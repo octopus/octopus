@@ -17,6 +17,7 @@
 !!
 !! $Id$
 
+!----------------------------------------------------
 subroutine X(nl_operator_tune)(op, best)
   type(nl_operator_t), intent(inout) :: op
   FLOAT,  optional,    intent(out)   :: best
@@ -100,7 +101,7 @@ subroutine X(nl_operator_tune)(op, best)
   SAFE_DEALLOCATE_A(in)
   SAFE_DEALLOCATE_A(out)
 
-  !choose the best method
+  ! choose the best method
   op%X(function) = OP_MIN
   do method = OP_MIN + 1, OP_MAX
     if(flops(method) > flops(op%X(function))) op%X(function) = method
@@ -116,13 +117,7 @@ subroutine X(nl_operator_tune)(op, best)
 #endif
   end if
 
-
-#if defined(HAVE_MPI)
   write(filenum, '(i6.6)') mpi_world%rank
-#else
-  filenum = '000000'
-#endif
-
   filename = 'exec/nl_operator_prof.'//trim(filenum)
   
   !print to file
@@ -164,12 +159,12 @@ subroutine X(nl_operator_tune)(op, best)
     end do
     
     write(iunit, '(a)') " "
-    
     call io_close(iunit)
 
   call pop_sub()
 
 end subroutine X(nl_operator_tune)
+
 
 subroutine X(operate)(nn, nri, w, ri, imin, imax, fi, fo, wim)
   integer,          intent(in)  :: nn
@@ -245,6 +240,7 @@ subroutine X(operate_nc)(nn, nri, w, ri, imin, imax, fi, fo, wim)
 
 end subroutine X(operate_nc)
 
+
 subroutine X(operate_nc_batch)(nn, nri, w, ri, imin, imax, fi, fo, wim)
   integer,          intent(in)  :: nn
   integer,          intent(in)  :: nri
@@ -261,21 +257,22 @@ subroutine X(operate_nc_batch)(nn, nri, w, ri, imin, imax, fi, fo, wim)
   if( .not. present(wim)) then
     
     do ll = 1, nri
-      forall(ist = 1:fi%nst, idim = 1:fi%dim, ii = imin(ll) + 1:imax(ll))
-        fo%states(ist)%X(psi)(ii, idim) = sum(w(1:nn, ii)*fi%states(ist)%X(psi)(ii + ri(1:nn, ll), idim))
+      forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
+        fo%states_linear(ist)%X(psi)(ii) = sum(w(1:nn, ii)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
       end forall
     end do
 
   else
 
     do ll = 1, nri
-      forall(ist = 1:fi%nst, idim = 1:fi%dim, ii = imin(ll) + 1:imax(ll))
-        fo%states(ist)%X(psi)(ii, idim) = sum(cmplx(w(1:nn, ii), wim(1:nn, ii))*fi%states(ist)%X(psi)(ii + ri(1:nn, ll), idim))
+      forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
+        fo%states_linear(ist)%X(psi)(ii) = sum(cmplx(w(1:nn, ii), wim(1:nn, ii))*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
       end forall
     end do
 
   end if
 end subroutine X(operate_nc_batch)
+
 
 subroutine X(select_op)(op, points, nri, imin, imax, ri)
   type(nl_operator_t), intent(in)    :: op
@@ -415,6 +412,7 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
   call pop_sub()
 end subroutine X(nl_operator_operate)
 
+
 ! ---------------------------------------------------------
 subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, points)
   type(nl_operator_t), intent(in)    :: op
@@ -423,7 +421,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, points)
   logical, optional,   intent(in)    :: ghost_update
   integer, optional,   intent(in)    :: points
 
-  integer :: idim, ist, points_
+  integer :: idim, ist, points_, cop
   logical :: update
   integer :: nri, nri_loc, ini, nns(1:2)
   integer, pointer :: imin(:), imax(:), ri(:, :)
@@ -443,10 +441,8 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, points)
   if(present(ghost_update)) update = ghost_update
 
   if(op%m%parallel_in_domains .and. update) then
-    do ist = 1, fi%nst
-      do idim = 1, fi%dim
-        call X(vec_ghost_update)(op%m%vp, fi%states(ist)%X(psi)(:, idim))
-      end do
+    do ist = 1, fi%nst_linear
+      call X(vec_ghost_update)(op%m%vp, fi%states_linear(ist)%X(psi)(:))
     end do
   end if
 #endif
@@ -454,12 +450,10 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, points)
   if(nri > 0) then
     if(op%const_w) then
       if(op%cmplx_op) then
-        do ist = 1, fi%nst
-          do idim = 1, fi%dim
-            pfi => fi%states(ist)%X(psi)(:, idim)
-            pfo => fo%states(ist)%X(psi)(:, idim)
-            call X(operate)(op%stencil%size, nri, op%w_re(:, 1), ri, imin, imax, pfi, pfo, op%w_im(:, 1))
-          end do
+        do ist = 1, fi%nst_linear
+          pfi => fi%states_linear(ist)%X(psi)(:)
+          pfo => fo%states_linear(ist)%X(psi)(:)
+          call X(operate)(op%stencil%size, nri, op%w_re(:, 1), ri, imin, imax, pfi, pfo, op%w_im(:, 1))
         end do
       else
         !$omp parallel private(ini, nri_loc, ws, idim, ist, pfi, pfo)
@@ -469,33 +463,31 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, points)
         ini = 1
         nri_loc = nri
 #endif
-        do idim = 1, fi%dim
-          do ist = 1, fi%nst
-            pfi => fi%states(ist)%X(psi)(:, idim)
-            pfo => fo%states(ist)%X(psi)(:, idim)
-            select case(op%X(function))
-            case(OP_FORTRAN)
-              call X(operate)(op%stencil%size, nri, op%w_re(:, 1), ri, imin, imax, pfi, pfo)
-            case(OP_C)
-              call X(operate_ri)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
-            case(OP_BIT)
-              call X(operate_bit)(op%stencil%size, op%w_re(1, 1), nri_loc, op%ribit(1), imin(ini), imax(ini), pfi(1), pfo(1))
+        do ist = 1, fi%nst_linear
+          pfi => fi%states_linear(ist)%X(psi)(:)
+          pfo => fo%states_linear(ist)%X(psi)(:)
+          select case(op%X(function))
+          case(OP_FORTRAN)
+            call X(operate)(op%stencil%size, nri, op%w_re(:, 1), ri, imin, imax, pfi, pfo)
+          case(OP_C)
+            call X(operate_ri)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
+          case(OP_BIT)
+            call X(operate_bit)(op%stencil%size, op%w_re(1, 1), nri_loc, op%ribit(1), imin(ini), imax(ini), pfi(1), pfo(1))
 #ifdef HAVE_VEC
-            case(OP_VEC)
-              call X(operate_ri_vec)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
+          case(OP_VEC)
+            call X(operate_ri_vec)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
 #endif
 #if defined(HAVE_BLUE_GENE) && defined(R_TCOMPLEX)
-            case(OP_BG)
-              call X(operate_bg)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
+          case(OP_BG)
+            call X(operate_bg)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
 #endif
 #ifdef HAVE_AS
-            case(OP_AS)
-              nns(1) = op%stencil%size
-              nns(2) = nri_loc
-              call X(operate_as)(nns, op%w_re(1, 1), ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1), ws(1))
+          case(OP_AS)
+            nns(1) = op%stencil%size
+            nns(2) = nri_loc
+            call X(operate_as)(nns, op%w_re(1, 1), ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1), ws(1))
 #endif
-            end select
-          end do
+          end select
         end do
         !$omp end parallel
       end if
@@ -507,16 +499,19 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, points)
       end if
     end if
 
+    ! count operations
     if(op%cmplx_op) then
-      call profiling_count_operations(fi%nst*(imax(nri) - imin(1))*op%stencil%size*(R_ADD + R_MUL))
+      cop = fi%nst_linear*(imax(nri) - imin(1))*op%stencil%size*(R_ADD + R_MUL)
     else
-      call profiling_count_operations(fi%nst*(imax(nri) - imin(1))*op%stencil%size*2*R_ADD)
+      cop = fi%nst_linear*(imax(nri) - imin(1))*op%stencil%size*2*R_ADD
     end if
+    call profiling_count_operations(cop)
   end if
 
   call profiling_out(operate_batch_prof)
 
 end subroutine X(nl_operator_operate_batch)
+
 
 ! ---------------------------------------------------------
 subroutine X(nl_operator_operate_diag)(op, fo)

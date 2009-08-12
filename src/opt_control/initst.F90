@@ -163,11 +163,10 @@ module opt_control_initst_m
         
         no_states = loct_parse_block_n(blk)
         do ib = 1, no_states
-          write(6,*) 'HELLO USERDEF' 
           call loct_parse_block_int(blk, ib-1, 0, idim)
           call loct_parse_block_int(blk, ib-1, 1, inst)
           call loct_parse_block_int(blk, ib-1, 2, inik)
-          write(6,*) ' DEBUG: ', idim,inst,inik
+
           ! read formula strings and convert to C strings
           do id = 1, initial_state%d%dim
             do is = 1, initial_state%nst
@@ -190,7 +189,6 @@ module opt_control_initst_m
                   ! parse user defined expressions
                   call loct_parse_expression(psi_re, psi_im, gr%sb%dim, x, r, M_ZERO, initial_state%user_def_states(id, is, ik))
                   ! fill state
-                  !write(6,*) psi_re, psi_im
                   initial_state%zpsi(ip, id, is, ik) = psi_re + M_zI*psi_im
                 end do
                 ! normalize orbital

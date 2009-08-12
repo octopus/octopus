@@ -141,7 +141,7 @@ contains
         d1(ip) = CNST(4.0)*step*r1(ip)
       end forall
 
-      call X(derivatives_lapl)(gr%mgrid%level(1)%der, d1, q1)
+      call X(derivatives_oper)(gr%mgrid%level(1)%der%lapl, gr%mgrid%level(1)%der, d1, q1)
 
       forall (ip = 1:mesh1%np) q1(ip) = CNST(-0.5)*q1(ip) - r1(ip)
 

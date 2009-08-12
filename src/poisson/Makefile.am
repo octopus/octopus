@@ -35,7 +35,7 @@ depend:
 	makedepf90 $(libpoisson_a_SOURCES)
 poismoda1.o : poismoda1.F90
 pois_sete_v1.o : pois_sete_v1.F90
-xyzgrid.o : xyzgrid.F90
+xyzgrid.o : xyzgrid.F90 poismoda1.F90
 cbsurf.o : cbsurf.F90
 capser.o : capser.F90 
 egate.o : egate.F90

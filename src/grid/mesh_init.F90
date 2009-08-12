@@ -1,4 +1,4 @@
-! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -107,7 +107,6 @@ subroutine mesh_init_stage_1(mesh, sb, cv, enlarge)
   ! we have a symmetric mesh (for now)
   mesh%idx%nr(1,:) = -mesh%idx%nr(2,:)
   
-
   ! we have to adjust a couple of things for the periodic directions
   do idir = 1, sb%periodic_dim
     !the spacing has to be a divisor of the box size

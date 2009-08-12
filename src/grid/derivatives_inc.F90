@@ -24,94 +24,15 @@
 ! followed by the rest of the code.
 
 ! ---------------------------------------------------------
-! The transpose of the Laplacian.
-subroutine X(derivatives_laplt)(der, f, lapl)
-  type(derivatives_t), intent(in)    :: der
-  R_TYPE,              intent(inout) :: f(:)     ! f(m%np_part)
-  R_TYPE,              intent(out)   :: lapl(:)  ! lapl(m%np)
-
-  call push_sub('derivatives_inc.Xderivatives_laplt')
-
-  ASSERT(ubound(f,    DIM=1) == der%mesh%np_part)
-  ASSERT(ubound(lapl, DIM=1) >= der%mesh%np)
-
-  call X(set_bc)(der, f)
-
-  call X(nl_operator_operate) (der%laplt, f, lapl)
-
-  call pop_sub()
-end subroutine X(derivatives_laplt)
-
-! ---------------------------------------------------------
-subroutine X(derivatives_lapl_start)(der, handle, f, lapl, ghost_update, set_bc)
-  type(derivatives_t),       intent(in)    :: der
-  type(der_handle_t),        intent(out)   :: handle
-  R_TYPE,  target,           intent(inout) :: f(:)     ! f(m%np_part)
-  R_TYPE,  target,           intent(inout) :: lapl(:)  ! lapl(m%np)
-  logical, optional,         intent(in)    :: ghost_update
-  logical, optional,         intent(in)    :: set_bc
-
-  logical :: set_bc_
-
-  call push_sub('derivatives_inc.Xderivatives_lapl_start')
-
-  call der_handle_init(handle, der)
-
-  ASSERT(ubound(f, DIM=1) >= der%mesh%np_part)
-  ASSERT(ubound(lapl, DIM=1) >= der%mesh%np)
-
-  handle%X(f) => f
-  handle%X(lapl) => lapl
-  
-  handle%ghost_update = .true.
-  if(present(ghost_update)) handle%ghost_update = ghost_update
-
-  set_bc_ = .true.
-  if(present(set_bc)) set_bc_ = set_bc
-  if(set_bc_) call X(set_bc)(der, handle%X(f))
-
-#ifdef HAVE_MPI
-  if(derivatives_overlap(der) .and. der%mesh%parallel_in_domains .and. handle%ghost_update) then
-    call X(vec_ighost_update)(der%mesh%vp,  handle%X(f), handle%pv_h)
-  end if
-#endif
-
-  call pop_sub()
-end subroutine X(derivatives_lapl_start)
-
-! ---------------------------------------------------------
-subroutine X(derivatives_lapl_finish)(der, handle)
-  type(derivatives_t),       intent(in)    :: der
-  type(der_handle_t),        intent(inout) :: handle
-
-  call push_sub('derivatives_inc.Xderivatives_lapl_finish')
-
-#ifdef HAVE_MPI
-  if(derivatives_overlap(der) .and. der%mesh%parallel_in_domains .and. handle%ghost_update) then
-
-    call X(nl_operator_operate)(der%lapl,  handle%X(f), handle%X(lapl), ghost_update = .false., points = OP_INNER)
-    call pv_handle_wait(handle%pv_h)
-    call X(nl_operator_operate) (der%lapl, handle%X(f), handle%X(lapl), ghost_update = .false., points = OP_OUTER)
-    
-    call pop_sub(); return
-  end if
-#endif
-
-  call X(nl_operator_operate) (der%lapl, handle%X(f), handle%X(lapl), ghost_update = handle%ghost_update)
-
-  call der_handle_end(handle)
-  call pop_sub()
-end subroutine X(derivatives_lapl_finish)
-
-! ---------------------------------------------------------
+! This are the workhorse routines that handle the calculation of derivatives
 subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, set_bc)
-  type(nl_operator_t), target, intent(in)    :: op
-  type(derivatives_t), target, intent(in)    :: der
-  type(batch_t),       target, intent(inout) :: ff
-  type(batch_t),       target, intent(inout) :: opff
-  type(der_handle_batch_t),    intent(out)   :: handle
-  logical, optional,           intent(in)    :: ghost_update
-  logical, optional,           intent(in)    :: set_bc
+  type(nl_operator_t),      target, intent(in)    :: op
+  type(derivatives_t),      target, intent(in)    :: der
+  type(batch_t),            target, intent(inout) :: ff
+  type(batch_t),            target, intent(inout) :: opff
+  type(derivatives_handle_batch_t), intent(out)   :: handle
+  logical,                optional, intent(in)    :: ghost_update
+  logical,                optional, intent(in)    :: set_bc
 
   logical :: set_bc_
 
@@ -140,9 +61,10 @@ subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, s
   call pop_sub()
 end subroutine X(derivatives_batch_start)
 
+
 ! ---------------------------------------------------------
 subroutine X(derivatives_batch_finish)(handle)
-  type(der_handle_batch_t), intent(inout) :: handle
+  type(derivatives_handle_batch_t), intent(inout) :: handle
 
   call push_sub('derivatives_inc.Xderivatives_batch_finish')
 
@@ -165,7 +87,50 @@ subroutine X(derivatives_batch_finish)(handle)
   call pop_sub()
 end subroutine X(derivatives_batch_finish)
 
+
 ! ---------------------------------------------------------
+subroutine X(derivatives_batch)(op, der, ff, opff, ghost_update, set_bc)
+  type(nl_operator_t),      target, intent(in)    :: op
+  type(derivatives_t),      target, intent(in)    :: der
+  type(batch_t),            target, intent(inout) :: ff
+  type(batch_t),            target, intent(inout) :: opff
+  logical,                optional, intent(in)    :: ghost_update
+  logical,                optional, intent(in)    :: set_bc
+
+  type(derivatives_handle_batch_t) :: handle
+
+  call push_sub('derivatives_inc.Xderivatives_batch')
+
+  call X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, set_bc)
+  call X(derivatives_batch_finish)(handle)
+
+  call pop_sub()
+
+end subroutine X(derivatives_batch)  
+
+
+! ---------------------------------------------------------
+! Now the non-batch version
+subroutine X(derivatives_start)(op, der, ff, opff, handle, ghost_update, set_bc)
+  type(nl_operator_t),      target, intent(in)    :: op
+  type(derivatives_t),      target, intent(in)    :: der
+  R_TYPE,                   target, intent(inout) :: ff
+  R_TYPE,                   target, intent(inout) :: opff
+  type(derivatives_handle_batch_t), intent(out)   :: handle
+  logical,                optional, intent(in)    :: ghost_update
+  logical,                optional, intent(in)    :: set_bc
+
+  logical :: set_bc_
+
+  call push_sub('derivatives_inc.Xderivatives_start')
+
+
+  call pop_sub()
+end subroutine X(derivatives_start)
+
+
+! ---------------------------------------------------------
+! Now the simplified interfaces
 subroutine X(derivatives_lapl)(der, f, lapl, ghost_update, set_bc)
   type(derivatives_t),       intent(in)    :: der
   R_TYPE,                    intent(inout) :: f(:)     ! f(m%np_part)
@@ -173,17 +138,106 @@ subroutine X(derivatives_lapl)(der, f, lapl, ghost_update, set_bc)
   logical, optional,         intent(in)    :: ghost_update
   logical, optional,         intent(in)    :: set_bc
 
-  type(der_handle_t) :: handle
+  type(derivatives_handle_t) :: handle
+  type(batch_t) :: batch_f, batch_lapl
 
   call push_sub('derivatives_inc.Xderivatives_lapl')
 
-  call der_handle_init(handle, der)
+  call derivatives_handle_init(handle, der)
   call X(derivatives_lapl_start) (der, handle, f, lapl, ghost_update, set_bc)
   call X(derivatives_lapl_finish)(der, handle)
-  call der_handle_end(handle)
+  call derivatives_handle_end(handle)
         
   call pop_sub()
 end subroutine X(derivatives_lapl)
+
+
+
+! ---------------------------------------------------------
+! The transpose of the Laplacian.
+subroutine X(derivatives_laplt)(der, f, lapl)
+  type(derivatives_t), intent(in)    :: der
+  R_TYPE,              intent(inout) :: f(:)     ! f(m%np_part)
+  R_TYPE,              intent(out)   :: lapl(:)  ! lapl(m%np)
+
+  call push_sub('derivatives_inc.Xderivatives_laplt')
+
+  ASSERT(ubound(f,    DIM=1) == der%mesh%np_part)
+  ASSERT(ubound(lapl, DIM=1) >= der%mesh%np)
+
+  call X(set_bc)(der, f)
+
+  call X(nl_operator_operate) (der%laplt, f, lapl)
+
+  call pop_sub()
+end subroutine X(derivatives_laplt)
+
+! ---------------------------------------------------------
+subroutine X(derivatives_lapl_start)(der, handle, f, lapl, ghost_update, set_bc)
+  type(derivatives_t),        intent(in)    :: der
+  type(derivatives_handle_t), intent(out)   :: handle
+  R_TYPE,  target,            intent(inout) :: f(:)     ! f(m%np_part)
+  R_TYPE,  target,            intent(inout) :: lapl(:)  ! lapl(m%np)
+  logical, optional,          intent(in)    :: ghost_update
+  logical, optional,          intent(in)    :: set_bc
+
+  logical :: set_bc_
+
+  call push_sub('derivatives_inc.Xderivatives_lapl_start')
+
+  call derivatives_handle_init(handle, der)
+
+  ASSERT(ubound(f, DIM=1) >= der%mesh%np_part)
+  ASSERT(ubound(lapl, DIM=1) >= der%mesh%np)
+
+  handle%X(f) => f
+  handle%X(lapl) => lapl
+  
+  handle%ghost_update = .true.
+  if(present(ghost_update)) handle%ghost_update = ghost_update
+
+  set_bc_ = .true.
+  if(present(set_bc)) set_bc_ = set_bc
+  if(set_bc_) call X(set_bc)(der, handle%X(f))
+
+#ifdef HAVE_MPI
+  if(derivatives_overlap(der) .and. der%mesh%parallel_in_domains .and. handle%ghost_update) then
+    call X(vec_ighost_update)(der%mesh%vp,  handle%X(f), handle%pv_h)
+  end if
+#endif
+
+  call pop_sub()
+end subroutine X(derivatives_lapl_start)
+
+
+! ---------------------------------------------------------
+subroutine X(derivatives_lapl_finish)(der, handle)
+  type(derivatives_t),        intent(in)    :: der
+  type(derivatives_handle_t), intent(inout) :: handle
+
+  call push_sub('derivatives_inc.Xderivatives_lapl_finish')
+
+#ifdef HAVE_MPI
+  if(derivatives_overlap(der) .and. der%mesh%parallel_in_domains .and. handle%ghost_update) then
+
+    call X(nl_operator_operate)(der%lapl,  handle%X(f), handle%X(lapl), ghost_update = .false., points = OP_INNER)
+    call pv_handle_wait(handle%pv_h)
+    call X(nl_operator_operate) (der%lapl, handle%X(f), handle%X(lapl), ghost_update = .false., points = OP_OUTER)
+    
+    call pop_sub(); return
+  end if
+#endif
+
+  call X(nl_operator_operate) (der%lapl, handle%X(f), handle%X(lapl), ghost_update = handle%ghost_update)
+
+  call derivatives_handle_end(handle)
+
+  call pop_sub()
+end subroutine X(derivatives_lapl_finish)
+
+
+! ---------------------------------------------------------
+
 
 ! ---------------------------------------------------------
 subroutine X(derivatives_grad)(der, f, grad, ghost_update, set_bc)
@@ -193,7 +247,7 @@ subroutine X(derivatives_grad)(der, f, grad, ghost_update, set_bc)
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: set_bc
 
-  type(der_handle_t) :: handle
+  type(derivatives_handle_t) :: handle
   integer :: idir
   logical :: set_bc_
   
@@ -203,7 +257,7 @@ subroutine X(derivatives_grad)(der, f, grad, ghost_update, set_bc)
 
   call push_sub('derivatives_inc.Xderivatives_grad')
 
-  call der_handle_init(handle, der)
+  call derivatives_handle_init(handle, der)
 
   ASSERT(ubound(grad, DIM=1) >= der%mesh%np)
   ASSERT(ubound(grad, DIM=2) >= der%dim)
@@ -241,7 +295,7 @@ subroutine X(derivatives_grad)(der, f, grad, ghost_update, set_bc)
   end if
 #endif
 
-  call der_handle_end(handle)
+  call derivatives_handle_end(handle)
 
   call pop_sub()
 end subroutine X(derivatives_grad)
@@ -255,18 +309,17 @@ subroutine X(derivatives_oper)(op, der, f, opf, ghost_update, set_bc)
   logical, optional,     intent(in)    :: ghost_update
   logical, optional,     intent(in)    :: set_bc
 
-  type(der_handle_t) :: handle
+  type(derivatives_handle_t) :: handle
   logical :: ghost_update_, set_bc_
 
   call push_sub('derivatives_inc.Xderivatives_oper')
   
   ASSERT(ubound(opf, DIM=1) >= der%mesh%np)
 
-  call der_handle_init(handle, der)
+  call derivatives_handle_init(handle, der)
 
   set_bc_ = .true.
   if(present(set_bc)) set_bc_ = set_bc
-
   if(set_bc_) call X(set_bc)(der, f)
 
   ghost_update_ = .true.
@@ -276,13 +329,11 @@ subroutine X(derivatives_oper)(op, der, f, opf, ghost_update, set_bc)
   if(derivatives_overlap(der) .and. der%mesh%parallel_in_domains .and. ghost_update_) then
 
     call X(vec_ighost_update)(der%mesh%vp, f, handle%pv_h)
-
     call X(nl_operator_operate)(op, f, opf, ghost_update = .false., points = OP_INNER)
 
     call pv_handle_wait(handle%pv_h)
 
     call X(nl_operator_operate)(op, f, opf, ghost_update = .false., points = OP_OUTER)
-
   else
 #endif
 
@@ -292,7 +343,7 @@ subroutine X(derivatives_oper)(op, der, f, opf, ghost_update, set_bc)
   end if
 #endif
 
-  call der_handle_end(handle)
+  call derivatives_handle_end(handle)
 
   call pop_sub()
 end subroutine X(derivatives_oper)
@@ -309,7 +360,7 @@ subroutine X(derivatives_oper_batch)(op, der, ff, opff, ghost_update, set_bc)
   logical :: set_bc_
   logical :: ghost_update_
 #ifdef HAVE_MPI
-  type(der_handle_t), allocatable :: handle(:, :)
+  type(derivatives_handle_t), allocatable :: handle(:, :)
   integer :: ist, idim
 #endif
 
@@ -317,7 +368,6 @@ subroutine X(derivatives_oper_batch)(op, der, ff, opff, ghost_update, set_bc)
 
   set_bc_ = .true.
   if(present(set_bc)) set_bc_ = set_bc
-
   if(set_bc_) call X(set_bc_batch)(der, ff)
 
   ghost_update_ = .true.
@@ -329,7 +379,7 @@ subroutine X(derivatives_oper_batch)(op, der, ff, opff, ghost_update, set_bc)
     
     do ist = 1, ff%nst
       do idim = 1, ff%dim
-        call der_handle_init(handle(ist, idim), der)
+        call derivatives_handle_init(handle(ist, idim), der)
       end do
     end do
     
@@ -349,7 +399,7 @@ subroutine X(derivatives_oper_batch)(op, der, ff, opff, ghost_update, set_bc)
 
     do ist = 1, ff%nst
       do idim = 1, ff%dim
-        call der_handle_end(handle(ist, idim))
+        call derivatives_handle_end(handle(ist, idim))
       end do
     end do
     
@@ -368,6 +418,7 @@ subroutine X(derivatives_oper_batch)(op, der, ff, opff, ghost_update, set_bc)
 
   call pop_sub()
 end subroutine X(derivatives_oper_batch)
+
 
 ! ---------------------------------------------------------
 subroutine X(derivatives_div)(der, f, div, ghost_update)

@@ -17,6 +17,7 @@
 !!
 !! $Id: batch_inc.F90 4298 2008-06-18 15:03:00Z dstrubbe $
 
+!--------------------------------------------------------------
 subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
   type(batch_t),  intent(out)   :: this
   integer,        intent(in)    :: dim
@@ -42,17 +43,29 @@ subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
 
 end subroutine X(batch_init_contiguous)
 
+
+!--------------------------------------------------------------
 subroutine X(batch_add_state)(this, ist, psi)
   type(batch_t),  intent(inout) :: this
   integer,        intent(in)    :: ist
   R_TYPE, target, intent(in)    :: psi(:, :)
 
+  integer :: idim, ii
+
   call push_sub('batch_inc.Xbatch_add_state')
 
   ASSERT(this%current <= this%nst)
 
-  this%states(this%current)%ist = ist
+  this%states(this%current)%ist    =  ist
   this%states(this%current)%X(psi) => psi
+
+  ! now we also populate the linear array
+  do idim = 1, this%dim
+    ii = this%dim*(this%current - 1) + idim
+    this%states_linear(ii)%ist    =  ist
+    this%states_linear(ii)%idim   =  idim
+    this%states_linear(ii)%X(psi) => psi(:, idim)
+  end do
 
   this%current = this%current  + 1
 
@@ -60,33 +73,29 @@ subroutine X(batch_add_state)(this, ist, psi)
 
 end subroutine X(batch_add_state)
 
-subroutine X(batch_new_state)(this, ist, np)
+
+!--------------------------------------------------------------
+subroutine X(batch_add_state_linear)(this, ist, psi)
   type(batch_t),  intent(inout) :: this
   integer,        intent(in)    :: ist
-  integer,        intent(in)    :: np
+  R_TYPE, target, intent(in)    :: psi(:)
 
-  call push_sub('batch_inc.Xbatch_new_state')
+  call push_sub('batch_inc.Xbatch_add_state_linear')
 
-  ASSERT(this%current <= this%nst)
+  ASSERT(this%current <= this%nst_linear)
 
-  this%states(this%current)%ist = ist
-  SAFE_ALLOCATE(this%states(this%current)%X(psi)(1:np, 1:this%dim))
+  this%states_linear(this%current)%ist    =  ist
+  this%states_linear(this%current)%idim   =  1
+  this%states_linear(this%current)%X(psi) => psi
+
   this%current = this%current  + 1
 
   call pop_sub()
-end subroutine X(batch_new_state)
 
-subroutine X(batch_delete_state)(this, ii)
-  type(batch_t),  intent(inout) :: this
-  integer,        intent(in)    :: ii
+end subroutine X(batch_add_state_linear)
 
-  call push_sub('batch_inc.Xbatch_delete_state')
 
-  SAFE_DEALLOCATE_P(this%states(ii)%X(psi))
-
-  call pop_sub()
-end subroutine X(batch_delete_state)
-
+!--------------------------------------------------------------
 subroutine X(batch_new)(this, st_start, st_end, np)
   type(batch_t),  intent(inout) :: this
   integer,        intent(in)    :: st_start
@@ -106,16 +115,20 @@ subroutine X(batch_new)(this, st_start, st_end, np)
   call pop_sub()
 end subroutine X(batch_new)
 
+
+!--------------------------------------------------------------
 subroutine X(batch_delete)(this)
   type(batch_t),  intent(inout) :: this
 
-  call push_sub('batch_inc.Xbatch_delete_state')
+  call push_sub('batch_inc.Xbatch_delete')
 
   SAFE_DEALLOCATE_P(this%X(psicont))
 
   call pop_sub()
 end subroutine X(batch_delete)
 
+
+!--------------------------------------------------------------
 subroutine X(batch_set)(this, np, psi)
   type(batch_t),  intent(out)   :: this
   integer,        intent(in)    :: np

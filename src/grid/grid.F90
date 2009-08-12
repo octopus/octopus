@@ -135,7 +135,6 @@ contains
       call mesh_init_stage_3(gr%mesh)
     end if
 
-
     if(gr%sb%open_boundaries) then
       SAFE_ALLOCATE(gr%intf(1:NLEADS))
       do il = 1, NLEADS

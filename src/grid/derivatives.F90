@@ -50,10 +50,6 @@ module derivatives_m
     derivatives_build,                  &
     dderivatives_lapl,                  &
     zderivatives_lapl,                  &
-    dderivatives_batch_start,           &
-    dderivatives_batch_finish,          &
-    zderivatives_batch_start,           &
-    zderivatives_batch_finish,          &
     derivatives_lapl_diag,              &
     dderivatives_laplt,                 &
     zderivatives_laplt,                 &
@@ -72,8 +68,11 @@ module derivatives_m
     dset_bc_batch,                      &
     zset_bc_batch,                      &
     stencil_extent,                     &
-    der_handle_t,                       &
-    der_handle_batch_t,                 &
+    derivatives_handle_batch_t,         &
+    dderivatives_batch_start,           &
+    dderivatives_batch_finish,          &
+    zderivatives_batch_start,           &
+    zderivatives_batch_finish,          &
     df_angular_momentum,                &
     zf_angular_momentum,                &
     df_l2, zf_l2
@@ -88,6 +87,7 @@ module derivatives_m
     DER_VARIATIONAL  = 2,   &
     DER_CUBE         = 3,   &
     DER_STARPLUS     = 4
+
 
   type derivatives_t
     type(mesh_t), pointer :: mesh          ! pointer to the underlying mesh
@@ -117,20 +117,22 @@ module derivatives_m
 #endif
   end type derivatives_t
 
-  type der_handle_t
+
+  type derivatives_handle_t
     private
 #ifdef HAVE_MPI
     type(pv_handle_t) :: pv_h
-    logical :: parallel_in_domains
+    logical           :: parallel_in_domains
 #endif
-    FLOAT, pointer :: df(:)
-    CMPLX, pointer :: zf(:)
-    FLOAT, pointer :: dlapl(:)
-    CMPLX, pointer :: zlapl(:)
-    logical :: ghost_update
-  end type der_handle_t
+    FLOAT, pointer    :: df(:)
+    CMPLX, pointer    :: zf(:)
+    FLOAT, pointer    :: dlapl(:)
+    CMPLX, pointer    :: zlapl(:)
+    logical           :: ghost_update
+  end type derivatives_handle_t
 
-  type der_handle_batch_t
+
+  type derivatives_handle_batch_t
     private
 #ifdef HAVE_MPI
     type(pv_handle_batch_t)      :: pv_h
@@ -139,8 +141,8 @@ module derivatives_m
     type(nl_operator_t), pointer :: op
     type(batch_t),       pointer :: ff
     type(batch_t),       pointer :: opff
-    logical :: ghost_update
-  end type der_handle_batch_t
+    logical                      :: ghost_update
+  end type derivatives_handle_batch_t
 
   type(profile_t), save :: set_bc_prof
 #ifdef HAVE_MPI
@@ -277,8 +279,7 @@ contains
     der%n_ghost(:) = 0
     do i = 1, der%dim
       if(der%boundaries(i) == DER_BC_ZERO_F .or. der%boundaries(i) == DER_BC_PERIOD) then
-        der%n_ghost(i) = &
-             maxval(abs(der%lapl%stencil%points(i,:)))
+        der%n_ghost(i) = maxval(abs(der%lapl%stencil%points(i,:)))
       end if
     end do
 
@@ -361,14 +362,14 @@ contains
   ! Returns the diagonal elements of the laplacian needed for preconditioning
   subroutine derivatives_lapl_diag(der, lapl)
     type(derivatives_t), intent(in)  :: der
-    FLOAT,             intent(out) :: lapl(:)  ! lapl(mesh%np)
+    FLOAT,               intent(out) :: lapl(:)  ! lapl(mesh%np)
 
     call push_sub('derivatives.derivatives_lapl_diag')
 
     ASSERT(ubound(lapl, DIM=1) >= der%mesh%np)
 
     ! the laplacian is a real operator
-    call dnl_operator_operate_diag (der%lapl, lapl)
+    call dnl_operator_operate_diag(der%lapl, lapl)
 
     call pop_sub()
 
@@ -379,37 +380,28 @@ contains
   subroutine derivatives_get_stencil_grad(der)
     type(derivatives_t), intent(inout) :: der
 
-    integer :: i
-    character :: dirchar
+    integer  :: ii
+    character :: dir_label, dir_labels(4) = (/'X', 'Y', 'Z', 'W' /)
 
     call push_sub('derivatives.derivatives_get_stencil_grad')
 
     ASSERT(associated(der%grad))
 
     ! initialize nl operator
-    do i = 1, der%dim
-      select case(i)
-      case(1)
-        dirchar = 'X'
-      case(2)
-        dirchar = 'Y'
-      case(3)
-        dirchar = 'Z'
-      case(4)
-        dirchar = 'W'
-      case default
-        dirchar = ' '
-      end select
-      call nl_operator_init(der%grad(i), "Gradient "//dirchar)
+    do ii = 1, der%dim
+      dir_label = ' '
+      if(ii < 5) dir_label = dir_labels(ii)
+
+      call nl_operator_init(der%grad(ii), "Gradient "//dir_label)
 
       ! create stencil
       select case(der%stencil_type)
       case(DER_STAR, DER_VARIATIONAL)
-        call stencil_star_get_grad(der%grad(i)%stencil, i, der%order)
+        call stencil_star_get_grad(der%grad(ii)%stencil, ii, der%order)
       case(DER_CUBE)
-        call stencil_cube_get_grad(der%grad(i)%stencil, der%dim, der%order)
+        call stencil_cube_get_grad(der%grad(ii)%stencil, der%dim, der%order)
       case(DER_STARPLUS)
-        call stencil_starplus_get_grad(der%grad(i)%stencil, der%dim, i, der%order)
+        call stencil_starplus_get_grad(der%grad(ii)%stencil, der%dim, ii, der%order)
       end select
     end do
 
@@ -464,7 +456,7 @@ contains
           call get_rhs_lapl(rhs(:,1))
         end if
 
-        call make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, 1, der%op(i:i))
+        call derivatives_make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, 1, der%op(i:i))
         SAFE_DEALLOCATE_A(polynomials)
         SAFE_DEALLOCATE_A(rhs)
       end do
@@ -479,7 +471,7 @@ contains
       end do
       call get_rhs_lapl(rhs(:, der%dim+1))
 
-      call make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, der%dim+1, der%op(:))
+      call derivatives_make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, der%dim+1, der%op(:))
 
       SAFE_DEALLOCATE_A(polynomials)
       SAFE_DEALLOCATE_A(rhs)
@@ -490,7 +482,7 @@ contains
         SAFE_ALLOCATE(rhs(1:der%op(i)%stencil%size, 1:1))
         call stencil_starplus_pol_grad(der%dim, i, der%order, polynomials)
         call get_rhs_grad(i, rhs(:, 1))
-        call make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, 1, der%op(i:i))
+        call derivatives_make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, 1, der%op(i:i))
         SAFE_DEALLOCATE_A(polynomials)
         SAFE_DEALLOCATE_A(rhs)
       end do
@@ -498,7 +490,7 @@ contains
       SAFE_ALLOCATE(rhs(1:der%op(i)%stencil%size, 1:1))
       call stencil_starplus_pol_lapl(der%dim, der%order, polynomials)
       call get_rhs_lapl(rhs(:, 1))
-      call make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, 1, der%op(der%dim+1:der%dim+1))
+      call derivatives_make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, 1, der%op(der%dim+1:der%dim+1))
       SAFE_DEALLOCATE_A(polynomials)
       SAFE_DEALLOCATE_A(rhs)
 
@@ -575,8 +567,9 @@ contains
 
   end subroutine derivatives_build
 
+
   ! ---------------------------------------------------------
-  subroutine make_discretization(dim, mesh, masses, pol, rhs, n, op)
+  subroutine derivatives_make_discretization(dim, mesh, masses, pol, rhs, n, op)
     integer,                intent(in)    :: dim
     type(mesh_t),           intent(in)    :: mesh
     FLOAT,                  intent(in)    :: masses(:)
@@ -589,7 +582,7 @@ contains
     FLOAT   :: x(MAX_DIM)
     FLOAT, allocatable :: mat(:,:), sol(:,:), powers(:,:)
 
-    call push_sub('derivatives.make_discretization')
+    call push_sub('derivatives.derivatives_make_discretization')
 
     SAFE_ALLOCATE(mat(1:op(1)%stencil%size, 1:op(1)%stencil%size))
     SAFE_ALLOCATE(sol(1:op(1)%stencil%size, 1:n))
@@ -646,13 +639,15 @@ contains
     SAFE_DEALLOCATE_A(powers)
 
     call pop_sub()
-  end subroutine make_discretization
+  end subroutine derivatives_make_discretization
 
-  subroutine der_handle_init(this, der)
-    type(der_handle_t),  intent(out) :: this
-    type(derivatives_t), intent(in)  :: der
 
-    call push_sub('derivatives.der_handle_init')
+  ! ---------------------------------------------------------
+  subroutine derivatives_handle_init(this, der)
+    type(derivatives_handle_t),  intent(out) :: this
+    type(derivatives_t),         intent(in)  :: der
+
+    call push_sub('derivatives.derivatives_handle_init')
 
     nullify(this%df, this%zf)
     nullify(this%dlapl, this%zlapl)
@@ -662,12 +657,14 @@ contains
 #endif
 
     call pop_sub()
-  end subroutine der_handle_init
+  end subroutine derivatives_handle_init
 
-  subroutine der_handle_end(this)
-    type(der_handle_t), intent(inout) :: this
 
-    call push_sub('derivatives.der_handle_end')
+  ! ---------------------------------------------------------
+  subroutine derivatives_handle_end(this)
+    type(derivatives_handle_t), intent(inout) :: this
+
+    call push_sub('derivatives.derivatives_handle_end')
 
     nullify(this%df, this%zf)
     nullify(this%dlapl, this%zlapl)
@@ -676,14 +673,18 @@ contains
 #endif
 
     call pop_sub()
-  end subroutine der_handle_end
+  end subroutine derivatives_handle_end
+
 
 #ifdef HAVE_MPI    
+  ! ---------------------------------------------------------
   logical function derivatives_overlap(this) result(overlap)
-    type(derivatives_t),    intent(in) :: this
+    type(derivatives_t), intent(in) :: this
 
     call push_sub('derivatives.derivatives_overlap')
+
     overlap = this%comm_method /= BLOCKING  
+
     call pop_sub()
   end function derivatives_overlap
 #endif

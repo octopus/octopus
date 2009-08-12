@@ -32,98 +32,162 @@ module batch_m
   implicit none
 
   private
-  public ::                     &
-       state_t,                 &
-       batch_t,                 &
-       batch_init,              &
-       batch_copy,              &
-       batch_subset,            &
-       batch_end,               &
-       batch_add_state,         &
-       dbatch_new_state,        &
-       zbatch_new_state,        &
-       dbatch_delete_state,     &
-       zbatch_delete_state,     &
-       dbatch_new,              &
-       zbatch_new,              &
-       dbatch_delete,           &
-       zbatch_delete,           &
-       batch_set,               &
-       batch_is_ok
+  public ::                  &
+    batch_state_t,           &
+    batch_state_l_t,         &
+    batch_t,                 &
+    batch_init,              &
+    batch_copy,              &
+    batch_end,               &
+    batch_add_state,         &
+    dbatch_new,              &
+    zbatch_new,              &
+    dbatch_delete,           &
+    zbatch_delete,           &
+    batch_set,               &
+    batch_is_ok
 
-  type state_t
+  !--------------------------------------------------------------
+  type batch_state_t
     FLOAT, pointer :: dpsi(:, :)
     CMPLX, pointer :: zpsi(:, :)
     integer        :: ist
-  end type state_t
+  end type batch_state_t
 
+  type batch_state_l_t
+    FLOAT, pointer :: dpsi(:)
+    CMPLX, pointer :: zpsi(:)
+    integer        :: ist, idim
+  end type batch_state_l_t
+  
   type batch_t
-    type(state_t), pointer :: states(:)
-    integer                :: nst
-    integer                :: current
-    integer                :: dim
-    FLOAT, pointer :: dpsicont(:, :, :)
-    CMPLX, pointer :: zpsicont(:, :, :)
+    type(batch_state_t), pointer   :: states(:)
+    integer                        :: nst
+    integer                        :: current
+    integer                        :: dim
+
+    ! we also need a linear array with the states in order to calculate derivates, etc.
+    integer                        :: nst_linear
+    type(batch_state_l_t), pointer :: states_linear(:)
+
+    ! if the memory is contiguous, we can perform some operations faster
+    FLOAT,               pointer   :: dpsicont(:, :, :)
+    CMPLX,               pointer   :: zpsicont(:, :, :)
   end type batch_t
 
+  !--------------------------------------------------------------
   interface batch_init
-    module procedure batch_init_empty, dbatch_init_contiguous, zbatch_init_contiguous
+    module procedure  batch_init_empty
+    module procedure  batch_init_empty_linear
+    module procedure dbatch_init_contiguous
+    module procedure zbatch_init_contiguous
   end interface
 
   interface batch_add_state
-    module procedure dbatch_add_state, zbatch_add_state
+    module procedure dbatch_add_state
+    module procedure zbatch_add_state
+    module procedure dbatch_add_state_linear
+    module procedure zbatch_add_state_linear
   end interface
 
   interface batch_set
-    module procedure dbatch_set, zbatch_set
+    module procedure dbatch_set
+    module procedure zbatch_set
   end interface
 
 contains
 
-  elemental subroutine state_nullify(this)
-    type(state_t), intent(out) :: this
-    nullify(this%dpsi, this%zpsi)
-  end subroutine state_nullify
-
-  logical elemental function state_is_associated(this) result(is_associated)
-    type(state_t), intent(in) :: this
-
-    is_associated = associated(this%dpsi) .or. associated(this%zpsi)
-  end function state_is_associated
-
+  !--------------------------------------------------------------
   subroutine batch_end(this)
     type(batch_t), intent(inout) :: this
 
     nullify(this%dpsicont)
     nullify(this%zpsicont)
+
     SAFE_DEALLOCATE_P(this%states)
+    SAFE_DEALLOCATE_P(this%states_linear)
   end subroutine batch_end
 
-  subroutine batch_init_empty(this, dim, nst)
+
+  !--------------------------------------------------------------
+  subroutine batch_init_empty (this, dim, nst)
     type(batch_t), intent(out)   :: this
     integer,       intent(in)    :: dim
     integer,       intent(in)    :: nst
     
-    call push_sub('batch.batch_init_empty')
+    integer :: ist
 
+    call push_sub('batch.batch_init_empty')
+    
     this%nst = nst
     this%dim = dim
     this%current = 1
     nullify(this%dpsicont, this%zpsicont)
     
     SAFE_ALLOCATE(this%states(1:nst))
-    call state_nullify(this%states(1:nst))
-
+    do ist = 1, nst
+      nullify(this%states(ist)%dpsi)
+      nullify(this%states(ist)%zpsi)
+    end do
+    
+    this%nst_linear = nst*dim
+    SAFE_ALLOCATE(this%states_linear(1:this%nst_linear))
+    do ist = 1, this%nst_linear
+      nullify(this%states_linear(ist)%dpsi)
+      nullify(this%states_linear(ist)%zpsi)
+    end do
+    
     call pop_sub()
-
+    
   end subroutine batch_init_empty
 
+
+  !--------------------------------------------------------------
+  ! When we are interested in batches of 1D functions
+  subroutine batch_init_empty_linear(this, nst)
+    type(batch_t), intent(out)   :: this
+    integer,       intent(in)    :: nst
+    
+    integer :: ist
+
+    call push_sub('batch.batch_init_empty_linear')
+    
+    this%nst = 0
+    this%dim = 0
+    this%current = 1
+    nullify(this%dpsicont, this%zpsicont)
+    nullify(this%states)
+
+    this%nst_linear = nst
+    SAFE_ALLOCATE(this%states_linear(1:this%nst_linear))
+    do ist = 1, this%nst_linear
+      nullify(this%states_linear(ist)%dpsi)
+      nullify(this%states_linear(ist)%zpsi)
+    end do
+    
+    call pop_sub()
+    
+  end subroutine batch_init_empty_linear
+
+
+  !--------------------------------------------------------------
   logical function batch_is_ok(this) result(ok)
     type(batch_t), intent(in)   :: this
+
+    integer :: ist
     
-    ok = (this%nst >= 1) .and. all(state_is_associated(this%states(1:this%nst)))
+    ok = (this%nst >= 1)
+    if(ok) then
+      do ist = 1, this%nst_linear
+        ok = ok.and. &
+          (associated(this%states_linear(ist)%dpsi) .or. associated(this%states_linear(ist)%zpsi))
+      end do
+    end if
+
   end function batch_is_ok
 
+
+  !--------------------------------------------------------------
   subroutine batch_copy(bin, bout)
     type(batch_t), intent(in)    :: bin
     type(batch_t), intent(out)   :: bout
@@ -141,38 +205,17 @@ contains
       if(associated(bin%states(ii)%zpsi)) bout%states(ii)%zpsi => bin%states(ii)%zpsi
     end do
 
-    call pop_sub()
-
-  end subroutine batch_copy
-
-  !----------------------------------------------
-
-  subroutine batch_subset(bin, istart, iend, bout)
-    type(batch_t), intent(in)    :: bin
-    integer,       intent(in)    :: istart
-    integer,       intent(in)    :: iend
-    type(batch_t), intent(out)   :: bout
-
-    integer :: ii, ist, nst
-
-    call push_sub('batch.batch_copy')
-
-    ASSERT(0 < istart .and. istart <= iend .and. iend <= bin%nst)
-    
-    nst = iend - istart + 1
-    
-    call batch_init_empty(bout, bin%dim, nst)
-    
-    do ist = istart, iend
-      ii = ist - istart + 1
-      bout%states(ii)%ist = bin%states(ist)%ist
-      if(associated(bin%states(ist)%dpsi)) bout%states(ii)%dpsi => bin%states(ist)%dpsi
-      if(associated(bin%states(ist)%zpsi)) bout%states(ii)%zpsi => bin%states(ist)%zpsi
+    do ii = 1, bout%nst_linear
+      bout%states_linear(ii)%ist  = bin%states_linear(ii)%ist
+      bout%states_linear(ii)%idim = bin%states_linear(ii)%idim
+      if(associated(bin%states_linear(ii)%dpsi)) bout%states_linear(ii)%dpsi => bin%states_linear(ii)%dpsi
+      if(associated(bin%states_linear(ii)%zpsi)) bout%states_linear(ii)%zpsi => bin%states_linear(ii)%zpsi
     end do
 
     call pop_sub()
 
-  end subroutine batch_subset
+  end subroutine batch_copy
+
 
 #include "undef.F90"
 #include "real.F90"

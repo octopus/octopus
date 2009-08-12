@@ -38,7 +38,7 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, time, kinetic_on
   integer :: ii, ist, idim, ip
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
   type(batch_t) :: epsib, laplb
-  type(der_handle_batch_t) :: handle
+  type(derivatives_handle_batch_t) :: handle
 
   call profiling_in(prof_hamiltonian, "HAMILTONIAN")
   call push_sub('hamiltonian_inc.Xhamiltonian_apply_batch')
