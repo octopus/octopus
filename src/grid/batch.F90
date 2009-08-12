@@ -57,7 +57,6 @@ module batch_m
   type batch_state_l_t
     FLOAT, pointer :: dpsi(:)
     CMPLX, pointer :: zpsi(:)
-    integer        :: ist, idim
   end type batch_state_l_t
   
   type batch_t
@@ -206,8 +205,6 @@ contains
     end do
 
     do ii = 1, bout%nst_linear
-      bout%states_linear(ii)%ist  = bin%states_linear(ii)%ist
-      bout%states_linear(ii)%idim = bin%states_linear(ii)%idim
       if(associated(bin%states_linear(ii)%dpsi)) bout%states_linear(ii)%dpsi => bin%states_linear(ii)%dpsi
       if(associated(bin%states_linear(ii)%zpsi)) bout%states_linear(ii)%zpsi => bin%states_linear(ii)%zpsi
     end do

@@ -62,8 +62,6 @@ subroutine X(batch_add_state)(this, ist, psi)
   ! now we also populate the linear array
   do idim = 1, this%dim
     ii = this%dim*(this%current - 1) + idim
-    this%states_linear(ii)%ist    =  ist
-    this%states_linear(ii)%idim   =  idim
     this%states_linear(ii)%X(psi) => psi(:, idim)
   end do
 
@@ -75,19 +73,14 @@ end subroutine X(batch_add_state)
 
 
 !--------------------------------------------------------------
-subroutine X(batch_add_state_linear)(this, ist, psi)
+subroutine X(batch_add_state_linear)(this, psi)
   type(batch_t),  intent(inout) :: this
-  integer,        intent(in)    :: ist
   R_TYPE, target, intent(in)    :: psi(:)
 
   call push_sub('batch_inc.Xbatch_add_state_linear')
 
   ASSERT(this%current <= this%nst_linear)
-
-  this%states_linear(this%current)%ist    =  ist
-  this%states_linear(this%current)%idim   =  1
   this%states_linear(this%current)%X(psi) => psi
-
   this%current = this%current  + 1
 
   call pop_sub()
