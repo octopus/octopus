@@ -38,6 +38,7 @@ module poisson_m
   use poisson_cg_m
   use poisson_isf_m
   use poisson_fft_m
+  use poisson_sete_m
   use grid_m
   use poisson_multigrid_m
   use mesh_function_m
@@ -45,7 +46,6 @@ module poisson_m
   use varinfo_m !Roberto
   use xyz_file_m !Roberto      
   use index_m
-  !  use POIS_data_l !SEC Team
   implicit none
 
   private

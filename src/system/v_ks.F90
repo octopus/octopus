@@ -39,8 +39,9 @@ module v_ks_m
   use xc_OEP_m
   use xc_m
   use magnetic_m
-  use POIS_data_l !SEC Team
   use index_m
+  use poisson_sete_m
+
   implicit none
 
   private

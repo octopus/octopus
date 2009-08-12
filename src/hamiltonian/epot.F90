@@ -60,7 +60,7 @@ module external_pot_m
   use varinfo_m
   use poisson_m
   use projector_m
-  use POIS_data_l !SEC Team
+  use poisson_sete_m
   use index_m
 
   implicit none

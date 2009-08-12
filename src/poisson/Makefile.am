@@ -24,7 +24,7 @@ noinst_LIBRARIES = libpoisson.a
 libpoisson_a_SOURCES = \
 	poisson_cutoffs.c poisson_cutoff.F90 poisson_isf.F90 poisson_fft.F90 \
 	poisson_corrections.F90 poisson_cg.F90 poisson_multigrid.F90 poisson.F90\
-	poismoda1.F90 pois_sete_v1.F90 xyzgrid.F90 cbsurf.F90 poissonmg.F90 capser.F90 egate.F90
+	pois_sete_v1.F90
 
 noinst_HEADERS = \
 	solver_1D.F90 solver_2D.F90 solver_3D.F90
@@ -33,13 +33,8 @@ include $(srcdir)/../common-rules.make
 
 depend:
 	makedepf90 $(libpoisson_a_SOURCES)
-poismoda1.o : poismoda1.F90
+
 pois_sete_v1.o : pois_sete_v1.F90
-xyzgrid.o : xyzgrid.F90 poismoda1.F90
-cbsurf.o : cbsurf.F90
-capser.o : capser.F90 
-egate.o : egate.F90
-poissonmg.o : poissonmg.F90
 poisson_cutoffs.o : poisson_cutoffs.c
 poisson_cutoff.o : poisson_cutoff.F90 
 poisson_isf.o : poisson_isf.F90 
@@ -47,5 +42,5 @@ poisson_fft.o : poisson_fft.F90 poisson_cutoff.o
 poisson_corrections.o : poisson_corrections.F90 
 poisson_cg.o : poisson_cg.F90 poisson_corrections.o 
 poisson_multigrid.o : poisson_multigrid.F90 poisson_corrections.o 
-poisson.o : poisson.F90 solver_3D.F90 solver_2D.F90 solver_1D.F90 poisson_multigrid.o poisson_fft.o poisson_isf.o poisson_cg.o poisson_corrections.o poismoda1.o
+poisson.o : poisson.F90 solver_3D.F90 solver_2D.F90 solver_1D.F90 poisson_multigrid.o poisson_fft.o poisson_isf.o poisson_cg.o poisson_corrections.o pois_sete_v1.o
 
