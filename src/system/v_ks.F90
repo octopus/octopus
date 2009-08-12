@@ -450,14 +450,12 @@ contains
     hm%ehartree = M_HALF*dmf_dotp(gr%mesh, rho, hm%vhartree)
 
     call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver)
-    if (poisson_solver.eq.9) then !Roberto
+    if (poisson_solver == POISSON_SETE) then !Roberto
       ! How to get the nuclear density here?
       hm%ep%eii = M_HALF*dmf_dotp(gr%mesh, rho_nuc, hm%ep%vpsl) 
       ! ESURF is a module called from later.  Need to write it into somewhere...
-      write(89,*) hm%ehartree*27.2,ESURF*27.2, hm%ep%eii*27.2
+      write(89,*) hm%ehartree*CNST(27.2), poisson_sete_energy()*CNST(27.2), hm%ep%eii
     endif
-
-
 
     SAFE_DEALLOCATE_A(rho)
     call pop_sub()

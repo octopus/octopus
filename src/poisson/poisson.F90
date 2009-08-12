@@ -313,8 +313,7 @@ contains
     case(POISSON_ISF)
       call poisson_isf_end()
     case(POISSON_SETE)
-      call cbsurf_end()
-
+      call poisson_sete_end()
 
     end select
     poisson_solver = -99
@@ -520,7 +519,7 @@ contains
       rh0(conversion(1),conversion(2),conversion(3))=rho(counter)
        end do
       
-      call pois(icase,rh0,vh0,nx,ny,nz,xl,yl,zl,icalc)
+      call poisson_sete_solve(icase,rh0,vh0,nx,ny,nz,xl,yl,zl,icalc)
 !      write(91,*) "vh0 rh0"
 !      do  i=1,nx
 !       write(91,*) i,vh0(i,0,0), rh0(i,0,0)
