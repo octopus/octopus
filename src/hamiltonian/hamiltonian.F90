@@ -44,6 +44,7 @@ module hamiltonian_m
   use mpi_m
   use mpi_lib_m
   use multigrid_m
+  use ob_interface_m
   use ob_lead_m
   use profiling_m
   use projector_m
@@ -145,10 +146,8 @@ module hamiltonian_m
     FLOAT, pointer :: ab_pot(:)   ! where we store the ab potential
 
     ! Open boundaries.
-    CMPLX, pointer :: lead_h_diag(:, :, :, :)      ! Diagonal block of the lead Hamiltonian.
-    CMPLX, pointer :: lead_h_offdiag(:, :, :)      ! Offdiagonal block of the lead Hamiltonian.
-    FLOAT, pointer :: lead_vks(:, :, :)            ! (np, nspin, nleads) Kohn-Sham potential of the leads.
-    FLOAT, pointer :: lead_vhartree(:, :)          ! (np, nleads) Hartree potential of the leads.
+!    type(lead_t), pointer :: lead(:)
+    type(lead_t) :: lead(NLEADS)
     
     ! Spectral range
     FLOAT :: spectral_middle_point
@@ -478,38 +477,38 @@ contains
     ! Calculate the blocks of the lead Hamiltonian and read the potential
     ! of the lead unit cell.
     subroutine init_lead_h
-      integer               :: np, np_uc, il, ierr, pot, ix, iy
+      integer               :: np, il, ierr, pot, ix, iy
       integer               :: irow, diag, offdiag
       character             :: channel
       character(len=256)    :: fname, fmt
       type(mesh_t), pointer :: m
 
-      np = gr%intf(LEFT)%np
-      np_uc = gr%mesh%lead_unit_cell(LEFT)%np
 
       ! Read potential of the leads. We try vks-x (for DFT without
       ! pseudo-potentials) and v0 (for non-interacting electrons) in
       ! that order (Octopus binary and NetCDF format). If none of the
       ! two can be found, a warning is emitted and zero potential
       ! assumed.
-      SAFE_ALLOCATE(hm%lead_vks(1:np_uc, 1:hm%d%nspin, 1:NLEADS))
-      SAFE_ALLOCATE(hm%lead_vhartree(1:np_uc, 1:NLEADS))
+!      S AFE_ALLOCATE(hm%lead(1:NLEADS))
 
       do il = 1, NLEADS
+        gr%intf(il)%np_uc = gr%mesh%lead_unit_cell(il)%np
+        SAFE_ALLOCATE(hm%lead(il)%vks(1:gr%intf(il)%np_uc, 1:hm%d%nspin))
+        SAFE_ALLOCATE(hm%lead(il)%vhartree(1:gr%intf(il)%np_uc))
         do ispin = 1, hm%d%nspin
           write(channel, '(i1)') ispin
 
           ! Try vks-ispin first.
           ! OBF.
           fname = trim(gr%sb%lead_static_dir(il))//'/vks-'//trim(channel)//'.obf'
-          call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead_vks(:, ispin, il), ierr)
+          call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vks(:, ispin), ierr)
           if(ierr.eq.0) then
             message(1) = 'Info: Successfully read KS potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
             call write_info(1)
           else
             ! NetCDF.
             fname = trim(gr%sb%lead_static_dir(il))//'/vks-'//trim(channel)//'.ncdf'
-            call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead_vks(:, ispin, il), ierr)
+            call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vks(:, ispin), ierr)
             if(ierr.eq.0) then
               message(1) = 'Info: Successfully read KS potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
               call write_info(1)
@@ -517,7 +516,7 @@ contains
               ! Now try v0.
               ! OBF.
               fname = trim(gr%sb%lead_static_dir(il))//'/v0.obf'
-              call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead_vks(:, ispin, il), ierr)
+              call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vks(:, ispin), ierr)
               if(ierr.eq.0) then
                 message(1) = 'Info: Successfully read external potential of the '// &
                   trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
@@ -525,7 +524,7 @@ contains
               else
                 ! NetCDF.
                 fname = trim(gr%sb%lead_static_dir(il))//'/v0.ncdf'
-                call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead_vks(:, ispin, il), ierr)
+                call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vks(:, ispin), ierr)
                 if(ierr.eq.0) then
                   message(1) = 'Info: Successfully read external potential of the '// &
                     trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
@@ -541,7 +540,7 @@ contains
                   message(7) = 'in your periodic run. Octopus now assumes zero potential'
                   message(8) = 'in the leads. This is most likely not what you want.'
                   call write_warning(8)
-                  hm%lead_vks(:, ispin, il) = M_ZERO
+                  hm%lead(il)%vks(:, ispin) = M_ZERO
                 end if
               end if
             end if
@@ -558,7 +557,7 @@ contains
             m => gr%mesh%lead_unit_cell(LEFT)
             do ix = m%idx%nr(1, 1)+m%idx%enlarge(1), m%idx%nr(2, 1)-m%idx%enlarge(1)
               do iy = m%idx%nr(1, 2)+m%idx%enlarge(2), m%idx%nr(2, 2)-m%idx%enlarge(2)
-                write(pot, '(2i8,f16.8)') ix, iy, hm%lead_vks(m%idx%Lxyz_inv(ix, iy, 0), ispin, il)
+                write(pot, '(2i8,f16.8)') ix, iy, hm%lead(il)%vks(m%idx%Lxyz_inv(ix, iy, 0), ispin)
               end do
             end do
             call io_close(pot)
@@ -567,17 +566,17 @@ contains
 
         ! Read Hartree potential.
         ! OBF.
-        hm%lead_vhartree(:, il) = M_ZERO
+        hm%lead(il)%vhartree(:) = M_ZERO
         if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
           fname = trim(gr%sb%lead_static_dir(il))//'/vh.obf'
-          call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead_vhartree(:, il), ierr)
+          call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vhartree(:), ierr)
           if(ierr.eq.0) then
             message(1) = 'Info: Successfully read Hartree potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
             call write_info(1)
           else
             ! NetCDF.
             fname = trim(gr%sb%lead_static_dir(il))//'/vh.ncdf'
-            call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead_vhartree(:, il), ierr)
+            call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vhartree(:), ierr)
             if(ierr.eq.0) then
               message(1) = 'Info: Successfully read Hartree potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
               call write_info(1)
@@ -597,50 +596,70 @@ contains
       end do
 
       ! Calculate the diagonal and offdiagonal blocks of the lead Hamiltonian.
-      SAFE_ALLOCATE(hm%lead_h_diag(1:np, 1:np, 1:st%d%dim, 1:NLEADS))
-      SAFE_ALLOCATE(hm%lead_h_offdiag(1:np, 1:np, 1:NLEADS))
+      ! First check if we can reduce the size of the interface.
+      ! If there is no dependence in transport direction in the Kohn-Sham
+      ! potential then it is possible to reduce the size of the unit cell
+      ! to the size of the interface itself.
       do il = 1, NLEADS
         do ispin = 1, hm%d%nspin
-          call lead_diag(gr%der%lapl, hm%lead_vks(:, ispin, il), &
-            gr%intf(il), hm%lead_h_diag(:, :, ispin, il))
+          np = gr%intf(il)%np
+          if (is_lead_transl_inv(gr%der%lapl, hm%lead(il)%vks(:, ispin), gr%intf(il))) then
+            write(*,*) 'reallocate interface!'
+            write(*,*) 'from', gr%intf(il)%np
+            ! resize array
+            ! so delete the old array intf%index
+            call interface_end(gr%intf(il))
+            ! then re-initialize interface
+            call interface_init(gr%mesh, gr%sb, gr%der, gr%intf(il), il, stencil_extent(gr%der, (il+1)/2))
+            write(*,*) 'to  ', gr%intf(il)%np
+          end if
+        end do
+      end do
+
+      do il = 1, NLEADS
+        np = gr%intf(il)%np
+        SAFE_ALLOCATE(hm%lead(il)%h_diag(1:np, 1:np, 1:st%d%dim))
+        SAFE_ALLOCATE(hm%lead(il)%h_offdiag(1:np, 1:np))
+        do ispin = 1, hm%d%nspin
+          call lead_diag(gr%der%lapl, hm%lead(il)%vks(:, ispin), &
+            gr%intf(il), hm%lead(il)%h_diag(:, :, ispin))
           ! In debug mode write the diagonal block to a file.
           if(in_debug_mode) then
             call io_mkdir('debug/open_boundaries')
             write(fname, '(3a,i1.1,a)') 'debug/open_boundaries/diag-', &
               trim(LEAD_NAME(il)), '-', ispin, '.real'
             diag = io_open(fname, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
-            write(fmt, '(a,i6,a)') '(', gr%intf(il)%np, 'e14.4)'
-            do irow = 1, gr%intf(il)%np
-              write(diag, fmt) real(hm%lead_h_diag(:, irow, ispin, il))
+            write(fmt, '(a,i6,a)') '(', np, 'e14.4)'
+            do irow = 1, np
+              write(diag, fmt) real(hm%lead(il)%h_diag(:, irow, ispin))
             end do
             call io_close(diag)
             write(fname, '(3a,i1.1,a)') 'debug/open_boundaries/diag-', &
               trim(LEAD_NAME(il)), '-', ispin, '.imag'
             diag = io_open(fname, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
-            write(fmt, '(a,i6,a)') '(', gr%intf(il)%np, 'e14.4)'
-            do irow = 1, gr%intf(il)%np
-              write(diag, fmt) aimag(hm%lead_h_diag(:, irow, ispin, il))
+            write(fmt, '(a,i6,a)') '(', np, 'e14.4)'
+            do irow = 1, np
+              write(diag, fmt) aimag(hm%lead(il)%h_diag(:, irow, ispin))
             end do
             call io_close(diag)
           end if
         end do
-        call lead_offdiag(gr%der%lapl, gr%intf(il), il, &
-          hm%lead_h_offdiag(:, :, il))
+        call lead_offdiag(gr%der%lapl, gr%intf(il), hm%lead(il)%h_offdiag(:, :))
         if(in_debug_mode) then
           write(fname, '(3a)') 'debug/open_boundaries/offdiag-', &
             trim(LEAD_NAME(il)), '.real'
           offdiag = io_open(fname, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
-          write(fmt, '(a,i6,a)') '(', gr%intf(il)%np, 'e14.4)'
-          do irow = 1, gr%intf(il)%np
-            write(offdiag, fmt) real(hm%lead_h_offdiag(:, irow, il))
+          write(fmt, '(a,i6,a)') '(', np, 'e14.4)'
+          do irow = 1, np
+            write(offdiag, fmt) real(hm%lead(il)%h_offdiag(:, irow))
           end do
           call io_close(offdiag)
           write(fname, '(3a)') 'debug/open_boundaries/offdiag-', &
             trim(LEAD_NAME(il)), '.imag'
           offdiag = io_open(fname, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
-          write(fmt, '(a,i6,a)') '(', gr%intf(il)%np, 'e14.4)'
-          do irow = 1, gr%intf(il)%np
-            write(offdiag, fmt) aimag(hm%lead_h_offdiag(:, irow, il))
+          write(fmt, '(a,i6,a)') '(', np, 'e14.4)'
+          do irow = 1, np
+            write(offdiag, fmt) aimag(hm%lead(il)%h_offdiag(:, irow))
           end do
           call io_close(offdiag)
         end if
@@ -677,7 +696,7 @@ contains
     type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(inout) :: geo
 
-    integer :: ispin
+    integer :: ispin, il
 
     call push_sub('hamiltonian.hamiltonian_end')
 
@@ -707,10 +726,13 @@ contains
 
     SAFE_DEALLOCATE_P(hm%ab_pot)
 
-    SAFE_DEALLOCATE_P(hm%lead_h_diag)
-    SAFE_DEALLOCATE_P(hm%lead_h_offdiag)
-    SAFE_DEALLOCATE_P(hm%lead_vks)
-    SAFE_DEALLOCATE_P(hm%lead_vhartree)
+    do il = 1, NLEADS
+      SAFE_DEALLOCATE_P(hm%lead(il)%h_diag)
+      SAFE_DEALLOCATE_P(hm%lead(il)%h_offdiag)
+      SAFE_DEALLOCATE_P(hm%lead(il)%vks)
+      SAFE_DEALLOCATE_P(hm%lead(il)%vhartree)
+    end do
+    !SA FE_DEALLOCATE_P(hm%lead)
 
     call states_dim_end(hm%d)
     call scissor_end(hm%scissor)

@@ -313,8 +313,8 @@ contains
             fac = (M_z1-M_zI*M_HALF*dt*st%ob_eigenval(ist, ik))*f0
             tmp_mem(:, :) = ob%mem_coeff(:, :, m, il)
             if(m.gt.0) tmp_mem(:, :) = tmp_mem(:, :) + ob%mem_coeff(:, :, m-1, il)
-            call calc_source_wf(max_iter, m, inp, il, hm%lead_h_offdiag(:, :, il), tmp_mem, dt, &
-              st%ob_intf_psi(:, :, 1, ist, ik, il), ob%src_mem_u(:, il), f0, fac,              &
+            call calc_source_wf(max_iter, m, inp, il, hm%lead(il)%h_offdiag(:, :), tmp_mem, dt, &
+              st%ob_lead(il)%intf_psi(:, :, 1, ist, ik), ob%src_mem_u(:, il), f0, fac,              &
               lambda(m, 0, max_iter, ob%src_mem_u(:, il)), ob%src_prev(:, 1, ist, ik, il))
             call apply_src(gr%intf(il), ob%src_prev(1:inp, 1, ist, ik, il), st%zpsi(:, :, ist, ik))
           end if
@@ -435,8 +435,8 @@ contains
             fac = (M_z1-M_zI*M_HALF*dt*st%ob_eigenval(ist, ik))*f0
             tmp_mem(:) = ob%mem_sp_coeff(:, m, il)
             if(m.gt.0) tmp_mem(:) = tmp_mem(:) + ob%mem_sp_coeff(:, m-1, il)
-            call calc_source_wf_sp(max_iter, m, inp, il, hm%lead_h_offdiag(:, :, il),     &
-              tmp_mem(:), dt, order, gr%sb%dim, st%ob_intf_psi(:, :, 1, ist, ik, il), &
+            call calc_source_wf_sp(max_iter, m, inp, il, hm%lead(il)%h_offdiag(:, :),     &
+              tmp_mem(:), dt, order, gr%sb%dim, st%ob_lead(il)%intf_psi(:, :, 1, ist, ik), &
               ob%mem_s(:, :, :, il), ob%sp2full_map, ob%src_mem_u(:, il), f0, fac,   &
               lambda(m, 0, max_iter, ob%src_mem_u(:, il)), ob%src_prev(:, 1, ist, ik, il))
             call apply_src(gr%intf(il), ob%src_prev(1:inp, 1, ist, ik, il), st%zpsi(:, :, ist, ik))
@@ -786,6 +786,7 @@ contains
     integer,          intent(in) :: order
 
     character(len=64) :: terms, mem_type_name
+    integer           :: il
 
     call push_sub('ob_rti.ob_rti_write_info')
 
@@ -807,16 +808,19 @@ contains
     end if
     
     write(message(1), '(a,a10)')    'Type of memory coefficients:     ', trim(mem_type_name)
-    write(message(2), '(a,f10.3)')  'MBytes required for memory term: ', &
+    do il=1, NLEADS
+      write(message(1+il), '(a,i10)') 'Dimension of '//LEAD_NAME(il)//' q-matrix:    ', gr%intf(il)%np
+    end do
+    write(message(NLEADS+2), '(a,f10.3)')  'MBytes required for memory term: ', &
       mbytes_memory_term(ob%max_mem_coeffs, gr%intf(:)%np, NLEADS, st, ob%mem_type, order)
-    write(message(3), '(a,i10)')    'Maximum QMR iterations:          ', qmr_max_iter
-    write(message(4), '(a,es10.1)') 'QMR residual tolerance:          ', qmr_tol
-    write(message(5), '(a,a20)')    'Included additional terms:       ', trim(terms)
-    write(message(6), '(a,a10)')    'TD left lead potential:          ', &
+    write(message(NLEADS+3), '(a,i10)')    'Maximum QMR iterations:          ', qmr_max_iter
+    write(message(NLEADS+4), '(a,es10.1)') 'QMR residual tolerance:          ', qmr_tol
+    write(message(NLEADS+5), '(a,a20)')    'Included additional terms:       ', trim(terms)
+    write(message(NLEADS+6), '(a,a10)')    'TD left lead potential:          ', &
       trim(gr%sb%lead_td_pot_formula(LEFT))
-    write(message(7), '(a,a10)')    'TD right lead potential:         ', &
+    write(message(NLEADS+7), '(a,a10)')    'TD right lead potential:         ', &
       trim(gr%sb%lead_td_pot_formula(RIGHT))
-    call write_info(7, stdout)
+    call write_info(NLEADS+7, stdout)
 
     call messages_print_stress(stdout)
 

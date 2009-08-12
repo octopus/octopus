@@ -45,6 +45,7 @@ module states_m
   use mpi_lib_m
   use multicomm_m
   use multigrid_m
+  use ob_interface_m
   use ob_green_m
   use profiling_m
   use simul_box_m
@@ -60,6 +61,7 @@ module states_m
 
   public ::                           &
     states_t,                         &
+    states_lead_t,                    &
     states_init,                      &
     states_look,                      &
     states_densities_init,            &
@@ -96,6 +98,12 @@ module states_m
     states_are_complex,               &
     states_are_real
 
+  type states_lead_t
+    CMPLX, pointer     :: intf_psi(:, :, :, :, :) ! (np, 2, st%d%dim, st%nst, st%d%nik)
+    FLOAT, pointer     :: rho(:, :)   ! Density of the lead unit cells.
+    CMPLX, pointer     :: green(:, :, :, :, :) ! (np, np, nspin, ncs, nik) Green`s function of the leads.
+  end type states_lead_t
+
   type states_t
     type(states_dim_t) :: d
     type(modelmb_particle_t) :: modelmbparticles
@@ -109,16 +117,16 @@ module states_m
 
     logical            :: open_boundaries
     CMPLX, pointer     :: zphi(:, :, :, :)  ! Free states for open-boundary calculations.
-    CMPLX, pointer     :: ob_intf_psi(:, :, :, :, :, :) ! (np, 2, st%d%dim, st%nst, st%d%nik, nleads)
-    FLOAT, pointer     :: ob_rho(:, :, :)   ! Density of the lead unit cells.
+    !CMPLX, pointer     :: ob_intf_psi(:, :, :, :, :, :) ! (np, 2, st%d%dim, st%nst, st%d%nik, nleads)
+    !FLOAT, pointer     :: ob_rho(:, :, :)   ! Density of the lead unit cells.
     FLOAT, pointer     :: ob_eigenval(:, :) ! Eigenvalues of free states.
     type(states_dim_t) :: ob_d              ! Dims. of the unscattered systems.
     integer            :: ob_nst            ! nst of the unscattered systems.
     integer            :: ob_ncs            ! No. of continuum states of open system.
                                             ! ob_ncs = ob_nst*st%ob_d%nik / st%d%nik
     FLOAT, pointer     :: ob_occ(:, :)      ! occupations
-    CMPLX, pointer     :: ob_green(:, :, :, :, :, :) ! (np, np, nspin, ncs, nik, nleads) Green`s function of the leads.
-
+    !CMPLX, pointer     :: ob_green(:, :, :, :, :, :) ! (np, np, nspin, ncs, nik, nleads) Green`s function of the leads.
+    type(states_lead_t) :: ob_lead(NLEADS)
     ! used for the user-defined wavefunctions (they are stored as formula strings)
     character(len=1024), pointer :: user_def_states(:,:,:) ! (st%d%dim, st%nst, st%d%nik)
 
@@ -168,10 +176,16 @@ contains
   ! ---------------------------------------------------------
   subroutine states_null(st)
     type(states_t), intent(inout) :: st
+
+    integer :: il
+
     call push_sub('states.states_null')
 
     nullify(st%dpsi, st%zpsi, st%zphi, st%rho, st%current, st%rho_core, st%frozen_rho, st%eigenval)
-    nullify(st%ob_intf_psi, st%ob_rho, st%ob_eigenval, st%ob_occ, st%ob_green)
+    do il=1, NLEADS
+      nullify(st%ob_lead(il)%intf_psi, st%ob_lead(il)%rho, st%ob_lead(il)%green)
+    end do
+    nullify(st%ob_eigenval, st%ob_occ)
     nullify(st%occ, st%spin, st%node, st%user_def_states)
     nullify(st%d%kpoints, st%d%kweights)
     nullify(st%st_range, st%st_num)
@@ -274,7 +288,9 @@ contains
 
     st%qtot = -(st%val_charge + excess_charge)
 
-    nullify(st%ob_intf_psi)
+    do il = 1, NLEADS
+      nullify(st%ob_lead(il)%intf_psi)
+    end do
     st%open_boundaries = .false.
     ! When doing open-boundary calculations the number of free states is
     ! determined by the previous periodic calculation.
@@ -535,12 +551,16 @@ contains
     type(states_t), intent(inout) :: st
     type(grid_t),   intent(in)    :: gr
 
+    integer :: il
+
     call push_sub('states.states_allocate_free_states')
 
     ! FIXME: spin-polarized free states ignored.
     if(gr%sb%open_boundaries) then
       SAFE_ALLOCATE(st%zphi(1:gr%mesh%np_part, 1:st%ob_d%dim, 1:st%ob_nst, 1:st%ob_d%nik))
-      SAFE_ALLOCATE(st%ob_rho(1:gr%mesh%lead_unit_cell(LEFT)%np, 1:st%d%nspin, 1:NLEADS))
+      do il = 1, NLEADS
+        SAFE_ALLOCATE(st%ob_lead(il)%rho(1:gr%mesh%lead_unit_cell(il)%np, 1:st%d%nspin))
+      end do
       st%zphi = M_z0
     else
       nullify(st%zphi)
@@ -556,11 +576,15 @@ contains
     type(states_t), intent(inout) :: st
     type(grid_t),   intent(in)    :: gr
 
+    integer :: il
+
     call push_sub('states.states_deallocate_free_states')
 
     if(gr%sb%open_boundaries) then
       SAFE_DEALLOCATE_P(st%zphi)
-      SAFE_DEALLOCATE_P(st%ob_rho)
+      do il = 1, NLEADS
+        SAFE_DEALLOCATE_P(st%ob_lead(il)%rho)
+      end do
     end if
 
     call pop_sub()
@@ -795,7 +819,7 @@ contains
     type(mesh_t),      intent(in)    :: mesh
     integer, optional, intent(in)    :: wfs_type
 
-    integer :: np, ik, ist, idim, st1, st2, k1, k2, size
+    integer :: np, ik, ist, idim, st1, st2, k1, k2, size, il
     logical :: force
 
     call push_sub('states.states_allocate_wfns')
@@ -855,10 +879,12 @@ contains
     end if
 
     if(calc_mode_is(CM_TD).and.st%open_boundaries) then
-      np = mesh%lead_unit_cell(LEFT)%np
-      SAFE_ALLOCATE(st%ob_intf_psi(1:np, 1:2, 1:st%d%dim, st1:st2, k1:k2, 1:NLEADS))
+      do il = 1, NLEADS
+        np = mesh%lead_unit_cell(il)%np
+        SAFE_ALLOCATE(st%ob_lead(il)%intf_psi(1:np, 1:2, 1:st%d%dim, st1:st2, k1:k2))
+        st%ob_lead(il)%intf_psi = M_z0
+      end do
 
-      st%ob_intf_psi = M_z0
     end if
 
     call pop_sub()
@@ -871,6 +897,8 @@ contains
   subroutine states_deallocate_wfns(st)
     type(states_t), intent(inout) :: st
 
+    integer :: il
+
     call push_sub('states.states_deallocate_wfns')
 
     if (st%wfs_type == M_REAL) then
@@ -880,7 +908,9 @@ contains
     end if
 
     if(st%open_boundaries.and.calc_mode_is(CM_TD)) then
-      SAFE_DEALLOCATE_P(st%ob_intf_psi)
+      do il = 1, NLEADS
+        SAFE_DEALLOCATE_P(st%ob_lead(il)%intf_psi)
+      end do
     end if
 
     call pop_sub()
@@ -1007,6 +1037,8 @@ contains
   subroutine states_end(st)
     type(states_t), intent(inout) :: st
 
+    integer :: il
+
     call push_sub('states.states_end')
     
     SAFE_DEALLOCATE_P(st%dpsi)
@@ -1037,7 +1069,9 @@ contains
       call states_dim_end(st%ob_d)
       SAFE_DEALLOCATE_P(st%ob_eigenval)
       SAFE_DEALLOCATE_P(st%ob_occ)
-      SAFE_DEALLOCATE_P(st%ob_green)
+      do il = 1, NLEADS
+        SAFE_DEALLOCATE_P(st%ob_lead(il)%green)
+      end do
     end if
 
     SAFE_DEALLOCATE_P(st%user_def_states)
@@ -2607,13 +2641,12 @@ contains
 
   ! ---------------------------------------------------------
   ! initialize the surface Green`s functions of the leads
-  subroutine states_init_green(st, gr, nspin, d_ispin, diag, offdiag)
+  subroutine states_init_green(st, gr, nspin, d_ispin, lead)
     type(states_t),      intent(inout) :: st
     type(grid_t),        intent(in)    :: gr
     integer,             intent(in)    :: nspin
     integer,             intent(in)    :: d_ispin
-    CMPLX,               intent(in)    :: diag(:, :, :, :)      ! Diagonal block of the lead Hamiltonian.
-    CMPLX,               intent(in)    :: offdiag(:, :, :)      ! Off-diagonal block of the lead Hamiltonian.
+    type(lead_t),        intent(in)    :: lead(:) ! Diagonal  and offdiagonal block of the lead Hamiltonian.
 
     character(len=1), allocatable  :: ln(:)
     character(len=2)      :: spin
@@ -2634,8 +2667,10 @@ contains
       ASSERT(st%ob_d%nik == st%d%nik)
       s1 = st%st_start; s2 = st%st_end
       k1 = st%d%kpt%start; k2 = st%d%kpt%end
-      SAFE_ALLOCATE(st%ob_green(1:np, 1:np, 1:nspin, s1:s2, k1:k2, 1:NLEADS))
-      call messages_print_stress(stdout, "Lead Green's functions")
+      do il = 1, NLEADS
+        SAFE_ALLOCATE(st%ob_lead(il)%green(1:np, 1:np, 1:nspin, s1:s2, k1:k2))
+      end do
+      call messages_print_stress(stdout, "Lead Green`s functions")
       message(1) = ' st#     k#  Spin  Lead     Energy'
       call write_info(1)
 #ifdef HAVE_MPI 
@@ -2669,8 +2704,10 @@ contains
               write(message(1), '(i4,3x,i4,3x,a2,5x,a1,1x,f12.6)') ist, ik, spin, ln(il), energy
               call write_info(1)
               ! TODO magnetic gs
-              call lead_green(energy, diag(:, :, ispin, il), offdiag(:, :, il), &
-                  np, st%ob_green(:, :, ispin, ist, ik, il), .true., il, gr%intf(il)%offdiag_invertible)
+!              call lead_green(energy, lead(il)%h_diag(:, :, ispin), lead(il)%h_offdiag(:, :), np, &
+!                st%ob_lead(il)%green(:, :, ispin, ist, ik), .true., il, gr%intf(il)%offdiag_invertible)
+              call lead_green(energy, lead(il)%h_diag(:, :, ispin), lead(il)%h_offdiag(:, :), &
+                              gr%intf(il), st%ob_lead(il)%green(:, :, ispin, ist, ik), .true.)
 
               ! Write the entire Green`s function to a file.
               if(in_debug_mode) then
@@ -2684,8 +2721,8 @@ contains
 
                 write(fmt, '(a,i6,a)') '(', np, 'e14.4)'
                 do irow = 1, np
-                  write(green_real, fmt) real(st%ob_green(irow, :, ispin, ist, ik, il))
-                  write(green_imag, fmt) aimag(st%ob_green(irow, :, ispin, ist, ik, il))
+                  write(green_real, fmt) real(st%ob_lead(il)%green(irow, :, ispin, ist, ik))
+                  write(green_imag, fmt) aimag(st%ob_lead(il)%green(irow, :, ispin, ist, ik))
                 end do
                 call io_close(green_real); call io_close(green_imag)
               end if

@@ -729,7 +729,7 @@ contains
     call push_sub('epot.epot_dipole_periodic')
 
     if(.not. smear_is_semiconducting(st%smear)) then
-      message(1) = "Warning: single-point Berry's phase dipole calculation not correct without integer occupations."
+      message(1) = "Warning: single-point Berry`s phase dipole calculation not correct without integer occupations."
       call write_warning(1)
     endif
 

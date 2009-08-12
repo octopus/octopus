@@ -67,9 +67,8 @@ contains
   ! ---------------------------------------------------------
   ! Allocate (machine) memory for the memory coefficents and
   ! calculate them.
-  subroutine ob_mem_init(intface, hm, ob, delta, max_iter, op, &
-    spacing, order, mpi_grp)
-    type(interface_t),   intent(in)    :: intface(1:NLEADS)
+  subroutine ob_mem_init(intf, hm, ob, delta, max_iter, op, spacing, order, mpi_grp)
+    type(interface_t),   intent(in)    :: intf(1:NLEADS)
     type(hamiltonian_t), intent(in)    :: hm
     type(ob_terms_t),    intent(inout) :: ob
     FLOAT,               intent(in)    :: delta
@@ -83,7 +82,7 @@ contains
 
     call push_sub('ob_mem.ob_mem_init')
 
-    np = intface(LEFT)%np
+    np = intf(LEFT)%np
 
     ! Allocate arrays depending on the type of coefficients requested.
     select case(ob%mem_type)
@@ -138,8 +137,8 @@ contains
 
     do il = 1, NLEADS
       ! Try to read the coefficients from file
-      call read_coeffs(trim(restart_dir)//'open_boundaries/', saved_iter, ob, hm, intface(il), &
-                       calc_dim, max_iter, spacing, delta, op%stencil%size, order, il )
+      call read_coeffs(trim(restart_dir)//'open_boundaries/', saved_iter, ob, hm, intf(il), &
+                       calc_dim, max_iter, spacing, delta, op%stencil%size, order)
 
       if (saved_iter.lt.max_iter) then ! Calculate missing coefficients.
         if (saved_iter.gt.0) then
@@ -154,18 +153,18 @@ contains
         ! Initialize progress bar.
         call loct_progress_bar(-1, max_iter+1)
 
-        ! FIXME: the spinor index of hm%lead_h_diag is ignored here.
+        ! FIXME: the spinor index of hm%lead(il)%h_diag is ignored here.
         ASSERT(hm%d%ispin.ne.SPINORS)
         if(saved_iter.eq.0) then 
           ! Get anchor for recursion.
           select case(ob%mem_type)
           case(SAVE_CPU_TIME)
-            call approx_coeff0(intface(il), delta, il, hm%lead_h_diag(:, :, 1, il),   &
-              hm%lead_h_offdiag(:, :, il), ob%mem_coeff(:, :, 0, il))
+            call approx_coeff0(intf(il), delta, hm%lead(il)%h_diag(:, :, 1),   &
+              hm%lead(il)%h_offdiag(:, :), ob%mem_coeff(:, :, 0, il))
           case(SAVE_RAM_USAGE) ! FIXME: only 2D.
             ASSERT(calc_dim.eq.2)
-            call approx_sp_coeff0(intface(il), delta, il, hm%lead_h_diag(:, :, 1, il), &
-                 hm%lead_h_offdiag(:, :, il), ob%mem_sp_coeff(:, 0, il), &
+            call approx_sp_coeff0(intf(il), delta, hm%lead(il)%h_diag(:, :, 1), &
+                 hm%lead(il)%h_offdiag(:, :), ob%mem_sp_coeff(:, 0, il), &
                  ob%mem_s(:,:,:,il), order, ob%sp2full_map)
           end select
           call loct_progress_bar(1, max_iter+1)
@@ -173,14 +172,14 @@ contains
         ! Calculate the subsequent coefficients by the recursive relation.
         select case(ob%mem_type)
         case(SAVE_CPU_TIME)
-          call calculate_coeffs_ni(il, saved_iter+1, max_iter, delta, intface(il), hm%lead_h_diag(:, :, 1, il), &
-            hm%lead_h_offdiag(:, :, il), ob%mem_coeff(:, :, :, il))
+          call calculate_coeffs_ni(saved_iter+1, max_iter, delta, intf(il), hm%lead(il)%h_diag(:, :, 1), &
+            hm%lead(il)%h_offdiag(:, :), ob%mem_coeff(:, :, :, il))
         case(SAVE_RAM_USAGE) ! FIXME: only 2D.
           ASSERT(calc_dim.eq.2)
-          call apply_coupling(ob%mem_coeff(:, :, 0, il), hm%lead_h_offdiag(:, :, il),&
+          call apply_coupling(ob%mem_coeff(:, :, 0, il), hm%lead(il)%h_offdiag(:, :),&
               ob%mem_coeff(:, :, 0, il), np, il)
-          call calculate_sp_coeffs(il, saved_iter+1, max_iter, delta, intface(il), hm%lead_h_diag(:, :, 1, il), &
-            hm%lead_h_offdiag(:, :, il), ob%mem_sp_coeff(:, :, il), ob%mem_s(:, :, :, il), np*order,            &
+          call calculate_sp_coeffs(saved_iter+1, max_iter, delta, intf(il), hm%lead(il)%h_diag(:, :, 1), &
+            hm%lead(il)%h_offdiag(:, :), ob%mem_sp_coeff(:, :, il), ob%mem_s(:, :, :, il), np*order,            &
             order, calc_dim, ob%sp2full_map, spacing)
         end select
 
@@ -190,8 +189,8 @@ contains
             trim(lead_name(il))//' lead.'
           call write_info(2)
           if(mpi_grp_is_root(mpi_grp)) then
-            call write_coeffs(trim(restart_dir)//'open_boundaries/', ob, hm, intface(il),     &
-              calc_dim, max_iter, spacing, delta, op%stencil%size, order, il)
+            call write_coeffs(trim(restart_dir)//'open_boundaries/', ob, hm, intf(il),     &
+              calc_dim, max_iter, spacing, delta, op%stencil%size, order)
           end if
         end if
       else
@@ -202,7 +201,7 @@ contains
 
       if(ob%mem_type.eq.SAVE_CPU_TIME) then
         do ii=0, max_iter
-          call apply_coupling(ob%mem_coeff(:, :, ii, il), hm%lead_h_offdiag(:, :, il),&
+          call apply_coupling(ob%mem_coeff(:, :, ii, il), hm%lead(il)%h_offdiag(:, :),&
               ob%mem_coeff(:, :, ii, il), np, il)
         end do
       end if
@@ -217,10 +216,9 @@ contains
   ! Solve for zeroth memory coefficient by truncating the continued
   ! matrix fraction. Since the coefficient must be symmetric (non-magnetic),
   ! a symmetric inversion is used.
-  subroutine approx_coeff0(intface, delta, il, diag, offdiag, coeff0)
-    type(interface_t), intent(in)  :: intface
+  subroutine approx_coeff0(intf, delta, diag, offdiag, coeff0)
+    type(interface_t), intent(in)  :: intf
     FLOAT,             intent(in)  :: delta
-    integer,           intent(in)  :: il
     CMPLX,             intent(in)  :: diag(:, :)
     CMPLX,             intent(in)  :: offdiag(:, :)
     CMPLX,             intent(out) :: coeff0(:, :)
@@ -232,7 +230,7 @@ contains
 
     call push_sub('ob_mem.approx_coeff0')
 
-    np = intface%np
+    np = intf%np
     d2 = delta**2
 
     ! If we are in 1D and have only a number we can solve the equation explicitly.
@@ -273,13 +271,13 @@ contains
           exit
         end if
         ! Apply coupling matrices.
-        call apply_coupling(coeff0, offdiag, q0, np, il)
+        call apply_coupling(coeff0, offdiag, q0, np, intf%il)
         call matrix_symmetric_average(q0, np)
         old_norm = norm
       end do
       if(i.gt.mem_iter) then
         write(message(1), '(a,i6,a)') 'Memory coefficent for time step 0, ' &
-          //trim(lead_name(il))//' lead, not converged'
+          //trim(lead_name(intf%il))//' lead, not converged'
         call write_warning(1)
       end if
 
@@ -294,10 +292,9 @@ contains
   ! Solve for zeroth memory coefficient by truncating the continued
   ! matrix fraction. Since the coefficient must be symmetric (non-magnetic),
   ! a symmetric inversion is used. Sparse version
-  subroutine approx_sp_coeff0(intface, delta, il, diag, offdiag, sp_coeff0, mem_s, order, mapping)
-    type(interface_t), intent(in)  :: intface
+  subroutine approx_sp_coeff0(intf, delta, diag, offdiag, sp_coeff0, mem_s, order, mapping)
+    type(interface_t), intent(in)  :: intf
     FLOAT,             intent(in)  :: delta
-    integer,           intent(in)  :: il
     CMPLX,             intent(in)  :: diag(:, :)
     CMPLX,             intent(in)  :: offdiag(:, :)
     CMPLX,             intent(out) :: sp_coeff0(:)   ! 0th coefficient in packed storage.
@@ -311,7 +308,7 @@ contains
 
     call push_sub('ob_mem.approx_sp_coeff0')
 
-    np = intface%np
+    np = intf%np
     d2 = delta**2
 
     ! Truncating the continued fraction is the same as iterating the equation
@@ -340,13 +337,13 @@ contains
         exit
       end if
       ! Apply coupling matrices.
-      call apply_coupling(q0, offdiag, q0, np, il)
+      call apply_coupling(q0, offdiag, q0, np, intf%il)
       call matrix_symmetric_average(q0, np)
       old_norm = norm
     end do
     if(i.gt.mem_iter) then
       write(message(1), '(a,i6,a)') 'Memory coefficent for time step 0, ' &
-        //trim(lead_name(il))//' lead, not converged'
+        //trim(lead_name(intf%il))//' lead, not converged'
       call write_warning(1)
     end if
 
@@ -374,8 +371,7 @@ contains
   ! This version cannot handle magnetic fields in the leads, 
   ! as the assumption of symmetric matrices for multiplications
   ! is not valid anymore.
-  subroutine calculate_coeffs_ni(il, start_iter, iter, delta, intf, diag, offdiag, coeffs)
-    integer,           intent(in)    :: il
+  subroutine calculate_coeffs_ni(start_iter, iter, delta, intf, diag, offdiag, coeffs)
     integer,           intent(in)    :: start_iter
     integer,           intent(in)    :: iter
     FLOAT,             intent(in)    :: delta
@@ -408,7 +404,7 @@ contains
 
     m_l(:, :) = delta*coeffs(:, :, 0)
     m_r(:, :) = m_l(:, :)
-    if(il.eq.LEFT) then
+    if(intf%il.eq.LEFT) then
       call lalg_trmm(np, np, 'U', 'N', 'R', M_z1, offdiag, m_l)
       call lalg_trmm(np, np, 'U', 'T', 'L', M_z1, offdiag, m_r)
     else
@@ -433,7 +429,7 @@ contains
         else
           tmp(:, :) = coeffs(:, :, k) + M_TWO*coeffs(:, :, k-1)
         end if
-        if(il.eq.LEFT) then
+        if(intf%il.eq.LEFT) then
           call lalg_trmm(np, np, 'U', 'T', 'R', M_z1, offdiag, tmp)
         else
           call lalg_trmm(np, np, 'L', 'T', 'R', M_z1, offdiag, tmp)
@@ -467,7 +463,7 @@ contains
       ! Write a warning if a coefficient is not converged.
       if(j.gt.mem_iter) then
         write(message(1), '(a,i6,a)') 'Memory coefficent for time step ', i, &
-          ', '//trim(lead_name(il))//' lead, not converged.'
+          ', '//trim(lead_name(intf%il))//' lead, not converged.'
         call write_warning(1)
       end if
 
@@ -492,9 +488,8 @@ contains
   ! sp_coeffs(:, :, 0) given, calculate the subsequent ones by
   ! the recursive relation. We can only use the (sparse) mem_q, so use the
   ! mem_q only recursive relation.
-  subroutine calculate_sp_coeffs(il, start_iter, iter, delta, intf, diag, offdiag, &
+  subroutine calculate_sp_coeffs(start_iter, iter, delta, intf, diag, offdiag, &
     sp_coeffs, mem_s, length, order, dim, mapping, spacing)
-    integer,           intent(in)    :: il
     integer,           intent(in)    :: start_iter
     integer,           intent(in)    :: iter
     FLOAT,             intent(in)    :: delta
@@ -538,7 +533,7 @@ contains
       prefactor_minus(i, i) = M_ONE + prefactor_minus(i, i)
     end do
     inv_offdiag(:, :) = offdiag(:, :)
-    if (il.eq.LEFT) then
+    if (intf%il.eq.LEFT) then
       call lalg_invert_upper_triangular(np, inv_offdiag)
     else
       call lalg_invert_lower_triangular(np, inv_offdiag)
@@ -546,7 +541,7 @@ contains
 
     call lalg_sym_inverter('U', np, prefactor_plus)
     call matrix_symmetrize(prefactor_plus, np)
-    select case(il)
+    select case(intf%il)
     case(LEFT)
       uplo = 'U'
     case(RIGHT)
@@ -572,7 +567,7 @@ contains
             sp_tmp = sp_tmp + sp_coeffs(:, k-2)
           end if
           call make_full_matrix(np, order, dim, sp_tmp, mem_s, tmp1, mapping)
-          if (il.eq.LEFT) then
+          if (intf%il.eq.LEFT) then
             call lalg_trmm(np, np, 'U', 'N', 'R', M_z1, inv_offdiag, tmp1)
           else
             call lalg_trmm(np, np, 'L', 'N', 'R', M_z1, inv_offdiag, tmp1)
@@ -595,7 +590,7 @@ contains
       ! Write a warning if a coefficient is not converged.
       if(j.gt.mem_iter) then
         write(message(1), '(a,i6,a)') 'Memory coefficent for time step ', i, &
-          ', '//trim(lead_name(il))//' lead, not converged.'
+          ', '//trim(lead_name(intf%il))//' lead, not converged.'
         call write_warning(1)
       end if
 
@@ -621,25 +616,25 @@ contains
   ! Write memory coefficients to file.
   ! FIXME: this routine writes compiler and/or system dependent binary files.
   ! It should be changed to a platform independent format.
-  subroutine write_coeffs(dir, ob, hm, intface, dim, iter, spacing, delta, op_n, order, il)
+  subroutine write_coeffs(dir, ob, hm, intf, dim, iter, spacing, delta, op_n, order)
     character(len=*), intent(in) :: dir
     type(ob_terms_t), intent(inout) :: ob
     type(hamiltonian_t), intent(in) :: hm
-    type(interface_t),   intent(in) :: intface
+    type(interface_t),   intent(in) :: intf
     integer,          intent(in) :: dim                       ! Dimension.
     integer,          intent(in) :: iter                      ! Number of coefficients.
     FLOAT,            intent(in) :: spacing                   ! Grid spacing.
     FLOAT,            intent(in) :: delta                     ! Timestep.
     integer,          intent(in) :: op_n                      ! Number of operator points.
     integer,          intent(in) :: order                     ! discretization order
-    integer,          intent(in) :: il                        ! Which lead.
 
     integer :: ntime, j, iunit, np
 
     call push_sub('ob_mem.write_coeffs')
 
     call io_mkdir(dir, is_tmp=.true.)
-    iunit = io_open(trim(dir)//trim(lead_name(il)), action='write', form='unformatted', is_tmp=.true.)
+    iunit = io_open(trim(dir)//trim(lead_name(intf%il)), &
+                    action='write', form='unformatted', is_tmp=.true.)
     if(iunit.lt.0) then
       message(1) = 'Cannot write memory coefficents to file.'
       call write_warning(1)
@@ -647,7 +642,7 @@ contains
       call pop_sub(); return
     end if
 
-    np = intface%np
+    np = intf%np
 
     ! Write numerical parameters.
     write(iunit) dim
@@ -657,22 +652,22 @@ contains
     write(iunit) delta
     write(iunit) op_n
     write(iunit) ob%mem_type
-    write(iunit) intface%offdiag_invertible
-    write(iunit) hm%lead_vks(1:np, 1, il)
+    write(iunit) intf%offdiag_invertible
+    write(iunit) hm%lead(intf%il)%vks(1:np, 1)
 
     ! Write matrices.
     select case(ob%mem_type)
     case(SAVE_CPU_TIME)
       do ntime = 0, iter
         do j = 1, np
-          write(iunit) ob%mem_coeff(j, j:np, ntime, il)
+          write(iunit) ob%mem_coeff(j, j:np, ntime, intf%il)
         end do
       end do
     case(SAVE_RAM_USAGE) ! FIXME: only 2D.
       ASSERT(dim.eq.2)
-      write(iunit) ob%mem_s(:, :, 1, il)
+      write(iunit) ob%mem_s(:, :, 1, intf%il)
       do ntime = 0, iter
-        write(iunit) ob%mem_sp_coeff(1:np*order, ntime, il)
+        write(iunit) ob%mem_sp_coeff(1:np*order, ntime, intf%il)
       end do
     end select
 
@@ -686,19 +681,18 @@ contains
   ! Read memory coefficients from file.
   ! FIXME: this routine reads compiler and/or system dependent binary files.
   ! It should be chanegd to a platform independent format.
-  subroutine read_coeffs(dir, s_iter, ob, hm, intface, dim, iter, spacing, delta, op_n, order, il)
+  subroutine read_coeffs(dir, s_iter, ob, hm, intf, dim, iter, spacing, delta, op_n, order)
     character(len=*), intent(in)    :: dir
     integer,          intent(out)   :: s_iter                        ! Number of saved coefficients.
     type(ob_terms_t), intent(inout) :: ob
     type(hamiltonian_t), intent(in) :: hm
-    type(interface_t),intent(in)    :: intface
+    type(interface_t),intent(in)    :: intf
     integer,          intent(in)    :: dim                           ! Dimension of the problem.
     integer,          intent(in)    :: iter                          ! Number of coefficients.
     FLOAT,            intent(in)    :: spacing                       ! Spacing.
     FLOAT,            intent(in)    :: delta                         ! Timestep.
     integer,          intent(in)    :: op_n                          ! Number of operator points.
     integer,          intent(in)    :: order                         ! discretization order
-    integer,          intent(in)    :: il                            ! Which lead.
 
     integer :: ntime, j, iunit, s_dim, s_np, s_op_n, s_mem_type, np
     FLOAT   :: s_spacing, s_delta, det
@@ -708,10 +702,10 @@ contains
     call push_sub('ob_mem.read_coeffs')
 
     s_iter = 0
-    np = intface%np
+    np = intf%np
 
     ! Try to open file.
-    iunit = io_open(trim(dir)//trim(lead_name(il)), action='read', &
+    iunit = io_open(trim(dir)//trim(lead_name(intf%il)), action='read', &
       status='old', die=.false., is_tmp=.true., form='unformatted')
     if(iunit.lt.0) then ! no file found
       call pop_sub(); return
@@ -733,25 +727,26 @@ contains
     ! current parameter set.
     if((s_dim.eq.dim) .and. (s_np.eq.np) .and. (s_op_n.eq.op_n) &
       .and. (s_spacing.eq.spacing) .and. (s_delta.eq.delta) .and. (s_mem_type.eq.ob%mem_type) &
-      .and. (s_offdiag_invertible.eqv.intface%offdiag_invertible) ) then
+      .and. (s_offdiag_invertible.eqv.intf%offdiag_invertible) ) then
       ! read the potential
       read(iunit) s_vks(1:np)
-      if(hm%lead_vks(1:np, 1, il).app.s_vks(1:np)) then
+      if(hm%lead(intf%il)%vks(1:np, 1).app.s_vks(1:np)) then
         ! Read the coefficients.
         if (ob%mem_type.eq.SAVE_CPU_TIME) then ! Full (upper half) matrices.
           do ntime = 0, min(iter, s_iter)
-            do j = 1, intface%np
-              read(iunit) ob%mem_coeff(j, j:intface%np, ntime, il)
-              ob%mem_coeff(j:intface%np, j, ntime, il) = ob%mem_coeff(j, j:intface%np, ntime, il)
+            do j = 1, intf%np
+              read(iunit) ob%mem_coeff(j, j:intf%np, ntime, intf%il)
+              ob%mem_coeff(j:intf%np, j, ntime, intf%il) = &
+                          ob%mem_coeff(j, j:intf%np, ntime, intf%il)
             end do
           end do
         else ! Packed matrices (FIXME: yet only 2D).
           ASSERT(dim.eq.2)
-          read(iunit) ob%mem_s(:, :, 1, il)
-          ob%mem_s(:, :, 2, il) = ob%mem_s(1:intface%np, 1:intface%np, 1, il)
-          det = lalg_inverter(intface%np, ob%mem_s(:, :, 2, il), invert=.true.)
+          read(iunit) ob%mem_s(:, :, 1, intf%il)
+          ob%mem_s(:, :, 2, intf%il) = ob%mem_s(1:intf%np, 1:intf%np, 1, intf%il)
+          det = lalg_inverter(intf%np, ob%mem_s(:, :, 2, intf%il), invert=.true.)
           do ntime = 0, min(iter, s_iter)
-            read(iunit) ob%mem_sp_coeff(1:np*order, ntime, il)
+            read(iunit) ob%mem_sp_coeff(1:np*order, ntime, intf%il)
           end do
         end if
       else

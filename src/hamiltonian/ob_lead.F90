@@ -42,7 +42,8 @@ module ob_lead_m
     apply_coupling, &
     lead_diag,      &
     lead_offdiag,   &
-    lead_td_pot
+    lead_td_pot,    &
+    is_lead_transl_inv
 
 contains
 
@@ -112,10 +113,9 @@ contains
   ! Calculate the offdiagonal block matrix, i. e. the Hamiltonian for
   ! entries not contained in the interface region, which is the matrix
   ! V^T_\alpha or H_{C\alpha}.
-  subroutine lead_offdiag(lapl, intf, il, offdiag)
+  subroutine lead_offdiag(lapl, intf, offdiag)
     type(nl_operator_t), intent(in)  :: lapl
     type(interface_t),   intent(in)  :: intf
-    integer,             intent(in)  :: il
     CMPLX,               intent(out) :: offdiag(:, :)
 
     integer :: p_n(MAX_DIM), p_k(MAX_DIM), p_matr(MAX_DIM)
@@ -125,8 +125,8 @@ contains
     call push_sub('ob_lead.lead_offdiag')
 
     ! Coupling direction.
-    dir = (-1)**(il+1)
-    tdir = (il+1)/2
+    dir = (-1)**(intf%il+1)
+    tdir = (intf%il+1)/2
 
     offdiag(:, :) = M_z0
 
@@ -213,7 +213,7 @@ contains
     call push_sub('ob_lead.apply_coupling')
 
     res(1:np, 1:np) = matrix(1:np, 1:np)
-    if(il.eq.LEFT) then
+    if(mod(il+1,2)+1.eq.1) then
       call lalg_trmm(np, np, 'U', 'N', 'L', M_z1, offdiag, res)
       call lalg_trmm(np, np, 'U', 'T', 'R', M_z1, offdiag, res)
     else
@@ -261,6 +261,19 @@ contains
     SAFE_DEALLOCATE_A(pot_im)
     call pop_sub()
   end subroutine lead_td_pot
+
+  
+  ! ---------------------------------------------------------
+  ! Is the lead potential translational invariant (in transport direction)?
+  logical function is_lead_transl_inv(lapl, vks, intf)
+    type(nl_operator_t), intent(in)  :: lapl
+    FLOAT,               intent(in)  :: vks(:)
+    type(interface_t),   intent(in)  :: intf
+
+    is_lead_transl_inv = .false.
+
+  end function is_lead_transl_inv
+
 
 end module ob_lead_m
 

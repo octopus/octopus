@@ -49,10 +49,14 @@ module ob_lippmann_schwinger_m
   public :: &
     lippmann_schwinger
 
+  type pg
+    CMPLX, pointer           :: green(:, :, :)
+  end type pg
+
   ! Pointers to communicate with iterative linear solver.
   integer, pointer             :: ist_p, ik_p
   FLOAT, pointer               :: energy_p
-  CMPLX, pointer               :: green_p(:, :, :, :)
+  type(pg), pointer            :: lead_p(:)
   type(grid_t), pointer        :: gr_p
   type(hamiltonian_t), pointer :: hm_p
   type(states_t), pointer      :: st_p
@@ -73,7 +77,8 @@ contains
     FLOAT, target              :: energy
     FLOAT                      :: tol, res
     CMPLX, allocatable         :: rhs(:, :)
-    CMPLX, allocatable, target :: green(:, :, :, :)
+    type(pg), target           :: lead(NLEADS)
+!    CMPLX, allocatable, target :: green(:, :, :, :)
     logical                    :: conv
 #ifdef HAVE_MPI
     integer :: outcount
@@ -83,14 +88,16 @@ contains
     call push_sub('ob_lippmann_schwinger.lippmann_schwinger')
 
     SAFE_ALLOCATE(rhs(1:gr%mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE(green(1:gr%intf(LEFT)%np, 1:gr%intf(LEFT)%np, 1:st%d%dim, 1:NLEADS))
+    do il = 1, NLEADS
+      SAFE_ALLOCATE(lead(il)%green(1:gr%intf(LEFT)%np, 1:gr%intf(LEFT)%np, 1:st%d%dim))
+    end do
 
     eigens%converged = 0
     eigens%matvec    = 0
 
     ist_p    => ist
     ik_p     => ik
-    green_p  => green
+    lead_p   => lead
     gr_p     => gr
     hm_p     => hm
     st_p     => st
@@ -112,7 +119,7 @@ contains
         do idim = 1, st%d%dim
           do ip = 1, gr%mesh%np
             ip_lead = mod(ip-1, gr%intf(LEFT)%np) + 1
-            rhs(ip, idim) = rhs(ip, idim) + hm%lead_vks(ip_lead, idim, LEFT)*st%zphi(ip, idim, ist, ik)
+            rhs(ip, idim) = rhs(ip, idim) + hm%lead(LEFT)%vks(ip_lead, idim)*st%zphi(ip, idim, ist, ik)
           end do
         end do
 
@@ -125,17 +132,17 @@ contains
         do il = 1, NLEADS
           do idim = 1, st%d%dim
             np_intf = gr%intf(il)%np
-            call apply_coupling(st%ob_green(1:np_intf, 1:np_intf, idim, ist, ik, il), &
-                            hm%lead_h_offdiag(:, :, il), green(:, :, idim, il), np_intf, il)
+            call apply_coupling(st%ob_lead(il)%green(1:np_intf, 1:np_intf, idim, ist, ik), &
+                            hm%lead(il)%h_offdiag(:, :), lead(il)%green(:, :, idim), np_intf, il)
           end do
         end do
         do il = 1, NLEADS
           do idim = 1, st%d%dim
             if (associated(hm%ep%A_static)) then ! magnetic gs
-              call interface_apply_op(gr%intf(il), -M_z1, green(:, :, idim, il), &
+              call interface_apply_op(gr%intf(il), -M_z1, lead(il)%green(:, :, idim), &
                 st%zphi(:, idim, ist, ik), rhs(:, idim))
             else
-              call interface_apply_sym_op(gr%intf(il), -M_z1, green(:, :, idim, il), &
+              call interface_apply_sym_op(gr%intf(il), -M_z1, lead(il)%green(:, :, idim), &
                 st%zphi(:, idim, ist, ik), rhs(:, idim))
             end if
           end do
@@ -292,7 +299,7 @@ contains
     do il = 1, NLEADS
       do idim = 1, dim
         call interface_apply_sym_op(gr_p%intf(il), &
-          -M_z1, green_p(:, :, idim, il), tmp_x(:, idim), y(l(idim):u(idim)))
+          -M_z1, lead_p(il)%green(:, :, idim), tmp_x(:, idim), y(l(idim):u(idim)))
       end do
     end do
 

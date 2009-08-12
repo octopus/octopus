@@ -248,7 +248,7 @@ contains
     call mesh_write_info(gr%mesh, iunit)
     if(gr%sb%open_boundaries) then
       do il = 1, NLEADS
-        call interface_write_info(gr%intf(il), il, iunit)
+        call interface_write_info(gr%intf(il), iunit)
       end do
     end if
     if (gr%mesh%use_curvilinear) then

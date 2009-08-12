@@ -373,7 +373,7 @@ contains
     type(grid_t),     intent(in)    :: gr
     integer,          intent(out)   :: ierr
 
-    integer              :: io_wfns, io_occs, io_mesh, np, lead_np, i, err
+    integer              :: io_wfns, io_occs, io_mesh, np, lead_np, i, err, il
     integer              :: ik, ist, idim, tnp
     character            :: char
     character(len=256)   :: line, filename
@@ -388,7 +388,9 @@ contains
 
     mpi_grp = mpi_world
     ! Sanity check.
-    ASSERT(associated(st%ob_intf_psi))
+    do il = 1, NLEADS
+      ASSERT(associated(st%ob_lead(il)%intf_psi))
+    end do
 
     ierr = 0
 
@@ -453,11 +455,11 @@ contains
         ! running slowest).
         ! Outer block.
         tnp = gr%mesh%np+2*lead_np
-        st%ob_intf_psi(1:np, OUTER, idim, ist, ik, LEFT)  = tmp(lead_np-np+1:lead_np)
-        st%ob_intf_psi(1:np, OUTER, idim, ist, ik, RIGHT) = tmp(tnp-lead_np+1:tnp-lead_np+np)
+        st%ob_lead(LEFT)%intf_psi(1:np, OUTER, idim, ist, ik)  = tmp(lead_np-np+1:lead_np)
+        st%ob_lead(RIGHT)%intf_psi(1:np, OUTER, idim, ist, ik) = tmp(tnp-lead_np+1:tnp-lead_np+np)
         ! Inner block.
-        st%ob_intf_psi(1:np, INNER, idim, ist, ik, LEFT)  = tmp(lead_np+1:lead_np+np)
-        st%ob_intf_psi(1:np, INNER, idim, ist, ik, RIGHT) = tmp(tnp-lead_np-np+1:tnp-lead_np)
+        st%ob_lead(LEFT)%intf_psi(1:np, INNER, idim, ist, ik)  = tmp(lead_np+1:lead_np+np)
+        st%ob_lead(RIGHT)%intf_psi(1:np, INNER, idim, ist, ik) = tmp(tnp-lead_np-np+1:tnp-lead_np)
         if(err.le.0) then
           ierr = ierr + 1
         end if
@@ -970,7 +972,7 @@ contains
     type(states_t),       intent(inout) :: st
     type(grid_t), target, intent(in)    :: gr
     
-    integer                    :: k, ik, ist, idim, jk, err, wfns, occs
+    integer                    :: k, ik, ist, idim, jk, err, wfns, occs, il
     integer                    :: np, ip, lead_nr(2, MAX_DIM)
     character(len=256)         :: line, fname, filename, restart_dir, chars
     character                  :: char
@@ -1014,7 +1016,9 @@ contains
     st%d%kpoints(:, :) = M_ZERO
     st%d%kweights(:) = M_ZERO
 
-    st%ob_rho = M_ZERO
+    do il = 1, NLEADS
+      st%ob_lead(il)%rho = M_ZERO
+    end do
     call mpi_grp_copy(m_lead%mpi_grp, gr%mesh%mpi_grp)
     do
       ! Check for end of file. Check only one of the two files assuming
@@ -1109,7 +1113,7 @@ contains
       !FIXME no spinors yet
       do il = 1, NLEADS
         do ip = 1, np
-          st%ob_rho(ip, idim, il) = st%ob_rho(ip, idim, il) + w_k*occ* &
+          st%ob_lead(il)%rho(ip, idim) = st%ob_lead(il)%rho(ip, idim) + w_k*occ* &
             (real(tmp(ip, idim), REAL_PRECISION)**2 + aimag(tmp(ip, idim))**2)
         end do
         select case(st%d%ispin)
@@ -1119,8 +1123,8 @@ contains
 !          if(k_idim.eq.2) then
 !            do ip = 1, np
 !              c = w_k*occ*tmp(ip, 1)*conjg(tmp(ip, 2))
-!              st%ob_rho(ip, 3, il) = st%ob_rho(ip, 3, il) + real(c, REAL_PRECISION)
-!              st%ob_rho(ip, 4, il) = st%ob_rho(ip, 4, il) + aimag(c)
+!              st%ob_lead(il)%rho(ip, 3) = st%ob_lead(il)%rho(ip, 3) + real(c, REAL_PRECISION)
+!              st%ob_lead(il)%rho(ip, 4) = st%ob_lead(il)%rho(ip, 4l) + aimag(c)
 !            end do
 !          end if
         end select

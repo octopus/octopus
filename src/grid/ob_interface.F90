@@ -35,15 +35,16 @@ module ob_interface_m
   implicit none
 
   private
-  public ::               &
+  public ::                 &
+    lead_t,                 &
     interface_apply_sym_op, &
     interface_apply_op,     &
-    interface_t,          &
-    interface_init,       &
-    interface_end,        &
-    interface_write_info, &
-    get_intf_wf,          &
-    put_intf_wf,          &
+    interface_t,            &
+    interface_init,         &
+    interface_end,          &
+    interface_write_info,   &
+    get_intf_wf,            &
+    put_intf_wf,            &
     member_of_interface
 
   ! Describes the points belonging to the left and right interface in an
@@ -54,35 +55,57 @@ module ob_interface_m
     integer          :: extent
     integer          :: np      ! number of interface points
     integer          :: np_uc   ! number of unit cell points
-    integer          :: nh      ! nh = np_uc / np number of interfaces in a unit cell
+    integer          :: nblocks ! nblocks = np_uc / np number of interfaces in a unit cell
+    integer          :: il      ! which lead (1..NLEADS)
     integer, pointer :: index(:)       ! (np)
     integer          :: index_range(2)
     logical          :: offdiag_invertible
   end type interface_t
 
+  type lead_t
+    CMPLX, pointer :: h_diag(:, :, :)      ! Diagonal block of the lead Hamiltonian.
+    CMPLX, pointer :: h_offdiag(:, :)      ! Offdiagonal block of the lead Hamiltonian.
+    FLOAT, pointer :: vks(:, :)            ! (np, nspin) Kohn-Sham potential of the leads.
+    FLOAT, pointer :: vhartree(:)          ! (np) Hartree potential of the leads.
+  end type lead_t
+
 contains
 
   ! ---------------------------------------------------------
   ! Calculate the member points of the interface region.
-  subroutine interface_init(m, sb, der_discr, intf, il)
+  subroutine interface_init(m, sb, der_discr, intf, il, extent)
     type(mesh_t),        intent(in)  :: m
     type(simul_box_t),   intent(in)  :: sb
     type(derivatives_t), intent(in)  :: der_discr
     type(interface_t),   intent(out) :: intf
     integer,             intent(in)  :: il
+    integer, optional,   intent(in)  :: extent
 
     logical :: ok
     integer :: i, from(MAX_DIM), to(MAX_DIM), ll(MAX_DIM), dir, lr, tdir
 
     call push_sub('ob_interface.interface_init')
 
+    intf%il = il
+
     tdir = (il+1)/2
-    ASSERT(stencil_extent(der_discr, tdir).le.lead_unit_cell_extent(sb, il))
-    intf%extent = maxval((/stencil_extent(der_discr, tdir), lead_unit_cell_extent(sb, il)/))
-    ! FIXME: not sure if it holds for lead-potentials with dependence in transport direction
-    if(stencil_extent(der_discr, tdir).eq.1) then
-      intf%extent = intf%extent - 1
-    end if
+    
+    if (present(extent)) then
+      write(*,*) 'stencil_extent(tdir)', tdir, stencil_extent(der_discr, tdir)
+      write(*,*) 'extent', extent
+      ASSERT(stencil_extent(der_discr, tdir).le.extent)
+      intf%extent = extent
+    else
+      write(*,*) 'stencil_extent(tdir)', tdir, stencil_extent(der_discr, tdir)
+      write(*,*) 'lead_unit_cell_extent(sb, il)', il, lead_unit_cell_extent(sb, il)
+      ASSERT(stencil_extent(der_discr, tdir).le.lead_unit_cell_extent(sb, il))
+      intf%extent = maxval((/stencil_extent(der_discr, tdir), lead_unit_cell_extent(sb, il)/))
+      ! if the lead potential has no dependence in transport direction
+      ! then reduce size of unit cell extent to interface extent
+      !if(stencil_extent(der_discr, tdir).eq.1) then
+      !  intf%extent = intf%extent - 1
+      !end if
+    endif
     if(intf%extent.eq.stencil_extent(der_discr, tdir)) then
       intf%offdiag_invertible = .true.
     else
@@ -123,25 +146,6 @@ contains
     call sort(intf%index)
     intf%index_range(1) = intf%index(1)
     intf%index_range(2) = intf%index(intf%np)
-
-    ! In debug mode, check if x_intface is dense, i. e. no index
-    ! between min(x_index) and max(x_index) is omitted.
-    ! As transport is along x-axis, which is the index running slowest,
-    ! this should be the case.
-    if(in_debug_mode) then
-      ok = .true.
-      do i = intf%index_range(1), intf%index_range(2)
-        if(intf%index(i-intf%index_range(1)+1).ne.i) then
-          ok = .false.
-        end if
-      end do
-      if(.not.ok) then
-        message(1) = 'Failed assertion:'
-        message(2) = 'ob_interface.interface_init: the interface region'
-        message(3) = 'has holes.'
-        call write_warning(3)
-      end if
-    end if
 
     call pop_sub()
   end subroutine interface_init
@@ -282,14 +286,13 @@ contains
 
   ! ---------------------------------------------------------
   ! Write number of interface points.
-  subroutine interface_write_info(intf, il, iunit)
+  subroutine interface_write_info(intf, iunit)
     type(interface_t), intent(in) :: intf
-    integer,           intent(in) :: il
-    integer,           intent(in) ::iunit
+    integer,           intent(in) :: iunit
 
     call push_sub('ob_interface.interface_write_info')
 
-    write(message(1), '(a,i6)') 'Number of points in '//LEAD_NAME(il)// &
+    write(message(1), '(a,i6)') 'Number of points in '//LEAD_NAME(intf%il)// &
       ' interface: ', intf%np
     call write_info(1, iunit)
 
