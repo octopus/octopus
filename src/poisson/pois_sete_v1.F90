@@ -18,13 +18,16 @@
 
         USE POIS_DATA_G ! global Poisson data
         USE POIS_DATA_L ! local Poisson data
-        IMPLICIT FLOAT (A-H,O-Z)
+
+        implicit none
+
 	FLOAT, intent(in) :: XL,YL,ZL
 	INTEGER, intent(in) :: NX,NY,NZ
         CHARACTER*40 :: CDUM,FIL1
-        FLOAT :: BOHRNM,ANGSNM
+        FLOAT :: BOHRNM, ANGSNM
 	INTEGER :: J1,K1, M, I,J,K
 	FLOAT :: ZCEN, XCEN, YCEN, VHMIN, VHMAX
+
         PI=DACOS(-1.D0)
         PCONST=4*PI ! need 4 pi for Hartrees I think (??)
 	BOHRNM=BOHR/10.0
@@ -36,12 +39,15 @@
            READ(57,'(A40)')CDUM
            READ(57,'(A40)')CDUM
            READ(57,'(A40)')CDUM
-           READ(57,*)IDEV,IPOISSON_SETE_ON ! for future use - device configuration
-           write(*,*)"IPOISSON_SETE is ON", IPOISSON_SETE_ON
+           READ(57,*)IDEV, IPOISSON_SETE_ON ! for future use - device configuration
+           write(*,*)"ISETE is ON", IPOISSON_SETE_ON
            IF(IDEV.EQ.1)THEN
 ! physical device characteristics
               READ(57,*)ZWIDTH;ZWIDTH=ZWIDTH*ANGSNM  ! distance between plates (nm)
-              READ(57,*)ZCEN;ZCEN=ZCEN*ANGSNM
+
+              READ(57,*) ZCEN
+              zcen = zcen*angsnm
+
               READ(57,*)NGATES;
               allocate(VTV(NGATES)); allocate(VT(NGATES))
               READ(57,*)VTV(1),VTV(2) ! voltage on plates in volts and nm?
@@ -64,7 +70,9 @@
               WRITE(6,*)' IDEV not supported '
               RETURN
            ENDIF
-      CALL XYZGRID(nx,ny,nz,xl,yl,zl)  ! establish x-y-z grids
+
+           call xyzgrid(nx, ny, nz, xl, yl, zl, xcen, ycen, zcen)  ! establish x-y-z grids
+
       CALL CBSURF !Assign boundaries 
            NELT=32+20*((NXTOT-2)+(NYTOT-2)+(NZTOT-2))+ &
                 12*((NXTOT-2)*(NYTOT-2)+(NXTOT-2)*(NZTOT-2)+(NYTOT-2)*(NZTOT-2)) + &

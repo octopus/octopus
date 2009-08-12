@@ -1,20 +1,21 @@
 #include <global.h>
 
-      subroutine xyzgrid(nx, ny, nz, xl, yl, zl)
-     ! Input: NX, NY, NZ -> No. of octopus grid points in each dimension
-     ! Input: XL, YL, ZL -> Size of the octopus box
-
-	Use pois_data_g ! global Poisson data
-        use pois_data_l ! local Poisson data
-
-        implicit none
+subroutine xyzgrid(nx, ny, nz, xl, yl, zl, xcen, ycen, zcen)
+  ! Input: NX, NY, NZ -> No. of octopus grid points in each dimension
+  ! Input: XL, YL, ZL -> Size of the octopus box
+  
+  Use pois_data_g ! global Poisson data
+  use pois_data_l ! local Poisson data
+  
+  implicit none
 
         integer, intent(in) :: nx, ny, nz
         FLOAT,   intent(in) :: xl, yl, zl
+        FLOAT,   intent(in) :: xcen, ycen, zcen
 
-        FLOAT   :: dx1b, dx1t, dx_oct, xbot, xtest, xtop, xcen, xwidth_big
-        FLOAT   :: dy1b, dy1t, dy_oct, ybot, ytop, ycen, ywidth_big
-        FLOAT   :: dz1b, dz1t, dz_oct, zbot, ztest, ztop, zcen
+        FLOAT   :: dx1b, dx1t, dx_oct, xbot, xtest, xtop, xwidth_big
+        FLOAT   :: dy1b, dy1t, dy_oct, ybot, ytop, ywidth_big
+        FLOAT   :: dz1b, dz1t, dz_oct, zbot, ztest, ztop
         integer :: i, j, k, m
         integer :: nxtop, nytop, nztop
         integer :: nxtot_0, nytot_0
@@ -29,25 +30,30 @@
 	!write(62,*)"XL,YL,ZL ",XL,YL,ZL
 ! z-mesh -- differs from x,y mesh because no border points
 !           hence NZTOT_0 = NZTOT (ie there IS no NZTOT_0)
-        NZTOT=NZ+NZ2
+        nztot = nz + nz2
+
         allocate(zg(nztot))
         allocate(dz(nztot))
+
 	!top and bottom z coordinates.
 	!Depend on POISSON_SETE (ZWIDTH) 
 	!and Octopus (ZL)parameters.
-        ZTOP=0.5*ZWIDTH-ZCEN-0.5*ZL
-        ZBOT=0.5*ZWIDTH+ZCEN-0.5*ZL
+        ztop = CNST(0.5)*zwidth - zcen - CNST(0.5)*zl
+        zbot = CNST(0.5)*zwidth + zcen - CNST(0.5)*zl
 
-        NZTOP=INT(NZ2*ZTOP/(ZTOP+ZBOT))
-        NZBOT=NZ2-NZTOP
+        nztop = int(nz2*ztop/(ztop + zbot))
+        nzbot = nz2 - nztop
+
         DZ1B=ZBOT/TOFLOAT(NZBOT)
         DO K=1,NZBOT
            DZ(K)=DZ1B
         ENDDO
         DZ_OCT=ZL/TOFLOAT(NZ)
-        DO K=NZBOT+1,NZBOT+NZ
-           DZ(K)=DZ_OCT
-        ENDDO
+
+        do k = nzbot + 1, nzbot + nz
+          dz(k) = dz_oct
+        end do
+
         DZ1T=ZTOP/TOFLOAT(NZTOP)
         DO K=NZBOT+NZ+1,NZTOT
            DZ(K)=DZ1T
@@ -189,5 +195,4 @@
         write(56,*)' dyg '
         write(56,101)(dyg(k),k=1,nytot)
 
-        RETURN
-      END SUBROUTINE XYZGRID
+end subroutine xyzgrid
