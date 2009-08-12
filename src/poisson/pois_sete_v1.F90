@@ -79,7 +79,8 @@
                 7*(NXTOT-2)*(NYTOT-2)*(NZTOT-2)
            LENW=NELT+9*NXTOT*NYTOT*NZTOT
            LENIW=NELT+5*NXTOT*NYTOT*NZTOT+12
-           allocate(Q2(NTOT)); allocate(AW(NELT))
+           allocate(q2(ntot))
+           allocate(AW(NELT))
            allocate(QS(NTOT))
            allocate(ADIAG(NTOT)); allocate(IDIAG(NTOT))
            allocate(IAD(NELT)); allocate(JAD(NELT))

@@ -41,6 +41,8 @@
         I=1; J=1; K=1
         IEC=1 ! counter for number of non-zero entries in AW.
 
+        q2(1:ntot) = M_ZERO
+
         DO IA=1,NTOT
            AV=0.D0
            IF(IPIO(I,J,K).EQ.0)THEN ! the point itself must be
