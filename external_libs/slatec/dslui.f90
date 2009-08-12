@@ -46,7 +46,7 @@
       INTEGER ISYM, N, NELT 
 !     .. Array Arguments ..                                             
       DOUBLE PRECISION A(NELT), B(N), RWORK(*), X(N) 
-      INTEGER IA(NELT), IWORK(10), JA(NELT) 
+      INTEGER IA(NELT), IWORK(*), JA(NELT) 
 !     .. Local Scalars ..                                               
       INTEGER LOCDIN, LOCIL, LOCIU, LOCJL, LOCJU, LOCL, LOCU 
 !     .. External Subroutines ..                                        
