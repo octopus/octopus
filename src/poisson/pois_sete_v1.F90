@@ -377,6 +377,7 @@ contains
           END SELECT
         end do
       ELSE
+        write(57,*) "At else", I, J, K
         AV(4) = M_ONE/PCONST ! for points that are out of the grid.
       end if
       !                                 DSLUCS matrix and normalizations
@@ -436,7 +437,6 @@ contains
     if(idebug == 1)then
       close(57)
     endif
-
   end subroutine poissonm
 
 
@@ -467,9 +467,7 @@ contains
     !  a homogeneous grid approximation is made: derivative
     !  at metal-semi border calculated discretely with 1/DXG (1/DYG,1/DZ)
     !  rather than properly averaged spacings.
-    write(*,*) "In capser.F90"
     allocate(SIG(NXTOT,NYTOT,NZTOT,6))
-    write(*,*) "Just called SIG"
     SIG=0.0
     DO I=1,NXTOT 
       DO J=1,NYTOT
@@ -534,6 +532,8 @@ contains
     IPIO=0; VBOUND=0.0
     IF(IDEV == 1)THEN ! parallel plates
       DIELECTRIC=DIELECTRIC0
+!      dielectric(:,:,0)=
+!      dielectric(:,:,NZTOT+1)=
       IPIO(:,:,0)=1
       IPIO(:,:,NZTOT+1)=1
       VBOUND(:,:,0)=VT(1)
@@ -559,7 +559,18 @@ contains
     deallocate(IAD);deallocate(JAD);deallocate(ADIAG)
     deallocate(IDIAG);deallocate(X2)
     deallocate(DXL);deallocate(DYL)
-    !	deallocate(VH_BIG)
+    deallocate(dielectric)
+    deallocate(zg)
+    deallocate(xg)
+    deallocate(yg)
+    deallocate(dz)
+    deallocate(dyg)
+    deallocate(dxg)
+    deallocate(ky)
+    deallocate(iy)
+    deallocate(jy)
+    deallocate(VH_BIG)
+    deallocate(aw)
   end subroutine poisson_sete_end
 
   !--------------------------------------------
