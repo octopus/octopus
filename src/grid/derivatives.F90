@@ -114,21 +114,6 @@ module derivatives_m
 #endif
   end type derivatives_t
 
-
-  type derivatives_handle_t
-    private
-#ifdef HAVE_MPI
-    type(pv_handle_t) :: pv_h
-    logical           :: parallel_in_domains
-#endif
-    FLOAT, pointer    :: df(:)
-    CMPLX, pointer    :: zf(:)
-    FLOAT, pointer    :: dlapl(:)
-    CMPLX, pointer    :: zlapl(:)
-    logical           :: ghost_update
-  end type derivatives_handle_t
-
-
   type derivatives_handle_batch_t
     private
 #ifdef HAVE_MPI
@@ -140,6 +125,7 @@ module derivatives_m
     type(batch_t),       pointer :: opff
     logical                      :: ghost_update
   end type derivatives_handle_batch_t
+
 
   type(profile_t), save :: set_bc_prof
 #ifdef HAVE_MPI
@@ -637,40 +623,6 @@ contains
 
     call pop_sub()
   end subroutine derivatives_make_discretization
-
-
-  ! ---------------------------------------------------------
-  subroutine derivatives_handle_init(this, der)
-    type(derivatives_handle_t),  intent(out) :: this
-    type(derivatives_t),         intent(in)  :: der
-
-    call push_sub('derivatives.derivatives_handle_init')
-
-    nullify(this%df, this%zf)
-    nullify(this%dlapl, this%zlapl)
-#ifdef HAVE_MPI
-    this%parallel_in_domains = der%mesh%parallel_in_domains
-    if(this%parallel_in_domains) call pv_handle_init(this%pv_h, der%mesh%vp, der%comm_method)
-#endif
-
-    call pop_sub()
-  end subroutine derivatives_handle_init
-
-
-  ! ---------------------------------------------------------
-  subroutine derivatives_handle_end(this)
-    type(derivatives_handle_t), intent(inout) :: this
-
-    call push_sub('derivatives.derivatives_handle_end')
-
-    nullify(this%df, this%zf)
-    nullify(this%dlapl, this%zlapl)
-#ifdef HAVE_MPI
-    if(this%parallel_in_domains) call pv_handle_end(this%pv_h)
-#endif
-
-    call pop_sub()
-  end subroutine derivatives_handle_end
 
 
 #ifdef HAVE_MPI    

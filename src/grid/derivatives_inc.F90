@@ -23,6 +23,184 @@
 ! are calculated. This was made to simplify the parallel mode, and has to be
 ! followed by the rest of the code.
 
+
+! ---------------------------------------------------------
+! Set all boundary points in f to zero to implement zero
+! boundary conditions for the derivatives, in finite system;
+! or set according to periodic boundary conditions.
+subroutine X(derivatives_batch_set_bc)(der, batch_ff)
+  type(derivatives_t), intent(in)    :: der
+  type(batch_t),       intent(inout) :: batch_ff
+
+  integer :: pp, bndry_start, bndry_end
+
+  call push_sub('derivatives_inc.Xset_bc_batch')
+  call profiling_in(set_bc_prof, 'SET_BC')
+
+  pp = der%mesh%vp%partno
+
+  ! The boundary points are at different locations depending on the presence
+  ! of ghost points due to domain parallelization.
+  if(der%mesh%parallel_in_domains) then
+    bndry_start = der%mesh%vp%np_local(pp) + der%mesh%vp%np_ghost(pp) + 1
+    bndry_end   = der%mesh%vp%np_local(pp) + der%mesh%vp%np_ghost(pp) + der%mesh%vp%np_bndry(pp)
+  else
+    bndry_start = der%mesh%np + 1
+    bndry_end   = der%mesh%np_part
+  end if
+  
+  if(der%zero_bc)         call zero_boundaries()
+  if(der%mesh%sb%mr_flag) call multiresolution()
+  if(der%periodic_bc)     call periodic()
+  
+  call profiling_out(set_bc_prof)
+  call pop_sub()
+
+contains
+  ! ---------------------------------------------------------
+  subroutine zero_boundaries()
+    integer :: ist, ip
+
+    forall (ist=1:batch_ff%nst_linear, ip=bndry_start:bndry_end)
+      batch_ff%states_linear(ist)%X(psi)(ip) = R_TOTYPE(M_ZERO)
+    end forall
+  end subroutine zero_boundaries
+
+
+  ! ---------------------------------------------------------
+  subroutine multiresolution()
+    integer :: ist, ip
+    integer :: ii, jj, kk, ix, iy, iz, dx, dy, dz, i_lev
+    FLOAT :: weight
+    R_TYPE, pointer :: ff(:)
+
+    do ist = 1, batch_ff%nst_linear
+      ff => batch_ff%states_linear(ist)%X(psi)
+
+      do ip = bndry_start, bndry_end
+        ix = der%mesh%idx%Lxyz(ip, 1)
+        iy = der%mesh%idx%Lxyz(ip, 2)
+        iz = der%mesh%idx%Lxyz(ip, 3)
+
+        i_lev = der%mesh%resolution(ix,iy,iz)
+
+        ! resolution is 2**num_radii for outer boundary points, but now we want inner boundary points
+        if(i_lev.ne.2**der%mesh%sb%hr_area%num_radii) then
+          dx = abs(mod(ix, 2**(i_lev)))
+          dy = abs(mod(iy, 2**(i_lev)))
+          dz = abs(mod(iz, 2**(i_lev)))
+
+          do ii = 1, der%mesh%sb%hr_area%interp%nn
+            do jj = 1, der%mesh%sb%hr_area%interp%nn
+              do kk = 1, der%mesh%sb%hr_area%interp%nn
+                weight = der%mesh%sb%hr_area%interp%ww(ii)* &
+                  der%mesh%sb%hr_area%interp%ww(jj)*        &
+                  der%mesh%sb%hr_area%interp%ww(kk)
+
+                ff(ip) = ff(ip) + weight * ff(der%mesh%idx%Lxyz_inv(   &
+                  ix + der%mesh%sb%hr_area%interp%posi(ii)*dx,        &
+                  iy + der%mesh%sb%hr_area%interp%posi(jj)*dy,        &
+                  iz + der%mesh%sb%hr_area%interp%posi(kk)*dz))
+              end do
+            end do
+          end do
+        end if
+
+      end do ! ip
+    end do ! ist
+  end subroutine multiresolution
+
+
+  ! ---------------------------------------------------------
+  subroutine periodic()
+    integer :: ip, ist
+    R_TYPE, pointer :: ff(:)
+
+#ifdef HAVE_MPI
+    integer :: ipart, nreq
+    integer, allocatable :: req(:), statuses(:, :)
+#endif
+
+#ifdef HAVE_MPI
+    if(der%mesh%parallel_in_domains) then
+      call profiling_in(set_bc_comm_prof, 'SET_BC_COMMUNICATION')
+      
+      ! get the points that are copies from other nodes
+      SAFE_ALLOCATE(req(1:2*der%mesh%vp%npart*batch_ff%nst_linear))
+
+      nreq = 0
+
+      do ist = 1, batch_ff%nst_linear
+        do ipart = 1, der%mesh%vp%npart
+          if(ipart == der%mesh%vp%partno .or. der%mesh%nrecv(ipart) == 0) cycle
+
+          ff => batch_ff%states_linear(ist)%X(psi)
+          nreq = nreq + 1
+          call MPI_Irecv(ff(1), 1, der%mesh%X(recv_type)(ipart), ipart - 1, 3, &
+            der%mesh%vp%comm, req(nreq), mpi_err)
+        end do
+      end do
+      
+      do ist = 1, batch_ff%nst_linear
+        do ipart = 1, der%mesh%vp%npart
+          if(ipart == der%mesh%vp%partno .or. der%mesh%nsend(ipart) == 0) cycle
+
+          ff => batch_ff%states_linear(ist)%X(psi)
+          nreq = nreq + 1
+          call MPI_Isend(ff(1), 1, der%mesh%X(send_type)(ipart), ipart - 1, 3, &
+            der%mesh%vp%comm, req(nreq), mpi_err)
+        end do
+      end do
+      
+      call profiling_count_transfers(  &
+        sum(der%mesh%nsend(1:der%mesh%vp%npart) + der%mesh%nrecv(1:der%mesh%vp%npart))*batch_ff%nst_linear, &
+        R_TOTYPE(M_ONE))
+      
+      call profiling_out(set_bc_comm_prof)
+    end if
+#endif
+    
+    do ist = 1, batch_ff%nst_linear
+      ff => batch_ff%states_linear(ist)%X(psi)
+      forall (ip = 1:der%mesh%nper)
+        ff(der%mesh%per_points(ip)) = ff(der%mesh%per_map(ip))
+      end forall
+    end do
+    
+#ifdef HAVE_MPI
+    if(der%mesh%parallel_in_domains) then
+      call profiling_in(set_bc_comm_prof)
+      
+      SAFE_ALLOCATE(statuses(1:MPI_STATUS_SIZE, 1:nreq))
+      call MPI_Waitall(nreq, req(1), statuses(1, 1), mpi_err)
+      SAFE_DEALLOCATE_A(statuses)
+      SAFE_DEALLOCATE_A(req)
+      
+      call profiling_out(set_bc_comm_prof)
+    end if
+#endif
+  end subroutine periodic
+
+end subroutine X(derivatives_batch_set_bc)
+
+
+! ---------------------------------------------------------
+subroutine X(derivatives_set_bc)(der, ff)
+  type(derivatives_t), intent(in)    :: der
+  R_TYPE,              intent(inout) :: ff(:)
+
+  type(batch_t) :: batch_ff
+
+  call batch_init     (batch_ff, 1)
+  call batch_add_state(batch_ff, ff)
+
+  call X(derivatives_batch_set_bc)(der, batch_ff)
+
+  call batch_end(batch_ff)
+
+end subroutine X(derivatives_set_bc)
+
+
 ! ---------------------------------------------------------
 ! This are the workhorse routines that handle the calculation of derivatives
 subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, set_bc)
@@ -269,245 +447,6 @@ subroutine X(derivatives_curl)(der, ff, op_ff, ghost_update, set_bc)
   call pop_sub()
 end subroutine X(derivatives_curl)
 
-
-! ---------------------------------------------------------
-! Set all boundary points in f to zero to implement zero
-! boundary conditions for the derivatives, in finite system;
-! or set according to periodic boundary conditions.
-subroutine X(derivatives_set_bc)(der, f)
-  type(derivatives_t), intent(in)    :: der
-  R_TYPE,              intent(inout) :: f(:)
-
-  integer :: bndry_start, bndry_end
-  integer :: p
-  integer :: iper, ip, ix, iy, iz, dx, dy, dz
-#ifdef HAVE_MPI
-  integer :: ipart, nreq
-  integer, allocatable :: req(:), statuses(:, :)
-#endif
-
-  call push_sub('derivatives_inc.Xset_bc')
-  call profiling_in(set_bc_prof, 'SET_BC')
-  
-  ASSERT(ubound(f, DIM=1) >= der%mesh%np_part)
-
-  p = der%mesh%vp%partno
-  
-  ! The boundary points are at different locations depending on the presence
-  ! of ghost points due to domain parallelization.
-  if(der%mesh%parallel_in_domains) then
-    bndry_start = der%mesh%vp%np_local(p) + der%mesh%vp%np_ghost(p) + 1
-    bndry_end   = der%mesh%vp%np_local(p) + der%mesh%vp%np_ghost(p) + der%mesh%vp%np_bndry(p)
-  else
-    bndry_start = der%mesh%np+1
-    bndry_end   = der%mesh%np_part
-  end if
-    
-  if(der%zero_bc) then
-    forall(ip = bndry_start:bndry_end) f(ip) = R_TOTYPE(M_ZERO)
-  end if
-
-  if(der%mesh%sb%mr_flag) call multires()
-
-  if(der%periodic_bc) then
-
-#ifdef HAVE_MPI
-    if(der%mesh%parallel_in_domains) then
-      call profiling_in(set_bc_comm_prof, 'SET_BC_COMMUNICATION')
-      ! get the points from other nodes
-      SAFE_ALLOCATE(req(1:2*der%mesh%vp%npart))
-
-      nreq = 0
-
-      do ipart = 1, der%mesh%vp%npart
-        if(ipart == p .or. der%mesh%nsend(ipart) == 0) cycle
-        nreq = nreq + 1
-        call MPI_Isend(f(1), 1, der%mesh%X(send_type)(ipart), ipart - 1, 3, der%mesh%vp%comm, req(nreq), mpi_err)
-      end do
-
-      do ipart = 1, der%mesh%vp%npart
-        if(ipart == p .or. der%mesh%nrecv(ipart) == 0) cycle
-        nreq = nreq + 1
-        call MPI_Irecv(f(1), 1, der%mesh%X(recv_type)(ipart), ipart - 1, 3, der%mesh%vp%comm, req(nreq), mpi_err)
-      end do
-
-      call profiling_count_transfers(sum(der%mesh%nrecv(1:der%mesh%vp%npart) + der%mesh%nrecv(1:der%mesh%vp%npart)), f(1))
-
-      call profiling_out(set_bc_comm_prof)
-    end if
-#endif
-
-    do iper = 1, der%mesh%nper
-      f(der%mesh%per_points(iper)) = f(der%mesh%per_map(iper))
-    end do
-
-#ifdef HAVE_MPI
-    if(der%mesh%parallel_in_domains) then
-      call profiling_in(set_bc_comm_prof)
-
-      SAFE_ALLOCATE(statuses(1:MPI_STATUS_SIZE, 1:nreq))
-      call MPI_Waitall(nreq, req(1), statuses(1, 1), mpi_err)
-      SAFE_DEALLOCATE_A(statuses)
-      SAFE_DEALLOCATE_A(req)
-
-      call profiling_out(set_bc_comm_prof)
-    end if
-#endif
-
-  end if
-
-  call profiling_out(set_bc_prof)
-  call pop_sub()
-
-contains 
-
-  subroutine multires()
-    integer :: ii, jj, kk, i_lev
-    
-    call push_sub('derivatives_inc.Xset_bc.multires')
-
-    do ip = bndry_start, bndry_end
-      ix = der%mesh%idx%Lxyz(ip, 1)
-      iy = der%mesh%idx%Lxyz(ip, 2)
-      iz = der%mesh%idx%Lxyz(ip, 3)
-
-      i_lev = der%mesh%resolution(ix,iy,iz)
-
-      ! resolution is 2**num_radii for outer boundary points, but now we want inner boundary points
-      if(i_lev.ne.2**der%mesh%sb%hr_area%num_radii) then
-
-        dx = abs(mod(ix, 2**(i_lev)))
-        dy = abs(mod(iy, 2**(i_lev)))
-        dz = abs(mod(iz, 2**(i_lev)))
-
-        do ii = 1, der%mesh%sb%hr_area%interp%nn
-          do jj = 1, der%mesh%sb%hr_area%interp%nn
-            do kk = 1, der%mesh%sb%hr_area%interp%nn
-              f(ip) = f(ip) + der%mesh%sb%hr_area%interp%ww(ii)*&
-                              der%mesh%sb%hr_area%interp%ww(jj)*&
-                              der%mesh%sb%hr_area%interp%ww(kk)*&
-                              f(der%mesh%idx%Lxyz_inv(ix + der%mesh%sb%hr_area%interp%posi(ii)*dx, &
-                                                      iy + der%mesh%sb%hr_area%interp%posi(jj)*dy, &
-                                                      iz + der%mesh%sb%hr_area%interp%posi(kk)*dz))
-            end do
-          end do
-        end do
-        
-      end if
-      
-    end do
-
-    call pop_sub()
-  end subroutine multires
-
-end subroutine X(derivatives_set_bc)
-
-! ---------------------------------------------------------
-! Set all boundary points in f to zero to implement zero
-! boundary conditions for the derivatives, in finite system;
-! or set according to periodic boundary conditions.
-subroutine X(derivatives_batch_set_bc)(der, fb)
-  type(derivatives_t), intent(in)    :: der
-  type(batch_t),       intent(inout) :: fb
-
-  integer :: ip, ist
-  integer :: pp, bndry_start, bndry_end
-#ifdef HAVE_MPI
-  integer :: ipart, nreq
-  integer, allocatable :: req(:), statuses(:, :)
-#endif
-
-  call push_sub('derivatives_inc.Xset_bc_batch')
-
-  if(der%mesh%sb%mr_flag) then
-    do ist = 1, fb%nst_linear
-      call X(derivatives_set_bc)(der, fb%states_linear(ist)%X(psi)(:))
-    end do
-    
-  else
-
-    call profiling_in(set_bc_prof, 'SET_BC')
-    pp = der%mesh%vp%partno
-
-    ! The boundary points are at different locations depending on the presence
-    ! of ghost points due to domain parallelization.
-    if(der%mesh%parallel_in_domains) then
-      bndry_start = der%mesh%vp%np_local(pp) + der%mesh%vp%np_ghost(pp) + 1
-      bndry_end   = der%mesh%vp%np_local(pp) + der%mesh%vp%np_ghost(pp) + der%mesh%vp%np_bndry(pp)
-    else
-      bndry_start = der%mesh%np + 1
-      bndry_end   = der%mesh%np_part
-    end if
-
-    if(der%zero_bc) then
-      forall (ist=1:fb%nst_linear, ip=bndry_start:bndry_end)
-        fb%states_linear(ist)%X(psi)(ip) = R_TOTYPE(M_ZERO)
-      end forall
-    end if
-
-    if(der%periodic_bc) then
-
-#ifdef HAVE_MPI
-      if(der%mesh%parallel_in_domains) then
-        call profiling_in(set_bc_comm_prof, 'SET_BC_COMMUNICATION')
-
-        ! get the points that are copies from other nodes
-        SAFE_ALLOCATE(req(1:2*der%mesh%vp%npart*fb%nst_linear))
-
-        nreq = 0
-
-        do ist = 1, fb%nst_linear
-          do ipart = 1, der%mesh%vp%npart
-            if(ipart == der%mesh%vp%partno .or. der%mesh%nrecv(ipart) == 0) cycle
-            nreq = nreq + 1
-            call MPI_Irecv(fb%states_linear(ist)%X(psi)(1), 1, der%mesh%X(recv_type)(ipart), ipart - 1, 3, &
-                   der%mesh%vp%comm, req(nreq), mpi_err)
-          end do
-        end do
-
-        do ist = 1, fb%nst_linear
-          do ipart = 1, der%mesh%vp%npart
-            if(ipart == der%mesh%vp%partno .or. der%mesh%nsend(ipart) == 0) cycle
-            nreq = nreq + 1
-            call MPI_Isend(fb%states_linear(ist)%X(psi)(1), 1, der%mesh%X(send_type)(ipart), ipart - 1, 3, &
-              der%mesh%vp%comm, req(nreq), mpi_err)
-          end do
-        end do
-        
-        call profiling_count_transfers(&
-        sum(der%mesh%nsend(1:der%mesh%vp%npart) + der%mesh%nrecv(1:der%mesh%vp%npart))*fb%nst_linear, &
-             R_TOTYPE(M_ONE))
-
-        call profiling_out(set_bc_comm_prof)
-      end if
-#endif
-
-      forall (ist = 1:fb%nst_linear, ip = 1:der%mesh%nper)
-        fb%states_linear(ist)%X(psi)(der%mesh%per_points(ip)) = fb%states_linear(ist)%X(psi)(der%mesh%per_map(ip))
-      end forall
-
-#ifdef HAVE_MPI
-      if(der%mesh%parallel_in_domains) then
-        call profiling_in(set_bc_comm_prof)
-
-        SAFE_ALLOCATE(statuses(1:MPI_STATUS_SIZE, 1:nreq))
-        call MPI_Waitall(nreq, req(1), statuses(1, 1), mpi_err)
-        SAFE_DEALLOCATE_A(statuses)
-        SAFE_DEALLOCATE_A(req)
-
-        call profiling_out(set_bc_comm_prof)
-      end if
-#endif
-
-    end if
-
-    call profiling_out(set_bc_prof)
-
-  end if
-
-  call pop_sub()
-
-end subroutine X(derivatives_batch_set_bc)
 
 ! ---------------------------------------------------------
 ! The action of the angular momentum operator (three spatial components).
