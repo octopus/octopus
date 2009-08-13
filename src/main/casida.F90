@@ -671,7 +671,7 @@ contains
     character(len=*),  intent(in) :: filename
 
     character(len=5) :: str
-    integer :: iunit, ia, jb, dim
+    integer :: iunit, ia, jb, idim, dim
     FLOAT   :: temp
     integer, allocatable :: ind(:)
     FLOAT, allocatable :: w(:)
@@ -703,7 +703,7 @@ contains
         write(iunit, '(2i4)', advance='no') cas%pair(ind(ia))%i, cas%pair(ind(ia))%a
       end if
       write(iunit, '(5(es15.8,1x))') units_from_atomic(units_out%energy, cas%w(ind(ia))), &
-        units_from_atomic(units_out%length, cas%tm(ind(ia), 1:dim)), cas%f(ind(ia))
+        (units_from_atomic(units_out%length, cas%tm(ind(ia), idim)), idim=1,dim), cas%f(ind(ia))
     end do
     call io_close(iunit)
 

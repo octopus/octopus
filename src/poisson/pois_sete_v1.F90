@@ -1,3 +1,22 @@
+!! Copyright (C) 2009
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+!!
+!! $Id: poisson_multigrid.F90 5486 2009-05-24 14:09:52Z xavier $
+
 #include <global.h>
 
 module poisson_sete_m
@@ -445,7 +464,7 @@ contains
     !
     !  local: BORDER,PCONST
     !
-    !  a homogeeneous grid approximation is made: derivative
+    !  a homogeneous grid approximation is made: derivative
     !  at metal-semi border calculated discretely with 1/DXG (1/DYG,1/DZ)
     !  rather than properly averaged spacings.
     write(*,*) "In capser.F90"
@@ -522,7 +541,7 @@ contains
       VBOUND(:,:,NZTOT+1)=VT(2)
       DO K=1,NZTOT
         IF(K /= 0 .AND. K /= NZTOT+1)THEN
-          ! lateral BC's
+          ! lateral BC`s
           IPIO(0,:,K)=2
           IPIO(NXTOT+1,:,K)=2
           IPIO(:,0,K)=2
@@ -786,3 +805,7 @@ contains
 
 end module poisson_sete_m
 
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

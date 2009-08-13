@@ -276,7 +276,7 @@ contains
     FLOAT,    optional, intent(in) :: offset(:)
     logical,  optional, intent(in) :: write_forces
 
-    integer idir, iatom
+    integer idir, idir2, iatom
     logical write_forces_
 
     call push_sub('io_function.write_xsf_geometry')
@@ -300,7 +300,8 @@ contains
       write(iunit, '(a)') 'PRIMVEC'
 
       do idir = 1, sb%dim
-        write(iunit, '(3f12.6)') units_from_atomic(units_out%length, M_TWO*sb%lsize(idir)*sb%rlattice(1:3, idir))
+        write(iunit, '(3f12.6)') (units_from_atomic(units_out%length, &
+                                  M_TWO*sb%lsize(idir)*sb%rlattice(idir2, idir)), idir2 = 1, sb%dim)
       enddo
 
       write(iunit, '(a)') 'PRIMCOORD'
@@ -312,9 +313,9 @@ contains
     ! BoxOffset should be considered here
     do iatom = 1, geo%natoms
       write(iunit, '(a10, 3f12.6, $)') trim(geo%atom(iatom)%label), &
-        units_from_atomic(units_out%length, geo%atom(iatom)%x(1:sb%dim) - offset(1:sb%dim))
+        (units_from_atomic(units_out%length, geo%atom(iatom)%x(idir) - offset(idir)), idir = 1, sb%dim)
       if(write_forces_) then
-        write(iunit, '(5x, 3f12.6, $)') units_from_atomic(units_out%force, geo%atom(iatom)%f(1:sb%dim))
+        write(iunit, '(5x, 3f12.6, $)') (units_from_atomic(units_out%force, geo%atom(iatom)%f(idir)), idir = 1, sb%dim)
       endif
       write(iunit, '()')
     enddo

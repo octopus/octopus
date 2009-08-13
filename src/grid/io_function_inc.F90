@@ -673,7 +673,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine out_dx()
-    integer :: ix, iy, iz
+    integer :: ix, iy, iz, idir
     FLOAT   :: offset(MAX_DIM)
     character(len=40) :: nitems
     type(X(cf_t)) :: cube
@@ -700,9 +700,12 @@ contains
 
     write(iunit, '(a,3i7)') 'object 1 class gridpositions counts', cube%n(:)
     write(iunit, '(a,3f12.6)') ' origin', offset(:)
-    write(iunit, '(a,3f12.6)') ' delta ', units_from_atomic(units_out%length, mesh%h(1)*sb%rlattice(:, 1))
-    write(iunit, '(a,3f12.6)') ' delta ', units_from_atomic(units_out%length, mesh%h(2)*sb%rlattice(:, 2))
-    write(iunit, '(a,3f12.6)') ' delta ', units_from_atomic(units_out%length, mesh%h(3)*sb%rlattice(:, 3))
+    write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
+                                           mesh%h(1)*sb%rlattice(idir, 1)), idir = 1, sb%dim)
+    write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
+                                           mesh%h(2)*sb%rlattice(idir, 2)), idir = 1, sb%dim)
+    write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
+                                           mesh%h(3)*sb%rlattice(idir, 3)), idir = 1, sb%dim)
     write(iunit, '(a,3i7)') 'object 2 class gridconnections counts', cube%n(:)
 #if defined(R_TREAL)
     write(iunit, '(a,a,a)') 'object 3 class array type float rank 0 items ', nitems, ' data follows'
@@ -733,7 +736,7 @@ contains
 ! for format specification see:
 ! http://www.xcrysden.org/doc/XSF.html#__toc__11
   subroutine out_xcrysden()
-    integer :: ix, iy, iz, idir, ix2, iy2, iz2
+    integer :: ix, iy, iz, idir, idir2, ix2, iy2, iz2
     FLOAT, allocatable :: offset(:)
     type(X(cf_t)) :: cube
 
@@ -768,7 +771,8 @@ contains
     write(iunit, '(a)') '0.0 0.0 0.0'
 
     do idir = 1, sb%dim
-      write(iunit, '(3f12.6)') units_from_atomic(units_out%length, M_TWO*sb%lsize(idir)*sb%rlattice(1:3, idir))
+      write(iunit, '(3f12.6)') (units_from_atomic(units_out%length, &
+        M_TWO*sb%lsize(idir)*sb%rlattice(idir2, idir)), idir2 = 1, sb%dim)
     enddo
 
     do iz = 1, cube%n(3) + 1

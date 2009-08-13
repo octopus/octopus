@@ -139,7 +139,7 @@ contains
     !%Option density 2
     !% Outputs density. The output file is called "density-i", where "i" stands for 
     !% the spin channel. In a linear-response run mode, instead the linear-response density
-    !% is printed in the run mode's directory, in a file "freq_XXX/lr_density-i-j", where j 
+    !% is printed in the directory for the run mode, in a file "freq_XXX/lr_density-i-j", where j 
     !% is the perturbation direction. 
     !%Option wfs 4
     !% Outputs wave-functions. Which wavefunctions are to be printed is specified
