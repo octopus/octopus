@@ -83,6 +83,10 @@ module opt_control_parameters_m
             parameters_targetfluence,     &
             parameters_filter
 
+!!!!NEW
+  public :: parameters_gradient
+!!!!ENDOFNEW
+
 
   integer, public, parameter ::   &
     ctr_real_time              = 1, &
@@ -90,6 +94,11 @@ module opt_control_parameters_m
     ctr_fourier_series_h       = 3, &
     ctr_zero_fourier_series_h  = 4, &
     ctr_fourier_series         = 5
+
+!!!!NEW
+  integer, public, parameter ::     &
+    ctr_zero_fourier_series    = 6
+!!!!ENDOFNEW
 
 
   integer, parameter :: parameter_mode_none      = 0, &
@@ -200,6 +209,13 @@ contains
     !% The control function is expanded as a full Fourier series (although it must, of 
     !% course, be a real function). The control parameters are the coefficients of this
     !% basis set expansion.
+    !%Option control_zero_fourier_series 6
+    !% The control function is expanded as a full Fourier series (although it must, of 
+    !% course, be a real function). The control parameters are the coefficients of this
+    !% basis set expansion. The difference with the option "control_fourier_series" is that
+    !% (1) that the zero frequency component is zero, and (2) the control function, integrated 
+    !% in time, adds up to zero (this essentially means that the sum of all the cosine 
+    !% coefficients is zero).
     !%End
     if (parametrized_controls) then
       call loct_parse_int(datasets_check('OCTParameterRepresentation'), &
@@ -218,12 +234,22 @@ contains
         call write_info(2)
       case(ctr_zero_fourier_series_h)
         write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series,'
-        write(message(2), '(a)') '      in which the zero-frequency component is assumed to be zero.'
-        write(message(3), '(a)') '      Then, a transformation to hyperspherical coordinates will be made.'
-        call write_info(3)
+        write(message(2), '(a)') '      in which (i) the zero-frequency component is assumed to be zero,'
+        write(message(3), '(a)') '      and  (ii) the sum of all the cosine coefficients are zero, so that'
+        write(message(4), '(a)') '      the control function starts and ends at zero.'
+        write(message(5), '(a)') '      Then, a transformation to hyperspherical coordinates will be made.'
+        call write_info(6)
       case(ctr_fourier_series)
         write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series.'
         call write_info(1)
+!!!!NEW
+      case(ctr_zero_fourier_series)
+        write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series,'
+        write(message(2), '(a)') '      in which the zero-frequency component is assumed to be zero,'
+        write(message(3), '(a)') '      and  (ii) the sum of all the cosine coefficients are zero, so that'
+        write(message(4), '(a)') '      the control function starts and ends at zero.'
+        call write_info(4)
+!!!!ENDOFNEW
       end select
     else
       par_common%representation = ctr_real_time
@@ -313,8 +339,9 @@ contains
 
 
     ! The laser field is defined by "td functions", as implemented in module "tdf_m". At this point, they
-    ! can be in "non-numerical" representation (i.e. described with a set of parameters, e.g. frequency, width, etc).
-    ! We need them to be in numerical form (i.e. time grid, values at the time grid). Here we do the transformation.
+    ! can be in "non-numerical" representation (i.e. described with a set of parameters, e.g. frequency, 
+    ! width, etc). We need them to be in numerical form (i.e. time grid, values at the time grid). 
+    ! Here we do the transformation.
     ! It cannot be done before calling parameters_mod_init because we need to pass the omegamax value.
     do i = 1, ep%no_lasers
       select case(par_common%mode)
@@ -362,7 +389,8 @@ contains
         call write_fatal(3)
       end if
       mode_fixed_fluence = .true.
-    case(ctr_fourier_series)
+!!$    case(ctr_fourier_series)
+    case(ctr_fourier_series, ctr_zero_fourier_series)
       if(par_common%targetfluence .ne. M_ZERO) then
         write(message(1), '(a)') 'Error: If you set "OCTParameterRepresentation" to "control_fourier_series",'
         write(message(2), '(a)') '       then you cannot run in fixed fluence mode.'
@@ -528,10 +556,10 @@ contains
     !
     ! If the control function is parametrized, up to now (in the future this might change), all 
     ! parametrizations are based on a previous basis set expansion (sine-Fourier series, or "normal"
-    ! Fourier series with or without the zero term). The parameters are not directly the coefficients
-    ! of the control function in this basis set expansion, but are constructed from them (e.g. 
-    ! by performing a coordinate transformation to hyperspherical coordinates). The "dimension" (cp%dim)
-    ! is the dimension of this basis set.
+    ! Fourier series with or without the zero term). For the representations whose name ends in "_h", 
+    ! the parameters are not directly the coefficients of the control function in this basis set 
+    ! expansion, but are constructed from them (e.g. by performing a coordinate transformation to 
+    ! hyperspherical coordinates). The "dimension" (cp%dim) is the dimension of this basis set.
     select case(par_common%representation)
     case(ctr_real_time)
       cp%dim = ntiter + 1
@@ -541,7 +569,7 @@ contains
     case(ctr_fourier_series_h)
       ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
       ! and the zero frequency component. Total, 2*(nf-1)+1
-      cp%dim = 2*(tdf_nfreqs(cp%f(1))-1)+1
+      cp%dim = 2*(tdf_nfreqs(cp%f(1))-1) + 1
     case(ctr_zero_fourier_series_h)
       ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
       ! but no zero frequency component. Total, 2*(nf-1)
@@ -549,7 +577,13 @@ contains
     case(ctr_fourier_series)
       ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
       ! and the zero frequency component. Total, 2*(nf-1)+1
-      cp%dim = 2*(tdf_nfreqs(cp%f(1))-1)+1
+      cp%dim = 2*(tdf_nfreqs(cp%f(1))-1) + 1
+!!!!NEW
+    case(ctr_zero_fourier_series)
+      ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
+      ! but no zero frequency component. Total, 2*(nf-1)+1
+      cp%dim = 2*(tdf_nfreqs(cp%f(1))-1)
+!!!!ENDOFNEW
     case default
       message(1) = "Internal error: invalid representation."
       call write_fatal(1)
@@ -558,9 +592,9 @@ contains
 
     ! The "degrees of freedom" cp%dof is the number of parameters that define the control function.
     ! (if it is represented directly in real time, this would be meaningless, but we put the number of 
-    ! control functions, times the "dimension", which in this case is the number of time discretization points).
-    ! This is not equal to the dimension of the basis set employed (cp%dim), because we may add further
-    ! constrains, and do a coordinate transformation to account for them.
+    ! control functions, times the "dimension", which in this case is the number of time discretization 
+    ! points). This is not equal to the dimension of the basis set employed (cp%dim), because we may 
+    ! add further constrains, and do a coordinate transformation to account for them.
     select case(par_common%representation)
     case(ctr_real_time)
       cp%dof = cp%no_parameters * cp%dim
@@ -570,12 +604,20 @@ contains
       cp%dof = cp%dim - 1
     case(ctr_zero_fourier_series_h)
       ! The number of degrees of freedom is one less than the number of basis coefficients, since we
-      ! add (1) the constrain of fixed fluence, and (2) the constrain of zero-integral.
+      ! add (1) the constrain of fixed fluence, and (2) the constrain of the field starting and
+      ! ending at zero, which amounts to having all the cosine coefficients summing up to zero.
       cp%dof = cp%dim - 2
     case(ctr_fourier_series)
       ! In this case, we have no constrains: the dof is equal to the dimesion of the basis set, since
       ! the parameters are directly the coefficients of the basis set expansion.
       cp%dof = cp%dim
+!!!!NEW
+    case(ctr_zero_fourier_series)
+      ! The number of degrees of freedom is reduced by one, since we add the constrain forcing the
+      ! the field to start and end at zero, which amounts to having all the cosine coefficients 
+      ! summing up to zero.
+      cp%dof = cp%dim - 1
+!!!!ENDOFNEW
     end select
 
 
@@ -742,6 +784,14 @@ contains
         end do
         par%current_representation = ctr_fourier_series
         call parameters_basis_to_theta(par)
+!!!!NEW
+      case(ctr_zero_fourier_series)
+        do j = 1, par%no_parameters
+          call tdf_numerical_to_zerofourier(par%f(j))
+        end do
+        par%current_representation = ctr_zero_fourier_series
+        call parameters_basis_to_theta(par)
+!!!!ENDOFNEW
       end select
     end if
 
@@ -779,6 +829,13 @@ contains
       do j = 1, par%no_parameters
         call tdf_fourier_to_numerical(par%f(j))
       end do
+!!!!NEW
+    case(ctr_zero_fourier_series)
+      call parameters_theta_to_basis(par)
+      do j = 1, par%no_parameters
+        call tdf_fourier_to_numerical(par%f(j))
+      end do
+!!!!ENDOFNEW
     end select
 
     par%current_representation = ctr_real_time
@@ -1458,6 +1515,38 @@ contains
     SAFE_DEALLOCATE_P(par_common)
 
   end subroutine parameters_mod_close
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine parameters_gradient(x, par, par_output, grad)
+    FLOAT, intent(in) :: x(:)
+    type(oct_control_parameters_t), intent(in) :: par, par_output
+    FLOAT, intent(inout) :: grad(:)
+
+    integer :: n, j
+    FLOAT, allocatable :: theta(:)
+    call push_sub('parameters.parameters_gradient')
+
+    n = par%dim
+
+    select case(par%current_representation)
+    case(ctr_fourier_series)
+       SAFE_ALLOCATE(theta(1:n)) ! dim = dof for fourier-series
+       call parameters_get_theta(par_output, theta)
+       forall(j = 1:n) grad(j) =  M_TWO*parameters_alpha(par, 1)*x(j) - M_TWO*theta(j)
+
+    case(ctr_zero_fourier_series)
+       SAFE_ALLOCATE(theta(1:n))      ! dim should be # of basis sets for a zero-fourier-series (even number)
+       forall(j = 1:n) theta(j) = tdf(par_output%f(1), j)    ! get the projection on my basis set of function f
+       forall(j = 1:n-1) grad(j) =  M_TWO*parameters_alpha(par, 1)*x(j) - M_TWO*theta(j+1)
+       forall(j = 1:(n/2)-1) grad(j) = grad(j) + M_TWO*parameters_alpha(par, 1)*sum(x(1:(n/2)-1)) + M_TWO*theta(1)
+
+    end select
+
+    SAFE_DEALLOCATE_A(theta)
+    call pop_sub()
+  end subroutine parameters_gradient
   ! ---------------------------------------------------------
 
 #include "parameters_trans.F90"

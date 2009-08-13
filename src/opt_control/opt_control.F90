@@ -773,8 +773,7 @@ contains
       if(oct%dump_intermediate) call iterator_write(iterator, par_)
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator)
       call parameters_set_rep(par_new)
-      call parameters_get_theta(par_new, theta)
-      forall(j = 1:n) df(j) =  M_TWO * parameters_alpha(par_, 1) * x(j) - M_TWO * theta(j)
+      call parameters_gradient(x, par_, par_new, df)
 
       ! Check if the gradient has been computed properly... This should be done only
       ! for debugging purposes.

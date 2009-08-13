@@ -60,6 +60,27 @@
 
     case(ctr_fourier_series)
       forall(j = 1: par%dim) par%theta(j) = tdf(par%f(1), j)
+
+    case(ctr_zero_fourier_series)
+      ! In this case, the transformation is (n = par%dim):
+      ! theta(1) = a(2)
+      ! theta(2) = a(3)
+      ! ...      = ...
+      ! theta(n/2-1)   = a(n/2)
+      ! theta(n/2) = b(1)
+      ! ...      = ...
+      ! theta(n-1) = b(n/2)
+      ! where a are the coefficients of the cosines in the Fourier series, and b are
+      ! the coefficients of the sines
+
+      SAFE_ALLOCATE(e(1:par%dim))
+      forall(j = 1: par%dim) e(j) = tdf(par%f(1), j)
+
+      do j = 2, par%dim
+        par%theta(j-1) = e(j)
+      end do
+
+      SAFE_DEALLOCATE_A(e)
       
     end select
 
@@ -69,29 +90,11 @@
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_get_theta(par, theta)
-    type(oct_control_parameters_t), intent(in) :: par
-    FLOAT, intent(inout) :: theta(:)
-    theta = par%theta
-  end subroutine parameters_get_theta
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  subroutine parameters_set_theta(par, theta)
-    type(oct_control_parameters_t), intent(inout) :: par
-    FLOAT, intent(in) :: theta(:)
-    par%theta = theta
-  end subroutine parameters_set_theta
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
   subroutine parameters_theta_to_basis(par)
     type(oct_control_parameters_t), intent(inout) :: par
 
     FLOAT, allocatable :: y(:), a(:), e(:), ep(:), x(:)
-    integer :: n, dof
+    integer :: n, dof, j
 
     call push_sub('parameters_trans.parameters_theta_to_basis')
 
@@ -136,10 +139,54 @@
 
       call tdf_set_numerical(par%f(1), par%theta)
 
+    case(ctr_zero_fourier_series)
+
+      ! In this case, the transformation is (n = par%dim):
+      ! a(1) = -sum(a(2)...a(n/2))  represents the constraint
+      ! theta(1) = a(2)
+      ! theta(2) = a(3)
+      ! ...      = ...
+      ! theta(n/2-1)   = a(n/2)
+      ! theta(n/2) = b(1)
+      ! ...      = ...
+      ! theta(n-1) = b(n/2)
+      ! where a are the coefficients of the cosines in the Fourier series, and b are
+      ! the coefficients of the sines (Note that in the next lines "a" are the coefficients
+      ! of both sines and cosines.
+
+      n = par%dim
+      SAFE_ALLOCATE(a(1:n))
+
+      a(1) = -sum(par%theta(1:n/2-1))
+      do j = 2, n
+        a(j) = par%theta(j-1)
+      end do
+      call tdf_set_numerical(par%f(1), a)
+
+      SAFE_DEALLOCATE_A(a)
+
     end select
 
     call pop_sub()
   end subroutine parameters_theta_to_basis
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine parameters_get_theta(par, theta)
+    type(oct_control_parameters_t), intent(in) :: par
+    FLOAT, intent(inout) :: theta(:)
+    theta = par%theta
+  end subroutine parameters_get_theta
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine parameters_set_theta(par, theta)
+    type(oct_control_parameters_t), intent(inout) :: par
+    FLOAT, intent(in) :: theta(:)
+    par%theta = theta
+  end subroutine parameters_set_theta
   ! ---------------------------------------------------------
 
 
@@ -163,6 +210,8 @@
     forall(mm = 1:par%dim) par%utransf(mm, mm) = M_ONE
     forall(mm = 1:par%dim) par%utransfi(mm, mm) = M_ONE
 
+    ! WARNING: Here we are missing the cases in which par_common%representation is
+    ! either ctr_fourier_series or ctr_zero_fourier_series.
     if( par_common%mode .eq. parameter_mode_f ) then
       ! If the object to optimize is the envelope of the
       ! the laser pulse. Being e(t) the laser pulse, it is assumed that it
