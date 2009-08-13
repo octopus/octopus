@@ -481,7 +481,7 @@ contains
                 call loct_parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
               end do
             end do
-            call rotate_states(gr%mesh, st, stin, rotation_matrix)
+            call states_rotate(gr%mesh, st, stin, rotation_matrix)
             SAFE_DEALLOCATE_A(rotation_matrix)
             call states_end(stin)
           else

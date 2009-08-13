@@ -48,7 +48,12 @@ module derivatives_m
     derivatives_init,                   &
     derivatives_end,                    &
     derivatives_build,                  &
+    derivatives_stencil_extent,         &
     derivatives_handle_batch_t,         &
+    dderivatives_set_bc,                &
+    zderivatives_set_bc,                &
+    dderivatives_batch_set_bc,          &
+    zderivatives_batch_set_bc,          &
     dderivatives_batch_start,           &
     zderivatives_batch_start,           &
     dderivatives_batch_finish,          &
@@ -65,15 +70,8 @@ module derivatives_m
     dderivatives_div,                   &
     zderivatives_div,                   &
     dderivatives_curl,                  &
-    zderivatives_curl,                  &
-    dderivatives_set_bc,                &
-    zderivatives_set_bc,                &
-    dderivatives_batch_set_bc,          &
-    zderivatives_batch_set_bc,          &
-    stencil_extent,                     &
-    df_angular_momentum,                &
-    zf_angular_momentum,                &
-    df_l2, zf_l2
+    zderivatives_curl
+
 
   integer, parameter ::     &
     DER_BC_ZERO_F    = 0,   &  ! function is zero at the boundaries
@@ -294,7 +292,7 @@ contains
   ! ---------------------------------------------------------
   ! Returns maximum extension of the stencil in spatial direction
   ! dir = 1, 2, 3 for a given derivative der.
-  integer function stencil_extent(der, dir)
+  integer function derivatives_stencil_extent(der, dir) result(extent)
     type(derivatives_t), intent(in) :: der
     integer,           intent(in) :: dir
 
@@ -302,17 +300,17 @@ contains
 
     select case(der%stencil_type)
       case(DER_STAR)
-        stencil_extent = stencil_star_extent(dir, der%order)
+        extent = stencil_star_extent(dir, der%order)
       case(DER_VARIATIONAL)
-        stencil_extent = stencil_variational_extent(dir, der%order)
+        extent = stencil_variational_extent(dir, der%order)
       case(DER_CUBE)
-        stencil_extent = stencil_cube_extent(dir, der%order)
+        extent = stencil_cube_extent(dir, der%order)
       case(DER_STARPLUS)
-        stencil_extent = stencil_cube_extent(dir, der%order)
+        extent = stencil_cube_extent(dir, der%order)
       end select
       
     call pop_sub()
-  end function stencil_extent
+  end function derivatives_stencil_extent
 
 
   ! ---------------------------------------------------------

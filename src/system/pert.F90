@@ -34,6 +34,7 @@ module pert_m
   use mesh_function_m
   use messages_m
   use nl_operator_m
+  use physics_op_m
   use profiling_m
   use projector_m
   use simul_box_m
@@ -67,17 +68,16 @@ module pert_m
      dionic_pert_matrix_elements_2, &
      zionic_pert_matrix_elements_2
 
-  integer, public, parameter :: &
-     PERTURBATION_ELECTRIC = 1, &
-     PERTURBATION_MAGNETIC = 2, &
-     PERTURBATION_IONIC    = 3, &
-     PERTURBATION_KDOTP    = 15, &
+  integer, public, parameter ::  &
+    PERTURBATION_ELECTRIC = 1,  &
+    PERTURBATION_MAGNETIC = 2,  &
+     PERTURBATION_IONIC    = 3,  &
+     PERTURBATION_KDOTP    = 15, &   ! value chosen for compatibility with calculation mode kdotp
      PERTURBATION_NONE     = 0
-! kdotp value chosen for compatibility with calculation mode kdotp
 
   integer, public, parameter :: &
-       GAUGE_GIPAW  = 1, &
-       GAUGE_ICL    = 2
+    GAUGE_GIPAW  = 1, &
+    GAUGE_ICL    = 2
 
   type pert_ionic_t
     private

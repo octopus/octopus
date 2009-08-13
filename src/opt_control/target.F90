@@ -264,7 +264,7 @@ module opt_control_target_m
               call loct_parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
             end do
           end do
-          call rotate_states(gr%mesh, target%st, tmp_st, rotation_matrix)
+          call states_rotate(gr%mesh, target%st, tmp_st, rotation_matrix)
           SAFE_DEALLOCATE_A(rotation_matrix)
           call states_end(tmp_st)
           call loct_parse_block_end(blk)
@@ -333,7 +333,7 @@ module opt_control_target_m
                 call loct_parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
               end do
             end do
-            call rotate_states(gr%mesh, target%st, tmp_st, rotation_matrix)
+            call states_rotate(gr%mesh, target%st, tmp_st, rotation_matrix)
             SAFE_DEALLOCATE_A(rotation_matrix)
             call states_calc_dens(target%st, gr)
             do ip = 1, gr%mesh%np

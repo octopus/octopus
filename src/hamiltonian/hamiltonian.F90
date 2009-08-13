@@ -610,7 +610,8 @@ contains
             ! so delete the old array intf%index
             call interface_end(gr%intf(il))
             ! then re-initialize interface
-            call interface_init(gr%mesh, gr%sb, gr%der, gr%intf(il), il, stencil_extent(gr%der, (il+1)/2))
+            call interface_init(gr%mesh, gr%sb, gr%der, gr%intf(il), il, &
+              derivatives_stencil_extent(gr%der, (il+1)/2))
             write(*,*) 'to  ', gr%intf(il)%np
           end if
         end do

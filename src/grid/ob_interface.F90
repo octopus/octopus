@@ -81,8 +81,7 @@ contains
     integer,             intent(in)  :: il
     integer, optional,   intent(in)  :: extent
 
-    logical :: ok
-    integer :: i, from(MAX_DIM), to(MAX_DIM), ll(MAX_DIM), dir, lr, tdir
+    integer :: from(MAX_DIM), to(MAX_DIM), ll(MAX_DIM), dir, tdir
 
     call push_sub('ob_interface.interface_init')
 
@@ -91,22 +90,22 @@ contains
     tdir = (il+1)/2
     
     if (present(extent)) then
-      write(*,*) 'stencil_extent(tdir)', tdir, stencil_extent(der_discr, tdir)
+      write(*,*) 'stencil_extent(tdir)', tdir, derivatives_stencil_extent(der_discr, tdir)
       write(*,*) 'extent', extent
-      ASSERT(stencil_extent(der_discr, tdir).le.extent)
+      ASSERT(derivatives_stencil_extent(der_discr, tdir).le.extent)
       intf%extent = extent
     else
-      write(*,*) 'stencil_extent(tdir)', tdir, stencil_extent(der_discr, tdir)
+      write(*,*) 'stencil_extent(tdir)', tdir, derivatives_stencil_extent(der_discr, tdir)
       write(*,*) 'lead_unit_cell_extent(sb, il)', il, lead_unit_cell_extent(sb, il)
-      ASSERT(stencil_extent(der_discr, tdir).le.lead_unit_cell_extent(sb, il))
-      intf%extent = maxval((/stencil_extent(der_discr, tdir), lead_unit_cell_extent(sb, il)/))
+      ASSERT(derivatives_stencil_extent(der_discr, tdir).le.lead_unit_cell_extent(sb, il))
+      intf%extent = maxval((/derivatives_stencil_extent(der_discr, tdir), lead_unit_cell_extent(sb, il)/))
       ! if the lead potential has no dependence in transport direction
       ! then reduce size of unit cell extent to interface extent
       !if(stencil_extent(der_discr, tdir).eq.1) then
       !  intf%extent = intf%extent - 1
       !end if
     endif
-    if(intf%extent.eq.stencil_extent(der_discr, tdir)) then
+    if(intf%extent.eq.derivatives_stencil_extent(der_discr, tdir)) then
       intf%offdiag_invertible = .true.
     else
       intf%offdiag_invertible = .false.

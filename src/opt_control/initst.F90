@@ -127,7 +127,7 @@ module opt_control_initst_m
               call loct_parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
             end do
           end do
-          call rotate_states(gr%mesh, initial_state, tmp_st, rotation_matrix)
+          call states_rotate(gr%mesh, initial_state, tmp_st, rotation_matrix)
           SAFE_DEALLOCATE_A(rotation_matrix)
           call states_end(tmp_st)
         else

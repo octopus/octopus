@@ -98,8 +98,8 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi)
   call profiling_out(prof)
 end subroutine X(states_gram_schmidt_full)
 
-! ---------------------------------------------------------
 
+! ---------------------------------------------------------
 subroutine X(states_gram_schmidt_block)(st, nst, m, dim, psi)
   type(states_t),    intent(in)    :: st
   integer,           intent(in)    :: nst
@@ -142,6 +142,7 @@ subroutine X(states_gram_schmidt_block)(st, nst, m, dim, psi)
 
   call pop_sub()
 end subroutine X(states_gram_schmidt_block)
+
 
 ! ---------------------------------------------------------
 ! Orthonormalizes phi to the nst orbitals psi.
@@ -307,6 +308,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
   call profiling_out(prof)
 end subroutine X(states_gram_schmidt)
 
+
 ! ---------------------------------------------------------
 subroutine X(states_normalize_orbital)(m, dim, psi)
   type(mesh_t),    intent(in)    :: m
@@ -325,6 +327,7 @@ subroutine X(states_normalize_orbital)(m, dim, psi)
   
   call pop_sub()
 end subroutine X(states_normalize_orbital)
+
 
 ! ---------------------------------------------------------
 FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
@@ -474,7 +477,7 @@ subroutine X(states_angular_momentum)(gr, phi, l, l2)
 
   call push_sub('states_calc_inc.Xstates_angular_momemtum')
 
-  ASSERT(gr%mesh%sb%dim .ne.1)
+  ASSERT(gr%mesh%sb%dim.ne.1)
 
   select case(gr%mesh%sb%dim)
   case(3)
@@ -492,7 +495,7 @@ subroutine X(states_angular_momentum)(gr, phi, l, l2)
 #if defined(R_TREAL)
     l = M_ZERO
 #else
-    call X(f_angular_momentum)(gr%sb, gr%mesh, gr%der, phi(:, idim), lpsi)
+    call X(physics_op_L)(gr%sb, gr%mesh, gr%der, phi(:, idim), lpsi)
     select case(gr%mesh%sb%dim)
     case(3)
       l(1) = l(1) + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 1))
@@ -503,7 +506,7 @@ subroutine X(states_angular_momentum)(gr, phi, l, l2)
     end select
 #endif
     if(present(l2)) then
-      call X(f_l2)(gr%sb, gr%mesh, gr%der, phi(:, idim), lpsi(:, 1))
+      call X(physics_op_L2)(gr%sb, gr%mesh, gr%der, phi(:, idim), lpsi(:, 1))
       l2 = l2 + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 1))
     end if
   end do

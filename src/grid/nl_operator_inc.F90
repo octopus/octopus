@@ -186,6 +186,11 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 
   call push_sub('nl_operator_inc.Xnl_operator_operate_batch')
   
+  do ist = 1, fi%nst_linear
+    ASSERT(ubound(fi%states_linear(ist)%X(psi)(:), dim=1) == op%m%np_part)
+    ASSERT(ubound(fo%states_linear(ist)%X(psi)(:), dim=1) >= op%m%np)
+  end do
+
   points_ = OP_ALL
   if(present(points)) points_ = points
 

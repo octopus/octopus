@@ -44,6 +44,7 @@ module states_calc_m
   use mpi_m
   use mpi_lib_m
   use multicomm_m
+  use physics_op_m
   use profiling_m
   use simul_box_m
   use states_m
@@ -56,10 +57,10 @@ module states_calc_m
 
   private
 
-  public ::                           &
-    states_orthogonalize,             &
-    states_degeneracy_matrix,         &
-    rotate_states
+  public ::                         &
+    states_orthogonalize,           &
+    states_degeneracy_matrix,       &
+    states_rotate
 
   public ::                         &
     dstates_gram_schmidt,           &
@@ -86,7 +87,7 @@ contains
   ! Each row of u contains the coefficients of the new orbitals
   ! in terms of the old ones.
   ! ---------------------------------------------------------
-  subroutine rotate_states(mesh, st, stin, u)
+  subroutine states_rotate(mesh, st, stin, u)
     type(mesh_t),      intent(in)    :: mesh
     type(states_t),    intent(inout) :: st
     type(states_t),    intent(in)    :: stin
@@ -94,7 +95,7 @@ contains
 
     integer :: ik
 
-    call push_sub('states_calc.rotate_states')
+    call push_sub('states_calc.states_rotate')
 
     if(st%wfs_type == M_REAL) then
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -109,7 +110,8 @@ contains
     end if
 
     call pop_sub()
-  end subroutine rotate_states
+  end subroutine states_rotate
+
 
   ! ---------------------------------------------------------
   subroutine states_orthogonalize(st, m)
@@ -127,6 +129,7 @@ contains
     end do
 
   end subroutine states_orthogonalize
+
 
   ! -------------------------------------------------------
   subroutine states_degeneracy_matrix(st)
