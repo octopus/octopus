@@ -37,7 +37,7 @@
 
     call profiling_in(interp_prof, "MG_INTERPOLATION")
 
-    call X(set_bc)(coarse_der, f_coarse)
+    call X(derivatives_set_bc)(coarse_der, f_coarse)
 
 #ifdef HAVE_MPI
     if(coarse_mesh%parallel_in_domains) call X(vec_ghost_update)(coarse_mesh%vp, f_coarse)
@@ -162,7 +162,7 @@
       end do
     end do
 
-    call X(set_bc)(fine_der, f_fine)
+    call X(derivatives_set_bc)(fine_der, f_fine)
 
 #ifdef HAVE_MPI
     if(fine_mesh%parallel_in_domains) call X(vec_ghost_update)(fine_mesh%vp, f_fine)

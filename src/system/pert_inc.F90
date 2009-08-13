@@ -41,7 +41,7 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
      SAFE_ALLOCATE(f_in_copy(1:gr%mesh%np_part))
      call lalg_copy(gr%mesh%np_part, f_in, f_in_copy)
-     call X(set_bc(gr%der, f_in_copy(:)))
+     call X(derivatives_set_bc(gr%der, f_in_copy(:)))
   endif
   ! no derivatives in electric, so ghost points not needed
 
@@ -230,7 +230,7 @@ subroutine X(ionic_perturbation)(this, gr, geo, hm, ik, f_in, f_out, iatom, idir
   R_TYPE,               intent(out)   :: f_out(:)
   integer,              intent(in)    :: iatom, idir    
 
-  ! FIX ME: may need to tell derivatives_oper not to apply boundary conditions 
+  ! FIX ME: may need to tell derivatives_perform not to apply boundary conditions 
   ! more things about ghost points may need to be done
 
   R_TYPE, allocatable :: grad(:,:), fin(:, :), fout(:, :)
@@ -250,11 +250,11 @@ subroutine X(ionic_perturbation)(this, gr, geo, hm, ik, f_in, f_out, iatom, idir
   SAFE_ALLOCATE(fout(1:gr%mesh%np_part, 1:1))
   forall(ip = 1:gr%mesh%np) fout(ip, 1) = vloc(ip)*fin(ip, 1)
   call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, fin, fout, ik)
-  call X(derivatives_oper)(gr%der%grad(idir), gr%der, fout(:,1), f_out)
+  call X(derivatives_perform)(gr%der%grad(idir), gr%der, fout(:,1), f_out)
 
   !v d |f>
   SAFE_ALLOCATE(grad(1:gr%mesh%np, 1:1))
-  call X(derivatives_oper)(gr%der%grad(idir), gr%der, fin(:,1), grad(:,1))
+  call X(derivatives_perform)(gr%der%grad(idir), gr%der, fin(:,1), grad(:,1))
   forall(ip = 1:gr%mesh%np) fout(ip, 1) = vloc(ip)*grad(ip, 1)
   call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, grad, fout, ik)
   forall(ip = 1:gr%mesh%np) f_out(ip) = -f_out(ip) + fout(ip, 1)
@@ -449,26 +449,26 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, hm, ik, f_in, f_out, ia
   !di^T dj^T v |f>
   forall(ip = 1:gr%mesh%np) tmp1(ip, 1) = vloc(ip)*fin(ip, 1)
   call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, fin, tmp1, ik)
-  call X(derivatives_oper)(gr%der%grad(idir), gr%der, tmp1(:,1), tmp2(:,1))
-  call X(derivatives_oper)(gr%der%grad(jdir), gr%der, tmp2(:,1), f_out)
+  call X(derivatives_perform)(gr%der%grad(idir), gr%der, tmp1(:,1), tmp2(:,1))
+  call X(derivatives_perform)(gr%der%grad(jdir), gr%der, tmp2(:,1), f_out)
 
   !di^T v dj |f>
-  call X(derivatives_oper)(gr%der%grad(jdir), gr%der, fin(:,1), tmp1(:,1))
+  call X(derivatives_perform)(gr%der%grad(jdir), gr%der, fin(:,1), tmp1(:,1))
   forall(ip = 1:gr%mesh%np) tmp2(ip, 1) = vloc(ip)*tmp1(ip, 1)
   call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
-  call X(derivatives_oper)(gr%der%grad(idir), gr%der, tmp2(:,1), tmp1(:,1))
+  call X(derivatives_perform)(gr%der%grad(idir), gr%der, tmp2(:,1), tmp1(:,1))
   forall(ip = 1:gr%mesh%np) f_out(ip) = f_out(ip) - tmp1(ip, 1)
 
   !dj^T v di |f>
-  call X(derivatives_oper)(gr%der%grad(idir), gr%der, fin(:,1), tmp1(:,1))
+  call X(derivatives_perform)(gr%der%grad(idir), gr%der, fin(:,1), tmp1(:,1))
   forall(ip = 1:gr%mesh%np) tmp2(ip, 1) = vloc(ip)*tmp1(ip, 1)
   call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
-  call X(derivatives_oper)(gr%der%grad(jdir), gr%der, tmp2(:,1), tmp1(:,1))
+  call X(derivatives_perform)(gr%der%grad(jdir), gr%der, tmp2(:,1), tmp1(:,1))
   forall(ip = 1:gr%mesh%np) f_out(ip) = f_out(ip) - tmp1(ip, 1)
 
   !v di dj |f>
-  call X(derivatives_oper)(gr%der%grad(idir), gr%der, fin(:,1), tmp1(:,1))
-  call X(derivatives_oper)(gr%der%grad(jdir), gr%der, tmp1(:,1), tmp2(:,1))
+  call X(derivatives_perform)(gr%der%grad(idir), gr%der, fin(:,1), tmp1(:,1))
+  call X(derivatives_perform)(gr%der%grad(jdir), gr%der, tmp1(:,1), tmp2(:,1))
   forall(ip = 1:gr%mesh%np) tmp1(ip, 1) = vloc(ip)*tmp2(ip, 1)
   call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, tmp2, tmp1, ik)
   forall(ip = 1:gr%mesh%np) f_out(ip) = f_out(ip) + tmp1(ip, 1)

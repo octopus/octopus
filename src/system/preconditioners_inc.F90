@@ -48,8 +48,7 @@ subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
 
     do idim = 1, hm%d%dim
       call lalg_copy(gr%mesh%np_part, a(:, idim), a_copy(:))
-      call X(set_bc)(gr%der, a_copy(:))
-      call X(derivatives_oper)(pre%op, gr%der, a_copy(:), b(:, idim), set_bc = .false.)
+      call X(derivatives_perform)(pre%op, gr%der, a_copy(:), b(:, idim))
     end do
 
     SAFE_DEALLOCATE_A(a_copy)
@@ -141,7 +140,7 @@ contains
         d1(ip) = CNST(4.0)*step*r1(ip)
       end forall
 
-      call X(derivatives_oper)(gr%mgrid%level(1)%der%lapl, gr%mgrid%level(1)%der, d1, q1)
+      call X(derivatives_lapl)(gr%mgrid%level(1)%der, d1, q1)
 
       forall (ip = 1:mesh1%np) q1(ip) = CNST(-0.5)*q1(ip) - r1(ip)
 
@@ -207,7 +206,7 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, aa, bb, omega)
 
   select case(pre%which)
   case(PRE_FILTER)
-    call X(derivatives_oper_batch)(pre%op, gr%der, aa, bb)
+    call X(derivatives_batch_perform)(pre%op, gr%der, aa, bb)
   case default
     do ii = 1, aa%nst
       if(present(omega)) then

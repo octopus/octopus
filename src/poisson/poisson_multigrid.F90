@@ -424,7 +424,7 @@ contains
 
       do t = 1, steps
 
-        call dset_bc(der, pot)
+        call dderivatives_set_bc(der, pot)
 
 #ifdef HAVE_MPI
         if(m%parallel_in_domains) call dvec_ghost_update(m%vp, pot)

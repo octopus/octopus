@@ -95,13 +95,13 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
           endif
         else
           call lalg_copy(gr%mesh%np_part, st%X(psi)(:, idim, ist, ik), psi(:, idim))
-          call X(set_bc)(gr%der, psi(:, idim))
+          call X(derivatives_set_bc)(gr%der, psi(:, idim))
 
           if (present(lr)) then
             call lalg_copy(gr%mesh%np_part, lr%X(dl_psi)(:, idim, ist, ik), dl_psi(:, idim))
-            call X(set_bc)(gr%der, dl_psi(:, idim))
+            call X(derivatives_set_bc)(gr%der, dl_psi(:, idim))
             call lalg_copy(gr%mesh%np_part, lr2%X(dl_psi)(:, idim, ist, ik), dl_psi2(:, idim))
-            call X(set_bc)(gr%der, dl_psi2(:, idim))
+            call X(derivatives_set_bc)(gr%der, dl_psi2(:, idim))
           endif
         endif
 
@@ -120,7 +120,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
         ! and set boundary conditions in preparation for applying projectors
         call X(derivatives_grad)(gr%fine%der, psi(:, idim), grad_psi(:, :, idim), set_bc = .false.)
         do idir = 1, gr%mesh%sb%dim
-          call X(set_bc)(gr%der, grad_psi(:, idir, idim))
+          call X(derivatives_set_bc)(gr%der, grad_psi(:, idir, idim))
         enddo
 
         if (present(lr)) then
@@ -128,8 +128,8 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
           call X(derivatives_grad)(gr%fine%der, dl_psi2(:, idim), grad_dl_psi2(:, :, idim), set_bc = .false.)
 
           do idir = 1, gr%mesh%sb%dim
-            call X(set_bc)(gr%der, grad_dl_psi(:, idir, idim))
-            call X(set_bc)(gr%der, grad_dl_psi2(:, idir, idim))
+            call X(derivatives_set_bc)(gr%der, grad_dl_psi(:, idir, idim))
+            call X(derivatives_set_bc)(gr%der, grad_dl_psi2(:, idir, idim))
           enddo
         endif
 

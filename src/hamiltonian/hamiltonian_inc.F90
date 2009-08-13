@@ -70,7 +70,7 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, time, kinetic_on
     call batch_copy(psib, epsib)
   end if
 
-  call X(set_bc_batch)(gr%der, psib)
+  call X(derivatives_batch_set_bc)(gr%der, psib)
 
   bs = hardware%X(block_size)
 
@@ -761,7 +761,6 @@ subroutine X(h_mgga_terms) (hm, gr, psi, hpsi, ik, grad)
   do idim = 1, hm%d%dim
     do ispace = 1, gr%sb%dim
       cgrad(1:gr%mesh%np, ispace) = M_TWO*grad(1:gr%mesh%np, ispace, idim)*hm%vtau(1:gr%mesh%np, ispin)
-      call X(set_bc)(gr%der, cgrad(:, ispace))
     end do
 
     diverg(1:gr%mesh%np) = M_ZERO

@@ -48,31 +48,29 @@ module derivatives_m
     derivatives_init,                   &
     derivatives_end,                    &
     derivatives_build,                  &
+    derivatives_handle_batch_t,         &
+    dderivatives_batch_start,           &
+    zderivatives_batch_start,           &
+    dderivatives_batch_finish,          &
+    zderivatives_batch_finish,          &
+    dderivatives_batch_perform,         &
+    zderivatives_batch_perform,         &
+    dderivatives_perform,               &
+    zderivatives_perform,               &
     dderivatives_lapl,                  &
     zderivatives_lapl,                  &
     derivatives_lapl_diag,              &
-    dderivatives_laplt,                 &
-    zderivatives_laplt,                 &
     dderivatives_grad,                  &
     zderivatives_grad,                  &
-    dderivatives_oper,                  &
-    zderivatives_oper,                  &
-    dderivatives_oper_batch,            &
-    zderivatives_oper_batch,            &
     dderivatives_div,                   &
     zderivatives_div,                   &
     dderivatives_curl,                  &
     zderivatives_curl,                  &
-    dset_bc,                            &
-    zset_bc,                            &
-    dset_bc_batch,                      &
-    zset_bc_batch,                      &
+    dderivatives_set_bc,                &
+    zderivatives_set_bc,                &
+    dderivatives_batch_set_bc,          &
+    zderivatives_batch_set_bc,          &
     stencil_extent,                     &
-    derivatives_handle_batch_t,         &
-    dderivatives_batch_start,           &
-    dderivatives_batch_finish,          &
-    zderivatives_batch_start,           &
-    zderivatives_batch_finish,          &
     df_angular_momentum,                &
     zf_angular_momentum,                &
     df_l2, zf_l2
@@ -110,10 +108,9 @@ module derivatives_m
     type(nl_operator_t), pointer :: lapl   ! these are just shortcuts for op
     type(nl_operator_t), pointer :: grad(:)
 
-    type(nl_operator_t) :: laplt ! The transpose of the Laplacian.
-    integer             :: n_ghost(MAX_DIM)   ! ghost points to add in each dimension
+    integer                      :: n_ghost(MAX_DIM)   ! ghost points to add in each dimension
 #if defined(HAVE_MPI)
-    integer             :: comm_method 
+    integer                      :: comm_method 
 #endif
   end type derivatives_t
 
