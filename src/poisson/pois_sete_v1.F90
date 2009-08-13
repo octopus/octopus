@@ -40,7 +40,7 @@ module poisson_sete_m
 
   FLOAT, DIMENSION(:), ALLOCATABLE :: AW,AWP,Q2,X2,QS
   INTEGER, DIMENSION(:), ALLOCATABLE :: IAD,JAD,IY,JY,KY
-  FLOAT :: TOL=0.01,HARTREE=2.0*13.60569193,BOHR=0.52917720859 ! Bohr radius in nm
+  FLOAT :: TOL=0.01,HARTREE=CNST(2.0*13.60569193),BOHR=CNST(0.52917720859) ! Bohr radius in nm
   INTEGER :: IPOISSON_SETE_ON,NELT,NTOT,LENW,LENIW,IDEV,NGATES, &
     ISYM=0,ITOL=2,ITMAX=201,ITERMIN=5,ITER,IERR,IUNIT=0, &
     NXBOT,NYBOT,NZBOT,NXL,NYL,NXTOT,NYTOT,NZTOT,MD
@@ -71,7 +71,7 @@ contains
     FLOAT :: BOHRNM, ANGSNM
     INTEGER :: J1,K1, M, I,J,K
     FLOAT :: ZCEN, XCEN, YCEN, VHMIN, VHMAX
-
+    write(*,*) BOHR 
     PCONST=CNST(4.0)*M_PI ! need 4 pi for Hartrees I think (??)
     BOHRNM=BOHR/CNST(10.0)
     ANGSNM=CNST(10.0)/BOHR
@@ -382,7 +382,7 @@ contains
       !                                 DSLUCS matrix and normalizations
       ADIAG(IA)=AV(4)
       IF(ADIAG(IA) == M_ZERO)THEN
-        WRITE(56,*)' DIAG ELEM ZERO ',IA
+        WRITE(*,*)' DIAG ELEM ZERO ',IA
         STOP ' GOTTA QUIT '
       end if
 
@@ -527,11 +527,10 @@ contains
 
     ! This is a combination of cbsurfser and spaceser located on
     ! /home/stopa/surfER/build
-    write(*,*) "Allocating data"
     allocate(VH_BIG(NXTOT,NYTOT,NZTOT))
     allocate(IPIO(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
     allocate(VBOUND(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
-    allocate(DIELECTRIC(NXTOT,NYTOT,NZTOT))
+    allocate(DIELECTRIC(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
     IPIO=0; VBOUND=0.0
     IF(IDEV == 1)THEN ! parallel plates
       DIELECTRIC=DIELECTRIC0
@@ -540,7 +539,7 @@ contains
       VBOUND(:,:,0)=VT(1)
       VBOUND(:,:,NZTOT+1)=VT(2)
       DO K=1,NZTOT
-        IF(K /= 0 .AND. K /= NZTOT+1)THEN
+        IF(K /= 0 .AND. K /= NZTOT+1)THEN !Redundant?
           ! lateral BC`s
           IPIO(0,:,K)=2
           IPIO(NXTOT+1,:,K)=2
@@ -644,7 +643,6 @@ contains
 
     nztop = int(nz2*ztop/(ztop + zbot))
     nzbot = nz2 - nztop
-
     DZ1B=ZBOT/TOFLOAT(NZBOT)
     DO K=1,NZBOT
       DZ(K)=DZ1B
@@ -667,12 +665,12 @@ contains
     ZG(NZTOT)=CNST(0.5)*ZWIDTH-CNST(0.5)*DZ(NZTOT)
 
     ZTEST=ZG(NZTOT)
-    write(6,*)' nzbot ',nzbot
-    write(56,*)' zg nztot ',nztot
-    write(56,101)(zg(k),k=1,nztot)
+!    write(6,*)' nzbot ',nzbot
+!    write(6,*)' zg nztot ',nztot
+!    write(6,101)(zg(k),k=1,nztot)
 101 format(10(1x,e10.4))
-    write(56,*)' dz '
-    write(56,101)(dz(k),k=1,nztot)
+!    write(6,*)' dz '
+!    write(6,101)(dz(k),k=1,nztot)
 
     ! x-mesh
     NXTOT_0=NX+NX2
@@ -711,11 +709,10 @@ contains
     XG(NXTOT)=CNST(0.5)*XWIDTH_BIG-CNST(0.5)*DXG(NXTOT)
 
     XTEST=XG(NXTOT)
-    write(56,*)' xg nxtot ',nxtot
-    write(56,101)(xg(k),k=1,nxtot)
-    write(56,*)' dxg '
-    write(56,101)(dxg(k),k=1,nxtot)
-
+!    write(6,*)' xg nxtot ',nxtot
+!    write(6,101)(xg(k),k=1,nxtot)
+!    write(6,*)' dxg '
+!    write(6,101)(dxg(k),k=1,nxtot)
     ! Y-mesh
     NYTOT_0=NY+NY2  ! excluding border points
     NYTOT=NYTOT_0+2*NYL  ! all Poisson Y mesh point
@@ -791,11 +788,10 @@ contains
 !!$        yg(nytot)=yg(nytot-1)+CNST(0.5)*dyg(nytot)
 !!$           
 
-    write(56,*)' yg '
-    write(56,101)(yg(k),k=1,nytot)
-    write(56,*)' dyg '
-    write(56,101)(dyg(k),k=1,nytot)
-
+!    write(6,*)' yg '
+!    write(6,101)(yg(k),k=1,nytot)
+!    write(6,*)' dyg '
+!    write(6,101)(dyg(k),k=1,nytot)
   end subroutine xyzgrid
 
 

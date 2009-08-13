@@ -376,11 +376,11 @@ contains
     INTEGER :: ny_half, ny !                                 ::SEC Team
     INTEGER :: nz_half, nz !                                 ::SEC Team
 !    integer ifinal
-    REAL*8 :: xl,yl,zl,dx,dy,dz,sum0,sum1,eion_ion,lx,ly,lz ! ::SEC Team
+    FLOAT :: xl,yl,zl,dx,dy,dz,sum0,sum1,eion_ion,lx,ly,lz ! ::SEC Team
 
-    real*8, dimension(:,:,:), allocatable :: vh0,rh0
+    FLOAT, dimension(:,:,:), allocatable :: vh0,rh0
     integer :: h,i,j,k,icase=1,icalc=1,i1,j1,k1,m1,m2,ind(3),no
-    real*8 ind1(3), p_nuc_charge, p_val
+    FLOAT :: ind1(3), p_nuc_charge, p_val
     FLOAT,                intent(inout) :: pot(:)    ! pot(mesh%np)
     FLOAT,                intent(in)    :: rho(:)    ! rho(mesh%np)
     logical, optional,    intent(in)    :: all_nodes ! Is the poisson solver allowed to utilise
@@ -518,7 +518,6 @@ contains
       vh0(conversion(1),conversion(2),conversion(3))=pot(counter)
       rh0(conversion(1),conversion(2),conversion(3))=rho(counter)
        end do
-      
       call poisson_sete_solve(icase,rh0,vh0,nx,ny,nz,xl,yl,zl,icalc)
 !      write(91,*) "vh0 rh0"
 !      do  i=1,nx
