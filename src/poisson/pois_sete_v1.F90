@@ -22,6 +22,7 @@
 module poisson_sete_m
 
   use global_m
+  use math_m
 
   implicit none
 
@@ -69,7 +70,7 @@ contains
 
     CHARACTER*40 :: CDUM,FIL1
     FLOAT :: BOHRNM, ANGSNM
-    INTEGER :: J1,K1, M, I,J,K
+    INTEGER :: J1,K1, M, I,J,K,idum
     FLOAT :: ZCEN, XCEN, YCEN, VHMIN, VHMAX
     write(*,*) BOHR 
     PCONST=CNST(4.0)*M_PI ! need 4 pi for Hartrees I think (??)
@@ -130,7 +131,11 @@ contains
     allocate(IAD(NELT))
     allocate(JAD(NELT))
     allocate(X2(NTOT)) 
-    X2=0.0
+    idum=3
+    DO I=1,NTOT
+      call quickrnd(IDUM,X2(I))! randomize sol'n vector Pois. Eq.
+    ENDDO
+    !X2=0.0
     CALL POISSONM
     QS=Q2 ! store Dirichlet BC info in QS
     deallocate(Q2)
@@ -532,8 +537,8 @@ contains
     IPIO=0; VBOUND=0.0
     IF(IDEV == 1)THEN ! parallel plates
       DIELECTRIC=DIELECTRIC0
-!      dielectric(:,:,0)=
-!      dielectric(:,:,NZTOT+1)=
+      dielectric(:,:,0)=6.5/pconst  !For platinum
+      dielectric(:,:,NZTOT+1)=6.5/pconst !For platinum
       IPIO(:,:,0)=1
       IPIO(:,:,NZTOT+1)=1
       VBOUND(:,:,0)=VT(1)
@@ -612,7 +617,8 @@ contains
     ESURF=CNST(0.5)*ESURF
     CHARGE_SURF=CS1+CS2+CS3
 
-    WRITE(520,*)'Esurf', ESURF*27.2,' CS1 ',CS1,' CS2 ',CS2,' CS3 ',CS3
+    WRITE(520,*)'Esurf', ESURF*27.2
+    write(521,*)' CS1 ',CS1,' CS2 ',CS2,' CS3 ',CS3
     RETURN
   end subroutine egate
 

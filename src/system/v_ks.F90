@@ -418,7 +418,6 @@ contains
     integer :: is, ip
     integer :: default_solver, poisson_solver, i!SEC Team
     real(8) :: ehartree_nuc!SEC Team
-
     call push_sub('v_ks.v_ks_hartree')
 
     SAFE_ALLOCATE(rho(1:gr%mesh%np))
@@ -453,8 +452,9 @@ contains
     if (poisson_solver == POISSON_SETE) then !Roberto
       ! How to get the nuclear density here?
       hm%ep%eii = M_HALF*dmf_dotp(gr%mesh, rho_nuc, hm%ep%vpsl) 
+      !hm%ep%eii = 0
       ! ESURF is a module called from later.  Need to write it into somewhere...
-      write(89,*) hm%ehartree*CNST(27.2), poisson_sete_energy()*CNST(27.2), hm%ep%eii
+      write(89,*) hm%ehartree*CNST(27.2), poisson_sete_energy()*CNST(27.2), hm%ep%eii*CNST(27.2)
     endif
 
     SAFE_DEALLOCATE_A(rho)
