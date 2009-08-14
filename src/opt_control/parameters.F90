@@ -81,24 +81,16 @@ module opt_control_parameters_m
             parameters_w0,                &
             parameters_alpha,             &
             parameters_targetfluence,     &
-            parameters_filter
-
-!!!!NEW
-  public :: parameters_gradient
-!!!!ENDOFNEW
-
+            parameters_filter,            &
+            parameters_gradient
 
   integer, public, parameter ::   &
     ctr_real_time              = 1, &
     ctr_sine_fourier_series_h  = 2, &
     ctr_fourier_series_h       = 3, &
     ctr_zero_fourier_series_h  = 4, &
-    ctr_fourier_series         = 5
-
-!!!!NEW
-  integer, public, parameter ::     &
+    ctr_fourier_series         = 5, &
     ctr_zero_fourier_series    = 6
-!!!!ENDOFNEW
 
 
   integer, parameter :: parameter_mode_none      = 0, &
@@ -242,14 +234,12 @@ contains
       case(ctr_fourier_series)
         write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series.'
         call write_info(1)
-!!!!NEW
       case(ctr_zero_fourier_series)
         write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series,'
         write(message(2), '(a)') '      in which the zero-frequency component is assumed to be zero,'
         write(message(3), '(a)') '      and  (ii) the sum of all the cosine coefficients are zero, so that'
         write(message(4), '(a)') '      the control function starts and ends at zero.'
         call write_info(4)
-!!!!ENDOFNEW
       end select
     else
       par_common%representation = ctr_real_time
@@ -389,7 +379,6 @@ contains
         call write_fatal(3)
       end if
       mode_fixed_fluence = .true.
-!!$    case(ctr_fourier_series)
     case(ctr_fourier_series, ctr_zero_fourier_series)
       if(par_common%targetfluence .ne. M_ZERO) then
         write(message(1), '(a)') 'Error: If you set "OCTParameterRepresentation" to "control_fourier_series",'
@@ -578,12 +567,10 @@ contains
       ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
       ! and the zero frequency component. Total, 2*(nf-1)+1
       cp%dim = 2*(tdf_nfreqs(cp%f(1))-1) + 1
-!!!!NEW
     case(ctr_zero_fourier_series)
       ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
       ! but no zero frequency component. Total, 2*(nf-1)+1
       cp%dim = 2*(tdf_nfreqs(cp%f(1))-1)
-!!!!ENDOFNEW
     case default
       message(1) = "Internal error: invalid representation."
       call write_fatal(1)
@@ -611,13 +598,11 @@ contains
       ! In this case, we have no constrains: the dof is equal to the dimesion of the basis set, since
       ! the parameters are directly the coefficients of the basis set expansion.
       cp%dof = cp%dim
-!!!!NEW
     case(ctr_zero_fourier_series)
       ! The number of degrees of freedom is reduced by one, since we add the constrain forcing the
       ! the field to start and end at zero, which amounts to having all the cosine coefficients 
       ! summing up to zero.
       cp%dof = cp%dim - 1
-!!!!ENDOFNEW
     end select
 
 
@@ -784,14 +769,12 @@ contains
         end do
         par%current_representation = ctr_fourier_series
         call parameters_basis_to_theta(par)
-!!!!NEW
       case(ctr_zero_fourier_series)
         do j = 1, par%no_parameters
           call tdf_numerical_to_zerofourier(par%f(j))
         end do
         par%current_representation = ctr_zero_fourier_series
         call parameters_basis_to_theta(par)
-!!!!ENDOFNEW
       end select
     end if
 
@@ -829,13 +812,11 @@ contains
       do j = 1, par%no_parameters
         call tdf_fourier_to_numerical(par%f(j))
       end do
-!!!!NEW
     case(ctr_zero_fourier_series)
       call parameters_theta_to_basis(par)
       do j = 1, par%no_parameters
         call tdf_fourier_to_numerical(par%f(j))
       end do
-!!!!ENDOFNEW
     end select
 
     par%current_representation = ctr_real_time
@@ -1060,7 +1041,7 @@ contains
         write(iunit,'(2a20)') '#       t [a.u]      ', '        e(t)         '
         do i = 1, tdf_niter(par%f(j)) + 1
           t = (i-1)*tdf_dt(par%f(j))
-          write(iunit, '(2es20.8e3)') t, tdf(par%f(j), t)
+          write(iunit, '(2es20.8e3)') t, tdf(par%f(j), i)
           func(i, j) = tdf(par%f(j), t)
         end do
         call io_close(iunit)
@@ -1413,7 +1394,7 @@ contains
 
       case('b')
         do j = 1, cp%no_parameters
-          value = d(j) / ( tdf(par_common%td_penalty(j), iter) - M_TWO*aimag(dq(j)) )
+          value = d(j) / ( tdf(par_common%td_penalty(j), iter+1) - M_TWO*aimag(dq(j)) )
           value = (M_ONE - mu)*tdf(cpp%f(j), iter+1) + mu * value
           call tdf_set_numerical(cp%f(j), iter+1, value)
           if(iter > 0) call tdf_set_numerical(cp%f(j), iter, value)

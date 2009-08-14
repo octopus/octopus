@@ -310,6 +310,7 @@ module opt_control_propagation_m
       call oct_prop_output(prop_psi, i, psi, gr)
       call oct_prop_check(prop_chi, chi, gr, sys%geo, i)
     end do
+    call update_field(td%max_iter+1, par, gr, hm, psi, chi, par_chi, dir = 'f')
 
     call states_calc_dens(psi, gr)
     call v_ks_calc(gr, sys%ks, hm, psi)
@@ -386,6 +387,7 @@ module opt_control_propagation_m
       call td_rti_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%max_iter, i)
     end do
     td%dt = -td%dt
+    call update_field(0, par_chi, gr, hm, psi, chi, par, dir = 'b')
 
     call states_calc_dens(psi, gr)
     call v_ks_calc(gr, sys%ks, hm, psi)
@@ -460,6 +462,7 @@ module opt_control_propagation_m
       call td_rti_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%max_iter, i)
     end do
     td%dt = -td%dt
+    call update_field(0, par_chi, gr, hm, psi, chi, par, dir = 'b')
 
     call states_calc_dens(psi, gr)
     call v_ks_calc(gr, sys%ks, hm, psi)
