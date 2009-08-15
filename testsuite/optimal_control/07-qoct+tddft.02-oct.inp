@@ -30,6 +30,12 @@ TDExponentialOrder = 4
 TDMaximumIter = stime/dt
 TDTimeStep = dt
 
+# Absorbing boundaries are probably not very meaningful in this calculation;
+# however I put them in order to have them in the testsuite.
+AbsorbingBoundaries = sin2
+ABWidth = 12.0
+ABHeight = -8.0
+
 
 #----------------------------
 # Laser field = Initial guess
