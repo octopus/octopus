@@ -57,25 +57,26 @@ module poisson_sete_m
   FLOAT :: ESURF,CHARGE_TOP,CHARGE_BOT,CHARGE_TOT,BORDER,&
     CS1,CS2,CS3,CHARGE_SURF
   FLOAT, DIMENSION(:), ALLOCATABLE :: rho_nuc(:)!, v_nuc(:)
-
+  integer :: noatoms, count_atoms
 contains
 
-  subroutine poisson_sete_init(nx, ny, nz, xl, yl, zl)
+  subroutine poisson_sete_init(nx, ny, nz, xl, yl, zl,number_atoms)
     integer, intent(in) :: nx
     integer, intent(in) :: ny
     integer, intent(in) :: nz
     FLOAT,   intent(in) :: xl
     FLOAT,   intent(in) :: yl
     FLOAT,   intent(in) :: zl
-
+    integer, intent(in) :: number_atoms
     CHARACTER*40 :: CDUM,FIL1
     FLOAT :: BOHRNM, ANGSNM
     INTEGER :: J1,K1, M, I,J,K,idum
     FLOAT :: ZCEN, XCEN, YCEN, VHMIN, VHMAX
-    write(*,*) BOHR 
     PCONST=CNST(4.0)*M_PI ! need 4 pi for Hartrees I think (??)
     BOHRNM=BOHR/CNST(10.0)
     ANGSNM=CNST(10.0)/BOHR
+    noatoms=number_atoms
+    count_atoms=0
     open(56,file='poisq',status='unknown')
     FIL1='test1.pois'
     OPEN(unit=57,FILE=FIL1,STATUS='UNKNOWN') ! status info file
@@ -130,12 +131,6 @@ contains
     allocate(IDIAG(NTOT))
     allocate(IAD(NELT))
     allocate(JAD(NELT))
-    allocate(X2(NTOT)) 
-    idum=3
-    DO I=1,NTOT
-      call quickrnd(IDUM,X2(I))! randomize sol'n vector Pois. Eq.
-    ENDDO
-    !X2=0.0
     CALL POISSONM
     QS=Q2 ! store Dirichlet BC info in QS
     deallocate(Q2)
@@ -161,16 +156,21 @@ contains
 
     CHARACTER*40 :: CDUM,FIL1
     FLOAT        :: bohrnm, angsnm, err
-    integer      :: j1, k1, m, i, j, k, idum,i1
+    integer      :: j1, k1, m, i, j, k, i1
     FLOAT :: ZCEN, XCEN, YCEN, VHMIN, VHMAX
-
     PCONST=CNST(4.0)*M_PI ! need 4 pi for Hartrees I think (??)
     BOHRNM=BOHR/CNST(10.0)
     ANGSNM=CNST(10.0)/BOHR
 
-    write(*,*) "LENW LENIW IELT", LENW, LENIW, NELT
     allocate(Q2(NTOT))
     allocate(rhotest(nxtot,nytot,nztot))
+    count_atoms=count_atoms + 1
+    if (count_atoms <= (noatoms + 1)) then
+      allocate(X2(NTOT)) 
+      DO I=1,NTOT
+        x2(I)=CNST(0.0)
+      ENDDO
+    endif
     rhotest=0
     do i= 1,ntot
       Q2(i)=QS(i) ! recall stored BC info
@@ -193,7 +193,6 @@ contains
         Q2(M)=0.0
       end if
     end do
-    write(*,*) size(Q2), size(ADIAG)
     do i=1,NTOT
       Q2(i)=Q2(i)/ADIAG(i)!! Laplacian scaled with diagonal elements
     enddo
@@ -229,12 +228,21 @@ contains
       end if
     end do
     call EGATE
+write(358,*) "#x,z, vh_big(x,11,k)"
+    do I=1,NXTOT
+     do K=1, NZTOT
+      write(358,*) I,K,VH_BIG(I,11,K)
+enddo
+enddo
     VHMIN=MINVAL(VH)
     VHMAX=MAXVAL(VH)
 
     deallocate(Q2)
     deallocate(rhotest)
-    ! deallocate(VH_BIG);
+    if (count_atoms <= noatoms ) then
+      deallocate(x2)
+    endif
+    !deallocate(VH_BIG);
 
   end subroutine poisson_sete_solve
 
@@ -530,8 +538,9 @@ contains
 
     ! This is a combination of cbsurfser and spaceser located on
     ! /home/stopa/surfER/build
-    allocate(VH_BIG(NXTOT,NYTOT,NZTOT))
     allocate(IPIO(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
+    allocate(VH_BIG(1:NXTOT,1:NYTOT,1:NZTOT))
+    vh_big(1:NXTOT,1:NYTOT,1:NZTOT)=0.0
     allocate(VBOUND(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
     allocate(DIELECTRIC(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
     IPIO=0; VBOUND=0.0

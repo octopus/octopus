@@ -521,8 +521,10 @@ contains
       call poisson_sete_solve(icase,rh0,vh0,nx,ny,nz,xl,yl,zl,icalc)
 !      write(91,*) "vh0 rh0"
 !      do  i=1,nx
-!       write(91,*) i,vh0(i,0,0), rh0(i,0,0)
+!       do j=1,ny
+!       write(91,*) i,j,vh0(i,11,j), rh0(i,11,j)
 !       enddo 
+!      enddo
          i=1;j=1;k=1
          do counter=1, gr%mesh%np
       call  index_to_coords(gr%mesh%idx,gr%mesh%sb%dim,counter,conversion)

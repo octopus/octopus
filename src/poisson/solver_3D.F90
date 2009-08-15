@@ -23,7 +23,7 @@ subroutine poisson3D_init(gr, geo)
   type(geometry_t), intent(in) :: geo
 
   integer :: maxl
-  integer :: nx,ny,nz !SEC
+  integer :: nx,ny,nz,noatoms !SEC
   FLOAT :: xl,yl,zl
 
   call push_sub('poisson3D.poisson3D_init')
@@ -136,7 +136,7 @@ subroutine poisson3D_init(gr, geo)
       xl = 2*gr%mesh%sb%lsize(1) 
       yl = 2*gr%mesh%sb%lsize(2) 
       zl = 2*gr%mesh%sb%lsize(3)
-    call poisson_sete_init(nx,ny,nz,xl,yl,zl)
+    call poisson_sete_init(nx,ny,nz,xl,yl,zl, geo%natoms)
      
   end select
 
