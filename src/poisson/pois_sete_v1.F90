@@ -35,7 +35,8 @@ module poisson_sete_m
     poisson_sete_energy
 
   public ::              &
-    rho_nuc
+    rho_nuc,             &
+    count_atoms
 
   FLOAT, DIMENSION(:,:,:), ALLOCATABLE :: RHO, VH
 
@@ -156,7 +157,7 @@ contains
 
     CHARACTER*40 :: CDUM,FIL1
     FLOAT        :: bohrnm, angsnm, err
-    integer      :: j1, k1, m, i, j, k, i1
+    integer      :: j1, k1, m, i, j, k, i1,idum
     FLOAT :: ZCEN, XCEN, YCEN, VHMIN, VHMAX
     PCONST=CNST(4.0)*M_PI ! need 4 pi for Hartrees I think (??)
     BOHRNM=BOHR/CNST(10.0)
@@ -164,12 +165,27 @@ contains
 
     allocate(Q2(NTOT))
     allocate(rhotest(nxtot,nytot,nztot))
-    count_atoms=count_atoms + 1
-    if (count_atoms <= (noatoms + 1)) then
-      allocate(X2(NTOT)) 
+    write(*,*) " Count AToms",count_atoms
+    if (count_atoms <= (noatoms )) then
+      idum=count_atoms
+      allocate(X2(1:NTOT))
+      DO I=1,NTOT
+        call quickrnd(IDUM,X2(I))
+        if (X2(i)>0.0) then
+            X2(i)=-X2(i)
+        endif
+      enddo
+    else if (count_atoms == noatoms+1) then
+      allocate(X2(1:NTOT))
+      X2(1:NTOT)=CNST(0.0)
+      idum=count_atoms+1
       DO I=1,NTOT
         x2(I)=CNST(0.0)
-      ENDDO
+        call quickrnd(IDUM,X2(I))
+        if (X2(i)<0) then
+            X2(i)=-X2(i)
+        endif
+      enddo
     endif
     rhotest=0
     do i= 1,ntot
@@ -571,7 +587,10 @@ enddo
     deallocate(VBOUND)
     deallocate(VT);deallocate(VTV);deallocate(QS)
     deallocate(IAD);deallocate(JAD);deallocate(ADIAG)
-    deallocate(IDIAG);deallocate(X2)
+    deallocate(IDIAG);
+!    if (count_atoms > noatoms ) then
+!     deallocate(X2)
+!    endif
     deallocate(DXL);deallocate(DYL)
     deallocate(dielectric)
     deallocate(zg)

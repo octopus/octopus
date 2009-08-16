@@ -565,6 +565,7 @@ contains
 
         vl(1:mesh%np) = M_ZERO   ! vl has to be initialized before entering routine
         ! and our best guess for the potential is zero
+        count_atoms=iatom
         call dpoisson_solve(gr, vl, rho) 
 
         if (poisson_solver == POISSON_SETE) then  !SEC
