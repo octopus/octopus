@@ -91,7 +91,13 @@ module td_rti_m
                                             ! Auxiliary function to store the Magnus potentials.
     type(zcf_t)         :: cf               ! Auxiliary cube for split operator methods.
     type(ob_terms_t)    :: ob               ! For open boundaries: leads, memory
-    logical             :: scf_propagation
+    integer             :: scf_propagation_steps ! Since the KS propagator is non-linear, each 
+                                                 ! propagating step should be performed self-consistently.
+                                                 ! In practice, for most purposes this is not 
+                                                 ! necessary, except perhaps in the first iterations. 
+                                                 ! This variable holds the number of initial steps for
+                                                 ! which the propagation is done self-consistently.
+                                                 ! The default is 3.
     FLOAT, pointer      :: prev_psi(:, :, :, :) => null()
     logical             :: first
   end type td_rti_t
@@ -132,7 +138,7 @@ contains
 
     call loct_pointer_copy(tro%v_old, tri%v_old)
     call exponential_copy(tro%te, tri%te)
-    tro%scf_propagation = tri%scf_propagation
+    tro%scf_propagation_steps = tri%scf_propagation_steps
     call loct_pointer_copy(tro%prev_psi, tri%prev_psi)
 
     call pop_sub()
@@ -368,7 +374,7 @@ contains
 
     ! By default, the propagation is only self-consistent in the first iterations
     ! (unless we are doing a QOCT run)
-    tr%scf_propagation = .false.
+    tr%scf_propagation_steps = 3
 
     if(tr%method == PROP_VISSCHER) then
       SAFE_ALLOCATE(tr%prev_psi(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
@@ -385,7 +391,7 @@ contains
   ! ---------------------------------------------------------
   subroutine td_rti_set_scf_prop(tr)
     type(td_rti_t), intent(inout) :: tr
-    tr%scf_propagation = .true.
+    tr%scf_propagation_steps = huge(1)
   end subroutine td_rti_set_scf_prop
   ! ---------------------------------------------------------
 
@@ -393,7 +399,7 @@ contains
   ! ---------------------------------------------------------
   subroutine td_rti_remove_scf_prop(tr)
     type(td_rti_t), intent(inout) :: tr
-    tr%scf_propagation = .false.
+    tr%scf_propagation_steps = -1
   end subroutine td_rti_remove_scf_prop
   ! ---------------------------------------------------------
 
@@ -479,7 +485,7 @@ contains
 
     self_consistent = .false.
     if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
-      if( (t < 3*dt)  .or.  (tr%scf_propagation) ) then
+      if( t < tr%scf_propagation_steps*abs(dt) ) then
         self_consistent = .true.
         SAFE_ALLOCATE(zpsi1(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
