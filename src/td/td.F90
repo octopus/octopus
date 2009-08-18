@@ -534,6 +534,7 @@ contains
         call v_ks_calc(gr, sys%ks, hm, st, calc_eigenval=.true.)
         call states_freeze_orbitals(st, gr, sys%mc, n = st%nst-1)
         call v_ks_freeze_hxc(sys%ks)
+        call states_calc_dens(st, gr)
       else
         ! Normal run.
         call states_calc_dens(st, gr)
