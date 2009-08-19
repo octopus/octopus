@@ -92,7 +92,7 @@ contains
   subroutine poisson_init(gr, geo)
     type(grid_t), intent(inout) :: gr
     type(geometry_t), intent(in) :: geo
-    integer i
+
     if(poisson_solver.ne.-99) return ! already initialized
 
     call push_sub('poisson.poisson_init')
@@ -228,9 +228,6 @@ contains
     !-----------------------------------------------------------------
     subroutine init_3D()
       integer :: default_solver 
-!      integer :: ind(3), i, j, poisson_solver
-!      REAL*8  :: ind1(3)
-
 
       call push_sub('poisson.init_3D')
 
@@ -336,7 +333,6 @@ contains
     FLOAT, allocatable :: aux1(:), aux2(:)
 
     logical :: all_nodes_value
-    integer :: ifinal
 
     call push_sub('poisson.zpoisson_solve')
 
@@ -371,30 +367,29 @@ contains
   !-----------------------------------------------------------------
   subroutine dpoisson_solve(gr, pot, rho, all_nodes)
     type(grid_t),         intent(inout) :: gr
-    INTEGER counter !                            ::SEC Team 
-    INTEGER :: nx_half, nx !                                 ::SEC Team
-    INTEGER :: ny_half, ny !                                 ::SEC Team
-    INTEGER :: nz_half, nz !                                 ::SEC Team
-!    integer ifinal
-    FLOAT :: xl,yl,zl,dx,dy,dz,sum0,sum1,eion_ion,lx,ly,lz ! ::SEC Team
-
-    FLOAT, dimension(:,:,:), allocatable :: vh0,rh0
-    integer :: h,i,j,k,icase=1,icalc=1,i1,j1,k1,m1,m2,ind(3),no
-    FLOAT :: ind1(3), p_nuc_charge, p_val
     FLOAT,                intent(inout) :: pot(:)    ! pot(mesh%np)
     FLOAT,                intent(in)    :: rho(:)    ! rho(mesh%np)
     logical, optional,    intent(in)    :: all_nodes ! Is the poisson solver allowed to utilise
                                                      ! all nodes or only the domain nodes for
                                                      ! its calculations? (Defaults to .true.)
 
+    integer :: counter
+    integer :: nx_half, nx
+    integer :: ny_half, ny
+    integer :: nz_half, nz
+
+    FLOAT :: xl, yl, zl, dx, dy, dz, sum0
+
+    FLOAT, dimension(:,:,:), allocatable :: vh0,rh0
+    integer :: icase = 1, icalc = 1, i1
+
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
-    FLOAT, allocatable :: rhop(:), potp(:), x0(:), y0(:), z0(:), &
-         rhop2(:),rhop_temp(:),rhop_temp2(:)!, rho_nuc(:)
+    FLOAT, allocatable :: rhop(:), potp(:)
 
     logical               :: all_nodes_value
     type(profile_t), save :: prof
     
-    integer :: nuc_dens_method, write_distr, conversion(3);  !Roberto
+    integer :: conversion(3)
 
     call profiling_in(prof, 'POISSON_SOLVE')
     call push_sub('poisson.dpoisson_solve')
@@ -475,69 +470,70 @@ contains
 
     case(POISSON_ISF)
             call poisson_isf_solve(gr%mesh, pot, rho, all_nodes_value)
+
     case(POISSON_SETE)
-       dx=gr%mesh%sb%h(1); dy=gr%mesh%sb%h(2); dz=gr%mesh%sb%h(3)
+
        !Probably do not need to allocate so much: erased rhop2
        i1=size(rho); !allocate(rhop_temp(i1)); allocate(rhop(i1)); allocate(rho_nuc(i1));
 !       rhop=0.0;rhop_temp=0.0;rho_nuc=0.0
        i1=size(pot);
 
-
-
 ! What this is doing is solving Poisson for rhop(e+p) and the given hartree pot.
 
-      nx=gr%mesh%idx%nr(2,1)-gr%mesh%idx%nr(1,1)+1-&
-      	2*gr%mesh%idx%enlarge(1)
-      ny=gr%mesh%idx%nr(2,2)-gr%mesh%idx%nr(1,2)+1-&
-      2*gr%mesh%idx%enlarge(2)
-      nz=gr%mesh%idx%nr(2,3)-gr%mesh%idx%nr(1,3)+1-&
-      2*gr%mesh%idx%enlarge(3)
-      nx_half=(gr%mesh%idx%nr(2,1)-gr%mesh%idx%nr(1,1)-&
-      	2*gr%mesh%idx%enlarge(1))/2+1
-      ny_half=(gr%mesh%idx%nr(2,2)-gr%mesh%idx%nr(1,2)-&
-      2*gr%mesh%idx%enlarge(2))/2+1
-      nz_half=(gr%mesh%idx%nr(2,3)-gr%mesh%idx%nr(1,3)-&
-      2*gr%mesh%idx%enlarge(3))/2+1
+      nx = gr%mesh%idx%nr(2,1) - gr%mesh%idx%nr(1,1) + 1 - 2*gr%mesh%idx%enlarge(1)
+      ny = gr%mesh%idx%nr(2,2) - gr%mesh%idx%nr(1,2) + 1 - 2*gr%mesh%idx%enlarge(2)
+      nz = gr%mesh%idx%nr(2,3) - gr%mesh%idx%nr(1,3) + 1 - 2*gr%mesh%idx%enlarge(3)
 
-      allocate(rh0(nx,ny,nz))
-      allocate(vh0(nx,ny,nz))
+      nx_half = (gr%mesh%idx%nr(2,1) - gr%mesh%idx%nr(1,1) - 2*gr%mesh%idx%enlarge(1))/2 + 1
+      ny_half = (gr%mesh%idx%nr(2,2) - gr%mesh%idx%nr(1,2) - 2*gr%mesh%idx%enlarge(2))/2 + 1
+      nz_half = (gr%mesh%idx%nr(2,3) - gr%mesh%idx%nr(1,3) - 2*gr%mesh%idx%enlarge(3))/2 + 1
+
+      SAFE_ALLOCATE(rh0(1:nx, 1:ny, 1:nz))
+      SAFE_ALLOCATE(vh0(1:nx, 1:ny, 1:nz))
 
       !Show Roberto tells us the size of the box. 
       ! The %size gives out half the size of a box. 
       xl = 2*gr%mesh%sb%lsize(1) 
       yl = 2*gr%mesh%sb%lsize(2) 
       zl = 2*gr%mesh%sb%lsize(3)
-      k=1; j=1; i=1
-      dx=gr%mesh%sb%h(1); dy=gr%mesh%sb%h(2); dz=gr%mesh%sb%h(3)
-      sum0=0.0
-      do counter=1, gr%mesh%np
-      call  index_to_coords(gr%mesh%idx,gr%mesh%sb%dim,counter,conversion)
-      conversion(1)=conversion(1)+nx_half
-      conversion(2)=conversion(2)+ny_half
-      conversion(3)=conversion(3)+nz_half
-      vh0(conversion(1),conversion(2),conversion(3))=pot(counter)
-      rh0(conversion(1),conversion(2),conversion(3))=rho(counter)
-       end do
+
+      dx = gr%mesh%sb%h(1)
+      dy = gr%mesh%sb%h(2)
+      dz = gr%mesh%sb%h(3)
+
+      sum0 = M_ZERO
+
+      do counter = 1, gr%mesh%np
+        call  index_to_coords(gr%mesh%idx,gr%mesh%sb%dim,counter,conversion)
+        conversion(1)=conversion(1)+nx_half
+        conversion(2)=conversion(2)+ny_half
+        conversion(3)=conversion(3)+nz_half
+        vh0(conversion(1),conversion(2),conversion(3))=pot(counter)
+        rh0(conversion(1),conversion(2),conversion(3))=rho(counter)
+      end do
+
       call poisson_sete_solve(icase,rh0,vh0,nx,ny,nz,xl,yl,zl,icalc)
-!      write(91,*) "vh0 rh0"
-!      do  i=1,nx
+      !      write(91,*) "vh0 rh0"
+      !      do  i=1,nx
 !       do j=1,ny
 !       write(91,*) i,j,vh0(i,11,j), rh0(i,11,j)
 !       enddo 
 !      enddo
-         i=1;j=1;k=1
-         do counter=1, gr%mesh%np
-      call  index_to_coords(gr%mesh%idx,gr%mesh%sb%dim,counter,conversion)
-      conversion(1)=conversion(1)+nx_half
-      conversion(2)=conversion(2)+ny_half
-      conversion(3)=conversion(3)+nz_half
-  
-            pot(counter)=vh0(conversion(1),conversion(2),conversion(3))
-         end do
 
-      deallocate(vh0)
-      deallocate(rh0)
+      do counter = 1, gr%mesh%np
 
+        call  index_to_coords(gr%mesh%idx,gr%mesh%sb%dim,counter,conversion)
+
+        conversion(1) = conversion(1) + nx_half
+        conversion(2) = conversion(2) + ny_half
+        conversion(3) = conversion(3) + nz_half
+        
+        pot(counter)=vh0(conversion(1), conversion(2), conversion(3))
+
+      end do
+
+      SAFE_DEALLOCATE_A(vh0)
+      SAFE_DEALLOCATE_A(rh0)
 
     end select
 
@@ -557,7 +553,7 @@ contains
 
     FLOAT, allocatable :: rho(:), vh(:), vh_exact(:), rhop(:), x(:, :)
     FLOAT :: alpha, beta, r, delta, norm, rnd, ralpha, range
-    integer :: i, k, ierr, iunit, n, n_gaussians, ifinal
+    integer :: i, k, ierr, iunit, n, n_gaussians
 
     call push_sub('poisson.poisson_test')
 

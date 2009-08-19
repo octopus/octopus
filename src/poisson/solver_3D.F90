@@ -23,8 +23,8 @@ subroutine poisson3D_init(gr, geo)
   type(geometry_t), intent(in) :: geo
 
   integer :: maxl
-  integer :: nx,ny,nz,noatoms !SEC
-  FLOAT :: xl,yl,zl
+  integer :: nx, ny, nz
+  FLOAT :: xl, yl, zl
 
   call push_sub('poisson3D.poisson3D_init')
 
