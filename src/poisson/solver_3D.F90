@@ -126,17 +126,17 @@ subroutine poisson3D_init(gr, geo)
     write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
     call write_info(1)
     call poisson_corrections_init(corrector, maxl, gr%mesh)
+
   case(POISSON_SETE)
-      nx=gr%mesh%idx%nr(2,1)-gr%mesh%idx%nr(1,1)+1-&
-      	2*gr%mesh%idx%enlarge(1)
-      ny=gr%mesh%idx%nr(2,2)-gr%mesh%idx%nr(1,2)+1-&
-      2*gr%mesh%idx%enlarge(2)
-      nz=gr%mesh%idx%nr(2,3)-gr%mesh%idx%nr(1,3)+1-&
-      2*gr%mesh%idx%enlarge(3)
-      xl = 2*gr%mesh%sb%lsize(1) 
-      yl = 2*gr%mesh%sb%lsize(2) 
-      zl = 2*gr%mesh%sb%lsize(3)
-    call poisson_sete_init(nx,ny,nz,xl,yl,zl, geo%natoms)
+    nx = gr%mesh%idx%nr(2, 1) - gr%mesh%idx%nr(1, 1) + 1 - 2*gr%mesh%idx%enlarge(1)
+    ny = gr%mesh%idx%nr(2, 2) - gr%mesh%idx%nr(1, 2) + 1 - 2*gr%mesh%idx%enlarge(2)
+    nz = gr%mesh%idx%nr(2, 3) - gr%mesh%idx%nr(1, 3) + 1 - 2*gr%mesh%idx%enlarge(3)
+
+    xl = 2*gr%mesh%sb%lsize(1)
+    yl = 2*gr%mesh%sb%lsize(2)
+    zl = 2*gr%mesh%sb%lsize(3)
+
+    call poisson_sete_init(nx, ny, nz, xl, yl, zl, geo%natoms)
      
   end select
 

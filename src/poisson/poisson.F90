@@ -380,7 +380,7 @@ contains
 
     FLOAT :: xl, yl, zl, dx, dy, dz, sum0
 
-    FLOAT, dimension(:,:,:), allocatable :: vh0,rh0
+    FLOAT, allocatable :: vh0(:,:,:), rh0(:,:,:)
     integer :: icase = 1, icalc = 1, i1
 
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
@@ -587,7 +587,7 @@ contains
       do while(abs(norm-M_ONE)> CNST(1.0e-4))
         do k = 1, gr%mesh%sb%dim
           call random_number(rnd)
-          x(k, n) = range * rnd 
+          x(k, n) = range*rnd 
         end do
         r = sqrt(sum(x(:, n)*x(:,n)))
         do i = 1, gr%mesh%np
