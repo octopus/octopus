@@ -275,7 +275,8 @@ module opt_control_propagation_m
     call td_rti_remove_scf_prop(tr_chi)
 
     aux_fwd_propagation = ( target_mode(target) == oct_targetmode_td .or. &
-                           (hm%theory_level.ne.INDEPENDENT_PARTICLES) )
+                           (hm%theory_level.ne.INDEPENDENT_PARTICLES .and. &
+                            .not.sys%ks%frozen_hxc ) )
     if(aux_fwd_propagation) then
       call states_copy(psi2, psi)
       call parameters_copy(par_prev, par)
@@ -315,7 +316,8 @@ module opt_control_propagation_m
     call states_calc_dens(psi, gr)
     call v_ks_calc(gr, sys%ks, hm, psi)
 
-    if(target_mode(target) == oct_targetmode_td .or. (hm%theory_level.ne.INDEPENDENT_PARTICLES) ) then
+    if( target_mode(target) == oct_targetmode_td .or. &
+        (hm%theory_level.ne.INDEPENDENT_PARTICLES .and. (.not.sys%ks%frozen_hxc) ) ) then
       call states_end(psi2)
       call parameters_end(par_prev)
     end if
@@ -499,7 +501,7 @@ module opt_control_propagation_m
       call states_end(inh)
     end if
 
-    if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+    if( hm%theory_level.ne.INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
       call hamiltonian_set_oct_exchange(hm, st, gr, ks%xc)
     end if
 
@@ -510,7 +512,7 @@ module opt_control_propagation_m
         call parameters_to_h_val(par_chi, hm%ep, j+1)
       end if
     end do
-    if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+    if(hm%theory_level.ne.INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
       call states_calc_dens(st, gr)
       call v_ks_calc(gr, ks, hm, st)
       call hamiltonian_update_potential(hm, gr%mesh)
@@ -541,7 +543,7 @@ module opt_control_propagation_m
       call hamiltonian_remove_inh(hm)
     end if
 
-    if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+    if(hm%theory_level.ne.INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
       call hamiltonian_remove_oct_exchange(hm)
     end if
 
@@ -552,7 +554,7 @@ module opt_control_propagation_m
         call parameters_to_h_val(par, hm%ep, j+1)
       end if
     end do
-    if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+    if(hm%theory_level.ne.INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
       call states_calc_dens(st, gr)
       call v_ks_calc(gr, ks, hm, st)
       call hamiltonian_update_potential(hm, gr%mesh)

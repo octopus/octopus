@@ -32,6 +32,9 @@ module opt_control_initst_m
   use geometry_m
   use profiling_m
   use restart_m
+  use system_m
+  use hamiltonian_m
+  use v_ks_m
 
   implicit none
 
@@ -49,21 +52,21 @@ module opt_control_initst_m
 
 
   ! ---------------------------------------------------------
-  subroutine initial_state_init(gr, geo, st, initial_state)
-    type(grid_t), intent(in)      :: gr
-    type(geometry_t), intent(in)  :: geo
-    type(states_t), intent(in)    :: st
+  subroutine initial_state_init(sys, hm, initial_state)
+    type(system_t), intent(inout) :: sys
+    type(hamiltonian_t), intent(inout) :: hm
     type(states_t), intent(inout) :: initial_state
 
-    integer           :: ist, jst, ik, ib, idim, inst, inik, id, is, ip, ierr, no_states, istype
+    integer           :: ist, jst, ik, ib, idim, inst, inik, id, is, ip, ierr, &
+                         no_states, istype, freeze_orbitals
     type(block_t)     :: blk
     type(states_t)    :: tmp_st 
     FLOAT             :: x(MAX_DIM), r, psi_re, psi_im
     CMPLX, allocatable :: rotation_matrix(:, :)
     call push_sub('defstates.initial_state_init')
 
-    call states_copy(initial_state, st)
-    call states_allocate_wfns(initial_state, gr%mesh, M_CMPLX)
+    call states_copy(initial_state, sys%st)
+    call states_allocate_wfns(initial_state, sys%gr%mesh, M_CMPLX)
 
     !%Variable OCTInitialState
     !%Type integer
@@ -89,7 +92,7 @@ module opt_control_initst_m
     case(oct_is_groundstate) 
       message(1) =  'Info: Using Ground State for InitialState'
       call write_info(1)
-      call restart_read(trim(restart_dir)//GS_DIR, initial_state, gr, geo, ierr)
+      call restart_read(trim(restart_dir)//GS_DIR, initial_state, sys%gr, sys%geo, ierr)
 
     case(oct_is_excited)  
       message(1) = 'Error: using an excited state as the starting state for an '
@@ -119,7 +122,7 @@ module opt_control_initst_m
         if(loct_parse_block(datasets_check('OCTInitialTransformStates'), blk) == 0) then
           call states_copy(tmp_st, initial_state)
           SAFE_DEALLOCATE_P(tmp_st%zpsi)
-          call restart_look_and_read(tmp_st, gr, geo)
+          call restart_look_and_read(tmp_st, sys%gr, sys%geo)
           SAFE_ALLOCATE(rotation_matrix(1:initial_state%nst, 1:tmp_st%nst))
           rotation_matrix = M_z0
           do ist = 1, initial_state%nst
@@ -127,7 +130,7 @@ module opt_control_initst_m
               call loct_parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
             end do
           end do
-          call states_rotate(gr%mesh, initial_state, tmp_st, rotation_matrix)
+          call states_rotate(sys%gr%mesh, initial_state, tmp_st, rotation_matrix)
           SAFE_DEALLOCATE_A(rotation_matrix)
           call states_end(tmp_st)
         else
@@ -182,17 +185,19 @@ module opt_control_initst_m
                 ! convert to C string
                 call conv_to_C_string(initial_state%user_def_states(id, is, ik))
                 
-                do ip = 1, gr%mesh%np
-                  x = gr%mesh%x(ip, :)
+                do ip = 1, sys%gr%mesh%np
+                  x = sys%gr%mesh%x(ip, :)
                   r = sqrt(sum(x(:)**2))
                   
                   ! parse user defined expressions
-                  call loct_parse_expression(psi_re, psi_im, gr%sb%dim, x, r, M_ZERO, initial_state%user_def_states(id, is, ik))
+                  call loct_parse_expression(psi_re, psi_im, &
+                    sys%gr%sb%dim, x, r, M_ZERO, initial_state%user_def_states(id, is, ik))
                   ! fill state
                   initial_state%zpsi(ip, id, is, ik) = psi_re + M_zI*psi_im
                 end do
                 ! normalize orbital
-                call zstates_normalize_orbital(gr%mesh, initial_state%d%dim, initial_state%zpsi(:,:, is, ik))
+                call zstates_normalize_orbital(sys%gr%mesh, initial_state%d%dim, &
+                  initial_state%zpsi(:,:, is, ik))
               end do
             end do
           enddo
@@ -209,7 +214,31 @@ module opt_control_initst_m
       call write_info(2)
     end select
 
-    call states_calc_dens(initial_state, gr)
+    ! Check if we want to freeze some of the deeper orbitals.
+    call loct_parse_int(datasets_check('TDFreezeOrbitals'), 0, freeze_orbitals)
+    if(freeze_orbitals > 0) then
+      ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
+      call states_freeze_orbitals(initial_state, sys%gr, sys%mc, freeze_orbitals)
+      write(message(1),'(a,i4,a,i4,a)') 'Info: The lowest', freeze_orbitals, &
+        ' orbitals have been frozen.', initial_state%nst, ' will be propagated.'
+      call write_info(1)
+      call states_calc_dens(initial_state, sys%gr)
+      call v_ks_calc(sys%gr, sys%ks, hm, initial_state, calc_eigenval = .true.)
+    elseif(freeze_orbitals < 0) then
+      ! This means SAE approximation. We calculate the Hxc first, then freezer all
+      ! orbitals minus one.
+      write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
+      call write_info(1)
+      call states_calc_dens(initial_state, sys%gr)
+      call v_ks_calc(sys%gr, sys%ks, hm, initial_state, calc_eigenval = .true.)
+      call states_freeze_orbitals(initial_state, sys%gr, sys%mc, n = initial_state%nst-1)
+      call v_ks_freeze_hxc(sys%ks)
+      call states_calc_dens(initial_state, sys%gr)
+    else
+      ! Normal run.
+      call states_calc_dens(initial_state, sys%gr)
+      call v_ks_calc(sys%gr, sys%ks, hm, initial_state, calc_eigenval = .true.)
+    end if
     
     call pop_sub()
   end subroutine initial_state_init
