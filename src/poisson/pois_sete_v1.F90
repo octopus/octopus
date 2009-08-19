@@ -1,4 +1,4 @@
-!! Copyright (C) 2009
+!! Copyright (C) 2009 R. Olivares, M. Stopa, X. Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -20,9 +20,10 @@
 #include <global.h>
 
 module poisson_sete_m
-
   use global_m
   use math_m
+  use messages_m
+  use profiling_m
 
   implicit none
 
@@ -38,27 +39,24 @@ module poisson_sete_m
     rho_nuc,             &
     count_atoms
 
-  FLOAT, DIMENSION(:,:,:), ALLOCATABLE :: RHO, VH
-
-  FLOAT, DIMENSION(:), ALLOCATABLE :: AW,AWP,Q2,X2,QS
-  INTEGER, DIMENSION(:), ALLOCATABLE :: IAD,JAD,IY,JY,KY
-  FLOAT :: TOL=0.01,HARTREE=CNST(2.0*13.60569193),BOHR=CNST(0.52917720859) ! Bohr radius in nm
-  INTEGER :: IPOISSON_SETE_ON,NELT,NTOT,LENW,LENIW,IDEV,NGATES, &
-    ISYM=0,ITOL=2,ITMAX=201,ITERMIN=5,ITER,IERR,IUNIT=0, &
-    NXBOT,NYBOT,NZBOT,NXL,NYL,NXTOT,NYTOT,NZTOT,MD
-  FLOAT, DIMENSION(:,:,:), ALLOCATABLE :: VBOUND,DIELECTRIC, &
-    rhotest,VH_BIG 
-  FLOAT, DIMENSION(:), ALLOCATABLE :: XG,YG,ZG, &
-    DXG,DYG,DZ,RWORK,DXL,DYL,VT,VTV,ADIAG
-  FLOAT :: XWIDTH,YWIDTH,ZWIDTH,DIELECTRIC0,PCONST
-  INTEGER, DIMENSION(:,:,:), ALLOCATABLE :: IPIO
-  INTEGER, DIMENSION(:), ALLOCATABLE :: IWORK,IDIAG
-  INTEGER :: NX2,NY2,NZ2
-  FLOAT, DIMENSION(:,:,:,:), ALLOCATABLE :: SIG
-  FLOAT :: ESURF,CHARGE_TOP,CHARGE_BOT,CHARGE_TOT,BORDER,&
-    CS1,CS2,CS3,CHARGE_SURF
-  FLOAT, DIMENSION(:), ALLOCATABLE :: rho_nuc(:)!, v_nuc(:)
+  FLOAT, allocatable :: rho(:, :, :), vh(:, :, :)
+  FLOAT, allocatable :: aw(:), awp(:), q2(:), x2(:), qs(:)
+  integer, allocatable :: iad(:), jad(:), iy(:), jy(:), ky(:)
+  FLOAT :: tol=0.01, hartree=CNST(2.0*13.60569193), bohr=CNST(0.52917720859) ! bohr radius in nm
+  integer :: isete_on, nelt, ntot, lenw, leniw, idev, ngates, &
+    isym = 0, itol = 2, itmax = 201, itermin = 5, iter, ierr, iunit = 0, &
+    nxbot, nybot, nzbot, nxl, nyl, nxtot, nytot, nztot, md
+  FLOAT, allocatable :: vbound(:,:,:), dielectric(:,:,:), rhotest(:,:,:), vh_big(:,:,:)
+  FLOAT, allocatable :: xg(:), yg(:), zg(:), dxg(:), dyg(:), dz(:), rwork(:), dxl(:), dyl(:), vt(:), vtv(:), adiag(:)
+  FLOAT :: xwidth, ywidth, zwidth, dielectric0, pconst
+  integer, allocatable :: ipio(:,:,:)
+  integer, allocatable :: iwork(:), idiag(:)
+  integer :: nx2, ny2, nz2
+  FLOAT, allocatable :: sig(:,:,:,:)
+  FLOAT :: esurf, charge_top, charge_bot, charge_tot, border, cs1, cs2, cs3, charge_surf
+  FLOAT, allocatable :: rho_nuc(:)
   integer :: noatoms, count_atoms
+
 contains
 
   subroutine poisson_sete_init(nx, ny, nz, xl, yl, zl,number_atoms)
@@ -69,33 +67,44 @@ contains
     FLOAT,   intent(in) :: yl
     FLOAT,   intent(in) :: zl
     integer, intent(in) :: number_atoms
-    CHARACTER*40 :: CDUM,FIL1
-    FLOAT :: BOHRNM, ANGSNM
-    INTEGER :: J1,K1, M, I,J,K,idum
-    FLOAT :: ZCEN, XCEN, YCEN, VHMIN, VHMAX
-    PCONST=CNST(4.0)*M_PI ! need 4 pi for Hartrees I think (??)
-    BOHRNM=BOHR/CNST(10.0)
-    ANGSNM=CNST(10.0)/BOHR
-    noatoms=number_atoms
-    count_atoms=0
-    open(56,file='poisq',status='unknown')
-    FIL1='test1.pois'
-    OPEN(unit=57,FILE=FIL1,STATUS='UNKNOWN') ! status info file
-    ! READ FILE
-    READ(57,'(A40)')CDUM
-    READ(57,'(A40)')CDUM
-    READ(57,'(A40)')CDUM
-    READ(57,*)IDEV, IPOISSON_SETE_ON ! for future use - device configuration
-    write(*,*)"ISETE is ON", IPOISSON_SETE_ON
-    IF(IDEV == 1)THEN
-      ! physical device characteristics
-      READ(57,*)ZWIDTH;ZWIDTH=ZWIDTH*ANGSNM  ! distance between plates (nm)
 
-      READ(57,*) ZCEN
+    character(len=40) :: cdum, fil1
+    FLOAT :: bohrnm, angsnm
+    integer :: i, j
+    FLOAT :: zcen, xcen, ycen
+
+    pconst = CNST(4.0)*M_PI ! need 4 pi for Hartrees I think (??)
+    bohrnm = bohr/CNST(10.0)
+    angsnm = CNST(10.0)/bohr
+    noatoms = number_atoms
+    count_atoms = 0
+
+    open(56, file = 'poisq',status = 'unknown')
+    FIL1='test1.pois'
+    OPEN(unit=57, FILE = FIL1, STATUS = 'UNKNOWN') ! status info file
+
+    ! READ FILE
+    read(57, '(a40)') cdum
+    read(57, '(a40)') cdum
+    read(57, '(a40)') cdum
+    read(57,*) idev, isete_on ! for future use - device configuration
+    write(*,*) "ISETE is ON", isete_on
+
+    if(idev == 1) then
+
+      ! physical device characteristics
+      read(57,*) zwidth
+
+      zwidth = zwidth*angsnm  ! distance between plates (nm)
+
+      read(57,*) zcen
       zcen = zcen*angsnm
 
-      READ(57,*)NGATES;
-      allocate(VTV(NGATES)); allocate(VT(NGATES))
+      read(57,*) ngates
+
+      SAFE_ALLOCATE(VTV(1:NGATES))
+      SAFE_ALLOCATE(VT(1:NGATES))
+
       READ(57,*)VTV(1),VTV(2) ! voltage on plates in volts and nm?
       VT=VTV/HARTREE
       READ(57,*)DIELECTRIC0    ! dielectric constant of region betw plates
@@ -119,22 +128,27 @@ contains
 
     call xyzgrid(nx, ny, nz, xl, yl, zl, xcen, ycen, zcen)  ! establish x-y-z grids
 
-    CALL CBSURF !Assign boundaries 
+    call cbsurf() !Assign boundaries 
+
     NELT=32+20*((NXTOT-2)+(NYTOT-2)+(NZTOT-2))+ &
       12*((NXTOT-2)*(NYTOT-2)+(NXTOT-2)*(NZTOT-2)+(NYTOT-2)*(NZTOT-2)) + &
       7*(NXTOT-2)*(NYTOT-2)*(NZTOT-2)
     LENW=NELT+9*NXTOT*NYTOT*NZTOT
     LENIW=NELT+5*NXTOT*NYTOT*NZTOT+12
-    allocate(q2(ntot))
-    allocate(AW(NELT))
-    allocate(QS(NTOT))
-    allocate(ADIAG(NTOT))
-    allocate(IDIAG(NTOT))
-    allocate(IAD(NELT))
-    allocate(JAD(NELT))
-    CALL POISSONM
-    QS=Q2 ! store Dirichlet BC info in QS
-    deallocate(Q2)
+
+    SAFE_ALLOCATE(q2(1:ntot))
+    SAFE_ALLOCATE(aw(1:nelt))
+    SAFE_ALLOCATE(qs(1:ntot))
+    SAFE_ALLOCATE(adiag(1:ntot))
+    SAFE_ALLOCATE(idiag(1:ntot))
+    SAFE_ALLOCATE(iad(1:nelt))
+    SAFE_ALLOCATE(jad(1:nelt))
+    
+    call poissonm()
+
+    qs = q2 ! store Dirichlet BC info in QS
+
+    SAFE_DEALLOCATE_A(q2)
 
   end subroutine poisson_sete_init
 
@@ -155,42 +169,57 @@ contains
     ! Input: NX, NY, NZ -> No. of octopus grid points in each dimension
     ! Input: XL, YL, ZL -> Size of the octopus box
 
-    CHARACTER*40 :: CDUM,FIL1
     FLOAT        :: bohrnm, angsnm, err
     integer      :: j1, k1, m, i, j, k, i1,idum
-    FLOAT :: ZCEN, XCEN, YCEN, VHMIN, VHMAX
+    FLOAT :: VHMIN, VHMAX
     PCONST=CNST(4.0)*M_PI ! need 4 pi for Hartrees I think (??)
     BOHRNM=BOHR/CNST(10.0)
     ANGSNM=CNST(10.0)/BOHR
 
-    allocate(Q2(NTOT))
-    allocate(rhotest(nxtot,nytot,nztot))
-    write(*,*) " Count AToms",count_atoms
-    if (count_atoms <= (noatoms )) then
-      idum=count_atoms
-      allocate(X2(1:NTOT))
-      DO I=1,NTOT
+    SAFE_ALLOCATE(Q2(1:NTOT))
+    SAFE_ALLOCATE(rhotest(1:nxtot, 1:nytot, 1:nztot))
+
+    write(*,*) " Count atoms", count_atoms
+
+    if (count_atoms <= noatoms) then
+      idum = count_atoms
+
+      SAFE_ALLOCATE(X2(1:NTOT))
+      
+      do i = 1, ntot
         call quickrnd(IDUM,X2(I))
-        if (X2(i)>0.0) then
-            X2(i)=-X2(i)
+        if (x2(i) > M_ZERO) then
+            x2(i) = - x2(i)
         endif
       enddo
+
     else if (count_atoms == noatoms+1) then
-      allocate(X2(1:NTOT))
-      X2(1:NTOT)=CNST(0.0)
-      idum=count_atoms+1
-      DO I=1,NTOT
-        x2(I)=CNST(0.0)
+
+      SAFE_ALLOCATE(X2(1:NTOT))
+
+      x2(1:NTOT) = M_ZERO
+
+      idum = count_atoms + 1
+
+      do i = 1, ntot
+        x2(i) = M_ZERO
+
         call quickrnd(IDUM,X2(I))
-        if (X2(i)<0) then
-            X2(i)=-X2(i)
+
+        if (x2(i) < M_ZERO) then
+            x2(i) = -x2(i)
         endif
+
       enddo
+
     endif
-    rhotest=0
-    do i= 1,ntot
-      Q2(i)=QS(i) ! recall stored BC info
+
+    rhotest = M_ZERO
+
+    do i = 1, ntot
+      q2(i) = qs(i) ! recall stored BC info
     enddo
+
     DO M = 1,NTOT
       I=IY(M); J=JY(M); K=KY(M)
       IF(IPIO(I,J,K) == 0)THEN
@@ -416,9 +445,8 @@ enddo
         STOP ' GOTTA QUIT '
       end if
 
-      if(idebug == 1)then
-        write(57,101)iec,(av(ii),ii=1,7),q2(ia)
-101     format(1x,i8,8(1x,e10.4))
+      if(idebug == 1) then
+        write(57, '(1x,i8,8(1x,e10.4))') iec, (av(ii),ii=1,7), q2(ia)
       endif
 
       DO ICOL=1,7  !  THIS IS SLAP TRIAD FORMAT
@@ -713,7 +741,7 @@ enddo
 !    write(6,*)' nzbot ',nzbot
 !    write(6,*)' zg nztot ',nztot
 !    write(6,101)(zg(k),k=1,nztot)
-101 format(10(1x,e10.4))
+! 101 format(10(1x,e10.4))
 !    write(6,*)' dz '
 !    write(6,101)(dz(k),k=1,nztot)
 
