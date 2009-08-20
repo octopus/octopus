@@ -664,7 +664,7 @@ module opt_control_propagation_m
     call calculate_g(gr, hm, psi, chi, dl, dq)
     d1 = M_z1
     if(zbr98_) then
-      d1 = zstates_mpdotp(gr%mesh, psi, chi)
+      d1 = zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, 1, 1), chi%zpsi(:, :, 1, 1))
       forall(j = 1:no_parameters) d(j) = aimag(d1*dl(j)) / parameters_alpha(cp, j) 
     elseif(gradients_) then
       forall(j = 1:no_parameters) d(j) = aimag(dl(j))
