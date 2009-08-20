@@ -30,6 +30,7 @@ module poisson_sete_m
   private
 
   public ::              &
+    poisson_sete_t,      &
     poisson_sete_init,   &
     poisson_sete_solve,  &
     poisson_sete_end,    &
@@ -39,14 +40,18 @@ module poisson_sete_m
     rho_nuc,             &
     count_atoms
 
+  type poisson_sete_t
+    integer :: isete_on
+  end type poisson_sete_t
+
   FLOAT, allocatable :: rho(:, :, :), vh(:, :, :)
   FLOAT, allocatable :: aw(:), awp(:), q2(:), x2(:), qs(:)
   integer, allocatable :: iad(:), jad(:), iy(:), jy(:), ky(:)
   FLOAT :: tol=0.01, hartree=CNST(2.0*13.60569193), bohr=CNST(0.52917720859) ! bohr radius in nm
-  integer :: isete_on, nelt, ntot, lenw, leniw, idev, ngates, &
+  integer :: nelt, ntot, lenw, leniw, idev, ngates, &
     isym = 0, itol = 2, itmax = 201, itermin = 5, iter, ierr, iunit = 0, &
     nxbot, nybot, nzbot, nxl, nyl, nxtot, nytot, nztot, md
-  FLOAT, allocatable :: vbound(:,:,:), dielectric(:,:,:), rhotest(:,:,:), vh_big(:,:,:)
+  FLOAT, allocatable :: vbound(:,:,:), rhotest(:,:,:), dielectric(:,:,:), vh_big(:,:,:)
   FLOAT, allocatable :: xg(:), yg(:), zg(:), dxg(:), dyg(:), dz(:), rwork(:), dxl(:), dyl(:), vt(:), vtv(:), adiag(:)
   FLOAT :: xwidth, ywidth, zwidth, dielectric0, pconst
   integer, allocatable :: ipio(:,:,:)
@@ -59,14 +64,15 @@ module poisson_sete_m
 
 contains
 
-  subroutine poisson_sete_init(nx, ny, nz, xl, yl, zl,number_atoms)
-    integer, intent(in) :: nx
-    integer, intent(in) :: ny
-    integer, intent(in) :: nz
-    FLOAT,   intent(in) :: xl
-    FLOAT,   intent(in) :: yl
-    FLOAT,   intent(in) :: zl
-    integer, intent(in) :: number_atoms
+  subroutine poisson_sete_init(this, nx, ny, nz, xl, yl, zl,number_atoms)
+    type(poisson_sete_t), intent(out)   :: this
+    integer,              intent(in)    :: nx
+    integer,              intent(in)    :: ny
+    integer,              intent(in)    :: nz
+    FLOAT,                intent(in)    :: xl
+    FLOAT,                intent(in)    :: yl
+    FLOAT,                intent(in)    :: zl
+    integer,              intent(in)    :: number_atoms
 
     character(len=40) :: cdum, fil1
     FLOAT :: bohrnm, angsnm
@@ -79,7 +85,7 @@ contains
     noatoms = number_atoms
     count_atoms = 0
 
-    open(56, file = 'poisq',status = 'unknown')
+    open(56, file = 'poisq', status = 'unknown')
     FIL1='test1.pois'
     OPEN(unit=57, FILE = FIL1, STATUS = 'UNKNOWN') ! status info file
 
@@ -87,8 +93,8 @@ contains
     read(57, '(a40)') cdum
     read(57, '(a40)') cdum
     read(57, '(a40)') cdum
-    read(57,*) idev, isete_on ! for future use - device configuration
-    write(*,*) "ISETE is ON", isete_on
+    read(57,*) idev, this%isete_on ! for future use - device configuration
+    write(*,*) "ISETE is ON", this%isete_on
 
     if(idev == 1) then
 
@@ -126,9 +132,9 @@ contains
       RETURN
     end if
 
-    call xyzgrid(nx, ny, nz, xl, yl, zl, xcen, ycen, zcen)  ! establish x-y-z grids
+    call xyzgrid(this, nx, ny, nz, xl, yl, zl, xcen, ycen, zcen)  ! establish x-y-z grids
 
-    call cbsurf() !Assign boundaries 
+    call cbsurf(this) !Assign boundaries 
 
     NELT=32+20*((NXTOT-2)+(NYTOT-2)+(NZTOT-2))+ &
       12*((NXTOT-2)*(NYTOT-2)+(NXTOT-2)*(NZTOT-2)+(NYTOT-2)*(NZTOT-2)) + &
@@ -144,7 +150,7 @@ contains
     SAFE_ALLOCATE(iad(1:nelt))
     SAFE_ALLOCATE(jad(1:nelt))
     
-    call poissonm()
+    call poissonm(this)
 
     qs = q2 ! store Dirichlet BC info in QS
 
@@ -154,17 +160,18 @@ contains
 
   !---------------------------------------
 
-  subroutine poisson_sete_solve(icase, rho, vh, nx, ny, nz, xl, yl, zl, icalc)
-    integer, intent(in)    :: icase
-    FLOAT,   intent(in)    :: rho(:, :, :)
-    FLOAT,   intent(inout) :: vh(:, :, :)
-    integer, intent(in)    :: nx
-    integer, intent(in)    :: ny
-    integer, intent(in)    :: nz
-    FLOAT,   intent(in)    :: xl
-    FLOAT,   intent(in)    :: yl
-    FLOAT,   intent(in)    :: zl
-    integer, intent(in)    :: icalc
+  subroutine poisson_sete_solve(this, icase, rho, vh, nx, ny, nz, xl, yl, zl, icalc)
+    type(poisson_sete_t), intent(in)    :: this
+    integer,              intent(in)    :: icase
+    FLOAT,                intent(in)    :: rho(:, :, :)
+    FLOAT,                intent(inout) :: vh(:, :, :)
+    integer,              intent(in)    :: nx
+    integer,              intent(in)    :: ny
+    integer,              intent(in)    :: nz
+    FLOAT,                intent(in)    :: xl
+    FLOAT,                intent(in)    :: yl
+    FLOAT,                intent(in)    :: zl
+    integer,              intent(in)    :: icalc
 
     ! Input: NX, NY, NZ -> No. of octopus grid points in each dimension
     ! Input: XL, YL, ZL -> Size of the octopus box
@@ -272,7 +279,9 @@ contains
         end if
       end if
     end do
-    call EGATE
+
+    call egate(this)
+
 write(358,*) "#x,z, vh_big(x,11,k)"
     do I=1,NXTOT
      do K=1, NZTOT
@@ -293,7 +302,9 @@ enddo
 
   ! ---------------------------------------------
 
-  subroutine poissonm
+  subroutine poissonm(this)
+    type(poisson_sete_t), intent(in)    :: this
+
     ! version g created 03/25/08 - modified to include 
     !                              DIELECTRIC(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1)
     !           based on ~/LEVEL1/photovolt/poissonpv_v2.f90
@@ -497,7 +508,8 @@ enddo
   end subroutine poissonm
 
 
-  subroutine cap
+  subroutine cap(this)
+    type(poisson_sete_t), intent(in)    :: this
 
     integer :: i, j, k
 
@@ -567,7 +579,8 @@ enddo
 
   end subroutine cap
 
-  subroutine cbsurf
+  subroutine cbsurf(this)
+    type(poisson_sete_t), intent(in)    :: this
 
     integer :: k
 
@@ -609,7 +622,8 @@ enddo
 
   end subroutine cbsurf
 
-  subroutine poisson_sete_end
+  subroutine poisson_sete_end(this)
+    type(poisson_sete_t), intent(inout) :: this
 
     deallocate(IPIO)
     deallocate(VBOUND)
@@ -636,14 +650,17 @@ enddo
 
   !--------------------------------------------
 
-  subroutine egate
+  subroutine egate(this)
+    type(poisson_sete_t), intent(in)    :: this
 
     integer :: i, j, k
 
     !
     !     to do energy calculations previously performed in setr
     !  compute capacitances of six surfaces
-    call CAP
+
+    call cap(this)
+
     ESURF=0.0
     CHARGE_SURF=0.0
     CHARGE_TOP=0.0
@@ -678,7 +695,9 @@ enddo
     RETURN
   end subroutine egate
 
-  subroutine xyzgrid(nx, ny, nz, xl, yl, zl, xcen, ycen, zcen)
+  subroutine xyzgrid(this, nx, ny, nz, xl, yl, zl, xcen, ycen, zcen)
+    type(poisson_sete_t), intent(in)    :: this
+
     ! Input: NX, NY, NZ -> No. of octopus grid points in each dimension
     ! Input: XL, YL, ZL -> Size of the octopus box
 
@@ -868,7 +887,9 @@ enddo
   end subroutine xyzgrid
 
 
-  FLOAT function poisson_sete_energy() result(energy)
+  FLOAT function poisson_sete_energy(this) result(energy)
+    type(poisson_sete_t), intent(in)    :: this
+
     energy = esurf
   end function poisson_sete_energy
 

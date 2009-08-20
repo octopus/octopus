@@ -136,7 +136,7 @@ subroutine poisson3D_init(gr, geo)
     yl = 2*gr%mesh%sb%lsize(2)
     zl = 2*gr%mesh%sb%lsize(3)
 
-    call poisson_sete_init(nx, ny, nz, xl, yl, zl, geo%natoms)
+    call poisson_sete_init(sete_solver, nx, ny, nz, xl, yl, zl, geo%natoms)
      
   end select
 

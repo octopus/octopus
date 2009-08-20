@@ -85,6 +85,7 @@ module poisson_m
 
   type(hartree_t) :: hartree_integrator
   type(poisson_corr_t) :: corrector
+  type(poisson_sete_t) :: sete_solver
 
 contains
 
@@ -310,7 +311,7 @@ contains
     case(POISSON_ISF)
       call poisson_isf_end()
     case(POISSON_SETE)
-      call poisson_sete_end()
+      call poisson_sete_end(sete_solver)
 
     end select
     poisson_solver = -99
@@ -512,7 +513,7 @@ contains
         rh0(conversion(1),conversion(2),conversion(3))=rho(counter)
       end do
 
-      call poisson_sete_solve(icase,rh0,vh0,nx,ny,nz,xl,yl,zl,icalc)
+      call poisson_sete_solve(sete_solver, icase, rh0, vh0, nx, ny, nz, xl, yl, zl, icalc)
       !      write(91,*) "vh0 rh0"
       !      do  i=1,nx
 !       do j=1,ny
