@@ -72,13 +72,12 @@ contains
     type(grid_t), target,        intent(inout) :: gr
     type(states_t), target,      intent(inout) :: st
 
-    integer                    :: idim, ip, ip_lead, il, np_intf, iter
+    integer                    :: idim, ip, ip_lead, il, np_intf, iter, np
     integer, target            :: ist, ik
     FLOAT, target              :: energy
     FLOAT                      :: tol, res
     CMPLX, allocatable         :: rhs(:, :)
     type(pg), target           :: lead(NLEADS)
-!    CMPLX, allocatable, target :: green(:, :, :, :)
     logical                    :: conv
 #ifdef HAVE_MPI
     integer :: outcount
@@ -89,7 +88,12 @@ contains
 
     SAFE_ALLOCATE(rhs(1:gr%mesh%np_part, 1:st%d%dim))
     do il = 1, NLEADS
-      SAFE_ALLOCATE(lead(il)%green(1:gr%intf(LEFT)%np, 1:gr%intf(LEFT)%np, 1:st%d%dim))
+      if(gr%intf(il)%reducible) then
+        np = gr%intf(il)%np_intf
+      else
+        np = gr%intf(il)%np_uc
+      end if
+      SAFE_ALLOCATE(lead(il)%green(1:np, 1:np, 1:st%d%dim))
     end do
 
     eigens%converged = 0
@@ -116,9 +120,11 @@ contains
         call zhamiltonian_apply(hm, gr, st%zphi(:, :, ist, ik), rhs(:, :), ist, ik, kinetic_only=.true.)
 
         ! Apply lead potential.
+        ! FIXME: this wrong when non-symmetric leads are used, here the periodicity is assumed
+        ! for the Lippmann-Schwinger solution
         do idim = 1, st%d%dim
           do ip = 1, gr%mesh%np
-            ip_lead = mod(ip-1, gr%intf(LEFT)%np) + 1
+            ip_lead = mod(ip-1, gr%intf(LEFT)%np_intf) + 1
             rhs(ip, idim) = rhs(ip, idim) + hm%lead(LEFT)%vks(ip_lead, idim)*st%zphi(ip, idim, ist, ik)
           end do
         end do
@@ -131,7 +137,7 @@ contains
         ! Apply term with lead Green functions.
         do il = 1, NLEADS
           do idim = 1, st%d%dim
-            np_intf = gr%intf(il)%np
+            np_intf = gr%intf(il)%np_intf
             call apply_coupling(st%ob_lead(il)%green(1:np_intf, 1:np_intf, idim, ist, ik), &
                             hm%lead(il)%h_offdiag(:, :), lead(il)%green(:, :, idim), np_intf, il)
           end do
@@ -149,7 +155,7 @@ contains
         end do
 
         if (associated(hm%ep%A_static)) then ! magnetic gs
-! FIXME: multiply rhs with (e-h-g)^T
+        ! FIXME: multiply rhs with (e-h-g)^T
         else
         end if
         ! Solve linear system lhs psi = rhs.

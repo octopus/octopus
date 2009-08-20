@@ -23,7 +23,7 @@ MeshBlockSizeZ = 1
 FromScratch = yes
 TheoryLevel = independent_particles
 BoxShape = parallelepiped
-DerivativesOrder = 2
+DerivativesOrder = 1
 Dimensions = 2
 Spacing = 0.1
 Lx = 5
@@ -31,7 +31,7 @@ Ly = 3
 
 lead_Lx = Spacing
 %lead_Lsize
- lead_Lx | Ly | 0
+ DerivativesOrder*lead_Lx | Ly | 0
 %
 
 D = 0.9 # Radius of the ring.

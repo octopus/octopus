@@ -53,34 +53,36 @@ contains
     CMPLX,             intent(out) :: green(:, :)   ! The calculated Green`s function.
     logical,           intent(in)  :: h_is_real     ! Is the hamiltonian real? (no vector potential)
 
-    integer            :: np
+    integer            :: np, np_uc
     FLOAT              :: threshold, eta, residual, residual2, eps
     CMPLX              :: c_energy
     CMPLX, allocatable :: green2(:, :)
 
     call push_sub('ob_green.lead_green')
 
-    np = intf%np
+    np = intf%np_intf
+    np_uc = intf%np_uc
+    
     eta = CNST(1e-7) ! FIXME: read from input.
     threshold = CNST(1e-14) ! FIXME: read from input.
     eps = CNST(1e-5) ! FIXME: read from input.
     c_energy = energy + eta*M_zI
 
-    ! if the offdiagonal matrix is not invertible we have only one way of calculating
-    ! the Green`s function: with the Sancho method
-    if(.not.intf%offdiag_invertible) then
-      call lead_green_sancho(c_energy, diag, offdiag, np, green, threshold, h_is_real)
-      residual = calc_residual_green(energy, green, diag, offdiag, np, intf%il)
+    ! if we can not reduce the unit cell
+    ! we have only one way of calculating the Green`s function: with the Sancho method
+    if(.not.intf%reducible) then ! use large matrices (rank = np_uc)
+      call lead_green_sancho(c_energy, diag, offdiag, np_uc, green, threshold, h_is_real)
+      residual = calc_residual_green(energy, green, diag, offdiag, intf)
       if(in_debug_mode) then ! write info
-        write(message(1), '(a,e10.3)') 'Sancho-Residual = ', residual
+        write(message(2), '(a)') 'Non-reducible unit cell'
+        write(message(2), '(a,e10.3)') 'Sancho-Residual = ', residual
         call write_info(1)
       end if
     else
       ! 1. calculate with the fastest method
       call lead_green_umerski(c_energy, diag, offdiag, intf, green)
       ! 2. check if converged
-      ASSERT(np.eq.intf%np_uc)
-      residual = calc_residual_green(energy, green, diag, offdiag, np, intf%il)
+      residual = calc_residual_green(energy, green, diag, offdiag, intf)
       if(in_debug_mode) then ! write info
         write(message(1), '(a,e10.3)') 'Umerski-Residual = ', residual
         call write_info(1)
@@ -89,7 +91,7 @@ contains
         ! 3. if not converged try the other method while saving the old
         SAFE_ALLOCATE(green2(1:np, 1:np))
         call lead_green_sancho(c_energy, diag, offdiag, np, green2, threshold, h_is_real)
-        residual2 = calc_residual_green(energy, green2, diag, offdiag, np, intf%il)
+        residual2 = calc_residual_green(energy, green2, diag, offdiag, intf)
         if(in_debug_mode) then ! write info
           write(message(1), '(a,e10.3)') 'Sancho-Residual = ', residual2
           call write_info(1)
@@ -142,20 +144,22 @@ contains
 
 
   ! calculate the residual of the Green`s function
-  FLOAT function calc_residual_green(energy, green, diag, offdiag, np, il) result(residual)
+  FLOAT function calc_residual_green(energy, green, diag, offdiag, intf) result(residual)
     FLOAT,   intent(in) :: energy
     CMPLX,   intent(in) :: green(:, :)
     CMPLX,   intent(in) :: diag(:, :)
     CMPLX,   intent(in) :: offdiag(:, :)
-    integer, intent(in) :: np
-    integer, intent(in) :: il
+    type(interface_t), intent(in)  :: intf ! => gr%intf(il)
 
     CMPLX, allocatable :: tmp1(:, :), tmp2(:, :)
     FLOAT              :: det
-    integer            :: j
+    integer            :: j, np, np_uc
 
     call push_sub('ob_green.calc_residual_green')
 
+    np = intf%np_intf
+    np_uc = intf%np_uc
+    
     SAFE_ALLOCATE(tmp1(1:np, 1:np))
     SAFE_ALLOCATE(tmp2(1:np, 1:np))
 
@@ -164,7 +168,7 @@ contains
     forall (j = 1:np) tmp1(j, j) = tmp1(j, j) + energy
 
     tmp2(1:np, 1:np) = green(1:np, 1:np)
-    if(mod(il+1,2)+1.eq.1) then
+    if(mod(intf%il+1,2)+1.eq.1) then
       call lalg_trmm(np, np, 'U', 'N', 'L', M_z1, offdiag, tmp2)
       call lalg_trmm(np, np, 'U', 'T', 'R', M_z1, offdiag, tmp2)
     else
@@ -287,16 +291,16 @@ contains
   subroutine create_moeb_trans_matrix(intf, energy, diag, offdiag, matrix)
     type(interface_t), intent(in)  :: intf          ! => gr%intf(il)
     CMPLX,             intent(in)  :: energy
-    CMPLX,             intent(in)  :: diag(1:intf%np, 1:intf%np)
-    CMPLX,             intent(in)  :: offdiag(1:intf%np, 1:intf%np)
-    CMPLX,             intent(out) :: matrix(1:2*intf%np, 1:2*intf%np)
+    CMPLX,             intent(in)  :: diag(1:intf%np_intf, 1:intf%np_intf)
+    CMPLX,             intent(in)  :: offdiag(1:intf%np_intf, 1:intf%np_intf)
+    CMPLX,             intent(out) :: matrix(1:2*intf%np_intf, 1:2*intf%np_intf)
 
-    integer  :: i, np, np2
+    integer  :: i, np, np2, itmp
     CMPLX, allocatable   :: x1(:,:), x2(:,:)
 
     call push_sub('ob_green.create_moeb_trans_matrix')
 
-    np  = intf%np
+    np  = intf%np_intf
     np2 = 2*np
     SAFE_ALLOCATE( x1(1:np, 1:np) )
     SAFE_ALLOCATE( x2(1:np, 1:np) )
@@ -344,15 +348,13 @@ contains
     CMPLX,   intent(out)   :: h(:, :, :) ! the diagonal sub blocks
     CMPLX,   intent(out)   :: v(:, :, :) ! the offdiagonal sub blocks
 
-    integer :: ni, iblock, nblocks, np
+    integer :: ni, iblock, np
 
     call push_sub('ob_green.extract_sub_matrices')
 
-    np = intf%np
-    nblocks = intf%np_uc/np
+    np = intf%np_intf
     ! extract sub diagonals
-    ! TODO: check if offdiagonal is correctly extracted
-    do iblock = 1, nblocks-1
+    do iblock = 1, intf%nblocks-1
       ni = (iblock-1)*np
       h(1:np, 1:np, iblock) = diag(ni+1:ni+np, ni+1:ni+np)
       if(mod(intf%il+1,2)+1.eq.1) then
@@ -364,14 +366,14 @@ contains
       end if
     end do
     ! now the last block
-    ni = (nblocks-1)*np
-    h(1:np, 1:np, nblocks) = diag(ni+1:ni+np, ni+1:ni+np)
+    ni = (intf%nblocks-1)*np
+    h(1:np, 1:np, intf%nblocks) = diag(ni+1:ni+np, ni+1:ni+np)
     if(mod(intf%il+1,2)+1.eq.1) then
       ! upper block of offdiag
-      v(1:np, 1:np, nblocks) = offdiag(ni+1:ni+np, 1:np)
+      v(1:np, 1:np, intf%nblocks) = offdiag(ni+1:ni+np, 1:np)
     else
       ! lower block of offdiag
-      v(1:np, 1:np, nblocks) = offdiag(1:np, ni+1:ni+np)
+      v(1:np, 1:np, intf%nblocks) = offdiag(1:np, ni+1:ni+np)
     end if
 
     call pop_sub()
@@ -388,33 +390,32 @@ contains
     type(interface_t), intent(in)  :: intf ! => gr%intf(il)
     CMPLX,     intent(out) :: green(:, :)
 
-    integer              :: ib, np, np2, nblocks
+    integer              :: ib, np, np2, itmp
     CMPLX, allocatable   :: x(:,:), x2(:,:), o2(:,:), o4(:,:), d(:), h(:, :, :), v(:, :, :)
     FLOAT                :: dos
 
     call push_sub('ob_green.lead_green_umerski')
 
-    ! check if intf%np_uc is a integer multiple of the intf%np
-    ASSERT(mod(intf%np_uc, intf%np).eq.0)
+    ! check if intf%np_uc is a integer multiple of the intf%np_intf
+    ASSERT(mod(intf%np_uc, intf%np_intf).eq.0)
 
-    np = intf%np
+    np = intf%np_intf
     np2 = 2*np
-    nblocks = intf%np_uc/np
     SAFE_ALLOCATE( x(1:np2, 1:np2) )
     SAFE_ALLOCATE( x2(1:np2, 1:np2) )
     SAFE_ALLOCATE( o2(1:np, 1:np) )
     SAFE_ALLOCATE( o4(1:np, 1:np) )
     SAFE_ALLOCATE( d(1:np2) )
-    SAFE_ALLOCATE( h(1:np, 1:np, 1:nblocks) )
-    SAFE_ALLOCATE( v(1:np, 1:np, 1:nblocks) )
+    SAFE_ALLOCATE( h(1:np, 1:np, 1:intf%nblocks) )
+    SAFE_ALLOCATE( v(1:np, 1:np, 1:intf%nblocks) )
 
     ! 1. Reduce any super-structure to the size of the normal surface Green`s function.
     ! 1.(a) Extract all block-diagonal and hopping matrices with the size of the
-    ! interface matrix [np_intf x np_intf], that makes nh of these matrices for both h and v
+    ! interface matrix [np x np], that makes intf%nblocks of these matrices for both h and v
     call extract_sub_matrices(intf, diag, offdiag, h, v)
     ! 1.(b) Create the Moebius transformation matrices for each sub-system and multiply all
     ! x = x(m)*...*x(2)*x(1)
-    do ib=1, nblocks
+    do ib=1, intf%nblocks
       call create_moeb_trans_matrix(intf, energy, h(:, :, ib), v(:, :, ib), x2)
       if (ib.eq.1) then
         x = x2

@@ -19,7 +19,7 @@ DevelVersion = yes
 FromScratch = yes
 TheoryLevel = independent_particles
 DerivativesOrder = 4
-Eigensolver = cg_new
+Eigensolver = lobpcg
 BoxShape = parallelepiped
 Dimensions = 1
 Spacing = 0.1
@@ -43,7 +43,7 @@ lead_PeriodicDimensions = 1
 %
 
 %lead_Lsize
- 4*Spacing | 0 | 0
+ 50*DerivativesOrder*Spacing/2 | 0 | 0
 %
 
 %KPointsMonkhorstPack 

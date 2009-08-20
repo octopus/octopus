@@ -390,6 +390,7 @@ contains
     ! Sanity check.
     do il = 1, NLEADS
       ASSERT(associated(st%ob_lead(il)%intf_psi))
+      ASSERT(il.le.2)
     end do
 
     ierr = 0
@@ -431,7 +432,7 @@ contains
     call iopar_read(mpi_grp, io_occs, line, err); call iopar_read(mpi_grp, io_occs, line, err)
 
     lead_np = gr%mesh%lead_unit_cell(LEFT)%np
-    np = gr%intf(LEFT)%np
+    np = gr%intf(LEFT)%np_intf
     SAFE_ALLOCATE(tmp(1:gr%mesh%np+2*lead_np))
     
     do

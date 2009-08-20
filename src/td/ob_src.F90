@@ -35,6 +35,7 @@ module ob_src_m
   use math_m
   use messages_m
   use nl_operator_m
+  use ob_interface_m
   use ob_mem_m
   use ob_terms_m
   use profiling_m
@@ -56,17 +57,20 @@ contains
   
   ! ---------------------------------------------------------
   ! Allocate memory to calculate source term.
-  subroutine ob_src_init(ob, st, np)
-    type(ob_terms_t), intent(inout) :: ob
-    type(states_t),   intent(in)    :: st
-    integer,          intent(in)    :: np
+  subroutine ob_src_init(ob, st, intf)
+    type(ob_terms_t),  intent(inout) :: ob
+    type(states_t),    intent(in)    :: st
+    type(interface_t), intent(in)    :: intf(1:NLEADS)
 
+    integer :: il, np
     call push_sub('ob_src.ob_src_init')
 
     ! FIXME: spinor index is ignored here.
-    SAFE_ALLOCATE(ob%src_prev(1:np, 1, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end, 1:NLEADS))
-
-    ob%src_prev = M_z0
+    do il=1, NLEADS
+      np = intf(il)%np_intf
+      SAFE_ALLOCATE(ob%lead(il)%src_prev(1:np, 1, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
+      ob%lead(il)%src_prev = M_z0
+    end do
 
     call pop_sub()
   end subroutine ob_src_init
@@ -156,9 +160,13 @@ contains
   subroutine ob_src_end(ob)
     type(ob_terms_t), intent(inout) :: ob
 
+    integer :: il
+
     call push_sub('ob_src.ob_src_end')
 
-    SAFE_DEALLOCATE_P(ob%src_prev)
+    do il=1, NLEADS
+      SAFE_DEALLOCATE_P(ob%lead(il)%src_prev)
+    end do
 
     call pop_sub()
   end subroutine ob_src_end

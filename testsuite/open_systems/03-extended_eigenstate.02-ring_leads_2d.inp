@@ -51,7 +51,7 @@ lead_PeriodicDimensions = 1
 
 lead_Lx = Spacing
 %lead_Lsize
- lead_Lx | Ly | 0
+ DerivativesOrder*lead_Lx | Ly | 0
 %
 
 %KPointsMonkhorstPack 
@@ -71,7 +71,7 @@ KPointsUseSymmetries = false
 
 ring_lead_EigenSolverMaxIter = 5000
 EigensolverFinalTolerance = 1e-9
-Eigensolver = cg_new
+Eigensolver = lobpcg
 
 Output = potential
 OutputHow = binary

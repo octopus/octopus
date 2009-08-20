@@ -78,29 +78,40 @@ contains
     integer,             intent(in)    :: order
     type(mpi_grp_t),     intent(in)    :: mpi_grp
 
-    integer :: il, np, saved_iter, ii
+    integer :: il, np, saved_iter, ii, ij
 
     call push_sub('ob_mem.ob_mem_init')
 
-    np = intf(LEFT)%np
+      do il=1, NLEADS
+        ASSERT(intf(il)%np_intf.eq.intf(il)%np_uc)
+      end do
 
     ! Allocate arrays depending on the type of coefficients requested.
     select case(ob%mem_type)
     case(SAVE_CPU_TIME)
-      SAFE_ALLOCATE(ob%mem_coeff(1:np, 1:np, 0:max_iter, 1:NLEADS))
-      nullify(ob%mem_sp_coeff, ob%mem_s, ob%sp2full_map)
-      ob%mem_coeff = M_z0
+      do il=1, NLEADS
+        np = intf(il)%np_intf
+        SAFE_ALLOCATE(ob%lead(il)%q(1:np, 1:np, 0:max_iter))
+        nullify(ob%lead(il)%q_sp, ob%lead(il)%q_s, ob%lead(il)%sp2full_map)
+        ob%lead(il)%q = M_z0
+      end do
     case(SAVE_RAM_USAGE) ! FIXME: only 2D.
       ASSERT(calc_dim.eq.2)
       ! sp_coeff has the size ny*nz*do**2, (np=ny*nz*do).
-      SAFE_ALLOCATE(ob%mem_sp_coeff(1:np*order, 0:max_iter, 1:NLEADS))
-      SAFE_ALLOCATE(ob%mem_s(1:np, 1:np, 1:2, 1:NLEADS))
-      SAFE_ALLOCATE(ob%sp2full_map(1:np*order))
-      nullify(ob%mem_coeff)
-      ! Fill sparse to full mapping matrix.
-      do ii = 0, np-1
-        do il = 1, order
-          ob%sp2full_map(ii*order+il) = mod((il-1)*(np/order) + ii , np) + 1
+      do il=1, NLEADS
+        np = intf(il)%np_intf
+        SAFE_ALLOCATE(ob%lead(il)%q_sp(1:np*order, 0:max_iter))
+        SAFE_ALLOCATE(ob%lead(il)%q_s(1:np, 1:np, 1:2))
+        SAFE_ALLOCATE(ob%lead(il)%sp2full_map(1:np*order))
+        ob%lead(il)%q_sp = M_z0
+        ob%lead(il)%q_s  = M_z0
+        ob%lead(il)%sp2full_map = M_z0
+        nullify(ob%lead(il)%q)
+        ! Fill sparse to full mapping matrix.
+        do ii = 0, np-1
+          do ij = 1, order
+            ob%lead(il)%sp2full_map(ii*order+ij) = mod((ij-1)*(np/order) + ii , np) + 1
+          end do
         end do
       end do
     end select
@@ -160,12 +171,12 @@ contains
           select case(ob%mem_type)
           case(SAVE_CPU_TIME)
             call approx_coeff0(intf(il), delta, hm%lead(il)%h_diag(:, :, 1),   &
-              hm%lead(il)%h_offdiag(:, :), ob%mem_coeff(:, :, 0, il))
+              hm%lead(il)%h_offdiag(:, :), ob%lead(il)%q(:, :, 0))
           case(SAVE_RAM_USAGE) ! FIXME: only 2D.
             ASSERT(calc_dim.eq.2)
             call approx_sp_coeff0(intf(il), delta, hm%lead(il)%h_diag(:, :, 1), &
-                 hm%lead(il)%h_offdiag(:, :), ob%mem_sp_coeff(:, 0, il), &
-                 ob%mem_s(:,:,:,il), order, ob%sp2full_map)
+                 hm%lead(il)%h_offdiag(:, :), ob%lead(il)%q_sp(:, 0), &
+                 ob%lead(il)%q_s(:,:,:), order, ob%lead(il)%sp2full_map)
           end select
           call loct_progress_bar(1, max_iter+1)
         end if
@@ -173,14 +184,14 @@ contains
         select case(ob%mem_type)
         case(SAVE_CPU_TIME)
           call calculate_coeffs_ni(saved_iter+1, max_iter, delta, intf(il), hm%lead(il)%h_diag(:, :, 1), &
-            hm%lead(il)%h_offdiag(:, :), ob%mem_coeff(:, :, :, il))
+            hm%lead(il)%h_offdiag(:, :), ob%lead(il)%q(:, :, :))
         case(SAVE_RAM_USAGE) ! FIXME: only 2D.
           ASSERT(calc_dim.eq.2)
-          call apply_coupling(ob%mem_coeff(:, :, 0, il), hm%lead(il)%h_offdiag(:, :),&
-              ob%mem_coeff(:, :, 0, il), np, il)
+          call apply_coupling(ob%lead(il)%q(:, :, 0), hm%lead(il)%h_offdiag(:, :),&
+              ob%lead(il)%q(:, :, 0), np, il)
           call calculate_sp_coeffs(saved_iter+1, max_iter, delta, intf(il), hm%lead(il)%h_diag(:, :, 1), &
-            hm%lead(il)%h_offdiag(:, :), ob%mem_sp_coeff(:, :, il), ob%mem_s(:, :, :, il), np*order,            &
-            order, calc_dim, ob%sp2full_map, spacing)
+            hm%lead(il)%h_offdiag(:, :), ob%lead(il)%q_sp(:, :), ob%lead(il)%q_s(:, :, :), np*order,     &
+            order, calc_dim, ob%lead(il)%sp2full_map, spacing)
         end select
 
         if(saved_iter.lt.max_iter) then
@@ -201,8 +212,8 @@ contains
 
       if(ob%mem_type.eq.SAVE_CPU_TIME) then
         do ii=0, max_iter
-          call apply_coupling(ob%mem_coeff(:, :, ii, il), hm%lead(il)%h_offdiag(:, :),&
-              ob%mem_coeff(:, :, ii, il), np, il)
+          call apply_coupling(ob%lead(il)%q(:, :, ii), hm%lead(il)%h_offdiag(:, :),&
+              ob%lead(il)%q(:, :, ii), np, il)
         end do
       end if
 
@@ -230,7 +241,7 @@ contains
 
     call push_sub('ob_mem.approx_coeff0')
 
-    np = intf%np
+    np = intf%np_intf
     d2 = delta**2
 
     ! If we are in 1D and have only a number we can solve the equation explicitly.
@@ -308,7 +319,7 @@ contains
 
     call push_sub('ob_mem.approx_sp_coeff0')
 
-    np = intf%np
+    np = intf%np_intf
     d2 = delta**2
 
     ! Truncating the continued fraction is the same as iterating the equation
@@ -378,7 +389,7 @@ contains
     type(interface_t), intent(in)    :: intf
     CMPLX,             intent(in)    :: diag(:, :)
     CMPLX,             intent(in)    :: offdiag(:, :)
-    CMPLX,             intent(inout) :: coeffs(intf%np, intf%np, 0:iter)
+    CMPLX,             intent(inout) :: coeffs(intf%np_intf, intf%np_intf, 0:iter)
 
     integer            :: i,j, k, np
     CMPLX, allocatable :: tmp(:, :), tmp2(:, :), m0(:, :), m_l(:, :), m_r(:, :)
@@ -386,7 +397,7 @@ contains
 
     call push_sub('ob_mem.calculate_coeffs_ni_new')
 
-    np = intf%np
+    np = intf%np_intf
 
     SAFE_ALLOCATE( tmp(1:np, 1:np))
     SAFE_ALLOCATE(tmp2(1:np, 1:np))
@@ -497,7 +508,7 @@ contains
     CMPLX,             intent(in)    :: diag(:, :)
     CMPLX,             intent(in)    :: offdiag(:, :)
     CMPLX,             intent(inout) :: sp_coeffs(1:length, 0:iter)
-    CMPLX,             intent(in)    :: mem_s(intf%np, intf%np, 2)
+    CMPLX,             intent(in)    :: mem_s(intf%np_intf, intf%np_intf, 2)
     integer,           intent(in)    :: length
     integer,           intent(in)    :: order
     integer,           intent(in)    :: dim
@@ -512,9 +523,9 @@ contains
     FLOAT              :: old_norm, norm, sp2
 
     call push_sub('ob_mem.calculate_sp_coeffs')
-    ASSERT(intf%offdiag_invertible)
+    ASSERT(intf%np_intf.eq.intf%np_uc)
 
-    np  = intf%np
+    np  = intf%np_intf
     sp2 = spacing**2
 
     SAFE_ALLOCATE(           tmp1(1:np, 1:np))
@@ -642,7 +653,7 @@ contains
       call pop_sub(); return
     end if
 
-    np = intf%np
+    np = intf%np_intf
 
     ! Write numerical parameters.
     write(iunit) dim
@@ -652,7 +663,7 @@ contains
     write(iunit) delta
     write(iunit) op_n
     write(iunit) ob%mem_type
-    write(iunit) intf%offdiag_invertible
+    write(iunit) intf%reducible
     write(iunit) hm%lead(intf%il)%vks(1:np, 1)
 
     ! Write matrices.
@@ -660,14 +671,14 @@ contains
     case(SAVE_CPU_TIME)
       do ntime = 0, iter
         do j = 1, np
-          write(iunit) ob%mem_coeff(j, j:np, ntime, intf%il)
+          write(iunit) ob%lead(intf%il)%q(j, j:np, ntime)
         end do
       end do
     case(SAVE_RAM_USAGE) ! FIXME: only 2D.
       ASSERT(dim.eq.2)
-      write(iunit) ob%mem_s(:, :, 1, intf%il)
+      write(iunit) ob%lead(intf%il)%q_s(:, :, 1)
       do ntime = 0, iter
-        write(iunit) ob%mem_sp_coeff(1:np*order, ntime, intf%il)
+        write(iunit) ob%lead(intf%il)%q_sp(1:np*order, ntime)
       end do
     end select
 
@@ -694,18 +705,19 @@ contains
     integer,          intent(in)    :: op_n                          ! Number of operator points.
     integer,          intent(in)    :: order                         ! discretization order
 
-    integer :: ntime, j, iunit, s_dim, s_np, s_op_n, s_mem_type, np
+    integer :: ntime, j, iunit, s_dim, s_np, s_op_n, s_mem_type, np, il
     FLOAT   :: s_spacing, s_delta, det
     FLOAT, allocatable :: s_vks(:)
-    logical :: s_offdiag_invertible
+    logical :: s_reducible
 
     call push_sub('ob_mem.read_coeffs')
 
     s_iter = 0
-    np = intf%np
+    np = intf%np_intf
+    il = intf%il
 
     ! Try to open file.
-    iunit = io_open(trim(dir)//trim(lead_name(intf%il)), action='read', &
+    iunit = io_open(trim(dir)//trim(lead_name(il)), action='read', &
       status='old', die=.false., is_tmp=.true., form='unformatted')
     if(iunit.lt.0) then ! no file found
       call pop_sub(); return
@@ -721,32 +733,31 @@ contains
     read(iunit) s_delta
     read(iunit) s_op_n
     read(iunit) s_mem_type
-    read(iunit) s_offdiag_invertible
+    read(iunit) s_reducible
 
     ! Check if numerical parameters of saved coefficients match
     ! current parameter set.
     if((s_dim.eq.dim) .and. (s_np.eq.np) .and. (s_op_n.eq.op_n) &
       .and. (s_spacing.eq.spacing) .and. (s_delta.eq.delta) .and. (s_mem_type.eq.ob%mem_type) &
-      .and. (s_offdiag_invertible.eqv.intf%offdiag_invertible) ) then
+      .and. (s_reducible.eqv.intf%reducible) ) then
       ! read the potential
       read(iunit) s_vks(1:np)
-      if(hm%lead(intf%il)%vks(1:np, 1).app.s_vks(1:np)) then
+      if(hm%lead(il)%vks(1:np, 1).app.s_vks(1:np)) then
         ! Read the coefficients.
         if (ob%mem_type.eq.SAVE_CPU_TIME) then ! Full (upper half) matrices.
           do ntime = 0, min(iter, s_iter)
-            do j = 1, intf%np
-              read(iunit) ob%mem_coeff(j, j:intf%np, ntime, intf%il)
-              ob%mem_coeff(j:intf%np, j, ntime, intf%il) = &
-                          ob%mem_coeff(j, j:intf%np, ntime, intf%il)
+            do j = 1, np
+              read(iunit) ob%lead(il)%q(j, j:np, ntime)
+              ob%lead(il)%q(j:np, j, ntime) = ob%lead(il)%q(j, j:np, ntime)
             end do
           end do
         else ! Packed matrices (FIXME: yet only 2D).
           ASSERT(dim.eq.2)
-          read(iunit) ob%mem_s(:, :, 1, intf%il)
-          ob%mem_s(:, :, 2, intf%il) = ob%mem_s(1:intf%np, 1:intf%np, 1, intf%il)
-          det = lalg_inverter(intf%np, ob%mem_s(:, :, 2, intf%il), invert=.true.)
+          read(iunit) ob%lead(il)%q_s(:, :, 1)
+          ob%lead(il)%q_s(:, :, 2) = ob%lead(il)%q_s(1:np, 1:np, 1)
+          det = lalg_inverter(np, ob%lead(il)%q_s(:, :, 2), invert=.true.)
           do ntime = 0, min(iter, s_iter)
-            read(iunit) ob%mem_sp_coeff(1:np*order, ntime, intf%il)
+            read(iunit) ob%lead(il)%q_sp(1:np*order, ntime)
           end do
         end if
       else
@@ -924,13 +935,17 @@ contains
   ! Free arrays.
   subroutine ob_mem_end(ob)
     type(ob_terms_t), intent(inout) :: ob
+      
+    integer :: il
 
     call push_sub('ob_mem.ob_mem_end')
 
-    SAFE_DEALLOCATE_P(ob%mem_coeff)
-    SAFE_DEALLOCATE_P(ob%mem_sp_coeff)
-    SAFE_DEALLOCATE_P(ob%sp2full_map)
-    SAFE_DEALLOCATE_P(ob%mem_s)
+    do il=1, NLEADS
+      SAFE_DEALLOCATE_P(ob%lead(il)%q)
+      SAFE_DEALLOCATE_P(ob%lead(il)%q_sp)
+      SAFE_DEALLOCATE_P(ob%lead(il)%sp2full_map)
+      SAFE_DEALLOCATE_P(ob%lead(il)%q_s)
+    end do
 
     call pop_sub()
   end subroutine ob_mem_end

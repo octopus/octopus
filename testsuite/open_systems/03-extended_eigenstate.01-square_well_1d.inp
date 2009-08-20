@@ -46,7 +46,7 @@ lead_PeriodicDimensions = 1
 %
 
 %lead_Lsize
- 50*Spacing | 0 | 0
+ 50*DerivativesOrder*Spacing | 0 | 0
 %
 
 %KPointsMonkhorstPack 
@@ -65,7 +65,7 @@ KPointsUseSymmetries = false
 #PoissonSolver = fft
 well_EigenSolverMaxiter = 5000
 EigensolverFinalTolerance = 1e-9
-Eigensolver = cg_new
+Eigensolver = lobpcg
 
 Output = wfs + wfs_sqmod + potential
 OutputHow = axis_x + binary

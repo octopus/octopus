@@ -52,65 +52,63 @@ module ob_interface_m
   ! (Important: the point numbers of the interface are dense and
   ! sorted in increasing order.)
   type interface_t
-    integer          :: extent
-    integer          :: np      ! number of interface points
-    integer          :: np_uc   ! number of unit cell points
-    integer          :: nblocks ! nblocks = np_uc / np number of interfaces in a unit cell
-    integer          :: il      ! which lead (1..NLEADS)
-    integer, pointer :: index(:)       ! (np)
-    integer          :: index_range(2)
-    logical          :: offdiag_invertible
+    integer          :: extent_uc  ! extent of the lead unit cell
+    integer          :: np_intf    ! number of interface points
+    integer          :: np_uc      ! number of unit cell points
+    integer          :: np_part_uc ! number of unit cell points including all points
+    integer          :: nblocks    ! number of interfaces in a unit cell
+    integer          :: il         ! which lead (1..NLEADS)
+    integer, pointer :: index(:)   ! (np_uc)
+    integer          :: index_range(2) ! lowest and highest index
+    logical          :: reducible  ! is the lead unit cell a integer multiple of the interface
   end type interface_t
 
   type lead_t
-    CMPLX, pointer :: h_diag(:, :, :)      ! Diagonal block of the lead Hamiltonian.
-    CMPLX, pointer :: h_offdiag(:, :)      ! Offdiagonal block of the lead Hamiltonian.
-    FLOAT, pointer :: vks(:, :)            ! (np, nspin) Kohn-Sham potential of the leads.
-    FLOAT, pointer :: vhartree(:)          ! (np) Hartree potential of the leads.
+    integer        :: np              ! number of points in the lead unit cell
+    integer        :: np_part         ! as np including ghost and boundary points
+    CMPLX, pointer :: h_diag(:, :, :) ! Diagonal block of the lead Hamiltonian.
+    CMPLX, pointer :: h_offdiag(:, :) ! Offdiagonal block of the lead Hamiltonian.
+    FLOAT, pointer :: vks(:, :)       ! (np_uc, nspin) Kohn-Sham potential of the leads.
+    FLOAT, pointer :: vhartree(:)     ! (np_uc) Hartree potential of the leads.
   end type lead_t
 
 contains
 
   ! ---------------------------------------------------------
   ! Calculate the member points of the interface region.
-  subroutine interface_init(m, sb, der_discr, intf, il, extent)
+  subroutine interface_init(m, sb, der_discr, intf, il, extent_uc)
     type(mesh_t),        intent(in)  :: m
     type(simul_box_t),   intent(in)  :: sb
     type(derivatives_t), intent(in)  :: der_discr
     type(interface_t),   intent(out) :: intf
     integer,             intent(in)  :: il
-    integer, optional,   intent(in)  :: extent
+    integer, optional,   intent(in)  :: extent_uc ! new reduced extent of the unit cell
 
-    integer :: from(MAX_DIM), to(MAX_DIM), ll(MAX_DIM), dir, tdir
+    logical :: ok
+    integer :: i, from(MAX_DIM), to(MAX_DIM), ll(MAX_DIM), dir, lr, tdir, extent
 
     call push_sub('ob_interface.interface_init')
 
     intf%il = il
-
     tdir = (il+1)/2
-    
-    if (present(extent)) then
-      write(*,*) 'stencil_extent(tdir)', tdir, derivatives_stencil_extent(der_discr, tdir)
-      write(*,*) 'extent', extent
-      ASSERT(derivatives_stencil_extent(der_discr, tdir).le.extent)
-      intf%extent = extent
-    else
-      write(*,*) 'stencil_extent(tdir)', tdir, derivatives_stencil_extent(der_discr, tdir)
-      write(*,*) 'lead_unit_cell_extent(sb, il)', il, lead_unit_cell_extent(sb, il)
-      ASSERT(derivatives_stencil_extent(der_discr, tdir).le.lead_unit_cell_extent(sb, il))
-      intf%extent = maxval((/derivatives_stencil_extent(der_discr, tdir), lead_unit_cell_extent(sb, il)/))
-      ! if the lead potential has no dependence in transport direction
-      ! then reduce size of unit cell extent to interface extent
-      !if(stencil_extent(der_discr, tdir).eq.1) then
-      !  intf%extent = intf%extent - 1
-      !end if
-    endif
-    if(intf%extent.eq.derivatives_stencil_extent(der_discr, tdir)) then
-      intf%offdiag_invertible = .true.
-    else
-      intf%offdiag_invertible = .false.
-    end if
 
+    intf%np_uc = m%lead_unit_cell(il)%np
+    intf%np_part_uc = m%lead_unit_cell(il)%np_part
+    if (present(extent_uc)) then
+      ! if the lead potential has no dependence in transport direction
+      ! then the size of unit cell extent will be reduced to interface extent
+      ! this happens within hamiltonian->init_lead_h which calls this  subroutine
+      intf%extent_uc = extent_uc
+    else
+      intf%extent_uc = lead_unit_cell_extent(sb, il)
+    endif
+
+    intf%reducible = mod(intf%extent_uc, derivatives_stencil_extent(der_discr, tdir)).eq.0
+    if(.not.intf%reducible) then
+      intf%nblocks = 1
+    else
+      intf%nblocks = intf%extent_uc / derivatives_stencil_extent(der_discr, tdir)
+    end if
     ! Extract submeshes for the interface regions.
     ! 
     ! In 2D for the left lead.
@@ -125,17 +123,19 @@ contains
     dir = (-1)**(il+1)
     ll(:) = m%idx%ll(:)
     ! the interface region has only intf%extent points in its normal direction
-    ll(tdir) = intf%extent
+    ll(tdir) =  derivatives_stencil_extent(der_discr, tdir)
+    intf%np_intf = product(ll(:))
 
-    intf%np = product(ll(:))
-    SAFE_ALLOCATE(intf%index(1:intf%np))
+    ll(tdir) =  intf%extent_uc
+    intf%np_uc = product(ll(:))
+
+    SAFE_ALLOCATE(intf%index(1:intf%np_uc))
 
     ! the point where we start
     from(:) = m%idx%nr( mod(il+1,2)+1, :) + dir*m%idx%enlarge
     ! the point were we end
     ! we are 1 point too far in every direction, so go back
     to(:)   = from(:) + dir*(ll(:) - 1)
-
 
     call mesh_subset_indices(m, from, to, intf%index)
 
@@ -144,7 +144,7 @@ contains
     ! number and global point number faster.
     call sort(intf%index)
     intf%index_range(1) = intf%index(1)
-    intf%index_range(2) = intf%index(intf%np)
+    intf%index_range(2) = intf%index(intf%np_uc)
 
     call pop_sub()
   end subroutine interface_init
@@ -172,7 +172,7 @@ contains
     ! (not the fastest way, but works if we have non-connected points)
     if (member_of_interface) then
       member_of_interface = .false.
-      do ii=1, intf%np
+      do ii=1, intf%np_uc
         if (intf%index(ii).eq.idx) then
           member_of_interface = .true.
           index = ii
@@ -187,19 +187,15 @@ contains
 
   ! ---------------------------------------------------------
   ! Get wave function points of interface intf.
-  ! intf_wf must be of dimension intf%np.
+  ! intf_wf must be of dimension intf%np_uc.
   subroutine get_intf_wf(intf, zpsi, intf_wf)
     type(interface_t), intent(in)  :: intf
     CMPLX,             intent(in)  :: zpsi(:)
     CMPLX,             intent(out) :: intf_wf(:)
 
-    integer :: ii
-
     call push_sub('ob_interface.get_intf_wf')
 
-    do ii=1, intf%np
-      intf_wf(ii) = zpsi(intf%index(ii))
-    end do
+    intf_wf(1:intf%np_uc) = zpsi(intf%index(1:intf%np_uc))
 
     call pop_sub()
   end subroutine get_intf_wf
@@ -207,19 +203,15 @@ contains
 
   ! ---------------------------------------------------------
   ! Put wave function points of interface intf.
-  ! intf_wf must be of dimension intf%np.
+  ! intf_wf must be of dimension intf%np_uc.
   subroutine put_intf_wf(intf, intf_wf, zpsi)
     type(interface_t), intent(in)     :: intf
     CMPLX,             intent(in)     :: intf_wf(:)
     CMPLX,             intent(inout)  :: zpsi(:)
 
-    integer :: ii
-
     call push_sub('ob_interface.put_intf_wf')
 
-    do ii=1, intf%np
-      zpsi(intf%index(ii)) = intf_wf(ii)
-    end do
+    zpsi(intf%index(1:intf%np_uc)) = intf_wf(1:intf%np_uc)
 
     call pop_sub()
   end subroutine put_intf_wf
@@ -239,12 +231,12 @@ contains
 
     call push_sub('ob_interface.interface_apply_op')
 
-    SAFE_ALLOCATE(intf_wf(1:intf%np))
-    SAFE_ALLOCATE(op_intf_wf(1:intf%np))
+    SAFE_ALLOCATE(intf_wf(1:intf%np_uc))
+    SAFE_ALLOCATE(op_intf_wf(1:intf%np_uc))
 
     call get_intf_wf(intf, wf, intf_wf)
     call get_intf_wf(intf, res, op_intf_wf)
-    call lalg_gemv(intf%np, intf%np, alpha, op, intf_wf, M_z1, op_intf_wf)
+    call lalg_gemv(intf%np_uc, intf%np_uc, alpha, op, intf_wf, M_z1, op_intf_wf)
     call put_intf_wf(intf, op_intf_wf, res)
 
     SAFE_DEALLOCATE_A(intf_wf)
@@ -268,12 +260,12 @@ contains
 
     call push_sub('ob_interface.interface_apply_sym_op')
 
-    SAFE_ALLOCATE(intf_wf(1:intf%np))
-    SAFE_ALLOCATE(op_intf_wf(1:intf%np))
+    SAFE_ALLOCATE(intf_wf(1:intf%np_uc))
+    SAFE_ALLOCATE(op_intf_wf(1:intf%np_uc))
 
     call get_intf_wf(intf, wf, intf_wf)
     call get_intf_wf(intf, res, op_intf_wf)
-    call lalg_symv(intf%np, alpha, op, intf_wf, M_z1, op_intf_wf)
+    call lalg_symv(intf%np_uc, alpha, op, intf_wf, M_z1, op_intf_wf)
     call put_intf_wf(intf, op_intf_wf, res)
 
     SAFE_DEALLOCATE_A(intf_wf)
@@ -292,7 +284,7 @@ contains
     call push_sub('ob_interface.interface_write_info')
 
     write(message(1), '(a,i6)') 'Number of points in '//LEAD_NAME(intf%il)// &
-      ' interface: ', intf%np
+      ' interface: ', intf%np_uc
     call write_info(1, iunit)
 
     call pop_sub()

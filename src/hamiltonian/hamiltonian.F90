@@ -412,6 +412,8 @@ contains
         call write_fatal(2)
       end if
       call init_lead_h
+      ! now replace the potential of the extended simulation region
+      ! with the potential of the leads
     end if
 
     hm%multigrid_initialized = .false.
@@ -477,11 +479,12 @@ contains
     ! Calculate the blocks of the lead Hamiltonian and read the potential
     ! of the lead unit cell.
     subroutine init_lead_h
-      integer               :: np, il, ierr, pot, ix, iy
+      integer               :: np, np_part, il, ierr, pot, ix, iy
       integer               :: irow, diag, offdiag
       character             :: channel
       character(len=256)    :: fname, fmt
       type(mesh_t), pointer :: m
+      logical               :: t_inv
 
 
       ! Read potential of the leads. We try vks-x (for DFT without
@@ -489,12 +492,13 @@ contains
       ! that order (Octopus binary and NetCDF format). If none of the
       ! two can be found, a warning is emitted and zero potential
       ! assumed.
-!      S AFE_ALLOCATE(hm%lead(1:NLEADS))
+      do il = 1, NLEADS
+        np = gr%intf(il)%np_uc
+        np_part =  gr%intf(il)%np_part_uc
+        call lead_init(hm%lead(il), np, np_part, st%d%dim, hm%d%nspin)
+      end do
 
       do il = 1, NLEADS
-        gr%intf(il)%np_uc = gr%mesh%lead_unit_cell(il)%np
-        SAFE_ALLOCATE(hm%lead(il)%vks(1:gr%intf(il)%np_uc, 1:hm%d%nspin))
-        SAFE_ALLOCATE(hm%lead(il)%vhartree(1:gr%intf(il)%np_uc))
         do ispin = 1, hm%d%nspin
           write(channel, '(i1)') ispin
 
@@ -601,26 +605,32 @@ contains
       ! potential then it is possible to reduce the size of the unit cell
       ! to the size of the interface itself.
       do il = 1, NLEADS
+        t_inv = .true.
         do ispin = 1, hm%d%nspin
-          np = gr%intf(il)%np
-          if (is_lead_transl_inv(gr%der%lapl, hm%lead(il)%vks(:, ispin), gr%intf(il))) then
-            write(*,*) 'reallocate interface!'
-            write(*,*) 'from', gr%intf(il)%np
-            ! resize array
-            ! so delete the old array intf%index
-            call interface_end(gr%intf(il))
-            ! then re-initialize interface
-            call interface_init(gr%mesh, gr%sb, gr%der, gr%intf(il), il, &
-              derivatives_stencil_extent(gr%der, (il+1)/2))
-            write(*,*) 'to  ', gr%intf(il)%np
-          end if
+          ! TODO generalize to find the smallest periodicity of the leads
+          t_inv = t_inv.and.is_lead_transl_inv(gr%der%lapl, hm%lead(il)%vks(:, ispin), gr%intf(il))
         end do
+        if (t_inv) then
+          if(in_debug_mode) then ! write some info
+            write(message(1), '(a,2i8)') 'Reallocate lead unit cell from ', gr%intf(il)%np_uc
+            call write_info(1)
+          end if
+          ! resize array
+          ! so delete the old array intf%index
+          call interface_end(gr%intf(il))
+          ! then re-initialize interface
+          ! TODO generalize to find the smallest periodicity of the leads
+          call interface_init(gr%mesh, gr%sb, gr%der, gr%intf(il), il, &
+                              derivatives_stencil_extent(gr%der, (il+1)/2))
+          call lead_resize(gr%intf(il), hm%lead(il), st%d%dim, hm%d%nspin)
+          if(in_debug_mode) then ! write some info
+            write(message(1), '(a,2i8)') 'to ', gr%intf(il)%np_uc
+            call write_info(1)
+          end if
+        end if
       end do
 
       do il = 1, NLEADS
-        np = gr%intf(il)%np
-        SAFE_ALLOCATE(hm%lead(il)%h_diag(1:np, 1:np, 1:st%d%dim))
-        SAFE_ALLOCATE(hm%lead(il)%h_offdiag(1:np, 1:np))
         do ispin = 1, hm%d%nspin
           call lead_diag(gr%der%lapl, hm%lead(il)%vks(:, ispin), &
             gr%intf(il), hm%lead(il)%h_diag(:, :, ispin))
@@ -728,12 +738,8 @@ contains
     SAFE_DEALLOCATE_P(hm%ab_pot)
 
     do il = 1, NLEADS
-      SAFE_DEALLOCATE_P(hm%lead(il)%h_diag)
-      SAFE_DEALLOCATE_P(hm%lead(il)%h_offdiag)
-      SAFE_DEALLOCATE_P(hm%lead(il)%vks)
-      SAFE_DEALLOCATE_P(hm%lead(il)%vhartree)
+      call lead_end(hm%lead(il))
     end do
-    !SA FE_DEALLOCATE_P(hm%lead)
 
     call states_dim_end(hm%d)
     call scissor_end(hm%scissor)

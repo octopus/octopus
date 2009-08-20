@@ -115,17 +115,14 @@ module states_m
     FLOAT, pointer :: dpsi(:,:,:,:) ! dpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
     CMPLX, pointer :: zpsi(:,:,:,:) ! zpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
 
-    logical            :: open_boundaries
-    CMPLX, pointer     :: zphi(:, :, :, :)  ! Free states for open-boundary calculations.
-    !CMPLX, pointer     :: ob_intf_psi(:, :, :, :, :, :) ! (np, 2, st%d%dim, st%nst, st%d%nik, nleads)
-    !FLOAT, pointer     :: ob_rho(:, :, :)   ! Density of the lead unit cells.
-    FLOAT, pointer     :: ob_eigenval(:, :) ! Eigenvalues of free states.
-    type(states_dim_t) :: ob_d              ! Dims. of the unscattered systems.
-    integer            :: ob_nst            ! nst of the unscattered systems.
-    integer            :: ob_ncs            ! No. of continuum states of open system.
+    logical             :: open_boundaries
+    CMPLX, pointer      :: zphi(:, :, :, :)  ! Free states for open-boundary calculations.
+    FLOAT, pointer      :: ob_eigenval(:, :) ! Eigenvalues of free states.
+    type(states_dim_t)  :: ob_d              ! Dims. of the unscattered systems.
+    integer             :: ob_nst            ! nst of the unscattered systems.
+    integer             :: ob_ncs            ! No. of continuum states of open system.
                                             ! ob_ncs = ob_nst*st%ob_d%nik / st%d%nik
-    FLOAT, pointer     :: ob_occ(:, :)      ! occupations
-    !CMPLX, pointer     :: ob_green(:, :, :, :, :, :) ! (np, np, nspin, ncs, nik, nleads) Green`s function of the leads.
+    FLOAT, pointer      :: ob_occ(:, :)      ! occupations
     type(states_lead_t) :: ob_lead(NLEADS)
     ! used for the user-defined wavefunctions (they are stored as formula strings)
     character(len=1024), pointer :: user_def_states(:,:,:) ! (st%d%dim, st%nst, st%d%nik)
@@ -2648,7 +2645,6 @@ contains
     integer,             intent(in)    :: d_ispin
     type(lead_t),        intent(in)    :: lead(:) ! Diagonal  and offdiagonal block of the lead Hamiltonian.
 
-    character(len=1), allocatable  :: ln(:)
     character(len=2)      :: spin
     character(len=256)    :: fmt, fname_real, fname_imag
     FLOAT                 :: energy
@@ -2658,9 +2654,6 @@ contains
     call push_sub('states.states_init_green')
 
     if(calc_mode_is(CM_GS)) then
-      SAFE_ALLOCATE(ln(1:NLEADS))
-      np = gr%intf(LEFT)%np
-      ln(LEFT)  = 'L'; ln(RIGHT) = 'R'
       ! Calculate Green`s function of the leads.
       ! FIXME: For spinors, this calculation is almost certainly wrong.
       ASSERT(st%ob_nst == st%nst)
@@ -2668,10 +2661,11 @@ contains
       s1 = st%st_start; s2 = st%st_end
       k1 = st%d%kpt%start; k2 = st%d%kpt%end
       do il = 1, NLEADS
+        np = gr%intf(il)%np_intf
         SAFE_ALLOCATE(st%ob_lead(il)%green(1:np, 1:np, 1:nspin, s1:s2, k1:k2))
       end do
       call messages_print_stress(stdout, "Lead Green`s functions")
-      message(1) = ' st#     k#  Spin  Lead     Energy'
+      message(1) = ' st#     k#  Spin      Lead     Energy'
       call write_info(1)
 #ifdef HAVE_MPI 
       ! wait for all processors to finish 
@@ -2683,6 +2677,7 @@ contains
         do ist = s1, s2
           energy = st%ob_eigenval(ist, ik)
           do il = 1, NLEADS
+            np = gr%intf(il)%np_intf
             do ispin = 1, nspin
               select case(d_ispin)
               case(UNPOLARIZED)
@@ -2701,11 +2696,9 @@ contains
                   spin = 'dn'
                 end if
               end select
-              write(message(1), '(i4,3x,i4,3x,a2,5x,a1,1x,f12.6)') ist, ik, spin, ln(il), energy
+              write(message(1), '(i4,3x,i4,3x,a2,5x,a6,1x,f12.6)') ist, ik, spin, LEAD_NAME(il), energy
               call write_info(1)
               ! TODO magnetic gs
-!              call lead_green(energy, lead(il)%h_diag(:, :, ispin), lead(il)%h_offdiag(:, :), np, &
-!                st%ob_lead(il)%green(:, :, ispin, ist, ik), .true., il, gr%intf(il)%offdiag_invertible)
               call lead_green(energy, lead(il)%h_diag(:, :, ispin), lead(il)%h_offdiag(:, :), &
                               gr%intf(il), st%ob_lead(il)%green(:, :, ispin, ist, ik), .true.)
 
@@ -2731,7 +2724,6 @@ contains
         end do
       end do
       call messages_print_stress(stdout)
-      SAFE_DEALLOCATE_A(ln)
     end if
 
     call pop_sub()

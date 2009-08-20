@@ -71,10 +71,10 @@ module ob_rti_m
   ! Pointers for the h_eff_backward(t) operator for the iterative linear solver.
   type(hamiltonian_t), pointer :: hm_p
   type(grid_t), pointer        :: gr_p
-  CMPLX, pointer               :: mem_p(:, :, :), sp_mem_p(:, :), mem_s_p(:, :, :, :)
+  type(ob_memsrc_t), pointer   :: lead_p(:)
   type(interface_t), pointer   :: intf_p(:)
   FLOAT, pointer               :: dt_p, t_p
-  integer, pointer             :: ist_p, ik_p, mem_type_p, mapping_p(:)
+  integer, pointer             :: ist_p, ik_p, mem_type_p
   
 contains
 
@@ -204,17 +204,20 @@ contains
     ! Initialize source and memory terms.
     call ob_mem_init(gr%intf, hm, ob, dt/M_TWO, ob%max_mem_coeffs, gr%der%lapl, &
       gr%sb%h(TRANS_DIR), order, st%d%kpt%mpi_grp)
-    call ob_src_init(ob, st, gr%intf(LEFT)%np)
+    call ob_src_init(ob, st, gr%intf)
 
     ! Allocate memory for the interface wave functions of previous
     ! timesteps.
-    np = gr%intf(LEFT)%np
     s1 = st%st_start
     s2 = st%st_end
     k1 = st%d%kpt%start
     k2 = st%d%kpt%end
-    SAFE_ALLOCATE(ob%st_intface(1:np, s1:s2, k1:k2, 1:NLEADS, 0:ob%max_mem_coeffs))
-    ob%st_intface = M_z0
+
+    do il=1, NLEADS
+      np = gr%intf(il)%np_intf
+      SAFE_ALLOCATE(ob%lead(il)%st_intface(1:np, s1:s2, k1:k2, 0:ob%max_mem_coeffs))
+      ob%lead(il)%st_intface = M_z0
+    end do
 
     ! check the symmetry of the effective hamiltonian
     ! if no magnetic field or vector potential is present then
@@ -226,7 +229,7 @@ contains
       if(laser_kind(hm%ep%lasers(il)).eq.E_FIELD_VECTOR_POTENTIAL) heff_sym = .false.
     end do
 
-    nullify(mem_p, sp_mem_p, mem_s_p, intf_p, dt_p, t_p, ist_p, ik_p, mem_type_p, mapping_p)
+    nullify(lead_p, intf_p, dt_p, t_p, ist_p, ik_p, mem_type_p)
 
     call pop_sub()
   end subroutine ob_rti_init
@@ -259,7 +262,7 @@ contains
     FLOAT, target,               intent(in)    :: t
     integer,                     intent(in)    :: timestep
 
-    integer            :: il, it, m, qmr_iter, order, inp
+    integer            :: il, it, m, qmr_iter, order, np
     integer, target    :: ist, ik
     CMPLX              :: factor, fac, f0
     CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:, :)
@@ -268,12 +271,12 @@ contains
     
     call push_sub('ob_rti.cn_src_mem_dt')
 
-    inp = gr%intf(LEFT)%np ! Assuming symmetric leads.
+    np = maxval(gr%intf(:)%np_intf)
 
     order = gr%der%order
     SAFE_ALLOCATE(tmp(1:gr%mesh%np, 1:st%d%ispin))
-    SAFE_ALLOCATE(tmp_wf(1:inp))
-    SAFE_ALLOCATE(tmp_mem(1:inp, 1:inp))
+    SAFE_ALLOCATE(tmp_wf(1:np))
+    SAFE_ALLOCATE(tmp_mem(1:np, 1:np))
 
     ! Set pointers to communicate with with backward propagator passed
     ! to iterative linear solver.
@@ -284,8 +287,7 @@ contains
     t_p        => t
     ist_p      => ist
     ik_p       => ik
-    mem_type_p => ob%mem_type
-    mem_p      => ob%mem_coeff(:, :, 0, :)
+    lead_p     => ob%lead(:)
 
     ! For the dot product passed to BiCG routine.
     call mesh_init_mesh_aux(gr%mesh)
@@ -295,7 +297,8 @@ contains
     ! save the initial state
     if (m.eq.0) then
       do il = 1, NLEADS
-        call save_intf_wf(gr%intf(il), st, ob%st_intface(1:inp, :, :, il, 0))
+        np = gr%intf(il)%np_intf
+        call save_intf_wf(gr%intf(il), st, ob%lead(il)%st_intface(1:np, :, :, 0))
       end do
     end if
 
@@ -303,31 +306,31 @@ contains
       do ist = st%st_start, st%st_end
         ! Get right-hand side.
         !   1. Apply effective Hamiltonian.
-        call apply_h_eff(hm, gr, ob%mem_coeff(:, :, 0, :), gr%intf, -M_ONE, dt, t, &
-          ist, ik, st%zpsi(:, :, ist, ik))
+        call apply_h_eff(hm, gr, ob%lead, gr%intf, -M_ONE, dt, t, ist, ik, st%zpsi(:, :, ist, ik))
 
         do il = 1, NLEADS
+          np = gr%intf(il)%np_intf
           ! 2. Add source term
           if(iand(ob%additional_terms, SRC_TERM_FLAG).ne.0) then
             f0  = M_z1/(M_z1+M_zI*M_HALF*dt*st%ob_eigenval(ist, ik))
             fac = (M_z1-M_zI*M_HALF*dt*st%ob_eigenval(ist, ik))*f0
-            tmp_mem(:, :) = ob%mem_coeff(:, :, m, il)
-            if(m.gt.0) tmp_mem(:, :) = tmp_mem(:, :) + ob%mem_coeff(:, :, m-1, il)
-            call calc_source_wf(max_iter, m, inp, il, hm%lead(il)%h_offdiag(:, :), tmp_mem, dt, &
+            tmp_mem(1:np, 1:np) = ob%lead(il)%q(1:np, 1:np, m)
+            if(m.gt.0) tmp_mem(1:np, 1:np) = tmp_mem(1:np, 1:np) + ob%lead(il)%q(1:np, 1:np, m-1)
+            call calc_source_wf(max_iter, m, np, il, hm%lead(il)%h_offdiag(:, :), tmp_mem(1:np, 1:np), dt, &
               st%ob_lead(il)%intf_psi(:, :, 1, ist, ik), ob%src_mem_u(:, il), f0, fac,              &
-              lambda(m, 0, max_iter, ob%src_mem_u(:, il)), ob%src_prev(:, 1, ist, ik, il))
-            call apply_src(gr%intf(il), ob%src_prev(1:inp, 1, ist, ik, il), st%zpsi(:, :, ist, ik))
+              lambda(m, 0, max_iter, ob%src_mem_u(:, il)), ob%lead(il)%src_prev(:, 1, ist, ik))
+            call apply_src(gr%intf(il), ob%lead(il)%src_prev(1:np, 1, ist, ik), st%zpsi(:, :, ist, ik))
           end if
           ! 3. Add memory term.
           if(iand(ob%additional_terms, MEM_TERM_FLAG).ne.0) then
             do it = max(m-ob%max_mem_coeffs,0), m-1
               factor = -dt**2/M_FOUR*lambda(m, it, max_iter, ob%src_mem_u(:, il)) / &
                 (ob%src_mem_u(m, il)*ob%src_mem_u(it, il))
-              tmp_wf(:) = ob%st_intface(:, ist, ik, il, mod(it+1, ob%max_mem_coeffs+1)) &
-                          + ob%st_intface(:, ist, ik, il, mod(it, ob%max_mem_coeffs+1))
-              tmp_mem(:, :) = ob%mem_coeff(:, :, m-it, il)
-              if((m-it).gt.0) tmp_mem(:, :) = tmp_mem(:, :) + ob%mem_coeff(:, :, m-it-1, il)
-              call apply_mem(tmp_mem, gr%intf(il), tmp_wf, st%zpsi(:, :, ist, ik), factor)
+              tmp_wf(1:np) = ob%lead(il)%st_intface(1:np, ist, ik, mod(it+1, ob%max_mem_coeffs+1)) &
+                          + ob%lead(il)%st_intface(1:np, ist, ik, mod(it, ob%max_mem_coeffs+1))
+              tmp_mem(1:np, 1:np) = ob%lead(il)%q(1:np, 1:np, m-it)
+              if((m-it).gt.0) tmp_mem(1:np, 1:np) = tmp_mem(1:np, 1:np) + ob%lead(il)%q(1:np, 1:np, m-it-1)
+              call apply_mem(tmp_mem(1:np, 1:np), gr%intf(il), tmp_wf(1:np), st%zpsi(1:np, :, ist, ik), factor)
             end do
           end if
         end do
@@ -335,7 +338,7 @@ contains
           ! 4. if H_eff is not complex symmetric do the following for solving the linear equation:
           ! A.x = b --> (A^T).A.x = (A^T).b
           ! In this case (A^T).A is complex symmetric and we can use the QMR_sym solver
-          call apply_h_eff(hm, gr, ob%mem_coeff(:, :, 0, :), gr%intf, M_ONE, dt, t, &
+          call apply_h_eff(hm, gr, ob%lead, gr%intf, M_ONE, dt, t, &
             ist, ik, st%zpsi(:, :, ist, ik), .true.)
         end if
 
@@ -346,15 +349,12 @@ contains
         ! h_eff_backward must be a complex symmetric operator !
         call zqmr_sym(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, precond_prop, &
           qmr_iter, residue=dres, threshold=qmr_tol, showprogress=.false., converged=conv)
-        !if (.not.conv) then
-        !  write(*,*) 'ik, residue', ik, dres
-        !end if
       end do
     end do
 
     ! Save interface part of wavefunction for subsequent iterations.
     do il = 1, NLEADS
-      call save_intf_wf(gr%intf(il), st, ob%st_intface(:, :, :, il, mod(timestep,ob%max_mem_coeffs+1)))
+      call save_intf_wf(gr%intf(il), st, ob%lead(il)%st_intface(:, :, :, mod(timestep,ob%max_mem_coeffs+1)))
     end do
 
     SAFE_DEALLOCATE_A(tmp)
@@ -379,7 +379,7 @@ contains
     FLOAT, target,               intent(in)    :: t
     integer,                     intent(in)    :: timestep
 
-    integer            :: il, it, m, qmr_iter, order, inp
+    integer            :: il, it, m, qmr_iter, order, np, npo
     integer, target    :: ist, ik
     CMPLX              :: factor, fac, f0
     CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:)
@@ -387,26 +387,24 @@ contains
     
     call push_sub('ob_rti.cn_src_mem_dt')
 
-    inp = gr%intf(LEFT)%np ! Assuming symmetric leads.
+    np = maxval(gr%intf(:)%np_intf)
 
     order = gr%der%order
     SAFE_ALLOCATE(tmp(1:gr%mesh%np, 1:st%d%ispin))
-    SAFE_ALLOCATE(tmp_wf(1:inp))
-    SAFE_ALLOCATE(tmp_mem(1:inp*order))
+    SAFE_ALLOCATE(tmp_wf(1:np))
+    SAFE_ALLOCATE(tmp_mem(1:np*order))
 
     ! Set pointers to communicate with with backward propagator passed
     ! to iterative linear solver.
     hm_p       => hm
     gr_p       => gr
-    sp_mem_p   => ob%mem_sp_coeff(:, 0, :)
     intf_p     => gr%intf
     dt_p       => dt
     t_p        => t
     ist_p      => ist
     ik_p       => ik
-    mem_s_p    => ob%mem_s(:, :, :, :)
+    lead_p     => ob%lead(:)
     mem_type_p => ob%mem_type
-    mapping_p  => ob%sp2full_map
 
     ! For the dot product passed to BiCG routine.
     call mesh_init_mesh_aux(gr%mesh)
@@ -417,7 +415,8 @@ contains
     ! save the initial state
     if (m.eq.0) then
       do il = 1, NLEADS
-        call save_intf_wf(gr%intf(il), st, ob%st_intface(1:inp, :, :, il, 0))
+        np = gr%intf(il)%np_intf
+        call save_intf_wf(gr%intf(il), st, ob%lead(il)%st_intface(1:np, :, :, 0))
       end do
     end if
 
@@ -425,33 +424,34 @@ contains
       do ist = st%st_start, st%st_end
         ! Get right-hand side.
         !   1. Apply effective Hamiltonian.
-        call apply_h_eff_sp(hm, gr, ob%mem_sp_coeff(:, 0, :), gr%intf, -M_ONE, dt, t, &
-          ist, ik, st%zpsi(:, :, ist, ik), ob%mem_s(:, :, :, :), ob%sp2full_map)
+        call apply_h_eff_sp(hm, gr, ob%lead, gr%intf, -M_ONE, dt, t, ist, ik, st%zpsi(:, :, ist, ik))
 
         do il = 1, NLEADS
+          np  = gr%intf(il)%np_intf
+          npo = np*order
           ! 2. Add source term
           if(iand(ob%additional_terms, SRC_TERM_FLAG).ne.0) then
             f0  = M_z1/(M_z1+M_zI*M_HALF*dt*st%ob_eigenval(ist, ik))
             fac = (M_z1-M_zI*M_HALF*dt*st%ob_eigenval(ist, ik))*f0
-            tmp_mem(:) = ob%mem_sp_coeff(:, m, il)
-            if(m.gt.0) tmp_mem(:) = tmp_mem(:) + ob%mem_sp_coeff(:, m-1, il)
-            call calc_source_wf_sp(max_iter, m, inp, il, hm%lead(il)%h_offdiag(:, :),     &
-              tmp_mem(:), dt, order, gr%sb%dim, st%ob_lead(il)%intf_psi(:, :, 1, ist, ik), &
-              ob%mem_s(:, :, :, il), ob%sp2full_map, ob%src_mem_u(:, il), f0, fac,   &
-              lambda(m, 0, max_iter, ob%src_mem_u(:, il)), ob%src_prev(:, 1, ist, ik, il))
-            call apply_src(gr%intf(il), ob%src_prev(1:inp, 1, ist, ik, il), st%zpsi(:, :, ist, ik))
+            tmp_mem(1:npo) = ob%lead(il)%q_sp(1:npo, m)
+            if(m.gt.0) tmp_mem(1:npo) = tmp_mem(1:npo) + ob%lead(il)%q_sp(1:npo, m-1)
+            call calc_source_wf_sp(max_iter, m, np, il, hm%lead(il)%h_offdiag(:, :),     &
+              tmp_mem(1:npo), dt, order, gr%sb%dim, st%ob_lead(il)%intf_psi(:, :, 1, ist, ik), &
+              ob%lead(il)%q_s(:, :, :), ob%lead(il)%sp2full_map, ob%src_mem_u(:, il), f0, fac,   &
+              lambda(m, 0, max_iter, ob%src_mem_u(:, il)), ob%lead(il)%src_prev(:, 1, ist, ik))
+            call apply_src(gr%intf(il), ob%lead(il)%src_prev(1:np, 1, ist, ik), st%zpsi(:, :, ist, ik))
           end if
           ! 3. Add memory term.
           if(iand(ob%additional_terms, MEM_TERM_FLAG).ne.0) then
             do it = max(m-ob%max_mem_coeffs,0), m-1
               factor = -dt**2/M_FOUR*lambda(m, it, max_iter, ob%src_mem_u(:, il)) / &
                 (ob%src_mem_u(m, il)*ob%src_mem_u(it, il))
-              tmp_wf(:) = ob%st_intface(:, ist, ik, il, mod(it+1, ob%max_mem_coeffs+1)) &
-                          + ob%st_intface(:, ist, ik, il, mod(it, ob%max_mem_coeffs+1))
-              tmp_mem(:) = ob%mem_sp_coeff(:, m-it, il)
-              if((m-it).gt.0) tmp_mem(:) = tmp_mem(:) + ob%mem_sp_coeff(:, m-it-1, il)
-              call apply_sp_mem(tmp_mem(:), il, gr%intf(il), tmp_wf, st%zpsi(:, :, ist, ik), &
-                factor, ob%mem_s(:, :, :, il), order, gr%sb%dim, ob%sp2full_map)
+              tmp_wf(1:np) = ob%lead(il)%st_intface(1:np, ist, ik, mod(it+1, ob%max_mem_coeffs+1)) &
+                          + ob%lead(il)%st_intface(1:np, ist, ik, mod(it, ob%max_mem_coeffs+1))
+              tmp_mem(1:npo) = ob%lead(il)%q_sp(1:npo, m-it)
+              if((m-it).gt.0) tmp_mem(1:npo) = tmp_mem(1:npo) + ob%lead(il)%q_sp(1:npo, m-it-1)
+              call apply_sp_mem(tmp_mem(1:npo), gr%intf(il), tmp_wf(1:np), st%zpsi(:, :, ist, ik), &
+                factor, ob%lead(il)%q_s(:, :, :), order, gr%sb%dim, ob%lead(il)%sp2full_map)
             end do
           end if
         end do
@@ -459,8 +459,8 @@ contains
           ! 4. if H_eff is not complex symmetric do the following for solving the linear equation:
           ! A.x = b --> (A^T).A.x = (A^T).b
           ! In this case (A^T).A is complex symmetric and we can use the QMR_sym solver
-          call apply_h_eff_sp(hm, gr, ob%mem_sp_coeff(:, 0, :), gr%intf, M_ONE, dt, t, &
-            ist, ik, st%zpsi(:, :, ist, ik), ob%mem_s(:, :, :, :), ob%sp2full_map, .true.)
+          call apply_h_eff_sp(hm, gr, ob%lead, gr%intf, M_ONE, dt, t, &
+                              ist, ik, st%zpsi(:, :, ist, ik), .true.)
         end if
 
         ! Solve linear system (1 + i \delta H_{eff}) st%zpsi = tmp.
@@ -473,7 +473,9 @@ contains
 
     ! Save interface part of wavefunction for subsequent iterations.
     do il = 1, NLEADS
-      call save_intf_wf(gr%intf(il), st, ob%st_intface(1:inp, :, :, il, mod(timestep,ob%max_mem_coeffs+1)))
+      np = gr%intf(il)%np_intf
+      call save_intf_wf(gr%intf(il), st, &
+                        ob%lead(il)%st_intface(1:np, :, :, mod(timestep,ob%max_mem_coeffs+1)))
     end do
 
     SAFE_DEALLOCATE_A(tmp)
@@ -496,9 +498,9 @@ contains
     SAFE_ALLOCATE(tmp(1:gr_p%mesh%np_part, 1:1))
     ! Propagate backward.
     tmp(1:gr_p%mesh%np, 1) = x(1:gr_p%mesh%np)
-    call apply_h_eff(hm_p, gr_p, mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp)
+    call apply_h_eff(hm_p, gr_p, lead_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp)
     if (.not.heff_sym) then ! make operator complex symmetric
-      call apply_h_eff(hm_p, gr_p, mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, .true.)
+      call apply_h_eff(hm_p, gr_p, lead_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, .true.)
     end if
     y(1:gr_p%mesh%np) = tmp(1:gr_p%mesh%np, 1)
 
@@ -520,9 +522,9 @@ contains
     SAFE_ALLOCATE(tmp(1:gr_p%mesh%np_part, 1:1))
     ! Propagate backward.
     tmp(1:gr_p%mesh%np, 1) = x(1:gr_p%mesh%np)
-    call apply_h_eff_sp(hm_p, gr_p, sp_mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, mem_s_p, mapping_p)
+    call apply_h_eff_sp(hm_p, gr_p, lead_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp)
     if (.not.heff_sym) then ! make operator complex symmetric
-      call apply_h_eff_sp(hm_p, gr_p, sp_mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, mem_s_p, mapping_p, .true.)
+      call apply_h_eff_sp(hm_p, gr_p, lead_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, .true.)
     end if
     y(1:gr_p%mesh%np) = tmp(1:gr_p%mesh%np, 1)
 
@@ -537,7 +539,7 @@ contains
   subroutine save_intf_wf(intf, st, st_intf)
     type(interface_t), intent(in)    :: intf
     type(states_t),    intent(in)    :: st
-    CMPLX,             intent(inout) :: st_intf(1:intf%np, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end)
+    CMPLX,  intent(inout) :: st_intf(1:intf%np_intf, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end)
 
     integer :: ik, ist
     
@@ -555,16 +557,16 @@ contains
 
   ! ---------------------------------------------------------
   ! Propagate forward/backward with effective Hamiltonian.
-  subroutine apply_h_eff(hm, gr, mem, intf, sign, dt, t, ist, ik, zpsi, transposed)
-    type(hamiltonian_t), intent(inout) :: hm
-    type(grid_t),        intent(inout) :: gr
-    CMPLX, target,       intent(in)    :: mem(:, :, :)
-    type(interface_t),   intent(in)    :: intf(1:NLEADS)
-    FLOAT,               intent(in)    :: sign, dt, t
-    integer,             intent(in)    :: ist
-    integer,             intent(in)    :: ik
-    CMPLX,               intent(inout) :: zpsi(:, :)
-    logical, optional,   intent(in)    :: transposed
+  subroutine apply_h_eff(hm, gr, lead, intf, sign, dt, t, ist, ik, zpsi, transposed)
+    type(hamiltonian_t), intent(inout)    :: hm
+    type(grid_t),        intent(inout)    :: gr
+    type(ob_memsrc_t), target, intent(in) :: lead(1:NLEADS)
+    type(interface_t),   intent(in)       :: intf(1:NLEADS)
+    FLOAT,               intent(in)       :: sign, dt, t
+    integer,             intent(in)       :: ist
+    integer,             intent(in)       :: ik
+    CMPLX,               intent(inout)    :: zpsi(:, :)
+    logical, optional,   intent(in)       :: transposed
 
     integer            :: il
     CMPLX, allocatable :: intf_wf(:, :)
@@ -572,7 +574,7 @@ contains
 
     call push_sub('ob_rti.apply_h_eff')
 
-    SAFE_ALLOCATE(intf_wf(1:intf(LEFT)%np, 1:NLEADS))
+    SAFE_ALLOCATE(intf_wf(1:maxval(gr%intf(:)%np_intf), 1:NLEADS))
 
     ASSERT(sign.eq.M_ONE.or.sign.eq.-M_ONE)
 
@@ -598,7 +600,7 @@ contains
 
     ! Apply modification: sign \delta^2 Q zpsi
     do il = 1, NLEADS
-      call apply_mem(mem(:, :, il), intf(il), intf_wf(:, il), zpsi, &
+      call apply_mem(lead(il)%q(:, :, 0), intf(il), intf_wf(:, il), zpsi, &
                      TOCMPLX(sign*dt**2/M_FOUR, M_ZERO), transposed_)
     end do
 
@@ -610,18 +612,16 @@ contains
 
   ! ---------------------------------------------------------
   ! Propagate forward/backward with effective Hamiltonian.
-  subroutine apply_h_eff_sp(hm, gr, sp_mem, intf, sign, dt, t, ist, ik, zpsi, mem_s, mapping, transposed)
-    type(hamiltonian_t), intent(inout) :: hm
-    type(grid_t),        intent(inout) :: gr
-    CMPLX, target,       intent(in)    :: sp_mem(:, :)
-    type(interface_t),   intent(in)    :: intf(1:NLEADS)
-    FLOAT,               intent(in)    :: sign, dt, t
-    integer,             intent(in)    :: ist
-    integer,             intent(in)    :: ik
-    CMPLX,               intent(inout) :: zpsi(:, :)
-    CMPLX,               intent(in)    :: mem_s(:, :, :, :)
-    integer,             intent(in)    :: mapping(:)   ! the mapping
-    logical, optional,   intent(in)    :: transposed
+  subroutine apply_h_eff_sp(hm, gr, lead, intf, sign, dt, t, ist, ik, zpsi, transposed)
+    type(hamiltonian_t), intent(inout)    :: hm
+    type(grid_t),        intent(inout)    :: gr
+    type(ob_memsrc_t), target, intent(in) :: lead(1:NLEADS)
+    type(interface_t),   intent(in)       :: intf(1:NLEADS)
+    FLOAT,               intent(in)       :: sign, dt, t
+    integer,             intent(in)       :: ist
+    integer,             intent(in)       :: ik
+    CMPLX,               intent(inout)    :: zpsi(:, :)
+    logical, optional,   intent(in)       :: transposed
 
     integer            :: il
     CMPLX, allocatable :: intf_wf(:, :)
@@ -629,7 +629,7 @@ contains
 
     call push_sub('ob_rti.apply_h_eff_sp')
 
-    SAFE_ALLOCATE(intf_wf(1:intf(LEFT)%np, 1:NLEADS))
+    SAFE_ALLOCATE(intf_wf(1:intf(LEFT)%np_intf, 1:NLEADS))
 
     ASSERT(sign.eq.M_ONE.or.sign.eq.-M_ONE)
 
@@ -653,8 +653,9 @@ contains
 
     ! Apply modification: sign \delta^2 Q zpsi
     do il = 1, NLEADS
-      call apply_sp_mem(sp_mem(:, il), il, intf(il), intf_wf(:, il), zpsi, &
-        TOCMPLX(sign*dt**2/M_FOUR, M_ZERO), mem_s(:, :, :, il), gr%der%order, gr%sb%dim, mapping)
+      call apply_sp_mem(lead(il)%q_sp(:, 0), intf(il), intf_wf(:, il), zpsi, &
+                        TOCMPLX(sign*dt**2/M_FOUR, M_ZERO), lead(il)%q_s(:, :, :), &
+                        gr%der%order, gr%sb%dim, lead(il)%sp2full_map)
     end do
 
     SAFE_DEALLOCATE_A(intf_wf)
@@ -675,7 +676,7 @@ contains
     call push_sub('ob_rti.apply_src')
 
     ! Do not use use BLAS here.
-    do ii=1, intf%np
+    do ii=1, intf%np_intf
       index = intf%index(ii)
       zpsi(index, 1) = zpsi(index, 1) + src_wf(ii)
     end do
@@ -700,7 +701,7 @@ contains
 
     call push_sub('ob_rti.apply_mem')
 
-    SAFE_ALLOCATE(mem_intf_wf(1:intf%np))
+    SAFE_ALLOCATE(mem_intf_wf(1:intf%np_intf))
 
     mem_intf_wf(:) = M_z0
 
@@ -708,10 +709,10 @@ contains
       ! FIXME: transpose if mem is not symmetric
     end if
 
-    call zsymv('U', intf%np, factor, mem, intf%np, intf_wf, 1, M_z0, mem_intf_wf, 1)
+    call zsymv('U', intf%np_intf, factor, mem, intf%np_intf, intf_wf, 1, M_z0, mem_intf_wf, 1)
 
     ! Do not use use BLAS here.
-    do ii=1, intf%np
+    do ii=1, intf%np_intf
       index = intf%index(ii)
       zpsi(index, 1) = zpsi(index, 1) + mem_intf_wf(ii)
     end do
@@ -723,9 +724,8 @@ contains
   ! ---------------------------------------------------------
   ! Apply memory coefficient: zpsi <- zpsi + factor Q intf_wf
   ! Use symmetric matrix-vector multiply, because Q is symmetric
-  subroutine apply_sp_mem(sp_mem, il, intf, intf_wf, zpsi, factor, mem_s, order, dim, mapping, transposed)
+  subroutine apply_sp_mem(sp_mem, intf, intf_wf, zpsi, factor, mem_s, order, dim, mapping, transposed)
     CMPLX,             intent(in)    :: sp_mem(:)
-    integer,           intent(in)    :: il
     type(interface_t), intent(in)    :: intf
     CMPLX,             intent(in)    :: intf_wf(:)
     CMPLX,             intent(inout) :: zpsi(:, :)
@@ -740,9 +740,9 @@ contains
 
     call push_sub('ob_rti.apply_sp_mem')
 
-    SAFE_ALLOCATE(tmem(1:intf%np, 1:intf%np))
+    SAFE_ALLOCATE(tmem(1:intf%np_intf, 1:intf%np_intf))
     ! TODO: do not multiply matrices together, better multiply successively onto wavefunction
-    call make_full_matrix(intf%np, order, dim, sp_mem, mem_s, tmem, mapping)
+    call make_full_matrix(intf%np_intf, order, dim, sp_mem, mem_s, tmem, mapping)
     call apply_mem(tmem, intf, intf_wf, zpsi, factor, transposed)
     SAFE_DEALLOCATE_A(tmem)
 
@@ -809,10 +809,10 @@ contains
     
     write(message(1), '(a,a10)')    'Type of memory coefficients:     ', trim(mem_type_name)
     do il=1, NLEADS
-      write(message(1+il), '(a,i10)') 'Dimension of '//LEAD_NAME(il)//' q-matrix:    ', gr%intf(il)%np
+      write(message(1+il), '(a,i10)') 'Dimension of '//LEAD_NAME(il)//' q-matrix:    ', gr%intf(il)%np_intf
     end do
     write(message(NLEADS+2), '(a,f10.3)')  'MBytes required for memory term: ', &
-      mbytes_memory_term(ob%max_mem_coeffs, gr%intf(:)%np, NLEADS, st, ob%mem_type, order)
+      mbytes_memory_term(ob%max_mem_coeffs, gr%intf(:)%np_intf, NLEADS, st, ob%mem_type, order)
     write(message(NLEADS+3), '(a,i10)')    'Maximum QMR iterations:          ', qmr_max_iter
     write(message(NLEADS+4), '(a,es10.1)') 'QMR residual tolerance:          ', qmr_tol
     write(message(NLEADS+5), '(a,a20)')    'Included additional terms:       ', trim(terms)
@@ -832,13 +832,18 @@ contains
   subroutine ob_rti_end(ob)
     type(ob_terms_t), intent(inout) :: ob
 
+    integer :: il
+
     call push_sub('ob_rti.ob_rti_end')
 
     call ob_mem_end(ob)
     call ob_src_end(ob)
 
     SAFE_DEALLOCATE_P(ob%src_mem_u)
-    SAFE_DEALLOCATE_P(ob%st_intface)
+
+    do il=1, NLEADS
+      SAFE_DEALLOCATE_P(ob%lead(il)%st_intface)
+    end do
 
     call pop_sub()
   end subroutine ob_rti_end

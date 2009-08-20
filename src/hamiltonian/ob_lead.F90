@@ -40,9 +40,12 @@ module ob_lead_m
 
   public ::         &
     apply_coupling, &
+    lead_init,      &
+    lead_end,       &
     lead_diag,      &
     lead_offdiag,   &
     lead_td_pot,    &
+    lead_resize,    &
     is_lead_transl_inv
 
 contains
@@ -64,7 +67,7 @@ contains
     diag = M_z0
 
     ! For all interface points...
-    do i = 1, intf%np
+    do i = 1, intf%np_uc
       n = intf%index(i)
       ! ... find the points they are coupled to.
       do k = 1, lapl%stencil%size
@@ -102,7 +105,7 @@ contains
     end do
 
     ! Add potential. FIXME: add vector potential (A^2)
-    do i = 1, intf%np
+    do i = 1, intf%np_uc
       diag(i, i) = diag(i, i) + vks(i)
     end do
     call pop_sub()
@@ -131,7 +134,7 @@ contains
     offdiag(:, :) = M_z0
 
     ! j iterates over rows of the block matrix.
-    do j = 1, intf%np
+    do j = 1, intf%np_uc
       n = intf%index(j)
       ! k iterates over all stencil points.
       do k = 1, lapl%stencil%size
@@ -145,7 +148,7 @@ contains
         p_n = lapl%m%idx%Lxyz(n, :)
         p_k = lapl%m%idx%Lxyz(k_stencil, :)
 
-        ! Now, we shift the stencil by the size of one unit cell (intf%extent)
+        ! Now, we shift the stencil by the size of one unit cell (intf%extent_uc)
         ! and check if the coupling point with point number n_matr is in the interface.
         ! The sketch if for a 4x2 unit cell and a 5 point stencil in 2D:
         !
@@ -166,7 +169,7 @@ contains
         ! The point p_k is marked with an x, the point p_matr with a #.
         shift        = abs(p_k(tdir)-p_n(tdir))
         p_matr       = p_n
-        p_matr(tdir) = p_matr(tdir) + dir*(intf%extent-shift)
+        p_matr(tdir) = p_matr(tdir) + dir*(intf%extent_uc-shift)
         n_matr       = lapl%m%idx%Lxyz_inv(p_matr(1), p_matr(2), p_matr(3))
 
         if(member_of_interface(n_matr, intf, intf_idx)) then
@@ -264,13 +267,114 @@ contains
 
   
   ! ---------------------------------------------------------
+  subroutine lead_init(lead, np, np_part, dim, nspin)
+    type(lead_t),        intent(out) :: lead
+    integer,             intent(in)  :: np
+    integer,             intent(in)  :: np_part ! including ghost and boundary points
+    integer,             intent(in)  :: dim
+    integer,             intent(in)  :: nspin
+
+    call push_sub('ob_lead.lead_init')
+
+    lead%np  = np
+    lead%np_part = np_part
+    SAFE_ALLOCATE(lead%h_diag(1:np, 1:np, 1:dim))
+    SAFE_ALLOCATE(lead%h_offdiag(1:np, 1:np))
+    SAFE_ALLOCATE(lead%vks(1:np_part, 1:nspin))
+    SAFE_ALLOCATE(lead%vhartree(1:np_part))
+
+    call pop_sub()
+  end subroutine lead_init
+
+
+  ! ---------------------------------------------------------
+  subroutine lead_end(lead)
+    type(lead_t),        intent(inout)  :: lead
+
+    call push_sub('ob_lead.lead_end')
+
+    SAFE_DEALLOCATE_P(lead%h_diag)
+    SAFE_DEALLOCATE_P(lead%h_offdiag)
+    SAFE_DEALLOCATE_P(lead%vks)
+    SAFE_DEALLOCATE_P(lead%vhartree)
+
+    call pop_sub()
+  end subroutine lead_end
+
+
+  ! ---------------------------------------------------------
+  subroutine lead_copy(src, dst, dim, nspin)
+    type(lead_t),  intent(in)  :: src
+    type(lead_t),  intent(out) :: dst
+    integer,       intent(in)  :: dim
+    integer,       intent(in)  :: nspin
+
+    integer :: np, np_part
+
+    call push_sub('ob_lead.lead_copy')
+
+    ASSERT(dst%np.le.src%np)
+    np = dst%np
+    np_part = dst%np_part
+
+    dst%h_diag(1:np, 1:np, 1:dim)   = src%h_diag(1:np, 1:np, 1:dim)
+    dst%h_offdiag(1:np, 1:np)       = src%h_offdiag(1:np, 1:np)
+    dst%vks(1:dst%np_part, 1:nspin) = src%vks(1:dst%np_part, 1:nspin)
+    dst%vhartree(1:dst%np_part)     = src%vhartree(1:dst%np_part)
+
+    call pop_sub()
+  end subroutine lead_copy
+
+
+  ! ---------------------------------------------------------
+  ! resizes the lead unit cell according to the interface size
+  ! TODO: if hamiltonian->lead is an allocatable array then pointers
+  ! are the better choice instead of copying
+  subroutine lead_resize(intf, lead, dim, nspin)
+    type(interface_t),   intent(in)    :: intf
+    type(lead_t),        intent(inout) :: lead
+    integer,             intent(in)    :: dim
+    integer,             intent(in)    :: nspin
+
+    type(lead_t) :: old_lead
+    integer :: np, np_part
+
+    call push_sub('ob_lead.lead_resize')
+
+    np = intf%np_uc
+    np_part = np + lead%np_part - lead%np
+
+    if(np.ne.lead%np) then
+      ! the new unit cell must be smaller
+      ASSERT(np.le.lead%np)
+      ! create temp lead
+      call lead_init(old_lead, np, np_part, dim, nspin)
+      ! safe old lead
+      call lead_copy(lead, old_lead, dim, nspin)
+      ! delete lead
+      call lead_end(lead)
+      ! allocate new (smaller) lead
+      call lead_init(lead, np, np_part, dim, nspin)
+      ! copy parts of the old leads
+      call lead_copy(old_lead, lead, dim, nspin)
+      ! delete old lead
+      call lead_end(old_lead)
+    end if
+
+    call pop_sub()
+  end subroutine lead_resize
+
+
+  ! ---------------------------------------------------------
   ! Is the lead potential translational invariant (in transport direction)?
   logical function is_lead_transl_inv(lapl, vks, intf)
     type(nl_operator_t), intent(in)  :: lapl
     FLOAT,               intent(in)  :: vks(:)
     type(interface_t),   intent(in)  :: intf
 
-    is_lead_transl_inv = .false.
+    ! FIXME: for now every potential is translational invariant in transport direction
+    ! this should be tested and also be generalized to periodic potentials
+    is_lead_transl_inv = .true.
 
   end function is_lead_transl_inv
 
