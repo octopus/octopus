@@ -454,7 +454,7 @@ contains
       hm%ep%eii = M_HALF*dmf_dotp(gr%mesh, rho_nuc, hm%ep%vpsl) 
       !hm%ep%eii = 0
       ! ESURF is a module called from later.  Need to write it into somewhere...
-      write(89,*) hm%ehartree*CNST(27.2), poisson_sete_energy()*CNST(27.2), hm%ep%eii*CNST(27.2)
+      write(89,*) hm%ehartree*CNST(27.2), poisson_sete_energy(sete_solver)*CNST(27.2), hm%ep%eii*CNST(27.2)
     endif
 
     SAFE_DEALLOCATE_A(rho)

@@ -85,7 +85,7 @@ module poisson_m
 
   type(hartree_t) :: hartree_integrator
   type(poisson_corr_t) :: corrector
-  type(poisson_sete_t) :: sete_solver
+  type(poisson_sete_t), public :: sete_solver
 
 contains
 

@@ -152,12 +152,463 @@ contains
     SAFE_ALLOCATE(this%adiag(1:ntot))
     SAFE_ALLOCATE(iad(1:nelt))
     SAFE_ALLOCATE(jad(1:nelt))
-    
+
     call poissonm(this)
 
     qs = q2 ! store Dirichlet BC info in QS
 
     SAFE_DEALLOCATE_A(q2)
+
+  contains
+
+    subroutine poissonm(this)
+      type(poisson_sete_t), intent(in)    :: this
+
+      ! version g created 03/25/08 - modified to include 
+      !                              DIELECTRIC(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1)
+      !           based on ~/LEVEL1/photovolt/poissonpv_v2.f90
+
+      ! creates Laplacian.
+      ! inputs:  NTOT,MD,NXTOT,NYTOT,NZTOT,this%ipio(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1),
+      !          VBOUND(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1),Q2(NTOT),
+      !          DXG(NXTOT),DYG(NYTOT),DZ(NZTOT),DIELELCTRIC(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1)
+      !
+      ! outputs: AW(NELT),THIS%ADIAG(NTOT),Q2,
+      !          NELT, IAD(NELT),JAD(NELT)
+      !
+      ! local:   JOFF(7),AV(7),DCONST,D1,D2,DEL,
+      !          I,J,K,IEC,IAV,N
+
+      !    Note: original treatment of variable grid spacing documented
+      !          in RIKEN I pg 50.
+
+      FLOAT   :: AV(7)
+      INTEGER :: JOFF(7)
+      FLOAT   :: d1, d2, dconst, del
+      integer :: i, j, k, ia, iav, icol, idebug, iec, n, ii
+      !
+      idebug=0
+      if(idebug == 1)then
+        open(57,file='aw.dat',status='unknown')
+      endif
+      !
+      JOFF(1)=-MD ! used to compute row indices JAD
+      JOFF(2)=-NZTOT; JOFF(3)=-1; JOFF(4)=0; JOFF(5)=1; JOFF(6)=NZTOT; JOFF(7)=MD
+      I=1; J=1; K=1
+      IEC=1 ! counter for number of non-zero entries in AW.
+
+      q2(1:ntot) = M_ZERO
+
+      DO IA=1,NTOT
+        AV=M_ZERO
+        IF(this%ipio(I,J,K) == 0)THEN ! the point itself must be
+          !                                   in the grid
+          DO N=1,6 ! for all neighbors of this IA
+            IF(N.GT.3)THEN
+              IAV=N+1
+            ELSE
+              IAV=N
+            end if
+            ! set grid intervals based on which direction
+            ! this neighbor is located in. (+-I,+-J,+-K).
+            SELECT CASE(IAV)
+            CASE(1) ! I-1,J,K
+              D1=DZ(K); D2=DYG(J)
+              SELECT CASE(this%ipio(I-1,J,K))
+              CASE(1) ! Dirichlet boundary point
+                DEL=CNST(0.5)*DXG(I)*DZ(K)
+                DCONST=DIELECTRIC(I,J,K)
+                AV(IAV)=M_ZERO; AV(4)=AV(4)+DCONST*D1*D2/DEL
+                Q2(IA)=Q2(IA)+VBOUND(I-1,J,K)*DCONST*D1*D2/DEL
+              CASE(2) ! Neumann boundary point
+                AV(IAV)=M_ZERO; DEL=M_ZERO
+              CASE DEFAULT ! interior point
+                DEL=CNST(0.5)*(DXG(I)+DXG(I-1))*DZ(K)
+                DCONST=CNST(0.5)*(DIELECTRIC(I-1,J,K)+DIELECTRIC(I,J,K))
+                AV(IAV)=-DCONST*D1*D2/DEL; AV(4)=AV(4)+DCONST*D1*D2/DEL
+              END SELECT
+            CASE(2) ! I,J-1,K
+              D1=DZ(K); D2=DXG(I)
+              SELECT CASE(this%ipio(I,J-1,K))
+              CASE(1) ! Dirichlet
+                DEL=CNST(0.5)*DYG(J)*DZ(K)
+                DCONST=DIELECTRIC(I,J,K)
+                AV(IAV)=M_ZERO; AV(4)=AV(4)+DCONST*D1*D2/DEL
+                Q2(IA)=Q2(IA)+VBOUND(I,J-1,K)*DCONST*D1*D2/DEL
+              CASE(2) ! Neumann
+                AV(IAV)=M_ZERO; DEL=M_ZERO
+              CASE DEFAULT! interior point
+                DEL=CNST(0.5)*(DYG(J)+DYG(J-1))*DZ(K)
+                DCONST=CNST(0.5)*(DIELECTRIC(I,J,K)+DIELECTRIC(I,J-1,K))
+                AV(IAV)=-DCONST*D1*D2/DEL; AV(4)=AV(4)+DCONST*D1*D2/DEL
+              END SELECT
+            CASE(3) ! I,J,K-1
+              D1=DXG(I); D2=DYG(J)
+              SELECT CASE(this%ipio(I,J,K-1))
+              CASE(1) ! Dirichlet
+                DEL=CNST(0.5)*DZ(K)*DZ(K)
+                DCONST=DIELECTRIC(I,J,K)
+                AV(IAV)=M_ZERO; AV(4)=AV(4)+DCONST*D1*D2/DEL
+                Q2(IA)=Q2(IA)+VBOUND(I,J,K-1)*DCONST*D1*D2/DEL
+              CASE(2) ! Neumann
+                AV(IAV)=M_ZERO; DEL=M_ZERO
+              CASE DEFAULT! interior point
+                DEL=CNST(0.5)*(DZ(K)+DZ(K-1))*DZ(K)
+                DCONST=CNST(0.5)*(DIELECTRIC(I,J,K)+DIELECTRIC(I,J,K-1))
+                AV(IAV)=-DCONST*D1*D2/DEL; AV(4)=AV(4)+DCONST*D1*D2/DEL
+              END SELECT
+            CASE(5) ! I,J,K+1
+              D1=DXG(I); D2=DYG(J)
+              SELECT CASE(this%ipio(I,J,K+1))
+              CASE(1) ! Dirichlet
+                DEL=CNST(0.5)*DZ(K)*DZ(K)
+                DCONST=DIELECTRIC(I,J,K)
+                AV(IAV)=M_ZERO; AV(4)=AV(4)+DCONST*D1*D2/DEL
+                Q2(IA)=Q2(IA)+VBOUND(I,J,K+1)*DCONST*D1*D2/DEL
+              CASE(2) ! Neumann
+                AV(IAV)=M_ZERO; DEL=M_ZERO
+              CASE DEFAULT! interior point
+                DEL=CNST(0.5)*(DZ(K)+DZ(K+1))*DZ(K)
+                DCONST=CNST(0.5)*(DIELECTRIC(I,J,K)+DIELECTRIC(I,J,K+1))
+                AV(IAV)=-DCONST*D1*D2/DEL; AV(4)=AV(4)+DCONST*D1*D2/DEL
+              END SELECT
+            CASE(6) ! I,J+1,K
+              D1=DZ(K); D2=DXG(I)
+              SELECT CASE(this%ipio(I,J+1,K))
+              CASE(1) ! Dirichlet
+                DEL=CNST(0.5)*DYG(J)*DZ(K)
+                DCONST=DIELECTRIC(I,J,K)
+                AV(IAV)=M_ZERO; AV(4)=AV(4)+DCONST*D1*D2/DEL
+                Q2(IA)=Q2(IA)+VBOUND(I,J+1,K)*DCONST*D1*D2/DEL
+              CASE(2) ! Neumann
+                AV(IAV)=M_ZERO; DEL=M_ZERO
+              CASE DEFAULT
+                DEL=CNST(0.5)*(DYG(J)+DYG(J+1))*DZ(K)
+                DCONST=CNST(0.5)*(DIELECTRIC(I,J,K)+DIELECTRIC(I,J+1,K))
+                AV(IAV)=-DCONST*D1*D2/DEL; AV(4)=AV(4)+DCONST*D1*D2/DEL
+              END SELECT
+            CASE(7) ! I+1,J,K
+              D1=DZ(K); D2=DYG(J)
+              SELECT CASE(this%ipio(I+1,J,K))
+              CASE(1) ! Dirichlet
+                DEL=CNST(0.5)*DXG(I)*DZ(K)
+                DCONST=DIELECTRIC(I,J,K)
+                AV(IAV)=M_ZERO; AV(4)=AV(4)+DCONST*D1*D2/DEL
+                Q2(IA)=Q2(IA)+VBOUND(I+1,J,K)*DCONST*D1*D2/DEL
+              CASE(2) ! Neumann
+                AV(IAV)=M_ZERO; DEL=M_ZERO
+              CASE DEFAULT
+                DEL=CNST(0.5)*(DXG(I)+DXG(I+1))*DZ(K)
+                DCONST=CNST(0.5)*(DIELECTRIC(I,J,K)+DIELECTRIC(I+1,J,K))
+                AV(IAV)=-DCONST*D1*D2/DEL; AV(4)=AV(4)+DCONST*D1*D2/DEL
+              END SELECT
+            END SELECT
+          end do
+        ELSE
+          write(57,*) "At else", I, J, K
+          AV(4) = M_ONE/PCONST ! for points that are out of the grid.
+        end if
+        !                                 DSLUCS matrix and normalizations
+        THIS%ADIAG(IA)=AV(4)
+        IF(THIS%ADIAG(IA) == M_ZERO)THEN
+          WRITE(*,*)' DIAG ELEM ZERO ',IA
+          STOP ' GOTTA QUIT '
+        end if
+
+        if(idebug == 1) then
+          write(57, '(1x,i8,8(1x,e10.4))') iec, (av(ii),ii=1,7), q2(ia)
+        endif
+
+        DO ICOL=1,7  !  THIS IS SLAP TRIAD FORMAT
+          IF(AV(ICOL) /= M_ZERO)THEN
+            AW(IEC)=AV(ICOL)/THIS%ADIAG(IA)
+            IAD(IEC)=IA
+            JAD(IEC)=IA+JOFF(ICOL)
+            IEC=IEC+1
+          end if
+        end do
+        !                                     increment I,J,K
+        K=K+1
+        IF(K == NZTOT+1)THEN
+          K=1
+          J=J+1
+          IF(J == NYTOT+1)THEN
+            J=1
+            I=I+1
+          end if
+        end if
+
+
+      end do
+      if(idebug == 1)then
+        close(57)
+      endif
+
+      IEC=IEC-1 ! overcounted non-zero elements by one.
+      write(6,*)' nelt, iec ',nelt,iec
+      NELT=IEC
+
+      ! in case NELT in static differs from that counted here
+!!$        allocate(AWP(NELT))
+!!$        DO I=1,NELT
+!!$           AWP(I)=AW(I)
+!!$        end do
+!!$        deallocate(AW)
+!!$        allocate(AW(NELT))
+!!$        AW=AWP
+!!$        deallocate(AWP)
+
+      if(idebug == 1)then
+        close(57)
+      endif
+    end subroutine poissonm
+
+    !---------------------------------------------------------
+
+    subroutine cbsurf(this, vt)
+      type(poisson_sete_t), intent(in)    :: this
+      FLOAT,                intent(in)    :: vt(:)
+
+      integer :: k
+
+      !  IFILL=1 parallel plate
+      !
+      ! input:  IFILL,IFREE_SURFACE,NX,NY,NXL,NYL
+      !         VFILL,XG(NX),YG(NY),XNG(:),YNG(:),VT(NGATES)
+      !         XMID,YMID
+      ! output: VSURF,VBOUND(0:NX+1,0:NY+1,0:NZ+1)
+      !         IPATTERN,this%ipio
+
+
+      ! This is a combination of cbsurfser and spaceser located on
+      ! /home/stopa/surfER/build
+      allocate(this%ipio(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
+      allocate(VH_BIG(1:NXTOT,1:NYTOT,1:NZTOT))
+      vh_big(1:NXTOT,1:NYTOT,1:NZTOT)=0.0
+      allocate(VBOUND(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
+      allocate(DIELECTRIC(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
+      this%ipio=0; VBOUND=0.0
+      IF(IDEV == 1)THEN ! parallel plates
+        DIELECTRIC=DIELECTRIC0
+        dielectric(:,:,0)=6.5/pconst  !For platinum
+        dielectric(:,:,NZTOT+1)=6.5/pconst !For platinum
+        this%ipio(:,:,0)=1
+        this%ipio(:,:,NZTOT+1)=1
+        VBOUND(:,:,0)=VT(1)
+        VBOUND(:,:,NZTOT+1)=VT(2)
+        DO K=1,NZTOT
+          IF(K /= 0 .AND. K /= NZTOT+1)THEN !Redundant?
+            ! lateral BC`s
+            this%ipio(0,:,K)=2
+            this%ipio(NXTOT+1,:,K)=2
+            this%ipio(:,0,K)=2
+            this%ipio(:,NYTOT+1,K)=2
+          end if
+        end do
+      end if
+
+    end subroutine cbsurf
+
+    !---------------------------------------------------------
+
+    subroutine xyzgrid(this, nx, ny, nz, xl, yl, zl, xcen, ycen, zcen, nx2, ny2, nz2)
+      type(poisson_sete_t), intent(in)    :: this
+      integer,              intent(in)    :: nx
+      integer,              intent(in)    :: ny
+      integer,              intent(in)    :: nz
+      FLOAT,                intent(in)    :: xl
+      FLOAT,                intent(in)    :: yl
+      FLOAT,                intent(in)    :: zl
+      FLOAT,                intent(in)    :: xcen
+      FLOAT,                intent(in)    :: ycen
+      FLOAT,                intent(in)    :: zcen
+      integer,              intent(in)    :: nx2
+      integer,              intent(in)    :: ny2
+      integer,              intent(in)    :: nz2
+
+      ! Input: NX, NY, NZ -> No. of octopus grid points in each dimension
+      ! Input: XL, YL, ZL -> Size of the octopus box
+
+      FLOAT   :: dx1b, dx1t, dx_oct, xbot, xtest, xtop, xwidth_big
+      FLOAT   :: dy1b, dy1t, dy_oct, ybot, ytop, ywidth_big
+      FLOAT   :: dz1b, dz1t, dz_oct, zbot, ztest, ztop
+      integer :: i, j, k, m
+      integer :: nxtop, nytop, nztop
+      integer :: nxtot_0, nytot_0
+
+
+      ! inputs:  NZ,NZ2,NX,NX2,NY,NY2
+      !          XCEN,YCEN,ZCEN
+      !          XWIDTH,YWIDTH,ZWIDTH
+      !          XL,YL,ZL
+      !
+      ! outputs: ZG,XG,YG        
+      !write(62,*)"XL,YL,ZL ",XL,YL,ZL
+      ! z-mesh -- differs from x,y mesh because no border points
+      !           hence NZTOT_0 = NZTOT (ie there IS no NZTOT_0)
+      nztot = nz + nz2
+
+      allocate(zg(nztot))
+      allocate(dz(nztot))
+
+      !top and bottom z coordinates.
+      !Depend on POISSON_SETE (ZWIDTH) 
+      !and Octopus (ZL)parameters.
+      ztop = CNST(0.5)*zwidth - zcen - CNST(0.5)*zl
+      zbot = CNST(0.5)*zwidth + zcen - CNST(0.5)*zl
+
+      nztop = int(nz2*ztop/(ztop + zbot))
+      nzbot = nz2 - nztop
+      DZ1B=ZBOT/TOFLOAT(NZBOT)
+      DO K=1,NZBOT
+        DZ(K)=DZ1B
+      end do
+      DZ_OCT=ZL/TOFLOAT(NZ)
+
+      do k = nzbot + 1, nzbot + nz
+        dz(k) = dz_oct
+      end do
+
+      DZ1T=ZTOP/TOFLOAT(NZTOP)
+      DO K=NZBOT+NZ+1,NZTOT
+        DZ(K)=DZ1T
+      end do
+
+      ZG(1)=-CNST(0.5)*ZWIDTH+CNST(0.5)*DZ(1)
+      DO K=2,NZTOT-1
+        ZG(K)=ZG(K-1)+CNST(0.5)*(DZ(K-1)+DZ(K))
+      end do
+      ZG(NZTOT)=CNST(0.5)*ZWIDTH-CNST(0.5)*DZ(NZTOT)
+
+      ZTEST=ZG(NZTOT)
+      !    write(6,*)' nzbot ',nzbot
+      !    write(6,*)' zg nztot ',nztot
+      !    write(6,101)(zg(k),k=1,nztot)
+      ! 101 format(10(1x,e10.4))
+      !    write(6,*)' dz '
+      !    write(6,101)(dz(k),k=1,nztot)
+
+      ! x-mesh
+      NXTOT_0=NX+NX2
+      NXTOT=NXTOT_0+2*NXL
+      allocate(xg(nxtot))
+      allocate(DXG(NXTOT))
+      DO I=1,NXL  !  border points
+        DXG(I)=DXL(I)
+      end do
+      DO I=NXL+NXTOT_0+1,NXTOT
+        DXG(I)=DXL(NXTOT-I+1)
+      end do
+      ! outside Octopus mesh
+      XTOP=CNST(0.5)*XWIDTH-XCEN-CNST(0.5)*XL
+      XBOT=CNST(0.5)*XWIDTH+XCEN-CNST(0.5)*XL
+      NXTOP=INT(NX2*XTOP/(XTOP+XBOT))
+      NXBOT=NX2-NXTOP
+      DX1B=XBOT/TOFLOAT(NXBOT) ! "bottom" region
+      DO I=NXL+1,NXL+NXBOT
+        DXG(I)=DX1B
+      end do
+      DX_OCT=XL/TOFLOAT(NX)  ! Octopus region
+      DO I=NXL+NXBOT+1,NXL+NXBOT+NX
+        DXG(I)=DX_OCT
+      end do
+      DX1T=XTOP/TOFLOAT(NXTOP)  ! "top" region
+      DO I=NXL+NXBOT+NX+1,NXL+NXBOT+NX+NXTOP
+        DXG(I)=DX1T
+      end do
+
+      XWIDTH_BIG=SUM(DXG)
+      XG(1)=-CNST(0.5)*XWIDTH_BIG+CNST(0.5)*DXG(1)
+      DO I=2,NXTOT-1
+        XG(I)=XG(I-1)+CNST(0.5)*(DXG(I-1)+DXG(I))
+      end do
+      XG(NXTOT)=CNST(0.5)*XWIDTH_BIG-CNST(0.5)*DXG(NXTOT)
+
+      XTEST=XG(NXTOT)
+      !    write(6,*)' xg nxtot ',nxtot
+      !    write(6,101)(xg(k),k=1,nxtot)
+      !    write(6,*)' dxg '
+      !    write(6,101)(dxg(k),k=1,nxtot)
+      ! Y-mesh
+      NYTOT_0=NY+NY2  ! excluding border points
+      NYTOT=NYTOT_0+2*NYL  ! all Poisson Y mesh point
+      allocate(yg(nytot))
+      allocate(dyg(nytot))
+      DO I=1,NYL  !  border points
+        DYG(I)=DYL(I)
+      end do
+      DO I=NYL+NYTOT_0+1,NYTOT
+        DYG(I)=DYL(NYTOT-I+1)
+      end do
+      ! outside Octopus mesh
+      YTOP=CNST(0.5)*YWIDTH-YCEN-CNST(0.5)*YL
+      YBOT=CNST(0.5)*YWIDTH+YCEN-CNST(0.5)*YL
+      NYTOP=INT(NY2*YTOP/(YTOP+YBOT))
+      NYBOT=NY2-NYTOP
+      DY1B=YBOT/TOFLOAT(NYBOT) ! "bottom" region
+      DO I=NYL+1,NYL+NYBOT
+        DYG(I)=DY1B
+      end do
+      DY_OCT=YL/TOFLOAT(NY)  ! Octopus region
+      DO I=NYL+NYBOT+1,NYL+NYBOT+NY
+        DYG(I)=DY_OCT
+      end do
+      DY1T=YTOP/TOFLOAT(NYTOP)  ! "top" region
+      DO I=NYL+NYBOT+NY+1,NYL+NYBOT+NY+NYTOP
+        DYG(I)=DY1T
+      end do
+
+      YWIDTH_BIG=SUM(DYG)
+      YG(1)=-CNST(0.5)*YWIDTH_BIG+CNST(0.5)*DYG(1)
+      DO I=2,NYTOT-1
+        YG(I)=YG(I-1)+CNST(0.5)*(DYG(I-1)+DYG(I))
+      end do
+      YG(NYTOT)=CNST(0.5)*YWIDTH_BIG-CNST(0.5)*DYG(NYTOT)
+
+
+      NTOT=NXTOT*NYTOT*NZTOT
+      MD=NZTOT*NYTOT
+
+      allocate(iy(ntot))
+      allocate(jy(ntot))
+      allocate(ky(ntot))
+      m=0
+      DO I=1,NXTOT
+        DO J=1,NYTOT
+          DO K=1,NZTOT
+            M=M+1
+            IY(M)=I
+            JY(M)=J
+            KY(M)=K
+          end do
+        end do
+      end do
+
+!!$        dxg=1.0; dyg=1.0; dz=1.0
+!!$        zg(1)=dz(1)*CNST(0.5)
+!!$        do i=2,nztot-1
+!!$           zg(i)=zg(i-1)+CNST(0.5)*(dz(i)+dz(i-1))
+!!$        enddo
+!!$        zg(nztot)=zg(nztot-1)+CNST(0.5)*dz(nztot)
+!!$
+!!$        xg(1)=dxg(1)*CNST(0.5)
+!!$        do i=2,nxtot-1
+!!$           xg(i)=xg(i-1)+CNST(0.5)*(dxg(i)+dxg(i-1))
+!!$        enddo
+!!$        xg(nxtot)=xg(nxtot-1)+CNST(0.5)*dxg(nxtot)
+!!$
+!!$        yg(1)=dyg(1)*CNST(0.5)
+!!$        do i=2,nytot-1
+!!$           yg(i)=yg(i-1)+CNST(0.5)*(dyg(i)+dyg(i-1))
+!!$        enddo
+!!$        yg(nytot)=yg(nytot-1)+CNST(0.5)*dyg(nytot)
+!!$           
+
+      !    write(6,*)' yg '
+      !    write(6,101)(yg(k),k=1,nytot)
+      !    write(6,*)' dyg '
+      !    write(6,101)(dyg(k),k=1,nytot)
+    end subroutine xyzgrid
 
   end subroutine poisson_sete_init
 
@@ -289,12 +740,13 @@ contains
 
     call egate(this)
 
-write(358,*) "#x,z, vh_big(x,11,k)"
-    do I=1,NXTOT
-     do K=1, NZTOT
-      write(358,*) I,K,VH_BIG(I,11,K)
-enddo
-enddo
+    write(358,*) "#x,z, vh_big(x,11,k)"
+    do I = 1, NXTOT
+      do K = 1, NZTOT
+        write(358,*) I,K,VH_BIG(I,11,K)
+      end do
+    end do
+
     VHMIN=MINVAL(VH)
     VHMAX=MAXVAL(VH)
 
@@ -307,328 +759,7 @@ enddo
 
   end subroutine poisson_sete_solve
 
-  ! ---------------------------------------------
-
-  subroutine poissonm(this)
-    type(poisson_sete_t), intent(in)    :: this
-
-    ! version g created 03/25/08 - modified to include 
-    !                              DIELECTRIC(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1)
-    !           based on ~/LEVEL1/photovolt/poissonpv_v2.f90
-
-    ! creates Laplacian.
-    ! inputs:  NTOT,MD,NXTOT,NYTOT,NZTOT,this%ipio(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1),
-    !          VBOUND(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1),Q2(NTOT),
-    !          DXG(NXTOT),DYG(NYTOT),DZ(NZTOT),DIELELCTRIC(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1)
-    !
-    ! outputs: AW(NELT),THIS%ADIAG(NTOT),Q2,
-    !          NELT, IAD(NELT),JAD(NELT)
-    !
-    ! local:   JOFF(7),AV(7),DCONST,D1,D2,DEL,
-    !          I,J,K,IEC,IAV,N
-
-    !    Note: original treatment of variable grid spacing documented
-    !          in RIKEN I pg 50.
-
-    FLOAT   :: AV(7)
-    INTEGER :: JOFF(7)
-    FLOAT   :: d1, d2, dconst, del
-    integer :: i, j, k, ia, iav, icol, idebug, iec, n, ii
-    !
-    idebug=0
-    if(idebug == 1)then
-      open(57,file='aw.dat',status='unknown')
-    endif
-    !
-    JOFF(1)=-MD ! used to compute row indices JAD
-    JOFF(2)=-NZTOT; JOFF(3)=-1; JOFF(4)=0; JOFF(5)=1; JOFF(6)=NZTOT; JOFF(7)=MD
-    I=1; J=1; K=1
-    IEC=1 ! counter for number of non-zero entries in AW.
-
-    q2(1:ntot) = M_ZERO
-
-    DO IA=1,NTOT
-      AV=M_ZERO
-      IF(this%ipio(I,J,K) == 0)THEN ! the point itself must be
-        !                                   in the grid
-        DO N=1,6 ! for all neighbors of this IA
-          IF(N.GT.3)THEN
-            IAV=N+1
-          ELSE
-            IAV=N
-          end if
-          ! set grid intervals based on which direction
-          ! this neighbor is located in. (+-I,+-J,+-K).
-          SELECT CASE(IAV)
-          CASE(1) ! I-1,J,K
-            D1=DZ(K); D2=DYG(J)
-            SELECT CASE(this%ipio(I-1,J,K))
-            CASE(1) ! Dirichlet boundary point
-              DEL=CNST(0.5)*DXG(I)*DZ(K)
-              DCONST=DIELECTRIC(I,J,K)
-              AV(IAV)=M_ZERO; AV(4)=AV(4)+DCONST*D1*D2/DEL
-              Q2(IA)=Q2(IA)+VBOUND(I-1,J,K)*DCONST*D1*D2/DEL
-            CASE(2) ! Neumann boundary point
-              AV(IAV)=M_ZERO; DEL=M_ZERO
-            CASE DEFAULT ! interior point
-              DEL=CNST(0.5)*(DXG(I)+DXG(I-1))*DZ(K)
-              DCONST=CNST(0.5)*(DIELECTRIC(I-1,J,K)+DIELECTRIC(I,J,K))
-              AV(IAV)=-DCONST*D1*D2/DEL; AV(4)=AV(4)+DCONST*D1*D2/DEL
-            END SELECT
-          CASE(2) ! I,J-1,K
-            D1=DZ(K); D2=DXG(I)
-            SELECT CASE(this%ipio(I,J-1,K))
-            CASE(1) ! Dirichlet
-              DEL=CNST(0.5)*DYG(J)*DZ(K)
-              DCONST=DIELECTRIC(I,J,K)
-              AV(IAV)=M_ZERO; AV(4)=AV(4)+DCONST*D1*D2/DEL
-              Q2(IA)=Q2(IA)+VBOUND(I,J-1,K)*DCONST*D1*D2/DEL
-            CASE(2) ! Neumann
-              AV(IAV)=M_ZERO; DEL=M_ZERO
-            CASE DEFAULT! interior point
-              DEL=CNST(0.5)*(DYG(J)+DYG(J-1))*DZ(K)
-              DCONST=CNST(0.5)*(DIELECTRIC(I,J,K)+DIELECTRIC(I,J-1,K))
-              AV(IAV)=-DCONST*D1*D2/DEL; AV(4)=AV(4)+DCONST*D1*D2/DEL
-            END SELECT
-          CASE(3) ! I,J,K-1
-            D1=DXG(I); D2=DYG(J)
-            SELECT CASE(this%ipio(I,J,K-1))
-            CASE(1) ! Dirichlet
-              DEL=CNST(0.5)*DZ(K)*DZ(K)
-              DCONST=DIELECTRIC(I,J,K)
-              AV(IAV)=M_ZERO; AV(4)=AV(4)+DCONST*D1*D2/DEL
-              Q2(IA)=Q2(IA)+VBOUND(I,J,K-1)*DCONST*D1*D2/DEL
-            CASE(2) ! Neumann
-              AV(IAV)=M_ZERO; DEL=M_ZERO
-            CASE DEFAULT! interior point
-              DEL=CNST(0.5)*(DZ(K)+DZ(K-1))*DZ(K)
-              DCONST=CNST(0.5)*(DIELECTRIC(I,J,K)+DIELECTRIC(I,J,K-1))
-              AV(IAV)=-DCONST*D1*D2/DEL; AV(4)=AV(4)+DCONST*D1*D2/DEL
-            END SELECT
-          CASE(5) ! I,J,K+1
-            D1=DXG(I); D2=DYG(J)
-            SELECT CASE(this%ipio(I,J,K+1))
-            CASE(1) ! Dirichlet
-              DEL=CNST(0.5)*DZ(K)*DZ(K)
-              DCONST=DIELECTRIC(I,J,K)
-              AV(IAV)=M_ZERO; AV(4)=AV(4)+DCONST*D1*D2/DEL
-              Q2(IA)=Q2(IA)+VBOUND(I,J,K+1)*DCONST*D1*D2/DEL
-            CASE(2) ! Neumann
-              AV(IAV)=M_ZERO; DEL=M_ZERO
-            CASE DEFAULT! interior point
-              DEL=CNST(0.5)*(DZ(K)+DZ(K+1))*DZ(K)
-              DCONST=CNST(0.5)*(DIELECTRIC(I,J,K)+DIELECTRIC(I,J,K+1))
-              AV(IAV)=-DCONST*D1*D2/DEL; AV(4)=AV(4)+DCONST*D1*D2/DEL
-            END SELECT
-          CASE(6) ! I,J+1,K
-            D1=DZ(K); D2=DXG(I)
-            SELECT CASE(this%ipio(I,J+1,K))
-            CASE(1) ! Dirichlet
-              DEL=CNST(0.5)*DYG(J)*DZ(K)
-              DCONST=DIELECTRIC(I,J,K)
-              AV(IAV)=M_ZERO; AV(4)=AV(4)+DCONST*D1*D2/DEL
-              Q2(IA)=Q2(IA)+VBOUND(I,J+1,K)*DCONST*D1*D2/DEL
-            CASE(2) ! Neumann
-              AV(IAV)=M_ZERO; DEL=M_ZERO
-            CASE DEFAULT
-              DEL=CNST(0.5)*(DYG(J)+DYG(J+1))*DZ(K)
-              DCONST=CNST(0.5)*(DIELECTRIC(I,J,K)+DIELECTRIC(I,J+1,K))
-              AV(IAV)=-DCONST*D1*D2/DEL; AV(4)=AV(4)+DCONST*D1*D2/DEL
-            END SELECT
-          CASE(7) ! I+1,J,K
-            D1=DZ(K); D2=DYG(J)
-            SELECT CASE(this%ipio(I+1,J,K))
-            CASE(1) ! Dirichlet
-              DEL=CNST(0.5)*DXG(I)*DZ(K)
-              DCONST=DIELECTRIC(I,J,K)
-              AV(IAV)=M_ZERO; AV(4)=AV(4)+DCONST*D1*D2/DEL
-              Q2(IA)=Q2(IA)+VBOUND(I+1,J,K)*DCONST*D1*D2/DEL
-            CASE(2) ! Neumann
-              AV(IAV)=M_ZERO; DEL=M_ZERO
-            CASE DEFAULT
-              DEL=CNST(0.5)*(DXG(I)+DXG(I+1))*DZ(K)
-              DCONST=CNST(0.5)*(DIELECTRIC(I,J,K)+DIELECTRIC(I+1,J,K))
-              AV(IAV)=-DCONST*D1*D2/DEL; AV(4)=AV(4)+DCONST*D1*D2/DEL
-            END SELECT
-          END SELECT
-        end do
-      ELSE
-        write(57,*) "At else", I, J, K
-        AV(4) = M_ONE/PCONST ! for points that are out of the grid.
-      end if
-      !                                 DSLUCS matrix and normalizations
-      THIS%ADIAG(IA)=AV(4)
-      IF(THIS%ADIAG(IA) == M_ZERO)THEN
-        WRITE(*,*)' DIAG ELEM ZERO ',IA
-        STOP ' GOTTA QUIT '
-      end if
-
-      if(idebug == 1) then
-        write(57, '(1x,i8,8(1x,e10.4))') iec, (av(ii),ii=1,7), q2(ia)
-      endif
-
-      DO ICOL=1,7  !  THIS IS SLAP TRIAD FORMAT
-        IF(AV(ICOL) /= M_ZERO)THEN
-          AW(IEC)=AV(ICOL)/THIS%ADIAG(IA)
-          IAD(IEC)=IA
-          JAD(IEC)=IA+JOFF(ICOL)
-          IEC=IEC+1
-        end if
-      end do
-      !                                     increment I,J,K
-      K=K+1
-      IF(K == NZTOT+1)THEN
-        K=1
-        J=J+1
-        IF(J == NYTOT+1)THEN
-          J=1
-          I=I+1
-        end if
-      end if
-
-
-    end do
-    if(idebug == 1)then
-      close(57)
-    endif
-
-    IEC=IEC-1 ! overcounted non-zero elements by one.
-    write(6,*)' nelt, iec ',nelt,iec
-    NELT=IEC
-
-    ! in case NELT in static differs from that counted here
-!!$        allocate(AWP(NELT))
-!!$        DO I=1,NELT
-!!$           AWP(I)=AW(I)
-!!$        end do
-!!$        deallocate(AW)
-!!$        allocate(AW(NELT))
-!!$        AW=AWP
-!!$        deallocate(AWP)
-
-    if(idebug == 1)then
-      close(57)
-    endif
-  end subroutine poissonm
-
   !------------------------------------------------------------
-
-  subroutine cap(this, sig)
-    type(poisson_sete_t), intent(in)    :: this
-    FLOAT,                intent(out)   :: sig(:, :, :, :)
-  
-    integer :: i, j, k
-
-    !  9/24/08 - THIS VERSION OF CAP is very generic. It is
-    !  for surfER. Assumes just this%ipio(0:NX+1,0:NY+1,0:NZ+1), 
-    !  VBOUND(0:NX+1,0:NY+1,0:NZ+1),DIELECTRIC(NX,NY,NZ).
-    !  Outputs a single 3D array SIG(NX,NY,NZ)
-    !
-    !  for calculating capacitances
-    !
-    !  SIG(I,J,K) is capacitance
-    !
-    !  input: NX,NY,NZ
-    !         this%ipio,VBOUND
-    !         ZG,DXG,DYG,DZ
-    !         VH_BIG,DIELECTRIC,PCONST
-    !
-    !  output: SIG(I,J,K,6) 6 faces of grid cube 
-    !          used in ETOT
-    !  1 I-1, 2 I+1, 3 J-1, 4 J+1, 5 K-1, 6 K+1
-    !
-    !  local: BORDER,PCONST
-    !
-    !  a homogeneous grid approximation is made: derivative
-    !  at metal-semi border calculated discretely with 1/DXG (1/DYG,1/DZ)
-    !  rather than properly averaged spacings.
-
-    SIG= M_ZERO
-
-    DO I=1,NXTOT 
-      DO J=1,NYTOT
-        DO K=1,NZTOT
-          IF(this%ipio(I,J,K) == 0)THEN ! I,J,K is in Poisson grid
-            IF(this%ipio(I-1,J,K) == 1)THEN
-              BORDER=2*(VH_BIG(I,J,K)-VBOUND(I-1,J,K))/DXG(I)
-              SIG(I,J,K,1)=SIG(I,J,K,1)-BORDER*DYG(J)*DZ(K)* &
-                DIELECTRIC(I,J,K)
-            end if
-            IF(this%ipio(I+1,J,K) == 1)THEN
-              BORDER=2*(VH_BIG(I,J,K)-VBOUND(I+1,J,K))/DXG(I)
-              SIG(I,J,K,2)=SIG(I,J,K,2)-BORDER*DYG(J)*DZ(K)* &
-                DIELECTRIC(I,J,K)
-            end if
-            IF(this%ipio(I,J-1,K) == 1)THEN
-              BORDER=2*(VH_BIG(I,J,K)-VBOUND(I,J-1,K))/DYG(J)
-              SIG(I,J,K,3)=SIG(I,J,K,3)-BORDER*DXG(I)*DZ(K)* &
-                DIELECTRIC(I,J,K)
-            end if
-            IF(this%ipio(I,J+1,K) == 1)THEN
-              BORDER=2*(VH_BIG(I,J,K)-VBOUND(I,J+1,K))/DYG(J)
-              SIG(I,J,K,4)=SIG(I,J,K,4)-BORDER*DXG(I)*DZ(K)* &
-                DIELECTRIC(I,J,K)
-            end if
-            IF(this%ipio(I,J,K-1) == 1)THEN
-              BORDER=2*(VH_BIG(I,J,K)-VBOUND(I,J,K-1))/DZ(K)
-              SIG(I,J,K,5)=SIG(I,J,K,5)-BORDER*DXG(I)*DYG(J)* &
-                DIELECTRIC(I,J,K)
-            end if
-            IF(this%ipio(I,J,K+1) == 1)THEN
-              BORDER=2*(VH_BIG(I,J,K)-VBOUND(I,J,K+1))/DZ(K)
-              SIG(I,J,K,6)=SIG(I,J,K,6)-BORDER*DXG(I)*DYG(J)* &
-                DIELECTRIC(I,J,K)
-            end if
-          end if
-        end do
-      end do
-    end do
-
-  end subroutine cap
-
-  subroutine cbsurf(this, vt)
-    type(poisson_sete_t), intent(in)    :: this
-    FLOAT,                intent(in)    :: vt(:)
-
-    integer :: k
-
-    !  IFILL=1 parallel plate
-    !
-    ! input:  IFILL,IFREE_SURFACE,NX,NY,NXL,NYL
-    !         VFILL,XG(NX),YG(NY),XNG(:),YNG(:),VT(NGATES)
-    !         XMID,YMID
-    ! output: VSURF,VBOUND(0:NX+1,0:NY+1,0:NZ+1)
-    !         IPATTERN,this%ipio
-
-
-    ! This is a combination of cbsurfser and spaceser located on
-    ! /home/stopa/surfER/build
-    allocate(this%ipio(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
-    allocate(VH_BIG(1:NXTOT,1:NYTOT,1:NZTOT))
-    vh_big(1:NXTOT,1:NYTOT,1:NZTOT)=0.0
-    allocate(VBOUND(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
-    allocate(DIELECTRIC(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
-    this%ipio=0; VBOUND=0.0
-    IF(IDEV == 1)THEN ! parallel plates
-      DIELECTRIC=DIELECTRIC0
-      dielectric(:,:,0)=6.5/pconst  !For platinum
-      dielectric(:,:,NZTOT+1)=6.5/pconst !For platinum
-      this%ipio(:,:,0)=1
-      this%ipio(:,:,NZTOT+1)=1
-      VBOUND(:,:,0)=VT(1)
-      VBOUND(:,:,NZTOT+1)=VT(2)
-      DO K=1,NZTOT
-        IF(K /= 0 .AND. K /= NZTOT+1)THEN !Redundant?
-          ! lateral BC`s
-          this%ipio(0,:,K)=2
-          this%ipio(NXTOT+1,:,K)=2
-          this%ipio(:,0,K)=2
-          this%ipio(:,NYTOT+1,K)=2
-        end if
-      end do
-    end if
-
-  end subroutine cbsurf
 
   subroutine poisson_sete_end(this)
     type(poisson_sete_t), intent(inout) :: this
@@ -705,208 +836,84 @@ enddo
 
     WRITE(520,*)'Esurf', ESURF*27.2
     write(521,*)' CS1 ',CS1,' CS2 ',CS2,' CS3 ',CS3
-    RETURN
-  end subroutine egate
 
-  subroutine xyzgrid(this, nx, ny, nz, xl, yl, zl, xcen, ycen, zcen, nx2, ny2, nz2)
-    type(poisson_sete_t), intent(in)    :: this
-    integer,              intent(in)    :: nx
-    integer,              intent(in)    :: ny
-    integer,              intent(in)    :: nz
-    FLOAT,                intent(in)    :: xl
-    FLOAT,                intent(in)    :: yl
-    FLOAT,                intent(in)    :: zl
-    FLOAT,                intent(in)    :: xcen
-    FLOAT,                intent(in)    :: ycen
-    FLOAT,                intent(in)    :: zcen
-    integer,              intent(in)    :: nx2
-    integer,              intent(in)    :: ny2
-    integer,              intent(in)    :: nz2
+  contains
 
-    ! Input: NX, NY, NZ -> No. of octopus grid points in each dimension
-    ! Input: XL, YL, ZL -> Size of the octopus box
+    subroutine cap(this, sig)
+      type(poisson_sete_t), intent(in)    :: this
+      FLOAT,                intent(out)   :: sig(:, :, :, :)
 
-    FLOAT   :: dx1b, dx1t, dx_oct, xbot, xtest, xtop, xwidth_big
-    FLOAT   :: dy1b, dy1t, dy_oct, ybot, ytop, ywidth_big
-    FLOAT   :: dz1b, dz1t, dz_oct, zbot, ztest, ztop
-    integer :: i, j, k, m
-    integer :: nxtop, nytop, nztop
-    integer :: nxtot_0, nytot_0
+      integer :: i, j, k
 
+      !  9/24/08 - THIS VERSION OF CAP is very generic. It is
+      !  for surfER. Assumes just this%ipio(0:NX+1,0:NY+1,0:NZ+1), 
+      !  VBOUND(0:NX+1,0:NY+1,0:NZ+1),DIELECTRIC(NX,NY,NZ).
+      !  Outputs a single 3D array SIG(NX,NY,NZ)
+      !
+      !  for calculating capacitances
+      !
+      !  SIG(I,J,K) is capacitance
+      !
+      !  input: NX,NY,NZ
+      !         this%ipio,VBOUND
+      !         ZG,DXG,DYG,DZ
+      !         VH_BIG,DIELECTRIC,PCONST
+      !
+      !  output: SIG(I,J,K,6) 6 faces of grid cube 
+      !          used in ETOT
+      !  1 I-1, 2 I+1, 3 J-1, 4 J+1, 5 K-1, 6 K+1
+      !
+      !  local: BORDER,PCONST
+      !
+      !  a homogeneous grid approximation is made: derivative
+      !  at metal-semi border calculated discretely with 1/DXG (1/DYG,1/DZ)
+      !  rather than properly averaged spacings.
 
-    ! inputs:  NZ,NZ2,NX,NX2,NY,NY2
-    !          XCEN,YCEN,ZCEN
-    !          XWIDTH,YWIDTH,ZWIDTH
-    !          XL,YL,ZL
-    !
-    ! outputs: ZG,XG,YG        
-    !write(62,*)"XL,YL,ZL ",XL,YL,ZL
-    ! z-mesh -- differs from x,y mesh because no border points
-    !           hence NZTOT_0 = NZTOT (ie there IS no NZTOT_0)
-    nztot = nz + nz2
+      SIG= M_ZERO
 
-    allocate(zg(nztot))
-    allocate(dz(nztot))
-
-    !top and bottom z coordinates.
-    !Depend on POISSON_SETE (ZWIDTH) 
-    !and Octopus (ZL)parameters.
-    ztop = CNST(0.5)*zwidth - zcen - CNST(0.5)*zl
-    zbot = CNST(0.5)*zwidth + zcen - CNST(0.5)*zl
-
-    nztop = int(nz2*ztop/(ztop + zbot))
-    nzbot = nz2 - nztop
-    DZ1B=ZBOT/TOFLOAT(NZBOT)
-    DO K=1,NZBOT
-      DZ(K)=DZ1B
-    end do
-    DZ_OCT=ZL/TOFLOAT(NZ)
-
-    do k = nzbot + 1, nzbot + nz
-      dz(k) = dz_oct
-    end do
-
-    DZ1T=ZTOP/TOFLOAT(NZTOP)
-    DO K=NZBOT+NZ+1,NZTOT
-      DZ(K)=DZ1T
-    end do
-
-    ZG(1)=-CNST(0.5)*ZWIDTH+CNST(0.5)*DZ(1)
-    DO K=2,NZTOT-1
-      ZG(K)=ZG(K-1)+CNST(0.5)*(DZ(K-1)+DZ(K))
-    end do
-    ZG(NZTOT)=CNST(0.5)*ZWIDTH-CNST(0.5)*DZ(NZTOT)
-
-    ZTEST=ZG(NZTOT)
-!    write(6,*)' nzbot ',nzbot
-!    write(6,*)' zg nztot ',nztot
-!    write(6,101)(zg(k),k=1,nztot)
-! 101 format(10(1x,e10.4))
-!    write(6,*)' dz '
-!    write(6,101)(dz(k),k=1,nztot)
-
-    ! x-mesh
-    NXTOT_0=NX+NX2
-    NXTOT=NXTOT_0+2*NXL
-    allocate(xg(nxtot))
-    allocate(DXG(NXTOT))
-    DO I=1,NXL  !  border points
-      DXG(I)=DXL(I)
-    end do
-    DO I=NXL+NXTOT_0+1,NXTOT
-      DXG(I)=DXL(NXTOT-I+1)
-    end do
-    ! outside Octopus mesh
-    XTOP=CNST(0.5)*XWIDTH-XCEN-CNST(0.5)*XL
-    XBOT=CNST(0.5)*XWIDTH+XCEN-CNST(0.5)*XL
-    NXTOP=INT(NX2*XTOP/(XTOP+XBOT))
-    NXBOT=NX2-NXTOP
-    DX1B=XBOT/TOFLOAT(NXBOT) ! "bottom" region
-    DO I=NXL+1,NXL+NXBOT
-      DXG(I)=DX1B
-    end do
-    DX_OCT=XL/TOFLOAT(NX)  ! Octopus region
-    DO I=NXL+NXBOT+1,NXL+NXBOT+NX
-      DXG(I)=DX_OCT
-    end do
-    DX1T=XTOP/TOFLOAT(NXTOP)  ! "top" region
-    DO I=NXL+NXBOT+NX+1,NXL+NXBOT+NX+NXTOP
-      DXG(I)=DX1T
-    end do
-
-    XWIDTH_BIG=SUM(DXG)
-    XG(1)=-CNST(0.5)*XWIDTH_BIG+CNST(0.5)*DXG(1)
-    DO I=2,NXTOT-1
-      XG(I)=XG(I-1)+CNST(0.5)*(DXG(I-1)+DXG(I))
-    end do
-    XG(NXTOT)=CNST(0.5)*XWIDTH_BIG-CNST(0.5)*DXG(NXTOT)
-
-    XTEST=XG(NXTOT)
-!    write(6,*)' xg nxtot ',nxtot
-!    write(6,101)(xg(k),k=1,nxtot)
-!    write(6,*)' dxg '
-!    write(6,101)(dxg(k),k=1,nxtot)
-    ! Y-mesh
-    NYTOT_0=NY+NY2  ! excluding border points
-    NYTOT=NYTOT_0+2*NYL  ! all Poisson Y mesh point
-    allocate(yg(nytot))
-    allocate(dyg(nytot))
-    DO I=1,NYL  !  border points
-      DYG(I)=DYL(I)
-    end do
-    DO I=NYL+NYTOT_0+1,NYTOT
-      DYG(I)=DYL(NYTOT-I+1)
-    end do
-    ! outside Octopus mesh
-    YTOP=CNST(0.5)*YWIDTH-YCEN-CNST(0.5)*YL
-    YBOT=CNST(0.5)*YWIDTH+YCEN-CNST(0.5)*YL
-    NYTOP=INT(NY2*YTOP/(YTOP+YBOT))
-    NYBOT=NY2-NYTOP
-    DY1B=YBOT/TOFLOAT(NYBOT) ! "bottom" region
-    DO I=NYL+1,NYL+NYBOT
-      DYG(I)=DY1B
-    end do
-    DY_OCT=YL/TOFLOAT(NY)  ! Octopus region
-    DO I=NYL+NYBOT+1,NYL+NYBOT+NY
-      DYG(I)=DY_OCT
-    end do
-    DY1T=YTOP/TOFLOAT(NYTOP)  ! "top" region
-    DO I=NYL+NYBOT+NY+1,NYL+NYBOT+NY+NYTOP
-      DYG(I)=DY1T
-    end do
-
-    YWIDTH_BIG=SUM(DYG)
-    YG(1)=-CNST(0.5)*YWIDTH_BIG+CNST(0.5)*DYG(1)
-    DO I=2,NYTOT-1
-      YG(I)=YG(I-1)+CNST(0.5)*(DYG(I-1)+DYG(I))
-    end do
-    YG(NYTOT)=CNST(0.5)*YWIDTH_BIG-CNST(0.5)*DYG(NYTOT)
-
-
-    NTOT=NXTOT*NYTOT*NZTOT
-    MD=NZTOT*NYTOT
-
-    allocate(iy(ntot))
-    allocate(jy(ntot))
-    allocate(ky(ntot))
-    m=0
-    DO I=1,NXTOT
-      DO J=1,NYTOT
-        DO K=1,NZTOT
-          M=M+1
-          IY(M)=I
-          JY(M)=J
-          KY(M)=K
+      DO I=1,NXTOT 
+        DO J=1,NYTOT
+          DO K=1,NZTOT
+            IF(this%ipio(I,J,K) == 0)THEN ! I,J,K is in Poisson grid
+              IF(this%ipio(I-1,J,K) == 1)THEN
+                BORDER=2*(VH_BIG(I,J,K)-VBOUND(I-1,J,K))/DXG(I)
+                SIG(I,J,K,1)=SIG(I,J,K,1)-BORDER*DYG(J)*DZ(K)* &
+                  DIELECTRIC(I,J,K)
+              end if
+              IF(this%ipio(I+1,J,K) == 1)THEN
+                BORDER=2*(VH_BIG(I,J,K)-VBOUND(I+1,J,K))/DXG(I)
+                SIG(I,J,K,2)=SIG(I,J,K,2)-BORDER*DYG(J)*DZ(K)* &
+                  DIELECTRIC(I,J,K)
+              end if
+              IF(this%ipio(I,J-1,K) == 1)THEN
+                BORDER=2*(VH_BIG(I,J,K)-VBOUND(I,J-1,K))/DYG(J)
+                SIG(I,J,K,3)=SIG(I,J,K,3)-BORDER*DXG(I)*DZ(K)* &
+                  DIELECTRIC(I,J,K)
+              end if
+              IF(this%ipio(I,J+1,K) == 1)THEN
+                BORDER=2*(VH_BIG(I,J,K)-VBOUND(I,J+1,K))/DYG(J)
+                SIG(I,J,K,4)=SIG(I,J,K,4)-BORDER*DXG(I)*DZ(K)* &
+                  DIELECTRIC(I,J,K)
+              end if
+              IF(this%ipio(I,J,K-1) == 1)THEN
+                BORDER=2*(VH_BIG(I,J,K)-VBOUND(I,J,K-1))/DZ(K)
+                SIG(I,J,K,5)=SIG(I,J,K,5)-BORDER*DXG(I)*DYG(J)* &
+                  DIELECTRIC(I,J,K)
+              end if
+              IF(this%ipio(I,J,K+1) == 1)THEN
+                BORDER=2*(VH_BIG(I,J,K)-VBOUND(I,J,K+1))/DZ(K)
+                SIG(I,J,K,6)=SIG(I,J,K,6)-BORDER*DXG(I)*DYG(J)* &
+                  DIELECTRIC(I,J,K)
+              end if
+            end if
+          end do
         end do
       end do
-    end do
 
-!!$        dxg=1.0; dyg=1.0; dz=1.0
-!!$        zg(1)=dz(1)*CNST(0.5)
-!!$        do i=2,nztot-1
-!!$           zg(i)=zg(i-1)+CNST(0.5)*(dz(i)+dz(i-1))
-!!$        enddo
-!!$        zg(nztot)=zg(nztot-1)+CNST(0.5)*dz(nztot)
-!!$
-!!$        xg(1)=dxg(1)*CNST(0.5)
-!!$        do i=2,nxtot-1
-!!$           xg(i)=xg(i-1)+CNST(0.5)*(dxg(i)+dxg(i-1))
-!!$        enddo
-!!$        xg(nxtot)=xg(nxtot-1)+CNST(0.5)*dxg(nxtot)
-!!$
-!!$        yg(1)=dyg(1)*CNST(0.5)
-!!$        do i=2,nytot-1
-!!$           yg(i)=yg(i-1)+CNST(0.5)*(dyg(i)+dyg(i-1))
-!!$        enddo
-!!$        yg(nytot)=yg(nytot-1)+CNST(0.5)*dyg(nytot)
-!!$           
+    end subroutine cap
 
-!    write(6,*)' yg '
-!    write(6,101)(yg(k),k=1,nytot)
-!    write(6,*)' dyg '
-!    write(6,101)(dyg(k),k=1,nytot)
-  end subroutine xyzgrid
 
+  end subroutine egate
 
   FLOAT function poisson_sete_energy(this) result(energy)
     type(poisson_sete_t), intent(in)    :: this
