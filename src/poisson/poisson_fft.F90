@@ -103,9 +103,9 @@ contains
           ixx(3) = pad_feq(iz, db(3), .true.)
 
           gg(:) = temp(:)*ixx(:)
-          gg(:) = matmul(gg, gr%mesh%sb%klattice_unitary)
+          gg(:) = matmul(gg, gr%mesh%sb%klattice_primitive)
           do idim = 1, gr%mesh%sb%dim
-            gg(idim) = gg(idim) / lalg_nrm2(MAX_DIM, gr%mesh%sb%klattice_unitary(:, idim))
+            gg(idim) = gg(idim) / lalg_nrm2(MAX_DIM, gr%mesh%sb%klattice_primitive(:, idim))
           end do
 
           modg2 = sum(gg(:)**2)
@@ -185,9 +185,9 @@ contains
 
           gg(:) = temp(:)*ixx(:)
 
-          gg(:) = matmul(gg, gr%mesh%sb%klattice_unitary)
+          gg(:) = matmul(gg, gr%mesh%sb%klattice_primitive)
           do idim = 1, gr%mesh%sb%dim
-            gg(idim) = gg(idim) / lalg_nrm2(MAX_DIM, gr%mesh%sb%klattice_unitary(:, idim))
+            gg(idim) = gg(idim) / lalg_nrm2(MAX_DIM, gr%mesh%sb%klattice_primitive(:, idim))
           end do
 
           modg2 = sum(gg(:)**2)
@@ -288,9 +288,9 @@ contains
 
           gg(:) = temp(:)*ixx(:)
 
-          gg(:) = matmul(gg, gr%mesh%sb%klattice_unitary)
+          gg(:) = matmul(gg, gr%mesh%sb%klattice_primitive)
           do idim = 1, gr%mesh%sb%dim
-            gg(idim) = gg(idim) / lalg_nrm2(MAX_DIM, gr%mesh%sb%klattice_unitary(:, idim))
+            gg(idim) = gg(idim) / lalg_nrm2(MAX_DIM, gr%mesh%sb%klattice_primitive(:, idim))
           end do
 
           modg2 = sum(gg(:)**2)
@@ -406,9 +406,9 @@ contains
           ixx(3) = pad_feq(iz, db(3), .true.)
 
           gg(:) = temp(:)*ixx(:)
-          gg(:) = matmul(gg, gr%mesh%sb%klattice_unitary)
+          gg(:) = matmul(gg, gr%mesh%sb%klattice_primitive)
           do idim = 1, gr%mesh%sb%dim
-            gg(idim) = gg(idim) / lalg_nrm2(MAX_DIM, gr%mesh%sb%klattice_unitary(:, idim))
+            gg(idim) = gg(idim) / lalg_nrm2(MAX_DIM, gr%mesh%sb%klattice_primitive(:, idim))
           end do
           modg2 = sum(gg(:)**2)
 

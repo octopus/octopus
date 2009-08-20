@@ -301,7 +301,7 @@ contains
 
       do idir = 1, sb%dim
         write(iunit, '(3f12.6)') (units_from_atomic(units_out%length, &
-                                  M_TWO*sb%lsize(idir)*sb%rlattice(idir2, idir)), idir2 = 1, sb%dim)
+          sb%rlattice(idir2, idir)), idir2 = 1, sb%dim)
       enddo
 
       write(iunit, '(a)') 'PRIMCOORD'

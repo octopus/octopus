@@ -137,14 +137,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine curvilinear_chi2x(sb, cv, chi, x)
-    type(simul_box_t),  intent(in)  :: sb
+    type(simul_box_t),   intent(in)  :: sb
     type(curvilinear_t), intent(in)  :: cv
-    FLOAT,              intent(in)  :: chi(MAX_DIM)  ! chi(conf%dim)
-    FLOAT,              intent(out) :: x(MAX_DIM)    ! x(conf%dim)
+    FLOAT,               intent(in)  :: chi(MAX_DIM)  ! chi(conf%dim)
+    FLOAT,               intent(out) :: x(MAX_DIM)    ! x(conf%dim)
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
-      x(1:sb%dim) = matmul(sb%rlattice(1:sb%dim,1:sb%dim), chi(1:sb%dim))
+      x(1:sb%dim) = matmul(sb%rlattice_primitive(1:sb%dim,1:sb%dim), chi(1:sb%dim))
     case(CURV_METHOD_GYGI)
       call curv_gygi_chi2x(sb, cv%gygi, chi, x)
     case(CURV_METHOD_BRIGGS)
@@ -165,7 +165,7 @@ contains
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
-      chi = matmul(x, sb%klattice_unitary)
+      chi = matmul(x, sb%klattice_primitive)
     case(CURV_METHOD_GYGI)
       call curv_gygi_x2chi(sb, cv%gygi, x, chi)
     case(CURV_METHOD_BRIGGS, CURV_METHOD_MODINE)

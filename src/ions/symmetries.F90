@@ -94,7 +94,7 @@ contains
     integer, allocatable :: typs(:)
     type(block_t) :: blk
 
-    forall(idir = 1:sb%dim, jdir = 1:sb%dim) lattice(jdir, idir) = sb%rlattice(idir, jdir)*M_TWO*sb%lsize(idir)
+    lattice(1:3, 1:3) = sb%rlattice(1:3, 1:3)
     SAFE_ALLOCATE(position(1:3, 1:geo%natoms))
     SAFE_ALLOCATE(typs(1:geo%natoms))
     

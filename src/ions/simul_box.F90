@@ -29,6 +29,7 @@ module simul_box_m
   use lalg_basic_m
   use loct_m
   use loct_parser_m
+  use kpoints_m
   use math_m
   use messages_m
   use mpi_m
@@ -93,26 +94,28 @@ module simul_box_m
     (/'left  ', 'right ', 'bottom', 'top   ', 'rear  ', 'front '/)
 #endif      
 
+
   type, public :: interp_t
     integer          :: nn, order  ! interpolation points and order
     FLOAT,   pointer :: ww(:)      ! weights
     integer, pointer :: posi(:)    ! positions
   end type interp_t
 
-  type, public :: multiresolution_t
 
+  type, public :: multiresolution_t
     type(interp_t) :: interp          ! interpolation points
     integer        :: num_areas       ! number of multiresolution areas
     integer        :: num_radii       ! number of radii (resolution borders)
     FLOAT, pointer :: radius(:)       ! radius of the high resolution area
     FLOAT          :: center(MAX_DIM) ! central point
-
   end type multiresolution_t
+
 
   type cell_t
     integer, pointer :: list_of_atoms(:)
     integer          :: natoms
   end type cell_t
+
   
   type simul_box_t
     integer  :: box_shape   ! 1->sphere, 2->cylinder, 3->sphere around each atom,
@@ -125,21 +128,25 @@ module simul_box_m
     FLOAT :: xsize          ! the length of the cylinder in the x direction
     FLOAT :: lsize(MAX_DIM) ! half of the length of the parallelepiped in each direction.
 
-    FLOAT :: cell_length(1:3)
-    integer :: ncell(1:3)
+    FLOAT                 :: cell_length(1:3)
+    integer               :: ncell(1:3)
     type(cell_t), pointer :: cells(:, :, :)
 
-    type(c_ptr)   :: image    ! for the box defined through an image
+    type(c_ptr)         :: image    ! for the box defined through an image
     character(len=1024) :: user_def ! for the user-defined box
 
     logical :: mr_flag                 ! .true. when using multiresolution
     type(multiresolution_t) :: hr_area ! high resolution areas
 
-    FLOAT :: rlattice(MAX_DIM,MAX_DIM)      ! lattice primitive vectors
-    FLOAT :: klattice_unitary(MAX_DIM,MAX_DIM)      ! reciprocal lattice primitive vectors
-    FLOAT :: klattice(MAX_DIM,MAX_DIM)      ! reciprocal lattice primitive vectors
-    FLOAT :: volume_element     ! the volume element in real space
-    FLOAT :: rcell_volume       ! the volume of the cell in real space
+    FLOAT :: rlattice_primitive(MAX_DIM,MAX_DIM)   ! lattice primitive vectors
+    FLOAT :: rlattice          (MAX_DIM,MAX_DIM)   ! lattice vectors
+    FLOAT :: klattice_primitive(MAX_DIM,MAX_DIM)   ! reciprocal lattice primitive vectors
+    FLOAT :: klattice          (MAX_DIM,MAX_DIM)   ! reciprocal lattice vectors
+    FLOAT :: volume_element                      ! the volume element in real space
+    FLOAT :: rcell_volume                        ! the volume of the cell in real space
+
+    type(kpoints_t) :: kpoints                   ! the kpoints
+
     FLOAT :: fft_alpha      ! enlargement factor for double box
 
     integer :: dim
@@ -181,11 +188,12 @@ contains
     call build_cells()
     call read_spacing ()                   ! Parameters defining the (canonical) spacing.
     call read_box_offset()                 ! Parameters defining the offset of the origin.
+    call simul_box_build_lattice(sb)       ! Build lattice vectors.
     call read_open_boundaries()            ! Parameters defining open boundaries.
-    call build_lattice()                   ! Build lattice vectors.
     call simul_box_add_lead_atoms(sb, geo) ! Add the atoms of the lead unit cells that are
                                            ! included in the simulation box to geo.
     call simul_box_atoms_in_box(sb, geo)   ! Put all the atoms inside the box.
+    call kpoints_init(sb%kpoints, sb%dim, sb%periodic_dim, sb%rlattice, sb%klattice, geo)
 
     call pop_sub()
 
@@ -858,60 +866,7 @@ contains
     end subroutine check_def
 
 
-    !--------------------------------------------------------------
-    subroutine build_lattice()
-      type(block_t) :: blk
-      FLOAT :: norm
-      integer :: idim, jdim
-
-      call push_sub('simul_box.simul_box_init.build_lattice')
-
-      !%Variable LatticeVectors
-      !%Type block
-      !%Section Mesh::Simulation Box
-      !%Description
-      !% <tt>%Spacing
-      !% <br>&nbsp;&nbsp;1.0 | 0.0 | 0.0
-      !% <br>&nbsp;&nbsp;0.0 | 1.0 | 0.0
-      !% <br>&nbsp;&nbsp;0.0 | 0.0 | 1.0
-      !% <br>%</tt>
-      !%End
-      
-      ! this has to be updated for non-orthogonal grids
-      sb%rcell_volume = product(M_TWO*sb%lsize(1:sb%periodic_dim))
-
-      sb%rlattice = M_ZERO
-      do idim = 1, MAX_DIM
-        sb%rlattice(idim, idim) = M_ONE
-      end do
-
-      if (loct_parse_block(datasets_check('LatticeVectors'), blk) == 0) then 
-        do idim = 1, sb%dim
-          do jdim = 1, sb%dim
-            call loct_parse_block_float(blk, idim - 1,  jdim - 1, sb%rlattice(jdim, idim))
-          end do
-        end do
-      end if
-
-      do idim = 1, sb%dim
-        norm = sqrt(sum(sb%rlattice(1:sb%dim, idim)**2))
-        do jdim = 1, sb%dim
-          sb%rlattice(jdim, idim) = sb%rlattice(jdim, idim) / norm
-        end do
-      end do
-
-      call reciprocal_lattice(sb%rlattice, sb%klattice_unitary, sb%volume_element)
-      
-      sb%klattice = M_ZERO
-      do idim = 1, sb%periodic_dim
-        sb%klattice(1:MAX_DIM, idim) = sb%klattice_unitary(1:MAX_DIM, idim)*M_TWO*M_PI/(M_TWO*sb%lsize(idim))
-      end do
-
-      call pop_sub()
-    end subroutine build_lattice
-
     !----------------------------------------------------------
-
     subroutine build_cells()
       integer :: ix, iy, iz, iatom, round, imax(1:3), imin(1:3)
       FLOAT :: xatom(1:3), radius
@@ -979,6 +934,68 @@ contains
     end subroutine build_cells
 
   end subroutine simul_box_init
+
+  !--------------------------------------------------------------
+  subroutine simul_box_build_lattice(sb, rlattice_primitive)
+    type(simul_box_t), intent(inout) :: sb
+    FLOAT,   optional, intent(in)    :: rlattice_primitive(:,:)
+
+    type(block_t) :: blk
+    FLOAT :: norm, cross(1:3)
+    integer :: idim, jdim
+
+    call push_sub('simul_box.simul_box_build_lattice')
+    
+    if(present(rlattice_primitive)) then
+      sb%rlattice_primitive(1:MAX_DIM,1:MAX_DIM) = rlattice_primitive(1:MAX_DIM,1:MAX_DIM)
+    else
+      !%Variable LatticeVectors
+      !%Type block
+      !%Section Mesh::Simulation Box
+      !%Description
+      !% Primitive lattice vectors. Vectors are stored in rows.
+      !% Note that these vectors will be normalized to 1 after being read.
+      !% 
+      !% <tt>%LatticeVectors
+      !% <br>&nbsp;&nbsp;1.0 | 0.0 | 0.0
+      !% <br>&nbsp;&nbsp;0.0 | 1.0 | 0.0
+      !% <br>&nbsp;&nbsp;0.0 | 0.0 | 1.0
+      !% <br>%</tt>
+      !%End
+      
+      sb%rlattice_primitive = M_ZERO
+      forall(idim = 1:MAX_DIM) sb%rlattice_primitive(idim, idim) = M_ONE
+      
+      if (loct_parse_block(datasets_check('LatticeVectors'), blk) == 0) then 
+        do idim = 1, sb%dim
+          do jdim = 1, sb%dim
+            call loct_parse_block_float(blk, idim - 1,  jdim - 1, sb%rlattice_primitive(jdim, idim))
+          end do
+        end do
+      end if
+    end if
+      
+    do idim = 1, sb%dim
+      norm = sqrt(sum(sb%rlattice_primitive(1:sb%dim, idim)**2))
+      forall(jdim = 1:sb%dim)
+        sb%rlattice_primitive(jdim, idim) = sb%rlattice_primitive(jdim, idim) / norm
+        sb%rlattice(jdim, idim) = sb%rlattice_primitive(jdim, idim) * M_TWO*sb%lsize(idim)
+      end forall
+    end do
+    
+    ! this has to be updated for non-orthogonal grids
+    cross = dcross_product(sb%rlattice(:,2), sb%rlattice(:,3))
+    sb%rcell_volume = sum(sb%rlattice(1:3, 1)*cross(1:3))
+    
+    call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, sb%volume_element)
+    
+    sb%klattice = M_ZERO
+    forall(idim=1:sb%periodic_dim, jdim=1:MAX_DIM)
+      sb%klattice(jdim, idim) = sb%klattice_primitive(jdim, idim)*M_TWO*M_PI/(M_TWO*sb%lsize(idim))
+    end forall
+    
+    call pop_sub()
+  end subroutine simul_box_build_lattice
 
   
   !--------------------------------------------------------------
@@ -1098,9 +1115,8 @@ contains
     do iatom = 1, geo%natoms
 
       if (simul_box_is_periodic(sb)) then
-
         !convert the position to the orthogonal space
-        xx(1:pd) = matmul(geo%atom(iatom)%x(1:pd) - sb%box_offset(1:pd), sb%klattice_unitary(1:pd, 1:pd))
+        xx(1:pd) = matmul(geo%atom(iatom)%x(1:pd) - sb%box_offset(1:pd), sb%klattice_primitive(1:pd, 1:pd))
 
         xx(1:pd) = xx(1:pd)/(M_TWO*sb%lsize(1:pd))
         xx(1:pd) = xx(1:pd) + M_HALF
@@ -1114,7 +1130,7 @@ contains
         ASSERT(all(xx(1:pd) >= M_ZERO))
         xx(1:pd) = (xx(1:pd) - M_HALF)*M_TWO*sb%lsize(1:pd) 
 
-        geo%atom(iatom)%x(1:pd) = matmul(sb%klattice_unitary(1:pd, 1:pd), xx(1:pd) + sb%box_offset(1:pd))
+        geo%atom(iatom)%x(1:pd) = matmul(sb%klattice_primitive(1:pd, 1:pd), xx(1:pd) + sb%box_offset(1:pd))
 
       end if
 
@@ -1334,7 +1350,7 @@ contains
 
     !convert to the orthogonal space
     forall(ip = 1:npoints)
-      xx(1:sb%dim, ip) = matmul(xx(1:sb%dim, ip), sb%klattice_unitary(1:sb%dim, 1:sb%dim))
+      xx(1:sb%dim, ip) = matmul(xx(1:sb%dim, ip), sb%klattice_primitive(1:sb%dim, 1:sb%dim))
     end forall
 
     select case(sb%box_shape)
@@ -1475,7 +1491,8 @@ contains
       end do
     end if
     do i = 1, MAX_DIM
-      write(iunit, '(a9,i1,a11,9e22.14)')   'rlattice(', i, ')=         ', sb%rlattice(1:MAX_DIM, i)
+      write(iunit, '(a9,i1,a11,9e22.14)')   'rlattice(', i, ')=         ', &
+        sb%rlattice_primitive(1:MAX_DIM, i)
     end do
     write(iunit, '(a20,l7)')        'open_boundaries=    ', sb%open_boundaries
     if(sb%open_boundaries) then
@@ -1574,7 +1591,7 @@ contains
     character(len=20)  :: str
     character(len=300) :: line
     integer            :: idim, jdim, il, ierr
-    FLOAT              :: norm
+    FLOAT              :: rlattice_primitive(1:MAX_DIM, 1:MAX_DIM)
 
     call push_sub('simul_box.simul_box_init_from_file')
 
@@ -1638,22 +1655,10 @@ contains
     end if
     do idim=1, MAX_DIM
       call iopar_read(mpi_world, iunit, line, ierr)
-      read(line, *) str, sb%rlattice(1:MAX_DIM, idim)
+      read(line, *) str, rlattice_primitive(1:MAX_DIM, idim)
     end do
 
-    do idim = 1, sb%dim
-      norm = lalg_nrm2(sb%dim, sb%rlattice(1:sb%dim, idim))
-      do jdim = 1, sb%dim
-        sb%rlattice(jdim, idim) = sb%rlattice(jdim, idim) / norm
-      end do
-    end do
-
-    call reciprocal_lattice(sb%rlattice, sb%klattice_unitary, sb%volume_element)
-
-    sb%klattice = M_ZERO
-    do idim = 1, sb%periodic_dim
-      sb%klattice(:, idim) = sb%klattice_unitary(:, idim)*M_TWO*M_PI/(M_TWO*sb%lsize(idim))
-    end do
+    call simul_box_build_lattice(sb, rlattice_primitive)
 
     call iopar_read(mpi_world, iunit, line, ierr)
     read(line, *) str, sb%open_boundaries
@@ -1740,8 +1745,9 @@ contains
     sbout%image                   = sbin%image
     sbout%user_def                = sbin%user_def
     sbout%rlattice                = sbin%rlattice
+    sbout%rlattice_primitive      = sbin%rlattice_primitive
     sbout%klattice                = sbin%klattice
-    sbout%klattice_unitary        = sbin%klattice_unitary
+    sbout%klattice_primitive      = sbin%klattice_primitive
     sbout%volume_element          = sbin%volume_element
     sbout%fft_alpha               = sbin%fft_alpha
     sbout%dim                     = sbin%dim
@@ -1753,6 +1759,8 @@ contains
     sbout%hr_area%num_areas       = sbin%hr_area%num_areas
     sbout%hr_area%num_radii       = sbin%hr_area%num_radii
     sbout%hr_area%center(1:MAX_DIM)=sbin%hr_area%center(1:MAX_DIM)
+
+    call kpoints_copy(sbout%kpoints, sbin%kpoints)
 
     SAFE_ALLOCATE(sbout%hr_area%radius(1:sbout%hr_area%num_radii))
     sbout%hr_area%radius(1:sbout%hr_area%num_radii) = sbin%hr_area%radius(1:sbout%hr_area%num_radii)

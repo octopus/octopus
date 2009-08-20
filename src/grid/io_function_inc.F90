@@ -686,7 +686,7 @@ contains
     call X(mesh_to_cube) (mesh, f, cube)
 
     ! the offset is different in periodic directions
-    offset = units_from_atomic(units_out%length, -matmul(sb%rlattice, sb%lsize))
+    offset = units_from_atomic(units_out%length, -matmul(sb%rlattice_primitive, sb%lsize))
 
     do i = sb%periodic_dim+1, 3
       offset(i) = units_from_atomic(units_out%length, -(cube%n(i) - 1)/2*mesh%h(i))
@@ -701,11 +701,11 @@ contains
     write(iunit, '(a,3i7)') 'object 1 class gridpositions counts', cube%n(:)
     write(iunit, '(a,3f12.6)') ' origin', offset(:)
     write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
-                                           mesh%h(1)*sb%rlattice(idir, 1)), idir = 1, sb%dim)
+                                           mesh%h(1)*sb%rlattice_primitive(idir, 1)), idir = 1, sb%dim)
     write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
-                                           mesh%h(2)*sb%rlattice(idir, 2)), idir = 1, sb%dim)
+                                           mesh%h(2)*sb%rlattice_primitive(idir, 2)), idir = 1, sb%dim)
     write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
-                                           mesh%h(3)*sb%rlattice(idir, 3)), idir = 1, sb%dim)
+                                           mesh%h(3)*sb%rlattice_primitive(idir, 3)), idir = 1, sb%dim)
     write(iunit, '(a,3i7)') 'object 2 class gridconnections counts', cube%n(:)
 #if defined(R_TREAL)
     write(iunit, '(a,a,a)') 'object 3 class array type float rank 0 items ', nitems, ' data follows'
@@ -749,7 +749,7 @@ contains
 
     SAFE_ALLOCATE(offset(1:sb%dim))
     ! offset in periodic directions
-    offset = -matmul(sb%rlattice, sb%lsize)
+    offset = -matmul(sb%rlattice_primitive, sb%lsize)
     ! offset in aperiodic directions
     do i = sb%periodic_dim+1, sb%dim
       offset(i) = -(cube%n(i) - 1)/2 * mesh%h(i)
@@ -772,7 +772,7 @@ contains
 
     do idir = 1, sb%dim
       write(iunit, '(3f12.6)') (units_from_atomic(units_out%length, &
-        M_TWO*sb%lsize(idir)*sb%rlattice(idir2, idir)), idir2 = 1, sb%dim)
+        sb%rlattice(idir2, idir)), idir2 = 1, sb%dim)
     enddo
 
     do iz = 1, cube%n(3) + 1

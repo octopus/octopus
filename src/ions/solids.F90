@@ -69,7 +69,7 @@ contains
     pd = sb%periodic_dim
 
     !convert the position to the orthogonal space
-    this%pos_chi(1:pd) = matmul(pos(1:pd), sb%klattice_unitary(1:pd, 1:pd))
+    this%pos_chi(1:pd) = matmul(pos(1:pd), sb%klattice_primitive(1:pd, 1:pd))
 
     this%nbmin(1:pd) = int((this%pos_chi(1:pd) - range)/sb%lsize(1:pd) - M_HALF)
     this%nbmax(1:pd) = int((this%pos_chi(1:pd) + range)/sb%lsize(1:pd) + M_HALF)
@@ -118,7 +118,7 @@ contains
           
           if (jj == ii) then 
             pcopy(1:pd) = this%pos_chi(1:pd) - M_TWO*sb%lsize(1:pd)*(/icell1, icell2, icell3/)
-            pcopy(1:pd) = matmul(sb%rlattice(1:pd, 1:pd), pcopy(1:pd))
+            pcopy(1:pd) = matmul(sb%rlattice_primitive(1:pd, 1:pd), pcopy(1:pd))
             pcopy(pd + 1:MAX_DIM) = this%pos(pd+1:MAX_DIM)
             return
           end if
