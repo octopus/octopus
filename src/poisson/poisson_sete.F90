@@ -44,18 +44,20 @@ module poisson_sete_m
     integer          :: isete_on
     integer, pointer :: ipio(:,:,:)
     FLOAT,   pointer :: adiag(:)
+    FLOAT,   pointer :: qs(:)
+    FLOAT,   pointer :: vbound(:,:,:)
+    integer, pointer :: iad(:)
+    integer, pointer :: jad(:)
+    FLOAT,   pointer :: aw(:)
   end type poisson_sete_t
 
-  FLOAT, allocatable :: rho(:, :, :), vh(:, :, :)
-  FLOAT, allocatable :: aw(:), awp(:), q2(:), x2(:), qs(:)
-  integer, allocatable :: iad(:), jad(:), iy(:), jy(:), ky(:)
-  integer :: nelt, ntot, lenw, leniw, idev, ngates, &
-    isym = 0, itol = 2, itmax = 201, itermin = 5, iter, ierr, iunit = 0, &
-    nxbot, nybot, nzbot, nxl, nyl, nxtot, nytot, nztot, md
-  FLOAT, allocatable :: vbound(:,:,:), dielectric(:,:,:), vh_big(:,:,:)
+  integer, allocatable :: iy(:), jy(:), ky(:)
+  integer :: nelt, ntot, lenw, leniw, idev, isym = 0, itol = 2, itmax = 201, itermin = 5, iter, ierr, iunit = 0, &
+    nxbot, nybot, nzbot, nxl, nyl, nxtot, nytot, nztot
+  FLOAT, allocatable :: dielectric(:,:,:), vh_big(:,:,:)
   FLOAT, allocatable :: xg(:), yg(:), zg(:), dxg(:), dyg(:), dz(:), dxl(:), dyl(:)
-  FLOAT :: xwidth, ywidth, zwidth, dielectric0, pconst
-  FLOAT :: esurf, charge_top, charge_bot, charge_tot, border, cs1, cs2, cs3, charge_surf
+  FLOAT :: xwidth, ywidth, zwidth, pconst
+  FLOAT :: esurf, charge_top, charge_bot, charge_tot, border, charge_surf
   FLOAT, allocatable :: rho_nuc(:)
   integer :: noatoms, count_atoms
 
@@ -75,10 +77,10 @@ contains
 
     character(len=40) :: cdum, fil1
     FLOAT :: bohrnm, angsnm
-    integer :: i, j
-    FLOAT :: zcen, xcen, ycen
-    FLOAT, allocatable :: vtv(:), vt(:)
-    integer :: nx2, ny2, nz2
+    integer :: i, j, ngates
+    FLOAT :: zcen, xcen, ycen, dielectric0
+    FLOAT, allocatable :: vtv(:), vt(:), q2(:)
+    integer :: nx2, ny2, nz2, md
 
     pconst = CNST(4.0)*M_PI ! need 4 pi for Hartrees I think (??)
     bohrnm = BOHR/CNST(10.0)
@@ -117,8 +119,9 @@ contains
 
       SAFE_DEALLOCATE_A(VTV)
 
-      READ(57,*)DIELECTRIC0    ! dielectric constant of region betw plates
-      DIELECTRIC0=DIELECTRIC0/PCONST
+      READ(57,*) dielectric0    ! dielectric constant of region betw plates
+      dielectric0 = dielectric0/pconst
+
       ! mesh related
       READ(57,*)XWIDTH,YWIDTH ! bounding box around octopus box
       XWIDTH=XWIDTH*ANGSNM
@@ -147,15 +150,15 @@ contains
     LENIW=NELT+5*NXTOT*NYTOT*NZTOT+12
 
     SAFE_ALLOCATE(q2(1:ntot))
-    SAFE_ALLOCATE(aw(1:nelt))
-    SAFE_ALLOCATE(qs(1:ntot))
+    SAFE_ALLOCATE(this%aw(1:nelt))
+    SAFE_ALLOCATE(this%qs(1:ntot))
     SAFE_ALLOCATE(this%adiag(1:ntot))
-    SAFE_ALLOCATE(iad(1:nelt))
-    SAFE_ALLOCATE(jad(1:nelt))
+    SAFE_ALLOCATE(this%iad(1:nelt))
+    SAFE_ALLOCATE(this%jad(1:nelt))
 
     call poissonm(this)
 
-    qs = q2 ! store Dirichlet BC info in QS
+    this%qs = q2 ! store Dirichlet BC info in this%QS
 
     SAFE_DEALLOCATE_A(q2)
 
@@ -165,16 +168,16 @@ contains
       type(poisson_sete_t), intent(in)    :: this
 
       ! version g created 03/25/08 - modified to include 
-      !                              DIELECTRIC(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1)
+      !                              dielectric(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1)
       !           based on ~/LEVEL1/photovolt/poissonpv_v2.f90
 
       ! creates Laplacian.
       ! inputs:  NTOT,MD,NXTOT,NYTOT,NZTOT,this%ipio(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1),
-      !          VBOUND(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1),Q2(NTOT),
+      !          this%VBOUND(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1),Q2(NTOT),
       !          DXG(NXTOT),DYG(NYTOT),DZ(NZTOT),DIELELCTRIC(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1)
       !
-      ! outputs: AW(NELT),THIS%ADIAG(NTOT),Q2,
-      !          NELT, IAD(NELT),JAD(NELT)
+      ! outputs: this%AW(NELT),this%ADIAG(NTOT),Q2,
+      !          NELT, IAD(NELT),this%JAD(NELT)
       !
       ! local:   JOFF(7),AV(7),DCONST,D1,D2,DEL,
       !          I,J,K,IEC,IAV,N
@@ -189,13 +192,13 @@ contains
       !
       idebug=0
       if(idebug == 1)then
-        open(57,file='aw.dat',status='unknown')
+        open(57,file='this%aw.dat',status='unknown')
       endif
       !
-      JOFF(1)=-MD ! used to compute row indices JAD
+      JOFF(1)=-MD ! used to compute row indices this%JAD
       JOFF(2)=-NZTOT; JOFF(3)=-1; JOFF(4)=0; JOFF(5)=1; JOFF(6)=NZTOT; JOFF(7)=MD
       I=1; J=1; K=1
-      IEC=1 ! counter for number of non-zero entries in AW.
+      IEC=1 ! counter for number of non-zero entries in this%AW.
 
       q2(1:ntot) = M_ZERO
 
@@ -217,14 +220,14 @@ contains
               SELECT CASE(this%ipio(I-1,J,K))
               CASE(1) ! Dirichlet boundary point
                 DEL=CNST(0.5)*DXG(I)*DZ(K)
-                DCONST=DIELECTRIC(I,J,K)
+                DCONST=dielectric(I,J,K)
                 AV(IAV)=M_ZERO; AV(4)=AV(4)+DCONST*D1*D2/DEL
-                Q2(IA)=Q2(IA)+VBOUND(I-1,J,K)*DCONST*D1*D2/DEL
+                Q2(IA)=Q2(IA)+this%VBOUND(I-1,J,K)*DCONST*D1*D2/DEL
               CASE(2) ! Neumann boundary point
                 AV(IAV)=M_ZERO; DEL=M_ZERO
               CASE DEFAULT ! interior point
                 DEL=CNST(0.5)*(DXG(I)+DXG(I-1))*DZ(K)
-                DCONST=CNST(0.5)*(DIELECTRIC(I-1,J,K)+DIELECTRIC(I,J,K))
+                DCONST=CNST(0.5)*(dielectric(I-1,J,K)+dielectric(I,J,K))
                 AV(IAV)=-DCONST*D1*D2/DEL; AV(4)=AV(4)+DCONST*D1*D2/DEL
               END SELECT
             CASE(2) ! I,J-1,K
@@ -232,14 +235,14 @@ contains
               SELECT CASE(this%ipio(I,J-1,K))
               CASE(1) ! Dirichlet
                 DEL=CNST(0.5)*DYG(J)*DZ(K)
-                DCONST=DIELECTRIC(I,J,K)
+                DCONST=dielectric(I,J,K)
                 AV(IAV)=M_ZERO; AV(4)=AV(4)+DCONST*D1*D2/DEL
-                Q2(IA)=Q2(IA)+VBOUND(I,J-1,K)*DCONST*D1*D2/DEL
+                Q2(IA)=Q2(IA)+this%VBOUND(I,J-1,K)*DCONST*D1*D2/DEL
               CASE(2) ! Neumann
                 AV(IAV)=M_ZERO; DEL=M_ZERO
               CASE DEFAULT! interior point
                 DEL=CNST(0.5)*(DYG(J)+DYG(J-1))*DZ(K)
-                DCONST=CNST(0.5)*(DIELECTRIC(I,J,K)+DIELECTRIC(I,J-1,K))
+                DCONST=CNST(0.5)*(dielectric(I,J,K)+dielectric(I,J-1,K))
                 AV(IAV)=-DCONST*D1*D2/DEL; AV(4)=AV(4)+DCONST*D1*D2/DEL
               END SELECT
             CASE(3) ! I,J,K-1
@@ -247,14 +250,14 @@ contains
               SELECT CASE(this%ipio(I,J,K-1))
               CASE(1) ! Dirichlet
                 DEL=CNST(0.5)*DZ(K)*DZ(K)
-                DCONST=DIELECTRIC(I,J,K)
+                DCONST=dielectric(I,J,K)
                 AV(IAV)=M_ZERO; AV(4)=AV(4)+DCONST*D1*D2/DEL
-                Q2(IA)=Q2(IA)+VBOUND(I,J,K-1)*DCONST*D1*D2/DEL
+                Q2(IA)=Q2(IA)+this%VBOUND(I,J,K-1)*DCONST*D1*D2/DEL
               CASE(2) ! Neumann
                 AV(IAV)=M_ZERO; DEL=M_ZERO
               CASE DEFAULT! interior point
                 DEL=CNST(0.5)*(DZ(K)+DZ(K-1))*DZ(K)
-                DCONST=CNST(0.5)*(DIELECTRIC(I,J,K)+DIELECTRIC(I,J,K-1))
+                DCONST=CNST(0.5)*(dielectric(I,J,K)+dielectric(I,J,K-1))
                 AV(IAV)=-DCONST*D1*D2/DEL; AV(4)=AV(4)+DCONST*D1*D2/DEL
               END SELECT
             CASE(5) ! I,J,K+1
@@ -262,14 +265,14 @@ contains
               SELECT CASE(this%ipio(I,J,K+1))
               CASE(1) ! Dirichlet
                 DEL=CNST(0.5)*DZ(K)*DZ(K)
-                DCONST=DIELECTRIC(I,J,K)
+                DCONST=dielectric(I,J,K)
                 AV(IAV)=M_ZERO; AV(4)=AV(4)+DCONST*D1*D2/DEL
-                Q2(IA)=Q2(IA)+VBOUND(I,J,K+1)*DCONST*D1*D2/DEL
+                Q2(IA)=Q2(IA)+this%VBOUND(I,J,K+1)*DCONST*D1*D2/DEL
               CASE(2) ! Neumann
                 AV(IAV)=M_ZERO; DEL=M_ZERO
               CASE DEFAULT! interior point
                 DEL=CNST(0.5)*(DZ(K)+DZ(K+1))*DZ(K)
-                DCONST=CNST(0.5)*(DIELECTRIC(I,J,K)+DIELECTRIC(I,J,K+1))
+                DCONST=CNST(0.5)*(dielectric(I,J,K)+dielectric(I,J,K+1))
                 AV(IAV)=-DCONST*D1*D2/DEL; AV(4)=AV(4)+DCONST*D1*D2/DEL
               END SELECT
             CASE(6) ! I,J+1,K
@@ -277,14 +280,14 @@ contains
               SELECT CASE(this%ipio(I,J+1,K))
               CASE(1) ! Dirichlet
                 DEL=CNST(0.5)*DYG(J)*DZ(K)
-                DCONST=DIELECTRIC(I,J,K)
+                DCONST=dielectric(I,J,K)
                 AV(IAV)=M_ZERO; AV(4)=AV(4)+DCONST*D1*D2/DEL
-                Q2(IA)=Q2(IA)+VBOUND(I,J+1,K)*DCONST*D1*D2/DEL
+                Q2(IA)=Q2(IA)+this%VBOUND(I,J+1,K)*DCONST*D1*D2/DEL
               CASE(2) ! Neumann
                 AV(IAV)=M_ZERO; DEL=M_ZERO
               CASE DEFAULT
                 DEL=CNST(0.5)*(DYG(J)+DYG(J+1))*DZ(K)
-                DCONST=CNST(0.5)*(DIELECTRIC(I,J,K)+DIELECTRIC(I,J+1,K))
+                DCONST=CNST(0.5)*(dielectric(I,J,K)+dielectric(I,J+1,K))
                 AV(IAV)=-DCONST*D1*D2/DEL; AV(4)=AV(4)+DCONST*D1*D2/DEL
               END SELECT
             CASE(7) ! I+1,J,K
@@ -292,14 +295,14 @@ contains
               SELECT CASE(this%ipio(I+1,J,K))
               CASE(1) ! Dirichlet
                 DEL=CNST(0.5)*DXG(I)*DZ(K)
-                DCONST=DIELECTRIC(I,J,K)
+                DCONST=dielectric(I,J,K)
                 AV(IAV)=M_ZERO; AV(4)=AV(4)+DCONST*D1*D2/DEL
-                Q2(IA)=Q2(IA)+VBOUND(I+1,J,K)*DCONST*D1*D2/DEL
+                Q2(IA)=Q2(IA)+this%VBOUND(I+1,J,K)*DCONST*D1*D2/DEL
               CASE(2) ! Neumann
                 AV(IAV)=M_ZERO; DEL=M_ZERO
               CASE DEFAULT
                 DEL=CNST(0.5)*(DXG(I)+DXG(I+1))*DZ(K)
-                DCONST=CNST(0.5)*(DIELECTRIC(I,J,K)+DIELECTRIC(I+1,J,K))
+                DCONST=CNST(0.5)*(dielectric(I,J,K)+dielectric(I+1,J,K))
                 AV(IAV)=-DCONST*D1*D2/DEL; AV(4)=AV(4)+DCONST*D1*D2/DEL
               END SELECT
             END SELECT
@@ -309,8 +312,8 @@ contains
           AV(4) = M_ONE/PCONST ! for points that are out of the grid.
         end if
         !                                 DSLUCS matrix and normalizations
-        THIS%ADIAG(IA)=AV(4)
-        IF(THIS%ADIAG(IA) == M_ZERO)THEN
+        this%ADIAG(IA)=AV(4)
+        IF(this%ADIAG(IA) == M_ZERO)THEN
           WRITE(*,*)' DIAG ELEM ZERO ',IA
           STOP ' GOTTA QUIT '
         end if
@@ -319,11 +322,11 @@ contains
           write(57, '(1x,i8,8(1x,e10.4))') iec, (av(ii),ii=1,7), q2(ia)
         endif
 
-        DO ICOL=1,7  !  THIS IS SLAP TRIAD FORMAT
+        DO ICOL=1,7  !  this IS SLAP TRIAD FORMAT
           IF(AV(ICOL) /= M_ZERO)THEN
-            AW(IEC)=AV(ICOL)/THIS%ADIAG(IA)
-            IAD(IEC)=IA
-            JAD(IEC)=IA+JOFF(ICOL)
+            this%AW(IEC)=AV(ICOL)/this%ADIAG(IA)
+            this%IAD(IEC)=IA
+            this%JAD(IEC)=IA+JOFF(ICOL)
             IEC=IEC+1
           end if
         end do
@@ -349,14 +352,14 @@ contains
       NELT=IEC
 
       ! in case NELT in static differs from that counted here
-!!$        allocate(AWP(NELT))
+!!$        allocate(this%AWP(NELT))
 !!$        DO I=1,NELT
-!!$           AWP(I)=AW(I)
+!!$           this%AWP(I)=this%AW(I)
 !!$        end do
-!!$        deallocate(AW)
-!!$        allocate(AW(NELT))
-!!$        AW=AWP
-!!$        deallocate(AWP)
+!!$        deallocate(this%AW)
+!!$        allocate(this%AW(NELT))
+!!$        this%AW=this%AWP
+!!$        deallocate(this%AWP)
 
       if(idebug == 1)then
         close(57)
@@ -376,7 +379,7 @@ contains
       ! input:  IFILL,IFREE_SURFACE,NX,NY,NXL,NYL
       !         VFILL,XG(NX),YG(NY),XNG(:),YNG(:),VT(NGATES)
       !         XMID,YMID
-      ! output: VSURF,VBOUND(0:NX+1,0:NY+1,0:NZ+1)
+      ! output: VSURF,this%VBOUND(0:NX+1,0:NY+1,0:NZ+1)
       !         IPATTERN,this%ipio
 
 
@@ -384,18 +387,18 @@ contains
       ! /home/stopa/surfER/build
       allocate(this%ipio(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
       allocate(VH_BIG(1:NXTOT,1:NYTOT,1:NZTOT))
-      vh_big(1:NXTOT,1:NYTOT,1:NZTOT)=0.0
-      allocate(VBOUND(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
-      allocate(DIELECTRIC(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
-      this%ipio=0; VBOUND=0.0
+      vh_big(1:NXTOT,1:NYTOT,1:NZTOT)= M_ZERO
+      allocate(this%VBOUND(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
+      allocate(dielectric(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
+      this%ipio=0; this%VBOUND= M_ZERO
       IF(IDEV == 1)THEN ! parallel plates
-        DIELECTRIC=DIELECTRIC0
+        dielectric=dielectric0
         dielectric(:,:,0)=6.5/pconst  !For platinum
         dielectric(:,:,NZTOT+1)=6.5/pconst !For platinum
         this%ipio(:,:,0)=1
         this%ipio(:,:,NZTOT+1)=1
-        VBOUND(:,:,0)=VT(1)
-        VBOUND(:,:,NZTOT+1)=VT(2)
+        this%VBOUND(:,:,0)=VT(1)
+        this%VBOUND(:,:,NZTOT+1)=VT(2)
         DO K=1,NZTOT
           IF(K /= 0 .AND. K /= NZTOT+1)THEN !Redundant?
             ! lateral BC`s
@@ -635,13 +638,13 @@ contains
     FLOAT :: VHMIN, VHMAX
 
     integer, allocatable :: iwork(:)
-    FLOAT,   allocatable :: rhotest(:,:,:), rwork(:)
+    FLOAT,   allocatable :: rhotest(:,:,:), rwork(:), q2(:), x2(:)
 
     PCONST=CNST(4.0)*M_PI ! need 4 pi for Hartrees I think (??)
     BOHRNM=BOHR/CNST(10.0)
     ANGSNM=CNST(10.0)/BOHR
 
-    SAFE_ALLOCATE(Q2(1:NTOT))
+    SAFE_ALLOCATE(q2(1:NTOT))
     SAFE_ALLOCATE(rhotest(1:nxtot, 1:nytot, 1:nztot))
 
     write(*,*) " Count atoms", count_atoms
@@ -682,7 +685,7 @@ contains
     rhotest = M_ZERO
 
     do i = 1, ntot
-      q2(i) = qs(i) ! recall stored BC info
+      q2(i) = this%qs(i) ! recall stored BC info
     enddo
 
     DO M = 1,NTOT
@@ -700,17 +703,17 @@ contains
           end if
         end if
       ELSE
-        Q2(M)=0.0
+        Q2(M)= M_ZERO
       end if
     end do
     do i=1,NTOT
-      Q2(i)=Q2(i)/THIS%ADIAG(i)!! Laplacian scaled with diagonal elements
+      Q2(i)=Q2(i)/this%ADIAG(i)!! Laplacian scaled with diagonal elements
     enddo
 
     allocate(rwork(lenw))
     allocate(iwork(leniw))
 
-    call dslucs(NTOT,Q2,X2,NELT,IAD,JAD,AW,ISYM,ITOL, &
+    call dslucs(NTOT,Q2,X2,NELT,this%IAD,this%JAD,this%AW,ISYM,ITOL, &
       TOL,ITMAX,ITER,ITERMIN,ERR,IERR,IUNIT,RWORK,LENW, &
       IWORK,LENIW)
 
@@ -765,10 +768,11 @@ contains
     type(poisson_sete_t), intent(inout) :: this
 
     SAFE_DEALLOCATE_P(this%ipio)
-    deallocate(VBOUND)
-    deallocate(QS)
-    deallocate(IAD)
-    deallocate(JAD)
+    SAFE_DEALLOCATE_P(this%vbound)
+    SAFE_DEALLOCATE_P(this%qs)
+    SAFE_DEALLOCATE_P(this%iad)
+    SAFE_DEALLOCATE_P(this%JAD)
+
     deallocate(this%adiag)
 !    if (count_atoms > noatoms ) then
 !     deallocate(X2)
@@ -785,7 +789,7 @@ contains
     deallocate(iy)
     deallocate(jy)
     deallocate(VH_BIG)
-    deallocate(aw)
+    deallocate(this%aw)
   end subroutine poisson_sete_end
 
   !--------------------------------------------
@@ -795,6 +799,7 @@ contains
 
     integer :: i, j, k
     FLOAT, allocatable :: sig(:, :, :, :)
+    FLOAT :: cs1, cs2, cs3
 
     !
     !     to do energy calculations previously performed in setr
@@ -804,22 +809,24 @@ contains
 
     call cap(this, sig)
 
-    ESURF=0.0
-    CHARGE_SURF=0.0
-    CHARGE_TOP=0.0
+    ESURF = M_ZERO
+    CHARGE_SURF = M_ZERO
+    CHARGE_TOP = M_ZERO
 
-    CHARGE_BOT=0.0
-    CS1=0.0; CS2=0.0; CS3=0.0
+    CHARGE_BOT = M_ZERO
+    CS1 = M_ZERO
+    CS2 = M_ZERO
+    CS3 = M_ZERO
     !write(*,*) "Begin cycle ", NXTOT, NYTOT, NZTOT
     DO I=1,NXTOT
       DO J=1,NYTOT
         DO K=1,NZTOT ! N.B. [SIG]=charge (not charge/Area)
-          ESURF=ESURF+VBOUND(I-1,J,K)*SIG(I,J,K,1)
-          ESURF=ESURF+VBOUND(I+1,J,K)*SIG(I,J,K,2)
-          ESURF=ESURF+VBOUND(I,J-1,K)*SIG(I,J,K,3)
-          ESURF=ESURF+VBOUND(I,J+1,K)*SIG(I,J,K,4)
-          ESURF=ESURF+VBOUND(I,J,K-1)*SIG(I,J,K,5)
-          ESURF=ESURF+VBOUND(I,J,K+1)*SIG(I,J,K,6)
+          ESURF=ESURF+this%VBOUND(I-1,J,K)*SIG(I,J,K,1)
+          ESURF=ESURF+this%VBOUND(I+1,J,K)*SIG(I,J,K,2)
+          ESURF=ESURF+this%VBOUND(I,J-1,K)*SIG(I,J,K,3)
+          ESURF=ESURF+this%VBOUND(I,J+1,K)*SIG(I,J,K,4)
+          ESURF=ESURF+this%VBOUND(I,J,K-1)*SIG(I,J,K,5)
+          ESURF=ESURF+this%VBOUND(I,J,K+1)*SIG(I,J,K,6)
           CS1=CS1+SIG(I,J,K,1)+SIG(I,J,K,2)
           CS2=CS2+SIG(I,J,K,3)+SIG(I,J,K,4)
           CS3=CS3+SIG(I,J,K,5)+SIG(I,J,K,6)
@@ -845,9 +852,9 @@ contains
 
       integer :: i, j, k
 
-      !  9/24/08 - THIS VERSION OF CAP is very generic. It is
+      !  9/24/08 - this VERSION OF CAP is very generic. It is
       !  for surfER. Assumes just this%ipio(0:NX+1,0:NY+1,0:NZ+1), 
-      !  VBOUND(0:NX+1,0:NY+1,0:NZ+1),DIELECTRIC(NX,NY,NZ).
+      !  this%VBOUND(0:NX+1,0:NY+1,0:NZ+1),dielectric(NX,NY,NZ).
       !  Outputs a single 3D array SIG(NX,NY,NZ)
       !
       !  for calculating capacitances
@@ -855,9 +862,9 @@ contains
       !  SIG(I,J,K) is capacitance
       !
       !  input: NX,NY,NZ
-      !         this%ipio,VBOUND
+      !         this%ipio,this%VBOUND
       !         ZG,DXG,DYG,DZ
-      !         VH_BIG,DIELECTRIC,PCONST
+      !         VH_BIG,dielectric,PCONST
       !
       !  output: SIG(I,J,K,6) 6 faces of grid cube 
       !          used in ETOT
@@ -876,34 +883,34 @@ contains
           DO K=1,NZTOT
             IF(this%ipio(I,J,K) == 0)THEN ! I,J,K is in Poisson grid
               IF(this%ipio(I-1,J,K) == 1)THEN
-                BORDER=2*(VH_BIG(I,J,K)-VBOUND(I-1,J,K))/DXG(I)
+                BORDER=2*(VH_BIG(I,J,K)-this%VBOUND(I-1,J,K))/DXG(I)
                 SIG(I,J,K,1)=SIG(I,J,K,1)-BORDER*DYG(J)*DZ(K)* &
-                  DIELECTRIC(I,J,K)
+                  dielectric(I,J,K)
               end if
               IF(this%ipio(I+1,J,K) == 1)THEN
-                BORDER=2*(VH_BIG(I,J,K)-VBOUND(I+1,J,K))/DXG(I)
+                BORDER=2*(VH_BIG(I,J,K)-this%VBOUND(I+1,J,K))/DXG(I)
                 SIG(I,J,K,2)=SIG(I,J,K,2)-BORDER*DYG(J)*DZ(K)* &
-                  DIELECTRIC(I,J,K)
+                  dielectric(I,J,K)
               end if
               IF(this%ipio(I,J-1,K) == 1)THEN
-                BORDER=2*(VH_BIG(I,J,K)-VBOUND(I,J-1,K))/DYG(J)
+                BORDER=2*(VH_BIG(I,J,K)-this%VBOUND(I,J-1,K))/DYG(J)
                 SIG(I,J,K,3)=SIG(I,J,K,3)-BORDER*DXG(I)*DZ(K)* &
-                  DIELECTRIC(I,J,K)
+                  dielectric(I,J,K)
               end if
               IF(this%ipio(I,J+1,K) == 1)THEN
-                BORDER=2*(VH_BIG(I,J,K)-VBOUND(I,J+1,K))/DYG(J)
+                BORDER=2*(VH_BIG(I,J,K)-this%VBOUND(I,J+1,K))/DYG(J)
                 SIG(I,J,K,4)=SIG(I,J,K,4)-BORDER*DXG(I)*DZ(K)* &
-                  DIELECTRIC(I,J,K)
+                  dielectric(I,J,K)
               end if
               IF(this%ipio(I,J,K-1) == 1)THEN
-                BORDER=2*(VH_BIG(I,J,K)-VBOUND(I,J,K-1))/DZ(K)
+                BORDER=2*(VH_BIG(I,J,K)-this%VBOUND(I,J,K-1))/DZ(K)
                 SIG(I,J,K,5)=SIG(I,J,K,5)-BORDER*DXG(I)*DYG(J)* &
-                  DIELECTRIC(I,J,K)
+                  dielectric(I,J,K)
               end if
               IF(this%ipio(I,J,K+1) == 1)THEN
-                BORDER=2*(VH_BIG(I,J,K)-VBOUND(I,J,K+1))/DZ(K)
+                BORDER=2*(VH_BIG(I,J,K)-this%VBOUND(I,J,K+1))/DZ(K)
                 SIG(I,J,K,6)=SIG(I,J,K,6)-BORDER*DXG(I)*DYG(J)* &
-                  DIELECTRIC(I,J,K)
+                  dielectric(I,J,K)
               end if
             end if
           end do
