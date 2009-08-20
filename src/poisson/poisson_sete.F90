@@ -383,7 +383,7 @@ contains
     !---------------------------------------------------------
 
     subroutine cbsurf(this, vt)
-      type(poisson_sete_t), intent(in)    :: this
+      type(poisson_sete_t), intent(inout) :: this
       FLOAT,                intent(in)    :: vt(:)
 
       integer :: k
