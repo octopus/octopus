@@ -41,30 +41,29 @@ module poisson_sete_m
     count_atoms
 
   type poisson_sete_t
-    integer :: isete_on
+    integer          :: isete_on
+    integer, pointer :: ipio(:,:,:)
+    FLOAT,   pointer :: adiag(:)
   end type poisson_sete_t
 
   FLOAT, allocatable :: rho(:, :, :), vh(:, :, :)
   FLOAT, allocatable :: aw(:), awp(:), q2(:), x2(:), qs(:)
   integer, allocatable :: iad(:), jad(:), iy(:), jy(:), ky(:)
-  FLOAT :: tol=0.01, hartree=CNST(2.0*13.60569193), bohr=CNST(0.52917720859) ! bohr radius in nm
   integer :: nelt, ntot, lenw, leniw, idev, ngates, &
     isym = 0, itol = 2, itmax = 201, itermin = 5, iter, ierr, iunit = 0, &
     nxbot, nybot, nzbot, nxl, nyl, nxtot, nytot, nztot, md
-  FLOAT, allocatable :: vbound(:,:,:), rhotest(:,:,:), dielectric(:,:,:), vh_big(:,:,:)
-  FLOAT, allocatable :: xg(:), yg(:), zg(:), dxg(:), dyg(:), dz(:), rwork(:), dxl(:), dyl(:), vt(:), vtv(:), adiag(:)
+  FLOAT, allocatable :: vbound(:,:,:), dielectric(:,:,:), vh_big(:,:,:)
+  FLOAT, allocatable :: xg(:), yg(:), zg(:), dxg(:), dyg(:), dz(:), dxl(:), dyl(:)
   FLOAT :: xwidth, ywidth, zwidth, dielectric0, pconst
-  integer, allocatable :: ipio(:,:,:)
-  integer, allocatable :: iwork(:), idiag(:)
-  integer :: nx2, ny2, nz2
-  FLOAT, allocatable :: sig(:,:,:,:)
   FLOAT :: esurf, charge_top, charge_bot, charge_tot, border, cs1, cs2, cs3, charge_surf
   FLOAT, allocatable :: rho_nuc(:)
   integer :: noatoms, count_atoms
 
+  FLOAT, parameter :: tol = 0.01, hartree = CNST(2.0*13.60569193), BOHR = CNST(0.52917720859)
+
 contains
 
-  subroutine poisson_sete_init(this, nx, ny, nz, xl, yl, zl,number_atoms)
+  subroutine poisson_sete_init(this, nx, ny, nz, xl, yl, zl, number_atoms)
     type(poisson_sete_t), intent(out)   :: this
     integer,              intent(in)    :: nx
     integer,              intent(in)    :: ny
@@ -78,10 +77,12 @@ contains
     FLOAT :: bohrnm, angsnm
     integer :: i, j
     FLOAT :: zcen, xcen, ycen
+    FLOAT, allocatable :: vtv(:), vt(:)
+    integer :: nx2, ny2, nz2
 
     pconst = CNST(4.0)*M_PI ! need 4 pi for Hartrees I think (??)
-    bohrnm = bohr/CNST(10.0)
-    angsnm = CNST(10.0)/bohr
+    bohrnm = BOHR/CNST(10.0)
+    angsnm = CNST(10.0)/BOHR
     noatoms = number_atoms
     count_atoms = 0
 
@@ -113,6 +114,9 @@ contains
 
       READ(57,*)VTV(1),VTV(2) ! voltage on plates in volts and nm?
       VT=VTV/HARTREE
+
+      SAFE_DEALLOCATE_A(VTV)
+
       READ(57,*)DIELECTRIC0    ! dielectric constant of region betw plates
       DIELECTRIC0=DIELECTRIC0/PCONST
       ! mesh related
@@ -132,9 +136,9 @@ contains
       RETURN
     end if
 
-    call xyzgrid(this, nx, ny, nz, xl, yl, zl, xcen, ycen, zcen)  ! establish x-y-z grids
+    call xyzgrid(this, nx, ny, nz, xl, yl, zl, xcen, ycen, zcen, nx2, ny2, nz2)  ! establish x-y-z grids
 
-    call cbsurf(this) !Assign boundaries 
+    call cbsurf(this, vt) !Assign boundaries 
 
     NELT=32+20*((NXTOT-2)+(NYTOT-2)+(NZTOT-2))+ &
       12*((NXTOT-2)*(NYTOT-2)+(NXTOT-2)*(NZTOT-2)+(NYTOT-2)*(NZTOT-2)) + &
@@ -145,8 +149,7 @@ contains
     SAFE_ALLOCATE(q2(1:ntot))
     SAFE_ALLOCATE(aw(1:nelt))
     SAFE_ALLOCATE(qs(1:ntot))
-    SAFE_ALLOCATE(adiag(1:ntot))
-    SAFE_ALLOCATE(idiag(1:ntot))
+    SAFE_ALLOCATE(this%adiag(1:ntot))
     SAFE_ALLOCATE(iad(1:nelt))
     SAFE_ALLOCATE(jad(1:nelt))
     
@@ -179,6 +182,10 @@ contains
     FLOAT        :: bohrnm, angsnm, err
     integer      :: j1, k1, m, i, j, k, i1,idum
     FLOAT :: VHMIN, VHMAX
+
+    integer, allocatable :: iwork(:)
+    FLOAT,   allocatable :: rhotest(:,:,:), rwork(:)
+
     PCONST=CNST(4.0)*M_PI ! need 4 pi for Hartrees I think (??)
     BOHRNM=BOHR/CNST(10.0)
     ANGSNM=CNST(10.0)/BOHR
@@ -229,7 +236,7 @@ contains
 
     DO M = 1,NTOT
       I=IY(M); J=JY(M); K=KY(M)
-      IF(IPIO(I,J,K) == 0)THEN
+      IF(this%ipio(I,J,K) == 0)THEN
         IF((I.GT.NXL+NXBOT.AND.I.LE.NXL+NXBOT+NX).AND. &
           (J.GT.NYL+NYBOT.AND.J.LE.NYL+NYBOT+NY).AND. &
           (K.GT.NZBOT.AND.K.LE.NZBOT+NZ))THEN
@@ -246,7 +253,7 @@ contains
       end if
     end do
     do i=1,NTOT
-      Q2(i)=Q2(i)/ADIAG(i)!! Laplacian scaled with diagonal elements
+      Q2(i)=Q2(i)/THIS%ADIAG(i)!! Laplacian scaled with diagonal elements
     enddo
 
     allocate(rwork(lenw))
@@ -268,7 +275,7 @@ contains
     end do
     DO M = 1,NTOT
       I=IY(M); J=JY(M); K=KY(M)
-      IF(IPIO(I,J,K) == 0)THEN
+      IF(this%ipio(I,J,K) == 0)THEN
         IF((I.GT.NXL+NXBOT.AND.I.LE.NXL+NXBOT+NX).AND. &
           (J.GT.NYL+NYBOT.AND.J.LE.NYL+NYBOT+NY).AND. &
           (K.GT.NZBOT.AND.K.LE.NZBOT+NZ))THEN
@@ -310,12 +317,12 @@ enddo
     !           based on ~/LEVEL1/photovolt/poissonpv_v2.f90
 
     ! creates Laplacian.
-    ! inputs:  NTOT,MD,NXTOT,NYTOT,NZTOT,IPIO(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1),
+    ! inputs:  NTOT,MD,NXTOT,NYTOT,NZTOT,this%ipio(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1),
     !          VBOUND(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1),Q2(NTOT),
     !          DXG(NXTOT),DYG(NYTOT),DZ(NZTOT),DIELELCTRIC(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1)
     !
-    ! outputs: AW(NELT),ADIAG(NTOT),Q2,
-    !          NELT,IDIAG(NTOT),IAD(NELT),JAD(NELT)
+    ! outputs: AW(NELT),THIS%ADIAG(NTOT),Q2,
+    !          NELT, IAD(NELT),JAD(NELT)
     !
     ! local:   JOFF(7),AV(7),DCONST,D1,D2,DEL,
     !          I,J,K,IEC,IAV,N
@@ -342,7 +349,7 @@ enddo
 
     DO IA=1,NTOT
       AV=M_ZERO
-      IF(IPIO(I,J,K) == 0)THEN ! the point itself must be
+      IF(this%ipio(I,J,K) == 0)THEN ! the point itself must be
         !                                   in the grid
         DO N=1,6 ! for all neighbors of this IA
           IF(N.GT.3)THEN
@@ -355,7 +362,7 @@ enddo
           SELECT CASE(IAV)
           CASE(1) ! I-1,J,K
             D1=DZ(K); D2=DYG(J)
-            SELECT CASE(IPIO(I-1,J,K))
+            SELECT CASE(this%ipio(I-1,J,K))
             CASE(1) ! Dirichlet boundary point
               DEL=CNST(0.5)*DXG(I)*DZ(K)
               DCONST=DIELECTRIC(I,J,K)
@@ -370,7 +377,7 @@ enddo
             END SELECT
           CASE(2) ! I,J-1,K
             D1=DZ(K); D2=DXG(I)
-            SELECT CASE(IPIO(I,J-1,K))
+            SELECT CASE(this%ipio(I,J-1,K))
             CASE(1) ! Dirichlet
               DEL=CNST(0.5)*DYG(J)*DZ(K)
               DCONST=DIELECTRIC(I,J,K)
@@ -385,7 +392,7 @@ enddo
             END SELECT
           CASE(3) ! I,J,K-1
             D1=DXG(I); D2=DYG(J)
-            SELECT CASE(IPIO(I,J,K-1))
+            SELECT CASE(this%ipio(I,J,K-1))
             CASE(1) ! Dirichlet
               DEL=CNST(0.5)*DZ(K)*DZ(K)
               DCONST=DIELECTRIC(I,J,K)
@@ -400,7 +407,7 @@ enddo
             END SELECT
           CASE(5) ! I,J,K+1
             D1=DXG(I); D2=DYG(J)
-            SELECT CASE(IPIO(I,J,K+1))
+            SELECT CASE(this%ipio(I,J,K+1))
             CASE(1) ! Dirichlet
               DEL=CNST(0.5)*DZ(K)*DZ(K)
               DCONST=DIELECTRIC(I,J,K)
@@ -415,7 +422,7 @@ enddo
             END SELECT
           CASE(6) ! I,J+1,K
             D1=DZ(K); D2=DXG(I)
-            SELECT CASE(IPIO(I,J+1,K))
+            SELECT CASE(this%ipio(I,J+1,K))
             CASE(1) ! Dirichlet
               DEL=CNST(0.5)*DYG(J)*DZ(K)
               DCONST=DIELECTRIC(I,J,K)
@@ -430,7 +437,7 @@ enddo
             END SELECT
           CASE(7) ! I+1,J,K
             D1=DZ(K); D2=DYG(J)
-            SELECT CASE(IPIO(I+1,J,K))
+            SELECT CASE(this%ipio(I+1,J,K))
             CASE(1) ! Dirichlet
               DEL=CNST(0.5)*DXG(I)*DZ(K)
               DCONST=DIELECTRIC(I,J,K)
@@ -450,8 +457,8 @@ enddo
         AV(4) = M_ONE/PCONST ! for points that are out of the grid.
       end if
       !                                 DSLUCS matrix and normalizations
-      ADIAG(IA)=AV(4)
-      IF(ADIAG(IA) == M_ZERO)THEN
+      THIS%ADIAG(IA)=AV(4)
+      IF(THIS%ADIAG(IA) == M_ZERO)THEN
         WRITE(*,*)' DIAG ELEM ZERO ',IA
         STOP ' GOTTA QUIT '
       end if
@@ -462,12 +469,9 @@ enddo
 
       DO ICOL=1,7  !  THIS IS SLAP TRIAD FORMAT
         IF(AV(ICOL) /= M_ZERO)THEN
-          AW(IEC)=AV(ICOL)/ADIAG(IA)
+          AW(IEC)=AV(ICOL)/THIS%ADIAG(IA)
           IAD(IEC)=IA
           JAD(IEC)=IA+JOFF(ICOL)
-          IF(ICOL == 4)THEN
-            IDIAG(IA)=IEC
-          end if
           IEC=IEC+1
         end if
       end do
@@ -507,14 +511,16 @@ enddo
     endif
   end subroutine poissonm
 
+  !------------------------------------------------------------
 
-  subroutine cap(this)
+  subroutine cap(this, sig)
     type(poisson_sete_t), intent(in)    :: this
-
+    FLOAT,                intent(out)   :: sig(:, :, :, :)
+  
     integer :: i, j, k
 
     !  9/24/08 - THIS VERSION OF CAP is very generic. It is
-    !  for surfER. Assumes just IPIO(0:NX+1,0:NY+1,0:NZ+1), 
+    !  for surfER. Assumes just this%ipio(0:NX+1,0:NY+1,0:NZ+1), 
     !  VBOUND(0:NX+1,0:NY+1,0:NZ+1),DIELECTRIC(NX,NY,NZ).
     !  Outputs a single 3D array SIG(NX,NY,NZ)
     !
@@ -523,7 +529,7 @@ enddo
     !  SIG(I,J,K) is capacitance
     !
     !  input: NX,NY,NZ
-    !         IPIO,VBOUND
+    !         this%ipio,VBOUND
     !         ZG,DXG,DYG,DZ
     !         VH_BIG,DIELECTRIC,PCONST
     !
@@ -536,38 +542,39 @@ enddo
     !  a homogeneous grid approximation is made: derivative
     !  at metal-semi border calculated discretely with 1/DXG (1/DYG,1/DZ)
     !  rather than properly averaged spacings.
-    allocate(SIG(NXTOT,NYTOT,NZTOT,6))
-    SIG=0.0
+
+    SIG= M_ZERO
+
     DO I=1,NXTOT 
       DO J=1,NYTOT
         DO K=1,NZTOT
-          IF(IPIO(I,J,K) == 0)THEN ! I,J,K is in Poisson grid
-            IF(IPIO(I-1,J,K) == 1)THEN
+          IF(this%ipio(I,J,K) == 0)THEN ! I,J,K is in Poisson grid
+            IF(this%ipio(I-1,J,K) == 1)THEN
               BORDER=2*(VH_BIG(I,J,K)-VBOUND(I-1,J,K))/DXG(I)
               SIG(I,J,K,1)=SIG(I,J,K,1)-BORDER*DYG(J)*DZ(K)* &
                 DIELECTRIC(I,J,K)
             end if
-            IF(IPIO(I+1,J,K) == 1)THEN
+            IF(this%ipio(I+1,J,K) == 1)THEN
               BORDER=2*(VH_BIG(I,J,K)-VBOUND(I+1,J,K))/DXG(I)
               SIG(I,J,K,2)=SIG(I,J,K,2)-BORDER*DYG(J)*DZ(K)* &
                 DIELECTRIC(I,J,K)
             end if
-            IF(IPIO(I,J-1,K) == 1)THEN
+            IF(this%ipio(I,J-1,K) == 1)THEN
               BORDER=2*(VH_BIG(I,J,K)-VBOUND(I,J-1,K))/DYG(J)
               SIG(I,J,K,3)=SIG(I,J,K,3)-BORDER*DXG(I)*DZ(K)* &
                 DIELECTRIC(I,J,K)
             end if
-            IF(IPIO(I,J+1,K) == 1)THEN
+            IF(this%ipio(I,J+1,K) == 1)THEN
               BORDER=2*(VH_BIG(I,J,K)-VBOUND(I,J+1,K))/DYG(J)
               SIG(I,J,K,4)=SIG(I,J,K,4)-BORDER*DXG(I)*DZ(K)* &
                 DIELECTRIC(I,J,K)
             end if
-            IF(IPIO(I,J,K-1) == 1)THEN
+            IF(this%ipio(I,J,K-1) == 1)THEN
               BORDER=2*(VH_BIG(I,J,K)-VBOUND(I,J,K-1))/DZ(K)
               SIG(I,J,K,5)=SIG(I,J,K,5)-BORDER*DXG(I)*DYG(J)* &
                 DIELECTRIC(I,J,K)
             end if
-            IF(IPIO(I,J,K+1) == 1)THEN
+            IF(this%ipio(I,J,K+1) == 1)THEN
               BORDER=2*(VH_BIG(I,J,K)-VBOUND(I,J,K+1))/DZ(K)
               SIG(I,J,K,6)=SIG(I,J,K,6)-BORDER*DXG(I)*DYG(J)* &
                 DIELECTRIC(I,J,K)
@@ -579,8 +586,9 @@ enddo
 
   end subroutine cap
 
-  subroutine cbsurf(this)
+  subroutine cbsurf(this, vt)
     type(poisson_sete_t), intent(in)    :: this
+    FLOAT,                intent(in)    :: vt(:)
 
     integer :: k
 
@@ -590,32 +598,32 @@ enddo
     !         VFILL,XG(NX),YG(NY),XNG(:),YNG(:),VT(NGATES)
     !         XMID,YMID
     ! output: VSURF,VBOUND(0:NX+1,0:NY+1,0:NZ+1)
-    !         IPATTERN,IPIO
+    !         IPATTERN,this%ipio
 
 
     ! This is a combination of cbsurfser and spaceser located on
     ! /home/stopa/surfER/build
-    allocate(IPIO(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
+    allocate(this%ipio(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
     allocate(VH_BIG(1:NXTOT,1:NYTOT,1:NZTOT))
     vh_big(1:NXTOT,1:NYTOT,1:NZTOT)=0.0
     allocate(VBOUND(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
     allocate(DIELECTRIC(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
-    IPIO=0; VBOUND=0.0
+    this%ipio=0; VBOUND=0.0
     IF(IDEV == 1)THEN ! parallel plates
       DIELECTRIC=DIELECTRIC0
       dielectric(:,:,0)=6.5/pconst  !For platinum
       dielectric(:,:,NZTOT+1)=6.5/pconst !For platinum
-      IPIO(:,:,0)=1
-      IPIO(:,:,NZTOT+1)=1
+      this%ipio(:,:,0)=1
+      this%ipio(:,:,NZTOT+1)=1
       VBOUND(:,:,0)=VT(1)
       VBOUND(:,:,NZTOT+1)=VT(2)
       DO K=1,NZTOT
         IF(K /= 0 .AND. K /= NZTOT+1)THEN !Redundant?
           ! lateral BC`s
-          IPIO(0,:,K)=2
-          IPIO(NXTOT+1,:,K)=2
-          IPIO(:,0,K)=2
-          IPIO(:,NYTOT+1,K)=2
+          this%ipio(0,:,K)=2
+          this%ipio(NXTOT+1,:,K)=2
+          this%ipio(:,0,K)=2
+          this%ipio(:,NYTOT+1,K)=2
         end if
       end do
     end if
@@ -625,11 +633,12 @@ enddo
   subroutine poisson_sete_end(this)
     type(poisson_sete_t), intent(inout) :: this
 
-    deallocate(IPIO)
+    SAFE_DEALLOCATE_P(this%ipio)
     deallocate(VBOUND)
-    deallocate(VT);deallocate(VTV);deallocate(QS)
-    deallocate(IAD);deallocate(JAD);deallocate(ADIAG)
-    deallocate(IDIAG);
+    deallocate(QS)
+    deallocate(IAD)
+    deallocate(JAD)
+    deallocate(this%adiag)
 !    if (count_atoms > noatoms ) then
 !     deallocate(X2)
 !    endif
@@ -654,12 +663,15 @@ enddo
     type(poisson_sete_t), intent(in)    :: this
 
     integer :: i, j, k
+    FLOAT, allocatable :: sig(:, :, :, :)
 
     !
     !     to do energy calculations previously performed in setr
     !  compute capacitances of six surfaces
+    
+    SAFE_ALLOCATE(sig(1:nxtot, 1:nytot, 1:nztot, 1:6))
 
-    call cap(this)
+    call cap(this, sig)
 
     ESURF=0.0
     CHARGE_SURF=0.0
@@ -685,7 +697,8 @@ enddo
         CHARGE_BOT=CHARGE_BOT+SIG(I,J,NZTOT,5)+SIG(I,J,NZTOT,6)
       end do
     end do
-    deallocate(SIG)
+
+    SAFE_DEALLOCATE_A(sig)
 
     ESURF=CNST(0.5)*ESURF
     CHARGE_SURF=CS1+CS2+CS3
@@ -695,15 +708,23 @@ enddo
     RETURN
   end subroutine egate
 
-  subroutine xyzgrid(this, nx, ny, nz, xl, yl, zl, xcen, ycen, zcen)
+  subroutine xyzgrid(this, nx, ny, nz, xl, yl, zl, xcen, ycen, zcen, nx2, ny2, nz2)
     type(poisson_sete_t), intent(in)    :: this
+    integer,              intent(in)    :: nx
+    integer,              intent(in)    :: ny
+    integer,              intent(in)    :: nz
+    FLOAT,                intent(in)    :: xl
+    FLOAT,                intent(in)    :: yl
+    FLOAT,                intent(in)    :: zl
+    FLOAT,                intent(in)    :: xcen
+    FLOAT,                intent(in)    :: ycen
+    FLOAT,                intent(in)    :: zcen
+    integer,              intent(in)    :: nx2
+    integer,              intent(in)    :: ny2
+    integer,              intent(in)    :: nz2
 
     ! Input: NX, NY, NZ -> No. of octopus grid points in each dimension
     ! Input: XL, YL, ZL -> Size of the octopus box
-
-    integer, intent(in) :: nx, ny, nz
-    FLOAT,   intent(in) :: xl, yl, zl
-    FLOAT,   intent(in) :: xcen, ycen, zcen
 
     FLOAT   :: dx1b, dx1t, dx_oct, xbot, xtest, xtop, xwidth_big
     FLOAT   :: dy1b, dy1t, dy_oct, ybot, ytop, ywidth_big
