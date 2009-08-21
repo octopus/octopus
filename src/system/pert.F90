@@ -71,9 +71,9 @@ module pert_m
   integer, public, parameter ::  &
     PERTURBATION_ELECTRIC = 1,  &
     PERTURBATION_MAGNETIC = 2,  &
-     PERTURBATION_IONIC    = 3,  &
-     PERTURBATION_KDOTP    = 15, &   ! value chosen for compatibility with calculation mode kdotp
-     PERTURBATION_NONE     = 0
+    PERTURBATION_IONIC    = 3,  &
+    PERTURBATION_KDOTP    = 15, &   ! value chosen for compatibility with calculation mode kdotp
+    PERTURBATION_NONE     = 0
 
   integer, public, parameter :: &
     GAUGE_GIPAW  = 1, &
@@ -101,64 +101,20 @@ module pert_m
     logical            :: use_nonlocalpps
   end type pert_t
 
-  interface pert_init
-    module procedure pert_init1
-    module procedure pert_init2
-  end interface
-
   type(profile_t), save :: prof
 
 contains
 
   ! --------------------------------------------------------------------
-  subroutine pert_init1(this, gr, geo)
-    type(pert_t), intent(out)   :: this
-    type(grid_t),      intent(inout) :: gr
-    type(geometry_t),  intent(in)    :: geo
-
-    integer :: ii
-
-    call push_sub('pert.pert_init1')
-
-    !%Variable RespPerturbationType
-    !%Type integer
-    !%Section Linear Response
-    !%Description
-    !% Which perturbation to consider.
-    !%Option electric 1
-    !% Electric perturbation used to calculate, e.g., electric polarizabilities
-    !% and hyperpolarizabilities
-    !%Option magnetic 2
-    !% Magnetic perturbation used to calculate magnetic susceptibilities
-    !%Option ionic 3
-    !% Displacements of the ions, used to calculate phonon frequencies and
-    !% electron-phonon couplings
-    !%Option kdotp 15
-    !% Small change of k-point, as in k.p perturbation theory, for calculating
-    !% effective masses, and dipoles and polarizabilities in periodic systems
-    !%Option none 0
-    !% Zero perturbation, for use in testing.
-    !%End 
-    call loct_parse_int(datasets_check('RespPerturbationType'), PERTURBATION_ELECTRIC, ii)
-
-    call pert_init2(this, ii, gr, geo)
-
-    call pop_sub()
-
-  end subroutine pert_init1
-
-
-  ! --------------------------------------------------------------------
-  subroutine pert_init2(this, pert_type, gr, geo)
+  subroutine pert_init(this, pert_type, gr, geo)
     type(pert_t),      intent(out)   :: this
     integer,           intent(in)    :: pert_type
     type(grid_t),      intent(inout) :: gr
     type(geometry_t),  intent(in)    :: geo
 
-    call push_sub('pert.pert_init2')
+    call push_sub('pert.pert_init')
     
     this%pert_type = pert_type
-    if(.not.varinfo_valid_option('RespPerturbationType', this%pert_type)) call input_error('RespPerturbationType')
 
     this%dir = -1 
     this%dir2 = -1 
@@ -172,9 +128,8 @@ contains
       !%Default gipaw
       !%Section Linear Response
       !%Description
-      !% How to describe the coupling of electrons to the magnetic
-      !% field, that is how to handle gauge invariance. Default is
-      !% gipaw.
+      !% For magnetic linear response: how to describe the coupling of electrons
+      !% to the magnetic field; that is, how to handle gauge invariance.
       !%Option none 0
       !% No correction
       !%Option gipaw 1
@@ -209,7 +164,7 @@ contains
     endif
 
     call pop_sub()
-  end subroutine pert_init2
+  end subroutine pert_init
 
   ! --------------------------------------------------------------------
   subroutine pert_end(this)

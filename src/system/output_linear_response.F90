@@ -32,7 +32,6 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, tag, isigma, outp, geo)
   FLOAT :: u
   FLOAT, allocatable :: dtmp(:)
   R_TYPE, allocatable :: tmp(:)
-  
 
   call push_sub('output_linear_response.Xh_sys_output_lr')
 
@@ -117,6 +116,9 @@ contains
     character(len=*), intent(in) :: filename2
     
     integer :: is, ierr
+
+    call push_sub('output_linear_response.Xh_sys_output_lr.lr_elf')
+
     u=M_ONE
 
     do is = 1, st%d%nspin
@@ -128,6 +130,8 @@ contains
       write(fname, '(a,a,i1,a,i1)') trim(filename2), '-', is, '-', tag 
       call X(output_function)(outp%how, dir, trim(fname), gr%mesh, gr%sb, lr%X(dl_elf)(1:gr%mesh%np,is), u, ierr, geo = geo)
     end do
+
+    call pop_sub()
 
   end subroutine lr_elf
 

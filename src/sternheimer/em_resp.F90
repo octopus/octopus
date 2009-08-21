@@ -479,7 +479,7 @@ contains
     ! ---------------------------------------------------------
     subroutine parse_input()
       type(block_t) :: blk
-      integer   :: nrow, irow, nfreqs_in_row, ifreq, istep
+      integer   :: nrow, irow, nfreqs_in_row, ifreq, istep, perturb_type
       FLOAT     :: omega_ini, omega_fin, domega
 
       call push_sub('em_resp.em_resp_run.parse_input')
@@ -572,7 +572,23 @@ contains
       em_vars%calc_hyperpol = .false.
       em_vars%freq_factor(1:MAX_DIM) = M_ONE
 
-      call pert_init(em_vars%perturbation, sys%gr, sys%geo)
+      !%Variable EMPerturbationType
+      !%Type integer
+      !%Default electric
+      !%Section Linear Response::Polarizabilities
+      !%Description
+      !% Which perturbation to consider for electromagnetic linear response.
+      !%Option electric 1
+      !% Electric perturbation used to calculate electric polarizabilities
+      !% and hyperpolarizabilities
+      !%Option magnetic 2
+      !% Magnetic perturbation used to calculate magnetic susceptibilities
+      !%Option none 0
+      !% Zero perturbation, for use in testing.
+      !%End 
+      call loct_parse_int(datasets_check('EMPerturbationType'), PERTURBATION_ELECTRIC, perturb_type)
+
+      call pert_init(em_vars%perturbation, perturb_type, sys%gr, sys%geo)
 
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         !%Variable EMHyperpol
