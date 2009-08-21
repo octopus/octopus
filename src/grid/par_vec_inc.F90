@@ -431,6 +431,8 @@ subroutine X(ghost_update_batch_finish)(handle)
   call profiling_in(prof_wait, "GHOST_UPDATE_WAIT")
   call push_sub('par_vec_inc.Xghost_update_batch_finish')
   
+  ASSERT(handle%nnb > 0)
+
   select case(handle%comm_method)
 #ifdef HAVE_LIBNBC
   case(NON_BLOCKING_COLLECTIVE)
