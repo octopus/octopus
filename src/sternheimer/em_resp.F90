@@ -20,10 +20,10 @@
 #include "global.h"
 
 module em_resp_m
-  use Born_charges_m
+  use born_charges_m
   use datasets_m
   use em_resp_calc_m
-  use external_pot_m
+  use forces_m
   use geometry_m
   use global_m
   use grid_m
@@ -400,21 +400,21 @@ contains
               ! time = M_ZERO
               if(states_are_complex(sys%st)) then
                 if(em_vars%nsigma == 2) then
-                  call zcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
+                  call zforces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
                     lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 2, ifactor), &
                     lr_dir = idir, Born_charges = em_vars%Born_charges(ifactor))
                 else
-                  call zcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
+                  call zforces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
                     lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 1, ifactor), &
                     lr_dir = idir, Born_charges = em_vars%Born_charges(ifactor))
                 endif
               else
                 if(em_vars%nsigma == 2) then
-                  call dcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
+                  call dforces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
                     lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 2, ifactor), &
                     lr_dir = idir, Born_charges = em_vars%Born_charges(ifactor))
                 else
-                  call dcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
+                  call dforces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
                     lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 1, ifactor), &
                     lr_dir = idir, Born_charges = em_vars%Born_charges(ifactor))
                 endif

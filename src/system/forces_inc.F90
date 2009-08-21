@@ -17,7 +17,7 @@
 !!
 !! $Id$
 
-subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born_charges)
+subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born_charges)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(inout) :: geo
   type(epot_t),                   intent(in)    :: ep
@@ -50,7 +50,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
   type(profile_t), save :: prof
 #endif
 
-  call push_sub('epot_inc.Xcalc_forces_from_potential')
+  call push_sub('epot_inc.Xforces_from_potential')
 
   ASSERT(present(lr) .eqv. present(lr_dir))
   ASSERT(present(lr) .eqv. present(lr2))
@@ -316,7 +316,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
   SAFE_DEALLOCATE_A(force)
   call pop_sub()
   
-end subroutine X(calc_forces_from_potential)
+end subroutine X(forces_from_potential)
 
 !! Local Variables:
 !! mode: f90

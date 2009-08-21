@@ -31,7 +31,7 @@ module td_m
   use units_m
   use messages_m
   use mesh_m
-  use external_pot_m
+  use forces_m
   use gauge_field_m
   use geometry_m
   use ground_state_m
@@ -160,7 +160,7 @@ contains
         call hamiltonian_epot_generate(hm, gr, geo, st)
       end if
 
-      call epot_forces(gr, geo, hm%ep, st, td%iter*td%dt)
+      call forces_calculate(gr, geo, hm%ep, st, td%iter*td%dt)
 
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
 
@@ -265,7 +265,7 @@ contains
       
       ! Recalculate forces, update velocities...
       if(ion_dynamics_ions_move(td%ions)) then
-        call epot_forces(gr, sys%geo, hm%ep, st, iter*td%dt)
+        call forces_calculate(gr, sys%geo, hm%ep, st, iter*td%dt)
 
         call ion_dynamics_propagate_vel(td%ions, sys%geo)
 

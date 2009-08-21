@@ -33,7 +33,8 @@ libsystem_a_SOURCES =         \
 	xc_OEP_kernel.F90     \
 	pert.F90              \
 	exponential_split.F90 \
-	exponential.F90
+	exponential.F90       \
+	forces.F90
 
 noinst_HEADERS =                     \
 	energy_inc.F90               \
@@ -68,3 +69,4 @@ output_me.o: output_me_inc.F90
 exponential_split.o : exponential_split.F90
 exponential.o : exponential.F90 exponential_split.o
 energy.o : energy.F90 energy_inc.F90
+forces.o : forces.F90 forces_inc.F90

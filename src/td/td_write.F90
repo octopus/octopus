@@ -23,7 +23,7 @@ module td_write_m
   use c_pointer_m
   use datasets_m
   use excited_states_m
-  use external_pot_m
+  use forces_m
   use gauge_field_m
   use geometry_m
   use global_m

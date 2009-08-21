@@ -8,7 +8,7 @@
 !! This program is distributed in the hope that it will be useful,
 !! but WITHOUT ANY WARRANTY; without even the implied warranty of
 !! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!! GNU General Public License for more details.
+!! GNU General Public License for more detals.
 !!
 !! You should have received a copy of the GNU General Public License
 !! along with this program; if not, write to the Free Software
@@ -71,12 +71,9 @@ module external_pot_m
     epot_init,                     &
     epot_end,                      &
     epot_generate,                 &
-    epot_forces,                   &
     epot_local_potential,          &
     epot_precalc_local_potential,  &
-    epot_dipole_periodic,          &
-    dcalc_forces_from_potential,   &
-    zcalc_forces_from_potential
+    epot_dipole_periodic
 
   type epot_t
     ! Classical charges:
@@ -113,7 +110,7 @@ module external_pot_m
     FLOAT, pointer :: fii(:, :)
     
     real(4), pointer :: local_potential(:,:)
-    logical        :: local_potential_precalculated
+    logical          :: local_potential_precalculated
   end type epot_t
 
   integer, public, parameter :: &
@@ -648,68 +645,6 @@ contains
     call pop_sub()
   end subroutine epot_generate_classical
 
-
-  ! ---------------------------------------------------------
-  subroutine epot_forces(gr, geo, ep, st, t)
-    type(grid_t),     intent(inout) :: gr
-    type(geometry_t), intent(inout) :: geo
-    type(epot_t),     intent(in)    :: ep
-    type(states_t),   intent(inout) :: st
-    FLOAT,     optional, intent(in) :: t
-
-    integer :: i, j
-    FLOAT :: x(MAX_DIM), time
-    
-    type(profile_t), save :: forces_prof
-
-    call profiling_in(forces_prof, "FORCES")
-    call push_sub('epot.epot_forces')
-
-    time = M_ZERO
-    if(present(t)) time = t
-
-    ! the ion-ion term is already calculated
-    do i = 1, geo%natoms
-      geo%atom(i)%f(1:MAX_DIM) = ep%fii(1:MAX_DIM, i)
-    end do
-    
-    if (states_are_real(st) ) then 
-      call dcalc_forces_from_potential(gr, geo, ep, st, time)
-    else
-      call zcalc_forces_from_potential(gr, geo, ep, st, time)
-    end if
-    
-    !TODO: forces due to the magnetic fields (static and time-dependent)
-    if(present(t)) then
-      do j = 1, ep%no_lasers
-        select case(laser_kind(ep%lasers(j)))
-        case(E_FIELD_ELECTRIC)
-          call laser_field(gr%sb, ep%lasers(j), x, t)
-          do i = 1, geo%natoms
-            geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) + &
-              P_PROTON_CHARGE * species_zval(geo%atom(i)%spec) * x(1:gr%mesh%sb%dim)
-          end do
-
-        case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL, E_FIELD_SCALAR_POTENTIAL)
-          write(message(1),'(a)') 'The forces are currently not properly calculated if time-dependent'
-          write(message(2),'(a)') 'magnetic fields are present.'
-          call write_fatal(2)
-        end select
-      end do
-    end if
-
-    if(associated(ep%E_field)) then
-      do i = 1, geo%natoms
-        geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) + &
-          P_PROTON_CHARGE * species_zval(geo%atom(i)%spec) * ep%E_field(1:gr%mesh%sb%dim)
-      end do
-    end if
-    
-    call pop_sub()
-    call profiling_out(forces_prof)
-
-  end subroutine epot_forces
-
   ! ---------------------------------------------------------
   ! Uses the single-point Berry`s phase method to calculate dipole moment in a periodic system
   ! This is only accurate in the limit of a large supercell.
@@ -807,14 +742,6 @@ contains
     ep%local_potential_precalculated = .true.
 
   end subroutine epot_precalc_local_potential
-
-#include "undef.F90"
-#include "real.F90"
-#include "epot_inc.F90"
-
-#include "undef.F90"
-#include "complex.F90"
-#include "epot_inc.F90"
 
 end module external_pot_m
 

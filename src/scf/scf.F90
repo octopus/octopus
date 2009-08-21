@@ -24,6 +24,7 @@ module scf_m
   use energy_m
   use eigensolver_m
   use external_pot_m
+  use forces_m
   use geometry_m
   use global_m
   use grid_m
@@ -367,7 +368,7 @@ contains
       SAFE_ALLOCATE(  forcein(1:geo%natoms, 1:gr%mesh%sb%dim))
       SAFE_ALLOCATE( forceout(1:geo%natoms, 1:gr%mesh%sb%dim))
       SAFE_ALLOCATE(forcediff(1:gr%mesh%sb%dim))
-      call epot_forces(gr, geo, hm%ep, st)
+      call forces_calculate(gr, geo, hm%ep, st)
       do iatom = 1, geo%natoms
         forcein(iatom,1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim)
       end do
@@ -430,7 +431,7 @@ contains
 
       ! compute forces only if they are used as convergence criteria
       if (scf%conv_abs_force > M_ZERO) then
-        call epot_forces(gr, geo, hm%ep, st)
+        call forces_calculate(gr, geo, hm%ep, st)
         scf%abs_force = M_ZERO
         do iatom = 1, geo%natoms
           forceout(iatom,1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim)
@@ -546,7 +547,7 @@ contains
     end if
 
     ! calculate forces
-    if(scf%calc_force) call epot_forces(gr, geo, hm%ep, st)
+    if(scf%calc_force) call forces_calculate(gr, geo, hm%ep, st)
 
     if(gs_run_) then 
       ! output final information
