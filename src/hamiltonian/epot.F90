@@ -8,7 +8,7 @@
 !! This program is distributed in the hope that it will be useful,
 !! but WITHOUT ANY WARRANTY; without even the implied warranty of
 !! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!! GNU General Public License for more detals.
+!! GNU General Public License for more details.
 !!
 !! You should have received a copy of the GNU General Public License
 !! along with this program; if not, write to the Free Software
@@ -20,7 +20,6 @@
 #include "global.h"
 
 module external_pot_m
-  use Born_charges_m
   use datasets_m
   use derivatives_m
   use double_grid_m
@@ -99,7 +98,7 @@ module external_pot_m
     integer                :: reltype              ! type of relativistic correction to use
 
     ! The gyromagnetic ratio (-2.0 for the electron, but different if we treat
-    ! *effective* electrons in a quantum dot. It affects the spin Zeeman term.
+    ! *effective* electrons in a quantum dot. It affects the spin Zeeman term.)
     FLOAT :: gyromagnetic_ratio
 
     ! SO prefactor (1.0 = normal SO, 0.0 = no SO)

@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module Born_charges_m
+module born_charges_m
   use datasets_m
   use geometry_m
   use global_m

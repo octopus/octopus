@@ -21,7 +21,7 @@
 #define RESTART_FILE 'dipoles'
 
 module static_pol_m
-  use Born_charges_m
+  use born_charges_m
   use datasets_m
   use elf_m
   use em_resp_m
