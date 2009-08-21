@@ -330,7 +330,7 @@ contains
                           + ob%lead(il)%st_intface(1:np, ist, ik, mod(it, ob%max_mem_coeffs+1))
               tmp_mem(1:np, 1:np) = ob%lead(il)%q(1:np, 1:np, m-it)
               if((m-it).gt.0) tmp_mem(1:np, 1:np) = tmp_mem(1:np, 1:np) + ob%lead(il)%q(1:np, 1:np, m-it-1)
-              call apply_mem(tmp_mem(1:np, 1:np), gr%intf(il), tmp_wf(1:np), st%zpsi(1:np, :, ist, ik), factor)
+              call apply_mem(tmp_mem(1:np, 1:np), gr%intf(il), tmp_wf(1:np), st%zpsi(:, :, ist, ik), factor)
             end do
           end if
         end do
