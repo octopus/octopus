@@ -30,7 +30,7 @@ libstates_a_SOURCES = \
 	ob_green.F90 modelmb_exchange_syms.F90
 
 noinst_HEADERS = \
-	excited_states_inc.F90 mix_inc.F90 states_kpoints.F90 \
+	excited_states_inc.F90 mix_inc.F90 states_kpoints_inc.F90 \
 	states_calc_inc.F90 \
 	modelmb_density_matrix_inc.F90 \
 	modelmb_density_inc.F90        \
@@ -48,7 +48,7 @@ modelmb_density.o : modelmb_density.F90 modelmb_density_inc.F90 modelmb_particle
 modelmb_exchange_syms.o : modelmb_exchange_syms.F90 modelmb_density.o modelmb_particles.o states.o
 physics_op.o : physics_op_inc.F90
 states.o : states.F90 states_dim.o ob_green.o modelmb_particles.o
-states_dim.o : states_dim.F90 states_kpoints.F90
+states_dim.o : states_dim.F90 states_kpoints_inc.F90
 states_calc.o : states_calc.F90 states_calc_inc.F90 states.o states_block.o
 magnetic.o : magnetic.F90 states.o 
 elf.o : elf.F90 states.o 

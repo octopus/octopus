@@ -669,9 +669,9 @@ contains
       
   end function poisson_solver_has_free_bc
 
-#include "solver_1D.F90"
-#include "solver_2D.F90"
-#include "solver_3D.F90"
+#include "solver_1d_inc.F90"
+#include "solver_2d_inc.F90"
+#include "solver_3d_inc.F90"
 
 end module poisson_m
 

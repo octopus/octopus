@@ -782,7 +782,7 @@ contains
 
   end subroutine td_run
 
-#include "td_init.F90"
+#include "td_init_inc.F90"
 
 end module td_m
 

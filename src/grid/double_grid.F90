@@ -202,7 +202,7 @@ contains
 #define double_grid_apply double_grid_apply_local
 #define calc_pot(vv) vv = spline_eval(ps%vl, r)
 
-#include "double_grid_apply.F90"
+#include "double_grid_apply_inc.F90"
 
 #undef calc_pot
 #undef double_grid_apply
@@ -214,7 +214,7 @@ contains
 #define double_grid_apply double_grid_apply_non_local
 #define calc_pot(vv) call species_real_nl_projector(s, x, l, lm, ic, vv, tmp)
 
-#include "double_grid_apply.F90"
+#include "double_grid_apply_inc.F90"
 
 end module double_grid_m
 

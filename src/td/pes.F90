@@ -141,8 +141,8 @@ contains
 
   end subroutine PES_output
 
-#include "pes_rc.F90"
-#include "pes_mask.F90"
+#include "pes_rc_inc.F90"
+#include "pes_mask_inc.F90"
 
 end module PES_m
 

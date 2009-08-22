@@ -955,8 +955,8 @@ contains
 
 
 
-#include "check_input.F90"
-#include "finalcheck.F90"
+#include "check_input_inc.F90"
+#include "finalcheck_inc.F90"
 
 end module opt_control_m
 

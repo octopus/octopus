@@ -26,7 +26,7 @@ libtd_a_SOURCES = \
 	ob_rti.F90 ob_src.F90 ob_mem.F90 ob_terms.F90
 
 noinst_HEADERS = \
-	pes_rc.F90 pes_mask.F90 td_init.F90 td_calc.F90 cpmd_inc.F90 \
+	pes_rc_inc.F90 pes_mask_inc.F90 td_init_inc.F90 td_calc_inc.F90 cpmd_inc.F90 \
 	td_rti_qoct_inc.F90
 
 include $(srcdir)/../common-rules.make
@@ -34,12 +34,12 @@ include $(srcdir)/../common-rules.make
 depend:
 	@makedepf90 $(libtd_a_SOURCES)
 
-pes.o: pes.F90 pes_mask.F90 pes_rc.F90
+pes.o: pes.F90 pes_mask_inc.F90 pes_rc_inc.F90
 spectrum.o: spectrum.F90
 td_rti.o: td_rti.F90 ob_rti.o
 ob_rti.o: ob_rti.F90 ob_mem.o ob_src.o ob_terms.o
 ob_mem.o: ob_mem.F90 ob_terms.o
 ob_src.o: ob_src.F90 ob_mem.o ob_terms.o
-td_write.o: td_write.F90 td_calc.F90 spectrum.o
-td.o: td.F90 td_init.F90 spectrum.o pes.o td_write.o td_rti.o cpmd.o
+td_write.o: td_write.F90 td_calc_inc.F90 spectrum.o
+td.o: td.F90 td_init_inc.F90 spectrum.o pes.o td_write.o td_rti.o cpmd.o
 cpmd.o: cpmd.F90 cpmd_inc.F90

@@ -442,10 +442,10 @@ contains
   end subroutine xc_end
 
 
-#include "vxc.F90"
-#include "axc.F90"
-#include "fxc.F90"
-#include "kxc.F90"
+#include "vxc_inc.F90"
+#include "axc_inc.F90"
+#include "fxc_inc.F90"
+#include "kxc_inc.F90"
 
 end module xc_m
 

@@ -256,7 +256,7 @@ contains
   end subroutine zlalg_phi
 
 #ifdef HAVE_LAPACK
-#include "lalg_adv_lapack.F90"
+#include "lalg_adv_lapack_inc.F90"
 #endif
 
 end module lalg_adv_m

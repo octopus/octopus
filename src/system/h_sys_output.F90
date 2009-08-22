@@ -572,18 +572,18 @@ contains
   end subroutine h_sys_calc_electronic_pressure
 
 
-#include "output_etsf.F90"
+#include "output_etsf_inc.F90"
 
-#include "output_states.F90"
-#include "output_h.F90"
+#include "output_states_inc.F90"
+#include "output_h_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
-#include "output_linear_response.F90"
+#include "output_linear_response_inc.F90"
 
 #include "undef.F90"
 #include "real.F90"
-#include "output_linear_response.F90"
+#include "output_linear_response_inc.F90"
 
 end module h_sys_output_m
 

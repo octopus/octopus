@@ -1530,7 +1530,7 @@ contains
   end subroutine parameters_gradient
   ! ---------------------------------------------------------
 
-#include "parameters_trans.F90"
+#include "parameters_trans_inc.F90"
 
 end module opt_control_parameters_m
 

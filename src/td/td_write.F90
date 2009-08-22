@@ -1418,7 +1418,7 @@ contains
   end subroutine td_write_print_header_end
 
 
-#include "td_calc.F90"
+#include "td_calc_inc.F90"
 
 end module td_write_m
 

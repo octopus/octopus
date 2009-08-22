@@ -21,11 +21,15 @@
 
 noinst_LIBRARIES = libxc.a
 
-libxc_a_SOURCES = \
-	functionals.F90 xc.F90
+libxc_a_SOURCES =        \
+	functionals.F90  \
+	xc.F90
 
-noinst_HEADERS = \
-	vxc.F90 axc.F90 fxc.F90 kxc.F90
+noinst_HEADERS =        \
+	vxc_inc.F90     \
+	axc_inc.F90      \
+	fxc_inc.F90     \
+	kxc_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -33,4 +37,4 @@ depend:
 	@makedepf90 $(libxc_a_SOURCES)
 
 functionals.o : functionals.F90 
-xc.o : xc.F90 kxc.F90 fxc.F90 axc.F90 vxc.F90 functionals.o 
+xc.o : xc.F90 kxc_inc.F90 fxc_inc.F90 axc_inc.F90 vxc_inc.F90 functionals.o 

@@ -173,7 +173,7 @@ contains
 
   end subroutine kpoints_distribute
   
-#include "states_kpoints.F90"
+#include "states_kpoints_inc.F90"
 
 end module states_dim_m
 
