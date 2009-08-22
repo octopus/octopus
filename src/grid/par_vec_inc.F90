@@ -342,79 +342,75 @@ subroutine X(ghost_update_batch_start)(vp, v_local, comm_method, handle)
   integer,                  intent(in)    :: comm_method
   type(pv_handle_batch_t),  intent(out)   :: handle
 
-  integer :: ipart, pos, nsend, ii, idim, tag
+  integer :: ipart, pos, nsend, ii, tag
 
   call profiling_in(C_PROFILING_GHOST_UPDATE, "GHOST_UPDATE")
   call push_sub('par_vec_inc.Xghost_update_batch_start')
 
-  call batch_init(handle%ghost_send, v_local%dim, v_local%nst)
+  ASSERT(v_local%nst_linear > 0)
+
+  call batch_init(handle%ghost_send, 1, v_local%nst_linear)
+
   nsend = subarray_size(vp%sendpoints)
-  call X(batch_new)(handle%ghost_send, 1, v_local%nst, nsend)
+
+  call X(batch_new)(handle%ghost_send, 1, v_local%nst_linear, nsend)
 
   handle%comm_method = comm_method
   handle%nnb = 0
 
   if(handle%comm_method == NON_BLOCKING) then
     ! first post the receptions
-    
-    SAFE_ALLOCATE(handle%requests(1:2*vp%npart*v_local%nst*v_local%dim))
 
-    do ii = 1, v_local%nst
-      do idim = 1, v_local%dim
-        do ipart = 1, vp%npart
-          if(vp%np_ghost_neigh(vp%partno, ipart) == 0) cycle
-          
-          handle%nnb = handle%nnb + 1
-          tag = v_local%states(ii)%ist*2 + idim
-          pos = vp%np_local(vp%partno) + 1 + vp%rdispls(ipart)
-          call MPI_Irecv(v_local%states(ii)%X(psi)(pos, idim), vp%rcounts(ipart), R_MPITYPE, ipart - 1, tag, &
-            vp%comm, handle%requests(handle%nnb), mpi_err)
+    SAFE_ALLOCATE(handle%requests(1:2*vp%npart*v_local%nst_linear))
 
-        end do
+    do ii = 1, v_local%nst_linear
+      do ipart = 1, vp%npart
+        if(vp%np_ghost_neigh(vp%partno, ipart) == 0) cycle
+
+        handle%nnb = handle%nnb + 1
+        tag = ii
+        pos = vp%np_local(vp%partno) + 1 + vp%rdispls(ipart)
+        call MPI_Irecv(v_local%states_linear(ii)%X(psi)(pos), vp%rcounts(ipart), R_MPITYPE, ipart - 1, tag, &
+          vp%comm, handle%requests(handle%nnb), mpi_err)
       end do
     end do
+
   end if
 
   !now pack the data for sending
   !$omp parallel do private(idim)
-  do ii = 1, v_local%nst
-    do idim = 1, v_local%dim
-      call X(subarray_gather)(vp%sendpoints, v_local%states(ii)%X(psi)(:, idim), handle%ghost_send%states(ii)%X(psi)(:, idim))
-    end do
+  do ii = 1, v_local%nst_linear
+    call X(subarray_gather)(vp%sendpoints, v_local%states_linear(ii)%X(psi), handle%ghost_send%states_linear(ii)%X(psi))
   end do
   !$omp end parallel do
-    
+
   select case(handle%comm_method)
 #ifdef HAVE_LIBNBC
   case(NON_BLOCKING_COLLECTIVE)
     ! use a collective non-blocking call
-    
-    SAFE_ALLOCATE(handle%nbc_h(1:vp%npart*v_local%nst*v_local%dim))
 
-    do ii = 1, v_local%nst
-      do idim = 1, v_local%dim
-        handle%nnb = handle%nnb + 1
-        call NBCF_Newhandle(handle%nbc_h(handle%nnb))
-        call NBCF_Ialltoallv(handle%ghost_send%states(ii)%X(psi)(1, idim), vp%np_ghost_neigh(1, vp%partno), vp%sdispls(1), &
-          R_MPITYPE, v_local%states(ii)%X(psi)(vp%np_local(vp%partno) + 1, idim), vp%rcounts(1), vp%rdispls(1), &
-          R_MPITYPE, vp%comm, handle%nbc_h(handle%nnb), mpi_err)
-      end do
+    SAFE_ALLOCATE(handle%nbc_h(1:vp%npart*v_local%nst_linear))
+
+    do ii = 1, v_local%nst_linear
+      handle%nnb = handle%nnb + 1
+      call NBCF_Newhandle(handle%nbc_h(handle%nnb))
+      call NBCF_Ialltoallv(handle%ghost_send%states_linear(ii)%X(psi)(1), vp%np_ghost_neigh(1, vp%partno), vp%sdispls(1), &
+        R_MPITYPE, v_local%states_linear(ii)%X(psi)(vp%np_local(vp%partno) + 1), vp%rcounts(1), vp%rdispls(1), &
+        R_MPITYPE, vp%comm, handle%nbc_h(handle%nnb), mpi_err)
     end do
 #endif
+
   case(NON_BLOCKING)
-    
-    do ii = 1, v_local%nst
-      do idim = 1, v_local%dim
-        do ipart = 1, vp%npart
-          if(vp%np_ghost_neigh(ipart, vp%partno) == 0) cycle
-          handle%nnb = handle%nnb + 1
-          tag = v_local%states(ii)%ist*2 + idim
-          call MPI_Isend(handle%ghost_send%states(ii)%X(psi)(vp%sendpos(ipart), idim), vp%np_ghost_neigh(ipart, vp%partno), &
-            R_MPITYPE, ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
-        end do
+
+    do ii = 1, v_local%nst_linear
+      do ipart = 1, vp%npart
+        if(vp%np_ghost_neigh(ipart, vp%partno) == 0) cycle
+        handle%nnb = handle%nnb + 1
+        tag = ii
+        call MPI_Isend(handle%ghost_send%states_linear(ii)%X(psi)(vp%sendpos(ipart)), vp%np_ghost_neigh(ipart, vp%partno), &
+          R_MPITYPE, ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
       end do
     end do
-    
   end select
 
   call pop_sub()
