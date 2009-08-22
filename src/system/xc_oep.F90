@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module xc_OEP_m
+module xc_oep_m
   use datasets_m
   use global_m
   use grid_m
@@ -269,21 +269,21 @@ contains
 
 #include "undef.F90"
 #include "real.F90"
-#include "xc_KLI_inc.F90"
-#include "xc_OEP_x_inc.F90"
-#include "xc_OEP_SIC_inc.F90"
-#include "xc_OEP_inc.F90"
+#include "xc_kli_inc.F90"
+#include "xc_oep_x_inc.F90"
+#include "xc_oep_sic_inc.F90"
+#include "xc_oep_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
-#include "xc_KLI_inc.F90"
-#include "xc_OEP_x_inc.F90"
-#include "xc_OEP_SIC_inc.F90"
-#include "xc_OEP_inc.F90"
+#include "xc_kli_inc.F90"
+#include "xc_oep_x_inc.F90"
+#include "xc_oep_sic_inc.F90"
+#include "xc_oep_inc.F90"
 
 #include "undef.F90"
 
-end module xc_OEP_m
+end module xc_oep_m
 
 !! Local Variables:
 !! mode: f90

@@ -35,7 +35,7 @@ libhamiltonian_a_SOURCES = \
 	gauge_field.F90    \
 	scissor.F90        \
 	ob_lead.F90        \
-        Born_charges.F90
+        born_charges.F90
 
 noinst_HEADERS =              \
 	lasers_inc.F90        \
@@ -64,4 +64,4 @@ hamiltonian.o : hamiltonian.F90 hamiltonian_inc.F90 lasers.o projector.o epot.o 
 scf_tol.o : scf_tol.F90 
 em_field.o : em_field.F90 em_field_inc.F90
 scissor.o : scissor.F90 scissor_inc.F90
-Born_charges.o : Born_charges.F90
+born_charges.o : born_charges.F90

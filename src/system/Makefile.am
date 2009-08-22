@@ -25,12 +25,12 @@ libsystem_a_SOURCES =         \
 	energy.F90            \
 	preconditioners.F90   \
 	linear_solver.F90     \
-	xc_OEP.F90            \
+	xc_oep.F90            \
 	v_ks.F90              \
 	output_me.F90         \
 	h_sys_output.F90      \
 	system.F90            \
-	xc_OEP_kernel.F90     \
+	xc_oep_kernel.F90     \
 	pert.F90              \
 	exponential_split.F90 \
 	exponential.F90       \
@@ -38,11 +38,11 @@ libsystem_a_SOURCES =         \
 
 noinst_HEADERS =                     \
 	energy_inc.F90               \
-	xc_KLI_inc.F90               \
-	xc_OEP_x_inc.F90             \
-	xc_OEP_SIC_inc.F90           \
-	xc_OEP_kernel_inc.F90        \
-	xc_OEP_inc.F90               \
+	xc_kli_inc.F90               \
+	xc_oep_x_inc.F90             \
+	xc_oep_sic_inc.F90           \
+	xc_oep_kernel_inc.F90        \
+	xc_oep_inc.F90               \
 	preconditioners_inc.F90      \
 	pert_inc.F90                 \
 	linear_solver_inc.F90        \
@@ -59,10 +59,10 @@ depend:
 
 preconditioners.o : preconditioners.F90 preconditioners_inc.F90 
 linear_solver.o : linear_solver.F90 linear_solver_inc.F90 preconditioners.o 
-xc_OEP.o : xc_OEP.F90 xc_OEP_inc.F90 xc_OEP_SIC_inc.F90 xc_OEP_x_inc.F90 xc_KLI_inc.F90 linear_solver.o 
-v_ks.o : v_ks.F90 xc_OEP.o energy.o
+xc_oep.o : xc_oep.F90 xc_oep_inc.F90 xc_oep_sic_inc.F90 xc_oep_x_inc.F90 xc_kli_inc.F90 linear_solver.o 
+v_ks.o : v_ks.F90 xc_oep.o energy.o
 system.o : system.F90 v_ks.o energy.o
-xc_OEP_kernel.o : xc_OEP_kernel.F90 xc_OEP_kernel_inc.F90 xc_OEP.o system.o 
+xc_oep_kernel.o : xc_oep_kernel.F90 xc_oep_kernel_inc.F90 xc_oep.o system.o 
 pert.o : pert.F90 pert_inc.F90
 h_sys_output.o : h_sys_output.F90 output_states.F90 output_h.F90 output_linear_response.F90 output_etsf.F90 output_me.o
 output_me.o: output_me_inc.F90

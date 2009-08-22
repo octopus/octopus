@@ -41,11 +41,11 @@ end subroutine xc_oep_kernel_init
 
 #include "undef.F90"
 #include "real.F90"
-#include "xc_OEP_kernel_inc.F90"
+#include "xc_oep_kernel_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
-#include "xc_OEP_kernel_inc.F90"
+#include "xc_oep_kernel_inc.F90"
 
 end module xc_oep_kernel_m
 
