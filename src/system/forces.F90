@@ -28,7 +28,6 @@ module forces_m
   use global_m
   use grid_m
   use io_m
-  use ion_interaction_m
   use lalg_basic_m
   use lalg_adv_m
   use linear_response_m
