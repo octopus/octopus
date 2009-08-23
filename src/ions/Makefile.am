@@ -31,7 +31,6 @@ libions_a_SOURCES =         \
 	vibrations.F90      \
 	crystal.F90         \
 	ion_dynamics.F90    \
-	ion_interaction.F90 \
 	symmetries.F90      \
 	spglib_f.c
 
@@ -51,7 +50,6 @@ solids.o: solids.F90 simul_box.o
 vibrations.o : vibrations.F90 simul_box.o geometry.o
 crystal.o : crystal.F90 geometry.o simul_box.o symmetries.o
 ion_dynamics.o : ion_dynamics.F90 simul_box.o geometry.o xyz_file.o
-ion_interaction.o : ion_interaction.F90 solids.o simul_box.o geometry.o
 symmetries.o : symmetries.F90 simul_box.o
 spglib_f.o : spglib_f.c
 

@@ -27,10 +27,10 @@ module external_pot_m
   use global_m
   use grid_m
   use io_m
-  use ion_interaction_m
   use lalg_basic_m
   use lalg_adv_m
   use linear_response_m
+  use loct_math_m
   use loct_parser_m
   use splines_m
   use magnetic_m
@@ -742,6 +742,172 @@ contains
 
   end subroutine epot_precalc_local_potential
 
+  subroutine ion_interaction_calculate(geo, sb, energy, force)
+    type(geometry_t),  target, intent(in)    :: geo
+    type(simul_box_t),         intent(in)    :: sb
+    FLOAT,                     intent(out)   :: energy
+    FLOAT,                     intent(out)   :: force(:, :)
+
+    type(species_t), pointer :: s
+    FLOAT :: r, dd, zi, zj
+    integer :: iatom, jatom
+
+    FLOAT, parameter :: alpha = CNST(1.1313708)
+
+    type(profile_t), save :: ion_ion_prof
+
+    call profiling_in(ion_ion_prof, "ION_ION_INTERACTION")
+
+    ! see
+    ! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:Ion-Ion_interaction
+    ! for details about this routine.
+
+    energy = M_ZERO
+    force = M_ZERO
+
+    if(simul_box_is_periodic(sb)) then
+      call ion_interaction_periodic(geo, sb, energy, force)
+    else
+      ! only interaction inside the cell
+      do iatom = 1, geo%natoms
+        s => geo%atom(iatom)%spec
+        zi = species_zval(geo%atom(iatom)%spec)
+
+        if(species_type(s) .eq. SPEC_JELLI) then
+          energy = energy + (M_THREE/M_FIVE)*species_zval(s)**2/species_jradius(s)
+        end if
+
+        do jatom = 1, geo%natoms
+
+          if(iatom == jatom) cycle
+
+          zj = species_zval(geo%atom(jatom)%spec)
+          r = sqrt(sum((geo%atom(iatom)%x - geo%atom(jatom)%x)**2))
+
+          !the force
+          dd = zi*zj/r**3
+          force(1:sb%dim, iatom) = force(1:sb%dim, iatom) + &
+            dd*(geo%atom(iatom)%x(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))
+
+          !energy
+          if(jatom > iatom) cycle
+          energy = energy + zi*zj/r
+
+        end do !jatom
+      end do !iatom
+
+    end if
+    call profiling_out(ion_ion_prof)
+
+  end subroutine ion_interaction_calculate
+
+  subroutine ion_interaction_periodic(geo, sb, energy, force)
+    type(geometry_t),  target, intent(in)    :: geo
+    type(simul_box_t),         intent(in)    :: sb
+    FLOAT,                     intent(out)   :: energy
+    FLOAT,                     intent(out)   :: force(:, :)
+
+    type(species_t), pointer :: s
+    FLOAT :: r, xi(1:MAX_DIM), zi, zj
+    integer :: iatom, jatom, icopy
+    type(periodic_copy_t) :: pc
+    integer :: ix, iy, iz, isph, ss
+    FLOAT   :: gg(1:MAX_DIM), gg2
+    FLOAT   :: factor, charge
+    CMPLX   :: sumatoms
+    FLOAT, parameter :: alpha = CNST(1.1313708)
+
+    ! see
+    ! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:Ion-Ion_interaction
+    ! for details about this routine.
+
+    energy = M_ZERO
+    force = M_ZERO
+
+    ! if the system is periodic we have to add the energy of the
+    ! interaction with the copies
+    
+    ! the short-range part is calculated directly
+    do iatom = 1, geo%natoms
+      s => geo%atom(iatom)%spec
+      if (.not. species_is_ps(s)) cycle
+      zi = species_zval(geo%atom(iatom)%spec)
+
+      call periodic_copy_init(pc, sb, geo%atom(iatom)%x, CNST(5.0))
+      
+      do icopy = 1, periodic_copy_num(pc)
+        xi = periodic_copy_position(pc, sb, icopy)
+        
+        do jatom = 1, geo%natoms
+          zj = -species_zval(geo%atom(jatom)%spec)
+          r = sqrt( sum( (xi(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))**2 ) )
+          
+          if(r < CNST(1e-5)) cycle
+          
+          ! energy
+          energy = energy + M_HALF*zj*zi*(M_ONE - loct_erf(alpha*r))
+          
+          ! force
+          force(1:sb%dim, jatom) = force(1:sb%dim, jatom) + &
+            M_HALF*zj*zi*(M_ONE - loct_erf(alpha*r))/r*(geo%atom(jatom)%x(1:sb%dim) - xi(1:sb%dim))
+        end do
+        
+      end do
+      
+      call periodic_copy_end(pc)
+    end do
+
+    ! And the long-range part, using an Ewald sum
+    
+    isph = 100
+    do ix = -isph, isph
+      do iy = -isph, isph
+        do iz = -isph, isph
+          
+          ss = ix**2 + iy**2 + iz**2
+          
+          if(ss == 0 .or. ss > isph**2) cycle
+
+          gg(1:sb%dim) = ix*sb%klattice(1:sb%dim, 1) + iy*sb%klattice(1:sb%dim, 2) + iz*sb%klattice(1:sb%dim, 3)
+          gg2 = sum(gg(1:sb%dim)**2)
+          
+          ! k=0 must be removed from the sum
+          if(gg2 == M_ZERO) cycle
+
+          factor = M_TWO*M_PI/sb%rcell_volume*exp(-CNST(0.25)*gg2/alpha**2)/gg2
+          
+          sumatoms = M_Z0
+          do iatom = 1, geo%natoms
+            zi = species_zval(geo%atom(iatom)%spec)
+            xi(1:sb%dim) = geo%atom(iatom)%x(1:sb%dim)
+            sumatoms = sumatoms + zi*exp(-M_ZI*sum(gg(1:sb%dim)*xi(1:sb%dim)))
+          end do
+          energy = energy + factor*sumatoms*conjg(sumatoms)
+          
+          do iatom = 1, geo%natoms
+            zi = species_zval(geo%atom(iatom)%spec)
+            force(1:sb%dim, iatom) = -M_TWO*zi*factor*sumatoms
+          end do
+          
+        end do
+      end do
+    end do
+    
+    ! remove self-interaction
+    charge = M_ZERO
+    do iatom = 1, geo%natoms
+      zi = species_zval(geo%atom(iatom)%spec)
+      charge = charge + zi
+      energy = energy - alpha*zi**2/sqrt(M_PI) 
+    end do
+    
+    ! This term is added in abinit, I am not sure where it comes
+    ! from and whether we should add it.
+    !
+    ! energy = energy - M_PI*charge**2/(M_TWO*alpha**2*sb%rcell_volume)
+    
+  end subroutine ion_interaction_periodic
+  
 end module external_pot_m
 
 
