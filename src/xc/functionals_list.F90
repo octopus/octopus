@@ -20,7 +20,7 @@
 !%Option lda_c_gl               5000
 !% Gunnarson & Lundqvist
 !%Option lda_c_xalpha               6000
-!% Slater's Xalpha
+!% Slater Xalpha
 !%Option lda_c_vwn               7000
 !% Vosko, Wilk, & Nussair
 !%Option lda_c_vwn_rpa               8000

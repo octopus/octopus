@@ -27,9 +27,9 @@ getopts "hs:";
 if($opt_h) {
     print <<"EndOfUsage";
 
-Usage: mk_varinfo.pl [-b DIR] [-s DIR] [-h]
+Usage: mk_functionals_list.pl [-b DIR] [-s DIR] [-h]
 
-    -s    The top level source tree directory, . if omited
+    -s    The top level source tree directory, . if omitted
     -h    This help message
 EndOfUsage
 
@@ -56,8 +56,8 @@ print OUT <<"EndOfHeader";
 !%Default lda_x+lda_c_pz_mod
 !%Section Hamiltonian::XC
 !%Description
-!% Defines the exchange and correlation functional to be used,
-!% they should be specified as a sum of a correlation and an
+!% Defines the exchange and correlation functional to be used;
+!% they should be specified as a sum of a correlation term and an
 !% exchange term.
 !%
 !% The value by default is lda_x + lda_c_pz_mod.
