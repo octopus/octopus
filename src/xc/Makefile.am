@@ -22,6 +22,7 @@
 noinst_LIBRARIES = libxc.a
 
 libxc_a_SOURCES =        \
+	functionals_list.F90 \
 	functionals.F90  \
 	xc.F90
 
