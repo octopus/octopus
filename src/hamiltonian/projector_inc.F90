@@ -159,7 +159,8 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
     SAFE_ALLOCATE(reduce_buffer_dest(1:nreduce))
     call lalg_copy(nreduce, reduce_buffer, reduce_buffer_dest)
 #endif
-    call MPI_Allreduce(MPI_IN_PLACE_OR(reduce_buffer_dest(1)), reduce_buffer(1), nreduce, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+    call MPI_Allreduce(MPI_IN_PLACE_OR(reduce_buffer_dest(1)), reduce_buffer(1), nreduce, &
+      R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
     SAFE_DEALLOCATE_A(reduce_buffer_dest)
     call profiling_out(reduce_prof)
   end if
@@ -309,7 +310,8 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
       SAFE_ALLOCATE(uvpsi_tmp(1:pj%reduce_size, 1:2, 0:pj%lmax, -pj%lmax:pj%lmax))
       uvpsi_tmp = R_TOTYPE(M_ZERO)
       size = pj%reduce_size*2*(pj%lmax + 1)*(2*pj%lmax + 1)
-      call MPI_Allreduce(uvpsi(1, 1, 0, -pj%lmax), uvpsi_tmp(1, 1, 0, -pj%lmax), size, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+      call MPI_Allreduce(uvpsi(1, 1, 0, -pj%lmax), uvpsi_tmp(1, 1, 0, -pj%lmax), size, &
+        R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
       uvpsi = uvpsi_tmp
       SAFE_DEALLOCATE_A(uvpsi_tmp)
     end if
