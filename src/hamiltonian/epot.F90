@@ -46,7 +46,6 @@ module external_pot_m
   use smear_m
   use species_m
   use species_pot_m
-  use splines_m
   use spline_filter_m
   use solids_m
   use geometry_m
@@ -373,7 +372,7 @@ contains
     type(geometry_t),  intent(inout) :: geo
     integer :: poisson_solver, default_solver !SEC Team
 
-    integer :: iproj
+    integer :: i, iproj
 
     call push_sub('epot.epot_end')
 
@@ -484,7 +483,7 @@ contains
 #endif
 
     ! we assume that we need to recalculate the ion-ion energy
-    call ion_interaction_calculate(ep, gr, sb, geo)
+    call ion_interaction_calculate(geo, sb, ep%eii, ep%fii)
 
     ! the pseudopotential part.
     do ia = 1, geo%natoms
@@ -743,160 +742,171 @@ contains
 
   end subroutine epot_precalc_local_potential
 
-  ! ---------------------------------------------------------
-
-  subroutine ion_interaction_calculate(ep, gr, sb, geo)
-    type(epot_t),              intent(inout) :: ep
-    type(grid_t),              intent(inout) :: gr
-    type(simul_box_t),         intent(in)    :: sb
+  subroutine ion_interaction_calculate(geo, sb, energy, force)
     type(geometry_t),  target, intent(in)    :: geo
+    type(simul_box_t),         intent(in)    :: sb
+    FLOAT,                     intent(out)   :: energy
+    FLOAT,                     intent(out)   :: force(:, :)
 
     type(species_t), pointer :: s
-    FLOAT :: r, rc, xi(1:MAX_DIM), dd, zi, zj
-    FLOAT, allocatable :: vns(:), vpslc(:), xx(:, :), vxx(:), gv(:, :), gxx(:, :)
-    integer :: iatom, jatom, icopy, idir
-    type(periodic_copy_t) :: pc
+    FLOAT :: r, dd, zi, zj
+    integer :: iatom, jatom
+
+    FLOAT, parameter :: alpha = CNST(1.1313708)
 
     type(profile_t), save :: ion_ion_prof
-    type(ps_t), pointer :: psi
 
     call profiling_in(ion_ion_prof, "ION_ION_INTERACTION")
-
-    ep%eii = M_ZERO
-    ep%fii = M_ZERO
 
     ! see
     ! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:Ion-Ion_interaction
     ! for details about this routine.
 
-    ! Note that a possible jellium-jellium interaction (the case where more
-    ! than one jellium species is present) is not properly calculated.
-    ! But if only one jellium sphere is present, it correctly calculates its
-    ! electrostatic energy. I do not know right now if there is a closed
-    ! analytical expression for the electrostatic energy of a system of two
-    ! uniformly charged spheres.
+    energy = M_ZERO
+    force = M_ZERO
 
-    ! interaction inside the cell, calculated directly
-    do iatom = 1, geo%natoms
-      s => geo%atom(iatom)%spec
-      zi = species_zval(s)
+    if(simul_box_is_periodic(sb)) then
+      call ion_interaction_periodic(geo, sb, energy, force)
+    else
+      ! only interaction inside the cell
+      do iatom = 1, geo%natoms
+        s => geo%atom(iatom)%spec
+        zi = species_zval(geo%atom(iatom)%spec)
 
-      if(species_type(s) .eq. SPEC_JELLI) then
-        ep%eii = ep%eii + (M_THREE/M_FIVE)*zi**2/species_jradius(s)
-      end if
+        if(species_type(s) .eq. SPEC_JELLI) then
+          energy = energy + (M_THREE/M_FIVE)*species_zval(s)**2/species_jradius(s)
+        end if
 
-      do jatom = 1, geo%natoms
+        do jatom = 1, geo%natoms
 
-        if(iatom == jatom) cycle
+          if(iatom == jatom) cycle
 
-        zj = species_zval(geo%atom(jatom)%spec)
-        r = sqrt(sum((geo%atom(iatom)%x - geo%atom(jatom)%x)**2))
+          zj = species_zval(geo%atom(jatom)%spec)
+          r = sqrt(sum((geo%atom(iatom)%x - geo%atom(jatom)%x)**2))
 
-        !the force
-        dd = zi*zj/r**3
-        ep%fii(1:MAX_DIM, iatom) = ep%fii(1:MAX_DIM, iatom) + dd*(geo%atom(iatom)%x(1:MAX_DIM) - geo%atom(jatom)%x(1:MAX_DIM))
+          !the force
+          dd = zi*zj/r**3
+          force(1:sb%dim, iatom) = force(1:sb%dim, iatom) + &
+            dd*(geo%atom(iatom)%x(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))
 
-        !energy
-        if(jatom > iatom) cycle
-        ep%eii = ep%eii + zi*zj/r
-        
-      end do !jatom
-      
-    end do !iatom
+          !energy
+          if(jatom > iatom) cycle
+          energy = energy + zi*zj/r
+
+        end do !jatom
+      end do !iatom
+
+    end if
+    call profiling_out(ion_ion_prof)
+
+  end subroutine ion_interaction_calculate
+
+  subroutine ion_interaction_periodic(geo, sb, energy, force)
+    type(geometry_t),  target, intent(in)    :: geo
+    type(simul_box_t),         intent(in)    :: sb
+    FLOAT,                     intent(out)   :: energy
+    FLOAT,                     intent(out)   :: force(:, :)
+
+    type(species_t), pointer :: s
+    FLOAT :: r, xi(1:MAX_DIM), zi, zj
+    integer :: iatom, jatom, icopy
+    type(periodic_copy_t) :: pc
+    integer :: ix, iy, iz, isph, ss
+    FLOAT   :: gg(1:MAX_DIM), gg2
+    FLOAT   :: factor, charge
+    CMPLX   :: sumatoms
+    FLOAT, parameter :: alpha = CNST(1.1313708)
+
+    ! see
+    ! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:Ion-Ion_interaction
+    ! for details about this routine.
+
+    energy = M_ZERO
+    force = M_ZERO
 
     ! if the system is periodic we have to add the energy of the
     ! interaction with the copies
-    if(simul_box_is_periodic(sb)) then
+    
+    ! the short-range part is calculated directly
+    do iatom = 1, geo%natoms
+      s => geo%atom(iatom)%spec
+      if (.not. species_is_ps(s)) cycle
+      zi = species_zval(geo%atom(iatom)%spec)
 
-      ! the short range part is calculated directly
-      do iatom = 1, geo%natoms
-        s => geo%atom(iatom)%spec
-        if (.not. species_is_ps(s)) cycle
-
-        psi => species_ps(s)
+      call periodic_copy_init(pc, sb, geo%atom(iatom)%x, CNST(5.0))
+      
+      do icopy = 1, periodic_copy_num(pc)
+        xi = periodic_copy_position(pc, sb, icopy)
         
-        rc = spline_cutoff_radius(psi%vion, psi%projectors_sphere_threshold)
-        rc = max(rc, spline_cutoff_radius(psi%dvion,  psi%projectors_sphere_threshold))
+        do jatom = 1, geo%natoms
+          zj = -species_zval(geo%atom(jatom)%spec)
+          r = sqrt( sum( (xi(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))**2 ) )
+          
+          if(r < CNST(1e-5)) cycle
+          
+          ! energy
+          energy = energy + M_HALF*zj*zi*(M_ONE - loct_erf(alpha*r))
+          
+          ! force
+          force(1:sb%dim, jatom) = force(1:sb%dim, jatom) + &
+            M_HALF*zj*zi*(M_ONE - loct_erf(alpha*r))/r*(geo%atom(jatom)%x(1:sb%dim) - xi(1:sb%dim))
+        end do
+        
+      end do
+      
+      call periodic_copy_end(pc)
+    end do
 
-        call periodic_copy_init(pc, sb, geo%atom(iatom)%x, rc)
+    ! And the long-range part, using an Ewald sum
+    
+    isph = 100
+    do ix = -isph, isph
+      do iy = -isph, isph
+        do iz = -isph, isph
+          
+          ss = ix**2 + iy**2 + iz**2
+          
+          if(ss == 0 .or. ss > isph**2) cycle
 
-        do icopy = 1, periodic_copy_num(pc)
+          gg(1:sb%dim) = ix*sb%klattice(1:sb%dim, 1) + iy*sb%klattice(1:sb%dim, 2) + iz*sb%klattice(1:sb%dim, 3)
+          gg2 = sum(gg(1:sb%dim)**2)
+          
+          ! k=0 must be removed from the sum
+          if(gg2 == M_ZERO) cycle
 
-          xi = periodic_copy_position(pc, sb, icopy)
-
-          ! do not consider atoms inside the cell
-          if ( maxval(abs(xi(1:MAX_DIM) - geo%atom(iatom)%x(1:MAX_DIM))) < M_TEN*M_EPSILON ) cycle
-
-          do jatom = 1, geo%natoms
-            zj = P_PROTON_CHARGE*species_zval(geo%atom(jatom)%spec)
-
-            r = sqrt( sum( (xi - geo%atom(jatom)%x)**2 ) )
-            ! energy
-            ep%eii = ep%eii + M_HALF*zj*spline_eval(psi%vion, r)
-            ! force
-            ep%fii(1:MAX_DIM, jatom) = ep%fii(1:MAX_DIM, jatom) + &
-              M_HALF*zj*spline_eval(psi%dvion, r)/r*(geo%atom(jatom)%x(1:MAX_DIM) - xi(1:MAX_DIM))
+          factor = M_TWO*M_PI/sb%rcell_volume*exp(-CNST(0.25)*gg2/alpha**2)/gg2
+          
+          sumatoms = M_Z0
+          do iatom = 1, geo%natoms
+            zi = species_zval(geo%atom(iatom)%spec)
+            xi(1:sb%dim) = geo%atom(iatom)%x(1:sb%dim)
+            sumatoms = sumatoms + zi*exp(-M_ZI*sum(gg(1:sb%dim)*xi(1:sb%dim)))
+          end do
+          energy = energy + factor*sumatoms*conjg(sumatoms)
+          
+          do iatom = 1, geo%natoms
+            zi = species_zval(geo%atom(iatom)%spec)
+            force(1:sb%dim, iatom) = -M_TWO*zi*factor*sumatoms
           end do
           
         end do
-        
-        call periodic_copy_end(pc)
-        
       end do
-
-      ! And the long range part, using the potential that was already
-      ! calculated via poisson equation
-
-      SAFE_ALLOCATE(vns(1:gr%mesh%np))
-      SAFE_ALLOCATE(vpslc(1:gr%mesh%np_part))
-      SAFE_ALLOCATE(gv(1:gr%mesh%np_part, 1:MAX_DIM))
-      SAFE_ALLOCATE(xx(1:geo%natoms, 1:MAX_DIM))
-      SAFE_ALLOCATE(vxx(1:geo%natoms))
-      SAFE_ALLOCATE(gxx(1:geo%natoms, 1:MAX_DIM))
-
-      vpslc(1:gr%mesh%np) = ep%vpsl(1:gr%mesh%np)
-
-      ! Remove the potential generated by atoms _in_ the cell, to only
-      ! leave the potential due to the periodic copies.
-      do iatom = 1, geo%natoms
-        vns = M_ZERO
-        call species_get_local(geo%atom(iatom)%spec, gr%mesh, geo%atom(iatom)%x, vns)
-        call lalg_axpy(gr%mesh%np, -M_ONE, vns, vpslc)
-        xx(iatom, 1:MAX_DIM) = geo%atom(iatom)%x(1:MAX_DIM)
-      end do
-      
-      call dderivatives_grad(gr%der, vpslc, gv)
-
-      ! interpolate in the atomic positions, boundary conditions must
-      ! be updated properly before
-      call dmf_interpolate_points(gr%sb%dim, gr%mesh%np, gr%mesh%x(:, :), vpslc, geo%natoms, xx, vxx)
-
-      gxx = M_ZERO
-      do idir = 1, sb%dim
-        call dderivatives_set_bc(gr%der, gv(:, idir))
-        call dmf_interpolate_points(gr%sb%dim, gr%mesh%np, gr%mesh%x(:, :), gv(:, idir), geo%natoms, xx, gxx(:, idir))
-      end do
-
-      ! Now calculate the interaction
-      do iatom = 1, geo%natoms
-        zi = P_PROTON_CHARGE*species_zval(geo%atom(iatom)%spec)
-        ! energy
-        ep%eii = ep%eii + M_HALF*zi*vxx(iatom)
-        ! force
-        ep%fii(1:MAX_DIM, iatom) = ep%fii(1:MAX_DIM, iatom) + M_HALF*zi*gxx(iatom, 1:MAX_DIM)
-      end do
-
-      SAFE_DEALLOCATE_A(vns)
-      SAFE_DEALLOCATE_A(vpslc)
-      SAFE_DEALLOCATE_A(xx)
-      SAFE_DEALLOCATE_A(vxx)
-      SAFE_DEALLOCATE_A(gv)
-      SAFE_DEALLOCATE_A(gxx)
-
-    end if
-
-    call profiling_out(ion_ion_prof)
-  end subroutine ion_interaction_calculate
+    end do
+    
+    ! remove self-interaction
+    charge = M_ZERO
+    do iatom = 1, geo%natoms
+      zi = species_zval(geo%atom(iatom)%spec)
+      charge = charge + zi
+      energy = energy - alpha*zi**2/sqrt(M_PI) 
+    end do
+    
+    ! This term is added in abinit, I am not sure where it comes
+    ! from and whether we should add it.
+    !
+    ! energy = energy - M_PI*charge**2/(M_TWO*alpha**2*sb%rcell_volume)
+    
+  end subroutine ion_interaction_periodic
   
 end module external_pot_m
 

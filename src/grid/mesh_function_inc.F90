@@ -436,6 +436,10 @@ end subroutine X(mf_interpolate)
 
 
 ! --------------------------------------------------------- 
+! this function receives a function u defined in a mesh, and returns
+! in the interpolated values of the function over the npoints defined
+! by x
+
 subroutine X(mf_interpolate_points) (ndim, npoints_in, x_in, f_in, npoints_out, x_out, f_out)
   integer,              intent(in)  :: ndim, npoints_in, npoints_out
   R_TYPE, target,       intent(in)  :: f_in(:)    ! f_in(npoints_in)
