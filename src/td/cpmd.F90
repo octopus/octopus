@@ -90,9 +90,9 @@ contains
     !%Variable CPElectronicMass
     !%Type float
     !%Default 1.0
-    !%Section Time Dependent::Propagation
+    !%Section Time-Dependent::Propagation
     !%Description
-    !% The fictious electronic mass used to propagate the electronic
+    !% The fictitious electronic mass used to propagate the electronic
     !% wavefunctions in the Car-Parrinelo formalism.
     !%End
     
@@ -101,7 +101,7 @@ contains
     !%Variable CPMethod
     !%Type integer
     !%Default verlet
-    !%Section Time Dependent::Propagation
+    !%Section Time-Dependent::Propagation
     !%Description
     !% This variable defines how to integrate the Car-Parrinello
     !% equations. The default is verlet.

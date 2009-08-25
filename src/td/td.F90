@@ -341,7 +341,7 @@ contains
           fromScratch = .false.
           call ground_state_run(sys, hm, fromScratch)
           call restart_read(trim(restart_dir)//'td', st, gr, geo, ierr, iter=iter)
-          call messages_print_stress(stdout, "Time-Dependent simulation proceeds")
+          call messages_print_stress(stdout, "Time-dependent simulation proceeds")
           if(td%dynamics /= CP) then 
             write(message(1), '(a7,1x,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'Elapsed Time '
           else
@@ -496,10 +496,10 @@ contains
       !%Variable TDFreezeOrbitals
       !%Type integer
       !%Default 0
-      !%Section Time Dependent
+      !%Section Time-Dependent
       !%Description
       !% You have the possibility of "freezing" a number of orbitals during a time-propagation.
-      !% The Hartree and exchange-and-correlation potential originated by these orbitals (which
+      !% The Hartree and exchange-correlation potential due to these orbitals (which
       !% will be the lowest-energy ones) will be added during the propagation, but the orbitals
       !% will not be propagated.
       !% 
@@ -510,8 +510,8 @@ contains
       !% The idea is that all orbitals except the last one are frozen. The orbitals are to 
       !% be read from a previous ground-state calculation. The active orbital is then treated
       !% as independent (no matter if it contains one electron or two) -- although it will
-      !% feel the Hartree and exchange-correlation created by the ground-state electronic
-      !% configureation.
+      !% feel the Hartree and exchange-correlation potentials from  the ground-state electronic
+      !% configuration.
       !% 
       !% It is almost equivalent to setting "TDFreezeOrbitals = N-1", where N is the number
       !% of orbitals, but not completely.
@@ -526,7 +526,7 @@ contains
         call states_calc_dens(st, gr)
         call v_ks_calc(gr, sys%ks, hm, st, calc_eigenval=.true.)
       elseif(freeze_orbitals < 0) then
-        ! This means SAE approximation. We calculate the Hxc first, then freezer all
+        ! This means SAE approximation. We calculate the Hxc first, then freeze all
         ! orbitals minus one.
         write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
         call write_info(1)

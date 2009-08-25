@@ -140,11 +140,11 @@ module tdf_m
 
     !%Variable TDFunctions
     !%Type block
-    !%Section Time Dependent
+    !%Section Time-Dependent
     !%Description
-    !% This block permits to specify the shape of a "time dependent function", such as the
+    !% This block specifies the shape of a "time-dependent function", such as the
     !% envelope needed when using the "TDExternalFields" block. Each line in the block
-    !% permits to specify one function. The first element of each line will be a string
+    !% specifies one function. The first element of each line will be a string
     !% that defines the name of the function. The second element specifies which type
     !% of function we are using; in the following we provide an example for each of the
     !% possible types:
@@ -165,7 +165,7 @@ module tdf_m
     !% <br>&nbsp;&nbsp; "function-name" | tdf_gaussian | amplitude | tau0 | t0
     !% <br>%</tt>
     !% 
-    !% The function is a gaussian:
+    !% The function is a Gaussian:
     !%
     !% <math> f(t) = F_0 exp( - (t-t_0)/(2\tau_0^2) ) </math>
     !%

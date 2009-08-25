@@ -769,6 +769,7 @@ contains
     subroutine out_polarizability()
       FLOAT :: cross(MAX_DIM, MAX_DIM), crossp(MAX_DIM, MAX_DIM)
       FLOAT :: average, anisotropy
+      integer :: idir, idir2
       
       call push_sub('em_resp.out_polarizability')
   
@@ -781,24 +782,28 @@ contains
       if(gr%mesh%sb%dim.ne.1) write(iunit, '(a,i1)', advance='no') '^', gr%mesh%sb%dim
       write(iunit, '(a)') ']'
   
-      call io_output_tensor(iunit, TOFLOAT(em_vars%alpha(1:MAX_DIM, 1:MAX_DIM, ifactor)), &
+      call io_output_tensor(iunit, TOFLOAT(em_vars%alpha(:, :, ifactor)), &
         gr%mesh%sb%dim, units_out%length%factor**gr%mesh%sb%dim)
   
       call io_close(iunit)
   
       ! CROSS SECTION (THE IMAGINARY PART OF POLARIZABILITY)
       if(states_are_complex(st)) then 
-        cross(1:MAX_DIM, 1:MAX_DIM) = aimag(em_vars%alpha(1:MAX_DIM, 1:MAX_DIM, ifactor)) * &
+        cross(1:3, 1:3) = aimag(em_vars%alpha(1:3, 1:3, ifactor)) * &
           em_vars%freq_factor(ifactor) * em_vars%omega(iomega) * &
           (M_FOUR * M_PI / P_c)
 
-        cross = units_from_atomic(units_out%length**(gr%mesh%sb%dim-1), cross)
+        do idir = 1, gr%mesh%sb%dim
+          do idir2 = 1, gr%mesh%sb%dim
+            cross(idir, idir2) = units_from_atomic(units_out%length**(gr%mesh%sb%dim-1), cross(idir, idir2))
+          enddo
+        enddo
 
         iunit = io_open(trim(dirname)//'/cross_section', action='write')
         if (.not. em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
   
         average = M_THIRD * (cross(1, 1) + cross(2, 2) + cross(3, 3))
-        crossp(:, :) = matmul(cross(:, :), cross(:, :))
+        crossp(1:3, 1:3) = matmul(cross(1:3, 1:3), cross(1:3, 1:3))
         anisotropy = &
           M_THIRD*(M_THREE*(crossp(1, 1) + crossp(2, 2) + crossp(3, 3)) - (cross(1, 1) + cross(2, 2) + cross(3, 3))**2)
             

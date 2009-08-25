@@ -34,7 +34,7 @@ subroutine td_init(td, sys, hm)
   !%Variable TDTimeStep
   !%Type float
   !%Default 0.07 a.u.
-  !%Section Time Dependent::Propagation
+  !%Section Time-Dependent::Propagation
   !%Description
   !% Time-step for the time propagation. The default is 0.07
   !% [hbar/Hartree].
@@ -50,20 +50,20 @@ subroutine td_init(td, sys, hm)
   !%Variable TDIonicTimeScale
   !%Type float
   !%Default 1.0
-  !%Section Time Dependent::Propagation
+  !%Section Time-Dependent::Propagation
   !%Description
-  !% This variable defines the factor between the time scale of ionic
-  !% and electronic movement. It allows to perform reasonably fast
-  !% Born-Oppenheimer molecular dynamics simulations based on
+  !% This variable defines the factor between the timescale of ionic
+  !% and electronic movement. It allows reasonably fast
+  !% Born-Oppenheimer molecular-dynamics simulations based on
   !% Ehrenfest dynamics. The value of this variable is equivalent to
-  !% the role of <math>\mu</math> in Car-Parrinello. If increased it
-  !% will allow to accelerate linearly the time step of the ion
-  !% dynamics, but more the system will deviate from the
+  !% the role of <math>\mu</math> in Car-Parrinello. Increasing it
+  !% linearly accelerates the time step of the ion
+  !% dynamics, but also increases the deviation of the system from the
   !% Born-Oppenheimer surface. The default is 1, which means that both
-  !% time scales are the same. Note that a value different than 1
-  !% implies that the electron will not follow a physical behaviour.
+  !% timescales are the same. Note that a value different than 1
+  !% implies that the electrons will not follow physical behaviour.
   !%
-  !% According to our test values around 10 are reasonable, but it
+  !% According to our tests, values around 10 are reasonable, but it
   !% will depend on your system, mainly on the width of the gap.
   !%
   !% Important: The electronic time step will be the value of
@@ -84,9 +84,9 @@ subroutine td_init(td, sys, hm)
   !%Variable TDMaximumIter
   !%Type integer
   !%Default 1500
-  !%Section Time Dependent::Propagation
+  !%Section Time-Dependent::Propagation
   !%Description
-  !% Number of time propagation steps that will be performed. By default 1500.
+  !% Number of time-propagation steps that will be performed. By default 1500.
   !%
   !% Tip: If you would like to specify the real time of the
   !% propagation, rather than the number of steps, just use something
@@ -104,7 +104,7 @@ subroutine td_init(td, sys, hm)
     call write_fatal(2)
   end if
   
-  ! Initialize the kick (if optical spectrum calculations are to be performed)
+  ! Initialize the kick (if optical-spectrum calculations are to be performed)
   call kick_init(td%kick, sys%st%d%nspin, sys%gr%mesh%sb%dim)
 
   ! now the photoelectron stuff
@@ -113,11 +113,11 @@ subroutine td_init(td, sys, hm)
 
   !%Variable TDDynamics
   !%Type integer
-  !%Default 1
-  !%Section Time Dependent::Propagation
+  !%Default ehrenfest
+  !%Section Time-Dependent::Propagation
   !%Description
   !% Type of dynamics to follow during a time propagation. By default
-  !% is Ehrenfest TDDFT.
+  !% it is Ehrenfest TDDFT.
   !%Option ehrenfest 1
   !% Ehrenfest dynamics.
   !%Option bo 2
@@ -133,13 +133,13 @@ subroutine td_init(td, sys, hm)
   !%Variable RecalculateGSDuringEvolution
   !%Type logical
   !%Default no
-  !%Section Time Dependent::Propagation
+  !%Section Time-Dependent::Propagation
   !%Description
   !% In order to calculate some information about the system along the
   !% evolution (e.g. projection onto the ground-state KS determinant,
-  !% projection of the TDKS spin-orbitals onto the grond-state KS
+  !% projection of the TDKS spin-orbitals onto the ground-state KS
   !% spin-orbitals), the ground-state KS orbitals are needed. If the
-  !% ionic potential changes -- that is, the ions move --, one may want
+  !% ionic potential changes -- that is, the ions move -- one may want
   !% to recalculate the ground state. You may do this by setting this
   !% variable.
   !%
@@ -151,11 +151,11 @@ subroutine td_init(td, sys, hm)
   !%Variable TDScissor
   !%Type float
   !%Default 0.0
-  !%Section Time Dependent
+  !%Section Time-Dependent
   !%Description
   !% (experimental) If set, a scissor operator will be applied in the
   !% Hamiltonian, shifting the excitation energies by the amount
-  !% specified. By default is not applied.
+  !% specified. By default, it is not applied.
   !%End
   call loct_parse_float(datasets_check('TDScissor'), CNST(0.0), td%scissor)
   td%scissor = td%scissor*units_inp%energy%factor

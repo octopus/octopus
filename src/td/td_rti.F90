@@ -165,10 +165,10 @@ contains
     !%Variable TDEvolutionMethod
     !%Type integer
     !%Default etrs
-    !%Section Time Dependent::Propagation
+    !%Section Time-Dependent::Propagation
     !%Description
     !% This variable determines which algorithm will be used to approximate
-    !% the evolution operator <math>U(t+\delta t, t)</math>. That is, known
+    !% the evolution operator <math>U(t+\delta t, t)</math>. That is, given
     !% <math>\psi(\tau)</math> and <math>H(\tau)</math> for <math>tau \le t</math>,
     !% calculate <math>t+\delta t</math>. Note that in general the Hamiltonian
     !% is not known at times in the interior of the interval <math>[t,t+\delta t]</math>.
@@ -185,11 +185,11 @@ contains
     !% may then be used to interpolate the Hamiltonian, and repeat the evolution
     !% algorithm with this new information. Whenever iterating the procedure does
     !% not change the solution wave-functions, the cycle is stopped. In practice,
-    !% in <tt>octopus</tt> we perform a second-order extrapolation without
-    !% self-consistente check, except for the first two iterations, where obviously
+    !% in <tt>octopus</tt> we perform a second-order extrapolation without a
+    !% self-consistency check, except for the first two iterations, where obviously
     !% the extrapolation is not reliable.
     !%
-    !% The proliferation of methods is certainly excessive; The reason for it is that 
+    !% The proliferation of methods is certainly excessive. The reason for it is that 
     !% the propagation algorithm is currently a topic of active development. We
     !% hope that in the future the optimal schemes are clearly identified. In the
     !% mean time, if you do not feel like testing, use the default choices and
@@ -197,7 +197,7 @@ contains
     !%Option split 0
     !% Split Operator (SO).
     !% This is one of the most traditional methods. It splits the full Hamiltonian
-    !% into a kinetic and a potential part, performing the first in Fourier-space,
+    !% into a kinetic and a potential part, performing the former in Fourier space,
     !% and the latter in real space. The necessary transformations are performed
     !% with the FFT algorithm.
     !%
@@ -214,7 +214,7 @@ contains
     !% The key point is the specification of <math>V^*</math>. Let <math>V(t)</math> be divided into
     !% <math>V_{\rm int}(t)</math>, the "internal" potential which depends self-consistently
     !% on the density, and <math>V_{\rm ext}(t)</math>, the external potential that we know
-    !% at all times since it is imposed to the system by us (e.g. a laser field):
+    !% at all times since we impose it on the system (e.g. a laser field):
     !% <math>V(t)=V_{\rm int}(t)+V_{\rm ext}(t)</math>. Then we define to be <math>V^*</math> to
     !% be the sum of <math>V_{\rm ext}(t+\delta t/2)</math> and the internal potential built
     !% from the wavefunctions <i>after</i> applying the right-most kinetic term
@@ -227,12 +227,12 @@ contains
     !%Option suzuki_trotter 1
     !% This is the generalization of the Suzuki-Trotter algorithm, described
     !% as one of the choices of the <tt>TDExponentialMethod</tt>,
-    !% to time-dependent problem. Consult the paper by O. Sugino and M. Miyamoto,
+    !% to the time-dependent problem. Consult the paper by O. Sugino and M. Miyamoto,
     !% Phys. Rev. B <b>59</b>, 2579 (1999), for details.
     !%
-    !% It requires of Hamiltonian extrapolations.
+    !% It requires Hamiltonian extrapolations.
     !%Option etrs 2
-    !% The idea is to make use of the time-reversal symmetry from the beginning:
+    !% The idea is to make use of time-reversal symmetry from the beginning:
     !%
     !% <MATH>
     !%   \exp \left(-i\delta t/2 H_{n}\right)\psi_n = exp \left(i\delta t/2 H_{n+1}\right)\psi_{n+1},
@@ -255,13 +255,13 @@ contains
     !% by about 40%.
     !%
     !% The only difference is the procedure to estimate @math{H_{n+1}}: in this case
-    !% it is extrapolated trough a second-order polynomial by making use of the
+    !% it is extrapolated via a second-order polynomial by making use of the
     !% Hamiltonian at time @math{t-2\delta t}, @math{t-\delta t} and @math{t}.
     !%Option exp_mid 4
     !% Exponential Midpoint Rule (EM).
-    !% This is maybe the simplest method, but is is very well grounded theretically:
+    !% This is maybe the simplest method, but it is very well grounded theoretically:
     !% it is unitary (if the exponential is performed correctly) and preserves
-    !% time symmetry (if the self-consistency problem is dealt with correctly).
+    !% time-reversal symmetry (if the self-consistency problem is dealt with correctly).
     !% It is defined as:
     !%
     !% <MATH>
@@ -281,10 +281,10 @@ contains
     !% </MATH>
     !%Option magnus 7
     !% Magnus Expansion (M4).
-    !% This is the most sophisticated approach. It is a fourth order scheme (feature
-    !% that shares with the ST scheme; the other schemes are in principle second order).
+    !% This is the most sophisticated approach. It is a fourth-order scheme (a feature
+    !% which it shares with the ST scheme; the other schemes are in principle second-order).
     !% It is tailored for making use of very large time steps, or equivalently,
-    !% dealing with problem with very high-frequency time dependence.
+    !% dealing with problem with very high-frequency time-dependence.
     !% It is still in a experimental state; we are not yet sure of when it is
     !% advantageous.
     !%Option crank_nicholson_src_mem 8

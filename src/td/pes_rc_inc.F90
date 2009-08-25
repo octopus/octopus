@@ -33,9 +33,9 @@ subroutine PES_rc_init(v, m, st, save_iter)
 
   !%Variable PES_rc_points
   !%Type block
-  !%Section Time Dependent::PES
+  !%Section Time-Dependent::PES
   !%Description
-  !% List of points where to calculate the photo-electron spectrum a la Suraud.
+  !% List of points where to calculate the photoelectron spectrum a la Suraud.
   !% The exact syntax is:
   !%
   !% <tt>%TDPES_rc_points

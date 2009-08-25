@@ -121,7 +121,7 @@ contains
     !%Variable MemoryTol
     !%Type float
     !%Default 1e-12
-    !%Section Time Dependent::Open Boundaries
+    !%Section Time-Dependent::Open Boundaries
     !%Description
     !% Decides when to consider the memory coefficients converged.
     !%End
@@ -135,7 +135,7 @@ contains
     !%Variable MemoryMaxIter
     !%Type integer
     !%Default 500
-    !%Section Time Dependent::Open Boundaries
+    !%Section Time-Dependent::Open Boundaries
     !%Description
     !% Sets the maximum iteration number to converge the memory coefficients.
     !%End
@@ -625,8 +625,8 @@ contains
 
   ! ---------------------------------------------------------
   ! Write memory coefficients to file.
-  ! FIXME: this routine writes compiler and/or system dependent binary files.
-  ! It should be changed to a platform independent format.
+  ! FIXME: this routine writes compiler- and/or system-dependent binary files.
+  ! It should be changed to a platform-independent format.
   subroutine write_coeffs(dir, ob, hm, intf, dim, iter, spacing, delta, op_n, order)
     character(len=*), intent(in) :: dir
     type(ob_terms_t), intent(inout) :: ob
@@ -647,7 +647,7 @@ contains
     iunit = io_open(trim(dir)//trim(lead_name(intf%il)), &
                     action='write', form='unformatted', is_tmp=.true.)
     if(iunit.lt.0) then
-      message(1) = 'Cannot write memory coefficents to file.'
+      message(1) = 'Cannot write memory coefficients to file.'
       call write_warning(1)
       call io_close(iunit)
       call pop_sub(); return

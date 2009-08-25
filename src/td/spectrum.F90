@@ -335,7 +335,7 @@ contains
     !%Variable TDDeltaStrength
     !%Type float
     !%Default 0.0
-    !%Section Time Dependent::Linear Response
+    !%Section Time-Dependent::Linear Response
     !%Description
     !% When no laser is applied, a delta (in time) perturbation with
     !% strength <tt>TDDeltaStrength</tt> can be applied. This is used to 
@@ -364,7 +364,7 @@ contains
     !%Variable TDDeltaStrengthMode
     !%Type integer
     !%Default kick_density
-    !%Section Time Dependent::Linear Response
+    !%Section Time-Dependent::Linear Response
     !%Description
     !% When calculating the linear response of the density via the propagation
     !% in real time, one needs to perform an initial kick on the KS system, at
@@ -392,7 +392,7 @@ contains
 
     !%Variable TDKickFunction
     !%Type block
-    !%Section Time Dependent::Linear Response
+    !%Section Time-Dependent::Linear Response
     !%Description
     !% If the block TDKickFunction is present in the input file, the kick function to
     !% be applied at time zero of the time-propagation will not be a "dipole" function
@@ -402,7 +402,7 @@ contains
     !% be of integer type: those two integers will be the (l,m) pair that defines the
     !% multipole.
     !%
-    !% This feature allows to calculate quadrupole, octupole, etc., response functions.
+    !% This feature allows calculation of quadrupole, octupole, etc., response functions.
     !%End
     if(loct_parse_block(datasets_check('TDKickFunction'), blk)==0) then
       n_rows = loct_parse_block_n(blk)
@@ -428,11 +428,11 @@ contains
     !%Variable TDPolarizationEquivAxes
     !%Type integer
     !%Default 0
-    !%Section Time Dependent::Linear Response
+    !%Section Time-Dependent::Linear Response
     !%Description
-    !% Defines how many of the %TDPolarization axes are equivalent. This information can then
-    !% be used by oct-cross-section to rebuild the full polarizability tensor just from the
-    !% first 3-TDPolarizationEquivAxes directions.
+    !% Defines how many of the <tt>TDPolarization</tt> axes are equivalent. This information can then
+    !% be used by <tt>oct-cross-section</tt> to rebuild the full polarizability tensor from just the
+    !% first <tt>TDPolarizationEquivAxes</tt> directions.
     !%End
     call loct_parse_int(datasets_check('TDPolarizationEquivAxes'), 0, k%pol_equiv_axes)
 
@@ -440,10 +440,10 @@ contains
     !%Variable TDPolarizationDirection
     !%Type integer
     !%Default 1
-    !%Section Time Dependent::Linear Response
+    !%Section Time-Dependent::Linear Response
     !%Description
     !%
-    !% When a delta potential is included in a time dependent run, this
+    !% When a delta potential is included in a time-dependent run, this
     !% variable defines in which direction the field will be applied
     !% by selecting one of the lines of <tt>TDPolarization</tt>. In a
     !% typical run (without using symmetry), the TDPolarization block
@@ -459,7 +459,7 @@ contains
 
     !%Variable TDPolarization
     !%Type block
-    !%Section Time Dependent::Linear Response
+    !%Section Time-Dependent::Linear Response
     !%Description
     !% The (real) polarization of the delta electric field. Normally
     !% one needs three perpendicular polarization directions to calculate a
@@ -472,19 +472,19 @@ contains
     !% <br>&nbsp;&nbsp;pol3x | pol3y | pol3z
     !% <br>%</tt>
     !%
-    !% Octopus uses both this block and the variable
+    !% <tt>Octopus</tt> uses both this block and the variable
     !% <tt>TDPolarizationDirection</tt> to determine the polarization
     !% vector for the run. For example, if
     !% <tt>TDPolarizationDirection=2</tt> the polarization <tt>(pol2x,
     !% pol2y, pol2z)</tt> would be used.
     !%
-    !% The default value for <tt>TDPolarization</tt> are the three
+    !% The default value for <tt>TDPolarization</tt> is the three
     !% Cartesian unit vectors (1,0,0), (0,1,0), and (0,0,1).
     !%
-    !% WARNING: If you want to obtain the cross section tensor, the
-    !% TDPolarization block must be exactly the same for the run in
+    !% WARNING: If you want to obtain the cross-section tensor, the
+    !% <tt>TDPolarization</tt> block must be exactly the same for the run in
     !% each direction. The direction must be selected by the
-    !% TDPolarizationDirection variable.
+    !% <tt>TDPolarizationDirection</tt> variable.
     !%
     !%End
 
@@ -504,7 +504,7 @@ contains
       call loct_parse_block_end(blk)
     else
       ! Here the symmetry of the system should be analyzed, and the polarization
-      ! basis, built accordingly.
+      ! basis built accordingly.
       k%pol(1:3, 1) = (/ M_ONE, M_ZERO, M_ZERO /)
       k%pol(1:3, 2) = (/ M_ZERO, M_ONE, M_ZERO /)
       k%pol(1:3, 3) = (/ M_ZERO, M_ZERO, M_ONE /)
@@ -517,7 +517,7 @@ contains
 
     !%Variable TDPolarizationWprime
     !%Type block
-    !%Section Time Dependent::Linear Response
+    !%Section Time-Dependent::Linear Response
     !%Description
     !% Say you have a first symmetry operation (A)
     !% that takes you the first axis (p1) to the second axis (p2), and then

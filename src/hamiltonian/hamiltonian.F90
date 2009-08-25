@@ -309,7 +309,7 @@ contains
     !%Variable TDGauge
     !%Type integer
     !%Default length
-    !%Section Time Dependent
+    !%Section Time-Dependent
     !%Description
     !% In which gauge to treat the laser field.
     !%Option length 1
@@ -324,7 +324,7 @@ contains
     !%Variable AbsorbingBoundaries
     !%Type integer
     !%Default not_absorbing
-    !%Section Time Dependent::Absorbing Boundaries
+    !%Section Time-Dependent::Absorbing Boundaries
     !%Description
     !% To improve the quality of the spectra by avoiding the formation of 
     !% standing density waves, one can make the boundaries of the simulation 
@@ -334,7 +334,7 @@ contains
     !%Option sin2 1
     !% A <math>\sin^2</math> imaginary potential is added at the boundaries.
     !%Option mask 2
-    !% A mask is applied to the wave-functions at the boundaries.
+    !% A mask is applied to the wavefunctions at the boundaries.
     !%End
     call loct_parse_int(datasets_check('AbsorbingBoundaries'), NOT_ABSORBING, hm%ab)
     if(.not.varinfo_valid_option('AbsorbingBoundaries', hm%ab)) call input_error('AbsorbingBoundaries')
@@ -445,7 +445,7 @@ contains
       !%Variable ABWidth
       !%Type float
       !%Default 0.4 a.u.
-      !%Section Time Dependent::Absorbing Boundaries
+      !%Section Time-Dependent::Absorbing Boundaries
       !%Description
       !% Width of the region used to apply the absorbing boundaries.
       !%End
@@ -455,9 +455,9 @@ contains
         !%Variable ABHeight
         !%Type float
         !%Default -0.2 a.u.
-        !%Section Time Dependent::Absorbing Boundaries
+        !%Section Time-Dependent::Absorbing Boundaries
         !%Description 
-        !% When <tt>AbsorbingBoundaries == sin2</tt>, is the height of the imaginary potential.
+        !% When <tt>AbsorbingBoundaries == sin2</tt>, this is the height of the imaginary potential.
         !%End
         call loct_parse_float(datasets_check('ABHeight'), -CNST(0.2)/units_inp%energy%factor, hm%ab_height)
         hm%ab_height = hm%ab_height * units_inp%energy%factor

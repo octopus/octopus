@@ -121,19 +121,19 @@ contains
     !%Variable TDOutput
     !%Type flag
     !%Default multipoles + geometry + temperature + energy
-    !%Section Time Dependent::TD Output
+    !%Section Time-Dependent::TD Output
     !%Description
     !% Defines what should be output during the time-dependent simulation.
     !%Option multipoles 1
     !% Outputs the multipole moments of the density to the file <tt>td.general/multipoles</tt>.
-    !% This is required to, e.g., calculate optical absorption spectra of finite systems. The
+    !% This is required to, <i>e.g.</i>, calculate optical absorption spectra of finite systems. The
     !% maximum value of <math>l</math> can be set with the variable <tt>TDDipoleLmax</tt>.
     !%Option angular 2
     !% Outputs the angular momentum of the system that can be used to calculate circular
-    !% dichroism (EXPERIMENTAL)
+    !% dichroism (EXPERIMENTAL).
     !%Option spin 4
     !% Outputs the expectation value of the spin, that can be used to calculate magnetic
-    !% cicular dichroism (EXPERIMENTAL)
+    !% cicular dichroism (EXPERIMENTAL).
     !%Option populations 8
     !% Outputs the projection of the time-dependent Kohn-Sham Slater determinant
     !% onto the ground-state (or approximations to the excited states) to the file 
@@ -153,14 +153,14 @@ contains
     !% to the file <tt>td.general/el_energy</tt>.
     !%Option td_occup 256
     !% If set, outputs the projections of the time-dependent Kohn-Sham
-    !% wave-functions onto the static (zero time) wave-functions to the
+    !% wavefunctions onto the static (zero-time) wavefunctions to the
     !% file <tt>td.general/projections.XXX</tt>.
     !%Option local_mag_moments 512
     !% If set, outputs the local magnetic moments, integrated in sphere centered around each atom.
-    !% The radius of the sphere can be ser with <tt>LocalMagneticMomentsSphereRadius</tt>
+    !% The radius of the sphere can be set with <tt>LocalMagneticMomentsSphereRadius</tt>.
     !%Option gauge_field 1024
-    !% If set, outputs the vector gauge field corresponding to a uniform (but time dependent) 
-    !% external electrical potential. This is only useful in a time-dependent periodic run
+    !% If set, outputs the vector gauge field corresponding to a spatially uniform (but time-dependent) 
+    !% external electrical potential. This is only useful in a time-dependent periodic run.
     !%Option temperature 2048
     !% If set, the ionic temperature at each step is printed.
     !%End
@@ -190,9 +190,9 @@ contains
     !%Variable TDDipoleLmax
     !%Type integer
     !%Default 1
-    !%Section Time Dependent::TD Output
+    !%Section Time-Dependent::TD Output
     !%Description
-    !% Maximum multi-pole of the density output to the file <tt>td.general/multipoles</tt>
+    !% Maximum multipole of the density output to the file <tt>td.general/multipoles</tt>
     !% during a time-dependent simulation. Must be 0 &lt; <tt>TDDipoleLmax &lt; 5</tt>.
     !%End
     call loct_parse_int(datasets_check('TDDipoleLmax'), 1, w%lmax)
@@ -232,13 +232,13 @@ contains
         !%Variable TDProjStateStart
         !%Type integer
         !%Default 1
-        !%Section Time Dependent::TD Output
+        !%Section Time-Dependent::TD Output
         !%Description
         !% Only output projections to states above TDProjStateStart. Usually one is only interested
         !% in particle-hole projections around the HOMO, so there is no need to calculate (and store)
         !% the projections of all static onto all TD states. This sets a lower limit. The upper limit
-        !% is set by the number of states in the propagation and the number of uncoccupied states
-        !% available
+        !% is set by the number of states in the propagation and the number of unoccupied states
+        !% available.
         !%End
         call loct_parse_int(datasets_check('TDProjStateStart'), 1, w%gs_st%st_start)
       else
@@ -268,13 +268,13 @@ contains
     if(w%out(OUT_POPULATIONS)%write) then
       !%Variable TDExcitedStatesToProject
       !%Type block
-      !%Section Time Dependent::TD Output
+      !%Section Time-Dependent::TD Output
       !%Description
       !% [WARNING: This is a *very* experimental feature] The population of the excited states
       !% (as defined by <Phi_I|Phi(t)> where |Phi(t)> is the many-body time-dependent state at
       !% time t, and |Phi_I> is the excited state of interest) can be approximated -- it is not clear 
-      !% how well--  by substituting those real many-body states by the time-dependent Kohn-Sham
-      !% determinant and by some modification of the Kohn-Sham ground state determinant (e.g.,
+      !% how well -- by substituting for those real many-body states the time-dependent Kohn-Sham
+      !% determinant and some modification of the Kohn-Sham ground-state determinant (e.g.,
       !% a simple HOMO-LUMO substitution, or the Casida ansatz for excited states in linear
       !% response theory. If you set TDOutput to contain, you may ask for these approximated
       !% populations for a number of excited states, which will be described in the files specified

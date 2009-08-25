@@ -58,7 +58,7 @@ module exponential_m
 
   type exponential_t
     integer     :: exp_method  ! which method is used to apply the exponential
-    FLOAT       :: lanczos_tol ! tolerance for the lanczos method
+    FLOAT       :: lanczos_tol ! tolerance for the Lanczos method
     integer     :: exp_order   ! order to which the propagator is expanded
     type(zcf_t) :: cf          ! auxiliary cube for split operator methods
   end type exponential_t
@@ -73,7 +73,7 @@ contains
     !%Variable TDExponentialMethod
     !%Type integer
     !%Default taylor
-    !%Section Time Dependent::Propagation
+    !%Section Time-Dependent::Propagation
     !%Description
     !% Method used to numerically calculate the exponential of the Hamiltonian,
     !% a core part of the full algorithm used to approximate the evolution
@@ -82,33 +82,33 @@ contains
     !% of the Magnus operator is also calculated through the algorithm specified
     !% by this variable.
     !%Option split 0
-    !% It is important to distinguish between applying the split operator method
+    !% It is important to distinguish between applying the split-operator method
     !% to calculate the exponential of the Hamiltonian at a given time -- which
-    !% is what this variable is referring to -- from the split operator method
+    !% is what this variable is referring to -- from the split-operator method
     !% as an algorithm to approximate the full evolution operator <math>U(t+\delta t, t)</math>,
     !% and which will be described below as one of the possibilities
     !% of the variable <tt>TDEvolutionMethod</tt>.
-    !% The equation that describes the split operator scheme is well known:
+    !% The equation that describes the split-operator scheme is well known:
     !%
     !% <MATH>\exp_{\rm SO} (-i \delta t H) = \exp (-i \delta t/2 V) \exp (-i \delta t T) \exp (-i \delta t/2 V).</MATH>
     !%
-    !% Note that this is a "kinetic referenced SO", since the kinetic term is sandwiched in the
-    !% middle. This is so because in <tt>octopus</tt>, the states spend most of its time in real-space; doing
-    !% it "potential referenced" would imply 4 FFTs instead of 2.
+    !% Note that this is a "kinetic-referenced SO", since the kinetic term is sandwiched in the
+    !% middle. This is so because in <tt>octopus</tt>, the states spend most of their time in real-space; doing
+    !% it "potential-referenced" would imply 4 FFTs instead of 2.
     !% This split-operator technique may be used in combination with, for example,
     !% the exponential midpoint rule as a means to approximate the evolution operator.
     !% In that case, the potential operator <i>V</i> that appears in the equation would be
     !% calculated at time <math>t+\delta t/2</math>, that is, in the middle of the time-step.
     !% However, note that if the split-operator method is invoked as a means to approximate
-    !% the evolution operator (<tt>TDEvolutionMethod = 0</tt>), a different procedure is taken -- it
-    !% will be described below --, and in fact the variable <tt>TDExponentialMethod</tt> has no
+    !% the evolution operator (<tt>TDEvolutionMethod = 0</tt>), a different procedure is taken -- 
+    !% described below -- and in fact the variable <tt>TDExponentialMethod</tt> has no
     !% effect at all.
     !%Option suzuki_trotter 1
-    !% This is a higher-order SO based algorithm. See O. Sugino and Y. Miyamoto,
+    !% This is a higher-order SO-based algorithm. See O. Sugino and Y. Miyamoto,
     !% Phys. Rev. B <b>59</b>, 2579 (1999). Allows for larger time-steps,
     !% but requires five times more time than the normal SO.
     !%
-    !% The considerations made above for the SO algorithm about the distinction
+    !% The considerations above for the SO algorithm about the distinction
     !% between using the method as a means to approximate <math>U(t+\delta t)</math> or as a
     !% means to approximate the exponential also apply here. Setting <tt>TDEvolutionMethod = 1</tt>
     !% enforces the use of the ST as an algorithm to approximate the full evolution operator,
@@ -163,7 +163,7 @@ contains
       !%Variable TDLanczosTol
       !%Type float
       !%Default 1e-5
-      !%Section Time Dependent::Propagation
+      !%Section Time-Dependent::Propagation
       !%Description
       !% An internal tolerance variable for the Lanczos method. The smaller, the more
       !% precisely the exponential is calculated, and also the bigger the dimension
@@ -186,9 +186,9 @@ contains
       !%Variable TDExpOrder
       !%Type integer
       !%Default 4
-      !%Section Time Dependent::Propagation
+      !%Section Time-Dependent::Propagation
       !%Description
-      !% For <tt>TDExponentialMethod</tt> equal <tt>standard</tt> or <tt>chebyshev</tt>, 
+      !% For <tt>TDExponentialMethod</tt> = <tt>standard</tt> or <tt>chebyshev</tt>, 
       !% the order to which the exponential is expanded. For the Lanczos approximation, 
       !% it is the Lanczos-subspace dimension.
       !%End

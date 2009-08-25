@@ -35,7 +35,7 @@ dist_doc_DATA = \
 	SCF.html \
 	States.html \
 	System.html \
-	Time_Dependent.html \
+	Time-Dependent.html \
 	Open_Boundaries.html \
 	Utilities.html
 
@@ -54,7 +54,7 @@ Output.html: RUN_SCRIPT
 SCF.html: RUN_SCRIPT
 States.html: RUN_SCRIPT
 System.html: RUN_SCRIPT
-Time_Dependent.html: RUN_SCRIPT
+Time-Dependent.html: RUN_SCRIPT
 Open_Boundaries.html: RUN_SCRIPT
 Utilities.html: RUN_SCRIPT
 

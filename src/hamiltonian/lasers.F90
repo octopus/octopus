@@ -229,10 +229,10 @@ contains
     call obsolete_variable("TDLasers", "TDExternalFields")
     !%Variable TDExternalFields
     !%Type block
-    !%Section Time Dependent
+    !%Section Time-Dependent
     !%Description
-    !% The block TDExternalFields describe the type and shape of time-dependent 
-    !% external perturbationss that are applied to the system.
+    !% The block TDExternalFields describes the type and shape of time-dependent 
+    !% external perturbations that are applied to the system.
     !%
     !% Each line of the block describes an external field; this way you can actually have more
     !% than one laser (e.g. a "pump" and a "probe").
@@ -246,8 +246,8 @@ contains
     !% The first element of each line describes which kind of external field is described
     !% by the line: (i) an electric field ("electric_field"); (ii) a magnetic field 
     !% ("magnetic_field"); (iii) a vector potential ("vector_potential") -- this option, 
-    !% in the current version, is constant field in space, which permits to describe 
-    !% an electrical perturbation in the velocity gauge; (iv) an arbitrary scalar potential
+    !% in the current version, is a field constant in space, which permits us to describe 
+    !% an electric perturbation in the velocity gauge; (iv) an arbitrary scalar potential
     !% ("scalar_potential").
     !%
     !% The "other descriptors" depend on which kind of external field has been indicated in 
@@ -267,7 +267,7 @@ contains
     !% direction of the field. The float omega will be the carrier frequency of the
     !% pulse. The envelope of the field is a time-dependent function whose definition
     !% must be given in a "TDFunctions". envelope_function_name is a string (and therefore
-    !% it must be surrounded by quotatin marks) that must match one of the function names
+    !% it must be surrounded by quotation marks) that must match one of the function names
     !% given in the first column of the "TDFunctions" block.
     !%
     !%
@@ -285,8 +285,8 @@ contains
     !%
     !% A NOTE ON UNITS:
     !%
-    !% It is very common to describe the strength of a laser field by it intensity, rather
-    !% than using the electric field amplitude. In atomic units (or, more precisely, in any
+    !% It is very common to describe the strength of a laser field by its intensity, rather
+    !% than using the electric-field amplitude. In atomic units (or, more precisely, in any
     !% Gaussian system of units), the relationship between instantaneous electric field
     !% and intensity is:
     !%
@@ -300,7 +300,7 @@ contains
     !% 
     !% <math> eV / ( angstrom^2 (hbar/eV) ) = 2.4341348e+12 W / cm^2 </math>
     !%
-    !% If, in atomic units, we set the electric field amplitude to <math>E_0</math>, 
+    !% If, in atomic units, we set the electric-field amplitude to <math>E_0</math>, 
     !% then the intensity is:
     !%
     !% <math> I_0 = 3.51 10^16 W/cm^2 (E_0^2) </math>
@@ -310,7 +310,7 @@ contains
     !% <math> I_0 = 1.327 10^13 (E_0^2) W/cm^2 </math>
     !%
     !%Option electric_field 1
-    !% The external field is an electric field; the usual case when we want to describe a 
+    !% The external field is an electric field, the usual case when we want to describe a 
     !% laser in the length gauge.
     !%Option magnetic_field 2
     !% The external field is a (homogeneous) time-dependent magnetic field.
@@ -319,7 +319,7 @@ contains
     !% a laser field in the velocity gauge.
     !%Option scalar_potential 4
     !% The external field is an arbitrary scalar potential, which may describe an
-    !% inhomogeneous electrical field
+    !% inhomogeneous electrical field.
     !%End
 
     no_l = 0

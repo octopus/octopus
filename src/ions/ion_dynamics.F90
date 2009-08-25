@@ -106,9 +106,9 @@ contains
     !%Variable MoveIons
     !%Type integer
     !%Default static_ions
-    !%Section Time Dependent::Propagation
+    !%Section Time-Dependent::Propagation
     !%Description
-    !% This variable specifies how to treat the dynamic of the ions
+    !% This variable specifies how to treat the dynamics of the ions
     !% during a time-dependent run. By default they will remain static.
     !%Option static_ions 0
     !% Do not move the ions.
