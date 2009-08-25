@@ -318,7 +318,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
  
             res_counter = res_counter + 1
  
-            ! loop through cartesian axes (both directions)
+            ! loop through Cartesian axes (both directions)
             do j_counter = 1,6
               select case(j_counter)
                 case(1)

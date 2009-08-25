@@ -237,6 +237,8 @@ contains
 
     integer :: il
 
+    call push_sub('grid.grid_write_info')
+
     if(.not.mpi_grp_is_root(mpi_world)) then
       if(in_debug_mode) call write_debug_newlines(6)
       return
@@ -254,6 +256,8 @@ contains
       call curvilinear_write_info(gr%cv, iunit)
     end if
     call messages_print_stress(iunit)
+
+    call pop_sub()
   end subroutine grid_write_info
 
 
@@ -262,9 +266,12 @@ contains
     type(grid_t), intent(inout) :: gr
     type(geometry_t), intent(in) :: geo
 
+    call push_sub('grid.grid_create_multigrid')
+
     SAFE_ALLOCATE(gr%mgrid)
     call multigrid_init(gr%mgrid, geo, gr%cv, gr%mesh, gr%der, gr%stencil)
 
+    call pop_sub()
   end subroutine grid_create_multigrid
 
 

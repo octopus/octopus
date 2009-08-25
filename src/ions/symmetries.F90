@@ -125,7 +125,7 @@ contains
     !%Section Mesh::Simulation Box
     !%Description
     !% This variable specifies a direction in which the symmetry of
-    !% the system will be broken. This is useful to generate k point
+    !% the system will be broken. This is useful for generating <i>k</i>-point
     !% grids when an external perturbation is applied.
     !%End
 

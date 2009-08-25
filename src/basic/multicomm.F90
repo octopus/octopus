@@ -530,7 +530,7 @@ contains
 #if defined(HAVE_MPI)
         if(.not. mc%use_topology) then
 
-          ! The "lines" of the cartesian grid.
+          ! The "lines" of the Cartesian grid.
           do i_strategy = 1, mc%n_index
             if(multicomm_strategy_is_parallel(mc, i_strategy)) then
               dim_mask             = .false.

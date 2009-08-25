@@ -20,7 +20,7 @@
 #include "global.h"
 
 ! This module implements a simple associative list for integer keys and
-! values. It is used by the separate chainging hash table implementation.
+! values. It is used by the separate changing hash-table implementation.
 
 module ialist_m
   use messages_m
@@ -157,7 +157,7 @@ contains
 
   ! ---------------------------------------------------------
   ! Get the value of key. If found is present and .false. the return
-  ! value of ialist_looup is meaningless (i. e. undefined). for this reason,
+  ! value of ialist_lookup is meaningless (i.e. undefined). For this reason,
   ! always pass found if you do not know, for different reasons, that key
   ! is member of the list.
   integer function ialist_lookup(key, l, found)

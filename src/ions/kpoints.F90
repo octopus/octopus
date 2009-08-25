@@ -101,6 +101,8 @@ contains
     integer       :: ii
     type(block_t) :: blk
 
+    call push_sub('kpoints.kpoints_init.read_MP')
+
     !%Variable KPointsMonkhorstPack
     !%Type block
     !%Default 1,1,1
@@ -160,6 +162,7 @@ contains
     this%points_full_red(:,:) = M_ZERO
     this%weights_full(:)      = M_ONE / TOFLOAT(this%nik_full)
 
+    call pop_sub()
   end subroutine read_MP
 
   
@@ -168,6 +171,8 @@ contains
     FLOAT :: dx(1:MAX_DIM)
     integer :: ii, jj, kk, ix(1:MAX_DIM), idir, ikp, odd_shifts(1:MAX_DIM)
     
+    call push_sub('kpoints.kpoints_init.generate_MP')
+
     dx(:) = M_ONE/TOFLOAT(2*this%nik_axis(:))
     odd_shifts(:) = M_ZERO
     do idir = 1, periodic_dim
@@ -198,6 +203,8 @@ contains
     type(block_t) :: blk
     logical :: reduced
     integer :: ik, idim
+
+    call push_sub('kpoints.kpoints_init.read_user_kpoints')
 
     !%Variable KPoints
     !%Type block
@@ -283,6 +290,7 @@ contains
     write(message(1), '(a,i4,a)') 'Input: ', this%nik_full, ' k-points were read from the input file'
     call write_info(1)
 
+    call pop_sub()
   end function read_user_kpoints
 
 end subroutine kpoints_init
@@ -294,10 +302,14 @@ subroutine kpoints_to_absolute(klattice, kin, kout)
 
   integer :: ii
 
+  call push_sub('kpoints.kpoints_to_absolute')
+
   kout(:) = M_ZERO
   do ii = 1, MAX_DIM
     kout(:) = kout(:) + kin(ii)*klattice(:, ii)
   end do
+
+  call pop_sub()
 
 end subroutine kpoints_to_absolute
 
@@ -309,18 +321,23 @@ subroutine kpoints_to_reduced(rlattice, kin, kout)
 
   integer :: ii
 
+  call push_sub('kpoints.kpoints_to_reduced')
+
   kout(:) = M_ZERO
   do ii = 1, MAX_DIM
     kout(:) = kout(:) + kin(ii)*rlattice(ii, :)
   end do
   kout(:) = kout(:) / (M_TWO*M_PI)
 
+  call pop_sub()
 end subroutine kpoints_to_reduced
 
 
 subroutine kpoints_copy(kout, kin)
   type(kpoints_t), intent(out) :: kout
   type(kpoints_t), intent(in)  :: kin
+
+  call push_sub('kpoints.kpoints_copy')
 
   kout%method = kin%method
   kout%nik_full = kin%nik_full
@@ -339,6 +356,7 @@ subroutine kpoints_copy(kout, kin)
   kout%nik_axis = kin%nik_axis
   kout%shifts = kin%shifts
 
+  call pop_sub()
 end subroutine kpoints_copy
 
 end module kpoints_m

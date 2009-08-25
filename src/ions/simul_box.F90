@@ -219,8 +219,8 @@ contains
       !%Type block
       !%Section Mesh::Simulation Box
       !%Description
-      !% Enables open boundaries in x-direction and defines the character
-      !% of the leads attached left and right ot the finite central system.
+      !% Enables open boundaries in the <i>x</i>-direction and defines the character
+      !% of the leads attached to the left and right of the finite central system.
       !%
       !% The format is as follows:
       !%
@@ -244,7 +244,7 @@ contains
       !%
       !%Option lead_dataset 1
       !% Gives the name of the dataset used for the periodic calculation of the
-      !% leads ground state. It is used, e. g., to read in the coordinates of the
+      !% ground states of the leads. It is used, <i>e.g.</i>, to read in the coordinates of the
       !% atoms of the lead. Both entries for left and right have to be equal.
       !%Option lead_restart_dir 2
       !% <tt>lead_restart_dir</tt> gives the name of restart directory of the periodic
@@ -254,7 +254,7 @@ contains
       !% The default is <tt>&lt;lead_dataset&gt;restart</tt>.
       !%Option lead_static_dir 3
       !% The same as <tt>lead_restart_dir</tt> for the <tt>static</tt> directory.
-      !% Octopus needs the Kohn-Sham potential of the leads. Therefore, the periodic
+      !% <tt>Octopus</tt> needs the Kohn-Sham potential of the leads. Therefore, the periodic
       !% run must include <tt>Output = potential</tt> in the input file. The default
       !% of this entry is <tt>&lt;lead_dataset&gt;static</tt>.
       !%Option add_unit_cells 4
@@ -309,7 +309,7 @@ contains
               call loct_parse_block_string(blk, nr, 2, sb%lead_dataset(RIGHT))
               if(trim(sb%lead_dataset(LEFT)).ne.trim(sb%lead_dataset(RIGHT))) then
                 message(1) = 'Datasets for left and right lead unit cells must'
-                message(2) = 'be equal, i. e. only symmetric leads are possible.'
+                message(2) = 'be equal, i.e. only symmetric leads are possible.'
                 call write_fatal(2)
               end if
             else
@@ -321,7 +321,7 @@ contains
               call loct_parse_block_string(blk, nr, 2, sb%lead_restart_dir(RIGHT))
               if(trim(sb%lead_restart_dir(LEFT)).ne.trim(sb%lead_restart_dir(RIGHT))) then
                 message(1) = 'Restart directories for left and right lead'
-                message(2) = 'unit cells must be equal, i. e. only symmetric'
+                message(2) = 'unit cells must be equal, i.e. only symmetric'
                 message(3) = 'leads are possible.'
                 call write_fatal(3)
               end if
@@ -334,7 +334,7 @@ contains
               call loct_parse_block_string(blk, nr, 2, sb%lead_static_dir(RIGHT))
               if(trim(sb%lead_static_dir(LEFT)).ne.trim(sb%lead_static_dir(RIGHT))) then
                 message(1) = 'Static directories for left and right lead'
-                message(2) = 'unit cells must be equal, i. e. only symmetric'
+                message(2) = 'unit cells must be equal, i.e. only symmetric'
                 message(3) = 'leads are possible.'
                 call write_fatal(3)
               end if
@@ -421,9 +421,9 @@ contains
       !%Default 2.0
       !%Section Mesh::FFTs
       !%Description
-      !% For solving Poisson equation in Fourier space, and for applying the local potential
+      !% For solving the Poisson equation in Fourier space, and for applying the local potential
       !% in Fourier space, an auxiliary cubic mesh is built. This mesh will be larger than
-      !% the circumscribed cube to the usual mesh by a factor <tt>DoubleFFTParameter</tt>. See
+      !% the circumscribed cube of the usual mesh by a factor <tt>DoubleFFTParameter</tt>. See
       !% the section that refers to Poisson equation, and to the local potential for details
       !% [the default value of two is typically good].
       !%End
@@ -442,16 +442,16 @@ contains
       !%Default 0
       !%Section System
       !%Description
-      !% Define which directions are to be considered periodic. Of course, it has to be a number
-      !% from 0 to three, and it cannot be larger than Dimensions.
+      !% Define how many directions are to be considered periodic. Of course, it has to be a number
+      !% from zero to three, and it cannot be larger than <tt>Dimensions</tt>.
       !%Option 0
-      !% No direction is periodic (molecule)
+      !% No direction is periodic (molecule).
       !%Option 1
-      !% The x direction is periodic (wire)
+      !% The <i>x</i> direction is periodic (wire, polymer).
       !%Option 2
-      !% The x and y directions are periodic (slab)
+      !% The <i>x</i> and <i>y</i> directions are periodic (slab).
       !%Option 3
-      !% The x, y, and z directions are periodic (bulk)
+      !% The <i>x</i>, <i>y</i>, and <i>z</i> directions are periodic (bulk).
       !%End
       call loct_parse_int(datasets_check('PeriodicDimensions'), 0, sb%periodic_dim)
       if ((sb%periodic_dim < 0) .or. (sb%periodic_dim > 3) .or. (sb%periodic_dim > sb%dim)) &
@@ -488,7 +488,7 @@ contains
         SAFE_ALLOCATE(sb%hr_area%radius(1:sb%hr_area%num_radii))
         do i = 1, sb%hr_area%num_radii
           call loct_parse_block_float(blk, 0, sb%dim+i-1, sb%hr_area%radius(i))
-          sb%hr_area%radius(i) = sb%hr_area%radius(i)*units_inp%length%factor
+          sb%hr_area%radius(i) = units_to_atomic(units_inp%length, sb%hr_area%radius(i))
         end do
 
         ! Create interpolation points (posi) and weights (ww)
@@ -554,27 +554,27 @@ contains
       !% <ul>
       !% <li>Spherical or minimum mesh is not allowed for periodic systems.</li>
       !% <li>Cylindrical mesh is not allowed for systems that are periodic in more than one dimension.</li>
-      !% <li>Box_image is only allowed in 2D.</li>
+      !% <li><tt>Box_image</tt> is only allowed in 2D.</li>
       !% </ul>
       !%Option sphere 1
-      !% The simulation box will be a sphere of radius Radius
+      !% The simulation box will be a sphere of radius <tt>Radius</tt>.
       !%Option cylinder 2
-      !% The simulation box will be a cylinder with radius Radius and height two times
-      !% Xlength
+      !% The simulation box will be a cylinder with radius <tt>Radius</tt> and height two times
+      !% <tt>Xlength</tt>.
       !%Option minimum 3
       !% The simulation box will be constructed by adding spheres created around each
-      !% atom (or user-defined potential), of radius Radius.
+      !% atom (or user-defined potential), of radius <tt>Radius</tt>.
       !%Option parallelepiped 4
       !% The simulation box will be a parallelepiped whose dimensions are taken from
-      !% the variable lsize.
+      !% the variable <tt>Lsize<tt>.
       !%Option box_image 5
       !% The simulation box will be defined through an image. White means that the point
       !% is contained in the simulation box, while any other color means that the point is out.
       !%Option user_defined 123
-      !% The shape of the simulation box will be read from the variable <tt>BoxShapeUsDef</tt>
+      !% The shape of the simulation box will be read from the variable <tt>BoxShapeUsDef</tt>.
       !%Option hypercube 6
-      !% (experimental) The simulation box will an hypercube or
-      !% hyperparallelepiped, this is equivalent to the
+      !% (experimental) The simulation box will be a hypercube or
+      !% hyperparallelepiped. This is equivalent to the
       !% <tt>parallelepiped</tt> box but it can work with an arbitrary
       !% number of dimensions.
       !%End
@@ -605,18 +605,15 @@ contains
       !%Type float
       !%Section Mesh::Simulation Box
       !%Description
-      !% If BoxShape is not "parallelepiped", defines the radius of the spheres or of the cylinder.
-      !% It has to be a positive number. If it is not defined in the input file, then the program
-      !% will attempt to find a suitable default. However, this is not always possible, in which case
-      !% the code will stop, issuing this error message.
-      !% For the minimum option, if the radius is not specified, a radius is chosen separately for each species.
-      !% If default pseudopotentials are used, the radii are read from the "rsize" column of share/PP/defaults.
-      !% Otherwise the radii are read from the Species block.
+      !% Defines the radius for <tt>BoxShape</tt> = <tt>sphere</tt>, <tt>cylinder</tt>, or <tt>minimum</tt>.
+      !% Must be a positive number. If not specified, the code will look for a default value in 
+      !% the <tt>Species</tt> block, or, if default pseudopotentials are used, the <tt>rsize</tt> column of
+      !% <tt>share/PP/defaults</tt>. For <tt>minimum</tt>, a default radius is chosen separately for each species.
       !%End
       select case(sb%box_shape)
       case(SPHERE, CYLINDER)
-        call loct_parse_float(datasets_check('radius'), def_rsize/units_inp%length%factor, sb%rsize)
-        if(sb%rsize < CNST(0.0)) call input_error('radius')
+        call loct_parse_float(datasets_check('radius'), units_from_atomic(units_inp%length, def_rsize), sb%rsize)
+        if(sb%rsize < M_ZERO) call input_error('radius')
         sb%rsize = units_to_atomic(units_inp%length, sb%rsize)
         if(def_rsize>M_ZERO) call check_def(def_rsize, sb%rsize, 'radius')
       case(MINIMUM)
@@ -631,7 +628,7 @@ contains
         !%Type float
         !%Section Mesh::Simulation Box
         !%Description
-        !% If BoxShape is "cylinder", it is half the total length of the cylinder.
+        !% If <tt>BoxShape</tt> is <tt>cylinder</tt>, the total length of the cylinder is twice <tt>Xlength</tt>.
         !%End
         call loct_parse_float(datasets_check('xlength'), M_ONE/units_inp%length%factor, sb%xsize)
         sb%xsize = units_to_atomic(units_inp%length, sb%xsize)
@@ -647,18 +644,18 @@ contains
         !%Type block
         !%Section Mesh::Simulation Box
         !%Description
-        !% In case BoxShape is "parallelepiped", "hypercube",
-        !% "box_image", or "user_defined", this is assumed to be a
+        !% If <tt>BoxShape</tt> is <tt>parallelepiped</tt>, <tt>hypercube</tt>,
+        !% <tt>box_image</tt>, or <tt>user_defined</tt>, this is a
         !% block of the form:
         !%
         !% <tt>%Lsize
         !% <br>&nbsp;&nbsp;sizex | sizey | sizez | ...
         !% <br>%</tt>
         !%
-        !% where the "size*" are half the lengths of the box in each direction.
+        !% where the <tt>size*</tt> are half the lengths of the box in each direction.
         !%
         !% The number of columns must match the dimensionality of the
-        !% calculation. If you want a cube you can also set Lsize as a
+        !% calculation. If you want a cube you can also set <tt>Lsize</tt> as a
         !% single variable.
         !%End
 
@@ -675,7 +672,7 @@ contains
           end if
           sb%lsize(1:sb%dim) = sb%lsize(1)
         end if
-        sb%lsize = sb%lsize*units_inp%length%factor
+        sb%lsize = units_to_atomic(units_inp%length, sb%lsize)
 
         do i = 1, sb%dim
           if(def_rsize>M_ZERO.and.sb%periodic_dim<i) call check_def(def_rsize, sb%lsize(i), 'Lsize')
@@ -700,7 +697,7 @@ contains
         end if
 #else
         message(1) = "To use 'BoxShape = box_image' you have to compile octopus"
-        message(2) = "with GD library support"
+        message(2) = "with GD library support."
         call write_fatal(2)
 #endif
       end if     
@@ -714,7 +711,7 @@ contains
         !%Description
         !% Boolean expression that defines the interior of the simulation box. For example,
         !% <tt>BoxShapeUsDef = "(sqrt(x^2+y^2) <= 4) && z>-2 && z<2"</tt> defines a cylinder
-        !% with axis parallel to the z axis
+        !% with axis parallel to the <i>z</i>-axis.
         !%End
         
         call loct_parse_string(datasets_check("BoxShapeUsDef"), "x^2+y^2+z^2 < 4", sb%user_def)
@@ -771,11 +768,11 @@ contains
       !%Type float
       !%Section Mesh::Simulation Box
       !%Description
-      !% The spacing between the points in the mesh. In case of using curvilinear
+      !% The spacing between the points in the mesh. If using curvilinear
       !% coordinates, this is a canonical spacing that will be changed locally by the
       !% transformation.
       !%
-      !% It is possible to have a different spacing in each one of the cartesian directions
+      !% It is possible to have a different spacing in each one of the Cartesian directions
       !% if we define <tt>Spacing</tt> as block of the form
       !%
       !% <tt>%Spacing
@@ -795,13 +792,13 @@ contains
       end if
 
       do i = 1, sb%dim
-        sb%h(i) = sb%h(i)*units_inp%length%factor
+        sb%h(i) = units_to_atomic(units_inp%length, sb%h(i))
         if(sb%h(i) < M_ZERO) then
           if(def_h > M_ZERO.and.def_h < huge(def_h)) then
             sb%h(i) = def_h
             write(message(1), '(a,i1,3a,f6.3)') "Info: Using default spacing(", i, &
-              ") [", trim(units_out%length%abbrev), "] = ",                        &
-              sb%h(i)/units_out%length%factor
+              ") [", trim(units_abbrev(units_out%length)), "] = ",                        &
+              units_from_atomic(units_out%length, sb%h(i))
             call write_info(1)
           else
             message(1) = 'Either:'
@@ -820,7 +817,7 @@ contains
 
     !--------------------------------------------------------------
     subroutine read_box_offset()
-      integer :: i
+      integer :: idir
       type(block_t) :: blk
 
       call push_sub('simul_box.simul_box_init.read_box_offset')
@@ -835,15 +832,18 @@ contains
       !%End
       sb%box_offset = M_ZERO
       if(loct_parse_block(datasets_check('BoxOffset'), blk) == 0) then
-        do i = 1, sb%dim
-          call loct_parse_block_float(blk, 0, i-1, sb%box_offset(i))
+        do idir = 1, sb%dim
+          call loct_parse_block_float(blk, 0, idir-1, sb%box_offset(idir))
         end do
         call loct_parse_block_end(blk)
       else
         call loct_parse_float(datasets_check('BoxOffset'), M_ZERO, sb%box_offset(1))
         sb%box_offset(1:sb%dim) = sb%box_offset(1)
       end if
-      sb%box_offset(:) = sb%box_offset(:)*units_inp%length%factor
+
+      do idir = 1, sb%dim
+        sb%box_offset(idir) = units_to_atomic(units_inp%length, sb%box_offset(idir))
+      enddo
 
       call pop_sub()
     end subroutine read_box_offset
@@ -1101,9 +1101,9 @@ contains
     type(simul_box_t), intent(in)    :: sb
     type(geometry_t),  intent(inout) :: geo
 
-    ! this function checks that the atoms are inside the box. if not:
+    ! This function checks that the atoms are inside the box. If not:
     ! if the system is periodic, the atoms are moved inside the box;
-    ! if the system is finite, a warning is emitted.
+    ! if the system is finite, a warning is written.
 
     integer :: iatom, pd, idir
     FLOAT :: xx(1:MAX_DIM)
@@ -1226,7 +1226,7 @@ contains
       'image defined ', &
       'hypercube     '/)
 
-    integer :: ii
+    integer :: ii, jj
 
     call push_sub('simul_box.simul_box_write_info')
 
@@ -1239,21 +1239,21 @@ contains
     call write_info(2, iunit)
 
     if(sb%box_shape == SPHERE.or.sb%box_shape == CYLINDER.or.sb%box_shape == MINIMUM) then
-      write(message(1), '(3a,f7.3)') '  Radius  [', trim(units_out%length%abbrev), '] = ', &
-        sb%rsize/units_out%length%factor
+      write(message(1), '(3a,f7.3)') '  Radius  [', trim(units_abbrev(units_out%length)), '] = ', &
+        units_from_atomic(units_out%length, sb%rsize)
       call write_info(1, iunit)
     end if
     if(sb%box_shape == CYLINDER) then
-      write(message(1), '(3a,f7.3)') '  Xlength [', trim(units_out%length%abbrev), '] = ', &
-        sb%xsize/units_out%length%factor
+      write(message(1), '(3a,f7.3)') '  Xlength [', trim(units_abbrev(units_out%length)), '] = ', &
+        units_from_atomic(units_out%length, sb%xsize)
       call write_info(1, iunit)
     end if
     if(sb%box_shape == PARALLELEPIPED) then
       write(message(1),'(3a, a, f8.3, a, f8.3, a, f8.3, a)')     &
-        '  Lengths [', trim(units_out%length%abbrev), '] = ',    &
-        '(', sb%lsize(1)/units_out%length%factor, ',',           &
-        sb%lsize(2)/units_out%length%factor, ',',                &
-        sb%lsize(3)/units_out%length%factor, ')'
+        '  Lengths [', trim(units_abbrev(units_out%length)), '] = ',    &
+        '(', units_from_atomic(units_out%length, sb%lsize(1)), ',',           &
+        units_from_atomic(units_out%length, sb%lsize(2)), ',',                &
+        units_from_atomic(units_out%length, sb%lsize(3)), ')'
     end if
 
     write(message(1), '(a,i1,a)') '  Octopus will run in ', sb%dim, ' dimension(s).'
@@ -1263,20 +1263,21 @@ contains
 
     if(sb%periodic_dim > 0 .or. sb%box_shape == PARALLELEPIPED) then
       write(message(1),'(1x)')
-      write(message(2),'(a,3a,a)') '  Lattice Vectors [', trim(units_out%length%abbrev), ']'
+      write(message(2),'(a,3a,a)') '  Lattice Vectors [', trim(units_abbrev(units_out%length)), ']'
       do ii = 1, sb%dim
-        write(message(2+ii),'(9f12.6)') sb%rlattice(1:sb%dim,ii)*M_TWO*sb%lsize(ii)/units_out%length%factor
+        write(message(2+ii),'(9f12.6)') (units_from_atomic(units_out%length, sb%rlattice(jj, ii)*M_TWO*sb%lsize(ii)), &
+                                         jj = 1, sb%dim) 
       end do
       call write_info(2+sb%dim, iunit)
 
       write(message(1),'(a,f18.4,3a,i1.1,a)') &
-        '  Cell volume = ', sb%rcell_volume/units_out%length%factor**sb%dim, &
-        ' [', trim(units_out%length%abbrev), '^', sb%dim, ']'
+        '  Cell volume = ', units_from_atomic(units_out%length**sb%dim, sb%rcell_volume), &
+        ' [', trim(units_abbrev(units_out%length**sb%dim)), ']'
       call write_info(1, iunit)
 
-      write(message(1),'(a,3a,a)') '  Reciprocal Lattice Vectors [', trim(units_out%length%abbrev), '^-1]'
+      write(message(1),'(a,3a,a)') '  Reciprocal Lattice Vectors [', trim(units_abbrev(units_out%length**(-1))), ']'
       do ii = 1, sb%dim
-        write(message(1+ii),'(3f12.6)')   sb%klattice(1:sb%dim,ii)*units_out%length%factor
+        write(message(1+ii),'(3f12.6)') (units_from_atomic(unit_one / units_out%length, sb%klattice(jj, ii)), jj = 1, sb%dim)
       end do
       call write_info(1+sb%dim, iunit)
     end if
@@ -1420,7 +1421,9 @@ contains
             (xx(3, ip) >= -sb%lsize(3)-DELTA.and.xx(3, ip) <= sb%lsize(3)+DELTA)
 
           ! and inside the simulation box
-          xx(:, ip) = xx(:, ip)/units_inp%length%factor ! convert from a.u. to input units
+          do idir = 1, sb%dim
+            xx(idir, ip) = units_from_atomic(units_inp%length, xx(idir, ip))
+          enddo
           r = sqrt(sum(xx(:, ip)**2))
           call loct_parse_expression(re, im, sb%dim, xx(:, ip), r, M_ZERO, sb%user_def)
           in_box(ip) = in_box(ip) .and. (re .ne. M_ZERO)

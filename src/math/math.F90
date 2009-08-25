@@ -823,9 +823,8 @@ contains
   end function odd
 
   ! ---------------------------------------------------------
-  ! Performs a transformation from the cartesian coordinates
-  ! of a n-th dimensional vector, to hyperspherical
-  ! coordinates
+  ! Performs a transformation of an n-dimensional vector
+  ! from Cartesian coordinates to hyperspherical coordinates
   ! ---------------------------------------------------------
   subroutine cartesian2hyperspherical(x, u)
     FLOAT, intent(in)  :: x(:)
