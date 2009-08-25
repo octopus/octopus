@@ -78,15 +78,26 @@ contains
     integer,         intent(in)  :: order
 
     integer :: ii, jj, nn
+    logical :: got_center
 
     call push_sub('stencil_star.stencil_star_get_lapl')
 
     call stencil_allocate(this, stencil_star_size_lapl(dim, order))
 
-    nn = 1
+    got_center = .false.
+
+    nn = 0
     do ii = 1, dim
       do jj = -order, order
-        if(jj == 0) cycle
+
+        if(jj == 0) then
+          if(got_center) then
+            cycle
+          else
+            got_center = .true.
+          end if
+        end if
+
         nn = nn + 1
         this%points(ii, nn) = jj
       end do
