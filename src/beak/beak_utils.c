@@ -71,10 +71,6 @@ int FC_FUNC_(op_is_available, OP_IS_AVAILABLE)
 #ifdef SINGLE_PRECISION
   if( *opid == OP_AS ) result = 0;
 #endif
-
-#if defined(USE_OMP) || defined(HAVE_MPI)
-  if( *opid == OP_BIT ) result = 0;
-#endif
   return result;
 }
 

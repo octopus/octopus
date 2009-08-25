@@ -23,8 +23,8 @@ noinst_LIBRARIES = libbeak.a
 
 libbeak_a_SOURCES =   \
 	beak_utils.c  \
-	operate_ri.c  \
-	operate_bit.c
+	operate_ri.c
+
 
 if COMPILE_VEC
 libbeak_a_SOURCES += operate_ri_vec.c
@@ -51,5 +51,4 @@ beak_utils.o : beak_utils.c beak.h
 operate_ri.o : operate_ri.c beak.h 
 operate_ri_vec.o : operate_ri_vec.c beak.h 
 operate_as.S : operate_ia64.S
-operate_bit.o : operate_bit.c
 operate_bg.o : operate_bg.c beak.h
