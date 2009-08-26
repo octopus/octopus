@@ -1297,7 +1297,8 @@ contains
 
       write(message(1),'(a,3a,a)') '  Reciprocal Lattice Vectors [', trim(units_abbrev(units_out%length**(-1))), ']'
       do idir = 1, sb%dim
-        write(message(1+idir),'(3f12.6)') (units_from_atomic(unit_one / units_out%length, sb%klattice(idir2, idir)), idir2 = 1, sb%dim)
+        write(message(1+idir),'(3f12.6)') (units_from_atomic(unit_one / units_out%length, sb%klattice(idir2, idir)), &
+                                           idir2 = 1, sb%dim)
       end do
       call write_info(1+sb%dim, iunit)
     end if
