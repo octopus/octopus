@@ -661,7 +661,7 @@ contains
         call io_mkdir(dir)
         iunit = io_open(trim(dir) // "/" // trim(fname), action='write')
 
-        call grid_write_info(gr, iunit)
+        call grid_write_info(gr, geo, iunit)
 
         if(simul_box_is_periodic(gr%sb)) then
           call kpoints_write_info(st%d, gr%mesh%sb%dim, iunit)

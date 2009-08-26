@@ -180,7 +180,7 @@ contains
     nullify(gr%mgrid)
 
     ! print info concerning the grid
-    call grid_write_info(gr, stdout)
+    call grid_write_info(gr, geo, stdout)
 
     call pop_sub()
   end subroutine grid_init_stage_2
@@ -231,9 +231,10 @@ contains
 
 
   !-------------------------------------------------------------------
-  subroutine grid_write_info(gr, iunit)
-    type(grid_t), intent(in) :: gr
-    integer,      intent(in) :: iunit
+  subroutine grid_write_info(gr, geo, iunit)
+    type(grid_t),     intent(in) :: gr
+    type(geometry_t), intent(in) :: geo
+    integer,          intent(in) :: iunit
 
     integer :: il
 
@@ -245,7 +246,7 @@ contains
     end if
 
     call messages_print_stress(iunit, "Grid")
-    call simul_box_write_info(gr%sb, iunit)
+    call simul_box_write_info(gr%sb, geo, iunit)
     call mesh_write_info(gr%mesh, iunit)
     if(gr%sb%open_boundaries) then
       do il = 1, NLEADS

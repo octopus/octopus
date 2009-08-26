@@ -566,7 +566,7 @@ contains
       !% atom (or user-defined potential), of radius <tt>Radius</tt>.
       !%Option parallelepiped 4
       !% The simulation box will be a parallelepiped whose dimensions are taken from
-      !% the variable <tt>Lsize<tt>.
+      !% the variable <tt>Lsize</tt>.
       !%Option box_image 5
       !% The simulation box will be defined through an image. White means that the point
       !% is contained in the simulation box, while any other color means that the point is out.
@@ -629,8 +629,15 @@ contains
         !%Section Mesh::Simulation Box
         !%Description
         !% If <tt>BoxShape</tt> is <tt>cylinder</tt>, the total length of the cylinder is twice <tt>Xlength</tt>.
+        !% The default is <tt>Radius</tt>.
         !%End
-        call loct_parse_float(datasets_check('xlength'), M_ONE/units_inp%length%factor, sb%xsize)
+        if(sb%rsize > M_ZERO) then
+          default = sb%rsize
+        else
+          default = def_rsize
+        endif
+
+        call loct_parse_float(datasets_check('xlength'), units_from_atomic(units_inp%length, default), sb%xsize)
         sb%xsize = units_to_atomic(units_inp%length, sb%xsize)
         sb%lsize(1) = sb%xsize
         if(def_rsize>M_ZERO.and.sb%periodic_dim==0) call check_def(def_rsize, sb%xsize, 'xlength')
@@ -1214,8 +1221,9 @@ contains
 
 
   !--------------------------------------------------------------
-  recursive subroutine simul_box_write_info(sb, iunit)
+  recursive subroutine simul_box_write_info(sb, geo, iunit)
     type(simul_box_t), intent(in) :: sb
+    type(geometry_t),  intent(in) :: geo
     integer,           intent(in) :: iunit
 
     character(len=15), parameter :: bs(6) = (/ &
@@ -1226,7 +1234,7 @@ contains
       'image defined ', &
       'hypercube     '/)
 
-    integer :: ii, jj
+    integer :: idir, idir2, ispec
 
     call push_sub('simul_box.simul_box_write_info')
 
@@ -1238,16 +1246,28 @@ contains
     end if
     call write_info(2, iunit)
 
-    if(sb%box_shape == SPHERE.or.sb%box_shape == CYLINDER.or.sb%box_shape == MINIMUM) then
+    if(sb%box_shape == SPHERE .or. sb%box_shape == CYLINDER &
+       .or. (sb%box_shape == MINIMUM .and. sb%rsize > M_ZERO)) then
       write(message(1), '(3a,f7.3)') '  Radius  [', trim(units_abbrev(units_out%length)), '] = ', &
         units_from_atomic(units_out%length, sb%rsize)
       call write_info(1, iunit)
+    endif
+
+    if (sb%box_shape == MINIMUM .and. sb%rsize <= M_ZERO) then
+      call write_info(1, iunit)
+      do ispec = 1, geo%nspecies     
+        write(message(1), '(a,a5,5x,a,f7.3,2a)') '  Species = ', trim(species_label(geo%species(ispec))), 'Radius = ', &
+          units_from_atomic(units_out%length, species_def_rsize(geo%species(ispec))), ' ', trim(units_abbrev(units_out%length))
+        call write_info(1, iunit)
+      enddo
     end if
+
     if(sb%box_shape == CYLINDER) then
       write(message(1), '(3a,f7.3)') '  Xlength [', trim(units_abbrev(units_out%length)), '] = ', &
         units_from_atomic(units_out%length, sb%xsize)
       call write_info(1, iunit)
     end if
+
     if(sb%box_shape == PARALLELEPIPED) then
       write(message(1),'(3a, a, f8.3, a, f8.3, a, f8.3, a)')     &
         '  Lengths [', trim(units_abbrev(units_out%length)), '] = ',    &
@@ -1264,9 +1284,9 @@ contains
     if(sb%periodic_dim > 0 .or. sb%box_shape == PARALLELEPIPED) then
       write(message(1),'(1x)')
       write(message(2),'(a,3a,a)') '  Lattice Vectors [', trim(units_abbrev(units_out%length)), ']'
-      do ii = 1, sb%dim
-        write(message(2+ii),'(9f12.6)') (units_from_atomic(units_out%length, sb%rlattice(jj, ii)*M_TWO*sb%lsize(ii)), &
-                                         jj = 1, sb%dim) 
+      do idir = 1, sb%dim
+        write(message(2+idir),'(9f12.6)') (units_from_atomic(units_out%length, sb%rlattice(idir2, idir)*M_TWO*sb%lsize(idir)), &
+                                         idir2 = 1, sb%dim) 
       end do
       call write_info(2+sb%dim, iunit)
 
@@ -1276,8 +1296,8 @@ contains
       call write_info(1, iunit)
 
       write(message(1),'(a,3a,a)') '  Reciprocal Lattice Vectors [', trim(units_abbrev(units_out%length**(-1))), ']'
-      do ii = 1, sb%dim
-        write(message(1+ii),'(3f12.6)') (units_from_atomic(unit_one / units_out%length, sb%klattice(jj, ii)), jj = 1, sb%dim)
+      do idir = 1, sb%dim
+        write(message(1+idir),'(3f12.6)') (units_from_atomic(unit_one / units_out%length, sb%klattice(idir2, idir)), idir2 = 1, sb%dim)
       end do
       call write_info(1+sb%dim, iunit)
     end if

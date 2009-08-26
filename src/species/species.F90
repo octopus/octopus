@@ -177,10 +177,10 @@ contains
 
     call push_sub('species.species_read')
 
-    s%has_density = .false. !there is no density associated
-    s%nlcc      = .false. ! without non-local core corrections
-    s%def_h     = -M_ONE  ! not defined
-    s%def_rsize = -M_ONE  ! not defined
+    s%has_density = .false. ! there is no density associated
+    s%nlcc      = .false.   ! without non-local core corrections
+    s%def_h     = -M_ONE    ! not defined
+    s%def_rsize = -M_ONE    ! not defined
     s%user_def  = ""
     read_data   = 0
 
@@ -192,7 +192,7 @@ contains
     !% through a pseudopotential, or a user-defined model potential.
     !%
     !% Note that some common pseudopotentials are distributed with the code in the
-    !% directory <i>OCTOPUS-HOME/share/PP/</i>. To use these pseudopotentials you are
+    !% directory <tt>OCTOPUS-HOME/share/PP/</tt>. To use these pseudopotentials you are
     !% not required to define them explicitly in the Species block, as defaults 
     !% are provided by the program (you can override these defaults in any case). 
     !% Additional pseudopotentials can be downloaded from the 
@@ -205,7 +205,7 @@ contains
     !% are detailed below), each type needs some extra parameters given in
     !% the following fields of the row.
     !%
-    !% In 3D, e.g.
+    !% In 3D, <i>e.g.</i>
     !%
     !% <tt>%Species
     !% <br>&nbsp;&nbsp;'O'       | 15.9994 | spec_ps_psf  | 8   | 1 | 1
@@ -233,9 +233,9 @@ contains
     !% sphere (an equal value of valence charge is assumed) and the radius of
     !% the sphere.
     !%Option spec_ps_psf  100
-    !% Troullier Martins pseudopotential in SIESTA format: the pseudopotential will be
-    !% read from a <i>.psf</i> file, either in the working
-    !% directory or in the <i>OCTOPUS-HOME/share/octopus/PP/PSF</i> directory.
+    !% Troullier Martins pseudopotential in <tt>SIESTA</tt> format: the pseudopotential will be
+    !% read from a <tt>.psf</tt> file, either in the working
+    !% directory or in the <tt>OCTOPUS-HOME/share/octopus/PP/PSF</tt> directory.
     !% Columns 4, 5, 6 are the atomic number, the maximum
     !% <i>l</i>-component of the pseudopotential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
@@ -245,23 +245,23 @@ contains
     !% are not necessary to define the HGH pseudopotential.
     !%Option spec_ps_cpi  102
     !% Fritz-Haber pseudopotential: the pseudopotential will be
-    !% read from a <i>.cpi</i> file, either in the working
-    !% directory or in the <i>OCTOPUS-HOME/share/PP/CPI</i> directory.
+    !% read from a <tt>.cpi</tt> file, either in the working
+    !% directory or in the <tt>OCTOPUS-HOME/share/PP/CPI</tt> directory.
     !% Columns 4, 5, 6 are the atomic number, the maximum
     !% <i>l</i>-component of the pseudopotential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
     !%Option spec_ps_fhi  103
-    !% Fritz-Haber pseudopotential (ABINIT format): the pseudopotential will be
-    !% read from an <i>.fhi</i> file, either in the working
-    !% directory or in the <i>OCTOPUS-HOME/share/PP/FHI</i> directory.
+    !% Fritz-Haber pseudopotential (<tt>ABINIT</tt> format): the pseudopotential will be
+    !% read from a <tt>.fhi</tt> file, either in the working
+    !% directory or in the <tt>OCTOPUS-HOME/share/PP/FHI</tt> directory.
     !% Columns 4, 5, 6 are the atomic number, the maximum
     !% <i>l</i>-component of the pseudopotential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
-    !% Note that you can use the pseudopotentials from ABINIT homepage.
+    !% Note that you can use the pseudopotentials from <tt>ABINIT</tt> homepage.
     !%Option spec_ps_upf  104
     !% UPF format: the pseudopotential will be
-    !% read from an <i>.UPF</i> file, either in the working
-    !% directory or in the <i>OCTOPUS-HOME/share/PP/UPF</i> directory.
+    !% read from a <tt>.UPF</tt> file, either in the working
+    !% directory or in the <tt>OCTOPUS-HOME/share/PP/UPF</tt> directory.
     !% Column 4 is the atomic number. Columns 5 and 6 are 
     !% ignored, as the maximum <i>l</i>-component of the pseudopotential to
     !% consider in the calculation and the <i>l</i>-component to consider as
@@ -269,7 +269,7 @@ contains
     !%Option spec_all_e   124
     !% Atom represented with all electrons; the extra parameter is the
     !% atomic number. See the documentation of the variable 
-    !% SpeciesAllElectronSigma.
+    !% <tt>SpeciesAllElectronSigma</tt>.
     !% WARNING: Currently you can not use LCAO with this species.
     !%Option spec_charge_density 125
     !% The potential is created by a distribution of charge.
@@ -298,7 +298,7 @@ contains
     !% <math>q(r)/z</math> is equal to the atomic position. This number should be small,
     !% but you may run into numerical difficulties if it is too small.
     !%
-    !% For a precise description, see [N. A. Modine, Phys. Rev. B 55, 10289 (1997)]
+    !% For a precise description, see N. A. Modine, <i>Phys. Rev. B</i> <b>55</b>, 10289 (1997).
     !%End
     call loct_parse_float(datasets_check('SpeciesAllElectronSigma'), CNST(0.25), s%sigma)
     if(s%sigma <= M_ZERO) call input_error('SpeciesAllElectronSigma')
@@ -373,7 +373,7 @@ contains
     end if
 
     ! masses are always in amu, so convert them to a.u.
-    s%weight =  units_inp%mass%factor * s%weight
+    s%weight =  units_to_atomic(units_inp%mass, s%weight)
 
     s%has_density = .false.
 
@@ -416,7 +416,7 @@ contains
 
     case(SPEC_FROM_FILE)
       if(print_info_) then
-        write(message(1),'(a)') 'Specie read from file "'//trim(s%filename)//'".'
+        write(message(1),'(a)') 'Species read from file "'//trim(s%filename)//'".'
         call write_info(1)
       end if
       s%omega = CNST(0.1)
