@@ -1124,6 +1124,8 @@ contains
     call push_sub('states.states_dens_accumulate_batch')
     call profiling_in(prof, "CALC_DENSITY")
 
+    ASSERT(ubound(rho, dim = 1) == gr%fine%mesh%np .or. ubound(rho, dim = 1) == gr%fine%mesh%np_part)
+
     ispin = states_dim_get_spin_index(st%d, ik)
 
     if(gr%have_fine_mesh) then

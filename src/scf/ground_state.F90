@@ -97,7 +97,7 @@ contains
       ! We do not compute the density from the random wave-functions. 
       ! Instead, we try to get a better guess
 
-      call guess_density(sys%gr%mesh, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
+      call guess_density(sys%gr%fine%mesh, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
         sys%st%d%spin_channels, sys%st%rho)
 
       ! setup Hamiltonian (we do not call system_h_setup here because we do not want to

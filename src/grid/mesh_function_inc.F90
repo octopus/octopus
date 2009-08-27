@@ -32,6 +32,8 @@ R_TYPE function X(mf_integrate) (mesh, f) result(d)
   call profiling_in(C_PROFILING_MF_INTEGRATE, 'MF_INTEGRATE')
   call push_sub('mesh_function_inc.Xmf_integrate')
 
+  ASSERT(ubound(f, dim = 1) == mesh%np .or. ubound(f, dim = 1) == mesh%np_part)
+
   d = M_ZERO
   if (mesh%use_curvilinear) then
     do ip = 1, mesh%np
@@ -92,6 +94,9 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
 
   call profiling_in(C_PROFILING_MF_DOTP, "MF_DOTP")
   call push_sub('mesh_function_inc.Xmf_dotp_1')
+
+  ASSERT(ubound(f1, dim = 1) == mesh%np .or. ubound(f1, dim = 1) == mesh%np_part)
+  ASSERT(ubound(f2, dim = 1) == mesh%np .or. ubound(f2, dim = 1) == mesh%np_part)
 
   reduce_ = .true.
   if(present(reduce)) then
@@ -563,7 +568,7 @@ end subroutine X(mf_interpolate_on_plane)
 ! interpolation
 subroutine X(mf_interpolate_on_line)(mesh, line, f, f_in_line)
   type(mesh_t),       intent(in)  :: mesh
-  type(mesh_line_t), intent(in)  :: line
+  type(mesh_line_t),  intent(in)  :: line
   R_TYPE,             intent(in)  :: f(:)
   R_TYPE,             intent(out) :: f_in_line(line%nu:line%mu)
 
@@ -606,8 +611,8 @@ end subroutine X(mf_interpolate_on_line)
 ! This subroutine calculates the surface integral of a scalar
 ! function on a given plane
 R_TYPE function X(mf_surface_integral_scalar) (mesh, f, plane) result(d)
-  type(mesh_t), intent(in)       :: mesh
-  R_TYPE,       intent(in)       :: f(:)  ! f(mesh%np)
+  type(mesh_t),       intent(in) :: mesh
+  R_TYPE,             intent(in) :: f(:)  ! f(mesh%np)
   type(mesh_plane_t), intent(in) :: plane
 
   R_TYPE, allocatable :: f_in_plane(:, :)
@@ -768,6 +773,8 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole)
   R_TYPE, allocatable :: ff2(:)
 
   call push_sub('mesh_function_inc.Xmf_multipoles')
+
+  ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
 
   SAFE_ALLOCATE(ff2(1:mesh%np))
 

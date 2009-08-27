@@ -403,7 +403,7 @@ contains
 
       ! compute output density, potential (if needed) and eigenvalues sum
       call states_calc_dens(st, gr)
-      rhoout(1:gr%mesh%np, 1, 1:nspin) = st%rho(1:gr%mesh%np, 1:nspin)
+      rhoout(1:mixnp, 1, 1:nspin) = st%rho(1:mixnp, 1:nspin)
       if (hm%d%cdft) then
         call calc_physical_current(gr, st, st%current)
         rhoout(1:gr%mesh%np, 2:dim, 1:nspin) = st%current(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
