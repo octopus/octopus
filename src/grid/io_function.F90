@@ -56,7 +56,8 @@ module io_function_m
     dio_function_out_text,        &
     zio_function_out_text,        &
     io_output_tensor,             &
-    io_output_dipole
+    io_output_dipole,             &
+    io_output_direction
 
   integer, parameter, public ::   &
     output_axis_x     =     1,    &
@@ -108,32 +109,32 @@ contains
     !%Section Output
     !%Description
     !% Describes the format of the output files (see <tt>Output</tt>).
-    !% Example: "axis_x + plane_x + dx"
+    !% Example: <tt>axis_x + plane_x + dx</tt>
     !%Option axis_x 1
-    !% The values of the function on the <math>x</math> axis are printed. The string ".y=0,z=0" is appended
+    !% The values of the function on the <math>x</math> axis are printed. The string <tt>.y=0,z=0</tt> is appended
     !% to previous file names.
     !%Option axis_y 2
-    !% The values of the function on the <math>y</math> axis are printed. The string ".x=0,z=0" is appended
+    !% The values of the function on the <math>y</math> axis are printed. The string <tt>.x=0,z=0</tt> is appended
     !% to previous file names.
     !%Option axis_z 4
-    !% The values of the function on the <math>z</math> axis are printed. The string ".x=0,y=0" is appended
+    !% The values of the function on the <math>z</math> axis are printed. The string <tt>.x=0,y=0</tt> is appended
     !% to previous file names.
     !%Option plane_x 8
-    !% A plane slice at <math>x=0</math> is printed. The string ".x=0" is appended
+    !% A plane slice at <math>x=0</math> is printed. The string <tt>.x=0</tt> is appended
     !% to previous file names.
     !%Option plane_y 16
-    !% A plane slice at <math>y=0</math> is printed. The string ".y=0" is appended
+    !% A plane slice at <math>y=0</math> is printed. The string <tt>.y=0</tt> is appended
     !% to previous file names.
     !%Option plane_z 32
-    !% A plane slice at <math>y=0</math> is printed. The string ".z=0" is appended to
+    !% A plane slice at <math>y=0</math> is printed. The string <tt>.z=0</tt> is appended to
     !% previous file names.
     !%Option dx 64
     !% For printing three-dimensional information, the open-source program
-    !% visualization tool OpenDX (http://www.opendx.org/) can be used. The string
-    !% ".dx" is appended to previous file names.
+    !% visualization tool OpenDX (<tt>http://www.opendx.org/</tt>) can be used. The string
+    !% <tt>.dx</tt> is appended to previous file names.
     !%Option netcdf 128
-    !% Outputs in NetCDF (http://www.unidata.ucar.edu/packages/netcdf/) format. This file
-    !% can then be read, for example, by OpenDX. The string ".ncdf" is appended to previous file names.
+    !% Outputs in NetCDF (<tt>http://www.unidata.ucar.edu/packages/netcdf/</tt>) format. This file
+    !% can then be read, for example, by OpenDX. The string <tt>.ncdf</tt> is appended to previous file names.
     !% Requires the NetCDF library.
     !%Option plain 256
     !% Restart files are output in plain binary.
@@ -142,33 +143,33 @@ contains
     !% the internal numbering of mesh points. Since this mode produces large datafiles this is only 
     !% useful for small meshes and debugging purposes.
     !% The output can also be used to display the mesh directly. A gnuplot script for mesh vizualization
-    !% can be found under <tt>PREFIX/share/octopus/util/display_mesh_index.gp</tt>
+    !% can be found under <tt>PREFIX/share/octopus/util/display_mesh_index.gp</tt>.
     !%Option xcrysden 1024
     !% A format for printing structures and three-dimensional information, which can be visualized by
-    !% the open-source program XCrySDen (http://www.xcrysden.org/). The string
-    !% ".xsf" is appended to previous file names. Note that lattice vectors and coordinates are as
+    !% the open-source program XCrySDen (<tt>http://www.xcrysden.org/</tt>). The string
+    !% <tt>.xsf</tt> is appended to previous file names. Note that lattice vectors and coordinates are as
     !% specified by UnitsOutput.
     !%Option matlab 2048
-    !% In combination with plane_x, plane_y and plane_z this option produces output files 
-    !% which are suitable for 2D Matlab functions like mesh(), surf() or waterfall(). To load 
-    !% these files into Matlab you can use, e.g.
-    !%
+    !% In combination with <tt>plane_x</tt>, <tt>plane_y</tt> and <tt>plane_z</tt> this option produces output files 
+    !% which are suitable for 2D Matlab functions like <tt>mesh()</tt>, <tt>surf()</tt>, or <tt>waterfall()</tt>. To load 
+    !% these files into Matlab you can use, <i>e.g.</i>
+    !%<tt>
     !%   >> density = load('static/density-1.x=0.matlab.abs');
     !%   >> mesh(density);
-    !%
+    !%</tt>
     !%Option meshgrid 4096
-    !% Outputs in Matlab mode the internal mesh in a format similar to e.g.
-    !%
+    !% Outputs in Matlab mode the internal mesh in a format similar to <i>e.g.</i>
+    !%<tt>
     !%   >> [x,y] = meshgrid(-2:.2:2,-1:.15:1)
-    !%
-    !% The x meshgrid is contained in a file *.meshgrid.x and the y-grid can be found in
-    !% *.meshgrid.y
+    !%</tt>
+    !% The <i>x</i> meshgrid is contained in a file <tt>*.meshgrid.x</tt> and the <i>y</i>-grid can be found in
+    !% <tt>*.meshgrid.y</tt>.
     !%Option boundary_points 8192
     !% This option includes the output of the mesh enlargement. Default is without.
     !%Option binary 16384
     !% Plain binary, new format.
     !%Option etsf 32768
-    !% ETSF file format (http://www.etsf.eu/resources/software/standardization_project).
+    !% ETSF file format (<tt>http://www.etsf.eu/resources/software/standardization_project</tt>).
     !% Requires the ETSF_IO library.
     !%End
     call loct_parse_int(datasets_check('OutputHow'), 0, how)
@@ -417,6 +418,27 @@ contains
 
     call pop_sub()
   end subroutine io_output_dipole
+
+
+  ! ---------------------------------------------------------
+  character function io_output_direction(idir) result(ch)
+    integer, intent(in) :: idir
+    
+    call push_sub('io_function.io_output_direction')
+
+    select case(idir)
+      case(1)
+        ch = 'x'
+      case(2)
+        ch = 'y'
+      case(3)
+        ch = 'z'
+      case default
+        write(ch,'i') idir
+    end select
+
+    call pop_sub()
+  end function io_output_direction
 
 
   ! ---------------------------------------------------------

@@ -179,9 +179,9 @@ contains
     do ii = i_start, gr%mesh%sb%dim
       do isign = 1, 2
         write(message(1), '(a)')
-        write(message(2), '(a,f6.4,3a,i1)') 'Info: Calculating dipole moment for field ', &
+        write(message(2), '(a,f6.4,4a)') 'Info: Calculating dipole moment for field ', &
           units_from_atomic(units_out%energy/units_out%length, -(-1)**isign *e_field), ' ', &
-          trim(units_abbrev(units_out%energy/units_out%length)), ' in direction ', ii
+          trim(units_abbrev(units_out%energy/units_out%length)), ' in direction ', io_output_direction(ii)
         call write_info(2)
         ! there is an extra factor of -1 in here that is for the electronic charge
 
@@ -216,9 +216,9 @@ contains
       write(message(1), '(a)')
       write(message(2), '(a,f6.4,3a, f6.4, 3a)') 'Info: Calculating dipole moment for field ', &
          units_from_atomic(units_out%energy/units_out%length, e_field), ' ', &
-         trim(units_abbrev(units_out%energy/units_out%length)), ' in direction 2 plus ', &
+         trim(units_abbrev(units_out%energy/units_out%length)), ' in direction y plus ', &
          units_from_atomic(units_out%energy/units_out%length, e_field), ' ', &
-         trim(units_abbrev(units_out%energy/units_out%length)), ' in direction 3'
+         trim(units_abbrev(units_out%energy/units_out%length)), ' in direction z'
       call write_info(2)
   
       hm%ep%vpsl(1:gr%mesh%np) = vpsl_save(1:gr%mesh%np) &
