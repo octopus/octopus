@@ -60,7 +60,7 @@ module xc_m
                                         ! (:,1) => unpolarized, (:,2) => polarized
 
     type(xc_functl_t) :: kernel(2,2)
-    type(xc_functl_t) :: j_functl       ! current-depent part of the functional
+    type(xc_functl_t) :: j_functl       ! current-dependent part of the functional
 
     FLOAT   :: exx_coef                 ! amount of EXX to add for the hybrids
     integer :: mGGA_implementation      ! how to implement the MGGAs
@@ -159,7 +159,7 @@ contains
       if(ll) then
         if((xcs%functl(1,1)%id.ne.0).and.(xcs%functl(1,1)%id.ne.XC_OEP_X)) then
           message(1) = "You can not use an exchange functional when performing"
-          message(2) = "an Hartree-Fock calculation or using a hybrid functional"
+          message(2) = "a Hartree-Fock calculation or using a hybrid functional."
           call write_fatal(2)
         end if
 
@@ -193,13 +193,13 @@ contains
         !% Decides how to implement the meta-GGAs (NOT WORKING).
         !%Option mgga_dphi 1
         !% Use for <math>v_xc</math> the derivative of the energy functional with respect
-        !% to <math>\phi^*(r)</math>. This is the approach used in most quantum chemistry
-        !% (and not only) programs
+        !% to <math>\phi^*(r)</math>. This is the approach used in most quantum-chemistry
+        !% (and other) programs.
         !%Option mgga_gea 2
-        !% Use gradient expansion (GEA) of the kinetic energy density
+        !% Use gradient expansion (GEA) of the kinetic energy density.
         !%Option mgga_oep 3
         !% Use the OEP equation to obtain the xc potential. This is the "correct" way
-        !% to do it within DFT
+        !% to do it within DFT.
         !%End
         call loct_parse_int(datasets_check('MGGAimplementation'), 1, xcs%mGGA_implementation)
         if(.not.varinfo_valid_option('MGGAimplementation', xcs%mGGA_implementation)) &
@@ -240,15 +240,15 @@ contains
 
       !%Variable XCKernel
       !%Type integer
-      !%Default xc_functional
+      !%Default lda_x+lda_c_pz_mod
       !%Section Hamiltonian::XC
       !%Description
-      !% Defines the exchange and correlation kernel
+      !% Defines the exchange and correlation kernel. Only LDA kernels are available currently.
       !%Option xc_functional -1
-      !% The same functional defined by XCFunctional
+      !% The same functional defined by XCFunctional.
       !%End
 
-      call loct_parse_int(datasets_check('XCKernel'), -1, val)
+      call loct_parse_int(datasets_check('XCKernel'), default, val)
 
       if( -1 == val ) then
         ck_id = c_id

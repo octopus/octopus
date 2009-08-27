@@ -7,8 +7,6 @@
 !% they should be specified as a sum of a correlation and an
 !% exchange term.
 !%
-!% The value by default is lda_x + lda_c_pz_mod.
-!%
 !%Option lda_x               1
 !% Exchange
 !%Option lda_c_wigner               2000

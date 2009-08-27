@@ -434,7 +434,7 @@ contains
       case(3)
         ch = 'z'
       case default
-        write(ch,'i') idir
+        write(ch,'(i)') idir
     end select
 
     call pop_sub()

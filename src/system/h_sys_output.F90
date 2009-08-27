@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id: out.F90 3613 2007-11-29 16:47:41Z xavier $
+!! $Id: h_sys_output.F90 3613 2007-11-29 16:47:41Z xavier $
 
 #include "global.h"
 
@@ -272,9 +272,9 @@ contains
         !%Type block
         !%Section States
         !%Description
-        !% At the end of the ground state calculation, the code may calculate
-        !% the steady current that the obtained ground state electronic state
-        !% transverses a user-defined portion of a plane....
+        !% At the end of the ground-state calculation, the code may calculate
+        !% the steady-state current in the ground state 
+        !% traversing a user-defined portion of a plane.
         !%
         !% In the 2D case, the current flow should be calculated through a line.
         !%

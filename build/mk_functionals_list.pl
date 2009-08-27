@@ -60,8 +60,6 @@ print OUT <<"EndOfHeader";
 !% they should be specified as a sum of a correlation term and an
 !% exchange term.
 !%
-!% The value by default is lda_x + lda_c_pz_mod.
-!%
 EndOfHeader
 
 open(IN, "<$funct");
