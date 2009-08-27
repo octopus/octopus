@@ -433,8 +433,10 @@ contains
         ch = 'y'
       case(3)
         ch = 'z'
+      case(4)
+        ch = 'w'
       case default
-        write(ch,'(i)') idir
+        write(ch,'(i1)') idir
     end select
 
     call pop_sub()
