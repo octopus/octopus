@@ -245,8 +245,8 @@ contains
           if(have_to_calculate) then 
 
             str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(ifactor)*em_vars%omega(iomega)))
-            write(message(1), '(4a)') 'Info: Calculating response for direction ', io_output_direction(idir), &
-              ' and frequency ' , trim(str_tmp)
+            write(message(1), '(5a)') 'Info: Calculating response for the ', io_output_direction(idir), &
+              '-direction and frequency ', trim(str_tmp), '.'
             call write_info(1)
 
             if(.not. fromscratch) then 

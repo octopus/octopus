@@ -137,9 +137,9 @@ contains
     !% Hartree potential, and <tt>vxc-i</tt> for the exchange-correlation potentials
     !% of each spin channel <tt>i</tt>.
     !%Option density 2
-    !% Outputs density. The output file is called <tt>density-i<tt>, where <tt>i</tt> stands for 
+    !% Outputs density. The output file is called <tt>density-i</tt>, where <tt>i</tt> stands for 
     !% the spin channel. In a linear-response run mode, instead the linear-response density
-    !% is printed in the directory for the run mode, in a file <tt>freq_XXX/lr_density-i-j<tt>, where <tt>j</tt> 
+    !% is printed in the directory for the run mode, in a file <tt>freq_XXX/lr_density-i-j</tt>, where <tt>j</tt> 
     !% is the perturbation direction. 
     !%Option wfs 4
     !% Outputs wave-functions. Which wavefunctions are to be printed is specified
