@@ -37,6 +37,9 @@
 
     call profiling_in(interp_prof, "MG_INTERPOLATION")
 
+    ASSERT(ubound(f_coarse, dim = 1) == coarse_mesh%np_part)
+    ASSERT(coarse_mesh%np == tt%n_coarse)
+
     call X(derivatives_set_bc)(coarse_der, f_coarse)
 
 #ifdef HAVE_MPI

@@ -37,11 +37,11 @@
 ! ---------------------------------------------------------
 
 subroutine X(input_function)(filename, mesh, f, ierr, is_tmp)
-  character(len=*),  intent(in)  :: filename
-  type(mesh_t),      intent(in)  :: mesh
-  R_TYPE,            intent(inout) :: f(1:mesh%np)
-  integer,           intent(out) :: ierr
-  logical, optional, intent(in)  :: is_tmp
+  character(len=*),  intent(in)    :: filename
+  type(mesh_t),      intent(in)    :: mesh
+  R_TYPE,            intent(inout) :: f(:)
+  integer,           intent(out)   :: ierr
+  logical, optional, intent(in)    :: is_tmp
 
   logical :: is_tmp_ = .false.
 
@@ -50,6 +50,8 @@ subroutine X(input_function)(filename, mesh, f, ierr, is_tmp)
 #endif
 
   call push_sub('io_function_inc.Xinput_function')
+
+  ASSERT(ubound(f, dim = 1) == mesh%np .or. ubound(f, dim = 1) == mesh%np_part)
 
   if(present(is_tmp)) is_tmp_ = is_tmp
 
@@ -285,7 +287,7 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp, ge
   character(len=*),  intent(in)  :: dir, fname
   type(mesh_t),      intent(in)  :: mesh
   type(simul_box_t), intent(in)  :: sb
-  R_TYPE,            intent(in)  :: f(:)  ! f(mesh%np)
+  R_TYPE,            intent(in)  :: f(:)
   FLOAT,             intent(in)  :: u
   integer,           intent(out) :: ierr
   logical, optional, intent(in)  :: is_tmp
@@ -299,6 +301,8 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp, ge
 #endif
 
   call push_sub('io_function_inc.Xoutput_function')
+
+  ASSERT(ubound(f, dim = 1) == mesh%np .or. ubound(f, dim = 1) == mesh%np_part)
 
   if(present(is_tmp)) is_tmp_ = is_tmp
 
