@@ -258,6 +258,7 @@ contains
       !%Description
       !% Which wavefunctions to print, in list form: <i>i.e.</i>, "1-5" to print the first
       !% five states, "2,3" to print the second and the third state, etc.
+      !% If more states are specified than available, extra ones will be ignored.
       !%End
       call loct_parse_string(datasets_check('OutputWfsNumber'), "1-1024", outp%wfs_list)
     end if

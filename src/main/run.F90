@@ -77,7 +77,7 @@ contains
 
     !%Variable FromScratch
     !%Type logical
-    !%Default 0
+    !%Default false
     !%Section Execution
     !%Description
     !% When this variable is yes, Octopus will always perform a
@@ -137,11 +137,14 @@ contains
   end subroutine run
   
 
+  ! ---------------------------------------------------------
   integer function get_resp_method()
+
+    call push_sub('run.get_resp_method')
     
     !%Variable ResponseMethod
     !%Type integer
-    !%Default gs
+    !%Default sternheimer
     !%Section Linear Response
     !%Description
     !% Some response properties can be calculated either via
@@ -167,10 +170,13 @@ contains
       call input_error('ResponseMethod')
     end if
 
+    call pop_sub()
   end function get_resp_method
   
   ! ---------------------------------------------------------
   subroutine run_init()
+
+    call push_sub('run.run_init')
 
     call messages_print_stress(stdout, "Calculation Mode")
     call messages_print_var_option(stdout, "CalculationMode", calc_mode())
@@ -190,11 +196,16 @@ contains
       endif
       call restart_init()
     end if
+
+    call pop_sub()
   end subroutine run_init
 
 
   ! ---------------------------------------------------------
   subroutine run_end()
+    
+    call push_sub('run.run_end')
+
     if(.not. calc_mode_is(CM_PULPO_A_FEIRA)) then
        call hamiltonian_end(hm, sys%gr, sys%geo)
        call system_end(sys)
@@ -206,6 +217,7 @@ contains
     call mpi_debug_statistics()
 #endif
 
+    call pop_sub()
   end subroutine run_end
 
 end module run_m

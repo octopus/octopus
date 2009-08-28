@@ -71,6 +71,8 @@ contains
     integer :: lcao_start, lcao_start_default, max_iter
     type(lcao_t) :: lcao
 
+    call push_sub('unocc.unocc_run')
+
     ! read the maximum number of eigensolver iterations
     call loct_parse_int(datasets_check('MaximumIter'), 20, max_iter)
 
@@ -171,7 +173,7 @@ contains
     call h_sys_output_states(sys%st, sys%gr, sys%geo, STATIC_DIR, sys%outp)
 
     call end_()
-
+    call pop_sub()
 
   contains
 
@@ -182,7 +184,7 @@ contains
 
       integer :: nus
 
-      call push_sub('unocc.unocc_run')
+      call push_sub('unocc.unocc_run.init_')
 
       !%Variable NumberUnoccStates
       !%Type integer
@@ -221,11 +223,14 @@ contains
       eigens%final_tol_iter = 2
       eigens%converged(1:st%d%nik) = st%nst - nus
 
+      call pop_sub()
     end subroutine init_
 
 
     ! ---------------------------------------------------------
     subroutine end_()
+      call push_sub('unocc.unocc_run.end_')
+
       call states_deallocate_wfns(sys%st)
       call eigensolver_end(eigens)
 

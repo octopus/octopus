@@ -198,7 +198,7 @@ contains
 
     ! solve the Sternheimer equation
     do idir = 1, gr%mesh%sb%dim
-      write(message(1), '(a3)') 'Info: Calculating response for the ', io_output_direction(idir), &
+      write(message(1), '(3a)') 'Info: Calculating response for the ', io_output_direction(idir), &
                                 '-direction.' 
       call write_info(1)
       call pert_setup_dir(kdotp_vars%perturbation, idir)
