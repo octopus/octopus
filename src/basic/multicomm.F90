@@ -196,8 +196,8 @@ contains
       !% This feauture is experimental, so use it with care.
       !%
       !% Warning: currently is not possible to use this variable for
-      !% states parallelization for ground state calculation or
-      !% Car-Parrinello.
+      !% states parallelization for ground-state calculations or
+      !% Car-Parrinello molecular dynamics.
       !%
       !%End
   
@@ -216,11 +216,11 @@ contains
       !%Section Execution::Parallelization
       !%Description
       !% Specifies the size of the groups used for the
-      !% parellization. For example (n_d, n_s, n_k) means we have
-      !% n_p*n_s*n_k processors and that the k-points should be
-      !% divided in n_k groups, the states in n_s groups, and each
-      !% state in n_d domains. You can pass the value 'fill' to one
-      !% field, it will be replaced by the value required to complete
+      !% parallelization. For example (n_d, n_s, n_k) means we have
+      !% <i>n_p*n_s*n_k</i> processors and that the <i>k</i>-points should be
+      !% divided in <i>n_k</i> groups, the states in <i>n_s</i> groups, and each
+      !% state in <i>n_d</i> domains. You can pass the value <tt>fill</tt> to one
+      !% field: it will be replaced by the value required to complete
       !% the number of processors in the run.
       !%Option fill -1
       !% Replaced by the value required to complete the number of processors.
@@ -258,9 +258,9 @@ contains
       !%Default par_domains + par_states + par_kpoints
       !%Section Execution::Parallelization
       !%Description
-      !% Specifies what kind of parallelization strategy octopus should use.
-      !% The values can be combined, for example "par_domains + par_states"
-      !% means a combined parallelization in domains and states
+      !% Specifies what kind of parallelization strategy Octopus should use.
+      !% The values can be combined, for example <tt>par_domains + par_states</tt>
+      !% means a combined parallelization in domains and states.
       !%Option serial 0
       !% Octopus will run in serial.
       !%Option par_domains 1
@@ -268,9 +268,9 @@ contains
       !%Option par_states  2
       !% Octopus will run parallel in states.
       !%Option par_kpoints 4
-      !% Octopus will run parallel in k-points/spin.
+      !% Octopus will run parallel in <i>k</i>-points/spin.
       !%Option par_other   8
-      !% Run-mode dependent. For example, in casida it means parallelization in e-h pairs.
+      !% Run-mode dependent. For example, in <tt>casida</tt>, it means parallelization in e-h pairs.
       !%End
 
       if(mpi_world%size > 1) then
@@ -290,7 +290,7 @@ contains
         mc%par_strategy = iand(mc%par_strategy, par_mask)
 
         if(mc%par_strategy == P_STRATEGY_SERIAL) then
-          message(1) = "More than one node is available, but the this run mode can not run in parallel"
+          message(1) = "More than one node is available, but this run mode can not run in parallel."
           message(2) = "Please select a ParallelizationStrategy compatible with"
           j = 2
           do i = 1, n_par_types
@@ -437,7 +437,7 @@ contains
       if(product(mc%group_sizes(1:mc%n_index)).ne.mpi_world%size) then
         write(message(1),'(a,i4,a,i4,a)') "Inconsistent number of processors (", &
           product(mc%group_sizes(1:mc%n_index)), ".ne.", mpi_world%size, ")"
-        message(2) = "You probably have an problem in the block 'ParallelizationGroupRanks'"
+        message(2) = "You probably have a problem in the block 'ParallelizationGroupRanks'"
         call write_fatal(2)
       end if
 
@@ -465,7 +465,7 @@ contains
         (M_ONE - frac)*CNST(100.), "% of computer time"
       if(frac < CNST(0.8)) then
         message(2) = "I decided this is too much. Change the number of processors and try again."
-        message(3) = "Usually a number of processors which is a multiple of small primes is best"
+        message(3) = "Usually a number of processors which is a multiple of small primes is best."
         call write_fatal(3)
       else
         call write_info(1)
