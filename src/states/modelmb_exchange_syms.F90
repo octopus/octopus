@@ -67,10 +67,9 @@ contains
 
     integer :: itype, ipart1, ipart2, npptype
     integer :: ip, ipp, iup, idown, iyoung
-    integer :: iantisym, ierr, ikeeppart
+    integer :: ikeeppart
     integer :: ndimmb
     integer :: nspindown, nspinup, iperm_up, iperm_down
-    integer :: idir
 
     type(permutations_t) :: perms_up, perms_down
     type(modelmb_1part_t) :: mb_1part

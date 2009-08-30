@@ -410,8 +410,8 @@ contains
     !--------------------------------------------------------------
     subroutine read_misc()
 
-      integer :: n_cols, n_rows, i
-      type(block_t)      :: blk
+      integer              :: i
+      type(block_t)        :: blk
       FLOAT,   allocatable :: pos(:)
 
       call push_sub('simul_box.simul_box_init.read_misc')
@@ -1612,7 +1612,7 @@ contains
 
     character(len=20)  :: str
     character(len=300) :: line
-    integer            :: idim, jdim, il, ierr
+    integer            :: idim, il, ierr
     FLOAT              :: rlattice_primitive(1:MAX_DIM, 1:MAX_DIM)
 
     call push_sub('simul_box.simul_box_init_from_file')

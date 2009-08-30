@@ -372,7 +372,6 @@ contains
   ! ---------------------------------------------------------
   subroutine excited_states_kill(excited_state)
     type(excited_states_t), intent(inout) :: excited_state
-    integer :: ierr
 
     call push_sub('excited_states.excited_states_kill')
 

@@ -44,8 +44,7 @@ subroutine X(nl_operator_tune)(op, best)
 #endif
 
 #ifdef HAVE_MPI
-  integer :: ierr, rank
-  real(8) :: global_flops(OP_MIN:OP_MAX)
+  integer :: ierr
 #endif
 
   call push_sub('nl_operator_inc.Xnl_operator_tune')

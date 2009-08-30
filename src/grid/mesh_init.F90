@@ -180,7 +180,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   type(stencil_t),    intent(in)    :: stencil
 
   integer :: i, j, k, il, ik, ix, iy, iz, is
-  integer :: newi, newj, newk, ii, jj, kk, dx, dy, dz, i_lev, ip
+  integer :: newi, newj, newk, ii, jj, kk, dx, dy, dz, i_lev
   integer :: jx, jy, jz, res_counter, j_counter
   FLOAT   :: chi(MAX_DIM)
   integer :: nr(1:2, 1:MAX_DIM), res, n_mod
@@ -781,13 +781,13 @@ contains
   subroutine mesh_get_vol_pp(sb)
     type(simul_box_t), intent(in) :: sb
 
-    integer :: i, j, jj(1:MAX_DIM), ip, np
+    integer :: i, jj(1:MAX_DIM), ip, np
     FLOAT   :: chi(MAX_DIM)
 
-    integer :: ix, iy, iz, dx, dy, dz, newi, newj, newk, ii, lii, ljj, lkk, nn, neighbor
+    integer :: ix, iy, iz, dx, dy, dz, newi, newj, newk, ii, lii, ljj, lkk, nn
     FLOAT,   allocatable :: pos(:), ww(:), vol_tmp(:, :, :)
     integer, allocatable :: posi(:)
-    integer :: res, n_mod, i_lev, nr(1:2, 1:MAX_DIM)
+    integer :: n_mod, i_lev, nr(1:2, 1:MAX_DIM)
     real(8), parameter :: DELTA = CNST(1e-12)
  
 #if defined(HAVE_MPI)

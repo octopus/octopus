@@ -416,8 +416,7 @@ contains
 
     FLOAT, allocatable :: rho(:)
     integer :: is, ip
-    integer :: default_solver, poisson_solver, i!SEC Team
-    real(8) :: ehartree_nuc!SEC Team
+    integer :: default_solver, poisson_solver
     call push_sub('v_ks.v_ks_hartree')
 
     SAFE_ALLOCATE(rho(1:gr%mesh%np))

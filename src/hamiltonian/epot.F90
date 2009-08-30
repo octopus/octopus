@@ -372,7 +372,7 @@ contains
     type(geometry_t),  intent(inout) :: geo
     integer :: poisson_solver, default_solver !SEC Team
 
-    integer :: i, iproj
+    integer :: iproj
 
     call push_sub('epot.epot_end')
 

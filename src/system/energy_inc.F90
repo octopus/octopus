@@ -27,7 +27,7 @@ subroutine X(calculate_eigenvalues)(hm, gr, st, time)
   FLOAT,  optional,    intent(in)    :: time
 
   R_TYPE, allocatable :: hpsi(:, :, :), psi(:, :, :)
-  integer :: ik, ist, minst, maxst, idim
+  integer :: ik, ist, minst, maxst
   type(batch_t) :: psib, hpsib
   type(profile_t), save :: prof
 

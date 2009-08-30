@@ -100,8 +100,6 @@ contains
     type(states_t), intent(in)    :: st
     type(mesh_t),   intent(in)    :: mesh
 
-    integer :: size
-
     call push_sub('linear_response.lr_allocate')
 
     if (states_are_complex(st)) then

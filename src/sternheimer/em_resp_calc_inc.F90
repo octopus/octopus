@@ -420,7 +420,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   type(mesh_t),   pointer :: mesh
 
   integer :: ifreq, jfreq, isigma, idim, ispin, np, ndim, idir, ist, ik
-  integer :: ii, jj, kk, iperm, op_sigma, idim2, ist2, ip
+  integer :: ii, jj, kk, iperm, op_sigma, ist2, ip
   integer :: perm(1:3), u(1:3), w(1:3), ijk(1:3)
 
   R_TYPE, allocatable :: hvar(:, :, :, :, :, :)

@@ -295,7 +295,7 @@ contains
     CMPLX,             intent(in)  :: offdiag(1:intf%np_intf, 1:intf%np_intf)
     CMPLX,             intent(out) :: matrix(1:2*intf%np_intf, 1:2*intf%np_intf)
 
-    integer  :: i, np, np2, itmp
+    integer  :: i, np, np2
     CMPLX, allocatable   :: x1(:,:), x2(:,:)
 
     call push_sub('ob_green.create_moeb_trans_matrix')
@@ -390,7 +390,7 @@ contains
     type(interface_t), intent(in)  :: intf ! => gr%intf(il)
     CMPLX,     intent(out) :: green(:, :)
 
-    integer              :: ib, np, np2, itmp
+    integer              :: ib, np, np2
     CMPLX, allocatable   :: x(:,:), x2(:,:), o2(:,:), o4(:,:), d(:), h(:, :, :), v(:, :, :)
     FLOAT                :: dos
 

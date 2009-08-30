@@ -84,8 +84,7 @@ contains
     integer,             intent(in)  :: il
     integer, optional,   intent(in)  :: extent_uc ! new reduced extent of the unit cell
 
-    logical :: ok
-    integer :: i, from(MAX_DIM), to(MAX_DIM), ll(MAX_DIM), dir, lr, tdir, extent
+    integer :: from(MAX_DIM), to(MAX_DIM), ll(MAX_DIM), dir, tdir
 
     call push_sub('ob_interface.interface_init')
 

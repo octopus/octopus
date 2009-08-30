@@ -94,7 +94,6 @@ contains
   subroutine states_dim_copy(dout, din)
     type(states_dim_t), intent(out) :: dout
     type(states_dim_t), intent(in)  :: din
-    integer :: i
 
     call push_sub('states_dim.states_dim_copy')
 

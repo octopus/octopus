@@ -27,7 +27,7 @@
     type(h_sys_output_t),   intent(in)    :: outp
 
     integer :: ik, ist, idim, is, id, ierr, ip
-    character(len=80) :: fname, dirname
+    character(len=80) :: fname
     FLOAT :: u
     FLOAT, allocatable :: dtmp(:), elf(:,:)
     FLOAT, allocatable :: current(:, :, :)

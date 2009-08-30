@@ -67,7 +67,7 @@ contains
 
     type(eigensolver_t) :: eigens
     integer :: iunit, ierr, occupied_states, total_states, iter
-    logical :: converged, l
+    logical :: converged
     integer :: lcao_start, lcao_start_default, max_iter
     type(lcao_t) :: lcao
 

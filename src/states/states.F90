@@ -1115,7 +1115,7 @@ contains
     type(batch_t),  intent(inout) :: psib
     FLOAT,          intent(inout) :: rho(:,:)
     
-    integer :: ist, ist2, ip, ispin, np, idim
+    integer :: ist, ist2, ip, ispin, idim
     CMPLX   :: c, psi1, psi2
     FLOAT, pointer :: dpsi(:, :)
     CMPLX, pointer :: zpsi(:, :)
@@ -1269,7 +1269,7 @@ contains
     type(grid_t),            intent(in)     :: gr
     FLOAT, optional, target, intent(out)    :: rho(:,:)
 
-    integer :: ik, ist
+    integer :: ik
 
     FLOAT, pointer :: dens(:, :)
     type(batch_t)  :: psib

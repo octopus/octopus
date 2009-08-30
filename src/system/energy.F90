@@ -67,7 +67,6 @@ contains
     logical, optional,   intent(in)    :: full
 
     logical :: full_
-    integer :: default_solver, poisson_solver, i
 
     call push_sub('energy.energy_calculate')
 

@@ -47,7 +47,10 @@ contains
   ! ---------------------------------------------------------
   subroutine mpi_mod_init()
 #if defined(HAVE_MPI)
-    integer :: mpi_err, provided
+    integer :: mpi_err
+#ifdef USE_OMP
+    integer :: provided
+#endif
 
     ! initialize MPI
 #if defined(USE_OMP) && defined(HAVE_MPI2)

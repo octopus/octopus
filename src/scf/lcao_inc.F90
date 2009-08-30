@@ -348,7 +348,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
 #ifdef HAVE_MPI
   R_TYPE, allocatable :: tmp(:, :)
-  type(profile_t), save :: commprof, comm2prof
+  type(profile_t), save :: comm2prof
 #endif
 
   maxorb = 0

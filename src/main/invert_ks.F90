@@ -51,7 +51,7 @@ contains
     type(system_t),              intent(inout) :: sys
     type(hamiltonian_t),         intent(inout) :: hm
 
-    integer :: ii, jj, kk, ierr, np, ndim, nspin, idiffmax
+    integer :: ii, jj, ierr, np, ndim, nspin, idiffmax
     integer :: invksmethod
     FLOAT :: diffdensity
     FLOAT, allocatable :: target_rho(:,:)
@@ -249,7 +249,7 @@ contains
     !local vars
     integer :: ii, jj, ierr, idiffmax
     integer :: iunit, verbosity, counter
-    FLOAT :: mixing, stabilizer, convdensity, diffdensity
+    FLOAT :: stabilizer, convdensity, diffdensity
     FLOAT, allocatable :: vhxc_in(:,:,:), vhxc_out(:,:,:), vhxc_mix(:,:,:)
     type(mix_t) :: smix
     character(len=256) :: fname
@@ -388,8 +388,7 @@ contains
     FLOAT, intent(out) :: vhxc_out(1:np, 1:nspin,1:1)
     
     integer :: ip, iprime, ii, jj, ivec, jdim
-    integer :: neigenval
-    FLOAT :: numerator, denominator, diffrho, epsij, occij, inverse
+    FLOAT :: numerator, diffrho, epsij, occij, inverse
     FLOAT :: vol_element
     FLOAT :: ki(1:np, 1:np)
     FLOAT :: eigenvals(1:np), inverseki(1:np,1:np)

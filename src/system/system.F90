@@ -65,7 +65,6 @@ contains
   !----------------------------------------------------------
   subroutine system_init(sys)
     type(system_t), intent(out) :: sys
-    integer :: ii
 
     call push_sub('system.system_init')
 

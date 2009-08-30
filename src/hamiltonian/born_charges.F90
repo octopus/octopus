@@ -104,7 +104,7 @@ module born_charges_m
     integer,              intent(in)    :: dim
 
     CMPLX :: Born_sum(MAX_DIM, MAX_DIM)        ! the sum of Born charges from the calculation 
-    integer iatom, idir
+    integer :: iatom
 
     call push_sub('Born_charges.correct_Born_charges')
 

@@ -58,7 +58,6 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   integer, allocatable :: ireduce(:, :, :, :)
   type(profile_t), save :: prof_scatter, prof_gather
 #if defined(HAVE_MPI)
-  integer :: nn
   type(profile_t), save :: reduce_prof
   R_TYPE, allocatable   :: reduce_buffer_dest(:)
 #endif

@@ -262,7 +262,7 @@ subroutine states_choose_kpoints(d, sb, geo)
 
 contains
   subroutine print_kpoints_debug
-    integer :: iunit, ik
+    integer :: iunit
 
     if(in_debug_mode) then
       

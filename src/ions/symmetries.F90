@@ -88,7 +88,7 @@ contains
     type(simul_box_t), intent(in)  :: sb
     
     integer :: max_size
-    integer :: idir, jdir, iatom
+    integer :: idir, iatom
     real(8) :: lattice(1:3, 1:3)
     real(8), allocatable :: position(:, :)
     integer, allocatable :: typs(:)

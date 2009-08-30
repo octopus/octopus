@@ -110,7 +110,7 @@ contains
     type(states_t),   pointer :: st
     type(geometry_t), pointer :: geo
     logical                   :: stopping
-    integer                   :: iter, ii, ik, ierr, iatom, ist, mpi_err
+    integer                   :: iter, ii, ierr, iatom, mpi_err
     real(8)                   :: etime
     logical                   :: generate
     type(gauge_force_t)       :: gauge_force

@@ -68,7 +68,7 @@ module gcm_m
     FLOAT, allocatable :: hmatrix(:, :), smatrix(:, :), overlap_matrix(:, :, :)
     character(len=100), allocatable :: slatdetnames(:)
     FLOAT :: uh, kij, gamma, ex
-    integer :: ierr, i, ndeterminants, j, k, n, ifinal
+    integer :: ierr, i, ndeterminants, j, k, n
 
     call push_sub('gcm.gcm_run')
 

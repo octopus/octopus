@@ -118,7 +118,7 @@ contains
     type(states_t),    intent(inout) :: st
     type(mesh_t),      intent(in)    :: m
 
-    integer :: ik, start_
+    integer :: ik
 
     do ik = st%d%kpt%start, st%d%kpt%end
       if (states_are_real(st)) then

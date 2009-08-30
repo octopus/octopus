@@ -65,13 +65,13 @@ contains
     type(grid_t),   pointer :: gr    ! shortcuts
     type(states_t), pointer :: st
 
-    integer :: iunit, ios, i_start, ii, jj, kk, is, isign, ierr, iatom
+    integer :: iunit, ios, i_start, ii, jj, is, isign, ierr
     FLOAT :: e_field
     FLOAT, allocatable :: Vpsl_save(:), trrho(:), dipole(:, :, :)
     FLOAT, allocatable :: elf(:,:), lr_elf(:,:), elfd(:,:), lr_elfd(:,:)
     FLOAT, allocatable :: lr_rho(:,:), lr_rho2(:,:), gs_rho(:,:), tmp_rho(:,:)
     FLOAT :: center_dipole(1:MAX_DIM), diag_dipole(1:MAX_DIM)
-    type(Born_charges_t) :: Born_charges
+    type(born_charges_t) :: born_charges
     logical :: diagonal_done, calc_Born
     character(len=80) :: fname
 

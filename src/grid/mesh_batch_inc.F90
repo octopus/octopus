@@ -137,7 +137,7 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   R_TYPE,            intent(inout) :: dot(:, :)
   logical, optional, intent(in)    :: reduce
 
-  integer :: ist, jst, idim, sp, block_size, ep, ip, lda, ldb
+  integer :: ist, jst, idim, sp, block_size, ep, ip, lda
   R_TYPE :: ss
 #ifdef HAVE_MPI
   R_TYPE, allocatable :: dottmp(:, :)
