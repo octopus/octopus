@@ -223,10 +223,8 @@ contains
     ! Handle mixing now...
 
     if (scf%what2mix == MIXPOT) then
-      call mesh_init_mesh_aux(gr%mesh)
       scf%mixdim1 = gr%mesh%np
     else
-      call mesh_init_mesh_aux(gr%fine%mesh)
       scf%mixdim1 = gr%fine%mesh%np
     end if
 
@@ -340,14 +338,14 @@ contains
 
     nspin = st%d%nspin
 
-    SAFE_ALLOCATE(rhoout(1:scf%mixdim1, 1:scf%mixdim2, 1:nspin))
-    SAFE_ALLOCATE(rhoin (1:scf%mixdim1, 1:scf%mixdim2, 1:nspin))
+    SAFE_ALLOCATE(rhoout(1:gr%fine%mesh%np, 1:scf%mixdim2, 1:nspin))
+    SAFE_ALLOCATE(rhoin (1:gr%fine%mesh%np, 1:scf%mixdim2, 1:nspin))
 
-    rhoin(1:scf%mixdim1, 1, 1:nspin) = st%rho(1:scf%mixdim1, 1:nspin)
+    rhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
     rhoout = M_ZERO
 
     if (st%d%cdft) then
-      rhoin(1:scf%mixdim1, 2:scf%mixdim2, 1:nspin) = st%current(1:scf%mixdim1, 1:gr%mesh%sb%dim, 1:nspin)
+      rhoin(1:gr%fine%mesh%np, 2:scf%mixdim2, 1:nspin) = st%current(1:gr%fine%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
     end if
     
     if (scf%what2mix == MIXPOT) then
@@ -404,7 +402,7 @@ contains
 
       ! compute output density, potential (if needed) and eigenvalues sum
       call states_calc_dens(st, gr)
-      rhoout(1:scf%mixdim1, 1, 1:nspin) = st%rho(1:scf%mixdim1, 1:nspin)
+      rhoout(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
       if (hm%d%cdft) then
         call calc_physical_current(gr, st, st%current)
         rhoout(1:gr%mesh%np, 2:scf%mixdim2, 1:nspin) = st%current(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
@@ -421,11 +419,11 @@ contains
 
       ! compute convergence criteria
       scf%abs_dens = M_ZERO
-      SAFE_ALLOCATE(tmp(1:gr%mesh%np))
+      SAFE_ALLOCATE(tmp(1:gr%fine%mesh%np))
       do is = 1, nspin
         do idim = 1, scf%mixdim2
-          tmp = abs(rhoin(1:gr%mesh%np, idim, is) - rhoout(1:gr%mesh%np, idim, is))
-          scf%abs_dens = scf%abs_dens + dmf_integrate(gr%mesh, tmp)
+          tmp = abs(rhoin(1:gr%fine%mesh%np, idim, is) - rhoout(1:gr%fine%mesh%np, idim, is))
+          scf%abs_dens = scf%abs_dens + dmf_integrate(gr%fine%mesh, tmp)
         end do
       end do
       SAFE_DEALLOCATE_A(tmp)
@@ -464,12 +462,16 @@ contains
       ! mixing
       select case (scf%what2mix)
       case (MIXDENS)
+        !set the pointer for dmf_dotp_aux
+        call mesh_init_mesh_aux(gr%fine%mesh)
         ! mix input and output densities and compute new potential
         call dmixing(scf%smix, iter, rhoin, rhoout, rhonew, dmf_dotp_aux)
-        st%rho(1:scf%mixdim1,1:nspin) = rhonew(1:scf%mixdim1, 1, 1:nspin)
+        st%rho(1:gr%fine%mesh%np, 1:nspin) = rhonew(1:gr%fine%mesh%np, 1, 1:nspin)
         if (hm%d%cdft) st%current(1:gr%mesh%np,1:gr%mesh%sb%dim,1:nspin) = rhonew(1:gr%mesh%np, 2:scf%mixdim2, 1:nspin)
         call v_ks_calc(gr, ks, hm, st)
       case (MIXPOT)
+        !set the pointer for dmf_dotp_aux
+        call mesh_init_mesh_aux(gr%mesh)
         ! mix input and output potentials
         call dmixing(scf%smix, iter, vin, vout, vnew, dmf_dotp_aux)
         hm%vhxc(1:gr%mesh%np, 1:nspin) = vnew(1:gr%mesh%np, 1, 1:nspin)
@@ -508,7 +510,7 @@ contains
       end if
 
       ! save information for the next iteration
-      rhoin(1:gr%mesh%np, 1, 1:nspin) = st%rho(1:gr%mesh%np, 1:nspin)
+      rhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
       if (hm%d%cdft) rhoin(1:gr%mesh%np, 2:scf%mixdim2, 1:nspin) = st%current(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
       if (scf%what2mix == MIXPOT) then
         vin(1:gr%mesh%np, 1, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
