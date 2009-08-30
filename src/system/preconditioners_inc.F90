@@ -159,7 +159,8 @@ contains
 
       ! back to level 1
 
-      call X(multigrid_coarse2fine)(gr%mgrid%level(2)%tt, gr%mgrid%level(2)%der, gr%mgrid%level(2)%mesh, d2, t1)
+      call X(multigrid_coarse2fine)(gr%mgrid%level(2)%tt, gr%mgrid%level(2)%der, &
+        gr%mgrid%level(2)%mesh,  gr%mgrid%level(1)%mesh, d2, t1)
 
       forall (ip = 1:mesh1%np) 
         q1(ip) = q1(ip) + t1(ip)
@@ -175,7 +176,8 @@ contains
 
       ! and finally back to level 0
 
-      call X(multigrid_coarse2fine)(gr%mgrid%level(1)%tt ,gr%mgrid%level(1)%der, gr%mgrid%level(1)%mesh, d1, d0)
+      call X(multigrid_coarse2fine)(gr%mgrid%level(1)%tt ,gr%mgrid%level(1)%der, &
+        gr%mgrid%level(1)%mesh, gr%mgrid%level(0)%mesh, d1, d0)
 
       forall (ip = 1:mesh0%np) d0(ip) = -d0(ip)
 

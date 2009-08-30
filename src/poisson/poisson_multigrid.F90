@@ -234,8 +234,9 @@ contains
 
       if(res < this%threshold) then
         if(curr_l > 0 ) then
-          call dmultigrid_coarse2fine(gr%mgrid%level(curr_l)%tt, gr%mgrid%level(curr_l)%der, gr%mgrid%level(curr_l)%mesh, &
-            phi%level(curr_l)%p, phi%level(curr_l-1)%p)
+          call dmultigrid_coarse2fine(gr%mgrid%level(curr_l)%tt, gr%mgrid%level(curr_l)%der, &
+            gr%mgrid%level(curr_l)%mesh, gr%mgrid%level(curr_l - 1)%mesh, &
+            phi%level(curr_l)%p, phi%level(curr_l - 1)%p)
           curr_l = curr_l - 1
         else
           exit
@@ -328,7 +329,7 @@ contains
         if(l /= fl) then
           ! transfer correction to finer level
           call dmultigrid_coarse2fine(gr%mgrid%level(l)%tt, gr%mgrid%level(l)%der, &
-            gr%mgrid%level(l)%mesh, phi%level(l)%p, err%level(l-1)%p)
+            gr%mgrid%level(l)%mesh, gr%mgrid%level(l - 1)%mesh, phi%level(l)%p, err%level(l-1)%p)
 
           np = gr%mgrid%level(l-1)%mesh%np
           forall(ip = 1:np) phi%level(l - 1)%p(ip) = phi%level(l - 1)%p(ip) + err%level(l - 1)%p(ip)
@@ -387,7 +388,8 @@ contains
 
           ! transfer correction to finer level
           call dmultigrid_coarse2fine(gr%mgrid%level(l)%tt, gr%mgrid%level(l)%der, &
-            gr%mgrid%level(l)%mesh, phi%level(l)%p, err%level(l-1)%p)
+            gr%mgrid%level(l)%mesh, gr%mgrid%level(l - 1)%mesh, phi%level(l)%p, err%level(l - 1)%p)
+
           np = gr%mgrid%level(l-1)%mesh%np
           forall(ip = 1:np) phi%level(l - 1)%p(ip) = phi%level(l - 1)%p(ip) + err%level(l - 1)%p(ip)
         end if

@@ -20,18 +20,17 @@
 #include "global.h"
 
   ! ---------------------------------------------------------
-  subroutine X(multigrid_coarse2fine)(tt, coarse_der, coarse_mesh, f_coarse, f_fine)
+  subroutine X(multigrid_coarse2fine)(tt, coarse_der, coarse_mesh, fine_mesh, f_coarse, f_fine)
     type(transfer_table_t),  intent(in)    :: tt
     type(derivatives_t),     intent(in)    :: coarse_der
     type(mesh_t),            intent(in)    :: coarse_mesh
+    type(mesh_t),            intent(in)    :: fine_mesh
     R_TYPE,                  intent(inout) :: f_coarse(:)
     R_TYPE,                  intent(out)   :: f_fine(:)
 
-    FLOAT, pointer :: vol_pp(:)
-
-    integer :: i, i1, i2, i4, i8
-    integer :: jj, j(8)
-    FLOAT   :: vol_total
+    integer :: idir
+    integer :: ipc, ipf, xf(1:3), xc(1:3), dd(1:3)
+    FLOAT   :: factor
 
     call push_sub('multigrid.Xmultigrid_coarse2fine')
 
@@ -46,44 +45,25 @@
     if(coarse_mesh%parallel_in_domains) call X(vec_ghost_update)(coarse_mesh%vp, f_coarse)
 #endif
 
-    vol_pp => coarse_mesh%vol_pp
+    factor = CNST(1.0)/(CNST(2.0)*coarse_mesh%sb%dim)
 
-    i1 = 0;  i2 = 0;  i4 = 0;  i8 = 0;
-    do i = 1, tt%n_fine
-      select case(tt%fine_i(i))
-      case(1)
-        i1 = i1 + 1
-        j(1:1) = tt%to_fine1(1:1, i1)
-      case(2)
-        i2 = i2 + 1
-        j(1:2) = tt%to_fine2(1:2, i2)
-      case(4)
-        i4 = i4 + 1
-        j(1:4) = tt%to_fine4(1:4, i4)
-      case(8)
-        i8 = i8 + 1
-        j(1:8) = tt%to_fine8(1:8, i8)
-      end select
+    do ipf = 1, fine_mesh%np
+      xf = fine_mesh%idx%lxyz(ipf, :)
+      dd = mod(xf, 2)
+ 
+      f_fine(ipf) = M_ZERO
 
-      if(coarse_mesh%use_curvilinear) then
-        f_fine(i) = M_ZERO
-        vol_total = M_ZERO
-        do jj = 1, tt%fine_i(i)
-          f_fine(i) = f_fine(i) + vol_pp(j(jj))*f_coarse(j(jj))
-          vol_total = vol_total + vol_pp(j(jj))
-        end do
-        f_fine(i) = f_fine(i)/vol_total
-      else
-        f_fine(i) = M_ZERO
-        vol_total = M_ZERO
-        do jj = 1, tt%fine_i(i)
-          f_fine(i) = f_fine(i) + vol_pp(1)*f_coarse(j(jj))
-          vol_total = vol_total + vol_pp(1)
-        end do
-        f_fine(i) = f_fine(i)/vol_total
-      end if
+      do idir = 1, coarse_mesh%sb%dim
+        xc = (xf - dd)/2
+        ipc = coarse_mesh%idx%lxyz_inv(xc(1), xc(2), xc(3))
+        f_fine(ipf) = f_fine(ipf) + factor*f_coarse(ipc)
+        xc = (xf + dd)/2
+        ipc = coarse_mesh%idx%lxyz_inv(xc(1), xc(2), xc(3))
+        f_fine(ipf) = f_fine(ipf) + factor*f_coarse(ipc)
+      end do
 
     end do
+
     call profiling_out(interp_prof)
     call pop_sub()
   end subroutine X(multigrid_coarse2fine)

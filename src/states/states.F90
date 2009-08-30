@@ -1141,7 +1141,7 @@ contains
         ist2 = psib%states(ist)%ist
 
         if(gr%have_fine_mesh) then
-          call dmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%mesh, psib%states(ist)%dpsi(:, 1), dpsi(:, 1))
+          call dmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%mesh, gr%fine%mesh, psib%states(ist)%dpsi(:, 1), dpsi(:, 1))
         else
           dpsi => psib%states(ist)%dpsi
         end if
@@ -1149,14 +1149,13 @@ contains
         forall(ip = 1:gr%fine%mesh%np)
           rho(ip, ispin) = rho(ip, ispin) + st%d%kweights(ik)*st%occ(ist2, ik)*dpsi(ip, 1)**2
         end forall
-
       end do
     else
       do ist = 1, psib%nst
         ist2 = psib%states(ist)%ist
 
         if(gr%have_fine_mesh) then
-          call zmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%mesh, psib%states(ist)%zpsi(:, 1), zpsi(:, 1))
+          call zmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%mesh, gr%fine%mesh, psib%states(ist)%zpsi(:, 1), zpsi(:, 1))
         else
           zpsi => psib%states(ist)%zpsi
         end if
@@ -1174,7 +1173,7 @@ contains
 
         if(gr%have_fine_mesh) then
           do idim = 1, st%d%dim
-            call zmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%mesh, psib%states(ist)%zpsi(:, idim), zpsi(:, idim))
+            call zmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%mesh, gr%fine%mesh, psib%states(ist)%zpsi(:, idim), zpsi(:, idim))
           end do
         else
           zpsi => psib%states(ist)%zpsi
