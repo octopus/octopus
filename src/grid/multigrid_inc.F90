@@ -20,17 +20,18 @@
 #include "global.h"
 
   ! ---------------------------------------------------------
-  subroutine X(multigrid_coarse2fine)(tt, coarse_der, coarse_mesh, fine_mesh, f_coarse, f_fine)
+  subroutine X(multigrid_coarse2fine)(tt, coarse_der, coarse_mesh, fine_mesh, f_coarse, f_fine, order)
     type(transfer_table_t),  intent(in)    :: tt
     type(derivatives_t),     intent(in)    :: coarse_der
     type(mesh_t),            intent(in)    :: coarse_mesh
     type(mesh_t),            intent(in)    :: fine_mesh
     R_TYPE,                  intent(inout) :: f_coarse(:)
     R_TYPE,                  intent(out)   :: f_fine(:)
+    integer, optional,       intent(in)    :: order
 
-    integer :: idir
+    integer :: idir, order_, ii, ifactor
     integer :: ipc, ipf, xf(1:3), xc(1:3), dd(1:3)
-    FLOAT   :: factor
+    FLOAT, allocatable :: factor(:), points(:)
 
     call push_sub('multigrid.Xmultigrid_coarse2fine')
 
@@ -39,27 +40,40 @@
     ASSERT(ubound(f_coarse, dim = 1) == coarse_mesh%np_part)
     ASSERT(coarse_mesh%np == tt%n_coarse)
 
+    order_ = 1
+    if(present(order)) order_ = order
+
+    SAFE_ALLOCATE(points(1:2*order_))
+    SAFE_ALLOCATE(factor(1:2*order_))
+
+    forall(ii = 1:2*order_) points(ii) = ii
+
+    call interpolation_coefficients(2*order_, points, order_ + M_HALF, factor)
+
+    factor = factor/coarse_mesh%sb%dim
+
     call X(derivatives_set_bc)(coarse_der, f_coarse)
 
 #ifdef HAVE_MPI
     if(coarse_mesh%parallel_in_domains) call X(vec_ghost_update)(coarse_mesh%vp, f_coarse)
 #endif
 
-    factor = CNST(1.0)/(CNST(2.0)*coarse_mesh%sb%dim)
-
     do ipf = 1, fine_mesh%np
+      
       xf = fine_mesh%idx%lxyz(ipf, :)
       dd = mod(xf, 2)
- 
+      
       f_fine(ipf) = M_ZERO
-
+      
       do idir = 1, coarse_mesh%sb%dim
-        xc = (xf - dd)/2
-        ipc = coarse_mesh%idx%lxyz_inv(xc(1), xc(2), xc(3))
-        f_fine(ipf) = f_fine(ipf) + factor*f_coarse(ipc)
-        xc = (xf + dd)/2
-        ipc = coarse_mesh%idx%lxyz_inv(xc(1), xc(2), xc(3))
-        f_fine(ipf) = f_fine(ipf) + factor*f_coarse(ipc)
+        ifactor = 1
+        do ii = -order_, order_
+          if(ii == 0) cycle
+          xc = (xf + ii*dd)/2
+          ipc = coarse_mesh%idx%lxyz_inv(xc(1), xc(2), xc(3))
+          f_fine(ipf) = f_fine(ipf) + factor(ifactor)*f_coarse(ipc)
+          ifactor = ifactor + 1
+        end do
       end do
 
     end do
