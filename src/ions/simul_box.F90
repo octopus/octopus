@@ -1362,7 +1362,6 @@ contains
     integer :: red, green, blue, ix, iy
 #endif
 
-    call push_sub('simul_box.simul_box_in_box_vec')
 
     SAFE_ALLOCATE(xx(1:MAX_DIM, 1:npoints))
 
@@ -1453,7 +1452,6 @@ contains
 
     SAFE_DEALLOCATE_A(xx)
 
-    call pop_sub()
   end subroutine simul_box_in_box_vec
 
 
