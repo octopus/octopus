@@ -38,6 +38,13 @@ dist_share_DATA =                    \
 	05-cpmd.test                 \
 	05-cpmd.01-gs.inp            \
 	05-cpmd.02-verlet.inp        \
-	05-cpmd.03-vel_verlet.inp
+	05-cpmd.03-vel_verlet.inp      \
+	07-visscher.test               \
+	07-visscher.01-gs.inp          \
+	07-visscher.02-td.inp          \
+	08-laser.test                  \
+	08-laser.01-ground_state.inp   \
+	08-laser.02-length_gauge.inp   \
+	08-laser.03-velocity_gauge.inp
 
 CLEANFILES = *~ *.bak
