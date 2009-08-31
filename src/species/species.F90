@@ -711,6 +711,7 @@ contains
     FLOAT :: r, uVr0, duvr0, ylm, gylm(MAX_DIM)
     FLOAT, parameter :: ylmconst = CNST(0.488602511902920) !  = sqrt(3/(4*pi))
 
+    ! no push_sub because this function is called very frequently
     r = sqrt(sum(x(1:MAX_DIM)**2))
 
     uVr0  = spline_eval(s%ps%kb(l, i), r)
@@ -751,6 +752,7 @@ contains
     FLOAT :: r, uVr0
     CMPLX :: ylm
 
+    ! no push_sub because this function is called very frequently
     r = sqrt(sum(x(1:MAX_DIM)**2))
 
     uVr0 = spline_eval(s%ps%kb(l, i), r)
@@ -767,6 +769,7 @@ contains
     FLOAT, intent(in) :: x(MAX_DIM)
     FLOAT :: r
 
+    ! no push_sub because this function is called very frequently
     ! only for 3D pseudopotentials, please
     if(species_is_ps(s)) then
       r = sqrt(sum(x(:)**2))

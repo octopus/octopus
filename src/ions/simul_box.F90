@@ -106,7 +106,7 @@ module simul_box_m
     type(interp_t) :: interp          ! interpolation points
     integer        :: num_areas       ! number of multiresolution areas
     integer        :: num_radii       ! number of radii (resolution borders)
-    FLOAT, pointer :: radius(:)       ! radius of the high resolution area
+    FLOAT, pointer :: radius(:)       ! radius of the high-resolution area
     FLOAT          :: center(MAX_DIM) ! central point
   end type multiresolution_t
 
@@ -136,12 +136,12 @@ module simul_box_m
     character(len=1024) :: user_def ! for the user-defined box
 
     logical :: mr_flag                 ! .true. when using multiresolution
-    type(multiresolution_t) :: hr_area ! high resolution areas
+    type(multiresolution_t) :: hr_area ! high-resolution areas
 
     FLOAT :: rlattice_primitive(MAX_DIM,MAX_DIM)   ! lattice primitive vectors
     FLOAT :: rlattice          (MAX_DIM,MAX_DIM)   ! lattice vectors
-    FLOAT :: klattice_primitive(MAX_DIM,MAX_DIM)   ! reciprocal lattice primitive vectors
-    FLOAT :: klattice          (MAX_DIM,MAX_DIM)   ! reciprocal lattice vectors
+    FLOAT :: klattice_primitive(MAX_DIM,MAX_DIM)   ! reciprocal-lattice primitive vectors
+    FLOAT :: klattice          (MAX_DIM,MAX_DIM)   ! reciprocal-lattice vectors
     FLOAT :: volume_element                      ! the volume element in real space
     FLOAT :: rcell_volume                        ! the volume of the cell in real space
 
@@ -1295,7 +1295,7 @@ contains
         ' [', trim(units_abbrev(units_out%length**sb%dim)), ']'
       call write_info(1, iunit)
 
-      write(message(1),'(a,3a,a)') '  Reciprocal Lattice Vectors [', trim(units_abbrev(units_out%length**(-1))), ']'
+      write(message(1),'(a,3a,a)') '  Reciprocal-Lattice Vectors [', trim(units_abbrev(units_out%length**(-1))), ']'
       do idir = 1, sb%dim
         write(message(1+idir),'(3f12.6)') (units_from_atomic(unit_one / units_out%length, sb%klattice(idir2, idir)), &
                                            idir2 = 1, sb%dim)
@@ -1332,7 +1332,6 @@ contains
 
     call push_sub('simul_box.simul_box_in_box')
 
-
     xx = M_ZERO
     xx(1:sb%dim, 1) = x(1:sb%dim)
 
@@ -1362,7 +1361,7 @@ contains
     integer :: red, green, blue, ix, iy
 #endif
 
-
+    ! no push_sub because this function is called very frequently
     SAFE_ALLOCATE(xx(1:MAX_DIM, 1:npoints))
 
     if(MAX_DIM /= sb%dim) xx = M_ZERO
