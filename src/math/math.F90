@@ -75,7 +75,8 @@ module math_m
     cartesian2hyperspherical,   &
     hyperspherical2cartesian,   &
     hypersphere_cut,            &
-    hypersphere_cut_back
+    hypersphere_cut_back,       &
+    hypersphere_grad_matrix
 
   !------------------------------------------------------------------------------
   ! This is the common interface to a simple-minded polynomical interpolation
@@ -920,7 +921,7 @@ contains
       forall(k=1:n-1) alpha(j, k) = a(j)*a(k)
       alpha(j, j) = alpha(j, j) + M_ONE
     end forall
-
+    
     eigenvectors = alpha
     call lalg_eigensolve(n-1, eigenvectors, eigenvalues)
     forall(j=1:n-1, k=1:n-1) eigenvectors(j, k) = eigenvectors(j, k)*sqrt(eigenvalues(k))
@@ -973,6 +974,48 @@ contains
     call pop_sub()
   end subroutine hypersphere_cut_back
   ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  ! Gives the hyperspherical gradient matrix, which contains
+  ! the derivatives of the cartesian coordinates with respect
+  ! to the hyperspherical angles
+  ! ---------------------------------------------------------
+  subroutine  hypersphere_grad_matrix(grad_matrix, r, x)
+    FLOAT, intent(out)  :: grad_matrix(:,:)
+    FLOAT, intent(in)   :: r     ! radius of hypersphere
+    FLOAT, intent(in)   :: x(:)  ! array of hyperspherical angles
+    
+    integer :: n, l, m
+    
+    n = size(x)+1  ! the dimension of the matrix is (n-1)x(n)
+
+    ! --- l=1 ---
+    grad_matrix = M_ONE
+    grad_matrix(1,1) = -r*sin(x(1))
+    forall(m = 2:n-1) grad_matrix(m,1) = M_ZERO
+    
+    ! --- l=2..(n-1) ---
+    do l=2, n-1
+       do m=1, n-1
+          if(m.eq.l) then
+             grad_matrix(m,l) = -r*grad_matrix(m,l)*product(sin(x(1:l)))
+          elseif(m.lt.l) then
+             grad_matrix(m,l) = grad_matrix(m,l)*r*cos(x(m))*cos(x(l))*product(sin(x(1:m-1)))*product(sin(x(m+1:l-1)))
+          else
+             grad_matrix(m,l) = M_ZERO
+          end if
+       end do
+    end do
+       
+    ! --- l=n ---
+    do m=1, n-1
+       grad_matrix(m,n) = r*cos(x(m))*grad_matrix(m,n)*product(sin(x(1:m-1)))*product(sin(x(m+1:n-1)))
+    end do
+
+  end subroutine  hypersphere_grad_matrix
+  ! ---------------------------------------------------------
+
 
 #include "undef.F90"
 #include "complex.F90"

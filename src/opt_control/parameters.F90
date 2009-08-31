@@ -84,7 +84,8 @@ module opt_control_parameters_m
             parameters_filter,            &
             parameters_gradient
 
-  integer, public, parameter ::   &
+
+  integer, public, parameter ::     &
     ctr_real_time              = 1, &
     ctr_sine_fourier_series_h  = 2, &
     ctr_fourier_series_h       = 3, &
@@ -1499,14 +1500,20 @@ contains
   ! ---------------------------------------------------------
 
 
+
+  ! ---------------------------------------------------------
+  ! parameters_gradient computes the gradient with respect
+  ! to the theta basis (dim=dof)
   ! ---------------------------------------------------------
   subroutine parameters_gradient(x, par, par_output, grad)
     FLOAT, intent(in) :: x(:)
     type(oct_control_parameters_t), intent(in) :: par, par_output
     FLOAT, intent(inout) :: grad(:)
 
-    integer :: n, j
-    FLOAT, allocatable :: theta(:)
+    integer :: n, j, m, k, s, t
+    FLOAT :: r
+    FLOAT, allocatable :: theta(:), grad_matrix(:,:), eigenvectors(:,:), eigenvalues(:), a(:)
+    
     call push_sub('parameters.parameters_gradient')
 
     n = par%dim
@@ -1522,7 +1529,59 @@ contains
        forall(j = 1:n) theta(j) = tdf(par_output%f(1), j)    ! get the projection on my basis set of function f
        forall(j = 1:n-1) grad(j) =  M_TWO*parameters_alpha(par, 1)*x(j) - M_TWO*theta(j+1)
        forall(j = 1:(n/2)-1) grad(j) = grad(j) + M_TWO*parameters_alpha(par, 1)*sum(x(1:(n/2)-1)) + M_TWO*theta(1)
+      
+    case(ctr_fourier_series_h)
+       SAFE_ALLOCATE(theta(1:n))   ! dim = dof+1 for fourier-series-h
+       SAFE_ALLOCATE(grad_matrix(1:n-1,1:n))
 
+       forall(j = 1:n) theta(j) = M_TWO*tdf(par_output%f(1), j) ! get the projection on my basis set of function (theta=b)
+       r = sqrt(par_common%targetfluence)
+       call hypersphere_grad_matrix(grad_matrix, r, x)
+       grad = matmul(grad_matrix, theta)
+       grad = -grad  ! the cg-alghorithm minimizes, so we need to give the negative gradient for maximization
+       
+       SAFE_DEALLOCATE_A(grad_matrix)
+       
+    case(ctr_zero_fourier_series_h)
+       
+       SAFE_ALLOCATE(theta(1:n))   ! dim = dof+2 for zero-fourier-series-h
+       SAFE_ALLOCATE(grad_matrix(1:n-2,1:n-1))
+       SAFE_ALLOCATE(eigenvectors(1:n-1, 1:n-1))
+       SAFE_ALLOCATE(eigenvalues(1:n-1))
+       SAFE_ALLOCATE(a(1:n-1))
+       
+       forall(j = 1:n) theta(j) = M_TWO*tdf(par_output%f(1),j) !get the projection on my basis set of function f
+       r = sqrt(par_common%targetfluence)
+       call hypersphere_grad_matrix(grad_matrix, r, x)
+       
+       ! create matrix S
+       a = M_ZERO
+       a(1:n/2-1) = M_ONE
+       forall(j=1:n-1)
+          forall(k=1:n-1) eigenvectors(j, k) = a(j)*a(k)
+          eigenvectors(j, j) = eigenvectors(j, j) + M_ONE
+       end forall
+
+       ! create unitary Matrix U
+       call lalg_eigensolve(n-1, eigenvectors, eigenvalues)
+       
+       grad = M_ZERO
+       do m=1, n-2
+          do k=1, n-1
+             do s=1, n-1
+                grad(m) = grad(m) + grad_matrix(m,k)*eigenvectors(s,k)*theta(s+1)/sqrt(eigenvalues(k))
+             end do
+             do t=1, n/2-1
+                grad(m) = grad(m) - grad_matrix(m,k)*eigenvectors(t,k)*theta(1)/sqrt(eigenvalues(k))
+             end do
+          end do
+       end do
+       grad = -grad
+
+       SAFE_DEALLOCATE_A(a)
+       SAFE_DEALLOCATE_A(grad_matrix)
+       SAFE_DEALLOCATE_A(eigenvectors)
+       SAFE_DEALLOCATE_A(eigenvalues)
     end select
 
     SAFE_DEALLOCATE_A(theta)
