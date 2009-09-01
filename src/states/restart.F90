@@ -456,6 +456,7 @@ contains
         ! running slowest).
         ! Outer block.
         tnp = gr%mesh%np+2*lead_np
+        ! FIXME: check for extent>der-order if this is still correct (left side)
         st%ob_lead(LEFT)%intf_psi(1:np, OUTER, idim, ist, ik)  = tmp(lead_np-np+1:lead_np)
         st%ob_lead(RIGHT)%intf_psi(1:np, OUTER, idim, ist, ik) = tmp(tnp-lead_np+1:tnp-lead_np+np)
         ! Inner block.

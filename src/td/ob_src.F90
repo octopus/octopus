@@ -88,7 +88,7 @@ contains
     CMPLX,   intent(in)    :: mem(np, np)   ! the effective memory coefficient
     FLOAT,   intent(in)    :: dt            ! Timestep.
     CMPLX,   intent(in)    :: psi0(:, :)    ! (np, INNER/OUTER).
-    CMPLX,   intent(in)    :: u(0:maxiter)
+    CMPLX,   intent(in)    :: u(0:)
     CMPLX,   intent(in)    :: f0
     CMPLX,   intent(in)    :: factor
     CMPLX,   intent(in)    :: lambda
@@ -110,9 +110,13 @@ contains
       call zsymv('U', np, tmp*M_zI*M_HALF*dt, mem, np, psi0(1:np, INNER), 1, tmp,  src, 1)
     else
       tmp   = factor*u(m)*u(m-1)
-      alpha = M_HALF*dt**2*f0*lambda/u(m)
-!      call lalg_gemv(np, np, alpha, mem, psi0(1:np, INNER), tmp, src)
-      call zsymv('U', np, alpha, mem, np, psi0(1:np, INNER), 1, tmp, src, 1)
+      if(m.gt.maxiter) then
+        src(1:np) = tmp*src(1:np)
+      else
+        alpha = M_HALF*dt**2*f0*lambda/u(m)
+!        call lalg_gemv(np, np, alpha, mem, psi0(1:np, INNER), tmp, src)
+        call zsymv('U', np, alpha, mem, np, psi0(1:np, INNER), 1, tmp, src, 1)
+      end if
     end if
 
     call pop_sub()

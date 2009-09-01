@@ -103,8 +103,8 @@ contains
     !%Default 100
     !%Section Open Boundaries
     !%Description
-    !% Sets the maximum iteration number for the BiCG linear solver in
-    !% the Crank-Nicholson procedure.
+    !% Sets the maximum iteration number for the QMR linear solver in
+    !% the Crank-Nicholson procedure for open boundaries.
     !%End
     call loct_parse_int(datasets_check('OpenBoundariesQMRMaxIter'), 100, qmr_max_iter)
     if(qmr_max_iter.le.0) then
@@ -167,7 +167,6 @@ contains
     !%Section Calculation Modes::Transport
     !%Description
     !% Sets the maximum number of used memory coefficients.
-    !% Can only be less than TDMaximumIter if source term is switched off.
     !%End
     call loct_parse_int(datasets_check('OpenBoundariesMaxMemCoeffs'), max_iter, ob%max_mem_coeffs)
     if(ob%max_mem_coeffs.le.0) then
@@ -177,10 +176,11 @@ contains
     end if
     ob%max_mem_coeffs = min(ob%max_mem_coeffs, max_iter)
     if((iand(ob%additional_terms, SRC_TERM_FLAG).ne.0).and.(ob%max_mem_coeffs.ne.max_iter)) then
-      write(message(1), '(a,i6,a)') "Input : '", ob%max_mem_coeffs, "' is not a valid OpenBoundariesMaxMemCoeffs."
-      message(2) = 'If in OpenBoundariesAdditionalTerms src_term is present this has to be equal to TDMaximumIter.'
-      message(3) = 'If an open system should be simulated the source term should be switched of.'
-      call write_fatal(3)
+      write(message(1), '(a,i6,a)') "Input : '", ob%max_mem_coeffs, "' is not equal OpenBoundariesMaxMemCoeffs."
+      message(2) = 'This is an experimental parameter, so handle with care.'
+      message(3) = 'If an open system should be simulated the source term should be switched of,'
+      message(4) = 'otherwise strange behavior can occur.'
+      call write_warning(4)
     end if
 
     ! Calculate td-potential.
@@ -314,9 +314,13 @@ contains
           if(iand(ob%additional_terms, SRC_TERM_FLAG).ne.0) then
             f0  = M_z1/(M_z1+M_zI*M_HALF*dt*st%ob_eigenval(ist, ik))
             fac = (M_z1-M_zI*M_HALF*dt*st%ob_eigenval(ist, ik))*f0
-            tmp_mem(1:np, 1:np) = ob%lead(il)%q(1:np, 1:np, m)
-            if(m.gt.0) tmp_mem(1:np, 1:np) = tmp_mem(1:np, 1:np) + ob%lead(il)%q(1:np, 1:np, m-1)
-            call calc_source_wf(max_iter, m, np, il, hm%lead(il)%h_offdiag(:, :), tmp_mem(1:np, 1:np), dt, &
+            if(m.gt.ob%max_mem_coeffs) then
+              tmp_mem(1:np, 1:np) = M_ZERO
+            else
+              tmp_mem(1:np, 1:np) = ob%lead(il)%q(1:np, 1:np, m)
+              if(m.gt.0) tmp_mem(1:np, 1:np) = tmp_mem(1:np, 1:np) + ob%lead(il)%q(1:np, 1:np, m-1)
+            end if
+            call calc_source_wf(ob%max_mem_coeffs, m, np, il, hm%lead(il)%h_offdiag, tmp_mem(1:np, 1:np), dt, &
               st%ob_lead(il)%intf_psi(:, :, 1, ist, ik), ob%src_mem_u(:, il), f0, fac,              &
               lambda(m, 0, max_iter, ob%src_mem_u(:, il)), ob%lead(il)%src_prev(:, 1, ist, ik))
             call apply_src(gr%intf(il), ob%lead(il)%src_prev(1:np, 1, ist, ik), st%zpsi(:, :, ist, ik))

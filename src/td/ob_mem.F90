@@ -796,10 +796,10 @@ contains
       select case(mem_type)
       case(SAVE_CPU_TIME) ! Lots of memory, but faster.
         mbytes_memory_term = mbytes_memory_term + iter*M_TWO*REAL_PRECISION* &
-          (st%nst*np(il)+np(il)**2) / M_TWO**20
+          (st%d%nik*np(il)+np(il)**2) / M_TWO**20
       case(SAVE_RAM_USAGE) ! Less memory, but slower.
         mbytes_memory_term = mbytes_memory_term + iter*M_TWO*REAL_PRECISION* &
-          (st%nst*np(il)+np(il)*order) / M_TWO**20
+          (st%d%nik*np(il)+np(il)*order) / M_TWO**20
       end select
     end do
 

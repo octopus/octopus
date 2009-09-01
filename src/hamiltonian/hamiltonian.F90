@@ -412,7 +412,7 @@ contains
         call write_fatal(2)
       end if
       call init_lead_h
-      ! now replace the potential of the extended simulation region
+      ! FIXME: now replace the potential of the extended simulation region
       ! with the potential of the leads
     end if
 

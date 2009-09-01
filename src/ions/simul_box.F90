@@ -981,7 +981,8 @@ contains
         end do
       end if
     end if
-      
+
+    sb%rlattice = M_ZERO
     do idim = 1, sb%dim
       norm = sqrt(sum(sb%rlattice_primitive(1:sb%dim, idim)**2))
       forall(jdim = 1:sb%dim)
