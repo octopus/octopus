@@ -1742,15 +1742,14 @@ contains
       end do
     end do
 
-    ! make sure that half occupancy was found
+    ! make sure that half-occupancy was found
     if(tpa_initialst.eq.-1) then
       if(mpi_grp_is_root(mpi_world)) then
 
-        message(1) = 'No orbital with half occupancy found. TPA output is not written.'
+        message(1) = 'No orbital with half-occupancy found. TPA output is not written.'
         call write_warning(1)
 
-        call pop_sub()
-        return
+        call pop_sub(); return
 
       end if
     end if
@@ -1759,12 +1758,12 @@ contains
     !%Type block
     !%Section States
     !%Description
-    !% Momentum-transfer vector q to be used when calculating matrix elements
+    !% Momentum-transfer vector <i>q</i> to be used when calculating matrix elements
     !% <f|exp(iq.r)|i>. This enables the calculation of the dynamic structure factor,
     !% which is closely related to generalized oscillator strengths.
-    !% If the vector is not given but TPA output is requested (Output=TPA),
+    !% If the vector is not given but TPA output is requested (<tt>Output = TPA </tt>),
     !% only the oscillator strengths are written in the output file.
-    !% For example, to use q = ( 0.1 , 0.2 , 0.3 ), set
+    !% For example, to use <i>q</i> = (0.1, 0.2, 0.3), set
     !% <tt>%MomentumTransfer
     !% <br>&nbsp;&nbsp; 0.1 | 0.2 | 0.3
     !% <br>%</tt>
@@ -2441,15 +2440,13 @@ contains
     iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=mpi_grp)
     if(iunit < 0) then
       ierr = -1
-      call pop_sub
-      return
+      call pop_sub(); return
     end if
     iunit2 = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp=.true., grp=mpi_grp)
     if(iunit2 < 0) then
       call io_close(iunit, grp = mpi_grp)
       ierr = -1
-      call pop_sub()
-      return
+      call pop_sub(); return
     end if
 
     ! Skip two lines.
@@ -2644,7 +2641,7 @@ contains
     type(grid_t),        intent(in)    :: gr
     integer,             intent(in)    :: nspin
     integer,             intent(in)    :: d_ispin
-    type(lead_t),        intent(in)    :: lead(:) ! Diagonal  and offdiagonal block of the lead Hamiltonian.
+    type(lead_t),        intent(in)    :: lead(:) ! Diagonal and off-diagonal block of the lead Hamiltonian.
 
     character(len=2)      :: spin
     character(len=256)    :: fmt, fname_real, fname_imag

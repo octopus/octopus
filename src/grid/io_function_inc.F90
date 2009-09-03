@@ -201,7 +201,8 @@ contains
     if((ndim(1) .ne. cube%n(1)) .or. &
          (ndim(2) .ne. cube%n(2)) .or. &
          (ndim(3) .ne. cube%n(3))) then
-       ierr = 12; return
+       ierr = 12
+       call pop_sub(); return
     end if
 
     if(status == NF90_NOERR) then
@@ -843,7 +844,7 @@ contains
     status = nf90_create(trim(filename), NF90_CLOBBER, ncid)
     if(status.ne.NF90_NOERR) then
       ierr = 2
-      return
+      call pop_sub(); return
     end if
 
     ! dimensions

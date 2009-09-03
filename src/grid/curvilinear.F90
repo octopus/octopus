@@ -84,21 +84,21 @@ contains
     !% This mesh may be an evenly spaced regular rectangular grid (standard mode),
     !% or else an *adaptive* or *curvilinear grid*. We have implemented
     !% three kinds of adative meshes, although only one is currently working,
-    !% the one invented by F. Gygi ("curv_gygi"). The code will stop if any of
+    !% the one invented by F. Gygi (<tt>curv_gygi</tt>). The code will stop if any of
     !% the other two is invoked.
     !%Option curv_uniform 1
     !% Regular, uniform rectangular grid. The default.
     !%Option curv_gygi 2
     !% The deformation of the grid is done according to the scheme described by
-    !% F. Gygi [F. Gygi and G. Galli, Phys. Rev. B 52, R2229 (1995)]
+    !% F. Gygi [F. Gygi and G. Galli, <i>Phys. Rev. B</i> <b>52</b>, R2229 (1995)].
     !%Option curv_briggs 3
     !% The deformation of the grid is done according to the scheme described by
-    !% Briggs [E.L. Briggs, D.J. Sullivan, and J. Bernholc, Phys. Rev. B 54 14362 (1996)]
-    !% (NOT WORKING)
+    !% Briggs [E.L. Briggs, D.J. Sullivan, and J. Bernholc, <i>Phys. Rev. B</i> <b>54</b> 14362 (1996)]
+    !% (NOT WORKING).
     !%Option curv_modine 4
     !% The deformation of the grid is done according to the scheme described by
-    !% Modine [N.A. Modine, G. Zumbach and E. Kaxiras, Phys. Rev. B 55, 10289 (1997)]
-    !% (NOT WORKING)
+    !% Modine [N.A. Modine, G. Zumbach and E. Kaxiras, <i>Phys. Rev. B</i> <b>55</b>, 10289 (1997)]
+    !% (NOT WORKING).
     !%End
     call loct_parse_int(datasets_check('CurvMethod'), CURV_METHOD_UNIFORM, cv%method)
     if(.not.varinfo_valid_option('CurvMethod', cv%method)) call input_error('CurvMethod')
@@ -124,6 +124,8 @@ contains
   subroutine curvilinear_end(cv)
     type(curvilinear_t), intent(inout) :: cv
 
+    call push_sub('curvilinear.curvilinear_end')
+
     select case(cv%method)
     case(CURV_METHOD_GYGI)
       call curv_gygi_end(cv%gygi)
@@ -132,6 +134,7 @@ contains
       call curv_modine_end(cv%modine)
     end select
 
+    call pop_sub()
   end subroutine curvilinear_end
   
 
@@ -141,6 +144,8 @@ contains
     type(curvilinear_t), intent(in)  :: cv
     FLOAT,               intent(in)  :: chi(MAX_DIM)  ! chi(conf%dim)
     FLOAT,               intent(out) :: x(MAX_DIM)    ! x(conf%dim)
+
+    call push_sub('curvilinear.curvilinear_chi2x')
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
@@ -153,6 +158,7 @@ contains
       call curv_modine_chi2x(sb, cv%modine, chi, x)
     end select
 
+    call pop_sub()
   end subroutine curvilinear_chi2x
 
 
@@ -162,6 +168,8 @@ contains
     type(curvilinear_t), intent(in)  :: cv
     FLOAT,               intent(in)  :: x(MAX_DIM)    ! x(conf%dim)
     FLOAT,               intent(out) :: chi(MAX_DIM)  ! chi(conf%dim)
+
+    call push_sub('curvilinear.curvilinear_x2chi')
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
@@ -173,6 +181,7 @@ contains
       call write_fatal(1)
     end select
 
+    call pop_sub()
   end subroutine curvilinear_x2chi
 
 
@@ -186,6 +195,8 @@ contains
     FLOAT :: dummy(MAX_DIM)
     FLOAT, allocatable :: Jac(:,:)
     integer :: i
+
+    call push_sub('curvilinear.curvilinear_det_Jac')
 
     if(cv%method.ne.CURV_METHOD_UNIFORM) then
       SAFE_ALLOCATE(Jac(1:sb%dim, 1:sb%dim))
@@ -212,6 +223,7 @@ contains
       SAFE_DEALLOCATE_A(Jac)
     end if
 
+    call pop_sub()
   end function curvilinear_det_Jac
 
   ! ---------------------------------------------------------
@@ -252,6 +264,8 @@ contains
     type(curvilinear_t), intent(in) :: cv
     integer,            intent(in) :: iunit
 
+    call push_sub('curvilinear.curvilinear_dump')
+
     write(iunit, '(a)')             dump_tag
     write(iunit, '(a20,i4)')        'method=              ', cv%method
     select case(cv%method)
@@ -270,6 +284,7 @@ contains
       write(iunit, '(a20,e22.14)')  'jrange=              ', cv%modine%jrange
     end select
 
+    call pop_sub()
   end subroutine curvilinear_dump
 
 
@@ -280,6 +295,8 @@ contains
 
     character(len=100) :: line
     character(len=20)  :: str
+
+    call push_sub('curvilinear.curvilinear_init_from_file')
 
     do
       read(iunit, '(a)') line
@@ -303,6 +320,7 @@ contains
       read(iunit, *) str, cv%modine%jrange
     end select
 
+    call pop_sub()
   end subroutine curvilinear_init_from_file
 
 

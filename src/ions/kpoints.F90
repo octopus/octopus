@@ -41,15 +41,15 @@ module kpoints_m
   type kpoints_t
     integer        :: method
     
-    integer        :: nik_full             ! number of kpoints in full Brillouin zone
+    integer        :: nik_full             ! number of k-points in full Brillouin zone
     FLOAT, pointer :: points_full(:,:)     ! kpoints in absolute coordinates
     FLOAT, pointer :: points_full_red(:,:) ! kpoints in reduced coordinates
-    FLOAT, pointer :: weights_full(:)      ! weights for the kpoint integrations
+    FLOAT, pointer :: weights_full(:)      ! weights for the k-point integrations
 
-    integer        :: nik                  ! number of kpoints in the irreducible zone
+    integer        :: nik                  ! number of k-points in the irreducible zone
     FLOAT, pointer :: points(:,:)          ! kpoints in absolute coordinates
     FLOAT, pointer :: points_red(:,:)      ! kpoints in relative coordinates
-    FLOAT, pointer :: weights(:)           ! weights for the kpoint integrations
+    FLOAT, pointer :: weights(:)           ! weights for the k-point integrations
 
     logical        :: use_symmetries
     logical        :: use_inversion
@@ -105,21 +105,21 @@ contains
 
     !%Variable KPointsMonkhorstPack
     !%Type block
-    !%Default 1,1,1
+    !%Default Gamma-point only
     !%Section Mesh::KPoints
     !%Description
-    !% When this block is given (and the KPoints block is not present),
-    !% k-points are arranged in a Monkhorst-Pack grid.
+    !% When this block is given (and the <tt>KPoints</tt> block is not present),
+    !% <i>k</i>-points are generated in a Monkhorst-Pack grid.
     !%
     !% The first row of the block is a triplet of integers defining the
-    !% number of k-points to be used along each direction in the
+    !% number of <i>k</i>-points to be used along each direction in 
     !% reciprocal space. The numbers refer to the whole Brillouin zone,
-    !% and the actual number of k-points is usually reduced exploiting
+    !% and the actual number of <i>k</i>-points is usually reduced exploiting
     !% the symmetries of the system.  An optional second row can specify
-    !% a shift in the k-points.
+    !% a shift in the <i>k</i>-points.
     !%
     !% For example, the following input samples the BZ with 100 points in the 
-    !% xy plane of the reciprocal space:
+    !% <i>xy</i>-plane of reciprocal space:
     !%
     !% <tt>%KPointsMonkhorstPack
     !% <br>&nbsp;&nbsp;10 | 10 | 1
@@ -128,8 +128,8 @@ contains
     !%End
     
     gamma_only_ = gamma_only
-    if(.not.gamma_only_) gamma_only_ = loct_parse_block(datasets_check('KPointsMonkhorstPack'), blk) == 0
- 
+    if(.not.gamma_only_) gamma_only_ = (loct_parse_block(datasets_check('KPointsMonkhorstPack'), blk) .ne. 0)
+
     this%nik_axis(:) = 1
     this%shifts(:)   = M_ZERO
 
@@ -210,16 +210,16 @@ contains
     !%Type block
     !%Section Mesh::KPoints
     !%Description
-    !% This block defines an explicit set of k-points and their weights for
+    !% This block defines an explicit set of <i>k</i>-points and their weights for
     !% a periodic-system calculation. The first column is the weight
-    !% of each k-point and the following are the components of the k-point
+    !% of each <i>k</i>-point and the following are the components of the <i>k</i>-point
     !% vector. You only need to specify the components for the
-    !% periodic directions. Note that the k-points should be given in
-    !% Cartesian coordinates (not in reduced coordinates), i.e.
+    !% periodic directions. Note that the <i>k</i>-points should be given in
+    !% Cartesian coordinates (not in reduced coordinates), <i>i.e.</i>
     !% what Octopus writes in a line in the ground-state standard output as
     !% <tt>#k =   1, k = (    0.154000,    0.154000,    0.154000)</tt>.
     !%
-    !% For example, if you want to include only the gamma point, you can
+    !% For example, if you want to include only the Gamma point, you can
     !% use:
     !%
     !% <tt>%KPoints
@@ -232,8 +232,8 @@ contains
     !%Type block
     !%Section Mesh::KPoints
     !%Description
-    !% As the block <tt>KPoints</tt> but this time the input is given in reduced 
-    !% coordinates
+    !% Same as the block <tt>KPoints</tt> but this time the input is given in reduced 
+    !% coordinates.
     !%End
 
     this%nik_full = 0
@@ -243,7 +243,7 @@ contains
         reduced = .true.
       else
         read_user_kpoints = .false.
-        return
+        call pop_sub(); return
       end if
     end if
     read_user_kpoints = .true.
@@ -278,7 +278,7 @@ contains
       end do
 
       do ik = 1, this%nik_full
-        ! K points have 1/length units
+        ! k-points have 1/length units
         this%points_full(:, ik) = units_to_atomic(unit_one/units_inp%length, this%points_full(:, ik))
 
         ! generate also the reduced coordinates

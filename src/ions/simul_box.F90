@@ -1331,7 +1331,7 @@ contains
     FLOAT :: xx(1:MAX_DIM, 1)
     logical :: in_box2(1)
 
-    call push_sub('simul_box.simul_box_in_box')
+    ! no push_sub because this function is called very frequently
 
     xx = M_ZERO
     xx(1:sb%dim, 1) = x(1:sb%dim)
@@ -1339,7 +1339,6 @@ contains
     call simul_box_in_box_vec(sb, geo, 1, xx, in_box2)
     in_box = in_box2(1)
     
-    call pop_sub()
   end function simul_box_in_box
 
 

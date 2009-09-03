@@ -524,9 +524,9 @@ contains
     integer i, iunit
     character(len=6) position
 
-    call push_sub('geometry.atom_write_xyz')
-
     if( .not. mpi_grp_is_root(mpi_world)) return
+
+    call push_sub('geometry.atom_write_xyz')
 
     call io_mkdir(dir)
     position = 'asis'

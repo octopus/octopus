@@ -57,13 +57,15 @@ contains
 
     integer :: pd
     
+    call push_sub('solids.periodic_copy_init')
+
     this%range = range
     this%pos = pos
 
     if(.not. simul_box_is_periodic(sb)) then
       this%nbmin = 0
       this%nbmax = 0
-      return
+      call pop_sub(); return
     end if
 
     pd = sb%periodic_dim
@@ -78,21 +80,27 @@ contains
     this%nbmin(pd + 1:MAX_DIM) = 0
     this%nbmax(pd + 1:MAX_DIM) = 0
 
+    call pop_sub()
   end subroutine periodic_copy_init
 
   subroutine periodic_copy_end(this)
     type(periodic_copy_t), intent(inout) :: this
 
+    call push_sub('solids.periodic_copy_end')
+
     this%nbmin = 0
     this%nbmax = 0
 
+    call pop_sub()
   end subroutine periodic_copy_end
 
   integer pure function periodic_copy_num(this) result(num)
     type(periodic_copy_t), intent(in)    :: this
 
-      num = product(this%nbmax - this%nbmin + 1)
+    call push_sub('solids.periodic_copy_num')
+    num = product(this%nbmax - this%nbmin + 1)
 
+    call pop_sub()
   end function periodic_copy_num
 
   function periodic_copy_position(this, sb, ii) result(pcopy)
@@ -104,11 +112,13 @@ contains
     integer :: icell1, icell2, icell3, jj
     integer :: pd
 
+    call push_sub('solids.periodic_copy_position')
+
     pd = sb%periodic_dim
 
     if(.not. simul_box_is_periodic(sb)) then
       pcopy = this%pos
-      return
+      call pop_sub(); return
     end if
 
     jj = 1
@@ -120,7 +130,7 @@ contains
             pcopy(1:pd) = this%pos_chi(1:pd) - M_TWO*sb%lsize(1:pd)*(/icell1, icell2, icell3/)
             pcopy(1:pd) = matmul(sb%rlattice_primitive(1:pd, 1:pd), pcopy(1:pd))
             pcopy(pd + 1:MAX_DIM) = this%pos(pd+1:MAX_DIM)
-            return
+            call pop_sub(); return
           end if
           jj = jj + 1
 
@@ -128,6 +138,7 @@ contains
       end do
     end do
 
+    call pop_sub()
   end function periodic_copy_position
 
   ! This subroutine creates a crystal by replicating the geometry and

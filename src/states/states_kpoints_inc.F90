@@ -35,7 +35,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   ! of the position of the j-th atom of type i.
   FLOAT, allocatable :: kp(:,:),kw(:)
 
-  call push_sub('states_kpoints.states_choose_kpoints')
+  call push_sub('states_kpoints_inc.states_choose_kpoints')
 
   ! if not periodic just return the Gamma point
   if (sb%periodic_dim == 0) then
@@ -285,14 +285,14 @@ subroutine kpoints_write_info(d, sbdim, iunit)
 
   integer :: ik
 
-  call push_sub('states_kpoints.kpoints_write_info')
+  call push_sub('states_kpoints_inc.kpoints_write_info')
 
   if(d%nik_axis(1) .ne. 0) then
-    write(message(1),'(a,9(i3,1x))') 'Number of k points in each direction = ', d%nik_axis(1:sbdim)
+    write(message(1),'(a,9(i3,1x))') 'Number of k-points in each direction = ', d%nik_axis(1:sbdim)
     call write_info(1, iunit)
   else
     ! a Monkhorst-Pack grid was not used
-    write(message(1),'(a,9(i3,1x))') 'Number of k points = ', kpoint_index(d, d%nik)
+    write(message(1),'(a,9(i3,1x))') 'Number of k-points = ', kpoint_index(d, d%nik)
     call write_info(1, iunit)
   endif
 
@@ -318,13 +318,13 @@ logical function in_wigner_seitz_cell(k_point, klattice) result(in_cell)
   integer :: ib, ws_cell_type
   FLOAT   :: half_dist(3), normal(3), asize
 
-  ! Wigner Seitz cells of cubic lattices
+  ! Wigner-Seitz cells of cubic lattices
   integer, parameter :: &
     CUBE         = 1,   &
     OCTAHEDRON   = 2,   &
     DODECAHEDRON = 3
 
-  call push_sub('states_kpoints.in_wigner_seitz_cell')
+  call push_sub('states_kpoints_inc.in_wigner_seitz_cell')
 
   ! Warning: currently the routine allows only for cubic systems
   ! Tetragonal, orthorombic and monoclinic systems are excluded

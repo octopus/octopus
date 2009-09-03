@@ -203,8 +203,8 @@ contains
     !% Use this variable to run octopus in profiling mode. In this mode
     !% octopus records time spent in certain areas of the code and
     !% the number of times this code is executed. These numbers
-    !% are written in './profiling.NNN/profiling.nnn' with nnn being the
-    !% node number (000 in serial) and NNN the number of processors.
+    !% are written in <tt>./profiling.NNN/profiling.nnn</tt> with <tt>nnn</tt> being the
+    !% node number (<tt>000</tt> in serial) and <tt>NNN</tt> the number of processors.
     !% This is mainly for development purposes. Note, however, that
     !% octopus should be compiled with --disable-debug to do proper
     !% profiling.

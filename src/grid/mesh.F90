@@ -166,6 +166,8 @@ contains
     
     integer :: i
     
+    call push_sub('mesh.mesh_double_box')
+
     db = 1
     
     ! double mesh with 2n points
@@ -176,6 +178,7 @@ contains
       db(i) = nint(sb%fft_alpha*(m%idx%ll(i)-1)) + 1
     end do
     
+    call pop_sub()
   end subroutine mesh_double_box
   
   

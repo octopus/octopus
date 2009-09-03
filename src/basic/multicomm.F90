@@ -80,10 +80,10 @@
 
   ! possible parallelization strategies
   integer, public, parameter ::      &
-    P_STRATEGY_SERIAL  = 0,          & ! single domain, all states, kpoints on a single processor
+    P_STRATEGY_SERIAL  = 0,          & ! single domain, all states, k-points on a single processor
     P_STRATEGY_DOMAINS = 1,          & ! parallelization domains
     P_STRATEGY_STATES  = 2,          & ! parallelization in states
-    P_STRATEGY_KPOINTS = 3,          & ! parallelization in kpoints
+    P_STRATEGY_KPOINTS = 3,          & ! parallelization in k-points
     P_STRATEGY_OTHER   = 4             ! something else like e-h pairs
 
   integer,           parameter :: n_par_types = 4
@@ -186,14 +186,14 @@ contains
       !%Description
       !%
       !% When set to yes, Octopus will try to determine the topology
-      !% of the network and based on this, assign the nodes to the
+      !% of the network and, based on this, assign the nodes to the
       !% different possible parallelization strategies and distribute
       !% the processes to reduce the communication overhead. Currently
       !% Octopus is only capable of detecting if processes are on the
       !% same machine or connected by a network. By default it is not
       !% enabled.
       !%
-      !% This feauture is experimental, so use it with care.
+      !% This feature is experimental, so use it with care.
       !%
       !% Warning: currently is not possible to use this variable for
       !% states parallelization for ground-state calculations or

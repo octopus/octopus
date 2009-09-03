@@ -88,7 +88,11 @@ contains
   ! ---------------------------------------------------------
   FLOAT function laser_carrier_frequency(l) result(w0)
     type(laser_t), intent(in) :: l
+
+    call push_sub('lasers.laser_carrier_frequency')
     w0 = l%omega
+
+    call pop_sub()
   end function laser_carrier_frequency
   ! ---------------------------------------------------------
 
@@ -96,7 +100,11 @@ contains
   ! ---------------------------------------------------------
   integer pure function laser_kind(l)
     type(laser_t), intent(in) :: l
+
+    call push_sub('lasers.laser_kind')
     laser_kind = l%field
+
+    call pop_sub()
   end function laser_kind
   ! ---------------------------------------------------------
 
@@ -105,7 +113,11 @@ contains
   function laser_polarization(l) result(pol)
     type(laser_t), intent(in) :: l
     CMPLX :: pol(MAX_DIM)
+
+    call push_sub('lasers.laser_polarization')
     pol(1:MAX_DIM) = l%pol(1:MAX_DIM)
+
+    call pop_sub()
   end function laser_polarization
   ! ---------------------------------------------------------
 
@@ -114,7 +126,11 @@ contains
   subroutine laser_get_f(l, f)
     type(laser_t), intent(in)    :: l
     type(tdf_t),   intent(inout) :: f
+
+    call push_sub('lasers.laser_get')
     call tdf_copy(f, l%f)
+
+    call pop_sub()
   end subroutine laser_get_f
   ! ---------------------------------------------------------
 
@@ -123,8 +139,13 @@ contains
   subroutine laser_set_f(l, f)
     type(laser_t), intent(inout) :: l
     type(tdf_t),   intent(inout) :: f
+
+    call push_sub('lasers.laser_set_f')
+
     call tdf_end(l%f)
     call tdf_copy(l%f, f)
+
+    call pop_sub()
   end subroutine laser_set_f
   ! ---------------------------------------------------------
 
@@ -133,7 +154,11 @@ contains
   subroutine laser_get_phi(l, phi)
     type(laser_t), intent(in)    :: l
     type(tdf_t),   intent(inout) :: phi
+
+    call push_sub('lasers.laser_get_phi')
     call tdf_copy(phi, l%phi)
+
+    call pop_sub()
   end subroutine laser_get_phi
   ! ---------------------------------------------------------
 
@@ -142,8 +167,13 @@ contains
   subroutine laser_set_phi(l, phi)
     type(laser_t), intent(inout) :: l
     type(tdf_t),   intent(inout) :: phi
+
+    call push_sub('lasers.laser_set_phi')
+
     call tdf_end(l%phi)
     call tdf_copy(l%phi, phi)
+
+    call pop_sub()
   end subroutine laser_set_phi
   ! ---------------------------------------------------------
 
@@ -153,7 +183,11 @@ contains
     type(laser_t), intent(inout) :: l
     integer,       intent(in)    :: i
     FLOAT,         intent(in)    :: x
+
+    call push_sub('lasers.laser_set_f_value')
     call tdf_set_numerical(l%f, i, x)
+
+    call pop_sub()
   end subroutine laser_set_f_value
   ! ---------------------------------------------------------
 
@@ -174,7 +208,7 @@ contains
     integer :: j
     FLOAT   :: t, fj, phi
 
-    call push_sub('lasers.lasers_to_numerical')
+    call push_sub('lasers.lasers_to_numerical_all')
 
     call tdf_to_numerical(l%f, max_iter, dt, omegamax)
     do j = 1, max_iter + 1
@@ -231,11 +265,11 @@ contains
     !%Type block
     !%Section Time-Dependent
     !%Description
-    !% The block TDExternalFields describes the type and shape of time-dependent 
+    !% The block <tt>TDExternalFields</tt> describes the type and shape of time-dependent 
     !% external perturbations that are applied to the system.
     !%
     !% Each line of the block describes an external field; this way you can actually have more
-    !% than one laser (e.g. a "pump" and a "probe").
+    !% than one laser (<i>e.g.</i> a "pump" and a "probe").
     !%
     !% The syntax of each line is:
     !%
@@ -244,17 +278,17 @@ contains
     !% <br>%</tt>
     !%
     !% The first element of each line describes which kind of external field is described
-    !% by the line: (i) an electric field ("electric_field"); (ii) a magnetic field 
-    !% ("magnetic_field"); (iii) a vector potential ("vector_potential") -- this option, 
+    !% by the line: (i) an electric field (<tt>electric_field</tt>); (ii) a magnetic field 
+    !% (<tt>magnetic_field</tt>); (iii) a vector potential (<tt>vector_potential</tt>) -- this option, 
     !% in the current version, is a field constant in space, which permits us to describe 
     !% an electric perturbation in the velocity gauge; (iv) an arbitrary scalar potential
-    !% ("scalar_potential").
+    !% (<tt>scalar_potential</tt>).
     !%
     !% The "other descriptors" depend on which kind of external field has been indicated in 
     !% the first column.
     !%
     !%
-    !% (A) type = electric field, magnetic field, vector_potential
+    !% (A) type = <tt>electric field, magnetic field, vector_potential</tt>
     !%
     !%
     !% For these cases, the syntax is:
@@ -263,15 +297,15 @@ contains
     !% <br>&nbsp;&nbsp; type | nx | ny | nz | omega | envelope_function_name
     !% <br>%</tt>
     !%
-    !% The three (possibly complex) numbers (nx, ny, nz) mark the polarization 
-    !% direction of the field. The float omega will be the carrier frequency of the
+    !% The three (possibly complex) numbers (<i>nx</i>, <i>ny</i>, <i>nz</i>) mark the polarization 
+    !% direction of the field. The float <tt>omega</tt> will be the carrier frequency of the
     !% pulse. The envelope of the field is a time-dependent function whose definition
-    !% must be given in a "TDFunctions". envelope_function_name is a string (and therefore
+    !% must be given in a <tt>TDFunctions</tt> block. <tt>envelope_function_name</tt> is a string (and therefore
     !% it must be surrounded by quotation marks) that must match one of the function names
-    !% given in the first column of the "TDFunctions" block.
+    !% given in the first column of the <tt>TDFunctions</tt> block.
     !%
     !%
-    !% (B) type = scalar_potential
+    !% (B) type = <tt>scalar_potential</tt>
     !%
     !%
     !% <tt>%TDExternalFields
@@ -280,7 +314,7 @@ contains
     !%
     !% The scalar potential is not just a dipole, but any expression given by the string
     !% "scalar_expression". The temporal shape is determined by the envelope function
-    !% defined by "envelope_function_name".
+    !% defined by <tt>envelope_function_name</tt>.
     !% 
     !%
     !% A NOTE ON UNITS:
@@ -315,7 +349,7 @@ contains
     !%Option magnetic_field 2
     !% The external field is a (homogeneous) time-dependent magnetic field.
     !%Option vector_potential 3
-    !% The external field is a time-depedent homogeneous vector potential, which may describe
+    !% The external field is a time-dependent homogeneous vector potential, which may describe
     !% a laser field in the velocity gauge.
     !%Option scalar_potential 4
     !% The external field is an arbitrary scalar potential, which may describe an
@@ -592,11 +626,14 @@ contains
     FLOAT,             intent(out) :: field(:)
     FLOAT, optional,   intent(in)  :: t
 
-
     CMPLX :: amp
 
+    call push_sub('lasers.laser_field')
+
     field = M_ZERO
-    if(l%field .eq. E_FIELD_SCALAR_POTENTIAL) return
+    if(l%field .eq. E_FIELD_SCALAR_POTENTIAL) then
+      call pop_sub(); return
+    endif
     if(present(t)) then
       amp = tdf(l%f, t) * exp(M_zI * ( l%omega * t + tdf(l%phi, t) ) )
     else
@@ -604,14 +641,18 @@ contains
     end if
     field(1:sb%dim) = field(1:sb%dim) + real(amp*l%pol(1:sb%dim))
 
+    call pop_sub()
   end subroutine laser_field
   ! ---------------------------------------------------------
 
   logical elemental function laser_requires_gradient(this) result(req)
     type(laser_t),  intent(in)  :: this
 
+    call push_sub('lasers.laser_requires_gradient')
+
     req = (laser_kind(this) == E_FIELD_MAGNETIC .or. laser_kind(this) == E_FIELD_VECTOR_POTENTIAL)
     
+    call pop_sub()
   end function laser_requires_gradient
 
   ! ---------------------------------------------------------

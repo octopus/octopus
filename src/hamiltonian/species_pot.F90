@@ -233,10 +233,10 @@ contains
       !%Section SCF
       !%Description
       !% The guess density for the SCF cycle is just the sum of all the atomic densities.
-      !% When performing spin-polarized or non-collinear spin calculations this option sets 
+      !% When performing spin-polarized or non-collinear-spin calculations this option sets 
       !% the guess magnetization density.
       !%
-      !% For anti-ferromagnetic configurations the <tt>user_defined</tt> option should be used.
+      !% For anti-ferromagnetic configurations, the <tt>user_defined</tt> option should be used.
       !%
       !% Note that if the <tt>paramagnetic</tt> option is used the final ground-state will also be
       !% paramagnetic, but the same is not true for the other options.
@@ -278,7 +278,7 @@ contains
         rho(1:m%np, 1:2) = rho(1:m%np, 1:2) + atom_rho(1:m%np, 1:2)
       end do
 
-    case (INITRHO_RANDOM) ! Random oriented spins
+    case (INITRHO_RANDOM) ! Randomly oriented spins
       SAFE_ALLOCATE(atom_rho(1:m%np, 1:2))
       do ia = 1, geo%natoms
         call atom_density(m, sb, geo%atom(ia), 2, atom_rho)
@@ -322,7 +322,7 @@ contains
       !% were defined in the coordinates specifications.
       !%
       !% For spin-polarized calculations the vectors should have only one component and
-      !% for non-collinear spin calculations they should have three components.
+      !% for non-collinear-spin calculations they should have three components.
       !%End
       if(loct_parse_block(datasets_check('AtomsMagnetDirection'), blk) < 0) then
         message(1) = "AtomsMagnetDirection block is not defined "
@@ -556,6 +556,8 @@ contains
     FLOAT, allocatable :: xrho(:)
     integer :: i, j, dim
 
+    call push_sub('species_pot.func')
+
     dim = m_p%sb%dim
 
     call getrho(xin)
@@ -581,6 +583,7 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(xrho)
+    call pop_sub()
   end subroutine func
 
 
@@ -590,6 +593,8 @@ contains
 
     integer :: i, j, dim
     FLOAT   :: r, chi(MAX_DIM)
+
+    call push_sub('species_pot.getrho')
 
     dim = m_p%sb%dim
     rho_p = M_ZERO
@@ -616,6 +621,7 @@ contains
       end do
     end do
 
+    call pop_sub()
   end subroutine getrho 
 
   ! ---------------------------------------------------------
@@ -628,11 +634,12 @@ contains
 
     FLOAT :: a1, a2, Rb2 ! for jellium
     FLOAT :: xx(MAX_DIM), r, time_
-    integer :: ip, err
+    integer :: ip, err, idim
     type(ps_t), pointer :: ps
 
     type(profile_t), save :: prof
 
+    call push_sub('species_pot.species_get_local')
     call profiling_in(prof, "SPECIES_GET_LOCAL")
 
     time_ = M_ZERO
@@ -650,10 +657,9 @@ contains
           
           ! Note that as the s%user_def is in input units, we have to convert
           ! the units back and forth
-          xx(:) = xx(:)/units_inp%length%factor ! convert from a.u. to input units
-          r = r/units_inp%length%factor
-          vl(ip) = species_userdef_pot(s, mesh%sb%dim, xx, r, time_) * &
-             units_inp%energy%factor  ! convert from input units to a.u.
+          forall(idim = 1:mesh%sb%dim) xx(idim) = units_from_atomic(units_inp%length, xx(idim))
+          r = units_from_atomic(units_inp%length, r)
+          vl(ip) = units_to_atomic(units_inp%energy, species_userdef_pot(s, mesh%sb%dim, xx, r, time_))
 
         end do
 
@@ -680,7 +686,7 @@ contains
           if(r <= species_jradius(s)) then
             vl(ip) = (a1*(r*r - Rb2) - a2)
           else
-            vl(ip) = - species_z(s)/r
+            vl(ip) = -species_z(s)/r
           end if
           
         end do
@@ -699,14 +705,14 @@ contains
       end select
 
       call profiling_out(prof)
-      
+      call pop_sub()
   end subroutine species_get_local
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Places, in the function phi (defined in each point of the mesh), the
   ! j-th atomic orbital. The orbitals are obtained from the species data
   ! type, and are numbered from one to species_niwfs(spec). It may happen
-  ! that there are different orbitals for each spin polarization direction,
+  ! that there are different orbitals for each spin-polarization direction,
   ! and therefore the orbital is also characterized by the label "is".
   !
   ! In order to put the orbital in the mesh, it is necessary to know where
@@ -728,6 +734,8 @@ contains
     FLOAT :: r2, x(1:MAX_DIM)
     FLOAT, allocatable :: xf(:, :), ylm(:)
     type(ps_t), pointer :: ps
+
+    call push_sub('species_pot.species_get_orbital')
 
     call species_iwf_ilm(spec, j, is, i, l, m)
 
@@ -774,6 +782,7 @@ contains
       end do
     end if
 
+    call pop_sub()
   end subroutine species_get_orbital
 
   subroutine species_get_orbital_submesh(spec, submesh, j, dim, is, pos, phi)
@@ -791,6 +800,8 @@ contains
     type(ps_t), pointer :: ps
 
     if(submesh%ns == 0) return
+
+    call push_sub('species_pot.species_get_orbital_submesh')
 
     call species_iwf_ilm(spec, j, is, i, l, m)
 
@@ -841,6 +852,7 @@ contains
       
     end if
 
+    call pop_sub()
   end subroutine species_get_orbital_submesh
 
 end module species_pot_m

@@ -83,11 +83,11 @@ contains
     !% Besides centering the structure, this is align to a set of orthogonal axis.
     !% This variable decides which set of axis to use.
     !%Option inertia 1
-    !% The axis of inertia
+    !% The axis of inertia.
     !%Option pseudo_inertia 2
-    !% Pseudo-axis of inertia, calculated considering that all species have mass one
+    !% Pseudo-axis of inertia, calculated considering all species to have equal mass.
     !%Option large_axis 3
-    !% The larger axis of the molecule
+    !% The larger axis of the molecule.
     !%End
     call loct_parse_int(datasets_check('AxisType'), INERTIA, axis_type)
 
@@ -105,7 +105,7 @@ contains
       call write_fatal(1)
     end select
 
-    ! check if the axis are OK
+    ! check if the axes are OK
     if(sum(x2**2) == M_ZERO) then ! linear molecule
       if(x1(1) == M_ZERO) then
         x2(1) = x1(1); x2(2) = -x1(3); x2(3) = x1(2)
@@ -254,7 +254,7 @@ contains
   ! ---------------------------------------------------------
   subroutine rotate(geo, from, from2, to)
     type(geometry_t), intent(inout) :: geo
-    FLOAT, intent(in) :: from(MAX_DIM), from2(MAX_DIM), to(MAX_DIM) ! assumed to be normalize
+    FLOAT, intent(in) :: from(MAX_DIM), from2(MAX_DIM), to(MAX_DIM) ! assumed to be normalized
 
     integer :: i, idim
     FLOAT :: m1(MAX_DIM, MAX_DIM), m2(MAX_DIM, MAX_DIM)
@@ -267,7 +267,7 @@ contains
       m1(idim, idim) = M_ONE
     end do
 
-    ! rotate the to axis to the z axis
+    ! rotate the to-axis to the z-axis
     if(to(2).ne.M_ZERO) then
       alpha = atan2(to(2), to(1))
       call rotate_z(m1, alpha)

@@ -242,7 +242,7 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) then
       if(in_debug_mode) call write_debug_newlines(6)
-      return
+      call pop_sub(); return
     end if
 
     call messages_print_stress(iunit, "Grid")

@@ -142,7 +142,7 @@ contains
     !%Section Execution::IO
     !%Description
     !% In addition to writing to stdout and stderr, the code messages may also be
-    !% flushed to "messages.stdout" and "messages.stderr", if this variable is
+    !% flushed to <tt>messages.stdout</tt> and <tt>messages.stderr</tt>, if this variable is
     !% set to yes.
     !%End
     call loct_parse_logical('FlushMessages', .false., flush_messages)
@@ -164,9 +164,9 @@ contains
       !% a facility to control separate MPI processes. If set to yes, all nodes will 
       !% start up, but will get trapped in an endless loop. In every cycle of the loop 
       !% each node is sleeping for one second and is then checking if a file with the 
-      !% name node_hook.xxx (where xxx denotes the node number) exists. A given node can 
+      !% name <tt>node_hook.xxx</tt> (where <tt>xxx</tt> denotes the node number) exists. A given node can 
       !% only be released from the loop if the corresponding file is created. This allows 
-      !% to selectively run eg. a compute node first followed by the master node. Or, by
+      !% to selectively run, <i>e.g.</i>, a compute node first followed by the master node. Or, by
       !% reversing the file creation of the node hooks, to run the master first followed
       !% by a compute node.
       !%End
@@ -212,7 +212,7 @@ contains
     !%Section Execution::IO
     !%Description
     !% The name of the directory where octopus stores binary information
-    !% like the wave-functions.
+    !% like the wavefunctions.
     !%End
     call loct_parse_string('TmpDir', trim(current_label)//'restart/', tmpdir)
     call io_mkdir(tmpdir, is_tmp=.true.)

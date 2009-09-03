@@ -238,9 +238,9 @@ contains
     FLOAT, allocatable:: offset_(:)
     logical write_forces_
 
-    call push_sub('io_function.write_xsf_geometry_file')
-
     if( .not. mpi_grp_is_root(mpi_world)) return
+
+    call push_sub('io_function.write_xsf_geometry_file')
 
     call io_mkdir(dir)
     position = 'asis'
