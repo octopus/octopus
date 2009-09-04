@@ -647,11 +647,9 @@ contains
   logical elemental function laser_requires_gradient(this) result(req)
     type(laser_t),  intent(in)  :: this
 
-    call push_sub('lasers.laser_requires_gradient')
-
+    ! no push_sub allowed in elemental function
     req = (laser_kind(this) == E_FIELD_MAGNETIC .or. laser_kind(this) == E_FIELD_VECTOR_POTENTIAL)
     
-    call pop_sub()
   end function laser_requires_gradient
 
   ! ---------------------------------------------------------
