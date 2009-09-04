@@ -101,10 +101,9 @@ contains
   integer pure function laser_kind(l)
     type(laser_t), intent(in) :: l
 
-    call push_sub('lasers.laser_kind')
+    ! no push_sub allowed in pure function
     laser_kind = l%field
 
-    call pop_sub()
   end function laser_kind
   ! ---------------------------------------------------------
 

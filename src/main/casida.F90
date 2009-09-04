@@ -166,8 +166,8 @@ contains
     !%Section Linear Response::Casida
     !%Description
     !% Specifies which transition densities are to be calculated and written down. The
-    !% transition density for the many-body state n will be written to a file called
-    !% casida/rho0n.
+    !% transition density for the many-body state <i>n</i> will be written to a file called
+    !% <tt>casida/rho0n</tt>.
     !% 
     !% By default, no transition density is calculated. 
     !%
@@ -182,7 +182,7 @@ contains
     if(fromScratch) call loct_rm(trim(tmpdir)//'casida-restart') ! restart
 
     ! First, print the differences between KS eigenvalues (first approximation to the
-    ! excitation energies, or rather, to the DOS.
+    ! excitation energies, or rather, to the DOS).
     message(1) = "Info: Approximating resonance energies through KS eigenvalue differences"
     call write_info(1)
     cas%type = CASIDA_EPS_DIFF
@@ -578,7 +578,7 @@ contains
         SAFE_DEALLOCATE_A(deltav)
 
 
-        ! And the oscillatory strengths.
+        ! And the oscillator strengths.
         do ia = 1, cas%n_pairs
           cas%f(ia) = (M_TWO/m%sb%dim) * cas%w(ia) * sum( (abs(cas%tm(ia, :)))**2 )
         end do
@@ -595,6 +595,7 @@ contains
     end subroutine solve_casida
 
 
+    ! ---------------------------------------------------------
     ! return the matrix element of <i(p),a(p)|v + fxc|j(q),b(q)>
     function K_term(p, q)
       FLOAT :: K_term
@@ -602,6 +603,8 @@ contains
 
       integer :: i, j, sigma, a, b, mu
       FLOAT, allocatable :: rho_i(:), rho_j(:)
+
+      call push_sub('casida.K_term')
 
       i = p%i; a = p%a; sigma = p%sigma
       j = q%i; b = q%a; mu = q%sigma
@@ -631,6 +634,8 @@ contains
 
       SAFE_DEALLOCATE_A(rho_i)
       SAFE_DEALLOCATE_A(rho_j)
+
+      call pop_sub()
     end function K_term
 
     ! ---------------------------------------------------------
@@ -707,7 +712,7 @@ contains
     end do
     call io_close(iunit)
 
-    ! output eigenvectors in casida approach
+    ! output eigenvectors in Casida approach
 
     if(cas%type.ne.CASIDA_CASIDA) then
       call pop_sub(); return

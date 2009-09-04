@@ -74,7 +74,7 @@ module ion_dynamics_m
 
     FLOAT, pointer   :: oldforce(:, :)
 
-    ! the old positions for verlet (used for the Nose Hoover)
+    ! the old positions for Verlet (used for the Nose Hoover)
     FLOAT, pointer :: old_x(:, :)    
 
     ! variables for the Nose-Hoover thermostat
@@ -103,6 +103,8 @@ contains
     type(c_ptr) :: random_gen_pointer
     type(xyz_file_info) :: xyz
 
+    call push_sub('ion_dynamics.ion_dynamics_init')
+
     !%Variable MoveIons
     !%Type integer
     !%Default static_ions
@@ -115,7 +117,7 @@ contains
     !%Option vel_verlet 1
     !% Newtonian dynamics using the velocity Verlet integrator.
     !%Option nose_hoover 5
-    !% Nose Hoover thermostat.
+    !% Nos&eacute;-Hoover thermostat.
     !%End
     
     call loct_parse_int(datasets_check('MoveIons'), STATIC_IONS, this%method)
@@ -137,8 +139,8 @@ contains
     !%Section System::Velocities
     !%Description
     !% If this variable is present, octopus will assign random
-    !% velocities to the atoms following a Bolzmann distribution with
-    !% temperature given by RandomVelocityTemp (in degrees Kelvin).
+    !% velocities to the atoms following a Boltzmann distribution with
+    !% temperature given by <tt>RandomVelocityTemp</tt> (in degrees Kelvin).
     !%End
 
     ! we now load the velocities, either from the temperature, from the input, or from a file
@@ -183,11 +185,11 @@ contains
       write(message(1),'(a,f10.4,1x,a)') 'Info: Initial velocities randomly distributed with T =', &
         temperature, 'K'
       write(message(2),'(2x,a,f8.4,1x,a)') '<K>       =', &
-        (ion_dynamics_kinetic_energy(geo)/geo%natoms)/units_out%energy%factor, &
-        units_out%energy%abbrev
+        units_from_atomic(units_out%energy, ion_dynamics_kinetic_energy(geo)/geo%natoms), &
+        units_abbrev(units_out%energy)
       write(message(3),'(2x,a,f8.4,1x,a)') '3/2 k_B T =', &
-        (M_THREE/M_TWO)*P_Kb*temperature/units_out%energy%factor, &
-        units_out%energy%abbrev
+        units_from_atomic(units_out%energy, (M_THREE/M_TWO)*P_Kb*temperature), &
+        units_abbrev(units_out%energy)
       call write_info(3)
 
     else
@@ -195,8 +197,8 @@ contains
       !%Type string
       !%Section System::Velocities
       !%Description
-      !% octopus will try to read the starting velocities of the atoms from the XYZ file 
-      !% specified by the variable XYZVelocities.
+      !% Octopus will try to read the starting velocities of the atoms from the XYZ file 
+      !% specified by the variable <tt>XYZVelocities</tt>.
       !% Note that you do not need to specify initial velocities if you are not going
       !% to perform ion dynamics; if you are going to allow the ions to move but the velocities
       !% are not specified, they are considered to be null.
@@ -206,7 +208,7 @@ contains
       !%Type block
       !%Section System::Velocities
       !%Description
-      !% If XYZVelocities is not present, octopus will try to fetch the initial 
+      !% If <tt>XYZVelocities</tt> is not present, octopus will try to fetch the initial 
       !% atomic velocities from this block. If this block is not present, octopus
       !% will reset the initial velocities to zero. The format of this block can be
       !% illustrated by this example:
@@ -216,8 +218,8 @@ contains
       !% <br>&nbsp;&nbsp;'O'  | &nbsp;1.7 | 0.0 | 0.0
       !% <br>%</tt>
       !%
-      !% It describes one Carbon and one Oxygen moving at the relative
-      !% velocity of 3.4, velocity units.
+      !% It describes one carbon and one oxygen moving at the relative
+      !% velocity of 3.4 velocity units.
       !%
       !% Note: It is important for the velocities to maintain the ordering 
       !% in which the species were defined in the coordinates specifications.
@@ -270,14 +272,17 @@ contains
       end do
 
     end if
-    
+
+    call pop_sub()
   end subroutine ion_dynamics_init
 
   subroutine ion_dynamics_end(this)
     type(ion_dynamics_t), intent(inout) :: this
 
+    call push_sub('ion_dynamics.ion_dynamics_end')
     SAFE_DEALLOCATE_P(this%oldforce)
 
+    call pop_sub()
   end subroutine ion_dynamics_end
 
   subroutine ion_dynamics_propagate(this, sb, geo, time, dt)
@@ -290,6 +295,8 @@ contains
     integer :: iatom
 
     if(.not. ion_dynamics_ions_move(this)) return
+
+    call push_sub('ion_dynamics.ion_dynamics_propagate')
 
     this%dt = dt
 
@@ -311,7 +318,7 @@ contains
 
     case(NOSE_HOOVER)
 
-      ! The implementation of the Nose Hoover thermostat is based on
+      ! The implementation of the Nose-Hoover thermostat is based on
       ! Understanding Molecular Simulations by Frenkel and Smit,
       ! Appendix E, page 540-542.
 
@@ -329,6 +336,7 @@ contains
 
     end select
     
+    call pop_sub()
   end subroutine ion_dynamics_propagate
   
   subroutine chain(this, geo)
@@ -337,6 +345,8 @@ contains
 
     FLOAT :: g1, g2, ss, uk, dt
     integer :: iatom
+
+    call push_sub('ion_dynamics.chain')
 
     dt = this%dt
 
@@ -368,6 +378,7 @@ contains
     g2 = (this%nh1%mass*this%nh1%vel**2 - this%temp)/this%nh2%mass
     this%nh2%vel = this%nh2%vel + g2*dt/CNST(4.0)
     
+    call pop_sub()
   end subroutine chain
   
   subroutine ion_dynamics_propagate_vel(this, geo)
@@ -377,6 +388,8 @@ contains
     integer :: iatom
 
     if(.not. ion_dynamics_ions_move(this)) return
+
+    call push_sub('ion_dynamics.ion_dynamics_propagate_vel')
 
     select case(this%method)
     case(VELOCITY_VERLET)
@@ -401,6 +414,7 @@ contains
 
     end select
 
+    call pop_sub()
   end subroutine ion_dynamics_propagate_vel
 
   subroutine ion_dynamics_save_state(this, geo, state)
@@ -412,6 +426,8 @@ contains
 
     if(.not. ion_dynamics_ions_move(this) .or. this%method /= VELOCITY_VERLET) return
 
+    call push_sub('ion_dynamics.ion_dynamics_save_state')
+
     SAFE_ALLOCATE(state%pos(1:MAX_DIM, 1:geo%natoms))
     SAFE_ALLOCATE(state%vel(1:MAX_DIM, 1:geo%natoms))
 
@@ -420,6 +436,7 @@ contains
       state%vel(1:MAX_DIM, iatom) = geo%atom(iatom)%v(1:MAX_DIM)
     end do
 
+    call pop_sub()
   end subroutine ion_dynamics_save_state
 
   subroutine ion_dynamics_restore_state(this, geo, state)
@@ -431,6 +448,8 @@ contains
 
     if(.not. ion_dynamics_ions_move(this)) return
 
+    call push_sub('ion_dynamics.ion_dynamics_restore_state')
+
     do iatom = 1, geo%natoms
       geo%atom(iatom)%x(1:MAX_DIM) = state%pos(1:MAX_DIM, iatom)
       geo%atom(iatom)%v(1:MAX_DIM) = state%vel(1:MAX_DIM, iatom)
@@ -439,6 +458,7 @@ contains
     SAFE_DEALLOCATE_P(state%pos)
     SAFE_DEALLOCATE_P(state%vel)
     
+    call pop_sub()
   end subroutine ion_dynamics_restore_state
 
   logical pure function ion_dynamics_ions_move(this) result(ions_move)

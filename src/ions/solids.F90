@@ -97,10 +97,9 @@ contains
   integer pure function periodic_copy_num(this) result(num)
     type(periodic_copy_t), intent(in)    :: this
 
-    call push_sub('solids.periodic_copy_num')
+    ! no push_sub allowed in pure function
     num = product(this%nbmax - this%nbmin + 1)
 
-    call pop_sub()
   end function periodic_copy_num
 
   function periodic_copy_position(this, sb, ii) result(pcopy)
