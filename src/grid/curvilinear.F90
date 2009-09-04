@@ -145,7 +145,7 @@ contains
     FLOAT,               intent(in)  :: chi(MAX_DIM)  ! chi(conf%dim)
     FLOAT,               intent(out) :: x(MAX_DIM)    ! x(conf%dim)
 
-    call push_sub('curvilinear.curvilinear_chi2x')
+    ! no push_sub because called too frequently
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
@@ -158,7 +158,6 @@ contains
       call curv_modine_chi2x(sb, cv%modine, chi, x)
     end select
 
-    call pop_sub()
   end subroutine curvilinear_chi2x
 
 

@@ -1,10 +1,24 @@
-
-
+!! Copyright (C) 2009
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+!!
 
 #include "global.h"
 
 module young_m
-
   use global_m
   use loct_m
   use math_m
@@ -15,13 +29,13 @@ module young_m
 
   private
 
-  public :: young_init, &
+  public :: young_init,           &
             young_write_allspins, &
-            young_write, &
-            young_write_one, &
-            young_copy, &
-            young_nullify, &
-            young_end, &
+            young_write,          &
+            young_write_one,      &
+            young_copy,           &
+            young_nullify,        &
+            young_end,            &
             young_t
 
   type young_t 
@@ -30,14 +44,10 @@ module young_m
    integer, pointer :: young_down(:,:)
   end type young_t 
 
-
-
   contains
 
+  !------------------------------------------------------------
   subroutine young_init (this, nup, ndown)
-
-    implicit none
-
     integer, intent(in) :: nup, ndown
     type(young_t), intent(inout) :: this
 
@@ -47,7 +57,7 @@ module young_m
     call push_sub('math.young_init')
 
     if (ndown > nup) then
-      write (message(1),'(a)') 'Error: we only make 2 row Young diagrams with nup >= ndown'
+      write (message(1),'(a)') 'Error: we only make 2-row Young diagrams with nup >= ndown'
       call write_fatal(1)
     end if
 
@@ -79,10 +89,8 @@ module young_m
   end subroutine young_init
 
 
-
+  !------------------------------------------------------------
   recursive subroutine young_fill (this, nn)
-    implicit none
-
     integer, intent(in) :: nn
     type(young_t), intent(inout) :: this
 
@@ -163,13 +171,15 @@ module young_m
     call pop_sub()
   end subroutine
 
-  subroutine young_reset_1val (this, nn)
-    implicit none
 
+  !------------------------------------------------------------
+  subroutine young_reset_1val (this, nn)
     type(young_t), intent(inout) :: this
     integer, intent(in) :: nn
 
     integer :: iup, idown
+
+    call push_sub('young.young_reset_1val')
 
     ! remove last entry in new diagram
     do iup = 1, this%nup
@@ -179,15 +189,17 @@ module young_m
       if(this%young_down(idown,this%iyoung) == nn+1) this%young_down(idown,this%iyoung) = -999
     end do
 
+    call pop_sub()
   end subroutine young_reset_1val
 
-  subroutine young_write (iunit, this)
-    implicit none
 
+  !------------------------------------------------------------
+  subroutine young_write (iunit, this)
     integer, intent(in) :: iunit
     type(young_t), intent(inout) :: this
-    ! local vars
+
     integer :: iyoung
+
     call push_sub('math.young_write')
     
     write (iunit, '(a,I4,a,I4,a)') ' Young diagrams for ', this%nup, ' spins up, and ', this%ndown, ' down '
@@ -198,12 +210,14 @@ module young_m
     call pop_sub()
   end subroutine young_write
 
-  subroutine young_write_one (iunit, this, iyoung)
-    implicit none
 
+  !------------------------------------------------------------
+  subroutine young_write_one (iunit, this, iyoung)
     integer, intent(in) :: iunit
     type(young_t), intent(inout) :: this
+
     integer, intent(in) :: iyoung
+
     call push_sub('math.young_write_one')
     
     write (iunit,'(a,I7)') ' Young diagram ', iyoung
@@ -213,14 +227,16 @@ module young_m
     call pop_sub()
   end subroutine young_write_one
 
-  ! routine gets all young diagrams for all distributions of spins
+
+  !------------------------------------------------------------
+  ! routine gets all Young diagrams for all distributions of spins
   subroutine young_write_allspins (iunit, nparticles)
-    implicit none
     integer, intent(in) :: iunit, nparticles
     integer :: nup, ndown
     type(young_t) :: this
 
     call push_sub('math.young_write_allspins')
+
     call young_nullify (this)
     do ndown = 0, floor(nparticles * 0.5)
       nup = nparticles - ndown
@@ -229,21 +245,25 @@ module young_m
       call young_end (this)
     end do
     call pop_sub()
+
   end subroutine young_write_allspins 
 
-  subroutine young_nullify (this)
-    implicit none
 
+  !------------------------------------------------------------
+  subroutine young_nullify (this)
     type(young_t), intent(inout) :: this
+
     call push_sub('math.young_nullify')
+
     nullify(this%young_up)
     nullify(this%young_down)
+
     call pop_sub()
   end subroutine young_nullify
 
-  subroutine young_copy (young_in, young_out)
-    implicit none
 
+  !------------------------------------------------------------
+  subroutine young_copy (young_in, young_out)
     type(young_t), intent(inout) :: young_in, young_out
 
     call push_sub('math.young_copy')
@@ -254,18 +274,26 @@ module young_m
 
     call loct_pointer_copy(young_out%young_up,young_in%young_up)
     call loct_pointer_copy(young_out%young_down,young_in%young_down)
+
     call pop_sub()
   end subroutine young_copy
 
-  subroutine young_end (this)
-    implicit none
 
+  !------------------------------------------------------------
+  subroutine young_end (this)
     type(young_t), intent(inout) :: this
 
     call push_sub('math.young_end')
+
     SAFE_DEALLOCATE_P (this%young_up)
     SAFE_DEALLOCATE_P (this%young_down)
+
     call pop_sub()
   end subroutine young_end
 
 end module young_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

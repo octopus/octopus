@@ -114,6 +114,8 @@ contains
   subroutine fft_all_init()
     integer :: i
 
+    call push_sub('fftw3.fft_all_init')
+
     !%Variable FFTOptimize
     !%Type logical
     !%Default yes
@@ -136,15 +138,15 @@ contains
     !%Default 0
     !%Section Mesh::FFTs
     !%Description
-    !% The FFTs are performed in octopus with the help of the FFTW package (http://www.tddft.org).
+    !% The FFTs are performed in octopus with the help of the FFTW package (http://www.fftw.org).
     !% Before doing the actual computations, this package prepares a "plan", which means that 
-    !% the precise numerical strategy to be followed to compute  the FFT is machine-compiler dependent,
+    !% the precise numerical strategy to be followed to compute the FFT is machine/compiler-dependent,
     !% and therefore the software attempts to figure out which is this precise strategy (see the
     !% FFTW documentation for details). This plan preparation, which has to be done for each particular
     !% FFT shape, can be done exhaustively and carefully (slow), or merely estimated. Since this is
     !% a rather critical numerical step, by default it is done carefully, which implies a longer initial
     !% initialization, but faster subsequent computations. You can change this behaviour by changing
-    !% this "FFTPreparePlan" variable, and in this way you can force FFTW to do a fast guess or
+    !% this <tt>FFTPreparePlan</tt> variable, and in this way you can force FFTW to do a fast guess or
     !% estimation of which is the best way to perform the FFT.
     !%Option fftw_measure 0
     !% This is the default, and implies a longer initialization, but involves a more careful analysis
@@ -156,6 +158,7 @@ contains
     call loct_parse_int(datasets_check('FFTPreparePlan'), fftw_measure, fft_prepare_plan)
     if(.not.varinfo_valid_option('FFTPreparePlan', fft_prepare_plan)) call input_error('FFTPreparePlan')
 
+    call pop_sub()
   end subroutine fft_all_init
 
 
@@ -163,6 +166,8 @@ contains
   ! delete all plans
   subroutine fft_all_end()
     integer :: i
+
+    call push_sub('fftw3.fft_all_end')
 
     do i = 1, FFT_MAX
       if(fft_refs(i).ne.NULL) then
@@ -172,7 +177,8 @@ contains
       end if
     end do
 
-    call DFFTW(cleanup);
+    call DFFTW(cleanup)
+    call pop_sub()
   end subroutine fft_all_end
 
 
@@ -189,13 +195,15 @@ contains
     integer :: i, j, dim
     logical :: optimize_
 
-    ! First, figure out about the dimensionaliy of the FFT.
+    call push_sub('fftw3.fft_init')
+
+    ! First, figure out the dimensionaliy of the FFT.
     dim = 0
     do i = 1, MAX_DIM
       if(n(i) > 1) then 
         dim = dim + 1
       else
-        exit
+         call pop_sub(); exit
       end if
     end do
 
@@ -289,6 +297,7 @@ contains
       n(1), ",", n(2), ",", n(3), ") in slot ", j
     call write_info(1)
 
+    call pop_sub()
   end subroutine fft_init
 
 
@@ -297,11 +306,15 @@ contains
     type(fft_t), intent( in) :: fft_i
     type(fft_t), intent(out) :: fft_o
 
+    call push_sub('fftw3.fft_copy')
+
     ASSERT(fft_i%slot>=1.and.fft_i%slot<=FFT_MAX)
     ASSERT(fft_refs(fft_i%slot) > 0)
 
     fft_o = fft_i
     fft_refs(fft_i%slot) = fft_refs(fft_i%slot) + 1
+
+    call pop_sub()
   end subroutine fft_copy
 
 
@@ -310,6 +323,8 @@ contains
     type(fft_t), intent(inout) :: fft
 
     integer :: i
+
+    call push_sub('fftw3.fft_end')
 
     i = fft%slot
     if(fft_refs(i)==NULL) then
@@ -327,6 +342,7 @@ contains
       end if
     end if
 
+    call pop_sub()
   end subroutine fft_end
 
 
@@ -335,7 +351,10 @@ contains
     type(fft_t), intent(in) :: fft
     integer,    intent(out) :: d(3)
 
+    call push_sub('fftw3.fft_getdim_real')
     d = fft%n
+
+    call pop_sub()
   end subroutine fft_getdim_real
 
 
@@ -344,8 +363,12 @@ contains
     type(fft_t), intent(in) :: fft
     integer,    intent(out) :: d(3)
 
+    call push_sub('fftw3.fft_getdim_complex')
+
     d = fft%n
     if(fft%is_real == fft_real)  d(1) = d(1)/2 + 1
+
+    call pop_sub()
   end subroutine fft_getdim_complex
 
 
@@ -374,7 +397,7 @@ contains
     FLOAT,       intent(in)  :: r(:)
     CMPLX,       intent(out) :: c(:)
 
-    call push_sub('fftw3.dfft_forward')
+    call push_sub('fftw3.dfft_forward1')
 
     call DFFTW(execute_dft_r2c) (fft%planf, r, c)
 
@@ -408,7 +431,7 @@ contains
     CMPLX, intent(in)  :: c(fft%n(1))
     FLOAT, intent(out) :: r(fft%n(1))
 
-    call push_sub('fftw3.dfft_backward')
+    call push_sub('fftw3.dfft_backward1')
     
     call DFFTW(execute_dft_c2r) (fft%planb, c, r)
 
@@ -463,6 +486,8 @@ contains
     logical, intent(in) :: mode
     integer :: pad_feq
 
+    call push_sub('fftw3.pad_feq')
+
     if(mode) then      ! index to frequency number
       if( i <= n/2 + 1 ) then
         pad_feq = i - 1
@@ -477,6 +502,7 @@ contains
       end if
     end if
 
+    call pop_sub()
     return
   end function pad_feq
 

@@ -91,27 +91,27 @@ contains
     !%Description
     !% The calculations can be run with three different "theory levels":
     !%Option independent_particles 2
-    !% Particles will be considered as independent, i.e. as non-interacting.
+    !% Particles will be considered as independent, <i>i.e.</i> as non-interacting.
     !% This mode is mainly used for testing purposes, as the code is usually 
-    !% much faster with independent_particles.
+    !% much faster with <tt>independent_particles</tt>.
     !%Option hartree 1
     !% Calculation within the Hartree method. Note that, contrary to what many people
     !% may think, the Hartree potential is self-interaction-free. Therefore, this run 
-    !% mode will not yield the same result as dft without exchange-correlation.
+    !% mode will not yield the same result as <tt>dft</tt> without exchange-correlation.
     !% 
     !% At the moment, I am not completely sure of the implementation, so I am
     !% marking it with development version only.
     !%Option hartree_fock 3
     !% This is the traditional Hartree-Fock scheme. Like the Hartree scheme it is fully
-    !% self-interaction-free. This mode is extremely slow. It is often more convinient
-    !% to use dft within the OEP scheme to get similar (but not the same) results.
+    !% self-interaction-free. This mode is extremely slow. It is often more convenient
+    !% to use <tt>dft</tt> within the OEP scheme to get similar (but not the same) results.
     !% 
     !% Note that within this scheme you can use a correlation functional, or a hybrid
-    !% functional (see XCFunctional). In the latter case, you will be following the
+    !% functional (see <tt>XCFunctional</tt>). In the latter case, you will be following the
     !% quantum-chemistry recipe to use hybrids.
     !%Option dft 4
     !% This is the default density-functional theory scheme. Note that you can also use 
-    !% hybrids in this scheme, but they will be handled the "DFT" way, i.e., solving the
+    !% hybrids in this scheme, but they will be handled the "DFT" way, <i>i.e.</i>, solving the
     !% OEP equation.
     !%End
     call loct_parse_int(datasets_check('TheoryLevel'), KOHN_SHAM_DFT, ks%theory_level)
@@ -145,14 +145,13 @@ contains
         !%Section Hamiltonian::XC
         !%Description
         !% This variable controls which Self-Interaction Correction to use. Note that
-        !% this correction will be applied to the functional chosen by 'XFunctional' and
-        !% 'CFunctional'
+        !% this correction will be applied to the functional chosen by <tt>XCFunctional</tt>.
         !%Option sic_none 1
-        !% No Self-Interaction Correction
+        !% No self-interaction correction.
         !%Option sic_pz 2
-        !% SIC a Perdew Zunger, hadled by the OEP technique
+        !% SIC a la Perdew Zunger, handled by the OEP technique.
         !%Option sic_amaldi 3
-        !% Amaldi correction term (NOT WORKING)
+        !% Amaldi correction term (NOT WORKING).
         !%End
         call loct_parse_int(datasets_check('SICCorrection'), sic_none, ks%sic_type)
         if(.not.varinfo_valid_option('SICCorrection', ks%sic_type)) call input_error('SICCorrection')
@@ -442,7 +441,7 @@ contains
       forall(ip = 1:gr%mesh%np) hm%vhartree(ip) = hm%vhxc(ip, 1) - hm%vxc(ip, 1)
     end if
 
-    ! solve the poisson equation
+    ! solve the Poisson equation
     call dpoisson_solve(gr, hm%vhartree, rho)
     ! Get the Hartree energy
     hm%ehartree = M_HALF*dmf_dotp(gr%mesh, rho, hm%vhartree)

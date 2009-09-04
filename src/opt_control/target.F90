@@ -103,7 +103,11 @@ module opt_control_target_m
   subroutine target_get_state(target, st)
     type(target_t), intent(in)    :: target
     type(states_t), intent(inout) :: st
+
+    call push_sub('target.target_get_state')
     call states_copy(st, target%st)
+
+    call pop_sub()
   end subroutine target_get_state
   ! ----------------------------------------------------------------------
 
@@ -131,41 +135,41 @@ module opt_control_target_m
     !%Variable OCTTargetOperator
     !%Type integer
     !%Section Calculation Modes::Optimal Control
-    !%Default 3
+    !%Default oct_tg_gstransformation
     !%Description
-    !% The variable OCTTargetOperator prescribes which kind of target functional is
+    !% The variable <tt>OCTTargetOperator</tt> prescribes which kind of target functional is
     !% to be used.
     !%
     !% The possible arguments are:
     !%
     !%Option oct_tg_groundstate 1 
-    !% The target operator is a projection operator on the ground state, i.e. the
+    !% The target operator is a projection operator on the ground state, <i>i.e.</i> the
     !% objective is to populate the ground state as much as possible.
     !%Option oct_tg_excited 2
     !% The target operator is an "excited state". This means that the target operator
     !% is a linear combination of Slater determinants, formed each one by swapping,
     !% from the ground state Slater determinant, one occupied state by one excited
-    !% state (i.e. "single excitations"). The description of which excitations are
-    !% used, and with which weight, should be given in a file called
-    !% "oct-excited-state-target". This is still in very preliminary, experimental
-    !% phase. See the documentation of subroutine "excited_states_init" in the source
+    !% state (<i>i.e.</i> "single excitations"). The description of which excitations are
+    !% used, and with which weights, should be given in a file called
+    !% <tt>oct-excited-state-target</tt>. This is still in very preliminary, experimental
+    !% phase. See the documentation of subroutine <tt>excited_states_init</tt> in the source
     !% code in order to use this feature.
     !%Option oct_tg_gstransformation 3
-    !% The target operator is a projection operator on a transformation of the ground state 
-    !% orbitals defined by the block "OCTTargetTransformStates".
+    !% The target operator is a projection operator on a transformation of the ground-state 
+    !% orbitals defined by the block <tt>OCTTargetTransformStates</tt>.
     !%Option oct_tg_userdefined 4
     !% WARNING: not implemented; reserved for use in future releases.
     !%Option oct_tg_density 5
-    !% The target operator is a given density, i.e. the final state should have a density
+    !% The target operator is a given density, <i>i.e.</i> the final state should have a density
     !% as close as possible as the one given in the input file, either from the variable
-    !% "OCTTargetDensityFromState", or from "OCTTargetDensity".
+    !% <tt>OCTTargetDensityFromState</tt>, or from <tt>OCTTargetDensity</tt>.
     !%Option oct_tg_local 6
     !% The target operator is a local operator.
     !%Option oct_tg_td_local 7
     !% The target operator is a time-dependent local operator.
     !%Option oct_tg_exclude_state 8
     !% Target operator is the projection onto the complement of a given state, given by the
-    !% block OCTTargetTransformStates. This means that the target operator is the unity
+    !% block <tt>OCTTargetTransformStates</tt>. This means that the target operator is the unity
     !% operator minus the projector onto that state.
     !%Option oct_tg_hhg 9
     !% The target is the optimization of the HHG yield.
@@ -244,12 +248,12 @@ module opt_control_target_m
       !%Default no
       !%Section Calculation Modes::Optimal Control
       !%Description
-      !% If OCTTargetOperator = oct_tg_gstransformation, you must specify one
-      !% OCTTargetTransformStates block, in order to specify which linear
-      !% combination of the states present in "restart/gs" is used to
+      !% If <tt>OCTTargetOperator = oct_tg_gstransformation</tt>, you must specify a
+      !% <tt>OCTTargetTransformStates</tt> block, in order to specify which linear
+      !% combination of the states present in <tt>restart/gs</tt> is used to
       !% create the target state.
       !% 
-      !% The syntax is equivalent to the one used for the TransformStates
+      !% The syntax is equivalent to the one used for the <tt>TransformStates</tt>
       !% block.
       !%End
       if(loct_parse_isdef(datasets_check('OCTTargetTransformStates')).ne.0) then
@@ -294,24 +298,22 @@ module opt_control_target_m
       !%Type string
       !%Section Calculation Modes::Optimal Control
       !%Description
-      !% If OCTTargetOperator = oct_tg_density, then one must supply the target density
+      !% If <tt>OCTTargetOperator = oct_tg_density</tt>, then one must supply the target density
       !% that should be searched for. This one can do by supplying a string through
-      !% the variable OCTLocalTarget.
+      !% the variable <tt>OCTTargetDensity</tt>.
       !%End
-
 
       !%Variable OCTTargetDensityFromState
       !%Type block
       !%Default no
       !%Section Calculation Modes::Optimal Control
       !%Description
-      !% If OCTTargetOperator = oct_tg_density, and OCTLocalTarget = "OCTTargetDensityFromState",
-      !% you must specify one OCTTargetDensityState block, in order to specify which linear
-      !% combination of the states present in "restart/gs" is used to
+      !% If <tt>OCTTargetOperator = oct_tg_density</tt>, and </tt>OCTLocalTarget = "OCTTargetDensityFromState"</tt>,
+      !% you must specify a <tt>OCTTargetDensityState</tt> block, in order to specify which linear
+      !% combination of the states present in <tt>restart/gs</tt> is used to
       !% create the target density.
       !%
-      !% The syntax is equivalent to the one used for the TransformStates
-      !% block.
+      !% The syntax is equivalent to the one used for the <tt>TransformStates</tt> block.
       !%End
 
       if(loct_parse_isdef('OCTTargetDensity').ne.0) then
@@ -368,13 +370,13 @@ module opt_control_target_m
       end if
 
     case(oct_tg_local)
-      !%Variable OCTTargetLocal
+      !%Variable OCTLocalTarget
       !%Type string
       !%Section Calculation Modes::Optimal Control
       !%Description
-      !% If OCTTargetOperator = oct_tg_local, then one must supply the target density
-      !% that should be searched for. This one can do by supplying a string through
-      !% the variable OCTLocalTarget.
+      !% If <tt>OCTTargetOperator = oct_tg_local</tt>, then one must supply the target density
+      !% that should be searched for. One can do this by supplying a string through
+      !% the variable <tt>OCTLocalTarget</tt>.
       !%End
 
       if(loct_parse_isdef('OCTTargetLocal').ne.0) then
@@ -384,13 +386,13 @@ module opt_control_target_m
         call conv_to_C_string(expression)
         do ip = 1, gr%mesh%np
           call mesh_r(gr%mesh, ip, r, x = x)
-          ! parse user defined expression
+          ! parse user-defined expression
           call loct_parse_expression(psi_re, psi_im, gr%sb%dim, x, r, M_ZERO, expression)
           target%rho(ip) = psi_re
         end do
       else
         message(1) = 'If OCTTargetOperator = oct_tg_local, then you must give the shape'
-        message(2) = 'of this target in variable "OCTTargetLocal"'
+        message(2) = 'of this target in variable "OCTTargetLocal".'
         call write_fatal(2)
       end if
 
@@ -400,7 +402,7 @@ module opt_control_target_m
         call conv_to_C_string(target%td_local_target)
         SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
       else
-        message(1) = 'If OCTTargetMode = oct_targetmode_td, you must suppy a OCTTDTarget block'
+        message(1) = 'If OCTTargetMode = oct_targetmode_td, you must suppy a OCTTDTarget block.'
         call write_fatal(1)
       end if
       target%dt     = td%dt
@@ -416,21 +418,21 @@ module opt_control_target_m
       !%Description
       !% WARNING: Experimental
       !%
-      !% If "OCTTargetOperator = oct_tg_hhg", the target is the harmonic emission spectrum.
-      !% In that case, you must supply a "OCTOptimizeHarmonicSpectrum" block in the "inp"
+      !% If <tt>OCTTargetOperator = oct_tg_hhg</tt>, the target is the harmonic emission spectrum.
+      !% In that case, you must supply an <tt>OCTOptimizeHarmonicSpectrum</tt> block in the <tt>inp</tt>
       !% file. The target is given, in general, by:
       !%
       !% <math>J_1 = \int_0^\infty d\omega \alpha(\omega) H(\omega)</math>,
       !%
       !% where <math>H(\omega)</math> is the harmonic spectrum generated by the system, and
       !% <math>\alpha(\omega)</math> is some function that determines what exactly we want
-      !% to optimize. The role of the "OCTOptimizeHarmonicSpectrum" block is to determine
+      !% to optimize. The role of the <tt>OCTOptimizeHarmonicSpectrum</tt> block is to determine
       !% this <math>\alpha(\omega)</math> function. Currently, this function is defined as:
       !%
       !% <math>\alpha(\omega) = \sum_{L=1}^{M} \frac{\alpha_L}{a_L} \sqcap( (\omega - L\omega_0)/a_L )</math>,
       !%
       !% where <math>omega_0</math> is the carrier frequency. <math>M</math> is
-      !% the number of columns in the "OCTOptimizeHarmonicSpectrum". The values of $L$ will be listed
+      !% the number of columns in the <tt>OCTOptimizeHarmonicSpectrum</tt> block. The values of <i>L</i> will be listed
       !% in the first row of this block; <math> alpha_L </math> in the second row, and <math>a_L</math> in
       !% the third.
       !% 

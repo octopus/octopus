@@ -108,7 +108,7 @@ contains
     !%Description
     !% When running in parallel, this variable selects whether the
     !% Poisson solver should divide the work among all nodes or only
-    !% among the parallelization in domains groups.
+    !% among the parallelization-in-domains groups.
     !%End
 
     call loct_parse_logical(datasets_check('ParallelizationPoissonAllNodes'), .true., all_nodes_default)
@@ -127,11 +127,11 @@ contains
 
     !%Variable PoissonSolver
     !%Type integer
-    !%Default fft
     !%Section Hamiltonian::Poisson
     !%Description
     !% Defines which method to use in order to solve the Poisson equation.
     !% The default for 1D and 2D is the direct evaluation of the Hartree potential.
+    !% The default for 3D is <tt>fft_nocut</tt>.
     !%Option direct2D -2
     !% Direct evaluation of the Hartree potential (in 2D)
     !%Option direct1D -1
@@ -153,14 +153,16 @@ contains
     !%Option multigrid 7
     !% Multigrid method
     !%Option isf 8
-    !% Interpolating Scaling Functions poisson solver.
+    !% Interpolating Scaling Functions Poisson solver.
+    !%Options sete 9
+    !% SETE solver.
     !%End
 
     !------------------------------------------------------------------
     subroutine init_1D()
       integer :: default_solver
 
-      call push_sub('poisson.init_1D')
+      call push_sub('poisson.poisson_init.init_1D')
 
       if(gr%sb%periodic_dim==0) then
         default_solver = POISSON_FFT_SPH
@@ -193,7 +195,7 @@ contains
     !-----------------------------------------------------------------
     subroutine init_2D()
       integer :: default_solver
-      call push_sub('poisson.init_2D')
+      call push_sub('poisson.poisson_init.init_2D')
 
       if (gr%sb%periodic_dim > 0) then 
         default_solver = gr%sb%periodic_dim
@@ -204,8 +206,8 @@ contains
       call loct_parse_int(datasets_check('PoissonSolver'), gr%sb%periodic_dim, poisson_solver)
       if( (poisson_solver .ne. POISSON_FFT_SPH)         .and. &
           (poisson_solver .ne. POISSON_DIRECT_SUM_2D)   .and. &
-          (poisson_solver .ne. 1)               .and. &
-          (poisson_solver .ne. 2)               .and. &
+          (poisson_solver .ne. 1)                       .and. &
+          (poisson_solver .ne. 2)                       .and. &
           (poisson_solver .ne. 3)                       ) then
         call input_error('PoissonSolver')
       end if
@@ -215,7 +217,7 @@ contains
 
       if(gr%mesh%use_curvilinear .and. (poisson_solver .ne. -gr%mesh%sb%dim) ) then
         message(1) = 'If curvilinear coordinates are used in 2D, then the only working'
-        message(2) = 'Poisson solver is -2 ("direct summation in two dimensions")'
+        message(2) = 'Poisson solver is -2 ("direct summation in two dimensions").'
         call write_fatal(2)
       end if
 
@@ -230,7 +232,7 @@ contains
     subroutine init_3D()
       integer :: default_solver 
 
-      call push_sub('poisson.init_3D')
+      call push_sub('poisson.poisson_init.init_3D')
 
 #ifndef SINGLE_PRECISION
       default_solver = POISSON_ISF
@@ -258,7 +260,7 @@ contains
 
       if(gr%mesh%use_curvilinear .and. (poisson_solver.ne.POISSON_CG_CORRECTED)) then
         message(1) = 'If curvilinear coordinates are used, then the only working'
-        message(2) = 'Poisson solver is cg_corrected'
+        message(2) = 'Poisson solver is cg_corrected.'
         call write_fatal(2)
       end if
 
@@ -370,7 +372,7 @@ contains
     type(grid_t),         intent(inout) :: gr
     FLOAT,                intent(inout) :: pot(:)    ! pot(mesh%np)
     FLOAT,                intent(in)    :: rho(:)    ! rho(mesh%np)
-    logical, optional,    intent(in)    :: all_nodes ! Is the poisson solver allowed to utilise
+    logical, optional,    intent(in)    :: all_nodes ! Is the Poisson solver allowed to utilise
                                                      ! all nodes or only the domain nodes for
                                                      ! its calculations? (Defaults to .true.)
 
@@ -559,7 +561,7 @@ contains
     call push_sub('poisson.poisson_test')
 
     if(calc_dim == 1) then
-      write(message(1),'(a)') 'The Hartree integrator test is not implemented for the one dimensional case.'
+      write(message(1),'(a)') 'The Hartree integrator test is not implemented for the one-dimensional case.'
       call write_warning(1)
       call pop_sub(); return
     endif

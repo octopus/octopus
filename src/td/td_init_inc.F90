@@ -67,15 +67,15 @@ subroutine td_init(td, sys, hm)
   !% will depend on your system, mainly on the width of the gap.
   !%
   !% Important: The electronic time step will be the value of
-  !% TDTimeStep divided by this variable, so if you have determined an
-  !% optimal electronic time step (that we can call dte), it is
+  !% <tt>TDTimeStep</tt> divided by this variable, so if you have determined an
+  !% optimal electronic time step (that we can call <i>dte</i>), it is
   !% recommended that you define your time step as:
   !%
-  !% TDTimeStep = dte * TDIonicTimeScale
+  !% <tt>TDTimeStep</tt> = <i>dte</i> * <tt>TDIonicTimeScale</tt>
   !%
   !% so you will always use the optimal electronic time step.
   !%
-  !% For more details see: http://arxiv.org/abs/0710.3321
+  !% For more details see: <tt>http://arxiv.org/abs/0710.3321</tt>
   !%
   !%End
 
@@ -92,7 +92,7 @@ subroutine td_init(td, sys, hm)
   !% propagation, rather than the number of steps, just use something
   !% like:
   !%
-  !% TDMaximumIter = 1000.0 / TDTimeStep
+  !% <tt>TDMaximumIter</tt> = 1000.0 / <tt>TDTimeStep</tt>
   !%
   !%End 
 
@@ -121,9 +121,9 @@ subroutine td_init(td, sys, hm)
   !%Option ehrenfest 1
   !% Ehrenfest dynamics.
   !%Option bo 2
-  !% Born Openheimer (Experimental).
+  !% Born-Oppenheimer (Experimental).
   !%Option cp 3
-  !% Carr-Parrinelo molecular dynamics.
+  !% Car-Parrinello molecular dynamics.
   !%End
 
   call loct_parse_int(datasets_check('TDDynamics'), EHRENFEST, td%dynamics)

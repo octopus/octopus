@@ -132,14 +132,14 @@ module math_m
   ! The subroutine set_app_threshold changes APP_THRESHOLD.
   FLOAT :: APP_THRESHOLD = CNST(1.0e-10)
   interface operator(.app.)
-    module procedure dapproximate_equal
-    module procedure dapproximate_equal_1
-    module procedure dapproximate_equal_2
-    module procedure dapproximate_equal_3
-    module procedure zapproximate_equal
-    module procedure zapproximate_equal_1
-    module procedure zapproximate_equal_2
-    module procedure zapproximate_equal_3
+    module procedure dapproximately_equal
+    module procedure dapproximately_equal_1
+    module procedure dapproximately_equal_2
+    module procedure dapproximately_equal_3
+    module procedure zapproximately_equal
+    module procedure zapproximately_equal_1
+    module procedure zapproximately_equal_2
+    module procedure zapproximately_equal_3
   end interface
 
   interface hypot
@@ -189,9 +189,12 @@ contains
 
     FLOAT :: ratio
 
-    ratio = a/b
+    call push_sub('math.is_integer_multiple')
 
+    ratio = a/b
     is_integer_multiple = ratio.app.TOFLOAT(nint(ratio))
+
+    call pop_sub()
   end function is_integer_multiple
 
 
@@ -202,6 +205,8 @@ contains
 
     FLOAT :: h
 
+    call push_sub('math.hermite')
+
     if(n<=0) then
       h = M_ONE
     elseif(n==1) then
@@ -210,13 +215,18 @@ contains
       h = M_TWO*x*hermite(n-1,x) - M_TWO*(n-1)*hermite(n-2,x)
     end if
 
+    call pop_sub()
   end function hermite
 
 
   ! ---------------------------------------------------------
   recursive function factorial (n) RESULT (fac)
     integer, intent(in) :: n
+
     integer :: fac
+
+    ! no push_sub for recursive function
+
     if(n<=1) then 
       fac = 1
     else
@@ -233,9 +243,12 @@ contains
 
     integer, parameter :: im=6075, ia=106, ic=1283
 
+    call push_sub('math.quickrnd')
+
     iseed = mod(iseed*ia + ic, im)
     rnd = real(iseed, REAL_PRECISION)/real(im, REAL_PRECISION)
 
+    call pop_sub()
   end subroutine quickrnd
 
 
@@ -249,10 +262,12 @@ contains
     integer :: i
     FLOAT :: dx, dy, dz, r, plm, cosm, sinm, cosmm1, sinmm1, cosphi, sinphi
 
+    call push_sub('math.ylmr')
+
     ! if l=0, no calculations are required
     if (li == 0) then
       ylm = cmplx(CNST(0.282094791773878), M_ZERO, REAL_PRECISION)
-      return
+      call pop_sub(); return
     end if
 
     r = sqrt(x*x + y*y + z*z)
@@ -260,7 +275,7 @@ contains
     ! if r=0, direction is undefined => make ylm=0 except for l=0
     if (r == M_ZERO) then
       ylm = M_z0
-      return
+      call pop_sub(); return
     end if
 
     dx = x/r; dy = y/r; dz = z/r
@@ -292,10 +307,11 @@ contains
       end do
     end if
 
+    call pop_sub()
   end subroutine ylmr
 
   ! ---------------------------------------------------------
-  ! This is a Numerical Recipes based subroutine
+  ! This is a Numerical Recipes-based subroutine
   ! computes real spherical harmonics ylm in the direction of vector r:
   !    ylm = c * plm( cos(theta) ) * sin(m*phi)   for   m <  0
   !    ylm = c * plm( cos(theta) ) * cos(m*phi)   for   m >= 0
@@ -315,6 +331,7 @@ contains
       sinmm1, sinphi, r2, rsize, Rx, Ry, Rz, xysize
     FLOAT, save :: c(0:(lmaxd+1)*(lmaxd+1))
 
+    call push_sub('math.grylmr')
 
     ! evaluate normalization constants once and for all
     if (li.gt.lmax) then
@@ -339,7 +356,7 @@ contains
     if (li.eq.0) then
       ylm = c(0)
       grylm(:) = M_ZERO
-      return
+      call pop_sub(); return
     end if
 
     ! if r=0, direction is undefined => make ylm=0 except for l=0
@@ -347,7 +364,7 @@ contains
     if(r2.lt.tiny) then
       ylm = M_ZERO
       grylm(:) = M_ZERO
-      return
+      call pop_sub(); return
     end if
     rsize = sqrt(r2)
 
@@ -374,7 +391,7 @@ contains
         grylm(2) = c(3)*Ry*Rx/rsize
         grylm(3) = c(3)*Rz*Rx/rsize
       end select
-      return
+      call pop_sub(); return
     end if
 
     if(li.eq.2) then
@@ -405,7 +422,7 @@ contains
         grylm(2) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry + M_ONE)*Ry/rsize
         grylm(3) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry)*Rz/rsize
       end select
-      return
+      call pop_sub(); return
     end if
 
     ! general algorithm based on routine plgndr of numerical recipes
@@ -468,6 +485,7 @@ contains
       +cmi*plgndr*dphase*Rx/(rsize*xysize**2)
     grylm(3)= cmi*dplg*(M_ONE - Rz*Rz)*phase/rsize
 
+    call pop_sub()
     return
   end subroutine grylmr
 
@@ -490,6 +508,8 @@ contains
     integer :: i, j, k, mn, side_
     FLOAT :: c1, c2, c3, c4, c5, xi
     FLOAT, allocatable :: x(:)
+
+    call push_sub('math.weights')
 
     SAFE_ALLOCATE(x(0:M))
 
@@ -552,21 +572,29 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(x)
-
+    call pop_sub()
   end subroutine weights
 
 
   ! ---------------------------------------------------------
   FLOAT function ddot_product(a, b) result(r)
     FLOAT, intent(in) :: a(:), b(:)
+
+    call push_sub('math.ddot_product')
     r = dot_product(a, b)
+
+    call pop_sub()
   end function ddot_product
 
 
   ! ---------------------------------------------------------
   CMPLX function zdot_product(a, b) result(r)
     CMPLX, intent(in) :: a(:), b(:)
+
+    call push_sub('math.zdot_product')
     r = sum(conjg(a(:))*b(:))
+
+    call pop_sub()
   end function zdot_product
 
 
@@ -577,6 +605,8 @@ contains
 
     integer :: i,j,inc,n, indi, indj
     FLOAT   :: v
+
+    call push_sub('math.shellsort')
 
     n = size(a)
 
@@ -589,7 +619,9 @@ contains
     inc = 1
     do
       inc=3*inc+1
-      if (inc > n) exit
+      if (inc > n) then
+        call pop_sub(); exit
+      endif
     end do
 
     do
@@ -599,7 +631,9 @@ contains
         if(present(ind)) indi = ind(i)
         j=i
         do
-          if (a(j-inc) <= v) exit
+          if (a(j-inc) <= v) then
+            call pop_sub(); exit
+          endif
           !if (a(j-inc) >= v) exit
           a(j)=a(j-inc)
 
@@ -609,14 +643,19 @@ contains
           if(present(ind)) ind(j) = indj
 
           j=j-inc
-          if (j <= inc) exit
+          if (j <= inc) then
+            call pop_sub(); exit
+          endif
         end do
         a(j)=v
         if(present(ind)) ind(j) = indi
       end do
-      if (inc <= 1) exit
+      if (inc <= 1) then
+        call pop_sub(); exit
+      endif
     end do
 
+    call pop_sub()
   end subroutine shellsort
 
 
@@ -629,6 +668,8 @@ contains
     integer :: i,j,inc,n, indi, indj
     integer :: v
 
+    call push_sub('math.ishellsort')
+
     n = size(a)
 
     if(present(ind)) then
@@ -640,7 +681,9 @@ contains
     inc = 1
     do
       inc=3*inc+1
-      if (inc > n) exit
+      if (inc > n) then
+        call pop_sub(); exit
+      endif
     end do
 
     do
@@ -650,7 +693,9 @@ contains
         if(present(ind)) indi = ind(i)
         j=i
         do
-          if (a(j-inc) <= v) exit
+          if (a(j-inc) <= v) then
+            call pop_sub(); exit
+          endif
           !if (a(j-inc) >= v) exit
           a(j)=a(j-inc)
           !workaround to a bug in itanium ifort
@@ -659,14 +704,19 @@ contains
           if(present(ind)) ind(j) = indj
 
           j=j-inc
-          if (j <= inc) exit
+          if (j <= inc) then
+            call pop_sub(); exit
+          endif
         end do
         a(j)=v
         if(present(ind)) ind(j) = indi
       end do
-      if (inc <= 1) exit
+      if (inc <= 1) then
+        call pop_sub(); exit
+      endif
     end do
 
+    call pop_sub()
   end subroutine ishellsort
 
 
@@ -677,6 +727,8 @@ contains
     integer, intent(out)   :: divisors(:)
 
     integer :: i, max_d
+
+    call push_sub('math.divisors')
 
     ASSERT(n_divisors > 1)
     max_d = n_divisors
@@ -697,16 +749,24 @@ contains
     end do
     n_divisors = n_divisors + 1
     divisors(n_divisors) = n
+
+    call pop_sub()
   end subroutine math_divisors
 
   subroutine set_app_threshold(thr)
     FLOAT, intent(in) :: thr
+
+    call push_sub('math.set_app_threshold')
     APP_THRESHOLD = thr
+
+    call pop_sub()
   end subroutine set_app_threshold
 
   FLOAT pure function ddelta(i, j)
     integer, intent(in) :: i
     integer, intent(in) :: j
+
+    ! no push_sub in pure function
 
     if ( i == j) then 
       ddelta = M_ONE
@@ -720,9 +780,12 @@ contains
     logical, intent(in) :: a
     logical, intent(in) :: b
 
+    call push_sub('math.math_xor')
+
     math_xor = ( a .or. b )
     if ( a .and. b ) math_xor = .false.
 
+    call pop_sub()
   end function math_xor
 
 
@@ -764,14 +827,14 @@ contains
 
     integer :: i
 
-    call push_sub('states_inc.member')
+    call push_sub('math.member')
 
     member = .false.
 
     do i = 1, ubound(a, 1)
       if(a(i).eq.n) then
         member = .true.
-        exit
+        call pop_sub(); exit
       end if
     end do
 
@@ -787,6 +850,8 @@ contains
 
     integer :: ii, kk
 
+    call push_sub('math.interpolation_coefficients')
+
     do ii = 1, nn
       cc(ii) = M_ONE
       do kk = 1, nn
@@ -795,6 +860,7 @@ contains
       end do
     end do
 
+    call pop_sub()
   end subroutine interpolation_coefficients
 
 
@@ -978,8 +1044,8 @@ contains
 
   ! ---------------------------------------------------------
   ! Gives the hyperspherical gradient matrix, which contains
-  ! the derivatives of the cartesian coordinates with respect
-  ! to the hyperspherical angles
+  ! the derivatives of the Cartesian coordinates with respect
+  ! to the hyperspherical angles.
   ! ---------------------------------------------------------
   subroutine  hypersphere_grad_matrix(grad_matrix, r, x)
     FLOAT, intent(out)  :: grad_matrix(:,:)
@@ -988,6 +1054,8 @@ contains
     
     integer :: n, l, m
     
+    call push_sub('math.hypersphere_grad_matrix')
+
     n = size(x)+1  ! the dimension of the matrix is (n-1)x(n)
 
     ! --- l=1 ---
@@ -1013,6 +1081,7 @@ contains
        grad_matrix(m,n) = r*cos(x(m))*grad_matrix(m,n)*product(sin(x(1:m-1)))*product(sin(x(m+1:n-1)))
     end do
 
+    call pop_sub()
   end subroutine  hypersphere_grad_matrix
   ! ---------------------------------------------------------
 

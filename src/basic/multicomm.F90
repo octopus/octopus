@@ -139,6 +139,8 @@ contains
     type(multicomm_all_pairs_t), intent(in)    :: apin
     integer :: i
 
+    call push_sub('multicomm.all_pairs_copy')
+
     call mpi_grp_copy(apout%grp, apin%grp)
     apout%rounds = apin%rounds
     if(associated(apin%schedule)) then
@@ -147,6 +149,7 @@ contains
       apout%schedule = apin%schedule
     end if    
 
+    call pop_sub()
   end subroutine multicomm_all_pairs_copy
 
   ! ---------------------------------------------------------
@@ -253,6 +256,8 @@ contains
     subroutine strategy()
       integer :: i, j,  par_mask
 
+      call push_sub('multicomm.multicomm_init.strategy')
+
       !%Variable ParallelizationStrategy
       !%Type flag
       !%Default par_domains + par_states + par_kpoints
@@ -325,6 +330,7 @@ contains
       end if
       call write_info(1)
 
+      call pop_sub()
     end subroutine strategy
 
 
@@ -334,6 +340,8 @@ contains
 
       integer :: i, n
       logical :: fill_used
+
+      call push_sub('multicomm.multicomm_init.read_block')
 
       n = loct_parse_block_cols(blk, 0)
 
@@ -356,6 +364,7 @@ contains
         end if
       end do
 
+      call pop_sub()
     end subroutine read_block
 
     ! ---------------------------------------------------------
@@ -363,6 +372,8 @@ contains
       integer :: i, n, k, n_divisors, divisors(50)
       integer, allocatable :: n_group_max(:)
       FLOAT   :: f
+
+      call push_sub('multicomm.multicomm_init.assign_nodes')
 
       if(mc%use_topology) then
         mc%group_sizes = 1
@@ -412,6 +423,7 @@ contains
 
       SAFE_DEALLOCATE_A(n_group_max)
 
+      call pop_sub()
     end subroutine assign_nodes
 
 
@@ -421,7 +433,7 @@ contains
       FLOAT :: frac
       integer :: i, k, n_max
 
-      call push_sub('multicomm.sanity_check')
+      call push_sub('multicomm.multicomm_init.sanity_check')
 
       ! print out some info
       i = 0
@@ -482,7 +494,7 @@ contains
       logical :: reorder, periodic_mask(MAX_INDEX)
 #endif
 
-      call push_sub('multicomm.cart_topology_create')
+      call push_sub('multicomm.multicomm_init.cart_topology_create')
 
 #if defined(HAVE_MPI)
       if(.not. mc%use_topology) then
@@ -522,7 +534,7 @@ contains
       integer :: i_strategy
 #endif
 
-      call push_sub('multicomm.group_comm_create')
+      call push_sub('multicomm.multicomm_init.group_comm_create')
 
       SAFE_ALLOCATE(mc%group_comm(1:mc%n_index))
       SAFE_ALLOCATE(mc%who_am_i(1:mc%n_index))
@@ -627,7 +639,10 @@ contains
     type(multicomm_t), intent(in) :: mc
     integer,           intent(in) :: level
 
+    call push_sub('multicomm.multicomm_strategy_is_parallel')
     r = iand(mc%par_strategy, 2**(level-1)).ne.0
+
+    call pop_sub()
   end function multicomm_strategy_is_parallel
 
 
@@ -675,17 +690,23 @@ contains
     integer function get_partner(in, ir)
       integer, intent(in) :: in, ir
 
+      call push_sub('multicomm.create_all_pairs.get_partner')
+
       if(mod(grp_size, 2).eq.0) then
         get_partner = get_partner_even(grp_size, in-1, ir-1) + 1
       else
         get_partner = get_partner_odd(grp_size, in-1, ir-1) + 1
       end if
+
+      call pop_sub()
     end function get_partner
 
     integer function get_partner_even(grp_size, i, r) result(p)
       integer, intent(in) :: grp_size, i, r
 
       integer :: m
+
+      call push_sub('multicomm.create_all_pairs.get_partner_even')
 
       m = grp_size/2
 
@@ -698,12 +719,16 @@ contains
         ! it has to be the modulo one. Do not change that!
         p = modulo(2*r-i+1, 2*m-1)+1
       end if
+
+      call pop_sub()
     end function get_partner_even
 
     integer function get_partner_odd(grp_size, i, r) result(p)
       integer, intent(in) :: grp_size, i, r
 
       integer :: m
+
+      call push_sub('multicomm.create_all_pairs.get_partner_odd')
 
       m = (grp_size+1)/2
 
@@ -712,6 +737,8 @@ contains
       if(p.eq.2*m-1) then
         p = i
       end if
+
+      call pop_sub()
     end function get_partner_odd
   end subroutine multicomm_create_all_pairs
 #endif
@@ -728,6 +755,8 @@ contains
 #ifdef HAVE_MPI
       character(len=25) :: my_name, its_name
       integer :: ir,  wsize, ig
+
+      call push_sub('multicomm.topology_init')
 
       wsize = mpi_world%size
 
@@ -805,22 +834,29 @@ contains
       !convert to mpi ranks
       this%groups = this%groups - 1
 
+      call pop_sub()
 #endif
     end subroutine topology_init
 
     logical function topology_groups_are_equal(this) result(are_equal)
       type(topology_t), intent(in) :: this
       
+      call push_sub('multicomm.topology_groups_are_equal')
       are_equal = all(this%gsize(2:this%ng) == this%maxgsize)
+
+      call pop_sub()
     end function topology_groups_are_equal
 
     subroutine topology_end(this)
       type(topology_t), intent(inout) :: this
 
+      call push_sub('multicomm.topology_end')
+
       SAFE_DEALLOCATE_P(this%groups)
       SAFE_DEALLOCATE_P(this%distance)
       SAFE_DEALLOCATE_P(this%gsize)
       
+      call pop_sub()
     end subroutine topology_end
 
   !---------------------------------------------------
@@ -835,6 +871,8 @@ contains
 
     integer :: ii, jj, rank
     
+    call push_sub('multicomm.multicomm_divide_range')
+
     if(tsize <= nn ) then
       
       do rank = 0, tsize - 1
@@ -861,6 +899,7 @@ contains
     
     ASSERT(sum(lsize(1:tsize)) == nn)
 
+    call pop_sub()
   end subroutine multicomm_divide_range
 
 #ifdef USE_OMP
@@ -871,12 +910,15 @@ contains
     
     integer :: start(MAX_OMP_THREADS), end(MAX_OMP_THREADS), lsize(MAX_OMP_THREADS), rank
 
+    call push_sub('multicomm.multicomm_divide_range_omp')
+
     call multicomm_divide_range(nn, omp_get_num_threads(), start, end, lsize)
 
     rank   = 1 + omp_get_thread_num()
     ini    = start(rank)
     nn_loc = lsize(rank)
 
+    call pop_sub()
   end subroutine multicomm_divide_range_omp
 #endif
 

@@ -93,7 +93,7 @@ contains
     !%Section Time-Dependent::Propagation
     !%Description
     !% The fictitious electronic mass used to propagate the electronic
-    !% wavefunctions in the Car-Parrinelo formalism.
+    !% wavefunctions in the Car-Parrinello formalism.
     !%End
     
     call loct_parse_float(datasets_check('CPElectronicMass'), CNST(1.0), this%emass)
@@ -106,7 +106,7 @@ contains
     !% This variable defines how to integrate the Car-Parrinello
     !% equations. The default is verlet.
     !%Option verlet 2
-    !% Standard verlet.
+    !% Standard Verlet.
     !%Option vel_verlet 1
     !% RATTLE/Velocity Verlet integrator.
     !%End

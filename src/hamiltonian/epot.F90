@@ -147,9 +147,9 @@ contains
     !%Option filter_none 1
     !% Do not filter
     !%Option filter_TS 2
-    !% The filter of M. Tafipolsky and R. Schmid, J. Chem. Phys. 124, 174102 (2006)
+    !% The filter of M. Tafipolsky and R. Schmid, <i>J. Chem. Phys.</i> <b>124</b>, 174102 (2006)
     !%Option filter_BSB 3
-    !% The filter of E. L. Briggs, D. J. Sullivan, and J. Bernholc, Phys. Rev. B 54, 14362 (1996)
+    !% The filter of E. L. Briggs, D. J. Sullivan, and J. Bernholc, <i>Phys. Rev. B</i> <b>54</b>, 14362 (1996)
     !%End
     call loct_parse_int(datasets_check('FilterPotentials'), PS_FILTER_NONE, filter)
     if(.not.varinfo_valid_option('FilterPotentials', filter)) call input_error('FilterPotentials')
@@ -533,6 +533,7 @@ contains
     type(submesh_t)  :: sphere
     type(profile_t), save :: prof
     integer :: poisson_solver, default_solver !SEC Team
+
     call push_sub('epot.epot_local_potential')
     call profiling_in(prof, "EPOT_LOCAL")
 
@@ -724,6 +725,8 @@ contains
     integer :: iatom
     FLOAT, allocatable :: tmp(:)
 
+    call push_sub('epot.epot_precalc_local_potential')
+
     if(.not. associated(ep%local_potential)) then
       SAFE_ALLOCATE(ep%local_potential(1:mesh%np, 1:geo%natoms))
     end if
@@ -740,6 +743,7 @@ contains
 
     ep%local_potential_precalculated = .true.
 
+    call pop_sub()
   end subroutine epot_precalc_local_potential
 
   subroutine ion_interaction_calculate(geo, sb, energy, force)
@@ -757,6 +761,7 @@ contains
     type(profile_t), save :: ion_ion_prof
 
     call profiling_in(ion_ion_prof, "ION_ION_INTERACTION")
+    call push_sub('epot.ion_interaction_calculate')
 
     ! see
     ! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:Ion-Ion_interaction
@@ -797,8 +802,9 @@ contains
       end do !iatom
 
     end if
-    call profiling_out(ion_ion_prof)
 
+    call profiling_out(ion_ion_prof)
+    call pop_sub()
   end subroutine ion_interaction_calculate
 
   subroutine ion_interaction_periodic(geo, sb, energy, force)
@@ -816,6 +822,8 @@ contains
     FLOAT   :: factor, charge
     CMPLX   :: sumatoms
     FLOAT, parameter :: alpha = CNST(1.1313708)
+
+    call push_sub('epot.ion_interaction_periodic')
 
     ! see
     ! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:Ion-Ion_interaction
@@ -906,6 +914,7 @@ contains
     !
     ! energy = energy - M_PI*charge**2/(M_TWO*alpha**2*sb%rcell_volume)
     
+    call pop_sub()
   end subroutine ion_interaction_periodic
   
 end module external_pot_m

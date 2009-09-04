@@ -26,6 +26,8 @@ subroutine X(interpolate_2)(xa, ya, x, y)
   integer :: n, n1, n2, i, k
   FLOAT, allocatable :: c(:)
 
+  call push_sub('math_inc.Xinterpolate_2')
+
   n = size(xa)
   n1 = size(ya, 1)
   n2 = size(ya, 2)
@@ -45,6 +47,7 @@ subroutine X(interpolate_2)(xa, ya, x, y)
   end do
 
   SAFE_DEALLOCATE_A(c)
+  call pop_sub()
 end subroutine X(interpolate_2)
 
 
@@ -56,6 +59,8 @@ subroutine X(interpolate_1)(xa, ya, x, y)
 
   integer :: n, n1, i
   FLOAT, allocatable :: c(:)
+
+  call push_sub('math_inc.Xinterpolate_1')
 
   n = size(xa)
   n1 = size(ya, 1)
@@ -69,6 +74,7 @@ subroutine X(interpolate_1)(xa, ya, x, y)
   end do
 
   SAFE_DEALLOCATE_A(c)
+  call pop_sub()
 end subroutine X(interpolate_1)
 
 
@@ -81,6 +87,8 @@ subroutine X(interpolate_0)(xa, ya, x, y)
   integer :: n, i
   FLOAT, allocatable :: c(:)
 
+  call push_sub('math_inc.Xinterpolate_0')
+
   n = size(xa)
   SAFE_ALLOCATE(c(1:n))
 
@@ -92,6 +100,7 @@ subroutine X(interpolate_0)(xa, ya, x, y)
   end do
 
   SAFE_DEALLOCATE_A(c)
+  call pop_sub()
 end subroutine X(interpolate_0)
 
 ! ---------------------------------------------------------
@@ -103,6 +112,8 @@ subroutine X(shellsort1)(a, x)
   FLOAT   :: v
   R_TYPE, allocatable :: b(:)
 
+  call push_sub('math_inc.Xshellsort1')
+
   n = size(a)
   m = size(x, 1)
   SAFE_ALLOCATE(b(1:m))
@@ -110,7 +121,9 @@ subroutine X(shellsort1)(a, x)
   inc = 1
   do
     inc=3*inc+1
-    if (inc > n) exit
+    if (inc > n) then
+      call pop_sub(); exit
+    endif
   end do
 
   do
@@ -120,20 +133,27 @@ subroutine X(shellsort1)(a, x)
       b(:) = x(:, i)
       j=i
       do
-        if (a(j-inc) <= v) exit
+        if (a(j-inc) <= v) then
+          call pop_sub(); exit
+        endif
         !if (a(j-inc) >= v) exit
         a(j)=a(j-inc)
         x(:, j) = x(:, j-inc)
         j=j-inc
-        if (j <= inc) exit
+        if (j <= inc) then
+          call pop_sub(); exit
+        endif
       end do
       a(j)=v
       x(:, j) = b(:)
     end do
-    if (inc <= 1) exit
+    if (inc <= 1) then
+      call pop_sub(); exit
+    endif
   end do
 
   SAFE_DEALLOCATE_A(b)
+  call pop_sub()
 end subroutine X(shellsort1)
 
 
@@ -146,6 +166,8 @@ subroutine X(shellsort2)(a, x)
   FLOAT   :: v
   R_TYPE, allocatable :: b(:, :)
 
+  call push_sub('math_inc.Xshellsort2')
+
   n = size(a)
   p = size(x, 1)
   q = size(x, 2)
@@ -154,7 +176,9 @@ subroutine X(shellsort2)(a, x)
   inc = 1
   do
     inc=3*inc+1
-    if (inc > n) exit
+    if (inc > n) then
+      call pop_sub(); exit
+    endif
   end do
 
   do
@@ -164,20 +188,27 @@ subroutine X(shellsort2)(a, x)
       b(:, :) = x(:, :, i)
       j=i
       do
-        if (a(j-inc) <= v) exit
+        if (a(j-inc) <= v) then
+          call pop_sub(); exit
+        endif
         !if (a(j-inc) >= v) exit
         a(j)=a(j-inc)
         x(:, :, j) = x(:, :, j-inc)
         j=j-inc
-        if (j <= inc) exit
+        if (j <= inc) then
+          call pop_sub(); exit
+        endif
       end do
       a(j)=v
       x(:, :, j) = b(:, :)
     end do
-    if (inc <= 1) exit
+    if (inc <= 1) then
+      call pop_sub(); exit
+    endif
   end do
 
   SAFE_DEALLOCATE_A(b)
+  call pop_sub()
 end subroutine X(shellsort2)
 
 
@@ -185,10 +216,12 @@ end subroutine X(shellsort2)
 ! These routines compare numbers or arrays of numbers to
 ! within a certain threshold (to avoid considering differences
 ! due to rounding as significant). They are not to be
-! accessed directly, but throught the .app. operator.
+! accessed directly, but through the .app. operator.
 ! ---------------------------------------------------------
-logical function X(approximate_equal)(a, b) result(app)
+logical function X(approximately_equal)(a, b) result(app)
   R_TYPE, intent(in) :: a, b
+  
+  call push_sub('math_inc.Xapproximately_equal')
 #if defined(R_TREAL)
   app = abs(a-b) < APP_THRESHOLD
 #else
@@ -196,46 +229,78 @@ logical function X(approximate_equal)(a, b) result(app)
     (abs(R_REAL(a)-R_REAL(b))   < APP_THRESHOLD) .and. &
     (abs(R_AIMAG(a)-R_AIMAG(b)) < APP_THRESHOLD)
 #endif
-end function X(approximate_equal)
+
+  call pop_sub()
+end function X(approximately_equal)
 
 
 ! ---------------------------------------------------------
-logical function X(approximate_equal_1)(a, b) result(app)
+logical function X(approximately_equal_1)(a, b) result(app)
   R_TYPE, intent(in) :: a(:), b(:)
+
   integer :: i
+
+  call push_sub('math_inc.Xapproximately_equal_1')
+
   app = .false.
-  if(size(a).ne.size(b)) return
+  if(size(a).ne.size(b)) then
+    call pop_sub(); return
+  endif
   do i = 1, size(a)
-    app = X(approximate_equal)(a(i), b(i))
-    if(.not.app) return
+    app = X(approximately_equal)(a(i), b(i))
+    if(.not.app) then
+      call pop_sub(); return
+    endif
   end do
-end function X(approximate_equal_1)
+
+  call pop_sub()
+end function X(approximately_equal_1)
 
 
 ! ---------------------------------------------------------
-logical function X(approximate_equal_2)(a, b) result(app)
+logical function X(approximately_equal_2)(a, b) result(app)
   R_TYPE, intent(in) :: a(:, :), b(:, :)
+
   integer :: i
+
+  call push_sub('math_inc.Xapproximately_equal_2')
+
   app = .false.
-  if(any(shape(a).ne.shape(b))) return
+  if(any(shape(a).ne.shape(b))) then
+    call pop_sub(); return
+  endif
   do i = 1, size(a, 1)
-    app = X(approximate_equal_1)(a(i, :), b(i, :))
-    if(.not.app) return
+    app = X(approximately_equal_1)(a(i, :), b(i, :))
+    if(.not.app) then
+      call pop_sub(); return
+    endif
   end do
-end function X(approximate_equal_2)
+
+  call pop_sub()
+end function X(approximately_equal_2)
 
 
 ! ---------------------------------------------------------
-logical function X(approximate_equal_3)(a, b) result(app)
+logical function X(approximately_equal_3)(a, b) result(app)
   R_TYPE, intent(in) :: a(:, :, :), b(:, :, :)
+
   integer :: i
+
+  call push_sub('math_inc.Xapproximately_equal_3')
+
   app = .false.
-  if(any(shape(a).ne.shape(b))) return
+  if(any(shape(a).ne.shape(b))) then
+    call pop_sub(); return
+  endif
   do i = 1, size(a, 1)
-    app = X(approximate_equal_2)(a(i, :, :), b(i, :, :))
-    if(.not.app) return
+    app = X(approximately_equal_2)(a(i, :, :), b(i, :, :))
+    if(.not.app) then
+      call pop_sub(); return
+    endif
   end do
-end function X(approximate_equal_3)
+
+  call pop_sub()
+end function X(approximately_equal_3)
 
 
 ! ---------------------------------------------------------
@@ -404,7 +469,7 @@ FLOAT function X(infinity_norm)(matrix)
   integer :: m_min, m_max, i
   FLOAT   :: norm_old, norm
 
-  call push_sub('math_inc.infinity_norm')
+  call push_sub('math_inc.Xinfinity_norm')
 
   norm = 0
 
@@ -423,7 +488,7 @@ end function X(infinity_norm)
 
 
 ! ---------------------------------------------------------
-! Takes the average of the matrix and its transposed.
+! Takes the average of the matrix and its transpose.
 subroutine X(matrix_symmetric_average)(matrix, np)
   R_TYPE,  intent(inout) :: matrix(np, np)
   integer, intent(in)    :: np
@@ -431,7 +496,7 @@ subroutine X(matrix_symmetric_average)(matrix, np)
   integer             :: j
   R_TYPE, allocatable :: tmp(:, :)
 
-  call push_sub('math_inc.symmetric_average')
+  call push_sub('math_inc.Xmatrix_symmetric_average')
 
   SAFE_ALLOCATE(tmp(1:np, 1:np))
 
@@ -466,7 +531,7 @@ end subroutine X(matrix_symmetrize)
 
 
 ! ---------------------------------------------------------
-! sort the eigenvectors accordingly to eigenvalues
+! sort the eigenvectors according to eigenvalues
 ! with increasing absolute value
 subroutine X(matrix_sort)(np, matrix, eigenvals)
   integer, intent(in)    :: np
@@ -478,7 +543,7 @@ subroutine X(matrix_sort)(np, matrix, eigenvals)
   FLOAT, allocatable   :: abs_e(:)
   integer, allocatable :: index(:)
 
-  call push_sub('math_inc.X(matrix_sort)')
+  call push_sub('math_inc.Xmatrix_sort')
 
   SAFE_ALLOCATE( abs_e(1:np) )
   SAFE_ALLOCATE( index(1:np) )

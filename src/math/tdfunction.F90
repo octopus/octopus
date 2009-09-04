@@ -143,23 +143,23 @@ module tdf_m
     !%Section Time-Dependent
     !%Description
     !% This block specifies the shape of a "time-dependent function", such as the
-    !% envelope needed when using the "TDExternalFields" block. Each line in the block
+    !% envelope needed when using the <tt>TDExternalFields</tt> block. Each line in the block
     !% specifies one function. The first element of each line will be a string
     !% that defines the name of the function. The second element specifies which type
     !% of function we are using; in the following we provide an example for each of the
     !% possible types:
     !%
-    !%    (1) tdf_cw
+    !%    (1) <tt>tdf_cw</tt>
     !%
     !% <tt>%TDFunctions
     !% <br>&nbsp;&nbsp; "function-name" | tdf_cw | amplitude 
     !% <br>%</tt>
     !%
-    !% The function is just a constant of value "amplitude".
+    !% The function is just a constant of value <tt>amplitude</tt>.
     !%
     !% <math> f(t) = amplitude
     !%
-    !%    (A.2) tdf_gaussian
+    !%    (2) <tt>tdf_gaussian</tt>
     !%
     !% <tt>%TDFunctions
     !% <br>&nbsp;&nbsp; "function-name" | tdf_gaussian | amplitude | tau0 | t0
@@ -171,7 +171,7 @@ module tdf_m
     !%
     !% <math>F_0</math> = amplitude.
     !%
-    !%    (A.3) tdf_cosinoidal
+    !%    (3) <tt>tdf_cosinoidal</tt>
     !%
     !% <tt>%TDFunctions
     !% <br>&nbsp;&nbsp; "function-name" | tdf_cosinoidal | amplitude | tau0 | t0
@@ -181,7 +181,7 @@ module tdf_m
     !%
     !% If <math> | t - t_0 | > \tau_0 </math>, then <math> f(t) = 0 </math>.
     !%
-    !%    (A.4) tdf_trapezoidal
+    !%    (4) <tt>tdf_trapezoidal</tt>
     !%
     !% <tt>%TDFunctions
     !% <br>&nbsp;&nbsp; "function-name" | tdf_trapezoidal | amplitude | tau0 | t0 | tau1
@@ -191,24 +191,24 @@ module tdf_m
     !% <math>tau_0</math> time units, and the decays to zero linearly again for <math>tau_1</math>
     !% time units.
     !%
-    !%    (A.5) tdf_from_file
+    !%    (5) <tt>tdf_from_file</tt>
     !%
     !% <tt>%TDFunctions
     !% <br>&nbsp;&nbsp; "function-name" | tdf_from_file | "filename"
     !% <br>%</tt>
     !%
-    !% The temporal shape of the function is contained in a file called "filename". This file
+    !% The temporal shape of the function is contained in a file called <tt>filename</tt>. This file
     !% should contain three columns: first column is time, second and third column are the
-    !% real part and the imaginary part of the temporal function f(t).
+    !% real part and the imaginary part of the temporal function <i>f</i>(<i>t</i>).
     !%
-    !%    (A.6) tdf_from_expr
+    !%    (A.6) <tt>tdf_from_expr</tt>
     !%
     !% <tt>%TDFunctions
     !% <br>&nbsp;&nbsp; "function-name" | tdf_from_expr | "expression"
     !% <br>%</tt>
     !%
     !% The temporal shape of the field is given as an expression (e.g., "cos(2.0*t)". The 
-    !% letter "t" means time, obviously. The expression is used to construct the function f
+    !% letter <i>t</i> means time, obviously. The expression is used to construct the function <i>f</i>
     !% that defines the field:
     !%
     !%Option tdf_cw 10002
@@ -328,12 +328,17 @@ module tdf_m
   !------------------------------------------------------------
   subroutine tdf_init(f)
     type(tdf_t), intent(inout) :: f
+
+    call push_sub('tdfunction.tdf_init')
+
     f%mode = TDF_EMPTY
     f%niter = 0
     f%dt = M_ZERO
     nullify(f%val)
     nullify(f%valww)
     nullify(f%coeffs)
+
+    call pop_sub()
   end subroutine tdf_init
   !------------------------------------------------------------
 
@@ -341,7 +346,11 @@ module tdf_m
   !------------------------------------------------------------
   logical function tdf_is_empty(f)
     type(tdf_t), intent(in) :: f
+
+    call push_sub('tdfunction.tdf_is_empty')
     tdf_is_empty = (f%mode == TDF_EMPTY)
+
+    call pop_sub()
   end function tdf_is_empty
   !------------------------------------------------------------
 
@@ -351,7 +360,7 @@ module tdf_m
     type(tdf_t), intent(inout) :: f
     FLOAT, intent(in) :: a0, omega0
 
-    call push_sub("tdfunction.tdf_init_cw")
+    call push_sub('tdfunction.tdf_init_cw')
 
     f%mode = TDF_CW
     f%a0 = a0
@@ -370,7 +379,7 @@ module tdf_m
     type(tdf_t), intent(inout) :: f
     FLOAT, intent(in) :: a0, omega0, t0, tau0
 
-    call push_sub("tdfunction.tdf_init_gaussian")
+    call push_sub('tdfunction.tdf_init_gaussian')
 
     f%mode = TDF_GAUSSIAN
     f%a0 = a0
@@ -391,7 +400,7 @@ module tdf_m
     type(tdf_t), intent(inout) :: f
     FLOAT, intent(in) :: a0, omega0, t0, tau0
 
-    call push_sub("tdfunction.tdf_init_cosinoidal")
+    call push_sub('tdfunction.tdf_init_cosinoidal')
 
     f%mode = TDF_COSINOIDAL
     f%a0 = a0
@@ -412,7 +421,7 @@ module tdf_m
     type(tdf_t), intent(inout) :: f
     FLOAT, intent(in) :: a0, omega0, t0, tau0, tau1
 
-    call push_sub("tdfunction.tdf_init_trapezoidal")
+    call push_sub('tdfunction.tdf_init_trapezoidal')
 
     f%mode = TDF_TRAPEZOIDAL
     f%a0 = a0
@@ -457,7 +466,7 @@ module tdf_m
     FLOAT :: dummy
     FLOAT, allocatable :: t(:), am(:)
 
-    call push_sub("tdfunction.tdf_init_fromfile")
+    call push_sub('tdfunction.tdf_init_fromfile')
 
     f%mode = TDF_FROM_FILE
     ierr = 0
@@ -511,7 +520,7 @@ module tdf_m
     integer :: n(3)
     FLOAT :: bigt
 
-    call push_sub("tdfunction.tdf_init_numerical")
+    call push_sub('tdfunction.tdf_init_numerical')
 
     f%mode = TDF_NUMERICAL
     f%niter = niter
@@ -687,7 +696,7 @@ module tdf_m
   subroutine tdf_set_numericalr(f, values)
     type(tdf_t), intent(inout) :: f
     FLOAT,       intent(in) :: values(:)
-    call push_sub("tdfunction.tdf_set_numerical") 
+    call push_sub('tdfunction.tdf_set_numericalr') 
 
     select case(f%mode)
     case(TDF_NUMERICAL)
@@ -711,6 +720,9 @@ module tdf_m
     type(tdf_t), intent(inout) :: f
     integer,     intent(in)    :: index
     FLOAT,       intent(in)    :: value
+
+    call push_sub('tdfunction.tdf_set_numericalr1')
+
     select case(f%mode)
     case(TDF_NUMERICAL)
       f%val(index) = value
@@ -721,6 +733,8 @@ module tdf_m
     case(TDF_ZERO_FOURIER)
       f%valww(index+1) = value
     end select
+
+    call pop_sub()
   end subroutine tdf_set_numericalr1
   !------------------------------------------------------------ 
 
@@ -822,6 +836,8 @@ module tdf_m
     integer :: j, k
     FLOAT :: bigt, t, omega
 
+    call push_sub('tdfunction.tdf_numerical_to_sineseries')
+
     ASSERT(f%mode .eq. TDF_NUMERICAL)
 
     bigt = f%final_time - f%init_time
@@ -841,6 +857,7 @@ module tdf_m
 
     call fft_end(f%fft_handler)
 
+    call pop_sub()
   end subroutine tdf_numerical_to_sineseries
   !------------------------------------------------------------
 
@@ -851,6 +868,8 @@ module tdf_m
 
     FLOAT :: bigt, t, omega
     integer :: j, k, n(3)
+
+    call push_sub('tdfunction.tdf_sineseries_to_numerical')
 
     ASSERT(f%mode .eq. TDF_SINE_SERIES)
 
@@ -874,6 +893,7 @@ module tdf_m
     n(1:3) = (/ f%niter, 1, 1 /)
     call fft_init(n, fft_real, f%fft_handler, optimize = .false.)
 
+    call pop_sub()
   end subroutine tdf_sineseries_to_numerical
   !------------------------------------------------------------
 
@@ -908,6 +928,8 @@ module tdf_m
 
     FLOAT :: r, fre, fim
     integer :: il, iu
+
+    call push_sub('tdfunction.tdft')
 
     select case(f%mode)
 
@@ -965,6 +987,7 @@ module tdf_m
 
     end select
 
+    call pop_sub()
   end function tdft
   !------------------------------------------------------------
 
@@ -972,6 +995,7 @@ module tdf_m
   !------------------------------------------------------------
   subroutine tdf_end(f)
     type(tdf_t), intent(inout) :: f
+
     call push_sub('tdfunction.tdf_end')
 
     select case(f%mode)
@@ -1052,6 +1076,8 @@ module tdf_m
     FLOAT, intent(in) :: alpha
     type(tdf_t), intent(inout) :: f
 
+    call push_sub('tdfunction.tdf_scalar_multiply')
+
     select case(f%mode)
     case(TDF_CW, TDF_GAUSSIAN, TDF_COSINOIDAL, TDF_TRAPEZOIDAL)
       f%a0 = alpha*f%a0
@@ -1065,6 +1091,7 @@ module tdf_m
       call spline_times(alpha, f%amplitude)
     end select
 
+    call pop_sub()
   end subroutine tdf_scalar_multiply
   !------------------------------------------------------------
 
@@ -1077,6 +1104,8 @@ module tdf_m
     integer :: j
     FLOAT :: t
 
+    call push_sub('tdfunction.tdf_cosine_multiply')
+
     ! For the moment, we will just assume that f and g are of the same type.
     ASSERT(f%mode .eq. TDF_NUMERICAL)
 
@@ -1085,6 +1114,7 @@ module tdf_m
       f%val(j) = f%val(j) * cos(omega*t)
     end do
 
+    call pop_sub()
   end subroutine tdf_cosine_multiply
   !------------------------------------------------------------
 
@@ -1094,6 +1124,8 @@ module tdf_m
     type(tdf_t), intent(in) :: f
     integer, intent(in) :: iunit
 
+    call push_sub('tdfunction.tdf_write')
+
     select case(f%mode)
     case(TDF_CW)
       write(iunit,'(6x,a)')          'Mode: continuous wave.'
@@ -1101,26 +1133,26 @@ module tdf_m
     case(TDF_GAUSSIAN)
       write(iunit,'(6x,a)')          'Mode: Gaussian envelope.'
       write(iunit,'(6x,a,f10.4,a)')  'Amplitude: ', f%a0, ' [a.u]'
-      write(iunit,'(6x,a,f10.4,3a)') 'Width:     ', f%tau0/units_inp%time%factor, &
-        ' [', trim(units_inp%time%abbrev), ']'
-      write(iunit,'(6x,a,f10.4,3a)') 'Middle t:  ', f%t0/units_inp%time%factor, &
-        ' [', trim(units_inp%time%abbrev), ']'
+      write(iunit,'(6x,a,f10.4,3a)') 'Width:     ', units_from_atomic(units_out%time, f%tau0), &
+        ' [', trim(units_abbrev(units_out%time)), ']'
+      write(iunit,'(6x,a,f10.4,3a)') 'Middle t:  ', units_from_atomic(units_out%time, f%t0), &
+        ' [', trim(units_abbrev(units_out%time)), ']'
     case(TDF_COSINOIDAL)
       write(iunit,'(6x,a)') 'Mode: cosinoidal envelope.'
       write(iunit,'(6x,a,f10.4,a)')  'Amplitude: ', f%a0, ' [a.u]'
-      write(iunit,'(6x,a,f10.4,3a)') 'Width:     ', f%tau0/units_inp%time%factor, &
-        ' [', trim(units_inp%time%abbrev), ']'
-      write(iunit,'(6x,a,f10.4,3a)') 'Middle t:  ', f%t0/units_inp%time%factor, &
-        ' [', trim(units_inp%time%abbrev), ']'
+      write(iunit,'(6x,a,f10.4,3a)') 'Width:     ', units_from_atomic(units_out%time, f%tau0), &
+        ' [', trim(units_abbrev(units_out%time)), ']'
+      write(iunit,'(6x,a,f10.4,3a)') 'Middle t:  ', units_from_atomic(units_out%time, f%t0), &
+        ' [', trim(units_abbrev(units_out%time)), ']'
     case(TDF_TRAPEZOIDAL)
       write(iunit,'(6x,a)') 'Mode: trapezoidal envelope.'
       write(iunit,'(6x,a,f10.4,a)')  'Amplitude: ', f%a0, ' [a.u]'
-      write(iunit,'(6x,a,f10.4,3a)') 'Width:     ', f%tau0/units_inp%time%factor, &
-        ' [', trim(units_inp%time%abbrev), ']'
-      write(iunit,'(6x,a,f10.4,3a)') 'Middle t:  ', f%t0/units_inp%time%factor, &
-        ' [', trim(units_inp%time%abbrev), ']'
-      write(iunit,'(6x,a,f10.4,3a)') 'Ramp time: ', f%tau1/units_inp%time%factor, &
-        ' [', trim(units_inp%time%abbrev), ']'
+      write(iunit,'(6x,a,f10.4,3a)') 'Width:     ', units_from_atomic(units_out%time, f%tau0), &
+        ' [', trim(units_abbrev(units_out%time)), ']'
+      write(iunit,'(6x,a,f10.4,3a)') 'Middle t:  ', units_from_atomic(units_out%time, f%t0), &
+        ' [', trim(units_abbrev(units_out%time)), ']'
+      write(iunit,'(6x,a,f10.4,3a)') 'Ramp time: ', units_from_atomic(units_out%time, f%tau1), &
+        ' [', trim(units_abbrev(units_out%time)), ']'
     case(TDF_FROM_FILE)
       write(iunit,'(6x,a)') 'Mode: time-dependent function read from file.'
     case(TDF_NUMERICAL)
@@ -1130,10 +1162,11 @@ module tdf_m
       write(iunit,'(6x,a)') '      f(t) = '//trim(f%expression)
     end select
     if(f%omega0 .ne. M_ZERO) then
-      write(iunit,'(6x,a,f10.4,3a)') 'Frequency: ', f%omega0/units_inp%energy%factor, &
-        ' [', trim(units_inp%energy%abbrev), ']'
+      write(iunit,'(6x,a,f10.4,3a)') 'Frequency: ', units_from_atomic(units_out%energy, f%omega0), &
+        ' [', trim(units_abbrev(units_out%energy)), ']'
     end if
 
+    call pop_sub()
   end subroutine tdf_write
   !------------------------------------------------------------
 
@@ -1148,6 +1181,8 @@ module tdf_m
     type(tdf_t), intent(in) :: f, g
     integer :: i
     FLOAT :: t
+
+    call push_sub('tdfunction.tdf_dot_product')
 
     fg = M_z0
 
@@ -1182,6 +1217,7 @@ module tdf_m
 
     end select
 
+    call pop_sub()
   end function tdf_dot_product
   !------------------------------------------------------------
 
