@@ -52,9 +52,9 @@
     use loct_parser_m
     use messages_m
     use mpi_m
+    use profiling_m
     use utils_m
     use varinfo_m
-    use profiling_m
 #if defined(USE_OMP)
     use omp_lib
 #endif
@@ -260,12 +260,14 @@ contains
 
       !%Variable ParallelizationStrategy
       !%Type flag
-      !%Default par_domains + par_states + par_kpoints
       !%Section Execution::Parallelization
       !%Description
       !% Specifies what kind of parallelization strategy Octopus should use.
-      !% The values can be combined, for example <tt>par_domains + par_states</tt>
+      !% The values can be combined: for example, <tt>par_domains + par_states</tt>
       !% means a combined parallelization in domains and states.
+      !% Default: <tt>par_domains + par_states</tt> for <tt>CalculationMode = td </tt>,
+      !% <tt>par_domains + par_other</tt> for <tt>CalculationMode = casida </tt>,
+      !% otherwise <tt>par_domains</tt>.
       !%Option serial 0
       !% Octopus will run in serial.
       !%Option par_domains 1
@@ -275,8 +277,10 @@ contains
       !%Option par_kpoints 4
       !% Octopus will run parallel in <i>k</i>-points/spin.
       !%Option par_other   8
-      !% Run-mode dependent. For example, in <tt>casida</tt>, it means parallelization in e-h pairs.
+      !% Run-mode-dependent. For example, in <tt>casida</tt>, it means parallelization in <i>e-h</i> pairs.
       !%End
+
+      ! default is set in calc_mode_default_parallel_mask()
 
       if(mpi_world%size > 1) then
 

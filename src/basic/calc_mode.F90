@@ -20,6 +20,7 @@
 #include "global.h"
 
 module calc_mode_m
+  use messages_m
   use multicomm_m
 
   public ::                            &
@@ -54,20 +55,31 @@ module calc_mode_m
     subroutine calc_mode_set(mode)
       integer, intent(in) :: mode
 
+      call push_sub('calc_mode.calc_mode_set')
       calc_mode_id = mode
+
+      call pop_sub()
     end subroutine calc_mode_set
 
     integer function calc_mode()
+
+      call push_sub('calc_mode.calc_mode')
       calc_mode = calc_mode_id
+
+      call pop_sub()
     end function calc_mode
 
     logical function calc_mode_is(mode)
       integer, intent(in) :: mode
       
+      call push_sub('calc_mode.calc_mode_is')
       calc_mode_is = (calc_mode_id == mode)
+
+      call pop_sub()
     end function calc_mode_is
 
     integer function calc_mode_parallel_mask() result(par_mask)
+      call push_sub('calc_mode.calc_mode_parallel_mask')
 
       par_mask = 0
 
@@ -81,11 +93,13 @@ module calc_mode_m
         par_mask = ibset(par_mask, P_STRATEGY_OTHER - 1)
       end select
 
+      call pop_sub()
     end function calc_mode_parallel_mask
 
     ! This function returns the default modes used for a calculation,
     ! that might be different from the modes available.
     integer function calc_mode_default_parallel_mask() result(par_mask)
+      call push_sub('calc_mode.calc_mode_default_parallel_mask')
 
       par_mask = 0
 
@@ -98,6 +112,7 @@ module calc_mode_m
         par_mask = ibset(par_mask, P_STRATEGY_OTHER - 1)
       end select
 
+      call pop_sub()
     end function calc_mode_default_parallel_mask
 
 end module calc_mode_m

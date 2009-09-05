@@ -107,14 +107,14 @@ contains
       call push_sub('system.system_init.parallel_init')
 
       ! for the moment we need communicators for domains plus three
-      ! index-dimensions: states, kpoints, and others
+      ! index-dimensions: states, k-points, and others
       index_dim = 4
 
       ! store the ranges for these two indices (serves as initial guess
       ! for parallelization strategy)
       index_range(1) = sys%gr%mesh%np_global  ! Number of points in mesh
       index_range(2) = sys%st%nst             ! Number of states
-      index_range(3) = sys%st%d%nik           ! Number of kpoints
+      index_range(3) = sys%st%d%nik           ! Number of k-points
       index_range(4) = 100000                 ! Some large number
 
       ! create index and domain communicators

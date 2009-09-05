@@ -25,22 +25,22 @@ module v_ks_m
   use global_m
   use grid_m
   use hamiltonian_m
+  use index_m
   use lalg_basic_m
   use loct_parser_m
-  use XC_F90(lib_m)
+  use magnetic_m
   use mesh_function_m
   use messages_m
   use mpi_m
   use poisson_m
+  use poisson_sete_m
   use profiling_m
   use states_m
   use states_dim_m
   use varinfo_m
-  use xc_OEP_m
   use xc_m
-  use magnetic_m
-  use index_m
-  use poisson_sete_m
+  use XC_F90(lib_m)
+  use xc_OEP_m
 
   implicit none
 
@@ -66,7 +66,7 @@ module v_ks_m
     logical :: frozen_hxc ! For RPA and SAE calculations.
 
     integer           :: xc_family  ! the xc stuff
-    integer           :: sic_type   ! what kind of Self-Interaction Correction to apply
+    integer           :: sic_type   ! what kind of self-interaction correction to apply
     type(xc_t)        :: xc
     type(xc_OEP_t)    :: oep
   end type v_ks_t
@@ -415,7 +415,7 @@ contains
 
     FLOAT, allocatable :: rho(:)
     integer :: is, ip
-    integer :: default_solver, poisson_solver
+
     call push_sub('v_ks.v_ks_hartree')
 
     SAFE_ALLOCATE(rho(1:gr%mesh%np))
@@ -446,8 +446,7 @@ contains
     ! Get the Hartree energy
     hm%ehartree = M_HALF*dmf_dotp(gr%mesh, rho, hm%vhartree)
 
-    call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver)
-    if (poisson_solver == POISSON_SETE) then !Roberto
+    if (poisson_get_solver() == POISSON_SETE) then !Roberto
       ! How to get the nuclear density here?
       hm%ep%eii = M_HALF*dmf_dotp(gr%mesh, rho_nuc, hm%ep%vpsl) 
       !hm%ep%eii = 0

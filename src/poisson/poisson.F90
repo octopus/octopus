@@ -23,33 +23,35 @@ module poisson_m
   use datasets_m
   use geometry_m
   use global_m
-  use io_function_m
+  use grid_m
+  use index_m
   use io_m
+  use io_function_m
   use loct_math_m
   use loct_parser_m
+  use math_m
   use mesh_m
+  use mesh_function_m
   use messages_m
   use mpi_m
+  use par_vec_m
+  use poisson_cg_m
+  use poisson_corrections_m
+  use poisson_isf_m
+  use poisson_fft_m
+  use poisson_multigrid_m
+  use poisson_sete_m
   use profiling_m
   use simul_box_m
   use units_m
-  use math_m
-  use poisson_corrections_m
-  use poisson_cg_m
-  use poisson_isf_m
-  use poisson_fft_m
-  use poisson_sete_m
-  use grid_m
-  use poisson_multigrid_m
-  use mesh_function_m
-  use par_vec_m
-  use varinfo_m !Roberto
-  use xyz_file_m !Roberto      
-  use index_m
+  use varinfo_m
+  use xyz_file_m      
+
   implicit none
 
   private
   public ::                      &
+    poisson_get_solver,          &
     poisson_init,                &
     dpoisson_solve,              &
     zpoisson_solve,              &
@@ -88,6 +90,11 @@ module poisson_m
   type(poisson_sete_t), public :: sete_solver
 
 contains
+
+  !-----------------------------------------------------------------
+  integer pure function poisson_get_solver() result (solver)
+    solver = poisson_solver
+  end function poisson_get_solver
 
   !-----------------------------------------------------------------
   subroutine poisson_init(gr, geo)
@@ -129,9 +136,12 @@ contains
     !%Type integer
     !%Section Hamiltonian::Poisson
     !%Description
-    !% Defines which method to use in order to solve the Poisson equation.
-    !% The default for 1D and 2D is the direct evaluation of the Hartree potential.
-    !% The default for 3D is <tt>fft_nocut</tt>.
+    !% Defines which method to use in order to solve the Poisson equation. Defaults:
+    !% 1D: fft if not periodic, fft_nocut if periodic.
+    !% 2D: fft if not periodic, fft_cyl if periodic in 1D, fft_nocut if periodic in 2D.
+    !% 3D: cg_corrected if curvilinear, fft if not periodic, fft_cyl if periodic in 1D,
+    !% fft_pla if periodic in 2D, fft_nocut if periodic in 3D.
+    !%
     !%Option direct2D -2
     !% Direct evaluation of the Hartree potential (in 2D)
     !%Option direct1D -1

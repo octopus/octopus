@@ -24,43 +24,43 @@ module external_pot_m
   use derivatives_m
   use double_grid_m
   use gauge_field_m
+  use geometry_m
   use global_m
   use grid_m
+  use index_m
   use io_m
   use lalg_basic_m
   use lalg_adv_m
+  use lasers_m
   use linear_response_m
   use loct_math_m
   use loct_parser_m
-  use splines_m
   use magnetic_m
   use mesh_function_m
   use mesh_m
   use messages_m
+  use mpi_m
+  use mpi_debug_m
   use multigrid_m
   use simul_box_m
   use units_m
   use logrid_m
+  use poisson_m
   use poisson_cutoff_m
+  use poisson_sete_m
+  use profiling_m
+  use projector_m
   use ps_m
   use smear_m
+  use solids_m
   use species_m
   use species_pot_m
+  use splines_m
   use spline_filter_m
-  use solids_m
-  use geometry_m
   use states_m
   use states_dim_m
   use submesh_m
-  use lasers_m
-  use profiling_m
-  use mpi_m
-  use mpi_debug_m
   use varinfo_m
-  use poisson_m
-  use projector_m
-  use poisson_sete_m
-  use index_m
 
   implicit none
 
@@ -131,7 +131,6 @@ contains
     type(block_t) :: blk
     FLOAT, allocatable :: x(:)
     integer :: filter
-    integer :: poisson_solver, default_solver !SEC Team
 
     call push_sub('epot.epot_init')
 
@@ -355,9 +354,7 @@ contains
     nullify(ep%local_potential)
     ep%local_potential_precalculated = .false.
     
-    call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver) !SEC
-
-    if (poisson_solver == POISSON_SETE) then 
+    if (poisson_get_solver() == POISSON_SETE) then 
       SAFE_ALLOCATE(rho_nuc(1:gr%mesh%np))
     end if
 
@@ -370,7 +367,6 @@ contains
     type(epot_t),      intent(inout) :: ep
     type(grid_t),      intent(in)    :: gr
     type(geometry_t),  intent(inout) :: geo
-    integer :: poisson_solver, default_solver !SEC Team
 
     integer :: iproj
 
@@ -417,9 +413,8 @@ contains
       end do
       SAFE_DEALLOCATE_P(ep%proj_fine)
     end if
-    call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver) !SEC
 
-    if (poisson_solver == POISSON_SETE) then 
+    if (poisson_get_solver() == POISSON_SETE) then 
       SAFE_DEALLOCATE_A(rho_nuc)
     end if
 
@@ -532,7 +527,6 @@ contains
     FLOAT, allocatable  :: rho(:), vl(:)
     type(submesh_t)  :: sphere
     type(profile_t), save :: prof
-    integer :: poisson_solver, default_solver !SEC Team
 
     call push_sub('epot.epot_local_potential')
     call profiling_in(prof, "EPOT_LOCAL")
@@ -549,8 +543,6 @@ contains
       !(for all-electron species or pseudopotentials in periodic
       !systems) or by applying it directly to the grid
 
-      call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver)
-      
       if(species_has_density(geo%atom(iatom)%spec) .or. &
         (species_is_ps(geo%atom(iatom)%spec) .and. .not. poisson_solver_has_free_bc())) then
 
@@ -565,7 +557,7 @@ contains
         count_atoms=iatom
         call dpoisson_solve(gr, vl, rho) 
 
-        if (poisson_solver == POISSON_SETE) then  !SEC
+        if (poisson_get_solver() == POISSON_SETE) then  !SEC
           rho_nuc(1:gr%mesh%np) = rho_nuc(1:gr%mesh%np) + rho(1:gr%mesh%np)
         end if
 

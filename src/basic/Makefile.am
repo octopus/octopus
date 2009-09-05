@@ -105,7 +105,7 @@ profiling.o : profiling.F90 mpi.o messages.o loct.o io.o global.o papi_f.o
 utils.o : utils.F90 messages.o global.o 
 multicomm.o : multicomm.F90 varinfo.o utils.o mpi.o messages.o loct_parser.o io.o global.o datasets.o profiling.o
 iihash.o : iihash.F90 ialist.o global.o
-calc_mode.o : calc_mode.F90 multicomm.o
+calc_mode.o : calc_mode.F90 multicomm.o messages.o
 distributed.o: distributed.F90 multicomm.o profiling.o
 varia.o : varia.c varia.h
 io_binary.o : io_binary.c io_binary.h
