@@ -992,9 +992,16 @@ contains
     end do
     
     ! this has to be updated for non-orthogonal grids
-    cross = dcross_product(sb%rlattice(:,2), sb%rlattice(:,3))
-    sb%rcell_volume = sum(sb%rlattice(1:3, 1)*cross(1:3))
-    
+    select case(sb%dim)
+    case(3)
+      cross = dcross_product(sb%rlattice(:,2), sb%rlattice(:,3))
+      sb%rcell_volume = sum(sb%rlattice(1:3, 1)*cross(1:3))
+    case(2)
+      sb%rcell_volume = abs(sb%rlattice(1, 1)*sb%rlattice(2, 2) - sb%rlattice(1, 2)*sb%rlattice(2, 1))
+    case(1)
+      sb%rcell_volume = abs(sb%rlattice(2, 1) - sb%rlattice(1, 1))
+    end select
+
     call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, sb%volume_element)
     
     sb%klattice = M_ZERO
@@ -1193,6 +1200,8 @@ contains
     integer :: ix, iy, iz
 
     call push_sub('simul_box.simul_box_end')
+
+    call kpoints_end(sb%kpoints)
 
     if(associated(sb%cells)) then
       

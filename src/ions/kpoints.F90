@@ -35,6 +35,7 @@ module kpoints_m
   public ::       &
     kpoints_t,    &
     kpoints_init, &
+    kpoints_end,  &
     kpoints_copy
 
 
@@ -94,6 +95,7 @@ subroutine kpoints_init(this, dim, periodic_dim, rlattice, klattice, geo)
   call pop_sub()
 
 contains
+  ! ---------------------------------------------------------
   subroutine read_MP(gamma_only)
     logical, intent(in) :: gamma_only
 
@@ -166,6 +168,7 @@ contains
   end subroutine read_MP
 
   
+  ! ---------------------------------------------------------
   subroutine generate_MP()
     !generate k-points using the MP scheme
     FLOAT :: dx(1:MAX_DIM)
@@ -180,11 +183,12 @@ contains
     end do
 
     ikp = 0
+    ix(:) = M_ZERO
     do ii = 1, this%nik_axis(1)
       do jj = 1, this%nik_axis(2)
         do kk = 1, this%nik_axis(3)
           ikp = ikp + 1
-          ix(:) = (/ii, jj, kk/)
+          ix(1:3) = (/ii, jj, kk/)
 
           forall(idir = 1:periodic_dim)
             this%points_full_red(idir, ikp) = TOFLOAT(2*ix(idir) - this%nik_axis(idir) - odd_shifts(idir))
@@ -199,6 +203,7 @@ contains
   end subroutine generate_MP
 
 
+  ! ---------------------------------------------------------
   logical function read_user_kpoints()
     type(block_t) :: blk
     logical :: reduced
@@ -296,6 +301,21 @@ contains
 end subroutine kpoints_init
 
 
+! ---------------------------------------------------------
+subroutine kpoints_end(this)
+  type(kpoints_t), intent(inout) :: this
+
+  SAFE_DEALLOCATE_P(this%points_full)
+  SAFE_DEALLOCATE_P(this%points_full_red)
+  SAFE_DEALLOCATE_P(this%weights_full)
+  SAFE_DEALLOCATE_P(this%points)
+  SAFE_DEALLOCATE_P(this%points_red)
+  SAFE_DEALLOCATE_P(this%weights)
+  
+end subroutine kpoints_end
+
+
+! ---------------------------------------------------------
 subroutine kpoints_to_absolute(klattice, kin, kout)
   FLOAT, intent(in)  :: klattice(:,:), kin(:)
   FLOAT, intent(out) :: kout(:)
@@ -314,6 +334,7 @@ subroutine kpoints_to_absolute(klattice, kin, kout)
 end subroutine kpoints_to_absolute
 
 
+! ---------------------------------------------------------
 subroutine kpoints_to_reduced(rlattice, kin, kout)
   FLOAT, intent(in)  :: rlattice(:,:)
   FLOAT, intent(in)  :: kin(:)
@@ -333,6 +354,7 @@ subroutine kpoints_to_reduced(rlattice, kin, kout)
 end subroutine kpoints_to_reduced
 
 
+! ---------------------------------------------------------
 subroutine kpoints_copy(kout, kin)
   type(kpoints_t), intent(out) :: kout
   type(kpoints_t), intent(in)  :: kin

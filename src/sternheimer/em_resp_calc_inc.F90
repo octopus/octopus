@@ -543,8 +543,8 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   end do !ii
 
   do ik = st%d%kpt%start, st%d%kpt%end
-    do ii = 1, MAX_DIM
-      do jj = 1, MAX_DIM
+    do ii = 1, ndim
+      do jj = 1, ndim
         do ifreq = 1, 3
           do jfreq = 1, 3
             do isigma = 1,2
@@ -594,7 +594,7 @@ contains
       ispin = states_dim_get_spin_index(sys%st%d, ik)
       do ist = 1, st%nst
         do ist2 = 1, st%nst
-          do ii = 1, MAX_DIM
+          do ii = 1, ndim
             do ifreq = 1, 3
 
               if (present(kdotp_lr)) then
@@ -620,8 +620,8 @@ contains
     end do
 
     do ik = st%d%kpt%start, st%d%kpt%end
-      do ii = 1, MAX_DIM
-        do jj = 1, MAX_DIM
+      do ii = 1, ndim
+        do jj = 1, ndim
           do ifreq = 1, 3
             do jfreq = 1, 3
               do isigma = 1, 2

@@ -32,8 +32,7 @@ module xc_functl_m
   public ::                     &
     xc_functl_t,                &
     xc_j_functl_init,           &
-    xc_functl_init_exchange,    &
-    xc_functl_init_correlation, &
+    xc_functl_init_functl,      &
     xc_functl_end,              &
     xc_functl_write_info
 
@@ -117,14 +116,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_functl_init_exchange(functl, id, ndim, spin_channels)
+  subroutine xc_functl_init_functl(functl, id, ndim, nel, spin_channels)
     type(xc_functl_t), intent(out) :: functl
     integer,           intent(in)  :: id
     integer,           intent(in)  :: ndim
+    FLOAT,             intent(in)  :: nel
     integer,           intent(in)  :: spin_channels
 
+    integer :: interact_1d
+    FLOAT   :: alpha
 
-    call push_sub('xc_functl.xc_functl_init_exchange')
+    call push_sub('xc_functl.xc_functl_init')
 
     ! initialize structure
     call xc_functl_init(functl, spin_channels)
@@ -147,10 +149,67 @@ contains
     ! initialize
     select case(functl%family)
     case(XC_FAMILY_LDA)
+      if((ndim.ne.1).and. &
+        (functl%id==XC_LDA_X_1D.or.functl%id==XC_LDA_C_1D_CSC)) then
+
+        message(1) = 'Functionals lda_x_1d and lda_c_1d_csc only allowed in 1D'
+        call write_fatal(1)
+      end if
+
+      if((ndim.ne.2).and. &
+        (functl%id==XC_LDA_X_2D.or.functl%id==XC_LDA_C_2D_AMGB.or.functl%id==XC_LDA_C_2D_PRM)) then
+
+        message(1) = 'Functional lda_x_2d, lda_c_2d_amgb, and lda_c_2d_prm only allowed in 2D'
+        call write_fatal(1)
+      end if
+
       call XC_F90(lda_init)(functl%conf, functl%info, functl%id, spin_channels)
+
+      ! special parameters that have to be configured
+      select case(functl%id)
+      case(XC_LDA_C_XALPHA)
+        call loct_parse_float(datasets_check('Xalpha'), M_ONE, alpha)
+        call XC_F90(lda_c_xalpha_set_par)(functl%conf, alpha)
+
+      case(XC_LDA_X_1D, XC_LDA_C_1D_CSC)
+        !%Variable SoftInteraction1D_type
+        !%Type integer
+        !%Default interaction_soft_coulomb
+        !%Section Hamiltonian::XC
+        !%Description
+        !% When running in 1D one has to soften the Coulomb interaction. This softening
+        !% is not unique, and several possibilities exist in the literature
+        !%Option interaction_exp_screened 0
+        !% Exponentially screened Coulomb interaction.
+        !% See, e.g., M Casula, S Sorella, and G Senatore, Phys. Rev. B 74, 245427 (2006)
+        !%Option interaction_soft_coulomb 1
+        !% Soft Coulomb interaction of the form 1/sqrt(x^2 + alpha^2)
+        !%End
+        call loct_parse_int(datasets_check('SoftInteraction1D_type'), 1, interact_1d)
+
+        !%Variable SoftInteraction1D_alpha
+        !%Type float
+        !%Default 1.0
+        !%Section Hamiltonian::XC
+        !%Description
+        !% Defines the screening parameter of the softned Coulomb interaction
+        !% when running in 1D
+        !%End
+        call loct_parse_float(datasets_check('SoftInteraction1D_alpha'), M_ONE, alpha)
+
+        if(functl%id == XC_LDA_X_1D) then
+          call XC_F90(lda_x_1d_set_par)(functl%conf, interact_1d, alpha)
+        else
+          call XC_F90(lda_c_1d_csc_set_par)(functl%conf, interact_1d, alpha)
+        end if
+
+      case(XC_LDA_C_2D_PRM)
+        call XC_F90(lda_c_2d_prm_set_par)(functl%conf, nel)
+      end select
 
     case(XC_FAMILY_GGA)
       call XC_F90(gga_init)(functl%conf, functl%info, functl%id, spin_channels)
+
       if(functl%id == XC_GGA_XC_LB) then
         call loct_parse_int  (datasets_check('LB94_modified'),             0, functl%LB94_modified)
         call loct_parse_float(datasets_check('LB94_threshold'), CNST(1.0e-6), functl%LB94_threshold)
@@ -165,88 +224,8 @@ contains
     end select
 
     if(functl%family == XC_FAMILY_OEP) then
-      functl%type = XC_EXCHANGE
+      functl%type     = XC_EXCHANGE
     else if(functl%family .ne. XC_FAMILY_NONE) then
-      functl%type = XC_F90(info_kind)(functl%info)
-      functl%provides = XC_F90(info_provides)(functl%info)
-    else
-      functl%type = -1
-    end if
-
-    call pop_sub()
-  end subroutine xc_functl_init_exchange
-
-
-  ! ---------------------------------------------------------
-  subroutine xc_functl_init_correlation(functl, id, ndim, nel, spin_channels)
-    type(xc_functl_t), intent(out) :: functl
-    integer,           intent(in)  :: id
-    integer,           intent(in)  :: ndim
-    FLOAT,             intent(in)  :: nel
-    integer,           intent(in)  :: spin_channels
-
-    FLOAT :: alpha
-
-    call push_sub('xc_functl.xc_functl_init_correlation')
-
-    ! initialize structure
-    call xc_functl_init(functl, spin_channels)
-
-    functl%id = id
-
-    if(functl%id.ne.0) then
-      ! get the family of the functional
-      functl%family = XC_F90(family_from_id)(functl%id)
-
-      if(functl%family == XC_FAMILY_UNKNOWN) then
-        call input_error('XCFunctional')
-      end if
-    end if
-
-    ! initialize
-    select case(functl%family)
-    case(XC_FAMILY_LDA)
-
-      if(functl%id==XC_LDA_C_1D_CSC.and.ndim.ne.1) then
-        message(1) = 'Functional CSC only allowed in 1D'
-        call write_fatal(1)
-      end if
-
-      if(functl%id==XC_LDA_C_2D_AMGB.and.ndim.ne.2) then
-        message(1) = 'Functional AMGB only allowed in 2D'
-        call write_fatal(1)
-      end if
-
-      ! we initialize the functionals
-      call XC_F90(lda_init)(functl%conf, functl%info, functl%id, spin_channels)
-
-      ! special parameters that have to be configured
-      select case(functl%id)
-      case(XC_LDA_C_XALPHA)
-        call loct_parse_float(datasets_check('Xalpha'), M_ONE, alpha)
-        call XC_F90(lda_c_xalpha_set_par)(functl%conf, alpha)
-
-      case(XC_LDA_C_1D_CSC)
-        ! default is screened coulomb interaction
-        call loct_parse_float(datasets_check('lda_c_1d_csc_bb'), M_ONE, alpha)
-        call XC_F90(lda_c_1d_csc_set_par)(functl%conf, 1, alpha)
-
-      case(XC_LDA_C_2D_PRM)
-        call XC_F90(lda_c_2d_prm_set_par)(functl%conf, nel)
-      end select
-
-    case(XC_FAMILY_GGA)
-      call XC_F90(gga_init)(functl%conf, functl%info, functl%id, spin_channels)
-
-    case(XC_FAMILY_HYB_GGA)
-      call XC_F90(hyb_gga_init)(functl%conf, functl%info, functl%id, spin_channels)
-
-    case(XC_FAMILY_MGGA)
-      call XC_F90(mgga_init)(functl%conf, functl%info, functl%id, spin_channels)
-
-    end select
-
-    if(functl%family.ne.XC_FAMILY_NONE) then
       functl%type     = XC_F90(info_kind)(functl%info)
       functl%provides = XC_F90(info_provides)(functl%info)
     else
@@ -254,8 +233,8 @@ contains
     end if
 
     call pop_sub()
-  end subroutine xc_functl_init_correlation
-
+  end subroutine xc_functl_init_functl
+  
 
   ! ---------------------------------------------------------
   subroutine xc_functl_end(functl)

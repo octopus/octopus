@@ -137,11 +137,11 @@ contains
       !get both spin polarized and unpolarized
       do i = 1, 2
 
-        call xc_functl_init_exchange   (xcs%functl(1,i), x_id, ndim, i)
-        call xc_functl_init_correlation(xcs%functl(2,i), c_id, ndim, nel, i)
+        call xc_functl_init_functl(xcs%functl(1,i),  x_id, ndim, nel, i)
+        call xc_functl_init_functl(xcs%functl(2,i),  c_id, ndim, nel, i)
         
-        call xc_functl_init_exchange   (xcs%kernel(1,i), xk_id, ndim, i)
-        call xc_functl_init_correlation(xcs%kernel(2,i), ck_id, ndim, nel, i)
+        call xc_functl_init_functl(xcs%kernel(1,i), xk_id, ndim, nel, i)
+        call xc_functl_init_functl(xcs%kernel(2,i), ck_id, ndim, nel, i)
 
       end do
 
