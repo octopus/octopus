@@ -3,8 +3,8 @@
 !%Default lda_x+lda_c_pz_mod
 !%Section Hamiltonian::XC
 !%Description
-!% Defines the exchange and correlation functional to be used,
-!% they should be specified as a sum of a correlation and an
+!% Defines the exchange and correlation functional to be used;
+!% they should be specified as a sum of a correlation term and an
 !% exchange term.
 !%
 !%Option lda_x               1
@@ -47,6 +47,8 @@
 !% Exchange in 2D
 !%Option lda_xc_teter93               20
 !% Teter 93 parametrization
+!%Option lda_x_1d               21
+!% Exchange in 1D
 !%Option gga_x_pbe               101
 !% Perdew, Burke & Ernzerhof exchange
 !%Option gga_x_pbe_r               102

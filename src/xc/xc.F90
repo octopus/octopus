@@ -218,14 +218,12 @@ contains
       ! the first 3 digits of the number indicate the X functional and
       ! the next 3 the C functional.
 
-      if(hartree_fock) then
-        default = 0
-      else
-        default = XC_LDA_X
-        
+      default = 0
+      if(.not.hartree_fock) then
         select case(calc_dim)
         case(3); default = XC_LDA_X    + XC_LDA_C_PZ_MOD *1000
         case(2); default = XC_LDA_X_2D + XC_LDA_C_2D_AMGB*1000
+        case(1); default = XC_LDA_X_1D + XC_LDA_C_1D_CSC *1000
         end select
       end if
 
