@@ -26,19 +26,17 @@ if ENABLE_PERL
 endif
 
 SUBDIRS =        \
-	external_libs liboct_parser libxc \
+	build external_libs liboct_parser libxc \
 	src share doc testsuite $(PERL_DIR)
 
 EXTRA_DIST =     \
 	ChangeLog PACKAGING \
-	TODO build/mk_varinfo.pl build/var2html.pl build/octopus.spec.in \
-	build/svn_release_number.sh \
-	build/true_compiler.sh      \
+	TODO \
 	debian/changelog debian/control debian/copyright debian/dirs     \
 	debian/info debian/README.Debian debian/rules
 
 DISTCLEANFILES = \
-	ChangeLog config.log config.status build/octopus.spec
+	ChangeLog config.log config.status
 
 DEB_DIR = deb-work
 

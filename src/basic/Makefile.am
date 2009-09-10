@@ -48,6 +48,7 @@ noinst_HEADERS =          \
 	mpi_debug_inc.F90 \
 	mpi_lib_inc.F90   \
 	loct_inc.F90      \
+	subarray_inc.F90  \
 	varia.h           \
 	io_binary.h
 

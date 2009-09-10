@@ -50,7 +50,8 @@ noinst_HEADERS =                        \
 	output_linear_response_inc.F90  \
 	output_me_inc.F90               \
 	output_states_inc.F90           \
-	output_etsf_inc.F90
+	output_etsf_inc.F90             \
+	forces_inc.F90
 
 include $(srcdir)/../common-rules.make
 
