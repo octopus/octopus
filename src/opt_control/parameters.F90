@@ -137,7 +137,7 @@ module opt_control_parameters_m
   end type oct_control_parameters_t
   
   ! the next variable has to be a pointer to avoid a bug in the IBM compiler
-  type(oct_parameters_common_t), pointer :: par_common
+  type(oct_parameters_common_t), pointer :: par_common => NULL()
   type(mix_t) :: parameters_mix
 
 contains
@@ -980,21 +980,10 @@ contains
       call tdf_end(cp%f(j))
     end do
     SAFE_DEALLOCATE_P(cp%f)
-    nullify(cp%f)
     SAFE_DEALLOCATE_P(cp%alpha)
-    nullify(cp%alpha)
-    if(associated(cp%utransf)) then
-      SAFE_DEALLOCATE_P(cp%utransf)
-      nullify(cp%utransf)
-    end if
-    if(associated(cp%utransfi)) then
-      SAFE_DEALLOCATE_P(cp%utransfi)
-      nullify(cp%utransfi)
-    end if
-    if(associated(cp%theta)) then
-      SAFE_DEALLOCATE_P(cp%theta)
-      nullify(cp%theta)
-    end if
+    SAFE_DEALLOCATE_P(cp%utransf)
+    SAFE_DEALLOCATE_P(cp%utransfi)
+    SAFE_DEALLOCATE_P(cp%theta)
 
     call pop_sub()
   end subroutine parameters_end

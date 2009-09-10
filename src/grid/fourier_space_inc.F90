@@ -21,6 +21,7 @@ subroutine X(cf_alloc_FS)(cf)
   type(X(cf_t)), intent(inout) :: cf
 
   call push_sub('cf_inc.Xcf_alloc_FS')
+
   ASSERT(.not.associated(cf%FS))
   ASSERT(associated(cf%fft))
 
@@ -35,6 +36,7 @@ subroutine X(cf_free_FS)(cf)
   type(X(cf_t)), intent(inout) :: cf
 
   call push_sub('cf_inc.Xcf_free_FS')
+
   ASSERT(associated(cf%FS))
   SAFE_DEALLOCATE_P(cf%FS)
   nullify(cf%FS)
@@ -50,6 +52,7 @@ subroutine X(cf_fft_init)(cf, sb)
   type(simul_box_t), intent(in)    :: sb
 
   call push_sub('cf_inc.Xcf_fft_init')
+
   ASSERT(.not.associated(cf%fft))
   ASSERT(.not.associated(cf%RS))
   ASSERT(.not.associated(cf%FS))

@@ -200,11 +200,8 @@ contains
     ! First, figure out the dimensionaliy of the FFT.
     dim = 0
     do i = 1, MAX_DIM
-      if(n(i) > 1) then 
-        dim = dim + 1
-      else
-         call pop_sub(); exit
-      end if
+      if(n(i) <= 1) exit
+      dim = dim + 1
     end do
 
     if(dim.eq.0) then

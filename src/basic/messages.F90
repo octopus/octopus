@@ -226,6 +226,7 @@ contains
     if(present(stress)) then
       call messages_print_stress(iu)
     end if
+
     do i = 1, no_lines
       if(.not.present(verbose_limit)) then
         write(msg, '(a)') trim(message(i))

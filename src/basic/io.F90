@@ -63,6 +63,7 @@ contains
   ! to the defaults values.
   subroutine io_init(defaults)
     logical, optional, intent(in) :: defaults
+
     character(len=128) :: filename
     character(len=256) :: node_hook
     logical :: file_exists, mpi_debug_hook
@@ -73,7 +74,7 @@ contains
     if(present(defaults)) then
       if(defaults) then
         lun_is_free(min_lun:max_lun)=.true.
-        stdin = 5
+        stdin  = 5
         stdout = 6
         stderr = 0
         work_dir = '.'

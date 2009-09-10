@@ -247,7 +247,7 @@ subroutine X(mixing_grpulay)(smix, vin, vout, vnew, iter, dotp)
   f(1:d1, 1:d2, 1:d3) = vout(1:d1, 1:d2, 1:d3) - vin(1:d1, 1:d2, 1:d3)
   
   ! we only extrapolate a new vector every two iterations
-  select case (mod(iter, 2_i4))
+  select case (mod(iter, 2))
   case (1)
     ! Store df and dv from current iteration
     if (iter > 1) then

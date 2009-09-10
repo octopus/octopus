@@ -659,10 +659,11 @@ contains
     integer            :: box(MAX_DIM), ixx(MAX_DIM), ix
     FLOAT              :: temp(MAX_DIM), g, r_c
     FLOAT, allocatable :: fft_coulb_fs(:, :, :)
-    call push_sub('poisson_fft.poisson_fft_build_1d_1d')
+
+    call push_sub('poisson_fft.poisson_fft_build_1d_0d')
 
     call mesh_double_box(gr%sb, gr%mesh, box)
-
+    
     call dcf_new(box, fft_cf)
     call dcf_fft_init(fft_cf, gr%sb)
     box(1:3) = fft_cf%n(1:3)

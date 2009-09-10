@@ -179,6 +179,7 @@ module opt_control_target_m
       call input_error('OCTTargetOperator')
 
     call states_copy(target%st, stin)
+    call states_deallocate_wfns(target%st)
     call states_allocate_wfns(target%st, gr%mesh, M_CMPLX)
 
     nullify(target%td_fitness)

@@ -21,6 +21,7 @@
 !-----------------------------------------------------------------
 subroutine poisson1d_init(gr)
   type(grid_t), intent(inout) :: gr
+
   call push_sub('solver_1D.poisson1d_init')
 
   call loct_parse_float(datasets_check('Poisson1DSoftCoulombParam'), &

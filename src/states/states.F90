@@ -816,11 +816,16 @@ contains
     type(mesh_t),      intent(in)    :: mesh
     integer, optional, intent(in)    :: wfs_type
 
-    integer :: np, ik, ist, idim, st1, st2, k1, k2, size, il
+    integer :: np, ip, ik, ist, idim, st1, st2, k1, k2, size, il
     logical :: force
 
     call push_sub('states.states_allocate_wfns')
 
+    if(associated(st%dpsi).or.associated(st%zpsi)) then
+      message(1) = "Trying to allocate wavefunctions that are already allocated"
+      call write_fatal(1)
+    end if
+    
     if (present(wfs_type)) then
       ASSERT(wfs_type == M_REAL .or. wfs_type == M_CMPLX)
       st%wfs_type = wfs_type
@@ -855,24 +860,16 @@ contains
     if (states_are_real(st)) then
       SAFE_ALLOCATE(st%dpsi(1:size, 1:st%d%dim, st1:st2, k1:k2))
 
-      do ik = k1, k2
-        do ist = st1, st2
-          do idim = 1, st%d%dim
-            st%dpsi(1:size, idim, ist, ik) = M_ZERO
-          end do
-        end do
-      end do
+      forall(ik=k1:k2, ist=st1:st2, idim=1:st%d%dim, ip=1:size)
+        st%dpsi(ip, idim, ist, ik) = M_ZERO
+      end forall
 
     else
       SAFE_ALLOCATE(st%zpsi(1:size, 1:st%d%dim, st1:st2, k1:k2))
 
-      do ik = k1, k2
-        do ist = st1, st2
-          do idim = 1, st%d%dim
-            st%zpsi(1:size, idim, ist, ik) = M_Z0
-           end do
-        end do
-      end do
+      forall(ik=k1:k2, ist=st1:st2, idim=1:st%d%dim, ip=1:size)
+        st%zpsi(ip, idim, ist, ik) = M_Z0
+      end forall
     end if
 
     if(calc_mode_is(CM_TD).and.st%open_boundaries) then

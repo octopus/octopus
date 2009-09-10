@@ -66,6 +66,7 @@ module opt_control_initst_m
     call push_sub('defstates.initial_state_init')
 
     call states_copy(initial_state, sys%st)
+    call states_deallocate_wfns(initial_state)
     call states_allocate_wfns(initial_state, sys%gr%mesh, M_CMPLX)
 
     !%Variable OCTInitialState
@@ -121,7 +122,7 @@ module opt_control_initst_m
       if(loct_parse_isdef(datasets_check('OCTInitialTransformStates')).ne.0) then
         if(loct_parse_block(datasets_check('OCTInitialTransformStates'), blk) == 0) then
           call states_copy(tmp_st, initial_state)
-          SAFE_DEALLOCATE_P(tmp_st%zpsi)
+          call states_deallocate_wfns(tmp_st)
           call restart_look_and_read(tmp_st, sys%gr, sys%geo)
           SAFE_ALLOCATE(rotation_matrix(1:initial_state%nst, 1:tmp_st%nst))
           rotation_matrix = M_z0
