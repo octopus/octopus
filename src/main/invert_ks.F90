@@ -62,7 +62,7 @@ contains
     !%Variable InvertKSmethod
     !%Type integer
     !%Default 0
-    !%Section Main:: Invert KS
+    !%Section Calculation Modes::Invert KS
     !%Description
     !% Selects whether the exact 2 particle method or the iterative scheme
     !% is used to invert the density to get the KS potential
@@ -257,7 +257,7 @@ contains
     !%Variable InvertKSConvAbsDens
     !%Type float
     !%Default 1e-5
-    !%Section Main:: Invert KS
+    !%Section Calculation Modes::Invert KS
     !%Description
     !% Absolute difference between the calculated and the target density in the KS
     !% inversion, has to be larger than the convergence of the density in the scf run
@@ -268,7 +268,7 @@ contains
     !%Variable InvertKSstabilizer
     !%Type float
     !%Default 0.5
-    !%Section Main:: Invert KS
+    !%Section Calculation Modes::Invert KS
     !%Description
     !% Additive constant c in the iterative calculation of the KS potential
     !%   (v(alpha+1)=rho(alpha)+c)/(rho_target+c)*v(alpha)
@@ -280,7 +280,7 @@ contains
     !%Variable InvertKSverbosity
     !%Type integer
     !%Default 0
-    !%Section Main:: Invert KS
+    !%Section Calculation Modes::Invert KS
     !%Description
     !% Selects what is output during the calculation of the KS potential
     !%Option 0
