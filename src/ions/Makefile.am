@@ -45,7 +45,7 @@ xyz_file.o : xyz_file.F90
 geometry.o : geometry.F90 xyz_file.o
 xyz_adjust.o : xyz_adjust.F90 geometry.o 
 kpoints.o : geometry.o
-simul_box.o : simul_box.F90 geometry.o
+simul_box.o : simul_box.F90 geometry.o kpoints.o
 solids.o: solids.F90 simul_box.o
 vibrations.o : vibrations.F90 simul_box.o geometry.o
 crystal.o : crystal.F90 geometry.o simul_box.o symmetries.o

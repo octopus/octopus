@@ -331,7 +331,7 @@ contains
       sinmm1, sinphi, r2, rsize, Rx, Ry, Rz, xysize
     FLOAT, save :: c(0:(lmaxd+1)*(lmaxd+1))
 
-    call push_sub('math.grylmr')
+    ! no push_sub: called too frequently
 
     ! evaluate normalization constants once and for all
     if (li.gt.lmax) then
@@ -422,7 +422,7 @@ contains
         grylm(2) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry + M_ONE)*Ry/rsize
         grylm(3) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry)*Rz/rsize
       end select
-      call pop_sub(); return
+      return
     end if
 
     ! general algorithm based on routine plgndr of numerical recipes
@@ -485,7 +485,6 @@ contains
       +cmi*plgndr*dphase*Rx/(rsize*xysize**2)
     grylm(3)= cmi*dplg*(M_ONE - Rz*Rz)*phase/rsize
 
-    call pop_sub()
     return
   end subroutine grylmr
 
@@ -619,9 +618,7 @@ contains
     inc = 1
     do
       inc=3*inc+1
-      if (inc > n) then
-        call pop_sub(); exit
-      endif
+      if (inc > n) exit
     end do
 
     do
@@ -631,9 +628,7 @@ contains
         if(present(ind)) indi = ind(i)
         j=i
         do
-          if (a(j-inc) <= v) then
-            call pop_sub(); exit
-          endif
+          if (a(j-inc) <= v) exit
           !if (a(j-inc) >= v) exit
           a(j)=a(j-inc)
 
@@ -643,16 +638,12 @@ contains
           if(present(ind)) ind(j) = indj
 
           j=j-inc
-          if (j <= inc) then
-            call pop_sub(); exit
-          endif
+          if (j <= inc) exit
         end do
         a(j)=v
         if(present(ind)) ind(j) = indi
       end do
-      if (inc <= 1) then
-        call pop_sub(); exit
-      endif
+      if (inc <= 1) exit
     end do
 
     call pop_sub()
@@ -681,9 +672,7 @@ contains
     inc = 1
     do
       inc=3*inc+1
-      if (inc > n) then
-        call pop_sub(); exit
-      endif
+      if (inc > n) exit
     end do
 
     do
@@ -693,9 +682,7 @@ contains
         if(present(ind)) indi = ind(i)
         j=i
         do
-          if (a(j-inc) <= v) then
-            call pop_sub(); exit
-          endif
+          if (a(j-inc) <= v) exit
           !if (a(j-inc) >= v) exit
           a(j)=a(j-inc)
           !workaround to a bug in itanium ifort
@@ -704,16 +691,12 @@ contains
           if(present(ind)) ind(j) = indj
 
           j=j-inc
-          if (j <= inc) then
-            call pop_sub(); exit
-          endif
+          if (j <= inc) exit
         end do
         a(j)=v
         if(present(ind)) ind(j) = indi
       end do
-      if (inc <= 1) then
-        call pop_sub(); exit
-      endif
+      if (inc <= 1) exit
     end do
 
     call pop_sub()
@@ -834,7 +817,7 @@ contains
     do i = 1, ubound(a, 1)
       if(a(i).eq.n) then
         member = .true.
-        call pop_sub(); exit
+        exit
       end if
     end do
 
@@ -846,7 +829,7 @@ contains
     integer, intent(in)  :: nn    ! the number of points and coefficients
     FLOAT,   intent(in)  :: xa(:) ! the nn points where we know the function
     FLOAT,   intent(in)  :: xx    ! the point where we want the function
-    FLOAT,   intent(out) :: cc(:)  ! the coefficients
+    FLOAT,   intent(out) :: cc(:) ! the coefficients
 
     integer :: ii, kk
 

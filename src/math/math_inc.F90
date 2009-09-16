@@ -121,9 +121,7 @@ subroutine X(shellsort1)(a, x)
   inc = 1
   do
     inc=3*inc+1
-    if (inc > n) then
-      call pop_sub(); exit
-    endif
+    if (inc > n) exit
   end do
 
   do
@@ -133,23 +131,17 @@ subroutine X(shellsort1)(a, x)
       b(:) = x(:, i)
       j=i
       do
-        if (a(j-inc) <= v) then
-          call pop_sub(); exit
-        endif
+        if (a(j-inc) <= v) exit
         !if (a(j-inc) >= v) exit
         a(j)=a(j-inc)
         x(:, j) = x(:, j-inc)
         j=j-inc
-        if (j <= inc) then
-          call pop_sub(); exit
-        endif
+        if (j <= inc) exit
       end do
       a(j)=v
       x(:, j) = b(:)
     end do
-    if (inc <= 1) then
-      call pop_sub(); exit
-    endif
+    if (inc <= 1) exit
   end do
 
   SAFE_DEALLOCATE_A(b)
@@ -176,9 +168,7 @@ subroutine X(shellsort2)(a, x)
   inc = 1
   do
     inc=3*inc+1
-    if (inc > n) then
-      call pop_sub(); exit
-    endif
+    if (inc > n) exit
   end do
 
   do
@@ -188,23 +178,17 @@ subroutine X(shellsort2)(a, x)
       b(:, :) = x(:, :, i)
       j=i
       do
-        if (a(j-inc) <= v) then
-          call pop_sub(); exit
-        endif
+        if (a(j-inc) <= v) exit
         !if (a(j-inc) >= v) exit
         a(j)=a(j-inc)
         x(:, :, j) = x(:, :, j-inc)
         j=j-inc
-        if (j <= inc) then
-          call pop_sub(); exit
-        endif
+        if (j <= inc) exit
       end do
       a(j)=v
       x(:, :, j) = b(:, :)
     end do
-    if (inc <= 1) then
-      call pop_sub(); exit
-    endif
+    if (inc <= 1) exit
   end do
 
   SAFE_DEALLOCATE_A(b)
