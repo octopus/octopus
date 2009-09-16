@@ -20,29 +20,29 @@
 #include "global.h"
   
 module cpmd_m
-  use global_m
-  use io_m
   use datasets_m
+  use geometry_m
+  use global_m
+  use grid_m
+  use hamiltonian_m
+  use io_m
   use io_function_m
   use lalg_basic_m
+  use loct_m
   use loct_math_m
   use loct_parser_m
-  use units_m
   use math_m
   use mesh_m
   use mesh_function_m
   use messages_m
-  use geometry_m
-  use hamiltonian_m
-  use loct_m
   use profiling_m
   use restart_m
   use scf_m
   use states_m
   use states_block_m
   use system_m
+  use units_m
   use varinfo_m
-  use grid_m
 
   implicit none
 
@@ -65,7 +65,7 @@ module cpmd_m
     FLOAT          :: emass
     FLOAT          :: ecorr
 
-    !for verlet, this store the previous wfs
+    !for verlet, this stores the previous wfs
     !for vel_verlet, the time derivative of the wfs
     FLOAT, pointer :: dpsi2(:, :, :, :)
     CMPLX, pointer :: zpsi2(:, :, :, :)
@@ -104,7 +104,7 @@ contains
     !%Section Time-Dependent::Propagation
     !%Description
     !% This variable defines how to integrate the Car-Parrinello
-    !% equations. The default is verlet.
+    !% equations. The default is <tt>verlet</tt>.
     !%Option verlet 2
     !% Standard Verlet.
     !%Option vel_verlet 1

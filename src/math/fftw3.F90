@@ -483,7 +483,7 @@ contains
     logical, intent(in) :: mode
     integer :: pad_feq
 
-    call push_sub('fftw3.pad_feq')
+    ! no push_sub: called too frequently
 
     if(mode) then      ! index to frequency number
       if( i <= n/2 + 1 ) then
@@ -499,7 +499,6 @@ contains
       end if
     end if
 
-    call pop_sub()
     return
   end function pad_feq
 

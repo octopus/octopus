@@ -215,21 +215,21 @@ contains
     !%Default unpolarized
     !%Section States
     !%Description
-    !% The calculations may be done in three different ways: spin-restricted (TD)DFT (i.e., doubly
-    !% occupied "closed shells"), spin-unrestricted or "spin-polarized" (TD)DFT (i.e. we have two
-    !% electronic systes, one with spin up and one with spin down), or making use of two-component
+    !% The calculations may be done in three different ways: spin-restricted (TD)DFT (<i>i.e.</i>, doubly
+    !% occupied "closed shells"), spin-unrestricted or "spin-polarized" (TD)DFT (<i>i.e.</i> we have two
+    !% electronic systems, one with spin up and one with spin down), or making use of two-component
     !% spinors.
     !%Option unpolarized 1
     !% Spin-restricted calculations.
     !%Option polarized 2
     !%Option spin_polarized 2
-    !% Spin unrestricted, also known as spin-DFT, SDFT. This mode will double the number of wave
-    !% functions necessary for a spin-unpolarized calculation.
+    !% Spin unrestricted, also known as spin-DFT, SDFT. This mode will double the number of 
+    !% wavefunctions necessary for a spin-unpolarized calculation.
     !%Option non_collinear 3
     !%Option spinors 3
     !% The spin-orbitals are two-component spinors. This effectively allows the spin-density to
-    !% arrange non-collinearly - i.e. the magnetization vector is allowed to take different
-    !% directions in different points.
+    !% arrange non-collinearly - <i>i.e.</i> the magnetization vector is allowed to take different
+    !% directions at different points.
     !%End
     call loct_parse_int(datasets_check('SpinComponents'), UNPOLARIZED, st%d%ispin)
     if(.not.varinfo_valid_option('SpinComponents', st%d%ispin)) call input_error('SpinComponents')
@@ -384,7 +384,7 @@ contains
     !%Default false
     !%Section Execution::Optimization
     !%Description
-    !% (experimental) If set to yes, the wave functions will require
+    !% (experimental) If set to yes, the wavefunctions will require
     !% less memory, at the expense of increased computational
     !% time. The default is no.
     !%End
@@ -410,7 +410,7 @@ contains
     ! current
     call loct_parse_logical(datasets_check('CurrentDFT'), .false., st%d%cdft)
     if (st%d%cdft) then
-      ! Use of CDFT requires complex wave-functions
+      ! Use of CDFT requires complex wavefunctions
       st%wfs_type = M_CMPLX
 
       if(st%d%ispin == SPINORS) then
@@ -421,8 +421,8 @@ contains
       call write_info(1)
     end if
 
-    ! Periodic systems require complex wave-functions
-    ! but not if it is gamma-point only
+    ! Periodic systems require complex wavefunctions
+    ! but not if it is Gamma-point only
     if(simul_box_is_periodic(gr%sb)) then
       if(.not. (st%d%nik == 1 .and. kpoint_is_gamma(st%d, 1))) then
         st%wfs_type = M_CMPLX
@@ -439,8 +439,8 @@ contains
     !%Default no
     !%Section States
     !%Description
-    !% If true, then only user-defined states from the block UserDefinedStates
-    !% will be used as initial states for a time propagation. No attempt is made
+    !% If true, then only user-defined states from the block <tt>UserDefinedStates</tt>
+    !% will be used as initial states for a time-propagation. No attempt is made
     !% to load ground-state orbitals from a previous ground-state run.
     !%End
     call loct_parse_logical(datasets_check('OnlyUserDefinedInitialStates'), .false., st%only_userdef_istates)
@@ -491,7 +491,7 @@ contains
       character          :: char
       character(len=256) :: restart_dir, line, chars
 
-      call push_sub('states.read_ob_eigenval_and_occ')
+      call push_sub('states.states_init.read_ob_eigenval_and_occ')
 
       restart_dir = trim(gr%sb%lead_restart_dir(LEFT))//'/'//GS_DIR
 
@@ -623,7 +623,7 @@ contains
     !% calculations, 1 otherwise) to the lower states. If <tt>SpinComponents == polarized</tt>
     !% this block should contain two lines, one for each spin channel.
     !% This variable is very useful when dealing with highly symmetric small systems
-    !% (like an open shell atom), for it allows us to fix the occupation numbers
+    !% (like an open-shell atom), for it allows us to fix the occupation numbers
     !% of degenerate states in order to help <tt>octopus</tt> to converge. This is to
     !% be used in conjuction with <tt>ExtraStates</tt>. For example, to calculate the
     !% carbon atom, one would do:
@@ -647,7 +647,7 @@ contains
     !% of the spin options.
     !%
     !% If the sum of occupations is not equal to the total charge set by <tt>ExcessCharge</tt>,
-    !% an error message is printed. If FromScratch = no, this block is ignored when restart information
+    !% an error message is printed. If <tt>FromScratch = no</tt>, this block is ignored when restart information
     !% is read, and the previous occupations are used.
     !%End
 
@@ -759,15 +759,16 @@ contains
     !% place).
     !%
     !% This block is meaningless and ignored if the run is not in spinors mode
-    !% (i.e. SpinComponents = spinors). 
+    !% (<tt>SpinComponents = spinors</tt>). 
     !%
     !% The structure of the block is very simple: each column contains the desired
-    !% <Sx>, <Sy>, <Sz> for each spinor. If the calculation is for a periodic system
-    !% and there are more than one k point, the spins of all the k-point space are
+    !% &lt;<i>S_x</i>&gt;, &lt;<i>S_y</i>&gt;, &lt;<i>S_z</i>&gt; for each spinor.
+    !% If the calculation is for a periodic system
+    !% and there is more than one <i>k</i>-point, the spins of all the <i>k</i>-points are
     !% the same.
     !%
-    !% For example, if we have two spinors, and we want one in the Sx "down" state,
-    !% and another one in the Sx "up" state:
+    !% For example, if we have two spinors, and we want one in the <i>Sx</i> "down" state,
+    !% and another one in the <i>Sx</i> "up" state:
     !%
     !% <tt>%InitialSpins
     !% <br>&nbsp;&nbsp;  0.5 | 0.0 | 0.0
@@ -775,14 +776,14 @@ contains
     !% <br>%</tt>
     !%
     !% WARNING: if the calculation is for a system described by pseudopotentials (as
-    !% opposed to using user defined potentials or model systems), this option is
+    !% opposed to user-defined potentials or model systems), this option is
     !% meaningless since the random spinors are overwritten by the atomic orbitals.
     !%
-    !% There are a couple of physical constrains that have to be fulfilled:
+    !% There are a couple of physical constraints that have to be fulfilled:
     !%
-    !% (A) | <S_i> | <= 1/2
+    !% (A) | &lt;<i>S_i</i>&gt; | &lt;= 1/2
     !%
-    !% (B) <S_x>^2 + <S_y>^2 + <S_z>^2 = 1/4
+    !% (B) &lt;<i>S_x</i>&gt;^2 + &lt;<i>S_y</i>&gt;^2 + &lt;<i>S_z<i>&gt;^2 = 1/4
     !%
     !%End
     spin_fix: if(loct_parse_block(datasets_check('InitialSpins'), blk)==0) then
@@ -809,8 +810,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Allocates the KS wavefunctions defined within an states_t
-  ! structure.
+  ! Allocates the KS wavefunctions defined within a states_t structure.
   subroutine states_allocate_wfns(st, mesh, wfs_type)
     type(states_t),    intent(inout) :: st
     type(mesh_t),      intent(in)    :: mesh
@@ -836,7 +836,7 @@ contains
     !%Default no
     !%Section Execution::Debug
     !%Description
-    !% Normally Octopus determines automatically the type necessary
+    !% Normally <tt>Octopus</tt> determines automatically the type necessary
     !% for the wavefunctions. When set to yes this variable will
     !% force the use of complex wavefunctions. 
     !%
@@ -886,8 +886,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Deallocates the KS wavefunctions defined within an states_t
-  ! structure.
+  ! Deallocates the KS wavefunctions defined within a states_t structure.
   subroutine states_deallocate_wfns(st)
     type(states_t), intent(inout) :: st
 
@@ -935,13 +934,13 @@ contains
 
     !%Variable StatesBlockSize
     !%Type integer
-    !%Default 4
+    !%Default max(4, 2*nthreads)
     !%Section Execution::Optimization
     !%Description
     !% Some routines work over blocks of eigenfunctions, this
     !% generally improves performance at the expense of increased
     !% memory consumption. This variable selects the size of the
-    !% blocks to be used, the default size is max(4, 2*nthreads).
+    !% blocks to be used.
     !%End
 
     ! This has to be here as it requires mc%nthreads that is not available in states_init
@@ -958,9 +957,9 @@ contains
     !%Default nst
     !%Section Execution::Optimization
     !%Description
-    !% (experimental) The orthogonalization of the wave-functions can
-    !% be done by windows, this value selects the size of the
-    !% windows. The default size is total number of states, that
+    !% (experimental) The orthogonalization of the wavefunctions can
+    !% be done by windows; this value selects the size of the
+    !% windows. The default size is total number of states, which
     !% disables window orthogonalization.
     !%End
 
@@ -1164,7 +1163,7 @@ contains
       end do
     end if
     
-    if(st%d%ispin == SPINORS) then ! in this case wave-functions are always complex
+    if(st%d%ispin == SPINORS) then ! in this case wavefunctions are always complex
      do ist = 1, psib%nst
         ist2 = psib%states(ist)%ist
 
@@ -1239,7 +1238,7 @@ contains
       call profiling_out(reduce_prof)
     end if
 
-    ! reduce over kpoints
+    ! reduce over k-points
     if(st%d%kpt%parallel) then
       call profiling_in(reduce_prof, "DENSITY_REDUCE")
       SAFE_ALLOCATE(reduce_rho(1:np))
@@ -1513,7 +1512,7 @@ contains
     message(1) = 'Eigenvalues [' // trim(units_abbrev(units_out%energy)) // ']'
     call write_info(1, iunit)
     if (st%d%nik > ns) then
-      message(1) = 'Kpoints [' // trim(units_abbrev(unit_one/units_out%length)) //']'
+      message(1) = 'k-points [' // trim(units_abbrev(unit_one/units_out%length)) //']'
       call write_info(1, iunit)
     end if
 
@@ -1728,7 +1727,7 @@ contains
 
     call push_sub('states.states_write_tpa')
 
-    ! find the orbital with half occupation
+    ! find the orbital with half-occupation
     tpa_initialst = -1
     do ist = 1, st%nst
       do ik = 1, st%d%nik
@@ -1915,20 +1914,20 @@ contains
 
     !%Variable DOSEnergyMin
     !%Type float
-    !%Default 
     !%Section Output
     !%Description
-    !% Lower bound for the energy mesh of the DOS
+    !% Lower bound for the energy mesh of the DOS.
+    !% The default is the lowest eigenvalue, minus a quarter of the total range of eigenvalues.
     !%End
     call loct_parse_float(datasets_check('DOSEnergyMin'), units_from_atomic(units_inp%energy, evalmin - eextend), emin)
     emin = units_to_atomic(units_inp%energy, emin)
 
     !%Variable DOSEnergyMax
     !%Type float
-    !%Default 
     !%Section Output
     !%Description
-    !% Upper bound for the energy mesh of the DOS
+    !% Upper bound for the energy mesh of the DOS.
+    !% The default is the lowest eigenvalue, minus a quarter of the total range of eigenvalues.
     !%End
     call loct_parse_float(datasets_check('DOSEnergyMax'), units_from_atomic(units_inp%energy, evalmax + eextend), emax)
     emax = units_to_atomic(units_inp%energy, emax)
@@ -1938,18 +1937,17 @@ contains
     !%Default 500
     !%Section Output
     !%Description
-    !% Determines how many energy points octopus should use for 
-    !% the DOS energy grid
+    !% Determines how many energy points <tt>Octopus</tt> should use for 
+    !% the DOS energy grid.
     !%End
     call loct_parse_int(datasets_check('DOSEnergyPoints'), 500, epoints)
 
     !%Variable DOSGamma
     !%Type float
-    !%Default 
+    !%Default 0.008 Ha
     !%Section Output
     !%Description
-    !% Determines the width of the Lorentzian which is used to sum 
-    !% up the DOS sum
+    !% Determines the width of the Lorentzian which is used for the DOS sum.
     !%End
     call loct_parse_float(datasets_check('DOSGamma'), &
       units_from_atomic(units_inp%energy, CNST(0.008)), gamma)
@@ -2002,7 +2000,7 @@ contains
       end do
     end do
 
-    ! for spin-polarized calculations also output spin-resolved tdos
+    ! for spin-polarized calculations also output spin-resolved tDOS
     if(st%d%nspin .gt. 1) then    
       do is = 0, ns-1
         write(filename, '(a,i1.1,a)') 'total-dos-', is+1,'.dat'
@@ -2209,14 +2207,22 @@ contains
   ! ---------------------------------------------------------
   logical function states_are_complex(st) result (wac)
     type(states_t),    intent(in) :: st
+
+    call push_sub('states.states_are_complex')
     wac = (st%wfs_type == M_CMPLX)
+
+    call pop_sub()
   end function states_are_complex
 
 
   ! ---------------------------------------------------------
   logical function states_are_real(st) result (war)
     type(states_t),    intent(in) :: st
+
+    call push_sub('states.states_are_real')
     war = (st%wfs_type == M_REAL)
+
+    call pop_sub()
   end function states_are_real
 
 
@@ -2253,6 +2259,8 @@ contains
     integer :: mpi_err
 #endif
 
+    call push_sub('states.states_calc_tau_jp_gn')
+
     SAFE_ALLOCATE( wf_psi(1:gr%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gwf_psi(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%dim))   
 
@@ -2271,14 +2279,14 @@ contains
 
         do ist = st%st_start, st%st_end
 
-          ! all calculations will be done with complex wave-functions
+          ! all calculations will be done with complex wavefunctions
           if (st%wfs_type == M_REAL) then
             wf_psi(:,:) = cmplx(st%dpsi(:,:, ist, ik), KIND=REAL_PRECISION)
           else
             wf_psi(:,:) = st%zpsi(:,:, ist, ik)
           end if
 
-          ! calculate gradient of the wave-function
+          ! calculate gradient of the wavefunction
           do st_dim = 1, st%d%dim
             call zderivatives_grad(gr%der, wf_psi(:,st_dim), gwf_psi(:,:,st_dim))
           end do
@@ -2352,12 +2360,14 @@ contains
       call reduce_all(st%d%kpt%mpi_grp)
     end if
 
+    call pop_sub()
+
   contains 
 
     subroutine reduce_all(grp)
       type(mpi_grp_t), intent(in)  :: grp
 
-      call push_sub('states.reduce_all')
+      call push_sub('states.states_calc_tau_jp_gn.reduce_all')
 
       SAFE_ALLOCATE(tmp_reduce(1:gr%mesh%np))
 
@@ -2399,7 +2409,7 @@ contains
 
     CMPLX :: z
 
-    call push_sub('states.zstate_spin')
+    call push_sub('states.state_spin')
 
     z = zmf_dotp(m, f1(:, 1) , f1(:, 2))
 
@@ -2622,12 +2632,14 @@ contains
   real(8) function states_wfns_memory(st, mesh) result(memory)
     type(states_t), intent(in) :: st
     type(mesh_t),   intent(in) :: mesh
-    
+
+    call push_sub('states.states_wfns_memory')
     memory = 0.0_8
 
     ! orbitals
     memory = memory + REAL_PRECISION*dble(mesh%np_part_global)*st%d%dim*dble(st%nst)*st%d%kpt%nglobal
 
+    call pop_sub()
   end function states_wfns_memory
 
 
@@ -2659,7 +2671,7 @@ contains
         np = gr%intf(il)%np_intf
         SAFE_ALLOCATE(st%ob_lead(il)%green(1:np, 1:np, 1:nspin, s1:s2, k1:k2))
       end do
-      call messages_print_stress(stdout, "Lead Green`s functions")
+      call messages_print_stress(stdout, "Lead Green's functions")
       message(1) = ' st#     k#  Spin      Lead     Energy'
       call write_info(1)
 #ifdef HAVE_MPI 

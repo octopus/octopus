@@ -43,15 +43,11 @@ module kpoints_m
     integer        :: method
     
     integer        :: nik_full             ! number of k-points in full Brillouin zone
-    FLOAT, pointer :: points_full(:,:)     ! kpoints in absolute coordinates
-    FLOAT, pointer :: points_full_red(:,:) ! kpoints in reduced coordinates
+    FLOAT, pointer :: points_full(:,:)     ! k-points in absolute coordinates
+    FLOAT, pointer :: points_full_red(:,:) ! k-points in reduced coordinates
     FLOAT, pointer :: weights_full(:)      ! weights for the k-point integrations
 
     integer        :: nik                  ! number of k-points in the irreducible zone
-    FLOAT, pointer :: points(:,:)          ! kpoints in absolute coordinates
-    FLOAT, pointer :: points_red(:,:)      ! kpoints in relative coordinates
-    FLOAT, pointer :: weights(:)           ! weights for the k-point integrations
-
     logical        :: use_symmetries
     logical        :: use_inversion
 
@@ -308,9 +304,6 @@ subroutine kpoints_end(this)
   SAFE_DEALLOCATE_P(this%points_full)
   SAFE_DEALLOCATE_P(this%points_full_red)
   SAFE_DEALLOCATE_P(this%weights_full)
-  SAFE_DEALLOCATE_P(this%points)
-  SAFE_DEALLOCATE_P(this%points_red)
-  SAFE_DEALLOCATE_P(this%weights)
   
 end subroutine kpoints_end
 
@@ -368,10 +361,6 @@ subroutine kpoints_copy(kout, kin)
   call loct_pointer_copy(kout%weights_full, kin%weights_full)
 
   kout%nik = kin%nik
-  call loct_pointer_copy(kout%points, kin%points)
-  call loct_pointer_copy(kout%points_red, kin%points_red)
-  call loct_pointer_copy(kout%weights, kin%weights)
-
   kout%use_symmetries = kin%use_symmetries
   kout%use_inversion  = kin%use_inversion
 
