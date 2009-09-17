@@ -49,10 +49,12 @@
     FLOAT, allocatable :: ldiff(:)
 #endif
 
-    call push_sub('eigen_lobpcg.Xlobpcg')
+    call push_sub('eigen_lobpcg_inc.Xeigen_solver_lobpcg')
 
     verbose_ = .false.
-    if(present(verbose)) verbose_ = verbose
+    if(present(verbose)) then
+      verbose_ = verbose
+    endif
 
     bs = block_size
 
@@ -179,10 +181,12 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   R_TYPE, allocatable, target :: ritz_vec(:, :)   ! Ritz-vectors.
   type(batch_t) :: psib, hpsib
   
-  call push_sub('eigen_lobpcg.Xlobpcg')
+  call push_sub('eigen_lobpcg_inc.Xlobpcg')
 
   verbose_ = .false.
-  if(present(verbose)) verbose_ = verbose
+  if(present(verbose)) then
+    verbose_ = verbose
+  endif
 
   ! The results with explicit Gram diagonal blocks were not better, so it is switched off.
   explicit_gram = .false.
@@ -575,7 +579,7 @@ contains
   subroutine X(lobpcg_info)(block_iter)
     integer, intent(in) :: block_iter
 
-    call push_sub('eigen_lobpcg_inc.X(lobpcg_info)')
+    call push_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_info')
 
     if(verbose_) then
       write(message(1), '(a,i3,a,i5,a,i5)') '  Converged vectors of block ', ib, &
@@ -593,7 +597,7 @@ contains
     integer :: ist, iev
     integer :: idim, ip
 
-    call push_sub('eigen_lobpcg_inc.Xlobpcg_res')
+    call push_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_res')
 
     do ist = st_start, st_end
       iev = iihash_lookup(all_ev_inv, ist, found)
@@ -614,7 +618,7 @@ contains
     integer           :: i, ist, j, new_nuc
     integer           :: new_uc(nuc)
 
-    call push_sub('eigen_lobpcg_inc.Xlobpcg_unconv_ev')
+    call push_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_unconv_ev')
 
     j       = 1
     new_nuc = 0
@@ -645,7 +649,7 @@ contains
   subroutine X(lobpcg_conv_mask)(mask)
     logical, intent(out) :: mask(:)
 
-    call push_sub('eigen_lobpcg_inc.Xlobpcg_conv_mask')
+    call push_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_conv_mask')
 
     mask     = .true.
     mask(UC) = .false.
@@ -665,7 +669,7 @@ contains
     integer             :: i
     R_TYPE, allocatable :: vv(:, :)
 
-    call push_sub('eigen_lobpcg_inc.Xlobpcg_orth')
+    call push_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_orth')
 
     chol_failure = .false.
     SAFE_ALLOCATE(vv(1:nuc, 1:nuc))
@@ -706,7 +710,7 @@ contains
     type(profile_t), save :: prof
 
     call profiling_in(prof, "LOBPCG_CONSTRAINTS")
-    call push_sub('eigen_lobpcg_inc.Xlobpcg_apply_constraints')
+    call push_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_apply_constraints')
 
     SAFE_ALLOCATE(tmp1(1:nconstr, 1:nconstr))
     SAFE_ALLOCATE(tmp2(1:nconstr, 1:nidx))
@@ -739,7 +743,7 @@ contains
     integer,           intent(in)  :: xpsi2(:)
     logical, optional, intent(in)  :: symm
 
-    call push_sub('eigen_lobpcg_inc.Xblockt_mul')
+    call push_sub('eigen_lobpcg_inc.Xlobpcg.Xblockt_mul')
 
     call states_blockt_mul(gr%mesh, st, st_start, st_end, st_start, st_end, &
       psi1, psi2, res, xpsi1=xpsi1, xpsi2=xpsi2, symm=symm)
@@ -758,7 +762,7 @@ contains
     integer, intent(in)    :: xpsi(:)
     integer, intent(in)    :: xres(:)
 
-    call push_sub('eigen_lobpcg_inc.block_matr_mul_add')
+    call push_sub('eigen_lobpcg_inc.Xlobpcg.Xblock_matr_mul_add')
 
     call states_block_matr_mul_add(gr%mesh, st, alpha, st_start, st_end, st_start, st_end, &
       psi, matr, beta, res, xpsi=xpsi, xres=xres)
@@ -775,7 +779,7 @@ contains
     integer, intent(in)  :: xpsi(:)
     integer, intent(in)  :: xres(:)
 
-    call push_sub('eigen_lobpcg_inc.block_matr_mul_add')
+    call push_sub('eigen_lobpcg_inc.Xlobpcg.Xblock_matr_mul')
 
     call states_block_matr_mul(gr%mesh, st, st_start, st_end, st_start, st_end, &
       psi, matr, res, xpsi=xpsi, xres=xres)

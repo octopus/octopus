@@ -27,6 +27,7 @@ module lcao_m
   use global_m
   use grid_m
   use hamiltonian_m
+  use h_sys_output_m
   use lalg_adv_m
   use lalg_basic_m
   use loct_m
@@ -41,12 +42,11 @@ module lcao_m
   use solids_m
   use species_m
   use species_pot_m
-  use submesh_m
   use states_m
-  use states_dim_m
-  use states_calc_m
   use states_block_m
-  use h_sys_output_m
+  use states_calc_m
+  use states_dim_m
+  use submesh_m
 
   implicit none
 
@@ -191,13 +191,13 @@ contains
       !% twice the number of required orbitals for the full calculation. 
       !%
       !% This dimension however can be changed by making use of this
-      !% variable. Note that LCAODimension cannot be smaller than the
+      !% variable. Note that <tt>LCAODimension</tt> cannot be smaller than the
       !% number of orbitals needed in the full calculation -- if
-      !% LCAODimension is smaller, it will be silently increased to meet
-      !% this requirement. In the same way, if LCAODimension is larger
+      !% <tt>LCAODimension</tt> is smaller, it will be silently increased to meet
+      !% this requirement. In the same way, if <tt>LCAODimension</tt> is larger
       !% than the available number of atomic orbitals, it will be
       !% reduced. If you want to use the largest possible number, set
-      !% LCAODimension to a negative number.
+      !% <tt>LCAODimension</tt> to a negative number.
       !%End
       call loct_parse_int(datasets_check('LCAODimension'), 0, n)
 
@@ -273,14 +273,20 @@ contains
 
   logical function lcao_is_available(this) result(available)
     type(lcao_t),        intent(in) :: this
-    
+
+    call push_sub('lcao.lcao_is_available')
     available = this%state == 1
+
+    call pop_sub()
   end function lcao_is_available
 
   integer function lcao_num_orbitals(this) result(norbs)
     type(lcao_t),        intent(in) :: this
 
+    call push_sub('lcao.lcao_num_orbitals')
     norbs = this%norbs
+
+    call pop_sub()
   end function lcao_num_orbitals
 
 #include "undef.F90"

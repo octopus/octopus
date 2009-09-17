@@ -29,8 +29,7 @@
 
     type(oct_control_parameters_t), pointer :: par
 
-    call push_sub('finalcheck.oct_finalcheck')
-
+    call push_sub('finalcheck_inc.oct_finalcheck')
 
     if(.not.oct%oct_double_check) then
       call pop_sub(); return

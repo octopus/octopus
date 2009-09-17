@@ -86,7 +86,7 @@ contains
     logical :: found
     character(len=256) :: filename2
 
-    call push_sub('hgh.hgh_init')
+    call push_sub('ps_hgh.hgh_init')
 
     filename2 =  filename // '.hgh'
     inquire(file=filename2, exist=found)
@@ -142,7 +142,7 @@ contains
   subroutine hgh_end(psp)
     type(hgh_t), intent(inout) :: psp
 
-    call push_sub('hgh.hgh_end')
+    call push_sub('ps_hgh.hgh_end')
 
     if(psp%l_max >= 0) then
       SAFE_DEALLOCATE_P(psp%kbr)
@@ -164,7 +164,7 @@ contains
     integer :: l, i, ierr
     FLOAT, pointer :: ptr(:)
 
-    call push_sub('hgh.hgh_process')
+    call push_sub('ps_hgh.hgh_process')
 
 
     ! Fixes the local potential
@@ -185,7 +185,7 @@ contains
     ! are obtained, but not the real ones!!!
     call solve_schroedinger(psp, ierr)
     if(ierr.ne.0) then ! If the wavefunctions could not be found, we set its number to zero.
-      write(message(1),'(a)') 'The algorithm that calculates atomic wave functions could not'
+      write(message(1),'(a)') 'The algorithm that calculates atomic wavefunctions could not'
       write(message(2),'(a)') 'do its job. The program will continue, but expect poor'
       write(message(3),'(a)') 'convergence properties.'
       call write_warning(3)
@@ -209,7 +209,7 @@ contains
     integer :: i, iostat, j, k
     character(len=VALCONF_STRING_LENGTH) :: line
 
-    call push_sub('hgh.load_params')
+    call push_sub('ps_hgh.load_params')
 
     ! Set initially everything to zero.
     params%c(1:4) = M_ZERO; params%rlocal = M_ZERO;
@@ -310,7 +310,7 @@ contains
     FLOAT :: dincv, tmp
     FLOAT, parameter :: threshold = CNST(1.0e-4)
 
-    call push_sub('hgh.get_cutoff_radii_psp')
+    call push_sub('ps_hgh.get_cutoff_radii')
 
     do l = 0, psp%l_max
       tmp = M_ZERO
@@ -337,17 +337,20 @@ contains
 
     FLOAT :: r1, r2, r4, r6
 
+    call push_sub('ps_hgh.vlocalr_scalar')
+
     r1 = r/p%rlocal; r2 = r1**2; r4 = r2**2; r6 = r4*r2
 
     if(r < CNST(1.0e-7)) then
       vlocalr_scalar = - (M_TWO * p%z_val)/(sqrt(M_TWO*M_Pi)*p%rlocal) + p%c(1)
-      return
+      call pop_sub(); return
     end if
 
     vlocalr_scalar = - (p%z_val/r)*loct_erf(r1/sqrt(M_TWO))   &
       + exp( -M_HALF*r2 ) *    &
       ( p%c(1) + p%c(2)*r2 + p%c(3)*r4 + p%c(4)*r6 )
 
+    call pop_sub()
   end function vlocalr_scalar
 
 
@@ -359,11 +362,14 @@ contains
 
     integer :: i
 
+    call push_sub('ps_hgh.vlocalr_vector')
+
     SAFE_ALLOCATE(vlocalr_vector(1:size(r)))
     do i = 1, size(r)
       vlocalr_vector(i) = vlocalr_scalar(r(i), p)
     end do
 
+    call pop_sub()
   end function vlocalr_vector
 
 
@@ -375,6 +381,8 @@ contains
 
     FLOAT :: g1, g2, g4, g6
 
+    call push_sub('ps_hgh.vlocalg')
+
     g1 = g*p%rlocal; g2 = g1*g1; g4 = g2*g2; g6 = g4*g2
 
     vlocalg = -(M_FOUR*M_Pi*p%z_val/g**2) * exp( -g2/M_TWO) +            &
@@ -382,6 +390,7 @@ contains
       ( p%c(1) + p%c(2)*(M_THREE - g2) + p%c(3)*(CNST(15.0) - M_TEN*g2 + g4) + &
       p%c(4)*(CNST(105.0) -CNST(105.0)*g2 + CNST(21.0)*g4 - g6) )
 
+    call pop_sub()
   end function vlocalg
 
 
@@ -394,6 +403,8 @@ contains
 
     FLOAT :: x, y, rr
 
+    call push_sub('ps_hgh.projectorr_scalar')
+
     x = l + real(4*i-1, REAL_PRECISION)/M_TWO
     y = loct_gamma(x); x = sqrt(y)
     if(l==0 .and. i==1) then
@@ -405,6 +416,7 @@ contains
     projectorr_scalar = sqrt(M_TWO) * rr * exp(-r**2/(M_TWO*p%rc(l)**2)) / &
       (  p%rc(l)**(l + real(4*i-1, REAL_PRECISION)/M_TWO) * x )
 
+    call pop_sub()
   end function projectorr_scalar
 
 
@@ -417,11 +429,14 @@ contains
 
     integer :: j
 
+    call push_sub('ps_hgh.projectorr_vector')
+
     SAFE_ALLOCATE(projectorr_vector(1:size(r)))
     do j=1, size(r)
       projectorr_vector(j) = projectorr_scalar(r(j), p, i, l)
     end do
 
+    call pop_sub()
   end function projectorr_vector
 
 
@@ -434,6 +449,8 @@ contains
 
     !FLOAT, external :: gamma
     FLOAT :: pif, ex
+
+    call push_sub('ps_hgh.projectorg')
 
     pif = M_Pi**(M_FIVE/M_FOUR)
 
@@ -482,6 +499,7 @@ contains
       ! This should be checked. Probably will not be needed in an near future...
     end select
 
+    call pop_sub()
   end function projectorg
 
 
@@ -497,7 +515,7 @@ contains
     REAL_DOUBLE :: e, z, dr, rmax
     REAL_DOUBLE, allocatable :: s(:), hato(:), g(:), y(:)
 
-    call push_sub('hgh.solve_schroedinger')
+    call push_sub('ps_hgh.solve_schroedinger')
 
     ierr = 0
 
@@ -618,7 +636,7 @@ contains
     integer :: hgh_unit, loc_unit, dat_unit, kbp_unit, wav_unit, i, l, k
     character(len=256) :: dirname
 
-    call push_sub('hgh.hgh_debug')
+    call push_sub('ps_hgh.hgh_debug')
 
     ! Open files.
     dirname = trim(dir)//'/hgh.'//trim(psp%atom_name)

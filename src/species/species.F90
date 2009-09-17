@@ -23,7 +23,6 @@ module species_m
   use datasets_m
   use global_m
   use io_m
-  use splines_m
   use loct_m
   use loct_math_m
   use loct_parser_m
@@ -32,6 +31,7 @@ module species_m
   use mpi_m
   use profiling_m
   use ps_m
+  use splines_m
   use string_m
   use units_m
 

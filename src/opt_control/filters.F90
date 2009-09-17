@@ -20,17 +20,17 @@
 #include "global.h"
 
 module filter_m  
-  use global_m
-  use messages_m
   use datasets_m
+  use fft_m
+  use global_m
   use io_m 
   use loct_m
-  use string_m
   use loct_parser_m
-  use fft_m
+  use messages_m
   use profiling_m
-  use units_m
+  use string_m
   use tdf_m
+  use units_m
 
   implicit none
 
@@ -78,12 +78,12 @@ contains
     !%Type block
     !%Section Calculation Modes::Optimal Control
     !%Description
-    !% The block OCTFilter describes the type and shape of the filter function
+    !% The block <tt>OCTFilter</tt> describes the type and shape of the filter function
     !% that are applied to the optimized laser field in each iteration.
     !% The filter forces the laser field to obtain the given form in frequency space.
     !% Each line of the block describes a filter; this way you can actually have more
-    !% than one filter function (e.g. a filter in time and two in frequency space). 
-    !% The filters are applied in the given order, i.e., first the filter specified 
+    !% than one filter function (<i>e.g.</i> a filter in time and two in frequency space). 
+    !% The filters are applied in the given order, <i>i.e.</i>, first the filter specified 
     !% by the first line is applied, then second line. 
     !% The syntax of each line is, then:
     !%
@@ -94,9 +94,9 @@ contains
     !%
     !% Possible arguments for domain are:
     !%  
-    !% (i) frequency_filter : Specifies a spectral filter.
+    !% (i) <tt>frequency_filter</tt>: Specifies a spectral filter.
     !% 
-    !% (ii) time_filter: DISABLED IN THIS VERSION.
+    !% (ii) <tt>time_filter</tt>: DISABLED IN THIS VERSION.
     !%
     !% Example:
     !%
@@ -104,11 +104,11 @@ contains
     !% <br>&nbsp;&nbsp;time | "exp(-80*( w + 0.1567 )^2  ) + exp(-80*( w - 0.1567 )^2  )"
     !% <br>%</tt>
     !%
-    !% Be careful that also the negative frequency component is filtered since the resulting 
-    !% field has to be real valued.
+    !% Be careful that also the negative-frequency component is filtered since the resulting 
+    !% field has to be real-valued.
     !%
     !%Option frequency_filter 1
-    !% The filter is applied in the frequency domain
+    !% The filter is applied in the frequency domain.
     !%End
     if( loct_parse_block(datasets_check('OCTFilter'),blk) == 0 ) then
       no_f = loct_parse_block_n(blk)
@@ -299,7 +299,11 @@ contains
   ! ---------------------------------------------------------
   integer function filter_number(filter)
     type(filter_t), intent(in) :: filter
+
+    call push_sub('filters.filter_number')
     filter_number = filter%no_filters
+
+    call pop_sub()
   end function filter_number
   ! ---------------------------------------------------------
 

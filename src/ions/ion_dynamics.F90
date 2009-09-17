@@ -21,22 +21,22 @@
 
 module ion_dynamics_m
   use c_pointer_m
+  use datasets_m
   use global_m
   use io_m
-  use datasets_m
   use loct_math_m
   use loct_parser_m
-  use units_m
+  use math_m
   use messages_m
   use mpi_m
   use geometry_m
   use loct_m
   use simul_box_m
-  use profiling_m
-  use varinfo_m
-  use math_m
-  use xyz_file_m
   use species_m
+  use profiling_m
+  use units_m
+  use varinfo_m
+  use xyz_file_m
 
   implicit none
 
@@ -74,7 +74,7 @@ module ion_dynamics_m
 
     FLOAT, pointer   :: oldforce(:, :)
 
-    ! the old positions for Verlet (used for the Nose Hoover)
+    ! the old positions for Verlet (used for the Nose-Hoover)
     FLOAT, pointer :: old_x(:, :)    
 
     ! variables for the Nose-Hoover thermostat
@@ -138,7 +138,7 @@ contains
     !%Type float
     !%Section System::Velocities
     !%Description
-    !% If this variable is present, octopus will assign random
+    !% If this variable is present, <tt>Octopus</tt> will assign random
     !% velocities to the atoms following a Boltzmann distribution with
     !% temperature given by <tt>RandomVelocityTemp</tt> (in degrees Kelvin).
     !%End
@@ -197,7 +197,7 @@ contains
       !%Type string
       !%Section System::Velocities
       !%Description
-      !% Octopus will try to read the starting velocities of the atoms from the XYZ file 
+      !% <tt>Octopus</tt> will try to read the starting velocities of the atoms from the XYZ file 
       !% specified by the variable <tt>XYZVelocities</tt>.
       !% Note that you do not need to specify initial velocities if you are not going
       !% to perform ion dynamics; if you are going to allow the ions to move but the velocities

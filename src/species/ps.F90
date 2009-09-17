@@ -20,22 +20,22 @@
 #include "global.h"
 
 module ps_m
-  use datasets_m
   use atomic_m
+  use datasets_m
   use global_m
   use io_m
-  use splines_m
   use loct_math_m
   use loct_parser_m
   use logrid_m
   use messages_m
+  use profiling_m
   use ps_cpi_m
   use ps_fhi_m
   use ps_hgh_m
   use ps_in_grid_m
   use ps_psf_m
   use ps_upf_m
-  use profiling_m
+  use splines_m
   use spline_filter_m
   implicit none
 
@@ -283,7 +283,7 @@ contains
     !% In practice, this localization is fixed by requiring the definition of the projectors to be
     !% contained in a sphere of a certain radius. This radius is computed by making sure that the 
     !% absolute value of the projector functions, at points outside the localization sphere, is 
-    !% below a certain threshold. This threshold is set the SpecieProjectorSphereThreshold.
+    !% below a certain threshold. This threshold is set by <tt>SpeciesProjectorSphereThreshold</tt>.
     !%End
     call loct_parse_float(datasets_check('SpeciesProjectorSphereThreshold'), &
       CNST(0.001), ps%projectors_sphere_threshold)
@@ -304,7 +304,9 @@ contains
     FLOAT :: r
     integer :: ii
     
-    !separate the local potential in (soft) long range and (hard) short range parts
+    call push_sub('ps.ps_separate')
+
+    !separate the local potential into (soft) long-ranged and (hard) short-ranged parts
     
     ps%sigma_erf = CNST(0.625) ! This is hard-coded to a reasonable value.
     ps%a_erf = M_ONE/(ps%sigma_erf*sqrt(M_TWO))
@@ -358,6 +360,7 @@ contains
     
     ps%is_separated = .true.
 
+    call pop_sub()
   end subroutine ps_separate
   
   ! ---------------------------------------------------------
@@ -623,7 +626,7 @@ contains
       integer :: l, is, nrc, j
       FLOAT, allocatable :: hato(:)
 
-      call push_sub('ps.get_splines_hgh')
+      call push_sub('ps.hgh_load.get_splines')
 
       SAFE_ALLOCATE(hato(1:psp%g%nrval))
 
@@ -694,9 +697,11 @@ contains
       FLOAT, allocatable :: hato(:)
       integer :: is, l, ir, nrc
 
+      call push_sub('ps.ps_grid_load.get_splines')
+
       SAFE_ALLOCATE(hato(1:g%nrval))
 
-      ! the wave-functions
+      ! the wavefunctions
       do is = 1, ps%ispin
         do l = 1, ps_grid%no_l_channels
           hato(2:) = ps_grid%rphi(2:, l, 1+is)/g%rofi(2:)
@@ -742,6 +747,7 @@ contains
       end if
 
       SAFE_DEALLOCATE_A(hato)
+      call pop_sub()
     end subroutine get_splines
   end subroutine ps_grid_load
 

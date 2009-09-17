@@ -21,30 +21,30 @@
 
 module opt_control_target_m
   use datasets_m
-  use varinfo_m
-  use messages_m
-  use loct_parser_m
-  use loct_m
-  use lalg_basic_m
-  use lalg_adv_m
-  use io_m
-  use global_m
-  use string_m
-  use states_m
-  use states_dim_m
-  use states_calc_m
   use excited_states_m
+  use geometry_m
+  use global_m
   use grid_m
   use h_sys_output_m
+  use io_m
   use io_function_m
-  use geometry_m
+  use lalg_adv_m
+  use lalg_basic_m
+  use loct_m
+  use loct_parser_m
+  use math_m
   use mesh_m
   use mesh_function_m
+  use messages_m
   use profiling_m
   use restart_m
-  use td_m
   use spectrum_m
-  use math_m
+  use states_m
+  use states_calc_m
+  use states_dim_m
+  use string_m
+  use td_m
+  use varinfo_m
 
   implicit none
 
