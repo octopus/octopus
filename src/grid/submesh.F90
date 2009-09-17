@@ -292,10 +292,12 @@ contains
 
     integer :: is
 
+    call push_sub('submesh.submesh_get_inv')
+    
     jxyz_inv(1:this%np_part) = 0
-
     forall (is = 1:this%ns) jxyz_inv(this%jxyz(is)) = is
 
+    call pop_sub()
   end subroutine submesh_get_inv
 
 #include "undef.F90"

@@ -24,8 +24,8 @@ module hamiltonian_m
   use blas_m
   use calc_mode_m
   use datasets_m
-  use em_field_m
   use derivatives_m
+  use em_field_m
   use external_pot_m
   use gauge_field_m
   use geometry_m
@@ -33,11 +33,11 @@ module hamiltonian_m
   use grid_m
   use gridhier_m
   use hardware_m
-  use lalg_basic_m
-  use loct_parser_m
-  use XC_F90(lib_m)
   use io_m
   use io_function_m
+  use lalg_basic_m
+  use lasers_m
+  use loct_parser_m
   use mesh_m
   use mesh_function_m
   use messages_m
@@ -46,18 +46,18 @@ module hamiltonian_m
   use multigrid_m
   use ob_interface_m
   use ob_lead_m
+  use poisson_m
   use profiling_m
   use projector_m
+  use scissor_m
   use simul_box_m
   use smear_m
-  use scissor_m
   use states_m
   use states_dim_m
   use units_m
   use varinfo_m
-  use lasers_m
-  use poisson_m
   use xc_m
+  use XC_F90(lib_m)
 
   implicit none
 
@@ -94,7 +94,7 @@ module hamiltonian_m
     hamiltonian_remove_oct_exchange, &
     hamiltonian_adjoint,             &
     hamiltonian_not_adjoint,         &
-    hamiltonian_hermitean,           &
+    hamiltonian_hermitian,           &
     hamiltonian_epot_generate,       &
     hamiltonian_update_potential,    &
     dvexternal,                      &
@@ -105,9 +105,9 @@ module hamiltonian_m
     ! in order to be able to operate on the states.
     type(states_dim_t) :: d
 
-    FLOAT, pointer :: vhartree(:) ! hartree potential
+    FLOAT, pointer :: vhartree(:) ! Hartree potential
     FLOAT, pointer :: vxc(:,:)    ! xc potential
-    FLOAT, pointer :: vhxc(:,:)   ! xc potential + hartree potential
+    FLOAT, pointer :: vhxc(:,:)   ! xc potential + Hartree potential
     FLOAT, pointer :: axc(:,:,:)  ! xc vector-potential divided by c
     FLOAT, pointer :: vtau(:,:)   ! Derivative of e_xc w.r.t. tau
 
@@ -161,7 +161,7 @@ module hamiltonian_m
     ! anisotropic scaling factor for the mass: different along x,y,z etc...
     FLOAT :: mass_scaling(MAX_DIM)
 
-    ! For the Hartree Fock Hamiltonian, the Fock operator depends on the states.
+    ! For the Hartree-Fock Hamiltonian, the Fock operator depends on the states.
     type(states_t) :: st
 
     ! There may be an "inhomogeneous", "source", or "forcing" term (useful for the OCT formalism)
@@ -277,9 +277,9 @@ contains
     !%Description
     !% The existence of an electronic current implies the creation of a self-induced magnetic
     !% field, which may in turn back-react on the system. Of course, a fully consistent treatment
-    !% of this kind of effects should be done of QED theory, but we will attempt a first
-    !% approximation to the problem by considering the lowest order relativistic terms
-    !% plugged in the normal Hamiltonian equations (spin-other-orbit coupling terms, etc). 
+    !% of this kind of effect should be done in QED theory, but we will attempt a first
+    !% approximation to the problem by considering the lowest-order relativistic terms
+    !% plugged into the normal Hamiltonian equations (spin-other-orbit coupling terms, etc.). 
     !% For the moment being, none of this is done, but a first step is taken by calculating
     !% the induced magnetic field of a system that has a current, by considering the magnetostatic
     !% approximation and Biot-Savart law:
@@ -288,10 +288,10 @@ contains
     !%
     !% <math> \vec{B} = \vec{\nabla} \times \vec{A}</math>
     !%
-    !% If CalculateSelfInducedMagneticField is set to yes, this <math> B </math> field is
-    !% calculated at the end of a gs calculation (nothing is done -- yet -- in the td case)
-    !% and printed out, if the Output variable contains the "potential" keyword (the prefix
-    !% of the output files are "Bind").
+    !% If <tt>CalculateSelfInducedMagneticField</tt> is set to yes, this <i>B</i> field is
+    !% calculated at the end of a <tt>gs</tt> calculation (nothing is done -- yet -- in the <tt>td </tt>case)
+    !% and printed out, if the <tt>Output</tt> variable contains the <tt>potential</tt> keyword (the prefix
+    !% of the output files is <tt>Bind</tt>).
     !%End
     if(hm%self_induced_magnetic) then
       select case(gr%mesh%sb%dim)
@@ -361,7 +361,7 @@ contains
     !%Description 
     !% It is possible to make calculations for a particle with a mass
     !% different from one (atomic unit of mass, or mass of the electron).
-    !% This is useful to describe non-electronic systems, of for
+    !% This is useful to describe non-electronic systems, or for
     !% esoteric purposes.
     !%End
     call loct_parse_float(datasets_check('ParticleMass'), M_ONE, hm%mass)
@@ -370,16 +370,16 @@ contains
     !%Type block
     !%Section Hamiltonian
     !%Description
-    !% scaling factor for anisotropic masses (different masses along each
-    !% geometric direction
+    !% Scaling factor for anisotropic masses (different masses along each
+    !% geometric direction).
     !%
     !% <tt>%MassScaling
     !% <br>&nbsp;&nbsp;1.0 | 1800.0 | 1800.0
     !% <br>%</tt>
     !%
-    !% would fix the mass of the particles to be 1800 along the y and z
-    !% directions. This can be useful, e.g., to simulate 3 particles in 1D,
-    !% viz in this case an electron and 2 protons.
+    !% would fix the mass of the particles to be 1800 along the <i>y</i> and <i>z</i>
+    !% directions. This can be useful, <i>e.g.</i>, to simulate 3 particles in 1D,
+    !% in this case an electron and 2 protons.
     !%
     !%End
     hm%mass_scaling = M_ONE
@@ -430,17 +430,22 @@ contains
     subroutine init_phase
       integer :: ip, ik
 
+      call push_sub('hamiltonian.hamiltonian_init.init_phase')
+
       SAFE_ALLOCATE(hm%phase(1:gr%mesh%np_part, 1:hm%d%nik))
 
       forall (ik = 1:hm%d%nik, ip = 1:gr%mesh%np_part)
         hm%phase(ip, ik) = exp(-M_zI*sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim)* hm%d%kpoints(1:gr%mesh%sb%dim, ik)))
       end forall
-      
+
+      call pop_sub()      
     end subroutine init_phase
 
 
     subroutine init_abs_boundaries()
       FLOAT  :: d
+
+      call push_sub('hamiltonian.hamiltonian_init.init_abs_boundaries')
 
       !%Variable ABWidth
       !%Type float
@@ -449,18 +454,18 @@ contains
       !%Description
       !% Width of the region used to apply the absorbing boundaries.
       !%End
-      call loct_parse_float(datasets_check('ABWidth'), CNST(0.4)/units_inp%length%factor, hm%ab_width)
-      hm%ab_width  = hm%ab_width * units_inp%length%factor
+      call loct_parse_float(datasets_check('ABWidth'), units_from_atomic(units_inp%length, CNST(0.4)), hm%ab_width)
+      hm%ab_width = units_to_atomic(units_inp%length, hm%ab_width)
       if(hm%ab == 1) then
         !%Variable ABHeight
         !%Type float
         !%Default -0.2 a.u.
         !%Section Time-Dependent::Absorbing Boundaries
         !%Description 
-        !% When <tt>AbsorbingBoundaries == sin2</tt>, this is the height of the imaginary potential.
+        !% When <tt>AbsorbingBoundaries = sin2</tt>, this is the height of the imaginary potential.
         !%End
-        call loct_parse_float(datasets_check('ABHeight'), -CNST(0.2)/units_inp%energy%factor, hm%ab_height)
-        hm%ab_height = hm%ab_height * units_inp%energy%factor
+        call loct_parse_float(datasets_check('ABHeight'), units_from_atomic(units_inp%energy, -CNST(0.2)), hm%ab_height)
+        hm%ab_height = units_to_atomic(units_inp%energy, hm%ab_height)
       else
         hm%ab_height = M_ONE
       end if
@@ -473,6 +478,8 @@ contains
           hm%ab_pot(i) = hm%ab_height * sin(d*M_PI/(M_TWO*hm%ab_width))**2
         end if
       end do
+
+      call pop_sub()
     end subroutine init_abs_boundaries
 
     ! ---------------------------------------------------------
@@ -486,9 +493,10 @@ contains
       type(mesh_t), pointer :: m
       logical               :: t_inv
 
+      call push_sub('hamiltonian.hamiltonian_init.init_lead_h')
 
       ! Read potential of the leads. We try vks-x (for DFT without
-      ! pseudo-potentials) and v0 (for non-interacting electrons) in
+      ! pseudopotentials) and v0 (for non-interacting electrons) in
       ! that order (Octopus binary and NetCDF format). If none of the
       ! two can be found, a warning is emitted and zero potential
       ! assumed.
@@ -676,6 +684,7 @@ contains
         end if
       end do
 
+      call pop_sub()
     end subroutine init_lead_h
   end subroutine hamiltonian_init
 
@@ -750,11 +759,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! True if the Hamiltonian is Hermitean, false otherwise
-  logical function hamiltonian_hermitean(hm)
+  ! True if the Hamiltonian is Hermitian, false otherwise
+  logical function hamiltonian_hermitian(hm)
     type(hamiltonian_t), intent(in) :: hm
-    hamiltonian_hermitean = .not.((hm%ab .eq. IMAGINARY_ABSORBING) .or. hamiltonian_oct_exchange(hm))
-  end function hamiltonian_hermitean
+
+    call push_sub('hamiltonian.hamiltonian_hermitian')
+    hamiltonian_hermitian = .not.((hm%ab .eq. IMAGINARY_ABSORBING) .or. hamiltonian_oct_exchange(hm))
+
+    call pop_sub()
+  end function hamiltonian_hermitian
 
   ! ---------------------------------------------------------
   subroutine hamiltonian_span(hm, delta, emin)
@@ -773,6 +786,7 @@ contains
   ! ---------------------------------------------------------
   pure logical function hamiltonian_inh_term(hm) result(inh)
     type(hamiltonian_t), intent(in) :: hm
+
     inh = hm%inh_term
   end function hamiltonian_inh_term
 
@@ -781,26 +795,40 @@ contains
   subroutine hamiltonian_set_inh(hm, st)
     type(hamiltonian_t), intent(inout) :: hm
     type(states_t), target, intent(in) :: st
+
+    call push_sub('hamiltonian.hamiltonian_set_inh')
+
     if(hm%inh_term) call states_end(hm%inh_st)
     call states_copy(hm%inh_st, st)
     hm%inh_term = .true.
+
+    call pop_sub()
   end subroutine hamiltonian_set_inh
 
 
   ! ---------------------------------------------------------
   subroutine hamiltonian_remove_inh(hm)
     type(hamiltonian_t), intent(inout) :: hm
+
+    call push_sub('hamiltonian.hamiltonian_remove_inh')
+
     if(hm%inh_term) then
       call states_end(hm%inh_st)
       hm%inh_term = .false.
     end if
+
+    call pop_sub()
   end subroutine hamiltonian_remove_inh
 
 
   ! ---------------------------------------------------------
   logical function hamiltonian_oct_exchange(hm) result(oct_exchange)
     type(hamiltonian_t), intent(in) :: hm
+
+    call push_sub('hamiltonian.hamiltonian_oct_exchange')
     oct_exchange = hm%oct_exchange
+
+    call pop_sub()
   end function hamiltonian_oct_exchange
 
 
@@ -811,6 +839,8 @@ contains
     type(grid_t), intent(in) :: gr
     type(xc_t), intent(in) :: xc
     integer :: np, nspin
+
+    call push_sub('hamiltonian.hamiltonian_set_oct_exchange')
 
     ! In this release, no non-local part for the QOCT Hamiltonian.
     nullify(hm%oct_st)
@@ -824,6 +854,7 @@ contains
     hm%oct_fxc = M_ZERO
     call xc_get_fxc(xc, gr%mesh, st%rho, st%d%ispin, hm%oct_fxc)
 
+    call pop_sub()
   end subroutine hamiltonian_set_oct_exchange
 
 
@@ -831,9 +862,13 @@ contains
   subroutine hamiltonian_remove_oct_exchange(hm)
     type(hamiltonian_t), intent(inout) :: hm
 
+    call push_sub('hamiltonian.hamiltonian_remove_oct_exchange')
+
     nullify(hm%oct_st)
     hm%oct_exchange = .false.
     SAFE_DEALLOCATE_P(hm%oct_fxc)
+
+    call pop_sub()
   end subroutine hamiltonian_remove_oct_exchange
 
 
@@ -841,12 +876,16 @@ contains
   subroutine hamiltonian_adjoint(hm)
     type(hamiltonian_t), intent(inout) :: hm
 
+    call push_sub('hamiltonian.hamiltonian_adjoint')
+
     if(.not.hm%adjoint) then
       hm%adjoint = .true.
       if(hm%ab .eq. IMAGINARY_ABSORBING) then
         hm%ab_pot = -hm%ab_pot
       end if
     endif
+
+    call pop_sub()
   end subroutine hamiltonian_adjoint
 
 
@@ -854,12 +893,16 @@ contains
   subroutine hamiltonian_not_adjoint(hm)
     type(hamiltonian_t), intent(inout) :: hm
 
+    call push_sub('hamiltonian.hamiltonian_not_adjoint')
+
     if(hm%adjoint) then
       hm%adjoint = .false.
       if(hm%ab .eq. IMAGINARY_ABSORBING) then
         hm%ab_pot = -hm%ab_pot
       end if
     endif
+
+    call pop_sub()
   end subroutine hamiltonian_not_adjoint
 
   subroutine hamiltonian_update_potential(this, mesh)
@@ -867,6 +910,8 @@ contains
     type(mesh_t),        intent(in)    :: mesh
 
     integer :: ispin, ip
+
+    call push_sub('hamiltonian.hamiltonian_update_potential')
 
     do ispin = 1, this%d%nspin
       
@@ -879,6 +924,7 @@ contains
     end do
     
     call profiling_count_operations(mesh%np*this%d%nspin)
+    call pop_sub()
   end subroutine hamiltonian_update_potential
 
   subroutine hamiltonian_epot_generate(this, gr, geo, st, time)
@@ -888,6 +934,8 @@ contains
     type(states_t),        intent(inout) :: st
     FLOAT,       optional, intent(in)    :: time
 
+    call push_sub('hamiltonian.hamiltonian_epot_generate')
+
     if(present(time)) then
       call epot_generate(this%ep, gr, geo, st, time)
     else
@@ -896,6 +944,7 @@ contains
 
     call hamiltonian_update_potential(this, gr%mesh)
 
+    call pop_sub()
   end subroutine hamiltonian_epot_generate
 
 #include "undef.F90"

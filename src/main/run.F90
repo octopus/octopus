@@ -80,7 +80,7 @@ contains
     !%Default false
     !%Section Execution
     !%Description
-    !% When this variable is yes, Octopus will always perform a
+    !% When this variable is set to true, <tt>Octopus</tt> will perform a
     !% calculation from the beginning, without looking for restart
     !% information.
     !%End
@@ -150,7 +150,7 @@ contains
     !% Some response properties can be calculated either via
     !% Sternheimer linear response or by using finite
     !% differences. You can use this variable to select how you want
-    !% them to be calculated, it applies to em_resp and vib_modes
+    !% them to be calculated, it applies to <tt>em_resp</tt> and <tt>vib_modes</tt>
     !% calculation modes. By default, the Sternheimer linear-response
     !% technique is used.
     !%Option sternheimer 1

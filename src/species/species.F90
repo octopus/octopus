@@ -400,7 +400,7 @@ contains
     case(SPEC_USDEF)
       if(print_info_) then
         write(message(1),'(a,a,a)')    'Species "',trim(s%label),'" is a user-defined potential.'
-        i = min(237, len_trim(s%user_def)-1) ! I substract 1 to avoid the non-printable C "end-of-string" character.
+        i = min(237, len_trim(s%user_def)-1) ! I subtract 1 to avoid the non-printable C "end-of-string" character.
         write(message(2),'(a,a)')      '   Potential = ', trim(s%user_def(1:i))
         if(len(trim(s%user_def)).gt.237) then
           message(2) = trim(message(2))//'...'

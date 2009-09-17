@@ -26,8 +26,8 @@ module distributed_m
   use loct_m
   use loct_parser_m
   use messages_m
-  use multicomm_m
   use mpi_m
+  use multicomm_m
   use profiling_m
   use utils_m
   use varinfo_m

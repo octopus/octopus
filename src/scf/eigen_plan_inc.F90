@@ -62,11 +62,11 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
   integer  :: blk, i, ii, idim, dim, j, d1, d2, matvec, nconv
   FLOAT :: x
 
-  ! Some hard coded parameters.
+  ! Some hard-coded parameters.
   integer, parameter  :: winsiz = 5  ! window size, number of eigenvalues computed simultaneously
   integer, parameter  :: krylov = 15 ! The Krylov subspace size.
 
-  call push_sub('eigen_plan.eigensolver_plan')
+  call push_sub('eigen_plan_inc.Xeigensolver_plan')
 
   !  n          = m%np*st%d%dim
   dim        = st%d%dim
@@ -115,7 +115,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
   d1     = 0 ! index for inner loop
   nconv  = 0 ! number of eigen-pairs converged.
 
-  ! Sets the projected hamiltonian matrix to zero.
+  ! Sets the projected Hamiltonian matrix to zero.
   h = R_TOTYPE(M_ZERO)
 
   ! Beginning of the outer loop; start/restart
@@ -202,7 +202,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
              R_TOTYPE(M_ZERO), eigenvec(:, :, nec + 1))
         call lalg_gemv(gr%mesh%np, dim, d2, R_TOTYPE(M_ONE), av(:, :, 1:d2), hevec(1:d2, 1), &
              R_TOTYPE(M_ZERO), av(:, :, d2 + 1))
-        call residual(dim, av(:, :, d2+1), eigenvec(:, :, nec+1), tmp(1), av(:, :, d2+1), res(nec+1))
+        call residual(av(:, :, d2+1), eigenvec(:, :, nec+1), tmp(1), av(:, :, d2+1), res(nec+1))
 
         ! If the first Ritz eigen-pair converged, compute all
         ! Ritz vectors and the residual norms.
@@ -216,7 +216,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
                  R_TOTYPE(M_ZERO), v  (:, :, i))
           end do
           do i = 2, winsiz
-            call residual(dim, v(:, :, i), eigenvec(:, :, nec+i), tmp(i), av(:, :, i), res(nec+i))
+            call residual(v(:, :, i), eigenvec(:, :, nec+i), tmp(i), av(:, :, i), res(nec+i))
           end do
         end if
         d1 = d2
@@ -234,7 +234,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
             call lalg_copy(gr%mesh%np, v(:, idim, i), av(:, idim, i))
             call lalg_copy(gr%mesh%np, eigenvec(:, idim, nec + i), v(:, idim, i))
           end do
-          call residual(dim, av(:, :, i), v(:, :, i), tmp(i), av(:, :, winsiz+i), res(nec+i))
+          call residual(av(:, :, i), v(:, :, i), tmp(i), av(:, :, winsiz+i), res(nec+i))
         end do
 
         ! Forms the first winsiz rows of H = V^T A V
@@ -310,15 +310,14 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
 contains
 
   ! ---------------------------------------------------------
-  subroutine residual(dim, hv, v, e, res, r)
-    integer, intent(in)    :: dim
+  subroutine residual(hv, v, e, res, r)
     R_TYPE,  intent(inout) :: hv(:,:)
     R_TYPE,  intent(inout) :: v(:,:)
     FLOAT,   intent(in)    :: e
     R_TYPE,  intent(inout) :: res(:,:)
     FLOAT,   intent(out)   :: r
 
-    call push_sub('eigen_plan.residual')
+    call push_sub('eigen_plan_inc.Xeigensolver_plan.residual')
 
     res = hv - e*v
     r = X(mf_nrm2)(gr%mesh, dim, res)

@@ -58,8 +58,8 @@ program octopus
   !%Section Execution::Debug
   !%Description
   !% This variable decides whether or not to enter debug mode.
-  !% If its value is 0 (the default) Octopus does not enter debug mode.
-  !% If it is greater than 0 different amounts of additional information
+  !% If its value is 0 (the default) <tt>Octopus</tt> does not enter debug mode.
+  !% If it is greater than 0, different amounts of additional information
   !% are written to standard output and additional assertion checks are performed.
   !% Level 1: moderate amount of debug output but assertion checks enabled.
   !% Level 2: the code prints a stack trace as it enters end exits subroutines.
@@ -67,7 +67,7 @@ program octopus
   !% submitting a bug report.
   !% Level 100: the debug output is additionally written to files in the debug
   !% directory. For each node (when running in parallel) there is a file called
-  !% debug_trace.<rank>. Writing these files slows down the code by a huge factor and
+  !% <tt>debug_trace.&lt;rank&gt;</tt>. Writing these files slows down the code by a huge factor and
   !% it is usually only necessary for parallel runs. In the serial case all
   !% the information can be obtained from standard out.
   !%End
@@ -86,10 +86,10 @@ program octopus
   !%Default no
   !%Section Execution::Debug
   !%Description
-  !% If true, octopus will print as part of the screen output
+  !% If true, <tt>Octopus</tt> will print as part of the screen output
   !% information about the memory the code is using. The quantity
   !% reported is an approximation to the size of the heap and
-  !% generally it is a lower bound to the actual memory octopus is
+  !% generally it is a lower bound to the actual memory <tt>Octopus</tt> is
   !% using. By default this variable is set to false.
   !%End
   call loct_parse_logical('ReportMemory', .false., conf%report_memory)
@@ -104,13 +104,13 @@ program octopus
   !%Description
   !% Decides what kind of calculation is to be performed.
   !%Option gs 01
-  !% Calculation of the ground state
+  !% Calculation of the ground state.
   !%Option unocc 02
-  !% Calculation of unoccupied/virtual KS states
+  !% Calculation of unoccupied/virtual KS states.
   !%Option td 03
-  !% Time-dependent calculation
+  !% Time-dependent calculation.
   !%Option go 05
-  !% Optimization of the geometry
+  !% Optimization of the geometry.
   !%Option opt_control 07
   !% Optimal control.
   !%Option em_resp 08
@@ -121,30 +121,30 @@ program octopus
   !%Option casida 09
   !% Excitations via Casida linear-response TDDFT; for finite systems only.
   !%Option td_transport 10
-  !% Time-dependent quantum transport
+  !% Time-dependent quantum transport.
   !%Option vdw 11
-  !% Calculate van der Waals coefficients
+  !% Calculate van der Waals coefficients.
   !%Option vib_modes 12
   !% Calculation of the vibrational modes.
   !%Option raman 13
   !% Calculation of Raman response properties.
   !% Currently available only in development version.
   !%Option one_shot 14
-  !% Use the self-consistent wave-functions in the restart directory to
-  !% evaluate the total energy using a different xc functional.
+  !% Use the self-consistent wavefunctions in the <tt>restart</tt> directory to
+  !% evaluate the total energy using a different XC functional.
   !% This is effectively a first-order perturbative calculation of the total energy, 
-  !% the perturbation being the difference between the two xc used.
+  !% the perturbation being the difference between the two XC potentials used.
   !%Option kdotp 15
-  !% Calculation of effective masses by k.p perturbation theory.
+  !% Calculation of effective masses by <i>k.p<i> perturbation theory.
   !% Currently available only in development version.
   !%Option gcm 16
   !% Generator-Coordinates calculation (experimental).
   !%Option memory 17
-  !% It tells you the approximate amount of memory octopus will need to run.
+  !% It tells you the approximate amount of memory <tt>Octopus</tt> will need to run.
   !%Option invert_ks 18
-  !% Run mode used to invert the Kohn-Sham equations
+  !% Run mode used to invert the Kohn-Sham equations.
   !%Option recipe 99
-  !% Prints out a tasty recipe
+  !% Prints out a tasty recipe.
   !%End
   if(loct_parse_block('CalculationMode', blk) == 0) then
     call datasets_init(inp_calc_mode, blk)
@@ -267,7 +267,7 @@ program octopus
     !%Section System
     !%Default 3
     !%Description
-    !% octopus can run in 1, 2 or 3 dimensions, depending on the value of this
+    !% <tt>Octopus</tt> can run in 1, 2 or 3 dimensions, depending on the value of this
     !% variable. Note that not all input variables may be available in all cases.
     !%End
     call loct_parse_int(datasets_check('Dimensions'), 3, calc_dim)

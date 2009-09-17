@@ -136,19 +136,19 @@ contains
 
     !%Variable FilterPotentials
     !%Type integer
-    !%Default 1
+    !%Default filter_none
     !%Section Hamiltonian
     !%Description
-    !% Octopus filters the pseudopotentials so that they no
+    !% <tt>Octopus</tt> can filter the pseudopotentials so that they no
     !% longer contain Fourier components larger than the mesh itself. This is
     !% very useful to decrease the egg-box effect, and so should be used in
     !% all instances where atoms move.
     !%Option filter_none 1
-    !% Do not filter
+    !% Do not filter.
     !%Option filter_TS 2
-    !% The filter of M. Tafipolsky and R. Schmid, <i>J. Chem. Phys.</i> <b>124</b>, 174102 (2006)
+    !% The filter of M. Tafipolsky and R. Schmid, <i>J. Chem. Phys.</i> <b>124</b>, 174102 (2006).
     !%Option filter_BSB 3
-    !% The filter of E. L. Briggs, D. J. Sullivan, and J. Bernholc, <i>Phys. Rev. B</i> <b>54</b>, 14362 (1996)
+    !% The filter of E. L. Briggs, D. J. Sullivan, and J. Bernholc, <i>Phys. Rev. B</i> <b>54</b>, 14362 (1996).
     !%End
     call loct_parse_int(datasets_check('FilterPotentials'), PS_FILTER_NONE, filter)
     if(.not.varinfo_valid_option('FilterPotentials', filter)) call input_error('FilterPotentials')
@@ -195,10 +195,10 @@ contains
     !%Type block
     !%Section Hamiltonian
     !%Description
-    !% A static constant electrical field may be added to the usual Hamiltonian,
-    !% by setting the block StaticElectricField.
+    !% A static constant electric field may be added to the usual Hamiltonian,
+    !% by setting the block <tt>StaticElectricField</tt>.
     !% The three possible components of the block (which should only have one
-    !% line) are the three components of the electrical field vector.
+    !% line) are the three components of the electric field vector.
     !%End
     nullify(ep%E_field, ep%v_static)
     if(loct_parse_block(datasets_check('StaticElectricField'), blk)==0) then
@@ -222,15 +222,15 @@ contains
     !%Section Hamiltonian
     !%Description
     !% A static constant magnetic field may be added to the usual Hamiltonian,
-    !% by setting the block StaticMagneticField. 
+    !% by setting the block <tt>StaticMagneticField</tt>.
     !% The three possible components of the block (which should only have one
     !% line) are the three components of the magnetic field vector. Note that
-    !% if you are running the code in 1D mode this will not work, and if you
+    !% if you are running the code in 1D mode, this will not work, and if you
     !% are running the code in 2D mode the magnetic field will have to be in
-    !% the z-direction, so that the first two columns should be zero.
+    !% the <i>z</i>-direction, so that the first two columns should be zero.
     !%
     !% The magnetic field should always be entered in atomic units, regardless
-    !% of the "Units" variable. Note that we use the "Gaussian" system
+    !% of the <tt>Units</tt> variable. Note that we use the "Gaussian" system
     !% meaning 1 au[B] = 1.7152553 * 10^7 gauss, which corresponds to
     !% 1.7152553 * 10^3 Tesla.
     !%End
@@ -297,7 +297,7 @@ contains
     !%Option non_relativistic 0
     !% No relativistic corrections.
     !%Option spin_orbit 1
-    !% Spin-Orbit.
+    !% Spin-orbit.
     !%Option app_zora 2
     !% Approximated ZORA (Not implemented)
     !%Option zora 3
@@ -322,7 +322,7 @@ contains
     !%Section Hamiltonian
     !%Description
     !% Tuning of the spin-orbit coupling strength: setting this value to zero turns off spin-orbit terms in
-    !% the hamiltonian, and setting it to one corresponds to full spin-orbit.
+    !% the Hamiltonian, and setting it to one corresponds to full spin-orbit.
     !%End
     if (ep%reltype == SPIN_ORBIT) then
       call loct_parse_float(datasets_check('SOStrength'), M_ONE, ep%so_strength)
@@ -487,9 +487,11 @@ contains
       ep%non_local = .true.
       call projector_end(ep%proj(ia))
       call projector_init(ep%proj(ia), gr%mesh, sb, atm, st%d%dim, ep%reltype)
+
       if(simul_box_is_periodic(sb) .or. associated(ep%a_static)) then
         call projector_init_phases(ep%proj(ia), sb, st%d%nik, st%d%kpoints, vec_pot_var = ep%a_static)
       end if
+
       call projector_build(ep%proj(ia), gr, atm, ep%so_strength)
 
       ! the projectors in the fine grid
@@ -501,7 +503,6 @@ contains
         end if
         call projector_build(ep%proj_fine(ia), gr, atm, ep%so_strength)
       end if
-
     end do
 
     ! add static electric fields

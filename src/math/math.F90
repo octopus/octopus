@@ -356,7 +356,7 @@ contains
     if (li.eq.0) then
       ylm = c(0)
       grylm(:) = M_ZERO
-      call pop_sub(); return
+      return
     end if
 
     ! if r=0, direction is undefined => make ylm=0 except for l=0
@@ -364,7 +364,7 @@ contains
     if(r2.lt.tiny) then
       ylm = M_ZERO
       grylm(:) = M_ZERO
-      call pop_sub(); return
+      return
     end if
     rsize = sqrt(r2)
 
@@ -391,7 +391,7 @@ contains
         grylm(2) = c(3)*Ry*Rx/rsize
         grylm(3) = c(3)*Rz*Rx/rsize
       end select
-      call pop_sub(); return
+      return
     end if
 
     if(li.eq.2) then

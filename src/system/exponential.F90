@@ -24,6 +24,7 @@ module exponential_m
   use blas_m
   use cube_function_m
   use datasets_m
+  use exponential_split_m
   use hardware_m
   use fourier_space_m
   use lalg_adv_m
@@ -32,10 +33,9 @@ module exponential_m
   use loct_parser_m
   use mesh_function_m
   use profiling_m
-  use states_calc_m
-  use exponential_split_m
-  use varinfo_m
   use states_m
+  use states_calc_m
+  use varinfo_m
 
   implicit none
 
@@ -143,7 +143,7 @@ contains
     !% of the exponential represents it more accurately than the canonical or standard expansion. 
     !% As in the latter case, <tt>TDExpOrder</tt> determines the order of the expansion.
     !%
-    !% There exists a closed analytical form for the coefficients of the exponential in terms
+    !% There exists a closed analytic form for the coefficients of the exponential in terms
     !% of Chebyshev polynomials:
     !%
     !% <MATH>\exp_{\rm CHEB} \left( -i\delta t H \right) = \sum_{k=0}^{\infty} (2-\delta_{k0})(-i)^{k}J_k(\delta t) T_k(H),</MATH>
@@ -231,7 +231,7 @@ contains
   !
   ! exp{ deltat*hm(t)}|zpsi>  <-- |zpsi>
   !
-  ! If the hamiltonian contains an inhomogeneous term, the operation is:
+  ! If the Hamiltonian contains an inhomogeneous term, the operation is:
   !
   ! exp{-i*deltat*hm(t)}|zpsi> + deltat*phi{-i*deltat*hm(t)}|zpsi>  <-- |zpsi>
   !
@@ -372,7 +372,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine cheby()
-      ! Calculates the exponential of the hamiltonian through a expansion in 
+      ! Calculates the exponential of the Hamiltonian through an expansion in 
       ! Chebyshev polynomials.
       ! For that purposes it uses the closed form of the coefficients[1] and Clenshaw-Gordons[2]
       ! recursive algorithm.
@@ -461,10 +461,10 @@ contains
             call lalg_copy(gr%mesh%np, v(:, idim, iter), zpsi(:, idim))
           end do
 
-          !to apply the hamiltonian
+          !to apply the Hamiltonian
           call operate(zpsi, v(:, :,  iter + 1))
         
-          if(hamiltonian_hermitean(hm)) then
+          if(hamiltonian_hermitian(hm)) then
             l = max(1, iter - 1)
           else
             l = 1
@@ -474,7 +474,7 @@ contains
           call zstates_gram_schmidt(gr%mesh, iter - l + 1, hm%d%dim, v(:, :, l:iter), v(:, :, iter + 1), &
             normalize = .true., overlap = hamilt(l:iter, iter), norm = hamilt(iter + 1, iter))
 
-          call zlalg_exp(iter, pp, hamilt, expo, hamiltonian_hermitean(hm))
+          call zlalg_exp(iter, pp, hamilt, expo, hamiltonian_hermitian(hm))
 
           res = abs(hamilt(iter + 1, iter)*abs(expo(iter, 1)))
 
@@ -516,11 +516,11 @@ contains
               call lalg_copy(gr%mesh%np, v(:, idim, iter), psi(:, idim))
             end do
 
-            !to apply the hamiltonian
+            !to apply the Hamiltonian
             call operate(psi, v(:, :, iter + 1))
   
 
-            if(hamiltonian_hermitean(hm)) then
+            if(hamiltonian_hermitian(hm)) then
               l = max(1, iter - 1)
             else
               l = 1
@@ -531,7 +531,7 @@ contains
               v(:, :, iter + 1), normalize = .true., overlap = hamilt(l:iter, iter), &
               norm = hamilt(iter + 1, iter))
 
-            call zlalg_phi(iter, pp, hamilt, expo, hamiltonian_hermitean(hm))
+            call zlalg_phi(iter, pp, hamilt, expo, hamiltonian_hermitian(hm))
  
             res = abs(hamilt(iter + 1, iter)*abs(expo(iter, 1)))
 

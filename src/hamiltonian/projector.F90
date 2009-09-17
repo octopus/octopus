@@ -22,29 +22,29 @@
 module projector_m
   use batch_m
   use double_grid_m
+  use geometry_m
   use global_m
   use grid_m
+  use hgh_projector_m
   use io_m
+  use kb_projector_m
   use lalg_basic_m
   use math_m
   use mesh_function_m
   use mesh_m
   use messages_m
-  use simul_box_m
   use profiling_m
   use ps_m
-  use geometry_m
-  use states_m
   use simul_box_m
+  use states_m
   use submesh_m
   use mpi_m
   use mpi_debug_m
   use multicomm_m
-  use varinfo_m
-  use hgh_projector_m
-  use kb_projector_m
   use rkb_projector_m
+  use simul_box_m
   use species_m
+  use varinfo_m
 
   implicit none
 

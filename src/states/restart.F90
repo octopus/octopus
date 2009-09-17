@@ -112,19 +112,19 @@ contains
 
     !%Variable RestartFileFormat
     !%Type integer
-    !%Default restart_netcdf
+    !%Default restart_binary
     !%Section Execution::IO
     !%Description
     !% Determines in which format the restart files should be written. The default
-    !% is binary files (restart_binary).
+    !% is binary files (<tt>restart_binary</tt>).
     !%Option restart_none 0
-    !% Restart information is not written, useful for testing.
+    !% Restart information is not written (useful for testing).
     !%Option restart_netcdf 2
-    !% NetCDF (platform independent) format. This requires the NETCDF library.
+    !% NetCDF (platform-independent) format. This requires the NetCDF library.
     !%Option restart_binary 3
     !% Octopus Binary Format, the new and more flexible binary format
-    !% of Octopus. It is faster and produces smaller files than NetCDF
-    !% and it is platform-independent.
+    !% of <tt>Octopus</tt>. It is faster and produces smaller files than NetCDF
+    !% and it is also platform-independent.
     !%End
 
     default = RESTART_BINARY
@@ -153,7 +153,7 @@ contains
     !%Default ''
     !%Section Execution::IO
     !%Description
-    !% When Octopus reads restart files, e. g. when running a time-propagation
+    !% When <tt>Octopus</tt> reads restart files, e. g. when running a time-propagation
     !% after a ground-state calculation, these files will be read from
     !% <tt>&lt;RestartDir&gt/</tt>. Usually, <tt>RestartDir</tt> is
     !% <tt>TmpDir</tt> but in a transport calculation, the output of
@@ -383,7 +383,7 @@ contains
 
     call push_sub('restart.restart_read_ob_intf')
 
-    write(message(1), '(a,i5)') 'Info: Reading ground state interface wave functions'
+    write(message(1), '(a,i5)') 'Info: Reading ground-state interface wavefunctions'
     call write_info(1)
 
     mpi_grp = mpi_world
@@ -395,7 +395,7 @@ contains
 
     ierr = 0
 
-    ! Read the mesh of the ground state calculation.
+    ! Read the mesh of the ground-state calculation.
     io_mesh = io_open(trim(dir)//'/mesh', action='read', status='old', die=.false., is_tmp=.true.)
     if(io_mesh.lt.0) then
       ierr = -1
@@ -420,7 +420,7 @@ contains
     end if
 
     if(ierr.ne.0) then
-      write(message(1),'(a)') 'Could not load ground state interface wave functions.'
+      write(message(1),'(a)') 'Could not load ground-state interface wavefunctions.'
       call write_info(1)
       call messages_print_stress(stdout)
       call pop_sub()
@@ -482,7 +482,7 @@ contains
     if(ierr.eq.0) then
       ierr = -1
       call messages_print_stress(stdout, 'Loading restart information')
-      message(1) = 'No interface wave functions could be read.'
+      message(1) = 'No interface wavefunctions could be read.'
       call write_info(1)
       call messages_print_stress(stdout)
     else
@@ -490,7 +490,7 @@ contains
         ierr = 0
       else
         call messages_print_stress(stdout, 'Loading restart information')
-        write(message(1),'(a,i4,a,i4,a)') 'Only ', ierr,' interface wave functions out of ', &
+        write(message(1),'(a,i4,a,i4,a)') 'Only ', ierr,' interface wavefunctions out of ', &
           st%nst*st%d%nik*st%d%dim, ' could be read.'
         call write_info(1)
         call messages_print_stress(stdout)
@@ -507,8 +507,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Reads the central regions of the ground state wavefunctions of
-  ! an open boundaries calculation.
+  ! Reads the central regions of the ground-state wavefunctions of
+  ! an open-boundaries calculation.
   ! Returns (in ierr)
   ! <0 => Fatal error,
   ! =0 => read all wave-functions,
@@ -861,6 +861,8 @@ contains
 
     ! ---------------------------------------------------------
     subroutine interpolation_init
+      call push_sub('restart.restart_read.interpolation_init')
+
       call mesh_init_stage_1(old_mesh, old_sb, old_cv, gr%der%n_ghost)
       call mesh_init_stage_2(old_mesh, old_sb, geo, old_cv, gr%stencil)
       call mesh_init_stage_3(old_mesh)
@@ -870,22 +872,29 @@ contains
       else
         SAFE_ALLOCATE(zphi(1:old_mesh%np_global))
       end if
+
+      call pop_sub()
     end subroutine interpolation_init
 
 
     ! ---------------------------------------------------------
     subroutine interpolation_end
+      call push_sub('restart.restart_read.interpolation_end')
+
       call mesh_end(old_mesh)
       if (states_are_real(st)) then
         SAFE_DEALLOCATE_A(dphi)
       else
         SAFE_DEALLOCATE_A(zphi)
       end if
+
+      call pop_sub()
     end subroutine interpolation_end
 
 
     ! ---------------------------------------------------------
     subroutine read_previous_mesh
+      call push_sub('restart.restart_read.read_previous_mesh')
 
       mesh_change = .false.
       full_interpolation = .true.
@@ -919,7 +928,7 @@ contains
         if(.not.full_interpolation) then
           write(message(1),'(a)') 'The functions stored in "restart/gs" were obtained with' 
           write(message(2),'(a)') 'a different simulation box. The possible missing regions will be'
-          write(message(3),'(a)') 'padded with zeros.'
+          write(message(3),'(a)') 'padded with zeroes.'
           call write_info(3)
         else
           write(message(1),'(a)') 'The functions stored in "restart/gs" were obtained with' 
@@ -930,11 +939,13 @@ contains
         call interpolation_init()
       endif
     
+      call pop_sub()
     end subroutine read_previous_mesh
 
 
     ! ---------------------------------------------------------
     subroutine fill() ! Put random function in orbitals that could not be read.
+      call push_sub('restart.restart_read.fill')
 
       do ik = st%d%kpt%start, st%d%kpt%end
 
@@ -948,11 +959,14 @@ contains
         end do
       end do
 
+      call pop_sub()
     end subroutine fill
 
 
     ! ---------------------------------------------------------
     logical function index_is_wrong() ! .true. if the index (idim, ist, ik) is not present in st structure...
+      call push_sub('restart.restart_read.index_is_wrong')
+
       if(idim > st%d%dim .or. idim < 1 .or.   &
            ist   > st%nst   .or. ist  < 1 .or.   &
            ik    > st%d%nik .or. ik   < 1) then
@@ -960,13 +974,15 @@ contains
       else
         index_is_wrong = .false.
       end if
+
+      call pop_sub()
     end function index_is_wrong
 
   end subroutine restart_read
 
 
   ! ---------------------------------------------------------
-  ! When doing an open boundary calculation Octopus needs the
+  ! When doing an open-boundary calculation Octopus needs the
   ! unscattered states in order to solve the Lippmann-Schwinger
   ! equation to obtain extended eigenstates.
   ! Since we only need the occupied states we just read them.
@@ -985,7 +1001,7 @@ contains
     CMPLX, allocatable         :: tmp(:, :)
     type(mpi_grp_t)            :: mpi_grp
 
-    call push_sub('restart.states_read_free_states')
+    call push_sub('restart.read_free_states')
 
     sb       => gr%sb
     m_lead   => gr%mesh%lead_unit_cell(LEFT)
@@ -1111,7 +1127,7 @@ contains
     subroutine lead_dens_accum()
       integer :: il
 
-      call push_sub('restart.lead_dens_accum')
+      call push_sub('restart.read_free_states.lead_dens_accum')
       !FIXME no spinors yet
       do il = 1, NLEADS
         do ip = 1, np
@@ -1163,7 +1179,7 @@ contains
     !%Description
     !% Instead of using the ground state as initial state for
     !% time propagations it might be interesting in some cases 
-    !% to specify alternative states. Similarly to user-defined
+    !% to specify alternate states. Similar to user-defined
     !% potentials, this block allows you to specify formulas for
     !% the orbitals at t=0.
     !%
@@ -1175,11 +1191,11 @@ contains
     !%
     !% The first column specifies the component of the spinor, 
     !% the second column the number of the state and the third 
-    !% contains kpoint and spin quantum numbers. Column four
+    !% contains k-point and spin quantum numbers. Column four
     !% indicates that column five should be interpreted as a formula
     !% for the corresponding orbital.
     !% 
-    !% Alternatively, if column four states file the state will
+    !% Alternatively, if column four states <tt>file</tt> the state will
     !% be read from the file given in column five.
     !%
     !% <tt>%UserDefinedStates
@@ -1187,21 +1203,21 @@ contains
     !% <br>%</tt>
     !% 
     !% Octopus reads first the ground-state orbitals from
-    !% the restart/gs directory. Only the states that are
+    !% the <tt>restart/gs</tt> directory. Only the states that are
     !% specified in the above block will be overwritten with
-    !% the given analytical expression for the orbital.
+    !% the given analytic expression for the orbital.
     !%
-    !% The sixth (optional) column indicates if Octopus should renormalize the orbital
-    !% or not. The default, i. e. no sixth column given, is to renormalize.
+    !% The sixth (optional) column indicates whether <tt>Octopus</tt> should renormalize
+    !% the orbital. The default (no sixth column given) is to renormalize.
     !%
     !%Option file 0
-    !% Read initial orbital from file
+    !% Read initial orbital from file.
     !%Option formula 1
-    !% Calculate initial orbital by given analytic expression
+    !% Calculate initial orbital by given analytic expression.
     !%Option normalize_yes 1
-    !% Normalize orbitals (default)
+    !% Normalize orbitals (default).
     !%Option normalize_no 0
-    !% Do not normalize orbitals
+    !% Do not normalize orbitals.
     !%End
     if(loct_parse_block(datasets_check('UserDefinedStates'), blk) == 0) then
 
@@ -1252,12 +1268,12 @@ contains
                 ! convert to C string
                 call conv_to_C_string(st%user_def_states(id, is, ik))
 
-                ! fill states with user defined formulas
+                ! fill states with user-defined formulas
                 do ip = 1, mesh%np
                   x = mesh%x(ip, :)
                   r = sqrt(sum(x(:)**2))
 
-                  ! parse user defined expressions
+                  ! parse user-defined expressions
                   call loct_parse_expression(psi_re, psi_im, mesh%sb%dim, x, r, M_ZERO, st%user_def_states(id, is, ik))
                   ! fill state
                   st%zpsi(ip, id, is, ik) = psi_re + M_zI*psi_im
@@ -1308,7 +1324,7 @@ contains
       call messages_print_stress(stdout)
 
     else
-      message(1) = '"UserDefinesStates" has to be specified as block.'
+      message(1) = '"UserDefinedStates" has to be specified as block.'
       call write_fatal(1)
     end if
 

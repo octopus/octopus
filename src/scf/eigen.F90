@@ -24,6 +24,7 @@ module eigensolver_m
   use eigen_cg_m
   use eigen_lobpcg_m
   use eigen_rmmdiis_m
+  use exponential_m
   use global_m
   use grid_m
   use hamiltonian_m
@@ -31,7 +32,6 @@ module eigensolver_m
   use lalg_basic_m
   use loct_m
   use loct_parser_m
-  use varinfo_m
   use math_m
   use mesh_m
   use mesh_function_m
@@ -42,11 +42,11 @@ module eigensolver_m
   use preconditioners_m
   use profiling_m
   use states_m
-  use states_dim_m
   use states_calc_m
+  use states_dim_m
   use subspace_m
   use units_m
-  use exponential_m
+  use varinfo_m
 
   implicit none
 
@@ -92,23 +92,22 @@ contains
 
   ! ---------------------------------------------------------
   subroutine eigensolver_init(gr, eigens, st)
-    type(grid_t),         intent(inout) :: gr
+    type(grid_t),        intent(inout) :: gr
     type(eigensolver_t), intent(out)   :: eigens
-    type(states_t),       intent(in)    :: st
+    type(states_t),      intent(in)    :: st
 
-    integer :: default_iter
+    integer :: default_iter, default_es
 
     call push_sub('eigen.eigensolver_init')
 
     !%Variable Eigensolver
     !%Type integer
-    !%Default cg
     !%Section SCF::Eigensolver
     !%Description
-    !% Decides the eigensolver that obtains the lowest eigenvalues and
+    !% Which eigensolver to use to obtain the lowest eigenvalues and
     !% eigenfunctions of the Kohn-Sham Hamiltonian. The default is
-    !% conjugate gradients (cg), when parallelization in states is
-    !% enabled the default is lobpcg.
+    !% conjugate gradients (<tt>cg</tt>); when parallelization in states is
+    !% enabled, and <tt>DevelVersion = yes</tt>, the default is <tt>lobpcg</tt>.
     !%Option cg 5
     !% Conjugate-gradients algorithm.
     !%Option plan 11
@@ -121,23 +120,30 @@ contains
     !% caution.
     !%Option lobpcg 8
     !% Locally optimal block-preconditioned conjugate-gradient algorithm
-    !% (only available if DevelVersion = yes),
+    !% (only available if <tt>DevelVersion = yes</tt>),
     !% see: A. Knyazev. Toward the Optimal Preconditioned Eigensolver: Locally
-    !% Optimal Block Preconditioned Conjugate Gradient Method. SIAM
-    !% Journal on Scientific Computing, 23(2):517??541, 2001.
+    !% Optimal Block Preconditioned Conjugate Gradient Method. <i>SIAM
+    !% Journal on Scientific Computing </i>, 23(2):517-541, 2001.
     !%Option rmmdiis 10
     !% Residual minimization scheme, direct inversion in the iterative
     !% subspace eigensolver, based on the implementation of Kresse and
-    !% Furthmüller [Phys. Rev. B 54, 11169 (1996)]. This eigensolver
+    !% Furthmüller [<i>Phys. Rev. B</i> <b>54</b>, 11169 (1996)]. This eigensolver
     !% requires almost no orthogonalization so it can be considerably
-    !% faster than the other options for large systems, however it
+    !% faster than the other options for large systems; however it
     !% might suffer stability problems. To improve its performance a
-    !% large number of ExtraStates are required (around 10-20% of the
-    !% number of occupied states).
+    !% large number of <tt>ExtraStates</tt> are required (around 10-20% of the
+    !% number of occupied states). Only available if <tt>DevelVersion = yes</tt>.
     !%Option multigrid 7
     !% Multigrid eigensolver (experimental).
     !%End
-    call loct_parse_int(datasets_check('Eigensolver'), RS_CG, eigens%es_type)
+
+    if(st%parallel_in_states .and. conf%devel_version) then
+      default_es = RS_LOBPCG
+    else
+      default_es = RS_CG
+    endif
+
+    call loct_parse_int(datasets_check('Eigensolver'), default_es, eigens%es_type)
 
     if(st%parallel_in_states .and. .not. eigensolver_parallel_in_states(eigens)) then
       message(1) = "The selected eigensolver is not parallel in states."
@@ -150,7 +156,7 @@ contains
     !%Default no
     !%Section SCF::Eigensolver
     !%Description
-    !% If enabled the eigensolver prints additional information.
+    !% If enabled, the eigensolver prints additional information.
     !%End
     call loct_parse_logical(datasets_check('EigensolverVerbose'), .false., eigens%verbose)
 
@@ -168,8 +174,8 @@ contains
       !%Section SCF::Eigensolver
       !%Description
       !% The imaginary-time step that is used in the imaginary-time evolution
-      !% method to obtain the lowest eigenvalues/eigenvectors.
-      !% It must satisfy EigensolverImaginaryTime > 0.
+      !% method (<tt>Eigensolver = evolution</tt>) to obtain the lowest eigenvalues/eigenvectors.
+      !% It must satisfy <tt>EigensolverImaginaryTime > 0</tt>.
       !%End
       call loct_parse_float(datasets_check('EigensolverImaginaryTime'), CNST(10.0), eigens%imag_time)
       if(eigens%imag_time <= M_ZERO) call input_error('EigensolverImaginaryTime')
@@ -222,7 +228,7 @@ contains
     !% Determines the maximum number of iterations that the
     !% eigensolver will perform if the desired tolerance is not
     !% achieved. The default is 25 iterations for all eigensolvers
-    !% except for the rmmdiis that only performs one iteration (only
+    !% except for <tt>rmdiis</tt>, which only performs one iteration (only
     !% increase it if you know what you are doing).
     !%End
     call loct_parse_int(datasets_check('EigensolverMaxIter'), default_iter, eigens%es_maxiter)
@@ -251,6 +257,8 @@ contains
   subroutine eigensolver_end(eigens)
     type(eigensolver_t), intent(inout) :: eigens
 
+    call push_sub('eigen.eigensolver_end')
+
     select case(eigens%es_type)
     case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS)
       call preconditioner_end(eigens%pre)
@@ -259,6 +267,8 @@ contains
     SAFE_DEALLOCATE_P(eigens%converged)
     SAFE_DEALLOCATE_P(eigens%diff)
     nullify(eigens%diff)
+
+    call pop_sub()
   end subroutine eigensolver_end
 
 
@@ -312,9 +322,9 @@ contains
       if(verbose_) then
         if(st%d%nik > ns) then
           write(message(1), '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
-               st%d%kpoints(1, ik)*units_out%length%factor, ',',            &
-               st%d%kpoints(2, ik)*units_out%length%factor, ',',            &
-               st%d%kpoints(3, ik)*units_out%length%factor, ')'
+               units_from_atomic(unit_one / units_out%length, st%d%kpoints(1, ik)), ',', &
+               units_from_atomic(unit_one / units_out%length, st%d%kpoints(2, ik)), ',', &
+               units_from_atomic(unit_one / units_out%length, st%d%kpoints(3, ik)), ')'
           call write_info(1)
         end if
       end if
@@ -435,6 +445,8 @@ contains
   logical function eigensolver_parallel_in_states(this) result(par_stat)
     type(eigensolver_t), intent(in) :: this
     
+    call push_sub('eigen.eigensolver_parallel_in_states')
+
     par_stat = .false.
 
     select case(this%es_type)
@@ -442,10 +454,13 @@ contains
       par_stat = .true.
     end select
     
+    call pop_sub()
   end function eigensolver_parallel_in_states
     
   logical function eigensolver_has_progress_bar(this) result(has)
     type(eigensolver_t), intent(in) :: this
+
+    call push_sub('eigen.eigensolver_has_progress_bar')
 
     has = .false.
 
@@ -454,6 +469,7 @@ contains
       has = .true.
     end select
 
+    call pop_sub()
   end function eigensolver_has_progress_bar
   
 #include "undef.F90"

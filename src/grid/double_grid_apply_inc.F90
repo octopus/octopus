@@ -43,7 +43,7 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
   integer(kind=omp_lock_kind) :: lock
 #endif
 
-  ! inclusion from double_grid.F90 result in local and non-local versions
+  ! inclusion from double_grid.F90 results in local and non-local versions
   call push_sub('double_grid_apply.double_grid_apply')
 
   ps => species_ps(s)
@@ -163,6 +163,7 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
   end if
 
   nullify(ps)
+
   call pop_sub()
 
 end subroutine double_grid_apply

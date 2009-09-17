@@ -1264,7 +1264,6 @@ contains
     endif
 
     if (sb%box_shape == MINIMUM .and. sb%rsize <= M_ZERO) then
-      call write_info(1, iunit)
       do ispec = 1, geo%nspecies     
         write(message(1), '(a,a5,5x,a,f7.3,2a)') '  Species = ', trim(species_label(geo%species(ispec))), 'Radius = ', &
           units_from_atomic(units_out%length, species_def_rsize(geo%species(ispec))), ' ', trim(units_abbrev(units_out%length))

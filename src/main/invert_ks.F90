@@ -26,8 +26,8 @@ module invert_ks_m
   use h_sys_output_m
   use io_m
   use io_function_m
-  use loct_parser_m
   use lalg_adv_m
+  use loct_parser_m
   use mesh_m
   use mesh_function_m
   use messages_m
@@ -55,21 +55,21 @@ contains
     integer :: invksmethod
     FLOAT :: diffdensity
     FLOAT, allocatable :: target_rho(:,:)
-
     type(scf_t) :: scfv
-
       
+    call push_sub('invert_ks.invert_ks_run')
+
     !%Variable InvertKSmethod
     !%Type integer
-    !%Default 0
+    !%Default iterative
     !%Section Calculation Modes::Invert KS
     !%Description
-    !% Selects whether the exact 2 particle method or the iterative scheme
-    !% is used to invert the density to get the KS potential
+    !% Selects whether the exact two-particle method or the iterative scheme
+    !% is used to invert the density to get the KS potential.
     !%Option iterative 0
-    !% Iterative scheme
-    !%Option 2particle 1
-    !% Exact for 2 particle scheme
+    !% Iterative scheme.
+    !%Option two_particle 1
+    !% Exact two-particle scheme.
     !%End
       
     call loct_parse_int(datasets_check('InvertKSmethod'), 0, invksmethod)
@@ -100,7 +100,7 @@ contains
     
     call scf_init(scfv, sys%gr, sys%geo, sys%st, hm)
     
-    if (invksmethod == 1) then ! 2 particle exact inversion
+    if (invksmethod == 1) then ! 2-particle exact inversion
 
       call invertks_2part(target_rho, np, nspin, hm%vhxc, sys%gr%mesh%h)
 
@@ -140,7 +140,7 @@ contains
 
 
     SAFE_DEALLOCATE_A(target_rho)
-
+    call pop_sub()
     
   contains
 
@@ -150,6 +150,8 @@ contains
       integer :: pass, iunit, ierr, ii, npoints
       FLOAT   :: l_xx(MAX_DIM), l_ff(4), rr
       FLOAT, allocatable :: xx(:,:), ff(:,:)
+
+      call push_sub('invert_ks.read_target_rho')
 
       call loct_parse_string(datasets_check('InvertKSTargetDensity'), "target_density.dat", filename)
 
@@ -195,22 +197,21 @@ contains
       SAFE_DEALLOCATE_A(xx)
       SAFE_DEALLOCATE_A(ff)
 
+      call pop_sub()
     end subroutine read_target_rho
 
   end subroutine invert_ks_run
 
   subroutine invertks_2part(target_rho, np, nspin, vhxc, spacing)
-     
-    !input vars
-    integer, intent(in) :: np, nspin
-    FLOAT, intent(in) :: spacing(1:MAX_DIM)
-    FLOAT, intent(in) :: target_rho(1:np, 1:nspin)
-    FLOAT, intent(out) :: vhxc(1:np, 1:nspin)
+    integer, intent(in)  :: np, nspin
+    FLOAT,   intent(in)  :: spacing(1:MAX_DIM)
+    FLOAT,   intent(in)  :: target_rho(1:np, 1:nspin)
+    FLOAT,   intent(out) :: vhxc(1:np, 1:nspin)
        
-    !local vars
     integer :: ii, jj
     FLOAT, allocatable :: sqrtrho(:,:), gradrho(:,:)
-    
+
+    call push_sub('invert_ks.invertks_2part')
     
     !initialize the ks potential
     SAFE_ALLOCATE(sqrtrho(1:np, 1:nspin))
@@ -233,20 +234,19 @@ contains
       enddo
     enddo
     SAFE_DEALLOCATE_A(sqrtrho)
-    SAFE_DEALLOCATE_A(gradrho)    
+    SAFE_DEALLOCATE_A(gradrho)
+
+    call pop_sub()
   end subroutine invertks_2part
 
 
   subroutine invertks_iter(target_rho, np, nspin, hm, sys, scfv)
-  
-    !input vars
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: hm
     type(scf_t),         intent(inout) :: scfv
-    integer,             intent(in) :: np, nspin
-    FLOAT,               intent(in) :: target_rho(1:np, 1:nspin)
+    integer,             intent(in)    :: np, nspin
+    FLOAT,               intent(in)    :: target_rho(1:np, 1:nspin)
         
-    !local vars
     integer :: ii, jj, ierr, idiffmax
     integer :: iunit, verbosity, counter
     FLOAT :: stabilizer, convdensity, diffdensity
@@ -260,7 +260,7 @@ contains
     !%Section Calculation Modes::Invert KS
     !%Description
     !% Absolute difference between the calculated and the target density in the KS
-    !% inversion, has to be larger than the convergence of the density in the scf run
+    !% inversion. Has to be larger than the convergence of the density in the SCF run.
     !%End
     
     call loct_parse_float(datasets_check('InvertKSConvAbsDens'), 1d-5, convdensity)
@@ -277,30 +277,30 @@ contains
 
     call loct_parse_float(datasets_check('InvertKSstabilizer'), M_HALF, stabilizer)
 
-    !%Variable InvertKSverbosity
+    !%Variable InvertKSVerbosity
     !%Type integer
     !%Default 0
     !%Section Calculation Modes::Invert KS
     !%Description
-    !% Selects what is output during the calculation of the KS potential
+    !% Selects what is output during the calculation of the KS potential.
     !%Option 0
-    !% Only outputs the converged density and KS potential
+    !% Only outputs the converged density and KS potential.
     !%Option 1
     !% Same as 0 but outputs the maximum difference to the target density in each
-    !% iteration in addition
+    !% iteration in addition.
     !%Option 2
     !% Same as 1 but outputs the density and the KS potential in each iteration in 
-    !% addition  
+    !% addition.
     !%End
       
-    call loct_parse_int(datasets_check('InvertKSverbosity'), 0, verbosity)  
+    call loct_parse_int(datasets_check('InvertKSVerbosity'), 0, verbosity)  
     if(verbosity < 0 .or. verbosity > 2) then
-      message(1) = 'InvertKSverbosity only has the options 0, 1, or 2'
+      message(1) = 'InvertKSVerbosity only has the options 0, 1, or 2.'
       call write_fatal(1)
     endif
   
     
-    !initialize the ks potential
+    !initialize the KS potential
     hm%vhxc = 1d0
        
     call mix_init(smix, np, nspin, 1, prefix_="InvertKS")
@@ -378,14 +378,15 @@ contains
     SAFE_DEALLOCATE_A(vhxc_out)
     SAFE_DEALLOCATE_A(vhxc_mix)
 
+    call pop_sub()
   end subroutine invertks_iter
 
   subroutine precond_kiks(mesh, np, nspin, st, target_rho, vhxc_out)
-    integer, intent(in) :: np, nspin
-    FLOAT, intent(in) :: target_rho(1:np, 1:nspin)
-    type(states_t), intent(in) :: st
-    type(mesh_t), intent(in) :: mesh
-    FLOAT, intent(out) :: vhxc_out(1:np, 1:nspin,1:1)
+    type(mesh_t),   intent(in)  :: mesh
+    integer,        intent(in)  :: np, nspin
+    type(states_t), intent(in)  :: st
+    FLOAT,          intent(in)  :: target_rho(1:np, 1:nspin)
+    FLOAT,          intent(out) :: vhxc_out(1:np, 1:nspin,1:1)
     
     integer :: ip, iprime, ii, jj, ivec, jdim
     FLOAT :: numerator, diffrho, epsij, occij, inverse
@@ -393,9 +394,9 @@ contains
     FLOAT :: ki(1:np, 1:np)
     FLOAT :: eigenvals(1:np), inverseki(1:np,1:np)
     FLOAT, allocatable :: matrixmul(:,:), kired(:,:)
-        
-
     
+    call push_sub('invert_ks.precond_kiks')
+
     numerator = M_ZERO
     vhxc_out = M_ZERO
     
@@ -468,6 +469,7 @@ contains
     !call flush(200)
 #endif
   
+    call pop_sub()
   end subroutine precond_kiks
   
 end module invert_ks_m
