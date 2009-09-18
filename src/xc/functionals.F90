@@ -23,8 +23,8 @@ module xc_functl_m
   use datasets_m
   use global_m
   use loct_parser_m
-  use XC_F90(lib_m)
   use messages_m
+  use XC_F90(lib_m)
 
   implicit none
 
@@ -64,11 +64,14 @@ contains
     type(xc_functl_t), intent(out) :: functl
     integer,           intent(in)  :: spin_channels
 
+    call push_sub('functionals.xc_functl_init')
+
     functl%family = 0
     functl%type   = 0
     functl%id     = 0
     functl%spin_channels = spin_channels
 
+    call pop_sub()
   end subroutine xc_functl_init
 
 
@@ -77,6 +80,8 @@ contains
     type(xc_functl_t), intent(out) :: functl
     logical,           intent(in)  :: cdft
     integer,           intent(in)  :: spin_channels
+
+    call push_sub('functionals.xc_j_functl_init')
 
     ! initialize structure
     call xc_functl_init(functl, spin_channels)
@@ -88,9 +93,9 @@ contains
     !%Default lca_omc
     !%Section Hamiltonian::XC
     !%Description
-    !% Defines the current functional
+    !% Defines the current functional.
     !%Option lca_omc 301
-    !% Orestes, Marcasso & Capelle 
+    !% Orestes, Marcasso & Capelle
     !%Option lca_lch 302
     !% Lee, Colwell & Handy
     !%End
@@ -112,6 +117,7 @@ contains
       call write_fatal(2)
     end select
 
+    call pop_sub()
   end subroutine xc_j_functl_init
 
 
@@ -126,7 +132,7 @@ contains
     integer :: interact_1d
     FLOAT   :: alpha
 
-    call push_sub('xc_functl.xc_functl_init')
+    call push_sub('functionals.xc_functl_init_functl')
 
     ! initialize structure
     call xc_functl_init(functl, spin_channels)
@@ -152,14 +158,14 @@ contains
       if((ndim.ne.1).and. &
         (functl%id==XC_LDA_X_1D.or.functl%id==XC_LDA_C_1D_CSC)) then
 
-        message(1) = 'Functionals lda_x_1d and lda_c_1d_csc only allowed in 1D'
+        message(1) = 'Functionals lda_x_1d and lda_c_1d_csc only allowed in 1D.'
         call write_fatal(1)
       end if
 
       if((ndim.ne.2).and. &
         (functl%id==XC_LDA_X_2D.or.functl%id==XC_LDA_C_2D_AMGB.or.functl%id==XC_LDA_C_2D_PRM)) then
 
-        message(1) = 'Functional lda_x_2d, lda_c_2d_amgb, and lda_c_2d_prm only allowed in 2D'
+        message(1) = 'Functionals lda_x_2d, lda_c_2d_amgb, and lda_c_2d_prm only allowed in 2D.'
         call write_fatal(1)
       end if
 
@@ -177,13 +183,13 @@ contains
         !%Default interaction_soft_coulomb
         !%Section Hamiltonian::XC
         !%Description
-        !% When running in 1D one has to soften the Coulomb interaction. This softening
-        !% is not unique, and several possibilities exist in the literature
+        !% When running in 1D, one has to soften the Coulomb interaction. This softening
+        !% is not unique, and several possibilities exist in the literature.
         !%Option interaction_exp_screened 0
         !% Exponentially screened Coulomb interaction.
-        !% See, e.g., M Casula, S Sorella, and G Senatore, Phys. Rev. B 74, 245427 (2006)
+        !% See, <i>e.g.</i>, M Casula, S Sorella, and G Senatore, <i>Phys. Rev. B</i> <b>74</b>, 245427 (2006).
         !%Option interaction_soft_coulomb 1
-        !% Soft Coulomb interaction of the form 1/sqrt(x^2 + alpha^2)
+        !% Soft Coulomb interaction of the form 1/sqrt(x^2 + alpha^2).
         !%End
         call loct_parse_int(datasets_check('SoftInteraction1D_type'), 1, interact_1d)
 
@@ -192,8 +198,8 @@ contains
         !%Default 1.0
         !%Section Hamiltonian::XC
         !%Description
-        !% Defines the screening parameter of the softned Coulomb interaction
-        !% when running in 1D
+        !% Defines the screening parameter of the softened Coulomb interaction
+        !% when running in 1D.
         !%End
         call loct_parse_float(datasets_check('SoftInteraction1D_alpha'), M_ONE, alpha)
 
@@ -240,6 +246,8 @@ contains
   subroutine xc_functl_end(functl)
     type(xc_functl_t), intent(inout) :: functl
 
+    call push_sub('functionals.xc_functl_end')
+
     select case(functl%family)
     case(XC_FAMILY_LDA);      call XC_F90(lda_end)     (functl%conf)
     case(XC_FAMILY_GGA);      call XC_F90(gga_end)     (functl%conf)
@@ -248,6 +256,7 @@ contains
     case(XC_FAMILY_LCA);      call XC_F90(lca_end)     (functl%conf)
     end select
 
+    call pop_sub()
   end subroutine xc_functl_end
 
 
@@ -260,7 +269,7 @@ contains
     integer(SIZEOF_VOIDP) :: str
     integer :: i
 
-    call push_sub('xc_functl.xc_functl_write_info')
+    call push_sub('functionals.xc_functl_write_info')
 
     if(functl%family == XC_FAMILY_OEP) then
       ! this is handled separately

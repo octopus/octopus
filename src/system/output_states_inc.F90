@@ -32,7 +32,7 @@
     FLOAT, allocatable :: dtmp(:), elf(:,:)
     FLOAT, allocatable :: current(:, :, :)
 
-    call push_sub('output_states.h_sys_output_states')
+    call push_sub('output_states_inc.h_sys_output_states')
 
     u = M_ONE/units_out%length%factor**gr%mesh%sb%dim
 
@@ -166,7 +166,7 @@
     type(modelmb_denmat_t) :: denmat
     type(modelmb_density_t) :: den
 
-    call push_sub('system.h_sys_output_modelmb')
+    call push_sub('output_states_inc.h_sys_output_modelmb')
 
     impose_exch_symmetry = .true.
 
@@ -258,7 +258,7 @@
     FLOAT   :: flow, dmin
     FLOAT, allocatable :: j(:, :, :)
 
-    call push_sub('output_states.h_sys_output_current_flow')
+    call push_sub('output_states_inc.h_sys_output_current_flow')
 
     if(iand(outp%what, output_j_flow) == 0) then
       call pop_sub(); return

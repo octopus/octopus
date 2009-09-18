@@ -252,7 +252,7 @@ contains
         coeff0(1, 1) = (-h + sqrt(h**2 + d2*(M_TWO*offdiag(1,1))**2)) / (M_TWO*d2*offdiag(1,1)**2)
       else
         message(1) = 'Error in approx_coeff0:'
-        message(2) = 'Offdiagonal term of hamiltonian must not be the zero matrix!'
+        message(2) = 'Off-diagonal term of Hamiltonian must not be the zero matrix!'
         call write_fatal(2)
       end if
     else ! We have the general case of a matrix, so solve the equation by iteration.
@@ -395,7 +395,7 @@ contains
     CMPLX, allocatable :: tmp(:, :), tmp2(:, :), m0(:, :), m_l(:, :), m_r(:, :)
     FLOAT              :: norm, old_norm
 
-    call push_sub('ob_mem.calculate_coeffs_ni_new')
+    call push_sub('ob_mem.calculate_coeffs_ni')
 
     np = intf%np_intf
 
@@ -690,8 +690,8 @@ contains
 
   ! ---------------------------------------------------------
   ! Read memory coefficients from file.
-  ! FIXME: this routine reads compiler and/or system dependent binary files.
-  ! It should be chanegd to a platform independent format.
+  ! FIXME: this routine reads compiler- and/or system-dependent binary files.
+  ! It should be chanegd to a platform-independent format.
   subroutine read_coeffs(dir, s_iter, ob, hm, intf, dim, iter, spacing, delta, op_n, order)
     character(len=*), intent(in)    :: dir
     integer,          intent(out)   :: s_iter                        ! Number of saved coefficients.
@@ -903,7 +903,7 @@ contains
     CMPLX, allocatable :: tmp(:, :)
     integer            :: id, i
 
-    call push_sub('td_transport.make_full_matrix')
+    call push_sub('ob_mem.make_full_matrix')
 
     SAFE_ALLOCATE(tmp(1:np, 1:np))
 

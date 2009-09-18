@@ -23,15 +23,15 @@
 subroutine xc_get_kxc(xcs, mesh, rho, ispin, kxc)
   type(xc_t), target, intent(in)    :: xcs
   type(mesh_t),       intent(in)    :: mesh
-  FLOAT, intent(in)                 :: rho(:, :)
-  integer, intent(in)               :: ispin
+  FLOAT,              intent(in)    :: rho(:, :)
+  integer,            intent(in)    :: ispin
   FLOAT,              intent(inout) :: kxc(:,:,:,:)
 
   FLOAT, allocatable :: dens(:,:), dedd(:,:), l_dens(:), l_dedd(:)
-
   integer :: i, ixc, spin_channels
-
   type(xc_functl_t), pointer :: functl(:)
+
+  call push_sub('kxc_inc.xc_get_kxc')
 
   if(ispin == UNPOLARIZED) then
     functl => xcs%kernel(:, 1)
@@ -41,19 +41,20 @@ subroutine xc_get_kxc(xcs, mesh, rho, ispin, kxc)
 
   ! is there anything to do? (only LDA by now)
   if(iand(xcs%kernel_family, NOT(XC_FAMILY_LDA)).ne.XC_FAMILY_NONE) then
-    message(1) = "Only LDA Functionals are authorized for now in xc_get_kxc"
+    message(1) = "Only LDA functionals are authorized for now in xc_get_kxc."
     call write_fatal(1)
   end if
 
-  if(xcs%kernel_family == XC_FAMILY_NONE) return ! nothing to do
+  if(xcs%kernel_family == XC_FAMILY_NONE) then
+    call pop_sub(); return ! nothing to do
+  endif
 
   ! really start
-  call push_sub('xc_kxc.xc_get_kxc')
 
   ! This is a bit ugly (why functl(1) and not functl(2)?, but for the moment it works.
   spin_channels = functl(1)%spin_channels
 
-  call  lda_init()
+  call lda_init()
 
   space_loop: do i = 1, mesh%np
 
@@ -77,11 +78,10 @@ subroutine xc_get_kxc(xcs, mesh, rho, ispin, kxc)
     end do functl_loop
   end do space_loop
 
-  call  lda_process()
-
+  call lda_process()
 
   ! clean up allocated memory
-  call  lda_end()
+  call lda_end()
 
   call pop_sub()
 
@@ -94,6 +94,8 @@ contains
   subroutine lda_init()
     integer :: i
     FLOAT   :: d(spin_channels)
+
+    call push_sub('kxc_inc.xc_get_kxc.lda_init')
 
     ! allocate some general arrays
     SAFE_ALLOCATE(  dens(1:mesh%np, 1:spin_channels))
@@ -113,21 +115,26 @@ contains
         dens(i, 1) = max(d(1), M_ZERO)
         dens(i, 2) = max(d(2), M_ZERO)
       case(SPINORS)
-        message(1) = 'Do not know how to handle spinors'
+        message(1) = 'Do not know how to handle spinors.'
         call write_fatal(1)
       end select
     end do
 
+    call pop_sub()
   end subroutine lda_init
 
 
   ! ---------------------------------------------------------
   ! SAFE_DEALLOCATE_Ps variables allocated in lda_init
   subroutine lda_end()
+    call push_sub('kxc_inc.xc_get_kxc.lda_end')
+
     SAFE_DEALLOCATE_A(dens)
     SAFE_DEALLOCATE_A(dedd)
     SAFE_DEALLOCATE_A(l_dens)
     SAFE_DEALLOCATE_A(l_dedd)
+
+    call pop_sub()
   end subroutine lda_end
 
 
@@ -135,6 +142,8 @@ contains
   ! calculates the LDA part of vxc
   subroutine lda_process()
     integer :: i
+
+    call push_sub('kxc_inc.xc_get_kxc.lda_process')
 
     forall(i = 1:mesh%np) kxc(i,1,1,1) = kxc(i,1,1,1) + dedd(i,1)
 
@@ -149,6 +158,8 @@ contains
         kxc(i,2,2,2) = kxc(i,2,2,2) + dedd(i,4)
       end forall
     end if
+
+    call pop_sub()
   end subroutine lda_process
 
 end subroutine xc_get_kxc

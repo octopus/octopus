@@ -41,12 +41,12 @@ module td_write_m
   use mpi_m
   use h_sys_output_m
   use pert_m
+  use profiling_m
   use restart_m
   use spectrum_m
   use states_m
-  use states_dim_m
   use states_calc_m
-  use profiling_m
+  use states_dim_m
   use units_m
   use varinfo_m
   use write_iter_m
@@ -142,9 +142,9 @@ contains
     !% If set (and if the atoms are allowed to move), outputs the coordinates, velocities,
     !% and forces of the atoms to the the file <tt>td.general/coordinates</tt>.
     !%Option acceleration 32
-    !% When set outputs the acceleration, calculated from Ehrenfest theorem,
+    !% When set, outputs the acceleration, calculated from Ehrenfest theorem,
     !% in the file <tt>td.general/acceleration</tt>. This file can then be
-    !% processed by the utility "hs-from-acc" in order to obtain the harmonic spectrum.
+    !% processed by the utility <tt>hs-from-acc</tt> in order to obtain the harmonic spectrum.
     !%Option laser 64
     !% If set, and if there are lasers defined in <tt>TDLasers</tt>,
     !% <tt>octopus</tt> outputs the laser field to the file <tt>td.general/laser</tt>.
@@ -204,8 +204,8 @@ contains
 
     ! Compatibility test
     if( (w%out(OUT_ACC)%write) .and. ions_move ) then
-      message(1) = 'Error. If harmonic spectrum is to be calculated'
-      message(2) = 'Atoms should not be allowed to move'
+      message(1) = 'Error: If harmonic spectrum is to be calculated,'
+      message(2) = 'atoms should not be allowed to move.'
       call write_fatal(2)
     end if
 
@@ -234,9 +234,9 @@ contains
         !%Default 1
         !%Section Time-Dependent::TD Output
         !%Description
-        !% Only output projections to states above TDProjStateStart. Usually one is only interested
+        !% Only output projections to states above <tt>TDProjStateStart</tt>. Usually one is only interested
         !% in particle-hole projections around the HOMO, so there is no need to calculate (and store)
-        !% the projections of all static onto all TD states. This sets a lower limit. The upper limit
+        !% the projections of all TD states onto all static states. This sets a lower limit. The upper limit
         !% is set by the number of states in the propagation and the number of unoccupied states
         !% available.
         !%End
@@ -270,13 +270,13 @@ contains
       !%Type block
       !%Section Time-Dependent::TD Output
       !%Description
-      !% [WARNING: This is a *very* experimental feature] The population of the excited states
+      !% <b>[WARNING: This is a *very* experimental feature]</b> The population of the excited states
       !% (as defined by <Phi_I|Phi(t)> where |Phi(t)> is the many-body time-dependent state at
-      !% time t, and |Phi_I> is the excited state of interest) can be approximated -- it is not clear 
+      !% time <i>t</i>, and |Phi_I> is the excited state of interest) can be approximated -- it is not clear 
       !% how well -- by substituting for those real many-body states the time-dependent Kohn-Sham
-      !% determinant and some modification of the Kohn-Sham ground-state determinant (e.g.,
-      !% a simple HOMO-LUMO substitution, or the Casida ansatz for excited states in linear
-      !% response theory. If you set TDOutput to contain, you may ask for these approximated
+      !% determinant and some modification of the Kohn-Sham ground-state determinant (<i>e.g.</i>,
+      !% a simple HOMO-LUMO substitution, or the Casida ansatz for excited states in linear-response
+      !% theory. If you set <tt>TDOutput</tt> to contain <tt>populations</tt>, you may ask for these approximated
       !% populations for a number of excited states, which will be described in the files specified
       !% in this block: each line should be the name of a file that contains one excited state.
       !%
@@ -547,7 +547,7 @@ contains
 
     call push_sub('td_write.td_write_local_magnetic_moments')
 
-    !get the atoms magnetization. This has to be calculated by all nodes
+    !get the atoms` magnetization. This has to be calculated by all nodes
     SAFE_ALLOCATE(lmm(1:3, 1:geo%natoms))
     call magnetic_local_moments(gr%mesh, st, geo, st%rho, lmm_r, lmm)
 
@@ -720,7 +720,7 @@ contains
 
       ! units
       call write_iter_string(out_multip, '#[Iter n.]')
-      call write_iter_header(out_multip, '[' // trim(units_out%time%abbrev) // ']')
+      call write_iter_header(out_multip, '[' // trim(units_abbrev(units_out%time)) // ']')
 
       do is = 1, st%d%nspin
         do l = 0, lmax
@@ -729,9 +729,9 @@ contains
             case(0)
               call write_iter_header(out_multip, 'Electrons')
             case(1)
-              call write_iter_header(out_multip, '[' // trim(units_out%length%abbrev) // ']')
+              call write_iter_header(out_multip, '[' // trim(units_abbrev(units_out%length)) // ']')
             case default
-              write(aux, '(a,a2,i1)') trim(units_out%length%abbrev), "**", l
+              write(aux, '(a,a2,i1)') trim(units_abbrev(units_out%length)), "**", l
               call write_iter_header(out_multip, '[' // trim(aux) // ']')
             end select
           end do
@@ -817,11 +817,11 @@ contains
 
       ! second line: units
       call write_iter_string(out_coords, '#[Iter n.]')
-      call write_iter_header(out_coords, '[' // trim(units_out%time%abbrev) // ']')
+      call write_iter_header(out_coords, '[' // trim(units_abbrev(units_out%time)) // ']')
       call write_iter_string(out_coords, &
-        'Positions in '   // trim(units_out%length%abbrev)   //   &
-        ', Velocities in '// trim(units_out%velocity%abbrev) //   &
-        ', Forces in '    // trim(units_out%force%abbrev))
+        'Positions in '   // trim(units_abbrev(units_out%length))   //   &
+        ', Velocities in '// trim(units_abbrev(units_out%velocity)) //   &
+        ', Forces in '    // trim(units_abbrev(units_out%force)))
       call write_iter_nl(out_coords)
 
       call td_write_print_header_end(out_coords)
@@ -864,7 +864,7 @@ contains
 
       ! second line: units
       call write_iter_string(out_temperature, '#[Iter n.]')
-      call write_iter_header(out_temperature, '[' // trim(units_out%time%abbrev) // ']')
+      call write_iter_header(out_temperature, '[' // trim(units_abbrev(units_out%time)) // ']')
       call write_iter_string(out_temperature, '        [K]')
       call write_iter_nl(out_temperature)
 
@@ -931,7 +931,7 @@ contains
 
         ! second line -> units
         call write_iter_string(out_populations, '#[Iter n.]')
-        call write_iter_header(out_populations, '[' // trim(units_out%time%abbrev) // ']')
+        call write_iter_header(out_populations, '[' // trim(units_abbrev(units_out%time)) // ']')
         call write_iter_nl(out_populations)
 
         call td_write_print_header_end(out_populations)
@@ -939,7 +939,7 @@ contains
 
       ! can not call write_iter_start, for the step is not 1
       call write_iter_int(out_populations, iter, 1)
-      call write_iter_double(out_populations, iter*dt/units_out%time%factor,  1)
+      call write_iter_double(out_populations, units_from_atomic(units_out%time, iter*dt),  1)
       call write_iter_double(out_populations, real(gsp),  1)
       call write_iter_double(out_populations, aimag(gsp), 1)
       do j = 1, n_excited_states
@@ -974,6 +974,8 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
+    call push_sub('td_write.td_write_acc')
+
     if(iter == 0) then
       call td_write_print_header_init(out_acc)
 
@@ -987,9 +989,9 @@ contains
 
       ! second line: units
       call write_iter_string(out_acc, '#[Iter n.]')
-      call write_iter_header(out_acc, '[' // trim(units_out%time%abbrev) // ']')
+      call write_iter_header(out_acc, '[' // trim(units_abbrev(units_out%time)) // ']')
       do i = 1, gr%mesh%sb%dim
-        call write_iter_header(out_acc, '[' // trim(units_out%acceleration%abbrev) // ']')
+        call write_iter_header(out_acc, '[' // trim(units_abbrev(units_out%acceleration)) // ']')
       end do
       call write_iter_nl(out_acc)
       call td_write_print_header_end(out_acc)
@@ -998,9 +1000,10 @@ contains
     call td_calc_tacc(gr, geo, st, hm, acc, dt*i)
 
     call write_iter_start(out_acc)
-    call write_iter_double(out_acc, acc/units_out%acceleration%factor, gr%mesh%sb%dim)
+    call write_iter_double(out_acc, acc / units_out%acceleration%factor, gr%mesh%sb%dim)
     call write_iter_nl(out_acc)
 
+    call pop_sub()
   end subroutine td_write_acc
 
 
@@ -1025,8 +1028,8 @@ contains
       call td_write_print_header_init(out_laser)
 
       ! first line
-      write(aux, '(a7,e20.12,3a)') '# dt = ', dt/units_out%time%factor, &
-        " [", trim(units_out%time%abbrev), "]"
+      write(aux, '(a7,e20.12,3a)') '# dt = ', units_from_atomic(units_out%time, dt), &
+        " [", trim(units_abbrev(units_out%time)), "]"
       call write_iter_string(out_laser, aux)
       call write_iter_nl(out_laser)
 
@@ -1053,7 +1056,7 @@ contains
       call write_iter_nl(out_laser)
 
       call write_iter_string(out_laser, '#[Iter n.]')
-      call write_iter_header(out_laser, '[' // trim(units_out%time%abbrev) // ']')
+      call write_iter_header(out_laser, '[' // trim(units_abbrev(units_out%time)) // ']')
 
       ! Note that we do not print out units of E, B, or A, but rather units of e*E, e*B, e*A.
       ! (force, force, and energy, respectively). The reason is that the units of E, B or A 
@@ -1061,12 +1064,12 @@ contains
       do i = 1, hm%ep%no_lasers
         select case(laser_kind(hm%ep%lasers(i)))
         case(E_FIELD_ELECTRIC, E_FIELD_MAGNETIC)
-          aux = '[' // trim(units_out%energy%abbrev) // ' / ' // trim(units_inp%length%abbrev) // ']'
+          aux = '[' // trim(units_abbrev(units_out%energy / units_out%length)) // ']'
           do j = 1, gr%mesh%sb%dim
             call write_iter_header(out_laser, aux)
           end do
         case(E_FIELD_VECTOR_POTENTIAL)
-          aux = '[' // trim(units_out%energy%abbrev) // ']'
+          aux = '[' // trim(units_abbrev(units_out%energy)) // ']'
           do j = 1, gr%mesh%sb%dim
             call write_iter_header(out_laser, aux)
           end do
@@ -1084,9 +1087,9 @@ contains
       call laser_field(gr%sb, hm%ep%lasers(i), field, iter*dt)
       select case(laser_kind(hm%ep%lasers(i)))
       case(E_FIELD_ELECTRIC, E_FIELD_MAGNETIC)
-        field = field * units_inp%length%factor / units_inp%energy%factor
+        field = units_from_atomic(units_out%energy / units_out%length, field)
       case(E_FIELD_VECTOR_POTENTIAL)
-        field = field / units_inp%energy%factor
+        field = units_from_atomic(units_out%energy, field)
       end select
       call write_iter_double(out_laser, field, gr%mesh%sb%dim)
     end do
@@ -1108,6 +1111,8 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
+    call push_sub('td_write.td_write_energy')
+
     if(iter == 0) then
       call td_write_print_header_init(out_energy)
 
@@ -1126,27 +1131,27 @@ contains
 
       ! second line: units
       call write_iter_string(out_energy, '#[Iter n.]')
-      call write_iter_header(out_energy, '[' // trim(units_out%time%abbrev) // ']')
+      call write_iter_header(out_energy, '[' // trim(units_abbrev(units_out%time)) // ']')
       do i = 1, 7
-        call write_iter_header(out_energy, '[' // trim(units_out%energy%abbrev) // ']')
+        call write_iter_header(out_energy, '[' // trim(units_abbrev(units_out%energy)) // ']')
       end do
       call write_iter_nl(out_energy)
       call td_write_print_header_end(out_energy)
     end if
 
     call write_iter_start(out_energy)
-    call write_iter_double(out_energy, (hm%etot+ke)/units_out%energy%factor, 1)
-    call write_iter_double(out_energy, ke/units_out%energy%factor, 1)
-    call write_iter_double(out_energy, hm%ep%eii /units_out%energy%factor, 1)
-    call write_iter_double(out_energy, (hm%etot-hm%ep%eii)/units_out%energy%factor, 1)
-    call write_iter_double(out_energy, hm%eeigen /units_out%energy%factor, 1)
-    call write_iter_double(out_energy, hm%ehartree /units_out%energy%factor, 1)
-    call write_iter_double(out_energy, hm%epot /units_out%energy%factor, 1)
-    call write_iter_double(out_energy, hm%ex  /units_out%energy%factor, 1)
-    call write_iter_double(out_energy, hm%ec  /units_out%energy%factor, 1)
+    call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%etot+ke), 1)
+    call write_iter_double(out_energy, units_from_atomic(units_out%energy, ke), 1)
+    call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%ep%eii), 1)
+    call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%etot-hm%ep%eii), 1)
+    call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%eeigen), 1)
+    call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%ehartree), 1)
+    call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%epot), 1)
+    call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%ex), 1)
+    call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%ec), 1)
     call write_iter_nl(out_energy)
 
-
+    call pop_sub()
   end subroutine td_write_energy
 
   ! ---------------------------------------------------------
@@ -1162,7 +1167,7 @@ contains
     
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
-    call push_sub('td_write.td_write_out_gauge')
+    call push_sub('td_write.td_write_gauge_field')
     
     if(iter == 0) then
       call td_write_print_header_init(out_gauge)
@@ -1327,6 +1332,8 @@ contains
     subroutine calc_projections()
       integer :: uist, ist, ik
 
+      call push_sub('td_write.td_write_proj.calc_projections')
+
       do ik = 1, st%d%nik
         do ist = max(gs_st%st_start, st%st_start), st%st_end
           do uist = gs_st%st_start, gs_st%st_end
@@ -1338,6 +1345,7 @@ contains
       
       call distribute_projections()
 
+      call pop_sub()
     end subroutine calc_projections
 
 
@@ -1348,6 +1356,8 @@ contains
       integer :: uist, ist, ik, idim
       FLOAT   :: n_dip(MAX_DIM)
       CMPLX, allocatable :: xpsi(:,:)
+
+      call push_sub('td_write.td_write_proj.dipole_matrix_elements')
 
       call geometry_dipole(geo, n_dip)
 
@@ -1372,6 +1382,7 @@ contains
 
       call distribute_projections()
 
+      call pop_sub()
     end subroutine dipole_matrix_elements
 
     subroutine distribute_projections
@@ -1379,6 +1390,8 @@ contains
       integer :: k, ik, ist, uist
 
       if(.not.st%parallel_in_states) return
+
+      call push_sub('td_write.td_write_proj.distribute_projections')
 
       do ik = 1, st%d%nik
         do ist = gs_st%st_start, st%nst
@@ -1389,6 +1402,7 @@ contains
         end do
       end do
 
+      call pop_sub()
 #endif
     end subroutine distribute_projections
 
@@ -1399,12 +1413,15 @@ contains
   subroutine td_write_print_header_init(out)
     type(c_ptr), intent(in) :: out
 
+    call push_sub('td_write.td_write_print_header_init')
+
     call write_iter_clear(out)
     call write_iter_string(out,'################################################################################')
     call write_iter_nl(out)
     call write_iter_string(out,'# HEADER')
     call write_iter_nl(out)
 
+    call pop_sub()
   end subroutine td_write_print_header_init
 
 
@@ -1412,9 +1429,12 @@ contains
   subroutine td_write_print_header_end(out)
     type(c_ptr), intent(in) :: out
 
+    call push_sub('td_write.td_write_print_header_end')
+
     call write_iter_string(out,'################################################################################')
     call write_iter_nl(out)
 
+    call pop_sub()
   end subroutine td_write_print_header_end
 
 

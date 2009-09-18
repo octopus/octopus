@@ -25,14 +25,14 @@ module spectrum_m
   use global_m
   use io_m
   use lalg_adv_m
-  use loct_parser_m
   use loct_math_m
+  use loct_parser_m
+  use math_m
   use messages_m
   use profiling_m
   use string_m
   use units_m
   use varinfo_m
-  use math_m
 
   implicit none
 
@@ -122,15 +122,15 @@ contains
     !%Section Utilities::oct-cross-section
     !%Description
     !% Decides which damping/filtering is to be applied in order to calculate
-    !% spectra by calculating a Fourier transform
+    !% spectra by calculating a Fourier transform.
     !%Option no 0
     !% No filtering at all.
     !%Option exponential 1
-    !% Exponential filtering, corresponding to a Lorentzian-shaped spectrum
+    !% Exponential filtering, corresponding to a Lorentzian-shaped spectrum.
     !%Option polynomial 2
     !% Third-order polynomial damping.
     !%Option gaussian 3
-    !% Gaussian damping
+    !% Gaussian damping.
     !%End
     call loct_parse_int  (datasets_check('SpecDampMode'), SPECTRUM_DAMP_POLYNOMIAL, s%damp)
     if(.not.varinfo_valid_option('SpecDampMode', s%damp)) call input_error('SpecDampMode')
@@ -140,7 +140,7 @@ contains
     !%Default sine
     !%Section Utilities::oct-cross-section
     !%Description
-    !% Decides which transform to perform
+    !% Decides which transform to perform.
     !%Option sine 2
     !% Sine transform <math>\int dt \sin(wt) f(t)</math>
     !%Option cosine 3
@@ -197,7 +197,7 @@ contains
     !%Default polynomial
     !%Section Utilities::oct-cross-section
     !%Description
-    !% If <tt>SpecDampMode</tt> is set to "exp", the damping parameter of the exponential
+    !% If <tt>SpecDampMode = exponential</tt>, the damping parameter of the exponential
     !% is fixed through this variable.
     !%End
     call loct_parse_float(datasets_check('SpecDampFactor'),  CNST(0.15), s%damp_factor)
@@ -339,7 +339,7 @@ contains
     !%Description
     !% When no laser is applied, a delta (in time) perturbation with
     !% strength <tt>TDDeltaStrength</tt> can be applied. This is used to 
-    !% calculate, e.g. the linear optical spectra.
+    !% calculate, <i>e.g.</i>, the linear optical spectra.
     !%
     !% Note that the "strength" here described is non-dimensional.
     !%End
@@ -357,8 +357,7 @@ contains
       nullify(k%l)
       nullify(k%m)
       nullify(k%weight)
-      call pop_sub()
-      return
+      call pop_sub(); return
     end if
 
     !%Variable TDDeltaStrengthMode
@@ -394,12 +393,12 @@ contains
     !%Type block
     !%Section Time-Dependent::Linear Response
     !%Description
-    !% If the block TDKickFunction is present in the input file, the kick function to
+    !% If the block <tt>TDKickFunction</tt> is present in the input file, the kick function to
     !% be applied at time zero of the time-propagation will not be a "dipole" function
     !% (i.e. phi => exp(i*k*z)phi), but a general multipole in the form r^l * Y_{lm}(r).
     !%
-    !% The block TDKickFunction shall only contain one line, with two columns that shall
-    !% be of integer type: those two integers will be the (l,m) pair that defines the
+    !% The block <tt>TDKickFunction</tt> shall only contain one line, with two columns that shall
+    !% be of integer type: those two integers will be the (<i>l</i>,<i>m</i>) pair that defines the
     !% multipole.
     !%
     !% This feature allows calculation of quadrupole, octupole, etc., response functions.
@@ -446,7 +445,7 @@ contains
     !% When a delta potential is included in a time-dependent run, this
     !% variable defines in which direction the field will be applied
     !% by selecting one of the lines of <tt>TDPolarization</tt>. In a
-    !% typical run (without using symmetry), the TDPolarization block
+    !% typical run (without using symmetry), the <tt>TDPolarization</tt> block
     !% would contain the three Cartesian unit vectors (the default
     !% value), and one would make 3 runs varying
     !% <tt>TDPolarization</tt> from 1 to 3.
@@ -918,7 +917,7 @@ contains
     FLOAT, allocatable :: angular(:, :)
     type(unit_system_t) :: file_units
 
-    call push_sub('spectrum_rotatory_strength')
+    call push_sub('spectrum.spectrum_rotatory_strength')
 
     call spectrum_mult_info(in_file, nspin, kick, time_steps, dt, file_units)
     call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
@@ -1015,18 +1014,25 @@ contains
     FLOAT,   intent(in) :: dt
     integer, intent(in) :: is, ie, niter
     CMPLX,   intent(in) :: acc(:)
+
+    call push_sub('spectrum.spectrum_hsfunction_init')
+
     is_ = is
     ie_ = ie
     time_step_ = dt
     SAFE_ALLOCATE(func_(0:niter))
     func_ = acc
+
+    call pop_sub()
   end subroutine spectrum_hsfunction_init
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
   subroutine spectrum_hsfunction_end
+    call push_sub('spectrum.spectrum_hsfunction_end')
     SAFE_DEALLOCATE_A(func_)
+    call pop_sub()
   end subroutine spectrum_hsfunction_end
   ! ---------------------------------------------------------
 
@@ -1038,6 +1044,8 @@ contains
 
     integer :: nfreqs, ierr, i
     FLOAT :: x, hsval, minhsval, dw, w, hsa, hsb
+
+    call push_sub('spectrum.spectrum_hsfunction_min')
 
     ! x should be an initial guess for the minimum. So we do a quick search
     ! that we refine later calling 1dminimize.
@@ -1059,19 +1067,19 @@ contains
     if( hsa == minhsval ) then
       omega_min = a
       func_min = hsval
-      return
+      call pop_sub(); return
     end if
     if( hsb == minhsval ) then
       omega_min = b
       func_min = hsval
-      return
+      call pop_sub(); return
     end if
 
     ! Around x, we call some GSL sophisticated search algorithm to find the minimum.
 #ifndef SINGLE_PRECISION
     call loct_1dminimize(a, b, x, hsfunction, ierr)
 #else
-    stop "FIXME: can not work in single precision"
+    stop "FIXME: cannot work in single-precision."
 #endif
 
     if(ierr .ne. 0) then
@@ -1082,6 +1090,7 @@ contains
     omega_min = x
     func_min  = hsval
 
+    call pop_sub()
   end subroutine spectrum_hsfunction_min
   ! ---------------------------------------------------------
 
@@ -1090,8 +1099,12 @@ contains
   subroutine hsfunction(omega, power)
     FLOAT, intent(in)   :: omega
     FLOAT, intent(out)  :: power
+
     CMPLX   :: c, ez1, ez, z
     integer :: j
+
+    call push_sub('spectrum.hsfunction')
+
     c = M_z0
     z = M_zI * omega * time_step_
     ez1 = exp((is_-1)*z)
@@ -1103,6 +1116,8 @@ contains
       c = c + ez1*func_(j)
     end do
     power = -abs(c)**2*time_step_**2
+
+    call pop_sub()
   end subroutine hsfunction
   ! ---------------------------------------------------------
 
@@ -1120,6 +1135,8 @@ contains
     FLOAT, allocatable :: d(:,:)
     CMPLX, allocatable :: dipole(:), ddipole(:)
     type(unit_system_t) :: file_units
+
+    call push_sub('spectrum.spectrum_hs_from_mult')
 
     call io_assign(iunit)
     iunit = io_open('multipoles', action='read', status='old', die=.false.)
@@ -1150,7 +1167,7 @@ contains
       case('-')
         dipole(i) = -sum(d(1, :) - M_zI*d(2, :)) / sqrt(M_TWO)
       end select
-      dipole(i) = dipole(i) * units_out%length%factor 
+      dipole(i) = dipole(i) * units_out%length%factor
     end do
     SAFE_DEALLOCATE_A(d)
     dipole(0) = dipole(1)
@@ -1172,6 +1189,8 @@ contains
 
     SAFE_DEALLOCATE_A(dipole)
     SAFE_DEALLOCATE_A(ddipole)
+
+    call pop_sub()
   end subroutine spectrum_hs_from_mult
   ! ---------------------------------------------------------
 
@@ -1186,6 +1205,8 @@ contains
     integer :: i, j, iunit, time_steps, is, ie, ntiter, ierr
     FLOAT :: dt, a(MAX_DIM)
     CMPLX, allocatable :: acc(:)
+
+    call push_sub('spectrum.spectrum_hs_from_acc')
 
     call spectrum_acc_info(iunit, time_steps, dt)
     call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
@@ -1222,6 +1243,7 @@ contains
     call spectrum_hsfunction_end()
 
     SAFE_DEALLOCATE_A(acc)
+    call pop_sub()
   end subroutine spectrum_hs_from_acc
   ! ---------------------------------------------------------
 
@@ -1237,22 +1259,24 @@ contains
     FLOAT   :: omega, hsval, x
     FLOAT, allocatable :: sp(:)
 
+    call push_sub('spectrum.spectrum_hs')
+
     if(present(w0)) then
 
       iunit = io_open(trim(out_file) // "." // trim(pol), action='write')
       write(iunit, '(a1,a20,a20)') '#', str_center("w", 20), str_center("H(w)", 20)
       write(iunit, '(a1,a20,a20)') '#', &
-        str_center('['//trim(units_out%energy%abbrev) // ']', 20), &
-        str_center('[('//trim(units_out%length%abbrev)//'/' &
-        //trim(units_out%time%abbrev)//')^2]' , 20)
+        str_center('['//trim(units_abbrev(units_out%energy)) // ']', 20), &
+        str_center('[('//trim(units_abbrev(units_out%length))//'/' &
+        //trim(units_abbrev(units_out%time))//')^2]' , 20)
 
       ! output
       omega = w0
       do while(omega <= s%max_energy)
         call spectrum_hsfunction_min(omega-w0, omega+w0, omega, x, hsval)
 
-        write(iunit, '(1x,2e20.8)') x/units_out%energy%factor, &
-          -hsval/(units_out%length%factor / units_out%time%factor)**2
+        write(iunit, '(1x,2e20.8)') units_from_atomic(units_out%energy, x), &
+          units_from_atomic((units_out%length / units_out%time)**2, -hsval)
 
         ! 2*w0 because we assume that there are only odd peaks.
         omega = omega + 2*w0
@@ -1275,12 +1299,12 @@ contains
         iunit = io_open(trim(out_file) // "." // trim(pol), action='write')
         write(iunit, '(a1,a20,a20)') '#', str_center("w", 20), str_center("H(w)", 20)
         write(iunit, '(a1,a20,a20)') &
-          '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20), &
-          str_center('[('//trim(units_out%length%abbrev)//'/' &
-            //trim(units_out%time%abbrev)//')^2]' , 20)
+          '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 20), &
+          str_center('[('//trim(units_abbrev(units_out%length))//'/' &
+            //trim(units_abbrev(units_out%time))//')^2]' , 20)
         do i = 0, no_e
-          write(iunit, '(2e15.6)') i*s%energy_step / units_out%energy%factor, &
-            sp(i) / (units_out%length%factor / units_out%time%factor)**2
+          write(iunit, '(2e15.6)') units_from_atomic(units_out%energy, i*s%energy_step), &
+            units_from_atomic((units_out%length / units_out%time)**2, sp(i))
         end do
         call io_close(iunit)
       end if
@@ -1288,6 +1312,7 @@ contains
 
     end if
 
+    call pop_sub()
   end subroutine spectrum_hs
   ! ---------------------------------------------------------
 
@@ -1326,7 +1351,7 @@ contains
     end if
 
     call count_time_steps(iunit, time_steps, dt)
-    dt = dt * file_units%time%factor ! units_out is OK
+    dt = units_to_atomic(file_units%time, dt) ! units_out is OK
 
     call pop_sub()
   end subroutine spectrum_mult_info
@@ -1341,6 +1366,8 @@ contains
 
     FLOAT :: t1, t2, dummy
     integer :: jj
+
+    call push_sub('spectrum.count_time_steps')
 
     ! count number of time_steps
     time_steps = 0
@@ -1359,6 +1386,7 @@ contains
       call write_fatal(1)
     end if
 
+    call pop_sub()
   end subroutine count_time_steps
   ! ---------------------------------------------------------
 
@@ -1389,7 +1417,7 @@ contains
       if(energy_steps == 2) e2 = dummy
     end do
 100 continue
-    dw = (e2 - e1) * units_out%energy%factor
+    dw = units_to_atomic(units_out%energy, e2 - e1)
     energy_steps = energy_steps - 1
 
     if(energy_steps < 3) then
@@ -1409,6 +1437,8 @@ contains
     integer :: j
     FLOAT :: t1, t2, dummy
 
+    call push_sub('spectrum.spectrum_acc_info')
+
     ! open files
     iunit = io_open('acceleration', action='read', status='old', die=.false.)
     if(iunit < 0) then
@@ -1427,7 +1457,7 @@ contains
       if(time_steps == 2) t2 = dummy
     end do
 100 continue
-    dt = (t2 - t1) * units_out%time%factor ! units_out is OK
+    dt = units_to_atomic(units_out%time, t2 - t1) ! units_out is OK
     time_steps = time_steps - 1
 
     if(time_steps < 3) then
@@ -1436,6 +1466,7 @@ contains
     end if
 
     rewind(iunit)
+    call pop_sub()
   end subroutine spectrum_acc_info
 
 

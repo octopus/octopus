@@ -46,7 +46,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
   if(oep%level == XC_OEP_NONE) return
 
   call profiling_in(C_PROFILING_XC_OEP)
-  call push_sub('xc_OEP_inc.xc_oep_calc')
+  call push_sub('xc_OEP_inc.Xxc_oep_calc')
 
   ! initialize oep structure
   SAFE_ALLOCATE(oep%eigen_type (1:st%nst))
@@ -135,7 +135,7 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   R_TYPE, allocatable :: b(:,:)
 
   call profiling_in(C_PROFILING_XC_OEP_FULL)
-  call push_sub('xc_OEP_inc.xc_oep_solve')
+  call push_sub('xc_OEP_inc.Xxc_oep_solve')
 
   SAFE_ALLOCATE(      b(1:gr%mesh%np, 1:1))
   SAFE_ALLOCATE(      s(1:gr%mesh%np))

@@ -54,8 +54,7 @@ subroutine states_choose_kpoints(d, sb, geo)
     d%kpoints  = M_ZERO
     d%kweights = M_ONE
 
-    call pop_sub()
-    return
+    call pop_sub(); return
   end if
 
   ! if Monkhorst-Pack used, this variable will be reset
@@ -65,16 +64,16 @@ subroutine states_choose_kpoints(d, sb, geo)
   !%Type block
   !%Section Mesh::KPoints
   !%Description
-  !% This block defines an explicit set of k-points and their weights for
+  !% This block defines an explicit set of <i>k</i>-points and their weights for
   !% a periodic-system calculation. The first column is the weight
-  !% of each k-point and the following are the components of the k-point
+  !% of each <i>k</i>-point and the following are the components of the <i>k</i>-point
   !% vector. You only need to specify the components for the
-  !% periodic directions. Note that the k-points should be given in
-  !% Cartesian coordinates (not in reduced coordinates), i.e.
+  !% periodic directions. Note that the <i>k</i>-points should be given in
+  !% Cartesian coordinates (not in reduced coordinates), <i>i.e.</i>
   !% what Octopus writes in a line in the ground-state standard output as
   !% <tt>#k =   1, k = (    0.154000,    0.154000,    0.154000)</tt>.
   !%
-  !% For example, if you want to include only the gamma point, you can
+  !% For example, if you want to include only the Gamma point, you can
   !% use:
   !%
   !% <tt>%KPoints
@@ -108,11 +107,10 @@ subroutine states_choose_kpoints(d, sb, geo)
       end do
     end do
 
-    d%kpoints = d%kpoints / units_inp%length%factor !K points have 1/length units
+    d%kpoints = units_to_atomic(unit_one / units_inp%length, d%kpoints) !k-points have 1/length units
 
     call print_kpoints_debug
-    call pop_sub()
-    return
+    call pop_sub(); return
   end if
 
   !%Variable KPointsMonkhorstPack
@@ -120,18 +118,18 @@ subroutine states_choose_kpoints(d, sb, geo)
   !%Default 1,1,1
   !%Section Mesh::KPoints
   !%Description
-  !% When this block is given (and the KPoints block is not present),
-  !% k-points are arranged in a Monkhorst-Pack grid.
+  !% When this block is given (and the <tt>KPoints</tt> block is not present),
+  !% <i>k</i>-points are arranged in a Monkhorst-Pack grid.
   !%
   !% The first row of the block is a triplet of integers defining the
-  !% number of k-points to be used along each direction in the
+  !% number of <i>k</i>-points to be used along each direction in the
   !% reciprocal space. The numbers refer to the whole Brillouin zone,
-  !% and the actual number of k-points is usually reduced exploiting
+  !% and the actual number of <i>k</i>-points is usually reduced exploiting
   !% the symmetries of the system.  An optional second row can specify
-  !% a shift in the k-points.
+  !% a shift in the <i>k</i>-points.
   !%
   !% For example, the following input samples the BZ with 100 points in the 
-  !% xy plane of the reciprocal space:
+  !% <i>xy</i>-plane of the reciprocal space:
   !%
   !% <tt>%KPointsMonkhorstPack
   !% <br>&nbsp;&nbsp;10 | 10 | 1
@@ -139,7 +137,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   !%
   !%End
 
-  ! default when nothing specified: gamma point only
+  ! default when nothing specified: Gamma point only
   if(loct_parse_block(datasets_check('KPointsMonkhorstPack'), blk) .ne. 0) then
 
     if (d%ispin == 2) then
@@ -157,8 +155,7 @@ subroutine states_choose_kpoints(d, sb, geo)
     d%kweights(1) = M_ONE
 
     call print_kpoints_debug
-    call pop_sub()
-    return
+    call pop_sub(); return
   end if
 
 ! now deal with Monkhorst-Pack
@@ -187,9 +184,8 @@ subroutine states_choose_kpoints(d, sb, geo)
   !%Section Mesh::KPoints
   !%Description
   !% This variable defines whether symmetries are taken into account
-  !% or not for the choice of k-points. If it is set to no, the k-point
-  !% sampling will range over the full Brillouin zone. The default is
-  !% yes.
+  !% or not for the choice of <i>k</i>-points. If it is set to no, the <i>k</i>-point
+  !% sampling will range over the full Brillouin zone. The default is yes.
   !%End
   call loct_parse_logical(datasets_check('KPointsUseSymmetries'), .false., use_symmetries)
 
@@ -198,11 +194,11 @@ subroutine states_choose_kpoints(d, sb, geo)
   !%Default yes
   !%Section Mesh::KPoints
   !%Description
-  !% WARNING: This variable does not seem to work.
+  !% <b>WARNING: This variable does not seem to work.</b>
   !% This variable defines whether time-reversal symmetry is taken into account
-  !% or not for the choice of k-points. If it is set to no, the k-point
+  !% or not for the choice of <i>k</i>-points. If it is set to no, the <i>k</i>-point
   !% sampling will not be reduced according to time-reversal symmetry. The default is
-  !% yes. If KPointsUseSymmetries = no, this variable is ignored, and time-reversal
+  !% yes. If <tt>KPointsUseSymmetries = no</tt>, this variable is ignored, and time-reversal
   !% symmetry is not used.
   !%End
   call loct_parse_logical(datasets_check('KPointsUseTimeReversal'), .true., use_time_reversal)
@@ -264,6 +260,8 @@ contains
   subroutine print_kpoints_debug
     integer :: iunit
 
+    call push_sub('states_kpoints_inc.states_choose_kpoints.print_kpoints_debug')
+
     if(in_debug_mode) then
       
       iunit = io_open('debug/kpoints', action = 'write')
@@ -272,6 +270,7 @@ contains
 
     end if
 
+    call pop_sub()
   end subroutine print_kpoints_debug
 
 end subroutine states_choose_kpoints
@@ -283,7 +282,7 @@ subroutine kpoints_write_info(d, sbdim, iunit)
   integer,            intent(in) :: sbdim
   integer,            intent(in) :: iunit
 
-  integer :: ik
+  integer :: ik, idim
 
   call push_sub('states_kpoints_inc.kpoints_write_info')
 
@@ -302,7 +301,7 @@ subroutine kpoints_write_info(d, sbdim, iunit)
 
   do ik = 1, d%nik
      write(message(1),'(i4,1x,4f12.4)') &
-       ik, d%kpoints(1:sbdim,ik)*units_out%length%factor, d%kweights(ik)
+       ik, (units_from_atomic(unit_one/units_out%length, d%kpoints(idim,ik)), idim=1,sbdim), d%kweights(ik)
      call write_info(1, iunit, verbose_limit=80)
   end do
 
@@ -341,8 +340,8 @@ logical function in_wigner_seitz_cell(k_point, klattice) result(in_cell)
   !%Default cube
   !%Section Mesh::KPoints
   !%Description
-  !% Determines which shape of Wigner-Seitz cell Octopus should use
-  !% for a full k-point sampling (currently this is not automatically
+  !% Determines which shape of Wigner-Seitz cell <tt>Octopus</tt> should use
+  !% for a full <i>k</i>-point sampling (currently this is not automatically
   !% determined from atomic positions and has to be specified
   !% manually). By default a cube is chosen.
   !%Option cube 1
@@ -435,6 +434,8 @@ integer function kpoint_index(this, ik) result(index)
   type(states_dim_t), intent(in) :: this
   integer,            intent(in) :: ik
 
+  call push_sub('states_kpoints_inc.kpoint_index')
+
   if (this%nspin == 2) then
     if (states_dim_get_spin_index(this, ik) == 1) then
       index = (ik + 1) / 2
@@ -445,6 +446,7 @@ integer function kpoint_index(this, ik) result(index)
      index = ik
   endif
 
+  call pop_sub()
 end function kpoint_index
 
 !! Local Variables:

@@ -265,8 +265,7 @@ contains
           call zcalculate_eigenvalues(hm, gr, st)
         end if
       end if
-      call pop_sub()
-      return
+      call pop_sub(); return
     end if
 
     hm%epot     = M_ZERO

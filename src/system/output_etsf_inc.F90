@@ -1,3 +1,24 @@
+!! Copyright (C) 2009
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+!!
+!! $Id: output_etsf_inc.F90 5880 2009-09-03 23:44:44Z dstrubbe $
+
+! ---------------------------------------------------------
+
 #if defined(HAVE_ETSF_IO)
 
 subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
@@ -23,7 +44,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
   type(etsf_kpoints), target :: kpoints
   type(dcf_t) :: cube
 
-  call push_sub("output_h_sys_etsf.h_sys_output_etsf")
+  call push_sub("output_etsf_inc.h_sys_output_etsf")
 
   if (iand(outp%what, output_geometry).ne.0) then
     !Create a cube
@@ -321,7 +342,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     nullify(main%real_space_wavefunctions%data7D)
     SAFE_DEALLOCATE_A(local_wfs)
 
-    !Free the kpoints container
+    !Free the k-points container
     SAFE_DEALLOCATE_A(local_red_coord_kpt)
     SAFE_DEALLOCATE_A(local_kpoint_weights)
     nullify(groups%kpoints)
@@ -362,3 +383,8 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 end subroutine h_sys_output_etsf
 
 #endif
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

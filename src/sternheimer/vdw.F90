@@ -27,18 +27,19 @@ module vdw_m
   use global_m
   use grid_m
   use hamiltonian_m
+  use h_sys_output_m
   use io_m
+  use io_function_m
   use lalg_basic_m
+  use linear_response_m
   use loct_math_m
   use loct_parser_m
-  use linear_response_m
   use math_m
-  use mesh_function_m
   use mesh_m
+  use mesh_function_m
   use messages_m
   use mix_m
   use mpi_m
-  use h_sys_output_m
   use pert_m
   use poisson_m
   use profiling_m
@@ -134,12 +135,14 @@ contains
     subroutine input()
       integer :: equiv_axes
 
+      call push_sub('vdw.vdw_run.input')
+
       !%Variable vdW_npoints
       !%Type integer
       !%Section Linear Response::Polarizabilities
       !%Description
       !% How many points to use in the Gauss-Legendre integration to obtain the
-      !% van der Waals coefficients
+      !% van der Waals coefficients.
       !%End
       call  loct_parse_int(datasets_check('vdW_npoints'), 6, gaus_leg_n)
 
@@ -152,6 +155,7 @@ contains
       case default; ndir = min(3, sys%gr%mesh%sb%dim)
       end select
 
+      call pop_sub()
     end subroutine input
 
 
@@ -161,6 +165,8 @@ contains
       logical :: file_exists
       character(len=80) :: dirname
       FLOAT :: iomega, domega, pol
+
+      call push_sub('vdw.vdw_run.init_')
 
       ! make some space for static polarizability
       gaus_leg_n = gaus_leg_n + 1
@@ -183,8 +189,8 @@ contains
         iunit = io_open(VDW_DIR//'vdw_c6', action='read')
         read(iunit, '(a12,i3)', iostat=ierr) dirname, ii
         if(ii .ne. gaus_leg_n) then
-          message(1) = "Invalid restart of van der Waals calculation"
-          message(2) = "The number of points in the Gauss-Legendre integration changed"
+          message(1) = "Invalid restart of van der Waals calculation."
+          message(2) = "The number of points in the Gauss-Legendre integration changed."
           write(message(3), '(i3,a,i3,a)') gaus_leg_n, " (input) != ", ii, "(restart)"
           call write_fatal(3)
         end if
@@ -204,7 +210,7 @@ contains
       call restart_look_and_read(sys%st, sys%gr, sys%geo, is_complex = .true.)
 
       ! setup Hamiltonian
-      message(1) = 'Info: Setting up Hamiltonian for linear response'
+      message(1) = 'Info: Setting up Hamiltonian for linear response.'
       call write_info(1)
       call system_h_setup(sys, hm)
 
@@ -219,7 +225,7 @@ contains
             ierr, lr=lr(dir,1))
           
           if(ierr.ne.0) then
-            message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//dirname
+            message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//dirname
             call write_warning(1)
           end if
         end if
@@ -227,11 +233,15 @@ contains
 
       call io_mkdir(trim(tmpdir)//VDW_DIR) ! restart
       call io_mkdir(VDW_DIR)               ! output data
+
+      call pop_sub()
     end subroutine init_
 
     ! --------------------------------------------------------------------
     subroutine end_()
       integer :: dir
+
+      call push_sub('vdw.vdw_run.end_')
 
       SAFE_DEALLOCATE_A(gaus_leg_points)
       SAFE_DEALLOCATE_A(gaus_leg_weights)
@@ -239,6 +249,8 @@ contains
       do dir = 1, ndir
         call lr_dealloc(lr(dir, 1))
       end do
+
+      call pop_sub()
     end subroutine end_
 
 
@@ -249,9 +261,11 @@ contains
       CMPLX        :: alpha(1:MAX_DIM, 1:MAX_DIM)
       type(pert_t) :: perturbation
 
+      call push_sub('vdw.vdw_run.get_pol')
+
       call pert_init(perturbation, PERTURBATION_ELECTRIC, sys%gr, sys%geo)
       do dir = 1, ndir
-        write(message(1), '(a,i1,a,f7.3)') 'Info: Calculating response for direction ', dir, &
+        write(message(1), '(3a,f7.3)') 'Info: Calculating response for the ', io_output_direction(dir), &
           ' and imaginary frequency ', units_from_atomic(units_out%energy, aimag(omega))
         call write_info(1)   
 
@@ -273,7 +287,7 @@ contains
       get_pol = get_pol / real(sys%gr%mesh%sb%dim)
 
       call pert_end(perturbation)
-
+      call pop_sub()
     end function get_pol
 
   end subroutine vdw_run

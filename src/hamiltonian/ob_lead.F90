@@ -113,7 +113,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Calculate the offdiagonal block matrix, i. e. the Hamiltonian for
+  ! Calculate the off-diagonal block matrix, i. e. the Hamiltonian for
   ! entries not contained in the interface region, which is the matrix
   ! V^T_\alpha or H_{C\alpha}.
   subroutine lead_offdiag(lapl, intf, offdiag)
@@ -372,10 +372,13 @@ contains
     FLOAT,               intent(in)  :: vks(:)
     type(interface_t),   intent(in)  :: intf
 
+    call push_sub('ob_lead.is_lead_transl_inv')
+
     ! FIXME: for now every potential is translational invariant in transport direction
     ! this should be tested and also be generalized to periodic potentials
     is_lead_transl_inv = .true.
 
+    call pop_sub()
   end function is_lead_transl_inv
 
 

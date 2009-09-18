@@ -20,27 +20,26 @@
 #include "global.h"
 
 module opt_control_parameters_m
-  use loct_m
-  use lalg_adv_m
-  use string_m
   use datasets_m
-  use varinfo_m
-  use global_m
-  use mpi_m
-  use messages_m
-  use io_m
-  use units_m
-  use loct_parser_m
-  use loct_math_m
-  use filter_m
-  use lasers_m
   use external_pot_m
-  use tdf_m
-  use mesh_m
-  use mix_m
   use filter_m
+  use global_m
+  use io_m
+  use lalg_adv_m
+  use lasers_m
+  use loct_m
+  use loct_math_m
+  use loct_parser_m
   use math_m
+  use mesh_m
+  use messages_m
+  use mix_m
+  use mpi_m
   use profiling_m
+  use string_m
+  use tdf_m
+  use units_m
+  use varinfo_m
 
   implicit none
 
@@ -165,7 +164,7 @@ contains
     FLOAT   :: octpenalty, t, f_re, f_im, total_time
     type(block_t)            :: blk
 
-    call push_sub('parameters.parameters_read')
+    call push_sub('parameters.parameters_mod_init')
 
     if(.not. associated(par_common)) then
       SAFE_ALLOCATE(par_common)
@@ -178,9 +177,9 @@ contains
     !%Section Calculation Modes::Optimal Control
     !%Default control_fourier_series_h
     !%Description
-    !% If "OCTControlRepresentation = control_function_parametrized", one must 
+    !% If <tt>OCTControlRepresentation = control_function_parametrized</tt>, one must 
     !% specify the kind of parameters that determine the control function.
-    !% If "OCTControlRepresentation = control_function_real_time", then this variable
+    !% If <tt>OCTControlRepresentation = control_function_real_time</tt>, then this variable
     !% is ignored, and the control function is handled directly in real time.
     !%Option control_sine_fourier_series_h 2
     !% The control function is expanded in a sine Fourier series (which implies that it
@@ -201,12 +200,12 @@ contains
     !%Option control_fourier_series 5
     !% The control function is expanded as a full Fourier series (although it must, of 
     !% course, be a real function). The control parameters are the coefficients of this
-    !% basis set expansion.
+    !% basis-set expansion.
     !%Option control_zero_fourier_series 6
     !% The control function is expanded as a full Fourier series (although it must, of 
     !% course, be a real function). The control parameters are the coefficients of this
-    !% basis set expansion. The difference with the option "control_fourier_series" is that
-    !% (1) that the zero frequency component is zero, and (2) the control function, integrated 
+    !% basis-set expansion. The difference with the option <tt>control_fourier_series</tt> is that
+    !% (1) that the zero-frequency component is zero, and (2) the control function, integrated 
     !% in time, adds up to zero (this essentially means that the sum of all the cosine 
     !% coefficients is zero).
     !%End
@@ -277,7 +276,7 @@ contains
     !%
     !% If this variable is given a negative value, then the target fluence will be that of
     !% the initial laser pulse given as guess in the input file. Note, however, that
-    !% first the code applies the envelope provided by the "OCTLaserEnvelope" input
+    !% first the code applies the envelope provided by the <tt>OCTLaserEnvelope</tt> input
     !% option, and afterwards it calculates the fluence.
     !%End
     call loct_parse_float(datasets_check('OCTFixFluenceTo'), M_ZERO, par_common%targetfluence)
@@ -287,10 +286,10 @@ contains
     !%Section Calculation Modes::Optimal Control
     !%Default yes
     !%Description
-    !% By default, when asking for a fixed-fluence optimization ("OCTFixFluenceTo = whatever"), 
+    !% By default, when asking for a fixed-fluence optimization (<tt>OCTFixFluenceTo = whatever</tt>), 
     !% the initial laser guess provided in the input file is scaled to match this
     !% fluence. However, you can force the program to use that initial laser as the initial
-    !% guess, no matter the fluence, by setting "OCTFixInitialFluence = no".
+    !% guess, no matter the fluence, by setting <tt>OCTFixInitialFluence = no</tt>.
     !%End
     call loct_parse_logical(datasets_check('OCTFixInitialFluence'), .true., &
       par_common%fix_initial_fluence)
@@ -305,16 +304,16 @@ contains
     !% Or, we may have two different control functions, one of them providing the phase 
     !% and the other one, the envelope.
     !%
-    !% Note that, if "OCTControlRepresentation = control_function_real_time", then the control
-    !% function must *always* determine the full external field.
+    !% Note that, if <tt>OCTControlRepresentation = control_function_real_time</tt>, then the control
+    !% function must <b>always</b> determine the full external field.
     !%Option parameter_mode_epsilon   1
-    !% In this case, the control function determines the full control function. That is, 
+    !% In this case, the control function determines the full control function: namely,
     !% if we are considering the electric field of a laser, the time-dependent electric field.
     !%Option parameter_mode_f         2
     !% The optimization process attempts to find the best possible envelope. The full 
     !% control field is this envelope times a cosine function with a "carrier" frequency. 
-    !% This carrier frequencey is given by the carrier frequency of the "TDExternalFields" 
-    !% in the inp file.
+    !% This carrier frequencey is given by the carrier frequency of the <tt>TDExternalFields</tt> 
+    !% in the <tt>inp</tt> file.
     !%Option parameter_mode_phi       3
     !% The optimization process attempts to find the best possible time-dependent phase. That is,
     !% the external field would be given by a function in the form e(t) = f(t)*cos(w0*t+phi(t)), 
@@ -397,10 +396,10 @@ contains
     !%Section Calculation Modes::Optimal Control
     !%Default 1.0
     !%Description
-    !% The variable specificies the value of the penalty factor for the 
-    !% integrated field strength (fluence). Large value - small fluence.
-    !% A transient shape can be specified using the block OCTLaserEnvelope.
-    !% In this case OCTPenalty is multiplied with time-dependent function. 
+    !% The variable specifies the value of the penalty factor for the 
+    !% integrated field strength (fluence). Large value = small fluence.
+    !% A transient shape can be specified using the block <tt>OCTLaserEnvelope</tt>.
+    !% In this case <tt>OCTPenalty</tt> is multiplied with time-dependent function. 
     !% The value depends on the coupling between the states. A good start might be a 
     !% value from 0.1 (strong fields) to 10 (weak fields). 
     !%
@@ -436,19 +435,19 @@ contains
     !%Type block
     !%Section Calculation Modes::Optimal Control
     !%Description
-    !% Often a predefined time-dependent envelope on the control parameter is desired. 
+    !% Often a pre-defined time-dependent envelope on the control parameter is desired. 
     !% This can be achieved by making the penalty factor time-dependent. 
-    !% Here, you may specify the required time dependent envelope.
+    !% Here, you may specify the required time-dependent envelope.
     !%
     !% It is possible to choose different envelopes for different control parameters.
     !% There should be one line for each control parameter. Each line should
     !% have only one element: a string with the function that defines the
-    !% *inverse* of the time-dependent penalty, which is then defined as
-    !% 1 upon this function + 1.0e-7 (to avoid possible singularities).
+    !% <b>inverse</b> of the time-dependent penalty, which is then defined as
+    !% 1 divided by (this function + 1.0e-7) (to avoid possible singularities).
     !%
     !% The usual choices should be functions between zero and one.
     !%
-    !% If, instead of defining a function, the string is "default", then
+    !% If, instead of defining a function, the string is <tt>default</tt>, then
     !% the program will use the function:
     !%
     !% <math> \frac{1}{\alpha(t)} = \frac{1}{2}( erf((100/T)*(t-T/20))+ erf(-(100/T)*(t-T+T/20)) </math>
@@ -518,8 +517,8 @@ contains
 
   ! ---------------------------------------------------------
   ! Before using an oct_control_parameters_t variable, it needs
-  ! to be initialized, either by call ing parameters_init, or
-  ! by copying anther initialized variable through
+  ! to be initialized, either by calling parameters_init, or
+  ! by copying another initialized variable through
   ! parameters_copy.
   ! ---------------------------------------------------------
   subroutine parameters_init(cp, dt, ntiter)
@@ -545,9 +544,9 @@ contains
     ! the number of values that represent the function in the discretized time axis.
     !
     ! If the control function is parametrized, up to now (in the future this might change), all 
-    ! parametrizations are based on a previous basis set expansion (sine-Fourier series, or "normal"
+    ! parametrizations are based on a previous basis-set expansion (sine-Fourier series, or "normal"
     ! Fourier series with or without the zero term). For the representations whose name ends in "_h", 
-    ! the parameters are not directly the coefficients of the control function in this basis set 
+    ! the parameters are not directly the coefficients of the control function in this basis-set 
     ! expansion, but are constructed from them (e.g. by performing a coordinate transformation to 
     ! hyperspherical coordinates). The "dimension" (cp%dim) is the dimension of this basis set.
     select case(par_common%representation)
@@ -570,7 +569,7 @@ contains
       cp%dim = 2*(tdf_nfreqs(cp%f(1))-1) + 1
     case(ctr_zero_fourier_series)
       ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
-      ! but no zero frequency component. Total, 2*(nf-1)+1
+      ! but no zero-frequency component. Total, 2*(nf-1)+1
       cp%dim = 2*(tdf_nfreqs(cp%f(1))-1)
     case default
       message(1) = "Internal error: invalid representation."
@@ -582,25 +581,25 @@ contains
     ! (if it is represented directly in real time, this would be meaningless, but we put the number of 
     ! control functions, times the "dimension", which in this case is the number of time discretization 
     ! points). This is not equal to the dimension of the basis set employed (cp%dim), because we may 
-    ! add further constrains, and do a coordinate transformation to account for them.
+    ! add further constraints, and do a coordinate transformation to account for them.
     select case(par_common%representation)
     case(ctr_real_time)
       cp%dof = cp%no_parameters * cp%dim
     case(ctr_sine_fourier_series_h, ctr_fourier_series_h)
       ! The number of degrees of freedom is one less than the number of basis coefficients, since we
-      ! add the constrain of fixed fluence.
+      ! add the constraint of fixed fluence.
       cp%dof = cp%dim - 1
     case(ctr_zero_fourier_series_h)
       ! The number of degrees of freedom is one less than the number of basis coefficients, since we
-      ! add (1) the constrain of fixed fluence, and (2) the constrain of the field starting and
+      ! add (1) the constraint of fixed fluence, and (2) the constraint of the field starting and
       ! ending at zero, which amounts to having all the cosine coefficients summing up to zero.
       cp%dof = cp%dim - 2
     case(ctr_fourier_series)
-      ! In this case, we have no constrains: the dof is equal to the dimesion of the basis set, since
-      ! the parameters are directly the coefficients of the basis set expansion.
+      ! In this case, we have no constraints: the dof is equal to the dimension of the basis set, since
+      ! the parameters are directly the coefficients of the basis-set expansion.
       cp%dof = cp%dim
     case(ctr_zero_fourier_series)
-      ! The number of degrees of freedom is reduced by one, since we add the constrain forcing the
+      ! The number of degrees of freedom is reduced by one, since we add the constraint forcing the
       ! the field to start and end at zero, which amounts to having all the cosine coefficients 
       ! summing up to zero.
       cp%dof = cp%dim - 1
@@ -614,7 +613,7 @@ contains
     else
       if(par_common%representation .ne. ctr_real_time) then
         write(message(1), '(a)')      'Info: The expansion of the control parameters in a Fourier series'
-        write(message(2), '(a,i6,a)') '      expansion implies the use of ', cp%dim, ' basis set functions.'
+        write(message(2), '(a,i6,a)') '      expansion implies the use of ', cp%dim, ' basis-set functions.'
         write(message(3), '(a,i6,a)') '      The number of degrees of freedom is ', cp%dof,'.'
         call write_info(3)
 
@@ -633,7 +632,7 @@ contains
 
   ! ---------------------------------------------------------
   ! The external fields defined in epot_t "ep" are transferred to
-  ! the control functions described in "cp". This shhould have been
+  ! the control functions described in "cp". This should have been
   ! initialized previously.
   ! ---------------------------------------------------------
   subroutine parameters_set(cp, ep)
@@ -857,8 +856,10 @@ contains
   ! ---------------------------------------------------------
   subroutine parameters_mixing_init(par)
     type(oct_control_parameters_t), intent(in) :: par
+
     call push_sub('parameters.parameters_mixing_init')
     call mix_init(parameters_mix, par%dim, par%no_parameters, 1)
+
     call pop_sub()
   end subroutine parameters_mixing_init
   ! ---------------------------------------------------------
@@ -866,7 +867,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine parameters_mixing_end
+    call push_sub('parameters.parameters_mixing_end')
     call mix_end(parameters_mix)
+
+    call pop_sub()
   end subroutine parameters_mixing_end
   ! ---------------------------------------------------------
 
@@ -912,7 +916,7 @@ contains
 
     call push_sub('parameters.parameters_apply_envelope')
 
-    ! Do not apply the envelope if the parameters are represented as a sine Fourier series.
+    ! Do not apply the envelope if the parameters are represented as a sine-Fourier series.
     if(par_common%representation .eq. ctr_real_time) then
       do j = 1, cp%no_parameters
         do i = 1, tdf_niter(cp%f(j)) + 1
@@ -961,10 +965,13 @@ contains
 
     integer :: j
 
+    call push_sub('parameters.parameters_to_h_val')
+
     do j = 1, cp%no_parameters
       call laser_set_f_value(ep%lasers(j), val, tdf(cp%f(j), val) )
     end do
 
+    call pop_sub()
   end subroutine parameters_to_h_val
   ! ---------------------------------------------------------
 
@@ -1088,7 +1095,7 @@ contains
 
         nfreqs = 1000
         wa = M_ZERO
-        wb = M_THREE ! hard coded to three atomic units... this should be improved.
+        wb = M_THREE ! hard-coded to three atomic units... this should be improved.
         wmax = wb
         dw = wmax/(nfreqs-1)
         dt = tdf_dt(par%f(1))
@@ -1294,8 +1301,14 @@ contains
   ! ---------------------------------------------------------
   subroutine parameters_set_alpha(par, alpha)
     type(oct_control_parameters_t), intent(inout) :: par
+
     FLOAT, intent(in) :: alpha
+
+    call push_sub('parameters.parameters_set_alpha')
+
     par%alpha(:) = alpha
+
+    call pop_sub()
   end subroutine parameters_set_alpha
   ! ---------------------------------------------------------
 
@@ -1464,12 +1477,16 @@ contains
   subroutine parameters_filter(par, filter)
     type(oct_control_parameters_t), intent(inout) :: par
     type(filter_t),                 intent(inout) :: filter
+
     integer :: j
+
+    call push_sub('parameters.parameters_filter')
 
     do j = 1, par%no_parameters
       call filter_apply(par%f(j), filter)
     end do
 
+    call pop_sub()
   end subroutine parameters_filter
   ! ---------------------------------------------------------
 
@@ -1478,6 +1495,8 @@ contains
   subroutine parameters_mod_close()
     integer :: j
 
+    call push_sub('parameters.parameters_mod_close')
+
     SAFE_DEALLOCATE_P(par_common%alpha); nullify(par_common%alpha)
     do j = 1, par_common%no_parameters
       call tdf_end(par_common%td_penalty(j))
@@ -1485,6 +1504,7 @@ contains
     SAFE_DEALLOCATE_P(par_common%td_penalty); nullify(par_common%td_penalty)
     SAFE_DEALLOCATE_P(par_common)
 
+    call pop_sub()
   end subroutine parameters_mod_close
   ! ---------------------------------------------------------
 

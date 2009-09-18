@@ -24,7 +24,7 @@
     integer :: j, n, dof
     FLOAT, allocatable :: ep(:), e(:), y(:), a(:), x(:)
 
-    call push_sub('parameters_trans.parameters_basis_to_theta')
+    call push_sub('parameters_trans_inc.parameters_basis_to_theta')
 
     ASSERT(par%current_representation .ne. ctr_real_time)
 
@@ -96,7 +96,7 @@
     FLOAT, allocatable :: y(:), a(:), e(:), ep(:), x(:)
     integer :: n, dof, j
 
-    call push_sub('parameters_trans.parameters_theta_to_basis')
+    call push_sub('parameters_trans_inc.parameters_theta_to_basis')
 
     ASSERT(par%current_representation .ne. ctr_real_time)
 
@@ -176,7 +176,11 @@
   subroutine parameters_get_theta(par, theta)
     type(oct_control_parameters_t), intent(in) :: par
     FLOAT, intent(inout) :: theta(:)
+
+    call push_sub('parameters_trans_inc.parameters_get_theta')
     theta = par%theta
+
+    call pop_sub()
   end subroutine parameters_get_theta
   ! ---------------------------------------------------------
 
@@ -185,7 +189,11 @@
   subroutine parameters_set_theta(par, theta)
     type(oct_control_parameters_t), intent(inout) :: par
     FLOAT, intent(in) :: theta(:)
+
+    call push_sub('parameters_trans_inc.parameters_set_theta')
     par%theta = theta
+
+    call pop_sub()
   end subroutine parameters_set_theta
   ! ---------------------------------------------------------
 

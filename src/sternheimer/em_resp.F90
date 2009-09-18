@@ -28,24 +28,25 @@ module em_resp_m
   use global_m
   use grid_m
   use hamiltonian_m
+  use h_sys_output_m
   use io_m
   use io_function_m
   use kdotp_m
   use kdotp_calc_m
   use lalg_basic_m
-  use loct_parser_m
   use linear_response_m
   use linear_solver_m
+  use loct_parser_m
   use math_m
-  use mesh_function_m
   use mesh_m
+  use mesh_function_m
   use messages_m
   use mix_m
-  use h_sys_output_m
   use pert_m
   use profiling_m
   use restart_m
   use simul_box_m
+  use species_m
   use states_m
   use states_dim_m
   use sternheimer_m
@@ -53,7 +54,6 @@ module em_resp_m
   use system_m
   use units_m
   use v_ks_m
-  use species_m
   
   implicit none
 

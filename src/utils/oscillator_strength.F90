@@ -20,17 +20,17 @@
 #include "global.h"
 
 module oscillator_strength_m
-  use global_m
-  use messages_m
   use datasets_m
-  use string_m
+  use global_m
+  use io_m
+  use loct_m
   use loct_math_m
   use loct_parser_m
-  use io_m
-  use units_m
+  use messages_m
   use profiling_m
   use spectrum_m
-  use loct_m
+  use string_m
+  use units_m
 
   implicit none
 
@@ -173,7 +173,7 @@ program oscillator_strength
   ! Reads the information passed through the command line options (if available).
   call getopt_init(ierr)
   if(ierr.ne.0) then
-    message(1) = "Your fortran compiler doesn't support command line arguments,"
+    message(1) = "Your Fortran compiler doesn't support command-line arguments;"
     message(2) = "the oct-oscillator-strength command is not available."
     call write_fatal(2)
   end if
@@ -253,7 +253,7 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
 
   if(order.ne.2) then
     write(message(1),'(a)') 'The run mode #3 is only compatible with the analysis of the'
-    write(message(2),'(a)') 'second order response.'
+    write(message(2),'(a)') 'second-order response.'
     call write_fatal(2)
   end if
 
@@ -316,7 +316,7 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
   call read_ot(nspin, order_in_file, nw_subtracted)
 
   if(order_in_file.ne.order) then
-    write(message(1), '(a)') 'Error: The ot file should contain the second order response'
+    write(message(1), '(a)') 'Error: The ot file should contain the second-order response'
     write(message(2), '(a)') '       in this run mode.'
     call write_fatal(2)
   end if
@@ -521,7 +521,7 @@ subroutine write_polarizability(nfrequencies, nresonances, dw, w, c0I2, gamma)
   CMPLX :: pol
 
   iunit = io_open('polarizability', status='replace', action = 'write', die=.false.)
-  write(iunit, '(a)') '# Polarizability file. Generated using the SOS formula with the followind data:'
+  write(iunit, '(a)') '# Polarizability file. Generated using the SOS formula with the following data:'
   write(iunit, '(a)') '#'
 
   do i = 1, nresonances
@@ -596,7 +596,7 @@ subroutine find_resonance(omega, leftbound, rightbound, nfrequencies)
 #ifndef SINGLE_PRECISION
   call loct_1dminimize(min_w - 2*dw, min_w + 2*dw, omega, ft2, ierr)
 #else
-  stop "FIXME: can not work in single precision"
+  stop "FIXME: can not work in single-precision."
 #endif
   if(ierr.ne.0) then
     write(message(1),'(a)') 'Could not find a maximum.'
@@ -645,21 +645,21 @@ subroutine resonance_first_order(omega, power, nw_subtracted, dw, leftbound, rig
 
   write(*, '(a)')                 '******************************************************************'
   write(*, '(a,i3)')              'Resonance #', nw_subtracted + 1
-  write(*, '(a,f12.8,a,f12.8,a)') 'omega    = ', omega / units%energy%factor, &
-                                  ' '//trim(units%energy%abbrev)//' = ',      &
+  write(*, '(a,f12.8,a,f12.8,a)') 'omega    = ', units_from_atomic(units_out%energy, omega), &
+                                  ' '//trim(units_abbrev(units_out%energy))//' = ',      &
                                   omega, ' Ha'
-  write(*, '(a,f12.8,a,f12.8,a)') 'C(omega) = ', power / units%length%factor**2, &
-                                  ' '//trim(units%length%abbrev)//'^2 =',        &
+  write(*, '(a,f12.8,a,f12.8,a)') 'C(omega) = ', units_from_atomic(units_out%length**2, power), &
+                                  ' '//trim(units_abbrev(units_out%length**2))//' =',        &
                                   power, ' b^2'
-  write(*, '(a,f12.8,a,f12.8,a)') '<0|P|I>  = ', sqrt(abs(power)) / units%length%factor, &
-                                  ' '//trim(units%length%abbrev)//' = ',                 &
+  write(*, '(a,f12.8,a,f12.8,a)') '<0|P|I>  = ', units_from_atomic(units_out%length, sqrt(abs(power))), &
+                                  ' '//trim(units_abbrev(units_out%length))//' = ',                 &
                                   sqrt(abs(power)),' b'
   write(*, '(a,f12.8)')           'f[O->I]  = ', M_TWO*omega*power
   write(*, '(a)')
-  write(*, '(a,f12.8,a,f12.8,a)') '   Search interval = [', leftbound / units%energy%factor, ',', &
-                                                            rightbound / units%energy%factor, ']'
-  write(*, '(a,f12.4,a)')         '   Search discretization = ', dw / units%energy%factor, &
-                                  ' '//trim(units%energy%abbrev)
+  write(*, '(a,f12.8,a,f12.8,a)') '   Search interval = [', units_from_atomic(units_out%energy, leftbound), ',', &
+                                                            units_from_atomic(units_out%energy, rightbound), ']'
+  write(*, '(a,f12.4,a)')         '   Search discretization = ', units_from_atomic(units_out%energy, dw), &
+                                  ' '//trim(units_abbrev(units_out%energy))
   write(*, '(a)')                 '******************************************************************'
   write(*, '(a)')
 
@@ -704,11 +704,11 @@ subroutine resonance_second_order(omega, power, nw_subtracted, leftbound, rightb
 
   write(*, '(a)')                 '******************************************************************'
   write(*, '(a,i3)')              'Resonance #', nw_subtracted + 1
-  write(*, '(a,f12.8,a,f12.8,a)') 'omega    = ', omega / units%energy%factor, &
-                                  ' '//trim(units%energy%abbrev)//' = ',      &
+  write(*, '(a,f12.8,a,f12.8,a)') 'omega    = ', units_from_atomic(units_out%energy, omega), &
+                                  ' '//trim(units_abbrev(units_out%energy))//' = ',      &
                                   omega, ' Ha'
-  write(*, '(a,f12.8,a,f12.8,a)') 'C(omega) = ', power / units%length%factor**3, &
-                                  ' '//trim(units%length%abbrev)//'^3 = ',       &
+  write(*, '(a,f12.8,a,f12.8,a)') 'C(omega) = ', units_from_atomic(units_out%length**3, power), &
+                                  ' '//trim(units_abbrev(units_out%length**3))//' = ',       &
                                   power, ' b^3'
 
   if(c01*c02 .ne. M_ZERO) then
@@ -716,8 +716,8 @@ subroutine resonance_second_order(omega, power, nw_subtracted, leftbound, rightb
   end if
 
   write(*, '(a)')
-  write(*, '(a,f12.8,a,f12.8,a)') '   Search interval = [', leftbound / units%energy%factor, ',', &
-                                                            rightbound / units%energy%factor, ']'
+  write(*, '(a,f12.8,a,f12.8,a)') '   Search interval = [', units_from_atomic(units_out%energy, leftbound), ',', &
+                                                            units_from_atomic(units_out%energy, rightbound), ']'
   write(*, '(a)')                 '******************************************************************'
   write(*, '(a)')
 
@@ -1032,9 +1032,9 @@ subroutine write_ot(nspin, time_steps, dt, kick, units, order, ot, observable)
   case(-1)
     write(iunit,'(a)') '# Observable operator = kick operator'
     if(kick%n_multipoles > 0 ) then
-      conversion_factor = units%length%factor ** kick%l(1)
+      conversion_factor = units_out%length%factor ** kick%l(1)
     else
-      conversion_factor = units%length%factor
+      conversion_factor = units_out%length%factor
     end if
   case(0)
     select case(observable(2))
@@ -1042,9 +1042,9 @@ subroutine write_ot(nspin, time_steps, dt, kick, units, order, ot, observable)
     case(2); write(iunit,'(a)') '# O = y'
     case(3); write(iunit,'(a)') '# O = z'
     end select
-    conversion_factor = units%length%factor
+    conversion_factor = units_out%length%factor
   case default
-    conversion_factor = units%length%factor ** observable(1)
+    conversion_factor = units_out%length%factor ** observable(1)
     write(iunit, '(a12,i1,a1,i2,a1)') '# (l, m) = (', observable(1),',',observable(2),')'
   end select
   call kick_write(kick, iunit)
@@ -1054,13 +1054,13 @@ subroutine write_ot(nspin, time_steps, dt, kick, units, order, ot, observable)
   write(iunit,'(a20)', advance = 'no') str_center('t', 19)
   write(iunit,'(a20)', advance = 'yes') str_center('<O>(t)', 20)
   write(iunit,'(a1)', advance = 'no') '#'
-  write(header_string, '(a)') '['//trim(units%time%abbrev)//']'
+  write(header_string, '(a)') '['//trim(units_abbrev(units_out%time))//']'
   write(iunit,'(a20)', advance = 'no')  str_center(trim(header_string), 19)
-  write(header_string, '(a)') '['//trim(units%length%abbrev)//']'
+  write(header_string, '(a)') '['//trim(units_abbrev(units_out%length))//']'
   write(iunit,'(a20)', advance = 'yes')  str_center(trim(header_string), 20)
 
   do i = 0, time_steps
-    write(iunit, '(2e20.8)') i*dt / units%time%factor, ot(i) / conversion_factor
+    write(iunit, '(2e20.8)') units_from_atomic(units_out%time, i*dt), ot(i) / conversion_factor
   end do
 
   call io_close(iunit)
@@ -1116,7 +1116,7 @@ subroutine read_ot(nspin, order, nw_subtracted)
   elseif(index(line, '# (l, m) = ').ne.0) then
     read(line,'(a12,i1,a1,i2,a1)') dummychar(1:12), observable(1), dummychar(1:1), observable(2), dummychar(1:1)
   else
-    write(message(1),'(a)') 'Problem reading ot file: could not figure out the shape'
+    write(message(1),'(a)') 'Problem reading "ot" file: could not figure out the shape'
     write(message(2),'(a)') 'of the observation operator.'
     call write_fatal(2)
   end if
@@ -1136,14 +1136,14 @@ subroutine read_ot(nspin, order, nw_subtracted)
   select case(observable(1))
   case(-1)
     if(kick%n_multipoles > 0) then
-      conversion_factor = units%length%factor**kick%l(1)
+      conversion_factor = units_out%length%factor**kick%l(1)
     else
-      conversion_factor = units%length%factor
+      conversion_factor = units_out%length%factor
     end if
   case(0)
-    conversion_factor = units%length%factor
+    conversion_factor = units_out%length%factor
   case default
-    conversion_factor = units%length%factor**observable(1)
+    conversion_factor = units_out%length%factor**observable(1)
   end select
 
   ! count number of time_steps
@@ -1242,8 +1242,8 @@ subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
       total_time = dt*time_steps
       write(0, '(a)')        '* WARNING: The requested total time to process is larger than the time'
       write(0, '(a)')        '*          available in the input file.'
-      write(0, '(a,f8.4,a)') '           The time has been adjusted to ', total_time / units%time%factor, &
-                         units%time%abbrev
+      write(0, '(a,f8.4,a)') '           The time has been adjusted to ', &
+           units_from_atomic(units_out%time, total_time), trim(units_abbrev(units_out%time))
     end if
     time_steps = int(total_time / dt)
     total_time = time_steps * dt
@@ -1267,12 +1267,12 @@ subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
   write(iunit, '(a1,a20)', advance = 'no') '#', str_center("omega", 20)
   write(header_string,'(a)') 'F(omega)'
   write(iunit, '(a20)', advance = 'yes') str_center(trim(header_string), 20)
-  write(iunit, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units%energy%abbrev) // ']', 20)
+  write(iunit, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 20)
   ! Here we should print the units of the transform.
   write(iunit, '(a)', advance = 'yes')
 
   do i = 1, nfrequencies
-    write(iunit,'(2e20.8)') warray(i) / units%energy%factor, &
+    write(iunit,'(2e20.8)') units_from_atomic(units_out%energy, warray(i)), &
                             tarray(i)
   end do
 

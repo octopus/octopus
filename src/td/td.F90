@@ -21,44 +21,44 @@
 
 module td_m
   use cpmd_m
-  use energy_m
-  use global_m
-  use io_m
   use datasets_m
-  use io_function_m
-  use loct_math_m
-  use loct_parser_m
-  use units_m
-  use messages_m
-  use mesh_m
+  use energy_m
   use forces_m
   use gauge_field_m
   use geometry_m
+  use global_m
+  use grid_m
   use ground_state_m
   use h_sys_output_m
   use hamiltonian_m
   use ion_dynamics_m
+  use io_m
+  use io_function_m
+  use lasers_m
   use loct_m
+  use loct_math_m
+  use loct_parser_m
+  use math_m
+  use mesh_m
+  use messages_m
+  use mpi_m
+  use PES_m
   use profiling_m
   use projector_m
+  use restart_m
   use scf_m
   use scissor_m
+  use species_m
+  use spectrum_m
   use states_m
-  use states_dim_m
   use states_calc_m
-  use restart_m
+  use states_dim_m
   use system_m
   use td_rti_m
   use td_write_m
+  use units_m
   use v_ks_m
-  use PES_m
-  use grid_m
-  use spectrum_m
-  use mpi_m
   use varinfo_m
-  use math_m
-  use lasers_m
-  use species_m
 
   implicit none
 
@@ -76,7 +76,7 @@ module td_m
        CP        = 3
   
   type td_t 
-    type(td_rti_t)       :: tr             ! contains the details of the time evolution
+    type(td_rti_t)       :: tr             ! contains the details of the time-evolution
     type(scf_t)          :: scf
     type(ion_dynamics_t) :: ions
     type(cpmd_t)         :: cp_propagator
@@ -131,9 +131,9 @@ contains
 
     call td_init(td, sys, hm)
 
-    ! Alocate wave-functions during time-propagation
+    ! Alocate wavefunctions during time-propagation
     if(td%dynamics == EHRENFEST) then
-      !complex wfs are required for ehrefenst
+      !complex wfs are required for Ehrenfest
       call states_allocate_wfns(st, gr%mesh, M_CMPLX)
     else
       call states_allocate_wfns(st, gr%mesh)
@@ -249,7 +249,7 @@ contains
       
       if(generate) call hamiltonian_epot_generate(hm, gr, sys%geo, st, time = iter*td%dt)
 
-      ! update hamiltonian and eigenvalues (fermi is *not* called)
+      ! update Hamiltonian and eigenvalues (fermi is *not* called)
       call v_ks_calc(gr, sys%ks, hm, st, calc_eigenval = .true.)
 
       ! Get the energies.
@@ -310,10 +310,14 @@ contains
     end if
 #endif
 
+    call pop_sub()
+
   contains
 
     ! ---------------------------------------------------------
     subroutine check_point
+      call push_sub('td.td_run.check_point')
+
       ! write info
       if(td%dynamics /= CP) then 
         write(message(1), '(i7,1x,2f14.6,f14.3, i10)') iter, &
@@ -351,15 +355,20 @@ contains
           call messages_print_stress(stdout)
         end if
       end if
+
+      call pop_sub()
     end subroutine check_point
 
    ! ---------------------------------------------------------
     subroutine end_()
+      call push_sub('td.td_run.end_')
+
       ! free memory
       if(td%dynamics == CP) call cpmd_end(td%cp_propagator)
       call states_deallocate_wfns(st)
       call ion_dynamics_end(td%ions)
       call td_end(td)
+
       call pop_sub()
     end subroutine end_
 
@@ -371,6 +380,8 @@ contains
       type(block_t) :: blk
       type(states_t) :: stin
       CMPLX, allocatable :: rotation_matrix(:, :)
+
+      call push_sub('td.td_run.init_wfs')
 
       if(.not.fromscratch) then
         call restart_read(trim(tmpdir)//'td', st, gr, geo, ierr, iter=td%iter)
@@ -419,12 +430,12 @@ contains
       if(fromScratch) then
 
         if(.not. st%only_userdef_istates) then
-          ! In the open bounary case the ground state wavefunctions are bit too "wide".
+          ! In the open-boundary case the ground-state wavefunctions are bit too "wide".
           ! Therefore, we need a special routine to extract the middle.
           if(gr%sb%open_boundaries) then
             call restart_read_ob_intf(trim(restart_dir)//GS_DIR, st, gr, ierr)
             if(ierr.ne.0) then
-              message(1) = "Could not read interface wave functions from '"//trim(restart_dir)//GS_DIR//"'"
+              message(1) = "Could not read interface wave unctions from '"//trim(restart_dir)//GS_DIR//"'"
               message(2) = "Please run an open-boundaries ground-state calculation first!"
               call write_fatal(2)
             end if
@@ -451,17 +462,17 @@ contains
         !%Default no
         !%Section States
         !%Description
-        !% Before starting the td calculation, the initial states (that are
-        !% read from the restart/gs directory, which should have been
+        !% Before starting the <tt>td</tt> calculation, the initial states (that are
+        !% read from the <tt>restart/gs</tt> directory, which should have been
         !% generated in a previous ground-state calculation) can be "transformed"
-        !% among themselves. The block TransformStates gives the transformation matrix
+        !% among themselves. The block <tt>TransformStates</tt> gives the transformation matrix
         !% to be used. The number of rows of the matrix should equal the number
         !% of the states present in the time-dependent calculation (the independent
-        !% spin and k-point subspaces are all transformed equally); the number of
+        !% spin and <i>k</i>-point subspaces are all transformed equally); the number of
         !% columns should be equal to the number of states present in the
-        !% restart/gs directory. This number may be different: for example,
-        !% one could have run previously in "unocc" mode in order to obtain unoccupied
-        !% Kohn-Sham states, and therefore restart/gs will contain more states.
+        !% <tt>restart/gs</tt> directory. This number may be different: for example,
+        !% one could have run previously in <tt>unocc</tt> mode in order to obtain unoccupied
+        !% Kohn-Sham states, and therefore <tt>restart/gs</tt> will contain more states.
         !% These states can be used in the transformation.
         !%
         !% Note that the code will not check the orthonormality of the new states!
@@ -503,17 +514,17 @@ contains
       !% will be the lowest-energy ones) will be added during the propagation, but the orbitals
       !% will not be propagated.
       !% 
-      !% WARNING: NOT TESTED YET.
+      !% <b>WARNING: NOT TESTED YET.</b>
       !%Option sae -1
       !% Single-active-electron approximation. This option is only valid for time-dependent 
-      !% calculations ("CalculationMode = td"). Also, the nuclei should not move. 
+      !% calculations (<tt>CalculationMode = td</tt>). Also, the nuclei should not move. 
       !% The idea is that all orbitals except the last one are frozen. The orbitals are to 
       !% be read from a previous ground-state calculation. The active orbital is then treated
-      !% as independent (no matter if it contains one electron or two) -- although it will
+      !% as independent (whether if it contains one electron or two) -- although it will
       !% feel the Hartree and exchange-correlation potentials from  the ground-state electronic
       !% configuration.
       !% 
-      !% It is almost equivalent to setting "TDFreezeOrbitals = N-1", where N is the number
+      !% It is almost equivalent to setting <tt>TDFreezeOrbitals = N-1</tt>, where <tt>N</tt> is the number
       !% of orbitals, but not completely.
       !%End
       call loct_parse_int(datasets_check('TDFreezeOrbitals'), 0, freeze_orbitals)
@@ -550,12 +561,13 @@ contains
       call hamiltonian_span(hm, minval(gr%mesh%h(1:gr%mesh%sb%dim)), x)
       call total_energy(hm, gr, st, -1)
 
+      call pop_sub()
     end subroutine init_wfs
 
 
     ! ---------------------------------------------------------
     subroutine td_run_zero_iter()
-      call push_sub('td.td_run_zero_iter')
+      call push_sub('td.td_run.td_run_zero_iter')
 
       call td_write_iter(write_handler, gr, st, hm, geo, td%kick, td%dt, 0)
 
@@ -580,9 +592,9 @@ contains
       FLOAT   :: xx(MAX_DIM)
       FLOAT, allocatable :: kick_function(:)
 
-      call push_sub('td.apply_delta_field')
+      call push_sub('td.td_run.apply_delta_field')
 
-      ! The wave-functions at time delta t read
+      ! The wavefunctions at time delta t read
       ! psi(delta t) = psi(t) exp(i k x)
       delta_strength: if(k%delta_strength .ne. M_ZERO) then
 
@@ -673,7 +685,7 @@ contains
     ! ---------------------------------------------------------
     subroutine td_read_coordinates() ! reads the pos and vel from coordinates file
       integer :: i, iunit, record_length
-      call push_sub('td.td_read_coordinates')
+      call push_sub('td.td_run.td_read_coordinates')
 
       record_length = 28 + 3*geo%natoms*3*20
       call io_assign(iunit)
@@ -715,7 +727,7 @@ contains
       integer :: i, iunit
       FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM), dummy(1:MAX_DIM)
 
-      call push_sub('td.td_read_gauge_field')
+      call push_sub('td.td_run.td_read_gauge_field')
 
       call io_assign(iunit)
       open(unit = iunit, file = io_workpath('td.general/gauge_field'), &
@@ -752,7 +764,7 @@ contains
       integer :: i, is, ierr
       character(len=256) :: filename
 
-      call push_sub('td.td_save_restart')
+      call push_sub('td.td_run.td_save_restart')
 
       ! first write resume file
       call restart_write(trim(tmpdir)//'td', st, gr, ierr, iter)

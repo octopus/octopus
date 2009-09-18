@@ -30,8 +30,8 @@ module ob_green_m
   use math_m
   use messages_m
   use nl_operator_m
-  use profiling_m
   use ob_interface_m
+  use profiling_m
   use simul_box_m
   use string_m
 
@@ -51,7 +51,7 @@ contains
     CMPLX,             intent(in)  :: offdiag(:, :) ! Off-diagonal block of lead Hamiltonian.
     type(interface_t), intent(in)  :: intf          ! => gr%intf(il)
     CMPLX,             intent(out) :: green(:, :)   ! The calculated Green`s function.
-    logical,           intent(in)  :: h_is_real     ! Is the hamiltonian real? (no vector potential)
+    logical,           intent(in)  :: h_is_real     ! Is the Hamiltonian real? (no vector potential)
 
     integer            :: np, np_uc
     FLOAT              :: threshold, eta, residual, residual2, eps
@@ -201,7 +201,7 @@ contains
     integer, intent(in)  :: np            ! Number of interface points.
     CMPLX,   intent(out) :: green(:, :)   ! The calculated Green`s function.
     FLOAT,   intent(in)  :: threshold     ! this defines convergence
-    logical, intent(in)  :: h_is_real     ! Is the hamiltonian real? (no vector potential)
+    logical, intent(in)  :: h_is_real     ! Is the Hamiltonian real? (no vector potential)
 
     CMPLX, allocatable :: e(:, :), es(:, :), a(:, :), b(:, :), inv(:, :)
     CMPLX, allocatable :: tmp1(:, :), tmp2(:, :), tmp3(:, :)
@@ -339,14 +339,14 @@ contains
   end subroutine create_moeb_trans_matrix
 
   
-  ! extract from the periodic hamiltonian the submatrices of the size
+  ! extract from the periodic Hamiltonian the submatrices of the size
   ! of the interface
   subroutine extract_sub_matrices(intf, diag, offdiag, h, v)
     type(interface_t), intent(in)  :: intf          ! => gr%intf(il)
     CMPLX,   intent(in)    :: diag(1:intf%np_uc, 1:intf%np_uc)   ! the lead diagonal (of the unit cell)
     CMPLX,   intent(in)    :: offdiag(1:intf%np_uc, 1:intf%np_uc)! the lead off-diagonal (of the unit cell)
     CMPLX,   intent(out)   :: h(:, :, :) ! the diagonal sub blocks
-    CMPLX,   intent(out)   :: v(:, :, :) ! the offdiagonal sub blocks
+    CMPLX,   intent(out)   :: v(:, :, :) ! the off-diagonal sub blocks
 
     integer :: ni, iblock, np
 

@@ -30,7 +30,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   R_TYPE :: occ
 
   call profiling_in(C_PROFILING_XC_KLI)
-  call push_sub('xc_KLI.xc_KLI_solve')
+  call push_sub('xc_KLI_inc.Xxc_KLI_solve')
 
   ! some intermediate quantities
   ! vxc contains the Slater part!
@@ -73,9 +73,8 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   if(oep%level == XC_OEP_SLATER) then
     SAFE_DEALLOCATE_A(rho_sigma)
     SAFE_DEALLOCATE_A(sqphi)
-    call pop_sub()
     call profiling_out(C_PROFILING_XC_KLI)
-    return
+    call pop_sub(); return
   end if
 
   n = oep%eigen_n

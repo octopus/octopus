@@ -33,15 +33,14 @@ subroutine xc_get_vxc_and_axc(gr, xcs, st, rho, j, ispin, vxc, axc, ex, ec, exc_
   FLOAT, allocatable :: v(:,:,:), f(:,:,:), dedd(:,:), dedv(:,:,:), tmp(:,:)
   FLOAT, allocatable :: l_dens(:), l_v(:,:), l_dedd(:), l_dedv(:,:)
 
-  call push_sub('xc_axc.xc_get_vxc_and_axc')
+  call push_sub('axc_inc.xc_get_vxc_and_axc')
 
   !xc energy and potential in the absence of external magnetic fields
   call xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc=vxc)
 
   !do we have a current-dependent xc?
   if(iand(xcs%family, XC_FAMILY_LCA) == 0) then
-    call pop_sub()
-    return
+    call pop_sub(); return
   end if
 
   spin_channels = xcs%j_functl%spin_channels

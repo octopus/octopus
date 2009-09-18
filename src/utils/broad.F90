@@ -20,13 +20,13 @@
 #include "global.h"
 
 program broad
-  use global_m
-  use messages_m
   use datasets_m
+  use global_m
   use io_m
-  use units_m
   use loct_parser_m
+  use messages_m
   use profiling_m
+  use units_m
 
   implicit none
 
@@ -47,14 +47,14 @@ program broad
   call units_init()
 
   ! broadening to use
-  call loct_parse_float(datasets_check('LinBroadening'),  CNST(0.005)/units_inp%energy%factor, b%b)
-  call loct_parse_float(datasets_check('LinEnergyStep'),  CNST(0.001)/units_inp%energy%factor, b%energy_step)
+  call loct_parse_float(datasets_check('LinBroadening'),  units_from_atomic(units_inp%energy, CNST(0.005)), b%b)
+  call loct_parse_float(datasets_check('LinEnergyStep'),  units_from_atomic(units_inp%energy, CNST(0.001)), b%energy_step)
   call loct_parse_float(datasets_check('LinMinEnergy'),   M_ZERO, b%min_energy)
-  call loct_parse_float(datasets_check('LinMaxEnergy'),   M_ONE/units_inp%energy%factor, b%max_energy)
-  b%b = b%b * units_inp%energy%factor
-  b%energy_step = b%energy_step * units_inp%energy%factor
-  b%min_energy  = b%min_energy  * units_inp%energy%factor
-  b%max_energy  = b%max_energy  * units_inp%energy%factor
+  call loct_parse_float(datasets_check('LinMaxEnergy'),   units_from_atomic(units_inp%energy, M_ONE), b%max_energy)
+  b%b = units_to_atomic(units_inp%energy, b%b)
+  b%energy_step = units_to_atomic(units_inp%energy, b%energy_step)
+  b%min_energy  = units_to_atomic(units_inp%energy, b%min_energy)
+  b%max_energy  = units_to_atomic(units_inp%energy, b%max_energy)
 
   call calc_broad(b, CASIDA_DIR, 'eps-diff', .true.)
   call calc_broad(b, CASIDA_DIR, 'petersilka', .true.)

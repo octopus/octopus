@@ -50,7 +50,7 @@ contains
     integer, intent(in) :: ml
     FLOAT,   intent(in) :: thr
 
-    call push_sub('poisson_cg.poisson_cg1_init')
+    call push_sub('poisson_cg.poisson_cg_init')
     threshold = thr
     call pop_sub()
   end subroutine poisson_cg_init
@@ -98,7 +98,7 @@ contains
     call dconjugate_gradients(m%np_part, m%np, pk, zk, &
       internal_laplacian_op, internal_dotp, iter, res, threshold)
     if(res >= threshold) then
-      message(1) = 'Conjugate gradients Poisson solver did not converge.'
+      message(1) = 'Conjugate-gradients Poisson solver did not converge.'
       write(message(2), '(a,i8)')    '  Iter = ',iter
       write(message(3), '(a,e14.6)') '  Res = ', res
       call write_warning(3)
@@ -138,7 +138,7 @@ contains
     call dconjugate_gradients(mesh%np_part, mesh%np, potc, rhs, internal_laplacian_op, internal_dotp, iter, res, threshold)
 
     if(res >= threshold) then
-      message(1) = 'Conjugate gradients Poisson solver did not converge.'
+      message(1) = 'Conjugate-gradients Poisson solver did not converge.'
       write(message(2), '(a,i8)')    '  Iter = ', iter
       write(message(3), '(a,e14.6)') '  Res = ', res
       call write_warning(3)
