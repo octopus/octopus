@@ -541,7 +541,7 @@ contains
     end do
 
     ! If the control function is represented directly in real time, the "dimension" (cp%dim) is
-    ! the number of values that represent the function in the discretized time axis.
+    ! the number of values that represent the function on the discretized time-axis.
     !
     ! If the control function is parametrized, up to now (in the future this might change), all 
     ! parametrizations are based on a previous basis-set expansion (sine-Fourier series, or "normal"

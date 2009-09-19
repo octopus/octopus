@@ -34,10 +34,10 @@ module simul_box_m
   use messages_m
   use mpi_m
   use profiling_m
+  use species_m
   use string_m
   use units_m
   use varinfo_m
-  use species_m
 
   implicit none
 
@@ -76,7 +76,7 @@ module simul_box_m
     TOP       = 4,              & ! 
     REAR      = 5,              & ! for 3D open system
     FRONT     = 6,              & ! 
-    OUTER     = 1,              & ! Block indices of interface wave functions
+    OUTER     = 1,              & ! Block indices of interface wavefunctions
     INNER     = 2,              & ! for source term.
     NLEADS    = NLEADS_,        & ! Number of leads.
     TRANS_DIR = 1                 ! Transport is in x-direction.
@@ -125,7 +125,7 @@ module simul_box_m
     FLOAT :: box_offset(MAX_DIM)  ! shifts of the origin in the respective direction
 
     FLOAT :: rsize          ! the radius of the sphere or of the cylinder
-    FLOAT :: xsize          ! the length of the cylinder in the x direction
+    FLOAT :: xsize          ! the length of the cylinder in the x-direction
     FLOAT :: lsize(MAX_DIM) ! half of the length of the parallelepiped in each direction.
 
     FLOAT                 :: cell_length(1:3)
@@ -145,7 +145,7 @@ module simul_box_m
     FLOAT :: volume_element                      ! the volume element in real space
     FLOAT :: rcell_volume                        ! the volume of the cell in real space
 
-    type(kpoints_t) :: kpoints                   ! the kpoints
+    type(kpoints_t) :: kpoints                   ! the k-points
 
     FLOAT :: fft_alpha      ! enlargement factor for double box
 
@@ -878,6 +878,8 @@ contains
       integer :: ix, iy, iz, iatom, round, imax(1:3), imin(1:3)
       FLOAT :: xatom(1:3), radius
 
+      call push_sub('simul_box.simul_box_init.build_cells')
+
       nullify(sb%cells)
 
       if(sb%box_shape == MINIMUM) then
@@ -1014,7 +1016,7 @@ contains
 
   
   !--------------------------------------------------------------
-  ! Read the coordinates of the leads atoms and add the to the
+  ! Read the coordinates of the leads atoms and add them to the
   ! simulation box (for open boundaries only, of course).
   subroutine simul_box_add_lead_atoms(sb, geo)
     type(simul_box_t), intent(in)    :: sb
@@ -1181,7 +1183,7 @@ contains
     volume = dot_product(rv(1:3, 1), tmp(1:3))
 
     if ( volume < M_ZERO ) then 
-      message(1) = "Your lattice vectors form a left-handed system"
+      message(1) = "Your lattice vectors form a left-handed system."
       call write_fatal(1)
     end if
 
@@ -1513,14 +1515,14 @@ contains
       write(iunit, '(a20,i4)')        'num_areas=         ',sb%hr_area%num_areas
       write(iunit, '(a20,i4)')        'num_radii=         ',sb%hr_area%num_radii
       do i = 1, sb%hr_area%num_radii
-        write(iunit, '(a10,i2.2,a9,e22.14)')    'mr_radius_', i, '=        ',sb%hr_area%radius(i)
+        write(iunit, '(a10,i2.2,a9,e22.14)') 'mr_radius_', i, '=        ',sb%hr_area%radius(i)
       end do
       do i = 1, MAX_DIM
-        write(iunit, '(a7,i1,a13,e22.14)')    'center(', i, ')=           ',sb%hr_area%center(i)
+        write(iunit, '(a7,i1,a13,e22.14)')   'center(', i, ')=           ',sb%hr_area%center(i)
       end do
     end if
     do i = 1, MAX_DIM
-      write(iunit, '(a9,i1,a11,9e22.14)')   'rlattice(', i, ')=         ', &
+      write(iunit, '(a9,i1,a11,9e22.14)')    'rlattice(', i, ')=         ', &
         sb%rlattice_primitive(1:MAX_DIM, i)
     end do
     write(iunit, '(a20,l7)')        'open_boundaries=    ', sb%open_boundaries

@@ -29,15 +29,15 @@ module static_pol_m
   use global_m
   use grid_m
   use hamiltonian_m
+  use h_sys_output_m
   use io_function_m
   use io_m
   use loct_m
   use loct_parser_m
   use mpi_m
-  use mesh_function_m
   use mesh_m
+  use mesh_function_m
   use messages_m
-  use h_sys_output_m
   use profiling_m
   use restart_m
   use scf_m
@@ -74,6 +74,8 @@ contains
     type(born_charges_t) :: born_charges
     logical :: diagonal_done, calc_Born
     character(len=80) :: fname
+
+    call push_sub('static_pol.static_pol_run')
 
     call init_()
 
@@ -181,7 +183,7 @@ contains
         write(message(1), '(a)')
         write(message(2), '(a,f6.4,5a)') 'Info: Calculating dipole moment for field ', &
           units_from_atomic(units_out%energy/units_out%length, -(-1)**isign * e_field), ' ', &
-          trim(units_abbrev(units_out%energy/units_out%length)), ' in the ', io_output_direction(ii), '-direction.'
+          trim(units_abbrev(units_out%energy/units_out%length)), ' in the ', index2axis(ii), '-direction.'
         call write_info(2)
         ! there is an extra factor of -1 in here that is for the electronic charge
 
@@ -216,9 +218,9 @@ contains
       write(message(1), '(a)')
       write(message(2), '(a,f6.4,3a, f6.4, 3a)') 'Info: Calculating dipole moment for field ', &
          units_from_atomic(units_out%energy/units_out%length, e_field), ' ', &
-         trim(units_abbrev(units_out%energy/units_out%length)), ' in the y-direction plus ', &
+         trim(units_abbrev(units_out%energy/units_out%length)), ' in the '//index2axis(2)//'-direction plus ', &
          units_from_atomic(units_out%energy/units_out%length, e_field), ' ', &
-         trim(units_abbrev(units_out%energy/units_out%length)), ' in the z-direction.'
+         trim(units_abbrev(units_out%energy/units_out%length)), ' in the '//index2axis(3)//'-direction.'
       call write_info(2)
   
       hm%ep%vpsl(1:gr%mesh%np) = vpsl_save(1:gr%mesh%np) &
@@ -255,12 +257,13 @@ contains
     SAFE_DEALLOCATE_A(tmp_rho)
     SAFE_DEALLOCATE_A(dipole)
     call end_()
+    call pop_sub()
 
   contains
 
     ! ---------------------------------------------------------
     subroutine init_()
-      call push_sub('static_pol.static_pol_run')
+      call push_sub('static_pol.static_pol_run.init_')
 
       ! shortcuts
       gr  => sys%gr
@@ -274,13 +277,13 @@ contains
       !%Section Linear Response::Static Polarization
       !%Description
       !% Magnitude of the static field used to calculate the static polarizability,
-      !% if ResponseMethod = finite_differences.
+      !% if <tt>ResponseMethod = finite_differences</tt>.
       !%End
       call loct_parse_float(datasets_check('EMStaticField'), &
          units_from_atomic(units_inp%energy / units_inp%length, CNST(0.01)), e_field)
       e_field = units_to_atomic(units_inp%energy / units_inp%length, e_field)
       if (e_field <= M_ZERO) then
-        write(message(1), '(a,e14.6,a)') "Input: '", e_field, "' is not a valid EMStaticField"
+        write(message(1), '(a,e14.6,a)') "Input: '", e_field, "' is not a valid EMStaticField."
         message(2) = '(0 < EMStaticField)'
         call write_fatal(2)
       end if
@@ -293,14 +296,15 @@ contains
 
     ! ---------------------------------------------------------
     subroutine end_()
+      call push_sub('static_pol.end_')
       call states_deallocate_wfns(sys%st)
-
       call pop_sub()
     end subroutine end_
   
 
     !-------------------------------------------------------------
     subroutine output_init_()
+      call push_sub('static_pol.output_init_')
 
       !allocate memory for what we want to output
       if(iand(sys%outp%what, output_density).ne.0 .or. &
@@ -316,6 +320,7 @@ contains
         SAFE_ALLOCATE(lr_elfd(1:gr%mesh%np, 1:st%d%nspin))
       end if
       
+      call pop_sub()
     end subroutine output_init_
 
 
@@ -323,6 +328,8 @@ contains
     subroutine output_cycle_()
       integer iatom
       
+      call push_sub('static_pol.output_cycle_')
+
       ! BORN CHARGES
       if(calc_Born) then
         do iatom = 1, sys%geo%natoms
@@ -418,6 +425,7 @@ contains
 
       end if
 
+      call pop_sub()
     end subroutine output_cycle_
 
 
@@ -426,6 +434,8 @@ contains
       FLOAT :: alpha(MAX_DIM, MAX_DIM)
       CMPLX :: beta(MAX_DIM, MAX_DIM, MAX_DIM)
       integer :: iunit, idir
+
+      call push_sub('static_pol.output_end_')
 
       call io_mkdir(EM_RESP_FD_DIR)
 
@@ -494,6 +504,8 @@ contains
         SAFE_DEALLOCATE_A(lr_elfd)
         SAFE_DEALLOCATE_A(elfd)
       end if
+
+      call pop_sub()
     end subroutine output_end_
 
   end subroutine static_pol_run

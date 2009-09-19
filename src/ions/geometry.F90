@@ -79,7 +79,6 @@ module geometry_m
   type geometry_t
     integer :: natoms
     type(atom_t), pointer :: atom(:)
-    CMPLX :: Born_delta(MAX_DIM, MAX_DIM) ! discrepancy of sum of Born charge tensors from sum rule
 
     integer :: ncatoms              ! For QM+MM calculations
     type(atom_classical_t), pointer :: catom(:)
@@ -133,23 +132,23 @@ contains
     !%Section System::Coordinates
     !%Description
     !% If this variable is present, the program tries to read the atomic coordinates
-    !% from the file specified by its value. The PDB (Protein Data Bank
-    !% (http://www.rcsb.org/pdb/)) format is quite complicated, and it goes 
+    !% from the file specified by its value. The PDB (Protein Data Bank,
+    !% <tt>http://www.rcsb.org/pdb/</tt>) format is quite complicated, and it goes 
     !% well beyond the scope of this manual. You can find a comprehensive
     !% description in <a href='http://www.wwpdb.org/docs.html'>here</a>.
-    !% From the plethora of instructions defined in the PDB standard, octopus
-    !% only reads two, "ATOM" and "HETATOM". From these fields, it reads:
+    !% From the plethora of instructions defined in the PDB standard, <tt>Octopus</tt>
+    !% only reads two, <tt>ATOM</tt> and <tt>HETATOM</tt>. From these fields, it reads:
     !% <ul>
-    !% <li> columns 13-16: The species; in fact "octopus" only cares about the
-    !% first letter - "CA" and "CB" will both refer to Carbon - so elements whose
+    !% <li> columns 13-16: The species; in fact <tt>Octopus</tt> only cares about the
+    !% first letter - "CA" and "CB" will both refer to carbon - so elements whose
     !% chemical symbol has more than one letter can not be represented in this way.
-    !% So, if you want to run mercury ("Hg") please use one of the other two methods_m
-    !% to input the coordinates, "XYZCoordinates" or "Coordinates".</li>
-    !% <li> columns 18-21: The residue. If residue is "QM", the atom is treated in quantum
+    !% So, if you want to run mercury (Hg) please use one of the other two methods
+    !% to input the coordinates, <tt>XYZCoordinates</tt> or <tt>Coordinates</tt>.</li>
+    !% <li> columns 18-21: The residue. If residue is <tt>QM</tt>, the atom is treated by quantum
     !% mechanics; otherwise it is simply treated as an external classical point charge.
     !% Its charge will be given by columns 61-65.</li>
-    !% <li> columns 31-54: The Cartesian coordinates. The Fortran format is "(3f8.3)".</li>
-    !% <li> columns 61-65: Classical charge of the atom. The Fortran format is "(f6.2)".</li>
+    !% <li> columns 31-54: The Cartesian coordinates. The Fortran format is <tt>(3f8.3)</tt>.</li>
+    !% <li> columns 61-65: Classical charge of the atom. The Fortran format is <tt>(f6.2)</tt>.</li>
     !% </ul>
     !%End
 
@@ -157,11 +156,11 @@ contains
     !%Type string
     !%Section System::Coordinates
     !%Description
-    !% If "PDBCoordinates" is not present, the program reads the atomic coordinates from
-    !% the XYZ file specified by the variable "XYZCoordinates" -- in case this variable
-    !% is present. The XYZ format is very simple:  The first line of the file has an integer
+    !% If <tt>PDBCoordinates</tt> is not present, the program reads the atomic coordinates from
+    !% the XYZ file specified by the variable <tt>XYZCoordinates</tt> -- in case this variable
+    !% is present. The XYZ format is very simple: The first line of the file has an integer
     !% indicating the number of atoms. The second can contain comments that are simply ignored by
-    !% "octopus". Then there follows one line per each atom, containing the chemical species and
+    !% <tt>Octopus</tt>. Then there follows one line per atom, containing the chemical species and
     !% the Cartesian coordinates of the atom.
     !%End
 
@@ -169,8 +168,8 @@ contains
     !%Type block
     !%Section System::Coordinates
     !%Description
-    !% If neither a "XYZCoordinates" nor a "PDBCoordinates" was found, octopus
-    !% tries to read the coordinates for the atoms from the block "Coordinates". The
+    !% If neither <tt>XYZCoordinates</tt> nor <tt>PDBCoordinates</tt> was found, <tt>Octopus</tt>
+    !% tries to read the coordinates for the atoms from the block <tt>Coordinates</tt>. The
     !% format is quite straightforward:
     !%
     !% <tt>%Coordinates
@@ -179,11 +178,11 @@ contains
     !% <br>%</tt>
     !%
     !% The first line defines a carbon atom at coordinates ("-0.56415", "0.0", "0.0"),
-    !% that is _not_ allowed to move during dynamical simulations. The second line has
+    !% that is <b>not</b> allowed to move during dynamical simulations. The second line has
     !% a similar meaning. This block obviously defines a carbon monoxide molecule, if the
-    !% input units are AA. Note that in this way it is possible to fix some of the atoms (this
-    !% is not possible when specifying the coordinates through a "PDBCoordinates" or
-    !% "XYZCoordinates" file). It is always possible to fix _all_ atoms using the "MoveIons" directive.
+    !% input units are <tt>eV_Angstrom</tt>. Note that in this way it is possible to fix some of the atoms (this
+    !% is not possible when specifying the coordinates through a <tt>PDBCoordinates</tt> or
+    !% <tt>XYZCoordinates</tt> file). It is always possible to fix <b>all</b> atoms using the <tt>MoveIons</tt> directive.
     !%End
     call xyz_file_read('Coordinates', xyz)
 
@@ -210,7 +209,7 @@ contains
     call xyz_file_read('Classical', xyz)
     if(xyz%file_type.ne.XYZ_FILE_ERR) then ! found classical atoms
       if(.not.iand(xyz%flags, XYZ_FLAGS_CHARGE).ne.0) then
-        message(1) = "Need to know charge for the classical atoms"
+        message(1) = "Need to know charge for the classical atoms."
         message(2) = "Please use a .pdb"
         call write_fatal(2)
       end if
@@ -521,7 +520,7 @@ contains
     logical,             intent(in), optional :: append
     character(len=*),    intent(in), optional :: comment
 
-    integer i, iunit
+    integer iatom, idir, iunit
     character(len=6) position
 
     if( .not. mpi_grp_is_root(mpi_world)) return
@@ -541,8 +540,9 @@ contains
     else
       write(iunit, '(1x)')
     endif
-    do i = 1, geo%natoms
-      write(iunit, '(6x,a,2x,9f12.6)') geo%atom(i)%label, geo%atom(i)%x(1:sbdim)/units_out%length%factor
+    do iatom = 1, geo%natoms
+      write(iunit, '(6x,a,2x,9f12.6)') geo%atom(iatom)%label, &
+        (units_from_atomic(units_out%length, geo%atom(iatom)%x(idir)), idir = 1, sbdim)
     end do
     call io_close(iunit)
 
@@ -550,10 +550,10 @@ contains
       iunit = io_open(trim(dir)//'/'//trim(fname)//'_classical.xyz', action='write', position=position)
       write(iunit, '(i4)') geo%ncatoms
       write(iunit, '(1x)')
-      do i = 1, geo%ncatoms
-        write(iunit, '(6x,a1,2x,3f12.6,a,f12.6)') &
-           geo%catom(i)%label(1:1), geo%catom(i)%x(1:sbdim)/units_out%length%factor, &
-           " # ", geo%catom(i)%charge
+      do iatom = 1, geo%ncatoms
+        write(iunit, '(6x,a1,2x,3f12.6,a,f12.6)') geo%catom(iatom)%label(1:1), &
+          (units_from_atomic(units_out%length, geo%catom(iatom)%x(idir)), idir = 1, sbdim), &
+          " # ", geo%catom(iatom)%charge
       end do
       call io_close(iunit)
     end if
@@ -567,13 +567,13 @@ contains
     type(geometry_t), intent(in) :: geo
     FLOAT,           intent(out) :: val_charge
 
-    integer :: i
+    integer :: iatom
 
     call push_sub('geometry.geometry_val_charge')
 
     val_charge = M_ZERO
-    do i = 1, geo%natoms
-      val_charge = val_charge - species_zval(geo%atom(i)%spec)
+    do iatom = 1, geo%natoms
+      val_charge = val_charge - species_zval(geo%atom(iatom)%spec)
     end do
 
     call pop_sub()
@@ -585,15 +585,15 @@ contains
     type(geometry_t), intent(in) :: geo
     FLOAT,           intent(out) :: def_h, def_rsize
 
-    integer :: i
+    integer :: ispec
 
     call push_sub('geometry.geometry_grid_defaults')
 
     def_h     =  huge(def_h)
     def_rsize = -huge(def_rsize)
-    do i = 1, geo%nspecies
-      def_h     = min(def_h,     species_def_h(geo%species(i)))
-      def_rsize = max(def_rsize, species_def_rsize(geo%species(i)))
+    do ispec = 1, geo%nspecies
+      def_h     = min(def_h,     species_def_h(geo%species(ispec)))
+      def_rsize = max(def_rsize, species_def_rsize(geo%species(ispec)))
     end do
 
     call pop_sub()

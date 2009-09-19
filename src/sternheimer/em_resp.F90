@@ -245,7 +245,7 @@ contains
           if(have_to_calculate) then 
 
             str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(ifactor)*em_vars%omega(iomega)))
-            write(message(1), '(5a)') 'Info: Calculating response for the ', io_output_direction(idir), &
+            write(message(1), '(5a)') 'Info: Calculating response for the ', index2axis(idir), &
               '-direction and frequency ', trim(str_tmp), '.'
             call write_info(1)
 
@@ -1069,7 +1069,7 @@ contains
       do j = 1, sb%dim
         do k = 1, sb%dim
           write(iunit,'(a,e20.8,e20.8)') 'beta '// &
-               io_output_direction(i)//io_output_direction(j)//io_output_direction(k)//' ', &
+               index2axis(i)//index2axis(j)//index2axis(k)//' ', &
                units_from_atomic(units_out%length**5, real( beta(i, j, k))), &
                units_from_atomic(units_out%length**5, aimag(beta(i, j, k)))
         end do
@@ -1094,21 +1094,21 @@ contains
       bk(1:sb%dim) = M_THREE*M_HALF*(bpar(1:sb%dim) - bper(1:sb%dim))
 
       do i = 1, sb%dim
-        write(iunit, '(a, 2e20.8)') 'beta // '//io_output_direction(i), &
+        write(iunit, '(a, 2e20.8)') 'beta // '//index2axis(i), &
           units_from_atomic(units_out%length**5, real(bpar(i))), units_from_atomic(units_out%length**5, aimag(bpar(i)))
       end do
 
       write(iunit, '()')
 
       do i = 1, sb%dim
-        write(iunit, '(a, 2e20.8)') 'beta _L '//io_output_direction(i), &
+        write(iunit, '(a, 2e20.8)') 'beta _L '//index2axis(i), &
           units_from_atomic(units_out%length**5, real(bper(i))), units_from_atomic(units_out%length**5, aimag(bper(i)))
       end do
 
       write(iunit, '()')
 
       do i = 1, sb%dim
-        write(iunit, '(a, 2e20.8)') 'beta  k '//io_output_direction(i), &
+        write(iunit, '(a, 2e20.8)') 'beta  k '//index2axis(i), &
           units_from_atomic(units_out%length**5, real(bk(i))), units_from_atomic(units_out%length**5, aimag(bk(i)))
       end do
 

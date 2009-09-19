@@ -20,12 +20,12 @@
 #include "global.h"
 
 module xyz_adjust_m
-  use global_m
-  use messages_m
   use datasets_m
+  use global_m
   use geometry_m
   use lalg_adv_m
   use loct_parser_m
+  use messages_m
   use species_m
 
   implicit none
@@ -80,8 +80,8 @@ contains
     !%Default inertia
     !%Section Utilities::oct-center-geometry
     !%Description
-    !% Besides centering the structure, this is align to a set of orthogonal axis.
-    !% This variable decides which set of axis to use.
+    !% After the structure is centered, it is also aligned to a set of orthogonal axes.
+    !% This variable decides which set of axes to use.
     !%Option inertia 1
     !% The axis of inertia.
     !%Option pseudo_inertia 2
@@ -101,7 +101,7 @@ contains
       call translate(geo, -center)
       call axis_large(geo, x1, x2)
     case default
-      write(message(1), '(a,i2,a)') 'AxisType = ', axis_type, ' not known by octopus'
+      write(message(1), '(a,i2,a)') 'AxisType = ', axis_type, ' not known by Octopus.'
       call write_fatal(1)
     end select
 
@@ -211,24 +211,24 @@ contains
     FLOAT,  intent(out) :: x(MAX_DIM), x2(MAX_DIM)
     logical, intent(in) :: pseudo
 
-    FLOAT :: m, tinertia(MAX_DIM, MAX_DIM), vec(MAX_DIM, MAX_DIM), e(MAX_DIM)
-    integer :: i, j, iatom
+    FLOAT :: m, tinertia(MAX_DIM, MAX_DIM), vec(MAX_DIM, MAX_DIM), eigenvalues(MAX_DIM)
+    integer :: ii, jj, iatom
 
     ! first calculate the inertia tensor
     tinertia = M_ZERO
     m = M_ONE
     do iatom = 1, geo%natoms
       if(.not.pseudo) m = species_weight(geo%atom(iatom)%spec)
-      do i = 1, 3
-        do j = 1, 3
-          tinertia(i, j) = tinertia(i, j) - m*geo%atom(iatom)%x(i)*geo%atom(iatom)%x(j)
+      do ii = 1, 3
+        do jj = 1, 3
+          tinertia(ii, jj) = tinertia(ii, jj) - m*geo%atom(iatom)%x(ii)*geo%atom(iatom)%x(jj)
         end do
-        tinertia(i, i) = tinertia(i, i) + M_THREE*m*sqrt(sum(geo%atom(iatom)%x(:)**2))
+        tinertia(ii, ii) = tinertia(ii, ii) + M_THREE*m*sqrt(sum(geo%atom(iatom)%x(:)**2))
       end do
     end do
 
     vec = tinertia
-    call lalg_eigensolve(3, vec, e)
+    call lalg_eigensolve(3, vec, eigenvalues)
 
     x  = vec(:,1) / sqrt(sum(vec(:,1)**2))
     x2 = vec(:,2) / sqrt(sum(vec(:,2)**2))
@@ -240,13 +240,13 @@ contains
     type(geometry_t), intent(inout) :: geo
     FLOAT, intent(in) :: x(MAX_DIM)
 
-    integer  :: i
+    integer  :: iatom
 
-    do i = 1, geo%natoms
-      geo%atom(i)%x = geo%atom(i)%x + x
+    do iatom = 1, geo%natoms
+      geo%atom(iatom)%x = geo%atom(iatom)%x + x
     end do
-    do i = 1, geo%ncatoms
-      geo%catom(i)%x = geo%catom(i)%x + x
+    do iatom = 1, geo%ncatoms
+      geo%catom(iatom)%x = geo%catom(iatom)%x + x
     end do
   end subroutine translate
 
@@ -256,7 +256,7 @@ contains
     type(geometry_t), intent(inout) :: geo
     FLOAT, intent(in) :: from(MAX_DIM), from2(MAX_DIM), to(MAX_DIM) ! assumed to be normalized
 
-    integer :: i, idim
+    integer :: iatom, idim
     FLOAT :: m1(MAX_DIM, MAX_DIM), m2(MAX_DIM, MAX_DIM)
     FLOAT :: m3(MAX_DIM, MAX_DIM), f2(MAX_DIM), per(MAX_DIM)
     FLOAT :: alpha, r
@@ -287,12 +287,12 @@ contains
       per(2) = M_ONE
     end if
 
-    ! rotate perpendicular axis to the y axis
+    ! rotate perpendicular axis to the y-axis
     m2 = M_ZERO; m2(1,1) = M_ONE; m2(2,2) = M_ONE; m2(3,3) = M_ONE
     alpha = atan2(per(1), per(2))
     call rotate_z(m2, -alpha)
 
-    ! rotate from => to (around the y axis)
+    ! rotate from => to (around the y-axis)
     m3 = M_ZERO; m3(1,1) = M_ONE; m3(2,2) = M_ONE; m3(3,3) = M_ONE
     alpha = acos(sum(from*to))
     call rotate_y(m3, -alpha)
@@ -300,7 +300,7 @@ contains
     ! join matrices
     m2 = matmul(transpose(m2), matmul(m3, m2))
 
-    ! rotate around the z axis to get the second axis
+    ! rotate around the z-axis to get the second axis
     per = matmul(m2, matmul(m1, from2))
     alpha = atan2(per(1), per(2))
     call rotate_z(m2, -alpha) ! second axis is now y
@@ -310,14 +310,14 @@ contains
 
     ! now transform the coordinates
     ! it is written in this way to avoid what I consider a bug in the Intel compiler
-    do i = 1, geo%natoms
-      f2 = geo%atom(i)%x
-      geo%atom(i)%x = matmul(m1, f2)
+    do iatom = 1, geo%natoms
+      f2 = geo%atom(iatom)%x
+      geo%atom(iatom)%x = matmul(m1, f2)
     end do
 
-    do i = 1, geo%ncatoms
-      f2 = geo%catom(i)%x
-      geo%catom(i)%x = matmul(m1, f2)
+    do iatom = 1, geo%ncatoms
+      f2 = geo%catom(iatom)%x
+      geo%catom(iatom)%x = matmul(m1, f2)
     end do
 
   end subroutine rotate

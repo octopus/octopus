@@ -31,7 +31,7 @@ contains
 
     ! Implements the Monkhorst-Pack scheme.
 
-    ! Sets up uniform array of k points. Use the normal MP scheme
+    ! Sets up uniform array of k-points. Use the normal MP scheme
     ! (PRB13, 5188, (1976)) when sx=sy=sz=0.5. If sx=sy=0,
     ! the special hexagonal scheme is used (PRB16, 1748, (1977))
 
@@ -94,7 +94,7 @@ contains
     end if
 
     write(message(1),'(a)')
-    write(message(2),'(1x,i3,a)') nkpoints, ' k points generated from parameters :'
+    write(message(2),'(1x,i3,a)') nkpoints, ' k-points generated from parameters :'
     write(message(3),'(1x,a)') '---------------------------------------------------'
     write(message(4),'(4x,a,3i5,6x,a,3f6.2)') 'n =', nk_axis(1:3), 's = ', shift(1:3)
     write(message(5),'(a)')
@@ -127,8 +127,8 @@ contains
 
     ! reduce to irreducible zone
 
-    ! kmap is used to mark reducible k points and also to
-    ! map reducible to irreducible k points
+    ! kmap is used to mark reducible k-points and also to
+    ! map reducible to irreducible k-points
 
     SAFE_ALLOCATE(kmap(1:nkpoints))
     SAFE_ALLOCATE(reduced(1:MAX_DIM, 1:nkpoints))
@@ -160,7 +160,7 @@ contains
         call symmetries_apply(symm, iop, reduced(:, nreduced), tran)
         tran_inv(1:MAX_DIM) = -tran(1:MAX_DIM)
            
-        ! remove (mark) k points related to irreducible reduced by symmetry
+        ! remove (mark) k-points related to irreducible reduced by symmetry
         do ik2 = ik + 1, nkpoints
           if (kmap(ik2) /= ik2) cycle
           

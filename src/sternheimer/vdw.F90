@@ -265,7 +265,7 @@ contains
 
       call pert_init(perturbation, PERTURBATION_ELECTRIC, sys%gr, sys%geo)
       do dir = 1, ndir
-        write(message(1), '(3a,f7.3)') 'Info: Calculating response for the ', io_output_direction(dir), &
+        write(message(1), '(3a,f7.3)') 'Info: Calculating response for the ', index2axis(dir), &
           ' and imaginary frequency ', units_from_atomic(units_out%energy, aimag(omega))
         call write_info(1)   
 

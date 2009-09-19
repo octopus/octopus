@@ -34,7 +34,7 @@ subroutine X(derivatives_batch_set_bc)(der, batch_ff)
 
   integer :: pp, bndry_start, bndry_end
 
-  call push_sub('derivatives_inc.Xset_bc_batch')
+  call push_sub('derivatives_inc.Xderivatives_batch_set_bc')
   call profiling_in(set_bc_prof, 'SET_BC')
 
   pp = der%mesh%vp%partno
@@ -61,9 +61,13 @@ contains
   subroutine zero_boundaries()
     integer :: ist, ip
 
+    call push_sub('derivatives_inc.Xderivatives_batch_set_bc.zero_boundaries')
+
     forall (ist=1:batch_ff%nst_linear, ip=bndry_start:bndry_end)
       batch_ff%states_linear(ist)%X(psi)(ip) = R_TOTYPE(M_ZERO)
     end forall
+
+    call pop_sub()
   end subroutine zero_boundaries
 
 
@@ -73,6 +77,8 @@ contains
     integer :: ii, jj, kk, ix, iy, iz, dx, dy, dz, i_lev
     FLOAT :: weight
     R_TYPE, pointer :: ff(:)
+
+    call push_sub('derivatives_inc.Xderivatives_batch_set_bc.multiresolution')
 
     do ist = 1, batch_ff%nst_linear
       ff => batch_ff%states_linear(ist)%X(psi)
@@ -108,6 +114,8 @@ contains
 
       end do ! ip
     end do ! ist
+
+    call pop_sub()
   end subroutine multiresolution
 
 
@@ -120,6 +128,8 @@ contains
     integer :: ipart, nreq
     integer, allocatable :: req(:), statuses(:, :)
 #endif
+
+    call push_sub('derivatives_inc.Xderivatives_batch_set_bc.periodic')
 
 #ifdef HAVE_MPI
     if(der%mesh%parallel_in_domains) then
@@ -179,6 +189,8 @@ contains
       call profiling_out(set_bc_comm_prof)
     end if
 #endif
+
+    call pop_sub()
   end subroutine periodic
 
 end subroutine X(derivatives_batch_set_bc)
@@ -191,13 +203,15 @@ subroutine X(derivatives_set_bc)(der, ff)
 
   type(batch_t) :: batch_ff
 
+  call push_sub('derivatives_inc.Xderivatives_set_bc')
+
   call batch_init     (batch_ff, 1)
   call batch_add_state(batch_ff, ff)
 
   call X(derivatives_batch_set_bc)(der, batch_ff)
 
   call batch_end(batch_ff)
-
+  call pop_sub()
 end subroutine X(derivatives_set_bc)
 
 
@@ -276,7 +290,7 @@ subroutine X(derivatives_batch_perform)(op, der, ff, opff, ghost_update, set_bc)
 
   type(derivatives_handle_batch_t) :: handle
 
-  call push_sub('derivatives_inc.Xderivatives_batch')
+  call push_sub('derivatives_inc.Xderivatives_batch_perform')
 
   call X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, set_bc)
   call X(derivatives_batch_finish)(handle)
@@ -298,7 +312,7 @@ subroutine X(derivatives_perform)(op, der, ff, op_ff, ghost_update, set_bc)
 
   type(batch_t) :: batch_ff, batch_op_ff
 
-  call push_sub('derivatives_inc.Xderivatives_lapl')
+  call push_sub('derivatives_inc.Xderivatives_perform')
 
   call batch_init     (batch_ff, 1)
   call batch_add_state(batch_ff, ff)

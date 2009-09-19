@@ -23,6 +23,7 @@ module derivatives_m
   use batch_m
   use datasets_m
   use global_m
+  use io_function_m
   use lalg_adv_m
   use lalg_basic_m
   use loct_parser_m
@@ -102,7 +103,7 @@ module derivatives_m
     FLOAT :: lapl_cutoff   
 
     type(nl_operator_t), pointer :: op(:)  ! op(1:conf%dim) => gradient
-    ! op(conf%dim+1) => laplacian
+    ! op(conf%dim+1) => Laplacian
     type(nl_operator_t), pointer :: lapl   ! these are just shortcuts for op
     type(nl_operator_t), pointer :: grad(:)
 
@@ -150,15 +151,15 @@ contains
     !%Default stencil_star
     !%Section Mesh::Derivatives
     !%Description
-    !% Decides what kind of stencil is used, i.e. what points, around
+    !% Decides what kind of stencil is used, <i>i.e.</i> which points, around
     !% each point in the mesh, are the neighboring points used in the
     !% expression of the differential operator.
     !%
-    !% If curvilinear coordinates are to be used, then only the "stencil_starplus"
-    !% or the "stencil_cube" may be used. We only recommend the "stencil_starplus",
-    !% the cube typically needing way too much memory resources.
+    !% If curvilinear coordinates are to be used, then only the <tt>stencil_starplus</tt>
+    !% or the <tt>stencil_cube</tt> may be used. We only recommend the <tt>stencil_starplus</tt>,
+    !% since the cube typically needs way too much memory resources.
     !%Option stencil_star 1
-    !% A star around each point (i.e., only points in the axis).
+    !% A star around each point (<i>i.e.</i>, only points on the axis).
     !%Option stencil_variational 2
     !% Same as the star, but with coefficients built in a different way.
     !%Option stencil_cube 3
@@ -187,16 +188,16 @@ contains
     !% This variable gives the discretization order for the approximation of
     !% the differential operators. This means, basically, that
     !% <tt>DerivativesOrder</tt> points are used in each positive/negative
-    !% spatial direction, e. g. <tt>DerivativesOrder = 1</tt> would give
+    !% spatial direction, <i>e.g.</i> <tt>DerivativesOrder = 1</tt> would give
     !% the well-known three-point formula in 1D.
     !% The number of points actually used for the Laplacian
     !% depends on the stencil used:
     !%
-    !% <tt>stencil_star</tt>: 2*<tt>DerivativesOrder</tt>*dim+1
+    !% <tt>stencil_star</tt>: 2*<tt>DerivativesOrder</tt>*<i>dim</i>+1
     !%
-    !% <tt>stencil_cube</tt>: (2*<tt>DerivativesOrder</tt>+1)^dim
+    !% <tt>stencil_cube</tt>: (2*<tt>DerivativesOrder</tt>+1)^<i>dim</i>
     !%
-    !% <tt>stencil_starplus</tt>: 2*<tt>DerivativesOrder</tt>+1+n with n being 12
+    !% <tt>stencil_starplus</tt>: 2*<tt>DerivativesOrder</tt>+1+<i>n</i> with <i>n</i> being 12
     !% in 2D and 44 in 3D.
     !%End
     call loct_parse_int(datasets_check('DerivativesOrder'), 4, der%order)
@@ -207,14 +208,13 @@ contains
     !%Default non_blocking
     !%Section Execution::Parallelization
     !%Description
-    !% This option selects how the communication required for the
-    !% synchronization is performed. The default is non_blocking.
+    !% This option selects how the communication required for the synchronization is performed.
     !%Option blocking 1
     !% Blocking communication.
     !%Option non_blocking 2
-    !% Communication is based on non blocking point to point communication.
+    !% Communication is based on non-blocking point-to-point communication.
     !%Option non_blocking_collective 3
-    !% Non-blocking collective communication (requires libnbc).
+    !% Non-blocking collective communication (requires <tt>libnbc</tt>).
     !%End
     
     call loct_parse_int(datasets_check('ParallelizationOfDerivatives'), NON_BLOCKING, der%comm_method)
@@ -247,7 +247,7 @@ contains
     ! find out the bounday conditions
     call loct_parse_int(datasets_check('DerivativesBoundaries'), DER_BC_ZERO_F, i)
     if((i < DER_BC_ZERO_F).or.(i > DER_BC_PERIOD)) then
-      write(message(1), '(a,i2,a)') 'DerivativesBoundaries = "', i, '" is unknown to octopus'
+      write(message(1), '(a,i2,a)') 'DerivativesBoundaries = "', i, '" is unknown to Octopus.'
       call write_fatal(1)
     end if
 
@@ -272,14 +272,14 @@ contains
   subroutine derivatives_end(der)
     type(derivatives_t), intent(inout) :: der
 
-    integer :: i
+    integer :: idim
 
     call push_sub('derivatives.derivatives_end')
 
     ASSERT(associated(der%op))
 
-    do i = 1, der%dim+1
-      call nl_operator_end(der%op(i))
+    do idim = 1, der%dim+1
+      call nl_operator_end(der%op(idim))
     end do
 
     SAFE_DEALLOCATE_P(der%op)
@@ -294,7 +294,7 @@ contains
   ! dir = 1, 2, 3 for a given derivative der.
   integer function derivatives_stencil_extent(der, dir) result(extent)
     type(derivatives_t), intent(in) :: der
-    integer,           intent(in) :: dir
+    integer,             intent(in) :: dir
 
     call push_sub('derivatives.stencil_extent')
 
@@ -340,7 +340,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Returns the diagonal elements of the laplacian needed for preconditioning
+  ! Returns the diagonal elements of the Laplacian, needed for preconditioning
   subroutine derivatives_lapl_diag(der, lapl)
     type(derivatives_t), intent(in)  :: der
     FLOAT,               intent(out) :: lapl(:)  ! lapl(mesh%np)
@@ -349,7 +349,7 @@ contains
 
     ASSERT(ubound(lapl, DIM=1) >= der%mesh%np)
 
-    ! the laplacian is a real operator
+    ! the Laplacian is a real operator
     call dnl_operator_operate_diag(der%lapl, lapl)
 
     call pop_sub()
@@ -362,7 +362,7 @@ contains
     type(derivatives_t), intent(inout) :: der
 
     integer  :: ii
-    character :: dir_label, dir_labels(4) = (/'X', 'Y', 'Z', 'W' /)
+    character :: dir_label
 
     call push_sub('derivatives.derivatives_get_stencil_grad')
 
@@ -371,7 +371,7 @@ contains
     ! initialize nl operator
     do ii = 1, der%dim
       dir_label = ' '
-      if(ii < 5) dir_label = dir_labels(ii)
+      if(ii < 5) dir_label = index2axis(ii)
 
       call nl_operator_init(der%grad(ii), "Gradient "//dir_label)
 
@@ -424,7 +424,7 @@ contains
 
     select case(der%stencil_type)
 
-    case(DER_STAR) ! laplacian and gradient have different stencils
+    case(DER_STAR) ! Laplacian and gradient have different stencils
       do i = 1, der%dim + 1
         SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(i)%stencil%size))
         SAFE_ALLOCATE(rhs(1:der%op(i)%stencil%size, 1:1))
@@ -432,7 +432,7 @@ contains
         if(i <= der%dim) then  ! gradient
           call stencil_star_polynomials_grad(i, der%order, polynomials)
           call get_rhs_grad(i, rhs(:,1))
-        else                      ! laplacian
+        else                      ! Laplacian
           call stencil_star_polynomials_lapl(der%dim, der%order, polynomials)
           call get_rhs_lapl(rhs(:,1))
         end if
@@ -442,7 +442,7 @@ contains
         SAFE_DEALLOCATE_A(rhs)
       end do
 
-    case(DER_CUBE) ! laplacian and gradient have similar stencils
+    case(DER_CUBE) ! Laplacian and gradient have similar stencils
       SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(1)%stencil%size))
       SAFE_ALLOCATE(rhs(1:der%op(1)%stencil%size, 1:der%dim + 1))
       call stencil_cube_polynomials_lapl(der%dim, der%order, polynomials)
@@ -481,7 +481,7 @@ contains
 
     end select
 
-    ! Here the Laplacian is forced to be self-adjoint, and the gradient to be skew-selfadjoint
+    ! Here the Laplacian is forced to be self-adjoint, and the gradient to be skew-self-adjoint
     if(mesh%use_curvilinear .and. (.not. der%mesh%sb%mr_flag)) then
       do i = 1, der%dim
         call nl_operator_init(auxop, "auxop")
@@ -510,7 +510,9 @@ contains
       integer :: i, j, k
       logical :: this_one
 
-      ! find right hand side for operator
+      call push_sub('derivatives.derivatives_build.get_rhs_lapl')
+
+      ! find right-hand side for operator
       rhs(:) = M_ZERO
       do i = 1, der%dim
         do j = 1, der%lapl%stencil%size
@@ -523,6 +525,7 @@ contains
         end do
       end do
 
+      call pop_sub()
     end subroutine get_rhs_lapl
 
     ! ---------------------------------------------------------
@@ -533,7 +536,9 @@ contains
       integer :: j, k
       logical :: this_one
 
-      ! find right hand side for operator
+      call push_sub('derivatives.derivatives_build.get_rhs_grad')
+
+      ! find right-hand side for operator
       rhs(:) = M_ZERO
       do j = 1, der%grad(dir)%stencil%size
         this_one = .true.
@@ -544,6 +549,7 @@ contains
         if(this_one) rhs(j) = M_ONE
       end do
 
+      call pop_sub()
     end subroutine get_rhs_grad
 
   end subroutine derivatives_build

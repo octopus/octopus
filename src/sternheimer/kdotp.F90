@@ -25,6 +25,7 @@ module kdotp_m
   use global_m
   use grid_m
   use hamiltonian_m
+  use h_sys_output_m
   use io_m
   use io_function_m
   use kdotp_calc_m
@@ -34,11 +35,10 @@ module kdotp_m
   use linear_response_m
   use linear_solver_m
   use math_m
-  use mesh_function_m
   use mesh_m
+  use mesh_function_m
   use messages_m
   use mix_m
-  use h_sys_output_m
   use pert_m
   use profiling_m
   use restart_m
@@ -198,7 +198,7 @@ contains
 
     ! solve the Sternheimer equation
     do idir = 1, gr%mesh%sb%dim
-      write(message(1), '(3a)') 'Info: Calculating response for the ', io_output_direction(idir), &
+      write(message(1), '(3a)') 'Info: Calculating response for the ', index2axis(idir), &
                                 '-direction.' 
       call write_info(1)
       call pert_setup_dir(kdotp_vars%perturbation, idir)

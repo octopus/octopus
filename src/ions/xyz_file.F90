@@ -74,10 +74,14 @@ contains
   subroutine xyz_file_init(gf)
     type(xyz_file_info), intent(out) :: gf
 
+    call push_sub('xyz_file.xyz_file_init')
+
     gf%file_type = XYZ_FILE_ERR
     gf%flags     = 0
     gf%n         = 0
     nullify(gf%atom)
+
+    call pop_sub()
   end subroutine xyz_file_init
 
 
@@ -85,10 +89,14 @@ contains
   subroutine xyz_file_end(gf)
     type(xyz_file_info), intent(inout) :: gf
 
+    call push_sub('xyz_file.xyz_file_end')
+
     if(associated(gf%atom)) then
       SAFE_DEALLOCATE_P(gf%atom)
     end if
     call xyz_file_init(gf)
+
+    call pop_sub()
   end subroutine xyz_file_end
 
 
@@ -167,7 +175,7 @@ contains
       do j = 4, MAX_DIM
         gf%atom(i)%x(j) = M_ZERO
       end do
-      gf%atom(i)%x = gf%atom(i)%x * units_inp%length%factor
+      gf%atom(i)%x = units_to_atomic(units_inp%length, gf%atom(i)%x)
     end do
 
     call pop_sub()
@@ -183,6 +191,8 @@ contains
     character(len=80) :: record
     character(len=6)  :: record_name
     integer :: na
+
+    call push_sub('xyz_file.xyz_file_read_PDB')
 
     ! First count number of atoms
     rewind(iunit)
@@ -220,6 +230,7 @@ contains
     end do
 991 continue
 
+    call pop_sub()
   end subroutine xyz_file_read_PDB
 
 end module xyz_file_m

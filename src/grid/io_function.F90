@@ -24,21 +24,21 @@ module io_function_m
   use datasets_m
   use geometry_m
   use global_m
+  use index_m
   use io_m
   use io_binary_m
-  use index_m
   use loct_parser_m
   use mesh_m
   use messages_m
-  use profiling_m
-  use simul_box_m
-  use units_m
+  use mpi_m
+  use mpi_debug_m
 #if defined(HAVE_NETCDF)
   use netcdf
 #endif
   use par_vec_m
-  use mpi_m
-  use mpi_debug_m
+  use profiling_m
+  use simul_box_m
+  use units_m
   use varinfo_m
 
   implicit none
@@ -57,7 +57,7 @@ module io_function_m
     zio_function_out_text,        &
     io_output_tensor,             &
     io_output_dipole,             &
-    io_output_direction
+    index2axis
 
   integer, parameter, public ::   &
     output_axis_x     =     1,    &
@@ -81,10 +81,6 @@ module io_function_m
   integer, parameter, private ::  &
     doutput_kind      =    1,     &
     zoutput_kind      =   -1
-
-  ! index to axis mapping
-  character, parameter, public :: &
-    index2axis(3) = (/ 'x', 'y', 'z' /)
 
   ! index to label mapping
   character(len=3), parameter ::  &
@@ -421,10 +417,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  character function io_output_direction(idir) result(ch)
+  character function index2axis(idir) result(ch)
     integer, intent(in) :: idir
     
-    call push_sub('io_function.io_output_direction')
+    call push_sub('io_function.index2axis')
 
     select case(idir)
       case(1)
@@ -440,7 +436,7 @@ contains
     end select
 
     call pop_sub()
-  end function io_output_direction
+  end function index2axis
 
 
   ! ---------------------------------------------------------
