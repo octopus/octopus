@@ -129,12 +129,15 @@ subroutine X(batch_set)(this, np, psi)
 
   integer :: ist, idim
 
+  call push_sub('batch_inc.Xbatch_set')
+
   do ist = 1, this%nst
     do idim = 1, this%dim
       call lalg_copy(np, psi(:, idim, ist), this%states(ist)%X(psi)(:, idim))
     end do
   end do
 
+  call pop_sub()
 end subroutine X(batch_set)
 
 !! Local Variables:

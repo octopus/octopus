@@ -80,7 +80,7 @@ contains
 
     integer :: idir 
 
-    ! We set all ix to zero first (otherwise the non-existent dimesions would be 
+    ! We set all ix to zero first (otherwise the non-existent dimensions would be 
     ! undefined on exit).
     ix = 0
     if(idx%sb%box_shape /= HYPERCUBE) then

@@ -81,7 +81,7 @@
   ! possible parallelization strategies
   integer, public, parameter ::      &
     P_STRATEGY_SERIAL  = 0,          & ! single domain, all states, k-points on a single processor
-    P_STRATEGY_DOMAINS = 1,          & ! parallelization domains
+    P_STRATEGY_DOMAINS = 1,          & ! parallelization in domains
     P_STRATEGY_STATES  = 2,          & ! parallelization in states
     P_STRATEGY_KPOINTS = 3,          & ! parallelization in k-points
     P_STRATEGY_OTHER   = 4             ! something else like e-h pairs
@@ -188,11 +188,11 @@ contains
       !%Section Execution::Parallelization
       !%Description
       !%
-      !% When set to yes, Octopus will try to determine the topology
+      !% When set to yes, <tt>Octopus</tt> will try to determine the topology
       !% of the network and, based on this, assign the nodes to the
       !% different possible parallelization strategies and distribute
       !% the processes to reduce the communication overhead. Currently
-      !% Octopus is only capable of detecting if processes are on the
+      !% <tt>Octopus</tt> is only capable of detecting if processes are on the
       !% same machine or connected by a network. By default it is not
       !% enabled.
       !%
@@ -262,20 +262,20 @@ contains
       !%Type flag
       !%Section Execution::Parallelization
       !%Description
-      !% Specifies what kind of parallelization strategy Octopus should use.
+      !% Specifies what kind of parallelization strategy <tt>Octopus</tt> should use.
       !% The values can be combined: for example, <tt>par_domains + par_states</tt>
       !% means a combined parallelization in domains and states.
       !% Default: <tt>par_domains + par_states</tt> for <tt>CalculationMode = td </tt>,
       !% <tt>par_domains + par_other</tt> for <tt>CalculationMode = casida </tt>,
       !% otherwise <tt>par_domains</tt>.
       !%Option serial 0
-      !% Octopus will run in serial.
+      !% <tt>Octopus</tt> will run in serial.
       !%Option par_domains 1
-      !% Octopus will run parallel in domains.
+      !% <tt>Octopus</tt> will run parallel in domains.
       !%Option par_states  2
-      !% Octopus will run parallel in states.
+      !% <tt>Octopus</tt> will run parallel in states.
       !%Option par_kpoints 4
-      !% Octopus will run parallel in <i>k</i>-points/spin.
+      !% <tt>Octopus</tt> will run parallel in <i>k</i>-points/spin.
       !%Option par_other   8
       !% Run-mode-dependent. For example, in <tt>casida</tt>, it means parallelization in <i>e-h</i> pairs.
       !%End

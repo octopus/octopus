@@ -111,7 +111,7 @@ module global_m
   integer, public :: s_epoch_sec, s_epoch_usec
 
   ! The stack.
-  character(len=40), public          :: sub_stack(50)
+  character(len=80), public          :: sub_stack(50)
   real(8), public                    :: time_stack(50)
   integer, public                    :: no_sub_stack = 0
 

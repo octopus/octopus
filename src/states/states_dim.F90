@@ -28,23 +28,23 @@ module states_dim_m
   use geometry_m
   use global_m
   use grid_m
-  use io_function_m
   use io_m
+  use io_function_m
   use lalg_basic_m
   use loct_m
   use loct_parser_m
   use math_m
   use messages_m
-  use mesh_function_m
   use mesh_m
+  use mesh_function_m
   use mpi_m
   use mpi_lib_m
   use multicomm_m
   use profiling_m
   use simul_box_m
+  use species_m
   use units_m
   use varinfo_m
-  use species_m
 
   implicit none
 
@@ -77,13 +77,13 @@ module states_dim_m
   type states_dim_t
     integer :: dim                  ! Dimension of the state (one or two for spinors)
     integer :: nik                  ! Number of irreducible subspaces
-    integer :: nik_axis(MAX_DIM)    ! Number of kpoints per axis
-    integer :: ispin                ! spin mode (unpolarized, spin polarized, spinors)
+    integer :: nik_axis(MAX_DIM)    ! Number of k-points per axis
+    integer :: ispin                ! spin mode (unpolarized, spin-polarized, spinors)
     integer :: nspin                ! dimension of rho (1, 2 or 4)
     integer :: spin_channels        ! 1 or 2, whether spin is or not considered.
-    logical :: cdft                 ! Are we using Current-DFT or not?
-    FLOAT, pointer :: kpoints(:,:)  ! obviously the kpoints
-    FLOAT, pointer :: kweights(:)   ! weights for the kpoint integrations
+    logical :: cdft                 ! Are we using current-DFT or not?
+    FLOAT, pointer :: kpoints(:,:)  ! obviously the k-points
+    FLOAT, pointer :: kweights(:)   ! weights for the k-point integrations
     type(distributed_t) :: kpt
     integer :: block_size
     integer :: window_size
@@ -119,11 +119,14 @@ contains
   subroutine states_dim_end(d)
     type(states_dim_t), intent(inout) :: d
 
+    call push_sub('states_dim.states_dim_end')
+
     call distributed_end(d%kpt)
 
     SAFE_DEALLOCATE_P(d%kpoints)
     SAFE_DEALLOCATE_P(d%kweights)
 
+    call pop_sub()
   end subroutine states_dim_end
 
 
@@ -156,20 +159,25 @@ contains
     type(states_dim_t), intent(in) :: this
     integer,            intent(in) :: iq
     
+    call push_sub('states_dim.states_dim_get_spin_index')
+
     if(this%ispin == SPIN_POLARIZED) then
       index = 1 + mod(iq - 1, 2)
     else
       index = 1
     end if
     
+    call pop_sub()
   end function states_dim_get_spin_index
   
   subroutine kpoints_distribute(this, mc)
     type(states_dim_t), intent(inout) :: this
     type(multicomm_t),  intent(in)    :: mc
 
-    call distributed_init(this%kpt, this%nik, mc, P_STRATEGY_KPOINTS, "K points")
+    call push_sub('states_dim.kpoints_distribute')
+    call distributed_init(this%kpt, this%nik, mc, P_STRATEGY_KPOINTS, "k-points")
 
+    call pop_sub()
   end subroutine kpoints_distribute
   
 #include "states_kpoints_inc.F90"

@@ -197,10 +197,14 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, time, kinetic_on
 contains
 
   subroutine set_pointers
+    call push_sub('hamiltonian_inc.Xhamiltonian_apply_batch.set_pointers')
+
     psi  => psib%states(ii)%X(psi)
     epsi => epsib%states(ii)%X(psi)
     hpsi => hpsib%states(ii)%X(psi)
     ist  =  psib%states(ii)%ist
+
+    call pop_sub()
   end subroutine set_pointers
 
 end subroutine X(hamiltonian_apply_batch)
@@ -215,6 +219,8 @@ subroutine X(get_grad)(hm, gr, psi, grad)
 
   integer :: idim
 
+  call push_sub('hamiltonian_inc.Xget_grad')
+
   if( .not. associated(grad)) then
     SAFE_ALLOCATE(grad(1:gr%mesh%np, 1:MAX_DIM, 1:hm%d%dim))
     do idim = 1, hm%d%dim 
@@ -224,6 +230,7 @@ subroutine X(get_grad)(hm, gr, psi, grad)
     end do
   end if
   
+  call pop_sub()
 end subroutine X(get_grad)       
 
 ! ---------------------------------------------------------
@@ -358,7 +365,7 @@ subroutine X(oct_exchange_operator_all) (hm, gr, psi, hpsi)
   FLOAT, allocatable :: rho(:), pot(:)
   integer :: j, k
 
-  call push_sub('hamiltonian_inc.Xexchange_operator_all')
+  call push_sub('hamiltonian_inc.Xoct_exchange_operator_all')
 
   SAFE_ALLOCATE(rho(1:gr%mesh%np))
   SAFE_ALLOCATE(pot(1:gr%mesh%np))
@@ -411,7 +418,7 @@ subroutine X(oct_exchange_operator) (hm, gr, psi, hpsi, ik)
   FLOAT, allocatable :: rho(:), pot(:)
   integer :: j, k
 
-  call push_sub('hamiltonian_inc.Xexchange_operator')
+  call push_sub('hamiltonian_inc.Xoct_exchange_operator')
 
   SAFE_ALLOCATE(rho(1:gr%mesh%np))
   SAFE_ALLOCATE(pot(1:gr%mesh%np))
@@ -704,7 +711,7 @@ subroutine X(vexternal) (hm, gr, psi, hpsi, ik)
   integer :: idim
 
   call profiling_in(prof_vlpsi, "VLPSI")
-  call push_sub('hamiltonian_inc.Xvlpsi')
+  call push_sub('hamiltonian_inc.Xvexternal')
 
   do idim = 1, hm%d%dim
     hpsi(1:gr%mesh%np, idim) = hpsi(1:gr%mesh%np, idim) + hm%ep%vpsl(1:gr%mesh%np)*psi(1:gr%mesh%np, idim)
@@ -810,7 +817,7 @@ subroutine X(hamiltonian_diagonal) (hm, gr, diag, ik)
 
   FLOAT, allocatable  :: ldiag(:)
 
-  call push_sub('hamiltonian_inc.Xhpsi_diag')
+  call push_sub('hamiltonian_inc.Xhamiltonian_diagonal')
   
   SAFE_ALLOCATE(ldiag(1:gr%mesh%np))
 

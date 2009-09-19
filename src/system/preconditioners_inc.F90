@@ -32,7 +32,7 @@ subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
   R_TYPE, allocatable :: a_copy(:)
 
   call profiling_in(preconditioner_prof, "PRECONDITIONER")
-  call push_sub('preconditioners_inc.preconditioner_apply')
+  call push_sub('preconditioners_inc.Xpreconditioner_apply')
 
   omega_ = M_ZERO
   if(present(omega)) omega_ = omega
@@ -81,6 +81,8 @@ contains
 
     FLOAT, allocatable :: diag(:)
 
+    call push_sub('preconditioners_inc.Xpreconditioner_apply.apply_D_inverse')
+
     SAFE_ALLOCATE(diag(1:gr%mesh%np))
 
     do idim = 1, hm%d%dim
@@ -90,6 +92,7 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(diag)
+    call pop_sub()
   end subroutine apply_D_inverse
 
   subroutine multigrid
@@ -100,8 +103,9 @@ contains
     R_TYPE, allocatable :: r2(:), d2(:), q2(:)
 
     type(mesh_t), pointer :: mesh0, mesh1, mesh2
-
     integer :: idim, ip
+
+    call push_sub('preconditioners_inc.Xpreconditioner_apply.multigrid')
     
     mesh0 => gr%mgrid%level(0)%mesh
     mesh1 => gr%mgrid%level(1)%mesh
@@ -191,6 +195,7 @@ contains
 
     end do
 
+    call pop_sub()
   end subroutine multigrid
 
 
@@ -206,6 +211,8 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, aa, bb, omega)
 
   integer :: ii
 
+  call push_sub('preconditioners_inc.Xpreconditioner_apply_batch')
+
   select case(pre%which)
   case(PRE_FILTER)
     call X(derivatives_batch_perform)(pre%op, gr%der, aa, bb)
@@ -219,6 +226,7 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, aa, bb, omega)
     end do
   end select
 
+  call pop_sub()
 end subroutine X(preconditioner_apply_batch)
 !! Local Variables:
 !! mode: f90

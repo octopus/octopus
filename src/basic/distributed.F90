@@ -121,8 +121,9 @@ contains
 
       call multicomm_divide_range(this%nglobal, size, this%range(1, :), this%range(2, :), this%num)
 
-      message(1) = 'Info: Parallelization in atoms:'
-        call write_info(1)
+      message(1) = 'Info: Parallelization in ' // trim(tag)
+      call write_info(1)
+
       do kk = 1, size
         write(message(1),'(a,i4,a,i6,a,i6)') 'Info: Node in group ', kk - 1, &
              ' will manage '//trim(tag), this%range(1, kk - 1), " - ", this%range(2, kk - 1)

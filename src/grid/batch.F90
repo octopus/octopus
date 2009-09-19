@@ -100,11 +100,15 @@ contains
   subroutine batch_end(this)
     type(batch_t), intent(inout) :: this
 
+    call push_sub('batch.batch_end')
+
     nullify(this%dpsicont)
     nullify(this%zpsicont)
 
     SAFE_DEALLOCATE_P(this%states)
     SAFE_DEALLOCATE_P(this%states_linear)
+
+    call pop_sub()
   end subroutine batch_end
 
 
@@ -175,6 +179,8 @@ contains
 
     integer :: ist
     
+    call push_sub('batch.batch_is_ok')
+
     ok = (this%nst >= 1)
     if(ok) then
       do ist = 1, this%nst_linear
@@ -183,6 +189,7 @@ contains
       end do
     end if
 
+    call pop_sub()
   end function batch_is_ok
 
 
