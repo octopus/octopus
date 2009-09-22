@@ -69,7 +69,8 @@
         ifactor = 1
         do ii = -order_, order_
           if(ii == 0) cycle
-          xc = (xf + ii*dd)/2
+          xc = xf + (2*ii - sign(1, ii))*dd
+          xc = xc/2
           ipc = coarse_mesh%idx%lxyz_inv(xc(1), xc(2), xc(3))
           f_fine(ipf) = f_fine(ipf) + factor(ifactor)*f_coarse(ipc)
           ifactor = ifactor + 1

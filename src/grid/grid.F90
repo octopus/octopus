@@ -106,7 +106,7 @@ contains
 
     ! the stencil used to generate the grid is a union of a cube (for
     ! multigrid) and the laplacian.
-    call stencil_cube_get_lapl(cube, gr%sb%dim, order = 1)
+    call stencil_cube_get_lapl(cube, gr%sb%dim, order = 2)
     call stencil_union(gr%sb%dim, cube, gr%der%lapl%stencil, gr%stencil)
     call stencil_end(cube)
     

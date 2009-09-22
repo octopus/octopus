@@ -104,10 +104,10 @@ contains
 
     !%Variable OEP_level
     !%Type integer
-    !%Default oep_none
+    !%Default oep_kli
     !%Section Hamiltonian::XC
     !%Description
-    !% At what level shall octopus handle the OEP equation
+    !% At what level shall octopus handle the OEP equation. The default is oep_kli.
     !%Option oep_none 1
     !% Do not solve OEP equation
     !%Option oep_slater 2
