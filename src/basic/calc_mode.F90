@@ -54,11 +54,9 @@ module calc_mode_m
 
     subroutine calc_mode_set(mode)
       integer, intent(in) :: mode
-
-      call push_sub('calc_mode.calc_mode_set')
+      ! no push_sub because this routine is called before everything
+      ! is fully initialized for the debugging stack
       calc_mode_id = mode
-
-      call pop_sub()
     end subroutine calc_mode_set
 
     integer function calc_mode()

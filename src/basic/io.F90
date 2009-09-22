@@ -124,7 +124,7 @@ contains
     !%Section Execution::IO
     !%Description
     !% By default, all files are written and read from the working directory,
-    !% i.e. the directory from which the executable was launched. This behavior can
+    !% <i>i.e.</i> the directory from which the executable was launched. This behavior can
     !% be changed by setting this variable: if you give it a name (other than ".")
     !% the files are written and read in that directory.
     !%End
@@ -205,14 +205,19 @@ contains
 
   ! ---------------------------------------------------------
   ! In this routine we should put all initializations of io
-  ! taht require the current_label dataset
+  ! that require the current_label dataset.
   subroutine io_init_datasets()
+    if(conf%debug_level .ge. 100) then
+      !wipe out debug trace files from previous runs to start fresh rather than appending
+      call delete_debug_trace()
+    endif
+
     !%Variable TmpDir
     !%Default "restart/"
     !%Type string
     !%Section Execution::IO
     !%Description
-    !% The name of the directory where octopus stores binary information
+    !% The name of the directory where <tt>Octopus</tt> stores binary information
     !% like the wavefunctions.
     !%End
     call loct_parse_string('TmpDir', trim(current_label)//'restart/', tmpdir)

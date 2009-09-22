@@ -73,14 +73,16 @@ contains
     type(output_me_t), intent(out) :: this
     type(simul_box_t), intent(in)  :: sb
 
+    call push_sub('output_me.output_me_init')
+
     !%Variable OutputMatrixElements
     !%Type flag
     !%Default no
     !%Section Output
     !%Description
     !% Specifies what matrix elements to print.
-    !% The output files go into the "static" directory, except when
-    !% running a time-dependent simulation, when the directory "td.XXXXXXX" is used.
+    !% The output files go into the <tt>static</tt> directory, except when
+    !% running a time-dependent simulation, when the directory <tt>td.XXXXXXX</tt> is used.
     !% Example: "momentum + ks_multipoles"
     !%Option multipoles 1
     !% TODO
@@ -108,14 +110,15 @@ contains
       !%Section Output
       !%Description
       !% This variable decides which multipole moments
-      !% are printed out: e.g., if 1, then the
-      !% program will print three files, ks_multipoles.x (x=1,2,3), containing
+      !% are printed out: <i>e.g.</i>, if 1, then the
+      !% program will print three files, <tt>ks_multipoles.x</tt> (<tt>x</tt>=1,2,3), containing
       !% respectively the (1,-1), (1,0) and (1,1) multipole matrix elements
       !% between Kohn-Sham states.
       !%End
       call loct_parse_int(datasets_check('OutputMatrixElementsL'), 1, this%ks_multipoles)
     end if
 
+    call pop_sub()
   end subroutine output_me_init
 
 
@@ -131,6 +134,8 @@ contains
     integer :: id, ll, mm, ik
     character(len=256) :: fname
     
+    call push_sub('output_me.output_me')
+
     if(iand(this%what, output_me_momentum).ne.0) then
       write(fname,'(2a)') trim(dir), '/ks_me_momentum'
       call output_me_out_momentum(fname, st, gr)
@@ -182,6 +187,7 @@ contains
       end if
     end if
 
+    call pop_sub()
   end subroutine output_me
 
 
@@ -196,7 +202,7 @@ contains
     FLOAT              :: o
     FLOAT, allocatable :: momentum(:,:,:)
 
-    call push_sub('output_me.output_me_momentum')   
+    call push_sub('output_me.output_me_out_momentum')   
 
     SAFE_ALLOCATE(momentum(1:gr%sb%dim, 1:st%nst, 1:st%d%nik))
 
@@ -214,16 +220,16 @@ contains
     write(message(1),'(a)') 'Momentum of the KS states [a.u.]:'
     call write_info(1, iunit)      
     if (st%d%nik > ns) then
-      message(1) = 'Kpoints [' // trim(units_out%length%abbrev) // '^-1]'
+      message(1) = 'Kpoints [' // trim(units_abbrev(unit_one/units_out%length)) // ']'
       call write_info(1, iunit)
     end if
 
     do ik = 1, st%d%nik, ns
       if(st%d%nik > ns) then
         write(message(1), '(a,i4,3(a,f12.6),a)') '#k =', ik, ', k = (',  &
-             st%d%kpoints(1, ik)*units_out%length%factor, ',',            &
-             st%d%kpoints(2, ik)*units_out%length%factor, ',',            &
-             st%d%kpoints(3, ik)*units_out%length%factor, ')'
+             units_from_atomic(unit_one/units_out%length, st%d%kpoints(1, ik)), ',', &
+             units_from_atomic(unit_one/units_out%length, st%d%kpoints(2, ik)), ',', &
+             units_from_atomic(unit_one/units_out%length, st%d%kpoints(3, ik)), ')'
         call write_info(1, iunit)
       end if
 
@@ -292,7 +298,7 @@ contains
       write(iunit,'(a)') '                                                  '
       write(iunit,'(a)') 'Angular Momentum of the KS states [dimensionless]:'
       if (st%d%nik > ns) then
-        message(1) = 'Kpoints [' // trim(units_out%length%abbrev) // '^-1]'
+        message(1) = 'k-points [' // trim(units_abbrev(unit_one/units_out%length)) // ']'
         call write_info(1, iunit)
       end if
     end if
@@ -317,9 +323,9 @@ contains
     do ik = 1, st%d%nik, ns
       if(st%d%nik > ns) then
         write(message(1), '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
-             st%d%kpoints(1, ik)*units_out%length%factor, ',',            &
-             st%d%kpoints(2, ik)*units_out%length%factor, ',',            &
-             st%d%kpoints(3, ik)*units_out%length%factor, ')'
+             units_from_atomic(unit_one/units_out%length, st%d%kpoints(1, ik)), ',', &
+             units_from_atomic(unit_one/units_out%length, st%d%kpoints(2, ik)), ',', &
+             units_from_atomic(unit_one/units_out%length, st%d%kpoints(3, ik)), ')'
         call write_info(1, iunit)
       end if
       

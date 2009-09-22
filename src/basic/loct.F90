@@ -23,7 +23,7 @@ module loct_m
 
   implicit none
 
-  ! Define the which routines can be seen from the outside
+  ! Define which routines can be seen from the outside
   private
   public ::                  &
     loct_clock,              &
@@ -122,7 +122,7 @@ module loct_m
 
 
   ! ---------------------------------------------------------
-  ! File handling
+  ! File-handling
   interface loct_mkdir
     subroutine oct_mkdir(name)
       character(len=*), intent(in) :: name

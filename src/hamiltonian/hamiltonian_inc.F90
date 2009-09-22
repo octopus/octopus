@@ -197,14 +197,12 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, time, kinetic_on
 contains
 
   subroutine set_pointers
-    call push_sub('hamiltonian_inc.Xhamiltonian_apply_batch.set_pointers')
+    ! no push_sub since called very frequently
 
     psi  => psib%states(ii)%X(psi)
     epsi => epsib%states(ii)%X(psi)
     hpsi => hpsib%states(ii)%X(psi)
     ist  =  psib%states(ii)%ist
-
-    call pop_sub()
   end subroutine set_pointers
 
 end subroutine X(hamiltonian_apply_batch)

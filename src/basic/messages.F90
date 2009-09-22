@@ -39,6 +39,7 @@ module messages_m
     write_debug,              &
     write_debug_marker,       &
     write_debug_newlines,     &
+    delete_debug_trace,       &
     print_date,               &
     time_diff,                &
     time_sum,                 &
@@ -87,6 +88,7 @@ module messages_m
 
   integer,    public :: global_alloc_err
   integer(8), public :: global_sizeof
+
 contains
 
   ! ---------------------------------------------------------
@@ -344,6 +346,19 @@ contains
       action='write', status='unknown', position='append')
 
   end subroutine open_debug_trace
+
+  ! ---------------------------------------------------------
+  subroutine delete_debug_trace()
+
+    integer :: iunit
+    character(len=4) :: filenum
+
+    iunit = mpi_world%rank + unit_offset
+    write(filenum, '(i3.3)') iunit - unit_offset
+    call loct_mkdir(trim(current_label)//'debug')
+    call loct_rm(trim(current_label)//'debug/debug_trace.node.'//filenum)
+
+  end subroutine delete_debug_trace
 
 
   ! ---------------------------------------------------------

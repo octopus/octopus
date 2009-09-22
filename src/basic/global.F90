@@ -185,7 +185,7 @@ contains
     character(len=*), intent(in) :: s, f
     integer, intent(in) :: l
 
-    write(stderr, '(3a,i5,3a)') 'Assertion "', trim(s), '" failed in line ', l, ' in file "', f, '"'
+    write(stderr, '(a,i5,3a,i5,3a)') 'Node ', mpi_world%rank, ': Assertion "', trim(s), '" failed in line ', l, ' in file "', f, '"'
     stop
   end subroutine assert_die
 

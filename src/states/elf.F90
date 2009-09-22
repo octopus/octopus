@@ -20,14 +20,14 @@
 #include "global.h"
 
 module elf_m
+  use cube_function_m
   use datasets_m
   use derivatives_m
   use fourier_space_m
-  use io_m
-  use loct_parser_m
-  use cube_function_m
   use global_m
   use grid_m
+  use io_m
+  use loct_parser_m
   use mesh_m
   use messages_m
   use mpi_m
@@ -47,17 +47,21 @@ module elf_m
 contains
 
   subroutine elf_init
-    !%Variable ElfWithCurrentTerm
+    call push_sub('elf.elf_init')
+
+    !%Variable ELFWithCurrentTerm
     !%Type logical
     !%Default true
     !%Section Output
     !%Description
-    !% The ELF, when calculated for complex wave functions, should contain
+    !% The ELF, when calculated for complex wavefunctions, should contain
     !% a term dependent on the current. This term is properly calculated by
     !% default; however, for research purposes it may be useful not to add it.
     !% If this feature proves to be useless, this option should go away.
     !%End
     call loct_parse_logical(datasets_check('ElfWithCurrentTerm'), .true., with_current_term)
+
+    call pop_sub()
   end subroutine elf_init
 
   ! ---------------------------------------------------------
@@ -70,7 +74,7 @@ contains
                                                 ! On output, it should contain the global ELF if st%d%ispin = 1,
                                                 ! otherwise elf(:, 3) contains the global elf, and 
                                                 ! elf(:, 1) and elf(:, 2) the spin resolved ELF.
-    FLOAT,   optional, intent(inout):: de(:,:)
+    FLOAT,  optional, intent(inout):: de(:,:)
 
     FLOAT :: f, D0, dens
     integer :: i, is, nelfs
@@ -79,10 +83,10 @@ contains
 
     FLOAT, parameter :: dmin = CNST(1e-10)
 
-    call push_sub('states.states_calc_elf')
+    call push_sub('elf.elf_calc')
 
-    ! We may or may not want the total elf. 
-    ! If we want it, the argument elf should have three components.c
+    ! We may or may not want the total ELF. 
+    ! If we want it, the argument elf should have three components.
     nelfs = size(elf, 2)
 
     SAFE_ALLOCATE(  rho(1:gr%mesh%np, 1:st%d%nspin))
@@ -195,6 +199,8 @@ contains
     type(zcf_t) :: zcf_tmp
 
     FLOAT, parameter :: dmin = CNST(1e-10)
+
+    call push_sub('elf.elf_calc_fs')
     
     ! single or double occupancy
     if(st%d%nspin == 1) then
@@ -290,6 +296,7 @@ contains
       call zcf_free(zcf_tmp)
     end if
 
+    call pop_sub()
   contains
 
     subroutine dmf2mf_RS2FS(m, fin, fout, c)
@@ -298,6 +305,8 @@ contains
       CMPLX,         intent(out)   :: fout(:)
       type(dcf_t),   intent(inout) :: c
     
+      call push_sub('elf.elf_calc_fs.dmf2mf_RS2FS')
+
       call dcf_alloc_RS(c)
       call dcf_alloc_FS(c)
       call dmesh_to_cube(m, fin, c)
@@ -305,6 +314,8 @@ contains
       call dfourier_to_mesh(m, c, fout)
       call dcf_free_RS(c)
       call dcf_free_FS(c)
+
+      call pop_sub()
     end subroutine dmf2mf_RS2FS
 
     subroutine zmf2mf_RS2FS(m, fin, fout, c)
@@ -313,6 +324,8 @@ contains
       CMPLX,         intent(out)   :: fout(:)
       type(zcf_t),   intent(inout) :: c
     
+      call push_sub('elf.elf_calc_fs.zmf2mf_RS2FS')
+
       call zcf_alloc_RS(c)
       call zcf_alloc_FS(c)
       call zmesh_to_cube(m, fin, c)
@@ -320,6 +333,8 @@ contains
       call zfourier_to_mesh(m, c, fout)
       call zcf_free_RS(c)
       call zcf_free_FS(c)
+
+      call pop_sub()
     end subroutine zmf2mf_RS2FS
 
   end subroutine elf_calc_fs

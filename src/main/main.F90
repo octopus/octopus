@@ -58,14 +58,18 @@ program octopus
   !%Section Execution::Debug
   !%Description
   !% This variable decides whether or not to enter debug mode.
-  !% If its value is 0 (the default) <tt>Octopus</tt> does not enter debug mode.
   !% If it is greater than 0, different amounts of additional information
   !% are written to standard output and additional assertion checks are performed.
-  !% Level 1: moderate amount of debug output but assertion checks enabled.
-  !% Level 2: the code prints a stack trace as it enters end exits subroutines.
+  !%Option 0
+  !% (default) <tt>Octopus</tt> does not enter debug mode.
+  !%Option 1
+  !% Moderate amount of debug output; assertion checks enabled.
+  !%Option 2
+  !% The code prints a stack trace as it enters end exits subroutines.
   !% This is useful for developers and you should include this output when
   !% submitting a bug report.
-  !% Level 100: the debug output is additionally written to files in the debug
+  !%Option 100
+  !% The debug output is additionally written to files in the debug
   !% directory. For each node (when running in parallel) there is a file called
   !% <tt>debug_trace.&lt;rank&gt;</tt>. Writing these files slows down the code by a huge factor and
   !% it is usually only necessary for parallel runs. In the serial case all
