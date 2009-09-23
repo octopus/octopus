@@ -19,4 +19,5 @@ Enabled    : Yes
 
 Input: 03-vdw_sternheimer.01-ground_state.inp
 Input: 03-vdw_sternheimer.02-vdw.inp
+Precision : 0.001
 match ; C6 ; GREP(vdw/vdw_c6, 'C_6  \[a.u.', 17) ; 1.828001742562

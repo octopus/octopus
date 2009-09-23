@@ -50,7 +50,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
   type(profile_t), save :: prof
 #endif
 
-  call push_sub('epot_inc.Xforces_from_potential')
+  call push_sub('forces_inc.Xforces_from_potential')
 
   ASSERT(present(lr) .eqv. present(lr_dir))
   ASSERT(present(lr) .eqv. present(lr2))
@@ -257,7 +257,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
     vloc(1:np) = M_ZERO
     
     call epot_local_potential(ep, gr, gr%fine%mesh, geo, iatom, vloc, time)
-    
+
     forall(ip = 1:np) zvloc(ip) = vloc(ip)
 
     do idir = 1, gr%mesh%sb%dim

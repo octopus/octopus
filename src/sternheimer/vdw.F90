@@ -107,19 +107,19 @@ contains
     if((gauss_start .le. gaus_leg_n).and.mpi_grp_is_root(mpi_world)) then
       iunit = io_open(VDW_DIR//'vdw_c6', action='write', position='append')
       write(iunit, '(1x)')
-      write(iunit, '(a,es20.12)') "C_3  [a.u.  ] = ", c3
-      write(iunit, '(a,es20.12)') "C_6  [a.u.  ] = ", c6
-      write(iunit, '(a,es20.12)') "C_AT [a.u.  ] = ", cat
+      write(iunit, '(a,es20.12)') "C_3  [a.u. ] = ", c3
+      write(iunit, '(a,es20.12)') "C_6  [a.u. ] = ", c6
+      write(iunit, '(a,es20.12)') "C_AT [a.u. ] = ", cat
       write(iunit, '(1x)')
 
-      write(iunit, '(5a,i1,a,es20.12)') "C_3  [", trim(units_abbrev(units_out%energy)), " ",  &
-        trim(units_abbrev(units_out%length**sys%gr%mesh%sb%dim)), "] = ", &
+      write(iunit, '(3a,es20.12)') "C_3  [", &
+        trim(units_abbrev(units_out%energy * units_out%length**sys%gr%mesh%sb%dim)), "] = ", &
         units_from_atomic(units_out%energy * units_out%length**sys%gr%mesh%sb%dim, c3)
-      write(iunit, '(5a,i1,a,es20.12)') "C_6  [", trim(units_abbrev(units_out%energy)), " ",  &
-        trim(units_abbrev(units_out%length**(2*sys%gr%mesh%sb%dim))), "] = ", &
+      write(iunit, '(3a,es20.12)') "C_6  [", &
+        trim(units_abbrev(units_out%energy * units_out%length**(2*sys%gr%mesh%sb%dim))), "] = ", &
         units_from_atomic(units_out%energy * units_out%length**(2*sys%gr%mesh%sb%dim), c6)
-      write(iunit, '(5a,i1,a,es20.12)') "C_AT [", trim(units_abbrev(units_out%energy)), " ",  &
-        trim(units_abbrev(units_out%length**(3*sys%gr%mesh%sb%dim))), "] = ", &
+      write(iunit, '(3a,es20.12)') "C_AT [", &
+        trim(units_abbrev(units_out%energy * units_out%length**(3*sys%gr%mesh%sb%dim))), "] = ", &
         units_from_atomic(units_out%energy * units_out%length**(3*sys%gr%mesh%sb%dim), cat)
 
       call io_close(iunit)
