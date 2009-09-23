@@ -14,5 +14,5 @@ match ; Eigenvalues    ; GREP(static/info, '1   --', 12) ;  -0.119004
 Precision : 0.01
 
 Input: 04-vib_modes.02-vib_modes.inp
-match ; Vibrational Frequency ; LINE(vibrations/normal_frequencies_lr, 1, 7) ; 167.32279
+match ; Vibrational Frequency ; LINE(vib_modes/normal_frequencies_lr, 1, 7) ; 167.32279
 
