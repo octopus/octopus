@@ -34,8 +34,6 @@ dist_share_DATA = \
 	03-functionals.test \
 	04-jellium.01-ground_state.inp \
 	04-jellium.test \
-	05-multigrid_solver.01-ground_state.inp \
-	05-multigrid_solver.test \
 	06-restart.01-ground_state.inp \
 	06-restart.02-restart_ground_state.inp \
 	06-restart.03-td_calc.inp \
@@ -66,8 +64,6 @@ dist_share_DATA = \
 	15-hartree.03-fft.inp                   \
 	15-hartree.04-fft_corrected.inp         \
 	15-hartree.05-cg_corrected.inp          \
-	16-isf_solver.01-ground_state.inp \
-	16-isf_solver.test \
 	18-current.01-current.inp \
 	18-current.test \
 	20-eigensolver.01-lobpcg.inp \
