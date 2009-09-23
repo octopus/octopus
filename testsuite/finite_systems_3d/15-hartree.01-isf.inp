@@ -1,0 +1,13 @@
+Units = ev_angstrom
+
+%Coordinates
+"Na" | 0.0 | 0.0 |  0.0	| yes
+%
+
+BoxShape = sphere
+Radius  = 8.0
+Spacing = 0.3
+
+PoissonSolver = isf
+
+
