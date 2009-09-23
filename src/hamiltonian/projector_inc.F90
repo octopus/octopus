@@ -31,6 +31,8 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
 
   type(batch_t) :: psib, ppsib
 
+  call push_sub('projector_inc.project_psi')
+
   call batch_init(psib, dim, 1)
   call batch_add_state(psib, 1, psi)
   call batch_init(ppsib, dim, 1)
@@ -41,6 +43,7 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
   call batch_end(psib)
   call batch_end(ppsib)
 
+  call pop_sub()
 end subroutine X(project_psi)
 
 !-------------------------------------------------------------------------------------------

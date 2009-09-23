@@ -57,7 +57,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     dims%number_of_symmetry_operations = 1
 
     ! Get the offset
-    offset = -matmul(gr%sb%rlattice, gr%sb%lsize)
+    offset = -matmul(gr%sb%rlattice_primitive, gr%sb%lsize)
     do i = gr%sb%periodic_dim+1, 3
       offset(i)=-(cube%n(i) - 1)/2 * gr%mesh%h(i)
     end do
@@ -75,7 +75,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     SAFE_ALLOCATE(geometry%atomic_numbers(geo%nspecies))
     SAFE_ALLOCATE(geometry%chemical_symbols(geo%nspecies))
     do idir = 1, gr%sb%dim
-      geometry%primitive_vectors(1:3, idir) = 2*gr%sb%lsize(idir)*gr%sb%rlattice(1:3, idir)
+      geometry%primitive_vectors(1:3, idir) = gr%sb%rlattice(1:3, idir)
     end do
     geometry%space_group = 1
     geometry%reduced_symmetry_matrices = reshape( (/ 1, 0, 0, 0, 1, 0, 0, 0, 1 /), (/ 3, 3, 1 /))
@@ -156,7 +156,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     groups%geometry => geometry
     SAFE_ALLOCATE(geometry%primitive_vectors(1:3, 1:3))
     do idir = 1, gr%sb%dim
-      geometry%primitive_vectors(1:3, idir) = 2*gr%sb%lsize(idir)*gr%sb%rlattice(1:3, idir)
+      geometry%primitive_vectors(1:3, idir) = gr%sb%rlattice(1:3, idir)
     end do
 
     !Open the file
@@ -256,7 +256,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     SAFE_ALLOCATE(geometry%reduced_symmetry_matrices(1:3, 1:3, 1:1))
     SAFE_ALLOCATE(geometry%reduced_symmetry_translations(1:3, 1:1))
     do idir = 1, gr%sb%dim
-      geometry%primitive_vectors(1:3, idir) = 2*gr%sb%lsize(idir)*gr%sb%rlattice(1:3, idir)
+      geometry%primitive_vectors(1:3, idir) = gr%sb%rlattice(1:3, idir)
     end do
     geometry%reduced_symmetry_matrices = reshape( (/ 1, 0, 0, 0, 1, 0, 0, 0, 1 /), (/ 3, 3, 1 /))
     geometry%reduced_symmetry_translations = reshape( (/ 0, 0, 0 /), (/ 3, 1 /))

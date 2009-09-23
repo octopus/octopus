@@ -93,11 +93,11 @@ contains
       forall(ik = 1:nkpoints) weights(ik) = M_ONE/dble(nkpoints)
     end if
 
-    write(message(1),'(a)')
+    write(message(1),'(a)') ' '
     write(message(2),'(1x,i3,a)') nkpoints, ' k-points generated from parameters :'
     write(message(3),'(1x,a)') '---------------------------------------------------'
     write(message(4),'(4x,a,3i5,6x,a,3f6.2)') 'n =', nk_axis(1:3), 's = ', shift(1:3)
-    write(message(5),'(a)')
+    write(message(5),'(a)') ' '
     call write_info(5)
 
     do ik = 1, nkpoints

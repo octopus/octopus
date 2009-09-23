@@ -53,6 +53,7 @@ subroutine dcholesky(n, a, bof, err_code)
   logical :: bof_
 
   call profiling_in(cholesky_prof, "CHOLESKY")
+  call push_sub('lalg_adv_lapack_inc.dcholesky')
 
   bof_ = .true.
   if(present(bof)) then
@@ -77,7 +78,9 @@ subroutine dcholesky(n, a, bof, err_code)
   if(present(err_code)) then
     err_code = info
   end if
+
   call profiling_out(cholesky_prof)
+  call pop_sub()
 end subroutine dcholesky
 
 
@@ -94,6 +97,7 @@ subroutine zcholesky(n, a, bof, err_code)
   integer :: info
   logical :: bof_
   call profiling_in(cholesky_prof, "CHOLESKY")
+  call push_sub('lalg_adv_lapack_inc.zcholesky')
 
   bof_ = .true.
   if(present(bof)) then
@@ -121,6 +125,7 @@ subroutine zcholesky(n, a, bof, err_code)
   end if
 
   call profiling_out(cholesky_prof)
+  call pop_sub()
 end subroutine zcholesky
 
 
@@ -142,6 +147,7 @@ subroutine dgeneigensolve(n, a, b, e, bof, err_code)
   FLOAT, allocatable :: work(:), diag(:)
 
   call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
+  call push_sub('lalg_adv_lapack_inc.dgeneigensolve')
 
   bof_ = .true.
   if(present(bof)) then
@@ -187,6 +193,7 @@ subroutine dgeneigensolve(n, a, b, e, bof, err_code)
   end if
   
   call profiling_out(eigensolver_prof)
+  call pop_sub()
 end subroutine dgeneigensolve
 
 
@@ -209,6 +216,7 @@ subroutine zgeneigensolve(n, a, b, e, bof, err_code)
   CMPLX, allocatable :: work(:), diag(:)
 
   call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
+  call push_sub('lalg_adv_lapack_inc.zgeneigensolve')
 
   bof_ = .true.
   if(present(bof)) then
@@ -256,6 +264,7 @@ subroutine zgeneigensolve(n, a, b, e, bof, err_code)
   end if
 
   call profiling_out(eigensolver_prof)
+  call pop_sub()
 end subroutine zgeneigensolve
 
 
@@ -273,6 +282,8 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side)
   FLOAT, allocatable :: rwork(:)
   CMPLX, allocatable :: work(:), vl(:, :) ,vr(:, :)
   character(1)       :: side_
+
+  call push_sub('lalg_adv_lapack_inc.zeigensolve_nonh')
 
   if (present(side)) then
     side_ = side
@@ -318,6 +329,8 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side)
   if(present(err_code)) then
     err_code = info
   end if
+
+  call pop_sub()
 end subroutine zeigensolve_nonh
 
 
@@ -334,6 +347,8 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
   integer            :: info, lwork
   FLOAT, allocatable :: rwork(:), work(:), vl(:, :) ,vr(:, :)
   character(1)       :: side_
+
+  call push_sub('lalg_adv_lapack_inc.deigensolve_nonh')
 
   if (present(side)) then
     side_ = side
@@ -379,6 +394,8 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
   if(present(err_code)) then
     err_code = info
   end if
+
+  call pop_sub()
 end subroutine deigensolve_nonh
 
 ! ---------------------------------------------------------
@@ -411,6 +428,8 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   FLOAT              :: abstol
   FLOAT, allocatable :: work(:)
   
+  call push_sub('lalg_adv_lapack_inc.dlowest_geneigensolve')
+
   bof_ = .true.
   if(present(bof)) then
     bof_ = bof
@@ -449,6 +468,8 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   if(present(err_code)) then
     err_code = info
   end if
+
+  call pop_sub()
 end subroutine dlowest_geneigensolve
 
 
@@ -483,6 +504,8 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   FLOAT              :: abstol
   FLOAT              :: rwork(7*n)
   CMPLX, allocatable :: work(:)
+
+  call push_sub('lalg_adv_lapack_inc.zlowest_geneigensolve')
 
   bof_ = .true.
   if(present(bof)) then
@@ -520,6 +543,8 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   if(present(err_code)) then
     err_code = info
   end if
+
+  call pop_sub()
 end subroutine zlowest_geneigensolve
 
 
@@ -535,6 +560,8 @@ subroutine deigensolve(n, a, e, bof, err_code)
   logical            :: bof_
   integer            :: info, lwork
   FLOAT, allocatable :: work(:)
+
+  call push_sub('lalg_adv_lapack_inc.deigensolve')
 
   bof_ = .true.
   if(present(bof)) then
@@ -563,6 +590,8 @@ subroutine deigensolve(n, a, e, bof, err_code)
   if(present(err_code)) then
     err_code = info
   end if
+
+  call pop_sub()
 end subroutine deigensolve
 
 
@@ -579,6 +608,8 @@ subroutine zeigensolve(n, a, e, bof, err_code)
   logical            :: bof_
   CMPLX, allocatable :: work(:)
   FLOAT, allocatable :: rwork(:)
+
+  call push_sub('lalg_adv_lapack_inc.zeigensolve')
 
   bof_ = .true.
   if(present(bof)) then
@@ -609,6 +640,8 @@ subroutine zeigensolve(n, a, e, bof, err_code)
   if(present(err_code)) then
     err_code = info
   end if
+
+  call pop_sub()
 end subroutine zeigensolve
 
 
@@ -638,6 +671,8 @@ subroutine dlowest_eigensolve(k, n, a, e, v)
   FLOAT              :: abstol
   FLOAT, allocatable :: work(:)
   
+  call push_sub('lalg_adv_lapack_inc.dlowest_eigensolve')
+
   abstol = 2*sfmin()
 
   ! Work size query.
@@ -657,6 +692,8 @@ subroutine dlowest_eigensolve(k, n, a, e, v)
       'In dlowest_eigensolve, LAPACK Xsygvx returned error message ', info
     call write_fatal(1)
   end if
+
+  call pop_sub()
 end subroutine dlowest_eigensolve
 
 
@@ -687,6 +724,8 @@ subroutine zlowest_eigensolve(k, n, a, e, v)
   FLOAT              :: abstol
   CMPLX, allocatable :: work(:)
    
+  call push_sub('lalg_adv_lapack_inc.zlowest_eigensolve')
+
   abstol = 2*sfmin()
 
   ! Work size query.
@@ -706,6 +745,8 @@ subroutine zlowest_eigensolve(k, n, a, e, v)
       'In zlowest_eigensolve, LAPACK Xsygvx returned error message ', info
     call write_fatal(1)
   end if
+
+  call pop_sub()
 end subroutine zlowest_eigensolve
 
 
@@ -738,12 +779,14 @@ FLOAT function ddeterminant(n, a, invert) result(d)
   FLOAT, allocatable :: work(:)
   logical :: invert_
 
+  call push_sub('lalg_adv_lapack_inc.ddeterminant')
+
   SAFE_ALLOCATE(work(1:n))
   SAFE_ALLOCATE(ipiv(1:n))
 
   call DLAPACK(getrf)(n, n, a(1, 1), n, ipiv(1), info)
   if(info < 0) then
-    write(message(1), '(a, i3)') 'In dinvert, LAPACK dgetrf returned info = ', info
+    write(message(1), '(a, i3)') 'In ddeterminant, LAPACK dgetrf returned info = ', info
     call write_fatal(1)
   end if
 
@@ -760,13 +803,14 @@ FLOAT function ddeterminant(n, a, invert) result(d)
   if(invert_) then
     call DLAPACK(getri)(n, a(1, 1), n, ipiv(1), work(1), n, info)
     if(info /= 0) then
-      write(message(1), '(a, i3)') 'In dinvert, LAPACK dgetri returned info = ', info
+      write(message(1), '(a, i3)') 'In ddeterminant, LAPACK dgetri returned info = ', info
       call write_fatal(1)
     end if
   end if
 
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(ipiv)
+  call pop_sub()
 end function ddeterminant
 
 
@@ -799,12 +843,14 @@ CMPLX function zdeterminant(n, a, invert) result(d)
   CMPLX, allocatable :: work(:)
   logical :: invert_
 
+  call push_sub('lalg_adv_lapack_inc.zdeterminant')
+
   SAFE_ALLOCATE(work(1:n))
   SAFE_ALLOCATE(ipiv(1:n))
 
   call ZLAPACK(getrf)(n, n, a(1, 1), n, ipiv(1), info)
   if(info < 0) then
-    write(message(1), '(a, i3)') 'In dinvert, LAPACK dgetrf returned info = ', info
+    write(message(1), '(a, i3)') 'In zdeterminant, LAPACK dgetrf returned info = ', info
     call write_fatal(1)
   end if
 
@@ -821,13 +867,14 @@ CMPLX function zdeterminant(n, a, invert) result(d)
   if(invert_) then
     call ZLAPACK(getri)(n, a(1, 1), n, ipiv(1), work(1), n, info)
     if(info /= 0) then
-      write(message(1), '(a, i3)') 'In dinvert, LAPACK dgetri returned info = ', info
+      write(message(1), '(a, i3)') 'In zdeterminant, LAPACK dgetri returned info = ', info
       call write_fatal(1)
     end if
   end if
 
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(ipiv)
+  call pop_sub()
 end function zdeterminant
 
 ! ---------------------------------------------------------
@@ -861,6 +908,8 @@ subroutine dsym_inverter(uplo, n, a)
   integer, allocatable :: ipiv(:)
   FLOAT, allocatable :: work(:)
 
+  call push_sub('lalg_adv_lapack_inc.dsym_inverter')
+
   SAFE_ALLOCATE(work(1:n))
   SAFE_ALLOCATE(ipiv(1:n))
 
@@ -878,6 +927,7 @@ subroutine dsym_inverter(uplo, n, a)
 
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(ipiv)
+  call pop_sub()
 end subroutine dsym_inverter
 
 ! ---------------------------------------------------------
@@ -911,6 +961,8 @@ subroutine zsym_inverter(uplo, n, a)
   integer, allocatable :: ipiv(:)
   CMPLX, allocatable :: work(:)
 
+  call push_sub('lalg_adv_lapack_inc.zsym_inverter')
+
   SAFE_ALLOCATE(work(1:n))
   SAFE_ALLOCATE(ipiv(1:n))
   call ZLAPACK(sytrf)(uplo, n, a, n, ipiv, work, n, info)
@@ -927,6 +979,7 @@ subroutine zsym_inverter(uplo, n, a)
 
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(ipiv)
+  call pop_sub()
 end subroutine zsym_inverter
 
 ! ---------------------------------------------------------
@@ -957,6 +1010,8 @@ subroutine dlinsyssolve(n, nhrs, a, b, x)
   FLOAT :: rcond
   FLOAT, allocatable :: ferr(:), berr(:), work(:), r(:), c(:), af(:,:)
   character(1) :: equed
+
+  call push_sub('lalg_adv_lapack_inc.dlinsyssolve')
 
   SAFE_ALLOCATE(ipiv(1:n))
   SAFE_ALLOCATE(iwork(1:n))
@@ -989,6 +1044,7 @@ subroutine dlinsyssolve(n, nhrs, a, b, x)
   SAFE_DEALLOCATE_A(c)
   SAFE_DEALLOCATE_A(af)
 
+  call pop_sub()
 end subroutine dlinsyssolve
 
 ! ---------------------------------------------------------
@@ -1023,6 +1079,8 @@ subroutine zlinsyssolve(n, nhrs, a, b, x)
   CMPLX, allocatable   :: work(:), af(:,:)
   character(1)         :: equed
 
+  call push_sub('lalg_adv_lapack_inc.zlinsyssolve')
+
   SAFE_ALLOCATE(ipiv(1:n))
   SAFE_ALLOCATE(rwork(1:2*n))
   SAFE_ALLOCATE(ferr(1:nhrs))
@@ -1049,6 +1107,8 @@ subroutine zlinsyssolve(n, nhrs, a, b, x)
   SAFE_DEALLOCATE_A(r)
   SAFE_DEALLOCATE_A(c)
   SAFE_DEALLOCATE_A(af)
+
+  call pop_sub()
 end subroutine zlinsyssolve
 
 
@@ -1078,6 +1138,8 @@ subroutine zsingular_value_decomp(n, a, u, vt, sg_values)
   CMPLX, allocatable :: work(:)
   FLOAT, allocatable :: rwork(:)
 
+  call push_sub('lalg_adv_lapack_inc.zsingular_value_decomp')
+
   ! for now we treat only square matrices
   m = n 
 
@@ -1097,7 +1159,7 @@ subroutine zsingular_value_decomp(n, a, u, vt, sg_values)
 
   SAFE_DEALLOCATE_A(rwork)
   SAFE_DEALLOCATE_A(work)
-
+  call pop_sub()
 end subroutine zsingular_value_decomp
 
 
@@ -1117,6 +1179,8 @@ subroutine zsvd_inverse(n, a, threshold)
   SAFE_ALLOCATE( u(1:n, 1:n))
   SAFE_ALLOCATE(vt(1:n, 1:n))
   SAFE_ALLOCATE(sg_values(1:n))
+
+  call push_sub('lalg_adv_lapack_inc.zsvd_inverse')
 
   call zsingular_value_decomp(n, a, u, vt, sg_values)
 
@@ -1144,6 +1208,7 @@ subroutine zsvd_inverse(n, a, threshold)
   SAFE_DEALLOCATE_A(sg_values)
   SAFE_DEALLOCATE_A(vt)
   SAFE_DEALLOCATE_A(u)
+  call pop_sub()
 end subroutine zsvd_inverse
 
 
@@ -1167,6 +1232,8 @@ subroutine dinvert_upper_triangular(n, a)
     end subroutine DLAPACK(trtri)
   end interface
   
+  call push_sub('lalg_adv_lapack_inc.dinvert_upper_triangular')
+
   call DLAPACK(trtri)('U', 'N', n, a(1, 1), n, info)
 
   if(info.ne.0) then
@@ -1174,6 +1241,8 @@ subroutine dinvert_upper_triangular(n, a)
       'In dinvert_upper_triangular, LAPACK Xtrtri returned error message ', info
     call write_fatal(1)
   end if
+
+  call pop_sub()
 end subroutine dinvert_upper_triangular
 
 
@@ -1197,6 +1266,8 @@ subroutine zinvert_upper_triangular(n, a)
     end subroutine ZLAPACK(trtri)
   end interface
   
+  call push_sub('lalg_adv_lapack_inc.zinvert_upper_triangular')
+
   call ZLAPACK(trtri)('U', 'N', n, a(1, 1), n, info)
 
   if(info.ne.0) then
@@ -1204,6 +1275,8 @@ subroutine zinvert_upper_triangular(n, a)
       'In zinvert_upper_triangular, LAPACK Xtrtri returned error message ', info
     call write_fatal(1)
   end if
+
+  call pop_sub()
 end subroutine zinvert_upper_triangular
 
 ! ---------------------------------------------------------
@@ -1226,6 +1299,8 @@ subroutine dinvert_lower_triangular(n, a)
     end subroutine DLAPACK(trtri)
   end interface
   
+  call push_sub('lalg_adv_lapack_inc.dinvert_lower_triangular')
+
   call DLAPACK(trtri)('L', 'N', n, a(1, 1), n, info)
 
   if(info.ne.0) then
@@ -1233,6 +1308,8 @@ subroutine dinvert_lower_triangular(n, a)
       'In dinvert_lower_triangular, LAPACK Xtrtri returned error message ', info
     call write_fatal(1)
   end if
+
+  call pop_sub()
 end subroutine dinvert_lower_triangular
 
 ! ---------------------------------------------------------
@@ -1255,6 +1332,8 @@ subroutine zinvert_lower_triangular(n, a)
     end subroutine ZLAPACK(trtri)
   end interface
   
+  call push_sub('lalg_adv_lapack_inc.zinvert_lower_triangular')
+
   call ZLAPACK(trtri)('L', 'N', n, a(1, 1), n, info)
 
   if(info.ne.0) then
@@ -1262,6 +1341,8 @@ subroutine zinvert_lower_triangular(n, a)
       'In zinvert_lower_triangular, LAPACK Xtrtri returned error message ', info
     call write_fatal(1)
   end if
+
+  call pop_sub()
 end subroutine zinvert_lower_triangular
 
 

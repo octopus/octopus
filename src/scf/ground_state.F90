@@ -63,7 +63,7 @@ contains
     integer      :: ierr, s1, s2, k1, k2, j
     logical      :: species_all_electron, lcao_done
 
-    call push_sub('gs.ground_state_run')
+    call push_sub('ground_state.ground_state_run')
 
     call states_distribute_nodes(sys%st, sys%mc)
     call states_allocate_wfns(sys%st, sys%gr%mesh)
@@ -104,7 +104,7 @@ contains
       ! overwrite the guess density)
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
-      ! get the effective potential (we don`t need the eigenvalues yes)
+      ! get the effective potential (we don`t need the eigenvalues yet)
       call v_ks_calc(sys%gr, sys%ks, hm, sys%st, calc_eigenval=.false.) 
 
       ! The initial LCAO calculation is done by default if we have pseudopotentials.
@@ -124,18 +124,18 @@ contains
       !%Default lcao_states
       !%Section SCF
       !%Description
-      !% Before starting a SCF calculation, <tt>octopus</tt> can perform
-      !% a LCAO calculation. These can provide <tt>octopus</tt> with a good set
+      !% Before starting a SCF calculation, <tt>Octopus</tt> can perform
+      !% a LCAO calculation. These can provide <tt>Octopus</tt> with a good set
       !% of initial wave-functions and with a new guess for the density.
       !% (Up to current version, only a minimal basis set used.)
       !%Option lcao_none 0
       !% Do not perform a LCAO calculation before the SCF cycle.
       !%Option lcao_states 2
-      !% Do a LCAO calculation before the SCF cycle and use the resulting wave-functions as 
-      !% initial wave-functions without changing the guess density.
+      !% Do a LCAO calculation before the SCF cycle and use the resulting wavefunctions as 
+      !% initial wavefunctions without changing the guess density.
       !% This will speed-up the convergence of the eigensolver during the first SCF iterations.
       !%Option lcao_full 3
-      !% Do a LCAO calculation before the SCF cycle and use the LCAO wave-functions to build a new
+      !% Do a LCAO calculation before the SCF cycle and use the LCAO wavefunctions to build a new
       !% guess density and a new KS potential.
       !% Using the LCAO density as a new guess density may improve the convergence, but can
       !% also slow it down or yield wrong results (especially for spin-polarized calculations).

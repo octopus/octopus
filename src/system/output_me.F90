@@ -220,7 +220,7 @@ contains
     write(message(1),'(a)') 'Momentum of the KS states [a.u.]:'
     call write_info(1, iunit)      
     if (st%d%nik > ns) then
-      message(1) = 'Kpoints [' // trim(units_abbrev(unit_one/units_out%length)) // ']'
+      message(1) = 'k-points [' // trim(units_abbrev(unit_one/units_out%length)) // ']'
       call write_info(1, iunit)
     end if
 

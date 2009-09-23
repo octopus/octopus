@@ -137,6 +137,8 @@ contains
     
     integer :: ii
 
+    call push_sub('lalg_adv.zlalg_exp')
+
     SAFE_ALLOCATE(evectors(1:nn, 1:nn))
 
     if(hermitian) then
@@ -179,6 +181,7 @@ contains
       SAFE_DEALLOCATE_A(zevalues)
     end if
 
+    call pop_sub()
   end subroutine zlalg_exp
 
 
@@ -189,7 +192,7 @@ contains
   ! 
   ! phi(x) = (e^x - 1)/x
   !
-  ! For the hermitian case, for any function f:
+  ! For the Hermitian case, for any function f:
   !
   !   A = V D V^T => f(A) = V f(D) V^T
   !
@@ -210,6 +213,8 @@ contains
     CMPLX :: deter
     
     integer :: ii
+
+    call push_sub('lalg_adv.zlalg_phi')
 
     SAFE_ALLOCATE(evectors(1:nn, 1:nn))
 
@@ -253,6 +258,7 @@ contains
       SAFE_DEALLOCATE_A(zevalues)
     end if
 
+    call pop_sub()
   end subroutine zlalg_phi
 
 #ifdef HAVE_LAPACK

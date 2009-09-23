@@ -960,11 +960,12 @@ contains
     else
       !%Variable LatticeVectors
       !%Type block
+      !%Default simple cubic
       !%Section Mesh::Simulation Box
       !%Description
       !% Primitive lattice vectors. Vectors are stored in rows.
       !% Note that these vectors will be normalized to 1 after being read.
-      !% 
+      !% Default:
       !% <tt>%LatticeVectors
       !% <br>&nbsp;&nbsp;1.0 | 0.0 | 0.0
       !% <br>&nbsp;&nbsp;0.0 | 1.0 | 0.0
@@ -1285,6 +1286,7 @@ contains
         '(', units_from_atomic(units_out%length, sb%lsize(1)), ',',           &
         units_from_atomic(units_out%length, sb%lsize(2)), ',',                &
         units_from_atomic(units_out%length, sb%lsize(3)), ')'
+      call write_info(1, iunit)
     end if
 
     write(message(1), '(a,i1,a)') '  Octopus will run in ', sb%dim, ' dimension(s).'
@@ -1296,7 +1298,7 @@ contains
       write(message(1),'(1x)')
       write(message(2),'(a,3a,a)') '  Lattice Vectors [', trim(units_abbrev(units_out%length)), ']'
       do idir = 1, sb%dim
-        write(message(2+idir),'(9f12.6)') (units_from_atomic(units_out%length, sb%rlattice(idir2, idir)*M_TWO*sb%lsize(idir)), &
+        write(message(2+idir),'(9f12.6)') (units_from_atomic(units_out%length, sb%rlattice(idir2, idir)), &
                                          idir2 = 1, sb%dim) 
       end do
       call write_info(2+sb%dim, iunit)

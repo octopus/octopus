@@ -35,7 +35,7 @@
 ! which means
 ! * that space is divided in 2 domains per state,
 ! * the states are divided in 3 groups, i. e. 5 states per processor, and
-! * the whole setting is duplicated because of the 2 kpoints.
+! * the whole setting is duplicated because of the 2 k-points.
 !
 ! To perform collective operations (like a reduce), you can use the communicators
 ! provided in mc%group_comm(:). For example, to sum over states, the communicator

@@ -22,38 +22,38 @@
 module states_m
   use batch_m
   use blas_m
-  use derivatives_m
   use calc_mode_m
   use crystal_m
-  use distributed_m
   use datasets_m
+  use derivatives_m
+  use distributed_m
   use geometry_m
   use global_m
   use grid_m
   use hardware_m
-  use io_function_m
   use io_m
+  use io_function_m
+  use lalg_adv_m
   use lalg_basic_m
   use loct_m
   use loct_parser_m
   use math_m
-  use messages_m
-  use mesh_function_m
   use mesh_m
+  use mesh_function_m
+  use messages_m
   use modelmb_particles_m
   use mpi_m
   use mpi_lib_m
   use multicomm_m
   use multigrid_m
-  use ob_interface_m
   use ob_green_m
+  use ob_interface_m
   use profiling_m
   use simul_box_m
   use smear_m
   use states_dim_m
   use units_m
   use varinfo_m
-  use lalg_adv_m
 
   implicit none
 
