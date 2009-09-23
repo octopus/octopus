@@ -35,7 +35,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, m, hm, geo, sb, psi, spin_channel
   type(species_t), pointer :: s
   type(periodic_copy_t)   :: pc
   integer :: icell, idim, iatom, jj, ip
-  FLOAT :: pos(MAX_DIM)
+  FLOAT :: pos(MAX_DIM), radius
   FLOAT, allocatable :: ao(:)
   type(profile_t), save :: prof
 
@@ -65,7 +65,9 @@ subroutine X(lcao_atomic_orbital) (this, iorb, m, hm, geo, sb, psi, spin_channel
 
   else
 
-    call periodic_copy_init(pc, sb, geo%atom(iatom)%x, range = species_get_iwf_radius(s, jj, spin_channel))
+    radius = min(species_get_iwf_radius(s, jj, spin_channel), maxval(sb%lsize))
+
+    call periodic_copy_init(pc, sb, geo%atom(iatom)%x, range = radius)
     do icell = 1, periodic_copy_num(pc)
       pos = periodic_copy_position(pc, sb, icell)
 
