@@ -274,8 +274,8 @@ contains
      F1, F2, GD(3,NSPIN), sigma(3), vxsigma(3), vcsigma(3),         &
      EPSX, EPSC,                                                    &
      DEXDD(NSPIN), DEXDGD(3,NSPIN), DECDD(NSPIN), DECDGD(3,NSPIN)
-  type(xc_f90_func_t) :: x_conf, c_conf
-  type(xc_f90_info_t) :: x_info, c_info
+  type(xc_f90_pointer_t) :: x_conf, c_conf
+  type(xc_f90_pointer_t) :: x_info, c_info
 
   call push_sub('atomic.atomxc')
 
@@ -296,15 +296,15 @@ contains
 
   ! initialize xc functional
   if(GGA) then
-    call xc_f90_gga_init(x_conf, x_info, XC_GGA_X_PBE, NSPIN)
-    call xc_f90_gga_init(c_conf, c_info, XC_GGA_C_PBE, NSPIN)
+    call xc_f90_func_init(x_conf, x_info, XC_GGA_X_PBE, NSPIN)
+    call xc_f90_func_init(c_conf, c_info, XC_GGA_C_PBE, NSPIN)
   else
-    call xc_f90_lda_init(x_conf, x_info, XC_LDA_X, NSPIN)
+    call xc_f90_func_init(x_conf, x_info, XC_LDA_X, NSPIN)
     if(AUTHOR.EQ.'CA' .OR. AUTHOR.EQ.'ca' .OR.                                &
        AUTHOR.EQ.'PZ' .OR. AUTHOR.EQ.'pz') THEN
-      call xc_f90_lda_init(c_conf, c_info, XC_LDA_C_PZ, NSPIN)
+      call xc_f90_func_init(c_conf, c_info, XC_LDA_C_PZ, NSPIN)
     else IF ( AUTHOR.EQ.'PW92' .OR. AUTHOR.EQ.'pw92' ) THEN
-      call xc_f90_lda_init(c_conf, c_info, XC_LDA_C_PW, NSPIN)
+      call xc_f90_func_init(c_conf, c_info, XC_LDA_C_PW, NSPIN)
     else
       write(message(1),'(a,a)') 'Error: LDAXC: Unknown author ', AUTHOR
       call write_fatal(1)
@@ -472,13 +472,8 @@ contains
     end do
   end do
 
-  if(GGA) then
-    call xc_f90_gga_end(x_conf)
-    call xc_f90_gga_end(c_conf)
-  else
-    call xc_f90_lda_end(x_conf)
-    call xc_f90_lda_end(c_conf)
-  end if
+  call xc_f90_func_end(x_conf)
+  call xc_f90_func_end(c_conf)
 
   call pop_sub()
 end subroutine atomxc

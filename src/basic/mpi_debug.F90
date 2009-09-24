@@ -31,7 +31,9 @@ module mpi_debug_m
 
   private
 
-#if defined(HAVE_MPI)
+#if !defined(HAVE_MPI)
+  integer, public :: mpi_debug_dummy ! this avoids compilers complaining about empty module
+#else
   public ::               &
     mpi_debug_statistics, &
     mpi_debug_in,         &

@@ -22,13 +22,14 @@
 
 use Getopt::Std;
 use File::Find;
-getopts "hs:";
+getopts "hs:b:";
 
 if($opt_h) {
     print <<"EndOfUsage";
 
 Usage: mk_functionals_list.pl [-b DIR] [-s DIR] [-h]
 
+    -b    The top level build tree directory, . if omitted
     -s    The top level source tree directory, . if omitted
     -h    This help message
 EndOfUsage
@@ -37,9 +38,10 @@ EndOfUsage
 }
 
 $top_srcdir = ($opt_s ? $opt_s : ".");
+$top_builddir = ($opt_b ? $opt_b : ".");
 
 $src   = "$top_srcdir/src/xc";
-$funct = "$top_srcdir/libxc/src/xc_funcs.h";
+$funct = "$top_builddir/libxc/src/xc_funcs.h";
 
 if(!-d $src && !-f $funct) {
     print stderr <<"EndOfErrorMsg";

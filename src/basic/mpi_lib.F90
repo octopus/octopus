@@ -32,7 +32,9 @@ module mpi_lib_m
 
   private
 
-#if defined(HAVE_MPI)
+#if !defined(HAVE_MPI)
+  integer, public :: mpi_lib_dummy ! this avoids compilers complaining about empty module
+#else
   public ::              &
     lmpi_gen_allgatherv, &
     lmpi_translate_rank

@@ -210,6 +210,7 @@ contains
     call double_grid_end(gr%dgrid)
 
     call derivatives_end(gr%der)
+    call curvilinear_end(gr%cv)
     call mesh_end(gr%mesh)
 
     if(associated(gr%mgrid)) then

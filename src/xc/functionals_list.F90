@@ -227,6 +227,8 @@
 !% Becke & Johnson correction to Becke-Roussel 89
 !%Option mgga_x_tb09               208
 !% Tran & Blaha correction to Becke & Johnson
+!%Option mgga_x_rpp09               209
+!% Rasanen, Pittalis, and Proetto correction to Becke & Johnson
 !%Option mgga_c_tpss               231000
 !% Perdew, Tao, Staroverov & Scuseria correlation
 !%Option mgga_c_vsxc               232000
