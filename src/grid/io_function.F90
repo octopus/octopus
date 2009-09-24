@@ -75,7 +75,8 @@ module io_function_m
     output_meshgrid   =  4096,    &
     boundary_points   =  8192,    &
     output_binary     = 16384,    &
-    output_etsf       = 32768
+    output_etsf       = 32768,    &
+    output_xyz        = 65536
 
   ! doutput_kind => real variables; zoutput_kind => complex variables.
   integer, parameter, private ::  &
@@ -144,7 +145,7 @@ contains
     !% A format for printing structures and three-dimensional information, which can be visualized by
     !% the open-source program XCrySDen (<tt>http://www.xcrysden.org/</tt>). The string
     !% <tt>.xsf</tt> is appended to previous file names. Note that lattice vectors and coordinates are as
-    !% specified by UnitsOutput.
+    !% specified by <tt>UnitsOutput</tt>.
     !%Option matlab 2048
     !% In combination with <tt>plane_x</tt>, <tt>plane_y</tt> and <tt>plane_z</tt> this option produces output files 
     !% which are suitable for 2D Matlab functions like <tt>mesh()</tt>, <tt>surf()</tt>, or <tt>waterfall()</tt>. To load 
@@ -167,6 +168,8 @@ contains
     !%Option etsf 32768
     !% ETSF file format (<tt>http://www.etsf.eu/resources/software/standardization_project</tt>).
     !% Requires the ETSF_IO library.
+    !%Option xyz 65536
+    !% Geometry will be output in XYZ format. Does not affect other outputs.
     !%End
     call loct_parse_int(datasets_check('OutputHow'), 0, how)
     if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
@@ -214,6 +217,7 @@ contains
     if(index(where, "Plain").ne.0)     how = ior(how, output_plain)
     if(index(where, "Binary").ne.0)    how = ior(how, output_binary)
     if(index(where, "MeshIndex").ne.0) how = ior(how, output_mesh_index)
+    if(index(where, "XYZ").ne.0) how = ior(how, output_xyz)
 #if defined(HAVE_NETCDF)
     if(index(where, "NETCDF").ne.0)    how = ior(how, output_netcdf)
 #endif

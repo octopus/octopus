@@ -20,20 +20,20 @@
 #include "global.h"
 
 module mesh_init_m
-  use datasets_m
   use curvilinear_m
+  use datasets_m
   use geometry_m
   use global_m
   use hypercube_m
-  use io_m
-  use math_m
-  use mesh_m
   use index_m
-  use messages_m
-  use multicomm_m
-  use mpi_m
+  use io_m
   use loct_m
   use loct_parser_m
+  use math_m
+  use mesh_m
+  use messages_m
+  use mpi_m
+  use multicomm_m
   use par_vec_m
   use profiling_m
   use simul_box_m
@@ -515,26 +515,28 @@ contains
 
     SAFE_ALLOCATE(mesh%idx%Lxyz(1:mesh%np_part_global, 1:MAX_DIM))
 
+    !%Variable MeshBlockSizeXY
     !%Type integer
     !%Default 20
     !%Section Execution::Optimization
     !%Description
-    !% To improve memory access locality when calculating derivatives,
-    !% Octopus orders mesh points in blocks. This variable controls
-    !% the size of this blocks in the X and Y directions. The default
-    !% is 20. (This variable only affects the performance of octopus
+    !% To improve memory-access locality when calculating derivatives,
+    !% <tt>Octopus</tt> arranges mesh points in blocks. This variable controls
+    !% the size of this blocks in the <i>x</i>- and <i>y</i>-directions. The default
+    !% is 20. (This variable only affects the performance of <tt>Octopus</tt>
     !% and not the results.)
     !%End
     call loct_parse_int(datasets_check('MeshBlockSizeXY'), 20, bsize)
 
+    !%Variable MeshBlockSizeZ
     !%Type integer
     !%Default 100
     !%Section Execution::Optimization
     !%Description
-    !% To improve memory access locality when calculating derivatives,
-    !% Octopus orders mesh points in blocks. This variable controls
-    !% the size of this blocks in the Z direction. The default is
-    !% 100. (This variable only affects the performance of octopus and
+    !% To improve memory-access locality when calculating derivatives,
+    !% <tt>Octopus</tt> arranges mesh points in blocks. This variable controls
+    !% the size of this blocks in the <i>z</i>-direction. The default is
+    !% 100. (This variable only affects the performance of <tt>Octopus</tt> and
     !% not the results.)
     !%End
     call loct_parse_int(datasets_check('MeshBlockSizeZ'), 100, bsizez)
@@ -542,11 +544,11 @@ contains
     ! When using open boundaries we need to have a mesh block-size of 1
     if (loct_parse_block(datasets_check('OpenBoundaries'), blk).eq.0) then
       if (bsize.gt.1 .or. bsizez.gt.1) then
-        message(1) = 'When chosen the Transport-Mode the block-ordering'
+        message(1) = 'When in transport mode, the block-ordering'
         message(2) = 'of the mesh points cannot be chosen freely.'
         message(3) = 'Both variables, MeshBlockSizeXY and MeshBlockSizeZ'
         message(4) = 'have to be initialized with the value 1.'
-        message(5) = 'Also restarting from datasets needs these to be'
+        message(5) = 'Also, when restarting from datasets, these need to be'
         message(6) = 'calculated with the same block-size of 1.'
         call write_fatal(6)
       end if
@@ -639,7 +641,7 @@ contains
     !%Default false
     !%Section Execution::Parallelization
     !%Description
-    !% (experimental) If enabled, Octopus will use an MPI virtual
+    !% (experimental) If enabled, <tt>Octopus</tt> will use an MPI virtual
     !% topology to map the processors. This can improve performance
     !% for certain interconnection systems.
     !%End

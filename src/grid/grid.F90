@@ -82,7 +82,7 @@ contains
     !%Default no
     !%Section Mesh
     !%Description
-    !% If enabled, octopus will use a finer mesh for the calculation
+    !% If enabled, <tt>Octopus</tt> will use a finer mesh for the calculation
     !% of the forces or other sensitive quantities. The default is
     !% disable.
     !%End

@@ -142,7 +142,7 @@ contains
     !% is printed in the directory for the run mode, in a file <tt>freq_XXX/lr_density-i-j</tt>, where <tt>j</tt> 
     !% is the perturbation direction. 
     !%Option wfs 4
-    !% Outputs wave-functions. Which wavefunctions are to be printed is specified
+    !% Outputs wavefunctions. Which wavefunctions are to be printed is specified
     !% by the variable <tt>OutputWfsNumber</tt> -- see below. The output file is called
     !% <tt>wf-k-p-i</tt>, where <tt>k</tt> stands for the <i>k</i>-point, <tt>p</tt> for the state, and
     !% <tt>i</tt> for the spin channel.
@@ -152,11 +152,12 @@ contains
     !% where <tt>k</tt> stands for the <i>k</i> number, <tt>p</tt> for the state,
     !% and <tt>i</tt> for the spin channel.
     !%Option geometry 16
-    !% Outputs XYZ file called <tt>geometry.xyz</tt> (or an XSF file called <tt>geometry.xsf</tt> if <tt>OutputHow = xcrysden</tt>) 
-    !% containing the coordinates of the atoms
-    !% treated within quantum mechanics. If point charges were defined
-    !% in the PDB file (see <tt>PDBCoordinates</tt>), they will be output
+    !% Outputs file containing the coordinates of the atoms treated within quantum mechanics.
+    !% If <tt>OutputHow = xyz</tt>, the file is called <tt>geometry.xyz</tt>; a
+    !% file <tt>crystal.xyz</tt> is written with a supercell geometry if the system is periodic;
+    !% if point charges were defined in the PDB file (see <tt>PDBCoordinates</tt>), they will be output
     !% in the file <tt>geometry_classical.xyz</tt>.
+    !% If <tt>OutputHow = xcrysden</tt>, a file called <tt>geometry.xsf</tt> is written.
     !%Option current 32
     !% Outputs paramagnetic current density. The output file is called <tt>current-i-(x,y,z)</tt>, 
     !% where <tt>i</tt> stands for the spin channel and <tt>x</tt>, <tt>y</tt>, <tt>z</tt> indicates the vector component
@@ -389,7 +390,8 @@ contains
     if(iand(outp%what, output_geometry) .ne. 0) then
       if(iand(outp%how, output_xcrysden) .ne. 0) then
         call write_xsf_geometry_file(dir, "geometry", geo, gr%sb)
-      else
+      endif
+      if(iand(outp%how, output_xyz) .ne. 0) then
         call atom_write_xyz(dir, "geometry", geo, gr%sb%dim)
         if(simul_box_is_periodic(gr%sb)) &
           call periodic_write_crystal(gr%sb, geo, dir)

@@ -83,14 +83,14 @@ module par_vec_m
   use c_pointer_m
   use global_m
   use iihash_m
-  use io_m
   use index_m
+  use io_m
   use messages_m
-  use mpi_debug_m
   use mpi_m
+  use mpi_debug_m
   use profiling_m
-  use subarray_m
   use stencil_m
+  use subarray_m
 
   implicit none
 
@@ -110,7 +110,7 @@ module par_vec_m
     integer, pointer :: rcounts(:)
 
     ! The following members are set independent of the nodes.
-    integer                 :: npart                    ! Number of partitions.
+    integer                 :: npart                ! Number of partitions.
     integer                 :: root                 ! The master node.
     integer                 :: comm                 ! MPI communicator to use.
     integer                 :: np                   ! Number of points in mesh.
@@ -461,6 +461,8 @@ contains
       integer, allocatable :: displacements(:)
       integer :: ii, jj, kk, ipart, total
 
+      call push_sub('par_vec.vec_init.init_send_points')
+
       SAFE_ALLOCATE(vp%sendpos(1:vp%npart))
 
       total = sum(vp%np_ghost_neigh(1:vp%npart, vp%partno))
@@ -508,6 +510,7 @@ contains
       
       vp%rcounts(1:vp%npart) = vp%np_ghost_neigh(vp%partno, 1:vp%npart)
 
+      call pop_sub()
     end subroutine init_send_points
 
   end subroutine vec_init
@@ -556,6 +559,8 @@ contains
     type(pv_t),        intent(in)  :: vp
     integer,           intent(in)  :: comm_method
 
+    call push_sub('par_vec.pv_handle_init')
+
     this%comm_method = comm_method
 
     select case(this%comm_method)
@@ -568,10 +573,14 @@ contains
       SAFE_ALLOCATE(this%status(1:MPI_STATUS_SIZE, 1:vp%npart*2))
     end select
     nullify(this%ighost_send, this%dghost_send, this%zghost_send)
+
+    call pop_sub()
   end subroutine pv_handle_init
 
   subroutine pv_handle_end(this)
     type(pv_handle_t), intent(inout) :: this
+
+    call push_sub('par_vec.pv_handle_end')
 
     select case(this%comm_method)
 #ifdef HAVE_LIBNBC
@@ -583,11 +592,14 @@ contains
       SAFE_DEALLOCATE_P(this%status)
     end select
 
+    call pop_sub()
   end subroutine pv_handle_end
 
   subroutine pv_handle_test(this)
     type(pv_handle_t), intent(inout) :: this
     
+    call push_sub('par_vec.pv_handle_test')
+
     select case(this%comm_method)
 #ifdef HAVE_LIBNBC
     case(NON_BLOCKING_COLLECTIVE)
@@ -596,11 +608,13 @@ contains
     case(NON_BLOCKING)
     end select
 
+    call pop_sub()
   end subroutine pv_handle_test
 
   subroutine pv_handle_wait(this)
     type(pv_handle_t), intent(inout) :: this
 
+    call push_sub('par_vec.pv_handle_wait')
     call profiling_in(prof_wait, "GHOST_UPDATE_WAIT")
 
     select case(this%comm_method)
@@ -617,11 +631,12 @@ contains
     SAFE_DEALLOCATE_P(this%zghost_send)
 
     call profiling_out(prof_wait)
+    call pop_sub()
   end subroutine pv_handle_wait
 
 
   ! ---------------------------------------------------------
-  ! Returns local local number of global point i on partition r.
+  ! Returns local number of global point i on partition r.
   ! If the result is zero, the point is neither a local nor a ghost
   ! point on r.
   integer function vec_global2local(vp, i, r)
