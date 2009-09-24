@@ -36,6 +36,7 @@ module opt_control_parameters_m
   use mix_m
   use mpi_m
   use profiling_m
+  use states_m
   use string_m
   use tdf_m
   use units_m
@@ -493,7 +494,7 @@ contains
       end do
 
       if(mpi_grp_is_root(mpi_world)) then
-        iunit = io_open('opt-control/td_penalty', action='write' )
+        iunit = io_open(OCT_DIR//'td_penalty', action='write' )
         do j = 1, steps+1
           t = (j-1)*dt
           write(iunit, '(f14.8)', advance='no') t
@@ -854,11 +855,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_mixing_init(par)
+  subroutine parameters_mixing_init(par, st)
     type(oct_control_parameters_t), intent(in) :: par
+    type(states_t),                 intent(in) :: st
 
     call push_sub('parameters.parameters_mixing_init')
-    call mix_init(parameters_mix, par%dim, par%no_parameters, 1)
+    call mix_init(parameters_mix, st, par%dim, par%no_parameters, 1)
 
     call pop_sub()
   end subroutine parameters_mixing_init

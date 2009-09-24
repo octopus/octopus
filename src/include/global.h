@@ -133,6 +133,7 @@
 #define VIB_MODES_DIR "vib_modes/"
 #define VDW_DIR "vdw/"
 #define CASIDA_DIR "casida/"
+#define OCT_DIR "opt-control/"
 
 #ifdef HAVE_MPI
 #ifdef HAVE_MPI2

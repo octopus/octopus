@@ -20,49 +20,49 @@
 #include "global.h"
 
 module opt_control_m
-  use lalg_basic_m
-  use lalg_adv_m
-  use loct_math_m
-  use excited_states_m
   use datasets_m
-  use varinfo_m
-  use global_m
+  use excited_states_m
+  use exponential_m
+  use external_pot_m
   use filter_m
+  use geometry_m
+  use global_m
   use grid_m
+  use h_sys_output_m
   use hamiltonian_m
   use io_m
+  use lalg_basic_m
+  use lalg_adv_m
   use lasers_m
-  use loct_parser_m
   use loct_m
-  use messages_m
-  use simul_box_m
+  use loct_math_m
+  use loct_parser_m
   use mesh_m
   use mesh_function_m
-  use h_sys_output_m
-  use geometry_m
-  use states_m
-  use states_dim_m
-  use states_calc_m
-  use string_m
-  use system_m
-  use td_m
-  use exponential_m
-  use td_rti_m
-  use td_write_m
-  use units_m
-  use v_ks_m
-  use external_pot_m
-  use restart_m
+  use messages_m
+#if defined(HAVE_NEWUOA)
+  use newuoa_m
+#endif
   use opt_control_global_m
   use opt_control_propagation_m
   use opt_control_parameters_m
   use opt_control_iter_m
   use opt_control_target_m
   use opt_control_initst_m
-#if defined(HAVE_NEWUOA)
-  use newuoa_m
-#endif
   use profiling_m
+  use restart_m
+  use simul_box_m
+  use states_m
+  use states_calc_m
+  use states_dim_m
+  use string_m
+  use system_m
+  use td_m
+  use td_rti_m
+  use td_write_m
+  use units_m
+  use v_ks_m
+  use varinfo_m
 
   implicit none
 
@@ -100,11 +100,11 @@ contains
     type(oct_control_parameters_t) :: par, par_new, par_prev
     logical                        :: stop_loop
     FLOAT                          :: j1
-    type(oct_prop_t)               :: prop_chi, prop_psi;
+    type(oct_prop_t)               :: prop_chi, prop_psi
 
     call push_sub('opt_control.opt_control_run')
 
-    call io_mkdir('opt-control')
+    call io_mkdir(OCT_DIR)
 
     ! Initialize the time propagator.
     call td_init(td, sys, hm)
@@ -124,13 +124,13 @@ contains
     call parameters_set(par, hm%ep)
       ! This prints the initial control parameters, exactly as described in the inp file,
       ! that is, without applying any envelope or filter.
-    call parameters_write('opt-control/initial_laser_inp', par)
+    call parameters_write(OCT_DIR//'initial_laser_inp', par)
     call parameters_prepare_initial(par)
     call parameters_to_h(par, hm%ep)
     call messages_print_stress(stdout, "TD ext. fields after processing")
     call laser_write_info(hm%ep%lasers, stdout)
     call messages_print_stress(stdout)
-    call parameters_write('opt-control/initial_laser', par)
+    call parameters_write(OCT_DIR//'initial_laser', par)
 
 
     ! Startup of the iterator data type (takes care of counting iterations, stopping, etc).
@@ -143,7 +143,7 @@ contains
 
 
     ! If mixing is required, the mixing machinery has to be initialized -- inside the parameters module.
-    if(oct%use_mixing) call parameters_mixing_init(par)
+    if(oct%use_mixing) call parameters_mixing_init(par, sys%st)
 
 
     ! If filters are to be used, they also have to be initialized.
@@ -161,8 +161,8 @@ contains
 
 
     ! Informative output.
-    call h_sys_output_states(initial_st, sys%gr, sys%geo, 'opt-control/initial', sys%outp)
-    call target_output(target, sys%gr, 'opt-control/target', sys%geo, sys%outp)
+    call h_sys_output_states(initial_st, sys%gr, sys%geo, OCT_DIR//'initial', sys%outp)
+    call target_output(target, sys%gr, OCT_DIR//'target', sys%geo, sys%outp)
 
 
     ! mode switcher; here is where the real run is made.
@@ -227,7 +227,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine scheme_straight_iteration
-      call push_sub('opt_control.scheme_straight_iteration')
+      call push_sub('opt_control.opt_control_run.scheme_straight_iteration')
 
       call parameters_set_rep(par)
       call parameters_copy(par_new, par)
@@ -254,7 +254,7 @@ contains
     ! ---------------------------------------------------------
     subroutine scheme_mt03
       type(states_t) :: psi
-      call push_sub('opt_control.scheme_mt03')
+      call push_sub('opt_control.opt_control_run.scheme_mt03')
 
       call states_copy(psi, initial_st)
       call oct_prop_init(prop_chi, "chi")
@@ -288,7 +288,7 @@ contains
     ! ---------------------------------------------------------
     subroutine scheme_wg05
       type(states_t) :: psi
-      call push_sub('opt_control.scheme_wg05')
+      call push_sub('opt_control.opt_control_run.scheme_wg05')
 
       call states_copy(psi, initial_st)
       call oct_prop_init(prop_chi, "chi")
@@ -324,7 +324,7 @@ contains
     ! ---------------------------------------------------------
     subroutine scheme_zbr98
       type(states_t) :: psi
-      call push_sub('opt_control.scheme_zbr98')
+      call push_sub('opt_control.opt_control_run.scheme_zbr98')
 
       call states_copy(psi, initial_st)
       call oct_prop_init(prop_chi, "chi")
@@ -369,7 +369,7 @@ contains
       REAL_DOUBLE, allocatable :: x(:)
       FLOAT   :: f
       type(states_t) :: psi
-      call push_sub('opt_control.scheme_cg')
+      call push_sub('opt_control.opt_control_run.scheme_cg')
 
       call parameters_set_rep(par)
 
@@ -428,7 +428,7 @@ contains
       integer :: dim
       type(states_t) :: psi
 
-      call push_sub('opt_control.scheme_direct')
+      call push_sub('opt_control.opt_control_run.scheme_direct')
 
       call parameters_set_rep(par)
 
@@ -493,7 +493,7 @@ contains
       FLOAT, allocatable :: theta(:)
       FLOAT :: f
       type(states_t) :: psi
-      call push_sub('opt_control.scheme_newuoa')
+      call push_sub('opt_control.opt_control_run.scheme_newuoa')
 
       call parameters_set_rep(par)
 
@@ -652,6 +652,8 @@ contains
     type(oct_control_parameters_t) :: par_chi
     type(oct_prop_t)               :: prop_chi, prop_psi;
 
+    call push_sub('opt_control.f_striter')
+
     call oct_prop_init(prop_chi, "chi")
     call oct_prop_init(prop_psi, "psi")
 
@@ -704,7 +706,7 @@ contains
     type(states_t) :: chi
     type(oct_control_parameters_t) :: par_chi
 
-    call push_sub('opt_control.f_zbr98')
+    call push_sub('opt_control.f_iter')
 
     if( oct_iterator_current(iterator) .eq. 0) then
       call states_end(psi)

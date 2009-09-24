@@ -21,16 +21,16 @@
 
 module opt_control_iter_m
   use datasets_m
-  use varinfo_m
-  use io_m
   use global_m
-  use loct_parser_m
-  use opt_control_parameters_m
   use grid_m
-  use states_m
   use h_sys_output_m
+  use io_m
+  use loct_parser_m
   use messages_m
+  use opt_control_parameters_m
   use profiling_m
+  use states_m
+  use varinfo_m
 
   implicit none
 
@@ -70,7 +70,7 @@ contains
     type(oct_iterator_t), intent(inout)        :: iterator
     type(oct_control_parameters_t), intent(in) :: par
 
-    call push_sub('iter.oct_iter_init')
+    call push_sub('iter.oct_iterator_init')
 
     !%Variable OCTEps
     !%Type float
@@ -79,17 +79,17 @@ contains
     !%Description
     !% Define the convergence threshold. It computes the difference between the "input"
     !% field in the iterative procedure, and the "output" field. If this difference is
-    !% less than OCTEps the iteration is stopped. This difference is defined as:
+    !% less than <tt>OCTEps</tt> the iteration is stopped. This difference is defined as:
     !% 
     !% <math>
     !% D[\epsilon^{i},\epsilon^{o}] = \int_0^T dt \vert \epsilon^{i}(t)-\epsilon^{o}(t)\vert^2\,.
     !% </math>
     !%
     !% (If there are several control fields, this difference is defined as the sum over
-    !% all the individual differences).
+    !% all the individual differences.)
     !%
     !% Whenever this condition is satisfied, it means that we have reached a solution point
-    !% point of the QOCT equations, i.e. a critical point of the QOCT functional (not
+    !% of the QOCT equations, <i>i.e.</i> a critical point of the QOCT functional (not
     !% necessarily a maximum, and not necessarily the global maximum). 
     !%End
     call loct_parse_float(datasets_check('OCTEps'), CNST(1.0e-6), iterator%eps)
@@ -100,13 +100,13 @@ contains
     !%Section Calculation Modes::Optimal Control
     !%Default 10
     !%Description
-    !% OCTMaxIter defines the maximum number of iterations.
+    !% The maximum number of iterations.
     !% Typical values range from 10-100.
     !%End
     call loct_parse_int(datasets_check('OCTMaxIter'), 10, iterator%ctr_iter_max)
 
     if( iterator%ctr_iter_max < 0 .and. iterator%eps < M_ZERO ) then
-      message(1) = "OptControlMaxIter and OptControlEps can not be both <0"
+      message(1) = "OCTMaxIter and OCTEps cannot be both < 0."
       call write_fatal(1)
     end if
     if(iterator%ctr_iter_max < 0) iterator%ctr_iter_max = huge(iterator%ctr_iter_max)
@@ -121,7 +121,7 @@ contains
     SAFE_ALLOCATE(iterator%best_par)
     call parameters_copy(iterator%best_par, par)
 
-    iterator%convergence_iunit = io_open('opt-control/convergence', action='write')
+    iterator%convergence_iunit = io_open(OCT_DIR//'convergence', action='write')
 
     write(iterator%convergence_iunit, '(91(''#''))') 
     write(iterator%convergence_iunit, '(5(a))') '# iteration', '  J[Psi,chi,epsilon]', &
@@ -141,7 +141,7 @@ contains
 
     call push_sub('iter.oct_iterator_end')
 
-    call parameters_write('opt-control/laser.bestJ1', iterator%best_par)
+    call parameters_write(OCT_DIR//'laser.bestJ1', iterator%best_par)
 
     call parameters_end(iterator%best_par)
     SAFE_DEALLOCATE_P(iterator%best_par)
@@ -173,7 +173,7 @@ contains
     delta = parameters_diff(par, par_prev)
     
     if(iterator%ctr_iter .eq. iterator%ctr_iter_max) then
-      message(1) = "Info: Maximum number of iterations reached"
+      message(1) = "Info: Maximum number of iterations reached."
       call write_info(1)
       stoploop = .true.
     end if
@@ -181,7 +181,7 @@ contains
     if( (iterator%eps > M_ZERO) .and. &
         (delta < iterator%eps) .and. &
         (iterator%ctr_iter > 0 ) ) then
-      message(1) = "Info: Convergence threshold reached"
+      message(1) = "Info: Convergence threshold reached."
       call write_info(1)
       stoploop = .true.
     end if
@@ -285,12 +285,18 @@ contains
   ! ---------------------------------------------------------
   subroutine iteration_manager_main(iterator, j, j1, j2, delta)
     type(oct_iterator_t), intent(inout) :: iterator
+
     FLOAT, intent(in) :: j, j1, j2, delta
+
+    call push_sub('iter.iteration_manager_main')
+
     iterator%ctr_iter_main = iterator%ctr_iter_main + 1
     write(iterator%convergence_iunit, '("### MAIN ITERATION")') 
     write(iterator%convergence_iunit, '(a2,i9,4f20.8)')                &
       '##', iterator%ctr_iter_main, j, j1, j2, delta
-    write(iterator%convergence_iunit, '("###")') 
+    write(iterator%convergence_iunit, '("###")')
+
+    call pop_sub()
   end subroutine iteration_manager_main
   ! ---------------------------------------------------------
 
@@ -301,9 +307,10 @@ contains
     type(oct_control_parameters_t), intent(in) :: par
 
     character(len=80)  :: filename
+
     call push_sub('iter.iterator_write')
 
-    write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
+    write(filename,'(a,i3.3)') OCT_DIR//'laser.', iterator%ctr_iter
     call parameters_write(filename, par)
 
     call pop_sub()
@@ -315,7 +322,11 @@ contains
   subroutine oct_iterator_bestpar(par, iterator)
     type(oct_iterator_t), intent(inout)     :: iterator
     type(oct_control_parameters_t), pointer :: par
+
+    call push_sub('iter.oct_iterator_bestpar')
     par => iterator%best_par
+
+    call pop_sub()
   end subroutine oct_iterator_bestpar
   ! ---------------------------------------------------------
 

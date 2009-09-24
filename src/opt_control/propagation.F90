@@ -22,30 +22,30 @@
 module opt_control_propagation_m
   use datasets_m
   use energy_m
-  use varinfo_m
-  use gauge_field_m
-  use global_m
-  use loct_m
-  use io_m
-  use ion_dynamics_m
-  use messages_m
-  use units_m
-  use grid_m
-  use mesh_function_m
-  use states_m
   use excited_states_m
-  use hamiltonian_m
+  use gauge_field_m
   use geometry_m
+  use global_m
+  use grid_m
+  use hamiltonian_m
+  use io_m
+  use ion_dynamics_m 
+  use lasers_m
+  use loct_m
+  use mesh_function_m
+  use messages_m
+  use opt_control_parameters_m
+  use opt_control_target_m
+  use profiling_m
+  use restart_m
+  use states_m
   use system_m
   use td_m
-  use restart_m
   use td_rti_m
   use td_write_m
-  use opt_control_target_m
-  use opt_control_parameters_m
-  use profiling_m
-  use lasers_m
+  use units_m
   use v_ks_m
+  use varinfo_m
 
   implicit none
 
@@ -98,13 +98,19 @@ module opt_control_propagation_m
     integer, intent(in) :: number_checkpoints
     logical, intent(in) :: zbr98
     logical, intent(in) :: gradients
+
     ASSERT(.not. (zbr98 .and. gradients) )
+
+    call push_sub('propagation.propagation_mod_init')
+
     niter_              = niter
     eta_                = eta
     delta_              = delta
     number_checkpoints_ = number_checkpoints
     zbr98_              = zbr98
     gradients_          = gradients
+
+    call pop_sub()
   end subroutine propagation_mod_init
   ! ---------------------------------------------------------
 
@@ -149,7 +155,7 @@ module opt_control_propagation_m
 
     call hamiltonian_not_adjoint(hm)
 
-    ! setup the hamiltonian
+    ! setup the Hamiltonian
     call states_calc_dens(psi, gr)
     call v_ks_calc(gr, sys%ks, hm, psi)
     call td_rti_run_zero_iter(hm, td%tr)
@@ -157,7 +163,7 @@ module opt_control_propagation_m
     if(present(prop)) call oct_prop_output(prop, 0, psi, gr)
     ii = 1
     do i = 1, td%max_iter
-      ! time iterate wavefunctions
+      ! time-iterate wavefunctions
       call td_rti_dt(sys%ks, hm, gr, psi, td%tr, i*td%dt, td%dt, td%max_iter, i)
 
       if(present(prop)) call oct_prop_output(prop, i, psi, gr)
@@ -189,8 +195,8 @@ module opt_control_propagation_m
 
 
   ! ---------------------------------------------------------
-  ! Performs a full bacward propagation of state psi, with the
-  ! external fields specified in hamiltonian h.
+  ! Performs a full backward propagation of state psi, with the
+  ! external fields specified in Hamiltonian h.
   ! ---------------------------------------------------------
   subroutine propagate_backward(sys, hm, td, psi, prop)
     type(system_t),          intent(inout) :: sys
@@ -211,7 +217,7 @@ module opt_control_propagation_m
 
     call hamiltonian_adjoint(hm)
 
-    ! setup the hamiltonian
+    ! setup the Hamiltonian
     call states_calc_dens(psi, gr)
     call v_ks_calc(gr, sys%ks, hm, psi)
     call td_rti_run_zero_iter(hm, td%tr)
@@ -231,7 +237,7 @@ module opt_control_propagation_m
 
   ! ---------------------------------------------------------
   ! Performs a forward propagation on the state psi and on the
-  ! lagrange-multiplier state chi. It also updates the control
+  ! Lagrange-multiplier state chi. It also updates the control
   ! parameter par,  according to the following scheme:
   ! 
   ! |chi> --> U[par_chi](T, 0)|chi>
@@ -270,8 +276,8 @@ module opt_control_propagation_m
     gr => sys%gr
     call td_rti_copy(tr_chi, td%tr)
     ! The propagation of chi should not be self-consistent, because the Kohn-Sham
-    ! potential used is the one created by psi. Note however, that it is likely that
-    ! the fist two iterations are done self-consistently nevertheless.
+    ! potential used is the one created by psi. Note, however, that it is likely that
+    ! the first two iterations are done self-consistently nonetheless.
     call td_rti_remove_scf_prop(tr_chi)
 
     aux_fwd_propagation = ( target_mode(target) == oct_targetmode_td .or. &
@@ -332,7 +338,7 @@ module opt_control_propagation_m
 
   ! --------------------------------------------------------
   ! Performs a backward propagation on the state psi and on the
-  ! lagrange-multiplier state chi, according to the following
+  ! Lagrange-multiplier state chi, according to the following
   ! scheme:
   !
   ! |psi> --> U[par](0, T)|psi>
@@ -364,8 +370,8 @@ module opt_control_propagation_m
 
     call td_rti_copy(tr_chi, td%tr)
     ! The propagation of chi should not be self-consistent, because the Kohn-Sham
-    ! potential used is the one created by psi. Note however, that it is likely that
-    ! the fist two iterations are done self-consistently nevertheless.
+    ! potential used is the one created by psi. Note, however, that it is likely that
+    ! the first two iterations are done self-consistently nonetheless.
     call td_rti_remove_scf_prop(tr_chi)
 
     call states_copy(psi, chi)
@@ -404,7 +410,7 @@ module opt_control_propagation_m
 
   ! --------------------------------------------------------
   ! Performs a backward propagation on the state psi and on the
-  ! lagrange-multiplier state chi, according to the following
+  ! Lagrange-multiplier state chi, according to the following
   ! scheme:
   !
   ! |psi> --> U[par](0, T)|psi>
@@ -439,8 +445,8 @@ module opt_control_propagation_m
 
     call td_rti_copy(tr_chi, td%tr)
     ! The propagation of chi should not be self-consistent, because the Kohn-Sham
-    ! potential used is the one created by psi. Note however, that it is likely that
-    ! the fist two iterations are done self-consistently nevertheless.
+    ! potential used is the one created by psi. Note, however, that it is likely that
+    ! the first two iterations are done self-consistently nonetheless.
     call td_rti_remove_scf_prop(tr_chi)
 
     call states_copy(psi, chi)
@@ -693,7 +699,9 @@ module opt_control_propagation_m
 
     integer :: j
 
-    prop%dirname = 'opt-control/'//trim(dirname)
+    call push_sub('propagation.oct_prop_init')
+
+    prop%dirname = OCT_DIR//trim(dirname)
     call io_mkdir(trim(prop%dirname))
     prop%niter = niter_
     prop%number_checkpoints = number_checkpoints_
@@ -705,6 +713,7 @@ module opt_control_propagation_m
     end do
     prop%iter(prop%number_checkpoints+2) = niter_
 
+    call pop_sub()
   end subroutine oct_prop_init
   ! ---------------------------------------------------------
 
@@ -713,9 +722,12 @@ module opt_control_propagation_m
   subroutine oct_prop_end(prop)
     type(oct_prop_t), intent(inout) :: prop
 
+    call push_sub('propagation.oct_prop_end')
+
     SAFE_DEALLOCATE_P(prop%iter)
     ! This routine should maybe delete the files?
 
+    call pop_sub()
   end subroutine oct_prop_end
   ! ---------------------------------------------------------
 
@@ -733,6 +745,8 @@ module opt_control_propagation_m
     integer :: j, ierr
     CMPLX :: overlap, prev_overlap
     FLOAT, parameter :: WARNING_THRESHOLD = CNST(1.0e-2)
+
+    call push_sub('propagation.oct_prop_check')
 
     do j = 1, prop%number_checkpoints + 2
      if(prop%iter(j) .eq. iter) then
@@ -756,6 +770,7 @@ module opt_control_propagation_m
      end if
     end do
 
+    call pop_sub()
   end subroutine oct_prop_check
   ! ---------------------------------------------------------
 
@@ -771,6 +786,8 @@ module opt_control_propagation_m
     character(len=100) :: filename
     integer :: j, ierr
 
+    call push_sub('propagation.oct_prop_read_state')
+
     do j = 1, prop%number_checkpoints + 2
      if(prop%iter(j) .eq. iter) then
        write(filename,'(a,i4.4)') trim(prop%dirname)//'/', j
@@ -778,6 +795,7 @@ module opt_control_propagation_m
      end if
     end do
 
+    call pop_sub()
   end subroutine oct_prop_read_state
   ! ---------------------------------------------------------
 
@@ -792,6 +810,8 @@ module opt_control_propagation_m
     integer :: j, ierr
     character(len=100) :: filename
 
+    call push_sub('propagation.oct_prop_output')
+
     do j = 1, prop%number_checkpoints + 2
       if(prop%iter(j) .eq. iter) then
         write(filename,'(a,i4.4)') trim(prop%dirname)//'/', j
@@ -799,6 +819,7 @@ module opt_control_propagation_m
       end if
     end do
 
+    call pop_sub()
   end subroutine oct_prop_output
   ! ---------------------------------------------------------
 

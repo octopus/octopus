@@ -254,7 +254,7 @@ contains
     end if
 
     do kk = 1, filter%no_filters
-      write(filename,'(a,i2.2)') 'opt-control/filter', kk
+      write(filename,'(a,i2.2)') OCT_DIR//'filter', kk
       max_iter = tdf_niter(filter%f(kk))
       dt = tdf_dt(filter%f(kk))
       iunit = io_open(filename, action='write')
