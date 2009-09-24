@@ -143,7 +143,7 @@ contains
 
 
     ! If mixing is required, the mixing machinery has to be initialized -- inside the parameters module.
-    if(oct%use_mixing) call parameters_mixing_init(par, sys%st)
+    if(oct%use_mixing) call parameters_mixing_init(par)
 
 
     ! If filters are to be used, they also have to be initialized.

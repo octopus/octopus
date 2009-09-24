@@ -855,12 +855,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_mixing_init(par, st)
+  subroutine parameters_mixing_init(par)
     type(oct_control_parameters_t), intent(in) :: par
-    type(states_t),                 intent(in) :: st
 
     call push_sub('parameters.parameters_mixing_init')
-    call mix_init(parameters_mix, st, par%dim, par%no_parameters, 1)
+    call mix_init(parameters_mix, par%dim, par%no_parameters, 1)
 
     call pop_sub()
   end subroutine parameters_mixing_init
