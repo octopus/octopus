@@ -2707,7 +2707,7 @@ contains
                 green_real = io_open(fname_real, action='write', grp=st%d%kpt%mpi_grp, is_tmp=.false.)
                 green_imag = io_open(fname_imag, action='write', grp=st%d%kpt%mpi_grp, is_tmp=.false.)
 
-                write(fmt, '(a,i6,a)') '(', np, 'e14.4)'
+                write(fmt, '(a,i6,a)') '(', np, 'e24.16)'
                 do irow = 1, np
                   write(green_real, fmt) real(st%ob_lead(il)%green(irow, :, ispin, ist, ik))
                   write(green_imag, fmt) aimag(st%ob_lead(il)%green(irow, :, ispin, ist, ik))

@@ -162,7 +162,7 @@ contains
         call write_info(1)
 
         ! Initialize progress bar.
-        call loct_progress_bar(-1, max_iter+1)
+        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, max_iter+1)
 
         ! FIXME: the spinor index of hm%lead(il)%h_diag is ignored here.
         ASSERT(hm%d%ispin.ne.SPINORS)
@@ -178,7 +178,7 @@ contains
                  hm%lead(il)%h_offdiag(:, :), ob%lead(il)%q_sp(:, 0), &
                  ob%lead(il)%q_s(:,:,:), order, ob%lead(il)%sp2full_map)
           end select
-          call loct_progress_bar(1, max_iter+1)
+          if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(1, max_iter+1)
         end if
         ! Calculate the subsequent coefficients by the recursive relation.
         select case(ob%mem_type)
@@ -478,7 +478,7 @@ contains
         call write_warning(1)
       end if
 
-      call loct_progress_bar(i+1, iter+1)
+      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(i+1, iter+1)
     end do
 
     message(1) = ''
@@ -605,7 +605,7 @@ contains
         call write_warning(1)
       end if
 
-      call loct_progress_bar(i+1, iter+1)
+      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(i+1, iter+1)
     end do
 
     message(1) = ''

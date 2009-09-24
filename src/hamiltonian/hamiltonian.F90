@@ -569,7 +569,7 @@ contains
             m => gr%mesh%lead_unit_cell(LEFT)
             do ix = m%idx%nr(1, 1)+m%idx%enlarge(1), m%idx%nr(2, 1)-m%idx%enlarge(1)
               do iy = m%idx%nr(1, 2)+m%idx%enlarge(2), m%idx%nr(2, 2)-m%idx%enlarge(2)
-                write(pot, '(2i8,f16.8)') ix, iy, hm%lead(il)%vks(m%idx%Lxyz_inv(ix, iy, 0), ispin)
+                write(pot, '(2i8,e24.16)') ix, iy, hm%lead(il)%vks(m%idx%Lxyz_inv(ix, iy, 0), ispin)
               end do
             end do
             call io_close(pot)
@@ -648,7 +648,7 @@ contains
             write(fname, '(3a,i1.1,a)') 'debug/open_boundaries/diag-', &
               trim(LEAD_NAME(il)), '-', ispin, '.real'
             diag = io_open(fname, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
-            write(fmt, '(a,i6,a)') '(', np, 'e14.4)'
+            write(fmt, '(a,i6,a)') '(', np, 'e24.16)'
             do irow = 1, np
               write(diag, fmt) real(hm%lead(il)%h_diag(:, irow, ispin))
             end do
@@ -656,7 +656,7 @@ contains
             write(fname, '(3a,i1.1,a)') 'debug/open_boundaries/diag-', &
               trim(LEAD_NAME(il)), '-', ispin, '.imag'
             diag = io_open(fname, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
-            write(fmt, '(a,i6,a)') '(', np, 'e14.4)'
+            write(fmt, '(a,i6,a)') '(', np, 'e24.16)'
             do irow = 1, np
               write(diag, fmt) aimag(hm%lead(il)%h_diag(:, irow, ispin))
             end do
@@ -668,7 +668,7 @@ contains
           write(fname, '(3a)') 'debug/open_boundaries/offdiag-', &
             trim(LEAD_NAME(il)), '.real'
           offdiag = io_open(fname, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
-          write(fmt, '(a,i6,a)') '(', np, 'e14.4)'
+          write(fmt, '(a,i6,a)') '(', np, 'e24.16)'
           do irow = 1, np
             write(offdiag, fmt) real(hm%lead(il)%h_offdiag(:, irow))
           end do
@@ -676,7 +676,7 @@ contains
           write(fname, '(3a)') 'debug/open_boundaries/offdiag-', &
             trim(LEAD_NAME(il)), '.imag'
           offdiag = io_open(fname, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
-          write(fmt, '(a,i6,a)') '(', np, 'e14.4)'
+          write(fmt, '(a,i6,a)') '(', np, 'e24.16)'
           do irow = 1, np
             write(offdiag, fmt) aimag(hm%lead(il)%h_offdiag(:, irow))
           end do
