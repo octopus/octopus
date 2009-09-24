@@ -415,7 +415,7 @@ contains
 
     m_l(:, :) = delta*coeffs(:, :, 0)
     m_r(:, :) = m_l(:, :)
-    if(intf%il.eq.LEFT) then
+    if(mod(intf%il+1,2)+1.eq.1) then
       call lalg_trmm(np, np, 'U', 'N', 'R', M_z1, offdiag, m_l)
       call lalg_trmm(np, np, 'U', 'T', 'L', M_z1, offdiag, m_r)
     else
@@ -440,7 +440,7 @@ contains
         else
           tmp(:, :) = coeffs(:, :, k) + M_TWO*coeffs(:, :, k-1)
         end if
-        if(intf%il.eq.LEFT) then
+        if(mod(intf%il+1,2)+1.eq.1) then
           call lalg_trmm(np, np, 'U', 'T', 'R', M_z1, offdiag, tmp)
         else
           call lalg_trmm(np, np, 'L', 'T', 'R', M_z1, offdiag, tmp)
@@ -516,7 +516,6 @@ contains
     FLOAT,             intent(in)    :: spacing
 
     integer            :: i,j, k, np
-    character          :: uplo
     CMPLX, allocatable :: tmp1(:, :), tmp2(:, :), tmp3(:, :), inv_offdiag(:, :)
     CMPLX, allocatable :: prefactor_plus(:, :), prefactor_minus(:, :)
     CMPLX, allocatable :: sp_tmp(:)
@@ -544,7 +543,7 @@ contains
       prefactor_minus(i, i) = M_ONE + prefactor_minus(i, i)
     end do
     inv_offdiag(:, :) = offdiag(:, :)
-    if (intf%il.eq.LEFT) then
+    if (mod(intf%il+1,2)+1.eq.1) then
       call lalg_invert_upper_triangular(np, inv_offdiag)
     else
       call lalg_invert_lower_triangular(np, inv_offdiag)
@@ -552,14 +551,13 @@ contains
 
     call lalg_sym_inverter('U', np, prefactor_plus)
     call matrix_symmetrize(prefactor_plus, np)
-    select case(intf%il)
-    case(LEFT)
-      uplo = 'U'
-    case(RIGHT)
-      uplo = 'L'
-    end select
-    call lalg_trmm(np, np, uplo, 'N', 'L', M_z1, offdiag, prefactor_plus)
-    call lalg_trmm(np, np, uplo, 'N', 'R', M_z1, inv_offdiag, prefactor_minus)
+    if (mod(intf%il+1,2)+1.eq.1) then
+      call lalg_trmm(np, np, 'U', 'N', 'L', M_z1, offdiag, prefactor_plus)
+      call lalg_trmm(np, np, 'U', 'N', 'R', M_z1, inv_offdiag, prefactor_minus)
+    else
+      call lalg_trmm(np, np, 'L', 'N', 'L', M_z1, offdiag, prefactor_plus)
+      call lalg_trmm(np, np, 'L', 'N', 'R', M_z1, inv_offdiag, prefactor_minus)
+    end if
 
     do i = start_iter, iter
       sp_coeffs(:, i) = M_z0

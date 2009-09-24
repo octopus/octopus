@@ -435,7 +435,7 @@ contains
           if(gr%sb%open_boundaries) then
             call restart_read_ob_intf(trim(restart_dir)//GS_DIR, st, gr, ierr)
             if(ierr.ne.0) then
-              message(1) = "Could not read interface wave unctions from '"//trim(restart_dir)//GS_DIR//"'"
+              message(1) = "Could not read interface wavefunctions from '"//trim(restart_dir)//GS_DIR//"'"
               message(2) = "Please run an open-boundaries ground-state calculation first!"
               call write_fatal(2)
             end if

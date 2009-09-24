@@ -51,7 +51,8 @@ module ob_terms_m
     integer           :: additional_terms      ! Shall we add source and memory term?
     integer           :: max_mem_coeffs        ! How many memory coefficients? (for open system)
     type(ob_memsrc_t) :: lead(NLEADS)          ! source and memory coefficients for each lead
-    CMPLX, pointer   :: src_mem_u(:, :)        ! Prefactor for source and memory term. (t, il)
+    CMPLX, pointer    :: src_mem_u(:, :)       ! Prefactor for source and memory term. (t, il)
+    FLOAT             :: td_pot0(NLEADS)       ! bias at t=0
   end type ob_terms_t
 
 end module ob_terms_m

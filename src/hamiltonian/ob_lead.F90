@@ -256,6 +256,9 @@ contains
 
       td_pot(0, il) = M_ZERO
       do it = 1, n_steps + 1
+      ! FIXME: if a better algorithm for the gs is implemented this should change.
+      ! Then the initial bias also matters
+!      do it = 0, n_steps + 1
         t = it*tstep
         call loct_parse_expression(td_pot(it, il), pot_im(it), 1, zero, zero(1), t, tmp_c_string)
       end do

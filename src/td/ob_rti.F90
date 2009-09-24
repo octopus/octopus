@@ -176,10 +176,10 @@ contains
     end if
     ob%max_mem_coeffs = min(ob%max_mem_coeffs, max_iter)
     if((iand(ob%additional_terms, SRC_TERM_FLAG).ne.0).and.(ob%max_mem_coeffs.ne.max_iter)) then
-      write(message(1), '(a,i6,a)') "Input : '", ob%max_mem_coeffs, "' is not equal TDMaximumIter."
+      write(message(1), '(a,i6,a)') "Input OpenBoundariesMaxMemCoeffs: '", ob%max_mem_coeffs, "' is not equal TDMaximumIter."
       message(2) = 'This is an experimental parameter, so handle with care.'
-      message(3) = 'If an open system should be simulated the source term should be switched of,'
-      message(4) = 'otherwise strange behavior can occur.'
+      message(3) = 'If an open system should be simulated the source term should be'
+      message(4) = 'switched of, otherwise strange behavior can occur.'
       call write_warning(4)
     end if
 
@@ -189,6 +189,8 @@ contains
     ! Allocate memory for the src_mem_u (needed for source and memory term.
     SAFE_ALLOCATE(ob%src_mem_u(0:max_iter, 1:NLEADS))
     SAFE_ALLOCATE(um(1:NLEADS))
+
+    ob%td_pot0(1:NLEADS) = td_pot(0, 1:NLEADS)
     !            /      dt        \   / /       dt        \
     ! u(m, il) = |1 - i -- U(m,il)|  /  | 1 + i -- U(m,il) |
     !            \      4         / /   \       4         /
@@ -312,8 +314,8 @@ contains
           np = gr%intf(il)%np_intf
           ! 2. Add source term
           if(iand(ob%additional_terms, SRC_TERM_FLAG).ne.0) then
-            f0  = M_z1/(M_z1+M_zI*M_HALF*dt*st%ob_eigenval(ist, ik))
-            fac = (M_z1-M_zI*M_HALF*dt*st%ob_eigenval(ist, ik))*f0
+            f0  = M_z1/(M_z1+M_zI*M_HALF*dt*(st%ob_eigenval(ist, ik)-ob%td_pot0(il)))
+            fac = f0/conjg(f0)
             if(m.gt.ob%max_mem_coeffs) then
               tmp_mem(1:np, 1:np) = M_ZERO
             else
