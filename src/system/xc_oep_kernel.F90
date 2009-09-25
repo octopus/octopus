@@ -32,9 +32,9 @@ subroutine xc_oep_kernel_init(oep)
   !%Default oep_kli
   !%Section Hamiltonian::XC
   !%Description
-  !% At what level shall octopus handle the OEP kernel
+  !% At what level shall <tt>Octopus</tt> handle the OEP kernel.
   !%Option oep_kli 3
-  !% KLI approximation
+  !% KLI approximation.
   !%End
 
 end subroutine xc_oep_kernel_init

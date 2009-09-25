@@ -299,7 +299,7 @@ contains
         mc%par_strategy = iand(mc%par_strategy, par_mask)
 
         if(mc%par_strategy == P_STRATEGY_SERIAL) then
-          message(1) = "More than one node is available, but this run mode can not run in parallel."
+          message(1) = "More than one node is available, but this run mode cannot run in parallel."
           message(2) = "Please select a ParallelizationStrategy compatible with"
           j = 2
           do i = 1, n_par_types
@@ -322,7 +322,7 @@ contains
       !$omp end master
       !$omp end parallel
       if(mc%nthreads > MAX_OMP_THREADS) then
-        message(1) = "Number of threads requested is larger than MAX_OMP_THREADS"
+        message(1) = "Number of threads requested is larger than MAX_OMP_THREADS."
         call write_fatal(1)
       end if
 #endif
@@ -459,13 +459,13 @@ contains
 
       if(any(mc%group_sizes(1:mc%n_index) > index_range(1:mc%n_index))) then
         message(1) = "Could not distribute nodes in parallel job. Most likely you are trying to"
-        message(2) = "use too many nodes for the job"
+        message(2) = "use too many nodes for the job."
         call write_fatal(2)
       end if
 
       if(any(index_range(1:mc%n_index)/mc%group_sizes(1:mc%n_index) < min_range(1:mc%n_index))) then
         message(1) = "I have fewer elements in a parallel group than recommended."
-        message(2) = "Maybe you should reduce the number of nodes"
+        message(2) = "Maybe you should reduce the number of nodes."
         call write_warning(2)
       end if
 
@@ -478,7 +478,7 @@ contains
       end do
 
       write(message(1), '(a,f5.2,a)') "Info: Octopus will waste at least ", &
-        (M_ONE - frac)*CNST(100.), "% of computer time"
+        (M_ONE - frac)*CNST(100.), "% of computer time."
       if(frac < CNST(0.8)) then
         message(2) = "I decided this is too much. Change the number of processors and try again."
         message(3) = "Usually a number of processors which is a multiple of small primes is best."
@@ -654,7 +654,7 @@ contains
   ! This routine uses the one-factorization (or near-one-factorization
   ! of a complete graph to construct an all-pair communication
   ! schedule (cf. Wang, X., Blum, E. K., Parker, D. S., and Massey,
-  ! D. 1997. The dance party problem and its application to collective
+  ! D. 1997. The dance-party problem and its application to collective
   ! communication in computer networks. Parallel Comput. 23, 8
   ! (Aug. 1997), 1141-1156.
 #if defined(HAVE_MPI)

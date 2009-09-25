@@ -141,9 +141,9 @@ contains
     !% <ul>
     !% <li> columns 13-16: The species; in fact <tt>Octopus</tt> only cares about the
     !% first letter - "CA" and "CB" will both refer to carbon - so elements whose
-    !% chemical symbol has more than one letter can not be represented in this way.
-    !% So, if you want to run mercury (Hg) please use one of the other two methods
-    !% to input the coordinates, <tt>XYZCoordinates</tt> or <tt>Coordinates</tt>.</li>
+    !% chemical symbol has more than one letter cannot be represented in this way.
+    !% So, if you want to run mercury (Hg), please use one of the other two methods
+    !% to input the coordinates: <tt>XYZCoordinates</tt> or <tt>Coordinates</tt>.</li>
     !% <li> columns 18-21: The residue. If residue is <tt>QM</tt>, the atom is treated by quantum
     !% mechanics; otherwise it is simply treated as an external classical point charge.
     !% Its charge will be given by columns 61-65.</li>

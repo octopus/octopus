@@ -59,7 +59,7 @@ module xc_oep_m
     XC_OEP_SLATER = 2,          &
     XC_OEP_KLI    = 3,          &
     XC_OEP_CEDA   = 4,          &  ! not yet implemented
-    XC_OEP_FULL   = 5              ! half implemented
+    XC_OEP_FULL   = 5              ! half-implemented
 
   type xc_oep_t
     integer       :: level      ! 0 = no oep, 1 = Slater, 2 = KLI, 3 = CEDA, 4 = full OEP
@@ -87,7 +87,7 @@ contains
     type(grid_t),       intent(inout) :: gr
     type(states_dim_t), intent(in)    :: d
 
-    call push_sub('xc_OEP.xc_oep_init')
+    call push_sub('xc_oep.xc_oep_init')
 
     if(iand(family, XC_FAMILY_OEP).eq.0) then
       oep%level = XC_OEP_NONE
@@ -97,7 +97,7 @@ contains
 
 #if defined(HAVE_MPI)
     if(oep%level == XC_OEP_FULL) then
-      message(1) = "Full OEP is not allowed with the code parallelized on orbitals..."
+      message(1) = "Full OEP is not allowed with the code parallel in states..."
       call write_fatal(1)
     end if
 #endif
@@ -107,17 +107,17 @@ contains
     !%Default oep_kli
     !%Section Hamiltonian::XC
     !%Description
-    !% At what level shall octopus handle the OEP equation. The default is oep_kli.
+    !% At what level shall <tt>Octopus</tt> handle the optimized effective potential (OEP) equation.
     !%Option oep_none 1
-    !% Do not solve OEP equation
+    !% Do not solve OEP equation.
     !%Option oep_slater 2
-    !% Slater approximation
+    !% Slater approximation.
     !%Option oep_kli 3
-    !% KLI approximation
+    !% KLI approximation.
     !%Option oep_ceda 4
-    !% CEDA (common energy denominator) approximation (not implemented)
+    !% CEDA (common energy denominator) approximation (not implemented).
     !%Option oep_full 5
-    !% Full solution of OEP equation using the approach of S. Kuemmel (half implemented)
+    !% Full solution of OEP equation using the approach of S. Kuemmel (half-implemented).
     !%End
     call loct_parse_int(datasets_check('OEP_level'), XC_OEP_KLI, oep%level)
     if(.not.varinfo_valid_option('OEP_level', oep%level)) call input_error('OEP_level')
@@ -159,7 +159,7 @@ contains
   subroutine xc_oep_end(oep)
     type(xc_oep_t), intent(inout) :: oep
 
-    call push_sub('xc_OEP.xc_oep_end')
+    call push_sub('xc_oep.xc_oep_end')
 
     if(oep%level.ne.XC_OEP_NONE) then
       SAFE_DEALLOCATE_P(oep%vxc); nullify(oep%vxc)
@@ -181,8 +181,10 @@ contains
 
     if(oep%level.eq.XC_OEP_NONE) return
 
+    call push_sub('xc_oep.xc_oep_write_info')
     call messages_print_var_option(iunit, 'OEP_level', oep%level)
 
+    call pop_sub()
   end subroutine xc_oep_write_info
 
 
@@ -193,6 +195,8 @@ contains
     type(xc_oep_t), intent(inout) :: oep
     integer,        intent(in)    :: nspin
 
+    call push_sub('xc_oep.xc_oep_SpinFactor')
+
     select case(nspin)
     case(1) ! we need to correct or the spin occupancies
       oep%socc  = M_HALF
@@ -200,10 +204,11 @@ contains
     case(2, 4)
       oep%socc  = M_ONE
       oep%sfact = M_ONE
-    case default ! can not handle any other case
+    case default ! cannot handle any other case
       ASSERT(.false.)
     end select
 
+    call pop_sub()
   end subroutine xc_oep_SpinFactor
 
 
@@ -213,57 +218,60 @@ contains
     type(states_t), intent(in)    :: st
     integer,        intent(in)    :: is
 
-    integer  :: i
+    integer  :: ist
     FLOAT :: max_eigen
     FLOAT, allocatable :: eigenval(:), occ(:)
+
+    call push_sub('xc_oep.xc_oep_AnalyzeEigen')
 
     SAFE_ALLOCATE(eigenval(1:st%nst))
     SAFE_ALLOCATE     (occ(1:st%nst))
     eigenval = M_ZERO; occ = M_ZERO
 
-    do i = st%st_start, st%st_end
-      eigenval(i) = st%eigenval(i, is)
-      occ(i) = st%occ(i, is)
+    do ist = st%st_start, st%st_end
+      eigenval(ist) = st%eigenval(ist, is)
+      occ(ist) = st%occ(ist, is)
     end do
 
 #if defined(HAVE_MPI)
     if(st%parallel_in_states) then
       call MPI_Barrier(st%mpi_grp%comm, mpi_err)
-      do i = 1, st%nst
-        call MPI_Bcast(eigenval(i), 1, MPI_FLOAT, st%node(i), st%mpi_grp%comm, mpi_err)
-        call MPI_Bcast(occ(i), 1, MPI_FLOAT, st%node(i), st%mpi_grp%comm, mpi_err)
+      do ist = 1, st%nst
+        call MPI_Bcast(eigenval(ist), 1, MPI_FLOAT, st%node(ist), st%mpi_grp%comm, mpi_err)
+        call MPI_Bcast(occ(ist), 1, MPI_FLOAT, st%node(ist), st%mpi_grp%comm, mpi_err)
       end do
     end if
 #endif
 
-    ! find out the top occupied state, to correct for the assymptotics
+    ! find out the top occupied state, to correct for the asymptotics
     ! of the potential
     max_eigen = CNST(-1e30)
-    do i = 1, st%nst
-      if((occ(i) .gt. small).and.(eigenval(i).gt.max_eigen)) then
-        max_eigen = eigenval(i)
+    do ist = 1, st%nst
+      if((occ(ist) .gt. small).and.(eigenval(ist).gt.max_eigen)) then
+        max_eigen = eigenval(ist)
       end if
     end do
 
     oep%eigen_n = 1
-    do i = 1, st%nst
-      if(occ(i) .gt. small) then
+    do ist = 1, st%nst
+      if(occ(ist) .gt. small) then
         ! criterion for degeneracy
-        if(abs(eigenval(i)-max_eigen).le.CNST(1e-3)) then
-          oep%eigen_type(i) = 2
+        if(abs(eigenval(ist)-max_eigen).le.CNST(1e-3)) then
+          oep%eigen_type(ist) = 2
         else
-          oep%eigen_type(i) = 1
-          oep%eigen_index(oep%eigen_n) = i
+          oep%eigen_type(ist) = 1
+          oep%eigen_index(oep%eigen_n) = ist
           oep%eigen_n = oep%eigen_n + 1
         end if
       else
-        oep%eigen_type(i) = 0
+        oep%eigen_type(ist) = 0
       end if
     end do
     oep%eigen_n = oep%eigen_n - 1
 
     SAFE_DEALLOCATE_A(eigenval)
     SAFE_DEALLOCATE_A(occ)
+    call pop_sub()
   end subroutine xc_oep_AnalyzeEigen
 
 

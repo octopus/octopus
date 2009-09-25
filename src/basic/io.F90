@@ -69,7 +69,7 @@ contains
     logical :: file_exists, mpi_debug_hook
     integer :: sec, usec
 
-    ! can not use push/pop before initializing io
+    ! cannot use push/pop before initializing io
 
     if(present(defaults)) then
       if(defaults) then

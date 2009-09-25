@@ -26,8 +26,8 @@ dist_share_DATA = \
 	01-carbon_atom.02-ground_state.inp \
 	01-carbon_atom.03-ground_state_double_grid.inp \
 	01-carbon_atom.test \
-	02-curvlinear_coordinates.01-gygi.inp \
-	02-curvlinear_coordinates.test \
+	02-curvilinear_coordinates.01-gygi.inp \
+	02-curvilinear_coordinates.test \
 	03-functionals.01-jellium-lsda.inp \
 	03-functionals.02-jellium-exx_kli.inp \
 	03-functionals.03-jellium-full_exx.inp \

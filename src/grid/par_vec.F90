@@ -213,15 +213,15 @@ module par_vec_m
 contains
 
   ! Initializes a pv_type object (parallel vector).
-  ! It computes the local to global and global to local index tables
+  ! It computes the local-to-global and global-to-local index tables
   ! and the ghost point exchange.
   !
-  ! Note: we can not pass in the i(:, :) array from the stencil
+  ! Note: we cannot pass in the i(:, :) array from the stencil
   ! because it is not yet computed (it is local to a node and
   ! must be initialized some time after vec_init is run).
-  ! Warning: The naming scheme for the np_ variables if different
+  ! Warning: The naming scheme for the np_ variables is different
   ! from how it is in the rest of the code (for historical reasons
-  ! and also because the vec_init has more a global than a local point
+  ! and also because the vec_init has more a global than local point
   ! of view on the mesh): See the comments in the parameter list.
   subroutine vec_init(comm, root, part, np, np_part, idx, stencil, dim, vp)
     integer,         intent(in)  :: comm         ! Communicator to use.

@@ -57,7 +57,7 @@ module v_ks_m
 
   integer, parameter, public :: &
     sic_none   = 1,     &  ! no self-interaction correction
-    sic_pz     = 2,     &  ! SIC a la Perdew Zunger (OEP way)
+    sic_pz     = 2,     &  ! Perdew-Zunger SIC (OEP way)
     sic_amaldi = 3         ! Amaldi correction term
 
   type v_ks_t
@@ -65,7 +65,7 @@ module v_ks_m
 
     logical :: frozen_hxc ! For RPA and SAE calculations.
 
-    integer           :: xc_family  ! the xc stuff
+    integer           :: xc_family  ! the XC stuff
     integer           :: sic_type   ! what kind of self-interaction correction to apply
     type(xc_t)        :: xc
     type(xc_OEP_t)    :: oep
@@ -144,19 +144,19 @@ contains
         !%Default sic_none
         !%Section Hamiltonian::XC
         !%Description
-        !% This variable controls which Self-Interaction Correction to use. Note that
+        !% This variable controls which form of self-interaction correction to use. Note that
         !% this correction will be applied to the functional chosen by <tt>XCFunctional</tt>.
         !%Option sic_none 1
         !% No self-interaction correction.
         !%Option sic_pz 2
-        !% SIC a la Perdew Zunger, handled by the OEP technique.
+        !% Perdew-Zunger SIC, handled by the OEP technique.
         !%Option sic_amaldi 3
         !% Amaldi correction term (NOT WORKING).
         !%End
         call loct_parse_int(datasets_check('SICCorrection'), sic_none, ks%sic_type)
         if(.not.varinfo_valid_option('SICCorrection', ks%sic_type)) call input_error('SICCorrection')
 
-        ! Perdew Zunger corrections
+        ! Perdew-Zunger corrections
         if(ks%sic_type == sic_pz) ks%xc_family = ior(ks%xc_family, XC_FAMILY_OEP)
       else
         ks%sic_type = sic_none

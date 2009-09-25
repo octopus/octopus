@@ -937,7 +937,7 @@ contains
         call td_write_print_header_end(out_populations)
       end if
 
-      ! can not call write_iter_start, for the step is not 1
+      ! cannot call write_iter_start, for the step is not 1
       call write_iter_int(out_populations, iter, 1)
       call write_iter_double(out_populations, units_from_atomic(units_out%time, iter*dt),  1)
       call write_iter_double(out_populations, real(gsp),  1)
@@ -968,7 +968,7 @@ contains
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: iter
 
-    integer :: i
+    integer :: idim
     character(len=7) :: aux
     FLOAT :: acc(MAX_DIM)
 
@@ -981,8 +981,8 @@ contains
 
       ! first line -> column names
       call write_iter_header_start(out_acc)
-      do i = 1, gr%mesh%sb%dim
-        write(aux, '(a4,i1,a1)') 'Acc(', i, ')'
+      do idim = 1, gr%mesh%sb%dim
+        write(aux, '(a4,i1,a1)') 'Acc(', idim, ')'
         call write_iter_header(out_acc, aux)
       end do
       call write_iter_nl(out_acc)
@@ -990,14 +990,14 @@ contains
       ! second line: units
       call write_iter_string(out_acc, '#[Iter n.]')
       call write_iter_header(out_acc, '[' // trim(units_abbrev(units_out%time)) // ']')
-      do i = 1, gr%mesh%sb%dim
+      do idim = 1, gr%mesh%sb%dim
         call write_iter_header(out_acc, '[' // trim(units_abbrev(units_out%acceleration)) // ']')
       end do
       call write_iter_nl(out_acc)
       call td_write_print_header_end(out_acc)
     end if
 
-    call td_calc_tacc(gr, geo, st, hm, acc, dt*i)
+    call td_calc_tacc(gr, geo, st, hm, acc, dt * idim)
 
     call write_iter_start(out_acc)
     call write_iter_double(out_acc, acc / units_out%acceleration%factor, gr%mesh%sb%dim)

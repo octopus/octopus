@@ -23,36 +23,36 @@ module sternheimer_m
   use datasets_m
   use global_m
   use grid_m
+  use h_sys_output_m
   use hamiltonian_m
   use io_m
   use lalg_basic_m
-  use loct_parser_m
-  use XC_F90(lib_m)
-  use linear_solver_m
   use linear_response_m
+  use linear_solver_m
+  use loct_parser_m
   use math_m
-  use mesh_function_m
   use mesh_m
+  use mesh_function_m
   use messages_m
-  use multigrid_m
   use mix_m
-  use h_sys_output_m
-  use preconditioners_m
-  use poisson_m
-  use profiling_m
+  use multigrid_m
   use pert_m
+  use poisson_m
+  use preconditioners_m
+  use profiling_m
   use restart_m
   use simul_box_m
   use scf_tol_m
   use smear_m
   use states_m
-  use states_dim_m
   use states_calc_m
+  use states_dim_m
   use string_m
   use system_m
   use units_m
   use v_ks_m
   use xc_m
+  use XC_F90(lib_m)
   use xc_OEP_kernel_m
 
   implicit none
@@ -109,6 +109,8 @@ contains
     integer :: ham_var
     logical :: default_preorthog
 
+    call push_sub('sternheimer.sternheimer_init')
+
     if(simul_box_is_periodic(sys%gr%mesh%sb)) call messages_devel_version("Sternheimer equation for periodic systems")
 
     !%Variable Preorthogonalization
@@ -133,17 +135,19 @@ contains
     !%Description
     !% The terms to be considered in the variation of the
     !% Hamiltonian. V_ext is always considered. The default is to include
-    !% also the exchange, correlation and Hartree terms. If you want
-    !% to choose the exchange and correlation kernel use the variable
-    !% XCKernel. For kdotp and magnetic em_resp modes, the value V_ext_only
-    !% is used and this variable is ignored.
+    !% also the exchange-correlation and Hartree terms, which fully
+    !% takes into account local fields.
+    !% <tt>hartree</tt> gives you the random-phase approximation (RPA).
+    !% If you want to choose the exchange-correlation kernel, use the variable
+    !% <tt>XCKernel</tt>. For <tt>kdotp</tt> and magnetic <tt>em_resp</tt> modes,
+    !% the value <tt>V_ext_only</tt> is used and this variable is ignored.
     !%Option V_ext_only 0
-    !% Neither Hartree nor xc potentials included.
+    !% Neither Hartree nor XC potentials included.
     !%Option hartree 1
     !% The variation of the Hartree potential only.
     !%Option fxc 2
-    !% The exchange and correlation kernel, the variation of the
-    !% exchange and correlation potential only.
+    !% The exchange-correlation kernel (the variation of the
+    !% exchange-correlation potential) only.
     !%End
 
     if(present(set_ham_var)) then
@@ -176,9 +180,9 @@ contains
 
     message(2) = "Solving Sternheimer equation for"
     if (this%occ_response) then
-       write(message(2), '(2a)') trim(message(2)), ' full linear response'
+       write(message(2), '(2a)') trim(message(2)), ' full linear response.'
     else
-       write(message(2), '(2a)') trim(message(2)), ' linear response in unoccupied subspace only'
+       write(message(2), '(2a)') trim(message(2)), ' linear response in unoccupied subspace only.'
     endif
 
     message(3) = "Sternheimer preorthogonalization:"
@@ -214,12 +218,15 @@ contains
 
     nullify(this%drhs)
     nullify(this%zrhs)
+    call pop_sub()
   end subroutine sternheimer_init
 
 
   !-----------------------------------------------------------
   subroutine sternheimer_end(this)
     type(sternheimer_t), intent(inout) :: this
+
+    call push_sub('sternheimer.sternheimer_end')
 
     call linear_solver_end(this%solver)
     call scf_tol_end(this%scf_tol)
@@ -228,6 +235,7 @@ contains
       SAFE_DEALLOCATE_P(this%fxc)
     end if
 
+    call pop_sub()
   end subroutine sternheimer_end
 
 

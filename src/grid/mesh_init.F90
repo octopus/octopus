@@ -866,11 +866,11 @@ contains
         vol_tmp(:,:,:) = product(mesh%h(1:sb%dim))
 
         ! The idea is that in the first i_lev loop we find intermediate
-        ! points that are odd, i.e. at least one of their index can not
+        ! points that are odd, i.e. at least one of their indices cannot
         ! be divided by 2 (note that then n_mod=2**1=1).
         !
         ! In the second loop we accept only those intermediate points that
-        ! have at least one index that can not be divided by 4. This
+        ! have at least one index that cannot be divided by 4. This
         ! rules out some even points that were included in the first loop.
         !
         ! This continues until the last resolution level. In each step

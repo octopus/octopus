@@ -3,7 +3,7 @@
 !%Default lda_x+lda_c_pz_mod
 !%Section Hamiltonian::XC
 !%Description
-!% Defines the exchange and correlation functional to be used;
+!% Defines the exchange-correlation functional to be used;
 !% they should be specified as a sum of a correlation term and an
 !% exchange term.
 !%

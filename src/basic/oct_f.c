@@ -303,7 +303,7 @@ On error, ierr is set to something different of 0, actual values are:
 
 0 : value found
 1 : no matching file found
-2 : can not open the directory
+2 : cannot open the directory
  
 */
 

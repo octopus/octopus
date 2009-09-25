@@ -27,15 +27,15 @@ module xc_m
   use io_function_m
   use lalg_basic_m
   use loct_parser_m
-  use XC_F90(lib_m)
-  use mesh_function_m
   use mesh_m
+  use mesh_function_m
   use messages_m
   use profiling_m
   use states_m
   use states_dim_m
-  use xc_functl_m
   use varinfo_m
+  use XC_F90(lib_m)
+  use xc_functl_m
 
   implicit none
 
@@ -82,15 +82,15 @@ contains
     call push_sub('xc.xc_write_info')
 
     if (xcs%cdft .and. iand(xcs%family, XC_FAMILY_LCA) /= 0) then
-      write(message(1), '(a)') "Current-dependent exchange and correlation:"
+      write(message(1), '(a)') "Current-dependent exchange-correlation:"
       call write_info(1, iunit)
       call xc_functl_write_info(xcs%j_functl, iunit)
 
       write(message(1), '(1x)')
-      write(message(2), '(a)') "Auxiliary exchange and correlation functionals:"
+      write(message(2), '(a)') "Auxiliary exchange-correlation functionals:"
       call write_info(2, iunit)
     else
-      write(message(1), '(a)') "Exchange and correlation:"
+      write(message(1), '(a)') "Exchange-correlation:"
       call write_info(1, iunit)
     end if
 
@@ -133,8 +133,8 @@ contains
       
       call parse()
 
-      !we also need xc functionals that do not depend on the current
-      !get both spin polarized and unpolarized
+      !we also need XC functionals that do not depend on the current
+      !get both spin-polarized and unpolarized
       do i = 1, 2
 
         call xc_functl_init_functl(xcs%functl(1,i),  x_id, ndim, nel, i)
@@ -158,7 +158,7 @@ contains
         .or.(iand(xcs%functl(2,1)%family, XC_FAMILY_HYB_GGA).ne.0)
       if(ll) then
         if((xcs%functl(1,1)%id.ne.0).and.(xcs%functl(1,1)%id.ne.XC_OEP_X)) then
-          message(1) = "You can not use an exchange functional when performing"
+          message(1) = "You cannot use an exchange functional when performing"
           message(2) = "a Hartree-Fock calculation or using a hybrid functional."
           call write_fatal(2)
         end if
@@ -180,7 +180,7 @@ contains
       ! Now it is time for these current functionals
       if (iand(xcs%family, XC_FAMILY_LCA).ne.0 .and. &
         iand(xcs%family, XC_FAMILY_MGGA + XC_FAMILY_OEP).ne.0) then
-        message(1) = "LCA functional can only be used along with LDA or GGA functionals"
+        message(1) = "LCA functional can only be used along with LDA or GGA functionals."
         call write_fatal(1)
       end if
 
@@ -198,7 +198,7 @@ contains
         !%Option mgga_gea 2
         !% Use gradient expansion (GEA) of the kinetic energy density.
         !%Option mgga_oep 3
-        !% Use the OEP equation to obtain the xc potential. This is the "correct" way
+        !% Use the OEP equation to obtain the XC potential. This is the "correct" way
         !% to do it within DFT.
         !%End
         call loct_parse_int(datasets_check('MGGAimplementation'), 1, xcs%mGGA_implementation)
@@ -241,9 +241,9 @@ contains
       !%Default lda_x+lda_c_pz_mod
       !%Section Hamiltonian::XC
       !%Description
-      !% Defines the exchange and correlation kernel. Only LDA kernels are available currently.
+      !% Defines the exchange-correlation kernel. Only LDA kernels are available currently.
       !%Option xc_functional -1
-      !% The same functional defined by XCFunctional.
+      !% The same functional defined by <tt>XCFunctional</tt>.
       !%End
 
       call loct_parse_int(datasets_check('XCKernel'), default, val)
@@ -267,6 +267,8 @@ contains
 
     integer :: i
 
+    call push_sub('xc.xc_end')
+
     if (xcs%cdft) then
       call xc_functl_end(xcs%j_functl)
     end if
@@ -278,6 +280,7 @@ contains
     end do
     xcs%family = 0
 
+    call pop_sub()
   end subroutine xc_end
 
 

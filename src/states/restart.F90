@@ -685,14 +685,14 @@ contains
     call profiling_in(prof_read, "RESTART_READ")
 
     if(.not. present(lr)) then 
-      write(message(1), '(a,i5)') 'Info: Loading restart information'
+      write(message(1), '(a,i5)') 'Info: Loading restart information.'
     else
-      write(message(1), '(a,i5)') 'Info: Loading restart information for linear response'
+      write(message(1), '(a,i5)') 'Info: Loading restart information for linear response.'
     end if
     call write_info(1)
 
     ! If one restarts a GS calculation changing the %Occupations block, one
-    ! can not read the occupations, otherwise these overwrite the ones from
+    ! cannot read the occupations, otherwise these overwrite the ones from
     ! the input file
     read_occ_ = .true.
     if(present(read_occ)) read_occ_ = .false.
@@ -838,9 +838,9 @@ contains
         ierr = 0
       else
         if(.not. present(lr)) then 
-          write(str, '(a,i5)') 'Loading restart information'
+          write(str, '(a,i5)') 'Loading restart information.'
         else
-          write(str, '(a,i5)') 'Loading restart information for linear response'
+          write(str, '(a,i5)') 'Loading restart information for linear response.'
         end if
         call messages_print_stress(stdout, trim(str))
         write(message(1),'(a,i4,a,i4,a)') 'Only ', ierr,' files out of ', &

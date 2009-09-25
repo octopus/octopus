@@ -193,7 +193,7 @@ contains
     !%
     !% Note that some common pseudopotentials are distributed with the code in the
     !% directory <tt>OCTOPUS-HOME/share/PP/</tt>. To use these pseudopotentials you are
-    !% not required to define them explicitly in the Species block, as defaults 
+    !% not required to define them explicitly in the <tt>Species</tt> block, as defaults 
     !% are provided by the program (you can override these defaults in any case). 
     !% Additional pseudopotentials can be downloaded from the 
     !% <a href='http://www.tddft.org/programs/octopus/wiki/index.php/Pseudopotentials'>
@@ -270,7 +270,7 @@ contains
     !% Atom represented with all electrons; the extra parameter is the
     !% atomic number. See the documentation of the variable 
     !% <tt>SpeciesAllElectronSigma</tt>.
-    !% WARNING: Currently you can not use LCAO with this species.
+    !% WARNING: Currently you cannot use LCAO with this species.
     !%Option spec_charge_density 125
     !% The potential is created by a distribution of charge.
     !%Option species_from_file  126

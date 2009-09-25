@@ -68,7 +68,7 @@ contains
     eps = CNST(1e-5) ! FIXME: read from input.
     c_energy = energy + eta*M_zI
 
-    ! if we can not reduce the unit cell
+    ! if we cannot reduce the unit cell
     ! we have only one way of calculating the Green`s function: with the Sancho method
     if(.not.intf%reducible) then ! use large matrices (rank = np_uc)
       call lead_green_sancho(c_energy, diag, offdiag, np_uc, green, threshold, h_is_real)
