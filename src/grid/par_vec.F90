@@ -335,6 +335,11 @@ contains
     do r = 1, npart
       call iihash_init(ghost_flag(r), vp%np_local(r))
     end do
+
+    do j = 1, stencil%size
+      ASSERT(all(stencil%points(1:dim, j) <= idx%enlarge(1:dim)))
+    end do
+
     vp%total          = 0
     vp%np_ghost_neigh = 0
     vp%np_ghost       = 0

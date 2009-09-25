@@ -74,6 +74,7 @@ contains
     type(geometry_t),  intent(in)    :: geo
 
     type(stencil_t) :: cube
+    integer :: enlarge(1:MAX_DIM)
 
     call push_sub('grid.grid_init_stage_1')
 
@@ -83,8 +84,7 @@ contains
     !%Section Mesh
     !%Description
     !% If enabled, <tt>Octopus</tt> will use a finer mesh for the calculation
-    !% of the forces or other sensitive quantities. The default is
-    !% disable.
+    !% of the forces or other sensitive quantities. The default is no.
     !%End
     if (gr%sb%dim == 3) then 
       call loct_parse_logical(datasets_check('UseFineMesh'), .false., gr%have_fine_mesh)
@@ -100,9 +100,13 @@ contains
 
     call double_grid_init(gr%dgrid, gr%sb)
 
+    enlarge = 0
+    enlarge(1:gr%sb%dim) = 2
+    enlarge = max(enlarge, double_grid_enlarge(gr%dgrid))
+    enlarge = max(enlarge, gr%der%n_ghost)
+
     ! now we generate the mesh and the derivatives
-    call mesh_init_stage_1(gr%mesh, gr%sb, gr%cv, &
-         enlarge = max(gr%der%n_ghost, double_grid_enlarge(gr%dgrid)))
+    call mesh_init_stage_1(gr%mesh, gr%sb, gr%cv, enlarge = enlarge)
 
     ! the stencil used to generate the grid is a union of a cube (for
     ! multigrid) and the laplacian.
