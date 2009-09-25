@@ -82,7 +82,7 @@ contains
   subroutine calc_source_wf(maxiter, m, np, il, offdiag, mem, dt, psi0, u, f0, factor, lambda, src)
     integer, intent(in)    :: maxiter
     integer, intent(in)    :: m             ! m-th timestep.
-    integer, intent(in)    :: np            ! intf%np, the size of the wave functions.
+    integer, intent(in)    :: np            ! intf%np, the size of the wavefunctions.
     integer, intent(in)    :: il            ! Which lead.
     CMPLX,   intent(in)    :: offdiag(:, :) ! Matrix V^T.
     CMPLX,   intent(in)    :: mem(np, np)   ! the effective memory coefficient
@@ -92,7 +92,7 @@ contains
     CMPLX,   intent(in)    :: f0
     CMPLX,   intent(in)    :: factor
     CMPLX,   intent(in)    :: lambda
-    CMPLX,   intent(inout) :: src(np)        ! Old wave function in, the new one out.
+    CMPLX,   intent(inout) :: src(np)        ! Old wavefunction in, the new one out.
     
     CMPLX   :: tmp, alpha
 
@@ -130,7 +130,7 @@ contains
     mem_s, mapping, u, f0, factor, lambda, src)
     integer, intent(in)    :: maxiter        ! Maximum timestep.
     integer, intent(in)    :: m              ! m-th timestep
-    integer, intent(in)    :: np             ! intf%np, the size of the wave functions.
+    integer, intent(in)    :: np             ! intf%np, the size of the wavefunctions.
     integer, intent(in)    :: order
     integer, intent(in)    :: dim
     integer, intent(in)    :: il             ! Which lead.
@@ -144,7 +144,7 @@ contains
     CMPLX,   intent(in)    :: f0
     CMPLX,   intent(in)    :: factor
     CMPLX,   intent(in)    :: lambda
-    CMPLX,   intent(inout) :: src(:)         ! Old wave function in, the new one out.
+    CMPLX,   intent(inout) :: src(:)         ! Old wavefunction in, the new one out.
     
     CMPLX,   allocatable :: tmem(:, :)
 

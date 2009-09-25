@@ -122,7 +122,7 @@ module species_m
     ! the default values for the spacing and atomic radius
     FLOAT :: def_rsize, def_h
 
-    ! The number of initial wave functions
+    ! The number of initial wavefunctions
     integer :: niwfs
     integer, pointer :: iwf_l(:, :), iwf_m(:, :), iwf_i(:, :)
 

@@ -139,7 +139,7 @@ program octopus
   !% This is effectively a first-order perturbative calculation of the total energy, 
   !% the perturbation being the difference between the two XC potentials used.
   !%Option kdotp 15
-  !% Calculation of effective masses by <i>k.p<i> perturbation theory.
+  !% Calculation of effective masses by <i>k.p</i> perturbation theory.
   !% Currently available only in development version.
   !%Option gcm 16
   !% Generator-Coordinates calculation (experimental).

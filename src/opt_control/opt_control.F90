@@ -151,7 +151,7 @@ contains
     call filter_write(filter)
 
 
-    ! Figure out how is the starting wave function(s), and the target.
+    ! Figure out the starting wavefunction(s), and the target.
     call initial_state_init(sys, hm, initial_st)
     call target_init(sys%gr, sys%geo, initial_st, td, parameters_w0(par), target)
 

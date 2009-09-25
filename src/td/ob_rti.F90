@@ -17,7 +17,7 @@
 !!
 !! $Id: td_transport.F90 3030 2007-06-25 16:45:05Z marques $
 
-! Implementation of the propagator for open boundaries, i. e. the
+! Implementation of the propagator for open boundaries, i.e. the
 ! modified Crank-Nicholson with source and memory terms.
 
 #include "global.h"
@@ -43,8 +43,8 @@ module ob_rti_m
   use simul_box_m
   use solvers_m
   use states_m
-  use varinfo_m
   use v_ks_m
+  use varinfo_m
 
   implicit none
 
@@ -208,7 +208,7 @@ contains
       gr%sb%h(TRANS_DIR), order, st%d%kpt%mpi_grp)
     call ob_src_init(ob, st, gr%intf)
 
-    ! Allocate memory for the interface wave functions of previous
+    ! Allocate memory for the interface wavefunctions of previous
     ! timesteps.
     s1 = st%st_start
     s2 = st%st_end
@@ -221,7 +221,7 @@ contains
       ob%lead(il)%st_intface = M_z0
     end do
 
-    ! check the symmetry of the effective hamiltonian
+    ! check the symmetry of the effective Hamiltonian
     ! if no magnetic field or vector potential is present then
     ! the h-matrix is complex symmetric, otherwise general complex
     heff_sym = .true.

@@ -299,9 +299,9 @@ contains
 
     call atomhxc(functl, g, 1, rho(:, 1:1), ve(:, 1:1), psf_file%chcore)
 
-    ! Calculation of the pseudo-wave functions.
-    !       rphi(1:nrval, 1:conf%p, :) : radial pseudo-wave functions. They are normalized so that
-    !           int dr {rphi^2} = 1. Thus its units are of bohr^(-1/2).
+    ! Calculation of the pseudo-wavefunctions.
+    !       rphi(1:nrval, 1:conf%p, :) : radial pseudo-wavefunctions. They are normalized so that
+    !           int dr {rphi^2} = 1. Thus its units are Bohr^(-1/2).
     !       eigen(1:conf%p, :)        : eigenvalues, in Rydbergs.
     do l = 1, psf_file%npotd
       do ir = 2, g%nrval
@@ -321,7 +321,7 @@ contains
         real(g%a, 8), real(g%b, 8), rmax, nprin, nnode, dr, ierr)
       
       if(ierr.ne.0) then
-        write(message(1),'(a)') 'The algorithm that calculates atomic wave functions could not'
+        write(message(1),'(a)') 'The algorithm that calculates atomic wavefunctions could not'
         write(message(2),'(a)') 'do its job. The program will terminate, since the wavefunctions'
         write(message(3),'(a)') 'are needed. Change the pseudopotential or improve the code.'
         call write_fatal(3)
@@ -335,10 +335,10 @@ contains
     ! Make a copy of the wavefunctions.
     rphi(:, :, 2) = rphi(:, :, 1)
 
-    ! And now, for the spin polarized case...
+    ! And now, for the spin-polarized case...
     spin_polarized: if(ispin == 2) then
 
-      rho = M_ZERO    ! Here information of previous calculation could be used, but
+      rho = M_ZERO    ! Here information from previous calculation could be used, but
       prev = M_ZERO   ! to save code lines, let us start from scratch.
       diff = CNST(1.0e5)
       iter = 0
@@ -365,7 +365,7 @@ contains
               real(g%a, 8), real(g%b, 8), rmax, nprin, nnode, dr, ierr)
 
             if(ierr.ne.0) then
-              write(message(1),'(a)') 'The algorithm that calculates atomic wave functions could not'
+              write(message(1),'(a)') 'The algorithm that calculates atomic wavefunctions could not'
               write(message(2),'(a)') 'do its job. The program will terminate, since the wavefunctions'
               write(message(3),'(a)') 'are needed. Change the pseudopotential or improve the code.'
               call write_fatal(3)

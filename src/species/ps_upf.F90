@@ -20,10 +20,10 @@
 #include "global.h"
 
 module ps_upf_m
-  use global_m
-  use messages_m
   use atomic_m
+  use global_m
   use io_m
+  use messages_m
   use profiling_m
 
   implicit none
@@ -71,7 +71,7 @@ module ps_upf_m
     FLOAT,   pointer :: proj(:,:)
     FLOAT,   pointer :: e(:)
 
-    !Wave-functions
+    !Wavefunctions
     FLOAT,  pointer :: wfs(:,:)
 
     !Valence charge
@@ -189,7 +189,7 @@ contains
     character (len=2) :: nl
     character (len=80) :: dummy
 
-    call push_sub('ps_upf.ps_upf_read_file')
+    call push_sub('ps_upf.ps_upf_file_read')
 
     ps_upf%kb_nc = 1
 
@@ -282,7 +282,7 @@ contains
 
     call check_end_tag(unit, "PP_NONLOCAL")
 
-    !Pseudo wave-functions
+    !Pseudo wavefunctions
     call init_tag(unit, "PP_PSWFC", .true.)
     SAFE_ALLOCATE(ps_upf%wfs(1:ps_upf%np, 1:ps_upf%n_wfs))
     do i = 1, ps_upf%n_wfs
@@ -297,7 +297,7 @@ contains
     read(unit,*) (ps_upf%rho(ir), ir = 1, ps_upf%np)
     call check_end_tag(unit, "PP_RHOATOM")
 
-    !Extra inforamation
+    !Extra information
     if (tag_isdef(unit, "PP_ADDINFO")) then
       ps_upf%kb_nc = 2
       call init_tag(unit, "PP_ADDINFO", .true.)
@@ -415,7 +415,7 @@ contains
     FLOAT            :: dincv
     FLOAT, parameter :: threshold = CNST(1.0e-6)
 
-    call push_sub('ps_upf.get_cutoff_radii')
+    call push_sub('ps_upf.ps_upf_cutoff_radii')
 
     ! local part ....
     do ir = ps_upf%np-1, 2, -1
@@ -443,14 +443,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! checks normalization of the pseudo wave-functions
+  ! checks normalization of the pseudo wavefunctions
   subroutine ps_upf_check_rphi(ps_upf)
     type(ps_upf_t), intent(in) :: ps_upf
     
     integer :: i
     FLOAT   :: nrm
 
-    !  checking normalization of the wave functions
+    call push_sub('ps_upf.ps_upf_check_rphi')
+
+    !  checking normalization of the wavefunctions
     do i = 1, ps_upf%n_wfs
       nrm = sqrt(sum(ps_upf%drdi(:)*ps_upf%wfs(:, i)**2))
       nrm = abs(nrm - M_ONE)
@@ -461,6 +463,7 @@ contains
       end if
     end do
 
+    call pop_sub()
   end subroutine ps_upf_check_rphi
 
 end module ps_upf_m

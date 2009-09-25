@@ -185,7 +185,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Get wave function points of interface intf.
+  ! Get wavefunction points of interface intf.
   ! intf_wf must be of dimension intf%np_uc.
   subroutine get_intf_wf(intf, zpsi, intf_wf)
     type(interface_t), intent(in)  :: intf
@@ -201,7 +201,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Put wave function points of interface intf.
+  ! Put wavefunction points of interface intf.
   ! intf_wf must be of dimension intf%np_uc.
   subroutine put_intf_wf(intf, intf_wf, zpsi)
     type(interface_t), intent(in)     :: intf

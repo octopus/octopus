@@ -68,12 +68,17 @@ contains
   subroutine valconf_null(c)
     type(valconf_t) :: c
 
+    call push_sub('atomic.valconf_null')
     c%z = 0; c%symbol = ""; c%type = 0; c%p = 0; c%n = 0; c%l = 0; c%occ = M_ZERO
+
+    call pop_sub()
   end subroutine valconf_null
 
   subroutine valconf_copy(cout, cin)
     type(valconf_t), intent(out) :: cout
     type(valconf_t), intent(in)  :: cin
+
+    call push_sub('atomic.valconf_copy')
 
     cout%z      = cin%z
     cout%symbol = cin%symbol
@@ -82,6 +87,8 @@ contains
     cout%n      = cin%n
     cout%l      = cin%l
     cout%occ    = cin%occ
+
+    call pop_sub()
   end subroutine valconf_copy
 
   subroutine write_valconf(c, s)
@@ -90,8 +97,12 @@ contains
     character(len=VALCONF_STRING_LENGTH) :: s
     integer :: j
 
+    call push_sub('atomic.write_valconf')
+
     write(s,'(i2,1x,a2,i1,1x,i1,a1,6(i1,a1,f6.3,a1))') c%z, c%symbol, c%type, c%p, ':',&
          (c%n(j),spec_notation(c%l(j)),c%occ(j,1),',',j=1,c%p)
+
+    call pop_sub()
   end subroutine write_valconf
 
   subroutine read_valconf(s, c)
@@ -100,6 +111,8 @@ contains
 
     integer :: j
     character(len=1) :: lvalues(1:6)
+
+    call push_sub('atomic.read_valconf')
 
     read (s,'(i2,1x,a2,i1,1x,i1,1x,6(i1,a1,f6.3,1x))') c%z, c%symbol, c%type, c%p,&
          (c%n(j),lvalues(j),c%occ(j,1),j=1,c%p)
@@ -115,6 +128,7 @@ contains
        end select
     end do
 
+    call pop_sub()
   end subroutine read_valconf
 
 
@@ -517,7 +531,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   QBYY = M_ONE/YBYQ
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!  SIMPSONS RULE IS USED TO PERFORM TWO INTEGRALS OVER THE ELECTRON          !
+!  SIMPSON`S RULE IS USED TO PERFORM TWO INTEGRALS OVER THE ELECTRON          !
 !  DENSITY.  THE TOTAL CHARGE QT IS USED TO FIX THE POTENTIAL AT R=R(NR)      !
 !  AND V0 (THE INTEGRAL OF THE ELECTRON DENSITY DIVIDED BY R) FIXES           !
 !  THE ELECTROSTATIC POTENTIAL AT THE ORIGIN                                  !
@@ -611,7 +625,6 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   end do
 
   call pop_sub()
-  return
   end subroutine vhrtre
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -650,6 +663,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   REAL_DOUBLE, dimension(n) :: h, s, g, y
   REAL_DOUBLE               :: e1, e2, del, de, et, t
   REAL_DOUBLE, parameter    :: tol = CNST(1.0e-5)
+
+  call push_sub('atomic.egofv')
 
   ncor=nprin-l-1
   n1=nnode
@@ -751,7 +766,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
-!  the numerov method uses a transformation of the radial wave fcn.           !
+!  the Numerov method uses a transformation of the radial wavefunction.       !
 !  that we call "y".  having located the eigenenergy, we transform            !
 !  y to "g", from which the density is easily constructed.                    !
 !  finally, the call to "nrmlzg" normalizes g to one electron.                !
@@ -764,10 +779,10 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   g(i)=y(i)/(M_ONE-t/CNST(12.))
 7 continue
   call nrmlzg(g,s,n)
-  return
+  call pop_sub(); return
 3 ierr = 1
-  return
-
+  call pop_sub(); return
+  
   end subroutine egofv
 
 
@@ -775,15 +790,15 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!   yofe integrates the radial schrodinger eqn using the numerov              !
+!   yofe integrates the radial Schroedinger eqn using the Numerov             !
 !   method.                                                                   !
 !                                                                             !
 !   the arguments are defined as follows:                                     !
 !       e is the old energy(overwritten) by the new energy                    !
 !      de is the e change predicted to elim the kink in psi                   !
 !       dr is the log deriv (the boundary condition)                          !
-!       gpp = (h-es)g (all diagonal in i (radius) )                            !
-!       y is the numerov independent variable y = g - gpp/12                   !
+!       gpp = (h-es)g (all diagonal in i (radius) )                           !
+!       y is the numerov independent variable y = g - gpp/12                  !
 !       n is the number of radial mesh points                                 !
 !       l is the angular momentum                                             !
 !       ncor is the number of states of lower energy                          !
@@ -796,6 +811,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   REAL_DOUBLE :: e, de, dr, rmax, z, a, b, y2, g, gsg, x, gin, gsgin, xin
   integer :: nmax,l,ncor,nnode,n,knk,nndin,i
   REAL_DOUBLE :: h(nmax), s(nmax), y(nmax), zdr, yn, ratio, t
+
+  call push_sub('atomic.yofe')
 
   zdr = z*a*b
   n=nmax
@@ -810,7 +827,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
 !  bcorgn computes y2, which embodies the boundary condition                  !
-!  satisfied by the radial wave function at the origin                        !
+!  satisfied by the radial wavefunction at the origin                         !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   knk=n
@@ -821,7 +838,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  the outward integration is now complete                                    !
 !                                                                             !
 !     we first decide if the kinetic energy is sufficiently non               !
-!     negative to permit use of the numerov eq at rmax.  if                   !_m
+!     negative to permit use of the numerov eq at rmax.  if                   !
 !     it is not, then zero-value boundary condition is used                   !
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -835,7 +852,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
 !  bcrmax computes yn, which embodies the boundary condition                  !
-!  satisfied by the radial wave function at rmax                              !
+!  satisfied by the radial wavefunction at rmax                               !
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -845,7 +862,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
-!  numin performs the inward integration by the numerov method                !
+!  numin performs the inward integration by the Numerov method                !
 !                                                                             !
 !  the energy increment is now evaluated from the kink in psi                 !
 !                                                                             !
@@ -862,8 +879,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   do 6 i=knk,n
   y(i) = y(i)*ratio
 6 continue
-  return
-
+  call pop_sub()
 
   end subroutine yofe
 
@@ -874,19 +890,19 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!   nrmlzg normalizes the supplied radial wave function                       !
+!   nrmlzg normalizes the supplied radial wavefunction                        !
 !                                                                             !
 !   the arguments are defined as follows:                                     !
-!       g is the radial wave function appropriate to the numerov              !
-!             representation of the radial schrodinger equation               !
+!       g is the radial wavefunction appropriate to the Numerov               !
+!             representation of the radial Schroedinger equation              !
 !             that is, the radial fcn r(r) = (drdi)**1/2 g(i) / r(i)          !
 !       gpp = (h-es)g (all diagonal in i (radius) )                           !
 !       n1 is the number of radial mesh points corresponding to               !
 !             the portion of the radial mesh on which the norm                !
 !             is defined                                                      !
 !       n2 is the number of radial mesh points corresponding to               !
-!             the portion of the radial mesh on which the wave                !
-!             function is defined.  for the intended use of this              !_m
+!             the portion of the radial mesh on which the wavefunction        !
+!             is defined. For the intended use of this                        !
 !             routine, n1 = nrval and n2 = nrcor                              !
 !       a and b are the radial mesh parameters                                !
 !             r(i) = ( exp(a*(i-1)) - 1 ) * b                                 !
@@ -897,8 +913,10 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   REAL_DOUBLE s(:), g(:), norm, srnrm
   integer :: n,nm1,nm2,i
 
+  call push_sub('atomic.nrmlzg')
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!  determine the norm of g(i) using simpsons rule                            !
+!  determine the norm of g(i) using Simpson`s rule                            !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
@@ -923,9 +941,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   do 5 i=1,n
   g(i) = g(i)/srnrm
 5 continue
-  return
 
-
+  call pop_sub()
   end subroutine nrmlzg
 
 
@@ -936,22 +953,23 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   REAL_DOUBLE :: h(:), s(:), t2, t3, d2, c0, c1, c2
   integer :: l
 
+  call push_sub('atomic.bcorgn')
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !   the quantity called d(i) in the program is actually the inverse           !
-!   of the diagonal of the tri-diagonal numerov matrix                        !
+!   of the diagonal of the tri-diagonal Numerov matrix                        !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   t2=h(2)-e*s(2)
   d2=-((CNST(24.)+M_TEN*t2)/(CNST(12.)-t2))
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!  the following section deals with the fact that the independent             !
-!  variable "y" in the numerov equation is not zero at the origin             !
-!  for l less than 2                                                          !
-!  the l=0 solution g vanishes, but the first and second                      !
-!  derivatives are finite, making the numerov variable y finite               !
-!  the l=1 solution g vanishes, and gprime also vanishes, but                 !
-!  the second derivative gpp is finite making y finite.  for l > 1,           !
+!  The following section deals with the fact that the independent             !
+!  variable "y" in the Numerov equation is not zero at the origin             !
+!  for l less than 2.                                                         !
+!  The l=0 solution g vanishes, but the first and second                      !
+!  derivatives are finite, making the Numerov variable y finite.              !
+!  The l=1 solution g vanishes, and gprime also vanishes, but                 !
+!  The second derivative gpp is finite making y finite. For l > 1,            !
 !  g and its first two derivatives vanish, making y zero.                     !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -967,8 +985,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   c2=(-M_HALF)*c0*(CNST(24.)-t3)/(CNST(12.)-t3)
   d2=(d2-c1)/(M_ONE-c2)
 3 y2=(-M_ONE)/d2
-  return
 
+  call pop_sub()
   end subroutine bcorgn
 
 
@@ -985,6 +1003,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
    e,dr,rmax,yn,a,b,tnm1,tn,tnp1,beta,dg,c1,c2,c3,dn
   integer :: n
 
+  call push_sub('atomic.bcrmax')
+
 !     write(6,*) 'bcrmax:',dr
   tnm1=h(n-1)-e*s(n-1)
   tn  =h(n  )-e*s(n  )
@@ -1000,8 +1020,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   c3=-((M_ONE-tnp1/M_SIX)/(M_ONE-tnp1/CNST(12.)))
   yn=-((M_ONE-c1/c3)/(dn-c2/c3))
 
-
-  return
+  call pop_sub()
 
   end subroutine bcrmax
 
@@ -1013,6 +1032,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   REAL_DOUBLE :: e, yn, g, gsg, x
   integer :: i,n,nnode,knk
   REAL_DOUBLE :: h(n),s(n),y(n),t
+
+  call push_sub('atomic.numin')
 
   y(n)=yn
   t=h(n)-e*s(n)
@@ -1029,7 +1050,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
-!  begin the inward integrationby the numerov method                          !
+!  begin the inward integration by the Numerov method                         !
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -1056,8 +1077,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
 
   knk=i
-  return
 
+  call pop_sub()
   end subroutine numin
 
 
@@ -1068,6 +1089,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   integer :: ncor,nnode,knk,i,nm4
   REAL_DOUBLE :: h(knk),s(knk),y(knk),t,xl
 
+  call push_sub('atomic.numout')
+  
   y(1)=M_ZERO
   y(2)=y2
   t=h(2)-e*s(2)
@@ -1083,7 +1106,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
-!  begin the outward integrationby the numerov method                         !
+!  begin the outward integration by the Numerov method                        !
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -1108,7 +1131,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  the outward integration is now complete                                    !
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  return
+  call pop_sub()
   end subroutine numout
 
 end module atomic_m

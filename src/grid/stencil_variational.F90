@@ -19,13 +19,13 @@
 
 #include "global.h"
 ! ---------------------------------------------------------
-! Implements the variational discretization of the laplacian
+! Implements the variational discretization of the Laplacian
 ! as proposed by P. Maragakis, J. Soler, and E. Kaxiras, PRB 64, 193101 (2001)
 !
-! However, we have introduced a possible variation: incorporating to
-! the expression of the Laplacian, a high-frequency filter. This in fact
-! goes agains the spirit of the work of Maragakis et al., which
-! attempts to increase the weight of the high-frequencies over the
+! However, we have introduced a possible variation: incorporating into
+! the expression of the Laplacian a high-frequency filter. This in fact
+! goes against the spirit of the work of Maragakis et al., which
+! attempts to increase the weight of the high frequencies over the
 ! conventional finite-difference scheme. But the mathematical
 ! machinery used in that work to generate the coefficient is ideal
 ! to add a frequency filter.

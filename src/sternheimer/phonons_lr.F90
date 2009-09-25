@@ -25,29 +25,28 @@ module phonons_lr_m
   use geometry_m
   use global_m
   use grid_m
-  use geometry_m
+  use h_sys_output_m
   use hamiltonian_m
   use io_m
   use lalg_basic_m
-  use loct_parser_m
   use linear_response_m
+  use loct_parser_m
   use math_m
-  use mesh_function_m
   use mesh_m
+  use mesh_function_m
   use messages_m
-  use h_sys_output_m
-  use vibrations_m
-  use projector_m
-  use profiling_m
   use pert_m
+  use profiling_m
+  use projector_m
   use restart_m
+  use species_m
   use states_m
   use states_dim_m
   use sternheimer_m
   use string_m
   use system_m
   use units_m
-  use species_m
+  use vibrations_m
 
   implicit none
 
@@ -76,6 +75,8 @@ contains
     integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, iunit, ierr
     FLOAT, allocatable   :: infrared(:,:)
 
+    call push_sub('phonons_lr.phonons_lr_run')
+
     !some shorcuts
 
     geo => sys%geo
@@ -87,12 +88,9 @@ contains
 
     !CONSTRUCT
 
-    call push_sub('phonons_lr.phonons_lr_run')
-
-    call parse_input()
     call restart_look_and_read(st, gr, geo)
 
-    message(1) = 'Info: Setting up Hamiltonian for linear response'
+    message(1) = 'Info: Setting up Hamiltonian for linear response.'
     call write_info(1)
 
     call system_h_setup(sys, hm)
@@ -122,7 +120,7 @@ contains
       idir  = vibrations_get_dir (vib, imat)
       
       if (.not. fromscratch) then
-        message(1) = "Loading restart wave functions for linear response."
+        message(1) = "Loading restart wavefunctions for linear response."
         call write_info(1)
         call restart_read(trim(restart_dir)//VIB_MODES_DIR//trim(phn_wfs_tag(iatom, idir))//'_1',&
           st, gr, geo, ierr, lr = lr(1))
@@ -180,17 +178,11 @@ contains
   contains
 
     ! ---------------------------------------------------------
-    subroutine parse_input()
-
-      call push_sub('phonons_lr.parse_input')
-
-      call pop_sub()
-
-    end subroutine parse_input
-
     subroutine build_ionic_dyn_matrix()
       FLOAT :: ac, xi(1:MAX_DIM), xj(1:MAX_DIM), xk(1:MAX_DIM), r2
       integer :: katom
+
+      call push_sub('phonons_lr.phonons_lr_run.build_ionic_dyn_matrix')
 
       do iatom = 1, natoms
         do idir = 1, gr%mesh%sb%dim
@@ -243,6 +235,7 @@ contains
     subroutine calc_infrared
       FLOAT :: lir(1:MAX_DIM+1)
 
+      call push_sub('phonons_lr.phonons_lr_run.calc_infrared')
       !calculate infrared intensities
 
       iunit = io_open(VIB_MODES_DIR//'infrared', action='write')
@@ -264,13 +257,15 @@ contains
       end do
 
       call io_close(iunit)
-
+      call pop_sub()
     end subroutine calc_infrared
 
     subroutine vib_modes_wavefunctions
-      ! now calculate the wavefunction associated to each normal mode
+      ! now calculate the wavefunction associated with each normal mode
       type(lr_t) :: lrtmp
       integer :: ik, ist, idim, inm
+
+      call push_sub('phonons_lr.phonons_lr_run.vib_modes_wavefunctions')
 
       call lr_init(lrtmp)
       call lr_allocate(lrtmp, st, gr%mesh)
@@ -307,7 +302,7 @@ contains
       end do
 
       call lr_dealloc(lrtmp)
-
+      call pop_sub()
     end subroutine vib_modes_wavefunctions
 
   end subroutine phonons_lr_run

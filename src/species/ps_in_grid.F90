@@ -60,7 +60,7 @@ module ps_in_grid_m
     FLOAT, pointer :: so_kb_radius(:)  ! radius of KB projectors
     
     FLOAT, pointer :: vlocal(:)        ! local part of the pseudopotential
-    FLOAT, pointer :: rphi(:, :,:)     ! pseudo wave-functions
+    FLOAT, pointer :: rphi(:, :,:)     ! pseudo wavefunctions
 
     logical        :: core_corrections
     FLOAT, pointer :: chcore(:)        ! core charge density
@@ -318,7 +318,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! checks normalization of the pseudo wave-functions
+  ! checks normalization of the pseudo wavefunctions
   subroutine ps_in_grid_check_rphi(ps)
     type(ps_in_grid_t), intent(in) :: ps
     
@@ -327,12 +327,12 @@ contains
 
     call push_sub('ps_in_grid.ps_in_grid_check_rphi')
 
-    !  checking normalization of the wave functions
+    !  checking normalization of the wavefunctions
     do l = 1, ps%no_l_channels
       nrm = sqrt(sum(ps%g%drdi(:)*ps%rphi(:, l, 1)**2))
       nrm = abs(nrm - M_ONE)
       if (nrm > CNST(1.0e-5)) then
-        write(message(1), '(a,i2,a)') "Eigenstate for l = ", l-1, ' is not normalized'
+        write(message(1), '(a,i2,a)') "Eigenstate for l = ", l-1, ' is not normalized.'
         write(message(2), '(a, f12.6,a)') '(abs(1 - norm) = ', nrm, ')'
         call write_warning(2)
       end if

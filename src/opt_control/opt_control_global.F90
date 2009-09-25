@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id: opt_control.F90 3099 2007-07-23 14:21:35Z lorenzen $
+!! $Id: opt_control_global.F90 3099 2007-07-23 14:21:35Z lorenzen $
 
 #include "global.h"
 
@@ -78,7 +78,7 @@ module opt_control_global_m
   ! ---------------------------------------------------------
   subroutine oct_read_inp(oct)
     type(oct_t), intent(inout) :: oct
-    call push_sub('opt_control_read.oct_read_inp')  
+    call push_sub('opt_control_global.oct_read_inp')  
 
     call messages_print_stress(stdout, "OCT run mode")
 
@@ -88,11 +88,11 @@ module opt_control_global_m
     !%Section Calculation Modes::Optimal Control
     !%Default control_function_real_time
     !%Description
-    !% Optimal Control Theory can be performed with octopus in two different modes:
+    !% Optimal Control Theory can be performed with <tt>Octopus</tt> in two different modes:
     !% either considering the control function to be described in full in real time,
-    !% or either be represented by a set of parameters (which may, or may not be,
+    !% or to be represented by a set of parameters (which may, or may not be,
     !% the coefficients of its expansion in a given basis). The particular choice
-    !% for these parameters is specified by variable "OCTParameterRepresentation"
+    !% for these parameters is specified by variable <tt>OCTParameterRepresentation</tt>
     !% (this variable will be ignored if the control function is to be represented
     !% in real space).
     !%Option control_function_real_time 1
@@ -113,43 +113,43 @@ module opt_control_global_m
     !%Section Calculation Modes::Optimal Control
     !%Default oct_algorithm_zbr98
     !%Description
-    !% Optimal Control Theory can be performed with octopus with a variety of different
+    !% Optimal Control Theory can be performed with <tt>Octopus</tt> with a variety of different
     !% algorithms. Not all of them can be used with any choice of target or control function
     !% representation. For example, some algorithms cannot be used if 
-    !% "OCTControlRepresentation = control_function_real_time" ("oct_algorithm_direct" and 
-    !% "oct_algorithm_newuoa"), and others cannot be used if 
-    !% "OCTControlRepresentation = control_function_parametrized"
-    !% (all others, except "oct_algorithm_straight_iteration").
+    !% <tt>OCTControlRepresentation = control_function_real_time</tt> (<tt>oct_algorithm_direct</tt> and 
+    !% <tt>oct_algorithm_newuoa</tt>), and others cannot be used if 
+    !% <tt>OCTControlRepresentation = control_function_parametrized</tt>
+    !% (all others, except <tt>oct_algorithm_straight_iteration</tt>).
     !%Option oct_algorithm_zbr98 1 
-    !% Backward-Forward-Backward scheme described in JCP 108, 1953 (1998).
-    !% Only possible if targetoperator is a projection operator.
+    !% Backward-Forward-Backward scheme described in <i>JCP</i> <b>108</b>, 1953 (1998).
+    !% Only possible if target operator is a projection operator.
     !% Provides fast, stable and monotonic convergence.
     !%Option oct_algorithm_zr98  2
-    !% Forward-Backward-Forward scheme described in JCP 109,385 (1998).
-    !% Works for projection and more general target operators, also. The convergence is 
+    !% Forward-Backward-Forward scheme described in <i>JCP</i> <b>109</b>, 385 (1998).
+    !% Works for projection and more general target operators also. The convergence is 
     !% stable but slower than ZBR98. 
     !% Note that local operators show an extremely slow convergence. It ensures monotonic 
     !% convergence.
     !%Option oct_algorithm_wg05  3
-    !% Forward-Backward scheme described in J. Opt. B. 7 300 (2005).
-    !% Works for all kind target operators and can be used with all kind of filters and 
+    !% Forward-Backward scheme described in <i>J. Opt. B.</i> <b>7</b>, 300 (2005).
+    !% Works for all kinds of target operators, can be used with all kinds of filters, and 
     !% allows a fixed fluence.
-    !% The price is a rather instable convergence. 
+    !% The price is a rather unstable convergence. 
     !% If the restrictions set by the filter and fluence are reasonable, a good overlap can be 
-    !% expected with 20 iterations.
+    !% expected within 20 iterations.
     !% No monotonic convergence.
     !%Option oct_algorithm_mt03 4
     !% Basically an improved and generalized scheme. 
-    !% Comparable to ZBR98/ZR98. See [Y. Maday and G. Turinici, J. Chem. Phys. 118, 8191 (2003)].
+    !% Comparable to ZBR98/ZR98. See [Y. Maday and G. Turinici, <i>J. Chem. Phys.</i> <b>118</b>, 8191 (2003)].
     !%Option oct_algorithm_krotov 5
     !% The procedure reported in [D. Tannor, V. Kazakov and V.
-    !% Orlov, in "Time Dependent Quantum Molecular Dynamics", edited by J. Broeckhove
+    !% Orlov, in <i>Time-Dependent Quantum Molecular Dynamics</i>, edited by J. Broeckhove
     !% and L. Lathouweres (Plenum, New York, 1992), pp. 347-360].
     !%Option oct_algorithm_straight_iteration 6
     !% Straight iteration: one forward and one backward propagation is performed at each
     !% iteration, both with the same control field. An output field is calculated with the
-    !% resulting wave functions. Note that this scheme typically does not converge, unless
-    !% some mixing ("OCTMixing = yes") is used.
+    !% resulting wavefunctions. Note that this scheme typically does not converge, unless
+    !% some mixing (<tt>OCTMixing = yes</tt>) is used.
     !%Option oct_algorithm_cg 7
     !% Conjugate-gradients, as implemented in the GNU GSL library.
     !%Option oct_algorithm_direct 8
@@ -159,9 +159,9 @@ module opt_control_global_m
     !% maximization algorithm is the Nelder-Mead algorithm as implemeted in the GSL. The function
     !% values are obtained by successive forward propagations.
     !%Option oct_algorithm_newuoa 9
-    !% This is exactly the same as oct_algorithm_direct, except in this case the maximization
-    !% algorithm is the so-called NEWUOA algorithm [M. J. D. Powell, IMA J. Numer. Analysis
-    !% 28, 649-664 (2008)].
+    !% This is exactly the same as <tt>oct_algorithm_direct</tt>, except in this case the maximization
+    !% algorithm is the so-called NEWUOA algorithm [M. J. D. Powell, <i>IMA J. Numer. Analysis</i>
+    !% <b>28</b>, 649-664 (2008)].
     !%End
     call loct_parse_int(datasets_check('OCTScheme'), oct_algorithm_zr98, oct%algorithm)
     if(.not.varinfo_valid_option('OCTScheme', oct%algorithm)) call input_error('OCTScheme')
@@ -219,13 +219,13 @@ module opt_control_global_m
     !%Section Calculation Modes::Optimal Control
     !%Default 0.0
     !%Description 
-    !% When doing QOCT with the conjugate gradient optimization scheme, the gradient is
+    !% When doing QOCT with the conjugate-gradient optimization scheme, the gradient is
     !% computed thanks to a forward-backwards propagation. For debugging purposes, this
-    !% gradient can be compared with the value obtained "numerically" (i.e. by doing
+    !% gradient can be compared with the value obtained "numerically" (<i>i.e.</i> by doing
     !% successive forward propagations with control fields separated by small finite
     !% differences).
     !%
-    !% In order to activate this feature, set "OCTCheckGradient" to some non-zero value,
+    !% In order to activate this feature, set <tt>OCTCheckGradient</tt> to some non-zero value,
     !% which will be the finite difference used to numerically compute the gradient.
     !%End
     call loct_parse_float(datasets_check('OCTCheckGradient'), CNST(0.0), oct%check_gradient)
@@ -242,12 +242,12 @@ module opt_control_global_m
     !% kind of mixing that you use, and the parameters that you set, it may or may
     !% not accelerate the convergence, or even spoil the convergence.
     !%
-    !% Using "TypeOfMixing = broyden", "Mixing = 0.1" and "MixNumberSteps = 3" seems
+    !% Using <tt>TypeOfMixing = broyden</tt>, <tt>Mixing = 0.1</tt> and <tt>MixNumberSteps = 3</tt> seems
     !% to work in many cases, but your mileage may vary.
     !%
     !% Note that mixing does not make sense (and is therefore not done, this variable
-    !% being ignored), for some OCT algorithms (in particular, if "OCTMixing" is
-    !% "oct_algorithm_direct" or "oct_algorithm_newuoa").
+    !% being ignored), for some OCT algorithms (in particular, if <tt>OCTScheme</tt> is
+    !% <tt>oct_algorithm_direct</tt> or <tt>oct_algorithm_newuoa</tt>).
     !%End
     call loct_parse_logical(datasets_check('OCTMixing'), .false., oct%use_mixing)
     call messages_print_var_value(stdout, "OCTMixing", oct%use_mixing)
@@ -257,9 +257,9 @@ module opt_control_global_m
     !%Section Calculation Modes::Optimal Control
     !%Default 0.25
     !%Description 
-    !% If you choose "OCTScheme = oct_algorithm_direct" or "OCTScheme = oct_algorithm_newuoa",
+    !% If you choose <tt>OCTScheme = oct_algorithm_direct</tt> or <tt>OCTScheme = oct_algorithm_newuoa</tt>,
     !% the algorithms necessitate an initial "step" to perform the direct search for the
-    !% optimal value. The precise meaning of this "step" differ.
+    !% optimal value. The precise meaning of this "step" differs.
     !%End
     call loct_parse_float(datasets_check('OCTDirectStep'), CNST(0.25), oct%direct_step)
     call messages_print_var_value(stdout, "OCTDirectStep", oct%direct_step)
@@ -272,7 +272,7 @@ module opt_control_global_m
     !% Writes to disk some data during the OCT algorithm at intermediate steps.
     !% This is rather technical and it should be considered only for debugging
     !% purposes. Nevertheless, since the whole OCT infrastructure is at a very
-    !% preliminary developing stage, it is set to true by default.
+    !% preliminary stage of development, it is set to true by default.
     !%End
     call loct_parse_logical(datasets_check('OCTDumpIntermediate'), .true., oct%dump_intermediate)
     call messages_print_var_value(stdout, "OCTDumpIntermediate", oct%dump_intermediate)
@@ -282,9 +282,9 @@ module opt_control_global_m
     !%Section Calculation Modes::Optimal Control
     !%Default 0
     !%Description 
-    !% During an OCT propagation, the code may write down at some time steps (the
-    !% "check points", the wavefunctions. When the inverse backward or forward propagation
-    !% is performed in a following step, the wave function should reverse its path
+    !% During an OCT propagation, the code may write the wavefunctions at some time steps (the
+    !% "check points"). When the inverse backward or forward propagation
+    !% is performed in a following step, the wavefunction should reverse its path
     !% (almost) exactly. This can be checked to make sure that it is the case -- otherwise
     !% one should try reducing the time-step, or altering in some other way the
     !% variables that control the propagation.
@@ -300,12 +300,12 @@ module opt_control_global_m
     !%Section Calculation Modes::Optimal Control
     !%Default false
     !%Description 
-    !% The initial field to start the optimization search is usually given in the inp file,
-    !% through a "TDExternalFields" block. However, you can start from a random guess if you
+    !% The initial field to start the optimization search is usually given in the <tt>inp</tt> file,
+    !% through a <tt>TDExternalFields</tt> block. However, you can start from a random guess if you
     !% set this variable to true.
     !%
     !% Note, however, that this is only valid for the "direct" optimization schemes; moreover
-    !% you still need to provide a "TDExternalFields" block.
+    !% you still need to provide a <tt>TDExternalFields</tt> block.
     !%End
     call loct_parse_logical(datasets_check('OCTRandomInitialGuess'), &
       .false., oct%random_initial_guess)
@@ -329,3 +329,8 @@ module opt_control_global_m
 
  
 end module opt_control_global_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

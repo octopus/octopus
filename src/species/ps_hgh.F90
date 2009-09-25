@@ -598,7 +598,7 @@ contains
     message(1) = '      Done.'
     call write_info(1)
 
-    !  checking normalization of the calculated wave functions
+    !  checking normalization of the calculated wavefunctions
     !do l = 0, psp%l_max_occ
     do n = 1, psp%conf%p
       e = sqrt(sum(psp%g%drdi(2:psp%g%nrval)*psp%rphi(2:psp%g%nrval, n)**2))
@@ -647,7 +647,7 @@ contains
     kbp_unit = io_open(trim(dirname)//'/nonlocal', action='write')
     wav_unit = io_open(trim(dirname)//'/wave', action='write')
 
-    ! Writes down the input file, to be checked agains SHARE_OCTOPUS/PP/HGH/ATOM_NAME.hgh
+    ! Writes down the input file, to be checked against SHARE_OCTOPUS/PP/HGH/ATOM_NAME.hgh
     write(hgh_unit,'(a5,i6,5f12.6)') psp%atom_name, psp%z_val, psp%rlocal, psp%c(1:4)
     write(hgh_unit,'(  11x,4f12.6)') psp%rc(0), (psp%h(0,i,i), i = 1, 3)
     do k = 1, 3

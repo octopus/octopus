@@ -36,10 +36,10 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
   FLOAT :: volume_element
   R_TYPE, allocatable :: psi_global(:)
 
-  call push_sub('mesh_function_inc.Xmf_calculate_gamma')
+  call push_sub('modelmb_density_matrix_inc.Xmf_calculate_gamma')
 
   ! In case of running parallel in domains, we need to operate psi_global, which 
-  ! contains the full wave function after "gathering" all the domains.
+  ! contains the full wavefunction after "gathering" all the domains.
   SAFE_ALLOCATE(psi_global(1:mesh%np_part_global))
   if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)

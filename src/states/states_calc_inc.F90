@@ -126,7 +126,7 @@ subroutine X(states_gram_schmidt_block)(st, nst, m, dim, psi)
   call lalg_cholesky(nst, ss, bof = bof)
   
   if(bof) then
-    message(1) = "Warning: Orthogonalization failed, probably your eigenvectors are not independent"
+    message(1) = "Warning: Orthogonalization failed; probably your eigenvectors are not independent."
     call write_warning(1)
   end if
   
@@ -402,7 +402,7 @@ subroutine X(states_calc_momentum)(gr, st, momentum)
         expect_val_p = X(mf_dotp)(gr%mesh, st%d%dim, &
           st%X(psi)(1:gr%mesh%np, 1:st%d%dim, ist, ik), grad(1:gr%mesh%np, 1:st%d%dim, i))
 
-        ! In the case of real wave functions we do not include the 
+        ! In the case of real wavefunctions we do not include the 
         ! -i prefactor of p = -i \nabla
         if (st%wfs_type == M_REAL) then
           momentum(i, ist, ik) = real( expect_val_p )

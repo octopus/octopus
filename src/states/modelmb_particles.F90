@@ -29,8 +29,8 @@ module modelmb_particles_m
   use hypercube_m
   use loct_m
   use loct_parser_m
-  use messages_m
   use mesh_m
+  use messages_m
   use profiling_m
 
   implicit none
@@ -99,6 +99,8 @@ contains
 subroutine modelmb_particles_nullify(this)
   type(modelmb_particle_t), intent(inout) :: this
 
+  call push_sub('modelmb_particles.modelmb_particles_nullify')
+
   nullify(this%labels_particles)
   nullify(this%particletype)
   nullify(this%nparticles_per_type)
@@ -109,6 +111,8 @@ subroutine modelmb_particles_nullify(this)
   nullify(this%charge_particle)
   nullify(this%labels_densities)
   nullify(this%particle_kept_densities)
+
+  call pop_sub()
 end subroutine modelmb_particles_nullify
 
 
@@ -122,7 +126,7 @@ subroutine modelmb_particles_init (this,gr)
   integer :: ipart, ncols, nline, itmp, jtmp, npar, ntype
   type(block_t) :: blk
 
-  call push_sub('states.modelmb_particles_init')
+  call push_sub('modelmb_particles.modelmb_particles_init')
 
   ! read in scalar dimensions
 
@@ -131,8 +135,8 @@ subroutine modelmb_particles_init (this,gr)
   !%Section States
   !%Default -1
   !%Description
-  !% Number of dimensions for modelmb space 
-  !% Full Ndim = NDimModelmb*NParticleModelmb
+  !% Number of dimensions for modelmb space.
+  !% Full Ndim = <tt>NDimModelmb</tt>*<tt>NParticleModelmb</tt>
   !%
   !%End
   call loct_parse_int(datasets_check('NDimModelmb'), gr%sb%dim, this%ndim)
@@ -143,8 +147,8 @@ subroutine modelmb_particles_init (this,gr)
   !%Section States
   !%Default 0
   !%Description
-  !% Number of particles in modelmb space 
-  !% Full Ndim = NDimModelmb*NParticleModelmb
+  !% Number of particles in modelmb space. 
+  !% Full Ndim = <tt>NDimModelmb</tt>*<tt>NParticleModelmb</tt>
   !%
   !%End
   call loct_parse_int(datasets_check('NParticleModelmb'), 1, this%nparticle)
@@ -155,7 +159,7 @@ subroutine modelmb_particles_init (this,gr)
   !%Section States
   !%Default 1
   !%Description
-  !% Number of different types of particles in modelmb space 
+  !% Number of different types of particles in modelmb space.
   !%
   !%End
   call loct_parse_int(datasets_check('NTypeParticleModelmb'), 1, this%ntype_of_particle)
@@ -178,7 +182,7 @@ subroutine modelmb_particles_init (this,gr)
   !%Type block
   !%Section States
   !%Description
-  !% Characterization of different modelmb particles in gr%mesh%sb%dim dimensional space
+  !% Characterization of different modelmb particles in gr%mesh%sb%dim dimensional space.
   !%
   !% <tt>%DescribeParticlesModelmb
   !% <br>&nbsp;&nbsp; proton   | 1 | 1800. | 1. | fermion
@@ -186,20 +190,20 @@ subroutine modelmb_particles_init (this,gr)
   !% <br>&nbsp;&nbsp; electron | 2 | 1.    | 1. | fermion
   !% <br>%</tt>
   !%
-  !% would tell octopus that there are presently 3 particles, called proton, proton,
+  !% would tell <tt>Octopus</tt> that there are presently 3 particles, called proton, proton,
   !% and electron, with types 1, 1, and 2, and corresponding masses and charges.
   !% All particles should be fermions, and this can be later enforced on the spatial
-  !% part of the wave functions.
+  !% part of the wavefunctions.
   !% The label and charge are presently only for informational purposes and
-  !% are not checked or used in octopus. The interaction has to take the
+  !% are not checked or used in <tt>Octopus</tt>. The interaction has to take the
   !% actual charge into account.
   !%
   !%Option fermion 1
-  !%  Particle is a Fermion
+  !%  Particle is a fermion.
   !%Option boson 2
-  !%  Particle is a Boson
+  !%  Particle is a boson.
   !%Option anyon 3
-  !%  Particle is neither Fermion nor Boson
+  !%  Particle is neither fermion nor boson.
   !%
   !%End
   ! allocate stuff
@@ -218,7 +222,7 @@ subroutine modelmb_particles_init (this,gr)
   this%particletype = 1
   this%mass_particle = M_ONE
   this%charge_particle = M_ONE
-  this%bosonfermion = 1 ! set tofermion
+  this%bosonfermion = 1 ! set to fermion
     
 
   if(loct_parse_block(datasets_check('DescribeParticlesModelmb'), blk)==0) then
@@ -268,18 +272,18 @@ subroutine modelmb_particles_init (this,gr)
   !%Type block
   !%Section States
   !%Description
-  !% choice of which particle densities will be calculated and output, in the
-  !%  modelmb particles scheme
+  !% Choice of which particle densities will be calculated and output, in the
+  !%  modelmb particles scheme.
   !%
   !% <tt>%DensitiestoCalc
   !% <br>&nbsp;&nbsp; proton   | 1
   !% <br>&nbsp;&nbsp; electron | 2
   !% <br>%</tt>
   !%
-  !% would ask octopus to calculate the density corresponding to the 1st
-  !% particle (whose coordinates correspond to dimensions 1 to ndim_modelmb),
+  !% would ask <tt>Octopus</tt> to calculate the density corresponding to the 1st
+  !% particle (whose coordinates correspond to dimensions 1 to <tt>NDimModelmb</tt>),
   !% which is an electron, then that corresponding to the 2nd particle
-  !% (dimensions ndim_modelmb+1 to 2*ndim_modelmb)
+  !% (dimensions <tt>NDimModelmb</tt>+1 to 2*<tt>NDimModelmb</tt>).
   !%
   !%End
   this%ndensities_to_calculate = 0
@@ -318,7 +322,7 @@ end subroutine modelmb_particles_init
 subroutine modelmb_particles_end (this)
   type(modelmb_particle_t),intent(inout) :: this
 
-  call push_sub('states.modelmb_particles_end')
+  call push_sub('modelmb_particles.modelmb_particles_end')
 
   SAFE_DEALLOCATE_P(this%labels_particles)
   SAFE_DEALLOCATE_P(this%particletype)
@@ -340,7 +344,7 @@ subroutine modelmb_particles_copy(modelmb_out, modelmb_in)
   type(modelmb_particle_t), intent(in)  :: modelmb_in
   type(modelmb_particle_t), intent(out) :: modelmb_out
 
-  call push_sub('states.modelmb_particles_copy')
+  call push_sub('modelmb_particles.modelmb_particles_copy')
 
   modelmb_out%ndim = modelmb_in%ndim
   modelmb_out%ntype_of_particle = modelmb_in%ntype_of_particle
@@ -373,7 +377,7 @@ subroutine modelmb_copy_masses (this,masses)
 
   integer :: dimcounter,ipart
 
-  call push_sub('states.modelmb_copy_masses')
+  call push_sub('modelmb_particles.modelmb_copy_masses')
 
   ! copy masses to gr%der%masses
   dimcounter = 0
