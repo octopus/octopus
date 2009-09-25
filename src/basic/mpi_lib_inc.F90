@@ -30,7 +30,7 @@ subroutine X(lmpi_gen_allgatherv)(incount, in, outcount, out, mpi_grp)
   R_TYPE,          intent(out) :: out(:)
   type(mpi_grp_t), intent(in)  :: mpi_grp
 
-  integer              :: mpi_err, i
+  integer              :: mpi_err, inode
   integer, allocatable :: rdispls(:), recvbuf(:), recvcnts(:)
 
   call push_sub('mpi_lib_inc.Xlmpi_gen_allgatherv')
@@ -53,8 +53,8 @@ subroutine X(lmpi_gen_allgatherv)(incount, in, outcount, out, mpi_grp)
   ! (caution: wrong code!):
   ! rdispls(2:mpi_grp%size) = rdispls(1:mpi_grp%size-1)+recvcnts(1:mpi_grp%size-1)
   ! (Took me an hour to find the mistake...)
-  do i = 2, mpi_grp%size
-    rdispls(i) = rdispls(i-1)+recvcnts(i-1)
+  do inode = 2, mpi_grp%size
+    rdispls(inode) = rdispls(inode-1)+recvcnts(inode-1)
   end do
 
   call mpi_debug_in(mpi_grp%comm, C_MPI_ALLGATHERV)

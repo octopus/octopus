@@ -21,13 +21,14 @@
 
 module scf_m
   use datasets_m
-  use energy_m
   use eigensolver_m
+  use energy_m
   use external_pot_m
   use forces_m
   use geometry_m
   use global_m
   use grid_m
+  use h_sys_output_m
   use hamiltonian_m
   use io_m
   use io_function_m
@@ -43,20 +44,19 @@ module scf_m
   use mpi_m
   use mpi_lib_m
   use multigrid_m
-  use h_sys_output_m
   use ob_lippmann_schwinger_m
   use preconditioners_m
   use profiling_m
   use restart_m
   use simul_box_m
   use solids_m
+  use species_m
   use states_m
-  use states_dim_m
   use states_calc_m
+  use states_dim_m
   use units_m
   use v_ks_m
   use varinfo_m
-  use species_m
 
   implicit none
 
@@ -114,7 +114,7 @@ contains
     !%Section SCF::Convergence
     !%Description
     !% Maximum number of SCF iterations. The code will stop even if convergence
-    !% has not been achieved. <tt>0</tt> means unlimited.
+    !% has not been achieved. 0 means unlimited.
     !%End
     call loct_parse_int  (datasets_check('MaximumIter'), 200, scf%max_iter)
 
@@ -207,16 +207,16 @@ contains
     !%Description
     !% Selects what should be mixed during the SCF cycle.
     !%Option potential 1
-    !% The Kohn-Sham potential
+    !% The Kohn-Sham potential.
     !%Option density 2
-    !% The density
+    !% The density.
     !%End
     call loct_parse_int(datasets_check('What2Mix'), MIXDENS, scf%what2mix)
     if(.not.varinfo_valid_option('What2Mix', scf%what2mix)) call input_error('What2Mix')
     call messages_print_var_option(stdout, "What2Mix", scf%what2mix, "what to mix during SCF cycles")
 
     if (scf%what2mix == MIXPOT.and.hm%theory_level==INDEPENDENT_PARTICLES) then
-      message(1) = "Input: Cannot mix the potential with non-interacting particles."
+      message(1) = "Input: Cannot mix the potential for non-interacting particles."
       call write_fatal(1)
     end if
 
@@ -374,7 +374,7 @@ contains
     endif
 
     if ( verbosity_ /= VERB_NO ) then
-      write(message(1),'(a)') 'Info: Starting SCF iteration'
+      write(message(1),'(a)') 'Info: Starting SCF iteration.'
       call write_info(1)
     end if
 
@@ -388,7 +388,7 @@ contains
       else
         ! FIXME: Currently, only the eigensolver or the
         ! Lippmann-Schwinger approach can be used (exclusively),
-        ! i. e. no bound states for open boundaries.
+        ! i.e. no bound states for open boundaries.
         if(gr%sb%open_boundaries) then
           call lippmann_schwinger(scf%eigens, hm, gr, st)
         else

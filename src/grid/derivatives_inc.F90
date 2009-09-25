@@ -17,7 +17,7 @@
 !!
 !! $Id$
 
-! This module calculates the derivatives (gradients, laplacians, etc.) 
+! This module calculates the derivatives (gradients, Laplacians, etc.) 
 ! of a function. Note that the function whose derivative is to be calculated
 ! *has* to be defined (1:m%np_part), while the (1:m%np) values of the derivative
 ! are calculated. This was made to simplify the parallel mode, and has to be
@@ -25,7 +25,7 @@
 
 
 ! ---------------------------------------------------------
-! Set all boundary points in f to zero to implement zero
+! Set all boundary points in ff to zero to implement zero
 ! boundary conditions for the derivatives, in finite system;
 ! or set according to periodic boundary conditions.
 subroutine X(derivatives_batch_set_bc)(der, batch_ff)
@@ -305,7 +305,7 @@ end subroutine X(derivatives_batch_perform)
 subroutine X(derivatives_perform)(op, der, ff, op_ff, ghost_update, set_bc)
   type(nl_operator_t), target, intent(in)    :: op
   type(derivatives_t),         intent(in)    :: der
-  R_TYPE,                      intent(inout) :: ff(:)     ! f(m%np_part)
+  R_TYPE,                      intent(inout) :: ff(:)     ! ff(m%np_part)
   R_TYPE,                      intent(out)   :: op_ff(:)  ! lapl(m%np)
   logical, optional,           intent(in)    :: ghost_update
   logical, optional,           intent(in)    :: set_bc

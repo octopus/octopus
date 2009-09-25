@@ -107,7 +107,7 @@ contains
     !% Which eigensolver to use to obtain the lowest eigenvalues and
     !% eigenfunctions of the Kohn-Sham Hamiltonian. The default is
     !% conjugate gradients (<tt>cg</tt>); when parallelization in states is
-    !% enabled, and <tt>DevelVersion = yes</tt>, the default is <tt>lobpcg</tt>.
+    !% enabled, the default is <tt>lobpcg</tt>.
     !%Option cg 5
     !% Conjugate-gradients algorithm.
     !%Option plan 11
@@ -137,7 +137,7 @@ contains
     !% Multigrid eigensolver (experimental).
     !%End
 
-    if(st%parallel_in_states .and. conf%devel_version) then
+    if(st%parallel_in_states) then
       default_es = RS_LOBPCG
     else
       default_es = RS_CG

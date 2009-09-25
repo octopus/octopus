@@ -228,7 +228,7 @@ contains
     !%Option non_collinear 3
     !%Option spinors 3
     !% The spin-orbitals are two-component spinors. This effectively allows the spin-density to
-    !% arrange non-collinearly - <i>i.e.</i> the magnetization vector is allowed to take different
+    !% be oriented non-collinearly - <i>i.e.</i> the magnetization vector is allowed to take different
     !% directions at different points.
     !%End
     call loct_parse_int(datasets_check('SpinComponents'), UNPOLARIZED, st%d%ispin)
@@ -260,16 +260,21 @@ contains
     !% The number of electrons is
     !% in turn calculated considering the nature of the species supplied in the
     !% <tt>Species</tt> block, and the value of the <tt>ExcessCharge</tt> variable.
-    !% However, one may command <tt>octopus</tt> to put more states, which is necessary if one wants to
+    !% However, one may command <tt>Octopus</tt> to use more states, which is necessary if one wants to
     !% use fractional occupational numbers, either fixed from the beginning through
     !% the <tt>Occupations</tt> block or by prescribing
     !% an electronic temperature with <tt>Smearing</tt>.
     !%
     !% Note that this number is unrelated to <tt>CalculationMode == unocc</tt>.
+    !% <tt>ExtraStates</tt> is used for a self-consistent calculation and
+    !% the usual convergence criteria on the density do not take into account the
+    !% eigenvalues, whereas <tt>unocc</tt> is a non-self-consistent calculation,
+    !% and explicitly considers the eigenvalues of the unoccupied states as the
+    !% convergence criteria.
     !%End
     call loct_parse_int(datasets_check('ExtraStates'), 0, nempty)
     if (nempty < 0) then
-      write(message(1), '(a,i5,a)') "Input: '", nempty, "' is not a valid ExtraStates"
+      write(message(1), '(a,i5,a)') "Input: '", nempty, "' is not a valid value for ExtraStates."
       message(2) = '(0 <= ExtraStates)'
       call write_fatal(2)
     end if
@@ -328,7 +333,7 @@ contains
       end if
       ! If the system is spin-polarized one half of the free states
       ! goes to the spin-up k-index, the other half to the spin-down
-      ! k-index, we therefore divide by st%d%nik.
+      ! k-index; we therefore divide by st%d%nik.
       st%ob_ncs = st%ob_d%nik*st%ob_nst / st%d%nik
       st%ob_ncs = 1
       SAFE_DEALLOCATE_P(st%d%kpoints)
@@ -822,7 +827,7 @@ contains
     call push_sub('states.states_allocate_wfns')
 
     if(associated(st%dpsi).or.associated(st%zpsi)) then
-      message(1) = "Trying to allocate wavefunctions that are already allocated"
+      message(1) = "Trying to allocate wavefunctions that are already allocated."
       call write_fatal(1)
     end if
     

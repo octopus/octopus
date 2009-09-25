@@ -272,7 +272,7 @@ contains
     !%Description
     !% Additive constant c in the iterative calculation of the KS potential
     !%   (v(alpha+1)=rho(alpha)+c)/(rho_target+c)*v(alpha)
-    !% ensures that very small densities do not cause numerical problems
+    !% ensures that very small densities do not cause numerical problems.
     !%End
 
     call loct_parse_float(datasets_check('InvertKSstabilizer'), M_HALF, stabilizer)

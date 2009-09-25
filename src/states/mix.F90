@@ -25,8 +25,9 @@ module mix_m
   use lalg_adv_m
   use lalg_basic_m
   use loct_parser_m
-  use profiling_m
   use messages_m
+  use profiling_m
+  use states_m
   use varinfo_m
 
   implicit none
@@ -49,7 +50,7 @@ module mix_m
     private
     integer  :: type_of_mixing
 
-    FLOAT :: alpha              !  vnew = (1-alpha)*vin + alpha*vout
+    FLOAT :: alpha              ! vnew = (1-alpha)*vin + alpha*vout
 
     integer :: ns               ! number of steps used to extrapolate the new vector
 
@@ -72,11 +73,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine mix_init(smix, d1, d2, d3, def_, func_type, prefix_)
-    type(mix_t),       intent(out) :: smix
-    integer,           intent(in)  :: d1, d2, d3
-    integer, optional, intent(in)  :: def_
-    integer, optional, intent(in)  :: func_type
-    character(len=*), optional, intent(in) :: prefix_
+    type(mix_t),                intent(out) :: smix
+    integer,                    intent(in)  :: d1, d2, d3
+    integer,          optional, intent(in)  :: def_
+    integer,          optional, intent(in)  :: func_type
+    character(len=*), optional, intent(in)  :: prefix_
 
     integer :: def, func_type_
     character(len=32) :: prefix
@@ -99,17 +100,17 @@ contains
     !%Default broyden
     !%Section SCF::Mixing
     !%Description
-    !% The scheme scheme used to produce, at each iteration in the self-consistent cycle
+    !% The scheme used to produce, at each iteration in the self-consistent cycle
     !% that attempts to solve the Kohn-Sham equations, the input density from the value
     !% of the input and output densities of previous iterations.
     !%Option linear 0
     !% Simple linear mixing.
     !%Option gr_pulay 1
-    !% "Guaranteed-reduction" Pulay scheme [D. R. Bowler and M. J. Gillan, Chem. Phys. 
-    !% Lett. 325, 473 (2000)].
+    !% "Guaranteed-reduction" Pulay scheme [D. R. Bowler and M. J. Gillan, <i>Chem. Phys. 
+    !% Lett.</i> <b>325</b>, 473 (2000)].
     !%Option broyden 2
-    !% Broyden scheme [C. G Broyden, Math. Comp. 19, 577 (1965); 
-    !% D. D. Johnson, Phys. Rev. B 38, 12807 (1988)].
+    !% Broyden scheme [C. G Broyden, <i>Math. Comp.</i> <b>19</b>, 577 (1965); 
+    !% D. D. Johnson, <i>Phys. Rev. B</i> <b>38</b>, 12807 (1988)].
     !%End
     call loct_parse_int(datasets_check(trim(prefix)//'TypeOfMixing'), def, smix%type_of_mixing)
     if(.not.varinfo_valid_option('TypeOfMixing', smix%type_of_mixing)) call input_error('TypeOfMixing')
@@ -120,7 +121,7 @@ contains
     !%Default 0.3
     !%Section SCF::Mixing
     !%Description
-    !% Both the linear and the Broyden scheme depend on a "mixing parameter", set by this variable.  Must be 0 < Mixing <= 1.
+    !% Both the linear and the Broyden scheme depend on a "mixing parameter", set by this variable.  Must be 0 < <tt>Mixing</tt> <= 1.
     !%End
     if (smix%type_of_mixing == MIX_LINEAR .or. smix%type_of_mixing == MIX_BROYDEN) then
       call loct_parse_float(datasets_check(trim(prefix)//'Mixing'), CNST(0.3), smix%alpha)
@@ -132,8 +133,8 @@ contains
     !%Default 3
     !%Section SCF::Mixing
     !%Description
-    !% In the Broyden and in the GR-Pulay scheme, the new input density or potential is constructed
-    !% from the values of densities/potentials of a given number of previous iterations.
+    !% In the Broyden and GR-Pulay schemes, the new input density or potential is constructed
+    !% from the values of the densities/potentials of a given number of previous iterations.
     !% This number is set by this variable. Must be at least 1.
     !%End
     if (smix%type_of_mixing == MIX_GRPULAY .or. smix%type_of_mixing == MIX_BROYDEN) then
@@ -221,14 +222,17 @@ contains
   subroutine mix_set_mixing(smix, newmixing)
     type(mix_t), intent(inout) :: smix
     FLOAT, intent(in):: newmixing
+
+    call push_sub('mix.mix_set_mixing')
     
     if(smix%type_of_mixing == MIX_LINEAR) then
       smix%alpha = newmixing
     else
-    !  message(1) = "Error: Mixing can only be adjusted in linear mixing scheme"
+    !  message(1) = "Error: Mixing can only be adjusted in linear mixing scheme."
     !  call write_fatal(1)
     endif
     
+    call pop_sub()
   end subroutine mix_set_mixing
 
 #include "undef.F90"

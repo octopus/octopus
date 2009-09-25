@@ -47,7 +47,7 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, time, kinetic_on
   if(present(kinetic_only)) kinetic_only_ = kinetic_only
 
   if(present(time).and.hm%d%cdft) then
-    message(1) = "TDCDFT not yet implemented"
+    message(1) = "TDCDFT not yet implemented."
     call write_fatal(1)
   end if
   
@@ -91,7 +91,7 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, time, kinetic_on
     end do
   end do
 
-  ! start the calculation of the laplacian
+  ! start the calculation of the Laplacian
   call X(derivatives_batch_start)(gr%der%lapl, gr%der, epsib, laplb, handle, set_bc = .false.)
     
   if (.not. kinetic_only_) then
@@ -108,7 +108,7 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, time, kinetic_on
 
     if (kinetic_only_) hpsi(1:gr%mesh%np, 1:hm%d%dim) = M_ZERO
 
-    ! finish the calculation of the laplacian
+    ! finish the calculation of the Laplacian
     call profiling_in(prof_kinetic, "KINETIC")
     do idim = 1, hm%d%dim
 #ifdef R_TREAL

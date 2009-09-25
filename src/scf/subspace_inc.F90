@@ -84,7 +84,7 @@ subroutine X(subspace_diag)(gr, st, hm, ik, eigenval, psi, diff)
       end do
     end do
 
-    ! Diagonalize the hamiltonian in the subspace.
+    ! Diagonalize the Hamiltonian in the subspace.
     call lalg_eigensolve(st%nst, h_subspace, eigenval(:))
 
     ! Calculate the new eigenfunctions as a linear combination of the
@@ -146,7 +146,7 @@ end subroutine X(subspace_diag)
 #ifdef HAVE_MPI
 ! --------------------------------------------------------- 
 ! This routine diagonalises the Hamiltonian in the subspace defined by
-! the states, this version is aware of parallelization in states but
+! the states; this version is aware of parallelization in states but
 ! consumes more memory.
 !
 subroutine X(subspace_diag_par_states)(gr, st, hm, ik, eigenval, psi, diff)
@@ -155,11 +155,11 @@ subroutine X(subspace_diag_par_states)(gr, st, hm, ik, eigenval, psi, diff)
   type(hamiltonian_t), intent(inout) :: hm
   integer,             intent(in)    :: ik
   FLOAT,               intent(out)   :: eigenval(:)
-  R_TYPE,              intent(inout) :: psi(:, :, :)
+  R_TYPE,              intent(inout) :: psi(1:gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end)
   FLOAT, optional,     intent(out)   :: diff(1:st%nst)
 
-  R_TYPE, allocatable :: h_subspace(:,:), f(:,:,:)
-  integer             :: i
+  R_TYPE, allocatable :: h_subspace(:,:), ff(:,:,:)
+  integer             :: ist
   FLOAT               :: nrm2
 #if defined(HAVE_MPI)
   integer             :: tmp
@@ -169,36 +169,36 @@ subroutine X(subspace_diag_par_states)(gr, st, hm, ik, eigenval, psi, diff)
   call push_sub('subspace_inc.Xsubspace_diag_par_states')
 
   SAFE_ALLOCATE(h_subspace(1:st%nst, 1:st%nst))
-  SAFE_ALLOCATE(f(1:gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
+  SAFE_ALLOCATE(ff(1:gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
 
   ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
-  do i = st%st_start, st%st_end
-    call X(hamiltonian_apply)(hm, gr, psi(:, :, i), f(:, :, i), i, ik)
+  do ist = st%st_start, st%st_end
+    call X(hamiltonian_apply)(hm, gr, psi(:, :, ist), ff(:, :, ist), ist, ik)
   end do
   call states_blockt_mul(gr%mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
-       psi(:, :, :), f, h_subspace, symm=.true.)
+       psi(:, :, :), ff, h_subspace, symm=.true.)
 
-  ! Diagonalize the hamiltonian in the subspace.
+  ! Diagonalize the Hamiltonian in the subspace.
   call lalg_eigensolve(st%nst, h_subspace, eigenval(:))
 
-  ! The new states are the given by the eigenvectors of the matrix.
-  f(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end) = psi(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end)
+  ! The new states are given by the eigenvectors of the matrix.
+  ff(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end) = psi(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end)
 
   call states_block_matr_mul(gr%mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
-       f, h_subspace, psi(:, :, :))
+       ff, h_subspace, psi(:, :, :))
 
   ! Renormalize.
-  do i = st%st_start, st%st_end
-    nrm2 = X(mf_nrm2)(gr%mesh, st%d%dim, psi(:, :, i))
-    psi(1:gr%mesh%np, 1:st%d%dim, i) = psi(1:gr%mesh%np, 1:st%d%dim, i)/nrm2
+  do ist = st%st_start, st%st_end
+    nrm2 = X(mf_nrm2)(gr%mesh, st%d%dim, psi(:, :, ist))
+    psi(1:gr%mesh%np, 1:st%d%dim, ist) = psi(1:gr%mesh%np, 1:st%d%dim, ist)/nrm2
   end do
 
   ! Recalculate the residues if requested by the diff argument.
   if(present(diff)) then 
-    do i = st%st_start, st%st_end
-      call X(hamiltonian_apply)(hm, gr, psi(:, :, i) , f(:, :, st%st_start), i, ik)
-      diff(i) = X(states_residue)(gr%mesh, st%d%dim, f(:, :, st%st_start), eigenval(i), &
-           psi(:, :, i))
+    do ist = st%st_start, st%st_end
+      call X(hamiltonian_apply)(hm, gr, psi(:, :, ist) , ff(:, :, st%st_start), ist, ik)
+      diff(ist) = X(states_residue)(gr%mesh, st%d%dim, ff(:, :, st%st_start), eigenval(ist), &
+           psi(:, :, ist))
     end do
 
 #if defined(HAVE_MPI)
@@ -209,7 +209,7 @@ subroutine X(subspace_diag_par_states)(gr, st, hm, ik, eigenval, psi, diff)
 #endif
   end if
   
-  SAFE_DEALLOCATE_A(f)
+  SAFE_DEALLOCATE_A(ff)
   SAFE_DEALLOCATE_A(h_subspace)
   
   call pop_sub()

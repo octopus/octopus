@@ -367,7 +367,7 @@ contains
     character(len=*), intent(in) :: file
     integer,          intent(in) :: line
 
-    write(message(1), '(a,i10,3a,i5)') "Failed to allocate ", size, " words in file '", trim(file), "' line ", line
+    write(message(1), '(a,i14,3a,i5)') "Failed to allocate ", size, " words in file '", trim(file), "' line ", line
     call write_fatal(1)
 
   end subroutine alloc_error

@@ -17,7 +17,7 @@
 !!
 !! $Id: eigen.F90 3030 2007-06-25 16:45:05Z marques $
   
-! Implementation of the locally optimal block preconditioned conjugate
+! Implementation of the locally optimal block preconditioned conjugate-
 ! gradients algorithm.
 
 #include "global.h"
@@ -27,8 +27,8 @@
 
 
 ! ---------------------------------------------------------
-! Driver for the LOBPCG eigensolver that performs a per block,
-! per k-point iteration.
+! Driver for the LOBPCG eigensolver that performs a per-block,
+! per-k-point iteration.
   subroutine X(eigensolver_lobpcg)(gr, st, hm, pre, tol, niter, converged, ik, diff, block_size, verbose)
     type(grid_t),           intent(inout) :: gr
     type(states_t),         intent(inout) :: st
@@ -49,7 +49,7 @@
     FLOAT, allocatable :: ldiff(:)
 #endif
 
-    call push_sub('eigen_lobpcg_inc.Xeigen_solver_lobpcg')
+    call push_sub('eigen_lobpcg_inc.Xeigensolver_lobpcg')
 
     verbose_ = .false.
     if(present(verbose)) then
@@ -80,6 +80,9 @@
       end if
       constr_start = st%st_start
       constr_end   = ib-1
+      ! FIXME: this setup for constr_start and constr_end is almost certainly not correct
+      ! it makes the first block always have constr_end = 0, which leads to errors in
+      ! an MPI_Allreduce in X(lobpcg) later.
 
       n_matvec = maxiter
 
@@ -116,7 +119,7 @@
 !
 ! A. Knyazev. Toward the Optimal Preconditioned Eigensolver: Locally
 ! Optimal Block Preconditioned Conjugate Gradient Method. SIAM
-! Journal on Scientific Computing, 23(2):517??541, 2001.
+! Journal on Scientific Computing, 23(2):517-541, 2001.
 !
 ! A. V. Knyazev, I. Lashuk, M. E. Argentati, and E. Ovchin-
 ! nikov. Block Locally Optimal Preconditioned Eigenvalue Xolvers
@@ -146,7 +149,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   logical, optional,      intent(in)    :: verbose
 
   integer :: nps   ! Number of points per state.
-  integer :: nst   ! Number of eigenstates (i. e. the blocksize).
+  integer :: nst   ! Number of eigenstates (i.e. the blocksize).
   integer :: lnst  ! Number of local eigenstates.
 
   integer :: ist, i, j, iter, blks, maxiter, nconstr
@@ -174,7 +177,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   R_TYPE, allocatable         :: dir(:, :, :)     ! Conjugate directions.
   R_TYPE, allocatable         :: h_dir(:, :, :)   ! H dir.
   R_TYPE, allocatable         :: h_psi(:, :, :)   ! H |psi>.
-  FLOAT, allocatable          :: eval(:)          ! The eigenvalues of the current block.
+  FLOAT,  allocatable          :: eval(:)         ! The eigenvalues of the current block.
   R_TYPE, allocatable         :: gram_h(:, :)     ! Gram matrix for Hamiltonian.
   R_TYPE, allocatable         :: gram_i(:, :)     ! Gram matrix for unit matrix.
   R_TYPE, allocatable         :: gram_block(:, :) ! Space to construct the Gram matrix blocks.
@@ -326,7 +329,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
 
     ! Check for convergence. If converged, quit the eigenpair iteration loop.
     call X(lobpcg_unconv_ev)
-    if(nuc.eq.0) then
+    if(lnuc.eq.0) then
       exit iteration
     end if
 
@@ -366,7 +369,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     call X(lobpcg_orth)(st_start, st_end, res, no_bof)
     ! FIXME: a proper restart should be initiated here.
     if(no_bof.and.verbose_) then
-      message(1) = 'Bad problem: orthonormalization of residuals failed.'
+      message(1) = 'Big problem: orthonormalization of residuals failed.'
       message(2) = 'Quitting eigensolver iteration.'
       write(message(3), '(a,i6)') 'in iteration #', iter
       call write_warning(3)
@@ -635,7 +638,7 @@ contains
     luc(1:lnuc) = new_uc(1:lnuc)
 
 #if defined(HAVE_MPI)
-    ! Update set of unconverged vectors an all nodes.
+    ! Update set of unconverged vectors on all nodes.
     if(st%parallel_in_states) then
       call lmpi_gen_allgatherv(lnuc, luc, nuc, uc, st%mpi_grp)
     end if
