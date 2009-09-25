@@ -21,26 +21,26 @@
 
 module system_m
   use calc_mode_m
+  use elf_m
   use energy_m
   use geometry_m
   use global_m
   use grid_m
+  use h_sys_output_m
   use hamiltonian_m
+  use io_function_m
   use mesh_m
   use messages_m
   use modelmb_particles_m
   use mpi_m
   use multicomm_m
-  use h_sys_output_m
-  use io_function_m
-  use profiling_m
   use poisson_m
+  use profiling_m
   use simul_box_m
   use states_m
   use states_dim_m
   use units_m
   use v_ks_m
-  use elf_m
 
   implicit none
 

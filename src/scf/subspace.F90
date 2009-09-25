@@ -28,7 +28,6 @@ module subspace_m
   use lalg_adv_m
   use lalg_basic_m
   use loct_parser_m
-  use varinfo_m
   use math_m
   use mesh_m
   use mesh_function_m
@@ -40,8 +39,9 @@ module subspace_m
   use preconditioners_m
   use profiling_m
   use states_m
-  use states_calc_m
   use states_block_m
+  use states_calc_m
+  use varinfo_m
 
   implicit none
 

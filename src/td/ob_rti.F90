@@ -176,10 +176,10 @@ contains
     end if
     ob%max_mem_coeffs = min(ob%max_mem_coeffs, max_iter)
     if((iand(ob%additional_terms, SRC_TERM_FLAG).ne.0).and.(ob%max_mem_coeffs.ne.max_iter)) then
-      write(message(1), '(a,i6,a)') "Input OpenBoundariesMaxMemCoeffs: '", ob%max_mem_coeffs, "' is not equal TDMaximumIter."
+      write(message(1), '(a,i6,a)') "Input OpenBoundariesMaxMemCoeffs: '", ob%max_mem_coeffs, "' is not equal to TDMaximumIter."
       message(2) = 'This is an experimental parameter, so handle with care.'
-      message(3) = 'If an open system should be simulated the source term should be'
-      message(4) = 'switched of, otherwise strange behavior can occur.'
+      message(3) = 'If an open system is being simulated, the source term should be'
+      message(4) = 'switched off, or strange behavior can occur.'
       call write_warning(4)
     end if
 

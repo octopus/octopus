@@ -20,21 +20,21 @@
 #include "global.h"
 
 program oct_test
-  use string_m
-  use global_m
-  use messages_m
   use datasets_m
+  use fft_m
+  use global_m
+  use io_m
   use loct_m
   use loct_parser_m
-  use io_m
-  use profiling_m
-  use varinfo_m
-  use fft_m
-  use units_m
+  use messages_m
   use mpi_m
   use multicomm_m
-  use system_m
   use poisson_m
+  use profiling_m
+  use string_m
+  use system_m
+  use units_m
+  use varinfo_m
 
   implicit none
 

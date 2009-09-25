@@ -63,7 +63,7 @@ module profiling_m
   !you want to profile. The objects need not be destroyed as this is
   !done by profiling_end.
   !
-  !This module work in the following way: 
+  !This module works in the following way: 
   !
   !Each profile_t object measures two times: 
   !
@@ -195,27 +195,29 @@ contains
   subroutine profiling_init()
     integer :: ii
 
+    call push_sub('profiling.profiling_init')
+
     !%Variable ProfilingMode
     !%Default no
     !%Type integer
     !%Section Execution::Optimization
     !%Description
-    !% Use this variable to run octopus in profiling mode. In this mode
-    !% octopus records time spent in certain areas of the code and
+    !% Use this variable to run <tt>Octopus</tt> in profiling mode. In this mode
+    !% <tt>Octopus</tt> records the time spent in certain areas of the code and
     !% the number of times this code is executed. These numbers
     !% are written in <tt>./profiling.NNN/profiling.nnn</tt> with <tt>nnn</tt> being the
     !% node number (<tt>000</tt> in serial) and <tt>NNN</tt> the number of processors.
     !% This is mainly for development purposes. Note, however, that
-    !% octopus should be compiled with --disable-debug to do proper
+    !% <tt>Octopus</tt> should be compiled with <tt>--disable-debug</tt> to do proper
     !% profiling.
     !%Option no 0
     !% No profiling information is generated.
     !%Option prof_time 1
     !% Profile the time spent in defined profiling regions.
     !%Option prof_memory 2
-    !% Additionally to time, memory usage is reported.
+    !% As well as the time, memory usage is reported.
     !%Option prof_memory_full 4
-    !% Additionally to time, memory usage is reported.
+    !% As well as the time, full memory usage is reported.
     !%End
 
     call loct_parse_int('ProfilingMode', 0, prof_vars%mode)
@@ -236,8 +238,6 @@ contains
       prof_vars%mode = ior(prof_vars%mode, PROFILING_MEMORY)
     end if
 
-    call push_sub('profiling.profiling_init')
-
     ! initialize memory profiling
     if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) then
       prof_vars%alloc_count   = 0
@@ -256,8 +256,9 @@ contains
       !%Type integer
       !%Section Execution::Optimization
       !%Description
-      !% If positive, octopus will stop if more memory than MemoryLimit is requested (in kb).
-      !% Note that this variable only works when ProfilingMode = prof_memory(_full)
+      !% If positive, <tt>Octopus</tt> will stop if more memory than <tt>MemoryLimit</tt>
+      !% is requested (in kb). Note that this variable only works when 
+      !% <tt>ProfilingMode = prof_memory(_full)</tt>.
       !%End
       call loct_parse_int('MemoryLimit', -1, ii)
       prof_vars%memory_limit = int(ii, 8)*1024
@@ -278,6 +279,8 @@ contains
   contains
     ! ---------------------------------------------------------
     subroutine init_profiles
+      call push_sub('profiling.profiling_init.init_profiles')
+
       call profile_init(C_PROFILING_COMPLETE_DATASET, 'COMPLETE_DATASET')
       call profile_init(C_PROFILING_XC_OEP,           'XC_OEP')
       call profile_init(C_PROFILING_XC_EXX,           'XC_EXX')
@@ -296,11 +299,15 @@ contains
       call profile_init(C_PROFILING_LOBPCG_INV,       'LOBPCG_INV')
       call profile_init(C_PROFILING_LOBPCG_COPY,      'LOBPCG_COPY')
       call profile_init(C_PROFILING_LOBPCG_LOOP,      'LOBPCG_LOOP')
+
+      call pop_sub()
     end subroutine init_profiles
 
     ! ---------------------------------------------------------
     subroutine get_output_dir()
       character(len=6) :: dirnum
+
+      call push_sub('profiling.profiling_init.get_output_dir')
 
       dirnum  = 'ser '
       prof_vars%file_number = '0000'
@@ -313,6 +320,8 @@ contains
       prof_vars%output_dir = 'profiling.'//trim(dirnum)
 
       if(mpi_grp_is_root(mpi_world)) call io_mkdir(trim(prof_vars%output_dir))
+
+      call pop_sub()
     end subroutine get_output_dir
 
   end subroutine profiling_init
@@ -324,6 +333,7 @@ contains
     real(8), parameter :: megabyte = 1048576.0_8
 
     if(.not. in_profiling_mode) return
+    call push_sub('profiling.profiling_end')
 
 #ifdef HAVE_PAPI
     call papi_end()
@@ -361,6 +371,7 @@ contains
       call io_close(prof_vars%mem_iunit)
     end if
 
+    call pop_sub()
   end subroutine profiling_end
 
 
@@ -370,6 +381,8 @@ contains
     type(profile_t), target, intent(out)   :: this
     character(*),            intent(in)    :: label 
     
+    call push_sub('profiling.profile_init')
+
     this%label = label
     this%total_time = M_ZERO
     this%self_time  = M_ZERO
@@ -381,7 +394,9 @@ contains
     this%active = .false.
     nullify(this%parent)
 
-    if(.not. in_profiling_mode) return
+    if(.not. in_profiling_mode) then
+      call pop_sub(); return
+    endif
 
     prof_vars%last_profile = prof_vars%last_profile + 1
 
@@ -390,20 +405,29 @@ contains
     prof_vars%profile_list(prof_vars%last_profile)%p => this
     this%initialized = .true.
     
+    call pop_sub()
   end subroutine profile_init
 
 
   ! ---------------------------------------------------------
   subroutine profile_end(this)
     type(profile_t), intent(inout) :: this
+
+    call push_sub('profiling.profile_end')
     this%initialized = .false.
+
+    call pop_sub()
   end subroutine profile_end
 
 
   ! ---------------------------------------------------------
   logical function profile_is_initialized(this)
     type(profile_t), intent(in)   :: this
+
+    call push_sub('profiling.profile_is_initialized')
     profile_is_initialized = this%initialized
+
+    call pop_sub()
   end function profile_is_initialized
 
 
@@ -421,6 +445,7 @@ contains
 #endif
 
     if(.not.in_profiling_mode) return
+    call push_sub('profiling.profiling_in')
 
     !$omp master
     if(.not. this%initialized) then 
@@ -453,6 +478,8 @@ contains
     prof_vars%current%p => this
     this%entry_time = now
     !$omp end master
+
+    call pop_sub()
   end subroutine profiling_in
 
 
@@ -470,6 +497,7 @@ contains
 #endif
     
     if(.not.in_profiling_mode) return
+    call push_sub('profiling.profiling_out')
 
     !$omp master
     ASSERT(this%active)
@@ -507,6 +535,8 @@ contains
       nullify(prof_vars%current%p)
     end if
     !$omp end master
+
+    call pop_sub()
   end subroutine profiling_out
 
 
@@ -694,7 +724,7 @@ contains
     end if
 
     write(iunit, '(2a)')                                                                                    &
-      '                                                             ACCUMULATIVE TIME                   |', &
+      '                                                              CUMULATIVE TIME                    |', &
       '                  SELF TIME'
     write(iunit, '(2a)')                                                                                    &
       '                                            -----------------------------------------------------|', &
@@ -742,6 +772,8 @@ contains
 
     integer            :: ii, jj, nn
     
+    call push_sub('profiling.profiling_make_position_str')
+
     jj = len(var)
     if(var(jj:jj) == ')') then
       nn = 1
@@ -760,6 +792,7 @@ contains
     write(str, '(4a,i5,a)') var(1:jj), "(", trim(file), ":", line, ")"
     call compact(str)
 
+    call pop_sub()
   end subroutine profiling_make_position_str
 
 
@@ -774,6 +807,8 @@ contains
     character(len=256) :: str
     integer(8) :: mem
     
+    call push_sub('profiling.profiling_memory_log')
+
     call profiling_make_position_str(var, file, line, str)
 
     ! get number of pages
@@ -782,6 +817,7 @@ contains
     write(prof_vars%mem_iunit, '(f16.6,1x,a,3i16,1x,a)') loct_clock() - prof_vars%start_time, &
          trim(type), size, prof_vars%total_memory, mem, trim(str)
 
+    call pop_sub()
   end subroutine profiling_memory_log
 
 
@@ -795,6 +831,8 @@ contains
     integer :: ii, jj
     integer(8) :: size
     character(len=256) :: str
+
+    call push_sub('profiling.profiling_memory_allocate')
 
     size = size_ ! make a copy that we can change
 
@@ -851,6 +889,7 @@ contains
       end if
     end do
     
+    call pop_sub()
   end subroutine profiling_memory_allocate
 
 
@@ -861,6 +900,8 @@ contains
     integer,          intent(in) :: line
     integer(8),       intent(in) :: size
     
+    call push_sub('profiling.profiling_memory_deallocate')
+
     prof_vars%dealloc_count  = prof_vars%dealloc_count + 1
     prof_vars%total_memory   = prof_vars%total_memory - size
 
@@ -868,6 +909,7 @@ contains
       call profiling_memory_log('D ', var, file, line, -size)
     end if
 
+    call pop_sub()
   end subroutine profiling_memory_deallocate
  
 
