@@ -266,7 +266,7 @@ contains
     !Initialize external potential
     call epot_init(hm%ep, gr, geo, hm%d%ispin)
 
-    !Static magnetic field requires complex wave-functions
+    !Static magnetic field requires complex wavefunctions
     if (associated(hm%ep%B_field) .or. gauge_field_is_applied(hm%ep%gfield)) wfs_type = M_CMPLX
 
     call loct_parse_logical(datasets_check('CalculateSelfInducedMagneticField'), .false., hm%self_induced_magnetic)

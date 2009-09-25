@@ -118,7 +118,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
           end do
         endif
        
-        ! calculate the gradients of the wave-functions
+        ! calculate the gradients of the wavefunctions
         ! and set boundary conditions in preparation for applying projectors
         call X(derivatives_grad)(gr%fine%der, psi(:, idim), grad_psi(:, :, idim), set_bc = .false.)
         do idir = 1, gr%mesh%sb%dim

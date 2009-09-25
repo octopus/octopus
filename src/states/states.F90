@@ -187,7 +187,7 @@ contains
     nullify(st%d%kpoints, st%d%kweights)
     nullify(st%st_range, st%st_num)
 
-    ! By default, calculations use real wave-functions
+    ! By default, calculations use real wavefunctions
     st%wfs_type = M_REAL
 
     call modelmb_particles_nullify(st%modelmbparticles)
@@ -234,7 +234,7 @@ contains
     call loct_parse_int(datasets_check('SpinComponents'), UNPOLARIZED, st%d%ispin)
     if(.not.varinfo_valid_option('SpinComponents', st%d%ispin)) call input_error('SpinComponents')
     call messages_print_var_option(stdout, 'SpinComponents', st%d%ispin)
-    ! Use of Spinors requires complex wave-functions
+    ! Use of spinors requires complex wavefunctions.
     if (st%d%ispin == SPINORS) st%wfs_type = M_CMPLX
 
 

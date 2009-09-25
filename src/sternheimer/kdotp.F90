@@ -24,16 +24,16 @@ module kdotp_m
   use geometry_m
   use global_m
   use grid_m
-  use hamiltonian_m
   use h_sys_output_m
+  use hamiltonian_m
   use io_m
   use io_function_m
   use kdotp_calc_m
-  use lalg_basic_m
   use lalg_adv_m
-  use loct_parser_m
+  use lalg_basic_m
   use linear_response_m
   use linear_solver_m
+  use loct_parser_m
   use math_m
   use mesh_m
   use mesh_function_m
@@ -63,7 +63,7 @@ module kdotp_m
   type kdotp_t
     type(pert_t) :: perturbation
 
-    FLOAT, pointer :: eff_mass_inv(:, :, :, :)  ! inverse effective mass tensor
+    FLOAT, pointer :: eff_mass_inv(:, :, :, :)  ! inverse effective-mass tensor
                                                 ! (ik, ist, idir1, idir2)
 
     type(lr_t), pointer :: lr(:,:) ! linear response for (gr%mesh%sb%dim,1)
@@ -122,7 +122,7 @@ contains
     kdotp_vars%lr(1:gr%mesh%sb%dim, 1:1)%nst = sys%st%nst
 
     ! setup Hamiltonian
-    message(1) = 'Info: Setting up Hamiltonian for linear response'
+    message(1) = 'Info: Setting up Hamiltonian for linear response.'
     call write_info(1)
     call system_h_setup(sys, hm)
     
@@ -172,7 +172,7 @@ contains
         SAFE_DEALLOCATE_A(orth_mask)
       endif
 
-      ! load wave-functions
+      ! load wavefunctions
       if(.not.fromScratch) then
          str_tmp =  kdotp_wfs_tag(idir)
          write(dirname,'(3a)') KDOTP_DIR, trim(str_tmp), '_1'
@@ -181,7 +181,7 @@ contains
                ierr, lr=kdotp_vars%lr(idir, 1))
           
           if(ierr.ne.0) then
-             message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//trim(dirname)//"'"
+             message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//trim(dirname)//"'"
              call write_warning(1)
           end if
           
@@ -283,6 +283,7 @@ contains
       !%Section Linear Response::KdotP
       !%Description
       !% Imaginary frequency added to Sternheimer equation which may improve convergence.
+      !% Not recommended.
       !%End
 
       call loct_parse_float(datasets_check('KdotP_Eta'), M_ZERO, kdotp_vars%eta)
@@ -294,12 +295,12 @@ contains
       !%Section Linear Response::KdotP
       !%Description
       !% Initial values assigned to linear-response wavefunctions. Only used if
-      !% FromScratch = yes, since otherwise initial values are read from restart directory.
+      !% <tt>FromScratch = yes</tt>, since otherwise initial values are read from restart directory.
       !%Option zero 0
       !% The initial values are zero.
       !%Option nondispersive 1
-      !% The initial values are the exact solutions in the limit of no dispersion, i.e. 
-      !% non-interacting unit cells: -i (d/dk) |u> = r |u>
+      !% The initial values are the exact solutions in the limit of no dispersion, <i>i.e.</i> 
+      !% non-interacting unit cells: -i (d/dk) |u> = r |u>.
       !%End
 
       call loct_parse_int(datasets_check('KdotP_Initialization'), 0, kdotp_vars%initialization)
@@ -309,7 +310,7 @@ contains
       !%Default true
       !%Section Linear Response::KdotP
       !%Description
-      !% If true, uses kdotp perturbations of ground-state wavefunctions
+      !% If true, uses <tt>kdotp</tt> perturbations of ground-state wavefunctions
       !% to calculate effective masses.
       !%End      
 
@@ -331,17 +332,17 @@ contains
       call messages_print_stress(stdout, trim(message(1)))
 
       if (kdotp_vars%occ_solution_method == 0) then
-        message(1) = 'Occupied solution method: Sternheimer equation'
+        message(1) = 'Occupied solution method: Sternheimer equation.'
       else
-        message(1) = 'Occupied solution method: sum over states'
+        message(1) = 'Occupied solution method: sum over states.'
       endif
 
       if (.not. fromScratch) then
-        message(2) = 'k.p initialization: restart wavefunctions'
+        message(2) = 'k.p initialization: restart wavefunctions.'
       else if (kdotp_vars%initialization == 0) then
-        message(2) = 'k.p initialization: zero'
+        message(2) = 'k.p initialization: zero.'
       else
-        message(2) = 'k.p initialization: non-dispersive solutions'
+        message(2) = 'k.p initialization: non-dispersive solutions.'
       endif
 
       call write_info(2)
@@ -413,7 +414,7 @@ contains
       if (.not. kdotp_vars%ok) write(iunit, '(a)') "# WARNING: not converged"      
       
       write(iunit,'(a)')
-      write(iunit,'(a)') '# Inverse effective mass tensors'
+      write(iunit,'(a)') '# Inverse effective-mass tensors'
       do ist = 1, st%nst
         write(iunit,'(a)')
         tmp = int2str(ist)
@@ -423,7 +424,7 @@ contains
       enddo
       
       write(iunit,'(a)')
-      write(iunit,'(a)') '# Effective mass tensors'
+      write(iunit,'(a)') '# Effective-mass tensors'
       do ist = 1, st%nst
         write(iunit,'(a)')
         tmp = int2str(ist)

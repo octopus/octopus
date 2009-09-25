@@ -77,10 +77,10 @@ contains
     end if
 
     if(.not.fromScratch) then
-      ! load wave-functions
+      ! load wavefunctions
       call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr, read_occ=sys%st%fixed_occ)
       if(ierr.ne.0) then
-        message(1) = "Could not load wave-functions from '"//trim(restart_dir)//GS_DIR//"'"
+        message(1) = "Could not load wavefunctions from '"//trim(restart_dir)//GS_DIR//"'"
         message(2) = "Starting from scratch!"
         call write_warning(2)
         fromScratch = .true.
@@ -94,8 +94,8 @@ contains
 #endif
 
     if(fromScratch) then
-      ! We do not compute the density from the random wave-functions. 
-      ! Instead, we try to get a better guess
+      ! We do not compute the density from the random wavefunctions. 
+      ! Instead, we try to get a better guess.
 
       call guess_density(sys%gr%fine%mesh, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
         sys%st%d%spin_channels, sys%st%rho)
@@ -126,14 +126,14 @@ contains
       !%Description
       !% Before starting a SCF calculation, <tt>Octopus</tt> can perform
       !% a LCAO calculation. These can provide <tt>Octopus</tt> with a good set
-      !% of initial wave-functions and with a new guess for the density.
-      !% (Up to current version, only a minimal basis set used.)
+      !% of initial wavefunctions and with a new guess for the density.
+      !% (Up to the current version, only a minimal basis set is used.)
       !%Option lcao_none 0
       !% Do not perform a LCAO calculation before the SCF cycle.
       !%Option lcao_states 2
       !% Do a LCAO calculation before the SCF cycle and use the resulting wavefunctions as 
       !% initial wavefunctions without changing the guess density.
-      !% This will speed-up the convergence of the eigensolver during the first SCF iterations.
+      !% This will speed up the convergence of the eigensolver during the first SCF iterations.
       !%Option lcao_full 3
       !% Do a LCAO calculation before the SCF cycle and use the LCAO wavefunctions to build a new
       !% guess density and a new KS potential.
@@ -181,7 +181,7 @@ contains
           k2 = sys%st%d%kpt%end
           sys%st%zpsi(1:sys%gr%mesh%np, :, s1:s2, k1:k2) = sys%st%zphi(1:sys%gr%mesh%np, :, s1:s2, k1:k2)
         else
-          ! Randomly generate the initial wave-functions.
+          ! Randomly generate the initial wavefunctions.
           call states_generate_random(sys%st, sys%gr%mesh)
           call states_orthogonalize(sys%st, sys%gr%mesh)
           call v_ks_calc(sys%gr, sys%ks, hm, sys%st, calc_eigenval=.true.) ! get potentials

@@ -79,7 +79,7 @@ contains
 
     call init_()
 
-    ! load wave-functions
+    ! load wavefunctions
     call restart_read(trim(restart_dir)//GS_DIR, sys%st, gr, sys%geo, ierr)
 
     if(simul_box_is_periodic(gr%sb)) then

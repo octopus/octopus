@@ -26,8 +26,8 @@ module vdw_m
   use gauss_legendre_m
   use global_m
   use grid_m
-  use hamiltonian_m
   use h_sys_output_m
+  use hamiltonian_m
   use io_m
   use io_function_m
   use lalg_basic_m
@@ -218,7 +218,7 @@ contains
         call lr_init(lr(dir,1))
         call lr_allocate(lr(dir,1), sys%st, sys%gr%mesh)
 
-        ! load wave-functions
+        ! load wavefunctions
         if(.not.fromScratch) then
           write(dirname,'(a,i1,a)') VDW_DIR//"wfs_", dir, "_1_1"
           call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &

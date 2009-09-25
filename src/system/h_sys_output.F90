@@ -20,22 +20,26 @@
 #include "global.h"
 
 module h_sys_output_m
-  use datasets_m
-  use derivatives_m
   use basins_m
   use cube_function_m
+  use datasets_m
+  use derivatives_m
   use elf_m
+#if defined(HAVE_ETSF_IO)
+  use etsf_io
+#endif
   use geometry_m
   use global_m
   use grid_m
   use hamiltonian_m
-  use io_function_m
   use io_m
+  use io_function_m
   use linear_response_m
   use loct_m
   use loct_math_m
   use loct_parser_m
   use magnetic_m
+  use mesh_m
   use mesh_function_m
   use messages_m
   use modelmb_density_m
@@ -45,17 +49,13 @@ module h_sys_output_m
   use output_me_m
   use profiling_m
   use simul_box_m
+  use solids_m
+  use species_m
   use states_m
   use states_dim_m
-  use solids_m
-  use mesh_m
   use units_m
   use varinfo_m
   use young_m
-  use species_m
-#if defined(HAVE_ETSF_IO)
-  use etsf_io
-#endif
 
   implicit none
 
@@ -147,7 +147,7 @@ contains
     !% <tt>wf-k-p-i</tt>, where <tt>k</tt> stands for the <i>k</i>-point, <tt>p</tt> for the state, and
     !% <tt>i</tt> for the spin channel.
     !%Option wfs_sqmod 8
-    !% Outputs modulus squared of the wave-functions. 
+    !% Outputs modulus squared of the wavefunctions. 
     !% The output file is called <tt>sqm-wf-k-p-i</tt>,
     !% where <tt>k</tt> stands for the <i>k</i> number, <tt>p</tt> for the state,
     !% and <tt>i</tt> for the spin channel.
@@ -232,7 +232,7 @@ contains
 
     if(iand(outp%what, output_modelmb).ne.0) then
       write(message(1),'(a)') 'Model many-body quantities will be output, according to the presence of'
-      write(message(2),'(a)') '  wfs, density, or density_matrix in Output'
+      write(message(2),'(a)') '  wfs, density, or density_matrix in Output.'
       call write_info(2)
     end if
 
@@ -241,7 +241,7 @@ contains
       write(message(2),'(a)') 'over the second dimension, diagonalized, and output.'
       call write_info(2)
       if(iand(outp%what, output_modelmb).eq.0) then
-        write(message(1),'(a)') 'Note that density matrix only works for model MB calculations for the moment'
+        write(message(1),'(a)') 'Note that density matrix only works for model MB calculations for the moment.'
         call write_info(1)
       end if
       ! NOTES:

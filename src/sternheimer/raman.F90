@@ -25,17 +25,16 @@ module raman_m
   use geometry_m
   use global_m
   use grid_m
-  use geometry_m
+  use h_sys_output_m
   use hamiltonian_m
   use io_m
   use lalg_basic_m
-  use loct_parser_m
   use linear_response_m
+  use loct_parser_m
   use math_m
-  use mesh_function_m
   use mesh_m
+  use mesh_function_m
   use messages_m
-  use h_sys_output_m
   use pert_m
   use phonons_lr_m
   use restart_m
@@ -85,7 +84,7 @@ contains
       call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, ierr, lr = psi_elec(idir))
       
       if(ierr.ne.0) then
-        message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//dirname
+        message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//dirname
         call write_fatal(1)
       end if
 
@@ -111,7 +110,7 @@ contains
       call restart_read(trim(restart_dir)//VIB_MODES_DIR//trim(phn_nm_wfs_tag(inm))//'_1', &
            sys%st, sys%gr, sys%geo, ierr, lr = psi_vib(1))
       if(ierr.ne.0) then
-        message(1) = "Could not load vibrational response wave-functions"
+        message(1) = "Could not load vibrational response wavefunctions."
         call write_fatal(1)
       end if
     end do

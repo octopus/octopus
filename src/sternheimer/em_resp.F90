@@ -138,7 +138,7 @@ contains
         call lr_init(kdotp_lr(idir, 1))
         call lr_allocate(kdotp_lr(idir, 1), sys%st, sys%gr%mesh)
 
-        ! load wave-functions
+        ! load wavefunctions
         str_tmp = kdotp_wfs_tag(idir)
         write(dirname,'(3a)') KDOTP_DIR, trim(str_tmp), '_1'
         ! 1 is the sigma index which is used in em_resp
@@ -260,7 +260,7 @@ contains
                     ierr, lr=em_vars%lr(idir, sigma, ifactor))
 
                   if(ierr.ne.0) then
-                    message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//trim(dirname)//"'"
+                    message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//trim(dirname)//"'"
                     call write_warning(1)
                   end if
                 end do
@@ -495,7 +495,7 @@ contains
       !%Section Linear Response::Polarizabilities
       !%Description
       !% This block defines for which frequencies the polarizabilities
-      !% will be calculated. If is not present the static (omega = 0) response
+      !% will be calculated. If it is not present, the static (omega = 0) response
       !% is calculated.
       !%
       !% Each row of the block indicates a sequence of frequency values, the
@@ -520,7 +520,7 @@ contains
         do irow = 0, nrow-1
           call loct_parse_block_int(blk, irow, 0, nfreqs_in_row)
           if(nfreqs_in_row < 1) then
-            message(1) = "EMFreqs: invalid number of frequencies"
+            message(1) = "EMFreqs: invalid number of frequencies."
             call write_fatal(1)
           end if
           em_vars%nomega = em_vars%nomega + nfreqs_in_row
@@ -562,7 +562,9 @@ contains
       !%Default 0.0
       !%Section Linear Response::Polarizabilities
       !%Description
-      !% Imaginary part of the frequency.
+      !% The imaginary part of the frequency, effectively a Lorentzian broadening
+      !% for peaks in the spectrum. It can help convergence of the SCF cycle for the
+      !% Sternheimer equation when on a resonance.
       !%End
 
       call loct_parse_float(datasets_check('EMEta'), M_ZERO, em_vars%eta)
@@ -580,9 +582,9 @@ contains
       !% Which perturbation to consider for electromagnetic linear response.
       !%Option electric 1
       !% Electric perturbation used to calculate electric polarizabilities
-      !% and hyperpolarizabilities
+      !% and hyperpolarizabilities.
       !%Option magnetic 2
-      !% Magnetic perturbation used to calculate magnetic susceptibilities
+      !% Magnetic perturbation used to calculate magnetic susceptibilities.
       !%Option none 0
       !% Zero perturbation, for use in testing.
       !%End 
@@ -597,7 +599,7 @@ contains
         !%Description
         !% This block describes the multiples of the frequency used for
         !% the dynamic hyperpolarizability. The results are written to the
-        !% file "beta" in the directory for the first multiple.
+        !% file <tt>beta</tt> in the directory for the first multiple.
         !%End
 
         if (loct_parse_block(datasets_check('EMHyperpol'), blk) == 0) then 
@@ -621,10 +623,10 @@ contains
       !%Default false
       !%Section Linear Response::Polarizabilities
       !%Description
-      !% If the system is periodic, by default wavefunctions from a previous kdotp run will
+      !% If the system is periodic, by default wavefunctions from a previous <tt>kdotp</tt> run will
       !% be read, to be used in the formulas for the polarizability and
       !% hyperpolarizability in the quantum theory of polarization. For testing purposes,
-      !% you can set this variable to true to disregard the kdotp run, and use the formulas
+      !% you can set this variable to true to disregard the <tt>kdotp</tt> run, and use the formulas
       !% for the finite system. This variable has no effect for a finite system.
       !%End
 

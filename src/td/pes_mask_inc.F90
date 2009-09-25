@@ -24,7 +24,9 @@ subroutine PES_mask_init(v, m, sb, st)
   type(simul_box_t), intent(in)    :: sb
   type(states_t),    intent(in)    :: st
 
-  message(1) = 'Info: Calculating PES using mask technique'
+  call push_sub('pes_mask_inc.PES_mask_init')
+
+  message(1) = 'Info: Calculating PES using mask technique.'
   call write_info(1)
 
   ! alloc ffts in case they are not allocated yet
@@ -37,6 +39,7 @@ subroutine PES_mask_init(v, m, sb, st)
   v%k = M_z0
   v%r = M_ZERO
 
+  call pop_sub()
 end subroutine PES_mask_init
 
 
@@ -44,12 +47,15 @@ end subroutine PES_mask_init
 subroutine PES_mask_end(v)
   type(PES_mask_t), intent(inout) :: v
 
+  call push_sub('pes_mask_inc.PES_mask_end')
+
   if(associated(v%k)) then
     call fft_end(v%fft)
     SAFE_DEALLOCATE_P(v%k)
     SAFE_DEALLOCATE_P(v%r)
   end if
 
+  call pop_sub()
 end subroutine PES_mask_end
 
 
@@ -65,7 +71,9 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
   CMPLX, allocatable :: wf1(:,:,:), wf2(:,:,:)
   FLOAT :: temp(MAX_DIM), vec
 
-  ! propagate wave-function in momentum space
+  call push_sub('pes_mask_inc.PES_mask_doit')
+
+  ! propagate wavefunction in momentum space
   temp(:) = M_TWO*M_PI/(m%idx%ll(:)*m%h(:))
   do ix = 1, m%idx%ll(1)
     ixx(1) = pad_feq(ix, m%idx%ll(1), .true.)
@@ -109,7 +117,7 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
 
   SAFE_DEALLOCATE_A(wf1)
   SAFE_DEALLOCATE_A(wf2)
-
+  call pop_sub()
 end subroutine PES_mask_doit
 
 
@@ -128,6 +136,8 @@ subroutine PES_mask_output(v, m, st, file)
 
   integer,  parameter :: n = 600, ar_n = 90
   FLOAT, parameter :: step = CNST(0.005)
+
+  call push_sub('pes_mask_inc.PES_mask_output')
 
   SAFE_ALLOCATE( spis(1:n,    st%st_start:st%st_end, 1:st%d%nik))
   SAFE_ALLOCATE(arpis(1:ar_n, st%st_start:st%st_end, 1:st%d%nik))
@@ -158,7 +168,7 @@ subroutine PES_mask_output(v, m, st, file)
             end do
           end if
 
-          ! angle resolved (assumes the pol is in the x direction)
+          ! angle-resolved (assumes the pol is in the x-direction)
           if(ixx(3)==0 .and. (ixx(1).ne.0 .or. ixx(2).ne.0)) then
             vec = atan2(real(ixx(2), REAL_PRECISION), real(ixx(1), REAL_PRECISION))
             ii  = nint(abs(vec)*(ar_n-1)/M_PI) + 1
@@ -240,7 +250,7 @@ subroutine PES_mask_output(v, m, st, file)
       do iz = 1, m%idx%ll(3)
         ixx(3) = iz - m%idx%ll(3)/2 - 1
 
-        ! angle resolved
+        ! angle-resolved
         if(ixx(3)==0.and.(ixx(1).ne.0 .or. ixx(2).ne.0)) then
           vec = atan2(real(ixx(2), REAL_PRECISION), real(ixx(1), REAL_PRECISION))
           ii  = nint(abs(vec)*(ar_n-1)/M_PI) + 1
@@ -289,6 +299,7 @@ subroutine PES_mask_output(v, m, st, file)
   SAFE_DEALLOCATE_A(npoints)
   SAFE_DEALLOCATE_A(ar_npoints)
 
+  call pop_sub()
 end subroutine PES_mask_output
 
 !! Local Variables:

@@ -25,6 +25,7 @@ module one_shot_m
   use external_pot_m
   use geometry_m
   use global_m
+  use h_sys_output_m
   use hamiltonian_m
   use loct_parser_m
   use loct_m
@@ -41,7 +42,6 @@ module one_shot_m
   use varinfo_m
   use xc_m
   use xc_OEP_m
-  use h_sys_output_m
 
   implicit none
 
@@ -59,11 +59,13 @@ contains
     FLOAT, allocatable :: rho(:,:)
     FLOAT :: E_tot, E_t, E_ext, E_Hartree, E_x, E_c
 
-    ! load wave-functions
+    call push_sub('one_shot.one_shot_run')
+
+    ! load wavefunctions
     call states_allocate_wfns(sys%st, sys%gr%mesh)
     call restart_read(trim(tmpdir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr)
     if(ierr.ne.0) then
-      message(1) = "Could not load wave-functions"
+      message(1) = "Could not load wavefunctions."
       call write_fatal(1)
     end if
 
@@ -90,7 +92,7 @@ contains
       M_ZERO, sys%st%qtot)
     SAFE_DEALLOCATE_A(rho)
 
-    ! The OEP family has to handle specially
+    ! The OEP family has to be handled specially
     if (sys%st%wfs_type == M_REAL) then
       call dxc_oep_calc(sys%ks%oep, sys%ks%xc, (sys%ks%sic_type==sic_pz),  &
         sys%gr, hm, sys%st, E_x, E_c)
@@ -102,13 +104,13 @@ contains
     E_tot = E_t + E_ext + E_Hartree + E_x + E_c + hm%ep%eii
 
     call messages_print_stress(stdout, "Energy")
-    write(message(1), '(6x,a, f18.8)')'Total       = ', E_tot     / units_out%energy%factor
-    write(message(2), '(6x,a, f18.8)')'Ion-ion     = ', hm%ep%eii  / units_out%energy%factor
-    write(message(3), '(6x,a, f18.8)')'Kinetic     = ', E_t       / units_out%energy%factor
-    write(message(4), '(6x,a, f18.8)')'External    = ', E_ext     / units_out%energy%factor
-    write(message(5), '(6x,a, f18.8)')'Hartree     = ', E_Hartree / units_out%energy%factor
-    write(message(6), '(6x,a, f18.8)')'Exchange    = ', E_x       / units_out%energy%factor
-    write(message(7), '(6x,a, f18.8)')'Correlation = ', E_c       / units_out%energy%factor
+    write(message(1), '(6x,a, f18.8)') 'Total       = ', E_tot     / units_out%energy%factor
+    write(message(2), '(6x,a, f18.8)') 'Ion-ion     = ', hm%ep%eii / units_out%energy%factor
+    write(message(3), '(6x,a, f18.8)') 'Kinetic     = ', E_t       / units_out%energy%factor
+    write(message(4), '(6x,a, f18.8)') 'External    = ', E_ext     / units_out%energy%factor
+    write(message(5), '(6x,a, f18.8)') 'Hartree     = ', E_Hartree / units_out%energy%factor
+    write(message(6), '(6x,a, f18.8)') 'Exchange    = ', E_x       / units_out%energy%factor
+    write(message(7), '(6x,a, f18.8)') 'Correlation = ', E_c       / units_out%energy%factor
     call write_info(7, stdout)
     call messages_print_stress(stdout)
 
@@ -116,6 +118,7 @@ contains
 
     call states_deallocate_wfns(sys%st)
 
+    call pop_sub()
   end subroutine one_shot_run
 
 end module one_shot_m

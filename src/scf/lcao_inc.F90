@@ -109,6 +109,7 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
 #ifdef HAVE_MPI
   FLOAT, allocatable :: tmp(:, :)
 #endif
+
   call push_sub('lcao_inc.Xlcao_wf')
   
   write(message(1),'(a,i6,a)') 'Info: Performing initial LCAO calculation with ', &
@@ -136,7 +137,7 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
   ie = 0
   max = this%norbs*(this%norbs + 1)/2
 
-  message(1) = "Info: Getting hamiltonian matrix elements"
+  message(1) = "Info: Getting Hamiltonian matrix elements."
   call write_info(1)
 
   if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, max)
@@ -240,7 +241,7 @@ contains
 
     ! We calculate the atomic orbitals first. To save memory we put
     ! all the orbitals we can in the part of st%Xpsi that we are going
-    ! to overwrite and then the rest is stored in a single precision
+    ! to overwrite and then the rest is stored in a single-precision
     ! buffer.
 
     SAFE_ALLOCATE(cst(1:this%norbs, 1:st%d%spin_channels))
@@ -353,6 +354,8 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   type(profile_t), save :: comm2prof
 #endif
 
+  call push_sub('lcao_inc.Xlcao_wf2')
+
   maxorb = 0
   nbasis = 0
   do iatom = 1, geo%natoms
@@ -403,7 +406,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       call write_info(1)
     end if
 
-    message(1) = "Info: Calculating atomic orbitals"
+    message(1) = "Info: Calculating atomic orbitals."
     call write_info(1)
 
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, nbasis)
@@ -435,7 +438,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
     do ik = st%d%kpt%start, st%d%kpt%end
       if(ispin /= states_dim_get_spin_index(st%d, ik)) cycle
 
-      message(1) = 'Info: Calculating matrix elements'
+      message(1) = 'Info: Calculating matrix elements.'
       if(st%d%nik > st%d%spin_channels) write(message(1), '(a,a,i5)') message(1), ' for k-point ', ik
       call write_info(1)
 
@@ -519,7 +522,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
       call profiling_in(prof_wavefunction, "LCAO_WAVEFUNCTIONS")
 
-      message(1) = "Info: Generating wave-functions"
+      message(1) = "Info: Generating wavefunctions."
       if(st%d%nik > st%d%spin_channels) write(message(1), '(a,a,i5)') message(1), ' for k-point ', ik
       call write_info(1)
 
@@ -565,6 +568,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   SAFE_DEALLOCATE_A(sphere)
   SAFE_DEALLOCATE_A(radius)
 
+  call pop_sub()
 end subroutine X(lcao_wf2)
 
 !! Local Variables:

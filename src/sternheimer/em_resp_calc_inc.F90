@@ -390,7 +390,7 @@ subroutine X(lr_calc_susceptibility)(sys, hm, lr, nsigma, perturbation, chi_para
   chi_dia (:,:) = -chi_dia (:,:)/P_C**2
 
 #if defined(R_TREAL)
-  ! When using real wave-functions there is an extra factor of (-i)*(-i) = -1
+  ! When using real wavefunctions there is an extra factor of (-i)*(-i) = -1
   chi_para(:,:) = -chi_para(:,:)
 #endif
 

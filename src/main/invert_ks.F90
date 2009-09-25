@@ -74,7 +74,7 @@ contains
       
     call loct_parse_int(datasets_check('InvertKSmethod'), 0, invksmethod)
 
-    ! initialize random wave-functions
+    ! initialize random wavefunctions
     call states_allocate_wfns(sys%st, sys%gr%mesh)
     call states_generate_random(sys%st, sys%gr%mesh)
 

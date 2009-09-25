@@ -304,8 +304,8 @@ end function X(mf_moment)
 
 
 ! ---------------------------------------------------------
-! This subroutine generates a Gaussian wave-function at a
-! random position in space
+! This subroutine generates a Gaussian wavefunction at a
+! random position in space.
 subroutine X(mf_random)(mesh, f, seed)
   type(mesh_t),      intent(in)  :: mesh
   R_TYPE,            intent(out) :: f(:)

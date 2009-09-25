@@ -26,22 +26,23 @@ module phonons_fd_m
   use geometry_m
   use global_m
   use grid_m
+  use h_sys_output_m
   use hamiltonian_m
   use io_m
+  use io_function_m
   use lalg_adv_m
   use loct_parser_m
   use mesh_m
   use messages_m
   use multicomm_m
-  use h_sys_output_m
   use profiling_m
-  use vibrations_m
   use restart_m
   use scf_m
   use states_m
   use system_m
   use units_m
   use v_ks_m
+  use vibrations_m
 
   implicit none
 
@@ -58,12 +59,14 @@ contains
     type(vibrations_t) :: vib
     integer :: ierr
 
+    call push_sub('phonons_fd.phonons_run')
+
     call init_()
 
-    ! load wave-functions
+    ! load wavefunctions
     call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr)
     if(ierr.ne.0) then
-      message(1) = "Could not load wave-functions: Starting from scratch"
+      message(1) = "Could not load wavefunctions: Starting from scratch."
       call write_warning(1)
     end if
 
@@ -95,19 +98,23 @@ contains
     call vibrations_end(vib)
 
     call end_()
+    call pop_sub()
 
   contains
 
     ! ---------------------------------------------------------
     subroutine init_()
 
-      call push_sub('phonons.phonons_run')
+      call push_sub('phonons.phonons_run.init_')
       call states_allocate_wfns(sys%st, sys%gr%mesh)
 
+      call pop_sub()
     end subroutine init_
 
     ! ---------------------------------------------------------
     subroutine end_()
+
+      call push_sub('phonons_fd.phonons_run.end_')
       call states_deallocate_wfns(sys%st)
 
       call pop_sub()
@@ -128,12 +135,13 @@ contains
     type(vibrations_t),      intent(inout) :: vib
 
     type(scf_t)               :: scf
-    type(mesh_t),     pointer :: m
-
-    integer :: i, j, alpha, beta
+    type(mesh_t),     pointer :: mesh
+    integer :: iatom, jatom, alpha, beta
     FLOAT, allocatable :: forces(:,:), forces0(:,:)
 
-    m   => gr%mesh
+    call push_sub('phonons_fd.get_dyn_matrix')
+
+    mesh => gr%mesh
 
     call scf_init(scf, gr, geo, st, hm)
     SAFE_ALLOCATE(forces0(1:geo%natoms, 1:3))
@@ -141,13 +149,13 @@ contains
     forces = M_ZERO
     forces0 = M_ZERO
 
-    do i = 1, geo%natoms
+    do iatom = 1, geo%natoms
       do alpha = 1, gr%mesh%sb%dim
-        write(message(1), '(a,i3,a,i2)') 'Info: Moving atom ', i, ' in the direction ', alpha
+        write(message(1), '(a,i3,3a)') 'Info: Moving atom ', iatom, ' in the ', index2axis(alpha), '-direction.'
         call write_info(1)
 
-        ! move atom i in direction alpha by dist
-        geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) + vib%disp
+        ! move atom iatom in direction alpha by dist
+        geo%atom(iatom)%x(alpha) = geo%atom(iatom)%x(alpha) + vib%disp
 
         ! first force
         call hamiltonian_epot_generate(hm, gr, geo, st)
@@ -155,11 +163,11 @@ contains
         call v_ks_calc(gr, ks, hm, st, calc_eigenval=.true.)
         call total_energy (hm, gr, st, -1)
         call scf_run(scf, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
-        do j = 1, geo%natoms
-          forces0(j, :) = geo%atom(j)%f(:)
+        do jatom = 1, geo%natoms
+          forces0(jatom, :) = geo%atom(jatom)%f(:)
         end do
 
-        geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) - M_TWO*vib%disp
+        geo%atom(iatom)%x(alpha) = geo%atom(iatom)%x(alpha) - M_TWO*vib%disp
 
         ! second force
         call hamiltonian_epot_generate(hm, gr, geo, st)
@@ -167,16 +175,16 @@ contains
         call v_ks_calc(gr, ks, hm, st, calc_eigenval=.true.)
         call total_energy(hm, gr, st, -1)
         call scf_run(scf, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
-        do j = 1, geo%natoms
-          forces(j, :) = geo%atom(j)%f(:)
+        do jatom = 1, geo%natoms
+          forces(jatom, :) = geo%atom(jatom)%f(:)
         end do
 
-        geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) + vib%disp
+        geo%atom(iatom)%x(alpha) = geo%atom(iatom)%x(alpha) + vib%disp
 
-        do j = 1, geo%natoms
+        do jatom = 1, geo%natoms
           do beta = 1, gr%mesh%sb%dim
-            vib%dyn_matrix(vibrations_get_index(vib, i, alpha), vibrations_get_index(vib, j, beta)) = &
-              (forces0(j, beta) - forces(j, beta)) / (M_TWO*vib%disp )
+            vib%dyn_matrix(vibrations_get_index(vib, iatom, alpha), vibrations_get_index(vib, jatom, beta)) = &
+              (forces0(jatom, beta) - forces(jatom, beta)) / (M_TWO*vib%disp )
           end do
         end do
 
@@ -189,6 +197,7 @@ contains
     call vibrations_normalize_dyn_matrix(vib, geo)
     call vibrations_diag_dyn_matrix(vib)
 
+    call pop_sub()
   end subroutine get_dyn_matrix
 
 end module phonons_fd_m

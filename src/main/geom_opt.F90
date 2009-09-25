@@ -26,22 +26,22 @@ module geom_opt_m
   use geometry_m
   use global_m
   use hamiltonian_m
-  use loct_parser_m
+  use lcao_m
   use loct_m
   use loct_math_m
+  use loct_parser_m
   use mesh_m
   use messages_m
   use profiling_m
   use restart_m
   use scf_m
+  use species_pot_m
   use states_m
   use states_calc_m
   use system_m
   use units_m
   use v_ks_m
   use varinfo_m
-  use species_pot_m
-  use lcao_m
 
   implicit none
 
@@ -84,13 +84,15 @@ contains
     type(lcao_t) :: lcao
     real(8) :: energy
 
+    call push_sub('geom_opt.geom_opt_run')
+
     call init_()
     
-    ! load wave-functions
+    ! load wavefunctions
     if(.not. fromscratch) then
       call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr)
       if(ierr .ne. 0) then
-        message(1) = "Could not load wave-functions: Starting from scratch"
+        message(1) = "Could not load wavefunctions: Starting from scratch."
         call write_warning(1)
         fromscratch = .true.
       end if
@@ -98,11 +100,11 @@ contains
 
     if(fromscratch) then
 
-      ! Randomly generate the initial wave-functions
+      ! Randomly generate the initial wavefunctions
       call states_generate_random(sys%st, sys%gr%mesh)
       call states_orthogonalize(sys%st, sys%gr%mesh)
 
-      ! We do not compute the density from the random wave-functions. 
+      ! We do not compute the density from the random wavefunctions. 
       ! Instead, we try to get a better guess for the density
       call guess_density(sys%gr%mesh, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
            sys%st%d%spin_channels, sys%st%rho)
@@ -112,7 +114,7 @@ contains
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
       call v_ks_calc(sys%gr, sys%ks, hm, sys%st, calc_eigenval=.true.) ! get potentials
-      call states_fermi(sys%st, sys%gr%mesh)                                ! occupations
+      call states_fermi(sys%st, sys%gr%mesh)                           ! occupations
       call total_energy(hm, sys%gr, sys%st, -1)
 
       lcao_start_default = LCAO_START_FULL
@@ -193,12 +195,13 @@ contains
     SAFE_DEALLOCATE_A(x)
     call scf_end(g_opt%scfv)
     call end_()
+    call pop_sub()
 
   contains
 
     ! ---------------------------------------------------------
     subroutine init_()
-      call push_sub('geom_opt.geom_opt_run')
+      call push_sub('geom_opt.geom_opt_run.init_')
 
       call states_allocate_wfns(sys%st, sys%gr%mesh)
 
@@ -216,30 +219,30 @@ contains
       !%Description
       !% Method by which the minimization is performed.
       !%Option steep 1
-      !% simple steepest descent.
+      !% Simple steepest descent.
       !%Option cg_fr 2
-      !% Fletcher-Reeves conjugate gradient algorithm. The
-      !% conjugate gradient algorithm proceeds as a succession of line
+      !% Fletcher-Reeves conjugate-gradient algorithm. The
+      !% conjugate-gradient algorithm proceeds as a succession of line
       !% minimizations. The sequence of search directions is used to build
       !% up an approximation to the curvature of the function in the
       !% neighborhood of the minimum. 
       !%Option cg_pr 3
-      !% Polak-Ribiere conjugate gradient algorithm.
+      !% Polak-Ribiere conjugate-gradient algorithm.
       !%Option cg_bfgs 4
-      !% Vector Broyden-Fletcher-Goldfarb-Shanno (BFGS) conjugate gradient algorithm.
+      !% Vector Broyden-Fletcher-Goldfarb-Shanno (BFGS) conjugate-gradient algorithm.
       !% It is a quasi-Newton method which builds up an approximation to the second 
-      !% derivatives of the function f using the difference between successive gradient
-      !% vectors.  By combining the first and second derivatives the algorithm is able 
+      !% derivatives of the function <i>f</i> using the difference between successive gradient
+      !% vectors.  By combining the first and second derivatives, the algorithm is able 
       !% to take Newton-type steps towards the function minimum, assuming quadratic 
       !% behavior in that region.
       !%Option cg_bfgs2 5
       !% The bfgs2 version of this minimizer is the most efficient version available, 
       !% and is a faithful implementation of the line minimization scheme described in 
-      !% Fletcher, _Practical Methods of Optimization_, Algorithms 2.6.2 and 2.6.4.
+      !% Fletcher, <i>Practical Methods of Optimization</i>, Algorithms 2.6.2 and 2.6.4.
       !%Option simplex 6
-      !% This is experimental, and in fact, *not* recommended unless you just want to
+      !% This is experimental, and in fact, <b>not</b> recommended unless you just want to
       !% fool around. It is the Nead-Melder simplex algorithm, as implemented in the
-      !% GNU Scientific Library (GSL). It does not make use of the gradients (i.e., the
+      !% GNU Scientific Library (GSL). It does not make use of the gradients (<i>i.e.</i>, the
       !% forces) which makes it more inefficient than other schemes. It is included here
       !% for completeness, since it is free.
       !%End
@@ -253,8 +256,8 @@ contains
       !%Section Calculation Modes::Geometry Optimization
       !%Description
       !% Convergence criterion to stop the minimization. In units of force; minimization
-      !% is stopped when all forces on ions are smaller.
-      !% Used in conjunction with GOMinimumMove. If GOTolerance = 0, this criterion is ignored.
+      !% is stopped when all forces on ions are smaller than this criterion.
+      !% Used in conjunction with <tt>GOMinimumMove</tt>. If <tt>GOTolerance = 0</tt>, this criterion is ignored.
       !%End
       call loct_parse_float(datasets_check('GOTolerance'), CNST(0.001)/units_inp%force%factor, g_opt%tolgrad)
       g_opt%tolgrad = g_opt%tolgrad*units_inp%force%factor
@@ -265,10 +268,10 @@ contains
       !%Section Calculation Modes::Geometry Optimization
       !%Description
       !% Convergence criterion to stop the minimization. In units of length; minimization
-      !% is stopped when all species coordinates change less than GOMinimumMove.
-      !% Used in conjunction with GOTolerance. If GOMinimumMove = 0, this criterion is ignored.
+      !% is stopped when the coordinates of all species change less than <tt>GOMinimumMove</tt>.
+      !% Used in conjunction with <tt>GOTolerance</tt>. If <tt>GOMinimumMove = 0</tt>, this criterion is ignored.
       !%
-      !% Note that if you use GOMethod = simplex, then you must supply a non-zero GOMinimumMove.
+      !% Note that if you use <tt>GOMethod = simplex</tt>, then you must supply a non-zero <tt>GOMinimumMove</tt>.
       !%End
       call loct_parse_float(datasets_check('GOMinimumMove'), CNST(0.0)/units_inp%length%factor, g_opt%toldr)
       g_opt%toldr = g_opt%toldr*units_inp%length%factor
@@ -288,7 +291,7 @@ contains
       !%Default 200
       !%Section Calculation Modes::Geometry Optimization
       !%Description
-      !% Even if previous convergence criterion is not satisfied, minimization will stop
+      !% Even if the convergence criterion is not satisfied, the minimization will stop
       !% after this number of iterations.
       !%End
       call loct_parse_int(datasets_check('GOMaxIter'), 200, g_opt%max_iter)
@@ -306,7 +309,7 @@ contains
       !% to minimize during a geometry minimization. The use of this variable may
       !% lead to inconsistencies, so please make sure you know what you are doing!
       !%Option minimize_energy 1
-      !% Use the total energy as objective function
+      !% Use the total energy as objective function.
       !%Option minimize_forces 2
       !% Use <math>\sqrt{\sum |f_i|^2}</math> as objective function.
       !% Note that in this case one still uses the forces as the gradient of the objective function.
@@ -324,12 +327,16 @@ contains
 
     ! ---------------------------------------------------------
     subroutine end_()
+      call push_sub('geom_opt.geom_opt_run.end_')
+
       call states_deallocate_wfns(sys%st)
       nullify(g_opt%m)
       nullify(g_opt%geo)
       nullify(g_opt%st)
       nullify(g_opt%hm)
       nullify(g_opt%syst)
+
+      call pop_sub()
     end subroutine end_
 
   end subroutine geom_opt_run
@@ -396,11 +403,15 @@ contains
     integer :: getgrad
     FLOAT, allocatable :: df(:)
     
+    call push_sub('geom_opt.calc_point_ng')
+    
     getgrad = 0
     SAFE_ALLOCATE(df(1:n))
     df = M_ZERO
     call calc_point(n, x, f, getgrad, df)
     SAFE_DEALLOCATE_A(df)
+
+    call pop_sub()
   end subroutine calc_point_ng
 
 
@@ -450,7 +461,10 @@ contains
     REAL_DOUBLE, intent(in) :: energy, maxdx
     REAL_DOUBLE, intent(in) :: x(n)
 
+    call push_sub('geom_opt.write_iter_info_ng')
     call write_iter_info(geom_iter, n, energy, maxdx, real(-M_ONE, 8), x)
+
+    call pop_sub()
   end subroutine write_iter_info_ng
 
 end module geom_opt_m

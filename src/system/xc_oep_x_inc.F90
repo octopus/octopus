@@ -55,7 +55,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
 
   ! Note: we assume that st%occ is known in all nodes
   call profiling_in(C_PROFILING_XC_EXX)
-  call push_sub('xc_OEP_x.oep_x')
+  call push_sub('xc_oep_x_inc.oep_x')
 
   SAFE_ALLOCATE(F_ij(1:gr%mesh%np))
   SAFE_ALLOCATE(rho_ij(1:gr%mesh%np))
@@ -77,7 +77,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
       node_to = -1
     end if
 
-    ! node from which we receive the wave-functions
+    ! node from which we receive the wavefunctions
     node_fr = st%mpi_grp%rank - i
     if(node_fr < 0) node_fr = st%mpi_grp%size + node_fr
     node_fr = mod(node_fr, st%mpi_grp%size)
@@ -85,7 +85,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
       node_fr = -1
     end if
 
-    ! check which wave-functions we have to send/recv, and put them in a stack
+    ! check which wavefunctions we have to send/recv, and put them in a stack
     recv_stack(:) = -1; ist_r = 1
     send_stack(:) = -1; ist_s = 1
     do j = 1, st%nst
@@ -110,7 +110,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
 
 #if defined(HAVE_MPI)
       if(st%parallel_in_states) then
-        ! send wave-function
+        ! send wavefunction
         send_req = 0
         if((send_stack(ist_s) > 0).and.(node_to.ne.st%mpi_grp%rank)) then
           call MPI_Isend(st%X(psi)(1, 1, send_stack(ist_s), is), gr%mesh%np, R_MPITYPE, &
@@ -122,7 +122,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
       ! increment receive counter
       if(ist_r <= st%nst) ist_r = ist_r  + 1
 
-      ! receive wave-function
+      ! receive wavefunction
       if(recv_stack(ist_r) > 0) then
         if(node_fr == st%mpi_grp%rank) then
           wf_ist => st%X(psi)(1:gr%mesh%np, 1, recv_stack(ist_r), is)
@@ -195,7 +195,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
 
 #if defined(HAVE_MPI)
       ! now we have to receive the contribution to lxc from the node to
-      ! which we sent the wave-function ist
+      ! which we sent the wavefunction ist
       if(st%parallel_in_states) then
         if((node_to >= 0).and.(send_stack(ist_s) > 0).and.(node_to.ne.st%mpi_grp%rank)) then
           call MPI_Recv(recv_buffer(:), gr%mesh%np, R_MPITYPE, &

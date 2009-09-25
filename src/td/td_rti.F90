@@ -20,7 +20,6 @@
 #include "global.h"
 
 module td_rti_m
-  use loct_m
   use batch_m
   use cube_function_m
   use datasets_m
@@ -33,6 +32,7 @@ module td_rti_m
   use ion_dynamics_m
   use lalg_basic_m
   use lasers_m
+  use loct_m
   use loct_parser_m
   use math_m
   use mesh_function_m
@@ -41,11 +41,11 @@ module td_rti_m
   use ob_rti_m
   use ob_terms_m
   use profiling_m
+  use solvers_m
   use sparskit_m
   use states_m
-  use varinfo_m
   use v_ks_m
-  use solvers_m
+  use varinfo_m
 
   implicit none
 
@@ -132,7 +132,7 @@ contains
     case(PROP_MAGNUS)
       call loct_pointer_copy(tro%vmagnus, tri%vmagnus)
     case(PROP_CRANK_NICHOLSON_SRC_MEM)
-      message(1) = 'Internal error at td_rti_copy'
+      message(1) = 'Internal error at td_rti_copy.'
       call write_fatal(1)
     end select
 
@@ -184,8 +184,8 @@ contains
     !% <i>self-consistently</i>: the obtained Hamiltonian at time <math>t+\delta t</math>
     !% may then be used to interpolate the Hamiltonian, and repeat the evolution
     !% algorithm with this new information. Whenever iterating the procedure does
-    !% not change the solution wave-functions, the cycle is stopped. In practice,
-    !% in <tt>octopus</tt> we perform a second-order extrapolation without a
+    !% not change the solution wavefunctions, the cycle is stopped. In practice,
+    !% in <tt>Octopus</tt> we perform a second-order extrapolation without a
     !% self-consistency check, except for the first two iterations, where obviously
     !% the extrapolation is not reliable.
     !%
@@ -291,7 +291,7 @@ contains
     !% Crank-Nicholson propagator with source and memory term for transport
     !% calculations.
     !%Option visscher 9
-    !% (experimental) Visscher integration scheme. Computational Physics 5 596 (1991).
+    !% (experimental) Visscher integration scheme. <i>Computational Physics</i> <b>5</b>, 596 (1991).
     !%Option qoct_tddft_propagator 10
     !% WARNING: EXPERIMENTAL
     !%Option qoct_tddft_propagator_2 11
@@ -307,7 +307,7 @@ contains
     if(.not.varinfo_valid_option('TDEVolutionMethod', tr%method)) call input_error('TDEvolutionMethod')
 
     if(gr%sb%open_boundaries.and.tr%method.ne.PROP_CRANK_NICHOLSON_SRC_MEM) then
-      message(1) = 'The time evolution method for time dependent cannot'
+      message(1) = 'The time-evolution method for time-dependent run cannot'
       message(2) = 'be chosen freely. The Crank-Nicholson propagator'
       message(3) = 'with source and memory term has to be used. Either set'
       message(4) = ''
@@ -318,7 +318,7 @@ contains
     end if
 
     if(tr%method .eq. SPLIT_OPERATOR .or. tr%method .eq. SUZUKI_TROTTER) then
-      message(1) = "You cannnot use the split operator evolution method, or the"
+      message(1) = "You cannnot use the split-operator evolution method, or the"
       message(2) = "Suzuki-Trotter, if the code was compiled without FFTW support."
       call write_fatal(2)
     end if
@@ -342,7 +342,7 @@ contains
 #else
       message(1) = 'Octopus was not compiled with support for the sparskit library. This'
       message(2) = 'library is required if the "crank_nicholson_sparskit" propagator is selected.'
-      message(3) = 'Try to use a different propagation scheme or recompile with sparskit support.'
+      message(3) = 'Try using a different propagation scheme or recompile with sparskit support.'
       call write_fatal(3)
 #endif
     case(PROP_MAGNUS)
@@ -362,7 +362,7 @@ contains
          tr%method /= PROP_APP_REVERSAL .and. &
          tr%method /= PROP_VISSCHER .and. &
          tr%method /= PROP_EXPONENTIAL_MIDPOINT) then
-        message(1) = "To move the ions or put a gauge field use the etrs, aetrs, visscher or exp_mid propagators." 
+        message(1) = "To move the ions or put in a gauge field, use the etrs, aetrs, visscher or exp_mid propagators." 
         call write_fatal(1)
       end if
     end if
@@ -408,11 +408,13 @@ contains
   subroutine td_rti_end(tr)
     type(td_rti_t), intent(inout) :: tr
 
+    call push_sub('td_rti.td_rti_end')
+
     SAFE_DEALLOCATE_P(tr%prev_psi)
 
     ! sanity check
     ASSERT(associated(tr%v_old)) 
-    SAFE_DEALLOCATE_P(tr%v_old)         ! clean ols KS potentials
+    SAFE_DEALLOCATE_P(tr%v_old)         ! clean old KS potentials
     nullify(tr%v_old)
 
     select case(tr%method)
@@ -431,6 +433,8 @@ contains
     end select
     
     call exponential_end(tr%te)       ! clean propagator method
+
+    call pop_sub()
   end subroutine td_rti_end
   ! ---------------------------------------------------------
 
@@ -440,9 +444,13 @@ contains
     type(hamiltonian_t), intent(in)    :: hm
     type(td_rti_t),      intent(inout) :: tr
 
+    call push_sub('td_rti.td_rti_run_zero_iter')
+
     tr%v_old(:, :, 2) = hm%vhxc(:, :)
     tr%v_old(:, :, 3) = hm%vhxc(:, :)
     tr%v_old(:, :, 1) = hm%vhxc(:, :)
+
+    call pop_sub()
   end subroutine td_rti_run_zero_iter
 
 
@@ -599,7 +607,7 @@ contains
     ! Split operator.
     subroutine td_split_operator
       integer :: ik, ist
-      call push_sub('td_rti.td_split_operator')
+      call push_sub('td_rti.td_rti_dt.td_split_operator')
 
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = 1, st%nst
@@ -631,7 +639,7 @@ contains
       FLOAT :: p, pp(5), time(5), dtime(5)
       integer :: ik, ist, k
 
-      call push_sub('td_rti.td_suzuki_trotter')
+      call push_sub('td_rti.td_rti_dt.td_suzuki_trotter')
 
       p = M_ONE/(M_FOUR - M_FOUR**(M_THIRD))
       pp = (/ p, p, M_ONE-M_FOUR*p, p, p /)
@@ -670,7 +678,7 @@ contains
       integer :: ik, ist, ist2, idim, ste, sts
       type(batch_t) :: zpsib
 
-      call push_sub('td_rti.td_reversal')
+      call push_sub('td_rti.td_rti_dt.td_reversal')
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
 
@@ -781,7 +789,7 @@ contains
       integer :: ik, sts, ste
       type(batch_t) :: zpsib
 
-      call push_sub('td_rti.td_app_reversal')
+      call push_sub('td_rti.td_rti_dt.td_app_reversal')
 
       ! propagate half of the time step with H(t-dt)
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -794,7 +802,7 @@ contains
         end do
       end do
 
-      ! interpolate the hamiltonian to time t
+      ! interpolate the Hamiltonian to time t
       call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 0), hm%vhxc)
       call hamiltonian_update_potential(hm, gr%mesh)
 
@@ -827,7 +835,7 @@ contains
       type(ion_state_t) :: ions_state
       FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM)
 
-      call push_sub('td_rti.exponential_midpoint')
+      call push_sub('td_rti.td_rti_dt.exponential_midpoint')
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
         call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t-dt/M_TWO, hm%vhxc(:, :))
@@ -872,7 +880,7 @@ contains
       CMPLX, allocatable :: zpsi_rhs_pred(:,:,:,:), zpsi_rhs_corr(:,:,:,:)
       integer :: ik, ist, idim, np_part
 
-      call push_sub('td_rti.td_crank_nicholson_sparskit')
+      call push_sub('td_rti.td_rti_dt.td_crank_nicholson_sparskit')
 
       np_part = gr%mesh%np_part
       SAFE_ALLOCATE(zpsi_rhs_corr(1:np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
@@ -887,7 +895,7 @@ contains
 
       ! we (ab)use exponential_apply to compute (1-i\delta t/2 H_n)\psi^n
       ! exponential order needs to be only 1
-      tr%te%exp_method = 3 ! == taylor expansion
+      tr%te%exp_method = 3 ! == Taylor expansion
       tr%te%exp_order  = 1
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
@@ -974,7 +982,7 @@ contains
       FLOAT :: cgtol = CNST(1.0e-8)
       logical :: converged
 
-      call push_sub('td_rti.td_crank_nicholson')
+      call push_sub('td_rti.td_rti_dt.td_crank_nicholson')
 
       np_part = gr%mesh%np_part
       np = gr%mesh%np
@@ -1049,7 +1057,7 @@ contains
       FLOAT :: time(2)
       FLOAT, allocatable :: vaux(:, :, :), pot(:)
 
-      call push_sub('td_rti.td_magnus')
+      call push_sub('td_rti.td_rti_dt.td_magnus')
 
       SAFE_ALLOCATE(vaux(1:gr%mesh%np, 1:st%d%nspin, 1:2))
 
@@ -1102,7 +1110,7 @@ contains
     ! ---------------------------------------------------------
     ! Crank-Nicholson scheme with source and memory term.
     subroutine td_crank_nicholson_src_mem()
-      call push_sub('td_rti.td_crank_nicholson_src_mem')
+      call push_sub('td_rti.td_rti_dt.td_crank_nicholson_src_mem')
       
       select case(tr%ob%mem_type)
       case(SAVE_CPU_TIME)
@@ -1115,13 +1123,12 @@ contains
     end subroutine td_crank_nicholson_src_mem
 
     ! ---------------------------------------------------------
-    ! Propagator with approximate enforced time-reversal symmetry
     subroutine td_visscher
       integer :: ik, ist, idim, ip
       FLOAT, allocatable :: dpsi(:, :), hpsi(:, :)
       CMPLX, allocatable :: zpsi(:,:)
 
-      call push_sub('td_rti.td_app_reversal')
+      call push_sub('td_rti.td_rti_dt.td_visscher')
       
       SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
       SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
@@ -1130,7 +1137,7 @@ contains
       ! use the exponential midpoint rule.
       if(tr%first) then
 
-        !propagate the hamiltonian to t - dt/4
+        !propagate the Hamiltonian to t - dt/4
         if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
           call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t - CNST(0.75)*dt, hm%vhxc(:, :))
         end if
@@ -1157,7 +1164,7 @@ contains
         SAFE_DEALLOCATE_A(zpsi)
         tr%first = .false.
         
-        !finish to propagate the hamiltonian to t - dt/2
+        !finish to propagate the Hamiltonian to t - dt/2
         
         if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
           call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t - CNST(0.5)*dt, hm%vhxc(:, :))
@@ -1174,7 +1181,7 @@ contains
         
       else
         
-        !directly propagate the hamiltonian to t - dt/2
+        !directly propagate the Hamiltonian to t - dt/2
         
         if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
           call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t-dt/M_TWO, hm%vhxc(:, :))
@@ -1210,7 +1217,7 @@ contains
         end do
       end do
 
-      ! propagate the hamiltonian to time t
+      ! propagate the Hamiltonian to time t
       call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 0), hm%vhxc)
       call hamiltonian_update_potential(hm, gr%mesh)
 
@@ -1254,6 +1261,8 @@ contains
     integer :: idim
     CMPLX, allocatable :: zpsi(:, :)
 
+    call push_sub('td_rti.td_rti_qmr_op')
+
     SAFE_ALLOCATE(zpsi(1:grid_p%mesh%np_part, 1:dim_op))
     zpsi = M_z0
     forall(idim = 1:dim_op)
@@ -1267,7 +1276,7 @@ contains
     end forall
 
     SAFE_DEALLOCATE_A(zpsi)
-
+    call pop_sub()
   end subroutine td_rti_qmr_op
   ! ---------------------------------------------------------
 
@@ -1276,7 +1285,11 @@ contains
   subroutine td_rti_qmr_prec(x, y)
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
+
+    call push_sub('td_rti.td_rti_qmr_prec')
     y = x
+
+    call pop_sub()
   end subroutine td_rti_qmr_prec
   ! ---------------------------------------------------------
 

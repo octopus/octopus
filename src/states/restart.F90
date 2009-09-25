@@ -25,22 +25,22 @@ module restart_m
   use geometry_m
   use global_m
   use grid_m
-  use io_function_m
   use io_m
+  use io_function_m
   use loct_m
   use loct_parser_m
   use linear_response_m
   use math_m
-  use mesh_function_m
   use mesh_m
+  use mesh_function_m
   use mesh_init_m
   use messages_m
   use mpi_m
   use profiling_m
   use simul_box_m
   use states_m
-  use states_dim_m
   use states_calc_m
+  use states_dim_m
   use string_m
   use units_m
   use varinfo_m
@@ -86,6 +86,8 @@ contains
   function clean_stop()
     logical clean_stop, file_exists
 
+    call push_sub('restart.clean_stop')
+
     clean_stop = .false.
     inquire(file='stop', exist=file_exists)
     if(file_exists) then
@@ -98,7 +100,7 @@ contains
       if(mpi_grp_is_root(mpi_world)) call loct_rm('stop')
     end if
 
-    return
+    call pop_sub(); return
   end function clean_stop
 
 
@@ -191,7 +193,7 @@ contains
     !check how many wfs we have
     call states_look(trim(dir)//GS_DIR, gr%mesh%mpi_grp, kpoints, dim, nst, ierr)
     if(ierr.ne.0) then
-      message(1) = 'Could not properly read wave-functions from "'//trim(dir)//GS_DIR//'".'
+      message(1) = 'Could not properly read wavefunctions from "'//trim(dir)//GS_DIR//'".'
       call write_fatal(1)
     end if
 
@@ -221,7 +223,7 @@ contains
     st%eigenval = huge(st%eigenval)
     st%occ      = M_ZERO
 
-    ! load wave-functions
+    ! load wavefunctions
     call restart_read(trim(dir)//GS_DIR, st, gr, geo, ierr)
     if(ierr.ne.0) then
       message(1) = "Could not read KS orbitals from '"//trim(dir)//GS_DIR//"'"
@@ -275,11 +277,11 @@ contains
       call io_mkdir(dir, is_tmp=.true.)
 
       iunit = io_open(trim(dir)//'/wfns', action='write', is_tmp=.true.)
-      write(iunit,'(a)') '#     #kpoint            #st            #dim    filename'
+      write(iunit,'(a)') '#     #k-point            #st            #dim    filename'
       write(iunit,'(a)') '%Wavefunctions'
 
       iunit2 = io_open(trim(dir)//'/occs', action='write', is_tmp=.true.)
-      write(iunit2,'(a)') '# occupations | eigenvalue[a.u.] | K-Points | K-Weights | filename | ik | ist | idim'
+      write(iunit2,'(a)') '# occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim'
       write(iunit2,'(a)') '%Occupations_Eigenvalues_K-Points'
 
       iunit_mesh = io_open(trim(dir)//'/mesh', action='write', is_tmp=.true.)
@@ -361,11 +363,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Reads the interface regions of the ground state wavefunctions of
-  ! an open boundaries calculation.
+  ! Reads the interface regions of the ground-state wavefunctions of
+  ! an open-boundaries calculation.
   ! Returns (in ierr)
   ! <0 => Fatal error,
-  ! =0 => read all wave-functions,
+  ! =0 => read all wavefunctions,
   ! >0 => could only read x wavefunctions.
   subroutine restart_read_ob_intf(dir, st, gr, ierr)
     character(len=*), intent(in)    :: dir
@@ -383,7 +385,7 @@ contains
 
     call push_sub('restart.restart_read_ob_intf')
 
-    write(message(1), '(a,i5)') 'Info: Reading ground-state interface wavefunctions'
+    write(message(1), '(a,i5)') 'Info: Reading ground-state interface wavefunctions.'
     call write_info(1)
 
     mpi_grp = mpi_world
@@ -511,7 +513,7 @@ contains
   ! an open-boundaries calculation.
   ! Returns (in ierr)
   ! <0 => Fatal error,
-  ! =0 => read all wave-functions,
+  ! =0 => read all wavefunctions,
   ! >0 => could only read x wavefunctions.
   subroutine restart_read_ob_central(dir, st, gr, ierr)
     character(len=*), intent(in)    :: dir
@@ -650,7 +652,7 @@ contains
   ! ---------------------------------------------------------
   ! returns
   ! <0 => Fatal error
-  ! =0 => read all wave-functions
+  ! =0 => read all wavefunctions
   ! >0 => could only read x wavefunctions
   subroutine restart_read(dir, st, gr, geo, ierr, read_occ, iter, lr)
     character(len=*),     intent(in)    :: dir
@@ -1178,10 +1180,10 @@ contains
     !%Section States
     !%Description
     !% Instead of using the ground state as initial state for
-    !% time propagations it might be interesting in some cases 
-    !% to specify alternate states. Similar to user-defined
+    !% time-propagations it might be interesting in some cases 
+    !% to specify alternate states. Like with user-defined
     !% potentials, this block allows you to specify formulas for
-    !% the orbitals at t=0.
+    !% the orbitals at <i>t</i>=0.
     !%
     !% Example:
     !%
@@ -1191,7 +1193,7 @@ contains
     !%
     !% The first column specifies the component of the spinor, 
     !% the second column the number of the state and the third 
-    !% contains k-point and spin quantum numbers. Column four
+    !% contains <i>k</i>-point and spin quantum numbers. Column four
     !% indicates that column five should be interpreted as a formula
     !% for the corresponding orbital.
     !% 

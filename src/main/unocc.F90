@@ -34,18 +34,18 @@ module unocc_m
   use lcao_m
   use loct_m
   use loct_parser_m
-  use mesh_function_m
   use mesh_m
+  use mesh_function_m
   use messages_m
   use mpi_m
   use poisson_m
-  use projector_m
   use profiling_m
+  use projector_m
   use restart_m
   use simul_box_m
   use states_m
-  use states_dim_m
   use states_calc_m
+  use states_dim_m
   use system_m
   use v_ks_m
   use varinfo_m
@@ -89,7 +89,7 @@ contains
     end if
 
     if(ierr.ne.0) then
-      message(1) = "Info:  Could not load all wave-functions from '"//trim(restart_dir)//GS_DIR//"'"
+      message(1) = "Info:  Could not load all wavefunctions from '"//trim(restart_dir)//GS_DIR//"'"
       call write_info(1)
     end if
 
@@ -169,7 +169,7 @@ contains
       call states_degeneracy_matrix(sys%st)
     end if
 
-    ! output wave-functions
+    ! output wavefunctions
     call h_sys_output_states(sys%st, sys%gr, sys%geo, STATIC_DIR, sys%outp)
 
     call end_()
