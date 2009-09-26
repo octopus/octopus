@@ -247,6 +247,7 @@ foreach my $octopus_exe (@executables){
 	  die "could not find input file: $input_file\n";
 	}
 
+	$return_value = 0;
 
 	if ( !$opt_m ) {
 	  if ( !$opt_n ) {
@@ -258,18 +259,22 @@ foreach my $octopus_exe (@executables){
 	    if ( $octopus_exe_suffix =~ /mpi$/) {
 	      if( -x "$mpiexec_raw") {
 		print "Executing: cd $workdir; $mpiexec -n $np $octopus_exe_suffix > out \n";
-		system("cd $workdir; $mpiexec -n $np $octopus_exe_suffix > out ");
+		$return_value = system("cd $workdir; $mpiexec -n $np $octopus_exe_suffix > out ");
 	      } else {
 		print "No mpiexec found: Skipping parallel test \n";
 		exit 255;
 	      }
 	    } else {
 	      print "Executing: cd $workdir; $octopus_exe_suffix > out \n";
-	      system("cd $workdir; $octopus_exe_suffix > out ");
+	      $return_value = system("cd $workdir; $octopus_exe_suffix > out ");
 	    }
 	    system("sed -n '/Running octopus/{N;N;N;N;N;N;p;}' $workdir/out > $workdir/build-stamp");
-	    print "Finished test run.\n\n"; }
-	  else {
+	    if($return_value == 0) {
+	      print "Finished test run.\n\n";
+	    } else {
+	      print "\nTest run failed with exit code $return_value\n\n";
+	    }
+	  } else {
 	    if(!$opt_i) { print "cd $workdir; $octopus_exe_suffix > out \n"; }
 	  }
 	  $test{"run"} = 1;
@@ -297,7 +302,7 @@ foreach my $octopus_exe (@executables){
       }
 
       if ( $_ =~ /^match/ && !$opt_n) {
-	if(run_match_new($_)){
+	if(run_match_new($_) && $return_value == 0){
 	  print "$name: \t [ $color_start{green}  OK  $color_end{green} ] \n";
 	  $test_succeeded = 1;
 	} else {
