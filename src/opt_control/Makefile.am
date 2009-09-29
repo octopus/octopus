@@ -41,5 +41,5 @@ iter.o : iter.F90 parameters.o opt_control_global.o
 target.o : target.F90 opt_control_global.o 
 initst.o: initst.F90 
 propagation.o : propagation.F90 parameters.o target.o opt_control_global.o 
-opt_control.o : opt_control.F90 finalcheck_inc.F90 initst.F90 check_input_inc.F90 target.o \
+opt_control.o : opt_control.F90 finalcheck_inc.F90 initst.o check_input_inc.F90 target.o \
   iter.o parameters.o propagation.o opt_control_global.o filters.o 
