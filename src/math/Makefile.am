@@ -26,6 +26,7 @@ libmath_a_SOURCES = \
 	lalg_adv.F90 gauss_legendre.F90 math.F90 ode_solver.F90 permutations.F90 root_solver.F90 \
 	solvers.F90 \
 	lapack.F90  \
+	mix.F90     \
 	splines.F90 sparskit.F90 fft.F90 tdfunction.F90 fft_cuda.c filters.F90 \
 	young.F90
 
@@ -33,6 +34,7 @@ noinst_HEADERS = \
 	lalg_basic_blas.F90 lalg_adv_lapack_inc.F90 math_inc.F90 \
 	ode_solver_inc.F90 root_solver_inc.F90 sparskit_inc.F90 \
 	solvers_inc.F90 \
+	mix_inc.F90     \
 	fftw3.F90 fft_cuda_inc.F90
 
 include $(srcdir)/../common-rules.make
@@ -60,3 +62,4 @@ filters.o: filters.F90 splines.o
 solvers.o : solvers.F90 solvers_inc.F90 lalg_adv.o
 young.o : young.F90 math.o
 lapack.o : lapack.F90
+mix.o : mix.F90 mix_inc.F90 lalg_basic.o lalg_adv.o

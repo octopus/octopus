@@ -27,7 +27,6 @@ module mix_m
   use loct_parser_m
   use messages_m
   use profiling_m
-  use states_m
   use varinfo_m
 
   implicit none
