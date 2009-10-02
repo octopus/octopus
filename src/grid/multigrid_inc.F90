@@ -30,7 +30,7 @@
     integer, optional,       intent(in)    :: order
 
     integer :: idir, order_, ii, ifactor
-    integer :: ipc, ipf, xf(1:3), xc(1:3), dd(1:3)
+    integer :: ipc, ipf, ipfg, xf(1:3), xc(1:3), dd(1:3)
     FLOAT, allocatable :: factor(:), points(:)
 
     call push_sub('multigrid.Xmultigrid_coarse2fine')
@@ -60,7 +60,13 @@
 
     do ipf = 1, fine_mesh%np
       
-      xf = fine_mesh%idx%lxyz(ipf, :)
+      ipfg = ipf
+#ifdef HAVE_MPI
+      ! translate to a global index
+      if(fine_mesh%parallel_in_domains) ipfg = fine_mesh%vp%local(ipf - 1 + fine_mesh%vp%xlocal(fine_mesh%vp%partno))
+#endif 
+      xf = fine_mesh%idx%lxyz(ipfg, :)
+
       dd = mod(xf, 2)
       
       f_fine(ipf) = M_ZERO
@@ -72,6 +78,10 @@
           xc = xf + (2*ii - sign(1, ii))*dd
           xc = xc/2
           ipc = coarse_mesh%idx%lxyz_inv(xc(1), xc(2), xc(3))
+#ifdef HAVE_MPI
+            ! translate to a local index
+            if(coarse_mesh%parallel_in_domains) ipc = vec_global2local(coarse_mesh%vp, ipc, coarse_mesh%vp%partno)
+#endif
           f_fine(ipf) = f_fine(ipf) + factor(ifactor)*f_coarse(ipc)
           ifactor = ifactor + 1
         end do
