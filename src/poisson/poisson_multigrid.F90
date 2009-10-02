@@ -236,7 +236,7 @@ contains
         if(curr_l > 0 ) then
           call dmultigrid_coarse2fine(gr%mgrid%level(curr_l)%tt, gr%mgrid%level(curr_l)%der, &
             gr%mgrid%level(curr_l)%mesh, gr%mgrid%level(curr_l - 1)%mesh, &
-            phi%level(curr_l)%p, phi%level(curr_l - 1)%p)
+            phi%level(curr_l)%p, phi%level(curr_l - 1)%p, order = 2)
           curr_l = curr_l - 1
         else
           exit
