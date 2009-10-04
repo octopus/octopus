@@ -173,8 +173,8 @@ contains
     !%End
     call loct_parse_float(datasets_check('ConvRelEv'), M_ZERO, scf%conv_rel_ev)
 
-    call obsolete_variable("ConvAbsForce", "ConvForce")
-    call obsolete_variable("ConvRelForce", "ConvForce")
+    call messages_obsolete_variable("ConvAbsForce", "ConvForce")
+    call messages_obsolete_variable("ConvRelForce", "ConvForce")
 
     !%Variable ConvForce
     !%Type float

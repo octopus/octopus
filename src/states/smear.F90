@@ -113,7 +113,7 @@ contains
       this%dsmear = this%dsmear * units_inp%energy%factor
     end if
 
-    call obsolete_variable("ElectronicTemperature", "Smearing")
+    call messages_obsolete_variable("ElectronicTemperature", "Smearing")
 
     this%fixed_occ = fixed_occ
     this%el_per_state = M_ONE

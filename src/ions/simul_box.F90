@@ -470,6 +470,8 @@ contains
       !%End
 
       if(loct_parse_block(datasets_check('MultiResolutionArea'), blk) == 0) then
+        
+        call messages_devel_version('Multi-resolution')
 
         ! number of areas
         sb%hr_area%num_areas = loct_parse_block_n(blk)

@@ -277,7 +277,7 @@ contains
     !% The potential is read from a file, whose name is given in column 5.
     !%End
 
-    call obsolete_variable('SpecieAllElectronSigma', 'SpeciesAllElectronSigma')
+    call messages_obsolete_variable('SpecieAllElectronSigma', 'SpeciesAllElectronSigma')
 
     !%Variable SpeciesAllElectronSigma
     !%Type float

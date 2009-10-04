@@ -139,7 +139,7 @@ contains
     !% Defines which method to use in order to solve the Poisson equation. Defaults:
     !% 1D: fft if not periodic, fft_nocut if periodic.
     !% 2D: fft if not periodic, fft_cyl if periodic in 1D, fft_nocut if periodic in 2D.
-    !% 3D: cg_corrected if curvilinear, fft if not periodic, fft_cyl if periodic in 1D,
+    !% 3D: cg_corrected if curvilinear, isf if not periodic, fft_cyl if periodic in 1D,
     !% fft_pla if periodic in 2D, fft_nocut if periodic in 3D.
     !%
     !%Option direct2D -2
@@ -164,8 +164,8 @@ contains
     !% Multigrid method
     !%Option isf 8
     !% Interpolating Scaling Functions Poisson solver.
-    !%Options sete 9
-    !% SETE solver.
+    !%Option sete 9
+    !% (Experimental) SETE solver.
     !%End
 
     !------------------------------------------------------------------
@@ -281,6 +281,11 @@ contains
         message(4) = 'solver are providing, in your case, the same results.'
         call write_warning(4)
       end if
+
+      if (poisson_solver == POISSON_SETE) then
+        call messages_devel_version('SETE poisson solver')
+      end if
+
 !      if poisson_solver == POISSON_SETE then
 !       do i = 1, geo%natoms !Roberto
 !         do j=1, 3 !Roberto 

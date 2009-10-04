@@ -117,8 +117,8 @@ contains
     call loct_parse_int(datasets_check('TheoryLevel'), KOHN_SHAM_DFT, ks%theory_level)
     if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call input_error('TheoryLevel')
 
-    call obsolete_variable('NonInteractingElectrons', 'TheoryLevel')
-    call obsolete_variable('HartreeFock', 'TheoryLevel')
+    call messages_obsolete_variable('NonInteractingElectrons', 'TheoryLevel')
+    call messages_obsolete_variable('HartreeFock', 'TheoryLevel')
 
     select case(ks%theory_level)
     case(INDEPENDENT_PARTICLES)

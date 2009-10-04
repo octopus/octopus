@@ -71,7 +71,7 @@ contains
     SAFE_ALLOCATE(sys%gr)
     SAFE_ALLOCATE(sys%st)
     
-    call obsolete_variable('SystemName')
+    call messages_obsolete_variable('SystemName')
 
     call geometry_init(sys%geo)
     call simul_box_init(sys%gr%sb, sys%geo)

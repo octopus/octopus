@@ -32,27 +32,27 @@ module messages_m
 
   private
 
-  public ::                   &
-    write_fatal,              &
-    write_warning,            &
-    write_info,               &
-    write_debug,              &
-    write_debug_marker,       &
-    write_debug_newlines,     &
-    delete_debug_trace,       &
-    print_date,               &
-    time_diff,                &
-    time_sum,                 &
-    epoch_time_diff,          &
-    alloc_error,              &
-    input_error,              &
-    push_sub,                 &
-    pop_sub,                  &
-    messages_print_stress,    &
-    messages_print_var_info,  &
-    messages_print_var_option,&
-    messages_print_var_value, &
-    obsolete_variable,        &
+  public ::                     &
+    write_fatal,                &
+    write_warning,              &
+    write_info,                 &
+    write_debug,                &
+    write_debug_marker,         &
+    write_debug_newlines,       &
+    delete_debug_trace,         &
+    print_date,                 &
+    time_diff,                  &
+    time_sum,                   &
+    epoch_time_diff,            &
+    alloc_error,                &
+    input_error,                &
+    push_sub,                   &
+    pop_sub,                    &
+    messages_print_stress,      &
+    messages_print_var_info,    &
+    messages_print_var_option,  &
+    messages_print_var_value,   &
+    messages_obsolete_variable, &
     messages_devel_version
 
   character(len=256), dimension(20), public :: message    ! to be output by fatal, warning
@@ -738,7 +738,7 @@ contains
   end subroutine pop_sub
 #endif
   
-  subroutine obsolete_variable(name, rep)
+  subroutine messages_obsolete_variable(name, rep)
     character(len=*),           intent(in) :: name
     character(len=*), optional, intent(in) :: rep
     
@@ -747,15 +747,18 @@ contains
       write(message(1), '(a)') 'Input variable '//trim(name)//' is obsolete.'
 
       if(present(rep)) then
-        write(message(2), '(a)') 'Please use variable '//trim(rep)//' instead.'
-        call write_fatal(2)
+        write(message(2), '(a)') ' '
+        write(message(3), '(a)') 'Equivalent functionality can be obtained with the '//trim(rep)
+        write(message(4), '(a)') 'variable, check the documentation for details.'
+        write(message(5), '(a)') '(You can use the `oct-help show '//trim(rep)//'` command).'
+        call write_fatal(5)
       else
         call write_fatal(1)
       end if
 
     end if
     
-  end subroutine obsolete_variable
+  end subroutine messages_obsolete_variable
 
   subroutine messages_devel_version(name)
     character(len=*),           intent(in) :: name
