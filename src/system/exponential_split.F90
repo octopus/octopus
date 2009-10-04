@@ -61,11 +61,7 @@ contains
       call write_fatal(1)
     end if
 
-    if(hm%cutoff > M_ZERO) then
-      cutoff = hm%cutoff
-    else
-      cutoff = CNST(1e10)
-    end if
+    cutoff = CNST(1e10)
 
     temp = M_ZERO
     temp(1:gr%mesh%sb%dim) = (M_TWO*M_Pi)/(cf%n(1:gr%mesh%sb%dim)*gr%mesh%h(1:gr%mesh%sb%dim))

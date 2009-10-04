@@ -264,10 +264,10 @@ module tdf_m
             call pop_sub(); return
         end select
 
-        a0   = a0 * units_inp%energy%factor / units_inp%length%factor
-        tau0 = tau0 * units_inp%time%factor
-        t0   = t0   * units_inp%time%factor
-        tau1 = tau1 * units_inp%time%factor
+        a0   = units_to_atomic(units_inp%energy/units_inp%length, a0)
+        tau0 = units_to_atomic(units_inp%time, tau0)
+        t0   = units_to_atomic(units_inp%time, t0)
+        tau1 = units_to_atomic(units_inp%time, tau1)
 
         select case(function_type)
         case(TDF_CW)
@@ -926,7 +926,7 @@ module tdf_m
     type(tdf_t), intent(in) :: f
     FLOAT, intent(in)       :: t
 
-    FLOAT :: r, fre, fim
+    FLOAT :: r, fre, fim, tcu
     integer :: il, iu
 
     call push_sub('tdfunction.tdft')
@@ -979,7 +979,8 @@ module tdf_m
       end if
 
     case(TDF_FROM_EXPR)
-      call loct_parse_expression(fre, fim, 't', t/units_inp%time%factor, f%expression)
+      tcu = units_from_atomic(units_inp%time, t)
+      call loct_parse_expression(fre, fim, 't', tcu, f%expression)
       y = cmplx(fre, fim)
 
     case default

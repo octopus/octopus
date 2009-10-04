@@ -153,9 +153,6 @@ module hamiltonian_m
     FLOAT :: spectral_middle_point
     FLOAT :: spectral_half_span
 
-    ! Kinetic Cutoff
-    FLOAT :: cutoff
-
     ! Mass of the particle (in most cases, mass = 1, electron mass)
     FLOAT :: mass
     ! anisotropic scaling factor for the mass: different along x,y,z etc...
@@ -343,16 +340,6 @@ contains
     nullify(hm%ab_pot)
 
     if(hm%ab.ne.NOT_ABSORBING) call init_abs_boundaries()
-
-    ! Cutoff applied to the kinetic term.
-    ! it is used *both* in the calculation of the split operator method
-    call loct_parse_float(datasets_check('KineticCutoff'), -M_ONE, hm%cutoff)
-    if(hm%cutoff > M_ZERO) then
-      hm%cutoff = hm%cutoff*units_inp%energy%factor
-      write(message(1),'(a,f7.2,a)') 'Info: The kinetic operator will have a cutoff of',&
-        hm%cutoff/units_out%energy%factor, units_out%energy%abbrev
-      call write_info(1)
-    end if
 
     !%Variable ParticleMass
     !%Type float

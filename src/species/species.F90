@@ -967,7 +967,7 @@ contains
     case(SPEC_JELLI)
       call loct_parse_block_float(blk, row, 3, s%Z)      ! charge of the jellium sphere
       call loct_parse_block_float(blk, row, 4, s%jradius)! radius of the jellium sphere
-      s%jradius = units_inp%length%factor * s%jradius    ! units conversion
+      s%jradius = units_to_atomic(units_inp%length, s%jradius) ! units conversion
       s%Z_val = s%Z
       read_data = 5
 
@@ -1001,13 +1001,13 @@ contains
 
       if(n>6) then
         call loct_parse_block_float (blk, row, 6, s%def_h)
-        s%def_h = s%def_h * units_inp%length%factor
+        s%def_h = units_to_atomic(units_inp%length, s%def_h)
         read_data = 7
       end if
 
       if(n>7) then
         call loct_parse_block_float (blk, row, 7, s%def_rsize)
-        s%def_rsize = s%def_rsize * units_inp%length%factor
+        s%def_rsize = units_to_atomic(units_inp%length, s%def_rsize)
         read_data = 8
       end if
 
