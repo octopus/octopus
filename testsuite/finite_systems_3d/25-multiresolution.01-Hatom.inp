@@ -24,3 +24,5 @@ EigenSolver = cg_new
 %
 
 MR_InterpolationOrder = 5
+
+DevelVersion = yes
