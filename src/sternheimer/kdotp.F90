@@ -72,7 +72,6 @@ module kdotp_m
 
     logical :: ok                   ! is converged?
     integer :: occ_solution_method  ! how to get occupied components of response
-    integer :: initialization       ! method for initialization of wfns
     FLOAT   :: degen_thres          ! maximum energy difference to be considered
                                     ! degenerate
     FLOAT   :: eta                  ! imaginary freq. added to Sternheimer eqn.
@@ -141,52 +140,19 @@ contains
       call lr_init(kdotp_vars%lr(idir, 1))
       call lr_allocate(kdotp_vars%lr(idir, 1), sys%st, sys%gr%mesh)
 
-      if(fromScratch .and. kdotp_vars%initialization .eq. 1) then
-      ! this is the exact solution in the limit of no dispersion, i.e. non-interacting unit cells
-      ! |u_i(1)> = r_i |u(0)>
-        SAFE_ALLOCATE(orth_mask(1:sys%st%nst))
-
-        do is = 1, sys%st%d%dim
-          do ist = 1, sys%st%nst
-             orth_mask(1:sys%st%nst) = .true.
-             orth_mask(ist) = .false.
-
-            do ik = 1, sys%st%d%nik
-              if(states_are_real(sys%st)) then
-                kdotp_vars%lr(idir, 1)%ddl_psi(1:gr%mesh%np, is, ist, ik) &
-                  = gr%mesh%x(1:gr%mesh%np, idir) * sys%st%dpsi(1:gr%mesh%np, is, ist, ik)
-                ! orthogonalize against unperturbed wfn to remove component unaccessible to perturbation theory
-                call dstates_gram_schmidt(gr%mesh, sys%st%nst, sys%st%d%dim, sys%st%dpsi(1:gr%mesh%np, 1:1, 1:sys%st%nst, ik), &
-                   kdotp_vars%lr(idir, 1)%ddl_psi(1:gr%mesh%np, 1:1, ist, ik), mask = orth_mask(1:sys%st%nst))
-              else
-                kdotp_vars%lr(idir, 1)%zdl_psi(1:gr%mesh%np, is, ist, ik) &
-                  = gr%mesh%x(1:gr%mesh%np, idir) * sys%st%zpsi(1:gr%mesh%np, is, ist, ik)
-                ! orthogonalize against unperturbed wfn to remove component unaccessible to perturbation theory
-                call zstates_gram_schmidt(gr%mesh, sys%st%nst, sys%st%d%dim, sys%st%zpsi(1:gr%mesh%np, 1:1, 1:sys%st%nst, ik), &
-                   kdotp_vars%lr(idir, 1)%zdl_psi(1:gr%mesh%np, 1:1, ist, ik), mask = orth_mask(1:sys%st%nst))
-              endif
-            enddo
-          enddo
-        enddo
-
-        SAFE_DEALLOCATE_A(orth_mask)
-      endif
-
       ! load wavefunctions
       if(.not.fromScratch) then
-         str_tmp =  kdotp_wfs_tag(idir)
-         write(dirname,'(3a)') KDOTP_DIR, trim(str_tmp), '_1'
-         ! 1 is the sigma index which is used in em_resp
-         call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
-               ierr, lr=kdotp_vars%lr(idir, 1))
+        str_tmp =  kdotp_wfs_tag(idir)
+        write(dirname,'(3a)') KDOTP_DIR, trim(str_tmp), '_1'
+        ! 1 is the sigma index which is used in em_resp
+        call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
+          ierr, lr=kdotp_vars%lr(idir, 1))
           
-          if(ierr.ne.0) then
-             message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//trim(dirname)//"'"
-             call write_warning(1)
-          end if
-          
-       end if
-
+        if(ierr.ne.0) then
+          message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//trim(dirname)//"'"
+          call write_warning(1)
+        end if      
+      end if
     end do
 
     call io_mkdir(trim(tmpdir)//KDOTP_DIR) ! restart
@@ -289,22 +255,6 @@ contains
       call loct_parse_float(datasets_check('KdotP_Eta'), M_ZERO, kdotp_vars%eta)
       kdotp_vars%eta = units_to_atomic(units_inp%energy, kdotp_vars%eta)
 
-      !%Variable KdotP_Initialization
-      !%Type integer
-      !%Default zero
-      !%Section Linear Response::KdotP
-      !%Description
-      !% Initial values assigned to linear-response wavefunctions. Only used if
-      !% <tt>FromScratch = yes</tt>, since otherwise initial values are read from restart directory.
-      !%Option zero 0
-      !% The initial values are zero.
-      !%Option nondispersive 1
-      !% The initial values are the exact solutions in the limit of no dispersion, <i>i.e.</i> 
-      !% non-interacting unit cells: -i (d/dk) |u> = r |u>.
-      !%End
-
-      call loct_parse_int(datasets_check('KdotP_Initialization'), 0, kdotp_vars%initialization)
-
       !%Variable KdotP_CalculateEffectiveMasses
       !%Type logical
       !%Default true
@@ -337,15 +287,7 @@ contains
         message(1) = 'Occupied solution method: sum over states.'
       endif
 
-      if (.not. fromScratch) then
-        message(2) = 'k.p initialization: restart wavefunctions.'
-      else if (kdotp_vars%initialization == 0) then
-        message(2) = 'k.p initialization: zero.'
-      else
-        message(2) = 'k.p initialization: non-dispersive solutions.'
-      endif
-
-      call write_info(2)
+      call write_info(1)
 
       call messages_print_stress(stdout)
       

@@ -322,7 +322,7 @@ contains
       hm%exx_coef = M_ONE
     end if
 
-    ! Calculate the potential vector induced by the electronic current
+    ! Calculate the vector potential induced by the electronic current.
     ! WARNING: calculating the self-induced magnetic field here only makes
     ! sense if it is going to be used in the Hamiltonian, which does not happen
     ! now. Otherwise one could just calculate it at the end of the calculation.
