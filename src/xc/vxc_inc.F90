@@ -453,14 +453,14 @@ contains
     FLOAT, allocatable :: gnon(:)
     FLOAT gn(MAX_DIM), n, tb09_c
     integer :: ii
-
+    integer, SAVE :: ncall = 0 
     SAFE_ALLOCATE( tau(1:gr%mesh%np, 1:spin_channels))
     SAFE_ALLOCATE(ldens(1:gr%mesh%np, 1:spin_channels))
     if(present(vxc)) then
       SAFE_ALLOCATE(dedldens(1:gr%mesh%np_part, 1:spin_channels))
       dedldens = M_ZERO
     end if
-
+    
     ! calculate laplacian of the density
     do ii = 1, spin_channels
       call dderivatives_lapl(gr%der, dens(:, ii), ldens(:, ii))
@@ -471,22 +471,34 @@ contains
 
     if(functl(1)%id == XC_MGGA_X_TB09 .and. gr%sb%periodic_dim == 3) then
       SAFE_ALLOCATE(gnon(1:gr%mesh%np))
-        
+
       do ii = 1, gr%mesh%np
-        if(ispin == UNPOLARIZED) then
-          n = dens(ii, 1)
-          gn(1:gr%mesh%sb%dim) = gdens(ii, 1:gr%mesh%sb%dim, 1)
-        else
-          n = dens(ii, 1) + dens(ii, 2)
-          gn(1:gr%mesh%sb%dim) = gdens(ii, 1:gr%mesh%sb%dim, 1) + gdens(ii, 1:gr%mesh%sb%dim, 2)
-        end if
-
-        gnon(ii) = sqrt(sum(gn(1:gr%mesh%sb%dim)**2))/n
+         if(ispin == UNPOLARIZED) then
+            n = dens(ii, 1)
+            gn(1:gr%mesh%sb%dim) = gdens(ii, 1:gr%mesh%sb%dim, 1)
+         else
+            n = dens(ii, 1) + dens(ii, 2)
+            gn(1:gr%mesh%sb%dim) = gdens(ii, 1:gr%mesh%sb%dim, 1) + gdens(ii, 1:gr%mesh%sb%dim, 2)
+         end if
+         
+         if (n <= CNST(1e-7)) then 
+            gnon(ii) = CNST(0.0)
+            ! here you will have to print the true gnon(ii) with the correspondent mesh point ii
+         else
+            gnon(ii) = sqrt(sum((gn(1:gr%mesh%sb%dim)/n)**2))
+         end if
       end do
+     
+      ncall = ncall +1 
+      tb09_c =  -CNST(0.012) + CNST(1.023)*sqrt(dmf_integrate(gr%mesh, gnon)/gr%sb%rcell_volume)
+           
+      write(*,*) "call number " , ncall
+ 
+ 
+    
+      
 
-      tb09_c = -CNST(0.012) + CNST(1.023)*sqrt(dmf_integrate(gr%mesh, gnon)/gr%sb%rcell_volume)
-
-      write(message(1), '(a,f8.6)') "Info: In the functional TP09 c = ", tb09_c
+      write(message(1), '(a,f8.6)') "Info: In the functional TB09 c = ", tb09_c
       call write_info(1)
 
       call  XC_F90(mgga_x_tb09_set_par)(functl(1)%conf, tb09_c)
