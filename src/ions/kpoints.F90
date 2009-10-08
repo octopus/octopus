@@ -51,7 +51,7 @@ module kpoints_m
     logical        :: use_symmetries
     logical        :: use_inversion
 
-    ! For the Monkhorst-Pack scheme
+    ! For the modified Monkhorst-Pack  scheme
     integer        :: nik_axis(MAX_DIM)    ! number of MP divisions
     FLOAT          :: shifts(MAX_DIM)      ! 
 

@@ -49,8 +49,9 @@ lead_PeriodicDimensions = 1
  50*DerivativesOrder*Spacing | 0 | 0
 %
 
-%KPointsMonkhorstPack 
+%KPointsGrid
   4 | 1 | 1
+1/2 | 1/2 | 1/2
 %
 KPointsUseSymmetries = false
 

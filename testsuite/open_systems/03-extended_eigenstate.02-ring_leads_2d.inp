@@ -54,8 +54,9 @@ lead_Lx = Spacing
  DerivativesOrder*lead_Lx | Ly | 0
 %
 
-%KPointsMonkhorstPack 
+%KPointsGrid 
   8 | 1 | 1
+1/2 | 1/2 | 1/2
 %
 KPointsUseSymmetries = false
 
