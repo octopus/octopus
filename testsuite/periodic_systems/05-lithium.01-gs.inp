@@ -19,8 +19,9 @@ Spacing = a/10
 
 BoxShape = parallelepiped
 
-%KPointsMonkhorstPack
- 4 | 4 | 4
+%KPointsGrid
+ 4   |   4 |    4
+ 1/2    |   1/2   |  1/2
 %
 
 KPointsUseSymmetries = no

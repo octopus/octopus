@@ -13,7 +13,6 @@ BoxShape = parallelepiped
 Lsize = 10
 PeriodicDimensions = 3
 
-%KPointsMonkhorstPack
+%KPointsGrid
 1 | 1 | 1
-0 | 0 | 0
 %

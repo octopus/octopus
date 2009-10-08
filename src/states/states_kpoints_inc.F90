@@ -113,32 +113,8 @@ subroutine states_choose_kpoints(d, sb, geo)
     call pop_sub(); return
   end if
 
-  !%Variable KPointsMonkhorstPack
-  !%Type block
-  !%Default 1,1,1
-  !%Section Mesh::KPoints
-  !%Description
-  !% When this block is given (and the <tt>KPoints</tt> block is not present),
-  !% <i>k</i>-points are arranged in a Monkhorst-Pack grid.
-  !%
-  !% The first row of the block is a triplet of integers defining the
-  !% number of <i>k</i>-points to be used along each direction in the
-  !% reciprocal space. The numbers refer to the whole Brillouin zone,
-  !% and the actual number of <i>k</i>-points is usually reduced exploiting
-  !% the symmetries of the system.  An optional second row can specify
-  !% a shift in the <i>k</i>-points.
-  !%
-  !% For example, the following input samples the BZ with 100 points in the 
-  !% <i>xy</i>-plane of the reciprocal space:
-  !%
-  !% <tt>%KPointsMonkhorstPack
-  !% <br>&nbsp;&nbsp;10 | 10 | 1
-  !% <br>%</tt>
-  !%
-  !%End
-
   ! default when nothing specified: Gamma point only
-  if(loct_parse_block(datasets_check('KPointsMonkhorstPack'), blk) .ne. 0) then
+  if(loct_parse_block(datasets_check('KPointsGrid'), blk) .ne. 0) then
 
     if (d%ispin == 2) then
       message(1) = 'Not implemented yet.'

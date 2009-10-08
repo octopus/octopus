@@ -22,29 +22,33 @@ module crystal_m
   
 contains
 
-  subroutine crystal_monkhorstpack_generate(sb, naxis, shift, nkpoints, kpoints)
+  subroutine crystal_kpointsgrid_generate(sb, naxis, shift, nkpoints, kpoints)
+  
+    ! Generates the K-points grid
+    ! Sets up a uniform array of k-points. Use  a modification of the normal MP scheme, 
+    ! wich is equal to the normal MP scheme in the case of even number of kpoints (i.d.  naxis (i) even)  
+    ! used with a shift of (1/2.1/2,1/2)
+    ! For the original   MP scheme, see (PRB13, 5188, (1976))
+    ! and (PRB16, 1748, (1977))
+    ! naxis(i) are the number of points in the three
+    ! directions dermined by the lattice wave vectors.
+    ! shift(i), and
+    ! sz shift the grid of integration points from the origin.
+
+    
     type(simul_box_t), intent(in)  :: sb
     integer,           intent(in)  :: naxis(1:MAX_DIM)
     FLOAT,             intent(in)  :: shift(1:MAX_DIM)
     integer,           intent(out) :: nkpoints
     FLOAT,             intent(out) :: kpoints(:, :)
-
-    ! Implements the Monkhorst-Pack scheme.
-
-    ! Sets up uniform array of k-points. Use the normal MP scheme
-    ! (PRB13, 5188, (1976)) when sx=sy=sz=0.5. If sx=sy=0,
-    ! the special hexagonal scheme is used (PRB16, 1748, (1977))
-
+  
     FLOAT :: dx(1:MAX_DIM)
     integer :: ii, jj, kk, idir, ix(1:MAX_DIM)
 
-    call push_sub('crystal.crystal_monkhorstpack_generate')
+    call push_sub('crystal.crystal_kpoints_generate')
 
-    ! nx, ny, and nz are the number of points in the three
-    ! directions dermined by the lattice wave vectors. sx, sy, and
-    ! sz shift the grid of integration points from the origin.
-
-    !generate k-points using the MP scheme
+    
+    
     
     dx(1:MAX_DIM) = M_ONE/real(2*naxis(1:MAX_DIM), REAL_PRECISION)
 
@@ -52,20 +56,26 @@ contains
     nkpoints = 0
     ix=1
     do ii = 1, naxis(1)
-      do jj = 1, naxis(2)
-        do kk = 1, naxis(3)
-          ix(1:3) = (/ii, jj, kk/)
-          nkpoints = nkpoints + 1
-          forall(idir = 1:sb%periodic_dim)
-            kpoints(idir, nkpoints) = (real(2*ix(idir) - naxis(idir) - 1, REAL_PRECISION) + shift(idir))*dx(idir)
-          end forall
-        end do
-      end do
+       do jj = 1, naxis(2)
+          do kk = 1, naxis(3)
+             ix(1:3) = (/ii, jj, kk/)
+             nkpoints = nkpoints + 1
+             do idir = 1,sb%periodic_dim
+                if ( (mod(naxis(idir),2) .ne. 0 ) ) then    
+                   kpoints(idir, nkpoints) = &
+                        & (real(2*ix(idir) - naxis(idir) - 1, REAL_PRECISION)   - 2*shift(idir))*dx(idir)
+                else 
+                   kpoints(idir, nkpoints) = &
+                        & (real(2*ix(idir) - naxis(idir) , REAL_PRECISION) - 2*shift(idir))*dx(idir)
+                end if
+             end do
+          end do
+       end do
     end do
     
     call pop_sub()
 
-  end subroutine crystal_monkhorstpack_generate
+  end subroutine crystal_kpointsgrid_generate
 
   subroutine crystal_init(geo, sb, nk_axis, shift, use_symmetries, use_time_reversal, nkpoints, kpoints, weights)
     type(geometry_t),  intent(in)    :: geo
@@ -83,11 +93,11 @@ contains
 
     call push_sub('crystal.crystal_init')
 
-    call crystal_monkhorstpack_generate(sb, nk_axis, shift, nkpoints, kpoints)
+    call crystal_kpointsgrid_generate(sb, nk_axis, shift, nkpoints, kpoints)
     
     if(use_symmetries) then
       call symmetries_init(symm, geo, sb)
-      call crystal_monkhorstpack_reduce(symm, use_time_reversal, nkpoints, kpoints, weights)
+      call crystal_kpointsgrid_reduce(symm, use_time_reversal, nkpoints, kpoints, weights)
       call symmetries_end(symm)
     else
       forall(ik = 1:nkpoints) weights(ik) = M_ONE/dble(nkpoints)
@@ -108,7 +118,7 @@ contains
     call pop_sub()
   end subroutine crystal_init
   
-  subroutine crystal_monkhorstpack_reduce(symm, time_reversal, nkpoints, kpoints, weights)
+  subroutine crystal_kpointsgrid_reduce(symm, time_reversal, nkpoints, kpoints, weights)
     type(symmetries_t), intent(in)    :: symm
     logical,            intent(in)    :: time_reversal
     integer,            intent(inout) :: nkpoints
@@ -123,7 +133,7 @@ contains
     FLOAT :: tran(MAX_DIM), tran_inv(MAX_DIM)
     integer, allocatable :: kmap(:)
 
-    call push_sub('crystal.crystal_monkhortstpack_reduce')
+    call push_sub('crystal.crystal_kpointsgrid_reduce')
 
     ! reduce to irreducible zone
 
@@ -187,7 +197,7 @@ contains
     end do
 
     call pop_sub()
-  end subroutine crystal_monkhorstpack_reduce
+  end subroutine crystal_kpointsgrid_reduce
 
 end module crystal_m
 
