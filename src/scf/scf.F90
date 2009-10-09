@@ -206,6 +206,10 @@ contains
     !%Section SCF::Mixing
     !%Description
     !% Selects what should be mixed during the SCF cycle.
+    !% Note that currently the exact-exchange part of hybrid functionals is not mixed at all,
+    !% which would require wavefunction-mixing, not yet implemented. This may lead to
+    !% instabilities in the SCF cycle, so starting from a converged LDA calculation is
+    !% recommended for hybrid functionals.
     !%Option potential 1
     !% The Kohn-Sham potential.
     !%Option density 2
