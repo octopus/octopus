@@ -227,7 +227,7 @@ contains
       res = residue(curr_l, phi%level(curr_l)%p, tau%level(curr_l)%p, err%level(curr_l)%p)
       
       if(in_debug_mode) then
-        write(message(1), '(a,5i,a,5i,a,5i)') "Multigrid: base level ", curr_l, " iter ", t, " res ", res
+        write(message(1), '(a,i5,a,i5,a,i5)') "Multigrid: base level ", curr_l, " iter ", t, " res ", res
         call write_info(1)
       end if
 
