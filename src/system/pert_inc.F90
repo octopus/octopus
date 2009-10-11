@@ -88,14 +88,16 @@ contains
 
   subroutine none()
 
+    call push_sub('pert_inc.Xpert_apply.none')
     f_out(1:gr%mesh%np) = M_ZERO
+    call pop_sub()
 
   end subroutine none
 
   ! --------------------------------------------------------------------------
   subroutine electric()
 
-    call push_sub('pert_inc.X(pert_apply).electric')
+    call push_sub('pert_inc.Xpert_apply.electric')
     f_out(1:gr%mesh%np) = f_in(1:gr%mesh%np) * gr%mesh%x(1:gr%mesh%np, this%dir)
     call pop_sub()
 
@@ -107,7 +109,7 @@ contains
     R_TYPE, allocatable :: grad(:,:), cpsi(:,:)
     integer iatom
 
-    call push_sub('pert_inc.X(pert_apply).kdotp')
+    call push_sub('pert_inc.Xpert_apply.kdotp')
 
     SAFE_ALLOCATE(cpsi(1:gr%mesh%np_part, 1:hm%d%dim))
     SAFE_ALLOCATE(grad(1:gr%mesh%np, 1:gr%sb%dim))
@@ -142,7 +144,7 @@ contains
     FLOAT :: xx(1:MAX_DIM)
     integer :: iatom, idir, ip
 
-    call push_sub('pert_inc.X(pert_apply).magnetic')
+    call push_sub('pert_inc.Xpert_apply.magnetic')
 
     SAFE_ALLOCATE(lf(1:gr%mesh%np, 1:gr%sb%dim))
 
@@ -496,6 +498,8 @@ subroutine X(ionic_pert_matrix_elements_2)(this, gr, geo, hm, ik, st, psi, vib, 
   R_TYPE, allocatable :: gpsi(:, :, :), g2psi(:, :, :, :), tmp1(:, :)
   R_TYPE :: dot
 
+  call push_sub('pert_inc.Xionic_pert_matrix_elements_2')
+
   SAFE_ALLOCATE( vloc(1:gr%mesh%np))
   SAFE_ALLOCATE( gpsi(1:gr%mesh%np_part, 1:st%d%dim, 1:gr%sb%dim))
   SAFE_ALLOCATE(g2psi(1:gr%mesh%np_part, 1:st%d%dim, 1:gr%sb%dim, 1:gr%sb%dim))
@@ -540,6 +544,7 @@ subroutine X(ionic_pert_matrix_elements_2)(this, gr, geo, hm, ik, st, psi, vib, 
     end do
   end do
   
+  call pop_sub()
 end subroutine X(ionic_pert_matrix_elements_2)
 
 ! --------------------------------------------------------------------------

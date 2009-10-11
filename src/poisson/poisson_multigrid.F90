@@ -84,21 +84,21 @@ contains
 
     !%Variable PoissonSolverMGPresmoothingSteps
     !%Type integer
-    !%Default 3
+    !%Default 1
     !%Section Hamiltonian::Poisson::Multigrid
     !%Description
-    !% Number of gauss-seidel smoothing steps before coarse level
-    !% correction in the multigrid Poisson solver. By default 1.
+    !% Number of Gauss-Seidel smoothing steps before coarse-level
+    !% correction in the multigrid Poisson solver.
     !%End
     call loct_parse_int(datasets_check('PoissonSolverMGPresmoothingSteps'), 1, this%presteps)
 
     !%Variable PoissonSolverMGPostsmoothingSteps
     !%Type integer
-    !%Default 3
+    !%Default 4
     !%Section Hamiltonian::Poisson::Multigrid
     !%Description
-    !% Number of gauss-seidel smoothing steps after coarse level
-    !% correction in the multigrid Poisson solver. By default 4.
+    !% Number of Gauss-Seidel smoothing steps after coarse-level
+    !% correction in the multigrid Poisson solver.
     !%End
     call loct_parse_int(datasets_check('PoissonSolverMGPostsmoothingSteps'), 4, this%poststeps)
 
@@ -108,7 +108,7 @@ contains
     !%Section Hamiltonian::Poisson::Multigrid
     !%Description
     !% Maximum number of multigrid cycles that are performed if
-    !% convergence is not achieved. By default 60.
+    !% convergence is not achieved.
     !%End
     call loct_parse_int(datasets_check('PoissonSolverMGMaxCycles'), 60, this%maxcycles)
 
@@ -117,7 +117,7 @@ contains
     !%Default fullweight
     !%Section Hamiltonian::Poisson::Multigrid
     !%Description
-    !% Method used from fine to coarse grid transfer.
+    !% Method used from fine-to-coarse grid transfer.
     !%Option injection 1
     !% Injection
     !%Option fullweight 2
@@ -130,12 +130,11 @@ contains
 
     !%Variable PoissonSolverMGRelaxationMethod
     !%Type integer
-    !%Default Gauss-Seidel
     !%Section Hamiltonian::Poisson::Multigrid
     !%Description
     !% Method used to solve the linear system approximately in each grid for the
-    !% multigrid procedure that solve Poisson equation. For the moment, the option
-    !% conjugate gradients is experimental. 
+    !% multigrid procedure that solve Poisson equation. Default is <tt>gauss_seidel</tt>,
+    !% except if curvilinear coordinates are used, the default is <tt>gauss_jacobi</tt>.
     !%Option gauss_seidel 1
     !% Gauss-Seidel
     !%Option gauss_jacobi 2
@@ -155,12 +154,12 @@ contains
 
     !%Variable PoissonSolverMGRelaxationFactor
     !%Type float
-    !%Default 1.0
     !%Section Hamiltonian::Poisson::Multigrid
     !%Description
     !% Relaxation factor of the relaxation operator used for the
-    !% multigrid method, default is 1.0. This is mainly for debugging,
-    !% overrelaxation does nos help in a multigrid scheme.
+    !% multigrid method. This is mainly for debugging,
+    !% since overrelaxation does not help in a multigrid scheme.
+    !% The default is 1.0, except 0.6666 for the <tt>gauss_jacobi</tt> method.
     !%End
     if ( this%relaxation_method == GAUSS_JACOBI) then
       call loct_parse_float(datasets_check('PoissonSolverMGRelaxationFactor'), CNST(0.6666), this%relax_factor )
@@ -228,7 +227,7 @@ contains
       res = residue(curr_l, phi%level(curr_l)%p, tau%level(curr_l)%p, err%level(curr_l)%p)
       
       if(in_debug_mode) then
-        write(message(1), *) "Multigrid: base level ", curr_l, " iter ", t, " res ", res
+        write(message(1), '(a,5i,a,5i,a,5i)') "Multigrid: base level ", curr_l, " iter ", t, " res ", res
         call write_info(1)
       end if
 

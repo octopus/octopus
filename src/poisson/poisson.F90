@@ -136,11 +136,11 @@ contains
     !%Type integer
     !%Section Hamiltonian::Poisson
     !%Description
-    !% Defines which method to use in order to solve the Poisson equation. Defaults:
-    !% 1D: fft if not periodic, fft_nocut if periodic.
-    !% 2D: fft if not periodic, fft_cyl if periodic in 1D, fft_nocut if periodic in 2D.
-    !% 3D: cg_corrected if curvilinear, isf if not periodic, fft_cyl if periodic in 1D,
-    !% fft_pla if periodic in 2D, fft_nocut if periodic in 3D.
+    !% Defines which method to use to solve the Poisson equation. Defaults:
+    !% <br> 1D: <tt>fft</tt> if not periodic, <tt>fft_nocut</tt> if periodic.
+    !% <br> 2D: <tt>fft</tt> if not periodic, <tt>fft_cyl</tt> if periodic in 1D, <tt>fft_nocut</tt> if periodic in 2D.
+    !% <br> 3D: <tt>cg_corrected</tt> if curvilinear, <tt>isf</tt> if not periodic, <tt>fft_cyl</tt> if periodic in 1D,
+    !% <tt>fft_pla</tt> if periodic in 2D, <tt>fft_nocut</tt> if periodic in 3D.
     !%
     !%Option direct2D -2
     !% Direct evaluation of the Hartree potential (in 2D)

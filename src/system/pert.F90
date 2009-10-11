@@ -33,6 +33,7 @@ module pert_m
   use mesh_m
   use mesh_function_m
   use messages_m
+  use mpi_m
   use nl_operator_m
   use physics_op_m
   use profiling_m
@@ -43,7 +44,6 @@ module pert_m
   use states_dim_m
   use varinfo_m
   use vibrations_m
-  use mpi_m
 
   implicit none
 
@@ -84,10 +84,10 @@ module pert_m
     !if pure_dir is .false. then the perturbation is a combination of
     !displacements of atoms
     logical :: pure_dir
-    !in that case these arrays are allocated
+    !if pure_dir is .true., these arrays are allocated
     FLOAT, pointer :: mix1(:,:) !mix1(natoms, ndim)
     FLOAT, pointer :: mix2(:,:)
-    !in the opposite case, atom, dir, atom2 and dir2 are used
+    !if pure_dir is .false., atom, dir, atom2 and dir2 are used
   end type pert_ionic_t
 
   type pert_t
@@ -129,13 +129,13 @@ contains
       !%Section Linear Response
       !%Description
       !% For magnetic linear response: how to describe the coupling of electrons
-      !% to the magnetic field; that is, how to handle gauge invariance.
+      !% to the magnetic field; that is, how to handle gauge-invariance.
       !%Option none 0
-      !% No correction
+      !% No correction.
       !%Option gipaw 1
-      !% GIPAW correction: Pickard and Mauri, PRL 91 196401 (2003).
+      !% GIPAW correction: Pickard and Mauri, <i>Phys. Rev. Lett.</i> <b>91</b> 196401 (2003).
       !%Option icl 2
-      !% ICL correction: Ismail-Beigi, Chang, and Louie, PRL 87, 087402 (2001).
+      !% ICL correction: S. Ismail-Beigi, E.K. Chang, and S.G. Louie, <i>Phys. Rev. Lett.</i> <b>87</b>, 087402 (2001).
       !%End
       
       call loct_parse_int(datasets_check('MagneticGaugeCorrection'), GAUGE_GIPAW, this%gauge)
@@ -156,7 +156,7 @@ contains
       !%Section Linear Response::KdotP
       !%Description
       !% For testing purposes, set to false to ignore the term -i[r,V] in
-      !% the kdotp perturbation, which is due to non-local pseudopotentials.
+      !% the k.p perturbation, which is due to non-local pseudopotentials.
       !%End
 
       call loct_parse_logical(datasets_check('KdotP_UseNonLocalPseudopotential'), &
