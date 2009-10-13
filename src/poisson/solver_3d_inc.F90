@@ -22,7 +22,7 @@ subroutine poisson3D_init(gr, geo)
   type(grid_t), intent(inout) :: gr
   type(geometry_t), intent(in) :: geo
 
-  integer :: maxl
+  integer :: maxl, iter
   integer :: nx, ny, nz
   FLOAT :: xl, yl, zl
 
@@ -39,6 +39,13 @@ subroutine poisson3D_init(gr, geo)
   !% for <tt>fft_corrected</tt>.
   !%End
 
+  !%Variable PoissonSolverMaxIter
+  !%Type integer
+  !%Section Hamiltonian::Poisson
+  !%Description
+  !% The maximum number of iterations for conjugate gradient
+  !% Poisson solvers. Default is 400.
+  !%End
 
   !%Variable PoissonSolverThreshold
   !%Type integer
@@ -74,12 +81,14 @@ subroutine poisson3D_init(gr, geo)
      call loct_parse_int(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)
      write(message(1),'(a,i2)')'Info: Boundary conditions fixed up to L =',  maxl
      call write_info(1)
+     call loct_parse_int(datasets_check('PoissonSolverMaxIter'), 400, iter)
      call loct_parse_float(datasets_check('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
      call poisson_corrections_init(corrector, maxl, gr%mesh)
-     call poisson_cg_init(gr%mesh, maxl, threshold)
+     call poisson_cg_init(gr%mesh, maxl, threshold, iter)
 
   case(POISSON_CG_CORRECTED)
      call loct_parse_int(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)
+     call loct_parse_int(datasets_check('PoissonSolverMaxIter'), 400, iter)
      call loct_parse_float(datasets_check('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
      write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
      call write_info(1)
@@ -92,7 +101,7 @@ subroutine poisson3D_init(gr, geo)
        call grid_create_largergrid(gr, geo, hartree_integrator%grid)
      end if
      call poisson_corrections_init(corrector, maxl, gr%mesh)
-     call poisson_cg_init(gr%mesh, maxl, threshold)
+     call poisson_cg_init(gr%mesh, maxl, threshold, iter)
 
 
   case(POISSON_MULTIGRID)

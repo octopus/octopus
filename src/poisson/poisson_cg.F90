@@ -40,18 +40,20 @@ module poisson_cg_m
     poisson_cg2
 
   FLOAT, public :: threshold
+  integer, public :: maxiter
 
 contains
 
 
   ! ---------------------------------------------------------
-  subroutine poisson_cg_init(m, ml, thr)
+  subroutine poisson_cg_init(m, ml, thr, itr)
     type(mesh_t), intent(in) :: m
-    integer, intent(in) :: ml
+    integer, intent(in) :: ml, itr
     FLOAT,   intent(in) :: thr
 
     call push_sub('poisson_cg.poisson_cg_init')
     threshold = thr
+    maxiter = itr
     call pop_sub()
   end subroutine poisson_cg_init
 
@@ -94,7 +96,7 @@ contains
     der_pointer  => der
     mesh_pointer => m
     pk = zk
-    iter = 400
+    iter = maxiter
     call dconjugate_gradients(m%np_part, m%np, pk, zk, &
       internal_laplacian_op, internal_dotp, iter, res, threshold)
     if(res >= threshold) then
@@ -125,7 +127,7 @@ contains
 
     call push_sub('poisson_cg.poisson_cg2')
 
-    iter = 400
+    iter = maxiter
     der_pointer  => der
     mesh_pointer => mesh
 
