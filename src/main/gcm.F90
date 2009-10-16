@@ -165,7 +165,7 @@ module gcm_m
     call messages_print_stress(stdout, 'Total energies of the Slater determinants')
     do i = 1, ndeterminants
       write(message(1),'(a,i2.2,a,f20.8,a)') &
-        'Etot(',i,') = ', etot(i)/units_out%energy%factor, ' ['//trim(units_out%energy%abbrev)//']'
+        'Etot(',i,') = ', etot(i)/units_out%energy%factor, ' ['//trim(units_abbrev(units_out%energy))//']'
       call write_info(1)
     end do
     call messages_print_stress(stdout)
@@ -226,7 +226,7 @@ module gcm_m
     call messages_print_stress(stdout, 'Eigenvalues')
     do i = 1, ndeterminants
       write(message(1), '(a,i2.2,a,f20.8,a)') &
-        'E(',i,') = ', etot(i) / units_out%energy%factor, ' ['//trim(units_out%energy%abbrev)//']'
+        'E(',i,') = ', etot(i) / units_out%energy%factor, ' ['//trim(units_abbrev(units_out%energy))//']'
       call write_info(1)
     end do
     call messages_print_stress(stdout)

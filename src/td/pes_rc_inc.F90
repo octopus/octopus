@@ -115,7 +115,7 @@ subroutine PES_rc_output(v, st, iter, save_iter, dt)
     do ix = 1, v%npoints
       iunit = io_open(v%filenames(ix), action='write')
       write(iunit, '(a7,f17.6,3a)') &
-        '# dt = ', dt/units_inp%time%factor, ' [', trim(units_inp%time%abbrev), ']'
+        '# dt = ', dt/units_inp%time%factor, ' [', trim(units_abbrev(units_inp%time)), ']'
       write(iunit, '(a3,14x)', advance='no') '# t'
       do ik = st%d%kpt%start, st%d%kpt%end
         do p = st%st_start, st%st_end

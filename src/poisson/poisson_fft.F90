@@ -160,7 +160,7 @@ contains
       maxval(db(:)*gr%mesh%h(:)/M_TWO)/units_inp%length%factor , r_c)
     r_c = r_c*units_inp%length%factor
     write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
-      trim(units_out%length%abbrev), '] = ',       &
+      trim(units_abbrev(units_out%length)), '] = ',       &
       r_c/units_out%length%factor
     call write_info(1)
     if ( r_c > maxval(db(:)*gr%mesh%h(:)/M_TWO) + DELTA_R) then
@@ -245,7 +245,7 @@ contains
       maxval(db(:)*gr%mesh%h(:)/M_TWO)/units_inp%length%factor , r_c)
     r_c = r_c*units_inp%length%factor
     write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
-      trim(units_out%length%abbrev), '] = ',       &
+      trim(units_abbrev(units_out%length)), '] = ',       &
       r_c/units_out%length%factor
     call write_info(1)
     if ( r_c > maxval(db(:)*gr%mesh%h(:)/M_TWO) + DELTA_R) then
@@ -380,7 +380,7 @@ contains
         maxval(db(:)*gr%mesh%h(:)/M_TWO)/units_inp%length%factor , r_c)
       r_c = r_c*units_inp%length%factor
       write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
-        trim(units_out%length%abbrev), '] = ',       &
+        trim(units_abbrev(units_out%length)), '] = ',       &
         r_c/units_out%length%factor
       call write_info(1)
       if ( r_c > maxval(db(:)*gr%mesh%h(:)/M_TWO) + DELTA_R) then
@@ -472,7 +472,7 @@ contains
       maxval(db(1:2)*gr%mesh%h(1:2)/M_TWO)/units_inp%length%factor , r_c)
     r_c = r_c*units_inp%length%factor
     write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
-      trim(units_out%length%abbrev), '] = ',       &
+      trim(units_abbrev(units_out%length)), '] = ',       &
       r_c/units_out%length%factor
     call write_info(1)
     if ( r_c > maxval(db(1:2)*gr%mesh%h(1:2)/M_TWO) + DELTA_R) then

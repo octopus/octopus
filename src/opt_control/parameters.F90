@@ -260,7 +260,7 @@ contains
     if(par_common%representation .ne. ctr_real_time) then
       write(message(1), '(a)')         'Info: The representation of the OCT control parameters will be restricted'
       write(message(2), '(a,f10.5,a)') '      with an energy cut-off of ', &
-        par_common%omegamax / units_out%energy%factor, ' ['//trim(units_out%energy%abbrev) // ']'
+        par_common%omegamax / units_out%energy%factor, ' ['//trim(units_abbrev(units_out%energy)) // ']'
     end if
 
     !%Variable OCTFixFluenceTo

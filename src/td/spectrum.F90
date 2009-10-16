@@ -694,9 +694,9 @@ contains
       end do
     end do
     write(out_file, '(1x)')
-    write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20)
+    write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 20)
     do i = 1, 2+nspin*9
-      write(out_file, '(a20)', advance = 'no')  str_center('['//trim(units_out%length%abbrev) //'^2]', 20)
+      write(out_file, '(a20)', advance = 'no')  str_center('['//trim(units_abbrev(units_out%length)) //'^2]', 20)
     end do
     write(out_file, '(1x)')
 
@@ -876,12 +876,12 @@ contains
       write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
     end do
     write(out_file, '(1x)')
-    write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20)
+    write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 20)
     do i = 1, nspin*3
-      write(out_file, '(a20)', advance = 'no') str_center('['//trim(units_out%length%abbrev) //'^2]', 20)
+      write(out_file, '(a20)', advance = 'no') str_center('['//trim(units_abbrev(units_out%length)) //'^2]', 20)
     end do
     do i = 1, nspin
-      write(out_file, '(a20)', advance = 'no') str_center('[1/'//trim(units_out%energy%abbrev) //']',20)
+      write(out_file, '(a20)', advance = 'no') str_center('[1/'//trim(units_abbrev(units_out%energy)) //']',20)
     end do
     write(out_file, '(1x)')
 
@@ -995,9 +995,9 @@ contains
     write(out_file, '(a15,i2)')      '# nspin        ', nspin
     call kick_write(kick, out_file)
     write(out_file, '(a1,a20,a20,a20)') '#', str_center("Energy", 20), str_center("R", 20), str_center("Re[beta]", 20)
-    write(out_file, '(a1,a20,a20,a20)') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20), &
-         str_center('['//trim(units_out%length%abbrev) //'^3]', 20), &
-         str_center('['//trim(units_out%length%abbrev) //'^4]', 20)
+    write(out_file, '(a1,a20,a20,a20)') '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 20), &
+         str_center('['//trim(units_abbrev(units_out%length)) //'^3]', 20), &
+         str_center('['//trim(units_abbrev(units_out%length)) //'^4]', 20)
     do i = 0, no_e
       write(out_file,'(e20.8,e20.8,e20.8)') i*s%energy_step / units_out%energy%factor, &
            aimag(sp(i)) / M_PI / (units_out%length%factor)**3, &

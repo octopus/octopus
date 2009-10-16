@@ -652,7 +652,7 @@ contains
 
         !third line -> should hold the units. Now unused (assumes atomic units)
         call write_iter_string(out_angular, '#[Iter n.]')
-        call write_iter_header(out_angular, '[' // trim(units_out%time%abbrev) // ']')
+        call write_iter_header(out_angular, '[' // trim(units_abbrev(units_out%time)) // ']')
         call write_iter_nl(out_angular)
 
         call td_write_print_header_end(out_angular)
@@ -1191,11 +1191,11 @@ contains
 
       ! second line: units
       !call write_iter_string(out_gauge, '#[Iter n.]')
-      !call write_iter_header(out_gauge, '[' // trim(units_out%time%abbrev) // ']')
+      !call write_iter_header(out_gauge, '[' // trim(units_abbrev(units_out%time)) // ']')
       !call write_iter_string(out_gauge, &
-      !  'A Vector potential in '   // trim(units_out%length%abbrev) &
-      !  'A dot in '                // trim(units_out%length%abbrev) &
-      !  'A dot dot in '            // trim(units_out%length%abbrev)
+      !  'A Vector potential in '   // trim(units_abbrev(units_out%length)) &
+      !  'A dot in '                // trim(units_abbrev(units_out%length)) &
+      !  'A dot dot in '            // trim(units_abbrev(units_out%length))
       !call write_iter_nl(out_gauge)
 
       call td_write_print_header_end(out_gauge)

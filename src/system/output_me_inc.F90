@@ -43,9 +43,9 @@ subroutine X(output_me_ks_multipoles)(fname, st, gr, l, m, ik)
   write(iunit, fmt = '(a,i2,a,i2)') '# l =', l, '; m =', m
   write(iunit, fmt = '(a,i4)')      '# ik =', ik
   if(l>1) then
-    write(iunit, fmt = '(a,i1)') '# Units = ['//trim(units_out%length%abbrev)//']^', l
+    write(iunit, fmt = '(a,i1)') '# Units = ['//trim(units_abbrev(units_out%length))//']^', l
   else
-    write(iunit, fmt = '(a)')    '# Units = ['//trim(units_out%length%abbrev)//']'
+    write(iunit, fmt = '(a)')    '# Units = ['//trim(units_abbrev(units_out%length))//']'
   end if
   
   SAFE_ALLOCATE(multipole(1:gr%mesh%np_part, 1:st%d%dim))

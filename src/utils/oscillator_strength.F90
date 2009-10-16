@@ -328,7 +328,7 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
       write(0, '(a)')        '* WARNING: The requested total time to process is larger than the time'
       write(0, '(a)')        '*          available in the input file.'
       write(0, '(a,f8.4,a)') '           The time has been adjusted to ', total_time / units%time%factor, &
-                             units%time%abbrev
+                             units_abbrev(units%time)
     end if
     time_steps = int(total_time / dt)
     total_time = time_steps * dt
@@ -444,7 +444,7 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
       write(0, '(a)')        '* WARNING: The requested total time to process is larger than the time'
       write(0, '(a)')        '*          available in the input file.'
       write(0, '(a,f8.4,a)') '           The time has been adjusted to ', total_time / units%time%factor, &
-                         units%time%abbrev
+                         units_abbrev(units%time)
     end if
     time_steps = int(total_time / dt)
     total_time = time_steps * dt
@@ -604,7 +604,7 @@ subroutine find_resonance(omega, leftbound, rightbound, nfrequencies)
     write(message(3), '(a,f12.8,a,f12.8,a)') '   Search interval = [', leftbound / units%energy%factor, ',', &
                                                           rightbound / units%energy%factor, ']'
     write(message(4), '(a,f12.4,a)')         '   Search discretization = ', dw / units%energy%factor, &
-                                ' '//trim(units%energy%abbrev)
+                                ' '//trim(units_abbrev(units%energy))
     call write_fatal(4)
   end if
 
