@@ -86,9 +86,16 @@
 
       n_matvec = maxiter
 
-      call X(lobpcg)(gr, st, hm, psi_start, psi_end, st%X(psi)(:, :, psi_start:psi_end, ik), &
-           constr_start, constr_end, st%X(psi)(:, :, constr_start:constr_end, ik),             &
+      if(constr_end >= constr_start) then
+        call X(lobpcg)(gr, st, hm, psi_start, psi_end, st%X(psi)(:, :, psi_start:psi_end, ik), &
+           constr_start, constr_end, &
+           ik, pre, tol, n_matvec, conv, diff, iblock, verbose_, &
+           constr = st%X(psi)(:, :, constr_start:constr_end, ik))
+      else
+        call X(lobpcg)(gr, st, hm, psi_start, psi_end, st%X(psi)(:, :, psi_start:psi_end, ik), &
+           constr_start, constr_end, &
            ik, pre, tol, n_matvec, conv, diff, iblock, verbose_)
+      end if
 
       niter         = niter + n_matvec
       converged = converged + conv  
@@ -128,8 +135,8 @@
 !
 ! There is also a wiki page at
 ! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:LOBPCG
-subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end, constr, &
-  ik, pre, tol, niter, converged, diff, ib, verbose)
+subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end,  &
+  ik, pre, tol, niter, converged, diff, ib, verbose, constr)
   type(grid_t),           intent(inout) :: gr
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(inout) :: hm
@@ -138,7 +145,6 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   R_TYPE, target,         intent(inout) :: psi(gr%mesh%np_part, st%d%dim, st_start:st_end)
   integer,                intent(in)    :: constr_start
   integer,                intent(in)    :: constr_end
-  R_TYPE,                 intent(in)    :: constr(gr%mesh%np_part, st%d%dim, constr_start:constr_end)
   integer,                intent(in)    :: ik
   type(preconditioner_t), intent(in)    :: pre
   FLOAT,                  intent(in)    :: tol
@@ -147,6 +153,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   FLOAT,                  intent(inout) :: diff(1:st%nst)
   integer,                intent(in)    :: ib
   logical, optional,      intent(in)    :: verbose
+  R_TYPE, optional,       intent(in)    :: constr(gr%mesh%np_part, st%d%dim, constr_start:constr_end)
 
   integer :: nps   ! Number of points per state.
   integer :: nst   ! Number of eigenstates (i.e. the blocksize).
@@ -183,8 +190,16 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   R_TYPE, allocatable         :: gram_block(:, :) ! Space to construct the Gram matrix blocks.
   R_TYPE, allocatable, target :: ritz_vec(:, :)   ! Ritz-vectors.
   type(batch_t) :: psib, hpsib
+  logical :: there_are_constraints
   
   call push_sub('eigen_lobpcg_inc.Xlobpcg')
+
+  if(constr_end >= constr_start) then
+    there_are_constraints = .true.
+    ASSERT(present(constr) .eqv. there_are_constraints)
+  else
+    there_are_constraints = .false.
+  end if
 
   verbose_ = .false.
   if(present(verbose)) then
@@ -204,10 +219,13 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     SAFE_ALLOCATE(luc(1:lnst))
     SAFE_ALLOCATE(lnuc)
     call MPI_Allreduce(lnst, nst, 1, MPI_INTEGER, MPI_SUM, st%mpi_grp%comm, mpi_err)
-    call MPI_Allreduce(lnconstr, nconstr, 1, MPI_INTEGER, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    if(there_are_constraints) then
+       call MPI_Allreduce(lnconstr, nconstr, 1, MPI_INTEGER, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    end if
 #endif
   else
     nconstr =  constr_end-constr_start+1
+    ASSERT( (nconstr > 0) .eqv. there_are_constraints)
     nst     =  st_end-st_start+1
     lnuc    => nuc
     lnst    =  nst
@@ -217,21 +235,23 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     luc => uc
   end if
 
-  SAFE_ALLOCATE(all_constr(1:nconstr))
-  if(st%parallel_in_states) then
+  if(there_are_constraints) then
+    SAFE_ALLOCATE(all_constr(1:nconstr))
+    if(st%parallel_in_states) then
 #if defined(HAVE_MPI)
-    SAFE_ALLOCATE(lall_constr(1:lnconstr))
-    do i = 1, lnconstr
-      lall_constr(i) = i + constr_start-1
-    end do
+      SAFE_ALLOCATE(lall_constr(1:lnconstr))
+      do i = 1, lnconstr
+        lall_constr(i) = i + constr_start-1
+      end do
 
-    call lmpi_gen_allgatherv(lnconstr, lall_constr, nconstr, all_constr, st%mpi_grp)
-    SAFE_DEALLOCATE_A(lall_constr)
+      call lmpi_gen_allgatherv(lnconstr, lall_constr, nconstr, all_constr, st%mpi_grp)
+      SAFE_DEALLOCATE_A(lall_constr)
 #endif
-  else
-    do i = 1, nconstr
-      all_constr(i) = i+constr_start-1
-    end do
+    else
+      do i = 1, nconstr
+        all_constr(i) = i+constr_start-1
+      end do
+    end if
   end if
 
   SAFE_ALLOCATE(  tmp(1:gr%mesh%np_part, 1:st%d%dim, st_start:st_end))
@@ -329,7 +349,8 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
 
     ! Check for convergence. If converged, quit the eigenpair iteration loop.
     call X(lobpcg_unconv_ev)
-    if(lnuc.eq.0) then
+    call mpi_barrier(mpi_world, mpi_err)
+    if(nuc.eq.0) then
       exit iteration
     end if
 
@@ -378,8 +399,10 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
 
     ! Apply Hamiltonian to residuals.
 
-    call batch_init(psib, st%d%dim, lnuc)
-    call batch_init(hpsib, st%d%dim, lnuc)
+    if(lnuc > 0) then
+      call batch_init(psib, st%d%dim, lnuc)
+      call batch_init(hpsib, st%d%dim, lnuc)
+    end if
     
     do i = 1, lnuc
       ist = luc(i)
@@ -387,7 +410,9 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
       call batch_add_state(hpsib, ist, h_res(:, :, ist))
     end do
 
-    call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik)
+    if(lnuc > 0) then
+      call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik)
+    end if
 
     niter = niter + lnuc
 
@@ -554,7 +579,9 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   end if
 #endif
 
-  SAFE_DEALLOCATE_A(all_constr)
+  if(there_are_constraints) then
+    SAFE_DEALLOCATE_A(all_constr)
+  end if
   SAFE_DEALLOCATE_A(all_ev)
   SAFE_DEALLOCATE_P(uc)
   SAFE_DEALLOCATE_A(tmp)
@@ -690,6 +717,7 @@ contains
     do i = 2, nuc
       vv(i, 1:i-1) = R_TOTYPE(M_ZERO)
     end do
+
     call X(block_matr_mul)(vs, vv, tmp, xpsi=UC, xres=UC)
     do i = 1, lnuc
       call lalg_copy(gr%mesh%np_part*st%d%dim, tmp(:, 1, luc(i)), vs(:, 1, luc(i)))
