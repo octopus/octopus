@@ -121,7 +121,6 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
           case(XC_FAMILY_HYB_GGA)
             message(1) = 'Hyb-GGAs are currently disabled.'
             call write_fatal(1)
-            !call XC_F90(hyb_gga_exc)(functl(ixc)%conf, l_dens(1), l_sigma(1), l_zk)
 
           case(XC_FAMILY_MGGA)
             call XC_F90(mgga_exc)(functl(ixc)%conf, l_dens(1,1), l_sigma(1,1), l_ldens(1), l_tau(1), l_zk(1))
@@ -142,12 +141,8 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
           case(XC_FAMILY_LDA)
             call XC_F90(lda_exc_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_zk(1), l_dedd(1,1))
 
-          case(XC_FAMILY_GGA)
+          case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
             call XC_F90(gga_exc_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), &
-              l_zk(1), l_dedd(1,1), l_vsigma(1,1))
-
-          case(XC_FAMILY_HYB_GGA)
-            call XC_F90(hyb_gga_exc_vxc)(functl(ixc)%conf, l_dens(1,1), l_sigma(1,1), &
               l_zk(1), l_dedd(1,1), l_vsigma(1,1))
 
           case(XC_FAMILY_MGGA)
@@ -165,7 +160,7 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
           case(XC_FAMILY_LDA)
             call XC_F90(lda_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_dedd(1,1))
           
-          case(XC_FAMILY_GGA)
+          case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
             l_vsigma = M_ZERO
 
             if(functl(ixc)%id == XC_GGA_XC_LB) then
@@ -177,10 +172,6 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
                 l_dedd(1,1), l_vsigma(1,1))
             end if
           
-          case(XC_FAMILY_HYB_GGA)
-            call XC_F90(hyb_gga_vxc)(functl(ixc)%conf, l_dens(1,1), l_sigma(1,1), &
-              l_dedd(1,1), l_vsigma(1,1))
-
           case(XC_FAMILY_MGGA)
             call XC_F90(mgga_vxc)(functl(ixc)%conf, l_dens(1,1), l_sigma(1,1), l_ldens(1), l_tau(1), &
               l_dedd(1,1), l_vsigma(1,1), l_dedldens(1), l_dedtau(1))
