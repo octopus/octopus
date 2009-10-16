@@ -148,7 +148,7 @@ contains
     character(len=*),  intent(in) :: dir
     
     type(periodic_copy_t) :: pp
-    FLOAT :: radius
+    FLOAT :: radius, pos(1:MAX_DIM)
     integer :: total_atoms, iatom, icopy, iunit
 
     call push_sub('solids.periodic_write_crystal')
@@ -172,8 +172,9 @@ contains
     do iatom = 1, geo%natoms
       call periodic_copy_init(pp, sb, geo%atom(iatom)%x, radius)
       do icopy = 1, periodic_copy_num(pp)
-        write(iunit, '(a, 3f12.6)') geo%atom(iatom)%label, &
-          units_from_atomic(units_out%length, periodic_copy_position(pp, sb, icopy))
+        pos = units_from_atomic(units_out%length, periodic_copy_position(pp, sb, icopy))
+        write(iunit, '(a, 3f12.6)') geo%atom(iatom)%label, pos(1:3)
+          
       end do
       call periodic_copy_end(pp)
     end do
