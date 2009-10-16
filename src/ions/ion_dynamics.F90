@@ -235,8 +235,9 @@ contains
 
         ! copy information and adjust units
         do i = 1, geo%natoms
-          geo%atom(i)%v = xyz%atom(i)%x * (units_inp%velocity%factor / units_inp%length%factor)
+          geo%atom(i)%v = units_to_atomic(units_inp%velocity/units_inp%length, xyz%atom(i)%x)
         end do
+
         call xyz_file_end(xyz)
 
       else

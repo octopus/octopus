@@ -173,7 +173,7 @@ contains
       call periodic_copy_init(pp, sb, geo%atom(iatom)%x, radius)
       do icopy = 1, periodic_copy_num(pp)
         write(iunit, '(a, 3f12.6)') geo%atom(iatom)%label, &
-          periodic_copy_position(pp, sb, icopy)/units_out%length%factor
+          units_from_atomic(units_out%length, periodic_copy_position(pp, sb, icopy))
       end do
       call periodic_copy_end(pp)
     end do

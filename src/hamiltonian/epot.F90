@@ -208,7 +208,7 @@ contains
       end do
       call loct_parse_block_end(blk)
 
-      ep%E_field(:) = ep%E_field(:) * units_inp%energy%factor/units_inp%length%factor
+      ep%E_field(:) = units_to_atomic(units_inp%energy/units_inp%length, ep%E_field(:))
 
       ! Compute the scalar potential
       SAFE_ALLOCATE(ep%v_static(1:gr%mesh%np))

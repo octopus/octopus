@@ -377,7 +377,8 @@ contains
         end select
 
         call loct_parse_block_float(blk, i-1, j+1, omega0)
-        omega0 = omega0*units_inp%energy%factor
+        omega0 = units_to_atomic(units_inp%energy, omega0)
+
         l(i)%omega = omega0
      
         call loct_parse_block_string(blk, i-1, j+2, envelope_expression)
@@ -518,8 +519,8 @@ contains
           '(', real(l(i)%pol(3)), ',', aimag(l(i)%pol(3)), ')'
       end if
       write(iunit,'(3x,a,f14.8,3a)') 'Carrier frequency = ', &
-        l(i)%omega / units_out%energy%factor, &
-        ' [', trim(units_out%energy%abbrev), ']'
+        units_from_atomic(units_out%energy, l(i)%omega), &
+        ' [', trim(units_abbrev(units_out%energy)), ']'
       write(iunit,'(3x,a)')       'Envelope: ' 
       call tdf_write(l(i)%f, iunit)
 
