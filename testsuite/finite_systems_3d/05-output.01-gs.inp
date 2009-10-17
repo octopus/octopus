@@ -1,0 +1,17 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 05-output.01-gs.inp 2308 2006-07-29 00:56:52Z appel $
+
+CalculationMode = gs
+fromScratch = yes
+
+UnitsOutput = ev_angstrom
+
+Radius = 5.0
+Spacing = 0.5
+
+%Coordinates
+  "H" | 0 | 0 | 0
+%
+
+Output = density
+OutputHow = axis_x + plane_x + dx

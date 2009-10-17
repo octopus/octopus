@@ -1,0 +1,43 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 06-restart.test 5186 2009-04-11 07:26:12Z xavier $
+
+Test       : Output
+Programs   : octopus; octopus_mpi
+TestGroups : short-run
+Enabled    : Yes
+
+Input: 05-output.01-gs.inp
+match ; Total energy     ; GREP(static/info, 'Total       =', 20) ; -11.99584633
+
+# DX output
+match ; DX Origin        ; LINE(static/density-1.dx, 2, 11) ; -2.645886
+match ; DX Delta         ; LINE(static/density-1.dx, 3, 11) ;  0.264589
+Precision : 0.000000001
+match ; DX value 1       ; LINE(static/density-1.dx, 1195, 9) ; 0.000003666782661
+match ; DX value 2       ; LINE(static/density-1.dx, 1489, 9) ; 0.000024889360932
+
+#axis output
+Precision : 0.0001
+match ; Axis pos 1       ; LINE(static/density-1.y\=0\,z\=0, 2, 2) ; -2.64588604295000
+match ; Axis pos 9       ; LINE(static/density-1.y\=0\,z\=0, 10, 2) ; -0.52917720859000
+match ; Axis pos 17      ; LINE(static/density-1.y\=0\,z\=0, 18, 2) ; 1.58753162577000
+
+Precision : 0.000000001
+match ; Axis value 1     ; LINE(static/density-1.y\=0\,z\=0, 2, 25) ; 2.91389739403624E-006
+Precision : 0.000001
+match ; Axis value 9     ; LINE(static/density-1.y\=0\,z\=0, 10, 25) ; 2.75939509225883E-001
+match ; Axis value 17    ; LINE(static/density-1.y\=0\,z\=0, 18, 25) ; 6.57093245587566E-003
+
+#plane output
+Precision : 0.0001
+match ; Plane pos  10 Y  ; LINE(static/density-1.x\=0, 10, 2)  ; -2.38129743865500
+match ; Plane pos  10 Z  ; LINE(static/density-1.x\=0, 10, 24) ; -1.05835441718000
+match ; Plane pos  30 Y  ; LINE(static/density-1.x\=0, 30, 2)  ; -2.11670883436000
+match ; Plane pos  30 Z  ; LINE(static/density-1.x\=0, 30, 24) ;  1.05835441718000
+match ; Plane pos 295 Y  ; LINE(static/density-1.x\=0, 295, 2)  ; 1.58753162577000
+match ; Plane pos 295 Z  ; LINE(static/density-1.x\=0, 295, 24) ; 2.64588604295000E-001
+
+Precision : 0.000000001
+match ; Plane value 10   ; LINE(static/density-1.x\=0, 10, 47) ; 2.23480652558410E-005
+match ; Plane value 30   ; LINE(static/density-1.x\=0, 30, 47) ; 1.89763461646455E-004
+match ; Plane value 295  ; LINE(static/density-1.x\=0, 295, 47) ; 6.06672515372129E-003

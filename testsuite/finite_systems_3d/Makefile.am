@@ -34,6 +34,8 @@ dist_share_DATA = \
 	03-functionals.test \
 	04-jellium.01-ground_state.inp \
 	04-jellium.test \
+	05-output.test                                 \
+	05-output.01-gs.inp                            \
 	06-restart.01-ground_state.inp \
 	06-restart.02-restart_ground_state.inp \
 	06-restart.03-td_calc.inp \

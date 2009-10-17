@@ -535,11 +535,13 @@ contains
 
       do ix = mesh%idx%nr(1, jdim), mesh%idx%nr(2, jdim)
 ! NOTE: MJV: how could this return anything but ix=0? Answ: if there is a shift in origin
-        ixvect_test=1
+        ixvect_test = 1
         ixvect_test(jdim) = ix
         i = index_from_coords(mesh%idx, mesh%sb%dim, ixvect_test)
-        call index_to_coords(mesh%idx, mesh%sb%dim, i, ixvect_test)
-        if(ixvect_test(jdim) == 0) exit
+        if(i /= 0) then 
+          call index_to_coords(mesh%idx, mesh%sb%dim, i, ixvect_test)
+          if(ixvect_test(jdim) == 0) exit
+        end if
       end do
       ixvect(jdim) = ix
     end do ! loop over dimensions
