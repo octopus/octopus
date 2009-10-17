@@ -30,7 +30,7 @@ subroutine X(restart_write_function)(dir, filename, gr, f, ierr, size)
   call push_sub('restart_inc.Xrestart_write_function')
 
   call X(output_function) (restart_format, trim(dir), trim(filename), &
-    gr%mesh, gr%sb, f(:), M_ONE, ierr, is_tmp=.true.)
+    gr%mesh, gr%sb, f(:), unit_one, ierr, is_tmp=.true.)
 
   call pop_sub()
 end subroutine X(restart_write_function)

@@ -283,13 +283,13 @@ end subroutine X(input_function_global)
 
 
 ! ---------------------------------------------------------
-subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp, geo, grp)
+subroutine X(output_function) (how, dir, fname, mesh, sb, f, unit, ierr, is_tmp, geo, grp)
   integer,           intent(in)  :: how
   character(len=*),  intent(in)  :: dir, fname
   type(mesh_t),      intent(in)  :: mesh
   type(simul_box_t), intent(in)  :: sb
   R_TYPE,            intent(in)  :: f(:)
-  FLOAT,             intent(in)  :: u
+  type(unit_t),      intent(in)  :: unit
   integer,           intent(out) :: ierr
   logical, optional, intent(in)  :: is_tmp
   type(geometry_t), optional, intent(in) :: geo
@@ -315,9 +315,9 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp, ge
 
     if(mesh%vp%rank.eq.mesh%vp%root) then
       if (present(geo)) then
-        call X(output_function_global)(how, dir, fname, mesh, sb, f_global, u, ierr, is_tmp = is_tmp_, geo = geo)
+        call X(output_function_global)(how, dir, fname, mesh, sb, f_global, unit, ierr, is_tmp = is_tmp_, geo = geo)
       else
-        call X(output_function_global)(how, dir, fname, mesh, sb, f_global, u, ierr, is_tmp = is_tmp_)
+        call X(output_function_global)(how, dir, fname, mesh, sb, f_global, unit, ierr, is_tmp = is_tmp_)
       end if
     end if
 
@@ -333,9 +333,9 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp, ge
     if(present(grp)) then ! only root writes output
       if(grp%rank.eq.0) then
         if (present(geo)) then
-          call X(output_function_global)(how, dir, fname, mesh, sb, f, u, ierr, is_tmp = is_tmp_, geo = geo)
+          call X(output_function_global)(how, dir, fname, mesh, sb, f, unit, ierr, is_tmp = is_tmp_, geo = geo)
         else
-          call X(output_function_global)(how, dir, fname, mesh, sb, f, u, ierr, is_tmp = is_tmp_)
+          call X(output_function_global)(how, dir, fname, mesh, sb, f, unit, ierr, is_tmp = is_tmp_)
         end if
       end if
       ! I have to broadcast the error code
@@ -348,9 +348,9 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp, ge
     else ! all nodes write output
 
       if (present(geo)) then
-        call X(output_function_global)(how, dir, fname, mesh, sb, f, u, ierr, is_tmp = is_tmp_, geo = geo)
+        call X(output_function_global)(how, dir, fname, mesh, sb, f, unit, ierr, is_tmp = is_tmp_, geo = geo)
       else
-        call X(output_function_global)(how, dir, fname, mesh, sb, f, u, ierr, is_tmp = is_tmp_)
+        call X(output_function_global)(how, dir, fname, mesh, sb, f, unit, ierr, is_tmp = is_tmp_)
       end if !present(geo)
     end if !present(grp)
 
@@ -363,9 +363,9 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp, ge
     ASSERT(.false.)
   end if
    if (present(geo)) then
-     call X(output_function_global)(how, dir, fname, mesh, sb, f, u, ierr, is_tmp = is_tmp_, geo = geo)
+     call X(output_function_global)(how, dir, fname, mesh, sb, f, unit, ierr, is_tmp = is_tmp_, geo = geo)
    else
-     call X(output_function_global)(how, dir, fname, mesh, sb, f, u, ierr, is_tmp = is_tmp_)
+     call X(output_function_global)(how, dir, fname, mesh, sb, f, unit, ierr, is_tmp = is_tmp_)
    endif
 #endif
 
@@ -374,13 +374,13 @@ end subroutine X(output_function)
 
 
 ! ---------------------------------------------------------
-subroutine X(output_function_global) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp, geo)
+subroutine X(output_function_global) (how, dir, fname, mesh, sb, f, unit, ierr, is_tmp, geo)
   integer,              intent(in)  :: how
   character(len=*),     intent(in)  :: dir, fname
   type(mesh_t),         intent(in)  :: mesh
   type(simul_box_t),    intent(in)  :: sb
   R_TYPE,               intent(in)  :: f(:)  ! f(mesh%np_global)
-  FLOAT,                intent(in)  :: u
+  type(unit_t),         intent(in)  :: unit
   integer,              intent(out) :: ierr
   logical,              intent(in)  :: is_tmp
   type(geometry_t), optional, intent(in) :: geo
@@ -388,12 +388,14 @@ subroutine X(output_function_global) (how, dir, fname, mesh, sb, f, u, ierr, is_
   character(len=512) :: filename
   character(len=20)  :: mformat, mformat2, mfmtheader
   integer            :: iunit, i, j, np_max
-  FLOAT              :: x0
+  FLOAT              :: x0, u
 
   call profiling_in(write_prof, "DISK_WRITE")
   call push_sub('io_function_inc.Xoutput_function_global')
 
   call io_mkdir(dir)
+
+  u = unit%factor
 
 ! Define the format; check if code is single precision or double precision
 !  FIXME: this may need to be expanded for MAX_DIM > 3

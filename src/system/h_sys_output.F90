@@ -450,13 +450,13 @@ contains
       if(iand(outp%what, output_elf).ne.0) then
         write(fname, '(a)') 'elf_rs'
         call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
-          f_loc(:,imax), M_ONE, ierr, is_tmp = .false., geo = geo)
+          f_loc(:,imax), unit_one, ierr, is_tmp = .false., geo = geo)
 
         if(st%d%ispin.ne.UNPOLARIZED) then
           do is = 1, 2
             write(fname, '(a,a,i1)') 'elf_rs', '-', is
             call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
-              f_loc(:, is), M_ONE, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)
+              f_loc(:, is), unit_one, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)
           end do
         end if
       end if
@@ -471,7 +471,7 @@ contains
       do is = 1, st%d%nspin
         write(fname, '(a,a,i1)') 'elf_fs', '-', is
         call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
-          f_loc(:,is), M_ONE, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)
+          f_loc(:,is), unit_one, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)
       end do
     end if
 
@@ -481,7 +481,7 @@ contains
         call dderivatives_lapl(gr%der, st%rho(:,is), f_loc(:,is))
         write(fname, '(a,a,i1)') 'bader', '-', is
         call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
-          f_loc(:,is), M_ONE, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)
+          f_loc(:,is), unit_one, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)
 
         write(fname, '(a,a,i1)') 'bader_basins', '-', is
         call out_basins(f_loc(:,1), fname)
@@ -492,7 +492,7 @@ contains
     if(iand(outp%what, output_el_pressure).ne.0) then
       call h_sys_calc_electronic_pressure(st, hm, gr, f_loc(:,1))
       call doutput_function(outp%how, dir, "el_pressure", gr%mesh, gr%sb, &
-        f_loc(:,1), M_ONE, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)
+        f_loc(:,1), unit_one, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)
     end if
 
     SAFE_DEALLOCATE_A(f_loc)
@@ -514,7 +514,7 @@ contains
       call basins_analyze(basins, gr%mesh, st%d%nspin, ff(:), st%rho, CNST(0.01))
 
       call doutput_function(outp%how, dir, trim(filename), gr%mesh, gr%sb, &
-        real(basins%map, REAL_PRECISION), M_ONE, ierr, is_tmp = .false., geo = geo)
+        real(basins%map, REAL_PRECISION), unit_one, ierr, is_tmp = .false., geo = geo)
         
       write(fname,'(4a)') trim(dir), '/', trim(filename), '.info'
       iunit = io_open(file=trim(fname), action = 'write')

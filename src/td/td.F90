@@ -778,7 +778,7 @@ contains
         do is = 1, st%d%nspin
           write(filename,'(a6,i2.2,i3.3)') 'vprev_', i, is
           call doutput_function(restart_format, trim(tmpdir)//"td", &
-            filename, gr%mesh, gr%sb, td%tr%v_old(1:gr%mesh%np, is, i), M_ONE, ierr, &
+            filename, gr%mesh, gr%sb, td%tr%v_old(1:gr%mesh%np, is, i), unit_one, ierr, &
             is_tmp = .true., grp = st%mpi_grp)
           if(ierr.ne.0) then
             write(message(1), '(3a)') 'Unsuccessful write of "', trim(filename), '"'

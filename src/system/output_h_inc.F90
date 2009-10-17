@@ -28,36 +28,35 @@
 
     integer :: is, err
     character(len=80) :: fname
-    FLOAT :: u
+
     FLOAT, allocatable :: v0(:,:)
     
     call push_sub('output_h.h_sys_output_hamiltonian')
 
-    u = units_out%energy%factor
     if(iand(outp%what, output_potential).ne.0) then
       SAFE_ALLOCATE(v0(1:m%np, 1:hm%d%dim))
       v0(1:m%np, 1) = hm%ep%vpsl(1:m%np)
-      call doutput_function(outp%how, dir, "v0", m, sb, v0(:, 1), u, err, geo = geo)
+      call doutput_function(outp%how, dir, "v0", m, sb, v0(:, 1), units_out%energy, err, geo = geo)
       SAFE_DEALLOCATE_A(v0)
 
       if(hm%ep%classical_pot > 0) then
-        call doutput_function(outp%how, dir, "vc", m, sb, hm%ep%Vclassical, u, err, geo = geo)
+        call doutput_function(outp%how, dir, "vc", m, sb, hm%ep%Vclassical, units_out%energy, err, geo = geo)
       end if
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
-        call doutput_function(outp%how, dir, 'vh', m, sb, hm%vhartree, u, err, geo = geo)
+        call doutput_function(outp%how, dir, 'vh', m, sb, hm%vhartree, units_out%energy, err, geo = geo)
         do is = 1, min(hm%d%ispin, 2)
           write(fname, '(a,i1)') 'vxc-', is
-          call doutput_function(outp%how, dir, fname, m, sb, hm%vxc(:, is), u, err, geo = geo)
+          call doutput_function(outp%how, dir, fname, m, sb, hm%vxc(:, is), units_out%energy, err, geo = geo)
 
           ! finally the full KS potential (without non-local PP contributions)
           write(fname, '(a,i1)') 'vks-', is
           if (hm%ep%classical_pot > 0) then
             call doutput_function(outp%how, dir, fname, m, sb, &
-              hm%ep%vpsl + hm%ep%Vclassical + hm%vhxc(:, is), u, err, geo = geo)
+              hm%ep%vpsl + hm%ep%Vclassical + hm%vhxc(:, is), units_out%energy, err, geo = geo)
           else
             call doutput_function(outp%how, dir, fname, m, sb, &
-              hm%ep%vpsl + hm%vhxc(:, is), u, err, geo = geo)
+              hm%ep%vpsl + hm%vhxc(:, is), units_out%energy, err, geo = geo)
           end if
         end do
       end if
@@ -65,11 +64,11 @@
       if(hm%self_induced_magnetic) then
         select case(sb%dim)
         case(3)
-          call doutput_function(outp%how, dir, 'Bind_x', m, sb, hm%b_ind(:, 1), M_ONE, err, geo = geo)
-          call doutput_function(outp%how, dir, 'Bind_y', m, sb, hm%b_ind(:, 2), M_ONE, err, geo = geo)
-          call doutput_function(outp%how, dir, 'Bind_z', m, sb, hm%b_ind(:, 3), M_ONE, err, geo = geo)
+          call doutput_function(outp%how, dir, 'Bind_x', m, sb, hm%b_ind(:, 1), unit_one, err, geo = geo)
+          call doutput_function(outp%how, dir, 'Bind_y', m, sb, hm%b_ind(:, 2), unit_one, err, geo = geo)
+          call doutput_function(outp%how, dir, 'Bind_z', m, sb, hm%b_ind(:, 3), unit_one, err, geo = geo)
         case(2)
-          call doutput_function(outp%how, dir, 'Bind_z', m, sb, hm%b_ind(:, 1), M_ONE, err, geo = geo)
+          call doutput_function(outp%how, dir, 'Bind_z', m, sb, hm%b_ind(:, 1), unit_one, err, geo = geo)
         end select
       end if
     end if

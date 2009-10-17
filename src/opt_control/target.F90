@@ -44,6 +44,7 @@ module opt_control_target_m
   use states_dim_m
   use string_m
   use td_m
+  use units_m
   use varinfo_m
 
   implicit none
@@ -526,14 +527,14 @@ module opt_control_target_m
     select case(target%type)
     case(oct_tg_local)
       call doutput_function(outp%how, trim(dir), 'local_target', gr%mesh, gr%sb, &
-        target%rho, M_ONE, ierr, geo = geo)
+        target%rho, unit_one, ierr, geo = geo)
     case(oct_tg_td_local)
       call target_build_tdlocal(target, gr, M_ZERO)
       call doutput_function(outp%how, trim(dir), 'td_local_target', gr%mesh, gr%sb, &
-        target%rho, M_ONE, ierr, geo = geo)
+        target%rho, unit_one, ierr, geo = geo)
     case(oct_tg_density)
       call doutput_function(outp%how, trim(dir), 'density_target', gr%mesh, gr%sb, &
-        target%rho, M_ONE, ierr, geo = geo)
+        target%rho, unit_one, ierr, geo = geo)
     case(oct_tg_excited)
       call h_sys_output_states(target%est%st, gr, geo, trim(dir)//'/st', outp)
       call excited_states_output(target%est, trim(dir))

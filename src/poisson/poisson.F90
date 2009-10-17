@@ -655,12 +655,12 @@ contains
     iunit = io_open("hartree_results", action='write')
     write(iunit, '(a,f10.2)' ) 'Hartree test = ', delta
     call io_close(iunit)
-    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_rho", gr%mesh, gr%sb, rho, M_ONE, ierr)
-    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_exact", gr%mesh, gr%sb, vh_exact, M_ONE, ierr)
-    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_numerical", gr%mesh, gr%sb, vh, M_ONE, ierr)
-    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_rho", gr%mesh, gr%sb, rho, M_ONE, ierr)
-    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_exact", gr%mesh, gr%sb, vh_exact, M_ONE, ierr)
-    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_numerical", gr%mesh, gr%sb, vh, M_ONE, ierr)
+    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_rho", gr%mesh, gr%sb, rho, unit_one, ierr)
+    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_exact", gr%mesh, gr%sb, vh_exact, unit_one, ierr)
+    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_numerical", gr%mesh, gr%sb, vh, unit_one, ierr)
+    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_rho", gr%mesh, gr%sb, rho, unit_one, ierr)
+    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_exact", gr%mesh, gr%sb, vh_exact, unit_one, ierr)
+    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_numerical", gr%mesh, gr%sb, vh, unit_one, ierr)
 
     SAFE_DEALLOCATE_A(rho)
     SAFE_DEALLOCATE_A(rhop)

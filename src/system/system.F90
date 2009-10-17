@@ -125,18 +125,17 @@ contains
     end subroutine parallel_init
 
     subroutine print_r()
-      FLOAT :: u
       integer :: i, ierr
       character(len=80) :: fname
 
       call push_sub('system.system_init.print_r')      
       
       if(iand(sys%outp%what, output_r).ne.0) then
-        u = M_ONE/units_out%length%factor
         
         do i=1, sys%gr%mesh%sb%dim
           write(fname, '(a,i1)') 'r-', i
-          call doutput_function(sys%outp%how, 'exec/', fname, sys%gr%mesh, sys%gr%sb, sys%gr%mesh%x(:,i), u, ierr, geo = sys%geo)
+          call doutput_function(sys%outp%how, 'exec/', fname, sys%gr%mesh, sys%gr%sb, sys%gr%mesh%x(:,i), &
+            units_out%length, ierr, geo = sys%geo)
         end do
       end if
 

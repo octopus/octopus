@@ -29,13 +29,13 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, tag, isigma, outp, geo)
 
   integer :: ik, ist, idim, ierr, is, i
   character(len=80) :: fname
-  FLOAT :: u
+  type(unit_t) :: u
   FLOAT, allocatable :: dtmp(:)
   R_TYPE, allocatable :: tmp(:)
 
   call push_sub('output_linear_response.Xh_sys_output_lr')
 
-  u = M_ONE/units_out%length%factor**gr%mesh%sb%dim
+  u = units_out%length**(-gr%mesh%sb%dim)
 
   if(isigma == 1) then ! the density, current, etc. are only defined for the + frequency
 
@@ -119,16 +119,14 @@ contains
 
     call push_sub('output_linear_response.Xh_sys_output_lr.lr_elf')
 
-    u=M_ONE
-
     do is = 1, st%d%nspin
       write(fname, '(a,a,i1,a,i1)') trim(filename1), '-', is, '-', tag 
-      call X(output_function)(outp%how, dir, trim(fname), gr%mesh, gr%sb, lr%X(dl_de)(1:gr%mesh%np,is), u, ierr, geo = geo)
+      call X(output_function)(outp%how, dir, trim(fname), gr%mesh, gr%sb, lr%X(dl_de)(1:gr%mesh%np,is), unit_one, ierr, geo = geo)
     end do
 
     do is = 1, st%d%nspin
       write(fname, '(a,a,i1,a,i1)') trim(filename2), '-', is, '-', tag 
-      call X(output_function)(outp%how, dir, trim(fname), gr%mesh, gr%sb, lr%X(dl_elf)(1:gr%mesh%np,is), u, ierr, geo = geo)
+      call X(output_function)(outp%how, dir, trim(fname), gr%mesh, gr%sb, lr%X(dl_elf)(1:gr%mesh%np,is), unit_one, ierr, geo = geo)
     end do
 
     call pop_sub()

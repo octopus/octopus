@@ -28,13 +28,13 @@
 
     integer :: ik, ist, idim, is, id, ierr, ip
     character(len=80) :: fname
-    FLOAT :: u
+    type(unit_t) :: u
     FLOAT, allocatable :: dtmp(:), elf(:,:)
     FLOAT, allocatable :: current(:, :, :)
 
     call push_sub('output_states_inc.h_sys_output_states')
 
-    u = M_ONE/units_out%length%factor**gr%mesh%sb%dim
+    u = units_out%length**(-gr%mesh%sb%dim)
 
     if(iand(outp%what, output_density).ne.0) then
       do is = 1, st%d%nspin
@@ -118,12 +118,12 @@
         case(UNPOLARIZED)
           write(fname, '(a)') 'tau'
           call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
-            elf(:,1), M_ONE, ierr, is_tmp = .false., geo = geo)
+            elf(:,1), unit_one, ierr, is_tmp = .false., geo = geo)
         case(SPIN_POLARIZED, SPINORS)
           do is = 1, 2
             write(fname, '(a,a,i1)') 'tau', '-', is
             call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
-              elf(:, is), M_ONE, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
+              elf(:, is), unit_one, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
           end do
       end select
       SAFE_DEALLOCATE_A(elf)

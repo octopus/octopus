@@ -57,7 +57,8 @@ module units_m
     units_abbrev,      &
     operator(*),       &
     operator(/),       &
-    operator(**)
+    operator(**),      &
+    sqrt
 
   type unit_t
     FLOAT             :: factor
@@ -90,6 +91,10 @@ module units_m
     module procedure units_pow
   end interface
   
+  interface sqrt
+    module procedure units_sqrt
+  end interface
+
   integer, parameter, public :: UNITS_ATOMIC = 1, UNITS_EVA = 2
 
 contains
@@ -399,6 +404,16 @@ contains
 
   end function units_pow
 
+
+  !-----------------------------------------------
+
+  type(unit_t) pure function units_sqrt(aa) result(cc)
+    type(unit_t), intent(in) :: aa
+    
+    cc%factor = sqrt(aa%factor)
+    cc%abbrev = 'sqrt('//trim(aa%abbrev)//')'
+
+  end function units_sqrt
 
 end module units_m
 
