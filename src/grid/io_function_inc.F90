@@ -388,14 +388,12 @@ subroutine X(output_function_global) (how, dir, fname, mesh, sb, f, unit, ierr, 
   character(len=512) :: filename
   character(len=20)  :: mformat, mformat2, mfmtheader
   integer            :: iunit, i, j, np_max
-  FLOAT              :: x0, u
+  FLOAT              :: x0
 
   call profiling_in(write_prof, "DISK_WRITE")
   call push_sub('io_function_inc.Xoutput_function_global')
 
   call io_mkdir(dir)
-
-  u = unit%factor
 
 ! Define the format; check if code is single precision or double precision
 !  FIXME: this may need to be expanded for MAX_DIM > 3
@@ -472,6 +470,7 @@ contains
     
     integer :: ixvect(MAX_DIM)
     FLOAT   :: xx(1:MAX_DIM)
+    R_TYPE  :: fu
 
     call push_sub('io_function_inc.Xoutput_function_global.out_axis')
 
@@ -484,7 +483,8 @@ contains
 
       if(ixvect(d2)==0.and.ixvect(d3)==0) then
         xx = units_from_atomic(units_out%length, mesh_x_global(mesh, i))
-        write(iunit, mformat, iostat=ierr) xx(d1), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+        fu = units_from_atomic(unit, f(i))
+        write(iunit, mformat, iostat=ierr) xx(d1), R_REAL(fu), R_AIMAG(fu)
       end if
     end do
 
@@ -501,6 +501,7 @@ contains
     integer :: ixvect(MAX_DIM)
     integer :: ixvect_test(MAX_DIM)
     FLOAT   :: xx(1:MAX_DIM)
+    R_TYPE  :: fu
 
     call push_sub('io_function_inc.Xoutput_function_global.out_plane')
 
@@ -544,8 +545,9 @@ contains
 
         if(i<=mesh%np_global .and. i> 0) then
           xx = units_from_atomic(units_out%length, mesh_x_global(mesh, i))
+          fu = units_from_atomic(unit, f(i))
           write(iunit, mformat, iostat=ierr)  &
-            xx(d2), xx(d3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+            xx(d2), xx(d3), R_REAL(fu), R_AIMAG(fu)
         end if
       end do
     end do
@@ -564,6 +566,7 @@ contains
     integer :: ix, iy, record_length
     integer :: min_d2, min_d3, max_d2, max_d3
     FLOAT, allocatable :: out_vec(:)
+    R_TYPE  :: fu
 
     call push_sub('io_function_inc.Xoutput_function_global.out_matlab')
     
@@ -614,10 +617,12 @@ contains
 
         if (i < 1 .or. i > np_max) cycle
         
+        fu = units_from_atomic(unit, f(i))
+
         select case(out_what)
-        case(1); out_vec(iy) = R_REAL(f(i))/u  ! real part
-        case(2); out_vec(iy) = R_AIMAG(f(i))/u ! imaginary part
-        case(3); out_vec(iy) = R_ABS(f(i))/u   ! absolute value
+        case(1); out_vec(iy) = R_REAL(fu)  ! real part
+        case(2); out_vec(iy) = R_AIMAG(fu) ! imaginary part
+        case(3); out_vec(iy) = R_ABS(fu)   ! absolute value
         end select
         
       end do
@@ -637,6 +642,7 @@ contains
   ! ---------------------------------------------------------
   subroutine out_mesh_index()
     FLOAT :: xx(1:MAX_DIM)
+    R_TYPE :: fu
 
     call push_sub('io_function_inc.Xoutput_function_global.out_mesh_index')
 
@@ -653,7 +659,8 @@ contains
           write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
           x0 = xx(1)
        end if
-       if(ierr==0) write(iunit, mformat2, iostat=ierr) i, xx(1), xx(2), xx(3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+       fu = units_from_atomic(unit, f(i))
+       if(ierr==0) write(iunit, mformat2, iostat=ierr) i, xx(1), xx(2), xx(3), R_REAL(fu), R_AIMAG(fu)
     end do
 
     if(ierr == 0) write(iunit, mformat, iostat=ierr)
@@ -707,7 +714,7 @@ contains
     do ix = 1, cube%n(1)
       do iy = 1, cube%n(2)
         do iz = 1, cube%n(3)
-          write(iunit,'(2f25.15)') u*cube%RS(ix, iy, iz)
+          write(iunit,'(2f25.15)') units_from_atomic(unit, cube%RS(ix, iy, iz))
         end do
       end do
     end do
@@ -789,7 +796,7 @@ contains
             iz2 = iz
           endif
 
-          write(iunit,'(2f25.15)') REAL(u*cube%RS(ix2, iy2, iz2))
+          write(iunit,'(2f25.15)') REAL(units_from_atomic(unit, cube%RS(ix2, iy2, iz2)))
         end do
       end do
     end do

@@ -90,6 +90,14 @@ module units_m
   interface operator (**)
     module procedure units_pow
   end interface
+
+  interface units_to_atomic
+    module procedure dunits_to_atomic, zunits_to_atomic
+  end interface
+
+  interface units_from_atomic
+    module procedure dunits_from_atomic, zunits_from_atomic
+  end interface
   
   interface sqrt
     module procedure units_sqrt
@@ -321,23 +329,44 @@ contains
 
   !-----------------------------------------------
 
-  FLOAT elemental pure function units_to_atomic(this, val) result(res)
+  FLOAT elemental pure function dunits_to_atomic(this, val) result(res)
     type(unit_t), intent(in) :: this
     FLOAT,        intent(in) :: val
 
     res = val*this%factor
 
-  end function units_to_atomic
+  end function dunits_to_atomic
  
   !-----------------------------------------------
 
-  FLOAT elemental pure function units_from_atomic(this, val) result(res)
+  CMPLX elemental pure function zunits_to_atomic(this, val) result(res)
+    type(unit_t), intent(in) :: this
+    CMPLX,        intent(in) :: val
+
+    res = val*this%factor
+
+  end function zunits_to_atomic
+
+  !-----------------------------------------------
+  
+  FLOAT elemental pure function dunits_from_atomic(this, val) result(res)
     type(unit_t), intent(in) :: this
     FLOAT,        intent(in) :: val
 
     res = val/this%factor
 
-  end function units_from_atomic
+  end function dunits_from_atomic
+
+  !-----------------------------------------------
+  
+  CMPLX elemental pure function zunits_from_atomic(this, val) result(res)
+    type(unit_t), intent(in) :: this
+    CMPLX,        intent(in) :: val
+
+    res = val/this%factor
+
+  end function zunits_from_atomic
+
   !-----------------------------------------------
 
   character(len=12) pure function units_abbrev(this) result(abbrev)

@@ -17,8 +17,8 @@ match ; Geometry         ; LINE(static/geometry.xyz, 3, 38) ; 0.000000
 match ; DX Origin        ; LINE(static/density-1.dx, 2, 11) ; -2.645886
 match ; DX Delta         ; LINE(static/density-1.dx, 3, 11) ;  0.264589
 Precision : 0.000000001
-match ; DX value 1       ; LINE(static/density-1.dx, 1195, 9) ; 0.000003666782661
-match ; DX value 2       ; LINE(static/density-1.dx, 1489, 9) ; 0.000024889360932
+match ; DX value 1       ; LINE(static/density-1.dx, 1195, 9) ; 0.000166985354390
+match ; DX value 2       ; LINE(static/density-1.dx, 1489, 9) ; 0.001133461985917
 
 #axis output
 Precision : 0.0001
@@ -52,10 +52,8 @@ match ; XCrysDen geometry; LINE(static/geometry.xsf, 2, 25) ; 0.00000
 match ; XCrysDen wf 1    ; LINE(static/wf-001-0001-1.xsf, 2, 25) ; 2.645886
 match ; XCrysDen wf 2    ; LINE(static/wf-001-0001-1.xsf, 8, 4)  ; 5.291772
 Precision : 0.000001
-match ; XCrysDen wf 3    ; LINE(static/wf-001-0001-1.xsf, 8867, 8) ; 0.001562436344102
-match ; XCrysDen wf 4    ; LINE(static/wf-001-0001-1.xsf, 9370, 8) ; 0.001072620390914
-
-
+match ; XCrysDen wf 3    ; LINE(static/wf-001-0001-1.xsf, 8867, 8) ; 0.010543843731284
+match ; XCrysDen wf 4    ; LINE(static/wf-001-0001-1.xsf, 9370, 8) ; 0.007238401100039
 
 
 
