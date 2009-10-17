@@ -211,8 +211,7 @@ contains
     end if
 
     call geometry_min_distance(geo, rmin)
-    call parse_float(datasets_check('LocalMagneticMomentsSphereRadius'), rmin*M_HALF/units_inp%length%factor, w%lmm_r)
-    w%lmm_r = w%lmm_r * units_inp%length%factor
+    call parse_float(datasets_check('LocalMagneticMomentsSphereRadius'), rmin*M_HALF, w%lmm_r, units_inp%length)
 
     if( (w%out(OUT_PROJ)%write)  .or.  (w%out(OUT_POPULATIONS)%write) ) then
       call states_copy(w%gs_st, st)
@@ -307,38 +306,38 @@ contains
     if(mpi_grp_is_root(mpi_world)) then
       if(w%out(OUT_MULTIPOLES)%write) &
         call write_iter_init(w%out(OUT_MULTIPOLES)%handle, &
-        first, dt/units_out%time%factor, trim(io_workpath("td.general/multipoles")))
+        first, units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/multipoles")))
 
       if(w%out(OUT_ANGULAR)%write) &
         call write_iter_init(w%out(OUT_ANGULAR)%handle, first, &
-          dt/units_out%time%factor, trim(io_workpath("td.general/angular")))
+          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/angular")))
 
       if(w%out(OUT_SPIN)%write) &
         call write_iter_init(w%out(OUT_SPIN)%handle, first, &
-          dt/units_out%time%factor, trim(io_workpath("td.general/spin")))
+          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/spin")))
 
       if(w%out(OUT_MAGNETS)%write) &
         call write_iter_init(w%out(OUT_MAGNETS)%handle, first, &
-          dt/units_out%time%factor, trim(io_workpath("td.general/magnetic_moments")))
+          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/magnetic_moments")))
 
       if(w%out(OUT_COORDS)%write) &
         call write_iter_init(w%out(OUT_COORDS)%handle, first, &
-          dt/units_out%time%factor, trim(io_workpath("td.general/coordinates")))
+          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/coordinates")))
 
       if(w%out(OUT_TEMPERATURE)%write) &
         call write_iter_init(w%out(OUT_TEMPERATURE)%handle, first, M_ONE, trim(io_workpath("td.general/temperature")))
 
       if(w%out(OUT_POPULATIONS)%write) &
         call write_iter_init(w%out(OUT_POPULATIONS)%handle, first, &
-          dt/units_out%time%factor, trim(io_workpath("td.general/populations")))
+          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/populations")))
 
       if(w%out(OUT_ACC)%write) &
         call write_iter_init(w%out(OUT_ACC)%handle, first, &
-          dt/units_out%time%factor, trim(io_workpath("td.general/acceleration")))
+          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/acceleration")))
 
       if(w%out(OUT_LASER)%write) then
         call write_iter_init(w%out(OUT_LASER)%handle, first, &
-          dt/units_out%time%factor, trim(io_workpath("td.general/laser")))
+          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/laser")))
         do i = 0, max_iter
           call td_write_laser(w%out(OUT_LASER)%handle, gr, hm, dt, i)
           if(mod(i, 100).eq.0) call write_iter_flush(w%out(OUT_LASER)%handle)
@@ -349,15 +348,15 @@ contains
 
       if(w%out(OUT_ENERGY)%write) &
         call write_iter_init(w%out(OUT_ENERGY)%handle, first, &
-          dt/units_out%time%factor, trim(io_workpath("td.general/energy")))
+          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/energy")))
 
       if(w%out(OUT_PROJ)%write) &
         call write_iter_init(w%out(OUT_PROJ)%handle, first, &
-          dt/units_out%time%factor, trim(io_workpath("td.general/projections")))
+          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/projections")))
 
       if(w%out(OUT_GAUGE_FIELD)%write) &
         call write_iter_init(w%out(OUT_GAUGE_FIELD)%handle, &
-        first, dt/units_out%time%factor, trim(io_workpath("td.general/gauge_field")))
+        first, units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/gauge_field")))
     end if
 
     call pop_sub()
@@ -762,7 +761,7 @@ contains
         add_lm = 1
         do l = 0, lmax
           do m = -l, l
-            call write_iter_double(out_multip, multipole(add_lm, is)/units_out%length%factor**l, 1)
+            call write_iter_double(out_multip, units_from_atomic(units_out%length**l, multipole(add_lm, is)), 1)
             add_lm = add_lm + 1
           end do
         end do
@@ -831,13 +830,13 @@ contains
     call write_iter_start(out_coords)
 
     do i = 1, geo%natoms
-      call write_iter_double(out_coords, geo%atom(i)%x(1:gr%mesh%sb%dim)/units_out%length%factor,   gr%mesh%sb%dim)
+      call write_iter_double(out_coords, units_from_atomic(units_out%length, geo%atom(i)%x(1:gr%mesh%sb%dim)), gr%mesh%sb%dim)
     end do
     do i = 1, geo%natoms
-      call write_iter_double(out_coords, geo%atom(i)%v(1:gr%mesh%sb%dim)/units_out%velocity%factor, gr%mesh%sb%dim)
+      call write_iter_double(out_coords, units_from_atomic(units_out%velocity, geo%atom(i)%v(1:gr%mesh%sb%dim)), gr%mesh%sb%dim)
     end do
     do i = 1, geo%natoms
-      call write_iter_double(out_coords, geo%atom(i)%f(1:gr%mesh%sb%dim)/units_out%force%factor,    gr%mesh%sb%dim)
+      call write_iter_double(out_coords, units_from_atomic(units_out%force, geo%atom(i)%f(1:gr%mesh%sb%dim)), gr%mesh%sb%dim)
     end do
     call write_iter_nl(out_coords)
 
@@ -1001,7 +1000,7 @@ contains
     call td_calc_tacc(gr, geo, st, hm, acc, dt * idim)
 
     call write_iter_start(out_acc)
-    call write_iter_double(out_acc, acc / units_out%acceleration%factor, gr%mesh%sb%dim)
+    call write_iter_double(out_acc, units_from_atomic(units_out%acceleration, acc), gr%mesh%sb%dim)
     call write_iter_nl(out_acc)
 
     call pop_sub()

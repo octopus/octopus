@@ -2051,7 +2051,7 @@ contains
     type(simul_box_t), intent(in) :: sb
 
     integer :: iunit, i
-    FLOAT :: scale, maxdos
+    FLOAT :: maxdos
     FLOAT :: factor(MAX_DIM)
 
     call push_sub('states.states_write_fermi_energy')
@@ -2059,8 +2059,6 @@ contains
     call states_fermi(st, m)
 
     iunit = io_open(trim(dir)//'/'//'bands-efermi.dat', action='write')    
-
-    scale = units_out%energy%factor
 
     ! define the scaling factor to output k_i/G_i, instead of k_i
     do i = 1, MAX_DIM
@@ -2084,7 +2082,7 @@ contains
     ! Gamma point
     write(message(3), '(7f12.6)')          &
       (M_ZERO, i = 1, 6),                  &
-      st%smear%e_fermi/scale
+      units_from_atomic(units_out%energy, st%smear%e_fermi)
 
     write(message(4), '(7f12.6)')          &
       maxval(st%d%kpoints(1,:)),           &

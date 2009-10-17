@@ -160,7 +160,7 @@ contains
     !% Processing is done for the given function in a time-window that starts at the
     !% value of this variable.
     !%End
-    call parse_float(datasets_check('SpecStartTime'),  M_ZERO,      s%start_time)
+    call parse_float(datasets_check('SpecStartTime'),  M_ZERO, s%start_time, units_inp%time)
 
     !%Variable SpecEndTime
     !%Type integer
@@ -170,7 +170,7 @@ contains
     !% Processing is done for the given function in a time-window that ends at the
     !% value of this variable.
     !%End
-    call parse_float(datasets_check('SpecEndTime'),   -M_ONE,       s%end_time)
+    call parse_float(datasets_check('SpecEndTime'), -M_ONE, s%end_time, units_inp%time)
 
     !%Variable SpecEnergyStep
     !%Type integer
@@ -179,8 +179,7 @@ contains
     !%Description
     !% Sampling rate for the spectrum.
     !%End
-    call parse_float(datasets_check('SpecEnergyStep'), CNST(0.01)/(M_TWO*P_Ry*units_inp%energy%factor),&
-         s%energy_step)
+    call parse_float(datasets_check('SpecEnergyStep'), CNST(0.01)/(M_TWO*P_Ry), s%energy_step, units_inp%energy)
     
 
     !%Variable SpecMaxEnergy
@@ -190,8 +189,7 @@ contains
     !%Description
     !% The Fourier transform is calculated for energies smaller than this value.
     !%End
-    call parse_float(datasets_check('SpecMaxEnergy'), CNST(20.0)/(M_TWO*P_Ry*units_inp%energy%factor),&
-         s%max_energy)
+    call parse_float(datasets_check('SpecMaxEnergy'), CNST(20.0)/(M_TWO*P_Ry), s%max_energy, units_inp%energy)
 
     !%Variable SpecDampFactor
     !%Type integer
@@ -201,13 +199,7 @@ contains
     !% If <tt>SpecDampMode = exponential</tt>, the damping parameter of the exponential
     !% is fixed through this variable.
     !%End
-    call parse_float(datasets_check('SpecDampFactor'),  CNST(0.15), s%damp_factor)
-
-    s%start_time      = s%start_time      * units_inp%time%factor
-    s%end_time        = s%end_time        * units_inp%time%factor
-    s%energy_step     = s%energy_step     * units_inp%energy%factor
-    s%max_energy      = s%max_energy      * units_inp%energy%factor
-    s%damp_factor     = s%damp_factor     / units_inp%time%factor
+    call parse_float(datasets_check('SpecDampFactor'),  CNST(0.15), s%damp_factor, units_inp%time**(-1))
 
     call pop_sub()
   end subroutine spectrum_init

@@ -260,8 +260,7 @@ contains
       !% is stopped when all forces on ions are smaller than this criterion.
       !% Used in conjunction with <tt>GOMinimumMove</tt>. If <tt>GOTolerance = 0</tt>, this criterion is ignored.
       !%End
-      call parse_float(datasets_check('GOTolerance'), CNST(0.001)/units_inp%force%factor, g_opt%tolgrad)
-      g_opt%tolgrad = g_opt%tolgrad*units_inp%force%factor
+      call parse_float(datasets_check('GOTolerance'), CNST(0.001), g_opt%tolgrad, units_inp%force)
       
       !%Variable GOMinimumMove
       !%Type float
@@ -274,8 +273,8 @@ contains
       !%
       !% Note that if you use <tt>GOMethod = simplex</tt>, then you must supply a non-zero <tt>GOMinimumMove</tt>.
       !%End
-      call parse_float(datasets_check('GOMinimumMove'), CNST(0.0)/units_inp%length%factor, g_opt%toldr)
-      g_opt%toldr = g_opt%toldr*units_inp%length%factor
+      call parse_float(datasets_check('GOMinimumMove'), CNST(0.0), g_opt%toldr, units_inp%length)
+
       if(g_opt%method == MINMETHOD_NMSIMPLEX .and. g_opt%toldr <= M_ZERO) call input_error('GOMinimumMove')
       
       !%Variable GOStep
@@ -428,7 +427,7 @@ contains
     call push_sub("geom_opt.write_iter_info")
     
     write(c_geom_iter, '(a,i4.4)') "go.", geom_iter
-    write(title, '(f16.10)') energy/units_out%energy%factor
+    write(title, '(f16.10)') units_from_atomic(units_out%energy, energy)
     call atom_write_xyz("geom", trim(c_geom_iter), g_opt%geo, g_opt%syst%gr%mesh%sb%dim, comment=trim(title))
 
     do i = 0, g_opt%geo%natoms - 1
@@ -441,11 +440,11 @@ contains
     message(2) = ""
     message(3) = "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
     write(message(4),'("+++++++++++++++++++++ MINIMIZATION ITER #: ",I4," ++++++++++++++++++++++")') geom_iter
-    write(message(5), '(2x,2(a,f16.10))') "Energy    = ", energy/units_out%energy%factor
+    write(message(5), '(2x,2(a,f16.10))') "Energy    = ", units_from_atomic(units_out%energy, energy)
     if(maxdf > M_ZERO) then
-      write(message(6),'(2X,2(a,f16.10))')  "Max force = ", maxdf/units_out%force%factor
+      write(message(6),'(2X,2(a,f16.10))')  "Max force = ", units_from_atomic(units_out%force, maxdf)
     end if
-    write(message(7),'(2X,2(a,f16.10))')  "Max dr    = ", maxdx/units_out%length%factor
+    write(message(7),'(2X,2(a,f16.10))')  "Max dr    = ", units_from_atomic(units_out%length, maxdx)
     message(8) = message(3)
     message(9) = message(3)
     message(10) = ""
