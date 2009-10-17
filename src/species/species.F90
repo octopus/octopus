@@ -25,7 +25,7 @@ module species_m
   use io_m
   use loct_m
   use loct_math_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use messages_m
   use mpi_m
@@ -300,19 +300,19 @@ contains
     !%
     !% For a precise description, see N. A. Modine, <i>Phys. Rev. B</i> <b>55</b>, 10289 (1997).
     !%End
-    call loct_parse_float(datasets_check('SpeciesAllElectronSigma'), CNST(0.25), s%sigma)
+    call parse_float(datasets_check('SpeciesAllElectronSigma'), CNST(0.25), s%sigma)
     if(s%sigma <= M_ZERO) call input_error('SpeciesAllElectronSigma')
 
     ! First, find out if there is a Species block.
     n_spec_block = 0
-    if(loct_parse_block(datasets_check('Species'), blk) == 0) then
-      n_spec_block = loct_parse_block_n(blk)
+    if(parse_block(datasets_check('Species'), blk) == 0) then
+      n_spec_block = parse_block_n(blk)
     end if
 
     ! Find out if the sought species is in the block
     row = -1
     block: do i = 1, n_spec_block
-      call loct_parse_block_string(blk, i-1, 0, lab)
+      call parse_block_string(blk, i-1, 0, lab)
       if(trim(lab)==trim(s%label)) then
         row = i - 1
         exit block
@@ -322,7 +322,7 @@ contains
     ! Read whatever may be read from the block
     if(row>=0) then
       call read_from_block(blk, row, s, read_data)
-      call loct_parse_block_end(blk)
+      call parse_block_end(blk)
     end if
 
     ! Find out if the species is in the defaults file.
@@ -409,7 +409,7 @@ contains
       end if
       s%niwfs = int(max(2*s%z_val, CNST(1.0)))
       xx(1) = CNST(0.01)
-      call loct_parse_expression(pot_re, pot_im, 1, xx, xx(1), M_ZERO, s%user_def)
+      call parse_expression(pot_re, pot_im, 1, xx, xx(1), M_ZERO, s%user_def)
       s%omega = sqrt( abs(M_TWO / CNST(1.0e-4) * pot_re ))
       ! To avoid problems with constant potentials.
       if(s%omega <= M_ZERO) s%omega = CNST(0.1) 
@@ -657,7 +657,7 @@ contains
     integer, intent(in) :: dim
     FLOAT, intent(in) :: xx(1:MAX_DIM), r, t
     FLOAT :: pot_re, pot_im
-    call loct_parse_expression(                            &
+    call parse_expression(                            &
                pot_re, pot_im, dim, xx, r, t, s%user_def)
     species_userdef_pot = pot_re
   end function species_userdef_pot
@@ -943,70 +943,70 @@ contains
 
     read_data = 0
 
-    call loct_parse_block_float (blk, row, 1, s%weight)
-    call loct_parse_block_int   (blk, row, 2, s%type)
+    call parse_block_float (blk, row, 1, s%weight)
+    call parse_block_integer   (blk, row, 2, s%type)
 
     select case(s%type)
     case(SPEC_USDEF) ! user-defined
-      call loct_parse_block_float (blk, row, 3, s%Z_val)
-      call loct_parse_block_string(blk, row, 4, s%user_def)
+      call parse_block_float (blk, row, 3, s%Z_val)
+      call parse_block_string(blk, row, 4, s%user_def)
       call conv_to_C_string(s%user_def)
       read_data = 5
 
     case(SPEC_FROM_FILE)
-      call loct_parse_block_float (blk, row, 3, s%Z_val)
-      call loct_parse_block_string(blk, row, 4, s%filename)
+      call parse_block_float (blk, row, 3, s%Z_val)
+      call parse_block_string(blk, row, 4, s%filename)
       read_data = 5
 
     case(SPEC_POINT) ! this is treated as a jellium with radius 0.5
-      call loct_parse_block_float(blk, row, 3, s%Z)
+      call parse_block_float(blk, row, 3, s%Z)
       s%jradius = M_HALF
       s%Z_val = 0
       read_data = 4
 
     case(SPEC_JELLI)
-      call loct_parse_block_float(blk, row, 3, s%Z)      ! charge of the jellium sphere
-      call loct_parse_block_float(blk, row, 4, s%jradius)! radius of the jellium sphere
+      call parse_block_float(blk, row, 3, s%Z)      ! charge of the jellium sphere
+      call parse_block_float(blk, row, 4, s%jradius)! radius of the jellium sphere
       s%jradius = units_to_atomic(units_inp%length, s%jradius) ! units conversion
       s%Z_val = s%Z
       read_data = 5
 
     case(SPEC_ALL_E)
-      call loct_parse_block_float(blk, row, 3, s%Z)
+      call parse_block_float(blk, row, 3, s%Z)
       s%Z_val = s%Z
       read_data = 4
 
     case(SPEC_CHARGE_DENSITY)
-      call loct_parse_block_float(blk, row, 3, s%Z)
-      call loct_parse_block_string(blk, row, 4, s%rho)
+      call parse_block_float(blk, row, 3, s%Z)
+      call parse_block_string(blk, row, 4, s%rho)
       s%Z_val = s%Z
       read_data = 5
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF) ! a pseudopotential file
-      n = loct_parse_block_cols(blk, row)
+      n = parse_block_cols(blk, row)
 
-      call loct_parse_block_float (blk, row, 3, s%Z)
+      call parse_block_float (blk, row, 3, s%Z)
 
       if(s%type == SPEC_PS_UPF) read_data = 4
 
       if(n>4) then
-        call loct_parse_block_int (blk, row, 4, s%lmax)
+        call parse_block_integer (blk, row, 4, s%lmax)
         read_data = 5
       end if
 
       if(n>5) then
-        call loct_parse_block_int (blk, row, 5, s%lloc)
+        call parse_block_integer (blk, row, 5, s%lloc)
         read_data = 6
       end if
 
       if(n>6) then
-        call loct_parse_block_float (blk, row, 6, s%def_h)
+        call parse_block_float (blk, row, 6, s%def_h)
         s%def_h = units_to_atomic(units_inp%length, s%def_h)
         read_data = 7
       end if
 
       if(n>7) then
-        call loct_parse_block_float (blk, row, 7, s%def_rsize)
+        call parse_block_float (blk, row, 7, s%def_rsize)
         s%def_rsize = units_to_atomic(units_inp%length, s%def_rsize)
         read_data = 8
       end if

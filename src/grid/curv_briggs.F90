@@ -27,7 +27,7 @@
 module curv_briggs_m
   use datasets_m
   use global_m
-  use loct_parser_m
+  use parser_m
   use messages_m
   use simul_box_m
 
@@ -55,7 +55,7 @@ contains
     cv%L = M_ZERO
     cv%L(1:sb%dim) = sb%lsize(1:sb%dim)
 
-    call loct_parse_float(datasets_check('CurvBriggsBeta'), M_HALF, cv%beta)
+    call parse_float(datasets_check('CurvBriggsBeta'), M_HALF, cv%beta)
 
     if(cv%beta<M_ZERO.or.cv%beta>M_ONE) then
       message(1) = 'The parameter "CurvBriggsBeta" must lie between 0 and 1.'

@@ -26,7 +26,7 @@ program harmonic_spectrum
   use datasets_m
   use io_m
   use units_m
-  use loct_parser_m
+  use parser_m
   use spectrum_m
   use varinfo_m
 

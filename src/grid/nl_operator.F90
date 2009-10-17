@@ -25,7 +25,7 @@ module nl_operator_m
   use global_m
   use io_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use index_m
   use mesh_m
@@ -175,7 +175,7 @@ contains
     !% Hand-written assembler version, currently only available on Itanium systems.
     !%End
 
-    call loct_parse_int(datasets_check('OperateDouble'),  -1, dfunction_global)
+    call parse_integer(datasets_check('OperateDouble'),  -1, dfunction_global)
     if(dfunction_global.ne.-1) then
       if(op_is_available(dfunction_global, M_REAL)  == 0) then
         message(1) = 'OperateDouble chosen in not available on this platform'
@@ -183,7 +183,7 @@ contains
       end if
     end if
 
-    call loct_parse_int(datasets_check('OperateComplex'), -1, zfunction_global)
+    call parse_integer(datasets_check('OperateComplex'), -1, zfunction_global)
     if(zfunction_global.ne.-1) then
       if(op_is_available(zfunction_global, M_CMPLX) == 0) then
         message(1) = 'OperateComplex chosen in not available on this platform'

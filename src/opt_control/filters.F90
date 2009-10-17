@@ -25,7 +25,7 @@ module filter_m
   use global_m
   use io_m 
   use loct_m
-  use loct_parser_m
+  use parser_m
   use messages_m
   use profiling_m
   use string_m
@@ -110,8 +110,8 @@ contains
     !%Option frequency_filter 1
     !% The filter is applied in the frequency domain.
     !%End
-    if( loct_parse_block(datasets_check('OCTFilter'),blk) == 0 ) then
-      no_f = loct_parse_block_n(blk)
+    if( parse_block(datasets_check('OCTFilter'),blk) == 0 ) then
+      no_f = parse_block_n(blk)
 
       if(no_f <= 0) then
         call pop_sub(); return
@@ -123,16 +123,16 @@ contains
       SAFE_ALLOCATE(filter%domain(1:no_f))
 
       do i=1, no_f
-        no_c = loct_parse_block_cols(blk, i-1)       
-        call loct_parse_block_int(blk, i-1, 0, filter%domain(i))
-        call loct_parse_block_string(blk, i-1, 1, filter%expression(i))
+        no_c = parse_block_cols(blk, i-1)       
+        call parse_block_integer(blk, i-1, 0, filter%domain(i))
+        call parse_block_string(blk, i-1, 1, filter%expression(i))
         call conv_to_C_string(filter%expression(i))
         call tdf_init_numerical(filter%f(i), steps, dt, -M_ONE)
         call tdf_numerical_to_fourier(filter%f(i))
       end do
       call build_filter(filter)
 
-      call loct_parse_block_end(blk)
+      call parse_block_end(blk)
     end if
 
     call pop_sub()
@@ -209,7 +209,7 @@ contains
         call tdf_fourier_grid(filter%f(i), grid)
         ff = M_z1
         do ip = 1, tdf_nfreqs(filter%f(i))
-          call loct_parse_expression(f_re, f_im, "w", real(grid(ip), 8), filter%expression(i))
+          call parse_expression(f_re, f_im, "w", real(grid(ip), 8), filter%expression(i))
           ff(ip) = f_re + M_zI*f_im
         end do
        

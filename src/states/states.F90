@@ -36,7 +36,7 @@ module states_m
   use lalg_adv_m
   use lalg_basic_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use mesh_m
   use mesh_function_m
@@ -231,7 +231,7 @@ contains
     !% be oriented non-collinearly - <i>i.e.</i> the magnetization vector is allowed to take different
     !% directions at different points.
     !%End
-    call loct_parse_int(datasets_check('SpinComponents'), UNPOLARIZED, st%d%ispin)
+    call parse_integer(datasets_check('SpinComponents'), UNPOLARIZED, st%d%ispin)
     if(.not.varinfo_valid_option('SpinComponents', st%d%ispin)) call input_error('SpinComponents')
     call messages_print_var_option(stdout, 'SpinComponents', st%d%ispin)
     ! Use of spinors requires complex wavefunctions.
@@ -247,7 +247,7 @@ contains
     !% electrons, while a positive value means we are taking electrons
     !% from the system.
     !%End
-    call loct_parse_float(datasets_check('ExcessCharge'), M_ZERO, excess_charge)
+    call parse_float(datasets_check('ExcessCharge'), M_ZERO, excess_charge)
 
 
     !%Variable ExtraStates
@@ -272,7 +272,7 @@ contains
     !% and explicitly considers the eigenvalues of the unoccupied states as the
     !% convergence criteria.
     !%End
-    call loct_parse_int(datasets_check('ExtraStates'), 0, nempty)
+    call parse_integer(datasets_check('ExtraStates'), 0, nempty)
     if (nempty < 0) then
       write(message(1), '(a,i5,a)') "Input: '", nempty, "' is not a valid value for ExtraStates."
       message(2) = '(0 <= ExtraStates)'
@@ -393,7 +393,7 @@ contains
     !% less memory, at the expense of increased computational
     !% time. The default is no.
     !%End
-    call loct_parse_logical(datasets_check('StatesSaveMemory'), .false., st%np_size)
+    call parse_logical(datasets_check('StatesSaveMemory'), .false., st%np_size)
 
     ! FIXME: For now, open-boundary calculations are only possible for
     ! continuum states, i.e. for those states treated by the Lippmann-
@@ -413,7 +413,7 @@ contains
     end if
 
     ! current
-    call loct_parse_logical(datasets_check('CurrentDFT'), .false., st%d%cdft)
+    call parse_logical(datasets_check('CurrentDFT'), .false., st%d%cdft)
     if (st%d%cdft) then
       ! Use of CDFT requires complex wavefunctions
       st%wfs_type = M_CMPLX
@@ -448,7 +448,7 @@ contains
     !% will be used as initial states for a time-propagation. No attempt is made
     !% to load ground-state orbitals from a previous ground-state run.
     !%End
-    call loct_parse_logical(datasets_check('OnlyUserDefinedInitialStates'), .false., st%only_userdef_istates)
+    call parse_logical(datasets_check('OnlyUserDefinedInitialStates'), .false., st%only_userdef_istates)
 
     ! we now allocate some arrays
     SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
@@ -665,13 +665,13 @@ contains
       end do
 
     else
-      occ_fix: if(loct_parse_block(datasets_check('Occupations'), blk)==0) then
+      occ_fix: if(parse_block(datasets_check('Occupations'), blk)==0) then
         ! read in occupations
         st%fixed_occ = .true.
 
         ! Reads the number of columns in the first row. This assumes that all rows
         ! have the same column number; otherwise the code will stop with an error.
-        ncols = loct_parse_block_cols(blk, 0)
+        ncols = parse_block_cols(blk, 0)
         if(ncols > st%nst) then
           call input_error("Occupations")
         end if
@@ -687,10 +687,10 @@ contains
         end do
         do ik = 1, st%d%nik
           do ist = st%nst - ncols + 1, st%nst 
-            call loct_parse_block_float(blk, ik-1, ist-1-(st%nst-ncols), st%occ(ist, ik))
+            call parse_block_float(blk, ik-1, ist-1-(st%nst-ncols), st%occ(ist, ik))
           end do
         end do
-        call loct_parse_block_end(blk)
+        call parse_block_end(blk)
 
       else
         st%fixed_occ = .false.
@@ -791,15 +791,15 @@ contains
     !% (B) &lt;<i>S_x</i>&gt;^2 + &lt;<i>S_y</i>&gt;^2 + &lt;<i>S_z<i>&gt;^2 = 1/4
     !%
     !%End
-    spin_fix: if(loct_parse_block(datasets_check('InitialSpins'), blk)==0) then
+    spin_fix: if(parse_block(datasets_check('InitialSpins'), blk)==0) then
       do i = 1, st%nst
         do j = 1, 3
-          call loct_parse_block_float(blk, i-1, j-1, st%spin(j, i, 1))
+          call parse_block_float(blk, i-1, j-1, st%spin(j, i, 1))
         end do
         ! This checks (B).
         if( abs(sum(st%spin(1:3, i, 1)**2) - M_FOURTH) > CNST(1.0e-6)) call input_error('InitialSpins')
       end do
-      call loct_parse_block_end(blk)
+      call parse_block_end(blk)
       ! This checks (A). In fact (A) follows from (B), so maybe this is not necessary...
       if(any(abs(st%spin(:, :, :)) > M_HALF)) then
         call input_error('InitialSpins')
@@ -849,7 +849,7 @@ contains
     !% benchmarking and normal users need not use it.
     !%
     !%End
-    call loct_parse_logical(datasets_check('ForceComplex'), .false., force)
+    call parse_logical(datasets_check('ForceComplex'), .false., force)
 
     if(force) st%wfs_type = M_CMPLX
 
@@ -949,7 +949,7 @@ contains
     !%End
 
     ! This has to be here as it requires mc%nthreads that is not available in states_init
-    call loct_parse_int(datasets_check('StatesBlockSize'), max(4, 2*mc%nthreads), st%d%block_size)
+    call parse_integer(datasets_check('StatesBlockSize'), max(4, 2*mc%nthreads), st%d%block_size)
     if(st%d%block_size < 1) then
       message(1) = "Error: The variable 'StatesBlockSize' must be greater than 0."
       call write_fatal(1)
@@ -969,7 +969,7 @@ contains
     !%End
 
     ! This has to be here as it requires mc%nthreads that is not available in states_init
-    call loct_parse_int(datasets_check('StatesWindowSize'), st%nst, st%d%window_size)
+    call parse_integer(datasets_check('StatesWindowSize'), st%nst, st%d%window_size)
     if(st%d%block_size < 1) then
       message(1) = "Error: The variable 'StatesBlockSize' must be greater than 0."
       call write_fatal(1)
@@ -1613,7 +1613,7 @@ contains
     !%Description
     !% The band file will be written in Gnuplot-friendly format.
     !%End
-    call loct_parse_logical(datasets_check('OutputBandsGnuplotMode'), .true., gnuplot_mode)
+    call parse_logical(datasets_check('OutputBandsGnuplotMode'), .true., gnuplot_mode)
 
     !%Variable OutputBandsGraceMode
     !%Type logical
@@ -1622,7 +1622,7 @@ contains
     !%Description
     !% The band file will be written in Grace-friendly format.
     !%End
-    call loct_parse_logical(datasets_check('OutputBandsGraceMode'), .false., grace_mode)
+    call parse_logical(datasets_check('OutputBandsGraceMode'), .false., grace_mode)
 
     ! shortcuts
     ns = 1
@@ -1757,10 +1757,10 @@ contains
     !% <br>&nbsp;&nbsp; 0.1 | 0.2 | 0.3
     !% <br>%</tt>
     !%End
-    if(loct_parse_block(datasets_check('MomentumTransfer'),blk)==0) then
+    if(parse_block(datasets_check('MomentumTransfer'),blk)==0) then
 
       ! check if input makes sense
-      ncols = loct_parse_block_cols(blk, 0)
+      ncols = parse_block_cols(blk, 0)
 
       if(ncols .ne. gr%mesh%sb%dim ) then ! wrong size
 
@@ -1775,7 +1775,7 @@ contains
         SAFE_ALLOCATE(qvector(1:gr%mesh%sb%dim))
 
         do icoord = 1,gr%mesh%sb%dim    !for x,y,z
-          call loct_parse_block_float(blk, 0, icoord-1, qvector(icoord))
+          call parse_block_float(blk, 0, icoord-1, qvector(icoord))
           qvector(icoord) = units_to_atomic(unit_one / units_inp%length, qvector(icoord))
         end do
 
@@ -1912,7 +1912,7 @@ contains
     !% Lower bound for the energy mesh of the DOS.
     !% The default is the lowest eigenvalue, minus a quarter of the total range of eigenvalues.
     !%End
-    call loct_parse_float(datasets_check('DOSEnergyMin'), units_from_atomic(units_inp%energy, evalmin - eextend), emin)
+    call parse_float(datasets_check('DOSEnergyMin'), units_from_atomic(units_inp%energy, evalmin - eextend), emin)
     emin = units_to_atomic(units_inp%energy, emin)
 
     !%Variable DOSEnergyMax
@@ -1922,7 +1922,7 @@ contains
     !% Upper bound for the energy mesh of the DOS.
     !% The default is the lowest eigenvalue, minus a quarter of the total range of eigenvalues.
     !%End
-    call loct_parse_float(datasets_check('DOSEnergyMax'), units_from_atomic(units_inp%energy, evalmax + eextend), emax)
+    call parse_float(datasets_check('DOSEnergyMax'), units_from_atomic(units_inp%energy, evalmax + eextend), emax)
     emax = units_to_atomic(units_inp%energy, emax)
 
     !%Variable DOSEnergyPoints
@@ -1933,7 +1933,7 @@ contains
     !% Determines how many energy points <tt>Octopus</tt> should use for 
     !% the DOS energy grid.
     !%End
-    call loct_parse_int(datasets_check('DOSEnergyPoints'), 500, epoints)
+    call parse_integer(datasets_check('DOSEnergyPoints'), 500, epoints)
 
     !%Variable DOSGamma
     !%Type float
@@ -1942,7 +1942,7 @@ contains
     !%Description
     !% Determines the width of the Lorentzian which is used for the DOS sum.
     !%End
-    call loct_parse_float(datasets_check('DOSGamma'), &
+    call parse_float(datasets_check('DOSGamma'), &
       units_from_atomic(units_inp%energy, CNST(0.008)), gamma)
     gamma = units_to_atomic(units_inp%energy, gamma)
 

@@ -31,7 +31,7 @@ module run_m
   use ground_state_m
   use hamiltonian_m
   use invert_ks_m
-  use loct_parser_m
+  use parser_m
   use messages_m
   use mpi_debug_m
   use memory_m
@@ -85,7 +85,7 @@ contains
     !% information.
     !%End
 
-    call loct_parse_logical(datasets_check('fromScratch'), .false., fromScratch)
+    call parse_logical(datasets_check('fromScratch'), .false., fromScratch)
 
     select case(calc_mode())
     case(CM_GS)
@@ -164,7 +164,7 @@ contains
     !% mainly because it is simple and useful for testing purposes.
     !%End
     
-    call loct_parse_int(datasets_check('ResponseMethod'), LR, get_resp_method)
+    call parse_integer(datasets_check('ResponseMethod'), LR, get_resp_method)
 
     if(.not.varinfo_valid_option('ResponseMethod', get_resp_method)) then
       call input_error('ResponseMethod')

@@ -24,7 +24,7 @@ module PES_m
   use fft_m
   use global_m
   use io_m
-  use loct_parser_m
+  use parser_m
   use mesh_m
   use messages_m
   use profiling_m
@@ -75,7 +75,7 @@ contains
     !% calculate the photoelectron spectrum at a point far in the box as proposed in 
     !% A. Pohl, P.-G. Reinhard, and E. Suraud, Phys. Rev. Lett. <b>84</b>, 5090 (2000).
     !%End
-    call loct_parse_logical(datasets_check('CalcPES_rc'), .false., p%calc_rc)
+    call parse_logical(datasets_check('CalcPES_rc'), .false., p%calc_rc)
     if(p%calc_rc) then
       p%calc_rc = .true.
       call PES_rc_init(p%rc, m, st, save_iter)
@@ -94,7 +94,7 @@ contains
       !% In order for this to work, masking boundaries are necessary 
       !% (<tt>AbsorbingBoundaries == 2</tt>).
       !%End
-      call loct_parse_logical(datasets_check('CalcPES_Mask'), .false., p%calc_mask)
+      call parse_logical(datasets_check('CalcPES_Mask'), .false., p%calc_mask)
       if(p%calc_mask) then
         call PES_mask_init(p%mask, m, sb, st)
       end if

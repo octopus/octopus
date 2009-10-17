@@ -36,7 +36,7 @@ module opt_control_m
   use lasers_m
   use loct_m
   use loct_math_m
-  use loct_parser_m
+  use parser_m
   use mesh_m
   use mesh_function_m
   use messages_m

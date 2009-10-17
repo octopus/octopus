@@ -33,7 +33,7 @@ module unocc_m
   use io_m
   use lcao_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use mesh_m
   use mesh_function_m
   use messages_m
@@ -74,7 +74,7 @@ contains
     call push_sub('unocc.unocc_run')
 
     ! read the maximum number of eigensolver iterations
-    call loct_parse_int(datasets_check('MaximumIter'), 20, max_iter)
+    call parse_integer(datasets_check('MaximumIter'), 20, max_iter)
 
     occupied_states = sys%st%nst
     call init_(sys%gr%mesh, sys%st)
@@ -110,7 +110,7 @@ contains
     lcao_start_default = LCAO_START_FULL
     if(sys%geo%only_user_def) lcao_start_default = LCAO_START_NONE
 
-    call loct_parse_int(datasets_check('LCAOStart'), lcao_start_default, lcao_start)
+    call parse_integer(datasets_check('LCAOStart'), lcao_start_default, lcao_start)
     if(.not.varinfo_valid_option('LCAOStart', lcao_start)) call input_error('LCAOStart')
     call messages_print_var_option(stdout, 'LCAOStart', lcao_start)
 
@@ -193,7 +193,7 @@ contains
       !%Description
       !% How many unoccupied states to compute.
       !%End
-      call loct_parse_int(datasets_check('NumberUnoccStates'), 5, nus)
+      call parse_integer(datasets_check('NumberUnoccStates'), 5, nus)
       if(nus <= 0) then
         message(1) = "Input: NumberUnoccStates must be > 0"
         call write_fatal(1)

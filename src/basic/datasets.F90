@@ -20,7 +20,7 @@
 #include "global.h"
 
 module datasets_m
-  use loct_parser_m
+  use parser_m
 
   implicit none
   private
@@ -62,7 +62,7 @@ contains
     ! where the second (the labels) and the third (the order) line are optional
 
     if(present(blk)) then
-      no_datasets = loct_parse_block_cols(blk, 0)
+      no_datasets = parse_block_cols(blk, 0)
     else
       no_datasets = 1
     end if
@@ -85,29 +85,29 @@ contains
 
       ! get run modes
       do i = 1, no_datasets
-        call loct_parse_block_int(blk, 0, i-1, dataset_runmode(i))
+        call parse_block_integer(blk, 0, i-1, dataset_runmode(i))
       end do
 
       ! the rest of the information is optional
-      n_rows = loct_parse_block_n(blk)
+      n_rows = parse_block_n(blk)
 
       ! first we get the labels
       if(n_rows >= 2) then
-        n_cols = loct_parse_block_cols(blk, 1)
+        n_cols = parse_block_cols(blk, 1)
         do i = 1, n_cols
-          call loct_parse_block_string(blk, 1, i-1, dataset_label(i))
+          call parse_block_string(blk, 1, i-1, dataset_label(i))
         end do
       end if
 
       ! and now the order
       if(n_rows >= 3) then
-        n_cols = loct_parse_block_cols(blk, 1)
+        n_cols = parse_block_cols(blk, 1)
         do i = 1, n_cols
-          call loct_parse_block_int(blk, 2, i-1, dataset_run_order(i))
+          call parse_block_integer(blk, 2, i-1, dataset_run_order(i))
         end do
       end if
 
-      call loct_parse_block_end(blk)
+      call parse_block_end(blk)
     end if
 
     ! consistency check: does the order match the run modes?
@@ -148,7 +148,7 @@ contains
 
     composite_name = trim(current_label)//trim(variable)
 
-    if(loct_parse_isdef(composite_name).ne.0) then
+    if(parse_isdef(composite_name).ne.0) then
       ! composite name has been defined in the input file
       var_name = composite_name
     else

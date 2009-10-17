@@ -38,7 +38,7 @@
 module units_m
   use datasets_m
   use global_m
-  use loct_parser_m
+  use parser_m
   use messages_m
   use io_m
   use varinfo_m
@@ -165,16 +165,16 @@ contains
     !% units are derived from these and <math>hbar=1</math>.
     !%End
 
-    if(loct_parse_isdef(datasets_check('Units')).ne.0) then
-      call loct_parse_int(datasets_check('Units'), UNITS_ATOMIC, c)
+    if(parse_isdef(datasets_check('Units')).ne.0) then
+      call parse_integer(datasets_check('Units'), UNITS_ATOMIC, c)
       if(.not.varinfo_valid_option('Units', c)) call input_error('Units')
       cinp = c
       cout = c
     else
-      call loct_parse_int(datasets_check('UnitsInput'), UNITS_ATOMIC, c)
+      call parse_integer(datasets_check('UnitsInput'), UNITS_ATOMIC, c)
       if(.not.varinfo_valid_option('UnitsInput', c)) call input_error('UnitsInput')
       cinp = c
-      call loct_parse_int(datasets_check('UnitsOutput'), UNITS_ATOMIC, c)
+      call parse_integer(datasets_check('UnitsOutput'), UNITS_ATOMIC, c)
       if(.not.varinfo_valid_option('UnitsOutput', c)) call input_error('UnitsOutput')
       cout = c
     end if

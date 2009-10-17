@@ -36,7 +36,7 @@ module em_resp_m
   use lalg_basic_m
   use linear_response_m
   use linear_solver_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use mesh_m
   use mesh_function_m
@@ -511,14 +511,14 @@ contains
       !%
       !%End
 
-      if (loct_parse_block(datasets_check('EMFreqs'), blk) == 0) then 
+      if (parse_block(datasets_check('EMFreqs'), blk) == 0) then 
 
-        nrow = loct_parse_block_n(blk)
+        nrow = parse_block_n(blk)
         em_vars%nomega = 0
 
         !count the number of frequencies
         do irow = 0, nrow-1
-          call loct_parse_block_int(blk, irow, 0, nfreqs_in_row)
+          call parse_block_integer(blk, irow, 0, nfreqs_in_row)
           if(nfreqs_in_row < 1) then
             message(1) = "EMFreqs: invalid number of frequencies."
             call write_fatal(1)
@@ -531,10 +531,10 @@ contains
         !read frequencies
         ifreq = 1
         do irow = 0, nrow-1
-          call loct_parse_block_int(blk, irow, 0, nfreqs_in_row)
-          call loct_parse_block_float(blk, irow, 1, omega_ini)
+          call parse_block_integer(blk, irow, 0, nfreqs_in_row)
+          call parse_block_float(blk, irow, 1, omega_ini)
           if(nfreqs_in_row > 1) then 
-            call loct_parse_block_float(blk, irow, 2, omega_fin)
+            call parse_block_float(blk, irow, 2, omega_fin)
             domega = (omega_fin - omega_ini)/(nfreqs_in_row - M_ONE)
             do istep = 0, nfreqs_in_row-1
               em_vars%omega(ifreq + istep) = units_to_atomic(units_inp%energy, omega_ini + domega*istep)
@@ -546,7 +546,7 @@ contains
           end if
         end do
 
-        call loct_parse_block_end(blk)
+        call parse_block_end(blk)
 
         call sort(em_vars%omega)
 
@@ -567,7 +567,7 @@ contains
       !% Sternheimer equation when on a resonance.
       !%End
 
-      call loct_parse_float(datasets_check('EMEta'), M_ZERO, em_vars%eta)
+      call parse_float(datasets_check('EMEta'), M_ZERO, em_vars%eta)
       em_vars%eta = units_to_atomic(units_inp%energy, em_vars%eta)
 
       ! reset the values of these variables
@@ -588,7 +588,7 @@ contains
       !%Option none 0
       !% Zero perturbation, for use in testing.
       !%End 
-      call loct_parse_int(datasets_check('EMPerturbationType'), PERTURBATION_ELECTRIC, perturb_type)
+      call parse_integer(datasets_check('EMPerturbationType'), PERTURBATION_ELECTRIC, perturb_type)
 
       call pert_init(em_vars%perturbation, perturb_type, sys%gr, sys%geo)
 
@@ -602,12 +602,12 @@ contains
         !% file <tt>beta</tt> in the directory for the first multiple.
         !%End
 
-        if (loct_parse_block(datasets_check('EMHyperpol'), blk) == 0) then 
-          call loct_parse_block_float(blk, 0, 0, em_vars%freq_factor(1))
-          call loct_parse_block_float(blk, 0, 1, em_vars%freq_factor(2))
-          call loct_parse_block_float(blk, 0, 2, em_vars%freq_factor(3))
+        if (parse_block(datasets_check('EMHyperpol'), blk) == 0) then 
+          call parse_block_float(blk, 0, 0, em_vars%freq_factor(1))
+          call parse_block_float(blk, 0, 1, em_vars%freq_factor(2))
+          call parse_block_float(blk, 0, 2, em_vars%freq_factor(3))
 
-          call loct_parse_block_end(blk)
+          call parse_block_end(blk)
 
           if(abs(sum(em_vars%freq_factor(1:3))) > M_EPSILON) then
             message(1) = "Frequency factors specified by EMHyperpol must sum to zero."
@@ -630,7 +630,7 @@ contains
       !% for the finite system. This variable has no effect for a finite system.
       !%End
 
-      call loct_parse_logical(datasets_check('EMForceNoKdotP'), .false., em_vars%force_no_kdotp)
+      call parse_logical(datasets_check('EMForceNoKdotP'), .false., em_vars%force_no_kdotp)
 
       !%Variable EMCalcBornCharges
       !%Type logical
@@ -641,7 +641,7 @@ contains
       !% Currently only available in development version.
       !%End
 
-      call loct_parse_logical(datasets_check('EMCalcBornCharges'), .false., em_vars%calc_Born)
+      call parse_logical(datasets_check('EMCalcBornCharges'), .false., em_vars%calc_Born)
       if (em_vars%calc_Born) call messages_devel_version("Calculation of Born effective charges")
 
       call pop_sub()

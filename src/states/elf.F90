@@ -27,7 +27,7 @@ module elf_m
   use global_m
   use grid_m
   use io_m
-  use loct_parser_m
+  use parser_m
   use mesh_m
   use messages_m
   use mpi_m
@@ -59,7 +59,7 @@ contains
     !% default; however, for research purposes it may be useful not to add it.
     !% If this feature proves to be useless, this option should go away.
     !%End
-    call loct_parse_logical(datasets_check('ElfWithCurrentTerm'), .true., with_current_term)
+    call parse_logical(datasets_check('ElfWithCurrentTerm'), .true., with_current_term)
 
     call pop_sub()
   end subroutine elf_init

@@ -23,7 +23,7 @@ program broad
   use datasets_m
   use global_m
   use io_m
-  use loct_parser_m
+  use parser_m
   use messages_m
   use profiling_m
   use units_m
@@ -47,10 +47,10 @@ program broad
   call units_init()
 
   ! broadening to use
-  call loct_parse_float(datasets_check('LinBroadening'),  units_from_atomic(units_inp%energy, CNST(0.005)), b%b)
-  call loct_parse_float(datasets_check('LinEnergyStep'),  units_from_atomic(units_inp%energy, CNST(0.001)), b%energy_step)
-  call loct_parse_float(datasets_check('LinMinEnergy'),   M_ZERO, b%min_energy)
-  call loct_parse_float(datasets_check('LinMaxEnergy'),   units_from_atomic(units_inp%energy, M_ONE), b%max_energy)
+  call parse_float(datasets_check('LinBroadening'),  units_from_atomic(units_inp%energy, CNST(0.005)), b%b)
+  call parse_float(datasets_check('LinEnergyStep'),  units_from_atomic(units_inp%energy, CNST(0.001)), b%energy_step)
+  call parse_float(datasets_check('LinMinEnergy'),   M_ZERO, b%min_energy)
+  call parse_float(datasets_check('LinMaxEnergy'),   units_from_atomic(units_inp%energy, M_ONE), b%max_energy)
   b%b = units_to_atomic(units_inp%energy, b%b)
   b%energy_step = units_to_atomic(units_inp%energy, b%energy_step)
   b%min_energy  = units_to_atomic(units_inp%energy, b%min_energy)

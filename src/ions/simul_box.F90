@@ -28,7 +28,7 @@ module simul_box_m
   use io_m
   use lalg_basic_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use kpoints_m
   use math_m
   use messages_m
@@ -273,7 +273,7 @@ contains
       !% Defines a spatially local time-dependent potential in the leads as an
       !% analytic expression.
       !%End
-      if(loct_parse_block(datasets_check('OpenBoundaries'), blk).eq.0) then
+      if(parse_block(datasets_check('OpenBoundaries'), blk).eq.0) then
         
         call messages_devel_version("Open boundaries")
 
@@ -294,19 +294,19 @@ contains
         sb%lead_restart_dir = ''
         sb%lead_static_dir  = ''
         sb%lead_td_pot_formula = '0'
-        nrows = loct_parse_block_n(blk)
+        nrows = parse_block_n(blk)
         do nr = 0, nrows-1
-          call loct_parse_block_int(blk, nr, 0, tag)
-          ncols = loct_parse_block_cols(blk, nr)
+          call parse_block_integer(blk, nr, 0, tag)
+          ncols = parse_block_cols(blk, nr)
           if(ncols.gt.3.or.ncols.lt.2) then
             call input_error('OpenBoundaries')
           end if
 
           select case(tag)
           case(LEAD_DATASET)
-            call loct_parse_block_string(blk, nr, 1, sb%lead_dataset(LEFT))
+            call parse_block_string(blk, nr, 1, sb%lead_dataset(LEFT))
             if(ncols.eq.3) then
-              call loct_parse_block_string(blk, nr, 2, sb%lead_dataset(RIGHT))
+              call parse_block_string(blk, nr, 2, sb%lead_dataset(RIGHT))
               if(trim(sb%lead_dataset(LEFT)).ne.trim(sb%lead_dataset(RIGHT))) then
                 message(1) = 'Datasets for left and right lead unit cells must'
                 message(2) = 'be equal, i.e. only symmetric leads are possible.'
@@ -316,9 +316,9 @@ contains
               sb%lead_dataset(RIGHT) = sb%lead_dataset(LEFT)
             end if
           case(LEAD_RESTART_DIR)
-            call loct_parse_block_string(blk, nr, 1, sb%lead_restart_dir(LEFT))
+            call parse_block_string(blk, nr, 1, sb%lead_restart_dir(LEFT))
             if(ncols.eq.3) then
-              call loct_parse_block_string(blk, nr, 2, sb%lead_restart_dir(RIGHT))
+              call parse_block_string(blk, nr, 2, sb%lead_restart_dir(RIGHT))
               if(trim(sb%lead_restart_dir(LEFT)).ne.trim(sb%lead_restart_dir(RIGHT))) then
                 message(1) = 'Restart directories for left and right lead'
                 message(2) = 'unit cells must be equal, i.e. only symmetric'
@@ -329,9 +329,9 @@ contains
               sb%lead_restart_dir(RIGHT) = sb%lead_restart_dir(LEFT)
             end if
           case(LEAD_STATIC_DIR)
-            call loct_parse_block_string(blk, nr, 1, sb%lead_static_dir(LEFT))
+            call parse_block_string(blk, nr, 1, sb%lead_static_dir(LEFT))
             if(ncols.eq.3) then
-              call loct_parse_block_string(blk, nr, 2, sb%lead_static_dir(RIGHT))
+              call parse_block_string(blk, nr, 2, sb%lead_static_dir(RIGHT))
               if(trim(sb%lead_static_dir(LEFT)).ne.trim(sb%lead_static_dir(RIGHT))) then
                 message(1) = 'Static directories for left and right lead'
                 message(2) = 'unit cells must be equal, i.e. only symmetric'
@@ -342,9 +342,9 @@ contains
               sb%lead_static_dir(RIGHT) = sb%lead_static_dir(LEFT)
             end if
           case(ADD_UNIT_CELLS)
-            call loct_parse_block_int(blk, nr, 1, sb%add_unit_cells(LEFT))
+            call parse_block_integer(blk, nr, 1, sb%add_unit_cells(LEFT))
             if(ncols.eq.3) then
-              call loct_parse_block_int(blk, nr, 2, sb%add_unit_cells(RIGHT))
+              call parse_block_integer(blk, nr, 2, sb%add_unit_cells(RIGHT))
             else
               sb%add_unit_cells(RIGHT) = sb%add_unit_cells(LEFT)
             end if
@@ -358,9 +358,9 @@ contains
               sb%add_unit_cells = sb%add_unit_cells + 1
             end if
           case(TD_POT_FORMULA)
-            call loct_parse_block_string(blk, nr, 1, sb%lead_td_pot_formula(LEFT))
+            call parse_block_string(blk, nr, 1, sb%lead_td_pot_formula(LEFT))
             if(ncols.eq.3) then
-              call loct_parse_block_string(blk, nr, 2, sb%lead_td_pot_formula(RIGHT))
+              call parse_block_string(blk, nr, 2, sb%lead_td_pot_formula(RIGHT))
             else
               sb%lead_td_pot_formula(RIGHT) = sb%lead_td_pot_formula(LEFT)
             end if
@@ -427,7 +427,7 @@ contains
       !% the section that refers to Poisson equation, and to the local potential for details
       !% [the default value of two is typically good].
       !%End
-      call loct_parse_float(datasets_check('DoubleFFTParameter'), M_TWO, sb%fft_alpha)
+      call parse_float(datasets_check('DoubleFFTParameter'), M_TWO, sb%fft_alpha)
       if (sb%fft_alpha < M_ONE .or. sb%fft_alpha > M_THREE ) then
         write(message(1), '(a,f12.5,a)') "Input: '", sb%fft_alpha, &
           "' is not a valid DoubleFFTParameter"
@@ -453,7 +453,7 @@ contains
       !%Option 3
       !% The <i>x</i>, <i>y</i>, and <i>z</i> directions are periodic (bulk).
       !%End
-      call loct_parse_int(datasets_check('PeriodicDimensions'), 0, sb%periodic_dim)
+      call parse_integer(datasets_check('PeriodicDimensions'), 0, sb%periodic_dim)
       if ((sb%periodic_dim < 0) .or. (sb%periodic_dim > 3) .or. (sb%periodic_dim > sb%dim)) &
         call input_error('PeriodicDimensions')
 
@@ -469,19 +469,19 @@ contains
       !% NOTE: up to now, only one area can be set up
       !%End
 
-      if(loct_parse_block(datasets_check('MultiResolutionArea'), blk) == 0) then
+      if(parse_block(datasets_check('MultiResolutionArea'), blk) == 0) then
         
         call messages_devel_version('Multi-resolution')
 
         ! number of areas
-        sb%hr_area%num_areas = loct_parse_block_n(blk)
+        sb%hr_area%num_areas = parse_block_n(blk)
 
         ! number of radii
-        sb%hr_area%num_radii = loct_parse_block_cols(blk,0)-sb%dim
+        sb%hr_area%num_radii = parse_block_cols(blk,0)-sb%dim
 
         ! the central point
         do i = 1, sb%dim
-           call loct_parse_block_float(blk, 0, i-1, sb%hr_area%center(i))
+           call parse_block_float(blk, 0, i-1, sb%hr_area%center(i))
         end do
 
         if (sb%hr_area%num_areas.ne.1) call input_error('MultiResolutionArea')
@@ -489,7 +489,7 @@ contains
         ! the radii
         SAFE_ALLOCATE(sb%hr_area%radius(1:sb%hr_area%num_radii))
         do i = 1, sb%hr_area%num_radii
-          call loct_parse_block_float(blk, 0, sb%dim+i-1, sb%hr_area%radius(i))
+          call parse_block_float(blk, 0, sb%dim+i-1, sb%hr_area%radius(i))
           sb%hr_area%radius(i) = units_to_atomic(units_inp%length, sb%hr_area%radius(i))
         end do
 
@@ -502,7 +502,7 @@ contains
         !%Description
         !% The interpolation order in multiresolution approach.
         !%End
-        call loct_parse_int(datasets_check('MR_InterpolationOrder'), 5, sb%hr_area%interp%order)
+        call parse_integer(datasets_check('MR_InterpolationOrder'), 5, sb%hr_area%interp%order)
         if(sb%hr_area%interp%order .le. 0) then
           message(1) = "The value for MR_InterpolationOrder must be > 0."
           call write_fatal(1)
@@ -581,7 +581,7 @@ contains
       !% number of dimensions.
       !%End
 
-      call loct_parse_int(datasets_check('BoxShape'), MINIMUM, sb%box_shape)
+      call parse_integer(datasets_check('BoxShape'), MINIMUM, sb%box_shape)
       if(.not.varinfo_valid_option('BoxShape', sb%box_shape)) call input_error('BoxShape')
       select case(sb%box_shape)
       case(SPHERE,MINIMUM,BOX_IMAGE,BOX_USDEF)
@@ -614,13 +614,13 @@ contains
       !%End
       select case(sb%box_shape)
       case(SPHERE, CYLINDER)
-        call loct_parse_float(datasets_check('radius'), units_from_atomic(units_inp%length, def_rsize), sb%rsize)
+        call parse_float(datasets_check('radius'), units_from_atomic(units_inp%length, def_rsize), sb%rsize)
         if(sb%rsize < M_ZERO) call input_error('radius')
         sb%rsize = units_to_atomic(units_inp%length, sb%rsize)
         if(def_rsize>M_ZERO) call check_def(def_rsize, sb%rsize, 'radius')
       case(MINIMUM)
         default=sb%rsize
-        call loct_parse_float(datasets_check('radius'), default, sb%rsize)
+        call parse_float(datasets_check('radius'), default, sb%rsize)
         sb%rsize = units_to_atomic(units_inp%length, sb%rsize)
         if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call input_error('Radius')
       end select
@@ -639,7 +639,7 @@ contains
           default = def_rsize
         endif
 
-        call loct_parse_float(datasets_check('xlength'), units_from_atomic(units_inp%length, default), sb%xsize)
+        call parse_float(datasets_check('xlength'), units_from_atomic(units_inp%length, default), sb%xsize)
         sb%xsize = units_to_atomic(units_inp%length, sb%xsize)
         sb%lsize(1) = sb%xsize
         if(def_rsize>M_ZERO.and.sb%periodic_dim==0) call check_def(def_rsize, sb%xsize, 'xlength')
@@ -668,14 +668,14 @@ contains
         !% single variable.
         !%End
 
-        if(loct_parse_block(datasets_check('Lsize'), blk) == 0) then
-          if(loct_parse_block_cols(blk,0) < sb%dim) call input_error('Lsize')
+        if(parse_block(datasets_check('Lsize'), blk) == 0) then
+          if(parse_block_cols(blk,0) < sb%dim) call input_error('Lsize')
           do i = 1, sb%dim
-            call loct_parse_block_float(blk, 0, i-1, sb%lsize(i))
+            call parse_block_float(blk, 0, i-1, sb%lsize(i))
           end do
-          call loct_parse_block_end(blk)
+          call parse_block_end(blk)
         else
-          call loct_parse_float(datasets_check('Lsize'), -M_ONE, sb%lsize(1))
+          call parse_float(datasets_check('Lsize'), -M_ONE, sb%lsize(1))
           if(sb%lsize(1).eq.-M_ONE) then
             call input_error('Lsize')
           end if
@@ -698,7 +698,7 @@ contains
         !% Name of the file that contains the image that defines the simulation box.
         !%End
 #if defined(HAVE_GDLIB)        
-        call loct_parse_string(datasets_check("BoxShapeImage"), "", filename)
+        call parse_string(datasets_check("BoxShapeImage"), "", filename)
         sb%image = loct_gdimage_create_from(filename)
         if(.not.c_associated(sb%image)) then
           message(1) = "Could not open file '" // filename // "'"
@@ -723,7 +723,7 @@ contains
         !% with axis parallel to the <i>z</i>-axis.
         !%End
         
-        call loct_parse_string(datasets_check("BoxShapeUsDef"), "x^2+y^2+z^2 < 4", sb%user_def)
+        call parse_string(datasets_check("BoxShapeUsDef"), "x^2+y^2+z^2 < 4", sb%user_def)
         call conv_to_C_string(sb%user_def)
       end if
 
@@ -789,14 +789,14 @@ contains
       !% <br>%</tt>
       !%End
 
-      if(loct_parse_block(datasets_check('Spacing'), blk) == 0) then
-        if(loct_parse_block_cols(blk,0) < sb%dim) call input_error('Spacing')
+      if(parse_block(datasets_check('Spacing'), blk) == 0) then
+        if(parse_block_cols(blk,0) < sb%dim) call input_error('Spacing')
         do i = 1, sb%dim
-          call loct_parse_block_float(blk, 0, i-1, sb%h(i))
+          call parse_block_float(blk, 0, i-1, sb%h(i))
         end do
-        call loct_parse_block_end(blk)
+        call parse_block_end(blk)
       else
-        call loct_parse_float(datasets_check('Spacing'), sb%h(1), sb%h(1))
+        call parse_float(datasets_check('Spacing'), sb%h(1), sb%h(1))
         sb%h(1:sb%dim) = sb%h(1)
       end if
 
@@ -840,13 +840,13 @@ contains
       !% WARNING: This variable does not seem to work correctly!
       !%End
       sb%box_offset = M_ZERO
-      if(loct_parse_block(datasets_check('BoxOffset'), blk) == 0) then
+      if(parse_block(datasets_check('BoxOffset'), blk) == 0) then
         do idir = 1, sb%dim
-          call loct_parse_block_float(blk, 0, idir-1, sb%box_offset(idir))
+          call parse_block_float(blk, 0, idir-1, sb%box_offset(idir))
         end do
-        call loct_parse_block_end(blk)
+        call parse_block_end(blk)
       else
-        call loct_parse_float(datasets_check('BoxOffset'), M_ZERO, sb%box_offset(1))
+        call parse_float(datasets_check('BoxOffset'), M_ZERO, sb%box_offset(1))
         sb%box_offset(1:sb%dim) = sb%box_offset(1)
       end if
 
@@ -978,10 +978,10 @@ contains
       sb%rlattice_primitive = M_ZERO
       forall(idim = 1:MAX_DIM) sb%rlattice_primitive(idim, idim) = M_ONE
       
-      if (loct_parse_block(datasets_check('LatticeVectors'), blk) == 0) then 
+      if (parse_block(datasets_check('LatticeVectors'), blk) == 0) then 
         do idim = 1, sb%dim
           do jdim = 1, sb%dim
-            call loct_parse_block_float(blk, idim - 1,  jdim - 1, sb%rlattice_primitive(jdim, idim))
+            call parse_block_float(blk, idim - 1,  jdim - 1, sb%rlattice_primitive(jdim, idim))
           end do
         end do
       end if
@@ -1458,7 +1458,7 @@ contains
             xx(idir, ip) = units_from_atomic(units_inp%length, xx(idir, ip))
           enddo
           r = sqrt(sum(xx(:, ip)**2))
-          call loct_parse_expression(re, im, sb%dim, xx(:, ip), r, M_ZERO, sb%user_def)
+          call parse_expression(re, im, sb%dim, xx(:, ip), r, M_ZERO, sb%user_def)
           in_box(ip) = in_box(ip) .and. (re .ne. M_ZERO)
         end do
     end select

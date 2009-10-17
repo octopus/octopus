@@ -28,7 +28,7 @@ module gauge_field_m
   use io_m
   use lalg_basic_m
   use lasers_m
-  use loct_parser_m
+  use parser_m
   use logrid_m
   use mesh_m
   use mesh_function_m
@@ -114,15 +114,15 @@ contains
     
     ! Read the initial gauge vector field
     
-    if(loct_parse_block(datasets_check('GaugeVectorField'), blk) == 0) then
+    if(parse_block(datasets_check('GaugeVectorField'), blk) == 0) then
       
       this%with_gauge_field = .true.
       
       do ii = 1, sb%dim
-        call loct_parse_block_float(blk, 0, ii - 1, this%vecpot(ii))
+        call parse_block_float(blk, 0, ii - 1, this%vecpot(ii))
       end do
       
-      call loct_parse_block_end(blk)
+      call parse_block_end(blk)
       
     end if
 

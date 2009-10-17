@@ -23,7 +23,7 @@ module symmetries_m
   use datasets_m
   use global_m
   use geometry_m
-  use loct_parser_m
+  use parser_m
   use messages_m
   use profiling_m
   use simul_box_m
@@ -131,13 +131,13 @@ contains
 
     this%breakdir(1:MAX_DIM) = M_ZERO
 
-    if(loct_parse_block(datasets_check('SymmetryBreakDir'), blk) == 0) then
+    if(parse_block(datasets_check('SymmetryBreakDir'), blk) == 0) then
       
       do idir = 1, sb%dim
-        call loct_parse_block_float(blk, 0, idir - 1, this%breakdir(idir))
+        call parse_block_float(blk, 0, idir - 1, this%breakdir(idir))
       end do
       
-      call loct_parse_block_end(blk)
+      call parse_block_end(blk)
       
     end if
 

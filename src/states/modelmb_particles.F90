@@ -28,7 +28,7 @@ module modelmb_particles_m
   use grid_m
   use hypercube_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use mesh_m
   use messages_m
   use profiling_m
@@ -139,7 +139,7 @@ subroutine modelmb_particles_init (this,gr)
   !% Full Ndim = <tt>NDimModelmb</tt>*<tt>NParticleModelmb</tt>
   !%
   !%End
-  call loct_parse_int(datasets_check('NDimModelmb'), gr%sb%dim, this%ndim)
+  call parse_integer(datasets_check('NDimModelmb'), gr%sb%dim, this%ndim)
   call messages_print_var_option(stdout, "NDimModelmb", this%ndim)
 
   !%Variable NParticleModelmb
@@ -151,7 +151,7 @@ subroutine modelmb_particles_init (this,gr)
   !% Full Ndim = <tt>NDimModelmb</tt>*<tt>NParticleModelmb</tt>
   !%
   !%End
-  call loct_parse_int(datasets_check('NParticleModelmb'), 1, this%nparticle)
+  call parse_integer(datasets_check('NParticleModelmb'), 1, this%nparticle)
   call messages_print_var_option(stdout, "NParticleModelmb", this%nparticle)
 
   !%Variable NTypeParticleModelmb
@@ -162,7 +162,7 @@ subroutine modelmb_particles_init (this,gr)
   !% Number of different types of particles in modelmb space.
   !%
   !%End
-  call loct_parse_int(datasets_check('NTypeParticleModelmb'), 1, this%ntype_of_particle)
+  call parse_integer(datasets_check('NTypeParticleModelmb'), 1, this%ntype_of_particle)
   call messages_print_var_option(stdout, "NTypeParticleModelmb", this%ntype_of_particle)
   if (this%ntype_of_particle > this%nparticle) then
      write (message(1), '(2a,2I6)') ' Number of types of modelmb particles should be', &
@@ -225,22 +225,22 @@ subroutine modelmb_particles_init (this,gr)
   this%bosonfermion = 1 ! set to fermion
     
 
-  if(loct_parse_block(datasets_check('DescribeParticlesModelmb'), blk)==0) then
-      ncols = loct_parse_block_cols(blk, 0)
+  if(parse_block(datasets_check('DescribeParticlesModelmb'), blk)==0) then
+      ncols = parse_block_cols(blk, 0)
       if(ncols /= 5 ) then
         call input_error("DescribeParticlesModelmb")
       end if
-      nline = loct_parse_block_n(blk)
+      nline = parse_block_n(blk)
       if (nline /= this%nparticle) then
         call input_error("DescribeParticlesModelmb")
       end if
 
       do ipart = 1,this%nparticle
-        call loct_parse_block_string(blk, ipart-1, 0, this%labels_particles(ipart))
-        call loct_parse_block_int   (blk, ipart-1, 1, this%particletype(ipart))
-        call loct_parse_block_float (blk, ipart-1, 2, this%mass_particle(ipart))
-        call loct_parse_block_float (blk, ipart-1, 3, this%charge_particle(ipart))
-        call loct_parse_block_int   (blk, ipart-1, 4, this%bosonfermion(ipart))
+        call parse_block_string(blk, ipart-1, 0, this%labels_particles(ipart))
+        call parse_block_integer   (blk, ipart-1, 1, this%particletype(ipart))
+        call parse_block_float (blk, ipart-1, 2, this%mass_particle(ipart))
+        call parse_block_float (blk, ipart-1, 3, this%charge_particle(ipart))
+        call parse_block_integer   (blk, ipart-1, 4, this%bosonfermion(ipart))
 
         write (message(1),'(a,a)') 'labels_particles = ', this%labels_particles(ipart)
         write (message(2),'(a,i6)') 'particletype = ', this%particletype(ipart)
@@ -249,7 +249,7 @@ subroutine modelmb_particles_init (this,gr)
         write (message(5),'(a,i6)') 'bosonfermion = ', this%bosonfermion(ipart)
         call write_info(5)
       end do
-      call loct_parse_block_end(blk)
+      call parse_block_end(blk)
 
   end if
     
@@ -288,12 +288,12 @@ subroutine modelmb_particles_init (this,gr)
   !%End
   this%ndensities_to_calculate = 0
 
-  if(loct_parse_block(datasets_check('DensitiestoCalc'), blk)==0) then
-    ncols = loct_parse_block_cols(blk, 0)
+  if(parse_block(datasets_check('DensitiestoCalc'), blk)==0) then
+    ncols = parse_block_cols(blk, 0)
     if(ncols /= 2 ) then
       call input_error("DensitiestoCalc")
     end if
-    this%ndensities_to_calculate = loct_parse_block_n(blk)
+    this%ndensities_to_calculate = parse_block_n(blk)
     if (this%ndensities_to_calculate < 0 .or. &
          this%ndensities_to_calculate > this%nparticle) then
       call input_error("DensitiestoCalc")
@@ -301,14 +301,14 @@ subroutine modelmb_particles_init (this,gr)
     SAFE_ALLOCATE (this%labels_densities(1:this%ndensities_to_calculate))
     SAFE_ALLOCATE (this%particle_kept_densities(1:this%ndensities_to_calculate))
     do ipart = 1,this%ndensities_to_calculate
-      call loct_parse_block_string(blk, ipart-1, 0, this%labels_densities(ipart))
-      call loct_parse_block_int(blk, ipart-1, 1, this%particle_kept_densities(ipart))
+      call parse_block_string(blk, ipart-1, 0, this%labels_densities(ipart))
+      call parse_block_integer(blk, ipart-1, 1, this%particle_kept_densities(ipart))
       
       write (message(1),'(a,a)') 'labels_densities = ', this%labels_densities(ipart)
       write (message(2),'(a,i6)') 'particle_kept_densities = ', this%particle_kept_densities(ipart)
       call write_info(2)
     end do
-    call loct_parse_block_end(blk)
+    call parse_block_end(blk)
   else
     nullify(this%labels_densities)
     nullify(this%particle_kept_densities)

@@ -28,7 +28,7 @@ module mesh_init_m
   use index_m
   use io_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use mesh_m
   use messages_m
@@ -526,7 +526,7 @@ contains
     !% is 20. (This variable only affects the performance of <tt>Octopus</tt>
     !% and not the results.)
     !%End
-    call loct_parse_int(datasets_check('MeshBlockSizeXY'), 20, bsize)
+    call parse_integer(datasets_check('MeshBlockSizeXY'), 20, bsize)
 
     !%Variable MeshBlockSizeZ
     !%Type integer
@@ -539,10 +539,10 @@ contains
     !% 100. (This variable only affects the performance of <tt>Octopus</tt> and
     !% not the results.)
     !%End
-    call loct_parse_int(datasets_check('MeshBlockSizeZ'), 100, bsizez)
+    call parse_integer(datasets_check('MeshBlockSizeZ'), 100, bsizez)
 
     ! When using open boundaries we need to have a mesh block-size of 1
-    if (loct_parse_block(datasets_check('OpenBoundaries'), blk).eq.0) then
+    if (parse_block(datasets_check('OpenBoundaries'), blk).eq.0) then
       if (bsize.gt.1 .or. bsizez.gt.1) then
         message(1) = 'When in transport mode, the block-ordering'
         message(2) = 'of the mesh points cannot be chosen freely.'
@@ -645,7 +645,7 @@ contains
     !% topology to map the processors. This can improve performance
     !% for certain interconnection systems.
     !%End
-    call loct_parse_logical(datasets_check('MeshUseTopology'), .false., use_topo)
+    call parse_logical(datasets_check('MeshUseTopology'), .false., use_topo)
 
     if(use_topo) then
       ! this should be integrated in vec_init
@@ -1259,7 +1259,7 @@ subroutine mesh_partition(m, lapl_stencil, part)
   !%Option zoltan 3
   !% Zoltan.
   !%End
-  call loct_parse_int(datasets_check('MeshPartitionPackage'), METIS, library)
+  call parse_integer(datasets_check('MeshPartitionPackage'), METIS, library)
 
   !%Variable MeshPartitionStencil
   !%Type integer
@@ -1277,7 +1277,7 @@ subroutine mesh_partition(m, lapl_stencil, part)
   !% partition, this in principle should give a better partition but
   !% it is slower and requires more memory.
   !%End
-  call loct_parse_int(datasets_check('MeshPartitionStencil'), STAR, stencil_to_use)
+  call parse_integer(datasets_check('MeshPartitionStencil'), STAR, stencil_to_use)
 
   if (stencil_to_use == STAR) then
     call stencil_star_get_lapl(stencil, m%sb%dim, order = 1)
@@ -1297,7 +1297,7 @@ subroutine mesh_partition(m, lapl_stencil, part)
     default_method = GRAPH
   end if
   ! Documentation is in zoltan.F90`
-  call loct_parse_int(datasets_check('MeshPartition'), default_method, method)
+  call parse_integer(datasets_check('MeshPartition'), default_method, method)
 
   SAFE_ALLOCATE(start(1:p))
   SAFE_ALLOCATE(final(1:p))

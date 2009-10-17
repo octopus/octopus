@@ -38,7 +38,7 @@ module fft_m
   use messages_m
   use datasets_m
   use loct_math_m
-  use loct_parser_m
+  use parser_m
   use lalg_basic_m
 
   use fft_t_m

@@ -30,7 +30,7 @@ module ob_rti_m
   use hamiltonian_m
   use lalg_basic_m
   use lasers_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use mesh_function_m
   use messages_m
@@ -106,7 +106,7 @@ contains
     !% Sets the maximum iteration number for the QMR linear solver in
     !% the Crank-Nicholson procedure for open boundaries.
     !%End
-    call loct_parse_int(datasets_check('OpenBoundariesQMRMaxIter'), 100, qmr_max_iter)
+    call parse_integer(datasets_check('OpenBoundariesQMRMaxIter'), 100, qmr_max_iter)
     if(qmr_max_iter.le.0) then
       call input_error('OpenBoundariesQMRMaxIter')
     end if
@@ -119,7 +119,7 @@ contains
     !% Sets the convergence tolerance for the residue in the QMR linear solver
     !% in the Crank-Nicholson procedure.
     !%End
-    call loct_parse_float(datasets_check('OpenBoundariesQMRTol'), CNST(1e-12), qmr_tol)
+    call parse_float(datasets_check('OpenBoundariesQMRTol'), CNST(1e-12), qmr_tol)
     if(qmr_tol.le.M_ZERO) then
       call input_error('OpenBoundariesQMRTol')
     end if
@@ -137,7 +137,7 @@ contains
     !%Option save_ram_usage 2
     !% Use the RAM-saving, CPU-intensive procedure
     !%End
-    call loct_parse_int(datasets_check('OpenBoundariesMemType'), SAVE_CPU_TIME, ob%mem_type)
+    call parse_integer(datasets_check('OpenBoundariesMemType'), SAVE_CPU_TIME, ob%mem_type)
     if(.not.varinfo_valid_option('OpenBoundariesMemType', ob%mem_type)) then
       call input_error('OpenBoundariesMemType')
     end if
@@ -156,7 +156,7 @@ contains
     !%Option src_term 2
     !% If present, include source term in propagator
     !%End
-    call loct_parse_int(datasets_check('OpenBoundariesAdditionalTerms'), MEM_TERM_FLAG+SRC_TERM_FLAG, ob%additional_terms)
+    call parse_integer(datasets_check('OpenBoundariesAdditionalTerms'), MEM_TERM_FLAG+SRC_TERM_FLAG, ob%additional_terms)
     if(.not.varinfo_valid_option('OpenBoundariesAdditionalTerms', ob%additional_terms, is_flag=.true.)) then
       call input_error('OpenBoundariesAdditionalTerms')
     end if
@@ -168,7 +168,7 @@ contains
     !%Description
     !% Sets the maximum number of used memory coefficients.
     !%End
-    call loct_parse_int(datasets_check('OpenBoundariesMaxMemCoeffs'), max_iter, ob%max_mem_coeffs)
+    call parse_integer(datasets_check('OpenBoundariesMaxMemCoeffs'), max_iter, ob%max_mem_coeffs)
     if(ob%max_mem_coeffs.le.0) then
       write(message(1), '(a,i6,a)') "Input : '", ob%max_mem_coeffs, "' is not a valid OpenBoundariesMaxMemCoeffs."
       message(2) = '(0 < OpenBoundariesMaxMemCoeffs <= TDMaximumIter)'

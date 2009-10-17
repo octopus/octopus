@@ -31,7 +31,7 @@ module opt_control_global_m
   use datasets_m
   use varinfo_m
   use global_m
-  use loct_parser_m
+  use parser_m
   use messages_m
 
   implicit none
@@ -100,7 +100,7 @@ module opt_control_global_m
     !%Option control_function_parametrized 2
     !% The control functions are specified by a set of parameters.
     !%End
-    call loct_parse_int(datasets_check('OCTControlRepresentation'), &
+    call parse_integer(datasets_check('OCTControlRepresentation'), &
       oct_ctr_function_real_time, oct%ctr_function_rep)
     if(.not.varinfo_valid_option('OCTControlRepresentation', oct%ctr_function_rep)) &
       call input_error('OCTControlRepresentation')
@@ -163,7 +163,7 @@ module opt_control_global_m
     !% algorithm is the so-called NEWUOA algorithm [M. J. D. Powell, <i>IMA J. Numer. Analysis</i>
     !% <b>28</b>, 649-664 (2008)].
     !%End
-    call loct_parse_int(datasets_check('OCTScheme'), oct_algorithm_zr98, oct%algorithm)
+    call parse_integer(datasets_check('OCTScheme'), oct_algorithm_zr98, oct%algorithm)
     if(.not.varinfo_valid_option('OCTScheme', oct%algorithm)) call input_error('OCTScheme')
     ! We must check that the algorithm is consistent with OCTControlRepresentation, i.e.
     ! some algorithms only make sense if the control functions are handled directly in real
@@ -186,12 +186,12 @@ module opt_control_global_m
     case(oct_algorithm_cg)
       oct%delta = M_ZERO; oct%eta = M_ONE
     case(oct_algorithm_direct)
-      call loct_parse_float(datasets_check('OCTEta'), M_ONE, oct%eta)
-      call loct_parse_float(datasets_check('OCTDelta'), M_ZERO, oct%delta)
+      call parse_float(datasets_check('OCTEta'), M_ONE, oct%eta)
+      call parse_float(datasets_check('OCTDelta'), M_ZERO, oct%delta)
     case(oct_algorithm_newuoa)
 #if defined(HAVE_NEWUOA)
-      call loct_parse_float(datasets_check('OCTEta'), M_ONE, oct%eta)
-      call loct_parse_float(datasets_check('OCTDelta'), M_ZERO, oct%delta)
+      call parse_float(datasets_check('OCTEta'), M_ONE, oct%eta)
+      call parse_float(datasets_check('OCTDelta'), M_ZERO, oct%delta)
 #else
       write(message(1), '(a)') '"OCTScheme = oct_algorithm_newuoa" is only possible if the newuoa'
       write(message(2), '(a)') 'code has been compiled. You must configure octopus passing the'
@@ -210,7 +210,7 @@ module opt_control_global_m
     !% In order to make sure that the optimized field indeed does its job, the code 
     !% may run a normal propagation after the optimization using the optimized field.
     !%End
-    call loct_parse_logical(datasets_check('OCTDoubleCheck'), .true., oct%oct_double_check)
+    call parse_logical(datasets_check('OCTDoubleCheck'), .true., oct%oct_double_check)
     call messages_print_var_value(stdout, "OCTDoubleCheck", oct%oct_double_check)
 
 
@@ -228,7 +228,7 @@ module opt_control_global_m
     !% In order to activate this feature, set <tt>OCTCheckGradient</tt> to some non-zero value,
     !% which will be the finite difference used to numerically compute the gradient.
     !%End
-    call loct_parse_float(datasets_check('OCTCheckGradient'), CNST(0.0), oct%check_gradient)
+    call parse_float(datasets_check('OCTCheckGradient'), CNST(0.0), oct%check_gradient)
     call messages_print_var_value(stdout, "OCTCheckGradient", oct%check_gradient)
 
 
@@ -249,7 +249,7 @@ module opt_control_global_m
     !% being ignored), for some OCT algorithms (in particular, if <tt>OCTScheme</tt> is
     !% <tt>oct_algorithm_direct</tt> or <tt>oct_algorithm_newuoa</tt>).
     !%End
-    call loct_parse_logical(datasets_check('OCTMixing'), .false., oct%use_mixing)
+    call parse_logical(datasets_check('OCTMixing'), .false., oct%use_mixing)
     call messages_print_var_value(stdout, "OCTMixing", oct%use_mixing)
 
     !%Variable OCTDirectStep
@@ -261,7 +261,7 @@ module opt_control_global_m
     !% the algorithms necessitate an initial "step" to perform the direct search for the
     !% optimal value. The precise meaning of this "step" differs.
     !%End
-    call loct_parse_float(datasets_check('OCTDirectStep'), CNST(0.25), oct%direct_step)
+    call parse_float(datasets_check('OCTDirectStep'), CNST(0.25), oct%direct_step)
     call messages_print_var_value(stdout, "OCTDirectStep", oct%direct_step)
 
     !%Variable OCTDumpIntermediate
@@ -274,7 +274,7 @@ module opt_control_global_m
     !% purposes. Nevertheless, since the whole OCT infrastructure is at a very
     !% preliminary stage of development, it is set to true by default.
     !%End
-    call loct_parse_logical(datasets_check('OCTDumpIntermediate'), .true., oct%dump_intermediate)
+    call parse_logical(datasets_check('OCTDumpIntermediate'), .true., oct%dump_intermediate)
     call messages_print_var_value(stdout, "OCTDumpIntermediate", oct%dump_intermediate)
 
     !%Variable OCTNumberCheckPoints
@@ -292,7 +292,7 @@ module opt_control_global_m
     !% If the backward (or forward) propagation is not retracing the steps of the previous
     !% forward (or backward) propation, the code will emit a warning.
     !%End
-    call loct_parse_int(datasets_check('OCTNumberCheckPoints'), 0, oct%number_checkpoints)
+    call parse_integer(datasets_check('OCTNumberCheckPoints'), 0, oct%number_checkpoints)
     call messages_print_var_value(stdout, "OCTNumberCheckPoints", oct%number_checkpoints)
 
     !%Variable OCTRandomInitialGuess
@@ -307,7 +307,7 @@ module opt_control_global_m
     !% Note, however, that this is only valid for the "direct" optimization schemes; moreover
     !% you still need to provide a <tt>TDExternalFields</tt> block.
     !%End
-    call loct_parse_logical(datasets_check('OCTRandomInitialGuess'), &
+    call parse_logical(datasets_check('OCTRandomInitialGuess'), &
       .false., oct%random_initial_guess)
     call messages_print_var_value(stdout, "OCTRandomInitialGuess", oct%random_initial_guess)
 

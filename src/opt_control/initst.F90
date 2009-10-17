@@ -23,7 +23,7 @@ module opt_control_initst_m
   use datasets_m
   use varinfo_m
   use messages_m
-  use loct_parser_m
+  use parser_m
   use global_m
   use string_m
   use states_m
@@ -86,7 +86,7 @@ module opt_control_initst_m
     !%Option oct_is_userdefined 4
     !% start in a userdefined state 
     !%End
-    call loct_parse_int(datasets_check('OCTInitialState'), oct_is_groundstate, istype)
+    call parse_integer(datasets_check('OCTInitialState'), oct_is_groundstate, istype)
     if(.not.varinfo_valid_option('OCTInitialState', istype)) call input_error('OCTInitialState')    
 
     select case(istype)
@@ -119,16 +119,16 @@ module opt_control_initst_m
       !% The syntax is equivalent to the one used for the TransformStates
       !% block.
       !%End
-      if(loct_parse_isdef(datasets_check('OCTInitialTransformStates')).ne.0) then
-        if(loct_parse_block(datasets_check('OCTInitialTransformStates'), blk) == 0) then
+      if(parse_isdef(datasets_check('OCTInitialTransformStates')).ne.0) then
+        if(parse_block(datasets_check('OCTInitialTransformStates'), blk) == 0) then
           call states_copy(tmp_st, initial_state)
           call states_deallocate_wfns(tmp_st)
           call restart_look_and_read(tmp_st, sys%gr, sys%geo)
           SAFE_ALLOCATE(rotation_matrix(1:initial_state%nst, 1:tmp_st%nst))
           rotation_matrix = M_z0
           do ist = 1, initial_state%nst
-            do jst = 1, loct_parse_block_cols(blk, ist-1)
-              call loct_parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
+            do jst = 1, parse_block_cols(blk, ist-1)
+              call parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
             end do
           end do
           call states_rotate(sys%gr%mesh, initial_state, tmp_st, rotation_matrix)
@@ -163,13 +163,13 @@ module opt_control_initst_m
       !% <br>%</tt>
       !%  
       !%End
-      if(loct_parse_block(datasets_check('OCTInitialUserdefined'),blk)==0) then
+      if(parse_block(datasets_check('OCTInitialUserdefined'),blk)==0) then
         
-        no_states = loct_parse_block_n(blk)
+        no_states = parse_block_n(blk)
         do ib = 1, no_states
-          call loct_parse_block_int(blk, ib-1, 0, idim)
-          call loct_parse_block_int(blk, ib-1, 1, inst)
-          call loct_parse_block_int(blk, ib-1, 2, inik)
+          call parse_block_integer(blk, ib-1, 0, idim)
+          call parse_block_integer(blk, ib-1, 1, inst)
+          call parse_block_integer(blk, ib-1, 2, inik)
 
           ! read formula strings and convert to C strings
           do id = 1, initial_state%d%dim
@@ -181,7 +181,7 @@ module opt_control_initst_m
                   .and. initial_state%st_start.le.is .and. initial_state%st_end.ge.is) ) cycle
                 
                 ! parse formula string
-                call loct_parse_block_string(                            &
+                call parse_block_string(                            &
                   blk, ib-1, 3, initial_state%user_def_states(id, is, ik))
                 ! convert to C string
                 call conv_to_C_string(initial_state%user_def_states(id, is, ik))
@@ -191,7 +191,7 @@ module opt_control_initst_m
                   r = sqrt(sum(x(:)**2))
                   
                   ! parse user defined expressions
-                  call loct_parse_expression(psi_re, psi_im, &
+                  call parse_expression(psi_re, psi_im, &
                     sys%gr%sb%dim, x, r, M_ZERO, initial_state%user_def_states(id, is, ik))
                   ! fill state
                   initial_state%zpsi(ip, id, is, ik) = psi_re + M_zI*psi_im
@@ -203,7 +203,7 @@ module opt_control_initst_m
             end do
           enddo
         end do
-        call loct_parse_block_end(blk)
+        call parse_block_end(blk)
       else
         message(1) = '"UserDefinedStates" has to be specified as block.'
         call write_fatal(1)
@@ -216,7 +216,7 @@ module opt_control_initst_m
     end select
 
     ! Check if we want to freeze some of the deeper orbitals.
-    call loct_parse_int(datasets_check('TDFreezeOrbitals'), 0, freeze_orbitals)
+    call parse_integer(datasets_check('TDFreezeOrbitals'), 0, freeze_orbitals)
     if(freeze_orbitals > 0) then
       ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
       call states_freeze_orbitals(initial_state, sys%gr, sys%mc, freeze_orbitals)

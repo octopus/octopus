@@ -25,7 +25,7 @@ module xc_oep_m
   use grid_m
   use hamiltonian_m
   use lalg_adv_m
-  use loct_parser_m
+  use parser_m
   use XC_F90(lib_m)
   use linear_response_m
   use linear_solver_m
@@ -119,13 +119,13 @@ contains
     !%Option oep_full 5
     !% Full solution of OEP equation using the approach of S. Kuemmel (half-implemented).
     !%End
-    call loct_parse_int(datasets_check('OEP_level'), XC_OEP_KLI, oep%level)
+    call parse_integer(datasets_check('OEP_level'), XC_OEP_KLI, oep%level)
     if(.not.varinfo_valid_option('OEP_level', oep%level)) call input_error('OEP_level')
 
     if(oep%level.ne.XC_OEP_NONE) then
       if(oep%level == XC_OEP_FULL) then
         call messages_devel_version("Full OEP")
-        call loct_parse_float(datasets_check('OEP_mixing'), M_ONE, oep%mixing)
+        call parse_float(datasets_check('OEP_mixing'), M_ONE, oep%mixing)
       end if
 
       ! this routine is only prepared for finite systems, and ispin = 1, 2

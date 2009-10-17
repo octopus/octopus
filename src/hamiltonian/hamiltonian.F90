@@ -37,7 +37,7 @@ module hamiltonian_m
   use io_function_m
   use lalg_basic_m
   use lasers_m
-  use loct_parser_m
+  use parser_m
   use mesh_m
   use mesh_function_m
   use messages_m
@@ -266,7 +266,7 @@ contains
     !Static magnetic field requires complex wavefunctions
     if (associated(hm%ep%B_field) .or. gauge_field_is_applied(hm%ep%gfield)) wfs_type = M_CMPLX
 
-    call loct_parse_logical(datasets_check('CalculateSelfInducedMagneticField'), .false., hm%self_induced_magnetic)
+    call parse_logical(datasets_check('CalculateSelfInducedMagneticField'), .false., hm%self_induced_magnetic)
     !%Variable CalculateSelfInducedMagneticField
     !%Type logical
     !%Default no
@@ -314,7 +314,7 @@ contains
     !%Option velocity 2
     !% Velocity gauge.
     !%End
-    call loct_parse_int(datasets_check('TDGauge'), LENGTH, hm%gauge)
+    call parse_integer(datasets_check('TDGauge'), LENGTH, hm%gauge)
     if(.not.varinfo_valid_option('TDGauge', hm%gauge)) call input_error('TDGauge')
     call messages_print_var_option(stdout, "TDGauge", hm%gauge)
 
@@ -333,7 +333,7 @@ contains
     !%Option mask 2
     !% A mask is applied to the wavefunctions at the boundaries.
     !%End
-    call loct_parse_int(datasets_check('AbsorbingBoundaries'), NOT_ABSORBING, hm%ab)
+    call parse_integer(datasets_check('AbsorbingBoundaries'), NOT_ABSORBING, hm%ab)
     if(.not.varinfo_valid_option('AbsorbingBoundaries', hm%ab)) call input_error('AbsorbingBoundaries')
     call messages_print_var_option(stdout, "AbsorbingBoundaries", hm%ab)
     
@@ -351,7 +351,7 @@ contains
     !% This is useful to describe non-electronic systems, or for
     !% esoteric purposes.
     !%End
-    call loct_parse_float(datasets_check('ParticleMass'), M_ONE, hm%mass)
+    call parse_float(datasets_check('ParticleMass'), M_ONE, hm%mass)
 
     !%Variable MassScaling
     !%Type block
@@ -370,16 +370,16 @@ contains
     !%
     !%End
     hm%mass_scaling = M_ONE
-    if(loct_parse_block(datasets_check('MassScaling'), blk)==0) then
-        ncols = loct_parse_block_cols(blk, 0)
+    if(parse_block(datasets_check('MassScaling'), blk)==0) then
+        ncols = parse_block_cols(blk, 0)
         if(ncols > MAX_DIM) then
           call input_error("MassScaling")
         end if
         i=1 ! just deal with 1 line - should be generalized
         do j = 1, ncols
-          call loct_parse_block_float(blk, i-1, j-1, hm%mass_scaling(j))
+          call parse_block_float(blk, i-1, j-1, hm%mass_scaling(j))
         end do
-        call loct_parse_block_end(blk)
+        call parse_block_end(blk)
     end if
 
     call states_null(hm%st)
@@ -441,7 +441,7 @@ contains
       !%Description
       !% Width of the region used to apply the absorbing boundaries.
       !%End
-      call loct_parse_float(datasets_check('ABWidth'), units_from_atomic(units_inp%length, CNST(0.4)), hm%ab_width)
+      call parse_float(datasets_check('ABWidth'), units_from_atomic(units_inp%length, CNST(0.4)), hm%ab_width)
       hm%ab_width = units_to_atomic(units_inp%length, hm%ab_width)
       if(hm%ab == 1) then
         !%Variable ABHeight
@@ -451,7 +451,7 @@ contains
         !%Description 
         !% When <tt>AbsorbingBoundaries = sin2</tt>, this is the height of the imaginary potential.
         !%End
-        call loct_parse_float(datasets_check('ABHeight'), units_from_atomic(units_inp%energy, -CNST(0.2)), hm%ab_height)
+        call parse_float(datasets_check('ABHeight'), units_from_atomic(units_inp%energy, -CNST(0.2)), hm%ab_height)
         hm%ab_height = units_to_atomic(units_inp%energy, hm%ab_height)
       else
         hm%ab_height = M_ONE

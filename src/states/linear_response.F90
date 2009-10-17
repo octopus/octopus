@@ -25,7 +25,7 @@ module linear_response_m
   use grid_m
   use lalg_basic_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use mesh_m
   use messages_m
   use io_function_m

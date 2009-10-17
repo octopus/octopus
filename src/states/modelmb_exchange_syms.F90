@@ -31,7 +31,7 @@ module modelmb_exchange_syms_m
   use io_m
   use lalg_adv_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use mesh_function_m
   use messages_m

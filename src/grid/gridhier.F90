@@ -24,7 +24,7 @@ module gridhier_m
   use datasets_m
   use geometry_m
   use global_m
-  use loct_parser_m
+  use parser_m
   use mesh_m
   use messages_m
   use multigrid_m

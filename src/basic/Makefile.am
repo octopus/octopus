@@ -23,7 +23,7 @@ noinst_LIBRARIES = libbasic.a
 
 libbasic_a_SOURCES = \
 	loct.F90 string.F90 varinfo.F90 mpi.F90 global.F90 \
-	loct_parser.F90 datasets.F90 messages.F90 io.F90   \
+	parser.F90 datasets.F90 messages.F90 io.F90   \
 	io_binary.c mpi_lib.F90 c_pointer.F90 \
 	units.F90 mpi_debug.F90 profiling.F90 utils.F90      \
 	multicomm.F90 periodic_table.F90 getopt_f.c command_line.F90 \
@@ -95,16 +95,16 @@ loct.o : loct.F90 loct_inc.F90 c_pointer.o
 string.o : string.F90 c_pointer.o
 varinfo.o : varinfo.F90 string.o c_pointer.o
 global.o : global.F90 mpi.o loct.o hardware.o
-loct_parser.o : loct_parser.F90 mpi.o loct.o global.o c_pointer.o
-datasets.o : datasets.F90 loct_parser.o c_pointer.o
-messages.o : messages.F90 varinfo.o string.o mpi.o loct_parser.o loct.o global.o datasets.o 
-io.o : io.F90 mpi.o messages.o loct_parser.o loct.o global.o datasets.o 
+parser.o : parser.F90 mpi.o loct.o global.o c_pointer.o
+datasets.o : datasets.F90 parser.o c_pointer.o
+messages.o : messages.F90 varinfo.o string.o mpi.o parser.o loct.o global.o datasets.o 
+io.o : io.F90 mpi.o messages.o parser.o loct.o global.o datasets.o 
 mpi_lib.o : mpi_lib.F90 mpi_lib_inc.F90 mpi_debug.o mpi.o messages.o global.o profiling.o
-units.o : units.F90 io.o messages.o loct_parser.o global.o datasets.o  varinfo.o
+units.o : units.F90 io.o messages.o parser.o global.o datasets.o  varinfo.o
 mpi_debug.o : mpi_debug.F90 mpi_debug_inc.F90 mpi.o messages.o loct.o global.o 
 profiling.o : profiling.F90 mpi.o messages.o loct.o io.o global.o papi_f.o
 utils.o : utils.F90 messages.o global.o 
-multicomm.o : multicomm.F90 varinfo.o utils.o mpi.o messages.o loct_parser.o io.o global.o datasets.o profiling.o
+multicomm.o : multicomm.F90 varinfo.o utils.o mpi.o messages.o parser.o io.o global.o datasets.o profiling.o
 iihash.o : iihash.F90 ialist.o global.o
 calc_mode.o : calc_mode.F90 multicomm.o messages.o
 distributed.o: distributed.F90 multicomm.o profiling.o

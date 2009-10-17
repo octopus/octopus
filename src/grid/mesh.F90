@@ -33,7 +33,7 @@ module mesh_m
   use multicomm_m
   use mpi_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use par_vec_m
   use profiling_m
   use simul_box_m

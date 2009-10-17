@@ -31,7 +31,7 @@ module forces_m
   use lalg_basic_m
   use lalg_adv_m
   use linear_response_m
-  use loct_parser_m
+  use parser_m
   use splines_m
   use magnetic_m
   use mesh_function_m

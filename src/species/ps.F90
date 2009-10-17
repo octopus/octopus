@@ -25,7 +25,7 @@ module ps_m
   use global_m
   use io_m
   use loct_math_m
-  use loct_parser_m
+  use parser_m
   use logrid_m
   use messages_m
   use profiling_m
@@ -285,7 +285,7 @@ contains
     !% absolute value of the projector functions, at points outside the localization sphere, is 
     !% below a certain threshold. This threshold is set by <tt>SpeciesProjectorSphereThreshold</tt>.
     !%End
-    call loct_parse_float(datasets_check('SpeciesProjectorSphereThreshold'), &
+    call parse_float(datasets_check('SpeciesProjectorSphereThreshold'), &
       CNST(0.001), ps%projectors_sphere_threshold)
     if(ps%projectors_sphere_threshold <= M_ZERO) call input_error('SpeciesProjectorSphereThreshold')
 

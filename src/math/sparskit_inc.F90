@@ -53,7 +53,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   !%Option sk_dqgmres 10
   !% Direct versions of Quasi Generalize Minimum Residual method
   !%End
-  call loct_parse_int(datasets_check('SparskitSolver'),          SK_CG, sk%solver_type)
+  call parse_integer(datasets_check('SparskitSolver'),          SK_CG, sk%solver_type)
   if ( sk%solver_type.lt.SK_MINVAL.or.sk%solver_type.gt.SK_MAXVAL ) then
     call input_error('SparskitSolver')
   end if
@@ -67,7 +67,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   !% This variable determines which size the solver will use 
   !% for the subspace.
   !%End
-  call loct_parse_int(datasets_check('SparskitKrylovSubspaceSize'), 15, sk%krylov_size)
+  call parse_integer(datasets_check('SparskitKrylovSubspaceSize'), 15, sk%krylov_size)
 
   !%Variable SparskitPreconditioning
   !%Type integer
@@ -78,7 +78,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   !% chosen Sparskit solver will use.
   !% However, currently there is none implemented.
   !%End
-  call loct_parse_int(datasets_check('SparskitPreconditioning'),     0, sk%preconditioning)
+  call parse_integer(datasets_check('SparskitPreconditioning'),     0, sk%preconditioning)
   if (sk%preconditioning.ne.0) then
     message(1) = 'Error: Preconditioning not implemented yet ...'
     call write_fatal(1)
@@ -92,7 +92,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   !% This variable controls the maximum number of iteration steps that
   !% will be performed by the (iterative) linear solver.
   !%End
-  call loct_parse_int(datasets_check('SparskitMaxIter'),          5000, sk%maxiter)
+  call parse_integer(datasets_check('SparskitMaxIter'),          5000, sk%maxiter)
 
   !%Variable SparskitIterOut
   !%Type integer
@@ -101,7 +101,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   !%Description
   !% Determines how often status info of the solver is printed
   !%End
-  call loct_parse_int(datasets_check('SparskitIterOut'),            -1, sk%iter_out)
+  call parse_integer(datasets_check('SparskitIterOut'),            -1, sk%iter_out)
 
   !%Variable SparskitRelTolerance
   !%Type float
@@ -112,7 +112,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   !% for the iteratve solution process. This variable can be used to 
   !% specify the tolerance.
   !%End
-  call loct_parse_float(datasets_check('SparskitRelTolerance'), CNST(1e-5), sk%rel_tolerance)
+  call parse_float(datasets_check('SparskitRelTolerance'), CNST(1e-5), sk%rel_tolerance)
 
   !%Variable SparskitAbsTolerance
   !%Type float
@@ -123,7 +123,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   !% for the iteratve solution process. This variable can be used to 
   !% specify the tolerance.
   !%End
-  call loct_parse_float(datasets_check('SparskitAbsTolerance'), CNST(1e-10), sk%abs_tolerance)
+  call parse_float(datasets_check('SparskitAbsTolerance'), CNST(1e-10), sk%abs_tolerance)
 
   !%Variable SparskitVerboseSolver
   !%Type logical
@@ -132,7 +132,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   !%Description
   !% When set to yes, the sparskit solver will emit more details 
   !%End
-  call loct_parse_logical(datasets_check('SparskitVerboseSolver'), .false., sk%verbose)
+  call parse_logical(datasets_check('SparskitVerboseSolver'), .false., sk%verbose)
 
   ! size of the problem
   sk%size = n

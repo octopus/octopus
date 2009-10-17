@@ -27,7 +27,7 @@ module preconditioners_m
   use grid_m
   use hamiltonian_m
   use lalg_basic_m
-  use loct_parser_m
+  use parser_m
   use mesh_m
   use messages_m
   use multigrid_m
@@ -111,13 +111,13 @@ contains
       default = PRE_FILTER
     end if
 
-    if (loct_parse_isdef(datasets_check(trim(prefix_)//'Preconditioner')) /= 0 ) then 
-      call loct_parse_int(datasets_check(trim(prefix_)//'Preconditioner'), PRE_FILTER, this%which)
+    if (parse_isdef(datasets_check(trim(prefix_)//'Preconditioner')) /= 0 ) then 
+      call parse_integer(datasets_check(trim(prefix_)//'Preconditioner'), PRE_FILTER, this%which)
       if(.not.varinfo_valid_option('Preconditioner', this%which)) &
         call input_error('Preconditioner')
       call messages_print_var_option(stdout, 'Preconditioner', this%which, prefix_)
     else
-      call loct_parse_int(datasets_check('Preconditioner'), PRE_FILTER, this%which)
+      call parse_integer(datasets_check('Preconditioner'), PRE_FILTER, this%which)
       if(.not.varinfo_valid_option('Preconditioner', this%which)) &
         call input_error('Preconditioner')
       call messages_print_var_option(stdout, 'Preconditioner', this%which)

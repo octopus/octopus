@@ -37,7 +37,7 @@ module h_sys_output_m
   use linear_response_m
   use loct_m
   use loct_math_m
-  use loct_parser_m
+  use parser_m
   use magnetic_m
   use mesh_m
   use mesh_function_m
@@ -221,7 +221,7 @@ contains
     !% Outputs file <tt>forces.xsf</tt> containing structure and forces on the atoms as 
     !% a vector associated with each atom, which can be visualized with XCrySDen.
     !%End
-    call loct_parse_int(datasets_check('Output'), 0, outp%what)
+    call parse_integer(datasets_check('Output'), 0, outp%what)
 
     ! cannot calculate the ELF in 1D
     if(sb%dim == 1) outp%what = iand(outp%what, not(output_elf + output_elf_basins))
@@ -261,10 +261,10 @@ contains
       !% five states, "2,3" to print the second and the third state, etc.
       !% If more states are specified than available, extra ones will be ignored.
       !%End
-      call loct_parse_string(datasets_check('OutputWfsNumber'), "1-1024", outp%wfs_list)
+      call parse_string(datasets_check('OutputWfsNumber'), "1-1024", outp%wfs_list)
     end if
 
-    if(loct_parse_block(datasets_check('CurrentThroughPlane'), blk) == 0) then
+    if(parse_block(datasets_check('CurrentThroughPlane'), blk) == 0) then
       outp%what = ior(outp%what, output_j_flow)
 
       select case(sb%dim)
@@ -308,20 +308,20 @@ contains
         !%
         !%End
         
-        call loct_parse_block_float(blk, 0, 0, outp%plane%origin(1))
-        call loct_parse_block_float(blk, 0, 1, outp%plane%origin(2))
-        call loct_parse_block_float(blk, 0, 2, outp%plane%origin(3))
-        call loct_parse_block_float(blk, 1, 0, outp%plane%u(1))
-        call loct_parse_block_float(blk, 1, 1, outp%plane%u(2))
-        call loct_parse_block_float(blk, 1, 2, outp%plane%u(3))
-        call loct_parse_block_float(blk, 2, 0, outp%plane%v(1))
-        call loct_parse_block_float(blk, 2, 1, outp%plane%v(2))
-        call loct_parse_block_float(blk, 2, 2, outp%plane%v(3))
-        call loct_parse_block_float(blk, 3, 0, outp%plane%spacing)
-        call loct_parse_block_int(blk, 4, 0, outp%plane%nu)
-        call loct_parse_block_int(blk, 4, 1, outp%plane%mu)
-        call loct_parse_block_int(blk, 5, 0, outp%plane%nv)
-        call loct_parse_block_int(blk, 5, 1, outp%plane%mv)
+        call parse_block_float(blk, 0, 0, outp%plane%origin(1))
+        call parse_block_float(blk, 0, 1, outp%plane%origin(2))
+        call parse_block_float(blk, 0, 2, outp%plane%origin(3))
+        call parse_block_float(blk, 1, 0, outp%plane%u(1))
+        call parse_block_float(blk, 1, 1, outp%plane%u(2))
+        call parse_block_float(blk, 1, 2, outp%plane%u(3))
+        call parse_block_float(blk, 2, 0, outp%plane%v(1))
+        call parse_block_float(blk, 2, 1, outp%plane%v(2))
+        call parse_block_float(blk, 2, 2, outp%plane%v(3))
+        call parse_block_float(blk, 3, 0, outp%plane%spacing)
+        call parse_block_integer(blk, 4, 0, outp%plane%nu)
+        call parse_block_integer(blk, 4, 1, outp%plane%mu)
+        call parse_block_integer(blk, 5, 0, outp%plane%nv)
+        call parse_block_integer(blk, 5, 1, outp%plane%mv)
 
         outp%plane%n(1) = outp%plane%u(2)*outp%plane%v(3) - outp%plane%u(3)*outp%plane%v(2)
         outp%plane%n(2) = outp%plane%u(3)*outp%plane%v(1) - outp%plane%u(1)*outp%plane%v(3)
@@ -329,20 +329,20 @@ contains
 
       case(2)
 
-        call loct_parse_block_float(blk, 0, 0, outp%line%origin(1))
-        call loct_parse_block_float(blk, 0, 1, outp%line%origin(2))
-        call loct_parse_block_float(blk, 1, 0, outp%line%u(1))
-        call loct_parse_block_float(blk, 1, 1, outp%line%u(2))
-        call loct_parse_block_float(blk, 2, 0, outp%line%spacing)
-        call loct_parse_block_int(blk, 3, 0, outp%line%nu)
-        call loct_parse_block_int(blk, 3, 1, outp%line%mu)
+        call parse_block_float(blk, 0, 0, outp%line%origin(1))
+        call parse_block_float(blk, 0, 1, outp%line%origin(2))
+        call parse_block_float(blk, 1, 0, outp%line%u(1))
+        call parse_block_float(blk, 1, 1, outp%line%u(2))
+        call parse_block_float(blk, 2, 0, outp%line%spacing)
+        call parse_block_integer(blk, 3, 0, outp%line%nu)
+        call parse_block_integer(blk, 3, 1, outp%line%mu)
 
         outp%line%n(1) = -outp%line%u(2)
         outp%line%n(2) =  outp%line%u(1)
 
       case(1)
 
-        call loct_parse_block_float(blk, 0, 0, outp%line%origin(1))
+        call parse_block_float(blk, 0, 0, outp%line%origin(1))
 
       end select
     end if
@@ -360,9 +360,9 @@ contains
     !% <tt>OutputEvery</tt> variable. This works for the ground-state and
     !% time-dependent runs.
     !%End
-    call loct_parse_int(datasets_check('OutputEvery'), 50, outp%iter)
+    call parse_integer(datasets_check('OutputEvery'), 50, outp%iter)
 
-    call loct_parse_logical(datasets_check('OutputDuringSCF'), .false., outp%duringscf)
+    call parse_logical(datasets_check('OutputDuringSCF'), .false., outp%duringscf)
 
     if(outp%what.ne.0.and.outp%what.ne.output_matrix_elements) &
          call io_function_read_how(sb, outp%how)

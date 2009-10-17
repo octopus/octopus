@@ -23,7 +23,7 @@ module root_solver_m
   use datasets_m
   use global_m
   use lalg_adv_m
-  use loct_parser_m
+  use parser_m
   use messages_m
   use ode_solver_m
   use profiling_m
@@ -126,7 +126,7 @@ contains
     !%Option root_watterstrom 5
     !% Watterstrom method
     !%End
-    call loct_parse_int(datasets_check('RootSolver'),        ROOT_NEWTON, rs%solver_type)
+    call parse_integer(datasets_check('RootSolver'),        ROOT_NEWTON, rs%solver_type)
     if( rs%solver_type.lt.ROOT_MINVAL.or.rs%solver_type.gt.ROOT_MAXVAL ) then
       call input_error(datasets_check('RootSolver'))
     end if
@@ -139,7 +139,7 @@ contains
     !% In case of an interative root solver this variable determines the maximal number
     !% of iteration steps.
     !%End
-    call loct_parse_int    (datasets_check('RootSolverMaxIter'),               100, rs%maxiter)
+    call parse_integer    (datasets_check('RootSolverMaxIter'),               100, rs%maxiter)
 
     !%Variable RootSolverRelTolerance
     !%Type float
@@ -148,7 +148,7 @@ contains
     !%Description
     !% Relative tolerance for the root finding process.
     !%End
-    call loct_parse_float  (datasets_check('RootSolverRelTolerance'),   CNST(1e-8), rs%rel_tolerance)
+    call parse_float  (datasets_check('RootSolverRelTolerance'),   CNST(1e-8), rs%rel_tolerance)
 
     !%Variable RootSolverAbsTolerance
     !%Type float
@@ -157,7 +157,7 @@ contains
     !%Description
     !% Relative tolerance for the root finding process.
     !%End
-    call loct_parse_float  (datasets_check('RootSolverAbsTolerance'),   CNST(1e-8), rs%abs_tolerance)
+    call parse_float  (datasets_check('RootSolverAbsTolerance'),   CNST(1e-8), rs%abs_tolerance)
 
     !%Variable RootSolverHavePolynomial
     !%Type logical
@@ -167,7 +167,7 @@ contains
     !%  If set to yes, the coefficients of the polynomial have to be passed to
     !%  the root solver.
     !%End
-    call loct_parse_logical(datasets_check('RootSolverHavePolynomial'),    .false., rs%have_polynomial)
+    call parse_logical(datasets_check('RootSolverHavePolynomial'),    .false., rs%have_polynomial)
 
     !%Variable RootSolverWSRadius
     !%Type float
@@ -177,7 +177,7 @@ contains
     !% Radius of circle in the complex plane. If RootSolverWSRadius = 1.0
     !% the unit roots of a n-th order polynomial are taken as initial values.
     !%End
-    call loct_parse_float  (datasets_check('RootSolverWSRadius'),       CNST( 1.0), rs%ws_radius)
+    call parse_float  (datasets_check('RootSolverWSRadius'),       CNST( 1.0), rs%ws_radius)
 
     call pop_sub()
   end subroutine root_solver_read
@@ -268,7 +268,7 @@ contains
     !%Option ode_pd89 4
     !% Prince-Dormand solver
     !%End
-    call loct_parse_int(datasets_check('WatterstromODESolver'),       ODE_PD89, os%solver_type)
+    call parse_integer(datasets_check('WatterstromODESolver'),       ODE_PD89, os%solver_type)
 
     !%Variable WatterstromODESolverNSteps
     !%Type integer
@@ -278,7 +278,7 @@ contains
     !% Number of steps which the chosen ODE solver should perform
     !% in the integration interval [a,b] of the Watterstrom ODE.
     !%End
-    call loct_parse_int(datasets_check('WatterstromODESolverNSteps'),      400, os%nsteps)
+    call parse_integer(datasets_check('WatterstromODESolverNSteps'),      400, os%nsteps)
 
     ! setup ode solver
     os%nsize       = order

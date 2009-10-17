@@ -37,7 +37,7 @@ module td_m
   use lasers_m
   use loct_m
   use loct_math_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use mesh_m
   use messages_m
@@ -453,7 +453,7 @@ contains
         ! check if we should deploy user-defined wavefunctions. 
         ! according to the settings in the input file the routine 
         ! overwrites orbitals that were read from restart/gs 
-        if(loct_parse_isdef(datasets_check('UserDefinedStates')).ne.0) then
+        if(parse_isdef(datasets_check('UserDefinedStates')).ne.0) then
           call restart_read_user_def_orbitals(gr%mesh, st)
         end if
 
@@ -480,16 +480,16 @@ contains
         !% Each line provides the coefficients of the new states, in terms of
         !% the old ones.
         !%End
-        if(loct_parse_isdef(datasets_check('TransformStates')).ne.0) then
-          if(loct_parse_block(datasets_check('TransformStates'), blk) == 0) then
+        if(parse_isdef(datasets_check('TransformStates')).ne.0) then
+          if(parse_block(datasets_check('TransformStates'), blk) == 0) then
             call states_copy(stin, st)
             SAFE_DEALLOCATE_P(stin%zpsi)
             call restart_look_and_read(stin, gr, sys%geo)
             SAFE_ALLOCATE(rotation_matrix(1:st%nst, 1:stin%nst))
             rotation_matrix = M_z0
             do ist = 1, st%nst
-              do jst = 1, loct_parse_block_cols(blk, ist-1)
-                call loct_parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
+              do jst = 1, parse_block_cols(blk, ist-1)
+                call parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
               end do
             end do
             call states_rotate(gr%mesh, st, stin, rotation_matrix)
@@ -527,7 +527,7 @@ contains
       !% It is almost equivalent to setting <tt>TDFreezeOrbitals = N-1</tt>, where <tt>N</tt> is the number
       !% of orbitals, but not completely.
       !%End
-      call loct_parse_int(datasets_check('TDFreezeOrbitals'), 0, freeze_orbitals)
+      call parse_integer(datasets_check('TDFreezeOrbitals'), 0, freeze_orbitals)
       if(freeze_orbitals > 0) then
         ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
         call states_freeze_orbitals(st, gr, sys%mc, freeze_orbitals)

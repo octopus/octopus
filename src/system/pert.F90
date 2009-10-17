@@ -28,7 +28,7 @@ module pert_m
   use grid_m
   use hamiltonian_m
   use lalg_basic_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use mesh_m
   use mesh_function_m
@@ -138,7 +138,7 @@ contains
       !% ICL correction: S. Ismail-Beigi, E.K. Chang, and S.G. Louie, <i>Phys. Rev. Lett.</i> <b>87</b>, 087402 (2001).
       !%End
       
-      call loct_parse_int(datasets_check('MagneticGaugeCorrection'), GAUGE_GIPAW, this%gauge)
+      call parse_integer(datasets_check('MagneticGaugeCorrection'), GAUGE_GIPAW, this%gauge)
       if(.not.varinfo_valid_option('MagneticGaugeCorrection', this%gauge)) &
            call input_error('MagneticGaugeCorrection')
 
@@ -159,7 +159,7 @@ contains
       !% the k.p perturbation, which is due to non-local pseudopotentials.
       !%End
 
-      call loct_parse_logical(datasets_check('KdotP_UseNonLocalPseudopotential'), &
+      call parse_logical(datasets_check('KdotP_UseNonLocalPseudopotential'), &
         .true., this%use_nonlocalpps)
     endif
 

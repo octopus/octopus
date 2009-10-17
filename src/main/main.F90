@@ -25,7 +25,7 @@ program octopus
   use global_m
   use io_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use messages_m
   use mpi_m
   use profiling_m
@@ -50,7 +50,7 @@ program octopus
   !% If true, allows the use of certain parts of the code that are
   !% still under development. This should not be used for production runs.
   !%End
-  call loct_parse_logical('DevelVersion', .false., conf%devel_version)
+  call parse_logical('DevelVersion', .false., conf%devel_version)
 
   !%Variable DebugLevel
   !%Type integer
@@ -75,7 +75,7 @@ program octopus
   !% it is usually only necessary for parallel runs. In the serial case all
   !% the information can be obtained from standard out.
   !%End
-  call loct_parse_int('DebugLevel', 0, conf%debug_level)
+  call parse_integer('DebugLevel', 0, conf%debug_level)
   if(conf%debug_level>0) then
     in_debug_mode = .true.
   else
@@ -96,7 +96,7 @@ program octopus
   !% generally it is a lower bound to the actual memory <tt>Octopus</tt> is
   !% using. By default this variable is set to false.
   !%End
-  call loct_parse_logical('ReportMemory', .false., conf%report_memory)
+  call parse_logical('ReportMemory', .false., conf%report_memory)
 
   ! need to find out calc_mode already here since some of the variables here (e.g.
   ! periodic dimensions) can be different for the subsystems
@@ -150,10 +150,10 @@ program octopus
   !%Option recipe 99
   !% Prints out a tasty recipe.
   !%End
-  if(loct_parse_block('CalculationMode', blk) == 0) then
+  if(parse_block('CalculationMode', blk) == 0) then
     call datasets_init(inp_calc_mode, blk)
   else
-    call loct_parse_int('CalculationMode', CM_GS, inp_calc_mode)
+    call parse_integer('CalculationMode', CM_GS, inp_calc_mode)
     if(.not.varinfo_valid_option('CalculationMode', inp_calc_mode)) call input_error('CalculationMode')
     call datasets_init(inp_calc_mode)
   end if
@@ -274,7 +274,7 @@ program octopus
     !% <tt>Octopus</tt> can run in 1, 2 or 3 dimensions, depending on the value of this
     !% variable. Note that not all input variables may be available in all cases.
     !%End
-    call loct_parse_int(datasets_check('Dimensions'), 3, calc_dim)
+    call parse_integer(datasets_check('Dimensions'), 3, calc_dim)
     if( calc_dim > MAX_DIM .or. calc_dim < 1) call input_error('Dimensions')
 
     ! now we really start

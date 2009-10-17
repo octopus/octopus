@@ -30,7 +30,7 @@ module modelmb_density_m
   use io_m
   use lalg_adv_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use mesh_m
   use mesh_function_m
   use messages_m
@@ -92,16 +92,16 @@ contains
     !%
     !%End
    
-    if(loct_parse_block(datasets_check('DensitiestoCalc'), blk) /= 0) then
+    if(parse_block(datasets_check('DensitiestoCalc'), blk) /= 0) then
       message(1) = 'To print out density, you must specify the DensitiestoCalc block in input'
       call write_fatal(1)
     end if
    
-    ncols = loct_parse_block_cols(blk, 0)
+    ncols = parse_block_cols(blk, 0)
     if(ncols /= 2 ) then
       call input_error("DensitiestoCalc")
     end if
-    den%ndensities_to_calculate = loct_parse_block_n(blk)
+    den%ndensities_to_calculate = parse_block_n(blk)
     if (den%ndensities_to_calculate < 0 .or. &
         den%ndensities_to_calculate > st%modelmbparticles%nparticle) then
       call input_error("DensitiestoCalc")
@@ -111,14 +111,14 @@ contains
     SAFE_ALLOCATE(den%particle_kept(1:den%ndensities_to_calculate))
    
     do ipart = 1, den%ndensities_to_calculate
-      call loct_parse_block_string(blk, ipart-1, 0, den%labels(ipart))
-      call loct_parse_block_int(blk, ipart-1, 1, den%particle_kept(ipart))
+      call parse_block_string(blk, ipart-1, 0, den%labels(ipart))
+      call parse_block_integer(blk, ipart-1, 1, den%particle_kept(ipart))
    
       write (message(1),'(a,a)') 'labels_densities = ', den%labels(ipart)
       write (message(2),'(a,i6)') 'particle_kept_densities = ', den%particle_kept(ipart)
       call write_info(2)
     end do
-    call loct_parse_block_end(blk)
+    call parse_block_end(blk)
     ! END reading in of input var block DensitiestoCalc
 
     den%dirname = trim(dir)

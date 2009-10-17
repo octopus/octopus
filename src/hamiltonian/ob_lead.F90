@@ -26,7 +26,7 @@ module ob_lead_m
   use grid_m
   use lalg_adv_m
   use lalg_basic_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use messages_m
   use nl_operator_m
@@ -260,7 +260,7 @@ contains
       ! Then the initial bias also matters
 !      do it = 0, n_steps + 1
         t = it*tstep
-        call loct_parse_expression(td_pot(it, il), pot_im(it), 1, zero, zero(1), t, tmp_c_string)
+        call parse_expression(td_pot(it, il), pot_im(it), 1, zero, zero(1), t, tmp_c_string)
       end do
     end do
 

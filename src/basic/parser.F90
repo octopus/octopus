@@ -33,7 +33,7 @@ module block_t_m
 end module block_t_m
 
 
-module loct_parser_m
+module parser_m
   use global_m
   use loct_m
   use mpi_m
@@ -43,39 +43,38 @@ module loct_parser_m
 
   ! Define the which routines can be seen from the outside
   private
-  public ::                   &
-    block_t,                  &   ! This is defined in block_t_m above
-    parser_init,              &
-    parser_end,               &
-    loct_parse_init,          &
-    loct_parse_putsym,        &
-    loct_parse_input,         &
-    loct_parse_end,           &
-    loct_parse_isdef,         &
-    loct_parse_int,           &
-    loct_parse_float,         &
-    loct_parse_cmplx,         &
-    loct_parse_string,        &
-    loct_parse_logical,       &
-    loct_parse_block,         &
-    loct_parse_block_end,     &
-    loct_parse_block_n,       &
-    loct_parse_block_cols,    &
-    loct_parse_block_int,     &
-    loct_parse_block_float,   &
-    loct_parse_block_cmplx,   &
-    loct_parse_block_string,  &
-    loct_parse_block_logical, &
-    loct_parse_expression
+  public ::              &
+    block_t,             &   ! This is defined in block_t_m above
+    parser_init,         &
+    parser_end,          &
+    parse_init,          &
+    parse_putsym,        &
+    parse_end,           &
+    parse_isdef,         &
+    parse_integer,       &
+    parse_float,         &
+    parse_cmplx,         &
+    parse_string,        &
+    parse_logical,       &
+    parse_block,         &
+    parse_block_end,     &
+    parse_block_n,       &
+    parse_block_cols,    &
+    parse_block_integer, &
+    parse_block_float,   &
+    parse_block_cmplx,   &
+    parse_block_string,  &
+    parse_block_logical, &
+    parse_expression
 
-  interface loct_parse_init
+  interface parse_init
     integer function oct_parse_init(file_out, mpiv_node)
       character(len=*), intent(in)  :: file_out
       integer, intent(in) :: mpiv_node
     end function oct_parse_init
   end interface
 
-  interface loct_parse_putsym
+  interface parse_putsym
     subroutine oct_parse_putsym_int(sym, i)
       character(len=*), intent(in)  :: sym
       integer, intent(in) :: i
@@ -87,24 +86,24 @@ module loct_parser_m
     module procedure oct_parse_putsym_double4
   end interface
 
-  interface loct_parse_input
+  interface parse_input_file
     integer function oct_parse_input(file_in)
       character(len=*), intent(in)  :: file_in
     end function oct_parse_input
   end interface
 
-  interface loct_parse_end
+  interface parse_end
     subroutine oct_parse_end()
     end subroutine oct_parse_end
   end interface
 
-  interface loct_parse_isdef
+  interface parse_isdef
     integer function oct_parse_isdef(name)
       character(len=*), intent(in) :: name
     end function oct_parse_isdef
   end interface
 
-  interface loct_parse_int
+  interface parse_integer
     subroutine oct_parse_int(name, def, res)
       character(len=*), intent(in) :: name
       integer, intent(in)          :: def
@@ -112,7 +111,7 @@ module loct_parser_m
     end subroutine oct_parse_int
   end interface
 
-  interface loct_parse_float
+  interface parse_float
     subroutine oct_parse_double(name, def, res)
       character(len=*), intent(in)  :: name
       real(8),          intent(in)  :: def
@@ -121,7 +120,7 @@ module loct_parser_m
     module procedure oct_parse_double4
   end interface
 
-  interface loct_parse_cmplx
+  interface parse_cmplx
     subroutine oct_parse_complex(name, def, res)
       character(len=*), intent(in) :: name
       complex(8), intent(in)       :: def
@@ -130,14 +129,14 @@ module loct_parser_m
     module procedure oct_parse_complex4
   end interface
 
-  interface loct_parse_string
+  interface parse_string
     subroutine oct_parse_string(name, def, res)
       character(len=*), intent(in) :: name, def
       character(len=*), intent(out):: res
     end subroutine oct_parse_string
   end interface
 
-  interface loct_parse_block
+  interface parse_block
     integer function oct_parse_block(name, blk)
       use block_t_m
       character(len=*), intent(in) :: name
@@ -145,21 +144,21 @@ module loct_parser_m
     end function oct_parse_block
   end interface
 
-  interface loct_parse_block_end
+  interface parse_block_end
     subroutine oct_parse_block_end(blk)
       use block_t_m
       type(block_t), intent(in) :: blk
     end subroutine oct_parse_block_end
   end interface
 
-  interface loct_parse_block_n
+  interface parse_block_n
     integer function oct_parse_block_n(blk)
       use block_t_m
       type(block_t), intent(in) :: blk
     end function oct_parse_block_n
   end interface
 
-  interface loct_parse_block_cols
+  interface parse_block_cols
     integer function oct_parse_block_cols(blk, line)
       use block_t_m
       type(block_t), intent(in) :: blk
@@ -167,7 +166,7 @@ module loct_parser_m
     end function oct_parse_block_cols
   end interface
 
-  interface loct_parse_block_int
+  interface parse_block_integer
     subroutine oct_parse_block_int(blk, l, c, res)
       use block_t_m
       type(block_t), intent(in) :: blk
@@ -176,7 +175,7 @@ module loct_parser_m
     end subroutine oct_parse_block_int
   end interface
 
-  interface loct_parse_block_float
+  interface parse_block_float
     subroutine oct_parse_block_double(blk, l, c, res)
       use block_t_m
       type(block_t), intent(in) :: blk
@@ -186,7 +185,7 @@ module loct_parser_m
     module procedure oct_parse_block_double4
   end interface
 
-  interface loct_parse_block_cmplx
+  interface parse_block_cmplx
     subroutine oct_parse_block_complex(blk, l, c, res)
       use block_t_m
       type(block_t), intent(in) :: blk
@@ -196,7 +195,7 @@ module loct_parser_m
     module procedure oct_parse_block_complex4
   end interface
 
-  interface loct_parse_block_string
+  interface parse_block_string
     subroutine oct_parse_block_string(blk, l, c, res)
       use block_t_m
       type(block_t), intent(in) :: blk
@@ -206,16 +205,16 @@ module loct_parser_m
   end interface
 
   ! ---------------------------------------------------------
-  ! The public subroutine loct_parse_expression accepts two
+  ! The public subroutine parse_expression accepts two
   ! possible interfaces, one which assumes that the variables
   ! in the expression are "x(:)", "r" and "t", and another
   ! one which permits to set one variable to whichever string.
   ! Examples of usage:
   !
-  ! call loct_parse_expression(f_re, f_im, ndim, x(:), r, t, &
+  ! call parse_expression(f_re, f_im, ndim, x(:), r, t, &
   !   "0.5*0.01*r^2")
   !
-  ! call loct_parse_expression(f_re, f_im, "t", t, "cos(0.01*t)")
+  ! call parse_expression(f_re, f_im, "t", t, "cos(0.01*t)")
   ! ---------------------------------------------------------
 
   interface
@@ -227,7 +226,7 @@ module loct_parser_m
     end subroutine oct_parse_expression
   end interface
 
-  interface loct_parse_expression
+  interface parse_expression
     subroutine oct_parse_expression1(re, im, c, x, string)
       real(8),          intent(out) :: re, im
       character(len=*), intent(in)  :: c
@@ -247,7 +246,7 @@ contains
     
     ! initialize the parser
     if(mpi_grp_is_root(mpi_world)) call loct_mkdir('exec')
-    ierr = loct_parse_init('exec/out.oct', mpi_world%rank)
+    ierr = parse_init('exec/out.oct', mpi_world%rank)
     if(ierr .ne. 0) then
       write(6,'(a)') '*** Fatal Error (description follows)'
       write(6,'(a)') 'Error initializing liboct'
@@ -259,7 +258,7 @@ contains
     end if
 
     ! read in default variables
-    ierr = loct_parse_input(trim(conf%share)//'/variables')
+    ierr = parse_input_file(trim(conf%share)//'/variables')
     if(ierr .ne. 0) then
       write(6,'(a)') '*** Fatal Error (description follows)'
       write(6,'(a)') 'Cannot open variables file: '//trim(conf%share)//'/variables'
@@ -270,7 +269,7 @@ contains
     end if
 
     ! setup standard input
-    ierr = loct_parse_input('inp')
+    ierr = parse_input_file('inp')
     if(ierr .ne. 0) then 
       write(6,'(a)') '*** Fatal Error (description follows)' 
       write(6,'(a)') 'Error initializing liboct' 
@@ -289,14 +288,14 @@ contains
   ! ---------------------------------------------------------
   subroutine parser_end
 
-    call loct_parse_end()
+    call parse_end()
 
   end subroutine parser_end
 
 
   ! ---------------------------------------------------------
   ! logical is a FORTRAN type, so we emulate the routine with integers
-  subroutine loct_parse_logical(name, def, res)
+  subroutine parse_logical(name, def, res)
     character(len=*), intent(in) :: name
     logical, intent(in) :: def
     logical, intent(out) :: res
@@ -309,11 +308,11 @@ contains
     call oct_parse_int(name, idef, ires)
     res = (ires .ne. 0)
 
-  end subroutine loct_parse_logical
+  end subroutine parse_logical
 
 
   ! ---------------------------------------------------------
-  subroutine loct_parse_block_logical(blk, l, c, res)
+  subroutine parse_block_logical(blk, l, c, res)
     type(block_t), intent(in) :: blk
     integer, intent(in)          :: l, c
     logical, intent(out)         :: res
@@ -323,7 +322,7 @@ contains
     call oct_parse_block_int(blk, l, c, ires)
     res = (ires .ne. 0)
 
-  end subroutine loct_parse_block_logical
+  end subroutine parse_block_logical
 
   ! The code may want to compile in single precision mode
   ! As I did not want to change the parser library, these
@@ -348,7 +347,6 @@ contains
     call oct_parse_double(name, real(def4, 8), res8)
     res4 = real(res8, kind=4)
   end subroutine oct_parse_double4
-
 
   ! ---------------------------------------------------------
   subroutine oct_parse_complex4(name, def4, res4)
@@ -428,7 +426,7 @@ contains
     im = real(im8, 4)
   end subroutine oct_parse_expression14
 
-end module loct_parser_m
+end module parser_m
 
 !! Local Variables:
 !! mode: f90

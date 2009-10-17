@@ -39,7 +39,7 @@ subroutine td_init(td, sys, hm)
   !% Time-step for the time propagation. The default is 0.07
   !% [hbar/Hartree].
   !%End
-  call loct_parse_float(datasets_check('TDTimeStep'), units_from_atomic(units_inp%time, CNST(0.07)), td%dt)
+  call parse_float(datasets_check('TDTimeStep'), units_from_atomic(units_inp%time, CNST(0.07)), td%dt)
   td%dt = units_to_atomic(units_inp%time, td%dt)
 
   if (td%dt <= M_ZERO) then
@@ -80,7 +80,7 @@ subroutine td_init(td, sys, hm)
   !%
   !%End
 
-  call loct_parse_float(datasets_check('TDIonicTimeScale'), CNST(1.0), td%mu)
+  call parse_float(datasets_check('TDIonicTimeScale'), CNST(1.0), td%mu)
 
   !%Variable TDMaximumIter
   !%Type integer
@@ -97,7 +97,7 @@ subroutine td_init(td, sys, hm)
   !%
   !%End 
 
-  call loct_parse_int(datasets_check('TDMaximumIter'), 1500, td%max_iter)
+  call parse_integer(datasets_check('TDMaximumIter'), 1500, td%max_iter)
 
   if(td%max_iter < 1) then
     write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid TDMaximumIter"
@@ -109,7 +109,7 @@ subroutine td_init(td, sys, hm)
   call kick_init(td%kick, sys%st%d%nspin, sys%gr%mesh%sb%dim)
 
   ! now the photoelectron stuff
-  call loct_parse_int(datasets_check('AbsorbingBoundaries'), 0, dummy)
+  call parse_integer(datasets_check('AbsorbingBoundaries'), 0, dummy)
   call PES_init(td%PESv, sys%gr%mesh, sys%gr%sb, sys%st, dummy, sys%outp%iter)
 
   !%Variable TDDynamics
@@ -127,7 +127,7 @@ subroutine td_init(td, sys, hm)
   !% Car-Parrinello molecular dynamics.
   !%End
 
-  call loct_parse_int(datasets_check('TDDynamics'), EHRENFEST, td%dynamics)
+  call parse_integer(datasets_check('TDDynamics'), EHRENFEST, td%dynamics)
   if(.not.varinfo_valid_option('TDDynamics', td%dynamics)) call input_error('TDDynamics')
   call messages_print_var_option(stdout, 'TDDynamics', td%dynamics)
 
@@ -147,7 +147,7 @@ subroutine td_init(td, sys, hm)
   !% The recalculation is not done every time step, but only every
   !% OutputEvery time steps.
   !%End
-  call loct_parse_logical(datasets_check("RecalculateGSDuringEvolution"), .false., td%recalculate_gs)
+  call parse_logical(datasets_check("RecalculateGSDuringEvolution"), .false., td%recalculate_gs)
 
   !%Variable TDScissor
   !%Type float
@@ -158,7 +158,7 @@ subroutine td_init(td, sys, hm)
   !% Hamiltonian, shifting the excitation energies by the amount
   !% specified. By default, it is not applied.
   !%End
-  call loct_parse_float(datasets_check('TDScissor'), CNST(0.0), td%scissor)
+  call parse_float(datasets_check('TDScissor'), CNST(0.0), td%scissor)
   td%scissor = units_to_atomic(units_inp%energy, td%scissor)
 
   call td_rti_init(sys%gr, sys%st, hm, td%tr, td%dt, td%max_iter, &

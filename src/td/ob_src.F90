@@ -31,7 +31,7 @@ module ob_src_m
   use lalg_adv_m
   use lalg_basic_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use messages_m
   use nl_operator_m

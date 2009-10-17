@@ -27,7 +27,7 @@ module invert_ks_m
   use io_m
   use io_function_m
   use lalg_adv_m
-  use loct_parser_m
+  use parser_m
   use mesh_m
   use mesh_function_m
   use messages_m
@@ -73,7 +73,7 @@ contains
     !% Exact two-particle scheme.
     !%End
       
-    call loct_parse_int(datasets_check('InvertKSmethod'), 0, invksmethod)
+    call parse_integer(datasets_check('InvertKSmethod'), 0, invksmethod)
 
     ! initialize random wavefunctions
     call states_allocate_wfns(sys%st, sys%gr%mesh)
@@ -154,7 +154,7 @@ contains
 
       call push_sub('invert_ks.read_target_rho')
 
-      call loct_parse_string(datasets_check('InvertKSTargetDensity'), "target_density.dat", filename)
+      call parse_string(datasets_check('InvertKSTargetDensity'), "target_density.dat", filename)
 
       iunit = io_open(filename, action='read', status='old')
 
@@ -264,7 +264,7 @@ contains
     !% inversion. Has to be larger than the convergence of the density in the SCF run.
     !%End
     
-    call loct_parse_float(datasets_check('InvertKSConvAbsDens'), 1d-5, convdensity)
+    call parse_float(datasets_check('InvertKSConvAbsDens'), 1d-5, convdensity)
     
     !%Variable InvertKSstabilizer
     !%Type float
@@ -276,7 +276,7 @@ contains
     !% ensures that very small densities do not cause numerical problems.
     !%End
 
-    call loct_parse_float(datasets_check('InvertKSstabilizer'), M_HALF, stabilizer)
+    call parse_float(datasets_check('InvertKSstabilizer'), M_HALF, stabilizer)
 
     !%Variable InvertKSVerbosity
     !%Type integer
@@ -294,7 +294,7 @@ contains
     !% addition.
     !%End
       
-    call loct_parse_int(datasets_check('InvertKSVerbosity'), 0, verbosity)  
+    call parse_integer(datasets_check('InvertKSVerbosity'), 0, verbosity)  
     if(verbosity < 0 .or. verbosity > 2) then
       message(1) = 'InvertKSVerbosity only has the options 0, 1, or 2.'
       call write_fatal(1)

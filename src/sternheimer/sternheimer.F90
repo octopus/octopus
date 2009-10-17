@@ -29,7 +29,7 @@ module sternheimer_m
   use lalg_basic_m
   use linear_response_m
   use linear_solver_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use mesh_m
   use mesh_function_m
@@ -122,10 +122,10 @@ contains
     !% or not against the occupied states, at the start of each SCF cycle.
     !%End 
     default_preorthog = sys%st%smear%method == SMEAR_SEMICONDUCTOR
-    if (loct_parse_isdef(datasets_check(trim(prefix)//'Preorthogonalization')) /= 0) then 
-      call loct_parse_logical(datasets_check(trim(prefix)//'Preorthogonalization'), default_preorthog, this%preorthogonalization) 
+    if (parse_isdef(datasets_check(trim(prefix)//'Preorthogonalization')) /= 0) then 
+      call parse_logical(datasets_check(trim(prefix)//'Preorthogonalization'), default_preorthog, this%preorthogonalization) 
     else 
-      call loct_parse_logical(datasets_check('Preorthogonalization'), default_preorthog, this%preorthogonalization) 
+      call parse_logical(datasets_check('Preorthogonalization'), default_preorthog, this%preorthogonalization) 
     end if
 
     !%Variable HamiltonianVariation
@@ -153,10 +153,10 @@ contains
     if(present(set_ham_var)) then
       ham_var = set_ham_var
     else if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
-      if (loct_parse_isdef(datasets_check(trim(prefix)//'HamiltonianVariation')) /= 0) then
-        call loct_parse_int(datasets_check(trim(prefix)//'HamiltonianVariation'), 3, ham_var)
+      if (parse_isdef(datasets_check(trim(prefix)//'HamiltonianVariation')) /= 0) then
+        call parse_integer(datasets_check(trim(prefix)//'HamiltonianVariation'), 3, ham_var)
       else
-        call loct_parse_int(datasets_check('HamiltonianVariation'), 3, ham_var)
+        call parse_integer(datasets_check('HamiltonianVariation'), 3, ham_var)
       end if
     end if
 

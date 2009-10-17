@@ -31,7 +31,7 @@ module lcao_m
   use lalg_adv_m
   use lalg_basic_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use mpi_m
   use mesh_m
   use mesh_function_m
@@ -103,7 +103,7 @@ contains
     !% If this variable is set, the LCAO procedure will use an
     !% alternative (and experimental) implementation.
     !%End
-    call loct_parse_logical(datasets_check('LCAOAlternative'), .false., this%alternative)
+    call parse_logical(datasets_check('LCAOAlternative'), .false., this%alternative)
 
     if(this%alternative) then
       message(1) = "Info: Using LCAO alternative implementation."
@@ -199,7 +199,7 @@ contains
       !% reduced. If you want to use the largest possible number, set
       !% <tt>LCAODimension</tt> to a negative number.
       !%End
-      call loct_parse_int(datasets_check('LCAODimension'), 0, n)
+      call parse_integer(datasets_check('LCAODimension'), 0, n)
 
       if(n > 0 .and. n <= st%nst) then
         this%norbs = st%nst

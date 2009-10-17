@@ -29,7 +29,7 @@ module geom_opt_m
   use lcao_m
   use loct_m
   use loct_math_m
-  use loct_parser_m
+  use parser_m
   use mesh_m
   use messages_m
   use profiling_m
@@ -120,7 +120,7 @@ contains
       lcao_start_default = LCAO_START_FULL
       if(sys%geo%only_user_def) lcao_start_default = LCAO_START_NONE
 
-      call loct_parse_int(datasets_check('LCAOStart'), lcao_start_default, lcao_start)
+      call parse_integer(datasets_check('LCAOStart'), lcao_start_default, lcao_start)
       if(.not.varinfo_valid_option('LCAOStart', lcao_start)) call input_error('LCAOStart')
       call messages_print_var_option(stdout, 'LCAOStart', lcao_start)
 
@@ -246,7 +246,7 @@ contains
       !% forces) which makes it more inefficient than other schemes. It is included here
       !% for completeness, since it is free.
       !%End
-      call loct_parse_int(datasets_check('GOMethod'), MINMETHOD_STEEPEST_DESCENT, g_opt%method)
+      call parse_integer(datasets_check('GOMethod'), MINMETHOD_STEEPEST_DESCENT, g_opt%method)
       if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call input_error('GOMethod')
       call messages_print_var_option(stdout, "GOMethod", g_opt%method)
 
@@ -259,7 +259,7 @@ contains
       !% is stopped when all forces on ions are smaller than this criterion.
       !% Used in conjunction with <tt>GOMinimumMove</tt>. If <tt>GOTolerance = 0</tt>, this criterion is ignored.
       !%End
-      call loct_parse_float(datasets_check('GOTolerance'), CNST(0.001)/units_inp%force%factor, g_opt%tolgrad)
+      call parse_float(datasets_check('GOTolerance'), CNST(0.001)/units_inp%force%factor, g_opt%tolgrad)
       g_opt%tolgrad = g_opt%tolgrad*units_inp%force%factor
       
       !%Variable GOMinimumMove
@@ -273,7 +273,7 @@ contains
       !%
       !% Note that if you use <tt>GOMethod = simplex</tt>, then you must supply a non-zero <tt>GOMinimumMove</tt>.
       !%End
-      call loct_parse_float(datasets_check('GOMinimumMove'), CNST(0.0)/units_inp%length%factor, g_opt%toldr)
+      call parse_float(datasets_check('GOMinimumMove'), CNST(0.0)/units_inp%length%factor, g_opt%toldr)
       g_opt%toldr = g_opt%toldr*units_inp%length%factor
       if(g_opt%method == MINMETHOD_NMSIMPLEX .and. g_opt%toldr <= M_ZERO) call input_error('GOMinimumMove')
       
@@ -284,7 +284,7 @@ contains
       !%Description
       !% Initial step for the geometry optimizer.
       !%End
-      call loct_parse_float(datasets_check('GOStep'), M_HALF, g_opt%step) ! WARNING: in some weird units
+      call parse_float(datasets_check('GOStep'), M_HALF, g_opt%step) ! WARNING: in some weird units
 
       !%Variable GOMaxIter
       !%Type integer
@@ -294,7 +294,7 @@ contains
       !% Even if the convergence criterion is not satisfied, the minimization will stop
       !% after this number of iterations.
       !%End
-      call loct_parse_int(datasets_check('GOMaxIter'), 200, g_opt%max_iter)
+      call parse_integer(datasets_check('GOMaxIter'), 200, g_opt%max_iter)
       if(g_opt%max_iter <= 0) then
         message(1) = "GoMaxIter has to be larger than 0"
         call write_fatal(1)
@@ -315,7 +315,7 @@ contains
       !% Note that in this case one still uses the forces as the gradient of the objective function.
       !% This is, of course, inconsistent, and may lead to very strange behavior.
       !%End
-      call loct_parse_int(datasets_check('GOWhat2Minimize'), MINWHAT_ENERGY, g_opt%what2minimize)
+      call parse_integer(datasets_check('GOWhat2Minimize'), MINWHAT_ENERGY, g_opt%what2minimize)
       if(.not.varinfo_valid_option('GOWhat2Minimize', g_opt%what2minimize)) call input_error('GOWhat2Minimize')
       call messages_print_var_option(stdout, "GOWhat2Minimize", g_opt%what2minimize)
 

@@ -29,7 +29,7 @@ module opt_control_parameters_m
   use lasers_m
   use loct_m
   use loct_math_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use mesh_m
   use messages_m
@@ -211,7 +211,7 @@ contains
     !% coefficients is zero).
     !%End
     if (parametrized_controls) then
-      call loct_parse_int(datasets_check('OCTParameterRepresentation'), &
+      call parse_integer(datasets_check('OCTParameterRepresentation'), &
         ctr_fourier_series_h, par_common%representation)
       if(.not.varinfo_valid_option('OCTParameterRepresentation', par_common%representation)) &
         call input_error('OCTParameterRepresentation')
@@ -256,7 +256,7 @@ contains
     !% The Fourier series that can be used to represent the control functions must be truncated;
     !% the truncation is given by a cut-off frequency which is determined by this variable.
     !%End
-    call loct_parse_float(datasets_check('OCTParameterOmegaMax'), -M_ONE, par_common%omegamax)
+    call parse_float(datasets_check('OCTParameterOmegaMax'), -M_ONE, par_common%omegamax)
     if(par_common%representation .ne. ctr_real_time) then
       write(message(1), '(a)')         'Info: The representation of the OCT control parameters will be restricted'
       write(message(2), '(a,f10.5,a)') '      with an energy cut-off of ', &
@@ -280,7 +280,7 @@ contains
     !% first the code applies the envelope provided by the <tt>OCTLaserEnvelope</tt> input
     !% option, and afterwards it calculates the fluence.
     !%End
-    call loct_parse_float(datasets_check('OCTFixFluenceTo'), M_ZERO, par_common%targetfluence)
+    call parse_float(datasets_check('OCTFixFluenceTo'), M_ZERO, par_common%targetfluence)
 
     !%Variable OCTFixInitialFluence
     !%Type logical
@@ -292,7 +292,7 @@ contains
     !% fluence. However, you can force the program to use that initial laser as the initial
     !% guess, no matter the fluence, by setting <tt>OCTFixInitialFluence = no</tt>.
     !%End
-    call loct_parse_logical(datasets_check('OCTFixInitialFluence'), .true., &
+    call parse_logical(datasets_check('OCTFixInitialFluence'), .true., &
       par_common%fix_initial_fluence)
 
     !%Variable OCTControlFunctionType
@@ -321,7 +321,7 @@ contains
     !% where f(t) is an "envelope", w0 a carrier frequency, and phi(t) the td phase that we 
     !% wish to optimize.
     !%End
-    call loct_parse_int(datasets_check('OCTControlFunctionType'), parameter_mode_epsilon, par_common%mode)
+    call parse_integer(datasets_check('OCTControlFunctionType'), parameter_mode_epsilon, par_common%mode)
     if(.not.varinfo_valid_option('OCTControlFunctionType', par_common%mode)) &
       call input_error('OCTControlFunctionType')
     if ( (.not.parametrized_controls)  .and.  (par_common%mode .ne. parameter_mode_epsilon) ) &
@@ -414,20 +414,20 @@ contains
     !%End
     SAFE_ALLOCATE(par_common%alpha(1:par_common%no_parameters))
     par_common%alpha = M_ZERO
-    if(loct_parse_block('OCTPenalty', blk) == 0) then
+    if(parse_block('OCTPenalty', blk) == 0) then
       ! We have a block
-      i = loct_parse_block_cols(blk, 0)
+      i = parse_block_cols(blk, 0)
       if(i.ne.par_common%no_parameters) then
         call input_error('OCTPenalty')
       else
         do j = 1, i
-          call loct_parse_block_float(blk, 0, j-1, par_common%alpha(j))
+          call parse_block_float(blk, 0, j-1, par_common%alpha(j))
           if(par_common%alpha(j) <= M_ZERO) call input_error('OCTPenalty')
         end do
       end if
     else
       ! We have the same penalty for all the control functions.
-      call loct_parse_float(datasets_check('OCTPenalty'), M_ONE, octpenalty)
+      call parse_float(datasets_check('OCTPenalty'), M_ONE, octpenalty)
       par_common%alpha(1:par_common%no_parameters) = octpenalty
     end if
 
@@ -459,7 +459,7 @@ contains
       call tdf_init_numerical(par_common%td_penalty(i), steps, dt, -M_ONE, initval = M_ONE)
     end do
 
-    if (loct_parse_block(datasets_check('OCTLaserEnvelope'), blk)==0) then
+    if (parse_block(datasets_check('OCTLaserEnvelope'), blk)==0) then
 
       ! Cannot have this unless we have the "usual" parameter_mode_epsilon.
       if(par_common%mode .ne. parameter_mode_epsilon) then
@@ -468,11 +468,11 @@ contains
         call write_fatal(2)
       end if
 
-      no_lines = loct_parse_block_n(blk)
+      no_lines = parse_block_n(blk)
       if(no_lines .ne.par_common%no_parameters) call input_error('OCTLaserEnvelope')
 
       do i = 1, no_lines
-        call loct_parse_block_string(blk, i-1, 0, expression)
+        call parse_block_string(blk, i-1, 0, expression)
         total_time = steps*dt
         if(trim(expression)=='default') then
           do j = 1, steps + 1
@@ -486,7 +486,7 @@ contains
           call conv_to_C_string(expression)
           do j = 1, steps+1
             t = (j-1)*dt
-            call loct_parse_expression(f_re, f_im, "t", t, expression)
+            call parse_expression(f_re, f_im, "t", t, expression)
             call tdf_set_numerical(par_common%td_penalty(i), j, &
               TOFLOAT(M_ONE /(f_re + CNST(1.0e-7)))  )
           end do
@@ -507,7 +507,7 @@ contains
         call io_close(iunit)
       end if
 
-      call loct_parse_block_end(blk)
+      call parse_block_end(blk)
     end if
 
     call messages_print_stress(stdout)

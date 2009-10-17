@@ -22,7 +22,7 @@
 module xc_functl_m
   use datasets_m
   use global_m
-  use loct_parser_m
+  use parser_m
   use messages_m
   use XC_F90(lib_m)
 
@@ -99,7 +99,7 @@ contains
     !%Option lca_lch 302
     !% Lee, Colwell & Handy
     !%End
-    call loct_parse_int(datasets_check('JFunctional'), XC_LCA_OMC, functl%id)
+    call parse_integer(datasets_check('JFunctional'), XC_LCA_OMC, functl%id)
 
     ! initialize
     select case(functl%id)
@@ -186,7 +186,7 @@ contains
     ! special parameters that have to be configured
     select case(functl%id)
     case(XC_LDA_C_XALPHA)
-      call loct_parse_float(datasets_check('Xalpha'), M_ONE, alpha)
+      call parse_float(datasets_check('Xalpha'), M_ONE, alpha)
       call XC_F90(lda_c_xalpha_set_par)(functl%conf, alpha)
 
     case(XC_LDA_X_1D, XC_LDA_C_1D_CSC)
@@ -203,7 +203,7 @@ contains
       !%Option interaction_soft_coulomb 1
       !% Soft Coulomb interaction of the form 1/sqrt(x^2 + alpha^2).
       !%End
-      call loct_parse_int(datasets_check('SoftInteraction1D_type'), 1, interact_1d)
+      call parse_integer(datasets_check('SoftInteraction1D_type'), 1, interact_1d)
 
       !%Variable SoftInteraction1D_alpha
       !%Type float
@@ -213,7 +213,7 @@ contains
       !% Defines the screening parameter of the softened Coulomb interaction
       !% when running in 1D.
       !%End
-      call loct_parse_float(datasets_check('SoftInteraction1D_alpha'), M_ONE, alpha)
+      call parse_float(datasets_check('SoftInteraction1D_alpha'), M_ONE, alpha)
       
       if(functl%id == XC_LDA_X_1D) then
         call XC_F90(lda_x_1d_set_par)(functl%conf, interact_1d, alpha)
@@ -225,8 +225,8 @@ contains
       call XC_F90(lda_c_2d_prm_set_par)(functl%conf, nel)
 
     case(XC_GGA_XC_LB)
-      call loct_parse_int  (datasets_check('LB94_modified'),             0, functl%LB94_modified)
-      call loct_parse_float(datasets_check('LB94_threshold'), CNST(1.0e-6), functl%LB94_threshold)
+      call parse_integer  (datasets_check('LB94_modified'),             0, functl%LB94_modified)
+      call parse_float(datasets_check('LB94_threshold'), CNST(1.0e-6), functl%LB94_threshold)
       
     end select
     

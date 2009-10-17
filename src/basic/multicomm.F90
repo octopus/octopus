@@ -49,7 +49,7 @@
     use global_m
     use io_m
     use loct_m
-    use loct_parser_m
+    use parser_m
     use messages_m
     use mpi_m
     use profiling_m
@@ -204,7 +204,7 @@ contains
       !%
       !%End
   
-      call loct_parse_logical(datasets_check('ParallelizationUseTopology'), .false., mc%use_topology)
+      call parse_logical(datasets_check('ParallelizationUseTopology'), .false., mc%use_topology)
 
       mc%use_topology = mc%use_topology .and. multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)
       mc%use_topology = mc%use_topology .and. multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)
@@ -228,9 +228,9 @@ contains
       !%Option fill -1
       !% Replaced by the value required to complete the number of processors.
       !%End
-      if(loct_parse_block(datasets_check('ParallelizationGroupRanks'), blk) == 0) then
+      if(parse_block(datasets_check('ParallelizationGroupRanks'), blk) == 0) then
         call read_block(blk)
-        call loct_parse_block_end(blk)
+        call parse_block_end(blk)
       else
         call assign_nodes()
       end if
@@ -290,7 +290,7 @@ contains
         par_mask = ibclr(par_mask, P_STRATEGY_DOMAINS - 1)
 #endif
 
-        call loct_parse_int(datasets_check('ParallelizationStrategy'), default_mask, mc%par_strategy)
+        call parse_integer(datasets_check('ParallelizationStrategy'), default_mask, mc%par_strategy)
 
         if(.not.varinfo_valid_option('ParallelizationStrategy', mc%par_strategy, is_flag=.true.)) then
           call input_error('ParallelizationStrategy')
@@ -347,12 +347,12 @@ contains
 
       call push_sub('multicomm.multicomm_init.read_block')
 
-      n = loct_parse_block_cols(blk, 0)
+      n = parse_block_cols(blk, 0)
 
       mc%group_sizes = 1
       do i = 1, min(n, mc%n_index)
         if(multicomm_strategy_is_parallel(mc, i)) then
-          call loct_parse_block_int(blk, 0, i-1, mc%group_sizes(i))
+          call parse_block_integer(blk, 0, i-1, mc%group_sizes(i))
         end if
       end do
 

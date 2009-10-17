@@ -33,7 +33,7 @@ module td_write_m
   use ion_dynamics_m
   use lasers_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use magnetic_m
   use mesh_function_m
   use mesh_m
@@ -173,7 +173,7 @@ contains
          2**(OUT_ENERGY - 1) +      &
          2**(OUT_GAUGE_FIELD - 1)
 
-    call loct_parse_int(datasets_check('TDOutput'), default, flags)
+    call parse_integer(datasets_check('TDOutput'), default, flags)
 
     if(.not.varinfo_valid_option('TDOutput', flags, is_flag = .true.)) call input_error('TDOutput')
 
@@ -195,7 +195,7 @@ contains
     !% Maximum multipole of the density output to the file <tt>td.general/multipoles</tt>
     !% during a time-dependent simulation. Must be 0 &lt; <tt>TDDipoleLmax &lt; 5</tt>.
     !%End
-    call loct_parse_int(datasets_check('TDDipoleLmax'), 1, w%lmax)
+    call parse_integer(datasets_check('TDDipoleLmax'), 1, w%lmax)
     if (w%lmax < 0 .or. w%lmax > 4) then
       write(message(1), '(a,i6,a)') "Input: '", w%lmax, "' is not a valid TDDipoleLmax"
       message(2) = '(0 <= TDDipoleLmax <= 4 )'
@@ -210,7 +210,7 @@ contains
     end if
 
     call geometry_min_distance(geo, rmin)
-    call loct_parse_float(datasets_check('LocalMagneticMomentsSphereRadius'), rmin*M_HALF/units_inp%length%factor, w%lmm_r)
+    call parse_float(datasets_check('LocalMagneticMomentsSphereRadius'), rmin*M_HALF/units_inp%length%factor, w%lmm_r)
     w%lmm_r = w%lmm_r * units_inp%length%factor
 
     if( (w%out(OUT_PROJ)%write)  .or.  (w%out(OUT_POPULATIONS)%write) ) then
@@ -240,7 +240,7 @@ contains
         !% is set by the number of states in the propagation and the number of unoccupied states
         !% available.
         !%End
-        call loct_parse_int(datasets_check('TDProjStateStart'), 1, w%gs_st%st_start)
+        call parse_integer(datasets_check('TDProjStateStart'), 1, w%gs_st%st_start)
       else
         w%gs_st%st_start = 1
       end if
@@ -282,11 +282,11 @@ contains
       !%
       !% FIXME: description of the format of the files.
       !%End
-      if(loct_parse_block('TDExcitedStatesToProject', blk) == 0) then
-        w%n_excited_states = loct_parse_block_n(blk)
+      if(parse_block('TDExcitedStatesToProject', blk) == 0) then
+        w%n_excited_states = parse_block_n(blk)
         SAFE_ALLOCATE(w%excited_st(1:w%n_excited_states))
         do i = 1, w%n_excited_states
-          call loct_parse_block_string(blk, i-1, 0, filename)
+          call parse_block_string(blk, i-1, 0, filename)
           call excited_states_init(w%excited_st(i), w%gs_st, trim(filename)) 
         end do
       else

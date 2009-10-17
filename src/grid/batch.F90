@@ -24,7 +24,7 @@ module batch_m
   use global_m
   use lalg_adv_m
   use lalg_basic_m
-  use loct_parser_m
+  use parser_m
   use messages_m
   use profiling_m
   use varinfo_m

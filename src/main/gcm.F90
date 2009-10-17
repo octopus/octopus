@@ -24,7 +24,7 @@ module gcm_m
   use datasets_m
   use energy_m
   use messages_m
-  use loct_parser_m
+  use parser_m
   use units_m
   use grid_m
   use system_m
@@ -80,17 +80,17 @@ module gcm_m
     !%Description
     !%
     !%End
-    if(loct_parse_block(datasets_check('GCMSlaterDeterminants'), blk) .ne. 0) then
+    if(parse_block(datasets_check('GCMSlaterDeterminants'), blk) .ne. 0) then
       write(message(1),'(a)') 'If you run in "CalculationMode = gcm" mode, then you must'
       write(message(2),'(a)') 'supply also a "GCMSlaterDeterminants" block.'
       call write_fatal(2)
     else
-     ndeterminants = loct_parse_block_n(blk)
+     ndeterminants = parse_block_n(blk)
      SAFE_ALLOCATE(slatdetnames(1:ndeterminants))
      do i = 0, ndeterminants - 1
-       call loct_parse_block_string(blk, i, 0, slatdetnames(i+1))
+       call parse_block_string(blk, i, 0, slatdetnames(i+1))
      end do
-     call loct_parse_block_end(blk)
+     call parse_block_end(blk)
     end if
 
     SAFE_ALLOCATE(    phi(1:ndeterminants))

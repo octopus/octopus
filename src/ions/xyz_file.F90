@@ -23,7 +23,7 @@ module xyz_file_m
   use datasets_m
   use global_m
   use io_m
-  use loct_parser_m
+  use parser_m
   use messages_m
   use profiling_m
   use string_m
@@ -111,20 +111,20 @@ contains
 
     call push_sub('xyz_file.xyz_file_read')
 
-    if(loct_parse_isdef(datasets_check('PDB'//trim(what))).ne.0) then
+    if(parse_isdef(datasets_check('PDB'//trim(what))).ne.0) then
       gf%file_type = XYZ_FILE_PDB
       gf%flags = ior(gf%flags, XYZ_FLAGS_RESIDUE)
       gf%flags = ior(gf%flags, XYZ_FLAGS_CHARGE)
 
-      call loct_parse_string(datasets_check('PDB'//trim(what)), 'coords.pdb', str)
+      call parse_string(datasets_check('PDB'//trim(what)), 'coords.pdb', str)
 
       iunit = io_open(str, action='read')
       call xyz_file_read_PDB(what, iunit, gf)
       call io_close(iunit)
 
-    else if(loct_parse_isdef(datasets_check('XYZ'//trim(what))).ne.0) then ! read a xyz file
+    else if(parse_isdef(datasets_check('XYZ'//trim(what))).ne.0) then ! read a xyz file
       gf%file_type = XYZ_FILE_XYZ
-      call loct_parse_string(datasets_check('XYZ'//trim(what)), 'coords.xyz', str)
+      call parse_string(datasets_check('XYZ'//trim(what)), 'coords.xyz', str)
 
       iunit = io_open(str, status='old', action='read', is_tmp=.true.)
       read(iunit, *) gf%n
@@ -139,8 +139,8 @@ contains
 
       call io_close(iunit)
 
-    else if(loct_parse_block(datasets_check(trim(what)), blk) == 0) then
-      gf%n = loct_parse_block_n(blk)
+    else if(parse_block(datasets_check(trim(what)), blk) == 0) then
+      gf%n = parse_block_n(blk)
 
       gf%file_type = XYZ_FILE_INP
       gf%flags = ior(gf%flags, XYZ_FLAGS_MOVE)
@@ -149,24 +149,24 @@ contains
 
       ! FIXME : this needs to be generalized to MAX_DIM dimensions
       do i = 1, gf%n
-        j = loct_parse_block_cols(blk, i-1)
+        j = parse_block_cols(blk, i-1)
         !if((j.lt.gr%sb%dim+1).or.(j.gt.gr%sb%dim+2)) then
         if((j.lt.4).or.(j.gt.5)) then
           write(message(1), '(3a,i2)') 'Error in block ', what, ' line #', i
           call write_fatal(1)
         end if
-        call loct_parse_block_string (blk, i-1, 0, gf%atom(i)%label)
+        call parse_block_string (blk, i-1, 0, gf%atom(i)%label)
         do jdim = 1, 3 ! gr%sb%dim
-          call loct_parse_block_float  (blk, i-1, jdim, gf%atom(i)%x(jdim))
+          call parse_block_float  (blk, i-1, jdim, gf%atom(i)%x(jdim))
         end do
         if(j == 5) then ! == gr%sb%dim+2
-          !call loct_parse_block_logical(blk, i-1, gr%sb%dim+1, gf%atom(i)%move)
-          call loct_parse_block_logical(blk, i-1, 4, gf%atom(i)%move)
+          !call parse_block_logical(blk, i-1, gr%sb%dim+1, gf%atom(i)%move)
+          call parse_block_logical(blk, i-1, 4, gf%atom(i)%move)
         else
           gf%atom(i)%move = .true.
         end if
       end do
-      call loct_parse_block_end(blk)
+      call parse_block_end(blk)
 
     end if
 

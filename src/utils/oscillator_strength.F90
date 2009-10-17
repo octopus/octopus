@@ -25,7 +25,7 @@ module oscillator_strength_m
   use io_m
   use loct_m
   use loct_math_m
-  use loct_parser_m
+  use parser_m
   use messages_m
   use profiling_m
   use spectrum_m
@@ -151,7 +151,7 @@ program oscillator_strength
   use messages_m
   use datasets_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use io_m
   use units_m
   use spectrum_m
@@ -230,7 +230,7 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
   use messages_m
   use datasets_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use io_m
   use units_m
   use spectrum_m
@@ -372,7 +372,7 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
   use messages_m
   use datasets_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use io_m
   use units_m
   use spectrum_m
@@ -552,7 +552,7 @@ subroutine find_resonance(omega, leftbound, rightbound, nfrequencies)
   use messages_m
   use datasets_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use io_m
   use units_m
   use spectrum_m
@@ -620,7 +620,7 @@ subroutine resonance_first_order(omega, power, nw_subtracted, dw, leftbound, rig
   use messages_m
   use datasets_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use io_m
   use units_m
   use spectrum_m
@@ -674,7 +674,7 @@ subroutine resonance_second_order(omega, power, nw_subtracted, leftbound, rightb
   use messages_m
   use datasets_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use io_m
   use units_m
   use spectrum_m
@@ -731,7 +731,7 @@ subroutine generate_signal(order, observable)
   use messages_m
   use datasets_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use io_m
   use units_m
   use spectrum_m
@@ -1175,7 +1175,7 @@ subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
   use messages_m
   use datasets_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use io_m
   use units_m
   use spectrum_m

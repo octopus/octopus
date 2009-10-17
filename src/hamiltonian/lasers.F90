@@ -27,7 +27,7 @@ module lasers_m
   use mpi_m
   use grid_m
   use io_m
-  use loct_parser_m
+  use parser_m
   use mesh_m
   use messages_m
   use profiling_m
@@ -356,46 +356,46 @@ contains
     !%End
 
     no_l = 0
-    if(loct_parse_block(datasets_check('TDExternalFields'), blk) == 0) then
-      no_l = loct_parse_block_n(blk)
+    if(parse_block(datasets_check('TDExternalFields'), blk) == 0) then
+      no_l = parse_block_n(blk)
       SAFE_ALLOCATE(l(1:no_l))
 
       do i = 1, no_l
 
-        call loct_parse_block_int(blk, i-1, 0, l(i)%field)
+        call parse_block_integer(blk, i-1, 0, l(i)%field)
 
         select case(l(i)%field)
         case(E_FIELD_SCALAR_POTENTIAL)
-          call loct_parse_block_string(blk, i-1, 1, scalar_pot_expression)
+          call parse_block_string(blk, i-1, 1, scalar_pot_expression)
           j = 1
           l(i)%pol = M_z1
         case default
-          call loct_parse_block_cmplx(blk, i-1, 1, l(i)%pol(1))
-          call loct_parse_block_cmplx(blk, i-1, 2, l(i)%pol(2))
-          call loct_parse_block_cmplx(blk, i-1, 3, l(i)%pol(3))
+          call parse_block_cmplx(blk, i-1, 1, l(i)%pol(1))
+          call parse_block_cmplx(blk, i-1, 2, l(i)%pol(2))
+          call parse_block_cmplx(blk, i-1, 3, l(i)%pol(3))
           j = 3
         end select
 
-        call loct_parse_block_float(blk, i-1, j+1, omega0)
+        call parse_block_float(blk, i-1, j+1, omega0)
         omega0 = units_to_atomic(units_inp%energy, omega0)
 
         l(i)%omega = omega0
      
-        call loct_parse_block_string(blk, i-1, j+2, envelope_expression)
+        call parse_block_string(blk, i-1, j+2, envelope_expression)
 
         ! For some reason, one cannot open a block if another one is already open.
         ! This is why I close blk before calling tdf_read, and then open it again.
         ! This should be fixed at the parser level.
-        call loct_parse_block_end(blk)
+        call parse_block_end(blk)
         call tdf_read(l(i)%f, trim(envelope_expression), ierr)
-        ierr = loct_parse_block(datasets_check('TDExternalFields'), blk)
+        ierr = parse_block(datasets_check('TDExternalFields'), blk)
 
         ! Check if there is a phase.
-        if(loct_parse_block_cols(blk, i-1) > j+3) then
-          call loct_parse_block_string(blk, i-1, j+3, envelope_expression)
-          call loct_parse_block_end(blk)
+        if(parse_block_cols(blk, i-1) > j+3) then
+          call parse_block_string(blk, i-1, j+3, envelope_expression)
+          call parse_block_end(blk)
           call tdf_read(l(i)%phi, trim(envelope_expression), ierr)
-          ierr = loct_parse_block(datasets_check('TDExternalFields'), blk)
+          ierr = parse_block(datasets_check('TDExternalFields'), blk)
         else
           call tdf_init(l(i)%phi)
         end if
@@ -409,7 +409,7 @@ contains
           SAFE_ALLOCATE(x(1:MAX_DIM))
           do j = 1, m%np
             call mesh_r(m, j, r, x = x)
-            call loct_parse_expression(pot_re, pot_im, m%sb%dim, x, r, M_ZERO, trim(scalar_pot_expression))
+            call parse_expression(pot_re, pot_im, m%sb%dim, x, r, M_ZERO, trim(scalar_pot_expression))
             l(i)%v(j) = pot_re
           end do
           SAFE_DEALLOCATE_A(x)
@@ -438,7 +438,7 @@ contains
 
       end do
 
-      call loct_parse_block_end(blk)
+      call parse_block_end(blk)
     end if
 
     call pop_sub()

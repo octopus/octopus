@@ -24,7 +24,7 @@ module kpoints_m
   use geometry_m
   use global_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use messages_m
   use profiling_m
   use units_m
@@ -129,14 +129,14 @@ contains
       !%End
 
       gamma_only_ = gamma_only
-      if(.not.gamma_only_) gamma_only_ = (loct_parse_block(datasets_check('KPointsGrid'), blk) .ne. 0)
+      if(.not.gamma_only_) gamma_only_ = (parse_block(datasets_check('KPointsGrid'), blk) .ne. 0)
 
       this%nik_axis(:) = 1
       this%shifts(:)   = M_ZERO
 
       if(.not.gamma_only_) then
         do ii = 1, periodic_dim
-          call loct_parse_block_int(blk, 0, ii-1, this%nik_axis(ii))
+          call parse_block_integer(blk, 0, ii-1, this%nik_axis(ii))
         end do
 
         if (any(this%nik_axis < 1)) then
@@ -144,13 +144,13 @@ contains
           call write_fatal(1)
         end if
 
-        if(loct_parse_block_n(blk) > 1) then ! we have a shift
+        if(parse_block_n(blk) > 1) then ! we have a shift
           do ii = 1, periodic_dim
-            call loct_parse_block_float(blk, 1, ii-1, this%shifts(ii))
+            call parse_block_float(blk, 1, ii-1, this%shifts(ii))
           end do
         end if
 
-        call loct_parse_block_end(blk)
+        call parse_block_end(blk)
       end if
 
       this%nik_full = product(this%nik_axis(:))
@@ -242,8 +242,8 @@ contains
 
       this%nik_full = 0
       reduced = .false.
-      if(loct_parse_block(datasets_check('KPoints'), blk).ne.0) then
-        if(loct_parse_block(datasets_check('KPointsReduced'), blk) == 0) then
+      if(parse_block(datasets_check('KPoints'), blk).ne.0) then
+        if(parse_block(datasets_check('KPointsReduced'), blk) == 0) then
           reduced = .true.
         else
           read_user_kpoints = .false.
@@ -252,7 +252,7 @@ contains
       end if
       read_user_kpoints = .true.
 
-      this%nik_full = loct_parse_block_n(blk)
+      this%nik_full = parse_block_n(blk)
 
       SAFE_ALLOCATE(this%points_full(1:MAX_DIM, 1:this%nik_full))
       SAFE_ALLOCATE(this%points_full_red(1:MAX_DIM, 1:this%nik_full))
@@ -263,9 +263,9 @@ contains
 
       if(reduced) then
         do ik = 1, this%nik_full
-          call loct_parse_block_float(blk, ik - 1, 0, this%weights_full(ik))
+          call parse_block_float(blk, ik - 1, 0, this%weights_full(ik))
           do idim = 1, periodic_dim
-            call loct_parse_block_float(blk, ik - 1, idim, this%points_full_red(idim, ik))
+            call parse_block_float(blk, ik - 1, idim, this%points_full_red(idim, ik))
           end do
         end do
 
@@ -275,9 +275,9 @@ contains
         end do
       else
         do ik = 1, this%nik_full
-          call loct_parse_block_float(blk, ik - 1, 0, this%weights_full(ik))
+          call parse_block_float(blk, ik - 1, 0, this%weights_full(ik))
           do idim = 1, periodic_dim
-            call loct_parse_block_float(blk, ik - 1, idim, this%points_full(idim, ik))
+            call parse_block_float(blk, ik - 1, idim, this%points_full(idim, ik))
           end do
         end do
 
@@ -289,7 +289,7 @@ contains
           call kpoints_to_reduced(rlattice, this%points_full(:,ik), this%points_full_red(:,ik))
         end do
       end if
-      call loct_parse_block_end(blk)
+      call parse_block_end(blk)
 
       write(message(1), '(a,i4,a)') 'Input: ', this%nik_full, ' k-points were read from the input file'
       call write_info(1)

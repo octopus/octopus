@@ -29,7 +29,7 @@ module fft_m
   use varinfo_m
   use datasets_m
   use loct_math_m
-  use loct_parser_m
+  use parser_m
   use lalg_basic_m
   use c_pointer_m
   use profiling_m
@@ -128,7 +128,7 @@ contains
     !% In some cases, namely when using
     !% the split-operator, or Suzuki-Trotter propagators, this option should be turned off.
     !%End
-    call loct_parse_logical(datasets_check('FFTOptimize'), .true., fft_optimize)
+    call parse_logical(datasets_check('FFTOptimize'), .true., fft_optimize)
     do i = 1, FFT_MAX
       fft_refs(i) = NULL
     end do
@@ -155,7 +155,7 @@ contains
     !% This is the "fast initialization" scheme, in which the plan is merely guessed from "reasonable"
     !% assumptions.
     !%End
-    call loct_parse_int(datasets_check('FFTPreparePlan'), fftw_measure, fft_prepare_plan)
+    call parse_integer(datasets_check('FFTPreparePlan'), fftw_measure, fft_prepare_plan)
     if(.not.varinfo_valid_option('FFTPreparePlan', fft_prepare_plan)) call input_error('FFTPreparePlan')
 
     call pop_sub()

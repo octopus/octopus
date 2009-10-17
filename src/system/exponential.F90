@@ -30,7 +30,7 @@ module exponential_m
   use lalg_adv_m
   use lalg_basic_m
   use loct_math_m
-  use loct_parser_m
+  use parser_m
   use mesh_function_m
   use profiling_m
   use states_m
@@ -154,7 +154,7 @@ contains
     !% 3967 (1984); R. Kosloff, Annu. Rev. Phys. Chem. <b>45</b>, 145 (1994);
     !% C. W. Clenshaw, MTAC <b>9</b>, 118 (1955).
     !%End
-    call loct_parse_int(datasets_check('TDExponentialMethod'), TAYLOR, te%exp_method)
+    call parse_integer(datasets_check('TDExponentialMethod'), TAYLOR, te%exp_method)
 
     select case(te%exp_method)
     case(TAYLOR)
@@ -171,7 +171,7 @@ contains
       !% make sure that this value is not too big, or else the evolution will be
       !% wrong.
       !%End
-      call loct_parse_float(datasets_check('TDLanczosTol'), CNST(1e-5), te%lanczos_tol)
+      call parse_float(datasets_check('TDLanczosTol'), CNST(1e-5), te%lanczos_tol)
       if (te%lanczos_tol <= M_ZERO) call input_error('TDLanczosTol')
 
     case(SPLIT_OPERATOR)
@@ -192,7 +192,7 @@ contains
       !% the order to which the exponential is expanded. For the Lanczos approximation, 
       !% it is the Lanczos-subspace dimension.
       !%End
-      call loct_parse_int(datasets_check('TDExpOrder'), 4, te%exp_order)
+      call parse_integer(datasets_check('TDExpOrder'), 4, te%exp_order)
       if (te%exp_order < 2) call input_error('TDExpOrder')
 
     else if(te%exp_method==SPLIT_OPERATOR.or.te%exp_method==SUZUKI_TROTTER) then

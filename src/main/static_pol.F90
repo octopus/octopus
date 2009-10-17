@@ -33,7 +33,7 @@ module static_pol_m
   use io_function_m
   use io_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use mpi_m
   use mesh_m
   use mesh_function_m
@@ -279,7 +279,7 @@ contains
       !% Magnitude of the static field used to calculate the static polarizability,
       !% if <tt>ResponseMethod = finite_differences</tt>.
       !%End
-      call loct_parse_float(datasets_check('EMStaticField'), &
+      call parse_float(datasets_check('EMStaticField'), &
          units_from_atomic(units_inp%energy / units_inp%length, CNST(0.01)), e_field)
       e_field = units_to_atomic(units_inp%energy / units_inp%length, e_field)
       if (e_field <= M_ZERO) then
@@ -289,7 +289,7 @@ contains
       end if
 
       ! variable defined in em_resp
-      call loct_parse_logical(datasets_check('EMCalcBornCharges'), .false., calc_Born)
+      call parse_logical(datasets_check('EMCalcBornCharges'), .false., calc_Born)
       if (calc_Born) call messages_devel_version("Calculation of Born effective charges")
 
     end subroutine init_

@@ -24,7 +24,7 @@ module mix_m
   use global_m
   use lalg_adv_m
   use lalg_basic_m
-  use loct_parser_m
+  use parser_m
   use messages_m
   use profiling_m
   use varinfo_m
@@ -111,7 +111,7 @@ contains
     !% Broyden scheme [C. G Broyden, <i>Math. Comp.</i> <b>19</b>, 577 (1965); 
     !% D. D. Johnson, <i>Phys. Rev. B</i> <b>38</b>, 12807 (1988)].
     !%End
-    call loct_parse_int(datasets_check(trim(prefix)//'TypeOfMixing'), def, smix%type_of_mixing)
+    call parse_integer(datasets_check(trim(prefix)//'TypeOfMixing'), def, smix%type_of_mixing)
     if(.not.varinfo_valid_option('TypeOfMixing', smix%type_of_mixing)) call input_error('TypeOfMixing')
     call messages_print_var_option(stdout, "TypeOfMixing", smix%type_of_mixing)
 
@@ -123,7 +123,7 @@ contains
     !% Both the linear and the Broyden scheme depend on a "mixing parameter", set by this variable.  Must be 0 < <tt>Mixing</tt> <= 1.
     !%End
     if (smix%type_of_mixing == MIX_LINEAR .or. smix%type_of_mixing == MIX_BROYDEN) then
-      call loct_parse_float(datasets_check(trim(prefix)//'Mixing'), CNST(0.3), smix%alpha)
+      call parse_float(datasets_check(trim(prefix)//'Mixing'), CNST(0.3), smix%alpha)
       if(smix%alpha <= M_ZERO .or. smix%alpha > M_ONE) call input_error('Mixing')
     end if
 
@@ -137,7 +137,7 @@ contains
     !% This number is set by this variable. Must be at least 1.
     !%End
     if (smix%type_of_mixing == MIX_GRPULAY .or. smix%type_of_mixing == MIX_BROYDEN) then
-      call loct_parse_int(datasets_check(trim(prefix)//'MixNumberSteps'), 3, smix%ns)
+      call parse_integer(datasets_check(trim(prefix)//'MixNumberSteps'), 3, smix%ns)
       if(smix%ns <= 1) call input_error('MixNumberSteps')
     end if
 

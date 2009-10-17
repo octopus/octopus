@@ -28,7 +28,7 @@ module restart_m
   use io_m
   use io_function_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use linear_response_m
   use math_m
   use mesh_m
@@ -131,7 +131,7 @@ contains
 
     default = RESTART_BINARY
 
-    call loct_parse_int(datasets_check('RestartFileFormat'), default, parsed)
+    call parse_integer(datasets_check('RestartFileFormat'), default, parsed)
 #ifndef HAVE_NETCDF
     if (parsed == RESTART_NETCDF) then 
       write(message(1),'(a)') 'Error: Octopus was compiled without NetCDF support but'
@@ -161,7 +161,7 @@ contains
     !% <tt>TmpDir</tt> but in a transport calculation, the output of
     !% a periodic dataset is required to calculate the extended ground state.
     !%End
-    call loct_parse_string(datasets_check('RestartDir'), tmpdir, restart_dir)
+    call parse_string(datasets_check('RestartDir'), tmpdir, restart_dir)
     ! Append "/" if necessary.
     if(scan(restart_dir, '/', .true.).lt.1) then
       restart_dir = trim(restart_dir)//'/'
@@ -1221,29 +1221,29 @@ contains
     !%Option normalize_no 0
     !% Do not normalize orbitals.
     !%End
-    if(loct_parse_block(datasets_check('UserDefinedStates'), blk) == 0) then
+    if(parse_block(datasets_check('UserDefinedStates'), blk) == 0) then
 
       call messages_print_stress(stdout, trim('Substitution of orbitals'))
 
       ! find out how many lines (i.e. states) the block has
-      nstates = loct_parse_block_n(blk)
+      nstates = parse_block_n(blk)
 
       ! read all lines
       do ib = 1, nstates
         ! Check that number of columns is five or six.
-        ncols = loct_parse_block_cols(blk, ib-1)
+        ncols = parse_block_cols(blk, ib-1)
         if(ncols.lt.5.or.ncols.gt.6) then
           message(1) = 'Each line in the UserDefinedStates block must have'
           message(2) = 'five or six columns.'
           call write_fatal(2)
         end if
 
-        call loct_parse_block_int(blk, ib-1, 0, idim)
-        call loct_parse_block_int(blk, ib-1, 1, inst)
-        call loct_parse_block_int(blk, ib-1, 2, inik)
+        call parse_block_integer(blk, ib-1, 0, idim)
+        call parse_block_integer(blk, ib-1, 1, inst)
+        call parse_block_integer(blk, ib-1, 2, inik)
 
         ! Calculate from expression or read from file?
-        call loct_parse_block_int(blk, ib-1, 3, state_from)
+        call parse_block_integer(blk, ib-1, 3, state_from)
 
         ! loop over all states
         do id = 1, st%d%dim
@@ -1259,7 +1259,7 @@ contains
 
               case(state_from_formula)
                 ! parse formula string
-                call loct_parse_block_string(                            &
+                call parse_block_string(                            &
                   blk, ib-1, 4, st%user_def_states(id, is, ik))
 
                 write(message(1), '(a,3i5)') 'Substituting state of orbital with k, ist, dim = ', ik, is, id
@@ -1276,7 +1276,7 @@ contains
                   r = sqrt(sum(x(:)**2))
 
                   ! parse user-defined expressions
-                  call loct_parse_expression(psi_re, psi_im, mesh%sb%dim, x, r, M_ZERO, st%user_def_states(id, is, ik))
+                  call parse_expression(psi_re, psi_im, mesh%sb%dim, x, r, M_ZERO, st%user_def_states(id, is, ik))
                   ! fill state
                   st%zpsi(ip, id, is, ik) = psi_re + M_zI*psi_im
                 end do
@@ -1285,7 +1285,7 @@ contains
                 ! The input format can be coded in column four now. As it is
                 ! not used now, we just say "file".
                 ! Read the filename.
-                call loct_parse_block_string(blk, ib-1, 4, filename)
+                call parse_block_string(blk, ib-1, 4, filename)
 
                 write(message(1), '(a,3i5)') 'Substituting state of orbital with k, ist, dim = ', ik, is, id
                 write(message(2), '(2a)') '  with data from file:'
@@ -1302,8 +1302,8 @@ contains
               end select
 
               ! normalize orbital
-              if(loct_parse_block_cols(blk, ib-1).eq.6) then
-                call loct_parse_block_int(blk, ib-1, 5, normalize)
+              if(parse_block_cols(blk, ib-1).eq.6) then
+                call parse_block_integer(blk, ib-1, 5, normalize)
               else
                 normalize = 1
               end if
@@ -1322,7 +1322,7 @@ contains
 
       end do
 
-      call loct_parse_block_end(blk)
+      call parse_block_end(blk)
       call messages_print_stress(stdout)
 
     else

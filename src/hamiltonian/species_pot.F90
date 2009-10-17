@@ -27,7 +27,7 @@ module species_pot_m
   use global_m
   use grid_m
   use io_m
-  use loct_parser_m
+  use parser_m
   use loct_math_m
   use math_m
   use mesh_function_m
@@ -120,7 +120,7 @@ contains
           call mesh_r(m, i, r, x = xx, a = atom%x)
           xx(1:sb%dim) = xx(1:sb%dim) + yy(1:sb%dim)
           r = sqrt(dot_product(xx(1:sb%dim), xx(1:sb%dim)))
-          call loct_parse_expression(rerho, imrho, sb%dim, xx, r, M_ZERO, trim(species_rho_string(s)))
+          call parse_expression(rerho, imrho, sb%dim, xx, r, M_ZERO, trim(species_rho_string(s)))
           rho(i, 1) = rho(i, 1) + rerho
         end do
       end do
@@ -251,7 +251,7 @@ contains
       !% vector has the same direction as a vector provided by the user. In this case,
       !% the <tt>AtomsMagnetDirection</tt> block has to be set.
       !%End
-      call loct_parse_int(datasets_check('GuessMagnetDensity'), INITRHO_FERROMAGNETIC, gmd_opt)
+      call parse_integer(datasets_check('GuessMagnetDensity'), INITRHO_FERROMAGNETIC, gmd_opt)
       if(.not.varinfo_valid_option('GuessMagnetDensity', gmd_opt)) call input_error('GuessMagnetDensity')
       call messages_print_var_option(stdout, 'GuessMagnetDensity', gmd_opt)
     end if
@@ -324,12 +324,12 @@ contains
       !% For spin-polarized calculations the vectors should have only one component and
       !% for non-collinear-spin calculations they should have three components.
       !%End
-      if(loct_parse_block(datasets_check('AtomsMagnetDirection'), blk) < 0) then
+      if(parse_block(datasets_check('AtomsMagnetDirection'), blk) < 0) then
         message(1) = "AtomsMagnetDirection block is not defined "
         call write_fatal(1)
       end if
 
-      if (loct_parse_block_n(blk) /= geo%natoms) then
+      if (parse_block_n(blk) /= geo%natoms) then
         message(1) = "AtomsMagnetDirection block has the wrong number of rows"
         call write_fatal(1)
       end if
@@ -338,11 +338,11 @@ contains
       do ia = 1, geo%natoms
         !Read from AtomsMagnetDirection block 
         if (nspin == 2) then
-          call loct_parse_block_float(blk, ia-1, 0, mag(1))
+          call parse_block_float(blk, ia-1, 0, mag(1))
           lmag = abs(mag(1))
         elseif (nspin == 4) then
           do i = 1, 3
-            call loct_parse_block_float(blk, ia-1, i-1, mag(i))
+            call parse_block_float(blk, ia-1, i-1, mag(i))
             if (abs(mag(i)) < CNST(1.0e-20)) mag(i) = M_ZERO
           end do
           lmag = sqrt(dot_product(mag, mag))
@@ -415,7 +415,7 @@ contains
         end if
       end do
 
-      call loct_parse_block_end(blk)
+      call parse_block_end(blk)
 
     end select
 
@@ -537,7 +537,7 @@ contains
           call mesh_r(gr%mesh, i, r, x = xx, a = pos)
           xx(1:gr%sb%dim) = xx(1:gr%sb%dim) + yy(1:gr%sb%dim)
           r = sqrt(dot_product(xx(1:gr%sb%dim), xx(1:gr%sb%dim)))
-          call loct_parse_expression(rerho, imrho, gr%sb%dim, xx, r, M_ZERO, trim(species_rho_string(s)))
+          call parse_expression(rerho, imrho, gr%sb%dim, xx, r, M_ZERO, trim(species_rho_string(s)))
           rho(i) = rho(i) - rerho
         end do
       end do

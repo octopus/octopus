@@ -27,7 +27,7 @@ module linear_solver_m
   use lalg_basic_m
   use linear_response_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use mesh_m
   use mesh_function_m
@@ -139,10 +139,10 @@ contains
     defsolver_ = LS_QMR_SYMMETRIZED
     if(present(def_solver)) defsolver_ = def_solver
 
-    if (loct_parse_isdef(datasets_check(trim(prefix)//"LinearSolver")) /= 0 ) then 
-      call loct_parse_int  (datasets_check(trim(prefix)//"LinearSolver"), defsolver_, fsolver)
+    if (parse_isdef(datasets_check(trim(prefix)//"LinearSolver")) /= 0 ) then 
+      call parse_integer  (datasets_check(trim(prefix)//"LinearSolver"), defsolver_, fsolver)
     else
-      call loct_parse_int  (datasets_check("LinearSolver"), defsolver_, fsolver)
+      call parse_integer  (datasets_check("LinearSolver"), defsolver_, fsolver)
     end if
 
     !the last 2 digits select the linear solver
@@ -158,10 +158,10 @@ contains
     !% Maximum number of iterations the linear solver does, even if
     !% convergence is not achieved.
     !%End
-    if (loct_parse_isdef(datasets_check(trim(prefix)//"LinearSolverMaxIter")) /= 0) then 
-      call loct_parse_int  (datasets_check(trim(prefix)//"LinearSolverMaxIter"), 1000, this%max_iter)
+    if (parse_isdef(datasets_check(trim(prefix)//"LinearSolverMaxIter")) /= 0) then 
+      call parse_integer  (datasets_check(trim(prefix)//"LinearSolverMaxIter"), 1000, this%max_iter)
     else
-      call loct_parse_int  (datasets_check("LinearSolverMaxIter"), 1000, this%max_iter)
+      call parse_integer  (datasets_check("LinearSolverMaxIter"), 1000, this%max_iter)
     end if
 
     write(message(1),'(a)') 'Linear Solver'

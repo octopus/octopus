@@ -24,7 +24,7 @@ module profiling_m
   use global_m
   use io_m
   use loct_m
-  use loct_parser_m
+  use parser_m
 #ifdef HAVE_PAPI
   use papi_m
 #endif
@@ -220,7 +220,7 @@ contains
     !% As well as the time, full memory usage is reported.
     !%End
 
-    call loct_parse_int('ProfilingMode', 0, prof_vars%mode)
+    call parse_integer('ProfilingMode', 0, prof_vars%mode)
     if(.not.varinfo_valid_option('ProfilingMode', prof_vars%mode, is_flag=.true.)) then
       call input_error('ProfilingMode')
     end if
@@ -260,7 +260,7 @@ contains
       !% is requested (in kb). Note that this variable only works when 
       !% <tt>ProfilingMode = prof_memory(_full)</tt>.
       !%End
-      call loct_parse_int('MemoryLimit', -1, ii)
+      call parse_integer('MemoryLimit', -1, ii)
       prof_vars%memory_limit = int(ii, 8)*1024
     end if
 

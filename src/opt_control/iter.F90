@@ -25,7 +25,7 @@ module opt_control_iter_m
   use grid_m
   use h_sys_output_m
   use io_m
-  use loct_parser_m
+  use parser_m
   use messages_m
   use opt_control_parameters_m
   use profiling_m
@@ -92,7 +92,7 @@ contains
     !% of the QOCT equations, <i>i.e.</i> a critical point of the QOCT functional (not
     !% necessarily a maximum, and not necessarily the global maximum). 
     !%End
-    call loct_parse_float(datasets_check('OCTEps'), CNST(1.0e-6), iterator%eps)
+    call parse_float(datasets_check('OCTEps'), CNST(1.0e-6), iterator%eps)
     if(iterator%eps < M_ZERO) iterator%eps = tiny(CNST(1.0))
 
     !%Variable OCTMaxIter
@@ -103,7 +103,7 @@ contains
     !% The maximum number of iterations.
     !% Typical values range from 10-100.
     !%End
-    call loct_parse_int(datasets_check('OCTMaxIter'), 10, iterator%ctr_iter_max)
+    call parse_integer(datasets_check('OCTMaxIter'), 10, iterator%ctr_iter_max)
 
     if( iterator%ctr_iter_max < 0 .and. iterator%eps < M_ZERO ) then
       message(1) = "OCTMaxIter and OCTEps cannot be both < 0."

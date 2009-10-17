@@ -25,7 +25,7 @@ module ion_dynamics_m
   use global_m
   use io_m
   use loct_math_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use messages_m
   use mpi_m
@@ -120,7 +120,7 @@ contains
     !% Nos&eacute;-Hoover thermostat.
     !%End
     
-    call loct_parse_int(datasets_check('MoveIons'), STATIC_IONS, this%method)
+    call parse_integer(datasets_check('MoveIons'), STATIC_IONS, this%method)
     if(.not.varinfo_valid_option('MoveIons', this%method)) call input_error('MoveIons')
     call messages_print_var_option(stdout, 'MoveIons', this%method)
 
@@ -144,11 +144,11 @@ contains
     !%End
 
     ! we now load the velocities, either from the temperature, from the input, or from a file
-    if(loct_parse_isdef(datasets_check('RandomVelocityTemp')).ne.0) then
+    if(parse_isdef(datasets_check('RandomVelocityTemp')).ne.0) then
 
       if( mpi_grp_is_root(mpi_world)) then
         call loct_ran_init(random_gen_pointer)
-        call loct_parse_float(datasets_check('RandomVelocityTemp'), M_ZERO, temperature)
+        call parse_float(datasets_check('RandomVelocityTemp'), M_ZERO, temperature)
       end if
 
       do i = 1, geo%natoms
@@ -250,15 +250,15 @@ contains
     geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
 
     if(this%method == NOSE_HOOVER) then
-      call loct_parse_float(datasets_check("NHTStart"), CNST(0.0), this%nh_t_start)
+      call parse_float(datasets_check("NHTStart"), CNST(0.0), this%nh_t_start)
       this%nh_t_start = P_Kb*this%nh_t_start
       
-      call loct_parse_float(datasets_check("NHTEnd"), CNST(300.0), this%nh_t_end)
+      call parse_float(datasets_check("NHTEnd"), CNST(300.0), this%nh_t_end)
       this%nh_t_end = P_Kb*this%nh_t_end
 
-      call loct_parse_float(datasets_check("NHEndTime"), CNST(200.0), this%nh_end_time)
+      call parse_float(datasets_check("NHEndTime"), CNST(200.0), this%nh_end_time)
       
-      call loct_parse_float(datasets_check("NHMass"), CNST(300.0), this%nh1%mass)
+      call parse_float(datasets_check("NHMass"), CNST(300.0), this%nh1%mass)
       this%nh2%mass = this%nh1%mass
 
       this%nh1%pos = M_ZERO

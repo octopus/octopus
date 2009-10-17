@@ -30,7 +30,7 @@ module poisson_fft_m
   use lalg_basic_m
   use loct_m
   use loct_math_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use mesh_function_m
   use mesh_m
@@ -156,7 +156,7 @@ contains
     ! dimensions may have been optimized
     db(1:3) = fft_cf%n(1:3)
 
-    call loct_parse_float(datasets_check('PoissonCutoffRadius'),&
+    call parse_float(datasets_check('PoissonCutoffRadius'),&
       maxval(db(:)*gr%mesh%h(:)/M_TWO)/units_inp%length%factor , r_c)
     r_c = r_c*units_inp%length%factor
     write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
@@ -241,7 +241,7 @@ contains
     ! dimensions may have been optimized
     db(1:3) = fft_cf%n(1:3)
 
-    call loct_parse_float(datasets_check('PoissonCutoffRadius'),&
+    call parse_float(datasets_check('PoissonCutoffRadius'),&
       maxval(db(:)*gr%mesh%h(:)/M_TWO)/units_inp%length%factor , r_c)
     r_c = r_c*units_inp%length%factor
     write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
@@ -376,7 +376,7 @@ contains
     db(1:3) = fft_cf%n(1:3)
 
     if (poisson_solver .ne. POISSON_FFT_CORRECTED) then
-      call loct_parse_float(datasets_check('PoissonCutoffRadius'),&
+      call parse_float(datasets_check('PoissonCutoffRadius'),&
         maxval(db(:)*gr%mesh%h(:)/M_TWO)/units_inp%length%factor , r_c)
       r_c = r_c*units_inp%length%factor
       write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
@@ -468,7 +468,7 @@ contains
     ! dimensions may have been optimized
     db(1:3) = fft_cf%n(1:3)
 
-    call loct_parse_float(datasets_check('PoissonCutoffRadius'),&
+    call parse_float(datasets_check('PoissonCutoffRadius'),&
       maxval(db(1:2)*gr%mesh%h(1:2)/M_TWO)/units_inp%length%factor , r_c)
     r_c = r_c*units_inp%length%factor
     write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &

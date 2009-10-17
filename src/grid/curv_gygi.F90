@@ -26,7 +26,7 @@ module curv_gygi_m
   use datasets_m
   use geometry_m
   use global_m
-  use loct_parser_m
+  use parser_m
   use messages_m
   use profiling_m
   use root_solver_m
@@ -78,7 +78,7 @@ contains
     !% Rev. B 52, R2229 (1995)]
     !% It must be larger than zero.
     !%End
-    call loct_parse_float(datasets_check('CurvGygiA'), M_HALF, cv%A)
+    call parse_float(datasets_check('CurvGygiA'), M_HALF, cv%A)
     !%Variable CurvGygiAlpha
     !%Type float
     !%Section Mesh::Curvilinear::Gygi
@@ -90,7 +90,7 @@ contains
     !% The default is two atomic units.
     !% It must be larger than zero.
     !%End
-    call loct_parse_float(datasets_check('CurvGygiAlpha'), units_from_atomic(units_inp%length, M_TWO), cv%alpha)
+    call parse_float(datasets_check('CurvGygiAlpha'), units_from_atomic(units_inp%length, M_TWO), cv%alpha)
     !%Variable CurvGygiBeta
     !%Type float
     !%Section Mesh::Curvilinear::Gygi
@@ -100,7 +100,7 @@ contains
     !% Phys. Rev. B 52, R2229 (1995)]. The default is four atomic units.
     !% It must be larger than zero.
     !%End
-    call loct_parse_float(datasets_check('CurvGygiBeta'),  units_from_atomic(units_inp%length, M_FOUR), cv%beta)
+    call parse_float(datasets_check('CurvGygiBeta'),  units_from_atomic(units_inp%length, M_FOUR), cv%beta)
 
     if(cv%a<=M_ZERO)     call input_error('CurvGygiA')
     if(cv%alpha<=M_ZERO) call input_error('CurvGygiAlpha')

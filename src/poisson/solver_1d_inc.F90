@@ -24,7 +24,7 @@ subroutine poisson1d_init(gr)
 
   call push_sub('solver_1D.poisson1d_init')
 
-  call loct_parse_float(datasets_check('Poisson1DSoftCoulombParam'), &
+  call parse_float(datasets_check('Poisson1DSoftCoulombParam'), &
     M_ONE, poisson_soft_coulomb_param)
 
   select case(poisson_solver)

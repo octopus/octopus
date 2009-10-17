@@ -23,7 +23,7 @@ module scalar_mesh_m
   use datasets_m
   use global_m
   use io_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use messages_m
   use profiling_m
@@ -89,16 +89,16 @@ contains
     !%Option gauss_legendre 5
     !% Gauss-Legendre mesh
     !%End
-    call loct_parse_int  (datasets_check(trim(label)//'MeshType'),             1, sm%mtype)
+    call parse_integer  (datasets_check(trim(label)//'MeshType'),             1, sm%mtype)
     if( sm%mtype.lt.MESH_MINVAL.or.sm%mtype.gt.MESH_MAXVAL ) then
       call input_error(datasets_check(trim(label)//'MeshType'))
     end if
-    call loct_parse_int  (datasets_check(trim(label)//'MeshNPoints'),          0, sm%np)
-    call loct_parse_float(datasets_check(trim(label)//'MeshMin'),      CNST(0.0), sm%min)
-    call loct_parse_float(datasets_check(trim(label)//'MeshMax'),      CNST(4.0), sm%max)
-    call loct_parse_float(datasets_check(trim(label)//'MeshCenter'),   CNST(2.0), sm%center)
-    call loct_parse_float(datasets_check(trim(label)//'MeshAlpha1'),   CNST(0.3), sm%alpha1)
-    call loct_parse_float(datasets_check(trim(label)//'MeshAlpha2'),   CNST(0.3), sm%alpha2)
+    call parse_integer  (datasets_check(trim(label)//'MeshNPoints'),          0, sm%np)
+    call parse_float(datasets_check(trim(label)//'MeshMin'),      CNST(0.0), sm%min)
+    call parse_float(datasets_check(trim(label)//'MeshMax'),      CNST(4.0), sm%max)
+    call parse_float(datasets_check(trim(label)//'MeshCenter'),   CNST(2.0), sm%center)
+    call parse_float(datasets_check(trim(label)//'MeshAlpha1'),   CNST(0.3), sm%alpha1)
+    call parse_float(datasets_check(trim(label)//'MeshAlpha2'),   CNST(0.3), sm%alpha2)
 
     ! a few sanity checks
     if(sm%min.ge.sm%max) then

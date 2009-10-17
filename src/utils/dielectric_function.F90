@@ -24,7 +24,7 @@ program dielectric_function
   use messages_m
   use datasets_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use io_m
   use units_m
   use spectrum_m
@@ -44,7 +44,7 @@ program dielectric_function
   ! Initialize stuff
   call global_init()
   call parser_init()
-  call loct_parse_int('DebugLevel', 0, conf%debug_level)
+  call parse_integer('DebugLevel', 0, conf%debug_level)
   if(conf%debug_level>0) then
     in_debug_mode = .true.
   else
@@ -59,13 +59,13 @@ program dielectric_function
 
   call spectrum_init(s)
     
-  if(loct_parse_block(datasets_check('GaugeVectorField'), blk) == 0) then
+  if(parse_block(datasets_check('GaugeVectorField'), blk) == 0) then
     
     do ii = 1, MAX_DIM
-      call loct_parse_block_float(blk, 0, ii - 1, vecpot0(ii))
+      call parse_block_float(blk, 0, ii - 1, vecpot0(ii))
     end do
     
-    call loct_parse_block_end(blk)
+    call parse_block_end(blk)
 
   else
     

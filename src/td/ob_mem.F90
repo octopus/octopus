@@ -30,7 +30,7 @@ module ob_mem_m
   use lalg_adv_m
   use lalg_basic_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use messages_m
   use mpi_m
@@ -125,7 +125,7 @@ contains
     !%Description
     !% Decides when to consider the memory coefficients converged.
     !%End
-    call loct_parse_float(datasets_check('MemoryTol'), CNST(1e-12), mem_tolerance)
+    call parse_float(datasets_check('MemoryTol'), CNST(1e-12), mem_tolerance)
     if(mem_tolerance.le.M_ZERO) then
       write(message(1), '(a,f14.6,a)') "Input : '", mem_tolerance, "' is not a valid MemoryTol."
       message(2) = '(0 < TDTransMemTol)'
@@ -139,7 +139,7 @@ contains
     !%Description
     !% Sets the maximum iteration number to converge the memory coefficients.
     !%End
-    call loct_parse_int(datasets_check('MemoryMaxIter'), 500, mem_iter)
+    call parse_integer(datasets_check('MemoryMaxIter'), 500, mem_iter)
     if(mem_iter.le.0) then
       write(message(1), '(a,i6,a)') "Input : '", mem_iter, "' is not a valid MemoryMaxIter."
       message(2) = '(0 <= TDTransMemMaxIter)'

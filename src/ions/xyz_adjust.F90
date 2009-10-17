@@ -24,7 +24,7 @@ module xyz_adjust_m
   use global_m
   use geometry_m
   use lalg_adv_m
-  use loct_parser_m
+  use parser_m
   use messages_m
   use species_m
 
@@ -53,11 +53,11 @@ contains
     if(geo%natoms <= 1) return
 
     ! get to axis
-    if(loct_parse_block(datasets_check('MainAxis'), blk)==0) then
-      call loct_parse_block_float(blk, 0, 0, to(1))
-      call loct_parse_block_float(blk, 0, 1, to(2))
-      call loct_parse_block_float(blk, 0, 2, to(3))
-      call loct_parse_block_end(blk)
+    if(parse_block(datasets_check('MainAxis'), blk)==0) then
+      call parse_block_float(blk, 0, 0, to(1))
+      call parse_block_float(blk, 0, 1, to(2))
+      call parse_block_float(blk, 0, 2, to(3))
+      call parse_block_end(blk)
     else
       to(1) = M_ONE; to(2) = M_ZERO; to(3) = M_ZERO
     end if
@@ -89,7 +89,7 @@ contains
     !%Option large_axis 3
     !% The larger axis of the molecule.
     !%End
-    call loct_parse_int(datasets_check('AxisType'), INERTIA, axis_type)
+    call parse_integer(datasets_check('AxisType'), INERTIA, axis_type)
 
     select case(axis_type)
     case(INERTIA, PSEUDO)

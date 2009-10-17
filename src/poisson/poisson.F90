@@ -28,7 +28,7 @@ module poisson_m
   use io_m
   use io_function_m
   use loct_math_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use mesh_m
   use mesh_function_m
@@ -118,7 +118,7 @@ contains
     !% among the parallelization-in-domains groups.
     !%End
 
-    call loct_parse_logical(datasets_check('ParallelizationPoissonAllNodes'), .true., all_nodes_default)
+    call parse_logical(datasets_check('ParallelizationPoissonAllNodes'), .true., all_nodes_default)
 #endif
 
     select case(gr%mesh%sb%dim)
@@ -179,7 +179,7 @@ contains
       else
         default_solver = POISSON_FFT_NOCUT
       end if
-      call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver)
+      call parse_integer(datasets_check('PoissonSolver'), default_solver, poisson_solver)
 
       select case(gr%sb%periodic_dim)
       case(0)
@@ -213,7 +213,7 @@ contains
         default_solver = POISSON_FFT_SPH
       end if
 
-      call loct_parse_int(datasets_check('PoissonSolver'), gr%sb%periodic_dim, poisson_solver)
+      call parse_integer(datasets_check('PoissonSolver'), gr%sb%periodic_dim, poisson_solver)
       if( (poisson_solver .ne. POISSON_FFT_SPH)         .and. &
           (poisson_solver .ne. POISSON_DIRECT_SUM_2D)   .and. &
           (poisson_solver .ne. 1)                       .and. &
@@ -253,7 +253,7 @@ contains
       if (gr%mesh%use_curvilinear) default_solver = POISSON_CG_CORRECTED
       if (gr%sb%periodic_dim > 0) default_solver = gr%sb%periodic_dim
       
-      call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver)
+      call parse_integer(datasets_check('PoissonSolver'), default_solver, poisson_solver)
       if(poisson_solver < POISSON_FFT_SPH .or. poisson_solver > POISSON_SETE ) then
         call input_error('PoissonSolver')
       end if

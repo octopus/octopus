@@ -27,7 +27,7 @@ module io_function_m
   use index_m
   use io_m
   use io_binary_m
-  use loct_parser_m
+  use parser_m
   use mesh_m
   use messages_m
   use mpi_m
@@ -168,7 +168,7 @@ contains
     !%Option xyz 65536
     !% Geometry will be output in XYZ format. Does not affect other outputs.
     !%End
-    call loct_parse_int(datasets_check('OutputHow'), 0, how)
+    call parse_integer(datasets_check('OutputHow'), 0, how)
     if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
       call input_error('OutputHow')
     end if

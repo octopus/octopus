@@ -25,7 +25,7 @@ module multigrid_m
   use datasets_m
   use geometry_m
   use global_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use mesh_m
   use mesh_init_m
@@ -102,7 +102,7 @@ contains
     !% Calculate the optimal number of levels for the grid.
     !%End
 
-    call loct_parse_int(datasets_check('MultigridLevels'), 0, n_levels)
+    call parse_integer(datasets_check('MultigridLevels'), 0, n_levels)
 
     if ( n_levels <= 0 )then
       n_levels=n_levels-3

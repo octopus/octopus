@@ -25,7 +25,7 @@ program oct_test
   use global_m
   use io_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use messages_m
   use mpi_m
   use multicomm_m
@@ -47,7 +47,7 @@ program oct_test
 
   conf%devel_version = .true.
 
-  call loct_parse_int('DebugLevel', 0, conf%debug_level)
+  call parse_integer('DebugLevel', 0, conf%debug_level)
   if(conf%debug_level>0) then
     in_debug_mode = .true.
   else
@@ -63,11 +63,11 @@ program oct_test
   !%Option hartree_test 1
   !% Tests the various Hartree solvers.
   !%End
-  call loct_parse_int('WhichTest', HARTREE_TEST, which_test)
+  call parse_integer('WhichTest', HARTREE_TEST, which_test)
   !if(.not.varinfo_valid_option('CalculationMode', calc_mode)) call input_error('CalculationMode')
   call datasets_init(which_test)
 
-  call loct_parse_int(datasets_check('Dimensions'), 3, calc_dim)
+  call parse_integer(datasets_check('Dimensions'), 3, calc_dim)
   if( calc_dim > 3 .or. calc_dim < 1) call input_error('Dimensions')
 
   call io_init()

@@ -26,7 +26,7 @@ module xc_m
   use grid_m
   use io_function_m
   use lalg_basic_m
-  use loct_parser_m
+  use parser_m
   use mesh_m
   use mesh_function_m
   use messages_m
@@ -201,7 +201,7 @@ contains
         !% Use the OEP equation to obtain the XC potential. This is the "correct" way
         !% to do it within DFT.
         !%End
-        call loct_parse_int(datasets_check('MGGAimplementation'), 1, xcs%mGGA_implementation)
+        call parse_integer(datasets_check('MGGAimplementation'), 1, xcs%mGGA_implementation)
         if(.not.varinfo_valid_option('MGGAimplementation', xcs%mGGA_implementation)) &
           call input_error('xcs%mGGA_implementation')
       end if
@@ -228,7 +228,7 @@ contains
       end if
 
       ! The description of this variable can be found in file src/xc/functionals_list.F90
-      call loct_parse_int(datasets_check('XCFunctional'), default, val)
+      call parse_integer(datasets_check('XCFunctional'), default, val)
 
       c_id = val / 1000
       x_id = val - c_id*1000
@@ -246,7 +246,7 @@ contains
       !% The same functional defined by <tt>XCFunctional</tt>.
       !%End
 
-      call loct_parse_int(datasets_check('XCKernel'), default, val)
+      call parse_integer(datasets_check('XCKernel'), default, val)
 
       if( -1 == val ) then
         ck_id = c_id

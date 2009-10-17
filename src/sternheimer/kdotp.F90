@@ -33,7 +33,7 @@ module kdotp_m
   use lalg_basic_m
   use linear_response_m
   use linear_solver_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use mesh_m
   use mesh_function_m
@@ -235,10 +235,10 @@ contains
       !% evaluate the contributions in the occupied subspace.
       !%End      
 
-      call loct_parse_int(datasets_check('KdotP_OccupiedSolutionMethod'), &
+      call parse_integer(datasets_check('KdotP_OccupiedSolutionMethod'), &
         0, kdotp_vars%occ_solution_method)
 
-      call loct_parse_float(datasets_check('DegeneracyThreshold'), &
+      call parse_float(datasets_check('DegeneracyThreshold'), &
         units_from_atomic(units_inp%energy, CNST(1e-5)), kdotp_vars%degen_thres)
       kdotp_vars%degen_thres = units_to_atomic(units_inp%energy, kdotp_vars%degen_thres)
       ! Note: this variable is defined in src/states_calc.F90, in states_degeneracy_matrix
@@ -252,7 +252,7 @@ contains
       !% Not recommended.
       !%End
 
-      call loct_parse_float(datasets_check('KdotP_Eta'), M_ZERO, kdotp_vars%eta)
+      call parse_float(datasets_check('KdotP_Eta'), M_ZERO, kdotp_vars%eta)
       kdotp_vars%eta = units_to_atomic(units_inp%energy, kdotp_vars%eta)
 
       !%Variable KdotP_CalculateEffectiveMasses
@@ -264,7 +264,7 @@ contains
       !% to calculate effective masses.
       !%End      
 
-      call loct_parse_logical(datasets_check('KdotP_CalculateEffectiveMasses'), &
+      call parse_logical(datasets_check('KdotP_CalculateEffectiveMasses'), &
         .true., calc_eff_mass)
 
       call pop_sub()

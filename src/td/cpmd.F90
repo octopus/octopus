@@ -30,7 +30,7 @@ module cpmd_m
   use lalg_basic_m
   use loct_m
   use loct_math_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use mesh_m
   use mesh_function_m
@@ -96,7 +96,7 @@ contains
     !% wavefunctions in the Car-Parrinello formalism.
     !%End
     
-    call loct_parse_float(datasets_check('CPElectronicMass'), CNST(1.0), this%emass)
+    call parse_float(datasets_check('CPElectronicMass'), CNST(1.0), this%emass)
 
     !%Variable CPMethod
     !%Type integer
@@ -111,7 +111,7 @@ contains
     !% RATTLE/Velocity Verlet integrator.
     !%End
 
-    call loct_parse_int(datasets_check('CPMethod'), VERLET, this%method)
+    call parse_integer(datasets_check('CPMethod'), VERLET, this%method)
     if(.not.varinfo_valid_option('CPMethod', this%method)) call input_error('CPMethod')
     call messages_print_var_option(stdout, 'CPMethod', this%method)
     

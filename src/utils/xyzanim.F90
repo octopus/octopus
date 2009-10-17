@@ -24,7 +24,7 @@ program xyzanim
   use messages_m
   use datasets_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use io_m
   use units_m
   use geometry_m
@@ -52,7 +52,7 @@ program xyzanim
   xyzfile = 'td.general/movie.xyz'
 
   ! how often do we sample?
-  call loct_parse_int(datasets_check('AnimationSampling'), 100, sampling)
+  call parse_integer(datasets_check('AnimationSampling'), 100, sampling)
   if(sampling < 1) then
     message(1) = 'Sampling rate (AnimationSampling) should be bigger than 0'
     call write_fatal(1)

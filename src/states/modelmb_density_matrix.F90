@@ -30,7 +30,7 @@ module modelmb_density_matrix_m
   use index_m
   use lalg_adv_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use mesh_m
   use mesh_function_m
   use messages_m
@@ -93,16 +93,16 @@ contains
     !%
     !%End
    
-    if(loct_parse_block(datasets_check('DensityMatricestoCalc'), blk)/=0) then
+    if(parse_block(datasets_check('DensityMatricestoCalc'), blk)/=0) then
      message(1) = 'To print out density matrices, you must specify the DensityMatricestoCalc block in input'
      call write_fatal(1)
     end if
    
-    ncols = loct_parse_block_cols(blk, 0)
+    ncols = parse_block_cols(blk, 0)
     if(ncols /= 3 ) then
       call input_error("DensityMatricestoCalc")
     end if
-    denmat%ndensmat_to_calculate=loct_parse_block_n(blk)
+    denmat%ndensmat_to_calculate=parse_block_n(blk)
     if (denmat%ndensmat_to_calculate < 0 .or. &
         denmat%ndensmat_to_calculate > st%modelmbparticles%nparticle) then
       call input_error("DensityMatricestoCalc")
@@ -113,16 +113,16 @@ contains
     SAFE_ALLOCATE(denmat%nnatorb_prt(1:denmat%ndensmat_to_calculate))
    
     do ipart=1,denmat%ndensmat_to_calculate
-      call loct_parse_block_string(blk, ipart-1, 0, denmat%labels(ipart))
-      call loct_parse_block_int(blk, ipart-1, 1, denmat%particle_kept(ipart))
-      call loct_parse_block_int(blk, ipart-1, 2, denmat%nnatorb_prt(ipart))
+      call parse_block_string(blk, ipart-1, 0, denmat%labels(ipart))
+      call parse_block_integer(blk, ipart-1, 1, denmat%particle_kept(ipart))
+      call parse_block_integer(blk, ipart-1, 2, denmat%nnatorb_prt(ipart))
 
       write (message(1),'(a,a)') 'labels_densmat = ', denmat%labels(ipart)
       write (message(2),'(a,i6)') 'particle_kept_densmat = ', denmat%particle_kept(ipart)
       write (message(3),'(a,i6)') 'nnatorb_prt_densmat = ', denmat%nnatorb_prt(ipart)
       call write_info(3)
     end do
-    call loct_parse_block_end(blk)
+    call parse_block_end(blk)
     ! END reading in of input var block DensityMatricestoCalc
 
     denmat%dirname = trim(dir)

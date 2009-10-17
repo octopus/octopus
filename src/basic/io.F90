@@ -23,7 +23,7 @@ module io_m
   use datasets_m
   use global_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use messages_m
   use mpi_m
 
@@ -95,7 +95,7 @@ contains
     !% be changed by setting this variable: if you give it a name (other than "-")
     !% the output stream is printed in that file instead.
     !%End
-    call loct_parse_string('stdout', '-', filename)
+    call parse_string('stdout', '-', filename)
     stdout = 6
     if(trim(filename).ne.'-') then
       close(stdout)
@@ -111,7 +111,7 @@ contains
     !% be changed by setting this variable: if you give it a name (other than "-")
     !% the output stream is printed in that file instead.
     !%End
-    call loct_parse_string('stderr', '-', filename)
+    call parse_string('stderr', '-', filename)
     stderr = 0
     if(trim(filename).ne.'-') then
       close(stderr)
@@ -128,7 +128,7 @@ contains
     !% be changed by setting this variable: if you give it a name (other than ".")
     !% the files are written and read in that directory.
     !%End
-    call loct_parse_string('WorkDir', '.', work_dir)
+    call parse_string('WorkDir', '.', work_dir)
     ! ... and if necessary create workdir (will not harm if work_dir is already there)
     if (work_dir.ne.'.') call loct_mkdir(trim(work_dir))
 
@@ -146,7 +146,7 @@ contains
     !% flushed to <tt>messages.stdout</tt> and <tt>messages.stderr</tt>, if this variable is
     !% set to yes.
     !%End
-    call loct_parse_logical('FlushMessages', .false., flush_messages)
+    call parse_logical('FlushMessages', .false., flush_messages)
 
     ! delete files so that we start writing to empty ones
     if(flush_messages) then
@@ -171,7 +171,7 @@ contains
       !% reversing the file creation of the node hooks, to run the master first followed
       !% by a compute node.
       !%End
-      call loct_parse_logical('MPIDebugHook', .false., mpi_debug_hook)
+      call parse_logical('MPIDebugHook', .false., mpi_debug_hook)
       if (mpi_debug_hook) then
         call loct_gettimeofday(sec, usec)
         call epoch_time_diff(sec,usec)
@@ -220,7 +220,7 @@ contains
     !% The name of the directory where <tt>Octopus</tt> stores binary information
     !% like the wavefunctions.
     !%End
-    call loct_parse_string('TmpDir', trim(current_label)//'restart/', tmpdir)
+    call parse_string('TmpDir', trim(current_label)//'restart/', tmpdir)
     call io_mkdir(tmpdir, is_tmp=.true.)
 
     ! create static directory

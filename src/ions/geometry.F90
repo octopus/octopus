@@ -26,7 +26,7 @@ module geometry_m
   use global_m
   use io_m
   use loct_math_m
-  use loct_parser_m
+  use parser_m
   use messages_m
   use multicomm_m
   use mpi_m
@@ -284,7 +284,7 @@ contains
 
     ! Reads the spin components. This is read here, as well as in states_init,
     ! to be able to pass it to the pseudopotential initializations subroutine.
-    call loct_parse_int(datasets_check('SpinComponents'), 1, ispin)
+    call parse_integer(datasets_check('SpinComponents'), 1, ispin)
     if(.not.varinfo_valid_option('SpinComponents', ispin)) call input_error('SpinComponents')
     ispin = min(2, ispin)
 

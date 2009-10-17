@@ -34,7 +34,7 @@ module grid_m
   use multicomm_m
   use multigrid_m
   use nl_operator_m
-  use loct_parser_m
+  use parser_m
   use profiling_m
   use simul_box_m
   use stencil_m
@@ -87,7 +87,7 @@ contains
     !% of the forces or other sensitive quantities. The default is no.
     !%End
     if (gr%sb%dim == 3) then 
-      call loct_parse_logical(datasets_check('UseFineMesh'), .false., gr%have_fine_mesh)
+      call parse_logical(datasets_check('UseFineMesh'), .false., gr%have_fine_mesh)
     else
       gr%have_fine_mesh = .false.
     end if

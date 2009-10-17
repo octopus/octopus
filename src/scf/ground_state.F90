@@ -26,7 +26,7 @@ module ground_state_m
   use grid_m
   use hamiltonian_m
   use lcao_m
-  use loct_parser_m
+  use parser_m
   use mesh_m
   use messages_m
   use mpi_debug_m
@@ -140,7 +140,7 @@ contains
       !% Using the LCAO density as a new guess density may improve the convergence, but can
       !% also slow it down or yield wrong results (especially for spin-polarized calculations).
       !%End
-      call loct_parse_int(datasets_check('LCAOStart'), lcao_start_default, lcao_start)
+      call parse_integer(datasets_check('LCAOStart'), lcao_start_default, lcao_start)
       if(.not.varinfo_valid_option('LCAOStart', lcao_start)) call input_error('LCAOStart')
       call messages_print_var_option(stdout, 'LCAOStart', lcao_start)
 

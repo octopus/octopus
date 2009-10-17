@@ -31,7 +31,7 @@ module output_me_m
   use mesh_function_m
   use messages_m
   use loct_math_m
-  use loct_parser_m
+  use parser_m
   use mpi_m
   use mpi_lib_m
   use poisson_m
@@ -96,7 +96,7 @@ contains
     !% TODO
     !%End
 
-    call loct_parse_int(datasets_check('OutputMatrixElements'), 0, this%what)
+    call parse_integer(datasets_check('OutputMatrixElements'), 0, this%what)
     if(.not.varinfo_valid_option('OutputMatrixElements', this%what, is_flag=.true.)) then
       call input_error('OutputMatrixElements')
     end if
@@ -115,7 +115,7 @@ contains
       !% respectively the (1,-1), (1,0) and (1,1) multipole matrix elements
       !% between Kohn-Sham states.
       !%End
-      call loct_parse_int(datasets_check('OutputMatrixElementsL'), 1, this%ks_multipoles)
+      call parse_integer(datasets_check('OutputMatrixElementsL'), 1, this%ks_multipoles)
     end if
 
     call pop_sub()

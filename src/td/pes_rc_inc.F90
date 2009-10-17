@@ -43,9 +43,9 @@ subroutine PES_rc_init(v, m, st, save_iter)
   !% <br>%
   !% </tt>
   !%End
-  if (loct_parse_block(datasets_check('PES_rc_points'), blk) < 0) call input_error('PES_rc_points')
+  if (parse_block(datasets_check('PES_rc_points'), blk) < 0) call input_error('PES_rc_points')
 
-  v%npoints = loct_parse_block_n(blk)
+  v%npoints = parse_block_n(blk)
 
   ! setup filenames and read points
   SAFE_ALLOCATE(v%filenames(1:v%npoints))
@@ -53,9 +53,9 @@ subroutine PES_rc_init(v, m, st, save_iter)
   do i = 1, v%npoints
     write(v%filenames(i), '(a,i2.2,a)') 'PES_rc.', i, '.out'
 
-    call loct_parse_block_float(blk, i-1, 0, x(1))
-    call loct_parse_block_float(blk, i-1, 1, x(2))
-    call loct_parse_block_float(blk, i-1, 2, x(3))
+    call parse_block_float(blk, i-1, 0, x(1))
+    call parse_block_float(blk, i-1, 1, x(2))
+    call parse_block_float(blk, i-1, 2, x(3))
 
     ! adjust units
     x = x*units_inp%length%factor
@@ -63,7 +63,7 @@ subroutine PES_rc_init(v, m, st, save_iter)
     v%points(i) = m%idx%Lxyz_inv(int(x(1)/m%h(1)), int(x(2)/m%h(2)), int(x(3)/m%h(3)))
   end do
 
-  call loct_parse_block_end(blk)
+  call parse_block_end(blk)
 
   SAFE_ALLOCATE(v%wf(1:v%npoints, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik, 1:save_iter))
 end subroutine PES_rc_init

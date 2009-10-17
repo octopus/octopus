@@ -27,7 +27,7 @@ module v_ks_m
   use hamiltonian_m
   use index_m
   use lalg_basic_m
-  use loct_parser_m
+  use parser_m
   use magnetic_m
   use mesh_function_m
   use messages_m
@@ -111,7 +111,7 @@ contains
     !% hybrids in this scheme, but they will be handled the "DFT" way, <i>i.e.</i>, solving the
     !% OEP equation.
     !%End
-    call loct_parse_int(datasets_check('TheoryLevel'), KOHN_SHAM_DFT, ks%theory_level)
+    call parse_integer(datasets_check('TheoryLevel'), KOHN_SHAM_DFT, ks%theory_level)
     if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call input_error('TheoryLevel')
 
     call messages_obsolete_variable('NonInteractingElectrons', 'TheoryLevel')
@@ -150,7 +150,7 @@ contains
         !%Option sic_amaldi 3
         !% Amaldi correction term (NOT WORKING).
         !%End
-        call loct_parse_int(datasets_check('SICCorrection'), sic_none, ks%sic_type)
+        call parse_integer(datasets_check('SICCorrection'), sic_none, ks%sic_type)
         if(.not.varinfo_valid_option('SICCorrection', ks%sic_type)) call input_error('SICCorrection')
 
         ! Perdew-Zunger corrections

@@ -27,7 +27,7 @@ module curvilinear_m
   use geometry_m
   use global_m
   use lalg_adv_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use messages_m
   use profiling_m
@@ -100,7 +100,7 @@ contains
     !% Modine [N.A. Modine, G. Zumbach and E. Kaxiras, <i>Phys. Rev. B</i> <b>55</b>, 10289 (1997)]
     !% (NOT WORKING).
     !%End
-    call loct_parse_int(datasets_check('CurvMethod'), CURV_METHOD_UNIFORM, cv%method)
+    call parse_integer(datasets_check('CurvMethod'), CURV_METHOD_UNIFORM, cv%method)
     if(.not.varinfo_valid_option('CurvMethod', cv%method)) call input_error('CurvMethod')
     call messages_print_var_option(stdout, "CurvMethod", cv%method)
 

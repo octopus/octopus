@@ -82,7 +82,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   !%
   !%End
 
-  if(loct_parse_block(datasets_check('KPoints'), blk) == 0) then
+  if(parse_block(datasets_check('KPoints'), blk) == 0) then
 
     if (d%ispin == 2) then
       message(1) = 'Not implemented yet.'
@@ -90,7 +90,7 @@ subroutine states_choose_kpoints(d, sb, geo)
     end if
 
     !we have a block with the k-points given explicitly
-    d%nik = loct_parse_block_n(blk)
+    d%nik = parse_block_n(blk)
     write(message(1), '(a,i4,a)') 'Input: ', d%nik, ' k-points will be read from the input file'
     call write_info(1)
 
@@ -101,9 +101,9 @@ subroutine states_choose_kpoints(d, sb, geo)
     d%kweights = M_ZERO
 
     do ik = 1, d%nik
-      call loct_parse_block_float(blk, ik - 1, 0, d%kweights(ik))
+      call parse_block_float(blk, ik - 1, 0, d%kweights(ik))
       do idim = 1, sb%periodic_dim
-        call loct_parse_block_float(blk, ik - 1, idim, d%kpoints(idim, ik))
+        call parse_block_float(blk, ik - 1, idim, d%kpoints(idim, ik))
       end do
     end do
 
@@ -114,7 +114,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   end if
 
   ! default when nothing specified: Gamma point only
-  if(loct_parse_block(datasets_check('KPointsGrid'), blk) .ne. 0) then
+  if(parse_block(datasets_check('KPointsGrid'), blk) .ne. 0) then
 
     if (d%ispin == 2) then
       message(1) = 'Not implemented yet.'
@@ -137,7 +137,7 @@ subroutine states_choose_kpoints(d, sb, geo)
 ! now deal with Monkhorst-Pack
   d%nik_axis(:) = 1
   do i = 1, sb%periodic_dim
-    call loct_parse_block_int(blk, 0, i-1, d%nik_axis(i))
+    call parse_block_integer(blk, 0, i-1, d%nik_axis(i))
   end do
   if (any(d%nik_axis < 1)) then
     message(1) = 'Input: KPointsMonkhorstPack is not valid'
@@ -147,12 +147,12 @@ subroutine states_choose_kpoints(d, sb, geo)
 
   kshifts = M_ZERO
 
-  if(loct_parse_block_n(blk) > 1) then ! we have a shift
+  if(parse_block_n(blk) > 1) then ! we have a shift
     do i = 1, sb%periodic_dim
-      call loct_parse_block_float(blk, 1, i-1, kshifts(i))
+      call parse_block_float(blk, 1, i-1, kshifts(i))
     end do
   end if
-  call loct_parse_block_end(blk)
+  call parse_block_end(blk)
 
   !%Variable KPointsUseSymmetries
   !%Type logical
@@ -163,7 +163,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   !% or not for the choice of <i>k</i>-points. If it is set to no, the <i>k</i>-point
   !% sampling will range over the full Brillouin zone. The default is yes.
   !%End
-  call loct_parse_logical(datasets_check('KPointsUseSymmetries'), .false., use_symmetries)
+  call parse_logical(datasets_check('KPointsUseSymmetries'), .false., use_symmetries)
 
   !%Variable KPointsUseTimeReversal
   !%Type logical
@@ -177,7 +177,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   !% yes. If <tt>KPointsUseSymmetries = no</tt>, this variable is ignored, and time-reversal
   !% symmetry is not used.
   !%End
-  call loct_parse_logical(datasets_check('KPointsUseTimeReversal'), .true., use_time_reversal)
+  call parse_logical(datasets_check('KPointsUseTimeReversal'), .true., use_time_reversal)
   
 
   SAFE_ALLOCATE(natom(1:geo%nspecies))
@@ -327,7 +327,7 @@ logical function in_wigner_seitz_cell(k_point, klattice) result(in_cell)
   !%Option dodecahedron 3
   !% The cell is dodecahedral.
   !%End
-  call loct_parse_int(datasets_check('KPointsCellType'), CUBE, ws_cell_type)
+  call parse_integer(datasets_check('KPointsCellType'), CUBE, ws_cell_type)
 
   ! the number of Bragg planes corresponds to the coordination number
   ! of the respective Bravais lattice

@@ -23,7 +23,7 @@ module messages_m
   use datasets_m
   use global_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use mpi_m
   use string_m
   use varinfo_m
@@ -742,7 +742,7 @@ contains
     character(len=*),           intent(in) :: name
     character(len=*), optional, intent(in) :: rep
     
-    if ( loct_parse_isdef(trim(name)) /= 0 ) then 
+    if ( parse_isdef(trim(name)) /= 0 ) then 
 
       write(message(1), '(a)') 'Input variable '//trim(name)//' is obsolete.'
 

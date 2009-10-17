@@ -31,7 +31,7 @@ module opt_control_target_m
   use lalg_adv_m
   use lalg_basic_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use mesh_m
   use mesh_function_m
@@ -175,7 +175,7 @@ module opt_control_target_m
     !%Option oct_tg_hhg 9
     !% The target is the optimization of the HHG yield.
     !%End
-    call loct_parse_int(datasets_check('OCTTargetOperator'), oct_tg_gstransformation, target%type)
+    call parse_integer(datasets_check('OCTTargetOperator'), oct_tg_gstransformation, target%type)
     if(.not.varinfo_valid_option('OCTTargetOperator', target%type)) &
       call input_error('OCTTargetOperator')
 
@@ -237,7 +237,7 @@ module opt_control_target_m
       !%Description
       !% WARNING: Experimental
       !%End
-      call loct_parse_int(datasets_check('OCTExcludeStates'), 1, target%excluded_states)
+      call parse_integer(datasets_check('OCTExcludeStates'), 1, target%excluded_states)
       call restart_look_and_read(target%st, gr, geo)
 
     case(oct_tg_gstransformation)  
@@ -258,22 +258,22 @@ module opt_control_target_m
       !% The syntax is equivalent to the one used for the <tt>TransformStates</tt>
       !% block.
       !%End
-      if(loct_parse_isdef(datasets_check('OCTTargetTransformStates')).ne.0) then
-        if(loct_parse_block(datasets_check('OCTTargetTransformStates'), blk) == 0) then
+      if(parse_isdef(datasets_check('OCTTargetTransformStates')).ne.0) then
+        if(parse_block(datasets_check('OCTTargetTransformStates'), blk) == 0) then
           call states_copy(tmp_st, target%st)
           SAFE_DEALLOCATE_P(tmp_st%zpsi)
           call restart_look_and_read(tmp_st, gr, geo)
           SAFE_ALLOCATE(rotation_matrix(1:target%st%nst, 1:tmp_st%nst))
           rotation_matrix = M_z0
           do ist = 1, target%st%nst
-            do jst = 1, loct_parse_block_cols(blk, ist-1)
-              call loct_parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
+            do jst = 1, parse_block_cols(blk, ist-1)
+              call parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
             end do
           end do
           call states_rotate(gr%mesh, target%st, tmp_st, rotation_matrix)
           SAFE_DEALLOCATE_A(rotation_matrix)
           call states_end(tmp_st)
-          call loct_parse_block_end(blk)
+          call parse_block_end(blk)
           call states_calc_dens(target%st, gr)
         else
           message(1) = '"OCTTargetTransformStates" has to be specified as block.'
@@ -318,23 +318,23 @@ module opt_control_target_m
       !% The syntax is equivalent to the one used for the <tt>TransformStates</tt> block.
       !%End
 
-      if(loct_parse_isdef('OCTTargetDensity').ne.0) then
+      if(parse_isdef('OCTTargetDensity').ne.0) then
         SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
         target%rho = M_ZERO
-        call loct_parse_string('OCTTargetDensity', "0", expression)
+        call parse_string('OCTTargetDensity', "0", expression)
 
 
         if(trim(expression).eq.'OCTTargetDensityFromState') then
 
-          if(loct_parse_block(datasets_check('OCTTargetDensityFromState'), blk) == 0) then
+          if(parse_block(datasets_check('OCTTargetDensityFromState'), blk) == 0) then
             call states_copy(tmp_st, target%st)
             SAFE_DEALLOCATE_P(tmp_st%zpsi)
             call restart_look_and_read(tmp_st, gr, geo)
             SAFE_ALLOCATE(rotation_matrix(1:target%st%nst, 1:tmp_st%nst))
             rotation_matrix = M_z0
             do ist = 1, target%st%nst
-              do jst = 1, loct_parse_block_cols(blk, ist-1)
-                call loct_parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
+              do jst = 1, parse_block_cols(blk, ist-1)
+                call parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
               end do
             end do
             call states_rotate(gr%mesh, target%st, tmp_st, rotation_matrix)
@@ -344,7 +344,7 @@ module opt_control_target_m
               target%rho(ip) = sum(target%st%rho(ip, 1:target%st%d%spin_channels))
             end do
             call states_end(tmp_st)
-            call loct_parse_block_end(blk)
+            call parse_block_end(blk)
           else
             message(1) = '"OCTTargetDensityState" has to be specified as block.'
             call write_info(1)
@@ -357,7 +357,7 @@ module opt_control_target_m
           do ip = 1, gr%mesh%np
             call mesh_r(gr%mesh, ip, r, x = x)
             ! parse user defined expression
-            call loct_parse_expression(psi_re, psi_im, gr%sb%dim, x, r, M_ZERO, expression)
+            call parse_expression(psi_re, psi_im, gr%sb%dim, x, r, M_ZERO, expression)
             target%rho(ip) = psi_re
           end do
           ! Normalize
@@ -381,15 +381,15 @@ module opt_control_target_m
       !% the variable <tt>OCTLocalTarget</tt>.
       !%End
 
-      if(loct_parse_isdef('OCTTargetLocal').ne.0) then
+      if(parse_isdef('OCTTargetLocal').ne.0) then
         SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
         target%rho = M_ZERO
-        call loct_parse_string('OCTTargetLocal', "0", expression)
+        call parse_string('OCTTargetLocal', "0", expression)
         call conv_to_C_string(expression)
         do ip = 1, gr%mesh%np
           call mesh_r(gr%mesh, ip, r, x = x)
           ! parse user-defined expression
-          call loct_parse_expression(psi_re, psi_im, gr%sb%dim, x, r, M_ZERO, expression)
+          call parse_expression(psi_re, psi_im, gr%sb%dim, x, r, M_ZERO, expression)
           target%rho(ip) = psi_re
         end do
       else
@@ -399,8 +399,8 @@ module opt_control_target_m
       end if
 
     case(oct_tg_td_local)
-      if(loct_parse_block(datasets_check('OCTTdTarget'),blk)==0) then
-        call loct_parse_block_string(blk, 0, 0, target%td_local_target)
+      if(parse_block(datasets_check('OCTTdTarget'),blk)==0) then
+        call parse_block_string(blk, 0, 0, target%td_local_target)
         call conv_to_C_string(target%td_local_target)
         SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
       else
@@ -447,16 +447,16 @@ module opt_control_target_m
       !% <br>%</tt>
       !%
       !%End
-      if(loct_parse_isdef(datasets_check('OCTOptimizeHarmonicSpectrum')).ne.0) then
-        if(loct_parse_block(datasets_check('OCTOptimizeHarmonicSpectrum'), blk) == 0) then
-          target%hhg_nks = loct_parse_block_cols(blk, 0)
+      if(parse_isdef(datasets_check('OCTOptimizeHarmonicSpectrum')).ne.0) then
+        if(parse_block(datasets_check('OCTOptimizeHarmonicSpectrum'), blk) == 0) then
+          target%hhg_nks = parse_block_cols(blk, 0)
           SAFE_ALLOCATE(    target%hhg_k(1:target%hhg_nks))
           SAFE_ALLOCATE(target%hhg_alpha(1:target%hhg_nks))
           SAFE_ALLOCATE(    target%hhg_a(1:target%hhg_nks))
           do j = 1, target%hhg_nks
-            call loct_parse_block_int(blk, 0, j-1, target%hhg_k(j))
-            call loct_parse_block_float(blk, 1, j-1, target%hhg_alpha(j))
-            call loct_parse_block_float(blk, 2, j-1, target%hhg_a(j))
+            call parse_block_integer(blk, 0, j-1, target%hhg_k(j))
+            call parse_block_float(blk, 1, j-1, target%hhg_alpha(j))
+            call parse_block_float(blk, 2, j-1, target%hhg_a(j))
           end do
         else
           message(1) = '"OCTOptimizeHarmonicSpectrum" has to be specified as block.'
@@ -646,7 +646,7 @@ module opt_control_target_m
 
     do i = 1, gr%mesh%np
       call mesh_r(gr%mesh, i, r, x = xx)
-      call loct_parse_expression(re, im, gr%sb%dim, xx, r, t, target%td_local_target)
+      call parse_expression(re, im, gr%sb%dim, xx, r, t, target%td_local_target)
       target%rho(i) = re
     end do
 

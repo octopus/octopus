@@ -28,7 +28,7 @@ module casida_m
   use io_m
   use lalg_adv_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use mesh_function_m
   use mesh_m
@@ -157,7 +157,7 @@ contains
     !% valid. You should include a non-zero number of unoccupied states and a non-zero number
     !% of occupied states.
     !%End
-    call loct_parse_string(datasets_check('CasidaKohnShamStates'), "1-1024", cas%wfn_list)
+    call parse_string(datasets_check('CasidaKohnShamStates'), "1-1024", cas%wfn_list)
     write(message(1),'(a,a)') "Info: States that form the basis: ",trim(cas%wfn_list)
     Call write_info(1)
 
@@ -174,7 +174,7 @@ contains
     !% This variable is a string in list form, i.e. expressions such as "1,2-5,8-15" are
     !% valid.
     !%End
-    call loct_parse_string(datasets_check('CasidaTransitionDensities'), "0", trandens)
+    call parse_string(datasets_check('CasidaTransitionDensities'), "0", trandens)
 
     ! Initialize structure
     call casida_type_init(cas, sys%gr%sb%dim, nk, sys%mc)

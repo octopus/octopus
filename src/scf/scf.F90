@@ -34,7 +34,7 @@ module scf_m
   use io_function_m
   use lcao_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use magnetic_m
   use mesh_m
   use mesh_batch_m
@@ -116,7 +116,7 @@ contains
     !% Maximum number of SCF iterations. The code will stop even if convergence
     !% has not been achieved. 0 means unlimited.
     !%End
-    call loct_parse_int  (datasets_check('MaximumIter'), 200, scf%max_iter)
+    call parse_integer  (datasets_check('MaximumIter'), 200, scf%max_iter)
 
     !%Variable ConvAbsDens
     !%Type float
@@ -129,7 +129,7 @@ contains
     !%
     !% A zero value (the default) means do not use this criterion.
     !%End
-    call loct_parse_float(datasets_check('ConvAbsDens'), M_ZERO, scf%conv_abs_dens)
+    call parse_float(datasets_check('ConvAbsDens'), M_ZERO, scf%conv_abs_dens)
 
     !%Variable ConvRelDens
     !%Type float
@@ -144,7 +144,7 @@ contains
     !% zero value means do not use this criterion. By default this
     !% value is set to 1e-3.
     !%End
-    call loct_parse_float(datasets_check('ConvRelDens'), CNST(1e-3), scf%conv_rel_dens)
+    call parse_float(datasets_check('ConvRelDens'), CNST(1e-3), scf%conv_rel_dens)
 
     !%Variable ConvAbsEv
     !%Type float
@@ -157,7 +157,7 @@ contains
     !%
     !% A zero value (the default) means do not use this criterion.
     !%End
-    call loct_parse_float(datasets_check('ConvAbsEv'), M_ZERO, scf%conv_abs_ev)
+    call parse_float(datasets_check('ConvAbsEv'), M_ZERO, scf%conv_abs_ev)
     scf%conv_abs_ev = units_to_atomic(units_inp%energy, scf%conv_abs_ev)
 
     !%Variable ConvRelEv
@@ -171,7 +171,7 @@ contains
     !%
     !% <i>E</i> is the sum of the eigenvalues. A zero value (the default) means do not use this criterion.
     !%End
-    call loct_parse_float(datasets_check('ConvRelEv'), M_ZERO, scf%conv_rel_ev)
+    call parse_float(datasets_check('ConvRelEv'), M_ZERO, scf%conv_rel_ev)
 
     call messages_obsolete_variable("ConvAbsForce", "ConvForce")
     call messages_obsolete_variable("ConvRelForce", "ConvForce")
@@ -185,7 +185,7 @@ contains
     !% maximum variation of any component of the ionic forces in consecutive iterations.
     !% A zero value (the default) means do not use this criterion.
     !%End
-    call loct_parse_float(datasets_check('ConvForce'), M_ZERO, scf%conv_abs_force)
+    call parse_float(datasets_check('ConvForce'), M_ZERO, scf%conv_abs_force)
     scf%conv_abs_force = units_to_atomic(units_inp%force, scf%conv_abs_force)
 
     if(scf%max_iter <= 0 .and. &
@@ -215,7 +215,7 @@ contains
     !%Option density 2
     !% The density.
     !%End
-    call loct_parse_int(datasets_check('What2Mix'), MIXDENS, scf%what2mix)
+    call parse_integer(datasets_check('What2Mix'), MIXDENS, scf%what2mix)
     if(.not.varinfo_valid_option('What2Mix', scf%what2mix)) call input_error('What2Mix')
     call messages_print_var_option(stdout, "What2Mix", scf%what2mix, "what to mix during SCF cycles")
 
@@ -258,7 +258,7 @@ contains
     !% calculation within the LCAO subspace, then restart from that point for
     !% an unrestricted calculation).
     !%End
-    call loct_parse_logical(datasets_check('SCFinLCAO'), .false., scf%lcao_restricted)
+    call parse_logical(datasets_check('SCFinLCAO'), .false., scf%lcao_restricted)
     if(scf%lcao_restricted) then
       message(1) = 'Info: SCF restricted to LCAO subspace'
       call write_info(1)
@@ -274,11 +274,11 @@ contains
     !% default is yes, unless the system only has user-defined
     !% species.
     !%End
-    call loct_parse_logical(datasets_check('SCFCalculateForces'), .not. geo%only_user_def, scf%calc_force)
+    call parse_logical(datasets_check('SCFCalculateForces'), .not. geo%only_user_def, scf%calc_force)
 
     call geometry_min_distance(geo, rmin)
     if(geo%natoms == 1) rmin = CNST(100.0)
-    call loct_parse_float(datasets_check('LocalMagneticMomentsSphereRadius'), &
+    call parse_float(datasets_check('LocalMagneticMomentsSphereRadius'), &
       units_from_atomic(units_inp%length, rmin*M_HALF), scf%lmm_r)
     scf%lmm_r = units_to_atomic(units_inp%length, scf%lmm_r)
 

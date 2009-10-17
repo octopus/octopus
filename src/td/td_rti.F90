@@ -33,7 +33,7 @@ module td_rti_m
   use lalg_basic_m
   use lasers_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use mesh_function_m
   use messages_m
@@ -303,7 +303,7 @@ contains
     else
       default_propagator = PROP_REVERSAL
     end if
-    call loct_parse_int(datasets_check('TDEvolutionMethod'), default_propagator, tr%method)
+    call parse_integer(datasets_check('TDEvolutionMethod'), default_propagator, tr%method)
     if(.not.varinfo_valid_option('TDEVolutionMethod', tr%method)) call input_error('TDEvolutionMethod')
 
     if(gr%sb%open_boundaries.and.tr%method.ne.PROP_CRANK_NICHOLSON_SRC_MEM) then

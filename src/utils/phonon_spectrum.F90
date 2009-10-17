@@ -26,7 +26,7 @@ program phonon_spectrum
   use messages_m
   use datasets_m
   use io_m
-  use loct_parser_m
+  use parser_m
   use profiling_m
   use units_m
   use varinfo_m
@@ -59,10 +59,10 @@ program phonon_spectrum
   call units_init()
 
   !These variables are documented in src/td/spectrum.F90
-  call loct_parse_int(datasets_check('TDMaximumIter'), 1500, max_iter)
-  call loct_parse_float(datasets_check('SpecStartTime'),  M_ZERO, start_time)
-  call loct_parse_float(datasets_check('SpecEndTime'),  -M_ONE, end_time)
-  call loct_parse_float(datasets_check('SpecMaxEnergy'), &
+  call parse_integer(datasets_check('TDMaximumIter'), 1500, max_iter)
+  call parse_float(datasets_check('SpecStartTime'),  M_ZERO, start_time)
+  call parse_float(datasets_check('SpecEndTime'),  -M_ONE, end_time)
+  call parse_float(datasets_check('SpecMaxEnergy'), &
     units_from_atomic(units_inp%energy, units_to_atomic(unit_invcm, CNST(10000.0))), max_energy)
 
   dw = max_energy*units_inp%energy%factor/(max_freq - M_ONE)
@@ -79,7 +79,7 @@ program phonon_spectrum
   !%Option infrared    2
   !% Infrared spectrum obtained from the dipole moment.
   !%End
-  call loct_parse_int  (datasets_check('SpecVibrational'), SPEC_VIBRATIONAL, mode)
+  call parse_integer  (datasets_check('SpecVibrational'), SPEC_VIBRATIONAL, mode)
   if(.not.varinfo_valid_option('SpecVibrational', mode)) call input_error('SpecVibrational')
 
   if (end_time < M_ZERO) end_time = huge(end_time)

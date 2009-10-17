@@ -30,7 +30,7 @@ module tdf_m
   use global_m
   use io_m
   use messages_m
-  use loct_parser_m
+  use parser_m
   use loct_math_m
   use splines_m
   use units_m
@@ -225,42 +225,42 @@ module tdf_m
     !% Explained above.
     !%End
     ierr = -3
-    if(loct_parse_block(datasets_check('TDFunctions'), blk) .ne. 0) then
+    if(parse_block(datasets_check('TDFunctions'), blk) .ne. 0) then
       ierr = -1
       call pop_sub(); return
     end if
 
-    nrows = loct_parse_block_n(blk)
+    nrows = parse_block_n(blk)
     row_loop: do i = 1, nrows
-      call loct_parse_block_string(blk, i-1, 0, row_name)
+      call parse_block_string(blk, i-1, 0, row_name)
       if(trim(row_name).eq.trim(function_name)) then
 
-        call loct_parse_block_int  (blk, i-1, 1, function_type)
+        call parse_block_integer  (blk, i-1, 1, function_type)
 
         a0 = M_ZERO; tau0 = M_ZERO; t0 = M_ZERO; tau1 = M_ZERO
         select case(function_type)
           case(TDF_CW)
-            call loct_parse_block_float(blk, i-1, 2, a0)
+            call parse_block_float(blk, i-1, 2, a0)
           case(TDF_GAUSSIAN)
-            call loct_parse_block_float(blk, i-1, 2, a0)
-            call loct_parse_block_float(blk, i-1, 3, tau0)
-            call loct_parse_block_float(blk, i-1, 4, t0)
+            call parse_block_float(blk, i-1, 2, a0)
+            call parse_block_float(blk, i-1, 3, tau0)
+            call parse_block_float(blk, i-1, 4, t0)
           case(TDF_COSINOIDAL)
-            call loct_parse_block_float(blk, i-1, 2, a0)
-            call loct_parse_block_float(blk, i-1, 3, tau0)
-            call loct_parse_block_float(blk, i-1, 4, t0)
+            call parse_block_float(blk, i-1, 2, a0)
+            call parse_block_float(blk, i-1, 3, tau0)
+            call parse_block_float(blk, i-1, 4, t0)
           case(TDF_TRAPEZOIDAL)
-            call loct_parse_block_float(blk, i-1, 2, a0)
-            call loct_parse_block_float(blk, i-1, 3, tau0)
-            call loct_parse_block_float(blk, i-1, 4, t0)
-            call loct_parse_block_float(blk, i-1, 5, tau1)
+            call parse_block_float(blk, i-1, 2, a0)
+            call parse_block_float(blk, i-1, 3, tau0)
+            call parse_block_float(blk, i-1, 4, t0)
+            call parse_block_float(blk, i-1, 5, tau1)
           case(TDF_FROM_FILE)
-            call loct_parse_block_string(blk, i-1, 2, filename)
+            call parse_block_string(blk, i-1, 2, filename)
           case(TDF_FROM_EXPR)
-            call loct_parse_block_string(blk, i-1, 2, function_expression)
+            call parse_block_string(blk, i-1, 2, function_expression)
           case default
             ierr = -2
-            call loct_parse_block_end(blk)
+            call parse_block_end(blk)
             call pop_sub(); return
         end select
 
@@ -288,7 +288,7 @@ module tdf_m
       end if
     end do row_loop
 
-    call loct_parse_block_end(blk)
+    call parse_block_end(blk)
     call pop_sub()
   end subroutine tdf_read
   !------------------------------------------------------------
@@ -980,7 +980,7 @@ module tdf_m
 
     case(TDF_FROM_EXPR)
       tcu = units_from_atomic(units_inp%time, t)
-      call loct_parse_expression(fre, fim, 't', tcu, f%expression)
+      call parse_expression(fre, fim, 't', tcu, f%expression)
       y = cmplx(fre, fim)
 
     case default

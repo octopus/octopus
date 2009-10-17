@@ -22,7 +22,7 @@
 module scf_tol_m
   use datasets_m
   use global_m
-  use loct_parser_m
+  use parser_m
   use messages_m
   use varinfo_m
 
@@ -79,9 +79,9 @@ contains
     if(present(def_maximumiter)) def_maximumiter_ = def_maximumiter
 
     str = 'LRMaximumIter'
-    if(loct_parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
+    if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
          str = trim(prefix)//trim(str)
-    call loct_parse_int(datasets_check(str), def_maximumiter_, this%max_iter)
+    call parse_integer(datasets_check(str), def_maximumiter_, this%max_iter)
     
     !%Variable LRConvAbsDens
     !%Type float
@@ -92,9 +92,9 @@ contains
     !% the SCF for linear response is converged.
     !%End
     str = 'LRConvAnsDens'
-    if(loct_parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
+    if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
          str = trim(prefix)//trim(str)
-    call loct_parse_float(datasets_check(str), CNST(1e-5), this%conv_abs_dens)
+    call parse_float(datasets_check(str), CNST(1e-5), this%conv_abs_dens)
 
     !%Variable LRTolScheme
     !%Type integer
@@ -120,9 +120,9 @@ contains
       this%scheme = tol_scheme
     else
       str = 'LRTolScheme'
-      if(loct_parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
+      if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
            str = trim(prefix)//trim(str)
-      call loct_parse_int(datasets_check(str), SCF_TOL_ADAPTIVE, this%scheme)
+      call parse_integer(datasets_check(str), SCF_TOL_ADAPTIVE, this%scheme)
     end if
     if(.not.varinfo_valid_option('LRTolScheme', this%scheme)) &
          call input_error('LRTolScheme')
@@ -136,9 +136,9 @@ contains
     !% for the first SCF iteration. Ignored if LRTolScheme = fixed.
     !%End
     str = 'LRTolInitTol'
-    if(loct_parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
+    if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
          str = trim(prefix)//trim(str)
-    call loct_parse_float(datasets_check(str), CNST(1e-2), this%initial_tol)
+    call parse_float(datasets_check(str), CNST(1e-2), this%initial_tol)
     this%current_tol = this%initial_tol
 
     !%Variable LinearSolverTol
@@ -149,9 +149,9 @@ contains
     !% This is the tolerance to determine that the linear solver has converged.
     !%End
     str = 'LRTolFinalTol'
-    if(loct_parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
+    if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
          str = trim(prefix)//trim(str)
-    call loct_parse_float(datasets_check(str), CNST(1e-6), this%final_tol)
+    call parse_float(datasets_check(str), CNST(1e-6), this%final_tol)
 
     if(this%scheme == SCF_TOL_ADAPTIVE) then 
       !%Variable LRTolAdaptiveFactor
@@ -164,9 +164,9 @@ contains
       !% tolerance is decreased faster. The default is 0.9.
       !%End
       str = 'LRAdaptiveTolFactor'
-      if(loct_parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
+      if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
            str = trim(prefix)//trim(str)
-      call loct_parse_float(datasets_check(str), CNST(0.1), this%dynamic_tol_factor)
+      call parse_float(datasets_check(str), CNST(0.1), this%dynamic_tol_factor)
     end if
 
     if(this%scheme==SCF_TOL_LINEAR.or.this%scheme==SCF_TOL_EXP) then
@@ -178,9 +178,9 @@ contains
       !% Number of iterations necessary to reach the final tolerance
       !%End
       str = 'LRTolIterWindow'
-      if(loct_parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
+      if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
            str = trim(prefix)//trim(str)
-      call loct_parse_int(datasets_check(str), 10, this%iter_window)
+      call parse_integer(datasets_check(str), 10, this%iter_window)
     end if
 
     call pop_sub()

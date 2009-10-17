@@ -33,7 +33,7 @@ module vdw_m
   use lalg_basic_m
   use linear_response_m
   use loct_math_m
-  use loct_parser_m
+  use parser_m
   use math_m
   use mesh_m
   use mesh_function_m
@@ -144,10 +144,10 @@ contains
       !% How many points to use in the Gauss-Legendre integration to obtain the
       !% van der Waals coefficients.
       !%End
-      call  loct_parse_int(datasets_check('vdW_npoints'), 6, gaus_leg_n)
+      call  parse_integer(datasets_check('vdW_npoints'), 6, gaus_leg_n)
 
       ! TODO: symmetry stuff should be general
-      call loct_parse_int(datasets_check('TDPolarizationEquivAxes'), 0, equiv_axes)
+      call parse_integer(datasets_check('TDPolarizationEquivAxes'), 0, equiv_axes)
 
       select case(equiv_axes)
       case(3);      ndir = 1

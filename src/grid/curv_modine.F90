@@ -31,7 +31,7 @@ module curv_modine_m
   use geometry_m
   use geometry_m
   use global_m
-  use loct_parser_m
+  use parser_m
   use messages_m
   use root_solver_m
   use profiling_m
@@ -130,8 +130,8 @@ contains
     type(geometry_t),    target, intent(in)   :: geo
     type(curv_modine_t), target, intent(out)  :: cv
 
-    call loct_parse_float(datasets_check('CurvModineXBar'), M_ONE/M_THREE, cv%xbar)
-    call loct_parse_float(datasets_check('CurvModineJBar'), M_HALF, cv%Jbar)
+    call parse_float(datasets_check('CurvModineXBar'), M_ONE/M_THREE, cv%xbar)
+    call parse_float(datasets_check('CurvModineJBar'), M_HALF, cv%Jbar)
 
     cv%L = M_ZERO
     cv%L(1:sb%dim) = sb%lsize(1:sb%dim) / cv%Jbar
@@ -145,8 +145,8 @@ contains
     SAFE_ALLOCATE(cv%Jrange(1:geo%natoms))
 
     ! WARNING: the reading has to be done for each atom kind
-    call loct_parse_float(datasets_check('CurvModineJlocal'), CNST(0.25), cv%Jlocal(1))
-    call loct_parse_float(datasets_check('CurvModineJrange'), units_from_atomic(units_inp%length, M_TWO), cv%Jrange(1))
+    call parse_float(datasets_check('CurvModineJlocal'), CNST(0.25), cv%Jlocal(1))
+    call parse_float(datasets_check('CurvModineJrange'), units_from_atomic(units_inp%length, M_TWO), cv%Jrange(1))
 
     cv%Jrange(1) = units_to_atomic(units_inp%length, cv%Jrange(1))
 

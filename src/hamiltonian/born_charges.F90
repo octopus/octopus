@@ -25,7 +25,7 @@ module born_charges_m
   use global_m
   use io_m
   use io_function_m
-  use loct_parser_m
+  use parser_m
   use messages_m
   use profiling_m
   use species_m
@@ -79,7 +79,7 @@ module born_charges_m
     !% sum rule: sum(iatom) Z*(iatom,idir,idir2) = Z_tot delta(idir1, idir2)
     !%End
 
-    call loct_parse_logical(datasets_check('BornChargeSumRuleCorrection'), .true., this%correct)
+    call parse_logical(datasets_check('BornChargeSumRuleCorrection'), .true., this%correct)
 
     call pop_sub()
   end subroutine Born_charges_init

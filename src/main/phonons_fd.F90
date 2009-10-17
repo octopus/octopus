@@ -31,7 +31,7 @@ module phonons_fd_m
   use io_m
   use io_function_m
   use lalg_adv_m
-  use loct_parser_m
+  use parser_m
   use mesh_m
   use messages_m
   use multicomm_m
@@ -87,7 +87,7 @@ contains
     !% <tt>Displacement</tt> controls how much the atoms are to be moved in order to calculate the 
     !% dynamical matrix.
     !%End
-    call loct_parse_float(datasets_check('Displacement'), units_from_atomic(units_inp%length, CNST(0.01)), vib%disp)
+    call parse_float(datasets_check('Displacement'), units_from_atomic(units_inp%length, CNST(0.01)), vib%disp)
     vib%disp = units_to_atomic(units_inp%length, vib%disp)
 
     ! calculate dynamical matrix

@@ -30,7 +30,7 @@ module double_grid_m
   use messages_m
   use mesh_function_m
   use loct_m
-  use loct_parser_m
+  use parser_m
   use par_vec_m
   use profiling_m
   use simul_box_m
@@ -92,7 +92,7 @@ contains
     !% pseudopotentials.
     !%End
     if (sb%dim == 3) then 
-      call loct_parse_logical(datasets_check('DoubleGrid'), .false., this%use_double_grid)
+      call parse_logical(datasets_check('DoubleGrid'), .false., this%use_double_grid)
     else
       this%use_double_grid = .false.
     end if
@@ -108,7 +108,7 @@ contains
     !% an odd number. Low-order interpolation schemes are not
     !% recommended. The default is to use 9th-order interpolation.
     !%End
-    call loct_parse_int(datasets_check('DoubleGridOrder'), 9, this%order)
+    call parse_integer(datasets_check('DoubleGridOrder'), 9, this%order)
     
     ASSERT(mod(this%order,2) == 1)
     
