@@ -92,7 +92,8 @@ contains
       else
         read(iunit, *, end=100) e, f
       end if
-      e = e * units_inp%energy%factor
+
+      e = units_to_atomic(units_inp%energy, e)
 
       do j1 = 1, n
         w = b%min_energy + real(j1-1, REAL_PRECISION)*b%energy_step
@@ -105,9 +106,13 @@ contains
     ! print spectra
     iunit = io_open(trim(dir)//"/spectrum."//fname, action='write')
     do j1 = 1, n
-      w = b%min_energy + real(j1-1, REAL_PRECISION)*b%energy_step
-      write(iunit, '(5es14.6)') w/units_inp%energy%factor, s(:, j1)*units_inp%energy%factor
+      w = units_from_atomic(units_inp%energy, b%min_energy + real(j1 - 1, REAL_PRECISION)*b%energy_step)
+      s(:, j1) = units_from_atomic(units_inp%energy, s(:, j1))
+      write(iunit, '(5es14.6)') w, s(:, j1)
     end do
+
+    ! IMPORTANT: s has changed units here
+
     call io_close(iunit)
 
     SAFE_DEALLOCATE_A(s)

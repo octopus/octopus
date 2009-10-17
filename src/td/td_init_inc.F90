@@ -39,8 +39,9 @@ subroutine td_init(td, sys, hm)
   !% Time-step for the time propagation. The default is 0.07
   !% [hbar/Hartree].
   !%End
-  call loct_parse_float(datasets_check('TDTimeStep'), CNST(0.07)/units_inp%time%factor, td%dt)
-  td%dt = td%dt * units_inp%time%factor
+  call loct_parse_float(datasets_check('TDTimeStep'), units_from_atomic(units_inp%time, CNST(0.07)), td%dt)
+  td%dt = units_to_atomic(units_inp%time, td%dt)
+
   if (td%dt <= M_ZERO) then
     write(message(1),'(a,f14.6,a)') "Input: '", td%dt, "' is not a valid TDTimeStep"
     message(2) = '(0 < TDTimeStep)'
@@ -158,7 +159,7 @@ subroutine td_init(td, sys, hm)
   !% specified. By default, it is not applied.
   !%End
   call loct_parse_float(datasets_check('TDScissor'), CNST(0.0), td%scissor)
-  td%scissor = td%scissor*units_inp%energy%factor
+  td%scissor = units_to_atomic(units_inp%energy, td%scissor)
 
   call td_rti_init(sys%gr, sys%st, hm, td%tr, td%dt, td%max_iter, &
        ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield))

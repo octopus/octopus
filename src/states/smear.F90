@@ -110,7 +110,7 @@ contains
     this%dsmear = CNST(1e-14)
     if(this%method.ne.SMEAR_SEMICONDUCTOR) then
       call loct_parse_float(datasets_check('Smearing'), CNST(0.1)/(M_TWO*P_Ry), this%dsmear)
-      this%dsmear = this%dsmear * units_inp%energy%factor
+      this%dsmear = units_to_atomic(units_inp%energy, this%dsmear)
     end if
 
     call messages_obsolete_variable("ElectronicTemperature", "Smearing")
