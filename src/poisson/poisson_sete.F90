@@ -63,6 +63,8 @@ module poisson_sete_m
     integer          :: noatoms
     integer          :: nelt
     integer          :: ntot
+    integer          :: counter 
+    FLOAT            :: tot_nuc_charge_energy
   end type poisson_sete_t
 
   integer :: lenw, leniw, idev, isym = 0, itol = 2, itmax = 201, itermin = 5, iter, ierr, iunit = 0, nxl, nyl
@@ -101,6 +103,8 @@ contains
     angsnm = CNST(10.0)/BOHR
     this%noatoms = number_atoms
     count_atoms = 0
+    this%counter = 0
+    this%tot_nuc_charge_energy=0.0
 
     open(56, file = 'poisq', status = 'unknown')
     FIL1='test1.pois'
@@ -759,10 +763,10 @@ contains
 
     call egate(this)
 
-    write(358,*) "#x,z, this%vh_big(x,11,k)"
+!    write(358,*) "#x,z, this%vh_big(x,11,k)"
     do I = 1, THIS%NXTOT
       do K = 1, THIS%NZTOT
-        write(358,*) I,K,THIS%VH_BIG(I,11,K)
+ !       write(358,*) I,K,THIS%VH_BIG(I,11,K)
       end do
     end do
 
@@ -814,8 +818,8 @@ contains
     type(poisson_sete_t), intent(inout) :: this
 
     integer :: i, j, k
-    FLOAT, allocatable :: sig(:, :, :, :)
-    FLOAT :: cs1, cs2, cs3
+    FLOAT, allocatable :: sig(:, :, :, :) 
+    FLOAT :: cs1, cs2, cs3,temporary
     FLOAT :: charge_top, charge_surf, charge_bot
 
     !
@@ -855,12 +859,20 @@ contains
 
     SAFE_DEALLOCATE_A(sig)
 
-    THIS%ESURF=CNST(0.5)*THIS%ESURF
-    CHARGE_SURF=CS1+CS2+CS3
-
-    WRITE(520,*)'This%esurf', THIS%ESURF*27.2
-    write(521,*)' CS1 ',CS1,' CS2 ',CS2,' CS3 ',CS3
-
+      THIS%ESURF=CNST(0.5)*THIS%ESURF
+      CHARGE_SURF=CS1+CS2+CS3
+!    WRITE(520,*)THIS%ESURF*hartree*CNST(0.5)
+!    write(521,*)' CS1 ',CS1,' CS2 ',CS2,' CS3 ',CS3
+    write(*,*) "COUNTING ATOMS",this%counter+1
+    if (this%counter<this%noatoms) then
+      this%counter=this%counter+1
+      this%tot_nuc_charge_energy=this%tot_nuc_charge_energy+THIS%ESURF
+!      write(523,*)this%tot_nuc_charge_energy,THIS%ESURF
+    else if (this%counter == this%noatoms) then
+      temporary=THIS%ESURF
+      THIS%ESURF=THIS%ESURF+this%tot_nuc_charge_energy 
+!      WRITE(522,*)this%counter,this%tot_nuc_charge_energy*hartree,temporary*hartree,THIS%ESURF*hartree
+      endif 
   contains
 
     subroutine cap(this, sig)
