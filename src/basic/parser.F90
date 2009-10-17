@@ -34,10 +34,11 @@ end module block_t_m
 
 
 module parser_m
+  use block_t_m
   use global_m
   use loct_m
   use mpi_m
-  use block_t_m
+  use unit_m
 
   implicit none
 
@@ -117,7 +118,8 @@ module parser_m
       real(8),          intent(in)  :: def
       real(8),          intent(out) :: res
     end subroutine oct_parse_double
-    module procedure oct_parse_double4
+    module procedure oct_parse_double4_unit
+    module procedure oct_parse_double8_unit
   end interface
 
   interface parse_cmplx
@@ -183,6 +185,8 @@ module parser_m
       real(8), intent(out)         :: res
     end subroutine oct_parse_block_double
     module procedure oct_parse_block_double4
+    module procedure oct_parse_block_double4_unit
+    module procedure oct_parse_block_double8_unit
   end interface
 
   interface parse_block_cmplx
@@ -349,6 +353,36 @@ contains
   end subroutine oct_parse_double4
 
   ! ---------------------------------------------------------
+
+  subroutine oct_parse_double4_unit(name, def4, res4, unit)
+    character(len=*), intent(in)  :: name
+    real(4),          intent(in)  :: def4
+    real(4),          intent(out) :: res4
+    type(unit_t),     intent(in)  :: unit
+
+    real(8) :: res8
+    
+    call oct_parse_double(name, units_from_atomic(unit, real(def4, 8)), res8)
+
+    res4 = real(units_to_atomic(unit, res8), kind=4)
+    
+  end subroutine oct_parse_double4_unit
+
+  ! ---------------------------------------------------------
+
+  subroutine oct_parse_double8_unit(name, def, res, unit)
+    character(len=*), intent(in)  :: name
+    real(8),          intent(in)  :: def
+    real(8),          intent(out) :: res
+    type(unit_t),     intent(in)  :: unit
+
+    call oct_parse_double(name, units_from_atomic(unit, def), res)
+
+    res = units_to_atomic(unit, res)
+    
+  end subroutine oct_parse_double8_unit
+
+  ! ---------------------------------------------------------
   subroutine oct_parse_complex4(name, def4, res4)
     character(len=*), intent(in) :: name
     complex(4), intent(in)       :: def4
@@ -371,6 +405,31 @@ contains
     res4 = real(res8, kind=4)
   end subroutine oct_parse_block_double4
 
+  ! ---------------------------------------------------------
+
+  subroutine oct_parse_block_double4_unit(blk, l, c, res4, unit)
+    type(block_t), intent(in)  :: blk
+    integer,       intent(in)  :: l, c
+    real(4),       intent(out) :: res4
+    type(unit_t),  intent(in)  :: unit
+
+    real(8) :: res8
+    call oct_parse_block_double(blk, l, c, res8)
+    res4 = real(units_to_atomic(unit, res8), kind=4)
+  end subroutine oct_parse_block_double4_unit
+
+  ! ---------------------------------------------------------
+
+  subroutine oct_parse_block_double8_unit(blk, l, c, res, unit)
+    type(block_t), intent(in)  :: blk
+    integer,       intent(in)  :: l, c
+    real(8),       intent(out) :: res
+    type(unit_t),  intent(in)  :: unit
+
+    call oct_parse_block_double(blk, l, c, res)
+    res = units_to_atomic(unit, res)
+
+  end subroutine oct_parse_block_double8_unit
 
   ! ---------------------------------------------------------
   subroutine oct_parse_block_complex4(blk, l, c, res4)

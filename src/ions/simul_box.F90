@@ -793,16 +793,15 @@ contains
       if(parse_block(datasets_check('Spacing'), blk) == 0) then
         if(parse_block_cols(blk,0) < sb%dim) call input_error('Spacing')
         do i = 1, sb%dim
-          call parse_block_float(blk, 0, i-1, sb%h(i))
+          call parse_block_float(blk, 0, i - 1, sb%h(i), units_inp%length)
         end do
         call parse_block_end(blk)
       else
-        call parse_float(datasets_check('Spacing'), sb%h(1), sb%h(1))
+        call parse_float(datasets_check('Spacing'), sb%h(1), sb%h(1), units_inp%length)
         sb%h(1:sb%dim) = sb%h(1)
       end if
 
       do i = 1, sb%dim
-        sb%h(i) = units_to_atomic(units_inp%length, sb%h(i))
         if(sb%h(i) < M_ZERO) then
           if(def_h > M_ZERO.and.def_h < huge(def_h)) then
             sb%h(i) = def_h
@@ -843,17 +842,13 @@ contains
       sb%box_offset = M_ZERO
       if(parse_block(datasets_check('BoxOffset'), blk) == 0) then
         do idir = 1, sb%dim
-          call parse_block_float(blk, 0, idir-1, sb%box_offset(idir))
+          call parse_block_float(blk, 0, idir - 1, sb%box_offset(idir), units_inp%length)
         end do
         call parse_block_end(blk)
       else
-        call parse_float(datasets_check('BoxOffset'), M_ZERO, sb%box_offset(1))
+        call parse_float(datasets_check('BoxOffset'), M_ZERO, sb%box_offset(1), units_inp%length)
         sb%box_offset(1:sb%dim) = sb%box_offset(1)
       end if
-
-      do idir = 1, sb%dim
-        sb%box_offset(idir) = units_to_atomic(units_inp%length, sb%box_offset(idir))
-      enddo
 
       call pop_sub()
     end subroutine read_box_offset
