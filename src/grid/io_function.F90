@@ -68,7 +68,6 @@ module io_function_m
     output_plane_z    =    32,    &
     output_dx         =    64,    &
     output_netcdf     =   128,    &
-    output_plain      =   256,    &
     output_mesh_index =   512,    &
     output_xcrysden   =  1024,    &
     output_matlab     =  2048,    &
@@ -133,8 +132,6 @@ contains
     !% Outputs in NetCDF (<tt>http://www.unidata.ucar.edu/packages/netcdf/</tt>) format. This file
     !% can then be read, for example, by OpenDX. The string <tt>.ncdf</tt> is appended to previous file names.
     !% Requires the NetCDF library.
-    !%Option plain 256
-    !% Restart files are output in plain binary.
     !%Option mesh_index 512
     !% Generates output files of a given quantity (density, wfs, ...) which include
     !% the internal numbering of mesh points. Since this mode produces large datafiles this is only 
@@ -214,7 +211,6 @@ contains
     if(index(where, "PlaneZ").ne.0)    how = ior(how, output_plane_z)
     if(index(where, "DX").ne.0)        how = ior(how, output_dx)
     if(index(where, "XCrySDen").ne.0)  how = ior(how, output_xcrysden)
-    if(index(where, "Plain").ne.0)     how = ior(how, output_plain)
     if(index(where, "Binary").ne.0)    how = ior(how, output_binary)
     if(index(where, "MeshIndex").ne.0) how = ior(how, output_mesh_index)
     if(index(where, "XYZ").ne.0) how = ior(how, output_xyz)

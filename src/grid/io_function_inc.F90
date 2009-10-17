@@ -411,7 +411,6 @@ subroutine X(output_function_global) (how, dir, fname, mesh, sb, f, u, ierr, is_
   ! should we output boundary points?
   if(iand(how, boundary_points)  .ne.0) np_max = mesh%np_part_global
 
-  if(iand(how, output_plain)     .ne.0) call out_plain()
   if(iand(how, output_binary)    .ne.0) call out_binary()
   if(iand(how, output_axis_x)    .ne.0) call out_axis (1, 2, 3) ! x ; y=0,z=0
   if(iand(how, output_axis_y)    .ne.0) call out_axis (2, 1, 3) ! y ; x=0,z=0
@@ -450,22 +449,6 @@ subroutine X(output_function_global) (how, dir, fname, mesh, sb, f, u, ierr, is_
   call profiling_out(write_prof)
 
 contains
-
-
-  ! ---------------------------------------------------------
-  subroutine out_plain()
-
-    call push_sub('io_function_inc.Xoutput_function_global.out_plain')
-
-    iunit = io_open(trim(dir)//'/'//trim(fname), action='write', form='unformatted', is_tmp=is_tmp)
-
-    write(unit=iunit, iostat=ierr) X(output_kind)*kind(f(1)), mesh%np_global
-    write(unit=iunit, iostat=ierr) f(1:mesh%np_global)
-    call io_close(iunit)
-
-    call pop_sub()
-  end subroutine out_plain
-
 
   ! ---------------------------------------------------------
   subroutine out_binary()
