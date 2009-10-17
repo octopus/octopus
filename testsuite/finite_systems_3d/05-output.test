@@ -9,6 +9,10 @@ Enabled    : Yes
 Input: 05-output.01-gs.inp
 match ; Total energy     ; GREP(static/info, 'Total       =', 20) ; -11.99584633
 
+#geometry
+Precision : 0.0001
+match ; Geometry         ; LINE(static/geometry.xyz, 3, 38) ; 0.000000
+
 # DX output
 match ; DX Origin        ; LINE(static/density-1.dx, 2, 11) ; -2.645886
 match ; DX Delta         ; LINE(static/density-1.dx, 3, 11) ;  0.264589
@@ -41,3 +45,17 @@ Precision : 0.000000001
 match ; Plane value 10   ; LINE(static/density-1.x\=0, 10, 47) ; 2.23480652558410E-005
 match ; Plane value 30   ; LINE(static/density-1.x\=0, 30, 47) ; 1.89763461646455E-004
 match ; Plane value 295  ; LINE(static/density-1.x\=0, 295, 47) ; 6.06672515372129E-003
+
+
+#xcrysden
+match ; XCrysDen geometry; LINE(static/geometry.xsf, 2, 25) ; 0.00000
+match ; XCrysDen wf 1    ; LINE(static/wf-001-0001-1.xsf, 2, 25) ; 2.645886
+match ; XCrysDen wf 2    ; LINE(static/wf-001-0001-1.xsf, 8, 4)  ; 5.291772
+Precision : 0.000001
+match ; XCrysDen wf 3    ; LINE(static/wf-001-0001-1.xsf, 8867, 8) ; 0.001562436344102
+match ; XCrysDen wf 4    ; LINE(static/wf-001-0001-1.xsf, 9370, 8) ; 0.001072620390914
+
+
+
+
+

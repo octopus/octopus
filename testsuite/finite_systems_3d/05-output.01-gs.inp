@@ -13,5 +13,5 @@ Spacing = 0.5
   "H" | 0 | 0 | 0
 %
 
-Output = density
-OutputHow = axis_x + plane_x + dx
+Output = density + geometry + wfs
+OutputHow = axis_x + plane_x + dx + xyz + xcrysden
