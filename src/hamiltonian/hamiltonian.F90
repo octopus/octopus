@@ -54,7 +54,8 @@ module hamiltonian_m
   use smear_m
   use states_m
   use states_dim_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use varinfo_m
   use xc_m
   use XC_F90(lib_m)

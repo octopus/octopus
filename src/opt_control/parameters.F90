@@ -39,7 +39,8 @@ module opt_control_parameters_m
   use states_m
   use string_m
   use tdf_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use varinfo_m
 
   implicit none

@@ -35,36 +35,23 @@
 
 #include "global.h"
 
-module units_m
+module unit_system_m
   use datasets_m
   use global_m
   use parser_m
   use messages_m
   use io_m
+  use unit_m
   use varinfo_m
 
   implicit none
 
   private
-  public ::            &
-    unit_t,            &
-    unit_system_t,     &
-    units_init,        &
-    units_get,         &
-    units_from_file,   &
-    units_to_atomic,   &
-    units_from_atomic, &
-    units_abbrev,      &
-    operator(*),       &
-    operator(/),       &
-    operator(**),      &
-    sqrt
-
-  type unit_t
-    FLOAT             :: factor
-    character(len=12) :: abbrev ! common abbreviation of the unit name
-    character(len=50) :: name   ! common name
-  end type unit_t
+  public ::                  &
+    unit_system_t,           &
+    unit_system_init,        &
+    unit_system_get,         &
+    unit_system_from_file
 
   type unit_system_t
     type(unit_t) :: length
@@ -79,40 +66,16 @@ module units_m
   type(unit_t),        public :: unit_one, unit_debye, unit_invcm
   type(unit_system_t), public :: units_inp, units_out
 
-  interface operator (*)
-    module procedure units_multiply
-  end interface
-
-  interface operator (/)
-    module procedure units_divide
-  end interface
-
-  interface operator (**)
-    module procedure units_pow
-  end interface
-
-  interface units_to_atomic
-    module procedure dunits_to_atomic, zunits_to_atomic
-  end interface
-
-  interface units_from_atomic
-    module procedure dunits_from_atomic, zunits_from_atomic
-  end interface
-  
-  interface sqrt
-    module procedure units_sqrt
-  end interface
-
   integer, parameter, public :: UNITS_ATOMIC = 1, UNITS_EVA = 2
 
 contains
 
 
   ! ---------------------------------------------------------
-  subroutine units_init()
+  subroutine unit_system_init()
     integer :: c, cinp, cout
 
-    call push_sub('units.units_init')
+    call push_sub('unit_system.unit_system_init')
 
     !%Variable Units
     !%Type integer
@@ -191,27 +154,27 @@ contains
     unit_invcm%abbrev = 'cm^-1'
     unit_invcm%name   = 'h times c over centimeters'
 
-    call units_get(units_inp, cinp)
-    call units_get(units_out, cout)
+    call unit_system_get(units_inp, cinp)
+    call unit_system_get(units_out, cout)
 
     call pop_sub()
 
-  end subroutine units_init
+  end subroutine unit_system_init
 
   ! ---------------------------------------------------------
-  subroutine units_get(u, c)
+  subroutine unit_system_get(u, c)
     type(unit_system_t), intent(out) :: u
     integer,             intent(in)  :: c
 
     select case(c)
     case (UNITS_ATOMIC)
-      call units_init_atomic(u)
+      call unit_system_init_atomic(u)
     case (UNITS_EVA)
-      call units_init_eV_Ang(u)
+      call unit_system_init_eV_Ang(u)
     case default
       call input_error('Units')
     end select
-  end subroutine units_get
+  end subroutine unit_system_get
 
 
   ! these routines output the unit conversions factors, defined by
@@ -219,7 +182,7 @@ contains
   ! <output> = [a.u.]/u.unit
 
   ! ---------------------------------------------------------
-  subroutine units_init_atomic(u)
+  subroutine unit_system_init_atomic(u)
     type(unit_system_t), intent(out) :: u
 
     u%length%abbrev = "b"
@@ -249,11 +212,11 @@ contains
     u%acceleration%abbrev = "bH(2pi/h)^2"
     u%acceleration%name   = "Bohr times (Hartree over h bar) squared"
     u%acceleration%factor = M_ONE
-  end subroutine units_init_atomic
+  end subroutine unit_system_init_atomic
 
 
   ! ---------------------------------------------------------
-  subroutine units_init_eV_Ang(u)
+  subroutine unit_system_init_eV_Ang(u)
     type(unit_system_t), intent(out) :: u
 
     u%length%abbrev = "A"
@@ -283,7 +246,7 @@ contains
     u%acceleration%abbrev = "AeV(2pi/h)^2"
     u%acceleration%name   = "Angstrom times (electronvolt over hbar) squared"
     u%acceleration%factor = u%length%factor/u%time%factor**2
-  end subroutine units_init_eV_Ang
+  end subroutine unit_system_init_eV_Ang
 
 
   ! ---------------------------------------------------------
@@ -293,7 +256,7 @@ contains
   ! TODO: although it seems to work in most cases, it is obviously
   ! a very weak code.
   ! ---------------------------------------------------------
-  subroutine units_from_file(u, fname, ierr)
+  subroutine unit_system_from_file(u, fname, ierr)
     type(unit_system_t), intent(inout) :: u
     character(len=*),    intent(in)    :: fname
     integer,             intent(inout) :: ierr
@@ -301,7 +264,7 @@ contains
     integer            :: iunit, ios
     character(len=256) :: line
 
-    call push_sub('units.units_from_file')
+    call push_sub('unit_system.unit_system_from_file')
 
     iunit = io_open(file = trim(fname), action = 'read', status = 'old', die = .false.)
     if(iunit < 0) then
@@ -314,10 +277,10 @@ contains
       read(iunit, '(a)', iostat = ios) line
       if(ios.ne.0) exit
       if(index(line,'[A]').ne.0  .or.  index(line,'eV').ne.0) then
-        call units_get(u, UNITS_EVA)
+        call unit_system_get(u, UNITS_EVA)
         call pop_sub(); return
       elseif(index(line,'[b]').ne.0) then
-        call units_get(u, UNITS_ATOMIC)
+        call unit_system_get(u, UNITS_ATOMIC)
         call pop_sub(); return
       end if
     end do
@@ -325,126 +288,9 @@ contains
     ierr = -1
 
     call pop_sub()
-  end subroutine units_from_file
+  end subroutine unit_system_from_file
 
-  !-----------------------------------------------
-
-  FLOAT elemental pure function dunits_to_atomic(this, val) result(res)
-    type(unit_t), intent(in) :: this
-    FLOAT,        intent(in) :: val
-
-    res = val*this%factor
-
-  end function dunits_to_atomic
- 
-  !-----------------------------------------------
-
-  CMPLX elemental pure function zunits_to_atomic(this, val) result(res)
-    type(unit_t), intent(in) :: this
-    CMPLX,        intent(in) :: val
-
-    res = val*this%factor
-
-  end function zunits_to_atomic
-
-  !-----------------------------------------------
-  
-  FLOAT elemental pure function dunits_from_atomic(this, val) result(res)
-    type(unit_t), intent(in) :: this
-    FLOAT,        intent(in) :: val
-
-    res = val/this%factor
-
-  end function dunits_from_atomic
-
-  !-----------------------------------------------
-  
-  CMPLX elemental pure function zunits_from_atomic(this, val) result(res)
-    type(unit_t), intent(in) :: this
-    CMPLX,        intent(in) :: val
-
-    res = val/this%factor
-
-  end function zunits_from_atomic
-
-  !-----------------------------------------------
-
-  character(len=12) pure function units_abbrev(this) result(abbrev)
-    type(unit_t), intent(in) :: this
-    
-    abbrev = this%abbrev
-  end function units_abbrev
-
-  !-----------------------------------------------
-
-  type(unit_t) pure function units_multiply(aa, bb) result(cc)
-    type(unit_t), intent(in) :: aa
-    type(unit_t), intent(in) :: bb
-
-    cc%factor = aa%factor*bb%factor
-    cc%abbrev = trim(aa%abbrev)//'*'//trim(bb%abbrev)
-
-  end function units_multiply
-
-  !-----------------------------------------------
-
-  type(unit_t) pure function units_divide(aa, bb) result(cc)
-    type(unit_t), intent(in) :: aa
-    type(unit_t), intent(in) :: bb
-
-    cc%factor = aa%factor/bb%factor
-    cc%abbrev = trim(aa%abbrev)//'/'//trim(bb%abbrev)
-
-  end function units_divide
-  !-----------------------------------------------
-
-  type(unit_t) pure function units_pow(aa, nn) result(cc)
-    type(unit_t), intent(in) :: aa
-    integer,      intent(in) :: nn
-
-    cc%factor = aa%factor**nn
-
-    ! We have to do the conversion by hand. This is ugly, but we
-    ! cannot use write here since this function might be called inside
-    ! another write (stupid Fortran).
-
-    select case(nn)
-    case(-3)
-      cc%abbrev = trim(aa%abbrev)//'^-3'
-    case(-2)
-      cc%abbrev = trim(aa%abbrev)//'^-2'
-    case(-1)
-      cc%abbrev = trim(aa%abbrev)//'^-1'
-    case(0)
-      cc%abbrev = '1'
-    case(1)
-      cc%abbrev = trim(aa%abbrev)
-    case(2)
-      cc%abbrev = trim(aa%abbrev)//'^2'
-    case(3)
-      cc%abbrev = trim(aa%abbrev)//'^3'
-    case(4)
-      cc%abbrev = trim(aa%abbrev)//'^4'
-    case(5)
-      cc%abbrev = trim(aa%abbrev)//'^5'
-    case default
-      cc%abbrev = trim(aa%abbrev)//'^n'
-    end select
-
-  end function units_pow
-
-
-  !-----------------------------------------------
-
-  type(unit_t) pure function units_sqrt(aa) result(cc)
-    type(unit_t), intent(in) :: aa
-    
-    cc%factor = sqrt(aa%factor)
-    cc%abbrev = 'sqrt('//trim(aa%abbrev)//')'
-
-  end function units_sqrt
-
-end module units_m
+end module unit_system_m
 
 !! Local Variables:
 !! mode: f90

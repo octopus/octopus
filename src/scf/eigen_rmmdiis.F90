@@ -41,7 +41,6 @@ module eigen_rmmdiis_m
   use states_m
   use states_calc_m
   use subspace_m
-  use units_m
 
   implicit none
 

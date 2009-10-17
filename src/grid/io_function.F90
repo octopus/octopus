@@ -38,7 +38,8 @@ module io_function_m
   use par_vec_m
   use profiling_m
   use simul_box_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use varinfo_m
 
   implicit none

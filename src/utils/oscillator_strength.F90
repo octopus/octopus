@@ -30,7 +30,8 @@ module oscillator_strength_m
   use profiling_m
   use spectrum_m
   use string_m
-  use units_m
+  use unit_m
+  use unit_system_m
 
   implicit none
 
@@ -153,7 +154,8 @@ program oscillator_strength
   use loct_m
   use parser_m
   use io_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use spectrum_m
   use loct_m
   use profiling_m
@@ -232,7 +234,8 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
   use loct_m
   use parser_m
   use io_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use spectrum_m
   use lalg_adv_m
   use oscillator_strength_m
@@ -265,7 +268,7 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
   end if
 
   ! Now, we should find out which units the file "ot" has.
-  call units_from_file(units, "ot", ierr)
+  call unit_system_from_file(units, "ot", ierr)
   if(ierr.ne.0) then
     write(message(1),'(a)') "Could not retrieve units in the 'ot' file."
     call write_fatal(1)
@@ -374,7 +377,8 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
   use loct_m
   use parser_m
   use io_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use spectrum_m
   use lalg_adv_m
   use oscillator_strength_m
@@ -403,7 +407,7 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
   end if
 
   ! Now, we should find out which units the file "ot" has.
-  call units_from_file(units, "ot", ierr)
+  call unit_system_from_file(units, "ot", ierr)
   if(ierr.ne.0) then
     write(message(1),'(a)') "Could not retrieve units in the 'ot' file."
     call write_fatal(1)
@@ -554,7 +558,8 @@ subroutine find_resonance(omega, leftbound, rightbound, nfrequencies)
   use loct_m
   use parser_m
   use io_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use spectrum_m
   use oscillator_strength_m
   use profiling_m
@@ -622,7 +627,8 @@ subroutine resonance_first_order(omega, power, nw_subtracted, dw, leftbound, rig
   use loct_m
   use parser_m
   use io_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use spectrum_m
   use oscillator_strength_m
   use profiling_m
@@ -676,7 +682,8 @@ subroutine resonance_second_order(omega, power, nw_subtracted, leftbound, rightb
   use loct_m
   use parser_m
   use io_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use spectrum_m
   use oscillator_strength_m
   use profiling_m
@@ -733,7 +740,8 @@ subroutine generate_signal(order, observable)
   use loct_m
   use parser_m
   use io_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use spectrum_m
   use lalg_adv_m
 
@@ -963,7 +971,8 @@ end subroutine generate_signal
 subroutine modify_ot(time_steps, dt, order, ot, omega, power)
   use global_m
   use io_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use spectrum_m
   use string_m
   use profiling_m
@@ -1004,7 +1013,8 @@ end subroutine modify_ot
 subroutine write_ot(nspin, time_steps, dt, kick, units, order, ot, observable)
   use global_m
   use io_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use spectrum_m
   use string_m
   use profiling_m
@@ -1073,7 +1083,8 @@ subroutine read_ot(nspin, order, nw_subtracted)
   use io_m
   use messages_m
   use datasets_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use spectrum_m
   use string_m
   use oscillator_strength_m
@@ -1127,7 +1138,7 @@ subroutine read_ot(nspin, order, nw_subtracted)
   call io_skip_header(iunit)
 
   ! Figure out about the units of the file
-  call units_from_file(units, "ot", ierr)
+  call unit_system_from_file(units, "ot", ierr)
   if(ierr.ne.0) then
     write(message(1), '(a)') 'Could not figure out the units in file "ot".'
     call write_fatal(1)
@@ -1177,7 +1188,8 @@ subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
   use loct_m
   use parser_m
   use io_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use spectrum_m
   use lalg_adv_m
   use oscillator_strength_m
@@ -1204,7 +1216,7 @@ subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
   end if
 
   ! Now, we should find out which units the file "ot" has.
-  call units_from_file(units, "ot", ierr)
+  call unit_system_from_file(units, "ot", ierr)
   if(ierr.ne.0) then
     write(message(1),'(a)') "Could not retrieve units in the 'ot' file."
     call write_fatal(1)

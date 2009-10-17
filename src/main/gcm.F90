@@ -25,7 +25,8 @@ module gcm_m
   use energy_m
   use messages_m
   use parser_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use grid_m
   use system_m
   use hamiltonian_m

@@ -40,7 +40,6 @@ module mesh_init_m
   use stencil_m
   use stencil_star_m
   use subarray_m
-  use units_m
   use zoltan_m
 
   implicit none

@@ -39,7 +39,8 @@ module system_m
   use simul_box_m
   use states_m
   use states_dim_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use v_ks_m
 
   implicit none

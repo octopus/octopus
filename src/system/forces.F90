@@ -39,7 +39,6 @@ module forces_m
   use messages_m
   use multigrid_m
   use simul_box_m
-  use units_m
   use logrid_m
   use poisson_cutoff_m
   use ps_m

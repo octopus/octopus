@@ -42,7 +42,6 @@ module raman_m
   use sternheimer_m
   use string_m
   use system_m
-  use units_m
 
   implicit none
 

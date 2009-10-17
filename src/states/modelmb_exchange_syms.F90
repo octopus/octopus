@@ -43,7 +43,6 @@ module modelmb_exchange_syms_m
   use permutations_m
   use profiling_m
   use states_m
-  use units_m
   use young_m
 
   implicit none

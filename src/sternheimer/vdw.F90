@@ -48,7 +48,8 @@ module vdw_m
   use sternheimer_m
   use string_m
   use system_m
-  use units_m
+  use unit_m
+  use unit_system_m
 
   implicit none
 

@@ -33,7 +33,8 @@ module species_m
   use ps_m
   use splines_m
   use string_m
-  use units_m
+  use unit_m
+  use unit_system_m
 
   implicit none
 

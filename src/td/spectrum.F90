@@ -31,7 +31,8 @@ module spectrum_m
   use messages_m
   use profiling_m
   use string_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use varinfo_m
 
   implicit none
@@ -1345,9 +1346,9 @@ contains
     ! Figure out about the units of the file
     i = index(line,'eV')
     if(i.ne.0) then
-      call units_get(file_units, UNITS_EVA)
+      call unit_system_get(file_units, UNITS_EVA)
     else
-      call units_get(file_units, UNITS_ATOMIC)
+      call unit_system_get(file_units, UNITS_ATOMIC)
     end if
 
     call count_time_steps(iunit, time_steps, dt)

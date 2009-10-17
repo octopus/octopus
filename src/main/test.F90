@@ -33,7 +33,8 @@ program oct_test
   use profiling_m
   use string_m
   use system_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use varinfo_m
 
   implicit none
@@ -77,7 +78,7 @@ program oct_test
   call messages_print_stress(stdout)
 
   call fft_all_init()
-  call units_init()
+  call unit_system_init()
 
   select case(which_test)
   case(HARTREE_TEST); call test_hartree

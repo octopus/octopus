@@ -25,7 +25,9 @@ libbasic_a_SOURCES = \
 	loct.F90 string.F90 varinfo.F90 mpi.F90 global.F90 \
 	parser.F90 datasets.F90 messages.F90 io.F90   \
 	io_binary.c mpi_lib.F90 c_pointer.F90 \
-	units.F90 mpi_debug.F90 profiling.F90 utils.F90      \
+	unit.F90        \
+	unit_system.F90 \
+	mpi_debug.F90 profiling.F90 utils.F90      \
 	multicomm.F90 periodic_table.F90 getopt_f.c command_line.F90 \
 	distributed.F90 \
 	hardware.F90 ialist.F90 iihash.F90 calc_mode.F90 \
@@ -100,7 +102,8 @@ datasets.o : datasets.F90 parser.o c_pointer.o
 messages.o : messages.F90 varinfo.o string.o mpi.o parser.o loct.o global.o datasets.o 
 io.o : io.F90 mpi.o messages.o parser.o loct.o global.o datasets.o 
 mpi_lib.o : mpi_lib.F90 mpi_lib_inc.F90 mpi_debug.o mpi.o messages.o global.o profiling.o
-units.o : units.F90 io.o messages.o parser.o global.o datasets.o  varinfo.o
+unit.o : unit.F90 global.o
+unit_system.o : unit_system.F90 unit.o io.o messages.o parser.o global.o datasets.o  varinfo.o
 mpi_debug.o : mpi_debug.F90 mpi_debug_inc.F90 mpi.o messages.o loct.o global.o 
 profiling.o : profiling.F90 mpi.o messages.o loct.o io.o global.o papi_f.o
 utils.o : utils.F90 messages.o global.o 

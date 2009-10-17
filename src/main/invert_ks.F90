@@ -37,7 +37,8 @@ module invert_ks_m
   use scf_m
   use states_m
   use system_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use v_ks_m
   
   implicit none

@@ -28,7 +28,8 @@ program phonon_spectrum
   use io_m
   use parser_m
   use profiling_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use varinfo_m
 
   implicit none
@@ -56,7 +57,7 @@ program phonon_spectrum
   if(in_debug_mode) then
     call io_mkdir('debug')
   end if
-  call units_init()
+  call unit_system_init()
 
   !These variables are documented in src/td/spectrum.F90
   call parse_integer(datasets_check('TDMaximumIter'), 1500, max_iter)

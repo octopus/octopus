@@ -48,7 +48,8 @@ module run_m
   use static_pol_m
   use system_m
   use td_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use unocc_m
   use varinfo_m
   use vdw_m
@@ -186,7 +187,7 @@ contains
     call fft_all_init()
 
     if(.not. calc_mode_is(CM_PULPO_A_FEIRA)) then
-      call units_init()
+      call unit_system_init()
       call system_init(sys)
       call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
       if(.not. calc_mode_is(CM_MEMORY)) then

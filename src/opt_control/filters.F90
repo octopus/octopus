@@ -30,7 +30,6 @@ module filter_m
   use profiling_m
   use string_m
   use tdf_m
-  use units_m
 
   implicit none
 

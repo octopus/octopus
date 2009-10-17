@@ -26,7 +26,8 @@ program cross_section
   use loct_m
   use parser_m
   use io_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use profiling_m
   use spectrum_m
 
@@ -51,7 +52,7 @@ program cross_section
   if(in_debug_mode) then
      call io_mkdir('debug')
   end if
-  call units_init()
+  call unit_system_init()
 
   call spectrum_init(s)
   call read_files('multipoles')

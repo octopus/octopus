@@ -26,7 +26,8 @@ program xyzanim
   use loct_m
   use parser_m
   use io_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use geometry_m
 
   implicit none
@@ -45,7 +46,7 @@ program xyzanim
   if(in_debug_mode) then
     call io_mkdir('debug')
   end if
-  call units_init()
+  call unit_system_init()
 
   ! Sets the filenames
   coords_file = 'td.general/coordinates'

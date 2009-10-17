@@ -12,7 +12,6 @@ module crystal_m
   use simul_box_m
   use symmetries_m
   use profiling_m
-  use units_m
 
   implicit none
 

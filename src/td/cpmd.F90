@@ -41,7 +41,6 @@ module cpmd_m
   use states_m
   use states_block_m
   use system_m
-  use units_m
   use varinfo_m
 
   implicit none

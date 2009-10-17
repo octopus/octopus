@@ -43,7 +43,8 @@ module species_pot_m
   use poisson_m
   use profiling_m
   use ps_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use varinfo_m
   use io_function_m
 

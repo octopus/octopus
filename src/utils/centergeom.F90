@@ -25,7 +25,8 @@ program centergeom
   use datasets_m
   use parser_m
   use io_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use geometry_m
   use xyz_adjust_m
 
@@ -44,7 +45,7 @@ program centergeom
 
   call datasets_init(1)
   call io_init()
-  call units_init()
+  call unit_system_init()
 
   call geometry_init_xyz(geo)              ! we need the geometry
   call geometry_init_species(geo)          ! we also need the masses

@@ -26,7 +26,8 @@ program broad
   use parser_m
   use messages_m
   use profiling_m
-  use units_m
+  use unit_m
+  use unit_system_m
 
   implicit none
 
@@ -44,7 +45,7 @@ program broad
   if(in_debug_mode) then
      call io_mkdir('debug')
   end if
-  call units_init()
+  call unit_system_init()
 
   ! broadening to use
   call parse_float(datasets_check('LinBroadening'),  units_from_atomic(units_inp%energy, CNST(0.005)), b%b)

@@ -49,7 +49,8 @@ module kdotp_m
   use sternheimer_m
   use string_m
   use system_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use v_ks_m
   
   implicit none

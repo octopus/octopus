@@ -40,7 +40,6 @@ module eigen_lobpcg_m
   use profiling_m
   use states_m
   use states_block_m
-  use units_m
 
   implicit none
 

@@ -54,7 +54,8 @@ module scf_m
   use states_m
   use states_calc_m
   use states_dim_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use v_ks_m
   use varinfo_m
 

@@ -25,7 +25,8 @@ program rotational_strength
   use datasets_m
   use parser_m
   use io_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use spectrum_m
 
   implicit none
@@ -41,7 +42,7 @@ program rotational_strength
   if(in_debug_mode) then
     call io_mkdir('debug')
   end if
-  call units_init()
+  call unit_system_init()
 
   call spectrum_init(s)
 

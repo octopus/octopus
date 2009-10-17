@@ -43,7 +43,8 @@ module casida_m
   use states_m
   use states_dim_m
   use system_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use xc_m
   
   implicit none

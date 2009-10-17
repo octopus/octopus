@@ -43,7 +43,8 @@ module external_pot_m
   use mpi_debug_m
   use multigrid_m
   use simul_box_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use logrid_m
   use poisson_m
   use poisson_cutoff_m

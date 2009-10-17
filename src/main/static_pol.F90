@@ -45,7 +45,8 @@ module static_pol_m
   use species_m
   use states_m
   use system_m
-  use units_m
+  use unit_m
+  use unit_system_m
 
   implicit none
 

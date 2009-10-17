@@ -25,7 +25,8 @@ program harmonic_spectrum
   use messages_m
   use datasets_m
   use io_m
-  use units_m
+  use unit_m
+  use unit_system_m
   use parser_m
   use spectrum_m
   use varinfo_m
@@ -65,7 +66,7 @@ program harmonic_spectrum
   if(in_debug_mode) then
     call io_mkdir('debug')
   end if
-  call units_init()
+  call unit_system_init()
 
   call spectrum_init(s)
 
