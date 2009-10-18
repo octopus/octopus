@@ -63,7 +63,7 @@ module unit_system_m
     type(unit_t) :: acceleration
   end type unit_system_t
 
-  type(unit_t),        public :: unit_one, unit_debye, unit_invcm
+  type(unit_t),        public :: unit_one, unit_debye, unit_invcm, unit_ppm, unit_susc_ppm_cgs
   type(unit_system_t), public :: units_inp, units_out
 
   integer, parameter, public :: UNITS_ATOMIC = 1, UNITS_EVA = 2
@@ -145,6 +145,14 @@ contains
     unit_one%factor = M_ONE
     unit_one%abbrev = '1'
     unit_one%name   = 'one'
+
+    unit_ppm%factor = CNST(1e-6)
+    unit_ppm%abbrev = 'ppm a.u.'
+    unit_ppm%name   = 'parts per million atomic units'
+
+    unit_susc_ppm_cgs%factor = CNST(8.9238878e-2)*CNST(1e-6)
+    unit_susc_ppm_cgs%abbrev = 'ppm cgs/mol'
+    unit_susc_ppm_cgs%name   = 'magnetic susceptibility parts per million atomic units'
 
     unit_debye%factor = M_ONE/CNST(2.5417462)
     unit_debye%abbrev = 'Debye'

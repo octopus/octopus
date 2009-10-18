@@ -486,7 +486,7 @@ contains
         beta(1, 3, 2) = beta(1, 2, 3)
         beta(2, 1, 3) = beta(1, 2, 3)
 
-        call io_output_tensor(iunit, alpha, gr%mesh%sb%dim, units_out%length%factor**gr%mesh%sb%dim)
+        call io_output_tensor(iunit, alpha, gr%mesh%sb%dim, units_out%length**gr%mesh%sb%dim)
         call io_close(iunit)
         
         call out_hyperpolarizability(gr%sb, beta, .true., EM_RESP_FD_DIR)

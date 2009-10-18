@@ -363,7 +363,7 @@ contains
         tmp = int2str(ist)
         write(iunit,'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
           units_from_atomic(units_out%energy, st%eigenval(ist, ik)), ' ', units_abbrev(units_out%energy)
-        call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), gr%mesh%sb%dim, M_ONE)
+        call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), gr%mesh%sb%dim, unit_one)
       enddo
       
       write(iunit,'(a)')
@@ -374,7 +374,7 @@ contains
         write(iunit,'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
           units_from_atomic(units_out%energy, st%eigenval(ist, ik)), ' ', units_abbrev(units_out%energy)
         determinant = lalg_inverter(gr%sb%dim, kdotp_vars%eff_mass_inv(ik, ist, :, :), .true.)
-        call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), gr%mesh%sb%dim, M_ONE)
+        call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), gr%mesh%sb%dim, unit_one)
       enddo
 
       call io_close(iunit)

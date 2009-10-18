@@ -368,11 +368,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine io_output_tensor(iunit, tensor, ndim, factor, write_average)
+  subroutine io_output_tensor(iunit, tensor, ndim, unit, write_average)
     integer,           intent(in) :: iunit
     FLOAT,             intent(in) :: tensor(:,:)
     integer,           intent(in) :: ndim
-    FLOAT,             intent(in) :: factor
+    type(unit_t),      intent(in) :: unit
     logical, optional, intent(in) :: write_average
     
     FLOAT :: trace
@@ -386,12 +386,13 @@ contains
 
     trace = M_z0
     do j = 1, ndim
-      write(iunit, '(3f20.6)') tensor(j, 1:ndim)/factor
+      write(iunit, '(3f20.6)') units_from_atomic(unit, tensor(j, 1:ndim))
       trace = trace + tensor(j, j)
     end do
-    trace = trace/TOFLOAT(ndim)
 
-    if(write_average_) write(iunit, '(a, f20.6)')  'Isotropic average', trace/factor
+    trace = units_from_atomic(unit, trace/TOFLOAT(ndim))
+
+    if(write_average_) write(iunit, '(a, f20.6)')  'Isotropic average', trace
 
     call pop_sub()
   end subroutine io_output_tensor

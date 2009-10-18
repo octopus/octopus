@@ -786,7 +786,7 @@ contains
       write(iunit, '(a)') ']'
   
       call io_output_tensor(iunit, TOFLOAT(em_vars%alpha(:, :, ifactor)), &
-        gr%mesh%sb%dim, units_out%length%factor**gr%mesh%sb%dim)
+        gr%mesh%sb%dim, units_out%length**gr%mesh%sb%dim)
   
       call io_close(iunit)
   
@@ -842,10 +842,10 @@ contains
       enddo
 
       write(iunit, '(a)') '# Real part of dielectric constant'
-      call io_output_tensor(iunit, real(epsilon(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim)), gr%mesh%sb%dim, M_ONE)
+      call io_output_tensor(iunit, real(epsilon(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim)), gr%mesh%sb%dim, unit_one)
       write(iunit, '(a)')
       write(iunit, '(a)') '# Imaginary part of dielectric constant'
-      call io_output_tensor(iunit, aimag(epsilon(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim)), gr%mesh%sb%dim, M_ONE)
+      call io_output_tensor(iunit, aimag(epsilon(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim)), gr%mesh%sb%dim, unit_one)
   
       call io_close(iunit)
       call pop_sub()
@@ -854,7 +854,6 @@ contains
 
     ! ---------------------------------------------------------
     subroutine out_susceptibility()
-      FLOAT :: to_ppmcgs
 
       call push_sub('em_resp.em_resp_output.out_susceptibility')
 
@@ -863,32 +862,31 @@ contains
       if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
 
       write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm a.u.]'
-      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), gr%mesh%sb%dim, CNST(1e-6))
+      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), gr%mesh%sb%dim, unit_ppm)
       write(iunit, '(1x)')
 
       write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm a.u.]'
-      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), gr%mesh%sb%dim, CNST(1e-6))
+      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), gr%mesh%sb%dim, unit_ppm)
       write(iunit, '(1x)')
 
       write(iunit, '(2a)') '# Total susceptibility tensor [ppm a.u.]'
       call io_output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor) + em_vars%chi_dia(:,:, ifactor)), &
-        gr%mesh%sb%dim, CNST(1e-6))
+        gr%mesh%sb%dim, unit_ppm)
       write(iunit, '(1x)')
 
       write(iunit, '(a)') hyphens
-      to_ppmcgs = M_ONE/CNST(8.9238878e-2)*CNST(1e-6)
 
       write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
-      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), gr%mesh%sb%dim, to_ppmcgs)
+      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), gr%mesh%sb%dim, unit_susc_ppm_cgs)
       write(iunit, '(1x)')
 
       write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
-      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), gr%mesh%sb%dim, to_ppmcgs)
+      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), gr%mesh%sb%dim, unit_susc_ppm_cgs)
       write(iunit, '(1x)')
 
       write(iunit, '(2a)') '# Total susceptibility tensor [ppm cgs / mol]'
       call io_output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor) + em_vars%chi_dia(:,:, ifactor)), &
-           gr%mesh%sb%dim, to_ppmcgs)
+           gr%mesh%sb%dim, unit_susc_ppm_cgs)
       write(iunit, '(1x)')
 
       call io_close(iunit)      
