@@ -91,7 +91,8 @@ contains
     this%nglobal = total
 
 #ifdef HAVE_MPI
-    if(.not. multicomm_strategy_is_parallel(mc, strategy)) then
+    if(  (.not. multicomm_strategy_is_parallel(mc, strategy)) .or. &
+         (this%nglobal.eq.1) ) then
 #endif      
       
       SAFE_ALLOCATE(this%node(1:total))

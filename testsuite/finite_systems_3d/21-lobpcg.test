@@ -3,8 +3,8 @@
 
 Test       : LOBPCG (parallel)
 Programs   : octopus_mpi
-TestGroups : long-run
-Enabled    : No
+TestGroups : short-run
+Enabled    : Yes
 
 # Depending on the surrounding, the LOBPCG routine takes different branches, which
 # are checked with this test:
@@ -14,24 +14,23 @@ Enabled    : No
 # The checks are only performed with the parallel LOBPCG.
 
 Input: 21-lobpcg.01-spin_polarized.inp
-
-Matches ; Eigenvalue [1up] ; sed -n '/^Eigenvalues \[/{n\;n\;p\;}'                      static/info ; \s*-14.461*\d*\s*1.0000\d*
-Matches ; Eigenvalue [1dn] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;p\;}'                   static/info ; \s*-11.750*\d*\s*1.0000\d*
-Matches ; Eigenvalue [2up] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;p\;}'                static/info ; \s*-6.187*\d*\s*0.6666\d*
-Matches ; Eigenvalue [2dn] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;p\;}'             static/info ; \s*-3.682*\d*\s*0.0000\d*
-Matches ; Eigenvalue [3up] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;n\;p\;}'          static/info ; \s*-6.187*\d*\s*0.6666\d*
-Matches ; Eigenvalue [3dn] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;n\;n\;p\;}'       static/info ; \s*-3.682*\d*\s*0.0000\d*
-Matches ; Eigenvalue [4up] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;n\;n\;n\;p\;}'    static/info ; \s*-6.187*\d*\s*0.6666\d*
-Matches ; Eigenvalue [4dn] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;n\;n\;n\;n\;p\;}' static/info ; \s*-3.682*\d*\s*0.0000\d*
+match ; Eigenvalue 1 up; GREP(static/info, ' 1   up', 13) ;       -14.461727
+match ; Eigenvalue 1 dn; GREP(static/info, ' 1   dn', 13) ;       -11.750136
+match ; Eigenvalue 2 up; GREP(static/info, ' 2   up', 13) ;       -6.187145
+match ; Eigenvalue 2 dn; GREP(static/info, ' 2   dn', 13) ;       -3.682145
+match ; Eigenvalue 3 up; GREP(static/info, ' 3   up', 13) ;       -6.187145
+match ; Eigenvalue 3 dn; GREP(static/info, ' 3   dn', 13) ;       -3.682145
+match ; Eigenvalue 4 up; GREP(static/info, ' 4   up', 13) ;       -6.187145
+match ; Eigenvalue 4 dn; GREP(static/info, ' 4   dn', 13) ;       -3.682145
 
 Input: 21-lobpcg.02-spinors.inp
+Precision : 0.001
+match ; Eigenvalue 1 up; GREP(static/info, ' 1   --', 13) ;       -14.461653
+match ; Eigenvalue 1 dn; GREP(static/info, ' 2   --', 13) ;       -11.750003
+match ; Eigenvalue 2 up; GREP(static/info, ' 3   --', 13) ;        -6.187323
+match ; Eigenvalue 2 dn; GREP(static/info, ' 4   --', 13) ;        -6.187320
+match ; Eigenvalue 3 up; GREP(static/info, ' 5   --', 13) ;        -6.187319
+match ; mx           ; GREP(static/info, 'Local Magnetic Moments', 20, 2) ;  1.408257
+match ; my           ; GREP(static/info, 'Local Magnetic Moments', 33, 2) ;  1.408257
+match ; mz           ; GREP(static/info, 'Local Magnetic Moments', 46, 2) ;  0.183358
 
-Matches ; Eigenvalue [1st] ; sed -n '/^Eigenvalues \[/{n\;n\;p\;}'             static/info ; \s*-14.461*\d*\s*1.00\d*\s*0.352\d*\s*0.354\d*\s*-0.001\d*
-Matches ; Eigenvalue [2nd] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;p\;}'          static/info ; \s*-11.750*\d*\s*1.00\d*\s*-0.352\d*\s*-0.354\d*\s*0.001\d*
-Matches ; Eigenvalue [3rd] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;p\;}'       static/info ; \s*-6.187*\d*\s*0.67\d*\s*0.352\d*\s*0.354\d*\s*-0.001\d*
-Matches ; Eigenvalue [4th] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;p\;}'    static/info ; \s*-6.187*\d*\s*0.67\d*\s*0.352\d*\s*0.354\d*\s*-0.001\d*
-Matches ; Eigenvalue [5th] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;n\;p\;}' static/info ; \s*-6.187*\d*\s*0.67\d*\s*0.352\d*\s*0.354\d*\s*-0.001\d*
-
-Matches ; Local Magnetic Moment [x] ; sed -n '/^Local Magnetic Moment/{n\;n\;p\;}' static/info | awk -F' ' '{print $3}' ; \s*1.410\d*
-Matches ; Local Magnetic Moment [y] ; sed -n '/^Local Magnetic Moment/{n\;n\;p\;}' static/info | awk -F' ' '{print $4}' ; \s*1.417\d*
-Matches ; Local Magnetic Moment [z] ; sed -n '/^Local Magnetic Moment/{n\;n\;p\;}' static/info | awk -F' ' '{print $5}' ; \s*-0.004\d*

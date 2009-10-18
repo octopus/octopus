@@ -34,12 +34,10 @@ GuessMagnetDensity = user_defined
  1.0 | 1.0 | 0.0
 %
 
-LCAOStart = lcao_none
-
 EigenSolver = lobpcg
 EigenSolverInitTolerance = 1e-2
 EigenSolverFinalTolerance = 1e-6
 EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 25
 
-PoissonSolver = fft_corrected
+ConvRelDens = 5.0e-3

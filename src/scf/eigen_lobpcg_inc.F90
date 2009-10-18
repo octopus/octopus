@@ -80,9 +80,6 @@
       end if
       constr_start = st%st_start
       constr_end   = ib-1
-      ! FIXME: this setup for constr_start and constr_end is almost certainly not correct
-      ! it makes the first block always have constr_end = 0, which leads to errors in
-      ! an MPI_Allreduce in X(lobpcg) later.
 
       n_matvec = maxiter
 

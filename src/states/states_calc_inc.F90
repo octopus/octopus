@@ -44,11 +44,11 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi)
     end do
   else
 
-    call states_blockt_mul(m, st, st%st_start, st%st_end, st%st_start, st%st_end, psi, psi, ss, symm = .true.)
-
     SAFE_ALLOCATE(qq(1:st%nst, 1:st%nst))
     SAFE_ALLOCATE(ss(1:nst, 1:nst))
     ss = M_ZERO
+
+    call states_blockt_mul(m, st, st%st_start, st%st_end, st%st_start, st%st_end, psi, psi, ss, symm = .true.)
   
     qq = M_ZERO
     do ist = 1, st%nst
