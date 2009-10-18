@@ -53,12 +53,9 @@ subroutine PES_rc_init(v, m, st, save_iter)
   do i = 1, v%npoints
     write(v%filenames(i), '(a,i2.2,a)') 'PES_rc.', i, '.out'
 
-    call parse_block_float(blk, i-1, 0, x(1))
-    call parse_block_float(blk, i-1, 1, x(2))
-    call parse_block_float(blk, i-1, 2, x(3))
-
-    ! adjust units
-    x = x*units_inp%length%factor
+    call parse_block_float(blk, i-1, 0, x(1), units_inp%length)
+    call parse_block_float(blk, i-1, 1, x(2), units_inp%length)
+    call parse_block_float(blk, i-1, 2, x(3), units_inp%length)
 
     v%points(i) = m%idx%Lxyz_inv(int(x(1)/m%h(1)), int(x(2)/m%h(2)), int(x(3)/m%h(3)))
   end do
@@ -110,12 +107,13 @@ subroutine PES_rc_output(v, st, iter, save_iter, dt)
   FLOAT,          intent(in) :: dt
 
   integer :: ix, iunit, j, jj, ik, p, idim
+  CMPLX :: vfu
 
   if(iter == 1) then
     do ix = 1, v%npoints
       iunit = io_open(v%filenames(ix), action='write')
       write(iunit, '(a7,f17.6,3a)') &
-        '# dt = ', dt/units_inp%time%factor, ' [', trim(units_abbrev(units_inp%time)), ']'
+        '# dt = ', units_from_atomic(units_inp%time, dt), ' [', trim(units_abbrev(units_inp%time)), ']'
       write(iunit, '(a3,14x)', advance='no') '# t'
       do ik = st%d%kpt%start, st%d%kpt%end
         do p = st%st_start, st%st_end
@@ -135,13 +133,14 @@ subroutine PES_rc_output(v, st, iter, save_iter, dt)
     iunit= io_open(v%filenames(ix), action='write', position='append')
     do j = 1, save_iter
       jj = iter - save_iter + j
-      write(iunit, '(e17.10)', advance='no') jj*dt/units_inp%time%factor
+      write(iunit, '(e17.10)', advance='no') units_from_atomic(units_inp%time, jj*dt)
       do ik = 1, st%d%nik
         do p = st%st_start, st%st_end
           do idim = 1, st%d%dim
+            vfu = v%wf(ix, idim, p, ik, j)
+            vfu = units_from_atomic(sqrt(units_out%length**3), vfu)
             write(iunit, '(1x,a1,e17.10,a1,e17.10,a1)', advance='no') &
-              '(', real(v%wf(ix, idim, p, ik, j))*units_out%length%factor**1.5, &
-              ',', aimag(v%wf(ix, idim, p, ik, j))*units_out%length%factor**1.5, ')'
+              '(', real(vfu), ',', aimag(vfu), ')'
           end do
         end do
       end do

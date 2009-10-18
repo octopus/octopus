@@ -63,7 +63,8 @@ subroutine X(output_me_ks_multipoles)(fname, st, gr, l, m, ik)
       multip_element = X(mf_dotp) (gr%mesh, st%d%dim, &
            R_CONJ(st%X(psi)(:, :, ii, 1)), &
            st%X(psi)(:, :, jj, 1) * multipole(:, :))
-      multip_element = multip_element / units_out%length%factor**l
+
+      multip_element = units_from_atomic(units_out%length**l, multip_element)
 
       write(iunit, fmt='(f20.12)', advance = 'no') R_REAL(multip_element)
 #if defined(R_TCOMPLEX)

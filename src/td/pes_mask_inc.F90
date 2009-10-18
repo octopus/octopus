@@ -196,7 +196,7 @@ subroutine PES_mask_output(v, m, st, file)
 
       do ix = 1, n
         if(npoints(ix) > 0) then
-          write(iunit, *)  (ix-1)*step/units_out%energy%factor, spis(ix, p, ik), npoints(ix)
+          write(iunit, *)  units_from_atomic(units_out%energy, (ix - 1)*step), spis(ix, p, ik), npoints(ix)
         end if
       end do
       call io_close(iunit)
@@ -208,7 +208,7 @@ subroutine PES_mask_output(v, m, st, file)
 
   do ix = 1, n
     if(npoints(ix) > 0) then
-      write(iunit, *)  (ix-1)*step/units_out%energy%factor, sum(spis(ix, :, :)), npoints(ix)
+      write(iunit, *)  units_from_atomic(units_out%energy, (ix - 1)*step), sum(spis(ix, :, :)), npoints(ix)
     end if
   end do
   call io_close(iunit)

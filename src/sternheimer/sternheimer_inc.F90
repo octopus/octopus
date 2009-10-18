@@ -108,7 +108,8 @@ subroutine X(sternheimer_solve)(                           &
     ! otherwise it is not actually SCF, and there can only be one pass through
 
     write(message(1), '(a, f20.6, a, f20.6, a, i1)') &
-         "Frequency: ", R_REAL(omega)/units_inp%energy%factor, " Eta : ", R_AIMAG(omega)/units_inp%energy%factor
+         "Frequency: ", units_from_atomic(units_inp%energy, R_REAL(omega)), &
+         " Eta : ", units_from_atomic(units_inp%energy, R_AIMAG(omega))
     write(message(2), '(a)') &
          '   ik  ist                norm   iters            residual'
     call write_info(2)

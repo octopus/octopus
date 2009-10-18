@@ -61,12 +61,10 @@ program phonon_spectrum
 
   !These variables are documented in src/td/spectrum.F90
   call parse_integer(datasets_check('TDMaximumIter'), 1500, max_iter)
-  call parse_float(datasets_check('SpecStartTime'),  M_ZERO, start_time)
-  call parse_float(datasets_check('SpecEndTime'),  -M_ONE, end_time)
+  call parse_float(datasets_check('SpecStartTime'),  M_ZERO, start_time, units_inp%time)
+  call parse_float(datasets_check('SpecEndTime'),  -M_ONE, end_time, units_inp%time)
   call parse_float(datasets_check('SpecMaxEnergy'), &
-    units_from_atomic(units_inp%energy, units_to_atomic(unit_invcm, CNST(10000.0))), max_energy)
-
-  dw = max_energy*units_inp%energy%factor/(max_freq - M_ONE)
+    units_from_atomic(units_inp%energy, units_to_atomic(unit_invcm, CNST(10000.0))), max_energy, units_inp%energy)
 
   !%Variable SpecVibrational
   !%Type integer
@@ -312,7 +310,7 @@ contains
       ftfi(ifreq) = M_ZERO
       do jj = ini_iter, end_iter
         ftfi(ifreq) = ftfi(ifreq) + &
-             exp(M_zI * ww * time(jj) * units_out%time%factor) * fi(jj)*M_HALF*(time(jj+1)-time(jj-1))
+             exp(M_zI * ww * time(jj))*fi(jj)*M_HALF*(time(jj+1)-time(jj-1))
       end do
     end do
     !$omp end parallel do
