@@ -93,7 +93,8 @@ contains
     !%
     !% Warning 2: Some values are treated in their most common units,
     !% for example atomic masses (a.m.u.), vibrational frequencies
-    !% (cm^-1) or temperatures (Kelvin).
+    !% (cm<sup>-1</sup>) or temperatures (Kelvin). The unit of charge is always
+    !% the electronic charge <i>e</i>.
     !%
     !%Option atomic        1
     !% Atomic units
@@ -111,7 +112,7 @@ contains
     !%Option atomic        1
     !% Atomic units
     !%Option ev_angstrom   2
-    !% Electronvolts for energy, Angstrom for length, the rest of the
+    !% Electronvolts for energy, Angstroms for length, and the rest of the
     !% units are derived from these and <math>hbar=1</math>.
     !%End
 

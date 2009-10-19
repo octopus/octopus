@@ -29,16 +29,13 @@
     integer :: ik, ist, idim, is, id, ierr, ip
     character(len=80) :: fname
     type(unit_t) :: fn_unit
-    type(unit_t) :: volume
     FLOAT, allocatable :: dtmp(:), elf(:,:)
     FLOAT, allocatable :: current(:, :, :)
 
     call push_sub('output_states_inc.h_sys_output_states')
 
-    volume = units_out%length**gr%mesh%sb%dim
-
     if(iand(outp%what, output_density).ne.0) then
-      fn_unit = unit_one / volume
+      fn_unit = units_out%length**(-gr%mesh%sb%dim)
       do is = 1, st%d%nspin
         write(fname, '(a,i1)') 'density-', is
         call doutput_function(outp%how, dir, fname, gr%fine%mesh, gr%sb, &
@@ -47,7 +44,7 @@
     end if
 
     if(iand(outp%what, output_pol_density).ne.0) then
-      fn_unit = units_out%length / volume
+      fn_unit = units_out%length**(1-gr%mesh%sb%dim)
       SAFE_ALLOCATE(dtmp(1:gr%fine%mesh%np))
       do idim = 1, gr%sb%dim
         do is = 1, st%d%nspin
@@ -61,7 +58,7 @@
     end if
 
     if( (iand(outp%what, output_current).ne.0) .and. (st%wfs_type == M_CMPLX) ) then
-      fn_unit = unit_one / (units_out%time * volume)
+      fn_unit = units_out%time * units_out%length**(-gr%mesh%sb%dim)
       ! calculate current first
       SAFE_ALLOCATE(current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
       call states_calc_tau_jp_gn(gr, st, jp = current)
@@ -76,7 +73,7 @@
     end if
 
     if(iand(outp%what, output_wfs).ne.0) then
-      fn_unit = unit_one / sqrt(volume)
+      fn_unit = sqrt(units_out%length**(-gr%mesh%sb%dim))
       do ist = st%st_start, st%st_end
         if(loct_isinstringlist(ist, outp%wfs_list)) then
           do ik = st%d%kpt%start, st%d%kpt%end
@@ -96,7 +93,7 @@
     end if
 
     if(iand(outp%what, output_wfs_sqmod).ne.0) then
-      fn_unit = unit_one / volume
+      fn_unit = units_out%length**(-gr%mesh%sb%dim)
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part))
       do ist = st%st_start, st%st_end
         if(loct_isinstringlist(ist, outp%wfs_list)) then
@@ -118,7 +115,7 @@
     end if
 
     if(iand(outp%what, output_ked).ne.0) then
-      fn_unit = units_out%energy / volume
+      fn_unit = units_out%energy * units_out%length**(-gr%mesh%sb%dim)
       SAFE_ALLOCATE(elf(1:gr%mesh%np, 1:st%d%nspin))
       call states_calc_tau_jp_gn(gr, st, tau=elf)
       select case(st%d%ispin)
