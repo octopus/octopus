@@ -45,7 +45,6 @@ module oscillator_strength_m
   end type local_operator_t
 
   integer             :: observable(2)
-  FLOAT               :: conversion_factor
   type(unit_system_t) :: units
   FLOAT, allocatable  :: ot(:)
   type(kick_t)        :: kick
@@ -311,7 +310,7 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
   end do
 
   if(search_interval > M_ZERO) then
-    search_interval = search_interval * units%energy%factor
+    search_interval = units_to_atomic(units%energy, search_interval)
   else
     search_interval = M_HALF
   end if
@@ -325,13 +324,13 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
   end if
 
   if(final_time > M_ZERO) then
-    total_time = final_time * units%time%factor
+    total_time = units_to_atomic(units%time, final_time)
     if(total_time > dt*time_steps) then
       total_time = dt*time_steps
       write(0, '(a)')        '* WARNING: The requested total time to process is larger than the time'
       write(0, '(a)')        '*          available in the input file.'
-      write(0, '(a,f8.4,a)') '           The time has been adjusted to ', total_time / units%time%factor, &
-                             units_abbrev(units%time)
+      write(0, '(a,f8.4,a)') '           The time has been adjusted to ', &
+        units_from_atomic(units%time, total_time), units_abbrev(units%time)
     end if
     time_steps = int(total_time / dt)
     total_time = time_steps * dt
@@ -414,13 +413,13 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
   end if
 
   if(omega > M_ZERO) then
-    omega = omega * units%energy%factor
+    omega = units_to_atomic(units%energy, omega)
   else
     omega = M_HALF
   end if
 
   if(search_interval > M_ZERO) then
-    search_interval = search_interval * units%energy%factor
+    search_interval = units_to_atomic(units%energy, search_interval)
   else
     search_interval = M_HALF
   end if
@@ -442,13 +441,13 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
   end if
 
   if(final_time > M_ZERO) then
-    total_time = final_time * units%time%factor
+    total_time = units_to_atomic(units%time, final_time)
     if(total_time > dt*time_steps) then
       total_time = dt*time_steps
       write(0, '(a)')        '* WARNING: The requested total time to process is larger than the time'
       write(0, '(a)')        '*          available in the input file.'
-      write(0, '(a,f8.4,a)') '           The time has been adjusted to ', total_time / units%time%factor, &
-                         units_abbrev(units%time)
+      write(0, '(a,f8.4,a)') '           The time has been adjusted to ', &
+        units_from_atomic(units%time, total_time), units_abbrev(units%time)
     end if
     time_steps = int(total_time / dt)
     total_time = time_steps * dt
@@ -606,10 +605,10 @@ subroutine find_resonance(omega, leftbound, rightbound, nfrequencies)
   if(ierr.ne.0) then
     write(message(1),'(a)') 'Could not find a maximum.'
     write(message(2),'(a)')
-    write(message(3), '(a,f12.8,a,f12.8,a)') '   Search interval = [', leftbound / units%energy%factor, ',', &
-                                                          rightbound / units%energy%factor, ']'
-    write(message(4), '(a,f12.4,a)')         '   Search discretization = ', dw / units%energy%factor, &
-                                ' '//trim(units_abbrev(units%energy))
+    write(message(3), '(a,f12.8,a,f12.8,a)') '   Search interval = [', &
+      units_from_atomic(units%energy, leftbound), ',', units_from_atomic(units%energy, rightbound), ']'
+    write(message(4), '(a,f12.4,a)')         '   Search discretization = ', &
+      units_from_atomic(units%energy, dw), ' '//trim(units_abbrev(units%energy))
     call write_fatal(4)
   end if
 
@@ -757,7 +756,8 @@ subroutine generate_signal(order, observable)
   logical :: file_exists
   integer :: i, j, nspin, time_steps, lmax, nfiles, k, add_lm, l, m, max_add_lm
   integer, allocatable :: iunit(:)
-  FLOAT :: dt, lambda, det, dump, o0, conversion_factor
+  FLOAT :: dt, lambda, det, dump, o0
+  type(unit_t) :: mp_unit
   FLOAT, allocatable :: q(:), mu(:), qq(:, :), c(:)
   character(len=20) :: filename
   type(kick_t) :: kick
@@ -889,11 +889,11 @@ subroutine generate_signal(order, observable)
     max_add_lm = (lmax+1)**2-1
     SAFE_ALLOCATE(multipole(1:max_add_lm, 0:time_steps, 1:nspin))
     ! The units have nothing to do with the perturbing kick??
-    conversion_factor = units%length%factor ** kick%l(1)
+    mp_unit = units%length**kick%l(1)
   else
     max_add_lm = 3
     SAFE_ALLOCATE(multipole(1:3, 0:time_steps, 1:nspin))
-    conversion_factor = units%length%factor
+    mp_unit = units%length
   end if
   SAFE_ALLOCATE(ot(0:time_steps))
   multipole = M_ZERO
@@ -917,7 +917,7 @@ subroutine generate_signal(order, observable)
                           dump, (multipole(add_lm, i, 3), add_lm = 1, max_add_lm), &
                           dump, (multipole(add_lm, i, 4), add_lm = 1, max_add_lm)
       end select
-      multipole(1:max_add_lm, i, :) = multipole(1:max_add_lm, i, :) * conversion_factor
+      multipole(1:max_add_lm, i, :) = units_to_atomic(mp_unit, multipole(1:max_add_lm, i, :))
 
       ! The dipole is treated differently in the multipoles file: first of all, 
       ! the program should have printed *minus* the dipole operator.
@@ -1031,7 +1031,7 @@ subroutine write_ot(nspin, time_steps, dt, kick, units, order, ot, observable)
 
   integer :: iunit, i
   character(len=20) :: header_string
-  FLOAT :: conversion_factor
+  type(unit_t) :: ot_unit
 
   iunit = io_open('ot', action='write', status='replace')
 
@@ -1042,9 +1042,9 @@ subroutine write_ot(nspin, time_steps, dt, kick, units, order, ot, observable)
   case(-1)
     write(iunit,'(a)') '# Observable operator = kick operator'
     if(kick%n_multipoles > 0 ) then
-      conversion_factor = units_out%length%factor ** kick%l(1)
+      ot_unit = units_out%length**kick%l(1)
     else
-      conversion_factor = units_out%length%factor
+      ot_unit = units_out%length
     end if
   case(0)
     select case(observable(2))
@@ -1052,9 +1052,9 @@ subroutine write_ot(nspin, time_steps, dt, kick, units, order, ot, observable)
     case(2); write(iunit,'(a)') '# O = y'
     case(3); write(iunit,'(a)') '# O = z'
     end select
-    conversion_factor = units_out%length%factor
+    ot_unit = units_out%length
   case default
-    conversion_factor = units_out%length%factor ** observable(1)
+    ot_unit = units_out%length**observable(1)
     write(iunit, '(a12,i1,a1,i2,a1)') '# (l, m) = (', observable(1),',',observable(2),')'
   end select
   call kick_write(kick, iunit)
@@ -1070,7 +1070,7 @@ subroutine write_ot(nspin, time_steps, dt, kick, units, order, ot, observable)
   write(iunit,'(a20)', advance = 'yes')  str_center(trim(header_string), 20)
 
   do i = 0, time_steps
-    write(iunit, '(2e20.8)') units_from_atomic(units_out%time, i*dt), ot(i) / conversion_factor
+    write(iunit, '(2e20.8)') units_from_atomic(units_out%time, i*dt), units_from_atomic(ot_unit, ot(i))
   end do
 
   call io_close(iunit)
@@ -1100,6 +1100,7 @@ subroutine read_ot(nspin, order, nw_subtracted)
   character(len=100) :: line
   character(len=12)  :: dummychar
   FLOAT :: dummy, t1, t2
+  type(unit_t) :: ot_unit
 
   iunit = io_open('ot', action='read', status='old')
   if(iunit .eq. 0) then
@@ -1147,14 +1148,14 @@ subroutine read_ot(nspin, order, nw_subtracted)
   select case(observable(1))
   case(-1)
     if(kick%n_multipoles > 0) then
-      conversion_factor = units_out%length%factor**kick%l(1)
+      ot_unit = units_out%length**kick%l(1)
     else
-      conversion_factor = units_out%length%factor
+      ot_unit = units_out%length
     end if
   case(0)
-    conversion_factor = units_out%length%factor
+    ot_unit = units_out%length
   case default
-    conversion_factor = units_out%length%factor**observable(1)
+    ot_unit = units_out%length**observable(1)
   end select
 
   ! count number of time_steps
@@ -1166,7 +1167,7 @@ subroutine read_ot(nspin, order, nw_subtracted)
     if(time_steps == 2) t2 = dummy
   end do
   100 continue
-  dt = (t2 - t1) * units%time%factor ! units_out is OK
+  dt = units_to_atomic(units%time, (t2 - t1)) ! units_out is OK
 
   call io_skip_header(iunit)
 
@@ -1174,7 +1175,7 @@ subroutine read_ot(nspin, order, nw_subtracted)
 
   do i = 0, time_steps-1
     read(iunit, *) dummy, ot(i)
-    ot(i) = ot(i) * conversion_factor
+    ot(i) = units_to_atomic(ot_unit, ot(i))
   end do
 
 end subroutine read_ot
@@ -1223,13 +1224,13 @@ subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
   end if
 
   if(omega > M_ZERO) then
-    omega = omega * units%energy%factor
+    omega = units_to_atomic(units%energy, omega)
   else
     omega = M_HALF
   end if
 
   if(search_interval > M_ZERO) then
-    search_interval = search_interval * units%energy%factor
+    search_interval = units_to_atomic(units%energy, search_interval)
   else
     search_interval = M_HALF
   end if
@@ -1249,7 +1250,7 @@ subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
   end if
 
   if(final_time > M_ZERO) then
-    total_time = final_time * units%time%factor
+    total_time = units_to_atomic(units%time, final_time)
     if(total_time > dt*time_steps) then
       total_time = dt*time_steps
       write(0, '(a)')        '* WARNING: The requested total time to process is larger than the time'

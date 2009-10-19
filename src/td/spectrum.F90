@@ -717,7 +717,7 @@ contains
 
       ! Note that the cross-section elements do not have to be transformed to the proper units, since
       ! they have been read from the "cross_section_vector.x", that are already in the proper units.
-      write(out_file,'(3e20.8)', advance = 'no') (i*s%energy_step) / units_out%energy%factor, &
+      write(out_file,'(3e20.8)', advance = 'no') units_from_atomic(units_out%energy, (i*s%energy_step)), &
         average , sqrt(max(anisotropy, M_ZERO)) 
       do j = 1, nspin
         write(out_file,'(9e20.8)', advance = 'no') sigma(1:3, 1:3, i, j)
@@ -778,8 +778,10 @@ contains
           dump, dipole(1:3, i, 3), dump, dipole(1:3, i, 4)
       end select
 
-      dipole(1:3, i, :) = dipole(1:3, i, :) * file_units%length%factor
+      dipole(1:3, i, :) = units_to_atomic(file_units%length, dipole(1:3, i, :))
+      
     end do
+
     ! Now subtract the initial dipole.
     do i = time_steps, 0, -1
       dipole(:, i, :) = dipole(:, i, :) - dipole(:, 0, :)
@@ -847,14 +849,14 @@ contains
     write(out_file, '(a)') '#%'
     write(out_file, '(a,i8)')    '# Number of time steps = ', time_steps
     write(out_file, '(a,i4)')    '# SpecDampMode         = ', s%damp
-    write(out_file, '(a,f10.4)') '# SpecDampFactor       = ', s%damp_factor * units_out%time%factor
-    write(out_file, '(a,f10.4)') '# SpecStartTime        = ', s%start_time   / units_out%time%factor
-    write(out_file, '(a,f10.4)') '# SpecEndTime          = ', s%end_time     / units_out%time%factor
-    write(out_file, '(a,f10.4)') '# SpecMaxEnergy        = ', s%max_energy   / units_out%energy%factor
-    write(out_file, '(a,f10.4)') '# SpecEnergyStep       = ', s%energy_step  / units_out%energy%factor
+    write(out_file, '(a,f10.4)') '# SpecDampFactor       = ', units_from_atomic(units_out%time**(-1), s%damp_factor)
+    write(out_file, '(a,f10.4)') '# SpecStartTime        = ', units_from_atomic(units_out%time, s%start_time)
+    write(out_file, '(a,f10.4)') '# SpecEndTime          = ', units_from_atomic(units_out%time, s%end_time)
+    write(out_file, '(a,f10.4)') '# SpecMaxEnergy        = ', units_from_atomic(units_out%energy, s%max_energy)
+    write(out_file, '(a,f10.4)') '# SpecEnergyStep       = ', units_from_atomic(units_out%energy, s%energy_step)
     write(out_file, '(a)') '#%'
     write(out_file, '(a,f16.6)') '# Electronic sum rule  = ', ewsum
-    write(out_file, '(a,f16.6)') '# Polariz. (sum rule)  = ', polsum  / units_out%length%factor**3
+    write(out_file, '(a,f16.6)') '# Polariz. (sum rule)  = ', units_from_atomic(units_out%length**3, polsum)
     write(out_file, '(a)') '#%'
     
     write(out_file, '(a1,a20)', advance = 'no') '#', str_center("Energy", 20)
@@ -879,12 +881,12 @@ contains
     write(out_file, '(1x)')
 
     do i = 0, no_e
-      write(out_file,'(e20.8)', advance = 'no') i*s%energy_step / units_out%energy%factor
+      write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, i*s%energy_step)
       do j = 1, nspin
-        write(out_file,'(3e20.8)', advance = 'no') sigma(1:3, i, j) / (units_out%length%factor**2)
+        write(out_file,'(3e20.8)', advance = 'no') units_from_atomic(units_out%length**2, sigma(1:3, i, j))
       end do
       do j = 1, nspin
-        write(out_file,'(e20.8)', advance = 'no') sf(i, j) * units_out%energy%factor
+        write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, sf(i, j))
       end do
       write(out_file, '(1x)')
     end do
@@ -973,11 +975,11 @@ contains
     ! print some info
     write(message(1), '(a,i8)')    'Number of time steps = ', ntiter
     write(message(2), '(a,i4)')    'SpecDampMode         = ', s%damp
-    write(message(3), '(a,f10.4)') 'SpecDampFactor       = ', s%damp_factor * units_out%time%factor
-    write(message(4), '(a,f10.4)') 'SpecStartTime        = ', s%start_time   / units_out%time%factor
-    write(message(5), '(a,f10.4)') 'SpecEndTime          = ', s%end_time     / units_out%time%factor
-    write(message(6), '(a,f10.4)') 'SpecMaxEnergy        = ', s%max_energy   / units_inp%energy%factor
-    write(message(7),'(a,f10.4)')  'SpecEnergyStep       = ', s%energy_step  / units_inp%energy%factor
+    write(message(3), '(a,f10.4)') 'SpecDampFactor       = ', units_from_atomic(units_out%time**(-1), s%damp_factor)
+    write(message(4), '(a,f10.4)') 'SpecStartTime        = ', units_from_atomic(units_out%time, s%start_time)
+    write(message(5), '(a,f10.4)') 'SpecEndTime          = ', units_from_atomic(units_out%time, s%end_time)
+    write(message(6), '(a,f10.4)') 'SpecMaxEnergy        = ', units_from_atomic(units_inp%energy, s%max_energy) 
+    write(message(7),'(a,f10.4)')  'SpecEnergyStep       = ', units_from_atomic(units_inp%energy, s%energy_step)
     message(8) = ""
     write(message(9), '(a,5e15.6,5e15.6)') 'R(0) sum rule = ', sum1
     write(message(10),'(a,5e15.6,5e15.6)') 'R(2) sum rule = ', sum2
@@ -992,9 +994,9 @@ contains
          str_center('['//trim(units_abbrev(units_out%length)) //'^3]', 20), &
          str_center('['//trim(units_abbrev(units_out%length)) //'^4]', 20)
     do i = 0, no_e
-      write(out_file,'(e20.8,e20.8,e20.8)') i*s%energy_step / units_out%energy%factor, &
-           aimag(sp(i)) / M_PI / (units_out%length%factor)**3, &
-           real(sp(i)) * P_C/(M_THREE*max(i,1)*s%energy_step) / (units_out%length%factor)**4
+      write(out_file,'(e20.8,e20.8,e20.8)') units_from_atomic(units_out%energy, i*s%energy_step), &
+        units_from_atomic(units_out%length**3, aimag(sp(i))/M_PI), &
+        units_from_atomic(units_out%length**4, real(sp(i))*P_C/(M_THREE*max(i,1)*s%energy_step))
     end do
 
     call pop_sub()
@@ -1160,7 +1162,7 @@ contains
       case('-')
         dipole(i) = -sum(d(1, :) - M_zI*d(2, :)) / sqrt(M_TWO)
       end select
-      dipole(i) = dipole(i) * units_out%length%factor
+      dipole(i) = units_to_atomic(units_out%length, dipole(i))
     end do
     SAFE_DEALLOCATE_A(d)
     dipole(0) = dipole(1)
@@ -1227,7 +1229,7 @@ contains
       case('-')
         acc(i) = (a(1) - M_zI*a(2)) / sqrt(M_TWO)
       end select
-      acc(i) = acc(i) * units_out%acceleration%factor
+      acc(i) = units_to_atomic(units_out%acceleration, acc(i))
     end do
     close(iunit)
 
