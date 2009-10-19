@@ -321,7 +321,7 @@
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
-      write(iunit,'(a,e20.12)') '# Flow = ', units_from_atomic(unit_one / units%out%time, flow)
+      write(iunit,'(a,e20.12)') '# Flow = ', units_from_atomic(unit_one / units_out%time, flow)
       call io_close(iunit)
     end if
 
