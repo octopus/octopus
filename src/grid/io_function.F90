@@ -378,21 +378,27 @@ contains
     FLOAT :: trace
     integer :: j
     logical :: write_average_
+    FLOAT, allocatable :: tmp(:)
 
     call push_sub('io_function.io_output_tensor')
+
+    SAFE_ALLOCATE(tmp(1:ndim))
 
     write_average_ = .true.
     if(present(write_average)) write_average_ = write_average
 
     trace = M_z0
     do j = 1, ndim
-      write(iunit, '(3f20.6)') units_from_atomic(unit, tensor(j, 1:ndim))
+      tmp(1:ndim) = units_from_atomic(unit, tensor(j, 1:ndim))
+      write(iunit, '(3f20.6)') tmp(1:ndim)
       trace = trace + tensor(j, j)
     end do
 
     trace = units_from_atomic(unit, trace/TOFLOAT(ndim))
 
     if(write_average_) write(iunit, '(a, f20.6)')  'Isotropic average', trace
+
+    SAFE_DEALLOCATE_A(tmp)
 
     call pop_sub()
   end subroutine io_output_tensor

@@ -784,6 +784,7 @@ contains
 
     integer :: i, j
     character(len=50) :: aux
+    FLOAT :: tmp(1:MAX_DIM)
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
@@ -830,13 +831,16 @@ contains
     call write_iter_start(out_coords)
 
     do i = 1, geo%natoms
-      call write_iter_double(out_coords, units_from_atomic(units_out%length, geo%atom(i)%x(1:gr%mesh%sb%dim)), gr%mesh%sb%dim)
+      tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%length, geo%atom(i)%x(1:gr%mesh%sb%dim))
+      call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
     end do
     do i = 1, geo%natoms
-      call write_iter_double(out_coords, units_from_atomic(units_out%velocity, geo%atom(i)%v(1:gr%mesh%sb%dim)), gr%mesh%sb%dim)
+      tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%velocity, geo%atom(i)%v(1:gr%mesh%sb%dim))
+      call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
     end do
     do i = 1, geo%natoms
-      call write_iter_double(out_coords, units_from_atomic(units_out%force, geo%atom(i)%f(1:gr%mesh%sb%dim)), gr%mesh%sb%dim)
+      tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%force, geo%atom(i)%f(1:gr%mesh%sb%dim))
+      call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
     end do
     call write_iter_nl(out_coords)
 
@@ -1000,7 +1004,8 @@ contains
     call td_calc_tacc(gr, geo, st, hm, acc, dt * idim)
 
     call write_iter_start(out_acc)
-    call write_iter_double(out_acc, units_from_atomic(units_out%acceleration, acc), gr%mesh%sb%dim)
+    acc = units_from_atomic(units_out%acceleration, acc)
+    call write_iter_double(out_acc, acc, gr%mesh%sb%dim)
     call write_iter_nl(out_acc)
 
     call pop_sub()

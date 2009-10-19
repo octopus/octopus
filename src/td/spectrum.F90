@@ -748,6 +748,7 @@ contains
     type(kick_t) :: kick
     FLOAT, allocatable :: dipole(:, :, :), sigma(:, :, :), dumpa(:), sf(:, :)
     type(unit_system_t) :: file_units
+    FLOAT :: tmp(1:3)
 
     call push_sub('spectrum.spectrum_cross_section')
 
@@ -883,7 +884,8 @@ contains
     do i = 0, no_e
       write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, i*s%energy_step)
       do j = 1, nspin
-        write(out_file,'(3e20.8)', advance = 'no') units_from_atomic(units_out%length**2, sigma(1:3, i, j))
+        tmp(1:3) = units_from_atomic(units_out%length**2, sigma(1:3, i, j))
+        write(out_file,'(3e20.8)', advance = 'no') tmp
       end do
       do j = 1, nspin
         write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, sf(i, j))
