@@ -64,10 +64,10 @@ module casida_m
     integer, pointer  :: n_unocc(:)     ! number of unoccupied states
     character(len=80) :: wfn_list
 
-    integer           :: n_pairs        ! number of pairs to take into acount
+    integer           :: n_pairs        ! number of pairs to take into account
     type(states_pair_t), pointer :: pair(:)
 
-    FLOAT,   pointer  :: mat(:,:)       ! general purpose matrix
+    FLOAT,   pointer  :: mat(:,:)       ! general-purpose matrix
     FLOAT,   pointer  :: w(:)           ! The excitation energies.
     FLOAT,   pointer  :: tm(:, :)       ! The transition matrix elements (between the many-particle states)
     FLOAT,   pointer  :: f(:)           ! The (dipole) strengths

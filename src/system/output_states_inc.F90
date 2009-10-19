@@ -28,36 +28,40 @@
 
     integer :: ik, ist, idim, is, id, ierr, ip
     character(len=80) :: fname
-    type(unit_t) :: u
+    type(unit_t) :: fn_unit
+    type(unit_t) :: volume
     FLOAT, allocatable :: dtmp(:), elf(:,:)
     FLOAT, allocatable :: current(:, :, :)
 
     call push_sub('output_states_inc.h_sys_output_states')
 
-    u = units_out%length**(-gr%mesh%sb%dim)
+    volume = units_out%length**gr%mesh%sb%dim
 
     if(iand(outp%what, output_density).ne.0) then
+      fn_unit = unit_one / volume
       do is = 1, st%d%nspin
         write(fname, '(a,i1)') 'density-', is
         call doutput_function(outp%how, dir, fname, gr%fine%mesh, gr%sb, &
-          st%rho(:, is), u, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
+          st%rho(:, is), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
       end do
     end if
 
     if(iand(outp%what, output_pol_density).ne.0) then
+      fn_unit = units_out%length / volume
       SAFE_ALLOCATE(dtmp(1:gr%fine%mesh%np))
       do idim = 1, gr%sb%dim
         do is = 1, st%d%nspin
           forall (ip = 1:gr%fine%mesh%np) dtmp(ip) = st%rho(ip, is)*gr%fine%mesh%x(ip, idim)
           write(fname, '(a,i1,a,i1)') 'dipole_density-', is, '-',idim
           call doutput_function(outp%how, dir, fname, gr%fine%mesh, gr%sb, &
-            dtmp(:), u, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
+            dtmp(:), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
         end do
       end do
       SAFE_DEALLOCATE_A(dtmp)
     end if
 
     if( (iand(outp%what, output_current).ne.0) .and. (st%wfs_type == M_CMPLX) ) then
+      fn_unit = unit_one / (units_out%time * volume)
       ! calculate current first
       SAFE_ALLOCATE(current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
       call states_calc_tau_jp_gn(gr, st, jp = current)
@@ -65,13 +69,14 @@
         do id = 1, gr%mesh%sb%dim
           write(fname, '(a,i1,a,a)') 'current-', is, '-', index2axis(id)
           call doutput_function(outp%how, dir, fname, gr%mesh, gr%sb, &
-            current(:, id, is), u, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
+            current(:, id, is), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
         end do
       end do
       SAFE_DEALLOCATE_A(current)
     end if
 
     if(iand(outp%what, output_wfs).ne.0) then
+      fn_unit = unit_one / sqrt(volume)
       do ist = st%st_start, st%st_end
         if(loct_isinstringlist(ist, outp%wfs_list)) then
           do ik = st%d%kpt%start, st%d%kpt%end
@@ -79,10 +84,10 @@
               write(fname, '(a,i3.3,a,i4.4,a,i1)') 'wf-', ik, '-', ist, '-', idim
               if (st%wfs_type == M_REAL) then
                 call doutput_function(outp%how, dir, fname, gr%mesh, gr%sb, &
-                     st%dpsi(1:, idim, ist, ik), sqrt(u), ierr, is_tmp = .false., geo = geo)
+                     st%dpsi(1:, idim, ist, ik), fn_unit, ierr, is_tmp = .false., geo = geo)
               else
                 call zoutput_function(outp%how, dir, fname, gr%mesh, gr%sb, &
-                     st%zpsi(1:, idim, ist, ik), sqrt(u), ierr, is_tmp = .false., geo = geo)
+                     st%zpsi(1:, idim, ist, ik), fn_unit, ierr, is_tmp = .false., geo = geo)
               end if
             end do
           end do
@@ -91,6 +96,7 @@
     end if
 
     if(iand(outp%what, output_wfs_sqmod).ne.0) then
+      fn_unit = unit_one / volume
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part))
       do ist = st%st_start, st%st_end
         if(loct_isinstringlist(ist, outp%wfs_list)) then
@@ -103,7 +109,7 @@
                 dtmp = abs(st%zpsi(:, idim, ist, ik))**2
               end if
               call doutput_function (outp%how, dir, fname, gr%mesh, gr%sb, &
-                dtmp, u, ierr, is_tmp = .false., geo = geo)
+                dtmp, fn_unit, ierr, is_tmp = .false., geo = geo)
             end do
           end do
         end if
@@ -112,6 +118,7 @@
     end if
 
     if(iand(outp%what, output_ked).ne.0) then
+      fn_unit = units_out%energy / volume
       SAFE_ALLOCATE(elf(1:gr%mesh%np, 1:st%d%nspin))
       call states_calc_tau_jp_gn(gr, st, tau=elf)
       select case(st%d%ispin)
@@ -314,7 +321,7 @@
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
-      write(iunit,'(a,e20.12)') '# Flow = ', flow
+      write(iunit,'(a,e20.12)') '# Flow = ', units_from_atomic(unit_one / units%out%time, flow)
       call io_close(iunit)
     end if
 
