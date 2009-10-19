@@ -743,12 +743,11 @@ contains
     type(spec_t),  intent(inout) :: s
 
     character(len=20) :: header_string
-    integer :: nspin, lmax, time_steps, is, ie, ntiter, i, j, jj, isp, no_e, k
+    integer :: nspin, lmax, time_steps, is, ie, ntiter, i, j, jj, isp, no_e, k, idir
     FLOAT   :: dt, dump, x, w, ewsum, polsum
     type(kick_t) :: kick
     FLOAT, allocatable :: dipole(:, :, :), sigma(:, :, :), dumpa(:), sf(:, :)
     type(unit_system_t) :: file_units
-    FLOAT :: tmp(1:3)
 
     call push_sub('spectrum.spectrum_cross_section')
 
@@ -849,15 +848,15 @@ contains
     call kick_write(kick, out_file)
     write(out_file, '(a)') '#%'
     write(out_file, '(a,i8)')    '# Number of time steps = ', time_steps
-    write(out_file, '(a,i4)')    '# SpecDampMode         = ', s%damp
-    write(out_file, '(a,f10.4)') '# SpecDampFactor       = ', units_from_atomic(units_out%time**(-1), s%damp_factor)
-    write(out_file, '(a,f10.4)') '# SpecStartTime        = ', units_from_atomic(units_out%time, s%start_time)
-    write(out_file, '(a,f10.4)') '# SpecEndTime          = ', units_from_atomic(units_out%time, s%end_time)
-    write(out_file, '(a,f10.4)') '# SpecMaxEnergy        = ', units_from_atomic(units_out%energy, s%max_energy)
-    write(out_file, '(a,f10.4)') '# SpecEnergyStep       = ', units_from_atomic(units_out%energy, s%energy_step)
+    write(out_file, '(a,i4)')    '# SpecDampMode              = ', s%damp
+    write(out_file, '(a,f10.4)') '# SpecDampFactor            = ', units_from_atomic(units_out%time**(-1), s%damp_factor)
+    write(out_file, '(a,f10.4)') '# SpecStartTime             = ', units_from_atomic(units_out%time, s%start_time)
+    write(out_file, '(a,f10.4)') '# SpecEndTime               = ', units_from_atomic(units_out%time, s%end_time)
+    write(out_file, '(a,f10.4)') '# SpecMaxEnergy             = ', units_from_atomic(units_out%energy, s%max_energy)
+    write(out_file, '(a,f10.4)') '# SpecEnergyStep            = ', units_from_atomic(units_out%energy, s%energy_step)
     write(out_file, '(a)') '#%'
-    write(out_file, '(a,f16.6)') '# Electronic sum rule  = ', ewsum
-    write(out_file, '(a,f16.6)') '# Polariz. (sum rule)  = ', units_from_atomic(units_out%length**3, polsum)
+    write(out_file, '(a,f16.6)') '# Electronic sum rule       = ', ewsum
+    write(out_file, '(a,f16.6)') '# Polarizability (sum rule) = ', units_from_atomic(units_out%length**3, polsum)
     write(out_file, '(a)') '#%'
     
     write(out_file, '(a1,a20)', advance = 'no') '#', str_center("Energy", 20)
@@ -884,8 +883,8 @@ contains
     do i = 0, no_e
       write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, i*s%energy_step)
       do j = 1, nspin
-        tmp(1:3) = units_from_atomic(units_out%length**2, sigma(1:3, i, j))
-        write(out_file,'(3e20.8)', advance = 'no') tmp
+        write(out_file,'(3e20.8)', advance = 'no') (units_from_atomic(units_out%length**2, sigma(idir, i, j)), &
+                                                    idir = 1, 3)
       end do
       do j = 1, nspin
         write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, sf(i, j))

@@ -28,10 +28,10 @@ module static_pol_m
   use geometry_m
   use global_m
   use grid_m
-  use hamiltonian_m
   use h_sys_output_m
-  use io_function_m
+  use hamiltonian_m
   use io_m
+  use io_function_m
   use loct_m
   use parser_m
   use mpi_m
