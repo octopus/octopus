@@ -154,7 +154,7 @@ contains
     !% states, and one sets this variable to the value "10-18", this means that occupied
     !% states from 10 to 15, and unoccupied states from 16 to 18 will be considered.
     !%
-    !% This variable is a string in list form, i.e. expressions such as "1,2-5,8-15" are
+    !% This variable is a string in list form, <i>i.e.</i> expressions such as "1,2-5,8-15" are
     !% valid. You should include a non-zero number of unoccupied states and a non-zero number
     !% of occupied states.
     !%End
@@ -172,7 +172,7 @@ contains
     !% 
     !% By default, no transition density is calculated. 
     !%
-    !% This variable is a string in list form, i.e. expressions such as "1,2-5,8-15" are
+    !% This variable is a string in list form, <i>i.e.</i> expressions such as "1,2-5,8-15" are
     !% valid.
     !%End
     call parse_string(datasets_check('CasidaTransitionDensities'), "0", trandens)
@@ -316,7 +316,7 @@ contains
 
     logical, allocatable :: saved_K(:, :)         ! which matrix elements have been loaded
     type(states_t), pointer :: st
-    type(mesh_t),   pointer :: m
+    type(mesh_t),   pointer :: mesh
 
     FLOAT, allocatable :: rho(:, :), fxc(:,:,:), pot(:)
     integer :: j_old, b_old, mu_old
@@ -328,7 +328,7 @@ contains
 
     ! some shortcuts
     st => sys%st
-    m  => sys%gr%mesh
+    mesh => sys%gr%mesh
 
     ! initialize stuff
     SAFE_ALLOCATE(saved_K(1:cas%n_pairs, 1:cas%n_pairs))
@@ -344,16 +344,16 @@ contains
 
     if (cas%type /= CASIDA_EPS_DIFF) then
       ! This is to be allocated here, and is used inside K_term.
-      SAFE_ALLOCATE(pot(1:m%np))
+      SAFE_ALLOCATE(pot(1:mesh%np))
       j_old = -1; b_old = -1; mu_old = -1
       
       ! We calculate here the kernel, since it will be needed later.
-      SAFE_ALLOCATE(rho(1:m%np, 1:st%d%nspin))
-      SAFE_ALLOCATE(fxc(1:m%np, 1:st%d%nspin, 1:st%d%nspin))
+      SAFE_ALLOCATE(rho(1:mesh%np, 1:st%d%nspin))
+      SAFE_ALLOCATE(fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
       fxc = M_ZERO
 
-      call states_total_density(st, m, rho)
-      call xc_get_fxc(sys%ks%xc, m, rho, st%d%ispin, fxc)
+      call states_total_density(st, mesh, rho)
+      call xc_get_fxc(sys%ks%xc, mesh, rho, st%d%ispin, fxc)
     end if
 
     select case(cas%type)
@@ -378,9 +378,9 @@ contains
 
     ! ---------------------------------------------------------
     subroutine solve_petersilka
-      integer :: ia, iunit, k
-      FLOAT   :: f
-      FLOAT, allocatable :: deltav(:), x(:)
+      integer :: ia, iunit, idir
+      FLOAT   :: ff
+      FLOAT, allocatable :: deltav(:), xx(:)
 
       call push_sub('casida.solve_petersilka')
 
@@ -397,40 +397,40 @@ contains
 
         if(cas%type == CASIDA_PETERSILKA) then
           if(saved_K(ia, ia)) then
-            f = cas%mat(ia, ia)
+            ff = cas%mat(ia, ia)
           else
-            f = K_term(cas%pair(ia), cas%pair(ia))
-            write(iunit, *) ia, ia, f
+            ff = K_term(cas%pair(ia), cas%pair(ia))
+            write(iunit, *) ia, ia, ff
           end if
-          cas%w(ia) = cas%w(ia) + M_TWO*f
+          cas%w(ia) = cas%w(ia) + M_TWO * ff
         end if
 
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ia, cas%n_pairs)
       end do
 
 
-      SAFE_ALLOCATE(x(1:cas%n_pairs))
-      SAFE_ALLOCATE(deltav(1:m%np))
+      SAFE_ALLOCATE(xx(1:cas%n_pairs))
+      SAFE_ALLOCATE(deltav(1:mesh%np))
 
-      do k = 1, m%sb%dim
+      do idir = 1, mesh%sb%dim
 
-        deltav(1:m%np) = m%x(1:m%np, k)
+        deltav(1:mesh%np) = mesh%x(1:mesh%np, idir)
         
-        !WARNING: should x always be real?
+        !WARNING: should xx always be real?
         if (st%wfs_type == M_REAL) then
-          x = dks_matrix_elements(cas, st, m, deltav)
+          xx = dks_matrix_elements(cas, st, mesh, deltav)
         else
-          x = zks_matrix_elements(cas, st, m, deltav)
+          xx = zks_matrix_elements(cas, st, mesh, deltav)
         end if
         
-        cas%tm(:, k) = M_TWO*x(:)**2*cas%w(:)
+        cas%tm(:, idir) = M_TWO * xx(:)**2 * cas%w(:)
 
       end do
-      SAFE_DEALLOCATE_A(x)
+      SAFE_DEALLOCATE_A(xx)
       SAFE_DEALLOCATE_A(deltav)
 
       do ia = 1, cas%n_pairs
-        cas%f(ia) = (M_TWO/m%sb%dim)*sum((abs(cas%tm(ia, :)))**2)
+        cas%f(ia) = (M_TWO/mesh%sb%dim)*sum((abs(cas%tm(ia, :)))**2)
       end do
 
       if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
@@ -444,7 +444,7 @@ contains
     ! ---------------------------------------------------------
     subroutine solve_casida()
       FLOAT :: temp
-      integer :: ia, jb, k
+      integer :: ia, jb, idir
       integer :: max, actual, iunit, counter
       FLOAT, allocatable :: deltav(:)
 
@@ -531,7 +531,7 @@ contains
 
         do ia = 1, cas%n_pairs
           if(cas%w(ia) < M_ZERO) then
-            write(message(1),'(a,i4,a)') 'For whatever reason, the excitation energy',ia,' is negative.'
+            write(message(1),'(a,i4,a)') 'For whatever reason, the excitation energy', ia, ' is negative.'
             write(message(2),'(a)')      'This should not happen.'
             call write_warning(2)
             cas%w(ia) = M_ZERO
@@ -550,28 +550,28 @@ contains
           end if
         end do
 
-        SAFE_ALLOCATE(deltav(1:m%np))
+        SAFE_ALLOCATE(deltav(1:mesh%np))
         if (st%wfs_type == M_REAL) then
           SAFE_ALLOCATE(dx(1:cas%n_pairs))
-          do k = 1, m%sb%dim
-            deltav(1:m%np) = m%x(1:m%np, k)
+          do idir = 1, mesh%sb%dim
+            deltav(1:mesh%np) = mesh%x(1:mesh%np, idir)
             ! let us get now the x vector.
-            dx = dks_matrix_elements(cas, st, m, deltav)
+            dx = dks_matrix_elements(cas, st, mesh, deltav)
             ! And now we are able to get the transition matrix elements between many-electron states.
             do ia = 1, cas%n_pairs
-              cas%tm(ia, k) = dtransition_matrix_element(cas, ia, dx)
+              cas%tm(ia, idir) = dtransition_matrix_element(cas, ia, dx)
             end do
           end do
           SAFE_DEALLOCATE_A(dx)
         else
           SAFE_ALLOCATE(zx(1:cas%n_pairs))
-          do k = 1, m%sb%dim
-            deltav(1:m%np) = m%x(1:m%np, k)
+          do idir = 1, mesh%sb%dim
+            deltav(1:mesh%np) = mesh%x(1:mesh%np, idir)
             ! let us get now the x vector.
-            zx = zks_matrix_elements(cas, st, m, deltav)
+            zx = zks_matrix_elements(cas, st, mesh, deltav)
             ! And now we are able to get the transition matrix elements between many-electron states.
             do ia = 1, cas%n_pairs
-              cas%tm(ia, k) = ztransition_matrix_element(cas, ia, zx)
+              cas%tm(ia, idir) = ztransition_matrix_element(cas, ia, zx)
             end do
           end do
           SAFE_DEALLOCATE_A(zx)
@@ -581,7 +581,7 @@ contains
 
         ! And the oscillator strengths.
         do ia = 1, cas%n_pairs
-          cas%f(ia) = (M_TWO/m%sb%dim) * cas%w(ia) * sum( (abs(cas%tm(ia, :)))**2 )
+          cas%f(ia) = (M_TWO / mesh%sb%dim) * cas%w(ia) * sum( (abs(cas%tm(ia, :)))**2 )
         end do
 
       end if
@@ -610,26 +610,26 @@ contains
       i = p%i; a = p%a; sigma = p%sigma
       j = q%i; b = q%a; mu = q%sigma
 
-      SAFE_ALLOCATE(rho_i(1:m%np))
-      SAFE_ALLOCATE(rho_j(1:m%np))
+      SAFE_ALLOCATE(rho_i(1:mesh%np))
+      SAFE_ALLOCATE(rho_j(1:mesh%np))
 
       if (st%wfs_type == M_REAL) then
-        rho_i(1:m%np) =  st%dpsi(1:m%np, 1, i, sigma) * st%dpsi(1:m%np, 1, a, sigma)
-        rho_j(1:m%np) =  st%dpsi(1:m%np, 1, j, mu) * st%dpsi(1:m%np, 1, b, mu)
+        rho_i(1:mesh%np) =  st%dpsi(1:mesh%np, 1, i, sigma) * st%dpsi(1:mesh%np, 1, a, sigma)
+        rho_j(1:mesh%np) =  st%dpsi(1:mesh%np, 1, j, mu) * st%dpsi(1:mesh%np, 1, b, mu)
       else
-        rho_i(1:m%np) =  st%zpsi(1:m%np, 1, i, sigma) * conjg(st%zpsi(1:m%np, 1, a, sigma))
-        rho_j(1:m%np) =  conjg(st%zpsi(1:m%np, 1, j, mu)) * st%zpsi(1:m%np, 1, b, mu)
+        rho_i(1:mesh%np) =  st%zpsi(1:mesh%np, 1, i, sigma) * conjg(st%zpsi(1:mesh%np, 1, a, sigma))
+        rho_j(1:mesh%np) =  conjg(st%zpsi(1:mesh%np, 1, j, mu)) * st%zpsi(1:mesh%np, 1, b, mu)
       end if
 
       !  first the Hartree part (only works for real wfs...)
       if( j.ne.j_old  .or.   b.ne.b_old   .or.  mu.ne.mu_old) then
-        pot(1:m%np) = M_ZERO
+        pot(1:mesh%np) = M_ZERO
         if(hm%theory_level.ne.INDEPENDENT_PARTICLES) call dpoisson_solve(sys%gr, pot, rho_j, all_nodes=.false.)
       end if
 
-      K_term = dmf_dotp(m, rho_i(:), pot(:))
-      rho(1:m%np, 1) = rho_i(1:m%np) * rho_j(1:m%np) * fxc(1:m%np, sigma, mu)
-      K_term = K_term + dmf_integrate(m, rho(:, 1))
+      K_term = dmf_dotp(mesh, rho_i(:), pot(:))
+      rho(1:mesh%np, 1) = rho_i(1:mesh%np) * rho_j(1:mesh%np) * fxc(1:mesh%np, sigma, mu)
+      K_term = K_term + dmf_integrate(mesh, rho(:, 1))
 
       j_old = j; b_old = b; mu_old = mu
 

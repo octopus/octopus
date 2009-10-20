@@ -19,82 +19,81 @@
 
 
 ! ---------------------------------------------------------
-function X(ks_matrix_elements) (cas, st, m, dv) result(x)
+function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
   type(casida_t), intent(in) :: cas
   type(states_t), intent(in) :: st
-  type(mesh_t),   intent(in) :: m
+  type(mesh_t),   intent(in) :: mesh
   FLOAT, intent(in)   :: dv(:)
-  FLOAT :: x(cas%n_pairs)
+  FLOAT :: xx(cas%n_pairs)
 
-  R_TYPE, allocatable :: f(:)
-  integer :: k, ia, i, a, sigma, idim
+  R_TYPE, allocatable :: ff(:)
+  integer :: ip, ia, sigma, idim
 
   call push_sub('casida_inc.Xks_matrix_elements')
 
-  SAFE_ALLOCATE(f(1:m%np))
+  SAFE_ALLOCATE(ff(1:mesh%np))
   do ia = 1, cas%n_pairs
-    i     = cas%pair(ia)%i
-    a     = cas%pair(ia)%a
     sigma = cas%pair(ia)%sigma
-    do k = 1, m%np
+    do ip = 1, mesh%np
       do idim = 1, st%d%dim
-        f(k) = dv(k) * R_CONJ(st%X(psi) (k, idim, i, sigma)) * st%X(psi) (k, idim, a, sigma)
+        ff(ip) = dv(ip) * R_CONJ(st%X(psi) (ip, idim, cas%pair(ia)%i, sigma)) &
+                               * st%X(psi) (ip, idim, cas%pair(ia)%a, sigma)
       end do
     end do
-    x(ia) = X(mf_integrate)(m, f)
+    xx(ia) = X(mf_integrate)(mesh, ff)
   end do
 
-  SAFE_DEALLOCATE_A(f)
+  SAFE_DEALLOCATE_A(ff)
   call pop_sub()
 end function X(ks_matrix_elements)
 
 ! ---------------------------------------------------------
-R_TYPE function X(transition_matrix_element) (cas, ia, x) result(z)
+R_TYPE function X(transition_matrix_element) (cas, ia, xx) result(zz)
   type(casida_t), intent(in) :: cas
   integer,        intent(in) :: ia
-  R_TYPE,         intent(in) :: x(:)
+  R_TYPE,         intent(in) :: xx(:)
 
   integer :: jb
 
   call push_sub('casida_inc.Xtransition_matrix_element')
 
-  z = R_TOTYPE(M_ZERO)
+  zz = R_TOTYPE(M_ZERO)
   if(cas%w(ia) > M_ZERO) then
     do jb = 1, cas%n_pairs
-      z = z + x(jb) * (M_ONE/sqrt(cas%s(jb))) * cas%mat(jb, ia)
+      zz = zz + xx(jb) * (M_ONE/sqrt(cas%s(jb))) * cas%mat(jb, ia)
     end do
-    z = (M_ONE/sqrt(cas%w(ia))) * z
+    zz = (M_ONE/sqrt(cas%w(ia))) * zz
   end if
 
   call pop_sub()
 end function X(transition_matrix_element)
 
 ! ---------------------------------------------------------
-subroutine X(transition_density) (cas, st, m, ia, n0I)
+subroutine X(transition_density) (cas, st, mesh, ia, n0I)
   type(casida_t), intent(in)  :: cas
   type(states_t), intent(in)  :: st
-  type(mesh_t),   intent(in)  :: m
+  type(mesh_t),   intent(in)  :: mesh
   integer,        intent(in)  :: ia
   R_TYPE,         intent(out) :: n0I(:)
 
-  integer :: i, jb, idim
-  R_TYPE, allocatable :: x(:)
+  integer :: ip, jb, idim
+  R_TYPE, allocatable :: xx(:)
 
   call push_sub('casida_inc.Xtransition_density')
 
-  SAFE_ALLOCATE(x(1:cas%n_pairs))
+  SAFE_ALLOCATE(xx(1:cas%n_pairs))
 
-  do i = 1, m%np
+  do ip = 1, mesh%np
     do jb = 1, cas%n_pairs
       do idim = 1, st%d%dim
-        x(jb) = R_CONJ(st%X(psi)(i, idim, cas%pair(jb)%i, cas%pair(jb)%sigma)) * &
-             st%X(psi)(i, idim, cas%pair(jb)%a, cas%pair(jb)%sigma)
+        xx(jb) = R_CONJ(st%X(psi)(ip, idim, cas%pair(jb)%i, cas%pair(jb)%sigma)) * &
+             st%X(psi)(ip, idim, cas%pair(jb)%a, cas%pair(jb)%sigma)
       end do
     end do
-    n0I(i) = X(transition_matrix_element) (cas, ia, x)
+    n0I(ip) = X(transition_matrix_element) (cas, ia, xx)
   end do
 
-  SAFE_DEALLOCATE_A(x)
+  SAFE_DEALLOCATE_A(xx)
   call pop_sub()
 end subroutine X(transition_density)
 
@@ -108,10 +107,13 @@ subroutine X(get_transition_densities) (cas, sys, trandens)
   character(len=5) :: intstr
   character(len=130) :: filename
   R_TYPE, allocatable :: n0I(:)
+  type(unit_t) :: fn_unit
+
   call push_sub('casida_inc.Xget_transition_densities')
 
   SAFE_ALLOCATE(n0I(1:sys%gr%mesh%np))
   n0I = M_ZERO
+  fn_unit = units_out%energy / units_out%length**sys%gr%sb%dim
 
   do ia = 1, cas%n_pairs
     if(loct_isinstringlist(ia, trandens)) then
@@ -120,7 +122,7 @@ subroutine X(get_transition_densities) (cas, sys, trandens)
       write(intstr,'(i1)') len(trim(adjustl(intstr)))
       write(filename,'(a,i'//trim(intstr)//')') 'n0',ia
       call X(output_function)(sys%outp%how, CASIDA_DIR, trim(filename), &
-                              sys%gr%mesh, sys%gr%sb, n0I, unit_one, ierr, geo = sys%geo)
+                              sys%gr%mesh, sys%gr%sb, n0I, fn_unit, ierr, geo = sys%geo)
     end if
   end do
 
