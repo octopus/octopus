@@ -48,7 +48,7 @@ dablas.o : dablas.c
 lalg_basic.o : lalg_basic.F90 lalg_basic_blas.F90 blas.o 
 lalg_adv.o : lalg_adv.F90  lalg_adv_lapack_inc.F90 lapack.o
 gauss_legendre.o : gauss_legendre.F90 
-math.o : math.F90 math_inc.F90 lalg_basic.o loct_math.o
+math.o : math.F90 math_inc.F90 lalg_basic.o lalg_adv.o loct_math.o
 ode_solver.o : ode_solver.F90 ode_solver_inc.F90 
 permutations.o : permutations.F90 math.o
 root_solver.o : root_solver.F90 root_solver_inc.F90 ode_solver.o lalg_adv.o 
