@@ -154,7 +154,6 @@
   !  routine for output of model many-body quantities.
   !
   subroutine h_sys_output_modelmb (dir, gr, st, geo, outp)
-
     type(states_t),         intent(inout) :: st
     type(grid_t),           intent(inout) :: gr
     character(len=*),       intent(in)    :: dir
@@ -171,6 +170,8 @@
     type(modelmb_density_t) :: den
 
     call push_sub('output_states_inc.h_sys_output_modelmb')
+
+    call messages_devel_version("Model many body")
 
     impose_exch_symmetry = .true.
 

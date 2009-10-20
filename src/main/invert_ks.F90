@@ -61,6 +61,8 @@ contains
       
     call push_sub('invert_ks.invert_ks_run')
 
+    call messages_devel_version("Kohn-Sham inversion")
+    
     !%Variable InvertKSmethod
     !%Type integer
     !%Default iterative
