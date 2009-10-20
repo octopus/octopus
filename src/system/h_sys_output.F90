@@ -452,12 +452,14 @@ contains
         write(fname, '(a)') 'elf_rs'
         call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
           f_loc(:,imax), unit_one, ierr, is_tmp = .false., geo = geo)
+        ! this quantity is dimensionless
 
         if(st%d%ispin.ne.UNPOLARIZED) then
           do is = 1, 2
             write(fname, '(a,a,i1)') 'elf_rs', '-', is
             call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
               f_loc(:, is), unit_one, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)
+            ! this quantity is dimensionless
           end do
         end if
       end if
@@ -473,6 +475,7 @@ contains
         write(fname, '(a,a,i1)') 'elf_fs', '-', is
         call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
           f_loc(:,is), unit_one, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)
+        ! this quantity is dimensionless
       end do
     end if
 
@@ -482,7 +485,8 @@ contains
         call dderivatives_lapl(gr%der, st%rho(:,is), f_loc(:,is))
         write(fname, '(a,a,i1)') 'bader', '-', is
         call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
-          f_loc(:,is), unit_one, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)
+          f_loc(:,is), units_out%length**(-2 - gr%sb%dim), ierr, is_tmp = .false., &
+          geo = geo, grp = mpi_grp)
 
         write(fname, '(a,a,i1)') 'bader_basins', '-', is
         call out_basins(f_loc(:,1), fname)
@@ -494,6 +498,7 @@ contains
       call h_sys_calc_electronic_pressure(st, hm, gr, f_loc(:,1))
       call doutput_function(outp%how, dir, "el_pressure", gr%mesh, gr%sb, &
         f_loc(:,1), unit_one, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)
+      ! this quantity is dimensionless
     end if
 
     SAFE_DEALLOCATE_A(f_loc)
@@ -516,7 +521,8 @@ contains
 
       call doutput_function(outp%how, dir, trim(filename), gr%mesh, gr%sb, &
         real(basins%map, REAL_PRECISION), unit_one, ierr, is_tmp = .false., geo = geo)
-        
+      ! this quantity is dimensionless
+
       write(fname,'(4a)') trim(dir), '/', trim(filename), '.info'
       iunit = io_open(file=trim(fname), action = 'write')
       call basins_write(basins, gr%mesh, iunit)
@@ -565,7 +571,7 @@ contains
       p_tf = M_TWO/M_FIVE*(M_THREE*M_PI**2)**(M_TWO/M_THREE)* &
         dens**(M_FIVE/M_THREE)
 
-      ! add xc pressure
+      ! add XC pressure
       pressure(ii) = pressure(ii) + (dens*hm%vxc(ii,1) - hm%ex - hm%ec)
 
       pressure(ii) = pressure(ii)/p_tf

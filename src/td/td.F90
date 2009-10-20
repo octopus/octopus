@@ -781,6 +781,8 @@ contains
           call doutput_function(restart_format, trim(tmpdir)//"td", &
             filename, gr%mesh, gr%sb, td%tr%v_old(1:gr%mesh%np, is, i), unit_one, ierr, &
             is_tmp = .true., grp = st%mpi_grp)
+          ! the unit is energy actually, but this only for restart, and can be kept in atomic units
+          ! for simplicity
           if(ierr.ne.0) then
             write(message(1), '(3a)') 'Unsuccessful write of "', trim(filename), '"'
             call write_fatal(1)

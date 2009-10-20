@@ -357,7 +357,7 @@ module opt_control_target_m
           call conv_to_C_string(expression)
           do ip = 1, gr%mesh%np
             call mesh_r(gr%mesh, ip, r, x = x)
-            ! parse user defined expression
+            ! parse user-defined expression
             call parse_expression(psi_re, psi_im, gr%sb%dim, x, r, M_ZERO, expression)
             target%rho(ip) = psi_re
           end do
@@ -528,14 +528,14 @@ module opt_control_target_m
     select case(target%type)
     case(oct_tg_local)
       call doutput_function(outp%how, trim(dir), 'local_target', gr%mesh, gr%sb, &
-        target%rho, unit_one, ierr, geo = geo)
+        target%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
     case(oct_tg_td_local)
       call target_build_tdlocal(target, gr, M_ZERO)
       call doutput_function(outp%how, trim(dir), 'td_local_target', gr%mesh, gr%sb, &
-        target%rho, unit_one, ierr, geo = geo)
+        target%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
     case(oct_tg_density)
       call doutput_function(outp%how, trim(dir), 'density_target', gr%mesh, gr%sb, &
-        target%rho, unit_one, ierr, geo = geo)
+        target%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
     case(oct_tg_excited)
       call h_sys_output_states(target%est%st, gr, geo, trim(dir)//'/st', outp)
       call excited_states_output(target%est, trim(dir))

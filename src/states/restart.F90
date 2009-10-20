@@ -1098,10 +1098,10 @@ contains
         select case(calc_dim)
         case(1)
           call zoutput_function(output_axis_x, 'debug/open_boundaries', filename, &
-            m_center, sb, st%zphi(:, idim, ist, jk), unit_one, err, is_tmp=.false.)
+            m_center, sb, st%zphi(:, idim, ist, jk), sqrt(units_out%length**(-sb%dim)), err, is_tmp=.false.)
         case(2, 3)
           call zoutput_function(output_plane_z, 'debug/open_boundaries', filename, &
-            m_center, sb, st%zphi(:, idim, ist, jk), unit_one, err, is_tmp=.false.)
+            m_center, sb, st%zphi(:, idim, ist, jk), sqrt(units_out%length**(-sb%dim)), err, is_tmp=.false.)
         end select
       end if
 

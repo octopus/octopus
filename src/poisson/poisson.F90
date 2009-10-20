@@ -294,7 +294,7 @@ contains
 !           ind(j)=nint(ind1(j))
 !         enddo !Roberto
 !	 m1=index_from_coords(gr%mesh%idx, gr%mesh%sb%dim,ind(j))
-!!         m1=gr%m%Lxyz_inv(ind(1),ind(2),ind(3)) 
+!!         m1=gr%mesh%Lxyz_inv(ind(1),ind(2),ind(3)) 
 !         rho_nuc(m1) = -geo%atom(i)%spec%z_val/&
 !                        gr%mesh%sb%h(1)*gr%mesh%sb%h(2)*gr%mesh%sb%h(3)
   !       dmf_interpolate_points(gr%mesh,rho_nuc(m1),m2)) !or something similar
@@ -662,6 +662,7 @@ contains
     call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_rho", gr%mesh, gr%sb, rho, unit_one, ierr)
     call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_exact", gr%mesh, gr%sb, vh_exact, unit_one, ierr)
     call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_numerical", gr%mesh, gr%sb, vh, unit_one, ierr)
+    ! not dimensionless, but no need for unit conversion for a test routine
 
     SAFE_DEALLOCATE_A(rho)
     SAFE_DEALLOCATE_A(rhop)

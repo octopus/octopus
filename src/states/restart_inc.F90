@@ -19,42 +19,46 @@
 
 
 ! ---------------------------------------------------------
-subroutine X(restart_write_function)(dir, filename, gr, f, ierr, size)
+subroutine X(restart_write_function)(dir, filename, gr, ff, ierr, size)
   character(len=*), intent(in)  :: dir
   character(len=*), intent(in)  :: filename
   type(grid_t),     intent(in)  :: gr
   integer,          intent(out) :: ierr
   integer,          intent(in)  :: size
-  R_TYPE,           intent(in)  :: f(size)
+  R_TYPE,           intent(in)  :: ff(size)
 
   call push_sub('restart_inc.Xrestart_write_function')
 
   call X(output_function) (restart_format, trim(dir), trim(filename), &
-    gr%mesh, gr%sb, f(:), unit_one, ierr, is_tmp=.true.)
+    gr%mesh, gr%sb, ff(:), unit_one, ierr, is_tmp=.true.)
+  ! all restart files are in atomic units
 
   call pop_sub()
 end subroutine X(restart_write_function)
 
 
 ! ---------------------------------------------------------
-subroutine X(restart_read_function)(dir, filename, m, f, ierr)
-  character(len=*), intent(in)  :: dir
-  character(len=*), intent(in)  :: filename
-  type(mesh_t),     intent(in)  :: m
-  R_TYPE,           intent(inout) :: f(1:m%np)
-  integer,          intent(out) :: ierr
+subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr)
+  character(len=*), intent(in)    :: dir
+  character(len=*), intent(in)    :: filename
+  type(mesh_t),     intent(in)    :: mesh
+  R_TYPE,           intent(inout) :: ff(1:mesh%np)
+  integer,          intent(out)   :: ierr
 
   call push_sub('restart_inc.Xrestart_read_function')
 
-  ! try Binary
-  call X(input_function) (trim(dir)//'/'//trim(filename)//'.obf', m, f(1:m%np), ierr, is_tmp=.true.)
+  ! try binary
+  call X(input_function) (trim(dir)//'/'//trim(filename)//'.obf', mesh, ff(1:mesh%np), ierr, is_tmp=.true.)
 
   ! if we do not succeed try NetCDF
-  if(ierr>0) call X(input_function) (trim(dir)//'/'//trim(filename)//'.ncdf', m, f(1:m%np), ierr, is_tmp=.true.)
+  if(ierr>0) call X(input_function) (trim(dir)//'/'//trim(filename)//'.ncdf', mesh, &
+       ff(1:mesh%np), ierr, is_tmp=.true.)
 
   call pop_sub()
 end subroutine X(restart_read_function)
 
+
+! ---------------------------------------------------------
 subroutine X(restart_write_lr_rho)(lr, gr, nspin, restart_dir, rho_tag)
   type(lr_t),        intent(in)    :: lr
   type(grid_t),      intent(in)    :: gr
@@ -65,17 +69,21 @@ subroutine X(restart_write_lr_rho)(lr, gr, nspin, restart_dir, rho_tag)
   character(len=100) :: fname
   integer :: is, ierr
 
+  call push_sub('restart_inc.Xrestart_write_lr_rho')
+
   call block_signals()
   do is = 1, nspin
     write(fname, '(a,i1,a)') trim(rho_tag)//'_', is
     call X(restart_write_function)(trim(tmpdir)//trim(RESTART_DIR), fname, gr,&
-         lr%X(dl_rho)(:, is), ierr, size(lr%X(dl_rho),1))
+         lr%X(dl_rho)(:, is), ierr, size(lr%X(dl_rho), 1))
   end do
   call unblock_signals()
 
+  call pop_sub()
 end subroutine X(restart_write_lr_rho)
 
 
+! ---------------------------------------------------------
 subroutine X(restart_read_lr_rho)(lr, gr, nspin, restart_subdir, rho_tag, ierr)
   type(lr_t),        intent(inout) :: lr
   type(grid_t),      intent(in)    :: gr
@@ -87,12 +95,14 @@ subroutine X(restart_read_lr_rho)(lr, gr, nspin, restart_subdir, rho_tag, ierr)
   character(len=80) :: fname
   integer :: is, s_ierr
 
-  ierr = 0;
+  call push_sub('restart_inc.Xrestart_read_lr_rho')
+
+  ierr = 0
   do is = 1, nspin
     write(fname, '(a, i1,a)') trim(rho_tag)//'_', is
     call X(restart_read_function)(trim(restart_dir)//trim(restart_subdir), fname, gr%mesh,&
          lr%X(dl_rho)(:, is), s_ierr)
-    if( s_ierr /=0 ) ierr = s_ierr;
+    if( s_ierr /=0 ) ierr = s_ierr
   end do
 
 
@@ -107,6 +117,7 @@ subroutine X(restart_read_lr_rho)(lr, gr, nspin, restart_subdir, rho_tag, ierr)
 
   end if
 
+  call pop_sub()
 end subroutine X(restart_read_lr_rho)
 
 
