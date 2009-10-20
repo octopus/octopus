@@ -568,8 +568,7 @@ contains
       !% Sternheimer equation when on a resonance.
       !%End
 
-      call parse_float(datasets_check('EMEta'), M_ZERO, em_vars%eta)
-      em_vars%eta = units_to_atomic(units_inp%energy, em_vars%eta)
+      call parse_float(datasets_check('EMEta'), M_ZERO, em_vars%eta, units_inp%energy)
 
       ! reset the values of these variables
       em_vars%calc_hyperpol = .false.
@@ -760,7 +759,7 @@ contains
       write(out_file, *)
       write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 20)
       do i = 1, 11
-        write(out_file, '(a20)', advance = 'no')  str_center('['//trim(units_abbrev(units_out%length)) //'^2]', 20)
+        write(out_file, '(a20)', advance = 'no')  str_center('['//trim(units_abbrev(units_out%length**2)) // ']', 20)
       end do
       write(out_file,*)
 
@@ -780,13 +779,9 @@ contains
   
       if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
   
-      write(iunit, '(2a)', advance='no') '# Polarizability tensor [', &
-        trim(units_abbrev(units_out%length))
-      if(gr%mesh%sb%dim.ne.1) write(iunit, '(a,i1)', advance='no') '^', gr%mesh%sb%dim
-      write(iunit, '(a)') ']'
-  
+      write(iunit, '(3a)') '# Polarizability tensor [', trim(units_abbrev(units_out%polarizability)), ']'
       call io_output_tensor(iunit, TOFLOAT(em_vars%alpha(:, :, ifactor)), &
-        gr%mesh%sb%dim, units_out%length**gr%mesh%sb%dim)
+        gr%mesh%sb%dim, units_out%polarizability)
   
       call io_close(iunit)
   
@@ -798,7 +793,7 @@ contains
 
         do idir = 1, gr%mesh%sb%dim
           do idir2 = 1, gr%mesh%sb%dim
-            cross(idir, idir2) = units_from_atomic(units_out%length**(gr%mesh%sb%dim-1), cross(idir, idir2))
+            cross(idir, idir2) = units_from_atomic(units_out%length**2, cross(idir, idir2))
           enddo
         enddo
 
@@ -1024,8 +1019,8 @@ contains
         ! print header
         write(iunit, '(a1,a20,a20,a20)') '#', str_center("Energy", 20), str_center("R", 20), str_center("Re[beta]", 20)
         write(iunit, '(a1,a20,a20,a20)') '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 20), &
-             str_center('['//trim(units_abbrev(units_out%length)) //'^3]', 20), &
-             str_center('['//trim(units_abbrev(units_out%length)) //'^4]', 20)
+             str_center('['//trim(units_abbrev(units_out%length**3)) //']', 20), &
+             str_center('['//trim(units_abbrev(units_out%length**4)) //']', 20)
 
         ff = M_ZERO
         if(em_vars%omega(iomega) .ne. 0) ff = real(dic)/(M_THREE*em_vars%omega(iomega))
@@ -1060,9 +1055,8 @@ contains
 
     if (.not. converged) write(iunit, '(a)') "# WARNING: not converged"
 
-    write(iunit, '(2a)', advance='no') 'First hyperpolarizability tensor: beta [', trim(units_abbrev(units_out%length))
-    write(iunit, '(a,i1)', advance='no') '^', 5
-    write(iunit, '(a)') ']'
+    write(iunit, '(3a)', advance='no') 'First hyperpolarizability tensor: beta [', &
+         trim(units_abbrev(units_out%hyperpolarizability)), ']'
 
     write(iunit, '()')
 
@@ -1071,8 +1065,8 @@ contains
         do k = 1, sb%dim
           write(iunit,'(a,e20.8,e20.8)') 'beta '// &
                index2axis(i)//index2axis(j)//index2axis(k)//' ', &
-               units_from_atomic(units_out%length**5, real( beta(i, j, k))), &
-               units_from_atomic(units_out%length**5, aimag(beta(i, j, k)))
+               units_from_atomic(units_out%hyperpolarizability, real( beta(i, j, k))), &
+               units_from_atomic(units_out%hyperpolarizability, aimag(beta(i, j, k)))
         end do
       end do
     end do
@@ -1096,21 +1090,24 @@ contains
 
       do i = 1, sb%dim
         write(iunit, '(a, 2e20.8)') 'beta // '//index2axis(i), &
-          units_from_atomic(units_out%length**5, real(bpar(i))), units_from_atomic(units_out%length**5, aimag(bpar(i)))
+          units_from_atomic(units_out%hyperpolarizability, real(bpar(i))), &
+          units_from_atomic(units_out%hyperpolarizability, aimag(bpar(i)))
       end do
 
       write(iunit, '()')
 
       do i = 1, sb%dim
         write(iunit, '(a, 2e20.8)') 'beta _L '//index2axis(i), &
-          units_from_atomic(units_out%length**5, real(bper(i))), units_from_atomic(units_out%length**5, aimag(bper(i)))
+          units_from_atomic(units_out%hyperpolarizability, real(bper(i))), &
+          units_from_atomic(units_out%hyperpolarizability, aimag(bper(i)))
       end do
 
       write(iunit, '()')
 
       do i = 1, sb%dim
         write(iunit, '(a, 2e20.8)') 'beta  k '//index2axis(i), &
-          units_from_atomic(units_out%length**5, real(bk(i))), units_from_atomic(units_out%length**5, aimag(bk(i)))
+          units_from_atomic(units_out%hyperpolarizability, real(bk(i))), &
+          units_from_atomic(units_out%hyperpolarizability, aimag(bk(i)))
       end do
 
       call calc_beta_HRS(sb, beta, HRS_VV, HRS_HV)
@@ -1118,9 +1115,11 @@ contains
       write(iunit, '()')
       write(iunit, '(a)') 'beta for liquid- or gas-phase hyper-Rayleigh scattering:'
       write(iunit, '(a, 2e20.8)') 'VV polarization ', &
-         units_from_atomic(units_out%length**5, real(sqrt(HRS_VV))), units_from_atomic(units_out%length**5, aimag(sqrt(HRS_VV)))
+         units_from_atomic(units_out%hyperpolarizability, real(sqrt(HRS_VV))), &
+         units_from_atomic(units_out%hyperpolarizability, aimag(sqrt(HRS_VV)))
       write(iunit, '(a, 2e20.8)') 'HV polarization ', &
-         units_from_atomic(units_out%length**5, real(sqrt(HRS_HV))), units_from_atomic(units_out%length**5, aimag(sqrt(HRS_HV)))
+         units_from_atomic(units_out%hyperpolarizability, real(sqrt(HRS_HV))), &
+         units_from_atomic(units_out%hyperpolarizability, aimag(sqrt(HRS_HV)))
     endif
 
     call io_close(iunit)

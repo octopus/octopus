@@ -183,8 +183,8 @@ contains
       do isign = 1, 2
         write(message(1), '(a)')
         write(message(2), '(a,f6.4,5a)') 'Info: Calculating dipole moment for field ', &
-          units_from_atomic(units_out%energy/units_out%length, -(-1)**isign * e_field), ' ', &
-          trim(units_abbrev(units_out%energy/units_out%length)), ' in the ', index2axis(ii), '-direction.'
+          units_from_atomic(units_out%force, -(-1)**isign * e_field), ' ', &
+          trim(units_abbrev(units_out%force)), ' in the ', index2axis(ii), '-direction.'
         call write_info(2)
         ! there is an extra factor of -1 in here that is for the electronic charge
 
@@ -218,10 +218,10 @@ contains
     if(.not. diagonal_done) then
       write(message(1), '(a)')
       write(message(2), '(a,f6.4,3a, f6.4, 3a)') 'Info: Calculating dipole moment for field ', &
-         units_from_atomic(units_out%energy/units_out%length, e_field), ' ', &
-         trim(units_abbrev(units_out%energy/units_out%length)), ' in the '//index2axis(2)//'-direction plus ', &
-         units_from_atomic(units_out%energy/units_out%length, e_field), ' ', &
-         trim(units_abbrev(units_out%energy/units_out%length)), ' in the '//index2axis(3)//'-direction.'
+         units_from_atomic(units_out%force, e_field), ' ', &
+         trim(units_abbrev(units_out%force)), ' in the '//index2axis(2)//'-direction plus ', &
+         units_from_atomic(units_out%force, e_field), ' ', &
+         trim(units_abbrev(units_out%force)), ' in the '//index2axis(3)//'-direction.'
       call write_info(2)
   
       hm%ep%vpsl(1:gr%mesh%np) = vpsl_save(1:gr%mesh%np) &
@@ -281,8 +281,7 @@ contains
       !% if <tt>ResponseMethod = finite_differences</tt>.
       !%End
       call parse_float(datasets_check('EMStaticField'), &
-         units_from_atomic(units_inp%energy / units_inp%length, CNST(0.01)), e_field)
-      e_field = units_to_atomic(units_inp%energy / units_inp%length, e_field)
+         CNST(0.01), e_field, units_inp%force)
       if (e_field <= M_ZERO) then
         write(message(1), '(a,e14.6,a)') "Input: '", e_field, "' is not a valid EMStaticField."
         message(2) = '(0 < EMStaticField)'
@@ -328,6 +327,7 @@ contains
     !-------------------------------------------------------------
     subroutine output_cycle_()
       integer iatom
+      type(unit_t) fn_unit
       
       call push_sub('static_pol.output_cycle_')
 
@@ -371,27 +371,31 @@ contains
           !write
           do is = 1, st%d%nspin
             if(iand(sys%outp%what, output_density).ne.0) then
+              fn_unit = units_out%length**(1-gr%sb%dim) / units_out%energy
               write(fname, '(a,a,i1,a,i1)') 'fd_density', '-', is, '-', ii
               call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
-                gr%mesh, gr%sb, lr_rho(:, is), unit_one, ierr, geo = sys%geo)
+                gr%mesh, gr%sb, lr_rho(:, is), fn_unit, ierr, geo = sys%geo)
 
               ! save the trouble of writing many copies of each density, since i,j = j,i
+              fn_unit = units_out%length**(2-gr%sb%dim) / units_out%energy**2
               do jj = ii, gr%mesh%sb%dim
                 write(fname, '(a,a,i1,a,i1,a,i1)') 'fd2_density', '-', is, '-', ii, '-', jj
                 call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
-                  gr%mesh, gr%sb, lr_rho2(:, is), unit_one, ierr, geo = sys%geo)
+                  gr%mesh, gr%sb, lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
               enddo
             endif
 
             if(iand(sys%outp%what, output_pol_density).ne.0) then
               do jj = ii, gr%mesh%sb%dim
+                fn_unit = units_out%length**(2-gr%sb%dim) / units_out%energy
                 write(fname, '(a,a,i1,a,i1,a,i1)') 'alpha_density', '-', is, '-', ii, '-', jj
                 call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
-                  gr%mesh, gr%sb, -gr%mesh%x(:, jj) * lr_rho(:, is), unit_one, ierr, geo = sys%geo)
+                  gr%mesh, gr%sb, -gr%mesh%x(:, jj) * lr_rho(:, is), fn_unit, ierr, geo = sys%geo)
 
+                fn_unit = units_out%length**(3-gr%sb%dim) / units_out%energy**2
                 write(fname, '(a,a,i1,a,i1,a,i1,a,i1)') 'beta_density', '-', is, '-', ii, '-', ii, '-', jj
                 call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
-                  gr%mesh, gr%sb, -gr%mesh%x(:, jj) * lr_rho2(:, is), unit_one, ierr, geo = sys%geo)
+                  gr%mesh, gr%sb, -gr%mesh%x(:, jj) * lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
               enddo
             endif
           end do
@@ -435,6 +439,7 @@ contains
       FLOAT :: alpha(MAX_DIM, MAX_DIM)
       CMPLX :: beta(MAX_DIM, MAX_DIM, MAX_DIM)
       integer :: iunit, idir
+      type(unit_t) fn_unit
 
       call push_sub('static_pol.output_end_')
 
@@ -447,12 +452,14 @@ contains
   
         do is = 1, st%d%nspin
           if(iand(sys%outp%what, output_density).ne.0) then
+            fn_unit = units_out%length**(2-gr%sb%dim) / units_out%energy**2
             write(fname, '(a,a,i1,a)') 'fd2_density', '-', is, '-2-3'
             call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
               gr%mesh, gr%sb, lr_rho2(:, is), unit_one, ierr, geo = sys%geo)
           endif
   
           if(iand(sys%outp%what, output_pol_density).ne.0) then
+            fn_unit = units_out%length**(3-gr%sb%dim) / units_out%energy**2
             write(fname, '(a,a,i1,a,i1,a,i1,a,i1)') 'beta_density', '-', is, '-1-2-3'
             call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
               gr%mesh, gr%sb, -gr%mesh%x(:, 1) * lr_rho2(:, is), unit_one, ierr, geo = sys%geo)
@@ -462,10 +469,7 @@ contains
 
       if(mpi_grp_is_root(mpi_world)) then ! output pol file
         iunit = io_open(EM_RESP_FD_DIR//'alpha', action='write')
-        write(iunit, '(2a)', advance='no') '# Polarizability tensor [', &
-          trim(units_abbrev(units_out%length))
-        if(gr%mesh%sb%dim.ne.1) write(iunit, '(a,i1)', advance='no') '^', gr%mesh%sb%dim
-        write(iunit, '(a)') ']'
+        write(iunit, '(3a)') '# Polarizability tensor [', trim(units_abbrev(units_out%polarizability)), ']'
 
         alpha(1:gr%mesh%sb%dim,1:gr%mesh%sb%dim) = (dipole(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim, 1) - &
              dipole(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim, 2))/(M_TWO*e_field)
@@ -486,7 +490,7 @@ contains
         beta(1, 3, 2) = beta(1, 2, 3)
         beta(2, 1, 3) = beta(1, 2, 3)
 
-        call io_output_tensor(iunit, alpha, gr%mesh%sb%dim, units_out%length**gr%mesh%sb%dim)
+        call io_output_tensor(iunit, alpha, gr%mesh%sb%dim, units_out%polarizability)
         call io_close(iunit)
         
         call out_hyperpolarizability(gr%sb, beta, .true., EM_RESP_FD_DIR)

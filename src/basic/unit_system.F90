@@ -61,6 +61,8 @@ module unit_system_m
     type(unit_t) :: mass
     type(unit_t) :: force
     type(unit_t) :: acceleration
+    type(unit_t) :: polarizability
+    type(unit_t) :: hyperpolarizability
   end type unit_system_t
 
   type(unit_t),        public :: unit_one, unit_debye, unit_invcm, unit_ppm, unit_susc_ppm_cgs
@@ -221,6 +223,17 @@ contains
     u%acceleration%abbrev = "bH(2pi/h)^2"
     u%acceleration%name   = "Bohr times (Hartree over h bar) squared"
     u%acceleration%factor = M_ONE
+
+    u%polarizability%abbrev  = "b^3"
+    u%polarizability%name    = "Bohr^3"
+    u%polarizability%factor  = M_ONE
+    ! By convention, this unit appears more commonly than the
+    ! equivalent b^2/H. It does not depend on the dimensionality
+    ! of the system, despite analogies to a volume.
+
+    u%hyperpolarizability%abbrev  = "b^5"
+    u%hyperpolarizability%name    = "Bohr^5"
+    u%hyperpolarizability%factor  = M_ONE
   end subroutine unit_system_init_atomic
 
 
@@ -255,6 +268,9 @@ contains
     u%acceleration%abbrev = "AeV(2pi/h)^2"
     u%acceleration%name   = "Angstrom times (electronvolt over hbar) squared"
     u%acceleration%factor = u%length%factor/u%time%factor**2
+
+    u%polarizability      = u%length**2 / u%energy
+    u%hyperpolarizability = u%length**3 / u%energy**2
   end subroutine unit_system_init_eV_Ang
 
 
