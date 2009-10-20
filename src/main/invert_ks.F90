@@ -138,9 +138,9 @@ contains
     call h_sys_output_all(sys%outp, sys%gr, sys%geo, sys%st, hm, STATIC_DIR)
 
     call doutput_function(io_function_fill_how("AxisX"), &
-           ".", "vhxc", sys%gr%mesh, sys%gr%sb, hm%vhxc(:,1), unit_one, ierr)
+           ".", "vhxc", sys%gr%mesh, sys%gr%sb, hm%vhxc(:,1), units_out%energy, ierr)
     call doutput_function(io_function_fill_how("AxisX"), &
-           ".", "rho", sys%gr%mesh, sys%gr%sb, sys%st%rho(:,1), unit_one, ierr)
+           ".", "rho", sys%gr%mesh, sys%gr%sb, sys%st%rho(:,1), units_out%length**(-sys%gr%sb%dim), ierr)
 
 
     SAFE_DEALLOCATE_A(target_rho)
@@ -196,7 +196,7 @@ contains
       target_rho(:,:) = rr*target_rho(:,:)
 
       call doutput_function(io_function_fill_how("AxisX"), &
-           ".", "func", sys%gr%mesh, sys%gr%sb, target_rho(:,1), unit_one, ierr)
+           ".", "func", sys%gr%mesh, sys%gr%sb, target_rho(:,1), units_out%length**(-sys%gr%sb%dim), ierr)
 
       SAFE_DEALLOCATE_A(xx)
       SAFE_DEALLOCATE_A(ff)
@@ -330,9 +330,9 @@ contains
       if(verbosity == 2) then
         write(fname,'(i6.6)') counter
         call doutput_function(io_function_fill_how("AxisX"), &
-             ".", "vhxc"//fname, sys%gr%mesh, sys%gr%sb, hm%vhxc(:,1), unit_one, ierr)
+             ".", "vhxc"//fname, sys%gr%mesh, sys%gr%sb, hm%vhxc(:,1), units_out%energy, ierr)
         call doutput_function(io_function_fill_how("AxisX"), &
-             ".", "rho"//fname, sys%gr%mesh, sys%gr%sb, sys%st%rho(:,1), unit_one, ierr)
+             ".", "rho"//fname, sys%gr%mesh, sys%gr%sb, sys%st%rho(:,1), units_out%length**(-sys%gr%sb%dim), ierr)
       endif
     
       call hamiltonian_update_potential(hm, sys%gr%mesh)

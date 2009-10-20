@@ -965,7 +965,7 @@ contains
               call zlr_calc_elf(st, gr, em_vars%lr(dir, 1, ifactor), em_vars%lr(dir, 2, ifactor))
           end if
           do isigma = 1, em_vars%nsigma
-            call zh_sys_output_lr(st, gr, em_vars%lr(dir, isigma, ifactor), dirname, dir, isigma, outp, geo)
+            call zh_sys_output_lr(st, gr, em_vars%lr(dir, isigma, ifactor), dirname, dir, isigma, outp, geo, units_out%force)
           end do
         else
 
@@ -975,7 +975,7 @@ contains
           end if
 
           do isigma = 1, em_vars%nsigma
-            call dh_sys_output_lr(st, gr, em_vars%lr(dir, isigma, ifactor), dirname, dir, isigma, outp, geo)
+            call dh_sys_output_lr(st, gr, em_vars%lr(dir, isigma, ifactor), dirname, dir, isigma, outp, geo, units_out%force)
           end do
 
         end if
