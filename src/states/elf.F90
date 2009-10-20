@@ -76,8 +76,8 @@ contains
                                                 ! elf(:, 1) and elf(:, 2) the spin resolved ELF.
     FLOAT,  optional, intent(inout):: de(:,:)
 
-    FLOAT :: f, D0, dens
-    integer :: i, is, nelfs
+    FLOAT :: factor, D0, dens
+    integer :: ip, is, nelfs
     FLOAT, allocatable :: rho(:,:), grho(:,:,:), jj(:,:,:)
     FLOAT, allocatable :: kappa(:,:)
 
@@ -112,10 +112,10 @@ contains
 
     ! kapp will contain rho * D
     do_is: do is = 1, st%d%nspin
-      do i = 1, gr%mesh%np
-        kappa(i, is) = kappa(i, is)*rho(i, is)        &    ! + tau * rho
-          - M_FOURTH*sum(grho(i, 1:gr%mesh%sb%dim, is)**2)      &    ! - | nabla rho |^2 / 4
-          - sum(jj(i, 1:gr%mesh%sb%dim, is)**2)                      ! - j^2
+      do ip = 1, gr%mesh%np
+        kappa(ip, is) = kappa(ip, is)*rho(ip, is)        &    ! + tau * rho
+          - M_FOURTH*sum(grho(ip, 1:gr%mesh%sb%dim, is)**2)      &    ! - | nabla rho |^2 / 4
+          - sum(jj(ip, 1:gr%mesh%sb%dim, is)**2)                      ! - j^2
       end do
 
       SAFE_DEALLOCATE_A(grho)
@@ -127,49 +127,49 @@ contains
     end do do_is
 
     select case(gr%sb%dim)
-      case(3); f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
-      case(2); f = M_TWO * M_Pi
+      case(3); factor = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
+      case(2); factor = M_TWO * M_Pi
     end select
 
     select case(st%d%ispin)
     case(UNPOLARIZED)
-      do i = 1, gr%mesh%np
-        if(rho(i, 1) >= dmin) then
+      do ip = 1, gr%mesh%np
+        if(rho(ip, 1) >= dmin) then
           select case(gr%sb%dim)
-            case(3); D0 = f * rho(i, 1)**(M_EIGHT/M_THREE)
-            case(2); D0 = f * rho(i, 1)**3
+            case(3); D0 = factor * rho(ip, 1)**(M_EIGHT/M_THREE)
+            case(2); D0 = factor * rho(ip, 1)**3
           end select
-          elf(i, 1) = D0*D0/(D0*D0 + kappa(i, 1)**2)
+          elf(ip, 1) = D0*D0/(D0*D0 + kappa(ip, 1)**2)
         else
-          elf(i, 1) = M_ZERO
+          elf(ip, 1) = M_ZERO
         endif
       end do
 
     case(SPIN_POLARIZED, SPINORS)
       if(nelfs .eq. 3) then
-        do i = 1, gr%mesh%np
-          dens = rho(i, 1) + rho(i, 2)
+        do ip = 1, gr%mesh%np
+          dens = rho(ip, 1) + rho(ip, 2)
           if( dens >= dmin ) then
             select case(gr%sb%dim)
-              case(3); D0 = f * dens ** (M_FIVE/M_THREE) * rho(i, 1) * rho(i, 2)
-              case(2); D0 = f * dens ** 2 * rho(i, 1) * rho(i, 2)
+              case(3); D0 = factor * dens ** (M_FIVE/M_THREE) * rho(ip, 1) * rho(ip, 2)
+              case(2); D0 = factor * dens ** 2 * rho(ip, 1) * rho(ip, 2)
             end select
-            elf(i, 3) = D0*D0/(D0*D0 + (kappa(i, 1)*rho(i, 2) + kappa(i,2)*rho(i, 1))**2)
+            elf(ip, 3) = D0*D0/(D0*D0 + (kappa(ip, 1)*rho(ip, 2) + kappa(ip,2)*rho(ip, 1))**2)
           else
-            elf(i, 3) = M_ZERO
+            elf(ip, 3) = M_ZERO
           endif
         end do
       end if
-      do i = 1, gr%mesh%np
+      do ip = 1, gr%mesh%np
         do is = 1, st%d%spin_channels
-          if(rho(i, is) >= dmin) then
+          if(rho(ip, is) >= dmin) then
             select case(gr%sb%dim)
-              case(3); D0 = f * rho(i, is)**(M_EIGHT/M_THREE)
-              case(2); D0 = f * rho(i, is)**3
+              case(3); D0 = factor * rho(ip, is)**(M_EIGHT/M_THREE)
+              case(2); D0 = factor * rho(ip, is)**3
             end select
-            elf(i, is) = D0*D0/(D0*D0 + kappa(i,is)**2)
+            elf(ip, is) = D0*D0/(D0*D0 + kappa(ip,is)**2)
           else
-            elf(i, is) = M_ZERO
+            elf(ip, is) = M_ZERO
           endif
         end do
       end do
@@ -191,10 +191,10 @@ contains
     FLOAT,             intent(inout):: elf(:,:)
     FLOAT,   optional, intent(inout):: de(:,:)
 
-    FLOAT :: f, d, s
-    integer :: i, is, ik, ist, idim
+    FLOAT :: factor, dd, sp
+    integer :: ip, is, ik, ist, idim, idir
     CMPLX, allocatable :: psi_fs(:), gpsi(:,:)
-    FLOAT, allocatable :: r(:), gradr(:,:), j(:,:)
+    FLOAT, allocatable :: rr(:), gradr(:,:), jj(:,:)
     type(dcf_t) :: dcf_tmp
     type(zcf_t) :: zcf_tmp
 
@@ -204,9 +204,9 @@ contains
     
     ! single or double occupancy
     if(st%d%nspin == 1) then
-      s = M_TWO
+      sp = M_TWO
     else
-      s = M_ONE
+      sp = M_ONE
     end if
  
     if (st%wfs_type == M_REAL) then
@@ -218,10 +218,10 @@ contains
     end if
 
     do_is: do is = 1, st%d%nspin
-      SAFE_ALLOCATE(    r(1:gr%mesh%np))
+      SAFE_ALLOCATE(   rr(1:gr%mesh%np))
       SAFE_ALLOCATE(gradr(1:gr%mesh%np, 1:gr%mesh%sb%dim))
-      SAFE_ALLOCATE(    j(1:gr%mesh%np, 1:gr%mesh%sb%dim))
-      r = M_ZERO; gradr = M_ZERO; j  = M_ZERO
+      SAFE_ALLOCATE(   jj(1:gr%mesh%np, 1:gr%mesh%sb%dim))
+      rr = M_ZERO; gradr = M_ZERO; jj = M_ZERO
 
       elf(1:gr%mesh%np,is) = M_ZERO
 
@@ -234,29 +234,31 @@ contains
             if (st%wfs_type == M_REAL) then
               call dmf2mf_RS2FS(gr%mesh, st%dpsi(:, idim, ist, ik), psi_fs(:), dcf_tmp)
               call zderivatives_grad(gr%der, psi_fs(:), gpsi)
-              do i = 1, gr%mesh%sb%dim
-                gpsi(:,i) = gpsi(:,i) * gr%mesh%h(i)**2 * real(dcf_tmp%n(i), REAL_PRECISION) / (M_TWO*M_PI)
+              do idir = 1, gr%mesh%sb%dim
+                gpsi(:,idir) = gpsi(:, idir) * gr%mesh%h(idir)**2 * &
+                     real(dcf_tmp%n(idir), REAL_PRECISION) / (M_TWO*M_PI)
               end do
             else
               call zmf2mf_RS2FS(gr%mesh, st%zpsi(:, idim, ist, ik), psi_fs(:), zcf_tmp)
               call zderivatives_grad(gr%der, psi_fs(:), gpsi)
-              do i = 1, gr%mesh%sb%dim
-                gpsi(:,i) = gpsi(:,i) * gr%mesh%h(i)**2 * real(zcf_tmp%n(i), REAL_PRECISION) / (M_TWO*M_PI)
+              do idir = 1, gr%mesh%sb%dim
+                gpsi(:, idir) = gpsi(:, idir) * gr%mesh%h(idir)**2 * &
+                     real(zcf_tmp%n(idir), REAL_PRECISION) / (M_TWO*M_PI)
               end do
             end if
 
-            r(:) = r(:) + st%d%kweights(ik)*st%occ(ist, ik) * abs(psi_fs(:))**2
-            do i = 1, gr%mesh%sb%dim
-              gradr(:,i) = gradr(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
-                   M_TWO * real(conjg(psi_fs(:))*gpsi(:,i))
-              j (:,i) =  j(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
-                   aimag(conjg(psi_fs(:))*gpsi(:,i))
+            rr(:) = rr(:) + st%d%kweights(ik)*st%occ(ist, ik) * abs(psi_fs(:))**2
+            do idir = 1, gr%mesh%sb%dim
+              gradr(:, idir) = gradr(:, idir) + st%d%kweights(ik) * st%occ(ist, ik) *  &
+                   M_TWO * real(conjg(psi_fs(:))*gpsi(:, idir))
+              jj(:, idir) = jj(:, idir) + st%d%kweights(ik) * st%occ(ist, ik) *  &
+                   aimag(conjg(psi_fs(:)) * gpsi(:, idir))
             end do
 
-            do i = 1, gr%mesh%np
-              if(r(i) >= dmin) then
-                elf(i,is) = elf(i,is) + st%d%kweights(ik)*st%occ(ist, ik)/s * &
-                     sum(abs(gpsi(i, 1:gr%mesh%sb%dim))**2)
+            do ip = 1, gr%mesh%np
+              if(rr(ip) >= dmin) then
+                elf(ip, is) = elf(ip, is) + st%d%kweights(ik) * st%occ(ist, ik)/sp * &
+                     sum(abs(gpsi(ip, 1:gr%mesh%sb%dim))**2)
               end if
             end do
           end do
@@ -265,28 +267,29 @@ contains
       SAFE_DEALLOCATE_A(psi_fs)
       SAFE_DEALLOCATE_A(gpsi)
 
-      do i = 1, gr%mesh%np
-        if(r(i) >= dmin) then
-          elf(i,is) = elf(i,is) - (M_FOURTH*sum(gradr(i, 1:gr%mesh%sb%dim)**2) + sum(j(i, 1:gr%mesh%sb%dim)**2))/(s*r(i))
+      do ip = 1, gr%mesh%np
+        if(rr(ip) >= dmin) then
+          elf(ip, is) = elf(ip, is) - &
+            (M_FOURTH*sum(gradr(ip, 1:gr%mesh%sb%dim)**2) + sum(jj(ip, 1:gr%mesh%sb%dim)**2))/(sp*rr(ip))
         end if
       end do
     
-      if(present(de)) de(1:gr%mesh%np,is)=elf(1:gr%mesh%np,is)
+      if(present(de)) de(1:gr%mesh%np, is) = elf(1:gr%mesh%np, is)
 
       ! normalization
-      f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
-      do i = 1, gr%mesh%np
-        if(abs(r(i)) >= dmin) then
-          d    = f*(r(i)/s)**(M_FIVE/M_THREE)
-          elf(i,is) = M_ONE/(M_ONE + (elf(i,is)/d)**2)
+      factor = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
+      do ip = 1, gr%mesh%np
+        if(abs(rr(ip)) >= dmin) then
+          dd = factor * (rr(ip)/sp)**(M_FIVE/M_THREE)
+          elf(ip, is) = M_ONE/(M_ONE + (elf(ip, is)/dd)**2)
         else
-          elf(i,is) = M_ZERO
+          elf(ip, is) = M_ZERO
         end if
       end do
 
-      SAFE_DEALLOCATE_A(r)
+      SAFE_DEALLOCATE_A(rr)
       SAFE_DEALLOCATE_A(gradr)
-      SAFE_DEALLOCATE_A(j)
+      SAFE_DEALLOCATE_A(jj)
 
     end do do_is
 
@@ -299,40 +302,40 @@ contains
     call pop_sub()
   contains
 
-    subroutine dmf2mf_RS2FS(m, fin, fout, c)
-      type(mesh_t),  intent(in)    :: m
+    subroutine dmf2mf_RS2FS(mesh, fin, fout, cc)
+      type(mesh_t),  intent(in)    :: mesh
       FLOAT,         intent(in)    :: fin(:)
       CMPLX,         intent(out)   :: fout(:)
-      type(dcf_t),   intent(inout) :: c
+      type(dcf_t),   intent(inout) :: cc
     
       call push_sub('elf.elf_calc_fs.dmf2mf_RS2FS')
 
-      call dcf_alloc_RS(c)
-      call dcf_alloc_FS(c)
-      call dmesh_to_cube(m, fin, c)
-      call dcf_RS2FS(c)
-      call dfourier_to_mesh(m, c, fout)
-      call dcf_free_RS(c)
-      call dcf_free_FS(c)
+      call dcf_alloc_RS(cc)
+      call dcf_alloc_FS(cc)
+      call dmesh_to_cube(mesh, fin, cc)
+      call dcf_RS2FS(cc)
+      call dfourier_to_mesh(mesh, cc, fout)
+      call dcf_free_RS(cc)
+      call dcf_free_FS(cc)
 
       call pop_sub()
     end subroutine dmf2mf_RS2FS
 
-    subroutine zmf2mf_RS2FS(m, fin, fout, c)
-      type(mesh_t),  intent(in)    :: m
+    subroutine zmf2mf_RS2FS(mesh, fin, fout, cc)
+      type(mesh_t),  intent(in)    :: mesh
       CMPLX,         intent(in)    :: fin(:)
       CMPLX,         intent(out)   :: fout(:)
-      type(zcf_t),   intent(inout) :: c
+      type(zcf_t),   intent(inout) :: cc
     
       call push_sub('elf.elf_calc_fs.zmf2mf_RS2FS')
 
-      call zcf_alloc_RS(c)
-      call zcf_alloc_FS(c)
-      call zmesh_to_cube(m, fin, c)
-      call zcf_RS2FS(c)
-      call zfourier_to_mesh(m, c, fout)
-      call zcf_free_RS(c)
-      call zcf_free_FS(c)
+      call zcf_alloc_RS(cc)
+      call zcf_alloc_FS(cc)
+      call zmesh_to_cube(mesh, fin, cc)
+      call zcf_RS2FS(cc)
+      call zfourier_to_mesh(mesh, cc, fout)
+      call zcf_free_RS(cc)
+      call zcf_free_FS(cc)
 
       call pop_sub()
     end subroutine zmf2mf_RS2FS
