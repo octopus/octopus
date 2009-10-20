@@ -763,8 +763,9 @@ contains
     call write_xsf_geometry(iunit, geo, sb, offset)
 
     write(iunit, '(a)') 'BEGIN_BLOCK_DATAGRID3D'
-    write(iunit, '(a)') 'comment'
-    write(iunit, '(a)') 'DATAGRID_3D_comment'
+    write(iunit, '(4a)') 'units: coords = ', trim(units_abbrev(units_out%length)), &
+                            ', function = ', trim(units_abbrev(unit))
+    write(iunit, '(a)') 'DATAGRID_3D_function'
     write(iunit, '(3i7)') (cube%n(:) + 1)
     ! XCrySDen uses "general" not "periodic" grids (see page above) which is why 1 is added here
     write(iunit, '(a)') '0.0 0.0 0.0'
