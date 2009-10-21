@@ -442,16 +442,13 @@ contains
     ! Get the Hartree energy
     hm%ehartree = M_HALF*dmf_dotp(gr%mesh, rho, hm%vhartree)
 
-    if (poisson_get_solver() == POISSON_SETE) then !Roberto
+    if (poisson_get_solver() == POISSON_SETE) then !SEC
       ! How to get the nuclear density here?
       hm%ep%eii = M_HALF*dmf_dotp(gr%mesh, rho_nuc, hm%ep%vpsl) 
-      !hm%ep%eii = 0
-      ! ESURF is a module called from later.  Need to write it into somewhere...
-      !hm%etot=-poisson_sete_energy(sete_solver)
 !      write(525,*) hm%ehartree+poisson_sete_energy(sete_solver),hm%ehartree,poisson_sete_energy(sete_solver)
       hm%ehartree=hm%ehartree+poisson_sete_energy(sete_solver)
 
-!      write(89,*) hm%ehartree*CNST(27.2), poisson_sete_energy(sete_solver)*CNST(27.2), hm%ep%eii*CNST(27.2)
+      write(89,*) hm%ehartree*CNST(2.0*13.60569193), poisson_sete_energy(sete_solver)*CNST(2.0*13.60569193), hm%ep%eii*CNST(2.0*13.60569193)
     endif
 
     SAFE_DEALLOCATE_A(rho)

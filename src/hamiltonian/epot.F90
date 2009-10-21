@@ -357,6 +357,7 @@ contains
     
     if (poisson_get_solver() == POISSON_SETE) then 
       SAFE_ALLOCATE(rho_nuc(1:gr%mesh%np))
+      rho_nuc(1:gr%mesh%np)=M_ZERO
     end if
 
     call pop_sub()

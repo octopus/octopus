@@ -411,8 +411,6 @@ contains
       this%ipio=0; this%VBOUND= M_ZERO
       IF(IDEV == 1)THEN ! parallel plates
         this%dielectric=dielectric0
-        this%dielectric(:,:,0)=6.5/pconst  !For platinum
-        this%dielectric(:,:,THIS%NZTOT+1)=6.5/pconst !For platinum
         this%ipio(:,:,0)=1
         this%ipio(:,:,THIS%NZTOT+1)=1
         this%VBOUND(:,:,0)=VT(1)
