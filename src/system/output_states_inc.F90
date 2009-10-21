@@ -26,7 +26,7 @@
     character(len=*),       intent(in)    :: dir
     type(h_sys_output_t),   intent(in)    :: outp
 
-    integer :: ik, ist, idim, is, id, ierr, ip
+    integer :: ik, ist, idim, idir, is, ierr, ip
     character(len=80) :: fname
     type(unit_t) :: fn_unit
     FLOAT, allocatable :: dtmp(:), elf(:,:)
@@ -37,7 +37,7 @@
     if(iand(outp%what, output_density).ne.0) then
       fn_unit = units_out%length**(-gr%mesh%sb%dim)
       do is = 1, st%d%nspin
-        write(fname, '(a,i1)') 'density-', is
+        write(fname, '(a,i1)') 'density-sp', is
         call doutput_function(outp%how, dir, fname, gr%fine%mesh, gr%sb, &
           st%rho(:, is), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
       end do
@@ -46,10 +46,10 @@
     if(iand(outp%what, output_pol_density).ne.0) then
       fn_unit = units_out%length**(1-gr%mesh%sb%dim)
       SAFE_ALLOCATE(dtmp(1:gr%fine%mesh%np))
-      do idim = 1, gr%sb%dim
+      do idir = 1, gr%sb%dim
         do is = 1, st%d%nspin
-          forall (ip = 1:gr%fine%mesh%np) dtmp(ip) = st%rho(ip, is)*gr%fine%mesh%x(ip, idim)
-          write(fname, '(a,i1,a,i1)') 'dipole_density-', is, '-',idim
+          forall (ip = 1:gr%fine%mesh%np) dtmp(ip) = st%rho(ip, is) * gr%fine%mesh%x(ip, idir)
+          write(fname, '(a,i1,2a)') 'dipole_density-sp', is, '-', index2axis(idir)
           call doutput_function(outp%how, dir, fname, gr%fine%mesh, gr%sb, &
             dtmp(:), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
         end do
@@ -63,10 +63,10 @@
       SAFE_ALLOCATE(current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
       call states_calc_tau_jp_gn(gr, st, jp = current)
       do is = 1, st%d%nspin
-        do id = 1, gr%mesh%sb%dim
-          write(fname, '(a,i1,a,a)') 'current-', is, '-', index2axis(id)
+        do idir = 1, gr%mesh%sb%dim
+          write(fname, '(a,i1,2a)') 'current-sp', is, '-', index2axis(idir)
           call doutput_function(outp%how, dir, fname, gr%mesh, gr%sb, &
-            current(:, id, is), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
+            current(:, idir, is), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
         end do
       end do
       SAFE_DEALLOCATE_A(current)
@@ -78,7 +78,7 @@
         if(loct_isinstringlist(ist, outp%wfs_list)) then
           do ik = st%d%kpt%start, st%d%kpt%end
             do idim = 1, st%d%dim
-              write(fname, '(a,i3.3,a,i4.4,a,i1)') 'wf-', ik, '-', ist, '-', idim
+              write(fname, '(a,i3.3,a,i4.4,a,i1)') 'wf-k', ik, '-st', ist, '-sp', idim
               if (st%wfs_type == M_REAL) then
                 call doutput_function(outp%how, dir, fname, gr%mesh, gr%sb, &
                      st%dpsi(1:, idim, ist, ik), fn_unit, ierr, is_tmp = .false., geo = geo)
@@ -99,7 +99,7 @@
         if(loct_isinstringlist(ist, outp%wfs_list)) then
           do ik = st%d%kpt%start, st%d%kpt%end
             do idim = 1, st%d%dim
-              write(fname, '(a,i3.3,a,i4.4,a,i1)') 'sqm-wf-', ik, '-', ist, '-', idim
+              write(fname, '(a,i3.3,a,i4.4,a,i1)') 'sqm-wf-k', ik, '-st', ist, '-sp', idim
               if (st%wfs_type == M_REAL) then
                 dtmp = abs(st%dpsi(:, idim, ist, ik))**2
               else
@@ -125,7 +125,7 @@
             elf(:,1), unit_one, ierr, is_tmp = .false., geo = geo)
         case(SPIN_POLARIZED, SPINORS)
           do is = 1, 2
-            write(fname, '(a,a,i1)') 'tau', '-', is
+            write(fname, '(a,i1)') 'tau-sp', is
             call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
               elf(:, is), unit_one, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
           end do

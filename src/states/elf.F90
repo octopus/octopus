@@ -85,6 +85,8 @@ contains
 
     call push_sub('elf.elf_calc')
 
+    ASSERT(gr%sb%dim == 2 .or. gr%sb%dim == 3)
+
     ! We may or may not want the total ELF. 
     ! If we want it, the argument elf should have three components.
     nelfs = size(elf, 2)

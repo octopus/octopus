@@ -129,29 +129,27 @@ contains
     !%Section Output
     !%Description
     !% Specifies what to print. The output files go into the <tt>static</tt> directory, except when
-    !% running a time-dependent simulation, when the directory <tt>td.XXXXXXX</tt> is used, or as
-    !% otherwise noted below.
+    !% running a time-dependent simulation, when the directory <tt>td.XXXXXXX</tt> is used. For
+    !% linear-response run modes, the derivatives of many quantities can be printed, as listed in
+    !% the options below; the files will be printed in the directory
+    !% for the run mode. Indices in the filename are labelled as follows:
+    !% <tt>sp</tt> = spin, <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band,
+    !% There is no tag for directions, given as a letter. The perturbation direction is always
+    !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
     !% Example: <tt>density + potential</tt>
     !%Option potential 1
     !% Outputs Kohn-Sham potential, separated by parts. File names are <tt>v0</tt> for 
     !% the local part, <tt>vc</tt> for the classical potential (if it exists), <tt>vh</tt> for the
-    !% Hartree potential, and <tt>vxc-i</tt> for the exchange-correlation potentials
-    !% of each spin channel <tt>i</tt>.
+    !% Hartree potential, and <tt>vxc-</tt> for the exchange-correlation potentials.
     !%Option density 2
-    !% Outputs density. The output file is called <tt>density-i</tt>, where <tt>i</tt> stands for 
-    !% the spin channel. In a linear-response run mode, instead the linear-response density
-    !% is printed in the directory for the run mode, in a file <tt>freq_XXX/lr_density-i-j</tt>, where <tt>j</tt> 
-    !% is the perturbation direction. 
+    !% Outputs density. The output file is called <tt>density-</tt>, or <tt>lr_density-</tt> in linear response.
     !%Option wfs 4
     !% Outputs wavefunctions. Which wavefunctions are to be printed is specified
     !% by the variable <tt>OutputWfsNumber</tt> -- see below. The output file is called
-    !% <tt>wf-k-p-i</tt>, where <tt>k</tt> stands for the <i>k</i>-point, <tt>p</tt> for the state, and
-    !% <tt>i</tt> for the spin channel.
+    !% <tt>wf-</tt>, or <tt>lr_wf-</tt> in linear response.
     !%Option wfs_sqmod 8
     !% Outputs modulus squared of the wavefunctions. 
-    !% The output file is called <tt>sqm-wf-k-p-i</tt>,
-    !% where <tt>k</tt> stands for the <i>k</i> number, <tt>p</tt> for the state,
-    !% and <tt>i</tt> for the spin channel.
+    !% The output file is called <tt>sqm-wf-</tt>. For linear response, the filename is <tt>sqm_lr_wf-</tt>.
     !%Option geometry 16
     !% Outputs file containing the coordinates of the atoms treated within quantum mechanics.
     !% If <tt>OutputHow = xyz</tt>, the file is called <tt>geometry.xyz</tt>; a
@@ -160,31 +158,30 @@ contains
     !% in the file <tt>geometry_classical.xyz</tt>.
     !% If <tt>OutputHow = xcrysden</tt>, a file called <tt>geometry.xsf</tt> is written.
     !%Option current 32
-    !% Outputs paramagnetic current density. The output file is called <tt>current-i-(x,y,z)</tt>, 
-    !% where <tt>i</tt> stands for the spin channel and <tt>x</tt>, <tt>y</tt>, <tt>z</tt> indicates the vector component
-    !% of the current.
+    !% Outputs paramagnetic current density. The output file is called <tt>current-</tt>.
+    !% For linear response, the filename is <tt>lr_current-</tt>.
     !%Option ELF 64
-    !% Outputs electron localization function, ELF. The output file is called
-    !% <tt>elf-i</tt>, where <tt>i</tt> stands for the spin channel.
+    !% Outputs electron localization function (ELF). The output file is called <tt>elf-</tt>,
+    !% or <tt>lr_elf-</tt> and <tt>lr_elf_D-</tt> in linear response. Only in 2D and 3D.
     !%Option ELF_basins 128
     !% Outputs basins of attraction of the ELF. The output file is called
-    !% <tt>elf_rs_basins.info</tt>.
+    !% <tt>elf_rs_basins.info</tt>. Only in 2D and 3D.
     !%Option ELF_FS 256
     !% Outputs electron localization function in Fourier space. The output file is called
-    !% <tt>elf_FS-i</tt>, where <tt>i</tt> stands for the spin channel. (EXPERIMENTAL)
+    !% <tt>elf_FS-</tt>. Only in development version. Only in 2D and 3D.
     !%Option Bader 512
     !% Outputs Laplacian of the density which shows lone pairs, bonded charge concentrations
     !% and regions subject to electrophilic or nucleophilic attack.
-    !% See RF Bader, <tt>Atoms in Molecules: A Quantum Theory</tt> (Oxford Univ. Press, Oxford, 1990).
+    !% See RF Bader, <i>Atoms in Molecules: A Quantum Theory<i> (Oxford Univ. Press, Oxford, 1990).
     !%Option el_pressure 1024
     !% Outputs electronic pressure. See Tao, Vignale, and Tokatly, <i>Phys Rev Lett</i> <b>100</b>, 206405 (2008).
     !%Option matrix_elements 2048
     !% Outputs a series of matrix elements of the Kohn-Sham states. What is output can
     !% be controlled by the <tt>OutputMatrixElements</tt> variable.
     !%Option pol_density 4096
-    !% Outputs dipole-moment density. For <tt>em_resp</tt> run, outputs instead the polarizability density,
-    !% in the <tt>em_resp</tt> directory if <tt>ResponseMethod = Sternheimer</tt>, or in the <tt>em_resp_fd</tt> directory 
-    !% if <tt>ResponseMethod = finite_differences</tt>, in which case the hyperpolarizability density is also printed.
+    !% Outputs dipole-moment density <tt>dipole_density-</tt>, or polarizability density <tt>alpha_density-</tt>
+    !% in linear response. If <tt>ResponseMethod = finite_differences</tt>, the hyperpolarizability density
+    !% <tt>beta_density-</tt> is also printed.
     !%Option mesh_r 8192
     !% Outputs values of the coordinates over the grid. Files
     !% will be in the <tt>exec/</tt> directory.
@@ -200,7 +197,7 @@ contains
     !% or null occupations. If fractional occupation numbers, each term in the sum
     !% is weighted by the occupation. Also, if we are working with an infinite 
     !% system, all <i>k</i>-points are summed up, with their corresponding weights. The
-    !% files will be called <tt>tau-1</tt> and <tt>tau-2</tt>, if the spin-resolved kinetic
+    !% files will be called <tt>tau-sp1</tt> and <tt>tau-sp2</tt>, if the spin-resolved kinetic
     !% energy density is produced (runs in spin-polarized and spinors mode), or
     !% only <tt>tau</tt> if the run is in spin-unpolarized mode.
     !%Option dos 65536
@@ -214,18 +211,28 @@ contains
     !% <i>N</i>-dimensional non-interacting problem, then to trace out <i>N</i>-1 coordinates.
     !%Option modelmb 524288
     !% This flag turns on the output for model many-body calculations, and
-    !% triggers the density, wfs, or density matrix to be output for the
+    !% triggers the density, wavefunctions, or density matrix to be output for the
     !% particles described in the <tt>DescribeParticlesModelMB</tt> block. Which
-    !% quantities will be output depends on the simultaneous presence of wfs,
-    !% density, etc.
+    !% quantities will be output depends on the simultaneous presence of <tt>wfs</tt>,
+    !% <tt>density</tt>, etc.
     !%Option forces 1048576
     !% Outputs file <tt>forces.xsf</tt> containing structure and forces on the atoms as 
     !% a vector associated with each atom, which can be visualized with XCrySDen.
     !%End
     call parse_integer(datasets_check('Output'), 0, outp%what)
 
+    if(iand(outp%what, output_elf_fs).ne.0) then
+      call messages_devel_version("ELF in Fourier space")
+    endif
+
     ! cannot calculate the ELF in 1D
-    if(sb%dim == 1) outp%what = iand(outp%what, not(output_elf + output_elf_basins))
+    if(iand(outp%what, output_elf) .or. iand(outp%what, output_elf_basins) .or. iand(outp%what, output_elf_fs)) then
+       if(sb%dim .ne. 2 .and. sb%dim .ne. 3) then
+         outp%what = iand(outp%what, not(output_elf + output_elf_basins + output_elf_fs))
+         write(message(1), '(a)') 'Cannot calculate ELF except in 2D and 3D.'
+         call write_warning(1)
+       endif
+    endif
 
     if(.not.varinfo_valid_option('Output', outp%what, is_flag=.true.)) then
       call input_error('Output')
@@ -456,7 +463,7 @@ contains
 
         if(st%d%ispin.ne.UNPOLARIZED) then
           do is = 1, 2
-            write(fname, '(a,a,i1)') 'elf_rs', '-', is
+            write(fname, '(a,i1)') 'elf_rs-sp', is
             call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
               f_loc(:, is), unit_one, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)
             ! this quantity is dimensionless
@@ -472,7 +479,7 @@ contains
     if(iand(outp%what, output_elf_fs).ne.0) then
       call elf_calc_fs(st, gr, f_loc)
       do is = 1, st%d%nspin
-        write(fname, '(a,a,i1)') 'elf_fs', '-', is
+        write(fname, '(a,i1)') 'elf_fs-sp', is
         call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
           f_loc(:,is), unit_one, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)
         ! this quantity is dimensionless
@@ -483,12 +490,12 @@ contains
     if(iand(outp%what, output_bader).ne.0) then
       do is = 1, st%d%nspin
         call dderivatives_lapl(gr%der, st%rho(:,is), f_loc(:,is))
-        write(fname, '(a,a,i1)') 'bader', '-', is
+        write(fname, '(a,i1)') 'bader-sp', is
         call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
           f_loc(:,is), units_out%length**(-2 - gr%sb%dim), ierr, is_tmp = .false., &
           geo = geo, grp = mpi_grp)
 
-        write(fname, '(a,a,i1)') 'bader_basins', '-', is
+        write(fname, '(a,i1)') 'bader_basins-sp', is
         call out_basins(f_loc(:,1), fname)
       end do
     end if

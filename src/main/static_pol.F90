@@ -362,8 +362,8 @@ contains
           lr_rho(1:gr%mesh%np, 1:st%d%nspin) = st%rho(1:gr%mesh%np, 1:st%d%nspin)
         else
           lr_rho2(1:gr%mesh%np, 1:st%d%nspin) = &
-            -(st%rho(1:gr%mesh%np, 1:st%d%nspin) + lr_rho(1:gr%mesh%np, 1:st%d%nspin) - 2 * gs_rho(1:gr%mesh%np, 1:st%d%nspin)) &
-            / e_field**2
+            -(st%rho(1:gr%mesh%np, 1:st%d%nspin) + lr_rho(1:gr%mesh%np, 1:st%d%nspin) - &
+              2 * gs_rho(1:gr%mesh%np, 1:st%d%nspin)) / e_field**2
 
           lr_rho(1:gr%mesh%np, 1:st%d%nspin) = &
                (st%rho(1:gr%mesh%np, 1:st%d%nspin) - lr_rho(1:gr%mesh%np, 1:st%d%nspin)) / (M_TWO*e_field)
@@ -372,14 +372,14 @@ contains
           do is = 1, st%d%nspin
             if(iand(sys%outp%what, output_density).ne.0) then
               fn_unit = units_out%length**(1-gr%sb%dim) / units_out%energy
-              write(fname, '(a,a,i1,a,i1)') 'fd_density', '-', is, '-', ii
+              write(fname, '(a,i1,2a)') 'fd_density-sp', is, '-', index2axis(ii)
               call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
                 gr%mesh, gr%sb, lr_rho(:, is), fn_unit, ierr, geo = sys%geo)
 
-              ! save the trouble of writing many copies of each density, since i,j = j,i
+              ! save the trouble of writing many copies of each density, since ii,jj = jj,ii
               fn_unit = units_out%length**(2-gr%sb%dim) / units_out%energy**2
               do jj = ii, gr%mesh%sb%dim
-                write(fname, '(a,a,i1,a,i1,a,i1)') 'fd2_density', '-', is, '-', ii, '-', jj
+                write(fname, '(a,i1,4a)') 'fd2_density-sp', is, '-', index2axis(ii), '-', index2axis(jj)
                 call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
                   gr%mesh, gr%sb, lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
               enddo
@@ -388,12 +388,13 @@ contains
             if(iand(sys%outp%what, output_pol_density).ne.0) then
               do jj = ii, gr%mesh%sb%dim
                 fn_unit = units_out%length**(2-gr%sb%dim) / units_out%energy
-                write(fname, '(a,a,i1,a,i1,a,i1)') 'alpha_density', '-', is, '-', ii, '-', jj
+                write(fname, '(a,i1,4a)') 'alpha_density-sp', is, '-', index2axis(ii), '-', index2axis(jj)
                 call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
                   gr%mesh, gr%sb, -gr%mesh%x(:, jj) * lr_rho(:, is), fn_unit, ierr, geo = sys%geo)
 
                 fn_unit = units_out%length**(3-gr%sb%dim) / units_out%energy**2
-                write(fname, '(a,a,i1,a,i1,a,i1,a,i1)') 'beta_density', '-', is, '-', ii, '-', ii, '-', jj
+                write(fname, '(a,i1,6a)') 'beta_density-sp', is, '-', index2axis(ii), &
+                  '-', index2axis(ii), '-', index2axis(jj)
                 call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
                   gr%mesh, gr%sb, -gr%mesh%x(:, jj) * lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
               enddo
@@ -419,10 +420,10 @@ contains
 
           !write
           do is = 1, st%d%nspin
-            write(fname, '(a,a,i1,a,i1)') 'elf', '-', is, '-', ii
+            write(fname, '(a,i1,2a)') 'lr_elf-sp', is, '-', index2axis(ii)
             call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
                 gr%mesh, gr%sb, lr_elf(:, is), unit_one, ierr, geo = sys%geo)
-            write(fname, '(a,a,i1,a,i1)') 'elf_D', '-', is, '-', ii
+            write(fname, '(a,i1,2a)') 'lr_elf_D-sp', is, '-', index2axis(ii)
             call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
                 gr%mesh, gr%sb, lr_elfd(:, is), unit_one, ierr, geo = sys%geo)
           end do
@@ -453,14 +454,14 @@ contains
         do is = 1, st%d%nspin
           if(iand(sys%outp%what, output_density).ne.0) then
             fn_unit = units_out%length**(2-gr%sb%dim) / units_out%energy**2
-            write(fname, '(a,a,i1,a)') 'fd2_density', '-', is, '-2-3'
+            write(fname, '(a,i1,a)') 'fd2_density-sp', is, '-2-3'
             call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
               gr%mesh, gr%sb, lr_rho2(:, is), unit_one, ierr, geo = sys%geo)
           endif
   
           if(iand(sys%outp%what, output_pol_density).ne.0) then
             fn_unit = units_out%length**(3-gr%sb%dim) / units_out%energy**2
-            write(fname, '(a,a,i1,a,i1,a,i1,a,i1)') 'beta_density', '-', is, '-1-2-3'
+            write(fname, '(a,i1,a)') 'beta_density-sp', is, '-1-2-3'
             call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
               gr%mesh, gr%sb, -gr%mesh%x(:, 1) * lr_rho2(:, is), unit_one, ierr, geo = sys%geo)
           endif

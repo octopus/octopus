@@ -26,7 +26,7 @@
     type(h_sys_output_t),  intent(in) :: outp
     type(geometry_t),      intent(in) :: geo
 
-    integer :: is, err
+    integer :: is, err, idir
     character(len=80) :: fname
 
     FLOAT, allocatable :: v0(:,:)
@@ -46,11 +46,11 @@
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
         call doutput_function(outp%how, dir, 'vh', mesh, sb, hm%vhartree, units_out%energy, err, geo = geo)
         do is = 1, min(hm%d%ispin, 2)
-          write(fname, '(a,i1)') 'vxc-', is
+          write(fname, '(a,i1)') 'vxc-sp', is
           call doutput_function(outp%how, dir, fname, mesh, sb, hm%vxc(:, is), units_out%energy, err, geo = geo)
 
           ! finally the full KS potential (without non-local PP contributions)
-          write(fname, '(a,i1)') 'vks-', is
+          write(fname, '(a,i1)') 'vks-sp', is
           if (hm%ep%classical_pot > 0) then
             call doutput_function(outp%how, dir, fname, mesh, sb, &
               hm%ep%vpsl + hm%ep%Vclassical + hm%vhxc(:, is), units_out%energy, err, geo = geo)
@@ -65,9 +65,10 @@
         ! unit of magnetic field is same as of electric field, and same as force (since e = 1)
         select case(sb%dim)
         case(3)
-          call doutput_function(outp%how, dir, 'Bind_x', mesh, sb, hm%b_ind(:, 1), units_out%force, err, geo = geo)
-          call doutput_function(outp%how, dir, 'Bind_y', mesh, sb, hm%b_ind(:, 2), units_out%force, err, geo = geo)
-          call doutput_function(outp%how, dir, 'Bind_z', mesh, sb, hm%b_ind(:, 3), units_out%force, err, geo = geo)
+          do idir = 1, sb%dim
+            call doutput_function(outp%how, dir, 'Bind_'//index2axis(idir), mesh, sb, hm%b_ind(:, idir), &
+              units_out%force, err, geo = geo)
+          enddo
         case(2)
           call doutput_function(outp%how, dir, 'Bind_z', mesh, sb, hm%b_ind(:, 1), units_out%force, err, geo = geo)
         end select

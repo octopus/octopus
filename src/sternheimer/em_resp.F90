@@ -891,24 +891,24 @@ contains
     ! ---------------------------------------------------------
     subroutine out_projections()
       CMPLX   :: proj
-      integer :: ist, ivar, ik, dir, sigma
+      integer :: ist, ivar, ik, idir, sigma
       character(len=80) :: fname
 
       call push_sub('em_resp.em_resp_output.out_projections')
 
       do ik = st%d%kpt%start, st%d%kpt%end
-        do dir = 1, gr%mesh%sb%dim
+        do idir = 1, gr%mesh%sb%dim
 
-          write(fname, '(2a,i1,a,i1)') trim(dirname), '/projection-', ik, '-', dir
+          write(fname, '(2a,i1,2a)') trim(dirname), '/projection-k', ik, '-', index2axis(idir)
           iunit = io_open(trim(fname), action='write')
 
           if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
 
           write(iunit, '(a)', advance='no') '# state '
-          do ivar = 1, em_vars%lr(dir, 1, 1)%nst
+          do ivar = 1, em_vars%lr(idir, 1, 1)%nst
             do sigma = 1, em_vars%nsigma
 
-              if( sigma == em_vars%nsigma .and. ivar == em_vars%lr(dir, 1, 1)%nst) then 
+              if( sigma == em_vars%nsigma .and. ivar == em_vars%lr(idir, 1, 1)%nst) then 
                 write(iunit, '(i3)', advance='yes') (3 - 2*sigma)*ivar
               else 
                 write(iunit, '(i3)', advance='no') (3 - 2*sigma)*ivar
@@ -920,18 +920,18 @@ contains
           do ist = 1, st%nst
             write(iunit, '(i3)', advance='no') ist
 
-            do ivar = 1, em_vars%lr(dir, 1, 1)%nst
+            do ivar = 1, em_vars%lr(idir, 1, 1)%nst
               do sigma = 1, em_vars%nsigma
 
                 if(states_are_complex(st)) then
                   proj = &
-                       zmf_dotp(gr%mesh, st%d%dim, st%zpsi(:, :, ist, ik), em_vars%lr(dir, sigma, ifactor)%zdl_psi(:, :, ivar, ik))
+                       zmf_dotp(gr%mesh, st%d%dim, st%zpsi(:, :, ist, ik), em_vars%lr(idir, sigma, ifactor)%zdl_psi(:, :, ivar, ik))
                 else
                   proj = &
-                       dmf_dotp(gr%mesh, st%d%dim, st%dpsi(:, :, ist, ik), em_vars%lr(dir, sigma, ifactor)%ddl_psi(:, :, ivar, ik))
+                       dmf_dotp(gr%mesh, st%d%dim, st%dpsi(:, :, ist, ik), em_vars%lr(idir, sigma, ifactor)%ddl_psi(:, :, ivar, ik))
                 end if
                   
-                if( sigma == em_vars%nsigma .and. ivar == em_vars%lr(dir, 1, 1)%nst) then 
+                if( sigma == em_vars%nsigma .and. ivar == em_vars%lr(idir, 1, 1)%nst) then 
                   write(iunit, '(f12.6)', advance='yes') abs(proj)
                 else 
                   write(iunit, '(f12.6,a)', advance='no') abs(proj), ' '
@@ -953,29 +953,29 @@ contains
 
     ! ---------------------------------------------------------
     subroutine out_wavefunctions()
-      integer :: dir, isigma
+      integer :: idir, isigma
 
       call push_sub('em_resp.em_resp_output.out_wavefunctions')
 
-      do dir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%mesh%sb%dim
         if(states_are_complex(st)) then 
 
-          if(gr%mesh%sb%dim==3) then
+          if(gr%mesh%sb%dim == 3) then
             if(iand(outp%what, output_elf).ne.0) &
-              call zlr_calc_elf(st, gr, em_vars%lr(dir, 1, ifactor), em_vars%lr(dir, 2, ifactor))
+              call zlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
           end if
           do isigma = 1, em_vars%nsigma
-            call zh_sys_output_lr(st, gr, em_vars%lr(dir, isigma, ifactor), dirname, dir, isigma, outp, geo, units_out%force)
+            call zh_sys_output_lr(st, gr, em_vars%lr(idir, isigma, ifactor), dirname, idir, isigma, outp, geo, units_out%force)
           end do
         else
 
-          if(gr%mesh%sb%dim==3) then
+          if(gr%mesh%sb%dim == 3) then
             if(iand(outp%what, output_elf) .ne. 0) &
-              call dlr_calc_elf(st, gr, em_vars%lr(dir, 1, ifactor), em_vars%lr(dir, 2, ifactor))
+              call dlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
           end if
 
           do isigma = 1, em_vars%nsigma
-            call dh_sys_output_lr(st, gr, em_vars%lr(dir, isigma, ifactor), dirname, dir, isigma, outp, geo, units_out%force)
+            call dh_sys_output_lr(st, gr, em_vars%lr(idir, isigma, ifactor), dirname, idir, isigma, outp, geo, units_out%force)
           end do
 
         end if
