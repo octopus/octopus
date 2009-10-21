@@ -163,7 +163,8 @@ contains
     !% For linear response, the filename is <tt>lr_current-</tt>.
     !%Option ELF 64
     !% Outputs electron localization function (ELF). The output file is called <tt>elf-</tt>,
-    !% or <tt>lr_elf-</tt> and <tt>lr_elf_D-</tt> in linear response. Only in 2D and 3D.
+    !% or <tt>lr_elf-</tt> in linear response, in which case the associated function D is also written,
+    !% as <tt>lr_elf_D-</tt>. Only in 2D and 3D.
     !%Option ELF_basins 128
     !% Outputs basins of attraction of the ELF. The output file is called
     !% <tt>elf_rs_basins.info</tt>. Only in 2D and 3D.
