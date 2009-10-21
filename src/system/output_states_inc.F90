@@ -273,28 +273,29 @@
 
       select case(gr%mesh%sb%dim)
       case(3)
-        write(iunit,'(a)')       '# Plane:'
-        write(iunit,'(a,3f9.5)') '# origin = ', &
+        write(iunit,'(a)')        '# Plane:'
+        write(iunit,'(3a,3f9.5)') '# origin [', trim(units_abbrev(units_out%length)), '] = ', &
              (units_from_atomic(units_out%length, outp%plane%origin(idir)), idir = 1, 3)
-        write(iunit,'(a,3f9.5)') '# u = ', outp%plane%u(1), outp%plane%u(2), outp%plane%u(3)
-        write(iunit,'(a,3f9.5)') '# v = ', outp%plane%v(1), outp%plane%v(2), outp%plane%v(3)
-        write(iunit,'(a,3f9.5)') '# n = ', outp%plane%n(1), outp%plane%n(2), outp%plane%n(3)
-        write(iunit,'(a, f9.5)') '# spacing = ', units_from_atomic(units_out%length, outp%plane%spacing)
-        write(iunit,'(a,2i4)')   '# nu, mu = ', outp%plane%nu, outp%plane%mu
-        write(iunit,'(a,2i4)')   '# nv, mv = ', outp%plane%nv, outp%plane%mv
+        write(iunit,'(a,3f9.5)')  '# u = ', outp%plane%u(1), outp%plane%u(2), outp%plane%u(3)
+        write(iunit,'(a,3f9.5)')  '# v = ', outp%plane%v(1), outp%plane%v(2), outp%plane%v(3)
+        write(iunit,'(a,3f9.5)')  '# n = ', outp%plane%n(1), outp%plane%n(2), outp%plane%n(3)
+        write(iunit,'(a, f9.5)')  '# spacing = ', units_from_atomic(units_out%length, outp%plane%spacing)
+        write(iunit,'(a,2i4)')    '# nu, mu = ', outp%plane%nu, outp%plane%mu
+        write(iunit,'(a,2i4)')    '# nv, mv = ', outp%plane%nv, outp%plane%mv
 
       case(2)
-        write(iunit,'(a)')       '# Line:'
-        write(iunit,'(a,2f9.5)') '# origin = ', &
+        write(iunit,'(a)')        '# Line:'
+        write(iunit,'(3a,2f9.5)') '# origin [',  trim(units_abbrev(units_out%length)), '] = ', &
              (units_from_atomic(units_out%length, outp%plane%origin(idir)), idir = 1, 2)
-        write(iunit,'(a,2f9.5)') '# u = ', outp%line%u(1), outp%line%u(2)
-        write(iunit,'(a,2f9.5)') '# n = ', outp%line%n(1), outp%line%n(2)
-        write(iunit,'(a, f9.5)') '# spacing = ', units_from_atomic(units_out%length, outp%line%spacing)
-        write(iunit,'(a,2i4)')   '# nu, mu = ', outp%line%nu, outp%line%mu
+        write(iunit,'(a,2f9.5)')  '# u = ', outp%line%u(1), outp%line%u(2)
+        write(iunit,'(a,2f9.5)')  '# n = ', outp%line%n(1), outp%line%n(2)
+        write(iunit,'(a, f9.5)')  '# spacing = ', units_from_atomic(units_out%length, outp%line%spacing)
+        write(iunit,'(a,2i4)')    '# nu, mu = ', outp%line%nu, outp%line%mu
 
       case(1)
-        write(iunit,'(a)')       '# Point:'
-        write(iunit,'(a, f9.5)') '# origin = ', units_from_atomic(units_out%length, outp%line%origin(1))
+        write(iunit,'(a)')        '# Point:'
+        write(iunit,'(3a, f9.5)') '# origin [',  trim(units_abbrev(units_out%length)), '] = ', &
+             units_from_atomic(units_out%length, outp%line%origin(1))
 
       end select
     end if
@@ -321,7 +322,8 @@
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
-      write(iunit,'(a,e20.12)') '# Flow = ', units_from_atomic(unit_one / units_out%time, flow)
+      write(iunit,'(3a,e20.12)') '# Flow [', trim(units_abbrev(unit_one / units_out%time)), '] = ', &
+           units_from_atomic(unit_one / units_out%time, flow)
       call io_close(iunit)
     end if
 

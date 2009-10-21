@@ -22,5 +22,5 @@ Enabled    : Yes
 # is 0.0002731 au, quite close to the value produced by the test.
 
 Input: 04-biot_savart.01-gs.inp
-match ; Current flow                  ; GREP(static/current-flow, '# Flow =', 9) ; -0.180741589461E-01
+match ; Current flow                  ; GREP(static/current-flow, '# Flow', 20) ; -0.180741589461E-01
 match ; Magnetic Field at loop center ; LINE(static/Bind_z.x=0\,z=0, 87, 24) ; 2.81319023461392E-004
