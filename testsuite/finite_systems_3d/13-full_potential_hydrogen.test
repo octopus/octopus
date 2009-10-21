@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-Test       : Full Potential Hydrogen
+Test       : Full-Potential Hydrogen
 Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes

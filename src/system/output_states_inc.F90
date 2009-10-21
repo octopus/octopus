@@ -171,8 +171,6 @@
 
     call push_sub('output_states_inc.h_sys_output_modelmb')
 
-    call messages_devel_version("Model many body")
-
     impose_exch_symmetry = .true.
 
     ! make sure directory exists
@@ -259,7 +257,7 @@
     type(h_sys_output_t), intent(in)    :: outp
     type(geometry_t),     intent(in)    :: geo
 
-    integer :: iunit, i, k, rankmin
+    integer :: iunit, ip, idir, rankmin
     FLOAT   :: flow, dmin
     FLOAT, allocatable :: j(:, :, :)
 
@@ -276,23 +274,27 @@
       select case(gr%mesh%sb%dim)
       case(3)
         write(iunit,'(a)')       '# Plane:'
+        write(iunit,'(a,3f9.5)') '# origin = ', &
+             (units_from_atomic(units_out%length, outp%plane%origin(idir)), idir = 1, 3)
         write(iunit,'(a,3f9.5)') '# u = ', outp%plane%u(1), outp%plane%u(2), outp%plane%u(3)
         write(iunit,'(a,3f9.5)') '# v = ', outp%plane%v(1), outp%plane%v(2), outp%plane%v(3)
         write(iunit,'(a,3f9.5)') '# n = ', outp%plane%n(1), outp%plane%n(2), outp%plane%n(3)
-        write(iunit,'(a, f9.5)') '# spacing = ', outp%plane%spacing
+        write(iunit,'(a, f9.5)') '# spacing = ', units_from_atomic(units_out%length, outp%plane%spacing)
         write(iunit,'(a,2i4)')   '# nu, mu = ', outp%plane%nu, outp%plane%mu
         write(iunit,'(a,2i4)')   '# nv, mv = ', outp%plane%nv, outp%plane%mv
 
       case(2)
         write(iunit,'(a)')       '# Line:'
+        write(iunit,'(a,2f9.5)') '# origin = ', &
+             (units_from_atomic(units_out%length, outp%plane%origin(idir)), idir = 1, 2)
         write(iunit,'(a,2f9.5)') '# u = ', outp%line%u(1), outp%line%u(2)
         write(iunit,'(a,2f9.5)') '# n = ', outp%line%n(1), outp%line%n(2)
-        write(iunit,'(a, f9.5)') '# spacing = ', outp%line%spacing
+        write(iunit,'(a, f9.5)') '# spacing = ', units_from_atomic(units_out%length, outp%line%spacing)
         write(iunit,'(a,2i4)')   '# nu, mu = ', outp%line%nu, outp%line%mu
 
       case(1)
         write(iunit,'(a)')       '# Point:'
-        write(iunit,'(a, f9.5)') '# origin = ', outp%line%origin(1)
+        write(iunit,'(a, f9.5)') '# origin = ', units_from_atomic(units_out%length, outp%line%origin(1))
 
       end select
     end if
@@ -301,15 +303,15 @@
       SAFE_ALLOCATE(j(1:gr%mesh%np, 1:MAX_DIM, 0:st%d%nspin))
       call states_calc_tau_jp_gn(gr, st, jp = j(:, :, 1:))
 
-      do k = 1, gr%mesh%sb%dim
-        do i = 1, gr%mesh%np
-          j(i, k, 0) = sum(j(i, k, 1:st%d%nspin))
+      do idir = 1, gr%mesh%sb%dim
+        do ip = 1, gr%mesh%np
+          j(ip, idir, 0) = sum(j(ip, idir, 1:st%d%nspin))
         end do
       end do
 
       select case(gr%mesh%sb%dim)
-      case(3); flow = mf_surface_integral (gr%mesh, j(:, :, 0), outp%plane)
-      case(2); flow = mf_line_integral (gr%mesh, j(:, :, 0), outp%line)
+      case(3); flow = mf_surface_integral(gr%mesh, j(:, :, 0), outp%plane)
+      case(2); flow = mf_line_integral(gr%mesh, j(:, :, 0), outp%line)
       case(1); flow = j(mesh_nearest_point(gr%mesh, outp%line%origin(1), dmin, rankmin), 1, 0)
       end select
 

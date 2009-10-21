@@ -120,6 +120,7 @@ contains
     type(h_sys_output_t), intent(out) :: outp
 
     type(block_t) :: blk
+    FLOAT :: norm
 
     call push_sub('output_h_sys.h_sys_output_init')
 
@@ -238,6 +239,10 @@ contains
       call input_error('Output')
     end if
 
+    if(iand(outp%what, output_modelmb) .or. iand(outp%what, output_density_matrix)) then
+      call messages_devel_version("Model many-body and density matrix")
+    endif
+
     if(iand(outp%what, output_modelmb).ne.0) then
       write(message(1),'(a)') 'Model many-body quantities will be output, according to the presence of'
       write(message(2),'(a)') '  wfs, density, or density_matrix in Output.'
@@ -275,61 +280,83 @@ contains
     if(parse_block(datasets_check('CurrentThroughPlane'), blk) == 0) then
       outp%what = ior(outp%what, output_j_flow)
 
+      !%Variable CurrentThroughPlane
+      !%Type block
+      !%Section States
+      !%Description
+      !% At the end of the ground-state calculation, the code can calculate
+      !% the steady-state current in the ground state 
+      !% traversing a user-defined portion of a plane, as specified by this block.
+      !% In the format below, <tt>origin</tt> is a point in the plane.
+      !% <tt>u</tt> and <tt>v</tt> are the (dimensionless) lattice vectors defining the plane;
+      !% they will be normalized by the code. <tt>spacing</tt> is the fineness of the mesh
+      !% on the plane. Integers <tt>nu</tt> and <tt>mu</tt> are the length and
+      !% width of the portion of the plane, in units of <tt>spacing</tt>.
+      !% Thus, the grid points included in the plane are
+      !% <tt>x_ij = origin + i*spacing*u + j*spacing*v</tt>,
+      !% for <tt>nu <= i <= mu </tt> and <tt>nv <= j <= mv</tt>.
+      !% Analogously, in the 2D case, the current flow is calculated through a line;
+      !% in the 1D case, the current flow is calculated through a point.
+      !%
+      !% Example (3D):
+      !%
+      !% <tt>%CurrentThroughPlane
+      !% <br>&nbsp;&nbsp; 0.0 | 0.0 | 0.0  # origin
+      !% <br>&nbsp;&nbsp; 0.0 | 1.0 | 0.0  # u
+      !% <br>&nbsp;&nbsp; 0.0 | 0.0 | 1.0  # v
+      !% <br>&nbsp;&nbsp; 0.2              # spacing
+      !% <br>&nbsp;&nbsp; 0 | 50           # nu | mu
+      !% <br>&nbsp;&nbsp; -50 | 50         # nv | mv
+      !% <br>%</tt>
+      !%
+      !% Example (2D):
+      !%
+      !% <tt>%CurrentThroughPlane
+      !% <br>&nbsp;&nbsp; 0.0 | 0.0        # origin
+      !% <br>&nbsp;&nbsp; 1.0 | 0.0        # u
+      !% <br>&nbsp;&nbsp; 0.2              # spacing
+      !% <br>&nbsp;&nbsp; 0 | 50           # nu | mu
+      !% <br>%</tt>
+      !%
+      !% Example (1D):
+      !%
+      !% <tt>%CurrentThroughPlane
+      !% <br>&nbsp;&nbsp; 0.0              # origin
+      !% <br>%</tt>
+      !%
+      !%End
+        
       select case(sb%dim)
       case(3)
 
-        !%Variable CurrentThroughPlane
-        !%Type block
-        !%Section States
-        !%Description
-        !% At the end of the ground-state calculation, the code may calculate
-        !% the steady-state current in the ground state 
-        !% traversing a user-defined portion of a plane.
-        !%
-        !% In the 2D case, the current flow should be calculated through a line.
-        !%
-        !% Example (3D):
-        !%
-        !% <tt>%CurrentThroughPlane
-        !% <br>&nbsp;&nbsp; 0.0 | 0.0 | 0.0  # origin
-        !% <br>&nbsp;&nbsp; 0.0 | 1.0 | 0.0  # u
-        !% <br>&nbsp;&nbsp; 0.0 | 0.0 | 1.0  # v
-        !% <br>&nbsp;&nbsp; 0.2              # spacing
-        !% <br>&nbsp;&nbsp; 0 | 50           # nu | mu
-        !% <br>&nbsp;&nbsp; -50 | 50         # nv | mv
-        !% <br>%</tt>
-        !%
-        !% Example (2D):
-        !%
-        !% <tt>%CurrentThroughPlane
-        !% <br>&nbsp;&nbsp; 0.0 | 0.0        # origin
-        !% <br>&nbsp;&nbsp; 1.0 | 0.0        # u
-        !% <br>&nbsp;&nbsp; 0.2              # spacing
-        !% <br>&nbsp;&nbsp; 0 | 50           # nu | mu
-        !% <br>%</tt>
-        !%
-        !% Example (1D):
-        !%
-        !% <tt>%CurrentThroughPlane
-        !% <br>&nbsp;&nbsp; 0.0              # origin
-        !% <br>%</tt>
-        !%
-        !%End
-        
-        call parse_block_float(blk, 0, 0, outp%plane%origin(1))
-        call parse_block_float(blk, 0, 1, outp%plane%origin(2))
-        call parse_block_float(blk, 0, 2, outp%plane%origin(3))
+        call parse_block_float(blk, 0, 0, outp%plane%origin(1), units_inp%length)
+        call parse_block_float(blk, 0, 1, outp%plane%origin(2), units_inp%length)
+        call parse_block_float(blk, 0, 2, outp%plane%origin(3), units_inp%length)
         call parse_block_float(blk, 1, 0, outp%plane%u(1))
         call parse_block_float(blk, 1, 1, outp%plane%u(2))
         call parse_block_float(blk, 1, 2, outp%plane%u(3))
         call parse_block_float(blk, 2, 0, outp%plane%v(1))
         call parse_block_float(blk, 2, 1, outp%plane%v(2))
         call parse_block_float(blk, 2, 2, outp%plane%v(3))
-        call parse_block_float(blk, 3, 0, outp%plane%spacing)
+        call parse_block_float(blk, 3, 0, outp%plane%spacing, units_inp%length)
         call parse_block_integer(blk, 4, 0, outp%plane%nu)
         call parse_block_integer(blk, 4, 1, outp%plane%mu)
         call parse_block_integer(blk, 5, 0, outp%plane%nv)
         call parse_block_integer(blk, 5, 1, outp%plane%mv)
+
+        norm = sqrt(sum(outp%plane%u(1:3)**2))
+        if(norm < M_EPSILON) then
+          write(1, '(a)') 'u-vector for CurrentThroughPlane cannot have norm zero.'
+          call write_fatal(1)
+        endif
+        outp%plane%u(1:3) = outp%plane%u(1:3) / norm
+
+        norm = sqrt(sum(outp%plane%v(1:3)**2))
+        if(norm < M_EPSILON) then
+          write(1, '(a)') 'v-vector for CurrentThroughPlane cannot have norm zero.'
+          call write_fatal(1)
+        endif
+        outp%plane%v(1:3) = outp%plane%v(1:3) / norm
 
         outp%plane%n(1) = outp%plane%u(2)*outp%plane%v(3) - outp%plane%u(3)*outp%plane%v(2)
         outp%plane%n(2) = outp%plane%u(3)*outp%plane%v(1) - outp%plane%u(1)*outp%plane%v(3)
@@ -337,20 +364,27 @@ contains
 
       case(2)
 
-        call parse_block_float(blk, 0, 0, outp%line%origin(1))
-        call parse_block_float(blk, 0, 1, outp%line%origin(2))
+        call parse_block_float(blk, 0, 0, outp%line%origin(1), units_inp%length)
+        call parse_block_float(blk, 0, 1, outp%line%origin(2), units_inp%length)
         call parse_block_float(blk, 1, 0, outp%line%u(1))
         call parse_block_float(blk, 1, 1, outp%line%u(2))
-        call parse_block_float(blk, 2, 0, outp%line%spacing)
+        call parse_block_float(blk, 2, 0, outp%line%spacing, units_inp%length)
         call parse_block_integer(blk, 3, 0, outp%line%nu)
         call parse_block_integer(blk, 3, 1, outp%line%mu)
+
+        norm = sqrt(sum(outp%line%u(1:2)**2))
+        if(norm < M_EPSILON) then
+          write(1, '(a)') 'u-vector for CurrentThroughPlane cannot have norm zero.'
+          call write_fatal(1)
+        endif
+        outp%line%u(1:2) = outp%line%u(1:2) / norm
 
         outp%line%n(1) = -outp%line%u(2)
         outp%line%n(2) =  outp%line%u(1)
 
       case(1)
 
-        call parse_block_float(blk, 0, 0, outp%line%origin(1))
+        call parse_block_float(blk, 0, 0, outp%line%origin(1), units_inp%length)
 
       end select
     end if

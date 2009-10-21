@@ -515,7 +515,7 @@ end subroutine X(mf_interpolate_points)
 
 ! ---------------------------------------------------------
 ! Given a function f defined on mesh, and a plane, it gives 
-! back the values of f on the plane, by doing the suitable
+! back the values of f on the plane, by doing the appropriate
 ! interpolation
 subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
   type(mesh_t),       intent(in)  :: mesh
@@ -563,8 +563,8 @@ end subroutine X(mf_interpolate_on_plane)
 
 
 ! ---------------------------------------------------------
-! Given a function f defined on mesh, and a plane, it gives 
-! back the values of f on the plane, by doing the suitable
+! Given a function f defined on mesh, and a line, it gives 
+! back the values of f on the line, by doing the appropriate
 ! interpolation
 subroutine X(mf_interpolate_on_line)(mesh, line, f, f_in_line)
   type(mesh_t),       intent(in)  :: mesh
@@ -644,13 +644,13 @@ R_TYPE function X(mf_surface_integral_vector) (mesh, f, plane) result(d)
   type(mesh_plane_t), intent(in) :: plane
 
   R_TYPE, allocatable :: fn(:)
-  integer :: i
+  integer :: ip
 
   call push_sub('mesh_function_inc.Xmf_surface_integral_vector')
 
   SAFE_ALLOCATE(fn(1:mesh%np))
-  do i = 1, mesh%np
-    fn(i) = sum(f(i, :)*plane%n(:))
+  do ip = 1, mesh%np
+    fn(ip) = sum(f(ip, :)*plane%n(:))
   end do
 
   d =  X(mf_surface_integral_scalar)(mesh, fn, plane)
