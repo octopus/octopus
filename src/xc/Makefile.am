@@ -22,14 +22,14 @@
 noinst_LIBRARIES = libxc.a
 
 libxc_a_SOURCES =        \
-	functionals_list.F90 \
 	functionals.F90  \
 	xc.F90
 
-noinst_HEADERS =        \
-	vxc_inc.F90     \
-	axc_inc.F90      \
-	fxc_inc.F90     \
+noinst_HEADERS =             \
+	functionals_list.F90 \
+	vxc_inc.F90          \
+	axc_inc.F90          \
+	fxc_inc.F90          \
 	kxc_inc.F90
 
 include $(srcdir)/../common-rules.make
