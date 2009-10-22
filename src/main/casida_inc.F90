@@ -113,7 +113,7 @@ subroutine X(get_transition_densities) (cas, sys, trandens)
 
   SAFE_ALLOCATE(n0I(1:sys%gr%mesh%np))
   n0I = M_ZERO
-  fn_unit = units_out%energy / units_out%length**sys%gr%sb%dim
+  fn_unit = units_out%length**(-sys%gr%sb%dim)
 
   do ia = 1, cas%n_pairs
     if(loct_isinstringlist(ia, trandens)) then
