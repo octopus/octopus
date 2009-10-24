@@ -102,8 +102,9 @@ if COMPILE_NEWUOA
   AM_FCFLAGS += @F90_MODULE_FLAG@$(top_builddir)/external_libs/newuoa
 endif
 
+# Since ETSF_IO depends on netCDF, it must be first in the list
 all_LIBS = $(core_LIBS) @LIBS_FFT@ @LIBS_SPARSKIT@ \
-  @LIBS_NETCDF@ @LIBS_ETSF_IO@ $(external_LIBS) \
+  @LIBS_ETSF_IO@ @LIBS_NETCDF@ $(external_LIBS) \
   @LIBS_MPI@ @LIBS_LAPACK@ @LIBS_BLAS@
 
 
@@ -118,8 +119,8 @@ SUFFIXES = _oct.f90 .F90 .o .S .s
 	@CC@ -c -o $@ $*.s
 	@rm -f $*.s
 
-# Compilation is a two step process: first we preprocess F90 files
-# to generate _oct.f90 files. Then, we compiler this _oct.f90 into
+# Compilation is a two-step process: first we preprocess F90 files
+# to generate _oct.f90 files. Then, we compile this _oct.f90 into
 # an object file and delete the intermediate file.
 .F90.o:
 	@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< > $*_oct.f90

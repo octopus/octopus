@@ -189,7 +189,7 @@ ACX_CC_FORTRAN_INT
 dnl Sometimes Fortran may use the flush function, sometimes not.
 ACX_FORTRAN_CHECK_FUNC(flush)
 
-dnl Some compiler define the sizeof intrinsic
+dnl Some compilers define the sizeof intrinsic
 ACX_FC_SIZEOF
 
 ACX_FORTRAN_LOC
