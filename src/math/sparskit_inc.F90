@@ -31,7 +31,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   !%Default sk_cg
   !%Section Math::General
   !%Description
-  !% Specifies what kind of linear solver will be used
+  !% Specifies what kind of linear solver will be used.
   !%Option sk_cg 1
   !% Conjugate Gradient Method
   !%Option sk_cgnr 2
@@ -51,7 +51,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   !%Option sk_fgmres 9
   !% Flexible version of Generalized Minimum Residual method
   !%Option sk_dqgmres 10
-  !% Direct versions of Quasi Generalize Minimum Residual method
+  !% Direct versions of the Quasi-Generalized Minimum Residual method
   !%End
   call parse_integer(datasets_check('SparskitSolver'),          SK_CG, sk%solver_type)
   if ( sk%solver_type.lt.SK_MINVAL.or.sk%solver_type.gt.SK_MAXVAL ) then
@@ -63,7 +63,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   !%Default 15
   !%Section Math::General
   !%Description
-  !% Some of the Sparskit solver are Krylov subspace methods.
+  !% Some of the Sparskit solvers are Krylov subspace methods.
   !% This variable determines which size the solver will use 
   !% for the subspace.
   !%End
@@ -99,7 +99,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   !%Default 0
   !%Section Math::General
   !%Description
-  !% Determines how often status info of the solver is printed
+  !% Determines how often status info of the solver is printed.
   !%End
   call parse_integer(datasets_check('SparskitIterOut'),            -1, sk%iter_out)
 
@@ -108,8 +108,8 @@ subroutine X(sparskit_solver_init)(n, sk)
   !%Default 1e-8
   !%Section Math::General
   !%Description
-  !% Some Sparskit solver use a relative tolerance as stopping criteria 
-  !% for the iteratve solution process. This variable can be used to 
+  !% Some Sparskit solvers use a relative tolerance as a stopping criterion 
+  !% for the iterative solution process. This variable can be used to 
   !% specify the tolerance.
   !%End
   call parse_float(datasets_check('SparskitRelTolerance'), CNST(1e-5), sk%rel_tolerance)
@@ -119,8 +119,8 @@ subroutine X(sparskit_solver_init)(n, sk)
   !%Default 1e-8
   !%Section Math::General
   !%Description
-  !% Some Sparskit solver use an absolute tolerance as stopping criteria 
-  !% for the iteratve solution process. This variable can be used to 
+  !% Some Sparskit solvers use an absolute tolerance as a stopping criterion 
+  !% for the iterative solution process. This variable can be used to 
   !% specify the tolerance.
   !%End
   call parse_float(datasets_check('SparskitAbsTolerance'), CNST(1e-10), sk%abs_tolerance)
@@ -130,7 +130,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   !%Default no
   !%Section Math::General
   !%Description
-  !% When set to yes, the sparskit solver will emit more details 
+  !% When set to yes, the Sparskit solver will write more detailed output.
   !%End
   call parse_logical(datasets_check('SparskitVerboseSolver'), .false., sk%verbose)
 
@@ -176,7 +176,7 @@ subroutine X(sparskit_solver_init)(n, sk)
     message(1) = 'Info: Sparskit solver type: Flexible version of Generalized Minimum Residual method'
     workspace_size =  2*sk%size*(m+1) + (m+1)*m/2 + 3*m + 2
   case(SK_DQGMRES)
-    message(1) = 'Info: Sparskit solver type: Direct versions of Quasi Generalize Minimum Residual method'
+    message(1) = 'Info: Sparskit solver type: Direct versions of Quasi-Generalized Minimum Residual method'
     workspace_size = sk%size + (m+1) * (2*sk%size+4)
   case default
     write(message(1), '(a,i4,a)') "Input: '", sk%solver_type, &
@@ -224,7 +224,6 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
   type(sparskit_solver_t), intent(inout) :: sk
   R_TYPE, intent(in)  :: rhs(:)
   R_TYPE, intent(out) :: sol(:)
-
 
 #ifdef R_TREAL
   interface
@@ -299,8 +298,8 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
       call dqgmres(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
     case default
       write(message(1), '(a,i4,a)') "Input: '", sk%solver_type, &
-           "' is not a valid Sparsekit Solver"
-      message(2) = '( Sparsekit Solver =  cg | cgnr | bcg | dbcg | bcgstab | tfqmr | fom | gmres | fgmres | dqgmres )'
+           "' is not a valid Sparskit Solver"
+      message(2) = '( Sparskit Solver =  cg | cgnr | bcg | dbcg | bcgstab | tfqmr | fom | gmres | fgmres | dqgmres )'
       call write_fatal(2)
     end select
     

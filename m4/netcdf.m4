@@ -21,7 +21,7 @@ if test $acx_netcdf_ok = no; then
   AC_MSG_CHECKING([for netcdf])  
   # If LIBS_NETCDF has been passed with --with-netcdf just test this
   if test "$LIBS_NETCDF"; then
-    netcdf_fcflags=""; netcdf_libs="$LIBS_NETCDF"
+    netcdf_fcflags="$LIBS_NETCDF"; netcdf_libs="$LIBS_NETCDF"
 FCFLAGS="$netcdf_fcflags $acx_netcdf_save_FCFLAGS"
 LIBS="$netcdf_libs $acx_netcdf_save_LIBS"
 AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
