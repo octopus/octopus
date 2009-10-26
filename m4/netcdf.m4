@@ -57,7 +57,7 @@ status=nf90_close(ncid)
   if test $acx_netcdf_ok = no -o -z "$FCFLAGS_NETCDF$LIBS_NETCDF"; then
     AC_MSG_RESULT([$acx_netcdf_ok])
   else
-    AC_MSG_RESULT([$acx_netcdf_ok ($FCFLAGS_NETCDF $LIBS_NETCDF)])
+    AC_MSG_RESULT([$acx_netcdf_ok ($LIBS_NETCDF)])
   fi
 fi
 
