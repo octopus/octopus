@@ -36,8 +36,8 @@ AC_LINK_IFELSE(
     i = command_argument_count()
     call get_command_argument(0, arg)
     ]),
-    [acx_command_line_arguments="fortran 2003"
-     AC_MSG_RESULT(fortran 2003)
+    [acx_command_line_arguments="Fortran 2003"
+     AC_MSG_RESULT(Fortran 2003)
      AC_DEFINE(FC_COMMAND_LINE_ARGUMENTS, 2003, [compiler supports command line arguments])],
     [acx_command_line_arguments=none])
 
