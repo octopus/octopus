@@ -137,10 +137,9 @@ subroutine poisson3D_init(gr, geo)
     call poisson_corrections_init(corrector, maxl, gr%mesh)
 
   case(POISSON_SETE)
-    nx = gr%mesh%idx%nr(2, 1) - gr%mesh%idx%nr(1, 1) + 1 - 2*gr%mesh%idx%enlarge(1)
-    ny = gr%mesh%idx%nr(2, 2) - gr%mesh%idx%nr(1, 2) + 1 - 2*gr%mesh%idx%enlarge(2)
-    nz = gr%mesh%idx%nr(2, 3) - gr%mesh%idx%nr(1, 3) + 1 - 2*gr%mesh%idx%enlarge(3)
-
+    nx = gr%mesh%idx%ll(1) 
+    ny = gr%mesh%idx%ll(2)
+    nz = gr%mesh%idx%ll(3)
     xl = 2*gr%mesh%sb%lsize(1)
     yl = 2*gr%mesh%sb%lsize(2)
     zl = 2*gr%mesh%sb%lsize(3)

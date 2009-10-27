@@ -481,15 +481,19 @@ contains
       DO K=1,this%nzbot
         dz(k)=dz1b
       end do
-      dz_oct=zl/TOFLOAT(nz)
+      write(67,*) zl
+      write(67,*) nz, (nz-1)/2
+      dz_oct=(zl/TOFLOAT((nz-1)))
 
       do k = this%nzbot + 1, this%nzbot + nz
         dz(k) = dz_oct
+        write(67,*) dz(k)
       end do
 
       dz1t=ztop/TOFLOAT(nztop)
       DO k=this%nzbot+nz+1,this%nztot
         dz(k)=dz1t
+        write(67,*) dz(k)
       end do
 
       zg(1)=-CNST(0.5)*zwidth+CNST(0.5)*dz(1)
