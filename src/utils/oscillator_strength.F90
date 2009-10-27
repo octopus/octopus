@@ -343,7 +343,7 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
   ! First, subtract zero resonance...
   w = M_ZERO
   call resonance_second_order(w, power, nw_subtracted, leftbound, rightbound, M_ZERO, M_ZERO)
-  call modify_ot(time_steps, dt, order, ot, omega, power)
+  call modify_ot(time_steps, dt, order, ot, w, power)
   nw_subtracted = nw_subtracted + 1
 
   ! Then, get all the others...

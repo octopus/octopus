@@ -196,6 +196,8 @@ contains
     end if
 #endif
 
+    SAFE_DEALLOCATE_A(rhs)
+
     call pop_sub()
   end subroutine lippmann_schwinger
 
