@@ -67,7 +67,7 @@ module poisson_sete_m
     FLOAT            :: tot_nuc_charge_energy
   end type poisson_sete_t
 
-  integer :: lenw, leniw, idev, isym = 0, itol = 2, itmax = 201, itermin = 5, iter, ierr, iunit = 0, nxl, nyl
+  integer :: lenw, leniw, idev, isym = 0, itol = 2, itmax = 2001, itermin = 5, iter, ierr, iunit = 0, nxl, nyl
   FLOAT, allocatable :: xg(:), yg(:), zg(:), dxg(:), dyg(:), dz(:), dxl(:), dyl(:)
 
   ! these variables must be local for the moment
@@ -132,7 +132,7 @@ contains
       SAFE_ALLOCATE(VTV(1:NGATES))
       SAFE_ALLOCATE(VT(1:NGATES))
 
-      READ(57,*)VTV(1),VTV(2) ! voltage on plates in volts and nm?
+      READ(57,*)VTV(1),VTV(2) ! voltage on plates 
       VT=VTV/HARTREE
 
       SAFE_DEALLOCATE_A(VTV)
@@ -142,16 +142,16 @@ contains
 
       ! mesh related
       READ(57,*)XWIDTH,YWIDTH ! bounding box around octopus box
-      XWIDTH=XWIDTH*ANGSNM
-      YWIDTH=YWIDTH*ANGSNM
-      READ(57,*)XCEN,YCEN
-      XCEN=XCEN*ANGSNM
-      YCEN=YCEN*ANGSNM
-      READ(57,*)NX2,NY2,NZ2   ! additional mesh points in bd box
-      READ(57,*)NXL,NYL       ! padding points (to sim zone edge)
-      allocate(DXL(NXL)); allocate(DYL(NYL))
-      READ(57,*)(DXL(I),I=1,NXL)
-      READ(57,*)(DYL(J),J=1,NYL)
+      xwidth=xwidth*angsnm
+      ywidth=ywidth*angsnm
+      READ(57,*)xcen,ycen
+      xcen=xcen*angsnm
+      ycen=ycen*angsnm
+      READ(57,*)nx2,ny2,nz2   ! additional mesh points in bd box
+      READ(57,*)nxl,nyl       ! padding points (to sim zone edge)
+      allocate(dxl(nxl)); allocate(dyl(nyl))
+      READ(57,*)(dxl(i),i=1,nxl)
+      READ(57,*)(dyl(j),j=1,nyl)
     ELSE
       WRITE(6,*)' IDEV not supported '
       RETURN
@@ -161,11 +161,11 @@ contains
 
     call cbsurf(this, vt) !Assign boundaries 
 
-    THIS%NELT=32+20*((THIS%NXTOT-2)+(THIS%NYTOT-2)+(THIS%NZTOT-2))+ &
-      12*((THIS%NXTOT-2)*(THIS%NYTOT-2)+(THIS%NXTOT-2)*(THIS%NZTOT-2)+(THIS%NYTOT-2)*(THIS%NZTOT-2)) + &
-      7*(THIS%NXTOT-2)*(THIS%NYTOT-2)*(THIS%NZTOT-2)
-    LENW=THIS%NELT+9*THIS%NXTOT*THIS%NYTOT*THIS%NZTOT
-    LENIW=THIS%NELT+5*THIS%NXTOT*THIS%NYTOT*THIS%NZTOT+12
+    this%nelt=32+20*((this%nxtot-2)+(this%nytot-2)+(this%nztot-2))+ &
+      12*((this%nxtot-2)*(this%nytot-2)+(this%nxtot-2)*(this%nztot-2)+(this%nytot-2)*(this%nztot-2)) + &
+      7*(this%nxtot-2)*(this%nytot-2)*(this%nztot-2)
+    lenw=this%nelt+9*this%nxtot*this%nytot*this%nztot
+    leniw=this%nelt+5*this%nxtot*this%nytot*this%nztot+12
 
     SAFE_ALLOCATE(q2(1:this%ntot))
     SAFE_ALLOCATE(this%aw(1:this%nelt))
@@ -477,34 +477,37 @@ contains
 
       nztop = int(nz2*ztop/(ztop + zbot))
       this%nzbot = nz2 - nztop
-      DZ1B=ZBOT/TOFLOAT(THIS%NZBOT)
-      DO K=1,THIS%NZBOT
-        DZ(K)=DZ1B
+      dz1b=zbot/TOFLOAT(this%nzbot)
+      DO K=1,this%nzbot
+        dz(k)=dz1b
       end do
-      DZ_OCT=ZL/TOFLOAT(NZ)
+      dz_oct=zl/TOFLOAT(nz)
 
       do k = this%nzbot + 1, this%nzbot + nz
         dz(k) = dz_oct
       end do
 
-      DZ1T=ZTOP/TOFLOAT(NZTOP)
-      DO K=THIS%NZBOT+NZ+1,THIS%NZTOT
-        DZ(K)=DZ1T
+      dz1t=ztop/TOFLOAT(nztop)
+      DO k=this%nzbot+nz+1,this%nztot
+        dz(k)=dz1t
       end do
 
-      ZG(1)=-CNST(0.5)*ZWIDTH+CNST(0.5)*DZ(1)
-      DO K=2,THIS%NZTOT-1
-        ZG(K)=ZG(K-1)+CNST(0.5)*(DZ(K-1)+DZ(K))
+      zg(1)=-CNST(0.5)*zwidth+CNST(0.5)*dz(1)
+      write(67,*) zg(1)
+      DO k=2,this%nztot-1
+        zg(k)=zg(k-1)+CNST(0.5)*(dz(k-1)+dz(k))
+        write(67,*) zg(k)
       end do
-      ZG(THIS%NZTOT)=CNST(0.5)*ZWIDTH-CNST(0.5)*DZ(THIS%NZTOT)
+      zg(this%nztot)=CNST(0.5)*zwidth-CNST(0.5)*dz(this%nztot)
+      write(67,*) zg(this%nztot)
 
       ZTEST=ZG(THIS%NZTOT)
-      !    write(6,*)' this%nzbot ',this%nzbot
-      !    write(6,*)' zg this%nztot ',this%nztot
-      !    write(6,101)(zg(k),k=1,this%nztot)
-      ! 101 format(10(1x,e10.4))
-      !    write(6,*)' dz '
-      !    write(6,101)(dz(k),k=1,this%nztot)
+          write(67,*)' this%nzbot ',this%nzbot
+          write(67,*)' zg this%nztot ',this%nztot
+          write(67,101)(zg(k),k=1,this%nztot)
+       101 format(10(1x,e10.4))
+          write(67,*)' dz '
+          write(67,101)(dz(k),k=1,this%nztot)
 
       ! x-mesh
       NXTOT_0=NX+NX2
@@ -535,18 +538,18 @@ contains
         DXG(I)=DX1T
       end do
 
-      XWIDTH_BIG=SUM(DXG)
-      XG(1)=-CNST(0.5)*XWIDTH_BIG+CNST(0.5)*DXG(1)
+      xwidth_big=SUM(dxg)
+      xg(1)=-CNST(0.5)*xwidth_big+CNST(0.5)*dxg(1)
       DO I=2,THIS%NXTOT-1
         XG(I)=XG(I-1)+CNST(0.5)*(DXG(I-1)+DXG(I))
       end do
       XG(THIS%NXTOT)=CNST(0.5)*XWIDTH_BIG-CNST(0.5)*DXG(THIS%NXTOT)
 
       XTEST=XG(THIS%NXTOT)
-      !    write(6,*)' xg this%nxtot ',this%nxtot
-      !    write(6,101)(xg(k),k=1,this%nxtot)
-      !    write(6,*)' dxg '
-      !    write(6,101)(dxg(k),k=1,this%nxtot)
+          write(57,*)' xg this%nxtot ',this%nxtot
+          write(57,101)(xg(k),k=1,this%nxtot)
+          write(57,*)' dxg '
+          write(57,101)(dxg(k),k=1,this%nxtot)
       ! Y-mesh
       NYTOT_0=NY+NY2  ! excluding border points
       THIS%NYTOT=NYTOT_0+2*NYL  ! all Poisson Y mesh point
@@ -582,6 +585,10 @@ contains
         YG(I)=YG(I-1)+CNST(0.5)*(DYG(I-1)+DYG(I))
       end do
       YG(THIS%NYTOT)=CNST(0.5)*YWIDTH_BIG-CNST(0.5)*DYG(THIS%NYTOT)
+          write(57,*)' yg this%nytot ',this%nytot
+          write(57,101)(yg(k),k=1,this%nytot)
+          write(57,*)' dyg '
+          write(57,101)(dyg(k),k=1,this%nytot)
 
 
       THIS%NTOT=THIS%NXTOT*THIS%NYTOT*THIS%NZTOT
@@ -732,7 +739,10 @@ contains
     call dslucs(THIS%NTOT,Q2,X2,THIS%NELT,this%IAD,this%JAD,this%AW,ISYM,ITOL, &
       TOL,ITMAX,ITER,ITERMIN,ERR,IERR,IUNIT,RWORK,LENW, &
       IWORK,LENIW)
-
+    if (ierr /= 0) then
+	    write(*,*) "DSLUCS error number:", ierr, err
+	    STOP
+    endif
     leniw = iwork(9)
     lenw  = iwork(10) ! new work array lengths
 
