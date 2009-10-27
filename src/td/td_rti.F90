@@ -274,7 +274,7 @@ contains
     !%  (1 + i\delta t/2 H_{n+1/2}) \psi_{n+1} = (1 - i\delta t/2 H_{n+1/2}) \psi_{n}  
     !% </MATH>
     !%Option crank_nicholson_sparskit 6
-    !% Classical Crank-Nicholson propagator. Requires the sparskit library.
+    !% Classical Crank-Nicholson propagator. Requires the SPARSKIT library.
     !%
     !% <MATH>
     !%  (1 + i\delta t/2 H_{n+1/2}) \psi_{n+1} = (1 - i\delta t/2 H_{n+1/2}) \psi_{n}  
@@ -340,9 +340,9 @@ contains
       call zsparskit_solver_init(gr%mesh%np, tdsk)
       SAFE_ALLOCATE(zpsi_tmp(1:gr%mesh%np_part, 1:st%d%dim, 1:st%nst, st%d%kpt%start:st%d%kpt%end))
 #else
-      message(1) = 'Octopus was not compiled with support for the sparskit library. This'
+      message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
       message(2) = 'library is required if the "crank_nicholson_sparskit" propagator is selected.'
-      message(3) = 'Try using a different propagation scheme or recompile with sparskit support.'
+      message(3) = 'Try using a different propagation scheme or recompile with SPARSKIT support.'
       call write_fatal(3)
 #endif
     case(PROP_MAGNUS)
@@ -873,7 +873,7 @@ contains
 
 
     ! ---------------------------------------------------------
-    ! Crank-Nicholson propagator, linear solver from sparskit.
+    ! Crank-Nicholson propagator, linear solver from SPARSKIT.
     subroutine td_crank_nicholson_sparskit
 #ifdef HAVE_SPARSKIT
       FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)

@@ -112,7 +112,7 @@ program octopus
   !%Option unocc 02
   !% Calculation of unoccupied/virtual KS states.
   !%Option td 03
-  !% Time-dependent calculation.
+  !% Time-dependent calculation. For periodic systems, currently available only in development version.
   !%Option go 05
   !% Optimization of the geometry.
   !%Option opt_control 07
@@ -121,11 +121,11 @@ program octopus
   !% Calculation of the electromagnetic response: electric
   !% polarizabilities and hyperpolarizabilities and magnetic
   !% susceptibilities.
-  !% For periodic system, currently available only in development version.
+  !% For periodic systems, currently available only in development version.
   !%Option casida 09
   !% Excitations via Casida linear-response TDDFT; for finite systems only.
   !%Option td_transport 10
-  !% Time-dependent quantum transport.
+  !% Time-dependent quantum transport. Currently available only in development version.
   !%Option vdw 11
   !% Calculate van der Waals coefficients.
   !%Option vib_modes 12
@@ -142,11 +142,11 @@ program octopus
   !% Calculation of effective masses by <i>k.p</i> perturbation theory.
   !% Currently available only in development version.
   !%Option gcm 16
-  !% Generator-Coordinates calculation (experimental).
+  !% Generator-Coordinates calculation. Currently available only in development version.
   !%Option memory 17
-  !% It tells you the approximate amount of memory <tt>Octopus</tt> will need to run.
+  !% Estimate the amount of memory <tt>Octopus</tt> will need to run.
   !%Option invert_ks 18
-  !% Run mode used to invert the Kohn-Sham equations.
+  !% Run mode used to invert the Kohn-Sham equations. Currently available only in development version.
   !%Option recipe 99
   !% Prints out a tasty recipe.
   !%End

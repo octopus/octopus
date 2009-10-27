@@ -26,7 +26,7 @@ subroutine X(sparskit_solver_init)(n, sk)
 
   call push_sub('sparskit_inc.Xsparskit_solver_init')
 
-  !%Variable SparskitSolver
+  !%Variable SPARSKITSolver
   !%Type integer
   !%Default sk_cg
   !%Section Math::General
@@ -53,38 +53,38 @@ subroutine X(sparskit_solver_init)(n, sk)
   !%Option sk_dqgmres 10
   !% Direct versions of the Quasi-Generalized Minimum Residual method
   !%End
-  call parse_integer(datasets_check('SparskitSolver'),          SK_CG, sk%solver_type)
+  call parse_integer(datasets_check('SPARSKITSolver'),          SK_CG, sk%solver_type)
   if ( sk%solver_type.lt.SK_MINVAL.or.sk%solver_type.gt.SK_MAXVAL ) then
-    call input_error('SparskitSolver')
+    call input_error('SPARSKITSolver')
   end if
 
-  !%Variable SparskitKrylovSubspaceSize
+  !%Variable SPARSKITKrylovSubspaceSize
   !%Type integer
   !%Default 15
   !%Section Math::General
   !%Description
-  !% Some of the Sparskit solvers are Krylov subspace methods.
-  !% This variable determines which size the solver will use 
+  !% Some of the SPARSKIT solvers are Krylov subspace methods.
+  !% This variable determines what size the solver will use 
   !% for the subspace.
   !%End
-  call parse_integer(datasets_check('SparskitKrylovSubspaceSize'), 15, sk%krylov_size)
+  call parse_integer(datasets_check('SPARSKITKrylovSubspaceSize'), 15, sk%krylov_size)
 
-  !%Variable SparskitPreconditioning
+  !%Variable SPARSKITPreconditioning
   !%Type integer
   !%Default 0
   !%Section Math::General
   !%Description
   !% This variable determines what kind of preconditioning the
-  !% chosen Sparskit solver will use.
+  !% chosen SPARSKIT solver will use.
   !% However, currently there is none implemented.
   !%End
-  call parse_integer(datasets_check('SparskitPreconditioning'),     0, sk%preconditioning)
+  call parse_integer(datasets_check('SPARSKITPreconditioning'),     0, sk%preconditioning)
   if (sk%preconditioning.ne.0) then
     message(1) = 'Error: Preconditioning not implemented yet ...'
     call write_fatal(1)
   end if
 
-  !%Variable SparskitMaxIter
+  !%Variable SPARSKITMaxIter
   !%Type integer
   !%Default 0
   !%Section Math::General
@@ -92,47 +92,47 @@ subroutine X(sparskit_solver_init)(n, sk)
   !% This variable controls the maximum number of iteration steps that
   !% will be performed by the (iterative) linear solver.
   !%End
-  call parse_integer(datasets_check('SparskitMaxIter'),          5000, sk%maxiter)
+  call parse_integer(datasets_check('SPARSKITMaxIter'),          5000, sk%maxiter)
 
-  !%Variable SparskitIterOut
+  !%Variable SPARSKITIterOut
   !%Type integer
   !%Default 0
   !%Section Math::General
   !%Description
   !% Determines how often status info of the solver is printed.
   !%End
-  call parse_integer(datasets_check('SparskitIterOut'),            -1, sk%iter_out)
+  call parse_integer(datasets_check('SPARSKITIterOut'),            -1, sk%iter_out)
 
-  !%Variable SparskitRelTolerance
+  !%Variable SPARSKITRelTolerance
   !%Type float
   !%Default 1e-8
   !%Section Math::General
   !%Description
-  !% Some Sparskit solvers use a relative tolerance as a stopping criterion 
+  !% Some SPARSKIT solvers use a relative tolerance as a stopping criterion 
   !% for the iterative solution process. This variable can be used to 
   !% specify the tolerance.
   !%End
-  call parse_float(datasets_check('SparskitRelTolerance'), CNST(1e-5), sk%rel_tolerance)
+  call parse_float(datasets_check('SPARSKITRelTolerance'), CNST(1e-5), sk%rel_tolerance)
 
-  !%Variable SparskitAbsTolerance
+  !%Variable SPARSKITAbsTolerance
   !%Type float
   !%Default 1e-8
   !%Section Math::General
   !%Description
-  !% Some Sparskit solvers use an absolute tolerance as a stopping criterion 
+  !% Some SPARSKIT solvers use an absolute tolerance as a stopping criterion 
   !% for the iterative solution process. This variable can be used to 
   !% specify the tolerance.
   !%End
-  call parse_float(datasets_check('SparskitAbsTolerance'), CNST(1e-10), sk%abs_tolerance)
+  call parse_float(datasets_check('SPARSKITAbsTolerance'), CNST(1e-10), sk%abs_tolerance)
 
-  !%Variable SparskitVerboseSolver
+  !%Variable SPARSKITVerboseSolver
   !%Type logical
   !%Default no
   !%Section Math::General
   !%Description
-  !% When set to yes, the Sparskit solver will write more detailed output.
+  !% When set to yes, the SPARSKIT solver will write more detailed output.
   !%End
-  call parse_logical(datasets_check('SparskitVerboseSolver'), .false., sk%verbose)
+  call parse_logical(datasets_check('SPARSKITVerboseSolver'), .false., sk%verbose)
 
   ! size of the problem
   sk%size = n
@@ -149,39 +149,39 @@ subroutine X(sparskit_solver_init)(n, sk)
 
   select case(sk%solver_type)
   case(SK_CG)
-    message(1) = 'Info: Sparskit solver type: Conjugate Gradient Method'
+    message(1) = 'Info: SPARSKIT solver type: Conjugate Gradient Method'
     workspace_size = 5*sk%size
   case(SK_CGNR)
-    message(1) = 'Info: Sparskit solver type: Conjugate Gradient Method (Normal Residual equation)'
+    message(1) = 'Info: SPARSKIT solver type: Conjugate Gradient Method (Normal Residual equation)'
     workspace_size = 5*sk%size
   case(SK_BCG)
-    message(1) = 'Info: Sparskit solver type: Bi-Conjugate Gradient Method'
+    message(1) = 'Info: SPARSKIT solver type: Bi-Conjugate Gradient Method'
     workspace_size = 7*sk%size
   case(SK_DBCG)
-    message(1) = 'Info: Sparskit solver type: BCG with partial pivoting'
+    message(1) = 'Info: SPARSKIT solver type: BCG with partial pivoting'
     workspace_size = 11*sk%size
   case(SK_BCGSTAB)
-    message(1) = 'Info: Sparskit solver type: BCG stabilized'
+    message(1) = 'Info: SPARSKIT solver type: BCG stabilized'
     workspace_size = 8*sk%size
   case(SK_TFQMR)
-    message(1) = 'Info: Sparskit solver type: Transpose-Free Quasi-Minimum Residual method'
+    message(1) = 'Info: SPARSKIT solver type: Transpose-Free Quasi-Minimum Residual method'
     workspace_size = 11*sk%size
   case(SK_FOM)
-    message(1) = 'Info: Sparskit solver type: Full Orthogonalization Method'
+    message(1) = 'Info: SPARSKIT solver type: Full Orthogonalization Method'
     workspace_size = (sk%size+3)*(m+2) + (m+1)*m/2
   case(SK_GMRES)
-    message(1) = 'Info: Sparskit solver type: Generalized Minimum Residual method'
+    message(1) = 'Info: SPARSKIT solver type: Generalized Minimum Residual method'
     workspace_size = (sk%size+3)*(m+2) + (m+1)*m/2
   case(SK_FGMRES)
-    message(1) = 'Info: Sparskit solver type: Flexible version of Generalized Minimum Residual method'
+    message(1) = 'Info: SPARSKIT solver type: Flexible version of Generalized Minimum Residual method'
     workspace_size =  2*sk%size*(m+1) + (m+1)*m/2 + 3*m + 2
   case(SK_DQGMRES)
-    message(1) = 'Info: Sparskit solver type: Direct versions of Quasi-Generalized Minimum Residual method'
+    message(1) = 'Info: SPARSKIT solver type: Direct versions of Quasi-Generalized Minimum Residual method'
     workspace_size = sk%size + (m+1) * (2*sk%size+4)
   case default
     write(message(1), '(a,i4,a)') "Input: '", sk%solver_type, &
-      "' is not a valid Sparskit Solver"
-    message(2) = '( Sparskit Solver =  cg | cgnr | bcg | dbcg | bcgstab | tfqmr | fom | gmres | fgmres | dqgmres )'
+      "' is not a valid SPARSKIT Solver"
+    message(2) = '( SPARSKIT Solver =  cg | cgnr | bcg | dbcg | bcgstab | tfqmr | fom | gmres | fgmres | dqgmres )'
     call write_fatal(2)
   end select
   call write_info(1)
@@ -298,8 +298,8 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
       call dqgmres(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
     case default
       write(message(1), '(a,i4,a)') "Input: '", sk%solver_type, &
-           "' is not a valid Sparskit Solver"
-      message(2) = '( Sparskit Solver =  cg | cgnr | bcg | dbcg | bcgstab | tfqmr | fom | gmres | fgmres | dqgmres )'
+           "' is not a valid SPARSKIT solver."
+      message(2) = '( SPARSKITSolver =  cg | cgnr | bcg | dbcg | bcgstab | tfqmr | fom | gmres | fgmres | dqgmres )'
       call write_fatal(2)
     end select
     
@@ -342,7 +342,7 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
       ! successful exit of solver
       exit solver_iter
     case(-1)
-!      message(1) = 'Warning: Maximum iteration number "SparskitMaxIter" exceeded.'
+!      message(1) = 'Warning: Maximum iteration number "SPARSKITMaxIter" exceeded.'
 !      call write_warning(1)
       exit solver_iter
     case(-2)
@@ -352,9 +352,9 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
       message(1) = 'Error: Anticipated break-down / divide by zero.'
       call write_fatal(1)
     case(-4)
-      message(1) = 'Error: "SparskitRelTolerance" and "SparskitAbsTolerance" are'
-      message(2) = '       both <= 0. Valid ranges are 0 <= SparskitRelTolerance < 1,'
-      message(3) = '       0 <= SparskitAbsTolerance.'
+      message(1) = 'Error: "SPARSKITRelTolerance" and "SPARSKITAbsTolerance" are'
+      message(2) = '       both <= 0. Valid ranges are 0 <= SPARSKITRelTolerance < 1,'
+      message(3) = '       0 <= SPARSKITAbsTolerance.'
       call write_fatal(3)
     case(-9)
       message(1) = 'Error: while trying to detect a break-down, an abnormal number is detected.'
@@ -364,13 +364,13 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
       message(2) = 'floating-point numbers etc.'
       call write_fatal(2)
     case default
-      message(1) = 'Error: Unknown Sparskit return value. Exiting ...'
+      message(1) = 'Error: Unknown SPARSKIT return value. Exiting ...'
       call write_fatal(1)
     end select
 
     if(sk%iter_out > 0) then
       if(mod(iter, sk%iter_out) == 0) then
-        write(message(1), '(a,i7)') 'Sparskit Iter: ', iter
+        write(message(1), '(a,i7)') 'SPARSKIT Iter: ', iter
         call write_info(1)
       end if
     end if
@@ -396,7 +396,7 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
 
   ! output status info
   if(sk%verbose) then
-    write(message(1), '(a,I5,a,E18.12)') 'Sparskit iter: ', sk%used_iter, ' residual norm: ', sk%residual_norm
+    write(message(1), '(a,I5,a,E18.12)') 'SPARSKIT iter: ', sk%used_iter, ' residual norm: ', sk%residual_norm
     call write_info(1)
   end if
 
