@@ -4,7 +4,7 @@
 Test       : Extended eigenstates for open systems
 Programs   : octopus; octopus_mpi
 TestGroups : short-run
-Enabled    : Yes
+Enabled    : No
 
 # Calculate eigenstate of 1d attractive square potential barrier.
 Input: 03-extended_eigenstate.01-square_well_1d.inp
