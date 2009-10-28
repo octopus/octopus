@@ -718,7 +718,9 @@ contains
         call out_susceptibility()
       end if
 
-      call out_projections()
+!      call out_projections()
+!      This routine does not give any useful information.
+
       call out_wavefunctions()
 
       if(gr%sb%periodic_dim .eq. 3) then
