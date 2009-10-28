@@ -137,8 +137,8 @@ contains
       write(message(7), '(6x,a, f18.8)')'-TS         = ', units_from_atomic(units_out%energy, hm%entropy)
       call write_info(7, iunit)
       if(full_) then  ! maybe it is full_ that is the problem
-        write(message(1), '(6x,a, f18.8)')'Kinetic     = ', units_from_atomic(units_out%energy, hm%t0) ! t0 is uninitialized according to valgrind
-        write(message(2), '(6x,a, f18.8)')'External    = ', units_from_atomic(units_out%energy, hm%eext) ! eext too
+        write(message(1), '(6x,a, f18.8)')'Kinetic     = ', units_from_atomic(units_out%energy, hm%t0)
+        write(message(2), '(6x,a, f18.8)')'External    = ', units_from_atomic(units_out%energy, hm%eext)
         call write_info(2, iunit)
       end if
     end if

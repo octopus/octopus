@@ -231,6 +231,9 @@ contains
     hm%ex = M_ZERO; hm%ec = M_ZERO
     hm%etot = M_ZERO
 
+    nullify(hm%oct_fxc)
+    hm%t0 = M_ZERO
+
     ! allocate potentials and density of the cores
     ! In the case of spinors, vxc_11 = hm%vxc(:, 1), vxc_22 = hm%vxc(:, 2), Re(vxc_12) = hm%vxc(:. 3);
     ! Im(vxc_12) = hm%vxc(:, 4)
