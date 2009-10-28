@@ -481,79 +481,78 @@ contains
       DO K=1,this%nzbot
         dz(k)=dz1b
       end do
-      write(67,*) zl
-      write(67,*) nz, (nz-1)/2
-      dz_oct=(zl/TOFLOAT((nz-1)))
+      dz_oct=(zl/TOFLOAT((nz-1))) 
 
       do k = this%nzbot + 1, this%nzbot + nz
         dz(k) = dz_oct
-        write(67,*) dz(k)
       end do
 
       dz1t=ztop/TOFLOAT(nztop)
       DO k=this%nzbot+nz+1,this%nztot
         dz(k)=dz1t
-        write(67,*) dz(k)
       end do
 
       zg(1)=-CNST(0.5)*zwidth+CNST(0.5)*dz(1)
-      write(67,*) zg(1)
-      DO k=2,this%nztot-1
-        zg(k)=zg(k-1)+CNST(0.5)*(dz(k-1)+dz(k))
-        write(67,*) zg(k)
-      end do
+      do k=2, this%nzbot
+       zg(k) =zg(1) + dz(k)*(k-1)
+      enddo
+      do k=this%nzbot+1,this%nzbot+nz
+          zg(k)=(-zl/2.0)+dz(k)*(k-this%nzbot-1)
+      enddo
       zg(this%nztot)=CNST(0.5)*zwidth-CNST(0.5)*dz(this%nztot)
-      write(67,*) zg(this%nztot)
+      do k=this%nzbot+nz+1,this%nztot-1
+         zg(k)=zg(this%nztot)-dz(k)*(this%nztot-k)
+      enddo 
 
-      ZTEST=ZG(THIS%NZTOT)
-          write(67,*)' this%nzbot ',this%nzbot
-          write(67,*)' zg this%nztot ',this%nztot
-          write(67,101)(zg(k),k=1,this%nztot)
+      ztest=zg(this%nztot)
        101 format(10(1x,e10.4))
-          write(67,*)' dz '
-          write(67,101)(dz(k),k=1,this%nztot)
 
       ! x-mesh
-      NXTOT_0=NX+NX2
-      THIS%NXTOT=NXTOT_0+2*NXL
+      nxtot_0=nx+nx2
+      this%nxtot=nxtot_0+2*nxl
       allocate(xg(this%nxtot))
-      allocate(DXG(THIS%NXTOT))
-      DO I=1,NXL  !  border points
-        DXG(I)=DXL(I)
+      allocate(dxg(this%nxtot))
+      DO i=1,nxl  !  border points
+        dxg(i)=dxl(i)
       end do
-      DO I=NXL+NXTOT_0+1,THIS%NXTOT
-        DXG(I)=DXL(THIS%NXTOT-I+1)
+      DO i=nxl+nxtot_0+1,this%nxtot
+        dxg(i)=dxl(this%nxtot-i+1)
       end do
       ! outside Octopus mesh
-      XTOP=CNST(0.5)*XWIDTH-XCEN-CNST(0.5)*XL
-      XBOT=CNST(0.5)*XWIDTH+XCEN-CNST(0.5)*XL
-      NXTOP=INT(NX2*XTOP/(XTOP+XBOT))
-      THIS%NXBOT=NX2-NXTOP
-      DX1B=XBOT/TOFLOAT(THIS%NXBOT) ! "bottom" region
-      DO I=NXL+1,NXL+THIS%NXBOT
-        DXG(I)=DX1B
+      xtop=CNST(0.5)*xwidth-xcen-CNST(0.5)*xl
+      xbot=CNST(0.5)*xwidth+xcen-CNST(0.5)*xl
+      nxtop=INT(nx2*xtop/(xtop+xbot))
+      this%nxbot=nx2-nxtop
+      dx1b=xbot/TOFLOAT(this%nxbot) ! "bottom" region
+      DO i=nxl+1,nxl+this%nxbot
+        dxg(i)=dx1b
       end do
-      DX_OCT=XL/TOFLOAT(NX)  ! Octopus region
-      DO I=NXL+THIS%NXBOT+1,NXL+THIS%NXBOT+NX
-        DXG(I)=DX_OCT
+      dx_oct=xl/TOFLOAT(nx-1)  ! Octopus region
+      DO i=nxl+this%nxbot+1,nxl+this%nxbot+nx
+        dxg(i)= dx_oct
       end do
-      DX1T=XTOP/TOFLOAT(NXTOP)  ! "top" region
-      DO I=NXL+THIS%NXBOT+NX+1,NXL+THIS%NXBOT+NX+NXTOP
-        DXG(I)=DX1T
+      dx1t=xtop/TOFLOAT(nxtop)  ! "top" region
+      do i=nxl+this%nxbot+nx+1,nxl+this%nxbot+nx+nxtop
+        dxg(i)=dx1t
       end do
 
       xwidth_big=SUM(dxg)
       xg(1)=-CNST(0.5)*xwidth_big+CNST(0.5)*dxg(1)
-      DO I=2,THIS%NXTOT-1
-        XG(I)=XG(I-1)+CNST(0.5)*(DXG(I-1)+DXG(I))
-      end do
-      XG(THIS%NXTOT)=CNST(0.5)*XWIDTH_BIG-CNST(0.5)*DXG(THIS%NXTOT)
-
+        write(67,*) xg(1)
+       do k=2,nxl+this%nxbot
+ !     do k=2,nxl
+         xg(k)=xg(k-1)+CNST(0.5)*(dxg(k-1)+dxg(k))
+      enddo
+      do k=nxl+this%nxbot+1,nxl+this%nxbot+nx
+        xg(k)=(-xl/2.0)+dxg(k)*(k-(nxl+this%nxbot)-1)
+        write(67,*)k,(k-(nxl+this%nxbot)-1), xg(k)
+      enddo
+      xg(this%nxtot)=CNST(0.5)*xwidth_big-CNST(0.5)*dxg(this%nxtot)
+      do i=1,nxl+nxtop-1 
+         k=this%nxtot-i
+         xg(k)=xg(k+1)-CNST(0.5)*(dxg(k+1)+dxg(k))
+      enddo
       XTEST=XG(THIS%NXTOT)
-          write(57,*)' xg this%nxtot ',this%nxtot
-          write(57,101)(xg(k),k=1,this%nxtot)
-          write(57,*)' dxg '
-          write(57,101)(dxg(k),k=1,this%nxtot)
       ! Y-mesh
       NYTOT_0=NY+NY2  ! excluding border points
       THIS%NYTOT=NYTOT_0+2*NYL  ! all Poisson Y mesh point
@@ -574,9 +573,9 @@ contains
       DO I=NYL+1,NYL+THIS%NYBOT
         DYG(I)=DY1B
       end do
-      DY_OCT=YL/TOFLOAT(NY)  ! Octopus region
-      DO I=NYL+THIS%NYBOT+1,NYL+THIS%NYBOT+NY
-        DYG(I)=DY_OCT
+      dy_oct=yl/TOFLOAT(ny-1)  ! Octopus region
+      DO i=nyl+this%nybot+1,nyl+this%nybot+ny
+        dyg(i)=dy_oct
       end do
       DY1T=YTOP/TOFLOAT(NYTOP)  ! "top" region
       DO I=NYL+THIS%NYBOT+NY+1,NYL+THIS%NYBOT+NY+NYTOP
@@ -585,6 +584,26 @@ contains
 
       YWIDTH_BIG=SUM(DYG)
       YG(1)=-CNST(0.5)*YWIDTH_BIG+CNST(0.5)*DYG(1)
+      do k=2,nyl+this%nybot
+         yg(k)=yg(k-1)+CNST(0.5)*(dyg(k-1)+dyg(k))
+      enddo
+      do k=nyl+this%nybot+1,nyl+this%nybot+ny
+        yg(k)=(-yl/2.0)+dyg(k)*(k-(nyl+this%nybot)-1)
+        write(67,*)k,(k-(nyl+this%nybot)-1), yg(k)
+      enddo
+      yg(this%nytot)=CNST(0.5)*ywidth_big-CNST(0.5)*dyg(this%nytot)
+      do i=1,nyl+nytop-1 
+         k=this%nytot-i
+         yg(k)=yg(k+1)-CNST(0.5)*(dyg(k+1)+dyg(k))
+      enddo
+      do i=1,this%nytot
+	      write(70,*)i,xg(i),yg(i)
+      enddo
+
+
+
+
+
       DO I=2,THIS%NYTOT-1
         YG(I)=YG(I-1)+CNST(0.5)*(DYG(I-1)+DYG(I))
       end do
