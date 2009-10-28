@@ -2695,7 +2695,8 @@ contains
                   spin = 'dn'
                 end if
               end select
-              write(message(1), '(i4,3x,i4,3x,a2,5x,a6,1x,f12.6)') ist, ik, spin, trim(LEAD_NAME(il)), energy
+              write(message(1), '(i4,3x,i4,3x,a2,5x,a6,1x,f12.6)') ist, ik, &
+                                  trim(spin), trim(LEAD_NAME(il)), energy
               call write_info(1)
               ! TODO magnetic gs
               call lead_green(energy, lead(il)%h_diag(:, :, ispin), lead(il)%h_offdiag(:, :), &

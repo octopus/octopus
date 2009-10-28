@@ -307,10 +307,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine lead_copy(src, dst, dim, nspin)
-    type(lead_t),  intent(in)  :: src
-    type(lead_t),  intent(out) :: dst
-    integer,       intent(in)  :: dim
-    integer,       intent(in)  :: nspin
+    type(lead_t),  intent(in)    :: src
+    type(lead_t),  intent(inout) :: dst
+    integer,       intent(in)    :: dim
+    integer,       intent(in)    :: nspin
 
     integer :: np, np_part
 
@@ -320,10 +320,10 @@ contains
     np = dst%np
     np_part = dst%np_part
 
-    dst%h_diag(1:np, 1:np, 1:dim)   = src%h_diag(1:np, 1:np, 1:dim)
-    dst%h_offdiag(1:np, 1:np)       = src%h_offdiag(1:np, 1:np)
-    dst%vks(1:dst%np_part, 1:nspin) = src%vks(1:dst%np_part, 1:nspin)
-    dst%vhartree(1:dst%np_part)     = src%vhartree(1:dst%np_part)
+    dst%h_diag(1:np, 1:np, 1:dim) = src%h_diag(1:np, 1:np, 1:dim)
+    dst%h_offdiag(1:np, 1:np)     = src%h_offdiag(1:np, 1:np)
+    dst%vks(1:np_part, 1:nspin)   = src%vks(1:np_part, 1:nspin)
+    dst%vhartree(1:np_part)       = src%vhartree(1:np_part)
 
     call pop_sub()
   end subroutine lead_copy

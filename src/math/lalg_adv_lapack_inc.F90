@@ -292,13 +292,17 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side)
   end if
 
   lwork = -1
-  SAFE_ALLOCATE(work(1))
+  ! A bug in the query mode of zgeev demands that the working array has to be larger than 1
+  ! problem here is that a value is written somewhere into the array whether it is
+  ! allocated or not. I noticed that it happens (hopefully) always at an index which
+  ! is below the matrix dimension.
+  SAFE_ALLOCATE(work(n))
   SAFE_ALLOCATE(vl(1, 1))
   SAFE_ALLOCATE(vr(1, 1))
   SAFE_ALLOCATE(rwork(1))
   call lapack_geev('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1, 1), n, work(1), lwork, rwork(1), info)
-    
-  lwork = int(real(work(1)))
+
+  lwork = int(work(1))
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(vl)
   SAFE_DEALLOCATE_A(vr)
@@ -357,13 +361,17 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
   end if
 
   lwork = -1
-  SAFE_ALLOCATE(work(1))
+  ! A bug in the query mode of dgeev demands that the working array has to be larger than 1
+  ! problem here is that a value is written somewhere into the array whether it is
+  ! allocated or not. I noticed that it happens (hopefully) always at an index which
+  ! is below the matrix dimension.
+  SAFE_ALLOCATE(work(n))
   SAFE_ALLOCATE(vl(1, 1))
   SAFE_ALLOCATE(vr(1, 1))
   SAFE_ALLOCATE(rwork(1))
   call lapack_geev('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1, 1), n, work(1), lwork, rwork(1), info)
 
-  lwork = int(real(work(1)))
+  lwork = int(work(1))
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(vl)
   SAFE_DEALLOCATE_A(vr)
