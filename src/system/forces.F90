@@ -33,7 +33,6 @@ module forces_m
   use linear_response_m
   use parser_m
   use splines_m
-  use magnetic_m
   use mesh_function_m
   use mesh_m
   use messages_m
