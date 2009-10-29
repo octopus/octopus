@@ -23,7 +23,7 @@ noinst_LIBRARIES = libstates.a
 
 libstates_a_SOURCES = \
 	physics_op.F90 \
-	smear.F90 states.F90 magnetic.F90 elf.F90 \
+	smear.F90 states.F90 \
 	states_block.F90 states_dim.F90 states_calc.F90 \
 	excited_states.F90 linear_response.F90 restart.F90 \
 	modelmb_density_matrix.F90 modelmb_density.F90 modelmb_particles.F90 \
@@ -51,8 +51,6 @@ physics_op.o : physics_op_inc.F90
 states.o : states.F90 states_dim.o ob_green.o modelmb_particles.o
 states_dim.o : states_dim.F90 states_kpoints_inc.F90
 states_calc.o : states_calc.F90 states_calc_inc.F90 states.o states_block.o
-magnetic.o : magnetic.F90 states.o 
-elf.o : elf.F90 states.o 
 states_block.o : states_block.F90 states_block_inc.F90 states.o
 excited_states.o : excited_states.F90 excited_states_inc.F90 states.o states_calc.o
 linear_response.o : linear_response.F90 linear_response_inc.F90 states.o states_calc.o

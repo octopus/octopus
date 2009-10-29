@@ -34,7 +34,9 @@ libsystem_a_SOURCES =         \
 	pert.F90              \
 	exponential_split.F90 \
 	exponential.F90       \
-	forces.F90
+	forces.F90            \
+	elf.F90               \
+	magnetic.F90
 
 noinst_HEADERS =                        \
 	energy_inc.F90                  \
@@ -71,3 +73,5 @@ exponential_split.o : exponential_split.F90
 exponential.o : exponential.F90 exponential_split.o
 energy.o : energy.F90 energy_inc.F90
 forces.o : forces.F90 forces_inc.F90
+elf.o : elf.F90
+magnetic.o : magnetic.F90
