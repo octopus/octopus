@@ -1196,8 +1196,8 @@ end subroutine mesh_init_stage_3
 ! ---------------------------------------------------------------
 ! Converts the mesh given by grid points into a graph. Each
 ! point is a vertex in the graph and closest neighbours are
-! connected by an edge (at max. 6 in 3D and 4 in 2D, 2 in
-! 1D, less at the boundaries).
+! connected by an edge (at most 6 in 3D and 4 in 2D, 2 in
+! 1D, fewer at the boundaries).
 ! Then calls METIS to get p partitions.
 ! Stored the mapping point no. -> partition no. into part,
 ! which has to be allocated beforehand.
@@ -1215,7 +1215,7 @@ subroutine mesh_partition(m, lapl_stencil, part)
   integer              :: edgecut        ! Number of edges cut by partitioning.
   ! Number of vertices (nv) is equal to number of
   ! points np_global and maximum number of edges (ne) is 2*m%sb%dim*np_global
-  ! (there are a little less because points on the border have less
+  ! (there are a little fewer because points on the border have less
   ! than two neighbours per dimension).
   ! xadj has nv+1 entries because last entry contains the total
   ! number of edges.
@@ -1248,13 +1248,13 @@ subroutine mesh_partition(m, lapl_stencil, part)
 
   !%Variable MeshPartitionPackage
   !%Type integer
-  !%Default zoltan
+  !%Default metis
   !%Section Execution::Parallelization
   !%Description
   !% Decides which library to use to perform the mesh partition. By
-  !% default metis is used.
+  !% default METIS is used.
   !%Option metis 2
-  !% Metis.
+  !% METIS.
   !%Option zoltan 3
   !% Zoltan.
   !%End
@@ -1311,7 +1311,7 @@ subroutine mesh_partition(m, lapl_stencil, part)
 
   case(ZOLTAN)
 
-    ! If we use zoltan we divide the space in a basic way, to balance
+    ! If we use Zoltan we divide the space in a basic way, to balance
     ! the memory for the graph. 
     call multicomm_divide_range(m%np_global, p, start, final, lsize)
 

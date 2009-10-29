@@ -33,10 +33,10 @@ __m128d a __attribute__((aligned(16)));
 AC_MSG_RESULT($acx_m128d)])
 
 ################################################################
-# Check whether the compiler accepts bluegene extensions
+# Check whether the compiler accepts Blue Gene extensions
 # ----------------------------------
 AC_DEFUN([ACX_BLUE_GENE],
-[AC_MSG_CHECKING([for blue gene intrinsics])
+[AC_MSG_CHECKING([for Blue Gene intrinsics])
 AC_COMPILE_IFELSE( AC_LANG_PROGRAM( [
 ], [[
   double aa, bb;
@@ -45,11 +45,11 @@ AC_COMPILE_IFELSE( AC_LANG_PROGRAM( [
   cc = __cmplx(aa, bb);
   cc = __fpneg(cc);
  ]]), 
- [AC_DEFINE(HAVE_BLUE_GENE, 1, [compiler supports blue gene intrinsics]) [acx_blue_gene=yes]], [acx_blue_gene=no])
+ [AC_DEFINE(HAVE_BLUE_GENE, 1, [compiler supports Blue Gene intrinsics]) [acx_blue_gene=yes]], [acx_blue_gene=no])
 AC_MSG_RESULT($acx_blue_gene)])
 
 #################################################################
-# Enables architecture specific code
+# Enables architecture-specific code
 AC_DEFUN([ACX_ARCH],
 [
 AC_REQUIRE([AC_CANONICAL_HOST])
@@ -142,11 +142,11 @@ if test x$assembler = xyes ; then
 AC_DEFINE(HAVE_AS, 1, [Define to 1 if assembler routines are to be compiled])
 fi
 
-AC_MSG_NOTICE([ Architecture specific code:
+AC_MSG_NOTICE([ Architecture-specific code:
 ***************************
 This is a $oct_arch processor:
 vectorial code: $vector 
 assembler code: $assembler
-blue gene code: $blue_gene
+Blue Gene code: $blue_gene
 ***************************])
 ])

@@ -7,11 +7,9 @@ dnl INCLUDES and LIBS for gd
 
 AC_DEFUN([ACX_GDLIB],
 [
-  dnl We enable the GD library by default
-  acx_gdlib_ok=yes
-
   dnl We disable GD support only if the user is requesting this explicitly
-  AC_ARG_ENABLE(gdlib, AS_HELP_STRING([--disable-gdlib], [Do not compile with internal GD library support]), [acx_gdlib_ok=no])
+  AC_ARG_ENABLE(gdlib, AS_HELP_STRING([--disable-gdlib], [Do not compile with GD image-processing library.]),[acx_gdlib_ok=$enableval],[acx_gdlib_ok=yes])
+  dnl GD library is enabled by default
 
   if test x"$acx_gdlib_ok" = xyes; then
     AC_PATH_PROG(GDLIB_CONFIG, gdlib-config)
@@ -72,11 +70,13 @@ dnl      fi
 
     else
       AC_MSG_WARN([GD library support has been disabled.
-                    *** some esoteric parts of octopus will not work.])
+                    *** Some esoteric parts of octopus will not work.])
     fi
   fi
 
+  CFLAGS="$CFLAGS $GD_CFLAGS"
   AC_SUBST(GD_CFLAGS)
+  AC_SUBST(LIBICONV) # @LIBICONV@ appears in GD_LIBS
   AC_SUBST(GD_LIBS)
 
 ])

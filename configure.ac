@@ -75,11 +75,11 @@ ACX_ARCH
 
 dnl ============================================================================
 dnl This part of the configuration file tries to sort out what needs to be built.
-dnl In particular, the code can be compile in single precision, mpi, using
-dnl complex wave-functions in the ground-state, and in debug mode.
+dnl In particular, the code can be compiled in single-precision, in debug mode,
+dnl and with OpenMP threads.
 
 dnl these are the --enable/--disable possible in octopus
-AC_ARG_ENABLE(single, AS_HELP_STRING([--enable-single], [octopus in single precision]))
+AC_ARG_ENABLE(single, AS_HELP_STRING([--enable-single], [octopus in single-precision]))
 AC_ARG_ENABLE(debug, AS_HELP_STRING([--disable-debug], [debug mode]), [DEBUG=${enableval}])
 AC_ARG_ENABLE(openmp, AS_HELP_STRING([--enable-openmp], [Multi-threaded parallel version using OpenMP (experimental)]))
 
@@ -129,28 +129,28 @@ if test x"$enable_mpi" != x"no"; then
 fi
 AM_CONDITIONAL(COMPILE_LIBNBC, test x${HAVE_LIBNBC} = x1)
 
-dnl check for newuoa
+dnl check for NEWUOA
 ACX_NEWUOA
 AM_CONDITIONAL(COMPILE_NEWUOA, test x${HAVE_NEWUOA} = x1)
 
-dnl If in parallel, enable zoltan compilation
+dnl If in parallel, enable Zoltan compilation
 AM_CONDITIONAL(COMPILE_ZOLTAN, test x"$enable_mpi" != x"no")
 
-dnl if libnbc is enabled, check for C MPI
+dnl if LibNBC is enabled, check for C MPI
 if test x"$enable_mpi" == x"yes"; then
   AC_CHECK_HEADER(mpi.h,,AC_MSG_ERROR([cannot find mpi.h]))
   ACX_MPI([], AC_MSG_ERROR([cannot call MPI from C]))
 fi
 
-dnl build/install perl bits unless --disable-perl is used
+dnl build/install Perl bits unless --disable-perl is used
 AC_ARG_ENABLE([perl],
-	      AS_HELP_STRING([--disable-perl], [don't build/install perl components]),
+	      AS_HELP_STRING([--disable-perl], [don't build/install Perl components]),
 	      [ac_cv_build_perl=$enableval],
 	      [ac_cv_build_perl=yes])
 if test "x$ac_cv_build_perl" = "xyes"; then
   AC_PATH_PROG([PERL], [perl], [], [])
   if test -z "$PERL" ; then
-     AC_MSG_WARN([perl not found. Disabling perl parts])
+     AC_MSG_WARN([perl not found. Disabling Perl parts])
      ac_cv_build_perl="no"
   fi
 fi
@@ -293,7 +293,7 @@ dnl check for ETSF_IO
 ACX_ETSF_IO
 
 dnl check for SPARSKIT
-ACX_SPARSKIT([], AC_MSG_WARN([SPARSKIT library not found. Will not use it]))
+ACX_SPARSKIT
   
 dnl check for Fortran MPI support
 if test x"$enable_mpi" != x"no"; then

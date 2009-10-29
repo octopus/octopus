@@ -5,8 +5,8 @@ acx_sparskit_ok=no
 dnl Check if the library was given in the command line
 AC_ARG_WITH(sparskit, [AS_HELP_STRING([--with-sparskit=DIR],[http://www-users.cs.umn.edu/~saad/software/])])
 case $with_sparskit in
-  yes) ;;
-  no | "") acx_sparskit_ok=disable ;;
+  yes | "") ;;
+  no ) acx_sparskit_ok=disable ;;
   -* | */* | *.a | *.so | *.so.* | *.o) LIBS_SPARSKIT="$with_sparskit" ;;
   *) LIBS_SPARSKIT="-l$with_sparskit" ;;
 esac
@@ -17,7 +17,7 @@ acx_sparskit_save_LIBS="$LIBS"
 dnl First, check if it links
 if test $acx_sparskit_ok = no; then
   LIBS="$LIBS_SPARSKIT $LIBS_LAPACK $LIBS_BLAS $acx_sparskit_save_LIBS $FLIBS"
-  AC_MSG_CHECKING([for sparskit library])
+  AC_MSG_CHECKING([for SPARSKIT library])
   AC_LINK_IFELSE([
     subroutine distdot
     end subroutine distdot
@@ -59,9 +59,13 @@ LIBS="$acx_sparskit_save_LIBS"
 
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_sparskit_ok" = xyes; then
-  AC_DEFINE(HAVE_SPARSKIT,1,[Defined if you have libsparskit library.])
+  AC_DEFINE(HAVE_SPARSKIT,1,[Defined if you have SPARSKIT library.])
   $1
 else
+  if test $acx_sparskit_ok != disable; then
+    AC_MSG_WARN([Could not find SPARSKIT library. 
+                *** Will compile without SPARSKIT support])
+  fi
   $2
 fi
 
