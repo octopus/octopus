@@ -18,15 +18,15 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-! Reads a function from file filename, and puts it into f. The input file
+! Reads a function from file filename, and puts it into ff. The input file
 ! may be a "plain" file (no extension), or a netcdf file ".ncdf" extension.
 ! On output, ierr signals how everything went:
-! ierr > 0 => Error. The function f was not read:
+! ierr > 0 => Error. The function ff was not read:
 !              1 : illegal filename (must have ".obf" or ".ncdf" extension).
 !              2 : file could not be successfully opened.
 !              3 : file opened, but error reading.
 !              4 : The number of points/mesh dimensions do not coincide.
-!              5 : Format or NetCDF error (one or several warnings are emitted)
+!              5 : Format or NetCDF error (one or several warnings are written)
 ! ierr = 0 => Success.
 ! ierr < 0 => Success, but some kind of type conversion was necessary. The value
 !             of ierr is then:
@@ -732,10 +732,12 @@ contains
 
 
   ! ---------------------------------------------------------
-! for format specification see:
-! http://www.xcrysden.org/doc/XSF.html#__toc__11
+  ! For format specification see:
+  ! http://www.xcrysden.org/doc/XSF.html#__toc__11
+  ! Note that XCrySDen uses "general" not "periodic" grids,
+  ! but cube%n = mesh%idx%ll in fact corresponds to general grids.
   subroutine out_xcrysden()
-    integer :: ix, iy, iz, idir2, ix2, iy2, iz2
+    integer :: ix, iy, iz, idir2
     FLOAT, allocatable :: offset(:)
     type(X(cf_t)) :: cube
 
@@ -766,8 +768,7 @@ contains
     write(iunit, '(4a)') 'units: coords = ', trim(units_abbrev(units_out%length)), &
                             ', function = ', trim(units_abbrev(unit))
     write(iunit, '(a)') 'DATAGRID_3D_function'
-    write(iunit, '(3i7)') (cube%n(:) + 1)
-    ! XCrySDen uses "general" not "periodic" grids (see page above) which is why 1 is added here
+    write(iunit, '(3i7)') cube%n(:)
     write(iunit, '(a)') '0.0 0.0 0.0'
 
     do idir = 1, sb%dim
@@ -775,29 +776,10 @@ contains
         sb%rlattice(idir2, idir)), idir2 = 1, sb%dim)
     enddo
 
-    do iz = 1, cube%n(3) + 1
-      do iy = 1, cube%n(2) + 1
-        do ix = 1, cube%n(1) + 1
-          ! this is about "general" grids also
-          if (ix == cube%n(1) + 1) then
-            ix2 = 1
-          else
-            ix2 = ix
-          endif
-
-          if (iy == cube%n(2) + 1) then
-            iy2 = 1
-          else
-            iy2 = iy
-          endif
-
-          if (iz == cube%n(3) + 1) then
-            iz2 = 1
-          else
-            iz2 = iz
-          endif
-
-          write(iunit,'(2f25.15)') REAL(units_from_atomic(unit, cube%RS(ix2, iy2, iz2)))
+    do iz = 1, cube%n(3)
+      do iy = 1, cube%n(2)
+        do ix = 1, cube%n(1)
+          write(iunit,'(2f25.15)') REAL(units_from_atomic(unit, cube%RS(ix, iy, iz)))
         end do
       end do
     end do
