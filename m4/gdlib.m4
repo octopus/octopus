@@ -10,7 +10,7 @@ AC_DEFUN([ACX_GDLIB],
   dnl We enable the GD library by default
   acx_gdlib_ok=yes
 
-  dnl We disable GD support only if the user is requesting this explicitely
+  dnl We disable GD support only if the user is requesting this explicitly
   AC_ARG_ENABLE(gdlib, AS_HELP_STRING([--disable-gdlib], [Do not compile with internal GD library support]), [acx_gdlib_ok=no])
 
   if test x"$acx_gdlib_ok" = xyes; then
@@ -74,9 +74,6 @@ dnl      fi
       AC_MSG_WARN([GD library support has been disabled.
                     *** some esoteric parts of octopus will not work.])
     fi
-  else
-    AC_MSG_WARN([GD library support has been disabled.
-                  *** some esoteric parts of octopus will not work.])
   fi
 
   AC_SUBST(GD_CFLAGS)

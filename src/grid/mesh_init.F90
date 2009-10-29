@@ -782,7 +782,7 @@ contains
   subroutine mesh_get_vol_pp(sb)
     type(simul_box_t), intent(in) :: sb
 
-    integer :: i, jj(1:MAX_DIM), ip, np
+    integer :: jj(1:MAX_DIM), ip, np
     FLOAT   :: chi(MAX_DIM)
 
     integer :: ix, iy, iz, dx, dy, dz, newi, newj, newk, ii, lii, ljj, lkk, nn
@@ -808,30 +808,30 @@ contains
     if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
       ! Do the inner points.
-      do i = 1, min(np, mesh%np)
-        k = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + i - 1)
+      do ip = 1, min(np, mesh%np)
+        k = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + ip - 1)
         call index_to_coords(mesh%idx, sb%dim, k, jj)
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
-        mesh%vol_pp(i) = mesh%vol_pp(i)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(i, :), chi(1:sb%dim))
+        mesh%vol_pp(ip) = mesh%vol_pp(ip)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip, :), chi(1:sb%dim))
       end do
 
       if(mesh%use_curvilinear) then
         ! Do the ghost points.
-        do i = 1, mesh%vp%np_ghost(mesh%vp%partno)
-          k = mesh%vp%ghost(mesh%vp%xghost(mesh%vp%partno) + i - 1)
+        do ip = 1, mesh%vp%np_ghost(mesh%vp%partno)
+          k = mesh%vp%ghost(mesh%vp%xghost(mesh%vp%partno) + ip - 1)
           call index_to_coords(mesh%idx, sb%dim, k, jj)
           chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
-          mesh%vol_pp(i + mesh%np) = &
-            mesh%vol_pp(i + mesh%np)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(i + mesh%np, :), chi(1:sb%dim))
+          mesh%vol_pp(ip + mesh%np) = &
+            mesh%vol_pp(ip + mesh%np)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip + mesh%np, :), chi(1:sb%dim))
         end do
         ! Do the boundary points.
-        do i = 1, mesh%vp%np_bndry(mesh%vp%partno)
-          k = mesh%vp%bndry(mesh%vp%xbndry(mesh%vp%partno) + i - 1)
+        do ip = 1, mesh%vp%np_bndry(mesh%vp%partno)
+          k = mesh%vp%bndry(mesh%vp%xbndry(mesh%vp%partno) + ip - 1)
           call index_to_coords(mesh%idx, sb%dim, k, jj)
           chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
-          mesh%vol_pp(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) = &
-            mesh%vol_pp(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) &
-            *curvilinear_det_Jac(sb, mesh%cv, mesh%x(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno), :), chi(1:sb%dim))
+          mesh%vol_pp(ip+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) = &
+            mesh%vol_pp(ip+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) &
+            *curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip+mesh%np+mesh%vp%np_ghost(mesh%vp%partno), :), chi(1:sb%dim))
         end do
       end if
 #endif
@@ -943,10 +943,10 @@ contains
 
       else ! no multiresolution
 
-        do i = 1, np
-          call index_to_coords(mesh%idx, sb%dim, i, jj)
+        do ip = 1, np
+          call index_to_coords(mesh%idx, sb%dim, ip, jj)
           chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
-          mesh%vol_pp(i) = mesh%vol_pp(i)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(i, 1:sb%dim), chi(1:sb%dim))
+          mesh%vol_pp(ip) = mesh%vol_pp(ip)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip, 1:sb%dim), chi(1:sb%dim))
         end do
 
       end if
@@ -1265,15 +1265,15 @@ subroutine mesh_partition(m, lapl_stencil, part)
   !%Default star
   !%Section Execution::Parallelization
   !%Description
-  !% To partition the mesh is it necessary to calculate the connection
-  !% graph connecting the points, this variable selects which stencil
-  !% is used to do this. The default is the order one star stencil,
-  !% alternatively the stencil used for the laplacian could be used.
+  !% To partition the mesh, it is necessary to calculate the connection
+  !% graph connecting the points. This variable selects which stencil
+  !% is used to do this. The default is the order-one star stencil.
+  !% Alternatively, the stencil used for the Laplacian may be used.
   !%Option stencil_star 1
-  !% A order one stencil_star.
+  !% An order-one star stencil.
   !%Option laplacian 2
-  !% The stencil used for the laplacian is used to calculate the
-  !% partition, this in principle should give a better partition but
+  !% The stencil used for the Laplacian is used to calculate the
+  !% partition. This in principle should give a better partition, but
   !% it is slower and requires more memory.
   !%End
   call parse_integer(datasets_check('MeshPartitionStencil'), STAR, stencil_to_use)
@@ -1329,8 +1329,8 @@ subroutine mesh_partition(m, lapl_stencil, part)
     SAFE_ALLOCATE(adjncy(1:stencil%size*nv))
 
     ! Create graph with each point being
-    ! represenetd by a vertice and edges between
-    ! neighboured points.
+    ! represented by a vertex and edges between
+    ! neighbouring points.
     ne = 1
     ! Iterate over number of vertices.
     do i = 1, nv
@@ -1362,7 +1362,7 @@ subroutine mesh_partition(m, lapl_stencil, part)
     ! The reason is: neighbours of node i are stored
     ! in adjncy(xadj(i):xadj(i+1)-1). Setting the last
     ! index as mentioned makes special handling of
-    ! last element unnecessary (this indicing is a
+    ! last element unnecessary (this indexing is a
     ! METIS requirement).
 
     if(in_debug_mode) then
@@ -1395,7 +1395,7 @@ subroutine mesh_partition(m, lapl_stencil, part)
     ! Recursive bisection is better for small number of partitions (<8),
     ! multilevel k-way otherwise (cf. METIS manual).
     ! If the graph contains no vertices, METIS cannot be called. This seems
-    ! to happen, e. g., when using minimum BoxShape without any atoms in the
+    ! to happen, e.g., when using minimum BoxShape without any atoms in the
     ! input file.
 
     select case(method)
@@ -1410,7 +1410,7 @@ subroutine mesh_partition(m, lapl_stencil, part)
       call oct_metis_part_graph_kway(nv, xadj, adjncy, &
            0, 0, 0, 1, p, options, edgecut, part)
     case default
-      message(1) = 'Error: Selected partition method is not available in Metis'
+      message(1) = 'Error: Selected partition method is not available in Metis.'
       call write_fatal(1)
     end select
 

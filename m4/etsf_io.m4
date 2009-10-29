@@ -12,7 +12,6 @@ if test "x$acx_netcdf_ok" != xyes; then
 fi
 
 dnl Check if the library was given in the command line
-if test $acx_etsf_io_ok = no; then
 AC_ARG_WITH(etsf_io, [AS_HELP_STRING([--with-etsf_io=DIR], [http://www.etsf.eu/resources/software/libraries_and_tools])])
 case $with_etsf_io in
   yes | "") ;;
@@ -20,7 +19,6 @@ case $with_etsf_io in
   -* | */* | *.a | *.so | *.so.* | *.o) LIBS_ETSF_IO="$with_etsf_io" ;;
   *) LIBS_ETSF_IO="-l$with_etsf_io" ;;
 esac
-fi
 
 dnl Backup LIBS and FCFLAGS
 acx_etsf_io_save_LIBS="$LIBS"
