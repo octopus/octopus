@@ -734,12 +734,18 @@ contains
   ! ---------------------------------------------------------
   ! For format specification see:
   ! http://www.xcrysden.org/doc/XSF.html#__toc__11
-  ! Note that XCrySDen uses "general" not "periodic" grids,
-  ! but cube%n = mesh%idx%ll in fact corresponds to general grids.
+  ! XCrySDen can only read 3D output, though it could be
+  ! extended to plot a function on a 2D plane.
   subroutine out_xcrysden()
-    integer :: ix, iy, iz, idir2
-    FLOAT, allocatable :: offset(:)
+    integer :: ix, iy, iz, idir2, ix2, iy2, iz2, my_n(3)
+    FLOAT :: offset(3)
     type(X(cf_t)) :: cube
+
+    if(sb%dim .ne. 3) then
+      write(message(1), '(a)') 'Cannot output function in XCrySDen format except in 3D.'
+      call write_warning(1)
+      return
+    endif
 
     call push_sub('io_function_inc.Xoutput_function_global.out_xcrysden')
 
@@ -748,16 +754,21 @@ contains
     call X(cf_alloc_RS) (cube)
     call X(mesh_to_cube) (mesh, ff, cube)
 
-    SAFE_ALLOCATE(offset(1:sb%dim))
+    ! The corner of the cell is always (0,0,0) to XCrySDen
+    ! so the offset is applied to the atomic coordinates.
     ! offset in periodic directions
     offset = -matmul(sb%rlattice_primitive, sb%lsize)
     ! offset in aperiodic directions
-    do idir = sb%periodic_dim+1, sb%dim
-      offset(idir) = -(cube%n(idir) - 1)/2 * mesh%h(idir)
+    do idir = sb%periodic_dim + 1, 3
+      offset(idir) = -(mesh%idx%ll(idir) - 1)/2 * mesh%h(idir)
     end do
 
-    ! the corner of the cell is always (0,0,0) to XCrySDen
-    ! so the offset is applied to the atomic coordinates
+    ! Note that XCrySDen uses "general" not "periodic" grids
+    ! mesh%idx%ll is "general" in aperiodic directions,
+    ! but "periodic" in periodic directions.
+    ! Making this assignment, the output grid is entirely "general"
+    my_n(1:sb%periodic_dim) = mesh%idx%ll(1:sb%periodic_dim) + 1
+    my_n(sb%periodic_dim + 1:3) = mesh%idx%ll(sb%periodic_dim + 1:3)
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".xsf", action='write', is_tmp=is_tmp)
 
@@ -768,18 +779,37 @@ contains
     write(iunit, '(4a)') 'units: coords = ', trim(units_abbrev(units_out%length)), &
                             ', function = ', trim(units_abbrev(unit))
     write(iunit, '(a)') 'DATAGRID_3D_function'
-    write(iunit, '(3i7)') cube%n(:)
+    write(iunit, '(3i7)') my_n(1:3)
     write(iunit, '(a)') '0.0 0.0 0.0'
 
-    do idir = 1, sb%dim
+    do idir = 1, 3
       write(iunit, '(3f12.6)') (units_from_atomic(units_out%length, &
-        sb%rlattice(idir2, idir)), idir2 = 1, sb%dim)
+        sb%rlattice(idir2, idir)), idir2 = 1, 3)
     enddo
 
-    do iz = 1, cube%n(3)
-      do iy = 1, cube%n(2)
-        do ix = 1, cube%n(1)
-          write(iunit,'(2f25.15)') REAL(units_from_atomic(unit, cube%RS(ix, iy, iz)))
+    do iz = 1, my_n(3)
+      do iy = 1, my_n(2)
+        do ix = 1, my_n(1)
+          ! this is about "general" grids also
+          if (ix == mesh%idx%ll(1) + 1) then
+            ix2 = 1
+          else
+            ix2 = ix
+          endif
+
+          if (iy == mesh%idx%ll(2) + 1) then
+            iy2 = 1
+          else
+            iy2 = iy
+          endif
+
+          if (iz == mesh%idx%ll(3) + 1) then
+            iz2 = 1
+          else
+            iz2 = iz
+          endif
+
+          write(iunit,'(2f25.15)') REAL(units_from_atomic(unit, cube%RS(ix2, iy2, iz2)))
         end do
       end do
     end do

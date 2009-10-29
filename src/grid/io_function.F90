@@ -108,22 +108,22 @@ contains
     !% Describes the format of the output files (see <tt>Output</tt>).
     !% Example: <tt>axis_x + plane_x + dx</tt>
     !%Option axis_x 1
-    !% The values of the function on the <math>x</math> axis are printed. The string <tt>.y=0,z=0</tt> is appended
+    !% The values of the function on the <i>x</i> axis are printed. The string <tt>.y=0,z=0</tt> is appended
     !% to previous file names.
     !%Option axis_y 2
-    !% The values of the function on the <math>y</math> axis are printed. The string <tt>.x=0,z=0</tt> is appended
+    !% The values of the function on the <i>y</i> axis are printed. The string <tt>.x=0,z=0</tt> is appended
     !% to previous file names.
     !%Option axis_z 4
-    !% The values of the function on the <math>z</math> axis are printed. The string <tt>.x=0,y=0</tt> is appended
+    !% The values of the function on the <i>z</i> axis are printed. The string <tt>.x=0,y=0</tt> is appended
     !% to previous file names.
     !%Option plane_x 8
-    !% A plane slice at <math>x=0</math> is printed. The string <tt>.x=0</tt> is appended
+    !% A plane slice at <i>x</i> = 0 is printed. The string <tt>.x=0</tt> is appended
     !% to previous file names.
     !%Option plane_y 16
-    !% A plane slice at <math>y=0</math> is printed. The string <tt>.y=0</tt> is appended
+    !% A plane slice at <i>y</i> = 0 is printed. The string <tt>.y=0</tt> is appended
     !% to previous file names.
     !%Option plane_z 32
-    !% A plane slice at <math>y=0</math> is printed. The string <tt>.z=0</tt> is appended to
+    !% A plane slice at <i>y</i> = 0 is printed. The string <tt>.z=0</tt> is appended to
     !% previous file names.
     !%Option dx 64
     !% For printing three-dimensional information, the open-source program
@@ -134,14 +134,14 @@ contains
     !% can then be read, for example, by OpenDX. The string <tt>.ncdf</tt> is appended to previous file names.
     !% Requires the NetCDF library.
     !%Option mesh_index 512
-    !% Generates output files of a given quantity (density, wfs, ...) which include
+    !% Generates output files of a given quantity (density, wavefunctions, ...) which include
     !% the internal numbering of mesh points. Since this mode produces large datafiles this is only 
     !% useful for small meshes and debugging purposes.
-    !% The output can also be used to display the mesh directly. A gnuplot script for mesh vizualization
+    !% The output can also be used to display the mesh directly. A Gnuplot script for mesh vizualization
     !% can be found under <tt>PREFIX/share/octopus/util/display_mesh_index.gp</tt>.
     !%Option xcrysden 1024
     !% A format for printing structures and three-dimensional information, which can be visualized by
-    !% the open-source program XCrySDen (<tt>http://www.xcrysden.org/</tt>). The string
+    !% the free open-source program XCrySDen (<tt>http://www.xcrysden.org/</tt>). The string
     !% <tt>.xsf</tt> is appended to previous file names. Note that lattice vectors and coordinates are as
     !% specified by <tt>UnitsOutput</tt>.
     !%Option matlab 2048
@@ -153,7 +153,7 @@ contains
     !%   >> mesh(density);
     !%</tt>
     !%Option meshgrid 4096
-    !% Outputs in Matlab mode the internal mesh in a format similar to <i>e.g.</i>
+    !% Outputs in Matlab mode the internal mesh in a format similar to
     !%<tt>
     !%   >> [x,y] = meshgrid(-2:.2:2,-1:.15:1)
     !%</tt>
