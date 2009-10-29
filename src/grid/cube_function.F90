@@ -48,7 +48,7 @@ module cube_function_m
 
     FLOAT, pointer :: RS(:,:,:)
     CMPLX, pointer :: FS(:,:,:)
-    integer :: nx           ! = n(1)/2 + 1, first dimension of the FS array
+    integer :: nx     ! = n(1)/2 + 1, first dimension of the FS array
     type(fft_t), pointer :: fft
   end type dcf_t
 
@@ -58,7 +58,7 @@ module cube_function_m
     CMPLX, pointer :: RS(:,:,:)
     CMPLX, pointer :: FS(:,:,:)
 
-    integer :: nx ! = n(1),  first dimension of the FS array
+    integer :: nx     ! = n(1),  first dimension of the FS array
     type(fft_t), pointer :: fft
   end type zcf_t
 
@@ -73,6 +73,8 @@ contains
 
     integer ix, iy, iz, npoints
     x = M_ZERO
+
+    call push_sub('cube_function.cf_surface_average')
 
     do iy = 2, cf%n(2) - 1
       do iz = 2, cf%n(3) - 1
@@ -117,6 +119,7 @@ contains
               2*(cf%n(3)-2)**2 + 4*(cf%n(3)-2) + 8
     x = x/npoints
 
+    call pop_sub()
   end function cf_surface_average
 
   ! ---------------------------------------------------------
@@ -131,6 +134,8 @@ contains
 
     CMPLX   :: k(3)
     integer :: n(3), ix, iy, iz, ixx, iyy, izz
+
+    call push_sub('cube_function.cf_phase_factor')
 
     ASSERT(all(cf_i%n == cf_o%n))
     ASSERT(associated(cf_i%FS).and.associated(cf_o%FS))
@@ -151,6 +156,8 @@ contains
         end do
       end do
     end do
+
+    call pop_sub()
   end subroutine cf_phase_factor
 
 

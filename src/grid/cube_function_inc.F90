@@ -118,51 +118,51 @@ end subroutine X(cf_free)
 ! parallel in real-space domains).
 ! ---------------------------------------------------------
 
-subroutine X(mesh_to_cube) (m, mf, cf)
-  type(mesh_t),  intent(in)    :: m
-  R_TYPE,        intent(in)    :: mf(:)  ! mf(m%np_global)
+subroutine X(mesh_to_cube) (mesh, mf, cf)
+  type(mesh_t),  intent(in)    :: mesh
+  R_TYPE,        intent(in)    :: mf(:)  ! mf(mesh%np_global)
   type(X(cf_t)), intent(inout) :: cf
 
-  integer :: i, ix, iy, iz, c(3)
+  integer :: ip, ix, iy, iz, center(3)
 
   call push_sub('cf_inc.Xmesh_to_cube')
 
   ASSERT(associated(cf%RS))
 
-  c(1:3)  =  cf%n(1:3)/2 + 1
+  center(1:3) = cf%n(1:3)/2 + 1
 
-  cf%RS =  M_ZERO
+  cf%RS = M_ZERO
 
-  do i = 1, m%np_global
-    ix = m%idx%Lxyz(i, 1) + c(1)
-    iy = m%idx%Lxyz(i, 2) + c(2)
-    iz = m%idx%Lxyz(i, 3) + c(3)
+  do ip = 1, mesh%np_global
+    ix = mesh%idx%Lxyz(ip, 1) + center(1)
+    iy = mesh%idx%Lxyz(ip, 2) + center(2)
+    iz = mesh%idx%Lxyz(ip, 3) + center(3)
 
-    cf%RS(ix, iy, iz) = mf(i)
+    cf%RS(ix, iy, iz) = mf(ip)
   end do
 
   call pop_sub()
 end subroutine X(mesh_to_cube)
 
 ! ---------------------------------------------------------
-subroutine X(cube_to_mesh) (m, cf, mf)
-  type(mesh_t),  intent(in)  :: m
+subroutine X(cube_to_mesh) (mesh, cf, mf)
+  type(mesh_t),  intent(in)  :: mesh
   type(X(cf_t)), intent(in)  :: cf
-  R_TYPE,        intent(out) :: mf(:)  ! mf(m%np_global)
+  R_TYPE,        intent(out) :: mf(:)  ! mf(mesh%np_global)
 
-  integer :: i, ix, iy, iz, c(3)
+  integer :: ip, ix, iy, iz, center(3)
 
   call push_sub('cf_inc.Xcube_to_mesh')
 
   ASSERT(associated(cf%RS))
 
-  c(1:3) =  cf%n(1:3)/2 + 1
+  center(1:3) =  cf%n(1:3)/2 + 1
 
-  do i = 1, m%np_global
-    ix = m%idx%Lxyz(i, 1) + c(1)
-    iy = m%idx%Lxyz(i, 2) + c(2)
-    iz = m%idx%Lxyz(i, 3) + c(3)
-    mf(i) = cf%RS(ix, iy, iz)
+  do ip = 1, mesh%np_global
+    ix = mesh%idx%Lxyz(ip, 1) + center(1)
+    iy = mesh%idx%Lxyz(ip, 2) + center(2)
+    iz = mesh%idx%Lxyz(ip, 3) + center(3)
+    mf(ip) = cf%RS(ix, iy, iz)
   end do
 
   call pop_sub()

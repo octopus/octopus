@@ -18,28 +18,26 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine xc_get_fxc(xcs, m, rho, ispin, fxc)
+subroutine xc_get_fxc(xcs, mesh, rho, ispin, fxc)
   type(xc_t), target, intent(in)    :: xcs
-  type(mesh_t),       intent(in)    :: m
+  type(mesh_t),       intent(in)    :: mesh
   FLOAT, intent(in)                 :: rho(:, :)
   integer, intent(in)               :: ispin
   FLOAT,              intent(inout) :: fxc(:,:,:)
 
   FLOAT, allocatable :: dens(:,:), dedd(:,:), l_dens(:), l_dedd(:)
-
-  integer :: i, ixc, spin_channels
-
+  integer :: ip, ixc, spin_channels
   type(xc_functl_t), pointer :: functl(:)
 
   ! is there anything to do? (only LDA by now)
   if(iand(xcs%kernel_family, NOT(XC_FAMILY_LDA)).ne.XC_FAMILY_NONE) then
-    message(1) = "Only LDA Functionals are authorized for now in xc_get_fxc"
+    message(1) = "Only LDA functionals are authorized for now in xc_get_fxc."
     call write_fatal(1)
   end if
 
   if(xcs%kernel_family == XC_FAMILY_NONE) return ! nothing to do
 
-  call push_sub('xc_fxc.xc_get_fxc')
+  call push_sub('fxc_inc.xc_get_fxc')
 
   if(ispin == UNPOLARIZED) then
     functl => xcs%kernel(:, 1)
@@ -53,10 +51,10 @@ subroutine xc_get_fxc(xcs, m, rho, ispin, fxc)
     
   call  lda_init()
     
-  space_loop: do i = 1, m%np
+  space_loop: do ip = 1, mesh%np
       
     ! make a local copy with the correct memory order
-    l_dens (:)   = dens (i, :)
+    l_dens (:)   = dens (ip, :)
       
     ! Calculate fxc
     functl_loop: do ixc = 1, 2
@@ -70,7 +68,7 @@ subroutine xc_get_fxc(xcs, m, rho, ispin, fxc)
       end select
       
       ! store results
-      dedd(i,:) = dedd(i,:) + l_dedd(:)
+      dedd(ip, :) = dedd(ip, :) + l_dedd(:)
         
     end do functl_loop
   end do space_loop
@@ -93,48 +91,56 @@ contains
     integer :: is
     FLOAT   :: d(spin_channels)
 
+    call push_sub('fxc_inc.xc_get_fxc.lda_init')
+
     is = 1
     if(ispin == SPIN_POLARIZED) is = 3
 
     ! allocate some general arrays
-    SAFE_ALLOCATE(  dens(1:m%np, 1:spin_channels))
-    SAFE_ALLOCATE(  dedd(1:m%np, 1:is))
+    SAFE_ALLOCATE(  dens(1:mesh%np, 1:spin_channels))
+    SAFE_ALLOCATE(  dedd(1:mesh%np, 1:is))
     SAFE_ALLOCATE(l_dens(1:spin_channels))
     SAFE_ALLOCATE(l_dedd(1:is))
     dedd = M_ZERO
 
     ! get the density
-    do i = 1, m%np
-      d(:) = rho(i, :)
+    do ip = 1, mesh%np
+      d(:) = rho(ip, :)
 
       select case(ispin)
       case(UNPOLARIZED)
-        dens(i, 1) = max(d(1), M_ZERO)
+        dens(ip, 1) = max(d(1), M_ZERO)
       case(SPIN_POLARIZED)
-        dens(i, 1) = max(d(1), M_ZERO)
-        dens(i, 2) = max(d(2), M_ZERO)
+        dens(ip, 1) = max(d(1), M_ZERO)
+        dens(ip, 2) = max(d(2), M_ZERO)
       case(SPINORS)
         message(1) = 'Do not know how to handle spinors'
         call write_fatal(1)
       end select
     end do
 
+    call pop_sub()
   end subroutine lda_init
 
 
   ! ---------------------------------------------------------
   ! SAFE_DEALLOCATE_Ps variables allocated in lda_init
   subroutine lda_end()
+    call push_sub('fxc_inc.xc_get_fxc.lda_end')
+
     SAFE_DEALLOCATE_A(dens)
     SAFE_DEALLOCATE_A(dedd)
     SAFE_DEALLOCATE_A(l_dens)
     SAFE_DEALLOCATE_A(l_dedd)
+
+    call pop_sub()
   end subroutine lda_end
 
 
   ! ---------------------------------------------------------
   ! calculates the LDA part of vxc, taking into account non-collinear spin
   subroutine lda_process()
+    call push_sub('fxc_inc.xc_get_fxc.lda_process')
 
     select case(ispin)
     case(UNPOLARIZED)
@@ -145,9 +151,11 @@ contains
       fxc(:,1,2) = fxc(:,1,2) + dedd(:,2)
       fxc(:,2,1) = fxc(:,2,1) + dedd(:,2)
     case(SPINORS)
-      message(1) = 'Do not know how to handle spinors'
+      message(1) = 'Do not know how to handle spinors.'
       call write_fatal(1)
     end select
+
+    call pop_sub()
   end subroutine lda_process
 
 end subroutine xc_get_fxc
