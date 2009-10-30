@@ -73,7 +73,7 @@ module external_pot_m
     epot_local_potential,          &
     epot_precalc_local_potential,  &
     epot_dipole_periodic
-
+     
   type epot_t
     ! Classical charges:
     integer        :: classical_pot ! how to include the classical charges
@@ -510,6 +510,10 @@ contains
     if (ep%classical_pot > 0)     ep%vpsl(1:mesh%np) = ep%vpsl(1:mesh%np) + ep%Vclassical(1:mesh%np)
     if (associated(ep%e_field)) ep%vpsl(1:mesh%np) = ep%vpsl(1:mesh%np) + ep%v_static(1:mesh%np)
 
+   if (.not. poisson_solver_has_free_bc()) then
+        ep%eii= M_ZERO
+        call ion_interaction_not_free_bc(gr, geo, ep) 
+   endif
     call pop_sub()
     call profiling_out(epot_generate_prof)
   end subroutine epot_generate
@@ -910,7 +914,36 @@ contains
     
     call pop_sub()
   end subroutine ion_interaction_periodic
+
+  subroutine ion_interaction_not_free_bc(gr, geo, ep)
+    type(grid_t), target,  intent(in)    :: gr
+    type(geometry_t),      intent(in)    :: geo
+    type(epot_t),          intent(inout) :: ep
   
+    integer                              :: iatom
+    FLOAT, allocatable                   :: rho(:)
+    FLOAT                                :: temp
+
+    do iatom = 1, geo%natoms
+        SAFE_ALLOCATE(rho(1:gr%mesh%np))
+        call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr, geo, rho)
+        temp=M_HALF*dmf_dotp(gr%mesh, rho, ep%vpsl) 
+        ep%eii = ep%eii-temp 
+        SAFE_DEALLOCATE_A(rho)
+        write(68,*) "ep%eii values", iatom, ep%eii, temp
+   enddo 
+        temp=M_HALF*dmf_dotp(gr%mesh, rho_nuc, ep%vpsl)
+        ep%eii = ep%eii+temp
+        write(68,*) "ep%eii values", ep%eii, temp
+
+   ! USE dmf_interpolate_points such that 
+   ! $  \sum_{i>j}z_i \phi_j(r_i)$
+   ! to see what is the effect of the ion-ion interaction
+
+   end subroutine ion_interaction_not_free_bc
+        
+       
+      
 end module external_pot_m
 
 

@@ -505,7 +505,10 @@ contains
       enddo 
 
       ztest=zg(this%nztot)
-       101 format(10(1x,e10.4))
+      do i=1,this%nztot
+        write(67,*) i, zg(i)
+      enddo
+                 
 
       ! x-mesh
       nxtot_0=nx+nx2
@@ -537,21 +540,25 @@ contains
       end do
 
       xwidth_big=SUM(dxg)
-      xg(1)=-CNST(0.5)*xwidth_big+CNST(0.5)*dxg(1)
-        write(67,*) xg(1)
-       do k=2,nxl+this%nxbot
- !     do k=2,nxl
-         xg(k)=xg(k-1)+CNST(0.5)*(dxg(k-1)+dxg(k))
+      xg(nxl+1)=-CNST(0.5)*xwidth+CNST(0.5)*dxg(nxl+1)
+      do k=nxl+2, nxl+this%nxbot
+       xg(k) =xg(nxl+1) + dxg(k)*(k-nxl-1)
+      enddo
+      do i=1, nxl
+          k=nxl-i+1
+       xg(k)= xg(k+1)-dxg(k)
       enddo
       do k=nxl+this%nxbot+1,nxl+this%nxbot+nx
         xg(k)=(-xl/2.0)+dxg(k)*(k-(nxl+this%nxbot)-1)
-        write(67,*)k,(k-(nxl+this%nxbot)-1), xg(k)
       enddo
-      xg(this%nxtot)=CNST(0.5)*xwidth_big-CNST(0.5)*dxg(this%nxtot)
-      do i=1,nxl+nxtop-1 
-         k=this%nxtot-i
-         xg(k)=xg(k+1)-CNST(0.5)*(dxg(k+1)+dxg(k))
+      xg(nxl+this%nxbot+nx+nxtop)=CNST(0.5)*xwidth-CNST(0.5)*dxg(nxl+this%nxbot+nx+nxtop)
+      do k=nxl+this%nxbot+nx+1, nxl+this%nxbot+nx+nxtop-1
+          xg(k) =xg(nxl+this%nxbot+nx+nxtop) + dxg(k)*(k-(nxl+this%nxbot+nx+nxtop))
       enddo
+      do k=nxl+this%nxbot+nx+nxtop+1,this%nxtot 
+       xg(k)= xg(k-1)+dxg(k)
+      enddo
+          
       XTEST=XG(THIS%NXTOT)
       ! Y-mesh
       NYTOT_0=NY+NY2  ! excluding border points
@@ -583,36 +590,32 @@ contains
       end do
 
       YWIDTH_BIG=SUM(DYG)
-      YG(1)=-CNST(0.5)*YWIDTH_BIG+CNST(0.5)*DYG(1)
-      do k=2,nyl+this%nybot
-         yg(k)=yg(k-1)+CNST(0.5)*(dyg(k-1)+dyg(k))
+      yg(nyl+1)=-CNST(0.5)*ywidth+CNST(0.5)*dyg(nyl+1)
+      do k=nyl+2, nyl+this%nybot
+       yg(k) =yg(nyl+1) + dxg(k)*(k-nyl-1)
+      enddo
+      do i=1, nyl
+          k=nyl-i+1
+       yg(k)= yg(k+1)-dyg(k)
       enddo
       do k=nyl+this%nybot+1,nyl+this%nybot+ny
         yg(k)=(-yl/2.0)+dyg(k)*(k-(nyl+this%nybot)-1)
-        write(67,*)k,(k-(nyl+this%nybot)-1), yg(k)
       enddo
-      yg(this%nytot)=CNST(0.5)*ywidth_big-CNST(0.5)*dyg(this%nytot)
-      do i=1,nyl+nytop-1 
-         k=this%nytot-i
-         yg(k)=yg(k+1)-CNST(0.5)*(dyg(k+1)+dyg(k))
+      yg(nyl+this%nybot+ny+nytop)=CNST(0.5)*ywidth-CNST(0.5)*dyg(nyl+this%nybot+ny+nytop)
+      do k=nyl+this%nybot+ny+1, nyl+this%nybot+ny+nytop-1
+          yg(k) =yg(nyl+this%nybot+ny+nytop) + dyg(k)*(k-(nyl+this%nybot+ny+nytop))
+      enddo
+      do k=nyl+this%nybot+ny+nytop+1,this%nytot 
+       yg(k)= yg(k-1)+dyg(k)
       enddo
       do i=1,this%nytot
-	      write(70,*)i,xg(i),yg(i)
+	      write(67,*)i,xg(i),yg(i)
       enddo
-
-
-
-
 
       DO I=2,THIS%NYTOT-1
         YG(I)=YG(I-1)+CNST(0.5)*(DYG(I-1)+DYG(I))
       end do
       YG(THIS%NYTOT)=CNST(0.5)*YWIDTH_BIG-CNST(0.5)*DYG(THIS%NYTOT)
-          write(57,*)' yg this%nytot ',this%nytot
-          write(57,101)(yg(k),k=1,this%nytot)
-          write(57,*)' dyg '
-          write(57,101)(dyg(k),k=1,this%nytot)
-
 
       THIS%NTOT=THIS%NXTOT*THIS%NYTOT*THIS%NZTOT
       MD=THIS%NZTOT*THIS%NYTOT
@@ -632,30 +635,6 @@ contains
         end do
       end do
 
-!!$        dxg=1.0; dyg=1.0; dz=1.0
-!!$        zg(1)=dz(1)*CNST(0.5)
-!!$        do i=2,this%nztot-1
-!!$           zg(i)=zg(i-1)+CNST(0.5)*(dz(i)+dz(i-1))
-!!$        enddo
-!!$        zg(this%nztot)=zg(this%nztot-1)+CNST(0.5)*dz(this%nztot)
-!!$
-!!$        xg(1)=dxg(1)*CNST(0.5)
-!!$        do i=2,this%nxtot-1
-!!$           xg(i)=xg(i-1)+CNST(0.5)*(dxg(i)+dxg(i-1))
-!!$        enddo
-!!$        xg(this%nxtot)=xg(this%nxtot-1)+CNST(0.5)*dxg(this%nxtot)
-!!$
-!!$        yg(1)=dyg(1)*CNST(0.5)
-!!$        do i=2,this%nytot-1
-!!$           yg(i)=yg(i-1)+CNST(0.5)*(dyg(i)+dyg(i-1))
-!!$        enddo
-!!$        yg(this%nytot)=yg(this%nytot-1)+CNST(0.5)*dyg(this%nytot)
-!!$           
-
-      !    write(6,*)' yg '
-      !    write(6,101)(yg(k),k=1,this%nytot)
-      !    write(6,*)' dyg '
-      !    write(6,101)(dyg(k),k=1,this%nytot)
     end subroutine xyzgrid
 
   end subroutine poisson_sete_init
