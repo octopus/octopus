@@ -918,29 +918,34 @@ contains
   end subroutine ion_interaction_periodic
 
   subroutine ion_interaction_not_free_bc(gr, geo, ep)
-    type(grid_t), target,  intent(in)    :: gr
+    type(grid_t), target,  intent(inout)    :: gr
     type(geometry_t),      intent(in)    :: geo
     type(epot_t),          intent(inout) :: ep
   
-    integer                              :: iatom
-    FLOAT, allocatable                   :: rho(:)
+    integer                              :: iatom, jatom
+    FLOAT, allocatable                   :: rho1(:), v2(:), rho2(:)
     FLOAT                                :: temp
 
-    do iatom = 1, geo%natoms
-        SAFE_ALLOCATE(rho(1:gr%mesh%np))
-        call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr, geo, rho)
-        temp=M_HALF*dmf_dotp(gr%mesh, rho, ep%vpsl) 
-        ep%eii = ep%eii-temp 
-        SAFE_DEALLOCATE_A(rho)
-        write(68,*) "ep%eii values", iatom, ep%eii, temp
-   enddo 
-        temp=M_HALF*dmf_dotp(gr%mesh, rho_nuc, ep%vpsl)
-        ep%eii = ep%eii+temp
-        write(68,*) "ep%eii values", ep%eii, temp
-
-   ! USE dmf_interpolate_points such that 
-   ! $  \sum_{i>j}z_i \phi_j(r_i)$
-   ! to see what is the effect of the ion-ion interaction
+        write(68,*) "ep%eii values", ep%eii
+   do jatom = geo%natoms,2, -1
+       SAFE_ALLOCATE(v2(1:gr%mesh%np))
+       SAFE_ALLOCATE(rho2(1:gr%mesh%np))
+       call species_get_density(geo%atom(jatom)%spec, geo%atom(jatom)%x, gr, geo, rho2)
+       v2(1:gr%mesh%np)= M_ZERO
+       call dpoisson_solve(gr, v2, rho2)
+       do iatom = jatom-1,1,-1
+        SAFE_ALLOCATE(rho1(1:gr%mesh%np))
+        call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr, geo, rho1)
+        temp=M_HALF*dmf_dotp(gr%mesh, rho1, v2) 
+        ep%eii = ep%eii+temp 
+        SAFE_DEALLOCATE_A(rho1)
+        write(*,*) iatom, jatom
+        write(68,*) "ep%eii values", iatom, jatom, ep%eii, temp
+       enddo
+       SAFE_DEALLOCATE_A(rho2)
+       SAFE_DEALLOCATE_A(v2)
+   enddo
+        write(68,*) "ep%eii values", ep%eii
 
    end subroutine ion_interaction_not_free_bc
         
