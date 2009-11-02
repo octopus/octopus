@@ -54,7 +54,7 @@ typedef unsigned int uint32_t;
 #elif SIZEOF_UNSIGNED_LONG == 4
 typedef unsigned long uint32_t;
 #else
-#error no suitable 32 bits integer type found
+#error no suitable 32-bit integer type found
 #endif
 #endif
 
@@ -64,7 +64,7 @@ typedef unsigned long long uint64_t;
 #elif SIZEOF_UNSIGNED_LONG == 8
 typedef unsigned long uint64_t;
 #else
-#error no suitable 64 bits integer type found
+#error no suitable 64-bit integer type found
 #endif
 #endif
 

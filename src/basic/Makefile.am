@@ -116,6 +116,6 @@ io_binary.o : io_binary.c io_binary.h
 getopt_f.o : getopt_f.c
 write_iter.o : write_iter.F90 c_pointer.o
 subarray.o : subarray.F90 subarray_inc.F90 profiling.o
-io_binary_f.o : io_binary_f.F90 io_binary.h
+io_binary_f.o : io_binary_f.F90 io_binary.h messages.o
 papi.o : papi.c
 papi_f.o : papi_f.F90

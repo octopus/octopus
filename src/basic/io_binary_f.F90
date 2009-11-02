@@ -21,6 +21,7 @@
 #include "io_binary.h"
 
 module io_binary_m
+  use messages_m
 
   implicit none 
 
@@ -51,8 +52,12 @@ contains
 
     integer, parameter :: type = TYPE_FLOAT
 
+    call push_sub('io_binary_f.swrite_binary')
+
     ierr = 0
     call write_binary(np, ff(1), type, ierr, trim(fname))
+
+    call pop_sub()
   end subroutine swrite_binary
 
   subroutine dwrite_binary(fname, np, ff, ierr)
@@ -63,8 +68,12 @@ contains
 
     integer, parameter :: type = TYPE_DOUBLE
 
+    call push_sub('io_binary_f.dwrite_binary')
+
     ierr = 0
     call write_binary(np, ff(1), type, ierr, trim(fname))
+
+    call pop_sub()
   end subroutine dwrite_binary
 
   subroutine cwrite_binary(fname, np, ff, ierr)
@@ -75,8 +84,12 @@ contains
 
     integer, parameter :: type = TYPE_FLOAT_COMPLEX
 
+    call push_sub('io_binary_f.cwrite_binary')
+
     ierr = 0
     call write_binary(np, ff(1), type, ierr, trim(fname))
+
+    call pop_sub()
   end subroutine cwrite_binary
 
   subroutine zwrite_binary(fname, np, ff, ierr)
@@ -87,8 +100,12 @@ contains
 
     integer, parameter :: type = TYPE_DOUBLE_COMPLEX
 
+    call push_sub('io_binary_f.zwrite_binary')
+
     ierr = 0
     call write_binary(np, ff(1), type, ierr, trim(fname))
+
+    call pop_sub()
   end subroutine zwrite_binary
 
   subroutine iwrite_binary(fname, np, ff, ierr)
@@ -99,8 +116,12 @@ contains
 
     integer, parameter :: type = TYPE_INT_32
 
+    call push_sub('io_binary_f.iwrite_binary')
+
     ierr = 0
     call write_binary(np, ff(1), type, ierr, trim(fname))
+
+    call pop_sub()
   end subroutine iwrite_binary
 
   subroutine lwrite_binary(fname, np, ff, ierr)
@@ -111,8 +132,12 @@ contains
 
     integer, parameter :: type = TYPE_INT_64
 
+    call push_sub('io_binary_f.lwrite_binary')
+
     ierr = 0
     call write_binary(np, ff(1), type, ierr, trim(fname))
+
+    call pop_sub()
   end subroutine lwrite_binary
 
   subroutine iwrite_binary2(fname, np, ff, ierr)
@@ -123,8 +148,12 @@ contains
 
     integer, parameter :: type = TYPE_INT_32
 
+    call push_sub('io_binary_f.iwrite_binary2')
+
     ierr = 0
     call write_binary(np, ff(1, 1), type, ierr, trim(fname))
+
+    call pop_sub()
   end subroutine iwrite_binary2
 
   subroutine lwrite_binary2(fname, np, ff, ierr)
@@ -135,8 +164,12 @@ contains
 
     integer, parameter :: type = TYPE_INT_64
 
+    call push_sub('io_binary_f.lwrite_binary2')
+
     ierr = 0
     call write_binary(np, ff(1, 1), type, ierr, trim(fname))
+
+    call pop_sub()
   end subroutine lwrite_binary2
 
   !------------------------------------------------------
@@ -149,92 +182,124 @@ contains
 
     integer, parameter :: type = TYPE_FLOAT
 
+    call push_sub('io_binary_f.sread_binary')
+
     ierr = 0
     call read_binary(np, ff(1), type, ierr, trim(fname))
+
+    call pop_sub()
   end subroutine sread_binary
 
   subroutine dread_binary(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
-    real(8),             intent(in)  :: ff(:)
+    real(8),             intent(out) :: ff(:)
     integer,             intent(out) :: ierr
 
     integer, parameter :: type = TYPE_DOUBLE
 
+    call push_sub('io_binary_f.dread_binary')
+
     ierr = 0
     call read_binary(np, ff(1), type, ierr, trim(fname))
+
+    call pop_sub()
   end subroutine dread_binary
 
   subroutine cread_binary(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
-    complex(4),          intent(in)  :: ff(:)
+    complex(4),          intent(out) :: ff(:)
     integer,             intent(out) :: ierr
 
     integer, parameter :: type = TYPE_FLOAT_COMPLEX
 
+    call push_sub('io_binary_f.cread_binary')
+
     ierr = 0
     call read_binary(np, ff(1), type, ierr, trim(fname))
+
+    call pop_sub()
   end subroutine cread_binary
 
   subroutine zread_binary(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
-    complex(8),          intent(in)  :: ff(:)
+    complex(8),          intent(out) :: ff(:)
     integer,             intent(out) :: ierr
 
     integer, parameter :: type = TYPE_DOUBLE_COMPLEX
 
+    call push_sub('io_binary_f.zread_binary')
+
     ierr = 0
     call read_binary(np, ff(1), type, ierr, trim(fname))
+
+    call pop_sub()
   end subroutine zread_binary
 
   subroutine iread_binary(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
-    integer(4),          intent(in)  :: ff(:)
+    integer(4),          intent(out) :: ff(:)
     integer,             intent(out) :: ierr
 
     integer, parameter :: type = TYPE_INT_32
 
+    call push_sub('io_binary_f.iread_binary')
+
     ierr = 0
     call read_binary(np, ff(1), type, ierr, trim(fname))
+
+    call pop_sub()
   end subroutine iread_binary
 
   subroutine lread_binary(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
-    integer(8),          intent(in)  :: ff(:)
+    integer(8),          intent(out) :: ff(:)
     integer,             intent(out) :: ierr
 
     integer, parameter :: type = TYPE_INT_64
 
+    call push_sub('io_binary_f.lread_binary')
+
     ierr = 0
     call read_binary(np, ff(1), type, ierr, trim(fname))
+
+    call pop_sub()
   end subroutine lread_binary
 
   subroutine iread_binary2(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
-    integer(4),          intent(in)  :: ff(:, :)
+    integer(4),          intent(out) :: ff(:, :)
     integer,             intent(out) :: ierr
 
     integer, parameter :: type = TYPE_INT_32
 
+    call push_sub('io_binary_f.iread_binary2')
+
     ierr = 0
     call read_binary(np, ff(1, 1), type, ierr, trim(fname))
+
+    call pop_sub()
   end subroutine iread_binary2
 
   subroutine lread_binary2(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
-    integer(8),          intent(in)  :: ff(:, :)
+    integer(8),          intent(out) :: ff(:, :)
     integer,             intent(out) :: ierr
 
     integer, parameter :: type = TYPE_INT_64
 
+    call push_sub('io_binary_f.lread_binary2')
+
     ierr = 0
     call read_binary(np, ff(1, 1), type, ierr, trim(fname))
+
+    call pop_sub()
   end subroutine lread_binary2
 
   subroutine io_binary_get_info(fname, np, ierr)
@@ -244,9 +309,13 @@ contains
 
     integer :: type
     
+    call push_sub('io_binary_f.io_binary_get_info')
+
     type = 0
     ierr = 0
     call get_info_binary(np, type, ierr, trim(fname))
+
+    call pop_sub()
   end subroutine io_binary_get_info
 
 end module io_binary_m
