@@ -433,7 +433,7 @@ void FC_FUNC_(get_info_binary,GET_INFO_BINARY)
   if( *ierr != 0 ) return;
 
   *np  = h->np;
-  type = h->type;
+  *type = (int) h->type;
 
   free(h);
 }

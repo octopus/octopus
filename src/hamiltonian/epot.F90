@@ -510,7 +510,7 @@ contains
     if (ep%classical_pot > 0)     ep%vpsl(1:mesh%np) = ep%vpsl(1:mesh%np) + ep%Vclassical(1:mesh%np)
     if (associated(ep%e_field)) ep%vpsl(1:mesh%np) = ep%vpsl(1:mesh%np) + ep%v_static(1:mesh%np)
 
-    !! this is disabled because it doesn't work for periodic systems
+    !  this is disabled because it does not work for periodic systems
     !    if (.not. poisson_solver_has_free_bc()) then
     !      ep%eii= M_ZERO
     !      call ion_interaction_not_free_bc(gr, geo, ep) 
