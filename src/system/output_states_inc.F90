@@ -162,6 +162,7 @@
 
     ! local vars
     integer :: mm, iunit, itype
+    integer :: iyoung
     logical :: symmetries_satisfied, impose_exch_symmetry
     CMPLX, allocatable :: wf(:)
     character(len=80) :: dirname
@@ -202,6 +203,7 @@
     ! write header
     write (iunit, '(a)') '  state      eigenvalue   ptype    Young#    nspindown    projection'
 
+    iyoung = 1
     do mm = 1, st%nst
       ! NOTE!!!! do not make this into some preprocessed X() stuff until I am dead and
       ! buried. Thanks - mjv
@@ -212,7 +214,16 @@
       end if
 
       if (impose_exch_symmetry) then
-        call modelmb_sym_state(st%eigenval(mm,1), iunit, gr, mm, geo, &
+        if (mm > 1) then
+          ! if eigenval is degenerate increment iyoung
+          if (abs(st%eigenval(mm,1) - st%eigenval(mm-1,1)) < 1.e-5) then
+            iyoung = iyoung + 1
+          else
+            iyoung = 1
+          end if
+        end if
+ 
+        call modelmb_sym_state(st%eigenval(mm,1), iyoung, iunit, gr, mm, geo, &
              st%modelmbparticles, wf, symmetries_satisfied)
       end if
 

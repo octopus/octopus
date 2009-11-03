@@ -54,8 +54,10 @@ module modelmb_exchange_syms_m
 contains
 
   ! project out states with proper symmetry for cases which are of symmetry = unknown
-  subroutine modelmb_sym_state(eigenval, iunit, gr, mm, geo, modelmbparticles, wf, symmetries_satisfied)
+  subroutine modelmb_sym_state(eigenval, iyoungstart, iunit, gr, mm, geo, &
+             modelmbparticles, wf, symmetries_satisfied)
     FLOAT,                    intent(in)    :: eigenval
+    integer,                  intent(in)    :: iyoungstart
     integer,                  intent(in)    :: iunit
     type(grid_t),             intent(in)    :: gr
     integer,                  intent(in)    :: mm
@@ -65,7 +67,7 @@ contains
     logical,                  intent(out)   :: symmetries_satisfied
 
     integer :: itype, ipart1, ipart2, npptype
-    integer :: ip, ipp, iup, idown, iyoung
+    integer :: ip, ipp, iup, idown, iyoung, iyoungstart_eff
     integer :: ikeeppart
     integer :: ndimmb
     integer :: nspindown, nspinup, iperm_up, iperm_down
@@ -90,6 +92,7 @@ contains
     symmetries_satisfied = .false.
 
     debug_antisym = .false.
+
 
     call permutations_nullify(perms_up)
     call permutations_nullify(perms_down)
@@ -151,7 +154,9 @@ contains
         call young_init (young, nspinup, nspindown)
 
         ! loop over all Young diagrams for present distribution of spins up and down
-        do iyoung = 1, young%nyoung
+        iyoungstart_eff = iyoungstart
+        if (iyoungstart_eff > young%nyoung) iyoungstart_eff = 1
+        do iyoung = iyoungstart_eff, young%nyoung
           antisymwf = M_z0
           antisymwf(:) = wf(:)
 
@@ -249,11 +254,13 @@ contains
           antisymrho = TOFLOAT(conjg(antisymwf)*antisymwf)
           norm = sum(antisymrho) * normalizer
 
-          ! FIXME: this is probably the problem when running in single precision
-          if (norm < CNST(1.e-5)) cycle
-  
-          write (iunit, '(I5,3x,E16.6,2x,I4,2x,I7,8x,I3,5x,E14.6)') mm, eigenval, itype, iyoung, nspindown, norm
+          if (norm > CNST(1.e-5)) &
+            write (iunit, '(I5,3x,E16.6,2x,I4,2x,I7,8x,I3,5x,E14.6)') &
+                  mm, eigenval, itype, iyoung, nspindown, norm
    
+          ! FIXME: this is probably the problem when running in single precision
+          if (norm < CNST(1.e-3)) cycle
+  
           ! we have found a valid Young diagram and antisymmetrized the present
           ! state enough. Loop to next type
           symmetries_satisfied_alltypes(itype) = 1

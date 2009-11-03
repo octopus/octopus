@@ -73,8 +73,8 @@ subroutine modelmb_1part_init(this, mesh, ikeeppart, ndim1part, box_offset)
 !   get full size of arrays for 1 particle only in ndim_modelmb dimensions
   this%npt_part = 1
   do idir = 1, ndim1part
-    this%npt_part = this%npt_part*(mesh%idx%nr(2,(ikeeppart-1)*ndim1part+idir) &
-                                   - mesh%idx%nr(1,(ikeeppart-1)*ndim1part+idir)+1)
+    this%npt_part = this%npt_part*(mesh%idx%nr(2,(ikeeppart - 1)*ndim1part + idir) &
+                                - mesh%idx%nr(1,(ikeeppart - 1)*ndim1part + idir + 1))
   end do
 
 !real bounds for indices in 
