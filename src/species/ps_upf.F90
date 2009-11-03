@@ -106,7 +106,7 @@ contains
       inquire(file=filename2, exist=found)
 
       if(.not.found) then
-        message(1) = "Pseudopotential file '" // trim(filename) // ".UPF}' not found"
+        message(1) = "Pseudopotential file '" // trim(filename) // ".UPF' not found"
         call write_fatal(1)
       end if
     end if
@@ -196,29 +196,34 @@ contains
     !Header info
     call init_tag(unit, "PP_HEADER", .true.)
 
-    read(unit,*) ps_upf%version, dummy
-    read(unit,*) ps_upf%symbol, dummy
-    read(unit,*) ps_upf%type, dummy
+    read(unit,*) ps_upf%version, dummy  ! n        "Version Number"
+    read(unit,*) ps_upf%symbol, dummy   ! psd      "Element"
+    read(unit,*) ps_upf%type, dummy     ! US|NC|PAW    "Ultrasoft|Norm conserving|Projector-augmented"
     if (ps_upf%type /= "NC") then
       message(1) = "Octopus can only read norm-conserving pseudo-potentials from UPF format."
       call write_fatal(1)
     end if
-    read(unit,*) ps_upf%nlcc, dummy
-    read(unit,*) dummy
-    read(unit,*) ps_upf%z_val, dummy
-    read(unit,*) dummy
-    read(unit,*) dummy
-    read(unit,*) ps_upf%l_max, dummy
-    read(unit,*) ps_upf%np, dummy
-    read(unit,*) ps_upf%n_wfs, ps_upf%n_proj, dummy
-    read(unit,*) dummy
+    read(unit,*) ps_upf%nlcc, dummy   ! nlcc     "Nonlinear Core Correction"
+    read(unit,*) dummy                ! dft      "Exch-Corr"
+    read(unit,*) ps_upf%z_val, dummy  ! zp       "Z valence"
+    read(unit,*) dummy                ! etotps   "Total Energy"
+    read(unit,*) dummy                ! ecutwfc, ecutrho     "Suggested Cutoff for wfc and rho"
+    read(unit,*) ps_upf%l_max, dummy  ! lmax     "Max angular momentum component"
+    read(unit,*) ps_upf%np, dummy     ! mesh     "Number of points in mesh"
+    read(unit,*) ps_upf%n_wfs, ps_upf%n_proj, dummy !  natwfc, nbeta   "Number of wavefunctions, projectors"
+    read(unit,*) dummy                ! "Wavefunctions   nl   l   occ"
     SAFE_ALLOCATE(ps_upf%n(1:ps_upf%n_wfs))
     SAFE_ALLOCATE(ps_upf%l(1:ps_upf%n_wfs))
     SAFE_ALLOCATE(ps_upf%occ(1:ps_upf%n_wfs))
+
+    ! els(1)      lchi(1)      oc(1)
+    !  ...
+    ! els(natwfc) lchi(natwfc) oc(natwfc)
     do i = 1, ps_upf%n_wfs
-      read(unit,*) nl, ps_upf%l(i), ps_upf%occ(i)
+      read(unit,*) nl, ps_upf%l(i), ps_upf%occ(i) 
       read(nl(1:1), '(I1)') ps_upf%n(i) 
     end do
+
     call check_end_tag(unit, "PP_HEADER")
 
     !Mesh info
