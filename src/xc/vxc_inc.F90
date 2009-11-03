@@ -77,6 +77,15 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
   if( gga) call  gga_init()
   if(mgga) call mgga_init()
 
+  ! Get the gradient and the laplacian of the density and the kinetic energy density
+  ! We do it here instead of doing it in gga_init and mgga_init in order to 
+  ! avoid calling the subroutine states_calc_tau_jp_gn twice
+  if(gga .and. (.not. mgga)) then
+    call states_calc_tau_jp_gn(gr, st, grho=gdens)
+  elseif(mgga) then
+    call states_calc_tau_jp_gn(gr, st, grho=gdens, tau=tau, lrho=ldens)    
+  end if
+
   space_loop: do jj = 1, gr%mesh%np, n_block
     if(jj + n_block > gr%mesh%np) n_block = gr%mesh%np - jj + 1
 
@@ -372,9 +381,6 @@ contains
       dedgd = M_ZERO
     end if
 
-    ! get gradient of the density
-    call states_calc_tau_jp_gn(gr, st, grho=gdens)
-
     do ii = 1, 2
       if(functl(ii)%id == XC_GGA_XC_LB) then
         call XC_F90(gga_lb_set_par)(functl(ii)%conf, &
@@ -449,9 +455,6 @@ contains
       SAFE_ALLOCATE(dedldens(1:gr%mesh%np_part, 1:spin_channels))
       dedldens = M_ZERO
     end if
-
-    ! calculate tau and the laplacian of the density
-    call states_calc_tau_jp_gn(gr, st, tau=tau, lrho=ldens)
 
     if(functl(1)%id == XC_MGGA_X_TB09 .and. gr%sb%periodic_dim == 3) then
       SAFE_ALLOCATE(gnon(1:gr%mesh%np))
