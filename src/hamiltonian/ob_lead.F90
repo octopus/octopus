@@ -283,8 +283,8 @@ contains
     lead%np_part = np_part
     SAFE_ALLOCATE(lead%h_diag(1:np, 1:np, 1:dim))
     SAFE_ALLOCATE(lead%h_offdiag(1:np, 1:np))
-    SAFE_ALLOCATE(lead%vks(1:np_part, 1:nspin))
-    SAFE_ALLOCATE(lead%vhartree(1:np_part))
+    SAFE_ALLOCATE(lead%vks(1:np, 1:nspin))
+    SAFE_ALLOCATE(lead%vhartree(1:np))
 
     call pop_sub()
   end subroutine lead_init
@@ -312,18 +312,17 @@ contains
     integer,       intent(in)    :: dim
     integer,       intent(in)    :: nspin
 
-    integer :: np, np_part
+    integer :: np
 
     call push_sub('ob_lead.lead_copy')
 
     ASSERT(dst%np.le.src%np)
     np = dst%np
-    np_part = dst%np_part
 
     dst%h_diag(1:np, 1:np, 1:dim) = src%h_diag(1:np, 1:np, 1:dim)
     dst%h_offdiag(1:np, 1:np)     = src%h_offdiag(1:np, 1:np)
-    dst%vks(1:np_part, 1:nspin)   = src%vks(1:np_part, 1:nspin)
-    dst%vhartree(1:np_part)       = src%vhartree(1:np_part)
+    dst%vks(1:np, 1:nspin)        = src%vks(1:np, 1:nspin)
+    dst%vhartree(1:np)            = src%vhartree(1:np)
 
     call pop_sub()
   end subroutine lead_copy

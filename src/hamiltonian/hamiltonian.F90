@@ -630,6 +630,7 @@ contains
       end do
 
       do il = 1, NLEADS
+        np = gr%intf(il)%np_uc
         do ispin = 1, hm%d%nspin
           call lead_diag(gr%der%lapl, hm%lead(il)%vks(:, ispin), &
             gr%intf(il), hm%lead(il)%h_diag(:, :, ispin))
