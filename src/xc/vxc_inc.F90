@@ -373,9 +373,7 @@ contains
     end if
 
     ! get gradient of the density
-    do ii = 1, spin_channels
-      call dderivatives_grad(gr%der, dens(:, ii), gdens(:, :, ii))
-    end do
+    call states_calc_tau_jp_gn(gr, st, grho=gdens)
 
     do ii = 1, 2
       if(functl(ii)%id == XC_GGA_XC_LB) then
@@ -451,33 +449,28 @@ contains
       SAFE_ALLOCATE(dedldens(1:gr%mesh%np_part, 1:spin_channels))
       dedldens = M_ZERO
     end if
-    
-    ! calculate laplacian of the density
-    do ii = 1, spin_channels
-      call dderivatives_lapl(gr%der, dens(:, ii), ldens(:, ii))
-    end do
 
-    ! calculate tau
-    call states_calc_tau_jp_gn(gr, st, tau=tau)
+    ! calculate tau and the laplacian of the density
+    call states_calc_tau_jp_gn(gr, st, tau=tau, lrho=ldens)
 
     if(functl(1)%id == XC_MGGA_X_TB09 .and. gr%sb%periodic_dim == 3) then
       SAFE_ALLOCATE(gnon(1:gr%mesh%np))
 
       do ii = 1, gr%mesh%np
-         if(ispin == UNPOLARIZED) then
-            n = dens(ii, 1)
-            gn(1:gr%mesh%sb%dim) = gdens(ii, 1:gr%mesh%sb%dim, 1)
-         else
-            n = dens(ii, 1) + dens(ii, 2)
-            gn(1:gr%mesh%sb%dim) = gdens(ii, 1:gr%mesh%sb%dim, 1) + gdens(ii, 1:gr%mesh%sb%dim, 2)
-         end if
+        if(ispin == UNPOLARIZED) then
+          n = dens(ii, 1)
+          gn(1:gr%mesh%sb%dim) = gdens(ii, 1:gr%mesh%sb%dim, 1)
+        else
+          n = dens(ii, 1) + dens(ii, 2)
+          gn(1:gr%mesh%sb%dim) = gdens(ii, 1:gr%mesh%sb%dim, 1) + gdens(ii, 1:gr%mesh%sb%dim, 2)
+        end if
          
-         if (n <= CNST(1e-7)) then 
-            gnon(ii) = CNST(0.0)
-            ! here you will have to print the true gnon(ii) with the correspondent mesh point ii
-         else
-            gnon(ii) = sqrt(sum((gn(1:gr%mesh%sb%dim)/n)**2))
-         end if
+        if (n <= CNST(1e-7)) then 
+          gnon(ii) = CNST(0.0)
+          ! here you will have to print the true gnon(ii) with the correspondent mesh point ii
+        else
+          gnon(ii) = sqrt(sum((gn(1:gr%mesh%sb%dim)/n)**2))
+        end if
       end do
      
       ncall = ncall +1 
