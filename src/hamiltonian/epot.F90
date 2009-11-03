@@ -545,7 +545,7 @@ contains
 
     else
 
-      SAFE_ALLOCATE(vl(1:mesh%np_part))
+      SAFE_ALLOCATE(vl(1:mesh%np))
 
       !Local potential, we can get it by solving the Poisson equation
       !(for all-electron species or pseudopotentials in periodic
