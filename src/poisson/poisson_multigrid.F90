@@ -373,31 +373,35 @@ contains
 
     case(GAUSS_SEIDEL)
 
-      call dset_bc(der, pot)
-
-#ifdef HAVE_MPI
-      if(m%parallel_in_domains) call dvec_ghost_update(m%vp, pot)
-#endif
-
       factor = CNST(-1.0)/der%lapl%w_re(der%lapl%stencil%center, 1)*this%relax_factor
 
       n = der%lapl%stencil%size
 
-      if(der%lapl%const_w) then
-        do t = 1, steps
+      do t = 1, steps
+
+        call dset_bc(der, pot)
+
+#ifdef HAVE_MPI
+        if(m%parallel_in_domains) call dvec_ghost_update(m%vp, pot)
+#endif
+
+        if(der%lapl%const_w) then
+
           call dgauss_seidel(der%lapl%stencil%size, der%lapl%w_re(1, 1), der%lapl%nri, &
-               der%lapl%ri(1, 1), der%lapl%rimap_inv(1), der%lapl%rimap_inv(2),        &
-               factor, pot(1), rho(1))
-        end do
-        call profiling_count_operations(m%np*(steps + 1)*(2*n + 3))
-      else
-        do t = 1, steps
+            der%lapl%ri(1, 1), der%lapl%rimap_inv(1), der%lapl%rimap_inv(2),        &
+            factor, pot(1), rho(1))
+          call profiling_count_operations(m%np*(steps + 1)*(2*n + 3))
+          
+        else
+          
           do i = 1, m%np
             point_lap = sum(der%lapl%w_re(1:n,i)*pot(der%lapl%i(1:n,i)))
             pot(i) = pot(i) - CNST(0.7)/der%lapl%w_re(der%lapl%stencil%center,i)*(point_lap-rho(i))
           end do
-        end do
-      end if
+
+        end if
+
+      end do
 
     case(GAUSS_JACOBI)
 
@@ -413,7 +417,7 @@ contains
 
       deallocate(ldiag)
       deallocate(lpot)
-      
+
     end select
 
     call profiling_out(prof)
