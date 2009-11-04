@@ -698,7 +698,7 @@ contains
     do ix = 1, cube%n(1)
       do iy = 1, cube%n(2)
         do iz = 1, cube%n(3)
-          write(iunit,'(2f25.15)') u*cube%RS(ix, iy, iz)
+          write(iunit,'(2f25.15)') cube%RS(ix, iy, iz)/u
         end do
       end do
     end do
@@ -793,7 +793,7 @@ contains
             iz2 = iz
           endif
 
-          write(iunit,'(2f25.15)') REAL(u*cube%RS(ix2, iy2, iz2))
+          write(iunit,'(2f25.15)') REAL(cube%RS(ix2, iy2, iz2)/u)
         end do
       end do
     end do
