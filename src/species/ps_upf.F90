@@ -126,6 +126,8 @@ contains
     ps_upf%conf%l(1:ps_upf%n_wfs) = ps_upf%l(1:ps_upf%n_wfs)
     ps_upf%conf%occ(1:ps_upf%n_wfs,1) = ps_upf%occ(1:ps_upf%n_wfs)
 
+    ps_upf%l_max = maxval(ps_upf%l)
+
     !Check if the local component is one of the angular momentum channels
     SAFE_ALLOCATE(found_l(0:ps_upf%l_max))
     found_l = .true.
@@ -144,6 +146,10 @@ contains
         end if
       end do
     end if
+
+    write(message(1), '(a,i2)') '      l max = ', ps_upf%l_max
+    write(message(2), '(a,i2)') '      l loc = ', ps_upf%l_local
+    call write_info(2)
 
     ! Define the KB-projector cut-off radii
     call ps_upf_cutoff_radii(ps_upf)
@@ -208,7 +214,7 @@ contains
     read(unit,*) ps_upf%z_val, dummy  ! zp       "Z valence"
     read(unit,*) dummy                ! etotps   "Total Energy"
     read(unit,*) dummy                ! ecutwfc, ecutrho     "Suggested Cutoff for wfc and rho"
-    read(unit,*) ps_upf%l_max, dummy  ! lmax     "Max angular momentum component"
+    read(unit,*) dummy                ! lmax     "Max angular momentum component", THIS IS NOT THE LMAX WE NEED
     read(unit,*) ps_upf%np, dummy     ! mesh     "Number of points in mesh"
     read(unit,*) ps_upf%n_wfs, ps_upf%n_proj, dummy !  natwfc, nbeta   "Number of wavefunctions, projectors"
     read(unit,*) dummy                ! "Wavefunctions   nl   l   occ"
