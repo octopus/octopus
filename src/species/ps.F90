@@ -825,10 +825,10 @@ contains
       if (ps_upf%kb_nc == 2) then
         if (ps_upf%proj_j(i) == ps_upf%proj_l(i) - M_HALF) ij = 2
       end if
-      ps%h(ps_upf%proj_l(i), ij, ij) = ps_upf%e(i)
+      ps%h(ps_upf%proj_l(i), ij, ij) = ps_upf%e(i)*M_TWO
 
       nrc = logrid_index(ps%g, ps_upf%kb_radius(i)) + 1
-      hato(2:nrc) = ps_upf%proj(2:nrc, i)/ps%g%rofi(2:nrc) ! in upf the projector is multiplied by r
+      hato(2:nrc) = ps_upf%proj(2:nrc, i)/ps%g%rofi(2:nrc)/M_TWO ! in upf the projector is given in Rydbergs and is multiplied by r
       hato(1) = linear_extrapolate(ps%g%rofi(1), ps%g%rofi(2), ps%g%rofi(3), hato(2), hato(3)) !take care of the point at zero
       hato(nrc+1:ps%g%nrval) = M_ZERO
 
@@ -838,10 +838,7 @@ contains
         call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%proj_l(i), 2))
       end if
     end do
-
-    ! Passes from Rydbergs to Hartrees.
-    ps%h(0:ps%l_max,:,:) = ps%h(0:ps%l_max,:,:)/M_TWO
-
+ 
     ! Define the table for the pseudo-wavefunction components (using splines)
     ! with a correct normalization function
     do is = 1, ps%ispin
