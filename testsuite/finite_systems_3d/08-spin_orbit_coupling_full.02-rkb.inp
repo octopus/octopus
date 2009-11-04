@@ -33,3 +33,5 @@ ParallelizationStrategy=par_domains
 ConvRelDens = 0.0
 ConvAbsEv = 1e-6
 ConvAbsForces = 1e-6
+
+DevelVersion = yes
