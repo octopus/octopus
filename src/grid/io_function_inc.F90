@@ -685,7 +685,8 @@ contains
     call X(mesh_to_cube) (mesh, ff, cube)
 
     ! the offset is different in periodic directions
-    offset = units_from_atomic(units_out%length, -matmul(sb%rlattice_primitive, sb%lsize))
+    offset = M_ZERO
+    offset(1:3) = units_from_atomic(units_out%length, -matmul(sb%rlattice_primitive(1:3,1:3), sb%lsize(1:3)))
 
     do idir = sb%periodic_dim+1, 3
       offset(idir) = units_from_atomic(units_out%length, -(cube%n(idir) - 1)/2*mesh%h(idir))
@@ -757,7 +758,7 @@ contains
     ! The corner of the cell is always (0,0,0) to XCrySDen
     ! so the offset is applied to the atomic coordinates.
     ! offset in periodic directions
-    offset = -matmul(sb%rlattice_primitive, sb%lsize)
+    offset = -matmul(sb%rlattice_primitive(1:3,1:3), sb%lsize(1:3))
     ! offset in aperiodic directions
     do idir = sb%periodic_dim + 1, 3
       offset(idir) = -(mesh%idx%ll(idir) - 1)/2 * mesh%h(idir)
