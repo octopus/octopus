@@ -47,8 +47,7 @@ program centergeom
   call io_init()
   call unit_system_init()
 
-  call geometry_init_xyz(geo)              ! we need the geometry
-  call geometry_init_species(geo)          ! we also need the masses
+  call geometry_init(geo)
 
   call xyz_adjust_it(geo)
   call atom_write_xyz(".", "adjusted", geo, 3)

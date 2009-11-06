@@ -81,8 +81,11 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
   ! We do it here instead of doing it in gga_init and mgga_init in order to 
   ! avoid calling the subroutine states_calc_tau_jp_gn twice
   if(gga .and. (.not. mgga)) then
-    call states_calc_tau_jp_gn(gr, st, grho=gdens)
-  elseif(mgga) then
+    ! get gradient of the density (this is faster than calling states_calc_tau_jp_gn)
+    do jj = 1, spin_channels 
+      call dderivatives_grad(gr%der, dens(:, jj), gdens(:, :, jj)) 
+    end do
+  else if(mgga) then
     call states_calc_tau_jp_gn(gr, st, grho=gdens, tau=tau, lrho=ldens)    
   end if
 

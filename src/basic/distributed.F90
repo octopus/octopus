@@ -192,8 +192,6 @@ contains
     SAFE_DEALLOCATE_P(this%range)
     SAFE_DEALLOCATE_P(this%num)
 
-    nullify(this%node, this%range, this%num)
-
     call pop_sub()
   end subroutine distributed_end
 
