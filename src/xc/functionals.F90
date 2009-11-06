@@ -170,6 +170,7 @@ contains
       ok =       (functl%id == XC_LDA_X_2D)
       ok = ok.or.(functl%id == XC_LDA_C_2D_AMGB)
       ok = ok.or.(functl%id == XC_LDA_C_2D_PRM)
+      ok = ok.or.(functl%id == XC_GGA_X_2D_B86_MGC)
       if((ndim.ne.2).and.ok) then
         message(1) = 'Specified functional is only allowed in 2D'
         call write_fatal(1)
