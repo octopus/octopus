@@ -1,3 +1,10 @@
+octopus (3.1.1) unstable; urgency=low
+
+  * Updated to version 3.1.1
+  * Included compilation in parallel
+
+ -- Xavier Andrade <xavier@tddft.org>  Thu, 05 Nov 2009 19:07:29 +0100
+
 octopus (3.1.0) unstable; urgency=low
 
   * Updated to version 3.1.0.

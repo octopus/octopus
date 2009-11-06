@@ -40,7 +40,7 @@ build-stamp:  config.status
 #
 
 ## GFORTRAN
-
+	CC=gcc      \
 	FC=gfortran \
 	CFLAGS="-O3 -funroll-loops -ffast-math" \
 	FCFLAGS="-O3 -funroll-loops -ffast-math -ffree-line-length-none -fsecond-underscore" \
@@ -66,34 +66,32 @@ build-stamp:  config.status
 #
 
 # inbetween we cleanup	
-#	$(MAKE) clean
+	$(MAKE) clean
 
-## GFORTRAN + MPICH
-#       #this is a work around to a bug of debian's openmpi
-#	ln -s `which mpif90.openmpi` /tmp/mpif90
-#	FC=/tmp/mpif90 \
-#	FCCPP="cpp -I/usr/lib/mpich/include -ansi -C" \
-#	CFLAGS="-O3 -funroll-loops -ffast-math" \
-#	FCFLAGS="-O3 -funroll-loops -ffast-math -ffree-line-length-none" \
-#	./configure \
-#	--disable-gdlib \
-#	--enable-mpi --program-suffix="-mpi" \
-#	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
-#	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info \
-#	--with-blas="/usr/lib/atlas/libblas.a -latlas -lg2c" 
-#
-#	$(MAKE)
-#
-#	install -m 755 src/octopus_mpi $(CURDIR)/debian/octopus/usr/bin/octopus_mpi
+## GFORTRAN + openmpi
+	CC=mpicc  \
+	FC=mpif90 \
+	CFLAGS="-O3 -funroll-loops -ffast-math" \
+	FCFLAGS="-O3 -funroll-loops -ffast-math -ffree-line-length-none -fsecond-underscore" \
+	./configure \
+	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
+	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info \
+	--with-blas="/usr/lib/atlas/libblas.a -latlas" \
+	--disable-gdlib  \
+	--enable-mpi
+
+	$(MAKE)
+
+	install -m 755 src/main/octopus_mpi $(CURDIR)/debian/octopus/usr/bin/octopus_mpi
+	install -m 755 src/main/oct-test_mpi $(CURDIR)/debian/octopus/usr/bin/oct-test_mpi
 
 	touch build-stamp
-
 
 clean:
 	-$(MAKE) clean
 	dh_testdir
 	dh_testroot
-	rm -f build-stamp 
+	rm -f build-stamp
 
         # Add here commands to clean up after the build process.
 	dh_clean
