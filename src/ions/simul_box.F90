@@ -1598,7 +1598,7 @@ contains
   ! direction. Returns -1 if open boundaries are not used.
   integer function lead_unit_cell_extent(sb, il)
     type(simul_box_t), intent(in) :: sb
-    integer                       :: il
+    integer,           intent(in) :: il
 
     integer :: tdir ! transport direction
     
@@ -1716,6 +1716,7 @@ contains
     type(simul_box_t), intent(in)  :: sbin
 
     integer :: il, ix, iy, iz
+    integer :: nc(1:3)
 
     call push_sub('simul_box.simul_box_copy')
 
@@ -1759,12 +1760,13 @@ contains
     end if
 
     if (associated(sbin%cells)) then
+      nc(1:3) = sbout%ncell(1:3)
+      
+      SAFE_ALLOCATE(sbout%cells(-nc(1):nc(1)-1,-nc(2):nc(2)-1,-nc(3):nc(3)-1))
 
-      SAFE_ALLOCATE(sbout%cells(-sbout%ncell(1):sbout%ncell(1)-1,-sbout%ncell(2):sbout%ncell(2)-1,-sbout%ncell(3):sbout%ncell(3)-1))
-
-      do iz = -sbout%ncell(3), sbout%ncell(3) - 1
-        do iy = -sbout%ncell(2), sbout%ncell(2) - 1
-          do ix = -sbout%ncell(1), sbout%ncell(1) - 1
+      do iz = -nc(3), nc(3) - 1
+        do iy = -nc(2), nc(2) - 1
+          do ix = -nc(1), nc(1) - 1
             sbout%cells(ix, iy, iz)%natoms = sbin%cells(ix, iy, iz)%natoms
             SAFE_ALLOCATE(sbout%cells(ix, iy, iz)%list_of_atoms(1:sbout%cells(ix, iy, iz)%natoms))
             sbout%cells(ix, iy, iz)%list_of_atoms = sbin%cells(ix, iy, iz)%list_of_atoms
