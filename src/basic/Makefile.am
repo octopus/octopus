@@ -96,7 +96,7 @@ periodic_table.o : periodic_table.F90
 loct.o : loct.F90 loct_inc.F90 c_pointer.o
 string.o : string.F90 c_pointer.o
 varinfo.o : varinfo.F90 string.o c_pointer.o
-global.o : global.F90 mpi.o loct.o hardware.o
+global.o : global.F90 mpi.o loct.o hardware.o Makefile
 parser.o : parser.F90 mpi.o loct.o global.o c_pointer.o unit.o
 datasets.o : datasets.F90 parser.o c_pointer.o
 messages.o : messages.F90 varinfo.o string.o mpi.o parser.o loct.o global.o datasets.o 
