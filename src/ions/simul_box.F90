@@ -1763,7 +1763,7 @@ contains
     type(simul_box_t), intent(out) :: sbout
     type(simul_box_t), intent(in)  :: sbin
 
-    integer :: il
+    integer :: il, ix, iy, iz
 
     call push_sub('simul_box.simul_box_copy')
 
@@ -1790,17 +1790,36 @@ contains
     sbout%hr_area%num_areas       = sbin%hr_area%num_areas
     sbout%hr_area%num_radii       = sbin%hr_area%num_radii
     sbout%hr_area%center(1:MAX_DIM)=sbin%hr_area%center(1:MAX_DIM)
-
+    sbout%ncell(1:MAX_DIM)        = sbin%ncell(1:MAX_DIM)
+    
     call kpoints_copy(sbout%kpoints, sbin%kpoints)
 
-    SAFE_ALLOCATE(sbout%hr_area%radius(1:sbout%hr_area%num_radii))
-    sbout%hr_area%radius(1:sbout%hr_area%num_radii) = sbin%hr_area%radius(1:sbout%hr_area%num_radii)
+    if(sbout%mr_flag) then
+      SAFE_ALLOCATE(sbout%hr_area%radius(1:sbout%hr_area%num_radii))
+      sbout%hr_area%radius(1:sbout%hr_area%num_radii) = sbin%hr_area%radius(1:sbout%hr_area%num_radii)
+    end if
 
     if(associated(sbin%lead_unit_cell)) then
       SAFE_ALLOCATE(sbout%lead_unit_cell(1:NLEADS))
       do il = 1, NLEADS
         call simul_box_copy(sbout%lead_unit_cell(il), sbin%lead_unit_cell(il))
       end do
+    end if
+
+    if (associated(sbin%cells)) then
+
+      SAFE_ALLOCATE(sbout%cells(-sbout%ncell(1):sbout%ncell(1)-1,-sbout%ncell(2):sbout%ncell(2)-1,-sbout%ncell(3):sbout%ncell(3)-1))
+
+      do iz = -sbout%ncell(3), sbout%ncell(3) - 1
+        do iy = -sbout%ncell(2), sbout%ncell(2) - 1
+          do ix = -sbout%ncell(1), sbout%ncell(1) - 1
+            sbout%cells(ix, iy, iz)%natoms = sbin%cells(ix, iy, iz)%natoms
+            SAFE_ALLOCATE(sbout%cells(ix, iy, iz)%list_of_atoms(1:sbout%cells(ix, iy, iz)%natoms))
+            sbout%cells(ix, iy, iz)%list_of_atoms = sbin%cells(ix, iy, iz)%list_of_atoms
+          end do
+        end do
+      end do
+
     end if
 
     call pop_sub()

@@ -59,21 +59,25 @@ subroutine poisson3D_init(gr, geo)
   !%Type logical
   !%Section Hamiltonian::Poisson
   !%Description
-  !% If the selected Poisson solver is <tt>cg</tt> or <tt>cg_corrected</tt>, the boundary conditions
-  !% have to be calculated by means of performing a multipole expansion. Unfortunately,
-  !% if the charge distribution is not contained in a simulation box of approximately
-  !% spherical shape, the error can be quite large. Good cases are the spherical box,
-  !% the parallelepiped when all dimensions are of similar magnitude, or the cylinder
-  !% when the height is not too different to the diameter of the base. Bad cases
-  !% are the rest, including the <tt>minimum</tt> box, when the geometry of the molecule is
-  !% not compact enough.
+  !% (experimental) If the selected Poisson solver is
+  !% <tt>cg_corrected</tt> the boundary conditions have to be
+  !% calculated by means of performing a multipole
+  !% expansion. Unfortunately, if the charge distribution is not
+  !% contained in a simulation box of approximately spherical shape,
+  !% the error can be quite large. Good cases are the spherical box,
+  !% the parallelepiped when all dimensions are of similar magnitude,
+  !% or the cylinder when the height is not too different to the
+  !% diameter of the base. Bad cases are the rest, including the
+  !% <tt>minimum</tt> box, when the geometry of the molecule is not
+  !% compact enough.
   !%
-  !% In order to cure this problem, the Hartree problem may be solved in an auxiliary
-  !% simulation box, which will contain the original one, but which will be a sphere.
-  !% This implies some extra computational effort -- since the density and potential have
-  !% to be transferred between boxes -- and extra memory consumption -- since a new
-  !% grid has to be stored, which may need quite a lot of memory if you use curvilinear
-  !% coordinates.
+  !% In order to cure this problem, the Hartree problem may be solved
+  !% in an auxiliary simulation box, which will contain the original
+  !% one, but which will be a sphere.  This implies some extra
+  !% computational effort -- since the density and potential have to
+  !% be transferred between boxes -- and extra memory consumption --
+  !% since a new grid has to be stored, which may need quite a lot of
+  !% memory if you use curvilinear coordinates.
   !%End
 
   select case(poisson_solver)
@@ -95,6 +99,7 @@ subroutine poisson3D_init(gr, geo)
      call parse_logical(datasets_check('PoissonSolverIncreaseBox'), .false., hartree_integrator%increase_box)
      if(gr%mesh%sb%box_shape .eq. SPHERE) hartree_integrator%increase_box = .false.
      if(hartree_integrator%increase_box) then
+       call messages_devel_version("The PoissonIncreaseBox feature")
        write(message(1),'(a)') "Info: Poisson equation will be solved in a larger grid."
        call write_info(1)
        SAFE_ALLOCATE(hartree_integrator%grid)
