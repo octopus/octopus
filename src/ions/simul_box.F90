@@ -51,11 +51,9 @@ module simul_box_m
     simul_box_write_info,       &
     simul_box_is_periodic,      &
     simul_box_has_zero_bc,      &
-    simul_box_is_eq,            &
     simul_box_in_box,           &
     simul_box_in_box_vec,       &
     simul_box_dump,             &
-    simul_box_init_from_file,   &
     simul_box_atoms_in_box,     &
     lead_unit_cell_extent,      &
     simul_box_copy
@@ -1396,6 +1394,9 @@ contains
         end do
 
       case(MINIMUM)
+
+        ASSERT(associated(sb%cells))
+
         do ip = 1, npoints
           in_box(ip) = .false.
           if (any(abs(xx(1:3, ip)) > sb%lsize(1:3))) cycle
@@ -1708,55 +1709,6 @@ contains
 
     call pop_sub()
   end subroutine simul_box_init_from_file
-
-
-  !--------------------------------------------------------------
-  recursive logical function simul_box_is_eq(sb1, sb2) result(res)
-    type(simul_box_t), intent(in) :: sb1, sb2
-
-    integer :: il
-
-    call push_sub('simul_box.simul_box_is_eq')
-
-    res = .false.
-    if(sb1%box_shape .ne. sb2%box_shape)             go to 1
-    if(sb1%dim .ne. sb2%dim)                         go to 1
-    if(sb1%periodic_dim .ne. sb2%periodic_dim)       go to 1
-
-    select case(sb1%box_shape)
-    case(SPHERE, MINIMUM)
-      if(.not.(sb1%rsize .app. sb2%rsize))           go to 1
-      if(.not.(sb1%lsize .app. sb2%lsize))           go to 1
-    case(CYLINDER)
-      if(.not.(sb1%rsize .app. sb2%rsize))           go to 1
-      if(.not.(sb1%xsize .app. sb2%xsize))           go to 1
-      if(.not.(sb1%lsize .app. sb2%lsize))           go to 1
-    case(PARALLELEPIPED)
-      if(.not.(sb1%lsize .app. sb2%lsize))           go to 1
-    case(BOX_USDEF)
-      if(.not.(sb1%lsize .app. sb2%lsize))           go to 1
-      if(trim(sb1%user_def) .ne. trim(sb2%user_def)) go to 1
-    end select
-
-    if(.not.(sb1%fft_alpha .app. sb2%fft_alpha))     go to 1
-    if(.not.(sb1%h .app. sb2%h))                     go to 1
-    if(.not.(sb1%box_offset .app. sb2%box_offset))   go to 1
-    if(sb1%open_boundaries.neqv.sb2%open_boundaries)   go to 1
-
-    if (sb1%open_boundaries) then
-      if(any(sb1%add_unit_cells.ne.sb2%add_unit_cells))     go to 1
-      if(any(sb1%lead_restart_dir.ne.sb2%lead_restart_dir)) go to 1
-      if(associated(sb1%lead_unit_cell).and.associated(sb2%lead_unit_cell)) then
-        do il = 1, NLEADS
-          if(.not.simul_box_is_eq(sb1%lead_unit_cell(il), sb2%lead_unit_cell(il))) go to 1
-        end do
-      end if
-    endif
-    res = .true.
-
-1   call pop_sub()
-  end function simul_box_is_eq
-
 
   ! --------------------------------------------------------------
   recursive subroutine simul_box_copy(sbout, sbin)

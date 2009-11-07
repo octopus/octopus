@@ -289,7 +289,7 @@ contains
       write(iunit_mesh,'(a)') '# This file contains the necessary information to generate the'
       write(iunit_mesh,'(a)') '# mesh with which the functions in this directory were calculated,'
       write(iunit_mesh,'(a)') '# except for the geometry of the system.'
-      call curvilinear_dump(gr%cv, iunit_mesh)
+
       call simul_box_dump(gr%sb, iunit_mesh)
       call mesh_dump(gr%mesh, iunit_mesh)
       call io_close(iunit_mesh)
@@ -666,7 +666,7 @@ contains
     !if this next argument is present, the lr wfs are read instead of the gs wfs
     type(lr_t), optional, intent(inout) :: lr 
 
-    integer              :: iunit, iunit2, iunit_mesh, err, ik, ist, idim, i
+    integer              :: iunit, iunit2, err, ik, ist, idim, i
     character(len=12)    :: filename
     character(len=1)     :: char
     logical, allocatable :: filled(:, :, :)
@@ -674,12 +674,7 @@ contains
     character(len=50)    :: str
 
     FLOAT                :: my_occ
-    FLOAT, allocatable   :: dphi(:)
-    CMPLX, allocatable   :: zphi(:)
-    type(mesh_t)         :: old_mesh
-    type(curvilinear_t)  :: old_cv
-    type(simul_box_t)    :: old_sb
-    logical              :: read_occ_, mesh_change, full_interpolation, gs_allocated, lr_allocated
+    logical              :: read_occ_, gs_allocated, lr_allocated
 
     call push_sub('restart.restart_read')
 
@@ -732,9 +727,6 @@ contains
       return
     end if
 
-    ! Reads out the previous mesh info.
-    call read_previous_mesh()
-
     ! now we really start
     SAFE_ALLOCATE(filled(1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
     filled = .false.
@@ -762,46 +754,26 @@ contains
       if(read_occ_) st%occ(ist, ik) = my_occ
 
       if(ist >= st%st_start .and. ist <= st%st_end .and. &
-         st%d%kpt%start <= ik .and. st%d%kpt%end >= ik) then
-        if(.not.mesh_change) then
-          if( .not. present(lr) ) then 
-            if (st%wfs_type == M_REAL) then
-              call drestart_read_function(dir, filename, gr%mesh, st%dpsi(:, idim, ist, ik), err)
-            else
-              call zrestart_read_function(dir, filename, gr%mesh, st%zpsi(:, idim, ist, ik), err)
-            end if
+        st%d%kpt%start <= ik .and. st%d%kpt%end >= ik) then
+
+        if( .not. present(lr) ) then 
+          if (st%wfs_type == M_REAL) then
+            call drestart_read_function(dir, filename, gr%mesh, st%dpsi(:, idim, ist, ik), err)
           else
-            if (st%wfs_type == M_REAL) then
-              call drestart_read_function(dir, filename, gr%mesh, lr%ddl_psi(:, idim, ist, ik), err)
-            else
-              call zrestart_read_function(dir, filename, gr%mesh, lr%zdl_psi(:, idim, ist, ik), err)
-            end if
-          end if
-          if(err <= 0) then
-            filled(idim, ist, ik) = .true.
-            ierr = ierr + 1
+            call zrestart_read_function(dir, filename, gr%mesh, st%zpsi(:, idim, ist, ik), err)
           end if
         else
           if (st%wfs_type == M_REAL) then
-            call drestart_read_function(dir, filename, old_mesh, dphi, err)
-            if( .not. present(lr) ) then 
-              call dmf_interpolate(old_mesh, gr%mesh, full_interpolation, dphi, st%dpsi(:, idim, ist, ik))
-            else
-              call dmf_interpolate(old_mesh, gr%mesh, full_interpolation, dphi, lr%ddl_psi(:, idim, ist, ik))
-            end if
+            call drestart_read_function(dir, filename, gr%mesh, lr%ddl_psi(:, idim, ist, ik), err)
           else
-            call zrestart_read_function(dir, filename, old_mesh, zphi, err)
-            if( .not. present(lr) ) then 
-              call zmf_interpolate(old_mesh, gr%mesh, full_interpolation, zphi, st%zpsi(:, idim, ist, ik))
-            else
-              call zmf_interpolate(old_mesh, gr%mesh, full_interpolation, zphi, lr%zdl_psi(:, idim, ist, ik))
-            end if
+            call zrestart_read_function(dir, filename, gr%mesh, lr%zdl_psi(:, idim, ist, ik), err)
           end if
-          if(err <= 0) then
-            filled(idim, ist, ik) = .true.
-            ierr = ierr + 1
-          end if
-        endif
+        end if
+        if(err <= 0) then
+          filled(idim, ist, ik) = .true.
+          ierr = ierr + 1
+        end if
+
       end if
     end do
 
@@ -855,96 +827,10 @@ contains
     call io_close(iunit, grp = gr%mesh%mpi_grp)
     call io_close(iunit2, grp = gr%mesh%mpi_grp)
 
-    if(mesh_change) call interpolation_end()
-
     call profiling_out(prof_read)
     call pop_sub()
 
   contains
-
-    ! ---------------------------------------------------------
-    subroutine interpolation_init
-      call push_sub('restart.restart_read.interpolation_init')
-
-      call mesh_init_stage_1(old_mesh, old_sb, old_cv, gr%der%n_ghost)
-      call mesh_init_stage_2(old_mesh, old_sb, geo, old_cv, gr%stencil)
-      call mesh_init_stage_3(old_mesh)
-
-      if (states_are_real(st)) then
-        SAFE_ALLOCATE(dphi(1:old_mesh%np_global))
-      else
-        SAFE_ALLOCATE(zphi(1:old_mesh%np_global))
-      end if
-
-      call pop_sub()
-    end subroutine interpolation_init
-
-
-    ! ---------------------------------------------------------
-    subroutine interpolation_end
-      call push_sub('restart.restart_read.interpolation_end')
-
-      call mesh_end(old_mesh)
-      if (states_are_real(st)) then
-        SAFE_DEALLOCATE_A(dphi)
-      else
-        SAFE_DEALLOCATE_A(zphi)
-      end if
-
-      call pop_sub()
-    end subroutine interpolation_end
-
-
-    ! ---------------------------------------------------------
-    subroutine read_previous_mesh
-      call push_sub('restart.restart_read.read_previous_mesh')
-
-      mesh_change = .false.
-      full_interpolation = .true.
-
-#if defined(HAVE_MPI)
-      return ! For the moment, avoid the complications of parallel stuff.
-#endif
-      if(present(iter)) return ! No interpolation, in case we are in the td part.
-      
-      if(gr%mesh%sb%box_shape == HYPERCUBE) return !No interpolation in hypercube case
-
-      iunit_mesh  = io_open(trim(dir)//'/mesh', action='read', status='old', die=.false., grp = gr%mesh%mpi_grp)
-      if(iunit_mesh < 0) return
-
-      read(iunit_mesh, *); read(iunit_mesh, *); read(iunit_mesh, *)
-      call curvilinear_init_from_file(old_cv, iunit_mesh)
-      call simul_box_init_from_file(old_sb, iunit_mesh)
-      call io_close(iunit_mesh, grp = gr%mesh%mpi_grp)
-
-      if( .not. curvilinear_is_eq(old_cv, gr%cv) ) then
-        mesh_change = .true.
-        return
-      end if
-      if( .not. simul_box_is_eq(old_sb, gr%sb) ) then
-        mesh_change = .true.
-        ! First, check whether the spacings are the same.
-        if(old_sb%h .app. gr%sb%h) full_interpolation = .false.
-      end if
-
-      if(mesh_change) then
-        if(.not.full_interpolation) then
-          write(message(1),'(a)') 'The functions stored in "restart/gs" were obtained with' 
-          write(message(2),'(a)') 'a different simulation box. The possible missing regions will be'
-          write(message(3),'(a)') 'padded with zeroes.'
-          call write_info(3)
-        else
-          write(message(1),'(a)') 'The functions stored in "restart/gs" were obtained with' 
-          write(message(2),'(a)') 'a different mesh. The values of the functions for the current'
-          write(message(3),'(a)') 'calculations will be interpolated/extrapolated.'
-          call write_info(3)
-        end if
-        call interpolation_init()
-      endif
-    
-      call pop_sub()
-    end subroutine read_previous_mesh
-
 
     ! ---------------------------------------------------------
     subroutine fill() ! Put random function in orbitals that could not be read.
@@ -971,8 +857,8 @@ contains
       call push_sub('restart.restart_read.index_is_wrong')
 
       if(idim > st%d%dim .or. idim < 1 .or.   &
-           ist   > st%nst   .or. ist  < 1 .or.   &
-           ik    > st%d%nik .or. ik   < 1) then
+        ist   > st%nst   .or. ist  < 1 .or.   &
+        ik    > st%d%nik .or. ik   < 1) then
         index_is_wrong = .true.
       else
         index_is_wrong = .false.
