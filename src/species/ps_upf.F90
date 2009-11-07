@@ -226,8 +226,11 @@ contains
     !  ...
     ! els(natwfc) lchi(natwfc) oc(natwfc)
     do i = 1, ps_upf%n_wfs
-      read(unit,*) nl, ps_upf%l(i), ps_upf%occ(i) 
-      read(nl(1:1), '(I1)') ps_upf%n(i) 
+      read(unit,*) nl, ps_upf%l(i), ps_upf%occ(i)
+      ps_upf%n(i) = iachar(nl(1:1)) - iachar('0')
+      ! some pseudopotentials do not have a number, but just a letter,
+      ! so we assume the level is 1a
+      if(ps_upf%n(i) < 1 .or. ps_upf%n(i) > 9)  ps_upf%n(i) = 1
     end do
 
     call check_end_tag(unit, "PP_HEADER")
