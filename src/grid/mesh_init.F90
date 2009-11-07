@@ -1396,7 +1396,9 @@ subroutine mesh_partition(m, lapl_stencil, part)
         call io_close(iunit)
       end if
     end if
-
+    
+  else
+    SAFE_ALLOCATE(adjncy(1:1))
   end if
 
   select case(library)
@@ -1461,6 +1463,7 @@ subroutine mesh_partition(m, lapl_stencil, part)
   SAFE_DEALLOCATE_A(start)
   SAFE_DEALLOCATE_A(final)
   SAFE_DEALLOCATE_A(lsize)
+  SAFE_DEALLOCATE_A(adjncy)
 
   ASSERT(all(part(1:m%np_global) > 0))
   ASSERT(all(part(1:m%np_global) <= p))

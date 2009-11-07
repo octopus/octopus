@@ -748,6 +748,7 @@ contains
       call index_to_coords(mesh%idx, mesh%sb%dim, ip, ix)
       chi(1:mesh%sb%dim) = ix(1:mesh%sb%dim)*mesh%h(1:mesh%sb%dim)
       chi(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
+      xx = M_ZERO ! this initialization is required by gfortran 4.4 or we get NaNs
       call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
       xx(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
     else
