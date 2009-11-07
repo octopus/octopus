@@ -22,10 +22,6 @@
 upfdir = $(pkgdatadir)/PP/UPF
 
 dist_upf_DATA = \
-	Cr_sc.UPF    \
-	Cr_sc_so.UPF \
-	Fe_sc.UPF    \
-	Fe_sc_so.UPF \
         Xe.UPF
 
 
