@@ -605,7 +605,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine do_partition()
-#if defined(HAVE_METIS) && defined(HAVE_MPI)
+#ifdef HAVE_MPI
     integer :: i, j, ipart, jpart, ip, ix, iy, iz
     integer, allocatable :: part(:), nnb(:), gindex(:), gedges(:)
     logical, allocatable :: nb(:, :)
@@ -1192,7 +1192,7 @@ contains
 end subroutine mesh_init_stage_3
 
 
-#if defined(HAVE_METIS) && defined(HAVE_MPI)
+#ifdef HAVE_MPI
 ! ---------------------------------------------------------------
 ! Converts the mesh given by grid points into a graph. Each
 ! point is a vertex in the graph and closest neighbours are
@@ -1212,7 +1212,6 @@ subroutine mesh_partition(m, lapl_stencil, part)
   integer              :: ix(1:MAX_DIM), jx(1:MAX_DIM)
   integer              :: ne             ! Number of edges.
   integer              :: nv             ! Number of vertices.
-  integer              :: edgecut        ! Number of edges cut by partitioning.
   ! Number of vertices (nv) is equal to number of
   ! points np_global and maximum number of edges (ne) is 2*m%sb%dim*np_global
   ! (there are a little fewer because points on the border have less
@@ -1223,8 +1222,11 @@ subroutine mesh_partition(m, lapl_stencil, part)
   integer              :: ipart          ! number of the current partition
   integer, allocatable :: xadj(:)        ! Indices of adjacency list in adjncy.
   integer, allocatable :: adjncy(:)      ! Adjacency lists.
-  integer              :: options(5)     ! Options to METIS.
   integer              :: iunit          ! For debug output to files.
+#ifdef HAVE_METIS
+  integer              :: options(5)     ! Options to METIS.
+  integer              :: edgecut        ! Number of edges cut by partitioning.
+#endif
 
   type(stencil_t) :: stencil
   integer :: ii, stencil_to_use, ip
@@ -1236,7 +1238,7 @@ subroutine mesh_partition(m, lapl_stencil, part)
   FLOAT, allocatable :: xglobal(:, :)
 
   type(profile_t), save :: prof
-
+  integer :: default
  
   call profiling_in(prof, "MESH_PARTITION")
   call push_sub('mesh_init.mesh_partition')
@@ -1252,13 +1254,24 @@ subroutine mesh_partition(m, lapl_stencil, part)
   !%Section Execution::Parallelization
   !%Description
   !% Decides which library to use to perform the mesh partition. By
-  !% default METIS is used.
+  !% default METIS is used (if available).
   !%Option metis 2
-  !% METIS.
+  !% METIS library.
   !%Option zoltan 3
-  !% Zoltan.
+  !% Zoltan library.
   !%End
-  call parse_integer(datasets_check('MeshPartitionPackage'), METIS, library)
+  default = ZOLTAN
+#ifdef HAVE_METIS
+  default = METIS
+#endif
+  call parse_integer(datasets_check('MeshPartitionPackage'), default, library)
+
+#ifndef HAVE_METIS
+  if(library == METIS) then
+    message(1) = 'Error: Metis was requested, but Octopus was compiled without it.'
+    call write_fatal(1)
+  end if
+#endif
 
   !%Variable MeshPartitionStencil
   !%Type integer
@@ -1388,7 +1401,7 @@ subroutine mesh_partition(m, lapl_stencil, part)
 
   select case(library)
   case(METIS)
-
+#ifdef HAVE_METIS
     options = (/1, 2, 1, 1, 0/) ! Use heavy edge matching in METIS.
 
     ! Partition graph.
@@ -1413,7 +1426,7 @@ subroutine mesh_partition(m, lapl_stencil, part)
       message(1) = 'Error: Selected partition method is not available in Metis.'
       call write_fatal(1)
     end select
-
+#endif
   case(ZOLTAN)
 
     call zoltan_method_info(method)

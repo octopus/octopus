@@ -285,10 +285,6 @@ contains
       if(mpi_world%size > 1) then
 
         par_mask = parallel_mask
-#if !defined(HAVE_METIS)
-        ! parallelization in domains is not allowed
-        par_mask = ibclr(par_mask, P_STRATEGY_DOMAINS - 1)
-#endif
 
         call parse_integer(datasets_check('ParallelizationStrategy'), default_mask, mc%par_strategy)
 
