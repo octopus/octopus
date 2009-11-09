@@ -35,7 +35,7 @@ fi
 dnl ... check if it links ...
 if test $acx_sparskit_ok = no; then
   LIBS="$LIBS_SPARSKIT -lskit $LIBS_LAPACK $LIBS_BLAS $acx_sparskit_save_LIBS $FLIBS"
-  AC_MSG_CHECKING([for sparskit library with -lskit])
+  AC_MSG_CHECKING([for SPARSKIT library with -lskit])
   AC_LINK_IFELSE([
     subroutine distdot
     end subroutine distdot
