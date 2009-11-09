@@ -347,10 +347,6 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     ! Check for convergence. If converged, quit the eigenpair iteration loop.
     call X(lobpcg_unconv_ev)
 
-#ifdef HAVE_MPI
-    call MPI_Barrier(mpi_world, mpi_err)
-#endif
-
     if(nuc.eq.0) then
       exit iteration
     end if
