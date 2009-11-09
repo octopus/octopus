@@ -258,15 +258,23 @@ foreach my $octopus_exe (@executables){
 	    # serial or MPI run?
 	    if ( $octopus_exe_suffix =~ /mpi$/) {
 	      if( -x "$mpiexec_raw") {
-		print "Executing: cd $workdir; $mpiexec -n $np $octopus_exe_suffix > out \n";
-		$return_value = system("cd $workdir; $mpiexec -n $np $octopus_exe_suffix > out ");
+		if ("$mpiexec" =~ /ibrun/) {
+		    $specify_np = "";
+		}
+		else {
+		    $specify_np = "-n $np";
+		}
+		$command_line = "cd $workdir; $mpiexec $specify_np $octopus_exe_suffix > out ";
+		print "Executing: " . $command_line . "\n";
+		$return_value = system("$command_line");
 	      } else {
 		print "No mpiexec found: Skipping parallel test \n";
 		exit 255;
 	      }
 	    } else {
-	      print "Executing: cd $workdir; $octopus_exe_suffix > out \n";
-	      $return_value = system("cd $workdir; $octopus_exe_suffix > out ");
+	      $command_line = "cd $workdir; $octopus_exe_suffix > out ";
+	      print "Executing: " . $command_line . "\n";
+	      $return_value = system("$command_line");
 	    }
 	    system("sed -n '/Running octopus/{N;N;N;N;N;N;p;}' $workdir/out > $workdir/build-stamp");
 	    if($return_value == 0) {
