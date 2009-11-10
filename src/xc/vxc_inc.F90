@@ -89,8 +89,14 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
     call states_calc_tau_jp_gn(gr, st, grho=gdens, tau=tau, lrho=ldens)    
   end if
 
+  if(functl(1)%id == XC_MGGA_X_TB09 .and. gr%sb%periodic_dim == 3) then
+    call calc_tb09_c()
+  end if
+
+
   space_loop: do jj = 1, gr%mesh%np, n_block
     if(jj + n_block > gr%mesh%np) n_block = gr%mesh%np - jj + 1
+      
 
     ! make a local copy with the correct memory order for libxc
     ib2 = jj
@@ -364,7 +370,7 @@ contains
   ! ---------------------------------------------------------
   ! initialize GGAs
   !   *) allocates gradient of the density (gdens), dedgd, and its local variants
-  !   *) calculates the gradient of the density
+  
   subroutine gga_init()
     integer :: ii
 
@@ -446,57 +452,57 @@ contains
   ! ---------------------------------------------------------
   ! initialize meta-GGAs
   !   *) allocate the kinetic energy density, dedtau, and local variants
-  !   *) calculates tau either from a GEA or from the orbitals
+  
   subroutine mgga_init()
-    FLOAT, allocatable :: gnon(:)
-    FLOAT gn(MAX_DIM), n, tb09_c
-    integer :: ii
-    integer, SAVE :: ncall = 0 
+  
     SAFE_ALLOCATE( tau(1:gr%mesh%np, 1:spin_channels))
     SAFE_ALLOCATE(ldens(1:gr%mesh%np, 1:spin_channels))
     if(present(vxc)) then
       SAFE_ALLOCATE(dedldens(1:gr%mesh%np_part, 1:spin_channels))
       dedldens = M_ZERO
     end if
-
-    if(functl(1)%id == XC_MGGA_X_TB09 .and. gr%sb%periodic_dim == 3) then
-      SAFE_ALLOCATE(gnon(1:gr%mesh%np))
-
-      do ii = 1, gr%mesh%np
-        if(ispin == UNPOLARIZED) then
-          n = dens(ii, 1)
-          gn(1:gr%mesh%sb%dim) = gdens(ii, 1:gr%mesh%sb%dim, 1)
-        else
-          n = dens(ii, 1) + dens(ii, 2)
-          gn(1:gr%mesh%sb%dim) = gdens(ii, 1:gr%mesh%sb%dim, 1) + gdens(ii, 1:gr%mesh%sb%dim, 2)
-        end if
-         
-        if (n <= CNST(1e-7)) then 
-          gnon(ii) = CNST(0.0)
-          ! here you will have to print the true gnon(ii) with the correspondent mesh point ii
-        else
-          gnon(ii) = sqrt(sum((gn(1:gr%mesh%sb%dim)/n)**2))
-        end if
-      end do
-     
-      ncall = ncall +1 
-      tb09_c =  -CNST(0.012) + CNST(1.023)*sqrt(dmf_integrate(gr%mesh, gnon)/gr%sb%rcell_volume)
-           
-      write(*,*) "call number " , ncall
- 
- 
-    
-      
-
-      write(message(1), '(a,f8.6)') "Info: In the functional TB09 c = ", tb09_c
-      call write_info(1)
-
-      call  XC_F90(mgga_x_tb09_set_par)(functl(1)%conf, tb09_c)
-
-      SAFE_DEALLOCATE_A(gnon)
-    end if
-
   end subroutine mgga_init
+
+
+  ! ---------------------------------------------------------
+
+  subroutine calc_tb09_c()
+    FLOAT, allocatable :: gnon(:)
+    FLOAT gn(MAX_DIM), n, tb09_c
+    integer :: ii
+    integer, SAVE :: ncall = 0 
+
+    SAFE_ALLOCATE(gnon(1:gr%mesh%np))
+
+    do ii = 1, gr%mesh%np
+      if(ispin == UNPOLARIZED) then
+        n = dens(ii, 1)
+        gn(1:gr%mesh%sb%dim) = gdens(ii, 1:gr%mesh%sb%dim, 1)
+      else
+        n = dens(ii, 1) + dens(ii, 2)
+        gn(1:gr%mesh%sb%dim) = gdens(ii, 1:gr%mesh%sb%dim, 1) + gdens(ii, 1:gr%mesh%sb%dim, 2)
+      end if
+
+      if (n <= CNST(1e-7)) then 
+        gnon(ii) = CNST(0.0)
+        ! here you will have to print the true gnon(ii) with the correspondent mesh point ii
+      else
+        gnon(ii) = sqrt(sum((gn(1:gr%mesh%sb%dim)/n)**2))
+      end if
+    end do
+
+    ncall = ncall +1 
+    tb09_c =  -CNST(0.012) + CNST(1.023)*sqrt(dmf_integrate(gr%mesh, gnon)/gr%sb%rcell_volume)
+
+    write(*,*) "call number " , ncall
+    write(message(1), '(a,f8.6)') "Info: In the functional TB09 c = ", tb09_c
+    call write_info(1)
+
+    call  XC_F90(mgga_x_tb09_set_par)(functl(1)%conf, tb09_c)
+
+    SAFE_DEALLOCATE_A(gnon)
+  
+  end subroutine calc_tb09_c
 
 
   ! ---------------------------------------------------------
