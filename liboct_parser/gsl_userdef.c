@@ -24,11 +24,11 @@
 
 
 /* ------------------------------------------------------ */
-gsl_complex gsl_complex_step_real (double a)
+gsl_complex gsl_complex_step_real (gsl_complex a)
 {        
   gsl_complex z;
 	
-  if (a < 0)
+  if (GSL_REAL(a) < 0)
 	{
 		GSL_SET_COMPLEX (&z, 0, 0);
 	}

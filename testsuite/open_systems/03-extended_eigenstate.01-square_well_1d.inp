@@ -24,15 +24,11 @@ Dimensions = 1
 Spacing = 0.1
 Lx = 20
 
-B=200
-BMAX=200
-#step(x)=max(min(1.1/(exp(min(-B*(x),BMAX))+1)-0.05,1),0)
 V = 1.5
 W = 10
 %Species
  "flat" | 0 | user_defined | 1.0 | "0"
-# "well" | 0 | user_defined | 1.0 | "V*(-step(x+W/2)+step(x-W/2))" # do NOT step function: bug in the parser on ppc
- "well" | 0 | user_defined | 1.0 | "-V*max(min(1.1/(exp(min(-B*(x+W/2),BMAX))+1)-0.05,1),0)*max(min(1.1/(exp(min(-B*(W/2-x),BMAX))+1)-0.05,1),0)"
+ "well" | 0 | user_defined | 1.0 | "V*(-step(x+W/2)+step(x-W/2))"
 %
 
 add_ucells = 10

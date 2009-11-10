@@ -28,15 +28,11 @@ Lx = 20
 TDMaximumIter = 300
 TDTimeStep = 0.5
 
-B=200
-BMAX=200
-#step(x)=max(min(1.1/(exp(min(-B*(x),BMAX))+1)-0.05,1),0)
 V = 0.5
 W = 10
 %Species
  "flat" | 0 | user_defined | 2.0 | "0"
-# "well" | 0 | user_defined | 2.0 | "V*(-step(x+W/2)+step(x-W/2))" # do NOT use step function: bug in the parser on ppc
- "well" | 0 | user_defined | 2.0 | "-V*max(min(1.1/(exp(min(-B*(x+W/2),BMAX))+1)-0.05,1),0)*max(min(1.1/(exp(min(-B*(W/2-x),BMAX))+1)-0.05,1),0)"
+ "well" | 0 | user_defined | 2.0 | "V*(-step(x+W/2)+step(x-W/2))"
 %
 
 
