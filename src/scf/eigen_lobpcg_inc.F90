@@ -216,19 +216,18 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     SAFE_ALLOCATE(luc(1:lnst))
     SAFE_ALLOCATE(lnuc)
     call MPI_Allreduce(lnst, nst, 1, MPI_INTEGER, MPI_SUM, st%mpi_grp%comm, mpi_err)
-    if(there_are_constraints) then
-       call MPI_Allreduce(lnconstr, nconstr, 1, MPI_INTEGER, MPI_SUM, st%mpi_grp%comm, mpi_err)
-    end if
+    call MPI_Allreduce(lnconstr, nconstr, 1, MPI_INTEGER, MPI_SUM, st%mpi_grp%comm, mpi_err)
 #endif
   else
     nconstr =  constr_end-constr_start+1
-    ASSERT( (nconstr > 0) .eqv. there_are_constraints)
     nst     =  st_end-st_start+1
     lnuc    => nuc
     lnst    =  nst
   end if
+  ASSERT( (nconstr > 0) .eqv. there_are_constraints)
   SAFE_ALLOCATE(uc(1:nst))
   if(.not.st%parallel_in_states) then
+    nconstr = 0
     luc => uc
   end if
 
