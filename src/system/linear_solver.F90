@@ -117,7 +117,7 @@ contains
     !% Biconjugate gradients stabilized. This is an improved version
     !% of bcg that is faster and more stable.
     !%Option multigrid 7
-    !% Multigrid solver (experimental, currently is only Gauss-Jacobi).
+    !% Multigrid solver, currently only Gauss-Jacobi (development version only).
     !%Option qmr_symmetric 81
     !% Quasi-minimal residual solver, for (complex) symmetric matrices
     !% (not applicable for Sternheimer equation).
@@ -126,7 +126,7 @@ contains
     !% symmetrized form A^T A x = A^T y instead of A x = y.
     !%Option qmr_dotp 83
     !% Quasi-minimal residual solver, for matrices of the form H + iI, using the
-    !% symmetric algorithm with conjugated dot product (experimental).
+    !% symmetric algorithm with conjugated dot product (development version only).
     !%Option qmr_general 84
     !% Quasi-minimal residual solver, for general matrices, using the
     !% most general form of the algorithm.
@@ -197,6 +197,9 @@ contains
     call write_info(1)
     
     call messages_print_stress(stdout)
+
+    if(this%solver == LS_MULTIGRID) call messages_devel_version("Multigrid linear solver")
+    if(this%solver == LS_QMR_DOTP)  call messages_devel_version("QMR solver (symmetric with conjugated dot product)")
 
     call pop_sub()
 

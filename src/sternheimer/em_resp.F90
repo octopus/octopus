@@ -177,7 +177,11 @@ contains
     call write_info(1)
     call system_h_setup(sys, hm)
 
-    default_solver = LS_QMR_DOTP
+    if(use_kdotp) then
+      default_solver = LS_QMR_DOTP
+    else
+      default_solver = LS_QMR_SYMMETRIC
+    endif
 
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
       call sternheimer_init(sh, sys, hm, "EM", hermitian = states_are_real(sys%st), set_ham_var = 0, &

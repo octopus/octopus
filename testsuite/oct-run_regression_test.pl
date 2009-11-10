@@ -260,8 +260,7 @@ foreach my $octopus_exe (@executables){
 	      if( -x "$mpiexec_raw") {
 		if ("$mpiexec" =~ /ibrun/) {
 		    $specify_np = "";
-		}
-		else {
+		} else {
 		    $specify_np = "-n $np";
 		}
 		$command_line = "cd $workdir; $mpiexec $specify_np $octopus_exe_suffix > out ";
