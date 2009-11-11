@@ -1287,7 +1287,7 @@ contains
     FLOAT :: r, re, im, dist2, radius
     real(8) :: llimit(MAX_DIM), ulimit(MAX_DIM)
     FLOAT, allocatable :: xx(:, :)
-    integer :: ip, idir, iatom, icell(1:3), ilist
+    integer :: ip, idir, iatom, ilist
     integer, allocatable :: nlist(:)
     integer, pointer :: list(:, :)
 

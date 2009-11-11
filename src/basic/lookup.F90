@@ -60,7 +60,7 @@ contains
   ! -----------------------------------------
 
   subroutine lookup_end(this)
-    type(lookup_t), intent(in) :: this
+    type(lookup_t), intent(inout) :: this
 
     SAFE_DEALLOCATE_P(this%pos)
 
