@@ -120,13 +120,13 @@ contains
           - sum(jj(ip, 1:gr%mesh%sb%dim, is)**2)                      ! - j^2
       end do
 
-      SAFE_DEALLOCATE_A(grho)
-      SAFE_DEALLOCATE_A(jj)   ! these are no longer needed
-    
       ! pass this information to the caller if requested
       if(present(de)) de(1:gr%mesh%np,is) = kappa(1:gr%mesh%np,is)
 
     end do do_is
+
+    SAFE_DEALLOCATE_A(grho)
+    SAFE_DEALLOCATE_A(jj)   ! these are no longer needed
 
     select case(gr%sb%dim)
       case(3); factor = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
