@@ -262,12 +262,12 @@ contains
     integer :: i
     FLOAT :: dx, dy, dz, r, plm, cosm, sinm, cosmm1, sinmm1, cosphi, sinphi
 
-    call push_sub('math.ylmr')
+!   no push_sub: this routine is called too many times
 
     ! if l=0, no calculations are required
     if (li == 0) then
       ylm = cmplx(CNST(0.282094791773878), M_ZERO, REAL_PRECISION)
-      call pop_sub(); return
+      return
     end if
 
     r = sqrt(x*x + y*y + z*z)
@@ -275,7 +275,7 @@ contains
     ! if r=0, direction is undefined => make ylm=0 except for l=0
     if (r == M_ZERO) then
       ylm = M_z0
-      call pop_sub(); return
+      return
     end if
 
     dx = x/r; dy = y/r; dz = z/r
@@ -307,7 +307,6 @@ contains
       end do
     end if
 
-    call pop_sub()
   end subroutine ylmr
 
   ! ---------------------------------------------------------

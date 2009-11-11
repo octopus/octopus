@@ -112,7 +112,7 @@ contains
     
     if(.not.with_current_term) jj = M_ZERO
 
-    ! kapp will contain rho * D
+    ! kappa will contain rho * D
     do_is: do is = 1, st%d%nspin
       do ip = 1, gr%mesh%np
         kappa(ip, is) = kappa(ip, is)*rho(ip, is)        &    ! + tau * rho

@@ -2238,9 +2238,9 @@ contains
     type(grid_t),    intent(inout) :: gr
     type(states_t),  intent(inout) :: st
     FLOAT, optional, intent(out)   :: tau(:,:)    ! (gr%mesh%np, st%d%nspin)
-    FLOAT, optional, intent(out)   :: jp(:,:,:)  ! (gr%mesh%np, gr%mesh%sb%dim, st%d%nspin)
-    FLOAT, optional, intent(out)   :: grho(:,:,:)  ! (gr%mesh%np, gr%mesh%sb%dim, st%d%nspin)
-    FLOAT, optional, intent(out)   :: lrho(:,:)    ! (gr%mesh%np, st%d%nspin)
+    FLOAT, optional, intent(out)   :: jp(:,:,:)   ! (gr%mesh%np, gr%mesh%sb%dim, st%d%nspin)
+    FLOAT, optional, intent(out)   :: grho(:,:,:) ! (gr%mesh%np, gr%mesh%sb%dim, st%d%nspin)
+    FLOAT, optional, intent(out)   :: lrho(:,:)   ! (gr%mesh%np, st%d%nspin)
 
     CMPLX, allocatable :: wf_psi(:,:), gwf_psi(:,:,:), lwf_psi(:,:)
     CMPLX   :: c_tmp
@@ -2254,7 +2254,7 @@ contains
 
     call push_sub('states.states_calc_tau_jp_gn')
 
-    ASSERT(present( tau).or.present(  jp).or.present(grho).or.present(lrho))
+    ASSERT(present(tau) .or. present(jp) .or. present(grho) .or. present(lrho))
 
     SAFE_ALLOCATE( wf_psi(1:gr%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gwf_psi(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%dim))
@@ -2286,7 +2286,7 @@ contains
             call zderivatives_grad(gr%der, wf_psi(:,st_dim), gwf_psi(:,:,st_dim))
           end do
 
-          ! calculate the laplacian of the wavefunction
+          ! calculate the Laplacian of the wavefunction
           if (present(lrho)) then
             do st_dim = 1, st%d%dim
               call zderivatives_lapl(gr%der, wf_psi(:,st_dim), lwf_psi(:,st_dim))
