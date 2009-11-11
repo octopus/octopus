@@ -136,7 +136,7 @@ AM_CONDITIONAL(COMPILE_NEWUOA, test x${HAVE_NEWUOA} = x1)
 dnl If in parallel, enable Zoltan compilation
 AM_CONDITIONAL(COMPILE_ZOLTAN, test x"$enable_mpi" != x"no")
 
-dnl if LibNBC is enabled, check for C MPI
+dnl check for C MPI
 if test x"$enable_mpi" == x"yes"; then
   AC_CHECK_HEADER(mpi.h,,AC_MSG_ERROR([cannot find mpi.h]))
   ACX_MPI([], AC_MSG_ERROR([cannot call MPI from C]))

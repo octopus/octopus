@@ -28,6 +28,7 @@ module simul_box_m
   use io_m
   use lalg_basic_m
   use loct_m
+  use lookup_m
   use parser_m
   use kpoints_m
   use math_m
@@ -44,7 +45,6 @@ module simul_box_m
 
   private
   public ::                     &
-    cell_t,                     &
     simul_box_t,                &
     simul_box_init,             &
     simul_box_end,              &
@@ -109,13 +109,6 @@ module simul_box_m
     FLOAT          :: center(MAX_DIM) ! central point
   end type multiresolution_t
 
-
-  type cell_t
-    integer, pointer :: list_of_atoms(:)
-    integer          :: natoms
-  end type cell_t
-
-  
   type simul_box_t
     integer  :: box_shape   ! 1->sphere, 2->cylinder, 3->sphere around each atom,
                             ! 4->parallelepiped (orthonormal, up to now).
@@ -128,8 +121,7 @@ module simul_box_m
     FLOAT :: lsize(MAX_DIM) ! half of the length of the parallelepiped in each direction.
 
     FLOAT                 :: cell_length(1:3)
-    integer               :: ncell(1:3)
-    type(cell_t), pointer :: cells(:, :, :)
+    type(lookup_t)        :: atom_lookup
 
     type(c_ptr)         :: image    ! for the box defined through an image
     character(len=1024) :: user_def ! for the user-defined box
@@ -184,7 +176,7 @@ contains
 
     call read_misc()                       ! Miscellaneous stuff.
     call read_box()                        ! Parameters defining the simulation box.
-    call build_cells()
+    call sb_lookup_init()
     call read_spacing ()                   ! Parameters defining the (canonical) spacing.
     call read_box_offset()                 ! Parameters defining the offset of the origin.
     call simul_box_build_lattice(sb)       ! Build lattice vectors.
@@ -868,79 +860,27 @@ contains
       call pop_sub()
     end subroutine check_def
 
+    ! ------------------------------------------------------------
+    subroutine sb_lookup_init()
+      FLOAT, allocatable :: pos(:, :)
+      integer :: iatom
 
-    !----------------------------------------------------------
-    subroutine build_cells()
-      integer :: ix, iy, iz, iatom, round, imax(1:3), imin(1:3)
-      FLOAT :: xatom(1:3), radius
+      SAFE_ALLOCATE(pos(1:sb%dim, 1:geo%natoms))
+     
+      do iatom = 1, geo%natoms
+        pos(1:sb%dim, iatom) = geo%atom(iatom)%x(1:sb%dim)
+      end do
+      
+      call lookup_init(sb%atom_lookup, sb%dim, geo%natoms, pos)
+      
+      SAFE_DEALLOCATE_A(pos)
 
-      call push_sub('simul_box.simul_box_init.build_cells')
-
-      nullify(sb%cells)
-
-      if(sb%box_shape == MINIMUM) then
-        
-        sb%cell_length = CNST(10.0)
-
-        ! cell n contains the range from n to n + 1
-
-        sb%ncell(1:3) = floor(sb%lsize(1:3)/sb%cell_length(1:3)) + 1
-
-        SAFE_ALLOCATE(sb%cells(-sb%ncell(1):sb%ncell(1)-1,-sb%ncell(2):sb%ncell(2)-1,-sb%ncell(3):sb%ncell(3)-1))
-
-        do round = 1, 2
-          
-          forall(ix = -sb%ncell(1):sb%ncell(1) - 1, iy = -sb%ncell(2):sb%ncell(2) - 1, iz = -sb%ncell(3):sb%ncell(3) - 1) 
-            sb%cells(ix, iy, iz)%natoms = 0
-          end forall
-
-          do iatom = 1, geo%natoms
-
-            xatom(1:3) = geo%atom(iatom)%x(1:3)
-
-            if(sb%rsize > M_ZERO) then
-              radius = sb%rsize
-            else
-              radius = species_def_rsize(geo%atom(iatom)%spec)
-            end if
-
-            imin(1:3) = floor((xatom(1:3) - radius)/sb%cell_length(1:3))
-            imax(1:3) = floor((xatom(1:3) + radius)/sb%cell_length(1:3))
-
-            ! this is necessary for dims < 3
-            imin = max(imin, -sb%ncell)
-            imax = min(imax, sb%ncell - 1)
-
-            do iz = imin(3), imax(3)
-              do iy = imin(2), imax(2)
-                do ix = imin(1), imax(1)
-                  sb%cells(ix, iy, iz)%natoms = sb%cells(ix, iy, iz)%natoms + 1
-                  if(round == 2) sb%cells(ix, iy, iz)%list_of_atoms(sb%cells(ix, iy, iz)%natoms) = iatom
-                end do
-              end do
-            end do
-
-          end do  ! iatom
-          
-          if(round == 1) then
-            do iz = -sb%ncell(3), sb%ncell(3) - 1
-              do iy = -sb%ncell(2), sb%ncell(2) - 1
-                do ix = -sb%ncell(1), sb%ncell(1) - 1
-                  SAFE_ALLOCATE(sb%cells(ix, iy, iz)%list_of_atoms(1:sb%cells(ix, iy, iz)%natoms))
-                end do
-              end do
-            end do
-          end if
-
-        end do !round
-
-      end if
-
-    end subroutine build_cells
+    end subroutine sb_lookup_init
 
   end subroutine simul_box_init
 
   !--------------------------------------------------------------
+
   subroutine simul_box_build_lattice(sb, rlattice_primitive)
     type(simul_box_t), intent(inout) :: sb
     FLOAT,   optional, intent(in)    :: rlattice_primitive(:,:)
@@ -1196,24 +1136,9 @@ contains
   subroutine simul_box_end(sb)
     type(simul_box_t), intent(inout) :: sb    
 
-    integer :: ix, iy, iz
-
     call push_sub('simul_box.simul_box_end')
 
     call kpoints_end(sb%kpoints)
-
-    if(associated(sb%cells)) then
-      
-      do iz = -sb%ncell(3), sb%ncell(3) - 1
-        do iy = -sb%ncell(2), sb%ncell(2) - 1
-          do ix = -sb%ncell(1), sb%ncell(1) - 1
-            SAFE_DEALLOCATE_P(sb%cells(ix, iy, iz)%list_of_atoms)
-          end do
-        end do
-      end do
-      
-      SAFE_DEALLOCATE_P(sb%cells)
-    end if
 
     if(sb%open_boundaries) then
       ! deallocated directly to avoid problems with xlf
@@ -1362,8 +1287,9 @@ contains
     FLOAT :: r, re, im, dist2, radius
     real(8) :: llimit(MAX_DIM), ulimit(MAX_DIM)
     FLOAT, allocatable :: xx(:, :)
-    integer :: ip, idir, iatom, icell(1:3)
-    type(cell_t), pointer :: cell
+    integer :: ip, idir, iatom, icell(1:3), ilist
+    integer, allocatable :: nlist(:)
+    integer, pointer :: list(:, :)
 
 #if defined(HAVE_GDLIB)
     integer :: red, green, blue, ix, iy
@@ -1395,29 +1321,51 @@ contains
 
       case(MINIMUM)
 
-        ASSERT(associated(sb%cells))
-
-        do ip = 1, npoints
-          in_box(ip) = .false.
-          if (any(abs(xx(1:3, ip)) > sb%lsize(1:3))) cycle
-
-          icell(1:3) = floor(xx(1:3, ip)/sb%cell_length(1:3))
-
-          cell => sb%cells(icell(1), icell(2), icell(3))
-
-          do iatom = 1, cell%natoms
-            dist2 = sum((xx(1:MAX_DIM, ip) - geo%atom(cell%list_of_atoms(iatom))%x(1:MAX_DIM))**2)
-            if(sb%rsize > M_ZERO) then
-              radius = sb%rsize
-            else
-              radius = species_def_rsize(geo%atom(cell%list_of_atoms(iatom))%spec)
-            endif
-            if(dist2 <= (radius + DELTA)**2) then
-              in_box(ip) = .true.
-              exit
-            end if
+        if(sb%rsize > M_ZERO) then
+          radius = sb%rsize
+        else
+          radius = M_ZERO
+          do iatom = 1, geo%natoms
+            radius = max(radius, species_def_rsize(geo%atom(iatom)%spec))
           end do
-        end do
+        end if
+
+        radius = radius + DELTA
+
+        SAFE_ALLOCATE(nlist(1:npoints))
+
+        if(sb%rsize > M_ZERO) then
+          nullify(list)
+          call lookup_get_list(sb%atom_lookup, npoints, xx, radius, nlist)
+        else
+          call lookup_get_list(sb%atom_lookup, npoints, xx, radius, nlist, list = list)
+        end if
+
+        if(sb%rsize > M_ZERO) then
+          do ip = 1, npoints
+            in_box(ip) = (nlist(ip) /= 0)
+          end do
+        else
+          do ip = 1, npoints
+            in_box(ip) = .false.
+
+            do ilist = 1, nlist(ip)
+
+              iatom = list(ilist, ip)
+
+              dist2 = sum((xx(1:MAX_DIM, ip) - geo%atom(iatom)%x(1:MAX_DIM))**2)
+
+              if(dist2 < species_def_rsize(geo%atom(iatom)%spec)**2) then
+                in_box(ip) = .true.
+                exit
+              end if
+
+            end do
+          end do
+        end if
+
+        SAFE_DEALLOCATE_A(nlist)
+        SAFE_DEALLOCATE_P(list)
 
       case(PARALLELEPIPED, HYPERCUBE) 
         llimit(1:sb%dim) = -sb%lsize(1:sb%dim) - DELTA
@@ -1715,8 +1663,7 @@ contains
     type(simul_box_t), intent(out) :: sbout
     type(simul_box_t), intent(in)  :: sbin
 
-    integer :: il, ix, iy, iz
-    integer :: nc(1:3)
+    integer :: il
 
     call push_sub('simul_box.simul_box_copy')
 
@@ -1743,7 +1690,6 @@ contains
     sbout%hr_area%num_areas       = sbin%hr_area%num_areas
     sbout%hr_area%num_radii       = sbin%hr_area%num_radii
     sbout%hr_area%center(1:MAX_DIM)=sbin%hr_area%center(1:MAX_DIM)
-    sbout%ncell(1:MAX_DIM)        = sbin%ncell(1:MAX_DIM)
     
     call kpoints_copy(sbout%kpoints, sbin%kpoints)
 
@@ -1759,22 +1705,7 @@ contains
       end do
     end if
 
-    if (associated(sbin%cells)) then
-      nc(1:3) = sbout%ncell(1:3)
-      
-      SAFE_ALLOCATE(sbout%cells(-nc(1):nc(1)-1,-nc(2):nc(2)-1,-nc(3):nc(3)-1))
-
-      do iz = -nc(3), nc(3) - 1
-        do iy = -nc(2), nc(2) - 1
-          do ix = -nc(1), nc(1) - 1
-            sbout%cells(ix, iy, iz)%natoms = sbin%cells(ix, iy, iz)%natoms
-            SAFE_ALLOCATE(sbout%cells(ix, iy, iz)%list_of_atoms(1:sbout%cells(ix, iy, iz)%natoms))
-            sbout%cells(ix, iy, iz)%list_of_atoms = sbin%cells(ix, iy, iz)%list_of_atoms
-          end do
-        end do
-      end do
-
-    end if
+    call lookup_copy(sbin%atom_lookup, sbout%atom_lookup)
 
     call pop_sub()
   end subroutine simul_box_copy
