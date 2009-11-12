@@ -578,19 +578,24 @@ contains
 
       vpsl(1:mesh%np) = vpsl(1:mesh%np) + vl(1:mesh%np)
 
+      SAFE_DEALLOCATE_A(vl)
+
       !the localized part
       if(species_is_ps(geo%atom(iatom)%spec)) then
 
         radius = double_grid_get_rmax(gr%dgrid, geo%atom(iatom)%spec, mesh) + mesh%h(1)
 
         call submesh_init_sphere(sphere, gr%sb, mesh, geo%atom(iatom)%x, radius)
-        call double_grid_apply_local(gr%dgrid, geo%atom(iatom)%spec, mesh, sphere, geo%atom(iatom)%x, vl(1:sphere%ns))
+        SAFE_ALLOCATE(vl(1:sphere%ns))
+
+        call double_grid_apply_local(gr%dgrid, geo%atom(iatom)%spec, mesh, sphere, geo%atom(iatom)%x, vl)
         vpsl(sphere%jxyz(1:sphere%ns)) = vpsl(sphere%jxyz(1:sphere%ns)) + vl(1:sphere%ns)
+
+        SAFE_DEALLOCATE_A(vl)
         call submesh_end(sphere)
 
       end if
 
-      SAFE_DEALLOCATE_A(vl)
     end if
 
     !Non-local core corrections
