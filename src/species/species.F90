@@ -476,12 +476,13 @@ contains
     integer,             intent(in)    :: filter
 
     character(len=256) :: dirname
+    FLOAT :: local_radius
 
     call push_sub('species.species_pot_init')
     
     if(species_is_ps(this)) then
       call ps_separate(this%ps)
-
+      
       call ps_getradius(this%ps)
 
       if(filter .ne. PS_FILTER_NONE) then 
@@ -490,7 +491,22 @@ contains
       end if
 
       call ps_derivatives(this%ps)
-       
+
+      local_radius = spline_cutoff_radius(this%ps%vl, this%ps%projectors_sphere_threshold)
+
+      write(message(1), '(2a)') "Info: Pseudopotential for ", trim(this%label)
+      write(message(2), '(a,f5.1, 3a)') "      localized part radius = ", &
+        units_from_atomic(units_out%length, local_radius), " [", trim(units_abbrev(units_out%length)), "] "
+      write(message(3), '(a,f5.1,3a)') "      non-local part radius = ", &
+        units_from_atomic(units_out%length, this%ps%rc_max), " [", trim(units_abbrev(units_out%length)), "] "
+      call write_info(3)
+
+      if(max(local_radius, this%ps%rc_max) > CNST(6.0)) then
+        message(1) = "Warning: One of the radii of your pseudopotential localized parts seems"
+        message(2) = "         unusually large, check that your pseudopotential is correct."
+        call write_warning(2)
+      end if
+
       if(in_debug_mode) then
         write(dirname, '(a)') 'debug/geometry'
         call io_mkdir(dirname)
