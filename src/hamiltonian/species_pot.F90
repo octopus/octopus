@@ -100,7 +100,7 @@ contains
 
     ! build density ...
     select case (species_type(s))
-    case (SPEC_FROM_FILE, SPEC_USDEF, SPEC_ALL_E, SPEC_PS_CPI, SPEC_PS_FHI) ! ... from userdef
+    case (SPEC_FROM_FILE, SPEC_USDEF, SPEC_FULL_DELTA, SPEC_FULL_GAUSSIAN, SPEC_PS_CPI, SPEC_PS_FHI) ! ... from userdef
       do i = 1, spin_channels
         rho(1:m%np, i) = M_ONE
         x = (species_zval(s)/real(spin_channels, REAL_PRECISION)) / dmf_integrate(m, rho(:, i))
@@ -458,9 +458,14 @@ contains
     integer :: dim, i
     FLOAT   :: x(1:MAX_DIM+1), chi0(MAX_DIM), startval(MAX_DIM + 1)
     FLOAT   :: delta, alpha, beta, xx(MAX_DIM), yy(MAX_DIM), r, imrho, rerho
-    integer :: icell
+    FLOAT   :: dist2, dist2_min
+    integer :: icell, ipos, ip
     type(periodic_copy_t) :: pp
     type(ps_t), pointer :: ps
+    logical :: have_point
+#ifdef HAVE_MPI
+    real(8) :: local_min(2), global_min(2)
+#endif
 
     call push_sub('species_pot.species_get_density')
 
@@ -475,8 +480,56 @@ contains
       end do
       call periodic_copy_end(pp)
       nullify(ps)
-      
-    case(SPEC_ALL_E)
+
+    case(SPEC_FULL_DELTA)
+
+      dist2_min = huge(delta)
+      ipos = 0
+
+      do ip = 1, gr%mesh%np
+
+        rho(ip) = M_ZERO
+
+        dist2 = sum((gr%mesh%x(ip, 1:MAX_DIM) - pos(1:MAX_DIM))**2)
+        if (dist2 < dist2_min) then
+          ipos = ip
+          dist2_min = dist2
+        end if
+
+      end do
+
+      write(message(1), '(3a,f5.2,3a)') &
+        "Info: all electron specie ", trim(species_label(s)), &
+        " displaced ", units_from_atomic(units_out%length, sqrt(dist2_min)), &
+        " [ ", trim(units_abbrev(units_out%length)), " ]"
+      call write_info(1)
+
+      have_point = .true.
+#ifdef HAVE_MPI
+      ! in parallel we have to find the minimum of the whole grid
+      if(gr%mesh%parallel_in_domains) then
+
+        local_min = (/ dist2_min, dble(gr%mesh%mpi_grp%rank)/)
+        call MPI_Allreduce(local_min, global_min, 1, MPI_2DOUBLE_PRECISION, MPI_MINLOC, gr%mesh%mpi_grp%comm, mpi_err)
+
+        if(gr%mesh%mpi_grp%rank /= nint(global_min(2))) have_point = .false.
+
+      end if
+#endif
+      if(have_point) then
+        if(gr%mesh%use_curvilinear) then
+          rho(ipos) = -species_z(s)/gr%mesh%vol_pp(ipos)
+        else
+          rho(ipos) = -species_z(s)/gr%mesh%vol_pp(1)
+        end if
+      end if
+
+    case(SPEC_FULL_GAUSSIAN)
+
+      ! periodic copies are not considered in this routine
+      if(simul_box_is_periodic(gr%mesh%sb)) then
+        call messages_devel_version("spec_full_gaussian for periodic systems")
+      end if
 
       ! --------------------------------------------------------------
       ! Constructs density for an all-electron atom with the procedure
@@ -499,8 +552,8 @@ contains
       beta    = M_ONE
 
       ! the first dim variables are the position of the delta function
-      startval(1:dim) = chi0(1:dim)
-      
+      startval(1:dim) = CNST(1.0)
+
       ! the dim+1 variable is the normalization of the delta function
       startval(dim+1) = beta
 
@@ -520,11 +573,12 @@ contains
       end if
 
       ! we want a charge of -Z
-      rho = - species_z(s) * rho_p
+      rho = -species_z(s)*rho_p
 
       nullify(m_p)
       SAFE_DEALLOCATE_A(grho_p)
       SAFE_DEALLOCATE_A(rho_p)
+
 
     case(SPEC_CHARGE_DENSITY)
 
@@ -700,7 +754,7 @@ contains
         call spline_eval_vec(ps%vlr_sq, mesh%np, vl)
         nullify(ps)
         
-      case(SPEC_ALL_E, SPEC_CHARGE_DENSITY)
+      case(SPEC_FULL_DELTA, SPEC_FULL_GAUSSIAN, SPEC_CHARGE_DENSITY)
         vl(1:mesh%np) = M_ZERO
         
       end select

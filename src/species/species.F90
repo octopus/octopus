@@ -66,6 +66,7 @@ module species_m
     species_iwf_ilm,           &
     species_userdef_pot,       &
     species_is_ps,             &
+    species_is_full,           &
     species_is_local,          &
     species_real_nl_projector, &
     species_get_nlcc,          &
@@ -78,7 +79,8 @@ module species_m
     SPEC_USDEF  = 123,          & ! user-defined function
     SPEC_POINT  = 2,            & ! point charge: jellium sphere of radius 0.5 a.u.
     SPEC_JELLI  = 3,            & ! jellium sphere.
-    SPEC_ALL_E  = 124,          & ! all-electron atom
+    SPEC_FULL_DELTA     = 127,  & ! full potential atom
+    SPEC_FULL_GAUSSIAN  = 124,  & ! full potential atom
     SPEC_CHARGE_DENSITY = 125,  &
     SPEC_FROM_FILE = 126,       &
     SPEC_PS_PSF = PS_TYPE_PSF,  & ! SIESTA pseudopotential
@@ -209,12 +211,13 @@ contains
     !% In 3D, <i>e.g.</i>
     !%
     !% <tt>%Species
-    !% <br>&nbsp;&nbsp;'O'       | 15.9994 | spec_ps_psf  | 8   | 1 | 1
-    !% <br>&nbsp;&nbsp;'H'       |  1.0079 | spec_ps_hgh  | 1   | 0 | 0
-    !% <br>&nbsp;&nbsp;'jlm'     | 23.2    | spec_jelli   | 8   | 5.0
-    !% <br>&nbsp;&nbsp;'pnt'     | 32.3    | spec_point   | 2.0
-    !% <br>&nbsp;&nbsp;'udf'     |  0.0    | user_defined | 8   | "1/2*r^2"
-    !% <br>&nbsp;&nbsp;'H_all'   |  1.0079 | spec_all_e   | 1   
+    !% <br>&nbsp;&nbsp;'O'       | 15.9994 | spec_ps_psf        | 8   | 1 | 1
+    !% <br>&nbsp;&nbsp;'H'       |  1.0079 | spec_ps_hgh        | 1   | 0 | 0
+    !% <br>&nbsp;&nbsp;'jlm'     | 23.2    | spec_jelli         | 8   | 5.0
+    !% <br>&nbsp;&nbsp;'pnt'     | 32.3    | spec_point         | 2.0
+    !% <br>&nbsp;&nbsp;'udf'     |  0.0    | user_defined       | 8   | "1/2*r^2"
+    !% <br>&nbsp;&nbsp;'H_all'   |  1.0079 | spec_full_delta    | 1
+    !% <br>&nbsp;&nbsp;'H_all'   |  1.0079 | spec_full_gaussian | 1
     !% <br>%</tt>
     !%
     !% Additionally, all the pseudopotential types (PSF, HGH, FHI, UPF) can take two extra
@@ -267,42 +270,40 @@ contains
     !% ignored, as the maximum <i>l</i>-component of the pseudopotential to
     !% consider in the calculation and the <i>l</i>-component to consider as
     !% local are indicated in the pseudopotential file are cannot be changed.
-    !%Option spec_all_e   124
-    !% Atom represented with all electrons; the extra parameter is the
-    !% atomic number. See the documentation of the variable 
-    !% <tt>SpeciesAllElectronSigma</tt>.
-    !% WARNING: Currently you cannot use LCAO with this species.
+    !%Option spec_full_delta   127
+    !% Full atomic potential represented by a delta charge
+    !% distribution. The atom will be displaced to the nearest grid
+    !% point. Column 4 is the atomic number.
+    !%Option spec_full_gaussian   124
+    !% A full potential atom is defined by a Gaussian accumulation of
+    !% positive charge (distorted if curvilinear coordinates are
+    !% used), in the form:
+    !%
+    !% <math>
+    !% q(r) = z * \beta * exp[ - (\vec{r}-\vec{r0})**2 / (sqrt(2) * \delta * \sigma) ]
+    !% </math>
+    !%
+    !% <math>\beta</math> is chosen in order to maintain proper
+    !% normalization (the integral of <math>q</math> should sum up to
+    !% <math>z</math>). <math>\delta</math> is the grid spacing (the
+    !% grid spacing in the first dimension, to be precise).
+    !% <math>\vec{r0}</math> is calculated in such a way that the the
+    !% first moment of <math>q(r)/z</math> is equal to the atomic
+    !% position. For a precise description, see N. A. Modine,
+    !% <i>Phys. Rev. B</i> <b>55</b>, 10289 (1997).
+    !%
+    !% Column 4 is the atomic number and column 5 is
+    !% <math>sigma</math>, the width of the gaussian that should be
+    !% small, but you may run into numerical difficulties if it is too
+    !% small (0.25 by default).
     !%Option spec_charge_density 125
     !% The potential is created by a distribution of charge.
     !%Option species_from_file  126
     !% The potential is read from a file, whose name is given in column 5.
     !%End
 
-    call messages_obsolete_variable('SpecieAllElectronSigma', 'SpeciesAllElectronSigma')
-
-    !%Variable SpeciesAllElectronSigma
-    !%Type float
-    !%Default 0.25
-    !%Section System::Species
-    !%Description
-    !% An all-electron atom is defined by a Gaussian accumulation of positive charge 
-    !% (distorted if curvilinear coordinates are used), in the form:
-    !%
-    !% <math>
-    !% q(r) = z * \beta * exp[ - (\vec{r}-\vec{r0})**2 / (sqrt(2) * \delta * \sigma) ]
-    !% </math>
-    !%
-    !% <math>\beta</math> is chosen in order to maintain proper normalization (the integral of
-    !% <math>q</math> should sum up to <math>z</math>). <math>\delta</math> is 
-    !% the grid spacing (the grid spacing in the first dimension, to be precise). 
-    !% <math>\vec{r0}</math> is calculated in such a way that the the first moment of 
-    !% <math>q(r)/z</math> is equal to the atomic position. This number should be small,
-    !% but you may run into numerical difficulties if it is too small.
-    !%
-    !% For a precise description, see N. A. Modine, <i>Phys. Rev. B</i> <b>55</b>, 10289 (1997).
-    !%End
-    call parse_float(datasets_check('SpeciesAllElectronSigma'), CNST(0.25), s%sigma)
-    if(s%sigma <= M_ZERO) call input_error('SpeciesAllElectronSigma')
+    call messages_obsolete_variable('SpecieAllElectronSigma', 'Species')
+    call messages_obsolete_variable('SpeciesAllElectronSigma', 'Species')
 
     ! First, find out if there is a Species block.
     n_spec_block = 0
@@ -433,7 +434,7 @@ contains
       s%niwfs = 2*s%z_val
       s%omega = CNST(0.1)
 
-    case(SPEC_ALL_E)
+    case(SPEC_FULL_DELTA, SPEC_FULL_GAUSSIAN)
       s%niwfs = 2*s%z_val
       s%has_density = .true.
       if(print_info_) then
@@ -696,10 +697,20 @@ contains
     
     call pop_sub()
   end function species_is_ps
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
+
+  logical elemental function species_is_full(s)
+    type(species_t), intent(in) :: s
+    
+    species_is_full = &
+         ( s%type == SPEC_FULL_GAUSSIAN) .or. &
+         ( s%type == SPEC_FULL_DELTA)
+    
+  end function species_is_full
+
+  ! ---------------------------------------------------------
+
   logical function species_is_local(s)
     type(species_t), intent(in) :: s
 
@@ -988,10 +999,17 @@ contains
       s%Z_val = s%Z
       read_data = 5
 
-    case(SPEC_ALL_E)
+    case(SPEC_FULL_DELTA, SPEC_FULL_GAUSSIAN)
       call parse_block_float(blk, row, 3, s%Z)
       s%Z_val = s%Z
       read_data = 4
+      
+      if (parse_block_cols(blk, row) <= 4) then
+        s%sigma = CNST(0.25)
+      else
+        call parse_block_float(blk, row, 4, s%sigma)
+        if(s%sigma <= M_ZERO) call input_error('Species')
+      end if
 
     case(SPEC_CHARGE_DENSITY)
       call parse_block_float(blk, row, 3, s%Z)

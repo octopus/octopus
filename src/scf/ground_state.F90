@@ -110,12 +110,8 @@ contains
       ! The initial LCAO calculation is done by default if we have pseudopotentials.
       ! Otherwise, it is not the default value and has to be enforced in the input file.
       lcao_start_default = LCAO_START_FULL
-      species_all_electron = .false.
-      do j = 1, sys%geo%nspecies
-        species_all_electron = ( species_all_electron .or. &
-          (species_type(sys%geo%species(j)) == SPEC_ALL_E) ) 
-      end do
-      if( sys%geo%only_user_def .or. species_all_electron ) then
+
+      if( sys%geo%only_user_def .or. all(species_is_full(sys%geo%species(1:sys%geo%nspecies))) ) then
         lcao_start_default = LCAO_START_NONE
       end if
       
