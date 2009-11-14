@@ -351,7 +351,12 @@ static int parse_block_work(sym_block *blk, int l, int col, parse_result *r)
 {
   assert(blk!=NULL);
   assert(l>=0 && l<blk->n);
-  assert(col>=0 && col<blk->lines[l].n);
+  assert(col>=0);
+
+  if(col >= blk->lines[l].n){
+    fprintf(stderr, "%s\n", "Error: Value not defined in block.");
+    exit(1);
+  }
   
   return parse_exp(blk->lines[l].fields[col], r);
 }
