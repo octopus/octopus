@@ -28,7 +28,7 @@ Radius =  8.0
 TheoryLevel = independent_particles
 
 %Species
-"AWD1D" | 1 | user_defined | 1 | "1/64*(x)^4-1/4*(x)^2+1/256*(x)^3"
+"AWD1D" | 1 | spec_user_defined | 1 | "1/64*(x)^4-1/4*(x)^2+1/256*(x)^3"
 %
 
 TheoryLevel = independent_particles

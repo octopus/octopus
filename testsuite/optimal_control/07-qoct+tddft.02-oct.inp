@@ -5,7 +5,7 @@ Dimensions = 2
 omega = 0.25
 
 %Species
-"qd" | 1.0 | user_defined | 2 | "0.5*omega^2*(x^2+0.9*y^2)"
+"qd" | 1.0 | spec_user_defined | 2 | "0.5*omega^2*(x^2+0.9*y^2)"
 %
 
 %Coordinates

@@ -13,7 +13,7 @@ fromScratch = yes
 
 a = 1
 %Species
-  "Helium1D" | 2 | user_defined | 1 | "-2/sqrt(a+(x)^2) -2/sqrt(a+(y)^2)+1/sqrt(a+(x-y)^2)" 
+  "Helium1D" | 2 | spec_user_defined | 1 | "-2/sqrt(a+(x)^2) -2/sqrt(a+(y)^2)+1/sqrt(a+(x-y)^2)" 
 %
 
 %Coordinates

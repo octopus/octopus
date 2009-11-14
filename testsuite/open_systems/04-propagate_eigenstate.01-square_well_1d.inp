@@ -31,8 +31,8 @@ TDTimeStep = 0.5
 V = 0.5
 W = 10
 %Species
- "flat" | 0 | user_defined | 2.0 | "0"
- "well" | 0 | user_defined | 2.0 | "V*(-step(x+W/2)+step(x-W/2))"
+ "flat" | 0 | spec_user_defined | 2.0 | "0"
+ "well" | 0 | spec_user_defined | 2.0 | "V*(-step(x+W/2)+step(x-W/2))"
 %
 
 

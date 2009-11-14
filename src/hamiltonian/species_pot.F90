@@ -61,7 +61,7 @@ module species_pot_m
   integer, parameter :: INITRHO_PARAMAGNETIC  = 1, &
                         INITRHO_FERROMAGNETIC = 2, &
                         INITRHO_RANDOM        = 3, &
-                        INITRHO_USERDEF       = 123
+                        INITRHO_USERDEF       = 77
 
   type(mesh_t),       pointer :: m_p
   FLOAT, allocatable :: rho_p(:)
@@ -247,7 +247,7 @@ contains
       !% Magnetization density is the sum of the atomic magnetization densities.
       !%Option random 3
       !% Each atomic magnetization density is randomly rotated.
-      !%Option user_defined 123
+      !%Option user_defined 77
       !% The atomic magnetization densities are rotated so that the magnetization 
       !% vector has the same direction as a vector provided by the user. In this case,
       !% the <tt>AtomsMagnetDirection</tt> block has to be set.
@@ -499,8 +499,8 @@ contains
       end do
 
       write(message(1), '(3a,f5.2,3a)') &
-        "Info: all electron specie ", trim(species_label(s)), &
-        " displaced ", units_from_atomic(units_out%length, sqrt(dist2_min)), &
+        "Info: spec_full_delta specie ", trim(species_label(s)), &
+        " atom displaced ", units_from_atomic(units_out%length, sqrt(dist2_min)), &
         " [ ", trim(units_abbrev(units_out%length)), " ]"
       call write_info(1)
 

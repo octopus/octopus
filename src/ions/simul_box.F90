@@ -65,7 +65,7 @@ module simul_box_m
     PARALLELEPIPED = 4,         &
     BOX_IMAGE      = 5,         &
     HYPERCUBE      = 6,         &
-    BOX_USDEF      = 123
+    BOX_USDEF      = 77
 
 #define NLEADS_ 2
   integer, parameter, public :: &
@@ -563,7 +563,7 @@ contains
       !%Option box_image 5
       !% The simulation box will be defined through an image. White means that the point
       !% is contained in the simulation box, while any other color means that the point is out.
-      !%Option user_defined 123
+      !%Option user_defined 77
       !% The shape of the simulation box will be read from the variable <tt>BoxShapeUsDef</tt>.
       !%Option hypercube 6
       !% (experimental) The simulation box will be a hypercube or

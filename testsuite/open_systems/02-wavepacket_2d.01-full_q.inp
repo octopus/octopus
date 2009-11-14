@@ -36,7 +36,7 @@ TDMaximumIter = 75
 TDEvolutionMethod = crank_nicholson_src_mem
 
 %Species
- "flat" | 0 | user_defined | 2.0 | "0"
+ "flat" | 0 | spec_user_defined | 2.0 | "0"
 %
 
 # The lead.

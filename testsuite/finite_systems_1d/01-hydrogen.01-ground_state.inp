@@ -31,7 +31,7 @@ Radius = 100.0
 TheoryLevel = independent_particles
 
 %Species
-"Hydrogen1D" | 1 | user_defined | 1 | "-1/sqrt(1+(x)^2)"
+"Hydrogen1D" | 1 | spec_user_defined | 1 | "-1/sqrt(1+(x)^2)"
 %
 
 %Coordinates

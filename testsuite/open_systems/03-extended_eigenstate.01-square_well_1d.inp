@@ -27,8 +27,8 @@ Lx = 20
 V = 1.5
 W = 10
 %Species
- "flat" | 0 | user_defined | 1.0 | "0"
- "well" | 0 | user_defined | 1.0 | "V*(-step(x+W/2)+step(x-W/2))"
+ "flat" | 0 | spec_user_defined | 1.0 | "0"
+ "well" | 0 | spec_user_defined | 1.0 | "V*(-step(x+W/2)+step(x-W/2))"
 %
 
 add_ucells = 10

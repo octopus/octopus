@@ -215,7 +215,7 @@ contains
     !% <br>&nbsp;&nbsp;'H'       |  1.0079 | spec_ps_hgh        | 1   | 0 | 0
     !% <br>&nbsp;&nbsp;'jlm'     | 23.2    | spec_jelli         | 8   | 5.0
     !% <br>&nbsp;&nbsp;'pnt'     | 32.3    | spec_point         | 2.0
-    !% <br>&nbsp;&nbsp;'udf'     |  0.0    | user_defined       | 8   | "1/2*r^2"
+    !% <br>&nbsp;&nbsp;'udf'     |  0.0    | spec_user_defined  | 8   | "1/2*r^2"
     !% <br>&nbsp;&nbsp;'H_all'   |  1.0079 | spec_full_delta    | 1
     !% <br>&nbsp;&nbsp;'H_all'   |  1.0079 | spec_full_gaussian | 1
     !% <br>%</tt>
@@ -224,7 +224,7 @@ contains
     !% fields: default spacing, and default radius (used for minimum simulation box if the
     !% radius is not specified). 
     !%
-    !%Option user_defined  123
+    !%Option spec_user_defined 123
     !% Species with user-defined potential. In this case, the fourth
     !% field is the valence charge and the fifth
     !% field is a string with a mathematical expression that defines the
@@ -454,6 +454,8 @@ contains
         write(message(3),'(a,f11.6)')  '   Z = ', s%z_val
         call write_info(3)
       end if
+    case default
+      call input_error('Species')
     end select
 
     SAFE_ALLOCATE(s%iwf_l(1:s%niwfs, 1:ispin))
@@ -1050,8 +1052,7 @@ contains
       end if
 
     case default
-      write(message(1), '(a,i2,a)') "Unknown pseudopotential type: '", s%type, "'"
-      call write_fatal(1)
+      call input_error('Species')
     end select
 
     call pop_sub()

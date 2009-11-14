@@ -63,7 +63,7 @@ Radius =  15.0
 TheoryLevel = independent_particles
 
 %Species
-"Box1D" | 1 | user_defined | 1 | "-5*step(x+5)*step(5-x)"
+"Box1D" | 1 | spec_user_defined | 1 | "-5*step(x+5)*step(5-x)"
 %
 
 %Coordinates

@@ -8,7 +8,7 @@ lambda = 2.0
 omega = 1/lambda^2
 
 %Species
-"qd" | 1.0 | user_defined | 2 | "0.5*omega^2*r^2"
+"qd" | 1.0 | spec_user_defined | 2 | "0.5*omega^2*r^2"
 %
 
 %Coordinates

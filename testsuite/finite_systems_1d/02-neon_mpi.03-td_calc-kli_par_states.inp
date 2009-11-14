@@ -16,7 +16,7 @@ XCFunctional = oep_x
 OEP_Level = oep_kli
 
 %Species
-  "Neon1D" | 1 | user_defined | 10 | "-10/sqrt(0.25 + x^2)"
+  "Neon1D" | 1 | spec_user_defined | 10 | "-10/sqrt(0.25 + x^2)"
 %
 
 %Coordinates
