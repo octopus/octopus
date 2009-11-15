@@ -37,8 +37,30 @@ AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 AC_PROG_YACC
+
+dnl check whether mpi is enabled
+AC_ARG_ENABLE(mpi, AS_HELP_STRING([--enable-mpi(=PATH)], [Parallel version]))
+case $enable_mpi in
+  yes) ;;
+  no | "") enable_mpi=no ;;
+  -* | */* | *.a | *.so | *.so.* | *.o)
+    LIBS_MPI="$enable_mpi"
+    enable_mpi=yes
+    ;;
+  *) 
+    LIBS_MPI="-l$enable_mpi"
+    enable_mpi=yes
+    ;;
+esac
+
+if test x"$enable_mpi" == x"yes"; then
+  octopus_default_cc=mpicc
+else
+  octopus_default_cc=gcc
+fi
+
+AC_PROG_CC($octopus_default_cc)
 AM_PROG_AS
-AC_PROG_CC
 
 # optimizations extensions supported by the compiler
 AC_C_INLINE
@@ -90,21 +112,6 @@ fi
 if test -n "${enable_openmp}" -a x"${enable_openmp}" != x"no"; then
   USE_OMP=1
 fi
-
-dnl the MPI has a special treatment
-AC_ARG_ENABLE(mpi, AS_HELP_STRING([--enable-mpi(=PATH)], [Parallel version]))
-case $enable_mpi in
-  yes) ;;
-  no | "") enable_mpi=no ;;
-  -* | */* | *.a | *.so | *.so.* | *.o)
-    LIBS_MPI="$enable_mpi"
-    enable_mpi=yes
-    ;;
-  *) 
-    LIBS_MPI="-l$enable_mpi"
-    enable_mpi=yes
-    ;;
-esac
 
 dnl workaround for xlf compilers
 ac_enable_f90_forall=yes

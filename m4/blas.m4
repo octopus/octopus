@@ -59,6 +59,12 @@ if test $acx_blas_ok = no; then
   )
 fi
 
+dnl atlas BLAS from debian
+if test $acx_blas_ok = no; then
+   AC_CHECK_LIB(atlas, $sgemm, [acx_blas_ok=yes; LIBS_BLAS="-L/usr/lib/atlas/ -lblas -latlas"], 
+   [], [-L/usr/lib/atlas/ -lblas])
+fi
+
 dnl BLAS in version 6 of MKL or higher
 if test $acx_blas_ok = no; then
   AC_CHECK_LIB(mkl_ia32, $sgemm, [acx_blas_ok=yes; LIBS_BLAS="$LIBS_BLAS -lmkl_ia32 -lguide -lpthread"],
