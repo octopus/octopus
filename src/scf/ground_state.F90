@@ -111,7 +111,7 @@ contains
       ! Otherwise, it is not the default value and has to be enforced in the input file.
       lcao_start_default = LCAO_START_FULL
 
-      if( sys%geo%only_user_def .or. all(species_is_full(sys%geo%species(1:sys%geo%nspecies))) ) then
+      if( sys%geo%only_user_def) then
         lcao_start_default = LCAO_START_NONE
       end if
       

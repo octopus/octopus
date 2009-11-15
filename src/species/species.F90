@@ -444,6 +444,7 @@ contains
         write(message(4),'(a)')  '   for a delta density distribution.'
         call write_info(4)
       end if
+      s%omega = s%z_val 
 
     case(SPEC_CHARGE_DENSITY)
       s%niwfs = int(max(2*s%z_val, CNST(1.0)))
