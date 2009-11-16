@@ -993,6 +993,8 @@ contains
     
 
   ! ---------------------------------------------------------
+  ! See D Versano, LA Espinosa Leal, Xavier Andrade, MAL Marques, Rosa di Felice, Angel Rubio,
+  ! Phys. Chem. Chem. Phys. 11, 4481 (2009)
     subroutine out_circular_dichroism
       type(pert_t) :: angular_momentum
       integer :: idir

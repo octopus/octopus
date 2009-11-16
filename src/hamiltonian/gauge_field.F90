@@ -106,11 +106,11 @@ contains
     !%Type block
     !%Section Hamiltonian
     !%Description
-    !% The gauge vector field is used to include a uniform (but time
-    !% dependent) external electric field in a time dependent run for
+    !% The gauge vector field is used to include a uniform (but time-dependent)
+    !% external electric field in a time-dependent run for
     !% a periodic system. An optional second row specifies the initial
-    !% value for the time derivative of the gauge_field (that is set
-    !% to zero by default).  By default this field is not included.
+    !% value for the time derivative of the gauge field (which is set
+    !% to zero by default). By default this field is not included.
     !%End
     
     ! Read the initial gauge vector field
@@ -135,7 +135,10 @@ contains
   subroutine gauge_field_end(this)
     type(gauge_field_t),     intent(inout) :: this
 
+    call push_sub('gauge_field.gauge_field_end')
     this%with_gauge_field = .false.
+
+    call pop_sub()
   end subroutine gauge_field_end
 
   ! ---------------------------------------------------------
@@ -152,7 +155,10 @@ contains
     type(gauge_field_t),  intent(inout) :: this
     FLOAT,                intent(in)    :: vec_pot(1:MAX_DIM)
 
-    this%vecpot = vec_pot 
+    call push_sub('gauge_field.gauge_field_set_vec_pot')
+    this%vecpot = vec_pot
+
+    call pop_sub()
   end subroutine gauge_field_set_vec_pot
 
   ! ---------------------------------------------------------
@@ -161,7 +167,10 @@ contains
     type(gauge_field_t),  intent(inout) :: this
     FLOAT,                intent(in)    :: vec_pot_vel(1:MAX_DIM)
 
+    call push_sub('gauge_field.gauge_field_set_vec_pot_vel')
     this%vecpot_vel = vec_pot_vel
+
+    call pop_sub()
   end subroutine gauge_field_set_vec_pot_vel
 
   ! ---------------------------------------------------------
@@ -170,7 +179,10 @@ contains
     type(gauge_field_t),  intent(in) :: this
     FLOAT :: vec_pot(1:MAX_DIM)
 
+    call push_sub('gauge_field.gauge_field_get_vec_pot')
     vec_pot = this%vecpot
+
+    call pop_sub()
   end function gauge_field_get_vec_pot
 
   ! ---------------------------------------------------------
@@ -179,7 +191,10 @@ contains
     type(gauge_field_t),  intent(in) :: this
     FLOAT :: vec_pot_vel(1:MAX_DIM)
 
+    call push_sub('gauge_field.gauge_field_get_vec_pot_vel')
     vec_pot_vel = this%vecpot_vel
+
+    call pop_sub()
   end function gauge_field_get_vec_pot_vel
 
   ! ---------------------------------------------------------
@@ -188,7 +203,10 @@ contains
     type(gauge_field_t),  intent(in) :: this
     FLOAT :: vec_pot_acc(1:MAX_DIM)
 
+    call push_sub('gauge_field.gauge_field_get_vec_pot_acc')
     vec_pot_acc = this%vecpot_acc
+
+    call pop_sub()
   end function gauge_field_get_vec_pot_acc
 
   ! ---------------------------------------------------------
@@ -198,9 +216,13 @@ contains
     type(gauge_force_t),  intent(in)    :: force
     FLOAT,                intent(in)    :: dt
 
+    call push_sub('gauge_field.gauge_field_propagate')
+
     this%vecpot_acc(1:MAX_DIM) = force%vecpot(1:MAX_DIM)
 
     this%vecpot = this%vecpot + dt*this%vecpot_vel + M_HALF*dt**2*force%vecpot
+
+    call pop_sub()
   end subroutine gauge_field_propagate
 
   ! ---------------------------------------------------------
@@ -210,7 +232,10 @@ contains
     type(gauge_force_t),  intent(in)    :: force
     FLOAT,                intent(in)    :: dt
 
+    call push_sub('gauge_field.gauge_field_propagate_vel')
     this%vecpot_vel = this%vecpot_vel + M_HALF*dt*(this%vecpot_acc + force%vecpot)
+
+    call pop_sub()
   end subroutine gauge_field_propagate_vel
 
   ! ---------------------------------------------------------
@@ -225,6 +250,8 @@ contains
     integer :: ik
     FLOAT :: n_el
 
+    call push_sub('gauge_field.gauge_field_init_vec_pot')
+
     n_el = M_ZERO
     do ik = 1, st%d%spin_channels
       n_el = n_el + dmf_integrate(m, st%rho(1:m%np, ik))
@@ -232,10 +259,11 @@ contains
     
     this%wp2 = M_FOUR*M_PI*n_el/sb%rcell_volume
 
-    write (message(1), '(a,f12.6,a)') "Info: Electron gas plasmon frequency", &
+    write (message(1), '(a,f12.6,a)') "Info: Electron-gas plasmon frequency", &
          units_from_atomic(units_out%energy, sqrt(this%wp2)), " ["//trim(units_abbrev(units_out%energy))//"]"
     call write_info(1)
 
+    call pop_sub()
   end subroutine gauge_field_init_vec_pot
 
   ! ---------------------------------------------------------
@@ -254,6 +282,8 @@ contains
 #ifdef HAVE_MPI
     FLOAT :: force_tmp(1:MAX_DIM)
 #endif
+
+    call push_sub('gauge_field.gauge_field_get_force')
 
     SAFE_ALLOCATE(epsi(1:gr%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gpsi(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%dim))
@@ -305,6 +335,7 @@ contains
     SAFE_DEALLOCATE_A(gpsi)
     SAFE_DEALLOCATE_A(cpsi)
 
+    call pop_sub()
   end subroutine gauge_field_get_force
 
   ! ---------------------------------------------------------
@@ -313,8 +344,10 @@ contains
     type(gauge_field_t),  intent(in)    :: this
     type(simul_box_t),    intent(in)    :: sb
 
+    call push_sub('gauge_field.gauge_field_get_energy')
     energy = sb%rcell_volume/(M_EIGHT*M_PI*P_c**2)*sum(this%vecpot_vel(1:MAX_DIM)**2)
 
+    call pop_sub()
   end function gauge_field_get_energy
 
   ! ---------------------------------------------------------
