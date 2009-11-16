@@ -133,12 +133,12 @@ contains
     !%Section Hamiltonian::Poisson::Multigrid
     !%Description
     !% Method used to solve the linear system approximately in each grid for the
-    !% multigrid procedure that solve Poisson equation. Default is <tt>gauss_seidel</tt>,
-    !% except if curvilinear coordinates are used, the default is <tt>gauss_jacobi</tt>.
+    !% multigrid procedure that solves Poisson equation. Default is <tt>gauss_seidel</tt>,
+    !% unless curvilinear coordinates are used, in which case the default is <tt>gauss_jacobi</tt>.
     !%Option gauss_seidel 1
-    !% Gauss-Seidel
+    !% Gauss-Seidel.
     !%Option gauss_jacobi 2
-    !% Gauss-Jacobi
+    !% Gauss-Jacobi.
     !%Option gauss_jacobi2 3
     !% Alternative implementation of Gauss-Jacobi.
     !%End

@@ -128,14 +128,14 @@ contains
       !%Default gipaw
       !%Section Linear Response
       !%Description
-      !% For magnetic linear response: how to describe the coupling of electrons
-      !% to the magnetic field; that is, how to handle gauge-invariance.
+      !% For magnetic linear response: how to handle gauge-invariance in the description
+      !% of the coupling of electrons to the magnetic field.
       !%Option none 0
       !% No correction.
       !%Option gipaw 1
-      !% GIPAW correction: Pickard and Mauri, <i>Phys. Rev. Lett.</i> <b>91</b> 196401 (2003).
+      !% GIPAW correction: C Pickard and F Mauri, <i>Phys. Rev. Lett.</i> <b>91</b>, 196401 (2003).
       !%Option icl 2
-      !% ICL correction: S. Ismail-Beigi, E.K. Chang, and S.G. Louie, <i>Phys. Rev. Lett.</i> <b>87</b>, 087402 (2001).
+      !% ICL correction: S Ismail-Beigi, EK Chang, and SG Louie, <i>Phys. Rev. Lett.</i> <b>87</b>, 087402 (2001).
       !%End
       
       call parse_integer(datasets_check('MagneticGaugeCorrection'), GAUGE_GIPAW, this%gauge)

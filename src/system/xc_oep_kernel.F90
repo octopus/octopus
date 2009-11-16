@@ -34,7 +34,8 @@ subroutine xc_oep_kernel_init(oep)
   !%Description
   !% At what level shall <tt>Octopus</tt> handle the OEP kernel.
   !%Option oep_kli 3
-  !% KLI approximation.
+  !% Krieger-Li-Iafrate (KLI) approximation
+  !% (JB Krieger, Y Li, GJ Iafrate, <i>Phys. Rev. Lett. A</i> <b>146</b>, 256 (1990).
   !%End
 
 end subroutine xc_oep_kernel_init

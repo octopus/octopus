@@ -142,27 +142,26 @@ contains
     !% <br> 2D: <tt>fft</tt> if not periodic, <tt>fft_cyl</tt> if periodic in 1D, <tt>fft_nocut</tt> if periodic in 2D.
     !% <br> 3D: <tt>cg_corrected</tt> if curvilinear, <tt>isf</tt> if not periodic, <tt>fft_cyl</tt> if periodic in 1D,
     !% <tt>fft_pla</tt> if periodic in 2D, <tt>fft_nocut</tt> if periodic in 3D.
-    !%
     !%Option direct2D -2
-    !% Direct evaluation of the Hartree potential (in 2D)
+    !% Direct evaluation of the Hartree potential (in 2D).
     !%Option direct1D -1
-    !% Direct evaluation of the Hartree potential (in 1D)
+    !% Direct evaluation of the Hartree potential (in 1D).
     !%Option fft 0
-    !% FFTs using spherical cutoff (in 2D or 3D; uses FFTW)
+    !% FFTs using spherical cutoff (in 2D or 3D; uses FFTW).
     !%Option fft_cyl 1
-    !% FFTs using cylindrical cutoff (in 3D; uses FFTW)
+    !% FFTs using cylindrical cutoff (in 3D; uses FFTW).
     !%Option fft_pla 2
-    !% FFTs using planar cutoff (in 3D; uses FFTW)
+    !% FFTs using planar cutoff (in 3D; uses FFTW).
     !%Option fft_nocut 3
-    !% FFTs without using a cutoff (in 3D; uses FFTW)
+    !% FFTs without using a cutoff (in 3D; uses FFTW).
     !%Option fft_corrected 4
-    !% FFTs + corrections
+    !% FFTs + corrections.
     !%Option cg 5
-    !% Conjugate gradients
+    !% Conjugate gradients.
     !%Option cg_corrected 6
-    !% Corrected conjugate gradients
+    !% Corrected conjugate gradients.
     !%Option multigrid 7
-    !% Multigrid method
+    !% Multigrid method.
     !%Option isf 8
     !% Interpolating Scaling Functions Poisson solver.
     !%Option sete 9

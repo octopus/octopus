@@ -113,9 +113,10 @@ contains
     !%Option oep_slater 2
     !% Slater approximation.
     !%Option oep_kli 3
-    !% KLI approximation.
+    !% Krieger-Li-Iafrate (KLI) approximation
+    !% (JB Krieger, Y Li, GJ Iafrate, <i>Phys. Rev. Lett. A</i> <b>146</b>, 256 (1990).
     !%Option oep_ceda 4
-    !% CEDA (common energy denominator) approximation (not implemented).
+    !% Common-energy-denominator approximation (CEDA) (not implemented).
     !%Option oep_full 5
     !% Full solution of OEP equation using the approach of S. Kuemmel (half-implemented).
     !%End
