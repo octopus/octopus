@@ -79,8 +79,8 @@ module species_m
     SPEC_USDEF  = 123,          & ! user-defined function
     SPEC_POINT  = 2,            & ! point charge: jellium sphere of radius 0.5 a.u.
     SPEC_JELLI  = 3,            & ! jellium sphere.
-    SPEC_FULL_DELTA     = 127,  & ! full potential atom
-    SPEC_FULL_GAUSSIAN  = 124,  & ! full potential atom
+    SPEC_FULL_DELTA     = 127,  & ! full-potential atom
+    SPEC_FULL_GAUSSIAN  = 124,  & ! full-potential atom
     SPEC_CHARGE_DENSITY = 125,  &
     SPEC_FROM_FILE = 126,       &
     SPEC_PS_PSF = PS_TYPE_PSF,  & ! SIESTA pseudopotential
@@ -275,7 +275,7 @@ contains
     !% distribution. The atom will be displaced to the nearest grid
     !% point. Column 4 is the atomic number.
     !%Option spec_full_gaussian   124
-    !% A full potential atom is defined by a Gaussian accumulation of
+    !% A full-potential atom is defined by a Gaussian accumulation of
     !% positive charge (distorted if curvilinear coordinates are
     !% used), in the form:
     !%
@@ -506,8 +506,8 @@ contains
       call write_info(3)
 
       if(max(local_radius, this%ps%rc_max) > CNST(6.0)) then
-        message(1) = "Warning: One of the radii of your pseudopotential localized parts seems"
-        message(2) = "         unusually large, check that your pseudopotential is correct."
+        message(1) = "Warning: One of the radii of your pseudopotential's localized parts seems"
+        message(2) = "         unusually large; check that your pseudopotential is correct."
         call write_warning(2)
       end if
 
