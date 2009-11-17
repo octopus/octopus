@@ -777,10 +777,9 @@ contains
   ! Calculate amount of (machine) memory required for
   ! the memory term (in MBytes).
   ! Does not consider spin at the moment.
-  FLOAT function mbytes_memory_term(iter, np, nl, st, mem_type, order)
+  FLOAT function mbytes_memory_term(iter, np, st, mem_type, order)
     integer,        intent(in) :: iter
-    integer,        intent(in) :: nl
-    integer,        intent(in) :: np(nl)
+    integer,        intent(in) :: np(:)
     type(states_t), intent(in) :: st
     integer,        intent(in) :: mem_type
     integer,        intent(in) :: order
@@ -790,7 +789,7 @@ contains
     call push_sub('ob_mem.mbytes_memory_term')
 
     mbytes_memory_term = M_ZERO
-    do il = 1, nl
+    do il = 1, NLEADS
       select case(mem_type)
       case(SAVE_CPU_TIME) ! Lots of memory, but faster.
         mbytes_memory_term = mbytes_memory_term + iter*M_TWO*REAL_PRECISION* &

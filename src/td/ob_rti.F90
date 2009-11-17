@@ -393,7 +393,7 @@ contains
     
     call push_sub('ob_rti.cn_src_mem_dt')
 
-    np = maxval(gr%intf(:)%np_intf)
+    np = maxval(gr%intf(1:NLEADS)%np_intf)
 
     order = gr%der%order
     SAFE_ALLOCATE(tmp(1:gr%mesh%np, 1:st%d%ispin))
@@ -580,7 +580,7 @@ contains
 
     call push_sub('ob_rti.apply_h_eff')
 
-    SAFE_ALLOCATE(intf_wf(1:maxval(gr%intf(:)%np_intf), 1:NLEADS))
+    SAFE_ALLOCATE(intf_wf(1:maxval(gr%intf(1:NLEADS)%np_intf), 1:NLEADS))
 
     ASSERT(sign.eq.M_ONE.or.sign.eq.-M_ONE)
 
@@ -818,7 +818,7 @@ contains
       write(message(1+il), '(a,i10)') 'Dimension of '//LEAD_NAME(il)//' q-matrix:    ', gr%intf(il)%np_intf
     end do
     write(message(NLEADS+2), '(a,f10.3)')  'MBytes required for memory term: ', &
-      mbytes_memory_term(ob%max_mem_coeffs, gr%intf(:)%np_intf, NLEADS, st, ob%mem_type, order)
+      mbytes_memory_term(ob%max_mem_coeffs, gr%intf(:)%np_intf, st, ob%mem_type, order)
     write(message(NLEADS+3), '(a,i10)')    'Maximum QMR iterations:          ', qmr_max_iter
     write(message(NLEADS+4), '(a,es10.1)') 'QMR residual tolerance:          ', qmr_tol
     write(message(NLEADS+5), '(a,a20)')    'Included additional terms:       ', trim(terms)
