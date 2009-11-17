@@ -265,7 +265,7 @@ contains
       call ps_upf_end(ps_upf)
     end select
 
-    ! Fix the threshold to calculate the radius of the projector function localization spheres:
+    ! Fix the threshold to calculate the radius of the projector-function localization spheres:
 
     call messages_obsolete_variable('SpecieProjectorSphereThreshold', 'SpeciesProjectorSphereThreshold')
 
@@ -275,8 +275,8 @@ contains
     !%Section System::Species
     !%Description
     !% The pseudopotentials may be composed of a local part, and a linear combination of nonlocal
-    !% operators. These nonlocal projectors have "projector" form, |v><v| (or, more generally
-    !% speaking, |u><v|). These projectors are localized in real space -- that is, the function v
+    !% operators. These nonlocal projectors have "projector" form, |<i>v</i>&gt;&lt;<i>v</i>| (or, more generally
+    !% speaking, |<i>u</i>&gt;&lt;<i>v</i>|). These projectors are localized in real space -- that is, the function <i>v</i>
     !% has a finite support around the nucleus. This region where the projectors are localized should
     !% be small or else the computation time required to operate with them will be very large.
     !% 
