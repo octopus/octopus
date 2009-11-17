@@ -273,7 +273,7 @@ contains
     
     call push_sub('ob_rti.cn_src_mem_dt')
 
-    np = maxval(gr%intf(:)%np_intf)
+    np = maxval(gr%intf(1:NLEADS)%np_intf)
 
     order = gr%der%order
     SAFE_ALLOCATE(tmp(1:gr%mesh%np, 1:st%d%ispin))
