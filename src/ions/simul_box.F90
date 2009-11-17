@@ -67,31 +67,24 @@ module simul_box_m
     HYPERCUBE      = 6,         &
     BOX_USDEF      = 77
 
-#define NLEADS_ 2
   integer, parameter, public :: &
     LEFT      = 1,              & ! Lead indices,
     RIGHT     = 2,              & ! L=1, R=2.
     BOTTOM    = 3,              & ! for 2D open system
     TOP       = 4,              & ! 
     REAR      = 5,              & ! for 3D open system
-    FRONT     = 6,              & ! 
+    FRONT     = 6,              & !
+    BEFORE    = 7,              & ! for 4D open system
+    AFTER     = 8,              & !
     OUTER     = 1,              & ! Block indices of interface wavefunctions
     INNER     = 2,              & ! for source term.
-    NLEADS    = NLEADS_,        & ! Number of leads.
     TRANS_DIR = 1                 ! Transport is in x-direction.
 
-#if NLEADS_==2        
-  character(len=5), dimension(NLEADS), parameter, public :: LEAD_NAME = &
-    (/'left ', 'right'/)
-#endif      
-#if NLEADS_==4        
-  character(len=6), dimension(NLEADS), parameter, public :: LEAD_NAME = &
-    (/'left  ', 'right ', 'bottom', 'top   '/)
-#endif      
-#if NLEADS_==6        
-  character(len=6), dimension(NLEADS), parameter, public :: LEAD_NAME = &
-    (/'left  ', 'right ', 'bottom', 'top   ', 'rear  ', 'front '/)
-#endif      
+  integer, public :: NLEADS  ! Number of leads.
+
+  ! the lead-names of the open boundaries, maximum 4D
+  character(len=6), dimension(2*4), parameter, public :: LEAD_NAME = &
+    (/'left  ', 'right ', 'bottom', 'top   ', 'rear  ', 'front ', 'before', 'after '/)
 
 
   type, public :: interp_t
@@ -145,16 +138,16 @@ module simul_box_m
 
     ! For open boundaries, we need reference to the lead`s unit cell.
     ! This unit cell is itself a simulation box.
-    logical                    :: open_boundaries          ! Use open boundaries?
-    integer                    :: n_ucells                 ! Number of unit cells that fit in central region.
-    integer                    :: add_unit_cells(NLEADS)   ! Number of additional unit cells.
-    character(len=32)          :: lead_dataset(NLEADS)     ! Dataset name of the periodic lead calculation.
-    character(len=32)          :: lead_restart_dir(NLEADS) ! Directory where to find the lead restart files.
-    character(len=32)          :: lead_static_dir(NLEADS)  ! Static directory of the lead ground state.
-    type(simul_box_t), pointer :: lead_unit_cell(:)        ! Simulation box of the unit cells.
+    logical           :: open_boundaries             ! Use open boundaries?
+    integer           :: n_ucells                    ! Number of unit cells that fit in central region.
+    integer           :: add_unit_cells(2*MAX_DIM)   ! Number of additional unit cells.
+    character(len=32) :: lead_dataset(2*MAX_DIM)     ! Dataset name of the periodic lead calculation.
+    character(len=32) :: lead_restart_dir(2*MAX_DIM) ! Directory where to find the lead restart files.
+    character(len=32) :: lead_static_dir(2*MAX_DIM)  ! Static directory of the lead ground state.
+    type(simul_box_t), pointer :: lead_unit_cell(:)  ! Simulation box of the unit cells.
     ! The next one does not really belong here but since the parsing happens in the simul_box_init
     ! it makes things a bit easier.
-    character(len=1000)        :: lead_td_pot_formula(NLEADS) ! Td-potential of lead.
+    character(len=20000) :: lead_td_pot_formula(2*MAX_DIM) ! Td-potential of lead.
   end type simul_box_t
 
   character(len=22), parameter :: dump_tag = '*** simul_box_dump ***'
@@ -285,6 +278,7 @@ contains
         sb%lead_restart_dir = ''
         sb%lead_static_dir  = ''
         sb%lead_td_pot_formula = '0'
+        sb%add_unit_cells   = 0
         nrows = parse_block_n(blk)
         do nr = 0, nrows-1
           call parse_block_integer(blk, nr, 0, tag)
@@ -339,14 +333,14 @@ contains
             else
               sb%add_unit_cells(RIGHT) = sb%add_unit_cells(LEFT)
             end if
-            if(any(sb%add_unit_cells.lt.0)) then
+            if(any(sb%add_unit_cells(1:NLEADS).lt.0)) then
               message(1) = 'add_unit_cells in the OpenBoundaries block must not be negative.'
               call write_fatal(1)
             end if
             ! If we are doing a ground-state calculation add one more unit
             ! cell at both ends to calculate the extended eigenstates.
             if(calc_mode_is(CM_GS)) then
-              sb%add_unit_cells = sb%add_unit_cells + 1
+              sb%add_unit_cells(1:NLEADS) = sb%add_unit_cells(1:NLEADS) + 1
             end if
           case(TD_POT_FORMULA)
             call parse_block_string(blk, nr, 1, sb%lead_td_pot_formula(LEFT))
@@ -359,17 +353,17 @@ contains
           end select
         end do
         ! Check if necessary lead_dataset line has been provided.
-        if(all(sb%lead_dataset.eq.'')) then
+        if(all(sb%lead_dataset(1:NLEADS).eq.'')) then
           call input_error('OpenBoundaries')
         end if
         ! Set default restart directory.
-        if(all(sb%lead_restart_dir.eq.'')) then
+        if(all(sb%lead_restart_dir(1:NLEADS).eq.'')) then
           do il = 1, NLEADS
             sb%lead_restart_dir(il) = trim(sb%lead_dataset(il))//'restart'
           end do
         end if
         ! Set default static directory.
-        if(all(sb%lead_static_dir.eq.'')) then
+        if(all(sb%lead_static_dir(1:NLEADS).eq.'')) then
           do il = 1, NLEADS
             sb%lead_static_dir(il) = trim(sb%lead_dataset(il))//'static'
           end do
@@ -520,7 +514,20 @@ contains
         sb%mr_flag = .false.
       end if
 
-      call pop_sub()
+      !%Variable OpenBoundariesNLeads
+      !%Type integer
+      !%Default 2
+      !%Section Open Boundaries
+      !%Description
+      !% The number of leads connected to the central region. Defines the number
+      !% of open boundaries for a parallelepiped simulation box shape.
+      !%End
+      call parse_integer(datasets_check('OpenBoundariesNLeads'), 2, NLEADS)
+      if ((NLEADS < 0) .or. (NLEADS > 2*MAX_DIM)) &
+        call input_error('OpenBoundariesNLeads')
+
+
+        call pop_sub()
     end subroutine read_misc
 
 
@@ -1477,7 +1484,7 @@ contains
     end do
     write(iunit, '(a20,l7)')        'open_boundaries=    ', sb%open_boundaries
     if(sb%open_boundaries) then
-      write(iunit, '(a20,2i4)')     'add_unit_cells=     ', sb%add_unit_cells
+      write(iunit, '(a20,2i4)')     'add_unit_cells=     ', sb%add_unit_cells(1:NLEADS) ! FIXME for NLEADS>2
       write(iunit, '(a20,a32)')     'lead_restart_dir(L)=', sb%lead_restart_dir(LEFT)
       write(iunit, '(a20,a32)')     'lead_restart_dir(R)=', sb%lead_restart_dir(RIGHT)
     end if

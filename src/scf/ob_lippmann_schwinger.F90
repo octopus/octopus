@@ -77,7 +77,7 @@ contains
     FLOAT, target              :: energy
     FLOAT                      :: tol, res
     CMPLX, allocatable         :: rhs(:, :)
-    type(pg), target           :: lead(NLEADS)
+    type(pg), target           :: lead(2*MAX_DIM)
     logical                    :: conv
 #ifdef HAVE_MPI
     integer :: outcount

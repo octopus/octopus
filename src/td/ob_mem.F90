@@ -68,7 +68,7 @@ contains
   ! Allocate (machine) memory for the memory coefficents and
   ! calculate them.
   subroutine ob_mem_init(intf, hm, ob, delta, max_iter, op, spacing, order, mpi_grp)
-    type(interface_t),   intent(in)    :: intf(1:NLEADS)
+    type(interface_t),   intent(in)    :: intf(:)
     type(hamiltonian_t), intent(in)    :: hm
     type(ob_terms_t),    intent(inout) :: ob
     FLOAT,               intent(in)    :: delta

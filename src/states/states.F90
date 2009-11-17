@@ -124,7 +124,7 @@ module states_m
     integer             :: ob_ncs            ! No. of continuum states of open system.
                                             ! ob_ncs = ob_nst*st%ob_d%nik / st%d%nik
     FLOAT, pointer      :: ob_occ(:, :)      ! occupations
-    type(states_lead_t) :: ob_lead(NLEADS)
+    type(states_lead_t) :: ob_lead(2*MAX_DIM)
     ! used for the user-defined wavefunctions (they are stored as formula strings)
     character(len=1024), pointer :: user_def_states(:,:,:) ! (st%d%dim, st%nst, st%d%nik)
 

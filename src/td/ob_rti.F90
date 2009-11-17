@@ -164,7 +164,7 @@ contains
     !%Variable OpenBoundariesMaxMemCoeffs
     !%Type integer
     !%Default TDMaximumIter
-    !%Section Calculation Modes::Transport
+    !%Section Open Boundaries
     !%Description
     !% Sets the maximum number of used memory coefficients.
     !%End
@@ -185,7 +185,7 @@ contains
 
     ! Calculate td-potential.
     SAFE_ALLOCATE(td_pot(0:max_iter+1, 1:NLEADS))
-    call lead_td_pot(td_pot, gr%sb%lead_td_pot_formula, max_iter, dt)
+    call lead_td_pot(td_pot, gr%sb%lead_td_pot_formula(1:NLEADS), max_iter, dt)
     ! Allocate memory for the src_mem_u (needed for source and memory term.
     SAFE_ALLOCATE(ob%src_mem_u(0:max_iter, 1:NLEADS))
     SAFE_ALLOCATE(um(1:NLEADS))
@@ -566,8 +566,8 @@ contains
   subroutine apply_h_eff(hm, gr, lead, intf, sign, dt, t, ist, ik, zpsi, transposed)
     type(hamiltonian_t), intent(inout)    :: hm
     type(grid_t),        intent(inout)    :: gr
-    type(ob_memsrc_t), target, intent(in) :: lead(1:NLEADS)
-    type(interface_t),   intent(in)       :: intf(1:NLEADS)
+    type(ob_memsrc_t), target, intent(in) :: lead(:)
+    type(interface_t),   intent(in)       :: intf(:)
     FLOAT,               intent(in)       :: sign, dt, t
     integer,             intent(in)       :: ist
     integer,             intent(in)       :: ik
@@ -621,8 +621,8 @@ contains
   subroutine apply_h_eff_sp(hm, gr, lead, intf, sign, dt, t, ist, ik, zpsi, transposed)
     type(hamiltonian_t), intent(inout)    :: hm
     type(grid_t),        intent(inout)    :: gr
-    type(ob_memsrc_t), target, intent(in) :: lead(1:NLEADS)
-    type(interface_t),   intent(in)       :: intf(1:NLEADS)
+    type(ob_memsrc_t), target, intent(in) :: lead(:)
+    type(interface_t),   intent(in)       :: intf(:)
     FLOAT,               intent(in)       :: sign, dt, t
     integer,             intent(in)       :: ist
     integer,             intent(in)       :: ik

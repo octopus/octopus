@@ -147,8 +147,7 @@ module hamiltonian_m
     FLOAT, pointer :: ab_pot(:)   ! where we store the ab potential
 
     ! Open boundaries.
-!    type(lead_t), pointer :: lead(:)
-    type(lead_t) :: lead(NLEADS)
+    type(lead_t) :: lead(2*MAX_DIM)
     
     ! Spectral range
     FLOAT :: spectral_middle_point
@@ -188,7 +187,8 @@ module hamiltonian_m
   integer, public, parameter :: &
     NOT_ABSORBING       = 0,    &
     IMAGINARY_ABSORBING = 1,    &
-    MASK_ABSORBING      = 2
+    MASK_ABSORBING      = 2,    &
+    EXACT_ABSORBING     = 3
 
   integer, public, parameter ::        &
     INDEPENDENT_PARTICLES = 2, &
@@ -336,6 +336,15 @@ contains
     !% A <math>\sin^2</math> imaginary potential is added at the boundaries.
     !%Option mask 2
     !% A mask is applied to the wavefunctions at the boundaries.
+    !%Option exact 3
+    !% NOT WORKING YET!
+    !% An exactly absorbing scheme is used for open boundaries. This feature
+    !% comes from transport calculation and assumes that on <tt>OpenBoundariesNLeads</tt>
+    !% sides there is a lead connected. No outgoing density is reflected within the leads,
+    !% but some minor reflection will occur on the corners of the box.
+    !% This is due to the setup of semi-infinite finite width leads connected to the sides.
+    !% Warning: This scheme works only with the special Cranck-Nicholson propagator and has
+    !% quadratic scaling with time. It may be tuned with the parameter <tt>OpenBoundariesMaxMemCoeffs</tt>.
     !%End
     call parse_integer(datasets_check('AbsorbingBoundaries'), NOT_ABSORBING, hm%ab)
     if(.not.varinfo_valid_option('AbsorbingBoundaries', hm%ab)) call input_error('AbsorbingBoundaries')
@@ -557,7 +566,7 @@ contains
             call io_mkdir('debug/open_boundaries')
             fname = 'debug/open_boundaries/v_lead-'//trim(LEAD_NAME(il))//'-'//trim(channel)
             pot = io_open(trim(fname), action='write', is_tmp=.false., grp=gr%mesh%mpi_grp)
-            m => gr%mesh%lead_unit_cell(LEFT)
+            m => gr%mesh%lead_unit_cell(il)
             do ix = m%idx%nr(1, 1)+m%idx%enlarge(1), m%idx%nr(2, 1)-m%idx%enlarge(1)
               do iy = m%idx%nr(1, 2)+m%idx%enlarge(2), m%idx%nr(2, 2)-m%idx%enlarge(2)
                 write(pot, '(2i8,e24.16)') ix, iy, hm%lead(il)%vks(m%idx%Lxyz_inv(ix, iy, 0), ispin)
@@ -738,9 +747,11 @@ contains
 
     SAFE_DEALLOCATE_P(hm%ab_pot)
 
-    do il = 1, NLEADS
-      call lead_end(hm%lead(il))
-    end do
+    if(gr%sb%open_boundaries) then
+      do il = 1, NLEADS
+        call lead_end(hm%lead(il))
+      end do
+    end if
 
     call states_dim_end(hm%d)
     call scissor_end(hm%scissor)

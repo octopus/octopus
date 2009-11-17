@@ -55,7 +55,7 @@ module grid_m
   type grid_t
     type(simul_box_t)           :: sb
     type(mesh_t)                :: mesh
-    type(interface_t), pointer  :: intf(:)
+    type(interface_t)           :: intf(2*MAX_DIM)
     type(multigrid_level_t)     :: fine
     type(derivatives_t)         :: der
     type(curvilinear_t)         :: cv
@@ -140,12 +140,9 @@ contains
     end if
 
     if(gr%sb%open_boundaries) then
-      SAFE_ALLOCATE(gr%intf(1:NLEADS))
       do il = 1, NLEADS
         call interface_init(gr%mesh, gr%sb, gr%der, gr%intf(il), il)
       end do
-    else
-      nullify(gr%intf)
     end if
 
     call nl_operator_global_init()
@@ -226,7 +223,6 @@ contains
       do il=1, NLEADS
         call interface_end(gr%intf(il))
       end do
-      SAFE_DEALLOCATE_P(gr%intf)
     end if
 
     call stencil_end(gr%stencil)

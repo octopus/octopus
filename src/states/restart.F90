@@ -366,6 +366,7 @@ contains
   ! ---------------------------------------------------------
   ! Reads the interface regions of the ground-state wavefunctions of
   ! an open-boundaries calculation.
+  ! Can also read the inner interface wf of a non-open boundary gs calculation
   ! Returns (in ierr)
   ! <0 => Fatal error,
   ! =0 => read all wavefunctions,
@@ -376,7 +377,7 @@ contains
     type(grid_t),     intent(in)    :: gr
     integer,          intent(out)   :: ierr
 
-    integer              :: io_wfns, io_occs, io_mesh, np, lead_np, i, err, il
+    integer              :: io_wfns, io_occs, io_mesh, np, lead_np, np_uc, i, err, il, ip
     integer              :: ik, ist, idim, tnp
     character            :: char
     character(len=256)   :: line, filename
@@ -393,7 +394,7 @@ contains
     ! Sanity check.
     do il = 1, NLEADS
       ASSERT(associated(st%ob_lead(il)%intf_psi))
-      ASSERT(il.le.2)
+      ASSERT(il.le.2) ! FIXME: wrong if non-transport calculation
     end do
 
     ierr = 0
@@ -434,9 +435,11 @@ contains
     call iopar_read(mpi_grp, io_wfns, line, err); call iopar_read(mpi_grp, io_wfns, line, err)
     call iopar_read(mpi_grp, io_occs, line, err); call iopar_read(mpi_grp, io_occs, line, err)
 
-    lead_np = gr%mesh%lead_unit_cell(LEFT)%np
-    np = gr%intf(LEFT)%np_intf
-    SAFE_ALLOCATE(tmp(1:gr%mesh%np+2*lead_np))
+    ! FIXME: make the assertion more exact!
+!    lead_np = gr%mesh%lead_unit_cell(LEFT)%np
+!    np = gr%intf(LEFT)%np_intf
+    ASSERT(gr%mesh%np.le.gs_mesh%np)
+    SAFE_ALLOCATE(tmp(1:gs_mesh%np))
     
     do
       call iopar_read(mpi_grp, io_wfns, line, i)
@@ -455,19 +458,34 @@ contains
          ik.ge.st%d%kpt%start .and. ik.le.st%d%kpt%end) then
         ! Open boundaries imply complex wavefunctions.
         call zrestart_read_function(dir, filename, gs_mesh, tmp, err)
-        ! Here we use the fact that transport is in x-direction (x is the index
-        ! running slowest).
-        ! Outer block.
-        tnp = gr%mesh%np+2*lead_np
-        ! FIXME: check for extent>der-order if this is still correct (left side)
-        st%ob_lead(LEFT)%intf_psi(1:np, OUTER, idim, ist, ik)  = tmp(lead_np-np+1:lead_np)
-        st%ob_lead(RIGHT)%intf_psi(1:np, OUTER, idim, ist, ik) = tmp(tnp-lead_np+1:tnp-lead_np+np)
-        ! Inner block.
-        st%ob_lead(LEFT)%intf_psi(1:np, INNER, idim, ist, ik)  = tmp(lead_np+1:lead_np+np)
-        st%ob_lead(RIGHT)%intf_psi(1:np, INNER, idim, ist, ik) = tmp(tnp-lead_np-np+1:tnp-lead_np)
-        if(err.le.0) then
-          ierr = ierr + 1
-        end if
+
+        ! count the valid file readings
+        if(err.le.0) ierr = ierr + 1
+        if(err.eq.0) then
+          if(gr%mesh%np.eq.gs_mesh%np) then! no extra unit cell present
+            do il=1, NLEADS
+              forall(ip=1:np_uc) &
+                st%ob_lead(il)%intf_psi(ip, INNER, idim, ist, ik) = tmp(gr%intf(il)%index(ip))
+              ! the outer part is zero (if the source term is still active)
+              st%ob_lead(il)%intf_psi(:, OUTER, idim, ist, ik) = M_ZERO
+            end do
+          else ! transport mode with extra unit cell
+            ! FIXME: to be generalized for more than 2 leads
+            lead_np = gr%mesh%lead_unit_cell(LEFT)%np
+            np = gr%intf(LEFT)%np_intf
+            np_uc = gr%intf(LEFT)%np_uc
+            ! Here we use the fact that transport is in x-direction (x is the index
+            ! running slowest).
+            ! Outer block.
+            tnp = gr%mesh%np+2*lead_np
+            ! FIXME: check for extent>der-order if this is still correct (left side)
+            st%ob_lead(LEFT)%intf_psi(1:np, OUTER, idim, ist, ik)  = tmp(lead_np-np+1:lead_np)
+            st%ob_lead(RIGHT)%intf_psi(1:np, OUTER, idim, ist, ik) = tmp(tnp-lead_np+1:tnp-lead_np+np)
+            ! Inner block.
+            st%ob_lead(LEFT)%intf_psi(1:np, INNER, idim, ist, ik)  = tmp(lead_np+1:lead_np+np)
+            st%ob_lead(RIGHT)%intf_psi(1:np, INNER, idim, ist, ik) = tmp(tnp-lead_np-np+1:tnp-lead_np)
+          end if
+        end if ! err
       end if
     end do
     

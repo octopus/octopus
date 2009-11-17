@@ -50,9 +50,9 @@ module ob_terms_m
     integer           :: mem_type              ! SAVE_CPU_TIME: fast/lots of memory, SAVE_RAM_USAGE: slow/little memory.
     integer           :: additional_terms      ! Shall we add source and memory term?
     integer           :: max_mem_coeffs        ! How many memory coefficients? (for open system)
-    type(ob_memsrc_t) :: lead(NLEADS)          ! source and memory coefficients for each lead
+    type(ob_memsrc_t) :: lead(2*MAX_DIM)       ! source and memory coefficients for each lead
     CMPLX, pointer    :: src_mem_u(:, :)       ! Prefactor for source and memory term. (t, il)
-    FLOAT             :: td_pot0(NLEADS)       ! bias at t=0
+    FLOAT             :: td_pot0(2*MAX_DIM)    ! bias at t=0
   end type ob_terms_t
 
 end module ob_terms_m

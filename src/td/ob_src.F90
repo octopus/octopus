@@ -60,7 +60,7 @@ contains
   subroutine ob_src_init(ob, st, intf)
     type(ob_terms_t),  intent(inout) :: ob
     type(states_t),    intent(in)    :: st
-    type(interface_t), intent(in)    :: intf(1:NLEADS)
+    type(interface_t), intent(in)    :: intf(:)
 
     integer :: il, np
     call push_sub('ob_src.ob_src_init')
