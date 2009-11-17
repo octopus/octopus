@@ -65,9 +65,6 @@ contains
     logical, optional, intent(in) :: defaults
 
     character(len=128) :: filename
-    character(len=256) :: node_hook
-    logical :: file_exists, mpi_debug_hook
-    integer :: sec, usec
 
     ! cannot use push/pop before initializing io
 
@@ -132,11 +129,6 @@ contains
     ! ... and if necessary create workdir (will not harm if work_dir is already there)
     if (work_dir.ne.'.') call loct_mkdir(trim(work_dir))
 
-    ! create debug directory if in debugging mode
-    if(in_debug_mode) then
-      call loct_mkdir(trim(work_dir)//'/'//'debug')
-    end if
-
     !%Variable FlushMessages
     !%Type logical
     !%Default no
@@ -153,6 +145,38 @@ contains
       call loct_rm('messages.stdout')
       call loct_rm('messages.stderr')
     end if
+
+  end subroutine io_init
+
+
+  ! ---------------------------------------------------------
+  ! In this routine we should put all initializations of io
+  ! that require the current_label dataset.
+  subroutine io_init_datasets()
+    character(len=256) :: node_hook
+    logical :: file_exists, mpi_debug_hook
+    integer :: sec, usec
+
+    if(in_debug_mode) call io_mkdir('debug')
+
+    if(conf%debug_level .ge. 100) then
+      !wipe out debug trace files from previous runs to start fresh rather than appending
+      call delete_debug_trace()
+    endif
+
+    !%Variable TmpDir
+    !%Default "restart/"
+    !%Type string
+    !%Section Execution::IO
+    !%Description
+    !% The name of the directory where <tt>Octopus</tt> stores binary information
+    !% like the wavefunctions.
+    !%End
+    call parse_string('TmpDir', trim(current_label)//'restart/', tmpdir)
+    call io_mkdir(tmpdir, is_tmp=.true.)
+
+    ! create static directory
+    call io_mkdir(STATIC_DIR, is_tmp=.false.)
 
     if(in_debug_mode) then
       !%Variable MPIDebugHook
@@ -200,31 +224,6 @@ contains
       end if
     end if
 
-  end subroutine io_init
-
-
-  ! ---------------------------------------------------------
-  ! In this routine we should put all initializations of io
-  ! that require the current_label dataset.
-  subroutine io_init_datasets()
-    if(conf%debug_level .ge. 100) then
-      !wipe out debug trace files from previous runs to start fresh rather than appending
-      call delete_debug_trace()
-    endif
-
-    !%Variable TmpDir
-    !%Default "restart/"
-    !%Type string
-    !%Section Execution::IO
-    !%Description
-    !% The name of the directory where <tt>Octopus</tt> stores binary information
-    !% like the wavefunctions.
-    !%End
-    call parse_string('TmpDir', trim(current_label)//'restart/', tmpdir)
-    call io_mkdir(tmpdir, is_tmp=.true.)
-
-    ! create static directory
-    call io_mkdir(STATIC_DIR, is_tmp=.false.)
   end subroutine io_init_datasets
 
 
