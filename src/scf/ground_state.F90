@@ -105,7 +105,9 @@ contains
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
       ! get the effective potential (we don`t need the eigenvalues yet)
-      call v_ks_calc(sys%gr, sys%ks, hm, sys%st, calc_eigenval=.false.) 
+      call v_ks_calc(sys%gr, sys%ks, hm, sys%st, calc_eigenval=.false.)
+      ! eigenvalues have nevertheless to be initialized to something
+      sys%st%eigenval = M_ZERO
 
       ! The initial LCAO calculation is done by default if we have pseudopotentials.
       ! Otherwise, it is not the default value and has to be enforced in the input file.
