@@ -1138,6 +1138,7 @@ contains
 
     call push_sub('simul_box.simul_box_end')
 
+    call lookup_end(sb%atom_lookup)
     call kpoints_end(sb%kpoints)
 
     if(sb%open_boundaries) then

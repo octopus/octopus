@@ -21,6 +21,7 @@
 
 module lookup_m
   use global_m
+  use loct_m
   use messages_m
   use profiling_m
 
@@ -51,10 +52,10 @@ contains
     
     this%nobjs = nobjs
     this%dim = dim
-
     SAFE_ALLOCATE(this%pos(1:this%dim, 1:this%nobjs))
     
     this%pos(1:this%dim, 1:this%nobjs) = pos(1:this%dim, 1:this%nobjs)
+
   end subroutine lookup_init
 
   ! -----------------------------------------
@@ -74,10 +75,7 @@ contains
 
     cout%nobjs = cin%nobjs
     cout%dim = cin%dim
-
-    SAFE_ALLOCATE(cout%pos(1:cout%dim, 1:cout%nobjs))
-    
-    cout%pos(1:cout%dim, 1:cout%nobjs) = cin%pos(1:cout%dim, 1:cout%nobjs)
+    call loct_pointer_copy(cout%pos, cin%pos)
    
   end subroutine lookup_copy
 
