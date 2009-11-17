@@ -22,9 +22,9 @@
 ! WARNING: This subroutine is clearly broken after the changes
 ! to include temperature in linear response
 subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
-  type(states_t),   intent(inout) :: st
-  type(grid_t),     intent(inout) :: gr
-  type(lr_t),       intent(inout) :: lr
+  type(states_t),       intent(inout) :: st
+  type(grid_t),         intent(inout) :: gr
+  type(lr_t),           intent(inout) :: lr
   type(lr_t), optional, intent(inout) :: lr_m !when this argument is present, we are doing dynamical response
 
   integer :: i, is, ist, idim, ik
@@ -39,7 +39,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
   FLOAT, parameter :: dmin = CNST(1e-10)
   FLOAT :: ik_weight
 
-  call push_sub('em_resp_inc.Xcalc_lr_elf')
+  call push_sub('em_resp_calc_inc.Xlr_calc_elf')
 
   ASSERT(.false.)
 
@@ -259,12 +259,12 @@ subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, n
 
   integer :: dir1, dir2, ndir_, ist, ik, idim
   CMPLX :: term, subterm
-  type(mesh_t), pointer :: m
-  m => sys%gr%mesh
+  type(mesh_t), pointer :: mesh
+  mesh => sys%gr%mesh
 
-  call push_sub('em_resp_calc.Xcalc_polarizability_periodic')
+  call push_sub('em_resp_calc_inc.Xcalc_polarizability_periodic')
 
-  ndir_ = sys%gr%mesh%sb%dim
+  ndir_ = mesh%sb%dim
   if(present(ndir)) ndir_ = ndir
 
   ! alpha_ij(w) = -e sum(m occ, k) [(<u_mk(0)|-id/dk_i)|u_mkj(1)(w)> + <u_mkj(1)(-w)|(-id/dk_i|u_mk(0)>)]
@@ -279,15 +279,15 @@ subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, n
         term = M_ZERO
         do ist = 1, sys%st%nst
           do idim = 1, sys%st%d%dim
-            subterm = - X(mf_dotp)(m, kdotp_lr(dir1)%X(dl_psi)(1:m%np, idim, ist, ik), &
-              em_lr(dir2, 1)%X(dl_psi)(1:m%np, idim, ist, ik))
+            subterm = - X(mf_dotp)(mesh, kdotp_lr(dir1)%X(dl_psi)(1:mesh%np, idim, ist, ik), &
+              em_lr(dir2, 1)%X(dl_psi)(1:mesh%np, idim, ist, ik))
             term = term + subterm
 
             if(nsigma == 1) then
               term = term + conjg(subterm)
             else
-              term = term - X(mf_dotp)(m, em_lr(dir2, 2)%X(dl_psi)(1:m%np, idim, ist, ik), & 
-                kdotp_lr(dir1)%X(dl_psi)(1:m%np, idim, ist, ik))
+              term = term - X(mf_dotp)(mesh, em_lr(dir2, 2)%X(dl_psi)(1:mesh%np, idim, ist, ik), & 
+                kdotp_lr(dir1)%X(dl_psi)(1:mesh%np, idim, ist, ik))
             end if
           enddo
         enddo
@@ -429,14 +429,14 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   FLOAT,  allocatable :: rho(:,:), kxc(:, :, :, :)
   R_TYPE, allocatable :: hpol_density(:)
 
-  call push_sub('em_resp_inc.Xlr_calc_beta')
+  call push_sub('em_resp_calc_inc.Xlr_calc_beta')
 
   call profiling_in(beta_prof, "CALC_BETA")
 
-  np   =  sys%gr%mesh%np
-  ndim =  sys%gr%sb%dim
   st   => sys%st
   mesh => sys%gr%mesh
+  np   =  mesh%np
+  ndim =  sys%gr%sb%dim
 
   ASSERT(present(kdotp_lr) .eqv. present(kdotp_em_lr))
   ! either both are absent for finite, or both present for periodic
@@ -573,6 +573,8 @@ contains
     integer, intent(in)  :: i
     integer, intent(out) :: p(1:3)
 
+    call push_sub('em_resp_calc_inc.Xlr_calc_beta.get_permutation')
+
     ASSERT( i>=1 .and. i <= 6)
 
     select case(i)
@@ -586,9 +588,11 @@ contains
 
     end select
 
+    call pop_sub()
   end subroutine get_permutation
 
   subroutine get_matrix_elements()
+    call push_sub('em_resp_calc_inc.Xlr_calc_beta.get_matrix_elements')
 
     do ik = st%d%kpt%start, st%d%kpt%end
       ispin = states_dim_get_spin_index(sys%st%d, ik)
@@ -641,6 +645,7 @@ contains
       end do
     end do
 
+    call pop_sub()
   end subroutine get_matrix_elements
 
 end subroutine X(lr_calc_beta)
@@ -663,6 +668,8 @@ subroutine X(lr_calc_2np1) (sh, hm, st, geo, gr, lr1, lr2, lr3, pert1, pert2, pe
   integer :: ik, ist, jst, idim
   R_TYPE :: term
   R_TYPE, allocatable :: tmp(:, :), me23(:, :)
+
+  call push_sub('em_resp_calc_inc.Xlr_calc_2np1')
 
   SAFE_ALLOCATE(tmp(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(me23(1:st%nst, 1:st%nst))
@@ -697,6 +704,7 @@ subroutine X(lr_calc_2np1) (sh, hm, st, geo, gr, lr1, lr2, lr3, pert1, pert2, pe
   SAFE_DEALLOCATE_A(tmp)
   SAFE_DEALLOCATE_A(me23)
 
+  call pop_sub()
 end subroutine X(lr_calc_2np1)
 
 !! Local Variables:

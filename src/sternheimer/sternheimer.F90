@@ -41,8 +41,8 @@ module sternheimer_m
   use preconditioners_m
   use profiling_m
   use restart_m
-  use simul_box_m
   use scf_tol_m
+  use simul_box_m
   use smear_m
   use states_m
   use states_calc_m
@@ -69,8 +69,8 @@ module sternheimer_m
        sternheimer_add_hartree,   &
        dsternheimer_calc_hvar,    &
        zsternheimer_calc_hvar,    &
-       dsternheimer_seT_rhs,      &
-       zsternheimer_seT_rhs,      &
+       dsternheimer_set_rhs,      &
+       zsternheimer_set_rhs,      &
        sternheimer_have_rhs,      &
        sternheimer_unset_rhs,     &
        sternheimer_has_converged
@@ -86,7 +86,6 @@ module sternheimer_m
      logical               :: add_fxc
      logical               :: add_hartree
      logical               :: ok
-     logical               :: hmermitian 
      logical               :: occ_response
      logical               :: preorthogonalization
      logical               :: oep_kernel
@@ -97,12 +96,11 @@ module sternheimer_m
 contains
   
   !-----------------------------------------------------------
-  subroutine sternheimer_init(this, sys, hm, prefix, hermitian, set_ham_var, set_occ_response, default_solver)
+  subroutine sternheimer_init(this, sys, hm, prefix, set_ham_var, set_occ_response, default_solver)
     type(sternheimer_t), intent(out)   :: this
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: hm
     character(len=*),    intent(in)    :: prefix
-    logical, optional,   intent(in)    :: hermitian
     integer, optional,   intent(in)    :: set_ham_var
     logical, optional,   intent(in)    :: set_occ_response
     integer, optional,   intent(in)    :: default_solver
@@ -138,7 +136,7 @@ contains
     !% Hamiltonian. V_ext is always considered. The default is to include
     !% also the exchange-correlation and Hartree terms, which fully
     !% takes into account local fields.
-    !% <tt>hartree</tt> gives you the random-phase approximation (RPA).
+    !% Just <tt>hartree</tt> gives you the random-phase approximation (RPA).
     !% If you want to choose the exchange-correlation kernel, use the variable
     !% <tt>XCKernel</tt>. For <tt>kdotp</tt> and magnetic <tt>em_resp</tt> modes,
     !% the value <tt>V_ext_only</tt> is used and this variable is ignored.

@@ -133,7 +133,7 @@ contains
     end if
     call write_info(1)
 
-    call sternheimer_init(sh, sys, hm, "KdotP_", hermitian = .true., &
+    call sternheimer_init(sh, sys, hm, "KdotP_", &
          set_ham_var = 0, set_occ_response = (kdotp_vars%occ_solution_method == 0), default_solver = LS_QMR_DOTP)
     ! ham_var_set = 0 results in HamiltonianVariation = V_ext_only
 

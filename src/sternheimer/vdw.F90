@@ -80,7 +80,7 @@ contains
 
     call input()
     call init_()
-    call sternheimer_init(sh, sys, hm, "Pol", hermitian=.false.)
+    call sternheimer_init(sh, sys, hm, "Pol")
 
     if(gauss_start == 1 .and. mpi_grp_is_root(mpi_world)) then
       iunit = io_open(VDW_DIR//'vdw_c6', action='write')
