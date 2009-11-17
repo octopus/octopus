@@ -197,6 +197,9 @@ contains
 #endif
 
     SAFE_DEALLOCATE_A(rhs)
+    do il = 1, NLEADS
+      SAFE_DEALLOCATE_P(lead(il)%green)
+    end do
 
     call pop_sub()
   end subroutine lippmann_schwinger
