@@ -2,7 +2,7 @@
  'H_f' | 0 | 0 | 0
 %
 %Species 
- 'H_f' | 1.00794 | spec_full_gaussian | 1
+ 'H_f' | 1.00794 | spec_full_delta | 1
 %
 
 LCAOStart = no
