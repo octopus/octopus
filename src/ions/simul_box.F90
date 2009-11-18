@@ -1562,7 +1562,7 @@ contains
     
     if(sb%open_boundaries) then
       tdir = (il+1)/2
-      lead_unit_cell_extent = int(2*sb%lead_unit_cell(il)%lsize(tdir)/sb%h(tdir))
+      lead_unit_cell_extent = nint(2*sb%lead_unit_cell(il)%lsize(tdir)/sb%h(tdir))
     else
       lead_unit_cell_extent = -1
     end if
