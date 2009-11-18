@@ -60,7 +60,7 @@ contains
     integer      :: lcao_start, lcao_start_default
     type(lcao_t) :: lcao
     type(scf_t)  :: scfv
-    integer      :: ierr, s1, s2, k1, k2, j
+    integer      :: ierr, s1, s2, k1, k2, j, inp, idim, is, ik
     logical      :: species_all_electron, lcao_done
 
     call push_sub('ground_state.ground_state_run')
@@ -177,7 +177,18 @@ contains
           s2 = sys%st%st_end
           k1 = sys%st%d%kpt%start
           k2 = sys%st%d%kpt%end
-          sys%st%zpsi(1:sys%gr%mesh%np, :, s1:s2, k1:k2) = sys%st%zphi(1:sys%gr%mesh%np, :, s1:s2, k1:k2)
+          ! the following copying does NOT ALWAYS work, especially for large numbers of k2
+          !sys%st%zpsi(1:sys%gr%mesh%np, :, s1:s2, k1:k2) = sys%st%zphi(1:sys%gr%mesh%np, :, s1:s2, k1:k2)
+          ! so do it the stupid and slow way
+          forall (ik = k1:k2)
+            forall (is = s1:s2)
+              forall (idim = 1:sys%st%d%dim)
+                forall (inp = 1:sys%gr%mesh%np)
+                  sys%st%zpsi(inp, idim, is, ik) = sys%st%zphi(inp, idim, is, ik)
+                end forall
+              end forall
+            end forall
+          end forall
         else
           ! Randomly generate the initial wavefunctions.
           call states_generate_random(sys%st, sys%gr%mesh)
