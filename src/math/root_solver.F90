@@ -23,9 +23,9 @@ module root_solver_m
   use datasets_m
   use global_m
   use lalg_adv_m
-  use parser_m
   use messages_m
   use ode_solver_m
+  use parser_m
   use profiling_m
 
   implicit none
@@ -57,7 +57,7 @@ module root_solver_m
     integer :: solver_type    ! what solver to use (see ROOT_* variables above)_m
     integer :: dim            ! dimensionality of the problem
     integer :: maxiter        ! maximal number of iterations
-    integer :: usediter       ! number of actually performed iterations
+    integer :: usediter       ! number of iterations actually performed
     FLOAT   :: abs_tolerance
     FLOAT   :: rel_tolerance
     FLOAT   :: ws_radius      ! radius of circle in complex plane; used for initial values
@@ -65,7 +65,7 @@ module root_solver_m
     integer :: poly_order
   end type root_solver_t
 
-  ! a few variables which we have to define global
+  ! a few variables which we have to define globally
   ! for this module
   CMPLX, allocatable :: gbase_coeff(:), gcoeff(:)
   integer            :: gorder
@@ -116,15 +116,15 @@ contains
     !%Description
     !% Specifies what kind of root solver will be used.
     !%Option root_bisection 1
-    !% Bisection method
+    !% Bisection method.
     !%Option root_brent 2
-    !% Brent method
+    !% Brent method.
     !%Option root_newton 3
-    !% Newton method
+    !% Newton method.
     !%Option root_laguerre 4
-    !% Laguerre method
+    !% Laguerre method.
     !%Option root_watterstrom 5
-    !% Watterstrom method
+    !% Watterstrom method.
     !%End
     call parse_integer(datasets_check('RootSolver'),        ROOT_NEWTON, rs%solver_type)
     if( rs%solver_type.lt.ROOT_MINVAL.or.rs%solver_type.gt.ROOT_MAXVAL ) then
@@ -136,7 +136,7 @@ contains
     !%Default 100
     !%Section Math::General
     !%Description
-    !% In case of an interative root solver this variable determines the maximal number
+    !% In case of an iterative root solver, this variable determines the maximum number
     !% of iteration steps.
     !%End
     call parse_integer    (datasets_check('RootSolverMaxIter'),               100, rs%maxiter)
@@ -146,7 +146,7 @@ contains
     !%Default 1e-8
     !%Section Math::General
     !%Description
-    !% Relative tolerance for the root finding process.
+    !% Relative tolerance for the root-finding process.
     !%End
     call parse_float  (datasets_check('RootSolverRelTolerance'),   CNST(1e-8), rs%rel_tolerance)
 
@@ -155,7 +155,7 @@ contains
     !%Default 1e-8
     !%Section Math::General
     !%Description
-    !% Relative tolerance for the root finding process.
+    !% Relative tolerance for the root-finding process.
     !%End
     call parse_float  (datasets_check('RootSolverAbsTolerance'),   CNST(1e-8), rs%abs_tolerance)
 
@@ -174,8 +174,8 @@ contains
     !%Default 1.0
     !%Section Math::General
     !%Description
-    !% Radius of circle in the complex plane. If RootSolverWSRadius = 1.0
-    !% the unit roots of a n-th order polynomial are taken as initial values.
+    !% Radius of circle in the complex plane. If <tt>RootSolverWSRadius = 1.0</tt>,
+    !% the unit roots of an <i>n</i>th-order polynomial are taken as initial values.
     !%End
     call parse_float  (datasets_check('RootSolverWSRadius'),       CNST( 1.0), rs%ws_radius)
 
@@ -254,19 +254,18 @@ contains
     !%Default ode_pd89
     !%Section Math::General
     !%Description
-    !% The Watterstrom method (cf. J. Comp. Phys., 8, (1971), p. 304-308) transforms
-    !% the root finding for n-th order polynomials into the solution of n uncoupled 
-    !% ODEs. This variable specifies the ODESolver that should be used for the ODE 
-    !% stepping. Valid solver types are the ones that are allowed for ODESolver (cf. 
-    !% variable ODESolver).
+    !% The Watterstrom method (<i>J. Comp. Phys.</i> <b>8</b>, 304-308 (1971)) transforms
+    !% finding roots for <i>n</i>th-order polynomials into the solution of <i>n</i> uncoupled 
+    !% ODEs. This variable specifies the solver that should be used for the ODE 
+    !% stepping. Valid solver types are those allowed for the <tt>ODESolver</tt> variable.
     !%Option ode_rk4 1
-    !% Standard Runge-Kutta 4th order
+    !% Standard 4th-order Runge-Kutta.
     !%Option ode_fb78 2
-    !% Fehlberg solver
+    !% Fehlberg solver.
     !%Option ode_vr89 3
-    !% Verner solver
+    !% Verner solver.
     !%Option ode_pd89 4
-    !% Prince-Dormand solver
+    !% Prince-Dormand solver.
     !%End
     call parse_integer(datasets_check('WatterstromODESolver'),       ODE_PD89, os%solver_type)
 
@@ -276,11 +275,11 @@ contains
     !%Section Math::General
     !%Description
     !% Number of steps which the chosen ODE solver should perform
-    !% in the integration interval [a,b] of the Watterstrom ODE.
+    !% in the integration interval [<i>a</i>, <i>b</i>] of the Watterstrom ODE.
     !%End
     call parse_integer(datasets_check('WatterstromODESolverNSteps'),      400, os%nsteps)
 
-    ! setup ode solver
+    ! set up ODE solver
     os%nsize       = order
     os%tmin        = M_ZERO
     os%tmax        = M_ONE
@@ -306,6 +305,8 @@ contains
     CMPLX, allocatable   :: numerator(:), denominator(:)
     integer :: j
 
+    call push_sub('root_solver.func_ws')
+
     SAFE_ALLOCATE(  numerator(1:size))
     SAFE_ALLOCATE(denominator(1:size))
     numerator   = M_ZERO
@@ -323,6 +324,8 @@ contains
 
     SAFE_DEALLOCATE_A(numerator)
     SAFE_DEALLOCATE_A(denominator)
+
+    call pop_sub()
 
   end subroutine func_ws
 
@@ -345,7 +348,7 @@ contains
     FLOAT   :: err
     FLOAT, allocatable :: f(:), jf(:, :), delta(:, :), rhs(:, :)
 
-    call push_sub('root_solver_inc.Xroot_newton')
+    call push_sub('root_solver.droot_newton')
 
     SAFE_ALLOCATE(    f(1:rs%dim))
     SAFE_ALLOCATE(   jf(1:rs%dim, 1:rs%dim))
