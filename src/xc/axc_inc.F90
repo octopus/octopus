@@ -18,27 +18,28 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine xc_get_vxc_and_axc(gr, xcs, st, rho, j, ispin, vxc, axc, ex, ec, exc_j, ip, qtot)
+subroutine xc_get_vxc_and_axc(gr, xcs, st, rho, current_density, ispin, vxc, axc, ex, ec, &
+exc_j, ioniz_pot, qtot)
   type(grid_t),       intent(inout) :: gr
   type(xc_t),         intent(in)    :: xcs
   type(states_t),     intent(inout) :: st
-  FLOAT,              intent(in)    :: rho(:, :), j(:,:,:)
+  FLOAT,              intent(in)    :: rho(:, :), current_density(:,:,:)
   integer,            intent(in)    :: ispin
   FLOAT,              intent(inout) :: vxc(:,:), axc(:,:,:)
   FLOAT,              intent(inout) :: ex, ec, exc_j
-  FLOAT,              intent(in)    :: ip, qtot
+  FLOAT,              intent(in)    :: ioniz_pot, qtot
 
-  integer :: spin_channels, i, is, id
-  FLOAT   :: e
-  FLOAT, allocatable :: v(:,:,:), f(:,:,:), dedd(:,:), dedv(:,:,:), tmp(:,:)
-  FLOAT, allocatable :: l_dens(:), l_v(:,:), l_dedd(:), l_dedv(:,:)
+  integer :: spin_channels, ip, is, id
+  FLOAT   :: ee
+  FLOAT, allocatable :: vorticity(:,:,:), ff(:,:,:), dedd(:,:), dedv(:,:,:), tmp(:,:)
+  FLOAT, allocatable :: l_dens(:), l_vorticity(:,:), l_dedd(:), l_dedv(:,:)
 
   call push_sub('axc_inc.xc_get_vxc_and_axc')
 
-  !xc energy and potential in the absence of external magnetic fields
-  call xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc=vxc)
+  !XC energy and potential in the absence of external magnetic fields
+  call xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc=vxc)
 
-  !do we have a current-dependent xc?
+  !do we have a current-dependent XC?
   if(iand(xcs%family, XC_FAMILY_LCA) == 0) then
     call pop_sub(); return
   end if
@@ -46,8 +47,8 @@ subroutine xc_get_vxc_and_axc(gr, xcs, st, rho, j, ispin, vxc, axc, ex, ec, exc_
   spin_channels = xcs%j_functl%spin_channels
 
   !allocate memory
-  SAFE_ALLOCATE(v   (1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:spin_channels))
-  SAFE_ALLOCATE(f   (1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:spin_channels))
+  SAFE_ALLOCATE(vorticity(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:spin_channels))
+  SAFE_ALLOCATE(ff  (1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:spin_channels))
   SAFE_ALLOCATE(dedd(1:gr%mesh%np, 1:spin_channels))
   SAFE_ALLOCATE(dedv(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:spin_channels))
   dedd = M_ZERO; dedv = M_ZERO
@@ -55,37 +56,37 @@ subroutine xc_get_vxc_and_axc(gr, xcs, st, rho, j, ispin, vxc, axc, ex, ec, exc_
   !Compute j/rho and the vorticity
   do is = 1, spin_channels
     do id = 1, gr%mesh%sb%dim
-      f(1:gr%mesh%np, id, is) = j(1:gr%mesh%np, id, is)/rho(1:gr%mesh%np, is)
+      ff(1:gr%mesh%np, id, is) = current_density(1:gr%mesh%np, id, is)/rho(1:gr%mesh%np, is)
     end do
-    call dderivatives_curl(gr%der, f(:,:,is), v(:,:,is))
+    call dderivatives_curl(gr%der, ff(:,:,is), vorticity(:,:,is))
   end do
 
   SAFE_ALLOCATE(l_dens(1:spin_channels))
-  SAFE_ALLOCATE(l_v   (1:gr%mesh%sb%dim, 1:spin_channels))
+  SAFE_ALLOCATE(l_vorticity(1:gr%mesh%sb%dim, 1:spin_channels))
   SAFE_ALLOCATE(l_dedd(1:spin_channels))
   SAFE_ALLOCATE(l_dedv(1:gr%mesh%sb%dim, 1:spin_channels))
   l_dedd = M_ZERO; l_dedv = M_ZERO
-  space_loop: do i = 1, gr%mesh%np
+  space_loop: do ip = 1, gr%mesh%np
     ! make a local copy with the correct memory order
-    l_dens (:) = rho(i, :)
-    l_v(:,:)   = v(i, :,:)
+    l_dens (:) = rho(ip, :)
+    l_vorticity(:,:) = vorticity(ip, :,:)
 
     ! Calculate the potential density in local reference frame.
     select case(xcs%j_functl%family)
     case(XC_FAMILY_LCA)
-      call XC_F90(lca)(xcs%j_functl%conf, l_dens(1), l_v(1,1), &
-        e, l_dedd(1), l_dedv(1,1))
+      call XC_F90(lca)(xcs%j_functl%conf, l_dens(1), l_vorticity(1,1), &
+        ee, l_dedd(1), l_dedv(1,1))
     end select
 
-    exc_j = exc_j + sum(l_dens(:)) * e * gr%mesh%vol_pp(i)
+    exc_j = exc_j + sum(l_dens(:)) * ee * gr%mesh%vol_pp(ip)
 
     ! store results
-    dedd(i,:) = dedd(i,:) + l_dedd
-    dedv(i,:,:) = dedv(i,:,:) + l_dedv
+    dedd(ip,:) = dedd(ip,:) + l_dedd
+    dedv(ip,:,:) = dedv(ip,:,:) + l_dedv
 
   end do space_loop
   SAFE_DEALLOCATE_A(l_dens)
-  SAFE_DEALLOCATE_A(l_v)
+  SAFE_DEALLOCATE_A(l_vorticity)
   SAFE_DEALLOCATE_A(l_dedd)
   SAFE_DEALLOCATE_A(l_dedv)
 
@@ -97,14 +98,14 @@ subroutine xc_get_vxc_and_axc(gr, xcs, st, rho, j, ispin, vxc, axc, ex, ec, exc_
 
     do id = 1, gr%mesh%sb%dim
       axc(1:gr%mesh%np, id, is) = axc(1:gr%mesh%np, id, is) - tmp(1:gr%mesh%np, id)/rho(1:gr%mesh%np, is)
-      vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) - axc(1:gr%mesh%np, id, is)*f(1:gr%mesh%np, id, is)
+      vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) - axc(1:gr%mesh%np, id, is)*ff(1:gr%mesh%np, id, is)
     end do
   end do
   SAFE_DEALLOCATE_A(tmp)
 
   !deallocate memory
-  SAFE_DEALLOCATE_A(f)
-  SAFE_DEALLOCATE_A(v)
+  SAFE_DEALLOCATE_A(ff)
+  SAFE_DEALLOCATE_A(vorticity)
   SAFE_DEALLOCATE_A(dedd)
   SAFE_DEALLOCATE_A(dedv)
 

@@ -10,7 +10,6 @@
 !% <br> 1D: lda_x_1d + lda_c_1d_csc
 !% <br> 2D: lda_x_2d + lda_c_2d_amgb
 !% <br> 3D: lda_x + lda_c_pz_mod
-!%
 !%Option lda_x               1
 !% Exchange
 !%Option lda_c_wigner               2000
@@ -243,4 +242,6 @@
 !% Lee, Colwell & Handy
 !%Option oep_x                    901
 !% OEP: Exact exchange
+!%Option none                       0
+!% Exchange and correlation set to zero.
 !%End

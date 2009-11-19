@@ -94,6 +94,7 @@ contains
     !%Section Hamiltonian::XC
     !%Description
     !% Defines the current functional for current-density functional theory.
+    !%Option none 0
     !%Option lca_omc 301
     !% Orestes, Marcasso & Capelle.
     !%Option lca_lch 302
@@ -159,11 +160,11 @@ contains
       ok =       (functl%id == XC_LDA_X_1D)
       ok = ok.or.(functl%id == XC_LDA_C_1D_CSC)
       if((ndim.ne.1).and.ok) then
-        message(1) = 'Specified functional is only allowed in 1D'
+        message(1) = 'Specified functional is only allowed in 1D.'
         call write_fatal(1)
       end if
       if(ndim==1.and.(.not.ok)) then
-        message(1) = 'Can not use the specified functionals in 1D'
+        message(1) = 'Cannot use the specified functionals in 1D.'
         call write_fatal(1)
       end if
 
@@ -172,11 +173,11 @@ contains
       ok = ok.or.(functl%id == XC_LDA_C_2D_PRM)
       ok = ok.or.(functl%id == XC_GGA_X_2D_B86_MGC)
       if((ndim.ne.2).and.ok) then
-        message(1) = 'Specified functional is only allowed in 2D'
+        message(1) = 'Specified functional is only allowed in 2D.'
         call write_fatal(1)
       end if
       if(ndim==2.and.(.not.ok)) then
-        message(1) = 'Can not use the specified functionals in 2D'
+        message(1) = 'Cannot use the specified functionals in 2D.'
         call write_fatal(1)
       end if
 

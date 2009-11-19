@@ -77,7 +77,7 @@ contains
     type(xc_t), intent(in) :: xcs
     integer,    intent(in) :: iunit
 
-    integer :: i
+    integer :: isp
 
     call push_sub('xc.xc_write_info')
 
@@ -94,8 +94,8 @@ contains
       call write_info(1, iunit)
     end if
 
-    do i = 1, 2
-      call xc_functl_write_info(xcs%functl(i, 1), iunit)
+    do isp = 1, 2
+      call xc_functl_write_info(xcs%functl(isp, 1), iunit)
     end do
 
     if(xcs%exx_coef.ne.M_ZERO) then
@@ -117,7 +117,7 @@ contains
     logical,    intent(in)  :: cdft
     logical,    intent(in)  :: hartree_fock
 
-    integer :: i, x_id, c_id, xk_id, ck_id
+    integer :: isp, x_id, c_id, xk_id, ck_id
     logical :: ll
 
     call push_sub('xc.xc_init')
@@ -135,13 +135,13 @@ contains
 
       !we also need XC functionals that do not depend on the current
       !get both spin-polarized and unpolarized
-      do i = 1, 2
+      do isp = 1, 2
 
-        call xc_functl_init_functl(xcs%functl(1,i),  x_id, ndim, nel, i)
-        call xc_functl_init_functl(xcs%functl(2,i),  c_id, ndim, nel, i)
+        call xc_functl_init_functl(xcs%functl(1,isp),  x_id, ndim, nel, isp)
+        call xc_functl_init_functl(xcs%functl(2,isp),  c_id, ndim, nel, isp)
         
-        call xc_functl_init_functl(xcs%kernel(1,i), xk_id, ndim, nel, i)
-        call xc_functl_init_functl(xcs%kernel(2,i), ck_id, ndim, nel, i)
+        call xc_functl_init_functl(xcs%kernel(1,isp), xk_id, ndim, nel, isp)
+        call xc_functl_init_functl(xcs%kernel(2,isp), ck_id, ndim, nel, isp)
 
       end do
 
@@ -268,18 +268,18 @@ contains
   subroutine xc_end(xcs)
     type(xc_t), intent(inout) :: xcs
 
-    integer :: i
+    integer :: isp
 
     call push_sub('xc.xc_end')
 
     if (xcs%cdft) then
       call xc_functl_end(xcs%j_functl)
     end if
-    do i = 1, 2
-      call xc_functl_end(xcs%functl(1,i))
-      call xc_functl_end(xcs%functl(2,i))
-      call xc_functl_end(xcs%kernel(1,i))
-      call xc_functl_end(xcs%kernel(2,i))
+    do isp = 1, 2
+      call xc_functl_end(xcs%functl(1,isp))
+      call xc_functl_end(xcs%functl(2,isp))
+      call xc_functl_end(xcs%kernel(1,isp))
+      call xc_functl_end(xcs%kernel(2,isp))
     end do
     xcs%family = 0
 

@@ -18,14 +18,14 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
+subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vtau)
   type(grid_t),       intent(inout) :: gr
   type(xc_t), target, intent(in)    :: xcs
   type(states_t),     intent(inout) :: st
   FLOAT,              intent(in)    :: rho(:, :)
   integer,            intent(in)    :: ispin
   FLOAT,              intent(inout) :: ex, ec
-  FLOAT,              intent(in)    :: ip, qtot
+  FLOAT,              intent(in)    :: ioniz_pot, qtot
   FLOAT, optional,    intent(inout) :: vxc(:,:)
   FLOAT, optional,    intent(inout) :: vtau(:,:)
 
@@ -40,14 +40,14 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
   FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:)
   FLOAT, allocatable :: ldens(:,:), tau(:,:), dedldens(:,:)
 
-  integer :: ib, ib2, jj, ixc, spin_channels
+  integer :: ib, ib2, ip, isp, families, ixc, spin_channels
   FLOAT   :: r
   logical :: gga, mgga
   type(profile_t), save :: prof
 
   type(xc_functl_t), pointer :: functl(:)
 
-  call push_sub('vxc.xc_get_vxc')
+  call push_sub('vxc_inc.xc_get_vxc')
   call profiling_in(prof, "XC_LOCAL")
 
   if(ispin == UNPOLARIZED) then
@@ -57,8 +57,8 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
   end if
 
   ! is there anything to do ?
-  jj = XC_FAMILY_LDA + XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA
-  if(iand(xcs%family, jj) == 0) go to 999
+  families = XC_FAMILY_LDA + XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA
+  if(iand(xcs%family, families) == 0) go to 999
 
   if(iand(xcs%family, not(XC_FAMILY_LDA + XC_FAMILY_GGA)) == 0) then
     n_block = 1000
@@ -70,20 +70,20 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
   gga  = iand(xcs%family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA).ne.0
   mgga = iand(xcs%family, XC_FAMILY_MGGA).ne.0
 
-  ! This is a bit ugly (why functl(1) and not functl(2)?, but for the moment it works.
+  ! This is a bit ugly (why functl(1) and not functl(2)?), but for the moment it works.
   spin_channels = functl(1)%spin_channels
 
   call lda_init()
   if( gga) call  gga_init()
   if(mgga) call mgga_init()
 
-  ! Get the gradient and the laplacian of the density and the kinetic energy density
+  ! Get the gradient and the Laplacian of the density and the kinetic-energy density
   ! We do it here instead of doing it in gga_init and mgga_init in order to 
   ! avoid calling the subroutine states_calc_tau_jp_gn twice
   if(gga .and. (.not. mgga)) then
     ! get gradient of the density (this is faster than calling states_calc_tau_jp_gn)
-    do jj = 1, spin_channels 
-      call dderivatives_grad(gr%der, dens(:, jj), gdens(:, :, jj)) 
+    do isp = 1, spin_channels 
+      call dderivatives_grad(gr%der, dens(:, isp), gdens(:, :, isp)) 
     end do
   else if(mgga) then
     call states_calc_tau_jp_gn(gr, st, grho=gdens, tau=tau, lrho=ldens)    
@@ -94,19 +94,19 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
   end if
 
 
-  space_loop: do jj = 1, gr%mesh%np, n_block
-    if(jj + n_block > gr%mesh%np) n_block = gr%mesh%np - jj + 1
+  space_loop: do ip = 1, gr%mesh%np, n_block
+    if(ip + n_block > gr%mesh%np) n_block = gr%mesh%np - ip + 1
       
 
     ! make a local copy with the correct memory order for libxc
-    ib2 = jj
+    ib2 = ip
     do ib = 1, n_block
       l_dens(1:spin_channels, ib) = dens(ib2, 1:spin_channels)
       ib2 = ib2 + 1
     end do
 
     if(gga) then
-      ib2 = jj
+      ib2 = ip
       do ib = 1, n_block
         l_sigma(1, ib) = sum(gdens(ib2, 1:gr%mesh%sb%dim, 1)*gdens(ib2, 1:gr%mesh%sb%dim, 1))
         if(ispin /= UNPOLARIZED) then
@@ -118,8 +118,8 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
     end if
 
     if(mgga) then
-      l_tau  (1:spin_channels) =   tau(jj, 1:spin_channels)
-      l_ldens(1:spin_channels) = ldens(jj, 1:spin_channels)
+      l_tau  (1:spin_channels) =   tau(ip, 1:spin_channels)
+      l_ldens(1:spin_channels) = ldens(ip, 1:spin_channels)
     end if
 
     ! Calculate the potential/gradient density in local reference frame.
@@ -182,7 +182,7 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
             l_vsigma = M_ZERO
 
             if(functl(ixc)%id == XC_GGA_XC_LB) then
-              call mesh_r(gr%mesh, jj, r)
+              call mesh_r(gr%mesh, ip, r)
               call XC_F90(gga_lb_modified)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), &
                 r, l_dedd(1,1))
             else
@@ -201,7 +201,7 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
         end if
       end if
 
-      ib2 = jj
+      ib2 = ip
       if(functl(ixc)%type == XC_EXCHANGE) then
         do ib = 1, n_block
           ex_per_vol(ib2) = ex_per_vol(ib2) + sum(l_dens(1:spin_channels, ib)) * l_zk(ib)
@@ -216,14 +216,14 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
 
       ! store results
       if(present(vxc)) then
-        ib2 = jj
+        ib2 = ip
         do ib = 1, n_block
           dedd(ib2, 1:spin_channels) = dedd(ib2, 1:spin_channels) + l_dedd(1:spin_channels, ib)
           ib2 = ib2 + 1
         end do
 
         if((functl(ixc)%family == XC_FAMILY_GGA).or.(functl(ixc)%family == XC_FAMILY_MGGA)) then
-          ib2 = jj
+          ib2 = ip
           do ib = 1, n_block
             dedgd(ib2,:,1) = dedgd(ib2,:,1) + M_TWO*l_vsigma(1, ib)*gdens(ib2,:,1)
             if(ispin /= UNPOLARIZED) then
@@ -236,8 +236,8 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
         end if
 
         if(functl(ixc)%family == XC_FAMILY_MGGA) then
-          dedldens(jj, 1:spin_channels) = dedldens(jj, 1:spin_channels) + l_dedldens(1:spin_channels)
-          vtau(jj, 1:spin_channels) = vtau(jj, 1:spin_channels) + l_dedtau(1:spin_channels)
+          dedldens(ip, 1:spin_channels) = dedldens(ip, 1:spin_channels) + l_dedldens(1:spin_channels)
+          vtau(ip, 1:spin_channels) = vtau(ip, 1:spin_channels) + l_dedtau(1:spin_channels)
         end if
       end if
 
@@ -248,7 +248,7 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
   if(present(vxc)) then
     if(mgga) call mgga_process()
     if( gga) call  gga_process()
-    call  lda_process()
+    call lda_process()
   end if
 
   ! integrate eneries per unit volume
@@ -256,7 +256,7 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
   ec = dmf_integrate(gr%mesh, ec_per_vol)
 
   ! clean up allocated memory
-  call  lda_end()
+  call lda_end()
   if( gga) call  gga_end()
   if(mgga) call mgga_end()
 
@@ -276,7 +276,7 @@ contains
     integer :: ii
     FLOAT   :: d(2), dtot, dpol
 
-    call push_sub('vxc.xc_get_vxc.lda_init')
+    call push_sub('vxc_inc.xc_get_vxc.lda_init')
 
     ! allocate some general arrays
     SAFE_ALLOCATE(l_dens(1:spin_channels, 1:n_block))
@@ -321,6 +321,8 @@ contains
   ! ---------------------------------------------------------
   ! deallocate variables allocated in lda_init
   subroutine lda_end()
+    call push_sub('vxc_inc.xc_get_vxc.lda_end')
+
     SAFE_DEALLOCATE_A(l_dens)
     SAFE_DEALLOCATE_A(l_zk)
 
@@ -331,30 +333,32 @@ contains
       SAFE_DEALLOCATE_A(l_dedd)
       SAFE_DEALLOCATE_A(dedd)
     end if
+
+    call pop_sub()
   end subroutine lda_end
 
 
   ! ---------------------------------------------------------
   ! calculates the LDA part of vxc, taking into account non-collinear spin
   subroutine lda_process()
-    integer :: i
+    integer :: ip
     FLOAT :: d(2), dpol, vpol
 
-    call push_sub('vxc.xc_get_vxc.lda_process')
+    call push_sub('vxc_inc.xc_get_vxc.lda_process')
 
     if(ispin == SPINORS) then
       ! rotate back (do not need the rotation matrix for this).
-      do i = 1, gr%mesh%np
-        d(1:spin_channels) = rho(i, 1:spin_channels)
+      do ip = 1, gr%mesh%np
+        d(1:spin_channels) = rho(ip, 1:spin_channels)
 
         dpol = sqrt((d(1) - d(2))**2 + &
-          M_FOUR*(rho(i, 3)**2 + rho(i, 4)**2))
-        vpol = (dedd(i, 1) - dedd(i, 2))*(d(1) - d(2))/(dpol + tiny)
+          M_FOUR*(rho(ip, 3)**2 + rho(ip, 4)**2))
+        vpol = (dedd(ip, 1) - dedd(ip, 2))*(d(1) - d(2))/(dpol + tiny)
 
-        vxc(i, 1) = vxc(i, 1) + M_HALF*(dedd(i, 1) + dedd(i, 2) + vpol)
-        vxc(i, 2) = vxc(i, 2) + M_HALF*(dedd(i, 1) + dedd(i, 2) - vpol)
-        vxc(i, 3) = vxc(i, 3) + (dedd(i, 1) - dedd(i, 2))*rho(i, 3)/(dpol + tiny)
-        vxc(i, 4) = vxc(i, 4) + (dedd(i, 1) - dedd(i, 2))*rho(i, 4)/(dpol + tiny)
+        vxc(ip, 1) = vxc(ip, 1) + M_HALF*(dedd(ip, 1) + dedd(ip, 2) + vpol)
+        vxc(ip, 2) = vxc(ip, 2) + M_HALF*(dedd(ip, 1) + dedd(ip, 2) - vpol)
+        vxc(ip, 3) = vxc(ip, 3) + (dedd(ip, 1) - dedd(ip, 2))*rho(ip, 3)/(dpol + tiny)
+        vxc(ip, 4) = vxc(ip, 4) + (dedd(ip, 1) - dedd(ip, 2))*rho(ip, 4)/(dpol + tiny)
       end do
     elseif(ispin == SPIN_POLARIZED) then
       call lalg_axpy(gr%mesh%np, M_ONE, dedd(:, 1), vxc(:, 1))
@@ -374,7 +378,7 @@ contains
   subroutine gga_init()
     integer :: ii
 
-    call push_sub('vxc.xc_get_vxc.gga_init')
+    call push_sub('vxc_inc.xc_get_vxc.gga_init')
     
     ii = 1
     if(ispin /= UNPOLARIZED) ii = 3
@@ -393,7 +397,7 @@ contains
     do ii = 1, 2
       if(functl(ii)%id == XC_GGA_XC_LB) then
         call XC_F90(gga_lb_set_par)(functl(ii)%conf, &
-          functl(ii)%LB94_modified, functl(ii)%LB94_threshold, ip, qtot)
+          functl(ii)%LB94_modified, functl(ii)%LB94_threshold, ioniz_pot, qtot)
       end if
     end do
 
@@ -404,22 +408,26 @@ contains
   ! ---------------------------------------------------------
   ! cleans up memory allocated in gga_init
   subroutine gga_end()
+    call push_sub('vxc_inc.xc_get_vxc.gga_end')
+
     SAFE_DEALLOCATE_A(l_sigma)
     SAFE_DEALLOCATE_A(gdens)
     if(present(vxc)) then
       SAFE_DEALLOCATE_A(l_vsigma)
       SAFE_DEALLOCATE_A(dedgd)
     end if
+
+    call pop_sub()
   end subroutine gga_end
 
 
   ! ---------------------------------------------------------
   ! calculates the GGA contribution to vxc
   subroutine gga_process()
-    integer :: i, is
+    integer :: ip, is
     FLOAT, allocatable :: gf(:,:)
 
-    call push_sub('vxc.xc_get_vxc.gga_process')
+    call push_sub('vxc_inc.xc_get_vxc.gga_process')
 
     ! subtract the divergence of the functional derivative of Exc with respect to
     ! the gradient of the density.
@@ -437,8 +445,8 @@ contains
 
       do is = 1, spin_channels
         call dderivatives_grad(gr%der, dedd(:, is), gf(:,:))
-        do i = 1, gr%mesh%np
-          ex_per_vol(i) = ex_per_vol(i) - dens(i, is) * sum(gr%mesh%x(i,:)*gf(i,:))
+        do ip = 1, gr%mesh%np
+          ex_per_vol(ip) = ex_per_vol(ip) - dens(ip, is) * sum(gr%mesh%x(ip,:)*gf(ip,:))
         end do
       end do
 
@@ -451,9 +459,10 @@ contains
 
   ! ---------------------------------------------------------
   ! initialize meta-GGAs
-  !   *) allocate the kinetic energy density, dedtau, and local variants
+  !   *) allocate the kinetic-energy density, dedtau, and local variants
   
   subroutine mgga_init()
+    call push_sub('vxc_inc.xc_get_vxc.mgga_init')
   
     SAFE_ALLOCATE( tau(1:gr%mesh%np, 1:spin_channels))
     SAFE_ALLOCATE(ldens(1:gr%mesh%np, 1:spin_channels))
@@ -461,6 +470,8 @@ contains
       SAFE_ALLOCATE(dedldens(1:gr%mesh%np_part, 1:spin_channels))
       dedldens = M_ZERO
     end if
+
+    call pop_sub()
   end subroutine mgga_init
 
 
@@ -471,6 +482,8 @@ contains
     FLOAT gn(MAX_DIM), n, tb09_c
     integer :: ii
     integer, SAVE :: ncall = 0 
+
+    call push_sub('vxc_inc.xc_get_vxc.calc_tb09_c')
 
     SAFE_ALLOCATE(gnon(1:gr%mesh%np))
 
@@ -502,17 +515,22 @@ contains
 
     SAFE_DEALLOCATE_A(gnon)
   
+    call pop_sub()
   end subroutine calc_tb09_c
 
 
   ! ---------------------------------------------------------
   ! clean up memory allocates in mgga_init
   subroutine mgga_end()
+    call push_sub('vxc_inc.xc_get_vxc.mgga_end')
+
     SAFE_DEALLOCATE_A(ldens)
     SAFE_DEALLOCATE_A(tau)
     if(present(vxc)) then
       SAFE_DEALLOCATE_A(dedldens)
     end if
+
+    call pop_sub()
   end subroutine mgga_end
 
 
@@ -522,7 +540,9 @@ contains
     integer :: is
     FLOAT, allocatable :: lf(:,:)
 
-    ! add the laplacian of the functional derivative of Exc with respect to
+    call push_sub('vxc_inc.xc_get_vxc.mgga_process')
+
+    ! add the Laplacian of the functional derivative of Exc with respect to
     ! the gradient of the density.
 
     SAFE_ALLOCATE(lf(1:gr%mesh%np, 1:1))
@@ -532,6 +552,7 @@ contains
     end do
     SAFE_DEALLOCATE_A(lf)
     
+    call pop_sub()
   end subroutine mgga_process
 
 end subroutine xc_get_vxc
