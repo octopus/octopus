@@ -205,25 +205,25 @@ contains
     !% The format of this block is the following: The first field is
     !% the name of the species, followed by the atomic mass (in atomic mass
     !% units). The third field defines the type of species (the valid options
-    !% are detailed below), each type needs some extra parameters given in
-    !% the following fields of the row.
+    !% are detailed below). Each type also needs some parameters given in
+    !% the remaining fields of the row.
     !%
     !% In 3D, <i>e.g.</i>
     !%
     !% <tt>%Species
-    !% <br>&nbsp;&nbsp;'O'       | 15.9994 | spec_ps_psf        | 8   | 1 | 1
-    !% <br>&nbsp;&nbsp;'H'       |  1.0079 | spec_ps_hgh        | 1   | 0 | 0
-    !% <br>&nbsp;&nbsp;'jlm'     | 23.2    | spec_jelli         | 8   | 5.0
-    !% <br>&nbsp;&nbsp;'pnt'     | 32.3    | spec_point         | 2.0
-    !% <br>&nbsp;&nbsp;'udf'     |  0.0    | spec_user_defined  | 8   | "1/2*r^2"
-    !% <br>&nbsp;&nbsp;'H_all'   |  1.0079 | spec_full_delta    | 1
-    !% <br>&nbsp;&nbsp;'H_all'   |  1.0079 | spec_full_gaussian | 1
+    !% <br>&nbsp;&nbsp;'O'       | 15.9994 | spec_ps_psf         | 8   | 1 | 1
+    !% <br>&nbsp;&nbsp;'H'       |  1.0079 | spec_ps_hgh         | 1   | 0 | 0
+    !% <br>&nbsp;&nbsp;'jlm'     | 23.2    | spec_jelli          | 8   | 5.0
+    !% <br>&nbsp;&nbsp;'rho'     | 17.0    | spec_charge_density | 6   | "exp(-r/a)"
+    !% <br>&nbsp;&nbsp;'pnt'     | 32.3    | spec_point          | 2.0
+    !% <br>&nbsp;&nbsp;'udf'     |  0.0    | spec_user_defined   | 8   | "1/2*r^2"
+    !% <br>&nbsp;&nbsp;'H_all'   |  1.0079 | spec_full_delta     | 1
+    !% <br>&nbsp;&nbsp;'H_all'   |  1.0079 | spec_full_gaussian  | 1
     !% <br>%</tt>
     !%
     !% Additionally, all the pseudopotential types (PSF, HGH, FHI, UPF) can take two extra
     !% fields: default spacing, and default radius (used for minimum simulation box if the
-    !% radius is not specified). 
-    !%
+    !% radius is not specified).
     !%Option spec_user_defined 123
     !% Species with user-defined potential. In this case, the fourth
     !% field is the valence charge and the fifth
@@ -297,7 +297,8 @@ contains
     !% small, but you may run into numerical difficulties if it is too
     !% small (0.25 by default).
     !%Option spec_charge_density 125
-    !% The potential is created by a distribution of charge.
+    !% The potential is created by a distribution of charge. The extra parameters are the
+    !% valence charge of the species, and an expression for the charge distribution.
     !%Option species_from_file  126
     !% The potential is read from a file, whose name is given in column 5.
     !%End
@@ -898,7 +899,7 @@ contains
     write(iunit, '(a,i3)')    'Type   = ', s%type
     if (s%type /= SPEC_USDEF ) write(iunit, '(a,f15.2)') 'z      = ', s%z
     if (s%type == SPEC_FROM_FILE) then
-      write(iunit,'(a)')      'Specie read from file "'//trim(s%filename)//'".'
+      write(iunit,'(a)')      'Species read from file "'//trim(s%filename)//'".'
     end if
     write(iunit, '(a,f15.2)') 'z_val  = ', s%z_val
     write(iunit, '(a,f15.2)') 'weight = ', s%weight

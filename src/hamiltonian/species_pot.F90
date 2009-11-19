@@ -63,7 +63,7 @@ module species_pot_m
                         INITRHO_RANDOM        = 3, &
                         INITRHO_USERDEF       = 77
 
-  type(mesh_t),       pointer :: m_p
+  type(mesh_t), pointer :: mesh_p
   FLOAT, allocatable :: rho_p(:)
   FLOAT, allocatable :: grho_p(:, :)
   FLOAT :: alpha_p
@@ -73,17 +73,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine atom_density(m, sb, atom, spin_channels, rho)
-    type(mesh_t),      intent(in)    :: m
+  subroutine atom_density(mesh, sb, atom, spin_channels, rho)
+    type(mesh_t),      intent(in)    :: mesh
     type(simul_box_t), intent(in)    :: sb
     type(atom_t),      intent(in)    :: atom
     integer,           intent(in)    :: spin_channels
     FLOAT,             intent(inout) :: rho(:, :) ! (m%np, spin_channels)
 
-    integer :: i, in_points, n, icell
+    integer :: isp, ip, in_points, n, icell
     FLOAT :: r, x, pos(1:MAX_DIM)
     FLOAT :: psi1, psi2, xx(MAX_DIM), yy(MAX_DIM), rerho, imrho
-    type(species_t), pointer :: s
+    type(species_t), pointer :: spec
     type(ps_t), pointer :: ps
 
 #if defined(HAVE_MPI)
@@ -95,16 +95,16 @@ contains
 
     ASSERT(spin_channels == 1 .or. spin_channels == 2)
 
-    s => atom%spec
+    spec => atom%spec
     rho = M_ZERO
 
     ! build density ...
-    select case (species_type(s))
+    select case (species_type(spec))
     case (SPEC_FROM_FILE, SPEC_USDEF, SPEC_FULL_DELTA, SPEC_FULL_GAUSSIAN, SPEC_PS_CPI, SPEC_PS_FHI) ! ... from userdef
-      do i = 1, spin_channels
-        rho(1:m%np, i) = M_ONE
-        x = (species_zval(s)/real(spin_channels, REAL_PRECISION)) / dmf_integrate(m, rho(:, i))
-        rho(1:m%np, i) = x * rho(1:m%np, i)
+      do isp = 1, spin_channels
+        rho(1:mesh%np, isp) = M_ONE
+        x = (species_zval(spec)/real(spin_channels, REAL_PRECISION)) / dmf_integrate(mesh, rho(:, isp))
+        rho(1:mesh%np, isp) = x * rho(1:mesh%np, isp)
       end do
 
     case (SPEC_CHARGE_DENSITY)
@@ -117,12 +117,12 @@ contains
       rho = M_ZERO
       do icell = 1, periodic_copy_num(pp)
         yy = periodic_copy_position(pp, sb, icell)
-        do i = 1, m%np
-          call mesh_r(m, i, r, x = xx, a = atom%x)
+        do ip = 1, mesh%np
+          call mesh_r(mesh, ip, r, x = xx, a = atom%x)
           xx(1:sb%dim) = xx(1:sb%dim) + yy(1:sb%dim)
           r = sqrt(dot_product(xx(1:sb%dim), xx(1:sb%dim)))
-          call parse_expression(rerho, imrho, sb%dim, xx, r, M_ZERO, trim(species_rho_string(s)))
-          rho(i, 1) = rho(i, 1) + rerho
+          call parse_expression(rerho, imrho, sb%dim, xx, r, M_ZERO, trim(species_rho_string(spec)))
+          rho(ip, 1) = rho(ip, 1) + rerho
         end do
       end do
       call periodic_copy_end(pp)
@@ -133,16 +133,16 @@ contains
 
     case (SPEC_POINT, SPEC_JELLI) ! ... from jellium
       in_points = 0
-      do i = 1, m%np
-        call mesh_r(m, i, r, a=atom%x)
-        if(r <= species_jradius(s)) then
+      do ip = 1, mesh%np
+        call mesh_r(mesh, ip, r, a=atom%x)
+        if(r <= species_jradius(spec)) then
           in_points = in_points + 1
         end if
       end do
 
 #if defined(HAVE_MPI)
-      if(m%parallel_in_domains) then
-        call MPI_Allreduce(in_points, in_points_red, 1, MPI_INTEGER, MPI_SUM, m%vp%comm, mpi_err)
+      if(mesh%parallel_in_domains) then
+        call MPI_Allreduce(in_points, in_points_red, 1, MPI_INTEGER, MPI_SUM, mesh%vp%comm, mpi_err)
         in_points = in_points_red
       end if
 #endif
@@ -150,20 +150,20 @@ contains
       if(in_points > 0) then
         ! This probably should be done inside the mesh_function_m module.
  
-        if (m%use_curvilinear) then
-          do i = 1, m%np
-            call mesh_r(m, i, r, a=atom%x)
-            if(r <= species_jradius(s)) then
-              rho(i, 1:spin_channels) = species_zval(s) /   &
-                (m%vol_pp(i)*real(in_points*spin_channels, REAL_PRECISION))
+        if (mesh%use_curvilinear) then
+          do ip = 1, mesh%np
+            call mesh_r(mesh, ip, r, a=atom%x)
+            if(r <= species_jradius(spec)) then
+              rho(ip, 1:spin_channels) = species_zval(spec) /   &
+                (mesh%vol_pp(ip)*real(in_points*spin_channels, REAL_PRECISION))
             end if
           end do
         else
-          do i = 1, m%np
-            call mesh_r(m, i, r, a=atom%x)
-            if(r <= species_jradius(s)) then
-              rho(i, 1:spin_channels) = species_zval(s) /   &
-                (m%vol_pp(1)*real(in_points*spin_channels, REAL_PRECISION))
+          do ip = 1, mesh%np
+            call mesh_r(mesh, ip, r, a=atom%x)
+            if(r <= species_jradius(spec)) then
+              rho(ip, 1:spin_channels) = species_zval(spec) /   &
+                (mesh%vol_pp(1)*real(in_points*spin_channels, REAL_PRECISION))
             end if
           end do
         end if
@@ -172,26 +172,26 @@ contains
     case (SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_UPF) ! ...from pseudopotential
       ! the outer loop sums densities over atoms in neighbour cells
 
-      ps => species_ps(s)
+      ps => species_ps(spec)
 
       call periodic_copy_init(pp, sb, atom%x, &
         range = spline_cutoff_radius(ps%Ur(1, 1), ps%projectors_sphere_threshold))
 
       do icell = 1, periodic_copy_num(pp)
         pos = periodic_copy_position(pp, sb, icell)
-        do i = 1, m%np
-          call mesh_r(m, i, r, pos)
+        do ip = 1, mesh%np
+          call mesh_r(mesh, ip, r, pos)
           r = max(r, r_small)
           do n = 1, ps%conf%p
             select case(spin_channels)
             case(1)
               psi1 = spline_eval(ps%Ur(n, 1), r)
-              rho(i, 1) = rho(i, 1) + ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
+              rho(ip, 1) = rho(ip, 1) + ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
             case(2)
               psi1 = spline_eval(ps%Ur(n, 1), r)
               psi2 = spline_eval(ps%Ur(n, 2), r)
-              rho(i, 1) = rho(i, 1) + ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
-              rho(i, 2) = rho(i, 2) + ps%conf%occ(n, 2)*psi2*psi2 /(M_FOUR*M_PI)
+              rho(ip, 1) = rho(ip, 1) + ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
+              rho(ip, 2) = rho(ip, 2) + ps%conf%occ(n, 2)*psi2*psi2 /(M_FOUR*M_PI)
             end select
           end do
         end do
@@ -209,15 +209,15 @@ contains
 
   ! ---------------------------------------------------------
   ! builds a density which is the sum of the atomic densities
-  subroutine guess_density(m, sb, geo, qtot, nspin, spin_channels, rho)
-    type(mesh_t),      intent(in)  :: m
+  subroutine guess_density(mesh, sb, geo, qtot, nspin, spin_channels, rho)
+    type(mesh_t),      intent(in)  :: mesh
     type(simul_box_t), intent(in)  :: sb
     type(geometry_t),  intent(in)  :: geo
     FLOAT,             intent(in)  :: qtot  ! the total charge of the system
     integer,           intent(in)  :: nspin, spin_channels
     FLOAT,             intent(out) :: rho(:, :)
 
-    integer :: ia, is, gmd_opt, i
+    integer :: ia, is, idir, gmd_opt
     integer, save :: iseed = 321
     type(block_t) :: blk
     FLOAT :: r, rnd, phi, theta, mag(MAX_DIM), lmag, n1, n2
@@ -239,7 +239,7 @@ contains
       !%
       !% For anti-ferromagnetic configurations, the <tt>user_defined</tt> option should be used.
       !%
-      !% Note that if the <tt>paramagnetic</tt> option is used the final ground-state will also be
+      !% Note that if the <tt>paramagnetic</tt> option is used, the final ground state will also be
       !% paramagnetic, but the same is not true for the other options.
       !%Option paramagnetic 1
       !% Magnetization density is zero.
@@ -260,52 +260,52 @@ contains
     rho = M_ZERO
     select case (gmd_opt)
     case (INITRHO_PARAMAGNETIC)
-      SAFE_ALLOCATE(atom_rho(1:m%np, 1:1))
+      SAFE_ALLOCATE(atom_rho(1:mesh%np, 1:1))
       do ia = 1, geo%natoms
-        call atom_density(m, sb, geo%atom(ia), 1, atom_rho(1:m%np, 1:1))
-        rho(1:m%np, 1:1) = rho(1:m%np, 1:1) + atom_rho(1:m%np, 1:1)
+        call atom_density(mesh, sb, geo%atom(ia), 1, atom_rho(1:mesh%np, 1:1))
+        rho(1:mesh%np, 1:1) = rho(1:mesh%np, 1:1) + atom_rho(1:mesh%np, 1:1)
       end do
       if (spin_channels == 2) then
-        rho(1:m%np, 1) = M_HALF*rho(1:m%np, 1)
-        rho(1:m%np, 2) = rho(1:m%np, 1)
+        rho(1:mesh%np, 1) = M_HALF*rho(1:mesh%np, 1)
+        rho(1:mesh%np, 2) = rho(1:mesh%np, 1)
       end if
 
     case (INITRHO_FERROMAGNETIC)
-      SAFE_ALLOCATE(atom_rho(1:m%np, 1:2))
+      SAFE_ALLOCATE(atom_rho(1:mesh%np, 1:2))
       atom_rho = M_ZERO
       rho = M_ZERO
       do ia = 1, geo%natoms
-        call atom_density(m, sb, geo%atom(ia), 2, atom_rho(1:m%np, 1:2))
-        rho(1:m%np, 1:2) = rho(1:m%np, 1:2) + atom_rho(1:m%np, 1:2)
+        call atom_density(mesh, sb, geo%atom(ia), 2, atom_rho(1:mesh%np, 1:2))
+        rho(1:mesh%np, 1:2) = rho(1:mesh%np, 1:2) + atom_rho(1:mesh%np, 1:2)
       end do
 
     case (INITRHO_RANDOM) ! Randomly oriented spins
-      SAFE_ALLOCATE(atom_rho(1:m%np, 1:2))
+      SAFE_ALLOCATE(atom_rho(1:mesh%np, 1:2))
       do ia = 1, geo%natoms
-        call atom_density(m, sb, geo%atom(ia), 2, atom_rho)
+        call atom_density(mesh, sb, geo%atom(ia), 2, atom_rho)
 
         if (nspin == 2) then
           call quickrnd(iseed, rnd)
           rnd = rnd - M_HALF
           if (rnd > M_ZERO) then
-            rho(1:m%np, 1:2) = rho(1:m%np, 1:2) + atom_rho(1:m%np, 1:2)
+            rho(1:mesh%np, 1:2) = rho(1:mesh%np, 1:2) + atom_rho(1:mesh%np, 1:2)
           else
-            rho(1:m%np, 1) = rho(1:m%np, 1) + atom_rho(1:m%np, 2)
-            rho(1:m%np, 2) = rho(1:m%np, 2) + atom_rho(1:m%np, 1)
+            rho(1:mesh%np, 1) = rho(1:mesh%np, 1) + atom_rho(1:mesh%np, 2)
+            rho(1:mesh%np, 2) = rho(1:mesh%np, 2) + atom_rho(1:mesh%np, 1)
           end if
         elseif (nspin == 4) then
           call quickrnd(iseed, phi)
           call quickrnd(iseed, theta)
           phi = phi*M_TWO*M_PI
           theta = theta*M_PI
-          rho(1:m%np, 1) = rho(1:m%np, 1) + cos(theta/M_TWO)**2*atom_rho(1:m%np, 1) &
-            + sin(theta/M_TWO)**2*atom_rho(1:m%np, 2)
-          rho(1:m%np, 2) = rho(1:m%np, 2) + sin(theta/M_TWO)**2*atom_rho(1:m%np, 1) &
-            + cos(theta/M_TWO)**2*atom_rho(1:m%np, 2)
-          rho(1:m%np, 3) = rho(1:m%np, 3) + cos(theta/M_TWO)*sin(theta/M_TWO)*cos(phi)* &
-            (atom_rho(1:m%np, 1) - atom_rho(1:m%np, 2))
-          rho(1:m%np, 4) = rho(1:m%np, 4) - cos(theta/M_TWO)*sin(theta/M_TWO)*sin(phi)* &
-            (atom_rho(1:m%np, 1) - atom_rho(1:m%np, 2))
+          rho(1:mesh%np, 1) = rho(1:mesh%np, 1) + cos(theta/M_TWO)**2*atom_rho(1:mesh%np, 1) &
+            + sin(theta/M_TWO)**2*atom_rho(1:mesh%np, 2)
+          rho(1:mesh%np, 2) = rho(1:mesh%np, 2) + sin(theta/M_TWO)**2*atom_rho(1:mesh%np, 1) &
+            + cos(theta/M_TWO)**2*atom_rho(1:mesh%np, 2)
+          rho(1:mesh%np, 3) = rho(1:mesh%np, 3) + cos(theta/M_TWO)*sin(theta/M_TWO)*cos(phi)* &
+            (atom_rho(1:mesh%np, 1) - atom_rho(1:mesh%np, 2))
+          rho(1:mesh%np, 4) = rho(1:mesh%np, 4) - cos(theta/M_TWO)*sin(theta/M_TWO)*sin(phi)* &
+            (atom_rho(1:mesh%np, 1) - atom_rho(1:mesh%np, 2))
         end if
       end do
 
@@ -335,36 +335,36 @@ contains
         call write_fatal(1)
       end if
 
-      SAFE_ALLOCATE(atom_rho(1:m%np, 1:2))
+      SAFE_ALLOCATE(atom_rho(1:mesh%np, 1:2))
       do ia = 1, geo%natoms
         !Read from AtomsMagnetDirection block 
         if (nspin == 2) then
           call parse_block_float(blk, ia-1, 0, mag(1))
           lmag = abs(mag(1))
         elseif (nspin == 4) then
-          do i = 1, 3
-            call parse_block_float(blk, ia-1, i-1, mag(i))
-            if (abs(mag(i)) < CNST(1.0e-20)) mag(i) = M_ZERO
+          do idir = 1, 3
+            call parse_block_float(blk, ia-1, idir-1, mag(idir))
+            if (abs(mag(idir)) < CNST(1.0e-20)) mag(idir) = M_ZERO
           end do
           lmag = sqrt(dot_product(mag, mag))
         end if
 
         !Get atomic density
-        call atom_density(m, sb, geo%atom(ia), 2, atom_rho)
+        call atom_density(mesh, sb, geo%atom(ia), 2, atom_rho)
 
         !Scale magnetization density
-        n1 = dmf_integrate(m, atom_rho(:, 1))
-        n2 = dmf_integrate(m, atom_rho(:, 2))
+        n1 = dmf_integrate(mesh, atom_rho(:, 1))
+        n2 = dmf_integrate(mesh, atom_rho(:, 2))
         if (lmag > n1 + n2) then
           mag = mag*(n1 + n2)/lmag
           lmag = n1 + n2
         elseif (lmag == M_ZERO) then
           if (n1 - n2 == M_ZERO) then
-            rho(1:m%np, 1:2) = rho(1:m%np, 1:2) + atom_rho(1:m%np, 1:2)
+            rho(1:mesh%np, 1:2) = rho(1:mesh%np, 1:2) + atom_rho(1:mesh%np, 1:2)
           else
             atom_rho(:, 1) = (atom_rho(:, 1) + atom_rho(:, 2))/M_TWO
-            rho(1:m%np, 1) = rho(1:m%np, 1) + atom_rho(1:m%np, 1)
-            rho(1:m%np, 2) = rho(1:m%np, 2) + atom_rho(1:m%np, 1)
+            rho(1:mesh%np, 1) = rho(1:mesh%np, 1) + atom_rho(1:mesh%np, 1)
+            rho(1:mesh%np, 2) = rho(1:mesh%np, 2) + atom_rho(1:mesh%np, 1)
           end if
           cycle
         end if
@@ -381,10 +381,10 @@ contains
         !Rotate magnetization density
         if (nspin == 2) then
           if (mag(1) > M_ZERO) then
-            rho(1:m%np, 1:2) = rho(1:m%np, 1:2) + atom_rho(1:m%np, 1:2)
+            rho(1:mesh%np, 1:2) = rho(1:mesh%np, 1:2) + atom_rho(1:mesh%np, 1:2)
           else
-            rho(1:m%np, 1) = rho(1:m%np, 1) + atom_rho(1:m%np, 2)
-            rho(1:m%np, 2) = rho(1:m%np, 2) + atom_rho(1:m%np, 1)
+            rho(1:mesh%np, 1) = rho(1:mesh%np, 1) + atom_rho(1:mesh%np, 2)
+            rho(1:mesh%np, 2) = rho(1:mesh%np, 2) + atom_rho(1:mesh%np, 1)
           end if
 
         elseif (nspin == 4) then
@@ -405,14 +405,14 @@ contains
             end if
           end if
 
-          rho(1:m%np, 1) = rho(1:m%np, 1) + cos(theta/M_TWO)**2*atom_rho(1:m%np, 1) &
-            + sin(theta/M_TWO)**2*atom_rho(1:m%np, 2)
-          rho(1:m%np, 2) = rho(1:m%np, 2) + sin(theta/M_TWO)**2*atom_rho(1:m%np, 1) &
-               + cos(theta/M_TWO)**2*atom_rho(1:m%np, 2)
-          rho(1:m%np, 3) = rho(1:m%np, 3) + cos(theta/M_TWO)*sin(theta/M_TWO)*cos(phi)* &
-            (atom_rho(1:m%np, 1) - atom_rho(1:m%np, 2))
-          rho(1:m%np, 4) = rho(1:m%np, 4) - cos(theta/M_TWO)*sin(theta/M_TWO)*sin(phi)* &
-            (atom_rho(1:m%np, 1) - atom_rho(1:m%np, 2))
+          rho(1:mesh%np, 1) = rho(1:mesh%np, 1) + cos(theta/M_TWO)**2*atom_rho(1:mesh%np, 1) &
+            + sin(theta/M_TWO)**2*atom_rho(1:mesh%np, 2)
+          rho(1:mesh%np, 2) = rho(1:mesh%np, 2) + sin(theta/M_TWO)**2*atom_rho(1:mesh%np, 1) &
+               + cos(theta/M_TWO)**2*atom_rho(1:mesh%np, 2)
+          rho(1:mesh%np, 3) = rho(1:mesh%np, 3) + cos(theta/M_TWO)*sin(theta/M_TWO)*cos(phi)* &
+            (atom_rho(1:mesh%np, 1) - atom_rho(1:mesh%np, 2))
+          rho(1:mesh%np, 4) = rho(1:mesh%np, 4) - cos(theta/M_TWO)*sin(theta/M_TWO)*sin(phi)* &
+            (atom_rho(1:mesh%np, 1) - atom_rho(1:mesh%np, 2))
         end if
       end do
 
@@ -423,7 +423,7 @@ contains
     ! we now renormalize the density (necessary if we have a charged system)
     r = M_ZERO
     do is = 1, spin_channels
-      r = r + dmf_integrate(m, rho(:, is))
+      r = r + dmf_integrate(mesh, rho(:, is))
     end do
 
     write(message(1),'(a,f13.6)')'Info: Unnormalized total charge = ', r
@@ -433,7 +433,7 @@ contains
     rho = r*rho
     r = M_ZERO
     do is = 1, spin_channels
-      r = r + dmf_integrate(m, rho(:, is))
+      r = r + dmf_integrate(mesh, rho(:, is))
     end do
 
     write(message(1),'(a,f13.6)')'Info: Renormalized total charge = ', r
@@ -446,8 +446,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine species_get_density(s, pos, gr, geo, rho)
-    type(species_t),             intent(in)  :: s
+  subroutine species_get_density(spec, pos, gr, geo, rho)
+    type(species_t),            intent(in)  :: spec
     FLOAT,                      intent(in)  :: pos(MAX_DIM)
     type(grid_t),       target, intent(in)  :: gr
     type(geometry_t),           intent(in)  :: geo
@@ -455,7 +455,7 @@ contains
 
     type(root_solver_t) :: rs
     logical :: conv
-    integer :: dim, i
+    integer :: dim
     FLOAT   :: x(1:MAX_DIM+1), chi0(MAX_DIM), startval(MAX_DIM + 1)
     FLOAT   :: delta, alpha, beta, xx(MAX_DIM), yy(MAX_DIM), r, imrho, rerho
     FLOAT   :: dist2, dist2_min
@@ -469,10 +469,10 @@ contains
 
     call push_sub('species_pot.species_get_density')
 
-    select case(species_type(s))
+    select case(species_type(spec))
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
-      ps => species_ps(s)
+      ps => species_ps(spec)
       rho = M_ZERO
       call periodic_copy_init(pp, gr%sb, pos, range = spline_cutoff_radius(ps%nlr, ps%projectors_sphere_threshold))
       do icell = 1, periodic_copy_num(pp)
@@ -499,7 +499,7 @@ contains
       end do
 
       write(message(1), '(3a,f5.2,3a)') &
-        "Info: spec_full_delta species ", trim(species_label(s)), &
+        "Info: spec_full_delta species ", trim(species_label(spec)), &
         " atom displaced ", units_from_atomic(units_out%length, sqrt(dist2_min)), &
         " [ ", trim(units_abbrev(units_out%length)), " ]"
       call write_info(1)
@@ -518,9 +518,9 @@ contains
 #endif
       if(have_point) then
         if(gr%mesh%use_curvilinear) then
-          rho(ipos) = -species_z(s)/gr%mesh%vol_pp(ipos)
+          rho(ipos) = -species_z(spec)/gr%mesh%vol_pp(ipos)
         else
-          rho(ipos) = -species_z(s)/gr%mesh%vol_pp(1)
+          rho(ipos) = -species_z(spec)/gr%mesh%vol_pp(1)
         end if
       end if
 
@@ -541,13 +541,13 @@ contains
       SAFE_ALLOCATE(rho_p(1:gr%mesh%np))
       SAFE_ALLOCATE(grho_p(1:gr%mesh%np, 1:dim+1))
 
-      m_p   => gr%mesh
+      mesh_p => gr%mesh
       pos_p = pos
 
       ! Initial guess.
       call curvilinear_x2chi(gr%mesh%sb, gr%cv, pos, chi0)
       delta   = gr%mesh%h(1)
-      alpha   = sqrt(M_TWO)*species_sigma(s)*delta
+      alpha   = sqrt(M_TWO)*species_sigma(spec)*delta
       alpha_p = alpha  ! global copy of alpha
       beta    = M_ONE
 
@@ -573,9 +573,9 @@ contains
       end if
 
       ! we want a charge of -Z
-      rho = -species_z(s)*rho_p
+      rho = -species_z(spec)*rho_p
 
-      nullify(m_p)
+      nullify(mesh_p)
       SAFE_DEALLOCATE_A(grho_p)
       SAFE_DEALLOCATE_A(rho_p)
 
@@ -588,12 +588,12 @@ contains
       rho = M_ZERO
       do icell = 1, periodic_copy_num(pp)
         yy = periodic_copy_position(pp, gr%sb, icell)
-        do i = 1, gr%mesh%np
-          call mesh_r(gr%mesh, i, r, x = xx, a = pos)
+        do ip = 1, gr%mesh%np
+          call mesh_r(gr%mesh, ip, r, x = xx, a = pos)
           xx(1:gr%sb%dim) = xx(1:gr%sb%dim) + yy(1:gr%sb%dim)
           r = sqrt(dot_product(xx(1:gr%sb%dim), xx(1:gr%sb%dim)))
-          call parse_expression(rerho, imrho, gr%sb%dim, xx, r, M_ZERO, trim(species_rho_string(s)))
-          rho(i) = rho(i) - rerho
+          call parse_expression(rerho, imrho, gr%sb%dim, xx, r, M_ZERO, trim(species_rho_string(spec)))
+          rho(ip) = rho(ip) - rerho
         end do
       end do
 
@@ -604,37 +604,37 @@ contains
     call pop_sub()
   end subroutine species_get_density
 
-  subroutine func(xin, f, jacobian)
+  subroutine func(xin, ff, jacobian)
     FLOAT, intent(in)  :: xin(:)
-    FLOAT, intent(out) :: f(:), jacobian(:,:)
+    FLOAT, intent(out) :: ff(:), jacobian(:,:)
 
     FLOAT, allocatable :: xrho(:)
-    integer :: i, j, dim
+    integer :: idir, jdir, dim
 
     call push_sub('species_pot.func')
 
-    dim = m_p%sb%dim
+    dim = mesh_p%sb%dim
 
     call getrho(xin)
-    SAFE_ALLOCATE(xrho(1:m_p%np))
+    SAFE_ALLOCATE(xrho(1:mesh_p%np))
 
-    ! First, we calculate the function f.
-    do i = 1, dim
-      xrho(1:m_p%np) = rho_p(1:m_p%np) * m_p%x(1:m_p%np, i)
-      f(i) = dmf_integrate(m_p, xrho) - pos_p(i)
+    ! First, we calculate the function ff.
+    do idir = 1, dim
+      xrho(1:mesh_p%np) = rho_p(1:mesh_p%np) * mesh_p%x(1:mesh_p%np, idir)
+      ff(idir) = dmf_integrate(mesh_p, xrho) - pos_p(idir)
     end do
-    f(dim+1) = dmf_integrate(m_p, rho_p) - M_ONE
+    ff(dim+1) = dmf_integrate(mesh_p, rho_p) - M_ONE
 
     ! Now the jacobian.
-    do i = 1, dim
-      do j = 1, dim+1
-        xrho(1:m_p%np) = grho_p(1:m_p%np, j) * m_p%x(1:m_p%np, i)
-        jacobian(i, j) = dmf_integrate(m_p, xrho)
+    do idir = 1, dim
+      do jdir = 1, dim+1
+        xrho(1:mesh_p%np) = grho_p(1:mesh_p%np, jdir) * mesh_p%x(1:mesh_p%np, idir)
+        jacobian(idir, jdir) = dmf_integrate(mesh_p, xrho)
       end do
     end do
-    do j = 1, dim+1
-      xrho(1:m_p%np) = grho_p(1:m_p%np, j)
-      jacobian(dim+1, j) = dmf_integrate(m_p, xrho)
+    do jdir = 1, dim+1
+      xrho(1:mesh_p%np) = grho_p(1:mesh_p%np, jdir)
+      jacobian(dim+1, jdir) = dmf_integrate(mesh_p, xrho)
     end do
 
     SAFE_DEALLOCATE_A(xrho)
@@ -646,33 +646,33 @@ contains
   subroutine getrho(xin)
     FLOAT, intent(in) :: xin(:)
 
-    integer :: i, j, dim
+    integer :: ip, jp, idir, dim
     FLOAT   :: r, chi(MAX_DIM)
 
     call push_sub('species_pot.getrho')
 
-    dim = m_p%sb%dim
+    dim = mesh_p%sb%dim
     rho_p = M_ZERO
-    do i = 1, m_p%np
+    do ip = 1, mesh_p%np
 
-      j = i
-      if(m_p%parallel_in_domains) &
-        j  = m_p%vp%local(m_p%vp%xlocal(m_p%vp%partno)+i-1)
+      jp = ip
+      if(mesh_p%parallel_in_domains) &
+        jp = mesh_p%vp%local(mesh_p%vp%xlocal(mesh_p%vp%partno)+ip-1)
 
-      chi(1:dim) = m_p%idx%Lxyz(j, 1:dim) * m_p%h(1:dim) + m_p%sb%box_offset(1:dim) 
+      chi(1:dim) = mesh_p%idx%Lxyz(jp, 1:dim) * mesh_p%h(1:dim) + mesh_p%sb%box_offset(1:dim) 
 
       r = sqrt( sum( (chi(1:dim) - xin(1:dim))**2 ) )
 
       if( (r/alpha_p)**2 < CNST(10.0)) then
-        grho_p(i, dim+1) = exp(-(r/alpha_p)**2)
-        rho_p(i)         = xin(dim+1) * grho_p(i, dim+1)
+        grho_p(ip, dim+1) = exp(-(r/alpha_p)**2)
+        rho_p(ip)         = xin(dim+1) * grho_p(ip, dim+1)
       else
-        grho_p(i, dim+1) = M_ZERO
-        rho_p(i)         = M_ZERO
+        grho_p(ip, dim+1) = M_ZERO
+        rho_p(ip)         = M_ZERO
       end if
 
-      do j = 1, dim
-        grho_p(i, j) = (M_TWO/alpha_p**2) * (chi(j)-xin(j)) * rho_p(i)
+      do idir = 1, dim
+        grho_p(ip, idir) = (M_TWO/alpha_p**2) * (chi(idir)-xin(idir)) * rho_p(ip)
       end do
     end do
 
@@ -680,8 +680,8 @@ contains
   end subroutine getrho 
 
   ! ---------------------------------------------------------
-  subroutine species_get_local(s, mesh, x_atom, vl, time)
-    type(species_t),  intent(in) :: s
+  subroutine species_get_local(spec, mesh, x_atom, vl, time)
+    type(species_t), intent(in) :: spec
     type(mesh_t),    intent(in) :: mesh
     FLOAT,           intent(in) :: x_atom(MAX_DIM)
     FLOAT,           intent(out):: vl(:)
@@ -701,7 +701,7 @@ contains
 
     if (present(time)) time_ = time
 
-      select case(species_type(s))
+      select case(species_type(spec))
       case(SPEC_USDEF)
 
         do ip = 1, mesh%np
@@ -714,40 +714,40 @@ contains
           ! the units back and forth
           forall(idim = 1:mesh%sb%dim) xx(idim) = units_from_atomic(units_inp%length, xx(idim))
           r = units_from_atomic(units_inp%length, r)
-          vl(ip) = units_to_atomic(units_inp%energy, species_userdef_pot(s, mesh%sb%dim, xx, r, time_))
+          vl(ip) = units_to_atomic(units_inp%energy, species_userdef_pot(spec, mesh%sb%dim, xx, r, time_))
 
         end do
 
 
       case(SPEC_FROM_FILE)
 
-        call dinput_function(trim(species_filename(s)), mesh, vl, err)
+        call dinput_function(trim(species_filename(spec)), mesh, vl, err)
         if(err .ne. 0) then
-          write(message(1), '(a)')    'File '//trim(species_filename(s))//'not found.'
+          write(message(1), '(a)')    'File '//trim(species_filename(spec))//'not found.'
           write(message(2), '(a,i4)') 'Error code returned = ', err
           call write_fatal(1)
         end if
 
       case(SPEC_POINT, SPEC_JELLI)
-        a1 = species_z(s)/(M_TWO*species_jradius(s)**3)
-        a2 = species_z(s)/species_jradius(s)
-        Rb2= species_jradius(s)**2
+        a1 = species_z(spec)/(M_TWO*species_jradius(spec)**3)
+        a2 = species_z(spec)/species_jradius(spec)
+        Rb2= species_jradius(spec)**2
         
         do ip = 1, mesh%np
           
           xx(:) = mesh%x(ip,:)-x_atom(:)
           r = sqrt(sum(xx(:)**2))
           
-          if(r <= species_jradius(s)) then
+          if(r <= species_jradius(spec)) then
             vl(ip) = (a1*(r*r - Rb2) - a2)
           else
-            vl(ip) = -species_z(s)/r
+            vl(ip) = -species_z(spec)/r
           end if
           
         end do
         
       case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
-        ps => species_ps(s)
+        ps => species_ps(spec)
         do ip = 1, mesh%np
           vl(ip) = sum((mesh%x(ip, 1:MAX_DIM) - x_atom(1:MAX_DIM))**2)
         end do
