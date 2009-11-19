@@ -123,13 +123,13 @@ contains
     case(HARTREE)
       call messages_devel_version("Hartree theory level")
     case(HARTREE_FOCK)
-      ! initilize xc modules
+      ! initialize XC modules
       call xc_init(ks%xc, gr%mesh%sb%dim, nel, d%spin_channels, d%cdft, hartree_fock=.true.)
       ks%xc_family = ks%xc%family
       ks%sic_type = sic_none
 
     case(KOHN_SHAM_DFT)
-      ! initilize xc modules
+      ! initialize XC modules
       call xc_init(ks%xc, gr%mesh%sb%dim, nel, d%spin_channels, d%cdft, hartree_fock=.false.)
       ks%xc_family = ks%xc%family
 
@@ -175,7 +175,7 @@ contains
   subroutine v_ks_end(ks)
     type(v_ks_t), intent(inout) :: ks
 
-    call push_sub('v_ks.v_ks_end');
+    call push_sub('v_ks.v_ks_end')
 
     select case(ks%theory_level)
     case(KOHN_SHAM_DFT)
@@ -183,7 +183,7 @@ contains
       call xc_end(ks%xc)
     end select
 
-    call pop_sub();
+    call pop_sub()
   end subroutine v_ks_end
   ! ---------------------------------------------------------
 
@@ -358,7 +358,7 @@ contains
         rho(1:gr%fine%mesh%np, :) = amaldi_factor*rho(1:gr%fine%mesh%np, :)
       end if
 
-      ! Get the *local* xc term
+      ! Get the *local* XC term
       if(hm%d%cdft) then
         call xc_get_vxc_and_axc(gr, ks%xc, st, rho, st%current, st%d%ispin, hm%vxc, hm%axc, &
              hm%ex, hm%ec, hm%exc_j, -minval(st%eigenval(st%nst, :)), st%qtot)
@@ -402,7 +402,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Hartree contribution to the xc potential
+  ! Hartree contribution to the XC potential
   subroutine v_ks_hartree(gr, st, hm, amaldi_factor)
     type(grid_t),        intent(inout) :: gr
     type(hamiltonian_t), intent(inout) :: hm

@@ -95,7 +95,7 @@ contains
     ! initialize curvilinear coordinates
     call curvilinear_init(gr%sb, geo, gr%cv)
 
-    ! initilize derivatives
+    ! initialize derivatives
     call derivatives_init(gr%der, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
 
     call double_grid_init(gr%dgrid, gr%sb)
@@ -109,7 +109,7 @@ contains
     call mesh_init_stage_1(gr%mesh, gr%sb, gr%cv, enlarge = enlarge)
 
     ! the stencil used to generate the grid is a union of a cube (for
-    ! multigrid) and the laplacian.
+    ! multigrid) and the Laplacian.
     call stencil_cube_get_lapl(cube, gr%sb%dim, order = 2)
     call stencil_union(gr%sb%dim, cube, gr%der%lapl%stencil, gr%stencil)
     call stencil_end(cube)

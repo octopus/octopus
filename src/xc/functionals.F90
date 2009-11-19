@@ -93,11 +93,11 @@ contains
     !%Default lca_omc
     !%Section Hamiltonian::XC
     !%Description
-    !% Defines the current functional.
+    !% Defines the current functional for current-density functional theory.
     !%Option lca_omc 301
-    !% Orestes, Marcasso & Capelle
+    !% Orestes, Marcasso & Capelle.
     !%Option lca_lch 302
-    !% Lee, Colwell & Handy
+    !% Lee, Colwell & Handy.
     !%End
     call parse_integer(datasets_check('JFunctional'), XC_LCA_OMC, functl%id)
 

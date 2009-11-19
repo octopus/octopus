@@ -196,7 +196,7 @@ contains
         !% to <math>\phi^*(r)</math>. This is the approach used in most quantum-chemistry
         !% (and other) programs.
         !%Option mgga_gea 2
-        !% Use gradient expansion (GEA) of the kinetic energy density.
+        !% Use gradient expansion (GEA) of the kinetic-energy density.
         !%Option mgga_oep 3
         !% Use the OEP equation to obtain the XC potential. This is the "correct" way
         !% to do it within DFT.
@@ -214,6 +214,8 @@ contains
     
     subroutine parse()
       integer :: val, default
+
+      call push_sub('xc.xc_init.parse')
 
       ! the first 3 digits of the number indicate the X functional and
       ! the next 3 the C functional.
@@ -256,6 +258,7 @@ contains
         xk_id = val - ck_id*1000  
       end if
 
+      call pop_sub()
     end subroutine parse
 
   end subroutine xc_init
