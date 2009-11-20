@@ -746,6 +746,9 @@ contains
       end do
       read(iunit, '(28x)', advance='no') ! skip the time index.
 
+      vecpot = M_ZERO
+      vecpot_vel = M_ZERO
+
       ! TODO: units are missing
       read(iunit, '(3es20.12)', advance='no') vecpot(1:gr%mesh%sb%dim)
       read(iunit, '(3es20.12)', advance='no') vecpot_vel(1:gr%mesh%sb%dim)

@@ -367,7 +367,7 @@ contains
     ASSERT(gauge_field_is_applied(this))
     
     vecpot = gauge_field_get_vec_pot(this)/P_c
-    a2 = sum(vecpot(1:MAX_DIM)**2)
+    a2 = sum(vecpot(1:gr%sb%dim)**2)
     
     forall(idim = 1:dim, ip = 1:gr%mesh%np)
       hpsi(ip, idim) = hpsi(ip, idim) + M_HALF*a2*psi(ip, idim) + M_zI*dot_product(vecpot(1:MAX_DIM), grad(ip, 1:MAX_DIM, idim))
