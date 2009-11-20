@@ -738,11 +738,11 @@ contains
         
         if (simul_box_is_periodic(gr%sb)) then
            write(iunit, '(a)') "Defined only up to quantum of polarization (e * lattice vector)."
-           write(iunit, '(a)') "Single-point Berry`s phase method only accurate for large supercells."
+           write(iunit, '(a)') "Single-point Berry's phase method only accurate for large supercells."
 
            if (st%d%nik * st%smear%el_per_state .ne. 2) then
               write(iunit, '(a)') &
-                   "WARNING: Single-point Berry`s phase method for dipole should not be used when there is more than one k-point."
+                   "WARNING: Single-point Berry's phase method for dipole should not be used when there is more than one k-point."
               write(iunit, '(a)') &
                    "Instead, finite differences on k-points (not yet implemented) are needed."
            endif

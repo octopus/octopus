@@ -8,7 +8,7 @@ Enabled    : Yes
 
 # This test calculates the ground-state of a Na8 cluster, described by
 # the spherical-jellium model. The calculation reproduces one of the 
-# first calculation of this kind; namely the plot of the density and of
+# first calculations of this kind; namely the plot of the density and of
 # the total self-consistent potential reproduces Fig. 1 of
 # [W. Ekardt, Phys. Rev. B 29, 1558 (1984)].
 # 

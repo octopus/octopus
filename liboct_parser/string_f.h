@@ -19,7 +19,7 @@
  $Id: string_f.h 3341 2007-10-12 15:47:30Z marques $
 */
 
-/* --------------------- Fortran to C string compatibility ---------------------- */
+/* --------------------- Fortran-to-C-string compatibility ---------------------- */
 #include <stdlib.h>
 
 #if defined(_CRAY)

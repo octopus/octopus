@@ -36,7 +36,7 @@
 #include "string_f.h"
 
 #ifndef FC_FUNC
-#error "Unknown Fortran name mangling. Check configuration."
+#error "Unknown Fortran name-mangling. Check configuration."
 #endif
 
 /* --------------------- Interface to the parsing routines ---------------------- */
@@ -179,7 +179,7 @@ void FC_FUNC_(oct_parse_string, OCT_PARSE_STRING)
   TO_C_STR1(name, name_c);
   TO_C_STR2(def, def_c);
   c = parse_string(name_c, def_c); 
-  TO_F_STR3(c, res);             /* convert string to fortran */
+  TO_F_STR3(c, res);             /* convert string to Fortran */
   free(name_c); free(def_c);     /* this has to be *after* the to_f_str or we will have memory problems */
 }
 

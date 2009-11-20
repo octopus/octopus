@@ -139,6 +139,7 @@ contains
     !% Just <tt>hartree</tt> gives you the random-phase approximation (RPA).
     !% If you want to choose the exchange-correlation kernel, use the variable
     !% <tt>XCKernel</tt>. For <tt>kdotp</tt> and magnetic <tt>em_resp</tt> modes,
+    !% or if <tt>TheoryLevel = independent_particles</tt>, 
     !% the value <tt>V_ext_only</tt> is used and this variable is ignored.
     !%Option V_ext_only 0
     !% Neither Hartree nor XC potentials included.

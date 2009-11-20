@@ -78,7 +78,7 @@ contains
     type(simul_box_t), intent(in)    :: sb
     type(atom_t),      intent(in)    :: atom
     integer,           intent(in)    :: spin_channels
-    FLOAT,             intent(inout) :: rho(:, :) ! (m%np, spin_channels)
+    FLOAT,             intent(inout) :: rho(:, :) ! (mesh%np, spin_channels)
 
     integer :: isp, ip, in_points, n, icell
     FLOAT :: r, x, pos(1:MAX_DIM)
@@ -710,7 +710,7 @@ contains
           xx(1:mesh%sb%dim) = mesh%x(ip,1:mesh%sb%dim)-x_atom(1:mesh%sb%dim)
           r = sqrt(sum(xx(:)**2))
           
-          ! Note that as the s%user_def is in input units, we have to convert
+          ! Note that as the spec%user_def is in input units, we have to convert
           ! the units back and forth
           forall(idim = 1:mesh%sb%dim) xx(idim) = units_from_atomic(units_inp%length, xx(idim))
           r = units_from_atomic(units_inp%length, r)

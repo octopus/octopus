@@ -328,7 +328,7 @@ contains
 
   end subroutine parse_block_logical
 
-  ! The code may want to compile in single precision mode
+  ! The code may want to compile in single-precision mode.
   ! As I did not want to change the parser library, these
   ! driver functions just convert their arguments.
 
