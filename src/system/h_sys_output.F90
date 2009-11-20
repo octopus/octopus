@@ -405,6 +405,17 @@ contains
     !%End
     call parse_integer(datasets_check('OutputEvery'), 50, outp%iter)
 
+    !%Variable OutputDuringSCF
+    !%Type logical
+    !%Default no
+    !%Section Output
+    !%Description
+    !% If this variable is set to yes, during a ground state run,
+    !% Octopus output will be written after every self self
+    !% consistency iteration to a directory called "scf.nnnn/" (with
+    !% nnnn the iteration number). The default is no.
+    !%End
+
     call parse_logical(datasets_check('OutputDuringSCF'), .false., outp%duringscf)
 
     if(outp%what.ne.0.and.outp%what.ne.output_matrix_elements) &
