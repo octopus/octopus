@@ -25,15 +25,15 @@ Spacing = 0.1
 Lx = 5
 Ly = 3
 
-D = 0.9 # Radius of the ring.
-W = 0.2 # Width of the channel.
-V = 10  # Depth of the potential.
+DD = 0.9 # Radius of the ring.
+WW = 0.2 # Width of the channel.
+VV = 10  # Depth of the potential.
 
 %Species
- "channel" | 1.0 | spec_user_defined | 1.0 | "V*step(x+lead_Lx+0.5*Spacing)*(1-step(x-0.5*Spacing))*(-exp(-y^2/W))"
- "lchan"   | 1.0 | spec_user_defined | 1.0 | "V*step(x+Lx-D+0.5*Spacing)*(1-step(x))*(-exp(-y^2/W))*(1-exp(-(sqrt((x-D)^2+y^2)-D)^2/W))"
- "rchan"   | 1.0 | spec_user_defined | 1.0 | "V*(1-step(x-Lx+D+0.5*Spacing))*step(x)*(-exp(-y^2/W))*(1-exp(-(sqrt((x+D)^2+y^2)-D)^2/W))"
- "ring"    | 1.0 | spec_user_defined | 1.0 | "-V*exp(-(sqrt(x^2+y^2)-D)^2/W)"
+ "channel" | 1.0 | spec_user_defined | 1.0 | "VV*step(x+lead_Lx+0.5*Spacing)*(1-step(x-0.5*Spacing))*(-exp(-y^2/WW))"
+ "lchan"   | 1.0 | spec_user_defined | 1.0 | "VV*step(x+Lx-DD+0.5*Spacing)*(1-step(x))*(-exp(-y^2/WW))*(1-exp(-(sqrt((x-DD)^2+y^2)-DD)^2/WW))"
+ "rchan"   | 1.0 | spec_user_defined | 1.0 | "VV*(1-step(x-Lx+DD+0.5*Spacing))*step(x)*(-exp(-y^2/WW))*(1-exp(-(sqrt((x+DD)^2+y^2)-DD)^2/WW))"
+ "ring"    | 1.0 | spec_user_defined | 1.0 | "-VV*exp(-(sqrt(x^2+y^2)-DD)^2/WW)"
 %
 
 add_ucells = 4
@@ -65,9 +65,9 @@ KPointsUseSymmetries = false
 %
 
 %ring_lead_Coordinates
- "lchan" | -D | 0 | 0
+ "lchan" | -DD | 0 | 0
  "ring"  |  0 | 0 | 0
- "rchan" |  D | 0 | 0
+ "rchan" |  DD | 0 | 0
 %
 
 ring_lead_EigenSolverMaxIter = 5000

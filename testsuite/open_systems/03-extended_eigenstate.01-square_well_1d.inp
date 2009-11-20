@@ -24,11 +24,11 @@ Dimensions = 1
 Spacing = 0.1
 Lx = 20
 
-V = 1.5
-W = 10
+VV = 1.5
+WW = 10
 %Species
  "flat" | 0 | spec_user_defined | 1.0 | "0"
- "well" | 0 | spec_user_defined | 1.0 | "V*(-step(x+W/2)+step(x-W/2))"
+ "well" | 0 | spec_user_defined | 1.0 | "VV*(-step(x+WW/2)+step(x-WW/2))"
 %
 
 add_ucells = 10
