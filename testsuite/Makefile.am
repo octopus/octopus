@@ -57,6 +57,6 @@ check-full:
 	fi
 
 clean-local:
-	-rm -rf /tmp/octopus.* 
+	-find /tmp* -name 'octopus*' -type d -mmin +600 -exec rm -rf {} \; 2>/dev/null
 
 .PHONY: check check-full clean clean-local
