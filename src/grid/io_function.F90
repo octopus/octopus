@@ -310,10 +310,10 @@ contains
 
     ! BoxOffset should be considered here
     do iatom = 1, geo%natoms
-      write(iunit, '(a10, 3f12.6, $)') trim(geo%atom(iatom)%label), &
+      write(iunit, '(a10, 3f12.6)', advance='no') trim(geo%atom(iatom)%label), &
         (units_from_atomic(units_out%length, geo%atom(iatom)%x(idir) - offset(idir)), idir = 1, sb%dim)
       if(write_forces_) then
-        write(iunit, '(5x, 3f12.6, $)') (units_from_atomic(units_out%force, geo%atom(iatom)%f(idir)), idir = 1, sb%dim)
+        write(iunit, '(5x, 3f12.6)', advance='no') (units_from_atomic(units_out%force, geo%atom(iatom)%f(idir)), idir = 1, sb%dim)
       endif
       write(iunit, '()')
     enddo
