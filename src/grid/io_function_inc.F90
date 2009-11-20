@@ -698,15 +698,15 @@ contains
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".dx", action='write', is_tmp=is_tmp)
 
-    write(iunit, '(a,3i7)') 'object 1 class gridpositions counts', cube%n(:)
-    write(iunit, '(a,3f12.6)') ' origin', offset(:)
+    write(iunit, '(a,3i7)') 'object 1 class gridpositions counts', cube%n(1:3)
+    write(iunit, '(a,3f12.6)') ' origin', offset(1:3)
     write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
-                                           mesh%h(1)*sb%rlattice_primitive(idir, 1)), idir = 1, sb%dim)
+                                           mesh%h(1)*sb%rlattice_primitive(idir, 1)), idir = 1, 3)
     write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
-                                           mesh%h(2)*sb%rlattice_primitive(idir, 2)), idir = 1, sb%dim)
+                                           mesh%h(2)*sb%rlattice_primitive(idir, 2)), idir = 1, 3)
     write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
-                                           mesh%h(3)*sb%rlattice_primitive(idir, 3)), idir = 1, sb%dim)
-    write(iunit, '(a,3i7)') 'object 2 class gridconnections counts', cube%n(:)
+                                           mesh%h(3)*sb%rlattice_primitive(idir, 3)), idir = 1, 3)
+    write(iunit, '(a,3i7)') 'object 2 class gridconnections counts', cube%n(1:3)
 #if defined(R_TREAL)
     write(iunit, '(a,a,a)') 'object 3 class array type float rank 0 items ', nitems, ' data follows'
 #else

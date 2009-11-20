@@ -234,21 +234,23 @@ contains
 
     call nl_operator_init(opo, opi%label)
 
-    opo%np       =  opi%np
-    opo%m        => opi%m
-    opo%cmplx_op =  opi%cmplx_op
-    opo%nri      =  opi%nri
-
     call stencil_copy(opi%stencil, opo%stencil)
 
-    opo%const_w = opi%const_w
+    opo%np           =  opi%np
+    opo%m            => opi%m
+    opo%der_zero_max = opi%der_zero_max
 
+    call loct_pointer_copy(opo%i,    opi%i)
     call loct_pointer_copy(opo%w_re, opi%w_re)
-    if (opi%cmplx_op) call loct_pointer_copy(opo%w_im, opi%w_im)
+    call loct_pointer_copy(opo%w_im, opi%w_im)
+
+    opo%const_w   = opi%const_w
+    opo%cmplx_op  = opi%cmplx_op
 
     opo%dfunction = opi%dfunction
     opo%zfunction = opi%zfunction
 
+    opo%nri       =  opi%nri
     ASSERT(associated(opi%ri))
 
     call loct_pointer_copy(opo%ri, opi%ri)
@@ -839,6 +841,7 @@ contains
   ! non constant case - op%w_re op%w_im.
   ! This can be considered as nl_operator_copy and
   ! reallocating w_re, w_im and i.
+  ! WARNING: this should be replaced by a normal copy with a flag
   subroutine nl_operator_common_copy(op, opg)
     type(nl_operator_t), intent(in)  :: op
     type(nl_operator_t), intent(out) :: opg
