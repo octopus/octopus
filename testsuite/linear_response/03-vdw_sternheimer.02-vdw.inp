@@ -14,5 +14,9 @@ Radius  = 7.0
 Spacing = 0.24
 
 LRConvAbsDens = 1.0e-3
+
+# Using the bicgstab solver because the default is much 
+# slower for vdw calculations
+LinearSolver = bicgstab
 LinearSolverTol = 1.0e-4
 
