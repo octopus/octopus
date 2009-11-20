@@ -107,10 +107,11 @@ contains
     write(message(3),'(1x,a)') '---------------------------------------------------'
     write(message(4),'(4x,a,3i5,6x,a,3f6.2)') 'n =', nk_axis(1:3), 's = ', shift(1:3)
     write(message(5),'(a)') ' '
-    call write_info(5)
+    write(message(6),'(a)') ' index |    weight    |              coordinates              |'
+    call write_info(6)
 
     do ik = 1, nkpoints
-      write(message(1), '(i5,4f12.6)') ik, weights(ik), kpoints(1:3, ik)
+      write(message(1), '(i6,a,f12.6,a,3f12.6, a)') ik, " | ", weights(ik), " | ", kpoints(1:3, ik), "  |"
     call write_info(1)
     end do
 
