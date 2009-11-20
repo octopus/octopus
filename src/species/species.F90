@@ -366,7 +366,7 @@ contains
 
     logical :: print_info_
     integer :: i, l
-    FLOAT   :: pot_re, pot_im, xx(1)
+    FLOAT   :: pot_re, pot_im, xx(MAX_DIM), rr
 
     call push_sub('species.species_init')
 
@@ -411,8 +411,11 @@ contains
         call write_info(2)
       end if
       s%niwfs = int(max(2*s%z_val, CNST(1.0)))
+
+      xx    = M_ZERO
       xx(1) = CNST(0.01)
-      call parse_expression(pot_re, pot_im, 1, xx, xx(1), M_ZERO, s%user_def)
+      rr    = sqrt(sum(xx**2))
+      call parse_expression(pot_re, pot_im, MAX_DIM, xx, rr, M_ZERO, s%user_def)
       s%omega = sqrt( abs(M_TWO / CNST(1.0e-4) * pot_re ))
       ! To avoid problems with constant potentials.
       if(s%omega <= M_ZERO) s%omega = CNST(0.1) 
