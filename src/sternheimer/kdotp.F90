@@ -353,7 +353,7 @@ contains
 
       write(iunit,'(a, i10)') '# spin    index = ', ispin
       write(iunit,'(a, i10)') '# k-point index = ', ik2
-      write(iunit,'(a, 3f12.8)') '# k-point coordinates = ', st%d%kpoints(1:MAX_DIM, ik)
+      write(iunit,'(a, 3f12.8)') '# k-point coordinates = ', st%d%kpoints(1:gr%mesh%sb%dim, ik)
       if (.not. kdotp_vars%ok) write(iunit, '(a)') "# WARNING: not converged"      
       
       write(iunit,'(a)')
