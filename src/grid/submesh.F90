@@ -96,7 +96,7 @@ contains
     type(submesh_t),      intent(out)  :: this
     type(simul_box_t),    intent(in)   :: sb
     type(mesh_t), target, intent(in)   :: m
-    FLOAT,                intent(in)   :: center(1:MAX_DIM)
+    FLOAT,                intent(in)   :: center(:)
     FLOAT,                intent(in)   :: rc
     
     FLOAT :: r2, x(1:MAX_DIM)
@@ -143,7 +143,7 @@ contains
             if(m%parallel_in_domains) ip = vec_global2local(m%vp, ip, m%vp%partno)
 #endif
             if(ip == 0) cycle
-            r2 = sum((m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM))**2)
+            r2 = sum((m%x(ip, 1:sb%dim) - center(1:sb%dim))**2)
             if(r2 <= rc**2) then
               if(ip > m%np) then
                 ! boundary points are marked as negative values
