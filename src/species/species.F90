@@ -747,10 +747,13 @@ contains
     FLOAT, parameter :: ylmconst = CNST(0.488602511902920) !  = sqrt(3/(4*pi))
 
     ! no push_sub because this function is called very frequently
+
     r = sqrt(sum(x(1:MAX_DIM)**2))
 
     uVr0  = spline_eval(s%ps%kb(l, i), r)
     duVr0 = spline_eval(s%ps%dkb(l, i), r)
+
+    gylm = M_ZERO
 
     call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
     uv = uvr0*ylm

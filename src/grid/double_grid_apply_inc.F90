@@ -47,9 +47,10 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
   call push_sub('double_grid_apply.double_grid_apply')
 
   ps => species_ps(s)
+  x = M_ZERO !must be initialized so x(dim + 1:MAX_DIM) = 0.0
 
   if (.not. this%use_double_grid) then 
-    
+
     do is = 1, sm%ns
       r = sm%x(is, 0)
       x(1:3) = sm%x(is, 1:3)
