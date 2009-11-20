@@ -290,7 +290,8 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, tol, occ
 
     gamma = X(mf_nrm2) (gr%mesh, st%d%dim, s)
 
-    if( gamma < tol ) then
+    conv = (gamma < tol)
+    if( conv ) then
       do idim = 1, st%d%dim 
         call lalg_axpy(gr%mesh%np, alpha, phat(:, idim), x(:, idim))
       end do
@@ -311,7 +312,6 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, tol, occ
 
     gamma = X(mf_nrm2)(gr%mesh, st%d%dim, r)
     conv = (gamma < tol)
-
     if( conv .and. conv_last ) then 
       exit
     end if
