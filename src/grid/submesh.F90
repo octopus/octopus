@@ -180,7 +180,8 @@ contains
               jxyz_inv(ip) = is
             end if
             this%jxyz(is) = ip
-            this%x(is, 1:MAX_DIM) = m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM)
+            this%x(is, 1:MAX_DIM) = M_ZERO
+            this%x(is, 1:sb%dim) = m%x(ip, 1:sb%dim) - center(1:sb%dim)
             this%x(is, 0) = sqrt(sum(this%x(is, 1:MAX_DIM)**2))
           end do
         end do

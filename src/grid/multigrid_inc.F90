@@ -65,7 +65,7 @@
       ! translate to a global index
       if(fine_mesh%parallel_in_domains) ipfg = fine_mesh%vp%local(ipf - 1 + fine_mesh%vp%xlocal(fine_mesh%vp%partno))
 #endif 
-      xf = fine_mesh%idx%lxyz(ipfg, :)
+      xf(1:3) = fine_mesh%idx%lxyz(ipfg, 1:3)
 
       dd = mod(xf, 2)
       
