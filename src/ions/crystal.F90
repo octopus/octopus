@@ -130,7 +130,7 @@ contains
     
     FLOAT :: dw
     integer ik, iop, ik2
-    FLOAT :: tran(MAX_DIM), tran_inv(MAX_DIM)
+    FLOAT :: tran(3), tran_inv(3)
     integer, allocatable :: kmap(:)
 
     call push_sub('crystal.crystal_kpointsgrid_reduce')
@@ -141,7 +141,7 @@ contains
     ! map reducible to irreducible k-points
 
     SAFE_ALLOCATE(kmap(1:nkpoints))
-    SAFE_ALLOCATE(reduced(1:MAX_DIM, 1:nkpoints))
+    SAFE_ALLOCATE(reduced(1:3, 1:nkpoints))
 
     forall(ik = 1:nkpoints) kmap(ik) = ik
     
@@ -156,7 +156,7 @@ contains
       ! mareduced with negative kmap
       
       nreduced = nreduced + 1
-      reduced(1:MAX_DIM, nreduced) = kpoints(1:MAX_DIM, ik)
+      reduced(1:3, nreduced) = kpoints(1:3, ik)
       
       kmap(ik) = -nreduced
       
@@ -168,7 +168,7 @@ contains
       
       do iop = 1, symmetries_number(symm)
         call symmetries_apply(symm, iop, reduced(:, nreduced), tran)
-        tran_inv(1:MAX_DIM) = -tran(1:MAX_DIM)
+        tran_inv(1:3) = -tran(1:3)
            
         ! remove (mark) k-points related to irreducible reduced by symmetry
         do ik2 = ik + 1, nkpoints

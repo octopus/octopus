@@ -45,7 +45,7 @@ module symmetries_m
     integer, pointer :: rotation(:, :, :)
     real(8), pointer :: translation(:, :)
     integer          :: nops
-    FLOAT            :: breakdir(1:MAX_DIM)
+    FLOAT            :: breakdir(1:3)
   end type symmetries_t
 
   real(8), parameter :: symprec = CNST(1e-5)
@@ -129,7 +129,7 @@ contains
     !% grids when an external perturbation is applied.
     !%End
 
-    this%breakdir(1:MAX_DIM) = M_ZERO
+    this%breakdir(1:3) = M_ZERO
 
     if(parse_block(datasets_check('SymmetryBreakDir'), blk) == 0) then
       
@@ -159,14 +159,14 @@ contains
   subroutine symmetries_apply(this, iop, aa, bb)
     type(symmetries_t),  intent(in)  :: this
     integer,             intent(in)  :: iop
-    FLOAT,               intent(in)  :: aa(1:MAX_DIM)
-    FLOAT,               intent(out) :: bb(1:MAX_DIM)
+    FLOAT,               intent(in)  :: aa(1:3)
+    FLOAT,               intent(out) :: bb(1:3)
 
-    FLOAT :: cc(1:MAX_DIM)
+    FLOAT :: cc(1:3)
 
     ASSERT(0 < iop .and. iop <= this%nops)
 
-    bb(1:MAX_DIM) = aa(1:MAX_DIM)
+    bb(1:3) = aa(1:3)
     
     ! if the operation leaves the vector invariant
     cc(1:3) = matmul(this%breakdir(1:3), dble(this%rotation(1:3, 1:3, iop)))

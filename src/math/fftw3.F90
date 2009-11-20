@@ -199,7 +199,7 @@ contains
 
     ! First, figure out the dimensionaliy of the FFT.
     dim = 0
-    do i = 1, MAX_DIM
+    do i = 1, 3
       if(n(i) <= 1) exit
       dim = dim + 1
     end do
