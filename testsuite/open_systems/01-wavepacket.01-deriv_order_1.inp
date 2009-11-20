@@ -13,7 +13,7 @@ MeshBlockSizeXY = 1
 MeshBlockSizeZ = 1
 DevelVersion = yes
 
-i = {0, 1}
+ci = {0, 1}
 
 %CalculationMode
  gs      | gs      | td
@@ -75,8 +75,8 @@ lead_OutputHow = binary
 # TD settings.
 flat_OnlyUserDefinedInitialStates = yes
 %flat_UserDefinedStates
- 1 | 1 | 1 | formula | "exp(-0.1*x*x)*exp(-i*0.9*x)"
- 1 | 1 | 2 | formula | "exp(-0.1*x*x)*exp(i*0.9*x)"
+ 1 | 1 | 1 | formula | "exp(-0.1*x*x)*exp(-ci*0.9*x)"
+ 1 | 1 | 2 | formula | "exp(-0.1*x*x)*exp(ci*0.9*x)"
 %
 
 flat_OpenBoundariesAdditionalTerms = mem_term
