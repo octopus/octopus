@@ -152,8 +152,17 @@ static int yylex (){
     
     if(!startc){
       s = getsym (symbuf);
-      if (s == 0)
+      if (s == 0){
+	int jj;
+	for (jj = 0; reserved_symbols[jj] != 0; jj++){
+	  if(strcmp(symbuf, reserved_symbols[jj]) == 0){
+	    fprintf(stderr, "Error: trying to redefine reserved symbol '%s'", symbuf);
+	    exit(1);
+	  }
+	}
+	
 	s = putsym (symbuf, S_CMPLX);
+      }
       yylval.tptr = s;
 
       free(symbuf);

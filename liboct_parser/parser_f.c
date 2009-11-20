@@ -287,7 +287,7 @@ void FC_FUNC_(oct_parse_block_string, OCT_PARSE_BLOCK_STRING)
 
 /* --------------------------------------------------------- */
 void FC_FUNC_(oct_parse_expression, OCT_PARSE_EXPRESSION)
-     (double *re, double *im, const int * ndim, const double *x, const double *r,  const double *t, STR_F_TYPE pot STR_ARG1)
+     (double *re, double *im, const int *ndim, const double *x, const double *r, const double *t, STR_F_TYPE pot STR_ARG1)
 {
   symrec *rec;
   parse_result c;
@@ -299,19 +299,23 @@ void FC_FUNC_(oct_parse_expression, OCT_PARSE_EXPRESSION)
   GSL_SET_COMPLEX(&rec->value.c, x[0], 0);
   rec->def = 1;
 
-  rec = putsym("y", S_CMPLX);
-  GSL_SET_COMPLEX(&rec->value.c, x[1], 0);
-  rec->def = 1;
+  if(*ndim > 1){
+    rec = putsym("y", S_CMPLX);
+    GSL_SET_COMPLEX(&rec->value.c, x[1], 0);
+    rec->def = 1;
+  }
   
-  rec = putsym("z", S_CMPLX);
-  GSL_SET_COMPLEX(&rec->value.c, x[2], 0);
-  rec->def = 1;
+  if(*ndim > 2){
+    rec = putsym("z", S_CMPLX);
+    GSL_SET_COMPLEX(&rec->value.c, x[2], 0);
+    rec->def = 1;
+  }
 
-#if MAX_DIM > 3
-  rec = putsym("w", S_CMPLX);
-  GSL_SET_COMPLEX(&rec->value.c, x[3], 0);
-  rec->def = 1;
-#endif
+  if(*ndim > 3){
+    rec = putsym("w", S_CMPLX);
+    GSL_SET_COMPLEX(&rec->value.c, x[3], 0);
+    rec->def = 1;
+  }
 
   rec = putsym("r", S_CMPLX);
   GSL_SET_COMPLEX(&rec->value.c, *r, 0);
@@ -322,14 +326,12 @@ void FC_FUNC_(oct_parse_expression, OCT_PARSE_EXPRESSION)
   rec->def = 1;
 
   parse_exp(s_c, &c);
-  
+
   /* clean up */
   rmsym("x");
-  rmsym("y");
-  rmsym("z");
-#if MAX_DIM > 3
-  rmsym("w");
-#endif
+  if(*ndim > 1) rmsym("y");
+  if(*ndim > 2) rmsym("z");
+  if(*ndim > 3) rmsym("w");
   rmsym("r");
   rmsym("t");
 

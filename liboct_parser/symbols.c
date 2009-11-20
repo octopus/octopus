@@ -175,8 +175,8 @@ static struct init_cnst arith_cnts[] = {
 	{0,          0, 0}
 };
 
-static char *reserved_symbols[] = {
-  "x", "y", "z", "r", 0
+char *reserved_symbols[] = {
+  "x", "y", "z", "r", "w", "t", 0
 };
 
 void sym_init_table ()  /* puts arithmetic functions in table. */

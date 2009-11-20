@@ -47,6 +47,7 @@ typedef struct symrec{
 
 /* The symbol table: a chain of struct symrec. */
 extern symrec *sym_table;
+extern char *reserved_symbols[];
 
 symrec *putsym (char *sym_name, symrec_type sym_type);
 symrec *getsym (char *sym_name);
