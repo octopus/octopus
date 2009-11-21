@@ -410,10 +410,10 @@ contains
     !%Default no
     !%Section Output
     !%Description
-    !% If this variable is set to yes, during a ground state run,
-    !% Octopus output will be written after every self self
-    !% consistency iteration to a directory called "scf.nnnn/" (with
-    !% nnnn the iteration number). The default is no.
+    !% If this variable is set to yes, during a ground-state run,
+    !% <tt>Octopus</tt> output will be written after every self-consistent
+    !% iteration to a directory called <tt>scf.nnnn/</tt> (with
+    !% <tt>nnnn</tt> the iteration number). The default is no.
     !%End
 
     call parse_logical(datasets_check('OutputDuringSCF'), .false., outp%duringscf)

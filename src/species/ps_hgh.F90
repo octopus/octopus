@@ -41,7 +41,7 @@ module ps_hgh_m
     hgh_debug,    &
     hgh_end
 
-  ! Next data type contains:
+  ! The following data type contains:
   !   (a) the pseudopotential parameters, as read from a *.hgh file,
   !   (b) auxiliary intermediate functions, to store stuff before passing it to the "ps" variable.
   type hgh_t
@@ -55,7 +55,7 @@ module ps_hgh_m
     FLOAT            :: k(0:3, 1:3, 1:3)
 
     type(valconf_t)  :: conf
-    integer          :: l_max     ! Maximum l for the Kleinmann-Bylander component.
+    integer          :: l_max     ! Maximum l for the Kleinman-Bylander component.
 
     FLOAT, pointer   :: vlocal(:) ! Local potential
     FLOAT, pointer   :: kb(:,:,:) ! KB projectors
@@ -264,8 +264,8 @@ contains
       end do
     end do kloop
 
-    ! Fill in the rest of the parameters matrices...
-    ! Fill in the rest of the parameters matrices...
+    ! Fill in the rest of the parameter matrices...
+    ! Fill in the rest of the parameter matrices...
     params%h(0, 1, 2) = -M_HALF      * sqrt(M_THREE/M_FIVE)            * params%h(0, 2, 2)
     params%h(0, 1, 3) =  M_HALF      * sqrt(M_FIVE/CNST(21.0))         * params%h(0, 3, 3)
     params%h(0, 2, 3) = -M_HALF      * sqrt(CNST(100.0)/CNST(63.0))    * params%h(0, 3, 3)
@@ -538,7 +538,7 @@ contains
     message(1) = '      Calculating atomic pseudo-eigenfunctions for species ' // psp%atom_name // '....'
     call write_info(1)
 
-    ! "Double" self consistent loop: nonlocal and xc parts have to be calculated
+    ! "Double" self-consistent loop: nonlocal and XC parts have to be calculated
     ! self-consistently.
     diff = CNST(1e5)
     iter = 0

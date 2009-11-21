@@ -73,9 +73,9 @@ module ps_m
     type(valconf_t)   :: conf
     type(logrid_t) :: g
     type(spline_t), pointer :: ur(:, :)     ! atomic wavefunctions
-    type(spline_t), pointer :: ur_sq(:, :)     ! atomic wavefunctions
+    type(spline_t), pointer :: ur_sq(:, :)  ! atomic wavefunctions
 
-    ! Kleynman and Bylander projectors stuff
+    ! Kleinman-Bylander projectors stuff
     integer  :: l_max    ! maximum value of l to take
     integer  :: l_loc    ! which component to take as local
 
@@ -92,7 +92,7 @@ module ps_m
 
     integer  :: kbc      ! Number of KB components (1 or 2 for TM ps, 3 for HGH)
     FLOAT, pointer :: h(:,:,:), k(:, :, :)
-    type(spline_t), pointer :: kb(:, :)     ! Kleynman-Bylander projectors
+    type(spline_t), pointer :: kb(:, :)     ! Kleinman-Bylander projectors
     type(spline_t), pointer :: dkb(:, :)    ! derivatives of KB projectors
 
     ! nonlinear core corrections
@@ -100,14 +100,14 @@ module ps_m
     type(spline_t) :: core ! normalization \int dr 4 pi r^2 rho(r) = N
 
 
-    !LONG RANGE PART OF THE LOCAL POTENTIAL
+    !LONG-RANGE PART OF THE LOCAL POTENTIAL
     
     logical :: has_long_range
 
-    type(spline_t) :: vlr         ! the long range part of the local potential
-    type(spline_t) :: vlr_sq      ! the long range part of the
+    type(spline_t) :: vlr         ! the long-range part of the local potential
+    type(spline_t) :: vlr_sq      ! the long-range part of the
                                   ! local potential in terms of r^2, to avoid the sqrt
-    type(spline_t) :: nlr         ! the charge density associated to the long range part
+    type(spline_t) :: nlr         ! the charge density associated with the long-range part
     
     FLOAT :: sigma_erf            ! the a constant in erf(r/(sqrt(2)*sigma))/r
     FLOAT :: a_erf                ! the a constant in erf(ar)/r

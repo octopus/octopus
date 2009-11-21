@@ -143,10 +143,10 @@ contains
   ! This label must match one of the labels given in the %Species block
   ! in the input file -- or else one of the labels in the defaults file.
   ! ---------------------------------------------------------
-  pure subroutine species_set_label(s, label)
-    type(species_t), intent(inout) :: s
+  pure subroutine species_set_label(spec, label)
+    type(species_t), intent(inout) :: spec
     character(len=*), intent(in)   :: label
-    s%label = trim(label)
+    spec%label = trim(label)
   end subroutine species_set_label
   ! ---------------------------------------------------------
 
@@ -156,10 +156,10 @@ contains
   ! second routine to be called (before species_read and species_init),
   ! when initializing a species_t variable.
   ! ---------------------------------------------------------
-  pure subroutine species_set_index(s, k)
-    type(species_t), intent(inout) :: s
+  pure subroutine species_set_index(spec, k)
+    type(species_t), intent(inout) :: spec
     integer, intent(in)   :: k
-    s%index = k
+    spec%index = k
   end subroutine species_set_index
   ! ---------------------------------------------------------
 
@@ -170,21 +170,21 @@ contains
   ! Note that species_read has to be called only after species_set_label
   ! and species_set index have been called.
   ! ---------------------------------------------------------
-  subroutine species_read(s)
-    type(species_t), intent(inout) :: s
+  subroutine species_read(spec)
+    type(species_t), intent(inout) :: spec
 
     character(len=256) :: fname
     character(len=10)  :: lab
-    integer :: i, row, n_spec_block, n_spec_def, iunit, read_data
+    integer :: ib, ispec, row, n_spec_block, n_spec_def, iunit, read_data
     type(block_t) :: blk
 
     call push_sub('species.species_read')
 
-    s%has_density = .false. ! there is no density associated
-    s%nlcc      = .false.   ! without non-local core corrections
-    s%def_h     = -M_ONE    ! not defined
-    s%def_rsize = -M_ONE    ! not defined
-    s%user_def  = ""
+    spec%has_density = .false. ! there is no density associated
+    spec%nlcc      = .false.   ! without non-local core corrections
+    spec%def_h     = -M_ONE    ! not defined
+    spec%def_rsize = -M_ONE    ! not defined
+    spec%user_def  = ""
     read_data   = 0
 
     !%Variable Species
@@ -314,17 +314,17 @@ contains
 
     ! Find out if the sought species is in the block
     row = -1
-    block: do i = 1, n_spec_block
-      call parse_block_string(blk, i-1, 0, lab)
-      if(trim(lab)==trim(s%label)) then
-        row = i - 1
+    block: do ib = 1, n_spec_block
+      call parse_block_string(blk, ib-1, 0, lab)
+      if(trim(lab)==trim(spec%label)) then
+        row = ib - 1
         exit block
       end if
     end do block
 
     ! Read whatever may be read from the block
     if(row>=0) then
-      call read_from_block(blk, row, s, read_data)
+      call read_from_block(blk, row, spec, read_data)
       call parse_block_end(blk)
     end if
 
@@ -337,10 +337,10 @@ contains
     if(iunit > 0) then
       read(iunit,*)
 
-      default_file: do i = 1, n_spec_def
+      default_file: do ispec = 1, n_spec_def
         read(iunit,*) lab
-        if(trim(lab) == trim(s%label)) then
-          call read_from_default_file(iunit, read_data, s)
+        if(trim(lab) == trim(spec%label)) then
+          call read_from_default_file(iunit, read_data, spec)
           exit default_file
         end if
       end do default_file
@@ -349,7 +349,7 @@ contains
     end if
 
     if(read_data == 0) then
-      message(1) = 'Species '//trim(s%label)//' not found.'
+      message(1) = 'Species '//trim(spec%label)//' not found.'
       call write_fatal(1)
     end if
 
@@ -359,8 +359,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine species_init(s, ispin, print_info)
-    type(species_t),   intent(inout) :: s
+  subroutine species_init(spec, ispin, print_info)
+    type(species_t),   intent(inout) :: spec
     integer,           intent(in)    :: ispin
     logical, optional, intent(in)    :: print_info
 
@@ -376,97 +376,97 @@ contains
     end if
 
     ! masses are always in amu, so convert them to a.u.
-    s%weight =  units_to_atomic(units_inp%mass, s%weight)
+    spec%weight =  units_to_atomic(units_inp%mass, spec%weight)
 
-    s%has_density = .false.
+    spec%has_density = .false.
 
-    select case(s%type)
+    select case(spec%type)
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
       ! allocate structure
-      SAFE_ALLOCATE(s%ps) 
-      call ps_init(s%ps, s%label, s%type, s%Z, s%lmax, s%lloc, ispin)
-      s%z_val = s%ps%z_val
-      s%nlcc = (s%ps%icore /= 'nc  ' )
-      s%niwfs = 0
-      do i = 1, s%ps%conf%p
-        l = s%ps%conf%l(i)
+      SAFE_ALLOCATE(spec%ps) 
+      call ps_init(spec%ps, spec%label, spec%type, spec%Z, spec%lmax, spec%lloc, ispin)
+      spec%z_val = spec%ps%z_val
+      spec%nlcc = (spec%ps%icore /= 'nc  ' )
+      spec%niwfs = 0
+      do i = 1, spec%ps%conf%p
+        l = spec%ps%conf%l(i)
 
         ! the input pseudo determines the maximum l we use
-        if(l <= s%lmax) s%niwfs = s%niwfs + (2*l+1)
+        if(l <= spec%lmax) spec%niwfs = spec%niwfs + (2*l+1)
 
         ! Another choice would be to use only the occupied atomic states,
         ! usually yielding a slightly smaller basis. To use this strategy
         ! uncomment the following line
-        !if(sum(s%ps%conf%occ(i, :)).ne.M_ZERO) s%niwfs = s%niwfs + (2*l+1)
+        !if(sum(spec%ps%conf%occ(i, :)).ne.M_ZERO) spec%niwfs = spec%niwfs + (2*l+1)
       end do
 
     case(SPEC_USDEF)
       if(print_info_) then
-        write(message(1),'(a,a,a)')    'Species "',trim(s%label),'" is a user-defined potential.'
-        i = min(237, len_trim(s%user_def)-1) ! I subtract 1 to avoid the non-printable C "end-of-string" character.
-        write(message(2),'(a,a)')      '   Potential = ', trim(s%user_def(1:i))
-        if(len(trim(s%user_def)).gt.237) then
+        write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a user-defined potential.'
+        i = min(237, len_trim(spec%user_def)-1) ! I subtract 1 to avoid the non-printable C "end-of-string" character.
+        write(message(2),'(a,a)')      '   Potential = ', trim(spec%user_def(1:i))
+        if(len(trim(spec%user_def)).gt.237) then
           message(2) = trim(message(2))//'...'
         end if
         call write_info(2)
       end if
-      s%niwfs = int(max(2*s%z_val, CNST(1.0)))
+      spec%niwfs = int(max(2*spec%z_val, CNST(1.0)))
 
       xx    = M_ZERO
       xx(1) = CNST(0.01)
       rr    = sqrt(sum(xx**2))
-      call parse_expression(pot_re, pot_im, MAX_DIM, xx, rr, M_ZERO, s%user_def)
-      s%omega = sqrt( abs(M_TWO / CNST(1.0e-4) * pot_re ))
+      call parse_expression(pot_re, pot_im, MAX_DIM, xx, rr, M_ZERO, spec%user_def)
+      spec%omega = sqrt( abs(M_TWO / CNST(1.0e-4) * pot_re ))
       ! To avoid problems with constant potentials.
-      if(s%omega <= M_ZERO) s%omega = CNST(0.1) 
+      if(spec%omega <= M_ZERO) spec%omega = CNST(0.1) 
 
     case(SPEC_FROM_FILE)
       if(print_info_) then
-        write(message(1),'(a)') 'Species read from file "'//trim(s%filename)//'".'
+        write(message(1),'(a)') 'Species read from file "'//trim(spec%filename)//'".'
         call write_info(1)
       end if
-      s%omega = CNST(0.1)
+      spec%omega = CNST(0.1)
 
     case(SPEC_JELLI, SPEC_POINT)
       if(print_info_) then
-        write(message(1),'(a,a,a)')    'Species "',trim(s%label),'" is a jellium sphere / approximated point particle.'
-        write(message(2),'(a,f11.6)')  '   Valence charge = ', s%z_val
-        write(message(3),'(a,f11.6)')  '   Radius [a.u]   = ', s%jradius
-        write(message(4),'(a,f11.6)')  '   Rs [a.u]       = ', s%jradius * s%z_val ** (-M_ONE/M_THREE)
+        write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a jellium sphere / approximated point particle.'
+        write(message(2),'(a,f11.6)')  '   Valence charge = ', spec%z_val
+        write(message(3),'(a,f11.6)')  '   Radius [a.u]   = ', spec%jradius
+        write(message(4),'(a,f11.6)')  '   Rs [a.u]       = ', spec%jradius * spec%z_val ** (-M_ONE/M_THREE)
         call write_info(4)
       end if
-      s%niwfs = 2*s%z_val
-      s%omega = CNST(0.1)
+      spec%niwfs = 2*spec%z_val
+      spec%omega = CNST(0.1)
 
     case(SPEC_FULL_DELTA, SPEC_FULL_GAUSSIAN)
-      s%niwfs = 2*s%z_val
-      s%has_density = .true.
+      spec%niwfs = 2*spec%z_val
+      spec%has_density = .true.
       if(print_info_) then
-        write(message(1),'(a,a,a)')    'Species "',trim(s%label),'" is an all-electron atom.'
-        write(message(2),'(a,f11.6)')  '   Z = ', s%z_val
+        write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is an all-electron atom.'
+        write(message(2),'(a,f11.6)')  '   Z = ', spec%z_val
         write(message(3),'(a)')  '   Potential will be calculated solving Poisson equation'
         write(message(4),'(a)')  '   for a delta density distribution.'
         call write_info(4)
       end if
-      s%omega = s%z_val 
+      spec%omega = spec%z_val 
 
     case(SPEC_CHARGE_DENSITY)
-      s%niwfs = int(max(2*s%z_val, CNST(1.0)))
-      s%has_density = .true.
+      spec%niwfs = int(max(2*spec%z_val, CNST(1.0)))
+      spec%has_density = .true.
       if(print_info_) then
-        write(message(1),'(a,a,a)')    'Species "',trim(s%label),'" is a distribution of charge:'
-        write(message(2),'(a,a)')      '   rho = ', trim(s%rho)
-        write(message(3),'(a,f11.6)')  '   Z = ', s%z_val
+        write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a distribution of charge:'
+        write(message(2),'(a,a)')      '   rho = ', trim(spec%rho)
+        write(message(3),'(a,f11.6)')  '   Z = ', spec%z_val
         call write_info(3)
       end if
     case default
       call input_error('Species')
     end select
 
-    SAFE_ALLOCATE(s%iwf_l(1:s%niwfs, 1:ispin))
-    SAFE_ALLOCATE(s%iwf_m(1:s%niwfs, 1:ispin))
-    SAFE_ALLOCATE(s%iwf_i(1:s%niwfs, 1:ispin))
-    call species_iwf_fix_qn(s, ispin)
+    SAFE_ALLOCATE(spec%iwf_l(1:spec%niwfs, 1:ispin))
+    SAFE_ALLOCATE(spec%iwf_m(1:spec%niwfs, 1:ispin))
+    SAFE_ALLOCATE(spec%iwf_i(1:spec%niwfs, 1:ispin))
+    call species_iwf_fix_qn(spec, ispin)
 
     call pop_sub()
   end subroutine species_init
@@ -528,205 +528,205 @@ contains
 
 
   ! ---------------------------------------------------------
-  integer pure function species_type(s)
-    type(species_t), intent(in) :: s
-    species_type = s%type
+  integer pure function species_type(spec)
+    type(species_t), intent(in) :: spec
+    species_type = spec%type
   end function species_type
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  character(len=15) pure function species_label(s)
-    type(species_t), intent(in) :: s
-    species_label = trim(s%label)
+  character(len=15) pure function species_label(spec)
+    type(species_t), intent(in) :: spec
+    species_label = trim(spec%label)
   end function species_label
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  integer pure function species_index(s)
-    type(species_t), intent(in) :: s
-    species_index = s%index
+  integer pure function species_index(spec)
+    type(species_t), intent(in) :: spec
+    species_index = spec%index
   end function species_index
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  logical pure function species_has_nlcc(s)
-    type(species_t), intent(in) :: s
-    species_has_nlcc = s%nlcc
+  logical pure function species_has_nlcc(spec)
+    type(species_t), intent(in) :: spec
+    species_has_nlcc = spec%nlcc
   end function species_has_nlcc
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  logical pure function species_has_density(s)
-    type(species_t), intent(in) :: s
-    species_has_density = s%has_density
+  logical pure function species_has_density(spec)
+    type(species_t), intent(in) :: spec
+    species_has_density = spec%has_density
   end function species_has_density
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  function species_ps(s)
+  function species_ps(spec)
     type(ps_t), pointer :: species_ps
-    type(species_t), intent(in) :: s
-    species_ps => s%ps
+    type(species_t), intent(in) :: spec
+    species_ps => spec%ps
   end function species_ps
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  FLOAT pure function species_zval(s)
-    type(species_t), intent(in) :: s
-    species_zval = s%z_val
+  FLOAT pure function species_zval(spec)
+    type(species_t), intent(in) :: spec
+    species_zval = spec%z_val
   end function species_zval
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  FLOAT pure function species_z(s)
-    type(species_t), intent(in) :: s
-    species_z = s%z
+  FLOAT pure function species_z(spec)
+    type(species_t), intent(in) :: spec
+    species_z = spec%z
   end function species_z
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  FLOAT pure function species_def_rsize(s)
-    type(species_t), intent(in) :: s
-    species_def_rsize = s%def_rsize
+  FLOAT pure function species_def_rsize(spec)
+    type(species_t), intent(in) :: spec
+    species_def_rsize = spec%def_rsize
   end function species_def_rsize
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  FLOAT pure function species_def_h(s)
-    type(species_t), intent(in) :: s
-    species_def_h = s%def_h
+  FLOAT pure function species_def_h(spec)
+    type(species_t), intent(in) :: spec
+    species_def_h = spec%def_h
   end function species_def_h
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  FLOAT pure function species_jradius(s)
-    type(species_t), intent(in) :: s
-    species_jradius = s%jradius
+  FLOAT pure function species_jradius(spec)
+    type(species_t), intent(in) :: spec
+    species_jradius = spec%jradius
   end function species_jradius
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  FLOAT pure function species_sigma(s)
-    type(species_t), intent(in) :: s
-    species_sigma = s%sigma
+  FLOAT pure function species_sigma(spec)
+    type(species_t), intent(in) :: spec
+    species_sigma = spec%sigma
   end function species_sigma
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  FLOAT pure function species_omega(s)
-    type(species_t), intent(in) :: s
-    species_omega = s%omega
+  FLOAT pure function species_omega(spec)
+    type(species_t), intent(in) :: spec
+    species_omega = spec%omega
   end function species_omega
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  FLOAT pure function species_weight(s)
-    type(species_t), intent(in) :: s
-    species_weight = s%weight
+  FLOAT pure function species_weight(spec)
+    type(species_t), intent(in) :: spec
+    species_weight = spec%weight
   end function species_weight
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  character(len=200) pure function species_rho_string(s)
-    type(species_t), intent(in) :: s
-    species_rho_string = trim(s%rho)
+  character(len=200) pure function species_rho_string(spec)
+    type(species_t), intent(in) :: spec
+    species_rho_string = trim(spec%rho)
   end function species_rho_string
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  character(len=200) pure function species_filename(s)
-    type(species_t), intent(in) :: s
-    species_filename = trim(s%filename)
+  character(len=200) pure function species_filename(spec)
+    type(species_t), intent(in) :: spec
+    species_filename = trim(spec%filename)
   end function species_filename
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  integer pure function species_niwfs(s)
-    type(species_t), intent(in) :: s
-    species_niwfs = s%niwfs
+  integer pure function species_niwfs(spec)
+    type(species_t), intent(in) :: spec
+    species_niwfs = spec%niwfs
   end function species_niwfs
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  pure subroutine species_iwf_ilm(s, j, is, i, l, m)
-    type(species_t), intent(in) :: s
+  pure subroutine species_iwf_ilm(spec, j, is, i, l, m)
+    type(species_t), intent(in) :: spec
     integer, intent(in)         :: j, is
     integer, intent(out)        :: i, l, m
-    i = s%iwf_i(j, is)
-    l = s%iwf_l(j, is)
-    m = s%iwf_m(j, is)
+    i = spec%iwf_i(j, is)
+    l = spec%iwf_l(j, is)
+    m = spec%iwf_m(j, is)
   end subroutine species_iwf_ilm
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  FLOAT function species_userdef_pot(s, dim, xx, r, t)
-    type(species_t), intent(in) :: s
+  FLOAT function species_userdef_pot(spec, dim, xx, r, t)
+    type(species_t), intent(in) :: spec
     integer, intent(in) :: dim
     FLOAT, intent(in) :: xx(1:MAX_DIM), r, t
     FLOAT :: pot_re, pot_im
     call parse_expression(                            &
-               pot_re, pot_im, dim, xx, r, t, s%user_def)
+               pot_re, pot_im, dim, xx, r, t, spec%user_def)
     species_userdef_pot = pot_re
   end function species_userdef_pot
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  logical function species_is_ps(s)
-    type(species_t), intent(in) :: s
+  logical function species_is_ps(spec)
+    type(species_t), intent(in) :: spec
     
     call push_sub('species.species_is_ps')
 
     species_is_ps = &
-         ( s%type == SPEC_PS_PSF) .or. &
-         ( s%type == SPEC_PS_HGH) .or. &
-         ( s%type == SPEC_PS_CPI) .or. &
-         ( s%type == SPEC_PS_FHI) .or. &
-         ( s%type == SPEC_PS_UPF)
+         ( spec%type == SPEC_PS_PSF) .or. &
+         ( spec%type == SPEC_PS_HGH) .or. &
+         ( spec%type == SPEC_PS_CPI) .or. &
+         ( spec%type == SPEC_PS_FHI) .or. &
+         ( spec%type == SPEC_PS_UPF)
     
     call pop_sub()
   end function species_is_ps
 
   ! ---------------------------------------------------------
 
-  logical elemental function species_is_full(s)
-    type(species_t), intent(in) :: s
+  logical elemental function species_is_full(spec)
+    type(species_t), intent(in) :: spec
     
     species_is_full = &
-         ( s%type == SPEC_FULL_GAUSSIAN) .or. &
-         ( s%type == SPEC_FULL_DELTA)
+         ( spec%type == SPEC_FULL_GAUSSIAN) .or. &
+         ( spec%type == SPEC_FULL_DELTA)
     
   end function species_is_full
 
   ! ---------------------------------------------------------
 
-  logical function species_is_local(s)
-    type(species_t), intent(in) :: s
+  logical function species_is_local(spec)
+    type(species_t), intent(in) :: spec
 
     call push_sub('species.species_is_local')
 
     species_is_local = .true.
       
-    if( species_is_ps(s) ) then 
-      if ( s%ps%l_max /= 0 ) species_is_local = .false. 
+    if( species_is_ps(spec) ) then 
+      if ( spec%ps%l_max /= 0 ) species_is_local = .false. 
     end if
 
     call pop_sub()
@@ -736,9 +736,9 @@ contains
 
   ! ---------------------------------------------------------
   ! This routine returns the non-local projector and its 
-  ! derivative build using real spherical harmonics
-  subroutine species_real_nl_projector(s, x, l, lm, i, uV, duV)
-    type(species_t),   intent(in)  :: s
+  ! derivative, built using real spherical harmonics
+  subroutine species_real_nl_projector(spec, x, l, lm, i, uV, duV)
+    type(species_t),   intent(in)  :: spec
     FLOAT,             intent(in)  :: x(1:MAX_DIM)
     integer,           intent(in)  :: l, lm, i
     FLOAT,             intent(out) :: uV, duV(1:MAX_DIM)
@@ -750,8 +750,8 @@ contains
 
     r = sqrt(sum(x(1:MAX_DIM)**2))
 
-    uVr0  = spline_eval(s%ps%kb(l, i), r)
-    duVr0 = spline_eval(s%ps%dkb(l, i), r)
+    uVr0  = spline_eval(spec%ps%kb(l, i), r)
+    duVr0 = spline_eval(spec%ps%dkb(l, i), r)
 
     gylm = M_ZERO
 
@@ -779,10 +779,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! This routine returns the non-local projector build using 
+  ! This routine returns the non-local projector, built using 
   ! spherical harmonics
-  subroutine species_nl_projector(s, x, l, lm, i, uV)
-    type(species_t),    intent(in)  :: s
+  subroutine species_nl_projector(spec, x, l, lm, i, uV)
+    type(species_t),   intent(in)  :: spec
     FLOAT,             intent(in)  :: x(1:MAX_DIM)
     integer,           intent(in)  :: l, lm, i
     CMPLX,             intent(out) :: uV
@@ -793,7 +793,7 @@ contains
     ! no push_sub because this function is called very frequently
     r = sqrt(sum(x(1:MAX_DIM)**2))
 
-    uVr0 = spline_eval(s%ps%kb(l, i), r)
+    uVr0 = spline_eval(spec%ps%kb(l, i), r)
 
     call ylmr(x(1), x(2), x(3), l, lm, ylm)
     uv = uvr0*ylm
@@ -802,16 +802,16 @@ contains
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  FLOAT function species_get_nlcc(s, x) result(l)
-    type(species_t), intent(in) :: s
+  FLOAT function species_get_nlcc(spec, x) result(l)
+    type(species_t), intent(in) :: spec
     FLOAT, intent(in) :: x(MAX_DIM)
     FLOAT :: r
 
     ! no push_sub because this function is called very frequently
     ! only for 3D pseudopotentials, please
-    if(species_is_ps(s)) then
+    if(species_is_ps(spec)) then
       r = sqrt(sum(x(:)**2))
-      l = spline_eval(s%ps%core, r)
+      l = spline_eval(spec%ps%core, r)
     else
       l = M_ZERO
     end if
@@ -820,8 +820,8 @@ contains
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  FLOAT function species_get_iwf_radius(s, j, is) result(radius)
-    type(species_t),   intent(in) :: s
+  FLOAT function species_get_iwf_radius(spec, j, is) result(radius)
+    type(species_t),   intent(in) :: spec
     integer,           intent(in) :: j
     integer,           intent(in) :: is
 
@@ -830,14 +830,14 @@ contains
 
     call push_sub('species.species_get_iwf_radius')
 
-    i = s%iwf_i(j, is)
-    l = s%iwf_l(j, is)
-    m = s%iwf_m(j, is)
+    i = spec%iwf_i(j, is)
+    l = spec%iwf_l(j, is)
+    m = spec%iwf_m(j, is)
 
-    if(species_is_ps(s)) then
-      radius = spline_cutoff_radius(s%ps%ur(i, is), threshold)
+    if(species_is_ps(spec)) then
+      radius = spline_cutoff_radius(spec%ps%ur(i, is), threshold)
     else
-      radius = sqrt(-M_TWO*log(threshold)/s%omega)
+      radius = sqrt(-M_TWO*log(threshold)/spec%omega)
     end if
 
     call pop_sub()
@@ -847,24 +847,24 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine species_end(ns, s)
-    integer,        intent(in) :: ns
-    type(species_t), pointer    :: s(:)
+  subroutine species_end(ns, spec)
+    integer,         intent(in) :: ns
+    type(species_t), pointer    :: spec(:)
 
     integer :: i
 
     call push_sub('species.species_end')
 
     do i = 1, ns
-      if (species_is_ps(s(i))) then 
-        if(associated(s(i)%ps)) then 
-          call ps_end(s(i)%ps)
-          SAFE_DEALLOCATE_P(s(i)%ps)
+      if (species_is_ps(spec(i))) then 
+        if(associated(spec(i)%ps)) then 
+          call ps_end(spec(i)%ps)
+          SAFE_DEALLOCATE_P(spec(i)%ps)
         end if
       end if
-      SAFE_DEALLOCATE_P(s(i)%iwf_l)
-      SAFE_DEALLOCATE_P(s(i)%iwf_m)
-      SAFE_DEALLOCATE_P(s(i)%iwf_i)
+      SAFE_DEALLOCATE_P(spec(i)%iwf_l)
+      SAFE_DEALLOCATE_P(spec(i)%iwf_m)
+      SAFE_DEALLOCATE_P(spec(i)%iwf_i)
     end do
 
     call pop_sub()
@@ -879,9 +879,9 @@ contains
 ! Private procedures
 
   ! ---------------------------------------------------------
-  subroutine species_debug(dir, s)
-    character(len=*), intent(in)  :: dir
-    type(species_t),    intent(in) :: s
+  subroutine species_debug(dir, spec)
+    character(len=*), intent(in) :: dir
+    type(species_t),  intent(in) :: spec
 
     character(len=256) :: dirname
     integer :: iunit
@@ -894,35 +894,35 @@ contains
 
     call push_sub('species.species_debug')
 
-    dirname = trim(dir)//'/'//trim(s%label)
+    dirname = trim(dir)//'/'//trim(spec%label)
 
     call io_mkdir(dirname)
 
     iunit = io_open(trim(dirname)//'/info', action='write')
 
-    write(iunit, '(a,i3)')    'Index  = ', s%index
-    write(iunit, '(2a)')      'Label  = ', trim(s%label)
-    write(iunit, '(a,i3)')    'Type   = ', s%type
-    if (s%type /= SPEC_USDEF ) write(iunit, '(a,f15.2)') 'z      = ', s%z
-    if (s%type == SPEC_FROM_FILE) then
-      write(iunit,'(a)')      'Species read from file "'//trim(s%filename)//'".'
+    write(iunit, '(a,i3)')    'Index  = ', spec%index
+    write(iunit, '(2a)')      'Label  = ', trim(spec%label)
+    write(iunit, '(a,i3)')    'Type   = ', spec%type
+    if (spec%type /= SPEC_USDEF ) write(iunit, '(a,f15.2)') 'z      = ', spec%z
+    if (spec%type == SPEC_FROM_FILE) then
+      write(iunit,'(a)')      'Species read from file "'//trim(spec%filename)//'".'
     end if
-    write(iunit, '(a,f15.2)') 'z_val  = ', s%z_val
-    write(iunit, '(a,f15.2)') 'weight = ', s%weight
-    bool = species_is_local(s)
+    write(iunit, '(a,f15.2)') 'z_val  = ', spec%z_val
+    write(iunit, '(a,f15.2)') 'weight = ', spec%weight
+    bool = species_is_local(spec)
     write(iunit, '(a,l1)')    'local  = ', bool
-    write(iunit, '(2a)')      'usdef  = ', trim(s%user_def)
-    if (s%type == SPEC_JELLI .or. s%type == SPEC_POINT) then
-      write(iunit, '(a,f15.2)') 'jradius= ', s%jradius
+    write(iunit, '(2a)')      'usdef  = ', trim(spec%user_def)
+    if (spec%type == SPEC_JELLI .or. spec%type == SPEC_POINT) then
+      write(iunit, '(a,f15.2)') 'jradius= ', spec%jradius
     end if
-    write(iunit, '(a,l1)')    'nlcc   = ', s%nlcc
-    write(iunit, '(a,f15.2)') 'def_rsize = ', s%def_rsize
-    write(iunit, '(a,f15.2)') 'def_h = ', s%def_h
-    if (s%type /= SPEC_USDEF ) write(iunit, '(a,i3)')    'lmax  = ', s%lmax
-    if (s%type /= SPEC_USDEF ) write(iunit, '(a,i3)')    'lloc  = ', s%lloc
+    write(iunit, '(a,l1)')    'nlcc   = ', spec%nlcc
+    write(iunit, '(a,f15.2)') 'def_rsize = ', spec%def_rsize
+    write(iunit, '(a,f15.2)') 'def_h = ', spec%def_h
+    if (spec%type /= SPEC_USDEF ) write(iunit, '(a,i3)')    'lmax  = ', spec%lmax
+    if (spec%type /= SPEC_USDEF ) write(iunit, '(a,i3)')    'lloc  = ', spec%lloc
 
-    if(species_is_ps(s)) then
-       if(in_debug_mode) call ps_debug(s%ps, trim(dirname))
+    if(species_is_ps(spec)) then
+       if(in_debug_mode) call ps_debug(spec%ps, trim(dirname))
     end if
 
     call io_close(iunit)
@@ -932,10 +932,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine read_from_default_file(iunit, read_data, s)
-    integer,        intent(in)    :: iunit
-    integer,        intent(inout) :: read_data
-    type(species_t), intent(inout) :: s
+  subroutine read_from_default_file(iunit, read_data, spec)
+    integer,         intent(in)    :: iunit
+    integer,         intent(inout) :: read_data
+    type(species_t), intent(inout) :: spec
 
     character(len=10) :: label
     FLOAT :: weight, z, def_h, def_rsize
@@ -949,17 +949,17 @@ contains
     read(iunit,*) label, weight, type, z, lmax, lloc, def_h, def_rsize
     def_h     = def_h     * P_ANG  ! These units are always in Angstrom
     def_rsize = def_rsize * P_ANG
-    ASSERT(trim(label) == trim(s%label))
+    ASSERT(trim(label) == trim(spec%label))
 
     if(read_data == 0) then ! The Species was not supplied in the block.
-      s%weight    = weight
-      s%type      = type
+      spec%weight    = weight
+      spec%type      = type
     end if
-    if(read_data < 4) s%z         = z
-    if(read_data < 5) s%lmax      = lmax
-    if(read_data < 6) s%lloc      = lloc
-    if(read_data < 7) s%def_h     = def_h
-    if(read_data < 8) s%def_rsize = def_rsize
+    if(read_data < 4) spec%z         = z
+    if(read_data < 5) spec%lmax      = lmax
+    if(read_data < 6) spec%lloc      = lloc
+    if(read_data < 7) spec%def_h     = def_h
+    if(read_data < 8) spec%def_rsize = def_rsize
 
     read_data = 8
 
@@ -969,11 +969,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine read_from_block(blk, row, s, read_data)
-    type(block_t),      intent(in) :: blk
-    integer,        intent(in) :: row
-    type(species_t), intent(inout) :: s
-    integer,        intent(out) :: read_data
+  subroutine read_from_block(blk, row, spec, read_data)
+    type(block_t),   intent(in)    :: blk
+    integer,         intent(in)    :: row
+    type(species_t), intent(inout) :: spec
+    integer,         intent(out)   :: read_data
 
     integer :: n
 
@@ -981,81 +981,81 @@ contains
 
     read_data = 0
 
-    call parse_block_float (blk, row, 1, s%weight)
-    call parse_block_integer   (blk, row, 2, s%type)
+    call parse_block_float (blk, row, 1, spec%weight)
+    call parse_block_integer   (blk, row, 2, spec%type)
 
-    select case(s%type)
+    select case(spec%type)
     case(SPEC_USDEF) ! user-defined
-      call parse_block_float (blk, row, 3, s%Z_val)
-      call parse_block_string(blk, row, 4, s%user_def)
-      call conv_to_C_string(s%user_def)
+      call parse_block_float (blk, row, 3, spec%Z_val)
+      call parse_block_string(blk, row, 4, spec%user_def)
+      call conv_to_C_string(spec%user_def)
       read_data = 5
 
     case(SPEC_FROM_FILE)
-      call parse_block_float (blk, row, 3, s%Z_val)
-      call parse_block_string(blk, row, 4, s%filename)
+      call parse_block_float (blk, row, 3, spec%Z_val)
+      call parse_block_string(blk, row, 4, spec%filename)
       read_data = 5
 
     case(SPEC_POINT) ! this is treated as a jellium with radius 0.5
-      call parse_block_float(blk, row, 3, s%Z)
-      s%jradius = M_HALF
-      s%Z_val = 0
+      call parse_block_float(blk, row, 3, spec%Z)
+      spec%jradius = M_HALF
+      spec%Z_val = 0
       read_data = 4
 
     case(SPEC_JELLI)
-      call parse_block_float(blk, row, 3, s%Z)      ! charge of the jellium sphere
-      call parse_block_float(blk, row, 4, s%jradius)! radius of the jellium sphere
-      s%jradius = units_to_atomic(units_inp%length, s%jradius) ! units conversion
-      s%Z_val = s%Z
+      call parse_block_float(blk, row, 3, spec%Z)      ! charge of the jellium sphere
+      call parse_block_float(blk, row, 4, spec%jradius)! radius of the jellium sphere
+      spec%jradius = units_to_atomic(units_inp%length, spec%jradius) ! units conversion
+      spec%Z_val = spec%Z
       read_data = 5
 
     case(SPEC_FULL_DELTA, SPEC_FULL_GAUSSIAN)
-      call parse_block_float(blk, row, 3, s%Z)
-      s%Z_val = s%Z
+      call parse_block_float(blk, row, 3, spec%Z)
+      spec%Z_val = spec%Z
       read_data = 4
       
       if (parse_block_cols(blk, row) <= 4) then
-        s%sigma = CNST(0.25)
+        spec%sigma = CNST(0.25)
       else
-        call parse_block_float(blk, row, 4, s%sigma)
-        if(s%sigma <= M_ZERO) call input_error('Species')
+        call parse_block_float(blk, row, 4, spec%sigma)
+        if(spec%sigma <= M_ZERO) call input_error('Species')
       end if
 
     case(SPEC_CHARGE_DENSITY)
-      call parse_block_float(blk, row, 3, s%Z)
-      call parse_block_string(blk, row, 4, s%rho)
-      s%Z_val = s%Z
+      call parse_block_float(blk, row, 3, spec%Z)
+      call parse_block_string(blk, row, 4, spec%rho)
+      spec%Z_val = spec%Z
       read_data = 5
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF) ! a pseudopotential file
       n = parse_block_cols(blk, row)
 
-      call parse_block_float (blk, row, 3, s%Z)
+      call parse_block_float (blk, row, 3, spec%Z)
 
-      if(s%type == SPEC_PS_UPF) then 
+      if(spec%type == SPEC_PS_UPF) then 
         read_data = 4
         call messages_devel_version("UPF pseudopotentials support")
       end if
 
       if(n>4) then
-        call parse_block_integer (blk, row, 4, s%lmax)
+        call parse_block_integer (blk, row, 4, spec%lmax)
         read_data = 5
       end if
 
       if(n>5) then
-        call parse_block_integer (blk, row, 5, s%lloc)
+        call parse_block_integer (blk, row, 5, spec%lloc)
         read_data = 6
       end if
 
       if(n>6) then
-        call parse_block_float (blk, row, 6, s%def_h)
-        s%def_h = units_to_atomic(units_inp%length, s%def_h)
+        call parse_block_float (blk, row, 6, spec%def_h)
+        spec%def_h = units_to_atomic(units_inp%length, spec%def_h)
         read_data = 7
       end if
 
       if(n>7) then
-        call parse_block_float (blk, row, 7, s%def_rsize)
-        s%def_rsize = units_to_atomic(units_inp%length, s%def_rsize)
+        call parse_block_float (blk, row, 7, spec%def_rsize)
+        spec%def_rsize = units_to_atomic(units_inp%length, spec%def_rsize)
         read_data = 8
       end if
 
@@ -1069,27 +1069,27 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine species_iwf_fix_qn(s, ispin)
-    type(species_t), intent(inout) :: s
+  subroutine species_iwf_fix_qn(spec, ispin)
+    type(species_t), intent(inout) :: spec
     integer, intent(in) :: ispin
 
     integer :: is, n, i, l, m, n1, n2, n3
 
     call push_sub('species.species_iwf_fix_qn')
 
-    if(species_is_ps(s)) then
+    if(species_is_ps(spec)) then
       do is = 1, ispin
         n = 1
-        do i = 1, s%ps%conf%p
-          l = s%ps%conf%l(i)
+        do i = 1, spec%ps%conf%p
+          l = spec%ps%conf%l(i)
 
           ! the input pseudo determines the maximum l we use
-          if(l > s%lmax) cycle
+          if(l > spec%lmax) cycle
 
           do m = -l, l
-            s%iwf_i(n, is) = i
-            s%iwf_l(n, is) = l
-            s%iwf_m(n, is) = m
+            spec%iwf_i(n, is) = i
+            spec%iwf_l(n, is) = l
+            spec%iwf_m(n, is) = m
             n = n + 1
           end do
         end do
@@ -1099,10 +1099,10 @@ contains
       select case(calc_dim)
       case(1)
         do is = 1, ispin
-          do i = 1, s%niwfs
-            s%iwf_i(i, is) = i
-            s%iwf_l(i, is) = 0
-            s%iwf_m(i, is) = 0
+          do i = 1, spec%niwfs
+            spec%iwf_i(i, is) = i
+            spec%iwf_l(i, is) = 0
+            spec%iwf_m(i, is) = 0
           end do
         end do
 
@@ -1110,20 +1110,20 @@ contains
         do is = 1, ispin
           i = 1; n1 = 1; n2 = 1
           do
-            s%iwf_i(i, is) = n1
-            s%iwf_l(i, is) = n2
-            s%iwf_m(i, is) = 0
-            i = i + 1; if(i>s%niwfs) exit
+            spec%iwf_i(i, is) = n1
+            spec%iwf_l(i, is) = n2
+            spec%iwf_m(i, is) = 0
+            i = i + 1; if(i>spec%niwfs) exit
 
-            s%iwf_i(i, is) = n1+1
-            s%iwf_l(i, is) = n2
-            s%iwf_m(i, is) = 0
-            i = i + 1; if(i>s%niwfs) exit
+            spec%iwf_i(i, is) = n1+1
+            spec%iwf_l(i, is) = n2
+            spec%iwf_m(i, is) = 0
+            i = i + 1; if(i>spec%niwfs) exit
 
-            s%iwf_i(i, is) = n1
-            s%iwf_l(i, is) = n2+1
-            s%iwf_m(i, is) = 0
-            i = i + 1; if(i>s%niwfs) exit
+            spec%iwf_i(i, is) = n1
+            spec%iwf_l(i, is) = n2+1
+            spec%iwf_m(i, is) = 0
+            i = i + 1; if(i>spec%niwfs) exit
 
             n1 = n1 + 1; n2 = n2 + 1
           end do
@@ -1133,40 +1133,40 @@ contains
         do is = 1, ispin
           i = 1; n1 = 1; n2 = 1; n3 = 1
           do
-            s%iwf_i(i, is) = n1
-            s%iwf_l(i, is) = n2
-            s%iwf_m(i, is) = n3
-            i = i + 1; if(i>s%niwfs) exit
+            spec%iwf_i(i, is) = n1
+            spec%iwf_l(i, is) = n2
+            spec%iwf_m(i, is) = n3
+            i = i + 1; if(i>spec%niwfs) exit
 
-            s%iwf_i(i, is) = n1+1
-            s%iwf_l(i, is) = n2
-            s%iwf_m(i, is) = n3
-            i = i + 1; if(i>s%niwfs) exit
+            spec%iwf_i(i, is) = n1+1
+            spec%iwf_l(i, is) = n2
+            spec%iwf_m(i, is) = n3
+            i = i + 1; if(i>spec%niwfs) exit
 
-            s%iwf_i(i, is) = n1
-            s%iwf_l(i, is) = n2+1
-            s%iwf_m(i, is) = 0
-            i = i + 1; if(i>s%niwfs) exit
+            spec%iwf_i(i, is) = n1
+            spec%iwf_l(i, is) = n2+1
+            spec%iwf_m(i, is) = 0
+            i = i + 1; if(i>spec%niwfs) exit
 
-            s%iwf_i(i, is) = n1
-            s%iwf_l(i, is) = n2
-            s%iwf_m(i, is) = n3+1
-            i = i + 1; if(i>s%niwfs) exit
+            spec%iwf_i(i, is) = n1
+            spec%iwf_l(i, is) = n2
+            spec%iwf_m(i, is) = n3+1
+            i = i + 1; if(i>spec%niwfs) exit
 
-            s%iwf_i(i, is) = n1+1
-            s%iwf_l(i, is) = n2+1
-            s%iwf_m(i, is) = n3
-            i = i + 1; if(i>s%niwfs) exit
+            spec%iwf_i(i, is) = n1+1
+            spec%iwf_l(i, is) = n2+1
+            spec%iwf_m(i, is) = n3
+            i = i + 1; if(i>spec%niwfs) exit
 
-            s%iwf_i(i, is) = n1+1
-            s%iwf_l(i, is) = n2
-            s%iwf_m(i, is) = n3+1
-            i = i + 1; if(i>s%niwfs) exit
+            spec%iwf_i(i, is) = n1+1
+            spec%iwf_l(i, is) = n2
+            spec%iwf_m(i, is) = n3+1
+            i = i + 1; if(i>spec%niwfs) exit
 
-            s%iwf_i(i, is) = n1
-            s%iwf_l(i, is) = n2+1
-            s%iwf_m(i, is) = n3+1
-            i = i + 1; if(i>s%niwfs) exit
+            spec%iwf_i(i, is) = n1
+            spec%iwf_l(i, is) = n2+1
+            spec%iwf_m(i, is) = n3+1
+            i = i + 1; if(i>spec%niwfs) exit
 
             n1 = n1 + 1; n2 = n2 + 1; n3 = n3 + 1
           end do

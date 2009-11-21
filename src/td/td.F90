@@ -749,9 +749,11 @@ contains
       vecpot = M_ZERO
       vecpot_vel = M_ZERO
 
-      ! TODO: units are missing
       read(iunit, '(3es20.12)', advance='no') vecpot(1:gr%mesh%sb%dim)
+      vecpot(1:gr%mesh%sb%dim) = units_to_atomic(units_inp%energy, vecpot(1:gr%mesh%sb%dim))
+      ! A ~ B * length ~ E * length ~ force * length ~ energy (all for e = 1)
       read(iunit, '(3es20.12)', advance='no') vecpot_vel(1:gr%mesh%sb%dim)
+      vecpot_vel(1:gr%mesh%sb%dim) = units_to_atomic(units_inp%energy / units_inp%time, vecpot_vel(1:gr%mesh%sb%dim))
       read(iunit, '(3es20.12)', advance='no') dummy(1:gr%mesh%sb%dim) ! skip the accel field.
 
       call gauge_field_set_vec_pot(hm%ep%gfield, vecpot)

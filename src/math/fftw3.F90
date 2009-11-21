@@ -197,7 +197,7 @@ contains
 
     call push_sub('fftw3.fft_init')
 
-    ! First, figure out the dimensionaliy of the FFT.
+    ! First, figure out the dimensionality of the FFT.
     dim = 0
     do i = 1, 3
       if(n(i) <= 1) exit
@@ -213,7 +213,7 @@ contains
     if(present(optimize)) optimize_ = optimize
 
 
-    ! OLD: I let it here because maybe I revert to this method later
+    ! OLD: I leave it here because maybe I revert to this method later
     ! optimize dimensions in non-periodic directions
     !    do i = sb%periodic_dim + 1, sb%dim
     !      if(n(i) /= 1 .and. fft_optimize) &
@@ -325,7 +325,7 @@ contains
 
     i = fft%slot
     if(fft_refs(i)==NULL) then
-      message(1) = "Trying to deallocate fft that has not been allocated"
+      message(1) = "Trying to deallocate FFT that has not been allocated"
       call write_warning(1)
     else
       if(fft_refs(i) > 1) then

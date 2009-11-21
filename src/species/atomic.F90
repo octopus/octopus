@@ -36,7 +36,7 @@ module atomic_m
     atomhxc,       &
     vhrtre, egofv
 
-  ! Next stuff is for the "valence_conf" data type, made to handle atomic configurations.
+  ! Following stuff is for the "val_conf_t" data type, made to handle atomic configurations.
   public ::        &
     valconf_t,     &
     valconf_copy,  &
