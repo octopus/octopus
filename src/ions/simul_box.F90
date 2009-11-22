@@ -462,19 +462,21 @@ contains
         sb%hr_area%num_areas = parse_block_n(blk)
 
         ! number of radii
-        sb%hr_area%num_radii = parse_block_cols(blk,0)-sb%dim
+        sb%hr_area%num_radii = parse_block_cols(blk, 0) - sb%dim
+
+        sb%hr_area%center = M_ZERO
 
         ! the central point
         do i = 1, sb%dim
-           call parse_block_float(blk, 0, i-1, sb%hr_area%center(i))
+           call parse_block_float(blk, 0, i - 1, sb%hr_area%center(i))
         end do
 
-        if (sb%hr_area%num_areas.ne.1) call input_error('MultiResolutionArea')
+        if (sb%hr_area%num_areas /= 1) call input_error('MultiResolutionArea')
 
         ! the radii
         SAFE_ALLOCATE(sb%hr_area%radius(1:sb%hr_area%num_radii))
         do i = 1, sb%hr_area%num_radii
-          call parse_block_float(blk, 0, sb%dim+i-1, sb%hr_area%radius(i))
+          call parse_block_float(blk, 0, sb%dim + i - 1, sb%hr_area%radius(i))
           sb%hr_area%radius(i) = units_to_atomic(units_inp%length, sb%hr_area%radius(i))
         end do
 

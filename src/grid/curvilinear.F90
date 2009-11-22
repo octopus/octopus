@@ -144,6 +144,7 @@ contains
     FLOAT,               intent(out) :: x(MAX_DIM)    ! x(conf%dim)
 
     ! no push_sub because called too frequently
+    x = M_ZERO
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
@@ -163,10 +164,12 @@ contains
   subroutine curvilinear_x2chi(sb, cv, x, chi)
     type(simul_box_t),   intent(in)  :: sb
     type(curvilinear_t), intent(in)  :: cv
-    FLOAT,               intent(in)  :: x(MAX_DIM)    ! x(conf%dim)
-    FLOAT,               intent(out) :: chi(MAX_DIM)  ! chi(conf%dim)
+    FLOAT,               intent(in)  :: x(MAX_DIM)
+    FLOAT,               intent(out) :: chi(MAX_DIM)
 
     call push_sub('curvilinear.curvilinear_x2chi')
+    
+    chi = M_ZERO
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)

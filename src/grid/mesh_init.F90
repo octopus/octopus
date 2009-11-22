@@ -224,6 +224,8 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   SAFE_ALLOCATE(xx(1:MAX_DIM, mesh%idx%nr(1,1):mesh%idx%nr(2,1)))
   SAFE_ALLOCATE(in_box(mesh%idx%nr(1,1):mesh%idx%nr(2,1)))
 
+  chi = M_ZERO
+
   ! We label the points inside the mesh
   do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
     chi(3) = real(iz, REAL_PRECISION) * mesh%h(3) + sb%box_offset(3)
