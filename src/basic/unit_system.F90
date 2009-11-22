@@ -269,8 +269,8 @@ contains
     u%acceleration%name   = "Angstrom times (electronvolt over hbar) squared"
     u%acceleration%factor = u%length%factor/u%time%factor**2
 
-    u%polarizability      = u%length**2 / u%energy
-    u%hyperpolarizability = u%length**3 / u%energy**2
+    u%polarizability      = u%length**3
+    u%hyperpolarizability = u%length**5
   end subroutine unit_system_init_eV_Ang
 
 
