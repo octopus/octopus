@@ -60,28 +60,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   ! if Monkhorst-Pack used, this variable will be reset
   d%nik_axis(:) = 0
 
-  !%Variable KPoints
-  !%Type block
-  !%Section Mesh::KPoints
-  !%Description
-  !% This block defines an explicit set of <i>k</i>-points and their weights for
-  !% a periodic-system calculation. The first column is the weight
-  !% of each <i>k</i>-point and the following are the components of the <i>k</i>-point
-  !% vector. You only need to specify the components for the
-  !% periodic directions. Note that the <i>k</i>-points should be given in
-  !% Cartesian coordinates (not in reduced coordinates), <i>i.e.</i>
-  !% what Octopus writes in a line in the ground-state standard output as
-  !% <tt>#k =   1, k = (    0.154000,    0.154000,    0.154000)</tt>.
-  !%
-  !% For example, if you want to include only the Gamma point, you can
-  !% use:
-  !%
-  !% <tt>%KPoints
-  !% <br>&nbsp;&nbsp;1.0 | 0 | 0 | 0
-  !% <br>%</tt>
-  !%
-  !%End
-
+  ! documented in ions/kpoints.F90
   if(parse_block(datasets_check('KPoints'), blk) == 0) then
 
     if (d%ispin == 2) then

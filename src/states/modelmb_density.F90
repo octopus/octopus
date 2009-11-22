@@ -73,25 +73,7 @@ contains
 
     call push_sub('states.modelmb_density_init')
 
-    !%Variable DensitiestoCalc
-    !%Type block
-    !%Section States
-    !%Description
-    !% choice of which particle density will be calculated and output, in the
-    !%  modelmb particles scheme (the corresponding density is also output)
-    !%
-    !% <tt>%DensitiestoCalc
-    !% <br>&nbsp;&nbsp; proton   | 1 
-    !% <br>&nbsp;&nbsp; electron | 2
-    !% <br>%</tt>
-    !%
-    !% would ask octopus to calculate the density corresponding to the 1st
-    !% particle (whose coordinates correspond to dimensions 1 to ndim_modelmb),
-    !% which is an proton, then that corresponding to the 2nd particle
-    !% (particle with dimensions ndim_modelmb+1 to 2*ndim_modelmb)
-    !%
-    !%End
-   
+    ! the description for this variable is in modelmb_particles.F90
     if(parse_block(datasets_check('DensitiestoCalc'), blk) /= 0) then
       message(1) = 'To print out density, you must specify the DensitiestoCalc block in input'
       call write_fatal(1)
