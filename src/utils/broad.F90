@@ -47,11 +47,42 @@ program broad
   end if
   call unit_system_init()
 
-  ! broadening to use
+  !%Variable LinBroadning
+  !%Type float
+  !%Default 0.005
+  !%Section Utilities::oct-broad
+  !%Description
+  !% Width of the Lorenzian used to broaden the excitations.
+  !%End
   call parse_float(datasets_check('LinBroadening'),  units_from_atomic(units_inp%energy, CNST(0.005)), b%b)
+
+  !%Variable LinEnergyStep
+  !%Type float
+  !%Default 0.001
+  !%Section Utilities::oct-broad
+  !%Description
+  !% Sampling rate for the spectrum. 
+  !%End
   call parse_float(datasets_check('LinEnergyStep'),  units_from_atomic(units_inp%energy, CNST(0.001)), b%energy_step)
+
+  !%Variable LinMinEnergy
+  !%Type float
+  !%Default 0.0
+  !%Section Utilities::oct-broad
+  !%Description
+  !% The broadning is done for energies greater than LinMinEnergy.
+  !%End
   call parse_float(datasets_check('LinMinEnergy'),   M_ZERO, b%min_energy)
+
+  !%Variable LinMaxEnergy
+  !%Type float
+  !%Default 1.0
+  !%Section Utilities::oct-broad
+  !%Description
+  !% The broadning is done for energies smaller than LinMaxEnergy.
+  !%End
   call parse_float(datasets_check('LinMaxEnergy'),   units_from_atomic(units_inp%energy, M_ONE), b%max_energy)
+
   b%b = units_to_atomic(units_inp%energy, b%b)
   b%energy_step = units_to_atomic(units_inp%energy, b%energy_step)
   b%min_energy  = units_to_atomic(units_inp%energy, b%min_energy)
