@@ -29,8 +29,6 @@ module invert_ks_m
   use lalg_adv_m
   use parser_m
   use mesh_m
-  use lalg_adv_m
-  use mesh_m
   use mesh_function_m
   use messages_m
   use mix_m
@@ -55,19 +53,10 @@ contains
     type(system_t),              intent(inout) :: sys
     type(hamiltonian_t),         intent(inout) :: hm
 
-<<<<<<< .mine
-    integer :: ii, jj, kk, ierr, np, ndim, nspin, counter, idiffmax
-    integer :: iunit, verbosity
-    FLOAT :: diffdensity, mixing, stabilizer, convdensity
-    FLOAT :: rho_resid_fact
-    FLOAT, allocatable :: target_rho(:,:), vhxc_in(:,:,:), vhxc_out(:,:,:), vhxc_mix(:,:,:)
-=======
     integer :: ii, jj, ierr, np, ndim, nspin, idiffmax
     integer :: invksmethod
     FLOAT :: diffdensity
     FLOAT, allocatable :: target_rho(:,:)
->>>>>>> .r6109
-    FLOAT, allocatable :: old_rho(:,:), old_vhxc(:,:)
     type(scf_t) :: scfv
       
     call push_sub('invert_ks.invert_ks_run')
@@ -118,9 +107,6 @@ contains
     if (invksmethod == 1) then ! 2-particle exact inversion
 
       call invertks_2part(target_rho, np, nspin, hm%vhxc, sys%gr%mesh%h)
-    
-    SAFE_ALLOCATE(old_rho(1:np, 1:nspin)) 
-    SAFE_ALLOCATE(old_vhxc(1:np, 1:nspin))
 
     else ! iterative case
 
@@ -171,16 +157,15 @@ contains
 
       call push_sub('invert_ks.read_target_rho')
 
-      call parse_string(datasets_check('InvertKSTargetDensity'), "target_density.dat", filename)
-
       !%Variable InvertKSTargetDensity
       !%Type string
       !%Default target_density.dat
-      !%Section Main:: Invert KS
+      !%Section Calculation Modes::Invert KS
       !%Description
       !% Name of the file that contains the density used as the target in the 
-      !% inversion of the KS equations
+      !% inversion of the KS equations.
       !%End
+      call parse_string(datasets_check('InvertKSTargetDensity'), "target_density.dat", filename)
 
       iunit = io_open(filename, action='read', status='old')
 
@@ -346,9 +331,6 @@ contains
     diffdensity = 1d0
     counter = 0
         
-    !old_vhxc = M_ZERO
-    !old_rho = target_rho
-    
     do while(diffdensity > convdensity)
       
       counter = counter + 1 
@@ -363,21 +345,6 @@ contains
     
       call hamiltonian_update_potential(hm, sys%gr%mesh)
 
-<<<<<<< .mine
-      call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run = .false., &
-                   verbosity = VERB_COMPACT)
-      call states_calc_dens(sys%st, np)
-        
-      !if (counter < 30) then    
-        vhxc_out(1:np, 1:nspin, 1) = &
-        (sys%st%rho(1:np,1:nspin) + stabilizer)/(target_rho(1:np,1:nspin) + stabilizer) &
-           * hm%vhxc(1:np, 1:nspin)
-      !else 
-      !  call precond_kiks(sys%gr%mesh, np, nspin, sys%st, target_rho, vhxc_out)
-      !  vhxc_out(1:np, 1:nspin, 1) = hm%vhxc(1:np, 1:nspin) + vhxc_out(1:np, 1:nspin, 1)
-      !end if
-	
-=======
       call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run = .false., &
                    verbosity = VERB_COMPACT)
       call states_calc_dens(sys%st, sys%gr)
@@ -387,13 +354,8 @@ contains
 	(target_rho(1:np,1:nspin) + stabilizer) &
          * hm%vhxc(1:np, 1:nspin)
 
->>>>>>> .r6109
       call dmixing(smix, counter, vhxc_in, vhxc_out, vhxc_mix, dmf_dotp_aux)
   
-      ! save for next iteration
-      !old_rho = sys%st%rho
-      !old_vhxc = hm%vhxc
-      
       hm%vhxc(1:np,1:nspin) = vhxc_mix(1:np, 1:nspin, 1)
       vhxc_in(1:np, 1:nspin, 1) = hm%vhxc(1:np, 1:nspin)
       
@@ -427,14 +389,6 @@ contains
     SAFE_DEALLOCATE_A(vhxc_in)
     SAFE_DEALLOCATE_A(vhxc_out)
     SAFE_DEALLOCATE_A(vhxc_mix)
-<<<<<<< .mine
-
-    SAFE_DEALLOCATE_A(old_rho)
-    SAFE_DEALLOCATE_A(old_vhxc)
-    
-  contains
-=======
->>>>>>> .r6109
 
     call pop_sub()
   end subroutine invertks_iter
@@ -455,29 +409,6 @@ contains
     
     call push_sub('invert_ks.precond_kiks')
 
-<<<<<<< .mine
-      iunit = io_open(filename, action='read', status='old')
-
-      npoints = 0
-      do pass = 1, 2
-        ii = 0
-        rewind(iunit)
-        do
-          read(iunit, fmt=*, iostat=ierr) l_xx(1:ndim), l_ff(1:nspin)
-          if(ierr.ne.0) exit
-          ii = ii + 1
-          if(pass == 1) npoints = npoints + 1
-          if(pass == 2) then
-            xx(ii, 1:ndim)  = l_xx(1:ndim)
-            ff(ii, 1:nspin) = l_ff(1:nspin)
-          end if
-        end do
-        if(pass == 1) then
-          SAFE_ALLOCATE(xx(1:npoints, 1:ndim))
-          SAFE_ALLOCATE(ff(1:npoints, 1:nspin))
-	  
-        end if
-=======
     numerator = M_ZERO
     vhxc_out = M_ZERO
     
@@ -499,7 +430,6 @@ contains
                             * (st%dpsi(iprime, 1, ii, 1)*st%dpsi(iprime, 1, jj, 1))
 	  enddo
 	enddo
->>>>>>> .r6109
       end do
     end do
     
@@ -553,96 +483,6 @@ contains
   
     call pop_sub()
   end subroutine precond_kiks
-  
-  subroutine precond_kiks(mesh, np, nspin, st, target_rho, vhxc_out)
-    integer, intent(in) :: np, nspin
-    FLOAT, intent(in) :: target_rho(1:np, 1:nspin)
-    type(states_t), intent(in) :: st
-    type(mesh_t), intent(in) :: mesh
-    FLOAT, intent(out) :: vhxc_out(1:np, 1:nspin,1:1)
-    
-    integer :: ip, iprime, ii, jj, ivec, jdim
-    integer :: neigenval
-    FLOAT :: numerator, denominator, diffrho, epsij, occij, inverse
-    FLOAT :: vol_element
-    FLOAT :: ki(1:np, 1:np)
-    FLOAT :: eigenvals(1:np), inverseki(1:np,1:np)
-    FLOAT, allocatable :: matrixmul(:,:), kired(:,:)
-        
-    
-    numerator = M_ZERO
-    vhxc_out = M_ZERO
-    
-    !do ip = 1, np
-    !  diffrho = st%rho(ip, 1) - target_rho(ip, 1)
-    !  numerator = numerator + diffrho**2
-    !end do
-    
-    ki = M_ZERO
-    
-    do jj = 1, st%nst
-      do ii = jj + 1, st%nst
-        epsij = M_ONE / (st%eigenval(jj, 1) - st%eigenval(ii, 1))
-	occij = st%occ(jj, 1) - st%occ(ii, 1)
-        do iprime = 1, np
-          do ip = 1, np
-            ki(ip, iprime) = ki(ip, iprime) + occij*epsij & 
-	                    * (st%dpsi(ip, 1, ii, 1)*st%dpsi(ip, 1, jj, 1)) & 
-                            * (st%dpsi(iprime, 1, ii, 1)*st%dpsi(iprime, 1, jj, 1))
-	  enddo
-	enddo
-      end do
-    end do
-    
-    call lalg_eigensolve(np, ki, eigenvals)
-    
-    !do ip = 1, np
-    !  if(abs(eigenvals(ip))>1d-10) then
-    !    neigenval = ip
-    !  endif
-    !enddo
-    
-    SAFE_ALLOCATE(matrixmul(1:np, 1:st%nst))
-    SAFE_ALLOCATE(kired(1:np, 1:st%nst))
-    
-    do ivec = 1, st%nst
-      inverse = 1d0/eigenvals(ivec)
-      do ip = 1, np
-        matrixmul(ip, ivec) = ki(ip,ivec)*inverse
-	kired(ip, ivec) = ki(ip, ivec)
-      enddo
-    enddo
-    
-    inverseki = matmul(matrixmul, transpose(kired))
-    
-    vhxc_out = M_ZERO
-    
-    vol_element = 1.0d0
-    do jdim = 1, MAX_DIM
-      if (mesh%h(jdim) > 1.e-10) vol_element = vol_element*mesh%h(jdim)
-    end do
-    
-    do iprime = 1, np
-      diffrho = target_rho(iprime, 1) - st%rho(iprime, 1)
-      do ip = 1, np
-	vhxc_out(ip, 1, 1) = vhxc_out(ip, 1, 1) + inverseki(ip, iprime)*diffrho
-	write(200,*) ip, iprime, inverseki(ip, iprime) 
-      enddo
-    enddo
-   
-    do ip = 1, np
-      write(100,*) ip, vhxc_out(ip, 1, 1),  target_rho(ip, 1) - st%rho(ip, 1)
-    enddo   
-    
-    
-    SAFE_DEALLOCATE_A(matrixmul)
-    SAFE_DEALLOCATE_A(kired)
-    
-#ifdef HAVE_FLUSH
-    !call flush(200)
-#endif
-  
-  end subroutine
   
 end module invert_ks_m
 
