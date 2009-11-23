@@ -52,7 +52,14 @@ program xyzanim
   coords_file = 'td.general/coordinates'
   xyzfile = 'td.general/movie.xyz'
 
-  ! how often do we sample?
+  !%Variable AnimationSampling
+  !%Type integer
+  !%Default 100
+  !%Section Utilities::oct-xyz-anim
+  !%Description
+  !% Sampling rate of the animation. The animation will be constructed using
+  !% the iteration numbers that are multiples of <tt>AnimationSampling<tt>.
+  !%End
   call parse_integer(datasets_check('AnimationSampling'), 100, sampling)
   if(sampling < 1) then
     message(1) = 'Sampling rate (AnimationSampling) should be bigger than 0'

@@ -413,9 +413,20 @@ contains
       end if
     end if
 
-    ! current
+    !%Variable CurrentDFT
+    !%Type logical
+    !%Default false
+    !%Section Hamiltonian
+    !%Description
+    !% (experimental) If set to yes, Current-DFT theory will be used. This is the
+    !% extension to DFT that sould be used when external magnetic fields are
+    !% present. The current-dependent part of the XC functional is set using the
+    !% <tt>JFunctional<tt> variable. The default is no.
+    !%End
     call parse_logical(datasets_check('CurrentDFT'), .false., st%d%cdft)
     if (st%d%cdft) then
+      call messages_devel_version('Current DFT')
+
       ! Use of CDFT requires complex wavefunctions
       st%wfs_type = M_CMPLX
 

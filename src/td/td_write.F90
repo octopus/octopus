@@ -211,6 +211,15 @@ contains
     end if
 
     call geometry_min_distance(geo, rmin)
+
+    !%Type float
+    !%Default Half the minimum distance between two atoms
+    !%Section Time-Dependent::TD Output
+    !%Description
+    !% The local magnetic moments are calculated by integrating the
+    !% magnetization density in spheres centered around each atom.
+    !% This variable controls the radius of the spheres.
+    !%End
     call parse_float(datasets_check('LocalMagneticMomentsSphereRadius'), rmin*M_HALF, w%lmm_r, units_inp%length)
 
     if( (w%out(OUT_PROJ)%write)  .or.  (w%out(OUT_POPULATIONS)%write) ) then

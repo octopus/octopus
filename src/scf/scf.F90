@@ -279,6 +279,8 @@ contains
 
     call geometry_min_distance(geo, rmin)
     if(geo%natoms == 1) rmin = CNST(100.0)
+
+    ! This variable is documented in td/td_write.F90
     call parse_float(datasets_check('LocalMagneticMomentsSphereRadius'), &
       units_from_atomic(units_inp%length, rmin*M_HALF), scf%lmm_r)
     scf%lmm_r = units_to_atomic(units_inp%length, scf%lmm_r)
