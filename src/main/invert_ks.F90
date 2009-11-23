@@ -53,11 +53,13 @@ contains
     type(system_t),              intent(inout) :: sys
     type(hamiltonian_t),         intent(inout) :: hm
 
-    integer :: ii, jj, ierr, np, ndim, nspin, idiffmax
-    integer :: invksmethod
-    FLOAT :: diffdensity
-    FLOAT, allocatable :: target_rho(:,:)
     type(scf_t) :: scfv
+
+    integer :: ii, jj, ierr, np, ndim, nspin, idiffmax
+    integer :: verbosity
+    FLOAT :: diffdensity
+    integer :: invksmethod
+    FLOAT, allocatable :: target_rho(:,:)
       
     call push_sub('invert_ks.invert_ks_run')
 
@@ -355,7 +357,7 @@ contains
          * hm%vhxc(1:np, 1:nspin)
 
       call dmixing(smix, counter, vhxc_in, vhxc_out, vhxc_mix, dmf_dotp_aux)
-  
+
       hm%vhxc(1:np,1:nspin) = vhxc_mix(1:np, 1:nspin, 1)
       vhxc_in(1:np, 1:nspin, 1) = hm%vhxc(1:np, 1:nspin)
       
@@ -391,6 +393,7 @@ contains
     SAFE_DEALLOCATE_A(vhxc_mix)
 
     call pop_sub()
+
   end subroutine invertks_iter
 
   subroutine precond_kiks(mesh, np, nspin, st, target_rho, vhxc_out)
@@ -481,7 +484,6 @@ contains
     !call flush(200)
 #endif
   
-    call pop_sub()
   end subroutine precond_kiks
   
 end module invert_ks_m
