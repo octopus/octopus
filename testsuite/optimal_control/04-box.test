@@ -4,7 +4,7 @@
 Test       : 1D Box
 Programs   : octopus
 TestGroups : long-run, oct
-Enabled    : Yes
+Enabled    : No
 
 # The test ensures the optimal control algorithm ZR98/WG05. It calculates the optimal laser field that transfers the ground-state to the first excited state. 
 # 
