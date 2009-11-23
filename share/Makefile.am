@@ -28,7 +28,6 @@ dta2dir = $(pkgdatadir)
 dist_dta2_DATA = variables varinfo
 
 CLEANFILES = variables varinfo varinfo_orig
-EXTRA_DIST = variables.local
 
 varinfo: RUN_SCRIPT
 

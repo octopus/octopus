@@ -145,18 +145,8 @@ sub put_opt{
 
 
 #####################################################
-# reads in share/variables.local, and then prints %opt to share/variables
+# prints %opt to share/variables
 sub print_opt{
-  # first read in variables.local file
-  open(IN, "<$share/variables.local");
-  while($_=<IN>){
-    if(/^\s*(\S+)\s*=\s*(\S+)/){
-      put_opt($1, $2);
-    }
-  }
-  close(IN);
-
-  # now print all variables for octopus
   open(OUT, ">$share/variables");
   my $key;
   foreach $key (sort(keys %opt)) {
