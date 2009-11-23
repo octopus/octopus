@@ -94,7 +94,6 @@ module derivatives_m
 
     FLOAT                 :: masses(MAX_DIM)     ! we can have different weights (masses) per space direction
 
-    integer               :: boundaries(MAX_DIM) ! boundary conditions
     logical               :: zero_bc
     logical               :: periodic_bc
 
@@ -244,24 +243,13 @@ contains
     call derivatives_get_stencil_lapl(der)
     call derivatives_get_stencil_grad(der)
 
-    ! find out the bounday conditions
-    call parse_integer(datasets_check('DerivativesBoundaries'), DER_BC_ZERO_F, i)
-    if((i < DER_BC_ZERO_F).or.(i > DER_BC_PERIOD)) then
-      write(message(1), '(a,i2,a)') 'DerivativesBoundaries = "', i, '" is unknown to Octopus.'
-      call write_fatal(1)
-    end if
-
-    der%zero_bc = (i == DER_BC_ZERO_F .and. sb%periodic_dim < 3)
+    der%zero_bc = (sb%periodic_dim < 3)
     der%periodic_bc = (sb%periodic_dim > 0)
-    der%boundaries(:) = i
-    der%boundaries(1:sb%periodic_dim) = DER_BC_PERIOD
 
     ! find out how many ghost points we need in which dimension
     der%n_ghost(:) = 0
     do i = 1, der%dim
-      if(der%boundaries(i) == DER_BC_ZERO_F .or. der%boundaries(i) == DER_BC_PERIOD) then
-        der%n_ghost(i) = maxval(abs(der%lapl%stencil%points(i,:)))
-      end if
+      der%n_ghost(i) = maxval(abs(der%lapl%stencil%points(i,:)))
     end do
 
     call pop_sub()

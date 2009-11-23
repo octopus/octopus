@@ -78,8 +78,8 @@ contains
     call simul_box_init(sys%gr%sb, sys%geo)
     call states_init(sys%st, sys%gr, sys%geo)
     call grid_init_stage_1(sys%gr, sys%geo)
-! if independent particles in N dimensions are being used, need to initialize them
-!  after masses are set to 1 in grid_init_stage_1 -> derivatives_init 
+    ! if independent particles in N dimensions are being used, need to initialize them
+    !  after masses are set to 1 in grid_init_stage_1 -> derivatives_init 
     call modelmb_copy_masses (sys%st%modelmbparticles, sys%gr%der%masses)
 
     call parallel_init()
