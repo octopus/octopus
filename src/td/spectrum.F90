@@ -154,7 +154,7 @@ contains
 
     !%Variable SpecStartTime
     !%Type integer
-    !%Default polynomial
+    !%Default 0.0
     !%Section Utilities::oct-cross-section
     !%Description
     !% Processing is done for the given function in a time-window that starts at the
@@ -164,17 +164,18 @@ contains
 
     !%Variable SpecEndTime
     !%Type integer
-    !%Default polynomial
+    !%Default -1.0
     !%Section Utilities::oct-cross-section
     !%Description
     !% Processing is done for the given function in a time-window that ends at the
-    !% value of this variable.
+    !% value of this variable. If set to a negative value, the maximum value from 
+    !% the corresponding multipole file will used.
     !%End
     call parse_float(datasets_check('SpecEndTime'), -M_ONE, s%end_time, units_inp%time)
 
     !%Variable SpecEnergyStep
     !%Type integer
-    !%Default polynomial
+    !%Default 0.000367493
     !%Section Utilities::oct-cross-section
     !%Description
     !% Sampling rate for the spectrum.
@@ -184,7 +185,7 @@ contains
 
     !%Variable SpecMaxEnergy
     !%Type integer
-    !%Default polynomial
+    !%Default 0.734987
     !%Section Utilities::oct-cross-section
     !%Description
     !% The Fourier transform is calculated for energies smaller than this value.
@@ -193,7 +194,7 @@ contains
 
     !%Variable SpecDampFactor
     !%Type integer
-    !%Default polynomial
+    !%Default 0.15
     !%Section Utilities::oct-cross-section
     !%Description
     !% If <tt>SpecDampMode = exponential</tt>, the damping parameter of the exponential
