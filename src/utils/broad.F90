@@ -102,11 +102,11 @@ contains
     logical,          intent(in) :: extracols
 
     FLOAT, allocatable :: spectrum(:,:)
-    FLOAT :: w, e, f(4)
-    integer :: n, iunit, j1, j2
+    FLOAT :: omega, energy, ff(4)
+    integer :: nsteps, iunit, j1, j2, ii
 
-    n = (br%max_energy - br%min_energy) / br%energy_step
-    SAFE_ALLOCATE(spectrum(1:4, 1:n))
+    nsteps = (br%max_energy - br%min_energy) / br%energy_step
+    SAFE_ALLOCATE(spectrum(1:4, 1:nsteps))
     spectrum = M_ZERO
 
     iunit = io_open(trim(dir)//"/"// fname, action='read', status='old', die = .false.)
@@ -115,16 +115,16 @@ contains
     read(iunit, *) ! skip header
     do
       if(extracols) then
-        read(iunit, *, end=100) j1, j2, e, f
+        read(iunit, *, end=100) j1, j2, energy, ff
       else
-        read(iunit, *, end=100) e, f
+        read(iunit, *, end=100) energy, ff
       end if
 
-      e = units_to_atomic(units_out%energy, e)
+      energy = units_to_atomic(units_out%energy, energy)
 
-      do j1 = 1, n
-        w = br%min_energy + real(j1-1, REAL_PRECISION)*br%energy_step
-        spectrum(:, j1) = spectrum(:, j1) + f(:)*br%br/((w-e)**2 + br%br**2)/M_PI ! Lorentzian
+      do j1 = 1, nsteps
+        omega = br%min_energy + real(j1-1, REAL_PRECISION)*br%energy_step
+        spectrum(1:4, j1) = spectrum(1:4, j1) + ff(1:4)*br%br/((omega-energy)**2 + br%br**2)/M_PI ! Lorentzian
       end do
     end do
 100   continue
@@ -132,9 +132,9 @@ contains
 
     ! print spectra
     iunit = io_open(trim(dir)//"/spectrum."//fname, action='write')
-    do j1 = 1, n
+    do j1 = 1, nsteps
       write(iunit, '(5es14.6)') units_from_atomic(units_out%energy, br%min_energy + real(j1 - 1, REAL_PRECISION) &
-        *br%energy_step), units_from_atomic(units_out%energy, spectrum(:, j1))
+        *br%energy_step), (units_from_atomic(units_out%energy, spectrum(ii, j1)), ii = 1, 4)
     end do
 
     call io_close(iunit)
