@@ -60,7 +60,6 @@ else
 fi
 
 AC_PROG_CC($octopus_default_cc)
-AC_PROG_CC_C99
 AM_PROG_AS
 
 # optimizations extensions supported by the compiler
