@@ -157,7 +157,7 @@ contains
       FLOAT   :: l_xx(MAX_DIM), l_ff(4), rr
       FLOAT, allocatable :: xx(:,:), ff(:,:)
 
-      call push_sub('invert_ks.read_target_rho')
+      call push_sub('invert_ks.invert_ks_run.read_target_rho')
 
       !%Variable InvertKSTargetDensity
       !%Type string
@@ -227,7 +227,7 @@ contains
 
     call push_sub('invert_ks.invertks_2part')
     
-    !initialize the ks potential
+    !initialize the KS potential
     SAFE_ALLOCATE(sqrtrho(1:np, 1:nspin))
     SAFE_ALLOCATE(gradrho(1:np, 1:nspin))
 
@@ -267,6 +267,8 @@ contains
     FLOAT, allocatable :: vhxc_in(:,:,:), vhxc_out(:,:,:), vhxc_mix(:,:,:)
     type(mix_t) :: smix
     character(len=256) :: fname
+
+    call push_sub('invert_ks.invertks_iter')
     
     !%Variable InvertKSConvAbsDens
     !%Type float
@@ -279,7 +281,7 @@ contains
     
     call parse_float(datasets_check('InvertKSConvAbsDens'), 1d-5, convdensity)
     
-    !%Variable InvertKSstabilizer
+    !%Variable InvertKSStabilizer
     !%Type float
     !%Default 0.5
     !%Section Calculation Modes::Invert KS
@@ -289,7 +291,7 @@ contains
     !% ensures that very small densities do not cause numerical problems.
     !%End
 
-    call parse_float(datasets_check('InvertKSstabilizer'), M_HALF, stabilizer)
+    call parse_float(datasets_check('InvertKSStabilizer'), M_HALF, stabilizer)
 
     !%Variable InvertKSVerbosity
     !%Type integer
@@ -309,7 +311,7 @@ contains
       
     call parse_integer(datasets_check('InvertKSVerbosity'), 0, verbosity)  
     if(verbosity < 0 .or. verbosity > 2) then
-      message(1) = 'InvertKSVerbosity only has the options 0, 1, or 2.'
+      call input_error('InvertKSVerbosity')
       call write_fatal(1)
     endif
   
@@ -483,6 +485,8 @@ contains
 #ifdef HAVE_FLUSH
     !call flush(200)
 #endif
+
+    call pop_sub()
   
   end subroutine precond_kiks
   

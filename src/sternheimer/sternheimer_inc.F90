@@ -252,7 +252,7 @@ subroutine X(sternheimer_solve)(                           &
       write(message(1), '(a, i4, a)') &
            'Info: SCF for response converged in ', iter, ' iterations.'
       write(message(2), '(a, i8)') &
-           '      Total hamiltonian applications:', total_iter*linear_solver_ops_per_iter(this%solver)
+           '      Total Hamiltonian applications:', total_iter*linear_solver_ops_per_iter(this%solver)
       call write_info(2)
       exit
     else

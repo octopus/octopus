@@ -153,7 +153,7 @@ contains
     if(.not.varinfo_valid_option('SpecTransform', s%transform)) call input_error('SpecTransform')
 
     !%Variable SpecStartTime
-    !%Type integer
+    !%Type float
     !%Default 0.0
     !%Section Utilities::oct-cross-section
     !%Description
@@ -163,8 +163,8 @@ contains
     call parse_float(datasets_check('SpecStartTime'),  M_ZERO, s%start_time, units_inp%time)
 
     !%Variable SpecEndTime
-    !%Type integer
-    !%Default -1.0
+    !%Type float
+    !%Default -1.0 au
     !%Section Utilities::oct-cross-section
     !%Description
     !% Processing is done for the given function in a time-window that ends at the
@@ -174,8 +174,8 @@ contains
     call parse_float(datasets_check('SpecEndTime'), -M_ONE, s%end_time, units_inp%time)
 
     !%Variable SpecEnergyStep
-    !%Type integer
-    !%Default 0.000367493
+    !%Type float
+    !%Default 0.01 eV
     !%Section Utilities::oct-cross-section
     !%Description
     !% Sampling rate for the spectrum.
@@ -184,8 +184,8 @@ contains
     
 
     !%Variable SpecMaxEnergy
-    !%Type integer
-    !%Default 0.734987
+    !%Type float
+    !%Default 20 eV
     !%Section Utilities::oct-cross-section
     !%Description
     !% The Fourier transform is calculated for energies smaller than this value.
@@ -193,8 +193,8 @@ contains
     call parse_float(datasets_check('SpecMaxEnergy'), CNST(20.0)/(M_TWO*P_Ry), s%max_energy, units_inp%energy)
 
     !%Variable SpecDampFactor
-    !%Type integer
-    !%Default 0.15
+    !%Type float
+    !%Default 0.15 au
     !%Section Utilities::oct-cross-section
     !%Description
     !% If <tt>SpecDampMode = exponential</tt>, the damping parameter of the exponential

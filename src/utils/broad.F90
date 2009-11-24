@@ -54,7 +54,7 @@ program broad
   !%Description
   !% Width of the Lorentzian used to broaden the excitations.
   !%End
-  call parse_float(datasets_check('LinBroadening'), CNST(0.005), br%b, units_inp%energy)
+  call parse_float(datasets_check('LinBroadening'), CNST(0.005), br%br, units_inp%energy)
 
   !%Variable LinEnergyStep
   !%Type float
@@ -106,7 +106,7 @@ contains
     integer :: n, iunit, j1, j2
 
     n = (br%max_energy - br%min_energy) / br%energy_step
-    SAFE_ALLOCATE(s(1:4, 1:n))
+    SAFE_ALLOCATE(spectrum(1:4, 1:n))
     spectrum = M_ZERO
 
     iunit = io_open(trim(dir)//"/"// fname, action='read', status='old', die = .false.)
@@ -124,7 +124,7 @@ contains
 
       do j1 = 1, n
         w = br%min_energy + real(j1-1, REAL_PRECISION)*br%energy_step
-        spectrum(:, j1) = spectrum(:, j1) + f(:)*br%b/((w-e)**2 + br%b**2)/M_PI ! Lorentzian
+        spectrum(:, j1) = spectrum(:, j1) + f(:)*br%br/((w-e)**2 + br%br**2)/M_PI ! Lorentzian
       end do
     end do
 100   continue

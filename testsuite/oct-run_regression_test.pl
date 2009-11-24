@@ -131,7 +131,7 @@ use File::Temp qw/tempdir/;
 # Handle options
 $opt_h && usage;
 $opt_c && create_template;
-####NEW This has to be handled in a differenty way.
+####NEW This has to be handled in a different way.
 #if($opt_d)  { $workdir = $opt_d; }
 ####
 
@@ -239,7 +239,7 @@ foreach my $octopus_exe (@executables){
 	if( -f $input_file ) {
 	  print "\n\nUsing input file : $input_file \n";
 	  system("cp $input_file $workdir/inp");
-	  # Ensure, that the input file is writable so that it can
+	  # Ensure that the input file is writable so that it can
 	  # be overwritten by the next test.
 	  $mode = (stat "$workdir/inp")[2];
 	  chmod $mode|S_IWUSR, "$workdir/inp";
