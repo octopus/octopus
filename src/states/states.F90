@@ -418,8 +418,8 @@ contains
     !%Default false
     !%Section Hamiltonian
     !%Description
-    !% (experimental) If set to yes, Current-DFT theory will be used. This is the
-    !% extension to DFT that sould be used when external magnetic fields are
+    !% (experimental) If set to yes, Current-DFT will be used. This is the
+    !% extension to DFT that should be used when external magnetic fields are
     !% present. The current-dependent part of the XC functional is set using the
     !% <tt>JFunctional<tt> variable. The default is no.
     !%End
@@ -431,7 +431,7 @@ contains
       st%wfs_type = M_CMPLX
 
       if(st%d%ispin == SPINORS) then
-        message(1) = "Sorry, current DFT not working yet for spinors"
+        message(1) = "Sorry, current DFT not working yet for spinors."
         call write_fatal(1)
       end if
       message(1) = "Info: Using current DFT"
