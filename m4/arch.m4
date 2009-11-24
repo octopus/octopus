@@ -24,7 +24,7 @@
 # ----------------------------------
 AC_DEFUN([ACX_M128D],
 [AC_MSG_CHECKING([whether the compiler accepts the __m128d type])
-AC_COMPILE_IFELSE( AC_LANG_PROGRAM( [
+AC_LINK_IFELSE( AC_LANG_PROGRAM( [
 #include <emmintrin.h>
 ], [
 __m128d a __attribute__((aligned(16)));
@@ -37,7 +37,7 @@ AC_MSG_RESULT($acx_m128d)])
 # ----------------------------------
 AC_DEFUN([ACX_BLUE_GENE],
 [AC_MSG_CHECKING([for Blue Gene intrinsics])
-AC_COMPILE_IFELSE( AC_LANG_PROGRAM( [
+AC_LINK_IFELSE( AC_LANG_PROGRAM( [
 ], [[
   double aa, bb;
   double _Complex cc;
