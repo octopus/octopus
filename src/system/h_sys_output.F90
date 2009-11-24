@@ -174,7 +174,7 @@ contains
     !%Option Bader 512
     !% Outputs Laplacian of the density which shows lone pairs, bonded charge concentrations
     !% and regions subject to electrophilic or nucleophilic attack.
-    !% See RF Bader, <i>Atoms in Molecules: A Quantum Theory<i> (Oxford Univ. Press, Oxford, 1990).
+    !% See RF Bader, <i>Atoms in Molecules: A Quantum Theory</i> (Oxford Univ. Press, Oxford, 1990).
     !%Option el_pressure 1024
     !% Outputs electronic pressure. See Tao, Vignale, and Tokatly, <i>Phys Rev Lett</i> <b>100</b>, 206405 (2008).
     !%Option matrix_elements 2048
