@@ -267,7 +267,6 @@ contains
 
     !%Variable SCFCalculateForces
     !%Type logical
-    !%Default yes
     !%Section SCF
     !%Description
     !% This variable controls whether the forces on the ions are

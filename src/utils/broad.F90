@@ -23,8 +23,8 @@ program broad
   use datasets_m
   use global_m
   use io_m
-  use parser_m
   use messages_m
+  use parser_m
   use profiling_m
   use unit_m
   use unit_system_m
@@ -32,10 +32,10 @@ program broad
   implicit none
 
   type broad_t
-    FLOAT :: b, energy_step, min_energy, max_energy
+    FLOAT :: br, energy_step, min_energy, max_energy
   end type broad_t
 
-  type(broad_t) :: b
+  type(broad_t) :: br
 
   ! Initialize stuff
   call global_init()
@@ -47,14 +47,14 @@ program broad
   end if
   call unit_system_init()
 
-  !%Variable LinBroadning
+  !%Variable LinBroadening
   !%Type float
   !%Default 0.005
   !%Section Utilities::oct-broad
   !%Description
-  !% Width of the Lorenzian used to broaden the excitations.
+  !% Width of the Lorentzian used to broaden the excitations.
   !%End
-  call parse_float(datasets_check('LinBroadening'),  units_from_atomic(units_inp%energy, CNST(0.005)), b%b)
+  call parse_float(datasets_check('LinBroadening'), CNST(0.005), br%b, units_inp%energy)
 
   !%Variable LinEnergyStep
   !%Type float
@@ -63,34 +63,29 @@ program broad
   !%Description
   !% Sampling rate for the spectrum. 
   !%End
-  call parse_float(datasets_check('LinEnergyStep'),  units_from_atomic(units_inp%energy, CNST(0.001)), b%energy_step)
+  call parse_float(datasets_check('LinEnergyStep'), CNST(0.001), br%energy_step, units_inp%energy)
 
   !%Variable LinMinEnergy
   !%Type float
   !%Default 0.0
   !%Section Utilities::oct-broad
   !%Description
-  !% The broadning is done for energies greater than LinMinEnergy.
+  !% The broadening is done for energies greater than LinMinEnergy.
   !%End
-  call parse_float(datasets_check('LinMinEnergy'),   M_ZERO, b%min_energy)
+  call parse_float(datasets_check('LinMinEnergy'), M_ZERO, br%min_energy, units_inp%energy)
 
   !%Variable LinMaxEnergy
   !%Type float
   !%Default 1.0
   !%Section Utilities::oct-broad
   !%Description
-  !% The broadning is done for energies smaller than LinMaxEnergy.
+  !% The broadening is done for energies smaller than LinMaxEnergy.
   !%End
-  call parse_float(datasets_check('LinMaxEnergy'),   units_from_atomic(units_inp%energy, M_ONE), b%max_energy)
+  call parse_float(datasets_check('LinMaxEnergy'), M_ONE, br%max_energy, units_inp%energy)
 
-  b%b = units_to_atomic(units_inp%energy, b%b)
-  b%energy_step = units_to_atomic(units_inp%energy, b%energy_step)
-  b%min_energy  = units_to_atomic(units_inp%energy, b%min_energy)
-  b%max_energy  = units_to_atomic(units_inp%energy, b%max_energy)
-
-  call calc_broad(b, CASIDA_DIR, 'eps-diff', .true.)
-  call calc_broad(b, CASIDA_DIR, 'petersilka', .true.)
-  call calc_broad(b, CASIDA_DIR, 'casida', .false.)
+  call calc_broad(br, CASIDA_DIR, 'eps-diff', .true.)
+  call calc_broad(br, CASIDA_DIR, 'petersilka', .true.)
+  call calc_broad(br, CASIDA_DIR, 'casida', .false.)
 
   call io_end()
   call datasets_end()
@@ -100,19 +95,19 @@ program broad
 contains
 
   ! ---------------------------------------------------------
-  subroutine calc_broad(b, dir, fname, extracols)
-    type(broad_t), intent(in) :: b
+  subroutine calc_broad(br, dir, fname, extracols)
+    type(broad_t),    intent(in) :: br
     character(len=*), intent(in) :: dir
     character(len=*), intent(in) :: fname
-    logical, intent(in) :: extracols
+    logical,          intent(in) :: extracols
 
-    FLOAT, allocatable :: s(:,:)
+    FLOAT, allocatable :: spectrum(:,:)
     FLOAT :: w, e, f(4)
     integer :: n, iunit, j1, j2
 
-    n = (b%max_energy - b%min_energy) / b%energy_step
+    n = (br%max_energy - br%min_energy) / br%energy_step
     SAFE_ALLOCATE(s(1:4, 1:n))
-    s = M_ZERO
+    spectrum = M_ZERO
 
     iunit = io_open(trim(dir)//"/"// fname, action='read', status='old', die = .false.)
     if(iunit < 0) return
@@ -125,11 +120,11 @@ contains
         read(iunit, *, end=100) e, f
       end if
 
-      e = units_to_atomic(units_inp%energy, e)
+      e = units_to_atomic(units_out%energy, e)
 
       do j1 = 1, n
-        w = b%min_energy + real(j1-1, REAL_PRECISION)*b%energy_step
-        s(:, j1) = s(:, j1) + f(:)*b%b/((w-e)**2 + b%b**2)/M_PI ! lorentzian
+        w = br%min_energy + real(j1-1, REAL_PRECISION)*br%energy_step
+        spectrum(:, j1) = spectrum(:, j1) + f(:)*br%b/((w-e)**2 + br%b**2)/M_PI ! Lorentzian
       end do
     end do
 100   continue
@@ -138,16 +133,13 @@ contains
     ! print spectra
     iunit = io_open(trim(dir)//"/spectrum."//fname, action='write')
     do j1 = 1, n
-      w = units_from_atomic(units_inp%energy, b%min_energy + real(j1 - 1, REAL_PRECISION)*b%energy_step)
-      s(:, j1) = units_from_atomic(units_inp%energy, s(:, j1))
-      write(iunit, '(5es14.6)') w, s(:, j1)
+      write(iunit, '(5es14.6)') units_from_atomic(units_out%energy, br%min_energy + real(j1 - 1, REAL_PRECISION) &
+        *br%energy_step), units_from_atomic(units_out%energy, spectrum(:, j1))
     end do
-
-    ! IMPORTANT: s has changed units here
 
     call io_close(iunit)
 
-    SAFE_DEALLOCATE_A(s)
+    SAFE_DEALLOCATE_A(spectrum)
   end subroutine calc_broad
 
 end program broad
