@@ -33,6 +33,7 @@ module xc_m
   use profiling_m
   use states_m
   use states_dim_m
+  use symmetrizer_m
   use varinfo_m
   use XC_F90(lib_m)
   use xc_functl_m

@@ -38,7 +38,7 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vta
 
   FLOAT, allocatable :: dens(:,:), dedd(:,:), ex_per_vol(:), ec_per_vol(:)
   FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:)
-  FLOAT, allocatable :: ldens(:,:), tau(:,:), dedldens(:,:)
+  FLOAT, allocatable :: ldens(:,:), tau(:,:), dedldens(:,:), symmtau(:)
 
   integer :: ib, ib2, ip, isp, families, ixc, spin_channels
   FLOAT   :: r
@@ -46,6 +46,7 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vta
   type(profile_t), save :: prof
 
   type(xc_functl_t), pointer :: functl(:)
+  type(symmetrizer_t) :: symmetrizer
 
   call push_sub('vxc_inc.xc_get_vxc')
   call profiling_in(prof, "XC_LOCAL")
@@ -86,17 +87,37 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vta
       call dderivatives_grad(gr%der, dens(:, isp), gdens(:, :, isp)) 
     end do
   else if(mgga) then
+
     call states_calc_tau_jp_gn(gr, st, grho=gdens, tau=tau, lrho=ldens)    
-  end if
 
-  if(functl(1)%id == XC_MGGA_X_TB09 .and. gr%sb%periodic_dim == 3) then
-    call calc_tb09_c()
-  end if
+    if(st%symmetrize_density) then
+      SAFE_ALLOCATE(symmtau(1:gr%fine%mesh%np))
+      call symmetrizer_init(symmetrizer, gr%fine%mesh)
 
+      do isp = 1, spin_channels
+        call dsymmetrizer_apply(symmetrizer, tau(:, isp), symmtau)
+        tau(1:gr%fine%mesh%np, isp) = symmtau(1:gr%fine%mesh%np)
+      end do
+
+      call symmetrizer_end(symmetrizer)
+      SAFE_DEALLOCATE_A(symmtau)
+
+      ! we need to calculate the gradient of symmetrized density
+      do isp = 1, spin_channels
+        call dderivatives_grad(gr%der, dens(:, isp), gdens(:, :, isp)) 
+      end do
+
+    end if
+
+    if(functl(1)%id == XC_MGGA_X_TB09 .and. gr%sb%periodic_dim == 3) then
+      call calc_tb09_c()
+    end if
+
+  end if
 
   space_loop: do ip = 1, gr%mesh%np, n_block
     if(ip + n_block > gr%mesh%np) n_block = gr%mesh%np - ip + 1
-      
+
 
     ! make a local copy with the correct memory order for libxc
     ib2 = ip
@@ -177,7 +198,7 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vta
           select case(functl(ixc)%family)
           case(XC_FAMILY_LDA)
             call XC_F90(lda_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_dedd(1,1))
-          
+
           case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
             l_vsigma = M_ZERO
 
@@ -189,11 +210,11 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vta
               call XC_F90(gga_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), &
                 l_dedd(1,1), l_vsigma(1,1))
             end if
-          
+
           case(XC_FAMILY_MGGA)
             call XC_F90(mgga_vxc)(functl(ixc)%conf, l_dens(1,1), l_sigma(1,1), l_ldens(1), l_tau(1), &
               l_dedd(1,1), l_vsigma(1,1), l_dedldens(1), l_dedtau(1))
-            
+
           case default
             cycle
           end select
@@ -313,7 +334,7 @@ contains
         dens(ii, 2) = max(M_HALF*(dtot - dpol), M_ZERO)
       end select
     end do
-    
+
     call pop_sub()
   end subroutine lda_init
 
@@ -374,12 +395,12 @@ contains
   ! ---------------------------------------------------------
   ! initialize GGAs
   !   *) allocates gradient of the density (gdens), dedgd, and its local variants
-  
+
   subroutine gga_init()
     integer :: ii
 
     call push_sub('vxc_inc.xc_get_vxc.gga_init')
-    
+
     ii = 1
     if(ispin /= UNPOLARIZED) ii = 3
 
@@ -460,10 +481,10 @@ contains
   ! ---------------------------------------------------------
   ! initialize meta-GGAs
   !   *) allocate the kinetic-energy density, dedtau, and local variants
-  
+
   subroutine mgga_init()
     call push_sub('vxc_inc.xc_get_vxc.mgga_init')
-  
+
     SAFE_ALLOCATE( tau(1:gr%mesh%np, 1:spin_channels))
     SAFE_ALLOCATE(ldens(1:gr%mesh%np, 1:spin_channels))
     if(present(vxc)) then
@@ -514,7 +535,7 @@ contains
     call  XC_F90(mgga_x_tb09_set_par)(functl(1)%conf, tb09_c)
 
     SAFE_DEALLOCATE_A(gnon)
-  
+
     call pop_sub()
   end subroutine calc_tb09_c
 
@@ -551,7 +572,7 @@ contains
       call lalg_axpy(gr%mesh%np, M_ONE, lf(:, 1), dedd(:, is))
     end do
     SAFE_DEALLOCATE_A(lf)
-    
+
     call pop_sub()
   end subroutine mgga_process
 
