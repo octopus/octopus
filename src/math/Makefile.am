@@ -64,4 +64,4 @@ solvers.o : solvers.F90 solvers_inc.F90 lalg_adv.o
 young.o : young.F90 math.o
 lapack.o : lapack.F90
 mix.o : mix.F90 mix_inc.F90 lalg_basic.o lalg_adv.o
-symm_op.F90 : symm_op.o
+symm_op.o : symm_op.F90

@@ -104,10 +104,16 @@ contains
     lattice(1:3, 1:3) = rlattice(1:3, 1:3)
     SAFE_ALLOCATE(position(1:3, 1:geo%natoms))
     SAFE_ALLOCATE(typs(1:geo%natoms))
+
+    ! we have to fix things for low dimensionality systems
+    do idir = dim + 1, 3
+      lattice(idir, idir) = M_ONE
+    end do
     
     forall(iatom = 1:geo%natoms)
       !this has to be fixed for non-orthogonal cells
-      position(1:3, iatom) = geo%atom(iatom)%x(1:3)/(M_TWO*lsize(1:3)) + M_HALF
+      position(1:3, iatom) = M_HALF
+      position(1:dim, iatom) = geo%atom(iatom)%x(1:dim)/(M_TWO*lsize(1:dim)) + M_HALF
       typs(iatom) = anint(species_z(geo%atom(iatom)%spec))
     end forall
 
