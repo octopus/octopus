@@ -148,16 +148,22 @@ contains
 
     SAFE_ALLOCATE(this%ops(1:fullnops))
 
-    ! check all operation and leave those that kept the symmetry breaking direction invariant
+    ! check all operation and leave those that kept the symmetry
+    ! breaking direction invariant and (for the moment) that do not have a translation
     this%nops = 0
     do iop = 1, fullnops
       call symm_op_init(tmpop, rotation(:, :, iop), translation(:, iop))
-      if(symm_op_invariant(tmpop, this%breakdir, symprec)) then
+
+      if(symm_op_invariant(tmpop, this%breakdir, symprec) &
+        .and. .not. symm_op_has_translation(tmpop, symprec)) then
         this%nops = this%nops + 1
         call symm_op_init(this%ops(this%nops), rotation(:, :, iop), translation(:, iop))
       end if
       call symm_op_end(tmpop)
     end do
+
+    write(message(1), '(a,i5,a)') 'Info: The system has ', this%nops, ' symmetries that can be used.'
+    call write_info(1)
 
     SAFE_DEALLOCATE_A(rotation)
     SAFE_DEALLOCATE_A(translation)

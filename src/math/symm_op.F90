@@ -34,6 +34,7 @@ module symm_op_m
        symm_op_apply,           &
        symm_op_apply_inv,       &
        symm_op_invariant,       &
+       symm_op_has_translation, &
        symm_op_t
 
   type symm_op_t
@@ -93,6 +94,15 @@ contains
     invariant = all(abs(cc(1:3) - aa(1:3)) < prec)
 
   end function symm_op_invariant
+
+  ! -------------------------------------------------------------------------------
+  logical pure function symm_op_has_translation(this, prec) result(has)
+    type(symm_op_t),  intent(in)  :: this
+    FLOAT,            intent(in)  :: prec
+
+    has = any(abs(this%translation(1:3)) >= prec)
+
+  end function symm_op_has_translation
 
 end module symm_op_m
 
