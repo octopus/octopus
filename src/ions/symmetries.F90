@@ -28,6 +28,7 @@ module symmetries_m
   use profiling_m
   use simul_box_m
   use species_m
+  use symm_op_m
 
   implicit none
 
@@ -42,10 +43,9 @@ module symmetries_m
 
   type symmetries_t
     private
-    integer, pointer :: rotation(:, :, :)
-    real(8), pointer :: translation(:, :)
-    integer          :: nops
-    FLOAT            :: breakdir(1:3)
+    type(symm_op_t), pointer :: ops(:)
+    integer                  :: nops
+    FLOAT                    :: breakdir(1:3)
   end type symmetries_t
 
   real(8), parameter :: symprec = CNST(1e-5)
@@ -88,11 +88,13 @@ contains
     type(simul_box_t), intent(in)  :: sb
     
     integer :: max_size
-    integer :: idir, iatom
+    integer :: idir, iatom, iop
     real(8) :: lattice(1:3, 1:3)
     real(8), allocatable :: position(:, :)
     integer, allocatable :: typs(:)
     type(block_t) :: blk
+    integer, allocatable :: rotation(:, :, :)
+    FLOAT,   allocatable :: translation(:, :)
 
     lattice(1:3, 1:3) = sb%rlattice(1:3, 1:3)
     SAFE_ALLOCATE(position(1:3, 1:geo%natoms))
@@ -110,10 +112,10 @@ contains
 
     max_size = spglib_get_max_multiplicity(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
-    SAFE_ALLOCATE(this%rotation(1:3, 1:3, 1:max_size))
-    SAFE_ALLOCATE(this%translation(1:3, 1:max_size))
+    SAFE_ALLOCATE(rotation(1:3, 1:3, 1:max_size))
+    SAFE_ALLOCATE(translation(1:3, 1:max_size))
 
-    this%nops = spglib_get_symmetry(this%rotation(1, 1, 1), this%translation(1, 1), &
+    this%nops = spglib_get_symmetry(rotation(1, 1, 1), translation(1, 1), &
          max_size, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
     ! this is a hack to get things working, this variable should be
@@ -141,13 +143,27 @@ contains
       
     end if
 
+    SAFE_ALLOCATE(this%ops(1:this%nops))
+    
+    do iop = 1, this%nops
+      call symm_op_init(this%ops(iop), rotation(:, :, iop), translation(:, iop))
+    end do
+
+    SAFE_DEALLOCATE_A(rotation)
+    SAFE_DEALLOCATE_A(translation)
+
   end subroutine symmetries_init
   
   subroutine symmetries_end(this)
     type(symmetries_t),  intent(inout) :: this
-    
-    SAFE_DEALLOCATE_P(this%rotation)
-    SAFE_DEALLOCATE_P(this%translation)
+
+    integer :: iop
+
+    do iop = 1, this%nops
+      call symm_op_end(this%ops(iop))
+    end do
+
+    SAFE_DEALLOCATE_P(this%ops)
   end subroutine symmetries_end
   
   integer pure function symmetries_number(this) result(number)
@@ -155,7 +171,7 @@ contains
     
     number = this%nops
   end function symmetries_number
-  
+
   subroutine symmetries_apply(this, iop, aa, bb)
     type(symmetries_t),  intent(in)  :: this
     integer,             intent(in)  :: iop
@@ -169,10 +185,10 @@ contains
     bb(1:3) = aa(1:3)
     
     ! if the operation leaves the vector invariant
-    cc(1:3) = matmul(this%breakdir(1:3), dble(this%rotation(1:3, 1:3, iop)))
+    cc(1:3) = symm_op_apply(this%ops(iop), this%breakdir)
     if(all(abs(cc(1:3) - this%breakdir(1:3)) < symprec)) then
       ! we can use it
-      bb(1:3) = matmul(aa(1:3), dble(this%rotation(1:3, 1:3, iop)))
+      bb(1:3) = symm_op_apply_inv(this%ops(iop), aa(1:3))
     end if
 
   end subroutine symmetries_apply

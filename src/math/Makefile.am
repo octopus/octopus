@@ -28,7 +28,8 @@ libmath_a_SOURCES = \
 	lapack.F90  \
 	mix.F90     \
 	splines.F90 sparskit.F90 fft.F90 tdfunction.F90 fft_cuda.c filters.F90 \
-	young.F90
+	young.F90   \
+	symm_op.F90
 
 noinst_HEADERS = \
 	lalg_basic_blas.F90 lalg_adv_lapack_inc.F90 math_inc.F90 \
@@ -63,3 +64,4 @@ solvers.o : solvers.F90 solvers_inc.F90 lalg_adv.o
 young.o : young.F90 math.o
 lapack.o : lapack.F90
 mix.o : mix.F90 mix_inc.F90 lalg_basic.o lalg_adv.o
+symm_op.F90 : symm_op.o
