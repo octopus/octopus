@@ -176,7 +176,7 @@ contains
     type(states_dim_t), intent(in) :: this
     integer,            intent(in) :: iq
     
-    call push_sub('states_dim.states_dim_get_spin_index')
+    call push_sub('states_dim.states_dim_get_kpoint_index')
 
     if(this%ispin == SPIN_POLARIZED) then
       index = 1 + (iq - 1)/2

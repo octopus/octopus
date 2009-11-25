@@ -21,16 +21,15 @@ module crystal_m
   
 contains
 
-  ! Generates the K-points grid
-  ! Sets up a uniform array of k-points. Use  a modification of the normal MP scheme, 
-  ! wich is equal to the normal MP scheme in the case of even number of kpoints (i.d.  naxis (i) even)  
-  ! used with a shift of (1/2.1/2,1/2)
-  ! For the original   MP scheme, see (PRB13, 5188, (1976))
-  ! and (PRB16, 1748, (1977))
+  ! Generates the k-points grid
+  ! Sets up a uniform array of k-points. Use a modification of the normal Monkhorst-Pack scheme, 
+  ! which is equivalent to the normal MP scheme in the case of even number of kpoints (i.e. naxis (i) even)  
+  ! used with a shift of (1/2, 1/2, 1/2)
+  ! For the original MP scheme, see (PRB 13, 518 (1976))
+  ! and (PRB 16, 1748 (1977))
   ! naxis(i) are the number of points in the three
-  ! directions dermined by the lattice wave vectors.
-  ! shift(i), and
-  ! sz shift the grid of integration points from the origin.
+  ! directions dermined by the lattice vectors.
+  ! shift(i) and sz shift the grid of integration points from the origin.
 
   subroutine crystal_kpointsgrid_generate(sb, naxis, shift, nkpoints, kpoints)    
     type(simul_box_t), intent(in)  :: sb
@@ -42,7 +41,7 @@ contains
     FLOAT :: dx(1:MAX_DIM)
     integer :: ii, jj, kk, idir, ix(1:MAX_DIM)
 
-    call push_sub('crystal.crystal_kpoints_generate')
+    call push_sub('crystal.crystal_kpointsgrid_generate')
     
     dx(1:MAX_DIM) = M_ONE/real(2*naxis(1:MAX_DIM), REAL_PRECISION)
 

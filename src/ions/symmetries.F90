@@ -100,11 +100,13 @@ contains
     FLOAT,   allocatable :: translation(:, :)
     type(symm_op_t) :: tmpop
 
+    call push_sub('symmetries.symmetries_init')
+
     lattice(1:3, 1:3) = rlattice(1:3, 1:3)
     SAFE_ALLOCATE(position(1:3, 1:geo%natoms))
     SAFE_ALLOCATE(typs(1:geo%natoms))
 
-    ! we have to fix things for low dimensionality systems
+    ! we have to fix things for low-dimensionality systems
     do idir = dim + 1, 3
       lattice(idir, idir) = M_ONE
     end do
@@ -155,8 +157,8 @@ contains
 
     SAFE_ALLOCATE(this%ops(1:fullnops))
 
-    ! check all operation and leave those that kept the symmetry
-    ! breaking direction invariant and (for the moment) that do not have a translation
+    ! check all operations and leave those that kept the symmetry-breaking
+    ! direction invariant and (for the moment) that do not have a translation
     this%nops = 0
     do iop = 1, fullnops
       call symm_op_init(tmpop, rotation(:, :, iop), translation(:, iop))
@@ -175,6 +177,7 @@ contains
     SAFE_DEALLOCATE_A(rotation)
     SAFE_DEALLOCATE_A(translation)
 
+    call pop_sub()
   end subroutine symmetries_init
 
   ! -------------------------------------------------------------------------------
@@ -185,6 +188,8 @@ contains
 
     integer :: iop
 
+    call push_sub('symmetries.symmetries_copy')
+
     outp%nops = inp%nops
     outp%breakdir = inp%breakdir
     
@@ -194,6 +199,7 @@ contains
       call symm_op_copy(inp%ops(iop), outp%ops(iop))
     end do
 
+    call pop_sub()
   end subroutine symmetries_copy
 
   ! -------------------------------------------------------------------------------
@@ -203,11 +209,14 @@ contains
 
     integer :: iop
 
+    call push_sub('symmetries.symmetries_end')
+
     do iop = 1, this%nops
       call symm_op_end(this%ops(iop))
     end do
 
     SAFE_DEALLOCATE_P(this%ops)
+    call pop_sub()
   end subroutine symmetries_end
 
   ! -------------------------------------------------------------------------------
@@ -226,9 +235,13 @@ contains
     FLOAT,               intent(in)  :: aa(1:3)
     FLOAT,               intent(out) :: bb(1:3)
 
+    call push_sub('symmetries.symmetries_apply_kpoint')
+
     ASSERT(0 < iop .and. iop <= this%nops)
 
     bb(1:3) = symm_op_apply_inv(this%ops(iop), aa(1:3))
+
+    call pop_sub()
   end subroutine symmetries_apply_kpoint
 
 end module symmetries_m
