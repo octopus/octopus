@@ -36,7 +36,7 @@ noinst_HEADERS = \
 	ode_solver_inc.F90 root_solver_inc.F90 sparskit_inc.F90 \
 	solvers_inc.F90 \
 	mix_inc.F90     \
-	fftw3.F90 fft_cuda_inc.F90
+	fftw3.F90 fft_cuda_inc.F90 symm_op_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -64,4 +64,4 @@ solvers.o : solvers.F90 solvers_inc.F90 lalg_adv.o
 young.o : young.F90 math.o
 lapack.o : lapack.F90
 mix.o : mix.F90 mix_inc.F90 lalg_basic.o lalg_adv.o
-symm_op.o : symm_op.F90
+symm_op.o : symm_op.F90 symm_op_inc.F90
