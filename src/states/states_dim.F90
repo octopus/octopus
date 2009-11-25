@@ -59,6 +59,7 @@ module states_dim_m
     is_spin_up,                       &
     states_choose_kpoints,            &
     states_dim_get_spin_index,        &
+    states_dim_get_kpoint_index,      &
     kpoints_write_info,               &
     kpoints_distribute,               &
     kpoint_is_gamma,                  &
@@ -171,6 +172,21 @@ contains
     call pop_sub()
   end function states_dim_get_spin_index
   
+  integer function states_dim_get_kpoint_index(this, iq) result(index)
+    type(states_dim_t), intent(in) :: this
+    integer,            intent(in) :: iq
+    
+    call push_sub('states_dim.states_dim_get_spin_index')
+
+    if(this%ispin == SPIN_POLARIZED) then
+      index = 1 + (iq - 1)/2
+    else
+      index = iq
+    end if
+    
+    call pop_sub()
+  end function states_dim_get_kpoint_index
+
   subroutine kpoints_distribute(this, mc)
     type(states_dim_t), intent(inout) :: this
     type(multicomm_t),  intent(in)    :: mc

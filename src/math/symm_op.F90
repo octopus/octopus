@@ -33,6 +33,7 @@ module symm_op_m
        symm_op_end,             &
        symm_op_apply,           &
        symm_op_apply_inv,       &
+       symm_op_invariant,       &
        symm_op_t
 
   type symm_op_t
@@ -80,6 +81,19 @@ contains
       
   end function symm_op_apply_inv
   
+  ! -------------------------------------------------------------------------------
+  logical pure function symm_op_invariant(this, aa, prec) result(invariant)
+    type(symm_op_t),  intent(in)  :: this
+    FLOAT,            intent(in)  :: aa(:)
+    FLOAT,            intent(in)  :: prec
+
+    FLOAT :: cc(1:3)
+
+    cc = symm_op_apply(this, aa)
+    invariant = all(abs(cc(1:3) - aa(1:3)) < prec)
+
+  end function symm_op_invariant
+
 end module symm_op_m
 
 !! Local Variables:

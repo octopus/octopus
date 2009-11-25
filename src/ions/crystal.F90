@@ -167,7 +167,7 @@ contains
       ! operate with the symmetry operations
       
       do iop = 1, symmetries_number(symm)
-        call symmetries_apply(symm, iop, reduced(:, nreduced), tran)
+        call symmetries_apply_kpoint(symm, iop, reduced(:, nreduced), tran)
         tran_inv(1:3) = -tran(1:3)
            
         ! remove (mark) k-points related to irreducible reduced by symmetry
