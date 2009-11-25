@@ -59,7 +59,8 @@ libgrid_a_SOURCES =             \
 	cubic_mesh_fft.c        \
 	transfer_table.F90      \
 	fourier_kernel.F90      \
-	mesh_batch.F90
+	mesh_batch.F90          \
+	symmetrizer.F90
 
 noinst_HEADERS =                  \
 	par_vec_inc.F90           \
@@ -119,3 +120,4 @@ cubic_mesh_fft.o : cubic_mesh_fft.c cubic_mesh.h
 transfer_table.o : transfer_table.F90
 mesh_batch.o : mesh_batch.F90 mesh_batch_inc.F90 mesh.o
 fourier_kernel.o : fourier_kernel.F90 cubic_mesh.o
+symmetrizer.o : symmetrizer.F90 symmetrizer_inc.F90 mesh.o

@@ -52,6 +52,7 @@ module states_m
   use simul_box_m
   use smear_m
   use states_dim_m
+  use symmetrizer_m
   use unit_m
   use unit_system_m
   use varinfo_m
@@ -167,6 +168,7 @@ module states_m
     type(multicomm_all_pairs_t) :: ap                 ! All-pairs schedule.
 
     logical                     :: np_size            ! whether the states were allocated with size mesh%np instead of size np
+    logical                     :: symmetrize_density
   end type states_t
 
 contains
@@ -497,6 +499,15 @@ contains
     call distributed_nullify(st%d%kpt, st%d%nik)
 
     call modelmb_particles_init (st%modelmbparticles,gr)
+
+    !%Variable SymmetrizeDensity
+    !%Type logical
+    !%Default no
+    !%Section States
+    !%Description
+    !% (experimental) If true and the system is periodic, the density will be symmetrized.
+    !%End
+    call parse_logical(datasets_check('SymmetrizeDensity'), .false., st%symmetrize_density)
 
     call pop_sub()
 
@@ -1039,6 +1050,8 @@ contains
     stout%open_boundaries = stin%open_boundaries
     ! Some of the "open boundaries" variables are not copied.
 
+    stout%symmetrize_density = stin%symmetrize_density
+
     call pop_sub()
   end subroutine states_copy
 
@@ -1216,17 +1229,32 @@ contains
     type(grid_t),   intent(in)    :: gr
     FLOAT,          intent(inout) :: rho(:,:)
 
-#ifdef HAVE_MPI
+    type(symmetrizer_t) :: symmetrizer
+    FLOAT,  allocatable :: symmrho(:)
     integer :: ispin, np
+#ifdef HAVE_MPI
     FLOAT,  allocatable :: reduce_rho(:)
     type(profile_t), save :: reduce_prof
 #endif
 
-    call push_sub('states.states_dens_reduce')
-
-#ifdef HAVE_MPI
     np = gr%fine%mesh%np
 
+    call push_sub('states.states_dens_reduce')
+
+    if(st%symmetrize_density) then
+      SAFE_ALLOCATE(symmrho(1:np))
+      call symmetrizer_init(symmetrizer, gr%fine%mesh)
+
+      do ispin = 1, st%d%nspin
+        call dsymmetrizer_apply(symmetrizer, rho(:, ispin), symmrho)
+        rho(1:np, ispin) = symmrho(1:np)
+      end do
+
+      call symmetrizer_end(symmetrizer)
+      SAFE_DEALLOCATE_A(symmrho)
+    end if
+
+#ifdef HAVE_MPI
     ! reduce over states
     if(st%parallel_in_states) then
       call profiling_in(reduce_prof, "DENSITY_REDUCE")

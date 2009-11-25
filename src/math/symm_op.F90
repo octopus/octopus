@@ -44,6 +44,14 @@ module symm_op_m
     FLOAT   :: translation(1:3)
   end type symm_op_t
   
+  interface symm_op_apply
+    module procedure isymm_op_apply, dsymm_op_apply, zsymm_op_apply
+  end interface
+
+  interface symm_op_apply_inv
+    module procedure isymm_op_apply_inv, dsymm_op_apply_inv, zsymm_op_apply_inv
+  end interface
+
 contains
   
   subroutine symm_op_init(this, rot, trans)
@@ -72,26 +80,6 @@ contains
 
     !nothing to do for the moment
   end subroutine symm_op_end
-
-  ! -------------------------------------------------------------------------------
-  pure function symm_op_apply(this, aa) result(bb)
-    type(symm_op_t),  intent(in)  :: this
-    FLOAT,            intent(in)  :: aa(:)
-    FLOAT                         :: bb(1:3)
-
-    bb(1:3) = matmul(aa(1:3), dble(this%rotation(1:3, 1:3))) + this%translation(1:3)
-      
-  end function symm_op_apply
-
-  ! -------------------------------------------------------------------------------
-  pure function symm_op_apply_inv(this, aa) result(bb)
-    type(symm_op_t),  intent(in)  :: this
-    FLOAT,            intent(in)  :: aa(:)
-    FLOAT                         :: bb(1:3)
-
-    bb(1:3) = matmul(dble(this%rotation(1:3, 1:3)), aa(1:3))
-      
-  end function symm_op_apply_inv
   
   ! -------------------------------------------------------------------------------
   logical pure function symm_op_invariant(this, aa, prec) result(invariant)
@@ -114,6 +102,18 @@ contains
     has = any(abs(this%translation(1:3)) >= prec)
 
   end function symm_op_has_translation
+
+#include "undef.F90"
+#include "integer.F90"
+#include "symm_op_inc.F90"
+
+#include "undef.F90"
+#include "real.F90"
+#include "symm_op_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "symm_op_inc.F90"
 
 end module symm_op_m
 

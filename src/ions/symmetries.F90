@@ -42,7 +42,6 @@ module symmetries_m
        symmetries_t
 
   type symmetries_t
-    private
     type(symm_op_t), pointer :: ops(:)
     integer                  :: nops
     FLOAT                    :: breakdir(1:3)
