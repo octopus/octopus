@@ -76,7 +76,8 @@ noinst_HEADERS =                  \
 	multigrid_inc.F90         \
 	gridhier_inc.F90          \
 	cubic_mesh.h              \
-	mesh_batch_inc.F90
+	mesh_batch_inc.F90        \
+	symmetrizer_inc.F90
 
 include $(srcdir)/../common-rules.make
 
