@@ -37,6 +37,7 @@ module simul_box_m
   use profiling_m
   use species_m
   use string_m
+  use symmetries_m
   use unit_m
   use unit_system_m
   use varinfo_m
@@ -103,6 +104,7 @@ module simul_box_m
   end type multiresolution_t
 
   type simul_box_t
+    type(symmetries_t) :: symm
     integer  :: box_shape   ! 1->sphere, 2->cylinder, 3->sphere around each atom,
                             ! 4->parallelepiped (orthonormal, up to now).
 
@@ -177,6 +179,9 @@ contains
     call simul_box_add_lead_atoms(sb, geo) ! Add the atoms of the lead unit cells that are
                                            ! included in the simulation box to geo.
     call simul_box_atoms_in_box(sb, geo)   ! Put all the atoms inside the box.
+
+    if(simul_box_is_periodic(sb)) call symmetries_init(sb%symm, geo, sb%dim, sb%rlattice, sb%lsize)
+
     call kpoints_init(sb%kpoints, sb%dim, sb%periodic_dim, sb%rlattice, sb%klattice, geo)
 
     call pop_sub()
@@ -1147,6 +1152,8 @@ contains
 
     call push_sub('simul_box.simul_box_end')
 
+    if(simul_box_is_periodic(sb)) call symmetries_end(sb%symm)
+
     call lookup_end(sb%atom_lookup)
     call kpoints_end(sb%kpoints)
 
@@ -1716,6 +1723,8 @@ contains
     end if
 
     call lookup_copy(sbin%atom_lookup, sbout%atom_lookup)
+
+    if(simul_box_is_periodic(sbin)) call symmetries_copy(sbin%symm, sbout%symm)
 
     call pop_sub()
   end subroutine simul_box_copy

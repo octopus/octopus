@@ -21,20 +21,18 @@ module crystal_m
   
 contains
 
-  subroutine crystal_kpointsgrid_generate(sb, naxis, shift, nkpoints, kpoints)
-  
-    ! Generates the K-points grid
-    ! Sets up a uniform array of k-points. Use  a modification of the normal MP scheme, 
-    ! wich is equal to the normal MP scheme in the case of even number of kpoints (i.d.  naxis (i) even)  
-    ! used with a shift of (1/2.1/2,1/2)
-    ! For the original   MP scheme, see (PRB13, 5188, (1976))
-    ! and (PRB16, 1748, (1977))
-    ! naxis(i) are the number of points in the three
-    ! directions dermined by the lattice wave vectors.
-    ! shift(i), and
-    ! sz shift the grid of integration points from the origin.
+  ! Generates the K-points grid
+  ! Sets up a uniform array of k-points. Use  a modification of the normal MP scheme, 
+  ! wich is equal to the normal MP scheme in the case of even number of kpoints (i.d.  naxis (i) even)  
+  ! used with a shift of (1/2.1/2,1/2)
+  ! For the original   MP scheme, see (PRB13, 5188, (1976))
+  ! and (PRB16, 1748, (1977))
+  ! naxis(i) are the number of points in the three
+  ! directions dermined by the lattice wave vectors.
+  ! shift(i), and
+  ! sz shift the grid of integration points from the origin.
 
-    
+  subroutine crystal_kpointsgrid_generate(sb, naxis, shift, nkpoints, kpoints)    
     type(simul_box_t), intent(in)  :: sb
     integer,           intent(in)  :: naxis(1:MAX_DIM)
     FLOAT,             intent(in)  :: shift(1:MAX_DIM)
@@ -45,9 +43,6 @@ contains
     integer :: ii, jj, kk, idir, ix(1:MAX_DIM)
 
     call push_sub('crystal.crystal_kpoints_generate')
-
-    
-    
     
     dx(1:MAX_DIM) = M_ONE/real(2*naxis(1:MAX_DIM), REAL_PRECISION)
 
@@ -88,16 +83,13 @@ contains
     FLOAT,             intent(out)   :: weights(:)
 
     integer :: ik
-    type(symmetries_t) :: symm
 
     call push_sub('crystal.crystal_init')
 
     call crystal_kpointsgrid_generate(sb, nk_axis, shift, nkpoints, kpoints)
     
     if(use_symmetries) then
-      call symmetries_init(symm, geo, sb)
-      call crystal_kpointsgrid_reduce(symm, use_time_reversal, nkpoints, kpoints, weights)
-      call symmetries_end(symm)
+      call crystal_kpointsgrid_reduce(sb%symm, use_time_reversal, nkpoints, kpoints, weights)
     else
       forall(ik = 1:nkpoints) weights(ik) = M_ONE/dble(nkpoints)
     end if

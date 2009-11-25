@@ -26,7 +26,6 @@ module symmetries_m
   use parser_m
   use messages_m
   use profiling_m
-  use simul_box_m
   use species_m
   use symm_op_m
 
@@ -36,6 +35,7 @@ module symmetries_m
   
   public ::                      &
        symmetries_init,          &
+       symmetries_copy,          &
        symmetries_end,           &
        symmetries_number,        &
        symmetries_apply_kpoint,  &
@@ -84,10 +84,12 @@ module symmetries_m
   
 contains
   
-  subroutine symmetries_init(this, geo, sb)
+  subroutine symmetries_init(this, geo, dim, rlattice, lsize)
     type(symmetries_t),  intent(out) :: this
-    type(geometry_t),  intent(in)  :: geo
-    type(simul_box_t), intent(in)  :: sb
+    type(geometry_t),    intent(in)  :: geo
+    integer,             intent(in)  :: dim
+    FLOAT,               intent(in)  :: rlattice(:, :)
+    FLOAT,               intent(in)  :: lsize(:)
     
     integer :: max_size, fullnops
     integer :: idir, iatom, iop
@@ -99,13 +101,13 @@ contains
     FLOAT,   allocatable :: translation(:, :)
     type(symm_op_t) :: tmpop
 
-    lattice(1:3, 1:3) = sb%rlattice(1:3, 1:3)
+    lattice(1:3, 1:3) = rlattice(1:3, 1:3)
     SAFE_ALLOCATE(position(1:3, 1:geo%natoms))
     SAFE_ALLOCATE(typs(1:geo%natoms))
     
     forall(iatom = 1:geo%natoms)
       !this has to be fixed for non-orthogonal cells
-      position(1:3, iatom) = geo%atom(iatom)%x(1:3)/(M_TWO*sb%lsize(1:3)) + M_HALF
+      position(1:3, iatom) = geo%atom(iatom)%x(1:3)/(M_TWO*lsize(1:3)) + M_HALF
       typs(iatom) = anint(species_z(geo%atom(iatom)%spec))
     end forall
 
@@ -138,7 +140,7 @@ contains
 
     if(parse_block(datasets_check('SymmetryBreakDir'), blk) == 0) then
       
-      do idir = 1, sb%dim
+      do idir = 1, dim
         call parse_block_float(blk, 0, idir - 1, this%breakdir(idir))
       end do
       
@@ -157,7 +159,7 @@ contains
       if(symm_op_invariant(tmpop, this%breakdir, symprec) &
         .and. .not. symm_op_has_translation(tmpop, symprec)) then
         this%nops = this%nops + 1
-        call symm_op_init(this%ops(this%nops), rotation(:, :, iop), translation(:, iop))
+        call symm_op_copy(tmpop, this%ops(this%nops))
       end if
       call symm_op_end(tmpop)
     end do
@@ -169,6 +171,25 @@ contains
     SAFE_DEALLOCATE_A(translation)
 
   end subroutine symmetries_init
+
+  ! -------------------------------------------------------------------------------
+
+  subroutine symmetries_copy(inp, outp)
+    type(symmetries_t),  intent(in)  :: inp
+    type(symmetries_t),  intent(out) :: outp
+
+    integer :: iop
+
+    outp%nops = inp%nops
+    outp%breakdir = inp%breakdir
+    
+    SAFE_ALLOCATE(outp%ops(1:outp%nops))
+
+    do iop = 1, outp%nops
+      call symm_op_copy(inp%ops(iop), outp%ops(iop))
+    end do
+
+  end subroutine symmetries_copy
 
   ! -------------------------------------------------------------------------------
 

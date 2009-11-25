@@ -30,6 +30,7 @@ module symm_op_m
   
   public ::                     &
        symm_op_init,            &
+       symm_op_copy,            &
        symm_op_end,             &
        symm_op_apply,           &
        symm_op_apply_inv,       &
@@ -53,6 +54,16 @@ contains
     this%rotation(1:3, 1:3) = rot(1:3, 1:3)
     this%translation(1:3) = trans(1:3)
   end subroutine symm_op_init
+  
+  ! -------------------------------------------------------------------------------
+  
+  subroutine symm_op_copy(inp, outp)
+    type(symm_op_t),     intent(in) :: inp
+    type(symm_op_t),     intent(out) :: outp
+
+    outp%rotation(1:3, 1:3) =  inp%rotation(1:3, 1:3)
+    outp%translation(1:3) =  inp%translation(1:3)
+  end subroutine symm_op_copy
   
   ! -------------------------------------------------------------------------------
 
