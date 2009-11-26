@@ -38,7 +38,7 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vta
 
   FLOAT, allocatable :: dens(:,:), dedd(:,:), ex_per_vol(:), ec_per_vol(:)
   FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:)
-  FLOAT, allocatable :: ldens(:,:), tau(:,:), dedldens(:,:), symmtmp(:)
+  FLOAT, allocatable :: ldens(:,:), tau(:,:), dedldens(:,:), symmtmp(:, :)
 
   integer :: ib, ib2, ip, isp, families, ixc, spin_channels
   FLOAT   :: r
@@ -91,26 +91,20 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vta
     call states_calc_tau_jp_gn(gr, st, grho=gdens, tau=tau, lrho=ldens)    
 
     if(st%symmetrize_density) then
-      SAFE_ALLOCATE(symmtmp(1:gr%fine%mesh%np))
+      SAFE_ALLOCATE(symmtmp(1:gr%fine%mesh%np, 1:3))
       call symmetrizer_init(symmetrizer, gr%fine%mesh)
 
       do isp = 1, spin_channels
-        call dsymmetrizer_apply(symmetrizer, tau(:, isp), symmtmp)
-        tau(1:gr%fine%mesh%np, isp) = symmtmp(1:gr%fine%mesh%np)
-        call dsymmetrizer_apply(symmetrizer, ldens(:, isp), symmtmp)
-        ldens(1:gr%fine%mesh%np, isp) = symmtmp(1:gr%fine%mesh%np)
+        call dsymmetrizer_apply(symmetrizer, tau(:, isp), symmtmp(:, 1))
+        tau(1:gr%fine%mesh%np, isp) = symmtmp(1:gr%fine%mesh%np, 1)
+        call dsymmetrizer_apply(symmetrizer, ldens(:, isp), symmtmp(:, 1))
+        ldens(1:gr%fine%mesh%np, isp) = symmtmp(1:gr%fine%mesh%np, 1)
+        call dsymmetrizer_apply_vector(symmetrizer, gdens(:, :, isp), symmtmp)
+        gdens(1:gr%fine%mesh%np, 1:3, isp) = symmtmp(1:gr%fine%mesh%np, 1:3)
       end do
 
       call symmetrizer_end(symmetrizer)
       SAFE_DEALLOCATE_A(symmtmp)
-
-      ! the gradient of the density is not symmetrized, so we need to
-      ! re-calculate it directly from the density (that was
-      ! symmetrized)
-      do isp = 1, spin_channels
-        call dderivatives_grad(gr%der, dens(:, isp), gdens(:, :, isp)) 
-      end do
-
     end if
 
     if(functl(1)%id == XC_MGGA_X_TB09 .and. gr%sb%periodic_dim == 3) then

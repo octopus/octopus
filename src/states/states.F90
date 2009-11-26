@@ -1241,19 +1241,6 @@ contains
 
     call push_sub('states.states_dens_reduce')
 
-    if(st%symmetrize_density) then
-      SAFE_ALLOCATE(symmrho(1:np))
-      call symmetrizer_init(symmetrizer, gr%fine%mesh)
-
-      do ispin = 1, st%d%nspin
-        call dsymmetrizer_apply(symmetrizer, rho(:, ispin), symmrho)
-        rho(1:np, ispin) = symmrho(1:np)
-      end do
-
-      call symmetrizer_end(symmetrizer)
-      SAFE_DEALLOCATE_A(symmrho)
-    end if
-
 #ifdef HAVE_MPI
     ! reduce over states
     if(st%parallel_in_states) then
@@ -1283,6 +1270,19 @@ contains
       call profiling_out(reduce_prof)
     end if
 #endif
+
+    if(st%symmetrize_density) then
+      SAFE_ALLOCATE(symmrho(1:np))
+      call symmetrizer_init(symmetrizer, gr%fine%mesh)
+
+      do ispin = 1, st%d%nspin
+        call dsymmetrizer_apply(symmetrizer, rho(:, ispin), symmrho)
+        rho(1:np, ispin) = symmrho(1:np)
+      end do
+
+      call symmetrizer_end(symmetrizer)
+      SAFE_DEALLOCATE_A(symmrho)
+    end if
 
     call pop_sub()
   end subroutine states_dens_reduce
