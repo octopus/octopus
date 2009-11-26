@@ -312,15 +312,15 @@ contains
     integer,       intent(in)    :: dim
     integer,       intent(in)    :: nspin
 
-    integer :: np
+    integer :: np, ip
 
     call push_sub('ob_lead.lead_copy')
 
     ASSERT(dst%np.le.src%np)
     np = dst%np
 
-    dst%h_diag(1:np, 1:np, 1:dim) = src%h_diag(1:np, 1:np, 1:dim)
-    dst%h_offdiag(1:np, 1:np)     = src%h_offdiag(1:np, 1:np)
+    forall(ip = 1:np) dst%h_diag(1:np, ip, 1:dim) = src%h_diag(1:np, ip, 1:dim)
+    forall(ip = 1:np) dst%h_offdiag(1:np, ip)     = src%h_offdiag(1:np, ip)
     dst%vks(1:np, 1:nspin)        = src%vks(1:np, 1:nspin)
     dst%vhartree(1:np)            = src%vhartree(1:np)
 

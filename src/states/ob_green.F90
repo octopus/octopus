@@ -295,7 +295,7 @@ contains
     CMPLX,             intent(in)  :: offdiag(1:intf%np_intf, 1:intf%np_intf)
     CMPLX,             intent(out) :: matrix(1:2*intf%np_intf, 1:2*intf%np_intf)
 
-    integer  :: i, np, np2
+    integer  :: ip, np, np2
     CMPLX, allocatable   :: x1(:,:), x2(:,:)
 
     call push_sub('ob_green.create_moeb_trans_matrix')
@@ -306,10 +306,10 @@ contains
     SAFE_ALLOCATE( x2(1:np, 1:np) )
 
     ! 1. create matrix x ( x = {{0,offdiag^(-1)},{-offdiag^H,(energy-diag)*offdiag^(-1)}} )
-    matrix(1:np, 1:np) = M_z0
+    forall(ip = 1:np) matrix(1:np, ip) = M_z0
 
     ! use o2 as tmp variable
-    x1(1:np, 1:np) = offdiag(1:np, 1:np)
+    forall(ip = 1:np) x1(1:np, ip) = offdiag(1:np, ip)
 
     if (mod(intf%il+1,2)+1.eq.1) then
       call lalg_invert_upper_triangular(np, x1)
@@ -317,12 +317,12 @@ contains
       call lalg_invert_lower_triangular(np, x1)
     end if
 
-    matrix(1:np, np+1:np2) = x1(1:np, 1:np)
-    matrix(np+1:np2, 1:np) = -transpose(conjg(offdiag(1:np, 1:np)))
+    forall(ip = 1:np) matrix(ip, np+1:np2) = x1(ip, 1:np)
+    forall(ip = 1:np) matrix(np+1:np2, ip) = -conjg(offdiag(ip, 1:np))
 
     ! use o4 as tmp variable
-    x2(1:np, 1:np) = -diag(1:np, 1:np)
-    forall (i = 1:np) x2(i, i) = x2(i, i) + energy
+    forall(ip = 1:np) x2(1:np, ip) = -diag(1:np, ip)
+    forall (ip = 1:np) x2(ip, ip) = x2(ip, ip) + energy
 
     if (mod(intf%il+1,2)+1.eq.1) then
       call lalg_trmm(np, np, 'U', 'N', 'R', M_z1, x1, x2)
@@ -330,7 +330,7 @@ contains
       call lalg_trmm(np, np, 'L', 'N', 'R', M_z1, x1, x2)
     end if
     
-    matrix(np+1:np2, np+1:np2) = x2(1:np, 1:np)
+    forall (ip = 1:np) matrix(np+1:np2, np+ip) = x2(1:np, ip)
 
     SAFE_DEALLOCATE_A(x1)
     SAFE_DEALLOCATE_A(x2)

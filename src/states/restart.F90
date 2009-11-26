@@ -459,9 +459,9 @@ contains
         ! Open boundaries imply complex wavefunctions.
         call zrestart_read_function(dir, filename, gs_mesh, tmp, err)
 
-        ! count the valid file readings
-        if(err.le.0) ierr = ierr + 1
-        if(err.eq.0) then
+        
+        if(err.le.0) then
+          ierr = ierr + 1 ! count the valid file readings
           if(gr%mesh%np.eq.gs_mesh%np) then! no extra unit cell present
             do il=1, NLEADS
               forall(ip=1:np_uc) &
