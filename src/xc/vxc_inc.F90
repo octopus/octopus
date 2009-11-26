@@ -88,12 +88,16 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vta
     end do
   else if(mgga) then
 
+    ! We calculate everything from the wave-functions to benefit from
+    ! the error cancelation between the gradient of the density and
+    ! tau.
     call states_calc_tau_jp_gn(gr, st, grho=gdens, tau=tau, lrho=ldens)    
 
+    ! We have to symmetrize everything as they are calculated from the
+    ! wave-functions.
     if(st%symmetrize_density) then
       SAFE_ALLOCATE(symmtmp(1:gr%fine%mesh%np, 1:3))
       call symmetrizer_init(symmetrizer, gr%fine%mesh)
-
       do isp = 1, spin_channels
         call dsymmetrizer_apply(symmetrizer, tau(:, isp), symmtmp(:, 1))
         tau(1:gr%fine%mesh%np, isp) = symmtmp(1:gr%fine%mesh%np, 1)

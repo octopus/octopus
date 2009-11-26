@@ -509,6 +509,8 @@ contains
     !%End
     call parse_logical(datasets_check('SymmetrizeDensity'), .false., st%symmetrize_density)
 
+    if(st%symmetrize_density) call messages_devel_version("Symmetrization of the density")
+
     call pop_sub()
 
   contains
