@@ -595,7 +595,8 @@ contains
               fname = trim(gr%sb%lead_static_dir(il))//'/vh.ncdf'
               call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vhartree(:), ierr)
               if(ierr.eq.0) then
-                message(1) = 'Info: Successfully read Hartree potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
+                message(1) = 'Info: Successfully read Hartree potential of the '//trim(LEAD_NAME(il))&
+                              //' lead from '//trim(fname)//'.'
                 call write_info(1)
               else
                 message(1) = 'Could not read the Hartree potential of the leads.'
