@@ -505,57 +505,61 @@ contains
         np_part =  gr%intf(il)%np_part_uc
         call lead_init(hm%lead(il), np, np_part, st%d%dim, hm%d%nspin)
       end do
-
+      
       do il = 1, NLEADS
         do ispin = 1, hm%d%nspin
           write(channel, '(i1)') ispin
 
           ! Try vks-ispin first.
           ! OBF.
-          fname = trim(gr%sb%lead_static_dir(il))//'/vks-'//trim(channel)//'.obf'
-          call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vks(:, ispin), ierr)
-          if(ierr.eq.0) then
-            message(1) = 'Info: Successfully read KS potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
-            call write_info(1)
-          else
-            ! NetCDF.
-            fname = trim(gr%sb%lead_static_dir(il))//'/vks-'//trim(channel)//'.ncdf'
+          if(ubound(hm%lead(il)%vks(:, ispin), dim = 1).eq.gr%mesh%lead_unit_cell(il)%np) then
+            fname = trim(gr%sb%lead_static_dir(il))//'/vks-'//trim(channel)//'.obf'
             call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vks(:, ispin), ierr)
             if(ierr.eq.0) then
               message(1) = 'Info: Successfully read KS potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
               call write_info(1)
             else
-              ! Now try v0.
-              ! OBF.
-              fname = trim(gr%sb%lead_static_dir(il))//'/v0.obf'
+              ! NetCDF.
+              fname = trim(gr%sb%lead_static_dir(il))//'/vks-'//trim(channel)//'.ncdf'
               call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vks(:, ispin), ierr)
               if(ierr.eq.0) then
-                message(1) = 'Info: Successfully read external potential of the '// &
-                  trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
+                message(1) = 'Info: Successfully read KS potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
                 call write_info(1)
               else
-                ! NetCDF.
-                fname = trim(gr%sb%lead_static_dir(il))//'/v0.ncdf'
+                ! Now try v0.
+                ! OBF.
+                fname = trim(gr%sb%lead_static_dir(il))//'/v0.obf'
                 call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vks(:, ispin), ierr)
                 if(ierr.eq.0) then
                   message(1) = 'Info: Successfully read external potential of the '// &
                     trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
                   call write_info(1)
                 else
-                  ! Reading potential failed.
-                  message(1) = 'Could neither read vks-x nor v0 from the directory'
-                  message(2) = trim(gr%sb%lead_static_dir(il))//' for the '//trim(LEAD_NAME(il))//' lead.'
-                  message(3) = 'Please include'
-                  message(4) = ''
-                  message(5) = '  Output = potential'
-                  message(6) = ''
-                  message(7) = 'in your periodic run. Octopus now assumes zero potential'
-                  message(8) = 'in the leads. This is most likely not what you want.'
-                  call write_warning(8)
-                  hm%lead(il)%vks(:, ispin) = M_ZERO
+                  ! NetCDF.
+                  fname = trim(gr%sb%lead_static_dir(il))//'/v0.ncdf'
+                  call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vks(:, ispin), ierr)
+                  if(ierr.eq.0) then
+                    message(1) = 'Info: Successfully read external potential of the '// &
+                      trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
+                    call write_info(1)
+                  else
+                    ! Reading potential failed.
+                    message(1) = 'Could neither read vks-x nor v0 from the directory'
+                    message(2) = trim(gr%sb%lead_static_dir(il))//' for the '//trim(LEAD_NAME(il))//' lead.'
+                    message(3) = 'Please include'
+                    message(4) = ''
+                    message(5) = '  Output = potential'
+                    message(6) = ''
+                    message(7) = 'in your periodic run. Octopus now assumes zero potential'
+                    message(8) = 'in the leads. This is most likely not what you want.'
+                    call write_warning(8)
+                    hm%lead(il)%vks(:, ispin) = M_ZERO
+                  end if
                 end if
               end if
             end if
+          else
+            hm%lead(il)%vks(:, ispin) = M_ZERO ! no unit cell present, so fill with zero
           end if
 
           ! In debug mode, write potential to file in gnuplot format
@@ -579,29 +583,31 @@ contains
         ! Read Hartree potential.
         ! OBF.
         hm%lead(il)%vhartree(:) = M_ZERO
-        if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
-          fname = trim(gr%sb%lead_static_dir(il))//'/vh.obf'
-          call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vhartree(:), ierr)
-          if(ierr.eq.0) then
-            message(1) = 'Info: Successfully read Hartree potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
-            call write_info(1)
-          else
-            ! NetCDF.
-            fname = trim(gr%sb%lead_static_dir(il))//'/vh.ncdf'
+        if(ubound(hm%lead(il)%vhartree(:), dim = 1).eq.gr%mesh%lead_unit_cell(il)%np) then
+          if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+            fname = trim(gr%sb%lead_static_dir(il))//'/vh.obf'
             call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vhartree(:), ierr)
             if(ierr.eq.0) then
               message(1) = 'Info: Successfully read Hartree potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
               call write_info(1)
             else
-              message(1) = 'Could not read the Hartree potential of the leads.'
-              message(2) = 'The Hartree term will not be calculated correctly.'
-              message(3) = 'Include'
-              message(4) = ''
-              message(5) = '  Output = potential'
-              message(6) = ''
-              message(7) = 'in your periodic run and make sure the Hartree interaction'
-              message(8) = 'is switched on.'
-              call write_warning(8)
+              ! NetCDF.
+              fname = trim(gr%sb%lead_static_dir(il))//'/vh.ncdf'
+              call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vhartree(:), ierr)
+              if(ierr.eq.0) then
+                message(1) = 'Info: Successfully read Hartree potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
+                call write_info(1)
+              else
+                message(1) = 'Could not read the Hartree potential of the leads.'
+                message(2) = 'The Hartree term will not be calculated correctly.'
+                message(3) = 'Include'
+                message(4) = ''
+                message(5) = '  Output = potential'
+                message(6) = ''
+                message(7) = 'in your periodic run and make sure the Hartree interaction'
+                message(8) = 'is switched on.'
+                call write_warning(8)
+              end if
             end if
           end if
         end if

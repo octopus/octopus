@@ -1546,7 +1546,8 @@ contains
     end if
     if(sb%lead_unit_cell(il)%periodic_dim.ne.1) then
       message(1) = 'Simulation box of '//LEAD_NAME(il)//' lead is not periodic in x-direction.'
-      call write_fatal(1)
+!      call write_fatal(1)
+      call write_warning(1)
     end if
     if(sb%lead_unit_cell(il)%dim.ne.calc_dim) then
       message(1) = 'Simulation box of '//LEAD_NAME(il)//' has a different dimension than'
