@@ -20,16 +20,16 @@
 #include "global.h"
 
 program cross_section
-  use global_m
-  use messages_m
   use datasets_m
-  use loct_m
-  use parser_m
+  use global_m
   use io_m
-  use unit_m
-  use unit_system_m
+  use loct_m
+  use messages_m
+  use parser_m
   use profiling_m
   use spectrum_m
+  use unit_m
+  use unit_system_m
 
   implicit none
 

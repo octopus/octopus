@@ -20,14 +20,14 @@
 #include "global.h"
 
 program centergeom
-  use global_m
-  use messages_m
   use datasets_m
-  use parser_m
+  use geometry_m
+  use global_m
   use io_m
+  use messages_m
+  use parser_m
   use unit_m
   use unit_system_m
-  use geometry_m
   use xyz_adjust_m
 
   implicit none
