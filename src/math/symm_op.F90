@@ -57,12 +57,17 @@ contains
   subroutine symm_op_init(this, rot, trans)
     type(symm_op_t),     intent(out) :: this
     integer,             intent(in)  :: rot(:, :)
-    FLOAT,               intent(in)  :: trans(:)
+    FLOAT, optional,     intent(in)  :: trans(:)
 
     call push_sub('symm_op.symm_op_init')
 
     this%rotation(1:3, 1:3) = rot(1:3, 1:3)
-    this%translation(1:3) = trans(1:3)
+
+    if(present(trans)) then
+      this%translation(1:3) = trans(1:3)
+    else
+      this%translation(1:3) = M_ZERO
+    end if
 
     call pop_sub()
   end subroutine symm_op_init

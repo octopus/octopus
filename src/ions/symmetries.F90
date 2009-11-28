@@ -83,13 +83,14 @@ module symmetries_m
   
 contains
   
-  subroutine symmetries_init(this, geo, dim, rlattice, lsize)
+  subroutine symmetries_init(this, geo, dim, periodic_dim, rlattice, lsize)
     type(symmetries_t),  intent(out) :: this
     type(geometry_t),    intent(in)  :: geo
     integer,             intent(in)  :: dim
+    integer,             intent(in)  :: periodic_dim
     FLOAT,               intent(in)  :: rlattice(:, :)
     FLOAT,               intent(in)  :: lsize(:)
-    
+
     integer :: max_size, fullnops
     integer :: idir, iatom, iop
     real(8) :: lattice(1:3, 1:3)
@@ -102,80 +103,92 @@ contains
 
     call push_sub('symmetries.symmetries_init')
 
-    lattice(1:3, 1:3) = rlattice(1:3, 1:3)
-    SAFE_ALLOCATE(position(1:3, 1:geo%natoms))
-    SAFE_ALLOCATE(typs(1:geo%natoms))
+    if (periodic_dim == 0) then
 
-    ! we have to fix things for low-dimensionality systems
-    do idir = dim + 1, 3
-      lattice(idir, idir) = M_ONE
-    end do
-    
-    forall(iatom = 1:geo%natoms)
-      !this has to be fixed for non-orthogonal cells
-      position(1:3, iatom) = M_HALF
-      position(1:dim, iatom) = geo%atom(iatom)%x(1:dim)/(M_TWO*lsize(1:dim)) + M_HALF
-      typs(iatom) = anint(species_z(geo%atom(iatom)%spec))
-    end forall
+      ! we only have the identity
 
-    ! This outputs information about the symmetries, I will disable it
-    ! for the moment as it causes some problems.
-    !    call spglib_show_symmetry(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+      SAFE_ALLOCATE(this%ops(1:1))
+      this%nops = 1
+      call symm_op_init(this%ops(1), reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/)))
+      this%breakdir = M_ZERO
+    else
 
-    max_size = spglib_get_max_multiplicity(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+      lattice(1:3, 1:3) = rlattice(1:3, 1:3)
+      SAFE_ALLOCATE(position(1:3, 1:geo%natoms))
+      SAFE_ALLOCATE(typs(1:geo%natoms))
 
-    SAFE_ALLOCATE(rotation(1:3, 1:3, 1:max_size))
-    SAFE_ALLOCATE(translation(1:3, 1:max_size))
-
-    fullnops = spglib_get_symmetry(rotation(1, 1, 1), translation(1, 1), &
-         max_size, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
-
-    ! this is a hack to get things working, this variable should be
-    ! eliminated and the direction calculated automatically from the
-    ! perturbations.
-
-    !%Variable SymmetryBreakDir
-    !%Type block
-    !%Section Mesh::Simulation Box
-    !%Description
-    !% This variable specifies a direction in which the symmetry of
-    !% the system will be broken. This is useful for generating <i>k</i>-point
-    !% grids when an external perturbation is applied.
-    !%End
-
-    this%breakdir(1:3) = M_ZERO
-
-    if(parse_block(datasets_check('SymmetryBreakDir'), blk) == 0) then
-      
-      do idir = 1, dim
-        call parse_block_float(blk, 0, idir - 1, this%breakdir(idir))
+      ! we have to fix things for low-dimensionality systems
+      do idir = dim + 1, 3
+        lattice(idir, idir) = M_ONE
       end do
-      
-      call parse_block_end(blk)
-      
-    end if
 
-    SAFE_ALLOCATE(this%ops(1:fullnops))
+      forall(iatom = 1:geo%natoms)
+        !this has to be fixed for non-orthogonal cells
+        position(1:3, iatom) = M_HALF
+        position(1:dim, iatom) = geo%atom(iatom)%x(1:dim)/(M_TWO*lsize(1:dim)) + M_HALF
+        typs(iatom) = anint(species_z(geo%atom(iatom)%spec))
+      end forall
 
-    ! check all operations and leave those that kept the symmetry-breaking
-    ! direction invariant and (for the moment) that do not have a translation
-    this%nops = 0
-    do iop = 1, fullnops
-      call symm_op_init(tmpop, rotation(:, :, iop), translation(:, iop))
+      ! This outputs information about the symmetries, I will disable it
+      ! for the moment as it causes some problems with the output.
+      !    call spglib_show_symmetry(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
-      if(symm_op_invariant(tmpop, this%breakdir, symprec) &
-        .and. .not. symm_op_has_translation(tmpop, symprec)) then
-        this%nops = this%nops + 1
-        call symm_op_copy(tmpop, this%ops(this%nops))
+      max_size = spglib_get_max_multiplicity(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+
+      SAFE_ALLOCATE(rotation(1:3, 1:3, 1:max_size))
+      SAFE_ALLOCATE(translation(1:3, 1:max_size))
+
+      fullnops = spglib_get_symmetry(rotation(1, 1, 1), translation(1, 1), &
+        max_size, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+
+      ! this is a hack to get things working, this variable should be
+      ! eliminated and the direction calculated automatically from the
+      ! perturbations.
+
+      !%Variable SymmetryBreakDir
+      !%Type block
+      !%Section Mesh::Simulation Box
+      !%Description
+      !% This variable specifies a direction in which the symmetry of
+      !% the system will be broken. This is useful for generating <i>k</i>-point
+      !% grids when an external perturbation is applied.
+      !%End
+
+      this%breakdir(1:3) = M_ZERO
+
+      if(parse_block(datasets_check('SymmetryBreakDir'), blk) == 0) then
+
+        do idir = 1, dim
+          call parse_block_float(blk, 0, idir - 1, this%breakdir(idir))
+        end do
+
+        call parse_block_end(blk)
+
       end if
-      call symm_op_end(tmpop)
-    end do
 
-    write(message(1), '(a,i5,a)') 'Info: The system has ', this%nops, ' symmetries that can be used.'
-    call write_info(1)
+      SAFE_ALLOCATE(this%ops(1:fullnops))
 
-    SAFE_DEALLOCATE_A(rotation)
-    SAFE_DEALLOCATE_A(translation)
+      ! check all operations and leave those that kept the symmetry-breaking
+      ! direction invariant and (for the moment) that do not have a translation
+      this%nops = 0
+      do iop = 1, fullnops
+        call symm_op_init(tmpop, rotation(:, :, iop), translation(:, iop))
+
+        if(symm_op_invariant(tmpop, this%breakdir, symprec) &
+          .and. .not. symm_op_has_translation(tmpop, symprec)) then
+          this%nops = this%nops + 1
+          call symm_op_copy(tmpop, this%ops(this%nops))
+        end if
+        call symm_op_end(tmpop)
+      end do
+
+      write(message(1), '(a,i5,a)') 'Info: The system has ', this%nops, ' symmetries that can be used.'
+      call write_info(1)
+
+      SAFE_DEALLOCATE_A(rotation)
+      SAFE_DEALLOCATE_A(translation)
+
+    end if
 
     call pop_sub()
   end subroutine symmetries_init

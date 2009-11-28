@@ -180,7 +180,7 @@ contains
                                            ! included in the simulation box to geo.
     call simul_box_atoms_in_box(sb, geo)   ! Put all the atoms inside the box.
 
-    if(simul_box_is_periodic(sb)) call symmetries_init(sb%symm, geo, sb%dim, sb%rlattice, sb%lsize)
+    call symmetries_init(sb%symm, geo, sb%dim, sb%periodic_dim, sb%rlattice, sb%lsize)
 
     call kpoints_init(sb%kpoints, sb%dim, sb%periodic_dim, sb%rlattice, sb%klattice, geo)
 
@@ -1152,7 +1152,7 @@ contains
 
     call push_sub('simul_box.simul_box_end')
 
-    if(simul_box_is_periodic(sb)) call symmetries_end(sb%symm)
+    call symmetries_end(sb%symm)
 
     call lookup_end(sb%atom_lookup)
     call kpoints_end(sb%kpoints)
