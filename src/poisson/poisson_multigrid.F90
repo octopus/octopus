@@ -184,11 +184,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine poisson_multigrid_solver(this, gr, pot, rho)
-    type(mg_solver_t), intent(in)    :: this
-    type(grid_t),      target, intent(inout) :: gr
-    FLOAT,             intent(inout) :: pot(:)
-    FLOAT,             intent(in)    :: rho(:)
+  subroutine poisson_multigrid_solver(this, base_der, pot, rho)
+    type(mg_solver_t),           intent(in)    :: this
+    type(derivatives_t), target, intent(inout) :: base_der
+    FLOAT,                       intent(inout) :: pot(:)
+    FLOAT,                       intent(in)    :: rho(:)
 
     integer :: lev, cl, t, np, curr_l, ip
     FLOAT :: res, fmg_threshold = CNST(0.1)
@@ -200,9 +200,6 @@ contains
     type(dgridhier_t) :: err
 
     type(derivatives_t), pointer :: der
-    type(derivatives_t), pointer :: base_der
-
-    base_der => gr%der
 
     call push_sub('poisson_multigrid.poisson_multigrid_solver');
 
@@ -219,8 +216,7 @@ contains
 
     forall (ip = 1:base_der%mesh%np) phi%level(0)%p(ip) = pot(ip) - vh_correction(ip)
 
-    cl = gr%mgrid%n_levels
-    print*, cl
+    cl = multigrid_number_of_levels(base_der)
 
     curr_l = 0
     der => base_der
@@ -231,7 +227,7 @@ contains
         call vcycle_cs(curr_l, der)
       end if
 
-      res = residue(curr_l, phi%level(curr_l)%p, tau%level(curr_l)%p, err%level(curr_l)%p)
+      res = residue(der, phi%level(curr_l)%p, tau%level(curr_l)%p, err%level(curr_l)%p)
       
       if(in_debug_mode) then
         write(message(1), '(a,i5,a,i5,a,e12.6)') "Multigrid: base level ", curr_l, " iter ", t, " res ", res
@@ -240,8 +236,7 @@ contains
 
       if(res < this%threshold) then
         if(curr_l > 0 ) then
-          call dmultigrid_coarse2fine(gr%mgrid%level(curr_l)%tt, gr%mgrid%level(curr_l)%der, &
-            gr%mgrid%level(curr_l - 1)%mesh, phi%level(curr_l)%p, phi%level(curr_l - 1)%p, order = 2)
+          call dmultigrid_coarse2fine(der%to_finer, der, der%finer%mesh,phi%level(curr_l)%p, phi%level(curr_l - 1)%p, order = 2)
           curr_l = curr_l - 1
           der => der%finer
         else
@@ -281,24 +276,21 @@ contains
   contains
 
     ! ---------------------------------------------------------
-    FLOAT function residue(level, phi, rho, tmp) result(res)
-      integer, intent(in)    :: level
-      FLOAT,   intent(inout) :: phi(:)
-      FLOAT,   intent(in)    :: rho(:)
-      FLOAT,   intent(inout) :: tmp(:)
+    FLOAT function residue(der, phi, rho, tmp) result(res)
+      type(derivatives_t), intent(in) :: der
+      FLOAT,               intent(inout) :: phi(:)
+      FLOAT,               intent(in)    :: rho(:)
+      FLOAT,               intent(inout) :: tmp(:)
 
-      type(mesh_t), pointer :: m
       integer :: ip
 
       call push_sub('poisson_multigrid.residue')
 
-      m => gr%mgrid%level(level)%mesh
+      call dderivatives_lapl(der, phi, tmp)
 
-      call dderivatives_lapl(gr%mgrid%level(level)%der, phi, tmp)
+      forall (ip = 1:der%mesh%np) tmp(ip) = tmp(ip) - rho(ip)
 
-      forall (ip = 1:m%np) tmp(ip) = tmp(ip) - rho(ip)
-
-      res = dmf_nrm2(m, tmp)
+      res = dmf_nrm2(der%mesh, tmp)
 
       call pop_sub()
     end function residue
@@ -352,67 +344,6 @@ contains
 
       call pop_sub()
     end subroutine vcycle_cs
-
-    ! ---------------------------------------------------------
-    subroutine vcycle_fas(fl)
-      integer, intent(in) :: fl
-
-      integer :: l, ip
-
-      call push_sub('poisson_multigrid.vcycle_fas')
-
-      do l = fl, cl
-        ! store the initial approximation
-        np = gr%mgrid%level(l)%mesh%np
-        call lalg_copy(np, phi%level(l)%p, phi_ini%level(l)%p)
-
-        ! presmoothing
-        call multigrid_relax(this, gr%mgrid%level(l)%mesh, gr%mgrid%level(l)%der, &
-          phi%level(l)%p, tau%level(l)%p , this%presteps)
-
-        if (l /= cl ) then
-          ! transfer of the current solution
-          call dmultigrid_fine2coarse(gr%mgrid%level(l + 1)%tt, gr%mgrid%level(l)%der, &
-            gr%mgrid%level(l + 1)%mesh, phi%level(l)%p, phi%level(l+1)%p, this%restriction_method)
-
-          ! error calculation
-          call dderivatives_lapl(gr%mgrid%level(l)%der, phi%level(l)%p, err%level(l)%p)
-          forall(ip = 1:np) err%level(l)%p(ip) = err%level(l)%p(ip) - tau%level(l)%p(ip)
-
-          ! transfer error to coarser grid
-          call dmultigrid_fine2coarse(gr%mgrid%level(l + 1)%tt, gr%mgrid%level(l)%der, &
-            gr%mgrid%level(l + 1)%mesh, err%level(l)%p, tau%level(l+1)%p, this%restriction_method)
-
-          ! the other part of the error
-          call dderivatives_lapl(gr%mgrid%level(l + 1)%der, phi%level(l + 1)%p, err%level(l + 1)%p)
-          np = gr%mgrid%level(l + 1)%mesh%np
-          forall(ip = 1:np) tau%level(l + 1)%p(ip) = err%level(l + 1)%p(ip) - tau%level(l + 1)%p(ip)
-        end if
-      end do
-
-      do l = cl, fl, -1
-       
-        ! postsmoothing
-        call multigrid_relax(this, gr%mgrid%level(l)%mesh, gr%mgrid%level(l)%der, &
-          phi%level(l)%p, tau%level(l)%p, this%poststeps)
-
-        if(l /= fl) then
-          ! calculate correction as the diference with the
-          ! original grid in this level
-          np = gr%mgrid%level(l)%mesh%np
-          forall(ip = 1:np) phi%level(l)%p(ip) = phi%level(l)%p(ip) - phi_ini%level(l)%p(ip)
-
-          ! transfer correction to finer level
-          call dmultigrid_coarse2fine(gr%mgrid%level(l)%tt, gr%mgrid%level(l)%der, &
-            gr%mgrid%level(l - 1)%mesh, phi%level(l)%p, err%level(l - 1)%p)
-
-          np = gr%mgrid%level(l-1)%mesh%np
-          forall(ip = 1:np) phi%level(l - 1)%p(ip) = phi%level(l - 1)%p(ip) + err%level(l - 1)%p(ip)
-        end if
-      end do
-
-      call pop_sub()
-    end subroutine vcycle_fas
 
   end subroutine poisson_multigrid_solver
 

@@ -438,7 +438,7 @@ contains
     end if
 
     ! solve the Poisson equation
-    call dpoisson_solve(gr, hm%vhartree, rho)
+    call dpoisson_solve(gr%der, hm%vhartree, rho)
     ! Get the Hartree energy
     hm%ehartree = M_HALF*dmf_dotp(gr%mesh, rho, hm%vhartree)
 

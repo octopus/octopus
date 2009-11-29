@@ -582,7 +582,7 @@ contains
         vl(1:mesh%np) = M_ZERO   ! vl has to be initialized before entering routine
         ! and our best guess for the potential is zero
         count_atoms=iatom
-        call dpoisson_solve(gr, vl, rho) 
+        call dpoisson_solve(gr%der, vl, rho) 
 
         if (poisson_get_solver() == POISSON_SETE) then  !SEC
           rho_nuc(1:gr%mesh%np) = rho_nuc(1:gr%mesh%np) + rho(1:gr%mesh%np)
@@ -958,7 +958,7 @@ contains
        SAFE_ALLOCATE(rho2(1:gr%mesh%np))
        call species_get_density(geo%atom(jatom)%spec, geo%atom(jatom)%x, gr, geo, rho2)
        v2(1:gr%mesh%np)= M_ZERO
-       call dpoisson_solve(gr, v2, rho2)
+       call dpoisson_solve(gr%der, v2, rho2)
        do iatom = jatom-1,1,-1
         SAFE_ALLOCATE(rho1(1:gr%mesh%np))
         call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr, geo, rho1)

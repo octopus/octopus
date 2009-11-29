@@ -134,7 +134,7 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, time, kinetic_on
         ! lasers
         if(hm%ep%no_lasers > 0) then
           if(any(laser_requires_gradient(hm%ep%lasers(1:hm%ep%no_lasers)))) then
-            call X(get_grad)(hm, gr, epsi, grad)
+            call X(get_grad)(hm, gr%der, epsi, grad)
           end if
           if(associated(hm%ep%a_static)) then
             call X(vlasers)(hm%ep%lasers, hm%ep%no_lasers, gr, hm%d, epsi, hpsi, grad, &
@@ -146,7 +146,7 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, time, kinetic_on
         end if
 #ifdef R_TCOMPLEX
         if (gauge_field_is_applied(hm%ep%gfield)) then
-          call X(get_grad)(hm, gr, psi, grad)
+          call X(get_grad)(hm, gr%der, psi, grad)
           call gauge_field_apply(hm%ep%gfield, gr, hm%d%dim, epsi, grad, hpsi)
         end if
 #endif
@@ -156,7 +156,7 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, time, kinetic_on
         call X(exchange_operator)(hm, gr, epsi, hpsi, ist, ik)
       
       if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) &
-        call X(h_mgga_terms) (hm, gr, epsi, hpsi, ik, grad)
+        call X(h_mgga_terms) (hm, gr%der, epsi, hpsi, ik, grad)
 
       call X(magnetic_terms) (gr, hm, epsi, hpsi, grad, ik)
       
@@ -209,9 +209,9 @@ end subroutine X(hamiltonian_apply_batch)
 
 ! ---------------------------------------------------------
 
-subroutine X(get_grad)(hm, gr, psi, grad)
+subroutine X(get_grad)(hm, der, psi, grad)
   type(hamiltonian_t), intent(in)    :: hm
-  type(grid_t),        intent(inout) :: gr
+  type(derivatives_t), intent(inout) :: der
   R_TYPE,              intent(inout) :: psi(:, :)
   R_TYPE,              pointer       :: grad(:, :, :)
 
@@ -220,10 +220,10 @@ subroutine X(get_grad)(hm, gr, psi, grad)
   call push_sub('hamiltonian_inc.Xget_grad')
 
   if( .not. associated(grad)) then
-    SAFE_ALLOCATE(grad(1:gr%mesh%np, 1:MAX_DIM, 1:hm%d%dim))
+    SAFE_ALLOCATE(grad(1:der%mesh%np, 1:MAX_DIM, 1:hm%d%dim))
     do idim = 1, hm%d%dim 
       ! boundary points were already set by the Laplacian
-      call X(derivatives_grad)(gr%der, psi(:, idim), grad(:, :, idim), &
+      call X(derivatives_grad)(der, psi(:, idim), grad(:, :, idim), &
         ghost_update = .false., set_bc = .false.)
     end do
   end if
@@ -331,7 +331,7 @@ subroutine X(exchange_operator) (hm, gr, psi, hpsi, ist, ik)
       end forall
     end do
 
-    call X(poisson_solve)(gr, pot, rho)
+    call X(poisson_solve)(gr%der, pot, rho)
 
     ff = hm%st%occ(j, ik)
     if(hm%d%ispin == UNPOLARIZED) ff = ff/M_TWO
@@ -381,7 +381,7 @@ subroutine X(oct_exchange_operator_all) (hm, gr, psi, hpsi)
             R_AIMAG(R_CONJ(hm%oct_st%X(psi)(k, 1, j, ik)) * psi%X(psi)(k, 1, j, ik))
         end forall
       end do 
-      call dpoisson_solve(gr, pot, rho)
+      call dpoisson_solve(gr%der, pot, rho)
       do ist = psi%st_start, psi%st_end
         forall(k = 1:gr%mesh%np)
           hpsi%X(psi)(k, 1, ist, ik) = hpsi%X(psi)(k, 1, ist, ik) + M_TWO * M_zI * &
@@ -428,7 +428,7 @@ subroutine X(oct_exchange_operator) (hm, gr, psi, hpsi, ik)
       forall (k = 1:gr%mesh%np)
         rho(k) = hm%oct_st%occ(j, 1) * R_AIMAG(R_CONJ(hm%oct_st%X(psi)(k, 1, j, ik)) * psi(k, 1))
       end forall
-      call dpoisson_solve(gr, pot, rho)
+      call dpoisson_solve(gr%der, pot, rho)
       forall(k = 1:gr%mesh%np)
         hpsi(k, 1) = hpsi(k, 1) + M_TWO * M_zI * &
           hm%oct_st%X(psi)(k, 1, j, ik) * (pot(k) + hm%oct_fxc(k, 1, 1) * rho(k))
@@ -442,7 +442,7 @@ subroutine X(oct_exchange_operator) (hm, gr, psi, hpsi, ik)
       do k = 1, gr%mesh%np
         rho(k) = R_AIMAG(R_CONJ(hm%oct_st%X(psi)(k, 1, j, ik)) * psi(k, 1))
       end do
-      call dpoisson_solve(gr, pot, rho)
+      call dpoisson_solve(gr%der, pot, rho)
       do k = 1, gr%mesh%np
         hpsi(k, 1) = hpsi(k, 1) +  M_TWO * M_zI * hm%oct_st%occ(j, ik) * &
           hm%oct_st%X(psi)(k, 1, j, ik) * pot(k)
@@ -531,7 +531,7 @@ subroutine X(magnetic_terms) (gr, hm, psi, hpsi, grad, ik)
   call push_sub('hamiltonian_inc.Xmagnetic_terms')
 
   if(hm%d%cdft .or. associated(hm%ep%A_static)) then
-    call X(get_grad)(hm, gr, psi, grad)
+    call X(get_grad)(hm, gr%der, psi, grad)
   else
     call pop_sub(); return
   endif
@@ -744,11 +744,11 @@ end subroutine X(vborders)
 
 
 ! ---------------------------------------------------------
-subroutine X(h_mgga_terms) (hm, gr, psi, hpsi, ik, grad)
+subroutine X(h_mgga_terms) (hm, der, psi, hpsi, ik, grad)
   type(hamiltonian_t), intent(in)    :: hm
-  type(grid_t),        intent(inout) :: gr
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(gr%mesh%np_part, hm%d%dim)
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(gr%mesh%np_part, hm%d%dim)
+  type(derivatives_t), intent(inout) :: der
+  R_TYPE,              intent(inout) :: psi(:,:)
+  R_TYPE,              intent(inout) :: hpsi(:,:)
   integer,             intent(in)    :: ik
   R_TYPE,              pointer       :: grad(:, :, :)
 
@@ -757,21 +757,21 @@ subroutine X(h_mgga_terms) (hm, gr, psi, hpsi, ik, grad)
 
   call push_sub('hamiltonian_inc.Xh_mgga_terms')
 
-  call X(get_grad)(hm, gr, psi, grad)
+  call X(get_grad)(hm, der, psi, grad)
   ispin = states_dim_get_spin_index(hm%d, ik)
 
-  SAFE_ALLOCATE(cgrad(1:gr%mesh%np_part, 1:MAX_DIM))
-  SAFE_ALLOCATE(diverg(1:gr%mesh%np))
+  SAFE_ALLOCATE(cgrad(1:der%mesh%np_part, 1:MAX_DIM))
+  SAFE_ALLOCATE(diverg(1:der%mesh%np))
 
   do idim = 1, hm%d%dim
-    do ispace = 1, gr%sb%dim
-      cgrad(1:gr%mesh%np, ispace) = M_TWO*grad(1:gr%mesh%np, ispace, idim)*hm%vtau(1:gr%mesh%np, ispin)
+    do ispace = 1, der%mesh%sb%dim
+      cgrad(1:der%mesh%np, ispace) = M_TWO*grad(1:der%mesh%np, ispace, idim)*hm%vtau(1:der%mesh%np, ispin)
     end do
 
-    diverg(1:gr%mesh%np) = M_ZERO
-    call X(derivatives_div)(gr%der, cgrad, diverg)
+    diverg(1:der%mesh%np) = M_ZERO
+    call X(derivatives_div)(der, cgrad, diverg)
 
-    hpsi(1:gr%mesh%np, idim) = hpsi(1:gr%mesh%np, idim) - diverg(1:gr%mesh%np)
+    hpsi(1:der%mesh%np, idim) = hpsi(1:der%mesh%np, idim) - diverg(1:der%mesh%np)
   end do
 
   SAFE_DEALLOCATE_A(cgrad)

@@ -343,8 +343,8 @@ contains
 
 
   !-----------------------------------------------------------------
-  subroutine zpoisson_solve(grid, pot, rho, all_nodes)
-    type(grid_t), target, intent(inout) :: grid
+  subroutine zpoisson_solve(der, pot, rho, all_nodes)
+    type(derivatives_t),  intent(inout) :: der
     CMPLX,                intent(inout) :: pot(:)  ! pot(mesh%np)
     CMPLX,                intent(in)    :: rho(:)  ! rho(mesh%np)
     logical, optional,    intent(in)    :: all_nodes
@@ -352,10 +352,6 @@ contains
     FLOAT, allocatable :: aux1(:), aux2(:)
 
     logical :: all_nodes_value
-
-    type(derivatives_t), pointer :: der
-
-    der => grid%der
 
     call push_sub('poisson.zpoisson_solve')
 
@@ -371,13 +367,13 @@ contains
     ! first the real part
     aux1(1:der%mesh%np) = real(rho(1:der%mesh%np))
     aux2(1:der%mesh%np) = real(pot(1:der%mesh%np))
-    call dpoisson_solve(grid, aux2, aux1, all_nodes=all_nodes_value)
+    call dpoisson_solve(der, aux2, aux1, all_nodes=all_nodes_value)
     pot(1:der%mesh%np)  = aux2(1:der%mesh%np)
 
     ! now the imaginary part
     aux1(1:der%mesh%np) = aimag(rho(1:der%mesh%np))
     aux2(1:der%mesh%np) = aimag(pot(1:der%mesh%np))
-    call dpoisson_solve(grid, aux2, aux1, all_nodes=all_nodes_value)
+    call dpoisson_solve(der, aux2, aux1, all_nodes=all_nodes_value)
     pot(1:der%mesh%np) = pot(1:der%mesh%np) + M_zI*aux2(1:der%mesh%np)
 
     SAFE_DEALLOCATE_A(aux1)
@@ -388,8 +384,8 @@ contains
 
 
   !-----------------------------------------------------------------
-  subroutine dpoisson_solve(grid, pot, rho, all_nodes)
-    type(grid_t), target, intent(inout) :: grid
+  subroutine dpoisson_solve(der, pot, rho, all_nodes)
+    type(derivatives_t),  intent(inout) :: der
     FLOAT,                intent(inout) :: pot(:)    ! pot(mesh%np)
     FLOAT,                intent(in)    :: rho(:)    ! rho(mesh%np)
     logical, optional,    intent(in)    :: all_nodes ! Is the Poisson solver allowed to utilise
@@ -413,10 +409,6 @@ contains
     type(profile_t), save :: prof
     
     integer :: conversion(3)
-
-    type(derivatives_t), pointer :: der
-
-    der => grid%der
     
     call profiling_in(prof, 'POISSON_SOLVE')
     call push_sub('poisson.dpoisson_solve')
@@ -479,7 +471,7 @@ contains
       end if
 
     case(POISSON_MULTIGRID)
-      call poisson_multigrid_solver(mg, grid, pot, rho)
+      call poisson_multigrid_solver(mg, der, pot, rho)
 
     case(POISSON_FFT_SPH,POISSON_FFT_CYL,POISSON_FFT_PLA,POISSON_FFT_NOCUT)
       call poisson_fft(der%mesh, pot, rho)
@@ -655,7 +647,7 @@ contains
     end do
 
     ! This calculates the numerical potential
-    call dpoisson_solve(gr, vh, rho)
+    call dpoisson_solve(gr%der, vh, rho)
 
     ! And this compares.
     delta = dmf_nrm2(gr%mesh, vh-vh_exact)

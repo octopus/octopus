@@ -302,7 +302,7 @@ subroutine X(sternheimer_calc_hvar)(this, sys, hm, lr, nsigma, hvar)
       tmp(i) = sum(lr(1)%X(dl_rho)(i, 1:sys%st%d%nspin))
     end do
     hartree(1:np) = R_TOTYPE(M_ZERO)
-    call X(poisson_solve)(sys%gr, hartree, tmp, all_nodes = .false.)
+    call X(poisson_solve)(sys%gr%der, hartree, tmp, all_nodes = .false.)
 
     SAFE_DEALLOCATE_A(tmp)
   end if
