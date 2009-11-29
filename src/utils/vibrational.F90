@@ -19,13 +19,13 @@
 
 #include "global.h"
 
-program phonon_spectrum
-  use global_m
+program vibrational
+  use datasets_m
   use geometry_m
+  use global_m
+  use io_m
   use math_m
   use messages_m
-  use datasets_m
-  use io_m
   use parser_m
   use profiling_m
   use unit_m
@@ -61,25 +61,25 @@ program phonon_spectrum
 
   !These variables are documented in src/td/spectrum.F90
   call parse_integer(datasets_check('TDMaximumIter'), 1500, max_iter)
-  call parse_float(datasets_check('SpecStartTime'),  M_ZERO, start_time, units_inp%time)
-  call parse_float(datasets_check('SpecEndTime'),  -M_ONE, end_time, units_inp%time)
-  call parse_float(datasets_check('SpecMaxEnergy'), &
+  call parse_float(datasets_check('PropagationSpectrumStartTime'),  M_ZERO, start_time, units_inp%time)
+  call parse_float(datasets_check('PropagationSpectrumEndTime'),  -M_ONE, end_time, units_inp%time)
+  call parse_float(datasets_check('PropagationSpectrumMaxEnergy'), &
     units_from_atomic(units_inp%energy, units_to_atomic(unit_invcm, CNST(10000.0))), max_energy, units_inp%energy)
 
-  !%Variable SpecVibrational
+  !%Variable VibrationalSpectrumType
   !%Type integer
   !%Default vibrational
   !%Section Utilities::oct-vibrational
   !%Description
-  !% This variable select the kind of spectrum that will be
-  !% calculated from a molecular dynamics run.
+  !% This variable selects the kind of spectrum that will be
+  !% calculated from a molecular-dynamics run.
   !%Option vibrational 1
   !% Vibrational spectrum from the velocity autocorrelation function.
   !%Option infrared    2
   !% Infrared spectrum obtained from the dipole moment.
   !%End
-  call parse_integer  (datasets_check('SpecVibrational'), SPEC_VIBRATIONAL, mode)
-  if(.not.varinfo_valid_option('SpecVibrational', mode)) call input_error('SpecVibrational')
+  call parse_integer (datasets_check('VibrationalSpectrumType'), SPEC_VIBRATIONAL, mode)
+  if(.not.varinfo_valid_option('VibrationalSpectrumType', mode)) call input_error('VibrationalSpectrumType')
 
   if (end_time < M_ZERO) end_time = huge(end_time)
 
@@ -97,7 +97,7 @@ program phonon_spectrum
       av = maxval(abs(vaf(ini_iter:end_iter)))
       
       if( av < CNST(1e-12)) then 
-        write (message(1), '(a)') "Error: Velocity autocorrelaion function is zero"
+        write (message(1), '(a)') "Error: Velocity autocorrelation function is zero."
         call write_fatal(1)
       end if
       
@@ -288,7 +288,7 @@ contains
       fi(jj) = fi(jj) * sin((time(jj)-time(ini_iter+1))*M_PI/(time(end_iter)-time(ini_iter)))
     end do
 
-    !remove the dc component
+    !remove the DC component
     av = M_ZERO
     count = 0
     do jj = ini_iter, end_iter
@@ -320,7 +320,7 @@ contains
 
   end subroutine fourier
 
-end program phonon_spectrum
+end program vibrational
 
 !! Local Variables:
 !! mode: f90

@@ -1,19 +1,19 @@
 =head1 NAME
 
-oct-rsf - Calculates the rotatory-strength spectrum
+oct-rotatory_strength - Calculates the rotatory-strength spectrum from a time-propagation run.
 
 =head1 SYNOPSIS
 
 =over
 
-=item B<oct-rsf>
+=item B<oct-rotatory_strength>
 
 =back
 
-[oct-rsf does not read the standard input: all standard
+[oct-rotatory_strength does not read the standard input: all standard
 input will be simply ignored. An input file named F<inp> must be
-present in the running directory.  Also, oct-rsf accepts
-no command line arguments, since there is not a standard way to do
+present in the running directory.  Also, oct-rotatory_strength accepts
+no command-line arguments, since there is not a standard way to do
 this with Fortran 90.]
 
 
