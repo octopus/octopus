@@ -495,7 +495,7 @@ subroutine X(states_angular_momentum)(gr, phi, l, l2)
 #if defined(R_TREAL)
     l = M_ZERO
 #else
-    call X(physics_op_L)(gr%sb, gr%mesh, gr%der, phi(:, idim), lpsi)
+    call X(physics_op_L)(gr%der, phi(:, idim), lpsi)
     select case(gr%mesh%sb%dim)
     case(3)
       l(1) = l(1) + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 1))
@@ -506,7 +506,7 @@ subroutine X(states_angular_momentum)(gr, phi, l, l2)
     end select
 #endif
     if(present(l2)) then
-      call X(physics_op_L2)(gr%sb, gr%mesh, gr%der, phi(:, idim), lpsi(:, 1))
+      call X(physics_op_L2)(gr%der, phi(:, idim), lpsi(:, 1))
       l2 = l2 + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 1))
     end if
   end do

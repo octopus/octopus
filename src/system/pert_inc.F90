@@ -149,7 +149,7 @@ contains
     SAFE_ALLOCATE(lf(1:gr%mesh%np, 1:gr%sb%dim))
 
     ! Note that we leave out the term 1/P_c
-    call X(physics_op_L) (gr%sb, gr%mesh, gr%der, f_in_copy, lf, set_bc = .false.)
+    call X(physics_op_L)(gr%der, f_in_copy, lf, set_bc = .false.)
     f_out(1:gr%mesh%np) = M_HALF * lf(1:gr%mesh%np, this%dir)
 
     SAFE_DEALLOCATE_A(lf)

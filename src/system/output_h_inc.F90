@@ -18,10 +18,9 @@
 !! $Id: output_linear_h.F90 5765 2009-07-24 20:47:06Z dstrubbe $
 
   ! ---------------------------------------------------------
-  subroutine h_sys_output_hamiltonian(hm, mesh, sb, dir, outp, geo)
+  subroutine h_sys_output_hamiltonian(hm, mesh, dir, outp, geo)
     type(hamiltonian_t),   intent(in) :: hm
     type(mesh_t),          intent(in) :: mesh
-    type(simul_box_t),     intent(in) :: sb
     character(len=*),      intent(in) :: dir
     type(h_sys_output_t),  intent(in) :: outp
     type(geometry_t),      intent(in) :: geo
@@ -36,26 +35,26 @@
     if(iand(outp%what, output_potential).ne.0) then
       SAFE_ALLOCATE(v0(1:mesh%np, 1:hm%d%dim))
       v0(1:mesh%np, 1) = hm%ep%vpsl(1:mesh%np)
-      call doutput_function(outp%how, dir, "v0", mesh, sb, v0(:, 1), units_out%energy, err, geo = geo)
+      call doutput_function(outp%how, dir, "v0", mesh, v0(:, 1), units_out%energy, err, geo = geo)
       SAFE_DEALLOCATE_A(v0)
 
       if(hm%ep%classical_pot > 0) then
-        call doutput_function(outp%how, dir, "vc", mesh, sb, hm%ep%Vclassical, units_out%energy, err, geo = geo)
+        call doutput_function(outp%how, dir, "vc", mesh, hm%ep%Vclassical, units_out%energy, err, geo = geo)
       end if
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
-        call doutput_function(outp%how, dir, 'vh', mesh, sb, hm%vhartree, units_out%energy, err, geo = geo)
+        call doutput_function(outp%how, dir, 'vh', mesh, hm%vhartree, units_out%energy, err, geo = geo)
         do is = 1, min(hm%d%ispin, 2)
           write(fname, '(a,i1)') 'vxc-sp', is
-          call doutput_function(outp%how, dir, fname, mesh, sb, hm%vxc(:, is), units_out%energy, err, geo = geo)
+          call doutput_function(outp%how, dir, fname, mesh, hm%vxc(:, is), units_out%energy, err, geo = geo)
 
           ! finally the full KS potential (without non-local PP contributions)
           write(fname, '(a,i1)') 'vks-sp', is
           if (hm%ep%classical_pot > 0) then
-            call doutput_function(outp%how, dir, fname, mesh, sb, &
+            call doutput_function(outp%how, dir, fname, mesh, &
               hm%ep%vpsl + hm%ep%Vclassical + hm%vhxc(:, is), units_out%energy, err, geo = geo)
           else
-            call doutput_function(outp%how, dir, fname, mesh, sb, &
+            call doutput_function(outp%how, dir, fname, mesh, &
               hm%ep%vpsl + hm%vhxc(:, is), units_out%energy, err, geo = geo)
           end if
         end do
@@ -63,14 +62,14 @@
 
       if(hm%self_induced_magnetic) then
         ! unit of magnetic field is same as of electric field, and same as force (since e = 1)
-        select case(sb%dim)
+        select case(mesh%sb%dim)
         case(3)
-          do idir = 1, sb%dim
-            call doutput_function(outp%how, dir, 'Bind_'//index2axis(idir), mesh, sb, hm%b_ind(:, idir), &
+          do idir = 1, mesh%sb%dim
+            call doutput_function(outp%how, dir, 'Bind_'//index2axis(idir), mesh, hm%b_ind(:, idir), &
               units_out%force, err, geo = geo)
           enddo
         case(2)
-          call doutput_function(outp%how, dir, 'Bind_z', mesh, sb, hm%b_ind(:, 1), units_out%force, err, geo = geo)
+          call doutput_function(outp%how, dir, 'Bind_z', mesh, hm%b_ind(:, 1), units_out%force, err, geo = geo)
         end select
       end if
     end if

@@ -655,12 +655,12 @@ contains
     iunit = io_open("hartree_results", action='write')
     write(iunit, '(a,f14.8)' ) 'Hartree test = ', delta
     call io_close(iunit)
-    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_rho", gr%mesh, gr%sb, rho, unit_one, ierr)
-    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_exact", gr%mesh, gr%sb, vh_exact, unit_one, ierr)
-    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_numerical", gr%mesh, gr%sb, vh, unit_one, ierr)
-    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_rho", gr%mesh, gr%sb, rho, unit_one, ierr)
-    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_exact", gr%mesh, gr%sb, vh_exact, unit_one, ierr)
-    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_numerical", gr%mesh, gr%sb, vh, unit_one, ierr)
+    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_rho", gr%mesh, rho, unit_one, ierr)
+    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_exact", gr%mesh, vh_exact, unit_one, ierr)
+    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_numerical", gr%mesh, vh, unit_one, ierr)
+    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_rho", gr%mesh, rho, unit_one, ierr)
+    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_exact", gr%mesh, vh_exact, unit_one, ierr)
+    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_numerical", gr%mesh, vh, unit_one, ierr)
     ! not dimensionless, but no need for unit conversion for a test routine
 
     SAFE_DEALLOCATE_A(rho)

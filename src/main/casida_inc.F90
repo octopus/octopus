@@ -122,7 +122,7 @@ subroutine X(get_transition_densities) (cas, sys, trandens)
       write(intstr,'(i1)') len(trim(adjustl(intstr)))
       write(filename,'(a,i'//trim(intstr)//')') 'n0',ia
       call X(output_function)(sys%outp%how, CASIDA_DIR, trim(filename), &
-                              sys%gr%mesh, sys%gr%sb, n0I, fn_unit, ierr, geo = sys%geo)
+                              sys%gr%mesh, n0I, fn_unit, ierr, geo = sys%geo)
     end if
   end do
 

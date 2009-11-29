@@ -134,10 +134,9 @@ contains
 
 
   !---------------------------------------------------------
-  subroutine projector_init(p, mesh, sb, atm, dim, reltype)
+  subroutine projector_init(p, mesh, atm, dim, reltype)
     type(projector_t), intent(inout) :: p
     type(mesh_t),      intent(in)    :: mesh
-    type(simul_box_t), intent(in)    :: sb
     type(atom_t),      intent(in)    :: atm
     integer,           intent(in)    :: dim
     integer,           intent(in)    :: reltype
@@ -159,7 +158,7 @@ contains
 
     p%lloc = ps%l_loc
 
-    call submesh_init_sphere(p%sphere, sb, mesh, atm%x, ps%rc_max + mesh%h(1))
+    call submesh_init_sphere(p%sphere, mesh%sb, mesh, atm%x, ps%rc_max + mesh%h(1))
 
     select case (ps%kbc)
     case (1)

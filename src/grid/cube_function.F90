@@ -125,12 +125,11 @@ contains
   ! ---------------------------------------------------------
   ! this routine computes
   ! cf_o = cf_o + exp(-k vec) cf_i
-  subroutine cf_phase_factor(sb, m, vec, cf_i, cf_o)
-    type(simul_box_t), intent(in)    :: sb
-    type(mesh_t),      intent(in)    :: m
+  subroutine cf_phase_factor(mesh, vec, cf_i, cf_o)
+    type(mesh_t),      intent(in)    :: mesh
     FLOAT,             intent(in)    :: vec(3)
-    type(dcf_t),         intent(in)    :: cf_i
-    type(dcf_t),         intent(inout) :: cf_o
+    type(dcf_t),       intent(in)    :: cf_i
+    type(dcf_t),       intent(inout) :: cf_o
 
     CMPLX   :: k(3)
     integer :: n(3), ix, iy, iz, ixx, iyy, izz
@@ -141,7 +140,7 @@ contains
     ASSERT(associated(cf_i%FS).and.associated(cf_o%FS))
 
     k = M_z0
-    k(1:sb%dim) = M_zI * ((M_TWO*M_Pi)/(cf_i%n(1:sb%dim)*m%h(1:sb%dim)))
+    k(1:mesh%sb%dim) = M_zI * ((M_TWO*M_Pi)/(cf_i%n(1:mesh%sb%dim)*mesh%h(1:mesh%sb%dim)))
 
     n  = cf_i%n
     do iz = 1, n(3)

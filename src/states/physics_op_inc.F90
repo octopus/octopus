@@ -22,9 +22,7 @@
 ! In case of real functions, it does not include the -i prefactor
 ! (L = -i r ^ nabla).
 ! ---------------------------------------------------------
-subroutine X(physics_op_L)(sb, mesh, der, f, lf, ghost_update, set_bc)
-  type(simul_box_t),   intent(in)    :: sb
-  type(mesh_t),        intent(in)    :: mesh
+subroutine X(physics_op_L)(der, f, lf, ghost_update, set_bc)
   type(derivatives_t), intent(inout) :: der
   R_TYPE,              intent(inout) :: f(:)     ! f(m%np_part)
   R_TYPE,              intent(out)   :: lf(:, :) ! lf(m%np, 3) in 3D, lf(m%np, 1) in 2D
@@ -38,9 +36,9 @@ subroutine X(physics_op_L)(sb, mesh, der, f, lf, ghost_update, set_bc)
 
   call push_sub('physics_op_inc.Xphysics_op_L')
 
-  ASSERT(sb%dim.ne.1)
+  ASSERT(der%mesh%sb%dim.ne.1)
 
-  SAFE_ALLOCATE(gf(1:mesh%np, 1:sb%dim))
+  SAFE_ALLOCATE(gf(1:der%mesh%np, 1:der%mesh%sb%dim))
 
   call X(derivatives_grad)(der, f, gf, ghost_update, set_bc)
 
@@ -50,21 +48,21 @@ subroutine X(physics_op_L)(sb, mesh, der, f, lf, ghost_update, set_bc)
   factor = M_ONE
 #endif
 
-  select case(sb%dim)
+  select case(der%mesh%sb%dim)
   case(3)
-    do ip = 1, mesh%np
-      x1 = mesh%x(ip, 1)
-      x2 = mesh%x(ip, 2)
-      x3 = mesh%x(ip, 3)
+    do ip = 1, der%mesh%np
+      x1 = der%mesh%x(ip, 1)
+      x2 = der%mesh%x(ip, 2)
+      x3 = der%mesh%x(ip, 3)
       lf(ip, 1) = factor*(x2*gf(ip, 3) - x3*gf(ip, 2))
       lf(ip, 2) = factor*(x3*gf(ip, 1) - x1*gf(ip, 3))
       lf(ip, 3) = factor*(x1*gf(ip, 2) - x2*gf(ip, 1))
     end do
 
   case(2)
-    do ip = 1, mesh%np
-      x1 = mesh%x(ip, 1)
-      x2 = mesh%x(ip, 2)
+    do ip = 1, der%mesh%np
+      x1 = der%mesh%x(ip, 1)
+      x2 = der%mesh%x(ip, 2)
       lf(ip, 1) = factor*(x1*gf(ip, 2) - x2*gf(ip, 1))
     end do
 
@@ -79,9 +77,7 @@ end subroutine X(physics_op_L)
 ! Square of the angular momentum L. This has to be very much improved if
 ! accuracy is needed.
 ! ---------------------------------------------------------
-subroutine X(physics_op_L2)(sb, m, der, f, l2f, ghost_update, set_bc)
-  type(simul_box_t),   intent(in)    :: sb
-  type(mesh_t),        intent(in)    :: m
+subroutine X(physics_op_L2)(der, f, l2f, ghost_update, set_bc)
   type(derivatives_t), intent(inout) :: der
   R_TYPE,              intent(inout) :: f(:)   ! f(1:m%np_part)
   R_TYPE,              intent(out)   :: l2f(:)
@@ -93,33 +89,33 @@ subroutine X(physics_op_L2)(sb, m, der, f, l2f, ghost_update, set_bc)
 
   call push_sub('physics_op_inc.Xphysics_op_L2')
 
-  ASSERT(sb%dim == 2 .or. sb%dim == 3)
+  ASSERT(der%mesh%sb%dim == 2 .or. der%mesh%sb%dim == 3)
 
   l2f = R_TOTYPE(M_ZERO)
 
-  select case(sb%dim)
+  select case(der%mesh%sb%dim)
   case(3)
-    SAFE_ALLOCATE( gf(1:m%np_part, 1:3))
-    SAFE_ALLOCATE(ggf(1:m%np_part, 1:3, 1:3))
+    SAFE_ALLOCATE( gf(1:der%mesh%np_part, 1:3))
+    SAFE_ALLOCATE(ggf(1:der%mesh%np_part, 1:3, 1:3))
 
-    call X(physics_op_L)(sb, m, der, f, gf, ghost_update, set_bc)
+    call X(physics_op_L)(der, f, gf, ghost_update, set_bc)
 
     do j = 1, 3
-      call X(physics_op_L)(sb, m, der, gf(:,j), ggf(:,:,j))
+      call X(physics_op_L)(der, gf(:,j), ggf(:,:,j))
     end do
 
-    do j = 1, sb%dim
-      l2f(1:m%np) = l2f(1:m%np) + ggf(1:m%np, j, j)
+    do j = 1, der%mesh%sb%dim
+      l2f(1:der%mesh%np) = l2f(1:der%mesh%np) + ggf(1:der%mesh%np, j, j)
     end do
 
   case(2)
-    SAFE_ALLOCATE( gf(1:m%np_part, 1:1))
-    SAFE_ALLOCATE(ggf(1:m%np_part, 1:1, 1:1))
+    SAFE_ALLOCATE( gf(1:der%mesh%np_part, 1:1))
+    SAFE_ALLOCATE(ggf(1:der%mesh%np_part, 1:1, 1:1))
 
-    call X(physics_op_L)(sb, m, der, f, gf, ghost_update, set_bc)
-    call X(physics_op_L)(sb, m, der, gf(:, 1), ggf(:, :, 1))
+    call X(physics_op_L)(der, f, gf, ghost_update, set_bc)
+    call X(physics_op_L)(der, gf(:, 1), ggf(:, :, 1))
 
-    l2f(1:m%np) = ggf(1:m%np, 1, 1)
+    l2f(1:der%mesh%np) = ggf(1:der%mesh%np, 1, 1)
   end select
 
 

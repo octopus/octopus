@@ -50,7 +50,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_un
       fn_unit = units_out%length**(-gr%mesh%sb%dim)
       do is = 1, st%d%nspin
         write(fname, '(a,i1,2a)') 'lr_density-sp', is, '-', index2axis(idir)
-        call X(output_function)(outp%how, dir, fname, gr%mesh, gr%sb, lr%X(dl_rho)(:, is), &
+        call X(output_function)(outp%how, dir, fname, gr%mesh, lr%X(dl_rho)(:, is), &
           fn_unit / pert_unit, ierr, geo = geo)
       end do
     end if
@@ -62,7 +62,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_un
         do idir2 = 1, gr%mesh%sb%dim
           tmp(1:gr%mesh%np) = -gr%mesh%x(1:gr%mesh%np, idir2) * lr%X(dl_rho)(:, is)
           write(fname, '(a,i1,4a)') 'alpha_density-sp', is, '-', index2axis(idir2), '-', index2axis(idir)
-          call X(output_function)(outp%how, dir, fname, gr%mesh, gr%sb, tmp, fn_unit / pert_unit, ierr, geo = geo)
+          call X(output_function)(outp%how, dir, fname, gr%mesh, tmp, fn_unit / pert_unit, ierr, geo = geo)
         end do
       end do
       SAFE_DEALLOCATE_A(tmp)
@@ -73,7 +73,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_un
       do is = 1, st%d%nspin
         do idir2 = 1, gr%mesh%sb%dim
           write(fname, '(a,i1,4a)') 'lr_current-sp', is, '-', index2axis(idir2), '-',  index2axis(idir)
-          call zoutput_function(outp%how, dir, fname, gr%mesh, gr%sb, lr%dl_j(:, idir2, is), &
+          call zoutput_function(outp%how, dir, fname, gr%mesh, lr%dl_j(:, idir2, is), &
             fn_unit / pert_unit, ierr, geo = geo)
         end do
       end do
@@ -94,7 +94,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_un
           do idim = 1, st%d%dim
             write(fname, '(a,i3.3,a,i3.3,a,i1,3a)') &
               'lr_wf-k', ik, '-st', ist, '-sp', idim, '-', index2axis(idir), sigma
-            call X(output_function) (outp%how, dir, fname, gr%mesh, gr%sb, &
+            call X(output_function) (outp%how, dir, fname, gr%mesh, &
               lr%X(dl_psi) (1:, idim, ist, ik), fn_unit  / pert_unit, ierr, geo = geo)
           end do
         end do
@@ -113,7 +113,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_un
               'sqm_lr_wf-k', ik, '-st', ist, '-sp', idim, '-', index2axis(idir), sigma
 
             dtmp = abs(lr%X(dl_psi) (:, idim, ist, ik))**2
-            call doutput_function (outp%how, dir, fname, gr%mesh, gr%sb, dtmp, fn_unit / pert_unit, ierr, geo = geo)
+            call doutput_function (outp%how, dir, fname, gr%mesh, dtmp, fn_unit / pert_unit, ierr, geo = geo)
           end do
         end do
       end if
@@ -136,13 +136,13 @@ contains
     ! these quantities are dimensionless, before the perturbation
     do is = 1, st%d%nspin
       write(fname, '(2a,i1,2a)') trim(filename1), '-sp', is, '-', index2axis(idir)
-      call X(output_function)(outp%how, dir, trim(fname), gr%mesh, gr%sb, lr%X(dl_de)(1:gr%mesh%np,is), &
+      call X(output_function)(outp%how, dir, trim(fname), gr%mesh, lr%X(dl_de)(1:gr%mesh%np,is), &
         unit_one / pert_unit, ierr, geo = geo)
     end do
 
     do is = 1, st%d%nspin
       write(fname, '(2a,i1,2a)') trim(filename2), '-sp', is, '-', index2axis(idir)
-      call X(output_function)(outp%how, dir, trim(fname), gr%mesh, gr%sb, lr%X(dl_elf)(1:gr%mesh%np,is), &
+      call X(output_function)(outp%how, dir, trim(fname), gr%mesh, lr%X(dl_elf)(1:gr%mesh%np,is), &
         unit_one / pert_unit, ierr, geo = geo)
     end do
 

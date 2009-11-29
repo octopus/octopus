@@ -283,17 +283,16 @@ end subroutine X(input_function_global)
 
 
 ! ---------------------------------------------------------
-subroutine X(output_function) (how, dir, fname, mesh, sb, ff, unit, ierr, is_tmp, geo, grp)
-  integer,           intent(in)  :: how
-  character(len=*),  intent(in)  :: dir, fname
-  type(mesh_t),      intent(in)  :: mesh
-  type(simul_box_t), intent(in)  :: sb
-  R_TYPE,            intent(in)  :: ff(:)
-  type(unit_t),      intent(in)  :: unit
-  integer,           intent(out) :: ierr
-  logical, optional, intent(in)  :: is_tmp
-  type(geometry_t), optional, intent(in) :: geo
-  type(mpi_grp_t),  optional, intent(in) :: grp
+subroutine X(output_function) (how, dir, fname, mesh, ff, unit, ierr, is_tmp, geo, grp)
+  integer,                    intent(in)  :: how
+  character(len=*),           intent(in)  :: dir, fname
+  type(mesh_t),               intent(in)  :: mesh
+  R_TYPE,                     intent(in)  :: ff(:)
+  type(unit_t),               intent(in)  :: unit
+  integer,                    intent(out) :: ierr
+  logical,          optional, intent(in)  :: is_tmp
+  type(geometry_t), optional, intent(in)  :: geo
+  type(mpi_grp_t),  optional, intent(in)  :: grp
 
   logical :: is_tmp_ = .false.
 
@@ -315,9 +314,9 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, ff, unit, ierr, is_tmp
 
     if(mesh%vp%rank.eq.mesh%vp%root) then
       if (present(geo)) then
-        call X(output_function_global)(how, dir, fname, mesh, sb, ff_global, unit, ierr, is_tmp = is_tmp_, geo = geo)
+        call X(output_function_global)(how, dir, fname, mesh, ff_global, unit, ierr, is_tmp = is_tmp_, geo = geo)
       else
-        call X(output_function_global)(how, dir, fname, mesh, sb, ff_global, unit, ierr, is_tmp = is_tmp_)
+        call X(output_function_global)(how, dir, fname, mesh, ff_global, unit, ierr, is_tmp = is_tmp_)
       end if
     end if
 
@@ -333,9 +332,9 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, ff, unit, ierr, is_tmp
     if(present(grp)) then ! only root writes output
       if(grp%rank.eq.0) then
         if (present(geo)) then
-          call X(output_function_global)(how, dir, fname, mesh, sb, ff, unit, ierr, is_tmp = is_tmp_, geo = geo)
+          call X(output_function_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_, geo = geo)
         else
-          call X(output_function_global)(how, dir, fname, mesh, sb, ff, unit, ierr, is_tmp = is_tmp_)
+          call X(output_function_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_)
         end if
       end if
       ! I have to broadcast the error code
@@ -348,9 +347,9 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, ff, unit, ierr, is_tmp
     else ! all nodes write output
 
       if (present(geo)) then
-        call X(output_function_global)(how, dir, fname, mesh, sb, ff, unit, ierr, is_tmp = is_tmp_, geo = geo)
+        call X(output_function_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_, geo = geo)
       else
-        call X(output_function_global)(how, dir, fname, mesh, sb, ff, unit, ierr, is_tmp = is_tmp_)
+        call X(output_function_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_)
       end if !present(geo)
     end if !present(grp)
 
@@ -363,9 +362,9 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, ff, unit, ierr, is_tmp
     ASSERT(.false.)
   end if
    if (present(geo)) then
-     call X(output_function_global)(how, dir, fname, mesh, sb, ff, unit, ierr, is_tmp = is_tmp_, geo = geo)
+     call X(output_function_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_, geo = geo)
    else
-     call X(output_function_global)(how, dir, fname, mesh, sb, ff, unit, ierr, is_tmp = is_tmp_)
+     call X(output_function_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_)
    endif
 #endif
 
@@ -374,16 +373,15 @@ end subroutine X(output_function)
 
 
 ! ---------------------------------------------------------
-subroutine X(output_function_global) (how, dir, fname, mesh, sb, ff, unit, ierr, is_tmp, geo)
-  integer,              intent(in)  :: how
-  character(len=*),     intent(in)  :: dir, fname
-  type(mesh_t),         intent(in)  :: mesh
-  type(simul_box_t),    intent(in)  :: sb
-  R_TYPE,               intent(in)  :: ff(:)  ! ff(mesh%np_global)
-  type(unit_t),         intent(in)  :: unit
-  integer,              intent(out) :: ierr
-  logical,              intent(in)  :: is_tmp
-  type(geometry_t), optional, intent(in) :: geo
+subroutine X(output_function_global) (how, dir, fname, mesh, ff, unit, ierr, is_tmp, geo)
+  integer,                    intent(in)  :: how
+  character(len=*),           intent(in)  :: dir, fname
+  type(mesh_t),               intent(in)  :: mesh
+  R_TYPE,                     intent(in)  :: ff(:)  ! ff(mesh%np_global)
+  type(unit_t),               intent(in)  :: unit
+  integer,                    intent(out) :: ierr
+  logical,                    intent(in)  :: is_tmp
+  type(geometry_t), optional, intent(in)  :: geo
 
   character(len=512) :: filename
   character(len=20)  :: mformat, mformat2, mfmtheader
@@ -686,9 +684,9 @@ contains
 
     ! the offset is different in periodic directions
     offset = M_ZERO
-    offset(1:3) = units_from_atomic(units_out%length, -matmul(sb%rlattice_primitive(1:3,1:3), sb%lsize(1:3)))
+    offset(1:3) = units_from_atomic(units_out%length, -matmul(mesh%sb%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3)))
 
-    do idir = sb%periodic_dim+1, 3
+    do idir = mesh%sb%periodic_dim+1, 3
       offset(idir) = units_from_atomic(units_out%length, -(cube%n(idir) - 1)/2*mesh%h(idir))
     end do
 
@@ -701,11 +699,11 @@ contains
     write(iunit, '(a,3i7)') 'object 1 class gridpositions counts', cube%n(1:3)
     write(iunit, '(a,3f12.6)') ' origin', offset(1:3)
     write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
-                                           mesh%h(1)*sb%rlattice_primitive(idir, 1)), idir = 1, 3)
+                                           mesh%h(1)*mesh%sb%rlattice_primitive(idir, 1)), idir = 1, 3)
     write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
-                                           mesh%h(2)*sb%rlattice_primitive(idir, 2)), idir = 1, 3)
+                                           mesh%h(2)*mesh%sb%rlattice_primitive(idir, 2)), idir = 1, 3)
     write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
-                                           mesh%h(3)*sb%rlattice_primitive(idir, 3)), idir = 1, 3)
+                                           mesh%h(3)*mesh%sb%rlattice_primitive(idir, 3)), idir = 1, 3)
     write(iunit, '(a,3i7)') 'object 2 class gridconnections counts', cube%n(1:3)
 #if defined(R_TREAL)
     write(iunit, '(a,a,a)') 'object 3 class array type float rank 0 items ', nitems, ' data follows'
@@ -742,7 +740,7 @@ contains
     FLOAT :: offset(3)
     type(X(cf_t)) :: cube
 
-    if(sb%dim .ne. 3) then
+    if(mesh%sb%dim .ne. 3) then
       write(message(1), '(a)') 'Cannot output function in XCrySDen format except in 3D.'
       call write_warning(1)
       return
@@ -758,9 +756,9 @@ contains
     ! The corner of the cell is always (0,0,0) to XCrySDen
     ! so the offset is applied to the atomic coordinates.
     ! offset in periodic directions
-    offset = -matmul(sb%rlattice_primitive(1:3,1:3), sb%lsize(1:3))
+    offset = -matmul(mesh%sb%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3))
     ! offset in aperiodic directions
-    do idir = sb%periodic_dim + 1, 3
+    do idir = mesh%sb%periodic_dim + 1, 3
       offset(idir) = -(mesh%idx%ll(idir) - 1)/2 * mesh%h(idir)
     end do
 
@@ -768,13 +766,13 @@ contains
     ! mesh%idx%ll is "general" in aperiodic directions,
     ! but "periodic" in periodic directions.
     ! Making this assignment, the output grid is entirely "general"
-    my_n(1:sb%periodic_dim) = mesh%idx%ll(1:sb%periodic_dim) + 1
-    my_n(sb%periodic_dim + 1:3) = mesh%idx%ll(sb%periodic_dim + 1:3)
+    my_n(1:mesh%sb%periodic_dim) = mesh%idx%ll(1:mesh%sb%periodic_dim) + 1
+    my_n(mesh%sb%periodic_dim + 1:3) = mesh%idx%ll(mesh%sb%periodic_dim + 1:3)
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".xsf", action='write', is_tmp=is_tmp)
 
     ASSERT(present(geo))
-    call write_xsf_geometry(iunit, geo, sb, offset)
+    call write_xsf_geometry(iunit, geo, mesh%sb, offset)
 
     write(iunit, '(a)') 'BEGIN_BLOCK_DATAGRID3D'
     write(iunit, '(4a)') 'units: coords = ', trim(units_abbrev(units_out%length)), &
@@ -785,7 +783,7 @@ contains
 
     do idir = 1, 3
       write(iunit, '(3f12.6)') (units_from_atomic(units_out%length, &
-        sb%rlattice(idir2, idir)), idir2 = 1, 3)
+        mesh%sb%rlattice(idir2, idir)), idir2 = 1, 3)
     enddo
 
     do iz = 1, my_n(3)
@@ -881,7 +879,7 @@ contains
       call ncdf_error('nf90_def_dim', status, filename, ierr)
     end if
 
-    dim_min = 3 - sb%dim + 1
+    dim_min = 3 - mesh%sb%dim + 1
 
 #if defined(SINGLE_PRECISION)
     if(status == NF90_NOERR) then
@@ -938,8 +936,8 @@ contains
 
     ! data
     pos(:,:) = M_ZERO
-    pos(1,1:sb%dim) = real(units_from_atomic(units_out%length, -(cube%n(1:sb%dim) - 1)/2*mesh%h(1:sb%dim)), 4)
-    pos(2,1:sb%dim) = real(units_from_atomic(units_out%length, mesh%h(1:sb%dim)), 4)
+    pos(1, 1:mesh%sb%dim) = real(units_from_atomic(units_out%length, - (cube%n(1:mesh%sb%dim) - 1)/2*mesh%h(1:mesh%sb%dim)), 4)
+    pos(2, 1:mesh%sb%dim) = real(units_from_atomic(units_out%length, mesh%h(1:mesh%sb%dim)), 4)
 
     if(status == NF90_NOERR) then
       status = nf90_put_var (ncid, pos_id, pos(:,:))
@@ -983,7 +981,7 @@ contains
 
     call push_sub('io_function_inc.Xoutput_function_global.write_variable')
 
-    select case(sb%dim)
+    select case(mesh%sb%dim)
     case(1);
       status = nf90_put_var (ncid, data_id, xx(1,1,:))
     case(2); 

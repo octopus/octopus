@@ -506,7 +506,7 @@ contains
       if(.not. species_is_ps(atm%spec)) cycle
       ep%non_local = .true.
       call projector_end(ep%proj(ia))
-      call projector_init(ep%proj(ia), gr%mesh, sb, atm, st%d%dim, ep%reltype)
+      call projector_init(ep%proj(ia), gr%mesh, atm, st%d%dim, ep%reltype)
 
       if(simul_box_is_periodic(sb) .or. associated(ep%a_static)) then
         call projector_init_phases(ep%proj(ia), sb, st%d%nik, st%d%kpoints, vec_pot_var = ep%a_static)
@@ -517,7 +517,7 @@ contains
       ! the projectors in the fine grid
       if(gr%have_fine_mesh) then
         call projector_end(ep%proj_fine(ia))
-        call projector_init(ep%proj_fine(ia), gr%fine%mesh, sb, atm, st%d%dim, ep%reltype)
+        call projector_init(ep%proj_fine(ia), gr%fine%mesh, atm, st%d%dim, ep%reltype)
         if(simul_box_is_periodic(sb) .or. associated(ep%a_static)) then
           call projector_init_phases(ep%proj_fine(ia), sb, st%d%nik, st%d%kpoints, vec_pot_var = ep%a_static)
         end if

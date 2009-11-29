@@ -437,7 +437,7 @@ contains
     call push_sub('output_h_sys.h_sys_output_all')
     
     call h_sys_output_states(st, gr, geo, dir, outp)
-    call h_sys_output_hamiltonian(hm, gr%mesh, gr%sb, dir, outp, geo)
+    call h_sys_output_hamiltonian(hm, gr%mesh, dir, outp, geo)
     call h_sys_output_localization_funct(st, hm, gr, dir, outp, geo)
     call h_sys_output_current_flow(gr, st, dir, outp, geo)
 
@@ -503,14 +503,14 @@ contains
       ! output ELF in real space
       if(iand(outp%what, output_elf).ne.0) then
         write(fname, '(a)') 'elf_rs'
-        call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
+        call doutput_function(outp%how, dir, trim(fname), gr%mesh, &
           f_loc(:,imax), unit_one, ierr, is_tmp = .false., geo = geo)
         ! this quantity is dimensionless
 
         if(st%d%ispin.ne.UNPOLARIZED) then
           do is = 1, 2
             write(fname, '(a,i1)') 'elf_rs-sp', is
-            call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
+            call doutput_function(outp%how, dir, trim(fname), gr%mesh, &
               f_loc(:, is), unit_one, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)
             ! this quantity is dimensionless
           end do
@@ -526,7 +526,7 @@ contains
       call elf_calc_fs(st, gr, f_loc)
       do is = 1, st%d%nspin
         write(fname, '(a,i1)') 'elf_fs-sp', is
-        call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
+        call doutput_function(outp%how, dir, trim(fname), gr%mesh, &
           f_loc(:,is), unit_one, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)
         ! this quantity is dimensionless
       end do
@@ -537,7 +537,7 @@ contains
       do is = 1, st%d%nspin
         call dderivatives_lapl(gr%der, st%rho(:,is), f_loc(:,is))
         write(fname, '(a,i1)') 'bader-sp', is
-        call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
+        call doutput_function(outp%how, dir, trim(fname), gr%mesh, &
           f_loc(:,is), units_out%length**(-2 - gr%sb%dim), ierr, is_tmp = .false., &
           geo = geo, grp = mpi_grp)
 
@@ -549,7 +549,7 @@ contains
     ! Now the pressure
     if(iand(outp%what, output_el_pressure).ne.0) then
       call h_sys_calc_electronic_pressure(st, hm, gr, f_loc(:,1))
-      call doutput_function(outp%how, dir, "el_pressure", gr%mesh, gr%sb, &
+      call doutput_function(outp%how, dir, "el_pressure", gr%mesh, &
         f_loc(:,1), unit_one, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)
       ! this quantity is dimensionless
     end if
@@ -572,7 +572,7 @@ contains
       call basins_init(basins, gr%mesh)
       call basins_analyze(basins, gr%mesh, st%d%nspin, ff(:), st%rho, CNST(0.01))
 
-      call doutput_function(outp%how, dir, trim(filename), gr%mesh, gr%sb, &
+      call doutput_function(outp%how, dir, trim(filename), gr%mesh, &
         real(basins%map, REAL_PRECISION), unit_one, ierr, is_tmp = .false., geo = geo)
       ! this quantity is dimensionless
 
