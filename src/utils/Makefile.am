@@ -28,7 +28,7 @@ EXTRA_PROGRAMS = oct-propagation_spectrum oct-rsf oct-harmonic-spectrum \
 
 bin_PROGRAMS = @UTILITY_PROGRAMS@
 
-oct_propagation_spectrum_SOURCES = cross_section.F90
+oct_propagation_spectrum_SOURCES = propagation_spectrum.F90
 oct_propagation_spectrum_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS) $(external_LIBS)
 
 oct_oscillator_strength_SOURCES = oscillator_strength.F90
@@ -46,7 +46,7 @@ oct_harmonic_spectrum_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS) $(externa
 oct_xyz_anim_SOURCES = xyzanim.F90
 oct_xyz_anim_LDADD   = $(all_LIBS)
 
-oct_casida_spectrum_SOURCES = broad.F90
+oct_casida_spectrum_SOURCES = casida_spectrum.F90
 oct_casida_spectrum_LDADD =  $(core_LIBS) $(external_LIBS)
 
 oct_vibrational_SOURCES = phonon_spectrum.F90
