@@ -71,9 +71,9 @@ subroutine X(calculate_eigenvalues)(hm, gr, st, time)
         call batch_init(hpsib, st%d%dim, minst, maxst, hpsi)
 
         if(present(time)) then
-          call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik, time)
+          call X(hamiltonian_apply_batch)(hm, gr%der, psib, hpsib, ik, time)
         else
-          call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik)
+          call X(hamiltonian_apply_batch)(hm, gr%der, psib, hpsib, ik)
         end if
 
         call batch_end(psib)
@@ -126,9 +126,9 @@ FLOAT function X(electronic_kinetic_energy)(hm, gr, st) result(t0)
         do idim = 1, st%d%dim
           call lalg_copy(gr%mesh%np, st%X(psi)(:, idim, ist, ik), psi(:, idim))
         end do
-        call X(hamiltonian_apply)(hm, gr, psi, tpsi, ist, ik, kinetic_only = .true.)
+        call X(hamiltonian_apply)(hm, gr%der, psi, tpsi, ist, ik, kinetic_only = .true.)
       else
-        call X(hamiltonian_apply)(hm, gr, st%X(psi)(:, :, ist, ik), tpsi, ist, ik, kinetic_only = .true.)
+        call X(hamiltonian_apply)(hm, gr%der, st%X(psi)(:, :, ist, ik), tpsi, ist, ik, kinetic_only = .true.)
       end if
       t(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), tpsi)
     end do
@@ -161,7 +161,7 @@ FLOAT function X(electronic_external_energy)(hm, gr, st) result(v)
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       vpsi = R_TOTYPE(M_ZERO)
-      call X(vexternal) (hm, gr, st%X(psi)(:, :, ist, ik), vpsi, ik)
+      call X(vexternal) (hm, gr%der, st%X(psi)(:, :, ist, ik), vpsi, ik)
       t(ist, ik) = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), vpsi)
     end do
   end do

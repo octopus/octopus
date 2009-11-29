@@ -177,7 +177,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
           call lalg_copy(gr%mesh%np, v(:, idim, d1 + i), aux(:, idim))
         end do
         av(:, :, d1 + i) = R_TOTYPE(M_ZERO)
-        call X(hamiltonian_apply)(hm, gr, aux, av(:, :, d1 + i), d1+i, ik)
+        call X(hamiltonian_apply)(hm, gr%der, aux, av(:, :, d1 + i), d1+i, ik)
       end do
       matvec = matvec + blk
 

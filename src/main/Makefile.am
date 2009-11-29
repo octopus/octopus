@@ -48,6 +48,6 @@ phonons_fd.o : phonons_fd.F90
 casida.o : casida.F90 casida_inc.F90 
 pulpo.o : pulpo.F90 
 gcm.o : gcm.F90
-run.o : run.F90 unocc.o static_pol.o pulpo.o phonons_fd.o geom_opt.o casida.o memory.o
+run.o : run.F90 unocc.o static_pol.o pulpo.o phonons_fd.o geom_opt.o casida.o memory.o gcm.o
 main.o : main.F90 run.o 
 memory.o : memory.F90

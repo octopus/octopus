@@ -441,7 +441,7 @@ subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, hx)
 
   call push_sub('linear_solver_inc.Xls_solver_operator')
 
-  call X(hamiltonian_apply)(hm, gr, x, Hx, ist, ik)
+  call X(hamiltonian_apply)(hm, gr%der, x, Hx, ist, ik)
 
   !Hx = Hx + omega*x
   do idim = 1, st%d%dim

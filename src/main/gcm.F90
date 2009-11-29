@@ -182,8 +182,8 @@ module gcm_m
         call states_copy(opst, phi(j))
         do k = 1, phi(j)%nst
           opst%dpsi(:, :, k, 1) = M_ZERO
-          call dhamiltonian_apply(hm, gr, phi(j)%dpsi(:, :, k, 1), opst%dpsi(:, :, k, 1), ist = k, ik = 1, kinetic_only = .true.)
-          call dvexternal (hm, gr, phi(j)%dpsi(:, :, k, 1), opst%dpsi(:, :, k, 1), 1)
+          call dhamiltonian_apply(hm, gr%der, phi(j)%dpsi(:, :, k, 1), opst%dpsi(:, :, k, 1), ist = k, ik = 1, kinetic_only = .true.)
+          call dvexternal(hm, gr%der, phi(j)%dpsi(:, :, k, 1), opst%dpsi(:, :, k, 1), 1)
         end do
         kij = dstates_mpmatrixelement(gr%mesh, phi(i), phi(j), opst)
         call states_end(opst)

@@ -79,7 +79,7 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
 
     ! Get the eigenvalues and the residues.
     do ist = conv + 1, st%nst
-      call X(hamiltonian_apply)(hm, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik)
+      call X(hamiltonian_apply)(hm, gr%der, st%X(psi)(:, :, ist, ik), hpsi, ist, ik)
       st%eigenval(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), hpsi)
       diff(ist) = X(states_residue)(gr%mesh, st%d%dim, hpsi, st%eigenval(ist, ik), st%X(psi)(:, :, ist, ik))
     end do

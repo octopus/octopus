@@ -82,7 +82,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     call batch_init(psib(1), st%d%dim, jst, maxst, psi(:, :, 1, :))
     call batch_init(resb(1), st%d%dim, jst, maxst, res(:, :, 1, :))
 
-    call X(hamiltonian_apply_batch)(hm, gr, psib(1), resb(1), ik)
+    call X(hamiltonian_apply_batch)(hm, gr%der, psib(1), resb(1), ik)
     nops = nops + bsize
 
     call batch_end(psib(1))
@@ -135,7 +135,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
       ! get lambda 
       call X(preconditioner_apply_batch)(pre, gr, hm, resb(1), psib(2))
-      call X(hamiltonian_apply_batch)(hm, gr, psib(2), resb(2), ik)
+      call X(hamiltonian_apply_batch)(hm, gr%der, psib(2), resb(2), ik)
       nops = nops + bsize - sum(done)
 
       do ist = jst, maxst
@@ -192,7 +192,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
         end do
 
         ! calculate the residual
-        call X(hamiltonian_apply_batch)(hm, gr, psib(iter), resb(iter), ik)
+        call X(hamiltonian_apply_batch)(hm, gr%der, psib(iter), resb(iter), ik)
         nops = nops + bsize - sum(done)
 
         SAFE_ALLOCATE(  mm(1:iter, 1:iter, 1:2, 1:bsize))
@@ -316,7 +316,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     end if
     call batch_init(resb(1), st%d%dim, jst, maxst, res(:, :, 1, :))
     
-    call X(hamiltonian_apply_batch)(hm, gr, psib(1), resb(1), ik)
+    call X(hamiltonian_apply_batch)(hm, gr%der, psib(1), resb(1), ik)
 
     call batch_end(psib(1))
     call batch_end(resb(1))
@@ -412,7 +412,7 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
 
       do isd = 1, sd_steps
 
-        call X(hamiltonian_apply_batch)(hm, gr, psib, resb, ik)
+        call X(hamiltonian_apply_batch)(hm, gr%der, psib, resb, ik)
 
         do ist = sst, est
           ib = ist - sst + 1
@@ -443,7 +443,7 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
 
         call X(preconditioner_apply_batch)(pre, gr, hm, resb, kresb)
         
-        call X(hamiltonian_apply_batch)(hm, gr, kresb, resb, ik)
+        call X(hamiltonian_apply_batch)(hm, gr%der, kresb, resb, ik)
 
         niter = niter + 2*bsize
 

@@ -311,9 +311,9 @@ contains
       CMPLX, intent(inout) :: oppsi(:, :)
 
       if(apply_magnus) then
-        call zmagnus(hm, gr, psi, oppsi, ik, vmagnus)
+        call zmagnus(hm, gr%der, psi, oppsi, ik, vmagnus)
       else
-        call zhamiltonian_apply(hm, gr, psi, oppsi, ist, ik, t)
+        call zhamiltonian_apply(hm, gr%der, psi, oppsi, ist, ik, t)
       end if
 
     end subroutine operate
@@ -679,7 +679,7 @@ contains
         zfact = zfact*(-M_zI*deltat)/iter
         zfact_is_real = .not. zfact_is_real
 
-        call zhamiltonian_apply_batch(hm, gr, psi1b, hpsi1b, ik, t)
+        call zhamiltonian_apply_batch(hm, gr%der, psi1b, hpsi1b, ik, t)
 
         !$omp parallel do private(ii, idim, ip, bsize)
         do ii = 1, psib%nst
@@ -779,9 +779,9 @@ contains
       zfact_is_real = .not. zfact_is_real
       
       if (i == 1) then
-        call zhamiltonian_apply_all (hm, gr, psi, hpsi1, t)
+        call zhamiltonian_apply_all (hm, gr%der, psi, hpsi1, t)
       else
-        call zhamiltonian_apply_all(hm, gr, psi1, hpsi1, t)
+        call zhamiltonian_apply_all(hm, gr%der, psi1, hpsi1, t)
       end if
 
       if(zfact_is_real) then

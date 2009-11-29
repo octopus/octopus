@@ -1205,7 +1205,7 @@ contains
             call lalg_copy(gr%mesh%np, tr%prev_psi(:, idim, ist, ik), dpsi(:, idim))
           end do
 
-          call dhamiltonian_apply(hm, gr, dpsi, hpsi, ist, ik, t - dt/2)
+          call dhamiltonian_apply(hm, gr%der, dpsi, hpsi, ist, ik, t - dt/2)
 
           forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) 
             st%zpsi(ip, idim, ist, ik) = real(st%zpsi(ip, idim, ist, ik)) + cmplx(dt*hpsi(ip, idim), &
@@ -1234,7 +1234,7 @@ contains
 
           forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) dpsi(ip, idim) = real(st%zpsi(ip, idim, ist, ik))
 
-          call dhamiltonian_apply(hm, gr, dpsi, hpsi, ist, ik, t)
+          call dhamiltonian_apply(hm, gr%der, dpsi, hpsi, ist, ik, t)
 
           forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np)
             tr%prev_psi(ip, idim, ist, ik) = tr%prev_psi(ip, idim, ist, ik) - dt*hpsi(ip, idim)

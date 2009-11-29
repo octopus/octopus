@@ -117,7 +117,7 @@ contains
 
         ! Calculate right hand side e-T-V0-sum(a)[H_ca*g_a*H_ac].
         rhs(:, :) = M_z0
-        call zhamiltonian_apply(hm, gr, st%zphi(:, :, ist, ik), rhs(:, :), ist, ik, kinetic_only=.true.)
+        call zhamiltonian_apply(hm, gr%der, st%zphi(:, :, ist, ik), rhs(:, :), ist, ik, kinetic_only=.true.)
 
         ! Apply lead potential.
         ! FIXME: this wrong when non-symmetric leads are used, here the periodicity is assumed
@@ -300,7 +300,7 @@ contains
     do idim = 1, dim
       tmp_x(1:np_part, idim) = x(l(idim):u(idim))
     end do
-    call zhamiltonian_apply(hm_p, gr_p, tmp_x, tmp_y, ist_p, ik_p)
+    call zhamiltonian_apply(hm_p, gr_p%der, tmp_x, tmp_y, ist_p, ik_p)
 
     ! y <- e x - tmp_y
     do idim = 1, dim

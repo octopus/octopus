@@ -92,7 +92,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
     end if
 
     ! Calculate starting gradient: |hpsi> = H|psi>
-    call X(hamiltonian_apply)(hm, gr, st%X(psi)(:,:, p, ik) , h_psi, p, ik)
+    call X(hamiltonian_apply)(hm, gr%der, st%X(psi)(:,:, p, ik) , h_psi, p, ik)
 
     ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
     st%eigenval(p, ik) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:,:, p, ik), h_psi))
@@ -175,7 +175,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       end if
 
       ! cg contains now the conjugate gradient
-      call X(hamiltonian_apply) (hm, gr, cg, ppsi, p, ik)
+      call X(hamiltonian_apply)(hm, gr%der, cg, ppsi, p, ik)
 
       ! Line minimization.
       a0 = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:,:, p, ik), ppsi, reduce = .false.)
@@ -333,7 +333,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
     end do
 
     ! Calculate starting gradient: |hpsi> = H|psi>
-    call X(hamiltonian_apply)(hm, gr, psi, phi, ist, ik)
+    call X(hamiltonian_apply)(hm, gr%der, psi, phi, ist, ik)
     niter = niter + 1
 
     ! Initial settings for scalar variables.
@@ -404,7 +404,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
         call lalg_scal(gr%mesh%np, M_ONE/dump, cgp(:, idim))
       end do
 
-      call X(hamiltonian_apply)(hm, gr, cgp, hcgp, ist, ik)
+      call X(hamiltonian_apply)(hm, gr%der, cgp, hcgp, ist, ik)
 
       niter = niter + 1
 

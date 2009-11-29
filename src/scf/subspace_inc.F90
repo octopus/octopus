@@ -67,7 +67,7 @@ subroutine X(subspace_diag)(gr, st, hm, ik, eigenval, psi, diff)
 
       call batch_init(hpsib, hm%d%dim, ist, ist + size - 1, f)
 
-      call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik)
+      call X(hamiltonian_apply_batch)(hm, gr%der, psib, hpsib, ik)
 
       call batch_end(psib)
 
@@ -115,7 +115,7 @@ subroutine X(subspace_diag)(gr, st, hm, ik, eigenval, psi, diff)
         end if
         call batch_init(hpsib, hm%d%dim, ist, ist + size - 1, f)
         
-        call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik)
+        call X(hamiltonian_apply_batch)(hm, gr%der, psib, hpsib, ik)
 
         call batch_end(psib)
         call batch_end(hpsib)
@@ -173,7 +173,7 @@ subroutine X(subspace_diag_par_states)(gr, st, hm, ik, eigenval, psi, diff)
 
   ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
   do ist = st%st_start, st%st_end
-    call X(hamiltonian_apply)(hm, gr, psi(:, :, ist), ff(:, :, ist), ist, ik)
+    call X(hamiltonian_apply)(hm, gr%der, psi(:, :, ist), ff(:, :, ist), ist, ik)
   end do
   call states_blockt_mul(gr%mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
        psi(:, :, :), ff, h_subspace, symm=.true.)
@@ -196,7 +196,7 @@ subroutine X(subspace_diag_par_states)(gr, st, hm, ik, eigenval, psi, diff)
   ! Recalculate the residues if requested by the diff argument.
   if(present(diff)) then 
     do ist = st%st_start, st%st_end
-      call X(hamiltonian_apply)(hm, gr, psi(:, :, ist) , ff(:, :, st%st_start), ist, ik)
+      call X(hamiltonian_apply)(hm, gr%der, psi(:, :, ist) , ff(:, :, st%st_start), ist, ik)
       diff(ist) = X(states_residue)(gr%mesh, st%d%dim, ff(:, :, st%st_start), eigenval(ist), &
            psi(:, :, ist))
     end do
