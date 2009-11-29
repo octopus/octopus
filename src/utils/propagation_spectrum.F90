@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-program cross_section
+program propagation_spectrum
   use datasets_m
   use global_m
   use io_m
@@ -35,7 +35,7 @@ program cross_section
 
   integer :: in_file(3), out_file(3), eq_axes, nspin, lmax, time_steps
   logical :: calculate_tensor
-  type(spec_t) :: s
+  type(spec_t) :: spectrum
   type(unit_system_t) :: file_units
 
   ! Initialize stuff
@@ -54,7 +54,7 @@ program cross_section
   end if
   call unit_system_init()
 
-  call spectrum_init(s)
+  call spectrum_init(spectrum)
   call read_files('multipoles')
   call calculate('cross_section')
 
@@ -188,41 +188,41 @@ program cross_section
     subroutine calculate(fname)
       character(len=*), intent(in) :: fname
 
-      integer :: i, j
+      integer :: ii, jj
       character(len=150), allocatable :: filename(:)
 
       if(.not.calculate_tensor) then
 
         out_file(1) = io_open(trim(fname)//'_vector', action='write')
-        call spectrum_cross_section(in_file(1), out_file(1), s)
+        call spectrum_cross_section(in_file(1), out_file(1), spectrum)
         call io_close(in_file(1)); call io_close(out_file(1))
         
       else
         select case(eq_axes)
-        case(0, 1); j = 3
-        case(2);    j = 2
-        case(3);    j = 1
+        case(0, 1); jj = 3
+        case(2);    jj = 2
+        case(3);    jj = 1
         end select
 
-        SAFE_ALLOCATE(filename(1:j))
-        do i = 1, j
-          write(filename(i),'(2a,i1)') trim(fname), '_vector.',i
-          out_file(i) = io_open(trim(filename(i)), action='write')
-          call spectrum_cross_section(in_file(i), out_file(i), s)
-          call io_close(in_file(i)); call io_close(out_file(i))
-          in_file(i)  = io_open(trim(filename(i)), action='read', status='old')
+        SAFE_ALLOCATE(filename(1:jj))
+        do ii = 1, jj
+          write(filename(ii),'(2a,i1)') trim(fname), '_vector.',ii
+          out_file(ii) = io_open(trim(filename(ii)), action='write')
+          call spectrum_cross_section(in_file(ii), out_file(ii), spectrum)
+          call io_close(in_file(ii)); call io_close(out_file(ii))
+          in_file(ii)  = io_open(trim(filename(ii)), action='read', status='old')
         end do
 
         out_file(1) = io_open(trim(fname)//'_tensor', action='write')
-        call spectrum_cross_section_tensor(s, out_file(1), in_file(1:j))
-        do i = 1, j
-          call io_close(in_file(i))
+        call spectrum_cross_section_tensor(spectrum, out_file(1), in_file(1:jj))
+        do ii = 1, jj
+          call io_close(in_file(ii))
         end do
         call io_close(out_file(1))
         
       end if
     end subroutine calculate
-end program cross_section
+end program propagation_spectrum
 
 !! Local Variables:
 !! mode: f90

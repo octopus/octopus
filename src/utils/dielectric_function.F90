@@ -20,16 +20,16 @@
 #include "global.h"
 
 program dielectric_function
-  use global_m
-  use messages_m
   use datasets_m
-  use loct_m
-  use parser_m
+  use global_m
   use io_m
+  use loct_m
+  use messages_m
+  use parser_m
+  use profiling_m
+  use spectrum_m
   use unit_m
   use unit_system_m
-  use spectrum_m
-  use profiling_m
 
   implicit none
 
@@ -39,7 +39,7 @@ program dielectric_function
   FLOAT, allocatable :: vecpot(:, :), dumpa(:)
   CMPLX, allocatable :: dielectric(:,:)
   FLOAT, parameter :: eta = CNST(0.2)/CNST(27.211383)
-  type(spec_t) :: s
+  type(spec_t) :: spectrum
   type(block_t) :: blk
 
   ! Initialize stuff
@@ -58,7 +58,7 @@ program dielectric_function
   end if
   call unit_system_init()
 
-  call spectrum_init(s)
+  call spectrum_init(spectrum)
     
   if(parse_block(datasets_check('GaugeVectorField'), blk) == 0) then
     
@@ -101,7 +101,7 @@ program dielectric_function
 
 
   ! Find out the iteration numbers corresponding to the time limits.
-  call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, istart, iend, ntiter)
+  call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
 
   istart = max(1, istart)
 
@@ -109,15 +109,15 @@ program dielectric_function
 
   do ii = istart, iend
     jj = ii - istart
-    select case(s%damp)
+    select case(spectrum%damp)
     case(SPECTRUM_DAMP_NONE)
       dumpa(ii) = M_ONE
     case(SPECTRUM_DAMP_LORENTZIAN)
-      dumpa(ii)= exp(-jj*dt*s%damp_factor)
+      dumpa(ii)= exp(-jj*dt*spectrum%damp_factor)
     case(SPECTRUM_DAMP_POLYNOMIAL)
       dumpa(ii) = M_ONE - M_THREE*(real(jj)/ntiter)**2+ M_TWO*(real(jj)/ntiter)**3
     case(SPECTRUM_DAMP_GAUSSIAN)
-      dumpa(ii)= exp(-(jj*dt)**2*s%damp_factor**2)
+      dumpa(ii)= exp(-(jj*dt)**2*spectrum%damp_factor**2)
     end select
   end do
 
@@ -127,10 +127,10 @@ program dielectric_function
     vecpot(idir, istart:iend) = vecpot(idir, istart:iend) - av/dble(ntiter)
   end do
 
-  energy_steps = s%max_energy / s%energy_step
+  energy_steps = spectrum%max_energy / spectrum%energy_step
   SAFE_ALLOCATE(dielectric(1:MAX_DIM, 0:energy_steps))  
   do kk = 0, energy_steps
-    ww = kk*s%energy_step
+    ww = kk*spectrum%energy_step
 
     do ii = istart, iend
       tt = ii*dt
@@ -144,7 +144,7 @@ program dielectric_function
 
   out_file = io_open('td.general/inverse_dielectric_function', action='write')
   do kk = 0, energy_steps
-    ww = kk*s%energy_step
+    ww = kk*spectrum%energy_step
     write(out_file, '(7e15.6)') ww,                                         &
          real(dielectric(1, kk), REAL_PRECISION), aimag(dielectric(1, kk)), &
          real(dielectric(2, kk), REAL_PRECISION), aimag(dielectric(2, kk)), &
@@ -155,7 +155,7 @@ program dielectric_function
   out_file = io_open('td.general/dielectric_function', action='write')
   do kk = 0, energy_steps
     dielectric(1:3, kk) = M_ONE/dielectric(1:3, kk)
-    ww = kk*s%energy_step
+    ww = kk*spectrum%energy_step
     write(out_file, '(7e15.6)') ww,                                         &
          real(dielectric(1, kk), REAL_PRECISION), aimag(dielectric(1, kk)), &
          real(dielectric(2, kk), REAL_PRECISION), aimag(dielectric(2, kk)), &
