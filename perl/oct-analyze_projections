@@ -75,7 +75,7 @@ for(my $j=0; $j<$files[0]->{"npairs"}; $j++){
   print "Transition: $ii -> $aa\n";
 
   # process partial-multipoles file
-  `cd work_proj; ln -sf ../../inp .; <BINDIR>/oct-cross-section`;
+  `cd work_proj; ln -sf ../../inp .; <BINDIR>/oct-propagation_spectrum`;
   $outfile = sprintf("%04d_%04d", $ii, $aa);
 
   # move partial spectra
