@@ -61,11 +61,11 @@ oct_help_LDADD =  $(core_LIBS)
 depend:
 	@makedepf90 $(core_SRCS) $(oct_dielectric_function_SOURCES) $(oct_propagation_spectrum_SOURCES) $(oct_rsf_SOURCES) $(oct_harmonic_spectrum_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_casida_spectrum_SOURCES) $(oct_vibrational_SOURCES) $(oct_center_geom_SOURCES) $(oct_atoms_magnet_SOURCES) $(oct_help_SOURCES)
 
-cross_section.o : cross_section.F90 
+propagation_spectrum.o : propagation_spectrum.F90 
 rotational_strength.o : rotational_strength.F90 
 harmonic_spectrum.o : harmonic_spectrum.F90 
 xyzanim.o : xyzanim.F90 
-broad.o : broad.F90 
+casida_spectrum.o : casida_spectrum.F90 
 phonon_spectrum.o : phonon_spectrum.F90 
 centergeom.o : centergeom.F90 
 help.o : help.F90 

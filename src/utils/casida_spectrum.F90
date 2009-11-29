@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-program broad
+program casida_spectrum
   use datasets_m
   use global_m
   use io_m
@@ -31,11 +31,11 @@ program broad
 
   implicit none
 
-  type broad_t
+  type casida_spectrum_t
     FLOAT :: br, energy_step, min_energy, max_energy
-  end type broad_t
+  end type casida_spectrum_t
 
-  type(broad_t) :: br
+  type(casida_spectrum_t) :: cs
 
   ! Initialize stuff
   call global_init()
@@ -50,42 +50,42 @@ program broad
   !%Variable CasidaSpectrumBroadening
   !%Type float
   !%Default 0.005
-  !%Section Utilities::oct-broad
+  !%Section Utilities::oct-casida_spectrum
   !%Description
   !% Width of the Lorentzian used to broaden the excitations.
   !%End
-  call parse_float(datasets_check('CasidaSpectrumBroadening'), CNST(0.005), br%br, units_inp%energy)
+  call parse_float(datasets_check('CasidaSpectrumBroadening'), CNST(0.005), cs%br, units_inp%energy)
 
   !%Variable CasidaSpectrumEnergyStep
   !%Type float
   !%Default 0.001
-  !%Section Utilities::oct-broad
+  !%Section Utilities::oct-casida_spectrum
   !%Description
   !% Sampling rate for the spectrum. 
   !%End
-  call parse_float(datasets_check('CasidaSpectrumEnergyStep'), CNST(0.001), br%energy_step, units_inp%energy)
+  call parse_float(datasets_check('CasidaSpectrumEnergyStep'), CNST(0.001), cs%energy_step, units_inp%energy)
 
   !%Variable CasidaSpectrumMinEnergy
   !%Type float
   !%Default 0.0
-  !%Section Utilities::oct-broad
+  !%Section Utilities::oct-casida_spectrum
   !%Description
   !% The broadening is done for energies greater than <tt>CasidaSpectrumMinEnergy</tt>.
   !%End
-  call parse_float(datasets_check('CasidaSpectrumMinEnergy'), M_ZERO, br%min_energy, units_inp%energy)
+  call parse_float(datasets_check('CasidaSpectrumMinEnergy'), M_ZERO, cs%min_energy, units_inp%energy)
 
   !%Variable CasidaSpectrumMaxEnergy
   !%Type float
   !%Default 1.0
-  !%Section Utilities::oct-broad
+  !%Section Utilities::oct-casida_spectrum
   !%Description
   !% The broadening is done for energies smaller than <tt>CasidaSpectrumMaxEnergy</tt>.
   !%End
-  call parse_float(datasets_check('CasidaSpectrumMaxEnergy'), M_ONE, br%max_energy, units_inp%energy)
+  call parse_float(datasets_check('CasidaSpectrumMaxEnergy'), M_ONE, cs%max_energy, units_inp%energy)
 
-  call calc_broad(br, CASIDA_DIR, 'eps-diff', .true.)
-  call calc_broad(br, CASIDA_DIR, 'petersilka', .true.)
-  call calc_broad(br, CASIDA_DIR, 'casida', .false.)
+  call calc_broad(cs, CASIDA_DIR, 'eps-diff', .true.)
+  call calc_broad(cs, CASIDA_DIR, 'petersilka', .true.)
+  call calc_broad(cs, CASIDA_DIR, 'casida', .false.)
 
   call io_end()
   call datasets_end()
@@ -95,17 +95,17 @@ program broad
 contains
 
   ! ---------------------------------------------------------
-  subroutine calc_broad(br, dir, fname, extracols)
-    type(broad_t),    intent(in) :: br
-    character(len=*), intent(in) :: dir
-    character(len=*), intent(in) :: fname
-    logical,          intent(in) :: extracols
+  subroutine calc_broad(cs, dir, fname, extracols)
+    type(casida_spectrum_t), intent(in) :: cs
+    character(len=*),        intent(in) :: dir
+    character(len=*),        intent(in) :: fname
+    logical,                 intent(in) :: extracols
 
     FLOAT, allocatable :: spectrum(:,:)
     FLOAT :: omega, energy, ff(4)
     integer :: nsteps, iunit, j1, j2, ii
 
-    nsteps = (br%max_energy - br%min_energy) / br%energy_step
+    nsteps = (cs%max_energy - cs%min_energy) / cs%energy_step
     SAFE_ALLOCATE(spectrum(1:4, 1:nsteps))
     spectrum = M_ZERO
 
@@ -123,8 +123,8 @@ contains
       energy = units_to_atomic(units_out%energy, energy)
 
       do j1 = 1, nsteps
-        omega = br%min_energy + real(j1-1, REAL_PRECISION)*br%energy_step
-        spectrum(1:4, j1) = spectrum(1:4, j1) + ff(1:4)*br%br/((omega-energy)**2 + br%br**2)/M_PI ! Lorentzian
+        omega = cs%min_energy + real(j1-1, REAL_PRECISION)*cs%energy_step
+        spectrum(1:4, j1) = spectrum(1:4, j1) + ff(1:4)*cs%br/((omega-energy)**2 + cs%br**2)/M_PI ! Lorentzian
       end do
     end do
 100   continue
@@ -133,8 +133,8 @@ contains
     ! print spectra
     iunit = io_open(trim(dir)//"/spectrum."//fname, action='write')
     do j1 = 1, nsteps
-      write(iunit, '(5es14.6)') units_from_atomic(units_out%energy, br%min_energy + real(j1 - 1, REAL_PRECISION) &
-        *br%energy_step), (units_from_atomic(units_out%energy, spectrum(ii, j1)), ii = 1, 4)
+      write(iunit, '(5es14.6)') units_from_atomic(units_out%energy, cs%min_energy + real(j1 - 1, REAL_PRECISION) &
+        *cs%energy_step), (units_from_atomic(units_out%energy, spectrum(ii, j1)), ii = 1, 4)
     end do
 
     call io_close(iunit)
@@ -142,7 +142,7 @@ contains
     SAFE_DEALLOCATE_A(spectrum)
   end subroutine calc_broad
 
-end program broad
+end program casida_spectrum
 
 !! Local Variables:
 !! mode: f90
