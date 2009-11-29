@@ -45,8 +45,9 @@ module multigrid_m
     multigrid_end,                  &
     multigrid_mesh_half,            &
     multigrid_mesh_double,          &
-    dmultigrid_fine2coarse,          &
-    zmultigrid_fine2coarse,          &
+    multigrid_number_of_levels,     &
+    dmultigrid_fine2coarse,         &
+    zmultigrid_fine2coarse,         &
     dmultigrid_coarse2fine,         &
     zmultigrid_coarse2fine,         &
     multigrid_get_transfer_tables
@@ -120,7 +121,7 @@ contains
 
     SAFE_ALLOCATE(mgrid%level(0:n_levels))
 
-    mgrid%level(0)%mesh   => mesh
+    mgrid%level(0)%mesh => mesh
     mgrid%level(0)%der => der
 
     mgrid%level(0)%tt%n_fine = mesh%np
@@ -148,7 +149,11 @@ contains
       call derivatives_build(mgrid%level(i)%der, mgrid%level(i)%mesh)
 
       call mesh_write_info(mgrid%level(i)%mesh, stdout)
-
+      
+      mgrid%level(i)%der%coarser => mgrid%level(i - 1)%der
+      mgrid%level(i - 1)%der%finer => mgrid%level(i)%der
+      mgrid%level(i)%der%to_coarser => mgrid%level(i)%tt
+      mgrid%level(i)%der%to_finer => mgrid%level(i)%tt
     end do
     
     SAFE_ALLOCATE(mgrid%sp(0:mgrid%n_levels))
@@ -412,6 +417,22 @@ contains
 
     call pop_sub()
   end subroutine multigrid_end
+
+  integer function multigrid_number_of_levels(base_der) result(number)
+    type(derivatives_t), target, intent(in)  :: base_der
+
+    type(derivatives_t), pointer :: next_der
+
+    next_der => base_der%finer
+
+    number = 0
+    do 
+      number = number + 1
+      next_der => next_der%finer
+      if(.not. associated(next_der)) exit
+    end do
+
+  end function multigrid_number_of_levels
 
 #include "undef.F90"
 #include "real.F90"

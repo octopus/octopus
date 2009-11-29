@@ -708,7 +708,7 @@ contains
     
     hm%multigrid_initialized = .true.
 
-    call gridhier_init(hm%coarse_v, gr%mgrid, add_points_for_boundaries=.false.)
+    call gridhier_init(hm%coarse_v, gr%der, np_part_size = .false.)
 
     hm%coarse_v%level(0)%p(1:gr%mesh%np) = hm%ep%vpsl(1:gr%mesh%np) + hm%vhxc(1:gr%mesh%np, 1)
 
@@ -735,7 +735,7 @@ contains
     SAFE_DEALLOCATE_P(hm%total)
 
     if(hm%multigrid_initialized) then
-      call gridhier_end(hm%coarse_v, gr%mgrid)
+      call gridhier_end(hm%coarse_v)
     end if
 
     SAFE_DEALLOCATE_P(hm%phase)

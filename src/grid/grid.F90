@@ -172,6 +172,11 @@ contains
       
       call mesh_write_info(gr%fine%mesh, stdout)
 
+      gr%fine%der%coarser => gr%der
+      gr%der%finer =>  gr%fine%der
+      gr%fine%der%to_coarser => gr%fine%tt
+      gr%der%to_finer => gr%fine%tt
+
     else
       gr%fine%mesh => gr%mesh
       gr%fine%der => gr%der

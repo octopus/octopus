@@ -17,44 +17,48 @@
 !!
 !! $Id: gridhier_inc.F90 4205 2008-05-29 07:54:35Z xavier $
 
-subroutine X(gridhier_init)(this, mgrid, add_points_for_boundaries)
-  type(X(gridhier_t)),  intent(out) :: this
-  type(multigrid_t),    intent(in)  :: mgrid
-  logical,              intent(in)  :: add_points_for_boundaries
+subroutine X(gridhier_init)(this, base_der, np_part_size)
+  type(X(gridhier_t)),          intent(out) :: this
+  type(derivatives_t),  target, intent(in)  :: base_der
+  logical,                      intent(in)  :: np_part_size
   
-  integer :: cl, l
+  integer :: cl, l, np
+  type(derivatives_t), pointer :: der
+
   call push_sub('poisson_multigrid.gridhier_init')
   
-  cl = mgrid%n_levels
-  
+  cl = multigrid_number_of_levels(base_der)
+
   SAFE_ALLOCATE(this%level(0:cl))
   
+  der => base_der
   do l = 0, cl
-    if(add_points_for_boundaries) then
-      SAFE_ALLOCATE(this%level(l)%p(1:mgrid%level(l)%mesh%np_part))
-      this%level(l)%p(1:mgrid%level(l)%mesh%np_part) = M_ZERO
+    if(np_part_size) then
+      np = der%mesh%np_part
     else
-      SAFE_ALLOCATE(this%level(l)%p(1:mgrid%level(l)%mesh%np))
-      this%level(l)%p(1:mgrid%level(l)%mesh%np) = M_ZERO
+      np = der%mesh%np
     end if
+
+    SAFE_ALLOCATE(this%level(l)%p(1:np))
+    this%level(l)%p(1:np) = M_ZERO
+    
+    der => der%finer
   end do
   
   call pop_sub()
 end subroutine X(gridhier_init)
 
 ! ---------------------------------------------------------
-subroutine X(gridhier_end)(this, mgrid)
+subroutine X(gridhier_end)(this)
   type(X(gridhier_t)),  intent(inout) :: this
-  type(multigrid_t),    intent(in)    :: mgrid
 
-  integer :: cl, l
+  integer :: l
   call push_sub('poisson_multigrid.gridhier_end')
   
-  cl = mgrid%n_levels
-  
-  do l = 0, cl
+  do l = 0, ubound(this%level, dim = 1)
     SAFE_DEALLOCATE_P(this%level(l)%p)
   end do
+
   SAFE_DEALLOCATE_P(this%level)
   
   call pop_sub()

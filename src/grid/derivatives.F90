@@ -39,6 +39,7 @@ module derivatives_m
   use stencil_star_m
   use stencil_starplus_m
   use stencil_variational_m
+  use transfer_table_m
   use varinfo_m
 
   implicit none
@@ -110,6 +111,10 @@ module derivatives_m
 #if defined(HAVE_MPI)
     integer                      :: comm_method 
 #endif
+    type(derivatives_t),    pointer :: finer
+    type(derivatives_t),    pointer :: coarser
+    type(transfer_table_t), pointer :: to_finer
+    type(transfer_table_t), pointer :: to_coarser
   end type derivatives_t
 
   type derivatives_handle_batch_t
@@ -246,11 +251,16 @@ contains
     der%zero_bc = (sb%periodic_dim < 3)
     der%periodic_bc = (sb%periodic_dim > 0)
 
-    ! find out how many ghost points we need in which dimension
+    ! find out how many ghost points we need in each dimension
     der%n_ghost(:) = 0
     do i = 1, der%dim
       der%n_ghost(i) = maxval(abs(der%lapl%stencil%points(i,:)))
     end do
+
+    nullify(der%coarser)
+    nullify(der%finer)
+    nullify(der%to_coarser)
+    nullify(der%to_finer)
 
     call pop_sub()
   end subroutine derivatives_init
@@ -272,6 +282,11 @@ contains
 
     SAFE_DEALLOCATE_P(der%op)
     nullify   (der%op, der%lapl, der%grad)
+
+    nullify(der%coarser)
+    nullify(der%finer)
+    nullify(der%to_coarser)
+    nullify(der%to_finer)
 
     call pop_sub()
   end subroutine derivatives_end

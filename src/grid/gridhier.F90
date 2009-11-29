@@ -22,6 +22,7 @@
 module gridhier_m
   use curvilinear_m
   use datasets_m
+  use derivatives_m
   use geometry_m
   use global_m
   use parser_m

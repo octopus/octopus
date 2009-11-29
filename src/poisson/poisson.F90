@@ -21,6 +21,7 @@
 
 module poisson_m
   use datasets_m
+  use derivatives_m
   use geometry_m
   use global_m
   use grid_m
@@ -342,8 +343,8 @@ contains
 
 
   !-----------------------------------------------------------------
-  subroutine zpoisson_solve(gr, pot, rho, all_nodes)
-    type(grid_t),         intent(inout) :: gr
+  subroutine zpoisson_solve(grid, pot, rho, all_nodes)
+    type(grid_t), target, intent(inout) :: grid
     CMPLX,                intent(inout) :: pot(:)  ! pot(mesh%np)
     CMPLX,                intent(in)    :: rho(:)  ! rho(mesh%np)
     logical, optional,    intent(in)    :: all_nodes
@@ -351,6 +352,10 @@ contains
     FLOAT, allocatable :: aux1(:), aux2(:)
 
     logical :: all_nodes_value
+
+    type(derivatives_t), pointer :: der
+
+    der => grid%der
 
     call push_sub('poisson.zpoisson_solve')
 
@@ -360,20 +365,20 @@ contains
       all_nodes_value = all_nodes_default
     end if
 
-    SAFE_ALLOCATE(aux1(1:gr%mesh%np))
-    SAFE_ALLOCATE(aux2(1:gr%mesh%np))
+    SAFE_ALLOCATE(aux1(1:der%mesh%np))
+    SAFE_ALLOCATE(aux2(1:der%mesh%np))
 
     ! first the real part
-    aux1(1:gr%mesh%np) = real(rho(1:gr%mesh%np))
-    aux2(1:gr%mesh%np) = real(pot(1:gr%mesh%np))
-    call dpoisson_solve(gr, aux2, aux1, all_nodes=all_nodes_value)
-    pot(1:gr%mesh%np)  = aux2(1:gr%mesh%np)
+    aux1(1:der%mesh%np) = real(rho(1:der%mesh%np))
+    aux2(1:der%mesh%np) = real(pot(1:der%mesh%np))
+    call dpoisson_solve(grid, aux2, aux1, all_nodes=all_nodes_value)
+    pot(1:der%mesh%np)  = aux2(1:der%mesh%np)
 
     ! now the imaginary part
-    aux1(1:gr%mesh%np) = aimag(rho(1:gr%mesh%np))
-    aux2(1:gr%mesh%np) = aimag(pot(1:gr%mesh%np))
-    call dpoisson_solve(gr, aux2, aux1, all_nodes=all_nodes_value)
-    pot(1:gr%mesh%np) = pot(1:gr%mesh%np) + M_zI*aux2(1:gr%mesh%np)
+    aux1(1:der%mesh%np) = aimag(rho(1:der%mesh%np))
+    aux2(1:der%mesh%np) = aimag(pot(1:der%mesh%np))
+    call dpoisson_solve(grid, aux2, aux1, all_nodes=all_nodes_value)
+    pot(1:der%mesh%np) = pot(1:der%mesh%np) + M_zI*aux2(1:der%mesh%np)
 
     SAFE_DEALLOCATE_A(aux1)
     SAFE_DEALLOCATE_A(aux2)
@@ -383,8 +388,8 @@ contains
 
 
   !-----------------------------------------------------------------
-  subroutine dpoisson_solve(gr, pot, rho, all_nodes)
-    type(grid_t),         intent(inout) :: gr
+  subroutine dpoisson_solve(grid, pot, rho, all_nodes)
+    type(grid_t), target, intent(inout) :: grid
     FLOAT,                intent(inout) :: pot(:)    ! pot(mesh%np)
     FLOAT,                intent(in)    :: rho(:)    ! rho(mesh%np)
     logical, optional,    intent(in)    :: all_nodes ! Is the Poisson solver allowed to utilise
@@ -409,6 +414,10 @@ contains
     
     integer :: conversion(3)
 
+    type(derivatives_t), pointer :: der
+
+    der => grid%der
+    
     call profiling_in(prof, 'POISSON_SOLVE')
     call push_sub('poisson.dpoisson_solve')
 
@@ -423,71 +432,71 @@ contains
 
     select case(poisson_solver)
     case(POISSON_DIRECT_SUM_1D)
-      call poisson1d_solve(gr%mesh, pot, rho)
+      call poisson1d_solve(der%mesh, pot, rho)
 
     case(POISSON_DIRECT_SUM_2D)
-      call poisson2d_solve(gr%mesh, pot, rho)
+      call poisson2d_solve(der%mesh, pot, rho)
 
     case(POISSON_CG)
-      call poisson_cg1(gr%mesh, corrector, gr%der, pot, rho)
+      call poisson_cg1(der, corrector, pot, rho)
 
     case(POISSON_CG_CORRECTED)
       if(hartree_integrator%increase_box) then
         SAFE_ALLOCATE(potp(1:hartree_integrator%grid%mesh%np))
         SAFE_ALLOCATE(rhop(1:hartree_integrator%grid%mesh%np))
-        SAFE_ALLOCATE(rho_corrected(1:gr%mesh%np))
-        SAFE_ALLOCATE(vh_correction(1:gr%mesh%np))
+        SAFE_ALLOCATE(rho_corrected(1:der%mesh%np))
+        SAFE_ALLOCATE(vh_correction(1:der%mesh%np))
 
         potp = M_ZERO; rhop = M_ZERO; rho_corrected = M_ZERO; vh_correction = M_ZERO
-        call correct_rho(corrector, gr%mesh, rho, rho_corrected, vh_correction)
+        call correct_rho(corrector, der%mesh, rho, rho_corrected, vh_correction)
 
-        pot(1:gr%mesh%np) = pot(1:gr%mesh%np) - vh_correction(1:gr%mesh%np)
+        pot(1:der%mesh%np) = pot(1:der%mesh%np) - vh_correction(1:der%mesh%np)
 
-        call dmf_interpolate(gr%mesh, hartree_integrator%grid%mesh, full_interpolation = .false., u = rho_corrected, f = rhop)
-        call dmf_interpolate(gr%mesh, hartree_integrator%grid%mesh, full_interpolation = .false., u = pot, f = potp)
+        call dmf_interpolate(der%mesh, hartree_integrator%grid%mesh, full_interpolation = .false., u = rho_corrected, f = rhop)
+        call dmf_interpolate(der%mesh, hartree_integrator%grid%mesh, full_interpolation = .false., u = pot, f = potp)
 
-        call poisson_cg2(hartree_integrator%grid%mesh, hartree_integrator%grid%der, potp, rhop)
+        call poisson_cg2(hartree_integrator%grid%der, potp, rhop)
 
-        call dmf_interpolate(hartree_integrator%grid%mesh, gr%mesh, full_interpolation = .false., u = potp, f = pot)
-        pot(1:gr%mesh%np) = pot(1:gr%mesh%np) + vh_correction(1:gr%mesh%np)
+        call dmf_interpolate(hartree_integrator%grid%mesh, der%mesh, full_interpolation = .false., u = potp, f = pot)
+        pot(1:der%mesh%np) = pot(1:der%mesh%np) + vh_correction(1:der%mesh%np)
 
         SAFE_DEALLOCATE_A(rho_corrected)
         SAFE_DEALLOCATE_A(vh_correction)
         SAFE_DEALLOCATE_A(potp)
         SAFE_DEALLOCATE_A(rhop)
       else
-        SAFE_ALLOCATE(rho_corrected(1:gr%mesh%np))
-        SAFE_ALLOCATE(vh_correction(1:gr%mesh%np))
+        SAFE_ALLOCATE(rho_corrected(1:der%mesh%np))
+        SAFE_ALLOCATE(vh_correction(1:der%mesh%np))
 
-        call correct_rho(corrector, gr%mesh, rho, rho_corrected, vh_correction)
+        call correct_rho(corrector, der%mesh, rho, rho_corrected, vh_correction)
 
-        pot(1:gr%mesh%np) = pot(1:gr%mesh%np) - vh_correction(1:gr%mesh%np)
-        call poisson_cg2(gr%mesh, gr%der, pot, rho_corrected)
-        pot(1:gr%mesh%np) = pot(1:gr%mesh%np) + vh_correction(1:gr%mesh%np)
+        pot(1:der%mesh%np) = pot(1:der%mesh%np) - vh_correction(1:der%mesh%np)
+        call poisson_cg2(der, pot, rho_corrected)
+        pot(1:der%mesh%np) = pot(1:der%mesh%np) + vh_correction(1:der%mesh%np)
 
         SAFE_DEALLOCATE_A(rho_corrected)
         SAFE_DEALLOCATE_A(vh_correction)
       end if
 
     case(POISSON_MULTIGRID)
-      call poisson_multigrid_solver(mg, gr, pot, rho)
+      call poisson_multigrid_solver(mg, grid, pot, rho)
 
     case(POISSON_FFT_SPH,POISSON_FFT_CYL,POISSON_FFT_PLA,POISSON_FFT_NOCUT)
-      call poisson_fft(gr%mesh, pot, rho)
+      call poisson_fft(der%mesh, pot, rho)
 
     case(POISSON_FFT_CORRECTED)
-      SAFE_ALLOCATE(rho_corrected(1:gr%mesh%np))
-      SAFE_ALLOCATE(vh_correction(1:gr%mesh%np))
+      SAFE_ALLOCATE(rho_corrected(1:der%mesh%np))
+      SAFE_ALLOCATE(vh_correction(1:der%mesh%np))
 
-      call correct_rho(corrector, gr%mesh, rho, rho_corrected, vh_correction)
-      call poisson_fft(gr%mesh, pot, rho_corrected, average_to_zero = .true.)
+      call correct_rho(corrector, der%mesh, rho, rho_corrected, vh_correction)
+      call poisson_fft(der%mesh, pot, rho_corrected, average_to_zero = .true.)
 
-      pot(1:gr%mesh%np) = pot(1:gr%mesh%np) + vh_correction(1:gr%mesh%np)
+      pot(1:der%mesh%np) = pot(1:der%mesh%np) + vh_correction(1:der%mesh%np)
       SAFE_DEALLOCATE_A(rho_corrected)
       SAFE_DEALLOCATE_A(vh_correction)
 
     case(POISSON_ISF)
-            call poisson_isf_solve(gr%mesh, pot, rho, all_nodes_value)
+            call poisson_isf_solve(der%mesh, pot, rho, all_nodes_value)
 
     case(POISSON_SETE)
 
@@ -498,31 +507,31 @@ contains
 
 ! What this is doing is solving Poisson for rhop(e+p) and the given hartree pot.
 
-      nx = gr%mesh%idx%nr(2,1) - gr%mesh%idx%nr(1,1) + 1 - 2*gr%mesh%idx%enlarge(1)
-      ny = gr%mesh%idx%nr(2,2) - gr%mesh%idx%nr(1,2) + 1 - 2*gr%mesh%idx%enlarge(2)
-      nz = gr%mesh%idx%nr(2,3) - gr%mesh%idx%nr(1,3) + 1 - 2*gr%mesh%idx%enlarge(3)
+      nx = der%mesh%idx%nr(2,1) - der%mesh%idx%nr(1,1) + 1 - 2*der%mesh%idx%enlarge(1)
+      ny = der%mesh%idx%nr(2,2) - der%mesh%idx%nr(1,2) + 1 - 2*der%mesh%idx%enlarge(2)
+      nz = der%mesh%idx%nr(2,3) - der%mesh%idx%nr(1,3) + 1 - 2*der%mesh%idx%enlarge(3)
 
-      nx_half = (gr%mesh%idx%nr(2,1) - gr%mesh%idx%nr(1,1) - 2*gr%mesh%idx%enlarge(1))/2 + 1
-      ny_half = (gr%mesh%idx%nr(2,2) - gr%mesh%idx%nr(1,2) - 2*gr%mesh%idx%enlarge(2))/2 + 1
-      nz_half = (gr%mesh%idx%nr(2,3) - gr%mesh%idx%nr(1,3) - 2*gr%mesh%idx%enlarge(3))/2 + 1
+      nx_half = (der%mesh%idx%nr(2,1) - der%mesh%idx%nr(1,1) - 2*der%mesh%idx%enlarge(1))/2 + 1
+      ny_half = (der%mesh%idx%nr(2,2) - der%mesh%idx%nr(1,2) - 2*der%mesh%idx%enlarge(2))/2 + 1
+      nz_half = (der%mesh%idx%nr(2,3) - der%mesh%idx%nr(1,3) - 2*der%mesh%idx%enlarge(3))/2 + 1
 
       SAFE_ALLOCATE(rh0(1:nx, 1:ny, 1:nz))
       SAFE_ALLOCATE(vh0(1:nx, 1:ny, 1:nz))
 
       !Show Roberto tells us the size of the box. 
       ! The %size gives out half the size of a box. 
-      xl = 2*gr%mesh%sb%lsize(1) 
-      yl = 2*gr%mesh%sb%lsize(2) 
-      zl = 2*gr%mesh%sb%lsize(3)
+      xl = 2*der%mesh%sb%lsize(1) 
+      yl = 2*der%mesh%sb%lsize(2) 
+      zl = 2*der%mesh%sb%lsize(3)
 
-      dx = gr%mesh%sb%h(1)
-      dy = gr%mesh%sb%h(2)
-      dz = gr%mesh%sb%h(3)
+      dx = der%mesh%sb%h(1)
+      dy = der%mesh%sb%h(2)
+      dz = der%mesh%sb%h(3)
 
       sum0 = M_ZERO
 
-      do counter = 1, gr%mesh%np
-        call  index_to_coords(gr%mesh%idx,gr%mesh%sb%dim,counter,conversion)
+      do counter = 1, der%mesh%np
+        call  index_to_coords(der%mesh%idx,der%mesh%sb%dim,counter,conversion)
         conversion(1)=conversion(1)+nx_half
         conversion(2)=conversion(2)+ny_half
         conversion(3)=conversion(3)+nz_half
@@ -538,9 +547,9 @@ contains
 !       enddo 
 !      enddo
 
-      do counter = 1, gr%mesh%np
+      do counter = 1, der%mesh%np
 
-        call  index_to_coords(gr%mesh%idx,gr%mesh%sb%dim,counter,conversion)
+        call  index_to_coords(der%mesh%idx,der%mesh%sb%dim,counter,conversion)
 
         conversion(1) = conversion(1) + nx_half
         conversion(2) = conversion(2) + ny_half

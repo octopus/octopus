@@ -186,7 +186,7 @@ contains
   ! ---------------------------------------------------------
   subroutine poisson_multigrid_solver(this, gr, pot, rho)
     type(mg_solver_t), intent(in)    :: this
-    type(grid_t),      intent(inout) :: gr
+    type(grid_t),      target, intent(inout) :: gr
     FLOAT,             intent(inout) :: pot(:)
     FLOAT,             intent(in)    :: rho(:)
 
@@ -199,20 +199,24 @@ contains
     type(dgridhier_t) :: tau
     type(dgridhier_t) :: err
 
+    type(derivatives_t), pointer :: der
+
+    der => gr%der
+
     call push_sub('poisson_multigrid.poisson_multigrid_solver');
 
     ! correction for treating boundaries
-    SAFE_ALLOCATE(vh_correction(1:gr%mesh%np))
+    SAFE_ALLOCATE(vh_correction(1:der%mesh%np))
 
-    call gridhier_init(phi, gr%mgrid, add_points_for_boundaries=.true.)
-    call gridhier_init(phi_ini, gr%mgrid, add_points_for_boundaries=.false.)
-    call gridhier_init(tau, gr%mgrid, add_points_for_boundaries=.true.)
-    call gridhier_init(err, gr%mgrid, add_points_for_boundaries=.true.)
+    call gridhier_init(phi, der, np_part_size = .true.)
+    call gridhier_init(phi_ini, der, np_part_size = .false.)
+    call gridhier_init(tau, der, np_part_size = .true.)
+    call gridhier_init(err, der, np_part_size = .true.)
 
-    call correct_rho(this%corrector, gr%mesh, rho, tau%level(0)%p, vh_correction)
-    call lalg_scal(gr%mesh%np, -M_FOUR*M_PI, tau%level(0)%p)
+    call correct_rho(this%corrector, der%mesh, rho, tau%level(0)%p, vh_correction)
+    call lalg_scal(der%mesh%np, -M_FOUR*M_PI, tau%level(0)%p)
 
-    forall (ip = 1:gr%mesh%np) phi%level(0)%p(ip) = pot(ip) - vh_correction(ip)
+    forall (ip = 1:der%mesh%np) phi%level(0)%p(ip) = pot(ip) - vh_correction(ip)
 
     cl = gr%mgrid%n_levels
 
@@ -257,14 +261,14 @@ contains
       call write_warning(2)
     end if
 
-    forall (ip = 1:gr%mesh%np) pot(ip) = phi%level(0)%p(ip) + vh_correction(ip)
+    forall (ip = 1:der%mesh%np) pot(ip) = phi%level(0)%p(ip) + vh_correction(ip)
 
     SAFE_DEALLOCATE_A(vh_correction)
 
-    call gridhier_end(phi, gr%mgrid)
-    call gridhier_end(tau, gr%mgrid)
-    call gridhier_end(err, gr%mgrid)
-    call gridhier_end(phi_ini, gr%mgrid)
+    call gridhier_end(phi)
+    call gridhier_end(tau)
+    call gridhier_end(err)
+    call gridhier_end(phi_ini)
 
     call pop_sub()
 

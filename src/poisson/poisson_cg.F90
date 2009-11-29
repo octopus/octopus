@@ -65,13 +65,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine poisson_cg1(m, corrector, der, pot, rho)
-    type(mesh_t),      target, intent(in)    :: m
-    type(poisson_corr_t), intent(inout) :: corrector
+  subroutine poisson_cg1(der, corrector, pot, rho)
     type(derivatives_t), target, intent(in)    :: der
-    FLOAT,                     intent(inout) :: pot(:) ! pot(m%np)
-    FLOAT,                     intent(in)    :: rho(:) ! rho(m%np)
-
+    type(poisson_corr_t),        intent(inout) :: corrector
+    FLOAT,                       intent(inout) :: pot(:)
+    FLOAT,                       intent(in)    :: rho(:)
 
     integer :: iter
     FLOAT :: res
@@ -79,25 +77,25 @@ contains
 
     call push_sub('poisson_cg.poisson_cg1')
 
-    SAFE_ALLOCATE( wk(1:m%np_part))
-    SAFE_ALLOCATE(lwk(1:m%np_part))
-    SAFE_ALLOCATE( zk(1:m%np_part))
-    SAFE_ALLOCATE( pk(1:m%np_part))
+    SAFE_ALLOCATE( wk(1:der%mesh%np_part))
+    SAFE_ALLOCATE(lwk(1:der%mesh%np_part))
+    SAFE_ALLOCATE( zk(1:der%mesh%np_part))
+    SAFE_ALLOCATE( pk(1:der%mesh%np_part))
 
     ! build initial guess for the potential
-    wk(1:m%np) = pot(1:m%np)
-    call boundary_conditions(corrector, m, rho, wk)
+    wk(1:der%mesh%np) = pot(1:der%mesh%np)
+    call boundary_conditions(corrector, der%mesh, rho, wk)
     call dderivatives_lapl(der, wk, lwk, .true.)
 
-    zk(1:m%np) = -M_FOUR*M_PI*rho(1:m%np) - lwk(1:m%np)
+    zk(1:der%mesh%np) = -M_FOUR*M_PI*rho(1:der%mesh%np) - lwk(1:der%mesh%np)
     SAFE_DEALLOCATE_A(wk)
     SAFE_DEALLOCATE_A(lwk) ! they are no longer needed
 
     der_pointer  => der
-    mesh_pointer => m
+    mesh_pointer => der%mesh
     pk = zk
     iter = maxiter
-    call dconjugate_gradients(m%np_part, m%np, pk, zk, &
+    call dconjugate_gradients(der%mesh%np_part, der%mesh%np, pk, zk, &
       internal_laplacian_op, internal_dotp, iter, res, threshold)
     if(res >= threshold) then
       message(1) = 'Conjugate-gradients Poisson solver did not converge.'
@@ -106,7 +104,7 @@ contains
       call write_warning(3)
     end if
     nullify(der_pointer, mesh_pointer)
-    pot(1:m%np) = pot(1:m%np) + pk(1:m%np)
+    pot(1:der%mesh%np) = pot(1:der%mesh%np) + pk(1:der%mesh%np)
 
     SAFE_DEALLOCATE_A(zk)
     SAFE_DEALLOCATE_A(pk)
@@ -115,8 +113,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine poisson_cg2(mesh, der, pot, rho)
-    type(mesh_t), target,        intent(in)    :: mesh
+  subroutine poisson_cg2(der, pot, rho)
     type(derivatives_t), target, intent(in)    :: der
     FLOAT,                       intent(inout) :: pot(:)
     FLOAT,                       intent(in)    :: rho(:)
@@ -129,15 +126,15 @@ contains
 
     iter = maxiter
     der_pointer  => der
-    mesh_pointer => mesh
+    mesh_pointer => der%mesh
 
-    SAFE_ALLOCATE(rhs(1:mesh%np))
-    SAFE_ALLOCATE(potc(1:mesh%np_part))
+    SAFE_ALLOCATE(rhs(1:der%mesh%np))
+    SAFE_ALLOCATE(potc(1:der%mesh%np_part))
 
-    forall (ip = 1:mesh%np) rhs(ip) = CNST(-4.0)*M_PI*rho(ip)
-    call lalg_copy(mesh%np, pot, potc)
+    forall (ip = 1:der%mesh%np) rhs(ip) = CNST(-4.0)*M_PI*rho(ip)
+    call lalg_copy(der%mesh%np, pot, potc)
 
-    call dconjugate_gradients(mesh%np_part, mesh%np, potc, rhs, internal_laplacian_op, internal_dotp, iter, res, threshold)
+    call dconjugate_gradients(der%mesh%np_part, der%mesh%np, potc, rhs, internal_laplacian_op, internal_dotp, iter, res, threshold)
 
     if(res >= threshold) then
       message(1) = 'Conjugate-gradients Poisson solver did not converge.'
@@ -146,7 +143,7 @@ contains
       call write_warning(3)
     end if
 
-    call lalg_copy(mesh%np, potc, pot)
+    call lalg_copy(der%mesh%np, potc, pot)
 
     nullify(der_pointer, mesh_pointer)
 
