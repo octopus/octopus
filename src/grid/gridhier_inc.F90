@@ -42,7 +42,7 @@ subroutine X(gridhier_init)(this, base_der, np_part_size)
     SAFE_ALLOCATE(this%level(l)%p(1:np))
     this%level(l)%p(1:np) = M_ZERO
     
-    der => der%finer
+    der => der%coarser
   end do
   
   call pop_sub()

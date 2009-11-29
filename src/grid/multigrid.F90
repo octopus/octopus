@@ -150,10 +150,10 @@ contains
 
       call mesh_write_info(mgrid%level(i)%mesh, stdout)
       
-      mgrid%level(i)%der%coarser => mgrid%level(i - 1)%der
-      mgrid%level(i - 1)%der%finer => mgrid%level(i)%der
-      mgrid%level(i)%der%to_coarser => mgrid%level(i)%tt
+      mgrid%level(i)%der%finer => mgrid%level(i - 1)%der
+      mgrid%level(i - 1)%der%coarser => mgrid%level(i)%der
       mgrid%level(i)%der%to_finer => mgrid%level(i)%tt
+      mgrid%level(i - 1)%der%to_coarser => mgrid%level(i)%tt
     end do
     
     SAFE_ALLOCATE(mgrid%sp(0:mgrid%n_levels))
@@ -423,12 +423,12 @@ contains
 
     type(derivatives_t), pointer :: next_der
 
-    next_der => base_der%finer
+    next_der => base_der%coarser
 
     number = 0
     do 
       number = number + 1
-      next_der => next_der%finer
+      next_der => next_der%coarser
       if(.not. associated(next_der)) exit
     end do
 
