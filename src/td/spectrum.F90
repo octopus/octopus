@@ -155,7 +155,7 @@ contains
     !%Variable PropagationSpectrumStartTime
     !%Type float
     !%Default 0.0
-    !%Section Utilities::oct-cross-section
+    !%Section Utilities::oct-propagation_spectrum
     !%Description
     !% Processing is done for the given function in a time-window that starts at the
     !% value of this variable.
@@ -165,7 +165,7 @@ contains
     !%Variable PropagationSpectrumEndTime
     !%Type float
     !%Default -1.0 au
-    !%Section Utilities::oct-cross-section
+    !%Section Utilities::oct-propagation_spectrum
     !%Description
     !% Processing is done for the given function in a time-window that ends at the
     !% value of this variable. If set to a negative value, the maximum value from 
@@ -176,7 +176,7 @@ contains
     !%Variable PropagationSpectrumEnergyStep
     !%Type float
     !%Default 0.01 eV
-    !%Section Utilities::oct-cross-section
+    !%Section Utilities::oct-propagation_spectrum
     !%Description
     !% Sampling rate for the spectrum.
     !%End
@@ -186,7 +186,7 @@ contains
     !%Variable PropagationSpectrumMaxEnergy
     !%Type float
     !%Default 20 eV
-    !%Section Utilities::oct-cross-section
+    !%Section Utilities::oct-propagation_spectrum
     !%Description
     !% The Fourier transform is calculated for energies smaller than this value.
     !%End
@@ -195,7 +195,7 @@ contains
     !%Variable PropagationSpectrumDampFactor
     !%Type float
     !%Default 0.15 au
-    !%Section Utilities::oct-cross-section
+    !%Section Utilities::oct-propagation_spectrum
     !%Description
     !% If <tt>PropagationSpectrumDampMode = exponential</tt>, the damping parameter of the exponential
     !% is fixed through this variable.
@@ -423,9 +423,9 @@ contains
     !%Default 0
     !%Section Time-Dependent::Linear Response
     !%Description
-    !% Defines how many of the <tt>TDPolarization</tt> axes are equivalent. This information can then
-    !% be used by <tt>oct-cross-section</tt> to rebuild the full polarizability tensor from just the
-    !% first <tt>TDPolarizationEquivAxes</tt> directions.
+    !% Defines how many of the <tt>TDPolarization</tt> axes are equivalent. This information is stored in a file and then
+    !% used by <tt>oct-propagation_spectrum</tt> to rebuild the full polarizability tensor from just the
+    !% first <tt>TDPolarizationEquivAxes</tt> directions. This variable is also used by <tt>CalculationMode = vdw</tt>.
     !%End
     call parse_integer(datasets_check('TDPolarizationEquivAxes'), 0, k%pol_equiv_axes)
 

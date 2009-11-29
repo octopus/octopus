@@ -70,7 +70,7 @@ program broad
   !%Default 0.0
   !%Section Utilities::oct-broad
   !%Description
-  !% The broadening is done for energies greater than CasidaSpectrumMinEnergy.
+  !% The broadening is done for energies greater than <tt>CasidaSpectrumMinEnergy</tt>.
   !%End
   call parse_float(datasets_check('CasidaSpectrumMinEnergy'), M_ZERO, br%min_energy, units_inp%energy)
 
@@ -79,7 +79,7 @@ program broad
   !%Default 1.0
   !%Section Utilities::oct-broad
   !%Description
-  !% The broadening is done for energies smaller than CasidaSpectrumMaxEnergy.
+  !% The broadening is done for energies smaller than <tt>CasidaSpectrumMaxEnergy</tt>.
   !%End
   call parse_float(datasets_check('CasidaSpectrumMaxEnergy'), M_ONE, br%max_energy, units_inp%energy)
 
