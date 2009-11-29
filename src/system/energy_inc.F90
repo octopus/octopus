@@ -20,9 +20,9 @@
 
 ! ---------------------------------------------------------
 ! calculates the eigenvalues of the real orbitals
-subroutine X(calculate_eigenvalues)(hm, gr, st, time)
+subroutine X(calculate_eigenvalues)(hm, der, st, time)
   type(hamiltonian_t), intent(inout) :: hm
-  type(grid_t) ,       intent(inout) :: gr
+  type(derivatives_t), intent(inout) :: der
   type(states_t),      intent(inout) :: st
   FLOAT,  optional,    intent(in)    :: time
 
@@ -39,7 +39,7 @@ subroutine X(calculate_eigenvalues)(hm, gr, st, time)
     call write_info(1)
   end if
 
-  if(gr%sb%open_boundaries.and.calc_mode_is(CM_GS)) then
+  if(der%mesh%sb%open_boundaries .and. calc_mode_is(CM_GS)) then
     ! For open boundaries we know the eigenvalues.
     st%eigenval = st%ob_eigenval
   else
@@ -53,9 +53,9 @@ subroutine X(calculate_eigenvalues)(hm, gr, st, time)
 
     do ik = st%d%kpt%start, st%d%kpt%end
 
-      SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim, 1:st%d%block_size))
+      SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:st%d%dim, 1:st%d%block_size))
       if(st%np_size) then
-        SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim, 1:st%d%block_size))
+        SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim, 1:st%d%block_size))
       end if
 
       do minst = st%st_start, st%st_end, st%d%block_size
@@ -63,7 +63,7 @@ subroutine X(calculate_eigenvalues)(hm, gr, st, time)
 
         if(st%np_size) then
           call batch_init(psib, st%d%dim, minst, maxst, psi)
-          call batch_set(psib, gr%mesh%np,  st%X(psi)(:, :, minst:, ik))
+          call batch_set(psib, der%mesh%np,  st%X(psi)(:, :, minst:, ik))
         else
           call batch_init(psib, st%d%dim, minst, maxst, st%X(psi)(:, :, minst:, ik))
         end if
@@ -71,9 +71,9 @@ subroutine X(calculate_eigenvalues)(hm, gr, st, time)
         call batch_init(hpsib, st%d%dim, minst, maxst, hpsi)
 
         if(present(time)) then
-          call X(hamiltonian_apply_batch)(hm, gr%der, psib, hpsib, ik, time)
+          call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time)
         else
-          call X(hamiltonian_apply_batch)(hm, gr%der, psib, hpsib, ik)
+          call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik)
         end if
 
         call batch_end(psib)
@@ -81,7 +81,7 @@ subroutine X(calculate_eigenvalues)(hm, gr, st, time)
         
         do ist = minst, maxst 
           st%eigenval(ist, ik) = &
-            R_REAL(X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), hpsi(:, :, ist - minst + 1)))
+            R_REAL(X(mf_dotp)(der%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), hpsi(:, :, ist - minst + 1)))
         end do
 
       end do

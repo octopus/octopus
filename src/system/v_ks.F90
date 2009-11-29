@@ -257,9 +257,9 @@ contains
     if(ks%frozen_hxc) then
       if(calc_eigenval_) then
         if (states_are_real(st)) then
-          call dcalculate_eigenvalues(hm, gr, st)
+          call dcalculate_eigenvalues(hm, gr%der, st)
         else
-          call zcalculate_eigenvalues(hm, gr, st)
+          call zcalculate_eigenvalues(hm, gr%der, st)
         end if
       end if
       call pop_sub(); return
@@ -327,9 +327,9 @@ contains
 
     if(calc_eigenval_) then
       if (states_are_real(st)) then
-        call dcalculate_eigenvalues(hm, gr, st)
+        call dcalculate_eigenvalues(hm, gr%der, st)
       else
-        call zcalculate_eigenvalues(hm, gr, st)
+        call zcalculate_eigenvalues(hm, gr%der, st)
       end if
     end if
 
@@ -417,15 +417,16 @@ contains
     SAFE_ALLOCATE(rho(1:gr%mesh%np))
 
     ! calculate the total density
-    call lalg_copy(gr%mesh%np, st%rho(:, 1), rho)
+    call lalg_copy(gr%fine%mesh%np, st%rho(:, 1), rho)
+
     do is = 2, hm%d%spin_channels
-      forall(ip = 1:gr%mesh%np) rho(ip) = rho(ip) + st%rho(ip, is)
+      forall(ip = 1:gr%fine%mesh%np) rho(ip) = rho(ip) + st%rho(ip, is)
     end do
 
     ! Add, if it exists, the frozen density from the inner orbitals.
     if(associated(st%frozen_rho)) then
       do is = 1, hm%d%spin_channels
-        forall(ip = 1:gr%mesh%np) rho(ip) = rho(ip) + st%frozen_rho(ip, is)
+        forall(ip = 1:gr%fine%mesh%np) rho(ip) = rho(ip) + st%frozen_rho(ip, is)
       end do
     end if
 
@@ -438,7 +439,8 @@ contains
     end if
 
     ! solve the Poisson equation
-    call dpoisson_solve(gr%der, hm%vhartree, rho)
+    call dpoisson_solve(gr%fine%der, hm%vhartree, rho)
+
     ! Get the Hartree energy
     hm%ehartree = M_HALF*dmf_dotp(gr%mesh, rho, hm%vhartree)
 
