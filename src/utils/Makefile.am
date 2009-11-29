@@ -49,7 +49,7 @@ oct_xyz_anim_LDADD   = $(all_LIBS)
 oct_casida_spectrum_SOURCES = casida_spectrum.F90
 oct_casida_spectrum_LDADD =  $(core_LIBS) $(external_LIBS)
 
-oct_vibrational_SOURCES = phonon_spectrum.F90
+oct_vibrational_SOURCES = vibrational.F90
 oct_vibrational_LDADD =  $(core_LIBS) $(external_LIBS)
 
 oct_center_geom_SOURCES = centergeom.F90
