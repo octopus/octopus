@@ -88,11 +88,11 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
 
         if(gr%have_fine_mesh) then
         ! conveniently, multigrid_coarse2fine sets the boundary conditions in the process
-          call X(multigrid_coarse2fine)(gr%fine%tt, gr%der, gr%mesh, gr%fine%mesh, st%X(psi)(:, idim, ist, ik), psi(:, idim))
+          call X(multigrid_coarse2fine)(gr%fine%tt, gr%der, gr%fine%mesh, st%X(psi)(:, idim, ist, ik), psi(:, idim))
           if (present(lr)) then
-            call X(multigrid_coarse2fine)(gr%fine%tt, gr%der, gr%mesh, gr%fine%mesh, &
+            call X(multigrid_coarse2fine)(gr%fine%tt, gr%der, gr%fine%mesh, &
               lr%X(dl_psi)(:, idim, ist, ik), dl_psi(:, idim))
-            call X(multigrid_coarse2fine)(gr%fine%tt, gr%der, gr%mesh, gr%fine%mesh, &
+            call X(multigrid_coarse2fine)(gr%fine%tt, gr%der, gr%fine%mesh, &
               lr2%X(dl_psi)(:, idim, ist, ik), dl_psi2(:, idim))
           endif
         else

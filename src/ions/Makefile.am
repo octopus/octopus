@@ -50,6 +50,6 @@ solids.o: solids.F90 simul_box.o
 vibrations.o : vibrations.F90 simul_box.o geometry.o
 crystal.o : crystal.F90 geometry.o simul_box.o symmetries.o
 ion_dynamics.o : ion_dynamics.F90 simul_box.o geometry.o xyz_file.o
-symmetries.o : symmetries.F90
+symmetries.o : symmetries.F90 geometry.o
 spglib_f.o : spglib_f.c
 

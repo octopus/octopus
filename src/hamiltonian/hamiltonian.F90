@@ -713,7 +713,8 @@ contains
     hm%coarse_v%level(0)%p(1:gr%mesh%np) = hm%ep%vpsl(1:gr%mesh%np) + hm%vhxc(1:gr%mesh%np, 1)
 
     do level = 1, gr%mgrid%n_levels
-      call dmultigrid_fine2coarse(gr%mgrid, level, hm%coarse_v%level(level - 1)%p, hm%coarse_v%level(level)%p, INJECTION)
+      call dmultigrid_fine2coarse(gr%mgrid%level(level)%tt, gr%mgrid%level(level - 1)%der, &
+        gr%mgrid%level(level)%mesh, hm%coarse_v%level(level - 1)%p, hm%coarse_v%level(level)%p, INJECTION)
     end do
 
   end subroutine hamiltonian_mg_init

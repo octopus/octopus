@@ -20,10 +20,9 @@
 #include "global.h"
 
   ! ---------------------------------------------------------
-  subroutine X(multigrid_coarse2fine)(tt, coarse_der, coarse_mesh, fine_mesh, f_coarse, f_fine, order)
+  subroutine X(multigrid_coarse2fine)(tt, coarse_der, fine_mesh, f_coarse, f_fine, order)
     type(transfer_table_t),  intent(in)    :: tt
     type(derivatives_t),     intent(in)    :: coarse_der
-    type(mesh_t),            intent(in)    :: coarse_mesh
     type(mesh_t),            intent(in)    :: fine_mesh
     R_TYPE,                  intent(inout) :: f_coarse(:)
     R_TYPE,                  intent(out)   :: f_fine(:)
@@ -37,8 +36,8 @@
 
     call profiling_in(interp_prof, "MG_INTERPOLATION")
 
-    ASSERT(ubound(f_coarse, dim = 1) == coarse_mesh%np_part)
-    ASSERT(coarse_mesh%np == tt%n_coarse)
+    ASSERT(ubound(f_coarse, dim = 1) == coarse_der%mesh%np_part)
+    ASSERT(coarse_der%mesh%np == tt%n_coarse)
 
     order_ = 1
     if(present(order)) order_ = order
@@ -50,12 +49,12 @@
 
     call interpolation_coefficients(2*order_, points, order_ + M_HALF, factor)
 
-    factor = factor/coarse_mesh%sb%dim
+    factor = factor/coarse_der%mesh%sb%dim
 
     call X(derivatives_set_bc)(coarse_der, f_coarse)
 
 #ifdef HAVE_MPI
-    if(coarse_mesh%parallel_in_domains) call X(vec_ghost_update)(coarse_mesh%vp, f_coarse)
+    if(coarse_der%mesh%parallel_in_domains) call X(vec_ghost_update)(coarse_der%mesh%vp, f_coarse)
 #endif
 
     do ipf = 1, fine_mesh%np
@@ -71,16 +70,16 @@
       
       f_fine(ipf) = M_ZERO
       
-      do idir = 1, coarse_mesh%sb%dim
+      do idir = 1, coarse_der%mesh%sb%dim
         ifactor = 1
         do ii = -order_, order_
           if(ii == 0) cycle
           xc = xf + (2*ii - sign(1, ii))*dd
           xc = xc/2
-          ipc = coarse_mesh%idx%lxyz_inv(xc(1), xc(2), xc(3))
+          ipc = coarse_der%mesh%idx%lxyz_inv(xc(1), xc(2), xc(3))
 #ifdef HAVE_MPI
             ! translate to a local index
-            if(coarse_mesh%parallel_in_domains) ipc = vec_global2local(coarse_mesh%vp, ipc, coarse_mesh%vp%partno)
+          if(coarse_der%mesh%parallel_in_domains) ipc = vec_global2local(coarse_der%mesh%vp, ipc, coarse_der%mesh%vp%partno)
 #endif
           f_fine(ipf) = f_fine(ipf) + factor(ifactor)*f_coarse(ipc)
           ifactor = ifactor + 1
@@ -94,12 +93,13 @@
   end subroutine X(multigrid_coarse2fine)
 
   ! ---------------------------------------------------------
-  subroutine X(multigrid_fine2coarse)(mgrid, ilevel, f_fine, f_coarse, method_p)
-    type(multigrid_t),    intent(in)    :: mgrid
-    integer,              intent(in)    :: ilevel
-    R_TYPE,               intent(inout) :: f_fine(:)
-    R_TYPE,               intent(out)   :: f_coarse(:)
-    integer, optional,    intent(in)    :: method_p
+  subroutine X(multigrid_fine2coarse)(tt, fine_der, coarse_mesh, f_fine, f_coarse, method_p)
+    type(transfer_table_t), intent(in)    :: tt
+    type(derivatives_t),    intent(in)    :: fine_der
+    type(mesh_t),           intent(in)    :: coarse_mesh
+    R_TYPE,                 intent(inout) :: f_fine(:)
+    R_TYPE,                 intent(out)   :: f_coarse(:)
+    integer, optional,      intent(in)    :: method_p
 
     integer :: method
 
@@ -113,10 +113,9 @@
 
     select case(method)
     case(FULLWEIGHT)
-      call X(multigrid_restriction)(mgrid%level(ilevel)%tt, mgrid%level(ilevel - 1)%der, &
-        mgrid%level(ilevel - 1)%mesh, mgrid%level(ilevel)%mesh, f_fine, f_coarse)
+      call X(multigrid_restriction)(tt, fine_der, coarse_mesh, f_fine, f_coarse)
     case(INJECTION)
-      call X(multigrid_injection)(mgrid%level(ilevel)%tt, f_fine, f_coarse)
+      call X(multigrid_injection)(tt, f_fine, f_coarse)
     case default
       write(message(1), '(a,i2,a)') 'Multigrid: Restriction method  = ', method, ' is not valid.'
       call write_fatal(1)
@@ -146,10 +145,9 @@
   end subroutine X(multigrid_injection)
 
   ! ---------------------------------------------------------
-  subroutine X(multigrid_restriction)(tt, fine_der, fine_mesh, coarse_mesh, f_fine, f_coarse)
+  subroutine X(multigrid_restriction)(tt, fine_der, coarse_mesh, f_fine, f_coarse)
     type(transfer_table_t), intent(in)    :: tt
     type(derivatives_t),    intent(in)    :: fine_der
-    type(mesh_t),           intent(in)    :: fine_mesh
     type(mesh_t),           intent(in)    :: coarse_mesh
     R_TYPE,                 intent(inout) :: f_fine(:)
     R_TYPE,                 intent(out)   :: f_coarse(:)
@@ -173,39 +171,41 @@
     call X(derivatives_set_bc)(fine_der, f_fine)
 
 #ifdef HAVE_MPI
-    if(fine_mesh%parallel_in_domains) call X(vec_ghost_update)(fine_mesh%vp, f_fine)
+    if(fine_der%mesh%parallel_in_domains) call X(vec_ghost_update)(fine_der%mesh%vp, f_fine)
 #endif
 
     do n = 1, tt%n_coarse
       fn = tt%to_coarse(n)
 #ifdef HAVE_MPI
       ! translate to a global index
-      if(fine_mesh%parallel_in_domains) fn = fine_mesh%vp%local(fn - 1 + fine_mesh%vp%xlocal(fine_mesh%vp%partno))
+      if(fine_der%mesh%parallel_in_domains) then
+        fn = fine_der%mesh%vp%local(fn - 1 + fine_der%mesh%vp%xlocal(fine_der%mesh%vp%partno))
+      end if
 #endif
-      fi(:) = fine_mesh%idx%Lxyz(fn, :)
+      fi(:) = fine_der%mesh%idx%Lxyz(fn, :)
 
       f_coarse(n) = M_ZERO
 
       do di = -1, 1
         do dj = -1, 1
           do dk = -1, 1
-            fn = fine_mesh%idx%Lxyz_inv(fi(1) + di, fi(2) + dj, fi(3) + dk)
+            fn = fine_der%mesh%idx%Lxyz_inv(fi(1) + di, fi(2) + dj, fi(3) + dk)
 
 #ifdef HAVE_MPI
             ! translate to a local index
-            if(fine_mesh%parallel_in_domains) fn = vec_global2local(fine_mesh%vp, fn, fine_mesh%vp%partno)
+            if(fine_der%mesh%parallel_in_domains) fn = vec_global2local(fine_der%mesh%vp, fn, fine_der%mesh%vp%partno)
 #endif
-            if(fine_mesh%use_curvilinear) then
-              f_coarse(n) = f_coarse(n) + weight(di, dj, dk)*f_fine(fn)*fine_mesh%vol_pp(fn)
+            if(fine_der%mesh%use_curvilinear) then
+              f_coarse(n) = f_coarse(n) + weight(di, dj, dk)*f_fine(fn)*fine_der%mesh%vol_pp(fn)
             else
-              f_coarse(n) = f_coarse(n) + weight(di, dj, dk)*f_fine(fn)*fine_mesh%vol_pp(1)
+              f_coarse(n) = f_coarse(n) + weight(di, dj, dk)*f_fine(fn)*fine_der%mesh%vol_pp(1)
             end if
 
           end do
         end do
       end do
 
-      if(fine_mesh%use_curvilinear) then
+      if(fine_der%mesh%use_curvilinear) then
         f_coarse(n) = f_coarse(n)/coarse_mesh%vol_pp(n)
       else
         f_coarse(n) = f_coarse(n)/coarse_mesh%vol_pp(1)

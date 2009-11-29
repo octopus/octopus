@@ -1189,7 +1189,7 @@ contains
     
     if(gr%have_fine_mesh) then
       SAFE_ALLOCATE(frho(1:gr%fine%mesh%np))
-      call dmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%mesh, gr%fine%mesh, crho, frho, order = 2)
+      call dmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%fine%mesh, crho, frho, order = 2)
       forall(ip = 1:gr%fine%mesh%np) rho(ip, ispin) = rho(ip, ispin) + frho(ip)
       SAFE_DEALLOCATE_P(crho)
       SAFE_DEALLOCATE_A(frho)

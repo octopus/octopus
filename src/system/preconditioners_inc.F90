@@ -137,7 +137,8 @@ contains
       q2 = M_ZERO
 
       ! move to level  1
-      call X(multigrid_fine2coarse)(gr%mgrid, 1, a(:, idim), r1, FULLWEIGHT)
+      call X(multigrid_fine2coarse)(gr%mgrid%level(1)%tt, gr%mgrid%level(0)%der, &
+        gr%mgrid%level(1)%mesh, a(:, idim), r1, FULLWEIGHT)
 
       forall (ip = 1:mesh1%np)
         r1(ip) = -r1(ip)
@@ -150,7 +151,8 @@ contains
 
       ! move to level  2
 
-      call X(multigrid_fine2coarse)(gr%mgrid, 2, q1, r2, FULLWEIGHT)
+      call X(multigrid_fine2coarse)(gr%mgrid%level(2)%tt, gr%mgrid%level(1)%der, &
+        gr%mgrid%level(2)%mesh, q1, r2, FULLWEIGHT)
 
       forall (ip = 1:mesh2%np) d2(ip) = CNST(16.0)*step*r2(ip)
 
@@ -164,7 +166,7 @@ contains
       ! back to level 1
 
       call X(multigrid_coarse2fine)(gr%mgrid%level(2)%tt, gr%mgrid%level(2)%der, &
-        gr%mgrid%level(2)%mesh,  gr%mgrid%level(1)%mesh, d2, t1)
+        gr%mgrid%level(1)%mesh, d2, t1)
 
       forall (ip = 1:mesh1%np) 
         q1(ip) = q1(ip) + t1(ip)
@@ -181,7 +183,7 @@ contains
       ! and finally back to level 0
 
       call X(multigrid_coarse2fine)(gr%mgrid%level(1)%tt ,gr%mgrid%level(1)%der, &
-        gr%mgrid%level(1)%mesh, gr%mgrid%level(0)%mesh, d1, d0)
+        gr%mgrid%level(0)%mesh, d1, d0)
 
       forall (ip = 1:mesh0%np) d0(ip) = -d0(ip)
 
