@@ -1,6 +1,6 @@
 =head1 NAME
 
-oct-rsf - Calculates the rotational spectrum
+oct-rsf - Calculates the rotatory-strength spectrum
 
 =head1 SYNOPSIS
 
@@ -21,7 +21,8 @@ this with Fortran 90.]
 
 This program is one of the B<octopus> utilities.
 
-(WARNING: MISSING SHORT DESCRIPTION OF THE PROGRAM)
+Uses output from a time-propagation run to calculate the rotatory strength,
+for circular dichroism or optical rotation.
 
 The man pages of octopus and of the auxiliary octopus
 sub-programs (oct-something) are not intended to contain the
@@ -46,7 +47,7 @@ This  is free software; see the source for copying conditions.  There is NO warr
 
 =head1 SEE ALSO
 
-The largest source of documentation is expected to be at the octopus wiki: S<http://www.tddft.org/programs/octopus/wiki/>.
+The largest source of documentation is the octopus wiki: S<http://www.tddft.org/programs/octopus/wiki/>.
 
-At the usual standard locations, you will also find and info file, F<octopus.info>.
+At the usual standard locations, you will also find an info file, F<octopus.info>.
 

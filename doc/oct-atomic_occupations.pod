@@ -15,8 +15,8 @@ oct-atomic_occupations - prints atomic electronic configurations.
 This script is one of the B<octopus> utilities. 
 
 It prints out to standard output the atomic electronic configuration
-of a given atom, and the way in which this electronic configuration
-should reflect in the %Occupations block of a corresponding B<octopus>
+of a given atom, and the way this electronic configuration
+should be specified in the %Occupations block of an B<octopus>
 input file.
 
 The man pages of octopus and of the auxiliary octopus
@@ -27,9 +27,9 @@ L<SEE ALSO> section below.
 
 =over
 
-=item B<-s> specie
+=item B<-s> species
 
-specie should be the atomic symbol (e.g. Na, Au, etc).
+species is the atomic symbol (e.g. Na, Au, etc).
 
 =item B<-h>
 
@@ -61,6 +61,6 @@ This  is free software; see the source for copying conditions.  There is NO warr
 
 =head1 SEE ALSO
 
-The largest source of documentation is expected to be at the octopus wiki: S<http://www.tddft.org/programs/octopus/wiki/>.
+The largest source of documentation is the octopus wiki: S<http://www.tddft.org/programs/octopus/wiki/>.
 
 

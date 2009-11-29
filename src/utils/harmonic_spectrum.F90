@@ -21,21 +21,21 @@
 
 program harmonic_spectrum
   use command_line_m
-  use global_m
-  use messages_m
   use datasets_m
+  use global_m
   use io_m
-  use unit_m
-  use unit_system_m
+  use messages_m
   use parser_m
   use spectrum_m
+  use unit_m
+  use unit_system_m
   use varinfo_m
 
   implicit none
 
   integer :: mode, ierr
   FLOAT :: w0
-  type(spec_t) :: s
+  type(spec_t) :: spectrum
   character :: pol
   logical :: get_maxima
 
@@ -45,7 +45,7 @@ program harmonic_spectrum
 
   call getopt_init(ierr)
   if(ierr.ne.0) then
-    write(stderr, '(a)') "Your fortran compiler doesn't support command line arguments;"
+    write(stderr, '(a)') "Your Fortran compiler doesn't support command-line arguments;"
     write(stderr, '(a)') "the oct-harmonic-spectrum command is not available."
     stop
   end if
@@ -68,7 +68,7 @@ program harmonic_spectrum
   end if
   call unit_system_init()
 
-  call spectrum_init(s)
+  call spectrum_init(spectrum)
 
   call messages_obsolete_variable('HarmonicSpectrumPolarization')
   call messages_obsolete_variable('HarmonicSpectrumMode')
@@ -83,22 +83,22 @@ program harmonic_spectrum
   end if
   if( (mode.ne.HS_FROM_MULT) .and. &
       (mode .ne.HS_FROM_ACC) ) then
-    message(1) = 'The harmonic spectrum mode given in the command line is not valid.'
+    message(1) = 'The harmonic-spectrum mode given in the command line is not valid.'
     call write_fatal(1)
   end if
 
   select case(mode)
   case(HS_FROM_MULT)
     if(get_maxima) then
-      call spectrum_hs_from_mult('hs-mult-maxima', s, pol, w0)
+      call spectrum_hs_from_mult('hs-mult-maxima', spectrum, pol, w0)
     else
-      call spectrum_hs_from_mult('hs-mult', s, pol)
+      call spectrum_hs_from_mult('hs-mult', spectrum, pol)
     end if
   case(HS_FROM_ACC)
     if(get_maxima) then
-      call spectrum_hs_from_acc('hs-acc-maxima', s, pol, w0)
+      call spectrum_hs_from_acc('hs-acc-maxima', spectrum, pol, w0)
     else
-      call spectrum_hs_from_acc('hs-acc', s, pol)
+      call spectrum_hs_from_acc('hs-acc', spectrum, pol)
     end if
   end select
 

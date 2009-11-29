@@ -11,20 +11,20 @@ octopus - Ab-initio Time-dependent Electronic Structure.
 =back
 
 [octopus no longer reads the standard input (this causes
-troubles to many MPI implementations). All standard input
+trouble to many MPI implementations). All standard input
 will be simply ignored. An input file named F<inp> must be present
 in the running directory.
-Also, octopus accepts no command line arguments, since there is
+Also, octopus accepts no command-line arguments, since there is
 not a standard way to do this with Fortran 90.]
 
 
 =head1 DESCRIPTION
 
-octopus is a program aimed at the ab initio virtual
+octopus is a program aimed at ab initio virtual
 experimentation on electron/ion dynamics in external
 electromagnetic fields of arbitrary intensity, shape
 and frequency in a hopefully ever increasing range of
-systems types.
+system types.
 
 The man pages of octopus and of the auxiliary octopus
 sub-programs (oct-something) are not intended to contain the
@@ -49,7 +49,7 @@ This  is free software; see the source for copying conditions.  There is NO warr
 
 =head1 SEE ALSO
 
-The largest source of documentation is expected to be at the octopus wiki: S<http://www.tddft.org/programs/octopus/wiki/>.
+The largest source of documentation is the octopus wiki: S<http://www.tddft.org/programs/octopus/wiki/>.
 
-At the usual standard locations, you will also find and info file, F<octopus.info>.
+At the usual standard locations, you will also find an info file, F<octopus.info>.
 

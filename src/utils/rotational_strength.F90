@@ -20,18 +20,18 @@
 #include "global.h"
 
 program rotational_strength
-  use global_m
-  use messages_m
   use datasets_m
-  use parser_m
+  use global_m
   use io_m
+  use messages_m
+  use parser_m
+  use spectrum_m
   use unit_m
   use unit_system_m
-  use spectrum_m
 
   implicit none
 
-  type(spec_t) :: s
+  type(spec_t) :: spectrum
   integer :: in_file, out_file
 
   ! Initialize stuff
@@ -44,7 +44,7 @@ program rotational_strength
   end if
   call unit_system_init()
 
-  call spectrum_init(s)
+  call spectrum_init(spectrum)
 
   in_file = io_open('angular', action='read', status='old', die=.false.)
   if(in_file < 0) in_file = io_open('td.general/angular', action='read', status='old', die=.false.)
@@ -55,7 +55,7 @@ program rotational_strength
   end if
   out_file = io_open('rotatory_strength', action='write')
 
-  call spectrum_rotatory_strength(in_file, out_file, s)
+  call spectrum_rotatory_strength(in_file, out_file, spectrum)
   call io_close(in_file); call io_close(out_file)
 
   call io_end()

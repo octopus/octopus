@@ -1,19 +1,19 @@
 =head1 NAME
 
-oct-cross-section - Calculates the absorption cross section tensor.
+oct-propagation_spectrum - Calculates the absorption cross-section tensor from a time-propagation run.
 
 =head1 SYNOPSIS
 
 =over
 
-=item B<oct-cross-section>
+=item B<oct-propagation_spectrum>
 
 =back
 
-[oct-cross-section does not read the standard input: all standard input
+[oct-propagation_spectrum does not read the standard input: all standard input
 will be simply ignored. An input file named F<inp> must be present
 in the running directory.
-Also, oct-cross-section accepts no command line arguments, since there is
+Also, oct-propagation_spectrum accepts no command-line arguments, since there is
 not a standard way to do this with Fortran 90.]
 
 
@@ -21,7 +21,8 @@ not a standard way to do this with Fortran 90.]
 
 This program is one of the B<octopus> utilities.
 
-(WARNING: MISSING SHORT DESCRIPTION OF THE PROGRAM)
+It uses the response of the system to a kick to the density, in a time-propagation run (CalculationMode = td),
+to calculate a spectrum of the absorption cross-section.
 
 The man pages of octopus and of the auxiliary octopus
 sub-programs (oct-something) are not intended to contain the
@@ -46,7 +47,7 @@ This  is free software; see the source for copying conditions.  There is NO warr
 
 =head1 SEE ALSO
 
-The largest source of documentation is expected to be at the octopus wiki: S<http://www.tddft.org/programs/octopus/wiki/>.
+The largest source of documentation is the octopus wiki: S<http://www.tddft.org/programs/octopus/wiki/>.
 
-At the usual standard locations, you will also find and info file, F<octopus.info>.
+At the usual standard locations, you will also find an info file, F<octopus.info>.
 

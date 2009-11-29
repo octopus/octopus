@@ -15,25 +15,25 @@ oct-run_periodic_table - run octopus for atoms
 This script is one of the B<octopus> utilities. 
 
 Simple script to run octopus for all atoms in the periodic table for
-which pseudopoentials are available.
+which pseudopotentials are available.
 
 =over
 
 =item B<-h> 
 
-Show this message
+Show this message.
 
 =item B<-n>
 
-Run in dry run mode (show what would be executed)
+Run in dry-run mode (show what would be executed).
 
-=item B<-s> specie
+=item B<-s> species
 
-Run octopus for given specie.
+Run octopus for given species.
 
 =item B<-a>
 
-Run octopus for all atoms            
+Run octopus for all atoms.
 
 =item B<-r>
 
@@ -45,7 +45,7 @@ Run with electronic temperature.
 
 =item B<-e> no_states
 
-Use extra states
+Use extra states.
 
 =item B<-x> octopus_executable
 
@@ -61,10 +61,10 @@ L<SEE ALSO> section below.
 
 =head1 EXAMPLES
 
-The following command would run the octopus_cmplx executable to
+The following command would run the octopus executable to
 calculate the He atom.
 
-prompt> B<oct-run_periodic_table> -s He -x octopus_cmplx
+prompt> B<oct-run_periodic_table> -s He -x octopus
 
 
 =head1 AUTHOR
@@ -83,6 +83,6 @@ This  is free software; see the source for copying conditions.  There is NO warr
 
 =head1 SEE ALSO
 
-The largest source of documentation is expected to be at the octopus wiki: S<http://www.tddft.org/programs/octopus/wiki/>.
+The largest source of documentation is the octopus wiki: S<http://www.tddft.org/programs/octopus/wiki/>.
 
 

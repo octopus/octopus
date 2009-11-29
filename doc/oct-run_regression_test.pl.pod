@@ -1,4 +1,4 @@
-=head1 NAME
+o=head1 NAME
 
 oct-run_regression_test.pl - Script to create and run B<octopus> regression tests
 
@@ -34,7 +34,7 @@ Run in verbose mode. Useful for debugging the script.
 
 =item B<-h>
 
-Show a brief summary of command line options.
+Show a brief summary of command-line options.
 
 =item B<-D> I<DIR>
 
@@ -55,7 +55,7 @@ This option specifies the input file for a regression test.
 
 =item B<-i>
 
-Print content of the Octopus inputfile which is used for the current test to stdout.
+Print content of the Octopus input file which is used for the current test to stdout.
 
 =item B<-p>
 
@@ -73,7 +73,7 @@ Run matches only (assumes there are work directories present).
 
 =head1 EXAMPLES
 
-To create a template for a regression test run e. g.
+To create a template for a regression test run, e.g.
 
 	oct-run_regression_test.pl -c finite_systems_3d/sodium.test
 
@@ -81,12 +81,12 @@ Running a test can be achieved with
 
 	oct-run_regression_test.pl -f finite_systems_3d/sodium.test
 
-If a test run fails it might be useful for bug tracing to preserve the working directory
+If a test run fails it might be useful for bug-tracing to preserve the working directory
 of this run and to print out the input file
 
  	oct-run_regression_test.pl -pi -f finite_systems_3d/sodium.test
 
-Run a MPI test with a local directory as working directory
+Run an MPI test with a local directory as working directory
 
 	oct-run_regression_test.pl -f benzene.test -D $PWD/../src -s _mpi
 
@@ -108,5 +108,5 @@ PARTICULAR PURPOSE.
 
 =head1 SEE ALSO
 
-The largest source of documentation is expected to be at the Octopus
+The largest source of documentation is the Octopus
 wiki: S<http://www.tddft.org/programs/octopus/wiki/>.

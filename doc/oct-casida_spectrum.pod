@@ -1,19 +1,19 @@
-=head1 NAME
+p=head1 NAME
 
-oct-broad - Broadens the linear-response spectra.
+oct-casida_spectrum - Calculates a spectrum from the excitation energies in a Casida run.
 
 =head1 SYNOPSIS
 
 =over
 
-=item B<oct-broad>
+=item B<oct-casida_spectrum>
 
 =back
 
-[oct-broad does not read standard input: all standard input
+[oct-casida_spectrum does not read standard input: all standard input
 will be simply ignored. An input file named F<inp> must be present
 in the running directory.
-Also, oct-broad accepts no command line arguments, since there is
+Also, oct-casida_spectrum accepts no command line arguments, since there is
 not a standard way to do this with Fortran 90.]
 
 
@@ -21,9 +21,10 @@ not a standard way to do this with Fortran 90.]
 
 This program is one of the B<octopus> utilities.
 
-It post-processes the files F<linear/casida>,
-F<linear/petersilka> and F<linear/eigenvalues>, that
-contain the (WARNING: MISSING SHORT DESCRIPTION OF THE PROGRAM).
+It post-processes the files F<casida/casida>,
+F<casida/petersilka> and F<casida/eigenvalues>, that
+contain the excitation energies of the system from a Casida run
+(CalculationMode = casida). Each pole is broadened into a Lorentzian peak.
 
 The man pages of octopus and of the auxiliary octopus
 sub-programs (oct-something) are not intended to contain the
@@ -50,5 +51,5 @@ This  is free software; see the source for copying conditions.  There is NO warr
 
 The largest source of documentation is expected to be at the octopus wiki: S<http://www.tddft.org/programs/octopus/wiki/>.
 
-At the usual standard locations, you will also find and info file, F<octopus.info>.
+At the usual standard locations, you will also find an info file, F<octopus.info>.
 

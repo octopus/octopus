@@ -1,4 +1,4 @@
-=head1 NAME
+ema=head1 NAME
 
 oct-run_testsuite - Script to run the B<octopus> testsuite.
 
@@ -34,7 +34,7 @@ Run in dry mode (show what would be executed).
 
 =item B<-g> I<LIST>
 
-Comma separated list of test groups to run. If not present, all tests
+Comma-separated list of test groups to run. If not present, all tests
 are run.
 
 =item B<-q>
@@ -90,5 +90,5 @@ PARTICULAR PURPOSE.
 
 =head1 SEE ALSO
 
-The largest source of documentation is expected to be at the Octopus
+The largest source of documentation is the Octopus
 wiki: S<http://www.tddft.org/programs/octopus/wiki/>.

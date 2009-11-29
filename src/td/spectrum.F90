@@ -1035,46 +1035,46 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_hsfunction_min(a, b, omega, omega_min, func_min)
-    FLOAT, intent(in)  :: a, b, omega
+  subroutine spectrum_hsfunction_min(aa, bb, omega, omega_min, func_min)
+    FLOAT, intent(in)  :: aa, bb, omega
     FLOAT, intent(out) :: omega_min, func_min
 
-    integer :: nfreqs, ierr, i
-    FLOAT :: x, hsval, minhsval, dw, w, hsa, hsb
+    integer :: nfreqs, ierr, ifreq
+    FLOAT :: xx, hsval, minhsval, dw, ww, hsa, hsb
 
     call push_sub('spectrum.spectrum_hsfunction_min')
 
-    ! x should be an initial guess for the minimum. So we do a quick search
+    ! xx should be an initial guess for the minimum. So we do a quick search
     ! that we refine later calling 1dminimize.
-    x = omega
-    call hsfunction(x, minhsval)
+    xx = omega
+    call hsfunction(xx, minhsval)
     nfreqs = 100
-    dw = (b-a)/(nfreqs-1)
-    do i = 1, nfreqs
-      w = a + dw*(i-1)
-      call hsfunction(w, hsval)
-      if(i .eq. 1)      hsa = hsval
-      if(i .eq. nfreqs) hsb = hsval
+    dw = (bb-aa)/(nfreqs-1)
+    do ifreq = 1, nfreqs
+      ww = aa + dw*(ifreq-1)
+      call hsfunction(ww, hsval)
+      if(ifreq .eq. 1)      hsa = hsval
+      if(ifreq .eq. nfreqs) hsb = hsval
       if(hsval < minhsval) then
         minhsval = hsval
-        x = w
+        xx = ww
       end if
     end do
 
     if( hsa == minhsval ) then
-      omega_min = a
+      omega_min = aa
       func_min = hsval
       call pop_sub(); return
     end if
     if( hsb == minhsval ) then
-      omega_min = b
+      omega_min = bb
       func_min = hsval
       call pop_sub(); return
     end if
 
     ! Around x, we call some GSL sophisticated search algorithm to find the minimum.
 #ifndef SINGLE_PRECISION
-    call loct_1dminimize(a, b, x, hsfunction, ierr)
+    call loct_1dminimize(aa, bb, xx, hsfunction, ierr)
 #else
     stop "FIXME: cannot work in single-precision."
 #endif
@@ -1083,8 +1083,8 @@ contains
       write(message(1),'(a)') 'Could not find a maximum.'      
       call write_fatal(1)
     end if
-    call hsfunction(x, hsval)
-    omega_min = x
+    call hsfunction(xx, hsval)
+    omega_min = xx
     func_min  = hsval
 
     call pop_sub()
@@ -1097,22 +1097,22 @@ contains
     FLOAT, intent(in)   :: omega
     FLOAT, intent(out)  :: power
 
-    CMPLX   :: c, ez1, ez, z
-    integer :: j
+    CMPLX   :: cc, ez1, ez, zz
+    integer :: jj
 
     call push_sub('spectrum.hsfunction')
 
-    c = M_z0
-    z = M_zI * omega * time_step_
-    ez1 = exp((is_-1)*z)
-    ez  = exp(z)
-    do j = is_, ie_
+    cc = M_z0
+    zz = M_zI * omega * time_step_
+    ez1 = exp((is_-1)*zz)
+    ez  = exp(zz)
+    do jj = is_, ie_
       ! This would be easier, but slower.
-      !c = c + exp(M_zI * omega * j * time_step_)*func_(j)
+      !cc = cc + exp(M_zI * omega * jj * time_step_)*func_(jj)
       ez1 = ez1 * ez
-      c = c + ez1*func_(j)
+      cc = cc + ez1*func_(jj)
     end do
-    power = -abs(c)**2*time_step_**2
+    power = -abs(cc)**2*time_step_**2
 
     call pop_sub()
   end subroutine hsfunction
@@ -1120,16 +1120,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_hs_from_mult(out_file, s, pol, w0)
-    character(len=*),   intent(in) :: out_file
-    type(spec_t),    intent(inout) :: s
-    character , intent(in) :: pol
-    FLOAT, optional, intent(in) :: w0
+  subroutine spectrum_hs_from_mult(out_file, spectrum, pol, w0)
+    character(len=*), intent(in)    :: out_file
+    type(spec_t),     intent(inout) :: spectrum
+    character,        intent(in)    :: pol
+    FLOAT,  optional, intent(in)    :: w0
 
-    integer :: i, j, iunit, nspin, time_steps, is, ie, ntiter, lmax
+    integer :: istep, jj, iunit, nspin, time_steps, is, ie, ntiter, lmax
     FLOAT :: dt, dump
     type(kick_t) :: kick
-    FLOAT, allocatable :: d(:,:)
+    FLOAT, allocatable :: dd(:,:)
     CMPLX, allocatable :: dipole(:), ddipole(:)
     type(unit_system_t) :: file_units
 
@@ -1141,39 +1141,39 @@ contains
       iunit = io_open('td.general/multipoles', action='read', status='old')
     end if
     call spectrum_mult_info(iunit, nspin, kick, time_steps, dt, file_units, lmax=lmax)
-    call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
+    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, is, ie, ntiter)
 
     call io_skip_header(iunit)
 
     ! load dipole from file
     SAFE_ALLOCATE(dipole(0:time_steps))
     SAFE_ALLOCATE(ddipole(0:time_steps))
-    SAFE_ALLOCATE(d(1:3, 1:nspin))
+    SAFE_ALLOCATE(dd(1:3, 1:nspin))
 
-    do i = 1, time_steps
-      read(iunit, *) j, dump, dump, d
+    do istep = 1, time_steps
+      read(iunit, *) jj, dump, dump, dd
       select case(pol)
       case('x')
-        dipole(i) = -sum(d(1, :))
+        dipole(istep) = -sum(dd(1, :))
       case('y')
-        dipole(i) = -sum(d(2, :))
+        dipole(istep) = -sum(dd(2, :))
       case('z')
-        dipole(i) =  sum(d(3, :))
+        dipole(istep) =  sum(dd(3, :))
       case('+')
-        dipole(i) = -sum(d(1, :) + M_zI*d(2, :)) / sqrt(M_TWO)
+        dipole(istep) = -sum(dd(1, :) + M_zI*dd(2, :)) / sqrt(M_TWO)
       case('-')
-        dipole(i) = -sum(d(1, :) - M_zI*d(2, :)) / sqrt(M_TWO)
+        dipole(istep) = -sum(dd(1, :) - M_zI*dd(2, :)) / sqrt(M_TWO)
       end select
-      dipole(i) = units_to_atomic(units_out%length, dipole(i))
+      dipole(istep) = units_to_atomic(units_out%length, dipole(istep))
     end do
-    SAFE_DEALLOCATE_A(d)
+    SAFE_DEALLOCATE_A(dd)
     dipole(0) = dipole(1)
     call io_close(iunit)
 
     ! we now calculate the acceleration.
     ddipole(0) = M_ZERO
-    do i = 1, time_steps - 1
-      ddipole(i) = (dipole(i-1)+dipole(i+1)-M_TWO*dipole(i))/dt**2
+    do istep = 1, time_steps - 1
+      ddipole(istep) = (dipole(istep-1)+dipole(istep+1)-M_TWO*dipole(istep))/dt**2
     end do
     call interpolate( dt*(/ -3, -2, -1 /),   &
                       ddipole(time_steps-3:time_steps-1), &
@@ -1181,7 +1181,7 @@ contains
                       ddipole(time_steps) )
 
     call spectrum_hsfunction_init(dt, is, ie, time_steps, ddipole)
-    call spectrum_hs(out_file, s, pol, w0)
+    call spectrum_hs(out_file, spectrum, pol, w0)
     call spectrum_hsfunction_end()
 
     SAFE_DEALLOCATE_A(dipole)
@@ -1193,50 +1193,50 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_hs_from_acc(out_file, s, pol, w0)
-    character(len=*),   intent(in) :: out_file
-    type(spec_t),    intent(inout) :: s
-    character, intent(in) :: pol
-    FLOAT, optional, intent(in) :: w0
+  subroutine spectrum_hs_from_acc(out_file, spectrum, pol, w0)
+    character(len=*), intent(in)    :: out_file
+    type(spec_t),     intent(inout) :: spectrum
+    character,        intent(in)    :: pol
+    FLOAT,  optional, intent(in)    :: w0
 
-    integer :: i, j, iunit, time_steps, is, ie, ntiter, ierr
-    FLOAT :: dt, a(MAX_DIM)
+    integer :: istep, jj, iunit, time_steps, is, ie, ntiter, ierr
+    FLOAT :: dt, aa(MAX_DIM)
     CMPLX, allocatable :: acc(:)
 
     call push_sub('spectrum.spectrum_hs_from_acc')
 
     call spectrum_acc_info(iunit, time_steps, dt)
-    call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
+    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, is, ie, ntiter)
 
     ! load dipole from file
     SAFE_ALLOCATE(acc(0:time_steps))
     acc = M_ZERO
     call io_skip_header(iunit)
-    do i = 1, time_steps
-      a = M_ZERO
-      read(iunit, '(28x,e20.12)', advance = 'no', iostat = ierr) a(1)
-      j = 2
-      do while( (ierr.eq.0) .and. (j <= MAX_DIM) )
-        read(iunit, '(e20.12)', advance = 'no', iostat = ierr) a(j)
+    do istep = 1, time_steps
+      aa = M_ZERO
+      read(iunit, '(28x,e20.12)', advance = 'no', iostat = ierr) aa(1)
+      jj = 2
+      do while( (ierr.eq.0) .and. (jj <= MAX_DIM) )
+        read(iunit, '(e20.12)', advance = 'no', iostat = ierr) aa(jj)
       end do
       select case(pol)
       case('x')
-        acc(i) = a(1)
+        acc(istep) = aa(1)
       case('y')
-        acc(i) = a(2)
+        acc(istep) = aa(2)
       case('z')
-        acc(i) = a(3)
+        acc(istep) = aa(3)
       case('+')
-        acc(i) = (a(1) + M_zI*a(2)) / sqrt(M_TWO)
+        acc(istep) = (aa(1) + M_zI*aa(2)) / sqrt(M_TWO)
       case('-')
-        acc(i) = (a(1) - M_zI*a(2)) / sqrt(M_TWO)
+        acc(istep) = (aa(1) - M_zI*aa(2)) / sqrt(M_TWO)
       end select
-      acc(i) = units_to_atomic(units_out%acceleration, acc(i))
+      acc(istep) = units_to_atomic(units_out%acceleration, acc(istep))
     end do
     close(iunit)
 
     call spectrum_hsfunction_init(dt, is, ie, time_steps, acc)
-    call spectrum_hs(out_file, s, pol, w0)
+    call spectrum_hs(out_file, spectrum, pol, w0)
     call spectrum_hsfunction_end()
 
     SAFE_DEALLOCATE_A(acc)
@@ -1246,14 +1246,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_hs(out_file, s, pol, w0)
-    character(len=*),   intent(in) :: out_file
-    type(spec_t),    intent(inout) :: s
-    character, intent(in) :: pol
-    FLOAT, optional, intent(in) :: w0
+  subroutine spectrum_hs(out_file, spectrum, pol, w0)
+    character(len=*), intent(in)    :: out_file
+    type(spec_t),     intent(inout) :: spectrum
+    character,        intent(in)    :: pol
+    FLOAT,  optional, intent(in)    :: w0
 
-    integer :: iunit, no_e, i
-    FLOAT   :: omega, hsval, x
+    integer :: iunit, no_e, ie
+    FLOAT   :: omega, hsval, xx
     FLOAT, allocatable :: sp(:)
 
     call push_sub('spectrum.spectrum_hs')
@@ -1265,14 +1265,14 @@ contains
       write(iunit, '(a1,a20,a20)') '#', &
         str_center('['//trim(units_abbrev(units_out%energy)) // ']', 20), &
         str_center('[('//trim(units_abbrev(units_out%length))//'/' &
-        //trim(units_abbrev(units_out%time))//')^2]' , 20)
+        //trim(units_abbrev(units_out%time**2)), 20)
 
       ! output
       omega = w0
-      do while(omega <= s%max_energy)
-        call spectrum_hsfunction_min(omega-w0, omega+w0, omega, x, hsval)
+      do while(omega <= spectrum%max_energy)
+        call spectrum_hsfunction_min(omega-w0, omega+w0, omega, xx, hsval)
 
-        write(iunit, '(1x,2e20.8)') units_from_atomic(units_out%energy, x), &
+        write(iunit, '(1x,2e20.8)') units_from_atomic(units_out%energy, xx), &
           units_from_atomic((units_out%length / units_out%time)**2, -hsval)
 
         ! 2*w0 because we assume that there are only odd peaks.
@@ -1282,13 +1282,13 @@ contains
 
     else
 
-      no_e = s%max_energy / s%energy_step
+      no_e = spectrum%max_energy / spectrum%energy_step
       SAFE_ALLOCATE(sp(0:no_e))
       sp = M_ZERO
 
-      do i = 0, no_e
-        call hsfunction(i*s%energy_step, sp(i))
-        sp(i) = -sp(i)
+      do ie = 0, no_e
+        call hsfunction(ie*spectrum%energy_step, sp(ie))
+        sp(ie) = -sp(ie)
       end do
 
       ! output
@@ -1298,10 +1298,10 @@ contains
         write(iunit, '(a1,a20,a20)') &
           '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 20), &
           str_center('[('//trim(units_abbrev(units_out%length))//'/' &
-            //trim(units_abbrev(units_out%time))//')^2]' , 20)
-        do i = 0, no_e
-          write(iunit, '(2e15.6)') units_from_atomic(units_out%energy, i*s%energy_step), &
-            units_from_atomic((units_out%length / units_out%time)**2, sp(i))
+            //trim(units_abbrev(units_out%time**2)), 20)
+        do ie = 0, no_e
+          write(iunit, '(2e15.6)') units_from_atomic(units_out%energy, ie*spectrum%energy_step), &
+            units_from_atomic((units_out%length / units_out%time)**2, sp(ie))
         end do
         call io_close(iunit)
       end if
@@ -1316,32 +1316,32 @@ contains
 
   ! ---------------------------------------------------------
   subroutine spectrum_mult_info(iunit, nspin, kick, time_steps, dt, file_units, lmax)
-    integer,           intent(in)  :: iunit
-    integer,           intent(out) :: nspin
-    type(kick_t),      intent(out) :: kick
-    integer,           intent(out) :: time_steps
-    FLOAT,             intent(out) :: dt
+    integer,             intent(in)  :: iunit
+    integer,             intent(out) :: nspin
+    type(kick_t),        intent(out) :: kick
+    integer,             intent(out) :: time_steps
+    FLOAT,               intent(out) :: dt
     type(unit_system_t), intent(out) :: file_units
-    integer, optional, intent(out) :: lmax
+    integer,   optional, intent(out) :: lmax
 
-    integer :: i
+    integer :: ii
     character(len=100) :: line
 
     call push_sub('spectrum.spectrum_mult_info')
 
     rewind(iunit); read(iunit,*); read(iunit,*)
-    read(iunit, '(15x,i2)')      nspin
+    read(iunit, '(15x,i2)') nspin
     if(present(lmax)) then
-      read(iunit, '(15x,i2)')      lmax
+      read(iunit, '(15x,i2)') lmax
     end if
     call kick_read(kick, iunit)
-    read(iunit, '(a)')           line
-    read(iunit, '(a)')           line
+    read(iunit, '(a)') line
+    read(iunit, '(a)') line
     call io_skip_header(iunit)
 
-    ! Figure out about the units of the file
-    i = index(line,'eV')
-    if(i.ne.0) then
+    ! Figure out the units of the file
+    ii = index(line,'eV')
+    if(ii.ne.0) then
       call unit_system_get(file_units, UNITS_EVA)
     else
       call unit_system_get(file_units, UNITS_ATOMIC)
@@ -1431,7 +1431,7 @@ contains
     integer, intent(out) :: iunit, time_steps
     FLOAT,   intent(out) :: dt
 
-    integer :: j
+    integer :: jj
     FLOAT :: t1, t2, dummy
 
     call push_sub('spectrum.spectrum_acc_info')
@@ -1448,7 +1448,7 @@ contains
     ! count number of time_steps
     time_steps = 0
     do
-      read(iunit, *, end=100) j, dummy
+      read(iunit, *, end=100) jj, dummy
       time_steps = time_steps + 1
       if(time_steps == 1) t1 = dummy
       if(time_steps == 2) t2 = dummy
@@ -1481,7 +1481,7 @@ contains
     ts = M_ZERO; te = time_steps*dt
     if(start_time < ts) start_time = ts
     if(start_time > te) start_time = te
-    if(end_time   > te .or. end_time <= M_ZERO) end_time   = te
+    if(end_time   > te .or. end_time <= M_ZERO) end_time = te
     if(end_time   < ts) end_time   = ts
 
     if(end_time < start_time) then
