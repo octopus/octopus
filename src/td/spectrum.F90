@@ -26,9 +26,9 @@ module spectrum_m
   use io_m
   use lalg_adv_m
   use loct_math_m
-  use parser_m
   use math_m
   use messages_m
+  use parser_m
   use profiling_m
   use string_m
   use unit_m
@@ -117,10 +117,10 @@ contains
 
     call push_sub('spectrum.spectrum_init')
 
-    !%Variable SpecDampMode
+    !%Variable PropagationSpectrumDampMode
     !%Type integer
     !%Default polynomial
-    !%Section Utilities::oct-cross-section
+    !%Section Utilities::oct-propagation_spectrum
     !%Description
     !% Decides which damping/filtering is to be applied in order to calculate
     !% spectra by calculating a Fourier transform.
@@ -133,13 +133,13 @@ contains
     !%Option gaussian 3
     !% Gaussian damping.
     !%End
-    call parse_integer  (datasets_check('SpecDampMode'), SPECTRUM_DAMP_POLYNOMIAL, s%damp)
-    if(.not.varinfo_valid_option('SpecDampMode', s%damp)) call input_error('SpecDampMode')
+    call parse_integer  (datasets_check('PropagationSpectrumDampMode'), SPECTRUM_DAMP_POLYNOMIAL, s%damp)
+    if(.not.varinfo_valid_option('PropagationSpectrumDampMode', s%damp)) call input_error('PropagationSpectrumDampMode')
 
-    !%Variable SpecTransform
+    !%Variable PropagationSpectrumTransform
     !%Type integer
     !%Default sine
-    !%Section Utilities::oct-cross-section
+    !%Section Utilities::oct-propagation_spectrum
     !%Description
     !% Decides which transform to perform.
     !%Option sine 2
@@ -149,10 +149,10 @@ contains
     !%Option exponential 1
     !% Exponential transform <math>\int dt \exp(-wt) f(t)</math>
     !%End
-    call parse_integer  (datasets_check('SpecTransform'), SPECTRUM_TRANSFORM_SIN, s%transform)
-    if(.not.varinfo_valid_option('SpecTransform', s%transform)) call input_error('SpecTransform')
+    call parse_integer  (datasets_check('PropagationSpectrumTransform'), SPECTRUM_TRANSFORM_SIN, s%transform)
+    if(.not.varinfo_valid_option('PropagationSpectrumTransform', s%transform)) call input_error('PropagationSpectrumTransform')
 
-    !%Variable SpecStartTime
+    !%Variable PropagationSpectrumStartTime
     !%Type float
     !%Default 0.0
     !%Section Utilities::oct-cross-section
@@ -160,9 +160,9 @@ contains
     !% Processing is done for the given function in a time-window that starts at the
     !% value of this variable.
     !%End
-    call parse_float(datasets_check('SpecStartTime'),  M_ZERO, s%start_time, units_inp%time)
+    call parse_float(datasets_check('PropagationSpectrumStartTime'),  M_ZERO, s%start_time, units_inp%time)
 
-    !%Variable SpecEndTime
+    !%Variable PropagationSpectrumEndTime
     !%Type float
     !%Default -1.0 au
     !%Section Utilities::oct-cross-section
@@ -171,36 +171,36 @@ contains
     !% value of this variable. If set to a negative value, the maximum value from 
     !% the corresponding multipole file will used.
     !%End
-    call parse_float(datasets_check('SpecEndTime'), -M_ONE, s%end_time, units_inp%time)
+    call parse_float(datasets_check('PropagationSpectrumEndTime'), -M_ONE, s%end_time, units_inp%time)
 
-    !%Variable SpecEnergyStep
+    !%Variable PropagationSpectrumEnergyStep
     !%Type float
     !%Default 0.01 eV
     !%Section Utilities::oct-cross-section
     !%Description
     !% Sampling rate for the spectrum.
     !%End
-    call parse_float(datasets_check('SpecEnergyStep'), CNST(0.01)/(M_TWO*P_Ry), s%energy_step, units_inp%energy)
+    call parse_float(datasets_check('PropagationSpectrumEnergyStep'), CNST(0.01)/(M_TWO*P_Ry), s%energy_step, units_inp%energy)
     
 
-    !%Variable SpecMaxEnergy
+    !%Variable PropagationSpectrumMaxEnergy
     !%Type float
     !%Default 20 eV
     !%Section Utilities::oct-cross-section
     !%Description
     !% The Fourier transform is calculated for energies smaller than this value.
     !%End
-    call parse_float(datasets_check('SpecMaxEnergy'), CNST(20.0)/(M_TWO*P_Ry), s%max_energy, units_inp%energy)
+    call parse_float(datasets_check('PropagationSpectrumMaxEnergy'), CNST(20.0)/(M_TWO*P_Ry), s%max_energy, units_inp%energy)
 
-    !%Variable SpecDampFactor
+    !%Variable PropagationSpectrumDampFactor
     !%Type float
     !%Default 0.15 au
     !%Section Utilities::oct-cross-section
     !%Description
-    !% If <tt>SpecDampMode = exponential</tt>, the damping parameter of the exponential
+    !% If <tt>PropagationSpectrumDampMode = exponential</tt>, the damping parameter of the exponential
     !% is fixed through this variable.
     !%End
-    call parse_float(datasets_check('SpecDampFactor'),  CNST(0.15), s%damp_factor, units_inp%time**(-1))
+    call parse_float(datasets_check('PropagationSpectrumDampFactor'),  CNST(0.15), s%damp_factor, units_inp%time**(-1))
 
     call pop_sub()
   end subroutine spectrum_init
@@ -849,12 +849,12 @@ contains
     call kick_write(kick, out_file)
     write(out_file, '(a)') '#%'
     write(out_file, '(a,i8)')    '# Number of time steps = ', time_steps
-    write(out_file, '(a,i4)')    '# SpecDampMode              = ', s%damp
-    write(out_file, '(a,f10.4)') '# SpecDampFactor            = ', units_from_atomic(units_out%time**(-1), s%damp_factor)
-    write(out_file, '(a,f10.4)') '# SpecStartTime             = ', units_from_atomic(units_out%time, s%start_time)
-    write(out_file, '(a,f10.4)') '# SpecEndTime               = ', units_from_atomic(units_out%time, s%end_time)
-    write(out_file, '(a,f10.4)') '# SpecMaxEnergy             = ', units_from_atomic(units_out%energy, s%max_energy)
-    write(out_file, '(a,f10.4)') '# SpecEnergyStep            = ', units_from_atomic(units_out%energy, s%energy_step)
+    write(out_file, '(a,i4)')    '# PropagationSpectrumDampMode   = ', s%damp
+    write(out_file, '(a,f10.4)') '# PropagationSpectrumDampFactor = ', units_from_atomic(units_out%time**(-1), s%damp_factor)
+    write(out_file, '(a,f10.4)') '# PropagationSpectrumStartTime  = ', units_from_atomic(units_out%time, s%start_time)
+    write(out_file, '(a,f10.4)') '# PropagationSpectrumEndTime    = ', units_from_atomic(units_out%time, s%end_time)
+    write(out_file, '(a,f10.4)') '# PropagationSpectrumMaxEnergy  = ', units_from_atomic(units_out%energy, s%max_energy)
+    write(out_file, '(a,f10.4)') '# PropagationSpectrumEnergyStep = ', units_from_atomic(units_out%energy, s%energy_step)
     write(out_file, '(a)') '#%'
     write(out_file, '(a,f16.6)') '# Electronic sum rule       = ', ewsum
     write(out_file, '(a,f16.6)') '# Polarizability (sum rule) = ', units_from_atomic(units_out%length**3, polsum)
@@ -976,12 +976,12 @@ contains
 
     ! print some info
     write(message(1), '(a,i8)')    'Number of time steps = ', ntiter
-    write(message(2), '(a,i4)')    'SpecDampMode         = ', s%damp
-    write(message(3), '(a,f10.4)') 'SpecDampFactor       = ', units_from_atomic(units_out%time**(-1), s%damp_factor)
-    write(message(4), '(a,f10.4)') 'SpecStartTime        = ', units_from_atomic(units_out%time, s%start_time)
-    write(message(5), '(a,f10.4)') 'SpecEndTime          = ', units_from_atomic(units_out%time, s%end_time)
-    write(message(6), '(a,f10.4)') 'SpecMaxEnergy        = ', units_from_atomic(units_inp%energy, s%max_energy) 
-    write(message(7),'(a,f10.4)')  'SpecEnergyStep       = ', units_from_atomic(units_inp%energy, s%energy_step)
+    write(message(2), '(a,i4)')    'PropagationSpectrumDampMode   = ', s%damp
+    write(message(3), '(a,f10.4)') 'PropagationSpectrumDampFactor = ', units_from_atomic(units_out%time**(-1), s%damp_factor)
+    write(message(4), '(a,f10.4)') 'PropagationSpectrumStartTime  = ', units_from_atomic(units_out%time, s%start_time)
+    write(message(5), '(a,f10.4)') 'PropagationSpectrumEndTime    = ', units_from_atomic(units_out%time, s%end_time)
+    write(message(6), '(a,f10.4)') 'PropagationSpectrumMaxEnergy  = ', units_from_atomic(units_inp%energy, s%max_energy) 
+    write(message(7),'(a,f10.4)')  'PropagationSpectrumEnergyStep = ', units_from_atomic(units_inp%energy, s%energy_step)
     message(8) = ""
     write(message(9), '(a,5e15.6,5e15.6)') 'R(0) sum rule = ', sum1
     write(message(10),'(a,5e15.6,5e15.6)') 'R(2) sum rule = ', sum2

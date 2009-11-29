@@ -47,41 +47,41 @@ program broad
   end if
   call unit_system_init()
 
-  !%Variable LinBroadening
+  !%Variable CasidaSpectrumBroadening
   !%Type float
   !%Default 0.005
   !%Section Utilities::oct-broad
   !%Description
   !% Width of the Lorentzian used to broaden the excitations.
   !%End
-  call parse_float(datasets_check('LinBroadening'), CNST(0.005), br%br, units_inp%energy)
+  call parse_float(datasets_check('CasidaSpectrumBroadening'), CNST(0.005), br%br, units_inp%energy)
 
-  !%Variable LinEnergyStep
+  !%Variable CasidaSpectrumEnergyStep
   !%Type float
   !%Default 0.001
   !%Section Utilities::oct-broad
   !%Description
   !% Sampling rate for the spectrum. 
   !%End
-  call parse_float(datasets_check('LinEnergyStep'), CNST(0.001), br%energy_step, units_inp%energy)
+  call parse_float(datasets_check('CasidaSpectrumEnergyStep'), CNST(0.001), br%energy_step, units_inp%energy)
 
-  !%Variable LinMinEnergy
+  !%Variable CasidaSpectrumMinEnergy
   !%Type float
   !%Default 0.0
   !%Section Utilities::oct-broad
   !%Description
-  !% The broadening is done for energies greater than LinMinEnergy.
+  !% The broadening is done for energies greater than CasidaSpectrumMinEnergy.
   !%End
-  call parse_float(datasets_check('LinMinEnergy'), M_ZERO, br%min_energy, units_inp%energy)
+  call parse_float(datasets_check('CasidaSpectrumMinEnergy'), M_ZERO, br%min_energy, units_inp%energy)
 
-  !%Variable LinMaxEnergy
+  !%Variable CasidaSpectrumMaxEnergy
   !%Type float
   !%Default 1.0
   !%Section Utilities::oct-broad
   !%Description
-  !% The broadening is done for energies smaller than LinMaxEnergy.
+  !% The broadening is done for energies smaller than CasidaSpectrumMaxEnergy.
   !%End
-  call parse_float(datasets_check('LinMaxEnergy'), M_ONE, br%max_energy, units_inp%energy)
+  call parse_float(datasets_check('CasidaSpectrumMaxEnergy'), M_ONE, br%max_energy, units_inp%energy)
 
   call calc_broad(br, CASIDA_DIR, 'eps-diff', .true.)
   call calc_broad(br, CASIDA_DIR, 'petersilka', .true.)
