@@ -32,6 +32,7 @@ module v_ks_m
   use mesh_function_m
   use messages_m
   use mpi_m
+  use multigrid_m
   use poisson_m
   use poisson_sete_m
   use profiling_m
@@ -410,6 +411,7 @@ contains
     FLOAT, optional,     intent(in)    :: amaldi_factor
 
     FLOAT, allocatable :: rho(:)
+    FLOAT, pointer :: pot(:)
     integer :: is, ip
 
     call push_sub('v_ks.v_ks_hartree')
@@ -433,16 +435,26 @@ contains
     ! Amaldi correction
     if(present(amaldi_factor)) rho = amaldi_factor*rho
 
-    if(poisson_solver_is_iterative()) then
-      ! provide a better starting point (in the td case vhxc was interpolated)
-      forall(ip = 1:gr%mesh%np) hm%vhartree(ip) = hm%vhxc(ip, 1) - hm%vxc(ip, 1)
+    if(.not. gr%have_fine_mesh) then
+      pot => hm%vhartree
+      if(poisson_solver_is_iterative()) then
+        ! provide a better starting point (in the td case vhxc was interpolated)
+        forall(ip = 1:gr%mesh%np) pot(ip) = hm%vhxc(ip, 1) - hm%vxc(ip, 1)
+      end if
+    else
+      SAFE_ALLOCATE(pot(1:gr%fine%mesh%np))
+      pot = M_ZERO
     end if
 
     ! solve the Poisson equation
-    call dpoisson_solve(gr%fine%der, hm%vhartree, rho)
+    call dpoisson_solve(gr%fine%der, pot, rho)
+
+    if(gr%have_fine_mesh) then
+      call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, pot, hm%vhartree)
+    end if
 
     ! Get the Hartree energy
-    hm%ehartree = M_HALF*dmf_dotp(gr%mesh, rho, hm%vhartree)
+    hm%ehartree = M_HALF*dmf_dotp(gr%fine%mesh, rho, pot)
 
     if (poisson_get_solver() == POISSON_SETE) then !SEC
 !      hm%ep%eii = hm%ep%eii+M_HALF*dmf_dotp(gr%mesh, rho_nuc, hm%ep%vpsl) 
