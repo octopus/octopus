@@ -43,8 +43,8 @@ subroutine poisson2D_solve(mesh, pot, rho)
   FLOAT,        intent(out) :: pot(:)
   FLOAT,        intent(in)  :: rho(:)
 
-  integer  :: i, j
-  FLOAT    :: x(2), y(2)
+  integer  :: ip, jp
+  FLOAT    :: xx(2), yy(2)
 #ifdef HAVE_MPI
   FLOAT    :: tmp, xg(1:MAX_DIM)
   FLOAT, allocatable :: pvec(:)
@@ -58,20 +58,20 @@ subroutine poisson2D_solve(mesh, pot, rho)
     SAFE_ALLOCATE(pvec(1:mesh%np))
 
     pot = M_ZERO
-    do i = 1, mesh%np_global
-      xg = mesh_x_global(m, i)
-      x(1:2) = xg(1:2)
-      do j = 1, mesh%np
-        if(vec_global2local(mesh%vp, i, mesh%vp%partno) == j) then
-          pvec(j) = M_TWO*sqrt(M_PI)*rho(j)/mesh%h(1)
+    do ip = 1, mesh%np_global
+      xg = mesh_x_global(mesh, ip)
+      xx(1:2) = xg(1:2)
+      do jp = 1, mesh%np
+        if(vec_global2local(mesh%vp, ip, mesh%vp%partno) == jp) then
+          pvec(jp) = M_TWO*sqrt(M_PI)*rho(jp)/mesh%h(1)
         else
-          y(:) = mesh%x(j,1:2)
-          pvec(j) = rho(j)/sqrt(sum((x-y)**2))
+          yy(:) = mesh%x(jp,1:2)
+          pvec(jp) = rho(jp)/sqrt(sum((xx-yy)**2))
         end if
       end do
-      tmp = dmf_integrate(m, pvec)
-      if (mesh%vp%part(i).eq.mesh%vp%partno) then
-        pot(vec_global2local(mesh%vp, i, mesh%vp%partno)) = tmp
+      tmp = dmf_integrate(mesh, pvec)
+      if (mesh%vp%part(ip).eq.mesh%vp%partno) then
+        pot(vec_global2local(mesh%vp, ip, mesh%vp%partno)) = tmp
       end if
     end do
 
@@ -80,14 +80,14 @@ subroutine poisson2D_solve(mesh, pot, rho)
   else ! serial mode
 #endif
     pot = M_ZERO
-    do i = 1, mesh%np
-      x(:) = mesh%x(i,1:2)
-      do j = 1, mesh%np
-        if(i == j) then
-          pot(i) = pot(i) + M_TWO*sqrt(M_PI)*rho(i)/mesh%h(1)*mesh%vol_pp(j)
+    do ip = 1, mesh%np
+      xx(:) = mesh%x(ip,1:2)
+      do jp = 1, mesh%np
+        if(ip == jp) then
+          pot(ip) = pot(ip) + M_TWO*sqrt(M_PI)*rho(ip)/mesh%h(1)*mesh%vol_pp(jp)
         else
-          y(:) = mesh%x(j,1:2)
-          pot(i) = pot(i) + rho(j)/sqrt(sum((x-y)**2))*mesh%vol_pp(j)
+          yy(:) = mesh%x(jp,1:2)
+          pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx-yy)**2))*mesh%vol_pp(jp)
         end if
       end do
     end do

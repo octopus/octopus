@@ -741,7 +741,7 @@ contains
       if(average_to_zero) average = cf_surface_average(fft_cf)
 #if defined HAVE_MPI
       ! Only root has the right average.
-      if(mesh%parallel_in_domains) call MPI_Bcast(average, 1, MPI_FLOAT, 0, mesh%mpigrp%comm, mpi_err)
+      if(mesh%parallel_in_domains) call MPI_Bcast(average, 1, MPI_FLOAT, 0, mesh%mpi_grp%comm, mpi_err)
 #endif
     end if
 
