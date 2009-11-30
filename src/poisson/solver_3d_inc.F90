@@ -18,9 +18,9 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine poisson3D_init(gr, geo)
-  type(grid_t), intent(inout) :: gr
-  type(geometry_t), intent(in) :: geo
+subroutine poisson3D_init(der, geo)
+  type(derivatives_t), intent(inout) :: der
+  type(geometry_t),    intent(in)    :: geo
 
   integer :: maxl, iter
   integer :: nx, ny, nz
@@ -55,30 +55,32 @@ subroutine poisson3D_init(gr, geo)
   !% <tt>multigrid</tt> solvers. Default is <math>10^{-5}</math>.
   !%End
 
-  !%Variable PoissonSolverIncreaseBox
-  !%Type logical
-  !%Section Hamiltonian::Poisson
-  !%Description
-  !% (experimental) If the selected Poisson solver is
-  !% <tt>cg_corrected</tt> the boundary conditions have to be
-  !% calculated by means of performing a multipole
-  !% expansion. Unfortunately, if the charge distribution is not
-  !% contained in a simulation box of approximately spherical shape,
-  !% the error can be quite large. Good cases are the spherical box,
-  !% the parallelepiped when all dimensions are of similar magnitude,
-  !% or the cylinder when the height is not too different to the
-  !% diameter of the base. Bad cases are the rest, including the
-  !% <tt>minimum</tt> box, when the geometry of the molecule is not
-  !% compact enough.
-  !%
-  !% In order to cure this problem, the Hartree problem may be solved
-  !% in an auxiliary simulation box, which will contain the original
-  !% one, but which will be a sphere.  This implies some extra
-  !% computational effort -- since the density and potential have to
-  !% be transferred between boxes -- and extra memory consumption --
-  !% since a new grid has to be stored, which may need quite a lot of
-  !% memory if you use curvilinear coordinates.
-  !%End
+  !! This variable is disabled for the moment
+  !!
+  !!Variable PoissonSolverIncreaseBox
+  !!Type logical
+  !!Section Hamiltonian::Poisson
+  !!Description
+  !! (experimental) If the selected Poisson solver is
+  !! <tt>cg_corrected</tt> the boundary conditions have to be
+  !! calculated by means of performing a multipole
+  !! expansion. Unfortunately, if the charge distribution is not
+  !! contained in a simulation box of approximately spherical shape,
+  !! the error can be quite large. Good cases are the spherical box,
+  !! the parallelepiped when all dimensions are of similar magnitude,
+  !! or the cylinder when the height is not too different to the
+  !! diameter of the base. Bad cases are the rest, including the
+  !! <tt>minimum</tt> box, when the geometry of the molecule is not
+  !! compact enough.
+  !!
+  !! In order to cure this problem, the Hartree problem may be solved
+  !! in an auxiliary simulation box, which will contain the original
+  !! one, but which will be a sphere.  This implies some extra
+  !! computational effort -- since the density and potential have to
+  !! be transferred between boxes -- and extra memory consumption --
+  !! since a new grid has to be stored, which may need quite a lot of
+  !! memory if you use curvilinear coordinates.
+  !!End
 
   select case(poisson_solver)
   case(POISSON_CG)
@@ -87,8 +89,8 @@ subroutine poisson3D_init(gr, geo)
      call write_info(1)
      call parse_integer(datasets_check('PoissonSolverMaxIter'), 400, iter)
      call parse_float(datasets_check('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
-     call poisson_corrections_init(corrector, maxl, gr%mesh)
-     call poisson_cg_init(gr%mesh, maxl, threshold, iter)
+     call poisson_corrections_init(corrector, maxl, der%mesh)
+     call poisson_cg_init(der%mesh, maxl, threshold, iter)
 
   case(POISSON_CG_CORRECTED)
      call parse_integer(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)
@@ -96,18 +98,8 @@ subroutine poisson3D_init(gr, geo)
      call parse_float(datasets_check('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
      write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
      call write_info(1)
-     call parse_logical(datasets_check('PoissonSolverIncreaseBox'), .false., hartree_integrator%increase_box)
-     if(gr%mesh%sb%box_shape .eq. SPHERE) hartree_integrator%increase_box = .false.
-     if(hartree_integrator%increase_box) then
-       call messages_devel_version("The PoissonIncreaseBox feature")
-       write(message(1),'(a)') "Info: Poisson equation will be solved in a larger grid."
-       call write_info(1)
-       SAFE_ALLOCATE(hartree_integrator%grid)
-       call grid_create_largergrid(gr, geo, hartree_integrator%grid)
-     end if
-     call poisson_corrections_init(corrector, maxl, gr%mesh)
-     call poisson_cg_init(gr%mesh, maxl, threshold, iter)
-
+     call poisson_corrections_init(corrector, maxl, der%mesh)
+     call poisson_cg_init(der%mesh, maxl, threshold, iter)
 
   case(POISSON_MULTIGRID)
      call parse_integer(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)
@@ -115,39 +107,37 @@ subroutine poisson3D_init(gr, geo)
      write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
      call write_info(1)
 
-     call poisson_multigrid_init(mg, gr%mesh, maxl, threshold)
-
-     call grid_create_multigrid(gr, geo)
+     call poisson_multigrid_init(mg, der%mesh, maxl, threshold)
      
   case(POISSON_ISF)
-    call poisson_isf_init(gr%mesh, init_world = all_nodes_default)
+    call poisson_isf_init(der%mesh, init_world = all_nodes_default)
 
   case(POISSON_FFT_SPH)
-    call poisson_fft_build_3d_0d(gr%mesh, poisson_solver)
+    call poisson_fft_build_3d_0d(der%mesh, poisson_solver)
 
   case(POISSON_FFT_CYL)
-    call poisson_fft_build_3d_1d(gr%mesh)
+    call poisson_fft_build_3d_1d(der%mesh)
 
   case(POISSON_FFT_PLA)
-    call poisson_fft_build_3d_2d(gr%mesh)
+    call poisson_fft_build_3d_2d(der%mesh)
 
   case(POISSON_FFT_NOCUT)
-    call poisson_fft_build_3d_3d(gr%mesh)
+    call poisson_fft_build_3d_3d(der%mesh)
 
   case(POISSON_FFT_CORRECTED)
-    call poisson_fft_build_3d_0d(gr%mesh, poisson_solver)
+    call poisson_fft_build_3d_0d(der%mesh, poisson_solver)
     call parse_integer(datasets_check('PoissonSolverMaxMultipole'), 2, maxl)
     write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
     call write_info(1)
-    call poisson_corrections_init(corrector, maxl, gr%mesh)
+    call poisson_corrections_init(corrector, maxl, der%mesh)
 
   case(POISSON_SETE)
-    nx = gr%mesh%idx%ll(1) 
-    ny = gr%mesh%idx%ll(2)
-    nz = gr%mesh%idx%ll(3)
-    xl = 2*gr%mesh%sb%lsize(1)
-    yl = 2*gr%mesh%sb%lsize(2)
-    zl = 2*gr%mesh%sb%lsize(3)
+    nx = der%mesh%idx%ll(1) 
+    ny = der%mesh%idx%ll(2)
+    nz = der%mesh%idx%ll(3)
+    xl = 2*der%mesh%sb%lsize(1)
+    yl = 2*der%mesh%sb%lsize(2)
+    zl = 2*der%mesh%sb%lsize(3)
 
     call poisson_sete_init(sete_solver, nx, ny, nz, xl, yl, zl, geo%natoms)
      

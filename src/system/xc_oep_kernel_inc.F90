@@ -34,7 +34,7 @@ subroutine X(xc_oep_kernel_calc)(sys, hm, lr, nsigma, fxcn)
           r(1:np) = R_CONJ(sys%st%X(psi)(1:np, 1, ii, 1))*&
                (sys%st%X(psi)(1:np, 1, kk, 1)+lr(kks)%X(dl_psi)(1:np, 1, kk, 1))
 
-          call X(poisson_solve)(sys%gr%der, s, r, all_nodes=.false.)
+          call X(poisson_solve)(psolver, s, r, all_nodes=.false.)
 
           do ip = 1, np
             if ( abs(sys%st%rho(ip, 1)) > tol) then 

@@ -63,7 +63,7 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
 
       ! calculate the Hartree contribution using poissons equation
       vxc(1:gr%mesh%np, 1) = M_ZERO
-      call dpoisson_solve(gr%der, vxc(:, 1), rho(:, 1), all_nodes=.false.)
+      call dpoisson_solve(psolver, vxc(:, 1), rho(:, 1), all_nodes=.false.)
 
       ! The exchange energy.
       ex_ = ex_ - M_HALF*oep%sfact*oep%socc*st%occ(i, is)* &

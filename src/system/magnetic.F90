@@ -180,7 +180,7 @@ contains
 
     a_ind = M_ZERO
     do i = 1, gr%mesh%sb%dim
-      call dpoisson_solve(gr%der, a_ind(:, i), j(:, i, 1))
+      call dpoisson_solve(psolver, a_ind(:, i), j(:, i, 1))
     end do
     ! This minus sign is introduced here because the current that has been used
     ! before is the "number current density", and not the "charge current density",

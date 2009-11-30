@@ -331,7 +331,7 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik)
       end forall
     end do
 
-    call X(poisson_solve)(der, pot, rho)
+    call X(poisson_solve)(psolver, pot, rho)
 
     ff = hm%st%occ(j, ik)
     if(hm%d%ispin == UNPOLARIZED) ff = ff/M_TWO
@@ -381,7 +381,7 @@ subroutine X(oct_exchange_operator_all) (hm, der, psi, hpsi)
             R_AIMAG(R_CONJ(hm%oct_st%X(psi)(k, 1, j, ik)) * psi%X(psi)(k, 1, j, ik))
         end forall
       end do 
-      call dpoisson_solve(der, pot, rho)
+      call dpoisson_solve(psolver, pot, rho)
       do ist = psi%st_start, psi%st_end
         forall(k = 1:der%mesh%np)
           hpsi%X(psi)(k, 1, ist, ik) = hpsi%X(psi)(k, 1, ist, ik) + M_TWO * M_zI * &
@@ -428,7 +428,7 @@ subroutine X(oct_exchange_operator) (hm, der, psi, hpsi, ik)
       forall (k = 1:der%mesh%np)
         rho(k) = hm%oct_st%occ(j, 1) * R_AIMAG(R_CONJ(hm%oct_st%X(psi)(k, 1, j, ik)) * psi(k, 1))
       end forall
-      call dpoisson_solve(der, pot, rho)
+      call dpoisson_solve(psolver, pot, rho)
       forall(k = 1:der%mesh%np)
         hpsi(k, 1) = hpsi(k, 1) + M_TWO * M_zI * &
           hm%oct_st%X(psi)(k, 1, j, ik) * (pot(k) + hm%oct_fxc(k, 1, 1) * rho(k))
@@ -442,7 +442,7 @@ subroutine X(oct_exchange_operator) (hm, der, psi, hpsi, ik)
       do k = 1, der%mesh%np
         rho(k) = R_AIMAG(R_CONJ(hm%oct_st%X(psi)(k, 1, j, ik)) * psi(k, 1))
       end do
-      call dpoisson_solve(der, pot, rho)
+      call dpoisson_solve(psolver, pot, rho)
       do k = 1, der%mesh%np
         hpsi(k, 1) = hpsi(k, 1) +  M_TWO * M_zI * hm%oct_st%occ(j, ik) * &
           hm%oct_st%X(psi)(k, 1, j, ik) * pot(k)

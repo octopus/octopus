@@ -97,7 +97,7 @@ program oct_test
     type(system_t) :: sys
 
     call system_init(sys)
-    call poisson_test(sys%gr)
+    call poisson_test(sys%gr%mesh)
     call system_end(sys)
 
   end subroutine test_hartree

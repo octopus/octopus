@@ -624,7 +624,7 @@ contains
       !  first the Hartree part (only works for real wfs...)
       if( j.ne.j_old  .or.   b.ne.b_old   .or.  mu.ne.mu_old) then
         pot(1:mesh%np) = M_ZERO
-        if(hm%theory_level.ne.INDEPENDENT_PARTICLES) call dpoisson_solve(sys%gr%der, pot, rho_j, all_nodes=.false.)
+        if(hm%theory_level.ne.INDEPENDENT_PARTICLES) call dpoisson_solve(psolver, pot, rho_j, all_nodes=.false.)
       end if
 
       K_term = dmf_dotp(mesh, rho_i(:), pot(:))

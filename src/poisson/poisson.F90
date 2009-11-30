@@ -24,7 +24,6 @@ module poisson_m
   use derivatives_m
   use geometry_m
   use global_m
-  use grid_m
   use index_m
   use io_m
   use io_function_m
@@ -60,7 +59,8 @@ module poisson_m
     poisson_solver_is_iterative, &
     poisson_solver_has_free_bc,  &
     poisson_end,                 &
-    poisson_test,                &       
+    poisson_test,                &
+    poisson_is_multigrid,        &
     geometry_init,               &
     geometry_init_xyz,           &
     geometry_init_species,       &
@@ -76,18 +76,18 @@ module poisson_m
     POISSON_SETE          =  9
   ! the FFT solvers are defined in its own module
 
+  type poisson_t
+    private
+    type(derivatives_t), pointer :: der
+  end type poisson_t
+
+  type(poisson_t), public :: psolver
+
   integer :: poisson_solver = -99
   FLOAT   :: poisson_soft_coulomb_param = M_ONE
   type(mg_solver_t) :: mg
   logical :: all_nodes_default
 
-  type hartree_t
-    private
-    logical                 :: increase_box
-    type(grid_t), pointer   :: grid
-  end type hartree_t
-
-  type(hartree_t) :: hartree_integrator
   type(poisson_corr_t) :: corrector
   type(poisson_sete_t), public :: sete_solver
 
@@ -99,13 +99,16 @@ contains
   end function poisson_get_solver
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(gr, geo)
-    type(grid_t), intent(inout) :: gr
-    type(geometry_t), intent(in) :: geo
+  subroutine poisson_init(this, der, geo)
+    type(poisson_t),             intent(out)   :: this
+    type(derivatives_t), target, intent(inout) :: der
+    type(geometry_t),            intent(in)    :: geo
 
     if(poisson_solver.ne.-99) return ! already initialized
 
     call push_sub('poisson.poisson_init')
+
+    this%der => der
 
     call messages_print_stress(stdout, "Hartree")
 
@@ -123,7 +126,7 @@ contains
     call parse_logical(datasets_check('ParallelizationPoissonAllNodes'), .true., all_nodes_default)
 #endif
 
-    select case(gr%mesh%sb%dim)
+    select case(der%mesh%sb%dim)
     case(1); call init_1D()
     case(2); call init_2D()
     case(3); call init_3D()
@@ -175,14 +178,14 @@ contains
 
       call push_sub('poisson.poisson_init.init_1D')
 
-      if(gr%sb%periodic_dim==0) then
+      if(der%mesh%sb%periodic_dim==0) then
         default_solver = POISSON_FFT_SPH
       else
         default_solver = POISSON_FFT_NOCUT
       end if
       call parse_integer(datasets_check('PoissonSolver'), default_solver, poisson_solver)
 
-      select case(gr%sb%periodic_dim)
+      select case(der%mesh%sb%periodic_dim)
       case(0)
         if( (poisson_solver.ne.POISSON_FFT_SPH)       .and. &
             (poisson_solver.ne.POISSON_DIRECT_SUM_1D)) call input_error('PoissonSolver')
@@ -190,14 +193,14 @@ contains
         if( (poisson_solver.ne.POISSON_FFT_NOCUT) ) call input_error('PoissonSolver')
       end select
 
-      if(gr%mesh%use_curvilinear.and.poisson_solver.ne.POISSON_DIRECT_SUM_1D) then
+      if(der%mesh%use_curvilinear.and.poisson_solver.ne.POISSON_DIRECT_SUM_1D) then
         message(1) = 'If curvilinear coordinates are used in 1D, then the only working'
         message(2) = 'Poisson solver is -1 ("direct summation in one dimension").'
         call write_fatal(2)
       end if
 
       call messages_print_var_option(stdout, "PoissonSolver", poisson_solver)
-      call poisson1d_init(gr%mesh)
+      call poisson1d_init(der%mesh)
 
       call pop_sub()
     end subroutine init_1D
@@ -208,13 +211,13 @@ contains
       integer :: default_solver
       call push_sub('poisson.poisson_init.init_2D')
 
-      if (gr%sb%periodic_dim > 0) then 
-        default_solver = gr%mesh%sb%periodic_dim
+      if (der%mesh%sb%periodic_dim > 0) then 
+        default_solver = der%mesh%sb%periodic_dim
       else
         default_solver = POISSON_FFT_SPH
       end if
 
-      call parse_integer(datasets_check('PoissonSolver'), gr%mesh%sb%periodic_dim, poisson_solver)
+      call parse_integer(datasets_check('PoissonSolver'), der%mesh%sb%periodic_dim, poisson_solver)
       if( (poisson_solver .ne. POISSON_FFT_SPH)         .and. &
           (poisson_solver .ne. POISSON_DIRECT_SUM_2D)   .and. &
           (poisson_solver .ne. 1)                       .and. &
@@ -226,14 +229,14 @@ contains
       ! In 2D, periodic in two dimensions means no cut-off at all.
       if(poisson_solver == 2) poisson_solver = 3
 
-      if(gr%mesh%use_curvilinear .and. (poisson_solver .ne. -gr%mesh%sb%dim) ) then
+      if(der%mesh%use_curvilinear .and. (poisson_solver .ne. -der%mesh%sb%dim) ) then
         message(1) = 'If curvilinear coordinates are used in 2D, then the only working'
         message(2) = 'Poisson solver is -2 ("direct summation in two dimensions").'
         call write_fatal(2)
       end if
 
       call messages_print_var_option(stdout, "PoissonSolver", poisson_solver)
-      call poisson2D_init(gr%mesh)
+      call poisson2D_init(der%mesh)
 
       call pop_sub()
     end subroutine init_2D
@@ -251,31 +254,31 @@ contains
       default_solver = POISSON_FFT_SPH
 #endif
 
-      if (gr%mesh%use_curvilinear) default_solver = POISSON_CG_CORRECTED
-      if (gr%sb%periodic_dim > 0) default_solver = gr%sb%periodic_dim
+      if (der%mesh%use_curvilinear) default_solver = POISSON_CG_CORRECTED
+      if (der%mesh%sb%periodic_dim > 0) default_solver = der%mesh%sb%periodic_dim
       
       call parse_integer(datasets_check('PoissonSolver'), default_solver, poisson_solver)
       if(poisson_solver < POISSON_FFT_SPH .or. poisson_solver > POISSON_SETE ) then
         call input_error('PoissonSolver')
       end if
 
-      if(gr%sb%periodic_dim > 0 .and. &
-           poisson_solver /= gr%sb%periodic_dim .and. &
+      if(der%mesh%sb%periodic_dim > 0 .and. &
+           poisson_solver /= der%mesh%sb%periodic_dim .and. &
            poisson_solver < POISSON_CG .and. &
            poisson_solver /= POISSON_FFT_CORRECTED .and. poisson_solver /= POISSON_FFT_CYL) then
-        write(message(1), '(a,i1,a)')'The system is periodic in ', gr%sb%periodic_dim ,' dimension(s),'
+        write(message(1), '(a,i1,a)')'The system is periodic in ', der%mesh%sb%periodic_dim ,' dimension(s),'
         write(message(2), '(a,i1,a)')'but Poisson solver is set for ',poisson_solver,' dimensions.'
         message(3) =                 'You know what you are doing, right?'
         call write_warning(3)
       end if
 
-      if(gr%mesh%use_curvilinear .and. (poisson_solver.ne.POISSON_CG_CORRECTED)) then
+      if(der%mesh%use_curvilinear .and. (poisson_solver.ne.POISSON_CG_CORRECTED)) then
         message(1) = 'If curvilinear coordinates are used, then the only working'
         message(2) = 'Poisson solver is cg_corrected.'
         call write_fatal(2)
       end if
 
-      if( (gr%sb%box_shape == MINIMUM) .and. (poisson_solver == POISSON_CG_CORRECTED) ) then
+      if( (der%mesh%sb%box_shape == MINIMUM) .and. (poisson_solver == POISSON_CG_CORRECTED) ) then
         message(1) = 'When using the "minimum" box shape and the "cg_corrected"'
         message(2) = 'Poisson solver, we have observed "sometimes" some non-'
         message(3) = 'negligible error. You may want to check that the "fft" or "cg"'
@@ -290,17 +293,17 @@ contains
 !      if poisson_solver == POISSON_SETE then
 !       do i = 1, geo%natoms !Roberto
 !         do j=1, 3 !Roberto 
-!           ind1(j)=geo%atom(i)%x(j)/gr%mesh%sb%h(j)
+!           ind1(j)=geo%atom(i)%x(j)/der%mesh%sb%h(j)
 !           ind(j)=nint(ind1(j))
 !         enddo !Roberto
-!	 m1=index_from_coords(gr%mesh%idx, gr%mesh%sb%dim,ind(j))
-!!         m1=gr%mesh%Lxyz_inv(ind(1),ind(2),ind(3)) 
+!	 m1=index_from_coords(der%mesh%idx, der%mesh%sb%dim,ind(j))
+!!         m1=der%mesh%Lxyz_inv(ind(1),ind(2),ind(3)) 
 !         rho_nuc(m1) = -geo%atom(i)%spec%z_val/&
-!                        gr%mesh%sb%h(1)*gr%mesh%sb%h(2)*gr%mesh%sb%h(3)
-  !       dmf_interpolate_points(gr%mesh,rho_nuc(m1),m2)) !or something similar
+!                        der%mesh%sb%h(1)*der%mesh%sb%h(2)*der%mesh%sb%h(3)
+  !       dmf_interpolate_points(der%mesh,rho_nuc(m1),m2)) !or something similar
 !        enddo
       call messages_print_var_option(stdout, "PoissonSolver", poisson_solver)
-      call poisson3D_init(gr, geo)
+      call poisson3D_init(der, geo)
 
       call pop_sub()
     end subroutine init_3D
@@ -309,7 +312,9 @@ contains
 
 
   !-----------------------------------------------------------------
-  subroutine poisson_end()
+  subroutine poisson_end(this)
+    type(poisson_t), intent(inout) :: this
+
     call push_sub('poisson.poisson_end')
 
     select case(poisson_solver)
@@ -334,24 +339,22 @@ contains
     end select
     poisson_solver = -99
 
-    if(hartree_integrator%increase_box) then
-      SAFE_DEALLOCATE_P(hartree_integrator%grid)
-    end if
-
     call pop_sub()
   end subroutine poisson_end
 
 
   !-----------------------------------------------------------------
-  subroutine zpoisson_solve(der, pot, rho, all_nodes)
-    type(derivatives_t),  intent(inout) :: der
+  subroutine zpoisson_solve(this, pot, rho, all_nodes)
+    type(poisson_t),      intent(inout) :: this
     CMPLX,                intent(inout) :: pot(:)  ! pot(mesh%np)
     CMPLX,                intent(in)    :: rho(:)  ! rho(mesh%np)
     logical, optional,    intent(in)    :: all_nodes
 
     FLOAT, allocatable :: aux1(:), aux2(:)
-
+    type(derivatives_t), pointer :: der
     logical :: all_nodes_value
+
+    der => this%der
 
     call push_sub('poisson.zpoisson_solve')
 
@@ -367,13 +370,13 @@ contains
     ! first the real part
     aux1(1:der%mesh%np) = real(rho(1:der%mesh%np))
     aux2(1:der%mesh%np) = real(pot(1:der%mesh%np))
-    call dpoisson_solve(der, aux2, aux1, all_nodes=all_nodes_value)
+    call dpoisson_solve(this, aux2, aux1, all_nodes=all_nodes_value)
     pot(1:der%mesh%np)  = aux2(1:der%mesh%np)
 
     ! now the imaginary part
     aux1(1:der%mesh%np) = aimag(rho(1:der%mesh%np))
     aux2(1:der%mesh%np) = aimag(pot(1:der%mesh%np))
-    call dpoisson_solve(der, aux2, aux1, all_nodes=all_nodes_value)
+    call dpoisson_solve(this, aux2, aux1, all_nodes=all_nodes_value)
     pot(1:der%mesh%np) = pot(1:der%mesh%np) + M_zI*aux2(1:der%mesh%np)
 
     SAFE_DEALLOCATE_A(aux1)
@@ -384,14 +387,15 @@ contains
 
 
   !-----------------------------------------------------------------
-  subroutine dpoisson_solve(der, pot, rho, all_nodes)
-    type(derivatives_t),  intent(inout) :: der
+  subroutine dpoisson_solve(this, pot, rho, all_nodes)
+    type(poisson_t),      intent(inout) :: this
     FLOAT,                intent(inout) :: pot(:)    ! pot(mesh%np)
     FLOAT,                intent(in)    :: rho(:)    ! rho(mesh%np)
     logical, optional,    intent(in)    :: all_nodes ! Is the Poisson solver allowed to utilise
                                                      ! all nodes or only the domain nodes for
                                                      ! its calculations? (Defaults to .true.)
 
+    type(derivatives_t), pointer :: der
     integer :: counter
     integer :: nx_half, nx
     integer :: ny_half, ny
@@ -403,7 +407,6 @@ contains
     integer :: icase = 1, icalc = 1, i1
 
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
-    FLOAT, allocatable :: rhop(:), potp(:)
 
     logical               :: all_nodes_value
     type(profile_t), save :: prof
@@ -412,6 +415,8 @@ contains
     
     call profiling_in(prof, 'POISSON_SOLVE')
     call push_sub('poisson.dpoisson_solve')
+
+    der => this%der
 
     ! Check optional argument and set to default if necessary.
     if(present(all_nodes)) then
@@ -433,42 +438,17 @@ contains
       call poisson_cg1(der, corrector, pot, rho)
 
     case(POISSON_CG_CORRECTED)
-      if(hartree_integrator%increase_box) then
-        SAFE_ALLOCATE(potp(1:hartree_integrator%grid%mesh%np))
-        SAFE_ALLOCATE(rhop(1:hartree_integrator%grid%mesh%np))
-        SAFE_ALLOCATE(rho_corrected(1:der%mesh%np))
-        SAFE_ALLOCATE(vh_correction(1:der%mesh%np))
-
-        potp = M_ZERO; rhop = M_ZERO; rho_corrected = M_ZERO; vh_correction = M_ZERO
-        call correct_rho(corrector, der%mesh, rho, rho_corrected, vh_correction)
-
-        pot(1:der%mesh%np) = pot(1:der%mesh%np) - vh_correction(1:der%mesh%np)
-
-        call dmf_interpolate(der%mesh, hartree_integrator%grid%mesh, full_interpolation = .false., u = rho_corrected, f = rhop)
-        call dmf_interpolate(der%mesh, hartree_integrator%grid%mesh, full_interpolation = .false., u = pot, f = potp)
-
-        call poisson_cg2(hartree_integrator%grid%der, potp, rhop)
-
-        call dmf_interpolate(hartree_integrator%grid%mesh, der%mesh, full_interpolation = .false., u = potp, f = pot)
-        pot(1:der%mesh%np) = pot(1:der%mesh%np) + vh_correction(1:der%mesh%np)
-
-        SAFE_DEALLOCATE_A(rho_corrected)
-        SAFE_DEALLOCATE_A(vh_correction)
-        SAFE_DEALLOCATE_A(potp)
-        SAFE_DEALLOCATE_A(rhop)
-      else
-        SAFE_ALLOCATE(rho_corrected(1:der%mesh%np))
-        SAFE_ALLOCATE(vh_correction(1:der%mesh%np))
-
-        call correct_rho(corrector, der%mesh, rho, rho_corrected, vh_correction)
-
-        pot(1:der%mesh%np) = pot(1:der%mesh%np) - vh_correction(1:der%mesh%np)
-        call poisson_cg2(der, pot, rho_corrected)
-        pot(1:der%mesh%np) = pot(1:der%mesh%np) + vh_correction(1:der%mesh%np)
-
-        SAFE_DEALLOCATE_A(rho_corrected)
-        SAFE_DEALLOCATE_A(vh_correction)
-      end if
+      SAFE_ALLOCATE(rho_corrected(1:der%mesh%np))
+      SAFE_ALLOCATE(vh_correction(1:der%mesh%np))
+      
+      call correct_rho(corrector, der%mesh, rho, rho_corrected, vh_correction)
+      
+      pot(1:der%mesh%np) = pot(1:der%mesh%np) - vh_correction(1:der%mesh%np)
+      call poisson_cg2(der, pot, rho_corrected)
+      pot(1:der%mesh%np) = pot(1:der%mesh%np) + vh_correction(1:der%mesh%np)
+      
+      SAFE_DEALLOCATE_A(rho_corrected)
+      SAFE_DEALLOCATE_A(vh_correction)
 
     case(POISSON_MULTIGRID)
       call poisson_multigrid_solver(mg, der, pot, rho)
@@ -534,10 +514,10 @@ contains
       call poisson_sete_solve(sete_solver, icase, rh0, vh0, nx, ny, nz, xl, yl, zl, icalc)
       !      write(91,*) "vh0 rh0"
       !      do  i=1,nx
-!       do j=1,ny
-!       write(91,*) i,j,vh0(i,11,j), rh0(i,11,j)
-!       enddo 
-!      enddo
+      !       do j=1,ny
+      !       write(91,*) i,j,vh0(i,11,j), rh0(i,11,j)
+      !       enddo 
+      !      enddo
 
       do counter = 1, der%mesh%np
 
@@ -567,8 +547,8 @@ contains
   ! file by calculating numerically and analytically the Hartree
   ! potential originated by a Gaussian distribution of charge.
   ! This only makes sense for finite systems.
-  subroutine poisson_test(gr)
-    type(grid_t), intent(inout) :: gr
+  subroutine poisson_test(mesh)
+    type(mesh_t), intent(inout) :: mesh
 
     FLOAT, allocatable :: rho(:), vh(:), vh_exact(:), rhop(:), x(:, :)
     FLOAT :: alpha, beta, r, delta, norm, rnd, ralpha, range
@@ -584,15 +564,15 @@ contains
 
     n_gaussians = 4
 
-    SAFE_ALLOCATE(     rho(1:gr%mesh%np))
-    SAFE_ALLOCATE(    rhop(1:gr%mesh%np))
-    SAFE_ALLOCATE(      vh(1:gr%mesh%np))
-    SAFE_ALLOCATE(vh_exact(1:gr%mesh%np))
-    SAFE_ALLOCATE(x(1:gr%mesh%sb%dim, 1:n_gaussians))
+    SAFE_ALLOCATE(     rho(1:mesh%np))
+    SAFE_ALLOCATE(    rhop(1:mesh%np))
+    SAFE_ALLOCATE(      vh(1:mesh%np))
+    SAFE_ALLOCATE(vh_exact(1:mesh%np))
+    SAFE_ALLOCATE(x(1:mesh%sb%dim, 1:n_gaussians))
 
     rho = M_ZERO; vh = M_ZERO; vh_exact = M_ZERO
 
-    alpha = CNST(4.0) * gr%mesh%h(1)
+    alpha = CNST(4.0) * mesh%h(1)
     beta = M_ONE / ( alpha**calc_dim * sqrt(M_PI)**calc_dim )
 
     write(message(1), '(a)') 'Building the Gaussian distribution of charge...'
@@ -604,28 +584,28 @@ contains
     do n = 1, n_gaussians
       norm = M_ZERO
       do while(abs(norm-M_ONE)> CNST(1.0e-4))
-        do k = 1, gr%mesh%sb%dim
+        do k = 1, mesh%sb%dim
           call random_number(rnd)
           x(k, n) = range*rnd 
         end do
         r = sqrt(sum(x(:, n)*x(:,n)))
-        do i = 1, gr%mesh%np
-          call mesh_r(gr%mesh, i, r, a = x(:, n))
+        do i = 1, mesh%np
+          call mesh_r(mesh, i, r, a = x(:, n))
           rhop(i) = beta*exp(-(r/alpha)**2)
         end do
-        norm = dmf_integrate(gr%mesh, rhop)
+        norm = dmf_integrate(mesh, rhop)
       end do
       rhop = (-1)**n * rhop
       rho = rho + rhop
     end do
-    write(message(1), '(a,f14.6)') 'Total charge of the Gaussian distribution', dmf_integrate(gr%mesh, rho)
+    write(message(1), '(a,f14.6)') 'Total charge of the Gaussian distribution', dmf_integrate(mesh, rho)
     call write_info(1)
 
     ! This builds analytically its potential
     vh_exact = M_ZERO
     do n = 1, n_gaussians
-      do i = 1, gr%mesh%np
-        call mesh_r(gr%mesh, i, r, a = x(:, n))
+      do i = 1, mesh%np
+        call mesh_r(mesh, i, r, a = x(:, n))
         select case(calc_dim)
         case(3)
           if(r > r_small) then
@@ -647,21 +627,21 @@ contains
     end do
 
     ! This calculates the numerical potential
-    call dpoisson_solve(gr%der, vh, rho)
+    call dpoisson_solve(psolver, vh, rho)
 
     ! And this compares.
-    delta = dmf_nrm2(gr%mesh, vh-vh_exact)
+    delta = dmf_nrm2(mesh, vh-vh_exact)
 
     ! Output
     iunit = io_open("hartree_results", action='write')
     write(iunit, '(a,f14.8)' ) 'Hartree test = ', delta
     call io_close(iunit)
-    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_rho", gr%mesh, rho, unit_one, ierr)
-    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_exact", gr%mesh, vh_exact, unit_one, ierr)
-    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_numerical", gr%mesh, vh, unit_one, ierr)
-    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_rho", gr%mesh, rho, unit_one, ierr)
-    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_exact", gr%mesh, vh_exact, unit_one, ierr)
-    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_numerical", gr%mesh, vh, unit_one, ierr)
+    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_rho", mesh, rho, unit_one, ierr)
+    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_exact", mesh, vh_exact, unit_one, ierr)
+    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_numerical", mesh, vh, unit_one, ierr)
+    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_rho", mesh, rho, unit_one, ierr)
+    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_exact", mesh, vh_exact, unit_one, ierr)
+    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_numerical", mesh, vh, unit_one, ierr)
     ! not dimensionless, but no need for unit conversion for a test routine
 
     SAFE_DEALLOCATE_A(rho)
@@ -677,6 +657,17 @@ contains
     iterative = poisson_solver == POISSON_CG .or. poisson_solver == POISSON_CG_CORRECTED .or. poisson_solver == POISSON_MULTIGRID
     
   end function poisson_solver_is_iterative
+
+  ! -----------------------------------------------------------------
+
+  logical pure function poisson_is_multigrid(this) result(is_multigrid)
+    type(poisson_t), intent(in) :: this
+    
+    is_multigrid = (poisson_solver == POISSON_MULTIGRID)
+    
+  end function poisson_is_multigrid
+
+  ! -----------------------------------------------------------------
 
   logical pure function poisson_solver_has_free_bc() result(free_bc)
 

@@ -155,7 +155,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
 
           rho_ij(1:gr%mesh%np) = R_CONJ(wf_ist(1:gr%mesh%np))*st%X(psi)(1:gr%mesh%np, 1, jst, is)
           F_ij(1:gr%mesh%np) = R_TOTYPE(M_ZERO)
-          call X(poisson_solve)(gr%der, F_ij, rho_ij, all_nodes=.false.)
+          call X(poisson_solve)(psolver, F_ij, rho_ij, all_nodes=.false.)
 
           ! this quantity has to be added to oep%X(lxc)(1:gr%mesh%np, ist)
           send_buffer(1:gr%mesh%np) = send_buffer(1:gr%mesh%np) + &

@@ -447,7 +447,7 @@ contains
     end if
 
     ! solve the Poisson equation
-    call dpoisson_solve(gr%fine%der, pot, rho)
+    call dpoisson_solve(psolver, pot, rho)
 
     if(gr%have_fine_mesh) then
       call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, pot, hm%vhartree)

@@ -58,7 +58,7 @@ subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
 
   case(PRE_POISSON)
     do idim = 1, hm%d%dim
-      call X(poisson_solve)(gr%der, b(:, idim), a(:, idim), all_nodes=.false.)
+      call X(poisson_solve)(psolver, b(:, idim), a(:, idim), all_nodes=.false.)
       call lalg_scal(gr%mesh%np, R_TOTYPE(M_ONE/(M_TWO*M_PI)), b(:,idim))
     end do
 

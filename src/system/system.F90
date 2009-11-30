@@ -90,7 +90,10 @@ contains
     call states_densities_init(sys%st, sys%gr, sys%geo, sys%mc)
     call h_sys_output_init(sys%gr%sb, sys%outp)
     call elf_init()
-    call poisson_init(sys%gr, sys%geo)
+
+    call poisson_init(psolver, sys%gr%der, sys%geo)
+    if(poisson_is_multigrid(psolver)) call grid_create_multigrid(sys%gr, sys%geo)
+
     call v_ks_init(sys%gr, sys%ks, sys%st%d, sys%st%qtot)
 
 
@@ -156,7 +159,7 @@ contains
     call multicomm_end(s%mc)
 #endif
 
-    call poisson_end()
+    call poisson_end(psolver)
     call v_ks_end(s%ks)
 
     if(associated(s%st)) then

@@ -140,7 +140,7 @@ module gcm_m
       do j = 1, gr%mesh%np
         rho(j) = phi(i)%rho(j, 1)
       end do
-      call dpoisson_solve(gr%der, vh, rho)
+      call dpoisson_solve(psolver, vh, rho)
       uh = M_HALF*dmf_integrate(gr%mesh, vh * rho)
 
       !Exchange contribution
@@ -151,7 +151,7 @@ module gcm_m
             do n = 1, gr%mesh%np
               rho(n) = phi(i)%dpsi(n, 1, j, 1)*phi(i)%dpsi(n, 1, k, 1)
             end do
-            call dpoisson_solve(gr%der, vh, rho)
+            call dpoisson_solve(psolver, vh, rho)
             ex = ex - dmf_integrate(gr%mesh, vh*rho)
           end do
         end do
@@ -277,7 +277,7 @@ module gcm_m
       do k = 1, gr%mesh%np
         rho(k) = st1%dpsi(k, 1, 1, 1) * st2%dpsi(k, 1, 1, 1)
       end do
-      call dpoisson_solve(gr%der, vh, rho)
+      call dpoisson_solve(psolver, vh, rho)
       st1opst2 =  dmf_integrate(gr%mesh, vh(:) * rho(:))
 
       SAFE_DEALLOCATE_A(rho)
@@ -297,7 +297,7 @@ module gcm_m
           do i = 1, gr%mesh%np
             rho(i) = st1%dpsi(i, 1, k1, 1)*st2%dpsi(i, 1, l1, 1)
           end do
-          call dpoisson_solve(gr%der, vh, rho)
+          call dpoisson_solve(psolver, vh, rho)
           do k2 = 1, nst
             do l2 = 1, nst
               do i = 1, gr%mesh%np
