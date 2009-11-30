@@ -46,10 +46,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine poisson_cg_init(m, ml, thr, itr)
-    type(mesh_t), intent(in) :: m
-    integer, intent(in) :: ml, itr
-    FLOAT,   intent(in) :: thr
+  subroutine poisson_cg_init(mesh, ml, thr, itr)
+    type(mesh_t), intent(in) :: mesh
+    integer,      intent(in) :: ml, itr
+    FLOAT,        intent(in) :: thr
 
     call push_sub('poisson_cg.poisson_cg_init')
     threshold = thr
@@ -66,10 +66,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine poisson_cg1(der, corrector, pot, rho)
-    type(derivatives_t), target, intent(in)    :: der
-    type(poisson_corr_t),        intent(inout) :: corrector
-    FLOAT,                       intent(inout) :: pot(:)
-    FLOAT,                       intent(in)    :: rho(:)
+    type(derivatives_t),  target, intent(in)    :: der
+    type(poisson_corr_t),         intent(inout) :: corrector
+    FLOAT,                        intent(inout) :: pot(:)
+    FLOAT,                        intent(in)    :: rho(:)
 
     integer :: iter
     FLOAT :: res

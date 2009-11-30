@@ -24,7 +24,7 @@ subroutine poisson3D_init(gr, geo)
 
   integer :: maxl, iter
   integer :: nx, ny, nz
-  FLOAT :: xl, yl, zl
+  FLOAT   :: xl, yl, zl
 
   call push_sub('poisson3D.poisson3D_init')
 
@@ -123,19 +123,19 @@ subroutine poisson3D_init(gr, geo)
     call poisson_isf_init(gr%mesh, init_world = all_nodes_default)
 
   case(POISSON_FFT_SPH)
-    call poisson_fft_build_3d_0d(gr, poisson_solver)
+    call poisson_fft_build_3d_0d(gr%mesh, poisson_solver)
 
   case(POISSON_FFT_CYL)
-    call poisson_fft_build_3d_1d(gr)
+    call poisson_fft_build_3d_1d(gr%mesh)
 
   case(POISSON_FFT_PLA)
-    call poisson_fft_build_3d_2d(gr)
+    call poisson_fft_build_3d_2d(gr%mesh)
 
   case(POISSON_FFT_NOCUT)
-    call poisson_fft_build_3d_3d(gr)
+    call poisson_fft_build_3d_3d(gr%mesh)
 
   case(POISSON_FFT_CORRECTED)
-    call poisson_fft_build_3d_0d(gr, poisson_solver)
+    call poisson_fft_build_3d_0d(gr%mesh, poisson_solver)
     call parse_integer(datasets_check('PoissonSolverMaxMultipole'), 2, maxl)
     write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
     call write_info(1)

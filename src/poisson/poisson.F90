@@ -197,7 +197,7 @@ contains
       end if
 
       call messages_print_var_option(stdout, "PoissonSolver", poisson_solver)
-      call poisson1d_init(gr)
+      call poisson1d_init(gr%mesh)
 
       call pop_sub()
     end subroutine init_1D
@@ -209,12 +209,12 @@ contains
       call push_sub('poisson.poisson_init.init_2D')
 
       if (gr%sb%periodic_dim > 0) then 
-        default_solver = gr%sb%periodic_dim
+        default_solver = gr%mesh%sb%periodic_dim
       else
         default_solver = POISSON_FFT_SPH
       end if
 
-      call parse_integer(datasets_check('PoissonSolver'), gr%sb%periodic_dim, poisson_solver)
+      call parse_integer(datasets_check('PoissonSolver'), gr%mesh%sb%periodic_dim, poisson_solver)
       if( (poisson_solver .ne. POISSON_FFT_SPH)         .and. &
           (poisson_solver .ne. POISSON_DIRECT_SUM_2D)   .and. &
           (poisson_solver .ne. 1)                       .and. &
@@ -233,7 +233,7 @@ contains
       end if
 
       call messages_print_var_option(stdout, "PoissonSolver", poisson_solver)
-      call poisson2D_init(gr)
+      call poisson2D_init(gr%mesh)
 
       call pop_sub()
     end subroutine init_2D
