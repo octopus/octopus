@@ -82,7 +82,7 @@ module poisson_m
     type(derivatives_t), pointer :: der
   end type poisson_t
 
-  type(poisson_t), public :: psolver
+  type(poisson_t), target, public :: psolver
 
   integer :: poisson_solver = -99
   FLOAT   :: poisson_soft_coulomb_param = M_ONE
@@ -390,8 +390,8 @@ contains
   !-----------------------------------------------------------------
   subroutine dpoisson_solve(this, pot, rho, all_nodes)
     type(poisson_t),      intent(inout) :: this
-    FLOAT,                intent(inout) :: pot(:)    ! pot(mesh%np)
-    FLOAT,                intent(in)    :: rho(:)    ! rho(mesh%np)
+    FLOAT,                intent(inout) :: pot(:)
+    FLOAT,                intent(in)    :: rho(:)
     logical, optional,    intent(in)    :: all_nodes ! Is the Poisson solver allowed to utilise
                                                      ! all nodes or only the domain nodes for
                                                      ! its calculations? (Defaults to .true.)
@@ -418,6 +418,9 @@ contains
     call push_sub('poisson.dpoisson_solve')
 
     der => this%der
+
+    ASSERT(ubound(pot, dim = 1) == der%mesh%np_part .or. ubound(pot, dim = 1) == der%mesh%np)
+    ASSERT(ubound(rho, dim = 1) == der%mesh%np_part .or. ubound(rho, dim = 1) == der%mesh%np)
 
     ! Check optional argument and set to default if necessary.
     if(present(all_nodes)) then

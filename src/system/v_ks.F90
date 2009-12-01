@@ -70,17 +70,19 @@ module v_ks_m
     integer           :: sic_type   ! what kind of self-interaction correction to apply
     type(xc_t)        :: xc
     type(xc_OEP_t)    :: oep
+    type(poisson_t), pointer :: hartree_solver
+    logical                  :: new_hartree
   end type v_ks_t
-
 
 contains
 
   
   ! ---------------------------------------------------------
-  subroutine v_ks_init(gr, ks, d, nel)
+  subroutine v_ks_init(gr, ks, d, geo, nel)
     type(v_ks_t),        intent(out)   :: ks
     type(grid_t),        intent(inout) :: gr
     type(states_dim_t),  intent(in)    :: d
+    type(geometry_t),    intent(in)    :: geo
     FLOAT,               intent(in)    :: nel ! the total number of electrons
 
     call push_sub('v_ks.v_ks_init')
@@ -167,6 +169,18 @@ contains
 
     call v_ks_write_info(ks, stdout)
 
+    ks%new_hartree = .false.
+    nullify(ks%hartree_solver)
+    if(ks%theory_level /= INDEPENDENT_PARTICLES) then
+      if(gr%have_fine_mesh) then
+        ks%new_hartree = .true.
+        SAFE_ALLOCATE(ks%hartree_solver)
+        call poisson_init(ks%hartree_solver, gr%fine%der, geo)
+      else
+        ks%hartree_solver => psolver
+      end if
+     end if
+
     call pop_sub()
   end subroutine v_ks_init
   ! ---------------------------------------------------------
@@ -183,6 +197,10 @@ contains
       call xc_oep_end(ks%oep)
       call xc_end(ks%xc)
     end select
+
+    if(ks%new_hartree) then
+      SAFE_DEALLOCATE_P(ks%hartree_solver)
+    end if
 
     call pop_sub()
   end subroutine v_ks_end
@@ -290,7 +308,7 @@ contains
         if(ks%theory_level.ne.HARTREE) call v_a_xc()
 
         hm%ehartree = M_ZERO
-        call v_ks_hartree(gr, st, hm, amaldi_factor)
+        call v_ks_hartree(ks, gr, st, hm, amaldi_factor)
 
       !end if
 
@@ -404,7 +422,8 @@ contains
 
   ! ---------------------------------------------------------
   ! Hartree contribution to the XC potential
-  subroutine v_ks_hartree(gr, st, hm, amaldi_factor)
+  subroutine v_ks_hartree(ks, gr, st, hm, amaldi_factor)
+    type(v_ks_t),        intent(inout) :: ks
     type(grid_t),        intent(inout) :: gr
     type(hamiltonian_t), intent(inout) :: hm
     type(states_t),      intent(in)    :: st
@@ -447,7 +466,7 @@ contains
     end if
 
     ! solve the Poisson equation
-    call dpoisson_solve(psolver, pot, rho)
+    call dpoisson_solve(ks%hartree_solver, pot, rho)
 
     if(gr%have_fine_mesh) then
       call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, pot, hm%vhartree)

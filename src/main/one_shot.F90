@@ -83,7 +83,7 @@ contains
     end if
 
     ! Get the Hartree energy
-    call v_ks_hartree(sys%gr, sys%st, hm)
+    call v_ks_hartree(sys%ks, sys%gr, sys%st, hm)
     E_Hartree = hm%ehartree
 
     ! Get exchange-correlation energies

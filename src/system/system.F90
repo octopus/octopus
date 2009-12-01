@@ -94,7 +94,7 @@ contains
     call poisson_init(psolver, sys%gr%der, sys%geo)
     if(poisson_is_multigrid(psolver)) call grid_create_multigrid(sys%gr, sys%geo)
 
-    call v_ks_init(sys%gr, sys%ks, sys%st%d, sys%st%qtot)
+    call v_ks_init(sys%gr, sys%ks, sys%st%d, sys%geo, sys%st%qtot)
 
 
     !print the mesh information if it is required
