@@ -68,7 +68,7 @@ program octopus
   !% The code prints a stack trace as it enters end exits subroutines.
   !% This is useful for developers and you should include this output when
   !% submitting a bug report.
-  !%Option 100
+  !%Option 99
   !% The debug output is additionally written to files in the debug
   !% directory. For each node (when running in parallel) there is a file called
   !% <tt>debug_trace.&lt;rank&gt;</tt>. Writing these files slows down the code by a huge factor and
@@ -82,7 +82,7 @@ program octopus
     in_debug_mode = .false.
   end if
 
-  ! Now we can initialize the io
+  ! Now we can initialize the I/O
   call io_init()
 
   !%Variable ReportMemory

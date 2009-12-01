@@ -92,7 +92,7 @@ contains
     !%Default dft
     !%Section Hamiltonian
     !%Description
-    !% The calculations can be run with three different "theory levels":
+    !% The calculations can be run with four different "theory levels":
     !%Option independent_particles 2
     !% Particles will be considered as independent, <i>i.e.</i> as non-interacting.
     !% This mode is mainly used for testing purposes, as the code is usually 

@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2002-2006 the cotopus team
+ Copyright (C) 2002-2006 the octopus team
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@
 #include <assert.h>
 #include <gd.h>
 
-#include "string_f.h" /* fortran <-> c string compatibility issues */
+#include "string_f.h" /* Fortran <-> C string compatibility issues */
 
 /* ---------------------- Interface to GD functions ------------------------ */
 gdImagePtr FC_FUNC_(oct_gdimage_create_from, OCT_GDIMAGE_CREATE_FROM)
@@ -111,7 +111,7 @@ void FC_FUNC_(oct_gdimage_get_pixel_rgb, OCT_GDIMAGE_GET_PIXEL_RGB)
 }
 
 #else
-/* this is to avoid an empty source file (not allowed by ansi C)*/
+/* this is to avoid an empty source file (not allowed by ANSI C)*/
 void useless(){}
 #endif
 /* defined HAVEGDLIB */

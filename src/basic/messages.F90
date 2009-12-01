@@ -658,7 +658,7 @@ contains
     sub_stack(no_sub_stack)  = trim(sub_name)
     time_stack(no_sub_stack) = loct_clock()
 
-    if(conf%debug_level.ge.100) then
+    if(conf%debug_level .ge. 99) then
       call open_debug_trace(iunit)
       call push_sub_write(iunit)
       ! close file to ensure flushing
@@ -705,7 +705,7 @@ contains
       call write_fatal(1)
     end if
 
-    if(conf%debug_level.ge.100) then
+    if(conf%debug_level .ge. 99) then
       call open_debug_trace(iunit)
       call pop_sub_write(iunit)
       ! close file to ensure flushing

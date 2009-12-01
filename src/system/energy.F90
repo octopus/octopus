@@ -70,7 +70,7 @@ contains
 
     logical :: full_
 
-    call push_sub('energy.energy_calculate')
+    call push_sub('energy.total_energy')
 
     full_ = .false.
     if(present(full)) full_ = full

@@ -109,7 +109,11 @@ contains
 
   subroutine mesh_init_mesh_aux(mesh)
     type(mesh_t), target, intent(in) :: mesh
+
+    call push_sub('mesh_function.mesh_init_mesh_aux')
     mesh_aux => mesh
+
+    call pop_sub()
   end subroutine mesh_init_mesh_aux
 
 #include "undef.F90"

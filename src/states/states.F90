@@ -423,7 +423,7 @@ contains
     !% (experimental) If set to yes, Current-DFT will be used. This is the
     !% extension to DFT that should be used when external magnetic fields are
     !% present. The current-dependent part of the XC functional is set using the
-    !% <tt>JFunctional<tt> variable. The default is no.
+    !% <tt>JFunctional</tt> variable. The default is no.
     !%End
     call parse_logical(datasets_check('CurrentDFT'), .false., st%d%cdft)
     if (st%d%cdft) then

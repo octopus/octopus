@@ -77,8 +77,8 @@ module scf_m
     VERB_COMPACT = 1,   &
     VERB_FULL    = 3
   
-  type scf_t      ! some variables used for the scf cycle
-    integer :: max_iter   ! maximum number of scf iterations
+  type scf_t      ! some variables used for the SCF cycle
+    integer :: max_iter   ! maximum number of SCF iterations
 
     FLOAT :: lmm_r
 
@@ -303,15 +303,15 @@ contains
 
   ! ---------------------------------------------------------
   subroutine scf_run(scf, gr, geo, st, ks, hm, outp, gs_run, verbosity)
-    type(scf_t),         intent(inout) :: scf
-    type(grid_t),        intent(inout) :: gr
-    type(geometry_t),    intent(inout) :: geo
-    type(states_t),      intent(inout) :: st
-    type(v_ks_t),        intent(inout) :: ks
-    type(hamiltonian_t), intent(inout) :: hm
-    type(h_sys_output_t),intent(in)    :: outp
-    logical, optional,   intent(in)    :: gs_run
-    integer, optional,   intent(in)    :: verbosity 
+    type(scf_t),          intent(inout) :: scf
+    type(grid_t),         intent(inout) :: gr
+    type(geometry_t),     intent(inout) :: geo
+    type(states_t),       intent(inout) :: st
+    type(v_ks_t),         intent(inout) :: ks
+    type(hamiltonian_t),  intent(inout) :: hm
+    type(h_sys_output_t), intent(in)    :: outp
+    logical, optional,    intent(in)    :: gs_run
+    integer, optional,    intent(in)    :: verbosity 
 
     type(lcao_t) :: lcao
     type(profile_t), save :: prof
@@ -435,7 +435,7 @@ contains
       end do
       SAFE_DEALLOCATE_A(tmp)
 
-      ! compute forces only if they are used as convergence criteria
+      ! compute forces only if they are used as convergence criterion
       if (scf%conv_abs_force > M_ZERO) then
         call forces_calculate(gr, geo, hm%ep, st)
         scf%abs_force = M_ZERO

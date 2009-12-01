@@ -159,7 +159,7 @@ contains
 
     if(in_debug_mode) call io_mkdir('debug')
 
-    if(conf%debug_level .ge. 100) then
+    if(conf%debug_level .ge. 99) then
       !wipe out debug trace files from previous runs to start fresh rather than appending
       call delete_debug_trace()
     endif
@@ -170,7 +170,7 @@ contains
     !%Section Execution::IO
     !%Description
     !% The name of the directory where <tt>Octopus</tt> stores binary information
-    !% like the wavefunctions.
+    !% such as the wavefunctions.
     !%End
     call parse_string('TmpDir', trim(current_label)//'restart/', tmpdir)
     call io_mkdir(tmpdir, is_tmp=.true.)
@@ -576,7 +576,7 @@ contains
     ! only root node performs the check
     if(mpi_grp_is_root(mpi_world)) then
       if(io_file_exists('enable_debug_mode', 'Enabling DebugMode')) then
-        conf%debug_level = 100
+        conf%debug_level = 99
         in_debug_mode    = .true.
         ! this call does not hurt if the directory is already there
         ! but is otherwise required
