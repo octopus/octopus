@@ -102,8 +102,12 @@
 !% Becke 86 MGC for 2D systems
 !%Option gga_x_bayesian               125
 !% Bayesian best fit for the enhancement factor
-!%Option gga_x_pbe_jsjr               126
-!% JSJR reparametrization by Pedroza, Silva & Capelle
+!%Option gga_x_2d_b88               127
+!% Becke 88 in 2D
+!%Option gga_x_2d_b86               128
+!% Becke 86 Xalfa,beta,gamma
+!%Option gga_x_2d_pbe               129
+!% Perdew, Burke & Ernzerhof exchange in 2D
 !%Option gga_c_pbe               130000
 !% Perdew, Burke & Ernzerhof correlation
 !%Option gga_c_lyp               131000
@@ -122,6 +126,12 @@
 !% Langreth and Mehl correlation
 !%Option gga_c_pbe_jrgx               138000
 !% JRGX reparametrization by Pedroza, Silva & Capelle
+!%Option gga_x_optb88_vdw               139
+!% Becke 88 reoptimized to be used with vdW functional of Dion et al
+!%Option gga_x_pbek1_vdw               140
+!% PBE reparametrization for vdW
+!%Option gga_x_optpbe_vdw               141
+!% PBE reparametrization for vdW
 !%Option gga_xc_lb               160
 !% van Leeuwen & Baerends
 !%Option gga_xc_hcth_93               161
@@ -166,6 +176,8 @@
 !% Schmider-Becke 98 parameterization 2b
 !%Option gga_xc_sb98_2c               181
 !% Schmider-Becke 98 parameterization 2c
+!%Option gga_x_2d_optx               199
+!% Handy & Cohen OPTX 01
 !%Option hyb_gga_xc_b3pw91               401
 !% The original hybrid proposed by Becke
 !%Option hyb_gga_xc_b3lyp               402
