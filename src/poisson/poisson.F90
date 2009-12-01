@@ -52,6 +52,7 @@ module poisson_m
 
   private
   public ::                      &
+    poisson_t,                   &
     poisson_get_solver,          &
     poisson_init,                &
     dpoisson_solve,              &
