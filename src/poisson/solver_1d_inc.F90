@@ -19,19 +19,19 @@
 
 
 !-----------------------------------------------------------------
-subroutine poisson1d_init(mesh)
-  type(mesh_t), intent(inout) :: mesh
+subroutine poisson1d_init(this)
+  type(poisson_t), intent(inout) :: this
 
   call push_sub('solver_1D.poisson1d_init')
 
   call parse_float(datasets_check('Poisson1DSoftCoulombParam'), &
-    M_ONE, poisson_soft_coulomb_param)
+    M_ONE, this%poisson_soft_coulomb_param)
 
-  select case(poisson_solver)
+  select case(this%method)
   case(POISSON_FFT_SPH)
-    call poisson_fft_build_1d_0d(mesh, poisson_soft_coulomb_param)
+    call poisson_fft_build_1d_0d(this%der%mesh, this%poisson_soft_coulomb_param)
   case(POISSON_FFT_NOCUT)
-    call poisson_fft_build_1d_1d(mesh, poisson_soft_coulomb_param)
+    call poisson_fft_build_1d_1d(this%der%mesh, this%poisson_soft_coulomb_param)
   end select
 
   call pop_sub()
@@ -39,10 +39,10 @@ end subroutine poisson1d_init
 
 !-----------------------------------------------------------------
 
-subroutine poisson1D_solve(mesh, pot, rho)
-  type(mesh_t), intent(in)  :: mesh
-  FLOAT,        intent(out) :: pot(:)
-  FLOAT,        intent(in)  :: rho(:)
+subroutine poisson1D_solve(this, pot, rho)
+  type(poisson_t), intent(in)  :: this
+  FLOAT,           intent(out) :: pot(:)
+  FLOAT,           intent(in)  :: rho(:)
 
   integer  :: ip, jp
   FLOAT    :: xx, yy
@@ -51,25 +51,25 @@ subroutine poisson1D_solve(mesh, pot, rho)
   FLOAT, allocatable :: pvec(:)
 #endif
 
-  ASSERT(poisson_solver == -1)
+  ASSERT(this%method == -1)
 
   call push_sub('poisson1D.poisson1D_solve')
 
 #ifdef HAVE_MPI
-  if(mesh%parallel_in_domains) then
-    SAFE_ALLOCATE(pvec(1:mesh%np))
+  if(this%der%mesh%parallel_in_domains) then
+    SAFE_ALLOCATE(pvec(1:this%der%mesh%np))
 
     pot = M_ZERO
-    do ip = 1, mesh%np_global
-      xg = mesh_x_global(mesh, ip)
+    do ip = 1, this%der%mesh%np_global
+      xg = this%der%mesh_x_global(this%der%mesh, ip)
       xx = xg(1)
-      do jp = 1, mesh%np
-        yy = mesh%x(jp, 1)
-        pvec(jp) = rho(jp)/sqrt(poisson_soft_coulomb_param**2 + (xx-yy)**2)
+      do jp = 1, this%der%mesh%np
+        yy = this%der%mesh%x(jp, 1)
+        pvec(jp) = rho(jp)/sqrt(this%poisson_soft_coulomb_param**2 + (xx-yy)**2)
       end do
-      tmp = dmf_integrate(mesh, pvec)
-      if (mesh%vp%part(ip).eq.mesh%vp%partno) then
-        pot(vec_global2local(mesh%vp, ip, mesh%vp%partno)) = tmp
+      tmp = dmf_integrate(this%der%mesh, pvec)
+      if (this%der%mesh%vp%part(ip).eq.this%der%mesh%vp%partno) then
+        pot(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno)) = tmp
       end if
     end do
 
@@ -78,11 +78,11 @@ subroutine poisson1D_solve(mesh, pot, rho)
   else  ! running in serial
 #endif
     pot = M_ZERO
-    do ip = 1, mesh%np
-      xx = mesh%x(ip, 1)
-      do jp = 1, mesh%np
-        yy = mesh%x(jp, 1)
-        pot(ip) = pot(ip) + rho(jp)/sqrt(poisson_soft_coulomb_param**2 + (xx-yy)**2)*mesh%vol_pp(jp)
+    do ip = 1, this%der%mesh%np
+      xx = this%der%mesh%x(ip, 1)
+      do jp = 1, this%der%mesh%np
+        yy = this%der%mesh%x(jp, 1)
+        pot(ip) = pot(ip) + rho(jp)/sqrt(this%poisson_soft_coulomb_param**2 + (xx-yy)**2)*this%der%mesh%vol_pp(jp)
       end do
     end do
 #ifdef HAVE_MPI

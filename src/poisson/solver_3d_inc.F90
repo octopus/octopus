@@ -18,9 +18,9 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine poisson3D_init(der, geo)
-  type(derivatives_t), intent(inout) :: der
-  type(geometry_t),    intent(in)    :: geo
+subroutine poisson3D_init(this, geo)
+  type(poisson_t),  intent(inout) :: this
+  type(geometry_t), intent(in)    :: geo
 
   integer :: maxl, iter
   integer :: nx, ny, nz
@@ -28,7 +28,7 @@ subroutine poisson3D_init(der, geo)
 
   call push_sub('poisson3D.poisson3D_init')
 
-  ASSERT(poisson_solver >= POISSON_FFT_SPH .and. poisson_solver <= POISSON_SETE)
+  ASSERT(this%method >= POISSON_FFT_SPH .and. this%method <= POISSON_SETE)
 
   !%Variable PoissonSolverMaxMultipole
   !%Type integer
@@ -82,15 +82,15 @@ subroutine poisson3D_init(der, geo)
   !! memory if you use curvilinear coordinates.
   !!End
 
-  select case(poisson_solver)
+  select case(this%method)
   case(POISSON_CG)
      call parse_integer(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)
      write(message(1),'(a,i2)')'Info: Boundary conditions fixed up to L =',  maxl
      call write_info(1)
      call parse_integer(datasets_check('PoissonSolverMaxIter'), 400, iter)
      call parse_float(datasets_check('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
-     call poisson_corrections_init(corrector, maxl, der%mesh)
-     call poisson_cg_init(der%mesh, maxl, threshold, iter)
+     call poisson_corrections_init(this%corrector, maxl, this%der%mesh)
+     call poisson_cg_init(this%der%mesh, maxl, threshold, iter)
 
   case(POISSON_CG_CORRECTED)
      call parse_integer(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)
@@ -98,8 +98,8 @@ subroutine poisson3D_init(der, geo)
      call parse_float(datasets_check('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
      write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
      call write_info(1)
-     call poisson_corrections_init(corrector, maxl, der%mesh)
-     call poisson_cg_init(der%mesh, maxl, threshold, iter)
+     call poisson_corrections_init(this%corrector, maxl, this%der%mesh)
+     call poisson_cg_init(this%der%mesh, maxl, threshold, iter)
 
   case(POISSON_MULTIGRID)
      call parse_integer(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)
@@ -107,39 +107,39 @@ subroutine poisson3D_init(der, geo)
      write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
      call write_info(1)
 
-     call poisson_multigrid_init(mg, der%mesh, maxl, threshold)
+     call poisson_multigrid_init(this%mg, this%der%mesh, maxl, threshold)
      
   case(POISSON_ISF)
-    call poisson_isf_init(der%mesh, init_world = all_nodes_default)
+    call poisson_isf_init(this%der%mesh, init_world = this%all_nodes_default)
 
   case(POISSON_FFT_SPH)
-    call poisson_fft_build_3d_0d(der%mesh, poisson_solver)
+    call poisson_fft_build_3d_0d(this%der%mesh, this%method)
 
   case(POISSON_FFT_CYL)
-    call poisson_fft_build_3d_1d(der%mesh)
+    call poisson_fft_build_3d_1d(this%der%mesh)
 
   case(POISSON_FFT_PLA)
-    call poisson_fft_build_3d_2d(der%mesh)
+    call poisson_fft_build_3d_2d(this%der%mesh)
 
   case(POISSON_FFT_NOCUT)
-    call poisson_fft_build_3d_3d(der%mesh)
+    call poisson_fft_build_3d_3d(this%der%mesh)
 
   case(POISSON_FFT_CORRECTED)
-    call poisson_fft_build_3d_0d(der%mesh, poisson_solver)
+    call poisson_fft_build_3d_0d(this%der%mesh, this%method)
     call parse_integer(datasets_check('PoissonSolverMaxMultipole'), 2, maxl)
     write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
     call write_info(1)
-    call poisson_corrections_init(corrector, maxl, der%mesh)
+    call poisson_corrections_init(this%corrector, maxl, this%der%mesh)
 
   case(POISSON_SETE)
-    nx = der%mesh%idx%ll(1) 
-    ny = der%mesh%idx%ll(2)
-    nz = der%mesh%idx%ll(3)
-    xl = 2*der%mesh%sb%lsize(1)
-    yl = 2*der%mesh%sb%lsize(2)
-    zl = 2*der%mesh%sb%lsize(3)
+    nx = this%der%mesh%idx%ll(1) 
+    ny = this%der%mesh%idx%ll(2)
+    nz = this%der%mesh%idx%ll(3)
+    xl = 2*this%der%mesh%sb%lsize(1)
+    yl = 2*this%der%mesh%sb%lsize(2)
+    zl = 2*this%der%mesh%sb%lsize(3)
 
-    call poisson_sete_init(sete_solver, nx, ny, nz, xl, yl, zl, geo%natoms)
+    call poisson_sete_init(this%sete_solver, nx, ny, nz, xl, yl, zl, geo%natoms)
      
   end select
 

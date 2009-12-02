@@ -373,7 +373,7 @@ contains
     nullify(ep%local_potential)
     ep%local_potential_precalculated = .false.
     
-    if (poisson_get_solver() == POISSON_SETE) then 
+    if (poisson_get_solver(psolver) == POISSON_SETE) then 
       SAFE_ALLOCATE(rho_nuc(1:gr%mesh%np))
       rho_nuc(1:gr%mesh%np)=M_ZERO
     end if
@@ -434,7 +434,7 @@ contains
       SAFE_DEALLOCATE_P(ep%proj_fine)
     end if
 
-    if (poisson_get_solver() == POISSON_SETE) then 
+    if (poisson_get_solver(psolver) == POISSON_SETE) then 
       SAFE_DEALLOCATE_A(rho_nuc)
     end if
 
@@ -571,7 +571,7 @@ contains
       !systems) or by applying it directly to the grid
 
       if(species_has_density(geo%atom(iatom)%spec) .or. &
-        (species_is_ps(geo%atom(iatom)%spec) .and. .not. poisson_solver_has_free_bc())) then
+        (species_is_ps(geo%atom(iatom)%spec) .and. .not. poisson_solver_has_free_bc(psolver))) then
 
         SAFE_ALLOCATE(rho(1:mesh%np))
 
@@ -584,7 +584,7 @@ contains
         count_atoms=iatom
         call dpoisson_solve(psolver, vl, rho) 
 
-        if (poisson_get_solver() == POISSON_SETE) then  !SEC
+        if (poisson_get_solver(psolver) == POISSON_SETE) then  !SEC
           rho_nuc(1:gr%mesh%np) = rho_nuc(1:gr%mesh%np) + rho(1:gr%mesh%np)
         end if
 

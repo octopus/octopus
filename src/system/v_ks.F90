@@ -22,6 +22,7 @@
 module v_ks_m
   use datasets_m
   use energy_m
+  use geometry_m
   use global_m
   use grid_m
   use hamiltonian_m
@@ -361,6 +362,9 @@ contains
     subroutine v_a_xc()
       FLOAT, allocatable :: rho(:, :)
       type(profile_t), save :: prof
+      FLOAT, pointer :: vxc(:, :)
+      integer :: ispin
+
       call push_sub('v_ks.v_ks_calc.v_a_xc')
       call profiling_in(prof, "XC")
 
@@ -377,14 +381,21 @@ contains
         rho(1:gr%fine%mesh%np, :) = amaldi_factor*rho(1:gr%fine%mesh%np, :)
       end if
 
+      if(gr%have_fine_mesh) then
+        SAFE_ALLOCATE(vxc(1:gr%fine%mesh%np_part, 1:st%d%nspin))
+      else
+        vxc => hm%vxc
+      end if
+
       ! Get the *local* XC term
       if(hm%d%cdft) then
         call xc_get_vxc_and_axc(gr, ks%xc, st, rho, st%current, st%d%ispin, hm%vxc, hm%axc, &
              hm%ex, hm%ec, hm%exc_j, -minval(st%eigenval(st%nst, :)), st%qtot)
       else
         call xc_get_vxc(gr, ks%xc, st, rho, st%d%ispin, hm%ex, hm%ec, &
-             -minval(st%eigenval(st%nst, :)), st%qtot, vxc=hm%vxc, vtau=hm%vtau)
+             -minval(st%eigenval(st%nst, :)), st%qtot, vxc, vtau=hm%vtau)
       end if
+
       SAFE_DEALLOCATE_A(rho)
 
       if(ks%theory_level == KOHN_SHAM_DFT) then
@@ -401,17 +412,24 @@ contains
       ! Now we calculate Int[n vxc] = hm%epot
       select case(hm%d%ispin)
       case(UNPOLARIZED)
-        hm%epot = hm%epot + dmf_dotp(gr%mesh, st%rho(:, 1), hm%vxc(:, 1))
+        hm%epot = hm%epot + dmf_dotp(gr%fine%mesh, st%rho(:, 1), vxc(:, 1))
       case(SPIN_POLARIZED)
-        hm%epot = hm%epot + dmf_dotp(gr%mesh, st%rho(:, 1), hm%vxc(:, 1)) &
-             + dmf_dotp(gr%mesh, st%rho(:, 2), hm%vxc(:, 2))
+        hm%epot = hm%epot + dmf_dotp(gr%fine%mesh, st%rho(:, 1), vxc(:, 1)) &
+             + dmf_dotp(gr%fine%mesh, st%rho(:, 2), vxc(:, 2))
       case(SPINORS)
-        hm%epot = hm%epot + dmf_dotp(gr%mesh, st%rho(:, 1), hm%vxc(:, 1)) &
-             + dmf_dotp(gr%mesh, st%rho(:, 2), hm%vxc(:, 2)) &
-             + M_TWO*dmf_dotp(gr%mesh, st%rho(:, 3), hm%vxc(:, 3)) &
-             + M_TWO*dmf_dotp(gr%mesh, st%rho(:, 4), hm%vxc(:, 4))
+        hm%epot = hm%epot + dmf_dotp(gr%fine%mesh, st%rho(:, 1), vxc(:, 1)) &
+             + dmf_dotp(gr%fine%mesh, st%rho(:, 2), vxc(:, 2)) &
+             + M_TWO*dmf_dotp(gr%fine%mesh, st%rho(:, 3), vxc(:, 3)) &
+             + M_TWO*dmf_dotp(gr%fine%mesh, st%rho(:, 4), vxc(:, 4))
 
       end select
+
+      if(gr%have_fine_mesh) then
+        do ispin = 1, st%d%nspin
+          call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, vxc(:, ispin), hm%vxc(:, ispin))
+        end do
+        SAFE_DEALLOCATE_P(vxc)
+      end if
 
       call profiling_out(prof)
       call pop_sub()
@@ -435,7 +453,7 @@ contains
 
     call push_sub('v_ks.v_ks_hartree')
 
-    SAFE_ALLOCATE(rho(1:gr%mesh%np))
+    SAFE_ALLOCATE(rho(1:gr%fine%mesh%np))
 
     ! calculate the total density
     call lalg_copy(gr%fine%mesh%np, st%rho(:, 1), rho)
@@ -456,30 +474,31 @@ contains
 
     if(.not. gr%have_fine_mesh) then
       pot => hm%vhartree
-      if(poisson_solver_is_iterative()) then
+      if(poisson_solver_is_iterative(ks%hartree_solver)) then
         ! provide a better starting point (in the td case vhxc was interpolated)
         forall(ip = 1:gr%mesh%np) pot(ip) = hm%vhxc(ip, 1) - hm%vxc(ip, 1)
       end if
     else
-      SAFE_ALLOCATE(pot(1:gr%fine%mesh%np))
+      SAFE_ALLOCATE(pot(1:gr%fine%mesh%np_part))
       pot = M_ZERO
     end if
 
     ! solve the Poisson equation
     call dpoisson_solve(ks%hartree_solver, pot, rho)
-
-    if(gr%have_fine_mesh) then
-      call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, pot, hm%vhartree)
-    end if
-
+    
     ! Get the Hartree energy
     hm%ehartree = M_HALF*dmf_dotp(gr%fine%mesh, rho, pot)
 
-    if (poisson_get_solver() == POISSON_SETE) then !SEC
+    if(gr%have_fine_mesh) then
+      call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, pot, hm%vhartree)
+      SAFE_DEALLOCATE_P(pot)
+    end if
+
+    if (poisson_get_solver(ks%hartree_solver) == POISSON_SETE) then !SEC
 !      hm%ep%eii = hm%ep%eii+M_HALF*dmf_dotp(gr%mesh, rho_nuc, hm%ep%vpsl) 
 !      write(525,*) hm%ehartree+poisson_sete_energy(sete_solver),hm%ehartree,poisson_sete_energy(sete_solver)
-      hm%ehartree=hm%ehartree+poisson_sete_energy(sete_solver)
-      write(89,*) hm%ehartree*CNST(2.0*13.60569193), poisson_sete_energy(sete_solver)*CNST(2.0*13.60569193), hm%ep%eii*CNST(2.0*13.60569193)
+      hm%ehartree=hm%ehartree + poisson_energy(ks%hartree_solver)
+      write(89,*) hm%ehartree*CNST(2.0*13.60569193), poisson_energy(ks%hartree_solver)*CNST(2.0*13.60569193), hm%ep%eii*CNST(2.0*13.60569193)
     endif
 
     SAFE_DEALLOCATE_A(rho)

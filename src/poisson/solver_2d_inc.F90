@@ -18,18 +18,18 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine poisson2D_init(mesh)
-  type(mesh_t), intent(inout) :: mesh
+subroutine poisson2D_init(this)
+  type(poisson_t), intent(inout) :: this
 
   call push_sub('poisson2D.poisson2D_init')
 
-  select case(poisson_solver)
+  select case(this%method)
   case(POISSON_FFT_SPH)
-    call poisson_fft_build_2d_0d(mesh)
+    call poisson_fft_build_2d_0d(this%der%mesh)
   case(POISSON_FFT_CYL)
-    call poisson_fft_build_2d_1d(mesh)
+    call poisson_fft_build_2d_1d(this%der%mesh)
   case(POISSON_FFT_NOCUT)
-    call poisson_fft_build_2d_2d(mesh)
+    call poisson_fft_build_2d_2d(this%der%mesh)
   end select
 
   call pop_sub()
@@ -38,10 +38,10 @@ end subroutine poisson2D_init
 
 ! ---------------------------------------------------------
 
-subroutine poisson2D_solve(mesh, pot, rho)
-  type(mesh_t), intent(in)  :: mesh
-  FLOAT,        intent(out) :: pot(:)
-  FLOAT,        intent(in)  :: rho(:)
+subroutine poisson2D_solve(this, pot, rho)
+  type(poisson_t), intent(in)  :: this
+  FLOAT,           intent(out) :: pot(:)
+  FLOAT,           intent(in)  :: rho(:)
 
   integer  :: ip, jp
   FLOAT    :: xx(2), yy(2)
@@ -50,28 +50,28 @@ subroutine poisson2D_solve(mesh, pot, rho)
   FLOAT, allocatable :: pvec(:)
 #endif
 
-  ASSERT(poisson_solver == -2)
+  ASSERT(this%method == -2)
 
   call push_sub('poisson2D.poisson2D_solve')
 #ifdef HAVE_MPI
-  if(mesh%parallel_in_domains) then
-    SAFE_ALLOCATE(pvec(1:mesh%np))
+  if(this%der%mesh%parallel_in_domains) then
+    SAFE_ALLOCATE(pvec(1:this%der%mesh%np))
 
     pot = M_ZERO
-    do ip = 1, mesh%np_global
-      xg = mesh_x_global(mesh, ip)
+    do ip = 1, this%der%mesh%np_global
+      xg = this%der%mesh_x_global(this%der%mesh, ip)
       xx(1:2) = xg(1:2)
-      do jp = 1, mesh%np
-        if(vec_global2local(mesh%vp, ip, mesh%vp%partno) == jp) then
-          pvec(jp) = M_TWO*sqrt(M_PI)*rho(jp)/mesh%h(1)
+      do jp = 1, this%der%mesh%np
+        if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
+          pvec(jp) = M_TWO*sqrt(M_PI)*rho(jp)/this%der%mesh%h(1)
         else
-          yy(:) = mesh%x(jp,1:2)
+          yy(:) = this%der%mesh%x(jp,1:2)
           pvec(jp) = rho(jp)/sqrt(sum((xx-yy)**2))
         end if
       end do
-      tmp = dmf_integrate(mesh, pvec)
-      if (mesh%vp%part(ip).eq.mesh%vp%partno) then
-        pot(vec_global2local(mesh%vp, ip, mesh%vp%partno)) = tmp
+      tmp = dmf_integrate(this%der%mesh, pvec)
+      if (this%der%mesh%vp%part(ip).eq.this%der%mesh%vp%partno) then
+        pot(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno)) = tmp
       end if
     end do
 
@@ -80,14 +80,14 @@ subroutine poisson2D_solve(mesh, pot, rho)
   else ! serial mode
 #endif
     pot = M_ZERO
-    do ip = 1, mesh%np
-      xx(:) = mesh%x(ip,1:2)
-      do jp = 1, mesh%np
+    do ip = 1, this%der%mesh%np
+      xx(:) = this%der%mesh%x(ip,1:2)
+      do jp = 1, this%der%mesh%np
         if(ip == jp) then
-          pot(ip) = pot(ip) + M_TWO*sqrt(M_PI)*rho(ip)/mesh%h(1)*mesh%vol_pp(jp)
+          pot(ip) = pot(ip) + M_TWO*sqrt(M_PI)*rho(ip)/this%der%mesh%h(1)*this%der%mesh%vol_pp(jp)
         else
-          yy(:) = mesh%x(jp,1:2)
-          pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx-yy)**2))*mesh%vol_pp(jp)
+          yy(:) = this%der%mesh%x(jp,1:2)
+          pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx-yy)**2))*this%der%mesh%vol_pp(jp)
         end if
       end do
     end do

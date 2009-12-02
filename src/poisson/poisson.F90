@@ -62,10 +62,7 @@ module poisson_m
     poisson_end,                 &
     poisson_test,                &
     poisson_is_multigrid,        &
-    geometry_init,               &
-    geometry_init_xyz,           &
-    geometry_init_species,       &
-    geometry_t
+    poisson_energy
 
   integer, public, parameter ::         &
     POISSON_DIRECT_SUM_1D = -1,         &
@@ -80,24 +77,17 @@ module poisson_m
   type poisson_t
     private
     type(derivatives_t), pointer :: der
+    integer :: method = -99
+    type(mg_solver_t) :: mg
+    FLOAT   :: poisson_soft_coulomb_param = M_ONE
+    logical :: all_nodes_default
+    type(poisson_corr_t) :: corrector
+    type(poisson_sete_t), public :: sete_solver
   end type poisson_t
 
-  type(poisson_t), target, public :: psolver
-
-  integer :: poisson_solver = -99
-  FLOAT   :: poisson_soft_coulomb_param = M_ONE
-  type(mg_solver_t) :: mg
-  logical :: all_nodes_default
-
-  type(poisson_corr_t) :: corrector
-  type(poisson_sete_t), public :: sete_solver
+  type(poisson_t), target, save, public :: psolver
 
 contains
-
-  !-----------------------------------------------------------------
-  integer pure function poisson_get_solver() result (solver)
-    solver = poisson_solver
-  end function poisson_get_solver
 
   !-----------------------------------------------------------------
   subroutine poisson_init(this, der, geo)
@@ -105,7 +95,7 @@ contains
     type(derivatives_t), target, intent(inout) :: der
     type(geometry_t),            intent(in)    :: geo
 
-    if(poisson_solver.ne.-99) return ! already initialized
+    if(this%method.ne.-99) return ! already initialized
 
     call push_sub('poisson.poisson_init')
 
@@ -124,7 +114,7 @@ contains
     !% among the parallelization-in-domains groups.
     !%End
 
-    call parse_logical(datasets_check('ParallelizationPoissonAllNodes'), .true., all_nodes_default)
+    call parse_logical(datasets_check('ParallelizationPoissonAllNodes'), .true., this%all_nodes_default)
 #endif
 
     select case(der%mesh%sb%dim)
@@ -184,24 +174,24 @@ contains
       else
         default_solver = POISSON_FFT_NOCUT
       end if
-      call parse_integer(datasets_check('PoissonSolver'), default_solver, poisson_solver)
+      call parse_integer(datasets_check('PoissonSolver'), default_solver, this%method)
 
       select case(der%mesh%sb%periodic_dim)
       case(0)
-        if( (poisson_solver.ne.POISSON_FFT_SPH)       .and. &
-            (poisson_solver.ne.POISSON_DIRECT_SUM_1D)) call input_error('PoissonSolver')
+        if( (this%method.ne.POISSON_FFT_SPH)       .and. &
+            (this%method.ne.POISSON_DIRECT_SUM_1D)) call input_error('PoissonSolver')
       case(1)
-        if( (poisson_solver.ne.POISSON_FFT_NOCUT) ) call input_error('PoissonSolver')
+        if( (this%method.ne.POISSON_FFT_NOCUT) ) call input_error('PoissonSolver')
       end select
 
-      if(der%mesh%use_curvilinear.and.poisson_solver.ne.POISSON_DIRECT_SUM_1D) then
+      if(der%mesh%use_curvilinear.and.this%method.ne.POISSON_DIRECT_SUM_1D) then
         message(1) = 'If curvilinear coordinates are used in 1D, then the only working'
         message(2) = 'Poisson solver is -1 ("direct summation in one dimension").'
         call write_fatal(2)
       end if
 
-      call messages_print_var_option(stdout, "PoissonSolver", poisson_solver)
-      call poisson1d_init(der%mesh)
+      call messages_print_var_option(stdout, "PoissonSolver", this%method)
+      call poisson1d_init(this)
 
       call pop_sub()
     end subroutine init_1D
@@ -218,26 +208,26 @@ contains
         default_solver = POISSON_FFT_SPH
       end if
 
-      call parse_integer(datasets_check('PoissonSolver'), der%mesh%sb%periodic_dim, poisson_solver)
-      if( (poisson_solver .ne. POISSON_FFT_SPH)         .and. &
-          (poisson_solver .ne. POISSON_DIRECT_SUM_2D)   .and. &
-          (poisson_solver .ne. 1)                       .and. &
-          (poisson_solver .ne. 2)                       .and. &
-          (poisson_solver .ne. 3)                       ) then
+      call parse_integer(datasets_check('PoissonSolver'), der%mesh%sb%periodic_dim, this%method)
+      if( (this%method .ne. POISSON_FFT_SPH)         .and. &
+          (this%method .ne. POISSON_DIRECT_SUM_2D)   .and. &
+          (this%method .ne. 1)                       .and. &
+          (this%method .ne. 2)                       .and. &
+          (this%method .ne. 3)                       ) then
         call input_error('PoissonSolver')
       end if
 
       ! In 2D, periodic in two dimensions means no cut-off at all.
-      if(poisson_solver == 2) poisson_solver = 3
+      if(this%method == 2) this%method = 3
 
-      if(der%mesh%use_curvilinear .and. (poisson_solver .ne. -der%mesh%sb%dim) ) then
+      if(der%mesh%use_curvilinear .and. (this%method .ne. -der%mesh%sb%dim) ) then
         message(1) = 'If curvilinear coordinates are used in 2D, then the only working'
         message(2) = 'Poisson solver is -2 ("direct summation in two dimensions").'
         call write_fatal(2)
       end if
 
-      call messages_print_var_option(stdout, "PoissonSolver", poisson_solver)
-      call poisson2D_init(der%mesh)
+      call messages_print_var_option(stdout, "PoissonSolver", this%method)
+      call poisson2D_init(this)
 
       call pop_sub()
     end subroutine init_2D
@@ -258,28 +248,28 @@ contains
       if (der%mesh%use_curvilinear) default_solver = POISSON_CG_CORRECTED
       if (der%mesh%sb%periodic_dim > 0) default_solver = der%mesh%sb%periodic_dim
       
-      call parse_integer(datasets_check('PoissonSolver'), default_solver, poisson_solver)
-      if(poisson_solver < POISSON_FFT_SPH .or. poisson_solver > POISSON_SETE ) then
+      call parse_integer(datasets_check('PoissonSolver'), default_solver, this%method)
+      if(this%method < POISSON_FFT_SPH .or. this%method > POISSON_SETE ) then
         call input_error('PoissonSolver')
       end if
 
       if(der%mesh%sb%periodic_dim > 0 .and. &
-           poisson_solver /= der%mesh%sb%periodic_dim .and. &
-           poisson_solver < POISSON_CG .and. &
-           poisson_solver /= POISSON_FFT_CORRECTED .and. poisson_solver /= POISSON_FFT_CYL) then
+           this%method /= der%mesh%sb%periodic_dim .and. &
+           this%method < POISSON_CG .and. &
+           this%method /= POISSON_FFT_CORRECTED .and. this%method /= POISSON_FFT_CYL) then
         write(message(1), '(a,i1,a)')'The system is periodic in ', der%mesh%sb%periodic_dim ,' dimension(s),'
-        write(message(2), '(a,i1,a)')'but Poisson solver is set for ',poisson_solver,' dimensions.'
+        write(message(2), '(a,i1,a)')'but Poisson solver is set for ',this%method,' dimensions.'
         message(3) =                 'You know what you are doing, right?'
         call write_warning(3)
       end if
 
-      if(der%mesh%use_curvilinear .and. (poisson_solver.ne.POISSON_CG_CORRECTED)) then
+      if(der%mesh%use_curvilinear .and. (this%method.ne.POISSON_CG_CORRECTED)) then
         message(1) = 'If curvilinear coordinates are used, then the only working'
         message(2) = 'Poisson solver is cg_corrected.'
         call write_fatal(2)
       end if
 
-      if( (der%mesh%sb%box_shape == MINIMUM) .and. (poisson_solver == POISSON_CG_CORRECTED) ) then
+      if( (der%mesh%sb%box_shape == MINIMUM) .and. (this%method == POISSON_CG_CORRECTED) ) then
         message(1) = 'When using the "minimum" box shape and the "cg_corrected"'
         message(2) = 'Poisson solver, we have observed "sometimes" some non-'
         message(3) = 'negligible error. You may want to check that the "fft" or "cg"'
@@ -287,11 +277,11 @@ contains
         call write_warning(4)
       end if
 
-      if (poisson_solver == POISSON_SETE) then
+      if (this%method == POISSON_SETE) then
         call messages_devel_version('SETE poisson solver')
       end if
 
-!      if poisson_solver == POISSON_SETE then
+!      if this%method == POISSON_SETE then
 !       do i = 1, geo%natoms !Roberto
 !         do j=1, 3 !Roberto 
 !           ind1(j)=geo%atom(i)%x(j)/der%mesh%sb%h(j)
@@ -303,8 +293,8 @@ contains
 !                        der%mesh%sb%h(1)*der%mesh%sb%h(2)*der%mesh%sb%h(3)
   !       dmf_interpolate_points(der%mesh,rho_nuc(m1),m2)) !or something similar
 !        enddo
-      call messages_print_var_option(stdout, "PoissonSolver", poisson_solver)
-      call poisson3D_init(der, geo)
+      call messages_print_var_option(stdout, "PoissonSolver", this%method)
+      call poisson3D_init(this, geo)
 
       call pop_sub()
     end subroutine init_3D
@@ -318,33 +308,33 @@ contains
 
     call push_sub('poisson.poisson_end')
 
-    select case(poisson_solver)
+    select case(this%method)
 
-    case(POISSON_FFT_SPH,POISSON_FFT_CYL,POISSON_FFT_PLA,POISSON_FFT_NOCUT)
+    case(POISSON_FFT_SPH,POISSON_FFT_CYL, POISSON_FFT_PLA, POISSON_FFT_NOCUT)
       call poisson_fft_end()
     case(POISSON_FFT_CORRECTED)
       call poisson_fft_end()
-      call poisson_corrections_end(corrector)
+      call poisson_corrections_end(this%corrector)
 
     case(POISSON_CG_CORRECTED, POISSON_CG)
       call poisson_cg_end()
-      call poisson_corrections_end(corrector)
+      call poisson_corrections_end(this%corrector)
 
     case(POISSON_MULTIGRID)
-      call poisson_multigrid_end(mg)
+      call poisson_multigrid_end(this%mg)
     case(POISSON_ISF)
       call poisson_isf_end()
     case(POISSON_SETE)
-      call poisson_sete_end(sete_solver)
+      call poisson_sete_end(this%sete_solver)
 
     end select
-    poisson_solver = -99
+    this%method = -99
 
     call pop_sub()
   end subroutine poisson_end
 
-
   !-----------------------------------------------------------------
+
   subroutine zpoisson_solve(this, pot, rho, all_nodes)
     type(poisson_t),      intent(inout) :: this
     CMPLX,                intent(inout) :: pot(:)  ! pot(mesh%np)
@@ -362,7 +352,7 @@ contains
     if(present(all_nodes)) then
       all_nodes_value = all_nodes
     else
-      all_nodes_value = all_nodes_default
+      all_nodes_value = this%all_nodes_default
     end if
 
     SAFE_ALLOCATE(aux1(1:der%mesh%np))
@@ -386,8 +376,8 @@ contains
     call pop_sub()
   end subroutine zpoisson_solve
 
-
   !-----------------------------------------------------------------
+
   subroutine dpoisson_solve(this, pot, rho, all_nodes)
     type(poisson_t),      intent(inout) :: this
     FLOAT,                intent(inout) :: pot(:)
@@ -426,26 +416,26 @@ contains
     if(present(all_nodes)) then
       all_nodes_value = all_nodes
     else
-      all_nodes_value = all_nodes_default
+      all_nodes_value = this%all_nodes_default
     end if
 
-    ASSERT(poisson_solver.ne.-99)
+    ASSERT(this%method.ne.-99)
 
-    select case(poisson_solver)
+    select case(this%method)
     case(POISSON_DIRECT_SUM_1D)
-      call poisson1d_solve(der%mesh, pot, rho)
+      call poisson1d_solve(this, pot, rho)
 
     case(POISSON_DIRECT_SUM_2D)
-      call poisson2d_solve(der%mesh, pot, rho)
+      call poisson2d_solve(this, pot, rho)
 
     case(POISSON_CG)
-      call poisson_cg1(der, corrector, pot, rho)
+      call poisson_cg1(der, this%corrector, pot, rho)
 
     case(POISSON_CG_CORRECTED)
       SAFE_ALLOCATE(rho_corrected(1:der%mesh%np))
       SAFE_ALLOCATE(vh_correction(1:der%mesh%np))
       
-      call correct_rho(corrector, der%mesh, rho, rho_corrected, vh_correction)
+      call correct_rho(this%corrector, der%mesh, rho, rho_corrected, vh_correction)
       
       pot(1:der%mesh%np) = pot(1:der%mesh%np) - vh_correction(1:der%mesh%np)
       call poisson_cg2(der, pot, rho_corrected)
@@ -455,7 +445,7 @@ contains
       SAFE_DEALLOCATE_A(vh_correction)
 
     case(POISSON_MULTIGRID)
-      call poisson_multigrid_solver(mg, der, pot, rho)
+      call poisson_multigrid_solver(this%mg, der, pot, rho)
 
     case(POISSON_FFT_SPH,POISSON_FFT_CYL,POISSON_FFT_PLA,POISSON_FFT_NOCUT)
       call poisson_fft(der%mesh, pot, rho)
@@ -464,7 +454,7 @@ contains
       SAFE_ALLOCATE(rho_corrected(1:der%mesh%np))
       SAFE_ALLOCATE(vh_correction(1:der%mesh%np))
 
-      call correct_rho(corrector, der%mesh, rho, rho_corrected, vh_correction)
+      call correct_rho(this%corrector, der%mesh, rho, rho_corrected, vh_correction)
       call poisson_fft(der%mesh, pot, rho_corrected, average_to_zero = .true.)
 
       pot(1:der%mesh%np) = pot(1:der%mesh%np) + vh_correction(1:der%mesh%np)
@@ -472,7 +462,7 @@ contains
       SAFE_DEALLOCATE_A(vh_correction)
 
     case(POISSON_ISF)
-            call poisson_isf_solve(der%mesh, pot, rho, all_nodes_value)
+      call poisson_isf_solve(der%mesh, pot, rho, all_nodes_value)
 
     case(POISSON_SETE)
 
@@ -515,7 +505,7 @@ contains
         rh0(conversion(1),conversion(2),conversion(3))=rho(counter)
       end do
 
-      call poisson_sete_solve(sete_solver, icase, rh0, vh0, nx, ny, nz, xl, yl, zl, icalc)
+      call poisson_sete_solve(this%sete_solver, icase, rh0, vh0, nx, ny, nz, xl, yl, zl, icalc)
       !      write(91,*) "vh0 rh0"
       !      do  i=1,nx
       !       do j=1,ny
@@ -543,7 +533,6 @@ contains
     call pop_sub()
     call profiling_out(prof)
   end subroutine dpoisson_solve
-
 
 
   !-----------------------------------------------------------------
@@ -656,10 +645,12 @@ contains
     call pop_sub()
   end subroutine poisson_test
 
-  logical pure function poisson_solver_is_iterative() result(iterative)
+  ! -----------------------------------------------------------------
 
-    iterative = poisson_solver == POISSON_CG .or. poisson_solver == POISSON_CG_CORRECTED .or. poisson_solver == POISSON_MULTIGRID
-    
+  logical pure function poisson_solver_is_iterative(this) result(iterative)
+    type(poisson_t), intent(in) :: this
+
+    iterative = this%method == POISSON_CG .or. this%method == POISSON_CG_CORRECTED .or. this%method == POISSON_MULTIGRID
   end function poisson_solver_is_iterative
 
   ! -----------------------------------------------------------------
@@ -667,21 +658,41 @@ contains
   logical pure function poisson_is_multigrid(this) result(is_multigrid)
     type(poisson_t), intent(in) :: this
     
-    is_multigrid = (poisson_solver == POISSON_MULTIGRID)
+    is_multigrid = (this%method == POISSON_MULTIGRID)
     
   end function poisson_is_multigrid
 
   ! -----------------------------------------------------------------
 
-  logical pure function poisson_solver_has_free_bc() result(free_bc)
+  logical pure function poisson_solver_has_free_bc(this) result(free_bc)
+    type(poisson_t), intent(in) :: this
 
     free_bc = &
-      poisson_solver /= POISSON_SETE      .and. &
-      poisson_solver /= POISSON_FFT_NOCUT .and. & 
-      poisson_solver /= POISSON_FFT_CYL   .and. & 
-      poisson_solver /= POISSON_FFT_PLA
+      this%method /= POISSON_SETE      .and. &
+      this%method /= POISSON_FFT_NOCUT .and. & 
+      this%method /= POISSON_FFT_CYL   .and. & 
+      this%method /= POISSON_FFT_PLA
       
   end function poisson_solver_has_free_bc
+
+  !-----------------------------------------------------------------
+
+  integer pure function poisson_get_solver(this) result (solver)
+    type(poisson_t), intent(in) :: this
+
+    solver = this%method
+  end function poisson_get_solver
+
+  !-----------------------------------------------------------------
+  
+  FLOAT function poisson_energy(this) result(energy)
+    type(poisson_t), intent(in) :: this
+
+    energy = M_ZERO
+    if(this%method == POISSON_SETE) energy = poisson_sete_energy(this%sete_solver)
+
+  end function poisson_energy
+
 
 #include "solver_1d_inc.F90"
 #include "solver_2d_inc.F90"
