@@ -59,7 +59,7 @@ subroutine poisson2D_solve(this, pot, rho)
 
     pot = M_ZERO
     do ip = 1, this%der%mesh%np_global
-      xg = this%der%mesh_x_global(this%der%mesh, ip)
+      xg = mesh_x_global(this%der%mesh, ip)
       xx(1:2) = xg(1:2)
       do jp = 1, this%der%mesh%np
         if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then

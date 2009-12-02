@@ -61,7 +61,7 @@ subroutine poisson1D_solve(this, pot, rho)
 
     pot = M_ZERO
     do ip = 1, this%der%mesh%np_global
-      xg = this%der%mesh_x_global(this%der%mesh, ip)
+      xg = mesh_x_global(this%der%mesh, ip)
       xx = xg(1)
       do jp = 1, this%der%mesh%np
         yy = this%der%mesh%x(jp, 1)
