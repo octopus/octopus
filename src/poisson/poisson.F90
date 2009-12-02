@@ -82,7 +82,7 @@ module poisson_m
     FLOAT   :: poisson_soft_coulomb_param = M_ONE
     logical :: all_nodes_default
     type(poisson_corr_t) :: corrector
-    type(poisson_sete_t), public :: sete_solver
+    type(poisson_sete_t) :: sete_solver
   end type poisson_t
 
   type(poisson_t), target, save, public :: psolver
