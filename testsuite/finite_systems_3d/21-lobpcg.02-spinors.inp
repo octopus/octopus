@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-#
+# -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 #
 # This input file is the same as 01-carbon_atom.01-ground_state.inp
@@ -17,7 +16,7 @@ units = ev_angstrom
 "C" | 0 | 0 | 0
 %
 
-Spacing = 0.19
+Spacing = 0.4
 Radius = 5.0
 
 SpinComponents = non_collinear

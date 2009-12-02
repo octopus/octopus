@@ -2,7 +2,7 @@
 # $Id$
 #
 # This input file is the same as 01-carbon_atom.01-ground_state.inp
-# except for the parallel LOBPCG in use.
+# except for the use of parallel LOBPCG.
 
 DebugLevel = 0
 

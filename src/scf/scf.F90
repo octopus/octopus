@@ -584,7 +584,7 @@ contains
       FLOAT :: mem_tmp
 #endif
 
-      call push_sub('scf.scf_write_iter')
+      call push_sub('scf.scf_run.scf_write_iter')
 
       if ( verbosity_ == VERB_FULL ) then
 
@@ -665,7 +665,7 @@ contains
       FLOAT :: e_dip(4, st%d%nspin), n_dip(MAX_DIM)
       integer :: iunit, ispin, idir, iatom, nquantumpol
 
-      call push_sub('scf.scf_write_static')
+      call push_sub('scf.scf_run.scf_write_static')
 
       if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
         call io_mkdir(dir)
@@ -782,20 +782,20 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine write_magnetic_moments(iunit, m, st)
+    subroutine write_magnetic_moments(iunit, mesh, st)
       integer,        intent(in) :: iunit
-      type(mesh_t),   intent(in) :: m
+      type(mesh_t),   intent(in) :: mesh
       type(states_t), intent(in) :: st
 
-      integer :: i
+      integer :: ia
       FLOAT :: mm(MAX_DIM)
       FLOAT, allocatable :: lmm(:,:)
 
-      call push_sub('scf.write_magnetic_moments')
+      call push_sub('scf.scf_run.write_magnetic_moments')
 
-      call magnetic_moment(m, st, st%rho, mm)
+      call magnetic_moment(mesh, st, st%rho, mm)
       SAFE_ALLOCATE(lmm(1:MAX_DIM, 1:geo%natoms))
-      call magnetic_local_moments(m, st, geo, st%rho, scf%lmm_r, lmm)
+      call magnetic_local_moments(mesh, st, geo, st%rho, scf%lmm_r, lmm)
 
       if(mpi_grp_is_root(mpi_world)) then
 
@@ -810,13 +810,13 @@ contains
              trim(units_abbrev(units_out%length)),'] = ', units_from_atomic(units_out%length, scf%lmm_r), '):'
         if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
           write(iunit,'(a,6x,14x,a)') ' Ion','mz'
-          do i = 1, geo%natoms
-            write(iunit,'(i4,a10,f15.6)') i, trim(species_label(geo%atom(i)%spec)), lmm(3, i)
+          do ia = 1, geo%natoms
+            write(iunit,'(i4,a10,f15.6)') ia, trim(species_label(geo%atom(ia)%spec)), lmm(3, ia)
           end do
         else if(st%d%ispin == SPINORS) then ! non-collinear
           write(iunit,'(a,8x,13x,a,13x,a,13x,a)') ' Ion','mx','my','mz'
-          do i = 1, geo%natoms
-            write(iunit,'(i4,a10,9f15.6)') i, trim(species_label(geo%atom(i)%spec)), lmm(1:m%sb%dim, i)
+          do ia = 1, geo%natoms
+            write(iunit,'(i4,a10,9f15.6)') ia, trim(species_label(geo%atom(ia)%spec)), lmm(1:mesh%sb%dim, ia)
           end do
         end if
 
