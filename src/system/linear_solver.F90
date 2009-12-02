@@ -44,9 +44,9 @@ module linear_solver_m
   private
 
   integer, public, parameter ::&
-       LS_CG              = 5, &
-       LS_BICGSTAB        = 3, &
-       LS_MULTIGRID       = 7, &
+       LS_CG              = 5,  &
+       LS_BICGSTAB        = 4,  &
+       LS_MULTIGRID       = 7,  &
        LS_QMR_SYMMETRIC   = 81, &
        LS_QMR_SYMMETRIZED = 82, &
        LS_QMR_DOTP        = 83, &
@@ -107,12 +107,12 @@ contains
     !% Method for solving linear equations, which occur for Sternheimer linear
     !% response and OEP. The solvers vary in speed, reliability (ability to
     !% converge), and domain of applicability. QMR solvers are most reliable.
-    !%Option cg 5
-    !% Conjugate gradients. Fast but unreliable. Hermitian matrices only
-    !% (no eta in Sternheimer).
     !%Option bicgstab 4
     !% Biconjugate gradients stabilized. Slower than <tt>cg</tt>, but more reliable.
     !% General matrices.
+    !%Option cg 5
+    !% Conjugate gradients. Fast but unreliable. Hermitian matrices only
+    !% (no eta in Sternheimer).
     !%Option multigrid 7
     !% Multigrid solver, currently only Gauss-Jacobi (development version only).
     !% Slow, but fairly reliable. General matrices.
