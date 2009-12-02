@@ -80,7 +80,7 @@ module sternheimer_m
      type(linear_solver_t) :: solver
      type(mix_t)           :: mixer
      type(scf_tol_t)       :: scf_tol
-     FLOAT, pointer        :: fxc(:,:,:)    ! linear change of the xc potential (fxc)
+     FLOAT, pointer        :: fxc(:,:,:)    ! linear change of the XC potential (fxc)
      FLOAT, pointer        :: drhs(:, :, :, :)
      CMPLX, pointer        :: zrhs(:, :, :, :)
      logical               :: add_fxc
@@ -96,16 +96,16 @@ module sternheimer_m
 contains
   
   !-----------------------------------------------------------
-  subroutine sternheimer_init(this, sys, hm, prefix, set_ham_var, set_occ_response, default_solver)
+  subroutine sternheimer_init(this, sys, hm, prefix, set_ham_var, set_occ_response, set_default_solver)
     type(sternheimer_t), intent(out)   :: this
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: hm
     character(len=*),    intent(in)    :: prefix
     integer, optional,   intent(in)    :: set_ham_var
     logical, optional,   intent(in)    :: set_occ_response
-    integer, optional,   intent(in)    :: default_solver
+    integer, optional,   intent(in)    :: set_default_solver
 
-    integer :: ham_var
+    integer :: ham_var, default_solver
     logical :: default_preorthog
 
     call push_sub('sternheimer.sternheimer_init')
@@ -193,11 +193,21 @@ contains
     endif
     call write_info(3) 
 
-    if(present(default_solver)) then
-      call linear_solver_init(this%solver, sys%gr, prefix, default_solver)
+    if(present(set_default_solver)) then
+      default_solver = set_default_solver
     else
-      call linear_solver_init(this%solver, sys%gr, prefix)
+      if(conf%devel_version) then
+        default_solver = LS_QMR_DOTP
+      else
+        if(states_are_real(sys%st)) then
+          default_solver = LS_QMR_SYMMETRIC
+          ! in this case, it is equivalent to LS_QMR_DOTP
+        else
+          default_solver = LS_QMR_SYMMETRIZED
+        endif
+      endif
     endif
+    call linear_solver_init(this%solver, sys%gr, prefix, default_solver)
 
     if(this%solver%solver == LS_MULTIGRID .or. preconditioner_is_multigrid(this%solver%pre)) then
       if(.not. associated(sys%gr%mgrid)) then

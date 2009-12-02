@@ -101,39 +101,40 @@ contains
 
     !%Variable LinearSolver
     !%Type integer
-    !%Default qmr_symmetrized
+    !%Default qmr_symmetric
     !%Section Linear Response::Solver
     !%Description
-    !% To calculate response using density functional perturbation
-    !% theory it is necessary to solve the Sternheimer equation, a
-    !% self-consistent linear equation where the operator is the
-    !% Kohn-Sham Hamiltonian with a complex shift. This variable
-    !% selects which method to use in order to solve this linear
-    !% equation.
+    !% Method for solving linear equations, which occur for Sternheimer linear
+    !% response and OEP. The solvers vary in speed, reliability (ability to
+    !% converge), and domain of applicability. QMR solvers are most reliable.
     !%Option cg 5
-    !% Conjugate gradients. This is the fastest solver but does not
-    !% work when an imaginary shift is added.
-    !%Option bicgstab 3
-    !% Biconjugate gradients stabilized. This is an improved version
-    !% of bcg that is faster and more stable.
+    !% Conjugate gradients. Fast but unreliable. Hermitian matrices only
+    !% (no eta in Sternheimer).
+    !%Option bicgstab 4
+    !% Biconjugate gradients stabilized. Slower than <tt>cg</tt>, but more reliable.
+    !% General matrices.
     !%Option multigrid 7
     !% Multigrid solver, currently only Gauss-Jacobi (development version only).
+    !% Slow, but fairly reliable. General matrices.
     !%Option qmr_symmetric 81
-    !% Quasi-minimal residual solver, for (complex) symmetric matrices
-    !% (not applicable for Sternheimer equation).
+    !% Quasi-minimal residual solver, for (complex) symmetric matrices. [Real symmetric
+    !% is equivalent to Hermitian.] Slightly slower than <tt>bicgstab</tt> but more reliable.
+    !% For Sternheimer, must be real wavefunctions, but can have eta.
     !%Option qmr_symmetrized 82
-    !% Quasi-minimal residual solver, for general matrices, using the
-    !% symmetrized form A^T A x = A^T y instead of A x = y.
+    !% Quasi-minimal residual solver, using the symmetrized form A^T A x = A^T y instead of
+    !% A x = y. Reliable but very slow. General matrices.
     !%Option qmr_dotp 83
-    !% Quasi-minimal residual solver, for matrices of the form H + iI, using the
-    !% symmetric algorithm with conjugated dot product (development version only).
+    !% Quasi-minimal residual solver, for Hermitian matrices, using the
+    !% symmetric algorithm with conjugated dot product. Slightly slower than <tt>bicgstab</tt>
+    !% but more reliable. Can always be used in Sternheimer. (Development version only).
     !%Option qmr_general 84
     !% Quasi-minimal residual solver, for general matrices, using the
-    !% most general form of the algorithm.
+    !% most general form of the algorithm. Slow and unreliable.
     !%Option sos 9
     !% Sum over states: the Sternheimer equation is solved by using
     !% the explicit solution in terms of the ground-state
     !% wavefunctions. You need unoccupied states to use this method.
+    !% Unlike the other methods, may not give the correct answer.
     !%End
 
     defsolver_ = LS_QMR_SYMMETRIZED

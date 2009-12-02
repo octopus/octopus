@@ -106,7 +106,7 @@ contains
     type(sternheimer_t)     :: sh
     type(lr_t)              :: kdotp_lr(MAX_DIM, 1)
 
-    integer :: sigma, ndim, idir, ierr, iomega, ifactor, default_solver
+    integer :: sigma, ndim, idir, ierr, iomega, ifactor
     character(len=100) :: dirname, str_tmp
     logical :: complex_response, have_to_calculate, use_kdotp
 
@@ -177,17 +177,11 @@ contains
     call write_info(1)
     call system_h_setup(sys, hm)
 
-    if(use_kdotp) then
-      default_solver = LS_QMR_DOTP
-    else
-      default_solver = LS_QMR_SYMMETRIC
-    endif
-
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
-      call sternheimer_init(sh, sys, hm, "EM", set_ham_var = 0, default_solver = default_solver)
+      call sternheimer_init(sh, sys, hm, "EM", set_ham_var = 0)
       ! set HamiltonVariation to V_ext_only, in magnetic case
     else
-      call sternheimer_init(sh, sys, hm, "EM", default_solver = default_solver)
+      call sternheimer_init(sh, sys, hm, "EM")
       ! otherwise, use default, which is hartree + fxc
     endif
 

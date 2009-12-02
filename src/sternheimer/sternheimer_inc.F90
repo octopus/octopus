@@ -19,8 +19,7 @@
 
 
 ! -------------------------------------------------------------
-! This is the central routine of the electromagnetic response.
-! It calculates the first-order variations of the wavefunctions 
+! This routine calculates the first-order variations of the wavefunctions 
 ! for an applied perturbation.
 !--------------------------------------------------------------
 
@@ -108,8 +107,8 @@ subroutine X(sternheimer_solve)(                           &
     ! otherwise it is not actually SCF, and there can only be one pass through
 
     write(message(1), '(a, f20.6, a, f20.6, a, i1)') &
-         "Frequency: ", units_from_atomic(units_inp%energy, R_REAL(omega)), &
-         " Eta : ", units_from_atomic(units_inp%energy, R_AIMAG(omega))
+         "Frequency: ", units_from_atomic(units_out%energy,  R_REAL(omega)), &
+         " Eta : ",     units_from_atomic(units_out%energy, R_AIMAG(omega))
     write(message(2), '(a)') &
          '   ik  ist                norm   iters            residual'
     call write_info(2)
@@ -203,7 +202,7 @@ subroutine X(sternheimer_solve)(                           &
       this%ok = states_conv
 
       if (.not. this%ok) then
-         message(1) = "Linear solver failed to converge all states"
+         message(1) = "Linear solver failed to converge all states."
          call write_warning(1)
       endif
 
@@ -217,7 +216,7 @@ subroutine X(sternheimer_solve)(                           &
     ! all the rest is the mixing and checking for convergence
 
     if(this%scf_tol%max_iter == iter) then 
-      message(1) = "Self-consistent iteration for response did not converge"
+      message(1) = "Self-consistent iteration for response did not converge."
       this%ok = .false.
       call write_warning(1)
     end if

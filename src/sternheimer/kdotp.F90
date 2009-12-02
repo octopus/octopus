@@ -134,7 +134,7 @@ contains
     call write_info(1)
 
     call sternheimer_init(sh, sys, hm, "KdotP_", &
-         set_ham_var = 0, set_occ_response = (kdotp_vars%occ_solution_method == 0), default_solver = LS_QMR_DOTP)
+         set_ham_var = 0, set_occ_response = (kdotp_vars%occ_solution_method == 0))
     ! ham_var_set = 0 results in HamiltonianVariation = V_ext_only
 
     do idir = 1, gr%mesh%sb%dim
