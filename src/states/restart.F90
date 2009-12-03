@@ -379,6 +379,7 @@ contains
 
     integer              :: io_wfns, io_occs, io_mesh, np, lead_np, np_uc, i, err, il, ip
     integer              :: ik, ist, idim, tnp
+    FLOAT                :: flt
     character            :: char
     character(len=256)   :: line, filename
     CMPLX, allocatable   :: tmp(:)
@@ -452,7 +453,8 @@ contains
       read(line, *) ik, char, ist, char, idim, char, filename
 
       call iopar_read(mpi_grp, io_occs, line, err)
-      read(line, *) st%occ(ist, ik), char, st%eigenval(ist, ik)
+      read(line, *) st%occ(ist, ik), char, st%eigenval(ist, ik), char, flt, char, flt,&
+                    char, flt, char, st%d%kweights(ik)
 
       if(ist.ge.st%st_start .and. ist.le.st%st_end .and. &
          ik.ge.st%d%kpt%start .and. ik.le.st%d%kpt%end) then
@@ -462,9 +464,9 @@ contains
         
         if(err.le.0) then
           ierr = ierr + 1 ! count the valid file readings
-          if(gr%mesh%np.eq.gs_mesh%np) then! no extra unit cell present
-            do il=1, NLEADS
-              forall(ip=1:np_uc) &
+          if(gr%mesh%np.eq.gs_mesh%np) then ! no extra unit cell present
+            do il = 1, NLEADS
+              forall(ip = 1:gr%intf(il)%np_uc) &
                 st%ob_lead(il)%intf_psi(ip, INNER, idim, ist, ik) = tmp(gr%intf(il)%index(ip))
               ! the outer part is zero (if the source term is still active)
               st%ob_lead(il)%intf_psi(:, OUTER, idim, ist, ik) = M_ZERO
@@ -897,7 +899,7 @@ contains
     type(states_t),       intent(inout) :: st
     type(grid_t), target, intent(in)    :: gr
     
-    integer                    :: k, ik, ist, idim, jk, err, wfns, occs, il
+    integer                    :: k, ik, ist, idim, jk(st%nst), err, wfns, occs, il
     integer                    :: np, ip, lead_nr(2, MAX_DIM)
     character(len=256)         :: line, fname, filename, restart_dir, chars
     character                  :: char
@@ -937,13 +939,11 @@ contains
     call iopar_read(mpi_grp, wfns, line, err); call iopar_read(mpi_grp, wfns, line, err)
     call iopar_read(mpi_grp, occs, line, err); call iopar_read(mpi_grp, occs, line, err)
 
-    jk  = 0 ! reset counter for k-points
+    jk(:)  = 0 ! reset counter for k-points
     st%d%kpoints(:, :) = M_ZERO
     st%d%kweights(:) = M_ZERO
 
-    do il = 1, NLEADS
-      st%ob_lead(il)%rho = M_ZERO
-    end do
+    forall(il = 1:NLEADS) st%ob_lead(il)%rho = M_ZERO
     call mpi_grp_copy(m_lead%mpi_grp, gr%mesh%mpi_grp)
     do
       ! Check for end of file. Check only one of the two files assuming
@@ -963,15 +963,15 @@ contains
       read(line, *) occ, char, eval, char, k_x, char, k_y, char, k_z, char, w_k, char, &
         chars, char, ik, char, ist, char, idim
       ! FIXME for more than 1 state
-      if(occ.gt.CNST(1e-5)) then
+      if(occ > M_EPSILON) then
         ! count the occupied k-points (with idim==1)
-        if(idim.eq.1) jk = jk + 1
+        if(idim.eq.1) jk(ist) = jk(ist) + 1
 
-        st%d%kpoints(:, jk) = (/k_x, k_y, k_z/)
-        st%d%kweights(jk) = w_k
-        st%occ(ist, jk) = occ
+        st%d%kpoints(:, jk(ist)) = (/k_x, k_y, k_z/)
+        st%d%kweights(jk(ist)) = w_k
+        st%occ(ist, jk(ist)) = occ
         ! if not in the corresponding node cycle
-        if(jk < st%d%kpt%start .or. jk > st%d%kpt%end) cycle
+        if(jk(ist) < st%d%kpt%start .or. jk(ist) > st%d%kpt%end) cycle
       else ! we do not consider empty states
         cycle
       end if
@@ -985,27 +985,27 @@ contains
       ! It only works in this compact form because the transport-direction (x) is
       ! the index running slowest.          
       do k = 1, gr%sb%n_ucells
-        st%zphi((k-1)*np+1:k*np, idim, 1, jk) = tmp(1:np, idim)
+        st%zphi((k-1)*np+1:k*np, idim, ist, jk(ist)) = tmp(1:np, idim)
       end do
 
       ! Apply phase.
       do ip = 1, gr%mesh%np
-        phase = exp(-M_zI*sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim)*st%d%kpoints(1:gr%mesh%sb%dim, jk)))
-        st%zphi(ip, idim, 1, jk) = phase*st%zphi(ip, idim, 1, jk)
+        phase = exp(-M_zI*sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim)*st%d%kpoints(1:gr%mesh%sb%dim, jk(ist))))
+        st%zphi(ip, idim, ist, jk(ist)) = phase*st%zphi(ip, idim, ist, jk(ist))
       end do
 
       ! For debugging: write phi in gnuplot format to files.
       ! Only the z=0 plane is written, so mainly useful for 1D and 2D
       ! debugging.
       if(in_debug_mode) then
-        write(filename, '(a,i3.3,a,i4.4,a,i1.1)') 'phi-', jk, '-', ist, '-', idim
+        write(filename, '(a,i3.3,a,i4.4,a,i1.1)') 'phi-', jk(ist), '-', ist, '-', idim
         select case(calc_dim)
         case(1)
           call zoutput_function(output_axis_x, 'debug/open_boundaries', filename, &
-            m_center, st%zphi(:, idim, ist, jk), sqrt(units_out%length**(-sb%dim)), err, is_tmp=.false.)
+            m_center, st%zphi(:, idim, ist, jk(ist)), sqrt(units_out%length**(-sb%dim)), err, is_tmp=.false.)
         case(2, 3)
           call zoutput_function(output_plane_z, 'debug/open_boundaries', filename, &
-            m_center, st%zphi(:, idim, ist, jk), sqrt(units_out%length**(-sb%dim)), err, is_tmp=.false.)
+            m_center, st%zphi(:, idim, ist, jk(ist)), sqrt(units_out%length**(-sb%dim)), err, is_tmp=.false.)
         end select
       end if
 
@@ -1024,7 +1024,7 @@ contains
 
     message(1) = "Info: Sucessfully initialized free states from '"// &
       trim(sb%lead_restart_dir(LEFT))//"/"//GS_DIR//"'"
-    write(message(2),'(a,i3,a)') 'Info:', jk, ' occupied states read by program.'
+    write(message(2),'(a,i3,a)') 'Info:', sum(jk(:)), ' occupied states read by program.'
     call write_info(2)
 
     call pop_sub()

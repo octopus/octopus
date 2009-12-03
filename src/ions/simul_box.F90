@@ -200,7 +200,7 @@ contains
         ADD_UNIT_CELLS   = 4, &
         TD_POT_FORMULA   = 5
 
-      integer :: il
+      integer :: il, ol
 
       call push_sub('simul_box.simul_box_init.read_open_boundaries')
 
@@ -303,7 +303,7 @@ contains
                 call write_fatal(2)
               end if
             else
-              sb%lead_dataset(RIGHT) = sb%lead_dataset(LEFT)
+              forall(ol = 2:NLEADS) sb%lead_dataset(ol) = sb%lead_dataset(LEFT)
             end if
           case(LEAD_RESTART_DIR)
             call parse_block_string(blk, nr, 1, sb%lead_restart_dir(LEFT))
@@ -316,7 +316,7 @@ contains
                 call write_fatal(3)
               end if
             else
-              sb%lead_restart_dir(RIGHT) = sb%lead_restart_dir(LEFT)
+              forall(ol = 2:NLEADS) sb%lead_restart_dir(ol) = sb%lead_restart_dir(LEFT)
             end if
           case(LEAD_STATIC_DIR)
             call parse_block_string(blk, nr, 1, sb%lead_static_dir(LEFT))
@@ -329,14 +329,14 @@ contains
                 call write_fatal(3)
               end if
             else
-              sb%lead_static_dir(RIGHT) = sb%lead_static_dir(LEFT)
+              forall(ol = 2:NLEADS) sb%lead_static_dir(ol) = sb%lead_static_dir(LEFT)
             end if
           case(ADD_UNIT_CELLS)
             call parse_block_integer(blk, nr, 1, sb%add_unit_cells(LEFT))
             if(ncols.eq.3) then
               call parse_block_integer(blk, nr, 2, sb%add_unit_cells(RIGHT))
             else
-              sb%add_unit_cells(RIGHT) = sb%add_unit_cells(LEFT)
+              forall(ol = 2:NLEADS) sb%add_unit_cells(ol) = sb%add_unit_cells(LEFT)
             end if
             if(any(sb%add_unit_cells(1:NLEADS).lt.0)) then
               message(1) = 'add_unit_cells in the OpenBoundaries block must not be negative.'
@@ -352,7 +352,7 @@ contains
             if(ncols.eq.3) then
               call parse_block_string(blk, nr, 2, sb%lead_td_pot_formula(RIGHT))
             else
-              sb%lead_td_pot_formula(RIGHT) = sb%lead_td_pot_formula(LEFT)
+              forall(ol = 2:NLEADS) sb%lead_td_pot_formula(ol) = sb%lead_td_pot_formula(LEFT)
             end if
           case default
           end select
@@ -363,15 +363,11 @@ contains
         end if
         ! Set default restart directory.
         if(all(sb%lead_restart_dir(1:NLEADS).eq.'')) then
-          do il = 1, NLEADS
-            sb%lead_restart_dir(il) = trim(sb%lead_dataset(il))//'restart'
-          end do
+          forall(il = 1:NLEADS) sb%lead_restart_dir(il) = trim(sb%lead_dataset(il))//'restart'
         end if
         ! Set default static directory.
         if(all(sb%lead_static_dir(1:NLEADS).eq.'')) then
-          do il = 1, NLEADS
-            sb%lead_static_dir(il) = trim(sb%lead_dataset(il))//'static'
-          end do
+          forall(il = 1:NLEADS) sb%lead_static_dir(il) = trim(sb%lead_dataset(il))//'static'
         end if
         
         sb%open_boundaries = .true.
@@ -1027,11 +1023,7 @@ contains
       iatom  = central_geo%natoms+1
       icatom = central_geo%ncatoms+1
       do il = 1, NLEADS
-        if(il.eq.LEFT) then
-          dir = -1
-        else
-          dir = 1
-        end if
+        dir = (-1)**il
         ! We start from the "outer" unit cells of the lead.
         do j = 1, sb%add_unit_cells(il)
           do n = 1, lead_geo(il)%natoms

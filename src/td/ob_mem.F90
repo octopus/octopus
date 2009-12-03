@@ -147,6 +147,7 @@ contains
     end if
 
     do il = 1, NLEADS
+      np = intf(il)%np_intf
       ! Try to read the coefficients from file
       call read_coeffs(trim(restart_dir)//'open_boundaries/', saved_iter, ob, hm, intf(il), &
                        calc_dim, max_iter, spacing, delta, op%stencil%size, order)

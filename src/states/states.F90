@@ -305,6 +305,10 @@ contains
       SAFE_ALLOCATE(ob_st(1:NLEADS))
       SAFE_ALLOCATE( ob_d(1:NLEADS))
       do il = 1, NLEADS
+        ! first get nst and kpoints of all states
+        call states_look(trim(gr%sb%lead_restart_dir(il))//'/'//GS_DIR, mpi_world, &
+          ob_k(il), ob_d(il), ob_st(il), ierr)
+          ! then count the occupied ones
         call states_look(trim(gr%sb%lead_restart_dir(il))//'/'//GS_DIR, mpi_world, &
           ob_k(il), ob_d(il), ob_st(il), ierr, .true.)
         if(ierr.ne.0) then
@@ -313,11 +317,13 @@ contains
           call write_fatal(2)
         end if
       end do
-      if(ob_k(LEFT).ne.ob_k(RIGHT).or. &
-        ob_st(LEFT).ne.ob_st(LEFT).or. &
-        ob_d(LEFT).ne.ob_d(RIGHT)) then
-        message(1) = 'The number of states for the left and right leads are not equal.'
-        call write_fatal(1)
+      if(NLEADS.gt.1) then
+        if(ob_k(LEFT).ne.ob_k(RIGHT).or. &
+          ob_st(LEFT).ne.ob_st(LEFT).or. &
+          ob_d(LEFT).ne.ob_d(RIGHT)) then
+          message(1) = 'The number of states for the left and right leads are not equal.'
+          call write_fatal(1)
+        end if
       end if
       st%ob_d%dim = ob_d(LEFT)
       st%ob_nst   = ob_st(LEFT)
@@ -516,8 +522,8 @@ contains
   contains
 
     subroutine read_ob_eigenval_and_occ()
-      integer            :: occs, jk, ist, ik, err
-      FLOAT              :: flt, eigenval, occ
+      integer            :: occs, jk(1:st%ob_nst), ist, ik, idim, err
+      FLOAT              :: flt, eigenval, occ, kweights
       character          :: char
       character(len=256) :: restart_dir, line, chars
 
@@ -535,7 +541,7 @@ contains
       call iopar_read(mpi_world, occs, line, err)
       call iopar_read(mpi_world, occs, line, err)
 
-      jk = 1
+      jk(:) = 1
       do
         ! Check for end of file.
         call iopar_read(mpi_world, occs, line, err)
@@ -547,8 +553,8 @@ contains
         ! Extract eigenvalue.
         call iopar_read(mpi_world, occs, line, err)
         read(line, *) occ, char, eigenval, char, flt, char, flt, char, flt, char, &
-          flt, chars, ik, char, ist
-        if(occ.gt.CNST(1e-5)) then
+          kweights, char, chars, char, ik, char, ist, char, idim
+        if(occ > M_EPSILON) then
           if(st%d%ispin.eq.SPIN_POLARIZED) then
             if(is_spin_up(ik)) then
 !              st%ob_eigenval(jst, SPIN_UP) = eigenval
@@ -558,10 +564,11 @@ contains
 !              st%ob_occ(jst, SPIN_DOWN)      = occ
             end if
           else
-            st%ob_eigenval(1, jk) = eigenval
-            st%ob_occ(1, jk)      = occ
+            st%ob_eigenval(ist, jk(ist)) = eigenval
+            st%ob_occ(ist, jk(ist))      = occ
+            st%ob_d%kweights(jk(ist))    = kweights
           end if
-          jk = jk + 1
+          jk(ist) = jk(ist) + 1
         end if
       end do
 
@@ -684,6 +691,7 @@ contains
     if(st%open_boundaries) then
       st%fixed_occ = .true.
       st%occ  = st%ob_occ
+      st%d%kweights = st%ob_d%kweights
       st%qtot = M_ZERO
       do ist = 1, st%nst
         st%qtot = st%qtot + sum(st%occ(ist, 1:st%d%nik) * st%d%kweights(1:st%d%nik))
@@ -2509,13 +2517,15 @@ contains
   subroutine states_look(dir, mpi_grp, kpoints, dim, nst, ierr, only_occupied)
     character(len=*), intent(in)    :: dir
     type(mpi_grp_t),  intent(in)    :: mpi_grp
-    integer,          intent(out)   :: kpoints, dim, nst, ierr
+    integer,          intent(out)   :: dim, ierr
+    integer,          intent(inout) :: nst, kpoints
     logical, intent(in), optional   :: only_occupied
 
     character(len=256) :: line
     character(len=12)  :: filename
     character(len=1)   :: char
-    integer :: iunit, iunit2, err, i, ist, idim, ik, counter_kpoints
+    integer :: iunit, iunit2, err, i, ist, idim, ik
+    integer, allocatable :: counter_kpoints(:), counter_nst(:)
     FLOAT :: occ, eigenval
     logical :: only_occupied_
 
@@ -2523,6 +2533,11 @@ contains
 
     only_occupied_ = .false.
     if(present(only_occupied)) only_occupied_ = only_occupied
+    if(only_occupied_) then
+      ASSERT(nst>0 .and. kpoints>0)
+      SAFE_ALLOCATE(counter_kpoints(1:nst))
+      SAFE_ALLOCATE(counter_nst(1:kpoints))
+    end if
     ierr = 0
     iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=mpi_grp)
     if(iunit < 0) then
@@ -2543,24 +2558,39 @@ contains
     kpoints = 1
     dim = 1
     nst = 1
-    counter_kpoints = 0
+    if(only_occupied_) then
+      counter_kpoints(:) = 0
+      counter_nst(:) = 0
+    end if
 
     do
       call iopar_read(mpi_grp, iunit, line, i)
       read(line, '(a)') char
       if(i.ne.0.or.char=='%') exit
       read(line, *) ik, char, ist, char, idim, char, filename
-      if(ik > kpoints) kpoints = ik
       if(idim == 2)    dim     = 2
-      if(ist>nst)      nst     = ist
       call iopar_read(mpi_grp, iunit2, line, err)
       read(line, *) occ, char, eigenval
-      if(occ.gt.CNST(1e-5)) counter_kpoints = counter_kpoints + 1
+      if(only_occupied_) then
+        if(occ > M_EPSILON) then
+          counter_kpoints(ist) = counter_kpoints(ist) + 1
+          counter_nst(ik) = counter_nst(ik) + 1
+          kpoints = maxval(counter_kpoints(:))
+          nst = maxval(counter_nst(:))
+        end if
+      else
+        if(ik > kpoints) kpoints = ik
+        if(ist>nst)      nst     = ist
+      end if
     end do
-    if(only_occupied_) kpoints = counter_kpoints
 
     call io_close(iunit, grp = mpi_grp)
     call io_close(iunit2, grp = mpi_grp)
+    if(only_occupied_) then
+      SAFE_DEALLOCATE_A(counter_kpoints)
+      SAFE_DEALLOCATE_A(counter_nst)
+    end if
+
     call pop_sub()
   end subroutine states_look
 

@@ -70,6 +70,9 @@ module ob_interface_m
     CMPLX, pointer :: h_offdiag(:, :) ! Offdiagonal block of the lead Hamiltonian.
     FLOAT, pointer :: vks(:, :)       ! (np_uc, nspin) Kohn-Sham potential of the leads.
     FLOAT, pointer :: vhartree(:)     ! (np_uc) Hartree potential of the leads.
+!    FLOAT, pointer :: A_static(:,:)   ! static vector potential
+!    CMPLX, pointer :: grad_diag(:, :, :)    ! diagonal block of the gradient operator
+!    CMPLX, pointer :: grad_offdiag(:, :, :) ! offdiagonal block of the gradient operator
   end type lead_t
 
 contains
@@ -123,6 +126,14 @@ contains
     ll(:) = m%idx%ll(:)
     ! the interface region has only intf%extent points in its normal direction
     ll(tdir) =  derivatives_stencil_extent(der_discr, tdir)
+    
+    ! if bottom, top, front or back lead then reduce x-extention by 2 points
+    ! (covered already by left and right lead)
+    if(tdir > 1) ll(1) = ll(1)-2
+    ! if front or back lead then reduce also y-extention by 2 points
+    ! (covered already by bottom and top lead)
+    if(tdir > 2) ll(2) = ll(2)-2
+
     intf%np_intf = product(ll(:))
 
     ll(tdir) =  intf%extent_uc
@@ -132,6 +143,10 @@ contains
 
     ! the point where we start
     from(:) = m%idx%nr( mod(il+1,2)+1, :) + dir*m%idx%enlarge
+
+    ! shift the starting point by 1 so that it is centralized again
+    if(tdir > 1) from(1) = from(1) + dir
+    if(tdir > 2) from(2) = from(2) + dir
     ! the point were we end
     ! we are 1 point too far in every direction, so go back
     to(:)   = from(:) + dir*(ll(:) - 1)
