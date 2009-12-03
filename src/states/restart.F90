@@ -466,8 +466,9 @@ contains
           ierr = ierr + 1 ! count the valid file readings
           if(gr%mesh%np.eq.gs_mesh%np) then ! no extra unit cell present
             do il = 1, NLEADS
-              forall(ip = 1:gr%intf(il)%np_uc) &
+              forall(ip = 1:gr%intf(il)%np_uc)
                 st%ob_lead(il)%intf_psi(ip, INNER, idim, ist, ik) = tmp(gr%intf(il)%index(ip))
+              end forall
               ! the outer part is zero (if the source term is still active)
               st%ob_lead(il)%intf_psi(:, OUTER, idim, ist, ik) = M_ZERO
             end do
