@@ -134,7 +134,14 @@ subroutine X(sternheimer_solve)(                           &
           end if
           Y(1:mesh%np, 1, sigma) = -Y(1:mesh%np, 1, sigma) - hvar(1:mesh%np, is, sigma)*st%X(psi)(1:mesh%np, 1, ist, ik)
 
-          if (this%occ_response) then
+          ! Let Pc = projector onto unoccupied states, Pn` = projector that removes state n
+          ! For an SCF run, we will apply Pn` for the last step always, since the whole wavefunction is useful for some
+          ! things and the extra cost here is small. If occ_response, previous steps will also use Pn`. If !occ_response,
+          ! previous steps will use Pc, which generally reduces the number of linear-solver iterations needed. Only the
+          ! wavefunctions in the unoccupied subspace are needed to construct the first-order density.
+          ! For a non-SCF run, we will apply Pn` if occ_response, and Pc if !occ_response.
+ 
+          if (this%occ_response .or. conv_last) then
             ! project out only the component of the unperturbed wavefunction
             proj = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist, ik), y(:, :, sigma))
             do idim = 1, st%d%dim
