@@ -239,6 +239,7 @@ module opt_control_target_m
       !% WARNING: Experimental
       !%End
       call parse_integer(datasets_check('OCTExcludeStates'), 1, target%excluded_states)
+      call states_deallocate_wfns(target%st)
       call restart_look_and_read(target%st, gr, geo)
 
     case(oct_tg_gstransformation)  
