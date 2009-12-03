@@ -1803,6 +1803,7 @@ contains
     !% If the vector is not given, but TPA output is requested (<tt>Output = TPA</tt>),
     !% only the oscillator strengths are written in the output file.
     !% For example, to use <i>q</i> = (0.1, 0.2, 0.3), set
+    !%
     !% <tt>%MomentumTransfer
     !% <br>&nbsp;&nbsp; 0.1 | 0.2 | 0.3
     !% <br>%</tt>

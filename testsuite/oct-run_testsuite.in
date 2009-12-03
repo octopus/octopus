@@ -45,8 +45,8 @@ function usage() {
 Usage: oct-run_testsuite [options]
     
      -h            this message
-     -n            dry run mode (show what would be executed)
-     -g LIST       comma separated list of test groups to run
+     -n            dry-run mode (show what would be executed)
+     -g LIST       comma-separated list of test groups to run
      -q            query testfiles for the given groups (no tests are run)
      -d DIR        directory where to look for the testsuite
      -l            local run
@@ -91,7 +91,7 @@ function run_testsuite() {
 
 tests="$1"
 
-# Check for preserve working directories flag.
+# Check for 'preserve working directories' flag.
 if [ "$cleanup" == "yes" ]; then
     preserve_opt=""
 else
@@ -169,7 +169,7 @@ done
 
 # Parse command line.
 
-# Some defaults settings.
+# Some default settings.
 query="no"
 send_mail="no"
 cleanup="no"
@@ -219,7 +219,7 @@ fi
 if [ -z "$testfiles" ]; then
     echo "No testfiles for group(s) $test_groups found."
     # This is also mailed, if -m is present (this is to prevent
-    # errorneous cron-jobs and the like).
+    # erroneous cron-jobs and the like).
     if [ "$send_mail" == "yes" ]; then
 	datestamp=`date +"%Y-%m-%d"`
 	echo "No testfiles for group(s) $test_groups found." | \

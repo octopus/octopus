@@ -22,7 +22,7 @@
 use Getopt::Std;
 use File::Basename;
 use Fcntl ':mode';
-
+use Time::HiRes qw(gettimeofday tv_interval);
 
 sub usage {
 
@@ -265,7 +265,10 @@ foreach my $octopus_exe (@executables){
 		}
 		$command_line = "cd $workdir; $mpiexec $specify_np $octopus_exe_suffix > out ";
 		print "Executing: " . $command_line . "\n";
+
+		$test_start = [gettimeofday];
 		$return_value = system("$command_line");
+		$test_end   = [gettimeofday];
 	      } else {
 		print "No mpiexec found: Skipping parallel test \n";
 		exit 255;
@@ -273,14 +276,20 @@ foreach my $octopus_exe (@executables){
 	    } else {
 	      $command_line = "cd $workdir; $octopus_exe_suffix > out ";
 	      print "Executing: " . $command_line . "\n";
+	      
+	      $test_start = [gettimeofday];
 	      $return_value = system("$command_line");
+	      $test_end   = [gettimeofday];
 	    }
 	    system("sed -n '/Running octopus/{N;N;N;N;N;N;p;}' $workdir/out > $workdir/build-stamp");
 	    if($return_value == 0) {
-	      print "Finished test run.\n\n";
+	      print "Finished test run.";
 	    } else {
-	      print "\nTest run failed with exit code $return_value\n\n";
+	      print "\nTest run failed with exit code $return_value.";
 	    }
+
+	    $elapsed = tv_interval($test_start, $test_end);
+	    printf("\tElapsed time: %8.1f s\n\n", $elapsed);
 	  } else {
 	    if(!$opt_i) { print "cd $workdir; $octopus_exe_suffix > out \n"; }
 	  }
