@@ -403,18 +403,17 @@ sub run_match_new(){
     $pre_command = $par[0];
 
   }elsif($func eq "LINE") { # function LINE(filename, line, column)
-    $pre_command = "cat $par[0]";
-    if($par[1] > 0){
-      $pre_command .= " | tail -n +$par[1] | head -n 1";
+    if($par[1] < 0) {
+      $line_num = "`wc -l $par[0] | awk '{print \$1}'`";
+      $pre_command = "awk -v n=$line_num '(NR==n+$par[1]+1)' $par[0]";
     } else {
-      $pre_command .= " | tail -n  $par[1] | head -n 1";
+      $pre_command = "awk '(NR==$par[1])' $par[0]";
     }
     $pre_command .= " | cut -b $par[2]- | perl -ne '/\\s*([0-9\\-+.eEdD]*)/; print \$1'";
 
   }elsif($func eq "GREP") { # function GREP(filename, 're', column <, offset>)
     my $off = 1*$par[3];
-    $pre_command = "n=\$(cat -n $par[0] | grep $par[1] | head -n 1 | awk '{print \$1;}');";
-    $pre_command .= " cat $par[0] | tail -n +\$((n+$off)) | head -n 1";
+    $pre_command = "grep -A$off -m 1 $par[1] $par[0] | awk '(NR==$off+1)'";
     $pre_command .= " | cut -b $par[2]- | perl -ne '/\\s*([0-9\\-+.eEdD]*)/; print \$1'";
 
   }else{ # error
