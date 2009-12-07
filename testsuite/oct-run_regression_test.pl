@@ -157,7 +157,7 @@ if($opt_s)  { $exec_suffix = $opt_s; }
 
 # MPI stuff
 $mpiexec = $ENV{MPIEXEC};
-if ("$mpiexec" eq "") { $mpiexec = `which mpiexec`; }
+if ("$mpiexec" eq "") { $mpiexec = `which mpiexec 2> /dev/null`; }
 chomp($mpiexec);
 
 # mpiexec without arguments (to check if it is available)

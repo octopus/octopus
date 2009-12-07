@@ -38,9 +38,9 @@ AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
     call etsf_io_vars_free(vars)
 ]), [acx_etsf_io_ok=yes; FCFLAGS_ETSF_IO="$etsf_io_fcflags"; LIBS_ETSF_IO="$etsf_io_libs"], [])
   else
-    etsf_io_fcflags="-letsf_io"
+    etsf_io_libs="-letsf_io"
 FCFLAGS="$etsf_io_fcflags $netcdf_fcflags $acx_etsf_io_save_FCFLAGS"
-LIBS="$etsf_io_libs $netcdf_libs $acx_etsf_io_save_LIBS"
+LIBS=" $acx_etsf_io_save_LIBS $etsf_io_libs $netcdf_libs"
 AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
     use etsf_io
     type(etsf_vars) :: vars
