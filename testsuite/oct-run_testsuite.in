@@ -244,7 +244,11 @@ else
 	echo "    --------------------------------------------------------------------"
 	echo -e "$failure_report"
     else
-	echo -e "\nEverything seems to be OK"
+	if [ $passed_tests -gt 0 ]; then
+	  echo -e "\nEverything seems to be OK"
+	else
+	  echo -e "\nAll tests were skipped."
+	fi
     fi
     echo
 
