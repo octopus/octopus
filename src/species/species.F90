@@ -505,7 +505,7 @@ contains
       write(message(1), '(2a)') "Info: Pseudopotential for ", trim(this%label)
       write(message(2), '(a,f5.1, 3a)') "     local part's radius     = ", &
         units_from_atomic(units_out%length, local_radius), " [", trim(units_abbrev(units_out%length)), "] "
-      write(message(3), '(a,f5.1,3a)') "      non-local part's radius = ", &
+      write(message(3), '(a,f5.1,3a)')  "     non-local part's radius = ", &
         units_from_atomic(units_out%length, this%ps%rc_max), " [", trim(units_abbrev(units_out%length)), "] "
       call write_info(3)
 
