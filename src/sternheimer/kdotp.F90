@@ -135,6 +135,9 @@ contains
     end if
     call write_info(1)
 
+    call io_mkdir(trim(tmpdir)//KDOTP_DIR) ! restart
+    call io_mkdir(KDOTP_DIR)               ! data output
+
     if(states_are_real(sys%st)) then
       call dcalc_band_velocity(sys, hm, kdotp_vars%perturbation, kdotp_vars%velocity(:,:,:))
     else
@@ -165,8 +168,6 @@ contains
       end if
     end do
 
-    call io_mkdir(trim(tmpdir)//KDOTP_DIR) ! restart
-    call io_mkdir(KDOTP_DIR)               ! data output
     call info()
     message(1) = "Info: Calculating k.p linear response of ground-state wavefunctions."
     call write_info(1)
