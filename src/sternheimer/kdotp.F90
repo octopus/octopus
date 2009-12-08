@@ -64,8 +64,9 @@ module kdotp_m
   type kdotp_t
     type(pert_t) :: perturbation
 
-    FLOAT, pointer :: eff_mass_inv(:, :, :, :)  ! inverse effective-mass tensor
+    FLOAT, pointer :: eff_mass_inv(:,:,:,:)  ! inverse effective-mass tensor
                                                 ! (ik, ist, idir1, idir2)
+    FLOAT, pointer :: velocity(:,:,:) ! group velocity vector (ik, ist, idir)
 
     type(lr_t), pointer :: lr(:,:) ! linear response for (gr%mesh%sb%dim,1)
                                    ! second index is dummy; should only be 1
@@ -107,8 +108,9 @@ contains
     endif
 
     SAFE_ALLOCATE(kdotp_vars%eff_mass_inv(1:sys%st%d%nik, 1:sys%st%nst, 1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim))
-
-    kdotp_vars%eff_mass_inv(:,:,:,:) = 0  
+    SAFE_ALLOCATE(kdotp_vars%velocity(1:sys%st%d%nik, 1:sys%st%nst, 1:gr%mesh%sb%dim))
+    kdotp_vars%eff_mass_inv(:,:,:,:) = 0 
+    kdotp_vars%velocity(:,:,:) = 0 
 
     call pert_init(kdotp_vars%perturbation, PERTURBATION_KDOTP, sys%gr, sys%geo)
 
@@ -126,12 +128,19 @@ contains
     call write_info(1)
     call system_h_setup(sys, hm)
     
-    if (states_are_real(sys%st)) then
+    if(states_are_real(sys%st)) then
       message(1) = 'Info: SCF using real wavefunctions.'
     else
       message(1) = 'Info: SCF using complex wavefunctions.'
     end if
     call write_info(1)
+
+    if(states_are_real(sys%st)) then
+      call dcalc_band_velocity(sys, hm, kdotp_vars%perturbation, kdotp_vars%velocity(:,:,:))
+    else
+      call zcalc_band_velocity(sys, hm, kdotp_vars%perturbation, kdotp_vars%velocity(:,:,:))
+    endif
+    call kdotp_write_band_velocity(sys%st, sys%gr%sb%periodic_dim, kdotp_vars%velocity(:,:,:))
 
     call sternheimer_init(sh, sys, hm, "KdotP_", &
          set_ham_var = 0, set_occ_response = (kdotp_vars%occ_solution_method == 0))
@@ -195,7 +204,9 @@ contains
         call zcalc_eff_mass_inv(sys, hm, kdotp_vars%lr, kdotp_vars%perturbation, &
           kdotp_vars%eff_mass_inv, kdotp_vars%occ_solution_method, kdotp_vars%degen_thres)
       endif
-      call kdotp_output(sys%st, sys%gr, kdotp_vars)
+
+      call kdotp_write_degeneracies(sys%st, kdotp_vars%degen_thres)
+      call kdotp_write_eff_mass(sys%st, sys%gr, kdotp_vars)
     endif
 
     ! clean up some things
@@ -209,6 +220,7 @@ contains
     SAFE_DEALLOCATE_P(kdotp_vars%lr)
     call states_deallocate_wfns(sys%st)
     SAFE_DEALLOCATE_P(kdotp_vars%eff_mass_inv)
+    SAFE_DEALLOCATE_P(kdotp_vars%velocity)
 
     call pop_sub()
 
@@ -299,7 +311,46 @@ contains
   end subroutine kdotp_lr_run
 
   ! ---------------------------------------------------------
-  subroutine kdotp_output(st, gr, kdotp_vars)
+  subroutine kdotp_write_band_velocity(st, periodic_dim, velocity)
+    type(states_t), intent(inout) :: st
+    integer,        intent(in)    :: periodic_dim
+    FLOAT,          intent(in)    :: velocity(:,:,:)
+
+    character(len=80) :: filename, tmp
+    integer :: iunit, ik, ist, ik2, ispin, idir
+
+    call push_sub('kdotp.kdotp_write_band_velocity')
+
+    write(filename, '(a)') KDOTP_DIR//'velocity'
+    iunit = io_open(trim(filename), action='write')
+    write(iunit,'(a)') '# Band velocities'
+
+    do ik = 1, st%d%nik
+      ispin = states_dim_get_spin_index(st%d, ik)
+      ik2 = kpoint_index(st%d, ik)
+      tmp = int2str(ik2)
+
+      write(iunit,'(a,i1,a,a)') '# spin = ', ispin, ', k-point = ', trim(tmp)
+      write(iunit,'(a)', advance = 'no') '# state energy'
+      do idir = 1, periodic_dim
+        write(iunit,'(3a)', advance = 'no') ' vg(', trim(index2axis(idir)), ')'
+      enddo
+      write(iunit,'(a)')
+      write(iunit,'(4a)')       '#       [', units_abbrev(units_out%energy), '], [', &
+        units_abbrev(units_out%velocity)
+     
+      do ist = 1, st%nst
+        write(iunit,'(i5,f12.5,3f12.5)') ist, units_from_atomic(units_out%energy, st%eigenval(ist, ik)), &
+          velocity(ik, ist, 1:periodic_dim)
+      enddo
+    enddo
+
+    call io_close(iunit)
+    call pop_sub()
+  end subroutine kdotp_write_band_velocity
+
+  ! ---------------------------------------------------------
+  subroutine kdotp_write_eff_mass(st, gr, kdotp_vars)
     type(states_t),       intent(inout) :: st
     type(grid_t),         intent(inout) :: gr
     type(kdotp_t),        intent(inout) :: kdotp_vars
@@ -308,51 +359,18 @@ contains
     integer :: iunit, ik, ist, ist2, ik2, ispin
     FLOAT :: determinant
 
-    call push_sub('kdotp.kdotp_output')
-
-    call messages_print_stress(stdout, 'Degenerate subspaces')
+    call push_sub('kdotp.kdotp_write_eff_mass')
 
     do ik = 1, st%d%nik
       ispin = states_dim_get_spin_index(st%d, ik)
       ik2 = kpoint_index(st%d, ik)
 
       tmp = int2str(ik2)
-      write(message(1), '(3a, i1)') 'k-point ', trim(tmp), ', spin ', ispin 
-      call write_info(1)
-
-      ist = 1
-      do while (ist <= st%nst)
-      ! test for degeneracies
-         write(message(1),'(a)') '===='
-         tmp = int2str(ist)
-         write(message(2),'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
-           units_from_atomic(units_out%energy, st%eigenval(ist, ik)), ' ', units_abbrev(units_out%energy)
-         call write_info(2)
-
-         ist2 = ist + 1
-         do while (ist2 <= st%nst .and. &
-           abs(st%eigenval(min(ist2, st%nst), ik) - st%eigenval(ist, ik)) < kdotp_vars%degen_thres)
-           ! eigenvalues are supposed to be in ascending order; if they are not, it is a sign
-           ! of being in a degenerate subspace?
-           ! write(*,*) ist2, ist, sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)
-            tmp = int2str(ist2)
-            write(message(1),'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
-              units_from_atomic(units_out%energy, st%eigenval(ist2, ik)), ' ', units_abbrev(units_out%energy)
-            call write_info(1)
-            ist2 = ist2 + 1
-         enddo
-
-         ist = ist2
-      enddo
-      write(message(1),'()')
-      call write_info(1)
-
-      tmp = int2str(ik2)
       write(filename, '(3a, i1)') KDOTP_DIR//'kpoint_', trim(tmp), '_', ispin
       iunit = io_open(trim(filename), action='write')
 
-      write(iunit,'(a, i10)') '# spin    index = ', ispin
-      write(iunit,'(a, i10)') '# k-point index = ', ik2
+      write(iunit,'(a, i10)')    '# spin    index = ', ispin
+      write(iunit,'(a, i10)')    '# k-point index = ', ik2
       write(iunit,'(a, 3f12.8)') '# k-point coordinates = ', st%d%kpoints(1:gr%mesh%sb%dim, ik)
       if (.not. kdotp_vars%ok) write(iunit, '(a)') "# WARNING: not converged"      
       
@@ -381,19 +399,67 @@ contains
     enddo
 
     call pop_sub()
+  end subroutine kdotp_write_eff_mass
 
-  end subroutine kdotp_output
+  ! ---------------------------------------------------------
+  subroutine kdotp_write_degeneracies(st, threshold)
+    type(states_t), intent(inout) :: st
+    FLOAT,          intent(in)    :: threshold
 
-  character(len=12) function int2str(i) result(str)
-    integer, intent(in) :: i
+    character(len=80) :: tmp
+    integer :: ik, ist, ist2, ik2, ispin
+
+    call push_sub('kdotp.kdotp_write_degeneracies')
+
+    call messages_print_stress(stdout, 'Degenerate subspaces')
+
+    do ik = 1, st%d%nik
+      ispin = states_dim_get_spin_index(st%d, ik)
+      ik2 = kpoint_index(st%d, ik)
+
+      tmp = int2str(ik2)
+      write(message(1), '(3a, i1)') 'k-point ', trim(tmp), ', spin ', ispin 
+      call write_info(1)
+
+      ist = 1
+      do while (ist <= st%nst)
+      ! test for degeneracies
+         write(message(1),'(a)') '===='
+         tmp = int2str(ist)
+         write(message(2),'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
+           units_from_atomic(units_out%energy, st%eigenval(ist, ik)), ' ', units_abbrev(units_out%energy)
+         call write_info(2)
+
+         ist2 = ist + 1
+         do while (ist2 <= st%nst .and. &
+           abs(st%eigenval(min(ist2, st%nst), ik) - st%eigenval(ist, ik)) < threshold)
+           tmp = int2str(ist2)
+           write(message(1),'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
+             units_from_atomic(units_out%energy, st%eigenval(ist2, ik)), ' ', units_abbrev(units_out%energy)
+           call write_info(1)
+           ist2 = ist2 + 1
+         enddo
+
+         ist = ist2
+      enddo
+
+      write(message(1),'()')
+      call write_info(1)
+    enddo
+
+    call pop_sub()
+  end subroutine kdotp_write_degeneracies
+
+  ! ---------------------------------------------------------
+  character(len=12) function int2str(ii) result(str)
+    integer, intent(in) :: ii
     
     call push_sub('kdotp.int2str')
 
-    write(str, '(i11)') i
+    write(str, '(i11)') ii
     str = trim(adjustl(str))
 
     call pop_sub()
-    
   end function int2str
             
 end module kdotp_m

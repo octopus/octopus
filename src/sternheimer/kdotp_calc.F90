@@ -37,8 +37,10 @@ module kdotp_calc_m
 
   private
   public ::                        &
-    dcalc_eff_mass_inv,            &  
-    zcalc_eff_mass_inv,            &  
+    dcalc_eff_mass_inv,            &
+    zcalc_eff_mass_inv,            &
+    dcalc_band_velocity,           &
+    zcalc_band_velocity,           &
     zcalc_dipole_periodic,         &
     kdotp_wfs_tag,                 &
     kdotp_rho_tag
