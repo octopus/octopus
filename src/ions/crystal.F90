@@ -106,6 +106,9 @@ contains
     call write_info(1)
     end do
 
+    write(message(1),'(a)') ''
+    call write_info(1)
+
     call pop_sub()
   end subroutine crystal_init
   
