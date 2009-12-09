@@ -138,6 +138,9 @@ contains
     call io_mkdir(trim(tmpdir)//KDOTP_DIR) ! restart
     call io_mkdir(KDOTP_DIR)               ! data output
 
+    message(1) = 'Calculating band velocities.'
+    call write_info(1)
+
     if(states_are_real(sys%st)) then
       call dcalc_band_velocity(sys, hm, kdotp_vars%perturbation, kdotp_vars%velocity(:,:,:))
     else
@@ -332,14 +335,19 @@ contains
       tmp = int2str(ik2)
 
       write(iunit,'(a,i1,a,a)') '# spin = ', ispin, ', k-point = ', trim(tmp)
-      write(iunit,'(a)', advance = 'no') '# state energy'
+
+      write(iunit,'(a)',advance='no') '# state    energy       '
       do idir = 1, periodic_dim
-        write(iunit,'(3a)', advance = 'no') ' vg(', trim(index2axis(idir)), ')'
+        write(iunit,'(3a)',advance='no') 'vg(', trim(index2axis(idir)), ')       '
       enddo
       write(iunit,'(a)')
-      write(iunit,'(4a)')       '#       [', units_abbrev(units_out%energy), '], [', &
-        units_abbrev(units_out%velocity)
-     
+
+      write(iunit,'(3a)',advance='no')       '#           [', trim(units_abbrev(units_out%energy)), ']     '
+      do idir = 1, periodic_dim
+        write(iunit,'(3a)',advance='no') '[', trim(units_abbrev(units_out%velocity)), '] '
+      enddo
+      write(iunit,'(a)')
+
       do ist = 1, st%nst
         write(iunit,'(i5,f12.5,3f12.5)') ist, units_from_atomic(units_out%energy, st%eigenval(ist, ik)), &
           velocity(ik, ist, 1:periodic_dim)
