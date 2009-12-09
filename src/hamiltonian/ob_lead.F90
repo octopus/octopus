@@ -40,7 +40,8 @@ module ob_lead_m
 
   public ::         &
     apply_coupling, &
-    lead_init,      &
+    lead_init_pot,  &
+    lead_init_kin,  &
     lead_end,       &
     lead_diag,      &
     lead_offdiag,   &
@@ -269,25 +270,39 @@ contains
   end subroutine lead_td_pot
 
   
-  ! ---------------------------------------------------------
-  subroutine lead_init(lead, np, np_part, dim, nspin)
+  ! init the potentials of the lead
+  subroutine lead_init_pot(lead, np, np_part, nspin)
+    type(lead_t),        intent(out) :: lead
+    integer,             intent(in)  :: np
+    integer,             intent(in)  :: np_part ! including ghost and boundary points
+    integer,             intent(in)  :: nspin
+
+    call push_sub('ob_lead.lead_init_pot')
+
+    lead%np  = np
+    lead%np_part = np_part
+    SAFE_ALLOCATE(lead%vks(1:np, 1:nspin))
+    SAFE_ALLOCATE(lead%vhartree(1:np))
+
+    call pop_sub()
+  end subroutine lead_init_pot
+
+  ! init the kinetic part (diag and offdiag) of the lead
+  subroutine lead_init_kin(lead, np, np_part, dim)
     type(lead_t),        intent(out) :: lead
     integer,             intent(in)  :: np
     integer,             intent(in)  :: np_part ! including ghost and boundary points
     integer,             intent(in)  :: dim
-    integer,             intent(in)  :: nspin
 
-    call push_sub('ob_lead.lead_init')
+    call push_sub('ob_lead.lead_init_kin')
 
     lead%np  = np
     lead%np_part = np_part
     SAFE_ALLOCATE(lead%h_diag(1:np, 1:np, 1:dim))
     SAFE_ALLOCATE(lead%h_offdiag(1:np, 1:np))
-    SAFE_ALLOCATE(lead%vks(1:np, 1:nspin))
-    SAFE_ALLOCATE(lead%vhartree(1:np))
 
     call pop_sub()
-  end subroutine lead_init
+  end subroutine lead_init_kin
 
 
   ! ---------------------------------------------------------
@@ -350,13 +365,15 @@ contains
       ! the new unit cell must be smaller
       ASSERT(np.le.lead%np)
       ! create temp lead
-      call lead_init(old_lead, np, np_part, dim, nspin)
+      call lead_init_pot(old_lead, np, np_part, nspin)
+      call lead_init_kin(old_lead, np, np_part, dim)
       ! safe old lead
       call lead_copy(lead, old_lead, dim, nspin)
       ! delete lead
       call lead_end(lead)
       ! allocate new (smaller) lead
-      call lead_init(lead, np, np_part, dim, nspin)
+      call lead_init_pot(lead, np, np_part, nspin)
+      call lead_init_kin(lead, np, np_part, dim)
       ! copy parts of the old leads
       call lead_copy(old_lead, lead, dim, nspin)
       ! delete old lead

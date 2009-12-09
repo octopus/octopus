@@ -503,10 +503,8 @@ contains
       do il = 1, NLEADS
         np = gr%intf(il)%np_uc
         np_part =  gr%intf(il)%np_part_uc
-        call lead_init(hm%lead(il), np, np_part, st%d%dim, hm%d%nspin)
-      end do
-      
-      do il = 1, NLEADS
+        call lead_init_pot(hm%lead(il), np, np_part, hm%d%nspin)
+        
         do ispin = 1, hm%d%nspin
           write(channel, '(i1)') ispin
 
@@ -637,6 +635,9 @@ contains
           ! TODO generalize to find the smallest periodicity of the leads
           call interface_init(gr%mesh, gr%sb, gr%der, gr%intf(il), il, &
                               derivatives_stencil_extent(gr%der, (il+1)/2))
+          np = gr%intf(il)%np_uc
+          np_part =  gr%intf(il)%np_part_uc
+          call lead_init_kin(hm%lead(il), np, np_part, st%d%dim)
           call lead_resize(gr%intf(il), hm%lead(il), st%d%dim, hm%d%nspin)
           if(in_debug_mode) then ! write some info
             write(message(1), '(a,2i8)') 'to ', gr%intf(il)%np_uc

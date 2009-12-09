@@ -123,7 +123,7 @@ contains
     !% A plane slice at <i>y</i> = 0 is printed. The string <tt>.y=0</tt> is appended
     !% to previous file names.
     !%Option plane_z 32
-    !% A plane slice at <i>y</i> = 0 is printed. The string <tt>.z=0</tt> is appended to
+    !% A plane slice at <i>z</i> = 0 is printed. The string <tt>.z=0</tt> is appended to
     !% previous file names.
     !%Option dx 64
     !% For printing three-dimensional information, the open-source program

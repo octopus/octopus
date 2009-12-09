@@ -94,8 +94,7 @@ contains
     intf%il = il
     tdir = (il+1)/2
 
-    intf%np_uc = m%lead_unit_cell(il)%np
-    intf%np_part_uc = m%lead_unit_cell(il)%np_part
+    intf%np_part_uc = 0
     if (present(extent_uc)) then
       ! if the lead potential has no dependence in transport direction
       ! then the size of unit cell extent will be reduced to interface extent
