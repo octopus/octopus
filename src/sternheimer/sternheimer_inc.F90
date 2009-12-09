@@ -140,8 +140,9 @@ subroutine X(sternheimer_solve)(                           &
           ! previous steps will use Pc, which generally reduces the number of linear-solver iterations needed. Only the
           ! wavefunctions in the unoccupied subspace are needed to construct the first-order density.
           ! For a non-SCF run, we will apply Pn` if occ_response, and Pc if !occ_response.
- 
-          if (this%occ_response .or. conv_last) then
+          ! I am not sure what the generalization of this scheme is for metals, so we will just use Pc if there is smearing.
+
+          if ((this%occ_response .or. conv_last) .and. st%smear%method == SMEAR_SEMICONDUCTOR) then
             ! project out only the component of the unperturbed wavefunction
             proj = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist, ik), y(:, :, sigma))
             do idim = 1, st%d%dim
