@@ -18,16 +18,16 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vtau)
-  type(grid_t),       intent(inout) :: gr
-  type(xc_t), target, intent(in)    :: xcs
-  type(states_t),     intent(inout) :: st
-  FLOAT,              intent(in)    :: rho(:, :)
-  integer,            intent(in)    :: ispin
-  FLOAT,              intent(inout) :: ex, ec
-  FLOAT,              intent(in)    :: ioniz_pot, qtot
-  FLOAT, optional,    intent(inout) :: vxc(:,:)
-  FLOAT, optional,    intent(inout) :: vtau(:,:)
+subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vtau)
+  type(derivatives_t),  intent(inout) :: der
+  type(xc_t), target,   intent(in)    :: xcs
+  type(states_t),       intent(inout) :: st
+  FLOAT,                intent(in)    :: rho(:, :)
+  integer,              intent(in)    :: ispin
+  FLOAT,                intent(inout) :: ex, ec
+  FLOAT,                intent(in)    :: ioniz_pot, qtot
+  FLOAT, optional,      intent(inout) :: vxc(:,:)
+  FLOAT, optional,      intent(inout) :: vtau(:,:)
 
   integer :: n_block
 
@@ -84,41 +84,41 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vta
   if(gga .and. (.not. mgga)) then
     ! get gradient of the density (this is faster than calling states_calc_tau_jp_gn)
     do isp = 1, spin_channels 
-      call dderivatives_grad(gr%der, dens(:, isp), gdens(:, :, isp)) 
+      call dderivatives_grad(der, dens(:, isp), gdens(:, :, isp)) 
     end do
   else if(mgga) then
 
     ! We calculate everything from the wave-functions to benefit from
     ! the error cancelation between the gradient of the density and
     ! tau.
-    call states_calc_tau_jp_gn(gr, st, grho=gdens, tau=tau, lrho=ldens)    
+    call states_calc_tau_jp_gn(der, st, grho=gdens, tau=tau, lrho=ldens)    
 
     ! We have to symmetrize everything as they are calculated from the
     ! wave-functions.
     if(st%symmetrize_density) then
-      SAFE_ALLOCATE(symmtmp(1:gr%fine%mesh%np, 1:3))
-      call symmetrizer_init(symmetrizer, gr%fine%mesh)
+      SAFE_ALLOCATE(symmtmp(1:der%mesh%np, 1:3))
+      call symmetrizer_init(symmetrizer, der%mesh)
       do isp = 1, spin_channels
         call dsymmetrizer_apply(symmetrizer, tau(:, isp), symmtmp(:, 1))
-        tau(1:gr%fine%mesh%np, isp) = symmtmp(1:gr%fine%mesh%np, 1)
+        tau(1:der%mesh%np, isp) = symmtmp(1:der%mesh%np, 1)
         call dsymmetrizer_apply(symmetrizer, ldens(:, isp), symmtmp(:, 1))
-        ldens(1:gr%fine%mesh%np, isp) = symmtmp(1:gr%fine%mesh%np, 1)
+        ldens(1:der%mesh%np, isp) = symmtmp(1:der%mesh%np, 1)
         call dsymmetrizer_apply_vector(symmetrizer, gdens(:, :, isp), symmtmp)
-        gdens(1:gr%fine%mesh%np, 1:3, isp) = symmtmp(1:gr%fine%mesh%np, 1:3)
+        gdens(1:der%mesh%np, 1:3, isp) = symmtmp(1:der%mesh%np, 1:3)
       end do
 
       call symmetrizer_end(symmetrizer)
       SAFE_DEALLOCATE_A(symmtmp)
     end if
 
-    if(functl(1)%id == XC_MGGA_X_TB09 .and. gr%sb%periodic_dim == 3) then
+    if(functl(1)%id == XC_MGGA_X_TB09 .and. der%mesh%sb%periodic_dim == 3) then
       call calc_tb09_c()
     end if
 
   end if
 
-  space_loop: do ip = 1, gr%mesh%np, n_block
-    if(ip + n_block > gr%mesh%np) n_block = gr%mesh%np - ip + 1
+  space_loop: do ip = 1, der%mesh%np, n_block
+    if(ip + n_block > der%mesh%np) n_block = der%mesh%np - ip + 1
 
 
     ! make a local copy with the correct memory order for libxc
@@ -131,10 +131,10 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vta
     if(gga) then
       ib2 = ip
       do ib = 1, n_block
-        l_sigma(1, ib) = sum(gdens(ib2, 1:gr%mesh%sb%dim, 1)*gdens(ib2, 1:gr%mesh%sb%dim, 1))
+        l_sigma(1, ib) = sum(gdens(ib2, 1:der%mesh%sb%dim, 1)*gdens(ib2, 1:der%mesh%sb%dim, 1))
         if(ispin /= UNPOLARIZED) then
-          l_sigma(2, ib) = sum(gdens(ib2, 1:gr%mesh%sb%dim, 1)*gdens(ib2, 1:gr%mesh%sb%dim, 2))
-          l_sigma(3, ib) = sum(gdens(ib2, 1:gr%mesh%sb%dim, 2)*gdens(ib2, 1:gr%mesh%sb%dim, 2))
+          l_sigma(2, ib) = sum(gdens(ib2, 1:der%mesh%sb%dim, 1)*gdens(ib2, 1:der%mesh%sb%dim, 2))
+          l_sigma(3, ib) = sum(gdens(ib2, 1:der%mesh%sb%dim, 2)*gdens(ib2, 1:der%mesh%sb%dim, 2))
         end if
         ib2 = ib2 + 1
       end do
@@ -205,7 +205,7 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vta
             l_vsigma = M_ZERO
 
             if(functl(ixc)%id == XC_GGA_XC_LB) then
-              call mesh_r(gr%mesh, ip, r)
+              call mesh_r(der%mesh, ip, r)
               call XC_F90(gga_lb_modified)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), &
                 r, l_dedd(1,1))
             else
@@ -275,8 +275,8 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vta
   end if
 
   ! integrate eneries per unit volume
-  ex = dmf_integrate(gr%mesh, ex_per_vol)
-  ec = dmf_integrate(gr%mesh, ec_per_vol)
+  ex = dmf_integrate(der%mesh, ex_per_vol)
+  ec = dmf_integrate(der%mesh, ec_per_vol)
 
   ! clean up allocated memory
   call lda_end()
@@ -305,9 +305,9 @@ contains
     SAFE_ALLOCATE(l_dens(1:spin_channels, 1:n_block))
     SAFE_ALLOCATE(l_zk(1:n_block))
 
-    SAFE_ALLOCATE(dens(1:gr%mesh%np_part, 1:spin_channels))
-    SAFE_ALLOCATE(ex_per_vol(1:gr%mesh%np))
-    SAFE_ALLOCATE(ec_per_vol(1:gr%mesh%np))
+    SAFE_ALLOCATE(dens(1:der%mesh%np_part, 1:spin_channels))
+    SAFE_ALLOCATE(ex_per_vol(1:der%mesh%np))
+    SAFE_ALLOCATE(ec_per_vol(1:der%mesh%np))
 
     dens       = M_ZERO
     ex_per_vol = M_ZERO
@@ -315,11 +315,11 @@ contains
 
     if(present(vxc)) then
       SAFE_ALLOCATE(l_dedd(1:spin_channels, 1:n_block))
-      SAFE_ALLOCATE(dedd(1:gr%mesh%np_part, 1:spin_channels))
+      SAFE_ALLOCATE(dedd(1:der%mesh%np_part, 1:spin_channels))
       dedd = M_ZERO
     end if
 
-    do ii = 1, gr%mesh%np
+    do ii = 1, der%mesh%np
       d(1:spin_channels) = rho(ii, 1:spin_channels)
 
       select case(ispin)
@@ -371,7 +371,7 @@ contains
 
     if(ispin == SPINORS) then
       ! rotate back (do not need the rotation matrix for this).
-      do ip = 1, gr%mesh%np
+      do ip = 1, der%mesh%np
         d(1:spin_channels) = rho(ip, 1:spin_channels)
 
         dpol = sqrt((d(1) - d(2))**2 + &
@@ -384,10 +384,10 @@ contains
         vxc(ip, 4) = vxc(ip, 4) + (dedd(ip, 1) - dedd(ip, 2))*rho(ip, 4)/(dpol + tiny)
       end do
     elseif(ispin == SPIN_POLARIZED) then
-      call lalg_axpy(gr%mesh%np, M_ONE, dedd(:, 1), vxc(:, 1))
-      call lalg_axpy(gr%mesh%np, M_ONE, dedd(:, 2), vxc(:, 2))
+      call lalg_axpy(der%mesh%np, M_ONE, dedd(:, 1), vxc(:, 1))
+      call lalg_axpy(der%mesh%np, M_ONE, dedd(:, 2), vxc(:, 2))
     else
-      call lalg_axpy(gr%mesh%np, M_ONE, dedd(:, 1), vxc(:, 1))
+      call lalg_axpy(der%mesh%np, M_ONE, dedd(:, 1), vxc(:, 1))
     end if
 
     call pop_sub()
@@ -408,12 +408,12 @@ contains
 
     ! allocate variables
     SAFE_ALLOCATE(l_sigma(1:ii, 1:n_block))
-    SAFE_ALLOCATE(gdens(1:gr%mesh%np, 1:3, 1:spin_channels))
+    SAFE_ALLOCATE(gdens(1:der%mesh%np, 1:3, 1:spin_channels))
     gdens = M_ZERO
 
     if(present(vxc)) then
       SAFE_ALLOCATE(l_vsigma(1:ii, 1:n_block))
-      SAFE_ALLOCATE(dedgd(1:gr%mesh%np_part, 1:3, 1:spin_channels))
+      SAFE_ALLOCATE(dedgd(1:der%mesh%np_part, 1:3, 1:spin_channels))
       dedgd = M_ZERO
     end if
 
@@ -454,22 +454,22 @@ contains
 
     ! subtract the divergence of the functional derivative of Exc with respect to
     ! the gradient of the density.
-    SAFE_ALLOCATE(gf(1:gr%mesh%np, 1:1))
+    SAFE_ALLOCATE(gf(1:der%mesh%np, 1:1))
     do is = 1, spin_channels
-      call dderivatives_div(gr%der, dedgd(:, :, is), gf(:, 1))
-      call lalg_axpy(gr%mesh%np, -M_ONE, gf(:,1), dedd(:, is))
+      call dderivatives_div(der, dedgd(:, :, is), gf(:, 1))
+      call lalg_axpy(der%mesh%np, -M_ONE, gf(:,1), dedd(:, is))
     end do
     SAFE_DEALLOCATE_A(gf)
 
     ! If LB94, we can calculate an approximation to the energy from
     ! Levy-Perdew relation PRA 32, 2010 (1985)
     if(functl(1)%id == XC_GGA_XC_LB) then
-      SAFE_ALLOCATE(gf(1:gr%mesh%np, 1:3))
+      SAFE_ALLOCATE(gf(1:der%mesh%np, 1:3))
 
       do is = 1, spin_channels
-        call dderivatives_grad(gr%der, dedd(:, is), gf(:,:))
-        do ip = 1, gr%mesh%np
-          ex_per_vol(ip) = ex_per_vol(ip) - dens(ip, is) * sum(gr%mesh%x(ip,:)*gf(ip,:))
+        call dderivatives_grad(der, dedd(:, is), gf(:,:))
+        do ip = 1, der%mesh%np
+          ex_per_vol(ip) = ex_per_vol(ip) - dens(ip, is) * sum(der%mesh%x(ip,:)*gf(ip,:))
         end do
       end do
 
@@ -487,10 +487,10 @@ contains
   subroutine mgga_init()
     call push_sub('vxc_inc.xc_get_vxc.mgga_init')
 
-    SAFE_ALLOCATE( tau(1:gr%mesh%np, 1:spin_channels))
-    SAFE_ALLOCATE(ldens(1:gr%mesh%np, 1:spin_channels))
+    SAFE_ALLOCATE( tau(1:der%mesh%np, 1:spin_channels))
+    SAFE_ALLOCATE(ldens(1:der%mesh%np, 1:spin_channels))
     if(present(vxc)) then
-      SAFE_ALLOCATE(dedldens(1:gr%mesh%np_part, 1:spin_channels))
+      SAFE_ALLOCATE(dedldens(1:der%mesh%np_part, 1:spin_channels))
       dedldens = M_ZERO
     end if
 
@@ -508,27 +508,27 @@ contains
 
     call push_sub('vxc_inc.xc_get_vxc.calc_tb09_c')
 
-    SAFE_ALLOCATE(gnon(1:gr%mesh%np))
+    SAFE_ALLOCATE(gnon(1:der%mesh%np))
 
-    do ii = 1, gr%mesh%np
+    do ii = 1, der%mesh%np
       if(ispin == UNPOLARIZED) then
         n = dens(ii, 1)
-        gn(1:gr%mesh%sb%dim) = gdens(ii, 1:gr%mesh%sb%dim, 1)
+        gn(1:der%mesh%sb%dim) = gdens(ii, 1:der%mesh%sb%dim, 1)
       else
         n = dens(ii, 1) + dens(ii, 2)
-        gn(1:gr%mesh%sb%dim) = gdens(ii, 1:gr%mesh%sb%dim, 1) + gdens(ii, 1:gr%mesh%sb%dim, 2)
+        gn(1:der%mesh%sb%dim) = gdens(ii, 1:der%mesh%sb%dim, 1) + gdens(ii, 1:der%mesh%sb%dim, 2)
       end if
 
       if (n <= CNST(1e-7)) then 
         gnon(ii) = CNST(0.0)
         ! here you will have to print the true gnon(ii) with the correspondent mesh point ii
       else
-        gnon(ii) = sqrt(sum((gn(1:gr%mesh%sb%dim)/n)**2))
+        gnon(ii) = sqrt(sum((gn(1:der%mesh%sb%dim)/n)**2))
       end if
     end do
 
     ncall = ncall +1 
-    tb09_c =  -CNST(0.012) + CNST(1.023)*sqrt(dmf_integrate(gr%mesh, gnon)/gr%sb%rcell_volume)
+    tb09_c =  -CNST(0.012) + CNST(1.023)*sqrt(dmf_integrate(der%mesh, gnon)/der%mesh%sb%rcell_volume)
 
     write(*,*) "call number " , ncall
     write(message(1), '(a,f8.6)') "Info: In the functional TB09 c = ", tb09_c
@@ -568,10 +568,10 @@ contains
     ! add the Laplacian of the functional derivative of Exc with respect to
     ! the gradient of the density.
 
-    SAFE_ALLOCATE(lf(1:gr%mesh%np, 1:1))
+    SAFE_ALLOCATE(lf(1:der%mesh%np, 1:1))
     do is = 1, spin_channels
-      call dderivatives_lapl(gr%der, dedldens(:, is), lf(:, 1))
-      call lalg_axpy(gr%mesh%np, M_ONE, lf(:, 1), dedd(:, is))
+      call dderivatives_lapl(der, dedldens(:, is), lf(:, 1))
+      call lalg_axpy(der%mesh%np, M_ONE, lf(:, 1), dedd(:, is))
     end do
     SAFE_DEALLOCATE_A(lf)
 

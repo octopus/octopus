@@ -61,7 +61,7 @@
       fn_unit = units_out%time * units_out%length**(-gr%mesh%sb%dim)
       ! calculate current first
       SAFE_ALLOCATE(current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
-      call states_calc_tau_jp_gn(gr, st, jp = current)
+      call states_calc_tau_jp_gn(gr%der, st, jp = current)
       do is = 1, st%d%nspin
         do idir = 1, gr%mesh%sb%dim
           write(fname, '(a,i1,2a)') 'current-sp', is, '-', index2axis(idir)
@@ -117,7 +117,7 @@
     if(iand(outp%what, output_ked).ne.0) then
       fn_unit = units_out%energy * units_out%length**(-gr%mesh%sb%dim)
       SAFE_ALLOCATE(elf(1:gr%mesh%np, 1:st%d%nspin))
-      call states_calc_tau_jp_gn(gr, st, tau=elf)
+      call states_calc_tau_jp_gn(gr%der, st, tau=elf)
       select case(st%d%ispin)
         case(UNPOLARIZED)
           write(fname, '(a)') 'tau'
@@ -313,7 +313,7 @@
 
     if(states_are_complex(st)) then
       SAFE_ALLOCATE(j(1:gr%mesh%np, 1:MAX_DIM, 0:st%d%nspin))
-      call states_calc_tau_jp_gn(gr, st, jp = j(:, :, 1:))
+      call states_calc_tau_jp_gn(gr%der, st, jp = j(:, :, 1:))
 
       do idir = 1, gr%mesh%sb%dim
         do ip = 1, gr%mesh%np

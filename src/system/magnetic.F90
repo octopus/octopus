@@ -143,7 +143,7 @@ contains
     call push_sub('magnetic.calc_physical_current')
 
     ! Paramagnetic contribution to the physical current
-    call states_calc_tau_jp_gn(gr, st, jp = j)
+    call states_calc_tau_jp_gn(gr%der, st, jp = j)
 
     ! TODO
     ! Diamagnetic contribution to the physical current
@@ -176,7 +176,7 @@ contains
     end if
 
     SAFE_ALLOCATE(j(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
-    call states_calc_tau_jp_gn(gr, st, jp=j)
+    call states_calc_tau_jp_gn(gr%der, st, jp=j)
 
     a_ind = M_ZERO
     do i = 1, gr%mesh%sb%dim

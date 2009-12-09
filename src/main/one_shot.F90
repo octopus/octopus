@@ -87,9 +87,10 @@ contains
     E_Hartree = hm%ehartree
 
     ! Get exchange-correlation energies
+    ! this should be done in the fine mesh
     SAFE_ALLOCATE(rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin))
     call states_total_density(sys%st, sys%gr%mesh, rho)
-    call xc_get_vxc(sys%gr, sys%ks%xc, sys%st, rho, sys%st%d%ispin, E_x, E_c, &
+    call xc_get_vxc(sys%gr%der, sys%ks%xc, sys%st, rho, sys%st%d%ispin, E_x, E_c, &
       M_ZERO, sys%st%qtot)
     SAFE_DEALLOCATE_A(rho)
 

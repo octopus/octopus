@@ -27,6 +27,7 @@ module v_ks_m
   use grid_m
   use hamiltonian_m
   use index_m
+  use io_function_m
   use lalg_basic_m
   use parser_m
   use magnetic_m
@@ -39,6 +40,7 @@ module v_ks_m
   use profiling_m
   use states_m
   use states_dim_m
+  use unit_system_m
   use varinfo_m
   use xc_m
   use XC_F90(lib_m)
@@ -363,7 +365,7 @@ contains
       FLOAT, allocatable :: rho(:, :)
       type(profile_t), save :: prof
       FLOAT, pointer :: vxc(:, :)
-      integer :: ispin
+      integer :: ispin, ierr
 
       call push_sub('v_ks.v_ks_calc.v_a_xc')
       call profiling_in(prof, "XC")
@@ -389,10 +391,10 @@ contains
 
       ! Get the *local* XC term
       if(hm%d%cdft) then
-        call xc_get_vxc_and_axc(gr, ks%xc, st, rho, st%current, st%d%ispin, hm%vxc, hm%axc, &
+        call xc_get_vxc_and_axc(gr%fine%der, ks%xc, st, rho, st%current, st%d%ispin, hm%vxc, hm%axc, &
              hm%ex, hm%ec, hm%exc_j, -minval(st%eigenval(st%nst, :)), st%qtot)
       else
-        call xc_get_vxc(gr, ks%xc, st, rho, st%d%ispin, hm%ex, hm%ec, &
+        call xc_get_vxc(gr%fine%der, ks%xc, st, rho, st%d%ispin, hm%ex, hm%ec, &
              -minval(st%eigenval(st%nst, :)), st%qtot, vxc, vtau=hm%vtau)
       end if
 
@@ -427,6 +429,9 @@ contains
       if(gr%have_fine_mesh) then
         do ispin = 1, st%d%nspin
           call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, vxc(:, ispin), hm%vxc(:, ispin))
+          ! some debugging output that I will keep here for the moment, XA
+          !          call doutput_function(1, "./", "vxc_fine", gr%fine%mesh, vxc(:, ispin), unit_one, ierr)
+          !          call doutput_function(1, "./", "vxc_coarse", gr%mesh, hm%vxc(:, ispin), unit_one, ierr)
         end do
         SAFE_DEALLOCATE_P(vxc)
       end if
@@ -449,7 +454,7 @@ contains
 
     FLOAT, allocatable :: rho(:)
     FLOAT, pointer :: pot(:)
-    integer :: is, ip
+    integer :: is, ip, ierr
 
     call push_sub('v_ks.v_ks_hartree')
 
@@ -491,6 +496,9 @@ contains
 
     if(gr%have_fine_mesh) then
       call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, pot, hm%vhartree)
+      ! some debugging output that I will keep here for the moment, XA
+      !      call doutput_function(1, "./", "vh_fine", gr%fine%mesh, pot, unit_one, ierr)
+      !      call doutput_function(1, "./", "vh_coarse", gr%mesh, hm%vhartree, unit_one, ierr)
       SAFE_DEALLOCATE_P(pot)
     end if
 
