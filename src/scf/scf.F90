@@ -152,9 +152,9 @@ contains
     !%Default 0.0
     !%Section SCF::Convergence
     !%Description
-    !% Absolute convergence of the eigenvalues:
+    !% Absolute convergence of the sum of the eigenvalues:
     !%
-    !% <math>\epsilon = \sum_{j=1}^{N_{occ}} \vert \epsilon_j^{out}-\epsilon_j^{inp}\vert</math>.
+    !% <math> \epsilon = \vert \sum_{j=1}^{N_{occ}}  \epsilon_j^{out}- \sum_{j=1}^{N_{occ}}  \epsilon_j^{inp} \vert </math>
     !%
     !% A zero value (the default) means do not use this criterion.
     !%End
@@ -166,11 +166,11 @@ contains
     !%Default 0.0
     !%Section SCF::Convergence
     !%Description
-    !% Relative convergence of the eigenvalues:
+    !% Relative convergence of the sum of the eigenvalues:
     !%
-    !% <math>\epsilon = {1 \over E} \sum_{j=1}^{N_{occ}} \vert \epsilon_j^{out}-\epsilon_j^{inp}\vert</math>.
+    !% <math>\epsilon = {1 \over \vert \sum_{j=1}^{N_{occ}} \epsilon_j^{out} \vert}  \vert \sum_{j=1}^{N_{occ}}  \epsilon_j^{out}- \sum_{j=1}^{N_{occ}}  \epsilon_j^{inp} \vert  <\math>
     !%
-    !% <i>E</i> is the sum of the eigenvalues. A zero value (the default) means do not use this criterion.
+    !%A zero value (the default) means do not use this criterion.
     !%End
     call parse_float(datasets_check('ConvRelEv'), M_ZERO, scf%conv_rel_ev)
 
