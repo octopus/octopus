@@ -428,7 +428,7 @@ contains
 
       if(gr%have_fine_mesh) then
         do ispin = 1, st%d%nspin
-          call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, vxc(:, ispin), hm%vxc(:, ispin))
+          call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, vxc(:, ispin), hm%vxc(:, ispin), INJECTION)
           ! some debugging output that I will keep here for the moment, XA
           !          call doutput_function(1, "./", "vxc_fine", gr%fine%mesh, vxc(:, ispin), unit_one, ierr)
           !          call doutput_function(1, "./", "vxc_coarse", gr%mesh, hm%vxc(:, ispin), unit_one, ierr)
@@ -495,7 +495,10 @@ contains
     hm%ehartree = M_HALF*dmf_dotp(gr%fine%mesh, rho, pot)
 
     if(gr%have_fine_mesh) then
-      call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, pot, hm%vhartree)
+      ! we use injection to transfer to the fine grid, we cannot use
+      ! restriction since the boundary conditions are not zero for the
+      ! Hartree potential (and for some XC functionals).
+      call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, pot, hm%vhartree, INJECTION)
       ! some debugging output that I will keep here for the moment, XA
       !      call doutput_function(1, "./", "vh_fine", gr%fine%mesh, pot, unit_one, ierr)
       !      call doutput_function(1, "./", "vh_coarse", gr%mesh, hm%vhartree, unit_one, ierr)
