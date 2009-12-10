@@ -281,18 +281,6 @@ contains
         call messages_devel_version('SETE poisson solver')
       end if
 
-!      if this%method == POISSON_SETE then
-!       do i = 1, geo%natoms !Roberto
-!         do j=1, 3 !Roberto 
-!           ind1(j)=geo%atom(i)%x(j)/der%mesh%sb%h(j)
-!           ind(j)=nint(ind1(j))
-!         enddo !Roberto
-!	 m1=index_from_coords(der%mesh%idx, der%mesh%sb%dim,ind(j))
-!!         m1=der%mesh%Lxyz_inv(ind(1),ind(2),ind(3)) 
-!         rho_nuc(m1) = -geo%atom(i)%spec%z_val/&
-!                        der%mesh%sb%h(1)*der%mesh%sb%h(2)*der%mesh%sb%h(3)
-  !       dmf_interpolate_points(der%mesh,rho_nuc(m1),m2)) !or something similar
-!        enddo
       call messages_print_var_option(stdout, "PoissonSolver", this%method)
       call poisson3D_init(this, geo)
 

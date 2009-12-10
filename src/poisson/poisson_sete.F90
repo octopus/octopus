@@ -65,6 +65,13 @@ module poisson_sete_m
     integer          :: ntot
     integer          :: counter 
     FLOAT            :: tot_nuc_charge_energy
+    integer          :: nx2
+    integer          :: ny2
+    integer          :: nz2
+    integer          :: md
+    FLOAT            :: dx
+    FLOAT            :: dy
+    FLOAT            :: dz
   end type poisson_sete_t
 
   integer :: lenw, leniw, idev, isym = 0, itol = 2, itmax = 2001, itermin = 5, iter, ierr, iunit = 0, nxl, nyl
@@ -95,7 +102,6 @@ contains
     integer :: i, j, ngates
     FLOAT :: zcen, xcen, ycen, dielectric0
     FLOAT, allocatable :: vtv(:), vt(:), q2(:)
-    integer :: nx2, ny2, nz2, md
     FLOAT :: xwidth, ywidth, zwidth, pconst
 
     pconst = CNST(4.0)*M_PI ! need 4 pi for Hartrees I think (??)
@@ -129,25 +135,29 @@ contains
 
       read(57,*) ngates
 
-      SAFE_ALLOCATE(VTV(1:NGATES))
-      SAFE_ALLOCATE(VT(1:NGATES))
+      SAFE_ALLOCATE(vtv(1:ngates))
+      SAFE_ALLOCATE(vt(1:ngates))
 
-      READ(57,*)VTV(1),VTV(2) ! voltage on plates 
-      VT=VTV/HARTREE
+      read(57,*)vtv(1),vtv(2) ! voltage on plates 
+      vt=vtv/HARTREE
 
-      SAFE_DEALLOCATE_A(VTV)
+      SAFE_DEALLOCATE_A(vtv)
 
       READ(57,*) dielectric0    ! dielectric constant of region betw plates
       dielectric0 = dielectric0/pconst
 
       ! mesh related
-      READ(57,*)XWIDTH,YWIDTH ! bounding box around octopus box
+      READ(57,*)xwidth,ywidth ! bounding box around octopus box
       xwidth=xwidth*angsnm
       ywidth=ywidth*angsnm
       READ(57,*)xcen,ycen
       xcen=xcen*angsnm
       ycen=ycen*angsnm
-      READ(57,*)nx2,ny2,nz2   ! additional mesh points in bd box
+      READ(57,*)this%nx2,this%ny2,this%nz2   ! additional mesh points in bd box
+      READ(57,*)this%dx,this%dy,this%dz      ! Differences, experimental
+      this%dx=this%dx*angsnm
+      this%dy=this%dy*angsnm
+      this%dz=this%dz*angsnm
       READ(57,*)nxl,nyl       ! padding points (to sim zone edge)
       allocate(dxl(nxl)); allocate(dyl(nyl))
       READ(57,*)(dxl(i),i=1,nxl)
@@ -157,7 +167,7 @@ contains
       RETURN
     end if
 
-    call xyzgrid(this, nx, ny, nz, xl, yl, zl, xcen, ycen, zcen, nx2, ny2, nz2)  ! establish x-y-z grids
+    call xyzgrid(this, nx, ny, nz, xl, yl, zl, xcen, ycen, zcen, xwidth, ywidth, zwidth)  ! establish x-y-z grids
 
     call cbsurf(this, vt) !Assign boundaries 
 
@@ -213,8 +223,8 @@ contains
         open(57,file='this%aw.dat',status='unknown')
       endif
       !
-      JOFF(1)=-MD ! used to compute row indices this%JAD
-      JOFF(2)=-THIS%NZTOT; JOFF(3)=-1; JOFF(4)=0; JOFF(5)=1; JOFF(6)=THIS%NZTOT; JOFF(7)=MD
+      joff(1)=-this%md ! used to compute row indices this%JAD
+      joff(2)=-THIS%NZTOT; JOFF(3)=-1; JOFF(4)=0; JOFF(5)=1; JOFF(6)=THIS%NZTOT; JOFF(7)=this%MD
       I=1; J=1; K=1
       IEC=1 ! counter for number of non-zero entries in this%AW.
 
@@ -430,7 +440,7 @@ contains
 
     !---------------------------------------------------------
 
-    subroutine xyzgrid(this, nx, ny, nz, xl, yl, zl, xcen, ycen, zcen, nx2, ny2, nz2)
+    subroutine xyzgrid(this, nx, ny, nz, xl, yl, zl, xcen, ycen, zcen, xwidth, ywidth, zwidth)
       type(poisson_sete_t), intent(inout) :: this
       integer,              intent(in)    :: nx
       integer,              intent(in)    :: ny
@@ -441,9 +451,9 @@ contains
       FLOAT,                intent(in)    :: xcen
       FLOAT,                intent(in)    :: ycen
       FLOAT,                intent(in)    :: zcen
-      integer,              intent(in)    :: nx2
-      integer,              intent(in)    :: ny2
-      integer,              intent(in)    :: nz2
+      FLOAT,                intent(in)    :: xwidth
+      FLOAT,                intent(in)    :: ywidth
+      FLOAT,                intent(in)    :: zwidth
 
       ! Input: NX, NY, NZ -> No. of octopus grid points in each dimension
       ! Input: XL, YL, ZL -> Size of the octopus box
@@ -464,20 +474,34 @@ contains
       !write(62,*)"XL,YL,ZL ",XL,YL,ZL
       ! z-mesh -- differs from x,y mesh because no border points
       !           hence NZTOT_0 = THIS%NZTOT (ie there IS no NZTOT_0)
-      this%nztot = nz + nz2
 
-      allocate(zg(this%nztot))
-      allocate(dz(this%nztot))
 
       !top and bottom z coordinates.
       !Depend on POISSON_SETE (ZWIDTH) 
       !and Octopus (ZL)parameters.
       ztop = CNST(0.5)*zwidth - zcen - CNST(0.5)*zl
       zbot = CNST(0.5)*zwidth + zcen - CNST(0.5)*zl
+      if (ztop/this%dz*this%dz==ztop) then
+              nztop = ztop/this%dz
+      else
+              nztop = ztop/this%dz+1
+      endif
+      if (zbot/this%dz*this%dz==zbot) then
+              this%nzbot = zbot/this%dz
+      else
+              this%nzbot = zbot/this%dz+1
+      endif
+      this%nz2=this%nzbot+nztop
+      this%nztot=nz+this%nz2
 
-      nztop = int(nz2*ztop/(ztop + zbot))
-      this%nzbot = nz2 - nztop
-      dz1b=zbot/TOFLOAT(this%nzbot)
+      this%nztot = nz + this%nz2
+      allocate(zg(this%nztot))
+      allocate(dz(this%nztot))
+      write(67,*)"NEW NUMBERS",zwidth,zbot,ztop ! Differences, experimental
+      write(67,*)"NEW NUMBERS",this%dz      ! Differences, experimental
+      write(67,*)"NEW NUMBERS",this%nztot,this%nzbot, nztop, this%nz2      ! Differences, experimental
+
+      dz1b=this%dz
       DO K=1,this%nzbot
         dz(k)=dz1b
       end do
@@ -487,11 +511,10 @@ contains
         dz(k) = dz_oct
       end do
 
-      dz1t=ztop/TOFLOAT(nztop)
-      DO k=this%nzbot+nz+1,this%nztot
+      dz1t=this%dz
+      do k=this%nzbot+nz+1,this%nztot
         dz(k)=dz1t
       end do
-
       zg(1)=-CNST(0.5)*zwidth+CNST(0.5)*dz(1)
       do k=2, this%nzbot
        zg(k) =zg(1) + dz(k)*(k-1)
@@ -505,16 +528,29 @@ contains
       enddo 
 
       ztest=zg(this%nztot)
-      do i=1,this%nztot
-        write(67,*) i, zg(i)
-      enddo
                  
 
       ! x-mesh
-      nxtot_0=nx+nx2
+      xtop=CNST(0.5)*xwidth-xcen-CNST(0.5)*xl
+      xbot=CNST(0.5)*xwidth+xcen-CNST(0.5)*xl
+      if (xtop/this%dx*this%dx==xtop) then
+              nxtop = xtop/this%dx
+      else
+              nxtop = xtop/this%dx+1
+      endif
+      if (xbot/this%dx*this%dx==xbot) then
+              this%nxbot = xbot/this%dx
+      else
+              this%nxbot = xbot/this%dx+1
+      endif
+      this%nx2=this%nxbot+nxtop
+      nxtot_0=nx+this%nx2
       this%nxtot=nxtot_0+2*nxl
       allocate(xg(this%nxtot))
       allocate(dxg(this%nxtot))
+      write(67,*)"NEW NUMBERS",xwidth,xbot,xtop ! Differences, experimental
+      write(67,*)"NEW NUMBERS",this%dx      ! Differences, experimental
+      write(67,*)"NEW NUMBERS",this%nxtot,this%nxbot, nxtop, this%nx2      ! Differences, experimental
       DO i=1,nxl  !  border points
         dxg(i)=dxl(i)
       end do
@@ -522,11 +558,7 @@ contains
         dxg(i)=dxl(this%nxtot-i+1)
       end do
       ! outside Octopus mesh
-      xtop=CNST(0.5)*xwidth-xcen-CNST(0.5)*xl
-      xbot=CNST(0.5)*xwidth+xcen-CNST(0.5)*xl
-      nxtop=INT(nx2*xtop/(xtop+xbot))
-      this%nxbot=nx2-nxtop
-      dx1b=xbot/TOFLOAT(this%nxbot) ! "bottom" region
+      dx1b=this%dx
       DO i=nxl+1,nxl+this%nxbot
         dxg(i)=dx1b
       end do
@@ -534,12 +566,14 @@ contains
       DO i=nxl+this%nxbot+1,nxl+this%nxbot+nx
         dxg(i)= dx_oct
       end do
-      dx1t=xtop/TOFLOAT(nxtop)  ! "top" region
+      !dx1t=xtop/TOFLOAT(nxtop)  ! "top" region
+      dx1t=this%dx
       do i=nxl+this%nxbot+nx+1,nxl+this%nxbot+nx+nxtop
         dxg(i)=dx1t
       end do
 
       xwidth_big=SUM(dxg)
+      xg(1)=-CNST(0.5)*xwidth_big+CNST(0.5)*dxg(1)
       xg(nxl+1)=-CNST(0.5)*xwidth+CNST(0.5)*dxg(nxl+1)
       do k=nxl+2, nxl+this%nxbot
        xg(k) =xg(nxl+1) + dxg(k)*(k-nxl-1)
@@ -561,8 +595,24 @@ contains
           
       XTEST=XG(THIS%NXTOT)
       ! Y-mesh
-      NYTOT_0=NY+NY2  ! excluding border points
-      THIS%NYTOT=NYTOT_0+2*NYL  ! all Poisson Y mesh point
+      ytop=CNST(0.5)*ywidth-ycen-CNST(0.5)*yl
+      ybot=CNST(0.5)*ywidth+ycen-CNST(0.5)*yl
+      if (ytop/this%dy*this%dy==ytop) then
+              nytop = ytop/this%dy
+      else
+              nytop = ytop/this%dy+1
+      endif
+      if (ybot/this%dy*this%dy==ybot) then
+              this%nybot = ybot/this%dy
+      else
+              this%nybot = ybot/this%dy+1
+      endif
+      this%ny2=this%nybot+nytop
+      nytot_0=ny+this%ny2  ! excluding border points
+      this%nytot=nytot_0+2*nyl  ! all Poisson Y mesh point
+      write(67,*)"NEW NUMBERS",ywidth,ybot,ytop ! Differences, experimental
+      write(67,*)"NEW NUMBERS",this%dy      ! Differences, experimental
+      write(67,*)"NEW NUMBERS",this%nytot,this%nybot, nytop, this%ny2      ! Differences, experimental
       allocate(yg(this%nytot))
       allocate(dyg(this%nytot))
       DO I=1,NYL  !  border points
@@ -572,19 +622,15 @@ contains
         DYG(I)=DYL(THIS%NYTOT-I+1)
       end do
       ! outside Octopus mesh
-      YTOP=CNST(0.5)*YWIDTH-YCEN-CNST(0.5)*YL
-      YBOT=CNST(0.5)*YWIDTH+YCEN-CNST(0.5)*YL
-      NYTOP=INT(NY2*YTOP/(YTOP+YBOT))
-      THIS%NYBOT=NY2-NYTOP
-      DY1B=YBOT/TOFLOAT(THIS%NYBOT) ! "bottom" region
+      dy1b=this%dy
       DO I=NYL+1,NYL+THIS%NYBOT
-        DYG(I)=DY1B
+        dyg(I)=dy1b
       end do
       dy_oct=yl/TOFLOAT(ny-1)  ! Octopus region
       DO i=nyl+this%nybot+1,nyl+this%nybot+ny
         dyg(i)=dy_oct
       end do
-      DY1T=YTOP/TOFLOAT(NYTOP)  ! "top" region
+      dy1t=this%dy
       DO I=NYL+THIS%NYBOT+NY+1,NYL+THIS%NYBOT+NY+NYTOP
         DYG(I)=DY1T
       end do
@@ -609,16 +655,15 @@ contains
        yg(k)= yg(k-1)+dyg(k)
       enddo
       do i=1,this%nytot
-	      write(67,*)i,xg(i),yg(i)
+        if (i <= this%nztot) then
+          write(67,*)i,xg(i),yg(i),zg(i)
+        else
+          write(67,*)i,xg(i),yg(i)
+        endif
       enddo
 
-      DO I=2,THIS%NYTOT-1
-        YG(I)=YG(I-1)+CNST(0.5)*(DYG(I-1)+DYG(I))
-      end do
-      YG(THIS%NYTOT)=CNST(0.5)*YWIDTH_BIG-CNST(0.5)*DYG(THIS%NYTOT)
-
       THIS%NTOT=THIS%NXTOT*THIS%NYTOT*THIS%NZTOT
-      MD=THIS%NZTOT*THIS%NYTOT
+      this%md=THIS%NZTOT*THIS%NYTOT
 
       allocate(this%iy(this%ntot))
       allocate(this%jy(this%ntot))

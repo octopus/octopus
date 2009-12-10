@@ -498,7 +498,7 @@ contains
 #endif
 
     ! we assume that we need to recalculate the ion-ion energy
-    call ion_interaction_calculate(geo, sb, ep%eii, ep%fii)
+    call ion_interaction_calculate(geo, sb, gr, ep, ep%eii, ep%fii)
 
     ! the pseudopotential part.
     do ia = 1, geo%natoms
@@ -529,11 +529,11 @@ contains
     if (ep%classical_pot > 0)   ep%vpsl(1:mesh%np) = ep%vpsl(1:mesh%np) + ep%Vclassical(1:mesh%np)
     if (associated(ep%e_field)) ep%vpsl(1:mesh%np) = ep%vpsl(1:mesh%np) + ep%v_static(1:mesh%np)
 
-    !  this is disabled because it does not work for periodic systems
-    !    if (.not. poisson_solver_has_free_bc()) then
-    !      ep%eii= M_ZERO
-    !      call ion_interaction_not_free_bc(gr, geo, ep) 
-    !    endif
+      !this is disabled because it does not work for periodic systems
+      !  if ((.not. poisson_solver_has_free_bc(this)).and.(.not.simul_box_is_periodic(sb))) then
+      !    ep%eii= M_ZERO
+      !  call ion_interaction_not_free_bc(gr, geo, ep) 
+      !endif
 
     call pop_sub()
     call profiling_out(epot_generate_prof)
@@ -772,9 +772,11 @@ contains
     call pop_sub()
   end subroutine epot_precalc_local_potential
 
-  subroutine ion_interaction_calculate(geo, sb, energy, force)
+  subroutine ion_interaction_calculate(geo, sb, gr, ep, energy, force)
     type(geometry_t),  target, intent(in)    :: geo
     type(simul_box_t),         intent(in)    :: sb
+    type(epot_t),              intent(inout) :: ep
+    type(grid_t), target,      intent(inout) :: gr
     FLOAT,                     intent(out)   :: energy
     FLOAT,                     intent(out)   :: force(:, :)
 
@@ -798,6 +800,11 @@ contains
 
     if(simul_box_is_periodic(sb)) then
       call ion_interaction_periodic(geo, sb, energy, force)
+    else if (poisson_get_solver(psolver)==POISSON_SETE) then
+      ! only interaction inside the cell
+      write(68,*) "Calling SETE interaction"
+      ep%eii= M_ZERO
+      call ion_interaction_sete(gr, sb, geo, ep) 
     else
       ! only interaction inside the cell
       do iatom = 1, geo%natoms
@@ -943,37 +950,62 @@ contains
     call pop_sub()
   end subroutine ion_interaction_periodic
 
-  subroutine ion_interaction_not_free_bc(gr, geo, ep)
+  subroutine ion_interaction_sete(gr, sb, geo, ep)
     type(grid_t), target,  intent(inout)    :: gr
+    type(simul_box_t),         intent(in)    :: sb
     type(geometry_t),      intent(in)    :: geo
     type(epot_t),          intent(inout) :: ep
   
     integer                              :: iatom, jatom
     FLOAT, allocatable                   :: rho1(:), v2(:), rho2(:)
     FLOAT                                :: temp
+    FLOAT                                :: time1
+    integer :: nx, ny, nz
+    FLOAT :: xl, yl, zl
+    FLOAT :: r, dd, zi, zj
 
-        write(68,*) "ep%eii values", ep%eii
+
+        write(68,*) "ep%eii values top", ep%eii
+        write(*,*) "WIP Entering the interaction zone"
+
    do jatom = geo%natoms,2, -1
        SAFE_ALLOCATE(v2(1:gr%mesh%np))
        SAFE_ALLOCATE(rho2(1:gr%mesh%np))
-       call species_get_density(geo%atom(jatom)%spec, geo%atom(jatom)%x, gr, geo, rho2)
        v2(1:gr%mesh%np)= M_ZERO
-       call dpoisson_solve(psolver, v2, rho2)
+       call epot_local_potential(ep, gr, gr%mesh, geo, jatom, v2, time1)
+       write(68,*) "time1,", time1
        do iatom = jatom-1,1,-1
         SAFE_ALLOCATE(rho1(1:gr%mesh%np))
         call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr, geo, rho1)
         temp=M_HALF*dmf_dotp(gr%mesh, rho1, v2) 
         ep%eii = ep%eii+temp 
         SAFE_DEALLOCATE_A(rho1)
-        write(*,*) iatom, jatom
         write(68,*) "ep%eii values", iatom, jatom, ep%eii, temp
        enddo
        SAFE_DEALLOCATE_A(rho2)
        SAFE_DEALLOCATE_A(v2)
    enddo
-        write(68,*) "ep%eii values", ep%eii
+        write(68,*) "ep%eii values very bottom", ep%eii*CNST(2.0*13.60569193)
 
-   end subroutine ion_interaction_not_free_bc
+      do iatom = 1, geo%natoms
+          write(68,*) "SETE Force:", iatom,ep%fii(1:sb%dim,iatom)
+        zi = species_zval(geo%atom(iatom)%spec)
+        do jatom = 1, geo%natoms
+
+          if(iatom == jatom) cycle
+          zj = species_zval(geo%atom(jatom)%spec)
+          r = sqrt(sum((geo%atom(iatom)%x - geo%atom(jatom)%x)**2))
+          !the force
+          dd = zi*zj/r**3
+          !ep%fii(1:sb%dim, iatom) = ep%fii(1:sb%dim, iatom) + &
+          !dd*(geo%atom(iatom)%x(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))
+          ep%fii(1:sb%dim, iatom) = M_ZERO 
+          
+      enddo
+          write(68,*) "SETE Force:", iatom,ep%fii(1:sb%dim,iatom)
+     enddo 
+
+   end subroutine ion_interaction_sete
         
        
       
