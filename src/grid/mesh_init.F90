@@ -445,10 +445,10 @@ end subroutine mesh_init_stage_2
 
 
 ! ---------------------------------------------------------
-! When running parallel in domains, stencil and np_stencil
-! are needed to compute the ghost points.
-! mpi_grp is the communicator group that will be used for
-! this mesh.
+!> When running parallel in domains, stencil and np_stencil
+!! are needed to compute the ghost points.
+!! mpi_grp is the communicator group that will be used for
+!! this mesh.
 ! ---------------------------------------------------------
 subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
   type(mesh_t),              intent(inout) :: mesh
@@ -780,7 +780,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! calculate the volume of integration
+  !> calculate the volume of integration
   subroutine mesh_get_vol_pp(sb)
     type(simul_box_t), intent(in) :: sb
 
@@ -1196,14 +1196,14 @@ end subroutine mesh_init_stage_3
 
 #ifdef HAVE_MPI
 ! ---------------------------------------------------------------
-! Converts the mesh given by grid points into a graph. Each
-! point is a vertex in the graph and closest neighbours are
-! connected by an edge (at most 6 in 3D and 4 in 2D, 2 in
-! 1D, fewer at the boundaries).
-! Then calls METIS to get p partitions.
-! Stored the mapping point no. -> partition no. into part,
-! which has to be allocated beforehand.
-! (mesh_partition_end should be called later.)
+!> Converts the mesh given by grid points into a graph. Each
+!! point is a vertex in the graph and closest neighbours are
+!! connected by an edge (at most 6 in 3D and 4 in 2D, 2 in
+!! 1D, fewer at the boundaries).
+!! Then calls METIS to get p partitions.
+!! Stored the mapping point no. -> partition no. into part,
+!! which has to be allocated beforehand.
+!! (mesh_partition_end should be called later.)
 ! ---------------------------------------------------------------
 subroutine mesh_partition(m, lapl_stencil, part)
   type(mesh_t),            intent(in)  :: m
@@ -1212,22 +1212,22 @@ subroutine mesh_partition(m, lapl_stencil, part)
 
   integer              :: i, j, inb
   integer              :: ix(1:MAX_DIM), jx(1:MAX_DIM)
-  integer              :: ne             ! Number of edges.
-  integer              :: nv             ! Number of vertices.
+  integer              :: ne             !< Number of edges.
+  integer              :: nv             !< Number of vertices.
   ! Number of vertices (nv) is equal to number of
   ! points np_global and maximum number of edges (ne) is 2*m%sb%dim*np_global
   ! (there are a little fewer because points on the border have less
   ! than two neighbours per dimension).
   ! xadj has nv+1 entries because last entry contains the total
   ! number of edges.
-  integer              :: p              ! Number of partitions.
-  integer              :: ipart          ! number of the current partition
-  integer, allocatable :: xadj(:)        ! Indices of adjacency list in adjncy.
-  integer, allocatable :: adjncy(:)      ! Adjacency lists.
-  integer              :: iunit          ! For debug output to files.
+  integer              :: p              !< Number of partitions.
+  integer              :: ipart          !< number of the current partition
+  integer, allocatable :: xadj(:)        !< Indices of adjacency list in adjncy.
+  integer, allocatable :: adjncy(:)      !< Adjacency lists.
+  integer              :: iunit          !< For debug output to files.
 #ifdef HAVE_METIS
-  integer              :: options(5)     ! Options to METIS.
-  integer              :: edgecut        ! Number of edges cut by partitioning.
+  integer              :: options(5)     !< Options to METIS.
+  integer              :: edgecut        !< Number of edges cut by partitioning.
 #endif
 
   type(stencil_t) :: stencil
