@@ -446,10 +446,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine species_get_density(spec, pos, gr, geo, rho)
+  subroutine species_get_density(spec, pos, mesh, geo, rho)
     type(species_t),            intent(in)  :: spec
     FLOAT,                      intent(in)  :: pos(MAX_DIM)
-    type(grid_t),       target, intent(in)  :: gr
+    type(mesh_t),       target, intent(in)  :: mesh
     type(geometry_t),           intent(in)  :: geo
     FLOAT,                      intent(out) :: rho(:)
 
@@ -474,9 +474,9 @@ contains
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
       ps => species_ps(spec)
       rho = M_ZERO
-      call periodic_copy_init(pp, gr%sb, pos, range = spline_cutoff_radius(ps%nlr, ps%projectors_sphere_threshold))
+      call periodic_copy_init(pp, mesh%sb, pos, range = spline_cutoff_radius(ps%nlr, ps%projectors_sphere_threshold))
       do icell = 1, periodic_copy_num(pp)
-        call dmf_put_radial_spline(gr%mesh, ps%nlr, periodic_copy_position(pp, gr%sb, icell), rho, add = .true.)
+        call dmf_put_radial_spline(mesh, ps%nlr, periodic_copy_position(pp, mesh%sb, icell), rho, add = .true.)
       end do
       call periodic_copy_end(pp)
       nullify(ps)
@@ -486,11 +486,11 @@ contains
       dist2_min = huge(delta)
       ipos = 0
 
-      do ip = 1, gr%mesh%np
+      do ip = 1, mesh%np
 
         rho(ip) = M_ZERO
 
-        dist2 = sum((gr%mesh%x(ip, 1:MAX_DIM) - pos(1:MAX_DIM))**2)
+        dist2 = sum((mesh%x(ip, 1:MAX_DIM) - pos(1:MAX_DIM))**2)
         if (dist2 < dist2_min) then
           ipos = ip
           dist2_min = dist2
@@ -507,27 +507,27 @@ contains
       have_point = .true.
 #ifdef HAVE_MPI
       ! in parallel we have to find the minimum of the whole grid
-      if(gr%mesh%parallel_in_domains) then
+      if(mesh%parallel_in_domains) then
 
-        local_min = (/ dist2_min, dble(gr%mesh%mpi_grp%rank)/)
-        call MPI_Allreduce(local_min, global_min, 1, MPI_2DOUBLE_PRECISION, MPI_MINLOC, gr%mesh%mpi_grp%comm, mpi_err)
+        local_min = (/ dist2_min, dble(mesh%mpi_grp%rank)/)
+        call MPI_Allreduce(local_min, global_min, 1, MPI_2DOUBLE_PRECISION, MPI_MINLOC, mesh%mpi_grp%comm, mpi_err)
 
-        if(gr%mesh%mpi_grp%rank /= nint(global_min(2))) have_point = .false.
+        if(mesh%mpi_grp%rank /= nint(global_min(2))) have_point = .false.
 
       end if
 #endif
       if(have_point) then
-        if(gr%mesh%use_curvilinear) then
-          rho(ipos) = -species_z(spec)/gr%mesh%vol_pp(ipos)
+        if(mesh%use_curvilinear) then
+          rho(ipos) = -species_z(spec)/mesh%vol_pp(ipos)
         else
-          rho(ipos) = -species_z(spec)/gr%mesh%vol_pp(1)
+          rho(ipos) = -species_z(spec)/mesh%vol_pp(1)
         end if
       end if
 
     case(SPEC_FULL_GAUSSIAN)
 
       ! periodic copies are not considered in this routine
-      if(simul_box_is_periodic(gr%mesh%sb)) then
+      if(simul_box_is_periodic(mesh%sb)) then
         call messages_devel_version("spec_full_gaussian for periodic systems")
       end if
 
@@ -536,17 +536,17 @@ contains
       ! sketched in Modine et al. [Phys. Rev. B 55, 10289 (1997)],
       ! section II.B
       ! --------------------------------------------------------------
-      dim = gr%mesh%sb%dim
+      dim = mesh%sb%dim
 
-      SAFE_ALLOCATE(rho_p(1:gr%mesh%np))
-      SAFE_ALLOCATE(grho_p(1:gr%mesh%np, 1:dim+1))
+      SAFE_ALLOCATE(rho_p(1:mesh%np))
+      SAFE_ALLOCATE(grho_p(1:mesh%np, 1:dim+1))
 
-      mesh_p => gr%mesh
+      mesh_p => mesh
       pos_p = pos
 
       ! Initial guess.
-      call curvilinear_x2chi(gr%mesh%sb, gr%cv, pos, chi0)
-      delta   = gr%mesh%h(1)
+      call curvilinear_x2chi(mesh%sb, mesh%cv, pos, chi0)
+      delta   = mesh%h(1)
       alpha   = sqrt(M_TWO)*species_sigma(spec)*delta
       alpha_p = alpha  ! global copy of alpha
       beta    = M_ONE
@@ -559,7 +559,7 @@ contains
 
       ! get a better estimate for beta
       call getrho(startval)
-      beta = M_ONE / dmf_integrate(gr%mesh, rho_p)
+      beta = M_ONE / dmf_integrate(mesh, rho_p)
       startval(dim+1) = beta
 
       ! solve equation
@@ -582,17 +582,17 @@ contains
 
     case(SPEC_CHARGE_DENSITY)
 
-      call periodic_copy_init(pp, gr%sb, spread(M_ZERO, dim=1, ncopies = MAX_DIM), &
-        range = M_TWO * maxval(gr%sb%lsize(1:gr%sb%dim)))
+      call periodic_copy_init(pp, mesh%sb, spread(M_ZERO, dim=1, ncopies = MAX_DIM), &
+        range = M_TWO * maxval(mesh%sb%lsize(1:mesh%sb%dim)))
 
       rho = M_ZERO
       do icell = 1, periodic_copy_num(pp)
-        yy = periodic_copy_position(pp, gr%sb, icell)
-        do ip = 1, gr%mesh%np
-          call mesh_r(gr%mesh, ip, r, x = xx, a = pos)
-          xx(1:gr%sb%dim) = xx(1:gr%sb%dim) + yy(1:gr%sb%dim)
-          r = sqrt(dot_product(xx(1:gr%sb%dim), xx(1:gr%sb%dim)))
-          call parse_expression(rerho, imrho, gr%sb%dim, xx, r, M_ZERO, trim(species_rho_string(spec)))
+        yy = periodic_copy_position(pp, mesh%sb, icell)
+        do ip = 1, mesh%np
+          call mesh_r(mesh, ip, r, x = xx, a = pos)
+          xx(1:mesh%sb%dim) = xx(1:mesh%sb%dim) + yy(1:mesh%sb%dim)
+          r = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
+          call parse_expression(rerho, imrho, mesh%sb%dim, xx, r, M_ZERO, trim(species_rho_string(spec)))
           rho(ip) = rho(ip) - rerho
         end do
       end do

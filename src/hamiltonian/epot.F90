@@ -88,7 +88,6 @@ module external_pot_m
     FLOAT,             pointer :: vpsl(:)       ! the local part of the pseudopotentials
                                                 ! plus the potential from static electric fields
     type(projector_t), pointer :: proj(:)       ! non-local projectors
-    type(projector_t), pointer :: proj_fine(:)  ! non-local projectors in the fine grid
     logical                    :: non_local
     integer                    :: natoms
 
@@ -354,15 +353,6 @@ contains
       call projector_null(ep%proj(ia))
     end do
 
-    if(gr%have_fine_mesh) then
-      SAFE_ALLOCATE(ep%proj_fine(1:geo%natoms))
-      do ia = 1, geo%natoms
-        call projector_null(ep%proj_fine(ia))
-      end do
-    else
-      ep%proj_fine => ep%proj
-    end if
-
     ep%natoms = geo%natoms
     ep%non_local = .false.
 
@@ -425,14 +415,6 @@ contains
 
     ASSERT(associated(ep%proj))
     SAFE_DEALLOCATE_P(ep%proj)
-
-    if(gr%have_fine_mesh) then
-      do iproj = 1, geo%natoms
-        if(.not. species_is_ps(geo%atom(iproj)%spec)) cycle
-        call projector_end(ep%proj_fine(iproj))
-      end do
-      SAFE_DEALLOCATE_P(ep%proj_fine)
-    end if
 
     if (poisson_get_solver(psolver) == POISSON_SETE) then 
       SAFE_DEALLOCATE_A(rho_nuc)
@@ -514,15 +496,6 @@ contains
 
       call projector_build(ep%proj(ia), gr, atm, ep%so_strength)
 
-      ! the projectors in the fine grid
-      if(gr%have_fine_mesh) then
-        call projector_end(ep%proj_fine(ia))
-        call projector_init(ep%proj_fine(ia), gr%fine%mesh, atm, st%d%dim, ep%reltype)
-        if(simul_box_is_periodic(sb) .or. associated(ep%a_static)) then
-          call projector_init_phases(ep%proj_fine(ia), sb, st%d%nik, st%d%kpoints, vec_pot_var = ep%a_static)
-        end if
-        call projector_build(ep%proj_fine(ia), gr, atm, ep%so_strength)
-      end if
     end do
 
     ! add static electric fields
@@ -577,7 +550,7 @@ contains
 
         !this has to be optimized so the Poisson solution is made once
         !for all species, perhaps even include it in the Hartree term
-        call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr, geo, rho)
+        call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr%mesh, geo, rho)
 
         vl(1:mesh%np) = M_ZERO   ! vl has to be initialized before entering routine
         ! and our best guess for the potential is zero
@@ -976,7 +949,7 @@ contains
        write(68,*) "time1,", time1
        do iatom = jatom-1,1,-1
         SAFE_ALLOCATE(rho1(1:gr%mesh%np))
-        call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr, geo, rho1)
+        call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr%mesh, geo, rho1)
         temp=M_HALF*dmf_dotp(gr%mesh, rho1, v2) 
         ep%eii = ep%eii+temp 
         SAFE_DEALLOCATE_A(rho1)

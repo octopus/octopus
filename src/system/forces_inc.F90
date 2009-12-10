@@ -60,9 +60,8 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
     ASSERT(lr_dir > 0 .and. lr_dir <= gr%mesh%sb%dim)
   end if
 
-  np = gr%fine%mesh%np
-  np_part = gr%fine%mesh%np_part
-  ! if there is no fine mesh, gr%fine%mesh => gr%mesh according to grid.F90
+  np = gr%mesh%np
+  np_part = gr%mesh%np_part
 
   if(present(lr)) then
     SAFE_ALLOCATE( grad_dl_psi(1:np_part, 1:gr%mesh%sb%dim, 1:st%d%dim))
@@ -86,25 +85,14 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
 
-        if(gr%have_fine_mesh) then
-        ! conveniently, multigrid_coarse2fine sets the boundary conditions in the process
-          call X(multigrid_coarse2fine)(gr%fine%tt, gr%der, gr%fine%mesh, st%X(psi)(:, idim, ist, ik), psi(:, idim))
-          if (present(lr)) then
-            call X(multigrid_coarse2fine)(gr%fine%tt, gr%der, gr%fine%mesh, &
-              lr%X(dl_psi)(:, idim, ist, ik), dl_psi(:, idim))
-            call X(multigrid_coarse2fine)(gr%fine%tt, gr%der, gr%fine%mesh, &
-              lr2%X(dl_psi)(:, idim, ist, ik), dl_psi2(:, idim))
-          endif
-        else
-          call lalg_copy(gr%mesh%np_part, st%X(psi)(:, idim, ist, ik), psi(:, idim))
-          call X(derivatives_set_bc)(gr%der, psi(:, idim))
-
-          if (present(lr)) then
-            call lalg_copy(gr%mesh%np_part, lr%X(dl_psi)(:, idim, ist, ik), dl_psi(:, idim))
-            call X(derivatives_set_bc)(gr%der, dl_psi(:, idim))
-            call lalg_copy(gr%mesh%np_part, lr2%X(dl_psi)(:, idim, ist, ik), dl_psi2(:, idim))
-            call X(derivatives_set_bc)(gr%der, dl_psi2(:, idim))
-          endif
+        call lalg_copy(gr%mesh%np_part, st%X(psi)(:, idim, ist, ik), psi(:, idim))
+        call X(derivatives_set_bc)(gr%der, psi(:, idim))
+        
+        if (present(lr)) then
+          call lalg_copy(gr%mesh%np_part, lr%X(dl_psi)(:, idim, ist, ik), dl_psi(:, idim))
+          call X(derivatives_set_bc)(gr%der, dl_psi(:, idim))
+          call lalg_copy(gr%mesh%np_part, lr2%X(dl_psi)(:, idim, ist, ik), dl_psi2(:, idim))
+          call X(derivatives_set_bc)(gr%der, dl_psi2(:, idim))
         endif
 
         if(simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(st%d, ik)) then
@@ -120,14 +108,14 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
        
         ! calculate the gradients of the wavefunctions
         ! and set boundary conditions in preparation for applying projectors
-        call X(derivatives_grad)(gr%fine%der, psi(:, idim), grad_psi(:, :, idim), set_bc = .false.)
+        call X(derivatives_grad)(gr%der, psi(:, idim), grad_psi(:, :, idim), set_bc = .false.)
         do idir = 1, gr%mesh%sb%dim
           call X(derivatives_set_bc)(gr%der, grad_psi(:, idir, idim))
         enddo
 
         if (present(lr)) then
-          call X(derivatives_grad)(gr%fine%der, dl_psi(:, idim), grad_dl_psi(:, :, idim), set_bc = .false.)
-          call X(derivatives_grad)(gr%fine%der, dl_psi2(:, idim), grad_dl_psi2(:, :, idim), set_bc = .false.)
+          call X(derivatives_grad)(gr%der, dl_psi(:, idim), grad_dl_psi(:, :, idim), set_bc = .false.)
+          call X(derivatives_grad)(gr%der, dl_psi2(:, idim), grad_dl_psi2(:, :, idim), set_bc = .false.)
 
           do idir = 1, gr%mesh%sb%dim
             call X(derivatives_set_bc)(gr%der, grad_dl_psi(:, idir, idim))
@@ -166,13 +154,13 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
 
           if(present(lr)) then
             force(idir, iatom) = force(idir, iatom) - st%d%kweights(ik) * st%occ(ist, ik) * &
-               (X(psia_project_psib)(ep%proj_fine(iatom), st%d%dim, grad_psi(:, idir, :), dl_psi, ik) &
-              + X(psia_project_psib)(ep%proj_fine(iatom), st%d%dim, psi, grad_dl_psi(:, idir, :), ik) &
-              + X(psia_project_psib)(ep%proj_fine(iatom), st%d%dim, dl_psi2, grad_psi(:, idir, :), ik) &
-              + X(psia_project_psib)(ep%proj_fine(iatom), st%d%dim, grad_dl_psi2(:, idir, :), psi, ik))
+               (X(psia_project_psib)(ep%proj(iatom), st%d%dim, grad_psi(:, idir, :), dl_psi, ik) &
+              + X(psia_project_psib)(ep%proj(iatom), st%d%dim, psi, grad_dl_psi(:, idir, :), ik) &
+              + X(psia_project_psib)(ep%proj(iatom), st%d%dim, dl_psi2, grad_psi(:, idir, :), ik) &
+              + X(psia_project_psib)(ep%proj(iatom), st%d%dim, grad_dl_psi2(:, idir, :), psi, ik))
           else
             force(idir, iatom) = force(idir, iatom) - M_TWO * st%d%kweights(ik) * st%occ(ist, ik) * &
-              X(psia_project_psib)(ep%proj_fine(iatom), st%d%dim, psi, grad_psi(:, idir, :), ik)
+              X(psia_project_psib)(ep%proj(iatom), st%d%dim, psi, grad_psi(:, idir, :), ik)
           endif
 
         end do
@@ -256,12 +244,12 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
     
     vloc(1:np) = M_ZERO
     
-    call epot_local_potential(ep, gr, gr%fine%mesh, geo, iatom, vloc, time)
+    call epot_local_potential(ep, gr, gr%mesh, geo, iatom, vloc, time)
 
     forall(ip = 1:np) zvloc(ip) = vloc(ip)
 
     do idir = 1, gr%mesh%sb%dim
-      force(idir, iatom) = -zmf_dotp(gr%fine%mesh, zvloc, grad_rho(:, idir))
+      force(idir, iatom) = -zmf_dotp(gr%mesh, zvloc, grad_rho(:, idir))
     end do
 
   end do
