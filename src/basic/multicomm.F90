@@ -19,30 +19,30 @@
 
 #include "global.h"
 
-! Given a number n_index of indices and their ranges index_range(1:n_index),
-! we divide the n_nodes in groups and create communicators for each group.
-! Each group is associated with one index. The min_range indicates the minimum
-! number of elements in each processor. For example, given min_range(1) = 25000,
-! the algorithm will try to put at least 25000 points in each processor
-!
-! Example:
-! Given 3 indices with ranges
-!   index_range(1) = 100000, (number of points in the mesh)
-!   index_range(2) = 15,     (number of states)
-!   index_range(3) = 2,      (number of k-points)
-! and 12 processors, we could get
-!   mc%group_sizes = (2, 3, 2)
-! which means
-! * that space is divided in 2 domains per state,
-! * the states are divided in 3 groups, i. e. 5 states per processor, and
-! * the whole setting is duplicated because of the 2 k-points.
-!
-! To perform collective operations (like a reduce), you can use the communicators
-! provided in mc%group_comm(:). For example, to sum over states, the communicator
-! to use is mc%group_comm(P_STRATEGY_STATES)
-!
-! You can use the routine multicomm_strategy_is_parallel to know if a certain
-! index is parallelized.
+!> Given a number n_index of indices and their ranges index_range(1:n_index),
+!! we divide the n_nodes in groups and create communicators for each group.
+!! Each group is associated with one index. The min_range indicates the minimum
+!! number of elements in each processor. For example, given min_range(1) = 25000,
+!! the algorithm will try to put at least 25000 points in each processor
+!!
+!! Example:
+!! Given 3 indices with ranges
+!!   index_range(1) = 100000, (number of points in the mesh)
+!!   index_range(2) = 15,     (number of states)
+!!   index_range(3) = 2,      (number of k-points)
+!! and 12 processors, we could get
+!!   mc%group_sizes = (2, 3, 2)
+!! which means
+!! * that space is divided in 2 domains per state,
+!! * the states are divided in 3 groups, i. e. 5 states per processor, and
+!! * the whole setting is duplicated because of the 2 k-points.
+!!
+!! To perform collective operations (like a reduce), you can use the communicators
+!! provided in mc%group_comm(:). For example, to sum over states, the communicator
+!! to use is mc%group_comm(P_STRATEGY_STATES)
+!!
+!! You can use the routine multicomm_strategy_is_parallel to know if a certain
+!! index is parallelized.
 
   module multicomm_m
     use datasets_m
@@ -107,28 +107,28 @@
     integer, pointer :: gsize(:)
   end type topology_t
 
-  ! Stores all communicators and groups
+  !> Stores all communicators and groups
   type multicomm_t
-    integer          :: n_node         ! Total number of nodes.
-    integer          :: n_index        ! Number of parallel indices.
+    integer          :: n_node         !< Total number of nodes.
+    integer          :: n_index        !< Number of parallel indices.
 
-    integer          :: par_strategy   ! What kind of parallelization strategy should we use?
+    integer          :: par_strategy   !< What kind of parallelization strategy should we use?
 
-    integer, pointer :: group_sizes(:) ! Number of processors in each group.
-    integer, pointer :: who_am_i(:)    ! Rank in the "line"-communicators.
-    integer, pointer :: group_comm(:)  ! "Line"-communicators I belong to.
-    integer          :: dom_st_comm    ! States-domain plane communicator.
+    integer, pointer :: group_sizes(:) !< Number of processors in each group.
+    integer, pointer :: who_am_i(:)    !< Rank in the "line"-communicators.
+    integer, pointer :: group_comm(:)  !< "Line"-communicators I belong to.
+    integer          :: dom_st_comm    !< States-domain plane communicator.
 
     integer          :: nthreads
     logical          :: use_topology
     type(topology_t) :: topo
   end type multicomm_t
 
-  ! An all-pairs communication schedule for a given group.
+  !> An all-pairs communication schedule for a given group.
   type multicomm_all_pairs_t
-    type(mpi_grp_t)  :: grp            ! Schedule for this group.
-    integer          :: rounds         ! This many comm. rounds.
-    integer, pointer :: schedule(:, :) ! This is the schedule.
+    type(mpi_grp_t)  :: grp            !< Schedule for this group.
+    integer          :: rounds         !< This many comm. rounds.
+    integer, pointer :: schedule(:, :) !< This is the schedule.
   end type multicomm_all_pairs_t
 
 contains
@@ -153,7 +153,7 @@ contains
   end subroutine multicomm_all_pairs_copy
 
   ! ---------------------------------------------------------
-  ! create index and domain communicators
+  !> create index and domain communicators
   subroutine multicomm_init(mc, parallel_mask, default_mask, n_node, n_index, index_range, min_range)
     type(multicomm_t), intent(out)  :: mc
     integer,           intent(in)   :: parallel_mask, default_mask, n_node, n_index
@@ -428,7 +428,7 @@ contains
 
 
     ! ---------------------------------------------------------
-    ! check if a balanced distribution of nodes will be used
+    !> check if a balanced distribution of nodes will be used
     subroutine sanity_check()
       FLOAT :: frac
       integer :: i, k, n_max
@@ -647,12 +647,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! This routine uses the one-factorization (or near-one-factorization
-  ! of a complete graph to construct an all-pair communication
-  ! schedule (cf. Wang, X., Blum, E. K., Parker, D. S., and Massey,
-  ! D. 1997. The dance-party problem and its application to collective
-  ! communication in computer networks. Parallel Comput. 23, 8
-  ! (Aug. 1997), 1141-1156.
+  !> This routine uses the one-factorization (or near-one-factorization
+  !! of a complete graph to construct an all-pair communication
+  !! schedule (cf. Wang, X., Blum, E. K., Parker, D. S., and Massey,
+  !! D. 1997. The dance-party problem and its application to collective
+  !! communication in computer networks. Parallel Comput. 23, 8
+  !! (Aug. 1997), 1141-1156.
 #if defined(HAVE_MPI)
 
   subroutine multicomm_create_all_pairs(mpi_grp, ap)
@@ -745,9 +745,9 @@ contains
 
     ! ---------------------------------------------------------
     
-    ! this routine tries to guess the distribution of the processors
-    ! we got, currently only checks processes that are running in the
-    ! same node
+    !> this routine tries to guess the distribution of the processors
+    !! we got, currently only checks processes that are running in the
+    !! same node
     
     subroutine topology_init(this)
       type(topology_t), intent(out) :: this
@@ -860,8 +860,8 @@ contains
     end subroutine topology_end
 
   !---------------------------------------------------
-  ! Function to divide the range of numbers from 1 to nn
-  ! between size processors.
+  !> Function to divide the range of numbers from 1 to nn
+  !! between size processors.
   subroutine multicomm_divide_range(nn, tsize, start, final, lsize)
     integer, intent(in)    :: nn
     integer, intent(in)    :: tsize
