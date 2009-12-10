@@ -19,65 +19,65 @@
 
 #include "global.h"
 
-module par_vec_m
+  !> Some general things and nomenclature:
+  !!
+  !! - Points that are stored only on one node are
+  !!   called local points.
+  !! - Local points that are stored redundantly on
+  !!   another node because of the partitioning are
+  !!   called ghost points.
+  !! - Points from the enlargement are only stored
+  !!   once on the corresponding node and are called
+  !!   boundary points.
+  !! - np is the total number of inner points.
+  !!
+  !! A globally defined vector v has two parts:
+  !! - v(1:np) are the inner points
+  !! - v(np+1:np_part) are the boundary points
+  !! In the typical case of zero boundary conditions
+  !! v(np+1:np_part) is 0.
+  !! The two parts are split according to the partitions.
+  !! The result of this split are local vectors vl on each node
+  !! which consist of three parts:
+  !! - vl(1:np_local)                                     local points.
+  !! - vl(np_local+1:np_local+np_ghost)                   ghost points.
+  !! - vl(np_local+np_ghost+1:np_local+np_ghost+np_bndry) boundary points.
+  !!
+  !!
+  !! Usage example for par_vec routines.
+  !!
+  !! ! Initialize parallelization with mesh m and operator op
+  !! ! initialized and given.
+  !! ! m          = sys%gr%mesh
+  !! ! stencil    = op%stencil
+  !!
+  !! FLOAT              :: s
+  !! FLOAT              :: u(np_global), v(np_global)
+  !! FLOAT, allocatable :: ul(:), vl(:), wl(:)
+  !! type(mesh_t)    :: m
+  !!
+  !! ! Fill u, v with sensible values.
+  !! ! ...
+  !!
+  !! ! Allocate space for local vectors.
+  !! allocate(ul(np_part))
+  !! allocate(vl(np_part))
+  !! allocate(wl(np_part))
+  !!
+  !! ! Distribute vectors.
+  !! call X(vec_scatter)(vp, u, ul)
+  !! call X(vec_scatter)(vp, v, vl)
+  !!
+  !! ! Compute some operator op: vl = op ul
+  !! call X(vec_ghost_update)(vp, ul)
+  !! call X(nl_operator_operate)(op, ul, vl)
+  !! !! Gather result of op in one vector v.
+  !! call X(vec_gather)(vp, v, vl)
+  !!
+  !! ! Clean up.
+  !! deallocate(ul, vl, wl)
 
-  ! Some general things and nomenclature:
-  !
-  ! - Points that are stored only on one node are
-  !   called local points.
-  ! - Local points that are stored redundantly on
-  !   another node because of the partitioning are
-  !   called ghost points.
-  ! - Points from the enlargement are only stored
-  !   once on the corresponding node and are called
-  !   boundary points.
-  ! - np is the total number of inner points.
-  !
-  ! A globally defined vector v has two parts:
-  ! - v(1:np) are the inner points
-  ! - v(np+1:np_part) are the boundary points
-  ! In the typical case of zero boundary conditions
-  ! v(np+1:np_part) is 0.
-  ! The two parts are split according to the partitions.
-  ! The result of this split are local vectors vl on each node
-  ! which consist of three parts:
-  ! - vl(1:np_local)                                     local points.
-  ! - vl(np_local+1:np_local+np_ghost)                   ghost points.
-  ! - vl(np_local+np_ghost+1:np_local+np_ghost+np_bndry) boundary points.
-  !
-  !
-  ! Usage example for par_vec routines.
-  !
-  ! ! Initialize parallelization with mesh m and operator op
-  ! ! initialized and given.
-  ! ! m          = sys%gr%mesh
-  ! ! stencil    = op%stencil
-  !
-  ! FLOAT              :: s
-  ! FLOAT              :: u(np_global), v(np_global)
-  ! FLOAT, allocatable :: ul(:), vl(:), wl(:)
-  ! type(mesh_t)    :: m
-  !
-  ! ! Fill u, v with sensible values.
-  ! ! ...
-  !
-  ! ! Allocate space for local vectors.
-  ! allocate(ul(np_part))
-  ! allocate(vl(np_part))
-  ! allocate(wl(np_part))
-  !
-  ! ! Distribute vectors.
-  ! call X(vec_scatter)(vp, u, ul)
-  ! call X(vec_scatter)(vp, v, vl)
-  !
-  ! ! Compute some operator op: vl = op ul
-  ! call X(vec_ghost_update)(vp, ul)
-  ! call X(nl_operator_operate)(op, ul, vl)
-  ! ! Gather result of op in one vector v.
-  ! call X(vec_gather)(vp, v, vl)
-  !
-  ! ! Clean up.
-  ! deallocate(ul, vl, wl)
+module par_vec_m
 
   use batch_m
   use c_pointer_m
@@ -99,9 +99,9 @@ module par_vec_m
 
   type pv_t
     ! The content of these members is node-dependent.
-    integer          :: rank                 ! Our rank in the communicator.
-    integer          :: partno               ! Partition number of the
-                                             ! current node
+    integer          :: rank                 !< Our rank in the communicator.
+    integer          :: partno               !< Partition number of the
+                                             !< current node
     type(subarray_t) :: sendpoints
     integer, pointer :: sendpos(:)
 
@@ -110,32 +110,32 @@ module par_vec_m
     integer, pointer :: rcounts(:)
 
     ! The following members are set independent of the nodes.
-    integer                 :: npart                ! Number of partitions.
-    integer                 :: root                 ! The master node.
-    integer                 :: comm                 ! MPI communicator to use.
-    integer                 :: np                   ! Number of points in mesh.
-    integer                 :: np_enl               ! Number of points in enlargement.
-    integer, pointer        :: part(:)              ! Point -> partition.
-    integer, pointer        :: np_local(:)          ! How many points has partition r?
-    integer, pointer        :: xlocal(:)            ! Points of partition r start at
-                                                    ! xlocal(r) in local.
-    integer, pointer        :: local(:)             ! Partition r has points
-                                                    ! local(xlocal(r):
-                                                    ! xlocal(r)+np_local(r)-1).
-    integer, pointer        :: np_bndry(:)          ! Number of boundary points.
-    integer, pointer        :: xbndry(:)            ! Index of bndry(:).
-    integer, pointer        :: bndry(:)             ! Global numbers of boundary
-                                                    ! points.
-    type(iihash_t), pointer :: global(:)            ! global(r) contains the global ->
-                                                    ! local mapping for partition r.
-    integer                 :: total                ! Total number of ghost points.
-    integer, pointer        :: np_ghost(:)          ! How many ghost points has
-                                                    ! partition r?
-    integer, pointer        :: np_ghost_neigh(:, :) ! Number of ghost points per
-                                                    ! neighbour per partition.
-    integer, pointer        :: xghost(:)            ! Like xlocal.
-    integer, pointer        :: xghost_neigh(:, :)   ! Like xghost for neighbours.
-    integer, pointer        :: ghost(:)             ! Global indices of all local
+    integer                 :: npart                !< Number of partitions.
+    integer                 :: root                 !< The master node.
+    integer                 :: comm                 !< MPI communicator to use.
+    integer                 :: np                   !< Number of points in mesh.
+    integer                 :: np_enl               !< Number of points in enlargement.
+    integer, pointer        :: part(:)              !< Point -> partition.
+    integer, pointer        :: np_local(:)          !< How many points has partition r?
+    integer, pointer        :: xlocal(:)            !< Points of partition r start at
+                                                    !< xlocal(r) in local.
+    integer, pointer        :: local(:)             !< Partition r has points
+                                                    !< local(xlocal(r):
+                                                    !< xlocal(r)+np_local(r)-1).
+    integer, pointer        :: np_bndry(:)          !< Number of boundary points.
+    integer, pointer        :: xbndry(:)            !< Index of bndry(:).
+    integer, pointer        :: bndry(:)             !< Global numbers of boundary
+                                                    !< points.
+    type(iihash_t), pointer :: global(:)            !< global(r) contains the global ->
+                                                    !< local mapping for partition r.
+    integer                 :: total                !< Total number of ghost points.
+    integer, pointer        :: np_ghost(:)          !< How many ghost points has
+                                                    !< partition r?
+    integer, pointer        :: np_ghost_neigh(:, :) !< Number of ghost points per
+                                                    !< neighbour per partition.
+    integer, pointer        :: xghost(:)            !< Like xlocal.
+    integer, pointer        :: xghost_neigh(:, :)   !< Like xghost for neighbours.
+    integer, pointer        :: ghost(:)             !< Global indices of all local
   end type pv_t
 
 #if defined(HAVE_MPI)
@@ -212,41 +212,41 @@ module par_vec_m
 
 contains
 
-  ! Initializes a pv_type object (parallel vector).
-  ! It computes the local-to-global and global-to-local index tables
-  ! and the ghost point exchange.
-  !
-  ! Note: we cannot pass in the i(:, :) array from the stencil
-  ! because it is not yet computed (it is local to a node and
-  ! must be initialized some time after vec_init is run).
-  ! Warning: The naming scheme for the np_ variables is different
-  ! from how it is in the rest of the code (for historical reasons
-  ! and also because the vec_init has more a global than local point
-  ! of view on the mesh): See the comments in the parameter list.
+  !> Initializes a pv_type object (parallel vector).
+  !! It computes the local-to-global and global-to-local index tables
+  !! and the ghost point exchange.
+  !!
+  !! Note: we cannot pass in the i(:, :) array from the stencil
+  !! because it is not yet computed (it is local to a node and
+  !! must be initialized some time after vec_init is run).
+  !! Warning: The naming scheme for the np_ variables is different
+  !! from how it is in the rest of the code (for historical reasons
+  !! and also because the vec_init has more a global than local point
+  !! of view on the mesh): See the comments in the parameter list.
   subroutine vec_init(comm, root, part, np, np_part, idx, stencil, dim, vp)
-    integer,         intent(in)  :: comm         ! Communicator to use.
-    integer,         intent(in)  :: root         ! The master node.
+    integer,         intent(in)  :: comm         !< Communicator to use.
+    integer,         intent(in)  :: root         !< The master node.
 
     ! The next seven entries come from the mesh.
-    integer,         intent(in)  :: part(:)      ! Point -> partition.
-    integer,         intent(in)  :: np           ! m%np_global
-    integer,         intent(in)  :: np_part      ! m%np_part_global
+    integer,         intent(in)  :: part(:)      !< Point -> partition.
+    integer,         intent(in)  :: np           !< m%np_global
+    integer,         intent(in)  :: np_part      !< m%np_part_global
     type(index_t),   intent(in)  :: idx
-    type(stencil_t), intent(in)  :: stencil      ! The stencil for which to calculate ghost points.
-    integer,         intent(in)  :: dim          ! Number of dimensions.
-    type(pv_t),      intent(out) :: vp           ! Description of partition.
+    type(stencil_t), intent(in)  :: stencil      !< The stencil for which to calculate ghost points.
+    integer,         intent(in)  :: dim          !< Number of dimensions.
+    type(pv_t),      intent(out) :: vp           !< Description of partition.
 
     ! Careful: MPI counts node ranks from 0 to numproc-1.
     ! Partition numbers from METIS range from 1 to numproc.
     ! For this reason, all ranks are incremented by one.
-    integer                     :: npart                ! Number of partitions.
-    integer                     :: np_enl           ! Number of points in enlargement.
-    integer                     :: i, j, k, r       ! Counters.
-    integer, allocatable        :: ir(:), irr(:, :) ! Counters.
-    integer                     :: rank             ! Rank of current node.
-    integer                     :: p1(MAX_DIM)      ! Points.
-    type(iihash_t), allocatable :: ghost_flag(:)    ! To remember ghost pnts.
-    integer                     :: iunit            ! For debug output to files.
+    integer                     :: npart                !< Number of partitions.
+    integer                     :: np_enl           !< Number of points in enlargement.
+    integer                     :: i, j, k, r       !< Counters.
+    integer, allocatable        :: ir(:), irr(:, :) !< Counters.
+    integer                     :: rank             !< Rank of current node.
+    integer                     :: p1(MAX_DIM)      !< Points.
+    type(iihash_t), allocatable :: ghost_flag(:)    !< To remember ghost pnts.
+    integer                     :: iunit            !< For debug output to files.
     character(len=3)            :: filenum
     integer                     :: tmp
     logical                     :: found
@@ -521,7 +521,7 @@ contains
   end subroutine vec_init
 
 
-  ! Deallocate memory used by vp.
+  !> Deallocate memory used by vp.
   subroutine vec_end(vp)
     type(pv_t), intent(inout) :: vp
 
@@ -641,9 +641,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Returns local number of global point i on partition r.
-  ! If the result is zero, the point is neither a local nor a ghost
-  ! point on r.
+  !> Returns local number of global point i on partition r.
+  !! If the result is zero, the point is neither a local nor a ghost
+  !! point on r.
   integer function vec_global2local(vp, i, r)
     type(pv_t), intent(in) :: vp
     integer,    intent(in) :: i
