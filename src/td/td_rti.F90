@@ -688,7 +688,7 @@ contains
 
         SAFE_ALLOCATE(zpsi1(1:gr%mesh%np_part, 1:st%d%dim, 1:st%d%block_size))
 
-        st%rho(1:gr%mesh%np, 1:st%d%nspin) = M_ZERO
+        st%rho(1:gr%fine%mesh%np, 1:st%d%nspin) = M_ZERO
 
         do ik = st%d%kpt%start, st%d%kpt%end
           do sts = st%st_start, st%st_end, st%d%block_size
@@ -708,11 +708,6 @@ contains
             call exponential_apply_batch(tr%te, gr, hm, zpsib, ik, dt, t-dt)
             call states_dens_accumulate_batch(st, gr, ik, zpsib, st%rho)
             call batch_end(zpsib)
-
-            !do ist = sts, ste
-            !  !calculate the contribution to the density
-            !  call states_dens_accumulate(st, gr%mesh%np, st%rho, ist, ik)
-            !end do
 
             !restore the saved state
             !$omp parallel do private(ist2, idim)

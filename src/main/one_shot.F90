@@ -73,35 +73,51 @@ contains
     ! generate density
     call states_calc_dens(sys%st, sys%gr)
 
-    ! kinetic energy + local potential + Hartree + xc
-    if(sys%st%wfs_type == M_REAL) then
-      E_t     = delectronic_kinetic_energy(hm, sys%gr, sys%st)
-      E_ext   = delectronic_external_energy(hm, sys%gr, sys%st)
-    else
-      E_t     = zelectronic_kinetic_energy(hm, sys%gr, sys%st)
-      E_ext   = zelectronic_external_energy(hm, sys%gr, sys%st)
-    end if
+    e_t = M_ZERO
+    e_ext = M_ZERO
+    e_hartree = M_ZERO
+    e_x = M_ZERO
+    e_c = M_ZERO
 
-    ! Get the Hartree energy
-    call v_ks_hartree(sys%ks, sys%gr, sys%st, hm)
-    E_Hartree = hm%ehartree
+    ! Probably this is particular to DFT
+    select case(sys%ks%theory_level)
+    case(KOHN_SHAM_DFT)
+      ! kinetic energy + local potential + Hartree + xc
+      if(sys%st%wfs_type == M_REAL) then
+        E_t     = delectronic_kinetic_energy(hm, sys%gr, sys%st)
+        E_ext   = delectronic_external_energy(hm, sys%gr, sys%st)
+      else
+        E_t     = zelectronic_kinetic_energy(hm, sys%gr, sys%st)
+        E_ext   = zelectronic_external_energy(hm, sys%gr, sys%st)
+      end if
 
-    ! Get exchange-correlation energies
-    ! this should be done in the fine mesh
-    SAFE_ALLOCATE(rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin))
-    call states_total_density(sys%st, sys%gr%mesh, rho)
-    call xc_get_vxc(sys%gr%der, sys%ks%xc, sys%st, rho, sys%st%d%ispin, E_x, E_c, &
-      M_ZERO, sys%st%qtot)
-    SAFE_DEALLOCATE_A(rho)
+      ! Get the Hartree energy
+      call v_ks_hartree(sys%ks, sys%gr, sys%st, hm)
+      E_Hartree = hm%ehartree
 
-    ! The OEP family has to be handled specially
-    if (sys%st%wfs_type == M_REAL) then
-      call dxc_oep_calc(sys%ks%oep, sys%ks%xc, (sys%ks%sic_type==sic_pz),  &
-        sys%gr, hm, sys%st, E_x, E_c)
-    else
-      call zxc_oep_calc(sys%ks%oep, sys%ks%xc, (sys%ks%sic_type==sic_pz),  &
-        sys%gr, hm, sys%st, E_x, E_c)
-    end if
+      ! Get exchange-correlation energies
+      ! this should be done in the fine mesh
+      SAFE_ALLOCATE(rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin))
+      call states_total_density(sys%st, sys%gr%mesh, rho)
+      call xc_get_vxc(sys%gr%der, sys%ks%xc, sys%st, rho, sys%st%d%ispin, E_x, E_c, &
+        M_ZERO, sys%st%qtot)
+      SAFE_DEALLOCATE_A(rho)
+
+      ! The OEP family has to be handled specially
+      if (sys%st%wfs_type == M_REAL) then
+        call dxc_oep_calc(sys%ks%oep, sys%ks%xc, (sys%ks%sic_type==sic_pz),  &
+          sys%gr, hm, sys%st, E_x, E_c)
+      else
+        call zxc_oep_calc(sys%ks%oep, sys%ks%xc, (sys%ks%sic_type==sic_pz),  &
+          sys%gr, hm, sys%st, E_x, E_c)
+      end if
+    case(INDEPENDENT_PARTICLES)
+      ! there is nothing to do
+    case default
+      message(1) = "Fatal: the one shot calculation mode has not been implemented for"
+      message(2) = "       this theory level."
+      call write_fatal(2)
+    end select
 
     E_tot = E_t + E_ext + E_Hartree + E_x + E_c + hm%ep%eii
 

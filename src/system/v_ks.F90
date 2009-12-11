@@ -454,9 +454,11 @@ contains
 
     FLOAT, allocatable :: rho(:)
     FLOAT, pointer :: pot(:)
-    integer :: is, ip, ierr
+    integer :: is, ip
 
     call push_sub('v_ks.v_ks_hartree')
+
+    ASSERT(associated(ks%hartree_solver))
 
     SAFE_ALLOCATE(rho(1:gr%fine%mesh%np))
 
@@ -500,8 +502,8 @@ contains
       ! Hartree potential (and for some XC functionals).
       call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, pot, hm%vhartree, INJECTION)
       ! some debugging output that I will keep here for the moment, XA
-      !      call doutput_function(1, "./", "vh_fine", gr%fine%mesh, pot, unit_one, ierr)
-      !      call doutput_function(1, "./", "vh_coarse", gr%mesh, hm%vhartree, unit_one, ierr)
+      !      call doutput_function(1, "./", "vh_fine", gr%fine%mesh, pot, unit_one, is)
+      !      call doutput_function(1, "./", "vh_coarse", gr%mesh, hm%vhartree, unit_one, is)
       SAFE_DEALLOCATE_P(pot)
     end if
 
