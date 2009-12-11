@@ -38,6 +38,7 @@ module pert_m
   use physics_op_m
   use profiling_m
   use projector_m
+  use poisson_m
   use simul_box_m
   use species_m
   use states_m

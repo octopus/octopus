@@ -91,6 +91,8 @@ contains
     else
       gr%have_fine_mesh = .false.
     end if
+    
+    if(gr%have_fine_mesh) call messages_devel_version("UseFineMesh")
 
     ! initialize curvilinear coordinates
     call curvilinear_init(gr%sb, geo, gr%cv)

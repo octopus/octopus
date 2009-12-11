@@ -98,7 +98,7 @@ contains
     call sternheimer_init(sh, sys, hm, "VM")
     call vibrations_init(vib, geo, gr%sb)
 
-    call epot_precalc_local_potential(hm%ep, sys%gr, sys%gr%mesh, sys%geo, time = M_ZERO)
+    call epot_precalc_local_potential(hm%ep, sys%gr, sys%geo, time = M_ZERO)
 
     SAFE_ALLOCATE(infrared(1:natoms*ndim, 1:ndim))
 

@@ -161,7 +161,7 @@ FLOAT function X(electronic_external_energy)(hm, gr, st) result(v)
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       vpsi = R_TOTYPE(M_ZERO)
-      call X(vexternal) (hm, gr%der, st%X(psi)(:, :, ist, ik), vpsi, ik)
+      call X(vexternal)(hm, gr%der, st%X(psi)(:, :, ist, ik), vpsi, ik)
       t(ist, ik) = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), vpsi)
     end do
   end do

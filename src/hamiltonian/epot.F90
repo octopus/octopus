@@ -459,9 +459,9 @@ contains
     if(st%nlcc) st%rho_core = M_ZERO
     do ia = geo%atoms%start, geo%atoms%end
       if(st%nlcc) then
-        call epot_local_potential(ep, gr, gr%mesh, geo, ia, ep%vpsl, time_, st%rho_core)
+        call epot_local_potential(ep, gr%der, gr%dgrid, psolver, geo, ia, ep%vpsl, time_, st%rho_core)
       else
-        call epot_local_potential(ep, gr, gr%mesh, geo, ia, ep%vpsl, time_)
+        call epot_local_potential(ep, gr%der, gr%dgrid, psolver, geo, ia, ep%vpsl, time_)
       end if
     end do
 #ifdef HAVE_MPI
@@ -512,10 +512,11 @@ contains
     call profiling_out(epot_generate_prof)
   end subroutine epot_generate
 
-  subroutine epot_local_potential(ep, gr, mesh, geo, iatom, vpsl, time, rho_core)
+  subroutine epot_local_potential(ep, der, dgrid, poisson_solver, geo, iatom, vpsl, time, rho_core)
     type(epot_t),             intent(in)    :: ep
-    type(grid_t),             intent(inout) :: gr
-    type(mesh_t),             intent(inout) :: mesh
+    type(derivatives_t),      intent(inout) :: der
+    type(double_grid_t),      intent(inout) :: dgrid
+    type(poisson_t),          intent(inout) :: poisson_solver
     type(geometry_t),         intent(in)    :: geo
     integer,                  intent(in)    :: iatom
     FLOAT,                    intent(inout) :: vpsl(:)
@@ -533,54 +534,58 @@ contains
 
     if(ep%local_potential_precalculated) then
 
-      forall(ip = 1:mesh%np) vpsl(ip) = vpsl(ip) + ep%local_potential(ip, iatom)
+      forall(ip = 1:der%mesh%np) vpsl(ip) = vpsl(ip) + ep%local_potential(ip, iatom)
 
     else
 
-      SAFE_ALLOCATE(vl(1:mesh%np))
+      SAFE_ALLOCATE(vl(1:der%mesh%np))
 
       !Local potential, we can get it by solving the Poisson equation
       !(for all-electron species or pseudopotentials in periodic
       !systems) or by applying it directly to the grid
 
       if(species_has_density(geo%atom(iatom)%spec) .or. &
-        (species_is_ps(geo%atom(iatom)%spec) .and. .not. poisson_solver_has_free_bc(psolver))) then
+        (species_is_ps(geo%atom(iatom)%spec) .and. .not. poisson_solver_has_free_bc(poisson_solver))) then
 
-        SAFE_ALLOCATE(rho(1:mesh%np))
+        SAFE_ALLOCATE(rho(1:der%mesh%np))
 
         !this has to be optimized so the Poisson solution is made once
         !for all species, perhaps even include it in the Hartree term
-        call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr%mesh, geo, rho)
+        call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, der%mesh, geo, rho)
 
-        vl(1:mesh%np) = M_ZERO   ! vl has to be initialized before entering routine
-        ! and our best guess for the potential is zero
+        if(poisson_solver_is_iterative(poisson_solver)) then
+          ! vl has to be initialized before entering routine
+          ! and our best guess for the potential is zero
+          vl(1:der%mesh%np) = M_ZERO
+        end if
+
         count_atoms=iatom
-        call dpoisson_solve(psolver, vl, rho) 
+        call dpoisson_solve(poisson_solver, vl, rho)
 
-        if (poisson_get_solver(psolver) == POISSON_SETE) then  !SEC
-          rho_nuc(1:gr%mesh%np) = rho_nuc(1:gr%mesh%np) + rho(1:gr%mesh%np)
+        if (poisson_get_solver(poisson_solver) == POISSON_SETE) then  !SEC
+          rho_nuc(1:der%mesh%np) = rho_nuc(1:der%mesh%np) + rho(1:der%mesh%np)
         end if
 
         SAFE_DEALLOCATE_A(rho)
       else
 
         !Local potential
-        call species_get_local(geo%atom(iatom)%spec, mesh, geo%atom(iatom)%x(1:gr%mesh%sb%dim), vl, time)
+        call species_get_local(geo%atom(iatom)%spec, der%mesh, geo%atom(iatom)%x(1:der%mesh%sb%dim), vl, time)
       end if
 
-      vpsl(1:mesh%np) = vpsl(1:mesh%np) + vl(1:mesh%np)
+      forall(ip = 1:der%mesh%np) vpsl(ip) = vpsl(ip) + vl(ip)
 
       SAFE_DEALLOCATE_A(vl)
 
       !the localized part
       if(species_is_ps(geo%atom(iatom)%spec)) then
 
-        radius = double_grid_get_rmax(gr%dgrid, geo%atom(iatom)%spec, mesh) + mesh%h(1)
+        radius = double_grid_get_rmax(dgrid, geo%atom(iatom)%spec, der%mesh) + der%mesh%h(1)
 
-        call submesh_init_sphere(sphere, gr%sb, mesh, geo%atom(iatom)%x, radius)
+        call submesh_init_sphere(sphere, der%mesh%sb, der%mesh, geo%atom(iatom)%x, radius)
         SAFE_ALLOCATE(vl(1:sphere%ns))
 
-        call double_grid_apply_local(gr%dgrid, geo%atom(iatom)%spec, mesh, sphere, geo%atom(iatom)%x, vl)
+        call double_grid_apply_local(dgrid, geo%atom(iatom)%spec, der%mesh, sphere, geo%atom(iatom)%x, vl)
         vpsl(sphere%jxyz(1:sphere%ns)) = vpsl(sphere%jxyz(1:sphere%ns)) + vl(1:sphere%ns)
 
         SAFE_DEALLOCATE_A(vl)
@@ -594,8 +599,8 @@ contains
     if( present(rho_core) .and. &
       species_has_nlcc(geo%atom(iatom)%spec) .and. &
       species_is_ps(geo%atom(iatom)%spec)) then
-      do i = 1, mesh%np
-        x(1:gr%mesh%sb%dim) = mesh%x(i, 1:gr%mesh%sb%dim) - geo%atom(iatom)%x(1:gr%mesh%sb%dim)
+      do i = 1, der%mesh%np
+        x(1:der%mesh%sb%dim) = der%mesh%x(i, 1:der%mesh%sb%dim) - geo%atom(iatom)%x(1:der%mesh%sb%dim)
         rho_core(i) = rho_core(i) + species_get_nlcc(geo%atom(iatom)%spec, x)
       end do
     end if
@@ -714,10 +719,9 @@ contains
     call pop_sub()
   end function epot_dipole_periodic
 
-  subroutine epot_precalc_local_potential(ep, gr, mesh, geo, time)
+  subroutine epot_precalc_local_potential(ep, gr, geo, time)
     type(epot_t),             intent(inout) :: ep
     type(grid_t),             intent(inout) :: gr
-    type(mesh_t),             intent(inout) :: mesh
     type(geometry_t),         intent(inout) :: geo
     FLOAT,                    intent(in)    :: time
 
@@ -727,17 +731,17 @@ contains
     call push_sub('epot.epot_precalc_local_potential')
 
     if(.not. associated(ep%local_potential)) then
-      SAFE_ALLOCATE(ep%local_potential(1:mesh%np, 1:geo%natoms))
+      SAFE_ALLOCATE(ep%local_potential(1:gr%mesh%np, 1:geo%natoms))
     end if
 
     ep%local_potential_precalculated = .false.
 
-    SAFE_ALLOCATE(tmp(1:mesh%np))
+    SAFE_ALLOCATE(tmp(1:gr%mesh%np))
 
     do iatom = 1, geo%natoms
-      tmp(1:mesh%np) = M_ZERO
-      call epot_local_potential(ep, gr, mesh, geo, iatom, tmp, time)
-      ep%local_potential(1:mesh%np, iatom) = tmp(1:mesh%np)
+      tmp(1:gr%mesh%np) = M_ZERO
+      call epot_local_potential(ep, gr%der, gr%dgrid, psolver, geo, iatom, tmp, time)
+      ep%local_potential(1:gr%mesh%np, iatom) = tmp(1:gr%mesh%np)
     end do
 
     ep%local_potential_precalculated = .true.
@@ -773,7 +777,7 @@ contains
 
     if(simul_box_is_periodic(sb)) then
       call ion_interaction_periodic(geo, sb, energy, force)
-    else if (poisson_get_solver(psolver)==POISSON_SETE) then
+    else if (poisson_get_solver(psolver) == POISSON_SETE) then
       ! only interaction inside the cell
       write(68,*) "Calling SETE interaction"
       ep%eii= M_ZERO
@@ -945,7 +949,7 @@ contains
        SAFE_ALLOCATE(v2(1:gr%mesh%np))
        SAFE_ALLOCATE(rho2(1:gr%mesh%np))
        v2(1:gr%mesh%np)= M_ZERO
-       call epot_local_potential(ep, gr, gr%mesh, geo, jatom, v2, time1)
+       call epot_local_potential(ep, gr%der, gr%dgrid, psolver, geo, jatom, v2, time1)
        write(68,*) "time1,", time1
        do iatom = jatom-1,1,-1
         SAFE_ALLOCATE(rho1(1:gr%mesh%np))

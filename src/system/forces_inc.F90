@@ -244,7 +244,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
     
     vloc(1:np) = M_ZERO
     
-    call epot_local_potential(ep, gr, gr%mesh, geo, iatom, vloc, time)
+    call epot_local_potential(ep, gr%der, gr%dgrid, psolver, geo, iatom, vloc, time)
 
     forall(ip = 1:np) zvloc(ip) = vloc(ip)
 
