@@ -381,8 +381,6 @@ contains
     type(profile_t), target, intent(out)   :: this
     character(*),            intent(in)    :: label 
     
-    call push_sub('profiling.profile_init')
-
     this%label = label
     this%total_time = M_ZERO
     this%self_time  = M_ZERO
@@ -394,9 +392,7 @@ contains
     this%active = .false.
     nullify(this%parent)
 
-    if(.not. in_profiling_mode) then
-      call pop_sub(); return
-    endif
+    if(.not. in_profiling_mode) return
 
     prof_vars%last_profile = prof_vars%last_profile + 1
 
@@ -404,10 +400,8 @@ contains
 
     prof_vars%profile_list(prof_vars%last_profile)%p => this
     this%initialized = .true.
-    
-    call pop_sub()
-  end subroutine profile_init
 
+  end subroutine profile_init
 
   ! ---------------------------------------------------------
   subroutine profile_end(this)
@@ -445,7 +439,6 @@ contains
 #endif
 
     if(.not.in_profiling_mode) return
-    call push_sub('profiling.profiling_in')
 
     !$omp master
     if(.not. this%initialized) then 
@@ -479,7 +472,6 @@ contains
     this%entry_time = now
     !$omp end master
 
-    call pop_sub()
   end subroutine profiling_in
 
 
@@ -497,7 +489,6 @@ contains
 #endif
     
     if(.not.in_profiling_mode) return
-    call push_sub('profiling.profiling_out')
 
     !$omp master
     ASSERT(this%active)
@@ -536,7 +527,6 @@ contains
     end if
     !$omp end master
 
-    call pop_sub()
   end subroutine profiling_out
 
 
