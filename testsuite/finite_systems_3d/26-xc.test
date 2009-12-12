@@ -1,0 +1,39 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: oct-run_regression_test.pl,v 1.15 2006/03/13 09:56:40 acastro Exp      :
+
+Test       : XC Functionals
+Programs   : octopus
+TestGroups : short-run
+Enabled    : Yes
+
+Input: 26-xc.01-gs.inp
+match ; Hartree-Fock energy                    ; GREP(static/info, 'Total       =', 20)   ; -0.57266978
+match ; Hartree-Fock eigenvalue up             ; GREP(static/info, '  1   up', 13) ;  -1.269867
+match ; Hartree-Fock eigenvalue dn             ; GREP(static/info, '  1   dn', 13) ;  -0.537714
+
+Input: 26-xc.vwn.inp
+match ; LDA exchange                           ; GREP(out, 'Exchange    =', 20)   ; -0.33035205
+match ; LDA VWN correlation                    ; GREP(out, 'Correlation =', 20)   ; -0.02449827
+
+Input: 26-xc.pw.inp
+match ; LDA PW correlation                     ; GREP(out, 'Correlation =', 20)   ; -0.02454785
+
+Input: 26-xc.teter93.inp
+match ; LDA Teter93 exchange correlation       ; GREP(out, 'Correlation =', 20)   ; -0.35490163
+
+Input: 26-xc.pbe.inp
+match ; GGA PBE Exchange                       ; GREP(out, 'Exchange    =', 20)   ; -0.37481226
+match ; GGA PBE Correlation                    ; GREP(out, 'Correlation =', 20)   ; -0.00827898
+
+Input: 26-xc.b88.inp
+match ; GGA B88 Exchange                       ; GREP(out, 'Exchange    =', 20)   ; -0.37996741
+
+Input: 26-xc.pw91.inp
+match ; GGA PW91 Exchange                      ; GREP(out, 'Exchange    =', 20)  ; -0.38443187
+match ; GGA PW91 Correlation                   ; GREP(out, 'Correlation =', 20)  ;  0.00000000
+
+Input: 26-xc.kli.inp
+match ; OEP KLI Exchange                       ; GREP(out, 'Exchange    =', 20)   ; -0.38419792
+
+Input: 26-xc.exx.inp
+match ; OEP exact exchange                     ; GREP(out, 'Exchange    =', 20)   ; -0.38419792

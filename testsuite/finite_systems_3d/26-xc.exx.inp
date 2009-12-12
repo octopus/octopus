@@ -1,0 +1,20 @@
+CalculationMode = one_shot
+
+%Coordinates
+ 'H' |  0.717157 | 0 | 0
+ 'H' | -0.717157 | 0 | 0
+%
+
+FromScratch = yes
+
+SpinComponents = spin_polarized
+
+ExcessCharge = 1
+
+Spacing = 0.5
+
+XCFunctional = oep_x
+OEP_level = oep_full
+
+DevelVersion = yes
+
