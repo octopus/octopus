@@ -6,19 +6,26 @@ Programs   : octopus
 TestGroups : short-run
 Enabled    : Yes
 
-Input: 01-xc_1d.01-wfs.inp
-match ; Hartree-Fock energy                      ; GREP(static/info, 'Total       =', 20)   ; -4.22149370
-match ; Hartree-Fock eigenvalue 1 up             ; GREP(static/info, '  1   up', 13) ;  -1.157661
-match ; Hartree-Fock eigenvalue 2 up             ; GREP(static/info, '  2   up', 13) ;  -0.308572
-match ; Hartree-Fock eigenvalue 1 dn             ; GREP(static/info, '  1   dn', 13) ;  -1.109834
-match ; Hartree-Fock eigenvalue 2 dn             ; GREP(static/info, '  2   dn', 13) ;   0.005212
+Input: 01-xc_1d.01-wfs-lda.inp
+match ; LDA energy                               ; GREP(static/info, 'Total       =', 20)   ; -4.21266878
+match ; LDA eigenvalue 1 up                      ; GREP(static/info, '  1   up', 13) ;  -0.803406
+match ; LDA eigenvalue 2 up                      ; GREP(static/info, '  2   up', 13) ;  -0.043894
+match ; LDA eigenvalue 1 dn                      ; GREP(static/info, '  1   dn', 13) ;  -0.838009
+match ; LDA eigenvalue 2 dn                      ; GREP(static/info, '  2   dn', 13) ;  -0.256193
+
+Input: 01-xc_1d.02-wfs-hf.inp
+match ; Hartree-Fock energy                      ; GREP(static/info, 'Total       =', 20)   ; -4.19644929
+match ; Hartree-Fock eigenvalue 1 up             ; GREP(static/info, '  1   up', 13) ;  -1.071001
+match ; Hartree-Fock eigenvalue 2 up             ; GREP(static/info, '  2   up', 13) ;   0.003012
+match ; Hartree-Fock eigenvalue 1 dn             ; GREP(static/info, '  1   dn', 13) ;  -1.126189 
+match ; Hartree-Fock eigenvalue 2 dn             ; GREP(static/info, '  2   dn', 13) ;  -0.315508
 
 Input: 01-xc_1d.lda_csc.inp
-match ; LDA exchange                             ; GREP(out, 'Exchange    =', 20)   ; -1.01638755
-match ; LDA CSC correlation                      ; GREP(out, 'Correlation =', 20)   ; -0.06883562
+match ; LDA exchange                             ; GREP(out, 'Exchange    =', 20)   ; -1.01931500
+match ; LDA CSC correlation                      ; GREP(out, 'Correlation =', 20)   ; -0.06786067
 
 Input: 01-xc_1d.oep_kli.inp
-match ; OEP KLI                                  ; GREP(out, 'Exchange    =', 20)   ; -1.07408212
+match ; OEP KLI                                  ; GREP(out, 'Exchange    =', 20)   ; -1.07717828
 
 Input: 01-xc_1d.oep_exx.inp
-match ; OEP Exact exchange                       ; GREP(out, 'Exchange    =', 20)   ; -1.07408212
+match ; OEP Exact exchange                       ; GREP(out, 'Exchange    =', 20)   ; -1.07717828

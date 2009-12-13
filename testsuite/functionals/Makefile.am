@@ -23,10 +23,11 @@ sharedir = $(pkgdatadir)/testsuite/functionals
 
 dist_share_DATA =                                  \
 	01-xc_1d.test                              \
-	01-xc_1d.01-wfs.inp                        \
+	01-xc_1d.01-wfs-lda.inp                    \
+	01-xc_1d.02-wfs-hf.inp                     \
 	01-xc_1d.lda_csc.inp                       \
         03-xc.test                                 \
-        03-xc.01-gs.in                             \
+        03-xc.01-gs.inp                            \
         03-xc.b88.inp                              \
         03-xc.exx.inp                              \
         03-xc.kli.inp                              \

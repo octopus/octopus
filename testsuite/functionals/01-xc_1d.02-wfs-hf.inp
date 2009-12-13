@@ -4,8 +4,6 @@ CalculationMode = gs
 
 Dimensions = 1
 
-fromScratch = yes
-
 BoxShape = sphere
 Spacing = 0.6
 Radius = 50.0
