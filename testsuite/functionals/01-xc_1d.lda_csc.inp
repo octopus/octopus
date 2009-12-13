@@ -1,0 +1,23 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+CalculationMode = one_shot
+
+Dimensions = 1
+
+fromScratch = yes
+
+BoxShape = sphere
+Spacing = 0.6
+Radius = 50.0
+
+%Species
+"Li1D" | 6 | spec_user_defined | 3 | "-3/sqrt(1+(x)^2)"
+%
+
+%Coordinates
+"Li1D" | 0 | 0 | 0
+%
+
+SpinComponents = spin_polarized
+
+XCFunctionals = lda_x_1d + lda_c_1d_csc

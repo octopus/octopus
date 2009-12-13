@@ -1,0 +1,24 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: oct-run_regression_test.pl,v 1.15 2006/03/13 09:56:40 acastro Exp      :
+
+Test       : XC Functionals 1D
+Programs   : octopus
+TestGroups : short-run
+Enabled    : Yes
+
+Input: 01-xc_1d.01-wfs.inp
+match ; Hartree-Fock energy                      ; GREP(static/info, 'Total       =', 20)   ; -4.22149370
+match ; Hartree-Fock eigenvalue 1 up             ; GREP(static/info, '  1   up', 13) ;  -1.157661
+match ; Hartree-Fock eigenvalue 2 up             ; GREP(static/info, '  2   up', 13) ;  -0.308572
+match ; Hartree-Fock eigenvalue 1 dn             ; GREP(static/info, '  1   dn', 13) ;  -1.109834
+match ; Hartree-Fock eigenvalue 2 dn             ; GREP(static/info, '  2   dn', 13) ;   0.005212
+
+Input: 01-xc_1d.lda_csc.inp
+match ; LDA exchange                             ; GREP(out, 'Exchange    =', 20)   ; -1.01638755
+match ; LDA CSC correlation                      ; GREP(out, 'Correlation =', 20)   ; -0.06883562
+
+Input: 01-xc_1d.oep_kli.inp
+match ; OEP KLI                                  ; GREP(out, 'Exchange    =', 20)   ; -1.07408212
+
+Input: 01-xc_1d.oep_exx.inp
+match ; OEP Exact exchange                       ; GREP(out, 'Exchange    =', 20)   ; -1.07408212
