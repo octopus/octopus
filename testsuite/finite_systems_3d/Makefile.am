@@ -28,10 +28,6 @@ dist_share_DATA = \
 	01-carbon_atom.test \
 	02-curvilinear_coordinates.01-gygi.inp \
 	02-curvilinear_coordinates.test \
-	03-functionals.01-jellium-lsda.inp \
-	03-functionals.02-jellium-exx_kli.inp \
-	03-functionals.03-jellium-full_exx.inp \
-	03-functionals.test \
 	04-jellium.01-ground_state.inp \
 	04-jellium.test \
 	05-output.test                                 \
@@ -88,16 +84,6 @@ dist_share_DATA = \
 	24-o2-spin.test                              \
 	24-o2-spin.01-gs.inp \
 	25-multiresolution.01-Hatom.inp \
-	25-multiresolution.test                      \
-        26-xc.test                                   \
-        26-xc.01-gs.inp                              \
-        26-xc.b88.inp                                \
-        26-xc.exx.inp                                \
-        26-xc.kli.inp                                \
-        26-xc.pbe.inp                                \
-        26-xc.pw91.inp                               \
-        26-xc.pw.inp                                 \
-        26-xc.teter93.inp                            \
-        26-xc.vwn.inp
+	25-multiresolution.test
 
 CLEANFILES = *~ *.bak

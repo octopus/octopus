@@ -24,6 +24,20 @@ sharedir = $(pkgdatadir)/testsuite/functionals
 dist_share_DATA =                                  \
 	01-xc_1d.test                              \
 	01-xc_1d.01-wfs.inp                        \
-	01-xc_1d.lda_csc.inp
+	01-xc_1d.lda_csc.inp                       \
+        03-xc.test                                 \
+        03-xc.01-gs.in                             \
+        03-xc.b88.inp                              \
+        03-xc.exx.inp                              \
+        03-xc.kli.inp                              \
+        03-xc.pbe.inp                              \
+        03-xc.pw91.inp                             \
+        03-xc.pw.inp                               \
+        03-xc.teter93.inp                          \
+        03-xc.vwn.inp                              \
+	04-oep.01-jellium-lsda.inp                 \
+	04-oep.02-jellium-exx_kli.inp              \
+	04-oep.03-jellium-full_exx.inp             \
+	04-oep.test
 
 CLEANFILES = *~ *.bak
