@@ -20,6 +20,7 @@
 #include "global.h"
 
 program casida_spectrum
+  use command_line_m
   use datasets_m
   use global_m
   use io_m
@@ -39,6 +40,7 @@ program casida_spectrum
 
   ! Initialize stuff
   call global_init()
+  call command_line_version()
   call parser_init()
   call datasets_init(1)
   call io_init()

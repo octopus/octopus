@@ -20,6 +20,7 @@
 #include "global.h"
 
 program centergeom
+  use command_line_m
   use datasets_m
   use geometry_m
   use global_m
@@ -35,6 +36,7 @@ program centergeom
   type(geometry_t) :: geo
 
   call global_init()                       ! initialize
+  call command_line_version()
   call parser_init()
   call parse_integer('DebugLevel', 0, conf%debug_level)
   if(conf%debug_level>0) then

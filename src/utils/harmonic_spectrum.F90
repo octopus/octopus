@@ -60,6 +60,7 @@ program harmonic_spectrum
 
   ! Initialize stuff
   call global_init()
+  call command_line_version()
   call parser_init()
   call datasets_init(1)
   call io_init()

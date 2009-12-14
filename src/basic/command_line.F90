@@ -25,7 +25,9 @@ module command_line_m
   use FC_COMMAND_LINE_MODULE
 #endif
 
+  use global_m
   use messages_m
+  use mpi_m
   use profiling_m
 
   implicit none
@@ -37,7 +39,8 @@ module command_line_m
   private
   public :: getopt_init,                &
             getopt_oscillator_strength, &
-            command_line_is_available
+            command_line_is_available,  &
+            command_line_version
 
 #if FC_COMMAND_LINE_ARGUMENTS != 2003
   public :: command_argument_count, get_command_argument
@@ -149,6 +152,29 @@ module command_line_m
   end subroutine get_command_argument
 
 #endif
+
+  subroutine command_line_version()
+    integer :: ii
+    character(len=100) :: arg
+    
+    do ii = 1, command_argument_count()
+      call get_command_argument(ii, arg)
+      if(arg == "--version") then
+        write(message(1), '(5a)') 'octopus ', trim(conf%version), ' (svn version ', trim(conf%latest_svn), ')'
+        call write_info(1)
+
+        if(flush_messages .and. mpi_grp_is_root(mpi_world)) then
+          close(iunit_err)
+        end if
+
+#ifdef HAVE_MPI
+        call MPI_Finalize(mpi_err)
+#endif
+        stop
+      end if
+    end do
+
+  end subroutine command_line_version
 
 end module command_line_m
 

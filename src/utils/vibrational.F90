@@ -20,6 +20,7 @@
 #include "global.h"
 
 program vibrational
+  use command_line_m
   use datasets_m
   use geometry_m
   use global_m
@@ -51,6 +52,7 @@ program vibrational
   
   ! Initialize stuff
   call global_init()
+  call command_line_version()
   call parser_init()
   call datasets_init(1)
   call io_init()

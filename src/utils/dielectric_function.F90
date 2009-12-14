@@ -21,6 +21,7 @@
 
 program dielectric_function
   use datasets_m
+  use command_line_m
   use global_m
   use io_m
   use loct_m
@@ -44,6 +45,7 @@ program dielectric_function
 
   ! Initialize stuff
   call global_init()
+  call command_line_version()
   call parser_init()
   call parse_integer('DebugLevel', 0, conf%debug_level)
   if(conf%debug_level>0) then

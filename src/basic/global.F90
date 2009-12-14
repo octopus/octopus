@@ -43,7 +43,7 @@ module global_m
     character(len=256) :: share       ! Name of the share dir
     character(len=256) :: latest_svn  ! rcs info of latest svn commit
     character(len=50)  :: build_time  ! time octopus was compiled
-    character(len=10)  :: version     ! version number
+    character(len=20)  :: version     ! version number
     character(len=256) :: cc
     character(len=256) :: cflags
     character(len=256) :: fc

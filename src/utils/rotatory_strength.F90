@@ -20,6 +20,7 @@
 #include "global.h"
 
 program rotational_strength
+  use command_line_m
   use datasets_m
   use global_m
   use io_m
@@ -36,6 +37,7 @@ program rotational_strength
 
   ! Initialize stuff
   call global_init()
+  call command_line_version()
   call parser_init()
   call datasets_init(1)
   call io_init()

@@ -35,6 +35,7 @@ program oct_help
   integer, parameter :: help_stdout = 6, help_stderr = 0
 
   call global_init()
+  call command_line_version()
 
   if( .not. command_line_is_available() ) then 
     write(help_stderr, '(a)') "Your fortran compiler doesn't support command line arguments,"

@@ -21,6 +21,7 @@
 
 program octopus
   use calc_mode_m
+  use command_line_m
   use datasets_m
   use global_m
   use io_m
@@ -40,6 +41,7 @@ program octopus
   character(len=256) :: sys_name
 
   call global_init()
+  call command_line_version()
   call parser_init()
 
   !%Variable DevelVersion

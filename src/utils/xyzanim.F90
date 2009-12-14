@@ -20,6 +20,7 @@
 #include "global.h"
 
 program xyzanim
+  use command_line_m
   use global_m
   use messages_m
   use datasets_m
@@ -40,6 +41,7 @@ program xyzanim
 
   ! Initialize stuff
   call global_init()
+  call command_line_version()
   call parser_init()
   call datasets_init(1)
   call io_init()

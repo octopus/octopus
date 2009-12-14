@@ -20,6 +20,7 @@
 #include "global.h"
 
 program oct_test
+  use command_line_m
   use datasets_m
   use fft_m
   use global_m
@@ -43,6 +44,7 @@ program oct_test
   integer, parameter :: HARTREE_TEST = 1
 
   call global_init()
+  call command_line_version()
   call parser_init()
   call profiling_init()
 

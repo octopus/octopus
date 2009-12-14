@@ -20,6 +20,7 @@
 #include "global.h"
 
 program propagation_spectrum
+  use command_line_m
   use datasets_m
   use global_m
   use io_m
@@ -40,7 +41,9 @@ program propagation_spectrum
 
   ! Initialize stuff
   call global_init()
+  call command_line_version()
   call parser_init()
+
   call parse_integer('DebugLevel', 0, conf%debug_level)
   if(conf%debug_level>0) then
     in_debug_mode = .true.
