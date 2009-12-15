@@ -159,7 +159,7 @@ contains
     select case (smix%type_of_mixing)
     case (MIX_GRPULAY)
       if(func_type_ == M_REAL ) then 
-        SAFE_ALLOCATE(     smix%ddf(1:d1, 1:d2, d1:3, 1:smix%ns + 1))
+        SAFE_ALLOCATE(     smix%ddf(1:d1, 1:d2, 1:d3, 1:smix%ns + 1))
         SAFE_ALLOCATE(smix%dvin_old(1:d1, 1:d2, 1:d3))
         SAFE_ALLOCATE(     smix%ddv(1:d1, 1:d2, 1:d3, 1:smix%ns + 1))
         SAFE_ALLOCATE(  smix%df_old(1:d1, 1:d2, 1:d3))
