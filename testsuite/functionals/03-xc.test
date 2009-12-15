@@ -7,8 +7,8 @@ TestGroups : short-run
 Enabled    : Yes
 
 Input: 03-xc.01-gs.inp
-match ; Hartree-Fock energy                    ; GREP(static/info, 'Total       =', 20)   ; -0.57266978
-match ; Hartree-Fock eigenvalue up             ; GREP(static/info, '  1   up', 13) ;  -1.239867
+match ; Hartree-Fock energy                    ; GREP(static/info, 'Total       =', 20)   ; -0.57266977
+match ; Hartree-Fock eigenvalue up             ; GREP(static/info, '  1   up', 13) ;  -1.269867
 match ; Hartree-Fock eigenvalue dn             ; GREP(static/info, '  1   dn', 13) ;  -0.537714
 
 Input: 03-xc.vwn.inp
@@ -22,7 +22,7 @@ Input: 03-xc.teter93.inp
 match ; LDA Teter93 exchange correlation       ; GREP(out, 'Correlation =', 20)   ; -0.35490163
 
 Input: 03-xc.pbe.inp
-match ; GGA PBE Exchange                       ; GREP(out, 'Exchange    =', 20)   ; -0.37481203
+match ; GGA PBE Exchange                       ; GREP(out, 'Exchange    =', 20)   ; -0.37481226
 match ; GGA PBE Correlation                    ; GREP(out, 'Correlation =', 20)   ; -0.00827898
 
 Input: 03-xc.b88.inp
