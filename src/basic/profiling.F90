@@ -19,6 +19,39 @@
 
 #include "global.h"
 
+  !>/* To use the profiling module you simply have to define a
+  !!profile_t object (with the save attribute). To initialize it you
+  !!can use the method profile_init (the second argument is the label
+  !!of the profile) or use implicit initialization, by passing the
+  !!optional label argument to profiling_in.
+  !!
+  !!To profile, call profiling_in and profiling_out around the regions
+  !!you want to profile. The objects need not be destroyed as this is
+  !!done by profiling_end.
+  !!
+  !!This module works in the following way:
+  !!
+  !!Each profile_t object measures two times:
+  !!
+  !! total time: time spent inside the profiling region
+  !! self time: the total time minus the time spent in profiling
+  !! regions called inside
+  !!
+  !!To implement this there is a current pointer that holds the
+  !!innermost region active. When a new profile_t is activated, it puts
+  !!itself as current and stores the previous current pointer as
+  !!parent. When it is deactivated it sets back current as its parent
+  !!and subtracts the time spent from the parent`s self time.
+  !!
+  !!This scheme will fail with recursive calls, but we don`t use that
+  !!and I don`t think we will need it.
+  !!
+  !!To be able to print the profiling results, there is an array with
+  !!pointers to all initialized profile_t. For simplicity this array is
+  !!static with size MAX_PROFILES, eventually it should be
+  !!incremented. It could be replaced by a linked list, but I don`t
+  !!think this is necessary.
+  !*/
 module profiling_m
   use datasets_m
   use global_m
@@ -52,44 +85,9 @@ module profiling_m
     profiling_memory_deallocate,        &
     profiling_output
 
-
-  !/* To use the profiling module you simply have to define a
-  !profile_t object (with the save attribute). To initialize it you
-  !can use the method profile_init (the second argument is the label
-  !of the profile) or use implicit initialization, by passing the
-  !optional label argument to profiling_in. 
-  !
-  !To profile, call profiling_in and profiling_out around the regions
-  !you want to profile. The objects need not be destroyed as this is
-  !done by profiling_end.
-  !
-  !This module works in the following way: 
-  !
-  !Each profile_t object measures two times: 
-  !
-  ! total time: time spent inside the profiling region
-  ! self time: the total time minus the time spent in profiling
-  ! regions called inside
-  !
-  !To implement this there is a current pointer that holds the
-  !innermost region active. When a new profile_t is activated, it puts
-  !itself as current and stores the previous current pointer as
-  !parent. When it is deactivated it sets back current as its parent
-  !and subtracts the time spent from the parent`s self time.
-  !
-  !This scheme will fail with recursive calls, but we don`t use that
-  !and I don`t think we will need it.
-  !
-  !To be able to print the profiling results, there is an array with
-  !pointers to all initialized profile_t. For simplicity this array is
-  !static with size MAX_PROFILES, eventually it should be
-  !incremented. It could be replaced by a linked list, but I don`t
-  !think this is necessary.
-  !*/
-
   integer, parameter ::                 & 
-       LABEL_LENGTH = 17,               &  ! Max. number of characters of tag label.
-       MAX_PROFILES = 200                  ! Max. number of tags.
+       LABEL_LENGTH = 17,               &  !< Max. number of characters of tag label.
+       MAX_PROFILES = 200                  !< Max. number of tags.
   
   type profile_t
     private
@@ -135,10 +133,10 @@ module profiling_m
 #define MAX_MEMORY_VARS 25
 
   type profile_vars_t
-    integer                  :: mode    ! 1=time, 2=memory, 4=memory_full
+    integer                  :: mode    !< 1=time, 2=memory, 4=memory_full
 
-    type(profile_pointer_t)  :: current !the currently active profile
-    type(profile_pointer_t)  :: profile_list(MAX_PROFILES) !the list of all profilers
+    type(profile_pointer_t)  :: current !<the currently active profile
+    type(profile_pointer_t)  :: profile_list(MAX_PROFILES) !<the list of all profilers
     integer                  :: last_profile
 
     integer(8)               :: alloc_count
@@ -191,7 +189,7 @@ module profiling_m
 contains
 
   ! ---------------------------------------------------------
-  ! Create profiling subdirectory.
+  !> Create profiling subdirectory.
   subroutine profiling_init()
     integer :: ii
 
@@ -376,7 +374,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Initialize a profile object and add it to the list
+  !> Initialize a profile object and add it to the list
   subroutine profile_init(this, label)
     type(profile_t), target, intent(out)   :: this
     character(*),            intent(in)    :: label 
@@ -426,9 +424,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Increment in counter and save entry time.
-  !
-  ! THREADSAFE
+  !> Increment in counter and save entry time.
+  !!
+  !! THREADSAFE
   subroutine profiling_in(this, label)
     type(profile_t), target, intent(inout) :: this
     character(*), optional,  intent(in)    :: label 
@@ -476,10 +474,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Increment out counter and sum up difference between entry
-  ! and exit time.
-  !
-  ! THREADSAFE
+  !> Increment out counter and sum up difference between entry
+  !! and exit time.
+  !!
+  !! THREADSAFE
   subroutine profiling_out(this)
     type(profile_t),   intent(inout) :: this
 
@@ -531,7 +529,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! THREADSAFE
+  !> THREADSAFE
   subroutine iprofiling_count_operations(ops)
     integer,         intent(in)    :: ops
 #ifndef HAVE_PAPI
@@ -543,7 +541,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! THREADSAFE
+  !> THREADSAFE
   subroutine rprofiling_count_operations(ops)
     real(4),         intent(in)    :: ops
 
@@ -556,7 +554,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! THREADSAFE
+  !> THREADSAFE
   subroutine dprofiling_count_operations(ops)
     real(8),         intent(in)    :: ops
 
@@ -569,7 +567,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! THREADSAFE
+  !> THREADSAFE
   subroutine profiling_count_tran_int(trf, type)
     integer,         intent(in)    :: trf
     integer,         intent(in)    :: type
@@ -581,7 +579,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! THREADSAFE
+  !> THREADSAFE
   subroutine profiling_count_tran_real_4(trf, type)
     integer,         intent(in)    :: trf
     real(4),         intent(in)    :: type
@@ -593,7 +591,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! THREADSAFE
+  !> THREADSAFE
   subroutine profiling_count_tran_real_8(trf, type)
     integer,         intent(in)    :: trf
     real(8),         intent(in)    :: type
@@ -605,7 +603,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! THREADSAFE
+  !> THREADSAFE
   subroutine profiling_count_tran_complex_4(trf, type)
     integer,         intent(in)    :: trf
     complex(4),      intent(in)    :: type
@@ -617,7 +615,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! THREADSAFE
+  !> THREADSAFE
   subroutine profiling_count_tran_complex_8(trf, type)
     integer,         intent(in)    :: trf
     complex(8),      intent(in)    :: type
@@ -686,12 +684,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Write profiling results of each node to profiling.NNN/profifling.nnn
-  ! The format of each line is
-  ! tag-label    pass_in    pass_out    time   time/pass_in
-  !
-  ! The last column gives the average time consumed between in and out
-  ! (only, if pass_in and pass_out are equal).
+  !> Write profiling results of each node to profiling.NNN/profifling.nnn
+  !! The format of each line is
+  !! tag-label    pass_in    pass_out    time   time/pass_in
+  !!
+  !! The last column gives the average time consumed between in and out
+  !! (only, if pass_in and pass_out are equal).
   subroutine profiling_output
     integer          :: ii
     integer          :: iunit
