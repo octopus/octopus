@@ -4,11 +4,11 @@
 Test       : XC Functionals
 Programs   : octopus
 TestGroups : short-run
-Enabled    : No
+Enabled    : Yes
 
 Input: 03-xc.01-gs.inp
-match ; Hartree-Fock energy                    ; GREP(static/info, 'Total       =', 20)   ; -0.57036978
-match ; Hartree-Fock eigenvalue up             ; GREP(static/info, '  1   up', 13) ;  -1.039867
+match ; Hartree-Fock energy                    ; GREP(static/info, 'Total       =', 20)   ; -0.57266978
+match ; Hartree-Fock eigenvalue up             ; GREP(static/info, '  1   up', 13) ;  -1.239867
 match ; Hartree-Fock eigenvalue dn             ; GREP(static/info, '  1   dn', 13) ;  -0.537714
 
 Input: 03-xc.vwn.inp
