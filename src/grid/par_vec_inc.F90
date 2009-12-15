@@ -17,25 +17,25 @@
 !!
 !! $Id$
 
-! Generally:
-! Xvec_gather and Xvec_scatter only consider inner points.
-! Xvec_scatter_bndry takes care of boundary points (there is
-! no Xvec_gather_bndry as they are only written and not read).
-! Xvec_scatter_all is Xvec_scatter followd by Xvec_scatter_bndry.
+!> Generally:
+!! Xvec_gather and Xvec_scatter only consider inner points.
+!! Xvec_scatter_bndry takes care of boundary points (there is
+!! no Xvec_gather_bndry as they are only written and not read).
+!! Xvec_scatter_all is Xvec_scatter followd by Xvec_scatter_bndry.
 
-! ---------------------------------------------------------
-! Scatters a vector v to all nodes in vp with respect to
-! to point -> node mapping in vp.
-! v_local has at least to be of size vp%np_local(vp%partno).
+!! ---------------------------------------------------------
+!! Scatters a vector v to all nodes in vp with respect to
+!! to point -> node mapping in vp.
+!! v_local has at least to be of size vp%np_local(vp%partno).
 subroutine X(vec_scatter)(vp, root, v, v_local)
   type(pv_t), intent(in)  :: vp
   integer,    intent(in)  :: root
   R_TYPE,     intent(in)  :: v(:)
   R_TYPE,     intent(out) :: v_local(:)
 
-  integer              :: i         ! Counter.
-  integer, allocatable :: displs(:) ! Displacements for scatter.
-  R_TYPE,  allocatable :: v_tmp(:)  ! Send buffer.
+  integer              :: i         !< Counter.
+  integer, allocatable :: displs(:) !< Displacements for scatter.
+  R_TYPE,  allocatable :: v_tmp(:)  !< Send buffer.
 
   call push_sub('par_vec_inc.Xvec_scatter')
 
@@ -81,18 +81,18 @@ end subroutine X(vec_scatter)
 
 
 ! ---------------------------------------------------------
-! v_local has to be of length np_local+np_ghost+np_bndry
-! for this to work.
-! And v has to be of length np_part.
+!> v_local has to be of length np_local+np_ghost+np_bndry
+!! for this to work.
+!! And v has to be of length np_part.
 subroutine X(vec_scatter_bndry)(vp, root, v, v_local)
   type(pv_t), intent(in)  :: vp
   integer,    intent(in)  :: root
   R_TYPE,     intent(in)  :: v(:)
   R_TYPE,     intent(out) :: v_local(:)
 
-  integer              :: i         ! Counter.
-  integer, allocatable :: displs(:) ! Displacements for scatter.
-  R_TYPE,  allocatable :: v_tmp(:)  ! Send buffer.
+  integer              :: i         !< Counter.
+  integer, allocatable :: displs(:) !< Displacements for scatter.
+  R_TYPE,  allocatable :: v_tmp(:)  !< Send buffer.
 
   call push_sub('par_vec_inc.Xvec_scatter_bndry')
 
@@ -148,18 +148,18 @@ end subroutine X(vec_scatter_all)
 
 
 ! ---------------------------------------------------------
-! Reverse operation of Xvec_scatter.
-! All v_locals from the nodes are packed together
-! into v on node root in correct order.
+!> Reverse operation of Xvec_scatter.
+!! All v_locals from the nodes are packed together
+!! into v on node root in correct order.
 subroutine X(vec_gather)(vp, root, v, v_local)
   type(pv_t), intent(in)  :: vp
   integer,    intent(in)  :: root
   R_TYPE,     intent(out) :: v(:)
   R_TYPE,     intent(in)  :: v_local(:)
 
-  integer              :: i         ! Counter.
-  integer, allocatable :: displs(:) ! Displacements for scatter.
-  R_TYPE,  allocatable :: v_tmp(:)  ! Receive buffer.
+  integer              :: i         !< Counter.
+  integer, allocatable :: displs(:) !< Displacements for scatter.
+  R_TYPE,  allocatable :: v_tmp(:)  !< Receive buffer.
 
   call push_sub('par_vec_inc.Xvec_gather')
 
@@ -198,17 +198,17 @@ subroutine X(vec_gather)(vp, root, v, v_local)
 end subroutine X(vec_gather)
 
 ! ---------------------------------------------------------
-! Like Xvec_gather but the result is gathered
-! on all nodes, i. e. v has to be a properly
-! allocated array on all nodes.
+!> Like Xvec_gather but the result is gathered
+!! on all nodes, i. e. v has to be a properly
+!! allocated array on all nodes.
 subroutine X(vec_allgather)(vp, v, v_local)
   type(pv_t), intent(in)  :: vp
   R_TYPE,     intent(out) :: v(:)
   R_TYPE,     intent(in)  :: v_local(:)
 
-  integer              :: i         ! Counter.
-  integer, allocatable :: displs(:) ! Displacements for scatter.
-  R_TYPE,  allocatable :: v_tmp(:)  ! Receive buffer.
+  integer              :: i         !< Counter.
+  integer, allocatable :: displs(:) !< Displacements for scatter.
+  R_TYPE,  allocatable :: v_tmp(:)  !< Receive buffer.
 
   call push_sub('par_vec_inc.Xvec_allgather')
 
@@ -239,11 +239,11 @@ end subroutine X(vec_allgather)
 
 
 ! ---------------------------------------------------------
-! Updates ghost points of every node. A vector suitable
-! for non local operations contains local values and
-! ghost point values.
-! Length of v_local must be
-! vp%np_local(vp%partno)+vp%np_ghost(vp%partno)
+!> Updates ghost points of every node. A vector suitable
+!! for non local operations contains local values and
+!! ghost point values.
+!! Length of v_local must be
+!! vp%np_local(vp%partno)+vp%np_ghost(vp%partno)
 subroutine X(vec_ghost_update)(vp, v_local)
   type(pv_t), intent(in)    :: vp
   R_TYPE,     intent(inout) :: v_local(:)
@@ -273,7 +273,7 @@ subroutine X(vec_ghost_update)(vp, v_local)
 end subroutine X(vec_ghost_update)
 
 ! ---------------------------------------------------------
-! The same as Xvec_ghost_update but in a non-blocking fashion.
+!> The same as Xvec_ghost_update but in a non-blocking fashion.
 subroutine X(vec_ighost_update)(vp, v_local, handle)
   type(pv_t),         intent(in)    :: vp
   R_TYPE,             intent(inout) :: v_local(:)
@@ -456,12 +456,12 @@ end subroutine X(ghost_update_batch_finish)
 
 !--------------------------------------------------------
 
-! This function collects points from the array src in nodes and puts
-! them in the arrat dst in the node with MPI rank root, the points to
-! collect are given by a list of global indexes (of size nn).
-!
-! dst does not need to be allocated in the other nodes.
-!
+!> This function collects points from the array src in nodes and puts
+!! them in the arrat dst in the node with MPI rank root, the points to
+!! collect are given by a list of global indexes (of size nn).
+!!
+!! dst does not need to be allocated in the other nodes.
+!!
 subroutine X(vec_selective_gather)(this, nn, list, root, src, dst)
   type(pv_t),       intent(in)    :: this
   integer,          intent(in)    :: nn
