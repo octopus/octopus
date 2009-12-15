@@ -157,8 +157,8 @@ contains
     end if
 
     if(functl%family.ne.XC_FAMILY_NONE.and.functl%family.ne.XC_FAMILY_OEP) then
-      ok =       (functl%id == XC_LDA_X_1D)
-      ok = ok.or.(functl%id == XC_LDA_C_1D_CSC)
+      ok =         (functl%id == XC_LDA_X_1D)
+      ok = ok .or. (functl%id == XC_LDA_C_1D_CSC)
       if((ndim.ne.1).and.ok) then
         message(1) = 'Specified functional is only allowed in 1D.'
         call write_fatal(1)
@@ -169,9 +169,13 @@ contains
       end if
 
       ok =       (functl%id == XC_LDA_X_2D)
-      ok = ok.or.(functl%id == XC_LDA_C_2D_AMGB)
-      ok = ok.or.(functl%id == XC_LDA_C_2D_PRM)
-      ok = ok.or.(functl%id == XC_GGA_X_2D_B86_MGC)
+      ok = ok .or. (functl%id == XC_LDA_C_2D_AMGB)
+      ok = ok .or. (functl%id == XC_LDA_C_2D_PRM)
+      ok = ok .or. (functl%id == XC_GGA_X_2D_B86)
+      ok = ok .or. (functl%id == XC_GGA_X_2D_B86_MGC)
+      ok = ok .or. (functl%id == XC_GGA_X_2D_B88)
+      ok = ok .or. (functl%id == XC_GGA_X_2D_PBE)
+
       if((ndim.ne.2).and.ok) then
         message(1) = 'Specified functional is only allowed in 2D.'
         call write_fatal(1)

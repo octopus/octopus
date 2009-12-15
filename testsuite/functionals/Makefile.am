@@ -28,6 +28,12 @@ dist_share_DATA =                                  \
 	01-xc_1d.lda_csc.inp                       \
 	02-xc_2d.test                              \
 	02-xc_2d.01-hf.inp                         \
+        02-xc_2d.gga_b86.inp                       \
+        02-xc_2d.lda_prm.inp                       \
+        02-xc_2d.gga_b88.inp                       \
+        02-xc_2d.gga_pbe.inp                       \
+        02-xc_2d.lda_amgb.inp                      \
+        02-xc_2d.gga_b86_mgc.inp                   \
         03-xc.test                                 \
         03-xc.01-gs.inp                            \
         03-xc.b88.inp                              \

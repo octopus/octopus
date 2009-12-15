@@ -25,4 +25,31 @@ Enabled    : Yes
 # could be do to the use of an underconverged basis set in the paper.
 
 Input: 02-xc_2d.01-hf.inp
-match ; Total energy ; GREP(static/info, 'Total       =', 20) ; 1.04191861
+match ; Hartree-Fock energy                      ; GREP(static/info, 'Total       =', 20)   ;  1.04191861
+match ; Hartree-Fock eigenvalue 1 up             ; GREP(static/info, '  1   up', 13) ; 0.537515
+match ; Hartree-Fock eigenvalue 2 up             ; GREP(static/info, '  2   up', 13) ; 0.776505
+match ; Hartree-Fock eigenvalue 1 dn             ; GREP(static/info, '  1   dn', 13) ; 1.169397
+match ; Hartree-Fock eigenvalue 2 dn             ; GREP(static/info, '  2   dn', 13) ; 1.224726
+
+# We use the wave-functions obtained to test the 2D XC functionals
+
+Input: 02-xc_2d.lda_amgb.inp
+match ; LDA exchange                             ; GREP(out, 'Exchange    =', 20)   ; -0.62342504
+match ; LDA AMGB correlation                     ; GREP(out, 'Correlation =', 20)   ; -0.03534534
+
+# (this calculation is done without spin polarization)
+Input: 02-xc_2d.lda_prm.inp
+match ; LDA exchange                             ; GREP(out, 'Exchange    =', 20)   ; -0.44082808
+match ; LDA PRM correlation                      ; GREP(out, 'Correlation =', 20)   ; -0.12223476
+
+Input: 02-xc_2d.gga_b86.inp
+match ; GGA 2D B86 exchange                      ; GREP(out, 'Exchange    =', 20)   ; -0.66569035
+
+Input: 02-xc_2d.gga_b86_mgc.inp
+match ; GGA 2D B86 MGC exchange                  ; GREP(out, 'Exchange    =', 20)   ; -0.65901733
+
+Input: 02-xc_2d.gga_b88.inp
+match ; GGA 2D B88 exchange                      ; GREP(out, 'Exchange    =', 20)   ; -0.67040364
+
+Input: 02-xc_2d.gga_pbe.inp
+match ; GGA 2D PBE exchange                      ; GREP(out, 'Exchange    =', 20)   ; -0.67022789

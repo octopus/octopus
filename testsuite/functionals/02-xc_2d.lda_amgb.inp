@@ -1,0 +1,32 @@
+CalculationMode = one_shot
+
+FromScratch = yes
+Dimensions = 2
+
+lambda = 2.0
+omega = 1/lambda^2
+
+%Species
+"qd" | 1.0 | spec_user_defined | 2 | "0.5*omega^2*r^2"
+%
+
+%Coordinates
+"qd" | 0 | 0 | 0 | no
+%
+
+ExtraStates = 1
+
+%Occupations
+1 | 1
+0 | 0
+%
+
+BoxShape = sphere
+Radius = 10.0
+Spacing = 0.2
+
+DerivativesOrder = 4
+
+SpinComponents = spin_polarized
+
+XCFunctional = lda_x_2d + lda_c_2d_amgb
