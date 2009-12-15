@@ -40,8 +40,6 @@ dist_share_DATA = \
 	06-tdmagnetic.test \
 	06-tdmagnetic.01-gs.inp \
 	06-tdmagnetic.02-unocc.inp \
-	06-tdmagnetic.03-td.inp \
-	07-hartree_fock.test \
-	07-hartree_fock.01-2electrons.inp
+	06-tdmagnetic.03-td.inp
 
 CLEANFILES = *~ *.bak

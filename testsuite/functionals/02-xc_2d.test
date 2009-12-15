@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
 
-Test       : Hartree-Fock
+Test       : XC 2D
 Programs   : octopus; octopus_single; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
@@ -18,11 +18,11 @@ Enabled    : Yes
 # "omega", and since omega in this case is 0.25 effective atomic
 # units, 1.0419 e.a.u. corresponds to 4.168, as given in the table.
 
-Input: 07-hartree_fock.01-2electrons.inp
-match ; Total energy ; GREP(static/info, 'Total       =', 20) ; 1.04191861
-
 # Results for 8 electrons quantum dots, provided in the paper, can
 # also be approximately reproduced. I do not put a test because it
 # would be too slow. In fact, the results provided by octopus are
 # lower in energy and closer to the Quantum Monte Carlo numbers, which
 # could be do to the use of an underconverged basis set in the paper.
+
+Input: 02-xc_2d.01-hf.inp
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; 1.04191861

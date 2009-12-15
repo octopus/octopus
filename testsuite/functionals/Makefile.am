@@ -26,6 +26,8 @@ dist_share_DATA =                                  \
 	01-xc_1d.01-wfs-lda.inp                    \
 	01-xc_1d.02-wfs-hf.inp                     \
 	01-xc_1d.lda_csc.inp                       \
+	02-xc_2d.test                              \
+	02-xc_2d.01-hf.inp                         \
         03-xc.test                                 \
         03-xc.01-gs.inp                            \
         03-xc.b88.inp                              \
