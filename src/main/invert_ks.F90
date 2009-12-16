@@ -497,7 +497,7 @@ contains
     
     !initialize the KS potential
     
-    call xc_get_vxc(sys%gr, sys%ks%xc, sys%st, target_rho, sys%st%d%ispin, E_x, E_c, &
+    call xc_get_vxc(sys%gr%der, sys%ks%xc, sys%st, target_rho, sys%st%d%ispin, E_x, E_c, &
       M_ZERO, sys%st%qtot, hm%vxc)
     
     call doutput_function(io_function_fill_how("AxisX"), &
