@@ -28,6 +28,7 @@ module invert_ks_m
   use io_function_m
   use lalg_adv_m
   use parser_m
+  use poisson_m
   use mesh_m
   use mesh_function_m
   use messages_m
@@ -40,6 +41,7 @@ module invert_ks_m
   use unit_m
   use unit_system_m
   use v_ks_m
+  use xc_m
   
   implicit none
 
@@ -76,9 +78,17 @@ contains
     !% Iterative scheme.
     !%Option two_particle 1
     !% Exact two-particle scheme.
+    !%Option iterativevxc 2
+    !% Iterative scheme for vxc
     !%End
       
     call parse_integer(datasets_check('InvertKSmethod'), 0, invksmethod)
+
+    if(invksmethod < 0 .or. invksmethod > 2) then
+      call input_error('InvertKSmethod')
+      call write_fatal(1)
+    endif
+
 
     ! initialize random wavefunctions
     call states_allocate_wfns(sys%st, sys%gr%mesh)
@@ -99,7 +109,7 @@ contains
     hm%ec       = M_ZERO
     hm%vhartree = M_ZERO
     hm%vxc      = M_ZERO
-    hm%ep%vpsl  = M_ZERO
+    !hm%ep%vpsl  = M_ZERO
     !hm%ep%local_potential = M_ZERO
 
     sys%ks%frozen_hxc = .true. !do not change hxc potential outside this routine
@@ -111,9 +121,15 @@ contains
       call invertks_2part(target_rho, np, nspin, hm%vhxc, sys%gr%mesh%h)
 
     else ! iterative case
-
-      call invertks_iter(target_rho, np, nspin, hm, sys, scfv)
+      if (invksmethod == 0) then ! iterative procedure for v_s (might be discontinued)
       
+        call invertks_iter(target_rho, np, nspin, hm, sys, scfv)
+      
+      else
+      
+        call invertvxc_iter(target_rho, np, nspin, hm, sys, scfv)
+      
+      endif
     end if ! invksmethod
 
     ! this is debugging: should output quality of KS inversion
@@ -140,10 +156,9 @@ contains
     call h_sys_output_all(sys%outp, sys%gr, sys%geo, sys%st, hm, STATIC_DIR)
 
     call doutput_function(io_function_fill_how("AxisX"), &
-           ".", "vhxc", sys%gr%mesh, hm%vhxc(:,1), units_out%energy, ierr)
+           ".", "vxc", sys%gr%mesh, hm%vxc(:,1), units_out%energy, ierr)
     call doutput_function(io_function_fill_how("AxisX"), &
            ".", "rho", sys%gr%mesh, sys%st%rho(:,1), units_out%length**(-sys%gr%sb%dim), ierr)
-
 
     SAFE_DEALLOCATE_A(target_rho)
     call pop_sub()
@@ -397,6 +412,184 @@ contains
     call pop_sub()
 
   end subroutine invertks_iter
+
+  subroutine invertvxc_iter(target_rho, np, nspin, hm, sys, scfv)
+    type(system_t),      intent(inout) :: sys
+    type(hamiltonian_t), intent(inout) :: hm
+    type(scf_t),         intent(inout) :: scfv
+    integer,             intent(in)    :: np, nspin
+    FLOAT,               intent(in)    :: target_rho(1:np, 1:nspin)
+        
+    integer :: ii, jj, ierr, idiffmax
+    integer :: iunit, verbosity, counter
+    FLOAT :: stabilizer, convdensity, diffdensity
+    FLOAT :: E_x, E_c
+    FLOAT, allocatable :: vxc_in(:,:,:), vxc_out(:,:,:), vxc_mix(:,:,:)
+    FLOAT, allocatable :: rho(:)
+    type(mix_t) :: smix
+    character(len=256) :: fname
+
+    call push_sub('invert_ks.invertvxc_iter')
+    
+    !%Variable InvertKSConvAbsDens
+    !%Type float
+    !%Default 1e-5
+    !%Section Calculation Modes::Invert KS
+    !%Description
+    !% Absolute difference between the calculated and the target density in the KS
+    !% inversion. Has to be larger than the convergence of the density in the SCF run.
+    !%End
+    
+    call parse_float(datasets_check('InvertKSConvAbsDens'), 1d-5, convdensity)
+    
+    !%Variable InvertKSStabilizer
+    !%Type float
+    !%Default 0.5
+    !%Section Calculation Modes::Invert KS
+    !%Description
+    !% Additive constant c in the iterative calculation of the KS potential
+    !%   (v(alpha+1)=rho(alpha)+c)/(rho_target+c)*v(alpha)
+    !% ensures that very small densities do not cause numerical problems.
+    !%End
+
+    call parse_float(datasets_check('InvertKSStabilizer'), M_HALF, stabilizer)
+
+    !%Variable InvertKSVerbosity
+    !%Type integer
+    !%Default 0
+    !%Section Calculation Modes::Invert KS
+    !%Description
+    !% Selects what is output during the calculation of the KS potential.
+    !%Option 0
+    !% Only outputs the converged density and KS potential.
+    !%Option 1
+    !% Same as 0 but outputs the maximum difference to the target density in each
+    !% iteration in addition.
+    !%Option 2
+    !% Same as 1 but outputs the density and the KS potential in each iteration in 
+    !% addition.
+    !%End
+      
+    call parse_integer(datasets_check('InvertKSVerbosity'), 0, verbosity)  
+    if(verbosity < 0 .or. verbosity > 2) then
+      call input_error('InvertKSVerbosity')
+      call write_fatal(1)
+    endif
+  
+    SAFE_ALLOCATE(rho(1:np))
+    
+    !calculate total density
+    
+    rho = M_ZERO
+    
+    do ii = 1, nspin
+      do jj = 1, np
+        rho(jj) = rho(jj) + target_rho(jj, ii)
+      enddo
+    enddo
+    
+    !calculate the Hartree potential
+    
+    call dpoisson_solve(sys%ks%hartree_solver,hm%vhartree,rho)
+    
+    call doutput_function(io_function_fill_how("AxisX"), &
+           ".", "vhartree", sys%gr%mesh, hm%vhartree(:), units_out%energy, ierr)
+    
+    !initialize the KS potential
+    
+    call xc_get_vxc(sys%gr, sys%ks%xc, sys%st, target_rho, sys%st%d%ispin, E_x, E_c, &
+      M_ZERO, sys%st%qtot, hm%vxc)
+    
+    call doutput_function(io_function_fill_how("AxisX"), &
+           ".", "vxc", sys%gr%mesh, hm%vxc(:,1), units_out%energy, ierr)
+    
+    call doutput_function(io_function_fill_how("AxisX"), &
+           ".", "vext", sys%gr%mesh, hm%ep%vpsl(:), units_out%energy, ierr)
+    
+    call hamiltonian_update_potential(hm, sys%gr%mesh)
+    
+    sys%ks%frozen_hxc = .true.
+    
+    call mix_init(smix, np, nspin, 1, prefix_="InvertKS")
+
+    SAFE_ALLOCATE(vxc_in(1:np, 1:nspin, 1:1))
+    SAFE_ALLOCATE(vxc_out(1:np, 1:nspin, 1:1))
+    SAFE_ALLOCATE(vxc_mix(1:np, 1:nspin, 1:1))
+    
+    vxc_in(1:np,1:nspin,1) = hm%vxc(1:np,1:nspin)
+         
+    if(verbosity == 1 .or. verbosity == 2) then
+      iunit = io_open('InvertKSconvergence', action = 'write')
+    endif
+    
+    diffdensity = 1d0
+    counter = 0
+        
+    do while(diffdensity > convdensity)
+  ! do while (counter <5)   
+      counter = counter + 1 
+        
+      if(verbosity == 2) then
+        write(fname,'(i6.6)') counter
+        call doutput_function(io_function_fill_how("AxisX"), &
+             ".", "vxc"//fname, sys%gr%mesh, hm%vxc(:,1), units_out%energy, ierr)
+        call doutput_function(io_function_fill_how("AxisX"), &
+             ".", "rho"//fname, sys%gr%mesh, sys%st%rho(:,1), units_out%length**(-sys%gr%sb%dim), ierr)
+      endif
+    
+      call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run = .false., &
+                   verbosity = VERB_COMPACT)
+      call states_calc_dens(sys%st, sys%gr)
+      
+      vxc_out(1:np, 1:nspin, 1) = &
+        (sys%st%rho(1:np,1:nspin) + stabilizer)/&
+	(target_rho(1:np,1:nspin) + stabilizer) &
+         * hm%vxc(1:np, 1:nspin)
+
+      call dmixing(smix, counter, vxc_in, vxc_out, vxc_mix, dmf_dotp_aux)
+
+      hm%vxc(1:np,1:nspin) = vxc_mix(1:np, 1:nspin, 1)
+      vxc_in(1:np, 1:nspin, 1) = hm%vxc(1:np, 1:nspin)
+      
+      call hamiltonian_update_potential(hm, sys%gr%mesh)
+      
+      diffdensity = 0d0
+      do jj = 1, nspin
+        do ii = 1, np
+          if (abs(sys%st%rho(ii,jj)-target_rho(ii,jj)) > diffdensity) then
+            diffdensity = abs(sys%st%rho(ii,jj)-target_rho(ii,jj))
+            idiffmax=ii
+          endif
+        enddo
+      enddo
+            
+      if(verbosity == 1 .or. verbosity == 2) then
+        write(iunit,'(i6.6)', ADVANCE = 'no') counter
+        write(iunit,'(es18.10)') diffdensity
+
+#ifdef HAVE_FLUSH
+        call flush(iunit)
+#endif
+      endif
+     
+    end do
+
+    write(message(1),'(a,I8)') "Invert KS: iterations needed:", counter
+    call write_info(1)
+    
+    call io_close(iunit)      
+    
+    call mix_end(smix)
+
+    SAFE_DEALLOCATE_A(vxc_in)
+    SAFE_DEALLOCATE_A(vxc_out)
+    SAFE_DEALLOCATE_A(vxc_mix)
+    SAFE_DEALLOCATE_A(rho)
+    
+    call pop_sub()
+
+  end subroutine invertvxc_iter
+
 
   subroutine precond_kiks(mesh, np, nspin, st, target_rho, vhxc_out)
     type(mesh_t),   intent(in)  :: mesh
