@@ -54,7 +54,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, kinetic_o
   ASSERT(batch_is_ok(psib))
   ASSERT(batch_is_ok(hpsib))
   ASSERT(psib%nst == hpsib%nst)
-
+  ASSERT(ik >= hm%d%kpt%start .AND. ik <= hm%d%kpt%end)
   nst = psib%nst
   
   SAFE_ALLOCATE(lapl(1:der%mesh%np, 1:hm%d%dim, 1:nst))

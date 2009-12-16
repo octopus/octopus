@@ -431,10 +431,10 @@ contains
       integer :: ip, ik
 
       call push_sub('hamiltonian.hamiltonian_init.init_phase')
-
-      SAFE_ALLOCATE(hm%phase(1:gr%mesh%np_part, 1:hm%d%nik))
-
-      forall (ik = 1:hm%d%nik, ip = 1:gr%mesh%np_part)
+      
+      SAFE_ALLOCATE(hm%phase(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
+      
+      forall (ik = hm%d%kpt%start:hm%d%kpt%end , ip = 1:gr%mesh%np_part)
         hm%phase(ip, ik) = exp(-M_zI*sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim)* hm%d%kpoints(1:gr%mesh%sb%dim, ik)))
       end forall
 
