@@ -1,0 +1,16 @@
+CalculationMode = one_shot
+
+%Coordinates
+ 'H' |  0.717157 | 0 | 0
+ 'H' | -0.717157 | 0 | 0
+%
+
+FromScratch = yes
+
+SpinComponents = spin_polarized
+
+ExcessCharge = 1
+
+Spacing = 0.5
+
+XCFunctional = lda_c_ob_pz

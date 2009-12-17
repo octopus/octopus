@@ -13,5 +13,4 @@ ExcessCharge = 1
 
 Spacing = 0.5
 
-XCFunctional = lda_xc_teter93
-
+XCFunctional = lda_c_pz

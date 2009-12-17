@@ -41,9 +41,22 @@ dist_share_DATA =                                  \
         03-xc.kli.inp                              \
         03-xc.pbe.inp                              \
         03-xc.pw91.inp                             \
-        03-xc.pw.inp                               \
-        03-xc.teter93.inp                          \
-        03-xc.vwn.inp                              \
+        03-xc.lda_c_vbh.inp                        \
+        03-xc.lda_c_rpa.inp                        \
+        03-xc.lda_c_pw.inp                         \
+        03-xc.lda_xc_teter93.inp                   \
+        03-xc.lda_c_pz.inp                         \
+        03-xc.lda_c_wigner.inp                     \
+        03-xc.lda_c_gl.inp                         \
+        03-xc.lda_x.inp                            \
+        03-xc.lda_c_ob_pw.inp                      \
+        03-xc.lda_c_ob_pz.inp                      \
+        03-xc.lda_c_xalpha.inp                     \
+        03-xc.lda_c_pw_mod.inp                     \
+        03-xc.lda_c_pz_mod.inp                     \
+        03-xc.lda_c_hl.inp                         \
+        03-xc.lda_c_vwn.inp                        \
+        03-xc.lda_c_vwn_rpa.inp                    \
 	04-oep.01-jellium-lsda.inp                 \
 	04-oep.02-jellium-exx_kli.inp              \
 	04-oep.03-jellium-full_exx.inp             \

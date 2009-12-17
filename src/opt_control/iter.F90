@@ -113,7 +113,7 @@ contains
 
     iterator%ctr_iter = 0
     iterator%ctr_iter_main = 0
-    iterator%bestJ1        = -CNST(1.0e20)
+    iterator%bestJ1          = -HUGE(iterator%bestJ1)
     iterator%bestJ1_fluence  = M_ZERO
     iterator%bestJ1_J        = M_ZERO
     iterator%bestJ1_ctr_iter = 0

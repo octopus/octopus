@@ -13,5 +13,4 @@ ExcessCharge = 1
 
 Spacing = 0.5
 
-XCFunctional = lda_x + lda_c_vwn
-
+XCFunctional = lda_c_vbh
