@@ -190,10 +190,11 @@ contains
     call pop_sub()
   end subroutine projector_init
 
-  subroutine projector_init_phases(this, sb, nkpoints, kpoints, vec_pot, vec_pot_var)
+  subroutine projector_init_phases(this, sb, kstart, kend, kpoints, vec_pot, vec_pot_var)
     type(projector_t), intent(inout) :: this
     type(simul_box_t), intent(in)    :: sb
-    integer,           intent(in)    :: nkpoints
+    integer,           intent(in)    :: kstart
+    integer,           intent(in)    :: kend
     FLOAT,             intent(in)    :: kpoints(:, :)
     FLOAT, optional,   intent(in)    :: vec_pot(1:MAX_DIM)
     FLOAT,             pointer       :: vec_pot_var(:, :)
@@ -208,17 +209,18 @@ contains
     ndim = sb%dim
 
     if(.not. associated(this%phase)) then
-      SAFE_ALLOCATE(this%phase(1:ns, 1:nkpoints))
+      SAFE_ALLOCATE(this%phase(1:ns, kstart:kend))
     end if
 
-    do ik = 1, nkpoints
+    do ik = kstart, kend
 
       do is = 1, ns
-        kr = sum(kpoints(1:ndim, ik) * &
-          (this%sphere%x(is, 1:ndim) - this%sphere%mesh%x(this%sphere%jxyz(is), 1:ndim)))
-        if(present(vec_pot)) kr = kr + sum(vec_pot(1:ndim) * this%sphere%x(is, 1:ndim))
+        ! this is only the correction to the global phase, that can
+        ! appear if the sphere crossed the boundary of the cell.
+        kr = sum(kpoints(1:ndim, ik)*(this%sphere%x(is, 1:ndim) - this%sphere%mesh%x(this%sphere%jxyz(is), 1:ndim)))
+        if(present(vec_pot)) kr = kr + sum(vec_pot(1:ndim)*this%sphere%x(is, 1:ndim))
         if(associated(vec_pot_var)) kr = kr + sum(vec_pot_var(this%sphere%jxyz(is), 1:ndim)*this%sphere%x(is, 1:ndim))
-        this%phase(is, ik) = exp(-M_zI * kr)
+        this%phase(is, ik) = exp(-M_zI*kr)
       end do
 
     end do
