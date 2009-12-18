@@ -772,7 +772,7 @@ contains
       !if (test>=3.and.(count_atoms==1).and.(count_old==1).and.(test1==1)) then
 	!write(71,*) "Deallocating electronic X2."
 	!test1=0
-        !SAFE_DEALLOCATE_A(X2)
+        !SAFE _DEALLOCATE_A(X2)
       !endif
 
 
@@ -795,7 +795,7 @@ contains
  !     test1=1
  !     write(71,*) "Allocating X2 to determine electronic potential"
 
-  !    SAFE_ALLOCATE(x2(1:this%ntot))
+  !    SAFE _ALLOCATE(x2(1:this%ntot))
 
    !   x2(1:this%ntot) = M_ZERO
 
@@ -864,9 +864,10 @@ contains
       k = this%ky(m)
       this%vh_big(i, j, k) = x2(m)
     end do
-    DO m = 1, this%ntot
+
+    do m = 1, this%ntot
       I=THIS%IY(M); J=THIS%JY(M); K=THIS%KY(M)
-      IF(this%ipio(I,J,K) == 0)THEN
+      if(this%ipio(I,J,K) == 0) then
         IF((I.GT.NXL+THIS%NXBOT.AND.I.LE.NXL+THIS%NXBOT+NX).AND. &
           (J.GT.NYL+THIS%NYBOT.AND.J.LE.NYL+THIS%NYBOT+NY).AND. &
           (K.GT.THIS%NZBOT.AND.K.LE.THIS%NZBOT+NZ))THEN
@@ -880,26 +881,28 @@ contains
 
     call egate(this)
 
-!    write(358,*) "#x,z, this%vh_big(x,11,k)"
-    do I = 1, THIS%NXTOT
-      do K = 1, THIS%NZTOT
- !       write(358,*) I,K,THIS%VH_BIG(I,11,K)
+    !    write(358,*) "#x,z, this%vh_big(x,11,k)"
+    do i = 1, this%nxtot
+      do k = 1, this%nztot
+        !       write(358,*) I,K,THIS%VH_BIG(I,11,K)
       end do
     end do
 
-    VHMIN=MINVAL(VH)
-    VHMAX=MAXVAL(VH)
+    vhmin = minval(vh)
+    vhmax = maxval(vh)
 
     deallocate(Q2)
     !deallocate(rhotest)
     !if (test/=3.and.((count_atoms==1).or.(count_atoms/=count_old).or.count_atoms==this%noatoms).and.(test1==0)) then
-!	    write(71,*) "deAllocating ionic X2."
-!      SAFE_DEALLOCATE_A(x2)
-!    endif
-!    do i=1, this%ntot
-!     write(72,*) x2(i)
-!    enddo
-    count_old=count_atoms
+    !	    write(71,*) "deAllocating ionic X2."
+    !      SAFE _DEALLOCATE_A(x2)
+    !    endif
+    !    do i=1, this%ntot
+    !     write(72,*) x2(i)
+    !    enddo
+
+    count_old = count_atoms
+
     !deallocate(THIS%VH_BIG);
 
   end subroutine poisson_sete_solve
@@ -982,12 +985,15 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(sig)
+    
+    this%esurf = CNST(0.5)*this%esurf
+    charge_surf = cs1 + cs2 + cs3
 
-      THIS%ESURF=CNST(0.5)*THIS%ESURF
-      CHARGE_SURF=CS1+CS2+CS3
-!    WRITE(520,*)THIS%ESURF*hartree*CNST(0.5)
-!    write(521,*)' CS1 ',CS1,' CS2 ',CS2,' CS3 ',CS3
-    write(*,*) "COUNTING ATOMS",this%counter+1
+    !    WRITE(520,*)THIS%ESURF*hartree*CNST(0.5)
+    !    write(521,*)' CS1 ',CS1,' CS2 ',CS2,' CS3 ',CS3
+
+    write(*,*) "COUNTING ATOMS", this%counter + 1
+
     if (this%counter<this%noatoms) then
       this%counter=this%counter+1
       this%tot_nuc_charge_energy=this%tot_nuc_charge_energy+THIS%ESURF
@@ -996,7 +1002,8 @@ contains
       temporary=THIS%ESURF
       THIS%ESURF=THIS%ESURF+this%tot_nuc_charge_energy 
 !      WRITE(522,*)this%counter,this%tot_nuc_charge_energy*hartree,temporary*hartree,THIS%ESURF*hartree
-      endif 
+    endif
+
   contains
 
     subroutine cap(this, sig)

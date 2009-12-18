@@ -57,8 +57,6 @@ contains
     this%size_fourier = sizes
     this%size_fourier(3) = this%size_fourier(3)/2 + 1
 
-    print*, this%size_fourier
-
     call cubic_mesh_init(this%kernel, mesh, this%size_fourier)
 
   end subroutine fourier_kernel_init
