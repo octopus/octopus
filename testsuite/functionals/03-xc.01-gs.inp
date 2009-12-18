@@ -14,4 +14,7 @@ ExcessCharge = 1
 Spacing = 0.5
 
 TheoryLevel = hartree_fock
-
+%Occupations
+0.8
+0.2
+%
