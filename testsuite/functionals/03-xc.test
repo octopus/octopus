@@ -12,52 +12,52 @@ match ; Hartree-Fock eigenvalue up             ; GREP(static/info, '  1   up', 1
 match ; Hartree-Fock eigenvalue dn             ; GREP(static/info, '  1   dn', 13) ;   -0.683557
 
 Input: 03-xc.lda_x.inp
-match ; LDA exchange                           ; GREP(out, 'Exchange    =', 20) ; -0.27231872
+match ; lda_x                                  ; GREP(out, 'Exchange    =', 20) ; -0.27231872
 
 Input: 03-xc.lda_c_wigner.inp
-match ; LDA Wigner correlation                 ; GREP(out, 'Correlation =', 20) ; -0.04403771
+match ; lda_c_wigner                           ; GREP(out, 'Correlation =', 20) ; -0.04403771
 
 Input: 03-xc.lda_c_rpa.inp
-match ; LDA rpa correlation                    ; GREP(out, 'Correlation =', 20) ; -0.04103201
+match ; lda_c_rpa                              ; GREP(out, 'Correlation =', 20) ; -0.04103201
 
 Input: 03-xc.lda_c_hl.inp
-match ; LDA hl correlation                     ; GREP(out, 'Correlation =', 20) ;  -0.04827922
+match ; lda_c_hl                               ; GREP(out, 'Correlation =', 20) ;  -0.04827922
 
 Input: 03-xc.lda_c_gl.inp
-match ; LDA gl correlation                     ; GREP(out, 'Correlation =', 20) ; -0.04909824
+match ; lda_c_gl                               ; GREP(out, 'Correlation =', 20) ; -0.04909824
 
 Input: 03-xc.lda_c_xalpha.inp
-match ; LDA xalpha correlation                 ; GREP(out, 'Correlation =', 20) ; -0.13615936
+match ; lda_c_xalpha                           ; GREP(out, 'Correlation =', 20) ; -0.13615936
 
 Input: 03-xc.lda_c_vwn.inp
-match ; LDA vwn correlation                    ; GREP(out, 'Correlation =', 20) ; -0.03869312
+match ; lda_c_vwn                              ; GREP(out, 'Correlation =', 20) ; -0.03869312
 
 Input: 03-xc.lda_c_vwn_rpa.inp
-match ; LDA vwn_rpa correlation                ; GREP(out, 'Correlation =', 20) ; -0.05643197
+match ; lda_c_vwn_rpa                          ; GREP(out, 'Correlation =', 20) ; -0.05643197
 
 Input: 03-xc.lda_c_pz.inp
-match ; LDA pz correlation                     ; GREP(out, 'Correlation =', 20) ; -0.03787715
+match ; lda_c_pz                               ; GREP(out, 'Correlation =', 20) ; -0.03787715
 
 Input: 03-xc.lda_c_pz_mod.inp
-match ; LDA pz_mod correlation                 ; GREP(out, 'Correlation =', 20) ; -0.03787715
+match ; lda_c_pz_mod                           ; GREP(out, 'Correlation =', 20) ; -0.03787715
 
 Input: 03-xc.lda_c_ob_pz.inp
-match ; LDA ob_pz correlation                  ; GREP(out, 'Correlation =', 20) ; -0.03653120
+match ; lda_c_ob_pz                            ; GREP(out, 'Correlation =', 20) ; -0.03653120
 
 Input: 03-xc.lda_c_pw.inp
-match ; LDA pw correlation                     ; GREP(out, 'Correlation =', 20) ; -0.03849585
+match ; lda_c_pw                               ; GREP(out, 'Correlation =', 20) ; -0.03849585
 
 Input: 03-xc.lda_c_pw_mod.inp
-match ; LDA pw_mod correlation                 ; GREP(out, 'Correlation =', 20) ; -0.03849578
+match ; lda_c_pw_mod                           ; GREP(out, 'Correlation =', 20) ; -0.03849578
 
 Input: 03-xc.lda_c_ob_pw.inp
-match ; LDA ob_pw correlation                  ; GREP(out, 'Correlation =', 20) ; -0.03723110
+match ; lda_c_ob_pw                            ; GREP(out, 'Correlation =', 20) ; -0.03723110
 
 Input: 03-xc.lda_c_vbh.inp
-match ; LDA vbh correlation                    ; GREP(out, 'Correlation =', 20) ; -0.05507011
+match ; lda_c_vbh                              ; GREP(out, 'Correlation =', 20) ; -0.05507011
 
 Input: 03-xc.lda_xc_teter93.inp
-match ; LDA teter93 exchange correlation       ; GREP(out, 'Correlation =', 20) ; -0.31070454
+match ; lda_xc_teter93                         ; GREP(out, 'Correlation =', 20) ; -0.31070454
 
 Input: 03-xc.gga_x_pbe.inp
 match ; gga_x_pbe                              ; GREP(out, 'Exchange    =', 20)   ; -0.31679142
