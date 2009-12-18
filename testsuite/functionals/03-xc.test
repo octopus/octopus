@@ -162,13 +162,13 @@ Input: 03-xc.gga_c_pbe_jrgx.inp
 match ; gga_c_pbe_jrgx                         ; GREP(out, 'Correlation =', 20)   ; 0.00000000
 
 Input: 03-xc.gga_x_optb88_vdw.inp
-match ; gga_x_optb88_vdw                       ; GREP(out, 'Correlation =', 20)   ; 0.00000000
+match ; gga_x_optb88_vdw                       ; GREP(out, 'Exchange    =', 20)   ; -0.31417392
 
 Input: 03-xc.gga_x_pbek1_vdw.inp
-match ; gga_x_pbek1_vdw                        ; GREP(out, 'Correlation =', 20)   ; 0.00000000
+match ; gga_x_pbek1_vdw                        ; GREP(out, 'Exchange    =', 20)   ; -0.32039747
 
 #Input: 03-xc.gga_x_optpbe_vdw.inp
-#match ; gga_x_optpbe_vdw                      ; GREP(out, 'Correlation =', 20)   ;
+#match ; gga_x_optpbe_vdw                      ; GREP(out, 'Exchange    =', 20)   ;
 
 Input: 03-xc.gga_xc_lb.inp
 match ; gga_xc_lb                              ; GREP(out, 'Correlation =', 20)   ; 0.00000000
