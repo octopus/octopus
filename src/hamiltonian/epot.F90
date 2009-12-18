@@ -502,11 +502,6 @@ contains
     if (ep%classical_pot > 0)   ep%vpsl(1:mesh%np) = ep%vpsl(1:mesh%np) + ep%Vclassical(1:mesh%np)
     if (associated(ep%e_field)) ep%vpsl(1:mesh%np) = ep%vpsl(1:mesh%np) + ep%v_static(1:mesh%np)
 
-      !this is disabled because it does not work for periodic systems
-      !  if ((.not. poisson_solver_has_free_bc(this)).and.(.not.simul_box_is_periodic(sb))) then
-      !    ep%eii= M_ZERO
-      !  call ion_interaction_not_free_bc(gr, geo, ep) 
-      !endif
 
     call pop_sub()
     call profiling_out(epot_generate_prof)
@@ -780,8 +775,10 @@ contains
     else if (poisson_get_solver(psolver) == POISSON_SETE) then
       ! only interaction inside the cell
       write(68,*) "Calling SETE interaction"
-      ep%eii= M_ZERO
+      write(6,*) "Calling SETE interaction"
+      !ep%eii= M_ZERO
       call ion_interaction_sete(gr, sb, geo, ep) 
+      write(*,*) "energy, ep%eii", energy, ep%eii
     else
       ! only interaction inside the cell
       do iatom = 1, geo%natoms
@@ -965,7 +962,6 @@ contains
         write(68,*) "ep%eii values very bottom", ep%eii*CNST(2.0*13.60569193)
 
       do iatom = 1, geo%natoms
-          write(68,*) "SETE Force:", iatom,ep%fii(1:sb%dim,iatom)
         zi = species_zval(geo%atom(iatom)%spec)
         do jatom = 1, geo%natoms
 
@@ -974,8 +970,8 @@ contains
           r = sqrt(sum((geo%atom(iatom)%x - geo%atom(jatom)%x)**2))
           !the force
           dd = zi*zj/r**3
-          !ep%fii(1:sb%dim, iatom) = ep%fii(1:sb%dim, iatom) + &
-          !dd*(geo%atom(iatom)%x(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))
+          ep%fii(1:sb%dim, iatom) = ep%fii(1:sb%dim, iatom) + &
+          dd*(geo%atom(iatom)%x(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))
           ep%fii(1:sb%dim, iatom) = M_ZERO 
           
       enddo
