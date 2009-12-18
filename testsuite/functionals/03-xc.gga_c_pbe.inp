@@ -13,9 +13,9 @@ ExcessCharge = 1
 
 Spacing = 0.5
 
-XCFunctional = gga_x_b88
-
 %Occupations
 0.8
 0.2
 %
+
+XCFunctional = gga_c_pbe

@@ -36,11 +36,8 @@ dist_share_DATA =                                  \
         02-xc_2d.gga_b86_mgc.inp                   \
         03-xc.test                                 \
         03-xc.01-gs.inp                            \
-        03-xc.b88.inp                              \
         03-xc.exx.inp                              \
         03-xc.kli.inp                              \
-        03-xc.pbe.inp                              \
-        03-xc.pw91.inp                             \
         03-xc.lda_c_vbh.inp                        \
         03-xc.lda_c_rpa.inp                        \
         03-xc.lda_c_pw.inp                         \
@@ -57,6 +54,65 @@ dist_share_DATA =                                  \
         03-xc.lda_c_hl.inp                         \
         03-xc.lda_c_vwn.inp                        \
         03-xc.lda_c_vwn_rpa.inp                    \
+        03-xc.gga_c_am05.inp                       \
+        03-xc.gga_c_lm.inp                         \
+        03-xc.gga_c_lyp.inp                        \
+        03-xc.gga_c_p86.inp                        \
+        03-xc.gga_c_pbe.inp                        \
+        03-xc.gga_c_pbe_jrgx.inp                   \
+        03-xc.gga_c_pbe_sol.inp                    \
+        03-xc.gga_c_pw91.inp                       \
+        03-xc.gga_c_xpbe.inp                       \
+        03-xc.gga_x_am05.inp                       \
+        03-xc.gga_x_b86.inp                        \
+        03-xc.gga_x_b86_mgc.inp                    \
+        03-xc.gga_x_b86_r.inp                      \
+        03-xc.gga_x_b88.inp                        \
+        03-xc.gga_x_bayesian.inp                   \
+        03-xc.gga_xc_b97_1.inp                     \
+        03-xc.gga_xc_b97_2.inp                     \
+        03-xc.gga_xc_b97_3.inp                     \
+        03-xc.gga_xc_b97_d.inp                     \
+        03-xc.gga_xc_b97.inp                       \
+        03-xc.gga_xc_b97_k.inp                     \
+        03-xc.gga_xc_edf1.inp                      \
+        03-xc.gga_xc_hcth_120.inp                  \
+        03-xc.gga_xc_hcth_147.inp                  \
+        03-xc.gga_xc_hcth_407.inp                  \
+        03-xc.gga_xc_hcth_93.inp                   \
+        03-xc.gga_xc_lb.inp                        \
+        03-xc.gga_xc_mpwlyp1w.inp                  \
+        03-xc.gga_xc_pbe1w.inp                     \
+        03-xc.gga_xc_pbelyp1w.inp                  \
+        03-xc.gga_xc_sb98_1a.inp                   \
+        03-xc.gga_xc_sb98_1b.inp                   \
+        03-xc.gga_xc_sb98_1c.inp                   \
+        03-xc.gga_xc_sb98_2a.inp                   \
+        03-xc.gga_xc_sb98_2b.inp                   \
+        03-xc.gga_xc_sb98_2c.inp                   \
+        03-xc.gga_xc_xlyp.inp                      \
+        03-xc.gga_x_dk87_r1.inp                    \
+        03-xc.gga_x_dk87_r2.inp                    \
+        03-xc.gga_x_ft97_a.inp                     \
+        03-xc.gga_x_ft97_b.inp                     \
+        03-xc.gga_x_g96.inp                        \
+        03-xc.gga_x_lg93.inp                       \
+        03-xc.gga_x_mpbe.inp                       \
+        03-xc.gga_x_mpw91.inp                      \
+        03-xc.gga_x_optb88_vdw.inp                 \
+        03-xc.gga_x_optpbe_vdw.inp                 \
+        03-xc.gga_x_optx.inp                       \
+        03-xc.gga_x_pbea.inp                       \
+        03-xc.gga_x_pbe.inp                        \
+        03-xc.gga_x_pbe_jsjr.inp                   \
+        03-xc.gga_x_pbek1_vdw.inp                  \
+        03-xc.gga_x_pbe_r.inp                      \
+        03-xc.gga_x_pbe_sol.inp                    \
+        03-xc.gga_x_pw86.inp                       \
+        03-xc.gga_x_pw91.inp                       \
+        03-xc.gga_x_rpbe.inp                       \
+        03-xc.gga_x_wc.inp                         \
+        03-xc.gga_x_xpbe.inp                       \
 	04-oep.01-jellium-lsda.inp                 \
 	04-oep.02-jellium-exx_kli.inp              \
 	04-oep.03-jellium-full_exx.inp             \
