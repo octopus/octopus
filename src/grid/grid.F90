@@ -171,8 +171,6 @@ contains
       call multigrid_get_transfer_tables(gr%fine%tt, gr%fine%mesh, gr%mesh)
       
       call derivatives_build(gr%fine%der, gr%fine%mesh)
-      
-      call mesh_write_info(gr%fine%mesh, stdout)
 
       gr%fine%der%coarser => gr%der
       gr%der%finer =>  gr%fine%der
@@ -255,7 +253,18 @@ contains
 
     call messages_print_stress(iunit, "Grid")
     call simul_box_write_info(gr%sb, geo, iunit)
-    call mesh_write_info(gr%mesh, iunit)
+
+    if(gr%have_fine_mesh) then
+      message(1) = "Wave-functions mesh:"
+      call write_info(1, iunit)
+      call mesh_write_info(gr%mesh, iunit)
+      message(1) = "Density mesh:"
+    else
+      message(1) = "Main mesh:"
+    end if
+    call write_info(1, iunit)
+    call mesh_write_info(gr%fine%mesh, iunit)
+
     if(gr%sb%open_boundaries) then
       do il = 1, NLEADS
         call interface_write_info(gr%intf(il), iunit)

@@ -385,6 +385,7 @@ contains
 
       if(gr%have_fine_mesh) then
         SAFE_ALLOCATE(vxc(1:gr%fine%mesh%np_part, 1:st%d%nspin))
+        vxc = M_ZERO
       else
         vxc => hm%vxc
       end if
