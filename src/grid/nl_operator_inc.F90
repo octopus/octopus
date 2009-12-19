@@ -71,7 +71,9 @@ subroutine X(nl_operator_tune)(op, best)
 #endif
     op%X(function) = method
 
-    reps = 10
+    ! set the number of repetitions so the total time is about 0.1
+    ! secs at 1 Gigaflop (we restrict the value between 1 and 30)
+    reps = min(30, max(1, nint(CNST(1e8)/noperations)))
 
     if(in_debug_mode) then
       write(message(1), '(6a)') 'Info: Profiling non-local operator: ', trim(op%label), ' - ', &
