@@ -480,7 +480,7 @@ contains
 
     case(DER_VARIATIONAL)
       ! we have the explicit coefficients
-      call stencil_variational_coeff_lapl(der%dim, der%order, mesh%h, der%lapl, alpha = der%lapl_cutoff)
+      call stencil_variational_coeff_lapl(der%dim, der%order, mesh%spacing, der%lapl, alpha = der%lapl_cutoff)
 
     end select
 
@@ -595,7 +595,7 @@ contains
         if(mesh%use_curvilinear) then
           forall(j = 1:dim) x(j) = mesh%x(p + op(1)%ri(i, op(1)%rimap(p)), j) - mesh%x(p, j)
         else
-          forall(j = 1:dim) x(j) = real(op(1)%stencil%points(j, i), REAL_PRECISION)*mesh%h(j)
+          forall(j = 1:dim) x(j) = real(op(1)%stencil%points(j, i), REAL_PRECISION)*mesh%spacing(j)
         end if
 
         forall(j = 1:dim) x(j) = x(j)*sqrt(masses(j))

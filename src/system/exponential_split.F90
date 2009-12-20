@@ -64,7 +64,7 @@ contains
     cutoff = CNST(1e10)
 
     temp = M_ZERO
-    temp(1:gr%mesh%sb%dim) = (M_TWO*M_Pi)/(cf%n(1:gr%mesh%sb%dim)*gr%mesh%h(1:gr%mesh%sb%dim))
+    temp(1:gr%mesh%sb%dim) = (M_TWO*M_Pi)/(cf%n(1:gr%mesh%sb%dim)*gr%mesh%spacing(1:gr%mesh%sb%dim))
 
     call zcf_alloc_RS(cf)
     call zcf_alloc_FS(cf)

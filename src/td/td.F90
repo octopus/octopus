@@ -559,7 +559,7 @@ contains
         call MPI_Bcast(x, 1, MPI_FLOAT, 0, st%mpi_grp%comm, mpi_err)
       end if
 #endif
-      call hamiltonian_span(hm, minval(gr%mesh%h(1:gr%mesh%sb%dim)), x)
+      call hamiltonian_span(hm, minval(gr%mesh%spacing(1:gr%mesh%sb%dim)), x)
       call total_energy(hm, gr, st, -1)
 
       call pop_sub()

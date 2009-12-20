@@ -115,7 +115,7 @@ contains
       
       call build_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),   &
         cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3, &
-        real(mesh%h(1), 8), order_scaling_function, cnf(serial)%kernel)
+        real(mesh%spacing(1), 8), order_scaling_function, cnf(serial)%kernel)
     end if
 
 #if defined(HAVE_MPI)
@@ -150,7 +150,7 @@ contains
 
     call par_build_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), n1, n2, n3,     &
       cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, cnf(i_cnf)%nfft3,                      &
-      mesh%h(1), order_scaling_function,                                            &
+      mesh%spacing(1), order_scaling_function,                                            &
       cnf(i_cnf)%mpi_grp%rank, cnf(i_cnf)%mpi_grp%size, cnf(i_cnf)%mpi_grp%comm, &
       cnf(i_cnf)%kernel)
     end do
@@ -218,7 +218,7 @@ contains
 
       call psolver_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),    &
         cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3, &
-        real(m%h(1), 8), cnf(serial)%kernel, rhop)
+        real(m%spacing(1), 8), cnf(serial)%kernel, rhop)
 
 #ifdef SINGLE_PRECISION
       rho_cf%RS = rhop
@@ -229,7 +229,7 @@ contains
     else
       call par_psolver_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), &
         cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, cnf(i_cnf)%nfft3,  &
-        real(m%h(1), 8), cnf(i_cnf)%kernel, rho_cf%RS,                      &
+        real(m%spacing(1), 8), cnf(i_cnf)%kernel, rho_cf%RS,                      &
         cnf(i_cnf)%mpi_grp%rank, cnf(i_cnf)%mpi_grp%size, cnf(i_cnf)%mpi_grp%comm)
 #endif
     endif

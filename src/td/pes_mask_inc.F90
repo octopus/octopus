@@ -74,7 +74,7 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
   call push_sub('pes_mask_inc.PES_mask_doit')
 
   ! propagate wavefunction in momentum space
-  temp(:) = M_TWO*M_PI/(m%idx%ll(:)*m%h(:))
+  temp(:) = M_TWO*M_PI/(m%idx%ll(:)*m%spacing(:))
   do ix = 1, m%idx%ll(1)
     ixx(1) = pad_feq(ix, m%idx%ll(1), .true.)
     do iy = 1, m%idx%ll(2)
@@ -146,7 +146,7 @@ subroutine PES_mask_output(v, m, st, file)
   spis = M_ZERO; arpis = M_ZERO
   npoints = 0;  ar_npoints = 0
 
-  temp(:) = M_TWO*M_PI/(m%idx%ll(:)*m%h(:))
+  temp(:) = M_TWO*M_PI/(m%idx%ll(:)*m%spacing(:))
   do ix = 1, m%idx%ll(1)
     ixx(1) = pad_feq(ix, m%idx%ll(1), .true.)
     do iy = 1, m%idx%ll(2)

@@ -687,7 +687,7 @@ contains
     offset(1:3) = units_from_atomic(units_out%length, -matmul(mesh%sb%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3)))
 
     do idir = mesh%sb%periodic_dim+1, 3
-      offset(idir) = units_from_atomic(units_out%length, -(cube%n(idir) - 1)/2*mesh%h(idir))
+      offset(idir) = units_from_atomic(units_out%length, -(cube%n(idir) - 1)/2*mesh%spacing(idir))
     end do
 
     ! just for nice formatting of the output
@@ -699,11 +699,11 @@ contains
     write(iunit, '(a,3i7)') 'object 1 class gridpositions counts', cube%n(1:3)
     write(iunit, '(a,3f12.6)') ' origin', offset(1:3)
     write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
-                                           mesh%h(1)*mesh%sb%rlattice_primitive(idir, 1)), idir = 1, 3)
+                                           mesh%spacing(1)*mesh%sb%rlattice_primitive(idir, 1)), idir = 1, 3)
     write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
-                                           mesh%h(2)*mesh%sb%rlattice_primitive(idir, 2)), idir = 1, 3)
+                                           mesh%spacing(2)*mesh%sb%rlattice_primitive(idir, 2)), idir = 1, 3)
     write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
-                                           mesh%h(3)*mesh%sb%rlattice_primitive(idir, 3)), idir = 1, 3)
+                                           mesh%spacing(3)*mesh%sb%rlattice_primitive(idir, 3)), idir = 1, 3)
     write(iunit, '(a,3i7)') 'object 2 class gridconnections counts', cube%n(1:3)
 #if defined(R_TREAL)
     write(iunit, '(a,a,a)') 'object 3 class array type float rank 0 items ', nitems, ' data follows'
@@ -759,7 +759,7 @@ contains
     offset = -matmul(mesh%sb%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3))
     ! offset in aperiodic directions
     do idir = mesh%sb%periodic_dim + 1, 3
-      offset(idir) = -(mesh%idx%ll(idir) - 1)/2 * mesh%h(idir)
+      offset(idir) = -(mesh%idx%ll(idir) - 1)/2 * mesh%spacing(idir)
     end do
 
     ! Note that XCrySDen uses "general" not "periodic" grids
@@ -936,8 +936,8 @@ contains
 
     ! data
     pos(:,:) = M_ZERO
-    pos(1, 1:mesh%sb%dim) = real(units_from_atomic(units_out%length, - (cube%n(1:mesh%sb%dim) - 1)/2*mesh%h(1:mesh%sb%dim)), 4)
-    pos(2, 1:mesh%sb%dim) = real(units_from_atomic(units_out%length, mesh%h(1:mesh%sb%dim)), 4)
+    pos(1, 1:mesh%sb%dim) = real(units_from_atomic(units_out%length, - (cube%n(1:mesh%sb%dim) - 1)/2*mesh%spacing(1:mesh%sb%dim)), 4)
+    pos(2, 1:mesh%sb%dim) = real(units_from_atomic(units_out%length, mesh%spacing(1:mesh%sb%dim)), 4)
 
     if(status == NF90_NOERR) then
       status = nf90_put_var (ncid, pos_id, pos(:,:))

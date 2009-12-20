@@ -72,7 +72,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, enlarge)
 
   mesh%sb => sb     ! keep an internal pointer
   mesh%idx%sb => sb
-  mesh%h  =  sb%h ! this number can change in the following
+  mesh%spacing  =  sb%spacing ! this number can change in the following
   mesh%use_curvilinear = cv%method.ne.CURV_METHOD_UNIFORM
   mesh%cv => cv
 
@@ -92,7 +92,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, enlarge)
     out = .false.
     do while(.not.out)
       jj = jj + 1
-      chi(idir) = real(jj, REAL_PRECISION)*mesh%h(idir)
+      chi(idir) = real(jj, REAL_PRECISION)*mesh%spacing(idir)
       if ( mesh%use_curvilinear ) then
         call curvilinear_chi2x(sb, cv, chi(1:sb%dim), x(1:sb%dim))
         out = (x(idir) > nearest(sb%lsize(idir), M_ONE))
@@ -109,7 +109,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, enlarge)
   ! we have to adjust a couple of things for the periodic directions
   do idir = 1, sb%periodic_dim
     !the spacing has to be a divisor of the box size
-    mesh%h(idir) = sb%lsize(idir)/real(mesh%idx%nr(2, idir))
+    mesh%spacing(idir) = sb%lsize(idir)/real(mesh%idx%nr(2, idir))
     !the upper boundary does not have to be included (as it is a copy of the lower boundary)
     mesh%idx%nr(2, idir) = mesh%idx%nr(2, idir) - 1
   end do
@@ -228,13 +228,13 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
 
   ! We label the points inside the mesh
   do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
-    chi(3) = real(iz, REAL_PRECISION) * mesh%h(3) + sb%box_offset(3)
+    chi(3) = real(iz, REAL_PRECISION) * mesh%spacing(3) + sb%box_offset(3)
     
     do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
-      chi(2) = real(iy, REAL_PRECISION) * mesh%h(2) + sb%box_offset(2)
+      chi(2) = real(iy, REAL_PRECISION) * mesh%spacing(2) + sb%box_offset(2)
       
       do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-        chi(1) = real(ix, REAL_PRECISION) * mesh%h(1) + sb%box_offset(1)
+        chi(1) = real(ix, REAL_PRECISION) * mesh%spacing(1) + sb%box_offset(1)
         call curvilinear_chi2x(sb, cv, chi(:), xx(:, ix))
       end do
 
@@ -301,13 +301,13 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
 
     ! Calculate the resolution for each point and label the enlargement points
     do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
-      chi(3) = real(iz, REAL_PRECISION) * mesh%h(3) + sb%box_offset(3)
+      chi(3) = real(iz, REAL_PRECISION) * mesh%spacing(3) + sb%box_offset(3)
       
       do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
-        chi(2) = real(iy, REAL_PRECISION) * mesh%h(2) + sb%box_offset(2)
+        chi(2) = real(iy, REAL_PRECISION) * mesh%spacing(2) + sb%box_offset(2)
         
         do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-          chi(1) = real(ix, REAL_PRECISION) * mesh%h(1) + sb%box_offset(1)
+          chi(1) = real(ix, REAL_PRECISION) * mesh%spacing(1) + sb%box_offset(1)
  
           ! skip if not inner point
           if(.not.btest(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)) cycle
@@ -563,11 +563,11 @@ contains
         do izb = mesh%idx%nr(1,3), mesh%idx%nr(2,3), bsizez
 
           do ix = ixb, min(ixb + bsize - 1, mesh%idx%nr(2,1))
-            chi(1) = real(ix, REAL_PRECISION) * mesh%h(1) + mesh%sb%box_offset(1)
+            chi(1) = real(ix, REAL_PRECISION) * mesh%spacing(1) + mesh%sb%box_offset(1)
             do iy = iyb, min(iyb + bsize - 1, mesh%idx%nr(2,2))
-              chi(2) = real(iy, REAL_PRECISION) * mesh%h(2) + mesh%sb%box_offset(2)
+              chi(2) = real(iy, REAL_PRECISION) * mesh%spacing(2) + mesh%sb%box_offset(2)
               do iz = izb, min(izb + bsizez - 1, mesh%idx%nr(2,3))
-                chi(3) = real(iz, REAL_PRECISION) * mesh%h(3) + mesh%sb%box_offset(3)
+                chi(3) = real(iz, REAL_PRECISION) * mesh%spacing(3) + mesh%sb%box_offset(3)
                 
                 if(btest(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)) then
                   iin = iin + 1
@@ -804,7 +804,7 @@ contains
 
     SAFE_ALLOCATE(mesh%vol_pp(1:np))
 
-    forall(ip = 1:np) mesh%vol_pp(ip) = product(mesh%h(1:sb%dim))
+    forall(ip = 1:np) mesh%vol_pp(ip) = product(mesh%spacing(1:sb%dim))
     jj(sb%dim + 1:MAX_DIM) = M_ZERO
 
     if(mesh%parallel_in_domains) then
@@ -813,7 +813,7 @@ contains
       do ip = 1, min(np, mesh%np)
         k = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + ip - 1)
         call index_to_coords(mesh%idx, sb%dim, k, jj)
-        chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
+        chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
         mesh%vol_pp(ip) = mesh%vol_pp(ip)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip, :), chi(1:sb%dim))
       end do
 
@@ -822,7 +822,7 @@ contains
         do ip = 1, mesh%vp%np_ghost(mesh%vp%partno)
           k = mesh%vp%ghost(mesh%vp%xghost(mesh%vp%partno) + ip - 1)
           call index_to_coords(mesh%idx, sb%dim, k, jj)
-          chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
+          chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
           mesh%vol_pp(ip + mesh%np) = &
             mesh%vol_pp(ip + mesh%np)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip + mesh%np, :), chi(1:sb%dim))
         end do
@@ -830,7 +830,7 @@ contains
         do ip = 1, mesh%vp%np_bndry(mesh%vp%partno)
           k = mesh%vp%bndry(mesh%vp%xbndry(mesh%vp%partno) + ip - 1)
           call index_to_coords(mesh%idx, sb%dim, k, jj)
-          chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
+          chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
           mesh%vol_pp(ip+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) = &
             mesh%vol_pp(ip+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) &
             *curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip+mesh%np+mesh%vp%np_ghost(mesh%vp%partno), :), chi(1:sb%dim))
@@ -864,7 +864,7 @@ contains
         ! volumes are initialized even for the intermediate points
         nr(:,:) = mesh%idx%nr(:,:)
         SAFE_ALLOCATE(vol_tmp(nr(1,1):nr(2,1),nr(1,2):nr(2,2),nr(1,3):nr(2,3)))
-        vol_tmp(:,:,:) = product(mesh%h(1:sb%dim))
+        vol_tmp(:,:,:) = product(mesh%spacing(1:sb%dim))
 
         ! The idea is that in the first i_lev loop we find intermediate
         ! points that are odd, i.e. at least one of their indices cannot
@@ -947,7 +947,7 @@ contains
 
         do ip = 1, np
           call index_to_coords(mesh%idx, sb%dim, ip, jj)
-          chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
+          chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
           mesh%vol_pp(ip) = mesh%vol_pp(ip)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip, 1:sb%dim), chi(1:sb%dim))
         end do
 

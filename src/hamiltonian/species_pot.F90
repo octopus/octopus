@@ -546,7 +546,7 @@ contains
 
       ! Initial guess.
       call curvilinear_x2chi(mesh%sb, mesh%cv, pos, chi0)
-      delta   = mesh%h(1)
+      delta   = mesh%spacing(1)
       alpha   = sqrt(M_TWO)*species_sigma(spec)*delta
       alpha_p = alpha  ! global copy of alpha
       beta    = M_ONE
@@ -659,7 +659,7 @@ contains
       if(mesh_p%parallel_in_domains) &
         jp = mesh_p%vp%local(mesh_p%vp%xlocal(mesh_p%vp%partno)+ip-1)
 
-      chi(1:dim) = mesh_p%idx%Lxyz(jp, 1:dim) * mesh_p%h(1:dim) + mesh_p%sb%box_offset(1:dim) 
+      chi(1:dim) = mesh_p%idx%Lxyz(jp, 1:dim) * mesh_p%spacing(1:dim) + mesh_p%sb%box_offset(1:dim) 
 
       r = sqrt( sum( (chi(1:dim) - xin(1:dim))**2 ) )
 

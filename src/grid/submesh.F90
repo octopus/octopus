@@ -124,8 +124,8 @@ contains
       nmax = 0
 
       ! get a cube of points that contains the sphere
-      nmin(1:sb%dim) = int((center(1:sb%dim) - abs(rc) - sb%box_offset(1:sb%dim))/m%h(1:sb%dim)) - 1
-      nmax(1:sb%dim) = int((center(1:sb%dim) + abs(rc) - sb%box_offset(1:sb%dim))/m%h(1:sb%dim)) + 1
+      nmin(1:sb%dim) = int((center(1:sb%dim) - abs(rc) - sb%box_offset(1:sb%dim))/m%spacing(1:sb%dim)) - 1
+      nmax(1:sb%dim) = int((center(1:sb%dim) + abs(rc) - sb%box_offset(1:sb%dim))/m%spacing(1:sb%dim)) + 1
 
       ! make sure that the cube is inside the grid
       nmin(1:MAX_DIM) = max(m%idx%nr(1, 1:MAX_DIM), nmin(1:MAX_DIM))

@@ -57,7 +57,7 @@ subroutine PES_rc_init(v, m, st, save_iter)
     call parse_block_float(blk, i-1, 1, x(2), units_inp%length)
     call parse_block_float(blk, i-1, 2, x(3), units_inp%length)
 
-    v%points(i) = m%idx%Lxyz_inv(int(x(1)/m%h(1)), int(x(2)/m%h(2)), int(x(3)/m%h(3)))
+    v%points(i) = m%idx%Lxyz_inv(int(x(1)/m%spacing(1)), int(x(2)/m%spacing(2)), int(x(3)/m%spacing(3)))
   end do
 
   call parse_block_end(blk)

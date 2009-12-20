@@ -81,7 +81,7 @@ module mesh_m
     type(index_t)                :: idx
     logical :: use_curvilinear
     
-    FLOAT :: h(MAX_DIM)         !< the (constant) spacing between the points
+    FLOAT :: spacing(MAX_DIM)         !< the (constant) spacing between the points
     
     ! When running serially, the local number of points is
     ! equal to the global number of points.
@@ -197,7 +197,7 @@ contains
     write(message(1),'(3a)') '  Spacing [', trim(units_abbrev(units_out%length)), '] = ('
     do ii = 1, m%sb%dim
       if(ii > 1) write(message(1), '(2a)') trim(message(1)), ','
-      write(message(1), '(a,f6.3)') trim(message(1)), units_from_atomic(units_out%length, m%h(ii))
+      write(message(1), '(a,f6.3)') trim(message(1)), units_from_atomic(units_out%length, m%spacing(ii))
     end do
     write(message(1), '(5a,f8.5)') trim(message(1)), ') ', &
          '   volume/point [', trim(units_abbrev(units_out%length**m%sb%dim)), '] = ',      &
@@ -207,7 +207,7 @@ contains
     write(message(3),'(a, i10)') '  # total mesh = ', m%np_part_global
     
     write(message(4),'(3a,f9.3,a)') '  Grid Cutoff [', trim(units_abbrev(units_out%energy)),'] = ', &
-      units_from_atomic(units_out%energy, M_PI**2/(M_TWO*maxval(m%h)**2))
+      units_from_atomic(units_out%energy, M_PI**2/(M_TWO*maxval(m%spacing)**2))
     call write_info(4, unit)
     
     call pop_sub()
@@ -425,7 +425,7 @@ contains
   FLOAT function mesh_gcutoff(m) result(gmax)
     type(mesh_t), intent(in) :: m
 
-    gmax = M_PI/(maxval(m%h))
+    gmax = M_PI/(maxval(m%spacing))
   end function mesh_gcutoff
   
   
@@ -745,7 +745,7 @@ contains
       
     if(mesh%parallel_in_domains .or. force_) then
       call index_to_coords(mesh%idx, mesh%sb%dim, ip, ix)
-      chi(1:mesh%sb%dim) = ix(1:mesh%sb%dim)*mesh%h(1:mesh%sb%dim)
+      chi(1:mesh%sb%dim) = ix(1:mesh%sb%dim)*mesh%spacing(1:mesh%sb%dim)
       chi(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
       xx = M_ZERO ! this initialization is required by gfortran 4.4 or we get NaNs
       call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)

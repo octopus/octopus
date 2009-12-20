@@ -82,7 +82,7 @@ contains
     SAFE_ALLOCATE(this%aux(1:m%np, 1:add_lm))
     SAFE_ALLOCATE(this%gaussian(1:m%np))
 
-    alpha = alpha_*m%h(1)
+    alpha = alpha_*m%spacing(1)
     do i = 1, m%np
       call mesh_r(m, i, r, x = x)
       this%gaussian(i) = exp(-(r/alpha)**2)
@@ -151,7 +151,7 @@ contains
     SAFE_ALLOCATE(mult(1:(this%maxl+1)**2))
     call get_multipoles(this, m, rho, this%maxl, mult)
 
-    alpha = alpha_*m%h(1)
+    alpha = alpha_*m%spacing(1)
 
     SAFE_ALLOCATE(betal(1:(this%maxl+1)**2))
     add_lm = 1

@@ -55,10 +55,10 @@ subroutine X(modelmb_density_calculate)(ikeeppart, mb_1part, nparticles_dens, &
 
   volume_element = 1.0d0
   do jdim = 1, MAX_DIM
-    if (mesh%h(jdim) > 1.e-10) volume_element=volume_element*mesh%h(jdim)
+    if (mesh%spacing(jdim) > 1.e-10) volume_element=volume_element*mesh%spacing(jdim)
   end do
   do jdim = (ikeeppart - 1)*mb_1part%ndim1part + 1, ikeeppart*mb_1part%ndim1part
-    if (mesh%h(jdim) > 1.e-10) volume_element = volume_element/mesh%h(jdim)
+    if (mesh%spacing(jdim) > 1.e-10) volume_element = volume_element/mesh%spacing(jdim)
   end do
 
   rho = R_TOTYPE(M_ZERO)

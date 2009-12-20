@@ -93,7 +93,7 @@ contains
     ! store the fourier transform of the Coulomb interaction
     SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
     fft_Coulb_FS = M_ZERO
-    temp(:) = M_TWO*M_PI/(db(:)*mesh%h(:))
+    temp(:) = M_TWO*M_PI/(db(:)*mesh%spacing(:))
 
     do ix = 1, fft_cf%nx
       ixx(1) = pad_feq(ix, db(1), .true.)
@@ -157,13 +157,13 @@ contains
     db(1:3) = fft_cf%n(1:3)
 
     call parse_float(datasets_check('PoissonCutoffRadius'),&
-      maxval(db(:)*mesh%h(:)/M_TWO), r_c, units_inp%length)
+      maxval(db(:)*mesh%spacing(:)/M_TWO), r_c, units_inp%length)
 
     write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
       trim(units_abbrev(units_out%length)), '] = ',       &
       units_from_atomic(units_out%length, r_c)
     call write_info(1)
-    if ( r_c > maxval(db(:)*mesh%h(:)/M_TWO) + DELTA_R) then
+    if ( r_c > maxval(db(:)*mesh%spacing(:)/M_TWO) + DELTA_R) then
       message(1) = 'Poisson cutoff radius is larger than cell size.'
       message(2) = 'You can see electrons in next cell(s).'
       call write_warning(2)
@@ -173,7 +173,7 @@ contains
     SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
     fft_Coulb_FS = M_ZERO
 
-    temp(:) = M_TWO*M_PI/(db(:)*mesh%h(:))
+    temp(:) = M_TWO*M_PI/(db(:)*mesh%spacing(:))
 
     do ix = 1, fft_cf%nx
       ixx(1) = pad_feq(ix, db(1), .true.)
@@ -242,13 +242,13 @@ contains
     db(1:3) = fft_cf%n(1:3)
 
     call parse_float(datasets_check('PoissonCutoffRadius'),&
-      maxval(db(:)*mesh%h(:)/M_TWO), r_c, units_inp%length)
+      maxval(db(:)*mesh%spacing(:)/M_TWO), r_c, units_inp%length)
 
     write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
       trim(units_abbrev(units_out%length)), '] = ',       &
       units_from_atomic(units_out%length, r_c)
     call write_info(1)
-    if ( r_c > maxval(db(:)*mesh%h(:)/M_TWO) + DELTA_R) then
+    if ( r_c > maxval(db(:)*mesh%spacing(:)/M_TWO) + DELTA_R) then
       message(1) = 'Poisson cutoff radius is larger than cell size.'
       message(2) = 'You can see electrons in next cell(s).'
       call write_warning(2)
@@ -258,7 +258,7 @@ contains
     SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
     fft_Coulb_FS = M_ZERO
 
-    temp(:) = M_TWO*M_PI/(db(:)*mesh%h(:))
+    temp(:) = M_TWO*M_PI/(db(:)*mesh%spacing(:))
 
     if( mesh%sb%periodic_dim == 0 ) then
       ngp = 8*db(2)
@@ -377,13 +377,13 @@ contains
 
     if (poisson_solver .ne. POISSON_FFT_CORRECTED) then
       call parse_float(datasets_check('PoissonCutoffRadius'),&
-        maxval(db(:)*mesh%h(:)/M_TWO), r_c, units_inp%length)
+        maxval(db(:)*mesh%spacing(:)/M_TWO), r_c, units_inp%length)
 
       write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
         trim(units_abbrev(units_out%length)), '] = ',       &
         units_from_atomic(units_out%length, r_c)
       call write_info(1)
-      if ( r_c > maxval(db(:)*mesh%h(:)/M_TWO) + DELTA_R) then
+      if ( r_c > maxval(db(:)*mesh%spacing(:)/M_TWO) + DELTA_R) then
         message(1) = 'Poisson cutoff radius is larger than cell size.'
         message(2) = 'You can see electrons in next cell(s).'
         call write_warning(2)
@@ -394,7 +394,7 @@ contains
     SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
     fft_Coulb_FS = M_ZERO
 
-    temp(:) = M_TWO*M_PI/(db(:)*mesh%h(:))
+    temp(:) = M_TWO*M_PI/(db(:)*mesh%spacing(:))
 
 
     do ix = 1, fft_cf%nx
@@ -469,13 +469,13 @@ contains
     db(1:3) = fft_cf%n(1:3)
 
     call parse_float(datasets_check('PoissonCutoffRadius'),&
-      maxval(db(1:2)*mesh%h(1:2)/M_TWO), r_c, units_inp%length)
+      maxval(db(1:2)*mesh%spacing(1:2)/M_TWO), r_c, units_inp%length)
 
     write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
       trim(units_abbrev(units_out%length)), '] = ',       &
       units_from_atomic(units_out%length, r_c)
     call write_info(1)
-    if ( r_c > maxval(db(1:2)*mesh%h(1:2)/M_TWO) + DELTA_R) then
+    if ( r_c > maxval(db(1:2)*mesh%spacing(1:2)/M_TWO) + DELTA_R) then
       message(1) = 'Poisson cutoff radius is larger than cell size.'
       message(2) = 'You can see electrons in next cell(s).'
       call write_warning(2)
@@ -485,7 +485,7 @@ contains
     ! store the fourier transform of the Coulomb interaction
     SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
     fft_Coulb_FS = M_ZERO
-    temp(:) = M_TWO*M_PI/(db(:)*mesh%h(:))
+    temp(:) = M_TWO*M_PI/(db(:)*mesh%spacing(:))
 
     maxf = r_c * sqrt((temp(1)*db(1)/2)**2 + (temp(2)*db(2)/2)**2)
     dk = CNST(0.25) ! This seems to be reasonable.
@@ -549,7 +549,7 @@ contains
     ! store the fourier transform of the Coulomb interaction
     SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
     fft_Coulb_FS = M_ZERO
-    temp(:) = M_TWO*M_PI/(db(:)*mesh%h(:))
+    temp(:) = M_TWO*M_PI/(db(:)*mesh%spacing(:))
 
     ! First, the term ix = 0 => gx = 0.
     fft_coulb_fs(1, 1, 1) = -M_FOUR * r_c * (log(r_c)-M_ONE)
@@ -600,7 +600,7 @@ contains
     ! store the fourier transform of the Coulomb interaction
     SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
     fft_Coulb_FS = M_ZERO
-    temp(:) = M_TWO*M_PI/(db(:)*mesh%h(:))
+    temp(:) = M_TWO*M_PI/(db(:)*mesh%spacing(:))
 
     do iy = 1, db(2)
       ixx(2) = pad_feq(iy, db(2), .true.)
@@ -669,11 +669,11 @@ contains
     call dcf_fft_init(fft_cf, mesh%sb)
     box(1:3) = fft_cf%n(1:3)
 
-    r_c = box(1)*mesh%h(1)/M_TWO
+    r_c = box(1)*mesh%spacing(1)/M_TWO
 
     SAFE_ALLOCATE(fft_coulb_fs(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
     fft_coulb_fs = M_ZERO
-    temp(:) = M_TWO*M_PI/(box(:)*mesh%h(:))
+    temp(:) = M_TWO*M_PI/(box(:)*mesh%spacing(:))
 
     ! Fourier transform of Soft Coulomb interaction.
     do ix = 1, fft_cf%nx

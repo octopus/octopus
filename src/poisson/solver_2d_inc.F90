@@ -63,7 +63,7 @@ subroutine poisson2D_solve(this, pot, rho)
       xx(1:2) = xg(1:2)
       do jp = 1, this%der%mesh%np
         if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
-          pvec(jp) = M_TWO*sqrt(M_PI)*rho(jp)/this%der%mesh%h(1)
+          pvec(jp) = M_TWO*sqrt(M_PI)*rho(jp)/this%der%mesh%spacing(1)
         else
           yy(:) = this%der%mesh%x(jp,1:2)
           pvec(jp) = rho(jp)/sqrt(sum((xx-yy)**2))
@@ -84,7 +84,7 @@ subroutine poisson2D_solve(this, pot, rho)
       xx(:) = this%der%mesh%x(ip,1:2)
       do jp = 1, this%der%mesh%np
         if(ip == jp) then
-          pot(ip) = pot(ip) + M_TWO*sqrt(M_PI)*rho(ip)/this%der%mesh%h(1)*this%der%mesh%vol_pp(jp)
+          pot(ip) = pot(ip) + M_TWO*sqrt(M_PI)*rho(ip)/this%der%mesh%spacing(1)*this%der%mesh%vol_pp(jp)
         else
           yy(:) = this%der%mesh%x(jp,1:2)
           pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx-yy)**2))*this%der%mesh%vol_pp(jp)

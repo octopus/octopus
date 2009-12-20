@@ -185,7 +185,8 @@ contains
 
       do i = 1, geo%natoms
         ! these are the chi positions where we want the atoms
-        cv%chi_atoms(:,i) = nint(cv%chi_atoms(:,i)/sb%h(:))*sb%h(:)
+        ! FIXME: sb should not know about the spacing
+        cv%chi_atoms(:,i) = nint(cv%chi_atoms(:,i)/sb%spacing(:))*sb%spacing(:)
       end do
 
     end subroutine find_atom_points

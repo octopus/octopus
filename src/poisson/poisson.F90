@@ -478,9 +478,9 @@ contains
       yl = 2*der%mesh%sb%lsize(2) 
       zl = 2*der%mesh%sb%lsize(3)
 
-      dx = der%mesh%sb%h(1)
-      dy = der%mesh%sb%h(2)
-      dz = der%mesh%sb%h(3)
+      dx = der%mesh%spacing(1)
+      dy = der%mesh%spacing(2)
+      dz = der%mesh%spacing(3)
 
       sum0 = M_ZERO
 
@@ -553,7 +553,7 @@ contains
 
     rho = M_ZERO; vh = M_ZERO; vh_exact = M_ZERO
 
-    alpha = CNST(4.0) * mesh%h(1)
+    alpha = CNST(4.0)*mesh%spacing(1)
     beta = M_ONE / ( alpha**calc_dim * sqrt(M_PI)**calc_dim )
 
     write(message(1), '(a)') 'Building the Gaussian distribution of charge...'

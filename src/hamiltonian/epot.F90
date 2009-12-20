@@ -575,7 +575,7 @@ contains
       !the localized part
       if(species_is_ps(geo%atom(iatom)%spec)) then
 
-        radius = double_grid_get_rmax(dgrid, geo%atom(iatom)%spec, der%mesh) + der%mesh%h(1)
+        radius = double_grid_get_rmax(dgrid, geo%atom(iatom)%spec, der%mesh) + der%mesh%spacing(1)
 
         call submesh_init_sphere(sphere, der%mesh%sb, der%mesh, geo%atom(iatom)%x, radius)
         SAFE_ALLOCATE(vl(1:sphere%ns))
@@ -934,8 +934,6 @@ contains
     FLOAT, allocatable                   :: rho1(:), v2(:), rho2(:)
     FLOAT                                :: temp
     FLOAT                                :: time1
-    integer :: nx, ny, nz
-    FLOAT :: xl, yl, zl
     FLOAT :: r, dd, zi, zj
 
 

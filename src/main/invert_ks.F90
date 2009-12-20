@@ -118,7 +118,7 @@ contains
     
     if (invksmethod == 1) then ! 2-particle exact inversion
 
-      call invertks_2part(target_rho, np, nspin, hm%vhxc, sys%gr%mesh%h)
+      call invertks_2part(target_rho, np, nspin, hm%vhxc, sys%gr%mesh%spacing)
 
     else ! iterative case
       if (invksmethod == 0) then ! iterative procedure for v_s (might be discontinued)
@@ -656,7 +656,7 @@ contains
     
     vol_element = 1.0d0
     do jdim = 1, MAX_DIM
-      if (mesh%h(jdim) > 1.e-10) vol_element = vol_element*mesh%h(jdim)
+      if (mesh%spacing(jdim) > 1.e-10) vol_element = vol_element*mesh%spacing(jdim)
     end do
     
     do iprime = 1, np

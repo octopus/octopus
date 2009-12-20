@@ -380,7 +380,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   SAFE_ALLOCATE(atom_orb_basis(1:geo%natoms, 1:maxorb))
 
   ! this is the extra distance that the laplacian adds to the localization radius
-  lapdist = maxval(abs(gr%mesh%idx%enlarge)*gr%mesh%h)
+  lapdist = maxval(abs(gr%mesh%idx%enlarge)*gr%mesh%spacing)
 
   call profiling_in(prof_orbitals, "LCAO_ORBITALS")
 

@@ -205,7 +205,7 @@ contains
 
     ! Initialize source and memory terms.
     call ob_mem_init(gr%intf, hm, ob, dt/M_TWO, ob%max_mem_coeffs, gr%der%lapl, &
-      gr%sb%h(TRANS_DIR), order, st%d%kpt%mpi_grp)
+      gr%mesh%spacing(TRANS_DIR), order, st%d%kpt%mpi_grp)
     call ob_src_init(ob, st, gr%intf)
 
     ! Allocate memory for the interface wavefunctions of previous

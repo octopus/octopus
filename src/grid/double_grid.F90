@@ -160,7 +160,7 @@ contains
 
     call push_sub('double_grid.double_grid_get_hmax')
 
-    hmax = maxval(mesh%h(1:MAX_DIM))
+    hmax = maxval(mesh%spacing(1:MAX_DIM))
       
     if(this%use_double_grid)  hmax = hmax / this%spacing_divisor    
 
@@ -179,7 +179,7 @@ contains
     ps => species_ps(s)
     rmax = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold)
     if(this%use_double_grid) then 
-      rmax = rmax + this%interpolation_max * maxval(m%h(1:3))
+      rmax = rmax + this%interpolation_max * maxval(m%spacing(1:3))
     end if
     nullify(ps)
 

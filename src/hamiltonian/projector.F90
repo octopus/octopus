@@ -158,7 +158,7 @@ contains
 
     p%lloc = ps%l_loc
 
-    call submesh_init_sphere(p%sphere, mesh%sb, mesh, atm%x, ps%rc_max + mesh%h(1))
+    call submesh_init_sphere(p%sphere, mesh%sb, mesh, atm%x, ps%rc_max + mesh%spacing(1))
 
     select case (ps%kbc)
     case (1)

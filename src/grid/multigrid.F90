@@ -339,14 +339,14 @@ contains
 
     nullify(mesh_out%lead_unit_cell)
 
-    mesh_out%sb             => mesh_in%sb
-    mesh_out%idx%sb         => mesh_in%idx%sb
+    mesh_out%sb              => mesh_in%sb
+    mesh_out%idx%sb          => mesh_in%idx%sb
     mesh_out%use_curvilinear =  mesh_in%use_curvilinear
-    mesh_out%cv             => mesh_in%cv
+    mesh_out%cv              => mesh_in%cv
 
-    mesh_out%h(:)    = 2*mesh_in%h(:)
+    mesh_out%spacing(:)  = 2*mesh_in%spacing(:)
     mesh_out%idx%nr(:,:) = mesh_in%idx%nr(:,:)/2
-    mesh_out%idx%ll(:)    = mesh_out%idx%nr(2, :) - mesh_out%idx%nr(1, :) + 1
+    mesh_out%idx%ll(:)   = mesh_out%idx%nr(2, :) - mesh_out%idx%nr(1, :) + 1
 
     mesh_out%idx%enlarge = mesh_in%idx%enlarge
     
@@ -371,9 +371,9 @@ contains
     mesh_out%use_curvilinear =  mesh_in%use_curvilinear
     mesh_out%cv             => mesh_in%cv
 
-    mesh_out%h(:)    = M_HALF*mesh_in%h(:)
+    mesh_out%spacing(:)  = M_HALF*mesh_in%spacing(:)
     mesh_out%idx%nr(:,:) = mesh_in%idx%nr(:,:)*2
-    mesh_out%idx%ll(:)    = mesh_out%idx%nr(2, :) - mesh_out%idx%nr(1, :) + 1
+    mesh_out%idx%ll(:)   = mesh_out%idx%nr(2, :) - mesh_out%idx%nr(1, :) + 1
     
     mesh_out%idx%enlarge = mesh_in%idx%enlarge
     

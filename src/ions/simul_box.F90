@@ -108,7 +108,7 @@ module simul_box_m
     integer  :: box_shape   ! 1->sphere, 2->cylinder, 3->sphere around each atom,
                             ! 4->parallelepiped (orthonormal, up to now).
 
-    FLOAT :: h(MAX_DIM)     ! the (canonical) spacing between the points
+    FLOAT :: spacing(MAX_DIM)     ! the (canonical) spacing between the points
     FLOAT :: box_offset(MAX_DIM)  ! shifts of the origin in the respective direction
 
     FLOAT :: rsize          ! the radius of the sphere or of the cylinder
@@ -760,7 +760,7 @@ contains
       call push_sub('simul_box.simul_box_init.read_spacing')
 
       ! initialize to -1
-      sb%h = -M_ONE
+      sb%spacing = -M_ONE
 
 #if defined(HAVE_GDLIB)
       if(sb%box_shape == BOX_IMAGE) then 
@@ -768,8 +768,8 @@ contains
         sx = loct_gdImage_SX(sb%image)
         sy = loct_gdImage_SY(sb%image)
 
-        sb%h(1) = M_TWO*sb%lsize(1)/real(sx, REAL_PRECISION)
-        sb%h(2) = M_TWO*sb%lsize(2)/real(sy, REAL_PRECISION)
+        sb%spacing(1) = M_TWO*sb%lsize(1)/real(sx, REAL_PRECISION)
+        sb%spacing(2) = M_TWO*sb%lsize(2)/real(sy, REAL_PRECISION)
         call pop_sub(); return
       end if
 #endif
@@ -793,21 +793,21 @@ contains
       if(parse_block(datasets_check('Spacing'), blk) == 0) then
         if(parse_block_cols(blk,0) < sb%dim) call input_error('Spacing')
         do i = 1, sb%dim
-          call parse_block_float(blk, 0, i - 1, sb%h(i), units_inp%length)
+          call parse_block_float(blk, 0, i - 1, sb%spacing(i), units_inp%length)
         end do
         call parse_block_end(blk)
       else
-        call parse_float(datasets_check('Spacing'), sb%h(1), sb%h(1), units_inp%length)
-        sb%h(1:sb%dim) = sb%h(1)
+        call parse_float(datasets_check('Spacing'), sb%spacing(1), sb%spacing(1), units_inp%length)
+        sb%spacing(1:sb%dim) = sb%spacing(1)
       end if
 
       do i = 1, sb%dim
-        if(sb%h(i) < M_ZERO) then
+        if(sb%spacing(i) < M_ZERO) then
           if(def_h > M_ZERO.and.def_h < huge(def_h)) then
-            sb%h(i) = def_h
+            sb%spacing(i) = def_h
             write(message(1), '(a,i1,3a,f6.3)') "Info: Using default spacing(", i, &
               ") [", trim(units_abbrev(units_out%length)), "] = ",                        &
-              units_from_atomic(units_out%length, sb%h(i))
+              units_from_atomic(units_out%length, sb%spacing(i))
             call write_info(1)
           else
             message(1) = 'Either:'
@@ -817,7 +817,7 @@ contains
             call write_fatal(4)
           end if
         end if
-        if(def_rsize>M_ZERO) call check_def(sb%h(i), def_rsize, 'Spacing')
+        if(def_rsize>M_ZERO) call check_def(sb%spacing(i), def_rsize, 'Spacing')
       end do
 
       call pop_sub()
@@ -1392,8 +1392,8 @@ contains
 #if defined(HAVE_GDLIB)
       case(BOX_IMAGE)
         do ip = 1, npoints
-          ix = int((xx(1, ip) + sb%lsize(1))/sb%h(1))
-          iy = int((xx(2, ip) + sb%lsize(2))/sb%h(2))
+          ix = int((xx(1, ip) + sb%lsize(1))/sb%spacing(1))
+          iy = int((xx(2, ip) + sb%lsize(2))/sb%spacing(2))
           call loct_gdimage_get_pixel_rgb(sb%image, ix, iy, red, green, blue)
           in_box(ip) = (red == 255).and.(green == 255).and.(blue == 255)
         end do
@@ -1466,7 +1466,7 @@ contains
       write(iunit, '(a20,a1024)')   'user_def=           ', sb%user_def
     end select
     write(iunit, '(a20,e22.14)')    'fft_alpha=          ', sb%fft_alpha
-    write(iunit, '(a20,9e22.14)')   'h=                  ', sb%h(1:MAX_DIM)
+    write(iunit, '(a20,9e22.14)')   'h=                  ', sb%spacing(1:MAX_DIM)
     write(iunit, '(a20,9e22.14)')   'box_offset=         ', sb%box_offset(1:MAX_DIM)
     write(iunit, '(a20,l7)')        'mr_flag=            ', sb%mr_flag
     if(sb%mr_flag) then
@@ -1520,7 +1520,7 @@ contains
       message(1) = 'Simulation box of '//LEAD_NAME(il)//' lead is not a parallelepiped.'
       call write_fatal(1)
     end if
-    if(any(sb%h.ne.sb%lead_unit_cell(il)%h)) then
+    if(any(sb%spacing.ne.sb%lead_unit_cell(il)%spacing)) then
       message(1) = 'Simulation box of '//LEAD_NAME(il)//' has a different spacing than'
       message(2) = 'the central system.'
       call write_fatal(2)
@@ -1564,7 +1564,8 @@ contains
     
     if(sb%open_boundaries) then
       tdir = (il+1)/2
-      lead_unit_cell_extent = nint(2*sb%lead_unit_cell(il)%lsize(tdir)/sb%h(tdir))
+      !FIXME: simul_box should not know about the spacing
+      lead_unit_cell_extent = nint(2*sb%lead_unit_cell(il)%lsize(tdir)/sb%spacing(tdir))
     else
       lead_unit_cell_extent = -1
     end if
@@ -1623,7 +1624,7 @@ contains
     call iopar_read(mpi_world, iunit, line, ierr)
     read(line, *) str, sb%fft_alpha
     call iopar_read(mpi_world, iunit, line, ierr)
-    read(line, *) str, sb%h(1:MAX_DIM)
+    read(line, *) str, sb%spacing(1:MAX_DIM)
     call iopar_read(mpi_world, iunit, line, ierr)
     read(line, *) str, sb%box_offset(1:MAX_DIM)
     call iopar_read(mpi_world, iunit, line, ierr)
@@ -1678,7 +1679,7 @@ contains
     call push_sub('simul_box.simul_box_copy')
 
     sbout%box_shape               = sbin%box_shape
-    sbout%h                       = sbin%h
+    sbout%spacing                 = sbin%spacing
     sbout%box_offset              = sbin%box_offset
     sbout%rsize                   = sbin%rsize
     sbout%xsize                   = sbin%xsize

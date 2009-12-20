@@ -140,7 +140,7 @@ contains
     ASSERT(associated(cf_i%FS).and.associated(cf_o%FS))
 
     k = M_z0
-    k(1:mesh%sb%dim) = M_zI * ((M_TWO*M_Pi)/(cf_i%n(1:mesh%sb%dim)*mesh%h(1:mesh%sb%dim)))
+    k(1:mesh%sb%dim) = M_zI * ((M_TWO*M_Pi)/(cf_i%n(1:mesh%sb%dim)*mesh%spacing(1:mesh%sb%dim)))
 
     n  = cf_i%n
     do iz = 1, n(3)

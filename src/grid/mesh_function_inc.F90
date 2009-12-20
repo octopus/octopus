@@ -382,7 +382,7 @@ subroutine X(mf_partial_integrate)(mesh, j, f, u)
      u(m) = u(m) + f(i)
   end do
 
-  u(1:k) = u(1:k) * mesh%vol_pp(1)/mesh%h(j)
+  u(1:k) = u(1:k) * mesh%vol_pp(1)/mesh%spacing(j)
 
   call pop_sub()
 end subroutine X(mf_partial_integrate)

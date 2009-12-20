@@ -86,7 +86,7 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
         do jj = -this%nn, this%nn
           do kk = -this%nn, this%nn
 
-            x(1:3) = m%x(sm%jxyz(is), 1:3) + m%h(1:3)/this%spacing_divisor * (/ii, jj, kk/) - x_atom(1:3)
+            x(1:3) = m%x(sm%jxyz(is), 1:3) + m%spacing(1:3)/this%spacing_divisor * (/ii, jj, kk/) - x_atom(1:3)
             r = sqrt(sum(x(1:3)**2))
 
             calc_pot(vv)

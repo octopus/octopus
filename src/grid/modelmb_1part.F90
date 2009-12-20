@@ -90,8 +90,8 @@ subroutine modelmb_1part_init(this, mesh, ikeeppart, ndim1part, box_offset)
   this%vol_elem_1part = 1.0d0
   do idir = 1,ndim1part
     irealdir = (ikeeppart-1)*ndim1part + idir
-    this%vol_elem_1part = this%vol_elem_1part*mesh%h(irealdir)
-    this%h_1part(idir) = mesh%h(irealdir)
+    this%vol_elem_1part = this%vol_elem_1part*mesh%spacing(irealdir)
+    this%h_1part(idir) = mesh%spacing(irealdir)
   end do
 
 !   store start and end positions for the relevant dimensions for this particle
@@ -110,7 +110,7 @@ subroutine modelmb_1part_init(this, mesh, ikeeppart, ndim1part, box_offset)
   SAFE_ALLOCATE(this%origin(1:ndim1part))
   do idir = 1,ndim1part
     irealdir = (ikeeppart-1)*ndim1part + idir
-    !origin(idir) = (npoints(irealdir)/2)*gr%mesh%h(irealdir)
+    !origin(idir) = (npoints(irealdir)/2)*gr%mesh%spacing(irealdir)
     this%origin(idir) = box_offset(irealdir)
   end do
 
