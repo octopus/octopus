@@ -141,14 +141,14 @@ contains
       call mesh_init_stage_3(gr%mesh)
     end if
 
+    call nl_operator_global_init()
+    call derivatives_build(gr%der, gr%mesh)
+
     if(gr%sb%open_boundaries) then
       do il = 1, NLEADS
         call interface_init(gr%der, gr%intf(il), il)
       end do
     end if
-
-    call nl_operator_global_init()
-    call derivatives_build(gr%der, gr%mesh)
 
     ! initialize a finer mesh to hold the density, for this we use the
     ! multigrid routines

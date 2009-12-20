@@ -89,6 +89,8 @@ contains
 
     call push_sub('ob_interface.interface_init')
 
+    ASSERT(associated(der%mesh))
+
     intf%il = il
     tdir = (il+1)/2
 
@@ -324,6 +326,8 @@ contains
     integer :: tdir ! transport direction
     
     call push_sub('simul_box.lead_unit_cell_extent')
+
+    ASSERT(associated(mesh%sb))
     
     if(mesh%sb%open_boundaries) then
       tdir = (il+1)/2
