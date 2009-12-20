@@ -56,7 +56,6 @@ module simul_box_m
     simul_box_in_box_vec,       &
     simul_box_dump,             &
     simul_box_atoms_in_box,     &
-    lead_unit_cell_extent,      &
     simul_box_copy
 
   integer, parameter, public :: &
@@ -1550,31 +1549,8 @@ contains
     call pop_sub()
   end subroutine read_lead_unit_cell
 
-
   ! --------------------------------------------------------------
-  ! Returns the extent of the lead unit cell of lead il in transport
-  ! direction. Returns -1 if open boundaries are not used.
-  integer function lead_unit_cell_extent(sb, il)
-    type(simul_box_t), intent(in) :: sb
-    integer,           intent(in) :: il
 
-    integer :: tdir ! transport direction
-    
-    call push_sub('simul_box.lead_unit_cell_extent')
-    
-    if(sb%open_boundaries) then
-      tdir = (il+1)/2
-      !FIXME: simul_box should not know about the spacing
-      lead_unit_cell_extent = nint(2*sb%lead_unit_cell(il)%lsize(tdir)/sb%spacing(tdir))
-    else
-      lead_unit_cell_extent = -1
-    end if
-
-    call pop_sub()
-  end function lead_unit_cell_extent
-
-
-  ! --------------------------------------------------------------
   subroutine simul_box_init_from_file(sb, iunit)
     type(simul_box_t), intent(inout) :: sb
     integer,           intent(in)    :: iunit

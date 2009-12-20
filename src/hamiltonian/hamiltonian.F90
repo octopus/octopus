@@ -633,8 +633,7 @@ contains
           call interface_end(gr%intf(il))
           ! then re-initialize interface
           ! TODO generalize to find the smallest periodicity of the leads
-          call interface_init(gr%mesh, gr%sb, gr%der, gr%intf(il), il, &
-                              derivatives_stencil_extent(gr%der, (il+1)/2))
+          call interface_init(gr%der, gr%intf(il), il, derivatives_stencil_extent(gr%der, (il+1)/2))
           np = gr%intf(il)%np_uc
           np_part =  gr%intf(il)%np_part_uc
           call lead_init_kin(hm%lead(il), np, np_part, st%d%dim)

@@ -143,7 +143,7 @@ contains
 
     if(gr%sb%open_boundaries) then
       do il = 1, NLEADS
-        call interface_init(gr%mesh, gr%sb, gr%der, gr%intf(il), il)
+        call interface_init(gr%der, gr%intf(il), il)
       end do
     end if
 

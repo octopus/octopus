@@ -79,10 +79,8 @@ contains
 
   ! ---------------------------------------------------------
   ! Calculate the member points of the interface region.
-  subroutine interface_init(m, sb, der_discr, intf, il, extent_uc)
-    type(mesh_t),        intent(in)  :: m
-    type(simul_box_t),   intent(in)  :: sb
-    type(derivatives_t), intent(in)  :: der_discr
+  subroutine interface_init(der, intf, il, extent_uc)
+    type(derivatives_t), intent(in)  :: der
     type(interface_t),   intent(out) :: intf
     integer,             intent(in)  :: il
     integer, optional,   intent(in)  :: extent_uc ! new reduced extent of the unit cell
@@ -101,14 +99,14 @@ contains
       ! this happens within hamiltonian->init_lead_h which calls this  subroutine
       intf%extent_uc = extent_uc
     else
-      intf%extent_uc = lead_unit_cell_extent(sb, il)
+      intf%extent_uc = lead_unit_cell_extent(der%mesh, il)
     endif
 
-    intf%reducible = mod(intf%extent_uc, derivatives_stencil_extent(der_discr, tdir)).eq.0
+    intf%reducible = mod(intf%extent_uc, derivatives_stencil_extent(der, tdir)).eq.0
     if(.not.intf%reducible) then
       intf%nblocks = 1
     else
-      intf%nblocks = intf%extent_uc / derivatives_stencil_extent(der_discr, tdir)
+      intf%nblocks = intf%extent_uc / derivatives_stencil_extent(der, tdir)
     end if
     ! Extract submeshes for the interface regions.
     ! 
@@ -122,9 +120,9 @@ contains
     
     ! direction: +1 if from L->R and -1 if R->L (other leads accordingly)
     dir = (-1)**(il+1)
-    ll(:) = m%idx%ll(:)
+    ll(:) = der%mesh%idx%ll(:)
     ! the interface region has only intf%extent points in its normal direction
-    ll(tdir) =  derivatives_stencil_extent(der_discr, tdir)
+    ll(tdir) =  derivatives_stencil_extent(der, tdir)
     
     ! if bottom, top, front or back lead then reduce x-extention by 2 points
     ! (covered already by left and right lead)
@@ -141,7 +139,7 @@ contains
     SAFE_ALLOCATE(intf%index(1:intf%np_uc))
 
     ! the point where we start
-    from(:) = m%idx%nr( mod(il+1,2)+1, :) + dir*m%idx%enlarge
+    from(:) = der%mesh%idx%nr( mod(il+1,2)+1, :) + dir*der%mesh%idx%enlarge
 
     ! shift the starting point by 1 so that it is centralized again
     if(tdir > 1) from(1) = from(1) + dir
@@ -150,7 +148,7 @@ contains
     ! we are 1 point too far in every direction, so go back
     to(:)   = from(:) + dir*(ll(:) - 1)
 
-    call mesh_subset_indices(m, from, to, intf%index)
+    call mesh_subset_indices(der%mesh, from, to, intf%index)
 
     ! Extract begin and end point numbers of interface region.
     ! Sort the array first to make translations between interface point
@@ -315,6 +313,28 @@ contains
 
     call pop_sub()
   end subroutine interface_end
+
+  ! --------------------------------------------------------------
+  ! Returns the extent of the lead unit cell of lead il in transport
+  ! direction. Returns -1 if open boundaries are not used.
+  integer function lead_unit_cell_extent(mesh, il)
+    type(mesh_t),      intent(in) :: mesh
+    integer,           intent(in) :: il
+
+    integer :: tdir ! transport direction
+    
+    call push_sub('simul_box.lead_unit_cell_extent')
+    
+    if(mesh%sb%open_boundaries) then
+      tdir = (il+1)/2
+      lead_unit_cell_extent = nint(2*mesh%sb%lead_unit_cell(il)%lsize(tdir)/mesh%spacing(tdir))
+    else
+      lead_unit_cell_extent = -1
+    end if
+
+    call pop_sub()
+  end function lead_unit_cell_extent
+
 end module ob_interface_m
 
 
