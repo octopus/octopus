@@ -136,6 +136,9 @@ module simul_box_m
 
     integer :: dim
     integer :: periodic_dim
+#ifdef HAVE_GDLIB
+    integer :: image_size(1:2)
+#endif
 
     ! For open boundaries, we need reference to the lead`s unit cell.
     ! This unit cell is itself a simulation box.
@@ -704,6 +707,8 @@ contains
           message(1) = "Could not open file '" // filename // "'"
           call write_fatal(1)
         end if
+        sb%image_size(1) = loct_gdImage_SX(sb%image)
+        sb%image_size(2) = loct_gdImage_SY(sb%image)
 #else
         message(1) = "To use 'BoxShape = box_image' you have to compile octopus"
         message(2) = "with GD library support."
@@ -752,9 +757,6 @@ contains
     subroutine read_spacing()
       type(block_t) :: blk
       integer :: i
-#if defined(HAVE_GDLIB)
-      integer :: sx, sy
-#endif
 
       call push_sub('simul_box.simul_box_init.read_spacing')
 
@@ -764,12 +766,9 @@ contains
 #if defined(HAVE_GDLIB)
       if(sb%box_shape == BOX_IMAGE) then 
         ! spacing is determined from lsize and the size of the image
-        sx = loct_gdImage_SX(sb%image)
-        sy = loct_gdImage_SY(sb%image)
-
-        sb%spacing(1) = M_TWO*sb%lsize(1)/real(sx, REAL_PRECISION)
-        sb%spacing(2) = M_TWO*sb%lsize(2)/real(sy, REAL_PRECISION)
-        call pop_sub(); return
+        sb%spacing(1:2) = M_TWO*sb%lsize(1:2)/real(sb%image_size(1:2), REAL_PRECISION)
+        call pop_sub()
+        return
       end if
 #endif
 
@@ -1391,8 +1390,8 @@ contains
 #if defined(HAVE_GDLIB)
       case(BOX_IMAGE)
         do ip = 1, npoints
-          ix = int((xx(1, ip) + sb%lsize(1))/sb%spacing(1))
-          iy = int((xx(2, ip) + sb%lsize(2))/sb%spacing(2))
+          ix = nint((xx(1, ip) + sb%lsize(1))*sb%image_size(1)/(M_TWO*sb%lsize(1)))
+          iy = nint((xx(2, ip) + sb%lsize(2))*sb%image_size(2)/(M_TWO*sb%lsize(2)))
           call loct_gdimage_get_pixel_rgb(sb%image, ix, iy, red, green, blue)
           in_box(ip) = (red == 255).and.(green == 255).and.(blue == 255)
         end do
