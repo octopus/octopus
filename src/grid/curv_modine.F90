@@ -126,10 +126,11 @@ contains
   end subroutine getf2
 
   ! ---------------------------------------------------------
-  subroutine curv_modine_init(sb, geo, cv)
+  subroutine curv_modine_init(cv, sb, geo, spacing)
+    type(curv_modine_t), target, intent(out)  :: cv
     type(simul_box_t),   target, intent(in)   :: sb
     type(geometry_t),    target, intent(in)   :: geo
-    type(curv_modine_t), target, intent(out)  :: cv
+    FLOAT,                       intent(in)   :: spacing(:)
 
     call parse_float(datasets_check('CurvModineXBar'), M_ONE/M_THREE, cv%xbar)
     call parse_float(datasets_check('CurvModineJBar'), M_HALF, cv%Jbar)
@@ -186,7 +187,7 @@ contains
       do i = 1, geo%natoms
         ! these are the chi positions where we want the atoms
         ! FIXME: sb should not know about the spacing
-        cv%chi_atoms(:,i) = nint(cv%chi_atoms(:,i)/sb%spacing(:))*sb%spacing(:)
+        cv%chi_atoms(:,i) = nint(cv%chi_atoms(:,i)/spacing(:))*spacing(:)
       end do
 
     end subroutine find_atom_points

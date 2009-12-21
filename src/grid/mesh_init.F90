@@ -57,11 +57,13 @@ contains
 #define ENLARGEMENT_POINT 2
 #define INNER_POINT 1
 ! ---------------------------------------------------------
-subroutine mesh_init_stage_1(mesh, sb, cv, enlarge)
+subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
   type(mesh_t),                intent(inout) :: mesh
   type(simul_box_t),   target, intent(in)    :: sb
   type(curvilinear_t), target, intent(in)    :: cv
+  FLOAT,                       intent(in)    :: spacing(1:MAX_DIM)
   integer,                     intent(in)    :: enlarge(MAX_DIM)
+
 
   integer :: idir, jj
   FLOAT   :: x(MAX_DIM), chi(MAX_DIM)
@@ -72,7 +74,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, enlarge)
 
   mesh%sb => sb     ! keep an internal pointer
   mesh%idx%sb => sb
-  mesh%spacing  =  sb%spacing ! this number can change in the following
+  mesh%spacing = spacing ! this number can change in the following
   mesh%use_curvilinear = cv%method.ne.CURV_METHOD_UNIFORM
   mesh%cv => cv
 

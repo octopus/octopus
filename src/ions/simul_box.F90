@@ -107,7 +107,6 @@ module simul_box_m
     integer  :: box_shape   ! 1->sphere, 2->cylinder, 3->sphere around each atom,
                             ! 4->parallelepiped (orthonormal, up to now).
 
-    FLOAT :: spacing(MAX_DIM)     ! the (canonical) spacing between the points
     FLOAT :: box_offset(MAX_DIM)  ! shifts of the origin in the respective direction
 
     FLOAT :: rsize          ! the radius of the sphere or of the cylinder
@@ -174,7 +173,6 @@ contains
     call read_misc()                       ! Miscellaneous stuff.
     call read_box()                        ! Parameters defining the simulation box.
     call sb_lookup_init()
-    call read_spacing ()                   ! Parameters defining the (canonical) spacing.
     call read_box_offset()                 ! Parameters defining the offset of the origin.
     call simul_box_build_lattice(sb)       ! Build lattice vectors.
     call read_open_boundaries()            ! Parameters defining open boundaries.
@@ -620,7 +618,7 @@ contains
         call parse_float(datasets_check('radius'), units_from_atomic(units_inp%length, def_rsize), sb%rsize)
         if(sb%rsize < M_ZERO) call input_error('radius')
         sb%rsize = units_to_atomic(units_inp%length, sb%rsize)
-        if(def_rsize>M_ZERO) call check_def(def_rsize, sb%rsize, 'radius')
+        if(def_rsize>M_ZERO) call messages_check_def(def_rsize, sb%rsize, 'radius')
       case(MINIMUM)
         default=sb%rsize
         call parse_float(datasets_check('radius'), default, sb%rsize)
@@ -645,7 +643,7 @@ contains
         call parse_float(datasets_check('xlength'), units_from_atomic(units_inp%length, default), sb%xsize)
         sb%xsize = units_to_atomic(units_inp%length, sb%xsize)
         sb%lsize(1) = sb%xsize
-        if(def_rsize>M_ZERO.and.sb%periodic_dim==0) call check_def(def_rsize, sb%xsize, 'xlength')
+        if(def_rsize>M_ZERO.and.sb%periodic_dim==0) call messages_check_def(def_rsize, sb%xsize, 'xlength')
       end if
 
       sb%lsize = M_ZERO
@@ -687,7 +685,7 @@ contains
         sb%lsize = units_to_atomic(units_inp%length, sb%lsize)
 
         do i = 1, sb%dim
-          if(def_rsize>M_ZERO.and.sb%periodic_dim<i) call check_def(def_rsize, sb%lsize(i), 'Lsize')
+          if(def_rsize>M_ZERO.and.sb%periodic_dim<i) call messages_check_def(def_rsize, sb%lsize(i), 'Lsize')
         end do
       end if
      
@@ -752,76 +750,6 @@ contains
       call pop_sub()
     end subroutine read_box
 
-
-    !--------------------------------------------------------------
-    subroutine read_spacing()
-      type(block_t) :: blk
-      integer :: i
-
-      call push_sub('simul_box.simul_box_init.read_spacing')
-
-      ! initialize to -1
-      sb%spacing = -M_ONE
-
-#if defined(HAVE_GDLIB)
-      if(sb%box_shape == BOX_IMAGE) then 
-        ! spacing is determined from lsize and the size of the image
-        sb%spacing(1:2) = M_TWO*sb%lsize(1:2)/real(sb%image_size(1:2), REAL_PRECISION)
-        call pop_sub()
-        return
-      end if
-#endif
-
-      !%Variable Spacing
-      !%Type float
-      !%Section Mesh::Simulation Box
-      !%Description
-      !% The spacing between the points in the mesh. If using curvilinear
-      !% coordinates, this is a canonical spacing that will be changed locally by the
-      !% transformation.
-      !%
-      !% It is possible to have a different spacing in each one of the Cartesian directions
-      !% if we define <tt>Spacing</tt> as block of the form
-      !%
-      !% <tt>%Spacing
-      !% <br>&nbsp;&nbsp;spacing_x | spacing_y | spacing_z
-      !% <br>%</tt>
-      !%End
-
-      if(parse_block(datasets_check('Spacing'), blk) == 0) then
-        if(parse_block_cols(blk,0) < sb%dim) call input_error('Spacing')
-        do i = 1, sb%dim
-          call parse_block_float(blk, 0, i - 1, sb%spacing(i), units_inp%length)
-        end do
-        call parse_block_end(blk)
-      else
-        call parse_float(datasets_check('Spacing'), sb%spacing(1), sb%spacing(1), units_inp%length)
-        sb%spacing(1:sb%dim) = sb%spacing(1)
-      end if
-
-      do i = 1, sb%dim
-        if(sb%spacing(i) < M_ZERO) then
-          if(def_h > M_ZERO.and.def_h < huge(def_h)) then
-            sb%spacing(i) = def_h
-            write(message(1), '(a,i1,3a,f6.3)') "Info: Using default spacing(", i, &
-              ") [", trim(units_abbrev(units_out%length)), "] = ",                        &
-              units_from_atomic(units_out%length, sb%spacing(i))
-            call write_info(1)
-          else
-            message(1) = 'Either:'
-            message(2) = "   *) variable 'Spacing' is not defined and"
-            message(4) = "      I can't find a suitable default"
-            message(3) = "   *) your input for 'Spacing' is negative"
-            call write_fatal(4)
-          end if
-        end if
-        if(def_rsize>M_ZERO) call check_def(sb%spacing(i), def_rsize, 'Spacing')
-      end do
-
-      call pop_sub()
-    end subroutine read_spacing
-
-
     !--------------------------------------------------------------
     subroutine read_box_offset()
       integer :: idir
@@ -851,24 +779,8 @@ contains
       call pop_sub()
     end subroutine read_box_offset
 
-
-    !--------------------------------------------------------------
-    subroutine check_def(var, def, text)
-      FLOAT, intent(in) :: var, def
-      character(len=*), intent(in) :: text
-
-      call push_sub('simul_box.simul_box_init.check_def')
-
-      if(var > def) then
-        write(message(1), '(3a)') "The value for '", text, "' does not match the recommended value"
-        write(message(2), '(f8.3,a,f8.3)') var, ' > ', def
-        call write_warning(2)
-      end if
-
-      call pop_sub()
-    end subroutine check_def
-
     ! ------------------------------------------------------------
+
     subroutine sb_lookup_init()
       FLOAT, allocatable :: pos(:, :)
       integer :: iatom
@@ -1464,7 +1376,6 @@ contains
       write(iunit, '(a20,a1024)')   'user_def=           ', sb%user_def
     end select
     write(iunit, '(a20,e22.14)')    'fft_alpha=          ', sb%fft_alpha
-    write(iunit, '(a20,9e22.14)')   'h=                  ', sb%spacing(1:MAX_DIM)
     write(iunit, '(a20,9e22.14)')   'box_offset=         ', sb%box_offset(1:MAX_DIM)
     write(iunit, '(a20,l7)')        'mr_flag=            ', sb%mr_flag
     if(sb%mr_flag) then
@@ -1508,7 +1419,6 @@ contains
     call io_close(iunit)
     ! Check, if
     ! * simulation box is a parallelepiped,
-    ! * lead simulation box has the same spacing than central region,
     ! * the extensions in y-, z-directions fit the central box,
     ! * the central simulation box x-length is an integer multiple of
     !   the unit cell x-length,
@@ -1517,11 +1427,6 @@ contains
     if(sb%lead_unit_cell(il)%box_shape.ne.PARALLELEPIPED) then
       message(1) = 'Simulation box of '//LEAD_NAME(il)//' lead is not a parallelepiped.'
       call write_fatal(1)
-    end if
-    if(any(sb%spacing.ne.sb%lead_unit_cell(il)%spacing)) then
-      message(1) = 'Simulation box of '//LEAD_NAME(il)//' has a different spacing than'
-      message(2) = 'the central system.'
-      call write_fatal(2)
     end if
     if(any(sb%lsize(2:3).ne.sb%lead_unit_cell(il)%lsize(2:3))) then
       message(1) = 'The size in y-, z-directions of the '//LEAD_NAME(LEFT)//' lead'
@@ -1599,8 +1504,6 @@ contains
     call iopar_read(mpi_world, iunit, line, ierr)
     read(line, *) str, sb%fft_alpha
     call iopar_read(mpi_world, iunit, line, ierr)
-    read(line, *) str, sb%spacing(1:MAX_DIM)
-    call iopar_read(mpi_world, iunit, line, ierr)
     read(line, *) str, sb%box_offset(1:MAX_DIM)
     call iopar_read(mpi_world, iunit, line, ierr)
     read(line,*) str, sb%mr_flag
@@ -1654,7 +1557,6 @@ contains
     call push_sub('simul_box.simul_box_copy')
 
     sbout%box_shape               = sbin%box_shape
-    sbout%spacing                 = sbin%spacing
     sbout%box_offset              = sbin%box_offset
     sbout%rsize                   = sbin%rsize
     sbout%xsize                   = sbin%xsize

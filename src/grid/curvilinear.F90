@@ -66,10 +66,11 @@ module curvilinear_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine curvilinear_init(sb, geo, cv)
-    type(simul_box_t),  intent(in)  :: sb
-    type(geometry_t),   intent(in)  :: geo
+  subroutine curvilinear_init(cv, sb, geo, spacing)
     type(curvilinear_t), intent(out) :: cv
+    type(simul_box_t),   intent(in)  :: sb
+    type(geometry_t),    intent(in)  :: geo
+    FLOAT,               intent(in)  :: spacing(:)
 
     call push_sub('curvilinear.curvilinear_init')
 
@@ -111,7 +112,7 @@ contains
     case(CURV_METHOD_BRIGGS)
       call curv_briggs_init(sb, cv%briggs)
     case(CURV_METHOD_MODINE)
-      call curv_modine_init(sb, geo, cv%modine)
+      call curv_modine_init(cv%modine, sb, geo, spacing)
     end select
 
     call pop_sub()

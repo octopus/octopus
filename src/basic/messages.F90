@@ -53,7 +53,8 @@ module messages_m
     messages_print_var_option,  &
     messages_print_var_value,   &
     messages_obsolete_variable, &
-    messages_devel_version
+    messages_devel_version,     &
+    messages_check_def
 
   character(len=256), dimension(20), public :: message    ! to be output by fatal, warning
   character(len=68),      parameter, public :: hyphens = &
@@ -775,6 +776,25 @@ contains
 
   end subroutine messages_devel_version
   
+  !--------------------------------------------------------------
+
+  subroutine messages_check_def(var, def, text)
+    FLOAT,            intent(in) :: var
+    FLOAT,            intent(in) :: def
+    character(len=*), intent(in) :: text
+
+    call push_sub('simul_box.simul_box_init.check_def')
+
+    if(var > def) then
+      write(message(1), '(3a)') "The value for '", text, "' does not match the recommended value"
+      write(message(2), '(f8.3,a,f8.3)') var, ' > ', def
+      call write_warning(2)
+    end if
+
+    call pop_sub()
+  end subroutine messages_check_def
+
+  ! ------------------------------------------------------------
 end module messages_m
 
 !! Local Variables:

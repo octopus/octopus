@@ -39,6 +39,8 @@ module grid_m
   use simul_box_m
   use stencil_m
   use stencil_cube_m
+  use unit_m
+  use unit_system_m
 
   implicit none
 
@@ -75,6 +77,10 @@ contains
 
     type(stencil_t) :: cube
     integer :: enlarge(1:MAX_DIM)
+    type(block_t) :: blk
+    integer :: i
+    FLOAT :: def_h, def_rsize
+    FLOAT :: spacing(1:MAX_DIM)
 
     call push_sub('grid.grid_init_stage_1')
 
@@ -91,11 +97,72 @@ contains
     else
       gr%have_fine_mesh = .false.
     end if
-    
+
     if(gr%have_fine_mesh) call messages_devel_version("UseFineMesh")
 
+    call geometry_grid_defaults(geo, def_h, def_rsize)
+
+    ! initialize to -1
+    spacing = -M_ONE
+
+#if defined(HAVE_GDLIB)
+    if(gr%sb%box_shape == BOX_IMAGE) then 
+      ! spacing is determined from lsize and the size of the image
+      spacing(1:2) = M_TWO*gr%sb%lsize(1:2)/real(gr%sb%image_size(1:2), REAL_PRECISION)
+      call pop_sub()
+      return
+    end if
+#endif
+
+    !%Variable Spacing
+    !%Type float
+    !%Section Mesh::Simulation Box
+    !%Description
+    !% The spacing between the points in the mesh. If using curvilinear
+    !% coordinates, this is a canonical spacing that will be changed locally by the
+    !% transformation.
+    !%
+    !% It is possible to have a different spacing in each one of the Cartesian directions
+    !% if we define <tt>Spacing</tt> as block of the form
+    !%
+    !% <tt>%Spacing
+    !% <br>&nbsp;&nbsp;spacing_x | spacing_y | spacing_z
+    !% <br>%</tt>
+    !%End
+
+    if(parse_block(datasets_check('Spacing'), blk) == 0) then
+      if(parse_block_cols(blk,0) < gr%sb%dim) call input_error('Spacing')
+      do i = 1, gr%sb%dim
+        call parse_block_float(blk, 0, i - 1, spacing(i), units_inp%length)
+      end do
+      call parse_block_end(blk)
+    else
+      call parse_float(datasets_check('Spacing'), spacing(1), spacing(1), units_inp%length)
+      spacing(1:gr%sb%dim) = spacing(1)
+    end if
+
+    do i = 1, gr%sb%dim
+      if(spacing(i) < M_ZERO) then
+        if(def_h > M_ZERO.and.def_h < huge(def_h)) then
+          spacing(i) = def_h
+          write(message(1), '(a,i1,3a,f6.3)') "Info: Using default spacing(", i, &
+            ") [", trim(units_abbrev(units_out%length)), "] = ",                        &
+            units_from_atomic(units_out%length, spacing(i))
+          call write_info(1)
+        else
+          message(1) = 'Either:'
+          message(2) = "   *) variable 'Spacing' is not defined and"
+          message(4) = "      I can't find a suitable default"
+          message(3) = "   *) your input for 'Spacing' is negative"
+          call write_fatal(4)
+        end if
+      end if
+      if(def_rsize > M_ZERO) call messages_check_def(spacing(i), def_rsize, 'Spacing')
+    end do
+
+
     ! initialize curvilinear coordinates
-    call curvilinear_init(gr%sb, geo, gr%cv)
+    call curvilinear_init(gr%cv, gr%sb, geo, spacing)
 
     ! initialize derivatives
     call derivatives_init(gr%der, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
@@ -108,14 +175,14 @@ contains
     enlarge = max(enlarge, gr%der%n_ghost)
 
     ! now we generate the mesh and the derivatives
-    call mesh_init_stage_1(gr%mesh, gr%sb, gr%cv, enlarge = enlarge)
+    call mesh_init_stage_1(gr%mesh, gr%sb, gr%cv, spacing, enlarge)
 
     ! the stencil used to generate the grid is a union of a cube (for
     ! multigrid) and the Laplacian.
     call stencil_cube_get_lapl(cube, gr%sb%dim, order = 2)
     call stencil_union(gr%sb%dim, cube, gr%der%lapl%stencil, gr%stencil)
     call stencil_end(cube)
-    
+
     call mesh_init_stage_2(gr%mesh, gr%sb, geo, gr%cv, gr%stencil)
 
     call pop_sub()
