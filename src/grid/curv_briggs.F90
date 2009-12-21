@@ -48,9 +48,9 @@ module curv_briggs_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine curv_briggs_init(sb, cv)
-    type(simul_box_t),   intent(in)  :: sb
+  subroutine curv_briggs_init(cv, sb)
     type(curv_briggs_t), intent(out) :: cv
+    type(simul_box_t),   intent(in)  :: sb
 
     cv%L = M_ZERO
     cv%L(1:sb%dim) = sb%lsize(1:sb%dim)

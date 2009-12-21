@@ -114,7 +114,7 @@ contains
       ! overwrite the guess density)
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
-      call v_ks_calc(sys%gr, sys%ks, hm, sys%st, calc_eigenval=.true.) ! get potentials
+      call v_ks_calc(sys%ks, sys%gr, hm, sys%st, calc_eigenval=.true.) ! get potentials
       call states_fermi(sys%st, sys%gr%mesh)                           ! occupations
       call total_energy(hm, sys%gr, sys%st, -1)
 
@@ -364,7 +364,7 @@ contains
 
     call epot_generate(g_opt%hm%ep, g_opt%syst%gr, g_opt%syst%geo, g_opt%syst%st)
     call states_calc_dens(g_opt%st, g_opt%syst%gr)
-    call v_ks_calc(g_opt%syst%gr, g_opt%syst%ks, g_opt%hm, g_opt%st, calc_eigenval=.true.)
+    call v_ks_calc(g_opt%syst%ks, g_opt%syst%gr, g_opt%hm, g_opt%st, calc_eigenval=.true.)
     call total_energy(g_opt%hm, g_opt%syst%gr, g_opt%st, -1)
 
     ! do scf calculation

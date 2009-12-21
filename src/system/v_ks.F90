@@ -81,7 +81,7 @@ contains
 
   
   ! ---------------------------------------------------------
-  subroutine v_ks_init(gr, ks, d, geo, nel)
+  subroutine v_ks_init(ks, gr, d, geo, nel)
     type(v_ks_t),        intent(out)   :: ks
     type(grid_t),        intent(inout) :: gr
     type(states_dim_t),  intent(in)    :: d
@@ -247,9 +247,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine v_ks_calc(gr, ks, hm, st, calc_eigenval)
-    type(grid_t),           intent(inout) :: gr
+  subroutine v_ks_calc(ks, gr, hm, st, calc_eigenval)
     type(v_ks_t),           intent(inout) :: ks
+    type(grid_t),           intent(inout) :: gr
     type(hamiltonian_t),    intent(inout) :: hm
     type(states_t),         intent(inout) :: st
     logical,      optional, intent(in)    :: calc_eigenval

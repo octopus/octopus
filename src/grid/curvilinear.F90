@@ -110,7 +110,7 @@ contains
     case(CURV_METHOD_GYGI)
       call curv_gygi_init(cv%gygi, sb, geo)
     case(CURV_METHOD_BRIGGS)
-      call curv_briggs_init(sb, cv%briggs)
+      call curv_briggs_init(cv%briggs, sb)
     case(CURV_METHOD_MODINE)
       call curv_modine_init(cv%modine, sb, geo, spacing)
     end select

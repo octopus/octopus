@@ -102,7 +102,7 @@ contains
     call write_info(1)
 
     call states_calc_dens(sys%st, sys%gr)
-    call v_ks_calc(sys%gr, sys%ks, hm, sys%st, calc_eigenval=.true.) ! get potentials
+    call v_ks_calc(sys%ks, sys%gr, hm, sys%st, calc_eigenval=.true.) ! get potentials
     call total_energy(hm, sys%gr, sys%st, -1)             ! total energy
 
     ! The initial LCAO calculation is done by default if we have pseudopotentials.

@@ -94,8 +94,7 @@ contains
     call poisson_init(psolver, sys%gr%der, sys%geo)
     if(poisson_is_multigrid(psolver)) call grid_create_multigrid(sys%gr, sys%geo)
 
-    call v_ks_init(sys%gr, sys%ks, sys%st%d, sys%geo, sys%st%qtot)
-
+    call v_ks_init(sys%ks, sys%gr, sys%st%d, sys%geo, sys%st%qtot)
 
     !print the mesh information if it is required
     call print_r()
@@ -186,8 +185,8 @@ contains
     call states_fermi(sys%st, sys%gr%mesh)
     call states_calc_dens(sys%st, sys%gr)
 
-    call v_ks_calc(sys%gr, sys%ks, hm, sys%st, calc_eigenval=.true.) ! get potentials
-    call states_fermi(sys%st, sys%gr%mesh)                           ! occupations
+    call v_ks_calc(sys%ks, sys%gr, hm, sys%st, calc_eigenval = .true.) ! get potentials
+    call states_fermi(sys%st, sys%gr%mesh)                             ! occupations
     call total_energy(hm, sys%gr, sys%st, -1)
 
     call pop_sub()

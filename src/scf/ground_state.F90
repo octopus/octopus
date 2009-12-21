@@ -105,7 +105,7 @@ contains
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
       ! get the effective potential (we don`t need the eigenvalues yet)
-      call v_ks_calc(sys%gr, sys%ks, hm, sys%st, calc_eigenval=.false.)
+      call v_ks_calc(sys%ks, sys%gr, hm, sys%st, calc_eigenval=.false.)
       ! eigenvalues have nevertheless to be initialized to something
       sys%st%eigenval = M_ZERO
 
@@ -187,7 +187,7 @@ contains
           ! Randomly generate the initial wavefunctions.
           call states_generate_random(sys%st, sys%gr%mesh)
           call states_orthogonalize(sys%st, sys%gr%mesh)
-          call v_ks_calc(sys%gr, sys%ks, hm, sys%st, calc_eigenval=.true.) ! get potentials
+          call v_ks_calc(sys%ks, sys%gr, hm, sys%st, calc_eigenval=.true.) ! get potentials
           call states_fermi(sys%st, sys%gr%mesh)                           ! occupations
         end if
       end if

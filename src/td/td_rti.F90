@@ -535,7 +535,7 @@ contains
 
       ! First, compare the new potential to the extrapolated one.
       call states_calc_dens(st, gr)
-      call v_ks_calc(gr, ks, hm, st)
+      call v_ks_calc(ks, gr, hm, st)
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
       d_max = M_ZERO
       do is = 1, st%d%nspin
@@ -579,7 +579,7 @@ contains
           end select
 
           call states_calc_dens(st, gr)
-          call v_ks_calc(gr, ks, hm, st)
+          call v_ks_calc(ks, gr, hm, st)
           SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
           d_max = M_ZERO
           do is = 1, st%d%nspin
@@ -615,7 +615,7 @@ contains
         end do
       end do
       call states_calc_dens(st, gr)
-      call v_ks_calc(gr, ks, hm, st)
+      call v_ks_calc(ks, gr, hm, st)
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = 1, st%nst
           if (hm%ep%non_local) call zexp_vnlpsi (gr%mesh, hm, st%zpsi(:, :, ist, ik), -M_zI*dt, .true.)
@@ -726,7 +726,7 @@ contains
         ! finish the calculation of the density
         call states_dens_reduce(st, gr, st%rho)
 
-        call v_ks_calc(gr, ks, hm, st)
+        call v_ks_calc(ks, gr, hm, st)
 
         call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
         call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)

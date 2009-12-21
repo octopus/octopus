@@ -415,7 +415,7 @@ contains
         rhoout(1:gr%mesh%np, 2:scf%mixdim2, 1:nspin) = st%current(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
       end if
       if (scf%what2mix == MIXPOT) then
-        call v_ks_calc(gr, ks, hm, st)
+        call v_ks_calc(ks, gr, hm, st)
         vout(1:gr%mesh%np, 1, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
         if (hm%d%cdft) vout(1:gr%mesh%np, 2:scf%mixdim2, 1:nspin) = hm%axc(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
       end if
@@ -475,7 +475,7 @@ contains
         call dmixing(scf%smix, iter, rhoin, rhoout, rhonew, dmf_dotp_aux)
         st%rho(1:gr%fine%mesh%np, 1:nspin) = rhonew(1:gr%fine%mesh%np, 1, 1:nspin)
         if (hm%d%cdft) st%current(1:gr%mesh%np,1:gr%mesh%sb%dim,1:nspin) = rhonew(1:gr%mesh%np, 2:scf%mixdim2, 1:nspin)
-        call v_ks_calc(gr, ks, hm, st)
+        call v_ks_calc(ks, gr, hm, st)
       case (MIXPOT)
         !set the pointer for dmf_dotp_aux
         call mesh_init_mesh_aux(gr%mesh)
@@ -541,7 +541,7 @@ contains
     end do
 
     if (scf%what2mix == MIXPOT) then
-      call v_ks_calc(gr, ks, hm, st)
+      call v_ks_calc(ks, gr, hm, st)
       SAFE_DEALLOCATE_A(vout)
       SAFE_DEALLOCATE_A(vin)
       SAFE_DEALLOCATE_A(vnew)

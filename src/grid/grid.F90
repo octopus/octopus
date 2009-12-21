@@ -109,14 +109,12 @@ contains
     if(gr%sb%box_shape == BOX_IMAGE) then 
       ! spacing is determined from lsize and the size of the image
       spacing(1:2) = M_TWO*gr%sb%lsize(1:2)/real(gr%sb%image_size(1:2), REAL_PRECISION)
-      call pop_sub()
-      return
-    end if
+    else
 #endif
 
     !%Variable Spacing
     !%Type float
-    !%Section Mesh::Simulation Box
+    !%Section Mesh
     !%Description
     !% The spacing between the points in the mesh. If using curvilinear
     !% coordinates, this is a canonical spacing that will be changed locally by the
@@ -160,6 +158,9 @@ contains
       if(def_rsize > M_ZERO) call messages_check_def(spacing(i), def_rsize, 'Spacing')
     end do
 
+#if defined(HAVE_GDLIB)
+  end if
+#endif
 
     ! initialize curvilinear coordinates
     call curvilinear_init(gr%cv, gr%sb, geo, spacing)
