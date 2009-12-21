@@ -627,6 +627,7 @@ contains
        xg(k)= xg(k-1)+dxg(k)
       enddo
       dxg(nxl+this%nxbot+nx)=dx1t
+      dxg(nxl+this%nxbot+nx+nxtop)=dxg(nxl)
       do i=1,this%nxtot
       write(70,*) "i, xg, dx",i, xg(i), dxg(i)
       enddo
@@ -700,6 +701,7 @@ contains
        yg(k)= yg(k-1)+dyg(k)
       enddo
       dyg(nyl+this%nybot+ny)=dy1t
+      dyg(nyl+this%nybot+ny+nytop)=dyg(nyl)
       do i=1,this%nxtot
       write(70,*) "i, xg, dx",i, xg(i), dxg(i)
       enddo
