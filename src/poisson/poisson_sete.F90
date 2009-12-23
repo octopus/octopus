@@ -759,30 +759,17 @@ contains
     ANGSNM=CNST(10.0)/BOHR
 
     SAFE_ALLOCATE(q2(1:THIS%NTOT))
-    !SAFE_ALLOCATE(rhotest(1:this%nxtot, 1:this%nytot, 1:this%nztot))
-
-     !This is a byzantine way of calling the allocation scheme for nuclear and electronic potentials.
-      if(count_atoms == 1) then
-	      count_old=count_atoms
-      end if
-      !if(count_atoms == 2) then
-	!      test=test+1
-      !endif
-      
-     write(71,*)"********************************", count_atoms, count_old, test, test1 
-
-      !if (test>=3.and.(count_atoms==1).and.(count_old==1).and.(test1==1)) then
-	!write(71,*) "Deallocating electronic X2."
-	!test1=0
-        !SAFE _DEALLOCATE_A(X2)
-      !endif
+    !SAFE _ALLOCATE(rhotest(1:this%nxtot, 1:this%nytot, 1:this%nztot))
 
 
-!    if (test/=3.and.((count_atoms==1).or.(count_atoms/=count_old).or.count_atoms==this%noatoms).and.(test1==0)) then
-!    if (((count_atoms==1).or.(count_atoms/=count_old).or.count_atoms==this%noatoms).and.(test1==0)) then
-	    if (test==0) then
-		    test=1
-      write(71,*) "Allocating X2 for nuclei"
+    if (rho(nx/2,ny/2,nz/2)<0.and.test1==1) then
+	test1=0
+        SAFE_DEALLOCATE_A(X2)
+    endif
+
+
+    if (rho(nx/2,ny/2,nz/2)<0.and.test1==0) then
+      test1=0
       idum = count_atoms
       SAFE_ALLOCATE(X2(1:THIS%NTOT))
       do i = 1, this%ntot
@@ -792,28 +779,18 @@ contains
         endif
       enddo
 
-!    else if (test==3.and.(count_atoms==count_old)) then 
-      !count_atoms=0
- !     test1=1
- !     write(71,*) "Allocating X2 to determine electronic potential"
-
-  !    SAFE _ALLOCATE(x2(1:this%ntot))
-
-   !   x2(1:this%ntot) = M_ZERO
-
-    !  idum = count_atoms + 1
-
-     ! do i = 1, this%ntot
-      !  x2(i) = M_ZERO
-
-       ! call quickrnd(idum, x2(i))
-
-       ! if (x2(i) < M_ZERO) then
-       !     x2(i) = -x2(i)
-       ! endif
-
-     ! enddo
-
+    else if (rho(nx/2,ny/2,nz/2)>0.and.test1==0) then
+      test1=1
+      SAFE_ALLOCATE(x2(1:this%ntot))
+      x2(1:this%ntot) = M_ZERO
+      idum = count_atoms + 1
+      do i = 1, this%ntot
+        x2(i) = M_ZERO
+        call quickrnd(idum, x2(i))
+        if (x2(i) < M_ZERO) then
+            x2(i) = -x2(i)
+        endif
+     enddo
     endif
 
     !rhotest = M_ZERO
@@ -895,13 +872,9 @@ contains
 
     deallocate(Q2)
     !deallocate(rhotest)
-    !if (test/=3.and.((count_atoms==1).or.(count_atoms/=count_old).or.count_atoms==this%noatoms).and.(test1==0)) then
-    !	    write(71,*) "deAllocating ionic X2."
-    !      SAFE _DEALLOCATE_A(x2)
-    !    endif
-    !    do i=1, this%ntot
-    !     write(72,*) x2(i)
-    !    enddo
+    if (rho(nx/2,ny/2,nz/2)<0.and.test1==0) then
+          SAFE_DEALLOCATE_A(x2)
+    endif
 
     count_old = count_atoms
 
@@ -921,11 +894,10 @@ contains
     SAFE_DEALLOCATE_P(this%JAD)
 
     deallocate(this%adiag)
-    write(*,*) "Count_atoms, this%noatoms poisson end", count_atoms, this%noatoms
-    !if (count_atoms > this%noatoms ) then
-    write(71,*) "Deallocating x2"
-    SAFE_DEALLOCATE_A(X2)
-    !endif
+    if (test1==1) then
+            test1=0
+            SAFE_DEALLOCATE_A(X2)
+    endif
     deallocate(DXL);deallocate(DYL)
     deallocate(this%dielectric)
     deallocate(zg)
@@ -994,7 +966,6 @@ contains
     !    WRITE(520,*)THIS%ESURF*hartree*CNST(0.5)
     !    write(521,*)' CS1 ',CS1,' CS2 ',CS2,' CS3 ',CS3
 
-    write(*,*) "COUNTING ATOMS", this%counter + 1
 
     if (this%counter<this%noatoms) then
       this%counter=this%counter+1
