@@ -72,7 +72,7 @@ contains
   ! --------------------------------------------------------- 
   subroutine preconditioner_init(this, gr, prefix)
     type(preconditioner_t), intent(out)    :: this 
-    type(grid_t),           intent(inout)  :: gr
+    type(grid_t),           intent(in)     :: gr
     character(len=*), optional, intent(in) :: prefix
 
     FLOAT, parameter :: alpha = M_HALF

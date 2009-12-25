@@ -241,8 +241,8 @@ contains
   ! ---------------------------------------------------------
   subroutine exponential_apply(te, gr, hm, zpsi, ist, ik, deltat, t, order, vmagnus, imag_time)
     type(exponential_t), intent(inout) :: te
-    type(grid_t),        intent(inout) :: gr
-    type(hamiltonian_t), intent(inout) :: hm
+    type(grid_t),        intent(in)    :: gr
+    type(hamiltonian_t), intent(in)    :: hm
     integer,             intent(in)    :: ist
     integer,             intent(in)    :: ik
     CMPLX,               intent(inout) :: zpsi(:, :)

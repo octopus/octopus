@@ -30,9 +30,9 @@
 ! Driver for the LOBPCG eigensolver that performs a per-block,
 ! per-k-point iteration.
   subroutine X(eigensolver_lobpcg)(gr, st, hm, pre, tol, niter, converged, ik, diff, block_size, verbose)
-    type(grid_t),           intent(inout) :: gr
+    type(grid_t),           intent(in)    :: gr
     type(states_t),         intent(inout) :: st
-    type(hamiltonian_t),    intent(inout) :: hm
+    type(hamiltonian_t),    intent(in)    :: hm
     type(preconditioner_t), intent(in)    :: pre
     FLOAT,                  intent(in)    :: tol
     integer,                intent(inout) :: niter
@@ -134,9 +134,9 @@
 ! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:LOBPCG
 subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end,  &
   ik, pre, tol, niter, converged, diff, ib, verbose, constr)
-  type(grid_t),           intent(inout) :: gr
+  type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
-  type(hamiltonian_t),    intent(inout) :: hm
+  type(hamiltonian_t),    intent(in)    :: hm
   integer,                intent(in)    :: st_start
   integer,                intent(in)    :: st_end
   R_TYPE, target,         intent(inout) :: psi(gr%mesh%np_part, st%d%dim, st_start:st_end)

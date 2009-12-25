@@ -635,7 +635,7 @@ contains
   ! set by the user through the "Occupations" block; false otherwise.
   subroutine states_read_initial_occs(st, excess_charge)
     type(states_t), intent(inout) :: st
-    FLOAT, intent(in) :: excess_charge
+    FLOAT,          intent(in)    :: excess_charge
 
     integer :: ik, ist, ispin, nspin, ncols
     type(block_t) :: blk
@@ -776,6 +776,7 @@ contains
   ! block is present.
   subroutine states_read_initial_spins(st)
     type(states_t), intent(inout) :: st
+
     integer :: i, j
     type(block_t) :: blk
 
@@ -1151,7 +1152,7 @@ contains
     type(batch_t),  intent(inout) :: psib
     FLOAT, target,  intent(inout) :: rho(:,:)
     
-    integer :: ist, ist2, ip, ispin, idim, ierr
+    integer :: ist, ist2, ip, ispin
     CMPLX   :: c, psi1, psi2
     FLOAT, pointer :: dpsi(:, :)
     CMPLX, pointer :: zpsi(:, :)
@@ -1502,8 +1503,8 @@ contains
   ! function to calculate the eigenvalues sum using occupations as weights
   function states_eigenvalues_sum(st, x) result(e)
     type(states_t), intent(in)  :: st
-    FLOAT                       :: e
     FLOAT, optional, intent(in) :: x(st%st_start:st%st_end, 1:st%d%nik)
+    FLOAT                       :: e
 
     integer :: ik
 #ifdef HAVE_MPI
@@ -1544,7 +1545,7 @@ contains
     integer,           intent(in) :: iunit, nst
     type(states_t),    intent(in) :: st
     type(simul_box_t), intent(in) :: sb
-    FLOAT,             intent(in), optional :: error(nst, st%d%nik)
+    FLOAT, optional,   intent(in) :: error(nst, st%d%nik)
 
     integer ik, j, ns, is
     FLOAT :: occ
@@ -2288,7 +2289,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine states_calc_tau_jp_gn(der, st, tau, jp, grho, lrho)
-    type(derivatives_t),    intent(inout) :: der
+    type(derivatives_t),    intent(in)    :: der
     type(states_t),         intent(inout) :: st
     FLOAT, optional,        intent(out)   :: tau(:,:)    ! (gr%mesh%np, st%d%nspin)
     FLOAT, optional,        intent(out)   :: jp(:,:,:)   ! (gr%mesh%np, gr%mesh%sb%dim, st%d%nspin)
@@ -2519,11 +2520,11 @@ contains
   ! the kpoints, dim, and nst contained in it.
   ! ---------------------------------------------------------
   subroutine states_look(dir, mpi_grp, kpoints, dim, nst, ierr, only_occupied)
-    character(len=*), intent(in)    :: dir
-    type(mpi_grp_t),  intent(in)    :: mpi_grp
-    integer,          intent(out)   :: dim, ierr
-    integer,          intent(inout) :: nst, kpoints
-    logical, intent(in), optional   :: only_occupied
+    character(len=*),  intent(in)    :: dir
+    type(mpi_grp_t),   intent(in)    :: mpi_grp
+    integer,           intent(out)   :: dim, ierr
+    integer,           intent(inout) :: nst, kpoints
+    logical, optional, intent(in)    :: only_occupied
 
     character(len=256) :: line
     character(len=12)  :: filename
@@ -2616,7 +2617,7 @@ contains
   subroutine states_freeze_orbitals(st, gr, mc, n)
     type(states_t),    intent(inout) :: st
     type(grid_t),      intent(in)    :: gr
-    type(multicomm_t), intent(in) :: mc
+    type(multicomm_t), intent(in)    :: mc
     integer,           intent(in)    :: n
 
     integer :: ist, ik
@@ -2774,79 +2775,77 @@ contains
 
     call push_sub('states.states_init_green')
 
-    if(calc_mode_is(CM_GS)) then
-      ! Calculate Green`s function of the leads.
-      ! FIXME: For spinors, this calculation is almost certainly wrong.
-      ASSERT(st%ob_nst == st%nst)
-      ASSERT(st%ob_d%nik == st%d%nik)
-      s1 = st%st_start; s2 = st%st_end
-      k1 = st%d%kpt%start; k2 = st%d%kpt%end
-      do il = 1, NLEADS
-        np = gr%intf(il)%np_intf
-        SAFE_ALLOCATE(st%ob_lead(il)%green(1:np, 1:np, 1:nspin, s1:s2, k1:k2))
-      end do
-      call messages_print_stress(stdout, "Lead Green's functions")
-      message(1) = ' st#     k#  Spin      Lead     Energy'
-      call write_info(1)
+    ! Calculate Green`s function of the leads.
+    ! FIXME: For spinors, this calculation is almost certainly wrong.
+    ASSERT(st%ob_nst == st%nst)
+    ASSERT(st%ob_d%nik == st%d%nik)
+    s1 = st%st_start; s2 = st%st_end
+    k1 = st%d%kpt%start; k2 = st%d%kpt%end
+    do il = 1, NLEADS
+      np = gr%intf(il)%np_intf
+      SAFE_ALLOCATE(st%ob_lead(il)%green(1:np, 1:np, 1:nspin, s1:s2, k1:k2))
+    end do
+    call messages_print_stress(stdout, "Lead Green's functions")
+    message(1) = ' st#     k#  Spin      Lead     Energy'
+    call write_info(1)
 #ifdef HAVE_MPI 
-      ! wait for all processors to finish 
-      if(st%d%kpt%parallel) then 
-        call MPI_Barrier(st%d%kpt%mpi_grp%comm, mpi_err) 
-      end if 
+    ! wait for all processors to finish 
+    if(st%d%kpt%parallel) then 
+      call MPI_Barrier(st%d%kpt%mpi_grp%comm, mpi_err) 
+    end if
 #endif
-      do ik = k1, k2
-        do ist = s1, s2
-          energy = st%ob_eigenval(ist, ik)
-          do il = 1, NLEADS
-            np = gr%intf(il)%np_intf
-            do ispin = 1, nspin
-              select case(d_ispin)
-              case(UNPOLARIZED)
-                spin = '--'
-              case(SPIN_POLARIZED)
-                if(is_spin_up(ik)) then
-                  spin = 'up'
-                else
-                  spin = 'dn'
-                end if
-                ! This is nonsense, but at least all indices are present.
-              case(SPINORS)
-                if(ispin.eq.1) then
-                  spin = 'up'
-                else
-                  spin = 'dn'
-                end if
-              end select
-              write(message(1), '(i4,3x,i4,3x,a2,5x,a6,1x,f12.6)') ist, ik, &
-                                  trim(spin), trim(LEAD_NAME(il)), energy
-              call write_info(1)
-              ! TODO magnetic gs
-              call lead_green(energy, lead(il)%h_diag(:, :, ispin), lead(il)%h_offdiag(:, :), &
-                              gr%intf(il), st%ob_lead(il)%green(:, :, ispin, ist, ik), .true.)
-
-              ! Write the entire Green`s function to a file.
-              if(in_debug_mode) then
-                call io_mkdir('debug/open_boundaries')
-                write(fname_real, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/green-', &
-                  trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.real'
-                write(fname_imag, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/green-', &
-                  trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.imag'
-                green_real = io_open(fname_real, action='write', grp=st%d%kpt%mpi_grp, is_tmp=.false.)
-                green_imag = io_open(fname_imag, action='write', grp=st%d%kpt%mpi_grp, is_tmp=.false.)
-
-                write(fmt, '(a,i6,a)') '(', np, 'e24.16)'
-                do irow = 1, np
-                  write(green_real, fmt) real(st%ob_lead(il)%green(irow, :, ispin, ist, ik))
-                  write(green_imag, fmt) aimag(st%ob_lead(il)%green(irow, :, ispin, ist, ik))
-                end do
-                call io_close(green_real); call io_close(green_imag)
+    do ik = k1, k2
+      do ist = s1, s2
+        energy = st%ob_eigenval(ist, ik)
+        do il = 1, NLEADS
+          np = gr%intf(il)%np_intf
+          do ispin = 1, nspin
+            select case(d_ispin)
+            case(UNPOLARIZED)
+              spin = '--'
+            case(SPIN_POLARIZED)
+              if(is_spin_up(ik)) then
+                spin = 'up'
+              else
+                spin = 'dn'
               end if
-            end do
+              ! This is nonsense, but at least all indices are present.
+            case(SPINORS)
+              if(ispin.eq.1) then
+                spin = 'up'
+              else
+                spin = 'dn'
+              end if
+            end select
+            write(message(1), '(i4,3x,i4,3x,a2,5x,a6,1x,f12.6)') ist, ik, &
+              trim(spin), trim(LEAD_NAME(il)), energy
+            call write_info(1)
+            ! TODO magnetic gs
+            call lead_green(energy, lead(il)%h_diag(:, :, ispin), lead(il)%h_offdiag(:, :), &
+              gr%intf(il), st%ob_lead(il)%green(:, :, ispin, ist, ik), .true.)
+
+            ! Write the entire Green`s function to a file.
+            if(in_debug_mode) then
+              call io_mkdir('debug/open_boundaries')
+              write(fname_real, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/green-', &
+                trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.real'
+              write(fname_imag, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/green-', &
+                trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.imag'
+              green_real = io_open(fname_real, action='write', grp=st%d%kpt%mpi_grp, is_tmp=.false.)
+              green_imag = io_open(fname_imag, action='write', grp=st%d%kpt%mpi_grp, is_tmp=.false.)
+
+              write(fmt, '(a,i6,a)') '(', np, 'e24.16)'
+              do irow = 1, np
+                write(green_real, fmt) real(st%ob_lead(il)%green(irow, :, ispin, ist, ik))
+                write(green_imag, fmt) aimag(st%ob_lead(il)%green(irow, :, ispin, ist, ik))
+              end do
+              call io_close(green_real); call io_close(green_imag)
+            end if
           end do
         end do
       end do
-      call messages_print_stress(stdout)
-    end if
+    end do
+    call messages_print_stress(stdout)
 
     call pop_sub()
   end subroutine states_init_green

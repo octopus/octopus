@@ -239,7 +239,7 @@ contains
     call mix_init(scf%smix, scf%mixdim1, scf%mixdim2, st%d%nspin)
 
     ! now the eigensolver stuff
-    call eigensolver_init(gr, scf%eigens, st)
+    call eigensolver_init(scf%eigens, gr, st)
 
     if(scf%eigens%es_type == RS_MG .or. preconditioner_is_multigrid(scf%eigens%pre)) then
       if(.not. associated(gr%mgrid)) then

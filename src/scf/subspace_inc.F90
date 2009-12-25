@@ -20,9 +20,9 @@
 ! ---------------------------------------------------------
 ! This routine diagonalises the Hamiltonian in the subspace defined by the states.
 subroutine X(subspace_diag)(gr, st, hm, ik, eigenval, psi, diff)
-  type(grid_t),        intent(inout) :: gr
-  type(states_t),      intent(in)    :: st
-  type(hamiltonian_t), intent(inout) :: hm
+  type(grid_t),        intent(in)    :: gr
+  type(states_t),      intent(inout) :: st
+  type(hamiltonian_t), intent(in)    :: hm
   integer,             intent(in)    :: ik
   FLOAT,               intent(out)   :: eigenval(:)
   R_TYPE,              intent(inout) :: psi(:, :, :)
@@ -150,9 +150,9 @@ end subroutine X(subspace_diag)
 ! consumes more memory.
 !
 subroutine X(subspace_diag_par_states)(gr, st, hm, ik, eigenval, psi, diff)
-  type(grid_t),        intent(inout) :: gr
-  type(states_t),      intent(in)    :: st
-  type(hamiltonian_t), intent(inout) :: hm
+  type(grid_t),        intent(in)    :: gr
+  type(states_t),      intent(inout) :: st
+  type(hamiltonian_t), intent(in)    :: hm
   integer,             intent(in)    :: ik
   FLOAT,               intent(out)   :: eigenval(:)
   R_TYPE,              intent(inout) :: psi(1:gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end)

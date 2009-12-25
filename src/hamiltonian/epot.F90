@@ -430,7 +430,7 @@ contains
     type(epot_t),          intent(inout) :: ep
     type(grid_t), target,  intent(in)    :: gr
     type(geometry_t),      intent(in)    :: geo
-    type(states_t),        intent(in)    :: st
+    type(states_t),        intent(inout) :: st
     FLOAT,       optional, intent(in)    :: time
 
     FLOAT   :: time_

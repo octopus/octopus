@@ -216,7 +216,7 @@ contains
       st%occ      = M_ZERO
 
       ! now the eigensolver stuff
-      call eigensolver_init(sys%gr, eigens, st)
+      call eigensolver_init(eigens, sys%gr, st)
 
       ! Having initial and final tolerance does not make sense in this case:
       eigens%init_tol       = eigens%final_tol

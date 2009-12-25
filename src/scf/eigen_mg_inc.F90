@@ -19,9 +19,9 @@
 
 ! ---------------------------------------------------------
 subroutine X(eigensolver_mg) (gr, st, hm, tol, niter, converged, ik, diff)
-  type(grid_t),           intent(inout) :: gr
+  type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
-  type(hamiltonian_t),    intent(inout) :: hm
+  type(hamiltonian_t),    intent(in)    :: hm
   FLOAT,                  intent(in)    :: tol
   integer,                intent(inout) :: niter
   integer,                intent(inout) :: converged
@@ -75,9 +75,9 @@ subroutine X(eigensolver_mg) (gr, st, hm, tol, niter, converged, ik, diff)
 end subroutine X(eigensolver_mg)
 
 subroutine X(coordinate_relaxation)(gr, mesh, hm, nst, steps, ik, psi, aa, cc)
-  type(grid_t),           intent(inout) :: gr
-  type(mesh_t),           intent(inout) :: mesh
-  type(hamiltonian_t),    intent(inout) :: hm
+  type(grid_t),           intent(in)    :: gr
+  type(mesh_t),           intent(in)    :: mesh
+  type(hamiltonian_t),    intent(in)    :: hm
   integer,                intent(in)    :: nst
   integer,                intent(in)    :: steps
   integer,                intent(in)    :: ik

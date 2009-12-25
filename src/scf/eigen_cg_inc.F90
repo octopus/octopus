@@ -20,16 +20,16 @@
 ! ---------------------------------------------------------
 ! conjugate-gradients method.
 subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff, verbose)
-  type(grid_t),        intent(inout) :: gr
-  type(states_t),      intent(inout) :: st
-  type(hamiltonian_t), intent(inout) :: hm
-  type(preconditioner_t), intent(in) :: pre
-  FLOAT,               intent(in)    :: tol
-  integer,             intent(inout) :: niter
-  integer,             intent(inout) :: converged
-  integer,             intent(in)    :: ik
-  FLOAT,     optional, intent(out)   :: diff(1:st%nst)
-  logical,   optional, intent(in)    :: verbose
+  type(grid_t),           intent(in)    :: gr
+  type(states_t),         intent(inout) :: st
+  type(hamiltonian_t),    intent(in)    :: hm
+  type(preconditioner_t), intent(in)    :: pre
+  FLOAT,                  intent(in)    :: tol
+  integer,                intent(inout) :: niter
+  integer,                intent(inout) :: converged
+  integer,                intent(in)    :: ik
+  FLOAT,        optional, intent(out)   :: diff(1:st%nst)
+  logical,      optional, intent(in)    :: verbose
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), ppsi(:,:)
 
@@ -267,9 +267,9 @@ end subroutine X(eigensolver_cg2)
 ! ---------------------------------------------------------
 ! The algorithm is essentially taken from Jiang et al. Phys. Rev. B 68, 165337 (2003).
 subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, verbose)
-  type(grid_t),        intent(inout) :: gr
+  type(grid_t),        intent(in)    :: gr
   type(states_t),      intent(inout) :: st
-  type(hamiltonian_t), intent(inout) :: hm
+  type(hamiltonian_t), intent(in)    :: hm
   FLOAT,               intent(in)    :: tol
   integer,             intent(inout) :: niter
   integer,             intent(inout) :: converged

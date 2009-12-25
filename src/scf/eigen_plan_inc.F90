@@ -28,9 +28,9 @@
 
 
 subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff)
-  type(grid_t),                intent(inout) :: gr
+  type(grid_t),                intent(in)    :: gr
   type(states_t),              intent(inout) :: st
-  type(hamiltonian_t),         intent(inout) :: hm
+  type(hamiltonian_t),         intent(in)    :: hm
   type(preconditioner_t),      intent(in)    :: pre
   FLOAT,                       intent(in)    :: tol
   integer,                     intent(inout) :: niter

@@ -19,15 +19,15 @@
 
 ! ---------------------------------------------------------
 subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff, tau)
-  type(grid_t), target,intent(inout) :: gr
-  type(states_t),      intent(inout) :: st
-  type(hamiltonian_t), target, intent(inout)    :: hm
-  FLOAT,               intent(in)    :: tol
-  integer,             intent(inout) :: niter
-  integer,             intent(inout) :: converged
-  integer,             intent(in)    :: ik
-  FLOAT,               intent(out)   :: diff(1:st%nst)
-  FLOAT,               intent(in)    :: tau
+  type(grid_t),        target, intent(in)    :: gr
+  type(states_t),              intent(inout) :: st
+  type(hamiltonian_t), target, intent(in)    :: hm
+  FLOAT,                       intent(in)    :: tol
+  integer,                     intent(inout) :: niter
+  integer,                     intent(inout) :: converged
+  integer,                     intent(in)    :: ik
+  FLOAT,                       intent(out)   :: diff(1:st%nst)
+  FLOAT,                       intent(in)    :: tau
 
   integer :: ist, iter, maxiter, conv, matvec, i, j
   R_TYPE, allocatable :: hpsi(:, :), m(:, :), c(:, :), phi(:, :, :)

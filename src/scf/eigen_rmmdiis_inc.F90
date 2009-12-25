@@ -20,23 +20,21 @@
 ! See http://prola.aps.org/abstract/PRB/v54/i16/p11169_1
 
 subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, diff, blocksize)
-  type(grid_t),        intent(inout) :: gr
-  type(states_t),      intent(inout) :: st
-  type(hamiltonian_t), intent(inout) :: hm
-  type(preconditioner_t), intent(in) :: pre
-  FLOAT,               intent(in)    :: tol
-  integer,             intent(inout) :: niter
-  integer,             intent(inout) :: converged
-  integer,             intent(in)    :: ik
-  FLOAT,               intent(out)   :: diff(1:st%nst)
-  integer,             intent(in)    :: blocksize
+  type(grid_t),           intent(in)    :: gr
+  type(states_t),         intent(inout) :: st
+  type(hamiltonian_t),    intent(in)    :: hm
+  type(preconditioner_t), intent(in)    :: pre
+  FLOAT,                  intent(in)    :: tol
+  integer,                intent(inout) :: niter
+  integer,                intent(inout) :: converged
+  integer,                intent(in)    :: ik
+  FLOAT,                  intent(out)   :: diff(1:st%nst)
+  integer,                intent(in)    :: blocksize
 
   R_TYPE, allocatable :: res(:, :, :, :)
   R_TYPE, allocatable :: psi(:, :, :, :)
-
   R_TYPE, allocatable :: mm(:, :, :, :), evec(:, :)
   FLOAT,  allocatable :: eval(:)
-
   FLOAT, allocatable :: lambda(:)
   integer :: ist, jst, idim, ip, ii, iter, nops, maxst, ib, bsize
   R_TYPE :: ca, cb, cc
@@ -352,9 +350,9 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 end subroutine X(eigensolver_rmmdiis)
 
 subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged, ik, diff, blocksize)
-  type(grid_t),           intent(inout) :: gr
+  type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
-  type(hamiltonian_t),    intent(inout) :: hm
+  type(hamiltonian_t),    intent(in)    :: hm
   type(preconditioner_t), intent(in)    :: pre
   FLOAT,                  intent(in)    :: tol
   integer,                intent(inout) :: niter

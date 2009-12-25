@@ -92,9 +92,9 @@ module eigensolver_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine eigensolver_init(gr, eigens, st)
-    type(grid_t),        intent(inout) :: gr
+  subroutine eigensolver_init(eigens, gr, st)
     type(eigensolver_t), intent(out)   :: eigens
+    type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(in)    :: st
 
     integer :: default_iter, default_es
@@ -275,10 +275,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine eigensolver_run(eigens, gr, st, hm, iter, conv, verbose)
-    type(eigensolver_t), intent(inout) :: eigens
-    type(grid_t),         intent(inout) :: gr
+    type(eigensolver_t),  intent(inout) :: eigens
+    type(grid_t),         intent(in)    :: gr
     type(states_t),       intent(inout) :: st
-    type(hamiltonian_t),  intent(inout) :: hm
+    type(hamiltonian_t),  intent(in)    :: hm
     integer,              intent(in)    :: iter
     logical,    optional, intent(inout) :: conv
     logical,    optional, intent(in)    :: verbose

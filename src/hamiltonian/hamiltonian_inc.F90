@@ -793,7 +793,7 @@ end subroutine X(vmask)
 ! ---------------------------------------------------------
 subroutine X(hamiltonian_diagonal) (hm, gr, diag, ik)
   type(hamiltonian_t), intent(in)    :: hm
-  type(grid_t),        intent(inout) :: gr
+  type(grid_t),        intent(in)    :: gr
   integer,             intent(in)    :: ik
   R_TYPE,              intent(out)   :: diag(:,:) ! hpsi(gr%mesh%np, hm%d%dim)
 
