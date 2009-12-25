@@ -20,7 +20,7 @@
 ! ---------------------------------------------------------
 subroutine X(vlaser_operator_quadratic) (laser, der, std, psi, hpsi)
   type(laser_t),       intent(in)    :: laser
-  type(derivatives_t), intent(inout) :: der
+  type(derivatives_t), intent(in)    :: der
   type(states_dim_t),  intent(in)    :: std
   R_TYPE,              intent(inout) :: psi(:,:)  ! psi(gr%mesh%np_part, h%d%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(gr%mesh%np_part, h%d%dim)
@@ -77,7 +77,7 @@ end subroutine X(vlaser_operator_quadratic)
 ! ---------------------------------------------------------
 subroutine X(vlaser_operator_linear) (laser, der, std, psi, hpsi, ik, gyromagnetic_ratio, a_static)
   type(laser_t),       intent(in)    :: laser
-  type(derivatives_t), intent(inout) :: der
+  type(derivatives_t), intent(in)    :: der
   type(states_dim_t),  intent(in)    :: std
   R_TYPE,              intent(inout) :: psi(:,:) 
   R_TYPE,              intent(inout) :: hpsi(:,:)
@@ -235,7 +235,7 @@ end subroutine X(vlaser_operator_linear)
 subroutine X(vlasers) (lasers, nlasers, der, std, psi, hpsi, grad, ik, gyromagnetic_ratio, a_static, t)
   type(laser_t),       intent(in)    :: lasers(:)
   integer,             intent(in)    :: nlasers
-  type(derivatives_t), intent(inout) :: der
+  type(derivatives_t), intent(in)    :: der
   type(states_dim_t),  intent(in)    :: std
   R_TYPE,              intent(inout) :: psi(:,:)  ! psi(der%mesh%np_part, std%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(der%mesh%np_part, std%dim)

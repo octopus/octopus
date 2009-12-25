@@ -428,9 +428,9 @@ contains
 
   subroutine epot_generate(ep, gr, geo, st, time)
     type(epot_t),          intent(inout) :: ep
-    type(grid_t), target,  intent(inout) :: gr
-    type(geometry_t),      intent(inout) :: geo
-    type(states_t),        intent(inout) :: st
+    type(grid_t), target,  intent(in)    :: gr
+    type(geometry_t),      intent(in)    :: geo
+    type(states_t),        intent(in)    :: st
     FLOAT,       optional, intent(in)    :: time
 
     FLOAT   :: time_
@@ -509,8 +509,8 @@ contains
 
   subroutine epot_local_potential(ep, der, dgrid, poisson_solver, geo, iatom, vpsl, time, rho_core)
     type(epot_t),             intent(in)    :: ep
-    type(derivatives_t),      intent(inout) :: der
-    type(double_grid_t),      intent(inout) :: dgrid
+    type(derivatives_t),      intent(in)    :: der
+    type(double_grid_t),      intent(in)    :: dgrid
     type(poisson_t),          intent(inout) :: poisson_solver
     type(geometry_t),         intent(in)    :: geo
     integer,                  intent(in)    :: iatom
@@ -716,8 +716,8 @@ contains
 
   subroutine epot_precalc_local_potential(ep, gr, geo, time)
     type(epot_t),             intent(inout) :: ep
-    type(grid_t),             intent(inout) :: gr
-    type(geometry_t),         intent(inout) :: geo
+    type(grid_t),             intent(in)    :: gr
+    type(geometry_t),         intent(in)    :: geo
     FLOAT,                    intent(in)    :: time
 
     integer :: iatom
@@ -748,7 +748,7 @@ contains
     type(geometry_t),  target, intent(in)    :: geo
     type(simul_box_t),         intent(in)    :: sb
     type(epot_t),              intent(inout) :: ep
-    type(grid_t), target,      intent(inout) :: gr
+    type(grid_t), target,      intent(in)    :: gr
     FLOAT,                     intent(out)   :: energy
     FLOAT,                     intent(out)   :: force(:, :)
 
@@ -924,9 +924,11 @@ contains
     call pop_sub()
   end subroutine ion_interaction_periodic
 
+  ! ------------------------------------------------------------
+
   subroutine ion_interaction_sete(gr, sb, geo, ep)
-    type(grid_t), target,  intent(inout)    :: gr
-    type(simul_box_t),         intent(in)    :: sb
+    type(grid_t), target,  intent(in)    :: gr
+    type(simul_box_t),     intent(in)    :: sb
     type(geometry_t),      intent(in)    :: geo
     type(epot_t),          intent(inout) :: ep
   
@@ -937,8 +939,8 @@ contains
     FLOAT :: r, dd, zi, zj
 
 
-        write(68,*) "ep%eii values top", ep%eii
-        write(*,*) "WIP Entering the interaction zone"
+    write(68,*) "ep%eii values top", ep%eii
+    write(*,*) "WIP Entering the interaction zone"
 
    do jatom = geo%natoms,2, -1
        SAFE_ALLOCATE(v2(1:gr%mesh%np))

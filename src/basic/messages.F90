@@ -54,7 +54,8 @@ module messages_m
     messages_print_var_value,   &
     messages_obsolete_variable, &
     messages_devel_version,     &
-    messages_check_def
+    messages_check_def,         &
+    messages_not_implemented
 
   character(len=256), dimension(20), public :: message    ! to be output by fatal, warning
   character(len=68),      parameter, public :: hyphens = &
@@ -793,6 +794,16 @@ contains
 
     call pop_sub()
   end subroutine messages_check_def
+
+  ! ------------------------------------------------------------
+
+  subroutine messages_not_implemented(feature)
+    character(len=*), intent(in) :: feature
+
+    message(1) = trim(feature)//" not implemented."
+    call write_fatal(1)
+
+  end subroutine messages_not_implemented
 
   ! ------------------------------------------------------------
 end module messages_m

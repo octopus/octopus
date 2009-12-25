@@ -20,7 +20,7 @@
 ! ---------------------------------------------------------
 subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, kinetic_only)
   type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(inout) :: der
+  type(derivatives_t), intent(in)    :: der
   type(batch_t),       intent(inout) :: psib
   type(batch_t),       intent(inout) :: hpsib
   integer,             intent(in)    :: ik
@@ -211,7 +211,7 @@ end subroutine X(hamiltonian_apply_batch)
 
 subroutine X(get_grad)(hm, der, psi, grad)
   type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(inout) :: der
+  type(derivatives_t), intent(in)    :: der
   R_TYPE,              intent(inout) :: psi(:, :)
   R_TYPE,              pointer       :: grad(:, :, :)
 
@@ -223,8 +223,7 @@ subroutine X(get_grad)(hm, der, psi, grad)
     SAFE_ALLOCATE(grad(1:der%mesh%np, 1:MAX_DIM, 1:hm%d%dim))
     do idim = 1, hm%d%dim 
       ! boundary points were already set by the Laplacian
-      call X(derivatives_grad)(der, psi(:, idim), grad(:, :, idim), &
-        ghost_update = .false., set_bc = .false.)
+      call X(derivatives_grad)(der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
     end do
   end if
   
@@ -232,34 +231,26 @@ subroutine X(get_grad)(hm, der, psi, grad)
 end subroutine X(get_grad)       
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, t, kinetic_only)
+subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, kinetic_only)
   type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(inout) :: der
+  type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ist       ! the index of the state
   integer,             intent(in)    :: ik        ! the index of the k-point
-  R_TYPE, target,      intent(inout) :: psi(:,:)  ! psi(gr%mesh%np_part, hm%d%dim)
+  R_TYPE,   target,    intent(inout) :: psi(:,:)  ! psi(gr%mesh%np_part, hm%d%dim)
   R_TYPE,              intent(out)   :: hpsi(:,:) ! hpsi(gr%mesh%np, hm%d%dim)
-  FLOAT, optional,     intent(in)    :: t
-  logical, optional,   intent(in)    :: kinetic_only
+  FLOAT,    optional,  intent(in)    :: time
+  logical,  optional,  intent(in)    :: kinetic_only
 
-  logical :: kinetic_only_
   type(batch_t) :: psib, hpsib
 
   call push_sub('hamiltonian_inc.Xhamiltonian_apply')
-
-  kinetic_only_ = .false.
-  if(present(kinetic_only)) kinetic_only_ = kinetic_only
 
   call batch_init(psib, hm%d%dim, 1)
   call batch_add_state(psib, ist, psi)
   call batch_init(hpsib, hm%d%dim, 1)
   call batch_add_state(hpsib, ist, hpsi)
 
-  if(present(t)) then
-    call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, t, kinetic_only = kinetic_only_)
-  else
-    call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, kinetic_only = kinetic_only_)
-  end if
+  call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time, kinetic_only = kinetic_only)
 
   call batch_end(psib)
   call batch_end(hpsib)
@@ -270,12 +261,12 @@ end subroutine X(hamiltonian_apply)
 
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_apply_all) (hm, der, psi, hpsi, t)
+subroutine X(hamiltonian_apply_all) (hm, der, psi, hpsi, time)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(inout) :: der
   type(states_t),      intent(inout) :: psi
   type(states_t),      intent(inout) :: hpsi
-  FLOAT, optional,     intent(in)    :: t
+  FLOAT, optional,     intent(in)    :: time
 
   integer :: ik
   type(batch_t) :: psib, hpsib
@@ -285,7 +276,7 @@ subroutine X(hamiltonian_apply_all) (hm, der, psi, hpsi, t)
   do ik = psi%d%kpt%start, psi%d%kpt%end
     call batch_init(psib, hm%d%dim, psi%st_start, psi%st_end, psi%X(psi)(:, :, :, ik))
     call batch_init(hpsib, hm%d%dim, hpsi%st_start, hpsi%st_end, hpsi%X(psi)(:, :, :, ik))
-    call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, t)
+    call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time)
     call batch_end(psib)
     call batch_end(hpsib)
   end do
@@ -300,14 +291,14 @@ end subroutine X(hamiltonian_apply_all)
 ! ---------------------------------------------------------
 subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik)
   type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(inout) :: der
+  type(derivatives_t), intent(in)    :: der
   R_TYPE,              intent(inout) :: psi(:,:)
   R_TYPE,              intent(inout) :: hpsi(:,:)
   integer,             intent(in)    :: ist
   integer,             intent(in)    :: ik
 
   R_TYPE, allocatable :: rho(:), pot(:)
-  integer :: j, k, idim
+  integer :: jst, ip, idim
 
   FLOAT :: ff
 
@@ -316,30 +307,29 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik)
   SAFE_ALLOCATE(rho(1:der%mesh%np))
   SAFE_ALLOCATE(pot(1:der%mesh%np))
 
-  do j = 1, hm%st%nst
-    if(hm%st%occ(j, ik) <= M_ZERO) cycle
+  do jst = 1, hm%st%nst
+    if(hm%st%occ(jst, ik) <= M_ZERO) cycle
 
     ! in Hartree we just remove the self-interaction
-    if(hm%theory_level == HARTREE .and. j .ne. ist) cycle
+    if(hm%theory_level == HARTREE .and. jst .ne. ist) cycle
 
     pot = M_ZERO
     rho = M_ZERO
 
     do idim = 1, hm%st%d%dim
-      forall(k = 1:der%mesh%np)
-        rho(k) = rho(k) + R_CONJ(hm%st%X(psi)(k, idim, j, ik)) * psi(k, idim)
+      forall(ip = 1:der%mesh%np)
+        rho(ip) = rho(ip) + R_CONJ(hm%st%X(psi)(ip, idim, jst, ik))*psi(ip, idim)
       end forall
     end do
 
     call X(poisson_solve)(psolver, pot, rho)
 
-    ff = hm%st%occ(j, ik)
-    if(hm%d%ispin == UNPOLARIZED) ff = ff/M_TWO
+    ff = hm%st%occ(jst, ik)
+    if(hm%d%ispin == UNPOLARIZED) ff = CNST(0.5)*ff
 
     do idim = 1, hm%st%d%dim
-      forall(k = 1:der%mesh%np)
-        hpsi(k, idim) = hpsi(k, idim) - hm%exx_coef * ff * &
-          hm%st%X(psi)(k, idim, j, ik)*pot(k)
+      forall(ip = 1:der%mesh%np)
+        hpsi(ip, idim) = hpsi(ip, idim) - hm%exx_coef*ff*hm%st%X(psi)(ip, idim, jst, ik)*pot(ip)
       end forall
     end do
 
@@ -355,13 +345,13 @@ end subroutine X(exchange_operator)
 ! ---------------------------------------------------------
 subroutine X(oct_exchange_operator_all) (hm, der, psi, hpsi)
   type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(inout) :: der
-  type(states_t),      intent(inout) :: psi
+  type(derivatives_t), intent(in)    :: der
+  type(states_t),      intent(in)    :: psi
   type(states_t),      intent(inout) :: hpsi
 
   integer :: ik, ist
   FLOAT, allocatable :: rho(:), pot(:)
-  integer :: j, k
+  integer :: jst, ip
 
   call push_sub('hamiltonian_inc.Xoct_exchange_operator_all')
 
@@ -375,28 +365,24 @@ subroutine X(oct_exchange_operator_all) (hm, der, psi, hpsi)
 
       pot = M_ZERO
       rho = M_ZERO
-      do j = 1, hm%oct_st%nst
-        forall (k = 1:der%mesh%np)
-          rho(k) = rho(k) + hm%oct_st%occ(j, 1) * &
-            R_AIMAG(R_CONJ(hm%oct_st%X(psi)(k, 1, j, ik)) * psi%X(psi)(k, 1, j, ik))
+      do jst = 1, hm%oct_st%nst
+        forall (ip = 1:der%mesh%np)
+          rho(ip) = rho(ip) + hm%oct_st%occ(jst, 1) * &
+            R_AIMAG(R_CONJ(hm%oct_st%X(psi)(ip, 1, jst, ik))*psi%X(psi)(ip, 1, jst, ik))
         end forall
       end do 
       call dpoisson_solve(psolver, pot, rho)
       do ist = psi%st_start, psi%st_end
-        forall(k = 1:der%mesh%np)
-          hpsi%X(psi)(k, 1, ist, ik) = hpsi%X(psi)(k, 1, ist, ik) + M_TWO * M_zI * &
-            hm%oct_st%X(psi)(k, 1, ist, ik) * (pot(k) + hm%oct_fxc(k, 1, 1) * rho(k))
+        forall(ip = 1:der%mesh%np)
+          hpsi%X(psi)(ip, 1, ist, ik) = hpsi%X(psi)(ip, 1, ist, ik) + M_TWO*M_zI* &
+            hm%oct_st%X(psi)(ip, 1, ist, ik)*(pot(ip) + hm%oct_fxc(ip, 1, 1)*rho(ip))
         end forall
       end do
 
     end do
 
-  case(SPIN_POLARIZED)
-    stop 'CODE MISSING.'
-
-  case(SPINORS)
-    stop 'CODE MISSING.'
-
+  case(SPIN_POLARIZED, SPINORS)
+    call messages_not_implemented("Function oct_exchange_operator_all for spin_polarized or spinors")
   end select
 
   SAFE_DEALLOCATE_A(rho)
@@ -409,12 +395,13 @@ end subroutine X(oct_exchange_operator_all)
 ! ---------------------------------------------------------
 subroutine X(oct_exchange_operator) (hm, der, psi, hpsi, ik)
   type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t),        intent(inout) :: der
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(der%mesh%np_part, hm%d%dim)
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(der%mesh%np, hm%d%dim)
+  type(derivatives_t), intent(in)    :: der
+  R_TYPE,              intent(in)    :: psi(:, :)
+  R_TYPE,              intent(inout) :: hpsi(:, :)
   integer,             intent(in)    :: ik
+
   FLOAT, allocatable :: rho(:), pot(:)
-  integer :: j, k
+  integer :: jst, ip
 
   call push_sub('hamiltonian_inc.Xoct_exchange_operator')
 
@@ -423,35 +410,34 @@ subroutine X(oct_exchange_operator) (hm, der, psi, hpsi, ik)
 
   select case(hm%d%ispin)
   case(UNPOLARIZED)
-    do j = 1, hm%oct_st%nst
+    do jst = 1, hm%oct_st%nst
       pot = M_ZERO
-      forall (k = 1:der%mesh%np)
-        rho(k) = hm%oct_st%occ(j, 1) * R_AIMAG(R_CONJ(hm%oct_st%X(psi)(k, 1, j, ik)) * psi(k, 1))
+      forall (ip = 1:der%mesh%np)
+        rho(ip) = hm%oct_st%occ(jst, 1) * R_AIMAG(R_CONJ(hm%oct_st%X(psi)(ip, 1, jst, ik))*psi(ip, 1))
       end forall
       call dpoisson_solve(psolver, pot, rho)
-      forall(k = 1:der%mesh%np)
-        hpsi(k, 1) = hpsi(k, 1) + M_TWO * M_zI * &
-          hm%oct_st%X(psi)(k, 1, j, ik) * (pot(k) + hm%oct_fxc(k, 1, 1) * rho(k))
+      forall(ip = 1:der%mesh%np)
+        hpsi(ip, 1) = hpsi(ip, 1) + M_TWO*M_zI * &
+          hm%oct_st%X(psi)(ip, 1, jst, ik)*(pot(ip) + hm%oct_fxc(ip, 1, 1)*rho(ip))
       end forall
     end do 
 
   case(SPIN_POLARIZED)
-    do j = 1, hm%oct_st%nst
-      if(hm%oct_st%occ(j, ik) <= M_ZERO) cycle
+    do jst = 1, hm%oct_st%nst
+      if(hm%oct_st%occ(jst, ik) <= M_ZERO) cycle
       pot = M_ZERO
-      do k = 1, der%mesh%np
-        rho(k) = R_AIMAG(R_CONJ(hm%oct_st%X(psi)(k, 1, j, ik)) * psi(k, 1))
+      do ip = 1, der%mesh%np
+        rho(ip) = R_AIMAG(R_CONJ(hm%oct_st%X(psi)(ip, 1, jst, ik))*psi(ip, 1))
       end do
       call dpoisson_solve(psolver, pot, rho)
-      do k = 1, der%mesh%np
-        hpsi(k, 1) = hpsi(k, 1) +  M_TWO * M_zI * hm%oct_st%occ(j, ik) * &
-          hm%oct_st%X(psi)(k, 1, j, ik) * pot(k)
+      do ip = 1, der%mesh%np
+        hpsi(ip, 1) = hpsi(ip, 1) +  M_TWO*M_zI*hm%oct_st%occ(ip, ik)* &
+          hm%oct_st%X(psi)(ip, 1, jst, ik)*pot(ip)
       end do
     end do 
 
   case(SPINORS)
-    stop 'CODE MISSING.'
-
+    call messages_not_implemented("Function oct_exchange_operator for spinors")
   end select
 
   SAFE_DEALLOCATE_A(rho)
@@ -463,7 +449,7 @@ end subroutine X(oct_exchange_operator)
 
 subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
   type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(inout) :: der
+  type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ik
   R_TYPE,              intent(inout) :: psi(:,:)
   R_TYPE,              intent(out)   :: hpsi(:,:)
@@ -517,7 +503,7 @@ end subroutine X(magnus)
 ! Here we the terms arising from the presence of a possible static external
 ! magnetic field, and the terms that come from CDFT.
 subroutine X(magnetic_terms) (der, hm, psi, hpsi, grad, ik)
-  type(derivatives_t), intent(inout) :: der
+  type(derivatives_t), intent(in)    :: der
   type(hamiltonian_t), intent(in)    :: hm
   R_TYPE,              intent(inout) :: psi(:, :)
   R_TYPE,              intent(inout) :: hpsi(:, :)
@@ -624,7 +610,7 @@ end subroutine X(magnetic_terms)
 ! ---------------------------------------------------------
 subroutine X(vnlpsi) (hm, mesh, psi, hpsi, ik)
   type(hamiltonian_t), intent(in)    :: hm
-  type(mesh_t),        intent(inout) :: mesh
+  type(mesh_t),        intent(in)    :: mesh
   R_TYPE,              intent(inout) :: psi(:,:)
   R_TYPE,              intent(inout) :: hpsi(:,:)
   integer,             intent(in)    :: ik
@@ -723,7 +709,7 @@ end subroutine X(vexternal)
 
 ! ---------------------------------------------------------
 subroutine X(vborders) (der, hm, psi, hpsi)
-  type(derivatives_t), intent(inout) :: der
+  type(derivatives_t), intent(in)    :: der
   type(hamiltonian_t), intent(in)    :: hm
   R_TYPE,              intent(in)    :: psi(:,:)
   R_TYPE,              intent(inout) :: hpsi(:,:)
@@ -746,7 +732,7 @@ end subroutine X(vborders)
 ! ---------------------------------------------------------
 subroutine X(h_mgga_terms) (hm, der, psi, hpsi, ik, grad)
   type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(inout) :: der
+  type(derivatives_t), intent(in)    :: der
   R_TYPE,              intent(inout) :: psi(:,:)
   R_TYPE,              intent(inout) :: hpsi(:,:)
   integer,             intent(in)    :: ik

@@ -353,7 +353,7 @@ contains
   ! ---------------------------------------------------------
   subroutine gauge_field_apply(this, der, dim, psi, grad, hpsi)
     type(gauge_field_t), intent(in)    :: this
-    type(derivatives_t), intent(inout) :: der
+    type(derivatives_t), intent(in)    :: der
     integer,             intent(in)    :: dim
     CMPLX,               intent(in)    :: psi(:,:)  ! psi(gr%mesh%np_part, hm%d%dim)
     CMPLX,               intent(in)    :: grad(:, :, :)
