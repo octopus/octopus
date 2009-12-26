@@ -411,7 +411,7 @@ contains
 
       rhoout(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
       if (hm%d%cdft) then
-        call calc_physical_current(gr, st, st%current)
+        call calc_physical_current(gr%der, st, st%current)
         rhoout(1:gr%mesh%np, 2:scf%mixdim2, 1:nspin) = st%current(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
       end if
       if (scf%what2mix == MIXPOT) then

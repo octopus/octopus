@@ -791,9 +791,9 @@ subroutine X(vmask) (gr, hm, st)
 end subroutine X(vmask)
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_diagonal) (hm, gr, diag, ik)
+subroutine X(hamiltonian_diagonal) (hm, der, diag, ik)
   type(hamiltonian_t), intent(in)    :: hm
-  type(grid_t),        intent(in)    :: gr
+  type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ik
   R_TYPE,              intent(out)   :: diag(:,:) ! hpsi(gr%mesh%np, hm%d%dim)
 
@@ -803,24 +803,24 @@ subroutine X(hamiltonian_diagonal) (hm, gr, diag, ik)
 
   call push_sub('hamiltonian_inc.Xhamiltonian_diagonal')
   
-  SAFE_ALLOCATE(ldiag(1:gr%mesh%np))
+  SAFE_ALLOCATE(ldiag(1:der%mesh%np))
 
   diag = M_ZERO
 
-  call derivatives_lapl_diag(gr%der, ldiag)
+  call derivatives_lapl_diag(der, ldiag)
 
   do idim = 1, hm%d%dim
-    diag(1:gr%mesh%np, idim) = -M_HALF/hm%mass*ldiag(1:gr%mesh%np)
+    diag(1:der%mesh%np, idim) = -M_HALF/hm%mass*ldiag(1:der%mesh%np)
   end do
 
   select case(hm%d%ispin)
 
   case(UNPOLARIZED, SPIN_POLARIZED)
     ispin = states_dim_get_spin_index(hm%d, ik)
-    diag(1:gr%mesh%np, 1) = diag(1:gr%mesh%np, 1) + hm%vhxc(1:gr%mesh%np, ispin) + hm%ep%vpsl(1:gr%mesh%np)
+    diag(1:der%mesh%np, 1) = diag(1:der%mesh%np, 1) + hm%vhxc(1:der%mesh%np, ispin) + hm%ep%vpsl(1:der%mesh%np)
     
   case(SPINORS)
-    do ip = 1, gr%mesh%np
+    do ip = 1, der%mesh%np
       diag(ip, 1) = diag(ip, 1) + hm%vhxc(ip, 1) + hm%ep%vpsl(ip)
       diag(ip, 2) = diag(ip, 2) + hm%vhxc(ip, 2) + hm%ep%vpsl(ip)
     end do

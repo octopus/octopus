@@ -19,8 +19,8 @@
 
 ! ---------------------------------------------------------
 ! This routine diagonalises the Hamiltonian in the subspace defined by the states.
-subroutine X(subspace_diag)(gr, st, hm, ik, eigenval, psi, diff)
-  type(grid_t),        intent(in)    :: gr
+subroutine X(subspace_diag)(der, st, hm, ik, eigenval, psi, diff)
+  type(derivatives_t), intent(in)    :: der
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(in)    :: hm
   integer,             intent(in)    :: ik
@@ -40,18 +40,18 @@ subroutine X(subspace_diag)(gr, st, hm, ik, eigenval, psi, diff)
 #ifdef HAVE_MPI
   if(st%parallel_in_states) then
     if(present(diff)) then
-      call X(subspace_diag_par_states)(gr, st, hm, ik, eigenval, psi, diff)
+      call X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
     else
-      call X(subspace_diag_par_states)(gr, st, hm, ik, eigenval, psi)
+      call X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi)
     end if
   else
 #endif
 
     SAFE_ALLOCATE(h_subspace(1:st%nst, 1:st%nst))
-    SAFE_ALLOCATE(f(1:gr%mesh%np, 1:st%d%dim, 1:st%d%block_size))
+    SAFE_ALLOCATE(f(1:der%mesh%np, 1:st%d%dim, 1:st%d%block_size))
 
     if(st%np_size) then
-      SAFE_ALLOCATE(psi2(1:gr%mesh%np_part, 1:st%d%dim, 1:st%d%block_size))
+      SAFE_ALLOCATE(psi2(1:der%mesh%np_part, 1:st%d%dim, 1:st%d%block_size))
     end if
 
     ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
@@ -60,19 +60,19 @@ subroutine X(subspace_diag)(gr, st, hm, ik, eigenval, psi, diff)
 
       if(st%np_size) then
         call batch_init(psib, hm%d%dim, ist, ist + size - 1, psi2)
-        call batch_set(psib, gr%mesh%np, psi(:, :, ist:))
+        call batch_set(psib, der%mesh%np, psi(:, :, ist:))
       else
         call batch_init(psib, hm%d%dim, ist, ist + size - 1, psi(:, :, ist:))
       end if
 
       call batch_init(hpsib, hm%d%dim, ist, ist + size - 1, f)
 
-      call X(hamiltonian_apply_batch)(hm, gr%der, psib, hpsib, ik)
+      call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik)
 
       call batch_end(psib)
 
       call batch_init(whole_psib, hm%d%dim, ist, st%nst, psi(:, :, ist:st%nst))
-      call X(mesh_batch_dotp_matrix)(gr%mesh, hpsib, whole_psib, h_subspace)
+      call X(mesh_batch_dotp_matrix)(der%mesh, hpsib, whole_psib, h_subspace)
       call batch_end(whole_psib)
       call batch_end(hpsib)
       
@@ -90,14 +90,14 @@ subroutine X(subspace_diag)(gr, st, hm, ik, eigenval, psi, diff)
     ! Calculate the new eigenfunctions as a linear combination of the
     ! old ones.
     call batch_init(whole_psib, hm%d%dim, 1, st%nst, psi(:, :, :))
-    call X(mesh_batch_rotate)(gr%mesh, whole_psib, h_subspace)
+    call X(mesh_batch_rotate)(der%mesh, whole_psib, h_subspace)
     call batch_end(whole_psib)
 
     ! Renormalize.
     do ist = st%st_start, st%st_end
-      nrm2 = X(mf_nrm2)(gr%mesh, st%d%dim, psi(:, :, ist))
+      nrm2 = X(mf_nrm2)(der%mesh, st%d%dim, psi(:, :, ist))
       do idim = 1, st%d%dim
-        call lalg_scal(gr%mesh%np, M_ONE/nrm2, psi(:, idim, ist))
+        call lalg_scal(der%mesh%np, M_ONE/nrm2, psi(:, idim, ist))
       end do
     end do
 
@@ -109,19 +109,19 @@ subroutine X(subspace_diag)(gr, st, hm, ik, eigenval, psi, diff)
 
         if(st%np_size) then
           call batch_init(psib, hm%d%dim, ist, ist + size - 1, psi2)
-          call batch_set(psib, gr%mesh%np, psi(:, :, ist:))
+          call batch_set(psib, der%mesh%np, psi(:, :, ist:))
         else
           call batch_init(psib, hm%d%dim, ist, ist + size - 1, psi(:, :, ist:))
         end if
         call batch_init(hpsib, hm%d%dim, ist, ist + size - 1, f)
         
-        call X(hamiltonian_apply_batch)(hm, gr%der, psib, hpsib, ik)
+        call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik)
 
         call batch_end(psib)
         call batch_end(hpsib)
         
         do ist2 = ist, ist + size - 1
-          diff(ist2) = X(states_residue)(gr%mesh, st%d%dim, f(:, :, ist2 - ist + 1), eigenval(ist2), psi(:, :, ist2))
+          diff(ist2) = X(states_residue)(der%mesh, st%d%dim, f(:, :, ist2 - ist + 1), eigenval(ist2), psi(:, :, ist2))
         end do
       end do
 
@@ -149,13 +149,13 @@ end subroutine X(subspace_diag)
 ! the states; this version is aware of parallelization in states but
 ! consumes more memory.
 !
-subroutine X(subspace_diag_par_states)(gr, st, hm, ik, eigenval, psi, diff)
-  type(grid_t),        intent(in)    :: gr
+subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
+  type(derivatives_t), intent(in)    :: der
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(in)    :: hm
   integer,             intent(in)    :: ik
   FLOAT,               intent(out)   :: eigenval(:)
-  R_TYPE,              intent(inout) :: psi(1:gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end)
+  R_TYPE,              intent(inout) :: psi(1:der%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end)
   FLOAT, optional,     intent(out)   :: diff(1:st%nst)
 
   R_TYPE, allocatable :: h_subspace(:,:), ff(:,:,:)
@@ -169,35 +169,35 @@ subroutine X(subspace_diag_par_states)(gr, st, hm, ik, eigenval, psi, diff)
   call push_sub('subspace_inc.Xsubspace_diag_par_states')
 
   SAFE_ALLOCATE(h_subspace(1:st%nst, 1:st%nst))
-  SAFE_ALLOCATE(ff(1:gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
+  SAFE_ALLOCATE(ff(1:der%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
 
   ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
   do ist = st%st_start, st%st_end
-    call X(hamiltonian_apply)(hm, gr%der, psi(:, :, ist), ff(:, :, ist), ist, ik)
+    call X(hamiltonian_apply)(hm, der, psi(:, :, ist), ff(:, :, ist), ist, ik)
   end do
-  call states_blockt_mul(gr%mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
+  call states_blockt_mul(der%mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
        psi(:, :, :), ff, h_subspace, symm=.true.)
 
   ! Diagonalize the Hamiltonian in the subspace.
   call lalg_eigensolve(st%nst, h_subspace, eigenval(:))
 
   ! The new states are given by the eigenvectors of the matrix.
-  ff(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end) = psi(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end)
+  ff(1:der%mesh%np, 1:st%d%dim, st%st_start:st%st_end) = psi(1:der%mesh%np, 1:st%d%dim, st%st_start:st%st_end)
 
-  call states_block_matr_mul(gr%mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
+  call states_block_matr_mul(der%mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
        ff, h_subspace, psi(:, :, :))
 
   ! Renormalize.
   do ist = st%st_start, st%st_end
-    nrm2 = X(mf_nrm2)(gr%mesh, st%d%dim, psi(:, :, ist))
-    psi(1:gr%mesh%np, 1:st%d%dim, ist) = psi(1:gr%mesh%np, 1:st%d%dim, ist)/nrm2
+    nrm2 = X(mf_nrm2)(der%mesh, st%d%dim, psi(:, :, ist))
+    psi(1:der%mesh%np, 1:st%d%dim, ist) = psi(1:der%mesh%np, 1:st%d%dim, ist)/nrm2
   end do
 
   ! Recalculate the residues if requested by the diff argument.
   if(present(diff)) then 
     do ist = st%st_start, st%st_end
-      call X(hamiltonian_apply)(hm, gr%der, psi(:, :, ist) , ff(:, :, st%st_start), ist, ik)
-      diff(ist) = X(states_residue)(gr%mesh, st%d%dim, ff(:, :, st%st_start), eigenval(ist), &
+      call X(hamiltonian_apply)(hm, der, psi(:, :, ist) , ff(:, :, st%st_start), ist, ik)
+      diff(ist) = X(states_residue)(der%mesh, st%d%dim, ff(:, :, st%st_start), eigenval(ist), &
            psi(:, :, ist))
     end do
 

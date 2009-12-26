@@ -21,6 +21,7 @@
 
 module eigensolver_m
   use datasets_m
+  use derivatives_m
   use eigen_cg_m
   use eigen_lobpcg_m
   use eigen_rmmdiis_m
@@ -332,9 +333,9 @@ contains
       
       if(eigens%converged(ik) == 0) then
         if (states_are_real(st)) then
-          call dsubspace_diag(gr, st, hm, ik, st%eigenval(:, ik), st%dpsi(:, :, :, ik), eigens%diff(:, ik))
+          call dsubspace_diag(gr%der, st, hm, ik, st%eigenval(:, ik), st%dpsi(:, :, :, ik), eigens%diff(:, ik))
         else
-          call zsubspace_diag(gr, st, hm, ik, st%eigenval(:, ik), st%zpsi(:, :, :, ik), eigens%diff(:, ik))
+          call zsubspace_diag(gr%der, st, hm, ik, st%eigenval(:, ik), st%zpsi(:, :, :, ik), eigens%diff(:, ik))
         end if
       end if
 
@@ -355,7 +356,7 @@ contains
           call deigensolver_lobpcg(gr, st, hm, eigens%pre, tol, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size, verbose = verbose_)
         case(RS_MG)
-          call deigensolver_mg(gr, st, hm, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call deigensolver_mg(gr%der, st, hm, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
           if(iter == 1) then
             call deigensolver_rmmdiis_start(gr, st, hm, eigens%pre, tol, maxiter, &
@@ -367,7 +368,7 @@ contains
         end select
 
         if(eigens%es_type /= RS_RMMDIIS) then
-          call dsubspace_diag(gr, st, hm, ik, st%eigenval(:, ik), st%dpsi(:, :, :, ik), eigens%diff(:, ik))
+          call dsubspace_diag(gr%der, st, hm, ik, st%eigenval(:, ik), st%dpsi(:, :, :, ik), eigens%diff(:, ik))
         end if
 
       else
@@ -388,7 +389,7 @@ contains
           call zeigensolver_lobpcg(gr, st, hm, eigens%pre, tol, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size, verbose = verbose_)
         case(RS_MG)
-          call zeigensolver_mg(gr, st, hm, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call zeigensolver_mg(gr%der, st, hm, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
           if(iter == 1) then
             call zeigensolver_rmmdiis_start(gr, st, hm, eigens%pre, tol, maxiter, &
@@ -400,7 +401,7 @@ contains
         end select
 
         if(eigens%es_type /= RS_RMMDIIS) then
-          call zsubspace_diag(gr, st, hm, ik, st%eigenval(:, ik), st%zpsi(:, :, :, ik), eigens%diff(:, ik))
+          call zsubspace_diag(gr%der, st, hm, ik, st%eigenval(:, ik), st%zpsi(:, :, :, ik), eigens%diff(:, ik))
         end if
 
       end if

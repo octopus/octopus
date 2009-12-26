@@ -22,8 +22,8 @@
 module subspace_m
   use batch_m
   use datasets_m
+  use derivatives_m
   use global_m
-  use grid_m
   use hamiltonian_m
   use lalg_adv_m
   use lalg_basic_m

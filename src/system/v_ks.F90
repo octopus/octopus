@@ -345,7 +345,7 @@ contains
     ! WARNING: calculating the self-induced magnetic field here only makes
     ! sense if it is going to be used in the Hamiltonian, which does not happen
     ! now. Otherwise one could just calculate it at the end of the calculation.
-    if(hm%self_induced_magnetic) call magnetic_induced(gr, st, hm%a_ind, hm%b_ind)
+    if(hm%self_induced_magnetic) call magnetic_induced(gr%der, st, hm%a_ind, hm%b_ind)
 
     if(calc_eigenval_) then
       if (states_are_real(st)) then

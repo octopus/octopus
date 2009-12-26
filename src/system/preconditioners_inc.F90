@@ -47,7 +47,7 @@ subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
     SAFE_ALLOCATE(a_copy(1:gr%mesh%np_part))
 
     do idim = 1, hm%d%dim
-      call lalg_copy(gr%mesh%np_part, a(:, idim), a_copy(:))
+      call lalg_copy(gr%mesh%np, a(:, idim), a_copy(:))
       call X(derivatives_perform)(pre%op, gr%der, a_copy(:), b(:, idim))
     end do
 
@@ -94,6 +94,8 @@ contains
     SAFE_DEALLOCATE_A(diag)
     call pop_sub()
   end subroutine apply_D_inverse
+
+  ! -----------------------------------------------------
 
   subroutine multigrid
     FLOAT :: step
@@ -220,11 +222,7 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, aa, bb, omega)
     call X(derivatives_batch_perform)(pre%op, gr%der, aa, bb)
   case default
     do ii = 1, aa%nst
-      if(present(omega)) then
-        call X(preconditioner_apply)(pre, gr, hm, aa%states(ii)%X(psi), bb%states(ii)%X(psi), omega)
-      else
-        call X(preconditioner_apply)(pre, gr, hm, aa%states(ii)%X(psi), bb%states(ii)%X(psi))
-      end if
+      call X(preconditioner_apply)(pre, gr, hm, aa%states(ii)%X(psi), bb%states(ii)%X(psi), omega)
     end do
   end select
 

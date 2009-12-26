@@ -18,8 +18,8 @@
 !! $Id: eigen_mg_inc.F90 4195 2008-05-25 18:15:35Z xavier $
 
 ! ---------------------------------------------------------
-subroutine X(eigensolver_mg) (gr, st, hm, tol, niter, converged, ik, diff)
-  type(grid_t),           intent(in)    :: gr
+subroutine X(eigensolver_mg) (der, st, hm, tol, niter, converged, ik, diff)
+  type(derivatives_t),    intent(in)    :: der
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
   FLOAT,                  intent(in)    :: tol
@@ -40,7 +40,7 @@ subroutine X(eigensolver_mg) (gr, st, hm, tol, niter, converged, ik, diff)
 
   do iter = 1, niter
 
-    call X(subspace_diag)(gr, st, hm, ik, st%eigenval(:, ik), st%X(psi)(:, :, :, ik), diff)
+    call X(subspace_diag)(der, st, hm, ik, st%eigenval(:, ik), st%X(psi)(:, :, :, ik), diff)
 
     do ist = 1, st%nst
       print*, iter, ist, st%eigenval(ist, ik), diff(ist)
@@ -53,30 +53,31 @@ subroutine X(eigensolver_mg) (gr, st, hm, tol, niter, converged, ik, diff)
 
       cc(ist, ist) = M_ONE
       do ist2 = 1, ist - 1
-        cc(ist, ist2) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), st%X(psi)(:, :, ist2, ik))
+        cc(ist, ist2) = X(mf_dotp)(der%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), st%X(psi)(:, :, ist2, ik))
       end do
 
     end do
 
-    call X(coordinate_relaxation)(gr, gr%mesh, hm, st%nst, 10, ik, st%X(psi)(:, :, :, ik), aa, cc)
+    call X(coordinate_relaxation)(der, hm, st%nst, 10, ik, st%X(psi)(:, :, :, ik), aa, cc)
 
     ! normalize
     do ist = 1, st%nst      
-      call lalg_scal(gr%mesh%np, CNST(1.0)/sqrt(cc(ist, ist)), st%X(psi)(:, 1, ist, ik))
+      call lalg_scal(der%mesh%np, CNST(1.0)/sqrt(cc(ist, ist)), st%X(psi)(:, 1, ist, ik))
     end do
 
   end do
 
-  call X(subspace_diag)(gr, st, hm, ik, st%eigenval(:, ik), st%X(psi)(:, :, :, ik), diff)
+  call X(subspace_diag)(der, st, hm, ik, st%eigenval(:, ik), st%X(psi)(:, :, :, ik), diff)
 
   niter = iter*10
 
   call pop_sub()
 end subroutine X(eigensolver_mg)
 
-subroutine X(coordinate_relaxation)(gr, mesh, hm, nst, steps, ik, psi, aa, cc)
-  type(grid_t),           intent(in)    :: gr
-  type(mesh_t),           intent(in)    :: mesh
+! -------------------------------------------------------------------------
+
+subroutine X(coordinate_relaxation)(der, hm, nst, steps, ik, psi, aa, cc)
+  type(derivatives_t),    intent(in)    :: der
   type(hamiltonian_t),    intent(in)    :: hm
   integer,                intent(in)    :: nst
   integer,                intent(in)    :: steps
@@ -94,15 +95,15 @@ subroutine X(coordinate_relaxation)(gr, mesh, hm, nst, steps, ik, psi, aa, cc)
 
   SAFE_ALLOCATE(sigma(1:nst))
   SAFE_ALLOCATE(beta(1:nst))
-  SAFE_ALLOCATE(hdiag(1:mesh%np, 1:hm%d%dim))
+  SAFE_ALLOCATE(hdiag(1:der%mesh%np, 1:hm%d%dim))
 
-  call X(hamiltonian_diagonal) (hm, gr, hdiag, ik)
+  call X(hamiltonian_diagonal)(hm, der, hdiag, ik)
 
   do iter = 1, steps
     
-    do ip = 1, mesh%np
+    do ip = 1, der%mesh%np
       
-      vv = sqrt(mesh%vol_pp(ip))
+      vv = sqrt(der%mesh%vol_pp(ip))
       dh = hdiag(ip, 1)
       pot = hm%vhxc(ip, 1) + hm%ep%vpsl(ip)
       
@@ -113,9 +114,9 @@ subroutine X(coordinate_relaxation)(gr, mesh, hm, nst, steps, ik, psi, aa, cc)
         ! apply the hamiltonian in the point
             
         alpha = M_ZERO
-        do is = 1, gr%der%lapl%stencil%size
-          inb = ip + gr%der%lapl%ri(is, gr%der%lapl%rimap(ip))
-          alpha = alpha + gr%der%lapl%w_re(is, 1)*psi(inb, 1, ist)
+        do is = 1, der%lapl%stencil%size
+          inb = ip + der%lapl%ri(is, der%lapl%rimap(ip))
+          alpha = alpha + der%lapl%w_re(is, 1)*psi(inb, 1, ist)
         end do
         
         alpha = -M_HALF*alpha + pot*psi(ip, 1, ist)

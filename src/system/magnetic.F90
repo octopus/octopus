@@ -23,7 +23,6 @@ module magnetic_m
   use derivatives_m
   use geometry_m
   use global_m
-  use grid_m
   use mesh_function_m
   use mesh_m
   use messages_m
@@ -46,11 +45,11 @@ module magnetic_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine magnetic_density(m, st, rho, md)
-    type(mesh_t),   intent(in)  :: m
+  subroutine magnetic_density(mesh, st, rho, md)
+    type(mesh_t),   intent(in)  :: mesh
     type(states_t), intent(in)  :: st
-    FLOAT,             intent(in)  :: rho(:,:) ! (np, st%d%nspin)
-    FLOAT,             intent(out) :: md(:,:)   ! (np, 3)
+    FLOAT,          intent(in)  :: rho(:,:) ! (np, st%d%nspin)
+    FLOAT,          intent(out) :: md(:,:)   ! (np, 3)
 
     call push_sub('states.magnetic_density')
 
@@ -60,12 +59,12 @@ contains
 
     case (SPIN_POLARIZED)
       md = M_ZERO
-      md(1:m%np, 3) = rho(1:m%np, 1) - rho(1:m%np, 2)
+      md(1:mesh%np, 3) = rho(1:mesh%np, 1) - rho(1:mesh%np, 2)
 
     case (SPINORS)
-      md(1:m%np, 1) =  M_TWO*rho(1:m%np, 3)
-      md(1:m%np, 2) = -M_TWO*rho(1:m%np, 4)
-      md(1:m%np, 3) = rho(1:m%np, 1) - rho(1:m%np, 2)
+      md(1:mesh%np, 1) =  M_TWO*rho(1:mesh%np, 3)
+      md(1:mesh%np, 2) = -M_TWO*rho(1:mesh%np, 4)
+      md(1:mesh%np, 3) = rho(1:mesh%np, 1) - rho(1:mesh%np, 2)
     end select
 
     call pop_sub()
@@ -73,22 +72,22 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine magnetic_moment(m, st, rho, mm)
-    type(mesh_t),   intent(in)  :: m
+  subroutine magnetic_moment(mesh, st, rho, mm)
+    type(mesh_t),   intent(in)  :: mesh
     type(states_t), intent(in)  :: st
-    FLOAT,          intent(in)  :: rho(:,:) ! (m%np_part, st%d%nspin)
+    FLOAT,          intent(in)  :: rho(:,:)
     FLOAT,          intent(out) :: mm(3)
 
     FLOAT, allocatable :: md(:,:)
 
     call push_sub('states.states_magnetic_moment')
 
-    SAFE_ALLOCATE(md(1:m%np, 1:MAX_DIM))
-    call magnetic_density(m, st, rho, md)
+    SAFE_ALLOCATE(md(1:mesh%np, 1:MAX_DIM))
+    call magnetic_density(mesh, st, rho, md)
 
-    mm(1) = dmf_integrate(m, md(:, 1))
-    mm(2) = dmf_integrate(m, md(:, 2))
-    mm(3) = dmf_integrate(m, md(:, 3))
+    mm(1) = dmf_integrate(mesh, md(:, 1))
+    mm(2) = dmf_integrate(mesh, md(:, 2))
+    mm(3) = dmf_integrate(mesh, md(:, 3))
 
     SAFE_DEALLOCATE_A(md)
 
@@ -97,11 +96,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine magnetic_local_moments(m, st, geo, rho, r, lmm)
-    type(mesh_t),     intent(in)  :: m
+  subroutine magnetic_local_moments(mesh, st, geo, rho, r, lmm)
+    type(mesh_t),     intent(in)  :: mesh
     type(states_t),   intent(in)  :: st
     type(geometry_t), intent(in)  :: geo
-    FLOAT,            intent(in)  :: rho(:,:) ! (m%np_part, st%d%nspin)
+    FLOAT,            intent(in)  :: rho(:,:)
     FLOAT,            intent(in)  :: r
     FLOAT,            intent(out) :: lmm(MAX_DIM, geo%natoms)
 
@@ -111,21 +110,21 @@ contains
 
     call push_sub('magnetic.magnetic_local_moments')
 
-    SAFE_ALLOCATE(md (1:m%np, 1:MAX_DIM))
-    SAFE_ALLOCATE(aux(1:m%np, 1:MAX_DIM))
+    SAFE_ALLOCATE(md (1:mesh%np, 1:MAX_DIM))
+    SAFE_ALLOCATE(aux(1:mesh%np, 1:MAX_DIM))
 
-    call magnetic_density(m, st, rho, md)
+    call magnetic_density(mesh, st, rho, md)
     lmm = M_ZERO
     do ia = 1, geo%natoms
       aux = M_ZERO
-      do i = 1, m%np
-        call mesh_r(m, i, ri, a=geo%atom(ia)%x)
+      do i = 1, mesh%np
+        call mesh_r(mesh, i, ri, a = geo%atom(ia)%x)
         if (ri > r) cycle
         aux(i, 1:MAX_DIM) = md(i, 1:MAX_DIM)
       end do
-      lmm(1, ia) = dmf_integrate(m, aux(:, 1))
-      lmm(2, ia) = dmf_integrate(m, aux(:, 2))
-      lmm(3, ia) = dmf_integrate(m, aux(:, 3))
+      lmm(1, ia) = dmf_integrate(mesh, aux(:, 1))
+      lmm(2, ia) = dmf_integrate(mesh, aux(:, 2))
+      lmm(3, ia) = dmf_integrate(mesh, aux(:, 3))
     end do
     SAFE_DEALLOCATE_A(md)
     SAFE_DEALLOCATE_A(aux)
@@ -135,15 +134,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine calc_physical_current(gr, st, j)
-    type(grid_t),     intent(inout) :: gr
-    type(states_t),   intent(inout) :: st
-    FLOAT,            intent(out)   :: j(:,:,:)   ! j(gr%mesh%np, gr%mesh%sb%dim, st%d%nspin)
+  subroutine calc_physical_current(der, st, j)
+    type(derivatives_t),  intent(in)    :: der
+    type(states_t),       intent(inout) :: st
+    FLOAT,                intent(out)   :: j(:,:,:)
 
     call push_sub('magnetic.calc_physical_current')
 
     ! Paramagnetic contribution to the physical current
-    call states_calc_tau_jp_gn(gr%der, st, jp = j)
+    call states_calc_tau_jp_gn(der, st, jp = j)
 
     ! TODO
     ! Diamagnetic contribution to the physical current
@@ -156,11 +155,11 @@ contains
   ! This soubroutine receives as input a current, and produces
   ! as an output the vector potential that it induces.
   ! WARNING: There is probably a problem for 2D. For 1D none of this makes sense?
-  subroutine magnetic_induced(gr, st, a_ind, b_ind)
-    type(grid_t), intent(inout) :: gr
-    type(states_t), intent(inout) :: st
-    FLOAT, intent(out) :: a_ind(:, :) ! a(gr%mesh%np_part, gr%mesh%sb%dim)
-    FLOAT, intent(out) :: b_ind(:, :) ! b(gr%mesh%np_part, gr%mesh%sb%dim) if gr%mesh%sb%dim=3, b(gr%mesh%np_part, 1) if gr%mesh%sb%dim=2
+  subroutine magnetic_induced(der, st, a_ind, b_ind)
+    type(derivatives_t),  intent(in)    :: der
+    type(states_t),       intent(inout) :: st
+    FLOAT,                intent(out)   :: a_ind(:, :) ! a(gr%mesh%np_part, gr%mesh%sb%dim)
+    FLOAT,                intent(out)   :: b_ind(:, :) ! b(gr%mesh%np_part, gr%mesh%sb%dim) if gr%mesh%sb%dim=3, b(gr%mesh%np_part, 1) if gr%mesh%sb%dim=2
 
     integer :: i
     FLOAT, allocatable :: j(:, :, :)
@@ -169,17 +168,17 @@ contains
 
     ! If the states are real, we should never have reached here, but
     ! just in case we return zero.
-    if(st%wfs_type .eq. M_REAL) then
+    if(states_are_real(st)) then
       a_ind = M_ZERO
       b_ind = M_ZERO
       call pop_sub(); return
     end if
 
-    SAFE_ALLOCATE(j(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
-    call states_calc_tau_jp_gn(gr%der, st, jp=j)
+    SAFE_ALLOCATE(j(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin))
+    call states_calc_tau_jp_gn(der, st, jp = j)
 
     a_ind = M_ZERO
-    do i = 1, gr%mesh%sb%dim
+    do i = 1, der%mesh%sb%dim
       call dpoisson_solve(psolver, a_ind(:, i), j(:, i, 1))
     end do
     ! This minus sign is introduced here because the current that has been used
@@ -187,7 +186,7 @@ contains
     ! and therefore there is a minus sign missing (electrons are negative charges...)
     a_ind = - a_ind / P_C
 
-    call dderivatives_curl(gr%der, a_ind, b_ind)
+    call dderivatives_curl(der, a_ind, b_ind)
 
     SAFE_DEALLOCATE_A(j)
     call pop_sub()

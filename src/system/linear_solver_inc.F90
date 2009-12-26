@@ -364,7 +364,7 @@ subroutine X(ls_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, omega, tol)
   SAFE_ALLOCATE(  hx(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE( res(1:gr%mesh%np, 1:st%d%dim))
 
-  call X(hamiltonian_diagonal)(hm, gr, diag, ik)
+  call X(hamiltonian_diagonal)(hm, gr%der, diag, ik)
   diag(1:gr%mesh%np, 1:st%d%dim) = diag(1:gr%mesh%np, 1:st%d%dim) + omega
 
   do iter = 1, ls%max_iter
