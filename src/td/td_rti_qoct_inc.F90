@@ -32,7 +32,7 @@
       call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t-dt/M_TWO, hm%vhxc(:, :))
       call hamiltonian_update_potential(hm, gr%mesh)
     end if
-    call exponential_apply_all(tr%te, gr, hm, st, dt, t - dt/M_TWO)
+    call exponential_apply_all(tr%te, gr%der, hm, st, dt, t - dt/M_TWO)
 
     call pop_sub()
   end subroutine td_qoct_tddft_propagator
@@ -83,7 +83,7 @@
     call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t-dt/M_TWO, hm%vhxc(:, :))
     call hamiltonian_update_potential(hm, gr%mesh)
 
-    call exponential_apply_all(tr%te, gr, hm, st_op, dt/M_TWO, t-dt)
+    call exponential_apply_all(tr%te, gr%der, hm, st_op, dt/M_TWO, t-dt)
 
     ! solve (1+i\delta t/2 H_n)\psi^{predictor}_{n+1} = (1-i\delta t/2 H_n)\psi^n
     do ik = st%d%kpt%start, st%d%kpt%end
@@ -138,7 +138,7 @@
                                             (ist-1)*np*dim_op + (idim-1)*np+np)
     end forall
 
-    call exponential_apply_all(tr_p%te, grid_p, hm_p, st_op, -dt_op/M_TWO, t_op)
+    call exponential_apply_all(tr_p%te, grid_p%der, hm_p, st_op, -dt_op/M_TWO, t_op)
 
     forall(ist = 1:nst_op, idim = 1:dim_op)
       y((ist-1)*np*dim_op + (idim-1)*np+1:(ist-1)*np*dim_op + (idim-1)*np+np) = &

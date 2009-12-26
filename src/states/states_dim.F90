@@ -21,7 +21,6 @@
 
 module states_dim_m
   use blas_m
-  use calc_mode_m
   use crystal_m
   use datasets_m
   use distributed_m

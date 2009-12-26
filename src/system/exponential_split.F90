@@ -44,10 +44,10 @@ contains
   ! ---------------------------------------------------------
   ! Calculates psi = exp{factor*T} psi
   ! where T is the kinetic energy operator
-  subroutine zexp_kinetic (gr, hm, psi, cf, factor)
-    type(grid_t),        intent(in)    :: gr
+  subroutine zexp_kinetic(mesh, hm, psi, cf, factor)
+    type(mesh_t),        intent(in)    :: mesh
     type(hamiltonian_t), intent(in)    :: hm
-    CMPLX,               intent(inout) :: psi(:,:) ! (gr%mesh%np_part, dim)
+    CMPLX,               intent(inout) :: psi(:,:) ! (mesh%np_part, dim)
     type(zcf_t),         intent(inout) :: cf
     CMPLX,               intent(in)    :: factor
 
@@ -56,7 +56,7 @@ contains
 
     call push_sub('exponential_split.exp_kinetic')
 
-    if(simul_box_is_periodic(gr%sb)) then
+    if(simul_box_is_periodic(mesh%sb)) then
       message(1) = 'Internal error in exp_kinetic'
       call write_fatal(1)
     end if
@@ -64,13 +64,13 @@ contains
     cutoff = CNST(1e10)
 
     temp = M_ZERO
-    temp(1:gr%mesh%sb%dim) = (M_TWO*M_Pi)/(cf%n(1:gr%mesh%sb%dim)*gr%mesh%spacing(1:gr%mesh%sb%dim))
+    temp(1:mesh%sb%dim) = (M_TWO*M_Pi)/(cf%n(1:mesh%sb%dim)*mesh%spacing(1:mesh%sb%dim))
 
     call zcf_alloc_RS(cf)
     call zcf_alloc_FS(cf)
 
     do idim = 1, hm%d%dim
-      call zmesh_to_cube(gr%mesh, psi(:, idim), cf)
+      call zmesh_to_cube(mesh, psi(:, idim), cf)
       call zcf_RS2FS(cf)
 
       do iz = 1, cf%n(3)
@@ -80,14 +80,14 @@ contains
           do ix = 1, cf%n(1)
             k(1) = pad_feq(ix, cf%n(1), .true.)
 
-            g2 = min(cutoff, sum((temp(1:gr%mesh%sb%dim)*k(1:gr%mesh%sb%dim))**2))
+            g2 = min(cutoff, sum((temp(1:mesh%sb%dim)*k(1:mesh%sb%dim))**2))
             cf%FS(ix, iy, iz) = exp(factor*g2/M_TWO)*cf%FS(ix, iy, iz)
           end do
         end do
       end do
 
       call zcf_FS2RS(cf)
-      call zcube_to_mesh(gr%mesh, cf, psi(:, idim))
+      call zcube_to_mesh(mesh, cf, psi(:, idim))
     end do
 
     call zcf_free_RS(cf)
@@ -100,10 +100,10 @@ contains
   ! ---------------------------------------------------------
   ! Calculates psi = exp{factor*V_KS(t)} psi
   ! where V_KS is the Kohn-Sham potential
-  subroutine zexp_vlpsi(gr, hm, psi, ik, t, factor)
-    type(grid_t),        intent(in)    :: gr
+  subroutine zexp_vlpsi(mesh, hm, psi, ik, t, factor)
+    type(mesh_t),        intent(in)    :: mesh
     type(hamiltonian_t), intent(in)    :: hm
-    CMPLX,               intent(inout) :: psi(:,:) ! (gr%mesh%np_part, gr%mesh%sb%dim)
+    CMPLX,               intent(inout) :: psi(:,:) ! (mesh%np_part, mesh%sb%dim)
     integer,             intent(in)    :: ik
     FLOAT,               intent(in)    :: t
     CMPLX,               intent(in)    :: factor
@@ -116,12 +116,12 @@ contains
     ! WARNING: spinors not yet supported.
     select case(hm%d%ispin)
     case(UNPOLARIZED)
-      psi(1:gr%mesh%np, 1) = exp(factor*(hm%ep%vpsl(1:gr%mesh%np)+hm%vhxc(1:gr%mesh%np, 1)))*psi(1:gr%mesh%np, 1)
+      psi(1:mesh%np, 1) = exp(factor*(hm%ep%vpsl(1:mesh%np)+hm%vhxc(1:mesh%np, 1)))*psi(1:mesh%np, 1)
     case(SPIN_POLARIZED)
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        psi(1:gr%mesh%np, 1) = exp(factor*(hm%ep%vpsl(1:gr%mesh%np)+hm%vhxc(1:gr%mesh%np, 1)))*psi(1:gr%mesh%np, 1)
+        psi(1:mesh%np, 1) = exp(factor*(hm%ep%vpsl(1:mesh%np)+hm%vhxc(1:mesh%np, 1)))*psi(1:mesh%np, 1)
       else
-        psi(1:gr%mesh%np, 1) = exp(factor*(hm%ep%vpsl(1:gr%mesh%np)+hm%vhxc(1:gr%mesh%np, 2)))*psi(1:gr%mesh%np, 1)
+        psi(1:mesh%np, 1) = exp(factor*(hm%ep%vpsl(1:mesh%np)+hm%vhxc(1:mesh%np, 2)))*psi(1:mesh%np, 1)
       end if
     case(SPINORS)
       message(1) = 'Internal error in exp_vlpsi'
@@ -131,9 +131,9 @@ contains
     do i = 1, hm%ep%no_lasers
       select case(laser_kind(hm%ep%lasers(i)))
       case(E_FIELD_ELECTRIC)
-        SAFE_ALLOCATE(pot(1:gr%mesh%np))
-        call laser_potential(gr%sb, hm%ep%lasers(i), gr%mesh, pot, t)
-        psi(1:gr%mesh%np, ik) = exp( factor * pot(1:gr%mesh%np) ) * psi(1:gr%mesh%np, ik) 
+        SAFE_ALLOCATE(pot(1:mesh%np))
+        call laser_potential(mesh%sb, hm%ep%lasers(i), mesh, pot, t)
+        psi(1:mesh%np, ik) = exp(factor*pot(1:mesh%np))*psi(1:mesh%np, ik) 
         SAFE_DEALLOCATE_A(pot)
       case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL)
         write(message(1),'(a)') 'The split-operator scheme cannot be used with magnetic fields, or'

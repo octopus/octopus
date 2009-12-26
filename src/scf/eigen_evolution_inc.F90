@@ -39,7 +39,7 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
   maxiter = niter
   matvec = 0
 
-  call exponential_init(te, gr)
+  call exponential_init(te, gr%der)
 
   SAFE_ALLOCATE(hpsi(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(m(1:st%nst, 1:st%nst))
@@ -118,7 +118,7 @@ contains
 #else
     zpsi => psi
 #endif
-    call exponential_apply(te, gr, hm, zpsi, ist, ik, -tau, M_ZERO, order = j, imag_time = .true.)
+    call exponential_apply(te, gr%der, hm, zpsi, ist, ik, -tau, M_ZERO, order = j, imag_time = .true.)
 #if defined(R_TREAL)
     psi = zpsi
     SAFE_DEALLOCATE_P(zpsi)

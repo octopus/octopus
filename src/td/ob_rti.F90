@@ -601,7 +601,7 @@ contains
     ! Apply (1 - i\delta H_{CC}^{(m)}) to zpsi.
     ! td_exp_dt with Taylor expansion calculates exp(-i dt H), i. e. the
     ! minus is already built in.
-    call exponential_apply(taylor_1st, gr, hm, zpsi, ist, ik, -sign*dt/M_TWO, t-dt)
+    call exponential_apply(taylor_1st, gr%der, hm, zpsi, ist, ik, -sign*dt/M_TWO, t-dt)
     if(transposed_) zpsi = conjg(zpsi)
 
     ! Apply modification: sign \delta^2 Q zpsi
@@ -653,7 +653,7 @@ contains
     ! Apply (1 - i\delta H_{CC}^{(m)}) to zpsi.
     ! td_exp_dt with Taylor expansion calculates exp(-i dt H), i. e. the
     ! minus is already built in.
-    call exponential_apply(taylor_1st, gr, hm, zpsi, ist, ik, -sign*dt/M_TWO, t-dt)
+    call exponential_apply(taylor_1st, gr%der, hm, zpsi, ist, ik, -sign*dt/M_TWO, t-dt)
 
     if(transposed_) zpsi = conjg(zpsi)
 
