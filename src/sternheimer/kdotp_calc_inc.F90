@@ -35,7 +35,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
 
   integer ik, ist, ist2, idir1, idir2
   R_TYPE term
-  R_TYPE, allocatable   :: pertpsi(:, :)       ! H`i|psi0>
+  R_TYPE, allocatable   :: pertpsi(:, :, :)       ! H`i|psi0>
   R_TYPE, allocatable   :: proj_dl_psi(:, :)   ! (1-Pn`)|psi`j>
   type(mesh_t), pointer :: mesh
   logical, allocatable  :: orth_mask(:)
@@ -44,7 +44,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
 
   mesh => sys%gr%mesh
 
-  SAFE_ALLOCATE(pertpsi(1:mesh%np, 1:sys%gr%sb%dim))
+  SAFE_ALLOCATE(pertpsi(1:mesh%np, 1:hm%d%dim, 1:sys%gr%sb%dim))
   SAFE_ALLOCATE(proj_dl_psi(1:mesh%np, 1)) ! second index should be sys%st%d%dim, i.e. spinors
   SAFE_ALLOCATE(orth_mask(1:sys%st%nst))
 
@@ -58,7 +58,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
       do idir1 = 1, sys%gr%sb%dim
         call pert_setup_dir(perturbation, idir1)
         call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, &
-          sys%st%X(psi)(1:mesh%np, 1, ist, ik), pertpsi(1:mesh%np, idir1))
+          sys%st%X(psi)(:, :, ist, ik), pertpsi(:, :, idir1))
       enddo
 
       do idir1 = 1, sys%gr%sb%dim
@@ -92,7 +92,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
           endif
 
           ! contribution from Sternheimer equation
-          term = X(mf_dotp)(mesh, proj_dl_psi(1:mesh%np, 1), pertpsi(1:mesh%np, idir1))
+          term = X(mf_dotp)(mesh, sys%st%d%dim, proj_dl_psi, pertpsi(:, :, idir1))
           eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) + M_TWO * term
 
           if (occ_solution_method == 1) then
@@ -102,8 +102,8 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
              do ist2 = 1, sys%st%nst
                 if (ist2 == ist .or. abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) cycle
 
-                term = X(mf_dotp)(mesh, pertpsi(1:mesh%np, idir1), sys%st%X(psi)(1:mesh%np, 1, ist2, ik)) * &
-                     X(mf_dotp)(mesh, sys%st%X(psi)(1:mesh%np, 1, ist2, ik), pertpsi(1:mesh%np, idir2)) / &
+                term = X(mf_dotp)(mesh, sys%st%d%dim, pertpsi(:, :, idir1), sys%st%X(psi)(:, :, ist2, ik)) * &
+                     X(mf_dotp)(mesh, sys%st%d%dim, sys%st%X(psi)(:, :, ist2, ik), pertpsi(:, :, idir2)) / &
                      (sys%st%eigenval(ist, ik) - sys%st%eigenval(ist2, ik))
                 eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) + M_TWO * term
              enddo
@@ -136,9 +136,7 @@ subroutine X(calc_band_velocity)(sys, hm, pert, velocity)
     do ist = 1, sys%st%nst
       do idir = 1, sys%gr%sb%periodic_dim
         call pert_setup_dir(pert, idir)
-        do idim = 1, sys%st%d%dim
-          call X(pert_apply)(pert, sys%gr, sys%geo, hm, ik, sys%st%X(psi)(:, idim, ist, ik), pertpsi(:, idim))
-        enddo
+        call X(pert_apply)(pert, sys%gr, sys%geo, hm, ik, sys%st%X(psi)(:, :, ist, ik), pertpsi)
         velocity(ik, ist, idir) = REAL(X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, &
                                                   sys%st%X(psi)(:, :, ist, ik), pertpsi(:, :)))
       enddo

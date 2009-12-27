@@ -130,7 +130,7 @@ subroutine X(sternheimer_solve)(                           &
             forall(idim = 1:st%d%dim, ip = 1:mesh%np) y(ip, idim, sigma) = this%X(rhs)(ip, idim, ist, ik)
           else
             Y(1:mesh%np, 1, sigma) = R_TOTYPE(M_ZERO)
-            call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, st%X(psi)(:, 1, ist, ik), Y(:, 1, sigma))
+            call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, st%X(psi)(:, :, ist, ik), Y(:, :, sigma))
           end if
           Y(1:mesh%np, 1, sigma) = -Y(1:mesh%np, 1, sigma) - hvar(1:mesh%np, is, sigma)*st%X(psi)(1:mesh%np, 1, ist, ik)
 

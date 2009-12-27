@@ -26,13 +26,13 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
   type(geometry_t),     intent(in)    :: geo
   type(hamiltonian_t),  intent(in)    :: hm
   integer,              intent(in)    :: ik
-  R_TYPE,               intent(in)    :: f_in(:)
-  R_TYPE,               intent(out)   :: f_out(:)
+  R_TYPE,               intent(in)    :: f_in(:, :)
+  R_TYPE,               intent(out)   :: f_out(:, :)
 
   R_TYPE, allocatable :: f_in_copy(:)
    logical :: apply_kpoint
 
-  call push_sub('pert_inc.Xpert_apply')
+   call push_sub('pert_inc.Xpert_apply')
 
   call profiling_in(prof, "PERT_APPLY")
 
@@ -40,7 +40,7 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
 
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
      SAFE_ALLOCATE(f_in_copy(1:gr%mesh%np_part))
-     call lalg_copy(gr%mesh%np_part, f_in, f_in_copy)
+     call lalg_copy(gr%mesh%np_part, f_in(:, 1), f_in_copy)
      call X(derivatives_set_bc(gr%der, f_in_copy(:)))
   endif
   ! no derivatives in electric, so ghost points not needed
@@ -50,7 +50,7 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
   ! electric does not need it since (e^-ikr)r(e^ikr) = r
 
   if (apply_kpoint) then
-    f_in_copy(1:gr%mesh%np_part) = hm%phase(1:gr%mesh%np_part, ik) * f_in_copy(1:gr%mesh%np_part)
+    f_in_copy(1:gr%mesh%np_part) = hm%phase(1:gr%mesh%np_part, ik)*f_in_copy(1:gr%mesh%np_part)
   endif
 
   select case(this%pert_type)
@@ -72,7 +72,7 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
   end select
   
   if (apply_kpoint) then
-    f_out(1:gr%mesh%np) = conjg(hm%phase(1:gr%mesh%np, ik)) * f_out(1:gr%mesh%np)
+    f_out(1:gr%mesh%np, 1) = conjg(hm%phase(1:gr%mesh%np, ik))*f_out(1:gr%mesh%np, 1)
   endif
 
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
@@ -89,7 +89,7 @@ contains
   subroutine none()
 
     call push_sub('pert_inc.Xpert_apply.none')
-    f_out(1:gr%mesh%np) = M_ZERO
+    f_out(1:gr%mesh%np, 1) = M_ZERO
     call pop_sub()
 
   end subroutine none
@@ -98,7 +98,7 @@ contains
   subroutine electric()
 
     call push_sub('pert_inc.Xpert_apply.electric')
-    f_out(1:gr%mesh%np) = f_in(1:gr%mesh%np) * gr%mesh%x(1:gr%mesh%np, this%dir)
+    f_out(1:gr%mesh%np, 1) = f_in(1:gr%mesh%np, 1)*gr%mesh%x(1:gr%mesh%np, this%dir)
     call pop_sub()
 
   end subroutine electric
@@ -116,7 +116,7 @@ contains
 
     call X(derivatives_grad) (gr%der, f_in_copy, grad, set_bc = .false.)
     ! set_bc done already separately
-    f_out(1:gr%mesh%np) = grad(1:gr%mesh%np, this%dir)
+    f_out(1:gr%mesh%np, 1) = grad(1:gr%mesh%np, this%dir)
     ! i delta_H_k = i (-i*grad + k) . delta_k
     ! representation on psi is just grad . delta_k
     ! note that second-order term is left out
@@ -125,7 +125,7 @@ contains
       do iatom = 1, geo%natoms
         if(species_is_ps(geo%atom(iatom)%spec)) then
           call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, this%dir, ik, f_in_copy, cpsi(:, :))
-          f_out(1:gr%mesh%np) = f_out(1:gr%mesh%np) + cpsi(1:gr%mesh%np, 1)
+          f_out(1:gr%mesh%np, 1) = f_out(1:gr%mesh%np, 1) + cpsi(1:gr%mesh%np, 1)
           ! using only the first spinor component
         end if
       end do
@@ -150,7 +150,7 @@ contains
 
     ! Note that we leave out the term 1/P_c
     call X(physics_op_L)(gr%der, f_in_copy, lf, set_bc = .false.)
-    f_out(1:gr%mesh%np) = M_HALF * lf(1:gr%mesh%np, this%dir)
+    f_out(1:gr%mesh%np, 1) = M_HALF*lf(1:gr%mesh%np, this%dir)
 
     SAFE_DEALLOCATE_A(lf)
 
@@ -178,9 +178,9 @@ contains
           cross(3) = xx(1) * vv(2) - xx(2) * vv(1)
 
 #if !defined(R_TCOMPLEX)
-          f_out(ip) = f_out(ip) + M_HALF * cross(this%dir)
+          f_out(ip, 1) = f_out(ip, 1) + M_HALF*cross(this%dir)
 #else
-          f_out(ip) = f_out(ip) - M_zI * M_HALF * cross(this%dir)
+          f_out(ip, 1) = f_out(ip, 1) - M_zI*M_HALF*cross(this%dir)
 #endif
         end do
       end do
@@ -200,7 +200,7 @@ contains
     call push_sub('pert_inc.Xpert_apply.ionic')
     SAFE_ALLOCATE(tmp(1:gr%mesh%np))
     
-    f_out(1:gr%mesh%np) = M_ZERO
+    f_out(1:gr%mesh%np, 1) = M_ZERO
     
     do iatom = 1, geo%natoms
       do idir = 1, gr%mesh%sb%dim
@@ -209,7 +209,7 @@ contains
 
         call X(ionic_perturbation)(this, gr, geo, hm, ik, f_in_copy, tmp, iatom, idir)
         
-        call lalg_axpy(gr%mesh%np, this%ionic%mix1(iatom, idir), tmp, f_out)
+        call lalg_axpy(gr%mesh%np, this%ionic%mix1(iatom, idir), tmp, f_out(:, 1))
 
       end do
     end do
@@ -276,8 +276,8 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
   type(geometry_t),     intent(in)    :: geo
   type(hamiltonian_t),  intent(in)    :: hm
   integer,              intent(in)    :: ik
-  R_TYPE,               intent(in)    :: f_in(:)
-  R_TYPE,               intent(out)   :: f_out(:)
+  R_TYPE,               intent(in)    :: f_in(:, :)
+  R_TYPE,               intent(out)   :: f_out(:, :)
 
 ! FIX ME: need to apply phases here
 
@@ -286,7 +286,7 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
   select case(this%pert_type)
 
   case(PERTURBATION_ELECTRIC)
-    f_out(1:gr%mesh%np) = R_TOTYPE(M_ZERO)
+    f_out(1:gr%mesh%np, 1:hm%d%dim) = R_TOTYPE(M_ZERO)
   case(PERTURBATION_IONIC)
     call ionic()
   case(PERTURBATION_MAGNETIC)
@@ -309,8 +309,8 @@ contains
     call push_sub('pert_inc.Xpert_apply_order2.magnetic')
 
     do ip = 1, gr%mesh%np
-      rdelta = sum(gr%mesh%x(ip, 1:MAX_DIM)**2) * ddelta(this%dir, this%dir2)
-      f_out(ip) = M_FOURTH * (rdelta - gr%mesh%x(ip, this%dir)*gr%mesh%x(ip, this%dir2)) * f_in(ip)
+      rdelta = sum(gr%mesh%x(ip, 1:MAX_DIM)**2)*ddelta(this%dir, this%dir2)
+      f_out(ip, 1) = M_FOURTH*(rdelta - gr%mesh%x(ip, this%dir)*gr%mesh%x(ip, this%dir2))*f_in(ip, 1)
     end do
 
     ! gauge correction
@@ -336,7 +336,7 @@ contains
             cross1 = X(cross_product)(bdir(:, 2), R_TOTYPE(gr%mesh%x(ip, :)))
           end select
 
-          f_in2(ip, 1:gr%sb%dim) = cross1(1:gr%sb%dim) * f_in(ip)
+          f_in2(ip, 1:gr%sb%dim) = cross1(1:gr%sb%dim)*f_in(ip, 1)
         end do
 
         ! let us now get sum_beta Dnl f_in2
@@ -369,7 +369,7 @@ contains
           do idir = 1, gr%sb%dim
             contr = contr + cross1(idir) * dnl(ip, idir)
           end do
-          f_out(ip) = f_out(ip) + M_FOURTH * contr
+          f_out(ip, 1) = f_out(ip, 1) + M_FOURTH * contr
         end do
 
       end do atoms
@@ -393,7 +393,7 @@ contains
 
     SAFE_ALLOCATE(tmp(1:gr%mesh%np))
     
-    f_out(1:gr%mesh%np) = M_ZERO
+    f_out(1:gr%mesh%np, 1) = M_ZERO
     
     do iatom = 1, geo%natoms
       do idir = 1, gr%mesh%sb%dim
@@ -403,9 +403,9 @@ contains
                .and. iatom /= this%atom1 .and. idir /= this%dir &
                .and. iatom /= this%atom2 .and. jdir /= this%dir2) cycle
 
-          call X(ionic_perturbation_order_2)(this, gr, geo, hm, ik, f_in, tmp, iatom, idir, jdir)
+          call X(ionic_perturbation_order_2)(this, gr, geo, hm, ik, f_in(:, 1), tmp, iatom, idir, jdir)
           
-          call lalg_axpy(gr%mesh%np, this%ionic%mix1(iatom, idir)*this%ionic%mix2(iatom, jdir), tmp, f_out)
+          call lalg_axpy(gr%mesh%np, this%ionic%mix1(iatom, idir)*this%ionic%mix2(iatom, jdir), tmp, f_out(:, 1))
           
         end do
       end do
@@ -559,13 +559,13 @@ subroutine X(pert_expectation_density) (this, gr, geo, hm, st, psia, psib, densi
   R_TYPE,               intent(out)   :: density(:)
   integer, optional,    intent(in)    :: pert_order
 
-  R_TYPE, allocatable :: pertpsib(:)
+  R_TYPE, allocatable :: pertpsib(:, :)
   integer :: ik, ist, idim, order
   FLOAT   :: ikweight
 
   call push_sub('pert_inc.Xpert_expectation_density')
 
-  SAFE_ALLOCATE(pertpsib(1:gr%mesh%np))
+  SAFE_ALLOCATE(pertpsib(1:gr%mesh%np, 1:st%d%dim))
 
   order = 1
   if(present(pert_order)) order = pert_order
@@ -575,20 +575,20 @@ subroutine X(pert_expectation_density) (this, gr, geo, hm, st, psia, psib, densi
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist  = st%st_start, st%st_end
+
+      if(order == 1) then 
+        call X(pert_apply)(this, gr, geo, hm, ik, psib(:, :, ist, ik), pertpsib)
+        ikweight = st%d%kweights(ik)*st%smear%el_per_state
+      else
+        call X(pert_apply_order_2)(this, gr, geo, hm, ik, psib(:, :, ist, ik), pertpsib)
+        ikweight = st%d%kweights(ik)*st%occ(ist, ik)
+      end if
+
       do idim = 1, st%d%dim
-
-        if(order == 1) then 
-          call X(pert_apply) (this, gr, geo, hm, ik, psib(:, idim, ist, ik), pertpsib)
-          ikweight = st%d%kweights(ik)*st%smear%el_per_state
-        else
-          call X(pert_apply_order_2) (this, gr, geo, hm, ik, psib(:, idim, ist, ik), pertpsib)
-          ikweight = st%d%kweights(ik)*st%occ(ist, ik)
-        end if
-
         density(1:gr%mesh%np) = density(1:gr%mesh%np) + ikweight * &
-             R_CONJ(psia(1:gr%mesh%np, idim, ist, ik))*pertpsib(1:gr%mesh%np)
-
+          R_CONJ(psia(1:gr%mesh%np, idim, ist, ik))*pertpsib(1:gr%mesh%np, idim)
       end do
+
     end do
   end do
 
