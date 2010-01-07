@@ -281,7 +281,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     flags%kpoints = etsf_kpoints_red_coord_kpt + etsf_kpoints_kpoint_weights
     SAFE_ALLOCATE(local_red_coord_kpt(1:3, 1:nik))
     SAFE_ALLOCATE(local_kpoint_weights(1:nik))
-    !Here we will assume a finite system (one k point at gamma)
+    !Here we will assume a finite system (one k-point at Gamma)
     local_red_coord_kpt = reshape( (/0, 0, 0/), (/3, 1/))
     local_kpoint_weights = M_ONE
     kpoints%reduced_coordinates_of_kpoints => local_red_coord_kpt

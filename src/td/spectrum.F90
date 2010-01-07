@@ -435,7 +435,6 @@ contains
     !%Default 1
     !%Section Time-Dependent::Linear Response
     !%Description
-    !%
     !% When a delta potential is included in a time-dependent run, this
     !% variable defines in which direction the field will be applied
     !% by selecting one of the lines of <tt>TDPolarization</tt>. In a
