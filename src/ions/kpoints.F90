@@ -117,7 +117,7 @@ contains
       !% in reciprocal space. The numbers refer to the whole Brillouin
       !% zone, and the actual number of <i>k</i>-points is usually
       !% reduced exploiting the symmetries of the system.  By default
-      !% the grid will always include the gamma point. An optional
+      !% the grid will always include the Gamma point. An optional
       !% second row can specify a shift in the <i>k</i>-points.
       !%
       !% For example, the following input samples the BZ with 100 points in the 

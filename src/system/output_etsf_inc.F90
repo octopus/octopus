@@ -59,7 +59,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     ! Get the offset
     offset = -matmul(gr%sb%rlattice_primitive, gr%sb%lsize)
     do i = gr%sb%periodic_dim+1, 3
-      offset(i)=-(cube%n(i) - 1)/2 * gr%mesh%h(i)
+      offset(i)=-(cube%n(i) - 1)/2 * gr%mesh%spacing(i)
     end do
 
     !Next we created the geometry container
