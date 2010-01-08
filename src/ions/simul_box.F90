@@ -142,6 +142,7 @@ module simul_box_m
     ! For open boundaries, we need reference to the lead`s unit cell.
     ! This unit cell is itself a simulation box.
     logical           :: open_boundaries             ! Use open boundaries?
+    logical           :: transport_mode              ! transport mode switched on (during open boundaries)
     integer           :: n_ucells                    ! Number of unit cells that fit in central region.
     integer           :: add_unit_cells(2*MAX_DIM)   ! Number of additional unit cells.
     character(len=32) :: lead_dataset(2*MAX_DIM)     ! Dataset name of the periodic lead calculation.
@@ -150,7 +151,7 @@ module simul_box_m
     type(simul_box_t), pointer :: lead_unit_cell(:)  ! Simulation box of the unit cells.
     ! The next one does not really belong here but since the parsing happens in the simul_box_init
     ! it makes things a bit easier.
-    character(len=20000) :: lead_td_pot_formula(2*MAX_DIM) ! Td-potential of lead.
+    character(len=2000) :: lead_td_pot_formula(2*MAX_DIM) ! Td-potential of lead.
   end type simul_box_t
 
   character(len=22), parameter :: dump_tag = '*** simul_box_dump ***'
@@ -198,11 +199,16 @@ contains
         LEAD_RESTART_DIR = 2, &
         LEAD_STATIC_DIR  = 3, &
         ADD_UNIT_CELLS   = 4, &
-        TD_POT_FORMULA   = 5
+        TD_POT_FORMULA   = 5, &
+        TRANSPORT_MODE   = 6, &
+        transport_on     = 1, &
+        transport_off    = 0
 
-      integer :: il, ol
+      integer :: il, ol, tmode
 
       call push_sub('simul_box.simul_box_init.read_open_boundaries')
+
+      sb%open_boundaries = .false.
 
       !%Variable OpenBoundaries
       !%Type block
@@ -220,6 +226,7 @@ contains
       !%  lead_static_dir  | "directory" | "directory"
       !%  add_unit_cells   | nl          | nr
       !%  td_pot_formula   | "formula"   | "formula"
+      !%  transport_mode   | transport_on
       !% %
       !% </pre>
       !%
@@ -261,6 +268,16 @@ contains
       !%Option td_pot_formula 5
       !% Defines a spatially local time-dependent potential in the leads as an
       !% analytic expression.
+      !%Option transport_mode 6
+      !% If set to on (transport_on) the normal transport calculation is done,
+      !% otherwise (transport_off) an open system without the source term.
+      !% The initial state is to be assumed to be completely localized in
+      !% the central region. Default is transport_on.
+      !%
+      !%Option transport_on 1
+      !% Use transport (default).
+      !%Option transport_off 0
+      !% Just use open boundaries.
       !%End
       if(parse_block(datasets_check('OpenBoundaries'), blk).eq.0) then
         
@@ -284,6 +301,7 @@ contains
         sb%lead_static_dir  = ''
         sb%lead_td_pot_formula = '0'
         sb%add_unit_cells   = 0
+        sb%transport_mode   = .true.
         nrows = parse_block_n(blk)
         do nr = 0, nrows-1
           call parse_block_integer(blk, nr, 0, tag)
@@ -354,6 +372,15 @@ contains
             else
               forall(ol = 2:NLEADS) sb%lead_td_pot_formula(ol) = sb%lead_td_pot_formula(LEFT)
             end if
+          case(TRANSPORT_MODE)
+            call parse_block_integer(blk, nr, 1, tmode)
+            select case(tmode)
+              case(transport_on)
+                sb%transport_mode = .true.
+              case(transport_off)
+                sb%transport_mode = .false.
+              case default
+            end select
           case default
           end select
         end do
@@ -1291,10 +1318,7 @@ contains
         ulimit(1:sb%dim) =  sb%lsize(1:sb%dim) + DELTA
         ulimit(1:sb%periodic_dim) = sb%lsize(1:sb%periodic_dim) - DELTA
 
-        if(sb%open_boundaries) then
-          ulimit(TRANS_DIR) = sb%lsize(TRANS_DIR) - DELTA
-        end if
-
+        if(sb%open_boundaries .and. sb%transport_mode) ulimit(TRANS_DIR) = sb%lsize(TRANS_DIR) - DELTA
         forall(ip = 1:npoints)
           in_box(ip) = all(xx(1:sb%dim, ip) >= llimit(1:sb%dim) .and. xx(1:sb%dim, ip) <= ulimit(1:sb%dim))
         end forall

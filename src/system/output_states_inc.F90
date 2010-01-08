@@ -175,10 +175,10 @@
     impose_exch_symmetry = .true.
 
     ! make sure directory exists
-    call loct_mkdir(trim(dir))
+    call io_mkdir(trim(dir))
     ! all model mb stuff should be in this directory
-    dirname = trim(dir)//'/modelmb'
-    call loct_mkdir(trim(dirname))
+    dirname = trim(dir)//'modelmb'
+    call io_mkdir(trim(dirname))
 
     SAFE_ALLOCATE(wf(1:gr%mesh%np_part_global))
 

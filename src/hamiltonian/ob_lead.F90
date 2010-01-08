@@ -106,9 +106,8 @@ contains
     end do
 
     ! Add potential. FIXME: add vector potential (A^2)
-    do i = 1, intf%np_uc
-      diag(i, i) = diag(i, i) + vks(i)
-    end do
+    forall(i = 1:intf%np_uc) diag(i, i) = diag(i, i) + vks(i)
+
     call pop_sub()
   end subroutine lead_diag
 

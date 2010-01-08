@@ -127,7 +127,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
     !                       L   |               C               |^  R
     !
     ! The indicated point (^) must be omitted to preserve correct periodicity.
-    mesh%idx%nr(2, TRANS_DIR) = mesh%idx%nr(2, TRANS_DIR) - 1
+    if(sb%transport_mode) mesh%idx%nr(2, TRANS_DIR) = mesh%idx%nr(2, TRANS_DIR) - 1
 
     call mesh_read_lead()
   else
@@ -285,7 +285,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
               if(any((/i, j, k/) < mesh%idx%nr(1, 1:3)) .or. any((/i, j, k/) >  mesh%idx%nr(2, 1:3))) cycle
     
               mesh%idx%Lxyz_inv(i, j, k) = ibset(mesh%idx%Lxyz_inv(i, j, k), ENLARGEMENT_POINT)
-    
+
             end do
 
           end if

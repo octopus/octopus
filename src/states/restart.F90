@@ -374,7 +374,7 @@ contains
   subroutine restart_read_ob_intf(dir, st, gr, ierr)
     character(len=*), intent(in)    :: dir
     type(states_t),   intent(inout) :: st
-    type(grid_t),     intent(in)    :: gr
+    type(grid_t),     intent(inout) :: gr
     integer,          intent(out)   :: ierr
 
     integer              :: io_wfns, io_occs, io_mesh, np, lead_np, np_uc, i, err, il, ip
@@ -1200,6 +1200,11 @@ contains
 
                 ! finally read the state
                 call zinput_function(filename, mesh, st%zpsi(:, id, is, ik), ierr, .true.)
+                if (ierr > 0) then
+                  message(1) = 'Could not read the file!'
+                  write(message(2),'(a,i1)') 'Error-Code: ', ierr
+                  call write_fatal(2)
+                end if
 
               case default
                 message(1) = 'Wrong entry in UserDefinedStates, column 4.'
