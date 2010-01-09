@@ -544,19 +544,6 @@ contains
     !%End
     call parse_integer(datasets_check('MeshBlockSizeZ'), 100, bsizez)
 
-    ! When using open boundaries we need to have a mesh block-size of 1
-    if (parse_block(datasets_check('OpenBoundaries'), blk).eq.0) then
-      if (bsize.gt.1 .or. bsizez.gt.1) then
-        message(1) = 'When in transport mode, the block-ordering'
-        message(2) = 'of the mesh points cannot be chosen freely.'
-        message(3) = 'Both variables, MeshBlockSizeXY and MeshBlockSizeZ'
-        message(4) = 'have to be initialized with the value 1.'
-        message(5) = 'Also, when restarting from datasets, these need to be'
-        message(6) = 'calculated with the same block-size of 1.'
-        call write_fatal(6)
-      end if
-    end if
-
     ! first we fill the points in the inner mesh
     iin = 0
     ien = mesh%np_global
