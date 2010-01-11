@@ -73,6 +73,12 @@ module spectrum_m
     KICK_SPIN_MODE           = 1,  &
     KICK_SPIN_DENSITY_MODE   = 2
 
+  integer, public, parameter ::    &
+    QKICKMODE_EXP            = 1,  &
+    QKICKMODE_COS            = 2,  &
+    QKICKMODE_SIN            = 3
+
+
   type spec_t
     FLOAT   :: start_time          ! start time for the transform
     FLOAT   :: end_time            ! when to stop the transform
@@ -87,10 +93,10 @@ module spectrum_m
     integer           :: delta_strength_mode
     FLOAT             :: delta_strength
     ! In case we use a normal dipole kick:
-    FLOAT             :: pol(3, 3)
+    FLOAT             :: pol(MAX_DIM, MAX_DIM)
     integer           :: pol_dir
     integer           :: pol_equiv_axes
-    FLOAT             :: wprime(3)
+    FLOAT             :: wprime(MAX_DIM)
     ! In case we have a general multipolar kick
     ! The form of this "kick" will be (atomic units):
     ! V(\vec{r}) = sum_{i=1}^{n_multipoles} 
@@ -101,6 +107,8 @@ module spectrum_m
     integer           :: n_multipoles
     integer, pointer  :: l(:), m(:)
     FLOAT, pointer    :: weight(:)
+    FLOAT             :: qvector(MAX_DIM)
+    integer           :: qkick_mode
   end type kick_t
 
   ! Module variables, necessary to compute the function hsfunction, called by
@@ -521,8 +529,42 @@ contains
         call parse_block_float(blk, 0, i-1, k%wprime(i))
       end do
       k%wprime(1:3) = k%wprime(1:3)/sqrt(sum(k%wprime(1:3)**2))
+      call parse_block_end(blk)
     else
       k%wprime(1:3) = (/ M_ZERO, M_ZERO, M_ONE /)
+    end if
+
+    !%Variable TDMomentumTransfer
+    !%Type block
+    !%Section Time-Dependent::Linear Response
+    !%Description
+    !% Momentum transfer vector for the calculation of dynamic structure factor.
+    !% When this variable is set, a non-dipole field is applied, and an output file
+    !% ftchd is created (it contains the Fourier transform of the charge density
+    !% at each time). The type of the applied external field can be set by
+    !% an optional last number. Possible options are qexp (default), qcos, qsin,
+    !% or qcos+qsin.
+    !%Option qexp 1
+    !% External field is exp(iq.r)
+    !%Option qcos 2
+    !% External field is cos(q.r)
+    !%Option qsin 3
+    !% External field is sin(q.r)
+    !%End
+
+    if(parse_block(datasets_check('TDMomentumTransfer'), blk)==0) then
+      do i = 1, MAX_DIM
+        call parse_block_float(blk, 0, i-1, k%qvector(i))
+        k%qvector(i) = units_to_atomic(unit_one / units_inp%length, k%qvector(i))
+      end do
+      if(parse_block_cols(blk, 0).gt.MAX_DIM) then
+        call parse_block_integer(blk, 0, i-1, k%qkick_mode)
+      else
+        k%qkick_mode = QKICKMODE_EXP
+      end if
+      call parse_block_end(blk)
+    else
+      k%qvector(:) = M_ZERO
     end if
 
     call pop_sub()

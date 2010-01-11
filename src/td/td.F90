@@ -591,7 +591,7 @@ contains
       CMPLX   :: c(2), kick
       FLOAT   :: ylm, rr
       FLOAT   :: xx(MAX_DIM)
-      FLOAT, allocatable :: kick_function(:)
+      CMPLX, allocatable :: kick_function(:)
 
       call push_sub('td.td_run.apply_delta_field')
 
@@ -600,19 +600,52 @@ contains
       delta_strength: if(k%delta_strength .ne. M_ZERO) then
 
         SAFE_ALLOCATE(kick_function(1:gr%mesh%np))
-        if(k%n_multipoles > 0) then
+        if(sum(k%qvector(:)**2).gt.1.0e-6) then ! q-vector is set
+
+          select case (k%qkick_mode)
+            case (QKICKMODE_COS)
+              write(message(1), '(a,3F9.6,a)') 'Info: Using cos(q.r) field with q = (', k%qvector(:), ')'
+            case (QKICKMODE_SIN)
+              write(message(1), '(a,3F9.6,a)') 'Info: Using sin(q.r) field with q = (', k%qvector(:), ')'
+            case (QKICKMODE_SIN+QKICKMODE_COS)
+              write(message(1), '(a,3F9.6,a)') 'Info: Using sin(q.r)+cos(q.r) field with q = (', k%qvector(:), ')'
+            case (QKICKMODE_EXP)
+              write(message(1), '(a,3F9.6,a)') 'Info: Using exp(iq.r) field with q = (', k%qvector(:), ')'
+            case default
+              write(message(1), '(a,3F9.6,a)') 'Info: Unknown field type!'
+          end select
+          call write_info(1)
+
           kick_function = M_ZERO
-          do j = 1, k%n_multipoles
-            do ip = 1, gr%mesh%np
-              call mesh_r(gr%mesh, ip, rr, x = xx)
-              call loct_ylm(1, xx(1), xx(2), xx(3), k%l(j), k%m(j), ylm)
-              kick_function(ip) = kick_function(ip) + k%weight(j)*(rr**k%l(j))*ylm 
-            end do
+          do ip = 1, gr%mesh%np
+            call mesh_r(gr%mesh, ip, rr, x = xx)
+            select case (k%qkick_mode)
+              case (QKICKMODE_COS)
+                kick_function(ip) = kick_function(ip) + cos(sum(k%qvector(:) * xx(:)));
+              case (QKICKMODE_SIN)
+                kick_function(ip) = kick_function(ip) + sin(sum(k%qvector(:) * xx(:)));
+              case (QKICKMODE_SIN+QKICKMODE_COS)
+                kick_function(ip) = kick_function(ip) + sin(sum(k%qvector(:) * xx(:)));
+              case (QKICKMODE_EXP)
+                kick_function(ip) = kick_function(ip) + exp(M_Zi * sum(k%qvector(:) * xx(:)));
+            end select
           end do
+
         else
-          forall(ip = 1:gr%mesh%np)
-            kick_function(ip) = sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim)*k%pol(1:gr%mesh%sb%dim, k%pol_dir))
-          end forall
+          if(k%n_multipoles > 0) then
+            kick_function = M_ZERO
+            do j = 1, k%n_multipoles
+              do ip = 1, gr%mesh%np
+                call mesh_r(gr%mesh, ip, rr, x = xx)
+                call loct_ylm(1, xx(1), xx(2), xx(3), k%l(j), k%m(j), ylm)
+                kick_function(ip) = kick_function(ip) + k%weight(j)*(rr**k%l(j))*ylm 
+              end do
+            end do
+          else
+            forall(ip = 1:gr%mesh%np)
+              kick_function(ip) = sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim)*k%pol(1:gr%mesh%sb%dim, k%pol_dir))
+            end forall
+          end if
         end if
 
         write(message(1),'(a,f11.6)')  'Info: Applying delta kick: k = ', k%delta_strength

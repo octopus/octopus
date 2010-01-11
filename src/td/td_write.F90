@@ -81,7 +81,8 @@ module td_write_m
     OUT_MAGNETS     = 10, &
     OUT_GAUGE_FIELD = 11, &
     OUT_TEMPERATURE = 12, &
-    OUT_MAX         = 12
+    OUT_FTCHD       = 13, &
+    OUT_MAX         = 13
   
   type td_write_t
     private
@@ -164,11 +165,15 @@ contains
     !% external electrical potential. This is only useful in a time-dependent periodic run.
     !%Option temperature 2048
     !% If set, the ionic temperature at each step is printed.
+    !%Option ftchd       4096
+    !% Write Fourier transform of the electron density to the file 'ftchds'.
+    !% This is needed for calculating the dynamic structure factor.
     !%End
 
-    ! by default print multipoles, coordinates and energy
+    ! by default print multipoles, ftchd, coordinates and energy
     default = &
          2**(OUT_MULTIPOLES - 1) +  &
+         2**(OUT_FTCHD - 1) +       &
          2**(OUT_COORDS - 1) +      &
          2**(OUT_TEMPERATURE - 1) + &
          2**(OUT_ENERGY - 1) +      &
@@ -319,6 +324,10 @@ contains
         call write_iter_init(w%out(OUT_MULTIPOLES)%handle, &
         first, units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/multipoles")))
 
+      if(w%out(OUT_FTCHD)%write) &
+        call write_iter_init(w%out(OUT_FTCHD)%handle, &
+        first, units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/ftchd")))
+
       if(w%out(OUT_ANGULAR)%write) &
         call write_iter_init(w%out(OUT_ANGULAR)%handle, first, &
           units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/angular")))
@@ -418,6 +427,9 @@ contains
     if(w%out(OUT_MULTIPOLES)%write) &
       call td_write_multipole(w%out(OUT_MULTIPOLES)%handle, gr, geo, st, w%lmax, kick, i)
     
+    if(w%out(OUT_FTCHD)%write) &
+      call td_write_ftchd(w%out(OUT_FTCHD)%handle, gr, geo, st, kick, i)
+
     if(w%out(OUT_ANGULAR)%write) &
       call td_write_angular(w%out(OUT_ANGULAR)%handle, gr, geo, hm, st, kick, i)
 
@@ -785,6 +797,73 @@ contains
     call pop_sub()
   end subroutine td_write_multipole
 
+  ! ---------------------------------------------------------
+  subroutine td_write_ftchd(out_ftchd, gr, geo, st, kick, iter)
+    type(c_ptr),        intent(in) :: out_ftchd
+    type(grid_t),       intent(in) :: gr
+    type(geometry_t),   intent(in) :: geo
+    type(states_t),     intent(in) :: st
+    type(kick_t),       intent(in) :: kick
+    integer,            intent(in) :: iter
+
+    integer :: is, ip
+    character(len=120) :: aux
+    CMPLX   :: ftchd
+    CMPLX, allocatable :: integrand(:)
+
+    call push_sub('td_write.td_write_ftchd')
+
+    if(mpi_grp_is_root(mpi_world).and.iter == 0) then
+      call td_write_print_header_init(out_ftchd)
+
+      write(aux, '(a15,i2)')      '# nspin        ', st%d%nspin
+      call write_iter_string(out_ftchd, aux)
+      call write_iter_nl(out_ftchd)
+
+      write(aux, '(a15,3f9.6)')      '# qvector      ', kick%qvector
+      call write_iter_string(out_ftchd, aux)
+      call write_iter_nl(out_ftchd)
+
+      call kick_write(kick, out = out_ftchd)
+
+      write(aux,'(a15,i2)') '# qkickmode    ', kick%qkick_mode
+      call write_iter_string(out_ftchd, aux)
+      call write_iter_nl(out_ftchd)
+
+      call write_iter_header_start(out_ftchd)
+      write(aux,'(a12)') 'Real, Imag'
+      call write_iter_header(out_ftchd, aux)
+      call write_iter_nl(out_ftchd)
+
+      ! units
+      call write_iter_string(out_ftchd, '#[Iter n.]')
+      call write_iter_header(out_ftchd, '[' // trim(units_abbrev(units_out%time)) // ']')
+      call write_iter_nl(out_ftchd)
+      call td_write_print_header_end(out_ftchd)
+
+    end if
+
+    ftchd            = M_ZERO
+
+    SAFE_ALLOCATE(integrand(1:gr%mesh%np))
+    integrand = M_ZERO
+    do is = 1, st%d%nspin
+      forall(ip = 1:gr%mesh%np)
+        integrand(ip) = integrand(ip) + st%rho(ip, is) * exp(-M_zI*sum(gr%mesh%x(ip,:)*kick%qvector(:)))
+      end forall
+    end do
+    ftchd = zmf_integrate(gr%mesh, integrand)
+    SAFE_DEALLOCATE_A(integrand)
+
+    if(mpi_grp_is_root(mpi_world)) then
+      call write_iter_start(out_ftchd)
+      call write_iter_double(out_ftchd, real(ftchd), 1)
+      call write_iter_double(out_ftchd, aimag(ftchd), 1)
+      call write_iter_nl(out_ftchd)
+    end if
+
+    call pop_sub()
+  end subroutine td_write_ftchd
 
   ! ---------------------------------------------------------
   subroutine td_write_coordinates(out_coords, gr, geo, iter)
