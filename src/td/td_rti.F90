@@ -924,7 +924,7 @@ contains
         end do
 
         call states_calc_dens(st, gr)
-        call v_ks_calc(gr, ks, hm, st)
+        call v_ks_calc(ks, gr, hm, st)
 
         vhxc_t2 = hm%vhxc
         ! compute potential at n+1/2 as average
