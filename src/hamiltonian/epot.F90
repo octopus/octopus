@@ -671,7 +671,7 @@ contains
     SAFE_ALLOCATE(matrix(1:st%nst, 1:st%nst))
     SAFE_ALLOCATE(tmp(1:gr%mesh%np))
 
-    ! TODO: add in sum over k-points in orthogonal directions here
+    ! \todo add in sum over k-points in orthogonal directions here
 
     phase = exp(-M_zI*(M_PI/gr%sb%lsize(dir)))
 

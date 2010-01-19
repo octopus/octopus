@@ -100,7 +100,7 @@ contains
       call zforces_from_potential(gr, geo, ep, st, time)
     end if
     
-    !TODO: forces due to the magnetic fields (static and time-dependent)
+    !\todo forces due to the magnetic fields (static and time-dependent)
     if(present(t)) then
       do j = 1, ep%no_lasers
         select case(laser_kind(ep%lasers(j)))

@@ -208,7 +208,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! builds a density which is the sum of the atomic densities
+  !> builds a density which is the sum of the atomic densities
   subroutine guess_density(mesh, sb, geo, qtot, nspin, spin_channels, rho)
     type(mesh_t),      intent(in)  :: mesh
     type(simul_box_t), intent(in)  :: sb
@@ -764,17 +764,19 @@ contains
   end subroutine species_get_local
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! Places, in the function phi (defined in each point of the mesh), the
-  ! j-th atomic orbital. The orbitals are obtained from the species data
-  ! type, and are numbered from one to species_niwfs(spec). It may happen
-  ! that there are different orbitals for each spin-polarization direction,
-  ! and therefore the orbital is also characterized by the label "is".
-  !
-  ! In order to put the orbital in the mesh, it is necessary to know where
-  ! the species is, and this is given by the vector "pos".
-  !
-  ! WARNING/TODO: Most of this work should be done inside the species
-  ! module, and we should get rid of species_iwf_i, species_ifw_l, etc.
+  !> Places, in the function phi (defined in each point of the mesh), the
+  !! j-th atomic orbital. The orbitals are obtained from the species data
+  !! type, and are numbered from one to species_niwfs(spec). It may happen
+  !! that there are different orbitals for each spin-polarization direction,
+  !! and therefore the orbital is also characterized by the label "is".
+  !!
+  !! In order to put the orbital in the mesh, it is necessary to know where
+  !! the species is, and this is given by the vector "pos".
+  !!
+  !! \warning Most of this work should be done inside the species
+  !! module, and we should get rid of species_iwf_i, species_ifw_l, etc.
+  !! \todo Most of this work should be done inside the species
+  !! module, and we should get rid of species_iwf_i, species_ifw_l, etc.
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine species_get_orbital(spec, mesh, j, dim, is, pos, phi)
     type(species_t),   intent(in)     :: spec

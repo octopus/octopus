@@ -747,7 +747,7 @@ contains
     call push_sub('ob_rti.apply_sp_mem')
 
     SAFE_ALLOCATE(tmem(1:intf%np_intf, 1:intf%np_intf))
-    ! TODO: do not multiply matrices together, better multiply successively onto wavefunction
+    ! \todo do not multiply matrices together, better multiply successively onto wavefunction
     call make_full_matrix(intf%np_intf, order, dim, sp_mem, mem_s, tmem, mapping)
     call apply_mem(tmem, intf, intf_wf, zpsi, factor, transposed)
     SAFE_DEALLOCATE_A(tmem)

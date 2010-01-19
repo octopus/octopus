@@ -549,7 +549,7 @@ end subroutine write_polarizability
 
 
 ! ---------------------------------------------------------
-! TODO This subroutine should be simplified.
+! \todo This subroutine should be simplified.
 subroutine find_resonance(omega, leftbound, rightbound, nfrequencies)
   use global_m
   use messages_m

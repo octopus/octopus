@@ -416,7 +416,7 @@ contains
           SAFE_DEALLOCATE_A(x)
 
         case(E_FIELD_MAGNETIC)
-          ! WARNING: note that for the moment we are ignoring the possibility of a complex
+          ! \warning: note that for the moment we are ignoring the possibility of a complex
           ! polarizability vector for the td magnetic field case.
           SAFE_ALLOCATE(l(i)%a(1:m%np_part, 1:m%sb%dim))
           l(i)%a = M_ZERO

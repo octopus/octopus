@@ -619,7 +619,7 @@ contains
       do il = 1, NLEADS
         t_inv = .true.
         do ispin = 1, hm%d%nspin
-          ! TODO generalize to find the smallest periodicity of the leads
+          ! \todo generalize to find the smallest periodicity of the leads
           t_inv = t_inv.and.is_lead_transl_inv(gr%der%lapl, hm%lead(il)%vks(:, ispin), gr%intf(il))
         end do
         if (t_inv) then
@@ -631,7 +631,7 @@ contains
           ! so delete the old array intf%index
           call interface_end(gr%intf(il))
           ! then re-initialize interface
-          ! TODO generalize to find the smallest periodicity of the leads
+          ! \todo generalize to find the smallest periodicity of the leads
           call interface_init(gr%der, gr%intf(il), il, derivatives_stencil_extent(gr%der, (il+1)/2))
           np = gr%intf(il)%np_uc
           np_part =  gr%intf(il)%np_part_uc

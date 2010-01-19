@@ -67,7 +67,7 @@ contains
 
   ! ---------------------------------------------------------
   ! This function calculates the surface average of any function.
-  ! WARNING: Some more careful testing should be done on this.
+  ! \warning: Some more careful testing should be done on this.
   FLOAT function cf_surface_average(cf) result(x)
     type(dcf_t), intent(in)       :: cf
 

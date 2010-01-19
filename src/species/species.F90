@@ -76,61 +76,61 @@ module species_m
 
 
   integer, public, parameter :: &
-    SPEC_USDEF  = 123,          & ! user-defined function
-    SPEC_POINT  = 2,            & ! point charge: jellium sphere of radius 0.5 a.u.
-    SPEC_JELLI  = 3,            & ! jellium sphere.
-    SPEC_FULL_DELTA     = 127,  & ! full-potential atom
-    SPEC_FULL_GAUSSIAN  = 124,  & ! full-potential atom
+    SPEC_USDEF  = 123,          & !< user-defined function
+    SPEC_POINT  = 2,            & !< point charge: jellium sphere of radius 0.5 a.u.
+    SPEC_JELLI  = 3,            & !< jellium sphere.
+    SPEC_FULL_DELTA     = 127,  & !< full-potential atom
+    SPEC_FULL_GAUSSIAN  = 124,  & !< full-potential atom
     SPEC_CHARGE_DENSITY = 125,  &
     SPEC_FROM_FILE = 126,       &
-    SPEC_PS_PSF = PS_TYPE_PSF,  & ! SIESTA pseudopotential
-    SPEC_PS_HGH = PS_TYPE_HGH,  & ! HGH pseudopotential
-    SPEC_PS_CPI = PS_TYPE_CPI,  & ! FHI pseudopotential (cpi format)
-    SPEC_PS_FHI = PS_TYPE_FHI,  & ! FHI pseudopotential (ABINIT format)
-    SPEC_PS_UPF = PS_TYPE_UPF     ! UPF pseudopotential
+    SPEC_PS_PSF = PS_TYPE_PSF,  & !< SIESTA pseudopotential
+    SPEC_PS_HGH = PS_TYPE_HGH,  & !< HGH pseudopotential
+    SPEC_PS_CPI = PS_TYPE_CPI,  & !< FHI pseudopotential (cpi format)
+    SPEC_PS_FHI = PS_TYPE_FHI,  & !< FHI pseudopotential (ABINIT format)
+    SPEC_PS_UPF = PS_TYPE_UPF     !< UPF pseudopotential
 
   type species_t
     private
-    integer :: index              ! just a counter
+    integer :: index              !< just a counter
 
-    character(len=15) :: label    ! Identifier for the species
-    integer :: type               ! what type of species
-    FLOAT   :: z                  ! charge of the species
-    FLOAT   :: z_val              ! valence charge of the species -- the total charge
-                                  ! minus the core charge in the case of the pseudopotentials
-    FLOAT   :: weight             ! mass, in atomic mass units (!= atomic units of mass)
+    character(len=15) :: label    !< Identifier for the species
+    integer :: type               !< what type of species
+    FLOAT   :: z                  !< charge of the species
+    FLOAT   :: z_val              !< valence charge of the species -- the total charge
+                                  !< minus the core charge in the case of the pseudopotentials
+    FLOAT   :: weight             !< mass, in atomic mass units (!= atomic units of mass)
 
-    logical :: has_density        ! true if the species has an electronic density 
+    logical :: has_density        !< true if the species has an electronic density
 
-    ! for the user-defined potential
-    character(len=1024) :: user_def
+
+    character(len=1024) :: user_def !< for the user-defined potential
     FLOAT :: omega
 
-    ! for the potential read from a file.
-    character(len=200) :: filename
 
-    ! jellium stuff
-    FLOAT :: jradius
+    character(len=200) :: filename !< for the potential read from a file.
 
-    ! For the pseudopotential
+
+    FLOAT :: jradius              !< jellium stuff
+
+
     type(ps_t), pointer :: ps
-    logical             :: nlcc       ! true if we have non-local core corrections
+    logical             :: nlcc   !< true if we have non-local core corrections
 
-    ! If we have an all-electron atom:
-    FLOAT :: sigma
 
-    ! If we have a charge distribution creating the potential:
-    character(len=200) :: rho
+    FLOAT :: sigma                !< If we have an all-electron atom:
 
-    ! the default values for the spacing and atomic radius
-    FLOAT :: def_rsize, def_h
 
-    ! The number of initial wavefunctions
-    integer :: niwfs
+    character(len=200) :: rho     !< If we have a charge distribution creating the potential:
+
+
+    FLOAT :: def_rsize, def_h     !< the default values for the spacing and atomic radius
+
+
+    integer :: niwfs              !< The number of initial wavefunctions
     integer, pointer :: iwf_l(:, :), iwf_m(:, :), iwf_i(:, :)
 
-    ! For the TM pseudos, the lmax and lloc.
-    integer :: lmax, lloc
+
+    integer :: lmax, lloc         !< For the TM pseudos, the lmax and lloc.
   end type species_t
 
 
@@ -138,10 +138,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Assigns a label to a species_t variable. This should be the
-  ! first routine to be called (before species_index, species_read and species_init).
-  ! This label must match one of the labels given in the %Species block
-  ! in the input file -- or else one of the labels in the defaults file.
+  !> Assigns a label to a species_t variable. This should be the
+  !! first routine to be called (before species_index, species_read and species_init).
+  !! This label must match one of the labels given in the %Species block
+  !! in the input file -- or else one of the labels in the defaults file.
   ! ---------------------------------------------------------
   pure subroutine species_set_label(spec, label)
     type(species_t), intent(inout) :: spec
@@ -152,9 +152,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Assigns an index to a species_t variable. This should be the
-  ! second routine to be called (before species_read and species_init),
-  ! when initializing a species_t variable.
+  !> Assigns an index to a species_t variable. This should be the
+  !! second routine to be called (before species_read and species_init),
+  !! when initializing a species_t variable.
   ! ---------------------------------------------------------
   pure subroutine species_set_index(spec, k)
     type(species_t), intent(inout) :: spec
@@ -165,10 +165,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Reads the information (from the input file) about a species_t variable, initializing
-  ! part of it (it has to be completed later with "species_init").
-  ! Note that species_read has to be called only after species_set_label
-  ! and species_set index have been called.
+  !> Reads the information (from the input file) about a species_t variable, initializing
+  !! part of it (it has to be completed later with "species_init").
+  !! Note that species_read has to be called only after species_set_label
+  !! and species_set index have been called.
   ! ---------------------------------------------------------
   subroutine species_read(spec)
     type(species_t), intent(inout) :: spec
@@ -474,9 +474,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! This routine performs some operations on the pseudopotential
-  ! functions (filtering, etc), some of which depend on the grid
-  ! cutoff value.
+  !> This routine performs some operations on the pseudopotential
+  !! functions (filtering, etc), some of which depend on the grid
+  !! cutoff value.
   ! ---------------------------------------------------------
   subroutine species_pot_init(this, grid_cutoff, filter)
     type(species_t),     intent(inout) :: this
@@ -735,8 +735,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! This routine returns the non-local projector and its 
-  ! derivative, built using real spherical harmonics
+  !> This routine returns the non-local projector and its
+  !! derivative, built using real spherical harmonics
   subroutine species_real_nl_projector(spec, x, l, lm, i, uV, duV)
     type(species_t),   intent(in)  :: spec
     FLOAT,             intent(in)  :: x(1:MAX_DIM)
@@ -779,8 +779,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! This routine returns the non-local projector, built using 
-  ! spherical harmonics
+  !> This routine returns the non-local projector, built using
+  !! spherical harmonics
   subroutine species_nl_projector(spec, x, l, lm, i, uV)
     type(species_t),   intent(in)  :: spec
     FLOAT,             intent(in)  :: x(1:MAX_DIM)

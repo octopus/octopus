@@ -147,7 +147,7 @@ contains
       !%End
       call  parse_integer(datasets_check('vdW_npoints'), 6, gaus_leg_n)
 
-      ! TODO: symmetry stuff should be general
+      ! \todo symmetry stuff should be general
       call parse_integer(datasets_check('TDPolarizationEquivAxes'), 0, equiv_axes)
 
       select case(equiv_axes)

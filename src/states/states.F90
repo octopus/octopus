@@ -101,73 +101,75 @@ module states_m
     states_are_real
 
   type states_lead_t
-    CMPLX, pointer     :: intf_psi(:, :, :, :, :) ! (np, 2, st%d%dim, st%nst, st%d%nik)
-    FLOAT, pointer     :: rho(:, :)   ! Density of the lead unit cells.
-    CMPLX, pointer     :: green(:, :, :, :, :) ! (np, np, nspin, ncs, nik) Green`s function of the leads.
+    CMPLX, pointer     :: intf_psi(:, :, :, :, :) !< (np, 2, st%d%dim, st%nst, st%d%nik)
+    FLOAT, pointer     :: rho(:, :)   !< Density of the lead unit cells.
+    CMPLX, pointer     :: green(:, :, :, :, :) !< (np, np, nspin, ncs, nik) Green`s function of the leads.
   end type states_lead_t
 
   type states_t
     type(states_dim_t) :: d
     type(modelmb_particle_t) :: modelmbparticles
-    integer :: nst                  ! Number of states in each irreducible subspace
+    integer :: nst                  !< Number of states in each irreducible subspace
 
-    integer :: wfs_type             ! real (M_REAL) or complex (M_CMPLX) wavefunctions
+    integer :: wfs_type             !< real (M_REAL) or complex (M_CMPLX) wavefunctions
     ! pointers to the wavefunctions 
-    logical :: only_userdef_istates ! only use user-defined states as initial states in propagation
-    FLOAT, pointer :: dpsi(:,:,:,:) ! dpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
-    CMPLX, pointer :: zpsi(:,:,:,:) ! zpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
+    logical :: only_userdef_istates !< only use user-defined states as initial states in propagation
+    FLOAT, pointer :: dpsi(:,:,:,:) !< dpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
+    CMPLX, pointer :: zpsi(:,:,:,:) !< zpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
 
     logical             :: open_boundaries
-    CMPLX, pointer      :: zphi(:, :, :, :)  ! Free states for open-boundary calculations.
-    FLOAT, pointer      :: ob_eigenval(:, :) ! Eigenvalues of free states.
-    type(states_dim_t)  :: ob_d              ! Dims. of the unscattered systems.
-    integer             :: ob_nst            ! nst of the unscattered systems.
-    integer             :: ob_ncs            ! No. of continuum states of open system.
-                                            ! ob_ncs = ob_nst*st%ob_d%nik / st%d%nik
-    FLOAT, pointer      :: ob_occ(:, :)      ! occupations
+    CMPLX, pointer      :: zphi(:, :, :, :)  !< Free states for open-boundary calculations.
+    FLOAT, pointer      :: ob_eigenval(:, :) !< Eigenvalues of free states.
+    type(states_dim_t)  :: ob_d              !< Dims. of the unscattered systems.
+    integer             :: ob_nst            !< nst of the unscattered systems.
+    integer             :: ob_ncs            !< No. of continuum states of open system.
+                                            !< ob_ncs = ob_nst*st%ob_d%nik / st%d%nik
+    FLOAT, pointer      :: ob_occ(:, :)      !< occupations
     type(states_lead_t) :: ob_lead(2*MAX_DIM)
-    ! used for the user-defined wavefunctions (they are stored as formula strings)
-    character(len=1024), pointer :: user_def_states(:,:,:) ! (st%d%dim, st%nst, st%d%nik)
 
-    ! the densities and currents (after all we are doing DFT :)
-    FLOAT, pointer :: rho(:,:)      ! rho(gr%mesh%np_part, st%d%nspin)
-    FLOAT, pointer :: current(:, :, :)      !   current(gr%mesh%np_part, gr%sb%dim, st%d%nspin)
+    !> used for the user-defined wavefunctions (they are stored as formula strings)
+    !! (st%d%dim, st%nst, st%d%nik)
+    character(len=1024), pointer :: user_def_states(:,:,:)
 
-    logical        :: nlcc          ! do we have non-linear core corrections
-    FLOAT, pointer :: rho_core(:)   ! core charge for nl core corrections
+    !> the densities and currents (after all we are doing DFT :)
+    FLOAT, pointer :: rho(:,:)      !< rho(gr%mesh%np_part, st%d%nspin)
+    FLOAT, pointer :: current(:, :, :)      !<   current(gr%mesh%np_part, gr%sb%dim, st%d%nspin)
 
-    ! It may be required to "freeze" the deepest orbitals during the evolution; the density
-    ! of these orbitals is kept in frozen_rho. It is different from rho_core.
+    logical        :: nlcc          !< do we have non-linear core corrections
+    FLOAT, pointer :: rho_core(:)   !< core charge for nl core corrections
+
+    !> It may be required to "freeze" the deepest orbitals during the evolution; the density
+    !! of these orbitals is kept in frozen_rho. It is different from rho_core.
     FLOAT, pointer :: frozen_rho(:, :)
 
-    FLOAT, pointer :: eigenval(:,:) ! obviously the eigenvalues
-    logical        :: fixed_occ     ! should the occupation numbers be fixed?
-    FLOAT, pointer :: occ(:,:)      ! the occupation numbers
-    logical        :: fixed_spins   ! In spinors mode, the spin direction is set
-                                    ! for the initial (random) orbitals.
+    FLOAT, pointer :: eigenval(:,:) !< obviously the eigenvalues
+    logical        :: fixed_occ     !< should the occupation numbers be fixed?
+    FLOAT, pointer :: occ(:,:)      !< the occupation numbers
+    logical        :: fixed_spins   !< In spinors mode, the spin direction is set
+                                    !< for the initial (random) orbitals.
     FLOAT, pointer :: spin(:, :, :)
 
-    FLOAT          :: qtot          ! (-) The total charge in the system (used in Fermi)
-    FLOAT          :: val_charge    ! valence charge
+    FLOAT          :: qtot          !< (-) The total charge in the system (used in Fermi)
+    FLOAT          :: val_charge    !< valence charge
 
     type(smear_t)  :: smear         ! smearing of the electronic occupations
 
-    ! This is stuff needed for the parallelization in states.
-    logical                     :: parallel_in_states ! Am I parallel in states?
-    type(mpi_grp_t)             :: mpi_grp            ! The MPI group related to the parallelization in states.
-    type(mpi_grp_t)             :: dom_st             ! The MPI group related to the domain-states "plane".
-    integer                     :: lnst               ! Number of states on local node.
-    integer                     :: st_start, st_end   ! Range of states processed by local node.
-    integer, pointer            :: node(:)            ! To which node belongs each state.
-    integer, pointer            :: st_range(:, :)     ! Node r manages states st_range(1, r) to
-                                                      ! st_range(2, r) for r = 0, ..., mpi_grp%size-1,
-                                                      ! i. e. st_start = st_range(1, r) and
-                                                      ! st_end = st_range(2, r) on node r.
-    integer, pointer            :: st_num(:)          ! Number of states on node r, i. e.
-                                                      ! st_num(r) = st_num(2, r)-st_num(1, r).
-    type(multicomm_all_pairs_t) :: ap                 ! All-pairs schedule.
+    !> This is stuff needed for the parallelization in states.
+    logical                     :: parallel_in_states !< Am I parallel in states?
+    type(mpi_grp_t)             :: mpi_grp            !< The MPI group related to the parallelization in states.
+    type(mpi_grp_t)             :: dom_st             !< The MPI group related to the domain-states "plane".
+    integer                     :: lnst               !< Number of states on local node.
+    integer                     :: st_start, st_end   !< Range of states processed by local node.
+    integer, pointer            :: node(:)            !< To which node belongs each state.
+    integer, pointer            :: st_range(:, :)     !< Node r manages states st_range(1, r) to
+                                                      !< st_range(2, r) for r = 0, ..., mpi_grp%size-1,
+                                                      !< i. e. st_start = st_range(1, r) and
+                                                      !< st_end = st_range(2, r) on node r.
+    integer, pointer            :: st_num(:)          !< Number of states on node r, i. e.
+                                                      !< st_num(r) = st_num(2, r)-st_num(1, r).
+    type(multicomm_all_pairs_t) :: ap                 !< All-pairs schedule.
 
-    logical                     :: np_size            ! whether the states were allocated with size mesh%np instead of size np
+    logical                     :: np_size            !< whether the states were allocated with size mesh%np instead of size np
     logical                     :: symmetrize_density
   end type states_t
 
@@ -626,13 +628,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Reads from the input file the initial occupations, if the
-  ! block "Occupations" is present. Otherwise, it makes an initial
-  ! guess for the occupations, maybe using the "Smearing"
-  ! variable.
-  ! The resulting occupations are placed on the st%occ variable. The
-  ! boolean st%fixed_occ is also set to .true., if the occupations are
-  ! set by the user through the "Occupations" block; false otherwise.
+  !> Reads from the input file the initial occupations, if the
+  !! block "Occupations" is present. Otherwise, it makes an initial
+  !! guess for the occupations, maybe using the "Smearing"
+  !! variable.
+  !! The resulting occupations are placed on the st%occ variable. The
+  !! boolean st%fixed_occ is also set to .true., if the occupations are
+  !! set by the user through the "Occupations" block; false otherwise.
   subroutine states_read_initial_occs(st, excess_charge)
     type(states_t), intent(inout) :: st
     FLOAT,          intent(in)    :: excess_charge
@@ -769,11 +771,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Reads, if present, the "InitialSpins" block. This is only
-  ! done in spinors mode; otherwise the routine does nothing. The
-  ! resulting spins are placed onto the st%spin pointer. The boolean
-  ! st%fixed_spins is set to true if (and only if) the InitialSpins
-  ! block is present.
+  !> Reads, if present, the "InitialSpins" block. This is only
+  !! done in spinors mode; otherwise the routine does nothing. The
+  !! resulting spins are placed onto the st%spin pointer. The boolean
+  !! st%fixed_spins is set to true if (and only if) the InitialSpins
+  !! block is present.
   subroutine states_read_initial_spins(st)
     type(states_t), intent(inout) :: st
 
@@ -925,7 +927,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Deallocates the KS wavefunctions defined within a states_t structure.
+  !> Deallocates the KS wavefunctions defined within a states_t structure.
   subroutine states_deallocate_wfns(st)
     type(states_t), intent(inout) :: st
 
@@ -1117,8 +1119,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Calculates the new density out the wavefunctions and
-  ! occupations...
+  !> Calculates the new density out the wavefunctions and
+  !! occupations...
   subroutine states_dens_accumulate(st, gr, ist, ik, rho)
     type(states_t), intent(inout) :: st
     type(grid_t),   intent(in)    :: gr
@@ -1303,9 +1305,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Computes the density from the orbitals in st. If rho is
-  ! present, the density is placed there; if it is not present,
-  ! the density is placed in st%rho.
+  !> Computes the density from the orbitals in st. If rho is
+  !! present, the density is placed there; if it is not present,
+  !! the density is placed in st%rho.
   ! ---------------------------------------------------------
   subroutine states_calc_dens(st, gr, rho)
     type(states_t),          intent(inout)  :: st
@@ -1348,7 +1350,7 @@ contains
   end subroutine states_calc_dens
 
   ! ---------------------------------------------------------
-  ! generate a hydrogen s-wavefunction around a random point
+  !> generate a hydrogen s-wavefunction around a random point
   subroutine states_generate_random(st, mesh, ist_start_, ist_end_)
     type(states_t),    intent(inout) :: st
     type(mesh_t),      intent(in)    :: mesh
@@ -1500,7 +1502,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! function to calculate the eigenvalues sum using occupations as weights
+  !> function to calculate the eigenvalues sum using occupations as weights
   function states_eigenvalues_sum(st, x) result(e)
     type(states_t), intent(in)  :: st
     FLOAT, optional, intent(in) :: x(st%st_start:st%st_end, 1:st%d%nik)
@@ -2291,10 +2293,10 @@ contains
   subroutine states_calc_tau_jp_gn(der, st, tau, jp, grho, lrho)
     type(derivatives_t),    intent(in)    :: der
     type(states_t),         intent(inout) :: st
-    FLOAT, optional,        intent(out)   :: tau(:,:)    ! (gr%mesh%np, st%d%nspin)
-    FLOAT, optional,        intent(out)   :: jp(:,:,:)   ! (gr%mesh%np, gr%mesh%sb%dim, st%d%nspin)
-    FLOAT, optional,        intent(out)   :: grho(:,:,:) ! (gr%mesh%np, gr%mesh%sb%dim, st%d%nspin)
-    FLOAT, optional,        intent(out)   :: lrho(:,:)   ! (gr%mesh%np, st%d%nspin)
+    FLOAT, optional,        intent(out)   :: tau(:,:)    !< (gr%mesh%np, st%d%nspin)
+    FLOAT, optional,        intent(out)   :: jp(:,:,:)   !< (gr%mesh%np, gr%mesh%sb%dim, st%d%nspin)
+    FLOAT, optional,        intent(out)   :: grho(:,:,:) !< (gr%mesh%np, gr%mesh%sb%dim, st%d%nspin)
+    FLOAT, optional,        intent(out)   :: lrho(:,:)   !< (gr%mesh%np, st%d%nspin)
 
     CMPLX, allocatable :: wf_psi(:,:), gwf_psi(:,:,:), lwf_psi(:,:)
     CMPLX   :: c_tmp
@@ -2516,8 +2518,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Reads the state stored in directory "dir", and finds out
-  ! the kpoints, dim, and nst contained in it.
+  !> Reads the state stored in directory "dir", and finds out
+  !! the kpoints, dim, and nst contained in it.
   ! ---------------------------------------------------------
   subroutine states_look(dir, mpi_grp, kpoints, dim, nst, ierr, only_occupied)
     character(len=*),  intent(in)    :: dir
@@ -2710,9 +2712,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! this routine calculates the total electronic density,
-  ! which is the sum of the part coming from the orbitals, the
-  ! non-linear core corrections and the frozen orbitals
+  !> this routine calculates the total electronic density,
+  !! which is the sum of the part coming from the orbitals, the
+  !! non-linear core corrections and the frozen orbitals
   subroutine states_total_density(st, mesh, rho)
     type(states_t), intent(in)  :: st
     type(mesh_t),   intent(in)  :: mesh
@@ -2759,7 +2761,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! initialize the surface Green`s functions of the leads
+  !> initialize the surface Green`s functions of the leads
   subroutine states_init_green(st, gr, nspin, d_ispin, lead)
     type(states_t),      intent(inout) :: st
     type(grid_t),        intent(in)    :: gr
@@ -2820,7 +2822,7 @@ contains
             write(message(1), '(i4,3x,i4,3x,a2,5x,a6,1x,f12.6)') ist, ik, &
               trim(spin), trim(LEAD_NAME(il)), energy
             call write_info(1)
-            ! TODO magnetic gs
+            ! \todo magnetic gs
             call lead_green(energy, lead(il)%h_diag(:, :, ispin), lead(il)%h_offdiag(:, :), &
               gr%intf(il), st%ob_lead(il)%green(:, :, ispin, ist, ik), .true.)
 

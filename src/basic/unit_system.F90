@@ -188,10 +188,10 @@ contains
   end subroutine unit_system_get
 
 
-  ! these routines output the unit conversions factors, defined by
-  ! [a.u.] = <input>*u.unit
-  ! <output> = [a.u.]/u.unit
-
+  ! ---------------------------------------------------------
+  !> these routines output the unit conversions factors, defined by
+  !! [a.u.] = <input>*u.unit
+  !! <output> = [a.u.]/u.unit
   ! ---------------------------------------------------------
   subroutine unit_system_init_atomic(u)
     type(unit_system_t), intent(out) :: u
@@ -275,11 +275,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! This is a very primitive procedure that attempts to find out
-  ! which units were used to write one octopus file, be it a
-  ! "multipoles", a "cross_section_tensor", etc. 
-  ! TODO: although it seems to work in most cases, it is obviously
-  ! a very weak code.
+  !> This is a very primitive procedure that attempts to find out
+  !! which units were used to write one octopus file, be it a
+  !! "multipoles", a "cross_section_tensor", etc.
+  !! \todo  although it seems to work in most cases, it is obviously
+  !! a very weak code.
   ! ---------------------------------------------------------
   subroutine unit_system_from_file(u, fname, ierr)
     type(unit_system_t), intent(inout) :: u

@@ -19,8 +19,8 @@
 
 
 ! ---------------------------------------------------------
-! This routine fills state psi with an atomic orbital -- provided
-! by the pseudopotential structure in geo.
+!> This routine fills state psi with an atomic orbital -- provided
+!! by the pseudopotential structure in geo.
 ! ---------------------------------------------------------
 subroutine X(lcao_atomic_orbital) (this, iorb, m, hm, geo, sb, psi, spin_channel)
   type(lcao_t),             intent(in)    :: this

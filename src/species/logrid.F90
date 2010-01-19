@@ -36,8 +36,8 @@ module logrid_m
     derivate_in_log_grid
 
   integer, parameter, public :: &
-    LOGRID_PSF  = 1, & ! log grid used in Troullier-Martins code
-    LOGRID_CPI  = 2    ! log grid used in FHI code
+    LOGRID_PSF  = 1, & !< log grid used in Troullier-Martins code
+    LOGRID_CPI  = 2    !< log grid used in FHI code
 
   type logrid_t
     integer  :: flavor
@@ -45,10 +45,10 @@ module logrid_m
     FLOAT    :: a, b
     integer  :: nrval
 
-    FLOAT, pointer :: rofi(:) ! r value of the point i
-    FLOAT, pointer :: r2ofi(:) ! r value of the point i
-    FLOAT, pointer :: drdi(:) ! jacobian, i.e., the derivative of r in terms of i
-    FLOAT, pointer :: s(:)    ! sqrt of drdi
+    FLOAT, pointer :: rofi(:) !< r value of the point i
+    FLOAT, pointer :: r2ofi(:) !< r value of the point i
+    FLOAT, pointer :: drdi(:) !< jacobian, i.e., the derivative of r in terms of i
+    FLOAT, pointer :: s(:)    !< sqrt of drdi
   end type logrid_t
 
 contains

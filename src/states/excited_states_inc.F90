@@ -262,7 +262,7 @@ end function X(states_mpmatrixelement_g)
 
 ! -------------------------------------------------------------
 ! Returns the dot product of two many-body states st1 and st2.
-! Warning: it does not permit fractional occupation numbers.
+! \warning: it does not permit fractional occupation numbers.
 ! -------------------------------------------------------------
 R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
   type(mesh_t),     intent(in) :: m

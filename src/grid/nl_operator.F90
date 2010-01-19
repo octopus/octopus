@@ -841,7 +841,7 @@ contains
   ! non constant case - op%w_re op%w_im.
   ! This can be considered as nl_operator_copy and
   ! reallocating w_re, w_im and i.
-  ! WARNING: this should be replaced by a normal copy with a flag
+  ! \warning: this should be replaced by a normal copy with a flag
   subroutine nl_operator_common_copy(op, opg)
     type(nl_operator_t), intent(in)  :: op
     type(nl_operator_t), intent(out) :: opg

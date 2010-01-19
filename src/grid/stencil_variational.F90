@@ -34,10 +34,10 @@
 ! k is the Nyquist frequency of the grid. Thus alpha = 1 means
 ! no filter at all.
 !
-! TODO: The coefficients should be calculated, and not hard-coded, in
+! \todo The coefficients should be calculated, and not hard-coded, in
 ! a subroutine similar to weights in the math module. It should also
 ! allos to get the coefficients to the gradient.
-! TODO: This module should look like stencil_star, allowing for
+! \todo This module should look like stencil_star, allowing for
 ! coefficients on non-uniform grids.
 ! ---------------------------------------------------------
 module stencil_variational_m

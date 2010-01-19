@@ -68,52 +68,52 @@ module ps_m
     character(len=10) :: label
     integer           :: flavour
 
-    integer  :: ispin    ! Consider spin (ispin = 2) or not (ispin = 1)
+    integer  :: ispin    !< Consider spin (ispin = 2) or not (ispin = 1)
     FLOAT    :: z, z_val
     type(valconf_t)   :: conf
     type(logrid_t) :: g
-    type(spline_t), pointer :: ur(:, :)     ! atomic wavefunctions
-    type(spline_t), pointer :: ur_sq(:, :)  ! atomic wavefunctions
+    type(spline_t), pointer :: ur(:, :)     !< atomic wavefunctions
+    type(spline_t), pointer :: ur_sq(:, :)  !< atomic wavefunctions
 
     ! Kleinman-Bylander projectors stuff
-    integer  :: l_max    ! maximum value of l to take
-    integer  :: l_loc    ! which component to take as local
+    integer  :: l_max    !< maximum value of l to take
+    integer  :: l_loc    !< which component to take as local
 
-    type(spline_t) :: vl         ! local part
+    type(spline_t) :: vl         !< local part
 
-    FLOAT :: projectors_sphere_threshold ! The projectors are localized in real
-                                         ! space, and so they are contained in a 
-                                         ! sphere whose radius is computed by
-                                         ! making sure that the projector
-                                         ! functions absolute value is below this
-                                         ! threshold, for points outside the
-                                         ! sphere.
-    FLOAT :: rc_max ! The radius of the spheres that contain the projector functions.
+    FLOAT :: projectors_sphere_threshold !< The projectors are localized in real
+                                         !! space, and so they are contained in a
+                                         !! sphere whose radius is computed by
+                                         !! making sure that the projector
+                                         !! functions absolute value is below this
+                                         !! threshold, for points outside the
+                                         !! sphere.
+    FLOAT :: rc_max !< The radius of the spheres that contain the projector functions.
 
-    integer  :: kbc      ! Number of KB components (1 or 2 for TM ps, 3 for HGH)
+    integer  :: kbc      !< Number of KB components (1 or 2 for TM ps, 3 for HGH)
     FLOAT, pointer :: h(:,:,:), k(:, :, :)
-    type(spline_t), pointer :: kb(:, :)     ! Kleinman-Bylander projectors
-    type(spline_t), pointer :: dkb(:, :)    ! derivatives of KB projectors
+    type(spline_t), pointer :: kb(:, :)     !< Kleinman-Bylander projectors
+    type(spline_t), pointer :: dkb(:, :)    !< derivatives of KB projectors
 
-    ! nonlinear core corrections
-    character(len=4) :: icore
-    type(spline_t) :: core ! normalization \int dr 4 pi r^2 rho(r) = N
+
+    character(len=4) :: icore !< nonlinear core corrections
+    type(spline_t) :: core !< normalization \int dr 4 pi r^2 rho(r) = N
 
 
     !LONG-RANGE PART OF THE LOCAL POTENTIAL
     
     logical :: has_long_range
 
-    type(spline_t) :: vlr         ! the long-range part of the local potential
-    type(spline_t) :: vlr_sq      ! the long-range part of the
-                                  ! local potential in terms of r^2, to avoid the sqrt
-    type(spline_t) :: nlr         ! the charge density associated with the long-range part
+    type(spline_t) :: vlr         !< the long-range part of the local potential
+    type(spline_t) :: vlr_sq      !< the long-range part of the
+                                  !< local potential in terms of r^2, to avoid the sqrt
+    type(spline_t) :: nlr         !< the charge density associated with the long-range part
     
-    FLOAT :: sigma_erf            ! the a constant in erf(r/(sqrt(2)*sigma))/r
-    FLOAT :: a_erf                ! the a constant in erf(ar)/r
+    FLOAT :: sigma_erf            !< the a constant in erf(r/(sqrt(2)*sigma))/r
+    FLOAT :: a_erf                !< the a constant in erf(ar)/r
 
-    type(spline_t) :: vion        ! the potential that other ions see
-    type(spline_t) :: dvion       ! the potential that other ions see
+    type(spline_t) :: vion        !< the potential that other ions see
+    type(spline_t) :: dvion       !< the potential that other ions see
     
     logical :: is_separated
   end type ps_t
@@ -132,11 +132,11 @@ contains
     integer,           intent(in)    :: lloc, ispin
     FLOAT,             intent(in)    :: z
 
-    type(ps_psf_t) :: ps_psf ! SIESTA pseudopotential
-    type(ps_cpi_t) :: ps_cpi ! Fritz-Haber pseudopotential
-    type(ps_fhi_t) :: ps_fhi ! Fritz-Haber pseudopotential (from abinit)
-    type(ps_upf_t) :: ps_upf ! In case UPF format is used
-    type(hgh_t)    :: psp    ! In case Hartwigsen-Goedecker-Hutter ps are used.
+    type(ps_psf_t) :: ps_psf !< SIESTA pseudopotential
+    type(ps_cpi_t) :: ps_cpi !< Fritz-Haber pseudopotential
+    type(ps_fhi_t) :: ps_fhi !< Fritz-Haber pseudopotential (from abinit)
+    type(ps_upf_t) :: ps_upf !< In case UPF format is used
+    type(hgh_t)    :: psp    !< In case Hartwigsen-Goedecker-Hutter ps are used.
 
     call push_sub('ps.ps_init')
 

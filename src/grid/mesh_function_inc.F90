@@ -360,7 +360,7 @@ end subroutine X(mf_random)
 !  if(i>0) v = gr%mesh%x(i, j)   ! I do not understand why
 !                             ! we need i>0...
 !
-! WARNING: It will stop if one is using curvilinear
+! \warning: It will stop if one is using curvilinear
 ! coordinates, or real-space domain parallelization.
 subroutine X(mf_partial_integrate)(mesh, j, f, u)
   type(mesh_t), intent(in)  :: mesh

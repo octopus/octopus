@@ -344,7 +344,7 @@ contains
 
   ! ---------------------------------------------------------
   ! resizes the lead unit cell according to the interface size
-  ! TODO: if hamiltonian->lead is an allocatable array then pointers
+  ! \todo if hamiltonian->lead is an allocatable array then pointers
   ! are the better choice instead of copying
   subroutine lead_resize(intf, lead, dim, nspin)
     type(interface_t),   intent(in)    :: intf

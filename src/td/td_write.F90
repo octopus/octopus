@@ -1118,7 +1118,7 @@ contains
 
     call push_sub('td_write.td_write_laser')
 
-    ! TODO -> confirm these stupid units, especially for the vector field
+    ! \todo -> confirm these stupid units, especially for the vector field
     if(iter == 0) then
       call td_write_print_header_init(out_laser)
 
@@ -1298,7 +1298,7 @@ contains
 
     call write_iter_start(out_gauge)
 
-    ! TODO: put the appropriate units here 
+    ! \todo put the appropriate units here 
     call write_iter_double(out_gauge, gauge_field_get_vec_pot(hm%ep%gfield), gr%mesh%sb%dim)
     call write_iter_double(out_gauge, gauge_field_get_vec_pot_vel(hm%ep%gfield), gr%mesh%sb%dim)
     call write_iter_double(out_gauge, gauge_field_get_vec_pot_acc(hm%ep%gfield), gr%mesh%sb%dim)

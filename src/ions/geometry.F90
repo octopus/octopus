@@ -62,12 +62,12 @@ module geometry_m
 
   type atom_t
     character(len=15) :: label
-    type(species_t), pointer :: spec             ! pointer to species
-    FLOAT :: x(MAX_DIM), v(MAX_DIM), f(MAX_DIM)  ! position/velocity/force of atom in real space
-    CMPLX :: Born_charge(MAX_DIM, MAX_DIM)       ! (frequency-dependent) Born effective charges
-                                                 ! Z*(field dir, force dir)
-                                                 ! = Z*(polarization dir, displacement dir)
-    logical :: move                              ! should I move this atom in the optimization mode
+    type(species_t), pointer :: spec             !< pointer to species
+    FLOAT :: x(MAX_DIM), v(MAX_DIM), f(MAX_DIM)  !< position/velocity/force of atom in real space
+    CMPLX :: Born_charge(MAX_DIM, MAX_DIM)       !< (frequency-dependent) Born effective charges
+                                                 !< Z*(field dir, force dir)
+                                                 !< = Z*(polarization dir, displacement dir)
+    logical :: move                              !< should I move this atom in the optimization mode
   end type atom_t
 
   type atom_classical_t
@@ -81,18 +81,18 @@ module geometry_m
     integer :: natoms
     type(atom_t), pointer :: atom(:)
 
-    integer :: ncatoms              ! For QM+MM calculations
+    integer :: ncatoms              !< For QM+MM calculations
     type(atom_classical_t), pointer :: catom(:)
 
     integer :: nspecies
     type(species_t), pointer :: species(:)
 
-    logical :: only_user_def        ! Do we want to treat only user-defined species?
+    logical :: only_user_def        !< Do we want to treat only user-defined species?
 
-    FLOAT :: kinetic_energy         ! the ion kinetic energy
+    FLOAT :: kinetic_energy         !< the ion kinetic energy
 
-    logical :: nlpp                 ! does any species have non-local pp?
-    logical :: nlcc                 ! does any species have non-local core corrections?
+    logical :: nlpp                 !< does any species have non-local pp?
+    logical :: nlcc                 !< does any species have non-local core corrections?
 
     type(distributed_t) :: atoms
   end type geometry_t
@@ -116,7 +116,7 @@ contains
 
 
   ! ---------------------------------------------------------------
-  ! initializes the xyz positions of the atoms in the structure geo
+  !> initializes the xyz positions of the atoms in the structure geo
   subroutine geometry_init_xyz(geo)
     type(geometry_t), intent(inout) :: geo
 

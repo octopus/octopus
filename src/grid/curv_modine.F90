@@ -146,7 +146,7 @@ contains
     SAFE_ALLOCATE(cv%Jlocal(1:geo%natoms))
     SAFE_ALLOCATE(cv%Jrange(1:geo%natoms))
 
-    ! WARNING: the reading has to be done for each atom kind
+    ! \warning: the reading has to be done for each atom kind
     call parse_float(datasets_check('CurvModineJlocal'), CNST(0.25), cv%Jlocal(1))
     call parse_float(datasets_check('CurvModineJrange'), units_from_atomic(units_inp%length, M_TWO), cv%Jrange(1))
 
@@ -177,7 +177,7 @@ contains
 
       ! get first estimate for chi_atoms
       SAFE_ALLOCATE(cv%chi_atoms(1:sb%dim, 1:geo%natoms))
-      do jj = 1, 10  ! WARNING: make something better
+      do jj = 1, 10  ! \warning: make something better
         do i = 1, geo%natoms
           call curv_modine_x2chi(sb, cv, geo%atom(i)%x, cv%chi_atoms(:,i))
         end do

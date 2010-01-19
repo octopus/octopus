@@ -19,7 +19,7 @@
 
 
 ! ---------------------------------------------------------
-! WARNING: This subroutine is clearly broken after the changes
+! \warning: This subroutine is clearly broken after the changes
 ! to include temperature in linear response
 subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
   type(states_t),       intent(inout) :: st

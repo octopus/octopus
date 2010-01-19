@@ -144,7 +144,7 @@ contains
     ! Paramagnetic contribution to the physical current
     call states_calc_tau_jp_gn(der, st, jp = j)
 
-    ! TODO
+    ! \todo
     ! Diamagnetic contribution to the physical current
 
     call pop_sub()
