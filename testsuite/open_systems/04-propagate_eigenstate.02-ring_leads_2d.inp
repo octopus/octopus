@@ -11,6 +11,9 @@ ParallelizationStrategy = par_kpoints
 Eigensolver = lobpcg
 EigensolverFinalTolerance = 1e-9
 
+MeshBlockSizeXY = 1
+MeshBlockSizeZ = 1
+
 %CalculationMode
  gs      | gs           | td
  "lead_" | "ring_lead_" | "ring_lead_"

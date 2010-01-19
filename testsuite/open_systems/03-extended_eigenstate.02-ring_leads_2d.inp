@@ -6,6 +6,8 @@
 # shaped lead channels.
 
 ParallelizationStrategy = par_kpoints
+MeshBlockSizeXY = 1
+MeshBlockSizeZ = 1
 DevelVersion = yes
 
 %CalculationMode
