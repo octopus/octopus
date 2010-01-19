@@ -137,17 +137,17 @@ match ; gga_x_pbe_jsjr                         ; GREP(out, 'Exchange    =', 20) 
 Input: 03-xc.gga_c_pbe.inp
 match ; gga_c_pbe                              ; GREP(out, 'Correlation =', 20)   ; -0.01453915
 
-#Input: 03-xc.gga_c_lyp.inp
-#match ; gga_c_lyp                             ; GREP(out, 'Correlation =', 20)   ; 
+Input: 03-xc.gga_c_lyp.inp
+match ; gga_c_lyp                              ; GREP(out, 'Correlation =', 20)   ; -0.01069976
 
-#Input: 03-xc.gga_c_p86.inp
-#match ; gga_c_p86                             ; GREP(out, 'Correlation =', 20)   ;
+Input: 03-xc.gga_c_p86.inp
+match ; gga_c_p86                              ; GREP(out, 'Correlation =', 20)   ; -0.01385540
 
 Input: 03-xc.gga_c_pbe_sol.inp
 match ; gga_c_pbe_sol                          ; GREP(out, 'Correlation =', 20)   ; -0.01754529
 
 Input: 03-xc.gga_c_pw91.inp
-match ; gga_c_pw91                             ; GREP(out, 'Correlation =', 20)   ; 0.00000000
+match ; gga_c_pw91                             ; GREP(out, 'Correlation =', 20)   ; -0.01535887
 
 Input: 03-xc.gga_c_am05.inp
 match ; gga_c_am05                             ; GREP(out, 'Correlation =', 20)   ; -0.03372666
@@ -159,7 +159,7 @@ Input: 03-xc.gga_c_lm.inp
 match ; gga_c_lm                               ; GREP(out, 'Correlation =', 20)   ; -0.08389880
 
 Input: 03-xc.gga_c_pbe_jrgx.inp
-match ; gga_c_pbe_jrgx                         ; GREP(out, 'Correlation =', 20)   ; 0.00000000
+match ; gga_c_pbe_jrgx                         ; GREP(out, 'Correlation =', 20)   ; -0.01924435
 
 Input: 03-xc.gga_x_optb88_vdw.inp
 match ; gga_x_optb88_vdw                       ; GREP(out, 'Exchange    =', 20)   ; -0.31417392
@@ -167,11 +167,12 @@ match ; gga_x_optb88_vdw                       ; GREP(out, 'Exchange    =', 20) 
 Input: 03-xc.gga_x_pbek1_vdw.inp
 match ; gga_x_pbek1_vdw                        ; GREP(out, 'Exchange    =', 20)   ; -0.32039747
 
-#Input: 03-xc.gga_x_optpbe_vdw.inp
-#match ; gga_x_optpbe_vdw                      ; GREP(out, 'Exchange    =', 20)   ;
+Input: 03-xc.gga_x_optpbe_vdw.inp
+match ; gga_x_optpbe_vdw                       ; GREP(out, 'Exchange    =', 20)   ; -0.32559263
 
-Input: 03-xc.gga_xc_lb.inp
-match ; gga_xc_lb                              ; GREP(out, 'Correlation =', 20)   ; 0.00000000
+# this functional can not be tested like this as it does not return the energy, but only the potential
+#Input: 03-xc.gga_xc_lb.inp
+#match ; gga_xc_lb                              ; GREP(out, 'Correlation =', 20)   ; 0.00000000
 
 Input: 03-xc.gga_xc_hcth_93.inp
 match ; gga_xc_hcth_93                         ; GREP(out, 'Correlation =', 20)   ; -0.34470063
@@ -185,11 +186,11 @@ match ; gga_xc_hcth_147                        ; GREP(out, 'Correlation =', 20) 
 Input: 03-xc.gga_xc_hcth_407.inp
 match ; gga_xc_hcth_407                        ; GREP(out, 'Correlation =', 20)   ; -0.34656464
 
-#Input: 03-xc.gga_xc_edf1.inp
-#match ; gga_xc_edf1                           ; GREP(out, 'Correlation =', 20)   ;
+Input: 03-xc.gga_xc_edf1.inp
+match ; gga_xc_edf1                            ; GREP(out, 'Correlation =', 20)   ; -0.34151185
 
-#Input: 03-xc.gga_xc_xlyp.inp
-#match ; gga_xc_xlyp                           ; GREP(out, 'Correlation =', 20)   ;
+Input: 03-xc.gga_xc_xlyp.inp
+match ; gga_xc_xlyp                            ; GREP(out, 'Correlation =', 20)   ; -0.33505116
 
 Input: 03-xc.gga_xc_b97.inp
 match ; gga_xc_b97                             ; GREP(out, 'Correlation =', 20)   ; -0.27231614
@@ -209,14 +210,14 @@ match ; gga_xc_b97_k                           ; GREP(out, 'Correlation =', 20) 
 Input: 03-xc.gga_xc_b97_3.inp
 match ; gga_xc_b97_3                           ; GREP(out, 'Correlation =', 20)   ; -0.25035509
 
-#Input: 03-xc.gga_xc_pbe1w.inp
-#match ; gga_xc_pbe1w                          ; GREP(out, 'Correlation =', 20)   ;
+Input: 03-xc.gga_xc_pbe1w.inp
+match ; gga_xc_pbe1w                           ; GREP(out, 'Correlation =', 20)   ; -0.33761061
 
-#Input: 03-xc.gga_xc_mpwlyp1w.inp
-#match ; gga_xc_mpwlyp1w                       ; GREP(out, 'Correlation =', 20)   ;
+Input: 03-xc.gga_xc_mpwlyp1w.inp
+match ; gga_xc_mpwlyp1w                        ; GREP(out, 'Correlation =', 20)   ; -0.33648566
 
-#Input: 03-xc.gga_xc_pbelyp1w.inp
-#match ; gga_xc_pbelyp1w                       ; GREP(out, 'Correlation =', 20)   ;
+Input: 03-xc.gga_xc_pbelyp1w.inp
+match ; gga_xc_pbelyp1w                        ; GREP(out, 'Correlation =', 20)   ; -0.33476946
 
 Input: 03-xc.gga_xc_sb98_1a.inp
 match ; gga_xc_sb98_1a                         ; GREP(out, 'Correlation =', 20)   ; -0.25339616
