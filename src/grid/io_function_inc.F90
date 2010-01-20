@@ -936,7 +936,8 @@ contains
 
     ! data
     pos(:,:) = M_ZERO
-    pos(1, 1:mesh%sb%dim) = real(units_from_atomic(units_out%length, - (cube%n(1:mesh%sb%dim) - 1)/2*mesh%spacing(1:mesh%sb%dim)), 4)
+    pos(1, 1:mesh%sb%dim) = &
+      real(units_from_atomic(units_out%length, - (cube%n(1:mesh%sb%dim) - 1)/2*mesh%spacing(1:mesh%sb%dim)), 4)
     pos(2, 1:mesh%sb%dim) = real(units_from_atomic(units_out%length, mesh%spacing(1:mesh%sb%dim)), 4)
 
     if(status == NF90_NOERR) then

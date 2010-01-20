@@ -164,6 +164,7 @@ contains
     character(len=1024)      :: expression
     integer :: i, j, no_lines, steps, iunit
     FLOAT   :: octpenalty, t, f_re, f_im, total_time
+    CMPLX   :: pol(MAX_DIM)
     type(block_t)            :: blk
 
     call push_sub('parameters.parameters_mod_init')
@@ -328,6 +329,24 @@ contains
     if ( (.not.parametrized_controls)  .and.  (par_common%mode .ne. parameter_mode_epsilon) ) &
       call input_error('OCTControlFunctionType')
     call messages_print_var_option(stdout, 'OCTControlFunctionType', par_common%mode)
+
+
+    ! Check that there are no complex polarization vectors.
+    do i = 1, ep%no_lasers
+      pol(1:MAX_DIM) = laser_polarization(ep%lasers(i))
+      do j = 1, MAX_DIM
+        if( aimag(pol(j))**2 > CNST(1.0e-20) ) then
+          write(message(1), '(a)') 'In QOCT runs, the polarization vector cannot be complex. Complex'
+          write(message(2), '(a)') 'polarization vectors are only truly necessary if one wants a'  
+          write(message(3), '(a)') 'circularly / elliptically polarized laser. This concepts assumes'
+          write(message(4), '(a)') 'the existence of a well defined carrier frequency (otherwise it'
+          write(message(5), '(a)') 'would not make sense to speak of a fixed phase difference). So in'
+          write(message(6), '(a)') 'QOCT runs it would only make sense for envelope-only optimizations.'
+          write(message(7), '(a)') 'This possibility should be implemented in the future.'
+          call write_fatal(7)
+        end if
+      end do
+    end do
 
 
     ! The laser field is defined by "td functions", as implemented in module "tdf_m". At this point, they
