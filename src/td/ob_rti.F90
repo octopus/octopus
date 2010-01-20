@@ -356,6 +356,10 @@ contains
         call zqmr_sym(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, precond_prop, &
           qmr_iter, residue=dres, threshold=qmr_tol, showprogress=.false., converged=conv)
       end do
+      if(in_debug_mode) then ! write info
+        write(message(1), '(a,i8,e10.3)') 'Iterations, Residual: ', qmr_iter, dres
+        call write_info(1)
+      end if
     end do
 
     ! Save interface part of wavefunction for subsequent iterations.

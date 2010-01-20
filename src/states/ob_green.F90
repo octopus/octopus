@@ -74,9 +74,9 @@ contains
       call lead_green_sancho(c_energy, diag, offdiag, np_uc, green, threshold, h_is_real)
       residual = calc_residual_green(energy, green, diag, offdiag, intf)
       if(in_debug_mode) then ! write info
-        write(message(2), '(a)') 'Non-reducible unit cell'
+        write(message(1), '(a)') 'Non-reducible unit cell'
         write(message(2), '(a,e10.3)') 'Sancho-Residual = ', residual
-        call write_info(1)
+        call write_info(2)
       end if
     else
       ! 1. calculate with the fastest method

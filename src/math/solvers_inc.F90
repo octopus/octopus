@@ -363,7 +363,7 @@ end subroutine X(bi_conjugate_gradients)
     FLOAT               :: rho, xsi, gamma, alpha, theta, threshold_, res, oldtheta, oldgamma, oldrho, tmp
     integer             :: max_iter, err, ip
     logical             :: showprogress_
-    FLOAT               :: log_res, log_thr
+    FLOAT               :: log_res, log_thr, norm_b
     integer             :: ilog_res, ilog_thr
 
     call push_sub('solvers_inc.Xqmr_sym_gen_dotu')
@@ -398,7 +398,8 @@ end subroutine X(bi_conjugate_gradients)
       v(ip) = r(ip)
     end forall
 
-    rho = nrm2(v)
+    rho      = nrm2(v)
+    norm_b   = nrm2(b)
 
     max_iter = iter
     iter     = 0
@@ -504,7 +505,7 @@ end subroutine X(bi_conjugate_gradients)
 
         end if
 
-        res = nrm2(r)/nrm2(x)
+        res = nrm2(r)/norm_b
 
         log_res = -log(res)
         if(log_res < 0) log_res = 0
