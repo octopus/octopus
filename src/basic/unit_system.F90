@@ -75,7 +75,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine unit_system_init()
-    integer :: c, cinp, cout
+    integer :: cc, cinp, cout
 
     call push_sub('unit_system.unit_system_init')
 
@@ -94,14 +94,15 @@ contains
     !% these units, including XYZ geometry files.
     !%
     !% Warning 2: Some values are treated in their most common units,
-    !% for example atomic masses (a.m.u.), vibrational frequencies
+    !% for example atomic masses (a.m.u.), electron effective masses
+    !% (electron mass), vibrational frequencies
     !% (cm<sup>-1</sup>) or temperatures (Kelvin). The unit of charge is always
     !% the electronic charge <i>e</i>.
     !%
     !%Option atomic        1
-    !% Atomic units
+    !% Atomic units.
     !%Option ev_angstrom   2
-    !% Electronvolts for energy, Angstrom for length, the rest of the
+    !% Electronvolts for energy, Angstroms for length, the rest of the
     !% units are derived from these and <math>hbar=1</math>.
     !%End
 
@@ -110,9 +111,9 @@ contains
     !%Default atomic
     !%Section Execution::Units
     !%Description
-    !% Same as "Units", but only refers to input values.
+    !% Same as <tt>Units</tt>, but only refers to input values.
     !%Option atomic        1
-    !% Atomic units
+    !% Atomic units.
     !%Option ev_angstrom   2
     !% Electronvolts for energy, Angstroms for length, and the rest of the
     !% units are derived from these and <math>hbar=1</math>.
@@ -123,26 +124,26 @@ contains
     !%Default atomic
     !%Section Execution::Units
     !%Description
-    !% Same as "Units", but only refers to output values.
+    !% Same as <tt>Units</tt>, but only refers to output values.
     !%Option atomic        1
     !% Atomic units
     !%Option ev_angstrom   2
-    !% Electronvolts for energy, Angstrom for length, the rest of the
+    !% Electronvolts for energy, Angstroms for length, the rest of the
     !% units are derived from these and <math>hbar=1</math>.
     !%End
 
     if(parse_isdef(datasets_check('Units')).ne.0) then
-      call parse_integer(datasets_check('Units'), UNITS_ATOMIC, c)
-      if(.not.varinfo_valid_option('Units', c)) call input_error('Units')
-      cinp = c
-      cout = c
+      call parse_integer(datasets_check('Units'), UNITS_ATOMIC, cc)
+      if(.not.varinfo_valid_option('Units', cc)) call input_error('Units')
+      cinp = cc
+      cout = cc
     else
-      call parse_integer(datasets_check('UnitsInput'), UNITS_ATOMIC, c)
-      if(.not.varinfo_valid_option('UnitsInput', c)) call input_error('UnitsInput')
-      cinp = c
-      call parse_integer(datasets_check('UnitsOutput'), UNITS_ATOMIC, c)
-      if(.not.varinfo_valid_option('UnitsOutput', c)) call input_error('UnitsOutput')
-      cout = c
+      call parse_integer(datasets_check('UnitsInput'), UNITS_ATOMIC, cc)
+      if(.not.varinfo_valid_option('UnitsInput', cc)) call input_error('UnitsInput')
+      cinp = cc
+      call parse_integer(datasets_check('UnitsOutput'), UNITS_ATOMIC, cc)
+      if(.not.varinfo_valid_option('UnitsOutput', cc)) call input_error('UnitsOutput')
+      cout = cc
     end if
 
     unit_one%factor = M_ONE
@@ -173,104 +174,116 @@ contains
   end subroutine unit_system_init
 
   ! ---------------------------------------------------------
-  subroutine unit_system_get(u, c)
-    type(unit_system_t), intent(out) :: u
-    integer,             intent(in)  :: c
+  subroutine unit_system_get(uu, cc)
+    type(unit_system_t), intent(out) :: uu
+    integer,             intent(in)  :: cc
 
-    select case(c)
+    call push_sub('unit_system.unit_system_get')
+
+    select case(cc)
     case (UNITS_ATOMIC)
-      call unit_system_init_atomic(u)
+      call unit_system_init_atomic(uu)
     case (UNITS_EVA)
-      call unit_system_init_eV_Ang(u)
+      call unit_system_init_eV_Ang(uu)
     case default
       call input_error('Units')
     end select
+
+    call pop_sub()
   end subroutine unit_system_get
 
 
   ! ---------------------------------------------------------
-  !> these routines output the unit conversions factors, defined by
+  !> These routines output the unit-conversion factors, defined by
   !! [a.u.] = <input>*u.unit
   !! <output> = [a.u.]/u.unit
   ! ---------------------------------------------------------
-  subroutine unit_system_init_atomic(u)
-    type(unit_system_t), intent(out) :: u
+  subroutine unit_system_init_atomic(uu)
+    type(unit_system_t), intent(out) :: uu
 
-    u%length%abbrev = "b"
-    u%length%name   = "Bohr"
-    u%length%factor = M_ONE
+    call push_sub('unit_system.unit_system_init_atomic')
 
-    u%energy%abbrev = "H"
-    u%energy%name   = "Hartree"
-    u%energy%factor = M_ONE
+    uu%length%abbrev = "b"
+    uu%length%name   = "Bohr"
+    uu%length%factor = M_ONE
 
-    u%time%abbrev = "hbar/H"
-    u%time%name   = "hbar/Hartree"
-    u%time%factor = M_ONE/u%energy%factor
+    uu%energy%abbrev = "H"
+    uu%energy%name   = "Hartree"
+    uu%energy%factor = M_ONE
 
-    u%velocity%abbrev = "bH(2pi/h)"
-    u%velocity%name   = "Bohr times Hartree over hbar"
-    u%velocity%factor = M_ONE
+    uu%time%abbrev = "hbar/H"
+    uu%time%name   = "hbar/Hartree"
+    uu%time%factor = M_ONE/uu%energy%factor
 
-    u%mass%abbrev   = "u"
-    u%mass%name     = "1/12 of the mass of C^12"
-    u%mass%factor   = M_ONE/CNST(5.485799110e-4)
+    uu%velocity%abbrev = "bH(2pi/h)"
+    uu%velocity%name   = "Bohr times Hartree over hbar"
+    uu%velocity%factor = M_ONE
 
-    u%force%abbrev  = "H/b"
-    u%force%name    = "Hartree/Bohr"
-    u%force%factor  = M_ONE
+    uu%mass%abbrev   = "u"
+    uu%mass%name     = "1/12 of the mass of C^12"
+    uu%mass%factor   = M_ONE/CNST(5.485799110e-4)
 
-    u%acceleration%abbrev = "bH(2pi/h)^2"
-    u%acceleration%name   = "Bohr times (Hartree over h bar) squared"
-    u%acceleration%factor = M_ONE
+    uu%force%abbrev  = "H/b"
+    uu%force%name    = "Hartree/Bohr"
+    uu%force%factor  = M_ONE
 
-    u%polarizability%abbrev  = "b^3"
-    u%polarizability%name    = "Bohr^3"
-    u%polarizability%factor  = M_ONE
+    uu%acceleration%abbrev = "bH(2pi/h)^2"
+    uu%acceleration%name   = "Bohr times (Hartree over h bar) squared"
+    uu%acceleration%factor = M_ONE
+
+    uu%polarizability%abbrev  = "b^3"
+    uu%polarizability%name    = "Bohr^3"
+    uu%polarizability%factor  = M_ONE
     ! By convention, this unit appears more commonly than the
     ! equivalent b^2/H. It does not depend on the dimensionality
     ! of the system, despite analogies to a volume.
 
-    u%hyperpolarizability%abbrev  = "b^5"
-    u%hyperpolarizability%name    = "Bohr^5"
-    u%hyperpolarizability%factor  = M_ONE
+    uu%hyperpolarizability%abbrev  = "b^5"
+    uu%hyperpolarizability%name    = "Bohr^5"
+    uu%hyperpolarizability%factor  = M_ONE
+
+    call pop_sub()
   end subroutine unit_system_init_atomic
 
 
   ! ---------------------------------------------------------
-  subroutine unit_system_init_eV_Ang(u)
-    type(unit_system_t), intent(out) :: u
+  subroutine unit_system_init_eV_Ang(uu)
+    type(unit_system_t), intent(out) :: uu
 
-    u%length%abbrev = "A"
-    u%length%name   = "Angstrom"
-    u%length%factor = P_Ang  ! 1 a.u. = 0.529 A
+    call push_sub('unit_system.unit_system_init_eV_Ang')
 
-    u%energy%abbrev = "eV"
-    u%energy%name   = "electronvolt"
-    u%energy%factor = M_ONE/(M_TWO*P_Ry)   ! 1 a.u. = 27.2 eV
+    uu%length%abbrev = "A"
+    uu%length%name   = "Angstrom"
+    uu%length%factor = P_Ang  ! 1 a.u. = 0.529 A
 
-    u%time%abbrev = "hbar/eV"
-    u%time%name   = "hbar/electronvolt"
-    u%time%factor = M_ONE/u%energy%factor
+    uu%energy%abbrev = "eV"
+    uu%energy%name   = "electronvolt"
+    uu%energy%factor = M_ONE/(M_TWO*P_Ry)   ! 1 a.u. = 27.2 eV
 
-    u%velocity%abbrev = "AeV(2pi/h)"
-    u%velocity%name   = "Angstrom times electronvolts over hbar"
-    u%velocity%factor = u%length%factor*u%energy%factor
+    uu%time%abbrev = "hbar/eV"
+    uu%time%name   = "hbar/electronvolt"
+    uu%time%factor = M_ONE/uu%energy%factor
 
-    u%mass%abbrev   = "u"
-    u%mass%name     = "1/12 of the mass of C^12"
-    u%mass%factor   = M_ONE/CNST(5.485799110e-4)
+    uu%velocity%abbrev = "AeV(2pi/h)"
+    uu%velocity%name   = "Angstrom times electronvolts over hbar"
+    uu%velocity%factor = uu%length%factor*uu%energy%factor
 
-    u%force%abbrev  = "eV/A"
-    u%force%name    = "electronvolt/Angstrom"
-    u%force%factor  = u%energy%factor/u%length%factor
+    uu%mass%abbrev   = "u"
+    uu%mass%name     = "1/12 of the mass of C^12"
+    uu%mass%factor   = M_ONE/CNST(5.485799110e-4)
 
-    u%acceleration%abbrev = "AeV(2pi/h)^2"
-    u%acceleration%name   = "Angstrom times (electronvolt over hbar) squared"
-    u%acceleration%factor = u%length%factor/u%time%factor**2
+    uu%force%abbrev  = "eV/A"
+    uu%force%name    = "electronvolt/Angstrom"
+    uu%force%factor  = uu%energy%factor/uu%length%factor
 
-    u%polarizability      = u%length**3
-    u%hyperpolarizability = u%length**5
+    uu%acceleration%abbrev = "AeV(2pi/h)^2"
+    uu%acceleration%name   = "Angstrom times (electronvolt over hbar) squared"
+    uu%acceleration%factor = uu%length%factor/uu%time%factor**2
+
+    uu%polarizability      = uu%length**3
+    uu%hyperpolarizability = uu%length**5
+
+    call pop_sub()
   end subroutine unit_system_init_eV_Ang
 
 
@@ -281,8 +294,8 @@ contains
   !! \todo  although it seems to work in most cases, it is obviously
   !! a very weak code.
   ! ---------------------------------------------------------
-  subroutine unit_system_from_file(u, fname, ierr)
-    type(unit_system_t), intent(inout) :: u
+  subroutine unit_system_from_file(uu, fname, ierr)
+    type(unit_system_t), intent(inout) :: uu
     character(len=*),    intent(in)    :: fname
     integer,             intent(inout) :: ierr
 
@@ -302,10 +315,10 @@ contains
       read(iunit, '(a)', iostat = ios) line
       if(ios.ne.0) exit
       if(index(line,'[A]').ne.0  .or.  index(line,'eV').ne.0) then
-        call unit_system_get(u, UNITS_EVA)
+        call unit_system_get(uu, UNITS_EVA)
         call pop_sub(); return
       elseif(index(line,'[b]').ne.0) then
-        call unit_system_get(u, UNITS_ATOMIC)
+        call unit_system_get(uu, UNITS_ATOMIC)
         call pop_sub(); return
       end if
     end do
