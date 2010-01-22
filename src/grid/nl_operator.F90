@@ -129,6 +129,8 @@ contains
   ! ---------------------------------------------------------
   subroutine nl_operator_global_init()
 
+    call push_sub('nl_operator.nl_operator_global_init')
+
     !%Variable OperateDouble
     !%Type integer
     !%Default autodetect
@@ -136,16 +138,16 @@ contains
     !%Description
     !% This variable selects the subroutine used to apply non-local
     !% operators over the grid for real functions. By default the best
-    !% subroutine for your system is detected at runtime, but using
-    !% this variable you might skip the detection.
+    !% subroutine for your system is detected at runtime, but by using
+    !% this variable you can skip the autodetection.
     !%Option autodetect -1
-    !% Automatically discover the fastest function
+    !% Automatically discover the fastest function.
     !%Option fortran 0
-    !% The standard fortran function.
+    !% The standard Fortran function.
     !%Option c 1
-    !% The C version of the function unrolled by hand.
+    !% The C version of the function, unrolled by hand.
     !%Option vec 2
-    !% This version has been optimized using vector primitives, it is
+    !% This version has been optimized using vector primitives,
     !% available on x86 (with SSE2) and x86-64 systems (not supported
     !% by all compilers).
     !%Option as 3
@@ -159,16 +161,16 @@ contains
     !%Description
     !% This variable selects the subroutine used to apply non-local
     !% operators over the grid for complex functions. By default the best
-    !% subroutine for your system is detected at runtime, but using
-    !% this variable you might skip the detection.
+    !% subroutine for your system is detected at runtime, but by using
+    !% this variable you can skip the detection.
     !%Option autodetect -1
-    !% Automatically discover the fastest function
+    !% Automatically discover the fastest function.
     !%Option fortran 0
-    !% The standard fortran function.
+    !% The standard Fortran function.
     !%Option c 1
-    !% The C version of the function unrolled by hand.
+    !% The C version of the function, unrolled by hand.
     !%Option vec 2
-    !% This version has been optimized using vector primitives, it is
+    !% This version has been optimized using vector primitives,
     !% available on x86 (with SSE2) and x86-64 systems (not supported
     !% by all compilers).
     !%Option as 3
@@ -178,7 +180,7 @@ contains
     call parse_integer(datasets_check('OperateDouble'),  -1, dfunction_global)
     if(dfunction_global.ne.-1) then
       if(op_is_available(dfunction_global, M_REAL)  == 0) then
-        message(1) = 'OperateDouble chosen in not available on this platform'
+        message(1) = 'OperateDouble option chosen is not available on this platform.'
         call write_fatal(1)
       end if
     end if
@@ -186,17 +188,20 @@ contains
     call parse_integer(datasets_check('OperateComplex'), -1, zfunction_global)
     if(zfunction_global.ne.-1) then
       if(op_is_available(zfunction_global, M_CMPLX) == 0) then
-        message(1) = 'OperateComplex chosen in not available on this platform'
+        message(1) = 'OperateComplex option chosen is not available on this platform.'
         call write_fatal(1)
       end if
     end if
 
+    call pop_sub()
   end subroutine nl_operator_global_init
 
 
   ! ---------------------------------------------------------
   character(len=8) function op_function_name(id) result(str)
     integer, intent(in) :: id
+
+    call push_sub('nl_operator.op_function_name')
     
     str = 'unknown'
     if(id == OP_FORTRAN) str = 'Fortran'
@@ -205,6 +210,7 @@ contains
     if(id == OP_AS)      str = 'AS'
     if(id == OP_BG)      str = 'BG'
     
+    call pop_sub()
   end function op_function_name
 
 
@@ -277,8 +283,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine nl_operator_build(m, op, np, const_w, cmplx_op)
-    type(mesh_t), target, intent(in)    :: m
+  subroutine nl_operator_build(mesh, op, np, const_w, cmplx_op)
+    type(mesh_t), target, intent(in)    :: mesh
     type(nl_operator_t),  intent(inout) :: op
     integer,              intent(in)    :: np       ! Number of (local) points.
     logical, optional,    intent(in)    :: const_w  ! are the weights constant (independent of the point)
@@ -295,7 +301,7 @@ contains
     call push_sub('nl_operator.nl_operator_build')
 
 #ifdef HAVE_MPI
-    if(m%parallel_in_domains .and. .not. const_w) then
+    if(mesh%parallel_in_domains .and. .not. const_w) then
       call messages_devel_version('Domain parallelization with curvilinear coordinates')
     end if
 #endif
@@ -304,7 +310,7 @@ contains
 
     ! store values in structure
     op%np       = np
-    op%m        => m
+    op%m        => mesh
     op%const_w  = .false.
     op%cmplx_op = .false.
     if(present(const_w )) op%const_w  = const_w
@@ -337,36 +343,37 @@ contains
     SAFE_ALLOCATE(st2(1:op%stencil%size))
 
     op%nri = 0
-    op%der_zero_max = m%np + 1
+    op%der_zero_max = mesh%np + 1
     do time = 1, 2
       st2 = 0
       do ii = 1, np
         p1 = 0
-        if(m%parallel_in_domains) then
+        if(mesh%parallel_in_domains) then
           ! When running in parallel, get global number of
           ! point ii.
-          call index_to_coords(m%idx, m%sb%dim, m%vp%local(m%vp%xlocal(m%vp%partno) + ii - 1), p1)
+          call index_to_coords(mesh%idx, mesh%sb%dim, &
+            mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + ii - 1), p1)
         else
-          call index_to_coords(m%idx, m%sb%dim, ii, p1)
+          call index_to_coords(mesh%idx, mesh%sb%dim, ii, p1)
         end if
 
         do jj = 1, op%stencil%size
           ! Get global index of p1 plus current stencil point.
-          if(m%sb%mr_flag) then
-            st1(jj) = index_from_coords(m%idx, m%sb%dim, &
-                 p1(1:MAX_DIM) + m%resolution(p1(1), p1(2), p1(3))*op%stencil%points(1:MAX_DIM, jj))
+          if(mesh%sb%mr_flag) then
+            st1(jj) = index_from_coords(mesh%idx, mesh%sb%dim, &
+                 p1(1:MAX_DIM) + mesh%resolution(p1(1), p1(2), p1(3))*op%stencil%points(1:MAX_DIM, jj))
           else
-            st1(jj) = index_from_coords(m%idx, m%sb%dim, p1(1:MAX_DIM) + op%stencil%points(1:MAX_DIM, jj))
+            st1(jj) = index_from_coords(mesh%idx, mesh%sb%dim, p1(1:MAX_DIM) + op%stencil%points(1:MAX_DIM, jj))
           end if
 #ifdef HAVE_MPI
-          if(m%parallel_in_domains) then
+          if(mesh%parallel_in_domains) then
             ! When running parallel, translate this global
             ! number back to a local number.
-            st1(jj) = vec_global2local(m%vp, st1(jj), m%vp%partno)
+            st1(jj) = vec_global2local(mesh%vp, st1(jj), mesh%vp%partno)
           end if
 #endif
-          if(mesh_compact_boundaries(m)) then
-            st1(jj) = min(st1(jj), m%np + 1)
+          if(mesh_compact_boundaries(mesh)) then
+            st1(jj) = min(st1(jj), mesh%np + 1)
           end if
           ASSERT(st1(jj) > 0)
         end do
@@ -375,10 +382,10 @@ contains
 
         change = any(st1 /= st2)
         
-        if(change .and. mesh_compact_boundaries(m)) then 
+        if(change .and. mesh_compact_boundaries(mesh)) then 
           !try to repair it by changing the boundary points
           do jj = 1, op%stencil%size
-            if(st1(jj) + ii > m%np .and. st2(jj) + ii - 1 > m%np .and. st2(jj) + ii <= m%np_part) then
+            if(st1(jj) + ii > mesh%np .and. st2(jj) + ii - 1 > mesh%np .and. st2(jj) + ii <= mesh%np_part) then
               st1r(jj) = st2(jj)
             else
               st1r(jj) = st1(jj)
@@ -489,7 +496,7 @@ contains
       !verify that all points in the inner operator are actually inner
       do ir = 1, op%inner%nri
         do ii = op%inner%imin(ir) + 1, op%inner%imax(ir)
-          ASSERT(all(ii + op%inner%ri(1:op%stencil%size, ir) <= m%np))
+          ASSERT(all(ii + op%inner%ri(1:op%stencil%size, ir) <= mesh%np))
         end do
       end do
       
@@ -525,7 +532,7 @@ contains
     type(nl_operator_t), intent(in)  :: op
     type(nl_operator_t), intent(out) :: opt
 
-    integer :: i, j, index, l, k
+    integer :: ip, jp, kp, lp, index
 
     call push_sub('nl_operator.nl_operator_transpose')
 
@@ -534,19 +541,19 @@ contains
     opt%label = trim(op%label)//' transposed'
     opt%w_re = M_ZERO
     if (op%cmplx_op) opt%w_im = M_ZERO
-    do i = 1, op%np
-      do j = 1, op%stencil%size
-        index = nl_operator_get_index(op, j, i)
+    do ip = 1, op%np
+      do jp = 1, op%stencil%size
+        index = nl_operator_get_index(op, jp, ip)
         if(index <= op%np) then
-          do l = 1, op%stencil%size
-            k = nl_operator_get_index(op, l, index)
-            if( k == i ) then
+          do lp = 1, op%stencil%size
+            kp = nl_operator_get_index(op, lp, index)
+            if( kp == ip ) then
               if(.not.op%const_w) then
-                opt%w_re(j, i) = op%w_re(l, index)
-                if (op%cmplx_op) opt%w_im(j, i) = op%w_im(l, index)
+                opt%w_re(jp, ip) = op%w_re(lp, index)
+                if (op%cmplx_op) opt%w_im(jp, ip) = op%w_im(lp, index)
               else
-                opt%w_re(j, 1) = op%w_re(l, 1)
-                if (op%cmplx_op) opt%w_im(j, 1) = op%w_im(l, 1)
+                opt%w_re(jp, 1) = op%w_re(lp, 1)
+                if (op%cmplx_op) opt%w_im(jp, 1) = op%w_im(lp, 1)
               end if
             end if
           end do
@@ -564,12 +571,12 @@ contains
 
   ! ---------------------------------------------------------
   ! opt has to be initialised and built.
-  subroutine nl_operator_skewadjoint(op, opt, m)
+  subroutine nl_operator_skewadjoint(op, opt, mesh)
     type(nl_operator_t), target, intent(in)  :: op
     type(nl_operator_t), target, intent(out) :: opt
-    type(mesh_t),        intent(in)  :: m
+    type(mesh_t),        intent(in)  :: mesh
 
-    integer          :: i, j, index, l, k
+    integer          :: ip, jp, kp, lp, index
     FLOAT, pointer   :: vol_pp(:)
 
     type(nl_operator_t), pointer :: opg, opgt
@@ -579,39 +586,39 @@ contains
     call nl_operator_copy(opt, op)
 
 #if defined(HAVE_MPI)
-    if(m%parallel_in_domains) then
+    if(mesh%parallel_in_domains) then
       SAFE_ALLOCATE(opg)
       SAFE_ALLOCATE(opgt)
       call nl_operator_allgather(op, opg)
       call nl_operator_init(opgt, op%label)
       call nl_operator_copy(opgt, opg)
-      SAFE_ALLOCATE(vol_pp(1:m%np_global))
-      call dvec_allgather(m%vp, vol_pp, m%vol_pp)
+      SAFE_ALLOCATE(vol_pp(1:mesh%np_global))
+      call dvec_allgather(mesh%vp, vol_pp, mesh%vol_pp)
     else
 #endif
       opg  => op
       opgt => opt
-      vol_pp => m%vol_pp
+      vol_pp => mesh%vol_pp
 #if defined(HAVE_MPI)
     end if
 #endif
 
     opgt%w_re = M_ZERO
     if (op%cmplx_op) opgt%w_im = M_ZERO
-    do i = 1, m%np_global
-      do j = 1, op%stencil%size
-        index = nl_operator_get_index(opg, j, i)
-        if(index <= m%np_global) then
-          do l = 1, op%stencil%size
-            k = nl_operator_get_index(opg, l, index)
-            if( k == i ) then
+    do ip = 1, mesh%np_global
+      do jp = 1, op%stencil%size
+        index = nl_operator_get_index(opg, jp, ip)
+        if(index <= mesh%np_global) then
+          do lp = 1, op%stencil%size
+            kp = nl_operator_get_index(opg, lp, index)
+            if( kp == ip ) then
               if(.not.op%const_w) then
-                opgt%w_re(j, i) = M_HALF*opg%w_re(j, i) - M_HALF*(vol_pp(index)/vol_pp(i))*opg%w_re(l, index)
+                opgt%w_re(jp, ip) = M_HALF*opg%w_re(jp, ip) - M_HALF*(vol_pp(index)/vol_pp(ip))*opg%w_re(lp, index)
                 if (op%cmplx_op) &
-                   opgt%w_im(j, i) = M_HALF*opg%w_im(j, i) - M_HALF*(vol_pp(index)/vol_pp(i))*opg%w_im(l, index)
+                   opgt%w_im(jp, ip) = M_HALF*opg%w_im(jp, ip) - M_HALF*(vol_pp(index)/vol_pp(ip))*opg%w_im(lp, index)
               else
-                opgt%w_re(j, 1) = opg%w_re(l, 1)
-                if (op%cmplx_op) opgt%w_im(j, 1) = opg%w_im(l, 1)
+                opgt%w_re(jp, 1) = opg%w_re(lp, 1)
+                if (op%cmplx_op) opgt%w_im(jp, 1) = opg%w_im(lp, 1)
               end if
             end if
           end do
@@ -620,12 +627,12 @@ contains
     end do
 
 #if defined(HAVE_MPI)
-    if(m%parallel_in_domains) then
+    if(mesh%parallel_in_domains) then
       SAFE_DEALLOCATE_P(vol_pp)
-      do i = 1, m%vp%np_local(m%vp%partno)
-        opt%w_re(:, i) = opgt%w_re(:, m%vp%local(m%vp%xlocal(m%vp%partno)+i-1))
+      do ip = 1, mesh%vp%np_local(mesh%vp%partno)
+        opt%w_re(:, ip) = opgt%w_re(:, mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno)+ip-1))
         if(opt%cmplx_op) then
-          opt%w_im(:, i) = opgt%w_im(:, m%vp%local(m%vp%xlocal(m%vp%partno)+i-1))
+          opt%w_im(:, ip) = opgt%w_im(:, mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno)+ip-1))
         end if
       end do
       call nl_operator_end(opg)
@@ -640,12 +647,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine nl_operator_selfadjoint(op, opt, m)
+  subroutine nl_operator_selfadjoint(op, opt, mesh)
     type(nl_operator_t), target, intent(in)  :: op
     type(nl_operator_t), target, intent(out) :: opt
-    type(mesh_t),        intent(in)  :: m
+    type(mesh_t),        intent(in)  :: mesh
 
-    integer          :: i, j, index, l, k
+    integer          :: ip, jp, kp, lp, index
     FLOAT, pointer   :: vol_pp(:)
 
     type(nl_operator_t), pointer :: opg, opgt
@@ -654,41 +661,41 @@ contains
 
     call nl_operator_copy(opt, op)
 
-    if(m%parallel_in_domains) then
+    if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
       SAFE_ALLOCATE(opg)
       SAFE_ALLOCATE(opgt)
       call nl_operator_allgather(op, opg)
       call nl_operator_init(opgt, op%label)
       opgt = opg
-      SAFE_ALLOCATE(vol_pp(1:m%np_global))
-      call dvec_allgather(m%vp, vol_pp, m%vol_pp)
+      SAFE_ALLOCATE(vol_pp(1:mesh%np_global))
+      call dvec_allgather(mesh%vp, vol_pp, mesh%vol_pp)
 #else
       ASSERT(.false.)
 #endif
     else      
       opg  => op
       opgt => opt
-      vol_pp => m%vol_pp
+      vol_pp => mesh%vol_pp
     end if
 
     opgt%w_re = M_ZERO
     if (op%cmplx_op) opgt%w_im = M_ZERO
-    do i = 1, m%np_global
-      do j = 1, op%stencil%size
-        index = nl_operator_get_index(opg, j, i)
+    do ip = 1, mesh%np_global
+      do jp = 1, op%stencil%size
+        index = nl_operator_get_index(opg, jp, ip)
 
-        if(index <= m%np_global) then
-          do l = 1, op%stencil%size
-            k = nl_operator_get_index(opg, l, index)
-            if( k == i ) then
+        if(index <= mesh%np_global) then
+          do lp = 1, op%stencil%size
+            kp = nl_operator_get_index(opg, lp, index)
+            if( kp == ip ) then
               if(.not.op%const_w) then
-                opgt%w_re(j, i) = M_HALF*opg%w_re(j, i) + M_HALF*(vol_pp(index)/vol_pp(i))*opg%w_re(l, index)
+                opgt%w_re(jp, ip) = M_HALF*opg%w_re(jp, ip) + M_HALF*(vol_pp(index)/vol_pp(ip))*opg%w_re(lp, index)
                 if (op%cmplx_op) &
-                  opgt%w_im(j, i) = M_HALF*opg%w_im(j, i) + M_HALF*(vol_pp(index)/vol_pp(i))*opg%w_im(l, index)
+                  opgt%w_im(jp, ip) = M_HALF*opg%w_im(jp, ip) + M_HALF*(vol_pp(index)/vol_pp(ip))*opg%w_im(lp, index)
               else
-                opgt%w_re(j, 1) = opg%w_re(l, 1)
-                if (op%cmplx_op) opgt%w_im(j, 1) = opg%w_im(l, 1)
+                opgt%w_re(jp, 1) = opg%w_re(lp, 1)
+                if (op%cmplx_op) opgt%w_im(jp, 1) = opg%w_im(lp, 1)
               end if
             end if
           end do
@@ -698,12 +705,12 @@ contains
     end do
 
 #if defined(HAVE_MPI)
-    if(m%parallel_in_domains) then
+    if(mesh%parallel_in_domains) then
       SAFE_DEALLOCATE_P(vol_pp)
-      do i = 1, m%vp%np_local(m%vp%partno)
-        opt%w_re(:, i) = opgt%w_re(:, m%vp%local(m%vp%xlocal(m%vp%partno)+i-1))
+      do ip = 1, mesh%vp%np_local(mesh%vp%partno)
+        opt%w_re(:, ip) = opgt%w_re(:, mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno)+ip-1))
         if(opt%cmplx_op) then
-          opt%w_im(:, i) = opgt%w_im(:, m%vp%local(m%vp%xlocal(m%vp%partno)+i-1))
+          opt%w_im(:, ip) = opgt%w_im(:, mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno)+ip-1))
         end if
       end do
       call nl_operator_end(opg)
@@ -726,15 +733,15 @@ contains
     type(nl_operator_t), intent(in)  :: op  ! Local operator.
     type(nl_operator_t), intent(out) :: opg ! Global operator.
 
-    integer :: i
+    integer :: ip
 
     call push_sub('nl_operator.nl_operator_gather')
 
     ASSERT(associated(op%i))
 
     ! If root node, copy elements of op to opg that
-    ! are independent from the partitions, i. e. everything
-    ! except op%i and - in the non constant case - op%w_re
+    ! are independent from the partitions, i.e. everything
+    ! except op%i and -- in the non-constant case -- op%w_re
     ! op%w_im.
     if(op%m%vp%rank.eq.op%m%vp%root) then
       call nl_operator_common_copy(op, opg)
@@ -744,20 +751,19 @@ contains
     ! Gather op%i and - if necessary - op%w_re and op%w_im.
     ! Collect for every point in the stencil in a single step.
     ! This permits to use ivec_gather.
-    do i = 1, op%stencil%size
-      call ivec_gather(op%m%vp, op%m%vp%root, opg%i(i, :), op%i(i, :))
+    do ip = 1, op%stencil%size
+      call ivec_gather(op%m%vp, op%m%vp%root, opg%i(ip, :), op%i(ip, :))
     end do
     if(op%m%vp%rank.eq.op%m%vp%root) then
       call nl_operator_translate_indices(opg)
     end if
     if(in_debug_mode) call write_debug_newlines(2)
 
-    ! Weights have to be collected only if they are
-    ! not constant.
+    ! Weights have to be collected only if they are not constant.
     if(.not.op%const_w) then
-      do i = 1, op%stencil%size
-        call dvec_gather(op%m%vp, op%m%vp%root, opg%w_re(i, :), op%w_re(i, :))
-        if(op%cmplx_op) call dvec_gather(op%m%vp, op%m%vp%root, opg%w_im(i, :), op%w_im(i, :))
+      do ip = 1, op%stencil%size
+        call dvec_gather(op%m%vp, op%m%vp%root, opg%w_re(ip, :), op%w_re(ip, :))
+        if(op%cmplx_op) call dvec_gather(op%m%vp, op%m%vp%root, opg%w_im(ip, :), op%w_im(ip, :))
       end do
     end if
 
@@ -773,17 +779,17 @@ contains
     type(nl_operator_t), intent(out) :: op
     type(nl_operator_t), intent(in)  :: opg
 
-    integer :: i
+    integer :: ip
 
     call push_sub('nl_operator.nl_operator_scatter')
 
     call nl_operator_init(op, op%label)
     call nl_operator_build(opg%m, op, opg%m%np, opg%const_w, opg%cmplx_op)
 
-    do i = 1, opg%stencil%size
-      call dvec_scatter(opg%m%vp, op%m%vp%root, opg%w_re(i, :), op%w_re(i, :))
+    do ip = 1, opg%stencil%size
+      call dvec_scatter(opg%m%vp, op%m%vp%root, opg%w_re(ip, :), op%w_re(ip, :))
       if(opg%cmplx_op) then
-        call dvec_scatter(opg%m%vp, op%m%vp%root, opg%w_im(i, :), op%w_im(i, :))
+        call dvec_scatter(opg%m%vp, op%m%vp%root, opg%w_im(ip, :), op%w_im(ip, :))
       end if
     end do
 
@@ -800,30 +806,29 @@ contains
     type(nl_operator_t), intent(in)  :: op
     type(nl_operator_t), intent(out) :: opg
 
-    integer :: i
+    integer :: ip
 
     call push_sub('nl_operator.nl_operator_allgather')
 
     ! Copy elements of op to opg that
-    ! are independent from the partitions, i. e. everything
-    ! except op%i and - in the non constant case - op%w_re
+    ! are independent from the partitions, i.e. everything
+    ! except op%i and -- in the non-constant case -- op%w_re
     ! op%w_im.
     call nl_operator_common_copy(op, opg)
 
-    ! Gather op%i and - if necessary - op%w_re and op%w_im.
+    ! Gather op%i and -- if necessary -- op%w_re and op%w_im.
     ! Collect for every point in the stencil in a single step.
     ! This permits to use ivec_gather.
-    do i = 1, op%stencil%size
-      call ivec_allgather(op%m%vp, opg%i(i, :), op%i(i, :))
+    do ip = 1, op%stencil%size
+      call ivec_allgather(op%m%vp, opg%i(ip, :), op%i(ip, :))
     end do
     call nl_operator_translate_indices(opg)
 
-    ! Weights have to be collected only if they are
-    ! not constant.
+    ! Weights have to be collected only if they are not constant.
     if(.not.op%const_w) then
-      do i = 1, op%stencil%size
-        call dvec_allgather(op%m%vp, opg%w_re(i, :), op%w_re(i, :))
-        if(op%cmplx_op) call dvec_allgather(op%m%vp, opg%w_im(i, :), op%w_im(i, :))
+      do ip = 1, op%stencil%size
+        call dvec_allgather(op%m%vp, opg%w_re(ip, :), op%w_re(ip, :))
+        if(op%cmplx_op) call dvec_allgather(op%m%vp, opg%w_im(ip, :), op%w_im(ip, :))
       end do
     end if
 
@@ -836,12 +841,12 @@ contains
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  ! Copies all part of op to opg that are independent of
-  ! the partitions,i. e. everything except op%i and - in the
-  ! non constant case - op%w_re op%w_im.
+  ! Copies all parts of op to opg that are independent of
+  ! the partitions, i.e. everything except op%i and -- in the
+  ! non-constant case -- op%w_re op%w_im.
   ! This can be considered as nl_operator_copy and
   ! reallocating w_re, w_im and i.
-  ! \warning: this should be replaced by a normal copy with a flag
+  ! \warning: this should be replaced by a normal copy with a flag.
   subroutine nl_operator_common_copy(op, opg)
     type(nl_operator_t), intent(in)  :: op
     type(nl_operator_t), intent(out) :: opg
@@ -887,34 +892,34 @@ contains
   subroutine nl_operator_translate_indices(opg)
     type(nl_operator_t), intent(inout) :: opg
 
-    integer :: i, j
+    integer :: ip, jp
     integer :: il, ig
 
     call push_sub('nl_operator.nl_operator_translate_indices')
 
     ASSERT(associated(opg%i))
 
-    do i = 1, opg%stencil%size
-      do j = 1, opg%m%np_global
-        il = opg%m%vp%np_local(opg%m%vp%part(j))
-        ig = il+opg%m%vp%np_ghost(opg%m%vp%part(j))
-        ! opg%i(i, j) is a local point number, i. e. it can be
-        ! a real local point (i. e. the local point number
+    do ip = 1, opg%stencil%size
+      do jp = 1, opg%m%np_global
+        il = opg%m%vp%np_local(opg%m%vp%part(jp))
+        ig = il+opg%m%vp%np_ghost(opg%m%vp%part(jp))
+        ! opg%i(ip, jp) is a local point number, i.e. it can be
+        ! a real local point (i.e. the local point number
         ! is less or equal than the number of local points of
-        ! the node which owns the point with global number j):
-        if(opg%i(i, j).le.il) then
+        ! the node which owns the point with global number jp):
+        if(opg%i(ip, jp).le.il) then
           ! Write the global point number from the lookup
-          ! table in op_(i, j).
-          opg%i(i, j) = opg%m%vp%local(opg%m%vp%xlocal(opg%m%vp%part(j)) &
-            +opg%i(i, j)-1)
+          ! table in op_(ip, jp).
+          opg%i(ip, jp) = opg%m%vp%local(opg%m%vp%xlocal(opg%m%vp%part(jp)) &
+            +opg%i(ip, jp)-1)
           ! Or a ghost point:
-        else if(opg%i(i, j).gt.il.and.opg%i(i, j).le.ig) then
-          opg%i(i, j) = opg%m%vp%ghost(opg%m%vp%xghost(opg%m%vp%part(j)) &
-            +opg%i(i, j)-1-il)
+        else if(opg%i(ip, jp).gt.il.and.opg%i(ip, jp).le.ig) then
+          opg%i(ip, jp) = opg%m%vp%ghost(opg%m%vp%xghost(opg%m%vp%part(jp)) &
+            +opg%i(ip, jp)-1-il)
           ! Or a boundary point:
-        else if(opg%i(i, j).gt.ig) then
-          opg%i(i, j) = opg%m%vp%bndry(opg%m%vp%xbndry(opg%m%vp%part(j)) &
-            +opg%i(i, j)-1-ig)
+        else if(opg%i(ip, jp).gt.ig) then
+          opg%i(ip, jp) = opg%m%vp%bndry(opg%m%vp%xbndry(opg%m%vp%part(jp)) &
+            +opg%i(ip, jp)-1-ig)
         end if
       end do
     end do
@@ -934,11 +939,11 @@ contains
   ! creates the matrix. But all nodes have to
   ! call this routine because the distributed operator has
   ! to be collected.
-  subroutine nl_operator_op_to_matrix_cmplx(op, a)
+  subroutine nl_operator_op_to_matrix_cmplx(op, aa)
     type(nl_operator_t), target, intent(in) :: op
-    CMPLX, intent(out)                      :: a(:, :)
+    CMPLX, intent(out)                      :: aa(:, :)
 
-    integer          :: i, j, k, index
+    integer          :: ip, jp, kp, index
 
     type(nl_operator_t), pointer :: opg
 
@@ -956,14 +961,14 @@ contains
     end if
 
     if(mpi_grp_is_root(op%m%mpi_grp)) then
-      k = 1
-      do i = 1, op%m%np_global
-        if(.not.op%const_w) k = i
-        do j = 1, op%stencil%size
-          index = nl_operator_get_index(opg, j, i)
+      kp = 1
+      do ip = 1, op%m%np_global
+        if(.not.op%const_w) kp = ip
+        do jp = 1, op%stencil%size
+          index = nl_operator_get_index(opg, jp, ip)
           if(index <= op%m%np_global) then
-            a(i, index) = opg%w_re(j, k)
-            if (op%cmplx_op) a(i, index) = a(i, index) + opg%w_im(j, k)
+            aa(ip, index) = opg%w_re(jp, kp)
+            if (op%cmplx_op) aa(ip, index) = aa(ip, index) + opg%w_im(jp, kp)
           end if
         end do
       end do
@@ -984,12 +989,12 @@ contains
   ! creates the matrix. But all nodes have to
   ! call this routine because the distributed operator has
   ! to be collected.
-  subroutine nl_operator_op_to_matrix(op, a, b)
+  subroutine nl_operator_op_to_matrix(op, aa, bb)
     type(nl_operator_t), target, intent(in) :: op
-    FLOAT, intent(out)                 :: a(:, :)
-    FLOAT, optional, intent(out)       :: b(:, :)
+    FLOAT, intent(out)                      :: aa(:, :)
+    FLOAT, optional, intent(out)            :: bb(:, :)
 
-    integer          :: i, j, k, index
+    integer          :: ip, jp, kp, index
 
     type(nl_operator_t), pointer :: opg
 
@@ -1007,14 +1012,14 @@ contains
     end if
 
     if(mpi_grp_is_root(op%m%mpi_grp)) then
-      k = 1
-      do i = 1, op%m%np_global
-        if(.not.op%const_w) k = i
-        do j = 1, op%stencil%size
-          index = nl_operator_get_index(opg, j, i)
+      kp = 1
+      do ip = 1, op%m%np_global
+        if(.not.op%const_w) kp = ip
+        do jp = 1, op%stencil%size
+          index = nl_operator_get_index(opg, jp, ip)
           if(index <= op%m%np_global) then
-            a(i, index) = opg%w_re(j, k)
-            if (op%cmplx_op) b(i, index) = opg%w_im(j, k)
+            aa(ip, index) = opg%w_re(jp, kp)
+            if (op%cmplx_op) bb(ip, index) = opg%w_im(jp, kp)
           end if
         end do
       end do
@@ -1032,25 +1037,25 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine nl_operator_matrix_to_op(op_ref, op, a, b)
-    FLOAT, intent(in)                   :: a(:, :)
-    FLOAT, optional, intent(in)         :: b(:, :)
+  subroutine nl_operator_matrix_to_op(op_ref, op, aa, bb)
+    FLOAT, intent(in)                :: aa(:, :)
+    FLOAT, optional, intent(in)      :: bb(:, :)
     type(nl_operator_t), intent(in)  :: op_ref
     type(nl_operator_t), intent(out) :: op
 
-    integer :: i, j, index
+    integer :: ip, jp, index
 
     call push_sub('nl_operator.nl_operator_matrix_to_op')
 
     ASSERT(associated(op_ref%i))
 
     call nl_operator_copy(op, op_ref)
-    do i = 1, op%np
-      do j = 1, op%stencil%size
-        index = nl_operator_get_index(op, j, i)
+    do ip = 1, op%np
+      do jp = 1, op%stencil%size
+        index = nl_operator_get_index(op, jp, ip)
         if(index <= op%np) &
-          op%w_re(j, i) = a(i, index)
-        if (op%cmplx_op) op%w_im(j, i) = b(i, index)
+          op%w_re(jp, ip) = aa(ip, index)
+        if (op%cmplx_op) op%w_im(jp, ip) = bb(ip, index)
       end do
     end do
 
@@ -1059,29 +1064,29 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Prints the matrix of the non local operator op to
+  ! Prints the matrix of the non-local operator op to
   ! a file (unit).
   ! When running in parallel, only the root node writes
   ! to the file but all nodes have to call this routine
   ! simultaneously because the distributed operator has
   ! to be collected.
   subroutine nl_operator_write(op, filename)
-    character(len=*),       intent(in) :: filename
+    character(len=*),    intent(in) :: filename
     type(nl_operator_t), intent(in) :: op
 
-    integer            :: i, j
+    integer            :: ip, jp
     integer            :: unit
-    FLOAT, allocatable :: a(:, :)
+    FLOAT, allocatable :: aa(:, :)
 
     call push_sub('nl_operator.nl_operator_write')
 
 
     if(mpi_grp_is_root(op%m%mpi_grp)) then
-      SAFE_ALLOCATE(a(1:op%m%np_global, 1:op%m%np_global))
-      a = M_ZERO
+      SAFE_ALLOCATE(aa(1:op%m%np_global, 1:op%m%np_global))
+      aa = M_ZERO
     end if
 
-    call nl_operator_op_to_matrix(op, a)
+    call nl_operator_op_to_matrix(op, aa)
 
     if(mpi_grp_is_root(op%m%mpi_grp)) then
       unit = io_open(filename, action='write')
@@ -1089,15 +1094,15 @@ contains
         message(1) = 'Could not open file '//filename//' to write operator.'
         call write_fatal(1)
       end if
-      do i = 1, op%m%np_global
-        do j = 1, op%m%np_global - 1
-          write(unit, fmt = '(f9.4)', advance ='no') a(i, j)
+      do ip = 1, op%m%np_global
+        do jp = 1, op%m%np_global - 1
+          write(unit, fmt = '(f9.4)', advance ='no') aa(ip, jp)
         end do
-        write(unit, fmt = '(f9.4)') a(i, op%m%np_global)
+        write(unit, fmt = '(f9.4)') aa(ip, op%m%np_global)
       end do
       call io_close(unit)
 
-      SAFE_DEALLOCATE_A(a)
+      SAFE_DEALLOCATE_A(aa)
     end if
 
     call pop_sub()
@@ -1109,30 +1114,30 @@ contains
   ! Same as nl_operator_write but transposed matrix.
   subroutine nl_operatorT_write(op, unit)
     type(nl_operator_t), intent(in) :: op
-    integer, intent(in)                :: unit
+    integer, intent(in)             :: unit
 
-    integer :: i, j
-    FLOAT, allocatable :: a(:, :)
+    integer :: ip, jp
+    FLOAT, allocatable :: aa(:, :)
 
-    call push_sub('nl_operator.nl_operator_write')
+    call push_sub('nl_operator.nl_operatorT_write')
 
 
     if(mpi_grp_is_root(op%m%mpi_grp)) then
-      SAFE_ALLOCATE(a(1:op%m%np_global, 1:op%m%np_global))
-      a = M_ZERO
+      SAFE_ALLOCATE(aa(1:op%m%np_global, 1:op%m%np_global))
+      aa = M_ZERO
     end if
 
-    call nl_operator_op_to_matrix(op, a)
+    call nl_operator_op_to_matrix(op, aa)
 
     if(mpi_grp_is_root(op%m%mpi_grp)) then
-      do i = 1, op%m%np_global
-        do j = 1, op%m%np_global - 1
-          write(unit, fmt = '(f9.4)', advance ='no') a(j, i)
+      do ip = 1, op%m%np_global
+        do jp = 1, op%m%np_global - 1
+          write(unit, fmt = '(f9.4)', advance ='no') aa(jp, ip)
         end do
-        write(unit, fmt = '(f9.4)') a(op%m%np_global, i)
+        write(unit, fmt = '(f9.4)') aa(op%m%np_global, ip)
       end do
 
-      SAFE_DEALLOCATE_A(a)
+      SAFE_DEALLOCATE_A(aa)
     end if
 
     call pop_sub()

@@ -289,9 +289,9 @@ contains
 
   ! ---------------------------------------------------------
   !> This is a very primitive procedure that attempts to find out
-  !! which units were used to write one octopus file, be it a
-  !! "multipoles", a "cross_section_tensor", etc.
-  !! \todo  although it seems to work in most cases, it is obviously
+  !! which units were used to write an octopus file, whether
+  !! "multipoles", "cross_section_tensor", etc.
+  !! \todo  Although it seems to work in most cases, it is obviously
   !! a very weak code.
   ! ---------------------------------------------------------
   subroutine unit_system_from_file(uu, fname, ierr)
