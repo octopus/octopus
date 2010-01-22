@@ -333,7 +333,7 @@ subroutine X(mf_random)(mesh, ff, seed)
 
   !$omp parallel do private(rr)
   do ip = 1, mesh%np
-    rr = sum((mesh%x(idim, 1:mesh%sb%dim) - aa(1:mesh%sb%dim))**2)
+    rr = sum((mesh%x(ip, 1:mesh%sb%dim) - aa(1:mesh%sb%dim))**2)
     if ( rr < CNST(100.0) ) then 
       ff(ip) = exp(-M_HALF*rr)
     else
