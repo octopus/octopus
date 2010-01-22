@@ -538,18 +538,18 @@ contains
     !%Type block
     !%Section Time-Dependent::Linear Response
     !%Description
-    !% Momentum transfer vector for the calculation of dynamic structure factor.
+    !% Momentum-transfer vector for the calculation of the dynamic structure factor.
     !% When this variable is set, a non-dipole field is applied, and an output file
-    !% ftchd is created (it contains the Fourier transform of the charge density
+    !% <tt>ftchd</tt> is created (it contains the Fourier transform of the charge density
     !% at each time). The type of the applied external field can be set by
-    !% an optional last number. Possible options are qexp (default), qcos, qsin,
-    !% or qcos+qsin.
+    !% an optional last number. Possible options are <tt>qexp</tt> (default), </tt>qcos</tt>,
+    !% <tt>qsin</tt>, or <tt>qcos+qsin</tt>.
     !%Option qexp 1
-    !% External field is exp(iq.r)
+    !% External field is exp(<i>iq.r</i>).
     !%Option qcos 2
-    !% External field is cos(q.r)
+    !% External field is cos(<i>q.r</i>).
     !%Option qsin 3
-    !% External field is sin(q.r)
+    !% External field is sin(<i>q.r</i>).
     !%End
 
     if(parse_block(datasets_check('TDMomentumTransfer'), blk)==0) then

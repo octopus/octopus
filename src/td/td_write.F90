@@ -166,7 +166,7 @@ contains
     !%Option temperature 2048
     !% If set, the ionic temperature at each step is printed.
     !%Option ftchd       4096
-    !% Write Fourier transform of the electron density to the file 'ftchds'.
+    !% Write Fourier transform of the electron density to the file <tt>ftchds</tt>.
     !% This is needed for calculating the dynamic structure factor.
     !%End
 

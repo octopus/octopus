@@ -582,7 +582,7 @@ contains
 
 
     ! ---------------------------------------------------------
-    ! Applies the delta function electric field E(t) = E_0 delta(t)
+    ! Applies the delta-function electric field E(t) = E_0 delta(t)
     ! where E_0 = - k \hbar / e
     subroutine apply_delta_field(k)
       type(kick_t), intent(in) :: k
@@ -697,7 +697,7 @@ contains
           end do
         end select
 
-        ! the nuclei velocity will be changed by
+        ! The nuclear velocities will be changed by
         ! Delta v_z = ( Z*e*E_0 / M) = - ( Z*k*\hbar / M)
         ! where M and Z are the ionic mass and charge, respectively.
         if(ion_dynamics_ions_move(td%ions)  .and. k%delta_strength .ne. M_ZERO) then

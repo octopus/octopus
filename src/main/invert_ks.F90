@@ -75,11 +75,11 @@ contains
     !% Selects whether the exact two-particle method or the iterative scheme
     !% is used to invert the density to get the KS potential.
     !%Option iterative 0
-    !% Iterative scheme.
+    !% Iterative scheme for v_s.
     !%Option two_particle 1
     !% Exact two-particle scheme.
     !%Option iterativevxc 2
-    !% Iterative scheme for vxc
+    !% Iterative scheme for v_xc.
     !%End
       
     call parse_integer(datasets_check('InvertKSmethod'), 0, invksmethod)
@@ -176,7 +176,7 @@ contains
 
       !%Variable InvertKSTargetDensity
       !%Type string
-      !%Default target_density.dat
+      !%Default <tt>target_density.dat</tt>
       !%Section Calculation Modes::Invert KS
       !%Description
       !% Name of the file that contains the density used as the target in the 
@@ -285,51 +285,14 @@ contains
 
     call push_sub('invert_ks.invertks_iter')
     
-    !%Variable InvertKSConvAbsDens
-    !%Type float
-    !%Default 1e-5
-    !%Section Calculation Modes::Invert KS
-    !%Description
-    !% Absolute difference between the calculated and the target density in the KS
-    !% inversion. Has to be larger than the convergence of the density in the SCF run.
-    !%End
-    
+    ! Variables defined in routine invertvxc_iter
     call parse_float(datasets_check('InvertKSConvAbsDens'), 1d-5, convdensity)
-    
-    !%Variable InvertKSStabilizer
-    !%Type float
-    !%Default 0.5
-    !%Section Calculation Modes::Invert KS
-    !%Description
-    !% Additive constant c in the iterative calculation of the KS potential
-    !%   (v(alpha+1)=rho(alpha)+c)/(rho_target+c)*v(alpha)
-    !% ensures that very small densities do not cause numerical problems.
-    !%End
-
     call parse_float(datasets_check('InvertKSStabilizer'), M_HALF, stabilizer)
-
-    !%Variable InvertKSVerbosity
-    !%Type integer
-    !%Default 0
-    !%Section Calculation Modes::Invert KS
-    !%Description
-    !% Selects what is output during the calculation of the KS potential.
-    !%Option 0
-    !% Only outputs the converged density and KS potential.
-    !%Option 1
-    !% Same as 0 but outputs the maximum difference to the target density in each
-    !% iteration in addition.
-    !%Option 2
-    !% Same as 1 but outputs the density and the KS potential in each iteration in 
-    !% addition.
-    !%End
-      
     call parse_integer(datasets_check('InvertKSVerbosity'), 0, verbosity)  
     if(verbosity < 0 .or. verbosity > 2) then
       call input_error('InvertKSVerbosity')
       call write_fatal(1)
     endif
-  
     
     !initialize the KS potential
     hm%vhxc = 1d0
@@ -447,7 +410,7 @@ contains
     !%Default 0.5
     !%Section Calculation Modes::Invert KS
     !%Description
-    !% Additive constant c in the iterative calculation of the KS potential
+    !% Additive constant <i>c</i> in the iterative calculation of the KS potential
     !%   (v(alpha+1)=rho(alpha)+c)/(rho_target+c)*v(alpha)
     !% ensures that very small densities do not cause numerical problems.
     !%End
