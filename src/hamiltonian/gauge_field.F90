@@ -240,9 +240,9 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine gauge_field_init_vec_pot(this, m, sb, st, dt)
+  subroutine gauge_field_init_vec_pot(this, mesh, sb, st, dt)
     type(gauge_field_t),  intent(inout) :: this
-    type(mesh_t),         intent(in)    :: m
+    type(mesh_t),         intent(in)    :: mesh
     type(simul_box_t),    intent(in)    :: sb
     type(states_t),       intent(in)    :: st
     FLOAT,                intent(in)    :: dt
@@ -254,7 +254,7 @@ contains
 
     n_el = M_ZERO
     do ik = 1, st%d%spin_channels
-      n_el = n_el + dmf_integrate(m, st%rho(1:m%np, ik))
+      n_el = n_el + dmf_integrate(mesh, st%rho(1:mesh%np, ik))
     end do
     
     this%wp2 = M_FOUR*M_PI*n_el/sb%rcell_volume

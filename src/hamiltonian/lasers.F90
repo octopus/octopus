@@ -87,11 +87,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  FLOAT function laser_carrier_frequency(l) result(w0)
-    type(laser_t), intent(in) :: l
+  FLOAT function laser_carrier_frequency(laser) result(w0)
+    type(laser_t), intent(in) :: laser
 
     call push_sub('lasers.laser_carrier_frequency')
-    w0 = l%omega
+    w0 = laser%omega
 
     call pop_sub()
   end function laser_carrier_frequency
@@ -99,23 +99,23 @@ contains
 
 
   ! ---------------------------------------------------------
-  integer pure function laser_kind(l)
-    type(laser_t), intent(in) :: l
+  integer pure function laser_kind(laser)
+    type(laser_t), intent(in) :: laser
 
     ! no push_sub allowed in pure function
-    laser_kind = l%field
+    laser_kind = laser%field
 
   end function laser_kind
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  function laser_polarization(l) result(pol)
-    type(laser_t), intent(in) :: l
+  function laser_polarization(laser) result(pol)
+    type(laser_t), intent(in) :: laser
     CMPLX :: pol(MAX_DIM)
 
     call push_sub('lasers.laser_polarization')
-    pol(1:MAX_DIM) = l%pol(1:MAX_DIM)
+    pol(1:MAX_DIM) = laser%pol(1:MAX_DIM)
 
     call pop_sub()
   end function laser_polarization
@@ -123,12 +123,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_get_f(l, f)
-    type(laser_t), intent(in)    :: l
-    type(tdf_t),   intent(inout) :: f
+  subroutine laser_get_f(laser, ff)
+    type(laser_t), intent(in)    :: laser
+    type(tdf_t),   intent(inout) :: ff
 
-    call push_sub('lasers.laser_get')
-    call tdf_copy(f, l%f)
+    call push_sub('lasers.laser_get_f')
+    call tdf_copy(ff, laser%f)
 
     call pop_sub()
   end subroutine laser_get_f
@@ -136,14 +136,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_set_f(l, f)
-    type(laser_t), intent(inout) :: l
-    type(tdf_t),   intent(inout) :: f
+  subroutine laser_set_f(laser, ff)
+    type(laser_t), intent(inout) :: laser
+    type(tdf_t),   intent(inout) :: ff
 
     call push_sub('lasers.laser_set_f')
 
-    call tdf_end(l%f)
-    call tdf_copy(l%f, f)
+    call tdf_end(laser%f)
+    call tdf_copy(laser%f, ff)
 
     call pop_sub()
   end subroutine laser_set_f
@@ -151,12 +151,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_get_phi(l, phi)
-    type(laser_t), intent(in)    :: l
+  subroutine laser_get_phi(laser, phi)
+    type(laser_t), intent(in)    :: laser
     type(tdf_t),   intent(inout) :: phi
 
     call push_sub('lasers.laser_get_phi')
-    call tdf_copy(phi, l%phi)
+    call tdf_copy(phi, laser%phi)
 
     call pop_sub()
   end subroutine laser_get_phi
@@ -164,14 +164,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_set_phi(l, phi)
-    type(laser_t), intent(inout) :: l
+  subroutine laser_set_phi(laser, phi)
+    type(laser_t), intent(inout) :: laser
     type(tdf_t),   intent(inout) :: phi
 
     call push_sub('lasers.laser_set_phi')
 
-    call tdf_end(l%phi)
-    call tdf_copy(l%phi, phi)
+    call tdf_end(laser%phi)
+    call tdf_copy(laser%phi, phi)
 
     call pop_sub()
   end subroutine laser_set_phi
@@ -179,13 +179,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_set_f_value(l, i, x)
-    type(laser_t), intent(inout) :: l
-    integer,       intent(in)    :: i
-    FLOAT,         intent(in)    :: x
+  subroutine laser_set_f_value(laser, ii, xx)
+    type(laser_t), intent(inout) :: laser
+    integer,       intent(in)    :: ii
+    FLOAT,         intent(in)    :: xx
 
     call push_sub('lasers.laser_set_f_value')
-    call tdf_set_numerical(l%f, i, x)
+    call tdf_set_numerical(laser%f, ii, xx)
 
     call pop_sub()
   end subroutine laser_set_f_value
@@ -197,29 +197,29 @@ contains
   ! "numerical" representation (i.e. time grid, values at this time grid).
   ! The possible phase and carrier frequency are evaluated and put together with
   ! the envelope, so that the envelope describes the full function (zero phase,
-  ! zero carrier frequency.
+  ! zero carrier frequency).
   ! ---------------------------------------------------------
-  subroutine laser_to_numerical_all(l, dt, max_iter, omegamax)
-    type(laser_t), intent(inout)  :: l
+  subroutine laser_to_numerical_all(laser, dt, max_iter, omegamax)
+    type(laser_t), intent(inout)  :: laser
     FLOAT,         intent(in)     :: dt
     integer,       intent(in)     :: max_iter
     FLOAT,         intent(in)     :: omegamax
 
-    integer :: j
-    FLOAT   :: t, fj, phi
+    integer :: iter
+    FLOAT   :: tt, fj, phi
 
     call push_sub('lasers.lasers_to_numerical_all')
 
-    call tdf_to_numerical(l%f, max_iter, dt, omegamax)
-    do j = 1, max_iter + 1
-      t = (j-1)*dt
-      fj = tdf(l%f, j)
-      phi = tdf(l%phi, t)
-      call tdf_set_numerical(l%f, j, fj*cos(l%omega*t+phi))
+    call tdf_to_numerical(laser%f, max_iter, dt, omegamax)
+    do iter = 1, max_iter + 1
+      tt = (iter-1)*dt
+      fj = tdf(laser%f, iter)
+      phi = tdf(laser%phi, tt)
+      call tdf_set_numerical(laser%f, iter, fj*cos(laser%omega*tt+phi))
     end do
-    call tdf_end(l%phi)
-    call tdf_init_cw(l%phi, M_ZERO, M_ZERO)
-    l%omega = M_ZERO
+    call tdf_end(laser%phi)
+    call tdf_init_cw(laser%phi, M_ZERO, M_ZERO)
+    laser%omega = M_ZERO
 
     call pop_sub()
   end subroutine laser_to_numerical_all
@@ -230,15 +230,15 @@ contains
   ! The td functions that describe the laser field are transformed to a 
   ! "numerical" representation (i.e. time grid, values at this time grid).
   ! ---------------------------------------------------------
-  subroutine laser_to_numerical(l, dt, max_iter, omegamax)
-    type(laser_t), intent(inout)  :: l
+  subroutine laser_to_numerical(laser, dt, max_iter, omegamax)
+    type(laser_t), intent(inout)  :: laser
     FLOAT,         intent(in)     :: dt
     integer,       intent(in)     :: max_iter
     FLOAT,         intent(in)     :: omegamax
     call push_sub('lasers.lasers_to_numerical')
 
-    call tdf_to_numerical(l%f, max_iter, dt, omegamax)
-    call tdf_to_numerical(l%phi, max_iter, dt, omegamax)
+    call tdf_to_numerical(laser%f, max_iter, dt, omegamax)
+    call tdf_to_numerical(laser%phi, max_iter, dt, omegamax)
 
     call pop_sub()
   end subroutine laser_to_numerical
@@ -246,17 +246,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_init(no_l, l, m)
-    integer,     intent(out) :: no_l
-    type(laser_t),   pointer :: l(:)
-    type(mesh_t), intent(in) :: m
+  subroutine laser_init(no_l, lasers, mesh)
+    integer,       intent(out) :: no_l
+    type(laser_t), pointer     :: lasers(:)
+    type(mesh_t),  intent(in)  :: mesh
 
     type(block_t)     :: blk
-    integer           :: i, j, ierr
+    integer           :: il, ip, jj, ierr
     character(len=200) :: scalar_pot_expression
     character(len=200) :: envelope_expression
-    FLOAT :: omega0, r, pot_re, pot_im
-    FLOAT, allocatable :: x(:)
+    FLOAT :: omega0, rr, pot_re, pot_im
+    FLOAT, allocatable :: xx(:)
 
     call push_sub('lasers.laser_init')
 
@@ -359,81 +359,81 @@ contains
     no_l = 0
     if(parse_block(datasets_check('TDExternalFields'), blk) == 0) then
       no_l = parse_block_n(blk)
-      SAFE_ALLOCATE(l(1:no_l))
+      SAFE_ALLOCATE(lasers(1:no_l))
 
-      do i = 1, no_l
+      do il = 1, no_l
 
-        call parse_block_integer(blk, i-1, 0, l(i)%field)
+        call parse_block_integer(blk, il-1, 0, lasers(il)%field)
 
-        select case(l(i)%field)
+        select case(lasers(il)%field)
         case(E_FIELD_SCALAR_POTENTIAL)
-          call parse_block_string(blk, i-1, 1, scalar_pot_expression)
-          j = 1
-          l(i)%pol = M_z1
+          call parse_block_string(blk, il-1, 1, scalar_pot_expression)
+          jj = 1
+          lasers(il)%pol = M_z1
         case default
-          call parse_block_cmplx(blk, i-1, 1, l(i)%pol(1))
-          call parse_block_cmplx(blk, i-1, 2, l(i)%pol(2))
-          call parse_block_cmplx(blk, i-1, 3, l(i)%pol(3))
-          j = 3
+          call parse_block_cmplx(blk, il-1, 1, lasers(il)%pol(1))
+          call parse_block_cmplx(blk, il-1, 2, lasers(il)%pol(2))
+          call parse_block_cmplx(blk, il-1, 3, lasers(il)%pol(3))
+          jj = 3
         end select
 
-        call parse_block_float(blk, i-1, j+1, omega0)
+        call parse_block_float(blk, il-1, jj+1, omega0)
         omega0 = units_to_atomic(units_inp%energy, omega0)
 
-        l(i)%omega = omega0
+        lasers(il)%omega = omega0
      
-        call parse_block_string(blk, i-1, j+2, envelope_expression)
+        call parse_block_string(blk, il-1, jj+2, envelope_expression)
 
         ! For some reason, one cannot open a block if another one is already open.
         ! This is why I close blk before calling tdf_read, and then open it again.
         ! This should be fixed at the parser level.
         call parse_block_end(blk)
-        call tdf_read(l(i)%f, trim(envelope_expression), ierr)
+        call tdf_read(lasers(il)%f, trim(envelope_expression), ierr)
         ierr = parse_block(datasets_check('TDExternalFields'), blk)
 
         ! Check if there is a phase.
-        if(parse_block_cols(blk, i-1) > j+3) then
-          call parse_block_string(blk, i-1, j+3, envelope_expression)
+        if(parse_block_cols(blk, il-1) > jj+3) then
+          call parse_block_string(blk, il-1, jj+3, envelope_expression)
           call parse_block_end(blk)
-          call tdf_read(l(i)%phi, trim(envelope_expression), ierr)
+          call tdf_read(lasers(il)%phi, trim(envelope_expression), ierr)
           ierr = parse_block(datasets_check('TDExternalFields'), blk)
         else
-          call tdf_init(l(i)%phi)
+          call tdf_init(lasers(il)%phi)
         end if
 
-        l(i)%pol(:) = l(i)%pol(:)/sqrt(sum(abs(l(i)%pol(:))**2))
+        lasers(il)%pol(:) = lasers(il)%pol(:)/sqrt(sum(abs(lasers(il)%pol(:))**2))
 
-        select case(l(i)%field)
+        select case(lasers(il)%field)
         case(E_FIELD_SCALAR_POTENTIAL)
-          SAFE_ALLOCATE(l(i)%v(1:m%np_part))
-          l(i)%v = M_ZERO
-          SAFE_ALLOCATE(x(1:MAX_DIM))
-          do j = 1, m%np
-            call mesh_r(m, j, r, x = x)
-            call parse_expression(pot_re, pot_im, m%sb%dim, x, r, M_ZERO, trim(scalar_pot_expression))
-            l(i)%v(j) = pot_re
+          SAFE_ALLOCATE(lasers(il)%v(1:mesh%np_part))
+          lasers(il)%v = M_ZERO
+          SAFE_ALLOCATE(xx(1:MAX_DIM))
+          do ip = 1, mesh%np
+            call mesh_r(mesh, ip, rr, x = xx)
+            call parse_expression(pot_re, pot_im, mesh%sb%dim, xx, rr, M_ZERO, trim(scalar_pot_expression))
+            lasers(il)%v(ip) = pot_re
           end do
-          SAFE_DEALLOCATE_A(x)
+          SAFE_DEALLOCATE_A(xx)
 
         case(E_FIELD_MAGNETIC)
           ! \warning: note that for the moment we are ignoring the possibility of a complex
           ! polarizability vector for the td magnetic field case.
-          SAFE_ALLOCATE(l(i)%a(1:m%np_part, 1:m%sb%dim))
-          l(i)%a = M_ZERO
-          SAFE_ALLOCATE(x(1:m%sb%dim))
-          do j = 1, m%np
-            x(1:m%sb%dim) = m%x(j, 1:m%sb%dim)
-            select case(m%sb%dim)
+          SAFE_ALLOCATE(lasers(il)%a(1:mesh%np_part, 1:mesh%sb%dim))
+          lasers(il)%a = M_ZERO
+          SAFE_ALLOCATE(xx(1:mesh%sb%dim))
+          do ip = 1, mesh%np
+            xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
+            select case(mesh%sb%dim)
             case(2)
-              l(i)%a(j, :) = (/x(2), -x(1)/) * sign(CNST(1.0), real(l(i)%pol(3), REAL_PRECISION))
+              lasers(il)%a(ip, :) = (/xx(2), -xx(1)/) * sign(CNST(1.0), real(lasers(il)%pol(3), REAL_PRECISION))
             case(3)
-              l(i)%a(j, :) = (/ x(2)*l(i)%pol(3) - x(3)*l(i)%pol(2), &
-                                x(3)*l(i)%pol(1) - x(1)*l(i)%pol(3), &
-                                x(1)*l(i)%pol(2) - x(2)*l(i)%pol(1)  /)
+              lasers(il)%a(ip, :) = (/ xx(2)*lasers(il)%pol(3) - xx(3)*lasers(il)%pol(2), &
+                                xx(3)*lasers(il)%pol(1) - xx(1)*lasers(il)%pol(3), &
+                                xx(1)*lasers(il)%pol(2) - xx(2)*lasers(il)%pol(1)  /)
             end select
           enddo
-          l(i)%a = -M_HALF * l(i)%a 
-          SAFE_DEALLOCATE_A(x)
+          lasers(il)%a = -M_HALF * lasers(il)%a 
+          SAFE_DEALLOCATE_A(xx)
 
         end select
 
@@ -449,26 +449,26 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_end(no_l, l)
-    type(laser_t), pointer :: l(:)
+  subroutine laser_end(no_l, lasers)
+    type(laser_t), pointer :: lasers(:)
     integer,    intent(in) :: no_l
 
-    integer :: i
+    integer :: il
 
     call push_sub('laser.laser_end')
 
     if(no_l > 0) then
-      do i = 1, no_l
-        call tdf_end(l(i)%f)
-        call tdf_end(l(i)%phi)
-        select case(l(i)%field)
+      do il = 1, no_l
+        call tdf_end(lasers(il)%f)
+        call tdf_end(lasers(il)%phi)
+        select case(lasers(il)%field)
         case(E_FIELD_SCALAR_POTENTIAL)
-          SAFE_DEALLOCATE_P(l(i)%v); nullify(l(i)%v)
+          SAFE_DEALLOCATE_P(lasers(il)%v); nullify(lasers(il)%v)
         case(E_FIELD_MAGNETIC)
-          SAFE_DEALLOCATE_P(l(i)%a); nullify(l(i)%a)
+          SAFE_DEALLOCATE_P(lasers(il)%a); nullify(lasers(il)%a)
         end select
       end do
-      SAFE_DEALLOCATE_P(l); nullify(l)
+      SAFE_DEALLOCATE_P(lasers); nullify(lasers)
     end if
 
     call pop_sub()
@@ -477,74 +477,74 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_write_info(l, iunit, dt, max_iter)
-    type(laser_t), intent(in) :: l(:)
-    integer,       intent(in) :: iunit
-    FLOAT, optional, intent(in) :: dt 
+  subroutine laser_write_info(lasers, iunit, dt, max_iter)
+    type(laser_t),     intent(in) :: lasers(:)
+    integer,           intent(in) :: iunit
+    FLOAT,   optional, intent(in) :: dt 
     integer, optional, intent(in) :: max_iter 
 
-    FLOAT :: t, fluence, max_intensity, intensity, dt_
+    FLOAT :: tt, fluence, max_intensity, intensity, dt_
     CMPLX :: amp, val
-    integer :: i, j, k, no_l, max_iter_
+    integer :: il, iter, idir, no_l, max_iter_
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
     call push_sub('lasers.laser_write_info')
 
-    no_l = size(l)
+    no_l = size(lasers)
     
-    do i = 1, no_l
+    do il = 1, no_l
 
       if(present(dt)) then
         dt_ = dt
       else
-        dt_ = tdf_dt(l(i)%f)
+        dt_ = tdf_dt(lasers(il)%f)
       end if
       if(present(max_iter)) then
         max_iter_ = max_iter
       else
-        max_iter_ = tdf_niter(l(i)%f)
+        max_iter_ = tdf_niter(lasers(il)%f)
       end if
 
-      write(iunit,'(i2,a)') i,':'
-      select case(l(i)%field)
+      write(iunit,'(i2,a)') il, ':'
+      select case(lasers(il)%field)
       case(E_FIELD_ELECTRIC);   write(iunit, '(a)') '   Electric Field.'
       case(E_FIELD_MAGNETIC);   write(iunit, '(a)') '   Magnetic Field.'
-      case(E_FIELD_VECTOR_POTENTIAL); write(iunit, '(a)') '   Potential vector.'
+      case(E_FIELD_VECTOR_POTENTIAL); write(iunit, '(a)') '   Vector Potential.'
       case(E_FIELD_SCALAR_POTENTIAL); write(iunit, '(a)') '   Scalar Potential.'
       end select
-      if(l(i)%field .ne. E_FIELD_SCALAR_POTENTIAL) then
+      if(lasers(il)%field .ne. E_FIELD_SCALAR_POTENTIAL) then
         write(iunit,'(3x,a,3(a1,f7.4,a1,f7.4,a1))') 'Polarization: ', &
-          '(', real(l(i)%pol(1)), ',', aimag(l(i)%pol(1)), '), ', &
-          '(', real(l(i)%pol(2)), ',', aimag(l(i)%pol(2)), '), ', &
-          '(', real(l(i)%pol(3)), ',', aimag(l(i)%pol(3)), ')'
+          '(', real(lasers(il)%pol(1)), ',', aimag(lasers(il)%pol(1)), '), ', &
+          '(', real(lasers(il)%pol(2)), ',', aimag(lasers(il)%pol(2)), '), ', &
+          '(', real(lasers(il)%pol(3)), ',', aimag(lasers(il)%pol(3)), ')'
       end if
       write(iunit,'(3x,a,f14.8,3a)') 'Carrier frequency = ', &
-        units_from_atomic(units_out%energy, l(i)%omega), &
+        units_from_atomic(units_out%energy, lasers(il)%omega), &
         ' [', trim(units_abbrev(units_out%energy)), ']'
       write(iunit,'(3x,a)')       'Envelope: ' 
-      call tdf_write(l(i)%f, iunit)
+      call tdf_write(lasers(il)%f, iunit)
 
-      if(.not.tdf_is_empty(l(i)%phi)) then
+      if(.not.tdf_is_empty(lasers(il)%phi)) then
         write(iunit,'(3x,a)')       'Phase: ' 
-        call tdf_write(l(i)%phi, iunit)
+        call tdf_write(lasers(il)%phi, iunit)
       end if
 
       ! 1 atomic unit of intensity = 3.5094448e+16 W / cm^2
       ! In a Gaussian system of units,
       ! I(t) = (1/(8\pi)) * c * E(t)^2
       ! (1/(8\pi)) * c = 5.4525289841210 a.u.
-      if(l(i)%field .eq. E_FIELD_ELECTRIC) then
+      if(lasers(il)%field .eq. E_FIELD_ELECTRIC) then
         fluence = M_ZERO
 
         max_intensity = M_ZERO
-        do j = 1, max_iter_
-          t = j * dt_
-          val = tdf(l(i)%f, t)
-          amp = val*exp(M_zI*(l(i)%omega*t + tdf(l(i)%phi, t)))
+        do iter = 1, max_iter_
+          tt = iter * dt_
+          val = tdf(lasers(il)%f, tt)
+          amp = val*exp(M_zI*(lasers(il)%omega*tt + tdf(lasers(il)%phi, tt)))
           intensity = M_ZERO
-          do k = 1, MAX_DIM
-            intensity = intensity + CNST(5.4525289841210) * real(amp*l(i)%pol(k))**2
+          do idir = 1, MAX_DIM
+            intensity = intensity + CNST(5.4525289841210) * real(amp*lasers(il)%pol(idir))**2
           end do
           fluence = fluence + intensity
           if(intensity > max_intensity) max_intensity = intensity
@@ -566,33 +566,33 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_potential(sb, l, m, pot, t)
+  subroutine laser_potential(sb, laser, mesh, pot, tt)
     type(simul_box_t), intent(in) :: sb
-    type(laser_t),     intent(in) :: l
-    type(mesh_t),      intent(in) :: m
+    type(laser_t),     intent(in) :: laser
+    type(mesh_t),      intent(in) :: mesh
     FLOAT,            intent(out) :: pot(:)
-    FLOAT, optional,   intent(in) :: t
+    FLOAT, optional,   intent(in) :: tt
 
     CMPLX :: amp
-    integer :: j
+    integer :: ip
     FLOAT :: field(MAX_DIM)
 
     call push_sub('lasers.laser_potential')
 
     pot = M_ZERO
-    if(present(t)) then
-      amp = tdf(l%f, t) * exp(M_zI * ( l%omega*t + tdf(l%phi, t) ) )
+    if(present(tt)) then
+      amp = tdf(laser%f, tt) * exp(M_zI * ( laser%omega*tt + tdf(laser%phi, tt) ) )
     else
       amp = M_z1
     end if
 
-    select case(l%field)
+    select case(laser%field)
     case(E_FIELD_SCALAR_POTENTIAL)
-      pot(1:m%np) = pot(1:m%np) + real(amp)*l%v(1:m%np)
+      pot(1:mesh%np) = pot(1:mesh%np) + real(amp)*laser%v(1:mesh%np)
     case default
-      field(1:sb%dim) = real(amp*l%pol(1:sb%dim))
-      do j = 1, m%np
-        pot(j) = pot(j) + sum(field(1:sb%dim)*m%x(j, 1:sb%dim))
+      field(1:sb%dim) = real(amp*laser%pol(1:sb%dim))
+      do ip = 1, mesh%np
+        pot(ip) = pot(ip) + sum(field(1:sb%dim)*mesh%x(ip, 1:sb%dim))
       end do
     end select
 
@@ -602,17 +602,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_vector_potential(l, a, t)
-    type(laser_t),     intent(in) :: l
-    FLOAT,            intent(out) :: a(:, :)
-    FLOAT, optional,   intent(in) :: t
+  subroutine laser_vector_potential(laser, aa, tt)
+    type(laser_t),   intent(in)  :: laser
+    FLOAT,           intent(out) :: aa(:, :)
+    FLOAT, optional, intent(in)  :: tt
 
     call push_sub('lasers.laser_vector_potential')
 
-    if(present(t)) then
-      a = l%a * real( tdf(l%f, t) * exp(M_zI* ( l%omega *t + tdf(l%phi, t)  ) ) )
+    if(present(tt)) then
+      aa = laser%a * real( tdf(laser%f, tt) * exp(M_zI * ( laser%omega * tt + tdf(laser%phi, tt)  ) ) )
     else
-      a = l%a
+      aa = laser%a
     end if
 
     call pop_sub()
@@ -621,26 +621,26 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_field(sb, l, field, t)
+  subroutine laser_field(sb, laser, field, tt)
     type(simul_box_t), intent(in)  :: sb
-    type(laser_t),     intent(in)  :: l
+    type(laser_t),     intent(in)  :: laser
     FLOAT,             intent(out) :: field(:)
-    FLOAT, optional,   intent(in)  :: t
+    FLOAT, optional,   intent(in)  :: tt
 
     CMPLX :: amp
 
     call push_sub('lasers.laser_field')
 
     field = M_ZERO
-    if(l%field .eq. E_FIELD_SCALAR_POTENTIAL) then
+    if(laser%field .eq. E_FIELD_SCALAR_POTENTIAL) then
       call pop_sub(); return
     endif
-    if(present(t)) then
-      amp = tdf(l%f, t) * exp(M_zI * ( l%omega * t + tdf(l%phi, t) ) )
+    if(present(tt)) then
+      amp = tdf(laser%f, tt) * exp(M_zI * ( laser%omega * tt + tdf(laser%phi, tt) ) )
     else
       amp = M_z1
     end if
-    field(1:sb%dim) = field(1:sb%dim) + real(amp*l%pol(1:sb%dim))
+    field(1:sb%dim) = field(1:sb%dim) + real(amp*laser%pol(1:sb%dim))
 
     call pop_sub()
   end subroutine laser_field

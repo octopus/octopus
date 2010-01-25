@@ -106,14 +106,14 @@ module hamiltonian_m
     type(states_dim_t) :: d
 
     FLOAT, pointer :: vhartree(:) ! Hartree potential
-    FLOAT, pointer :: vxc(:,:)    ! xc potential
-    FLOAT, pointer :: vhxc(:,:)   ! xc potential + Hartree potential
-    FLOAT, pointer :: axc(:,:,:)  ! xc vector-potential divided by c
-    FLOAT, pointer :: vtau(:,:)   ! Derivative of e_xc w.r.t. tau
+    FLOAT, pointer :: vxc(:,:)    ! XC potential
+    FLOAT, pointer :: vhxc(:,:)   ! XC potential + Hartree potential
+    FLOAT, pointer :: axc(:,:,:)  ! XC vector potential divided by c
+    FLOAT, pointer :: vtau(:,:)   ! Derivative of e_XC w.r.t. tau
 
-    FLOAT :: exx_coef ! how much of exx to mix
+    FLOAT :: exx_coef ! how much of EXX to mix
 
-    ! The self-induced potential vector and magnetic field
+    ! The self-induced vector potential and magnetic field
     logical :: self_induced_magnetic
     FLOAT, pointer :: a_ind(:, :)
     FLOAT, pointer :: b_ind(:, :)
