@@ -167,19 +167,19 @@ contains
     call pop_sub()
   end function double_grid_get_hmax
 
-  FLOAT function double_grid_get_rmax(this, s, m) result(rmax)
+  FLOAT function double_grid_get_rmax(this, spec, mesh) result(rmax)
     type(double_grid_t),     intent(in) :: this
-    type(species_t),         intent(in) :: s
-    type(mesh_t),            intent(in) :: m
+    type(species_t),         intent(in) :: spec
+    type(mesh_t),            intent(in) :: mesh
 
     type(ps_t), pointer :: ps
     
     call push_sub('double_grid.double_grid_get_rmax')
 
-    ps => species_ps(s)
+    ps => species_ps(spec)
     rmax = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold)
     if(this%use_double_grid) then 
-      rmax = rmax + this%interpolation_max * maxval(m%spacing(1:3))
+      rmax = rmax + this%interpolation_max * maxval(mesh%spacing(1:3))
     end if
     nullify(ps)
 
@@ -212,7 +212,7 @@ contains
 #define profiler double_grid_nonlocal_prof
 #define profiler_label "DOUBLE_GRID_NL"
 #define double_grid_apply double_grid_apply_non_local
-#define calc_pot(vv) call species_real_nl_projector(s, x, l, lm, ic, vv, tmp)
+#define calc_pot(vv) call species_real_nl_projector(spec, xx, l, lm, ic, vv, tmp)
 
 #include "double_grid_apply_inc.F90"
 

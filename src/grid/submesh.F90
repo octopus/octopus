@@ -92,14 +92,14 @@ contains
 
   end subroutine submesh_null
 
-  subroutine submesh_init_sphere(this, sb, m, center, rc)
+  subroutine submesh_init_sphere(this, sb, mesh, center, rc)
     type(submesh_t),      intent(out)  :: this
     type(simul_box_t),    intent(in)   :: sb
-    type(mesh_t), target, intent(in)   :: m
+    type(mesh_t), target, intent(in)   :: mesh
     FLOAT,                intent(in)   :: center(:)
     FLOAT,                intent(in)   :: rc
     
-    FLOAT :: r2, x(1:MAX_DIM)
+    FLOAT :: r2, xx(1:MAX_DIM)
     FLOAT, allocatable :: center_copies(:, :)
     integer :: icell, is, isb, ip, ix, iy, iz
     type(profile_t), save :: submesh_init_prof
@@ -110,8 +110,8 @@ contains
     call push_sub('submesh.submesh_init_sphere')
     call profiling_in(submesh_init_prof, "SUBMESH_INIT")
 
-    this%np_part = m%np_part
-    this%mesh => m
+    this%np_part = mesh%np_part
+    this%mesh => mesh
 
     ! The spheres are generated differently for periodic coordinates,
     ! mainly for performance reasons.
@@ -124,12 +124,12 @@ contains
       nmax = 0
 
       ! get a cube of points that contains the sphere
-      nmin(1:sb%dim) = int((center(1:sb%dim) - abs(rc) - sb%box_offset(1:sb%dim))/m%spacing(1:sb%dim)) - 1
-      nmax(1:sb%dim) = int((center(1:sb%dim) + abs(rc) - sb%box_offset(1:sb%dim))/m%spacing(1:sb%dim)) + 1
+      nmin(1:sb%dim) = int((center(1:sb%dim) - abs(rc) - sb%box_offset(1:sb%dim))/mesh%spacing(1:sb%dim)) - 1
+      nmax(1:sb%dim) = int((center(1:sb%dim) + abs(rc) - sb%box_offset(1:sb%dim))/mesh%spacing(1:sb%dim)) + 1
 
       ! make sure that the cube is inside the grid
-      nmin(1:MAX_DIM) = max(m%idx%nr(1, 1:MAX_DIM), nmin(1:MAX_DIM))
-      nmax(1:MAX_DIM) = min(m%idx%nr(2, 1:MAX_DIM), nmax(1:MAX_DIM))
+      nmin(1:MAX_DIM) = max(mesh%idx%nr(1, 1:MAX_DIM), nmin(1:MAX_DIM))
+      nmax(1:MAX_DIM) = min(mesh%idx%nr(2, 1:MAX_DIM), nmax(1:MAX_DIM))
 
       ! Get the total number of points inside the sphere
       is = 0   ! this index counts inner points
@@ -137,15 +137,15 @@ contains
       do iz = nmin(3), nmax(3)
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
-            ip = m%idx%Lxyz_inv(ix, iy, iz)
+            ip = mesh%idx%Lxyz_inv(ix, iy, iz)
 #if defined(HAVE_MPI)
             if(ip == 0) cycle
-            if(m%parallel_in_domains) ip = vec_global2local(m%vp, ip, m%vp%partno)
+            if(mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
 #endif
             if(ip == 0) cycle
-            r2 = sum((m%x(ip, 1:sb%dim) - center(1:sb%dim))**2)
+            r2 = sum((mesh%x(ip, 1:sb%dim) - center(1:sb%dim))**2)
             if(r2 <= rc**2) then
-              if(ip > m%np) then
+              if(ip > mesh%np) then
                 ! boundary points are marked as negative values
                 isb = isb + 1
                 jxyz_inv(ip) = -isb
@@ -167,10 +167,10 @@ contains
       do iz = nmin(3), nmax(3)
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
-            ip = m%idx%Lxyz_inv(ix, iy, iz)
+            ip = mesh%idx%Lxyz_inv(ix, iy, iz)
 #if defined(HAVE_MPI)
             if(ip == 0) cycle
-            if(m%parallel_in_domains) ip = vec_global2local(m%vp, ip, m%vp%partno)
+            if(mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
 #endif
             is = jxyz_inv(ip)
             if(is == 0) cycle
@@ -181,7 +181,7 @@ contains
             end if
             this%jxyz(is) = ip
             this%x(is, 1:MAX_DIM) = M_ZERO
-            this%x(is, 1:sb%dim) = m%x(ip, 1:sb%dim) - center(1:sb%dim)
+            this%x(is, 1:sb%dim) = mesh%x(ip, 1:sb%dim) - center(1:sb%dim)
             this%x(is, 0) = sqrt(sum(this%x(is, 1:MAX_DIM)**2))
           end do
         end do
@@ -207,13 +207,13 @@ contains
       end do
 
       is = 0
-      do ip = 1, m%np_part
+      do ip = 1, mesh%np_part
         do icell = 1, periodic_copy_num(pp)
-          r2 = sum((m%x(ip, 1:MAX_DIM) - center_copies(1:MAX_DIM, icell))**2)
+          r2 = sum((mesh%x(ip, 1:MAX_DIM) - center_copies(1:MAX_DIM, icell))**2)
           if(r2 > rc**2 ) cycle
           is = is + 1
         end do
-        if (ip == m%np) this%ns = is
+        if (ip == mesh%np) this%ns = is
       end do
       
       this%ns_part = is
@@ -223,15 +223,15 @@ contains
             
       !iterate again to fill the tables
       is = 0
-      do ip = 1, m%np_part
+      do ip = 1, mesh%np_part
         do icell = 1, periodic_copy_num(pp)
-          x(1:MAX_DIM) = m%x(ip, 1:MAX_DIM) - center_copies(1:MAX_DIM, icell)
-          r2 = sum(x(1:MAX_DIM)**2)
+          xx(1:MAX_DIM) = mesh%x(ip, 1:MAX_DIM) - center_copies(1:MAX_DIM, icell)
+          r2 = sum(xx(1:MAX_DIM)**2)
           if(r2 > rc**2 ) cycle
           is = is + 1
           this%jxyz(is) = ip
           this%x(is, 0) = sqrt(r2)
-          this%x(is, 1:MAX_DIM) = x(1:MAX_DIM)
+          this%x(is, 1:MAX_DIM) = xx(1:MAX_DIM)
          end do
       end do
 

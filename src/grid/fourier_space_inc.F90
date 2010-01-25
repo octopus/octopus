@@ -156,52 +156,52 @@ end subroutine X(fourier_space_op_apply)
 ! globally, not just in a partition (when running in
 ! parallel in real-space domains).
 ! ---------------------------------------------------------
-subroutine X(mesh_to_fourier) (m, mf, cf)
-  type(mesh_t),  intent(in)    :: m
-  CMPLX,         intent(in)    :: mf(:)   ! mf(m%np_global)
+subroutine X(mesh_to_fourier) (mesh, mf, cf)
+  type(mesh_t),  intent(in)    :: mesh
+  CMPLX,         intent(in)    :: mf(:)   ! mf(mesh%np_global)
   type(X(cf_t)), intent(inout) :: cf
 
-  integer :: i, ix, iy, iz
+  integer :: ip, ix, iy, iz
 
   ASSERT(associated(cf%FS))
 
   cf%FS = M_z0
 
-  do i = 1, m%np_global
-    ix = pad_feq(m%idx%Lxyz(i, 1), cf%n(1), .false.)
+  do ip = 1, mesh%np_global
+    ix = pad_feq(mesh%idx%Lxyz(ip, 1), cf%n(1), .false.)
     if(ix > cf%nx) cycle ! negative frequencies are redundant
-    iy = pad_feq(m%idx%Lxyz(i, 2), cf%n(2), .false.)
-    iz = pad_feq(m%idx%Lxyz(i, 3), cf%n(3), .false.)
+    iy = pad_feq(mesh%idx%Lxyz(ip, 2), cf%n(2), .false.)
+    iz = pad_feq(mesh%idx%Lxyz(ip, 3), cf%n(3), .false.)
 
-    cf%FS(ix, iy, iz) = mf(i)
+    cf%FS(ix, iy, iz) = mf(ip)
   end do
 end subroutine X(mesh_to_fourier)
 
 
 ! ---------------------------------------------------------
-subroutine X(fourier_to_mesh) (m, cf, mf)
-  type(mesh_t),  intent(in)  :: m
+subroutine X(fourier_to_mesh) (mesh, cf, mf)
+  type(mesh_t),  intent(in)  :: mesh
   type(X(cf_t)), intent(in)  :: cf
-  CMPLX,         intent(out) :: mf(:) ! mf(m%np_global)
+  CMPLX,         intent(out) :: mf(:) ! mf(mesh%np_global)
 
-  integer :: i, ix, iy, iz
+  integer :: ip, ix, iy, iz
 
   ASSERT(associated(cf%FS))
 
-  do i = 1, m%np_global
-    ix = pad_feq(m%idx%Lxyz(i, 1), cf%n(1), .false.)
-    iy = pad_feq(m%idx%Lxyz(i, 2), cf%n(2), .false.)
-    iz = pad_feq(m%idx%Lxyz(i, 3), cf%n(3), .false.)
+  do ip = 1, mesh%np_global
+    ix = pad_feq(mesh%idx%Lxyz(ip, 1), cf%n(1), .false.)
+    iy = pad_feq(mesh%idx%Lxyz(ip, 2), cf%n(2), .false.)
+    iz = pad_feq(mesh%idx%Lxyz(ip, 3), cf%n(3), .false.)
 
 #ifdef R_TREAL
     if(ix > cf%nx) then
-      ix = pad_feq(-m%idx%Lxyz(i, 1), cf%n(1), .false.)
-      mf(i) = conjg(cf%FS(ix, iy, iz))
+      ix = pad_feq(-mesh%idx%Lxyz(ip, 1), cf%n(1), .false.)
+      mf(ip) = conjg(cf%FS(ix, iy, iz))
     else
-      mf(i) = cf%FS(ix, iy, iz)
+      mf(ip) = cf%FS(ix, iy, iz)
     end if
 #else
-    mf(i) = cf%FS(ix, iy, iz)
+    mf(ip) = cf%FS(ix, iy, iz)
 #endif
   end do
 

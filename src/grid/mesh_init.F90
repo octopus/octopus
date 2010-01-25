@@ -145,7 +145,7 @@ contains
   subroutine mesh_read_lead()
     integer :: il, iunit
 
-    type(mesh_t), pointer :: m
+    type(mesh_t), pointer :: mm
     integer :: nr(1:2, 1:MAX_DIM)
 
     call push_sub('mesh_init.mesh_init_stage1_mesh_read_lead')
@@ -153,18 +153,18 @@ contains
     SAFE_ALLOCATE(mesh%lead_unit_cell(1:NLEADS))
 
     do il = 1, NLEADS
-      m => mesh%lead_unit_cell(il)
-      m%sb => mesh%sb
-      m%cv => mesh%cv
-      m%parallel_in_domains = mesh%parallel_in_domains
+      mm => mesh%lead_unit_cell(il)
+      mm%sb => mesh%sb
+      mm%cv => mesh%cv
+      mm%parallel_in_domains = mesh%parallel_in_domains
       iunit = io_open(trim(sb%lead_restart_dir(il))//'/'//GS_DIR//'mesh', action='read', is_tmp=.true.)
-      call mesh_init_from_file(m, iunit)
+      call mesh_init_from_file(mm, iunit)
       call io_close(iunit)
       ! Read the lxyz maps.
-      nr = m%idx%nr
-      SAFE_ALLOCATE(m%idx%Lxyz(1:m%np_part, 1:3))
-      SAFE_ALLOCATE(m%idx%Lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
-      call mesh_lxyz_init_from_file(m, trim(sb%lead_restart_dir(il))//'/'//GS_DIR//'lxyz')
+      nr = mm%idx%nr
+      SAFE_ALLOCATE(mm%idx%Lxyz(1:mm%np_part, 1:3))
+      SAFE_ALLOCATE(mm%idx%Lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
+      call mesh_lxyz_init_from_file(mm, trim(sb%lead_restart_dir(il))//'/'//GS_DIR//'lxyz')
     end do
 
     call pop_sub()
@@ -1207,22 +1207,22 @@ end subroutine mesh_init_stage_3
 !! which has to be allocated beforehand.
 !! (mesh_partition_end should be called later.)
 ! ---------------------------------------------------------------
-subroutine mesh_partition(m, lapl_stencil, part)
-  type(mesh_t),            intent(in)  :: m
+subroutine mesh_partition(mesh, lapl_stencil, part)
+  type(mesh_t),            intent(in)  :: mesh
   type(stencil_t), target, intent(in)  :: lapl_stencil
   integer,                 intent(out) :: part(:)
 
-  integer              :: i, j, inb
+  integer              :: iv, jp, inb
   integer              :: ix(1:MAX_DIM), jx(1:MAX_DIM)
   integer              :: ne             !< Number of edges.
   integer              :: nv             !< Number of vertices.
   ! Number of vertices (nv) is equal to number of
-  ! points np_global and maximum number of edges (ne) is 2*m%sb%dim*np_global
+  ! points np_global and maximum number of edges (ne) is 2*mesh%sb%dim*np_global
   ! (there are a little fewer because points on the border have less
   ! than two neighbours per dimension).
   ! xadj has nv+1 entries because last entry contains the total
   ! number of edges.
-  integer              :: p              !< Number of partitions.
+  integer              :: npart          !< Number of partitions.
   integer              :: ipart          !< number of the current partition
   integer, allocatable :: xadj(:)        !< Indices of adjacency list in adjncy.
   integer, allocatable :: adjncy(:)      !< Adjacency lists.
@@ -1247,7 +1247,7 @@ subroutine mesh_partition(m, lapl_stencil, part)
   call profiling_in(prof, "MESH_PARTITION")
   call push_sub('mesh_init.mesh_partition')
 
-  if(m%np_global == 0) then
+  if(mesh%np_global == 0) then
     message(1) = 'The mesh is empty and cannot be partitioned.'
     call write_fatal(1)
   end if
@@ -1258,7 +1258,7 @@ subroutine mesh_partition(m, lapl_stencil, part)
   !%Section Execution::Parallelization
   !%Description
   !% Decides which library to use to perform the mesh partition. By
-  !% default METIS is used (if available).
+  !% default, METIS is used (if available).
   !%Option metis 2
   !% METIS library.
   !%Option zoltan 3
@@ -1272,7 +1272,7 @@ subroutine mesh_partition(m, lapl_stencil, part)
 
 #ifndef HAVE_METIS
   if(library == METIS) then
-    message(1) = 'Error: Metis was requested, but Octopus was compiled without it.'
+    message(1) = 'Error: METIS was requested, but Octopus was compiled without it.'
     call write_fatal(1)
   end if
 #endif
@@ -1296,7 +1296,7 @@ subroutine mesh_partition(m, lapl_stencil, part)
   call parse_integer(datasets_check('MeshPartitionStencil'), STAR, stencil_to_use)
 
   if (stencil_to_use == STAR) then
-    call stencil_star_get_lapl(stencil, m%sb%dim, order = 1)
+    call stencil_star_get_lapl(stencil, mesh%sb%dim, order = 1)
   else if (stencil_to_use == LAPLACIAN) then
     call stencil_copy(lapl_stencil, stencil)
   else
@@ -1304,35 +1304,35 @@ subroutine mesh_partition(m, lapl_stencil, part)
   end if
 
   ! Get number of partitions.
-  p = m%mpi_grp%size
-  ipart = m%mpi_grp%rank + 1
+  npart = mesh%mpi_grp%size
+  ipart = mesh%mpi_grp%rank + 1
 
-  if(p .lt. 8) then
+  if(npart .lt. 8) then
     default_method = RCB
   else
     default_method = GRAPH
   end if
-  ! Documentation is in zoltan.F90`
+  ! Documentation is in zoltan.F90
   call parse_integer(datasets_check('MeshPartition'), default_method, method)
 
-  SAFE_ALLOCATE(start(1:p))
-  SAFE_ALLOCATE(final(1:p))
-  SAFE_ALLOCATE(lsize(1:p))
+  SAFE_ALLOCATE(start(1:npart))
+  SAFE_ALLOCATE(final(1:npart))
+  SAFE_ALLOCATE(lsize(1:npart))
 
   select case(library)
   case(METIS)
 
-    start(1:p) = 1
-    final(1:p) = m%np_global
-    lsize(1:p) = m%np_global
+    start(1:npart) = 1
+    final(1:npart) = mesh%np_global
+    lsize(1:npart) = mesh%np_global
 
   case(ZOLTAN)
 
-    ! If we use Zoltan we divide the space in a basic way, to balance
+    ! If we use Zoltan, we divide the space in a basic way, to balance
     ! the memory for the graph. 
-    call multicomm_divide_range(m%np_global, p, start, final, lsize)
+    call multicomm_divide_range(mesh%np_global, npart, start, final, lsize)
 
-    do ii = 1, p
+    do ii = 1, npart
       part(start(ii):final(ii)) = ii
     end do
 
@@ -1350,21 +1350,21 @@ subroutine mesh_partition(m, lapl_stencil, part)
     ! neighbouring points.
     ne = 1
     ! Iterate over number of vertices.
-    do i = 1, nv
+    do iv = 1, nv
       ! Get coordinates of point i (vertex i).
-      call index_to_coords(m%idx, m%sb%dim, i, ix)
+      call index_to_coords(mesh%idx, mesh%sb%dim, iv, ix)
       ! Set entry in index table.
-      xadj(i) = ne
+      xadj(iv) = ne
       ! Check all possible neighbours.
-      do j = 1, stencil%size 
+      do jp = 1, stencil%size 
         ! Store coordinates of possible neighbors, they
         ! are needed several times in the check below.
-        jx(1:MAX_DIM) = ix(1:MAX_DIM) + stencil%points(1:MAX_DIM, j)
+        jx(1:MAX_DIM) = ix(1:MAX_DIM) + stencil%points(1:MAX_DIM, jp)
 
-        if(all(jx(1:MAX_DIM) >= m%idx%nr(1, 1:MAX_DIM)) .and. all(jx(1:MAX_DIM) <= m%idx%nr(2, 1:MAX_DIM))) then
+        if(all(jx(1:MAX_DIM) >= mesh%idx%nr(1, 1:MAX_DIM)) .and. all(jx(1:MAX_DIM) <= mesh%idx%nr(2, 1:MAX_DIM))) then
           ! Only points inside the mesh or its enlargement
           ! are included in the graph.
-          inb = index_from_coords(m%idx, m%sb%dim, jx)
+          inb = index_from_coords(mesh%idx, mesh%sb%dim, jx)
           if(inb /= 0 .and. inb <= nv) then
             ! Store a new edge and increment edge counter.
             adjncy(ne) = inb
@@ -1394,8 +1394,8 @@ subroutine mesh_partition(m, lapl_stencil, part)
         call io_mkdir('debug/mesh_partition')
         iunit = io_open('debug/mesh_partition/mesh_graph.txt', action='write')
         write(iunit, *) nv, ne/2
-        do i = 1, nv
-          write(iunit, *) adjncy(xadj(i):xadj(i+1) - 1)
+        do iv = 1, nv
+          write(iunit, *) adjncy(xadj(iv):xadj(iv+1) - 1)
         end do
         call io_close(iunit)
       end if
@@ -1419,17 +1419,17 @@ subroutine mesh_partition(m, lapl_stencil, part)
 
     select case(method)
     case(RCB)
-      message(1) = 'Info: Using Metis multilevel recursive bisection to partition the mesh.'
+      message(1) = 'Info: Using METIS multilevel recursive bisection to partition the mesh.'
       call write_info(1)
       call oct_metis_part_graph_recursive(nv, xadj, adjncy, &
-           0, 0, 0, 1, p, options, edgecut, part)
+           0, 0, 0, 1, npart, options, edgecut, part)
     case(GRAPH)
-      message(1) = 'Info: Using Metis multilevel k-way algorithm to partition the mesh.'
+      message(1) = 'Info: Using METIS multilevel k-way algorithm to partition the mesh.'
       call write_info(1)
       call oct_metis_part_graph_kway(nv, xadj, adjncy, &
-           0, 0, 0, 1, p, options, edgecut, part)
+           0, 0, 0, 1, npart, options, edgecut, part)
     case default
-      message(1) = 'Error: Selected partition method is not available in Metis.'
+      message(1) = 'Error: Selected partition method is not available in METIS.'
       call write_fatal(1)
     end select
 #endif
@@ -1437,15 +1437,15 @@ subroutine mesh_partition(m, lapl_stencil, part)
 
     call zoltan_method_info(method)
 
-    SAFE_ALLOCATE(xglobal(1:m%np_part_global, 1:MAX_DIM))
+    SAFE_ALLOCATE(xglobal(1:mesh%np_part_global, 1:MAX_DIM))
 
-    do ip = 1, m%np_part_global
-      xglobal(ip, 1:MAX_DIM) = mesh_x_global(m, ip)
+    do ip = 1, mesh%np_part_global
+      xglobal(ip, 1:MAX_DIM) = mesh_x_global(mesh, ip)
     end do
 
     !assign all points to one node
-    call zoltan_partition(method, m%sb%dim, m%np_global, m%np_part_global, &
-         xglobal(1, 1),  start(ipart), xadj(1), adjncy(1), ipart, part(1), m%mpi_grp%comm)
+    call zoltan_partition(method, mesh%sb%dim, mesh%np_global, mesh%np_part_global, &
+         xglobal(1, 1),  start(ipart), xadj(1), adjncy(1), ipart, part(1), mesh%mpi_grp%comm)
 
     SAFE_DEALLOCATE_A(xglobal)
 
@@ -1454,13 +1454,13 @@ subroutine mesh_partition(m, lapl_stencil, part)
 
     ASSERT(all(xadj(1:lsize(ipart)) > 0))
 
-    part(1:m%np_global) = 0 ! so we catch non-initialized values
+    part(1:mesh%np_global) = 0 ! so we catch non-initialized values
 
     ! convert start to C notation
     start = start - 1
 
     ! we collect part from all processors
-    call MPI_Allgatherv(xadj(1), lsize(ipart), MPI_INTEGER, part(1), lsize(1), start(1), MPI_INTEGER, m%mpi_grp%comm, mpi_err)
+    call MPI_Allgatherv(xadj(1), lsize(ipart), MPI_INTEGER, part(1), lsize(1), start(1), MPI_INTEGER, mesh%mpi_grp%comm, mpi_err)
 
   end select
 
@@ -1469,8 +1469,8 @@ subroutine mesh_partition(m, lapl_stencil, part)
   SAFE_DEALLOCATE_A(lsize)
   SAFE_DEALLOCATE_A(adjncy)
 
-  ASSERT(all(part(1:m%np_global) > 0))
-  ASSERT(all(part(1:m%np_global) <= p))
+  ASSERT(all(part(1:mesh%np_global) > 0))
+  ASSERT(all(part(1:mesh%np_global) <= npart))
 
   call stencil_end(stencil)
   call pop_sub()
@@ -1483,7 +1483,7 @@ subroutine mesh_partition_boundaries(mesh, stencil, part)
   type(stencil_t), intent(in)    :: stencil
   integer,         intent(inout) :: part(:)
 
-  integer              :: i, j           ! Counter.
+  integer              :: ii, jj         ! Counter.
   integer              :: ix(1:MAX_DIM), jx(1:MAX_DIM)
   integer              :: npart
   integer              :: iunit          ! For debug output to files.
@@ -1502,13 +1502,13 @@ subroutine mesh_partition_boundaries(mesh, stencil, part)
 
   !assign boundary points
   bps = 0
-  do i = mesh%np_global + 1, mesh%np_part_global
+  do ii = mesh%np_global + 1, mesh%np_part_global
     !get the coordinates of the point
-    call index_to_coords(mesh%idx, mesh%sb%dim, i, ix)
+    call index_to_coords(mesh%idx, mesh%sb%dim, ii, ix)
     votes = 0
     ! check the partition of all the points that are connected through the stencil with this one
-    do j = 1, stencil%size
-      jx(1:MAX_DIM) = ix(1:MAX_DIM) + stencil%points(1:MAX_DIM, j)
+    do jj = 1, stencil%size
+      jx(1:MAX_DIM) = ix(1:MAX_DIM) + stencil%points(1:MAX_DIM, jj)
       if(any(jx < mesh%idx%nr(1, :)) .or. any(jx > mesh%idx%nr(2, :))) cycle
       ip = index_from_coords(mesh%idx, mesh%sb%dim, jx)
       if(ip > 0 .and. ip <= mesh%np_global) votes(part(ip)) = votes(part(ip)) + 1
@@ -1519,9 +1519,9 @@ subroutine mesh_partition_boundaries(mesh, stencil, part)
     ! from all the ones that have the maximum
     winner = (votes == maxvotes)
     ! select the one that has less points up to now
-    part(i) = minloc(bps, dim = 1,  mask = winner)
+    part(ii) = minloc(bps, dim = 1,  mask = winner)
     ! and count it
-    bps(part(i)) = bps(part(i)) + 1
+    bps(part(ii)) = bps(part(ii)) + 1
 
   end do
 
@@ -1531,21 +1531,21 @@ subroutine mesh_partition_boundaries(mesh, stencil, part)
 
   if(in_debug_mode.and.mpi_grp_is_root(mpi_world)) then
     ! Debug output. Write points of each partition in a different file.
-    do i = 1, npart
+    do ii = 1, npart
 
-      write(filenum, '(i3.3)') i
+      write(filenum, '(i3.3)') ii
 
       iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
            action='write')
-      do j = 1, mesh%np_global
-        if(part(j).eq.i) write(iunit, '(i8,3f18.8)') j, mesh_x_global(mesh, j)
+      do jj = 1, mesh%np_global
+        if(part(jj).eq.ii) write(iunit, '(i8,3f18.8)') jj, mesh_x_global(mesh, jj)
       end do
       call io_close(iunit)
 
       iunit = io_open('debug/mesh_partition/mesh_partition_all.'//filenum, &
            action='write')
-      do j = 1, mesh%np_part_global
-        if(part(j).eq.i) write(iunit, '(i8,3f18.8)') j, mesh_x_global(mesh, j)
+      do jj = 1, mesh%np_part_global
+        if(part(jj).eq.ii) write(iunit, '(i8,3f18.8)') jj, mesh_x_global(mesh, jj)
       end do
       call io_close(iunit)
 
@@ -1554,8 +1554,8 @@ subroutine mesh_partition_boundaries(mesh, stencil, part)
     write(filenum, '(i3.3)') npart+1
     iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
          action='write')
-    do i = mesh%np_global+1, mesh%np_part_global
-      write(iunit, '(i8,3f18.8)') i, mesh_x_global(mesh, i)
+    do ii = mesh%np_global+1, mesh%np_part_global
+      write(iunit, '(i8,3f18.8)') ii, mesh_x_global(mesh, ii)
     end do
     call io_close(iunit)
   end if
