@@ -52,7 +52,7 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
   if (.not. this%use_double_grid) then 
 
     do is = 1, sm%ns
-      rr = sm%x(is, 0)
+      r = sm%x(is, 0)
       xx(1:3) = sm%x(is, 1:3)
       calc_pot(vl(is))
     end do
@@ -79,7 +79,7 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
     vs = M_ZERO
 
     !for each grid point
-    !$omp do private(ii, jj, kk, ip, ll, mm, nn, pp, qq, rr, is2, start, vv, tmp, rr, xx)
+    !$omp do private(ii, jj, kk, ip, ll, mm, nn, pp, qq, rr, is2, start, vv, tmp, r, xx)
     do is = 1, sm%ns_part
 
       do ii = -this%nn, this%nn
@@ -87,7 +87,7 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
           do kk = -this%nn, this%nn
 
             xx(1:3) = mesh%x(sm%jxyz(is), 1:3) + mesh%spacing(1:3)/this%spacing_divisor * (/ii, jj, kk/) - x_atom(1:3)
-            rr = sqrt(sum(xx(1:3)**2))
+            r = sqrt(sum(xx(1:3)**2))
 
             calc_pot(vv)
 

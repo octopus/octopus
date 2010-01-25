@@ -1202,7 +1202,7 @@ end subroutine mesh_init_stage_3
 !! point is a vertex in the graph and closest neighbours are
 !! connected by an edge (at most 6 in 3D and 4 in 2D, 2 in
 !! 1D, fewer at the boundaries).
-!! Then calls METIS to get p partitions.
+!! Then calls METIS to get npart partitions.
 !! Stored the mapping point no. -> partition no. into part,
 !! which has to be allocated beforehand.
 !! (mesh_partition_end should be called later.)
@@ -1351,7 +1351,7 @@ subroutine mesh_partition(mesh, lapl_stencil, part)
     ne = 1
     ! Iterate over number of vertices.
     do iv = 1, nv
-      ! Get coordinates of point i (vertex i).
+      ! Get coordinates of point iv (vertex iv).
       call index_to_coords(mesh%idx, mesh%sb%dim, iv, ix)
       ! Set entry in index table.
       xadj(iv) = ne
