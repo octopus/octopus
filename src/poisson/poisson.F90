@@ -531,9 +531,9 @@ contains
   subroutine poisson_test(mesh)
     type(mesh_t), intent(inout) :: mesh
 
-    FLOAT, allocatable :: rho(:), vh(:), vh_exact(:), rhop(:), x(:, :)
-    FLOAT :: alpha, beta, r, delta, norm, rnd, ralpha, range
-    integer :: i, k, ierr, iunit, n, n_gaussians
+    FLOAT, allocatable :: rho(:), vh(:), vh_exact(:), rhop(:), xx(:, :)
+    FLOAT :: alpha, beta, rr, delta, norm, rnd, ralpha, range
+    integer :: ip, idir, ierr, iunit, nn, n_gaussians
 
     call push_sub('poisson.poisson_test')
 
@@ -549,7 +549,7 @@ contains
     SAFE_ALLOCATE(    rhop(1:mesh%np))
     SAFE_ALLOCATE(      vh(1:mesh%np))
     SAFE_ALLOCATE(vh_exact(1:mesh%np))
-    SAFE_ALLOCATE(x(1:mesh%sb%dim, 1:n_gaussians))
+    SAFE_ALLOCATE(xx(1:mesh%sb%dim, 1:n_gaussians))
 
     rho = M_ZERO; vh = M_ZERO; vh_exact = M_ZERO
 
@@ -562,21 +562,21 @@ contains
     range = CNST(8.0)
 
     rho = M_ZERO
-    do n = 1, n_gaussians
+    do nn = 1, n_gaussians
       norm = M_ZERO
       do while(abs(norm-M_ONE)> CNST(1.0e-4))
-        do k = 1, mesh%sb%dim
+        do idir = 1, mesh%sb%dim
           call random_number(rnd)
-          x(k, n) = range*rnd 
+          xx(idir, nn) = range*rnd 
         end do
-        r = sqrt(sum(x(:, n)*x(:,n)))
-        do i = 1, mesh%np
-          call mesh_r(mesh, i, r, a = x(:, n))
-          rhop(i) = beta*exp(-(r/alpha)**2)
+        rr = sqrt(sum(xx(:, nn)*xx(:,nn)))
+        do ip = 1, mesh%np
+          call mesh_r(mesh, ip, rr, origin = xx(:, nn))
+          rhop(ip) = beta*exp(-(rr/alpha)**2)
         end do
         norm = dmf_integrate(mesh, rhop)
       end do
-      rhop = (-1)**n * rhop
+      rhop = (-1)**nn * rhop
       rho = rho + rhop
     end do
     write(message(1), '(a,f14.6)') 'Total charge of the Gaussian distribution', dmf_integrate(mesh, rho)
@@ -584,23 +584,23 @@ contains
 
     ! This builds analytically its potential
     vh_exact = M_ZERO
-    do n = 1, n_gaussians
-      do i = 1, mesh%np
-        call mesh_r(mesh, i, r, a = x(:, n))
+    do nn = 1, n_gaussians
+      do ip = 1, mesh%np
+        call mesh_r(mesh, ip, rr, origin = xx(:, nn))
         select case(calc_dim)
         case(3)
-          if(r > r_small) then
-            vh_exact(i) = vh_exact(i) + (-1)**n * loct_erf(r/alpha)/r
+          if(rr > r_small) then
+            vh_exact(ip) = vh_exact(ip) + (-1)**nn * loct_erf(rr/alpha)/rr
           else
-            vh_exact(i) = vh_exact(i) + (-1)**n * (M_TWO/sqrt(M_PI))/alpha
+            vh_exact(ip) = vh_exact(ip) + (-1)**nn * (M_TWO/sqrt(M_PI))/alpha
           end if
         case(2)
-          ralpha = r**2/(M_TWO*alpha**2)
+          ralpha = rr**2/(M_TWO*alpha**2)
           if(ralpha < CNST(100.0)) then
-            vh_exact(i) = vh_exact(i) + (-1)**n * beta * (M_PI)**(M_THREE*M_HALF) * alpha * exp(-r**2/(M_TWO*alpha**2)) * &
-              loct_bessel_in(0, r**2/(M_TWO*alpha**2))
+            vh_exact(ip) = vh_exact(ip) + (-1)**nn * beta * (M_PI)**(M_THREE*M_HALF) * alpha * exp(-rr**2/(M_TWO*alpha**2)) * &
+              loct_bessel_in(0, rr**2/(M_TWO*alpha**2))
           else
-            vh_exact(i) = vh_exact(i) + (-1)**n * beta * (M_PI)**(M_THREE*M_HALF) * alpha * &
+            vh_exact(ip) = vh_exact(ip) + (-1)**nn * beta * (M_PI)**(M_THREE*M_HALF) * alpha * &
                           (M_ONE/sqrt(M_TWO*M_PI*ralpha)) 
           end if
         end select
@@ -629,7 +629,7 @@ contains
     SAFE_DEALLOCATE_A(rhop)
     SAFE_DEALLOCATE_A(vh)
     SAFE_DEALLOCATE_A(vh_exact)
-    SAFE_DEALLOCATE_A(x)
+    SAFE_DEALLOCATE_A(xx)
     call pop_sub()
   end subroutine poisson_test
 

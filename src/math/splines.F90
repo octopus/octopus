@@ -24,7 +24,7 @@
 ! along with a series of procedures to manage them (to define them, to obtain
 ! its values, to operate on them, etc). The internal representation of the
 ! functions is done through cubic splines, handled by the GSL library. For
-! the user of the module, this internal representation is hidden, one just
+! the user of the module, this internal representation is hidden; one just
 ! works with what are called hereafter "spline functions".
 !
 ! WARNINGS:
@@ -157,14 +157,14 @@
 !
 ! [9] FOURIER TRANSFORM:
 !     If a spline function f is representing the radial part of a spherically
-!     symmetric fuction F(\vec{r}), its Fourier transform is:
+!     symmetric function F(\vec{r}), its Fourier transform is:
 !       F(\vec{g}) = f(g) = \frac{4\pi}{g} \int_{0}^{\infty} { r*sin(g*r)*f(r) }
 !     It is assumed that f is defined in some interval [0,rmax], and that it is
 !     null at rmax and beyond. One may obtain f(g) by using spline_3dft.
 !     The result is placed on the spline data type splw. This has to be initialized,
 !     and may or may not be filled. If it is filled, the abscissas that it has
 !     are used to define the function. If it is not filled, an equally spaced
-!     grid is constructed to define the faction, in the interval [0, gmax], where
+!     grid is constructed to define the function, in the interval [0, gmax], where
 !     gmax has to be supplied by the caller.
 !
 !     Interface:
@@ -189,7 +189,7 @@
 !
 ! [13] PRINTING A FUNCTION:
 !     It prints to a file the (x,y) values that were used to define a function.
-!     The file is pointed by its Fortran unit given by argument iunit.
+!     The file is pointed to by its Fortran unit given by argument iunit.
 !
 !     Interface:
 !     subroutine spline_print(spl, iunit)
@@ -197,7 +197,7 @@
 !       integer, intent(in) :: iunit
 !     end subroutine spline_print
 !
-! [14] DERIVATE A FUNCTION:
+! [14] DIFFERENTIATE A FUNCTION:
 !
 !----------------------------------------------------------------------------*/!
 module splines_m
@@ -209,7 +209,7 @@ module splines_m
 
   implicit none
 
-  ! Define the which routines can be seen from the outside
+  ! Define which routines can be seen from the outside.
   private
   public ::               &
     spline_t,        & ! [*]
@@ -238,7 +238,7 @@ module splines_m
     type(c_ptr) :: spl, acc
   end type spline_t
 
-  ! Both the filling of the fuction, and the retrieval of the values
+  ! Both the filling of the function, and the retrieval of the values
   ! may be done using single or double precision values.
   interface spline_fit
     module procedure spline_fit4
@@ -279,7 +279,7 @@ module splines_m
     module procedure spline_print_2
   end interface
 
-  ! These are interfaces to functions defined in oct_gsl_f.c, which  in turn
+  ! These are interfaces to functions defined in oct_gsl_f.c, which in turn
   ! take care of calling the GSL library.
   interface
     subroutine oct_spline_end(spl, acc)

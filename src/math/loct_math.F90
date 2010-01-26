@@ -22,7 +22,7 @@
 module loct_math_m
   implicit none
 
-  ! Define the which routines can be seen from the outside
+  ! Define which routines can be seen from the outside.
   private
   public ::                  &
     loct_gamma,              &

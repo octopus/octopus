@@ -584,11 +584,11 @@ contains
     ! ---------------------------------------------------------
     ! Applies the delta-function electric field E(t) = E_0 delta(t)
     ! where E_0 = - k \hbar / e
-    subroutine apply_delta_field(k)
-      type(kick_t), intent(in) :: k
-      integer :: j, iatom
+    subroutine apply_delta_field(kick)
+      type(kick_t), intent(in) :: kick
+      integer :: jj, iatom
       integer :: ik, ist, idim, ip
-      CMPLX   :: c(2), kick
+      CMPLX   :: cc(2), kick_value
       FLOAT   :: ylm, rr
       FLOAT   :: xx(MAX_DIM)
       CMPLX, allocatable :: kick_function(:)
@@ -597,20 +597,20 @@ contains
 
       ! The wavefunctions at time delta t read
       ! psi(delta t) = psi(t) exp(i k x)
-      delta_strength: if(k%delta_strength .ne. M_ZERO) then
+      delta_strength: if(kick%delta_strength .ne. M_ZERO) then
 
         SAFE_ALLOCATE(kick_function(1:gr%mesh%np))
-        if(sum(k%qvector(:)**2).gt.1.0e-6) then ! q-vector is set
+        if(sum(kick%qvector(:)**2).gt.1.0e-6) then ! q-vector is set
 
-          select case (k%qkick_mode)
+          select case (kick%qkick_mode)
             case (QKICKMODE_COS)
-              write(message(1), '(a,3F9.6,a)') 'Info: Using cos(q.r) field with q = (', k%qvector(:), ')'
+              write(message(1), '(a,3F9.6,a)') 'Info: Using cos(q.r) field with q = (', kick%qvector(:), ')'
             case (QKICKMODE_SIN)
-              write(message(1), '(a,3F9.6,a)') 'Info: Using sin(q.r) field with q = (', k%qvector(:), ')'
+              write(message(1), '(a,3F9.6,a)') 'Info: Using sin(q.r) field with q = (', kick%qvector(:), ')'
             case (QKICKMODE_SIN+QKICKMODE_COS)
-              write(message(1), '(a,3F9.6,a)') 'Info: Using sin(q.r)+cos(q.r) field with q = (', k%qvector(:), ')'
+              write(message(1), '(a,3F9.6,a)') 'Info: Using sin(q.r)+cos(q.r) field with q = (', kick%qvector(:), ')'
             case (QKICKMODE_EXP)
-              write(message(1), '(a,3F9.6,a)') 'Info: Using exp(iq.r) field with q = (', k%qvector(:), ')'
+              write(message(1), '(a,3F9.6,a)') 'Info: Using exp(iq.r) field with q = (', kick%qvector(:), ')'
             case default
               write(message(1), '(a,3F9.6,a)') 'Info: Unknown field type!'
           end select
@@ -618,38 +618,39 @@ contains
 
           kick_function = M_ZERO
           do ip = 1, gr%mesh%np
-            call mesh_r(gr%mesh, ip, rr, x = xx)
-            select case (k%qkick_mode)
+            call mesh_r(gr%mesh, ip, rr, coords = xx)
+            select case (kick%qkick_mode)
               case (QKICKMODE_COS)
-                kick_function(ip) = kick_function(ip) + cos(sum(k%qvector(:) * xx(:)));
+                kick_function(ip) = kick_function(ip) + cos(sum(kick%qvector(:) * xx(:)));
               case (QKICKMODE_SIN)
-                kick_function(ip) = kick_function(ip) + sin(sum(k%qvector(:) * xx(:)));
+                kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:) * xx(:)));
               case (QKICKMODE_SIN+QKICKMODE_COS)
-                kick_function(ip) = kick_function(ip) + sin(sum(k%qvector(:) * xx(:)));
+                kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:) * xx(:)));
               case (QKICKMODE_EXP)
-                kick_function(ip) = kick_function(ip) + exp(M_Zi * sum(k%qvector(:) * xx(:)));
+                kick_function(ip) = kick_function(ip) + exp(M_zI * sum(kick%qvector(:) * xx(:)));
             end select
           end do
 
         else
-          if(k%n_multipoles > 0) then
+          if(kick%n_multipoles > 0) then
             kick_function = M_ZERO
-            do j = 1, k%n_multipoles
+            do jj = 1, kick%n_multipoles
               do ip = 1, gr%mesh%np
-                call mesh_r(gr%mesh, ip, rr, x = xx)
-                call loct_ylm(1, xx(1), xx(2), xx(3), k%l(j), k%m(j), ylm)
-                kick_function(ip) = kick_function(ip) + k%weight(j)*(rr**k%l(j))*ylm 
+                call mesh_r(gr%mesh, ip, rr, coords = xx)
+                call loct_ylm(1, xx(1), xx(2), xx(3), kick%l(jj), kick%m(jj), ylm)
+                kick_function(ip) = kick_function(ip) + kick%weight(jj)*(rr**kick%l(jj))*ylm 
               end do
             end do
           else
             forall(ip = 1:gr%mesh%np)
-              kick_function(ip) = sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim)*k%pol(1:gr%mesh%sb%dim, k%pol_dir))
+              kick_function(ip) = sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim) * &
+                kick%pol(1:gr%mesh%sb%dim, kick%pol_dir))
             end forall
           end if
         end if
 
-        write(message(1),'(a,f11.6)')  'Info: Applying delta kick: k = ', k%delta_strength
-        select case (k%delta_strength_mode)
+        write(message(1),'(a,f11.6)')  'Info: Applying delta kick: k = ', kick%delta_strength
+        select case (kick%delta_strength_mode)
         case (KICK_DENSITY_MODE)
           message(2) = "Info: Delta kick mode: Density mode"
         case (KICK_SPIN_MODE)
@@ -659,40 +660,40 @@ contains
         end select
         call write_info(2)
 
-        select case (k%delta_strength_mode)
+        select case (kick%delta_strength_mode)
         case (KICK_DENSITY_MODE)
           forall(ik = st%d%kpt%start:st%d%kpt%end, ist = st%st_start:st%st_end, idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-            st%zpsi(ip, idim, ist, ik) = exp(M_zI*k%delta_strength*kick_function(ip))*st%zpsi(ip, idim, ist, ik) 
+            st%zpsi(ip, idim, ist, ik) = exp(M_zI*kick%delta_strength*kick_function(ip))*st%zpsi(ip, idim, ist, ik) 
           end forall
 
         case (KICK_SPIN_MODE)
           do ip = 1, gr%mesh%np
-            kick = M_zI * k%delta_strength * kick_function(ip)
+            kick_value = M_zI * kick%delta_strength * kick_function(ip)
 
-            c(1) = exp(kick)
-            c(2) = exp(-kick)
+            cc(1) = exp(kick_value)
+            cc(2) = exp(-kick_value)
             select case (st%d%ispin)
             case (SPIN_POLARIZED)
 
               do ik = 1, st%d%nik, 2
-                st%zpsi(ip,:,:,ik)   = c(1) * st%zpsi(ip,:,:,ik)
-                st%zpsi(ip,:,:,ik+1) = c(2) * st%zpsi(ip,:,:,ik+1)
+                st%zpsi(ip,:,:,ik)   = cc(1) * st%zpsi(ip,:,:,ik)
+                st%zpsi(ip,:,:,ik+1) = cc(2) * st%zpsi(ip,:,:,ik+1)
               end do
             case (SPINORS)
-              st%zpsi(ip,1,:,:) = c(1) * st%zpsi(ip,1,:,:)
-              st%zpsi(ip,2,:,:) = c(2) * st%zpsi(ip,2,:,:)
+              st%zpsi(ip,1,:,:) = cc(1) * st%zpsi(ip,1,:,:)
+              st%zpsi(ip,2,:,:) = cc(2) * st%zpsi(ip,2,:,:)
             end select
           end do
         case (KICK_SPIN_DENSITY_MODE)
           do ip = 1, gr%mesh%np
-            c(1) = exp(M_TWO*kick)
+            cc(1) = exp(M_TWO*kick_value)
             select case (st%d%ispin)
             case (SPIN_POLARIZED)
               do ik = 1, st%d%nik, 2
-                st%zpsi(ip,:,:,ik) = c(1) * st%zpsi(ip,:,:,ik)
+                st%zpsi(ip,:,:,ik) = cc(1) * st%zpsi(ip,:,:,ik)
               end do
             case (SPINORS)
-              st%zpsi(ip,1,:,:) = c(1) * st%zpsi(ip,1,:,:)
+              st%zpsi(ip,1,:,:) = cc(1) * st%zpsi(ip,1,:,:)
             end select
           end do
         end select
@@ -700,10 +701,10 @@ contains
         ! The nuclear velocities will be changed by
         ! Delta v_z = ( Z*e*E_0 / M) = - ( Z*k*\hbar / M)
         ! where M and Z are the ionic mass and charge, respectively.
-        if(ion_dynamics_ions_move(td%ions)  .and. k%delta_strength .ne. M_ZERO) then
+        if(ion_dynamics_ions_move(td%ions)  .and. kick%delta_strength .ne. M_ZERO) then
           do iatom = 1, geo%natoms
             geo%atom(iatom)%v(1:gr%mesh%sb%dim) = geo%atom(iatom)%v(1:gr%mesh%sb%dim) + &
-              k%delta_strength * k%pol(1:gr%mesh%sb%dim, k%pol_dir) * &
+              kick%delta_strength * kick%pol(1:gr%mesh%sb%dim, kick%pol_dir) * &
               P_PROTON_CHARGE * species_zval(geo%atom(iatom)%spec) / &
               species_weight(geo%atom(iatom)%spec)
           end do

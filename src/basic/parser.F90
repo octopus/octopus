@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-! This module is only supposed to be used within this file
+! This module is only supposed to be used within this file.
 module block_t_m
   implicit none
   
@@ -42,7 +42,7 @@ module parser_m
 
   implicit none
 
-  ! Define the which routines can be seen from the outside
+  ! Define which routines can be seen from the outside.
   private
   public ::              &
     block_t,             &   ! This is defined in block_t_m above

@@ -49,7 +49,7 @@ contains
     type(mesh_t),   intent(in)  :: mesh
     type(states_t), intent(in)  :: st
     FLOAT,          intent(in)  :: rho(:,:) ! (np, st%d%nspin)
-    FLOAT,          intent(out) :: md(:,:)   ! (np, 3)
+    FLOAT,          intent(out) :: md(:,:)  ! (np, 3)
 
     call push_sub('states.magnetic_density')
 
@@ -96,15 +96,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine magnetic_local_moments(mesh, st, geo, rho, r, lmm)
+  subroutine magnetic_local_moments(mesh, st, geo, rho, rr, lmm)
     type(mesh_t),     intent(in)  :: mesh
     type(states_t),   intent(in)  :: st
     type(geometry_t), intent(in)  :: geo
     FLOAT,            intent(in)  :: rho(:,:)
-    FLOAT,            intent(in)  :: r
+    FLOAT,            intent(in)  :: rr
     FLOAT,            intent(out) :: lmm(MAX_DIM, geo%natoms)
 
-    integer :: ia, i
+    integer :: ia, ip
     FLOAT :: ri
     FLOAT, allocatable :: md(:, :), aux(:, :)
 
@@ -117,10 +117,10 @@ contains
     lmm = M_ZERO
     do ia = 1, geo%natoms
       aux = M_ZERO
-      do i = 1, mesh%np
-        call mesh_r(mesh, i, ri, a = geo%atom(ia)%x)
-        if (ri > r) cycle
-        aux(i, 1:MAX_DIM) = md(i, 1:MAX_DIM)
+      do ip = 1, mesh%np
+        call mesh_r(mesh, ip, ri, origin = geo%atom(ia)%x)
+        if (ri > rr) cycle
+        aux(ip, 1:MAX_DIM) = md(ip, 1:MAX_DIM)
       end do
       lmm(1, ia) = dmf_integrate(mesh, aux(:, 1))
       lmm(2, ia) = dmf_integrate(mesh, aux(:, 2))
@@ -134,15 +134,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine calc_physical_current(der, st, j)
+  subroutine calc_physical_current(der, st, jj)
     type(derivatives_t),  intent(in)    :: der
     type(states_t),       intent(inout) :: st
-    FLOAT,                intent(out)   :: j(:,:,:)
+    FLOAT,                intent(out)   :: jj(:,:,:)
 
     call push_sub('magnetic.calc_physical_current')
 
     ! Paramagnetic contribution to the physical current
-    call states_calc_tau_jp_gn(der, st, jp = j)
+    call states_calc_tau_jp_gn(der, st, jp = jj)
 
     ! \todo
     ! Diamagnetic contribution to the physical current
@@ -152,17 +152,19 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! This soubroutine receives as input a current, and produces
+  ! This subroutine receives as input a current, and produces
   ! as an output the vector potential that it induces.
   ! WARNING: There is probably a problem for 2D. For 1D none of this makes sense?
   subroutine magnetic_induced(der, st, a_ind, b_ind)
     type(derivatives_t),  intent(in)    :: der
     type(states_t),       intent(inout) :: st
-    FLOAT,                intent(out)   :: a_ind(:, :) ! a(gr%mesh%np_part, gr%mesh%sb%dim)
-    FLOAT,                intent(out)   :: b_ind(:, :) ! b(gr%mesh%np_part, gr%mesh%sb%dim) if gr%mesh%sb%dim=3, b(gr%mesh%np_part, 1) if gr%mesh%sb%dim=2
+    FLOAT,                intent(out)   :: a_ind(:, :) ! a_ind(gr%mesh%np_part, gr%mesh%sb%dim)
+    FLOAT,                intent(out)   :: b_ind(:, :)
+    ! if gr%mesh%sb%dim=3, b_ind(gr%mesh%np_part, gr%mesh%sb%dim)
+    ! if gr%mesh%sb%dim=2, b_ind(gr%mesh%np_part, 1)
 
-    integer :: i
-    FLOAT, allocatable :: j(:, :, :)
+    integer :: idir
+    FLOAT, allocatable :: jj(:, :, :)
 
     call push_sub('magnetic.magnetic_induced')
 
@@ -174,21 +176,21 @@ contains
       call pop_sub(); return
     end if
 
-    SAFE_ALLOCATE(j(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin))
-    call states_calc_tau_jp_gn(der, st, jp = j)
+    SAFE_ALLOCATE(jj(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin))
+    call states_calc_tau_jp_gn(der, st, jp = jj)
 
     a_ind = M_ZERO
-    do i = 1, der%mesh%sb%dim
-      call dpoisson_solve(psolver, a_ind(:, i), j(:, i, 1))
+    do idir = 1, der%mesh%sb%dim
+      call dpoisson_solve(psolver, a_ind(:, idir), jj(:, idir, 1))
     end do
     ! This minus sign is introduced here because the current that has been used
-    ! before is the "number current density", and not the "charge current density",
+    ! before is the "number-current density", and not the "charge-current density",
     ! and therefore there is a minus sign missing (electrons are negative charges...)
     a_ind = - a_ind / P_C
 
     call dderivatives_curl(der, a_ind, b_ind)
 
-    SAFE_DEALLOCATE_A(j)
+    SAFE_DEALLOCATE_A(jj)
     call pop_sub()
   end subroutine magnetic_induced
 

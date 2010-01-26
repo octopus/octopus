@@ -160,23 +160,23 @@ contains
 
   ! ---------------------------------------------------------
   !> finds the dimension of a box doubled in the non-periodic dimensions
-  subroutine mesh_double_box(sb, m, db)
+  subroutine mesh_double_box(sb, mesh, db)
     type(simul_box_t), intent(in)  :: sb
-    type(mesh_t),      intent(in)  :: m
+    type(mesh_t),      intent(in)  :: mesh
     integer,           intent(out) :: db(MAX_DIM)
     
-    integer :: i
+    integer :: idir
     
     call push_sub('mesh.mesh_double_box')
 
     db = 1
     
     ! double mesh with 2n points
-    do i = 1, sb%periodic_dim
-      db(i) = m%idx%ll(i)
+    do idir = 1, sb%periodic_dim
+      db(idir) = mesh%idx%ll(idir)
     end do
-    do i = sb%periodic_dim + 1, sb%dim
-      db(i) = nint(sb%fft_alpha*(m%idx%ll(i)-1)) + 1
+    do idir = sb%periodic_dim + 1, sb%dim
+      db(idir) = nint(sb%fft_alpha*(mesh%idx%ll(idir)-1)) + 1
     end do
     
     call pop_sub()
@@ -184,8 +184,8 @@ contains
   
   
   ! ---------------------------------------------------------
-  subroutine mesh_write_info(m, unit)
-    type(mesh_t), intent(in) :: m
+  subroutine mesh_write_info(mesh, unit)
+    type(mesh_t), intent(in) :: mesh
     integer,      intent(in) :: unit
     
     integer :: ii
@@ -195,19 +195,19 @@ contains
     call push_sub('mesh.mesh_write_info')
     
     write(message(1),'(3a)') '  Spacing [', trim(units_abbrev(units_out%length)), '] = ('
-    do ii = 1, m%sb%dim
+    do ii = 1, mesh%sb%dim
       if(ii > 1) write(message(1), '(2a)') trim(message(1)), ','
-      write(message(1), '(a,f6.3)') trim(message(1)), units_from_atomic(units_out%length, m%spacing(ii))
+      write(message(1), '(a,f6.3)') trim(message(1)), units_from_atomic(units_out%length, mesh%spacing(ii))
     end do
     write(message(1), '(5a,f8.5)') trim(message(1)), ') ', &
-         '   volume/point [', trim(units_abbrev(units_out%length**m%sb%dim)), '] = ',      &
-         units_from_atomic(units_out%length**m%sb%dim, m%vol_pp(1))
+         '   volume/point [', trim(units_abbrev(units_out%length**mesh%sb%dim)), '] = ',      &
+         units_from_atomic(units_out%length**mesh%sb%dim, mesh%vol_pp(1))
     
-    write(message(2),'(a, i10)') '  # inner mesh = ', m%np_global
-    write(message(3),'(a, i10)') '  # total mesh = ', m%np_part_global
+    write(message(2),'(a, i10)') '  # inner mesh = ', mesh%np_global
+    write(message(3),'(a, i10)') '  # total mesh = ', mesh%np_part_global
     
     write(message(4),'(3a,f9.3,a)') '  Grid Cutoff [', trim(units_abbrev(units_out%energy)),'] = ', &
-      units_from_atomic(units_out%energy, M_PI**2/(M_TWO*maxval(m%spacing)**2))
+      units_from_atomic(units_out%energy, M_PI**2/(M_TWO*maxval(mesh%spacing)**2))
     call write_info(4, unit)
     
     call pop_sub()
@@ -215,22 +215,22 @@ contains
   
   
   ! ---------------------------------------------------------
-  subroutine mesh_r(m, i, r, a, x)
-    type(mesh_t), intent(in)  :: m
-    integer,      intent(in)  :: i
-    FLOAT,        intent(out) :: r
-    FLOAT,        intent(in),  optional :: a(:) ! a(sb%dim)
-    FLOAT,        intent(out), optional :: x(:) ! x(sb%dim)
-    
+  subroutine mesh_r(mesh, ip, rr, origin, coords)
+    type(mesh_t), intent(in)  :: mesh
+    integer,      intent(in)  :: ip
+    FLOAT,        intent(out) :: rr
+    FLOAT,        intent(in),  optional :: origin(:) ! origin(sb%dim)
+    FLOAT,        intent(out), optional :: coords(:) ! coords(sb%dim)
+   
     FLOAT :: xx(MAX_DIM)
     
-    xx(1:m%sb%dim) = m%x(i, 1:m%sb%dim)
-    if(present(a)) xx(1:m%sb%dim) = xx(1:m%sb%dim) - a(1:m%sb%dim)
-    r = sqrt(dot_product(xx(1:m%sb%dim), xx(1:m%sb%dim)))
+    xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
+    if(present(origin)) xx(1:mesh%sb%dim) = xx(1:mesh%sb%dim) - origin(1:mesh%sb%dim)
+    rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
     
-    if(present(x)) then
-      x(1:MAX_DIM) = M_ZERO
-      x(1:m%sb%dim) = xx(1:m%sb%dim)
+    if(present(coords)) then
+      coords(1:MAX_DIM) = M_ZERO
+      coords(1:mesh%sb%dim) = xx(1:mesh%sb%dim)
     end if
   end subroutine mesh_r
   
@@ -252,37 +252,37 @@ contains
   !!
   !! So, if n>0, the point is in the border.
   ! ----------------------------------------------------------------------
-  logical function mesh_inborder(m, geo, i, dist, width) result(is_on_border)
-    type(mesh_t), intent(in)  :: m
-    type(geometry_t),  intent(in) :: geo
-    integer,      intent(in)  :: i
-    FLOAT,        intent(in)  :: width
-    FLOAT,        intent(out) :: dist ! distance from border
+  logical function mesh_inborder(mesh, geo, ip, dist, width) result(is_on_border)
+    type(mesh_t),     intent(in)  :: mesh
+    type(geometry_t), intent(in)  :: geo
+    integer,          intent(in)  :: ip
+    FLOAT,            intent(in)  :: width
+    FLOAT,            intent(out) :: dist ! distance from border
     
-    integer :: j, l
-    FLOAT   :: x(MAX_DIM), r, dd, radius
+    integer :: iatom, jatom, idir
+    FLOAT   :: xx(MAX_DIM), rr, dd, radius
     
     is_on_border = .false.
     dist = M_ZERO
 
-    select case(m%sb%box_shape)
+    select case(mesh%sb%box_shape)
     case(SPHERE)
-      call mesh_r(m, i, r, x=x)
-      dd = r - (m%sb%rsize - width)
+      call mesh_r(mesh, ip, rr, coords=xx)
+      dd = rr - (mesh%sb%rsize - width)
       if(dd.gt.M_ZERO) then
         is_on_border = .true.
         dist = dd
       end if
 
     case(CYLINDER)
-      call mesh_r(m, i, r, x=x)
-      dd = sqrt(x(2)**2 + x(3)**2) - (m%sb%rsize - width)
+      call mesh_r(mesh, ip, rr, coords=xx)
+      dd = sqrt(xx(2)**2 + xx(3)**2) - (mesh%sb%rsize - width)
       if(dd.gt.M_ZERO) then
         is_on_border = .true.
         dist = dd
       end if
-      if(m%sb%periodic_dim == 0) then
-        dd = abs(x(1)) - (m%sb%xsize - width)
+      if(mesh%sb%periodic_dim == 0) then
+        dd = abs(xx(1)) - (mesh%sb%xsize - width)
         if(dd.gt.M_ZERO) then
           is_on_border = .true.
           dist = sqrt(dist*dist + dd*dd)
@@ -290,21 +290,21 @@ contains
       end if
 
     case(MINIMUM)
-      radius = m%sb%rsize
-      do j = 1, geo%natoms
-        call mesh_r(m, i, r, a=geo%atom(j)%x, x=x)
-        if(m%sb%rsize < M_ZERO) radius = species_def_rsize(geo%atom(j)%spec)
-        dd = r - (radius - width)
-	! check if the point is on the spherical shell of the j-th atom
-	if ((dd < M_ZERO) .or. (r > radius)) cycle
+      radius = mesh%sb%rsize
+      do iatom = 1, geo%natoms
+        call mesh_r(mesh, ip, rr, origin=geo%atom(iatom)%x, coords=xx)
+        if(mesh%sb%rsize < M_ZERO) radius = species_def_rsize(geo%atom(iatom)%spec)
+        dd = rr - (radius - width)
+	! check if the point is on the spherical shell of atom # iatom
+	if ((dd < M_ZERO) .or. (rr > radius)) cycle
  
         ! make sure that the point is not inside some other atomic sphere
         is_on_border = .true.
-        do l = 1, geo%natoms
-          if(l == j) cycle
-          call mesh_r(m, i, r, a=geo%atom(l)%x)
-          if(m%sb%rsize < M_ZERO) radius = species_def_rsize(geo%atom(l)%spec)
-          if(r < radius - width) then 
+        do jatom = 1, geo%natoms
+          if(jatom == iatom) cycle
+          call mesh_r(mesh, ip, rr, origin=geo%atom(jatom)%x)
+          if(mesh%sb%rsize < M_ZERO) radius = species_def_rsize(geo%atom(jatom)%spec)
+          if(rr < radius - width) then 
             is_on_border = .false.
             exit
           end if
@@ -314,9 +314,9 @@ contains
       end do
 
     case(PARALLELEPIPED, HYPERCUBE)
-      call mesh_r(m, i, r, x=x)
-      do j = m%sb%periodic_dim+1, m%sb%dim
-        dd = abs(x(j)) - (m%sb%lsize(j) - width)
+      call mesh_r(mesh, ip, rr, coords=xx)
+      do idir = mesh%sb%periodic_dim+1, mesh%sb%dim
+        dd = abs(xx(idir)) - (mesh%sb%lsize(idir) - width)
         if(dd.gt.M_ZERO) then
           is_on_border = .true.
           dist = dist + dd*dd
@@ -325,13 +325,12 @@ contains
       dist = sqrt(dist)
 
     case(BOX_IMAGE, BOX_USDEF)
-      message(1) = "Absorbing boundaries are not implemented for a user defined box"
+      message(1) = "Absorbing boundaries are not implemented for a user-defined box."
       call write_fatal(1)
 
     end select
     
-    ! This may happen if the point is in more than one border at the
-    ! same time
+    ! This may happen if the point is on more than one border at the same time.
     if(dist > width) dist = width
 
   end function mesh_inborder
@@ -350,8 +349,8 @@ contains
     FLOAT,        intent(out) :: dmin
     integer,      intent(out) :: rankmin
     
-    FLOAT :: d
-    integer :: imin, i
+    FLOAT :: dd
+    integer :: imin, ip
 #if defined(HAVE_MPI)
     FLOAT :: min_loc_in(2), min_loc_out(2)
 #endif
@@ -360,11 +359,11 @@ contains
     
     !find the point of the grid that is closer to the atom
     dmin = M_ZERO
-    do i = 1, mesh%np
-      d = sum((pos(1:mesh%sb%dim) - mesh%x(i, 1:mesh%sb%dim))**2)
-      if((d < dmin) .or. (i == 1)) then 
-        imin = i
-        dmin = d 
+    do ip = 1, mesh%np
+      dd = sum((pos(1:mesh%sb%dim) - mesh%x(ip, 1:mesh%sb%dim))**2)
+      if((dd < dmin) .or. (ip == 1)) then 
+        imin = ip
+        dmin = dd
       end if
     end do
     
@@ -419,13 +418,13 @@ contains
   
   ! --------------------------------------------------------------
   !> mesh_gcutoff returns the "natural" band limitation of the
-  !! grid m, in terms of the maximum G vector. For a cubic regular
-  !! grid of spacing h is M_PI/h.
+  !! grid mesh, in terms of the maximum G vector. For a cubic regular
+  !! grid, it is M_PI/spacing.
   ! --------------------------------------------------------------
-  FLOAT function mesh_gcutoff(m) result(gmax)
-    type(mesh_t), intent(in) :: m
+  FLOAT function mesh_gcutoff(mesh) result(gmax)
+    type(mesh_t), intent(in) :: mesh
 
-    gmax = M_PI/(maxval(m%spacing))
+    gmax = M_PI/(maxval(mesh%spacing))
   end function mesh_gcutoff
   
   
@@ -551,7 +550,7 @@ contains
     integer :: lb(MAX_DIM) !< Lower bound of indices.
     integer :: ub(MAX_DIM) !< Upper bound of indices.
 
-    integer :: ix, iy, iz, i
+    integer :: ix, iy, iz, ii
 
     call push_sub('mesh.mesh_subset_indices')
 
@@ -572,12 +571,12 @@ contains
     lb = min(from, to)
     ub = max(from, to)
 
-    i = 1
+    ii = 1
     do ix = lb(1), ub(1)
       do iy = lb(2), ub(2)
         do iz = lb(3), ub(3)
-          indices(i) = mesh%idx%Lxyz_inv(ix, iy, iz)
-          i          = i + 1
+          indices(ii) = mesh%idx%Lxyz_inv(ix, iy, iz)
+          ii         = ii + 1
         end do
       end do
     end do
@@ -587,20 +586,20 @@ contains
 
 
   ! --------------------------------------------------------------
-  !> Checks if the (x, y, z) indices of point are valid, i. e.
+  !> Checks if the (x, y, z) indices of point are valid, i.e.
   !! inside the dimensions of the simulation box.
   logical function index_valid(mesh, point)
     type(mesh_t), intent(in) :: mesh
     integer,      intent(in) :: point(MAX_DIM)
 
-    integer :: i
+    integer :: idir
     logical :: valid
 
     call push_sub('mesh.index_valid')
 
     valid = .true.
-    do i = 1, 3
-      if(point(i).lt.mesh%idx%nr(1, i).or.point(i).gt.mesh%idx%nr(2, i)) then
+    do idir = 1, mesh%sb%dim
+      if(point(idir).lt.mesh%idx%nr(1, idir).or.point(idir).gt.mesh%idx%nr(2, idir)) then
         valid = .false.
       end if
     end do
@@ -681,28 +680,31 @@ contains
   end subroutine mesh_end
   
   ! This function returns the point inside the grid corresponding to
-  ! a boundary point when PBC are used. In case the point does not
-  ! have a correspondance (i.e. other BC are used in that direction),
+  ! a boundary point when PBCs are used. In case the point does not
+  ! have a correspondence (i.e. other BCs are used in that direction),
   ! the same point is returned. Note that this function returns a
   ! global point number when parallelization in domains is used.
   
-  integer function mesh_periodic_point(m, ip) result(ipp)
-    type(mesh_t), intent(in)    :: m
+  integer function mesh_periodic_point(mesh, ip) result(ipp)
+    type(mesh_t), intent(in)    :: mesh
     integer,      intent(in)    :: ip
     
     integer :: ix(MAX_DIM), nr(2, MAX_DIM), idim
     
-    ix = m%idx%Lxyz(ip, :)
-    nr(1, :) = m%idx%nr(1, :) + m%idx%enlarge(:)
-    nr(2, :) = m%idx%nr(2, :) - m%idx%enlarge(:)
+    call push_sub('mesh.mesh_periodic_point')
+
+    ix = mesh%idx%Lxyz(ip, :)
+    nr(1, :) = mesh%idx%nr(1, :) + mesh%idx%enlarge(:)
+    nr(2, :) = mesh%idx%nr(2, :) - mesh%idx%enlarge(:)
     
-    do idim = 1, m%sb%periodic_dim
-      if(ix(idim) < nr(1, idim)) ix(idim) = ix(idim) + m%idx%ll(idim)
-      if(ix(idim) > nr(2, idim)) ix(idim) = ix(idim) - m%idx%ll(idim)
+    do idim = 1, mesh%sb%periodic_dim
+      if(ix(idim) < nr(1, idim)) ix(idim) = ix(idim) + mesh%idx%ll(idim)
+      if(ix(idim) > nr(2, idim)) ix(idim) = ix(idim) - mesh%idx%ll(idim)
     end do
     
-    ipp = m%idx%Lxyz_inv(ix(1), ix(2), ix(3))
+    ipp = mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3))
     
+    call pop_sub()
   end function mesh_periodic_point
   
   real(8) pure function mesh_global_memory(mesh) result(memory)
@@ -740,6 +742,8 @@ contains
     integer :: ix(1:MAX_DIM)
     logical :: force_
 
+    call push_sub('mesh.mesh_x_global')
+
     force_=.false.
     if (present(force)) force_=force
       
@@ -754,6 +758,7 @@ contains
       xx(1:MAX_DIM) = mesh%x(ip, 1:MAX_DIM)
     end if
 
+    call pop_sub()
   end function mesh_x_global
 
   logical pure function mesh_compact_boundaries(mesh) result(cb)

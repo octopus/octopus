@@ -800,7 +800,7 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole)
     do ll = 2, lmax
       do lm = -ll, ll
         do ip = 1, mesh%np
-          call mesh_r(mesh, ip, rr, x=xx)
+          call mesh_r(mesh, ip, rr, coords=xx)
           call loct_ylm(1, xx(1), xx(2), xx(3), ll, lm, ylm)
           ff2(ip) = ff(ip) * ylm * rr**ll
         end do

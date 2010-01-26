@@ -125,11 +125,11 @@ module opt_control_target_m
     FLOAT,            intent(in)    :: w0
     type(target_t),   intent(inout) :: target
 
-    integer           :: ierr, ip, ist, jst, j
-    type(block_t)         :: blk
-    FLOAT             :: x(MAX_DIM), r, psi_re, psi_im
-    CMPLX, allocatable :: rotation_matrix(:, :)
-    type(states_t)    :: tmp_st
+    integer             :: ierr, ip, ist, jst, jj
+    type(block_t)       :: blk
+    FLOAT               :: xx(MAX_DIM), rr, psi_re, psi_im
+    CMPLX, allocatable  :: rotation_matrix(:, :)
+    type(states_t)      :: tmp_st
     character(len=1024) :: expression
 
     call push_sub('target.target_init')
@@ -149,8 +149,8 @@ module opt_control_target_m
     !% objective is to populate the ground state as much as possible.
     !%Option oct_tg_excited 2
     !% The target operator is an "excited state". This means that the target operator
-    !% is a linear combination of Slater determinants, formed each one by swapping,
-    !% from the ground state Slater determinant, one occupied state by one excited
+    !% is a linear combination of Slater determinants, each one formed by replacing
+    !% in the ground-state Slater determinant one occupied state with one excited
     !% state (<i>i.e.</i> "single excitations"). The description of which excitations are
     !% used, and with which weights, should be given in a file called
     !% <tt>oct-excited-state-target</tt>. This is still in very preliminary, experimental
@@ -357,19 +357,19 @@ module opt_control_target_m
 
           call conv_to_C_string(expression)
           do ip = 1, gr%mesh%np
-            call mesh_r(gr%mesh, ip, r, x = x)
+            call mesh_r(gr%mesh, ip, rr, coords = xx)
             ! parse user-defined expression
-            call parse_expression(psi_re, psi_im, gr%sb%dim, x, r, M_ZERO, expression)
+            call parse_expression(psi_re, psi_im, gr%sb%dim, xx, rr, M_ZERO, expression)
             target%rho(ip) = psi_re
           end do
           ! Normalize
-          r = dmf_integrate(gr%mesh, target%rho)
-          target%rho = (-target%st%val_charge) * target%rho/r
+          rr = dmf_integrate(gr%mesh, target%rho)
+          target%rho = (-target%st%val_charge) * target%rho/rr
         end if
 
       else
         message(1) = 'If OCTTargetOperator = oct_tg_density, then you must give the shape'
-        message(2) = 'of this target in variable "OCTTargetDensity"'
+        message(2) = 'of this target in variable "OCTTargetDensity".'
         call write_fatal(2)
       end if
 
@@ -389,9 +389,9 @@ module opt_control_target_m
         call parse_string('OCTTargetLocal', "0", expression)
         call conv_to_C_string(expression)
         do ip = 1, gr%mesh%np
-          call mesh_r(gr%mesh, ip, r, x = x)
+          call mesh_r(gr%mesh, ip, rr, coords = xx)
           ! parse user-defined expression
-          call parse_expression(psi_re, psi_im, gr%sb%dim, x, r, M_ZERO, expression)
+          call parse_expression(psi_re, psi_im, gr%sb%dim, xx, rr, M_ZERO, expression)
           target%rho(ip) = psi_re
         end do
       else
@@ -409,7 +409,7 @@ module opt_control_target_m
         message(1) = 'If OCTTargetMode = oct_targetmode_td, you must suppy a OCTTDTarget block.'
         call write_fatal(1)
       end if
-      target%dt     = td%dt
+      target%dt = td%dt
       SAFE_ALLOCATE(target%td_fitness(0:td%max_iter))
       target%td_fitness = M_ZERO
 
@@ -455,13 +455,13 @@ module opt_control_target_m
           SAFE_ALLOCATE(    target%hhg_k(1:target%hhg_nks))
           SAFE_ALLOCATE(target%hhg_alpha(1:target%hhg_nks))
           SAFE_ALLOCATE(    target%hhg_a(1:target%hhg_nks))
-          do j = 1, target%hhg_nks
-            call parse_block_integer(blk, 0, j-1, target%hhg_k(j))
-            call parse_block_float(blk, 1, j-1, target%hhg_alpha(j))
-            call parse_block_float(blk, 2, j-1, target%hhg_a(j))
+          do jj = 1, target%hhg_nks
+            call parse_block_integer(blk, 0, jj-1, target%hhg_k(jj))
+            call parse_block_float(blk, 1, jj-1, target%hhg_alpha(jj))
+            call parse_block_float(blk, 2, jj-1, target%hhg_a(jj))
           end do
         else
-          message(1) = '"OCTOptimizeHarmonicSpectrum" has to be specified as block.'
+          message(1) = '"OCTOptimizeHarmonicSpectrum" has to be specified as a block.'
           call write_info(1)
           call input_error('OCTOptimizeHarmonicSpectrum')
         end if
@@ -638,18 +638,18 @@ module opt_control_target_m
 
 
   !----------------------------------------------------------
-  subroutine target_build_tdlocal(target, gr, t)
+  subroutine target_build_tdlocal(target, gr, tt)
     type(target_t), intent(inout) :: target
     type(grid_t),      intent(in) :: gr
-    FLOAT, intent(in)             :: t
-    integer :: i
-    FLOAT :: xx(MAX_DIM), r, re, im
+    FLOAT, intent(in)             :: tt
+    integer :: ip
+    FLOAT :: xx(MAX_DIM), rr, re, im
     call push_sub('target.target_build_tdlocal')
 
-    do i = 1, gr%mesh%np
-      call mesh_r(gr%mesh, i, r, x = xx)
-      call parse_expression(re, im, gr%sb%dim, xx, r, t, target%td_local_target)
-      target%rho(i) = re
+    do ip = 1, gr%mesh%np
+      call mesh_r(gr%mesh, ip, rr, coords = xx)
+      call parse_expression(re, im, gr%sb%dim, xx, rr, tt, target%td_local_target)
+      target%rho(ip) = re
     end do
 
     call pop_sub()
@@ -668,8 +668,8 @@ module opt_control_target_m
     type(grid_t),   intent(inout)   :: gr
     type(states_t), intent(inout)   :: psi
 
-    integer :: i, p, j, maxiter, ik
-    FLOAT :: omega, a, maxhh, w
+    integer :: ip, ist, iter, jj, maxiter, ik
+    FLOAT :: omega, aa, maxhh, ww
     FLOAT, allocatable :: local_function(:)
     CMPLX, allocatable :: ddipole(:)
     CMPLX, allocatable :: opsi(:, :)
@@ -681,8 +681,8 @@ module opt_control_target_m
     case(oct_tg_density)
 
       SAFE_ALLOCATE(local_function(1:gr%mesh%np))
-      do i = 1, gr%mesh%np
-        local_function(i) = - ( sqrt(psi%rho(i, 1)) - sqrt(target%rho(i)) )**2
+      do ip = 1, gr%mesh%np
+        local_function(ip) = - ( sqrt(psi%rho(ip, 1)) - sqrt(target%rho(ip)) )**2
       end do
       j1 = dmf_integrate(gr%mesh, local_function)
       SAFE_DEALLOCATE_A(local_function)
@@ -695,11 +695,11 @@ module opt_control_target_m
         SAFE_ALLOCATE(opsi(1:gr%mesh%np_part, 1:1))
         opsi = M_z0
         j1 = M_ZERO
-        do p  = psi%st_start, psi%st_end
-          do j = 1, gr%mesh%np
-            opsi(j, 1) = target%rho(j) * psi%zpsi(j, 1, p, 1)
+        do ist = psi%st_start, psi%st_end
+          do ip = 1, gr%mesh%np
+            opsi(ip, 1) = target%rho(ip) * psi%zpsi(ip, 1, ist, 1)
           end do
-          j1 = j1 + zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, p, 1), opsi(:, :))
+          j1 = j1 + zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, ist, 1), opsi(:, :))
         end do
         SAFE_DEALLOCATE_A(opsi)
       case(SPIN_POLARIZED); stop 'Error'
@@ -715,9 +715,9 @@ module opt_control_target_m
     case(oct_tg_exclude_state)
 
       j1 = M_ONE
-      do i = 1, target%excluded_states
+      do ist = 1, target%excluded_states
         j1 = j1 - abs(zmf_dotp(gr%mesh, psi%d%dim, &
-          target%st%zpsi(:, :, i, 1), psi%zpsi(:, :, 1, 1)))**2
+          target%st%zpsi(:, :, ist, 1), psi%zpsi(:, :, 1, 1)))**2
       end do
 
     case(oct_tg_hhg)
@@ -726,9 +726,9 @@ module opt_control_target_m
       SAFE_ALLOCATE(ddipole(0:maxiter))
 
       ddipole(0) = M_ZERO
-      do i = 1, maxiter - 1
-        ddipole(i) = (target%td_fitness(i-1)+target%td_fitness(i+1)- &
-                      M_TWO*target%td_fitness(i))/target%dt**2
+      do iter = 1, maxiter - 1
+        ddipole(iter) = (target%td_fitness(iter-1)+target%td_fitness(iter+1)- &
+                      M_TWO*target%td_fitness(iter))/target%dt**2
       end do
       call interpolate( target%dt*(/ -3, -2, -1 /),   &
                         ddipole(maxiter-3:maxiter-1), &
@@ -736,11 +736,11 @@ module opt_control_target_m
                         ddipole(maxiter) )
 
       call spectrum_hsfunction_init(target%dt, 0, maxiter, maxiter, ddipole)
-      do j = 1, target%hhg_nks
-        a = target%hhg_a(j) * target%hhg_w0
-        w = target%hhg_k(j)*target%hhg_w0
-        call spectrum_hsfunction_min(w -a, w +a, w, omega, maxhh)
-        j1 = j1 + target%hhg_alpha(j) * log(-maxhh)
+      do jj = 1, target%hhg_nks
+        aa = target%hhg_a(jj) * target%hhg_w0
+        ww = target%hhg_k(jj) * target%hhg_w0
+        call spectrum_hsfunction_min(ww - aa, ww + aa, ww, omega, maxhh)
+        j1 = j1 + target%hhg_alpha(jj) * log(-maxhh)
       end do
       call spectrum_hsfunction_end()
 
@@ -748,10 +748,10 @@ module opt_control_target_m
 
     case default
       do ik = 1, psi%d%nik
-        do p = psi%st_start, psi%st_end
-          j1 = j1 + psi%occ(p, ik) * &
-            abs(zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, p, ik), &
-              target%st%zpsi(:, :, p, ik)))**2
+        do ist = psi%st_start, psi%st_end
+          j1 = j1 + psi%occ(ist, ik) * &
+            abs(zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, ist, ik), &
+              target%st%zpsi(:, :, ist, ik)))**2
         end do
       end do
 

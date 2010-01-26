@@ -80,8 +80,8 @@ contains
     integer,           intent(in)    :: spin_channels
     FLOAT,             intent(inout) :: rho(:, :) ! (mesh%np, spin_channels)
 
-    integer :: isp, ip, in_points, n, icell
-    FLOAT :: r, x, pos(1:MAX_DIM)
+    integer :: isp, ip, in_points, nn, icell
+    FLOAT :: rr, x, pos(1:MAX_DIM)
     FLOAT :: psi1, psi2, xx(MAX_DIM), yy(MAX_DIM), rerho, imrho
     type(species_t), pointer :: spec
     type(ps_t), pointer :: ps
@@ -118,10 +118,10 @@ contains
       do icell = 1, periodic_copy_num(pp)
         yy = periodic_copy_position(pp, sb, icell)
         do ip = 1, mesh%np
-          call mesh_r(mesh, ip, r, x = xx, a = atom%x)
+          call mesh_r(mesh, ip, rr, origin = atom%x, coords = xx)
           xx(1:sb%dim) = xx(1:sb%dim) + yy(1:sb%dim)
-          r = sqrt(dot_product(xx(1:sb%dim), xx(1:sb%dim)))
-          call parse_expression(rerho, imrho, sb%dim, xx, r, M_ZERO, trim(species_rho_string(spec)))
+          rr = sqrt(dot_product(xx(1:sb%dim), xx(1:sb%dim)))
+          call parse_expression(rerho, imrho, sb%dim, xx, rr, M_ZERO, trim(species_rho_string(spec)))
           rho(ip, 1) = rho(ip, 1) + rerho
         end do
       end do
@@ -134,8 +134,8 @@ contains
     case (SPEC_POINT, SPEC_JELLI) ! ... from jellium
       in_points = 0
       do ip = 1, mesh%np
-        call mesh_r(mesh, ip, r, a=atom%x)
-        if(r <= species_jradius(spec)) then
+        call mesh_r(mesh, ip, rr, origin = atom%x)
+        if(rr <= species_jradius(spec)) then
           in_points = in_points + 1
         end if
       end do
@@ -152,16 +152,16 @@ contains
  
         if (mesh%use_curvilinear) then
           do ip = 1, mesh%np
-            call mesh_r(mesh, ip, r, a=atom%x)
-            if(r <= species_jradius(spec)) then
+            call mesh_r(mesh, ip, rr, origin = atom%x)
+            if(rr <= species_jradius(spec)) then
               rho(ip, 1:spin_channels) = species_zval(spec) /   &
                 (mesh%vol_pp(ip)*real(in_points*spin_channels, REAL_PRECISION))
             end if
           end do
         else
           do ip = 1, mesh%np
-            call mesh_r(mesh, ip, r, a=atom%x)
-            if(r <= species_jradius(spec)) then
+            call mesh_r(mesh, ip, rr, origin = atom%x)
+            if(rr <= species_jradius(spec)) then
               rho(ip, 1:spin_channels) = species_zval(spec) /   &
                 (mesh%vol_pp(1)*real(in_points*spin_channels, REAL_PRECISION))
             end if
@@ -180,18 +180,18 @@ contains
       do icell = 1, periodic_copy_num(pp)
         pos = periodic_copy_position(pp, sb, icell)
         do ip = 1, mesh%np
-          call mesh_r(mesh, ip, r, pos)
-          r = max(r, r_small)
-          do n = 1, ps%conf%p
+          call mesh_r(mesh, ip, rr, origin = pos)
+          rr = max(rr, r_small)
+          do nn = 1, ps%conf%p
             select case(spin_channels)
             case(1)
-              psi1 = spline_eval(ps%Ur(n, 1), r)
-              rho(ip, 1) = rho(ip, 1) + ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
+              psi1 = spline_eval(ps%Ur(nn, 1), rr)
+              rho(ip, 1) = rho(ip, 1) + ps%conf%occ(nn, 1)*psi1*psi1 /(M_FOUR*M_PI)
             case(2)
-              psi1 = spline_eval(ps%Ur(n, 1), r)
-              psi2 = spline_eval(ps%Ur(n, 2), r)
-              rho(ip, 1) = rho(ip, 1) + ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
-              rho(ip, 2) = rho(ip, 2) + ps%conf%occ(n, 2)*psi2*psi2 /(M_FOUR*M_PI)
+              psi1 = spline_eval(ps%Ur(nn, 1), rr)
+              psi2 = spline_eval(ps%Ur(nn, 2), rr)
+              rho(ip, 1) = rho(ip, 1) + ps%conf%occ(nn, 1)*psi1*psi1 /(M_FOUR*M_PI)
+              rho(ip, 2) = rho(ip, 2) + ps%conf%occ(nn, 2)*psi2*psi2 /(M_FOUR*M_PI)
             end select
           end do
         end do
@@ -220,7 +220,7 @@ contains
     integer :: ia, is, idir, gmd_opt
     integer, save :: iseed = 321
     type(block_t) :: blk
-    FLOAT :: r, rnd, phi, theta, mag(MAX_DIM), lmag, n1, n2
+    FLOAT :: rr, rnd, phi, theta, mag(MAX_DIM), lmag, n1, n2
     FLOAT, allocatable :: atom_rho(:,:)
 
     call push_sub('species_pot.guess_density')
@@ -421,22 +421,22 @@ contains
     end select
 
     ! we now renormalize the density (necessary if we have a charged system)
-    r = M_ZERO
+    rr = M_ZERO
     do is = 1, spin_channels
-      r = r + dmf_integrate(mesh, rho(:, is))
+      rr = rr + dmf_integrate(mesh, rho(:, is))
     end do
 
-    write(message(1),'(a,f13.6)')'Info: Unnormalized total charge = ', r
+    write(message(1),'(a,f13.6)')'Info: Unnormalized total charge = ', rr
     call write_info(1)
 
-    r = qtot/r
-    rho = r*rho
-    r = M_ZERO
+    rr = qtot / rr
+    rho = rr * rho
+    rr = M_ZERO
     do is = 1, spin_channels
-      r = r + dmf_integrate(mesh, rho(:, is))
+      rr = rr + dmf_integrate(mesh, rho(:, is))
     end do
 
-    write(message(1),'(a,f13.6)')'Info: Renormalized total charge = ', r
+    write(message(1),'(a,f13.6)')'Info: Renormalized total charge = ', rr
     call write_info(1)
 
     SAFE_DEALLOCATE_A(atom_rho)
@@ -457,7 +457,7 @@ contains
     logical :: conv
     integer :: dim
     FLOAT   :: x(1:MAX_DIM+1), chi0(MAX_DIM), startval(MAX_DIM + 1)
-    FLOAT   :: delta, alpha, beta, xx(MAX_DIM), yy(MAX_DIM), r, imrho, rerho
+    FLOAT   :: delta, alpha, beta, xx(MAX_DIM), yy(MAX_DIM), rr, imrho, rerho
     FLOAT   :: dist2, dist2_min
     integer :: icell, ipos, ip
     type(periodic_copy_t) :: pp
@@ -589,10 +589,10 @@ contains
       do icell = 1, periodic_copy_num(pp)
         yy = periodic_copy_position(pp, mesh%sb, icell)
         do ip = 1, mesh%np
-          call mesh_r(mesh, ip, r, x = xx, a = pos)
+          call mesh_r(mesh, ip, rr, origin = pos, coords = xx)
           xx(1:mesh%sb%dim) = xx(1:mesh%sb%dim) + yy(1:mesh%sb%dim)
-          r = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
-          call parse_expression(rerho, imrho, mesh%sb%dim, xx, r, M_ZERO, trim(species_rho_string(spec)))
+          rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
+          call parse_expression(rerho, imrho, mesh%sb%dim, xx, rr, M_ZERO, trim(species_rho_string(spec)))
           rho(ip) = rho(ip) - rerho
         end do
       end do

@@ -612,18 +612,18 @@ contains
     type(geometry_t), intent(in)    :: geo
 
     integer ip, ia
-    FLOAT :: r, rc
+    FLOAT :: rr, rc
 
     call push_sub('epot.epot_generate_classical')
 
     ep%Vclassical = M_ZERO
     do ia = 1, geo%ncatoms
       do ip = 1, mesh%np
-        call mesh_r(mesh, ip, r, a=geo%catom(ia)%x)
+        call mesh_r(mesh, ip, rr, origin=geo%catom(ia)%x)
         select case(ep%classical_pot)
         case(CLASSICAL_POINT)
-          if(r < r_small) r = r_small
-          ep%Vclassical(ip) = ep%Vclassical(ip) - geo%catom(ia)%charge/r
+          if(rr < r_small) rr = r_small
+          ep%Vclassical(ip) = ep%Vclassical(ip) - geo%catom(ia)%charge/rr
         case(CLASSICAL_GAUSSIAN)
           select case(geo%catom(ia)%label(1:1)) ! covalent radii
           case('H')
@@ -633,8 +633,8 @@ contains
           case default
             rc = CNST(0.7)*P_Ang
           end select
-          if(abs(r - rc) < r_small) r = rc + sign(r_small, r-rc)
-          ep%Vclassical(ip) = ep%Vclassical(ip) - geo%catom(ia)%charge*(r**4 - rc**4)/(r**5 - rc**5)
+          if(abs(rr - rc) < r_small) rr = rc + sign(r_small, rr - rc)
+          ep%Vclassical(ip) = ep%Vclassical(ip) - geo%catom(ia)%charge*(rr**4 - rc**4)/(rr**5 - rc**5)
         case default
           call input_error('ClassicalPotential')
         end select
