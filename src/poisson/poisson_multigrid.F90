@@ -70,14 +70,15 @@ module poisson_multigrid_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine poisson_multigrid_init(this, m, ml, thr)
+  subroutine poisson_multigrid_init(this, mesh, ml, thr)
     type(mg_solver_t), intent(inout) :: this
-    type(mesh_t),      intent(inout) :: m
+    type(mesh_t),      intent(inout) :: mesh
     integer,           intent(in)    :: ml
     FLOAT,             intent(in)    :: thr
 
     call push_sub('poisson_multigrid.poisson_multigrid_init')
-    call poisson_corrections_init(this%corrector, ml, m)
+
+    call poisson_corrections_init(this%corrector, ml, mesh)
 
     this%threshold = thr
 
@@ -141,7 +142,7 @@ contains
     !%Option gauss_jacobi2 3
     !% Alternative implementation of Gauss-Jacobi.
     !%End
-    if ( m%use_curvilinear ) then
+    if ( mesh%use_curvilinear ) then
       call parse_integer(datasets_check('PoissonSolverMGRelaxationMethod'), GAUSS_JACOBI, this%relaxation_method)
     else
       call parse_integer(datasets_check('PoissonSolverMGRelaxationMethod'), GAUSS_SEIDEL, this%relaxation_method)
@@ -300,42 +301,42 @@ contains
       type(derivatives_t), pointer :: base_der
 
       type(derivatives_t), pointer :: der
-      integer :: l, ip
+      integer :: level, ip
 
       call push_sub('poisson_multigrid.vcycle_fas')
 
       der => base_der
-      do l = fl, cl
-        ! der points to level l
-        if(l /= fl) phi%level(l)%p(1:der%mesh%np) = M_ZERO
+      do level = fl, cl
+        ! der points to level
+        if(level /= fl) phi%level(level)%p(1:der%mesh%np) = M_ZERO
 
         ! presmoothing
-        call multigrid_relax(this, der%mesh, der, phi%level(l)%p, tau%level(l)%p , this%presteps)
+        call multigrid_relax(this, der%mesh, der, phi%level(level)%p, tau%level(level)%p , this%presteps)
 
-        if (l /= cl ) then
+        if (level /= cl ) then
           ! error calculation
-          call dderivatives_lapl(der, phi%level(l)%p, err%level(l)%p)
-          forall(ip = 1:der%mesh%np) err%level(l)%p(ip) = tau%level(l)%p(ip) - err%level(l)%p(ip)
+          call dderivatives_lapl(der, phi%level(level)%p, err%level(level)%p)
+          forall(ip = 1:der%mesh%np) err%level(level)%p(ip) = tau%level(level)%p(ip) - err%level(level)%p(ip)
 
           ! transfer error as the source in the coarser grid
           call dmultigrid_fine2coarse(der%to_coarser, der, der%coarser%mesh, &
-            err%level(l)%p, tau%level(l+1)%p, this%restriction_method)
+            err%level(level)%p, tau%level(level+1)%p, this%restriction_method)
 
           der => der%coarser
         end if
       end do
 
-      do l = cl, fl, -1
+      do level = cl, fl, -1
         ! postsmoothing
-        call multigrid_relax(this, der%mesh, der, phi%level(l)%p, tau%level(l)%p, this%poststeps)
+        call multigrid_relax(this, der%mesh, der, phi%level(level)%p, tau%level(level)%p, this%poststeps)
 
-        if(l /= fl) then
+        if(level /= fl) then
           ! transfer correction to finer level
-          call dmultigrid_coarse2fine(der%to_finer, der, der%finer%mesh, phi%level(l)%p, err%level(l-1)%p)
+          call dmultigrid_coarse2fine(der%to_finer, der, der%finer%mesh, phi%level(level)%p, err%level(level-1)%p)
 
           np = der%finer%mesh%np
 
-          forall(ip = 1:np) phi%level(l - 1)%p(ip) = phi%level(l - 1)%p(ip) + err%level(l - 1)%p(ip)
+          forall(ip = 1:np) phi%level(level - 1)%p(ip) = phi%level(level - 1)%p(ip) + err%level(level - 1)%p(ip)
           der => der%finer
         end if
 
@@ -347,16 +348,16 @@ contains
   end subroutine poisson_multigrid_solver
 
   ! ---------------------------------------------------------
-  subroutine multigrid_relax(this, m, der, pot, rho, steps)
+  subroutine multigrid_relax(this, mesh, der, pot, rho, steps)
     type(mg_solver_t),   intent(in)    :: this
-    type(mesh_t),        intent(in)    :: m
+    type(mesh_t),        intent(in)    :: mesh
     type(derivatives_t), intent(inout) :: der
     FLOAT,               intent(inout) :: pot(:)
     FLOAT,               intent(in)    :: rho(:)
     integer,             intent(in)    :: steps
 
-    integer :: t
-    integer :: i, n
+    integer :: istep
+    integer :: ip, nn
     FLOAT   :: point_lap, factor
     FLOAT, allocatable :: lpot(:), ldiag(:)
     type(profile_t), save :: prof
@@ -370,39 +371,39 @@ contains
 
       factor = CNST(-1.0)/der%lapl%w_re(der%lapl%stencil%center, 1)*this%relax_factor
 
-      do t = 1, steps
+      do istep = 1, steps
 
         call dderivatives_set_bc(der, pot)
 
 #ifdef HAVE_MPI
-        if(m%parallel_in_domains) call dvec_ghost_update(m%vp, pot)
+        if(mesh%parallel_in_domains) call dvec_ghost_update(mesh%vp, pot)
 #endif
 
-        n = der%lapl%stencil%size
+        nn = der%lapl%stencil%size
 
         if(der%lapl%const_w) then
           call dgauss_seidel(der%lapl%stencil%size, der%lapl%w_re(1, 1), der%lapl%nri, &
             der%lapl%ri(1, 1), der%lapl%rimap_inv(1), der%lapl%rimap_inv(2),        &
             factor, pot(1), rho(1))
         else
-          do i = 1, m%np
-            point_lap = sum(der%lapl%w_re(1:n,i)*pot(der%lapl%i(1:n,i)))
-            pot(i) = pot(i) - CNST(0.7)/der%lapl%w_re(der%lapl%stencil%center,i)*(point_lap-rho(i))
+          do ip = 1, mesh%np
+            point_lap = sum(der%lapl%w_re(1:nn, ip)*pot(der%lapl%i(1:nn, ip)))
+            pot(ip) = pot(ip) - CNST(0.7)/der%lapl%w_re(der%lapl%stencil%center, ip)*(point_lap-rho(ip))
           end do
         end if
       end do
-      call profiling_count_operations(m%np*(steps + 1)*(2*n + 3))
+      call profiling_count_operations(mesh%np*(steps + 1)*(2*nn + 3))
 
     case(GAUSS_JACOBI)
 
-      SAFE_ALLOCATE( lpot(1:m%np))
-      SAFE_ALLOCATE(ldiag(1:m%np))
+      SAFE_ALLOCATE( lpot(1:mesh%np))
+      SAFE_ALLOCATE(ldiag(1:mesh%np))
 
       call derivatives_lapl_diag(der, ldiag)
 
-      do t = 1, steps
+      do istep = 1, steps
         call dderivatives_lapl(der, pot, lpot)
-        pot(1:m%np) = pot(1:m%np) - this%relax_factor/ldiag(1:m%np)*(lpot(1:m%np) - rho(1:m%np)) 
+        pot(1:mesh%np) = pot(1:mesh%np) - this%relax_factor/ldiag(1:mesh%np)*(lpot(1:mesh%np) - rho(1:mesh%np)) 
       end do
 
       SAFE_DEALLOCATE_A(ldiag)

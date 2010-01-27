@@ -17,7 +17,7 @@
 !!
 !! $Id: h.F90 4037 2008-04-03 13:30:00Z xavier $
 
-! Lead related routines for open boundaries.
+! Lead-related routines for open boundaries.
 
 #include "global.h"
 
@@ -52,7 +52,7 @@ module ob_lead_m
 contains
 
   ! ---------------------------------------------------------
-  ! Calculate the diagonal block matrix, i. e. the Hamiltonian for
+  ! Calculate the diagonal block matrix, i.e. the Hamiltonian for
   ! entries contained in the interface region.
   subroutine lead_diag(lapl, vks, intf, diag)
     type(nl_operator_t), intent(in)  :: lapl
@@ -60,7 +60,7 @@ contains
     type(interface_t),   intent(in)  :: intf
     CMPLX,               intent(out) :: diag(:, :)
 
-    integer :: i, k, n, k_stencil, intf_index
+    integer :: ip, kk, nn, k_stencil, intf_index
     FLOAT   :: w_re, w_im
 
     call push_sub('ob_lead.lead_diag')
@@ -68,31 +68,31 @@ contains
     diag = M_z0
 
     ! For all interface points...
-    do i = 1, intf%np_uc
-      n = intf%index(i)
+    do ip = 1, intf%np_uc
+      nn = intf%index(ip)
       ! ... find the points they are coupled to.
-      do k = 1, lapl%stencil%size
+      do kk = 1, lapl%stencil%size
         k_stencil = lapl%m%idx%Lxyz_inv(          &
-          lapl%m%idx%Lxyz(n,1)+lapl%stencil%points(1,k), &
-          lapl%m%idx%Lxyz(n,2)+lapl%stencil%points(2,k), &
-          lapl%m%idx%Lxyz(n,3)+lapl%stencil%points(3,k))
+          lapl%m%idx%Lxyz(nn,1)+lapl%stencil%points(1,kk), &
+          lapl%m%idx%Lxyz(nn,2)+lapl%stencil%points(2,kk), &
+          lapl%m%idx%Lxyz(nn,3)+lapl%stencil%points(3,kk))
         ! If the coupling point is in the interface...
         if(k_stencil.le.lapl%np.and. &
           member_of_interface(k_stencil, intf, intf_index)) then
           ! ... get the operator coefficients.
           if(lapl%cmplx_op) then
             if(lapl%const_w) then
-              w_re = lapl%w_re(k, 1)
-              w_im = lapl%w_im(k, 1)
+              w_re = lapl%w_re(kk, 1)
+              w_im = lapl%w_im(kk, 1)
             else
-              w_re = lapl%w_re(k, n)
-              w_im = lapl%w_im(k, n)
+              w_re = lapl%w_re(kk, nn)
+              w_im = lapl%w_im(kk, nn)
             end if
           else
             if(lapl%const_w) then
-              w_re = lapl%w_re(k, 1)
+              w_re = lapl%w_re(kk, 1)
             else
-              w_re = lapl%w_re(k, n)
+              w_re = lapl%w_re(kk, nn)
             end if
             w_im = M_ZERO
           end if
@@ -100,20 +100,20 @@ contains
           w_im = -w_im/M_TWO
           w_re = -w_re/M_TWO
           ! ... write them into the right entry of the diagonal block.
-          diag(i, intf_index) = TOCMPLX(w_re, w_im)
+          diag(ip, intf_index) = TOCMPLX(w_re, w_im)
         end if
       end do
     end do
 
     ! Add potential. FIXME: add vector potential (A^2)
-    forall(i = 1:intf%np_uc) diag(i, i) = diag(i, i) + vks(i)
+    forall(ip = 1:intf%np_uc) diag(ip, ip) = diag(ip, ip) + vks(ip)
 
     call pop_sub()
   end subroutine lead_diag
 
 
   ! ---------------------------------------------------------
-  ! Calculate the off-diagonal block matrix, i. e. the Hamiltonian for
+  ! Calculate the off-diagonal block matrix, i.e. the Hamiltonian for
   ! entries not contained in the interface region, which is the matrix
   ! V^T_\alpha or H_{C\alpha}.
   subroutine lead_offdiag(lapl, intf, offdiag)
@@ -122,7 +122,7 @@ contains
     CMPLX,               intent(out) :: offdiag(:, :)
 
     integer :: p_n(MAX_DIM), p_k(MAX_DIM), p_matr(MAX_DIM)
-    integer :: j, k, k_stencil, n, n_matr, dir, tdir, shift, intf_idx
+    integer :: jp, kk, k_stencil, nn, n_matr, dir, tdir, shift, intf_idx
     FLOAT   :: w_re, w_im
 
     call push_sub('ob_lead.lead_offdiag')
@@ -133,24 +133,24 @@ contains
 
     offdiag(:, :) = M_z0
 
-    ! j iterates over rows of the block matrix.
-    do j = 1, intf%np_uc
-      n = intf%index(j)
+    ! jp iterates over rows of the block matrix.
+    do jp = 1, intf%np_uc
+      nn = intf%index(jp)
       ! k iterates over all stencil points.
-      do k = 1, lapl%stencil%size
+      do kk = 1, lapl%stencil%size
         ! Get point number of coupling point.
         k_stencil = lapl%m%idx%Lxyz_inv(            &
-          lapl%m%idx%Lxyz(n, 1)+lapl%stencil%points(1, k), &
-          lapl%m%idx%Lxyz(n, 2)+lapl%stencil%points(2, k), &
-          lapl%m%idx%Lxyz(n, 3)+lapl%stencil%points(3, k))
+          lapl%m%idx%Lxyz(nn, 1)+lapl%stencil%points(1, kk), &
+          lapl%m%idx%Lxyz(nn, 2)+lapl%stencil%points(2, kk), &
+          lapl%m%idx%Lxyz(nn, 3)+lapl%stencil%points(3, kk))
 
-        ! Get coordinates of current interface point n and current stencil point k_stencil.
-        p_n = lapl%m%idx%Lxyz(n, :)
+        ! Get coordinates of current interface point nn and current stencil point k_stencil.
+        p_n = lapl%m%idx%Lxyz(nn, :)
         p_k = lapl%m%idx%Lxyz(k_stencil, :)
 
         ! Now, we shift the stencil by the size of one unit cell (intf%extent_uc)
         ! and check if the coupling point with point number n_matr is in the interface.
-        ! The sketch if for a 4x2 unit cell and a 5 point stencil in 2D:
+        ! The sketch is for a 4x2 unit cell and a 5-point stencil in 2D:
         !
         !    |       ||                     |       ||
         ! ...+---+---++---+---+...       ...+---+---++---+---+...
@@ -177,17 +177,17 @@ contains
           ! Multiply by the coefficient of the operator and sum up.
           if(lapl%cmplx_op) then
             if(lapl%const_w) then
-              w_re = lapl%w_re(k, 1)
-              w_im = lapl%w_im(k, 1)
+              w_re = lapl%w_re(kk, 1)
+              w_im = lapl%w_im(kk, 1)
             else
-              w_re = lapl%w_re(k, n)
-              w_im = lapl%w_im(k, n)
+              w_re = lapl%w_re(kk, nn)
+              w_im = lapl%w_im(kk, nn)
             end if
           else
             if(lapl%const_w) then
-              w_re = lapl%w_re(k, 1)
+              w_re = lapl%w_re(kk, 1)
             else
-              w_re = lapl%w_re(k, n)
+              w_re = lapl%w_re(kk, nn)
             end if
             w_im = M_ZERO
           end if
@@ -195,7 +195,7 @@ contains
           ! Calculation of the kinetic term: -1/2 prefactor.
           w_im = -w_im/M_TWO
           w_re = -w_re/M_TWO
-          offdiag(j, intf_idx) = TOCMPLX(w_re, w_im)
+          offdiag(jp, intf_idx) = TOCMPLX(w_re, w_im)
         end if
       end do
     end do
@@ -237,7 +237,7 @@ contains
     FLOAT,            intent(in)  :: tstep
 
     integer             :: it, il
-    FLOAT               :: t
+    FLOAT               :: tt
     FLOAT, allocatable  :: pot_im(:)
     character(len=1024) :: tmp_c_string
     
@@ -259,8 +259,8 @@ contains
       ! FIXME: if a better algorithm for the gs is implemented this should change.
       ! Then the initial bias also matters
 !      do it = 0, n_steps + 1
-        t = it*tstep
-        call parse_expression(td_pot(it, il), pot_im(it), 1, zero, zero(1), t, tmp_c_string)
+        tt = it*tstep
+        call parse_expression(td_pot(it, il), pot_im(it), 1, zero, zero(1), tt, tmp_c_string)
       end do
     end do
 
@@ -343,7 +343,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! resizes the lead unit cell according to the interface size
+  ! Resizes the lead unit cell according to the interface size.
   ! \todo if hamiltonian->lead is an allocatable array then pointers
   ! are the better choice instead of copying
   subroutine lead_resize(intf, lead, dim, nspin)
@@ -384,7 +384,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Is the lead potential translational invariant (in transport direction)?
+  ! Is the lead potential translationally invariant (in transport direction)?
   logical function is_lead_transl_inv(lapl, vks, intf)
     type(nl_operator_t), intent(in)  :: lapl
     FLOAT,               intent(in)  :: vks(:)
@@ -392,8 +392,8 @@ contains
 
     call push_sub('ob_lead.is_lead_transl_inv')
 
-    ! FIXME: for now every potential is translational invariant in transport direction
-    ! this should be tested and also be generalized to periodic potentials
+    ! FIXME: For now every potential is translationally invariant in transport direction.
+    ! This should be tested and also be generalized to periodic potentials.
     is_lead_transl_inv = .true.
 
     call pop_sub()

@@ -489,7 +489,7 @@ contains
       integer               :: irow, diag, offdiag
       character             :: channel
       character(len=256)    :: fname, fmt
-      type(mesh_t), pointer :: m
+      type(mesh_t), pointer :: mesh
       logical               :: t_inv
 
       call push_sub('hamiltonian.hamiltonian_init.init_lead_h')
@@ -497,11 +497,11 @@ contains
       ! Read potential of the leads. We try vks-x (for DFT without
       ! pseudopotentials) and v0 (for non-interacting electrons) in
       ! that order (Octopus binary and NetCDF format). If none of the
-      ! two can be found, a warning is emitted and zero potential
+      ! two can be found, a warning is written and zero potential
       ! assumed.
       do il = 1, NLEADS
         np = gr%intf(il)%np_uc
-        np_part =  gr%intf(il)%np_part_uc
+        np_part = gr%intf(il)%np_part_uc
         call lead_init_pot(hm%lead(il), np, np_part, hm%d%nspin)
         
         do ispin = 1, hm%d%nspin
@@ -567,10 +567,10 @@ contains
             call io_mkdir('debug/open_boundaries')
             fname = 'debug/open_boundaries/v_lead-'//trim(LEAD_NAME(il))//'-'//trim(channel)
             pot = io_open(trim(fname), action='write', is_tmp=.false., grp=gr%mesh%mpi_grp)
-            m => gr%mesh%lead_unit_cell(il)
-            do ix = m%idx%nr(1, 1)+m%idx%enlarge(1), m%idx%nr(2, 1)-m%idx%enlarge(1)
-              do iy = m%idx%nr(1, 2)+m%idx%enlarge(2), m%idx%nr(2, 2)-m%idx%enlarge(2)
-                write(pot, '(2i8,e24.16)') ix, iy, hm%lead(il)%vks(m%idx%Lxyz_inv(ix, iy, 0), ispin)
+            mesh => gr%mesh%lead_unit_cell(il)
+            do ix = mesh%idx%nr(1, 1)+mesh%idx%enlarge(1), mesh%idx%nr(2, 1)-mesh%idx%enlarge(1)
+              do iy = mesh%idx%nr(1, 2)+mesh%idx%enlarge(2), mesh%idx%nr(2, 2)-mesh%idx%enlarge(2)
+                write(pot, '(2i8,e24.16)') ix, iy, hm%lead(il)%vks(mesh%idx%Lxyz_inv(ix, iy, 0), ispin)
               end do
             end do
             call io_close(pot)
@@ -915,6 +915,8 @@ contains
     call pop_sub()
   end subroutine hamiltonian_not_adjoint
 
+
+  ! ---------------------------------------------------------
   subroutine hamiltonian_update_potential(this, mesh)
     type(hamiltonian_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
@@ -937,6 +939,8 @@ contains
     call pop_sub()
   end subroutine hamiltonian_update_potential
 
+
+  ! ---------------------------------------------------------
   subroutine hamiltonian_epot_generate(this, gr, geo, st, time)
     type(hamiltonian_t),   intent(inout) :: this
     type(grid_t), target,  intent(inout) :: gr

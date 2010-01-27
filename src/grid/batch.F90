@@ -65,11 +65,11 @@ module batch_m
     integer                        :: current
     integer                        :: dim
 
-    ! we also need a linear array with the states in order to calculate derivates, etc.
+    ! We also need a linear array with the states in order to calculate derivatives, etc.
     integer                        :: nst_linear
     type(batch_state_l_t), pointer :: states_linear(:)
 
-    ! if the memory is contiguous, we can perform some operations faster
+    ! If the memory is contiguous, we can perform some operations faster.
     FLOAT,               pointer   :: dpsicont(:, :, :)
     CMPLX,               pointer   :: zpsicont(:, :, :)
   end type batch_t

@@ -37,12 +37,12 @@ module poisson_isf_m
        poisson_isf_solve, & 
        poisson_isf_end
 
-  ! Datatype to store kernel values to solve poisson equation
+  ! Datatype to store kernel values to solve Poisson equation
   ! on different communicators (configurations).
   type isf_cnf_t
     real(8), pointer  :: kernel(:, :, :)
-    integer         :: nfft1, nfft2, nfft3
-    type(mpi_grp_t) :: mpi_grp
+    integer           :: nfft1, nfft2, nfft3
+    type(mpi_grp_t)   :: mpi_grp
   end type isf_cnf_t
 
   ! Indices for the cnf array
@@ -55,7 +55,7 @@ module poisson_isf_m
   type(isf_cnf_t)              :: cnf(1:3)
   integer, parameter           :: order_scaling_function = 8 
 
-  ! Interface to the poisson solver calls
+  ! Interface to the Poisson solver calls
   interface
 
     subroutine build_kernel(n01,n02,n03,nfft1,nfft2,nfft3,hgrid,itype_scf,karrayout)
@@ -160,8 +160,8 @@ contains
   end subroutine poisson_isf_init
 
   ! ---------------------------------------------------------
-  subroutine poisson_isf_solve(m, pot, rho, all_nodes)
-    type(mesh_t), intent(in)  :: m
+  subroutine poisson_isf_solve(mesh, pot, rho, all_nodes)
+    type(mesh_t), intent(in)  :: mesh
     FLOAT,        intent(out) :: pot(:)
     FLOAT,        intent(in)  :: rho(:)
     logical,      intent(in)  :: all_nodes
@@ -177,19 +177,19 @@ contains
 
     call dcf_alloc_RS(rho_cf)
 
-    if(m%parallel_in_domains) then
+    if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
-      SAFE_ALLOCATE(rho_global(1:m%np_global))
-      SAFE_ALLOCATE(pot_global(1:m%np_global))
+      SAFE_ALLOCATE(rho_global(1:mesh%np_global))
+      SAFE_ALLOCATE(pot_global(1:mesh%np_global))
 
       ! At this point, dvec_allgather is required because the ISF solver
       ! uses another data distribution algorithm than for the mesh functions
       ! for which every node requires the full data.
-      call dvec_allgather(m%vp, rho_global, rho)
-      call dmesh_to_cube(m, rho_global, rho_cf)
+      call dvec_allgather(mesh%vp, rho_global, rho)
+      call dmesh_to_cube(mesh, rho_global, rho_cf)
 #endif
     else
-      call dmesh_to_cube(m, rho, rho_cf)
+      call dmesh_to_cube(mesh, rho, rho_cf)
     end if
 
     ! Choose configuration.
@@ -198,7 +198,7 @@ contains
 #if defined(HAVE_MPI)
     if(all_nodes) then
       i_cnf = world
-    else if(m%parallel_in_domains) then
+    else if(mesh%parallel_in_domains) then
       i_cnf = domain
     end if
 #endif
@@ -218,7 +218,7 @@ contains
 
       call psolver_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),    &
         cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3, &
-        real(m%spacing(1), 8), cnf(serial)%kernel, rhop)
+        real(mesh%spacing(1), 8), cnf(serial)%kernel, rhop)
 
 #ifdef SINGLE_PRECISION
       rho_cf%RS = rhop
@@ -229,20 +229,20 @@ contains
     else
       call par_psolver_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), &
         cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, cnf(i_cnf)%nfft3,  &
-        real(m%spacing(1), 8), cnf(i_cnf)%kernel, rho_cf%RS,                      &
+        real(mesh%spacing(1), 8), cnf(i_cnf)%kernel, rho_cf%RS,                      &
         cnf(i_cnf)%mpi_grp%rank, cnf(i_cnf)%mpi_grp%size, cnf(i_cnf)%mpi_grp%comm)
 #endif
     endif
 
-    if(m%parallel_in_domains) then
+    if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
-      call dcube_to_mesh(m, rho_cf, pot_global)
-      call dvec_scatter(m%vp, m%vp%root, pot_global, pot)
+      call dcube_to_mesh(mesh, rho_cf, pot_global)
+      call dvec_scatter(mesh%vp, mesh%vp%root, pot_global, pot)
       SAFE_DEALLOCATE_A(rho_global)
       SAFE_DEALLOCATE_A(pot_global)
 #endif
     else
-      call dcube_to_mesh(m, rho_cf, pot)
+      call dcube_to_mesh(mesh, rho_cf, pot)
     end if
 
     call dcf_free_RS(rho_cf)

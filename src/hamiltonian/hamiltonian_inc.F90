@@ -644,9 +644,9 @@ end subroutine X(vnlpsi_batch)
 
 
 ! ---------------------------------------------------------
-subroutine X(vlpsi_batch) (hm, m, psib, hpsib, ik)
+subroutine X(vlpsi_batch) (hm, mesh, psib, hpsib, ik)
   type(hamiltonian_t), intent(in)    :: hm
-  type(mesh_t),        intent(in)    :: m
+  type(mesh_t),        intent(in)    :: mesh
   integer,             intent(in)    :: ik
   type(batch_t),       intent(in)    :: psib
   type(batch_t),       intent(inout) :: hpsib
@@ -660,7 +660,7 @@ subroutine X(vlpsi_batch) (hm, m, psib, hpsib, ik)
   select case(hm%d%ispin)
   case(UNPOLARIZED, SPIN_POLARIZED)
     ispin = states_dim_get_spin_index(hm%d, ik)
-    call X(em_field_apply_batch)(hm%total(ispin), m, psib, hpsib)
+    call X(em_field_apply_batch)(hm%total(ispin), mesh, psib, hpsib)
 
   case(SPINORS)
     !the spinor case is more complicated since it mixes the two components.
@@ -668,7 +668,7 @@ subroutine X(vlpsi_batch) (hm, m, psib, hpsib, ik)
       psi  => psib%states(ii)%X(psi)
       hpsi => hpsib%states(ii)%X(psi)
 
-      do ip = 1, m%np
+      do ip = 1, mesh%np
         hpsi(ip, 1) = (hm%vhxc(ip, 1) + hm%ep%vpsl(ip))*psi(ip, 1) + &
              (hm%vhxc(ip, 3) + M_zI*hm%vhxc(ip, 4))*psi(ip, 2)
         hpsi(ip, 2) = (hm%vhxc(ip, 2) + hm%ep%vpsl(ip))*psi(ip, 2) + &
@@ -676,7 +676,7 @@ subroutine X(vlpsi_batch) (hm, m, psib, hpsib, ik)
       end do
 
     end do
-    call profiling_count_operations((6*R_ADD + 2*R_MUL)*m%np*psib%nst)
+    call profiling_count_operations((6*R_ADD + 2*R_MUL)*mesh%np*psib%nst)
 
   end select
 

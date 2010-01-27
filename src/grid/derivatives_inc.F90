@@ -19,7 +19,7 @@
 
 ! This module calculates the derivatives (gradients, Laplacians, etc.) 
 ! of a function. Note that the function whose derivative is to be calculated
-! *has* to be defined (1:m%np_part), while the (1:m%np) values of the derivative
+! *has* to be defined (1:mesh%np_part), while the (1:mesh%np) values of the derivative
 ! are calculated. This was made to simplify the parallel mode, and has to be
 ! followed by the rest of the code.
 
@@ -305,8 +305,8 @@ end subroutine X(derivatives_batch_perform)
 subroutine X(derivatives_perform)(op, der, ff, op_ff, ghost_update, set_bc)
   type(nl_operator_t), target, intent(in)    :: op
   type(derivatives_t),         intent(in)    :: der
-  R_TYPE,                      intent(inout) :: ff(:)     ! ff(m%np_part)
-  R_TYPE,                      intent(out)   :: op_ff(:)  ! lapl(m%np)
+  R_TYPE,                      intent(inout) :: ff(:)     ! ff(der%mesh%np_part)
+  R_TYPE,                      intent(out)   :: op_ff(:)  ! lapl(der%mesh%np)
   logical, optional,           intent(in)    :: ghost_update
   logical, optional,           intent(in)    :: set_bc
 
@@ -333,8 +333,8 @@ end subroutine X(derivatives_perform)
 ! ---------------------------------------------------------
 subroutine X(derivatives_lapl)(der, ff, op_ff, ghost_update, set_bc)
   type(derivatives_t),       intent(in)    :: der
-  R_TYPE,                    intent(inout) :: ff(:)     ! f(m%np_part)
-  R_TYPE,                    intent(out)   :: op_ff(:)  ! lapl(m%np)
+  R_TYPE,                    intent(inout) :: ff(:)     ! f(der%mesh%np_part)
+  R_TYPE,                    intent(out)   :: op_ff(:)  ! lapl(der%mesh%np)
   logical, optional,         intent(in)    :: ghost_update
   logical, optional,         intent(in)    :: set_bc
 
@@ -349,8 +349,8 @@ end subroutine X(derivatives_lapl)
 ! ---------------------------------------------------------
 subroutine X(derivatives_grad)(der, ff, op_ff, ghost_update, set_bc)
   type(derivatives_t), intent(in)    :: der
-  R_TYPE,              intent(inout) :: ff(:)        ! f(mesh%np_part)
-  R_TYPE,              intent(out)   :: op_ff(:, :)  ! grad(mesh%np, mesh%sb%dim)
+  R_TYPE,              intent(inout) :: ff(:)        ! ff(der%mesh%np_part)
+  R_TYPE,              intent(out)   :: op_ff(:, :)  ! op_ff(der%mesh%np, der%mesh%sb%dim)
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: set_bc
 
@@ -382,8 +382,8 @@ end subroutine X(derivatives_grad)
 ! ---------------------------------------------------------
 subroutine X(derivatives_div)(der, ff, op_ff, ghost_update, set_bc)
   type(derivatives_t), intent(in)    :: der
-  R_TYPE,              intent(inout) :: ff(:,:)   ! f(m%np_part, m%sb%dim)
-  R_TYPE,              intent(out)   :: op_ff(:)  ! div(m%np)
+  R_TYPE,              intent(inout) :: ff(:,:)   ! ff(der%mesh%np_part, der%mesh%sb%dim)
+  R_TYPE,              intent(out)   :: op_ff(:)  ! op_ff(der%mesh%np)
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: set_bc
 
@@ -413,8 +413,10 @@ end subroutine X(derivatives_div)
 ! ---------------------------------------------------------
 subroutine X(derivatives_curl)(der, ff, op_ff, ghost_update, set_bc)
   type(derivatives_t), intent(in)    :: der
-  R_TYPE,              intent(inout) :: ff(:,:)    ! f(m%np_part, der%dim) 
-  R_TYPE,              intent(out)   :: op_ff(:,:) ! curl(m%np, der%dim) if dim = 2, curl(m%np, 1) if dim = 1.
+  R_TYPE,              intent(inout) :: ff(:,:)    ! ff(der%mesh%np_part, der%dim) 
+  R_TYPE,              intent(out)   :: op_ff(:,:)
+    ! if dim = 2, op_ff(der%mesh%np, der%dim)
+    ! if dim = 1, op_ff(der%mesh%np, 1)
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: set_bc
 
