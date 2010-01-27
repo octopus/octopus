@@ -229,8 +229,8 @@ contains
 
     ! The next seven entries come from the mesh.
     integer,         intent(in)  :: part(:)      !< Point -> partition.
-    integer,         intent(in)  :: np           !< m%np_global
-    integer,         intent(in)  :: np_part      !< m%np_part_global
+    integer,         intent(in)  :: np           !< mesh%np_global
+    integer,         intent(in)  :: np_part      !< mesh%np_part_global
     type(index_t),   intent(in)  :: idx
     type(stencil_t), intent(in)  :: stencil      !< The stencil for which to calculate ghost points.
     integer,         intent(in)  :: dim          !< Number of dimensions.
@@ -239,9 +239,9 @@ contains
     ! Careful: MPI counts node ranks from 0 to numproc-1.
     ! Partition numbers from METIS range from 1 to numproc.
     ! For this reason, all ranks are incremented by one.
-    integer                     :: npart                !< Number of partitions.
+    integer                     :: npart            !< Number of partitions.
     integer                     :: np_enl           !< Number of points in enlargement.
-    integer                     :: i, j, k, r       !< Counters.
+    integer                     :: ip, jp, jj, index, inode, jnode !< Counters.
     integer, allocatable        :: ir(:), irr(:, :) !< Counters.
     integer                     :: rank             !< Rank of current node.
     integer                     :: p1(MAX_DIM)      !< Points.
@@ -282,96 +282,96 @@ contains
     ! Count number of points for each node.
     ! Local points.
     vp%np_local = 0
-    do i = 1, np
-      vp%np_local(part(i)) = vp%np_local(part(i)) + 1
+    do ip = 1, np
+      vp%np_local(part(ip)) = vp%np_local(part(ip)) + 1
     end do
     ! Boundary points.
     vp%np_bndry = 0
-    do i = 1, np_enl
-      vp%np_bndry(part(i + np)) = vp%np_bndry(part(i + np)) + 1
+    do ip = 1, np_enl
+      vp%np_bndry(part(ip + np)) = vp%np_bndry(part(ip + np)) + 1
     end do
 
-    ! Set up local to global index table for local points
+    ! Set up local-to-global index table for local points
     ! (xlocal, local) and for boundary points (xbndry, bndry).
     vp%xlocal(1) = 1
     vp%xbndry(1) = 1
-    do r = 2, npart
-      vp%xlocal(r) = vp%xlocal(r - 1) + vp%np_local(r - 1)
-      vp%xbndry(r) = vp%xbndry(r - 1) + vp%np_bndry(r - 1)
+    do inode = 2, npart
+      vp%xlocal(inode) = vp%xlocal(inode - 1) + vp%np_local(inode - 1)
+      vp%xbndry(inode) = vp%xbndry(inode - 1) + vp%np_bndry(inode - 1)
     end do
     ir = 0
-    do i = 1, np
-      vp%local(vp%xlocal(part(i)) + ir(part(i))) = i
-      ir(part(i))                                = ir(part(i)) + 1
+    do ip = 1, np
+      vp%local(vp%xlocal(part(ip)) + ir(part(ip))) = ip
+      ir(part(ip))                                 = ir(part(ip)) + 1
     end do
     ir = 0
-    do i = np+1, np+np_enl
-      vp%bndry(vp%xbndry(part(i)) + ir(part(i))) = i
-      ir(part(i))                                = ir(part(i)) + 1
+    do ip = np+1, np+np_enl
+      vp%bndry(vp%xbndry(part(ip)) + ir(part(ip))) = ip
+      ir(part(ip))                                 = ir(part(ip)) + 1
     end do
 
     ! Format of ghost:
     !
-    ! np_ghost_neigh, np_ghost, xghost_neigh, xghost are components of vp, the vp% is
-    ! ommited due to space constraints.
+    ! np_ghost_neigh, np_ghost, xghost_neigh, xghost are components of vp.
+    ! The vp% is omitted due to space constraints.
     !
-    ! The following figure shows, how ghost points of node r are put into ghost:
+    ! The following figure shows how ghost points of node "inode" are put into ghost:
     !
-    !  |<---------------------------------------np_ghost(r)----------------------------------->|
-    !  |                                                                                       |
-    !  |<-np_ghost_neigh(r,1)->|     |<-np_ghost_neigh(r,npart-1)->|<-np_ghost_neigh(r,npart)->|
-    !  |                       |     |                             |                           |
-    ! ------------------------------------------------------------------------------------------
-    !  |                       | ... |                             |                           |
-    ! ------------------------------------------------------------------------------------------
-    !  ^                             ^                             ^
-    !  |                             |                             |
-    !  xghost_neigh(r,1)             xghost_neigh(r,npart-1)       xghost_neigh(r,npart)
+    !  |<-------------------------------------------np_ghost(inode)--------------------------------------->|
+    !  |                                                                                                   |
+    !  |<-np_ghost_neigh(inode,1)->|     |<-np_ghost_neigh(inode,npart-1)->|<-np_ghost_neigh(inode,npart)->|
+    !  |                           |     |                                 |                               |
+    ! -------------------------------------------------------------------------------------------------------
+    !  |                           | ... |                                 |                               |
+    ! -------------------------------------------------------------------------------------------------------
+    !  ^                                 ^                                 ^
+    !  |                                 |                                 |
+    !  xghost_neigh(inode,1)             xghost_neigh(inode,npart-1)       xghost_neigh(inode,npart)
     !  |
-    !  xghost(r)
+    !  xghost(inode)
 
     ! Mark and count ghost points and neighbours
     ! (set vp%np_ghost_neigh, vp%np_ghost, ghost_flag).
-    do r = 1, npart
-      call iihash_init(ghost_flag(r), vp%np_local(r))
+    do inode = 1, npart
+      call iihash_init(ghost_flag(inode), vp%np_local(inode))
     end do
 
-    do j = 1, stencil%size
-      ASSERT(all(stencil%points(1:dim, j) <= idx%enlarge(1:dim)))
+    do jj = 1, stencil%size
+      ASSERT(all(stencil%points(1:dim, jj) <= idx%enlarge(1:dim)))
     end do
 
     vp%total          = 0
     vp%np_ghost_neigh = 0
     vp%np_ghost       = 0
     ! Check all nodes.
-    do r = 1, npart
+    do inode = 1, npart
       ! Check all points of this node.
-      do i = vp%xlocal(r), vp%xlocal(r)+ vp%np_local(r) - 1
+      do ip = vp%xlocal(inode), vp%xlocal(inode)+ vp%np_local(inode) - 1
         ! Get coordinates of current point.
-        call index_to_coords(idx, dim, vp%local(i), p1)
+        call index_to_coords(idx, dim, vp%local(ip), p1)
 
         ! For all points in stencil.
-        do j = 1, stencil%size
+        do jj = 1, stencil%size
           ! Get point number of possible ghost point.
-          k = index_from_coords(idx, dim, p1(:) + stencil%points(:, j))
-          ASSERT(k.ne.0)
-          ! If this index k does not belong to partition of node r,
-          ! then k is a ghost point for r with part(k) now being
-          ! a neighbour of r.
-          if(part(k).ne.r) then
+          index = index_from_coords(idx, dim, p1(:) + stencil%points(:, jj))
+          ASSERT(index.ne.0)
+          ! If this index does not belong to partition of node "inode",
+          ! then index is a ghost point for "inode" with part(index) now being
+          ! a neighbour of "inode".
+          if(part(index).ne.inode) then
             ! Only mark and count this ghost point, if it is not
             ! done yet. Otherwise, points would possibly be registered
             ! more than once.
-            tmp = iihash_lookup(ghost_flag(r), k, found)
+            tmp = iihash_lookup(ghost_flag(inode), index, found)
             if(.not.found) then
-              ! Mark point i as ghost point for r from part(k).
-              call iihash_insert(ghost_flag(r), k, part(k))
-              ! Increase number of ghost points of r from part(k).
-              vp%np_ghost_neigh(r, part(k)) = vp%np_ghost_neigh(r, part(k))+1
-              ! Increase total number of ghostpoints of r.
-              vp%np_ghost(r)                  = vp%np_ghost(r) + 1
+              ! Mark point ip as ghost point for inode from part(index).
+              call iihash_insert(ghost_flag(inode), index, part(index))
+              ! Increase number of ghost points of inode from part(index).
+              vp%np_ghost_neigh(inode, part(index)) = vp%np_ghost_neigh(inode, part(index))+1
+              ! Increase total number of ghostpoints of inode.
+              vp%np_ghost(inode)                    = vp%np_ghost(inode) + 1
               ! One more ghost point.
-              vp%total                        = vp%total + 1
+              vp%total                              = vp%total + 1
             end if
           end if
         end do
@@ -380,13 +380,13 @@ contains
 
     ! Set index tables xghost and xghost_neigh.
     vp%xghost(1) = 1
-    do r = 2, npart
-      vp%xghost(r) = vp%xghost(r - 1) + vp%np_ghost(r - 1)
+    do inode = 2, npart
+      vp%xghost(inode) = vp%xghost(inode - 1) + vp%np_ghost(inode - 1)
     end do
-    do r = 1, npart
-      vp%xghost_neigh(r, 1) = vp%xghost(r)
-      do j = 2, npart
-        vp%xghost_neigh(r, j) = vp%xghost_neigh(r, j - 1) + vp%np_ghost_neigh(r, j - 1)
+    do inode = 1, npart
+      vp%xghost_neigh(inode, 1) = vp%xghost(inode)
+      do jnode = 2, npart
+        vp%xghost_neigh(inode, jnode) = vp%xghost_neigh(inode, jnode - 1) + vp%np_ghost_neigh(inode, jnode - 1)
       end do
     end do
 
@@ -395,14 +395,14 @@ contains
 
     ! Fill ghost as described above.
     irr = 0
-    do i = 1, np+np_enl
-      do r = 1, npart
-        j = iihash_lookup(ghost_flag(r), i, found)
-        ! If point i is a ghost point for r from j, save this
+    do ip = 1, np+np_enl
+      do inode = 1, npart
+        jnode = iihash_lookup(ghost_flag(inode), ip, found)
+        ! If point ip is a ghost point for inode from jnode, save this
         ! information.
         if(found) then
-          vp%ghost(vp%xghost_neigh(r, j) + irr(r, j)) = i
-          irr(r, j)                                   = irr(r, j) + 1
+          vp%ghost(vp%xghost_neigh(inode, jnode) + irr(inode, jnode)) = ip
+          irr(inode, jnode)                                           = irr(inode, jnode) + 1
         end if
       end do
     end do
@@ -413,34 +413,34 @@ contains
       ! debug/mesh_partition/ghost_points.###.
       if(mpi_grp_is_root(mpi_world)) then
         call io_mkdir('debug/mesh_partition')
-        do r = 1, npart
-          write(filenum, '(i3.3)') r
+        do inode = 1, npart
+          write(filenum, '(i3.3)') inode
           iunit = io_open('debug/mesh_partition/ghost_points.'//filenum, &
             action='write')
-          do i = 1, vp%np_ghost(r)
-            j = vp%ghost(vp%xghost(r) + i - 1)
-            write(iunit, '(4i8)') j, idx%Lxyz(j, :)
+          do ip = 1, vp%np_ghost(inode)
+            jp = vp%ghost(vp%xghost(inode) + ip - 1)
+            write(iunit, '(4i8)') jp, idx%Lxyz(jp, :)
           end do
           call io_close(iunit)
         end do
       end if
     end if
 
-    ! Set up the global to local point number mapping.
-    do r = 1, npart
+    ! Set up the global-to-local point number mapping.
+    do inode = 1, npart
       ! Create hash table.
-      call iihash_init(vp%global(r), vp%np_local(r) + vp%np_ghost(r) + vp%np_bndry(r))
+      call iihash_init(vp%global(inode), vp%np_local(inode) + vp%np_ghost(inode) + vp%np_bndry(inode))
       ! Insert local points.
-      do i = 1, vp%np_local(r)
-        call iihash_insert(vp%global(r), vp%local(vp%xlocal(r) + i - 1), i)
+      do ip = 1, vp%np_local(inode)
+        call iihash_insert(vp%global(inode), vp%local(vp%xlocal(inode) + ip - 1), ip)
       end do
       ! Insert ghost points.
-      do i = 1, vp%np_ghost(r)
-        call iihash_insert(vp%global(r), vp%ghost(vp%xghost(r) + i - 1), i + vp%np_local(r))
+      do ip = 1, vp%np_ghost(inode)
+        call iihash_insert(vp%global(inode), vp%ghost(vp%xghost(inode) + ip - 1), ip + vp%np_local(inode))
       end do
       ! Insert boundary points.
-      do i = 1, vp%np_bndry(r)
-        call iihash_insert(vp%global(r), vp%bndry(vp%xbndry(r) + i - 1), i + vp%np_local(r) + vp%np_ghost(r))
+      do ip = 1, vp%np_bndry(inode)
+        call iihash_insert(vp%global(inode), vp%bndry(vp%xbndry(inode) + ip - 1), ip + vp%np_local(inode) + vp%np_ghost(inode))
       end do
     end do
     
@@ -454,8 +454,8 @@ contains
 
     call init_send_points
 
-    do r = 1, npart
-      call iihash_end(ghost_flag(r))
+    do inode = 1, npart
+      call iihash_end(ghost_flag(inode))
     end do
 
     call pop_sub()
@@ -521,6 +521,7 @@ contains
   end subroutine vec_init
 
 
+  ! ---------------------------------------------------------
   !> Deallocate memory used by vp.
   subroutine vec_end(vp)
     type(pv_t), intent(inout) :: vp
@@ -559,6 +560,8 @@ contains
 
   end subroutine vec_end
 
+
+  ! ---------------------------------------------------------
   subroutine pv_handle_init(this, vp, comm_method)
     type(pv_handle_t), intent(out) :: this
     type(pv_t),        intent(in)  :: vp
@@ -582,6 +585,8 @@ contains
     call pop_sub()
   end subroutine pv_handle_init
 
+
+  ! ---------------------------------------------------------
   subroutine pv_handle_end(this)
     type(pv_handle_t), intent(inout) :: this
 
@@ -600,6 +605,8 @@ contains
     call pop_sub()
   end subroutine pv_handle_end
 
+
+  ! ---------------------------------------------------------
   subroutine pv_handle_test(this)
     type(pv_handle_t), intent(inout) :: this
     
@@ -616,6 +623,8 @@ contains
     call pop_sub()
   end subroutine pv_handle_test
 
+
+  ! ---------------------------------------------------------
   subroutine pv_handle_wait(this)
     type(pv_handle_t), intent(inout) :: this
 
@@ -641,23 +650,26 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> Returns local number of global point i on partition r.
+  !> Returns local number of global point ip on partition inode.
   !! If the result is zero, the point is neither a local nor a ghost
-  !! point on r.
-  integer function vec_global2local(vp, i, r)
+  !! point on inode.
+  integer function vec_global2local(vp, ip, inode)
     type(pv_t), intent(in) :: vp
-    integer,    intent(in) :: i
-    integer,    intent(in) :: r
+    integer,    intent(in) :: ip
+    integer,    intent(in) :: inode
 
-    integer :: n
+    integer :: nn
     logical :: found
+
+    call push_sub('par_vec.vec_global2local')
 
     vec_global2local = 0
     if(associated(vp%global)) then
-      n = iihash_lookup(vp%global(r), i, found)
-      if(found) vec_global2local = n
+      nn = iihash_lookup(vp%global(inode), inode, found)
+      if(found) vec_global2local = nn
     end if
 
+    call pop_sub()
   end function vec_global2local
 
 #include "undef.F90"

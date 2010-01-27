@@ -33,7 +33,7 @@ module logrid_m
     logrid_end,     &
     logrid_copy,    &
     logrid_index,   &
-    derivate_in_log_grid
+    derivative_in_log_grid
 
   integer, parameter, public :: &
     LOGRID_PSF  = 1, & !< log grid used in Troullier-Martins code
@@ -45,114 +45,126 @@ module logrid_m
     FLOAT    :: a, b
     integer  :: nrval
 
-    FLOAT, pointer :: rofi(:) !< r value of the point i
+    FLOAT, pointer :: rofi(:)  !< r value of the point i
     FLOAT, pointer :: r2ofi(:) !< r value of the point i
-    FLOAT, pointer :: drdi(:) !< jacobian, i.e., the derivative of r in terms of i
-    FLOAT, pointer :: s(:)    !< sqrt of drdi
+    FLOAT, pointer :: drdi(:)  !< Jacobian, i.e., the derivative of r in terms of i
+    FLOAT, pointer :: s(:)     !< sqrt of drdi
   end type logrid_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine logrid_init(g, flavor, a, b, nrval)
-    type(logrid_t), intent(out) :: g
+  subroutine logrid_init(grid, flavor, aa, bb, nrval)
+    type(logrid_t), intent(out) :: grid
     integer,        intent(in)  :: flavor
-    FLOAT,          intent(in)  :: a, b
+    FLOAT,          intent(in)  :: aa, bb
     integer,        intent(in)  :: nrval
 
     FLOAT :: rpb, ea
     integer  :: ir
 
+    call push_sub('logrid.logrid_init')
+
     ASSERT(flavor==LOGRID_PSF.or.flavor==LOGRID_CPI)
 
-    g%flavor = flavor
-    g%a = a; g%b = b; g%nrval = nrval
+    grid%flavor = flavor
+    grid%a = aa
+    grid%b = bb
+    grid%nrval = nrval
 
-    SAFE_ALLOCATE(g%rofi(1:nrval))
-    SAFE_ALLOCATE(g%r2ofi(1:nrval))
-    SAFE_ALLOCATE(g%drdi(1:nrval))
-    SAFE_ALLOCATE(g%s(1:nrval))
+    SAFE_ALLOCATE(grid%rofi(1:nrval))
+    SAFE_ALLOCATE(grid%r2ofi(1:nrval))
+    SAFE_ALLOCATE(grid%drdi(1:nrval))
+    SAFE_ALLOCATE(grid%s(1:nrval))
 
-    select case(g%flavor)
+    select case(grid%flavor)
     case(LOGRID_PSF)
-      rpb = b
-      ea  = exp(a)
+      rpb = bb
+      ea  = exp(aa)
       do ir = 1, nrval
-        g%drdi(ir) = a*rpb
-        rpb        = rpb*ea
-        g%rofi(ir) = b*(exp(a*(ir-1)) - M_ONE)
+        grid%drdi(ir) = aa*rpb
+        rpb           = rpb*ea
+        grid%rofi(ir) = bb*(exp(aa*(ir-1)) - M_ONE)
       end do
 
     case(LOGRID_CPI)
-      g%rofi(1) = M_ZERO
-      g%drdi(1) = M_ZERO
+      grid%rofi(1) = M_ZERO
+      grid%drdi(1) = M_ZERO
 
-      rpb = log(a)
-      g%rofi(2) = b
-      g%drdi(2) = b*rpb
-      do ir = 3, g%nrval
-        g%rofi(ir) = g%rofi(ir-1)*a
-        g%drdi(ir) = g%rofi(ir)*rpb
+      rpb = log(aa)
+      grid%rofi(2) = bb
+      grid%drdi(2) = bb*rpb
+      do ir = 3, grid%nrval
+        grid%rofi(ir) = grid%rofi(ir-1)*aa
+        grid%drdi(ir) = grid%rofi(ir)*rpb
       end do
     end select
 
     ! calculate sqrt(drdi)
-    do ir = 1, g%nrval
-      g%s(ir)    = sqrt(g%drdi(ir))
-      g%r2ofi(ir) = g%rofi(ir)**2
+    do ir = 1, grid%nrval
+      grid%s(ir)     = sqrt(grid%drdi(ir))
+      grid%r2ofi(ir) = grid%rofi(ir)**2
     end do
 
-
+    call pop_sub()
   end subroutine logrid_init
 
 
   ! ---------------------------------------------------------
-  subroutine logrid_end(g)
-    type(logrid_t), intent(inout) :: g
+  subroutine logrid_end(grid)
+    type(logrid_t), intent(inout) :: grid
 
-    SAFE_DEALLOCATE_P(g%rofi)
-    SAFE_DEALLOCATE_P(g%r2ofi)
-    SAFE_DEALLOCATE_P(g%drdi)
-    SAFE_DEALLOCATE_P(g%s)
+    call push_sub('logrid.logrid_end')
 
+    SAFE_DEALLOCATE_P(grid%rofi)
+    SAFE_DEALLOCATE_P(grid%r2ofi)
+    SAFE_DEALLOCATE_P(grid%drdi)
+    SAFE_DEALLOCATE_P(grid%s)
+
+    call pop_sub()
   end subroutine logrid_end
 
 
   ! ---------------------------------------------------------
-  subroutine logrid_copy(gi, g)
-    type(logrid_t), intent(in)  :: gi
-    type(logrid_t), intent(out) :: g
+  subroutine logrid_copy(grid_in, grid_out)
+    type(logrid_t), intent(in)  :: grid_in
+    type(logrid_t), intent(out) :: grid_out
 
-    g%flavor = gi%flavor
-    g%a      = gi%a
-    g%b      = gi%b
-    g%nrval  = gi%nrval
+    call push_sub('logrid.logrid_copy')
 
-    SAFE_ALLOCATE(g%rofi (1:g%nrval))
-    SAFE_ALLOCATE(g%r2ofi(1:g%nrval))
-    SAFE_ALLOCATE(g%drdi (1:g%nrval))
-    SAFE_ALLOCATE(g%s    (1:g%nrval))
+    grid_out%flavor = grid_in%flavor
+    grid_out%a      = grid_in%a
+    grid_out%b      = grid_in%b
+    grid_out%nrval  = grid_in%nrval
 
-    g%rofi(:)  = gi%rofi(:)
-    g%r2ofi(:) = gi%r2ofi(:)
-    g%drdi(:)  = gi%drdi(:)
-    g%s(:)     = gi%s(:)
+    SAFE_ALLOCATE(grid_out%rofi (1:grid_out%nrval))
+    SAFE_ALLOCATE(grid_out%r2ofi(1:grid_out%nrval))
+    SAFE_ALLOCATE(grid_out%drdi (1:grid_out%nrval))
+    SAFE_ALLOCATE(grid_out%s    (1:grid_out%nrval))
 
+    grid_out%rofi(:)  = grid_in%rofi(:)
+    grid_out%r2ofi(:) = grid_in%r2ofi(:)
+    grid_out%drdi(:)  = grid_in%drdi(:)
+    grid_out%s(:)     = grid_in%s(:)
+
+    call pop_sub()
   end subroutine logrid_copy
 
 
   ! ---------------------------------------------------------
-  integer function logrid_index(g, rofi) result(ii)
-    type(logrid_t), intent(in) :: g
+  integer function logrid_index(grid, rofi) result(ii)
+    type(logrid_t), intent(in) :: grid
     FLOAT,          intent(in) :: rofi
 
     integer :: ir
 
-    ii = 0
-    do ir = 1, g%nrval-1
+    call push_sub('logrid.logrid_index')
 
-      if(rofi >= g%rofi(ir).and.rofi < g%rofi(ir+1)) then
-        if(abs(rofi-g%rofi(ir)) < abs(rofi-g%rofi(ir+1))) then
+    ii = 0
+    do ir = 1, grid%nrval-1
+
+      if(rofi >= grid%rofi(ir).and.rofi < grid%rofi(ir+1)) then
+        if(abs(rofi-grid%rofi(ir)) < abs(rofi-grid%rofi(ir+1))) then
           ii = ir
         else
           ii = ir + 1
@@ -161,24 +173,29 @@ contains
       end if
 
     end do
+
+    call pop_sub()
   end function logrid_index
 
 
   ! ---------------------------------------------------------
-  subroutine derivate_in_log_grid(g, f, dfdr)
-    type(logrid_t), intent(in)   :: g
-    FLOAT,          intent(in)   :: f(:)
+  subroutine derivative_in_log_grid(grid, ff, dfdr)
+    type(logrid_t), intent(in)   :: grid
+    FLOAT,          intent(in)   :: ff(:)
     FLOAT,          intent(out)  :: dfdr(:)
 
-    integer :: i
+    integer :: ii
 
-    dfdr(1) = (f(2) - f(1))/(g%rofi(2) - g%rofi(1))
-    do i = 2, g%nrval-1
-      dfdr(i) = (f(i+1) - f(i-1))/(g%rofi(i+1) - g%rofi(i-1))
+    call push_sub('logrid.derivative_in_log_grid')
+
+    dfdr(1) = (ff(2) - ff(1))/(grid%rofi(2) - grid%rofi(1))
+    do ii = 2, grid%nrval-1
+      dfdr(ii) = (ff(ii+1) - ff(ii-1))/(grid%rofi(ii+1) - grid%rofi(ii-1))
     end do
-    dfdr(g%nrval) = (f(g%nrval) - f(g%nrval-1))/(g%rofi(g%nrval) - g%rofi(g%nrval-1))
+    dfdr(grid%nrval) = (ff(grid%nrval) - ff(grid%nrval-1))/(grid%rofi(grid%nrval) - grid%rofi(grid%nrval-1))
 
-  end subroutine derivate_in_log_grid
+    call pop_sub()
+  end subroutine derivative_in_log_grid
 
 end module logrid_m
 
