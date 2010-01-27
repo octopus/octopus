@@ -1261,7 +1261,7 @@ contains
     
     integer :: idir
     character(len=50) :: aux
-
+    FLOAT :: temp(1:MAX_DIM)
     
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
@@ -1301,12 +1301,25 @@ contains
 
     call write_iter_start(out_gauge)
 
-    call write_iter_double(out_gauge, units_from_atomic(units_out%energy, &
-      gauge_field_get_vec_pot(hm%ep%gfield)), gr%mesh%sb%dim)
-    call write_iter_double(out_gauge, units_from_atomic(units_out%energy / units_out%time, &
-      gauge_field_get_vec_pot_vel(hm%ep%gfield)), gr%mesh%sb%dim)
-    call write_iter_double(out_gauge, units_from_atomic(units_out%energy / units_out%time**2, &
-      gauge_field_get_vec_pot_acc(hm%ep%gfield)), gr%mesh%sb%dim)
+    ! this complicated stuff here is a workaround for a PGI compiler bug in versions before 9.0-3
+    temp = gauge_field_get_vec_pot(hm%ep%gfield)
+    forall(idir = 1:gr%mesh%sb%dim)
+      temp(idir) = units_from_atomic(units_out%energy, temp(idir))
+    end forall
+    call write_iter_double(out_gauge, temp, gr%mesh%sb%dim)
+
+    temp = gauge_field_get_vec_pot_vel(hm%ep%gfield)
+    forall(idir = 1:gr%mesh%sb%dim)
+      temp(idir) = units_from_atomic(units_out%energy / units_out%time, temp(idir))
+    end forall
+    call write_iter_double(out_gauge, temp, gr%mesh%sb%dim)
+
+    temp = gauge_field_get_vec_pot_acc(hm%ep%gfield)
+    forall(idir = 1:gr%mesh%sb%dim)
+      temp(idir) = units_from_atomic(units_out%energy / units_out%time**2, temp(idir))
+    end forall
+    call write_iter_double(out_gauge, temp, gr%mesh%sb%dim)
+
     call write_iter_nl(out_gauge)
     call pop_sub()
     
