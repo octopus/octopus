@@ -835,7 +835,8 @@ contains
     call oct_spline_end(spl%spl, spl%acc)
     do i = npoints, 1, -1
       if(x(i)<cutoff) then
-        call pop_sub(); exit
+        !call pop_sub(); ! MJV 1/2010: if this is really exit the loop, should not have a pop_sub
+        exit
       endif
       y(i) = y(i) * exp(-beta*(x(i)/cutoff - CNST(1.0))**2)
     end do

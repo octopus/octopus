@@ -379,6 +379,7 @@ contains
         mc%group_sizes = 1
         mc%group_sizes(P_STRATEGY_DOMAINS) = mc%topo%maxgsize
         mc%group_sizes(P_STRATEGY_STATES)  = mc%topo%ng
+        call pop_sub()
         return
       end if
 

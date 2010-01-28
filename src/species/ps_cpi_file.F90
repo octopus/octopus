@@ -135,6 +135,7 @@ contains
 
     ! WARNING: This should go away
     psf%vps(:,:) = psf%vps(:,:)*M_TWO ! convert to Rydbergs
+    call pop_sub()
   end subroutine ps_cpi_file_read
 
 

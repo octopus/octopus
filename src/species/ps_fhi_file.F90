@@ -88,6 +88,7 @@ contains
     read(unit, '(a3)') line
     read(unit, '(a3)') line
     
+    call pop_sub()
   end subroutine ps_fhi_file_read
 
 end module ps_fhi_file_m

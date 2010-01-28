@@ -236,7 +236,7 @@ contains
           is_real == fft_array(i)%is_real) then
           fft = fft_array(i)             ! return a copy
           fft_refs(i) = fft_refs(i) + 1  ! increment the ref count
-          return
+          call pop_sub(); return
         end if
       else
         j = i

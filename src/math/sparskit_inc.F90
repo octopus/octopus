@@ -215,7 +215,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   sk_work = M_ZERO
   sk_y    = M_ZERO
 
-  call pop_sub
+  call pop_sub()
 end subroutine X(sparskit_solver_init)
 
 

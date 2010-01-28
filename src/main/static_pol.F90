@@ -292,6 +292,7 @@ contains
       call parse_logical(datasets_check('EMCalcBornCharges'), .false., calc_Born)
       if (calc_Born) call messages_devel_version("Calculation of Born effective charges")
 
+      call pop_sub()
     end subroutine init_
 
     ! ---------------------------------------------------------

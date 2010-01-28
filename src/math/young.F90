@@ -98,7 +98,10 @@ module young_m
     integer :: idown, iup
     call push_sub('math.young_fill')
 
-    if (this%iyoung > this%nyoung) return
+    if (this%iyoung > this%nyoung) then
+      call pop_sub()
+      return
+    end if
 
     ! find next lower right hand corner, in the down spins
     do idown = this%ndown, 1, -1
@@ -119,7 +122,10 @@ module young_m
       end if
     end do
 
-    if (this%iyoung > this%nyoung) return
+    if (this%iyoung > this%nyoung) then
+      call pop_sub()
+      return
+    end if
 
     ! find next lower right hand corner, in the up spins
     do iup = this%nup, 1, -1
@@ -157,7 +163,10 @@ module young_m
       end if
     end do
 
-    if (this%iyoung > this%nyoung) return
+    if (this%iyoung > this%nyoung) then
+      call pop_sub()
+      return
+    end if
     
     call young_reset_1val (this, nn)
 

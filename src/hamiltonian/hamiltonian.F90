@@ -716,6 +716,7 @@ contains
         gr%mgrid%level(level)%mesh, hm%coarse_v%level(level - 1)%p, hm%coarse_v%level(level)%p, INJECTION)
     end do
 
+    call pop_sub()
   end subroutine hamiltonian_mg_init
 
   ! ---------------------------------------------------------

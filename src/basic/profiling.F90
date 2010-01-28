@@ -224,7 +224,10 @@ contains
     end if
 
     in_profiling_mode = (prof_vars%mode > 0)
-    if(.not.in_profiling_mode) return
+    if(.not.in_profiling_mode) then
+      call pop_sub()
+      return
+    end if
 
     call get_output_dir()
 
