@@ -19,14 +19,14 @@
 
 
 ! ---------------------------------------------------------
-! Orthogonalizes v against all the occupied states
+! Orthogonalizes vec against all the occupied states.
 ! For details on the metallic part, take a look at
-! de Gironcoli, PRB 51, 6773 (1995)
+! de Gironcoli, PRB 51, 6773 (1995).
 ! ---------------------------------------------------------
-subroutine X(lr_orth_vector) (m, st, v, ist, ik)
-  type(mesh_t),        intent(in)    :: m
+subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik)
+  type(mesh_t),        intent(in)    :: mesh
   type(states_t),      intent(in)    :: st
-  R_TYPE,              intent(inout) :: v(:,:)
+  R_TYPE,              intent(inout) :: vec(:,:)
   integer,             intent(in)    :: ist, ik
 
   integer :: jst
@@ -76,7 +76,7 @@ subroutine X(lr_orth_vector) (m, st, v, ist, ik)
     end do
   end if
 
-  call X(states_gram_schmidt)(m, st%nst, st%d%dim, st%X(psi)(:, :, :, ik), v(:, :), &
+  call X(states_gram_schmidt)(mesh, st%nst, st%d%dim, st%X(psi)(:, :, :, ik), vec(:, :), &
     Theta_Fi=Theta_Fi(ist), beta_ij=beta_ij)
 
   SAFE_DEALLOCATE_A(beta_ij)
@@ -88,15 +88,15 @@ end subroutine X(lr_orth_vector)
 
 
 ! --------------------------------------------------------------------
-subroutine X(lr_build_dl_rho) (m, st, lr, nsigma)
-  type(mesh_t),   intent(in)    :: m
+subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
+  type(mesh_t),   intent(in)    :: mesh
   type(states_t), intent(in)    :: st
   type(lr_t),     intent(inout) :: lr(:)
   integer,        intent(in)    :: nsigma
 
   integer :: ip, ist, ik, ik2, sp, isigma
-  CMPLX   :: c
-  R_TYPE  :: d
+  CMPLX   :: cc
+  R_TYPE  :: dd
 
   call push_sub('linear_response_inc.Xlr_build_dl_rho')
 
@@ -116,20 +116,20 @@ subroutine X(lr_build_dl_rho) (m, st, lr, nsigma)
   ! calculate density
   do ik = 1, st%d%nik, sp
     do ist  = st%st_start, st%st_end
-      do ip = 1, m%np
+      do ip = 1, mesh%np
 
         do ik2 = ik, ik+sp-1 ! this loop takes care of the SPIN_POLARIZED case
-          d = st%d%kweights(ik2) * st%smear%el_per_state
+          dd = st%d%kweights(ik2) * st%smear%el_per_state
 
           if(nsigma == 1) then  ! either omega purely real or purely imaginary
-            d = d * st%X(psi)(ip, 1, ist, ik2)*R_CONJ(lr(1)%X(dl_psi)(ip, 1, ist, ik2))
-            lr(1)%X(dl_rho)(ip, 1) = lr(1)%X(dl_rho)(ip, 1) + d + R_CONJ(d)
+            dd = dd * st%X(psi)(ip, 1, ist, ik2)*R_CONJ(lr(1)%X(dl_psi)(ip, 1, ist, ik2))
+            lr(1)%X(dl_rho)(ip, 1) = lr(1)%X(dl_rho)(ip, 1) + dd + R_CONJ(dd)
           else
-            c = d * (                                                             &
+            cc = dd * (                                                             &
               R_CONJ(st%X(psi)(ip, 1, ist, ik2))*lr(1)%X(dl_psi)(ip, 1, ist, ik2) + &
               st%X(psi)(ip, 1, ist, ik2)*R_CONJ(lr(2)%X(dl_psi)(ip, 1, ist, ik2)))
-            lr(1)%X(dl_rho)(ip, 1) = lr(1)%X(dl_rho)(ip, 1) + c
-            lr(2)%X(dl_rho)(ip, 1) = lr(2)%X(dl_rho)(ip, 1) + R_CONJ(c)
+            lr(1)%X(dl_rho)(ip, 1) = lr(1)%X(dl_rho)(ip, 1) + cc
+            lr(2)%X(dl_rho)(ip, 1) = lr(2)%X(dl_rho)(ip, 1) + R_CONJ(cc)
           end if
         end do
 
@@ -142,11 +142,11 @@ end subroutine X(lr_build_dl_rho)
 
 
 ! ---------------------------------------------------------
-! orthogonalizes response of \alpha KS orbital to all occupied
-! \alpha KS orbitals
+! Orthogonalizes response of \alpha KS orbital to all occupied
+! \alpha KS orbitals.
 ! ---------------------------------------------------------
-subroutine X(lr_orth_response)(m, st, lr)
-  type(mesh_t),   intent(in)    :: m
+subroutine X(lr_orth_response)(mesh, st, lr)
+  type(mesh_t),   intent(in)    :: mesh
   type(states_t), intent(in)    :: st
   type(lr_t),     intent(inout) :: lr
   
@@ -155,7 +155,7 @@ subroutine X(lr_orth_response)(m, st, lr)
   
   do ik = 1, st%d%nik
     do ist = 1, st%nst
-      call X(lr_orth_vector) (m, st, lr%X(dl_psi)(:,:, ist, ik), ist, ik)
+      call X(lr_orth_vector) (mesh, st, lr%X(dl_psi)(:,:, ist, ik), ist, ik)
     end do
   end do
   

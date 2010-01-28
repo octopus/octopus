@@ -19,12 +19,12 @@
 
 
 ! ---------------------------------------------------------
-! Orthonormalizes nst orbitals in mesh m (honours state
+! Orthonormalizes nst orbitals in mesh (honours state
 ! parallelization).
-subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi)
+subroutine X(states_gram_schmidt_full)(st, nst, mesh, dim, psi)
   type(states_t),    intent(in)    :: st
   integer,           intent(in)    :: nst, dim
-  type(mesh_t),      intent(in)    :: m
+  type(mesh_t),      intent(in)    :: mesh
   R_TYPE, target,    intent(inout) :: psi(:, :, st%st_start:)
 
   R_TYPE, allocatable :: ss(:, :), qq(:, :), psi_tmp(:, :, :)
@@ -40,7 +40,7 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi)
     wsize = st%d%window_size
     do st_start = 1, nst, wsize
       st_end = min(st_start + 2*wsize - 1, nst)
-      call X(states_gram_schmidt_block)(st, st_end - st_start + 1, m, dim, psi(:, :, st_start:))
+      call X(states_gram_schmidt_block)(st, st_end - st_start + 1, mesh, dim, psi(:, :, st_start:))
     end do
   else
 
@@ -48,7 +48,8 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi)
     SAFE_ALLOCATE(ss(1:nst, 1:nst))
     ss = M_ZERO
 
-    call states_blockt_mul(m, st, st%st_start, st%st_end, st%st_start, st%st_end, psi, psi, ss, symm = .true.)
+    call states_blockt_mul(mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
+      psi, psi, ss, symm = .true.)
   
     qq = M_ZERO
     do ist = 1, st%nst
@@ -77,15 +78,15 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi)
 
     end do
 
-    SAFE_ALLOCATE(psi_tmp(1:m%np_part, 1:dim, st%st_start:st%st_end))
+    SAFE_ALLOCATE(psi_tmp(1:mesh%np_part, 1:dim, st%st_start:st%st_end))
 
     do ist = st%st_start, st%st_end
       do idim = 1, dim
-        call lalg_copy(m%np, psi(:, idim, ist), psi_tmp(:, idim, ist))
+        call lalg_copy(mesh%np, psi(:, idim, ist), psi_tmp(:, idim, ist))
       end do
     end do
 
-    call states_block_matr_mul(m, st, st%st_start, st%st_end, st%st_start, st%st_end, psi_tmp, qq, psi)
+    call states_block_matr_mul(mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, psi_tmp, qq, psi)
 
     SAFE_DEALLOCATE_A(psi_tmp)
 
@@ -100,10 +101,10 @@ end subroutine X(states_gram_schmidt_full)
 
 
 ! ---------------------------------------------------------
-subroutine X(states_gram_schmidt_block)(st, nst, m, dim, psi)
+subroutine X(states_gram_schmidt_block)(st, nst, mesh, dim, psi)
   type(states_t),    intent(in)    :: st
   integer,           intent(in)    :: nst
-  type(mesh_t),      intent(in)    :: m
+  type(mesh_t),      intent(in)    :: mesh
   integer,           intent(in)    :: dim
   R_TYPE, target,    intent(inout) :: psi(:, :, :)
 
@@ -118,7 +119,7 @@ subroutine X(states_gram_schmidt_block)(st, nst, m, dim, psi)
   ss = M_ZERO
 
   call batch_init(psib, st%d%dim, 1, nst, psi)
-  call X(mesh_batch_dotp_self)(m, psib, ss)
+  call X(mesh_batch_dotp_self)(mesh, psib, ss)
   call batch_end(psib)
   
   bof = .false.
@@ -132,11 +133,11 @@ subroutine X(states_gram_schmidt_block)(st, nst, m, dim, psi)
   
   do idim = 1, st%d%dim
     ! multiply by the inverse of ss
-    call blas_trsm('R', 'U', 'N', 'N', m%np, nst, R_TOTYPE(M_ONE), ss(1, 1), nst, &
+    call blas_trsm('R', 'U', 'N', 'N', mesh%np, nst, R_TOTYPE(M_ONE), ss(1, 1), nst, &
       psi(1, idim, 1), ubound(psi, dim = 1)*st%d%dim)
   end do
 
-  call profiling_count_operations(dble(m%np)*dble(nst)**2*(R_ADD + R_MUL))
+  call profiling_count_operations(dble(mesh%np)*dble(nst)**2*(R_ADD + R_MUL))
 
   SAFE_DEALLOCATE_A(ss)
 
@@ -153,13 +154,13 @@ end subroutine X(states_gram_schmidt_block)
 ! If Theta_Fi and beta_ij are present, it performs the generalized orthogonalization
 !   (Theta_Fi - sum_j beta_ij |j><j|Phi>
 ! This is used in response for metals
-subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
+subroutine X(states_gram_schmidt)(mesh, nst, dim, psi, phi,  &
   normalize, mask, overlap, norm, Theta_fi, beta_ij)
-  type(mesh_t),      intent(in)    :: m
+  type(mesh_t),      intent(in)    :: mesh
   integer,           intent(in)    :: nst
   integer,           intent(in)    :: dim
-  R_TYPE,            intent(in)    :: psi(:,:,:)   ! psi(m%np_part, dim, nst)
-  R_TYPE,            intent(inout) :: phi(:,:)     ! phi(m%np_part, dim)
+  R_TYPE,            intent(in)    :: psi(:,:,:)   ! psi(mesh%np_part, dim, nst)
+  R_TYPE,            intent(inout) :: phi(:,:)     ! phi(mesh%np_part, dim)
   logical, optional, intent(in)    :: normalize
   logical, optional, intent(inout) :: mask(:)      ! mask(nst)
   R_TYPE,  optional, intent(out)   :: overlap(:) 
@@ -193,11 +194,11 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
 
   ss = M_ZERO
 
-  if(.not. m%use_curvilinear) then
+  if(.not. mesh%use_curvilinear) then
 
     do idim = 1, dim
-      do sp = 1, m%np, block_size
-        size = min(block_size, m%np - sp + 1)
+      do sp = 1, mesh%np, block_size
+        size = min(block_size, mesh%np - sp + 1)
         do ist = 1, nst
 
           if(present(mask)) then
@@ -209,15 +210,15 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
       end do
     end do
 
-    ss = ss * m%vol_pp(1)
+    ss = ss * mesh%vol_pp(1)
 
-    call profiling_count_operations((R_ADD + R_MUL) * m%np * dim * nst)
+    call profiling_count_operations((R_ADD + R_MUL) * mesh%np * dim * nst)
 
   else
 
     do idim = 1, dim
-      do sp = 1, m%np, block_size
-        size = min(block_size, m%np - sp + 1)
+      do sp = 1, mesh%np, block_size
+        size = min(block_size, mesh%np - sp + 1)
         ep = sp - 1 + size
         do ist = 1, nst
 
@@ -225,21 +226,21 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
             if(mask(ist)) cycle
           end if
 
-          ss(ist) = ss(ist) + sum(m%vol_pp(sp:ep)*R_CONJ(psi(sp:ep, idim, ist))*phi(sp:ep, idim))
+          ss(ist) = ss(ist) + sum(mesh%vol_pp(sp:ep)*R_CONJ(psi(sp:ep, idim, ist))*phi(sp:ep, idim))
 
         end do
       end do
     end do
 
-    call profiling_count_operations((R_ADD + 2 * R_MUL) * m%np * dim * nst)
+    call profiling_count_operations((R_ADD + 2 * R_MUL) * mesh%np * dim * nst)
 
   end if
 
 #ifdef HAVE_MPI
-  if(m%parallel_in_domains) then
+  if(mesh%parallel_in_domains) then
     SAFE_ALLOCATE(ss_tmp(1:nst))
     call profiling_in(reduce_prof, "GRAM_SCHMIDT_REDUCE")
-    call MPI_Allreduce(ss(1), ss_tmp(1), nst, R_MPITYPE, MPI_SUM, m%vp%comm, mpi_err)
+    call MPI_Allreduce(ss(1), ss_tmp(1), nst, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
     call profiling_out(reduce_prof)
     ss = ss_tmp
     SAFE_DEALLOCATE_A(ss_tmp)
@@ -256,8 +257,8 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
     ss(:) = ss(:) * beta_ij(:)
 
   do idim = 1, dim
-    do sp = 1, m%np, block_size
-      size = min(block_size, m%np - sp + 1)
+    do sp = 1, mesh%np, block_size
+      size = min(block_size, mesh%np - sp + 1)
 
       if(present(Theta_Fi)) then
         if(Theta_Fi .ne. M_ONE) &
@@ -276,7 +277,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
     end do
   end do
 
-  call profiling_count_operations((R_ADD + R_MUL) * m%np * dim * nst)
+  call profiling_count_operations((R_ADD + R_MUL) * mesh%np * dim * nst)
 
   ! the following ifs cannot be given as a single line (without the
   ! then) to avoid a bug in xlf 10.1
@@ -287,9 +288,9 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
   end if
 
   if(normalize_) then
-    nrm2 = X(mf_nrm2)(m, dim, phi)
+    nrm2 = X(mf_nrm2)(mesh, dim, phi)
     do idim = 1, dim
-      call lalg_scal(m%np, M_ONE / nrm2, phi(:, idim))
+      call lalg_scal(mesh%np, M_ONE / nrm2, phi(:, idim))
     end do
   end if
 
@@ -310,8 +311,8 @@ end subroutine X(states_gram_schmidt)
 
 
 ! ---------------------------------------------------------
-subroutine X(states_normalize_orbital)(m, dim, psi)
-  type(mesh_t),    intent(in)    :: m
+subroutine X(states_normalize_orbital)(mesh, dim, psi)
+  type(mesh_t),    intent(in)    :: mesh
   integer,         intent(in)    :: dim
   R_TYPE,          intent(inout) :: psi(:,:)
 
@@ -320,21 +321,21 @@ subroutine X(states_normalize_orbital)(m, dim, psi)
 
   call push_sub('states_calc_inc.Xstates_normalize_orbital')
 
-  norm = X(mf_nrm2) (m, dim, psi)
+  norm = X(mf_nrm2) (mesh, dim, psi)
   norm = sqrt(norm)
 
-  forall (idim = 1:dim, ip = 1:m%np) psi(ip, idim) = psi(ip, idim)/norm
+  forall (idim = 1:dim, ip = 1:mesh%np) psi(ip, idim) = psi(ip, idim)/norm
   
   call pop_sub()
 end subroutine X(states_normalize_orbital)
 
 
 ! ---------------------------------------------------------
-FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
-  type(mesh_t),      intent(in)  :: m
+FLOAT function X(states_residue)(mesh, dim, hf, ee, ff) result(rr)
+  type(mesh_t),      intent(in)  :: mesh
   integer,           intent(in)  :: dim
-  R_TYPE,            intent(in)  :: hf(:,:), f(:,:)
-  FLOAT,             intent(in)  :: e
+  R_TYPE,            intent(in)  :: hf(:,:), ff(:,:)
+  FLOAT,             intent(in)  :: ee
 
   R_TYPE, allocatable :: res(:,:)
   type(profile_t), save :: prof
@@ -344,13 +345,13 @@ FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
 
   call profiling_in(prof, "RESIDUE")
 
-  SAFE_ALLOCATE(res(1:m%np_part, 1:dim))
+  SAFE_ALLOCATE(res(1:mesh%np_part, 1:dim))
 
-  forall (idim = 1:dim, ip = 1:m%np) res(ip, idim) = hf(ip, idim) - e*f(ip, idim)
+  forall (idim = 1:dim, ip = 1:mesh%np) res(ip, idim) = hf(ip, idim) - ee*ff(ip, idim)
 
-  call profiling_count_operations(dim*m%np*(R_ADD + R_MUL))
+  call profiling_count_operations(dim*mesh%np*(R_ADD + R_MUL))
 
-  r = X(mf_nrm2)(m, dim, res)
+  rr = X(mf_nrm2)(mesh, dim, res)
   SAFE_DEALLOCATE_A(res)
 
   call profiling_out(prof)
@@ -373,7 +374,7 @@ subroutine X(states_calc_momentum)(gr, st, momentum)
   type(states_t), intent(inout) :: st
   FLOAT,          intent(out)   :: momentum(:,:,:)
 
-  integer             :: idim, ist, ik, i
+  integer             :: idim, ist, ik, idir
   CMPLX               :: expect_val_p
   R_TYPE, allocatable :: grad(:,:,:)  
 #if defined(HAVE_MPI)
@@ -395,26 +396,26 @@ subroutine X(states_calc_momentum)(gr, st, momentum)
         call X(derivatives_grad)(gr%der, st%X(psi)(:, idim, ist, ik), grad(:, idim, 1:gr%mesh%sb%dim))
       end do
 
-      do i = 1, gr%mesh%sb%dim
+      do idir = 1, gr%mesh%sb%dim
         ! since the expectation value of the momentum operator is real
         ! for square integrable wfns this integral should be purely imaginary 
         ! for complex wfns but real for real wfns (see case distinction below)
         expect_val_p = X(mf_dotp)(gr%mesh, st%d%dim, &
-          st%X(psi)(1:gr%mesh%np, 1:st%d%dim, ist, ik), grad(1:gr%mesh%np, 1:st%d%dim, i))
+          st%X(psi)(1:gr%mesh%np, 1:st%d%dim, ist, ik), grad(1:gr%mesh%np, 1:st%d%dim, idir))
 
         ! In the case of real wavefunctions we do not include the 
         ! -i prefactor of p = -i \nabla
         if (st%wfs_type == M_REAL) then
-          momentum(i, ist, ik) = real( expect_val_p )
+          momentum(idir, ist, ik) = real( expect_val_p )
         else
-          momentum(i, ist, ik) = real( -M_zI*expect_val_p )
+          momentum(idir, ist, ik) = real( -M_zI*expect_val_p )
         end if
       end do
 
       ! have to add the momentum vector in the case of periodic systems, 
       ! since st%X(psi) contains only u_k
-      do i = 1, gr%sb%periodic_dim
-        momentum(i, ist, ik) = momentum(i, ist, ik) + st%d%kpoints(i, ik)
+      do idir = 1, gr%sb%periodic_dim
+        momentum(idir, ist, ik) = momentum(idir, ist, ik) + st%d%kpoints(idir, ik)
       end do
     end do
 
@@ -443,10 +444,10 @@ subroutine X(states_calc_momentum)(gr, st, momentum)
       SAFE_ALLOCATE(lmomentum(1:st%lnst))
       SAFE_ALLOCATE(gmomentum(1:st%nst))
 
-      do i = 1, gr%mesh%sb%dim
-        lmomentum(1:st%lnst) = momentum(i, st%st_start:st%st_end, ik)
+      do idir = 1, gr%mesh%sb%dim
+        lmomentum(1:st%lnst) = momentum(idir, st%st_start:st%st_end, ik)
         call lmpi_gen_allgatherv(st%lnst, lmomentum, tmp, gmomentum, st%mpi_grp)
-        momentum(i, 1:st%nst, ik) = gmomentum(1:st%nst)
+        momentum(idir, 1:st%nst, ik) = gmomentum(1:st%nst)
       end do
 
       SAFE_DEALLOCATE_A(lmomentum)
@@ -466,10 +467,10 @@ end subroutine X(states_calc_momentum)
 ! calculates the expectation value of the square of the
 ! angular momentum of the state phi.
 ! ---------------------------------------------------------
-subroutine X(states_angular_momentum)(gr, phi, l, l2)
+subroutine X(states_angular_momentum)(gr, phi, ll, l2)
   type(grid_t), intent(inout)  :: gr
   R_TYPE,       intent(inout)  :: phi(:, :)
-  FLOAT,        intent(out)    :: l(MAX_DIM)
+  FLOAT,        intent(out)    :: ll(MAX_DIM)
   FLOAT, optional, intent(out) :: l2
 
   integer :: idim, dim
@@ -488,21 +489,21 @@ subroutine X(states_angular_momentum)(gr, phi, l, l2)
 
   dim = size(phi, 2)
 
-  l = M_ZERO
+  ll = M_ZERO
   if(present(l2)) l2 = M_ZERO
 
   do idim = 1, dim
 #if defined(R_TREAL)
-    l = M_ZERO
+    ll = M_ZERO
 #else
     call X(physics_op_L)(gr%der, phi(:, idim), lpsi)
     select case(gr%mesh%sb%dim)
     case(3)
-      l(1) = l(1) + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 1))
-      l(2) = l(2) + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 2))
-      l(3) = l(3) + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 3))
+      ll(1) = ll(1) + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 1))
+      ll(2) = ll(2) + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 2))
+      ll(3) = ll(3) + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 3))
     case(2)
-      l(3) = l(3) + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 1))
+      ll(3) = ll(3) + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 1))
     end select
 #endif
     if(present(l2)) then
@@ -517,15 +518,15 @@ end subroutine X(states_angular_momentum)
 
 
 ! ---------------------------------------------------------
-subroutine X(states_matrix)(m, st1, st2, a)
-  type(mesh_t),   intent(in)  :: m
+subroutine X(states_matrix)(mesh, st1, st2, aa)
+  type(mesh_t),   intent(in)  :: mesh
   type(states_t), intent(in)  :: st1, st2
-  R_TYPE,         intent(out) :: a(:, :, :)
+  R_TYPE,         intent(out) :: aa(:, :, :)
 
-  integer :: i, j, dim, n1, n2, ik
+  integer :: ist, ii, jj, dim, n1, n2, ik
 #if defined(HAVE_MPI)
   R_TYPE, allocatable :: phi2(:, :)
-  integer :: k, l
+  integer :: kk, ll
   integer :: status(MPI_STATUS_SIZE)
   integer :: request
 #endif
@@ -544,27 +545,27 @@ subroutine X(states_matrix)(m, st1, st2, a)
 #if defined(HAVE_MPI)
     call MPI_Barrier(st1%mpi_grp%comm, mpi_err)
     ! Each process sends the states in st2 to the rest of the processes.
-    do i = st1%st_start, st1%st_end
-      do j = 0, st1%mpi_grp%size - 1
-        if(st1%mpi_grp%rank.ne.j) then
-          call MPI_Isend(st2%X(psi)(1, 1, i, ik), st1%d%dim*m%np, R_MPITYPE, &
-            j, i, st1%mpi_grp%comm, request, mpi_err)
+    do ist = st1%st_start, st1%st_end
+      do jj = 0, st1%mpi_grp%size - 1
+        if(st1%mpi_grp%rank.ne.jj) then
+          call MPI_Isend(st2%X(psi)(1, 1, ist, ik), st1%d%dim*mesh%np, R_MPITYPE, &
+            jj, ist, st1%mpi_grp%comm, request, mpi_err)
         end if
       end do
     end do
 
     ! Processes are received, and then the matrix elements are calculated.
-    SAFE_ALLOCATE(phi2(1:m%np, 1:st1%d%dim))
-    do j = 1, n2
-      l = st1%node(j)
-      if(l.ne.st1%mpi_grp%rank) then
-        call MPI_Irecv(phi2(1, 1), st1%d%dim*m%np, R_MPITYPE, l, j, st1%mpi_grp%comm, request, mpi_err)
+    SAFE_ALLOCATE(phi2(1:mesh%np, 1:st1%d%dim))
+    do jj = 1, n2
+      ll = st1%node(jj)
+      if(ll.ne.st1%mpi_grp%rank) then
+        call MPI_Irecv(phi2(1, 1), st1%d%dim*mesh%np, R_MPITYPE, ll, jj, st1%mpi_grp%comm, request, mpi_err)
         call MPI_Wait(request, status, mpi_err)
       else
-        phi2(:, :) = st2%X(psi)(:, :, j, ik)
+        phi2(:, :) = st2%X(psi)(:, :, jj, ik)
       end if
-      do i = st1%st_start, st1%st_end
-        a(i, j, ik) = X(mf_dotp)(m, dim, st1%X(psi)(:, :, i, ik), phi2(:, :))
+      do ist = st1%st_start, st1%st_end
+        aa(ist, jj, ik) = X(mf_dotp)(mesh, dim, st1%X(psi)(:, :, ist, ik), phi2(:, :))
       end do
     end do
     SAFE_DEALLOCATE_A(phi2)
@@ -572,10 +573,10 @@ subroutine X(states_matrix)(m, st1, st2, a)
     ! Each process holds some lines of the matrix. So it is broadcasted (All processes
     ! should get the whole matrix)
     call MPI_Barrier(st1%mpi_grp%comm, mpi_err)
-    do i = 1, n1
-      k = st1%node(i)
-      do j = 1, n2
-        call MPI_Bcast(a(i, j, ik), 1, R_MPITYPE, k, st1%mpi_grp%comm, mpi_err)
+    do ii = 1, n1
+      kk = st1%node(ii)
+      do jj = 1, n2
+        call MPI_Bcast(aa(ii, jj, ik), 1, R_MPITYPE, kk, st1%mpi_grp%comm, mpi_err)
       end do
     end do
 #else
@@ -584,9 +585,9 @@ subroutine X(states_matrix)(m, st1, st2, a)
 #endif
 
   else
-    do i = 1, n1
-      do j = 1, n2
-        a(i, j, ik) = X(mf_dotp)(m, dim, st1%X(psi)(:, :, i, ik), st2%X(psi)(:, :, j, ik))
+    do ii = 1, n1
+      do jj = 1, n2
+        aa(ii, jj, ik) = X(mf_dotp)(mesh, dim, st1%X(psi)(:, :, ii, ik), st2%X(psi)(:, :, jj, ik))
       end do
     end do
   end if

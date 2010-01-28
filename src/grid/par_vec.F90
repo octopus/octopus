@@ -1,4 +1,3 @@
-
 !! Copyright (C) 2005-2006 Florian Lorenzen, Heiko Appel
 !!
 !! This program is free software; you can redistribute it and/or modify

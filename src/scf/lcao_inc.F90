@@ -22,18 +22,18 @@
 !> This routine fills state psi with an atomic orbital -- provided
 !! by the pseudopotential structure in geo.
 ! ---------------------------------------------------------
-subroutine X(lcao_atomic_orbital) (this, iorb, m, hm, geo, sb, psi, spin_channel)
+subroutine X(lcao_atomic_orbital) (this, iorb, mesh, hm, geo, sb, psi, spin_channel)
   type(lcao_t),             intent(in)    :: this
   integer,                  intent(in)    :: iorb
-  type(mesh_t),             intent(in)    :: m
+  type(mesh_t),             intent(in)    :: mesh
   type(simul_box_t),        intent(in)    :: sb
   type(hamiltonian_t),      intent(in)    :: hm
   type(geometry_t), target, intent(in)    :: geo
   R_TYPE,                   intent(inout) :: psi(:, :)
   integer,                  intent(in)    :: spin_channel
 
-  type(species_t), pointer :: s
-  type(periodic_copy_t)   :: pc
+  type(species_t), pointer :: spec
+  type(periodic_copy_t) :: pc
   integer :: icell, idim, iatom, jj, ip
   FLOAT :: pos(MAX_DIM), radius
   FLOAT, allocatable :: ao(:)
@@ -45,35 +45,35 @@ subroutine X(lcao_atomic_orbital) (this, iorb, m, hm, geo, sb, psi, spin_channel
   ASSERT(iorb >= 1)
   ASSERT(iorb <= this%maxorbs)
 
-  psi(1:m%np, 1:hm%d%dim) = R_TOTYPE(M_ZERO)
+  psi(1:mesh%np, 1:hm%d%dim) = R_TOTYPE(M_ZERO)
 
   iatom = this%atom(iorb)
   jj = this%level(iorb)
   idim = this%ddim(iorb)
-  s => geo%atom(iatom)%spec
-  ASSERT(jj <= species_niwfs(s))
+  spec => geo%atom(iatom)%spec
+  ASSERT(jj <= species_niwfs(spec))
 
-  SAFE_ALLOCATE(ao(1:m%np))
+  SAFE_ALLOCATE(ao(1:mesh%np))
 
   if (.not. simul_box_is_periodic(sb)) then
 
-    call species_get_orbital(s, m, jj, calc_dim, max(spin_channel, idim), geo%atom(iatom)%x, ao)
+    call species_get_orbital(spec, mesh, jj, calc_dim, max(spin_channel, idim), geo%atom(iatom)%x, ao)
 
-    do ip = 1, m%np
+    do ip = 1, mesh%np
       psi(ip, idim) = ao(ip)
     end do
 
   else
 
-    radius = min(species_get_iwf_radius(s, jj, spin_channel), maxval(sb%lsize))
+    radius = min(species_get_iwf_radius(spec, jj, spin_channel), maxval(sb%lsize))
 
     call periodic_copy_init(pc, sb, geo%atom(iatom)%x, range = radius)
     do icell = 1, periodic_copy_num(pc)
       pos = periodic_copy_position(pc, sb, icell)
 
-      call species_get_orbital(s, m, jj, calc_dim, max(spin_channel, idim), pos, ao)
+      call species_get_orbital(spec, mesh, jj, calc_dim, max(spin_channel, idim), pos, ao)
       
-      do ip = 1, m%np
+      do ip = 1, mesh%np
         psi(ip, idim) = psi(ip, idim) + ao(ip)
       end do
 
@@ -379,7 +379,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   SAFE_ALLOCATE(basis_orb(1:nbasis))
   SAFE_ALLOCATE(atom_orb_basis(1:geo%natoms, 1:maxorb))
 
-  ! this is the extra distance that the laplacian adds to the localization radius
+  ! This is the extra distance that the Laplacian adds to the localization radius.
   lapdist = maxval(abs(gr%mesh%idx%enlarge)*gr%mesh%spacing)
 
   call profiling_in(prof_orbitals, "LCAO_ORBITALS")

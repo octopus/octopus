@@ -22,10 +22,10 @@
 ! In case of real functions, it does not include the -i prefactor
 ! (L = -i r ^ nabla).
 ! ---------------------------------------------------------
-subroutine X(physics_op_L)(der, f, lf, ghost_update, set_bc)
+subroutine X(physics_op_L)(der, ff, lf, ghost_update, set_bc)
   type(derivatives_t), intent(inout) :: der
-  R_TYPE,              intent(inout) :: f(:)     ! f(m%np_part)
-  R_TYPE,              intent(out)   :: lf(:, :) ! lf(m%np, 3) in 3D, lf(m%np, 1) in 2D
+  R_TYPE,              intent(inout) :: ff(:)    ! ff(der%mesh%np_part)
+  R_TYPE,              intent(out)   :: lf(:, :) ! lf(der%mesh%np, 3) in 3D, lf(der%mesh%np, 1) in 2D
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: set_bc
 
@@ -40,7 +40,7 @@ subroutine X(physics_op_L)(der, f, lf, ghost_update, set_bc)
 
   SAFE_ALLOCATE(gf(1:der%mesh%np, 1:der%mesh%sb%dim))
 
-  call X(derivatives_grad)(der, f, gf, ghost_update, set_bc)
+  call X(derivatives_grad)(der, ff, gf, ghost_update, set_bc)
 
 #if defined(R_TCOMPLEX)
   factor = -M_ZI
@@ -77,15 +77,15 @@ end subroutine X(physics_op_L)
 ! Square of the angular momentum L. This has to be very much improved if
 ! accuracy is needed.
 ! ---------------------------------------------------------
-subroutine X(physics_op_L2)(der, f, l2f, ghost_update, set_bc)
+subroutine X(physics_op_L2)(der, ff, l2f, ghost_update, set_bc)
   type(derivatives_t), intent(inout) :: der
-  R_TYPE,              intent(inout) :: f(:)   ! f(1:m%np_part)
+  R_TYPE,              intent(inout) :: ff(:)   ! ff(1:der%mesh%np_part)
   R_TYPE,              intent(out)   :: l2f(:)
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: set_bc
 
   R_TYPE, allocatable :: gf(:, :), ggf(:, :, :)
-  integer :: j
+  integer :: idir
 
   call push_sub('physics_op_inc.Xphysics_op_L2')
 
@@ -98,28 +98,28 @@ subroutine X(physics_op_L2)(der, f, l2f, ghost_update, set_bc)
     SAFE_ALLOCATE( gf(1:der%mesh%np_part, 1:3))
     SAFE_ALLOCATE(ggf(1:der%mesh%np_part, 1:3, 1:3))
 
-    call X(physics_op_L)(der, f, gf, ghost_update, set_bc)
+    call X(physics_op_L)(der, ff, gf, ghost_update, set_bc)
 
-    do j = 1, 3
-      call X(physics_op_L)(der, gf(:,j), ggf(:,:,j))
+    do idir = 1, 3
+      call X(physics_op_L)(der, gf(:, idir), ggf(:, :, idir))
     end do
 
-    do j = 1, der%mesh%sb%dim
-      l2f(1:der%mesh%np) = l2f(1:der%mesh%np) + ggf(1:der%mesh%np, j, j)
+    do idir = 1, 3
+      l2f(1:der%mesh%np) = l2f(1:der%mesh%np) + ggf(1:der%mesh%np, idir, idir)
     end do
 
   case(2)
     SAFE_ALLOCATE( gf(1:der%mesh%np_part, 1:1))
     SAFE_ALLOCATE(ggf(1:der%mesh%np_part, 1:1, 1:1))
 
-    call X(physics_op_L)(der, f, gf, ghost_update, set_bc)
+    call X(physics_op_L)(der, ff, gf, ghost_update, set_bc)
     call X(physics_op_L)(der, gf(:, 1), ggf(:, :, 1))
 
     l2f(1:der%mesh%np) = ggf(1:der%mesh%np, 1, 1)
   end select
 
 
-  ! In case of real functions, since the angular momentum calculations
+  ! In case of real functions, since the angular-momentum calculations
   ! lack a (-i) prefactor, we must add a (-1) factor
 #if defined(R_TREAL)
   l2f = - l2f

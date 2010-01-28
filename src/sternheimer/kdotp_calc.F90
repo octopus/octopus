@@ -81,9 +81,9 @@ subroutine zcalc_dipole_periodic(sys, lr, dipole)
   FLOAT,                  intent(out)   :: dipole(:)
 
   integer idir, ist, ik, idim
-  type(mesh_t), pointer :: m
+  type(mesh_t), pointer :: mesh
   CMPLX :: term, moment
-  m => sys%gr%mesh
+  mesh => sys%gr%mesh
 
   ! mu_i = sum(m occ, k) <u_mk(0)|(-id/dk_i|u_mk(0)>)
   !      = Im sum(m occ, k) <u_mk(0)|(d/dk_i|u_mk(0)>)
@@ -98,7 +98,8 @@ subroutine zcalc_dipole_periodic(sys, lr, dipole)
 
       do ist = 1, sys%st%nst
         do idim = 1, sys%st%d%dim
-          term = term + zmf_dotp(m, sys%st%zpsi(1:m%np, idim, ist, ik), lr(idir, 1)%zdl_psi(1:m%np, idim, ist, ik))
+          term = term + zmf_dotp(mesh, sys%st%zpsi(1:mesh%np, idim, ist, ik), &
+            lr(idir, 1)%zdl_psi(1:mesh%np, idim, ist, ik))
         enddo
       enddo
 
