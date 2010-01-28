@@ -1,3 +1,4 @@
+
 !! Copyright (C) 2005-2006 Florian Lorenzen, Heiko Appel
 !!
 !! This program is free software; you can redistribute it and/or modify
@@ -46,17 +47,16 @@
   !!
   !! Usage example for par_vec routines.
   !!
-  !! ! Initialize parallelization with mesh m and operator op
+  !! ! Initialize parallelization with mesh and operator op
   !! ! initialized and given.
-  !! ! m          = sys%gr%mesh
+  !! ! mesh       = sys%gr%mesh
   !! ! stencil    = op%stencil
   !!
-  !! FLOAT              :: s
-  !! FLOAT              :: u(np_global), v(np_global)
+  !! FLOAT              :: uu(np_global), vv(np_global)
   !! FLOAT, allocatable :: ul(:), vl(:), wl(:)
-  !! type(mesh_t)    :: m
+  !! type(mesh_t)       :: mesh
   !!
-  !! ! Fill u, v with sensible values.
+  !! ! Fill uu, vv with sensible values.
   !! ! ...
   !!
   !! ! Allocate space for local vectors.
@@ -65,14 +65,14 @@
   !! allocate(wl(np_part))
   !!
   !! ! Distribute vectors.
-  !! call X(vec_scatter)(vp, u, ul)
-  !! call X(vec_scatter)(vp, v, vl)
+  !! call X(vec_scatter)(vp, uu, ul)
+  !! call X(vec_scatter)(vp, vv, vl)
   !!
   !! ! Compute some operator op: vl = op ul
   !! call X(vec_ghost_update)(vp, ul)
   !! call X(nl_operator_operate)(op, ul, vl)
-  !! !! Gather result of op in one vector v.
-  !! call X(vec_gather)(vp, v, vl)
+  !! !! Gather result of op in one vector vv.
+  !! call X(vec_gather)(vp, vv, vl)
   !!
   !! ! Clean up.
   !! deallocate(ul, vl, wl)
@@ -665,7 +665,7 @@ contains
 
     vec_global2local = 0
     if(associated(vp%global)) then
-      nn = iihash_lookup(vp%global(inode), inode, found)
+      nn = iihash_lookup(vp%global(inode), ip, found)
       if(found) vec_global2local = nn
     end if
 
