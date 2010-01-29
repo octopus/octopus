@@ -24,6 +24,8 @@ subroutine PES_mask_init(mask, mesh, sb, st)
   type(simul_box_t), intent(in)    :: sb
   type(states_t),    intent(in)    :: st
 
+  integer :: ll(MAX_DIM)
+
   call push_sub('pes_mask_inc.PES_mask_init')
 
   message(1) = 'Info: Calculating PES using mask technique.'
@@ -32,9 +34,11 @@ subroutine PES_mask_init(mask, mesh, sb, st)
   ! allocate FFTs in case they are not allocated yet
   call fft_init(mesh%idx%ll, fft_complex, mask%fft, optimize = .not.simul_box_is_periodic(sb))
 
+  ll(1:MAX_DIM) = mesh%idx%ll(1:MAX_DIM)
+
   ! setup arrays to be used
-  SAFE_ALLOCATE(mask%k(1:mesh%idx%ll(1),1:mesh%idx%ll(2),1:mesh%idx%ll(3),1:st%d%dim,st%st_start:st%st_end,1:st%d%nik))
-  SAFE_ALLOCATE(mask%r(1:mesh%idx%ll(1), 1:mesh%idx%ll(2), 1:mesh%idx%ll(3), st%st_start:st%st_end, 1:st%d%nik))
+  SAFE_ALLOCATE(mask%k(1:ll(1),1:ll(2),1:ll(3),1:st%d%dim,st%st_start:st%st_end,1:st%d%nik))
+  SAFE_ALLOCATE(mask%r(1:ll(1),1:ll(2),1:ll(3), st%st_start:st%st_end, 1:st%d%nik))
 
   mask%k = M_z0
   mask%r = M_ZERO
