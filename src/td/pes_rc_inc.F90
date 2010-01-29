@@ -18,108 +18,122 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine PES_rc_init(v, m, st, save_iter)
-  type(mesh_t),   intent(in) :: m
-  type(states_t), intent(in) :: st
-  integer,        intent(in) :: save_iter
-  type(PES_rc_t), intent(out) :: v
+subroutine PES_rc_init(pesrc, mesh, st, save_iter)
+  type(PES_rc_t), intent(out) :: pesrc
+  type(mesh_t),   intent(in)  :: mesh
+  type(states_t), intent(in)  :: st
+  integer,        intent(in)  :: save_iter
 
   type(block_t) :: blk
-  integer  :: i
-  FLOAT ::  x(MAX_DIM)
+  integer  :: ip
+  FLOAT :: xx(MAX_DIM)
 
-  message(1) = 'Info: Calculating PES using rc technique'
+  call push_sub('pes_rc_inc.PES_rc_init')
+
+  message(1) = 'Info: Calculating PES using rc technique.'
   call write_info(1)
 
   !%Variable PES_rc_points
   !%Type block
   !%Section Time-Dependent::PES
   !%Description
-  !% List of points where to calculate the photoelectron spectrum a la Suraud.
+  !% List of points where to calculate the photoelectron spectrum by Suraud's method.
   !% The exact syntax is:
   !%
-  !% <tt>%TDPES_rc_points
+  !% <tt>%PES_rc_points
   !% <br>&nbsp;&nbsp;x1 | y1 | z1
   !% <br>%
   !% </tt>
   !%End
   if (parse_block(datasets_check('PES_rc_points'), blk) < 0) call input_error('PES_rc_points')
 
-  v%npoints = parse_block_n(blk)
+  pesrc%npoints = parse_block_n(blk)
 
   ! setup filenames and read points
-  SAFE_ALLOCATE(v%filenames(1:v%npoints))
-  SAFE_ALLOCATE(v%points   (1:v%npoints))
-  do i = 1, v%npoints
-    write(v%filenames(i), '(a,i2.2,a)') 'PES_rc.', i, '.out'
+  SAFE_ALLOCATE(pesrc%filenames(1:pesrc%npoints))
+  SAFE_ALLOCATE(pesrc%points   (1:pesrc%npoints))
+  do ip = 1, pesrc%npoints
+    write(pesrc%filenames(ip), '(a,i2.2,a)') 'PES_rc.', ip, '.out'
 
-    call parse_block_float(blk, i-1, 0, x(1), units_inp%length)
-    call parse_block_float(blk, i-1, 1, x(2), units_inp%length)
-    call parse_block_float(blk, i-1, 2, x(3), units_inp%length)
+    call parse_block_float(blk, ip - 1, 0, xx(1), units_inp%length)
+    call parse_block_float(blk, ip - 1, 1, xx(2), units_inp%length)
+    call parse_block_float(blk, ip - 1, 2, xx(3), units_inp%length)
 
-    v%points(i) = m%idx%Lxyz_inv(int(x(1)/m%spacing(1)), int(x(2)/m%spacing(2)), int(x(3)/m%spacing(3)))
+    pesrc%points(ip) = mesh%idx%Lxyz_inv(int(xx(1) / mesh%spacing(1)), &
+      int(xx(2) / mesh%spacing(2)), int(xx(3) / mesh%spacing(3)))
   end do
 
   call parse_block_end(blk)
 
-  SAFE_ALLOCATE(v%wf(1:v%npoints, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik, 1:save_iter))
+  SAFE_ALLOCATE(pesrc%wf(1:pesrc%npoints, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik, 1:save_iter))
+  call pop_sub()
 end subroutine PES_rc_init
 
 
 ! ---------------------------------------------------------
-subroutine PES_rc_end(v)
-  type(PES_rc_t), intent(inout) :: v
+subroutine PES_rc_end(pesrc)
+  type(PES_rc_t), intent(inout) :: pesrc
 
-  if(associated(v%filenames)) then
-    SAFE_DEALLOCATE_P(v%filenames)
-    SAFE_DEALLOCATE_P(v%points)
-    SAFE_DEALLOCATE_P(v%wf)
+  call push_sub('pes_rc_inc.PES_rc_end')
+
+  if(associated(pesrc%filenames)) then
+    SAFE_DEALLOCATE_P(pesrc%filenames)
+    SAFE_DEALLOCATE_P(pesrc%points)
+    SAFE_DEALLOCATE_P(pesrc%wf)
   end if
+
+  call pop_sub()
 end subroutine PES_rc_end
 
 
 ! ---------------------------------------------------------
-subroutine PES_rc_doit(v, st, ii)
-  type(PES_rc_t), intent(inout) :: v
-  type(states_t), intent(in) :: st
-  integer,        intent(in) :: ii
+subroutine PES_rc_calc(pesrc, st, ii)
+  type(PES_rc_t), intent(inout) :: pesrc
+  type(states_t), intent(in)    :: st
+  integer,        intent(in)    :: ii
 
-  integer :: ix, ik, p, idim
+  integer :: ip, ik, ist, idim
 
-  do ix = 1, v%npoints
+  call push_sub('pes_rc_inc.PES_rc_calc')
+
+  do ip = 1, pesrc%npoints
     do ik = st%d%kpt%start, st%d%kpt%end
-      do p = st%st_start, st%st_end
+      do ist = st%st_start, st%st_end
         do idim = 1, st%d%dim
-          v%wf(ix, idim, p, ik, ii) = st%occ(p, ik)*st%zpsi(v%points(ix), idim, p, ik)
+          pesrc%wf(ip, idim, ist, ik, ii) = st%occ(ist, ik) * &
+            st%zpsi(pesrc%points(ip), idim, ist, ik)
         end do
       end do
     end do
   end do
 
-end subroutine PES_rc_doit
+  call pop_sub()
+end subroutine PES_rc_calc
 
 
 ! ---------------------------------------------------------
-subroutine PES_rc_output(v, st, iter, save_iter, dt)
-  type(PES_rc_t), intent(in) :: v
+subroutine PES_rc_output(pesrc, st, iter, save_iter, dt)
+  type(PES_rc_t), intent(in) :: pesrc
   type(states_t), intent(in) :: st
   integer,        intent(in) :: iter, save_iter
   FLOAT,          intent(in) :: dt
 
-  integer :: ix, iunit, j, jj, ik, p, idim
+  integer :: ip, iunit, ii, jj, ik, ist, idim
   CMPLX :: vfu
 
+  call push_sub('pes_rc_inc.PES_rc_output')
+
   if(iter == 1) then
-    do ix = 1, v%npoints
-      iunit = io_open(v%filenames(ix), action='write')
+    do ip = 1, pesrc%npoints
+      iunit = io_open(pesrc%filenames(ip), action='write')
       write(iunit, '(a7,f17.6,3a)') &
         '# dt = ', units_from_atomic(units_inp%time, dt), ' [', trim(units_abbrev(units_inp%time)), ']'
       write(iunit, '(a3,14x)', advance='no') '# t'
       do ik = st%d%kpt%start, st%d%kpt%end
-        do p = st%st_start, st%st_end
+        do ist = st%st_start, st%st_end
           do idim = 1, st%d%dim
             write(iunit, '(3x,a8,i3,a7,i3,a8,i3,3x)', advance='no') &
-              "ik = ", ik, " ist = ", p, " idim = ", idim
+              "ik = ", ik, " ist = ", ist, " idim = ", idim
           end do
         end do
       end do
@@ -128,16 +142,16 @@ subroutine PES_rc_output(v, st, iter, save_iter, dt)
     end do
   end if
 
-  do ix = 1, v%npoints
+  do ip = 1, pesrc%npoints
     call io_assign(iunit)
-    iunit= io_open(v%filenames(ix), action='write', position='append')
-    do j = 1, save_iter
-      jj = iter - save_iter + j
-      write(iunit, '(e17.10)', advance='no') units_from_atomic(units_inp%time, jj*dt)
+    iunit = io_open(pesrc%filenames(ip), action='write', position='append')
+    do ii = 1, save_iter
+      jj = iter - save_iter + ii
+      write(iunit, '(e17.10)', advance='no') units_from_atomic(units_inp%time, jj * dt)
       do ik = 1, st%d%nik
-        do p = st%st_start, st%st_end
+        do ist = st%st_start, st%st_end
           do idim = 1, st%d%dim
-            vfu = v%wf(ix, idim, p, ik, j)
+            vfu = pesrc%wf(ip, idim, ist, ik, ii)
             vfu = units_from_atomic(sqrt(units_out%length**3), vfu)
             write(iunit, '(1x,a1,e17.10,a1,e17.10,a1)', advance='no') &
               '(', real(vfu), ',', aimag(vfu), ')'
@@ -149,6 +163,7 @@ subroutine PES_rc_output(v, st, iter, save_iter, dt)
     call io_close(iunit)
   end do
 
+  call pop_sub()
 end subroutine PES_rc_output
 
 !! Local Variables:

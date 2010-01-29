@@ -288,7 +288,7 @@ contains
 
       call td_write_iter(write_handler, gr, st, hm, geo, td%kick, td%dt, iter)
 
-      if(td%PESv%calc_rc .or. td%PESv%calc_mask) call PES_doit(td%PESv, gr%mesh, st, ii, td%dt, hm%ab_pot)
+      if(td%PESv%calc_rc .or. td%PESv%calc_mask) call PES_calc(td%PESv, gr%mesh, st, ii, td%dt, hm%ab_pot)
 
       ! write down data
       call check_point()

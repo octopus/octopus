@@ -141,7 +141,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, kinetic_o
               ik, hm%ep%gyromagnetic_ratio, hm%ep%a_static, time)
           else
             call X(vlasers)(hm%ep%lasers, hm%ep%no_lasers, der, hm%d, epsi, hpsi, grad, &
-              ik, hm%ep%gyromagnetic_ratio, t = time)
+              ik, hm%ep%gyromagnetic_ratio, time = time)
           end if
         end if
 #ifdef R_TCOMPLEX

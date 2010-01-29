@@ -22,16 +22,16 @@ subroutine X(vlaser_operator_quadratic) (laser, der, std, psi, hpsi)
   type(laser_t),       intent(in)    :: laser
   type(derivatives_t), intent(in)    :: der
   type(states_dim_t),  intent(in)    :: std
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(gr%mesh%np_part, h%d%dim)
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(gr%mesh%np_part, h%d%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(der%mesh%np_part, h%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(der%mesh%np_part, h%d%dim)
 
-  integer :: k
+  integer :: ip
   logical :: vector_potential, magnetic_field
 
-  FLOAT :: a_field(1:MAX_DIM), a_field_prime(1:MAX_DIM), b(1:MAX_DIM), b_prime(1:MAX_DIM)
-  FLOAT, allocatable :: a(:, :), a_prime(:, :)
+  FLOAT :: a_field(1:MAX_DIM), a_field_prime(1:MAX_DIM), bb(1:MAX_DIM), b_prime(1:MAX_DIM)
+  FLOAT, allocatable :: aa(:, :), a_prime(:, :)
 
-  call push_sub('h_inc.Xvlaser_operator_quadratic')
+  call push_sub('lasers_inc.Xvlaser_operator_quadratic')
 
   a_field = M_ZERO
 
@@ -41,16 +41,16 @@ subroutine X(vlaser_operator_quadratic) (laser, der, std, psi, hpsi)
   select case(laser_kind(laser))
   case(E_FIELD_ELECTRIC) ! do nothing
   case(E_FIELD_MAGNETIC)
-    if(.not. allocated(a)) then 
-      SAFE_ALLOCATE(a(1:der%mesh%np_part, 1:der%mesh%sb%dim))
-      a = M_ZERO
+    if(.not. allocated(aa)) then 
+      SAFE_ALLOCATE(aa(1:der%mesh%np_part, 1:der%mesh%sb%dim))
+      aa = M_ZERO
       SAFE_ALLOCATE(a_prime(1:der%mesh%np_part, 1:der%mesh%sb%dim))
       a_prime = M_ZERO
     end if
     call laser_vector_potential(laser, a_prime)
-    a = a + a_prime
+    aa = aa + a_prime
     call laser_field(der%mesh%sb, laser, b_prime)
-    b = b + b_prime
+    bb = bb + b_prime
     magnetic_field = .true.
   case(E_FIELD_VECTOR_POTENTIAL)
     call laser_field(der%mesh%sb, laser, a_field_prime)
@@ -59,15 +59,17 @@ subroutine X(vlaser_operator_quadratic) (laser, der, std, psi, hpsi)
   end select
 
   if(magnetic_field) then
-    do k = 1, der%mesh%np
-      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a(k, 1:der%mesh%sb%dim), a(k, 1:der%mesh%sb%dim))*psi(k, :) / P_c**2
+    do ip = 1, der%mesh%np
+      hpsi(ip, :) = hpsi(ip, :) + M_HALF * &
+        dot_product(aa(ip, 1:der%mesh%sb%dim), aa(ip, 1:der%mesh%sb%dim)) * psi(ip, :) / P_c**2
     end do
-    SAFE_DEALLOCATE_A(a)
+    SAFE_DEALLOCATE_A(aa)
     SAFE_DEALLOCATE_A(a_prime)
   end if
   if(vector_potential) then
-    do k = 1, der%mesh%np
-      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a_field(1:der%mesh%sb%dim), a_field(1:der%mesh%sb%dim))*psi(k, :) / P_c**2
+    do ip = 1, der%mesh%np
+      hpsi(ip, :) = hpsi(ip, :) + M_HALF * &
+        dot_product(a_field(1:der%mesh%sb%dim), a_field(1:der%mesh%sb%dim))*psi(ip, :) / P_c**2
     end do
   end if
 
@@ -85,15 +87,15 @@ subroutine X(vlaser_operator_linear) (laser, der, std, psi, hpsi, ik, gyromagnet
   FLOAT,               intent(in)    :: gyromagnetic_ratio
   FLOAT, optional,     intent(in)    :: a_static(:,:)
 
-  integer :: k, idim
+  integer :: ip, idim
   logical :: electric_field, vector_potential, magnetic_field
   R_TYPE, allocatable :: grad(:, :, :), lhpsi(:, :)
 
-  FLOAT :: a_field(1:MAX_DIM), a_field_prime(1:MAX_DIM), b(1:MAX_DIM), b_prime(1:MAX_DIM)
+  FLOAT :: a_field(1:MAX_DIM), a_field_prime(1:MAX_DIM), bb(1:MAX_DIM), b_prime(1:MAX_DIM)
 
-  FLOAT, allocatable :: v(:), pot(:), a(:, :), a_prime(:, :)
+  FLOAT, allocatable :: vv(:), pot(:), aa(:, :), a_prime(:, :)
 
-  call push_sub('h_inc.Xvlaser_operator_linear')
+  call push_sub('lasers_inc.Xvlaser_operator_linear')
 
   a_field = M_ZERO
 
@@ -103,36 +105,36 @@ subroutine X(vlaser_operator_linear) (laser, der, std, psi, hpsi, ik, gyromagnet
 
   select case(laser_kind(laser))
   case(E_FIELD_SCALAR_POTENTIAL)
-    if(.not. allocated(v)) then 
-      SAFE_ALLOCATE(v(1:der%mesh%np))
-      v = M_ZERO
+    if(.not. allocated(vv)) then 
+      SAFE_ALLOCATE(vv(1:der%mesh%np))
+      vv = M_ZERO
     end if
-    call laser_potential(der%mesh%sb, laser, der%mesh, v)
+    call laser_potential(der%mesh%sb, laser, der%mesh, vv)
     electric_field = .true.
 
   case(E_FIELD_ELECTRIC)
-    if(.not. allocated(v)) then 
-      SAFE_ALLOCATE(v(1:der%mesh%np))
-      v = M_ZERO
+    if(.not. allocated(vv)) then 
+      SAFE_ALLOCATE(vv(1:der%mesh%np))
+      vv = M_ZERO
       SAFE_ALLOCATE(pot(1:der%mesh%np))
       pot = M_ZERO
     end if
     call laser_potential(der%mesh%sb, laser, der%mesh, pot)
-    v = v + pot
+    vv = vv + pot
     electric_field = .true.
     SAFE_DEALLOCATE_A(pot)
 
   case(E_FIELD_MAGNETIC)
-    if(.not. allocated(a)) then 
-      SAFE_ALLOCATE(a(1:der%mesh%np_part, 1:der%mesh%sb%dim))
-      a = M_ZERO
+    if(.not. allocated(aa)) then 
+      SAFE_ALLOCATE(aa(1:der%mesh%np_part, 1:der%mesh%sb%dim))
+      aa = M_ZERO
       SAFE_ALLOCATE(a_prime(1:der%mesh%np_part, 1:der%mesh%sb%dim))
       a_prime = M_ZERO
     end if
     call laser_vector_potential(laser, a_prime)
-    a = a + a_prime
+    aa = aa + a_prime
     call laser_field(der%mesh%sb, laser, b_prime)
-    b = b + b_prime
+    bb = bb + b_prime
     magnetic_field = .true.
   case(E_FIELD_VECTOR_POTENTIAL)
     call laser_field(der%mesh%sb, laser, a_field_prime)
@@ -141,10 +143,10 @@ subroutine X(vlaser_operator_linear) (laser, der, std, psi, hpsi, ik, gyromagnet
   end select
 
   if(electric_field) then
-    do k = 1, std%dim
-      hpsi(1:der%mesh%np, k)= hpsi(1:der%mesh%np, k) + v(1:der%mesh%np) * psi(1:der%mesh%np, k)
+    do idim = 1, std%dim
+      hpsi(1:der%mesh%np, idim)= hpsi(1:der%mesh%np, idim) + vv(1:der%mesh%np) * psi(1:der%mesh%np, idim)
     end do
-    SAFE_DEALLOCATE_A(v)
+    SAFE_DEALLOCATE_A(vv)
   end if
 
   if(magnetic_field) then
@@ -160,20 +162,21 @@ subroutine X(vlaser_operator_linear) (laser, der, std, psi, hpsi, ik, gyromagnet
     ! do the calculation only once...). Note that h%ep%a_static already has been divided
     ! by P_c, and therefore here we only divide by P_c, and not P_c**2.
     if(present(a_static)) then
-      do k = 1, der%mesh%np
-        hpsi(k, :) = hpsi(k, :) + dot_product(a(k, 1:der%mesh%sb%dim), a_static(k, 1:der%mesh%sb%dim))*psi(k, :) / P_c
+      do ip = 1, der%mesh%np
+        hpsi(ip, :) = hpsi(ip, :) + dot_product(aa(ip, 1:der%mesh%sb%dim), a_static(ip, 1:der%mesh%sb%dim)) * psi(ip, :) / P_c
       end do
     end if
 
     select case(std%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
-      do k = 1, der%mesh%np
-        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a(k, 1:der%mesh%sb%dim), grad(k, 1:der%mesh%sb%dim, 1)) / P_c
+      do ip = 1, der%mesh%np
+        hpsi(ip, 1) = hpsi(ip, 1) - M_zI * dot_product(aa(ip, 1:der%mesh%sb%dim), grad(ip, 1:der%mesh%sb%dim, 1)) / P_c
       end do
     case (SPINORS)
-      do k = 1, der%mesh%np
+      do ip = 1, der%mesh%np
         do idim = 1, std%dim
-          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(a(k, 1:der%mesh%sb%dim), grad(k, 1:der%mesh%sb%dim, idim)) / P_c
+          hpsi(ip, idim) = hpsi(ip, idim) - M_zI * &
+            dot_product(aa(ip, 1:der%mesh%sb%dim), grad(ip, 1:der%mesh%sb%dim, idim)) / P_c
         end do
       end do
     end select
@@ -183,25 +186,25 @@ subroutine X(vlaser_operator_linear) (laser, der, std, psi, hpsi, ik, gyromagnet
     case (SPIN_POLARIZED)
       SAFE_ALLOCATE(lhpsi(1:der%mesh%np, 1:std%dim))
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        lhpsi(1:der%mesh%np, 1) = - M_HALF/P_C*sqrt(dot_product(b, b))*psi(1:der%mesh%np, 1)
+        lhpsi(1:der%mesh%np, 1) = - M_HALF / P_c * sqrt(dot_product(bb, bb)) * psi(1:der%mesh%np, 1)
       else
-        lhpsi(1:der%mesh%np, 1) = + M_HALF/P_C*sqrt(dot_product(b, b))*psi(1:der%mesh%np, 1)
+        lhpsi(1:der%mesh%np, 1) = + M_HALF / P_c * sqrt(dot_product(bb, bb)) * psi(1:der%mesh%np, 1)
       end if
       hpsi(1:der%mesh%np, :) = hpsi(1:der%mesh%np, :) + (gyromagnetic_ratio * M_HALF) * lhpsi(1:der%mesh%np, :)
       SAFE_DEALLOCATE_A(lhpsi)
 
     case (SPINORS)
       SAFE_ALLOCATE(lhpsi(1:der%mesh%np, 1:std%dim))
-      lhpsi(1:der%mesh%np, 1) = M_HALF/P_C*( b(3)*psi(1:der%mesh%np, 1) &
-           + (b(1) - M_zI*b(2))*psi(1:der%mesh%np, 2))
-      lhpsi(1:der%mesh%np, 2) = M_HALF/P_C*(-b(3)*psi(1:der%mesh%np, 2) &
-           + (b(1) + M_zI*b(2))*psi(1:der%mesh%np, 1))
+      lhpsi(1:der%mesh%np, 1) = M_HALF / P_c * (bb(3) * psi(1:der%mesh%np, 1) &
+           + (bb(1) - M_zI * bb(2)) * psi(1:der%mesh%np, 2))
+      lhpsi(1:der%mesh%np, 2) = M_HALF / P_c * (-bb(3) * psi(1:der%mesh%np, 2) &
+           + (bb(1) + M_zI * bb(2)) * psi(1:der%mesh%np, 1))
       hpsi(1:der%mesh%np, :) = hpsi(1:der%mesh%np, :) + (gyromagnetic_ratio * M_HALF) * lhpsi(1:der%mesh%np, :)
       SAFE_DEALLOCATE_A(lhpsi)
     end select
 
     SAFE_DEALLOCATE_A(grad)
-    SAFE_DEALLOCATE_A(a)
+    SAFE_DEALLOCATE_A(aa)
     SAFE_DEALLOCATE_A(a_prime)
   end if
 
@@ -214,13 +217,14 @@ subroutine X(vlaser_operator_linear) (laser, der, std, psi, hpsi, ik, gyromagnet
 
     select case(std%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
-      do k = 1, der%mesh%np
-        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a_field(1:der%mesh%sb%dim), grad(k, 1:der%mesh%sb%dim, 1)) / P_c
+      do ip = 1, der%mesh%np
+        hpsi(ip, 1) = hpsi(ip, 1) - M_zI * dot_product(a_field(1:der%mesh%sb%dim), grad(ip, 1:der%mesh%sb%dim, 1)) / P_c
       end do
     case (SPINORS)
-      do k = 1, der%mesh%np
+      do ip = 1, der%mesh%np
         do idim = 1, std%dim
-          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(a_field(1:der%mesh%sb%dim), grad(k, 1:der%mesh%sb%dim, idim)) / P_c
+          hpsi(ip, idim) = hpsi(ip, idim) - M_zI * &
+            dot_product(a_field(1:der%mesh%sb%dim), grad(ip, 1:der%mesh%sb%dim, idim)) / P_c
         end do
       end do
     end select
@@ -232,7 +236,7 @@ end subroutine X(vlaser_operator_linear)
 
 
 ! ---------------------------------------------------------
-subroutine X(vlasers) (lasers, nlasers, der, std, psi, hpsi, grad, ik, gyromagnetic_ratio, a_static, t)
+subroutine X(vlasers) (lasers, nlasers, der, std, psi, hpsi, grad, ik, gyromagnetic_ratio, a_static, time)
   type(laser_t),       intent(in)    :: lasers(:)
   integer,             intent(in)    :: nlasers
   type(derivatives_t), intent(in)    :: der
@@ -243,18 +247,18 @@ subroutine X(vlasers) (lasers, nlasers, der, std, psi, hpsi, grad, ik, gyromagne
   integer,             intent(in)    :: ik
   FLOAT,               intent(in)    :: gyromagnetic_ratio
   FLOAT,    optional,  intent(in)    :: a_static(:,:)
-  FLOAT,    optional,  intent(in)    :: t
+  FLOAT,    optional,  intent(in)    :: time
 
-  integer :: k, idim
+  integer :: ip, idim
   logical :: electric_field, vector_potential, magnetic_field
   R_TYPE, allocatable :: lhpsi(:, :)
   type(profile_t), save :: ext_fields_profile
 
-  FLOAT :: a_field(1:MAX_DIM), a_field_prime(1:MAX_DIM), b(1:MAX_DIM), b_prime(1:MAX_DIM)
+  FLOAT :: a_field(1:MAX_DIM), a_field_prime(1:MAX_DIM), bb(1:MAX_DIM), b_prime(1:MAX_DIM)
 
-  FLOAT, allocatable :: v(:), pot(:), a(:, :), a_prime(:, :)
+  FLOAT, allocatable :: vv(:), pot(:), aa(:, :), a_prime(:, :)
 
-  call push_sub('h_inc.Xvlasers')
+  call push_sub('lasers_inc.Xvlasers')
   call profiling_in(ext_fields_profile, 'EXTERNAL_FIELDS')
 
   a_field = M_ZERO
@@ -276,43 +280,45 @@ contains
 
   ! ---------------------------------------------------------
   subroutine get_fields()
-    integer :: i
+    integer :: il
 
-    do i = 1, nlasers
+  call push_sub('lasers_inc.Xvlasers.get_fields')
 
-      select case(laser_kind(lasers(i)))
+    do il = 1, nlasers
+
+      select case(laser_kind(lasers(il)))
       case(E_FIELD_SCALAR_POTENTIAL, E_FIELD_ELECTRIC)
-        if(.not. allocated(v)) then 
-          SAFE_ALLOCATE(v(1:der%mesh%np))
-          v = M_ZERO
+        if(.not. allocated(vv)) then 
+          SAFE_ALLOCATE(vv(1:der%mesh%np))
+          vv = M_ZERO
         end if
         SAFE_ALLOCATE(pot(1:der%mesh%np))
         pot = M_ZERO
-        call laser_potential(der%mesh%sb, lasers(i), der%mesh, pot, t)
-        v = v + pot
+        call laser_potential(der%mesh%sb, lasers(il), der%mesh, pot, time)
+        vv = vv + pot
         electric_field = .true.
         SAFE_DEALLOCATE_A(pot)
         
       case(E_FIELD_MAGNETIC)
-        if(.not. allocated(a)) then 
-          SAFE_ALLOCATE(a(1:der%mesh%np_part, 1:der%mesh%sb%dim))
-          a = M_ZERO
+        if(.not. allocated(aa)) then 
+          SAFE_ALLOCATE(aa(1:der%mesh%np_part, 1:der%mesh%sb%dim))
+          aa = M_ZERO
           SAFE_ALLOCATE(a_prime(1:der%mesh%np_part, 1:der%mesh%sb%dim))
           a_prime = M_ZERO
         end if
 
-        call laser_vector_potential(lasers(i), a_prime, t)
-        a = a + a_prime
-        if(present(t)) then
-          call laser_field(der%mesh%sb, lasers(i), b_prime, t)
+        call laser_vector_potential(lasers(il), a_prime, time)
+        aa = aa + a_prime
+        if(present(time)) then
+          call laser_field(der%mesh%sb, lasers(il), b_prime, time)
         else 
-          call laser_field(der%mesh%sb, lasers(i), b_prime)
+          call laser_field(der%mesh%sb, lasers(il), b_prime)
         end if
-        b = b + b_prime
+        bb = bb + b_prime
         magnetic_field = .true.
         
       case(E_FIELD_VECTOR_POTENTIAL)
-        call laser_field(der%mesh%sb, lasers(i), a_field_prime, t)
+        call laser_field(der%mesh%sb, lasers(il), a_field_prime, time)
         a_field = a_field + a_field_prime
         vector_potential = .true.
         
@@ -320,23 +326,30 @@ contains
 
     end do
 
+    call pop_sub()
   end subroutine get_fields
 
 
   ! ---------------------------------------------------------
   subroutine apply_electric_field()
-    do k = 1, std%dim
-      hpsi(1:der%mesh%np, k)= hpsi(1:der%mesh%np, k) + v(1:der%mesh%np) * psi(1:der%mesh%np, k)
+    call push_sub('lasers_inc.Xvlasers.apply_electric_field')
+
+    do idim = 1, std%dim
+      hpsi(1:der%mesh%np, idim) = hpsi(1:der%mesh%np, idim) + vv(1:der%mesh%np) * psi(1:der%mesh%np, idim)
     end do
-    SAFE_DEALLOCATE_A(v)
+    SAFE_DEALLOCATE_A(vv)
+
+    call pop_sub()
   end subroutine apply_electric_field
 
 
   ! ---------------------------------------------------------
   subroutine apply_magnetic_field()
-    do k = 1, der%mesh%np
-      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a(k, 1:der%mesh%sb%dim), &
-        a(k, 1:der%mesh%sb%dim))*psi(k, :) / P_c**2
+    call push_sub('lasers_inc.Xvlasers.apply_magnetic_field')
+
+    do ip = 1, der%mesh%np
+      hpsi(ip, :) = hpsi(ip, :) + M_HALF * dot_product(aa(ip, 1:der%mesh%sb%dim), &
+        aa(ip, 1:der%mesh%sb%dim)) * psi(ip, :) / P_c**2
     end do
 
     ! If there is a static magnetic field, its associated vector potential is coupled with
@@ -344,21 +357,22 @@ contains
     ! do the calculation only once...). Note that h%ep%a_static already has been divided
     ! by P_c, and therefore here we only divide by P_c, and not P_c**2.
     if(present(a_static)) then
-      do k = 1, der%mesh%np
-        hpsi(k, :) = hpsi(k, :) + dot_product(a(k, 1:der%mesh%sb%dim), &
-          a_static(k, 1:der%mesh%sb%dim))*psi(k, :) / P_c
+      do ip = 1, der%mesh%np
+        hpsi(ip, :) = hpsi(ip, :) + dot_product(aa(ip, 1:der%mesh%sb%dim), &
+          a_static(ip, 1:der%mesh%sb%dim))*psi(ip, :) / P_c
       end do
     end if
     
     select case(std%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
-      do k = 1, der%mesh%np
-        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a(k, 1:der%mesh%sb%dim), grad(k, 1:der%mesh%sb%dim, 1)) / P_c
+      do ip = 1, der%mesh%np
+        hpsi(ip, 1) = hpsi(ip, 1) - M_zI * dot_product(aa(ip, 1:der%mesh%sb%dim), grad(ip, 1:der%mesh%sb%dim, 1)) / P_c
       end do
     case (SPINORS)
-      do k = 1, der%mesh%np
+      do ip = 1, der%mesh%np
         do idim = 1, std%dim
-          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(a(k, 1:der%mesh%sb%dim), grad(k, 1:der%mesh%sb%dim, idim)) / P_c
+          hpsi(ip, idim) = hpsi(ip, idim) - M_zI * &
+            dot_product(aa(ip, 1:der%mesh%sb%dim), grad(ip, 1:der%mesh%sb%dim, idim)) / P_c
         end do
       end do
     end select
@@ -368,48 +382,53 @@ contains
     case (SPIN_POLARIZED)
       SAFE_ALLOCATE(lhpsi(1:der%mesh%np, 1:std%dim))
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        lhpsi(1:der%mesh%np, 1) = - M_HALF/P_C*sqrt(dot_product(b, b))*psi(1:der%mesh%np, 1)
+        lhpsi(1:der%mesh%np, 1) = - M_HALF / P_c * sqrt(dot_product(bb, bb)) * psi(1:der%mesh%np, 1)
       else
-        lhpsi(1:der%mesh%np, 1) = + M_HALF/P_C*sqrt(dot_product(b, b))*psi(1:der%mesh%np, 1)
+        lhpsi(1:der%mesh%np, 1) = + M_HALF / P_c * sqrt(dot_product(bb, bb)) * psi(1:der%mesh%np, 1)
       end if
       hpsi(1:der%mesh%np, :) = hpsi(1:der%mesh%np, :) + (gyromagnetic_ratio * M_HALF) * lhpsi(1:der%mesh%np, :)
       SAFE_DEALLOCATE_A(lhpsi)
 
     case (SPINORS)
       SAFE_ALLOCATE(lhpsi(1:der%mesh%np, 1:std%dim))
-      lhpsi(1:der%mesh%np, 1) = M_HALF/P_C*( b(3)*psi(1:der%mesh%np, 1) &
-        + (b(1) - M_zI*b(2))*psi(1:der%mesh%np, 2))
-      lhpsi(1:der%mesh%np, 2) = M_HALF/P_C*(-b(3)*psi(1:der%mesh%np, 2) &
-        + (b(1) + M_zI*b(2))*psi(1:der%mesh%np, 1))
+      lhpsi(1:der%mesh%np, 1) = M_HALF/P_c * ( bb(3) * psi(1:der%mesh%np, 1) &
+        + (bb(1) - M_zI * bb(2)) * psi(1:der%mesh%np, 2))
+      lhpsi(1:der%mesh%np, 2) = M_HALF/P_c * (-bb(3) * psi(1:der%mesh%np, 2) &
+        + (bb(1) + M_zI * bb(2)) * psi(1:der%mesh%np, 1))
       hpsi(1:der%mesh%np, :) = hpsi(1:der%mesh%np, :) + (gyromagnetic_ratio * M_HALF) * lhpsi(1:der%mesh%np, :)
       SAFE_DEALLOCATE_A(lhpsi)
     end select
 
-    SAFE_DEALLOCATE_A(a)
+    SAFE_DEALLOCATE_A(aa)
     SAFE_DEALLOCATE_A(a_prime)
 
+    call pop_sub()
   end subroutine apply_magnetic_field
 
 
   ! ---------------------------------------------------------
   subroutine apply_vector_potential()
-    do k = 1, der%mesh%np
-      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a_field(1:der%mesh%sb%dim), a_field(1:der%mesh%sb%dim))*psi(k, :) / P_c**2
+    call push_sub('lasers_inc.Xvlasers.apply_vector_potential')
+
+    do ip = 1, der%mesh%np
+      hpsi(ip, :) = hpsi(ip, :) + M_HALF * dot_product(a_field(1:der%mesh%sb%dim), a_field(1:der%mesh%sb%dim))*psi(ip, :) / P_c**2
     end do
 
     select case(std%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
-      do k = 1, der%mesh%np
-        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a_field(1:der%mesh%sb%dim), grad(k, 1:der%mesh%sb%dim, 1)) / P_c
+      do ip = 1, der%mesh%np
+        hpsi(ip, 1) = hpsi(ip, 1) - M_zI * dot_product(a_field(1:der%mesh%sb%dim), grad(ip, 1:der%mesh%sb%dim, 1)) / P_c
       end do
     case (SPINORS)
-      do k = 1, der%mesh%np
+      do ip = 1, der%mesh%np
         do idim = 1, std%dim
-          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(a_field(1:der%mesh%sb%dim), grad(k, 1:der%mesh%sb%dim, idim)) / P_c
+          hpsi(ip, idim) = hpsi(ip, idim) - M_zI * &
+             dot_product(a_field(1:der%mesh%sb%dim), grad(ip, 1:der%mesh%sb%dim, idim)) / P_c
         end do
       end do
     end select
 
+    call pop_sub()
   end subroutine apply_vector_potential
 
 end subroutine X(vlasers)

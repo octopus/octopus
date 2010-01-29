@@ -24,9 +24,9 @@ module PES_m
   use fft_m
   use global_m
   use io_m
-  use parser_m
   use mesh_m
   use messages_m
+  use parser_m
   use profiling_m
   use simul_box_m
   use states_m
@@ -60,12 +60,14 @@ module PES_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine PES_init(p, m, sb, st, ab, save_iter)
-    type(pes_t),    intent(out)   :: p
-    type(mesh_t),   intent(inout) :: m
+  subroutine PES_init(pes, mesh, sb, st, ab, save_iter)
+    type(pes_t),    intent(out)   :: pes
+    type(mesh_t),   intent(inout) :: mesh
     type(simul_box_t), intent(in) :: sb
     type(states_t),    intent(in) :: st
     integer,           intent(in) :: ab, save_iter
+
+    call push_sub('pes.PES_init')
 
     !%Variable CalcPES_rc
     !%Type logical
@@ -74,15 +76,15 @@ contains
     !%Description
     !%  If <tt>true</tt>, store the wavefunctions at specific points in order to 
     !% calculate the photoelectron spectrum at a point far in the box as proposed in 
-    !% A. Pohl, P.-G. Reinhard, and E. Suraud, Phys. Rev. Lett. <b>84</b>, 5090 (2000).
+    !% A. Pohl, P.-G. Reinhard, and E. Suraud, <i>Phys. Rev. Lett.</i> <b>84</b>, 5090 (2000).
     !%End
-    call parse_logical(datasets_check('CalcPES_rc'), .false., p%calc_rc)
-    if(p%calc_rc) then
-      p%calc_rc = .true.
-      call PES_rc_init(p%rc, m, st, save_iter)
+    call parse_logical(datasets_check('CalcPES_rc'), .false., pes%calc_rc)
+    if(pes%calc_rc) then
+      pes%calc_rc = .true.
+      call PES_rc_init(pes%rc, mesh, st, save_iter)
     end if
 
-    p%calc_mask = .false.
+    pes%calc_mask = .false.
     ! have the mask, and we are working in the velocity gauge
     if(ab == 2) then
       !%Variable CalcPES_mask
@@ -92,54 +94,63 @@ contains
       !%Description
       !% If <tt>true</tt>, calculate the photo-electron spectrum using the mask method
       !% (M. Marques, D. Varsano, H. Appel, E.K.U. Gross and A. Rubio, to be submitted). 
-      !% In order for this to work, masking boundaries are necessary 
-      !% (<tt>AbsorbingBoundaries == 2</tt>).
+      !% For this to work, masking boundaries are necessary (<tt>AbsorbingBoundaries == 2</tt>).
       !%End
-      call parse_logical(datasets_check('CalcPES_Mask'), .false., p%calc_mask)
-      if(p%calc_mask) then
-        call PES_mask_init(p%mask, m, sb, st)
+      call parse_logical(datasets_check('CalcPES_Mask'), .false., pes%calc_mask)
+      if(pes%calc_mask) then
+        call PES_mask_init(pes%mask, mesh, sb, st)
       end if
     end if
 
+    call pop_sub()
   end subroutine PES_init
 
 
   ! ---------------------------------------------------------
-  subroutine PES_end(p)
-    type(PES_t), intent(inout) :: p
+  subroutine PES_end(pes)
+    type(PES_t), intent(inout) :: pes
 
-    if(p%calc_rc)   call PES_rc_end  (p%rc)
-    if(p%calc_mask) call PES_mask_end(p%mask)
+    call push_sub('pes.PES_end')
 
+    if(pes%calc_rc)   call PES_rc_end  (pes%rc)
+    if(pes%calc_mask) call PES_mask_end(pes%mask)
+
+    call pop_sub()
   end subroutine PES_end
 
 
   ! ---------------------------------------------------------
-  subroutine PES_doit(p, m, st, ii, dt, mask)
-    type(PES_t),    intent(inout) :: p
-    type(mesh_t),   intent(in)    :: m
+  subroutine PES_calc(pes, mesh, st, ii, dt, mask)
+    type(PES_t),    intent(inout) :: pes
+    type(mesh_t),   intent(in)    :: mesh
     type(states_t), intent(in)    :: st
     FLOAT,          intent(in)    :: dt
     FLOAT,          pointer       :: mask(:)
     integer,        intent(in)    :: ii
 
-    if(p%calc_rc)   call PES_rc_doit  (p%rc, st, ii)
-    if(p%calc_mask) call PES_mask_doit(p%mask, m, st, dt, mask)
+    call push_sub('pes.PES_calc')
 
-  end subroutine PES_doit
+    if(pes%calc_rc)   call PES_rc_calc  (pes%rc, st, ii)
+    if(pes%calc_mask) call PES_mask_calc(pes%mask, mesh, st, dt, mask)
+
+    call pop_sub()
+  end subroutine PES_calc
 
 
   ! ---------------------------------------------------------
-  subroutine PES_output(p, m, st, iter, save_iter, dt)
-    type(PES_t),    intent(in) :: p
-    type(mesh_t),   intent(in) :: m
+  subroutine PES_output(pes, mesh, st, iter, save_iter, dt)
+    type(PES_t),    intent(in) :: pes
+    type(mesh_t),   intent(in) :: mesh
     type(states_t), intent(in) :: st
     integer,        intent(in) :: iter, save_iter
     FLOAT,          intent(in) :: dt
 
-    if(p%calc_rc)   call PES_rc_output   (p%rc, st, iter, save_iter, dt)
-    if(p%calc_mask) call PES_mask_output (p%mask, m, st, "PES")
+    call push_sub('pes.PES_output')
 
+    if(pes%calc_rc)   call PES_rc_output   (pes%rc, st, iter, save_iter, dt)
+    if(pes%calc_mask) call PES_mask_output (pes%mask, mesh, st, "PES")
+
+    call pop_sub()
   end subroutine PES_output
 
 #include "pes_rc_inc.F90"

@@ -19,8 +19,8 @@
 
 #include "global.h"
 
-! This module contains routines necessary to the split operator
-! methods defined in exponential
+! This module contains routines needed for the split-operator
+! methods defined in exponential.
 module exponential_split_m
   use cube_function_m
   use external_pot_m
@@ -29,13 +29,13 @@ module exponential_split_m
   use global_m
   use grid_m
   use hamiltonian_m
+  use lasers_m
   use mesh_m
   use messages_m
   use profiling_m
   use simul_box_m
   use states_m
   use states_dim_m
-  use lasers_m
 
   implicit none
 
@@ -54,10 +54,10 @@ contains
     integer :: ix, iy, iz, k(MAX_DIM), idim
     FLOAT :: cutoff, temp(MAX_DIM), g2
 
-    call push_sub('exponential_split.exp_kinetic')
+    call push_sub('exponential_split.zexp_kinetic')
 
     if(simul_box_is_periodic(mesh%sb)) then
-      message(1) = 'Internal error in exp_kinetic'
+      message(1) = 'Internal error in zexp_kinetic'
       call write_fatal(1)
     end if
 
@@ -100,18 +100,18 @@ contains
   ! ---------------------------------------------------------
   ! Calculates psi = exp{factor*V_KS(t)} psi
   ! where V_KS is the Kohn-Sham potential
-  subroutine zexp_vlpsi(mesh, hm, psi, ik, t, factor)
+  subroutine zexp_vlpsi(mesh, hm, psi, ik, time, factor)
     type(mesh_t),        intent(in)    :: mesh
     type(hamiltonian_t), intent(in)    :: hm
     CMPLX,               intent(inout) :: psi(:,:) ! (mesh%np_part, mesh%sb%dim)
     integer,             intent(in)    :: ik
-    FLOAT,               intent(in)    :: t
+    FLOAT,               intent(in)    :: time
     CMPLX,               intent(in)    :: factor
 
-    integer :: i
+    integer :: il
     FLOAT, allocatable :: pot(:)
 
-    call push_sub('exponential_split.vlpsi')
+    call push_sub('exponential_split.zexp_vlpsi')
 
     ! WARNING: spinors not yet supported.
     select case(hm%d%ispin)
@@ -128,11 +128,11 @@ contains
       call write_fatal(1)
     end select
 
-    do i = 1, hm%ep%no_lasers
-      select case(laser_kind(hm%ep%lasers(i)))
+    do il = 1, hm%ep%no_lasers
+      select case(laser_kind(hm%ep%lasers(il)))
       case(E_FIELD_ELECTRIC)
         SAFE_ALLOCATE(pot(1:mesh%np))
-        call laser_potential(mesh%sb, hm%ep%lasers(i), mesh, pot, t)
+        call laser_potential(mesh%sb, hm%ep%lasers(il), mesh, pot, time)
         psi(1:mesh%np, ik) = exp(factor*pot(1:mesh%np))*psi(1:mesh%np, ik) 
         SAFE_DEALLOCATE_A(pot)
       case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL)
@@ -150,10 +150,10 @@ contains
   ! ---------------------------------------------------------
   ! calculates psi = exp{factor V_nlpp} psi
   ! where V_nlpp is the non-local part of the pseudpotential
-  subroutine zexp_vnlpsi (m, hm, psi, factor_, order_)
-    type(mesh_t),        intent(in) :: m
+  subroutine zexp_vnlpsi (mesh, hm, psi, factor_, order_)
+    type(mesh_t),        intent(in) :: mesh
     type(hamiltonian_t), intent(in) :: hm
-    CMPLX,            intent(inout) :: psi(m%np, hm%d%dim)
+    CMPLX,            intent(inout) :: psi(mesh%np, hm%d%dim)
     CMPLX,               intent(in) :: factor_
     logical,             intent(in) :: order_
 
@@ -161,12 +161,12 @@ contains
 !    CMPLX   :: factor
 !    CMPLX, allocatable :: initzpsi(:, :)
 
-    call push_sub('exponential_split.vnlpsi')
+    call push_sub('exponential_split.zexp_vnlpsi')
 
     message(1) = 'Error: zexp_vnlpsi is currently broken.'
     call write_fatal(1)
 
-!    ALLO CATE(initzpsi(m%np, 1:hm%d%dim), m%np*hm%d%dim)
+!    ALLO CATE(initzpsi(mesh%np, 1:hm%d%dim), mesh%np*hm%d%dim)
 !   just to avoid compiler warnings due to unused variables
 !    factor   = factor_
 !    order    = order_

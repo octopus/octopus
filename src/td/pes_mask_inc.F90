@@ -18,9 +18,9 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine PES_mask_init(v, m, sb, st)
-  type(PES_mask_t),  intent(out)   :: v
-  type(mesh_t),      intent(inout) :: m
+subroutine PES_mask_init(mask, mesh, sb, st)
+  type(PES_mask_t),  intent(out)   :: mask
+  type(mesh_t),      intent(inout) :: mesh
   type(simul_box_t), intent(in)    :: sb
   type(states_t),    intent(in)    :: st
 
@@ -29,30 +29,30 @@ subroutine PES_mask_init(v, m, sb, st)
   message(1) = 'Info: Calculating PES using mask technique.'
   call write_info(1)
 
-  ! alloc ffts in case they are not allocated yet
-  call fft_init(m%idx%ll, fft_complex, v%fft, optimize = .not.simul_box_is_periodic(sb))
+  ! allocate FFTs in case they are not allocated yet
+  call fft_init(mesh%idx%ll, fft_complex, mask%fft, optimize = .not.simul_box_is_periodic(sb))
 
   ! setup arrays to be used
-  SAFE_ALLOCATE(v%k(1:m%idx%ll(1), 1:m%idx%ll(2), 1:m%idx%ll(3), 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
-  SAFE_ALLOCATE(v%r(1:m%idx%ll(1), 1:m%idx%ll(2), 1:m%idx%ll(3),             st%st_start:st%st_end, 1:st%d%nik))
+  SAFE_ALLOCATE(mask%k(1:mesh%idx%ll(1), 1:mesh%idx%ll(2), 1:mesh%idx%ll(3), 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
+  SAFE_ALLOCATE(mask%r(1:mesh%idx%ll(1), 1:mesh%idx%ll(2), 1:mesh%idx%ll(3),             st%st_start:st%st_end, 1:st%d%nik))
 
-  v%k = M_z0
-  v%r = M_ZERO
+  mask%k = M_z0
+  mask%r = M_ZERO
 
   call pop_sub()
 end subroutine PES_mask_init
 
 
 ! ---------------------------------------------------------
-subroutine PES_mask_end(v)
-  type(PES_mask_t), intent(inout) :: v
+subroutine PES_mask_end(mask)
+  type(PES_mask_t), intent(inout) :: mask
 
   call push_sub('pes_mask_inc.PES_mask_end')
 
-  if(associated(v%k)) then
-    call fft_end(v%fft)
-    SAFE_DEALLOCATE_P(v%k)
-    SAFE_DEALLOCATE_P(v%r)
+  if(associated(mask%k)) then
+    call fft_end(mask%fft)
+    SAFE_DEALLOCATE_P(mask%k)
+    SAFE_DEALLOCATE_P(mask%r)
   end if
 
   call pop_sub()
@@ -60,56 +60,56 @@ end subroutine PES_mask_end
 
 
 ! ---------------------------------------------------------
-subroutine PES_mask_doit(v, m, st, dt, mask)
-  type(PES_mask_t), intent(inout) :: v
-  type(mesh_t),     intent(in)    :: m
+subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn)
+  type(PES_mask_t), intent(inout) :: mask
+  type(mesh_t),     intent(in)    :: mesh
   type(states_t),   intent(in)    :: st
   FLOAT,            intent(in)    :: dt
-  FLOAT,            pointer       :: mask(:)
+  FLOAT,            pointer       :: mask_fn(:)
 
-  integer :: j, idim, ist, ik, ix, iy, iz, ix3(MAX_DIM), ixx(MAX_DIM)
+  integer :: ip, idim, ist, ik, ix, iy, iz, ix3(MAX_DIM), ixx(MAX_DIM)
   CMPLX, allocatable :: wf1(:,:,:), wf2(:,:,:)
   FLOAT :: temp(MAX_DIM), vec
 
-  call push_sub('pes_mask_inc.PES_mask_doit')
+  call push_sub('pes_mask_inc.PES_mask_calc')
 
   ! propagate wavefunction in momentum space
-  temp(:) = M_TWO*M_PI/(m%idx%ll(:)*m%spacing(:))
-  do ix = 1, m%idx%ll(1)
-    ixx(1) = pad_feq(ix, m%idx%ll(1), .true.)
-    do iy = 1, m%idx%ll(2)
-      ixx(2) = pad_feq(iy, m%idx%ll(2), .true.)
-      do iz = 1, m%idx%ll(3)
-        ixx(3) = pad_feq(iz, m%idx%ll(3), .true.)
+  temp(:) = M_TWO * M_PI / (mesh%idx%ll(:) * mesh%spacing(:))
+  do ix = 1, mesh%idx%ll(1)
+    ixx(1) = pad_feq(ix, mesh%idx%ll(1), .true.)
+    do iy = 1, mesh%idx%ll(2)
+      ixx(2) = pad_feq(iy, mesh%idx%ll(2), .true.)
+      do iz = 1, mesh%idx%ll(3)
+        ixx(3) = pad_feq(iz, mesh%idx%ll(3), .true.)
 
         vec = sum((temp(:) * ixx(:))**2) / M_TWO
-        v%k(ix, iy, iz,:,:,:) = v%k(ix, iy, iz,:,:,:)*exp(-M_zI*dt*vec)
+        mask%k(ix, iy, iz,:,:,:) = mask%k(ix, iy, iz,:,:,:) * exp(-M_zI * dt * vec)
       end do
     end do
   end do
 
   ! we now add the contribution from this timestep
-  SAFE_ALLOCATE(wf1(1:m%idx%ll(1), 1:m%idx%ll(2), 1:m%idx%ll(3)))
-  SAFE_ALLOCATE(wf2(1:m%idx%ll(1), 1:m%idx%ll(2), 1:m%idx%ll(3)))
+  SAFE_ALLOCATE(wf1(1:mesh%idx%ll(1), 1:mesh%idx%ll(2), 1:mesh%idx%ll(3)))
+  SAFE_ALLOCATE(wf2(1:mesh%idx%ll(1), 1:mesh%idx%ll(2), 1:mesh%idx%ll(3)))
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
 
         wf1 = M_z0
 
-        do j = 1, m%np
-          ix3(:) = m%idx%Lxyz(j,:) + m%idx%ll(:)/2 + 1
-          wf1(ix3(1), ix3(2), ix3(3)) = mask(j)*st%zpsi(j, idim, ist, ik)
+        do ip = 1, mesh%np
+          ix3(:) = mesh%idx%Lxyz(ip, :) + mesh%idx%ll(:)/2 + 1
+          wf1(ix3(1), ix3(2), ix3(3)) = mask_fn(ip) * st%zpsi(ip, idim, ist, ik)
         end do
 
         ! and add to our density (sum for idim, also)
-        v%r(:,:,:, ist, ik) = v%r(:,:,:, ist, ik) + abs(wf1)**2
+        mask%r(:,:,:, ist, ik) = mask%r(:,:,:, ist, ik) + abs(wf1)**2
 
         ! now we FT
-        call zfft_forward(v%fft, wf1, wf2)
+        call zfft_forward(mask%fft, wf1, wf2)
 
         ! and add to our spectrum
-        v%k(:,:,:, idim, ist, ik) = v%k(:,:,:, idim, ist, ik) + wf2
+        mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) + wf2
 
       end do
     end do
@@ -118,51 +118,53 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
   SAFE_DEALLOCATE_A(wf1)
   SAFE_DEALLOCATE_A(wf2)
   call pop_sub()
-end subroutine PES_mask_doit
+end subroutine PES_mask_calc
 
 
 ! ---------------------------------------------------------
-subroutine PES_mask_output(v, m, st, file)
-  type(PES_mask_t), intent(in) :: v
-  type(mesh_t),     intent(in) :: m
+subroutine PES_mask_output(mask, mesh, st, file)
+  type(PES_mask_t), intent(in) :: mask
+  type(mesh_t),     intent(in) :: mesh
   type(states_t),   intent(in) :: st
   character(len=*), intent(in) :: file
 
-  FLOAT, allocatable :: spis(:,:,:), arpis(:,:,:)
+  FLOAT, allocatable :: spis(:,:,:), arpes(:,:,:)
   FLOAT :: vec, temp(MAX_DIM)
   integer, allocatable :: npoints(:), ar_npoints(:)
-  integer :: p, ik, ii, ix, iy, iz, ixx(MAX_DIM), iunit
+  integer :: ist, ik, ii, ix, iy, iz, ixx(MAX_DIM), iunit
   character(len=100) :: fn
 
-  integer,  parameter :: n = 600, ar_n = 90
+  integer,  parameter :: nn = 600, ar_n = 90
   FLOAT, parameter :: step = CNST(0.005)
 
   call push_sub('pes_mask_inc.PES_mask_output')
 
-  SAFE_ALLOCATE( spis(1:n,    st%st_start:st%st_end, 1:st%d%nik))
-  SAFE_ALLOCATE(arpis(1:ar_n, st%st_start:st%st_end, 1:st%d%nik))
-  SAFE_ALLOCATE(npoints(1:n))
+  SAFE_ALLOCATE( spis(1:nn,   st%st_start:st%st_end, 1:st%d%nik))
+  SAFE_ALLOCATE(arpes(1:ar_n, st%st_start:st%st_end, 1:st%d%nik))
+  SAFE_ALLOCATE(npoints(1:nn))
   SAFE_ALLOCATE(ar_npoints(1:ar_n))
-  spis = M_ZERO; arpis = M_ZERO
-  npoints = 0;  ar_npoints = 0
+  spis = M_ZERO
+  arpes = M_ZERO
+  npoints = 0
+  ar_npoints = 0
 
-  temp(:) = M_TWO*M_PI/(m%idx%ll(:)*m%spacing(:))
-  do ix = 1, m%idx%ll(1)
-    ixx(1) = pad_feq(ix, m%idx%ll(1), .true.)
-    do iy = 1, m%idx%ll(2)
-      ixx(2) = pad_feq(iy, m%idx%ll(2), .true.)
-      do iz = 1, m%idx%ll(3)
-        ixx(3) = pad_feq(iz, m%idx%ll(3), .true.)
+  temp(:) = M_TWO * M_PI / (mesh%idx%ll(:) * mesh%spacing(:))
+  do ix = 1, mesh%idx%ll(1)
+    ixx(1) = pad_feq(ix, mesh%idx%ll(1), .true.)
+    do iy = 1, mesh%idx%ll(2)
+      ixx(2) = pad_feq(iy, mesh%idx%ll(2), .true.)
+      do iz = 1, mesh%idx%ll(3)
+        ixx(3) = pad_feq(iz, mesh%idx%ll(3), .true.)
 
         if(ixx(1).ne.0 .or. ixx(2).ne.0 .or. ixx(3).ne.0) then
           ! power spectrum
           vec = sum((temp(:) * ixx(:))**2) / M_TWO
           ii = nint(vec / step) + 1
-          if(ii <= n) then
+          if(ii <= nn) then
             do ik = st%d%kpt%start, st%d%kpt%end
-              do p = st%st_start, st%st_end
-                spis(ii, p, ik) = spis(ii, p, ik) + st%occ(p, ik) * &
-                  sum(abs(v%k(ix, iy, iz, :, p, ik))**2)
+              do ist = st%st_start, st%st_end
+                spis(ii, ist, ik) = spis(ii, ist, ik) + st%occ(ist, ik) * &
+                  sum(abs(mask%k(ix, iy, iz, :, ist, ik))**2)
                 npoints(ii) = npoints(ii) + 1
               end do
             end do
@@ -171,12 +173,12 @@ subroutine PES_mask_output(v, m, st, file)
           ! angle-resolved (assumes the pol is in the x-direction)
           if(ixx(3)==0 .and. (ixx(1).ne.0 .or. ixx(2).ne.0)) then
             vec = atan2(real(ixx(2), REAL_PRECISION), real(ixx(1), REAL_PRECISION))
-            ii  = nint(abs(vec)*(ar_n-1)/M_PI) + 1
+            ii  = nint(abs(vec) * (ar_n - 1)/M_PI) + 1
             if(ii <= ar_n) then ! should always be true
               do ik = st%d%kpt%start, st%d%kpt%end
-                do p = st%st_start, st%st_end
-                  arpis(ii, p, ik) = arpis(ii, p, ik) + &
-                    st%occ(p, ik)*sum(abs(v%k(ix, iy, iz, :, p, ik))**2)
+                do ist = st%st_start, st%st_end
+                  arpes(ii, ist, ik) = arpes(ii, ist, ik) + &
+                    st%occ(ist, ik) * sum(abs(mask%k(ix, iy, iz, :, ist, ik))**2)
                   ar_npoints(ii) = ar_npoints(ii) + 1
                 end do
               end do
@@ -190,13 +192,13 @@ subroutine PES_mask_output(v, m, st, file)
 
   ! first output power spectra
   do ik = st%d%kpt%start, st%d%kpt%end
-    do p = st%st_start, st%st_end
-      write(fn, '(a,a,i1.1,a,i2.2)') trim(file), '_power.', ik, '.',p
+    do ist = st%st_start, st%st_end
+      write(fn, '(a,a,i1.1,a,i2.2)') trim(file), '_power.', ik, '.', ist
       iunit = io_open(fn, action='write')
 
-      do ix = 1, n
+      do ix = 1, nn
         if(npoints(ix) > 0) then
-          write(iunit, *)  units_from_atomic(units_out%energy, (ix - 1)*step), spis(ix, p, ik), npoints(ix)
+          write(iunit, *)  units_from_atomic(units_out%energy, (ix - 1) * step), spis(ix, ist, ik), npoints(ix)
         end if
       end do
       call io_close(iunit)
@@ -206,23 +208,23 @@ subroutine PES_mask_output(v, m, st, file)
   write(fn, '(a,a)') trim(file), '_power.sum'
   iunit = io_open(fn, action='write')
 
-  do ix = 1, n
+  do ix = 1, nn
     if(npoints(ix) > 0) then
-      write(iunit, *)  units_from_atomic(units_out%energy, (ix - 1)*step), sum(spis(ix, :, :)), npoints(ix)
+      write(iunit, *)  units_from_atomic(units_out%energy, (ix - 1) * step), sum(spis(ix, :, :)), npoints(ix)
     end if
   end do
   call io_close(iunit)
 
   ! now output ar spectra
   do ik = st%d%kpt%start, st%d%kpt%end
-    do p = st%st_start, st%st_end
-      write(fn, '(a,a,i1.1,a,i2.2)') trim(file), '_ar.', ik, '.', p
+    do ist = st%st_start, st%st_end
+      write(fn, '(a,a,i1.1,a,i2.2)') trim(file), '_ar.', ik, '.', ist
       iunit = io_open(fn, action='write')
 
       do ix = 1, ar_n
         if(ar_npoints(ix) > 0) then
-          write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, REAL_PRECISION), &
-            arpis(ix, p, ik), ar_npoints(ix)
+          write(iunit, *)  (ix-1)*CNST(180.0) / real(ar_n-1, REAL_PRECISION), &
+            arpes(ix, ist, ik), ar_npoints(ix)
         end if
       end do
       call io_close(iunit)
@@ -235,29 +237,29 @@ subroutine PES_mask_output(v, m, st, file)
   do ix = 1, ar_n
     if(ar_npoints(ix) > 0) then
       write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, REAL_PRECISION), &
-        sum(arpis(ix, :, :)), ar_npoints(ix)
+        sum(arpes(ix, :, :)), ar_npoints(ix)
     end if
   end do
   call io_close(iunit)
 
   ! now we do the ar spectrum in real space
-  arpis = M_ZERO
+  arpes = M_ZERO
   ar_npoints = 0
-  do ix = 1, m%idx%ll(1)
-    ixx(1) = ix - m%idx%ll(1)/2 - 1
-    do iy = 1, m%idx%ll(2)
-      ixx(2) = iy - m%idx%ll(2)/2 - 1
-      do iz = 1, m%idx%ll(3)
-        ixx(3) = iz - m%idx%ll(3)/2 - 1
+  do ix = 1, mesh%idx%ll(1)
+    ixx(1) = ix - mesh%idx%ll(1)/2 - 1
+    do iy = 1, mesh%idx%ll(2)
+      ixx(2) = iy - mesh%idx%ll(2)/2 - 1
+      do iz = 1, mesh%idx%ll(3)
+        ixx(3) = iz - mesh%idx%ll(3)/2 - 1
 
         ! angle-resolved
-        if(ixx(3)==0.and.(ixx(1).ne.0 .or. ixx(2).ne.0)) then
+        if(ixx(3) == 0 .and. (ixx(1) .ne. 0 .or. ixx(2) .ne. 0)) then
           vec = atan2(real(ixx(2), REAL_PRECISION), real(ixx(1), REAL_PRECISION))
-          ii  = nint(abs(vec)*(ar_n-1)/M_PI) + 1
+          ii  = nint(abs(vec) * (ar_n-1) / M_PI) + 1
           if(ii <= ar_n) then ! should always be true
             do ik = st%d%kpt%start, st%d%kpt%end
-              do p = st%st_start, st%st_end
-                arpis(ii, p, ik) = arpis(ii, p, ik) + st%occ(p, ik)*v%r(ix, iy, iz, p, ik)
+              do ist = st%st_start, st%st_end
+                arpes(ii, ist, ik) = arpes(ii, ist, ik) + st%occ(ist, ik) * mask%r(ix, iy, iz, ist, ik)
                 ar_npoints(ii) = ar_npoints(ii) + 1
               end do
             end do
@@ -268,16 +270,16 @@ subroutine PES_mask_output(v, m, st, file)
     end do
   end do
 
-  ! now output real ar spectra
+  ! now output real angle-resolved spectra
   do ik = st%d%kpt%start, st%d%kpt%end
-    do p = st%st_start, st%st_end
-      write(fn, '(a,a,i1.1,a,i2.2)') trim(file), '_ar_r.', ik, '.', p
+    do ist = st%st_start, st%st_end
+      write(fn, '(a,a,i1.1,a,i2.2)') trim(file), '_ar_r.', ik, '.', ist
       iunit = io_open(fn, action='write')
 
       do ix = 1, ar_n
         if(ar_npoints(ix) > 0) then
-          write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, REAL_PRECISION), &
-            arpis(ix, p, ik), ar_npoints(ix)
+          write(iunit, *) (ix - 1) * CNST(180.0) / real(ar_n - 1, REAL_PRECISION), &
+            arpes(ix, ist, ik), ar_npoints(ix)
         end if
       end do
       call io_close(iunit)
@@ -288,14 +290,14 @@ subroutine PES_mask_output(v, m, st, file)
   iunit = io_open(fn, action='write')
   do ix = 1, ar_n
     if(ar_npoints(ix) > 0) then
-      write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, REAL_PRECISION), &
-        sum(arpis(ix, :, :)), ar_npoints(ix)
+      write(iunit, *) (ix - 1) * CNST(180.0) / real(ar_n - 1, REAL_PRECISION), &
+        sum(arpes(ix, :, :)), ar_npoints(ix)
     end if
   end do
   call io_close(iunit)
 
   SAFE_DEALLOCATE_A(spis)
-  SAFE_DEALLOCATE_A(arpis)
+  SAFE_DEALLOCATE_A(arpes)
   SAFE_DEALLOCATE_A(npoints)
   SAFE_DEALLOCATE_A(ar_npoints)
 

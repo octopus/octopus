@@ -566,12 +566,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_potential(sb, laser, mesh, pot, tt)
+  subroutine laser_potential(sb, laser, mesh, pot, time)
     type(simul_box_t), intent(in) :: sb
     type(laser_t),     intent(in) :: laser
     type(mesh_t),      intent(in) :: mesh
     FLOAT,            intent(out) :: pot(:)
-    FLOAT, optional,   intent(in) :: tt
+    FLOAT, optional,   intent(in) :: time
 
     CMPLX :: amp
     integer :: ip
@@ -580,8 +580,8 @@ contains
     call push_sub('lasers.laser_potential')
 
     pot = M_ZERO
-    if(present(tt)) then
-      amp = tdf(laser%f, tt) * exp(M_zI * ( laser%omega*tt + tdf(laser%phi, tt) ) )
+    if(present(time)) then
+      amp = tdf(laser%f, time) * exp(M_zI * ( laser%omega*time + tdf(laser%phi, time) ) )
     else
       amp = M_z1
     end if
@@ -602,15 +602,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_vector_potential(laser, aa, tt)
+  subroutine laser_vector_potential(laser, aa, time)
     type(laser_t),   intent(in)  :: laser
     FLOAT,           intent(out) :: aa(:, :)
-    FLOAT, optional, intent(in)  :: tt
+    FLOAT, optional, intent(in)  :: time
 
     call push_sub('lasers.laser_vector_potential')
 
-    if(present(tt)) then
-      aa = laser%a * real( tdf(laser%f, tt) * exp(M_zI * ( laser%omega * tt + tdf(laser%phi, tt)  ) ) )
+    if(present(time)) then
+      aa = laser%a * real( tdf(laser%f, time) * exp(M_zI * ( laser%omega * time + tdf(laser%phi, time)  ) ) )
     else
       aa = laser%a
     end if
@@ -621,11 +621,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_field(sb, laser, field, tt)
+  subroutine laser_field(sb, laser, field, time)
     type(simul_box_t), intent(in)  :: sb
     type(laser_t),     intent(in)  :: laser
     FLOAT,             intent(out) :: field(:)
-    FLOAT, optional,   intent(in)  :: tt
+    FLOAT, optional,   intent(in)  :: time
 
     CMPLX :: amp
 
@@ -635,8 +635,8 @@ contains
     if(laser%field .eq. E_FIELD_SCALAR_POTENTIAL) then
       call pop_sub(); return
     endif
-    if(present(tt)) then
-      amp = tdf(laser%f, tt) * exp(M_zI * ( laser%omega * tt + tdf(laser%phi, tt) ) )
+    if(present(time)) then
+      amp = tdf(laser%f, time) * exp(M_zI * ( laser%omega * time + tdf(laser%phi, time) ) )
     else
       amp = M_z1
     end if
