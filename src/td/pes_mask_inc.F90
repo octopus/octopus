@@ -33,10 +33,8 @@ subroutine PES_mask_init(mask, mesh, sb, st)
   call fft_init(mesh%idx%ll, fft_complex, mask%fft, optimize = .not.simul_box_is_periodic(sb))
 
   ! setup arrays to be used
-  SAFE_ALLOCATE(mask%k(1:mesh%idx%ll(1), 1:mesh%idx%ll(2), 1:mesh%idx%ll(3), &
-    1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
-  SAFE_ALLOCATE(mask%r(1:mesh%idx%ll(1), 1:mesh%idx%ll(2), 1:mesh%idx%ll(3), &
-                st%st_start:st%st_end, 1:st%d%nik))
+  SAFE_ALLOCATE(mask%k(1:mesh%idx%ll(1),1:mesh%idx%ll(2),1:mesh%idx%ll(3),1:st%d%dim,st%st_start:st%st_end,1:st%d%nik))
+  SAFE_ALLOCATE(mask%r(1:mesh%idx%ll(1), 1:mesh%idx%ll(2), 1:mesh%idx%ll(3), st%st_start:st%st_end, 1:st%d%nik))
 
   mask%k = M_z0
   mask%r = M_ZERO
