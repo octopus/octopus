@@ -86,7 +86,7 @@ module td_m
     integer              :: iter           ! the actual iteration
     logical              :: recalculate_gs ! Recalculate ground-state along the evolution.
     
-    ! The *kick* used in "linear response in the time domain" calculations.
+    ! The *kick* used in "response in the time domain" calculations.
     type(kick_t)         :: kick
 
     type(PES_t)          :: PESv
@@ -583,10 +583,10 @@ contains
 
     ! ---------------------------------------------------------
     ! Applies the delta-function electric field E(t) = E_0 delta(t)
-    ! where E_0 = - k \hbar / e
+    ! where E_0 = - k \hbar / e, k = kick%delta_strength.
     subroutine apply_delta_field(kick)
       type(kick_t), intent(in) :: kick
-      integer :: jj, iatom
+      integer :: im, iatom
       integer :: ik, ist, idim, ip
       CMPLX   :: cc(2), kick_value
       FLOAT   :: ylm, rr
@@ -600,14 +600,14 @@ contains
       delta_strength: if(kick%delta_strength .ne. M_ZERO) then
 
         SAFE_ALLOCATE(kick_function(1:gr%mesh%np))
-        if(sum(kick%qvector(:)**2).gt.1.0e-6) then ! q-vector is set
+        if(sum(kick%qvector(:)**2) .gt. 1.0e-6) then ! q-vector is set
 
           select case (kick%qkick_mode)
             case (QKICKMODE_COS)
               write(message(1), '(a,3F9.6,a)') 'Info: Using cos(q.r) field with q = (', kick%qvector(:), ')'
             case (QKICKMODE_SIN)
               write(message(1), '(a,3F9.6,a)') 'Info: Using sin(q.r) field with q = (', kick%qvector(:), ')'
-            case (QKICKMODE_SIN+QKICKMODE_COS)
+            case (QKICKMODE_SIN + QKICKMODE_COS)
               write(message(1), '(a,3F9.6,a)') 'Info: Using sin(q.r)+cos(q.r) field with q = (', kick%qvector(:), ')'
             case (QKICKMODE_EXP)
               write(message(1), '(a,3F9.6,a)') 'Info: Using exp(iq.r) field with q = (', kick%qvector(:), ')'
@@ -634,11 +634,11 @@ contains
         else
           if(kick%n_multipoles > 0) then
             kick_function = M_ZERO
-            do jj = 1, kick%n_multipoles
+            do im = 1, kick%n_multipoles
               do ip = 1, gr%mesh%np
                 call mesh_r(gr%mesh, ip, rr, coords = xx)
-                call loct_ylm(1, xx(1), xx(2), xx(3), kick%l(jj), kick%m(jj), ylm)
-                kick_function(ip) = kick_function(ip) + kick%weight(jj)*(rr**kick%l(jj))*ylm 
+                call loct_ylm(1, xx(1), xx(2), xx(3), kick%l(im), kick%m(im), ylm)
+                kick_function(ip) = kick_function(ip) + kick%weight(im) * (rr**kick%l(im)) * ylm 
               end do
             end do
           else
@@ -663,7 +663,8 @@ contains
         select case (kick%delta_strength_mode)
         case (KICK_DENSITY_MODE)
           forall(ik = st%d%kpt%start:st%d%kpt%end, ist = st%st_start:st%st_end, idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-            st%zpsi(ip, idim, ist, ik) = exp(M_zI*kick%delta_strength*kick_function(ip))*st%zpsi(ip, idim, ist, ik) 
+            st%zpsi(ip, idim, ist, ik) = exp(M_zI * kick%delta_strength * kick_function(ip)) &
+              * st%zpsi(ip, idim, ist, ik) 
           end forall
 
         case (KICK_SPIN_MODE)
@@ -719,10 +720,10 @@ contains
 
     ! ---------------------------------------------------------
     subroutine td_read_coordinates() ! reads the pos and vel from coordinates file
-      integer :: i, iunit, record_length
+      integer :: iatom, iter, iunit, record_length
       call push_sub('td.td_run.td_read_coordinates')
 
-      record_length = 28 + 3*geo%natoms*3*20
+      record_length = 28 + 3 * geo%natoms * 3 * 20
       call io_assign(iunit)
       open(unit = iunit, file = io_workpath('td.general/coordinates'), &
         action='read', status='old', recl = record_length)
@@ -734,22 +735,22 @@ contains
       end if
 
       call io_skip_header(iunit)
-      do i = 0, td%iter - 1
+      do iter = 0, td%iter - 1
         read(iunit, *) ! skip previous iterations... sorry, but no seek in Fortran
       end do
       read(iunit, '(28x)', advance='no') ! skip the time index.
 
-      do i = 1, geo%natoms
-        read(iunit, '(3es20.12)', advance='no') geo%atom(i)%x(1:gr%mesh%sb%dim)
-        geo%atom(i)%x(:) = units_to_atomic(units_inp%length, geo%atom(i)%x(:))
+      do iatom = 1, geo%natoms
+        read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%x(1:gr%mesh%sb%dim)
+        geo%atom(iatom)%x(:) = units_to_atomic(units_inp%length, geo%atom(iatom)%x(:))
       end do
-      do i = 1, geo%natoms
-        read(iunit, '(3es20.12)', advance='no') geo%atom(i)%v(1:gr%mesh%sb%dim)
-        geo%atom(i)%v(:) = units_to_atomic(units_inp%velocity, geo%atom(i)%v(:))
+      do iatom = 1, geo%natoms
+        read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%v(1:gr%mesh%sb%dim)
+        geo%atom(iatom)%v(:) = units_to_atomic(units_inp%velocity, geo%atom(iatom)%v(:))
       end do
-      do i = 1, geo%natoms
-        read(iunit, '(3es20.12)', advance='no') geo%atom(i)%f(1:gr%mesh%sb%dim)
-        geo%atom(i)%f(:) = units_to_atomic(units_inp%force, geo%atom(i)%f(:))
+      do iatom = 1, geo%natoms
+        read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%f(1:gr%mesh%sb%dim)
+        geo%atom(iatom)%f(:) = units_to_atomic(units_inp%force, geo%atom(iatom)%f(:))
       end do
 
       call io_close(iunit)
@@ -759,7 +760,7 @@ contains
     ! ---------------------------------------------------------
     subroutine td_read_gauge_field()
       
-      integer :: i, iunit
+      integer :: iter, iunit
       FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM), dummy(1:MAX_DIM)
 
       call push_sub('td.td_run.td_read_gauge_field')
@@ -775,7 +776,7 @@ contains
       end if
 
       call io_skip_header(iunit)
-      do i = 0, td%iter - 1
+      do iter = 0, td%iter - 1
         read(iunit, *) ! skip previous iterations... sorry, but no seek in Fortran
       end do
       read(iunit, '(28x)', advance='no') ! skip the time index.
@@ -801,7 +802,7 @@ contains
     subroutine td_save_restart(iter)
       integer, intent(in) :: iter
 
-      integer :: i, is, ierr
+      integer :: ii, is, ierr
       character(len=256) :: filename
 
       call push_sub('td.td_run.td_save_restart')
@@ -814,11 +815,11 @@ contains
       end if
 
       ! write potential from previous interactions
-      do i = 1, 2
+      do ii = 1, 2
         do is = 1, st%d%nspin
-          write(filename,'(a6,i2.2,i3.3)') 'vprev_', i, is
+          write(filename,'(a6,i2.2,i3.3)') 'vprev_', ii, is
           call doutput_function(restart_format, trim(tmpdir)//"td", &
-            filename, gr%mesh, td%tr%v_old(1:gr%mesh%np, is, i), unit_one, ierr, &
+            filename, gr%mesh, td%tr%v_old(1:gr%mesh%np, is, ii), unit_one, ierr, &
             is_tmp = .true., grp = st%mpi_grp)
           ! the unit is energy actually, but this only for restart, and can be kept in atomic units
           ! for simplicity
