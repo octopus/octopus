@@ -190,7 +190,8 @@ contains
     !%Description
     !% Sampling rate for the spectrum.
     !%End
-    call parse_float(datasets_check('PropagationSpectrumEnergyStep'), CNST(0.01) / (M_TWO * P_Ry), spectrum%energy_step, units_inp%energy)
+    call parse_float(datasets_check('PropagationSpectrumEnergyStep'), CNST(0.01) / (M_TWO * P_Ry), &
+      spectrum%energy_step, units_inp%energy)
     
 
     !%Variable PropagationSpectrumMaxEnergy
@@ -200,7 +201,8 @@ contains
     !%Description
     !% The Fourier transform is calculated for energies smaller than this value.
     !%End
-    call parse_float(datasets_check('PropagationSpectrumMaxEnergy'), CNST(20.0) / (M_TWO * P_Ry), spectrum%max_energy, units_inp%energy)
+    call parse_float(datasets_check('PropagationSpectrumMaxEnergy'), CNST(20.0) / (M_TWO * P_Ry), &
+      spectrum%max_energy, units_inp%energy)
 
     !%Variable PropagationSpectrumDampFactor
     !%Type float
