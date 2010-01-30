@@ -40,11 +40,10 @@ module zoltan_m
 
   !%Variable MeshPartition
   !%Type integer
-  !%Default metis
   !%Section Execution::Parallelization
   !%Description
-  !% Decides which algorithm is used to partition the mesh. By default
-  !% graph partitioning for is used for 8 or more partitions and rcb for less.
+  !% Decides which algorithm is used to partition the mesh. By default,
+  !% <tt>graph</tt> partitioning is used for 8 or more partitions, and <tt>rcb</tt> for fewer.
   !%Option rcb 2
   !% Recursive coordinate bisection partitioning.
   !%Option rib 3
@@ -52,9 +51,9 @@ module zoltan_m
   !%Option hsfc 4
   !% Hilbert space-filling curve partioning.
   !%Option reftree 5
-  !% Refinement tree based partitioning.
+  !% Refinement-tree-based partitioning.
   !%Option graph 6
-  !% Graph partitioning
+  !% Graph partitioning.
   !%Option hypergraph 7
   !% Hypergraph partitioning.
   !%End
@@ -80,6 +79,8 @@ contains
   subroutine zoltan_method_info(method)
     integer, intent(in) :: method
 
+    call push_sub('zoltan.zoltan_method_info')
+
     message(1) = 'Info: Using Zoltan to partition the mesh.'
   
     select case(method)
@@ -90,7 +91,7 @@ contains
     case(HSFC)
       message(2) = '      Hilbert space-filling curve partitioning.'
     case(REFTREE)
-      message(2) = '      Refinement tree based partitioning.'
+      message(2) = '      Refinement-tree-based partitioning.'
     case(GRAPH)
       message(2) = '      Graph partition algorithm.'
     case(HYPERGRAPH)
@@ -99,12 +100,17 @@ contains
     message(3) = ''
     call write_info(3)
 
+    call pop_sub()
   end subroutine zoltan_method_info
 
   logical function zoltan_method_is_geometric(method) result(geometric)
     integer, intent(in) :: method
 
+    call push_sub('zoltan.zoltan_method_is_geometric')
+
     geometric = method == RCB .or. method == RIB .or. method == HSFC .or. method == REFTREE
+
+    call pop_sub()
   end function zoltan_method_is_geometric
 
 end module zoltan_m

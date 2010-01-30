@@ -158,7 +158,9 @@ contains
     !% Exponential transform <math>\int dt \exp(-wt) f(t)</math>
     !%End
     call parse_integer  (datasets_check('PropagationSpectrumTransform'), SPECTRUM_TRANSFORM_SIN, spectrum%transform)
-    if(.not.varinfo_valid_option('PropagationSpectrumTransform', spectrum%transform)) call input_error('PropagationSpectrumTransform')
+    if(.not.varinfo_valid_option('PropagationSpectrumTransform', spectrum%transform)) then
+      call input_error('PropagationSpectrumTransform')
+    endif
 
     !%Variable PropagationSpectrumStartTime
     !%Type float

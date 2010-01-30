@@ -118,9 +118,8 @@ contains
     integer,                 intent(in) :: mm
     type(modelmb_density_t), intent(in) :: den
 
-    integer :: jj, j, iunit, ndims, ndim1part
-    integer :: ikeeppart, idir
-    integer :: idensities, nparticles_density
+    integer :: jj, idir, iunit, ndims, ndim1part
+    integer :: ikeeppart, idensities, nparticles_density
     integer, allocatable :: npoints(:)
     integer, allocatable :: ix_1part(:), ix_1part_p(:)
     character(len=200) :: filename
@@ -145,8 +144,8 @@ contains
 
     ! Allocatation of the arrays that store the limiting indexes for each direction
     SAFE_ALLOCATE(npoints(1:ndims))
-    do j = 1, ndims
-      npoints(j) = gr%mesh%idx%ll(j)
+    do idir = 1, ndims
+      npoints(idir) = gr%mesh%idx%ll(idir)
     end do
 
 
@@ -161,7 +160,7 @@ contains
 
       density = M_z0
 
-      !   calculate the 1 particle density for this Many Body state, and for the chosen
+      !   calculate the 1-particle density for this many-body state, and for the chosen
       !   particle being the free coordinate
       call zmodelmb_density_calculate(ikeeppart, mb_1part, nparticles_density, &
             gr%mesh, wf, density)
@@ -177,7 +176,7 @@ contains
         call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
              mb_1part%enlarge_1part(1), jj, ix_1part)
         do idir = 1, ndim1part
-          write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
+          write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir) * mb_1part%h_1part(idir) + mb_1part%origin(idir)
         end do
         write(iunit,'(es18.10)') real(density(jj))
       end do
@@ -185,19 +184,20 @@ contains
 
 
       ! calculate dipole moment from density for this particle
-      dipole_moment(:) = 0.0d0
-      do jj = 1,mb_1part%npt_part
+      dipole_moment(:) = M_ZERO
+      do jj = 1, mb_1part%npt_part
         call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
              mb_1part%enlarge_1part(1), jj, ix_1part)
-        dipole_moment = dipole_moment+(ix_1part(:)*mb_1part%h_1part(:)+mb_1part%origin(:))&
-                      *real(density(jj))&
-                      *st%modelmbparticles%charge_particle(ikeeppart)
+        dipole_moment = dipole_moment + (ix_1part(:) * mb_1part%h_1part(:) + mb_1part%origin(:)) &
+                      * real(density(jj)) &
+                      * st%modelmbparticles%charge_particle(ikeeppart)
       end do
       ! note: for eventual multiple particles in 4D (eg 8D total) this would fail to give the last values of dipole_moment
       write (message(1),'(a,I6,a,I6,a,I6)') 'For particle ', ikeeppart, ' of mb state ', mm
-      write (message(2),'(a,3E20.10)') 'The dipole moment is (in a.u. = e bohr):     ', dipole_moment(1:min(3,ndim1part))
-      write (message(3),'(a,E15.3)') '     with intrinsic numerical error usually <= ', 1.e-6*mb_1part%npt
+      write (message(2),'(a,3E20.10)') 'The dipole moment is (in a.u. = e bohr):     ', dipole_moment(1:min(3, ndim1part))
+      write (message(3),'(a,E15.3)') '     with intrinsic numerical error usually <= ', 1.e-6 * mb_1part%npt
       call write_info(3)
+      ! dipole should be expressed in units_out%length
 
       SAFE_DEALLOCATE_A(density)
     
@@ -222,6 +222,7 @@ contains
     call push_sub('states.modelmb_density_nullify')
     nullify(this%labels)
     nullify(this%particle_kept)
+
     call pop_sub()
   end subroutine modelmb_density_nullify
 
@@ -232,6 +233,7 @@ contains
     call push_sub('states.modelmb_density_end')
     SAFE_DEALLOCATE_P(this%labels)
     SAFE_DEALLOCATE_P(this%particle_kept)
+
     call pop_sub()
   end subroutine modelmb_density_end
 

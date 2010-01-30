@@ -32,9 +32,9 @@
 !!   index_range(3) = 2,      (number of k-points)
 !! and 12 processors, we could get
 !!   mc%group_sizes = (2, 3, 2)
-!! which means
-!! * that space is divided in 2 domains per state,
-!! * the states are divided in 3 groups, i. e. 5 states per processor, and
+!! which means that
+!! * space is divided in 2 domains per state,
+!! * the states are divided in 3 groups, i.e. 5 states per processor, and
 !! * the whole setting is duplicated because of the 2 k-points.
 !!
 !! To perform collective operations (like a reduce), you can use the communicators
@@ -694,49 +694,49 @@ contains
       call push_sub('multicomm.create_all_pairs.get_partner')
 
       if(mod(grp_size, 2).eq.0) then
-        get_partner = get_partner_even(grp_size, in-1, ir-1) + 1
+        get_partner = get_partner_even(grp_size, in - 1, ir - 1) + 1
       else
-        get_partner = get_partner_odd(grp_size, in-1, ir-1) + 1
+        get_partner = get_partner_odd(grp_size, in - 1, ir - 1) + 1
       end if
 
       call pop_sub()
     end function get_partner
 
-    integer function get_partner_even(grp_size, i, r) result(p)
-      integer, intent(in) :: grp_size, i, r
+    integer function get_partner_even(grp_size, ii, rr) result(pp)
+      integer, intent(in) :: grp_size, ii, rr
 
-      integer :: m
+      integer :: mm
 
       call push_sub('multicomm.create_all_pairs.get_partner_even')
 
-      m = grp_size/2
+      mm = grp_size / 2
 
-      if(i.eq.0) then
-        p = r+1
-      elseif(i.eq.r+1) then
-        p = 0
+      if(ii .eq. 0) then
+        pp = rr + 1
+      elseif(ii .eq. rr + 1) then
+        pp = 0
       else
         ! I never know when to use which remainder function, but here
         ! it has to be the modulo one. Do not change that!
-        p = modulo(2*r-i+1, 2*m-1)+1
+        pp = modulo(2 * rr - ii + 1, 2 * mm - 1) + 1
       end if
 
       call pop_sub()
     end function get_partner_even
 
-    integer function get_partner_odd(grp_size, i, r) result(p)
-      integer, intent(in) :: grp_size, i, r
+    integer function get_partner_odd(grp_size, ii, rr) result(pp)
+      integer, intent(in) :: grp_size, ii, rr
 
-      integer :: m
+      integer :: mm
 
       call push_sub('multicomm.create_all_pairs.get_partner_odd')
 
-      m = (grp_size+1)/2
+      mm = (grp_size + 1) / 2
 
-      p = get_partner_even(grp_size+1, i, r)
+      pp = get_partner_even(grp_size + 1, ii, rr)
 
-      if(p.eq.2*m-1) then
-        p = i
+      if(pp .eq. 2 * mm - 1) then
+        pp = ii
       end if
 
       call pop_sub()

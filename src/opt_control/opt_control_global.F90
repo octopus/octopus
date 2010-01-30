@@ -29,10 +29,10 @@
 ! ----------------------------------------------------------------------
 module opt_control_global_m
   use datasets_m
-  use varinfo_m
   use global_m
-  use parser_m
   use messages_m
+  use parser_m
+  use varinfo_m
 
   implicit none
 
@@ -290,7 +290,7 @@ module opt_control_global_m
     !% variables that control the propagation.
     !%
     !% If the backward (or forward) propagation is not retracing the steps of the previous
-    !% forward (or backward) propation, the code will emit a warning.
+    !% forward (or backward) propagation, the code will write a warning.
     !%End
     call parse_integer(datasets_check('OCTNumberCheckPoints'), 0, oct%number_checkpoints)
     call messages_print_var_value(stdout, "OCTNumberCheckPoints", oct%number_checkpoints)

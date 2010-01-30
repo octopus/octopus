@@ -1218,7 +1218,7 @@ subroutine mesh_partition(mesh, lapl_stencil, part)
   integer              :: nv             !< Number of vertices.
   ! Number of vertices (nv) is equal to number of
   ! points np_global and maximum number of edges (ne) is 2*mesh%sb%dim*np_global
-  ! (there are a little fewer because points on the border have less
+  ! (there are a little fewer because points on the border have fewer
   ! than two neighbours per dimension).
   ! xadj has nv+1 entries because last entry contains the total
   ! number of edges.
@@ -1518,7 +1518,7 @@ subroutine mesh_partition_boundaries(mesh, stencil, part)
     maxvotes = maxval(votes)
     ! from all the ones that have the maximum
     winner = (votes == maxvotes)
-    ! select the one that has less points up to now
+    ! select the one that has fewer points currently
     part(ii) = minloc(bps, dim = 1,  mask = winner)
     ! and count it
     bps(part(ii)) = bps(part(ii)) + 1

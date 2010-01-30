@@ -16,7 +16,7 @@
 !! 02111-1307, USA.
 !!
 !
-!  general module for modelmb particles (eg 4 electrons in 1D equiv to
+!  general module for modelmb particles (e.g. 4 electrons in 1D equiv to
 !  1 in 4D). Also calculate different densities on request.
 !
 #include "global.h"
@@ -149,7 +149,6 @@ subroutine modelmb_particles_init (this,gr)
   !%Description
   !% Number of particles in modelmb space. 
   !% Full Ndim = <tt>NDimModelmb</tt>*<tt>NParticleModelmb</tt>
-  !%
   !%End
   call parse_integer(datasets_check('NParticleModelmb'), 1, this%nparticle)
   call messages_print_var_option(stdout, "NParticleModelmb", this%nparticle)
@@ -160,7 +159,6 @@ subroutine modelmb_particles_init (this,gr)
   !%Default 1
   !%Description
   !% Number of different types of particles in modelmb space.
-  !%
   !%End
   call parse_integer(datasets_check('NTypeParticleModelmb'), 1, this%ntype_of_particle)
   call messages_print_var_option(stdout, "NTypeParticleModelmb", this%ntype_of_particle)
@@ -204,8 +202,8 @@ subroutine modelmb_particles_init (this,gr)
   !%  Particle is a boson.
   !%Option anyon 3
   !%  Particle is neither fermion nor boson.
-  !%
   !%End
+
   ! allocate stuff
   npar = this%nparticle
   ntype = this%ntype_of_particle
@@ -225,9 +223,9 @@ subroutine modelmb_particles_init (this,gr)
   this%bosonfermion = 1 ! set to fermion
 
 
-  if(parse_block(datasets_check('DescribeParticlesModelmb'), blk)==0) then
+  if(parse_block(datasets_check('DescribeParticlesModelmb'), blk) == 0) then
 
-    call messages_devel_version("Model many body")
+    call messages_devel_version("Model many-body")
 
     ncols = parse_block_cols(blk, 0)
     if(ncols /= 5 ) then
@@ -238,12 +236,12 @@ subroutine modelmb_particles_init (this,gr)
       call input_error("DescribeParticlesModelmb")
     end if
 
-    do ipart = 1,this%nparticle
-      call parse_block_string(blk, ipart-1, 0, this%labels_particles(ipart))
-      call parse_block_integer   (blk, ipart-1, 1, this%particletype(ipart))
-      call parse_block_float (blk, ipart-1, 2, this%mass_particle(ipart))
-      call parse_block_float (blk, ipart-1, 3, this%charge_particle(ipart))
-      call parse_block_integer   (blk, ipart-1, 4, this%bosonfermion(ipart))
+    do ipart = 1, this%nparticle
+      call parse_block_string(blk, ipart - 1, 0, this%labels_particles(ipart))
+      call parse_block_integer(blk, ipart - 1, 1, this%particletype(ipart))
+      call parse_block_float(blk, ipart - 1, 2, this%mass_particle(ipart))
+      call parse_block_float(blk, ipart - 1, 3, this%charge_particle(ipart))
+      call parse_block_integer(blk, ipart - 1, 4, this%bosonfermion(ipart))
 
       write (message(1),'(a,a)') 'labels_particles = ', this%labels_particles(ipart)
       write (message(2),'(a,i6)') 'particletype = ', this%particletype(ipart)
@@ -287,7 +285,6 @@ subroutine modelmb_particles_init (this,gr)
   !% particle (whose coordinates correspond to dimensions 1 to <tt>NDimModelmb</tt>),
   !% which is an electron, then that corresponding to the 2nd particle
   !% (dimensions <tt>NDimModelmb</tt>+1 to 2*<tt>NDimModelmb</tt>).
-  !%
   !%End
   this%ndensities_to_calculate = 0
 

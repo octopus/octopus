@@ -71,7 +71,7 @@ module sparskit_m
 
     integer :: ipar(16)             ! integer parameter array for the reverse communication protocol
     FLOAT   :: fpar(16)             ! floating-point parameter array for the reverse communication protocol
-    logical :: verbose              ! if .true. then the solver will emit more details
+    logical :: verbose              ! if .true. then the solver will write more details
   end type sparskit_solver_t
 
 

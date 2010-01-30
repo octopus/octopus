@@ -190,7 +190,7 @@ contains
       
       densmatr  = M_z0
 
-      !   calculate the 1 particle density matrix for this Many Body state, and for the chosen
+      !   calculate the 1-particle density matrix for this many-body state, and for the chosen
       !   particle being the free coordinate
       call zmf_calculate_gamma(ikeeppart, mb_1part, nparticles, &
             gr%mesh, wf, densmatr)

@@ -156,7 +156,7 @@ contains
     !%Default ''
     !%Section Execution::IO
     !%Description
-    !% When <tt>Octopus</tt> reads restart files, e. g. when running a time-propagation
+    !% When <tt>Octopus</tt> reads restart files, e.g. when running a time-propagation
     !% after a ground-state calculation, these files will be read from
     !% <tt>&lt;RestartDir&gt/</tt>. Usually, <tt>RestartDir</tt> is
     !% <tt>TmpDir</tt> but in a transport calculation, the output of

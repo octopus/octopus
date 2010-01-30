@@ -23,10 +23,10 @@
 ! and integer values.
 ! The collision resolution used is separate chaining (cf. Knuth, 1973, vol. 3)
 ! using associative lists. The reason to use separate chaining is that we
-! look up a lot of keys not in the table and, e. g., open addressing is
+! look up a lot of keys not in the table and, e.g., open addressing is
 ! very slow in that case.
 ! The hash function is simply (key mod size) but size is taken to be a prime
-! number, i. e. the table is usually slightly larger than the user requests.
+! number, i.e. the table is usually slightly larger than the user requests.
 
 module iihash_m
   use ialist_m
