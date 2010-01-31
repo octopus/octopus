@@ -817,8 +817,6 @@ contains
     end do
 
     call egate(this)
-    10 format(2F12.7, 2E20.12E2)
-    20 format(6I)
     vhmin = minval(vh)
     vhmax = maxval(vh)
 
