@@ -55,6 +55,7 @@ module poisson_sete_m
     integer, pointer :: jy(:)
     integer, pointer :: ky(:)
     FLOAT            :: esurf
+    FLOAT            :: tol
     integer          :: nxtot
     integer          :: nytot
     integer          :: nztot
@@ -82,7 +83,7 @@ module poisson_sete_m
   FLOAT, allocatable :: rho_nuc(:)
   integer :: count_atoms, count_old
 
-  FLOAT, parameter :: tol = 0.01, hartree = CNST(2.0*13.60569193), BOHR = CNST(0.52917720859) 
+  FLOAT, parameter :: hartree = CNST(2.0*13.60569193), BOHR = CNST(0.52917720859) 
   
 
 contains
@@ -108,6 +109,7 @@ contains
     pconst = CNST(4.0)*M_PI ! need 4 pi for Hartrees I think (??)
     bohrnm = BOHR*CNST(0.1) 
     angsnm = CNST(10.0)/BOHR
+    this%tol = 0.01 
     this%noatoms = number_atoms
     count_atoms = 0
     this%counter = 0
@@ -177,7 +179,7 @@ contains
       7*(this%nxtot-2)*(this%nytot-2)*(this%nztot-2)
     lenw=this%nelt+9*this%nxtot*this%nytot*this%nztot
     leniw=this%nelt+5*this%nxtot*this%nytot*this%nztot+12
-     write(6,*)' Initial this%nelt ',this%nelt
+    !write(6,*)' Initial this%nelt ',this%nelt
 
     SAFE_ALLOCATE(q2(1:this%ntot))
     SAFE_ALLOCATE(this%aw(1:this%nelt))
@@ -360,7 +362,6 @@ contains
             END SELECT
           end do
         ELSE
-          write(68,*) "At else", I, J, K
           av(4) = M_ONE/pconst ! for points that are out of the grid.
         end if
         !                                 DSLUCS matrix and normalizations
@@ -395,7 +396,7 @@ contains
       end do
 
       IEC=IEC-1 ! overcounted non-zero elements by one.
-      write(6,*)' this%nelt, iec ',this%nelt,iec
+      !write(6,*)' this%nelt, iec ',this%nelt,iec
       this%nelt = iec
 
       ! in case THIS%NELT in static differs from that counted here
@@ -438,7 +439,7 @@ contains
       allocate(this%VBOUND(0:THIS%NXTOT+1,0:THIS%NYTOT+1,0:THIS%NZTOT+1))
       allocate(this%dielectric(0:THIS%NXTOT+1,0:THIS%NYTOT+1,0:THIS%NZTOT+1))
       this%ipio=0; this%VBOUND= M_ZERO
-      write(68,*) "IDEV," , idev
+      !write(68,*) "IDEV," , idev
       IF(IDEV == 1)THEN ! parallel plates
         this%dielectric=dielectric0
         this%ipio(:,:,0)=1
@@ -499,211 +500,159 @@ contains
       !top and bottom z coordinates.
       !Depend on POISSON_SETE (ZWIDTH) 
       !and Octopus (ZL)parameters.
-      ztop = CNST(0.5)*zwidth - zcen - CNST(0.5)*zl-CNST(0.5)*this%dz
-      zbot = CNST(0.5)*zwidth + zcen - CNST(0.5)*zl-CNST(0.5)*this%dz
-      write(70,*)"zwidth ",zwidth ! Differences, experimental
-      write(70,*)"zbot ztop",zbot,ztop ! Differences, experimental
-      write(70,*)"dz",this%dz      ! Differences, experimental
-      if (ztop/this%dz*this%dz==ztop) then
-              nztop = ztop/this%dz+1
-      else
-              nztop = ztop/this%dz+2
+      dz_oct=(zl/TOFLOAT((nz-1))) 
+      ztop = CNST(0.5)*zwidth - zcen - ((nz-1)/2)*dz_oct -CNST(0.5)*dz_oct
+      zbot = CNST(0.5)*zwidth + zcen - ((nz-1)/2)*dz_oct -CNST(0.5)*dz_oct
+      if (ztop<0.0.and.zbot<0.0) then
+	      write(*,*) "ztop and zbot are less than zero", ztop, zbot
+	      stop
       endif
-      if (zbot/this%dz*this%dz==zbot) then
-              this%nzbot = zbot/this%dz+1
-      else
-              this%nzbot = zbot/this%dz+2
+      
+      if (ztop<0.0) then
+	      ztop=0.0
       endif
-      this%nz2=this%nzbot+nztop
-      this%nztot=nz+this%nz2
-
+      if (zbot<0.0) then
+	      zbot=0.0
+      endif
       this%nztot = nz + this%nz2
-      write(70,*)"nztot, nzbot, nztop nz2",this%nztot,this%nzbot, nztop, this%nz2      ! Differences, experimental
+
       allocate(zg(this%nztot))
       allocate(dz(this%nztot))
-
-      dz1b=this%dz
-      do k=1,this%nzbot
-        dz(k)=dz1b
+      if (ztop==0.0) then
+	      nztop=0
+	      dz1t=0.0
+      else
+	      nztop = int(this%nz2*ztop/(ztop + zbot))
+	      DZ1T=ZTOP/TOFLOAT(NZTOP)
+      endif
+      if (zbot==0.0) then
+              this%nzbot=0
+	      DZ1B=0.0
+      else
+              this%nzbot = this%nz2 - nztop
+	      DZ1B=ZBOT/TOFLOAT(THIS%NZBOT)
+      endif
+      DO K=1,THIS%NZBOT
+        DZ(K)=DZ1B
       end do
-      dz_oct=(zl/TOFLOAT((nz-1))) 
+      !DZ_OCT=ZL/TOFLOAT(NZ)
 
       do k = this%nzbot + 1, this%nzbot + nz
         dz(k) = dz_oct
       end do
 
-      dz1t=this%dz
-      do k=this%nzbot+nz+1,this%nztot
-        dz(k)=dz1t
+      DO K=THIS%NZBOT+NZ+1,THIS%NZTOT
+        DZ(K)=DZ1T
       end do
+      write(70,*)"zwidth, nz-1/2,factor",zwidth, (nz-1)/2, ((nz-1)/2)*dz_oct ! Differences, experimental
+      write(70,*)"zbot ztop",zbot,ztop ! Differences, experimental
+      write(70,*)"dz1b, dz1t, dz_oct",dz1b,dz1t, dz_oct  ! Differences, experimental
 
-      zg(1)=-zwidth*CNST(0.5)+CNST(0.5)*dz(1)
-      
-      do k=2, this%nzbot
-       zg(k) =zg(1) + dz(k)*(k-1)
-      enddo
-      
-      do k=this%nzbot+1,this%nzbot+nz
-          zg(k)=(-zl/2.0)+dz(k)*(k-this%nzbot-1)
-      enddo
-      zg(this%nztot)=zwidth*CNST(0.5)-CNST(0.5)*dz(this%nztot)
+      ZG(1)=-CNST(0.5)*ZWIDTH+CNST(0.5)*DZ(1)
+      DO K=2,THIS%NZTOT-1 
+      ZG(K)=ZG(K-1)+CNST(0.5)*(DZ(K-1)+DZ(K))
+      end do
+      ZG(THIS%NZTOT)=CNST(0.5)*ZWIDTH-CNST(0.5)*DZ(THIS%NZTOT)
 
-      do k=this%nzbot+nz+1,this%nztot-1
-         zg(k)=zg(this%nztot)-dz(k)*(this%nztot-k)
-      enddo 
-      dz(this%nzbot+nz)=dz1t
       do i=1,this%nztot
       write(70,*) "i,zg, dz",i, zg(i), dz(i)
       enddo
-
       ztest=zg(this%nztot)
-
       ! x-mesh
-      xtop=CNST(0.5)*xwidth-xcen-CNST(0.5)*xl-CNST(0.5)*this%dx
-      xbot=CNST(0.5)*xwidth+xcen-CNST(0.5)*xl-CNST(0.5)*this%dx
-      if (xtop/this%dx*this%dx==xtop) then
-              nxtop = xtop/this%dx+1
-      else
-              nxtop = xtop/this%dx+2
+      dx_oct=xl/TOFLOAT(nx-1)  ! Octopus region
+      xtop=CNST(0.5)*xwidth-xcen-((nx-1)/2)*dx_oct-CNST(0.5)*dx_oct
+      xbot=CNST(0.5)*xwidth+xcen-((nx-1)/2)*dx_oct-CNST(0.5)*dx_oct
+      if (xtop<0.0) then
+	      xtop=0.0
       endif
-      if (xbot/this%dx*this%dx==xbot) then
-              this%nxbot = xbot/this%dx+1
-      else
-              this%nxbot = xbot/this%dx+2
+      if (xbot<0.0) then
+	      xbot=0.0
       endif
-      this%nx2=this%nxbot+nxtop
       nxtot_0=nx+this%nx2
       this%nxtot=nxtot_0+2*nxl
       allocate(xg(this%nxtot))
       allocate(dxg(this%nxtot))
+      DO I=1,NXL  !  border points
+	DXG(I)=DXL(I)
+      end do
+      DO I=NXL+NXTOT_0+1,THIS%NXTOT
+	DXG(I)=DXL(THIS%NXTOT-I+1)
+      enddo
+      NXTOP=INT(this%NX2*XTOP/(XTOP+XBOT))
+      THIS%NXBOT=this%NX2-NXTOP
+      DX1B=XBOT/TOFLOAT(THIS%NXBOT) ! "bottom" region
+      DO I=NXL+1,NXL+THIS%NXBOT
+        DXG(I)=DX1B
+      end do
+      DX1T=XTOP/TOFLOAT(NXTOP)  ! "top" region
+      DO I=NXL+THIS%NXBOT+NX+1,NXL+THIS%NXBOT+NX+NXTOP
+        DXG(I)=DX1T
+      end do
       write(70,*)"xwidth ",xwidth ! Differences, experimental
       write(70,*)"xbot xtop",xbot,xtop ! Differences, experimental
-      write(70,*)"dx",this%dx      ! Differences, experimental
+      write(70,*)"dx1b, dx1t, dx_oct",dx1b,dx1t, dx_oct  ! Differences, experimental
       write(70,*)"nxtot, nxbot, nxtop nx2",this%nxtot,this%nxbot, nxtop, this%nx2
-      DO i=1,nxl  !  border points
-        dxg(i)=dxl(i)
+      DO I=NXL+THIS%NXBOT+1,NXL+THIS%NXBOT+NX
+        DXG(I)=DX_OCT
       end do
-      DO i=nxl+nxtot_0+1,this%nxtot
-        dxg(i)=dxl(this%nxtot-i+1)
+      XWIDTH_BIG=SUM(DXG)
+      XG(1)=-CNST(0.5)*XWIDTH_BIG+CNST(0.5)*DXG(1)
+      DO I=2,THIS%NXTOT-1
+        XG(I)=XG(I-1)+CNST(0.5)*(DXG(I-1)+DXG(I))
       end do
-      ! outside Octopus mesh
-      dx1b=this%dx
-      DO i=nxl+1,nxl+this%nxbot
-        dxg(i)=dx1b
-      end do
-      dx_oct=xl/TOFLOAT(nx-1)  ! Octopus region
-      DO i=nxl+this%nxbot+1,nxl+this%nxbot+nx
-        dxg(i)= dx_oct
-      end do
-      dx1t=this%dx
-      do i=nxl+this%nxbot+nx+1,nxl+this%nxbot+nx+nxtop
-        dxg(i)=dx1t
-      end do
-
-      xwidth_big = SUM(dxg)
-      xg(1)=-CNST(0.5)*xwidth_big+CNST(0.5)*dxg(1)
-
-      xg(nxl+1)=-CNST(0.5)*xwidth+CNST(0.5)*dxg(nxl+1)
-
-      do k=nxl+2, nxl+this%nxbot
-       xg(k) = xg(nxl+1) + dxg(k)*(k-nxl-1)
-      enddo
-
-      do i=1, nxl
-          k=nxl-i+1
-       xg(k)= xg(k+1)-dxg(k)
-      enddo
-
-      do k=nxl+this%nxbot+1,nxl+this%nxbot+nx
-        xg(k)=(-xl*CNST(0.5))+dxg(k)*(k-(nxl+this%nxbot)-1)
-      enddo
-
-      xg(nxl+this%nxbot+nx+nxtop)=CNST(0.5)*xwidth-CNST(0.5)*dxg(nxl+this%nxbot+nx+nxtop)
-
-      do k=nxl+this%nxbot+nx+1, nxl+this%nxbot+nx+nxtop-1
-          xg(k) = xg(nxl+this%nxbot+nx+nxtop) + dxg(k)*(k-(nxl+this%nxbot+nx+nxtop))
-      enddo
-      do k=nxl+this%nxbot+nx+nxtop+1,this%nxtot 
-       xg(k)= xg(k-1)+dxg(k)
-      enddo
-      dxg(nxl+this%nxbot+nx)=dx1t
-      dxg(nxl+this%nxbot+nx+nxtop)=dxg(nxl)
+      XG(THIS%NXTOT)=CNST(0.5)*XWIDTH_BIG-CNST(0.5)*DXG(THIS%NXTOT)
       do i=1,this%nxtot
       write(70,*) "i, xg, dx",i, xg(i), dxg(i)
       enddo
           
       XTEST=XG(THIS%NXTOT)
       ! Y-mesh
-      ytop=CNST(0.5)*ywidth-ycen-CNST(0.5)*yl-CNST(0.5)*this%dy
-      ybot=CNST(0.5)*ywidth+ycen-CNST(0.5)*yl-CNST(0.5)*this%dy
-      if (ytop/this%dy*this%dy==ytop) then
-              nytop = ytop/this%dy+1
-      else
-              nytop = ytop/this%dy+2
+      dy_oct=yl/TOFLOAT(ny-1)  ! Octopus region
+      ytop=CNST(0.5)*ywidth-ycen-((ny-1)/2)*dy_oct-CNST(0.5)*dy_oct
+      ybot=CNST(0.5)*ywidth+ycen-((ny-1)/2)*dy_oct-CNST(0.5)*dy_oct
+      if (ytop<0.0) then
+	      ytop=0.0
       endif
-      if (ybot/this%dy*this%dy==ybot) then
-              this%nybot = ybot/this%dy+1
-      else
-              this%nybot = ybot/this%dy+2
+      if (ybot<0.0) then
+	      ybot=0.0
       endif
-      this%ny2=this%nybot+nytop
-      nytot_0=ny+this%ny2  ! excluding border points
-      this%nytot=nytot_0+2*nyl  ! all Poisson Y mesh point
+      NYTOT_0=NY+this%NY2  ! excluding border points
+      THIS%NYTOT=NYTOT_0+2*NYL  ! all Poisson Y mesh point
       allocate(yg(this%nytot))
       allocate(dyg(this%nytot))
+      DO I=1,NYL  !  border points
+        DYG(I)=DYL(I)
+      end do
+      DO I=NYL+NYTOT_0+1,THIS%NYTOT
+        DYG(I)=DYL(THIS%NYTOT-I+1)
+      end do
+      NYTOP=INT(this%NY2*YTOP/(YTOP+YBOT))
+      THIS%NYBOT=this%NY2-NYTOP
+      DY1B=YBOT/TOFLOAT(THIS%NYBOT) ! "bottom" region
+      DO I=NYL+1,NYL+THIS%NYBOT
+        DYG(I)=DY1B
+      end do
+      DO I=NYL+THIS%NYBOT+1,NYL+THIS%NYBOT+NY
+        DYG(I)=DY_OCT
+      end do
+      DY1T=YTOP/TOFLOAT(NYTOP)  ! "top" region
+      DO I=NYL+THIS%NYBOT+NY+1,NYL+THIS%NYBOT+NY+NYTOP
+        DYG(I)=DY1T
+      end do
+
+      YWIDTH_BIG=SUM(DYG)
+      YG(1)=-CNST(0.5)*YWIDTH_BIG+CNST(0.5)*DYG(1)
+      DO I=2,THIS%NYTOT-1
+        YG(I)=YG(I-1)+CNST(0.5)*(DYG(I-1)+DYG(I))
+      end do
+      YG(THIS%NYTOT)=CNST(0.5)*YWIDTH_BIG-CNST(0.5)*DYG(THIS%NYTOT)
+
       write(70,*)"ywidth", ywidth ! Differences, experimental
       write(70,*)"ybot ytop", ybot,ytop ! Differences, experimental
-      write(70,*)"dy", this%dy      ! Differences, experimental
+      write(70,*)"dy1b, dy1t, dy_oct",dy1b,dy1t, dy_oct  ! Differences, experimental
       write(70,*)"nytot, nybot, nytop ny2",this%nytot,this%nybot, nytop, this%ny2
-      DO i=1, nyl  !  border points
-        dyg(i)=dyl(i)
-      end do
-      DO i=nyl+nytot_0+1,this%nytot
-        dyg(i)=dyl(this%nytot-i+1)
-      end do
-      ! outside Octopus mesh
-      dy1b=this%dy
-      DO i=nyl+1,nyl+this%nybot
-        dyg(i)=dy1b
-      end do
-      dy_oct=yl/TOFLOAT(ny-1)  ! Octopus region
-      DO i=nyl+this%nybot+1,nyl+this%nybot+ny
-        dyg(i)=dy_oct
-      end do
-      dy1t=this%dy
-      DO i=nyl+this%nybot+ny+1,nyl+this%nybot+ny+nytop
-        dyg(i)=dy1t
-      end do
-
-      ywidth_big=SUM(dyg)
-      yg(1)=-CNST(0.5)*ywidth_big+CNST(0.5)*dyg(1)
-
-      yg(nyl+1)=-CNST(0.5)*ywidth+CNST(0.5)*dyg(nyl+1)
-
-      do k=nyl+2, nyl+this%nybot
-       yg(k) =yg(nyl+1) + dxg(k)*(k-nyl-1)
-      enddo
-
-      do i=1, nyl
-          k=nyl-i+1
-       yg(k)= yg(k+1)-dyg(k)
-      enddo
-
-      do k=nyl+this%nybot+1,nyl+this%nybot+ny
-        yg(k)=(-yl/2.0)+dyg(k)*(k-(nyl+this%nybot)-1)
-      enddo
-      yg(nyl+this%nybot+ny+nytop)=CNST(0.5)*ywidth-CNST(0.5)*dyg(nyl+this%nybot+ny+nytop)
-
-      do k=nyl+this%nybot+ny+1, nyl+this%nybot+ny+nytop-1
-          yg(k) =yg(nyl+this%nybot+ny+nytop) + dyg(k)*(k-(nyl+this%nybot+ny+nytop))
-      enddo
-      do k=nyl+this%nybot+ny+nytop+1,this%nytot 
-       yg(k)= yg(k-1)+dyg(k)
-      enddo
-      dyg(nyl+this%nybot+ny)=dy1t
-      dyg(nyl+this%nybot+ny+nytop)=dyg(nyl)
       do i=1,this%nxtot
-      write(70,*) "i, xg, dx",i, xg(i), dxg(i)
+      write(70,*) "i, yg, dy",i, yg(i), dyg(i)
       enddo
 
       this%ntot=this%nxtot*this%nytot*this%nztot
@@ -747,7 +696,7 @@ contains
     ! Input: XL, YL, ZL -> Size of the octopus box
 
     FLOAT        :: bohrnm, angsnm, err
-    integer      :: j1, k1, m, i, j, k, i1,idum
+    integer      :: j1, k1, m, i, j, k, i1,idum, archt
     FLOAT :: VHMIN, VHMAX
     FLOAT :: pconst
 
@@ -759,17 +708,19 @@ contains
     ANGSNM=CNST(10.0)/BOHR
 
     SAFE_ALLOCATE(q2(1:THIS%NTOT))
-    !SAFE _ALLOCATE(rhotest(1:this%nxtot, 1:this%nytot, 1:this%nztot))
+    SAFE_ALLOCATE(rhotest(1:this%nxtot, 1:this%nytot, 1:this%nztot))
 
 
     if (rho(nx/2,ny/2,nz/2)<0.and.test1==1) then
 	test1=0
+	this%tol=0.000001
         SAFE_DEALLOCATE_A(X2)
     endif
 
 
     if (rho(nx/2,ny/2,nz/2)<0.and.test1==0) then
       test1=0
+	this%tol=0.000001
       idum = count_atoms
       SAFE_ALLOCATE(X2(1:THIS%NTOT))
       do i = 1, this%ntot
@@ -781,6 +732,7 @@ contains
 
     else if (rho(nx/2,ny/2,nz/2)>0.and.test1==0) then
       test1=1
+	this%tol=0.01
       SAFE_ALLOCATE(x2(1:this%ntot))
       x2(1:this%ntot) = M_ZERO
       idum = count_atoms + 1
@@ -793,7 +745,13 @@ contains
      enddo
     endif
 
-    !rhotest = M_ZERO
+    do i=1,this%nxtot
+     do j=1, this%nytot
+      do k=1, this%nztot
+        rhotest(i,j,k) = M_ZERO
+      enddo
+     enddo
+    enddo
 
     do i = 1, this%ntot
       q2(i) = this%qs(i) ! recall stored BC info
@@ -810,7 +768,7 @@ contains
           K1=K-(THIS%NZBOT)
           IF(I1.GT.0.AND.J1.GT.0.AND.K1.GT.0)THEN ! this is redundant
             Q2(M)=Q2(M)+DYG(J)*DXG(I)*RHO(I1,J1,K1)
-            !rhotest(i,j,k)=rho(i1,j1,k1)
+            rhotest(i,j,k)=rho(i1,j1,k1)
           end if
         end if
       ELSE
@@ -825,7 +783,7 @@ contains
     allocate(iwork(leniw))
 
     call dslucs(THIS%NTOT,Q2,X2,THIS%NELT,this%IAD,this%JAD,this%AW,ISYM,ITOL, &
-      TOL,ITMAX,ITER,ITERMIN,ERR,IERR,IUNIT,RWORK,LENW, &
+      this%TOL,ITMAX,ITER,ITERMIN,ERR,IERR,IUNIT,RWORK,LENW, &
       IWORK,LENIW)
     if (ierr /= 0) then
 	    write(*,*) "DSLUCS error number:", ierr, err
@@ -859,19 +817,13 @@ contains
     end do
 
     call egate(this)
-
-    !    write(358,*) "#x,z, this%vh_big(x,11,k)"
-    do i = 1, this%nxtot
-      do k = 1, this%nztot
-        !       write(358,*) I,K,THIS%VH_BIG(I,11,K)
-      end do
-    end do
-
+    10 format(2F12.7, 2E20.12E2)
+    20 format(6I)
     vhmin = minval(vh)
     vhmax = maxval(vh)
 
     deallocate(Q2)
-    !deallocate(rhotest)
+    deallocate(rhotest)
     if (rho(nx/2,ny/2,nz/2)<0.and.test1==0) then
           SAFE_DEALLOCATE_A(x2)
     endif
