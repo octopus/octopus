@@ -64,7 +64,8 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
     !Next we created the geometry container
     !For now, we will assume a 3D finite system and we will use a cubic cell with no symmetry operations.
-    flags%geometry = etsf_geometry_all
+    flags%geometry = etsf_geometry_all - etsf_geometry_valence_charges - &
+                    etsf_geometry_pseudo_types - etsf_geometry_atom_species_names
     groups%geometry => geometry
     SAFE_ALLOCATE(geometry%space_group)
     SAFE_ALLOCATE(geometry%primitive_vectors(1:3, 1:3))
