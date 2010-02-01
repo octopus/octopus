@@ -681,6 +681,10 @@ contains
         zfact = zfact*(-M_zI*deltat)/iter
         zfact_is_real = .not. zfact_is_real
 
+! FIXME: need a test here for runaway exponential, e.g. for too large dt.
+!  in runaway case the problem is really hard to trace back: the positions
+!  go haywire on the first step of dynamics (often NaN) and with debugging options
+!  the code stops in ZAXPY below without saying why.
         call zhamiltonian_apply_batch(hm, der, psi1b, hpsi1b, ik, time)
 
         !$omp parallel do private(ii, idim, ip, bsize)
