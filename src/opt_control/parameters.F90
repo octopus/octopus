@@ -161,11 +161,11 @@ contains
     logical, intent(out)                          :: mode_fixed_fluence
     logical, intent(in)                           :: parametrized_controls
 
-    character(len=1024)      :: expression
-    integer :: i, j, no_lines, steps, iunit
-    FLOAT   :: octpenalty, t, f_re, f_im, total_time
+    character(len=1024) :: expression
+    integer :: no_lines, steps, iunit, il, idir, ncols, ipar, irow, istep
+    FLOAT   :: octpenalty, f_re, f_im, total_time, time
     CMPLX   :: pol(MAX_DIM)
-    type(block_t)            :: blk
+    type(block_t) :: blk
 
     call push_sub('parameters.parameters_mod_init')
 
@@ -332,10 +332,10 @@ contains
 
 
     ! Check that there are no complex polarization vectors.
-    do i = 1, ep%no_lasers
-      pol(1:MAX_DIM) = laser_polarization(ep%lasers(i))
-      do j = 1, MAX_DIM
-        if( aimag(pol(j))**2 > CNST(1.0e-20) ) then
+    do il = 1, ep%no_lasers
+      pol(1:MAX_DIM) = laser_polarization(ep%lasers(il))
+      do idir = 1, MAX_DIM
+        if( aimag(pol(idir))**2 > CNST(1.0e-20) ) then
           write(message(1), '(a)') 'In QOCT runs, the polarization vector cannot be complex. Complex'
           write(message(2), '(a)') 'polarization vectors are only truly necessary if one wants a'  
           write(message(3), '(a)') 'circularly / elliptically polarized laser. This concepts assumes'
@@ -354,12 +354,12 @@ contains
     ! width, etc). We need them to be in numerical form (i.e. time grid, values at the time grid). 
     ! Here we do the transformation.
     ! It cannot be done before calling parameters_mod_init because we need to pass the omegamax value.
-    do i = 1, ep%no_lasers
+    do il = 1, ep%no_lasers
       select case(par_common%mode)
       case(parameter_mode_epsilon)
-        call laser_to_numerical_all(ep%lasers(i), dt, max_iter, par_common%omegamax)
+        call laser_to_numerical_all(ep%lasers(il), dt, max_iter, par_common%omegamax)
       case default
-        call laser_to_numerical(ep%lasers(i), dt, max_iter, par_common%omegamax)
+        call laser_to_numerical(ep%lasers(il), dt, max_iter, par_common%omegamax)
       end select
     end do
 
@@ -436,13 +436,13 @@ contains
     par_common%alpha = M_ZERO
     if(parse_block('OCTPenalty', blk) == 0) then
       ! We have a block
-      i = parse_block_cols(blk, 0)
-      if(i.ne.par_common%no_parameters) then
+      ncols = parse_block_cols(blk, 0)
+      if(ncols .ne. par_common%no_parameters) then
         call input_error('OCTPenalty')
       else
-        do j = 1, i
-          call parse_block_float(blk, 0, j-1, par_common%alpha(j))
-          if(par_common%alpha(j) <= M_ZERO) call input_error('OCTPenalty')
+        do ipar = 1, ncols
+          call parse_block_float(blk, 0, ipar - 1, par_common%alpha(ipar))
+          if(par_common%alpha(ipar) <= M_ZERO) call input_error('OCTPenalty')
         end do
       end if
     else
@@ -475,8 +475,8 @@ contains
     !%End
     steps = max_iter
     SAFE_ALLOCATE(par_common%td_penalty(1:par_common%no_parameters))
-    do i = 1, par_common%no_parameters
-      call tdf_init_numerical(par_common%td_penalty(i), steps, dt, -M_ONE, initval = M_ONE)
+    do ipar = 1, par_common%no_parameters
+      call tdf_init_numerical(par_common%td_penalty(ipar), steps, dt, -M_ONE, initval = M_ONE)
     end do
 
     if (parse_block(datasets_check('OCTLaserEnvelope'), blk)==0) then
@@ -489,39 +489,39 @@ contains
       end if
 
       no_lines = parse_block_n(blk)
-      if(no_lines .ne.par_common%no_parameters) call input_error('OCTLaserEnvelope')
+      if(no_lines .ne. par_common%no_parameters) call input_error('OCTLaserEnvelope')
 
-      do i = 1, no_lines
-        call parse_block_string(blk, i-1, 0, expression)
-        total_time = steps*dt
-        if(trim(expression)=='default') then
-          do j = 1, steps + 1
-            t = (j-1)*dt
-            f_re = M_HALF * (loct_erf((CNST(100.0)/total_time)*(t-CNST(0.05)*total_time)) + &
-              loct_erf(-(CNST(100.0)/total_time)*(t-total_time+CNST(0.05)*total_time)) )
-            call tdf_set_numerical(par_common%td_penalty(i), j, &
-              TOFLOAT(M_ONE /(f_re + CNST(1.0e-7)))  )
+      do irow = 1, no_lines
+        call parse_block_string(blk, irow - 1, 0, expression)
+        total_time = steps * dt
+        if(trim(expression) == 'default') then
+          do istep = 1, steps + 1
+            time = (istep - 1) * dt
+            f_re = M_HALF * (loct_erf((CNST(100.0) / total_time) * (time - CNST(0.05) * total_time)) + &
+              loct_erf(-(CNST(100.0) / total_time) * (time - total_time + CNST(0.05) * total_time)) )
+            call tdf_set_numerical(par_common%td_penalty(irow), istep, &
+              TOFLOAT(M_ONE / (f_re + CNST(1.0e-7)))  )
           end do
         else
           call conv_to_C_string(expression)
-          do j = 1, steps+1
-            t = (j-1)*dt
-            call parse_expression(f_re, f_im, "t", t, expression)
-            call tdf_set_numerical(par_common%td_penalty(i), j, &
-              TOFLOAT(M_ONE /(f_re + CNST(1.0e-7)))  )
+          do istep = 1, steps + 1
+            time = (istep - 1) * dt
+            call parse_expression(f_re, f_im, "t", time, expression)
+            call tdf_set_numerical(par_common%td_penalty(irow), istep, &
+              TOFLOAT(M_ONE / (f_re + CNST(1.0e-7)))  )
           end do
         end if
       end do
 
       if(mpi_grp_is_root(mpi_world)) then
         iunit = io_open(OCT_DIR//'td_penalty', action='write' )
-        do j = 1, steps+1
-          t = (j-1)*dt
-          write(iunit, '(f14.8)', advance='no') t
-          do i = 1, par_common%no_parameters - 1
-            write(iunit, '(es20.8e3)') M_ONE/tdf(par_common%td_penalty(i), j)
+        do istep = 1, steps + 1
+          time = (istep - 1) * dt
+          write(iunit, '(f14.8)', advance='no') time
+          do ipar = 1, par_common%no_parameters - 1
+            write(iunit, '(es20.8e3)') M_ONE / tdf(par_common%td_penalty(ipar), istep)
           end do
-          write(iunit, '(es20.8e3)') M_ONE/tdf(par_common%td_penalty(par_common%no_parameters), j)
+          write(iunit, '(es20.8e3)') M_ONE / tdf(par_common%td_penalty(par_common%no_parameters), istep)
         end do
         write(iunit,'()')
         call io_close(iunit)
@@ -547,7 +547,7 @@ contains
     FLOAT, intent(in) :: dt
     integer, intent(in) :: ntiter
 
-    integer :: j
+    integer :: ipar
 
     call push_sub('parameters.parameters_init')
 
@@ -557,8 +557,8 @@ contains
     call loct_pointer_copy(cp%alpha, par_common%alpha)
 
     SAFE_ALLOCATE(cp%f(1:cp%no_parameters))
-    do j = 1, cp%no_parameters
-      call tdf_init_numerical(cp%f(j), ntiter, dt, par_common%omegamax)
+    do ipar = 1, cp%no_parameters
+      call tdf_init_numerical(cp%f(ipar), ntiter, dt, par_common%omegamax)
     end do
 
     ! If the control function is represented directly in real time, the "dimension" (cp%dim) is
@@ -578,20 +578,20 @@ contains
       cp%dim = tdf_sine_nfreqs(cp%f(1))
     case(ctr_fourier_series_h)
       ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
-      ! and the zero frequency component. Total, 2*(nf-1)+1
-      cp%dim = 2*(tdf_nfreqs(cp%f(1))-1) + 1
+      ! and the zero-frequency component. Total, 2*(nf-1)+1
+      cp%dim = 2 * (tdf_nfreqs(cp%f(1)) - 1) + 1
     case(ctr_zero_fourier_series_h)
       ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
-      ! but no zero frequency component. Total, 2*(nf-1)
-      cp%dim = 2*(tdf_nfreqs(cp%f(1))-1)
+      ! but no zero-frequency component. Total, 2*(nf-1)
+      cp%dim = 2 * (tdf_nfreqs(cp%f(1)) - 1)
     case(ctr_fourier_series)
       ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
-      ! and the zero frequency component. Total, 2*(nf-1)+1
-      cp%dim = 2*(tdf_nfreqs(cp%f(1))-1) + 1
+      ! and the zero-frequency component. Total, 2*(nf-1)+1
+      cp%dim = 2 * (tdf_nfreqs(cp%f(1)) - 1) + 1
     case(ctr_zero_fourier_series)
       ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
       ! but no zero-frequency component. Total, 2*(nf-1)+1
-      cp%dim = 2*(tdf_nfreqs(cp%f(1))-1)
+      cp%dim = 2 * (tdf_nfreqs(cp%f(1)) - 1)
     case default
       message(1) = "Internal error: invalid representation."
       call write_fatal(1)
@@ -607,11 +607,11 @@ contains
     case(ctr_real_time)
       cp%dof = cp%no_parameters * cp%dim
     case(ctr_sine_fourier_series_h, ctr_fourier_series_h)
-      ! The number of degrees of freedom is one less than the number of basis coefficients, since we
+      ! The number of degrees of freedom is one fewer than the number of basis coefficients, since we
       ! add the constraint of fixed fluence.
       cp%dof = cp%dim - 1
     case(ctr_zero_fourier_series_h)
-      ! The number of degrees of freedom is one less than the number of basis coefficients, since we
+      ! The number of degrees of freedom is one fewer than the number of basis coefficients, since we
       ! add (1) the constraint of fixed fluence, and (2) the constraint of the field starting and
       ! ending at zero, which amounts to having all the cosine coefficients summing up to zero.
       cp%dof = cp%dim - 2
@@ -629,7 +629,7 @@ contains
 
     if(cp%dof <= 0) then
       write(message(1),'(a)') 'Error: The number of degrees of freedom used to describe the control function'
-      write(message(2),'(a)') '       is zero or less. This should not happen. Please review your input file.'
+      write(message(2),'(a)') '       is less than or equal to zero. This should not happen. Please review your input file.'
       call write_fatal(2)
     else
       if(par_common%representation .ne. ctr_real_time) then
@@ -659,15 +659,16 @@ contains
   subroutine parameters_set(cp, ep)
     type(oct_control_parameters_t), intent(inout) :: cp
     type(epot_t), intent(in) :: ep
-    integer :: j
+
+    integer :: ipar
 
     call push_sub('parameters.parameters_set')
 
     select case(par_common%mode)
     case(parameter_mode_epsilon, parameter_mode_f)
-      do j = 1, cp%no_parameters
-        call tdf_end(cp%f(j))
-        call laser_get_f(ep%lasers(j), cp%f(j))
+      do ipar = 1, cp%no_parameters
+        call tdf_end(cp%f(ipar))
+        call laser_get_f(ep%lasers(ipar), cp%f(ipar))
       end do
     case(parameter_mode_phi)
       call tdf_end(cp%f(1))
@@ -719,7 +720,7 @@ contains
         dt = tdf_dt(par%f(1))
         ntiter = tdf_niter(par%f(1))
 
-        par%intphi = CNST(0.1)*(M_PI/M_TWO)**2*dt*ntiter
+        par%intphi = CNST(0.1) * (M_PI / M_TWO)**2 * dt * ntiter
       else
         par%intphi = tdf_dot_product(par%f(1), par%f(1))
       end if
@@ -743,6 +744,7 @@ contains
   ! ---------------------------------------------------------
   subroutine parameters_set_rep(par)
     type(oct_control_parameters_t), intent(inout) :: par
+
     call push_sub('parameters.parameters_set_rep')
 
     if(par%current_representation .ne. par_common%representation) then
@@ -761,38 +763,40 @@ contains
   ! ---------------------------------------------------------
   subroutine parameters_to_basis(par)
     type(oct_control_parameters_t), intent(inout) :: par
-    integer :: j
+
+    integer :: ipar
+
     call push_sub('parameters.parameters_to_basis')
 
     if(par%current_representation.eq.ctr_real_time) then
       select case(par_common%representation)
       case(ctr_sine_fourier_series_h)
-        do j = 1, par%no_parameters
-          call tdf_numerical_to_sineseries(par%f(j))
+        do ipar = 1, par%no_parameters
+          call tdf_numerical_to_sineseries(par%f(ipar))
         end do
         par%current_representation = ctr_sine_fourier_series_h
         call parameters_basis_to_theta(par)
       case(ctr_fourier_series_h)
-        do j = 1, par%no_parameters
-          call tdf_numerical_to_fourier(par%f(j))
+        do ipar = 1, par%no_parameters
+          call tdf_numerical_to_fourier(par%f(ipar))
         end do
         par%current_representation = ctr_fourier_series_h
         call parameters_basis_to_theta(par)
       case(ctr_zero_fourier_series_h)
-        do j = 1, par%no_parameters
-          call tdf_numerical_to_zerofourier(par%f(j))
+        do ipar = 1, par%no_parameters
+          call tdf_numerical_to_zerofourier(par%f(ipar))
         end do
         par%current_representation = ctr_zero_fourier_series_h
         call parameters_basis_to_theta(par)
       case(ctr_fourier_series)
-        do j = 1, par%no_parameters
-          call tdf_numerical_to_fourier(par%f(j))
+        do ipar = 1, par%no_parameters
+          call tdf_numerical_to_fourier(par%f(ipar))
         end do
         par%current_representation = ctr_fourier_series
         call parameters_basis_to_theta(par)
       case(ctr_zero_fourier_series)
-        do j = 1, par%no_parameters
-          call tdf_numerical_to_zerofourier(par%f(j))
+        do ipar = 1, par%no_parameters
+          call tdf_numerical_to_zerofourier(par%f(ipar))
         end do
         par%current_representation = ctr_zero_fourier_series
         call parameters_basis_to_theta(par)
@@ -807,7 +811,9 @@ contains
   ! ---------------------------------------------------------
   subroutine parameters_to_realtime(par)
     type(oct_control_parameters_t), intent(inout) :: par
-    integer :: j
+
+    integer :: ipar
+
     call push_sub('parameters.parameters_to_realtime')
 
     select case(par%current_representation)
@@ -815,28 +821,28 @@ contains
       call pop_sub(); return
     case(ctr_sine_fourier_series_h)
       call parameters_theta_to_basis(par)
-      do j = 1, par%no_parameters
-        call tdf_sineseries_to_numerical(par%f(j))
+      do ipar = 1, par%no_parameters
+        call tdf_sineseries_to_numerical(par%f(ipar))
       end do
     case(ctr_fourier_series_h)
       call parameters_theta_to_basis(par)
-      do j = 1, par%no_parameters
-        call tdf_fourier_to_numerical(par%f(j))
+      do ipar = 1, par%no_parameters
+        call tdf_fourier_to_numerical(par%f(ipar))
       end do
     case(ctr_zero_fourier_series_h)
       call parameters_theta_to_basis(par)
-      do j = 1, par%no_parameters
-        call tdf_zerofourier_to_numerical(par%f(j))
+      do ipar = 1, par%no_parameters
+        call tdf_zerofourier_to_numerical(par%f(ipar))
       end do
     case(ctr_fourier_series)
       call parameters_theta_to_basis(par)
-      do j = 1, par%no_parameters
-        call tdf_fourier_to_numerical(par%f(j))
+      do ipar = 1, par%no_parameters
+        call tdf_fourier_to_numerical(par%f(ipar))
       end do
     case(ctr_zero_fourier_series)
       call parameters_theta_to_basis(par)
-      do j = 1, par%no_parameters
-        call tdf_fourier_to_numerical(par%f(j))
+      do ipar = 1, par%no_parameters
+        call tdf_fourier_to_numerical(par%f(ipar))
       end do
     end select
 
@@ -847,17 +853,18 @@ contains
 
 
   ! ---------------------------------------------------------
-  FLOAT function parameters_diff(p, q) result(res)
-    type(oct_control_parameters_t), intent(in) :: p, q
-    integer :: i
+  FLOAT function parameters_diff(pp, qq) result(res)
+    type(oct_control_parameters_t), intent(in) :: pp, qq
+
+    integer :: ipar
 
     call push_sub('parameters.parameters_diff')
 
-    ASSERT(p%current_representation .eq. q%current_representation)
+    ASSERT(pp%current_representation .eq. qq%current_representation)
 
     res = M_ZERO
-    do i = 1, p%no_parameters
-      res = res + tdf_diff(p%f(i), q%f(i))
+    do ipar = 1, pp%no_parameters
+      res = res + tdf_diff(pp%f(ipar), qq%f(ipar))
     end do
 
     call pop_sub()
@@ -866,10 +873,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  FLOAT function parameters_dotp(x, y) result(res)
-    FLOAT, intent(in) :: x(:)
-    FLOAT, intent(in) :: y(:)
-    res = sum(x(:)*y(:))
+  FLOAT function parameters_dotp(xx, yy) result(res)
+    FLOAT, intent(in) :: xx(:)
+    FLOAT, intent(in) :: yy(:)
+
+    call push_sub('parameters.parameters_dotp')
+    res = sum(xx(:) * yy(:))
+
+    call pop_sub()
   end function parameters_dotp
   ! ---------------------------------------------------------
 
@@ -902,7 +913,7 @@ contains
     type(oct_control_parameters_t), intent(in) :: par_in, par_out
     type(oct_control_parameters_t), intent(inout) :: par_new
 
-    integer :: i, j, dim!, ntiter
+    integer :: ipar, idir, dim
     FLOAT, allocatable :: e_in(:, :, :), e_out(:, :, :), e_new(:, :, :)
     call push_sub('parameters.parameters_mixing')
 
@@ -910,16 +921,18 @@ contains
     SAFE_ALLOCATE(e_in (1:dim, 1:par_in%no_parameters, 1:1))
     SAFE_ALLOCATE(e_out(1:dim, 1:par_in%no_parameters, 1:1))
     SAFE_ALLOCATE(e_new(1:dim, 1:par_in%no_parameters, 1:1))
-    do i = 1, par_in%no_parameters
-      do j = 1, dim
-        e_in (j, i, 1) = tdf(par_in%f(i), j)
-        e_out(j, i, 1) = tdf(par_out%f(i), j)
+
+    do ipar = 1, par_in%no_parameters
+      do idir = 1, dim
+        e_in (idir, ipar, 1) = tdf(par_in%f(ipar), idir)
+        e_out(idir, ipar, 1) = tdf(par_out%f(ipar), idir)
       end do
     end do
+
     e_new = M_ZERO
     call dmixing(parameters_mix, iter, e_in, e_out, e_new, parameters_dotp)
-    do i = 1, par_out%no_parameters
-      call tdf_set_numerical(par_new%f(i), e_new(:, i, 1))
+    do ipar = 1, par_out%no_parameters
+      call tdf_set_numerical(par_new%f(ipar), e_new(:, ipar, 1))
     end do
 
     SAFE_DEALLOCATE_A(e_in)
@@ -933,15 +946,15 @@ contains
   ! ---------------------------------------------------------
   subroutine parameters_apply_envelope(cp)
     type(oct_control_parameters_t), intent(inout) :: cp
-    integer :: j, i
+    integer :: ipar, iter
 
     call push_sub('parameters.parameters_apply_envelope')
 
     ! Do not apply the envelope if the parameters are represented as a sine-Fourier series.
     if(par_common%representation .eq. ctr_real_time) then
-      do j = 1, cp%no_parameters
-        do i = 1, tdf_niter(cp%f(j)) + 1
-          call tdf_set_numerical(cp%f(j), i, tdf(cp%f(j), i) / tdf(par_common%td_penalty(j), i) )
+      do ipar = 1, cp%no_parameters
+        do iter = 1, tdf_niter(cp%f(ipar)) + 1
+          call tdf_set_numerical(cp%f(ipar), iter, tdf(cp%f(ipar), iter) / tdf(par_common%td_penalty(ipar), iter) )
         end do
       end do
     end if
@@ -956,7 +969,7 @@ contains
     type(oct_control_parameters_t), intent(in) :: cp
     type(epot_t), intent(inout) :: ep
 
-    integer :: j
+    integer :: ipar
     type(oct_control_parameters_t) :: par
     call push_sub('parameters.parameters_to_h')
 
@@ -965,8 +978,8 @@ contains
 
     select case(par_common%mode)
     case(parameter_mode_epsilon, parameter_mode_f)
-      do j = 1, cp%no_parameters
-        call laser_set_f(ep%lasers(j), par%f(j))
+      do ipar = 1, cp%no_parameters
+        call laser_set_f(ep%lasers(ipar), par%f(ipar))
       end do
     case(parameter_mode_phi)
       call laser_set_phi(ep%lasers(1), par%f(1))
@@ -984,12 +997,12 @@ contains
     type(epot_t), intent(inout) :: ep
     integer, intent(in) :: val
 
-    integer :: j
+    integer :: ipar
 
     call push_sub('parameters.parameters_to_h_val')
 
-    do j = 1, cp%no_parameters
-      call laser_set_f_value(ep%lasers(j), val, tdf(cp%f(j), val) )
+    do ipar = 1, cp%no_parameters
+      call laser_set_f_value(ep%lasers(ipar), val, tdf(cp%f(ipar), val) )
     end do
 
     call pop_sub()
@@ -1000,12 +1013,12 @@ contains
   ! ---------------------------------------------------------
   subroutine parameters_end(cp)
     type(oct_control_parameters_t), intent(inout) :: cp
-    integer :: j
+    integer :: ipar
 
     call push_sub('parameters.parameters_end')
 
-    do j = 1, cp%no_parameters
-      call tdf_end(cp%f(j))
+    do ipar = 1, cp%no_parameters
+      call tdf_end(cp%f(ipar))
     end do
     SAFE_DEALLOCATE_P(cp%f)
     SAFE_DEALLOCATE_P(cp%alpha)
@@ -1023,8 +1036,8 @@ contains
     character(len=*), intent(in) :: filename
     type(oct_control_parameters_t), intent(in) :: cp
 
-    integer :: i, j, k, iunit, niter, nfreqs
-    FLOAT :: t, wmax, dw, w, wa, wb, dt
+    integer :: iter, ipar, ifreq, iunit, niter, nfreqs, idof
+    FLOAT :: time, wmax, dw, ww, wa, wb, dt
     FLOAT, allocatable :: func(:, :)
     CMPLX :: ft, ez, ezdt
     character(len=2) :: digit
@@ -1044,41 +1057,41 @@ contains
     call io_close(iunit)
 
     niter = tdf_niter(par%f(1))
-    SAFE_ALLOCATE(func(1:niter+1, 1:cp%no_parameters))
+    SAFE_ALLOCATE(func(1:niter + 1, 1:cp%no_parameters))
 
     select case(par_common%mode)
     case(parameter_mode_epsilon)
 
-      do j = 1, cp%no_parameters
+      do ipar = 1, cp%no_parameters
         if(cp%no_parameters > 1) then
-          write(digit,'(i2.2)') j
+          write(digit,'(i2.2)') ipar
           iunit = io_open(trim(filename)//'/cp-'//digit, action='write')
         else
           iunit = io_open(trim(filename)//'/cp', action='write')
         end if
         write(iunit,'(2a20)') '#       t [a.u]      ', '        e(t)         '
-        do i = 1, tdf_niter(par%f(j)) + 1
-          t = (i-1)*tdf_dt(par%f(j))
-          write(iunit, '(2es20.8e3)') t, tdf(par%f(j), i)
-          func(i, j) = tdf(par%f(j), t)
+        do iter = 1, tdf_niter(par%f(ipar)) + 1
+          time = (iter - 1) * tdf_dt(par%f(ipar))
+          write(iunit, '(2es20.8e3)') time, tdf(par%f(ipar), iter)
+          func(iter, ipar) = tdf(par%f(ipar), time)
         end do
         call io_close(iunit)
       end do
 
     case(parameter_mode_f)
 
-      do j = 1, cp%no_parameters
+      do ipar = 1, cp%no_parameters
         if(cp%no_parameters > 1) then
-          write(digit,'(i2.2)') j
+          write(digit,'(i2.2)') ipar
           iunit = io_open(trim(filename)//'/cp-'//digit, action='write')
         else
           iunit = io_open(trim(filename)//'/cp', action='write')
         end if
         write(iunit,'(3a20)') '#       t [a.u]      ', '        e(t)         ', '        f(t)         '
-        do i = 1, tdf_niter(par%f(j)) + 1
-          t = (i-1)*tdf_dt(par%f(j))
-          write(iunit, '(3es20.8e3)') t, tdf(par%f(j), t) * cos(par%w0*t), tdf(par%f(j), t)
-          func(i, j) = tdf(par%f(j), t) * cos(par%w0*t)
+        do iter = 1, tdf_niter(par%f(ipar)) + 1
+          time = (iter - 1) * tdf_dt(par%f(ipar))
+          write(iunit, '(3es20.8e3)') time, tdf(par%f(ipar), time) * cos(par%w0 * time), tdf(par%f(ipar), time)
+          func(iter, ipar) = tdf(par%f(ipar), time) * cos(par%w0 * time)
         end do
         call io_close(iunit)
       end do
@@ -1089,11 +1102,11 @@ contains
       iunit = io_open(trim(filename)//'/cp', action='write')
       write(iunit,'(4a20)') '#       t [a.u]      ', '        e(t)         ', &
                             '         f(t)        ', '       phi(t)        ' 
-      do i = 1, tdf_niter(par%f(j)) + 1
-        t = (i-1)*tdf_dt(par%f(j))
-        write(iunit, '(4es20.8e3)') t, tdf(par_common%f, t) * &
-          cos(par%w0*t + tdf(par%f(1), t) ), tdf(par_common%f, t), tdf(par%f(1), t)
-        func(i, 1) = tdf(par_common%f, t) * cos(par%w0*t + tdf(par%f(1), t) )
+      do iter = 1, tdf_niter(par%f(ipar)) + 1
+        time = (iter - 1) * tdf_dt(par%f(ipar))
+        write(iunit, '(4es20.8e3)') time, tdf(par_common%f, time) * &
+          cos(par%w0 * time + tdf(par%f(1), time) ), tdf(par_common%f, time), tdf(par%f(1), time)
+        func(iter, 1) = tdf(par_common%f, time) * cos(par%w0 * time + tdf(par%f(1), time) )
       end do
       call io_close(iunit)
 
@@ -1104,9 +1117,9 @@ contains
     select case(par_common%mode)
     case(parameter_mode_epsilon)
 
-      do j = 1, cp%no_parameters
+      do ipar = 1, cp%no_parameters
         if(cp%no_parameters > 1) then
-          write(digit,'(i2.2)') j
+          write(digit,'(i2.2)') ipar
           iunit = io_open(trim(filename)//'/cpw-'//digit, action='write')
         else
           iunit = io_open(trim(filename)//'/cpw', action='write')
@@ -1118,21 +1131,21 @@ contains
         wa = M_ZERO
         wb = M_THREE ! hard-coded to three atomic units... this should be improved.
         wmax = wb
-        dw = wmax/(nfreqs-1)
+        dw = wmax / (nfreqs - 1)
         dt = tdf_dt(par%f(1))
 
-        do k = 1, nfreqs
-          w = wa + (k-1)*dw
+        do ifreq = 1, nfreqs
+          ww = wa + (ifreq - 1) * dw
           ft = M_z0
           ez = M_z1
-          ezdt = exp(M_zI*w*tdf_dt(par%f(j)))
-          do i = 1, niter + 1
-            t = (i-1)*dt
-            ft = ft + func(i, j)*ez
-            ez = ez*ezdt
+          ezdt = exp(M_zI * ww * tdf_dt(par%f(ipar)))
+          do iter = 1, niter + 1
+            time = (iter - 1) * dt
+            ft = ft + func(iter, ipar) * ez
+            ez = ez * ezdt
           end do
-          ft = ft*dt
-          write(iunit,'(3es20.8e3)') w, real(ft), aimag(ft)
+          ft = ft * dt
+          write(iunit,'(3es20.8e3)') ww, real(ft), aimag(ft)
         end do
       end do
       call io_close(iunit)
@@ -1149,18 +1162,18 @@ contains
       dw = wmax/(nfreqs-1)
       dt = tdf_dt(par%f(1))
 
-      do j = 1, nfreqs
-        w = wa + (j-1)*dw
+      do ifreq = 1, nfreqs
+        ww = wa + (ifreq - 1) * dw
         ft = M_z0
         ez = M_z1
-        ezdt = exp(M_zI*w*tdf_dt(par%f(1)))
-        do i = 1, niter + 1
-          t = (i-1)*dt
-          ft = ft + func(i, 1)*ez
-          ez = ez*ezdt
+        ezdt = exp(M_zI * ww * tdf_dt(par%f(1)))
+        do iter = 1, niter + 1
+          time = (iter - 1) * dt
+          ft = ft + func(iter, 1) * ez
+          ez = ez * ezdt
         end do
-        ft = ft*dt
-        write(iunit,'(3es20.8e3)') w, real(ft), aimag(ft)
+        ft = ft * dt
+        write(iunit,'(3es20.8e3)') ww, real(ft), aimag(ft)
       end do
 
       call io_close(iunit)
@@ -1169,8 +1182,8 @@ contains
     ! Now, in case of a parametrized control function, the parameters.
     if(par_common%representation .ne. ctr_real_time) then
       iunit = io_open(trim(filename)//'/theta', action='write')
-      do j = 1, par%dof
-        write(iunit,'(i5,es20.8e3)') j, par%theta(j)
+      do idof = 1, par%dof
+        write(iunit,'(i5,es20.8e3)') idof, par%theta(idof)
       end do
       call io_close(iunit)
     end if
@@ -1188,9 +1201,9 @@ contains
   FLOAT function parameters_fluence(par)
     type(oct_control_parameters_t), intent(in) :: par
     type(oct_control_parameters_t)             :: par_
-    integer :: j, i
-    FLOAT :: t, fi, phi
-    type(tdf_t) :: f
+    integer :: iter, ipar
+    FLOAT :: time, fi, phi
+    type(tdf_t) :: ff
     call push_sub('parameters.parameters_fluence')
 
     call parameters_copy(par_, par)
@@ -1200,28 +1213,28 @@ contains
 
     select case(par_common%mode)
     case(parameter_mode_epsilon)
-      do j = 1, par_%no_parameters
-        parameters_fluence = parameters_fluence + tdf_dot_product(par_%f(j), par_%f(j))
+      do ipar = 1, par_%no_parameters
+        parameters_fluence = parameters_fluence + tdf_dot_product(par_%f(ipar), par_%f(ipar))
       end do
     case(parameter_mode_f)
-      do j = 1, par%no_parameters
-        call tdf_init(f)
-        call tdf_copy(f, par_%f(j))
-        call tdf_cosine_multiply(par%w0, f)
-        parameters_fluence = parameters_fluence + tdf_dot_product(f, f)
-        call tdf_end(f)
+      do ipar = 1, par%no_parameters
+        call tdf_init(ff)
+        call tdf_copy(ff, par_%f(ipar))
+        call tdf_cosine_multiply(par%w0, ff)
+        parameters_fluence = parameters_fluence + tdf_dot_product(ff, ff)
+        call tdf_end(ff)
       end do
     case(parameter_mode_phi)
-      call tdf_init(f)
-      call tdf_copy(f, par_%f(1))
-      do i = 1, tdf_niter(f) + 1
-        t = (i-1)*tdf_dt(f)
-        fi = tdf(par_common%f, i)
-        phi = real(tdf(f, i)) 
-        call tdf_set_numerical(f, i, fi *cos(par%w0*t+phi))
+      call tdf_init(ff)
+      call tdf_copy(ff, par_%f(1))
+      do iter = 1, tdf_niter(ff) + 1
+        time = (iter - 1) * tdf_dt(ff)
+        fi = tdf(par_common%f, iter)
+        phi = real(tdf(ff, iter)) 
+        call tdf_set_numerical(ff, iter, fi * cos(par%w0 * time + phi))
       end do
-      parameters_fluence = tdf_dot_product(f, f)
-      call tdf_end(f)
+      parameters_fluence = tdf_dot_product(ff, ff)
+      call tdf_end(ff)
     end select
 
     call parameters_end(par_)
@@ -1237,9 +1250,9 @@ contains
   FLOAT function parameters_j2(par) result(j2)
     type(oct_control_parameters_t), intent(in) :: par
     type(oct_control_parameters_t)             :: par_
-    integer :: i, j
-    FLOAT   :: t, integral, fi, phi, tdp
-    type(tdf_t) :: f
+    integer :: iter, ipar
+    FLOAT   :: time, integral, fi, phi, tdp
+    type(tdf_t) :: ff
 
     call push_sub('parameters.parameters_j2')
 
@@ -1251,46 +1264,46 @@ contains
     integral = M_ZERO
     select case(par_common%mode)
     case(parameter_mode_epsilon)
-      do j = 1, par_%no_parameters
-        call tdf_init(f)
-        call tdf_copy(f, par_%f(j))
-        do i = 1, tdf_niter(f) + 1
-          t = (i-1)*tdf_dt(f)
-          fi = tdf(par_%f(j), i)
-          tdp = sqrt(real(tdf(par_common%td_penalty(j), i),kind=REAL_PRECISION))
-          call tdf_set_numerical(f, i, fi*tdp)
+      do ipar = 1, par_%no_parameters
+        call tdf_init(ff)
+        call tdf_copy(ff, par_%f(ipar))
+        do iter = 1, tdf_niter(ff) + 1
+          time = (iter - 1) * tdf_dt(ff)
+          fi = tdf(par_%f(ipar), iter)
+          tdp = sqrt(real(tdf(par_common%td_penalty(ipar), iter), kind=REAL_PRECISION))
+          call tdf_set_numerical(ff, iter, fi * tdp)
         end do
-        integral = integral + tdf_dot_product(f, f)
-        call tdf_end(f)
+        integral = integral + tdf_dot_product(ff, ff)
+        call tdf_end(ff)
       end do
     case(parameter_mode_f)
-      do j = 1, par_%no_parameters
-        call tdf_init(f)
-        call tdf_copy(f, par_%f(j))
+      do ipar = 1, par_%no_parameters
+        call tdf_init(ff)
+        call tdf_copy(ff, par_%f(ipar))
         if(par_%current_representation .eq. ctr_sine_fourier_series_h) then
-          call tdf_sineseries_to_numerical(f)
+          call tdf_sineseries_to_numerical(ff)
         end if
-        do i = 1, tdf_niter(f) + 1
-          t = (i-1)*tdf_dt(f)
-          fi = tdf(par_%f(j), i)
-          tdp = sqrt(real(tdf(par_common%td_penalty(j), i)))
-          call tdf_set_numerical(f, i, fi*tdp*cos(par_%w0*t))
+        do iter = 1, tdf_niter(ff) + 1
+          time = (iter - 1) * tdf_dt(ff)
+          fi = tdf(par_%f(ipar), iter)
+          tdp = sqrt(real(tdf(par_common%td_penalty(ipar), iter)))
+          call tdf_set_numerical(ff, iter, fi * tdp * cos(par_%w0 * time))
         end do
-        integral = integral + tdf_dot_product(f, f)
-        call tdf_end(f)
+        integral = integral + tdf_dot_product(ff, ff)
+        call tdf_end(ff)
       end do
     case(parameter_mode_phi)
-      call tdf_init(f)
-      call tdf_copy(f, par_%f(1))
-      do i = 1, tdf_niter(f) + 1
-        t = (i-1)*tdf_dt(f)
-        fi = tdf(par_common%f, i)
-        phi = real(tdf(par_%f(1), i),kind=REAL_PRECISION)
-        tdp = sqrt(real(tdf(par_common%td_penalty(1), i),kind=REAL_PRECISION))
-        call tdf_set_numerical(f, i, fi*cos(par_%w0*t+phi))
+      call tdf_init(ff)
+      call tdf_copy(ff, par_%f(1))
+      do iter = 1, tdf_niter(ff) + 1
+        time = (iter - 1) * tdf_dt(ff)
+        fi = tdf(par_common%f, iter)
+        phi = real(tdf(par_%f(1), iter), kind=REAL_PRECISION)
+        tdp = sqrt(real(tdf(par_common%td_penalty(1), iter), kind=REAL_PRECISION))
+        call tdf_set_numerical(ff, iter, fi * cos(par_%w0 * time + phi))
       end do
-      integral = tdf_dot_product(f, f)
-      call tdf_end(f)
+      integral = tdf_dot_product(ff, ff)
+      call tdf_end(ff)
     end select
 
     j2 = - par_%alpha(1) * (integral - par_common%targetfluence)
@@ -1305,13 +1318,13 @@ contains
   subroutine parameters_set_fluence(par)
     type(oct_control_parameters_t), intent(inout) :: par
     FLOAT   :: old_fluence
-    integer :: j
+    integer :: ipar
 
     call push_sub('parameters.parameters_set_fluence')
 
     old_fluence = parameters_fluence(par) 
-    do j = 1, par%no_parameters
-      call tdf_scalar_multiply( sqrt(par_common%targetfluence/old_fluence) , par%f(j) )
+    do ipar = 1, par%no_parameters
+      call tdf_scalar_multiply( sqrt(par_common%targetfluence / old_fluence), par%f(ipar) )
     end do
 
     call pop_sub()
@@ -1338,7 +1351,9 @@ contains
   subroutine parameters_copy(cp_out, cp_in)
     type(oct_control_parameters_t), intent(inout) :: cp_out
     type(oct_control_parameters_t), intent(in)    :: cp_in
-    integer :: j
+
+    integer :: ipar
+
     call push_sub('parameters.parameters_copy')
 
     cp_out%no_parameters = cp_in%no_parameters
@@ -1347,12 +1362,15 @@ contains
     cp_out%intphi = cp_in%intphi
     cp_out%current_representation = cp_in%current_representation
     cp_out%w0 = cp_in%w0
+
     call loct_pointer_copy(cp_out%alpha, cp_in%alpha)
     SAFE_ALLOCATE(cp_out%f(1:cp_out%no_parameters))
-    do j = 1, cp_in%no_parameters
-      call tdf_init(cp_out%f(j))
-      call tdf_copy(cp_out%f(j), cp_in%f(j))
+
+    do ipar = 1, cp_in%no_parameters
+      call tdf_init(cp_out%f(ipar))
+      call tdf_copy(cp_out%f(ipar), cp_in%f(ipar))
     end do
+
     call loct_pointer_copy(cp_out%utransf, cp_in%utransf)
     call loct_pointer_copy(cp_out%utransfi, cp_in%utransfi)
     call loct_pointer_copy(cp_out%theta, cp_in%theta)
@@ -1366,7 +1384,8 @@ contains
   subroutine parameters_randomize(par)
     type(oct_control_parameters_t), intent(inout) :: par
 
-     integer :: j
+     integer :: ipar
+
      call push_sub('parameters.parameters_randomize')
 
      ASSERT(par_common%representation .ne. ctr_real_time)
@@ -1375,8 +1394,8 @@ contains
 
      select case(par_common%mode)
      case(parameter_mode_epsilon, parameter_mode_f)
-       do j = 1, par%no_parameters
-         call tdf_set_random(par%f(j))
+       do ipar = ipar, par%no_parameters
+         call tdf_set_random(par%f(ipar))
        end do
      case(parameter_mode_phi)
        call tdf_set_random(par%f(1))
@@ -1388,41 +1407,40 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Update the control function(s) given in "cp", according to the formulae:
-  !
-  ! cp = (1-mu)*cpp + mu * d / (td_penalty - 2*dq)
+  ! Update the control function(s) given in "cp", according to the formula
+  ! cp = (1 - mu) * cpp + mu * dd / (td_penalty - 2 * dq)
   ! ---------------------------------------------------------
-  subroutine parameters_update(cp, cpp, dir, iter, mu, d, dq)
+  subroutine parameters_update(cp, cpp, dir, iter, mu, dd, dq)
     type(oct_control_parameters_t), intent(inout) :: cp
     type(oct_control_parameters_t), intent(in)    :: cpp
     character(len=1),               intent(in)    :: dir
     integer,                        intent(in)    :: iter
     FLOAT,                          intent(in)    :: mu
-    FLOAT,                          intent(in)    :: d(:)
+    FLOAT,                          intent(in)    :: dd(:)
     CMPLX,                          intent(in)    :: dq(:)
 
     FLOAT :: value
-    integer :: j
+    integer :: ipar
     
     call push_sub('parameters.parameters_update')
 
     select case(dir)
       case('f')
-        do j = 1, cp%no_parameters
-          value = d(j) / ( tdf(par_common%td_penalty(j), iter) - M_TWO*aimag(dq(j)) )
-          value = (M_ONE - mu)*tdf(cpp%f(j), iter) + mu * value
-          call tdf_set_numerical(cp%f(j), iter, value)
-          if(iter+1 <= tdf_niter(cp%f(j)) + 1)  call tdf_set_numerical(cp%f(j), iter+1, value)
-          if(iter+2 <= tdf_niter(cp%f(j)) + 1)  call tdf_set_numerical(cp%f(j), iter+2, value)
+        do ipar = 1, cp%no_parameters
+          value = dd(ipar) / ( tdf(par_common%td_penalty(ipar), iter) - M_TWO * aimag(dq(ipar)) )
+          value = (M_ONE - mu) * tdf(cpp%f(ipar), iter) + mu * value
+          call tdf_set_numerical(cp%f(ipar), iter, value)
+          if(iter + 1 <= tdf_niter(cp%f(ipar)) + 1)  call tdf_set_numerical(cp%f(ipar), iter+1, value)
+          if(iter + 2 <= tdf_niter(cp%f(ipar)) + 1)  call tdf_set_numerical(cp%f(ipar), iter+2, value)
         end do
 
       case('b')
-        do j = 1, cp%no_parameters
-          value = d(j) / ( tdf(par_common%td_penalty(j), iter+1) - M_TWO*aimag(dq(j)) )
-          value = (M_ONE - mu)*tdf(cpp%f(j), iter+1) + mu * value
-          call tdf_set_numerical(cp%f(j), iter+1, value)
-          if(iter > 0) call tdf_set_numerical(cp%f(j), iter, value)
-          if(iter-1 > 0) call tdf_set_numerical(cp%f(j), iter-1, value)
+        do ipar = 1, cp%no_parameters
+          value = dd(ipar) / ( tdf(par_common%td_penalty(ipar), iter + 1) - M_TWO * aimag(dq(ipar)) )
+          value = (M_ONE - mu) * tdf(cpp%f(ipar), iter + 1) + mu * value
+          call tdf_set_numerical(cp%f(ipar), iter + 1, value)
+          if(iter > 0) call tdf_set_numerical(cp%f(ipar), iter, value)
+          if(iter - 1 > 0) call tdf_set_numerical(cp%f(ipar), iter-1, value)
         end do
     end select
 
@@ -1432,10 +1450,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  FLOAT pure function parameters_alpha(par, j)
+  FLOAT pure function parameters_alpha(par, ipar)
     type(oct_control_parameters_t), intent(in) :: par
-    integer,                        intent(in) :: j
-    parameters_alpha = par%alpha(j)
+    integer,                        intent(in) :: ipar
+
+    parameters_alpha = par%alpha(ipar)
+
   end function parameters_alpha
   ! ---------------------------------------------------------
 
@@ -1450,7 +1470,9 @@ contains
   ! ---------------------------------------------------------
   integer pure function parameters_number(par)
     type(oct_control_parameters_t), intent(in) :: par
+
     parameters_number = par%no_parameters
+
   end function parameters_number
   ! ---------------------------------------------------------
 
@@ -1469,8 +1491,8 @@ contains
 
     select case(par_common%mode)
     case(parameter_mode_epsilon, parameter_mode_f, parameter_mode_phi)
-      lower_bounds(1:dog-1) = M_ZERO
-      lower_bounds(dog)     = -M_PI
+      lower_bounds(1:dog - 1) = M_ZERO
+      lower_bounds(dog)       = -M_PI
     end select
 
     call pop_sub()
@@ -1481,6 +1503,7 @@ contains
   ! ---------------------------------------------------------
   integer pure function parameters_dof(par)
     type(oct_control_parameters_t), intent(in) :: par
+
     parameters_dof = par%dof
   end function parameters_dof
   ! ---------------------------------------------------------
@@ -1489,6 +1512,7 @@ contains
   ! ---------------------------------------------------------
   FLOAT pure function parameters_w0(par)
     type(oct_control_parameters_t), intent(in) :: par
+
     parameters_w0 = par%w0
   end function parameters_w0
   ! ---------------------------------------------------------
@@ -1499,12 +1523,12 @@ contains
     type(oct_control_parameters_t), intent(inout) :: par
     type(filter_t),                 intent(inout) :: filter
 
-    integer :: j
+    integer :: ipar
 
     call push_sub('parameters.parameters_filter')
 
-    do j = 1, par%no_parameters
-      call filter_apply(par%f(j), filter)
+    do ipar = 1, par%no_parameters
+      call filter_apply(par%f(ipar), filter)
     end do
 
     call pop_sub()
@@ -1514,15 +1538,19 @@ contains
 
   ! ---------------------------------------------------------
   subroutine parameters_mod_close()
-    integer :: j
+    integer :: ipar
 
     call push_sub('parameters.parameters_mod_close')
 
-    SAFE_DEALLOCATE_P(par_common%alpha); nullify(par_common%alpha)
-    do j = 1, par_common%no_parameters
-      call tdf_end(par_common%td_penalty(j))
+    SAFE_DEALLOCATE_P(par_common%alpha)
+    nullify(par_common%alpha)
+
+    do ipar = 1, par_common%no_parameters
+      call tdf_end(par_common%td_penalty(ipar))
     end do
-    SAFE_DEALLOCATE_P(par_common%td_penalty); nullify(par_common%td_penalty)
+
+    SAFE_DEALLOCATE_P(par_common%td_penalty)
+    nullify(par_common%td_penalty)
     SAFE_DEALLOCATE_P(par_common)
 
     call pop_sub()
@@ -1535,80 +1563,81 @@ contains
   ! parameters_gradient computes the gradient with respect
   ! to the theta basis (dim=dof)
   ! ---------------------------------------------------------
-  subroutine parameters_gradient(x, par, par_output, grad)
-    FLOAT, intent(in) :: x(:)
-    type(oct_control_parameters_t), intent(in) :: par, par_output
-    FLOAT, intent(inout) :: grad(:)
+  subroutine parameters_gradient(xx, par, par_output, grad)
+    FLOAT,                          intent(in)    :: xx(:)
+    type(oct_control_parameters_t), intent(in)    :: par, par_output
+    FLOAT,                          intent(inout) :: grad(:)
 
-    integer :: n, j, m, k, s, t
-    FLOAT :: r
-    FLOAT, allocatable :: theta(:), grad_matrix(:,:), eigenvectors(:,:), eigenvalues(:), a(:)
+    integer :: dim, jj, mm, kk, ss, tt
+    FLOAT :: rr
+    FLOAT, allocatable :: theta(:), grad_matrix(:,:), eigenvectors(:,:), eigenvalues(:), aa(:)
     
     call push_sub('parameters.parameters_gradient')
 
-    n = par%dim
+    dim = par%dim
 
     select case(par%current_representation)
     case(ctr_fourier_series)
-       SAFE_ALLOCATE(theta(1:n)) ! dim = dof for fourier-series
+       SAFE_ALLOCATE(theta(1:dim)) ! dim = dof for fourier-series
        call parameters_get_theta(par_output, theta)
-       forall(j = 1:n) grad(j) =  M_TWO*parameters_alpha(par, 1)*x(j) - M_TWO*theta(j)
+       forall(jj = 1:dim) grad(jj) =  M_TWO * parameters_alpha(par, 1) * xx(jj) - M_TWO * theta(jj)
 
     case(ctr_zero_fourier_series)
-       SAFE_ALLOCATE(theta(1:n))      ! dim should be # of basis sets for a zero-fourier-series (even number)
-       forall(j = 1:n) theta(j) = tdf(par_output%f(1), j)    ! get the projection on my basis set of function f
-       forall(j = 1:n-1) grad(j) =  M_TWO*parameters_alpha(par, 1)*x(j) - M_TWO*theta(j+1)
-       forall(j = 1:(n/2)-1) grad(j) = grad(j) + M_TWO*parameters_alpha(par, 1)*sum(x(1:(n/2)-1)) + M_TWO*theta(1)
+       SAFE_ALLOCATE(theta(1:dim))      ! dim should be # of basis sets for a zero-Fourier-series (even number)
+       forall(jj = 1:dim) theta(jj) = tdf(par_output%f(1), jj)    ! get the projection on my basis set of function f
+       forall(jj = 1:dim - 1) grad(jj) =  M_TWO * parameters_alpha(par, 1) * xx(jj) - M_TWO * theta(jj + 1)
+       forall(jj = 1:(dim / 2) - 1) &
+         grad(jj) = grad(jj) + M_TWO * parameters_alpha(par, 1) * sum(xx(1:(dim / 2) - 1)) + M_TWO * theta(1)
       
     case(ctr_fourier_series_h)
-       SAFE_ALLOCATE(theta(1:n))   ! dim = dof+1 for fourier-series-h
-       SAFE_ALLOCATE(grad_matrix(1:n-1,1:n))
+       SAFE_ALLOCATE(theta(1:dim))   ! dim = dof + 1 for fourier-series-h
+       SAFE_ALLOCATE(grad_matrix(1:dim - 1, 1:dim))
 
-       forall(j = 1:n) theta(j) = M_TWO*tdf(par_output%f(1), j) ! get the projection on my basis set of function (theta=b)
-       r = sqrt(par_common%targetfluence)
-       call hypersphere_grad_matrix(grad_matrix, r, x)
+       forall(jj = 1:dim) theta(jj) = M_TWO * tdf(par_output%f(1), jj) ! get the projection on my basis set of function (theta=b)
+       rr = sqrt(par_common%targetfluence)
+       call hypersphere_grad_matrix(grad_matrix, rr, xx)
        grad = matmul(grad_matrix, theta)
-       grad = -grad  ! the cg-alghorithm minimizes, so we need to give the negative gradient for maximization
+       grad = -grad  ! the CG algorithm minimizes, so we need to give the negative gradient for maximization
        
        SAFE_DEALLOCATE_A(grad_matrix)
        
     case(ctr_zero_fourier_series_h)
        
-       SAFE_ALLOCATE(theta(1:n))   ! dim = dof+2 for zero-fourier-series-h
-       SAFE_ALLOCATE(grad_matrix(1:n-2,1:n-1))
-       SAFE_ALLOCATE(eigenvectors(1:n-1, 1:n-1))
-       SAFE_ALLOCATE(eigenvalues(1:n-1))
-       SAFE_ALLOCATE(a(1:n-1))
+       SAFE_ALLOCATE(theta(1:dim))   ! dim = dof + 2 for zero-fourier-series-h
+       SAFE_ALLOCATE(grad_matrix(1:dim - 2, 1:dim - 1))
+       SAFE_ALLOCATE(eigenvectors(1:dim - 1, 1:dim - 1))
+       SAFE_ALLOCATE(eigenvalues(1:dim - 1))
+       SAFE_ALLOCATE(aa(1:dim - 1))
        
-       forall(j = 1:n) theta(j) = M_TWO*tdf(par_output%f(1),j) !get the projection on my basis set of function f
-       r = sqrt(par_common%targetfluence)
-       call hypersphere_grad_matrix(grad_matrix, r, x)
+       forall(jj = 1:dim) theta(jj) = M_TWO * tdf(par_output%f(1), jj) !get the projection on my basis set of function f
+       rr = sqrt(par_common%targetfluence)
+       call hypersphere_grad_matrix(grad_matrix, rr, xx)
        
        ! create matrix S
-       a = M_ZERO
-       a(1:n/2-1) = M_ONE
-       forall(j=1:n-1)
-          forall(k=1:n-1) eigenvectors(j, k) = a(j)*a(k)
-          eigenvectors(j, j) = eigenvectors(j, j) + M_ONE
+       aa = M_ZERO
+       aa(1:dim / 2 - 1) = M_ONE
+       forall(jj = 1:dim - 1)
+          forall(kk = 1:dim - 1) eigenvectors(jj, kk) = aa(jj) * aa(kk)
+          eigenvectors(jj, jj) = eigenvectors(jj, jj) + M_ONE
        end forall
 
        ! create unitary Matrix U
-       call lalg_eigensolve(n-1, eigenvectors, eigenvalues)
+       call lalg_eigensolve(dim - 1, eigenvectors, eigenvalues)
        
        grad = M_ZERO
-       do m=1, n-2
-          do k=1, n-1
-             do s=1, n-1
-                grad(m) = grad(m) + grad_matrix(m,k)*eigenvectors(s,k)*theta(s+1)/sqrt(eigenvalues(k))
+       do mm = 1, dim - 2
+          do kk = 1, dim - 1
+             do ss = 1, dim - 1
+                grad(mm) = grad(mm) + grad_matrix(mm, kk) * eigenvectors(ss, kk) * theta(ss + 1) / sqrt(eigenvalues(kk))
              end do
-             do t=1, n/2-1
-                grad(m) = grad(m) - grad_matrix(m,k)*eigenvectors(t,k)*theta(1)/sqrt(eigenvalues(k))
+             do tt = 1, dim / 2 - 1
+                grad(mm) = grad(mm) - grad_matrix(mm, kk) * eigenvectors(tt, kk) * theta(1) / sqrt(eigenvalues(kk))
              end do
           end do
        end do
        grad = -grad
 
-       SAFE_DEALLOCATE_A(a)
+       SAFE_DEALLOCATE_A(aa)
        SAFE_DEALLOCATE_A(grad_matrix)
        SAFE_DEALLOCATE_A(eigenvectors)
        SAFE_DEALLOCATE_A(eigenvalues)
