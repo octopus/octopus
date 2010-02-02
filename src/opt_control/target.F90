@@ -86,7 +86,7 @@ module opt_control_target_m
     FLOAT, pointer :: rho(:) => null()
     FLOAT, pointer :: td_fitness(:) => null()
     character(len=200) :: td_local_target
-    integer :: excluded_states
+    character(len=80) :: excluded_states_list
     integer :: hhg_nks
     integer, pointer :: hhg_k(:) => null()
     FLOAT,   pointer :: hhg_alpha(:) => null()
@@ -229,16 +229,19 @@ module opt_control_target_m
     case(oct_tg_exclude_state)
 
       message(1) =  'Info: The target functional is the exclusion of a number of states defined by'
-      message(2) =  '      "OCTExcludeStates".'
+      message(2) =  '      "OCTExcludedStates".'
       call write_info(2)
-      !%Variable OCTExcludeStates
-      !%Type integer
-      !%Default 1
+      !%Variable OCTExcludedStates
+      !%Type string
       !%Section Calculation Modes::Optimal Control
       !%Description
-      !% WARNING: Experimental
+      !% If the target is the exclusion of several targets, ("OCTTargetOperator = oct_exclude_states") 
+      !% then you must declare which states are to be excluded, by setting the OCTExcludedStates variable.
+      !% It must be a string in "list" format: "1-8", or "2,3,4-9", for example. Be careful to include
+      !% in this list only states that have been calculated in a previous "gs" or "unocc" calculation,
+      !% or otherwise the error will be silently ignored.
       !%End
-      call parse_integer(datasets_check('OCTExcludeStates'), 1, target%excluded_states)
+      call parse_string(datasets_check('OCTExcludedStates'), "1", target%excluded_states_list)
       call states_deallocate_wfns(target%st)
       call restart_look_and_read(target%st, gr, geo)
 
@@ -715,9 +718,11 @@ module opt_control_target_m
     case(oct_tg_exclude_state)
 
       j1 = M_ONE
-      do ist = 1, target%excluded_states
-        j1 = j1 - abs(zmf_dotp(gr%mesh, psi%d%dim, &
-          target%st%zpsi(:, :, ist, 1), psi%zpsi(:, :, 1, 1)))**2
+      do ist = 1, target%st%nst
+        if(loct_isinstringlist(ist, target%excluded_states_list)) then
+          j1 = j1 - abs(zmf_dotp(gr%mesh, psi%d%dim, &
+            target%st%zpsi(:, :, ist, 1), psi%zpsi(:, :, 1, 1)))**2
+        end if
       end do
 
     case(oct_tg_hhg)
@@ -927,9 +932,11 @@ module opt_control_target_m
     case(oct_tg_exclude_state)
 
       chi_out%zpsi(:, :, 1, 1) = psi_in%zpsi(:, :, 1, 1)
-      do p = 1, target%excluded_states
-        olap = zmf_dotp(gr%mesh, psi_in%d%dim, target%st%zpsi(:, :, p, 1), psi_in%zpsi(:, :, 1, 1))
-        chi_out%zpsi(:, :, 1, 1) = chi_out%zpsi(:, :, 1, 1) - olap*target%st%zpsi(:, :, p, 1)
+      do p = 1, target%st%nst
+        if(loct_isinstringlist(p, target%excluded_states_list)) then
+          olap = zmf_dotp(gr%mesh, psi_in%d%dim, target%st%zpsi(:, :, p, 1), psi_in%zpsi(:, :, 1, 1))
+          chi_out%zpsi(:, :, 1, 1) = chi_out%zpsi(:, :, 1, 1) - olap*target%st%zpsi(:, :, p, 1)
+        end if
       end do
 
     case default
