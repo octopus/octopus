@@ -48,7 +48,7 @@ module xc_functl_m
     integer         :: id                ! identifier
 
     integer         :: spin_channels     ! XC_UNPOLARIZED | XC_POLARIZED
-    integer         :: provides          ! XC_PROVIDES_EXC + XC_PROVIDES_VXC + ...
+    integer         :: flags             ! XC_FLAGS_HAVE_EXC + XC_FLAGS_HAVE_VXC + ...
 
     type(XC_F90(pointer_t)) :: conf         ! the pointer used to call the library
     type(XC_F90(pointer_t)) :: info         ! information about the functional
@@ -156,9 +156,19 @@ contains
       end if
     end if
 
-    if(functl%family.ne.XC_FAMILY_NONE.and.functl%family.ne.XC_FAMILY_OEP) then
-      ok =         (functl%id == XC_LDA_X_1D)
-      ok = ok .or. (functl%id == XC_LDA_C_1D_CSC)
+    if(functl%family == XC_FAMILY_OEP) then
+      functl%type = XC_EXCHANGE
+
+    else if(functl%family .eq. XC_FAMILY_NONE) then
+      functl%type = -1
+
+    else ! handled by libxc
+      ! initialize
+      call XC_F90(func_init)(functl%conf, functl%info, functl%id, spin_channels)
+      functl%type     = XC_F90(info_kind)(functl%info)
+      functl%flags    = XC_F90(info_flags)(functl%info)
+
+      ok = iand(functl%flags, XC_FLAGS_1D).ne.0
       if((ndim.ne.1).and.ok) then
         message(1) = 'Specified functional is only allowed in 1D.'
         call write_fatal(1)
@@ -168,14 +178,7 @@ contains
         call write_fatal(1)
       end if
 
-      ok =       (functl%id == XC_LDA_X_2D)
-      ok = ok .or. (functl%id == XC_LDA_C_2D_AMGB)
-      ok = ok .or. (functl%id == XC_LDA_C_2D_PRM)
-      ok = ok .or. (functl%id == XC_GGA_X_2D_B86)
-      ok = ok .or. (functl%id == XC_GGA_X_2D_B86_MGC)
-      ok = ok .or. (functl%id == XC_GGA_X_2D_B88)
-      ok = ok .or. (functl%id == XC_GGA_X_2D_PBE)
-
+      ok = iand(functl%flags, XC_FLAGS_2D).ne.0
       if((ndim.ne.2).and.ok) then
         message(1) = 'Specified functional is only allowed in 2D.'
         call write_fatal(1)
@@ -185,8 +188,15 @@ contains
         call write_fatal(1)
       end if
 
-      ! initialize
-      call XC_F90(func_init)(functl%conf, functl%info, functl%id, spin_channels)
+      ok = iand(functl%flags, XC_FLAGS_3D).ne.0
+      if((ndim.ne.3).and.ok) then
+        message(1) = 'Specified functional is only allowed in 3D.'
+        call write_fatal(1)
+      end if
+      if(ndim==3.and.(.not.ok)) then
+        message(1) = 'Cannot use the specified functionals in 3D.'
+        call write_fatal(1)
+      end if
     end if
 
     ! special parameters that have to be configured
@@ -236,15 +246,6 @@ contains
       
     end select
     
-    if(functl%family == XC_FAMILY_OEP) then
-      functl%type     = XC_EXCHANGE
-    else if(functl%family .ne. XC_FAMILY_NONE) then
-      functl%type     = XC_F90(info_kind)(functl%info)
-      functl%provides = XC_F90(info_provides)(functl%info)
-    else
-      functl%type = -1
-    end if
-
     call pop_sub()
   end subroutine xc_functl_init_functl
   

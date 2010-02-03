@@ -34,7 +34,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
   FLOAT, allocatable :: l_zk(:)
   FLOAT, allocatable :: l_dens(:,:), l_dedd(:,:)
   FLOAT, allocatable :: l_sigma(:,:), l_vsigma(:,:)
-  FLOAT :: l_tau(MAX_SPIN), l_ldens(MAX_SPIN), l_dedtau(MAX_SPIN), l_dedldens(MAX_SPIN)
+  FLOAT, allocatable :: l_tau(:,:), l_ldens(:,:), l_dedtau(:,:), l_dedldens(:,:)
 
   FLOAT, allocatable :: dens(:,:), dedd(:,:), ex_per_vol(:), ec_per_vol(:)
   FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:)
@@ -61,11 +61,11 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
   families = XC_FAMILY_LDA + XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA
   if(iand(xcs%family, families) == 0) go to 999
 
-  if(iand(xcs%family, not(XC_FAMILY_LDA + XC_FAMILY_GGA)) == 0) then
+  !if(iand(xcs%family, not(XC_FAMILY_LDA + XC_FAMILY_GGA)) == 0) then
     n_block = 1000
-  else
-    n_block = 1 ! blocks not yet implemented for the other functionals
-  end if
+  !else
+  !  n_block = 1 ! blocks not yet implemented for the other functionals
+  !end if
 
   ! initialize a couple of handy variables
   gga  = iand(xcs%family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA).ne.0
@@ -120,7 +120,6 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
   space_loop: do ip = 1, der%mesh%np, n_block
     if(ip + n_block > der%mesh%np) n_block = der%mesh%np - ip + 1
 
-
     ! make a local copy with the correct memory order for libxc
     ib2 = ip
     do ib = 1, n_block
@@ -141,8 +140,12 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
     end if
 
     if(mgga) then
-      l_tau  (1:spin_channels) =   tau(ip, 1:spin_channels)
-      l_ldens(1:spin_channels) = ldens(ip, 1:spin_channels)
+      ib2 = ip
+      do ib = 1, n_block
+        l_tau  (1:spin_channels, ib) =   tau(ib2, 1:spin_channels)
+        l_ldens(1:spin_channels, ib) = ldens(ib2, 1:spin_channels)
+        ib2 = ib2 + 1
+      end do
     end if
 
     ! Calculate the potential/gradient density in local reference frame.
@@ -150,7 +153,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
 
       if(.not.present(vxc)) then ! get only the xc energy
 
-        if(iand(functl(ixc)%provides, XC_PROVIDES_EXC).ne.0) then
+        if(iand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC).ne.0) then
           select case(functl(ixc)%family)
 
           case(XC_FAMILY_LDA)
@@ -164,7 +167,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
             call write_fatal(1)
 
           case(XC_FAMILY_MGGA)
-            call XC_F90(mgga_exc)(functl(ixc)%conf, l_dens(1,1), l_sigma(1,1), l_ldens(1), l_tau(1), l_zk(1))
+            call XC_F90(mgga_exc)(functl(ixc)%conf, n_block, &
+              l_dens(1,1), l_sigma(1,1), l_ldens(1,1), l_tau(1,1), l_zk(1))
 
           case default
             cycle
@@ -176,7 +180,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
 
       else ! we want exc and vxc
 
-        if(iand(functl(ixc)%provides, XC_PROVIDES_EXC).ne.0) then
+        if(iand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC).ne.0) then
           ! we get the xc energy and potential
           select case(functl(ixc)%family)
           case(XC_FAMILY_LDA)
@@ -187,8 +191,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
               l_zk(1), l_dedd(1,1), l_vsigma(1,1))
 
           case(XC_FAMILY_MGGA)
-            call XC_F90(mgga_exc_vxc)(functl(ixc)%conf, l_dens(1,1), l_sigma(1,1), l_ldens(1), l_tau(1), &
-              l_zk(1), l_dedd(1,1), l_vsigma(1,1), l_dedldens(1), l_dedtau(1))
+            call XC_F90(mgga_exc_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), l_ldens(1,1), l_tau(1,1), &
+              l_zk(1), l_dedd(1,1), l_vsigma(1,1), l_dedldens(1,1), l_dedtau(1,1))
 
           case default
             cycle
@@ -214,8 +218,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
             end if
 
           case(XC_FAMILY_MGGA)
-            call XC_F90(mgga_vxc)(functl(ixc)%conf, l_dens(1,1), l_sigma(1,1), l_ldens(1), l_tau(1), &
-              l_dedd(1,1), l_vsigma(1,1), l_dedldens(1), l_dedtau(1))
+            call XC_F90(mgga_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), l_ldens(1,1), l_tau(1,1), &
+              l_dedd(1,1), l_vsigma(1,1), l_dedldens(1,1), l_dedtau(1,1))
 
           case default
             cycle
@@ -259,8 +263,12 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
         end if
 
         if(functl(ixc)%family == XC_FAMILY_MGGA) then
-          dedldens(ip, 1:spin_channels) = dedldens(ip, 1:spin_channels) + l_dedldens(1:spin_channels)
-          vtau(ip, 1:spin_channels) = vtau(ip, 1:spin_channels) + l_dedtau(1:spin_channels)
+          ib2 = ip
+          do ib = 1, n_block
+            dedldens(ib2, 1:spin_channels) = dedldens(ib2, 1:spin_channels) + l_dedldens(1:spin_channels, ib)
+            vtau    (ib2, 1:spin_channels) = vtau    (ib2, 1:spin_channels) + l_dedtau  (1:spin_channels, ib)
+            ib2 = ib2 + 1
+          end do
         end if
       end if
 
@@ -487,11 +495,19 @@ contains
   subroutine mgga_init()
     call push_sub('vxc_inc.xc_get_vxc.mgga_init')
 
+    ! allocate variables
     SAFE_ALLOCATE( tau(1:der%mesh%np, 1:spin_channels))
     SAFE_ALLOCATE(ldens(1:der%mesh%np, 1:spin_channels))
+
+    SAFE_ALLOCATE(l_tau  (1:spin_channels, 1:n_block))
+    SAFE_ALLOCATE(l_ldens(1:spin_channels, 1:n_block))
+
     if(present(vxc)) then
       SAFE_ALLOCATE(dedldens(1:der%mesh%np_part, 1:spin_channels))
       dedldens = M_ZERO
+
+      SAFE_ALLOCATE(l_dedtau  (1:spin_channels, 1:n_block))
+      SAFE_ALLOCATE(l_dedldens(1:spin_channels, 1:n_block))
     end if
 
     call pop_sub()
@@ -530,7 +546,6 @@ contains
     ncall = ncall +1 
     tb09_c =  -CNST(0.012) + CNST(1.023)*sqrt(dmf_integrate(der%mesh, gnon)/der%mesh%sb%rcell_volume)
 
-    write(*,*) "call number " , ncall
     write(message(1), '(a,f8.6)') "Info: In the functional TB09 c = ", tb09_c
     call write_info(1)
 
@@ -547,10 +562,17 @@ contains
   subroutine mgga_end()
     call push_sub('vxc_inc.xc_get_vxc.mgga_end')
 
-    SAFE_DEALLOCATE_A(ldens)
     SAFE_DEALLOCATE_A(tau)
+    SAFE_DEALLOCATE_A(ldens)
+
+    SAFE_DEALLOCATE_A(l_tau)
+    SAFE_DEALLOCATE_A(l_ldens)
+    
     if(present(vxc)) then
       SAFE_DEALLOCATE_A(dedldens)
+
+      SAFE_DEALLOCATE_A(l_dedtau)
+      SAFE_DEALLOCATE_A(l_dedldens)
     end if
 
     call pop_sub()
