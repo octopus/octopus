@@ -301,6 +301,20 @@
 
       eigenvec = par%utransf
       call lalg_eigensolve(par%dim, eigenvec, eigenval)
+
+      ! We need to make sure that eigenvectors have the same sign on all machines, which is not guaranteed
+      ! by LAPACK. So, we will use the following creterion: the sign of the first non-null component should be
+      ! positive.
+      do nn = 1, par%dim
+        do mm = 1, par%dim
+          if( eigenvec(mm, nn)*eigenvec(mm, nn) > CNST(1.0e-20) ) then
+            !eigenvec(1:par%dim, nn) = sign(eigenvec(mm, nn), M_ONE) * eigenvec(1:par%dim, nn)
+       	    if(eigenvec(mm, nn)	< M_ZERO) eigenvec(1:par%dim, nn) = - eigenvec(1:par%dim, nn)
+            exit
+          end if
+        end do
+      end do
+
       do mm = 1, par%dim
         do nn = 1, par%dim
           eigenvec(mm, nn) = eigenvec(mm, nn) * sqrt(eigenval(nn))

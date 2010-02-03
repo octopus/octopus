@@ -4,7 +4,7 @@
 Test       : 1D Box
 Programs   : octopus
 TestGroups : long-run, oct
-Enabled    : No
+Enabled    : Yes
 
 # The test checks the optimal-control algorithm ZR98/WG05. It calculates the optimal laser field that transfers the ground state to the first excited state. 
 # 
@@ -53,7 +53,7 @@ match ; J1 5th evaluation  ; GREP(opt-control/convergence, ' 5  ', 40) ; 0.35438
 # Then, run the optimization also with DIRECT OPTIMIZATION scheme, but optimizing
 # the envelope of the laser field only.
 Input: 04-box.07-oct_long.inp
-match ; J1 7th evaluation  ; GREP(opt-control/convergence, ' 7  ', 40) ; 0.59864286
+match ; J1 7th evaluation  ; GREP(opt-control/convergence, ' 7  ', 40) ; 0.54291037
 
 # Now the CONJUGATE GRADIENTS scheme.
 Input: 04-box.08-oct_long.inp
