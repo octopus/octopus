@@ -17,24 +17,24 @@
 !!
 !! $Id$
 
-!
-! Atomic weights should be read in "atomic mass units" (u) (not to
-! be confused with mass in "atomic units"), that is, it should be given
-! the relative atomic weight). 1 u is roughly the mass of the proton,
-! and exactly one twelfth of mass of the ^{12}C isotope. The relation of the
-! atomic mass unit and the atomic unit of mass, au_[mass], is:
-!
-! 1 au_[mass] = 5.485799110e-4 u
-!
-! The atomic unit of mass is the mass of the electron. Unfortunately, the
-! code uses units of mass of (eV/A^2)(h/(2pieV))^2, which are related to
-! atomic units through 1 cu_[mass] = 7.619963358 au_[mass] . So:
-!
-! 1 u = (1/5.485799110e-4) au_[mass] = (1/5.485799110e-4) *
-!      (1/7.619963358) cu_[mass] = 239.225360 cu_[mass].
+
 
 #include "global.h"
-
+!
+!> Atomic weights should be read in "atomic mass units" (u) (not to
+!! be confused with mass in "atomic units"), that is, it should be given
+!! the relative atomic weight). 1 u is roughly the mass of the proton,
+!! and exactly one twelfth of mass of the ^{12}C isotope. The relation of the
+!! atomic mass unit and the atomic unit of mass, au_[mass], is:
+!!
+!! 1 au_[mass] = 5.485799110e-4 u
+!!
+!! The atomic unit of mass is the mass of the electron. Unfortunately, the
+!! code uses units of mass of (eV/A^2)(h/(2pieV))^2, which are related to
+!! atomic units through 1 cu_[mass] = 7.619963358 au_[mass] . So:
+!!
+!! 1 u = (1/5.485799110e-4) au_[mass] = (1/5.485799110e-4) *
+!!      (1/7.619963358) cu_[mass] = 239.225360 cu_[mass].
 module unit_system_m
   use datasets_m
   use global_m

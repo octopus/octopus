@@ -79,8 +79,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine mpi_grp_init(grp, comm)
-    type(mpi_grp_t), intent(out)  :: grp   ! information about this MPI group
-    integer,         intent(in)   :: comm  ! the communicator that defined the group
+    type(mpi_grp_t), intent(out)  :: grp   !< information about this MPI group
+    integer,         intent(in)   :: comm  !< the communicator that defined the group
 
 #if defined(HAVE_MPI)
     integer :: mpi_err
