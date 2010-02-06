@@ -1,13 +1,13 @@
 //
-// time: Wed Mar  4 22:56:03 2009
+// time: Fri Feb  5 20:27:24 2010
 //
-// version: 3.2.0 (format), 4.4.0 (DX)
+// version: 3.2.0 (format), 4.4.4 (DX)
 //
 //
 //
-// macro reference (indirect): CPK /usr/lib/dx/CMSP_Linux/macros/CPK.net
+// macro reference (indirect): CPK /usr/local/dx/CMSP-2.0.4/macros/CPK.net
 //
-// macro reference (direct): BallsAndSticks /usr/lib/dx/CMSP_Linux/macros/BallsAndSticks.net
+// macro reference (direct): BallsAndSticks /usr/local/dx/CMSP-2.0.4/macros/BallsAndSticks.net
 include "BallsAndSticks.net"
 //
 // MODULE main
@@ -120,7 +120,7 @@ include "BallsAndSticks.net"
 // page assignment: Crystal Axes	order=6, windowed=0, showing=0
 // page assignment: Geometry	order=16, windowed=0, showing=0
 // page assignment: Glyphs	order=8, windowed=0, showing=0
-// page assignment: Image	order=18, windowed=0, showing=0
+// page assignment: Image	order=18, windowed=0, showing=1
 // page assignment: Import	order=3, windowed=0, showing=0
 // page assignment: ImportN	order=4, windowed=0, showing=0
 // page assignment: Iso 2	order=11, windowed=0, showing=0
@@ -128,13 +128,13 @@ include "BallsAndSticks.net"
 // page assignment: Slab_cut	order=14, windowed=0, showing=0
 // page assignment: Statistics	order=5, windowed=0, showing=0
 // page assignment: TD mode	order=2, windowed=0, showing=0
-// page assignment: WriteImage	order=19, windowed=0, showing=1
+// page assignment: WriteImage	order=19, windowed=0, showing=0
 // page assignment: caption	order=15, windowed=0, showing=0
 // page assignment: map_iso	order=10, windowed=0, showing=0
 // page assignment: mapped_data	order=17, windowed=0, showing=0
 // page assignment: slab	order=12, windowed=0, showing=0
 // page assignment: slab_II	order=13, windowed=0, showing=0
-// workspace: width = 407, height = 608
+// workspace: width = 692, height = 687
 // layout: snap = 0, width = 50, height = 50, align = NN
 //
 macro main(
@@ -143,18 +143,18 @@ macro main(
     // 
     // node Toggle[4]: x = 49, y = 20, inputs = 6, label = Toggle
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Toggle_4"
-    // input[2]: defaulting = 0, visible = 0, type = 29, value = 1
-    // input[3]: defaulting = 0, visible = 0, type = 3, value = 1
+    // input[2]: defaulting = 0, visible = 0, type = 29, value = 0
+    // input[3]: defaulting = 0, visible = 0, type = 3, value = 0
     // input[4]: defaulting = 1, visible = 1, type = 29, value = 1
     // input[5]: defaulting = 1, visible = 1, type = 29, value = 0
-    // output[1]: visible = 1, type = 29, value = 1
+    // output[1]: visible = 1, type = 29, value = 0
     // page group: Geometry
-    // toggle : 1
+    // toggle : 0
     //
     // 
     // node FileSelector[2]: x = 167, y = 17, inputs = 0, label = FileSelector
-    // output[1]: visible = 1, type = 32, value = "static/geometry.xyz"
-    // output[2]: visible = 1, type = 32, value = "geometry.xyz"
+    // output[1]: visible = 1, type = 32, value = NULL
+    // output[2]: visible = 1, type = 32, value = NULL
     // page group: Geometry
     //
     // 
@@ -239,8 +239,8 @@ main_Compute_72_out_1 =
     ) [instance: 72, cache: 1];
     // 
     // node FileSelector[1]: x = 255, y = 57, inputs = 0, label = FileSelector
-    // output[1]: visible = 1, type = 32, value = "static/density-1.dx"
-    // output[2]: visible = 1, type = 32, value = "density-1.dx"
+    // output[1]: visible = 1, type = 32, value = NULL
+    // output[2]: visible = 1, type = 32, value = NULL
     // page group: TD mode
     //
     // 
@@ -290,7 +290,7 @@ main_Route_26_out_2 =
     // input[7]: defaulting = 0, visible = 0, type = 16777217, value = { 1 2 1 1 2 1 }
     // page group: TD mode
     // vcr[2]: min = 1, max = 2, beg = 1, end = 2, cur = 2, inc = 1, loop = off, step = on, pal = off
-    // window: position = (0.7602,0.0312), size = 0.2188x0.0775, screen = 0
+    // window: position = (0.7602,0.0312), size = 0.2188x0.0775
     //
     main_Sequencer_2_out_1 = @frame;
     // 
@@ -1844,7 +1844,7 @@ main_Receiver_6_out_1[cache: 0] = max;
     // input[19]: defaulting = 1, visible = 1, type = 32, value = "Slab colormap"
     // page group: slab
     // Colormap: title = Slab colormap
-    // window: position = (0.1492,0.3287), size = 0.6352x0.5863, screen = 0
+    // window: position = (0.1492,0.3287), size = 0.6352x0.5863
     //
 main_Colormap_2_out_1[cache: 2],
 main_Colormap_2_out_2[cache: 2] = 
@@ -2028,13 +2028,13 @@ main_Collect_2_out_1 =
     // 
     // node Toggle[1]: x = 281, y = 7, inputs = 6, label = Toggle
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Toggle_1"
-    // input[2]: defaulting = 0, visible = 0, type = 29, value = 1
-    // input[3]: defaulting = 0, visible = 0, type = 3, value = 1
+    // input[2]: defaulting = 0, visible = 0, type = 29, value = 0
+    // input[3]: defaulting = 0, visible = 0, type = 3, value = 0
     // input[4]: defaulting = 1, visible = 1, type = 29, value = 1
     // input[5]: defaulting = 1, visible = 1, type = 29, value = 0
-    // output[1]: visible = 1, type = 29, value = 1
+    // output[1]: visible = 1, type = 29, value = 0
     // page group: Isosurface
-    // toggle : 1
+    // toggle : 0
     //
     // 
     // node Transmitter[25]: x = 141, y = 85, inputs = 1, label = show_isosurface
@@ -2258,7 +2258,7 @@ main_Map_2_out_1 =
     // input[19]: defaulting = 1, visible = 0, type = 32, value = "Mapped function colormap"
     // page group: map_iso
     // Colormap: title = Mapped function colormap
-    // window: position = (0.0773,0.2437), size = 0.6352x0.5863, screen = 0
+    // window: position = (0.0773,0.2437), size = 0.6352x0.5863
     //
 main_Colormap_3_out_1[cache: 2],
 main_Colormap_3_out_2[cache: 2] = 
@@ -3432,8 +3432,8 @@ main_Compute_66_out_1 =
     ) [instance: 66, cache: 1];
     // 
     // node FileSelector[14]: x = 214, y = 19, inputs = 0, label = FileSelector
-    // output[1]: visible = 1, type = 32, value = "camera.dx"
-    // output[2]: visible = 1, type = 32, value = "camera.dx"
+    // output[1]: visible = 1, type = 32, value = NULL
+    // output[2]: visible = 1, type = 32, value = NULL
     // page group: WriteImage
     //
     // 
@@ -3471,6 +3471,18 @@ main_Compute_67_out_1 =
     // toggle : 0
     //
     // 
+    // node Compute[75]: x = 106, y = 425, inputs = 2, label = Compute
+    // input[1]: defaulting = 0, visible = 0, type = 32, value = "$0==1 ? 0 : 1"
+    // page group: Image
+    // expression: value = a==1 ? 0 : 1
+    // name[2]: value = a
+    //
+main_Compute_75_out_1 = 
+    Compute(
+    main_Compute_75_in_1,
+    main_Toggle_21_out_1
+    ) [instance: 75, cache: 1];
+    // 
     // node Route[23]: x = 350, y = 427, inputs = 2, outputs = 2, label = Route
     // page group: Image
     //
@@ -3488,7 +3500,7 @@ main_Route_23_out_2 =
     // input[6]: defaulting = 0, visible = 0, type = 8, value = [-18.3829 2.30478 264.529]
     // input[7]: defaulting = 1, visible = 0, type = 5, value = 66.6791
     // input[8]: defaulting = 0, visible = 0, type = 1, value = 829
-    // input[9]: defaulting = 0, visible = 0, type = 5, value = 0.42
+    // input[9]: defaulting = 0, visible = 0, type = 5, value = 0.317853
     // input[10]: defaulting = 0, visible = 0, type = 8, value = [0 1 0]
     // input[11]: defaulting = 0, visible = 0, type = 5, value = 14.6607
     // input[12]: defaulting = 0, visible = 0, type = 1, value = 1
@@ -3505,7 +3517,7 @@ main_Route_23_out_2 =
     // input[41]: defaulting = 0, visible = 0, type = 32, value = "panzoom"
     // page group: Image
     // depth: value = 24
-    // window: position = (0.2773,0.1675), size = 0.6586x0.3812, screen = 0
+    // window: position = (0.2773,0.1675), size = 0.6586x0.3812
     // internal caching: 1
     //
 main_Image_2_out_1,
@@ -3809,7 +3821,7 @@ main_Plot_1_out_1 =
     // input[6]: defaulting = 0, visible = 0, type = 8, value = [22.5192 -9.19421 143.3]
     // input[7]: defaulting = 0, visible = 0, type = 5, value = 76.7946
     // input[8]: defaulting = 0, visible = 0, type = 1, value = 678
-    // input[9]: defaulting = 0, visible = 0, type = 5, value = 0.723451
+    // input[9]: defaulting = 0, visible = 0, type = 5, value = 0.55236
     // input[10]: defaulting = 0, visible = 0, type = 8, value = [0 1 0]
     // input[11]: defaulting = 1, visible = 0, type = 5, value = 30.0001
     // input[12]: defaulting = 0, visible = 0, type = 1, value = 0
@@ -3827,8 +3839,9 @@ main_Plot_1_out_1 =
     // output[3]: visible = 0
     // page group: Slab_cut
     // depth: value = 24
-    // window: position = (0.0586,0.3450), size = 0.5406x0.5200, screen = 0
+    // window: position = (0.0586,0.3450), size = 0.5406x0.5200
     // internal caching: 1
+    // interaction mode = NONE
     //
 main_Image_4_out_1,
 main_Image_4_out_2,
@@ -3953,13 +3966,13 @@ main_Import_11_out_1 =
     // 
     // node Toggle[5]: x = 195, y = 386, inputs = 6, label = Toggle
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Toggle_5"
-    // input[2]: defaulting = 0, visible = 0, type = 29, value = 1
-    // input[3]: defaulting = 0, visible = 0, type = 3, value = 1
+    // input[2]: defaulting = 0, visible = 0, type = 29, value = 0
+    // input[3]: defaulting = 0, visible = 0, type = 3, value = 0
     // input[4]: defaulting = 1, visible = 1, type = 29, value = 1
     // input[5]: defaulting = 1, visible = 1, type = 29, value = 0
-    // output[1]: visible = 1, type = 29, value = 1
+    // output[1]: visible = 1, type = 29, value = 0
     // page group: Geometry
-    // toggle : 1
+    // toggle : 0
     //
     // 
     // node ManageControlPanel[1]: x = 107, y = 459, inputs = 2, label = ManageControlPanel
@@ -4011,13 +4024,13 @@ main_Import_11_out_1 =
     // 
     // node Toggle[14]: x = 538, y = 348, inputs = 6, label = Toggle
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Toggle_14"
-    // input[2]: defaulting = 0, visible = 0, type = 29, value = 1
-    // input[3]: defaulting = 0, visible = 0, type = 3, value = 1
+    // input[2]: defaulting = 0, visible = 0, type = 29, value = 0
+    // input[3]: defaulting = 0, visible = 0, type = 3, value = 0
     // input[4]: defaulting = 1, visible = 1, type = 29, value = 1
     // input[5]: defaulting = 1, visible = 1, type = 29, value = 0
-    // output[1]: visible = 1, type = 29, value = 1
+    // output[1]: visible = 1, type = 29, value = 0
     // page group: mapped_data
-    // toggle : 1
+    // toggle : 0
     //
     // 
     // node ManageControlPanel[6]: x = 450, y = 430, inputs = 2, label = ManageControlPanel
@@ -4075,7 +4088,7 @@ main_Import_11_out_1 =
     //
     ManageControlPanel(
     main_ManageControlPanel_9_in_1,
-    main_Toggle_21_out_1
+    main_Compute_75_out_1
     ) [instance: 9, cache: 1];
     // 
     // node Toggle[22]: x = 1015, y = 43, inputs = 6, label = Toggle
@@ -4211,13 +4224,13 @@ CacheScene(main_Image_2_in_1, main_Image_2_out_1, main_Image_2_out_2);
 CacheScene(main_Image_4_in_1, main_Image_4_out_1, main_Image_4_out_2);
 }
 main_Toggle_4_in_1 = "Toggle_4";
-main_Toggle_4_in_2 = 1;
-main_Toggle_4_in_3 = 1;
+main_Toggle_4_in_2 = 0;
+main_Toggle_4_in_3 = 0;
 main_Toggle_4_in_4 = NULL;
 main_Toggle_4_in_5 = NULL;
 main_Toggle_4_in_6 = NULL;
-main_Toggle_4_out_1 = 1;
-main_FileSelector_2_out_1 = "static/geometry.xyz";
+main_Toggle_4_out_1 = 0;
+main_FileSelector_2_out_1 = NULL;
 main_Route_6_out_1 = NULL;
 main_ImportStructure_1_in_2 = "xyz";
 main_ImportStructure_1_out_1 = NULL;
@@ -4247,8 +4260,8 @@ main_Toggle_23_in_6 = NULL;
 main_Toggle_23_out_1 = 0;
 main_Compute_72_in_1 = "$0==1?2:1";
 main_Compute_72_out_1 = NULL;
-main_FileSelector_1_out_1 = "static/density-1.dx";
-main_FileSelector_1_out_2 = "density-1.dx";
+main_FileSelector_1_out_1 = NULL;
+main_FileSelector_1_out_2 = NULL;
 main_Inquire_17_in_2 = "is null";
 main_Inquire_17_in_3 = NULL;
 main_Inquire_17_out_1 = NULL;
@@ -4771,12 +4784,12 @@ main_Transmitter_21_out_1 = NULL;
 main_Receiver_15_out_1 = NULL;
 main_Collect_2_out_1 = NULL;
 main_Toggle_1_in_1 = "Toggle_1";
-main_Toggle_1_in_2 = 1;
-main_Toggle_1_in_3 = 1;
+main_Toggle_1_in_2 = 0;
+main_Toggle_1_in_3 = 0;
 main_Toggle_1_in_4 = NULL;
 main_Toggle_1_in_5 = NULL;
 main_Toggle_1_in_6 = NULL;
-main_Toggle_1_out_1 = 1;
+main_Toggle_1_out_1 = 0;
 main_Transmitter_25_out_1 = NULL;
 main_Receiver_19_out_1 = NULL;
 main_Toggle_6_in_1 = "Toggle_6";
@@ -5225,7 +5238,7 @@ main_Compute_64_in_1 = "[$0, min($1,$2)]";
 main_Compute_64_out_1 = NULL;
 main_Compute_66_in_1 = "[$0, max($1,$2)]";
 main_Compute_66_out_1 = NULL;
-main_FileSelector_14_out_1 = "camera.dx";
+main_FileSelector_14_out_1 = NULL;
 main_Inquire_16_in_2 = "is null";
 main_Inquire_16_in_3 = NULL;
 main_Inquire_16_out_1 = NULL;
@@ -5238,6 +5251,8 @@ main_Toggle_21_in_4 = NULL;
 main_Toggle_21_in_5 = NULL;
 main_Toggle_21_in_6 = NULL;
 main_Toggle_21_out_1 = 1;
+main_Compute_75_in_1 = "$0==1 ? 0 : 1";
+main_Compute_75_out_1 = NULL;
 main_Route_23_out_1 = NULL;
 main_Route_23_out_2 = NULL;
 macro Image(
@@ -5559,7 +5574,7 @@ main_Image_2_in_5 = [-20.2257 0.294469 5.37711];
 main_Image_2_in_6 = [-18.3829 2.30478 264.529];
 main_Image_2_in_7 = NULL;
 main_Image_2_in_8 = 829;
-main_Image_2_in_9 = 0.42;
+main_Image_2_in_9 = 0.317853;
 main_Image_2_in_10 = [0 1 0];
 main_Image_2_in_11 = 14.6607;
 main_Image_2_in_12 = 1;
@@ -5670,318 +5685,6 @@ main_Integer_6_in_9 = NULL;
 main_Integer_6_in_10 = NULL;
 main_Integer_6_in_11 = NULL;
 main_Integer_6_out_1 = 1 ;
-macro Image(
-        id,
-        object,
-        where,
-        useVector,
-        to,
-        from,
-        width,
-        resolution,
-        aspect,
-        up,
-        viewAngle,
-        perspective,
-        options,
-        buttonState = 1,
-        buttonUpApprox = "none",
-        buttonDownApprox = "none",
-        buttonUpDensity = 1,
-        buttonDownDensity = 1,
-        renderMode = 0,
-        defaultCamera,
-        reset,
-        backgroundColor,
-        throttle,
-        RECenable = 0,
-        RECfile,
-        RECformat,
-        RECresolution,
-        RECaspect,
-        AAenable = 0,
-        AAlabels,
-        AAticks,
-        AAcorners,
-        AAframe,
-        AAadjust,
-        AAcursor,
-        AAgrid,
-        AAcolors,
-        AAannotation,
-        AAlabelscale,
-        AAfont,
-        interactionMode,
-        title,
-        AAxTickLocs,
-        AAyTickLocs,
-        AAzTickLocs,
-        AAxTickLabels,
-        AAyTickLabels,
-        AAzTickLabels,
-        webOptions) -> (
-        object,
-        camera,
-        where)
-{
-    ImageMessage(
-        id,
-        backgroundColor,
-        throttle,
-        RECenable,
-        RECfile,
-        RECformat,
-        RECresolution,
-        RECaspect,
-        AAenable,
-        AAlabels,
-        AAticks,
-        AAcorners,
-        AAframe,
-        AAadjust,
-        AAcursor,
-        AAgrid,
-        AAcolors,
-        AAannotation,
-        AAlabelscale,
-        AAfont,
-        AAxTickLocs,
-        AAyTickLocs,
-        AAzTickLocs,
-        AAxTickLabels,
-        AAyTickLabels,
-        AAzTickLabels,
-        interactionMode,
-        title,
-        renderMode,
-        buttonUpApprox,
-        buttonDownApprox,
-        buttonUpDensity,
-        buttonDownDensity) [instance: 1, cache: 1];
-    autoCamera =
-        AutoCamera(
-            object,
-            "front",
-            object,
-            resolution,
-            aspect,
-            [0,1,0],
-            perspective,
-            viewAngle,
-            backgroundColor) [instance: 1, cache: 1];
-    realCamera =
-        Camera(
-            to,
-            from,
-            width,
-            resolution,
-            aspect,
-            up,
-            perspective,
-            viewAngle,
-            backgroundColor) [instance: 1, cache: 1];
-    coloredDefaultCamera = 
-	 UpdateCamera(defaultCamera,
-            background=backgroundColor) [instance: 1, cache: 1];
-    nullDefaultCamera =
-        Inquire(defaultCamera,
-            "is null + 1") [instance: 1, cache: 1];
-    resetCamera =
-        Switch(
-            nullDefaultCamera,
-            coloredDefaultCamera,
-            autoCamera) [instance: 1, cache: 1];
-    resetNull = 
-        Inquire(
-            reset,
-            "is null + 1") [instance: 2, cache: 1];
-    reset =
-        Switch(
-            resetNull,
-            reset,
-            0) [instance: 2, cache: 1];
-    whichCamera =
-        Compute(
-            "($0 != 0 || $1 == 0) ? 1 : 2",
-            reset,
-            useVector) [instance: 1, cache: 1];
-    camera = Switch(
-            whichCamera,
-            resetCamera,
-            realCamera) [instance: 3, cache: 1];
-    AAobject =
-        AutoAxes(
-            object,
-            camera,
-            AAlabels,
-            AAticks,
-            AAcorners,
-            AAframe,
-            AAadjust,
-            AAcursor,
-            AAgrid,
-            AAcolors,
-            AAannotation,
-            AAlabelscale,
-            AAfont,
-            AAxTickLocs,
-            AAyTickLocs,
-            AAzTickLocs,
-            AAxTickLabels,
-            AAyTickLabels,
-            AAzTickLabels) [instance: 1, cache: 1];
-    switchAAenable = Compute("$0+1",
-	     AAenable) [instance: 2, cache: 1];
-    object = Switch(
-	     switchAAenable,
-	     object,
-	     AAobject) [instance:4, cache: 1];
-    SWapproximation_options =
-        Switch(
-            buttonState,
-            buttonUpApprox,
-            buttonDownApprox) [instance: 5, cache: 1];
-    SWdensity_options =
-        Switch(
-            buttonState,
-            buttonUpDensity,
-            buttonDownDensity) [instance: 6, cache: 1];
-    HWapproximation_options =
-        Format(
-            "%s,%s",
-            buttonDownApprox,
-            buttonUpApprox) [instance: 1, cache: 1];
-    HWdensity_options =
-        Format(
-            "%d,%d",
-            buttonDownDensity,
-            buttonUpDensity) [instance: 2, cache: 1];
-    switchRenderMode = Compute(
-	     "$0+1",
-	     renderMode) [instance: 3, cache: 1];
-    approximation_options = Switch(
-	     switchRenderMode,
-            SWapproximation_options,
-	     HWapproximation_options) [instance: 7, cache: 1];
-    density_options = Switch(
-	     switchRenderMode,
-            SWdensity_options,
-            HWdensity_options) [instance: 8, cache: 1];
-    renderModeString = Switch(
-            switchRenderMode,
-            "software",
-            "hardware")[instance: 9, cache: 1];
-    object_tag = Inquire(
-            object,
-            "object tag")[instance: 3, cache: 1];
-    annoted_object =
-        Options(
-            object,
-            "send boxes",
-            0,
-            "cache",
-            1,
-            "object tag",
-            object_tag,
-            "ddcamera",
-            whichCamera,
-            "rendering approximation",
-            approximation_options,
-            "render every",
-            density_options,
-            "button state",
-            buttonState,
-            "rendering mode",
-            renderModeString) [instance: 1, cache: 1];
-    RECresNull =
-        Inquire(
-            RECresolution,
-            "is null + 1") [instance: 4, cache: 1];
-    ImageResolution =
-        Inquire(
-            camera,
-            "camera resolution") [instance: 5, cache: 1];
-    RECresolution =
-        Switch(
-            RECresNull,
-            RECresolution,
-            ImageResolution) [instance: 10, cache: 1];
-    RECaspectNull =
-        Inquire(
-            RECaspect,
-            "is null + 1") [instance: 6, cache: 1];
-    ImageAspect =
-        Inquire(
-            camera,
-            "camera aspect") [instance: 7, cache: 1];
-    RECaspect =
-        Switch(
-            RECaspectNull,
-            RECaspect,
-            ImageAspect) [instance: 11, cache: 1];
-    switchRECenable = Compute(
-          "$0 == 0 ? 1 : (($2 == $3) && ($4 == $5)) ? ($1 == 1 ? 2 : 3) : 4",
-            RECenable,
-            switchRenderMode,
-            RECresolution,
-            ImageResolution,
-            RECaspect,
-	     ImageAspect) [instance: 4, cache: 1];
-    NoRECobject, RECNoRerenderObject, RECNoRerHW, RECRerenderObject = Route(switchRECenable, annoted_object);
-    Display(
-        NoRECobject,
-        camera,
-        where,
-        throttle) [instance: 1, cache: 1];
-    image =
-        Render(
-            RECNoRerenderObject,
-            camera) [instance: 1, cache: 1];
-    Display(
-        image,
-        NULL,
-        where,
-        throttle) [instance: 2, cache: 1];
-    WriteImage(
-        image,
-        RECfile,
-        RECformat) [instance: 1, cache: 1];
-    rec_where = Display(
-        RECNoRerHW,
-        camera,
-        where,
-        throttle) [instance: 1, cache: 0];
-    rec_image = ReadImageWindow(
-        rec_where) [instance: 1, cache: 1];
-    WriteImage(
-        rec_image,
-        RECfile,
-        RECformat) [instance: 1, cache: 1];
-    RECupdateCamera =
-	UpdateCamera(
-	    camera,
-	    resolution=RECresolution,
-	    aspect=RECaspect) [instance: 2, cache: 1];
-    Display(
-        RECRerenderObject,
-        camera,
-        where,
-        throttle) [instance: 1, cache: 1];
-    RECRerenderObject =
-	ScaleScreen(
-	    RECRerenderObject,
-	    NULL,
-	    RECresolution,
-	    camera) [instance: 1, cache: 1];
-    image =
-        Render(
-            RECRerenderObject,
-            RECupdateCamera) [instance: 2, cache: 1];
-    WriteImage(
-        image,
-        RECfile,
-        RECformat) [instance: 2, cache: 1];
-}
 main_Image_4_in_1 = "Image_4";
 main_Image_4_in_3 = "X24,,";
 main_Image_4_in_4 = 1;
@@ -5989,7 +5692,7 @@ main_Image_4_in_5 = [22.5192 -9.19421 0];
 main_Image_4_in_6 = [22.5192 -9.19421 143.3];
 main_Image_4_in_7 = 76.7946;
 main_Image_4_in_8 = 678;
-main_Image_4_in_9 = 0.723451;
+main_Image_4_in_9 = 0.55236;
 main_Image_4_in_10 = [0 1 0];
 main_Image_4_in_11 = NULL;
 main_Image_4_in_12 = 0;
@@ -6054,12 +5757,12 @@ main_Toggle_7_out_1 = 0;
 main_ManageColormapEditor_2_in_1 = {"Mapped function colormap"};
 main_ManageColormapEditor_2_in_3 = NULL;
 main_Toggle_5_in_1 = "Toggle_5";
-main_Toggle_5_in_2 = 1;
-main_Toggle_5_in_3 = 1;
+main_Toggle_5_in_2 = 0;
+main_Toggle_5_in_3 = 0;
 main_Toggle_5_in_4 = NULL;
 main_Toggle_5_in_5 = NULL;
 main_Toggle_5_in_6 = NULL;
-main_Toggle_5_out_1 = 1;
+main_Toggle_5_out_1 = 0;
 main_ManageControlPanel_1_in_1 = {"Geometry"};
 main_ManageControlPanel_2_in_1 = {"Mapping function"};
 main_ManageControlPanel_3_in_1 = {"Multiple Functions Import"};
@@ -6072,12 +5775,12 @@ main_Toggle_12_in_6 = NULL;
 main_Toggle_12_out_1 = 0;
 main_ManageControlPanel_5_in_1 = {"Crystal"};
 main_Toggle_14_in_1 = "Toggle_14";
-main_Toggle_14_in_2 = 1;
-main_Toggle_14_in_3 = 1;
+main_Toggle_14_in_2 = 0;
+main_Toggle_14_in_3 = 0;
 main_Toggle_14_in_4 = NULL;
 main_Toggle_14_in_5 = NULL;
 main_Toggle_14_in_6 = NULL;
-main_Toggle_14_out_1 = 1;
+main_Toggle_14_out_1 = 0;
 main_ManageControlPanel_6_in_1 = {"Isosurfaces"};
 main_Toggle_15_in_1 = "Toggle_15";
 main_Toggle_15_in_2 = 0;
@@ -6115,7 +5818,7 @@ main_Render_2_in_3 = NULL;
 main_Render_2_out_1 = NULL;
 main_WriteImage_2_in_3 = "tiff";
 main_WriteImage_2_in_4 = NULL;
-Executive("product version 4 4 0");
+Executive("product version 4 4 4");
 $sync
 
 sequence main();
