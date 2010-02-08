@@ -41,6 +41,7 @@ module index_m
     integer, pointer           :: Lxyz(:,:)        ! return x, y and z for each point
     integer, pointer           :: Lxyz_inv(:,:,:)  ! return points # for each xyz
     integer                    :: enlarge(MAX_DIM) ! number of points to add for boundary conditions
+    integer(8)                 :: checksum
   end type index_t
 
 contains

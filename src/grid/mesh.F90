@@ -21,6 +21,7 @@
 
 module mesh_m
   use datasets_m
+  use checksum_m
   use curvilinear_m
   use geometry_m
   use global_m
@@ -494,11 +495,18 @@ contains
     type(mesh_t),     intent(in) :: mesh
     character(len=*), intent(in) :: filename
 
-    integer :: ierr
+    integer :: ierr, iunit
 
     call push_sub('mesh.lxyz_dump')
 
     if(mesh%sb%box_shape /= HYPERCUBE) then
+
+      iunit = io_open(trim(filename)//'.fingerprint', action='write', is_tmp=.true.)
+      write(iunit, '(a20,i21)')  'np_part_global=     ', mesh%np_part_global
+      write(iunit, '(a20,i21)')  'algorithm=          ', 1
+      write(iunit, '(a20,i21)')  'checksum=           ', mesh%idx%checksum
+      call io_close(iunit)
+
       call io_binary_write(trim(filename)//'.obf', mesh%np_part*mesh%sb%dim, mesh%idx%lxyz, ierr)
     end if
 

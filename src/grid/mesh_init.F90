@@ -600,6 +600,8 @@ contains
       end do
     end do
 
+    call checksum_calculate(1, mesh%np_part_global*MAX_DIM, mesh%idx%lxyz(1, 1), mesh%idx%checksum)
+
     ASSERT(iin == mesh%np_global)
     ASSERT(ien == mesh%np_part_global)
     
