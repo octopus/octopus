@@ -22,7 +22,7 @@
 #include <config.h>
 typedef long long checksum_t;
 
-void FC_FUNC(checksum_calculate, CHECKSUM_CALCULATE)(const int * algorithm, const int * narray, const unsigned int * array, checksum_t * sum){
+void FC_FUNC_(checksum_calculate, CHECKSUM_CALCULATE)(const int * algorithm, const int * narray, const unsigned int * array, checksum_t * sum){
   int i;
 
   *sum = 0;
@@ -30,6 +30,6 @@ void FC_FUNC(checksum_calculate, CHECKSUM_CALCULATE)(const int * algorithm, cons
 
 }
 
-int FC_FUNC(checksum_compare_int, CHECKSUM_COMPARE_INT)(const int * algorithm, const checksum_t * sum1, const checksum_t * sum2){
+int FC_FUNC_(checksum_compare_int, CHECKSUM_COMPARE_INT)(const int * algorithm, const checksum_t * sum1, const checksum_t * sum2){
   return (sum1 == sum2);
 }
