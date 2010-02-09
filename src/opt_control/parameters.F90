@@ -1394,7 +1394,7 @@ contains
 
      select case(par_common%mode)
      case(parameter_mode_epsilon, parameter_mode_f)
-       do ipar = ipar, par%no_parameters
+       do ipar = 1, par%no_parameters
          call tdf_set_random(par%f(ipar))
        end do
      case(parameter_mode_phi)
