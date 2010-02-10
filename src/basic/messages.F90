@@ -45,6 +45,7 @@ module messages_m
     time_sum,                   &
     epoch_time_diff,            &
     alloc_error,                &
+    dealloc_error,              &
     input_error,                &
     push_sub,                   &
     pop_sub,                    &
@@ -373,6 +374,18 @@ contains
     call write_fatal(1)
 
   end subroutine alloc_error
+
+
+  ! ---------------------------------------------------------
+  subroutine dealloc_error(size, file, line)
+    integer(8),       intent(in) :: size
+    character(len=*), intent(in) :: file
+    integer,          intent(in) :: line
+
+    write(message(1), '(a,i14,3a,i5)') "Failed to deallocate array of ", size, " words in file '", trim(file), "' line ", line
+    call write_fatal(1)
+
+  end subroutine dealloc_error
 
 
   ! ---------------------------------------------------------

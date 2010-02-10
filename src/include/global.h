@@ -77,7 +77,7 @@
   if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) _anl_ \
     call profiling_memory_deallocate(#x, _anl_ __FILE__, _anl_ __LINE__, _anl_ global_sizeof); _newline_ \
   if(global_alloc_err.ne.0) _anl_ \
-    call alloc_error(-global_sizeof, _anl_ __FILE__, _anl_ __LINE__); \
+    call dealloc_error(global_sizeof, _anl_ __FILE__, _anl_ __LINE__); \
   CARDINAL
 
 #  define SAFE_DEALLOCATE_P(x) \
