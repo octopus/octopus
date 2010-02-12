@@ -1431,7 +1431,7 @@ contains
             do id = 1, st%d%dim
               call zmf_random(mesh, st%zpsi(:, id, ist, ik))
             end do
-            st%eigenval(ist, ik) = M_ZERO
+            st%eigenval(ist, ik) = M_HUGE
           end do
         end do
       end if

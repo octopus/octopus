@@ -221,7 +221,7 @@ contains
       SAFE_ALLOCATE(st%spin(1:3, 1:st%nst, 1:st%d%nik))
       st%spin = M_ZERO
     end if
-    st%eigenval = huge(st%eigenval)
+    st%eigenval = M_HUGE
     st%occ      = M_ZERO
 
     ! load wavefunctions

@@ -63,6 +63,8 @@ module eigensolver_m
     integer :: es_type    ! which eigensolver to use
     logical :: verbose    ! If true, the solver prints additional information.
 
+    logical :: subspace_diag
+    
     FLOAT   :: init_tol
     FLOAT   :: final_tol
     integer :: final_tol_iter
@@ -161,6 +163,17 @@ contains
     !% If enabled, the eigensolver prints additional information.
     !%End
     call parse_logical(datasets_check('EigensolverVerbose'), .false., eigens%verbose)
+
+    !%Variable EigensolverSubspaceDiag
+    !%Type logical
+    !%Default yes
+    !%Section SCF::Eigensolver
+    !%Description
+    !% Allows you to turn off subspace diagonalization during the diagonalization of
+    !% the Hamiltonian. Subspace diagonalization sometimes creates problems when restarting
+    !% unoccupied states calculations with a larger number of unoccupied states.
+    !%End
+    call parse_logical(datasets_check('EigensolverSubspaceDiag'), .true., eigens%subspace_diag)
 
     default_iter = 25
 
@@ -331,7 +344,7 @@ contains
         end if
       end if
       
-      if(eigens%converged(ik) == 0) then
+      if(eigens%subspace_diag.and.eigens%converged(ik) == 0) then
         if (states_are_real(st)) then
           call dsubspace_diag(gr%der, st, hm, ik, st%eigenval(:, ik), st%dpsi(:, :, :, ik), eigens%diff(:, ik))
         else
@@ -367,7 +380,7 @@ contains
           end if
         end select
 
-        if(eigens%es_type /= RS_RMMDIIS) then
+        if(eigens%subspace_diag.and.eigens%es_type /= RS_RMMDIIS) then
           call dsubspace_diag(gr%der, st, hm, ik, st%eigenval(:, ik), st%dpsi(:, :, :, ik), eigens%diff(:, ik))
         end if
 
@@ -400,7 +413,7 @@ contains
           end if
         end select
 
-        if(eigens%es_type /= RS_RMMDIIS) then
+        if(eigens%subspace_diag.and.eigens%es_type /= RS_RMMDIIS) then
           call zsubspace_diag(gr%der, st, hm, ik, st%eigenval(:, ik), st%zpsi(:, :, :, ik), eigens%diff(:, ik))
         end if
 
