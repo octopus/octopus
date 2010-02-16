@@ -58,20 +58,20 @@ module casida_m
     CASIDA_CASIDA     = 3
 
   type casida_t
-    integer :: type          ! CASIDA_EPS_DIFF | CASIDA_PETERSILKA | CASIDA_CASIDA
+    integer :: type          !< CASIDA_EPS_DIFF | CASIDA_PETERSILKA | CASIDA_CASIDA
 
-    integer, pointer  :: n_occ(:)       ! number of occupied states
-    integer, pointer  :: n_unocc(:)     ! number of unoccupied states
+    integer, pointer  :: n_occ(:)       !< number of occupied states
+    integer, pointer  :: n_unocc(:)     !< number of unoccupied states
     character(len=80) :: wfn_list
 
-    integer           :: n_pairs        ! number of pairs to take into account
+    integer           :: n_pairs        !< number of pairs to take into account
     type(states_pair_t), pointer :: pair(:)
 
-    FLOAT,   pointer  :: mat(:,:)       ! general-purpose matrix
-    FLOAT,   pointer  :: w(:)           ! The excitation energies.
-    FLOAT,   pointer  :: tm(:, :)       ! The transition matrix elements (between the many-particle states)
-    FLOAT,   pointer  :: f(:)           ! The (dipole) strengths
-    FLOAT,   pointer  :: s(:)           ! The diagonal part of the S-matrix
+    FLOAT,   pointer  :: mat(:,:)       !< general-purpose matrix
+    FLOAT,   pointer  :: w(:)           !< The excitation energies.
+    FLOAT,   pointer  :: tm(:, :)       !< The transition matrix elements (between the many-particle states)
+    FLOAT,   pointer  :: f(:)           !< The (dipole) strengths
+    FLOAT,   pointer  :: s(:)           !< The diagonal part of the S-matrix
 
     logical           :: parallel_in_eh_pairs
     type(mpi_grp_t)   :: mpi_grp
@@ -80,13 +80,13 @@ module casida_m
 contains
 
   ! ---------------------------------------------------------
-  ! References for Casida:
-  ! C Jamorski, ME Casida, DR Salahub, J Chem Phys 104, 5134 (1996)
-  ! ME Casida, "Time-dependent density functional response theory for molecules,"
-  !   in Recent Advances in Density Functional Methods, edited by DE Chong, vol. 1
-  !   of Recent Advances in Computational Chemistry, pp. 155-192 (World Scientific,
-  !   Singapore)
-  !   -- available at http://dcm.ujf-grenoble.fr/PERSONNEL/CT/casida/research/chong.ps
+  !> References for Casida:
+  !! C Jamorski, ME Casida, DR Salahub, J Chem Phys 104, 5134 (1996)
+  !! ME Casida, "Time-dependent density functional response theory for molecules,"
+  !!   in Recent Advances in Density Functional Methods, edited by DE Chong, vol. 1
+  !!   of Recent Advances in Computational Chemistry, pp. 155-192 (World Scientific,
+  !!   Singapore)
+  !!   -- available at http://dcm.ujf-grenoble.fr/PERSONNEL/CT/casida/research/chong.ps
   subroutine casida_run(sys, hm, fromScratch)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: hm
@@ -220,7 +220,7 @@ contains
   end subroutine casida_run
 
   ! ---------------------------------------------------------
-  ! allocates stuff, and constructs the arrays pair_i and pair_j
+  !> allocates stuff, and constructs the arrays pair_i and pair_j
   subroutine casida_type_init(cas, dim, nk, mc)
     type(casida_t), intent(inout) :: cas
     integer, intent(in) :: dim, nk
@@ -307,8 +307,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! this subroutine calculates electronic excitation energies using
-  ! the matrix formulation of M. Petersilka, or of M. Casida
+  !> this subroutine calculates electronic excitation energies using
+  !! the matrix formulation of M. Petersilka, or of M. Casida
   subroutine casida_work(sys, hm, cas)
     type(system_t), target, intent(inout) :: sys
     type(hamiltonian_t),    intent(in)    :: hm
