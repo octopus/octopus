@@ -257,7 +257,7 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
 	ffi[j] = fi + index[j];
 	a0 = _mm_add_pd(a0, _mm_mul_pd(vw[j], _mm_loadu_pd((double *)(ffi[j] + i))));
       }
-      _mm_storeu_pd(fo + i, a0);
+      _mm_storeu_pd((double *)(fo + i), a0);
       i++;
 
       for (; i < (rimap_inv_max[l] - 4 + 1) ; i+=4){
@@ -280,9 +280,9 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
       
 	a0 = _mm_setzero_pd();
 	for(j = 0; j < n; j++) {
-	  a0 = _mm_add_pd(a0, _mm_mul_pd(vw[j], _mm_loadu_pd(ffi[j] + i)));
+	  a0 = _mm_add_pd(a0, _mm_mul_pd(vw[j], _mm_loadu_pd((double *) (ffi[j] + i))));
 	}
-	_mm_storeu_pd(fo + i, a0);
+	_mm_storeu_pd((double *) (fo + i), a0);
       }
 
     }
