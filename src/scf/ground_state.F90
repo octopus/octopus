@@ -119,7 +119,7 @@ contains
       
       !%Variable LCAOStart
       !%Type integer
-      !%Default lcao_states
+      !%Default lcao_full
       !%Section SCF
       !%Description
       !% Before starting a SCF calculation, <tt>Octopus</tt> can perform
