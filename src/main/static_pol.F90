@@ -91,7 +91,7 @@ contains
     if(ierr.ne.0) then
       message(1) = "Could not read KS orbitals from '"//trim(restart_dir)//GS_DIR//"'"
       message(2) = "Please run a ground-state calculation first and/or"
-      message(3) = "Give the correct RestartDataset in the input file."
+      message(3) = "give the correct RestartDataset in the input file."
       call write_fatal(3)
     end if
 

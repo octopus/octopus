@@ -113,19 +113,20 @@ contains
       ! Otherwise, it is not the default value and has to be enforced in the input file.
       lcao_start_default = LCAO_START_FULL
 
-      if( sys%geo%only_user_def) then
+      if(sys%geo%only_user_def) then
         lcao_start_default = LCAO_START_NONE
       end if
       
       !%Variable LCAOStart
       !%Type integer
-      !%Default lcao_full
       !%Section SCF
       !%Description
       !% Before starting a SCF calculation, <tt>Octopus</tt> can perform
       !% a LCAO calculation. These can provide <tt>Octopus</tt> with a good set
       !% of initial wavefunctions and with a new guess for the density.
       !% (Up to the current version, only a minimal basis set is used.)
+      !% The default is <tt>lcao_full</tt> unless all species are user-defined, in which case
+      !% the default is <tt>lcao_none</tt>.
       !%Option lcao_none 0
       !% Do not perform a LCAO calculation before the SCF cycle.
       !%Option lcao_states 2
