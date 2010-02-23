@@ -287,9 +287,7 @@ contains
     !% The "other descriptors" depend on which kind of external field has been indicated in 
     !% the first column.
     !%
-    !%
     !% (A) type = <tt>electric field, magnetic field, vector_potential</tt>
-    !%
     !%
     !% For these cases, the syntax is:
     !%
@@ -304,9 +302,7 @@ contains
     !% it must be surrounded by quotation marks) that must match one of the function names
     !% given in the first column of the <tt>TDFunctions</tt> block.
     !%
-    !%
     !% (B) type = <tt>scalar_potential</tt>
-    !%
     !%
     !% <tt>%TDExternalFields
     !% <br>&nbsp;&nbsp; scalar_potential | "scalar_expression" | freq | envelope_function_name
@@ -315,7 +311,6 @@ contains
     !% The scalar potential is not just a dipole, but any expression given by the string
     !% "scalar_expression". The temporal shape is determined by the envelope function
     !% defined by <tt>envelope_function_name</tt>.
-    !% 
     !%
     !% A NOTE ON UNITS:
     !%
@@ -323,7 +318,6 @@ contains
     !% than using the electric-field amplitude. In atomic units (or, more precisely, in any
     !% Gaussian system of units), the relationship between instantaneous electric field
     !% and intensity is:
-    !%
     !% <math> I(t) = \frac{c}{8\pi} E^2(t) </math>.
     !%
     !% It is common to read intensities in W/cm^2. The dimensions of intensities are

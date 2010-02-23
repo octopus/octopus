@@ -141,9 +141,6 @@ module opt_control_target_m
     !%Description
     !% The variable <tt>OCTTargetOperator</tt> prescribes which kind of target functional is
     !% to be used.
-    !%
-    !% The possible arguments are:
-    !%
     !%Option oct_tg_groundstate 1 
     !% The target operator is a projection operator on the ground state, <i>i.e.</i> the
     !% objective is to populate the ground state as much as possible.
@@ -260,8 +257,7 @@ module opt_control_target_m
       !% combination of the states present in <tt>restart/gs</tt> is used to
       !% create the target state.
       !% 
-      !% The syntax is equivalent to the one used for the <tt>TransformStates</tt>
-      !% block.
+      !% The syntax is the same as the <tt>TransformStates</tt> block.
       !%End
       if(parse_isdef(datasets_check('OCTTargetTransformStates')).ne.0) then
         if(parse_block(datasets_check('OCTTargetTransformStates'), blk) == 0) then
@@ -320,7 +316,7 @@ module opt_control_target_m
       !% combination of the states present in <tt>restart/gs</tt> is used to
       !% create the target density.
       !%
-      !% The syntax is equivalent to the one used for the <tt>TransformStates</tt> block.
+      !% The syntax is the same as the <tt>TransformStates</tt> block.
       !%End
 
       if(parse_isdef('OCTTargetDensity').ne.0) then
