@@ -68,7 +68,7 @@ contains
     type(eigensolver_t) :: eigens
     integer :: iunit, ierr, occupied_states, total_states, iter
     logical :: converged
-    integer :: lcao_start, lcao_start_default, max_iter
+    integer :: lcao_start, lcao_start_default, max_iter, nst_calculated
     type(lcao_t) :: lcao
 
     call push_sub('unocc.unocc_run')
@@ -88,13 +88,15 @@ contains
       call write_fatal(2)
     end if
 
-    if(ierr.ne.0) then
+    if(ierr .ne. 0) then
       message(1) = "Info:  Could not load all wavefunctions from '"//trim(restart_dir)//GS_DIR//"'"
       call write_info(1)
     end if
 
     if(fromScratch) then ! reset unoccupied states
-      ierr = occupied_states
+      nst_calculated = occupied_states
+    else
+      nst_calculated = ierr
     end if
 
     ! Setup Hamiltonian
@@ -111,16 +113,16 @@ contains
     if(sys%geo%only_user_def) lcao_start_default = LCAO_START_NONE
 
     call parse_integer(datasets_check('LCAOStart'), lcao_start_default, lcao_start)
-    if(.not.varinfo_valid_option('LCAOStart', lcao_start)) call input_error('LCAOStart')
+    if(.not. varinfo_valid_option('LCAOStart', lcao_start)) call input_error('LCAOStart')
     call messages_print_var_option(stdout, 'LCAOStart', lcao_start)
 
     if (lcao_start > LCAO_START_NONE) then
-      if( (ierr.ne.0) .and. (ierr >= occupied_states)) then
+      if((ierr .ne. 0)) then
         message(1) = "Info:  Performing LCAO calculation to get a reasonable starting point."
         call write_info(1)
         call lcao_init(lcao, sys%gr, sys%geo, sys%st)
         if(lcao_is_available(lcao)) then
-          call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm, start = ierr+1)
+          call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm, start = nst_calculated + 1)
           call lcao_end(lcao)
         end if
       end if
@@ -163,7 +165,7 @@ contains
       call io_close(iunit)
     end if
 
-    if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik>sys%st%d%nspin) then
+    if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik > sys%st%d%nspin) then
       call states_write_bands(STATIC_DIR, sys%st%nst, sys%st, sys%gr%sb)
       call states_write_fermi_energy(STATIC_DIR, sys%st, sys%gr%mesh, sys%gr%sb)
       call states_degeneracy_matrix(sys%st)

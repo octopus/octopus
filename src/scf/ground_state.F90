@@ -60,7 +60,7 @@ contains
     integer      :: lcao_start, lcao_start_default
     type(lcao_t) :: lcao
     type(scf_t)  :: scfv
-    integer      :: ierr, s1, s2, k1, k2, j, inp, idim, is, ik
+    integer      :: ierr, s1, s2, k1, k2, j, ip, idim, is, ik
     logical      :: species_all_electron, lcao_done
 
     call push_sub('ground_state.ground_state_run')
@@ -181,8 +181,8 @@ contains
           ! the following copying does NOT ALWAYS work, especially for large numbers of k2
           !sys%st%zpsi(1:sys%gr%mesh%np, :, s1:s2, k1:k2) = sys%st%zphi(1:sys%gr%mesh%np, :, s1:s2, k1:k2)
           ! so do it the stupid and slow way
-          forall (ik = k1:k2, is = s1:s2, idim = 1:sys%st%d%dim, inp = 1:sys%gr%mesh%np)
-            sys%st%zpsi(inp, idim, is, ik) = sys%st%zphi(inp, idim, is, ik)
+          forall (ik = k1:k2, is = s1:s2, idim = 1:sys%st%d%dim, ip = 1:sys%gr%mesh%np)
+            sys%st%zpsi(ip, idim, is, ik) = sys%st%zphi(ip, idim, is, ik)
           end forall
         else
           ! Randomly generate the initial wavefunctions.
@@ -205,7 +205,7 @@ contains
 
     end if
 
-    ! run self consistency
+    ! run self-consistency
     if (states_are_real(sys%st)) then
       message(1) = 'Info: SCF using real wavefunctions.'
     else

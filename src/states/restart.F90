@@ -246,7 +246,7 @@ contains
     !if this next argument is present, the lr wfs are stored instead of the gs wfs
     type(lr_t), optional, intent(in)  :: lr 
 
-    integer :: iunit, iunit2, iunit_mesh, iunit_states, err, ik, ist, idim, i
+    integer :: iunit, iunit2, iunit_mesh, iunit_states, err, ik, ist, idim, itot
     character(len=80) :: filename, mformat
     logical :: wfns_are_associated, lr_wfns_are_associated
 
@@ -301,17 +301,17 @@ contains
       call io_close(iunit_states)      
     end if
 
-    i = 1
+    itot = 1
     do ik = 1, st%d%nik
       do ist = 1, st%nst
         do idim = 1, st%d%dim
-          write(filename,'(i10.10)') i
+          write(filename,'(i10.10)') itot
 
           if(mpi_grp_is_root(mpi_world)) then
             write(unit=iunit,  fmt=*) ik, ' | ', ist, ' | ', idim, ' | "', trim(filename), '"'
             write(unit=iunit2, fmt=mformat) st%occ(ist,ik), ' | ', st%eigenval(ist, ik), ' | ',   &
                  st%d%kpoints(1,ik), ' | ', st%d%kpoints(2,ik), ' | ', st%d%kpoints(3,ik) , ' | ', &
-                 st%d%kweights(ik), ' | ', i, ' | ', ik, ' | ', ist, ' | ', idim
+                 st%d%kweights(ik), ' | ', itot, ' | ', ik, ' | ', ist, ' | ', idim
           end if
 
           if(st%st_start <= ist .and. ist <= st%st_end) then
@@ -336,7 +336,7 @@ contains
 #if defined(HAVE_MPI)
           call MPI_Barrier(MPI_COMM_WORLD, mpi_err) ! now we all wait
 #endif
-          i = i + 1
+          itot = itot + 1
         end do
       end do
     end do

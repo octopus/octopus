@@ -100,7 +100,7 @@ contains
       end if
     end if
 
-    if(fromscratch) then
+    if(fromScratch) then
 
       ! Randomly generate the initial wavefunctions
       call states_generate_random(sys%st, sys%gr%mesh)
