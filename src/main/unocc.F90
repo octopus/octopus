@@ -3,7 +3,7 @@
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
 !! the Free Software Foundation; either version 2, or (at your option)
-!! any %later version.
+!! any later version.
 !!
 !! This program is distributed in the hope that it will be useful,
 !! but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -178,8 +178,8 @@ contains
   contains
 
     ! ---------------------------------------------------------
-    subroutine init_(m, st)
-      type(mesh_t),   intent(in)    :: m
+    subroutine init_(mesh, st)
+      type(mesh_t),   intent(in)    :: mesh
       type(states_t), intent(inout) :: st
 
       integer :: nus
@@ -205,7 +205,7 @@ contains
 
       SAFE_DEALLOCATE_P(st%eigenval)
       SAFE_DEALLOCATE_P(st%occ)
-      call states_allocate_wfns(st, m)
+      call states_allocate_wfns(st, mesh)
       SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
       SAFE_ALLOCATE(st%occ(1:st%nst, 1:st%d%nik))
       if(st%d%ispin == SPINORS) then

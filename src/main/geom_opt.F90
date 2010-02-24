@@ -62,8 +62,9 @@ module geom_opt_m
     type(geometry_t),    pointer :: geo
     type(hamiltonian_t), pointer :: hm
     type(system_t),      pointer :: syst
-    type(mesh_t),        pointer :: m
+    type(mesh_t),        pointer :: mesh
     type(states_t),      pointer :: st
+    integer                      :: dim
   end type geom_opt_t
 
   type(geom_opt_t) :: g_opt
@@ -80,10 +81,10 @@ contains
     type(hamiltonian_t), target, intent(inout) :: hm
     logical,                     intent(inout) :: fromscratch
 
-    integer :: i, ierr, lcao_start, lcao_start_default
-    real(8), allocatable :: x(:)
+    integer :: iatom, idir, ierr, lcao_start, lcao_start_default
+    REAL_DOUBLE, allocatable :: coords(:)
     type(lcao_t) :: lcao
-    real(8) :: energy
+    REAL_DOUBLE :: energy
 
     call push_sub('geom_opt.geom_opt_run')
 
@@ -160,21 +161,18 @@ contains
     call scf_init(g_opt%scfv, sys%gr, sys%geo, sys%st, hm)
 
     !Initial point
-    SAFE_ALLOCATE(x(1:3*g_opt%geo%natoms))
-    do i = 0, g_opt%geo%natoms - 1
-      x(3*i + 1) = g_opt%geo%atom(i + 1)%x(1)
-      x(3*i + 2) = g_opt%geo%atom(i + 1)%x(2)
-      x(3*i + 3) = g_opt%geo%atom(i + 1)%x(3)
-    end do
+    SAFE_ALLOCATE(coords(1:g_opt%dim * g_opt%geo%natoms))
+    forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim) &
+      coords(g_opt%dim * iatom + idir) = g_opt%geo%atom(iatom + 1)%x(idir)
 
     !Minimize
     select case(g_opt%method)
     case(MINMETHOD_NMSIMPLEX)
-      ierr = loct_minimize_direct(g_opt%method, 3*g_opt%geo%natoms, x(1), real(g_opt%step, 8),&
+      ierr = loct_minimize_direct(g_opt%method, g_opt%dim * g_opt%geo%natoms, coords(1), real(g_opt%step, 8),&
            real(g_opt%toldr, 8), g_opt%max_iter, &
            calc_point_ng, write_iter_info_ng, energy)
     case default
-      ierr = loct_minimize(g_opt%method, 3*g_opt%geo%natoms, x(1), real(g_opt%step, 8),&
+      ierr = loct_minimize(g_opt%method, g_opt%dim * g_opt%geo%natoms, coords(1), real(g_opt%step, 8),&
            real(g_opt%tolgrad, 8), real(g_opt%toldr, 8), g_opt%max_iter, &
            calc_point, write_iter_info, energy)
     end select
@@ -186,14 +184,11 @@ contains
     end if
 
     ! print out geometry
-    do i = 0, g_opt%geo%natoms - 1
-      g_opt%geo%atom(i+1)%x(1) = x(3*i + 1)
-      g_opt%geo%atom(i+1)%x(2) = x(3*i + 2)
-      g_opt%geo%atom(i+1)%x(3) = x(3*i + 3)
-    end do
-    call atom_write_xyz(".", "min", g_opt%geo, sys%gr%mesh%sb%dim)
+    forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim) &
+      g_opt%geo%atom(iatom + 1)%x(idir) = coords(g_opt%dim * iatom + idir)
+    call atom_write_xyz(".", "min", g_opt%geo, g_opt%dim)
 
-    SAFE_DEALLOCATE_A(x)
+    SAFE_DEALLOCATE_A(coords)
     call scf_end(g_opt%scfv)
     call end_()
     call pop_sub()
@@ -207,11 +202,12 @@ contains
       call states_allocate_wfns(sys%st, sys%gr%mesh)
 
       ! shortcuts
-      g_opt%m      => sys%gr%mesh
+      g_opt%mesh   => sys%gr%mesh
       g_opt%geo    => sys%geo
       g_opt%st     => sys%st
       g_opt%hm     => hm
       g_opt%syst   => sys
+      g_opt%dim    =  sys%gr%mesh%sb%dim
 
       !%Variable GOMethod
       !%Type integer
@@ -256,7 +252,7 @@ contains
       !%Default 0.001 a.u.
       !%Section Calculation Modes::Geometry Optimization
       !%Description
-      !% Convergence criterion to stop the minimization. In units of force; minimization
+      !% Convergence criterion, for stopping the minimization. In units of force; minimization
       !% is stopped when all forces on ions are smaller than this criterion.
       !% Used in conjunction with <tt>GOMinimumMove</tt>. If <tt>GOTolerance = 0</tt>, this criterion is ignored.
       !%End
@@ -267,7 +263,7 @@ contains
       !%Default 0.0 a.u.
       !%Section Calculation Modes::Geometry Optimization
       !%Description
-      !% Convergence criterion to stop the minimization. In units of length; minimization
+      !% Convergence criterion, for stopping stop the minimization. In units of length; minimization
       !% is stopped when the coordinates of all species change less than <tt>GOMinimumMove</tt>.
       !% Used in conjunction with <tt>GOTolerance</tt>. If <tt>GOMinimumMove = 0</tt>, this criterion is ignored.
       !%
@@ -283,8 +279,9 @@ contains
       !%Section Calculation Modes::Geometry Optimization
       !%Description
       !% Initial step for the geometry optimizer.
+      !% WARNING: in some weird units.
       !%End
-      call parse_float(datasets_check('GOStep'), M_HALF, g_opt%step) ! WARNING: in some weird units
+      call parse_float(datasets_check('GOStep'), M_HALF, g_opt%step)
 
       !%Variable GOMaxIter
       !%Type integer
@@ -330,7 +327,8 @@ contains
       call push_sub('geom_opt.geom_opt_run.end_')
 
       call states_deallocate_wfns(sys%st)
-      nullify(g_opt%m)
+
+      nullify(g_opt%mesh)
       nullify(g_opt%geo)
       nullify(g_opt%st)
       nullify(g_opt%hm)
@@ -343,24 +341,21 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine calc_point(n, x, f, getgrad, df)
-    integer,           intent(in)  :: n
-    real(8),           intent(in)  :: x(n)
-    real(8),           intent(inout) :: f
-    integer,           intent(in)  :: getgrad
-    real(8),           intent(inout) :: df(n)
+  subroutine calc_point(size, coords, objective, getgrad, df)
+    integer,     intent(in)    :: size         ! must equal dim * natoms
+    REAL_DOUBLE, intent(in)    :: coords(size)
+    REAL_DOUBLE, intent(inout) :: objective
+    integer,     intent(in)    :: getgrad
+    REAL_DOUBLE, intent(inout) :: df(size)
     
-    integer :: i
+    integer :: iatom, idir
 
     call push_sub("geom_opt.calc_point")
 
-    do i = 0, g_opt%geo%natoms - 1
-      g_opt%geo%atom(i+1)%x(1) = x(3*i + 1)
-      g_opt%geo%atom(i+1)%x(2) = x(3*i + 2)
-      g_opt%geo%atom(i+1)%x(3) = x(3*i + 3)
-    end do
+    forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim) &
+      g_opt%geo%atom(iatom + 1)%x(idir) = coords(g_opt%dim * iatom + idir)
 
-    call atom_write_xyz(".", "work-geom", g_opt%geo, g_opt%syst%gr%mesh%sb%dim, append=.true.)
+    call atom_write_xyz(".", "work-geom", g_opt%geo, g_opt%dim, append=.true.)
 
     call epot_generate(g_opt%hm%ep, g_opt%syst%gr, g_opt%syst%geo, g_opt%syst%st)
     call states_calc_dens(g_opt%st, g_opt%syst%gr)
@@ -373,21 +368,18 @@ contains
 
     ! store results
     if(getgrad .eq. 1) then
-      do i = 0, g_opt%geo%natoms - 1
-        df(3*i + 1) = -g_opt%geo%atom(i+1)%f(1)
-        df(3*i + 2) = -g_opt%geo%atom(i+1)%f(2)
-        df(3*i + 3) = -g_opt%geo%atom(i+1)%f(3)
-      end do
+      forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim) &
+        df(g_opt%dim * iatom + idir) = -g_opt%geo%atom(iatom + 1)%f(idir)
     end if
 
     if(g_opt%what2minimize == MINWHAT_FORCES) then
-      f = M_ZERO
-      do i = 1, g_opt%geo%natoms
-        f = f + sum(g_opt%geo%atom(i)%f(:)**2)
+      objective = M_ZERO
+      do iatom = 1, g_opt%geo%natoms
+        objective = objective + sum(g_opt%geo%atom(iatom)%f(:)**2)
       end do
-      f = sqrt(f)
+      objective = sqrt(objective)
     else
-      f = g_opt%hm%etot
+      objective = g_opt%hm%etot
     end if
 
     call pop_sub()
@@ -396,19 +388,21 @@ contains
 
   ! ---------------------------------------------------------
   ! Same as calc_point, but without the gradients.
-  subroutine calc_point_ng(n, x, f)
-    integer, intent(in)  :: n
-    real(8), intent(in)  :: x(n)
-    real(8), intent(out) :: f
+  subroutine calc_point_ng(size, coords, objective)
+    integer,     intent(in)  :: size         ! must equal dim * natoms
+    REAL_DOUBLE, intent(in)  :: coords(size)
+    REAL_DOUBLE, intent(out) :: objective
+
     integer :: getgrad
-    FLOAT, allocatable :: df(:)
+    REAL_DOUBLE , allocatable :: df(:)
     
     call push_sub('geom_opt.calc_point_ng')
     
     getgrad = 0
-    SAFE_ALLOCATE(df(1:n))
+    SAFE_ALLOCATE(df(1:size))
     df = M_ZERO
-    call calc_point(n, x, f, getgrad, df)
+
+    call calc_point(size, coords, objective, getgrad, df)
     SAFE_DEALLOCATE_A(df)
 
     call pop_sub()
@@ -416,25 +410,23 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine write_iter_info(geom_iter, n, energy, maxdx, maxdf, x)
-    integer,      intent(in) :: geom_iter, n
-    REAL_DOUBLE,  intent(in) :: energy, maxdx, maxdf
-    REAL_DOUBLE,  intent(in) :: x(n)
+  subroutine write_iter_info(geom_iter, size, energy, maxdx, maxdf, coords)
+    integer,     intent(in) :: geom_iter
+    integer,     intent(in) :: size ! must equal dim * natoms
+    REAL_DOUBLE, intent(in) :: energy, maxdx, maxdf
+    REAL_DOUBLE, intent(in) :: coords(size)
 
-    integer :: i
+    integer :: iatom, idir
     character(len=256) :: c_geom_iter, title
 
     call push_sub("geom_opt.write_iter_info")
     
     write(c_geom_iter, '(a,i4.4)') "go.", geom_iter
     write(title, '(f16.10)') units_from_atomic(units_out%energy, energy)
-    call atom_write_xyz("geom", trim(c_geom_iter), g_opt%geo, g_opt%syst%gr%mesh%sb%dim, comment=trim(title))
+    call atom_write_xyz("geom", trim(c_geom_iter), g_opt%geo, g_opt%dim, comment=trim(title))
 
-    do i = 0, g_opt%geo%natoms - 1
-      g_opt%geo%atom(i+1)%x(1) = x(3*i + 1)
-      g_opt%geo%atom(i+1)%x(2) = x(3*i + 2)
-      g_opt%geo%atom(i+1)%x(3) = x(3*i + 3)
-    end do
+    forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim) &
+      g_opt%geo%atom(iatom + 1)%x(idir) = coords(g_opt%dim * iatom + idir)
 
     message(1) = ""
     message(2) = ""
@@ -456,13 +448,14 @@ contains
 
   ! ---------------------------------------------------------
   ! Same as write_iter_info, but without the gradients.
-  subroutine write_iter_info_ng(geom_iter, n, energy, maxdx, x)
-    integer, intent(in) :: geom_iter, n
+  subroutine write_iter_info_ng(geom_iter, size, energy, maxdx, coords)
+    integer,     intent(in) :: geom_iter
+    integer,     intent(in) :: size ! must equal dim * natoms
     REAL_DOUBLE, intent(in) :: energy, maxdx
-    REAL_DOUBLE, intent(in) :: x(n)
+    REAL_DOUBLE, intent(in) :: coords(size)
 
     call push_sub('geom_opt.write_iter_info_ng')
-    call write_iter_info(geom_iter, n, energy, maxdx, real(-M_ONE, 8), x)
+    call write_iter_info(geom_iter, size, energy, maxdx, real(-M_ONE, 8), coords)
 
     call pop_sub()
   end subroutine write_iter_info_ng
