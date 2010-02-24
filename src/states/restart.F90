@@ -27,15 +27,15 @@ module restart_m
   use grid_m
   use io_m
   use io_function_m
-  use loct_m
-  use parser_m
   use linear_response_m
+  use loct_m
   use math_m
   use mesh_m
   use mesh_function_m
   use mesh_init_m
   use messages_m
   use mpi_m
+  use parser_m
   use profiling_m
   use simul_box_m
   use states_m
@@ -342,7 +342,7 @@ contains
     end do
 
     ! do NOT use st%lnst here as it is not (st%st_end - st%st_start + 1)
-    if(ierr == st%d%kpt%nlocal*(st%st_end - st%st_start + 1)*st%d%dim) ierr = 0 ! All OK
+    if(ierr == st%d%kpt%nlocal * (st%st_end - st%st_start + 1) * st%d%dim) ierr = 0 ! All OK
 
     if(mpi_grp_is_root(mpi_world)) then
       write(iunit,'(a)') '%'
@@ -377,7 +377,7 @@ contains
     type(grid_t),     intent(inout) :: gr
     integer,          intent(out)   :: ierr
 
-    integer              :: io_wfns, io_occs, io_mesh, np, lead_np, np_uc, i, err, il, ip
+    integer              :: io_wfns, io_occs, io_mesh, np, lead_np, np_uc, int, err, il, ip
     integer              :: ik, ist, idim, tnp
     FLOAT                :: flt
     character            :: char
@@ -433,8 +433,11 @@ contains
     end if
 
     ! Skip two lines.
-    call iopar_read(mpi_grp, io_wfns, line, err); call iopar_read(mpi_grp, io_wfns, line, err)
-    call iopar_read(mpi_grp, io_occs, line, err); call iopar_read(mpi_grp, io_occs, line, err)
+    call iopar_read(mpi_grp, io_wfns, line, err)
+    call iopar_read(mpi_grp, io_wfns, line, err)
+
+    call iopar_read(mpi_grp, io_occs, line, err)
+    call iopar_read(mpi_grp, io_occs, line, err)
 
     ! FIXME: make the assertion more exact!
 !    lead_np = gr%mesh%lead_unit_cell(LEFT)%np
@@ -443,9 +446,9 @@ contains
     SAFE_ALLOCATE(tmp(1:gs_mesh%np))
     
     do
-      call iopar_read(mpi_grp, io_wfns, line, i)
+      call iopar_read(mpi_grp, io_wfns, line, int)
       read(line, '(a)') char
-      if(i.ne.0.or.char.eq.'%') exit
+      if(int .ne. 0 .or. char .eq. '%') exit
 
       call iopar_backspace(mpi_grp, io_wfns)
 
@@ -456,15 +459,15 @@ contains
       read(line, *) st%occ(ist, ik), char, st%eigenval(ist, ik), char, flt, char, flt,&
                     char, flt, char, st%d%kweights(ik)
 
-      if(ist.ge.st%st_start .and. ist.le.st%st_end .and. &
-         ik.ge.st%d%kpt%start .and. ik.le.st%d%kpt%end) then
+      if(ist .ge. st%st_start .and. ist .le. st%st_end .and. &
+         ik .ge. st%d%kpt%start .and. ik .le. st%d%kpt%end) then
         ! Open boundaries imply complex wavefunctions.
         call zrestart_read_function(dir, filename, gs_mesh, tmp, err)
 
         
         if(err.le.0) then
           ierr = ierr + 1 ! count the valid file readings
-          if(gr%mesh%np.eq.gs_mesh%np) then ! no extra unit cell present
+          if(gr%mesh%np .eq. gs_mesh%np) then ! no extra unit cell present
             do il = 1, NLEADS
               forall(ip = 1:gr%intf(il)%np_uc)
                 st%ob_lead(il)%intf_psi(ip, INNER, idim, ist, ik) = tmp(gr%intf(il)%index(ip))
@@ -480,13 +483,13 @@ contains
             ! Here we use the fact that transport is in x-direction (x is the index
             ! running slowest).
             ! Outer block.
-            tnp = gr%mesh%np+2*lead_np
+            tnp = gr%mesh%np + 2 * lead_np
             ! FIXME: check for extent>der-order if this is still correct (left side)
-            st%ob_lead(LEFT)%intf_psi(1:np, OUTER, idim, ist, ik)  = tmp(lead_np-np+1:lead_np)
-            st%ob_lead(RIGHT)%intf_psi(1:np, OUTER, idim, ist, ik) = tmp(tnp-lead_np+1:tnp-lead_np+np)
+            st%ob_lead(LEFT)%intf_psi(1:np, OUTER, idim, ist, ik)  = tmp(lead_np - np + 1:lead_np)
+            st%ob_lead(RIGHT)%intf_psi(1:np, OUTER, idim, ist, ik) = tmp(tnp - lead_np + 1:tnp - lead_np + np)
             ! Inner block.
-            st%ob_lead(LEFT)%intf_psi(1:np, INNER, idim, ist, ik)  = tmp(lead_np+1:lead_np+np)
-            st%ob_lead(RIGHT)%intf_psi(1:np, INNER, idim, ist, ik) = tmp(tnp-lead_np-np+1:tnp-lead_np)
+            st%ob_lead(LEFT)%intf_psi(1:np, INNER, idim, ist, ik)  = tmp(lead_np + 1:lead_np+np)
+            st%ob_lead(RIGHT)%intf_psi(1:np, INNER, idim, ist, ik) = tmp(tnp - lead_np - np + 1:tnp - lead_np)
           end if
         end if ! err
       end if
@@ -510,12 +513,12 @@ contains
       call write_info(1)
       call messages_print_stress(stdout)
     else
-      if(ierr.eq.st%nst*st%d%nik*st%d%dim) then
+      if(ierr .eq. st%nst * st%d%nik * st%d%dim) then
         ierr = 0
       else
         call messages_print_stress(stdout, 'Loading restart information')
         write(message(1),'(a,i4,a,i4,a)') 'Only ', ierr,' interface wavefunctions out of ', &
-          st%nst*st%d%nik*st%d%dim, ' could be read.'
+          st%nst * st%d%nik * st%d%dim, ' could be read.'
         call write_info(1)
         call messages_print_stress(stdout)
       end if
@@ -544,7 +547,7 @@ contains
     integer,          intent(out)   :: ierr
 
     logical              :: psi_allocated
-    integer              :: io_wfns, io_occs, io_mesh, lead_np, i, err
+    integer              :: io_wfns, io_occs, io_mesh, lead_np, int, err
     integer              :: ik, ist, idim
     character            :: char
     character(len=256)   :: line, filename
@@ -572,8 +575,7 @@ contains
     if(io_mesh.lt.0) then
       ierr = -1
       call io_close(io_mesh, grp=mpi_grp)
-      call pop_sub()
-      return
+      call pop_sub(); return
     end if
     gs_mesh%sb => gr%mesh%sb
     call mesh_init_from_file(gs_mesh, io_mesh)
@@ -599,15 +601,18 @@ contains
     end if
 
     ! Skip two lines.
-    call iopar_read(mpi_grp, io_wfns, line, err); call iopar_read(mpi_grp, io_wfns, line, err)
-    call iopar_read(mpi_grp, io_occs, line, err); call iopar_read(mpi_grp, io_occs, line, err)
+    call iopar_read(mpi_grp, io_wfns, line, err)
+    call iopar_read(mpi_grp, io_wfns, line, err)
+
+    call iopar_read(mpi_grp, io_occs, line, err)
+    call iopar_read(mpi_grp, io_occs, line, err)
 
     lead_np = gr%mesh%lead_unit_cell(LEFT)%np
-    SAFE_ALLOCATE(tmp(1:gr%mesh%np+2*lead_np))
+    SAFE_ALLOCATE(tmp(1:gr%mesh%np + 2 * lead_np))
     
     do
-      call iopar_read(mpi_grp, io_wfns, line, i)
-      if(i.ne.0) exit
+      call iopar_read(mpi_grp, io_wfns, line, int)
+      if(int .ne. 0) exit
       read(line, '(a)') char
       if(char.eq.'%') exit
 
@@ -621,13 +626,13 @@ contains
                     k_x, char, k_y, char, k_z, char, st%d%kweights(ik)
       st%d%kpoints(:, ik) = (/k_x, k_y, k_z/)
 
-      if(ist.ge.st%st_start .and. ist.le.st%st_end .and. &
-         ik.ge.st%d%kpt%start .and. ik.le.st%d%kpt%end) then
+      if(ist .ge. st%st_start .and. ist .le. st%st_end .and. &
+         ik .ge. st%d%kpt%start .and. ik .le. st%d%kpt%end) then
         ! Open boundaries imply complex wavefunctions.
         call zrestart_read_function(dir, filename, gs_mesh, tmp, err)
         ! Here we use the fact that transport is in x-direction (x is the index
         ! running slowest).
-        st%zpsi(1:gr%mesh%np, idim, ist, ik) = tmp(lead_np+1:gr%mesh%np+lead_np)
+        st%zpsi(1:gr%mesh%np, idim, ist, ik) = tmp(lead_np + 1:gr%mesh%np + lead_np)
         if(err.le.0) then
           ierr = ierr + 1
         end if
@@ -651,12 +656,12 @@ contains
       call write_info(1)
       call messages_print_stress(stdout)
     else
-      if(ierr.eq.st%nst*st%d%nik*st%d%dim) then
+      if(ierr.eq.st%nst * st%d%nik * st%d%dim) then
         ierr = 0
       else
         call messages_print_stress(stdout, 'Loading restart information')
         write(message(1),'(a,i4,a,i4,a)') 'Only ', ierr,' files out of ', &
-          st%nst*st%d%nik*st%d%dim, ' could be read.'
+          st%nst * st%d%nik * st%d%dim, ' could be read.'
         call write_info(1)
         call messages_print_stress(stdout)
       end if
@@ -687,7 +692,7 @@ contains
     !if this next argument is present, the lr wfs are read instead of the gs wfs
     type(lr_t), optional, intent(inout) :: lr 
 
-    integer              :: iunit, iunit2, err, ik, ist, idim, i
+    integer              :: iunit, iunit2, err, ik, ist, idim, int
     character(len=12)    :: filename
     character(len=1)     :: char
     logical, allocatable :: filled(:, :, :)
@@ -753,13 +758,16 @@ contains
     filled = .false.
 
     ! Skip two lines.
-    call iopar_read(gr%mesh%mpi_grp, iunit,  line, err); call iopar_read(gr%mesh%mpi_grp, iunit,  line, err)
-    call iopar_read(gr%mesh%mpi_grp, iunit2, line, err); call iopar_read(gr%mesh%mpi_grp, iunit2, line, err)
+    call iopar_read(gr%mesh%mpi_grp, iunit,  line, err)
+    call iopar_read(gr%mesh%mpi_grp, iunit,  line, err)
+
+    call iopar_read(gr%mesh%mpi_grp, iunit2, line, err)
+    call iopar_read(gr%mesh%mpi_grp, iunit2, line, err)
 
     do
-      call iopar_read(gr%mesh%mpi_grp, iunit, line, i)
+      call iopar_read(gr%mesh%mpi_grp, iunit, line, int)
       read(line, '(a)') char
-      if(i.ne.0.or.char=='%') exit
+      if(int .ne. 0 .or. char == '%') exit
 
       call iopar_backspace(gr%mesh%mpi_grp, iunit)
 
@@ -828,7 +836,7 @@ contains
       call messages_print_stress(stdout)
     else
       ! Everything o.k.
-      if(ierr == st%nst*st%d%nik*st%d%dim) then
+      if(ierr == st%nst * st%d%nik * st%d%dim) then
         ierr = 0
       else
         if(.not. present(lr)) then 
@@ -838,7 +846,7 @@ contains
         end if
         call messages_print_stress(stdout, trim(str))
         write(message(1),'(a,i4,a,i4,a)') 'Only ', ierr,' files out of ', &
-          st%nst*st%d%nik*st%d%dim, ' could be read.'
+          st%nst * st%d%nik * st%d%dim, ' could be read.'
         call write_info(1)
         call messages_print_stress(stdout)
       endif
@@ -900,7 +908,7 @@ contains
     type(states_t),       intent(inout) :: st
     type(grid_t), target, intent(in)    :: gr
     
-    integer                    :: k, ik, ist, idim, jk(st%nst), err, wfns, occs, il
+    integer                    :: icell, ik, ist, idim, jk(st%nst), err, wfns, occs, il
     integer                    :: np, ip, lead_nr(2, MAX_DIM)
     character(len=256)         :: line, fname, filename, restart_dir, chars
     character                  :: char
@@ -916,8 +924,8 @@ contains
     sb       => gr%sb
     m_lead   => gr%mesh%lead_unit_cell(LEFT)
     m_center => gr%mesh
-    lead_nr(1, :) = m_lead%idx%nr(1, :)+m_lead%idx%enlarge
-    lead_nr(1, :) = m_lead%idx%nr(2, :)-m_lead%idx%enlarge
+    lead_nr(1, :) = m_lead%idx%nr(1, :) + m_lead%idx%enlarge
+    lead_nr(1, :) = m_lead%idx%nr(2, :) - m_lead%idx%enlarge
 
     mpi_grp = mpi_world
 
@@ -926,19 +934,22 @@ contains
     restart_dir = trim(sb%lead_restart_dir(LEFT))//'/'// GS_DIR
 
     wfns = io_open(trim(restart_dir)//'/wfns', action='read', is_tmp=.true., grp=mpi_grp)
-    if(wfns.lt.0) then
+    if(wfns .lt. 0) then
       message(1) = 'Could not read '//trim(restart_dir)//'/wfns.'
       call write_fatal(1)
     end if
     occs = io_open(trim(restart_dir)//'/occs', action='read', is_tmp=.true., grp=mpi_grp)
-    if(occs.lt.0) then
+    if(occs .lt. 0) then
       message(1) = 'Could not read '//trim(restart_dir)//'/occs.'
       call write_fatal(1)
     end if
 
     ! Skip two lines.
-    call iopar_read(mpi_grp, wfns, line, err); call iopar_read(mpi_grp, wfns, line, err)
-    call iopar_read(mpi_grp, occs, line, err); call iopar_read(mpi_grp, occs, line, err)
+    call iopar_read(mpi_grp, wfns, line, err)
+    call iopar_read(mpi_grp, wfns, line, err)
+
+    call iopar_read(mpi_grp, occs, line, err)
+    call iopar_read(mpi_grp, occs, line, err)
 
     jk(:)  = 0 ! reset counter for k-points
     st%d%kpoints(:, :) = M_ZERO
@@ -948,7 +959,7 @@ contains
     call mpi_grp_copy(m_lead%mpi_grp, gr%mesh%mpi_grp)
     do
       ! Check for end of file. Check only one of the two files assuming
-      ! they are written correctly, i. e. of same length.
+      ! they are written correctly, i.e. of same length.
       call iopar_read(mpi_grp, wfns, line, err)
       read(line, '(a)') char
       if(char.eq.'%') then
@@ -965,7 +976,7 @@ contains
         chars, char, ik, char, ist, char, idim
       ! FIXME for more than 1 state
       if(occ > M_EPSILON) then
-        ! count the occupied k-points (with idim==1)
+        ! count the occupied k-points (with idim == 1)
         if(idim.eq.1) jk(ist) = jk(ist) + 1
 
         st%d%kpoints(:, jk(ist)) = (/k_x, k_y, k_z/)
@@ -985,14 +996,14 @@ contains
       ! This loop replicates the lead wavefunction into the central region.
       ! It only works in this compact form because the transport-direction (x) is
       ! the index running slowest.          
-      do k = 1, gr%sb%n_ucells
-        st%zphi((k-1)*np+1:k*np, idim, ist, jk(ist)) = tmp(1:np, idim)
+      do icell = 1, gr%sb%n_ucells
+        st%zphi((icell - 1) * np + 1:icell * np, idim, ist, jk(ist)) = tmp(1:np, idim)
       end do
 
       ! Apply phase.
       do ip = 1, gr%mesh%np
-        phase = exp(-M_zI*sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim)*st%d%kpoints(1:gr%mesh%sb%dim, jk(ist))))
-        st%zphi(ip, idim, ist, jk(ist)) = phase*st%zphi(ip, idim, ist, jk(ist))
+        phase = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim) * st%d%kpoints(1:gr%mesh%sb%dim, jk(ist))))
+        st%zphi(ip, idim, ist, jk(ist)) = phase * st%zphi(ip, idim, ist, jk(ist))
       end do
 
       ! For debugging: write phi in gnuplot format to files.
@@ -1020,7 +1031,8 @@ contains
       st%qtot = st%qtot + sum(st%occ(ist, 1:st%d%nik) * st%d%kweights(1:st%d%nik))
     end do
 
-    call io_close(wfns); call io_close(occs)
+    call io_close(wfns)
+    call io_close(occs)
     SAFE_DEALLOCATE_A(tmp)
 
     message(1) = "Info: Sucessfully initialized free states from '"// &
@@ -1039,7 +1051,7 @@ contains
       !FIXME no spinors yet
       do il = 1, NLEADS
         do ip = 1, np
-          st%ob_lead(il)%rho(ip, idim) = st%ob_lead(il)%rho(ip, idim) + w_k*occ* &
+          st%ob_lead(il)%rho(ip, idim) = st%ob_lead(il)%rho(ip, idim) + w_k * occ * &
             (real(tmp(ip, idim), REAL_PRECISION)**2 + aimag(tmp(ip, idim))**2)
         end do
         select case(st%d%ispin)
@@ -1068,9 +1080,9 @@ contains
     type(states_t), intent(inout) :: st    
 
     type(block_t) :: blk
-    integer   :: ip, id, is, ik, nstates, state_from, ierr, ncols
-    integer   :: ib, idim, inst, inik, normalize
-    FLOAT     :: x(MAX_DIM), r, psi_re, psi_im
+    integer :: ip, id, is, ik, nstates, state_from, ierr, ncols
+    integer :: ib, idim, inst, inik, normalize
+    FLOAT :: xx(MAX_DIM), rr, psi_re, psi_im
     character(len=150) :: filename
 
     integer, parameter ::      &
@@ -1137,19 +1149,19 @@ contains
       ! read all lines
       do ib = 1, nstates
         ! Check that number of columns is five or six.
-        ncols = parse_block_cols(blk, ib-1)
-        if(ncols.lt.5.or.ncols.gt.6) then
+        ncols = parse_block_cols(blk, ib - 1)
+        if(ncols .lt. 5 .or. ncols .gt. 6) then
           message(1) = 'Each line in the UserDefinedStates block must have'
           message(2) = 'five or six columns.'
           call write_fatal(2)
         end if
 
-        call parse_block_integer(blk, ib-1, 0, idim)
-        call parse_block_integer(blk, ib-1, 1, inst)
-        call parse_block_integer(blk, ib-1, 2, inik)
+        call parse_block_integer(blk, ib - 1, 0, idim)
+        call parse_block_integer(blk, ib - 1, 1, inst)
+        call parse_block_integer(blk, ib - 1, 2, inik)
 
         ! Calculate from expression or read from file?
-        call parse_block_integer(blk, ib-1, 3, state_from)
+        call parse_block_integer(blk, ib - 1, 3, state_from)
 
         ! loop over all states
         do id = 1, st%d%dim
@@ -1166,7 +1178,7 @@ contains
               case(state_from_formula)
                 ! parse formula string
                 call parse_block_string(                            &
-                  blk, ib-1, 4, st%user_def_states(id, is, ik))
+                  blk, ib - 1, 4, st%user_def_states(id, is, ik))
 
                 write(message(1), '(a,3i5)') 'Substituting state of orbital with k, ist, dim = ', ik, is, id
                 write(message(2), '(2a)') '  with the expression:'
@@ -1178,20 +1190,20 @@ contains
 
                 ! fill states with user-defined formulas
                 do ip = 1, mesh%np
-                  x = mesh%x(ip, :)
-                  r = sqrt(sum(x(:)**2))
+                  xx = mesh%x(ip, :)
+                  rr = sqrt(sum(xx(:)**2))
 
                   ! parse user-defined expressions
-                  call parse_expression(psi_re, psi_im, mesh%sb%dim, x, r, M_ZERO, st%user_def_states(id, is, ik))
+                  call parse_expression(psi_re, psi_im, mesh%sb%dim, xx, rr, M_ZERO, st%user_def_states(id, is, ik))
                   ! fill state
-                  st%zpsi(ip, id, is, ik) = psi_re + M_zI*psi_im
+                  st%zpsi(ip, id, is, ik) = psi_re + M_zI * psi_im
                 end do
 
               case(state_from_file)
                 ! The input format can be coded in column four now. As it is
                 ! not used now, we just say "file".
                 ! Read the filename.
-                call parse_block_string(blk, ib-1, 4, filename)
+                call parse_block_string(blk, ib - 1, 4, filename)
 
                 write(message(1), '(a,3i5)') 'Substituting state of orbital with k, ist, dim = ', ik, is, id
                 write(message(2), '(2a)') '  with data from file:'
@@ -1202,7 +1214,7 @@ contains
                 call zinput_function(filename, mesh, st%zpsi(:, id, is, ik), ierr, .true.)
                 if (ierr > 0) then
                   message(1) = 'Could not read the file!'
-                  write(message(2),'(a,i1)') 'Error-Code: ', ierr
+                  write(message(2),'(a,i1)') 'Error code: ', ierr
                   call write_fatal(2)
                 end if
 
@@ -1213,8 +1225,8 @@ contains
               end select
 
               ! normalize orbital
-              if(parse_block_cols(blk, ib-1).eq.6) then
-                call parse_block_integer(blk, ib-1, 5, normalize)
+              if(parse_block_cols(blk, ib - 1) .eq. 6) then
+                call parse_block_integer(blk, ib - 1, 5, normalize)
               else
                 normalize = 1
               end if

@@ -116,7 +116,7 @@ contains
 
     if (lcao_start > LCAO_START_NONE) then
       if( (ierr.ne.0) .and. (ierr >= occupied_states)) then
-        message(1) = "Info:  I will perform a LCAO calculation to get reasonable starting points."
+        message(1) = "Info:  Performing LCAO calculation to get a reasonable starting point."
         call write_info(1)
         call lcao_init(lcao, sys%gr, sys%geo, sys%st)
         if(lcao_is_available(lcao)) then
@@ -126,7 +126,7 @@ contains
       end if
     end if
     
-    message(1) = "Info:  Starting calculation of unoccupied states"
+    message(1) = "Info:  Starting calculation of unoccupied states."
     call write_info(1)
 
     ! reset this variable, so that the eigensolver passes through all states
