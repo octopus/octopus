@@ -23,6 +23,7 @@ module lcao_m
   use batch_m
   use datasets_m
   use distributed_m
+  use energy_m
   use geometry_m
   use global_m
   use grid_m
@@ -47,6 +48,9 @@ module lcao_m
   use states_calc_m
   use states_dim_m
   use submesh_m
+  use system_m
+  use v_ks_m
+  use varinfo_m
 
   implicit none
 
@@ -55,6 +59,7 @@ module lcao_m
     lcao_t,            &
     lcao_init,         &
     lcao_wf,           &
+    lcao_run,          &
     lcao_end,          &
     lcao_is_available, &
     lcao_num_orbitals
@@ -66,8 +71,7 @@ module lcao_m
 
   type lcao_t
     private
-    integer           :: state ! 0 => non-initialized;
-                               ! 1 => initialized (k, s and v1 matrices filled)
+    logical           :: initialized ! are k, s and v1 matrices filled?
     integer           :: norbs
     integer           :: maxorbs
     integer, pointer  :: atom(:)
@@ -77,6 +81,7 @@ module lcao_m
   end type lcao_t
 
 contains
+
   ! ---------------------------------------------------------
   subroutine lcao_init(this, gr, geo, st)
     type(lcao_t),         intent(out)   :: this
@@ -93,7 +98,7 @@ contains
     nullify(this%level)
     nullify(this%ddim)
 
-    this%state = 1
+    this%initialized = .true.
 
     !%Variable LCAOAlternative
     !%Type logical
@@ -123,13 +128,13 @@ contains
       this%maxorbs = this%maxorbs*st%d%dim
 
       if(this%maxorbs < st%nst) then
-        this%state = 0
+        this%initialized = .false.
         write(message(1),'(a)') 'Cannot do LCAO initial calculation because there are not enough atomic orbitals.'
         call write_warning(1)
         call pop_sub(); return
       end if
 
-      ! generate tables to know which indexes each atomic orbital has
+      ! generate tables to know which indices each atomic orbital has
 
       SAFE_ALLOCATE( this%atom(1:this%maxorbs))
       SAFE_ALLOCATE(this%level(1:this%maxorbs))
@@ -219,6 +224,130 @@ contains
     call pop_sub()
   end subroutine lcao_init
 
+
+  ! ---------------------------------------------------------
+  subroutine lcao_run(sys, hm, st_start)
+    type(system_t),      intent(inout) :: sys
+    type(hamiltonian_t), intent(inout) :: hm
+    integer, optional,   intent(in)    :: st_start ! use for unoccupied-states run
+
+    integer :: lcao_start_default, lcao_start
+    type(lcao_t) :: lcao
+    integer :: s1, s2, k1, k2, is, ik, ip, idim
+
+    call push_sub('lcao.lcao_run')
+
+    if (.not. present(st_start)) then
+      call guess_density(sys%gr%fine%mesh, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
+        sys%st%d%spin_channels, sys%st%rho)
+
+      ! set up Hamiltonian (we do not call system_h_setup here because we do not want to
+      ! overwrite the guess density)
+      message(1) = 'Info: Setting up Hamiltonian.'
+      call write_info(1)
+
+      ! get the effective potential (we don`t need the eigenvalues yet)
+      call v_ks_calc(sys%ks, sys%gr, hm, sys%st, calc_eigenval=.false.)
+      ! eigenvalues have nevertheless to be initialized to something
+      sys%st%eigenval = M_ZERO
+    else
+      call v_ks_calc(sys%ks, sys%gr, hm, sys%st, calc_eigenval=.true.)
+
+      if(st_start .gt. sys%st%nst) then ! nothing to be done in LCAO
+        call total_energy(hm, sys%gr, sys%st, -1)
+        call pop_sub(); return
+      endif
+    endif
+
+    ! The initial LCAO calculation is done by default if we have pseudopotentials.
+    ! Otherwise, it is not the default value and has to be enforced in the input file.
+    lcao_start_default = LCAO_START_FULL
+    if(sys%geo%only_user_def) lcao_start_default = LCAO_START_NONE
+    
+    !%Variable LCAOStart
+    !%Type integer
+    !%Section SCF
+    !%Description
+    !% Before starting a SCF calculation, <tt>Octopus</tt> can perform
+    !% a LCAO calculation. These can provide <tt>Octopus</tt> with a good set
+    !% of initial wavefunctions and with a new guess for the density.
+    !% (Up to the current version, only a minimal basis set is used.)
+    !% The default is <tt>lcao_full</tt> unless all species are user-defined, in which case
+    !% the default is <tt>lcao_none</tt>.
+    !%Option lcao_none 0
+    !% Do not perform a LCAO calculation before the SCF cycle. Instead use random wavefunctions.
+    !%Option lcao_states 2
+    !% Do a LCAO calculation before the SCF cycle and use the resulting wavefunctions as 
+    !% initial wavefunctions without changing the guess density.
+    !% This will speed up the convergence of the eigensolver during the first SCF iterations.
+    !%Option lcao_full 3
+    !% Do a LCAO calculation before the SCF cycle and use the LCAO wavefunctions to build a new
+    !% guess density and a new KS potential.
+    !% Using the LCAO density as a new guess density may improve the convergence, but can
+    !% also slow it down or yield wrong results (especially for spin-polarized calculations).
+    !%End
+    call parse_integer(datasets_check('LCAOStart'), lcao_start_default, lcao_start)
+    if(.not.varinfo_valid_option('LCAOStart', lcao_start)) call input_error('LCAOStart')
+    call messages_print_var_option(stdout, 'LCAOStart', lcao_start)
+
+    if (lcao_start /= LCAO_START_NONE) then
+      call lcao_init(lcao, sys%gr, sys%geo, sys%st)
+
+      ! after initialized, can check that LCAO is possible
+      if(lcao_is_available(lcao)) then
+        if(present(st_start)) then
+          call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm, start=st_start)
+        else
+          call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm)
+        endif
+
+        if (.not. present(st_start)) then
+          !Just populate again the states, so that the eigenvalues are properly written
+          call states_fermi(sys%st, sys%gr%mesh)
+          call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb)
+
+          ! Update the density and the Hamiltonian
+          if (lcao_start == LCAO_START_FULL) call system_h_setup(sys, hm)
+        endif
+      endif
+
+      call lcao_end(lcao)
+
+    else
+
+      ! FIXME: the following initialization is wrong when not all
+      ! wavefunctions are calculated by the Lippmann-Schwinger
+      ! equation.
+      ! Use free states as initial wavefunctions.
+      if(sys%gr%sb%open_boundaries) then
+        ASSERT(sys%st%ob_nst .eq. sys%st%nst)
+        ASSERT(sys%st%ob_d%nik .eq. sys%st%d%nik)
+        s1 = sys%st%st_start
+        s2 = sys%st%st_end
+        k1 = sys%st%d%kpt%start
+        k2 = sys%st%d%kpt%end
+        ! the following copying does NOT ALWAYS work, especially for large numbers of k2
+        !sys%st%zpsi(1:sys%gr%mesh%np, :, s1:s2, k1:k2) = sys%st%zphi(1:sys%gr%mesh%np, :, s1:s2, k1:k2)
+        ! so do it the stupid and slow way
+        forall (ik = k1:k2, is = s1:s2, idim = 1:sys%st%d%dim, ip = 1:sys%gr%mesh%np)
+          sys%st%zpsi(ip, idim, is, ik) = sys%st%zphi(ip, idim, is, ik)
+        end forall
+      else
+        ! Randomly generate the initial wavefunctions.
+        call states_generate_random(sys%st, sys%gr%mesh)
+        call states_orthogonalize(sys%st, sys%gr%mesh)
+        call v_ks_calc(sys%ks, sys%gr, hm, sys%st, calc_eigenval=.true.) ! get potentials
+        call states_fermi(sys%st, sys%gr%mesh)                           ! occupations
+      end if
+
+    end if
+
+    ! I don`t think we need this, but I keep it just in case
+    call total_energy(hm, sys%gr, sys%st, -1)         ! total energy
+
+    call pop_sub()
+  end subroutine lcao_run
+
   ! ---------------------------------------------------------
   subroutine lcao_end(this)
     type(lcao_t), intent(inout) :: this
@@ -229,7 +358,7 @@ contains
     SAFE_DEALLOCATE_P(this%level)
     SAFE_DEALLOCATE_P(this%ddim)
 
-    this%state = 0
+    this%initialized = .false.
     call pop_sub()
   end subroutine lcao_end
 
@@ -246,7 +375,7 @@ contains
     integer :: start_
     type(profile_t), save :: prof
 
-    ASSERT(this%state == 1)
+    ASSERT(this%initialized)
 
     call profiling_in(prof, "LCAO")
     call push_sub('lcao.lcao_wf')
@@ -271,17 +400,21 @@ contains
     call profiling_out(prof)
   end subroutine lcao_wf
 
+
+  ! ---------------------------------------------------------
   logical function lcao_is_available(this) result(available)
-    type(lcao_t),        intent(in) :: this
+    type(lcao_t), intent(in) :: this
 
     call push_sub('lcao.lcao_is_available')
-    available = this%state == 1
+    available = this%initialized
 
     call pop_sub()
   end function lcao_is_available
 
+
+  ! ---------------------------------------------------------
   integer function lcao_num_orbitals(this) result(norbs)
-    type(lcao_t),        intent(in) :: this
+    type(lcao_t), intent(in) :: this
 
     call push_sub('lcao.lcao_num_orbitals')
     norbs = this%norbs

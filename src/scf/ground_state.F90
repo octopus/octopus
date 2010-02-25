@@ -94,115 +94,12 @@ contains
 #endif
 
     if(fromScratch) then
-      ! We do not compute the density from the random wavefunctions. 
-      ! Instead, we try to get a better guess.
-
-      call guess_density(sys%gr%fine%mesh, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
-        sys%st%d%spin_channels, sys%st%rho)
-
-      ! setup Hamiltonian (we do not call system_h_setup here because we do not want to
-      ! overwrite the guess density)
-      message(1) = 'Info: Setting up Hamiltonian.'
-      call write_info(1)
-      ! get the effective potential (we don`t need the eigenvalues yet)
-      call v_ks_calc(sys%ks, sys%gr, hm, sys%st, calc_eigenval=.false.)
-      ! eigenvalues have nevertheless to be initialized to something
-      sys%st%eigenval = M_ZERO
-
-      ! The initial LCAO calculation is done by default if we have pseudopotentials.
-      ! Otherwise, it is not the default value and has to be enforced in the input file.
-      lcao_start_default = LCAO_START_FULL
-
-      if(sys%geo%only_user_def) then
-        lcao_start_default = LCAO_START_NONE
-      end if
-      
-      !%Variable LCAOStart
-      !%Type integer
-      !%Section SCF
-      !%Description
-      !% Before starting a SCF calculation, <tt>Octopus</tt> can perform
-      !% a LCAO calculation. These can provide <tt>Octopus</tt> with a good set
-      !% of initial wavefunctions and with a new guess for the density.
-      !% (Up to the current version, only a minimal basis set is used.)
-      !% The default is <tt>lcao_full</tt> unless all species are user-defined, in which case
-      !% the default is <tt>lcao_none</tt>.
-      !%Option lcao_none 0
-      !% Do not perform a LCAO calculation before the SCF cycle.
-      !%Option lcao_states 2
-      !% Do a LCAO calculation before the SCF cycle and use the resulting wavefunctions as 
-      !% initial wavefunctions without changing the guess density.
-      !% This will speed up the convergence of the eigensolver during the first SCF iterations.
-      !%Option lcao_full 3
-      !% Do a LCAO calculation before the SCF cycle and use the LCAO wavefunctions to build a new
-      !% guess density and a new KS potential.
-      !% Using the LCAO density as a new guess density may improve the convergence, but can
-      !% also slow it down or yield wrong results (especially for spin-polarized calculations).
-      !%End
-      call parse_integer(datasets_check('LCAOStart'), lcao_start_default, lcao_start)
-      if(.not.varinfo_valid_option('LCAOStart', lcao_start)) call input_error('LCAOStart')
-      call messages_print_var_option(stdout, 'LCAOStart', lcao_start)
-
-      lcao_done = .false.
-      if (lcao_start /= LCAO_START_NONE) then
-          
-        call lcao_init(lcao, sys%gr, sys%geo, sys%st)
-        if(lcao_is_available(lcao)) then
-
-          call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm)
-          call lcao_end(lcao)
-          
-          lcao_done = .true.
-
-          !Just populate again the states, so that the eigenvalues are properly written
-          call states_fermi(sys%st, sys%gr%mesh)
-          call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb)
-
-          ! Update the density and the Hamiltonian
-          if (lcao_start == LCAO_START_FULL) then
-            call system_h_setup(sys, hm)
-          end if
-          
-        end if
-      end if
-
-      if(.not. lcao_done) then
-        ! FIXME: the following initialization is wrong when not all
-        ! wavefunctions are calculated by the Lippmann-Schwinger
-        ! equation.
-        ! Use free states as initial wavefunctions.
-        if(sys%gr%sb%open_boundaries) then
-          ASSERT(sys%st%ob_nst.eq.sys%st%nst)
-          ASSERT(sys%st%ob_d%nik.eq.sys%st%d%nik)
-          s1 = sys%st%st_start
-          s2 = sys%st%st_end
-          k1 = sys%st%d%kpt%start
-          k2 = sys%st%d%kpt%end
-          ! the following copying does NOT ALWAYS work, especially for large numbers of k2
-          !sys%st%zpsi(1:sys%gr%mesh%np, :, s1:s2, k1:k2) = sys%st%zphi(1:sys%gr%mesh%np, :, s1:s2, k1:k2)
-          ! so do it the stupid and slow way
-          forall (ik = k1:k2, is = s1:s2, idim = 1:sys%st%d%dim, ip = 1:sys%gr%mesh%np)
-            sys%st%zpsi(ip, idim, is, ik) = sys%st%zphi(ip, idim, is, ik)
-          end forall
-        else
-          ! Randomly generate the initial wavefunctions.
-          call states_generate_random(sys%st, sys%gr%mesh)
-          call states_orthogonalize(sys%st, sys%gr%mesh)
-          call v_ks_calc(sys%ks, sys%gr, hm, sys%st, calc_eigenval=.true.) ! get potentials
-          call states_fermi(sys%st, sys%gr%mesh)                           ! occupations
-        end if
-      end if
-
-      ! I don`t think we need this, but I keep it just in case
-      call total_energy(hm, sys%gr, sys%st, -1)         ! total energy
-
+      call lcao_run(sys, hm)
     else
-
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
       call system_h_setup(sys, hm)
-
     end if
 
     ! run self-consistency

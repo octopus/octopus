@@ -99,34 +99,9 @@ contains
       nst_calculated = ierr
     end if
 
-    ! Setup Hamiltonian
-    message(1) = 'Info:  Setting up Hamiltonian.'
-    call write_info(1)
-
     call states_calc_dens(sys%st, sys%gr)
-    call v_ks_calc(sys%ks, sys%gr, hm, sys%st, calc_eigenval=.true.) ! get potentials
-    call total_energy(hm, sys%gr, sys%st, -1)             ! total energy
 
-    ! The initial LCAO calculation is done by default if we have pseudopotentials.
-    ! Otherwise, it is not the default value and has to be enforced in the input file.
-    lcao_start_default = LCAO_START_FULL
-    if(sys%geo%only_user_def) lcao_start_default = LCAO_START_NONE
-
-    call parse_integer(datasets_check('LCAOStart'), lcao_start_default, lcao_start)
-    if(.not. varinfo_valid_option('LCAOStart', lcao_start)) call input_error('LCAOStart')
-    call messages_print_var_option(stdout, 'LCAOStart', lcao_start)
-
-    if (lcao_start > LCAO_START_NONE) then
-      if((ierr .ne. 0)) then
-        message(1) = "Info:  Performing LCAO calculation to get a reasonable starting point."
-        call write_info(1)
-        call lcao_init(lcao, sys%gr, sys%geo, sys%st)
-        if(lcao_is_available(lcao)) then
-          call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm, start = nst_calculated + 1)
-          call lcao_end(lcao)
-        end if
-      end if
-    end if
+    call lcao_run(sys, hm, nst_calculated + 1)
     
     message(1) = "Info:  Starting calculation of unoccupied states."
     call write_info(1)

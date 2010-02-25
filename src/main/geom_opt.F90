@@ -101,61 +101,12 @@ contains
     end if
 
     if(fromScratch) then
-
-      ! Randomly generate the initial wavefunctions
-      call states_generate_random(sys%st, sys%gr%mesh)
-      call states_orthogonalize(sys%st, sys%gr%mesh)
-
-      ! We do not compute the density from the random wavefunctions. 
-      ! Instead, we try to get a better guess for the density
-      call guess_density(sys%gr%mesh, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
-           sys%st%d%spin_channels, sys%st%rho)
-
-      ! setup Hamiltonian (we do not call system_h_setup here because we do not want to
-      ! overwrite the guess density)
-      message(1) = 'Info: Setting up Hamiltonian.'
-      call write_info(1)
-      call v_ks_calc(sys%ks, sys%gr, hm, sys%st, calc_eigenval=.true.) ! get potentials
-      call states_fermi(sys%st, sys%gr%mesh)                           ! occupations
-      call total_energy(hm, sys%gr, sys%st, -1)
-
-      lcao_start_default = LCAO_START_FULL
-      if(sys%geo%only_user_def) lcao_start_default = LCAO_START_NONE
-
-      call parse_integer(datasets_check('LCAOStart'), lcao_start_default, lcao_start)
-      if(.not.varinfo_valid_option('LCAOStart', lcao_start)) call input_error('LCAOStart')
-      call messages_print_var_option(stdout, 'LCAOStart', lcao_start)
-
-      if (lcao_start > LCAO_START_NONE) then
-
-        call lcao_init(lcao, sys%gr, sys%geo, sys%st)
-
-        if(lcao_is_available(lcao)) then
-          write(message(1),'(a,i4,a)') 'Info: Performing initial LCAO calculation with ', &
-               lcao_num_orbitals(lcao), ' orbitals.'
-          call write_info(1)
-          
-          call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm)
-          call lcao_end(lcao)
-
-          !Just populate again the states, so that the eigenvalues are properly written
-          call states_fermi(sys%st, sys%gr%mesh)
-          call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb)
-
-          ! Update the density and the Hamiltonian
-          if (lcao_start == LCAO_START_FULL) call system_h_setup(sys, hm)
-
-        end if
-
-      end if
-
+      call lcao_run(sys, hm)
     else
-
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
       call system_h_setup(sys, hm)
-
     end if
 
     call scf_init(g_opt%scfv, sys%gr, sys%geo, sys%st, hm)
@@ -263,7 +214,7 @@ contains
       !%Default 0.0 a.u.
       !%Section Calculation Modes::Geometry Optimization
       !%Description
-      !% Convergence criterion, for stopping stop the minimization. In units of length; minimization
+      !% Convergence criterion, for stopping the minimization. In units of length; minimization
       !% is stopped when the coordinates of all species change less than <tt>GOMinimumMove</tt>.
       !% Used in conjunction with <tt>GOTolerance</tt>. If <tt>GOMinimumMove = 0</tt>, this criterion is ignored.
       !%

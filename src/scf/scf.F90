@@ -337,7 +337,7 @@ contains
     if(scf%lcao_restricted) then
       call lcao_init(lcao, gr, geo, st)
       if(.not. lcao_is_available(lcao)) then
-        message(1) = 'Nothing to do'
+        message(1) = 'LCAO is not available. Cannot do SCF in LCAO.'
         call write_fatal(1)
       end if
     end if

@@ -328,6 +328,7 @@ contains
 end subroutine X(lcao_wf)
 
 ! ---------------------------------------------------------
+! The alternative implementation.
 subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   type(lcao_t),        intent(inout) :: this
   type(states_t),      intent(inout) :: st
