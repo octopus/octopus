@@ -313,7 +313,7 @@ contains
     call v_ks_calc(g_opt%syst%ks, g_opt%syst%gr, g_opt%hm, g_opt%st, calc_eigenval=.true.)
     call total_energy(g_opt%hm, g_opt%syst%gr, g_opt%st, -1)
 
-    ! do scf calculation
+    ! do SCF calculation
     call scf_run(g_opt%scfv, g_opt%syst%gr, g_opt%geo, g_opt%st, &
       g_opt%syst%ks, g_opt%hm, g_opt%syst%outp, verbosity = VERB_COMPACT)
 

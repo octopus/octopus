@@ -23,10 +23,9 @@ module io_m
   use datasets_m
   use global_m
   use loct_m
-  use parser_m
   use messages_m
   use mpi_m
-
+  use parser_m
 
   implicit none
 
@@ -60,7 +59,7 @@ contains
   ! ---------------------------------------------------------
   ! If the argument defaults is present and set to true, then the routine
   ! will not try to read anything from the inp file, but set everything
-  ! to the defaults values.
+  ! to the default values.
   subroutine io_init(defaults)
     logical, optional, intent(in) :: defaults
 

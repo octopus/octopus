@@ -20,9 +20,9 @@
 #include "global.h"
 
 module global_m
+  use hardware_m
   use loct_m
   use mpi_m
-  use hardware_m
 
   implicit none
 

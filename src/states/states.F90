@@ -86,7 +86,7 @@ module states_m
     states_dens_accumulate,           &
     states_dens_accumulate_batch,     &
     states_dens_reduce,               &
-    states_calc_dens,              &
+    states_calc_dens,                 &
     states_calc_tau_jp_gn,            &
     state_is_local,                   &
     states_dump,                      &

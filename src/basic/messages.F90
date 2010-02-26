@@ -23,8 +23,8 @@ module messages_m
   use datasets_m
   use global_m
   use loct_m
-  use parser_m
   use mpi_m
+  use parser_m
   use string_m
   use varinfo_m
 
