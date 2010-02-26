@@ -74,7 +74,7 @@ core_LIBS = \
 	$(octopus_LIBS)                               \
 	@LIBS_LAPACK@ @LIBS_BLAS@                     \
 	$(top_builddir)/liboct_parser/liboct_parser.a \
-	$(top_builddir)/libxc/src/libxc.a             \
+	$(top_builddir)/libxc/src/.libs/libxc.a       \
 	@GSL_LIBS@ @GD_LIBS@ @FCEXTRALIBS@
 
 external_LIBS = \
