@@ -21,7 +21,10 @@
 
 module invert_ks_m
   use datasets_m
+  use derivatives_m
+  use eigensolver_m
   use global_m
+  use grid_m
   use hamiltonian_m
   use h_sys_output_m
   use io_m
@@ -36,6 +39,7 @@ module invert_ks_m
   use profiling_m
   use restart_m
   use scf_m
+  use simul_box_m
   use states_m
   use system_m
   use unit_m
@@ -55,7 +59,8 @@ contains
     type(system_t),              intent(inout) :: sys
     type(hamiltonian_t),         intent(inout) :: hm
 
-    type(scf_t) :: scfv
+    !type(scf_t) :: scfv
+    type(eigensolver_t) :: eigensolver
 
     integer :: ii, jj, ierr, np, ndim, nspin, idiffmax
     integer :: verbosity
@@ -114,27 +119,30 @@ contains
 
     sys%ks%frozen_hxc = .true. !do not change hxc potential outside this routine
     
-    call scf_init(scfv, sys%gr, sys%geo, sys%st, hm)
+    !call scf_init(scfv, sys%gr, sys%geo, sys%st, hm)
+    
+    call eigensolver_init(eigensolver, sys%gr, sys%st)
     
     if (invksmethod == 1) then ! 2-particle exact inversion
 
-      call invertks_2part(target_rho, np, nspin, hm%vhxc, sys%gr%mesh%spacing)
+      call invertks_2part(target_rho, nspin, hm%vhxc, sys%gr)
 
     else ! iterative case
-      if (invksmethod == 0) then ! iterative procedure for v_s (might be discontinued)
+      if (invksmethod == 0) then ! iterative procedure for v_s 
       
-        call invertks_iter(target_rho, np, nspin, hm, sys, scfv)
+        call invertks_iter(target_rho, np, nspin, hm, sys, eigensolver)
       
       else
       
-        call invertvxc_iter(target_rho, np, nspin, hm, sys, scfv)
+        call invertvxc_iter(target_rho, np, nspin, hm, sys, eigensolver)
       
       endif
     end if ! invksmethod
 
     ! this is debugging: should output quality of KS inversion
-    call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run = .false., &
-                 verbosity = VERB_COMPACT)
+    
+    call eigensolver_run(eigensolver, sys%gr, sys%st, hm, 1)
+    
     call states_calc_dens(sys%st, sys%gr)
 
     diffdensity = 0d0
@@ -150,13 +158,19 @@ contains
         diffdensity
     call write_info(1)
 
-    call scf_end(scfv)
+    call eigensolver_end(eigensolver)
     
     ! output for all cases    
     call h_sys_output_all(sys%outp, sys%gr, sys%geo, sys%st, hm, STATIC_DIR)
-
-    call doutput_function(io_function_fill_how("AxisX"), &
+    
+    if (invksmethod == 2) then
+      call doutput_function(io_function_fill_how("AxisX"), &
            ".", "vxc", sys%gr%mesh, hm%vxc(:,1), units_out%energy, ierr)
+    else
+      call doutput_function(io_function_fill_how("AxisX"), &
+           ".", "vks", sys%gr%mesh, hm%vhxc(:,1), units_out%energy, ierr)
+    endif
+    
     call doutput_function(io_function_fill_how("AxisX"), &
            ".", "rho", sys%gr%mesh, sys%st%rho(:,1), units_out%length**(-sys%gr%sb%dim), ierr)
 
@@ -231,48 +245,56 @@ contains
 
   end subroutine invert_ks_run
 
-  subroutine invertks_2part(target_rho, np, nspin, vhxc, spacing)
-    integer, intent(in)  :: np, nspin
-    FLOAT,   intent(in)  :: spacing(1:MAX_DIM)
-    FLOAT,   intent(in)  :: target_rho(1:np, 1:nspin)
-    FLOAT,   intent(out) :: vhxc(1:np, 1:nspin)
-       
-    integer :: ii, jj
-    FLOAT, allocatable :: sqrtrho(:,:), gradrho(:,:)
+  subroutine invertks_2part(target_rho, nspin, vhxc, grid)
+
+    type(grid_t), intent(in) :: grid
+    integer, intent(in)  :: nspin
+    FLOAT,   intent(in)  :: target_rho(1:grid%mesh%np, 1:nspin)
+    FLOAT,   intent(out) :: vhxc(1:grid%mesh%np, 1:nspin)
+           
+    integer :: ii, jj 
+    integer :: np, np_part, ndim
+    FLOAT   :: spacing(1:MAX_DIM)
+    FLOAT, allocatable :: sqrtrho(:,:), laplace(:,:)
 
     call push_sub('invert_ks.invertks_2part')
     
-    !initialize the KS potential
-    SAFE_ALLOCATE(sqrtrho(1:np, 1:nspin))
-    SAFE_ALLOCATE(gradrho(1:np, 1:nspin))
-
-    gradrho = 0d0
+    ndim = grid%sb%dim
+    spacing = grid%mesh%spacing
+    np = grid%mesh%np
+    
+    SAFE_ALLOCATE(sqrtrho(1:grid%der%mesh%np_part, 1:nspin))
+    SAFE_ALLOCATE(laplace(1:grid%der%mesh%np, 1:nspin))
+    
+    sqrtrho = M_ZERO
+    
     do jj = 1, nspin
-      do ii = 1, np
+      do ii = 1, grid%der%mesh%np
         sqrtrho(ii, jj) = sqrt(target_rho(ii, jj))
       enddo
-      do ii = 3, np-2
-        gradrho(ii, jj) = - sqrtrho(ii+2, jj) - sqrtrho(ii-2, jj) &
-                        & + 16d0*(sqrtrho(ii+1, jj) + sqrtrho(ii-1, jj)) &
-                        & - 30d0*sqrtrho(ii, jj)
-      enddo
-      
-      gradrho(:, jj) = gradrho(:, jj)/(12d0*spacing(1)**2)
+    enddo   
+    
+    do jj = 1, nspin
+      call dderivatives_lapl(grid%der, sqrtrho(:,jj), laplace(:,jj))
+    enddo
+    
+    do jj = 1, nspin
       do ii = 1, np
-        vhxc(ii, jj) = gradrho(ii, jj)/(2d0*sqrtrho(ii, jj))
+        vhxc(ii, jj) = laplace(ii, jj)/(2d0*sqrtrho(ii, jj))
       enddo
     enddo
+    
     SAFE_DEALLOCATE_A(sqrtrho)
-    SAFE_DEALLOCATE_A(gradrho)
+    SAFE_DEALLOCATE_A(laplace)
 
     call pop_sub()
   end subroutine invertks_2part
 
 
-  subroutine invertks_iter(target_rho, np, nspin, hm, sys, scfv)
+  subroutine invertks_iter(target_rho, np, nspin, hm, sys, eigensolver)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: hm
-    type(scf_t),         intent(inout) :: scfv
+    type(eigensolver_t), intent(inout) :: eigensolver
     integer,             intent(in)    :: np, nspin
     FLOAT,               intent(in)    :: target_rho(1:np, 1:nspin)
         
@@ -327,8 +349,8 @@ contains
     
       call hamiltonian_update_potential(hm, sys%gr%mesh)
 
-      call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run = .false., &
-                   verbosity = VERB_COMPACT)
+      call eigensolver_run(eigensolver, sys%gr, sys%st, hm, 1)
+
       call states_calc_dens(sys%st, sys%gr)
       
       vhxc_out(1:np, 1:nspin, 1) = &
@@ -376,10 +398,10 @@ contains
 
   end subroutine invertks_iter
 
-  subroutine invertvxc_iter(target_rho, np, nspin, hm, sys, scfv)
+  subroutine invertvxc_iter(target_rho, np, nspin, hm, sys, eigensolver)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: hm
-    type(scf_t),         intent(inout) :: scfv
+    type(eigensolver_t), intent(inout) :: eigensolver
     integer,             intent(in)    :: np, nspin
     FLOAT,               intent(in)    :: target_rho(1:np, 1:nspin)
         
@@ -464,7 +486,7 @@ contains
       M_ZERO, sys%st%qtot, hm%vxc)
     
     call doutput_function(io_function_fill_how("AxisX"), &
-           ".", "vxc", sys%gr%mesh, hm%vxc(:,1), units_out%energy, ierr)
+           ".", "vxcinit", sys%gr%mesh, hm%vxc(:,1), units_out%energy, ierr)
     
     call doutput_function(io_function_fill_how("AxisX"), &
            ".", "vext", sys%gr%mesh, hm%ep%vpsl(:), units_out%energy, ierr)
@@ -500,8 +522,8 @@ contains
              ".", "rho"//fname, sys%gr%mesh, sys%st%rho(:,1), units_out%length**(-sys%gr%sb%dim), ierr)
       endif
     
-      call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run = .false., &
-                   verbosity = VERB_COMPACT)
+      call eigensolver_run(eigensolver, sys%gr, sys%st, hm, 1)
+    
       call states_calc_dens(sys%st, sys%gr)
       
       vxc_out(1:np, 1:nspin, 1) = &
