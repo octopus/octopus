@@ -32,6 +32,7 @@ module static_pol_m
   use hamiltonian_m
   use io_m
   use io_function_m
+  use lcao_m
   use loct_m
   use parser_m
   use mpi_m
@@ -73,7 +74,7 @@ contains
     FLOAT, allocatable :: lr_rho(:,:), lr_rho2(:,:), gs_rho(:,:), tmp_rho(:,:)
     FLOAT :: center_dipole(1:MAX_DIM), diag_dipole(1:MAX_DIM)
     type(born_charges_t) :: born_charges
-    logical :: diagonal_done, calc_Born
+    logical :: diagonal_done, calc_Born, start_density_is_zero_field
     character(len=80) :: fname
 
     call push_sub('static_pol.static_pol_run')
@@ -88,33 +89,34 @@ contains
       call write_fatal(1)
     endif
 
-    if(ierr.ne.0) then
+    if(ierr .ne. 0) then
       message(1) = "Could not read KS orbitals from '"//trim(restart_dir)//GS_DIR//"'"
       message(2) = "Please run a ground-state calculation first and/or"
       message(3) = "give the correct RestartDataset in the input file."
       call write_fatal(3)
     end if
 
-    ! setup Hamiltonian
+    ! set up Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
     call write_info(1)
     call system_h_setup (sys, hm)
 
     call io_mkdir(trim(tmpdir)//EM_RESP_FD_DIR) ! restart
 
-    ! Allocate the dipole...
+    ! Allocate the dipole
     SAFE_ALLOCATE(dipole(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim, 1:2))
     dipole = M_ZERO
 
-    if(.not.fromScratch) then
+    if(.not. fromScratch) then
       iunit = io_open(trim(tmpdir)//EM_RESP_FD_DIR//RESTART_FILE, action='read', status='old', die=.false.)
+
       if(iunit > 0) then
         ! Finds out how many dipoles have already been written.
         rewind(iunit)
         i_start = 1
         do ii = 1, 3
           read(iunit, fmt=*, iostat = ios) ((dipole(ii, jj, isign), jj = 1, gr%mesh%sb%dim), isign = 1, 2)
-          if(ios.ne.0) exit
+          if(ios .ne. 0) exit
           i_start = i_start + 1
         end do
 
@@ -127,8 +129,8 @@ contains
       end if
     end if
 
-    if(iand(sys%outp%what, output_density).ne.0 .or. &
-       iand(sys%outp%what, output_pol_density).ne.0 .or. calc_Born) then
+    if(iand(sys%outp%what, output_density) .ne. 0 .or. &
+       iand(sys%outp%what, output_pol_density) .ne. 0 .or. calc_Born) then
        fromScratch = .true.
        diagonal_done = .false.
        ! since only dipoles, not densities or forces, are stored and reloaded, we need to
@@ -137,17 +139,18 @@ contains
 
     if(fromScratch) then
       if(mpi_grp_is_root(mpi_world)) then
-        iunit = io_open(trim(tmpdir)//EM_RESP_FD_DIR//RESTART_FILE, action='write')
+        ! open new file, and erase old data
+        iunit = io_open(trim(tmpdir)//EM_RESP_FD_DIR//RESTART_FILE, action='write', status='replace')
         call io_close(iunit)
       end if
       i_start = 1
     end if
 
-    ! Save local pseudopotential
+    ! Save local potential
     SAFE_ALLOCATE(Vpsl_save(1:gr%mesh%np))
     Vpsl_save = hm%ep%Vpsl
 
-    ! Allocate the trrho to the contain the trace of the density.
+    ! Allocate the trrho to contain the trace of the density.
     SAFE_ALLOCATE(trrho(1:gr%mesh%np))
     SAFE_ALLOCATE(gs_rho(1:gr%mesh%np, 1:st%d%nspin))
     SAFE_ALLOCATE(tmp_rho(1:gr%mesh%np, 1:st%d%nspin))
@@ -191,6 +194,12 @@ contains
         hm%ep%vpsl(1:gr%mesh%np) = vpsl_save(1:gr%mesh%np) + (-1)**isign*gr%mesh%x(1:gr%mesh%np, ii)*e_field
         call hamiltonian_update_potential(hm, gr%mesh)
 
+        if(start_density_is_zero_field) then
+          st%rho(1:gr%mesh%np, 1:st%d%nspin) = gs_rho(1:gr%mesh%np, 1:st%d%nspin)
+        else
+          call lcao_run(sys, hm)
+        endif
+
         call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = VERB_COMPACT)
 
         trrho = M_ZERO
@@ -225,9 +234,15 @@ contains
       call write_info(2)
   
       hm%ep%vpsl(1:gr%mesh%np) = vpsl_save(1:gr%mesh%np) &
-        - gr%mesh%x(1:gr%mesh%np, 2) * e_field - gr%mesh%x(1:gr%mesh%np, 3) * e_field
+        - (gr%mesh%x(1:gr%mesh%np, 2) + gr%mesh%x(1:gr%mesh%np, 3)) * e_field
       call hamiltonian_update_potential(hm, gr%mesh)
   
+      if(start_density_is_zero_field) then
+        st%rho(1:gr%mesh%np, 1:st%d%nspin) = gs_rho(1:gr%mesh%np, 1:st%d%nspin)
+      else
+        call lcao_run(sys, hm)
+      endif
+
       call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = VERB_COMPACT)
   
       trrho = M_ZERO
@@ -292,6 +307,19 @@ contains
       call parse_logical(datasets_check('EMCalcBornCharges'), .false., calc_Born)
       if (calc_Born) call messages_devel_version("Calculation of Born effective charges")
 
+      !%Variable EMStartDensityIsZeroField
+      !%Type logical
+      !%Default true
+      !%Section Linear Response::Static Polarization
+      !%Description
+      !% Use the charge density from the zero-field calculation as the starting density for
+      !% SCF calculations with applied fields. For small fields, this will be fastest.
+      !% If there is trouble converging with larger fields, set to false,
+      !% to initialize the calculation for each field from scratch, as specified by the LCAO variables. 
+      !% Only applies if <tt>ResponseMethod = finite_differences</tt>.
+      !%End
+      call parse_logical(datasets_check('EMStartDensityIsZeroField'), .true., start_density_is_zero_field)
+
       call pop_sub()
     end subroutine init_
 
@@ -308,13 +336,13 @@ contains
       call push_sub('static_pol.output_init_')
 
       !allocate memory for what we want to output
-      if(iand(sys%outp%what, output_density).ne.0 .or. &
-         iand(sys%outp%what, output_pol_density).ne.0 ) then 
+      if(iand(sys%outp%what, output_density) .ne. 0 .or. &
+         iand(sys%outp%what, output_pol_density) .ne. 0 ) then 
         SAFE_ALLOCATE(lr_rho (1:gr%mesh%np, 1:st%d%nspin))
         SAFE_ALLOCATE(lr_rho2(1:gr%mesh%np, 1:st%d%nspin))
       end if
       
-      if(iand(sys%outp%what, output_elf).ne.0) then 
+      if(iand(sys%outp%what, output_elf) .ne. 0) then 
         SAFE_ALLOCATE(    elf(1:gr%mesh%np, 1:st%d%nspin))
         SAFE_ALLOCATE( lr_elf(1:gr%mesh%np, 1:st%d%nspin))
         SAFE_ALLOCATE(   elfd(1:gr%mesh%np, 1:st%d%nspin))
@@ -350,8 +378,8 @@ contains
       endif
 
       !DENSITY AND POLARIZABILITY DENSITY   
-      if(iand(sys%outp%what, output_density).ne.0 .or. &
-         iand(sys%outp%what, output_pol_density).ne.0) then 
+      if(iand(sys%outp%what, output_density) .ne. 0 .or. &
+         iand(sys%outp%what, output_pol_density) .ne. 0) then 
          
         if(isign == 1 .and. ii == 2) then
           tmp_rho(1:gr%mesh%np, 1:st%d%nspin) = st%rho(1:gr%mesh%np, 1:st%d%nspin)
@@ -371,7 +399,7 @@ contains
 
           !write
           do is = 1, st%d%nspin
-            if(iand(sys%outp%what, output_density).ne.0) then
+            if(iand(sys%outp%what, output_density) .ne. 0) then
               fn_unit = units_out%length**(1-gr%sb%dim) / units_out%energy
               write(fname, '(a,i1,2a)') 'fd_density-sp', is, '-', index2axis(ii)
               call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
@@ -386,17 +414,17 @@ contains
               enddo
             endif
 
-            if(iand(sys%outp%what, output_pol_density).ne.0) then
+            if(iand(sys%outp%what, output_pol_density) .ne. 0) then
               do jj = ii, gr%mesh%sb%dim
                 fn_unit = units_out%length**(2-gr%sb%dim) / units_out%energy
                 write(fname, '(a,i1,4a)') 'alpha_density-sp', is, '-', index2axis(ii), '-', index2axis(jj)
-                call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
+                call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname), &
                   gr%mesh, -gr%mesh%x(:, jj) * lr_rho(:, is), fn_unit, ierr, geo = sys%geo)
 
                 fn_unit = units_out%length**(3-gr%sb%dim) / units_out%energy**2
                 write(fname, '(a,i1,6a)') 'beta_density-sp', is, '-', index2axis(ii), &
                   '-', index2axis(ii), '-', index2axis(jj)
-                call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
+                call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname), &
                   gr%mesh, -gr%mesh%x(:, jj) * lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
               enddo
             endif
@@ -406,7 +434,7 @@ contains
       end if
 
       !ELF
-      if(iand(sys%outp%what, output_elf).ne.0) then 
+      if(iand(sys%outp%what, output_elf) .ne. 0) then 
          
         if(isign == 1) then 
           call elf_calc(st, gr, elf, elfd)
@@ -415,9 +443,9 @@ contains
           
           !numerical derivative
           lr_elf(1:gr%mesh%np, 1:st%d%nspin) = &
-               ( lr_elf(1:gr%mesh%np, 1:st%d%nspin) -  elf(1:gr%mesh%np, 1:st%d%nspin)) / (M_TWO*e_field)
+               ( lr_elf(1:gr%mesh%np, 1:st%d%nspin) -  elf(1:gr%mesh%np, 1:st%d%nspin)) / (M_TWO * e_field)
           lr_elfd(1:gr%mesh%np, 1:st%d%nspin) = &
-               (lr_elfd(1:gr%mesh%np, 1:st%d%nspin) - elfd(1:gr%mesh%np, 1:st%d%nspin)) / (M_TWO*e_field)
+               (lr_elfd(1:gr%mesh%np, 1:st%d%nspin) - elfd(1:gr%mesh%np, 1:st%d%nspin)) / (M_TWO * e_field)
 
           !write
           do is = 1, st%d%nspin
@@ -447,22 +475,23 @@ contains
 
       call io_mkdir(EM_RESP_FD_DIR)
 
-      if(iand(sys%outp%what, output_density).ne.0 .or. &
-         iand(sys%outp%what, output_pol_density).ne.0) then 
-        lr_rho2(1:gr%mesh%np, 1:st%d%nspin) = -(st%rho(1:gr%mesh%np, 1:st%d%nspin) - lr_rho(1:gr%mesh%np, 1:st%d%nspin) &
+      if(iand(sys%outp%what, output_density) .ne. 0 .or. &
+         iand(sys%outp%what, output_pol_density) .ne. 0) then 
+        lr_rho2(1:gr%mesh%np, 1:st%d%nspin) = &
+          -(st%rho(1:gr%mesh%np, 1:st%d%nspin) - lr_rho(1:gr%mesh%np, 1:st%d%nspin) &
           - tmp_rho(1:gr%mesh%np, 1:st%d%nspin) + gs_rho(1:gr%mesh%np, 1:st%d%nspin)) / e_field**2
   
         do is = 1, st%d%nspin
-          if(iand(sys%outp%what, output_density).ne.0) then
+          if(iand(sys%outp%what, output_density) .ne. 0) then
             fn_unit = units_out%length**(2-gr%sb%dim) / units_out%energy**2
-            write(fname, '(a,i1,a)') 'fd2_density-sp', is, '-2-3'
+            write(fname, '(a,i1,a)') 'fd2_density-sp', is, '-y-z'
             call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
               gr%mesh, lr_rho2(:, is), unit_one, ierr, geo = sys%geo)
           endif
   
-          if(iand(sys%outp%what, output_pol_density).ne.0) then
+          if(iand(sys%outp%what, output_pol_density) .ne. 0) then
             fn_unit = units_out%length**(3-gr%sb%dim) / units_out%energy**2
-            write(fname, '(a,i1,a)') 'beta_density-sp', is, '-1-2-3'
+            write(fname, '(a,i1,a)') 'beta_density-sp', is, '-x-y-z'
             call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
               gr%mesh, -gr%mesh%x(:, 1) * lr_rho2(:, is), unit_one, ierr, geo = sys%geo)
           endif
@@ -473,19 +502,19 @@ contains
         iunit = io_open(EM_RESP_FD_DIR//'alpha', action='write')
         write(iunit, '(3a)') '# Polarizability tensor [', trim(units_abbrev(units_out%polarizability)), ']'
 
-        alpha(1:gr%mesh%sb%dim,1:gr%mesh%sb%dim) = (dipole(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim, 1) - &
-             dipole(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim, 2))/(M_TWO*e_field)
+        alpha(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim) = (dipole(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim, 1) - &
+             dipole(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim, 2)) / (M_TWO * e_field)
 
         beta = M_ZERO
 
         do idir = 1, gr%mesh%sb%dim
           beta(1:gr%mesh%sb%dim, idir, idir) = -(dipole(idir, 1:gr%mesh%sb%dim, 1) + dipole(idir, 1:gr%mesh%sb%dim, 2) - &
-            M_TWO*center_dipole(1:gr%mesh%sb%dim))/e_field**2
+            M_TWO * center_dipole(1:gr%mesh%sb%dim)) / e_field**2
           beta(idir, 1:gr%mesh%sb%dim, idir) = beta(1:gr%mesh%sb%dim, idir, idir) 
           beta(idir, idir, 1:gr%mesh%sb%dim) = beta(1:gr%mesh%sb%dim, idir, idir)
         end do
 
-        beta(1, 2, 3) = - (diag_dipole(1) - dipole(2, 1, 1) - dipole(3, 1, 1) + center_dipole(1)) / e_field**2
+        beta(1, 2, 3) = -(diag_dipole(1) - dipole(2, 1, 1) - dipole(3, 1, 1) + center_dipole(1)) / e_field**2
         beta(2, 3, 1) = beta(1, 2, 3)
         beta(3, 1, 2) = beta(1, 2, 3)
         beta(3, 2, 1) = beta(1, 2, 3)
@@ -500,12 +529,12 @@ contains
         if(calc_Born) call out_Born_charges(Born_charges, sys%geo, gr%mesh%sb%dim, EM_RESP_FD_DIR)
       end if
 
-      if(iand(sys%outp%what, output_density).ne.0 .or. &
-         iand(sys%outp%what, output_pol_density).ne.0) then 
+      if(iand(sys%outp%what, output_density) .ne. 0 .or. &
+         iand(sys%outp%what, output_pol_density) .ne. 0) then 
         SAFE_DEALLOCATE_A(lr_rho)
       end if
       
-      if(iand(sys%outp%what, output_elf).ne.0) then 
+      if(iand(sys%outp%what, output_elf) .ne. 0) then 
         SAFE_DEALLOCATE_A(lr_elf)
         SAFE_DEALLOCATE_A(elf)
         SAFE_DEALLOCATE_A(lr_elfd)
