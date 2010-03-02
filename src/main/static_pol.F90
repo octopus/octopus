@@ -72,7 +72,7 @@ contains
     FLOAT, allocatable :: Vpsl_save(:), trrho(:), dipole(:, :, :)
     FLOAT, allocatable :: elf(:,:), lr_elf(:,:), elfd(:,:), lr_elfd(:,:)
     FLOAT, allocatable :: lr_rho(:,:), lr_rho2(:,:), gs_rho(:,:), tmp_rho(:,:)
-    FLOAT :: center_dipole(1:MAX_DIM), diag_dipole(1:MAX_DIM)
+    FLOAT :: center_dipole(1:MAX_DIM), diag_dipole(1:MAX_DIM), ionic_dipole(1:MAX_DIM), print_dipole(1:MAX_DIM)
     type(born_charges_t) :: born_charges
     logical :: diagonal_done, calc_Born, start_density_is_zero_field
     character(len=80) :: fname
@@ -182,6 +182,12 @@ contains
        center_dipole(jj) = dmf_moment(gr%mesh, trrho, jj, 1)
     end do
 
+    if(mpi_grp_is_root(mpi_world)) then
+      call geometry_dipole(sys%geo, ionic_dipole)
+      print_dipole(1:gr%mesh%sb%dim) = center_dipole(1:gr%mesh%sb%dim) + ionic_dipole(1:gr%mesh%sb%dim)
+      call io_output_dipole(stdout, print_dipole, gr%mesh%sb%dim)
+    endif
+
     do ii = i_start, gr%mesh%sb%dim
       do isign = 1, 2
         write(message(1), '(a)')
@@ -211,6 +217,11 @@ contains
         do jj = 1, gr%mesh%sb%dim
           dipole(ii, jj, isign) = dmf_moment(gr%mesh, trrho, jj, 1)
         end do
+
+        if(mpi_grp_is_root(mpi_world)) then
+          print_dipole(1:gr%mesh%sb%dim) = dipole(ii, 1:gr%mesh%sb%dim, isign) + ionic_dipole(1:gr%mesh%sb%dim)
+          call io_output_dipole(stdout, print_dipole, gr%mesh%sb%dim)
+        endif
 
         call output_cycle_()
 
@@ -254,6 +265,11 @@ contains
       do jj = 1, gr%mesh%sb%dim
         diag_dipole(jj) = dmf_moment(gr%mesh, trrho, jj, 1)
       end do
+
+      if(mpi_grp_is_root(mpi_world)) then
+        print_dipole(1:gr%mesh%sb%dim) = diag_dipole(1:gr%mesh%sb%dim) + ionic_dipole(1:gr%mesh%sb%dim)
+        call io_output_dipole(stdout, print_dipole, gr%mesh%sb%dim)
+      endif
   
       ! Writes the dipole to file
       if(mpi_grp_is_root(mpi_world)) then 

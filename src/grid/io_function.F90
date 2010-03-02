@@ -408,8 +408,8 @@ contains
 
     call push_sub('io_function.io_output_dipole')
 
-    write(iunit, '(5a)') 'Dipole [', trim(units_abbrev(units_out%length)), &
-                         ']:                    [', trim(units_abbrev(unit_debye)), ']'
+    write(iunit, '(a,a20,a17)') 'Dipole:', '[' // trim(units_abbrev(units_out%length)) // ']', &
+          '[' // trim(units_abbrev(unit_debye)) // ']'
     do idir = 1, ndim
       write(iunit, '(6x,a,i1,a,es14.5,3x,2es14.5)') '<x', idir, '> = ', &
         units_from_atomic(units_out%length, dipole(idir)), units_from_atomic(unit_debye, dipole(idir))
