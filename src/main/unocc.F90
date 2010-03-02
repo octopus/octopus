@@ -68,8 +68,7 @@ contains
     type(eigensolver_t) :: eigens
     integer :: iunit, ierr, occupied_states, total_states, iter
     logical :: converged
-    integer :: lcao_start, lcao_start_default, max_iter, nst_calculated
-    type(lcao_t) :: lcao
+    integer :: max_iter, nst_calculated
 
     call push_sub('unocc.unocc_run')
 

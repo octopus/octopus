@@ -81,9 +81,8 @@ contains
     type(hamiltonian_t), target, intent(inout) :: hm
     logical,                     intent(inout) :: fromscratch
 
-    integer :: iatom, idir, ierr, lcao_start, lcao_start_default
+    integer :: iatom, idir, ierr
     REAL_DOUBLE, allocatable :: coords(:)
-    type(lcao_t) :: lcao
     REAL_DOUBLE :: energy
 
     call push_sub('geom_opt.geom_opt_run')

@@ -57,11 +57,8 @@ contains
     type(hamiltonian_t), intent(inout) :: hm
     logical,             intent(inout) :: fromScratch
 
-    integer      :: lcao_start, lcao_start_default
-    type(lcao_t) :: lcao
     type(scf_t)  :: scfv
-    integer      :: ierr, s1, s2, k1, k2, j, ip, idim, is, ik
-    logical      :: species_all_electron, lcao_done
+    integer      :: ierr
 
     call push_sub('ground_state.ground_state_run')
 
