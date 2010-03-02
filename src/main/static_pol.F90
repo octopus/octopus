@@ -74,7 +74,7 @@ contains
     FLOAT, allocatable :: lr_rho(:,:), lr_rho2(:,:), gs_rho(:,:), tmp_rho(:,:)
     FLOAT :: center_dipole(1:MAX_DIM), diag_dipole(1:MAX_DIM), ionic_dipole(1:MAX_DIM), print_dipole(1:MAX_DIM)
     type(born_charges_t) :: born_charges
-    logical :: diagonal_done, calc_Born, start_density_is_zero_field
+    logical :: diagonal_done, calc_Born, start_density_is_zero_field, center_written
     character(len=80) :: fname
 
     call push_sub('static_pol.static_pol_run')
@@ -113,6 +113,12 @@ contains
       if(iunit > 0) then
         ! Finds out how many dipoles have already been written.
         rewind(iunit)
+
+        read(iunit, fmt=*, iostat = ios) (center_dipole(jj), jj = 1, gr%mesh%sb%dim)
+        center_written = (ios .eq. 0)
+        write(message(1),*) 'center_written = ', center_written
+        call write_info(1)
+
         i_start = 1
         do ii = 1, 3
           read(iunit, fmt=*, iostat = ios) ((dipole(ii, jj, isign), jj = 1, gr%mesh%sb%dim), isign = 1, 2)
@@ -143,6 +149,7 @@ contains
         iunit = io_open(trim(tmpdir)//EM_RESP_FD_DIR//RESTART_FILE, action='write', status='replace')
         call io_close(iunit)
       end if
+      center_written = .false.
       i_start = 1
     end if
 
@@ -182,6 +189,13 @@ contains
        center_dipole(jj) = dmf_moment(gr%mesh, trrho, jj, 1)
     end do
 
+    ! Writes the dipole to file
+    if(mpi_grp_is_root(mpi_world) .and. .not. center_written) then 
+      iunit = io_open(trim(tmpdir)//EM_RESP_FD_DIR//RESTART_FILE, action='write', status='old', position='append')
+      write(iunit, fmt='(6e20.12)') (center_dipole(jj), jj = 1, gr%mesh%sb%dim)
+      call io_close(iunit)
+    end if
+
     if(mpi_grp_is_root(mpi_world)) then
       call geometry_dipole(sys%geo, ionic_dipole)
       print_dipole(1:gr%mesh%sb%dim) = center_dipole(1:gr%mesh%sb%dim) + ionic_dipole(1:gr%mesh%sb%dim)
@@ -197,7 +211,7 @@ contains
         call write_info(2)
         ! there is an extra factor of -1 in here that is for the electronic charge
 
-        hm%ep%vpsl(1:gr%mesh%np) = vpsl_save(1:gr%mesh%np) + (-1)**isign*gr%mesh%x(1:gr%mesh%np, ii)*e_field
+        hm%ep%vpsl(1:gr%mesh%np) = vpsl_save(1:gr%mesh%np) + (-1)**isign * gr%mesh%x(1:gr%mesh%np, ii) * e_field
         call hamiltonian_update_potential(hm, gr%mesh)
 
         if(start_density_is_zero_field) then
@@ -206,6 +220,7 @@ contains
           call lcao_run(sys, hm)
         endif
 
+        call scf_mix_clear(scfv)
         call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = VERB_COMPACT)
 
         trrho = M_ZERO
@@ -254,6 +269,7 @@ contains
         call lcao_run(sys, hm)
       endif
 
+      call scf_mix_clear(scfv)
       call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = VERB_COMPACT)
   
       trrho = M_ZERO

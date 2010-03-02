@@ -65,6 +65,7 @@ module scf_m
   public ::             &
     scf_t,              &
     scf_init,           &
+    scf_mix_clear,      &
     scf_run,            &
     scf_end
 
@@ -299,6 +300,18 @@ contains
 
     call pop_sub()
   end subroutine scf_end
+
+
+  ! ---------------------------------------------------------
+  subroutine scf_mix_clear(scf)
+    type(scf_t), intent(inout) :: scf
+
+    call push_sub('scf.scf_mix_clear')
+
+    call mix_clear(scf%smix)
+
+    call pop_sub()
+  end subroutine scf_mix_clear
 
 
   ! ---------------------------------------------------------

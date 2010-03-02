@@ -24,8 +24,8 @@ module mix_m
   use global_m
   use lalg_adv_m
   use lalg_basic_m
-  use parser_m
   use messages_m
+  use parser_m
   use profiling_m
   use varinfo_m
 
@@ -36,6 +36,7 @@ module mix_m
     mix_set_mixing,             &
     mix_t,                      &
     mix_init,                   &
+    mix_clear,                  &
     mix_end,                    &
     dmixing,                    &
     zmixing
@@ -158,34 +159,79 @@ contains
 
     select case (smix%type_of_mixing)
     case (MIX_GRPULAY)
-      if(func_type_ == M_REAL ) then 
+      if(func_type_ == M_REAL) then 
         SAFE_ALLOCATE(     smix%ddf(1:d1, 1:d2, 1:d3, 1:smix%ns + 1))
         SAFE_ALLOCATE(smix%dvin_old(1:d1, 1:d2, 1:d3))
         SAFE_ALLOCATE(     smix%ddv(1:d1, 1:d2, 1:d3, 1:smix%ns + 1))
         SAFE_ALLOCATE(  smix%df_old(1:d1, 1:d2, 1:d3))
-
-        smix%ddf = M_ZERO; smix%ddv = M_ZERO; smix%dvin_old = M_ZERO; smix%df_old = M_ZERO
       else
         SAFE_ALLOCATE(     smix%zdf(1:d1, 1:d2, 1:d3, 1:smix%ns + 1))
         SAFE_ALLOCATE(smix%zvin_old(1:d1, 1:d2, 1:d3))
         SAFE_ALLOCATE(     smix%zdv(1:d1, 1:d2, 1:d3, 1:smix%ns + 1))
         SAFE_ALLOCATE(  smix%zf_old(1:d1, 1:d2, 1:d3))
-        smix%zdf = M_z0; smix%zdv = M_z0; smix%zvin_old = M_z0; smix%zf_old = M_z0
       end if
 
     case (MIX_BROYDEN)
-      if(func_type_ == M_REAL ) then 
+      if(func_type_ == M_REAL) then 
         SAFE_ALLOCATE(     smix%ddf(1:d1, 1:d2, 1:d3, 1:smix%ns))
         SAFE_ALLOCATE(smix%dvin_old(1:d1, 1:d2, 1:d3))
         SAFE_ALLOCATE(     smix%ddv(1:d1, 1:d2, 1:d3, 1:smix%ns))
         SAFE_ALLOCATE(  smix%df_old(1:d1, 1:d2, 1:d3))
-        smix%ddf = M_ZERO; smix%ddv = M_ZERO; smix%dvin_old = M_ZERO; smix%df_old = M_ZERO
       else
         SAFE_ALLOCATE(     smix%zdf(1:d1, 1:d2, 1:d3, 1:smix%ns))
         SAFE_ALLOCATE(smix%zvin_old(1:d1, 1:d2, 1:d3))
         SAFE_ALLOCATE(     smix%zdv(1:d1, 1:d2, 1:d3, 1:smix%ns))
         SAFE_ALLOCATE(  smix%zf_old(1:d1, 1:d2, 1:d3))
-        smix%zdf = M_z0; smix%zdv = M_z0; smix%zvin_old = M_z0; smix%zf_old = M_z0
+      end if
+
+    end select
+
+    call mix_clear(smix, func_type_)
+
+    call pop_sub()
+  end subroutine mix_init
+
+
+  ! ---------------------------------------------------------
+  subroutine mix_clear(smix, func_type)
+    type(mix_t),           intent(inout) :: smix
+    integer,     optional, intent(in)    :: func_type
+
+    integer :: func_type_
+
+    call push_sub('mix.mix_clear')
+
+    if(present(func_type)) then 
+      func_type_ = func_type
+    else 
+      func_type_ = M_REAL
+    end if
+
+    select case (smix%type_of_mixing)
+    case (MIX_GRPULAY)
+      if(func_type_ == M_REAL) then 
+        smix%ddf = M_ZERO
+        smix%ddv = M_ZERO
+        smix%dvin_old = M_ZERO
+        smix%df_old = M_ZERO
+      else
+        smix%zdf = M_z0
+        smix%zdv = M_z0
+        smix%zvin_old = M_z0
+        smix%zf_old = M_z0
+      end if
+
+    case (MIX_BROYDEN)
+      if(func_type_ == M_REAL) then 
+        smix%ddf = M_ZERO
+        smix%ddv = M_ZERO
+        smix%dvin_old = M_ZERO
+        smix%df_old = M_ZERO
+      else
+        smix%zdf = M_z0
+        smix%zdv = M_z0
+        smix%zvin_old = M_z0
+        smix%zf_old = M_z0
       end if
 
     end select
@@ -193,7 +239,7 @@ contains
     smix%last_ipos = 0
 
     call pop_sub()
-  end subroutine mix_init
+  end subroutine mix_clear
 
 
   ! ---------------------------------------------------------
@@ -218,6 +264,8 @@ contains
     call pop_sub()
   end subroutine mix_end
 
+
+  ! ---------------------------------------------------------
   subroutine mix_set_mixing(smix, newmixing)
     type(mix_t), intent(inout) :: smix
     FLOAT, intent(in):: newmixing
