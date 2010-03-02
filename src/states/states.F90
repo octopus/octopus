@@ -761,7 +761,7 @@ contains
       charge = charge + sum(st%occ(ist, 1:st%d%nik) * st%d%kweights(1:st%d%nik))
     end do
     if(abs(charge - st%qtot) > CNST(1e-6)) then
-      message(1) = "Occupations do not integrate to total charge"
+      message(1) = "Initial occupations do not integrate to total charge."
       write(message(2), '(6x,f12.6,a,f12.6)') charge, ' != ', st%qtot
       call write_fatal(2)
     end if
@@ -1469,8 +1469,8 @@ contains
       charge = charge + sum(st%occ(ist, 1:st%d%nik) * st%d%kweights(1:st%d%nik))
     end do
     if(abs(charge-st%qtot) > CNST(1e-6)) then
-      message(1) = 'Occupations do not integrate to total charge!'
-      write(message(2), '(6x,f12.8,a,f12.8)') charge, '.ne.', st%qtot
+      message(1) = 'Occupations do not integrate to total charge.'
+      write(message(2), '(6x,f12.8,a,f12.8)') charge, ' != ', st%qtot
       call write_warning(2)
     end if
 
@@ -1478,7 +1478,7 @@ contains
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
           if (st%wfs_type == M_REAL) then
-            write(message(1),'(a)') 'Internal error in states_fermi'
+            write(message(1),'(a)') 'Internal error in states_fermi.'
             call write_fatal(1)
           else
             st%spin(1:3, ist, ik) = state_spin(mesh, st%zpsi(:, :, ist, ik))

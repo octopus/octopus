@@ -234,6 +234,7 @@ contains
     integer :: lcao_start_default, lcao_start
     type(lcao_t) :: lcao
     integer :: s1, s2, k1, k2, is, ik, ip, idim
+    logical :: lcao_done
 
     call push_sub('lcao.lcao_run')
 
@@ -290,11 +291,14 @@ contains
     if(.not.varinfo_valid_option('LCAOStart', lcao_start)) call input_error('LCAOStart')
     call messages_print_var_option(stdout, 'LCAOStart', lcao_start)
 
+    lcao_done = .false.
     if (lcao_start /= LCAO_START_NONE) then
       call lcao_init(lcao, sys%gr, sys%geo, sys%st)
 
       ! after initialized, can check that LCAO is possible
       if(lcao_is_available(lcao)) then
+        lcao_done = .true.
+        
         if(present(st_start)) then
           call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm, start=st_start)
         else
@@ -313,7 +317,9 @@ contains
 
       call lcao_end(lcao)
 
-    else
+    endif
+
+    if(.not. lcao_done) then
 
       ! FIXME: the following initialization is wrong when not all
       ! wavefunctions are calculated by the Lippmann-Schwinger
