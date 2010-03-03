@@ -35,7 +35,7 @@ match ; Total energy ; GREP(static/info, 'Total       =', 20) ; 1.79226552
 
 Input: 06-tdmagnetic.02-unocc.inp
 
-match ; Unoccupied state 1; GREP(unocc_static/eigenvalues, '1   --', 12) ; 1.792266
+match ; Unoccupied state 1; GREP(static/eigenvalues, '1   --', 12) ; 1.792266
 
 Input: 06-tdmagnetic.03-td.inp
 match ; <x>(t) ; LINE(td.general/multipoles, -1, 50) ; 1.448208882702e+00
