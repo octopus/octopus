@@ -2,7 +2,7 @@ CalculationMode = em_resp
 Units = eV_Angstrom
 
 ResponseMethod = finite_differences
-EMStaticField = 0.01
+EMStaticElectricField = 0.01
 
 DevelVersion = yes
 EMCalcBornCharges = yes

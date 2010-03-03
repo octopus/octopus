@@ -319,7 +319,7 @@ contains
 
     endif
 
-    if(.not. lcao_done) then
+    if(.not. lcao_done .and. .not. present(st_start)) then
 
       ! FIXME: the following initialization is wrong when not all
       ! wavefunctions are calculated by the Lippmann-Schwinger

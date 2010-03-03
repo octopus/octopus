@@ -1,13 +1,13 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id
 
-Test       : Time dependent magnetic field
+Test       : Time-dependent magnetic field
 Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes
 
 # This test demonstrates the possibility of using time-dependent
-# magnetic fields (the test works on a 2D system, in principle one could
+# magnetic fields (the test works on a 2D system; in principle one could
 # use time-dependent magnetic fields both in 2D and in 3D).
 #
 # The calculation replicates the results given by Popsueva et al.
@@ -22,10 +22,10 @@ Enabled    : Yes
 # are complex this linear combination is just a sum, and one needs
 # to multiply by a global phase that cannot be predicted -- one
 # should look at the results of the gs and unocc calculation and
-# apply it by hand [See below for the exact way to do this]
+# apply it by hand. [See below for the exact way to do this.]
 #
 # Therefore we apply an approximate procedure: in the gs and unocc
-# calculation, we have a small disymmetry between the two quantum
+# calculation, we have a small asymmetry between the two quantum
 # dots, enough to localize the states in one or the other well.
 # The time-propagation is then performed with the symmetric
 # potential.
@@ -39,9 +39,8 @@ match ; <y>(t) ; LINE(td.general/multipoles, -1, 70) ; -1.105531371295e-02
 
 
 # In order to do the "exact" calculation with perfectly symmetric
-# quantum dots, one should :
-# (1) Do the gs and unocc calculations removing the small
-# disymmetry.
+# quantum dots, one should:
+# (1) Do the gs and unocc calculations removing the small asymmetry.
 # (2) Calculate the ratio of the imaginary to the real part, in the
 # x-axis (which should be a constant) for both the ground (r1) and
 # the first excited state (r2). Calculate theta1 = atan(r1) and

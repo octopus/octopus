@@ -314,24 +314,25 @@ contains
       call push_sub('static_pol.static_pol_run.init_')
 
       ! shortcuts
-      gr  => sys%gr
+      gr => sys%gr
       st => sys%st
 
       call states_allocate_wfns(st, gr%mesh)
 
-      !%Variable EMStaticField
+      call messages_obsolete_variable("EMStaticField", "EMStaticElectricField")
+      !%Variable EMStaticElectricField
       !%Type float
       !%Default 0.01 a.u.
       !%Section Linear Response::Static Polarization
       !%Description
-      !% Magnitude of the static field used to calculate the static polarizability,
+      !% Magnitude of the static electric field used to calculate the static polarizability,
       !% if <tt>ResponseMethod = finite_differences</tt>.
       !%End
-      call parse_float(datasets_check('EMStaticField'), &
+      call parse_float(datasets_check('EMStaticElectricField'), &
          CNST(0.01), e_field, units_inp%force)
       if (e_field <= M_ZERO) then
-        write(message(1), '(a,e14.6,a)') "Input: '", e_field, "' is not a valid EMStaticField."
-        message(2) = '(0 < EMStaticField)'
+        write(message(1), '(a,e14.6,a)') "Input: '", e_field, "' is not a valid EMElectricStaticField."
+        message(2) = '(0 < EMStaticElectricField)'
         call write_fatal(2)
       end if
 
@@ -357,8 +358,11 @@ contains
 
     ! ---------------------------------------------------------
     subroutine end_()
+
       call push_sub('static_pol.end_')
+
       call states_deallocate_wfns(sys%st)
+
       call pop_sub()
     end subroutine end_
   
