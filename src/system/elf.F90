@@ -59,7 +59,7 @@ contains
     !% default; however, for research purposes it may be useful not to add it.
     !% If this feature proves to be useless, this option should go away.
     !%End
-    call parse_logical(datasets_check('ElfWithCurrentTerm'), .true., with_current_term)
+    call parse_logical(datasets_check('ELFWithCurrentTerm'), .true., with_current_term)
 
     call pop_sub()
   end subroutine elf_init
@@ -72,15 +72,14 @@ contains
     type(grid_t),     intent(inout) :: gr
     FLOAT,            intent(inout) :: elf(:,:) ! elf(gr%mesh%np, 1) if st%d%ispin = 1, elf(gr%mesh%np, 3) otherwise.
                                                 ! On output, it should contain the global ELF if st%d%ispin = 1,
-                                                ! otherwise elf(:, 3) contains the global elf, and 
-                                                ! elf(:, 1) and elf(:, 2) the spin resolved ELF.
+                                                ! otherwise elf(:, 3) contains the global ELF, and 
+                                                ! elf(:, 1) and elf(:, 2) the spin-resolved ELF.
     FLOAT,  optional, intent(inout):: de(:,:)
 
     FLOAT :: factor, D0, dens
     integer :: ip, is, nelfs
     FLOAT, allocatable :: rho(:,:), grho(:,:,:), jj(:,:,:)
     FLOAT, allocatable :: kappa(:,:)
-
     FLOAT, parameter :: dmin = CNST(1e-10)
 
     call push_sub('elf.elf_calc')
@@ -129,7 +128,7 @@ contains
     SAFE_DEALLOCATE_A(jj)   ! these are no longer needed
 
     select case(gr%sb%dim)
-      case(3); factor = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
+      case(3); factor = M_THREE / M_FIVE * (M_SIX * M_PI**2)**M_TWOTHIRD
       case(2); factor = M_TWO * M_Pi
     end select
 
@@ -138,10 +137,10 @@ contains
       do ip = 1, gr%mesh%np
         if(rho(ip, 1) >= dmin) then
           select case(gr%sb%dim)
-            case(3); D0 = factor * rho(ip, 1)**(M_EIGHT/M_THREE)
+            case(3); D0 = factor * rho(ip, 1)**(M_EIGHT / M_THREE)
             case(2); D0 = factor * rho(ip, 1)**3
           end select
-          elf(ip, 1) = D0*D0/(D0*D0 + kappa(ip, 1)**2)
+          elf(ip, 1) = D0 * D0 / (D0 * D0 + kappa(ip, 1)**2)
         else
           elf(ip, 1) = M_ZERO
         endif
@@ -156,7 +155,7 @@ contains
               case(3); D0 = factor * dens ** (M_FIVE/M_THREE) * rho(ip, 1) * rho(ip, 2)
               case(2); D0 = factor * dens ** 2 * rho(ip, 1) * rho(ip, 2)
             end select
-            elf(ip, 3) = D0*D0/(D0*D0 + (kappa(ip, 1)*rho(ip, 2) + kappa(ip,2)*rho(ip, 1))**2)
+            elf(ip, 3) = D0 * D0 / (D0 * D0 + (kappa(ip, 1) * rho(ip, 2) + kappa(ip,2) * rho(ip, 1))**2)
           else
             elf(ip, 3) = M_ZERO
           endif
@@ -169,7 +168,7 @@ contains
               case(3); D0 = factor * rho(ip, is)**(M_EIGHT/M_THREE)
               case(2); D0 = factor * rho(ip, is)**3
             end select
-            elf(ip, is) = D0*D0/(D0*D0 + kappa(ip,is)**2)
+            elf(ip, is) = D0 * D0 / (D0 * D0 + kappa(ip,is)**2)
           else
             elf(ip, is) = M_ZERO
           endif
@@ -199,7 +198,6 @@ contains
     FLOAT, allocatable :: rr(:), gradr(:,:), jj(:,:)
     type(dcf_t) :: dcf_tmp
     type(zcf_t) :: zcf_tmp
-
     FLOAT, parameter :: dmin = CNST(1e-10)
 
     call push_sub('elf.elf_calc_fs')
@@ -272,18 +270,18 @@ contains
       do ip = 1, gr%mesh%np
         if(rr(ip) >= dmin) then
           elf(ip, is) = elf(ip, is) - &
-            (M_FOURTH*sum(gradr(ip, 1:gr%mesh%sb%dim)**2) + sum(jj(ip, 1:gr%mesh%sb%dim)**2))/(sp*rr(ip))
+            (M_FOURTH * sum(gradr(ip, 1:gr%mesh%sb%dim)**2) + sum(jj(ip, 1:gr%mesh%sb%dim)**2)) / (sp * rr(ip))
         end if
       end do
     
       if(present(de)) de(1:gr%mesh%np, is) = elf(1:gr%mesh%np, is)
 
       ! normalization
-      factor = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
+      factor = M_THREE / M_FIVE * (M_SIX * M_PI**2)**M_TWOTHIRD
       do ip = 1, gr%mesh%np
         if(abs(rr(ip)) >= dmin) then
-          dd = factor * (rr(ip)/sp)**(M_FIVE/M_THREE)
-          elf(ip, is) = M_ONE/(M_ONE + (elf(ip, is)/dd)**2)
+          dd = factor * (rr(ip) / sp)**(M_FIVE / M_THREE)
+          elf(ip, is) = M_ONE / (M_ONE + (elf(ip, is) / dd)**2)
         else
           elf(ip, is) = M_ZERO
         end if
@@ -302,8 +300,10 @@ contains
     end if
 
     call pop_sub()
+
   contains
 
+    ! ---------------------------------------------------------
     subroutine dmf2mf_RS2FS(mesh, fin, fout, cc)
       type(mesh_t),  intent(in)    :: mesh
       FLOAT,         intent(in)    :: fin(:)
@@ -323,6 +323,7 @@ contains
       call pop_sub()
     end subroutine dmf2mf_RS2FS
 
+    ! ---------------------------------------------------------
     subroutine zmf2mf_RS2FS(mesh, fin, fout, cc)
       type(mesh_t),  intent(in)    :: mesh
       CMPLX,         intent(in)    :: fin(:)

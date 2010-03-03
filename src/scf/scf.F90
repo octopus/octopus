@@ -262,7 +262,7 @@ contains
     !%End
     call parse_logical(datasets_check('SCFinLCAO'), .false., scf%lcao_restricted)
     if(scf%lcao_restricted) then
-      message(1) = 'Info: SCF restricted to LCAO subspace'
+      message(1) = 'Info: SCF restricted to LCAO subspace.'
       call write_info(1)
     end if
 

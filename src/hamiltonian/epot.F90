@@ -221,7 +221,7 @@ contains
     if(parse_block(datasets_check('StaticElectricField'), blk)==0) then
       SAFE_ALLOCATE(ep%E_field(1:gr%mesh%sb%dim))
       do idir = 1, gr%mesh%sb%dim
-        call parse_block_float(blk, 0, idir-1, ep%E_field(idir), units_inp%energy/units_inp%length)
+        call parse_block_float(blk, 0, idir - 1, ep%E_field(idir), units_inp%energy / units_inp%length)
 
         if(idir <= gr%mesh%sb%periodic_dim .and. abs(ep%E_field(idir)) > M_EPSILON) then
           message(1) = "You should not apply StaticElectricField in a periodic direction."
@@ -233,7 +233,7 @@ contains
       ! Compute the scalar potential
       SAFE_ALLOCATE(ep%v_static(1:gr%mesh%np))
       do ip = 1, gr%mesh%np
-        ep%v_static(ip) = sum(gr%mesh%x(ip,:)*ep%E_field(:))
+        ep%v_static(ip) = -sum(gr%mesh%x(ip,:) * ep%E_field(:))
       end do
     end if
 
@@ -255,17 +255,17 @@ contains
     !% 1.7152553 * 10^3 Tesla.
     !%End
     nullify(ep%B_field, ep%A_static)
-    if(parse_block(datasets_check('StaticMagneticField'), blk)==0) then
+    if(parse_block(datasets_check('StaticMagneticField'), blk) == 0) then
 
       SAFE_ALLOCATE(ep%B_field(1:3))
       do idir = 1, 3
-        call parse_block_float(blk, 0, idir-1, ep%B_field(idir))
+        call parse_block_float(blk, 0, idir - 1, ep%B_field(idir))
       end do
       select case(calc_dim)
       case(1)
         call input_error('StaticMagneticField')
       case(2)
-        if(ep%B_field(1)**2+ep%B_field(2)**2 > M_ZERO) call input_error('StaticMagneticField')
+        if(ep%B_field(1)**2 + ep%B_field(2)**2 > M_ZERO) call input_error('StaticMagneticField')
       end select
       call parse_block_end(blk)
 
@@ -383,7 +383,6 @@ contains
     call push_sub('epot.epot_end')
 
     SAFE_DEALLOCATE_P(ep%local_potential)
-
     SAFE_DEALLOCATE_P(ep%fii)
 
     if(associated(ep%vpsl)) then
@@ -424,8 +423,8 @@ contains
 
   end subroutine epot_end
 
-  ! ---------------------------------------------------------
 
+  ! ---------------------------------------------------------
   subroutine epot_generate(ep, gr, geo, st, time)
     type(epot_t),          intent(inout) :: ep
     type(grid_t), target,  intent(in)    :: gr
@@ -507,6 +506,8 @@ contains
     call profiling_out(epot_generate_prof)
   end subroutine epot_generate
 
+
+  ! ---------------------------------------------------------
   subroutine epot_local_potential(ep, der, dgrid, poisson_solver, geo, iatom, vpsl, time, rho_core)
     type(epot_t),             intent(in)    :: ep
     type(derivatives_t),      intent(in)    :: der
@@ -518,8 +519,8 @@ contains
     FLOAT,                    intent(in)    :: time
     FLOAT,          optional, pointer       :: rho_core(:)
 
-    integer :: i, ip
-    FLOAT :: x(MAX_DIM), radius
+    integer :: ip
+    FLOAT :: xx(MAX_DIM), radius
     FLOAT, allocatable  :: rho(:), vl(:)
     type(submesh_t)  :: sphere
     type(profile_t), save :: prof
@@ -591,12 +592,12 @@ contains
     end if
 
     !Non-local core corrections
-    if( present(rho_core) .and. &
+    if(present(rho_core) .and. &
       species_has_nlcc(geo%atom(iatom)%spec) .and. &
       species_is_ps(geo%atom(iatom)%spec)) then
-      do i = 1, der%mesh%np
-        x(1:der%mesh%sb%dim) = der%mesh%x(i, 1:der%mesh%sb%dim) - geo%atom(iatom)%x(1:der%mesh%sb%dim)
-        rho_core(i) = rho_core(i) + species_get_nlcc(geo%atom(iatom)%spec, x)
+      do ip = 1, der%mesh%np
+        xx(1:der%mesh%sb%dim) = der%mesh%x(ip, 1:der%mesh%sb%dim) - geo%atom(iatom)%x(1:der%mesh%sb%dim)
+        rho_core(ip) = rho_core(ip) + species_get_nlcc(geo%atom(iatom)%spec, xx)
       end do
     end if
 
@@ -643,6 +644,7 @@ contains
 
     call pop_sub()
   end subroutine epot_generate_classical
+
 
   ! ---------------------------------------------------------
   ! Uses the single-point Berry`s phase method to calculate dipole moment in a periodic system
@@ -714,6 +716,8 @@ contains
     call pop_sub()
   end function epot_dipole_periodic
 
+
+  ! ---------------------------------------------------------
   subroutine epot_precalc_local_potential(ep, gr, geo, time)
     type(epot_t),             intent(inout) :: ep
     type(grid_t),             intent(in)    :: gr
@@ -744,6 +748,8 @@ contains
     call pop_sub()
   end subroutine epot_precalc_local_potential
 
+
+  ! ---------------------------------------------------------
   subroutine ion_interaction_calculate(geo, sb, gr, ep, energy, force)
     type(geometry_t),  target, intent(in)    :: geo
     type(simul_box_t),         intent(in)    :: sb
@@ -752,12 +758,10 @@ contains
     FLOAT,                     intent(out)   :: energy
     FLOAT,                     intent(out)   :: force(:, :)
 
-    type(species_t), pointer :: s
-    FLOAT :: r, dd, zi, zj
+    type(species_t), pointer :: spec
+    FLOAT :: rr, dd, zi, zj
     integer :: iatom, jatom
-
     FLOAT, parameter :: alpha = CNST(1.1313708)
-
     type(profile_t), save :: ion_ion_prof
 
     call profiling_in(ion_ion_prof, "ION_ION_INTERACTION")
@@ -774,19 +778,19 @@ contains
       call ion_interaction_periodic(geo, sb, energy, force)
     else if (poisson_get_solver(psolver) == POISSON_SETE) then
       ! only interaction inside the cell
-      write(68,*) "Calling SETE interaction"
-      write(6,*) "Calling SETE interaction"
+      write(68,'(a)') "Calling SETE interaction"
+      write(6,'(a)') "Calling SETE interaction"
       !ep%eii= M_ZERO
       call ion_interaction_sete(gr, sb, geo, ep) 
       write(*,*) "energy, ep%eii", energy, ep%eii
     else
       ! only interaction inside the cell
       do iatom = 1, geo%natoms
-        s => geo%atom(iatom)%spec
+        spec => geo%atom(iatom)%spec
         zi = species_zval(geo%atom(iatom)%spec)
 
-        if(species_type(s) .eq. SPEC_JELLI) then
-          energy = energy + (M_THREE/M_FIVE)*species_zval(s)**2/species_jradius(s)
+        if(species_type(spec) .eq. SPEC_JELLI) then
+          energy = energy + (M_THREE / M_FIVE) * species_zval(spec)**2 / species_jradius(spec)
         end if
 
         do jatom = 1, geo%natoms
@@ -794,16 +798,16 @@ contains
           if(iatom == jatom) cycle
 
           zj = species_zval(geo%atom(jatom)%spec)
-          r = sqrt(sum((geo%atom(iatom)%x - geo%atom(jatom)%x)**2))
+          rr = sqrt(sum((geo%atom(iatom)%x - geo%atom(jatom)%x)**2))
 
           !the force
-          dd = zi*zj/r**3
+          dd = zi * zj / rr**3
           force(1:sb%dim, iatom) = force(1:sb%dim, iatom) + &
-            dd*(geo%atom(iatom)%x(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))
+            dd * (geo%atom(iatom)%x(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))
 
           !energy
           if(jatom > iatom) cycle
-          energy = energy + zi*zj/r
+          energy = energy + zi * zj / rr
 
         end do !jatom
       end do !iatom
@@ -814,14 +818,16 @@ contains
     call pop_sub()
   end subroutine ion_interaction_calculate
 
+
+  ! ---------------------------------------------------------
   subroutine ion_interaction_periodic(geo, sb, energy, force)
     type(geometry_t),  target, intent(in)    :: geo
     type(simul_box_t),         intent(in)    :: sb
     FLOAT,                     intent(out)   :: energy
     FLOAT,                     intent(out)   :: force(:, :)
 
-    type(species_t), pointer :: s
-    FLOAT :: r, xi(1:MAX_DIM), zi, zj
+    type(species_t), pointer :: spec
+    FLOAT :: rr, xi(1:MAX_DIM), zi, zj
     integer :: iatom, jatom, icopy
     type(periodic_copy_t) :: pc
     integer :: ix, iy, iz, isph, ss
@@ -844,8 +850,8 @@ contains
     
     ! the short-range part is calculated directly
     do iatom = 1, geo%natoms
-      s => geo%atom(iatom)%spec
-      if (.not. species_is_ps(s)) cycle
+      spec => geo%atom(iatom)%spec
+      if (.not. species_is_ps(spec)) cycle
       zi = species_zval(geo%atom(iatom)%spec)
 
       call periodic_copy_init(pc, sb, geo%atom(iatom)%x, CNST(5.0))
@@ -855,16 +861,17 @@ contains
         
         do jatom = 1, geo%natoms
           zj = -species_zval(geo%atom(jatom)%spec)
-          r = sqrt( sum( (xi(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))**2 ) )
+          rr = sqrt( sum( (xi(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))**2 ) )
           
-          if(r < CNST(1e-5)) cycle
+          if(rr < CNST(1e-5)) cycle
           
           ! energy
-          energy = energy + M_HALF*zj*zi*(M_ONE - loct_erf(alpha*r))
+          energy = energy + M_HALF * zj * zi * (M_ONE - loct_erf(alpha * rr))
           
           ! force
           force(1:sb%dim, jatom) = force(1:sb%dim, jatom) + &
-            M_HALF*zj*zi*(M_ONE - loct_erf(alpha*r))/r*(geo%atom(jatom)%x(1:sb%dim) - xi(1:sb%dim))
+            M_HALF* zj * zi * (M_ONE - loct_erf(alpha * rr)) / &
+            rr * (geo%atom(jatom)%x(1:sb%dim) - xi(1:sb%dim))
         end do
         
       end do
@@ -883,25 +890,25 @@ contains
           
           if(ss == 0 .or. ss > isph**2) cycle
 
-          gg(1:sb%dim) = ix*sb%klattice(1:sb%dim, 1) + iy*sb%klattice(1:sb%dim, 2) + iz*sb%klattice(1:sb%dim, 3)
+          gg(1:sb%dim) = ix * sb%klattice(1:sb%dim, 1) + iy * sb%klattice(1:sb%dim, 2) + iz * sb%klattice(1:sb%dim, 3)
           gg2 = sum(gg(1:sb%dim)**2)
           
           ! k=0 must be removed from the sum
           if(gg2 == M_ZERO) cycle
 
-          factor = M_TWO*M_PI/sb%rcell_volume*exp(-CNST(0.25)*gg2/alpha**2)/gg2
+          factor = M_TWO * M_PI/sb%rcell_volume * exp(-CNST(0.25) * gg2 / alpha**2) / gg2
           
           sumatoms = M_Z0
           do iatom = 1, geo%natoms
             zi = species_zval(geo%atom(iatom)%spec)
             xi(1:sb%dim) = geo%atom(iatom)%x(1:sb%dim)
-            sumatoms = sumatoms + zi*exp(-M_ZI*sum(gg(1:sb%dim)*xi(1:sb%dim)))
+            sumatoms = sumatoms + zi * exp(-M_ZI * sum(gg(1:sb%dim) * xi(1:sb%dim)))
           end do
-          energy = energy + factor*sumatoms*conjg(sumatoms)
+          energy = energy + factor * sumatoms * conjg(sumatoms)
           
           do iatom = 1, geo%natoms
             zi = species_zval(geo%atom(iatom)%spec)
-            force(1:sb%dim, iatom) = -M_TWO*zi*factor*sumatoms
+            force(1:sb%dim, iatom) = -M_TWO * zi * factor * sumatoms
           end do
           
         end do
@@ -913,7 +920,7 @@ contains
     do iatom = 1, geo%natoms
       zi = species_zval(geo%atom(iatom)%spec)
       charge = charge + zi
-      energy = energy - alpha*zi**2/sqrt(M_PI) 
+      energy = energy - alpha * zi**2 / sqrt(M_PI) 
     end do
     
     ! This term is added in abinit, I am not sure where it comes
@@ -924,8 +931,8 @@ contains
     call pop_sub()
   end subroutine ion_interaction_periodic
 
-  ! ------------------------------------------------------------
 
+  ! ------------------------------------------------------------
   subroutine ion_interaction_sete(gr, sb, geo, ep)
     type(grid_t), target,  intent(in)    :: gr
     type(simul_box_t),     intent(in)    :: sb
@@ -936,55 +943,55 @@ contains
     FLOAT, allocatable                   :: rho1(:), v2(:), rho2(:)
     FLOAT                                :: temp
     FLOAT                                :: time1
-    FLOAT :: r, dd, zi, zj
+    FLOAT :: rr, dd, zi, zj
 
+    call push_sub('epot.ion_interaction_sete')
 
     write(68,*) "ep%eii values top", ep%eii
-    write(*,*) "WIP Entering the interaction zone"
+    write(*,'(a)') "WIP Entering the interaction zone"
 
-   do jatom = geo%natoms,2, -1
-       SAFE_ALLOCATE(v2(1:gr%mesh%np))
-       SAFE_ALLOCATE(rho2(1:gr%mesh%np))
-       v2(1:gr%mesh%np)= M_ZERO
-       call epot_local_potential(ep, gr%der, gr%dgrid, psolver, geo, jatom, v2, time1)
-       write(68,*) "time1,", time1
-       do iatom = jatom-1,1,-1
+    do jatom = geo%natoms,2, -1
+      SAFE_ALLOCATE(v2(1:gr%mesh%np))
+      SAFE_ALLOCATE(rho2(1:gr%mesh%np))
+      v2(1:gr%mesh%np)= M_ZERO
+      call epot_local_potential(ep, gr%der, gr%dgrid, psolver, geo, jatom, v2, time1)
+      write(68,*) "time1,", time1
+
+      do iatom = jatom-1,1,-1
         SAFE_ALLOCATE(rho1(1:gr%mesh%np))
         call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr%mesh, geo, rho1)
-        temp=M_HALF*dmf_dotp(gr%mesh, rho1, v2) 
-        ep%eii = ep%eii+temp 
+        temp=M_HALF * dmf_dotp(gr%mesh, rho1, v2) 
+        ep%eii = ep%eii + temp 
         SAFE_DEALLOCATE_A(rho1)
         write(68,*) "ep%eii values", iatom, jatom, ep%eii, temp
-       enddo
-       SAFE_DEALLOCATE_A(rho2)
-       SAFE_DEALLOCATE_A(v2)
-   enddo
-        write(68,*) "ep%eii values very bottom", ep%eii*CNST(2.0*13.60569193)
-
-      do iatom = 1, geo%natoms
-        zi = species_zval(geo%atom(iatom)%spec)
-        do jatom = 1, geo%natoms
-
-          if(iatom == jatom) cycle
-          zj = species_zval(geo%atom(jatom)%spec)
-          r = sqrt(sum((geo%atom(iatom)%x - geo%atom(jatom)%x)**2))
-          !the force
-          dd = zi*zj/r**3
-          ep%fii(1:sb%dim, iatom) = ep%fii(1:sb%dim, iatom) + &
-          dd*(geo%atom(iatom)%x(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))
-          ep%fii(1:sb%dim, iatom) = M_ZERO 
-          
       enddo
-          write(68,*) "SETE Force:", iatom,ep%fii(1:sb%dim,iatom)
-     enddo 
 
+      SAFE_DEALLOCATE_A(rho2)
+      SAFE_DEALLOCATE_A(v2)
+    enddo
+
+    write(68,*) "ep%eii values very bottom", ep%eii * CNST(2.0*13.60569193)
+
+    do iatom = 1, geo%natoms
+      zi = species_zval(geo%atom(iatom)%spec)
+
+      do jatom = 1, geo%natoms
+        if(iatom == jatom) cycle
+        zj = species_zval(geo%atom(jatom)%spec)
+        rr = sqrt(sum((geo%atom(iatom)%x - geo%atom(jatom)%x)**2))
+        !the force
+        dd = zi * zj / rr**3
+        ep%fii(1:sb%dim, iatom) = ep%fii(1:sb%dim, iatom) + &
+          dd * (geo%atom(iatom)%x(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))
+        ep%fii(1:sb%dim, iatom) = M_ZERO         
+      enddo
+      write(68,*) "SETE Force:", iatom,ep%fii(1:sb%dim,iatom)
+    enddo 
+
+    call pop_sub()
    end subroutine ion_interaction_sete
-        
-       
       
 end module external_pot_m
-
-
 
 !! Local Variables:
 !! mode: f90

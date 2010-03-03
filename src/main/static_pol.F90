@@ -116,8 +116,6 @@ contains
 
         read(iunit, fmt=*, iostat = ios) (center_dipole(jj), jj = 1, gr%mesh%sb%dim)
         center_written = (ios .eq. 0)
-        write(message(1),*) 'center_written = ', center_written
-        call write_info(1)
 
         i_start = 1
         do ii = 1, 3
@@ -172,6 +170,12 @@ contains
 
     hm%ep%vpsl(1:gr%mesh%np) = vpsl_save(1:gr%mesh%np)
     call hamiltonian_update_potential(hm, gr%mesh)
+
+    ! set barrier before the first communication takes place
+    ! this ensures proper debug timing of MPI calls
+#if defined(HAVE_MPI)
+    call MPI_Barrier(MPI_COMM_WORLD, mpi_err)
+#endif
 
     write(message(1), '(a)')
     write(message(2), '(a)') 'Info: Calculating dipole moment for zero field.'

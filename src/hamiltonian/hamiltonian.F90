@@ -208,7 +208,7 @@ contains
     integer,                intent(in)    :: theory_level
     integer,                intent(in)    :: xc_family
 
-    integer                     :: i, j, ispin
+    integer                     :: iline, icol, ispin
     integer, pointer            :: wfs_type
     type(states_dim_t), pointer :: states_dim
 
@@ -227,7 +227,8 @@ contains
 
     ! initialize variables
     hm%epot = M_ZERO
-    hm%ex = M_ZERO; hm%ec = M_ZERO
+    hm%ex = M_ZERO
+    hm%ec = M_ZERO
     hm%etot = M_ZERO
 
     nullify(hm%oct_fxc)
@@ -236,12 +237,12 @@ contains
     ! allocate potentials and density of the cores
     ! In the case of spinors, vxc_11 = hm%vxc(:, 1), vxc_22 = hm%vxc(:, 2), Re(vxc_12) = hm%vxc(:. 3);
     ! Im(vxc_12) = hm%vxc(:, 4)
-    ! FIXME: in principle also vhxc should not be allocated for independent particles
     SAFE_ALLOCATE(hm%vhxc(1:gr%mesh%np, 1:hm%d%nspin))
-    if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+
+    if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
       SAFE_ALLOCATE(hm%vhartree(1:gr%mesh%np))
       SAFE_ALLOCATE(hm%vxc(1:gr%mesh%np, 1:hm%d%nspin))
-      if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) then
+      if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) then
         SAFE_ALLOCATE(hm%vtau(1:gr%mesh%np, 1:hm%d%nspin))
       else
         nullify(hm%vtau)
@@ -252,7 +253,7 @@ contains
       do ispin = 1, hm%d%nspin
         hm%vhxc(1:gr%mesh%np, ispin) = M_ZERO
         hm%vxc(1:gr%mesh%np, ispin) = M_ZERO
-        if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) hm%vtau(1:gr%mesh%np, ispin) = M_ZERO
+        if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) hm%vtau(1:gr%mesh%np, ispin) = M_ZERO
       end do
     
       if (hm%d%cdft) then
@@ -351,7 +352,7 @@ contains
     
     nullify(hm%ab_pot)
 
-    if(hm%ab.ne.NOT_ABSORBING) call init_abs_boundaries()
+    if(hm%ab .ne. NOT_ABSORBING) call init_abs_boundaries()
 
     !%Variable ParticleMass
     !%Type float
@@ -382,14 +383,14 @@ contains
     !%
     !%End
     hm%mass_scaling = M_ONE
-    if(parse_block(datasets_check('MassScaling'), blk)==0) then
+    if(parse_block(datasets_check('MassScaling'), blk) == 0) then
         ncols = parse_block_cols(blk, 0)
         if(ncols > MAX_DIM) then
           call input_error("MassScaling")
         end if
-        i=1 ! just deal with 1 line - should be generalized
-        do j = 1, ncols
-          call parse_block_float(blk, i-1, j-1, hm%mass_scaling(j))
+        iline = 1 ! just deal with 1 line - should be generalized
+        do icol = 1, ncols
+          call parse_block_float(blk, iline - 1, icol - 1, hm%mass_scaling(icol))
         end do
         call parse_block_end(blk)
     end if
@@ -433,16 +434,18 @@ contains
       
       SAFE_ALLOCATE(hm%phase(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
       
-      forall (ik = hm%d%kpt%start:hm%d%kpt%end , ip = 1:gr%mesh%np_part)
-        hm%phase(ip, ik) = exp(-M_zI*sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim)* hm%d%kpoints(1:gr%mesh%sb%dim, ik)))
+      forall (ik = hm%d%kpt%start:hm%d%kpt%end, ip = 1:gr%mesh%np_part)
+        hm%phase(ip, ik) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim) * hm%d%kpoints(1:gr%mesh%sb%dim, ik)))
       end forall
 
       call pop_sub()      
     end subroutine init_phase
 
 
+    ! ---------------------------------------------------------
     subroutine init_abs_boundaries()
-      FLOAT  :: d
+      FLOAT :: dd
+      integer :: ip
 
       call push_sub('hamiltonian.hamiltonian_init.init_abs_boundaries')
 
@@ -453,8 +456,8 @@ contains
       !%Description
       !% Width of the region used to apply the absorbing boundaries.
       !%End
-      call parse_float(datasets_check('ABWidth'), units_from_atomic(units_inp%length, CNST(0.4)), hm%ab_width)
-      hm%ab_width = units_to_atomic(units_inp%length, hm%ab_width)
+      call parse_float(datasets_check('ABWidth'), CNST(0.4), hm%ab_width, units_inp%length)
+
       if(hm%ab == 1) then
         !%Variable ABHeight
         !%Type float
@@ -463,8 +466,7 @@ contains
         !%Description 
         !% When <tt>AbsorbingBoundaries = sin2</tt>, this is the height of the imaginary potential.
         !%End
-        call parse_float(datasets_check('ABHeight'), units_from_atomic(units_inp%energy, -CNST(0.2)), hm%ab_height)
-        hm%ab_height = units_to_atomic(units_inp%energy, hm%ab_height)
+        call parse_float(datasets_check('ABHeight'), -CNST(0.2), hm%ab_height, units_inp%energy)
       else
         hm%ab_height = M_ONE
       end if
@@ -472,14 +474,15 @@ contains
       ! generate boundary potential...
       SAFE_ALLOCATE(hm%ab_pot(1:gr%mesh%np))
       hm%ab_pot = M_ZERO
-      do i = 1, gr%mesh%np
-        if(mesh_inborder(gr%mesh, geo, i, d, hm%ab_width)) then
-          hm%ab_pot(i) = hm%ab_height * sin(d*M_PI/(M_TWO*hm%ab_width))**2
+      do ip = 1, gr%mesh%np
+        if(mesh_inborder(gr%mesh, geo, ip, dd, hm%ab_width)) then
+          hm%ab_pot(ip) = hm%ab_height * sin(dd * M_PI / (M_TWO * hm%ab_width))**2
         end if
       end do
 
       call pop_sub()
     end subroutine init_abs_boundaries
+
 
     ! ---------------------------------------------------------
     ! Calculate the blocks of the lead Hamiltonian and read the potential
@@ -719,6 +722,7 @@ contains
     call pop_sub()
   end subroutine hamiltonian_mg_init
 
+
   ! ---------------------------------------------------------
   subroutine hamiltonian_end(hm, gr, geo)
     type(hamiltonian_t), intent(inout) :: hm
@@ -780,6 +784,7 @@ contains
     call pop_sub()
   end function hamiltonian_hermitian
 
+
   ! ---------------------------------------------------------
   subroutine hamiltonian_span(hm, delta, emin)
     type(hamiltonian_t), intent(inout) :: hm
@@ -787,8 +792,8 @@ contains
 
     call push_sub('hamiltonian.hamiltonian_span')
 
-    hm%spectral_middle_point = ((M_Pi**2/(2*delta**2)) + emin)/M_TWO
-    hm%spectral_half_span    = ((M_Pi**2/(2*delta**2)) - emin)/M_TWO
+    hm%spectral_middle_point = ((M_PI**2 / (2 * delta**2)) + emin) / M_TWO
+    hm%spectral_half_span    = ((M_PI**2 / (2 * delta**2)) - emin) / M_TWO
 
     call pop_sub()
   end subroutine hamiltonian_span
@@ -846,9 +851,10 @@ contains
   ! ---------------------------------------------------------
   subroutine hamiltonian_set_oct_exchange(hm, st, gr, xc)
     type(hamiltonian_t), intent(inout) :: hm
-    type(states_t), target :: st
-    type(grid_t), intent(in) :: gr
-    type(xc_t), intent(in) :: xc
+    type(states_t),      target        :: st
+    type(grid_t),        intent(in)    :: gr
+    type(xc_t),          intent(in)    :: xc
+
     integer :: np, nspin
 
     call push_sub('hamiltonian.hamiltonian_set_oct_exchange')
@@ -936,7 +942,7 @@ contains
       
     end do
     
-    call profiling_count_operations(mesh%np*this%d%nspin)
+    call profiling_count_operations(mesh%np * this%d%nspin)
     call pop_sub()
   end subroutine hamiltonian_update_potential
 

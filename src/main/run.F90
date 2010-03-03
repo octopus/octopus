@@ -183,10 +183,10 @@ contains
     call messages_print_var_option(stdout, "CalculationMode", calc_mode())
     call messages_print_stress(stdout)
 
-    ! initialize ffts
-    call fft_all_init()
-
     if(.not. calc_mode_is(CM_PULPO_A_FEIRA)) then
+      ! initialize FFTs
+      call fft_all_init()
+
       call unit_system_init()
       call system_init(sys)
       call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
@@ -208,11 +208,10 @@ contains
     call push_sub('run.run_end')
 
     if(.not. calc_mode_is(CM_PULPO_A_FEIRA)) then
-       call hamiltonian_end(hm, sys%gr, sys%geo)
-       call system_end(sys)
+      call hamiltonian_end(hm, sys%gr, sys%geo)
+      call system_end(sys)
+      call fft_all_end()
     end if
-
-    call fft_all_end()
 
 #ifdef HAVE_MPI
     call mpi_debug_statistics()
