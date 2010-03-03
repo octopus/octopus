@@ -130,7 +130,8 @@ contains
     else ! iterative case
       if (invksmethod == 0) then ! iterative procedure for v_s 
       
-        call invertks_iter(target_rho, np, nspin, hm, sys, eigensolver)
+        call invertks_iter(target_rho, np, nspin, hm, sys%gr, sys%st, eigensolver)
+      !call invertks_iter(target_rho, np, nspin, hm, sys, eigensolver)
       
       else
       
@@ -139,7 +140,7 @@ contains
       endif
     end if ! invksmethod
 
-    ! this is debugging: should output quality of KS inversion
+    ! output quality of KS inversion
     
     call eigensolver_run(eigensolver, sys%gr, sys%st, hm, 1)
     
@@ -290,9 +291,10 @@ contains
     call pop_sub()
   end subroutine invertks_2part
 
+  subroutine invertks_iter(target_rho, np, nspin, hm, gr, st, eigensolver)
 
-  subroutine invertks_iter(target_rho, np, nspin, hm, sys, eigensolver)
-    type(system_t),      intent(inout) :: sys
+    type(grid_t),        intent(in)    :: gr
+    type(states_t),      intent(inout) :: st
     type(hamiltonian_t), intent(inout) :: hm
     type(eigensolver_t), intent(inout) :: eigensolver
     integer,             intent(in)    :: np, nspin
@@ -320,14 +322,13 @@ contains
     hm%vhxc = 1d0
        
     call mix_init(smix, np, nspin, 1, prefix_="InvertKS")
-
+    
     SAFE_ALLOCATE(vhxc_in(1:np, 1:nspin, 1:1))
     SAFE_ALLOCATE(vhxc_out(1:np, 1:nspin, 1:1))
     SAFE_ALLOCATE(vhxc_mix(1:np, 1:nspin, 1:1))
     
     vhxc_in(1:np,1:nspin,1) = hm%vhxc(1:np,1:nspin)
          
-    
     if(verbosity == 1 .or. verbosity == 2) then
       iunit = io_open('InvertKSconvergence', action = 'write')
     endif
@@ -342,19 +343,19 @@ contains
       if(verbosity == 2) then
         write(fname,'(i6.6)') counter
         call doutput_function(io_function_fill_how("AxisX"), &
-             ".", "vhxc"//fname, sys%gr%mesh, hm%vhxc(:,1), units_out%energy, ierr)
+             ".", "vhxc"//fname, gr%mesh, hm%vhxc(:,1), units_out%energy, ierr)
         call doutput_function(io_function_fill_how("AxisX"), &
-             ".", "rho"//fname, sys%gr%mesh, sys%st%rho(:,1), units_out%length**(-sys%gr%sb%dim), ierr)
+             ".", "rho"//fname, gr%mesh, st%rho(:,1), units_out%length**(-gr%sb%dim), ierr)
       endif
     
-      call hamiltonian_update_potential(hm, sys%gr%mesh)
+      call hamiltonian_update_potential(hm, gr%mesh)
 
-      call eigensolver_run(eigensolver, sys%gr, sys%st, hm, 1)
+      call eigensolver_run(eigensolver, gr, st, hm, 1)
 
-      call states_calc_dens(sys%st, sys%gr)
+      call states_calc_dens(st, gr)      
       
       vhxc_out(1:np, 1:nspin, 1) = &
-        (sys%st%rho(1:np,1:nspin) + stabilizer)/&
+        (st%rho(1:np,1:nspin) + stabilizer)/&
 	(target_rho(1:np,1:nspin) + stabilizer) &
          * hm%vhxc(1:np, 1:nspin)
 
@@ -366,8 +367,8 @@ contains
       diffdensity = 0d0
       do jj = 1, nspin
         do ii = 1, np
-          if (abs(sys%st%rho(ii,jj)-target_rho(ii,jj)) > diffdensity) then
-            diffdensity = abs(sys%st%rho(ii,jj)-target_rho(ii,jj))
+          if (abs(st%rho(ii,jj)-target_rho(ii,jj)) > diffdensity) then
+            diffdensity = abs(st%rho(ii,jj)-target_rho(ii,jj))
             idiffmax=ii
           endif
         enddo
