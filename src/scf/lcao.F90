@@ -23,7 +23,6 @@ module lcao_m
   use batch_m
   use datasets_m
   use distributed_m
-!  use energy_m
   use geometry_m
   use global_m
   use grid_m
@@ -255,7 +254,6 @@ contains
       call v_ks_calc(sys%ks, sys%gr, hm, sys%st, calc_eigenval=.true.)
 
       if(st_start .gt. sys%st%nst) then ! nothing to be done in LCAO
-!        call total_energy(hm, sys%gr, sys%st, -1)
         call pop_sub(); return
       endif
     endif
@@ -347,9 +345,6 @@ contains
       end if
 
     end if
-
-    ! I don`t think we need this, but I keep it just in case
-!    call total_energy(hm, sys%gr, sys%st, -1)         ! total energy
 
     call pop_sub()
   end subroutine lcao_run

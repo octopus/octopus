@@ -276,14 +276,15 @@ contains
         grx(1:gr%mesh%sb%dim) = gr%mesh%x(ip, 1:gr%mesh%sb%dim)
         select case (gr%mesh%sb%dim)
         case (2)
-          ep%A_static(ip, :) = (/grx(2), -grx(1)/)*ep%B_field(3)
+          ep%A_static(ip, :) = (/grx(2), -grx(1)/) * ep%B_field(3)
         case (3)
-          ep%A_static(ip, :) = (/grx(2)*ep%B_field(3) - grx(3)*ep%B_field(2), &
-            grx(3)*ep%B_field(1) - grx(1)*ep%B_field(3), grx(1)*ep%B_field(2) - grx(2)*ep%B_field(1)/)
+          ep%A_static(ip, :) = (/grx(2) * ep%B_field(3) - grx(3) * ep%B_field(2), &
+                                 grx(3) * ep%B_field(1) - grx(1) * ep%B_field(3), &
+                                 grx(1) * ep%B_field(2) - grx(2) * ep%B_field(1)/)
         end select
       end do
       SAFE_DEALLOCATE_A(grx)
-      ep%A_static = -M_HALF/P_c*ep%A_static
+      ep%A_static = -M_HALF / P_c * ep%A_static
 
     end if
     
@@ -628,14 +629,14 @@ contains
         case(CLASSICAL_GAUSSIAN)
           select case(geo%catom(ia)%label(1:1)) ! covalent radii
           case('H')
-            rc = CNST(0.4)*P_Ang
+            rc = CNST(0.4) * P_Ang
           case('C')
-            rc = CNST(0.8)*P_Ang
+            rc = CNST(0.8) * P_Ang
           case default
-            rc = CNST(0.7)*P_Ang
+            rc = CNST(0.7) * P_Ang
           end select
           if(abs(rr - rc) < r_small) rr = rc + sign(r_small, rr - rc)
-          ep%Vclassical(ip) = ep%Vclassical(ip) - geo%catom(ia)%charge*(rr**4 - rc**4)/(rr**5 - rc**5)
+          ep%Vclassical(ip) = ep%Vclassical(ip) - geo%catom(ia)%charge * (rr**4 - rc**4) / (rr**5 - rc**5)
         case default
           call input_error('ClassicalPotential')
         end select
@@ -675,7 +676,7 @@ contains
 
     ! \todo add in sum over k-points in orthogonal directions here
 
-    phase = exp(-M_zI*(M_PI/gr%sb%lsize(dir)))
+    phase = exp(-M_zI * (M_PI / gr%sb%lsize(dir)))
 
     do ik = st%d%kpt%start, st%d%kpt%end ! determinants for different spins multiply since matrix is block-diagonal
       do ist = 1, st%nst
@@ -687,13 +688,13 @@ contains
 
               if(states_are_complex(st)) then
                 forall(ip = 1:gr%mesh%np)
-                  tmp(ip) = conjg(st%zpsi(ip, idim, ist, ik))*&
-                       exp(-M_zI*(M_PI/gr%sb%lsize(dir))*gr%mesh%x(ip, dir))*st%zpsi(ip, idim, ist2, ik)
+                  tmp(ip) = conjg(st%zpsi(ip, idim, ist, ik)) * &
+                    exp(-M_zI * (M_PI / gr%sb%lsize(dir)) * gr%mesh%x(ip, dir)) * st%zpsi(ip, idim, ist2, ik)
                 end forall
               else
                 forall(ip = 1:gr%mesh%np)
-                  tmp(ip) = st%dpsi(ip, idim, ist, ik)*&
-                       exp(-M_zI*(M_PI/gr%sb%lsize(dir))*gr%mesh%x(ip, dir))*st%dpsi(ip, idim, ist2, ik)
+                  tmp(ip) = st%dpsi(ip, idim, ist, ik) * &
+                    exp(-M_zI * (M_PI / gr%sb%lsize(dir)) * gr%mesh%x(ip, dir)) * st%dpsi(ip, idim, ist2, ik)
                 end forall
               end if
 

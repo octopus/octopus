@@ -89,6 +89,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, hm, geo, sb, psi, spin_chan
 
 end subroutine X(lcao_atomic_orbital)
 
+
 ! ---------------------------------------------------------
 subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
   type(lcao_t),        intent(inout) :: this
@@ -135,7 +136,7 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
   call init_orbitals()
 
   ie = 0
-  max = this%norbs*(this%norbs + 1)/2
+  max = this%norbs * (this%norbs + 1)/2
 
   message(1) = "Info: Getting Hamiltonian matrix elements."
   call write_info(1)
@@ -193,8 +194,8 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
     ASSERT(.not. st%parallel_in_states)
     SAFE_ALLOCATE(tmp(1:st%nst, kstart:kend))
     tmp(1:st%nst, kstart:kend) = st%eigenval(1:st%nst, kstart:kend)
-    call MPI_Allgatherv(tmp(:, kstart:), st%nst*(kend - kstart + 1), MPI_FLOAT, &
-         st%eigenval, st%d%kpt%num(:)*st%nst, (st%d%kpt%range(1, :) - 1)*st%nst, MPI_FLOAT, &
+    call MPI_Allgatherv(tmp(:, kstart:), st%nst * (kend - kstart + 1), MPI_FLOAT, &
+         st%eigenval, st%d%kpt%num(:) * st%nst, (st%d%kpt%range(1, :) - 1) * st%nst, MPI_FLOAT, &
          st%d%kpt%mpi_grp%comm, mpi_err)
     SAFE_DEALLOCATE_A(tmp)
   end if
@@ -233,6 +234,8 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
 
 contains 
 
+
+! ---------------------------------------------------------
   subroutine init_orbitals()
     integer :: iorb, ispin, ist, ik, size
     R_TYPE, allocatable :: ao(:, :)
@@ -278,7 +281,7 @@ contains
 
     if(iorb <= this%norbs) then
 
-      size = (this%norbs - iorb + 1)*st%d%spin_channels
+      size = (this%norbs - iorb + 1) * st%d%spin_channels
       write(message(1), '(a, i5, a)') "Info: Extra storage for ", size, " orbitals will be allocated."
       call write_info(1)
 
@@ -299,6 +302,8 @@ contains
 
   end subroutine init_orbitals
 
+
+! ---------------------------------------------------------
   subroutine get_ao(iorb, ispin, ao, use_psi)
     integer, intent(in)    :: iorb
     integer, intent(in)    :: ispin
@@ -326,6 +331,7 @@ contains
   end subroutine get_ao
 
 end subroutine X(lcao_wf)
+
 
 ! ---------------------------------------------------------
 ! The alternative implementation.
@@ -381,7 +387,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   SAFE_ALLOCATE(atom_orb_basis(1:geo%natoms, 1:maxorb))
 
   ! This is the extra distance that the Laplacian adds to the localization radius.
-  lapdist = maxval(abs(gr%mesh%idx%enlarge)*gr%mesh%spacing)
+  lapdist = maxval(abs(gr%mesh%idx%enlarge) * gr%mesh%spacing)
 
   call profiling_in(prof_orbitals, "LCAO_ORBITALS")
 
