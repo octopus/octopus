@@ -75,28 +75,30 @@ contains
     integer,       intent(in)  :: ispin
     logical,       intent(in)  :: fixed_occ
 
+    call push_sub('smear.smear_init')
+
     !%Variable SmearingFunction
     !%Type integer
     !%Default semiconducting
     !%Section States
     !%Description
-    !% This is the function used to smear the electronic occupations
+    !% This is the function used to smear the electronic occupations.
     !%Option semiconducting 1
-    !% Semiconducting occupations, i.e., the lowest lying states are occupied
-    !% until no more electrons are left 
+    !% Semiconducting occupations, <i>i.e.</i> the lowest lying states are occupied
+    !% until no more electrons are left.
     !%Option fermi_dirac 2
-    !% Simple Fermi-Dirac distribution. In this case, the <tt>Smearing</tt> has
-    !% the meaning of an electronic temperature
+    !% Simple Fermi-Dirac distribution. In this case, <tt>Smearing</tt> has
+    !% the meaning of an electronic temperature.
     !%Option cold_smearing 3
-    !% N Marzari, D Vanderbilt, A De Vita, and MC Payne, Phys. Rev. Lett. 82, 3296 (1999).
+    !% N Marzari, D Vanderbilt, A De Vita, and MC Payne, <i>Phys. Rev. Lett.</i> <b>82</b>, 3296 (1999).
     !%Option methfessel_paxton 4
-    !% M Methfessel and AT Paxton, Phys. Rev. B 40, 3616 (1989).
+    !% M Methfessel and AT Paxton, <i>Phys. Rev. B</i> <b>40</b>, 3616 (1989).
     !% In this case, the variable <tt>SmearingMPOrder</tt> sets the order of the smearing.
     !%Option spline_smearing 5
-    !% Nearly identical to Gaussian smearing
+    !% Nearly identical to Gaussian smearing.
     !%End
     call parse_integer(datasets_check('SmearingFunction'), SMEAR_SEMICONDUCTOR, this%method)
-    if(.not.varinfo_valid_option('SmearingFunction', this%method)) call input_error('SmearingFunction')
+    if(.not. varinfo_valid_option('SmearingFunction', this%method)) call input_error('SmearingFunction')
     call messages_print_var_option(stdout, 'SmearingFunction', this%method)
 
     !%Variable Smearing
@@ -109,9 +111,8 @@ contains
     !% among the existing states.
     !%End
     this%dsmear = CNST(1e-14)
-    if(this%method.ne.SMEAR_SEMICONDUCTOR) then
-      call parse_float(datasets_check('Smearing'), CNST(0.1)/(M_TWO*P_Ry), this%dsmear)
-      this%dsmear = units_to_atomic(units_inp%energy, this%dsmear)
+    if(this%method .ne. SMEAR_SEMICONDUCTOR) then
+      call parse_float(datasets_check('Smearing'), CNST(0.1) / (M_TWO * P_Ry), this%dsmear, units_inp%energy)
     end if
 
     call messages_obsolete_variable("ElectronicTemperature", "Smearing")
@@ -133,6 +134,7 @@ contains
       call parse_integer(datasets_check('SmearingMPOrder'), 1, this%MP_n)
     end if
 
+    call pop_sub()
   end subroutine smear_init
 
 
@@ -141,6 +143,8 @@ contains
     type(smear_t), intent(out) :: to
     type(smear_t), intent(in)  :: from
 
+    call push_sub('smear.smear_copy')
+
     to%method       = from%method
     to%dsmear       = from%dsmear
     to%e_fermi      = from%e_fermi
@@ -148,6 +152,8 @@ contains
     to%fixed_occ    = from%fixed_occ
     to%ef_occ       = from%ef_occ
     to%MP_n         = from%MP_n
+
+    call pop_sub()
   end subroutine smear_copy
 
 
@@ -161,12 +167,9 @@ contains
 
     integer, parameter :: nitmax = 200
     FLOAT, parameter   :: tol = CNST(1.0e-10)
-
-    ! Local variables.
     integer            :: ist, ik, iter
     FLOAT              :: drange, xx, emin, emax, sumq, dsmear
     logical            :: conv
-
     FLOAT,   allocatable :: eigenval_list(:)
     integer, allocatable :: k_list(:), reorder(:)
 
@@ -201,9 +204,9 @@ contains
     else if(this%method == SMEAR_SEMICONDUCTOR) then
       sumq = qtot
       ! first we sort the eigenvalues
-      SAFE_ALLOCATE(eigenval_list(1:nst*nik))
-      SAFE_ALLOCATE(       k_list(1:nst*nik))
-      SAFE_ALLOCATE(      reorder(1:nst*nik))
+      SAFE_ALLOCATE(eigenval_list(1:nst * nik))
+      SAFE_ALLOCATE(       k_list(1:nst * nik))
+      SAFE_ALLOCATE(      reorder(1:nst * nik))
 
       iter = 1
       do ist = 1, nst
@@ -262,7 +265,7 @@ contains
       end do
 
       if(.not.conv) then
-        message(1) = 'Fermi: did not converge'
+        message(1) = 'Fermi: did not converge.'
         call write_fatal(1)
       end if
 
@@ -281,6 +284,8 @@ contains
 
     integer :: ik, ist
     FLOAT   :: dsmear, xx
+
+    call push_sub('smear.smear_fill_occupations')
 
     if(this%fixed_occ) then
       ! do nothing
@@ -308,6 +313,7 @@ contains
       end do
     end if
 
+    call pop_sub()
   end subroutine smear_fill_occupations
 
 
@@ -322,16 +328,19 @@ contains
     integer :: ist, ik
     FLOAT :: dsmear, xx
 
+    call push_sub('smear.smear_calc_entropy')
+
     dsmear = max(CNST(1e-14), this%dsmear)
     entropy = M_ZERO
     do ik = 1, nik
       do ist = 1, nst
-        xx = (this%e_fermi - eigenvalues(ist, ik))/dsmear
+        xx = (this%e_fermi - eigenvalues(ist, ik)) / dsmear
         entropy = entropy + kweights(ik) * this%el_per_state *  &
-          dsmear*smear_entropy_function(this, xx)
+          dsmear * smear_entropy_function(this, xx)
       end do
     end do
 
+    call pop_sub()
   end function smear_calc_entropy
 
 
@@ -341,8 +350,10 @@ contains
     FLOAT,         intent(in) ::  xx
 
     FLOAT, parameter :: maxarg = CNST(200.0)
-    FLOAT :: xp, arg, hd, hp, A
+    FLOAT :: xp, arg, hd, hp, aa
     integer :: ii, ni
+
+    call push_sub('smear.smear_delta_function')
 
     deltaf = M_ZERO
     select case(this%method)
@@ -352,39 +363,40 @@ contains
 
     case(SMEAR_FERMI_DIRAC)
       if (abs(xx) <= CNST(36.0)) &
-        deltaf = M_ONE/(M_TWO + exp(-xx) + exp(xx))
+        deltaf = M_ONE / (M_TWO + exp(-xx) + exp(xx))
 
     case(SMEAR_COLD)
-      xp  = xx - M_ONE/sqrt(M_TWO)
+      xp  = xx - M_ONE / sqrt(M_TWO)
       arg = min(maxarg, xp**2)
 
-      deltaf = exp(-arg)/sqrt(M_PI)*(M_TWO - sqrt(M_TWO)*xx)
+      deltaf = exp(-arg) / sqrt(M_PI) * (M_TWO - sqrt(M_TWO) * xx)
       
     case(SMEAR_METHFESSEL_PAXTON)
       arg    = min(maxarg, xx**2)
-      deltaf = exp(-arg)/sqrt(M_PI)
+      deltaf = exp(-arg) / sqrt(M_PI)
 
       if(this%MP_n > 0) then ! recursion
         hd = M_ZERO
         hp = exp(-arg)
         ni = 0
-        A = M_ONE/sqrt(M_PI)
+        aa = M_ONE / sqrt(M_PI)
         do ii = 1, this%MP_n
-          hd = M_TWO*xx*hp - M_TWO*ni*hd
+          hd = M_TWO * xx * hp - M_TWO * ni * hd
           ni = ni + 1
-          A = -A/(M_FOUR*ii)
-          hp = M_TWO*xx*hd - M_TWO*ni*hp
+          aa = -aa / (M_FOUR * ii)
+          hp = M_TWO * xx * hd - M_TWO * ni * hp
           ni = ni + 1
-          deltaf = deltaf + A*hp
+          deltaf = deltaf + aa * hp
         end do
       end if
 
     case(SMEAR_SPLINE)
-      xp     = abs(xx) + M_ONE/sqrt(M_TWO)
-      deltaf = sqrt(M_E)*xp*exp(-xp*xp)
+      xp     = abs(xx) + M_ONE / sqrt(M_TWO)
+      deltaf = sqrt(M_E) * xp * exp(-xp * xp)
 
     end select
     
+    call pop_sub()
   end function smear_delta_function
 
 
@@ -394,8 +406,10 @@ contains
     FLOAT,         intent(in) ::  xx
 
     FLOAT, parameter :: maxarg = CNST(200.0)
-    FLOAT :: xp, arg, hd, hp, A
+    FLOAT :: xp, arg, hd, hp, aa
     integer :: ii, ni
+
+    call push_sub('smear.smear_step_function')
 
     stepf = M_ZERO
     select case(this%method)
@@ -410,46 +424,47 @@ contains
       if (xx > maxarg) then
         stepf = M_ONE
       else if(xx > -maxarg) then
-        stepf = M_ONE/(M_ONE + exp(-xx))
+        stepf = M_ONE / (M_ONE + exp(-xx))
       end if
 
     case(SMEAR_COLD)
-      xp  = xx - M_ONE/sqrt(M_TWO)
+      xp  = xx - M_ONE / sqrt(M_TWO)
       arg = min(maxarg, xp**2)
 
-      stepf = M_HALF*loct_erf(xp) + &
-        M_ONE/sqrt(M_TWO*M_PI)*exp(-arg) + M_HALF
+      stepf = M_HALF * loct_erf(xp) + &
+        M_ONE / sqrt(M_TWO * M_PI) * exp(-arg) + M_HALF
       
     case(SMEAR_METHFESSEL_PAXTON)
-      stepf = M_HALF*loct_erfc(-xx)
+      stepf = M_HALF * loct_erfc(-xx)
 
       if(this%MP_n > 0) then ! recursion
         hd = M_ZERO
         arg = min(maxarg, xx**2)
         hp = exp(-arg)
         ni = 0
-        A = M_ONE/sqrt(M_PI)
+        aa = M_ONE / sqrt(M_PI)
         do ii = 1, this%MP_n
-          hd = M_TWO*xx*hp - M_TWO*ni*hd
+          hd = M_TWO * xx * hp - M_TWO * ni * hd
           ni = ni + 1
-          A = -A/(M_FOUR*ii)
-          stepf = stepf - A*hd
-          hp = M_TWO*xx*hd - M_TWO*ni*hp
+          aa = -aa / (M_FOUR * ii)
+          stepf = stepf - aa * hd
+          hp = M_TWO * xx * hd - M_TWO * ni * hp
           ni = ni + 1
         end do
       end if
 
     case(SMEAR_SPLINE)
       if(xx <= M_ZERO) then
-        xp = xx - M_ONE/sqrt(M_TWO)
-        stepf = M_HALF*sqrt(M_E)*exp(-xp*xp)
+        xp = xx - M_ONE / sqrt(M_TWO)
+        stepf = M_HALF * sqrt(M_E) * exp(-xp * xp)
       else
-        xp = xx + M_ONE/sqrt(M_TWO)
-        stepf = M_ONE - M_HALF*sqrt(M_E)*exp(-xp*xp)
+        xp = xx + M_ONE / sqrt(M_TWO)
+        stepf = M_ONE - M_HALF * sqrt(M_E) * exp(-xp * xp)
       end if
 
     end select
 
+    call pop_sub()
   end function smear_step_function
 
 
@@ -460,8 +475,10 @@ contains
     FLOAT,         intent(in) ::  xx
 
     FLOAT, parameter :: maxarg = CNST(200.0)
-    FLOAT :: xp, arg, hd, hp, hpm1, A
+    FLOAT :: xp, arg, hd, hp, hpm1, aa
     integer :: ii, ni
+
+    call push_sub('smear.smear_entropy_function')
 
     entropyf = M_ZERO
     select case(this%method)
@@ -469,49 +486,53 @@ contains
 
     case(SMEAR_FERMI_DIRAC)
       if(abs(xx) <= 36.0) then
-        xp = M_ONE/(M_ONE + exp(-xx))
-        entropyf = xp*log(xp) + (M_ONE - xp)*log(M_ONE - xp)
+        xp = M_ONE / (M_ONE + exp(-xx))
+        entropyf = xp * log(xp) + (M_ONE - xp) * log(M_ONE - xp)
       end if
 
     case(SMEAR_COLD)
-      xp  = xx - M_ONE/sqrt(M_TWO)
+      xp  = xx - M_ONE / sqrt(M_TWO)
       arg = min(maxarg, xp**2)
 
-      entropyf =  M_ONE/sqrt(M_TWO*M_PI)*xp*exp(-arg)
+      entropyf =  M_ONE / sqrt(M_TWO * M_PI) * xp * exp(-arg)
       
     case(SMEAR_METHFESSEL_PAXTON)
       arg = min(maxarg, xx**2)
-      entropyf = -M_HALF*exp(-arg)/sqrt(M_PI)
+      entropyf = -M_HALF * exp(-arg) / sqrt(M_PI)
 
       if(this%MP_n > 0) then ! recursion
         hd = M_ZERO
         hp = exp(-arg)
         ni = 0
-        A = M_ONE/sqrt(M_PI)
+        aa = M_ONE / sqrt(M_PI)
         do ii = 1, this%MP_n
-          hd = M_TWO*xx*hp - M_TWO*ni*hd
+          hd = M_TWO * xx * hp - M_TWO * ni * hd
           ni = ni + 1
           hpm1 = hp
-          hp = M_TWO*xx*hd - M_TWO*ni*hp
+          hp = M_TWO * xx * hd - M_TWO * ni * hp
           ni = ni + 1
-          A = -A/(M_FOUR*ii)
-          entropyf = entropyf - A*(M_HALF*hp + hpm1*ni)
+          aa = -aa / (M_FOUR * ii)
+          entropyf = entropyf - aa * (M_HALF * hp + hpm1 * ni)
         end do
       end if
 
     case(SMEAR_SPLINE)
-      xp = abs(xx) + M_ONE/sqrt(M_TWO)
-      entropyf = -sqrt(M_E)*(abs(xx)*exp(-xp*xp)/M_TWO + sqrt(M_PI)/M_FOUR*loct_erfc(xp))
+      xp = abs(xx) + M_ONE / sqrt(M_TWO)
+      entropyf = -sqrt(M_E) * (abs(xx) * exp(-xp * xp) / M_TWO + sqrt(M_PI) / M_FOUR * loct_erfc(xp))
 
     end select
 
+    call pop_sub()
   end function smear_entropy_function
 
   logical function smear_is_semiconducting(this) result(answer)
     type(smear_t), intent(in) :: this
 
+    call push_sub('smear.smear_is_semiconducting')
+
     answer = this%method .eq. SMEAR_SEMICONDUCTOR
 
+    call pop_sub()
   end function smear_is_semiconducting
 
 end module smear_m

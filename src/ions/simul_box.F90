@@ -165,7 +165,7 @@ contains
 
     ! some local stuff
     FLOAT :: def_h, def_rsize
-    integer :: i
+    integer :: idir
 
     call push_sub('simul_box.simul_box_init')
 
@@ -291,31 +291,31 @@ contains
         end if
         ! Simulation box must not be periodic in transport direction.
         if(sb%periodic_dim.eq.1) then
-          message(1) = 'When using open boundaries you cannot use periodic boundary'
-          message(2) = 'conditions in x-direction.'
+          message(1) = 'When using open boundaries, you cannot use periodic boundary'
+          message(2) = 'conditions in the x-direction.'
           call write_fatal(2)
         end if
 
-        sb%lead_dataset     = ''
-        sb%lead_restart_dir = ''
-        sb%lead_static_dir  = ''
+        sb%lead_dataset        = ''
+        sb%lead_restart_dir    = ''
+        sb%lead_static_dir     = ''
         sb%lead_td_pot_formula = '0'
-        sb%add_unit_cells   = 0
-        sb%transport_mode   = .true.
+        sb%add_unit_cells      = 0
+        sb%transport_mode      = .true.
         nrows = parse_block_n(blk)
-        do nr = 0, nrows-1
+        do nr = 0, nrows - 1
           call parse_block_integer(blk, nr, 0, tag)
           ncols = parse_block_cols(blk, nr)
-          if(ncols.gt.3.or.ncols.lt.2) then
+          if(ncols .gt. 3 .or. ncols .lt. 2) then
             call input_error('OpenBoundaries')
           end if
 
           select case(tag)
           case(LEAD_DATASET)
             call parse_block_string(blk, nr, 1, sb%lead_dataset(LEFT))
-            if(ncols.eq.3) then
+            if(ncols .eq. 3) then
               call parse_block_string(blk, nr, 2, sb%lead_dataset(RIGHT))
-              if(trim(sb%lead_dataset(LEFT)).ne.trim(sb%lead_dataset(RIGHT))) then
+              if(trim(sb%lead_dataset(LEFT)) .ne. trim(sb%lead_dataset(RIGHT))) then
                 message(1) = 'Datasets for left and right lead unit cells must'
                 message(2) = 'be equal, i.e. only symmetric leads are possible.'
                 call write_fatal(2)
@@ -325,9 +325,9 @@ contains
             end if
           case(LEAD_RESTART_DIR)
             call parse_block_string(blk, nr, 1, sb%lead_restart_dir(LEFT))
-            if(ncols.eq.3) then
+            if(ncols .eq. 3) then
               call parse_block_string(blk, nr, 2, sb%lead_restart_dir(RIGHT))
-              if(trim(sb%lead_restart_dir(LEFT)).ne.trim(sb%lead_restart_dir(RIGHT))) then
+              if(trim(sb%lead_restart_dir(LEFT)) .ne. trim(sb%lead_restart_dir(RIGHT))) then
                 message(1) = 'Restart directories for left and right lead'
                 message(2) = 'unit cells must be equal, i.e. only symmetric'
                 message(3) = 'leads are possible.'
@@ -338,9 +338,9 @@ contains
             end if
           case(LEAD_STATIC_DIR)
             call parse_block_string(blk, nr, 1, sb%lead_static_dir(LEFT))
-            if(ncols.eq.3) then
+            if(ncols .eq. 3) then
               call parse_block_string(blk, nr, 2, sb%lead_static_dir(RIGHT))
-              if(trim(sb%lead_static_dir(LEFT)).ne.trim(sb%lead_static_dir(RIGHT))) then
+              if(trim(sb%lead_static_dir(LEFT)) .ne. trim(sb%lead_static_dir(RIGHT))) then
                 message(1) = 'Static directories for left and right lead'
                 message(2) = 'unit cells must be equal, i.e. only symmetric'
                 message(3) = 'leads are possible.'
@@ -351,12 +351,12 @@ contains
             end if
           case(ADD_UNIT_CELLS)
             call parse_block_integer(blk, nr, 1, sb%add_unit_cells(LEFT))
-            if(ncols.eq.3) then
+            if(ncols .eq. 3) then
               call parse_block_integer(blk, nr, 2, sb%add_unit_cells(RIGHT))
             else
               forall(ol = 2:NLEADS) sb%add_unit_cells(ol) = sb%add_unit_cells(LEFT)
             end if
-            if(any(sb%add_unit_cells(1:NLEADS).lt.0)) then
+            if(any(sb%add_unit_cells(1:NLEADS) .lt. 0)) then
               message(1) = 'add_unit_cells in the OpenBoundaries block must not be negative.'
               call write_fatal(1)
             end if
@@ -367,7 +367,7 @@ contains
             end if
           case(TD_POT_FORMULA)
             call parse_block_string(blk, nr, 1, sb%lead_td_pot_formula(LEFT))
-            if(ncols.eq.3) then
+            if(ncols .eq. 3) then
               call parse_block_string(blk, nr, 2, sb%lead_td_pot_formula(RIGHT))
             else
               forall(ol = 2:NLEADS) sb%lead_td_pot_formula(ol) = sb%lead_td_pot_formula(LEFT)
@@ -385,16 +385,16 @@ contains
           end select
         end do
         ! Check if necessary lead_dataset line has been provided.
-        if(all(sb%lead_dataset(1:NLEADS).eq.'')) then
+        if(all(sb%lead_dataset(1:NLEADS) .eq. '')) then
           call input_error('OpenBoundaries')
         end if
         ! Set default restart directory.
-        if(all(sb%lead_restart_dir(1:NLEADS).eq.'')) then
-          forall(il = 1:NLEADS) sb%lead_restart_dir(il) = trim(sb%lead_dataset(il))//'restart'
+        if(all(sb%lead_restart_dir(1:NLEADS) .eq. '')) then
+          forall(il = 1:NLEADS) sb%lead_restart_dir(il) = trim(sb%lead_dataset(il)) // 'restart'
         end if
         ! Set default static directory.
-        if(all(sb%lead_static_dir(1:NLEADS).eq.'')) then
-          forall(il = 1:NLEADS) sb%lead_static_dir(il) = trim(sb%lead_dataset(il))//'static'
+        if(all(sb%lead_static_dir(1:NLEADS) .eq. '')) then
+          forall(il = 1:NLEADS) sb%lead_static_dir(il) = trim(sb%lead_dataset(il)) // 'static'
         end if
         
         sb%open_boundaries = .true.
@@ -416,6 +416,7 @@ contains
         sb%lead_restart_dir = ''
         nullify(sb%lead_unit_cell)
       end if
+
       call pop_sub()
     end subroutine read_open_boundaries
 
@@ -423,7 +424,7 @@ contains
     !--------------------------------------------------------------
     subroutine read_misc()
 
-      integer              :: i
+      integer              :: idir, irad, ii
       type(block_t)        :: blk
       FLOAT,   allocatable :: pos(:)
 
@@ -495,17 +496,17 @@ contains
         sb%hr_area%center = M_ZERO
 
         ! the central point
-        do i = 1, sb%dim
-           call parse_block_float(blk, 0, i - 1, sb%hr_area%center(i))
+        do idir = 1, sb%dim
+           call parse_block_float(blk, 0, idir - 1, sb%hr_area%center(idir))
         end do
 
         if (sb%hr_area%num_areas /= 1) call input_error('MultiResolutionArea')
 
         ! the radii
         SAFE_ALLOCATE(sb%hr_area%radius(1:sb%hr_area%num_radii))
-        do i = 1, sb%hr_area%num_radii
-          call parse_block_float(blk, 0, sb%dim + i - 1, sb%hr_area%radius(i))
-          sb%hr_area%radius(i) = units_to_atomic(units_inp%length, sb%hr_area%radius(i))
+        do irad = 1, sb%hr_area%num_radii
+          call parse_block_float(blk, 0, sb%dim + irad - 1, sb%hr_area%radius(irad))
+          sb%hr_area%radius(irad) = units_to_atomic(units_inp%length, sb%hr_area%radius(irad))
         end do
 
         ! Create interpolation points (posi) and weights (ww)
@@ -523,15 +524,15 @@ contains
           call write_fatal(1)
         end if
 
-        sb%hr_area%interp%nn = 2*sb%hr_area%interp%order
+        sb%hr_area%interp%nn = 2 * sb%hr_area%interp%order
         SAFE_ALLOCATE(pos(1:sb%hr_area%interp%nn))
         SAFE_ALLOCATE(sb%hr_area%interp%ww(1:sb%hr_area%interp%nn))
         SAFE_ALLOCATE(sb%hr_area%interp%posi(1:sb%hr_area%interp%nn))
-        do i = 1, sb%hr_area%interp%order
-          sb%hr_area%interp%posi(i) = 1 + 2*(i - 1)
-          sb%hr_area%interp%posi(sb%hr_area%interp%order + i) = -sb%hr_area%interp%posi(i)
-          pos(i) =  sb%hr_area%interp%posi(i)
-          pos(sb%hr_area%interp%order + i) = -pos(i)
+        do ii = 1, sb%hr_area%interp%order
+          sb%hr_area%interp%posi(ii) = 1 + 2 * (ii - 1)
+          sb%hr_area%interp%posi(sb%hr_area%interp%order + ii) = -sb%hr_area%interp%posi(ii)
+          pos(ii) = sb%hr_area%interp%posi(ii)
+          pos(sb%hr_area%interp%order + ii) = -pos(ii)
         end do
         call interpolation_coefficients(sb%hr_area%interp%nn, pos, M_ZERO,sb%hr_area%interp%ww)
         SAFE_DEALLOCATE_A(pos)
@@ -553,17 +554,17 @@ contains
       !% of open boundaries for a parallelepiped simulation box shape.
       !%End
       call parse_integer(datasets_check('OpenBoundariesNLeads'), 2, NLEADS)
-      if ((NLEADS < 0) .or. (NLEADS > 2*MAX_DIM)) &
+      if ((NLEADS < 0) .or. (NLEADS > 2 * MAX_DIM)) &
         call input_error('OpenBoundariesNLeads')
 
-
-        call pop_sub()
+      call pop_sub()
     end subroutine read_misc
 
 
     !--------------------------------------------------------------
     subroutine read_box()
       type(block_t) :: blk
+
       FLOAT :: default
 #if defined(HAVE_GDLIB)        
       character(len=200) :: filename
@@ -612,21 +613,22 @@ contains
       call parse_integer(datasets_check('BoxShape'), MINIMUM, sb%box_shape)
       if(.not.varinfo_valid_option('BoxShape', sb%box_shape)) call input_error('BoxShape')
       select case(sb%box_shape)
-      case(SPHERE,MINIMUM,BOX_IMAGE,BOX_USDEF)
-        if(sb%dim>1 .and. simul_box_is_periodic(sb)) call input_error('BoxShape')
+      case(SPHERE, MINIMUM, BOX_IMAGE, BOX_USDEF)
+        if(sb%dim > 1 .and. simul_box_is_periodic(sb)) call input_error('BoxShape')
       case(CYLINDER)
-        if (sb%dim>2 .and. &
+        if (sb%dim > 2 .and. &
           ((sb%dim - sb%periodic_dim == 0) .or. (sb%dim - sb%periodic_dim == 1))) call input_error('BoxShape')
       end select
 
       ! ignore box_shape in 1D
-      if(sb%dim==1.and.sb%box_shape /= PARALLELEPIPED.and.sb%box_shape /= HYPERCUBE) sb%box_shape=SPHERE
+      if(sb%dim == 1 .and. sb%box_shape /= PARALLELEPIPED .and. sb%box_shape /= HYPERCUBE) &
+        sb%box_shape = SPHERE
 
       ! Cannot use images in 1D or 3D
-      if(sb%dim/=2.and.sb%box_shape == BOX_IMAGE) call input_error('BoxShape')
+      if(sb%dim /= 2 .and. sb%box_shape == BOX_IMAGE) call input_error('BoxShape')
 
       if(sb%dim > 3 .and. sb%box_shape /= HYPERCUBE) then
-        message(1) = "For more than 3 dimensions you can only use the hypercubic box."
+        message(1) = "For more than 3 dimensions, you can only use the hypercubic box."
         call write_fatal(1)
       end if
 
@@ -642,14 +644,12 @@ contains
       !%End
       select case(sb%box_shape)
       case(SPHERE, CYLINDER)
-        call parse_float(datasets_check('radius'), units_from_atomic(units_inp%length, def_rsize), sb%rsize)
+        call parse_float(datasets_check('Radius'), def_rsize, sb%rsize, units_inp%length)
         if(sb%rsize < M_ZERO) call input_error('radius')
-        sb%rsize = units_to_atomic(units_inp%length, sb%rsize)
         if(def_rsize>M_ZERO) call messages_check_def(def_rsize, sb%rsize, 'radius')
       case(MINIMUM)
         default=sb%rsize
-        call parse_float(datasets_check('radius'), default, sb%rsize)
-        sb%rsize = units_to_atomic(units_inp%length, sb%rsize)
+        call parse_float(datasets_check('radius'), default, sb%rsize, units_inp%length)
         if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call input_error('Radius')
       end select
 
@@ -667,15 +667,15 @@ contains
           default = def_rsize
         endif
 
-        call parse_float(datasets_check('xlength'), units_from_atomic(units_inp%length, default), sb%xsize)
-        sb%xsize = units_to_atomic(units_inp%length, sb%xsize)
+        call parse_float(datasets_check('xlength'), default, sb%xsize, units_inp%length)
         sb%lsize(1) = sb%xsize
-        if(def_rsize>M_ZERO.and.sb%periodic_dim==0) call messages_check_def(def_rsize, sb%xsize, 'xlength')
+        if(def_rsize > M_ZERO .and. sb%periodic_dim == 0) &
+          call messages_check_def(def_rsize, sb%xsize, 'xlength')
       end if
 
       sb%lsize = M_ZERO
-      if(sb%box_shape == PARALLELEPIPED .or.sb%box_shape == HYPERCUBE .or. &
-           sb%box_shape == BOX_IMAGE .or. sb%box_shape == BOX_USDEF) then
+      if(sb%box_shape == PARALLELEPIPED .or. sb%box_shape == HYPERCUBE .or. &
+         sb%box_shape == BOX_IMAGE .or. sb%box_shape == BOX_USDEF) then
 
         !%Variable Lsize
         !%Type block
@@ -698,21 +698,22 @@ contains
 
         if(parse_block(datasets_check('Lsize'), blk) == 0) then
           if(parse_block_cols(blk,0) < sb%dim) call input_error('Lsize')
-          do i = 1, sb%dim
-            call parse_block_float(blk, 0, i-1, sb%lsize(i))
+          do idir = 1, sb%dim
+            call parse_block_float(blk, 0, idir - 1, sb%lsize(idir))
           end do
           call parse_block_end(blk)
         else
           call parse_float(datasets_check('Lsize'), -M_ONE, sb%lsize(1))
-          if(sb%lsize(1).eq.-M_ONE) then
+          if(sb%lsize(1) .eq. -M_ONE) then
             call input_error('Lsize')
           end if
           sb%lsize(1:sb%dim) = sb%lsize(1)
         end if
         sb%lsize = units_to_atomic(units_inp%length, sb%lsize)
 
-        do i = 1, sb%dim
-          if(def_rsize>M_ZERO.and.sb%periodic_dim<i) call messages_check_def(def_rsize, sb%lsize(i), 'Lsize')
+        do idir = 1, sb%dim
+          if(def_rsize > M_ZERO .and. sb%periodic_dim < idir) &
+            call messages_check_def(def_rsize, sb%lsize(idir), 'Lsize')
         end do
       end if
      
@@ -735,7 +736,7 @@ contains
         sb%image_size(1) = loct_gdImage_SX(sb%image)
         sb%image_size(2) = loct_gdImage_SY(sb%image)
 #else
-        message(1) = "To use 'BoxShape = box_image' you have to compile octopus"
+        message(1) = "To use 'BoxShape = box_image', you have to compile Octopus"
         message(2) = "with GD library support."
         call write_fatal(2)
 #endif
@@ -765,11 +766,11 @@ contains
         sb%lsize(1)        = sb%xsize
         sb%lsize(2:sb%dim) = sb%rsize
       case(MINIMUM)
-        do i = 1, sb%dim
+        do idir = 1, sb%dim
           if(sb%rsize > M_ZERO) then
-            sb%lsize(i) = maxval(abs(geo%atom(:)%x(i))) + sb%rsize
+            sb%lsize(idir) = maxval(abs(geo%atom(:)%x(idir))) + sb%rsize
           else
-            sb%lsize(i) = maxval(abs(geo%atom(:)%x(i))) + def_rsize
+            sb%lsize(idir) = maxval(abs(geo%atom(:)%x(idir))) + def_rsize
           end if
         end do
       end select
@@ -909,7 +910,7 @@ contains
     type(geometry_t)  :: central_geo
     type(geometry_t), allocatable  :: lead_geo(:)
     character(len=32) :: label_bak
-    integer           :: il, j, n, iatom, icatom, dir
+    integer           :: il, icell, iatom, jatom, icatom, dir
 
     call push_sub('simul_box.simul_box_add_lead_atoms')
 
@@ -930,24 +931,24 @@ contains
 
       ! Set the number of atoms and classical atoms to the number
       ! of atoms coming from left and right lead and central part.
-      if(geo%natoms.gt.0) then
+      if(geo%natoms .gt. 0) then
         SAFE_DEALLOCATE_P(geo%atom)
       end if
       geo%natoms = central_geo%natoms +                 &
-        sb%add_unit_cells(LEFT)*lead_geo(LEFT)%natoms + &
-        sb%add_unit_cells(RIGHT)*lead_geo(RIGHT)%natoms
+        sb%add_unit_cells(LEFT) * lead_geo(LEFT)%natoms + &
+        sb%add_unit_cells(RIGHT) * lead_geo(RIGHT)%natoms
       SAFE_ALLOCATE(geo%atom(1:geo%natoms))
-      if(geo%ncatoms.gt.0) then
+      if(geo%ncatoms .gt. 0) then
         SAFE_DEALLOCATE_P(geo%catom)
       end if
       geo%ncatoms = central_geo%ncatoms +                &
-        sb%add_unit_cells(LEFT)*lead_geo(LEFT)%ncatoms + &
-        sb%add_unit_cells(RIGHT)*lead_geo(RIGHT)%ncatoms
+        sb%add_unit_cells(LEFT) * lead_geo(LEFT)%ncatoms + &
+        sb%add_unit_cells(RIGHT) * lead_geo(RIGHT)%ncatoms
       SAFE_ALLOCATE(geo%catom(1:geo%ncatoms))
 
-      geo%only_user_def = central_geo%only_user_def.and.all(lead_geo(:)%only_user_def)
-      geo%nlpp          = central_geo%nlpp.or.any(lead_geo(:)%nlpp)
-      geo%nlcc          = central_geo%nlcc.or.any(lead_geo(:)%nlcc)
+      geo%only_user_def = central_geo%only_user_def .and. all(lead_geo(:)%only_user_def)
+      geo%nlpp          = central_geo%nlpp .or. any(lead_geo(:)%nlpp)
+      geo%nlcc          = central_geo%nlcc .or. any(lead_geo(:)%nlcc)
       geo%atoms%start   = 1
       geo%atoms%end     = geo%natoms
       geo%atoms%nlocal  = geo%natoms
@@ -956,26 +957,29 @@ contains
       geo%atom(1:central_geo%natoms)   = central_geo%atom
       geo%catom(1:central_geo%ncatoms) = central_geo%catom
 
-      ! 2. Put the atoms of the leads into geo and adjust their x coordinates.
-      iatom  = central_geo%natoms+1
-      icatom = central_geo%ncatoms+1
+      ! 2. Put the atoms of the leads into geo and adjust their x-coordinates.
+      iatom  = central_geo%natoms + 1
+      icatom = central_geo%ncatoms + 1
+
       do il = 1, NLEADS
         dir = (-1)**il
         ! We start from the "outer" unit cells of the lead.
-        do j = 1, sb%add_unit_cells(il)
-          do n = 1, lead_geo(il)%natoms
-            geo%atom(iatom) = lead_geo(il)%atom(n)
+        do icell = 1, sb%add_unit_cells(il)
+          do jatom = 1, lead_geo(il)%natoms
+            geo%atom(iatom) = lead_geo(il)%atom(jatom)
             geo%atom(iatom)%x(TRANS_DIR) = geo%atom(iatom)%x(TRANS_DIR) + &
-              dir*(sb%lsize(TRANS_DIR) - (2*(j-1)+1)*sb%lead_unit_cell(il)%lsize(TRANS_DIR))
+              dir * (sb%lsize(TRANS_DIR) - (2*(icell - 1) + 1) * sb%lead_unit_cell(il)%lsize(TRANS_DIR))
             iatom = iatom + 1
           end do
-          do n = 1, lead_geo(il)%ncatoms
-            geo%catom(icatom) = lead_geo(il)%catom(n)
+
+          do jatom = 1, lead_geo(il)%ncatoms
+            geo%catom(icatom) = lead_geo(il)%catom(jatom)
             geo%catom(icatom)%x(TRANS_DIR) = geo%catom(icatom)%x(TRANS_DIR) + &
-              dir*(sb%lsize(TRANS_DIR) - (2*(j-1)+1)*sb%lead_unit_cell(il)%lsize(TRANS_DIR))
+              dir * (sb%lsize(TRANS_DIR) - (2 * (icell - 1) + 1) * sb%lead_unit_cell(il)%lsize(TRANS_DIR))
           end do
         end do
       end do
+
       ! Initialize the species of the "extended" central system.
       if(geo%nspecies.gt.0) then
         SAFE_DEALLOCATE_P(geo%species)
@@ -985,6 +989,7 @@ contains
       do il = 1, NLEADS
         call geometry_end(lead_geo(il))
       end do
+
       call geometry_end(central_geo)
       SAFE_DEALLOCATE_A(lead_geo)
 
@@ -1189,9 +1194,9 @@ contains
         sb%add_unit_cells(LEFT)
       write(message(3), '(a,2i4)') '  Additional unit cells right:   ', &
         sb%add_unit_cells(RIGHT)
-      write(message(4), '(a)')     '  Left lead read from directory:  '// &
+      write(message(4), '(a)')     '  Left lead read from directory:  ' // &
         trim(sb%lead_restart_dir(LEFT))
-      write(message(5), '(a)')     '  Right lead read from directory: '// &
+      write(message(5), '(a)')     '  Right lead read from directory: ' // &
         trim(sb%lead_restart_dir(RIGHT))
       call write_info(5, iunit)
     end if
@@ -1201,10 +1206,10 @@ contains
 
 
   !--------------------------------------------------------------
-  logical function simul_box_in_box(sb, geo, x) result(in_box)
+  logical function simul_box_in_box(sb, geo, yy) result(in_box)
     type(simul_box_t),  intent(in) :: sb
     type(geometry_t),   intent(in) :: geo
-    FLOAT,              intent(in) :: x(:)
+    FLOAT,              intent(in) :: yy(:)
 
     real(8), parameter :: DELTA = CNST(1e-12)
     FLOAT :: xx(1:MAX_DIM, 1)
@@ -1213,7 +1218,7 @@ contains
     ! no push_sub because this function is called very frequently
 
     xx = M_ZERO
-    xx(1:sb%dim, 1) = x(1:sb%dim)
+    xx(1:sb%dim, 1) = yy(1:sb%dim)
 
     call simul_box_in_box_vec(sb, geo, 1, xx, in_box2)
     in_box = in_box2(1)
@@ -1230,7 +1235,7 @@ contains
     logical,            intent(out) :: in_box(:)
 
     real(8), parameter :: DELTA = CNST(1e-12)
-    FLOAT :: r, re, im, dist2, radius
+    FLOAT :: rr, re, im, dist2, radius
     real(8) :: llimit(MAX_DIM), ulimit(MAX_DIM)
     FLOAT, allocatable :: xx(:, :)
     integer :: ip, idir, iatom, ilist
@@ -1261,8 +1266,8 @@ contains
 
       case(CYLINDER)
         do ip = 1, npoints
-          r = sqrt(xx(2, ip)**2 + xx(3, ip)**2)
-          in_box(ip) = (r <= sb%rsize + DELTA .and. abs(xx(1, ip)) <= sb%xsize+DELTA)
+          rr = sqrt(xx(2, ip)**2 + xx(3, ip)**2)
+          in_box(ip) = (rr <= sb%rsize + DELTA .and. abs(xx(1, ip)) <= sb%xsize + DELTA)
         end do
 
       case(MINIMUM)
@@ -1326,27 +1331,27 @@ contains
 #if defined(HAVE_GDLIB)
       case(BOX_IMAGE)
         do ip = 1, npoints
-          ix = nint((xx(1, ip) + sb%lsize(1))*sb%image_size(1)/(M_TWO*sb%lsize(1)))
-          iy = nint((xx(2, ip) + sb%lsize(2))*sb%image_size(2)/(M_TWO*sb%lsize(2)))
+          ix = nint((xx(1, ip) + sb%lsize(1)) * sb%image_size(1) / (M_TWO * sb%lsize(1)))
+          iy = nint((xx(2, ip) + sb%lsize(2)) * sb%image_size(2) / (M_TWO * sb%lsize(2)))
           call loct_gdimage_get_pixel_rgb(sb%image, ix, iy, red, green, blue)
-          in_box(ip) = (red == 255).and.(green == 255).and.(blue == 255)
+          in_box(ip) = (red == 255) .and. (green == 255) .and. (blue == 255)
         end do
 #endif
 
       case(BOX_USDEF)
-        ! is it inside the user-given boundaries
+        ! is it inside the user-given boundaries?
         do ip = 1, npoints
           in_box(ip) =  &
-            (xx(1, ip) >= -sb%lsize(1)-DELTA.and.xx(1, ip) <= sb%lsize(1)+DELTA).and. &
-            (xx(2, ip) >= -sb%lsize(2)-DELTA.and.xx(2, ip) <= sb%lsize(2)+DELTA).and. &
-            (xx(3, ip) >= -sb%lsize(3)-DELTA.and.xx(3, ip) <= sb%lsize(3)+DELTA)
+            (xx(1, ip) >= -sb%lsize(1) - DELTA .and. xx(1, ip) <= sb%lsize(1) + DELTA) .and. &
+            (xx(2, ip) >= -sb%lsize(2) - DELTA .and. xx(2, ip) <= sb%lsize(2) + DELTA) .and. &
+            (xx(3, ip) >= -sb%lsize(3) - DELTA .and. xx(3, ip) <= sb%lsize(3) + DELTA)
 
-          ! and inside the simulation box
+          ! and inside the simulation box?
           do idir = 1, sb%dim
             xx(idir, ip) = units_from_atomic(units_inp%length, xx(idir, ip))
           enddo
-          r = sqrt(sum(xx(:, ip)**2))
-          call parse_expression(re, im, sb%dim, xx(:, ip), r, M_ZERO, sb%user_def)
+          rr = sqrt(sum(xx(:, ip)**2))
+          call parse_expression(re, im, sb%dim, xx(:, ip), rr, M_ZERO, sb%user_def)
           in_box(ip) = in_box(ip) .and. (re .ne. M_ZERO)
         end do
     end select
@@ -1438,38 +1443,43 @@ contains
 
     call push_sub('simul_box.read_lead_unit_cell')
 
-    iunit = io_open(trim(sb%lead_restart_dir(il))//'/gs/mesh', action='read', is_tmp=.true., grp = mpi_world)
+    iunit = io_open(trim(sb%lead_restart_dir(il)) // '/gs/mesh', action='read', is_tmp=.true., grp = mpi_world)
     call simul_box_init_from_file(sb%lead_unit_cell(il), iunit)
     call io_close(iunit)
-    ! Check, if
+
+    ! Check whether
     ! * simulation box is a parallelepiped,
     ! * the extensions in y-, z-directions fit the central box,
     ! * the central simulation box x-length is an integer multiple of
     !   the unit cell x-length,
     ! * periodic in one dimension, and
     ! * of the same dimensionality as the central system.
-    if(sb%lead_unit_cell(il)%box_shape.ne.PARALLELEPIPED) then
-      message(1) = 'Simulation box of '//LEAD_NAME(il)//' lead is not a parallelepiped.'
+
+    if(sb%lead_unit_cell(il)%box_shape .ne. PARALLELEPIPED) then
+      message(1) = 'Simulation box of ' // LEAD_NAME(il) // ' lead is not a parallelepiped.'
       call write_fatal(1)
     end if
-    if(any(sb%lsize(2:3).ne.sb%lead_unit_cell(il)%lsize(2:3))) then
-      message(1) = 'The size in y-, z-directions of the '//LEAD_NAME(LEFT)//' lead'
+
+    if(any(sb%lsize(2:3) .ne. sb%lead_unit_cell(il)%lsize(2:3))) then
+      message(1) = 'The size in y-, z-directions of the ' // LEAD_NAME(LEFT) // ' lead'
       message(2) = 'does not fit the size of the y-, z-directions of the central system.'
       call write_fatal(2)
     end if
-    if(.not.is_integer_multiple(sb%lsize(1), sb%lead_unit_cell(il)%lsize(1))) then
+
+    if(.not. is_integer_multiple(sb%lsize(1), sb%lead_unit_cell(il)%lsize(1))) then
       message(1) = 'The length in x-direction of the central simulation'
       message(2) = 'box is not an integer multiple of the x-length of'
-      message(3) = 'the '//trim(LEAD_NAME(il))//' lead.'
+      message(3) = 'the ' // trim(LEAD_NAME(il)) // ' lead.'
       call write_fatal(3)
     end if
-    if(sb%lead_unit_cell(il)%periodic_dim.ne.1) then
-      message(1) = 'Simulation box of '//LEAD_NAME(il)//' lead is not periodic in x-direction.'
+
+    if(sb%lead_unit_cell(il)%periodic_dim .ne. 1) then
+      message(1) = 'Simulation box of ' // LEAD_NAME(il) // ' lead is not periodic in x-direction.'
 !      call write_fatal(1)
       call write_warning(1)
     end if
-    if(sb%lead_unit_cell(il)%dim.ne.calc_dim) then
-      message(1) = 'Simulation box of '//LEAD_NAME(il)//' has a different dimension than'
+    if(sb%lead_unit_cell(il)%dim .ne. calc_dim) then
+      message(1) = 'Simulation box of ' // LEAD_NAME(il) // ' has a different dimension than'
       message(2) = 'the central system.'
       call write_fatal(2)
     end if

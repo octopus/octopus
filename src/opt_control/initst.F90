@@ -21,20 +21,20 @@
 
 module opt_control_initst_m
   use datasets_m
-  use varinfo_m
+  use geometry_m
+  use global_m
+  use grid_m
+  use hamiltonian_m
   use messages_m
   use parser_m
-  use global_m
-  use string_m
-  use states_m
-  use states_calc_m
-  use grid_m
-  use geometry_m
   use profiling_m
   use restart_m
+  use states_m
+  use states_calc_m
+  use string_m
   use system_m
-  use hamiltonian_m
   use v_ks_m
+  use varinfo_m
 
   implicit none
 
@@ -53,17 +53,18 @@ module opt_control_initst_m
 
   ! ---------------------------------------------------------
   subroutine initial_state_init(sys, hm, initial_state)
-    type(system_t), intent(inout) :: sys
+    type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: hm
-    type(states_t), intent(inout) :: initial_state
+    type(states_t),      intent(inout) :: initial_state
 
     integer           :: ist, jst, ik, ib, idim, inst, inik, id, is, ip, ierr, &
                          no_states, istype, freeze_orbitals
     type(block_t)     :: blk
     type(states_t)    :: tmp_st 
-    FLOAT             :: x(MAX_DIM), r, psi_re, psi_im
+    FLOAT             :: xx(MAX_DIM), rr, psi_re, psi_im
     CMPLX, allocatable :: rotation_matrix(:, :)
-    call push_sub('defstates.initial_state_init')
+
+    call push_sub('initst.initial_state_init')
 
     call states_copy(initial_state, sys%st)
     call states_deallocate_wfns(initial_state)
@@ -74,52 +75,50 @@ module opt_control_initst_m
     !%Section Calculation Modes::Optimal Control
     !%Default 1
     !%Description
-    !% The string OCTInitialState describes the initial state of the quantum system
+    !% Describes the initial state of the quantum system.
     !% Possible arguments are:
     !%Option oct_is_groundstate 1
-    !% start in the ground state 
+    !% Start in the ground state.
     !%Option oct_is_excited 2
     !% Currently not in use.
     !%Option oct_is_gstransformation 3
-    !% start in a transformation of the ground-state orbitals, as defined in the
-    !% block OCTInitialTransformStates
+    !% Start in a transformation of the ground-state orbitals, as defined in the
+    !% block <tt>OCTInitialTransformStates</tt>.
     !%Option oct_is_userdefined 4
-    !% start in a userdefined state 
+    !% Start in a userdefined state.
     !%End
     call parse_integer(datasets_check('OCTInitialState'), oct_is_groundstate, istype)
     if(.not.varinfo_valid_option('OCTInitialState', istype)) call input_error('OCTInitialState')    
 
     select case(istype)
     case(oct_is_groundstate) 
-      message(1) =  'Info: Using Ground State for InitialState'
+      message(1) =  'Info: Using ground state for initial state.'
       call write_info(1)
       call restart_read(trim(restart_dir)//GS_DIR, initial_state, sys%gr, sys%geo, ierr)
 
     case(oct_is_excited)  
-      message(1) = 'Error: using an excited state as the starting state for an '
-      message(2) = 'optimal control run is not possible yet.'
+      message(1) = 'Error: Using an excited state as the starting state for an '
+      message(2) = 'optimal-control run is not possible yet.'
       message(3) = 'Try using "OCTInitialState = oct_is_transformation" instead.'
       call write_fatal(3)
 
     case(oct_is_gstransformation)   
-      message(1) =  'Info: Using Superposition of States for InitialState'
+      message(1) =  'Info: Using superposition of states for initial state.'
       call write_info(1)
 
 
       !%Variable OCTInitialTransformStates
       !%Type block
-      !%Default no
       !%Section Calculation Modes::Optimal Control
       !%Description
-      !% If OCTInitialState = oct_is_gstransformation, you must specify one
-      !% OCTInitialTransformStates block, in order to specify which linear
-      !% combination of the states present in "restart/gs" is used to
+      !% If <tt>OCTInitialState = oct_is_gstransformation</tt>, you must specify an
+      !% <tt>OCTInitialTransformStates</tt> block, in order to specify which linear
+      !% combination of the states present in <tt>restart/gs</tt> is used to
       !% create the initial state.
       !% 
-      !% The syntax is equivalent to the one used for the TransformStates
-      !% block.
+      !% The syntax is the same as the <tt>TransformStates</tt> block.
       !%End
-      if(parse_isdef(datasets_check('OCTInitialTransformStates')).ne.0) then
+      if(parse_isdef(datasets_check('OCTInitialTransformStates')) .ne. 0) then
         if(parse_block(datasets_check('OCTInitialTransformStates'), blk) == 0) then
           call states_copy(tmp_st, initial_state)
           call states_deallocate_wfns(tmp_st)
@@ -127,8 +126,8 @@ module opt_control_initst_m
           SAFE_ALLOCATE(rotation_matrix(1:initial_state%nst, 1:tmp_st%nst))
           rotation_matrix = M_z0
           do ist = 1, initial_state%nst
-            do jst = 1, parse_block_cols(blk, ist-1)
-              call parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
+            do jst = 1, parse_block_cols(blk, ist - 1)
+              call parse_block_cmplx(blk, ist - 1, jst - 1, rotation_matrix(ist, jst))
             end do
           end do
           call states_rotate(sys%gr%mesh, initial_state, tmp_st, rotation_matrix)
@@ -141,21 +140,20 @@ module opt_control_initst_m
         end if
       else
         message(1) = 'Error: if "OCTInitialState = oct_is_gstransformation", then you must'
-        message(2) = 'supply one "OCTInitialTransformStates" block to define the transformation.'
+        message(2) = 'supply an "OCTInitialTransformStates" block to define the transformation.'
         call write_info(2)
         call input_error('OCTInitialTransformStates')
       end if
 
 
     case(oct_is_userdefined) 
-      message(1) =  'Info: Building userdefined InitialState'
+      message(1) =  'Info: Building user-defined initial state.'
       call write_info(1)
       
       !%Variable OCTInitialUserdefined
       !%Type block
       !%Section Calculation Modes::Optimal Control
       !%Description
-      !% 
       !% Example:
       !%
       !% <tt>%UserDefinedStates
@@ -163,13 +161,13 @@ module opt_control_initst_m
       !% <br>%</tt>
       !%  
       !%End
-      if(parse_block(datasets_check('OCTInitialUserdefined'),blk)==0) then
+      if(parse_block(datasets_check('OCTInitialUserdefined'), blk) == 0) then
         
         no_states = parse_block_n(blk)
         do ib = 1, no_states
-          call parse_block_integer(blk, ib-1, 0, idim)
-          call parse_block_integer(blk, ib-1, 1, inst)
-          call parse_block_integer(blk, ib-1, 2, inik)
+          call parse_block_integer(blk, ib - 1, 0, idim)
+          call parse_block_integer(blk, ib - 1, 1, inst)
+          call parse_block_integer(blk, ib - 1, 2, inik)
 
           ! read formula strings and convert to C strings
           do id = 1, initial_state%d%dim
@@ -177,24 +175,24 @@ module opt_control_initst_m
               do ik = 1, initial_state%d%nik   
                 
                 ! does the block entry match and is this node responsible?
-                if(.not.(id.eq.idim .and. is.eq.inst .and. ik.eq.inik    &
-                  .and. initial_state%st_start.le.is .and. initial_state%st_end.ge.is) ) cycle
+                if(.not. (id .eq. idim .and. is .eq. inst .and. ik .eq. inik    &
+                  .and. initial_state%st_start .le. is .and. initial_state%st_end .ge. is) ) cycle
                 
                 ! parse formula string
                 call parse_block_string(                            &
-                  blk, ib-1, 3, initial_state%user_def_states(id, is, ik))
+                  blk, ib - 1, 3, initial_state%user_def_states(id, is, ik))
                 ! convert to C string
                 call conv_to_C_string(initial_state%user_def_states(id, is, ik))
                 
                 do ip = 1, sys%gr%mesh%np
-                  x = sys%gr%mesh%x(ip, :)
-                  r = sqrt(sum(x(:)**2))
+                  xx = sys%gr%mesh%x(ip, :)
+                  rr = sqrt(sum(xx(:)**2))
                   
-                  ! parse user defined expressions
+                  ! parse user-defined expressions
                   call parse_expression(psi_re, psi_im, &
-                    sys%gr%sb%dim, x, r, M_ZERO, initial_state%user_def_states(id, is, ik))
+                    sys%gr%sb%dim, xx, rr, M_ZERO, initial_state%user_def_states(id, is, ik))
                   ! fill state
-                  initial_state%zpsi(ip, id, is, ik) = psi_re + M_zI*psi_im
+                  initial_state%zpsi(ip, id, is, ik) = psi_re + M_zI * psi_im
                 end do
                 ! normalize orbital
                 call zstates_normalize_orbital(sys%gr%mesh, initial_state%d%dim, &
@@ -215,7 +213,7 @@ module opt_control_initst_m
       call write_info(2)
     end select
 
-    ! Check if we want to freeze some of the deeper orbitals.
+    ! Check whether we want to freeze some of the deeper orbitals.
     call parse_integer(datasets_check('TDFreezeOrbitals'), 0, freeze_orbitals)
     if(freeze_orbitals > 0) then
       ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
@@ -226,13 +224,13 @@ module opt_control_initst_m
       call states_calc_dens(initial_state, sys%gr)
       call v_ks_calc(sys%ks, sys%gr, hm, initial_state, calc_eigenval = .true.)
     elseif(freeze_orbitals < 0) then
-      ! This means SAE approximation. We calculate the Hxc first, then freezer all
+      ! This means SAE approximation. We calculate the Hxc first, then freeze all
       ! orbitals minus one.
       write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
       call write_info(1)
       call states_calc_dens(initial_state, sys%gr)
       call v_ks_calc(sys%ks, sys%gr, hm, initial_state, calc_eigenval = .true.)
-      call states_freeze_orbitals(initial_state, sys%gr, sys%mc, n = initial_state%nst-1)
+      call states_freeze_orbitals(initial_state, sys%gr, sys%mc, n = initial_state%nst - 1)
       call v_ks_freeze_hxc(sys%ks)
       call states_calc_dens(initial_state, sys%gr)
     else

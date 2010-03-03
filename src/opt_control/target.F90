@@ -188,7 +188,7 @@ module opt_control_target_m
       message(1) =  'Info: Using Ground State for TargetOperator'
       call write_info(1)
       call restart_read(trim(restart_dir)//GS_DIR, target%st, gr, geo, ierr)
-      if(ierr.ne.0) then
+      if(ierr .ne. 0) then
         write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(restart_dir)//GS_DIR//'.'
         call write_fatal(1)
       end if
@@ -217,7 +217,7 @@ module opt_control_target_m
       target%st%node(:)  = 0
 
       call restart_read(trim(restart_dir)//GS_DIR, target%st, gr, geo, ierr)
-      if(ierr.ne.0) then
+      if(ierr .ne. 0) then
         write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(restart_dir)//GS_DIR//'.'
         call write_fatal(1)
       end if
@@ -259,7 +259,7 @@ module opt_control_target_m
       !% 
       !% The syntax is the same as the <tt>TransformStates</tt> block.
       !%End
-      if(parse_isdef(datasets_check('OCTTargetTransformStates')).ne.0) then
+      if(parse_isdef(datasets_check('OCTTargetTransformStates')) .ne. 0) then
         if(parse_block(datasets_check('OCTTargetTransformStates'), blk) == 0) then
           call states_copy(tmp_st, target%st)
           SAFE_DEALLOCATE_P(tmp_st%zpsi)
@@ -267,10 +267,11 @@ module opt_control_target_m
           SAFE_ALLOCATE(rotation_matrix(1:target%st%nst, 1:tmp_st%nst))
           rotation_matrix = M_z0
           do ist = 1, target%st%nst
-            do jst = 1, parse_block_cols(blk, ist-1)
-              call parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
+            do jst = 1, parse_block_cols(blk, ist - 1)
+              call parse_block_cmplx(blk, ist - 1, jst - 1, rotation_matrix(ist, jst))
             end do
           end do
+
           call states_rotate(gr%mesh, target%st, tmp_st, rotation_matrix)
           SAFE_DEALLOCATE_A(rotation_matrix)
           call states_end(tmp_st)
@@ -289,7 +290,7 @@ module opt_control_target_m
       end if
 
     case(oct_tg_userdefined) 
-      message(1) =  'Error: Option oct_tg_userdefined is disabled in this version'
+      message(1) =  'Error: Option oct_tg_userdefined is disabled in this version.'
       call write_fatal(1)
 
     case(oct_tg_density) 
@@ -311,7 +312,7 @@ module opt_control_target_m
       !%Default no
       !%Section Calculation Modes::Optimal Control
       !%Description
-      !% If <tt>OCTTargetOperator = oct_tg_density</tt>, and </tt>OCTLocalTarget = "OCTTargetDensityFromState"</tt>,
+      !% If <tt>OCTTargetOperator = oct_tg_density</tt>, and <tt>OCTLocalTarget = "OCTTargetDensityFromState"</tt>,
       !% you must specify a <tt>OCTTargetDensityState</tt> block, in order to specify which linear
       !% combination of the states present in <tt>restart/gs</tt> is used to
       !% create the target density.
@@ -325,7 +326,7 @@ module opt_control_target_m
         call parse_string('OCTTargetDensity', "0", expression)
 
 
-        if(trim(expression).eq.'OCTTargetDensityFromState') then
+        if(trim(expression) .eq. 'OCTTargetDensityFromState') then
 
           if(parse_block(datasets_check('OCTTargetDensityFromState'), blk) == 0) then
             call states_copy(tmp_st, target%st)
@@ -334,8 +335,8 @@ module opt_control_target_m
             SAFE_ALLOCATE(rotation_matrix(1:target%st%nst, 1:tmp_st%nst))
             rotation_matrix = M_z0
             do ist = 1, target%st%nst
-              do jst = 1, parse_block_cols(blk, ist-1)
-                call parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
+              do jst = 1, parse_block_cols(blk, ist - 1)
+                call parse_block_cmplx(blk, ist - 1, jst - 1, rotation_matrix(ist, jst))
               end do
             end do
             call states_rotate(gr%mesh, target%st, tmp_st, rotation_matrix)
@@ -382,7 +383,7 @@ module opt_control_target_m
       !% the variable <tt>OCTLocalTarget</tt>.
       !%End
 
-      if(parse_isdef('OCTTargetLocal').ne.0) then
+      if(parse_isdef('OCTTargetLocal') .ne. 0) then
         SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
         target%rho = M_ZERO
         call parse_string('OCTTargetLocal', "0", expression)
@@ -448,16 +449,16 @@ module opt_control_target_m
       !% <br>%</tt>
       !%
       !%End
-      if(parse_isdef(datasets_check('OCTOptimizeHarmonicSpectrum')).ne.0) then
+      if(parse_isdef(datasets_check('OCTOptimizeHarmonicSpectrum')) .ne. 0) then
         if(parse_block(datasets_check('OCTOptimizeHarmonicSpectrum'), blk) == 0) then
           target%hhg_nks = parse_block_cols(blk, 0)
           SAFE_ALLOCATE(    target%hhg_k(1:target%hhg_nks))
           SAFE_ALLOCATE(target%hhg_alpha(1:target%hhg_nks))
           SAFE_ALLOCATE(    target%hhg_a(1:target%hhg_nks))
           do jj = 1, target%hhg_nks
-            call parse_block_integer(blk, 0, jj-1, target%hhg_k(jj))
-            call parse_block_float(blk, 1, jj-1, target%hhg_alpha(jj))
-            call parse_block_float(blk, 2, jj-1, target%hhg_a(jj))
+            call parse_block_integer(blk, 0, jj - 1, target%hhg_k(jj))
+            call parse_block_float(blk, 1, jj - 1, target%hhg_alpha(jj))
+            call parse_block_float(blk, 2, jj - 1, target%hhg_a(jj))
           end do
         else
           message(1) = '"OCTOptimizeHarmonicSpectrum" has to be specified as a block.'
@@ -550,39 +551,39 @@ module opt_control_target_m
 
   ! ---------------------------------------------------------
   ! Calculates, at a given point in time marked by the integer
-  ! index "i", the integrand of the target functional:
+  ! index, the integrand of the target functional:
   ! <Psi(t)|\hat{O}(t)|Psi(t)>.
-  ! This subroutine that the operator O is already updated
   ! ---------------------------------------------------------
-  subroutine target_tdcalc(target, gr, psi, i)
+  subroutine target_tdcalc(target, gr, psi, time)
     type(target_t), intent(inout) :: target
     type(grid_t),      intent(in) :: gr
     type(states_t),    intent(in) :: psi
-    integer,           intent(in) :: i
+    integer,           intent(in) :: time
+
     CMPLX, allocatable :: opsi(:, :)
     FLOAT, allocatable :: multipole(:, :)
-    integer :: p, j, is
+    integer :: ist, ip, is
 
-    if(target_mode(target) .ne. oct_targetmode_td) return
+    if(target_mode(target)  .ne. oct_targetmode_td) return
 
     call push_sub('target.target_tdcalc')
 
-    target%td_fitness(i) = M_ZERO
+    target%td_fitness(time) = M_ZERO
 
     select case(target%type)
     case(oct_tg_td_local)
 
       select case(psi%d%ispin)
       case(UNPOLARIZED)
-        ASSERT(psi%d%nik.eq.1)
+        ASSERT(psi%d%nik .eq. 1)
         SAFE_ALLOCATE(opsi(1:gr%mesh%np_part, 1:1))
         opsi = M_z0
-        do p  = psi%st_start, psi%st_end
-          do j = 1, gr%mesh%np
-            opsi(j, 1) = target%rho(j) * psi%zpsi(j, 1, p, 1)
+        do ist  = psi%st_start, psi%st_end
+          do ip = 1, gr%mesh%np
+            opsi(ip, 1) = target%rho(ip) * psi%zpsi(ip, 1, ist, 1)
           end do
-          target%td_fitness(i) = &
-            target%td_fitness(i) + zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, p, 1), opsi(:, :))
+          target%td_fitness(time) = &
+            target%td_fitness(time) + zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, ist, 1), opsi(:, :))
         end do
         SAFE_DEALLOCATE_A(opsi)
       case(SPIN_POLARIZED); stop 'Error'
@@ -595,11 +596,11 @@ module opt_control_target_m
       do is = 1, psi%d%nspin
         call dmf_multipoles(gr%mesh, psi%rho(:, is), 1, multipole(:, is))
       end do
-      target%td_fitness(i) = sum(multipole(2, 1:psi%d%spin_channels))
+      target%td_fitness(time) = sum(multipole(2, 1:psi%d%spin_channels))
       SAFE_DEALLOCATE_A(multipole)
 
     case default
-      stop 'Error at calc_tdfitness'
+      stop 'Error at target.target_tdcalc.'
     end select
 
     call pop_sub()
@@ -611,22 +612,22 @@ module opt_control_target_m
   ! Calculates the inhomogeneous term that appears in the equation
   ! for chi, and places it into inh.
   ! ---------------------------------------------------------------
-  subroutine target_inh(psi, gr, target, t, inh)
+  subroutine target_inh(psi, gr, target, time, inh)
     type(states_t),    intent(in)        :: psi
     type(grid_t),      intent(in)        :: gr
     type(target_t),    intent(inout)     :: target
-    FLOAT,             intent(in)        :: t
+    FLOAT,             intent(in)        :: time
     type(states_t),    intent(inout)     :: inh
  
-    integer :: ik, ist, idim, i
+    integer :: ik, ist, idim, ip
     
     call push_sub('target.target_inh')
 
     select case(target%type)
     case(oct_tg_td_local)
-      call target_build_tdlocal(target, gr, t)
-      forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, idim = 1:inh%d%dim, i = 1:gr%mesh%np)
-        inh%zpsi(i, idim, ist, ik) = - target%rho(i) * psi%zpsi(i, idim, ist, ik)
+      call target_build_tdlocal(target, gr, time)
+      forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, idim = 1:inh%d%dim, ip = 1:gr%mesh%np)
+        inh%zpsi(ip, idim, ist, ik) = -target%rho(ip) * psi%zpsi(ip, idim, ist, ik)
       end forall
       
     end select
@@ -637,17 +638,19 @@ module opt_control_target_m
 
 
   !----------------------------------------------------------
-  subroutine target_build_tdlocal(target, gr, tt)
+  subroutine target_build_tdlocal(target, gr, time)
     type(target_t), intent(inout) :: target
-    type(grid_t),      intent(in) :: gr
-    FLOAT, intent(in)             :: tt
+    type(grid_t),   intent(in)    :: gr
+    FLOAT,          intent(in)    :: time
+
     integer :: ip
     FLOAT :: xx(MAX_DIM), rr, re, im
+
     call push_sub('target.target_build_tdlocal')
 
     do ip = 1, gr%mesh%np
       call mesh_r(gr%mesh, ip, rr, coords = xx)
-      call parse_expression(re, im, gr%sb%dim, xx, rr, tt, target%td_local_target)
+      call parse_expression(re, im, gr%sb%dim, xx, rr, time, target%td_local_target)
       target%rho(ip) = re
     end do
 
@@ -690,7 +693,7 @@ module opt_control_target_m
 
       select case(psi%d%ispin)
       case(UNPOLARIZED)
-        ASSERT(psi%d%nik.eq.1)
+        ASSERT(psi%d%nik .eq. 1)
         SAFE_ALLOCATE(opsi(1:gr%mesh%np_part, 1:1))
         opsi = M_z0
         j1 = M_ZERO
@@ -728,11 +731,11 @@ module opt_control_target_m
 
       ddipole(0) = M_ZERO
       do iter = 1, maxiter - 1
-        ddipole(iter) = (target%td_fitness(iter-1)+target%td_fitness(iter+1)- &
-                      M_TWO*target%td_fitness(iter))/target%dt**2
+        ddipole(iter) = (target%td_fitness(iter - 1) + target%td_fitness(iter + 1) - &
+                      M_TWO * target%td_fitness(iter)) / target%dt**2
       end do
       call interpolate( target%dt*(/ -3, -2, -1 /),   &
-                        ddipole(maxiter-3:maxiter-1), &
+                        ddipole(maxiter - 3:maxiter - 1), &
                         M_ZERO, &
                         ddipole(maxiter) )
 
@@ -772,9 +775,9 @@ module opt_control_target_m
     type(states_t),    intent(inout) :: psi_in
     type(states_t),    intent(inout) :: chi_out
     
-    CMPLX   :: olap, zdet
+    CMPLX :: olap, zdet
     CMPLX, allocatable :: cI(:), dI(:), mat(:, :, :), mm(:, :, :, :), mk(:, :), lambda(:, :)
-    integer :: ik, p, dim, k, j, no_electrons, ia, ib, n_pairs, nst, kpoints, jj
+    integer :: ik, ip, ist, jst, idim, no_electrons, ia, ib, n_pairs, nst, kpoints, jj
 
     call push_sub('target.calc_chi')
 
@@ -787,22 +790,22 @@ module opt_control_target_m
       select case(psi_in%d%ispin)
       case(UNPOLARIZED)
 
-        ASSERT(psi_in%d%nik.eq.1)
+        ASSERT(psi_in%d%nik .eq. 1)
 
         if(no_electrons .eq. 1) then
-          do j = 1, gr%mesh%np
-            chi_out%zpsi(j, 1, 1, 1) = sqrt(target%rho(j)) * &
-              exp( M_zI * atan2(aimag(psi_in%zpsi(j, 1, 1, 1)), &
-                                real(psi_in%zpsi(j, 1, 1, 1)  )) )
+          do ip = 1, gr%mesh%np
+            chi_out%zpsi(ip, 1, 1, 1) = sqrt(target%rho(ip)) * &
+              exp(M_zI * atan2(aimag(psi_in%zpsi(ip, 1, 1, 1)), &
+                                real(psi_in%zpsi(ip, 1, 1, 1) )) )
           end do
         else
-          do p  = psi_in%st_start, psi_in%st_end
-            do j = 1, gr%mesh%np_part
-              if(psi_in%rho(j, 1) > CNST(1.0e-8)) then
-                chi_out%zpsi(j, 1, p, 1) = sqrt(target%rho(j)/psi_in%rho(j, 1)) * &
-                  psi_in%zpsi(j, 1, p, 1)
+          do ist = psi_in%st_start, psi_in%st_end
+            do ip = 1, gr%mesh%np_part
+              if(psi_in%rho(ip, 1) > CNST(1.0e-8)) then
+                chi_out%zpsi(ip, 1, ist, 1) = sqrt(target%rho(ip) / psi_in%rho(ip, 1)) * &
+                  psi_in%zpsi(ip, 1, ist, 1)
               else
-                chi_out%zpsi(j, 1, p, 1) = M_ZERO!sqrt(target%rho(j))
+                chi_out%zpsi(ip, 1, ist, 1) = M_ZERO !sqrt(target%rho(ip))
               end if
             end do
           end do
@@ -816,10 +819,10 @@ module opt_control_target_m
 
       select case(psi_in%d%ispin)
       case(UNPOLARIZED)
-        ASSERT(psi_in%d%nik.eq.1)
-        do p  = psi_in%st_start, psi_in%st_end
-          do j = 1, gr%mesh%np
-            chi_out%zpsi(j, 1, p, 1) = target%rho(j) * psi_in%zpsi(j, 1, p, 1)
+        ASSERT(psi_in%d%nik .eq. 1)
+        do ist = psi_in%st_start, psi_in%st_end
+          do ip = 1, gr%mesh%np
+            chi_out%zpsi(ip, 1, ist, 1) = target%rho(ip) * psi_in%zpsi(ip, 1, ist, 1)
           end do
         end do
       case(SPIN_POLARIZED); stop 'Error'
@@ -828,8 +831,9 @@ module opt_control_target_m
 
     case(oct_tg_td_local)
       !We assume that there is no time-independent operator.
-      forall(ik = 1:chi_out%d%nik, p = chi_out%st_start:chi_out%st_end, dim = 1:chi_out%d%dim, j = 1:gr%mesh%np)
-        chi_out%zpsi(j, dim, p, ik) = M_z0
+      forall(ik = 1:chi_out%d%nik, ist = chi_out%st_start:chi_out%st_end, &
+             idim = 1:chi_out%d%dim, ip = 1:gr%mesh%np)
+        chi_out%zpsi(ip, idim, ist, ik) = M_z0
       end forall
 
     case(oct_tg_excited) 
@@ -868,26 +872,26 @@ module opt_control_target_m
 
       select case(psi_in%d%ispin)
       case(UNPOLARIZED)
-        write(message(1), '(a)') 'Internal error in aux.calc_chi'
+        write(message(1), '(a)') 'Internal error in target.calc_chi.'
         call write_fatal(2)
 
       case(SPIN_POLARIZED)
         ASSERT(chi_out%d%nik .eq. 2)
 
         do ik = 1, kpoints
-          do k = chi_out%st_start, chi_out%st_end
-            chi_out%zpsi(:, :, k, ik) = M_z0
+          do ist = chi_out%st_start, chi_out%st_end
+            chi_out%zpsi(:, :, ist, ik) = M_z0
             do ia = 1, n_pairs
               if(ik .ne. target%est%pair(ia)%sigma) cycle
               if(abs(dI(ia)) < CNST(1.0e-12)) cycle
               do ib = 1, n_pairs
                 if(abs(dI(ib)) < CNST(1.0e-12)) cycle
                 mk = M_z0
-                do j = 1, nst
-                  if(j .eq. target%est%pair(ib)%i) jj = target%est%pair(ia)%a
-                  mk(:, :) = mk(:, :) + conjg(mm(k, j, ik, ib)) * target%est%st%zpsi(:, :, jj, ik)
+                do jst = 1, nst
+                  if(jst .eq. target%est%pair(ib)%i) jj = target%est%pair(ia)%a
+                  mk(:, :) = mk(:, :) + conjg(mm(ist, jst, ik, ib)) * target%est%st%zpsi(:, :, jj, ik)
                 end do
-                call lalg_axpy(gr%mesh%np_part, psi_in%d%dim, M_z1, lambda(ib, ia)*mk(:, :), chi_out%zpsi(:, :, k, ik))
+                call lalg_axpy(gr%mesh%np_part, psi_in%d%dim, M_z1, lambda(ib, ia) * mk(:, :), chi_out%zpsi(:, :, ist, ik))
               end do
             end do
           end do
@@ -896,8 +900,8 @@ module opt_control_target_m
       case(SPINORS)
         ASSERT(chi_out%d%nik .eq. 1)
 
-        do k = chi_out%st_start, chi_out%st_end
-          chi_out%zpsi(:, :, k, 1) = M_z0
+        do ist = chi_out%st_start, chi_out%st_end
+          chi_out%zpsi(:, :, ist, 1) = M_z0
 
           do ia = 1, n_pairs
             if(abs(dI(ia)) < CNST(1.0e-12)) cycle
@@ -906,12 +910,12 @@ module opt_control_target_m
               if(abs(dI(ib)) < CNST(1.0e-12)) cycle
 
               mk = M_z0
-              do j = 1, nst
-                if(j .eq. target%est%pair(ib)%i) jj = target%est%pair(ia)%a
-                mk(:, :) = mk(:, :) + conjg(mm(k, j, 1, ib)) * target%est%st%zpsi(:, :, jj, 1)
+              do jst = 1, nst
+                if(jst .eq. target%est%pair(ib)%i) jj = target%est%pair(ia)%a
+                mk(:, :) = mk(:, :) + conjg(mm(ist, jst, 1, ib)) * target%est%st%zpsi(:, :, jj, 1)
               end do
 
-              call lalg_axpy(gr%mesh%np_part, 2, M_z1, lambda(ib, ia)*mk(:, :), chi_out%zpsi(:, :, k, 1))
+              call lalg_axpy(gr%mesh%np_part, 2, M_z1, lambda(ib, ia) * mk(:, :), chi_out%zpsi(:, :, ist, 1))
             end do
           end do
         end do
@@ -928,10 +932,10 @@ module opt_control_target_m
     case(oct_tg_exclude_state)
 
       chi_out%zpsi(:, :, 1, 1) = psi_in%zpsi(:, :, 1, 1)
-      do p = 1, target%st%nst
-        if(loct_isinstringlist(p, target%excluded_states_list)) then
-          olap = zmf_dotp(gr%mesh, psi_in%d%dim, target%st%zpsi(:, :, p, 1), psi_in%zpsi(:, :, 1, 1))
-          chi_out%zpsi(:, :, 1, 1) = chi_out%zpsi(:, :, 1, 1) - olap*target%st%zpsi(:, :, p, 1)
+      do ist = 1, target%st%nst
+        if(loct_isinstringlist(ist, target%excluded_states_list)) then
+          olap = zmf_dotp(gr%mesh, psi_in%d%dim, target%st%zpsi(:, :, ist, 1), psi_in%zpsi(:, :, 1, 1))
+          chi_out%zpsi(:, :, 1, 1) = chi_out%zpsi(:, :, 1, 1) - olap * target%st%zpsi(:, :, ist, 1)
         end if
       end do
 
@@ -939,9 +943,9 @@ module opt_control_target_m
 
       !olap = zstates_mpdotp(gr%mesh, target%st, psi_in)
       do ik = 1, psi_in%d%nik
-        do p  = psi_in%st_start, psi_in%st_end
-          olap = zmf_dotp(gr%mesh, target%st%zpsi(:, 1, p, ik), psi_in%zpsi(:, 1, p, ik))
-          chi_out%zpsi(:, :, p, ik) = olap*target%st%zpsi(:, :, p, ik)
+        do ist = psi_in%st_start, psi_in%st_end
+          olap = zmf_dotp(gr%mesh, target%st%zpsi(:, 1, ist, ik), psi_in%zpsi(:, 1, ist, ik))
+          chi_out%zpsi(:, :, ist, ik) = olap * target%st%zpsi(:, :, ist, ik)
         end do
       end do
 
@@ -949,26 +953,28 @@ module opt_control_target_m
 
     call pop_sub()
   end subroutine calc_chi
-  ! ---------------------------------------------------------
 
 
   ! ----------------------------------------------------------------------
   integer pure function target_mode(target)
     type(target_t), intent(in) :: target
+
     select case(target%type)
     case(oct_tg_td_local, oct_tg_hhg)
       target_mode = oct_targetmode_td
     case default
       target_mode = oct_targetmode_static
     end select
+
   end function target_mode
-  ! ----------------------------------------------------------------------
 
 
   ! ----------------------------------------------------------------------
   integer pure function target_type(target)
     type(target_t), intent(in) :: target
+
     target_type = target%type
+
   end function target_type
   ! ----------------------------------------------------------------------
 
