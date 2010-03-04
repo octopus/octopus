@@ -17,8 +17,8 @@
 !!
 !! $Id$
 
+! ---------------------------------------------------------
 ! See http://prola.aps.org/abstract/PRB/v54/i16/p11169_1
-
 subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, diff, blocksize)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
@@ -152,7 +152,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       if(gr%mesh%parallel_in_domains) then
         SAFE_ALLOCATE(buff(1:4, 1:blocksize))
         buff(1:4, 1:blocksize) = fr(1:4, 1:blocksize)
-        call MPI_Allreduce(buff(1, 1), fr(1, 1), 4*blocksize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
+        call MPI_Allreduce(buff(1, 1), fr(1, 1), 4 * blocksize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
         SAFE_DEALLOCATE_A(buff)
       end if
 #endif
@@ -162,15 +162,15 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
         if(done(ib) /= 0) cycle
 
-        ca = fr(1, ib)*fr(4, ib) - fr(3, ib)*fr(2, ib)
-        cb = fr(3, ib) - st%eigenval(ist, ik)*fr(1, ib)
+        ca = fr(1, ib) * fr(4, ib) - fr(3, ib) * fr(2, ib)
+        cb = fr(3, ib) - st%eigenval(ist, ik) * fr(1, ib)
         cc = st%eigenval(ist, ik)*fr(2, ib) - fr(4, ib)
 
-        lambda(ib) = 2*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc))
+        lambda(ib) = 2 * cc / (cb + sqrt(cb**2 - CNST(4.0) * ca * cc))
 
         ! restrict the value of lambda to be between 0.1 and 1.0
-        if(abs(lambda(ib)) > CNST(1.0)) lambda(ib) = lambda(ib)/abs(lambda(ib))
-        if(abs(lambda(ib)) < CNST(0.1)) lambda(ib) = CNST(0.1)*lambda(ib)/abs(lambda(ib))
+        if(abs(lambda(ib)) > CNST(1.0)) lambda(ib) = lambda(ib) / abs(lambda(ib))
+        if(abs(lambda(ib)) < CNST(0.1)) lambda(ib) = CNST(0.1) * lambda(ib) / abs(lambda(ib))
       end do
 
       do iter = 2, niter
@@ -185,7 +185,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
           ! predict by jacobi
           forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-            psi(ip, idim, iter, ib) = lambda(ib)*psi(ip, idim, iter, ib) + psi(ip, idim, iter - 1, ib)
+            psi(ip, idim, iter, ib) = lambda(ib) * psi(ip, idim, iter, ib) + psi(ip, idim, iter - 1, ib)
           end forall
         end do
 
@@ -225,7 +225,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
         if(gr%mesh%parallel_in_domains) then
           SAFE_ALLOCATE(mmc(1:iter, 1:iter, 1:2, 1:bsize))
           mmc(1:iter, 1:iter, 1:2, 1:bsize) = mm(1:iter, 1:iter, 1:2, 1:bsize)
-          call MPI_Allreduce(mmc(1, 1, 1, 1), mm(1, 1, 1, 1), iter**2*2*bsize, R_MPITYPE, MPI_SUM, &
+          call MPI_Allreduce(mmc(1, 1, 1, 1), mm(1, 1, 1, 1), iter**2 * 2 * bsize, R_MPITYPE, MPI_SUM, &
             gr%mesh%mpi_grp%comm, mpi_err)
           SAFE_DEALLOCATE_A(mmc)
         end if
@@ -281,7 +281,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
           call X(preconditioner_apply)(pre, gr, hm, res(:, :, iter - 1, ib), st%X(psi)(: , :, ist, ik))
 
           forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-            st%X(psi)(ip, idim, ist, ik) = psi(ip, idim, iter - 1, ib) + lambda(ib)*st%X(psi)(ip, idim, ist, ik)
+            st%X(psi)(ip, idim, ist, ik) = psi(ip, idim, iter - 1, ib) + lambda(ib) * st%X(psi)(ip, idim, ist, ik)
           end forall
         else
           do idim = 1, st%d%dim
@@ -290,7 +290,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
         end if
 
         if(mpi_grp_is_root(mpi_world)) then
-          call loct_progress_bar(st%nst*(ik - 1) +  ist, st%nst*st%d%nik)
+          call loct_progress_bar(st%nst * (ik - 1) +  ist, st%nst * st%d%nik)
         end if
 
       end do
@@ -349,7 +349,9 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
 end subroutine X(eigensolver_rmmdiis)
 
-subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged, ik, diff, blocksize)
+
+! ---------------------------------------------------------
+subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged, ik, blocksize)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
@@ -358,7 +360,6 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
   integer,                intent(inout) :: niter
   integer,                intent(inout) :: converged
   integer,                intent(in)    :: ik
-  FLOAT,                  intent(out)   :: diff(1:st%nst)
   integer,                intent(in)    :: blocksize
 
   integer, parameter :: sweeps = 5
@@ -424,7 +425,7 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
         if(gr%mesh%parallel_in_domains) then
           SAFE_ALLOCATE(metmp(1:2, 1:blocksize))
           metmp = me1
-          call MPI_Allreduce(metmp(1, 1), me1(1, 1), 2*blocksize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
+          call MPI_Allreduce(metmp(1, 1), me1(1, 1), 2 * blocksize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
           SAFE_DEALLOCATE_A(metmp)
         end if
 #endif
@@ -443,7 +444,7 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
         
         call X(hamiltonian_apply_batch)(hm, gr%der, kresb, resb, ik)
 
-        niter = niter + 2*bsize
+        niter = niter + 2 * bsize
 
         do ist = sst, est
           ib = ist - sst + 1
@@ -459,7 +460,7 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
         if(gr%mesh%parallel_in_domains) then
           SAFE_ALLOCATE(metmp(1:4, 1:blocksize))
           metmp = me2
-          call MPI_Allreduce(metmp(1, 1), me2(1, 1), 4*blocksize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
+          call MPI_Allreduce(metmp(1, 1), me2(1, 1), 4 * blocksize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
           SAFE_DEALLOCATE_A(metmp)
         end if
 #endif
@@ -467,11 +468,11 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
         do ist = sst, est
           ib = ist - sst + 1
 
-          ca = me2(1, ib)*me2(4, ib) - me2(3, ib)*me2(2, ib)
-          cb = me1(2, ib)*me2(3, ib) - me1(1, ib)*me2(1, ib)
-          cc = me1(1, ib)*me2(2, ib) - me1(2, ib)*me2(4, ib)
+          ca = me2(1, ib) * me2(4, ib) - me2(3, ib) * me2(2, ib)
+          cb = me1(2, ib) * me2(3, ib) - me1(1, ib) * me2(1, ib)
+          cc = me1(1, ib) * me2(2, ib) - me1(2, ib) * me2(4, ib)
 
-          lambda = CNST(2.0)*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc))
+          lambda = CNST(2.0) * cc / (cb + sqrt(cb**2 - CNST(4.0) * ca * cc))
 
           do idim = 1, st%d%dim
             call lalg_axpy(gr%mesh%np, lambda, kres(:, idim, ib), psib%states(ib)%X(psi)(:, idim))
@@ -488,7 +489,7 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
     end do
 
     if(mpi_grp_is_root(mpi_world)) then
-      call loct_progress_bar(st%nst*(ik - 1) +  (ist*(isweep - 1))/sweeps, st%nst*st%d%nik)
+      call loct_progress_bar(st%nst * (ik - 1) +  (ist * (isweep - 1)) / sweeps, st%nst * st%d%nik)
     end if
 
     call X(states_gram_schmidt_full)(st, st%nst, gr%mesh, st%d%dim, st%X(psi)(:, :, :, ik))

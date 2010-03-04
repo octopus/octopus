@@ -1291,16 +1291,18 @@ contains
   ! ---------------------------------------------------------
   ! operators for Crank-Nicholson scheme
   subroutine td_zop(xre, xim, yre, yim)
-    FLOAT, intent(in)  :: xre(:), xim(:)
-    FLOAT, intent(out) :: yre(:), yim(:)
+    FLOAT, intent(in)  :: xre(:)
+    FLOAT, intent(in)  :: xim(:)
+    FLOAT, intent(out) :: yre(:)
+    FLOAT, intent(out) :: yim(:)
 
     call push_sub('td_rti.td_zop')
 #ifdef HAVE_SPARSKIT    
     zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op) = &
-      xre(1:grid_p%mesh%np) + M_zI*xim(1:grid_p%mesh%np)
+      xre(1:grid_p%mesh%np) + M_zI * xim(1:grid_p%mesh%np)
 
     ! propagate backwards
-    call exponential_apply(tr_p%te, grid_p%der, hm_p, zpsi_tmp(:, :, ist_op, ik_op), ist_op, ik_op, -dt_op/M_TWO, t_op)
+    call exponential_apply(tr_p%te, grid_p%der, hm_p, zpsi_tmp(:, :, ist_op, ik_op), ist_op, ik_op, -dt_op / M_TWO, t_op)
 
     yre(1:grid_p%mesh%np) =  real(zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op))
     yim(1:grid_p%mesh%np) = aimag(zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op))
@@ -1313,8 +1315,10 @@ contains
   ! ---------------------------------------------------------
   ! Transpose of H (called e.g. by bi-conjugate gradient solver)
   subroutine td_zopt(xre, xim, yre, yim)
-    FLOAT, intent(in)  :: xre(:), xim(:)
-    FLOAT, intent(out) :: yre(:), yim(:)
+    FLOAT, intent(in)  :: xre(:)
+    FLOAT, intent(in)  :: xim(:)
+    FLOAT, intent(out) :: yre(:)
+    FLOAT, intent(out) :: yim(:)
     
     call push_sub('td_rti.td_zopt')
 #ifdef HAVE_SPARSKIT        
@@ -1322,7 +1326,7 @@ contains
     ! and conjugate the resulting hpsi (note that H is not a purely real operator
     ! for scattering wavefunctions anymore).
     zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op) = &
-      xre(1:grid_p%mesh%np) - M_zI*xim(1:grid_p%mesh%np)
+      xre(1:grid_p%mesh%np) - M_zI * xim(1:grid_p%mesh%np)
     
     ! propagate backwards
     call exponential_apply(tr_p%te, grid_p%der, hm_p, zpsi_tmp(:, :, ist_op, ik_op), ist_op, ik_op, -dt_op/M_TWO, t_op)

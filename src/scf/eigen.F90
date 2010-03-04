@@ -373,7 +373,7 @@ contains
         case(RS_RMMDIIS)
           if(iter == 1) then
             call deigensolver_rmmdiis_start(gr, st, hm, eigens%pre, tol, maxiter, &
-                 eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
+                 eigens%converged(ik), ik, hm%d%block_size)
           else
             call deigensolver_rmmdiis(gr, st, hm, eigens%pre, tol, maxiter, &
                  eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
@@ -406,7 +406,7 @@ contains
         case(RS_RMMDIIS)
           if(iter == 1) then
             call zeigensolver_rmmdiis_start(gr, st, hm, eigens%pre, tol, maxiter, &
-                 eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
+                 eigens%converged(ik), ik, hm%d%block_size)
           else
             call zeigensolver_rmmdiis(gr, st, hm, eigens%pre, tol, maxiter, &
                  eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
