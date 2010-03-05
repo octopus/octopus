@@ -74,7 +74,7 @@ contains
     FLOAT, allocatable :: lr_rho(:,:), lr_rho2(:,:), gs_rho(:,:), tmp_rho(:,:)
     FLOAT :: center_dipole(1:MAX_DIM), diag_dipole(1:MAX_DIM), ionic_dipole(1:MAX_DIM), print_dipole(1:MAX_DIM)
     type(born_charges_t) :: born_charges
-    logical :: diagonal_done, calc_Born, start_density_is_zero_field, center_written
+    logical :: diagonal_done, calc_Born, start_density_is_zero_field, center_written, calc_diagonal
     character(len=80) :: fname
 
     call push_sub('static_pol.static_pol_run')
@@ -254,7 +254,7 @@ contains
       end if
     end do
     
-    if(.not. diagonal_done) then
+    if(.not. diagonal_done .and. calc_diagonal) then
       write(message(1), '(a)')
       write(message(2), '(a,f6.4,3a, f6.4, 3a)') 'Info: Calculating dipole moment for field ', &
          units_from_atomic(units_out%force, e_field), ' ', &
@@ -356,6 +356,16 @@ contains
       !% Only applies if <tt>ResponseMethod = finite_differences</tt>.
       !%End
       call parse_logical(datasets_check('EMStartDensityIsZeroField'), .true., start_density_is_zero_field)
+
+      !%Variable EMCalcDiagonalField
+      !%Type logical
+      !%Default true
+      !%Section Linear Response::Static Polarization
+      !%Description
+      !% Calculate <i>yz</i>-field for beta_<i>xyz</i> hyperpolarizability, which is sometimes harder to converge.
+      !% Only applies if <tt>ResponseMethod = finite_differences</tt>.
+      !%End
+      call parse_logical(datasets_check('EMCalcDiagonalField'), .true., calc_diagonal)
 
       call pop_sub()
     end subroutine init_
@@ -515,8 +525,8 @@ contains
 
       call io_mkdir(EM_RESP_FD_DIR)
 
-      if(iand(sys%outp%what, output_density) .ne. 0 .or. &
-         iand(sys%outp%what, output_pol_density) .ne. 0) then 
+      if((iand(sys%outp%what, output_density) .ne. 0 .or. &
+         iand(sys%outp%what, output_pol_density) .ne. 0) .and. calc_diagonal) then 
         lr_rho2(1:gr%mesh%np, 1:st%d%nspin) = &
           -(st%rho(1:gr%mesh%np, 1:st%d%nspin) - lr_rho(1:gr%mesh%np, 1:st%d%nspin) &
           - tmp_rho(1:gr%mesh%np, 1:st%d%nspin) + gs_rho(1:gr%mesh%np, 1:st%d%nspin)) / e_field**2
@@ -554,7 +564,12 @@ contains
           beta(idir, idir, 1:gr%mesh%sb%dim) = beta(1:gr%mesh%sb%dim, idir, idir)
         end do
 
-        beta(1, 2, 3) = -(diag_dipole(1) - dipole(2, 1, 1) - dipole(3, 1, 1) + center_dipole(1)) / e_field**2
+        if(calc_diagonal) then
+          beta(1, 2, 3) = -(diag_dipole(1) - dipole(2, 1, 1) - dipole(3, 1, 1) + center_dipole(1)) / e_field**2
+        else
+          beta(1, 2, 3) = M_ZERO
+        endif
+
         beta(2, 3, 1) = beta(1, 2, 3)
         beta(3, 1, 2) = beta(1, 2, 3)
         beta(3, 2, 1) = beta(1, 2, 3)
