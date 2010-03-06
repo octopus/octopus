@@ -660,7 +660,8 @@ contains
     integer :: nn
     logical :: found
 
-    call push_sub('par_vec.vec_global2local')
+! no push_sub because called too frequently
+!    call push_sub('par_vec.vec_global2local')
 
     vec_global2local = 0
     if(associated(vp%global)) then
@@ -668,7 +669,6 @@ contains
       if(found) vec_global2local = nn
     end if
 
-    call pop_sub()
   end function vec_global2local
 
 #include "undef.F90"

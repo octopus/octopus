@@ -48,10 +48,14 @@ module fourier_kernel_m
 
 contains
 
+
+  !------------------------------------------------------------------------------
   subroutine fourier_kernel_init(this, mesh, sizes)
     type(fourier_kernel_t), intent(out) :: this
     type(mesh_t),           intent(in)  :: mesh
     integer,                intent(in)  :: sizes(1:MAX_DIM)
+
+    call push_sub('fourier_kernel.fourier_kernel_init')
 
     this%size_real = sizes
     this%size_fourier = sizes
@@ -59,36 +63,46 @@ contains
 
     call cubic_mesh_init(this%kernel, mesh, this%size_fourier)
 
+    call pop_sub()
   end subroutine fourier_kernel_init
 
-  !------------------------------------------------------------------------------
 
+  !------------------------------------------------------------------------------
   subroutine fourier_kernel_end(this)
     type(fourier_kernel_t), intent(inout) :: this
 
+    call push_sub('fourier_kernel.fourier_kernel_end')
     call cubic_mesh_end(this%kernel)
-    
+
+    call pop_sub()    
   end subroutine fourier_kernel_end
+
 
   !------------------------------------------------------------------------------
   function fourier_kernel_size_real(this) result(sizes)
-    type(fourier_kernel_t), intent(out) :: this
-    integer                             :: sizes(1:MAX_DIM)
+    type(fourier_kernel_t), intent(in) :: this
+    integer                            :: sizes(1:MAX_DIM)
 
+    call push_sub('fourier_kernel.fourier_kernel_size_real')
     sizes = this%size_real
+
+    call pop_sub()
   end function fourier_kernel_size_real
 
+
   !------------------------------------------------------------------------------
-
   function fourier_kernel_size_fourier(this) result(sizes)
-    type(fourier_kernel_t), intent(out) :: this
-    integer                             :: sizes(1:MAX_DIM)
+    type(fourier_kernel_t), intent(in) :: this
+    integer                            :: sizes(1:MAX_DIM)
 
+    call push_sub('fourier_kernel.fourier_kernel_size_fourier')
     sizes = this%size_fourier
+
+    call pop_sub()
   end function fourier_kernel_size_fourier
 
-  !------------------------------------------------------------------------------
 
+  !------------------------------------------------------------------------------
   subroutine dfourier_kernel_set_value(this, ix, iy, iz, val)
     type(fourier_kernel_t), intent(inout) :: this
     integer,                intent(in)    :: ix
@@ -96,18 +110,22 @@ contains
     integer,                intent(in)    :: iz
     FLOAT,                  intent(in)    :: val
 
+    call push_sub('fourier_kernel.dfourier_kernel_set_value')
     call dcubic_mesh_set_point(this%kernel, ix, iy, iz, val)
 
+    call pop_sub()
   end subroutine dfourier_kernel_set_value
 
+
   !------------------------------------------------------------------------------
-  
   subroutine dfourier_kernel_apply(this, mesh, ff)
     type(fourier_kernel_t), intent(in) :: this
     type(mesh_t),           intent(in) :: mesh
     FLOAT,                  intent(in) :: ff(:)
 
     type(cubic_mesh_t) :: cube, fourier
+
+    call push_sub('fourier_kernel.dfourier_kernel_apply')
 
     call cubic_mesh_init(cube, mesh, this%size_real)
     call dcubic_mesh_from_mesh(cube, ff)
@@ -123,6 +141,7 @@ contains
     call dcubic_mesh_to_mesh(cube, ff)
     call cubic_mesh_end(cube)
 
+    call pop_sub()
   end subroutine dfourier_kernel_apply
 
 end module fourier_kernel_m
