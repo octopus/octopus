@@ -177,7 +177,7 @@ contains
       db(idir) = mesh%idx%ll(idir)
     end do
     do idir = sb%periodic_dim + 1, sb%dim
-      db(idir) = nint(sb%fft_alpha*(mesh%idx%ll(idir)-1)) + 1
+      db(idir) = nint(sb%fft_alpha * (mesh%idx%ll(idir) - 1)) + 1
     end do
     
     call pop_sub()
@@ -208,7 +208,7 @@ contains
     write(message(3),'(a, i10)') '  # total mesh = ', mesh%np_part_global
     
     write(message(4),'(3a,f9.3,a)') '  Grid Cutoff [', trim(units_abbrev(units_out%energy)),'] = ', &
-      units_from_atomic(units_out%energy, M_PI**2/(M_TWO*maxval(mesh%spacing)**2))
+      units_from_atomic(units_out%energy, M_PI**2 / (M_TWO * maxval(mesh%spacing)**2))
     call write_info(4, unit)
     
     call pop_sub()
@@ -225,6 +225,8 @@ contains
    
     FLOAT :: xx(MAX_DIM)
     
+    call push_sub('mesh.mesh_r')
+
     xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
     if(present(origin)) xx(1:mesh%sb%dim) = xx(1:mesh%sb%dim) - origin(1:mesh%sb%dim)
     rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
@@ -233,6 +235,8 @@ contains
       coords(1:MAX_DIM) = M_ZERO
       coords(1:mesh%sb%dim) = xx(1:mesh%sb%dim)
     end if
+
+    call pop_sub()
   end subroutine mesh_r
   
   
@@ -242,16 +246,16 @@ contains
   !! to any of the walls of the mesh. The criterion is set by input
   !! parameter "width".
   !!
-  !! m     : the mesh.
-  !! i     : the point in the mesh.
+  !! mesh  : the mesh.
+  !! ip    : the point in the mesh.
   !! n     : on output, the number (0<=n<=3) of "walls" of the mesh that
   !!         the point is too close to, in order to consider it belonging
   !!         to a mesh.
-  !! d     : the distances of the point to the walls, for each of the walls
+  !! dist  : the distances of the point to the walls, for each of the walls
   !!         that the point is too close to.
   !! width : the width of the border.
   !!
-  !! So, if n>0, the point is in the border.
+  !! So, if n > 0, the point is in the border.
   ! ----------------------------------------------------------------------
   logical function mesh_inborder(mesh, geo, ip, dist, width) result(is_on_border)
     type(mesh_t),     intent(in)  :: mesh
@@ -263,6 +267,8 @@ contains
     integer :: iatom, jatom, idir
     FLOAT   :: xx(MAX_DIM), rr, dd, radius
     
+    call push_sub('mesh.mesh_inborder')
+
     is_on_border = .false.
     dist = M_ZERO
 
@@ -334,6 +340,7 @@ contains
     ! This may happen if the point is on more than one border at the same time.
     if(dist > width) dist = width
 
+    call pop_sub()
   end function mesh_inborder
   
   
@@ -425,7 +432,10 @@ contains
   FLOAT function mesh_gcutoff(mesh) result(gmax)
     type(mesh_t), intent(in) :: mesh
 
-    gmax = M_PI/(maxval(mesh%spacing))
+    call push_sub('mesh.mesh_gcutoff')
+    gmax = M_PI / (maxval(mesh%spacing))
+
+    call pop_sub()
   end function mesh_gcutoff
   
   
@@ -607,7 +617,7 @@ contains
 
     valid = .true.
     do idir = 1, mesh%sb%dim
-      if(point(idir).lt.mesh%idx%nr(1, idir).or.point(idir).gt.mesh%idx%nr(2, idir)) then
+      if(point(idir) .lt. mesh%idx%nr(1, idir) .or. point(idir) .gt. mesh%idx%nr(2, idir)) then
         valid = .false.
       end if
     end do
@@ -638,7 +648,7 @@ contains
       is_lead_ = .false.
     end if
 
-    if (.not.is_lead_) then
+    if (.not. is_lead_) then
       if(mesh%idx%sb%box_shape == HYPERCUBE) call hypercube_end(mesh%idx%hypercube)
     end if
 
@@ -686,13 +696,14 @@ contains
     
     call pop_sub()
   end subroutine mesh_end
+
   
   ! This function returns the point inside the grid corresponding to
   ! a boundary point when PBCs are used. In case the point does not
   ! have a correspondence (i.e. other BCs are used in that direction),
   ! the same point is returned. Note that this function returns a
   ! global point number when parallelization in domains is used.
-  
+  ! ---------------------------------------------------------  
   integer function mesh_periodic_point(mesh, ip) result(ipp)
     type(mesh_t), intent(in)    :: mesh
     integer,      intent(in)    :: ip
@@ -715,31 +726,37 @@ contains
     call pop_sub()
   end function mesh_periodic_point
   
+
+  ! ---------------------------------------------------------
   real(8) pure function mesh_global_memory(mesh) result(memory)
     type(mesh_t), intent(in) :: mesh
     
     memory = 0.0_8
     
     ! Lxyz_inv
-    memory = memory + SIZEOF_UNSIGNED_INT*product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
+    memory = memory + SIZEOF_UNSIGNED_INT * product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
     ! resolution
     if(mesh%sb%mr_flag) then
-      memory = memory + SIZEOF_UNSIGNED_INT*product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
+      memory = memory + SIZEOF_UNSIGNED_INT * product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
     end if
     ! Lxyz
-    memory = memory + SIZEOF_UNSIGNED_INT*dble(mesh%np_part_global)*MAX_DIM
+    memory = memory + SIZEOF_UNSIGNED_INT * dble(mesh%np_part_global) * MAX_DIM
 
   end function mesh_global_memory
 
+
+  ! ---------------------------------------------------------
   real(8) pure function mesh_local_memory(mesh) result(memory)
     type(mesh_t), intent(in) :: mesh
     
     memory = 0.0_8
     
     ! x
-    memory = memory + REAL_PRECISION*dble(mesh%np_part)*MAX_DIM
+    memory = memory + REAL_PRECISION * dble(mesh%np_part) * MAX_DIM
   end function mesh_local_memory
 
+
+  ! ---------------------------------------------------------
   function mesh_x_global(mesh, ip, force) result(xx)
     type(mesh_t),       intent(in) :: mesh
     integer,            intent(in) :: ip
@@ -750,14 +767,15 @@ contains
     integer :: ix(1:MAX_DIM)
     logical :: force_
 
-    call push_sub('mesh.mesh_x_global')
+! no push_sub because function is called too frequently
+!    call push_sub('mesh.mesh_x_global')
 
-    force_=.false.
-    if (present(force)) force_=force
+    force_ = .false.
+    if (present(force)) force_ = force
       
     if(mesh%parallel_in_domains .or. force_) then
       call index_to_coords(mesh%idx, mesh%sb%dim, ip, ix)
-      chi(1:mesh%sb%dim) = ix(1:mesh%sb%dim)*mesh%spacing(1:mesh%sb%dim)
+      chi(1:mesh%sb%dim) = ix(1:mesh%sb%dim) * mesh%spacing(1:mesh%sb%dim)
       chi(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
       xx = M_ZERO ! this initialization is required by gfortran 4.4 or we get NaNs
       call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
@@ -766,15 +784,17 @@ contains
       xx(1:MAX_DIM) = mesh%x(ip, 1:MAX_DIM)
     end if
 
-    call pop_sub()
   end function mesh_x_global
 
+
+  ! ---------------------------------------------------------
   logical pure function mesh_compact_boundaries(mesh) result(cb)
     type(mesh_t),       intent(in) :: mesh
     
     cb = .not. mesh%use_curvilinear .and. &
          .not. mesh%parallel_in_domains .and.  &
          simul_box_has_zero_bc(mesh%sb)
+
   end function mesh_compact_boundaries
 
 end module mesh_m
