@@ -44,7 +44,6 @@ program oct_test
   integer, parameter :: HARTREE_TEST = 1
 
   call global_init()
-  call command_line_version()
   call parser_init()
   call profiling_init()
 

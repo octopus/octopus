@@ -22,7 +22,12 @@
 #include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
+#if defined(HAVE_GETOPT_LONG)
+#include <getopt.h>
+#else
 #include <unistd.h>
+#endif
+#include <string.h>
 #include "string_f.h"
 
 /* GENERAL FUNCTIONS AND VARIABLES */
@@ -45,7 +50,6 @@ void FC_FUNC_(set_clarg, SET_CLARG)(int *i, STR_F_TYPE arg STR_ARG1)
 
 
 /* FUNCTIONS TO BE USED BY THE PROGRAM oct-oscillator-strength */
-
 void oscillator_strength_help(){
   printf("Usage: oct-oscillator_strength [OPTIONS] [w]\n");
   printf("\n");
@@ -92,8 +96,6 @@ void oscillator_strength_help(){
   printf("                    multipoles files.\n");
   exit(-1);
 }
-
-/***************************************************************/
 
 void FC_FUNC_(getopt_oscillator_strength, GETOPT_OSCILLATOR_STRENGTH)
   (int *mode, double *omega, double *searchinterval, int *order, 
@@ -185,15 +187,14 @@ void FC_FUNC_(getopt_oscillator_strength, GETOPT_OSCILLATOR_STRENGTH)
 
 
 /* FUNCTIONS TO BE USED BY THE PROGRAM oct-harmonic-spectrum */
-
-
 void harmonic_spectrum_help(){
   printf("Usage: oct-harmonic-spectrum [OPTIONS] \n");
   printf("\n");
   printf("Options:\n");
-  printf("  -h              Print this help and exits.\n");
-  printf("  -w <freq>       Specifies the fundamental frequency.\n");
-  printf("  -p <pol>        Specifies the direction of the light polarization.\n");
+  printf("  -h, --help      Prints this help and exits.\n");
+  printf("  -v, --version   Prints octopus version.\n");
+  printf("  -w, --freq=freq Specifies the fundamental frequency.\n");
+  printf("  -p, --pol=pol   Specifies the direction of the light polarization.\n");
   printf("                  The oct-harmonic-spectrum utility program needs to know\n");
   printf("                  the direction along which the emission radiation is\n");
   printf("                  considered to be polarized. It may be linearly polarized\n");
@@ -204,7 +205,7 @@ void harmonic_spectrum_help(){
   printf("                     '+' : Circularly polarized field, counterclockwise.\n");
   printf("                     '-' : Circularly polarized field, clockwise.\n");
   printf("                  The default is 'x'\n");
-  printf("  -m <mode>       Whether the harmonic spectrum is computed by taking the\n");
+  printf("  -m, --mode=mode Whether the harmonic spectrum is computed by taking the\n");
   printf("                  second derivative of the dipole moment numerically, or by\n");
   printf("                  making use of the acceleration operator, stored in the\n:");
   printf("                  'acceleration' file. The options are:\n");
@@ -219,14 +220,35 @@ void FC_FUNC_(getopt_harmonic_spectrum, GETOPT_HARMONIC_SPECTRUM)
 {
   int c;
 
+#if defined(HAVE_GETOPT_LONG)
+  static struct option long_options[] =
+    {
+      {"help", no_argument, 0, 'h'},
+      {"version", no_argument, 0, 'v'},
+      {"freq", required_argument, 0, 'w'},
+      {"pol", required_argument, 0, 'p'},
+      {"mode", required_argument, 0, 'm'},
+      {0, 0, 0, 0}
+    };
+#endif
+
   while (1) {
-    c = getopt(argc, argv, "hw:p:m:");
+    int option_index = 0;
+#if defined(HAVE_GETOPT_LONG)
+    c = getopt_long(argc, argv, "hvw:p:m:", long_options, &option_index);
+#else
+    c = getopt(argc, argv, "hvw:p:m:");
+#endif
     if (c == -1) break;
     switch (c) {
 
     case 'h':
       harmonic_spectrum_help();
       break;
+
+    case 'v':
+      printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
+      exit(0);
 
     case 'w':
       *w0 = (double)atof(optarg);
@@ -240,12 +262,460 @@ void FC_FUNC_(getopt_harmonic_spectrum, GETOPT_HARMONIC_SPECTRUM)
       *m = (int)atoi(optarg);
       break;
 
-    case '?':
-      harmonic_spectrum_help();
     }
   }
+
+}
+/***************************************************************/
+
+
+/* FUNCTIONS TO BE USED BY THE PROGRAM oct-help */
+void help_help(){
+  printf("Usage: oct-help [options] \n");
+  printf("\n");
+  printf("Options:\n");
+  printf("  -h, --help            Prints this help and exits.\n");
+  printf("  -v, --version         Prints octopus version.\n");
+  printf("  -s, --search=STRING   Search variables whose names contain string 'STRING'.\n");
+  printf("  -p, --print=VARNAME   Prints description of variable 'VARNAME'.\n");
+  exit(-1);
+}
+
+
+void FC_FUNC_(getopt_help, GETOPT_HELP)
+     (STR_F_TYPE mode, STR_F_TYPE name STR_ARG2)
+{
+  int c;
+
+#if defined(HAVE_GETOPT_LONG)
+  static struct option long_options[] =
+    {
+      {"help", no_argument, 0, 'h'},
+      {"version", no_argument, 0, 'v'},
+      {"list", no_argument, 0, 'l'},
+      {"search", required_argument, 0, 's'},
+      {"print", required_argument, 0, 'p'},
+      {0, 0, 0, 0}
+    };
+#endif
+
+
+  while (1) {
+    int option_index = 0;
+#if defined(HAVE_GETOPT_LONG)
+    c = getopt_long(argc, argv, "hvls:p:", long_options, &option_index);
+#else
+    c = getopt(argc, argv, "hvls:p:");
+#endif
+    if (c == -1) break;
+    switch (c) {
+
+    case 'h':
+      help_help();
+      break;
+
+    case 'v':
+      printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
+      exit(0);
+
+    case 'l':
+      TO_F_STR1("list", mode);
+      return;
+
+    case 's':
+      TO_F_STR1("search", mode);
+      TO_F_STR2(optarg, name);
+      return;
+
+    case 'p':
+      TO_F_STR1("print", mode);
+      TO_F_STR2(optarg, name);
+      return;
+
+    }
+  }
+  if (optind < argc) help_help();
 
 }
 
 
 /***************************************************************/
+
+
+/* FUNCTIONS TO BE USED BY THE PROGRAM octopus */
+void octopus_help(){
+  printf("Usage: octopus [options] \n");
+  printf("\n");
+  printf("Options:\n");
+  printf("  -h, --help            Prints this help and exits.\n");
+  printf("  -v, --version         Prints octopus version.\n");
+  exit(-1);
+}
+
+void FC_FUNC_(getopt_octopus, GETOPT_OCTOPUS)
+     (STR_F_TYPE mode, STR_F_TYPE name STR_ARG2)
+{
+  int c;
+#if defined(HAVE_GETOPT_LONG)
+  static struct option long_options[] =
+    {
+      {"help", no_argument, 0, 'h'},
+      {"version", no_argument, 0, 'v'},
+      {0, 0, 0, 0}
+    };
+#endif
+
+  while (1) {
+    int option_index = 0;
+#if defined(HAVE_GETOPT_LONG)
+    c = getopt_long(argc, argv, "hv", long_options, &option_index);
+#else
+    c = getopt(argc, argv, "hv");
+#endif
+    if (c == -1) break;
+    switch (c) {
+    case 'h':
+      octopus_help();
+      break;
+    case 'v':
+      printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
+      exit(0);
+    }
+  }
+  if (optind < argc) octopus_help();
+
+}
+
+/***************************************************************/
+
+
+/* FUNCTIONS TO BE USED BY THE PROGRAM oct-casida_spectrum */
+void casida_spectrum_help(){
+  printf("Usage: oct-casida_spectrum [options] \n");
+  printf("\n");
+  printf("Options:\n");
+  printf("  -h, --help            Prints this help and exits.\n");
+  printf("  -v, --version         Prints octopus version.\n");
+  exit(-1);
+}
+
+void FC_FUNC_(getopt_casida_spectrum, GETOPT_CASIDA_SPECTRUM)
+     (STR_F_TYPE mode, STR_F_TYPE name STR_ARG2)
+{
+  int c;
+#if defined(HAVE_GETOPT_LONG)
+  static struct option long_options[] =
+    {
+      {"help", no_argument, 0, 'h'},
+      {"version", no_argument, 0, 'v'},
+      {0, 0, 0, 0}
+    };
+#endif
+
+  while (1) {
+    int option_index = 0;
+#if defined(HAVE_GETOPT_LONG)
+    c = getopt_long(argc, argv, "hv", long_options, &option_index);
+#else
+    c = getopt(argc, argv, "hv");
+#endif
+    if (c == -1) break;
+    switch (c) {
+    case 'h':
+      casida_spectrum_help();
+      break;
+    case 'v':
+      printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
+      exit(0);
+    }
+  }
+  if (optind < argc) casida_spectrum_help();
+
+}
+
+/***************************************************************/
+
+
+/* FUNCTIONS TO BE USED BY THE PROGRAM oct-center-geom */
+void center_geom_help(){
+  printf("Usage: oct-center-geom [options] \n");
+  printf("\n");
+  printf("Options:\n");
+  printf("  -h, --help            Prints this help and exits.\n");
+  printf("  -v, --version         Prints octopus version.\n");
+  exit(-1);
+}
+
+void FC_FUNC_(getopt_center_geom, GETOPT_CENTER_GEOM)
+     (STR_F_TYPE mode, STR_F_TYPE name STR_ARG2)
+{
+  int c;
+#if defined(HAVE_GETOPT_LONG)
+  static struct option long_options[] =
+    {
+      {"help", no_argument, 0, 'h'},
+      {"version", no_argument, 0, 'v'},
+      {0, 0, 0, 0}
+    };
+#endif
+
+  while (1) {
+    int option_index = 0;
+#if defined(HAVE_GETOPT_LONG)
+    c = getopt_long(argc, argv, "hv", long_options, &option_index);
+#else
+    c = getopt(argc, argv, "hv");
+#endif
+    if (c == -1) break;
+    switch (c) {
+    case 'h':
+      center_geom_help();
+      break;
+    case 'v':
+      printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
+      exit(0);
+    }
+  }
+  if (optind < argc) center_geom_help();
+
+}
+
+/***************************************************************/
+
+
+/* FUNCTIONS TO BE USED BY THE PROGRAM oct-center-geom */
+void dielectric_function_help(){
+  printf("Usage: oct-dielectric-function [options] \n");
+  printf("\n");
+  printf("Options:\n");
+  printf("  -h, --help            Prints this help and exits.\n");
+  printf("  -v, --version         Prints octopus version.\n");
+  exit(-1);
+}
+
+void FC_FUNC_(getopt_dielectric_function, GETOPT_DIELECTRIC_FUNCTION)
+     (STR_F_TYPE mode, STR_F_TYPE name STR_ARG2)
+{
+  int c;
+#if defined(HAVE_GETOPT_LONG)
+  static struct option long_options[] =
+    {
+      {"help", no_argument, 0, 'h'},
+      {"version", no_argument, 0, 'v'},
+      {0, 0, 0, 0}
+    };
+#endif
+
+  while (1) {
+    int option_index = 0;
+#if defined(HAVE_GETOPT_LONG)
+    c = getopt_long(argc, argv, "hv", long_options, &option_index);
+#else
+    c = getopt(argc, argv, "hv");
+#endif
+    if (c == -1) break;
+    switch (c) {
+    case 'h':
+      dielectric_function_help();
+      break;
+    case 'v':
+      printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
+      exit(0);
+    }
+  }
+  if (optind < argc) dielectric_function_help();
+
+}
+
+/***************************************************************/
+
+
+/* FUNCTIONS TO BE USED BY THE PROGRAM oct-propagation_spectrum */
+void propagation_spectrum_help(){
+  printf("Usage: oct-propagation_spectrum [options] \n");
+  printf("\n");
+  printf("Options:\n");
+  printf("  -h, --help            Prints this help and exits.\n");
+  printf("  -v, --version         Prints octopus version.\n");
+  exit(-1);
+}
+
+void FC_FUNC_(getopt_propagation_spectrum, GETOPT_PROPAGATION_SPECTRUM)
+     (STR_F_TYPE mode, STR_F_TYPE name STR_ARG2)
+{
+  int c;
+#if defined(HAVE_GETOPT_LONG)
+  static struct option long_options[] =
+    {
+      {"help", no_argument, 0, 'h'},
+      {"version", no_argument, 0, 'v'},
+      {0, 0, 0, 0}
+    };
+#endif
+
+  while (1) {
+    int option_index = 0;
+#if defined(HAVE_GETOPT_LONG)
+    c = getopt_long(argc, argv, "hv", long_options, &option_index);
+#else
+    c = getopt(argc, argv, "hv");
+#endif
+    if (c == -1) break;
+    switch (c) {
+    case 'h':
+      propagation_spectrum_help();
+      break;
+    case 'v':
+      printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
+      exit(0);
+    }
+  }
+  if (optind < argc) propagation_spectrum_help();
+
+}
+
+/***************************************************************/
+
+
+/* FUNCTIONS TO BE USED BY THE PROGRAM oct-rotatory_strength */
+void rotatory_strength_help(){
+  printf("Usage: oct-rotatory_strength [options] \n");
+  printf("\n");
+  printf("Options:\n");
+  printf("  -h, --help            Prints this help and exits.\n");
+  printf("  -v, --version         Prints octopus version.\n");
+  exit(-1);
+}
+
+void FC_FUNC_(getopt_rotatory_strength, GETOPT_ROTATORY_STRENGTH)
+     (STR_F_TYPE mode, STR_F_TYPE name STR_ARG2)
+{
+  int c;
+#if defined(HAVE_GETOPT_LONG)
+  static struct option long_options[] =
+    {
+      {"help", no_argument, 0, 'h'},
+      {"version", no_argument, 0, 'v'},
+      {0, 0, 0, 0}
+    };
+#endif
+
+  while (1) {
+    int option_index = 0;
+#if defined(HAVE_GETOPT_LONG)
+    c = getopt_long(argc, argv, "hv", long_options, &option_index);
+#else
+    c = getopt(argc, argv, "hv");
+#endif
+    if (c == -1) break;
+    switch (c) {
+    case 'h':
+      rotatory_strength_help();
+      break;
+    case 'v':
+      printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
+      exit(0);
+    }
+  }
+  if (optind < argc) rotatory_strength_help();
+
+}
+
+/***************************************************************/
+
+
+/* FUNCTIONS TO BE USED BY THE PROGRAM oct-vibrational */
+void vibrational_help(){
+  printf("Usage: oct-vibrational [options] \n");
+  printf("\n");
+  printf("Options:\n");
+  printf("  -h, --help            Prints this help and exits.\n");
+  printf("  -v, --version         Prints octopus version.\n");
+  exit(-1);
+}
+
+void FC_FUNC_(getopt_vibrational, GETOPT_VIBRATIONAL)
+     (STR_F_TYPE mode, STR_F_TYPE name STR_ARG2)
+{
+  int c;
+#if defined(HAVE_GETOPT_LONG)
+  static struct option long_options[] =
+    {
+      {"help", no_argument, 0, 'h'},
+      {"version", no_argument, 0, 'v'},
+      {0, 0, 0, 0}
+    };
+#endif
+
+  while (1) {
+    int option_index = 0;
+#if defined(HAVE_GETOPT_LONG)
+    c = getopt_long(argc, argv, "hv", long_options, &option_index);
+#else
+    c = getopt(argc, argv, "hv");
+#endif
+    if (c == -1) break;
+    switch (c) {
+    case 'h':
+      vibrational_help();
+      break;
+    case 'v':
+      printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
+      exit(0);
+    }
+  }
+  if (optind < argc) vibrational_help();
+
+}
+
+/***************************************************************/
+
+
+/* FUNCTIONS TO BE USED BY THE PROGRAM oct-xyz-anim */
+void xyz_anim_help(){
+  printf("Usage: oct-xyz-anim [options] \n");
+  printf("\n");
+  printf("Options:\n");
+  printf("  -h, --help            Prints this help and exits.\n");
+  printf("  -v, --version         Prints octopus version.\n");
+  exit(-1);
+}
+
+void FC_FUNC_(getopt_xyz_anim, GETOPT_XYZ_ANIM)
+     (STR_F_TYPE mode, STR_F_TYPE name STR_ARG2)
+{
+  int c;
+#if defined(HAVE_GETOPT_LONG)
+  static struct option long_options[] =
+    {
+      {"help", no_argument, 0, 'h'},
+      {"version", no_argument, 0, 'v'},
+      {0, 0, 0, 0}
+    };
+#endif
+
+  while (1) {
+    int option_index = 0;
+#if defined(HAVE_GETOPT_LONG)
+    c = getopt_long(argc, argv, "hv", long_options, &option_index);
+#else
+    c = getopt(argc, argv, "hv");
+#endif
+    if (c == -1) break;
+    switch (c) {
+    case 'h':
+      xyz_anim_help();
+      break;
+    case 'v':
+      printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
+      exit(0);
+    }
+  }
+  if (optind < argc) xyz_anim_help();
+
+}
+
+/***************************************************************/
+
+
+

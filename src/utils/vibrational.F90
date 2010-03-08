@@ -52,7 +52,8 @@ program vibrational
   
   ! Initialize stuff
   call global_init()
-  call command_line_version()
+  call getopt_init(ierr)
+  if(ierr.eq.0) call getopt_vibrational
   call parser_init()
   call datasets_init(1)
   call io_init()

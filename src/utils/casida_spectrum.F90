@@ -36,11 +36,13 @@ program casida_spectrum
     FLOAT :: br, energy_step, min_energy, max_energy
   end type casida_spectrum_t
 
+  integer :: ierr
   type(casida_spectrum_t) :: cs
 
   ! Initialize stuff
   call global_init()
-  call command_line_version()
+  call getopt_init(ierr)
+  if(ierr.eq.0) call getopt_casida_spectrum
   call parser_init()
   call datasets_init(1)
   call io_init()

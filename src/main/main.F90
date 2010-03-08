@@ -36,12 +36,13 @@ program octopus
 
   implicit none
 
-  integer :: ns, inp_calc_mode
+  integer :: ns, inp_calc_mode, ierr
   type(block_t) :: blk
   character(len=256) :: sys_name
 
   call global_init()
-  call command_line_version()
+  call getopt_init(ierr)
+  if(ierr.eq.0) call getopt_octopus
   call parser_init()
 
   !%Variable DevelVersion

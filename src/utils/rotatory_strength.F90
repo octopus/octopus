@@ -33,11 +33,12 @@ program rotational_strength
   implicit none
 
   type(spec_t) :: spectrum
-  integer :: in_file, out_file
+  integer :: in_file, out_file, ierr
 
   ! Initialize stuff
   call global_init()
-  call command_line_version()
+  call getopt_init(ierr)
+  if(ierr.eq.0) call getopt_rotatory_strength
   call parser_init()
   call datasets_init(1)
   call io_init()

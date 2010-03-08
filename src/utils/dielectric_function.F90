@@ -34,7 +34,7 @@ program dielectric_function
 
   implicit none
 
-  integer :: in_file, out_file, ii, jj, kk, idir
+  integer :: in_file, out_file, ii, jj, kk, idir, ierr
   integer :: time_steps, energy_steps, istart, iend, ntiter
   FLOAT :: vecpot0(1:MAX_DIM), dt, tt, ww, av
   FLOAT, allocatable :: vecpot(:, :), dumpa(:)
@@ -45,7 +45,8 @@ program dielectric_function
 
   ! Initialize stuff
   call global_init()
-  call command_line_version()
+  call getopt_init(ierr)
+  if(ierr.eq.0) call getopt_dielectric_function
   call parser_init()
   call parse_integer('DebugLevel', 0, conf%debug_level)
   if(conf%debug_level>0) then

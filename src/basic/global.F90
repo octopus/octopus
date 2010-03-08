@@ -148,7 +148,7 @@ contains
     end if
     conf%latest_svn = LATEST_SVN
     conf%build_time = BUILD_TIME
-    conf%version    = OCTOPUS_VERSION
+    conf%version    = PACKAGE_VERSION
     conf%cc         = CC
 #if defined (LONG_LINES)
     conf%cflags     = CFLAGS

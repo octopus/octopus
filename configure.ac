@@ -92,7 +92,7 @@ AC_FUNC_STAT
 AC_CHECK_FUNCS([gettimeofday \
 strndup tcgetpgrp scandir alphasort \
 sigaction readdir closedir strchr strtod \
-perror strcasestr sbrk])
+perror strcasestr sbrk getopt_long])
 
 ACX_PAPI
 ACX_ARCH
@@ -321,6 +321,8 @@ AC_CONFIG_SUBDIRS([libxc])
 LINK="$FC $FCFLAGS $LDFLAGS -o \$@"
 AC_SUBST(LINK)
 AC_SUBST(FCEXTRALIBS)
+
+ACX_OCTOPUS_COMPILATION_INFO
 
 AC_CONFIG_FILES([Makefile
   external_libs/Makefile

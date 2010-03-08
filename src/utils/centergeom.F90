@@ -33,10 +33,12 @@ program centergeom
 
   implicit none
 
+  integer :: ierr
   type(geometry_t) :: geo
 
   call global_init()                       ! initialize
-  call command_line_version()
+  call getopt_init(ierr)
+  if(ierr.eq.0) call getopt_center_geom
   call parser_init()
   call parse_integer('DebugLevel', 0, conf%debug_level)
   if(conf%debug_level>0) then

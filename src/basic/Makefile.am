@@ -57,26 +57,6 @@ noinst_HEADERS =          \
 
 include $(srcdir)/../common-rules.make
 
-# How to compile global.F90 (have to define some extra variables here).
-global.o: global.F90
-	rev="`$(SHELL) $(top_srcdir)/build/svn_release_number.sh 2> /dev/null`"; \
-	truecc="`$(SHELL) $(top_srcdir)/build/true_compiler.sh $(CC) 2> /dev/null`"; \
-	truefc="`$(SHELL) $(top_srcdir)/build/true_compiler.sh $(FC) 2> /dev/null`"; \
-	@FCCPP@ @CPPFLAGS@ -I. $(AM_CPPFLAGS) \
-	        -DSHARE_OCTOPUS='"$(pkgdatadir)"' \
-		-DLATEST_SVN="'$$rev'" \
-		-DOCTOPUS_VERSION='"$(VERSION)"' \
-		-DBUILD_TIME="'`date`'" \
-		-DCC="'$(CC) $$truecc'" \
-		-DCFLAGS="'$(CFLAGS)'" \
-		-DFC="'$(FC) $$truefc'" \
-		-DFCFLAGS='"$(FCFLAGS) $(FCFLAGS_f90)"' $< > $*_oct.f90
-	@if [ "@F90_ACCEPTS_LINE_NUMBERS@" = "no" ]; then \
-		grep -v "^#" $*_oct.f90 > $*_oct.f91; \
-		mv -f $*_oct.f91 $*_oct.f90; \
-	fi
-	@FC@ @FCFLAGS@ $(AM_FCFLAGS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
-	@rm -f $*_oct.f90
 
 # This is to generate the dependencies. It makes use of the makedepf90
 # program of Erik Edelmann

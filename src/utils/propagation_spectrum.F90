@@ -34,14 +34,15 @@ program propagation_spectrum
 
   implicit none
 
-  integer :: in_file(3), out_file(3), eq_axes, nspin, lmax, time_steps
+  integer :: in_file(3), out_file(3), eq_axes, nspin, lmax, time_steps, ierr
   logical :: calculate_tensor
   type(spec_t) :: spectrum
   type(unit_system_t) :: file_units
 
   ! Initialize stuff
   call global_init()
-  call command_line_version()
+  call getopt_init(ierr)
+  if(ierr.eq.0) call getopt_propagation_spectrum
   call parser_init()
 
   call parse_integer('DebugLevel', 0, conf%debug_level)

@@ -35,56 +35,34 @@ program oct_help
   integer, parameter :: help_stdout = 6, help_stderr = 0
 
   call global_init()
-  call command_line_version()
 
-  if( .not. command_line_is_available() ) then 
-    write(help_stderr, '(a)') "Your fortran compiler doesn't support command line arguments,"
-    write(help_stderr, '(a)') "the oct-help command is not available."
+  call getopt_init(ierr)
+  if(ierr.ne.0) then
+    write(stderr, '(a)') "Your Fortran compiler doesn't support command-line arguments;"
+    write(stderr, '(a)') "the oct-help command is not available."
     stop
   end if
+  mode    = " "
+  varname = " "
+  call getopt_help(mode, varname)
 
-  argc = command_argument_count()
-
-  if( argc == 0 ) then
-    write(help_stderr, '(a)') 'Usage: oct-help { show | search | list }'
-    stop
-  end if
-
-  call get_command_argument(1, mode)
-  
   select case(mode)
 
-  case("show")
-    
-    if (argc >= 2) then
-      call get_command_argument(2, varname)
-      call varinfo_print(help_stdout, trim(varname), ierr)
-
-      if (ierr /= 0) then
-        write(help_stderr, '(a)') "Error: Variable "//trim(varname)//" not found."
-      end if
-
-    else
-      write(help_stderr, '(a)') "Gives information about a variable"
-      write(help_stderr, '(a)') "Usage: oct-help show variable_name"
+  case("print")
+    call varinfo_print(help_stdout, trim(varname), ierr)
+    if (ierr /= 0) then
+      write(help_stderr, '(a)') "Error: Variable "//trim(varname)//" not found."
     end if
 
   case("search")
-
-    if (argc >= 2) then
-      call get_command_argument(2, varname)
-      call varinfo_search(help_stdout, trim(varname), ierr)
-    else
-      write(help_stderr, '(a)') 'Searches for variable names that contain a certain string'
-      write(help_stderr, '(a)') 'Usage: oct-help search string'
-    end if
+    call varinfo_search(help_stdout, trim(varname), ierr)
 
   case("list")
     call varinfo_search(help_stdout, "", ierr)
 
   case default
     write(help_stderr, '(a,a)') 'Unknown command: ', mode
-    write(help_stderr, '(a)') 'Usage: oct-help { show | search | list}'
+    write(help_stderr, '(a)') 'Usage: oct-help { print | search | list}'
 
   end select
     
