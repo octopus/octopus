@@ -211,17 +211,17 @@ contains
           have_to_calculate = .true.
           ! if this frequency is zero and this is not the first
           ! iteration we do not have to do anything
-          if( iomega > 1 .and. em_vars%freq_factor(ifactor) == M_ZERO) have_to_calculate = .false. 
+          if(iomega > 1 .and. em_vars%freq_factor(ifactor) == M_ZERO) have_to_calculate = .false. 
 
           if(ifactor > 1) then 
 
             ! if this frequency is the same as the previous one, just copy it
             if( have_to_calculate .and. &
-              em_vars%freq_factor(ifactor)*em_vars%omega(iomega) == & 
-              em_vars%freq_factor(ifactor-1)*em_vars%omega(iomega) ) then
+              em_vars%freq_factor(ifactor) * em_vars%omega(iomega) == & 
+              em_vars%freq_factor(ifactor - 1) * em_vars%omega(iomega) ) then
 
-              call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor-1), em_vars%lr(idir, 1, ifactor))
-              call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, ifactor-1), em_vars%lr(idir, 2, ifactor))
+              call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor - 1), em_vars%lr(idir, 1, ifactor))
+              call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, ifactor - 1), em_vars%lr(idir, 2, ifactor))
 
               have_to_calculate = .false.
 
@@ -229,10 +229,10 @@ contains
 
             ! if this frequency is minus the previous one, copy it inverted
             if( have_to_calculate .and. & 
-              em_vars%freq_factor(ifactor) == -em_vars%freq_factor(ifactor-1) ) then 
+              em_vars%freq_factor(ifactor) == -em_vars%freq_factor(ifactor - 1) ) then 
 
-              call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor-1), em_vars%lr(idir, 2, ifactor))
-              call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, ifactor-1), em_vars%lr(idir, 1, ifactor))
+              call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor - 1), em_vars%lr(idir, 2, ifactor))
+              call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, ifactor - 1), em_vars%lr(idir, 1, ifactor))
 
               have_to_calculate = .false.
 
@@ -242,7 +242,7 @@ contains
 
           if(have_to_calculate) then 
 
-            str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(ifactor)*em_vars%omega(iomega)))
+            str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(ifactor) * em_vars%omega(iomega)))
             write(message(1), '(5a)') 'Info: Calculating response for the ', index2axis(idir), &
               '-direction and frequency ', trim(str_tmp), '.'
             call write_info(1)

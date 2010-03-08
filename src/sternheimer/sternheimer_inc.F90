@@ -17,14 +17,12 @@
 !!
 !! $Id: em_resp_inc.F90 2663 2007-01-25 09:04:29Z lorenzen $
 
-
-! -------------------------------------------------------------
+!--------------------------------------------------------------
 ! This routine calculates the first-order variations of the wavefunctions 
 ! for an applied perturbation.
 !--------------------------------------------------------------
-
 subroutine X(sternheimer_solve)(                           &
-     this, sys, hm, lr, nsigma, omega, perturbation,        &
+     this, sys, hm, lr, nsigma, omega, perturbation,       &
      restart_dir, rho_tag, wfs_tag, have_restart_rho)
   type(sternheimer_t),    intent(inout) :: this
   type(system_t), target, intent(inout) :: sys
@@ -95,14 +93,14 @@ subroutine X(sternheimer_solve)(                           &
       call X(lr_orth_response)(mesh, st, lr(sigma))
     enddo
   endif
-   
+
   tol = scf_tol_step(this%scf_tol, 0, M_ONE)
 
   !self-consistency iteration for response
   iter_loop: do iter = 1, this%scf_tol%max_iter
     if (this%add_fxc .or. this%add_hartree) then
-       write(message(1), '(a, i3)') "LR SCF Iteration: ", iter
-       call write_info(1)
+      write(message(1), '(a, i3)') "LR SCF Iteration: ", iter
+      call write_info(1)
     endif
     ! otherwise it is not actually SCF, and there can only be one pass through
 
@@ -132,7 +130,7 @@ subroutine X(sternheimer_solve)(                           &
             Y(1:mesh%np, 1, sigma) = R_TOTYPE(M_ZERO)
             call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, st%X(psi)(:, :, ist, ik), Y(:, :, sigma))
           end if
-          Y(1:mesh%np, 1, sigma) = -Y(1:mesh%np, 1, sigma) - hvar(1:mesh%np, is, sigma)*st%X(psi)(1:mesh%np, 1, ist, ik)
+          Y(1:mesh%np, 1, sigma) = -Y(1:mesh%np, 1, sigma) - hvar(1:mesh%np, is, sigma) * st%X(psi)(1:mesh%np, 1, ist, ik)
 
           ! Let Pc = projector onto unoccupied states, Pn` = projector that removes state n
           ! For an SCF run, we will apply Pn` for the last step always, since the whole wavefunction is useful for some
@@ -199,7 +197,7 @@ subroutine X(sternheimer_solve)(                           &
     call X(restart_write_lr_rho)(lr(1), sys%gr, st%d%nspin, restart_dir, rho_tag)
 
     do sigma = 1, nsigma 
-      write(dirname,'(a,a,i1)') trim(restart_dir)//trim(wfs_tag),'_', sigma
+      write(dirname,'(a,a,i1)') trim(restart_dir)//trim(wfs_tag), '_', sigma
       call restart_write(trim(tmpdir)//dirname, st, sys%gr, err, iter=iter, lr=lr(sigma))
     end do
     
@@ -259,7 +257,7 @@ subroutine X(sternheimer_solve)(                           &
       write(message(1), '(a, i4, a)') &
            'Info: SCF for response converged in ', iter, ' iterations.'
       write(message(2), '(a, i8)') &
-           '      Total Hamiltonian applications:', total_iter*linear_solver_ops_per_iter(this%solver)
+           '      Total Hamiltonian applications:', total_iter * linear_solver_ops_per_iter(this%solver)
       call write_info(2)
       exit
     else
@@ -286,6 +284,8 @@ subroutine X(sternheimer_solve)(                           &
 
 end subroutine X(sternheimer_solve)
 
+
+!--------------------------------------------------------------
 subroutine X(sternheimer_calc_hvar)(this, sys, hm, lr, nsigma, hvar)
   type(sternheimer_t),    intent(inout) :: this
   type(system_t),         intent(inout) :: sys
@@ -295,7 +295,7 @@ subroutine X(sternheimer_calc_hvar)(this, sys, hm, lr, nsigma, hvar)
   R_TYPE,                 intent(out)   :: hvar(:,:,:)
 
   R_TYPE, allocatable :: tmp(:), hartree(:)
-  integer :: np, i, ik, ik2
+  integer :: np, ip, ik, ik2
 
   call push_sub('sternheimer_inc.Xsternheimer_calc_hvar')
   call profiling_in(prof_hvar, "STERNHEIMER_HVAR")
@@ -305,8 +305,8 @@ subroutine X(sternheimer_calc_hvar)(this, sys, hm, lr, nsigma, hvar)
   if (this%add_hartree) then 
     SAFE_ALLOCATE(    tmp(1:np))
     SAFE_ALLOCATE(hartree(1:np))
-    do i = 1, np
-      tmp(i) = sum(lr(1)%X(dl_rho)(i, 1:sys%st%d%nspin))
+    do ip = 1, np
+      tmp(ip) = sum(lr(1)%X(dl_rho)(ip, 1:sys%st%d%nspin))
     end do
     hartree(1:np) = R_TOTYPE(M_ZERO)
     call X(poisson_solve)(psolver, hartree, tmp, all_nodes = .false.)
@@ -326,7 +326,7 @@ subroutine X(sternheimer_calc_hvar)(this, sys, hm, lr, nsigma, hvar)
     if(this%add_fxc) then
       if(.not. this%oep_kernel) then 
         do ik2 = 1, sys%st%d%nspin
-          hvar(1:np, ik, 1) = hvar(1:np, ik, 1) + this%fxc(1:np, ik, ik2)*lr(1)%X(dl_rho)(1:np, ik2)
+          hvar(1:np, ik, 1) = hvar(1:np, ik, 1) + this%fxc(1:np, ik, ik2) * lr(1)%X(dl_rho)(1:np, ik2)
         end do
       else
         call X(xc_oep_kernel_calc)(sys, hm, lr, nsigma, hartree(:))
@@ -345,12 +345,16 @@ subroutine X(sternheimer_calc_hvar)(this, sys, hm, lr, nsigma, hvar)
   call pop_sub()
 end subroutine X(sternheimer_calc_hvar)
 
+
 !-----------------------------------------------------------
 subroutine X(sternheimer_set_rhs)(this, rhs)
   type(sternheimer_t), intent(inout) :: this
   R_TYPE, target,      intent(in)    :: rhs(:, :, :, :)
 
+  call push_sub('sternheimer_inc.Xsternheimer_set_rhs')
   this%X(rhs) => rhs
+
+  call pop_sub()
 end subroutine X(sternheimer_set_rhs)
 
 !! Local Variables:

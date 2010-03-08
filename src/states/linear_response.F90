@@ -32,8 +32,8 @@ module linear_response_m
   use profiling_m
   use smear_m
   use states_m
-  use states_dim_m
   use states_calc_m
+  use states_dim_m
 
   implicit none
 
@@ -69,10 +69,10 @@ module linear_response_m
 
     !other observables
     CMPLX, pointer :: dl_j(:,:,:)     ! response of the current
-    FLOAT, pointer :: ddl_de(:,:)     ! unnormalized elf
-    FLOAT, pointer :: ddl_elf(:,:)    ! normalized elf
-    CMPLX, pointer :: zdl_de(:,:)     ! unnormalized elf
-    CMPLX, pointer :: zdl_elf(:,:)    ! normalized elf
+    FLOAT, pointer :: ddl_de(:,:)     ! unnormalized ELF
+    FLOAT, pointer :: ddl_elf(:,:)    ! normalized ELF
+    CMPLX, pointer :: zdl_de(:,:)     ! unnormalized ELF
+    CMPLX, pointer :: zdl_elf(:,:)    ! normalized ELF
     
   end type lr_t
 
@@ -80,7 +80,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine lr_init(lr)
-    type(lr_t),     intent(out)   :: lr
+    type(lr_t), intent(out) :: lr
 
     call push_sub('linear_response.lr_init')
 
@@ -94,6 +94,8 @@ contains
 
   end subroutine lr_init
 
+
+  ! ---------------------------------------------------------
   subroutine lr_allocate(lr, st, mesh)
     type(lr_t),     intent(inout) :: lr
     type(states_t), intent(in)    :: st
@@ -120,6 +122,7 @@ contains
     call pop_sub()
 
   end subroutine lr_allocate
+
 
   ! ---------------------------------------------------------
   subroutine lr_dealloc(lr)
@@ -179,10 +182,14 @@ contains
 
   end subroutine lr_copy
 
+
+  ! ---------------------------------------------------------
   logical function lr_is_allocated(this) 
-    type(lr_t),     intent(in) :: this
+    type(lr_t), intent(in) :: this
+
     call push_sub('linear_response.lr_is_allocated')
     lr_is_allocated = this%is_allocated
+
     call pop_sub()
   end function lr_is_allocated
 
