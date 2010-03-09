@@ -67,15 +67,17 @@ contains
     type(grid_t),   pointer :: gr    ! shortcuts
     type(states_t), pointer :: st
 
-    integer :: iunit, ios, i_start, ii, jj, is, isign, ierr
+    integer :: iunit, ios, i_start, ii, jj, is, isign, ierr, read_count
     FLOAT :: e_field
     FLOAT, allocatable :: Vpsl_save(:), trrho(:), dipole(:, :, :)
     FLOAT, allocatable :: elf(:,:), lr_elf(:,:), elfd(:,:), lr_elfd(:,:)
     FLOAT, allocatable :: lr_rho(:,:), lr_rho2(:,:), gs_rho(:,:), tmp_rho(:,:)
     FLOAT :: center_dipole(1:MAX_DIM), diag_dipole(1:MAX_DIM), ionic_dipole(1:MAX_DIM), print_dipole(1:MAX_DIM)
     type(born_charges_t) :: born_charges
-    logical :: diagonal_done, calc_Born, start_density_is_zero_field, center_written, calc_diagonal
-    character(len=80) :: fname
+    logical :: calc_Born, start_density_is_zero_field, write_restart_densities, calc_diagonal
+    logical :: diagonal_done, center_written, fromScratch_local
+    character(len=80) :: fname, dir_name
+    character :: sign_char
 
     call push_sub('static_pol.static_pol_run')
 
@@ -107,6 +109,10 @@ contains
     SAFE_ALLOCATE(dipole(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim, 1:2))
     dipole = M_ZERO
 
+    i_start = 1
+    center_written = .false.
+    diagonal_done = .false.
+
     if(.not. fromScratch) then
       iunit = io_open(trim(tmpdir)//EM_RESP_FD_DIR//RESTART_FILE, action='read', status='old', die=.false.)
 
@@ -117,7 +123,6 @@ contains
         read(iunit, fmt=*, iostat = ios) (center_dipole(jj), jj = 1, gr%mesh%sb%dim)
         center_written = (ios .eq. 0)
 
-        i_start = 1
         do ii = 1, 3
           read(iunit, fmt=*, iostat = ios) ((dipole(ii, jj, isign), jj = 1, gr%mesh%sb%dim), isign = 1, 2)
           if(ios .ne. 0) exit
@@ -128,27 +133,28 @@ contains
         diagonal_done = (ios .eq. 0)
 
         call io_close(iunit)
-      else
-        fromScratch = .true.
       end if
+
+      read_count = (i_start - 1) * 2
+      if(center_written) read_count = read_count + 1
+      if(diagonal_done)  read_count = read_count + 1
+      write(message(1),'(a,i1,a)') "Read ", read_count, " dipole(s) from file."
+      call write_info(1)
     end if
 
     if(iand(sys%outp%what, output_density) .ne. 0 .or. &
        iand(sys%outp%what, output_pol_density) .ne. 0 .or. calc_Born) then
-       fromScratch = .true.
+       i_start = 1
        diagonal_done = .false.
-       ! since only dipoles, not densities or forces, are stored and reloaded, we need to
-       ! recalculate to get the densities and forces again
     endif
 
-    if(fromScratch) then
+    if(i_start .eq. 1) then
       if(mpi_grp_is_root(mpi_world)) then
         ! open new file, and erase old data
         iunit = io_open(trim(tmpdir)//EM_RESP_FD_DIR//RESTART_FILE, action='write', status='replace')
         call io_close(iunit)
       end if
       center_written = .false.
-      i_start = 1
     end if
 
     ! Save local potential
@@ -218,10 +224,30 @@ contains
         hm%ep%vpsl(1:gr%mesh%np) = vpsl_save(1:gr%mesh%np) + (-1)**isign * gr%mesh%x(1:gr%mesh%np, ii) * e_field
         call hamiltonian_update_potential(hm, gr%mesh)
 
-        if(start_density_is_zero_field) then
-          st%rho(1:gr%mesh%np, 1:st%d%nspin) = gs_rho(1:gr%mesh%np, 1:st%d%nspin)
+        if(isign == 1) then
+          sign_char = '+'
         else
-          call lcao_run(sys, hm)
+          sign_char = '-'
+        endif
+
+        write(dir_name,'(a)') trim(tmpdir)//EM_RESP_FD_DIR//"field_"//index2axis(ii)//sign_char
+        call io_mkdir(trim(dir_name))
+
+        fromScratch_local = fromScratch
+
+        if(.not. fromScratch) then
+          call restart_read(trim(dir_name), sys%st, gr, sys%geo, ierr)
+          call system_h_setup(sys, hm)
+          if(ierr .ne. 0) fromScratch_local = .true.
+        endif
+
+        if(fromScratch_local) then
+          if(start_density_is_zero_field) then
+            st%rho(1:gr%mesh%np, 1:st%d%nspin) = gs_rho(1:gr%mesh%np, 1:st%d%nspin)
+            call system_h_setup(sys, hm)
+          else
+            call lcao_run(sys, hm)
+          endif
         endif
 
         call scf_mix_clear(scfv)
@@ -243,6 +269,14 @@ contains
         endif
 
         call output_cycle_()
+
+        if(write_restart_densities) then
+          call restart_write(trim(dir_name), st, gr, ierr)
+          if(ierr .ne. 0) then
+            message(1) = 'Unsuccessful write of "'//trim(dir_name)//'"'
+            call write_fatal(1)
+          end if
+        endif
 
       end do
 
@@ -267,10 +301,30 @@ contains
         - (gr%mesh%x(1:gr%mesh%np, 2) + gr%mesh%x(1:gr%mesh%np, 3)) * e_field
       call hamiltonian_update_potential(hm, gr%mesh)
   
-      if(start_density_is_zero_field) then
-        st%rho(1:gr%mesh%np, 1:st%d%nspin) = gs_rho(1:gr%mesh%np, 1:st%d%nspin)
+      if(isign == 1) then
+        sign_char = '+'
       else
-        call lcao_run(sys, hm)
+        sign_char = '-'
+      endif
+
+      write(dir_name,'(a)') trim(tmpdir)//EM_RESP_FD_DIR//"field_yz+"
+      call io_mkdir(trim(dir_name))
+
+      fromScratch_local = fromScratch
+
+      if(.not. fromScratch) then
+        call restart_read(trim(dir_name), sys%st, gr, sys%geo, ierr)
+        call system_h_setup(sys, hm)
+        if(ierr .ne. 0) fromScratch_local = .true.
+      endif
+
+      if(fromScratch_local) then
+        if(start_density_is_zero_field) then
+          st%rho(1:gr%mesh%np, 1:st%d%nspin) = gs_rho(1:gr%mesh%np, 1:st%d%nspin)
+          call system_h_setup(sys, hm)
+        else
+          call lcao_run(sys, hm)
+        endif
       endif
 
       call scf_mix_clear(scfv)
@@ -297,6 +351,15 @@ contains
         write(iunit, fmt='(3e20.12)') (diag_dipole(jj), jj = 1, gr%mesh%sb%dim)
         call io_close(iunit)
       end if
+
+      if(write_restart_densities) then
+        call restart_write(trim(dir_name), st, gr, ierr)
+        if(ierr .ne. 0) then
+          message(1) = 'Unsuccessful write of "'//trim(dir_name)//'"'
+          call write_fatal(1)
+        end if
+      endif
+
     endif
 
     call scf_end(scfv)
@@ -366,6 +429,17 @@ contains
       !% Only applies if <tt>ResponseMethod = finite_differences</tt>.
       !%End
       call parse_logical(datasets_check('EMCalcDiagonalField'), .true., calc_diagonal)
+
+      !%Variable EMWriteRestartDensities
+      !%Type logical
+      !%Default true
+      !%Section Linear Response::Static Polarization
+      !%Description
+      !% Write density after each calculation for restart, rather than just the resulting electronic dipole moment.
+      !% Only applies if <tt>ResponseMethod = finite_differences</tt>. Restarting from calculations at smaller
+      !% fields can be helpful if there are convergence problems.
+      !%End
+      call parse_logical(datasets_check('EMWriteRestartDensities'), .true., write_restart_densities)
 
       call pop_sub()
     end subroutine init_

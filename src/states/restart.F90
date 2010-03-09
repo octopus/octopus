@@ -193,7 +193,7 @@ contains
 
     !check how many wfs we have
     call states_look(trim(dir)//GS_DIR, gr%mesh%mpi_grp, kpoints, dim, nst, ierr)
-    if(ierr.ne.0) then
+    if(ierr .ne. 0) then
       message(1) = 'Could not properly read wavefunctions from "'//trim(dir)//GS_DIR//'".'
       call write_fatal(1)
     end if
@@ -226,7 +226,7 @@ contains
 
     ! load wavefunctions
     call restart_read(trim(dir)//GS_DIR, st, gr, geo, ierr)
-    if(ierr.ne.0) then
+    if(ierr .ne. 0) then
       message(1) = "Could not read KS orbitals from '"//trim(dir)//GS_DIR//"'"
       message(2) = "Please run a calculation of the ground state first!"
       call write_fatal(2)
@@ -424,7 +424,7 @@ contains
       ierr = -1
     end if
 
-    if(ierr.ne.0) then
+    if(ierr .ne. 0) then
       write(message(1),'(a)') 'Could not load ground-state interface wavefunctions.'
       call write_info(1)
       call messages_print_stress(stdout)
@@ -592,7 +592,7 @@ contains
       ierr = -1
     end if
 
-    if(ierr.ne.0) then
+    if(ierr .ne. 0) then
       write(message(1),'(a)') 'Could not load any previous restart information.'
       call write_info(1)
       call messages_print_stress(stdout)
@@ -744,7 +744,7 @@ contains
       ierr = -1
     end if
 
-    if(ierr.ne.0) then
+    if(ierr .ne. 0) then
       write(message(1),'(a)') 'Could not load any previous restart information.'
       call write_info(1)
       call messages_print_stress(stdout)

@@ -73,10 +73,10 @@ contains
       call states_init_green(sys%st, sys%gr, hm%d%nspin, hm%d%ispin, hm%lead)
     end if
 
-    if(.not.fromScratch) then
+    if(.not. fromScratch) then
       ! load wavefunctions
       call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr, read_occ=sys%st%fixed_occ)
-      if(ierr.ne.0) then
+      if(ierr .ne. 0) then
         message(1) = "Could not load wavefunctions from '"//trim(restart_dir)//GS_DIR//"'"
         message(2) = "Starting from scratch!"
         call write_warning(2)
