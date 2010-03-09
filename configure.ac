@@ -209,7 +209,7 @@ ACX_LONG_FORTRAN_LINES
 dnl check whether the Fortran 90 compiler accepts line markers cast by the preprocessor.
 ACX_F90_ACCEPTS_LINE_NUMBERS
 
-dnl check whether the Fortran compiler supports command line arguments
+dnl check whether the Fortran compiler supports command-line arguments
 ACX_FC_COMMAND_LINE_ARGUMENTS
 
 dnl check whether the Fortran compiler supports Fortran 2003's c_ptr type
@@ -273,10 +273,10 @@ dnl ===================================================================
 dnl now we search for libraries
 
 dnl check for BLAS
-ACX_BLAS([], AC_MSG_ERROR([could not find required blas library]))
+ACX_BLAS([], AC_MSG_ERROR([could not find required BLAS library]))
 
 dnl check for LAPACK
-ACX_LAPACK([], AC_MSG_ERROR([could not find required lapack library]))
+ACX_LAPACK([], AC_MSG_ERROR([could not find required LAPACK library]))
 
 dnl check for GSL
 AC_LANG_PUSH(C)
@@ -284,7 +284,7 @@ LIBS="${acx_save_libs}"
 
 AX_PATH_GSL([1.9], 
   [CFLAGS="$CFLAGS $GSL_CFLAGS"], 
-  AC_MSG_ERROR([could not find required gsl library]))
+  AC_MSG_ERROR([could not find required GSL library]))
 
 dnl check for GD library
 ACX_GDLIB
@@ -306,7 +306,7 @@ ACX_SPARSKIT
   
 dnl check for Fortran MPI support
 if test x"$enable_mpi" != x"no"; then
-  ACX_MPI([], AC_MSG_ERROR([could not compile an mpi test program]))
+  ACX_MPI([], AC_MSG_ERROR([could not compile an MPI test program]))
   ACX_MPI_FC_MODULE
   ACX_MPI2
 fi
