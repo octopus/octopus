@@ -67,14 +67,14 @@ contains
     type(grid_t),   pointer :: gr    ! shortcuts
     type(states_t), pointer :: st
 
-    integer :: iunit, ios, i_start, ii, jj, is, isign, ierr, read_count
+    integer :: iunit, ios, i_start, ii, jj, is, isign, ierr, read_count, verbosity
     FLOAT :: e_field
     FLOAT, allocatable :: Vpsl_save(:), trrho(:), dipole(:, :, :)
     FLOAT, allocatable :: elf(:,:), lr_elf(:,:), elfd(:,:), lr_elfd(:,:)
     FLOAT, allocatable :: lr_rho(:,:), lr_rho2(:,:), gs_rho(:,:), tmp_rho(:,:)
     FLOAT :: center_dipole(1:MAX_DIM), diag_dipole(1:MAX_DIM), ionic_dipole(1:MAX_DIM), print_dipole(1:MAX_DIM)
     type(born_charges_t) :: born_charges
-    logical :: calc_Born, start_density_is_zero_field, write_restart_densities, calc_diagonal
+    logical :: calc_Born, start_density_is_zero_field, write_restart_densities, calc_diagonal, verbose
     logical :: diagonal_done, center_written, fromScratch_local
     character(len=80) :: fname, dir_name
     character :: sign_char
@@ -143,9 +143,12 @@ contains
     end if
 
     if(iand(sys%outp%what, output_density) .ne. 0 .or. &
-       iand(sys%outp%what, output_pol_density) .ne. 0 .or. calc_Born) then
-       i_start = 1
-       diagonal_done = .false.
+       iand(sys%outp%what, output_pol_density) .ne. 0) then
+       if(i_start .gt. 2 .and. calc_diagonal) then
+          i_start = 2
+          diagonal_done = .false.
+          !FIXME: take derivatives between yz and z (not y) so can restart from only last (z) calc
+       endif
     endif
 
     if(i_start .eq. 1) then
@@ -186,7 +189,7 @@ contains
     write(message(1), '(a)')
     write(message(2), '(a)') 'Info: Calculating dipole moment for zero field.'
     call write_info(2)
-    call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = VERB_COMPACT)
+    call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
 
     gs_rho(1:gr%mesh%np, 1:st%d%nspin) = st%rho(1:gr%mesh%np, 1:st%d%nspin)
     trrho = M_ZERO
@@ -251,7 +254,7 @@ contains
         endif
 
         call scf_mix_clear(scfv)
-        call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = VERB_COMPACT)
+        call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
 
         trrho = M_ZERO
         do is = 1, st%d%spin_channels
@@ -328,7 +331,7 @@ contains
       endif
 
       call scf_mix_clear(scfv)
-      call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = VERB_COMPACT)
+      call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
   
       trrho = M_ZERO
       do is = 1, st%d%spin_channels
@@ -440,6 +443,22 @@ contains
       !% fields can be helpful if there are convergence problems.
       !%End
       call parse_logical(datasets_check('EMWriteRestartDensities'), .true., write_restart_densities)
+
+      !%Variable EMVerbose
+      !%Type logical
+      !%Default false
+      !%Section Linear Response::Static Polarization
+      !%Description
+      !% Write full SCF output.
+      !% Only applies if <tt>ResponseMethod = finite_differences</tt>.
+      !%End
+      call parse_logical(datasets_check('EMVerbose'), .false., verbose)
+
+      if(verbose) then
+        verbosity = VERB_FULL
+      else
+        verbosity = VERB_COMPACT
+      endif
 
       call pop_sub()
     end subroutine init_
@@ -661,6 +680,7 @@ contains
       if(iand(sys%outp%what, output_density) .ne. 0 .or. &
          iand(sys%outp%what, output_pol_density) .ne. 0) then 
         SAFE_DEALLOCATE_A(lr_rho)
+        SAFE_DEALLOCATE_A(lr_rho2)
       end if
       
       if(iand(sys%outp%what, output_elf) .ne. 0) then 
