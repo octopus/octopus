@@ -56,11 +56,13 @@ contains
              do idir = 1,sb%periodic_dim
                 if ( (mod(naxis(idir),2) .ne. 0 ) ) then    
                    kpoints(idir, nkpoints) = &
-                        & (real(2*ix(idir) - naxis(idir) - 1, REAL_PRECISION)   - 2*shift(idir))*dx(idir)
+                        & (real(2*ix(idir) - naxis(idir) - 1, REAL_PRECISION) + 2*shift(idir))*dx(idir)
                 else 
                    kpoints(idir, nkpoints) = &
-                        & (real(2*ix(idir) - naxis(idir) , REAL_PRECISION) - 2*shift(idir))*dx(idir)
+                        & (real(2*ix(idir) - naxis(idir) , REAL_PRECISION) + 2*shift(idir))*dx(idir)
                 end if
+		! bring back point to first Brillouin zone
+                kpoints(idir, nkpoints) = mod(kpoints(idir, nkpoints) + M_HALF, M_ONE) - M_HALF
              end do
           end do
        end do

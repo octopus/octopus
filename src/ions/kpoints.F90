@@ -185,17 +185,20 @@ contains
       ikp = 0
       ix(:) = M_ZERO
       do ii = 1, this%nik_axis(1)
-        do jj = 1, this%nik_axis(2)
-          do kk = 1, this%nik_axis(3)
-            ikp = ikp + 1
-            ix(1:3) = (/ii, jj, kk/)
+         do jj = 1, this%nik_axis(2)
+            do kk = 1, this%nik_axis(3)
+               ikp = ikp + 1
+               ix(1:3) = (/ii, jj, kk/)
 
-            forall(idir = 1:periodic_dim)
-              this%points_full_red(idir, ikp) = TOFLOAT(2*ix(idir) - this%nik_axis(idir) - odd_shifts(idir))
-              this%points_full_red(idir, ikp) = (this%points_full(idir, ikp) + this%shifts(idir))*dx(idir)
-            end forall
-          end do
-        end do
+               do idir = 1, periodic_dim
+                  this%points_full_red(idir, ikp) = TOFLOAT(2*ix(idir) - this%nik_axis(idir) - odd_shifts(idir))
+                  this%points_full_red(idir, ikp) = (this%points_full_red(idir, ikp) + M_TWO*this%shifts(idir))*dx(idir)
+                  this%points_full_red(idir, ikp) = mod(this%points_full_red(idir, ikp) + M_HALF, M_ONE) - M_HALF
+                   
+               end do
+               print *,this%points_full_red(: ,ikp)   
+            end do
+         end do
       end do
 
       call pop_sub()
