@@ -196,7 +196,7 @@ contains
                   this%points_full_red(idir, ikp) = mod(this%points_full_red(idir, ikp) + M_HALF, M_ONE) - M_HALF
                    
                end do
-               print *,this%points_full_red(: ,ikp)   
+               
             end do
          end do
       end do
