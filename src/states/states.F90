@@ -2877,7 +2877,10 @@ contains
 
     hpsi(:, :) = M_z0
 
-    call io_mkdir(dir, is_tmp=.true.)
+    if(mpi_grp_is_root(mpi_world)) call io_mkdir(dir, is_tmp=.true.)
+#ifdef HAVE_MPI
+    if(st%parallel_in_states.or.st%d%kpt%parallel) call MPI_Barrier(st%d%kpt%mpi_grp%comm, mpi_err)
+#endif
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
