@@ -76,8 +76,6 @@ module simul_box_m
     FRONT     = 6,              & !
     BEFORE    = 7,              & ! for 4D open system
     AFTER     = 8,              & !
-    OUTER     = 1,              & ! Block indices of interface wavefunctions
-    INNER     = 2,              & ! for source term.
     TRANS_DIR = 1                 ! Transport is in x-direction.
 
   integer, public :: NLEADS  ! Number of leads.
@@ -359,11 +357,6 @@ contains
             if(any(sb%add_unit_cells(1:NLEADS) .lt. 0)) then
               message(1) = 'add_unit_cells in the OpenBoundaries block must not be negative.'
               call write_fatal(1)
-            end if
-            ! If we are doing a ground-state calculation add one more unit
-            ! cell at both ends to calculate the extended eigenstates.
-            if(calc_mode_is(CM_GS)) then
-              sb%add_unit_cells(1:NLEADS) = sb%add_unit_cells(1:NLEADS) + 1
             end if
           case(TD_POT_FORMULA)
             call parse_block_string(blk, nr, 1, sb%lead_td_pot_formula(LEFT))

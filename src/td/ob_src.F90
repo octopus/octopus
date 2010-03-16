@@ -87,7 +87,7 @@ contains
     CMPLX,   intent(in)    :: offdiag(:, :) ! Matrix V^T.
     CMPLX,   intent(in)    :: mem(np, np)   ! the effective memory coefficient
     FLOAT,   intent(in)    :: dt            ! Timestep.
-    CMPLX,   intent(in)    :: psi0(:, :)    ! (np, INNER/OUTER).
+    CMPLX,   intent(in)    :: psi0(:)       ! (np).
     CMPLX,   intent(in)    :: u(0:)
     CMPLX,   intent(in)    :: f0
     CMPLX,   intent(in)    :: factor
@@ -97,25 +97,19 @@ contains
     CMPLX   :: tmp, alpha
 
     call push_sub('ob_src.calc_source_wf')
-
     if(m.eq.0) then
-      src(1:np) = psi0(1:np, OUTER)
-      if (il.eq.LEFT) then
-        call ztrmv('U', 'N', 'N', np, offdiag, np, src, 1)
-      else
-        call ztrmv('L', 'N', 'N', np, offdiag, np, src, 1)
-      end if
-      tmp = -M_zI*dt*u(0)*f0
-!      call lalg_gemv(np, np, tmp*M_zI*M_HALF*dt, mem, psi0(1:np, INNER), tmp, src)
-      call zsymv('U', np, tmp*M_zI*M_HALF*dt, mem, np, psi0(1:np, INNER), 1, tmp,  src, 1)
+      ! initial src is V*psi0(outer) (precalculated in gs mode)
+      tmp = -M_zI*dt*f0*u(0)
+      !call lalg_gemv(np, np, tmp*M_zI*M_HALF*dt, mem, psi0, tmp, src)
+      call zsymv('U', np, tmp*M_zI*M_HALF*dt, mem, np, psi0, 1, tmp, src, 1)
     else
       tmp   = factor*u(m)*u(m-1)
       if(m.gt.maxiter) then
         src(1:np) = tmp*src(1:np)
       else
         alpha = M_HALF*dt**2*f0*lambda/u(m)
-!        call lalg_gemv(np, np, alpha, mem, psi0(1:np, INNER), tmp, src)
-        call zsymv('U', np, alpha, mem, np, psi0(1:np, INNER), 1, tmp, src, 1)
+!        call lalg_gemv(np, np, alpha, mem, psi0, tmp, src)
+        call zsymv('U', np, alpha, mem, np, psi0, 1, tmp, src, 1)
       end if
     end if
 
@@ -137,7 +131,7 @@ contains
     CMPLX,   intent(in)    :: offdiag(:, :)  ! matrix V^T.
     CMPLX,   intent(in)    :: sp_mem(:)
     FLOAT,   intent(in)    :: dt             ! Timestep.
-    CMPLX,   intent(in)    :: psi0(:, :)     ! (np, INNER/OUTER)
+    CMPLX,   intent(in)    :: psi0(:)        ! (np)
     CMPLX,   intent(in)    :: mem_s(:, :, :)
     integer, intent(in)    :: mapping(:)
     CMPLX,   intent(in)    :: u(0:maxiter)

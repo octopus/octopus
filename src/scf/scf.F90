@@ -575,6 +575,11 @@ contains
       ! output final information
       call scf_write_static(STATIC_DIR, "info")
       call h_sys_output_all(outp, gr, geo, st, hm, STATIC_DIR)
+
+      if(gr%sb%open_boundaries) then ! write part of the source term s(0)
+        call states_write_proj_lead_wf('open_boundaries/', gr%intf, st)
+      end if
+
     end if
 
     if(simul_box_is_periodic(gr%sb).and.st%d%nik > st%d%nspin) then

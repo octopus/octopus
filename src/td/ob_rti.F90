@@ -219,6 +219,7 @@ contains
       np = gr%intf(il)%np_intf
       SAFE_ALLOCATE(ob%lead(il)%st_intface(1:np, s1:s2, k1:k2, 0:ob%max_mem_coeffs))
       ob%lead(il)%st_intface = M_z0
+      call states_read_proj_lead_wf('open_boundaries/', gr%intf(il), st, ob%lead(il)%src_prev)
     end do
 
     ! check the symmetry of the effective Hamiltonian
@@ -323,7 +324,7 @@ contains
               if(m.gt.0) tmp_mem(1:np, 1:np) = tmp_mem(1:np, 1:np) + ob%lead(il)%q(1:np, 1:np, m-1)
             end if
             call calc_source_wf(ob%max_mem_coeffs, m, np, il, hm%lead(il)%h_offdiag, tmp_mem(1:np, 1:np), dt, &
-              st%ob_lead(il)%intf_psi(:, :, 1, ist, ik), ob%src_mem_u(:, il), f0, fac,              &
+              st%ob_lead(il)%intf_psi(:, 1, ist, ik), ob%src_mem_u(:, il), f0, fac,              &
               lambda(m, 0, max_iter, ob%src_mem_u(:, il)), ob%lead(il)%src_prev(:, 1, ist, ik))
             call apply_src(gr%intf(il), ob%lead(il)%src_prev(1:np, 1, ist, ik), st%zpsi(:, :, ist, ik))
           end if
@@ -354,7 +355,7 @@ contains
         ! Use the stable symmetric QMR solver
         ! h_eff_backward must be a complex symmetric operator !
         call zqmr_sym(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, precond_prop, &
-          qmr_iter, residue=dres, threshold=qmr_tol, showprogress=.false., converged=conv)
+          qmr_iter, residue=dres, threshold=qmr_tol, showprogress=in_debug_mode, converged=conv)
       end do
       if(in_debug_mode) then ! write info
         write(message(1), '(a,i8,e10.3)') 'Iterations, Residual: ', qmr_iter, dres
@@ -446,7 +447,7 @@ contains
             tmp_mem(1:npo) = ob%lead(il)%q_sp(1:npo, m)
             if(m.gt.0) tmp_mem(1:npo) = tmp_mem(1:npo) + ob%lead(il)%q_sp(1:npo, m-1)
             call calc_source_wf_sp(max_iter, m, np, il, hm%lead(il)%h_offdiag(:, :),     &
-              tmp_mem(1:npo), dt, order, gr%sb%dim, st%ob_lead(il)%intf_psi(:, :, 1, ist, ik), &
+              tmp_mem(1:npo), dt, order, gr%sb%dim, st%ob_lead(il)%intf_psi(:, 1, ist, ik), &
               ob%lead(il)%q_s(:, :, :), ob%lead(il)%sp2full_map, ob%src_mem_u(:, il), f0, fac,   &
               lambda(m, 0, max_iter, ob%src_mem_u(:, il)), ob%lead(il)%src_prev(:, 1, ist, ik))
             call apply_src(gr%intf(il), ob%lead(il)%src_prev(1:np, 1, ist, ik), st%zpsi(:, :, ist, ik))

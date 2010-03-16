@@ -8,16 +8,16 @@ Enabled    : yes
 
 # Calculate eigenstate of 1d attractive square-potential barrier.
 Input: 04-propagate_eigenstate.01-square_well_1d.inp
-match ; Total energy [step   0]; LINE(well_td.general/energy,   6, 30) ; 2.049018304223e+00
-match ; Total energy [step 100]; LINE(well_td.general/energy, 106, 30) ; 2.049017944732e+00
-match ; Total energy [step 200]; LINE(well_td.general/energy, 206, 30) ; 2.049017813254e+00
-match ; Total energy [step 300]; LINE(well_td.general/energy, 306, 30) ; 2.049017923834e+00
+match ; Total energy [step   0]; LINE(well_td.general/energy,   6, 30) ; 2.064297127468e+00
+match ; Total energy [step 100]; LINE(well_td.general/energy, 106, 30) ; 2.064289561608e+00
+match ; Total energy [step 200]; LINE(well_td.general/energy, 206, 30) ; 2.064286304422e+00
+match ; Total energy [step 300]; LINE(well_td.general/energy, 306, 30) ; 2.064284239477e+00
 
 # Calculate eigenstates of 2D ring potential attached to upside-down Gaussian-shaped
 # lead channels and propagate with a bias switched on.
 Input: 04-propagate_eigenstate.02-ring_leads_2d.inp
-match ; Total energy [step   0]; LINE(ring_lead_td.general/energy,   6, 30) ; 4.626426074917e+02
-match ; Total energy [step  25]; LINE(ring_lead_td.general/energy,  31, 30) ; 4.635193147887e+02
-match ; Total energy [step  50]; LINE(ring_lead_td.general/energy,  56, 30) ; 4.648048709782e+02
-match ; Total energy [step  75]; LINE(ring_lead_td.general/energy,  81, 30) ; 4.676178752149e+02
-match ; Total energy [step 100]; LINE(ring_lead_td.general/energy, 106, 30) ; 4.714202246759e+02
+match ; Total energy [step   0]; LINE(ring_lead_td.general/energy,   6, 30) ; 4.626426040993e+02
+match ; Total energy [step  25]; LINE(ring_lead_td.general/energy,  31, 30) ; 4.635193115106e+02
+match ; Total energy [step  50]; LINE(ring_lead_td.general/energy,  56, 30) ; 4.648048674987e+02
+match ; Total energy [step  75]; LINE(ring_lead_td.general/energy,  81, 30) ; 4.676178717766e+02
+match ; Total energy [step 100]; LINE(ring_lead_td.general/energy, 106, 30) ; 4.714202213930e+02

@@ -23,34 +23,30 @@
 
 module ob_green_m
   use global_m
-  use grid_m
   use lalg_adv_m
   use lalg_basic_m
-  use parser_m
   use math_m
   use messages_m
-  use nl_operator_m
   use ob_interface_m
   use profiling_m
   use simul_box_m
-  use string_m
 
   implicit none
   private
 
   public ::         &
-    lead_green
+    lead_self_energy
 
 contains
 
-  ! calculate the surface Green`s function
+  ! calculate the lead self energy
   ! prefer the fast method if possible, but if not converged check also other method
-  subroutine lead_green(energy, diag, offdiag, intf, green, h_is_real)
+  subroutine lead_self_energy(energy, diag, offdiag, intf, self_energy, h_is_real)
     FLOAT,             intent(in)  :: energy        ! Energy to calculate Green`s function for.
     CMPLX,             intent(in)  :: diag(:, :)    ! Diagonal block of lead Hamiltonian.
     CMPLX,             intent(in)  :: offdiag(:, :) ! Off-diagonal block of lead Hamiltonian.
     type(interface_t), intent(in)  :: intf          ! => gr%intf(il)
-    CMPLX,             intent(out) :: green(:, :)   ! The calculated Green`s function.
+    CMPLX,             intent(inout) :: self_energy(:, :) ! The calculated self_energy.
     logical,           intent(in)  :: h_is_real     ! Is the Hamiltonian real? (no vector potential)
 
     integer            :: np, np_uc
@@ -58,7 +54,7 @@ contains
     CMPLX              :: c_energy
     CMPLX, allocatable :: green2(:, :)
 
-    call push_sub('ob_green.lead_green')
+    call push_sub('ob_green.lead_self_energy')
 
     np = intf%np_intf
     np_uc = intf%np_uc
@@ -71,8 +67,8 @@ contains
     ! if we cannot reduce the unit cell
     ! we have only one way of calculating the Green`s function: with the Sancho method
     if(.not.intf%reducible) then ! use large matrices (rank = np_uc)
-      call lead_green_sancho(c_energy, diag, offdiag, np_uc, green, threshold, h_is_real)
-      residual = calc_residual_green(energy, green, diag, offdiag, intf)
+      call lead_green_sancho(c_energy, diag, offdiag, np_uc, self_energy, threshold, h_is_real)
+      residual = calc_residual_green(energy, self_energy, diag, offdiag, intf)
       if(in_debug_mode) then ! write info
         write(message(1), '(a)') 'Non-reducible unit cell'
         write(message(2), '(a,e10.3)') 'Sancho-Residual = ', residual
@@ -80,9 +76,9 @@ contains
       end if
     else
       ! 1. calculate with the fastest method
-      call lead_green_umerski(c_energy, diag, offdiag, intf, green)
+      call lead_green_umerski(c_energy, diag, offdiag, intf, self_energy)
       ! 2. check if converged
-      residual = calc_residual_green(energy, green, diag, offdiag, intf)
+      residual = calc_residual_green(energy, self_energy, diag, offdiag, intf)
       if(in_debug_mode) then ! write info
         write(message(1), '(a,e10.3)') 'Umerski-Residual = ', residual
         call write_info(1)
@@ -98,10 +94,10 @@ contains
         end if
         ! 4. if also not converged choose the best one and give warning
         if(residual2.lt.eps) then ! finally converged
-          green = green2
+          self_energy = green2
         else ! write warning
           if(residual2.lt.residual) then
-            green = green2
+            self_energy = green2
           end if
           message(1) = 'The surface Green`s function did not converge properly'
           message(2) = 'with either the decimation technique nor the closed form!'
@@ -114,19 +110,27 @@ contains
         SAFE_DEALLOCATE_A(green2)
       end if
     end if
+    ! now calculate the self energy
+    if(intf%il.eq.LEFT) then
+      call lalg_trmm(np, np, 'U', 'N', 'L', M_z1, offdiag, self_energy)
+      call lalg_trmm(np, np, 'U', 'T', 'R', M_z1, offdiag, self_energy)
+    else
+      call lalg_trmm(np, np, 'L', 'N', 'L', M_z1, offdiag, self_energy)
+      call lalg_trmm(np, np, 'L', 'T', 'R', M_z1, offdiag, self_energy)
+    end if
 
     call pop_sub()
-  end subroutine lead_green
+  end subroutine lead_self_energy
 
 
   ! check if the Green`s function gives the correct density of states
   ! if not compute its Hermitian conjugate
-  subroutine fix_green(np, green, dos)
+  subroutine fix_green(np, green)
     integer, intent(in)    :: np
     CMPLX,   intent(inout) :: green(:, :)
-    FLOAT,   intent(out)   :: dos
 
     integer  :: j
+    FLOAT    :: dos
 
     call push_sub('ob_green.fix_green')
 
@@ -135,8 +139,18 @@ contains
     do j = 2, np
       dos = dos - aimag(green(j, j))
     end do
+
+    if(in_debug_mode) then ! write info
+      write(message(1), '(a,e10.3)') 'density of states = ', abs(dos)
+      call write_info(1)
+    end if
+
     if(dos.lt.M_ZERO) then
       green(:, :) = transpose(conjg(green(:, :)))
+      if(in_debug_mode) then ! write info
+        message(1) = "surface Green's function changed to its hermitian conjugate"
+        call write_info(1)
+      end if
     end if
 
     call pop_sub()
@@ -206,7 +220,7 @@ contains
     CMPLX, allocatable :: e(:, :), es(:, :), a(:, :), b(:, :), inv(:, :)
     CMPLX, allocatable :: tmp1(:, :), tmp2(:, :), tmp3(:, :)
     integer            :: i, j
-    FLOAT              :: dos, old_norm, norm, res
+    FLOAT              :: det, old_norm, norm, res
 
     call push_sub('ob_green.lead_green_sancho')
 
@@ -235,7 +249,7 @@ contains
       inv(1:np, 1:np) = - e(1:np, 1:np)
 
       forall (j = 1:np) inv(j, j) = inv(j, j) + energy
-      dos = lalg_inverter(np, inv, invert=.true.)
+      det = lalg_inverter(np, inv, invert=.true.)
 
       call lalg_gemm(np, np, np, M_z1, a, inv, M_z0, tmp2)
       call lalg_gemm(np, np, np, M_z1, tmp2, b, M_z0, tmp1)
@@ -261,17 +275,17 @@ contains
     green(1:np, 1:np) = - es(1:np, 1:np)
 
     forall (j = 1:np) green(j, j) = green(j, j) + energy
-    dos = lalg_inverter(np, green, invert = .true.)
+    det = lalg_inverter(np, green, invert = .true.)
     if (h_is_real) then ! the Green`s function is complex symmetric
       call matrix_symmetric_average(green, np)
     end if ! otherwise it is general complex
 
-    call fix_green(np, green, dos)
-
     if(in_debug_mode) then ! write some info
-      write(message(1), '(a,e10.3)') 'Sancho-DOS = ', dos
+      message(1) = "surface Green's function: iterative algorithm"
       call write_info(1)
     end if
+
+    call fix_green(np, green)
 
     SAFE_DEALLOCATE_A(e)
     SAFE_DEALLOCATE_A(es)
@@ -392,7 +406,7 @@ contains
 
     integer              :: ib, np, np2
     CMPLX, allocatable   :: x(:,:), x2(:,:), o2(:,:), o4(:,:), d(:), h(:, :, :), v(:, :, :)
-    FLOAT                :: dos
+    FLOAT                :: det
 
     call push_sub('ob_green.lead_green_umerski')
 
@@ -434,14 +448,15 @@ contains
     o2(1:np, 1:np) = x(1:np, np+1:np2)
     o4(1:np, 1:np) = x(np+1:np2, np+1:np2)
     ! 4. calculate green = o2*o4^(-1)
-    dos = lalg_inverter(np, o4, invert = .true.)
+    det = lalg_inverter(np, o4, invert = .true.)
     call zgemm('N', 'N', np, np, np, M_z1, o2, np, o4, np, M_z0, green, np)
 
-    call fix_green(np, green, dos)
     if(in_debug_mode) then ! write some info
-      write(message(1), '(a,e10.5)') 'Umerski: DOS = ', dos
+      message(1) = "surface Green's function: direct algorithm (Moebius transformation)"
       call write_info(1)
     end if
+
+    call fix_green(np, green)
 
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(x2)

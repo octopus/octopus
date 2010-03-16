@@ -37,7 +37,6 @@ module ob_interface_m
   private
   public ::                 &
     lead_t,                 &
-    interface_apply_sym_op, &
     interface_apply_op,     &
     interface_t,            &
     interface_init,         &
@@ -257,35 +256,6 @@ contains
 
     call pop_sub()
   end subroutine interface_apply_op
-
-
-  ! ---------------------------------------------------------
-  ! Apply an np x np symmetric operator op to the interface region of the wavefunction.
-  ! np is the number of points in the interface: res <- res + alpha op wf
-  subroutine interface_apply_sym_op(intf, alpha, op, wf, res)
-    type(interface_t), intent(in)    :: intf
-    CMPLX,             intent(in)    :: alpha
-    CMPLX,             intent(in)    :: op(:, :)
-    CMPLX,             intent(in)    :: wf(:)
-    CMPLX,             intent(inout) :: res(:)
-    
-    CMPLX, allocatable :: intf_wf(:), op_intf_wf(:)
-
-    call push_sub('ob_interface.interface_apply_sym_op')
-
-    SAFE_ALLOCATE(intf_wf(1:intf%np_uc))
-    SAFE_ALLOCATE(op_intf_wf(1:intf%np_uc))
-
-    call get_intf_wf(intf, wf, intf_wf)
-    call get_intf_wf(intf, res, op_intf_wf)
-    call lalg_symv(intf%np_uc, alpha, op, intf_wf, M_z1, op_intf_wf)
-    call put_intf_wf(intf, op_intf_wf, res)
-
-    SAFE_DEALLOCATE_A(intf_wf)
-    SAFE_DEALLOCATE_A(op_intf_wf)
-
-    call pop_sub()
-  end subroutine interface_apply_sym_op
 
 
   ! ---------------------------------------------------------

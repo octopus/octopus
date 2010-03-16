@@ -94,16 +94,18 @@ module states_m
     states_wfns_memory,               &
     states_freeze_orbitals,           &
     states_total_density,             &
-    states_init_green
+    states_init_self_energy,          &
+    states_write_proj_lead_wf,        &
+    states_read_proj_lead_wf
 
   public ::                           &
     states_are_complex,               &
     states_are_real
 
   type states_lead_t
-    CMPLX, pointer     :: intf_psi(:, :, :, :, :) !< (np, 2, st%d%dim, st%nst, st%d%nik)
+    CMPLX, pointer     :: intf_psi(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
     FLOAT, pointer     :: rho(:, :)   !< Density of the lead unit cells.
-    CMPLX, pointer     :: green(:, :, :, :, :) !< (np, np, nspin, ncs, nik) Green`s function of the leads.
+    CMPLX, pointer     :: self_energy(:, :, :, :, :) !< (np, np, nspin, ncs, nik) self energy of the leads.
   end type states_lead_t
 
   type states_t
@@ -185,7 +187,7 @@ contains
 
     nullify(st%dpsi, st%zpsi, st%zphi, st%rho, st%current, st%rho_core, st%frozen_rho, st%eigenval)
     do il=1, NLEADS
-      nullify(st%ob_lead(il)%intf_psi, st%ob_lead(il)%rho, st%ob_lead(il)%green)
+      nullify(st%ob_lead(il)%intf_psi, st%ob_lead(il)%rho, st%ob_lead(il)%self_energy)
     end do
     nullify(st%ob_eigenval, st%ob_occ)
     nullify(st%occ, st%spin, st%node, st%user_def_states)
@@ -916,7 +918,7 @@ contains
     if(calc_mode_is(CM_TD).and.st%open_boundaries) then
       do il = 1, NLEADS
         np = mesh%lead_unit_cell(il)%np
-        SAFE_ALLOCATE(st%ob_lead(il)%intf_psi(1:np, 1:2, 1:st%d%dim, st1:st2, k1:k2))
+        SAFE_ALLOCATE(st%ob_lead(il)%intf_psi(1:np, 1:st%d%dim, st1:st2, k1:k2))
         st%ob_lead(il)%intf_psi = M_z0
       end do
 
@@ -1106,7 +1108,7 @@ contains
       SAFE_DEALLOCATE_P(st%ob_eigenval)
       SAFE_DEALLOCATE_P(st%ob_occ)
       do il = 1, NLEADS
-        SAFE_DEALLOCATE_P(st%ob_lead(il)%green)
+        SAFE_DEALLOCATE_P(st%ob_lead(il)%self_energy)
       end do
     end if
 
@@ -2761,8 +2763,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> initialize the surface Green`s functions of the leads
-  subroutine states_init_green(st, gr, nspin, d_ispin, lead)
+  !> initialize the self energy of the leads
+  subroutine states_init_self_energy(st, gr, nspin, d_ispin, lead)
     type(states_t),      intent(inout) :: st
     type(grid_t),        intent(in)    :: gr
     integer,             intent(in)    :: nspin
@@ -2770,14 +2772,14 @@ contains
     type(lead_t),        intent(in)    :: lead(:) ! Diagonal and off-diagonal block of the lead Hamiltonian.
 
     character(len=2)      :: spin
-    character(len=256)    :: fmt, fname_real, fname_imag
+    character(len=256)    :: fmt, fname, fname_real, fname_imag
     FLOAT                 :: energy
     integer  :: np, ik, ist, il, ispin, s1, s2, k1, k2
     integer  :: green_real, green_imag, irow
 
-    call push_sub('states.states_init_green')
+    call push_sub('states.states_init_self_energy')
 
-    ! Calculate Green`s function of the leads.
+    ! Calculate self energy of the leads.
     ! FIXME: For spinors, this calculation is almost certainly wrong.
     ASSERT(st%ob_nst == st%nst)
     ASSERT(st%ob_d%nik == st%d%nik)
@@ -2785,9 +2787,9 @@ contains
     k1 = st%d%kpt%start; k2 = st%d%kpt%end
     do il = 1, NLEADS
       np = gr%intf(il)%np_intf
-      SAFE_ALLOCATE(st%ob_lead(il)%green(1:np, 1:np, 1:nspin, s1:s2, k1:k2))
+      SAFE_ALLOCATE(st%ob_lead(il)%self_energy(1:np, 1:np, 1:nspin, s1:s2, k1:k2))
     end do
-    call messages_print_stress(stdout, "Lead Green's functions")
+    call messages_print_stress(stdout, "Lead self energy")
     message(1) = ' st#     k#  Spin      Lead     Energy'
     call write_info(1)
 #ifdef HAVE_MPI 
@@ -2822,24 +2824,24 @@ contains
             write(message(1), '(i4,3x,i4,3x,a2,5x,a6,1x,f12.6)') ist, ik, &
               trim(spin), trim(LEAD_NAME(il)), energy
             call write_info(1)
-            ! \todo magnetic gs
-            call lead_green(energy, lead(il)%h_diag(:, :, ispin), lead(il)%h_offdiag(:, :), &
-              gr%intf(il), st%ob_lead(il)%green(:, :, ispin, ist, ik), .true.)
 
-            ! Write the entire Green`s function to a file.
+            call lead_self_energy(energy, lead(il)%h_diag(:, :, ispin), lead(il)%h_offdiag(:, :), &
+              gr%intf(il), st%ob_lead(il)%self_energy(:, :, ispin, ist, ik), .true.)
+
+            ! Write the entire self energy to a file.
             if(in_debug_mode) then
               call io_mkdir('debug/open_boundaries')
-              write(fname_real, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/green-', &
+              write(fname_real, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/self-energy-', &
                 trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.real'
-              write(fname_imag, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/green-', &
+              write(fname_imag, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/self-energy-', &
                 trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.imag'
               green_real = io_open(fname_real, action='write', grp=st%d%kpt%mpi_grp, is_tmp=.false.)
               green_imag = io_open(fname_imag, action='write', grp=st%d%kpt%mpi_grp, is_tmp=.false.)
 
               write(fmt, '(a,i6,a)') '(', np, 'e24.16)'
               do irow = 1, np
-                write(green_real, fmt) real(st%ob_lead(il)%green(irow, :, ispin, ist, ik))
-                write(green_imag, fmt) aimag(st%ob_lead(il)%green(irow, :, ispin, ist, ik))
+                write(green_real, fmt) real(st%ob_lead(il)%self_energy(irow, :, ispin, ist, ik))
+                write(green_imag, fmt) aimag(st%ob_lead(il)%self_energy(irow, :, ispin, ist, ik))
               end do
               call io_close(green_real); call io_close(green_imag)
             end if
@@ -2850,7 +2852,116 @@ contains
     call messages_print_stress(stdout)
 
     call pop_sub()
-  end subroutine states_init_green
+  end subroutine states_init_self_energy
+
+
+  ! ---------------------------------------------------------
+  ! write H_(C,apha)*Psi_(alpha) without using Psi_(alpha)
+  subroutine states_write_proj_lead_wf(dir, intf, st)
+    character(len=*),  intent(in) :: dir   ! directory
+    type(interface_t), intent(in) :: intf(:)
+    type(states_t),    intent(in) :: st
+
+    integer :: ik, ist, idim, il, np, ip, iunit
+    CMPLX, allocatable :: psi(:, :), phi(:, :), hpsi(:, :), self_energy(:, :)
+    character(len=256) :: fname
+
+    call push_sub('states.write_proj_lead_wf')
+
+    np = maxval(intf(1:NLEADS)%np_intf)
+
+    SAFE_ALLOCATE(psi(1:np, 1:st%d%dim))
+    SAFE_ALLOCATE(phi(1:np, 1:st%d%dim))
+    SAFE_ALLOCATE(hpsi(1:np, 1:st%d%dim))
+    SAFE_ALLOCATE(self_energy(1:np, 1:np))
+
+    hpsi(:, :) = M_z0
+
+    call io_mkdir(dir, is_tmp=.true.)
+
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ist = st%st_start, st%st_end
+        do il = 1, NLEADS
+          np = intf(il)%np_intf
+          forall(ip = 1:np)
+            psi(ip, :) = st%zpsi(intf(il)%index(ip), :, ist, ik)
+            phi(ip, :) = st%zphi(intf(il)%index(ip), :, ist, ik)
+          end forall
+          do idim = 1, st%d%dim
+            self_energy(1:np, 1:np) = st%ob_lead(il)%self_energy(1:np, 1:np, idim, ist, ik)
+            call lalg_gemv(np, np, M_z1, self_energy(1:np, 1:np), psi(1:np, idim), M_z0, hpsi(1:np, idim))
+            if((il.eq.LEFT).and.(-st%d%kpoints(1, ik).gt.M_ZERO) .or. (il.eq.RIGHT).and.(-st%d%kpoints(1, ik).lt.M_ZERO)) then
+              ! add the reflecting part
+              self_energy(1:np, 1:np) = transpose(conjg(self_energy(1:np, 1:np))) - self_energy(1:np, 1:np)
+              call lalg_gemv(np, np, M_z1, self_energy(1:np, 1:np), phi(1:np, idim), M_z1, hpsi(1:np, idim))
+            end if
+            write(fname, '(3a,i4.4,a,i3.3,a,i1.1)') 'src0-', trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', idim
+            iunit = io_open(trim(dir)//trim(fname), action='write', form='unformatted', is_tmp=.true.)
+            if(iunit.lt.0) then
+              message(1) = 'Cannot write term for source term to file.'
+              call write_warning(1)
+              call io_close(iunit)
+              call pop_sub(); return
+            end if
+            ! Write parameters.
+            write(iunit) np
+            ! Write matrix.
+            write(iunit) hpsi(1:np, idim)
+            call io_close(iunit)
+          end do
+        end do
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(phi)
+    SAFE_DEALLOCATE_A(hpsi)
+    SAFE_DEALLOCATE_A(self_energy)
+
+    call pop_sub()
+  end subroutine states_write_proj_lead_wf
+
+  ! ---------------------------------------------------------
+  subroutine states_read_proj_lead_wf(dir, intf, st, src0)
+    character(len=*),  intent(in)    :: dir   ! directory
+    type(interface_t), intent(in)    :: intf
+    type(states_t),    intent(in)    :: st
+    CMPLX,             intent(inout) :: src0(:, : ,:, :)
+
+    integer :: ik, ist, idim, np, ip, iunit
+    character(len=256) :: fname
+
+    call push_sub('states.states_read_proj_lead_wf')
+
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ist = st%st_start, st%st_end
+        do idim = 1, st%d%dim
+          ! Try to open file.
+          write(fname, '(3a,i4.4,a,i3.3,a,i1.1)') 'src0-', trim(LEAD_NAME(intf%il)), '-', ist, '-', ik, '-', idim
+          iunit = io_open(trim(dir)//trim(fname), action='read', status='old', die=.false., is_tmp=.true., form='unformatted')
+          if(iunit.lt.0) then ! no file found
+            message(1) = 'Cannot read src(0) from file.'
+            call write_fatal(1)
+          end if
+
+          ! Now read the data.
+          read(iunit) np
+
+          if(np.ne.size(src0, 1)) then
+            message(1) = 'Size mismatch! Cannot read src(0) from file.'
+            call write_fatal(1)
+          end if
+
+          read(iunit) src0(1:np, idim, ist, ik)
+
+          call io_close(iunit)
+        end do
+      end do
+    end do
+
+    call pop_sub()
+  end subroutine states_read_proj_lead_wf
+
 
 end module states_m
 

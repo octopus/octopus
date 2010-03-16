@@ -393,10 +393,8 @@ contains
 
           fromScratch = .true.
         end if
-      end if
-
-      if(.not.fromscratch .and. st%open_boundaries) then
-        call restart_read_ob_intf(trim(restart_dir)//GS_DIR, st, gr, ierr)
+        ! extract the interface wave function
+        if(st%open_boundaries) call restart_get_ob_intf(st, gr)
       end if
 
       if(.not. fromscratch .and. td%dynamics == CP) then 
@@ -431,23 +429,16 @@ contains
       if(fromScratch) then
 
         if(.not. st%only_userdef_istates) then
-          ! In the open-boundary case the ground-state wavefunctions are bit too "wide".
-          ! Therefore, we need a special routine to extract the middle.
-          if(gr%sb%open_boundaries) then
-            call restart_read_ob_intf(trim(restart_dir)//GS_DIR, st, gr, ierr)
-            if(ierr.ne.0) then
-              message(1) = "Could not read interface wavefunctions from '"//trim(restart_dir)//GS_DIR//"'"
-              message(2) = "Please run an open-boundaries ground-state calculation first!"
-              call write_fatal(2)
-            end if
-            call restart_read_ob_central(trim(restart_dir)//GS_DIR, st, gr, ierr)
-          else
-            call restart_read(trim(restart_dir)//GS_DIR, st, gr, geo, ierr)
-          end if
+          call restart_read(trim(restart_dir)//GS_DIR, st, gr, geo, ierr)
           if(ierr.ne.0) then
             message(1) = "Could not read KS orbitals from '"//trim(restart_dir)//GS_DIR//"'"
             message(2) = "Please run a ground-state calculation first!"
             call write_fatal(2)
+          end if
+          
+          if(gr%sb%open_boundaries) then
+            ! extract the interface wave function
+            call restart_get_ob_intf(st, gr)
           end if
         end if
 
