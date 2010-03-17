@@ -2,7 +2,7 @@
 # $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
 
 Test       : Open boundaries 2D
-Programs   : octopus
+Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 

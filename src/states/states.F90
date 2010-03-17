@@ -2955,7 +2955,8 @@ contains
             call write_fatal(1)
           end if
 
-          read(iunit) src0(1:np, idim, ist, ik)
+          ! because we use a sliced array we have to remap the index
+          read(iunit) src0(1:np, idim, ist-st%st_start+1, ik-st%d%kpt%start+1)
 
           call io_close(iunit)
         end do
