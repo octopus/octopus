@@ -236,9 +236,9 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     nspin = 1
     if (st%d%ispin == SPIN_POLARIZED) nspin = 2
     nik = st%d%nik/nspin
-    if (st%wfs_type == M_REAL) then
+    if (states_are_real(st)) then
       zdim = 1
-    elseif(st%wfs_type == M_CMPLX) then
+    elseif(states_are_complex(st)) then
       zdim = 2
     end if    
     dims%max_number_of_states = st%nst
@@ -307,12 +307,12 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
       do ik = 1, st%d%nik, nspin
         do i = 1, st%nst
           do idim = 1, st%d%dim
-            if (st%wfs_type == M_REAL) then
+            if (states_are_real(st)) then
               call dmesh_to_cube(gr%mesh, st%dpsi(1:gr%mesh%np_part, idim, i, ik+is-1), cube)
               local_wfs(1, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, i, ik+(is-1)*nik) = &
                    cube%RS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
 
-            elseif(st%wfs_type == M_CMPLX) then
+            elseif(states_are_complex(st)) then
               call dmesh_to_cube(gr%mesh, &
                    real(st%zpsi(1:gr%mesh%np_part, idim, i, ik+is-1), REAL_PRECISION), cube)
               local_wfs(1, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, i, ik+(is-1)*nik) = &

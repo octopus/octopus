@@ -208,7 +208,7 @@ contains
     end if
 
     ! Calculate and write the transition matrix
-    if (sys%st%wfs_type == M_REAL) then
+    if (states_are_real(sys%st)) then
       call dget_transition_densities(cas, sys, trandens)
     else
       call zget_transition_densities(cas, sys, trandens)
@@ -417,7 +417,7 @@ contains
         deltav(1:mesh%np) = mesh%x(1:mesh%np, idir)
         
         !WARNING: should xx always be real?
-        if (st%wfs_type == M_REAL) then
+        if (states_are_real(st)) then
           xx = dks_matrix_elements(cas, st, mesh, deltav)
         else
           xx = zks_matrix_elements(cas, st, mesh, deltav)
@@ -551,7 +551,7 @@ contains
         end do
 
         SAFE_ALLOCATE(deltav(1:mesh%np))
-        if (st%wfs_type == M_REAL) then
+        if (states_are_real(st)) then
           SAFE_ALLOCATE(dx(1:cas%n_pairs))
           do idir = 1, mesh%sb%dim
             deltav(1:mesh%np) = mesh%x(1:mesh%np, idir)
@@ -613,7 +613,7 @@ contains
       SAFE_ALLOCATE(rho_i(1:mesh%np))
       SAFE_ALLOCATE(rho_j(1:mesh%np))
 
-      if (st%wfs_type == M_REAL) then
+      if (states_are_real(st)) then
         rho_i(1:mesh%np) =  st%dpsi(1:mesh%np, 1, i, sigma) * st%dpsi(1:mesh%np, 1, a, sigma)
         rho_j(1:mesh%np) =  st%dpsi(1:mesh%np, 1, j, mu) * st%dpsi(1:mesh%np, 1, b, mu)
       else

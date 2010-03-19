@@ -889,7 +889,7 @@ contains
 
       ! we (ab)use exponential_apply to compute (1-i\delta t/2 H_n)\psi^n
       ! exponential order needs to be only 1
-      tr%te%exp_method = 3 ! == Taylor expansion
+      tr%te%exp_method = TAYLOR
       tr%te%exp_order  = 1
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then

@@ -68,7 +68,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_un
       SAFE_DEALLOCATE_A(tmp)
     end if
 
-    if( (iand(outp%what, output_current).ne.0) .and. (st%wfs_type == M_CMPLX) )then
+    if( (iand(outp%what, output_current).ne.0) .and. states_are_complex(st)) then
       fn_unit = units_out%time**(-1) * units_out%length**(-gr%mesh%sb%dim)
       do is = 1, st%d%nspin
         do idir2 = 1, gr%mesh%sb%dim

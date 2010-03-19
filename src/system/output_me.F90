@@ -156,7 +156,7 @@ contains
           do mm = -ll, ll
             write(fname,'(i4)') id
             write(fname,'(a)') trim(dir)//'/ks_me_multipoles.'//trim(adjustl(fname))
-            if (st%wfs_type == M_REAL) then
+            if (states_are_real(st)) then
               call doutput_me_ks_multipoles(fname, st, gr, ll, mm, ik)
             else
               call zoutput_me_ks_multipoles(fname, st, gr, ll, mm, ik)
@@ -171,7 +171,7 @@ contains
     if(iand(this%what, output_me_one_body).ne.0) then
       message(1) = "Computing one-body matrix elements"
       call write_info(1)
-      if (st%wfs_type == M_REAL) then
+      if (states_are_real(st)) then
         call done_body(dir, gr, geo, st, hm)
       else
         call zone_body(dir, gr, geo, st, hm)
@@ -181,7 +181,7 @@ contains
     if(iand(this%what, output_me_two_body).ne.0) then
       message(1) = "Computing two-body matrix elements"
       call write_info(1)
-      if (st%wfs_type == M_REAL) then
+      if (states_are_real(st)) then
         call dtwo_body(dir, gr, st)
       else
         call ztwo_body(dir, gr, st)
@@ -207,7 +207,7 @@ contains
 
     SAFE_ALLOCATE(momentum(1:gr%sb%dim, 1:st%nst, 1:st%d%nik))
 
-    if (st%wfs_type == M_REAL) then
+    if (states_are_real(st)) then
       call dstates_calc_momentum(gr, st, momentum)
     else
       call zstates_calc_momentum(gr, st, momentum)
@@ -308,7 +308,7 @@ contains
     SAFE_ALLOCATE(ang2(1:st%nst, 1:st%d%nik))
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
-        if (st%wfs_type == M_REAL) then
+        if (states_are_real(st)) then
           call dstates_angular_momentum(gr, st%dpsi(:, :, ist, ik), ang(ist, ik, :), ang2(ist, ik))
         else
           call zstates_angular_momentum(gr, st%zpsi(:, :, ist, ik), ang(ist, ik, :), ang2(ist, ik))

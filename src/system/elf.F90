@@ -209,7 +209,7 @@ contains
       sp = M_ONE
     end if
  
-    if (st%wfs_type == M_REAL) then
+    if (states_are_real(st)) then
       call dcf_new(gr%mesh%idx%ll, dcf_tmp)
       call dcf_fft_init(dcf_tmp, gr%sb)
     else
@@ -231,7 +231,7 @@ contains
         do ist = 1, st%nst
           do idim = 1, st%d%dim
             
-            if (st%wfs_type == M_REAL) then
+            if (states_are_real(st)) then
               call dmf2mf_RS2FS(gr%mesh, st%dpsi(:, idim, ist, ik), psi_fs(:), dcf_tmp)
               call zderivatives_grad(gr%der, psi_fs(:), gpsi)
               do idir = 1, gr%mesh%sb%dim
@@ -293,7 +293,7 @@ contains
 
     end do do_is
 
-    if (st%wfs_type == M_REAL) then
+    if (states_are_real(st)) then
       call dcf_free(dcf_tmp)
     else
       call zcf_free(zcf_tmp)
