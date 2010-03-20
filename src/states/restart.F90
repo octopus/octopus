@@ -261,13 +261,13 @@ contains
 
     call profiling_in(prof_write, "RESTART_WRITE")
 
-    wfns_are_associated = (associated(st%dpsi) .and. st%wfs_type == M_REAL) .or. &
-         (associated(st%zpsi) .and. st%wfs_type == M_CMPLX)
+    wfns_are_associated = (associated(st%dpsi) .and. states_are_real(st)) .or. &
+      (associated(st%zpsi) .and. states_are_complex(st))
     ASSERT(wfns_are_associated)
 
     if(present(lr)) then 
-      lr_wfns_are_associated = (associated(lr%ddl_psi) .and. st%wfs_type == M_REAL) .or. &
-                (associated(lr%zdl_psi) .and. st%wfs_type == M_CMPLX)
+      lr_wfns_are_associated = (associated(lr%ddl_psi) .and. states_are_real(st)) .or. &
+        (associated(lr%zdl_psi) .and. states_are_complex(st))
       ASSERT(lr_wfns_are_associated)
     endif
 
@@ -443,13 +443,13 @@ contains
     if(present(read_occ)) read_occ_ = .false.
     
     ! sanity check
-    gs_allocated = (associated(st%dpsi) .and. st%wfs_type == M_REAL) .or. &
-      (associated(st%zpsi) .and. st%wfs_type == M_CMPLX)
+    gs_allocated = (associated(st%dpsi) .and. states_are_real(st)) .or. &
+      (associated(st%zpsi) .and. states_are_complex(st))
     ASSERT(gs_allocated)
 
     if(present(lr)) then 
-      lr_allocated = (associated(lr%ddl_psi) .and. st%wfs_type == M_REAL) .or. &
-        (associated(lr%zdl_psi) .and. st%wfs_type == M_CMPLX)
+      lr_allocated = (associated(lr%ddl_psi) .and. states_are_real(st)) .or. &
+        (associated(lr%zdl_psi) .and. states_are_complex(st))
       ASSERT(lr_allocated)
     endif
 
@@ -510,13 +510,13 @@ contains
         st%d%kpt%start <= ik .and. st%d%kpt%end >= ik) then
 
         if( .not. present(lr) ) then 
-          if (st%wfs_type == M_REAL) then
+          if (states_are_real(st)) then
             call drestart_read_function(dir, filename, gr%mesh, st%dpsi(:, idim, ist, ik), err)
           else
             call zrestart_read_function(dir, filename, gr%mesh, st%zpsi(:, idim, ist, ik), err)
           end if
         else
-          if (st%wfs_type == M_REAL) then
+          if (states_are_real(st)) then
             call drestart_read_function(dir, filename, gr%mesh, lr%ddl_psi(:, idim, ist, ik), err)
           else
             call zrestart_read_function(dir, filename, gr%mesh, lr%zdl_psi(:, idim, ist, ik), err)

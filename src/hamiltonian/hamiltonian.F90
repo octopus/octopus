@@ -209,7 +209,6 @@ contains
     integer,                intent(in)    :: xc_family
 
     integer                     :: iline, icol, ispin
-    integer, pointer            :: wfs_type
     type(states_dim_t), pointer :: states_dim
 
     integer :: ncols
@@ -218,7 +217,6 @@ contains
     call push_sub('hamiltonian.hamiltonian_init')
 
     states_dim => st%d
-    wfs_type   => st%wfs_type
 
     ! make a couple of local copies
     hm%theory_level = theory_level
@@ -268,7 +266,7 @@ contains
     call epot_init(hm%ep, gr, geo, hm%d%ispin)
 
     !Static magnetic field requires complex wavefunctions
-    if (associated(hm%ep%B_field) .or. gauge_field_is_applied(hm%ep%gfield)) wfs_type = M_CMPLX
+    if (associated(hm%ep%B_field) .or. gauge_field_is_applied(hm%ep%gfield)) call states_set_complex(st)
 
     call parse_logical(datasets_check('CalculateSelfInducedMagneticField'), .false., hm%self_induced_magnetic)
     !%Variable CalculateSelfInducedMagneticField

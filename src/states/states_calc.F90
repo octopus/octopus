@@ -98,7 +98,7 @@ contains
 
     call push_sub('states_calc.states_rotate')
 
-    if(st%wfs_type == M_REAL) then
+    if(states_are_real(st)) then
       do ik = st%d%kpt%start, st%d%kpt%end
         call lalg_gemm(mesh%np_part*st%d%dim, st%nst, stin%nst, M_ONE, stin%dpsi(:, :, 1:stin%nst, ik), &
           transpose(real(u(:, :), REAL_PRECISION)), M_ZERO, st%dpsi(:, :, :, ik))

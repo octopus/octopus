@@ -62,7 +62,12 @@ subroutine X(sternheimer_solve)(                           &
   mesh => sys%gr%mesh
   st => sys%st
   
-  call mix_init(this%mixer, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type=sys%st%wfs_type)
+#ifdef R_TREAL
+  call mix_init(this%mixer, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type = M_REAL)
+#else
+  call mix_init(this%mixer, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type = M_CMPLX)
+#endif
+
   call mesh_init_mesh_aux(sys%gr%mesh)
   
   SAFE_ALLOCATE(      tmp(1:mesh%np))

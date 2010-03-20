@@ -63,6 +63,7 @@ module states_m
 
   public ::                           &
     states_t,                         &
+    states_priv_t,                    &
     states_lead_t,                    &
     states_init,                      &
     states_look,                      &
@@ -100,7 +101,8 @@ module states_m
 
   public ::                           &
     states_are_complex,               &
-    states_are_real
+    states_are_real,                  &
+    states_set_complex
 
   type states_lead_t
     CMPLX, pointer     :: intf_psi(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
@@ -108,12 +110,17 @@ module states_m
     CMPLX, pointer     :: self_energy(:, :, :, :, :) !< (np, np, nspin, ncs, nik) self energy of the leads.
   end type states_lead_t
 
-  type states_t
-    type(states_dim_t) :: d
-    type(modelmb_particle_t) :: modelmbparticles
-    integer :: nst                  !< Number of states in each irreducible subspace
+  type states_priv_t
+    private
+    integer :: wfs_type              !< real (M_REAL) or complex (M_CMPLX) wavefunctions
+  end type states_priv_t
 
-    integer :: wfs_type             !< real (M_REAL) or complex (M_CMPLX) wavefunctions
+  type states_t
+    type(states_dim_t)       :: d
+    type(modelmb_particle_t) :: modelmbparticles
+    type(states_priv_t)      :: priv !< the private components 
+    integer :: nst                   !< Number of states in each irreducible subspace
+
     ! pointers to the wavefunctions 
     logical :: only_userdef_istates !< only use user-defined states as initial states in propagation
     FLOAT, pointer :: dpsi(:,:,:,:) !< dpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
@@ -195,7 +202,7 @@ contains
     nullify(st%st_range, st%st_num)
 
     ! By default, calculations use real wavefunctions
-    st%wfs_type = M_REAL
+    st%priv%wfs_type = M_REAL
 
     call modelmb_particles_nullify(st%modelmbparticles)
 
@@ -242,7 +249,7 @@ contains
     if(.not.varinfo_valid_option('SpinComponents', st%d%ispin)) call input_error('SpinComponents')
     call messages_print_var_option(stdout, 'SpinComponents', st%d%ispin)
     ! Use of spinors requires complex wavefunctions.
-    if (st%d%ispin == SPINORS) st%wfs_type = M_CMPLX
+    if (st%d%ispin == SPINORS) st%priv%wfs_type = M_CMPLX
 
 
     !%Variable ExcessCharge
@@ -440,7 +447,7 @@ contains
       call messages_devel_version('Current DFT')
 
       ! Use of CDFT requires complex wavefunctions
-      st%wfs_type = M_CMPLX
+      st%priv%wfs_type = M_CMPLX
 
       if(st%d%ispin == SPINORS) then
         message(1) = "Sorry, current DFT not working yet for spinors."
@@ -454,13 +461,13 @@ contains
     ! but not if it is Gamma-point only
     if(simul_box_is_periodic(gr%sb)) then
       if(.not. (st%d%nik == 1 .and. kpoint_is_gamma(st%d, 1))) then
-        st%wfs_type = M_CMPLX
+        st%priv%wfs_type = M_CMPLX
       endif
     endif
 
     ! Calculations with open boundaries require complex wavefunctions.
     if(gr%sb%open_boundaries) then
-      st%wfs_type = M_CMPLX
+      st%priv%wfs_type = M_CMPLX
     end if
 
     !%Variable OnlyUserDefinedInitialStates
@@ -871,7 +878,7 @@ contains
     
     if (present(wfs_type)) then
       ASSERT(wfs_type == M_REAL .or. wfs_type == M_CMPLX)
-      st%wfs_type = wfs_type
+      st%priv%wfs_type = wfs_type
     end if
 
     !%Variable ForceComplex
@@ -889,7 +896,7 @@ contains
     !%End
     call parse_logical(datasets_check('ForceComplex'), .false., force)
 
-    if(force) st%wfs_type = M_CMPLX
+    if(force) call states_set_complex(st)
 
     st1 = st%st_start; st2 = st%st_end
     k1 = st%d%kpt%start; k2 = st%d%kpt%end
@@ -937,13 +944,13 @@ contains
 
     call push_sub('states.states_deallocate_wfns')
 
-    if (st%wfs_type == M_REAL) then
+    if (states_are_real(st)) then
       SAFE_DEALLOCATE_P(st%dpsi)
     else
       SAFE_DEALLOCATE_P(st%zpsi)
     end if
 
-    if(st%open_boundaries.and.calc_mode_is(CM_TD)) then
+    if(st%open_boundaries .and. calc_mode_is(CM_TD)) then
       do il = 1, NLEADS
         SAFE_DEALLOCATE_P(st%ob_lead(il)%intf_psi)
       end do
@@ -1028,7 +1035,7 @@ contains
 
     call states_null(stout)
 
-    stout%wfs_type   = stin%wfs_type
+    stout%priv%wfs_type   = stin%priv%wfs_type
     call states_dim_copy(stout%d, stin%d)
     stout%nst        = stin%nst
     stout%qtot       = stin%qtot
@@ -1395,7 +1402,7 @@ contains
 
     case(SPINORS)
 
-      ASSERT(st%wfs_type == M_CMPLX)
+      ASSERT(st%priv%wfs_type == M_CMPLX)
 
       if(st%fixed_spins) then
         
@@ -1479,7 +1486,7 @@ contains
     if(st%d%ispin == SPINORS) then
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
-          if (st%wfs_type == M_REAL) then
+          if (st%priv%wfs_type == M_REAL) then
             write(message(1),'(a)') 'Internal error in states_fermi.'
             call write_fatal(1)
           else
@@ -2255,24 +2262,28 @@ contains
 
 
   ! ---------------------------------------------------------
-  logical function states_are_complex(st) result (wac)
+  subroutine states_set_complex(st)
+    type(states_t),    intent(inout) :: st
+
+    st%priv%wfs_type = M_CMPLX
+
+  end subroutine states_set_complex
+
+  ! ---------------------------------------------------------
+  pure logical function states_are_complex(st) result (wac)
     type(states_t),    intent(in) :: st
 
-    call push_sub('states.states_are_complex')
-    wac = (st%wfs_type == M_CMPLX)
+    wac = (st%priv%wfs_type == M_CMPLX)
 
-    call pop_sub()
   end function states_are_complex
 
 
   ! ---------------------------------------------------------
-  logical function states_are_real(st) result (war)
+  pure logical function states_are_real(st) result (war)
     type(states_t),    intent(in) :: st
 
-    call push_sub('states.states_are_real')
-    war = (st%wfs_type == M_REAL)
+    war = (st%priv%wfs_type == M_REAL)
 
-    call pop_sub()
   end function states_are_real
 
 
@@ -2333,7 +2344,7 @@ contains
         do ist = st%st_start, st%st_end
 
           ! all calculations will be done with complex wavefunctions
-          if (st%wfs_type == M_REAL) then
+          if (states_are_real(st)) then
             wf_psi(:,:) = cmplx(st%dpsi(:,:, ist, ik), KIND=REAL_PRECISION)
           else
             wf_psi(:,:) = st%zpsi(:,:, ist, ik)
