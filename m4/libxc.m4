@@ -19,7 +19,7 @@ if test "$acx_libxc_ok" = no; then
   AC_MSG_CHECKING([for libxc])
   # If the location has been passed with --with-libxc-prefix just test this
   if test "$LIBS_LIBXC"; then
-    libxc_fcflags="$LIBS_LIBXC"; libxc_libs="$LIBS_LIBXC"
+    libxc_fcflags="$FCFLAGS_LIBXC"; libxc_libs="$LIBS_LIBXC"
 FCFLAGS="$libxc_fcflags $acx_libxc_save_FCFLAGS"
 LIBS="$libxc_libs $acx_libxc_save_LIBS"
 AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
