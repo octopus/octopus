@@ -49,10 +49,6 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr)
   ! try binary
   call X(input_function) (trim(dir)//'/'//trim(filename)//'.obf', mesh, ff(1:mesh%np), ierr, is_tmp=.true.)
 
-  ! if we do not succeed try NetCDF
-  if(ierr>0) call X(input_function) (trim(dir)//'/'//trim(filename)//'.ncdf', mesh, &
-       ff(1:mesh%np), ierr, is_tmp=.true.)
-
   call pop_sub()
 end subroutine X(restart_read_function)
 

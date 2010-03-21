@@ -518,7 +518,7 @@ contains
       write(iunit, '(a20,i21)')  'checksum=           ', mesh%idx%checksum
       call io_close(iunit)
 
-      call io_binary_write(trim(filename)//'.obf', mesh%np_part*mesh%sb%dim, mesh%idx%lxyz, ierr)
+      call io_binary_write(trim(filename)//'.obf', mesh%np_part_global*mesh%sb%dim, mesh%idx%lxyz, ierr)
     end if
 
     call pop_sub()

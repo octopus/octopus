@@ -71,12 +71,7 @@ module restart_m
     drestart_read_lr_rho,    &
     zrestart_read_lr_rho
   
-
-  integer, parameter :: &
-    RESTART_NONE   = 0, &
-    RESTART_NETCDF = 2, &
-    RESTART_BINARY = 3
-
+  logical           :: restart_write_files
   integer           :: restart_format
   character(len=32) :: restart_dir
 
@@ -110,47 +105,28 @@ contains
   ! read restart format information
   subroutine restart_init
 
-    integer :: default, parsed
 
     call push_sub('restart.restart_init')
 
-    !%Variable RestartFileFormat
-    !%Type integer
-    !%Default restart_binary
+    call messages_obsolete_variable('RestartFileFormat', 'RestartWrite')
+
+    !%Variable RestartWrite
+    !%Type logical
+    !%Default true
     !%Section Execution::IO
     !%Description
-    !% Determines in which format the restart files should be written. The default
-    !% is binary files (<tt>restart_binary</tt>).
-    !%Option restart_none 0
-    !% Restart information is not written (useful for testing).
-    !%Option restart_netcdf 2
-    !% NetCDF (platform-independent) format. This requires the NetCDF library.
-    !%Option restart_binary 3
-    !% Octopus Binary Format, the new and more flexible binary format
-    !% of <tt>Octopus</tt>. It is faster and produces smaller files than NetCDF
-    !% and it is also platform-independent.
+    !% If this variable is set to no, restart information is not
+    !% written. The default is yes.
     !%End
 
-    default = RESTART_BINARY
+    call parse_logical(datasets_check('RestartWrite'), .true., restart_write_files)
 
-    call parse_integer(datasets_check('RestartFileFormat'), default, parsed)
-#ifndef HAVE_NETCDF
-    if (parsed == RESTART_NETCDF) then 
-      write(message(1),'(a)') 'Error: Octopus was compiled without NetCDF support but'
-      write(message(2),'(a)') 'NetCDF restart files were requested.'
-      call write_fatal(2)
-    end if
-#endif
-    if(.not.varinfo_valid_option('RestartFileFormat', parsed)) call input_error('RestartFileFormat')
-
-    select case(parsed) 
-    case(RESTART_NONE)
-      restart_format = 0
-    case(RESTART_NETCDF)
-      restart_format = io_function_fill_how("NETCDF")
-    case(RESTART_BINARY)
+    if(restart_write_files) then
       restart_format = io_function_fill_how("Binary")
-    end select
+    else
+      message(1) = 'Restart information will not be written'
+      call write_warning(1)
+    end if
 
     !%Variable RestartDir
     !%Type string
@@ -253,7 +229,7 @@ contains
 
     call push_sub('restart.restart_write')
 
-    if(restart_format == RESTART_NONE) then
+    if(.not. restart_write_files) then
       ierr = 0
       call pop_sub()
       return
