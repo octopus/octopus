@@ -38,8 +38,6 @@ AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 AC_PROG_YACC
 
-AC_DISABLE_SHARED
-
 dnl check whether mpi is enabled
 AC_ARG_ENABLE(mpi, AS_HELP_STRING([--enable-mpi(=PATH)], [Parallel version]))
 case $enable_mpi in
@@ -272,6 +270,8 @@ echo "**********************************************"
 dnl ===================================================================
 dnl now we search for libraries
 
+ACX_LIBXC
+
 dnl check for BLAS
 ACX_BLAS([], AC_MSG_ERROR([could not find required BLAS library]))
 
@@ -313,8 +313,6 @@ fi
 
 dnl now I run configure for the internal libraries
 AC_CONFIG_SUBDIRS([external_libs/spglibs])
-
-AC_CONFIG_SUBDIRS([libxc])
 
 # This is certainly wrong, but I don't know
 # how to do it right

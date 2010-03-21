@@ -37,7 +37,6 @@ AM_FCFLAGS = \
 	@F90_MODULE_FLAG@$(top_builddir)/src/td          \
 	@F90_MODULE_FLAG@$(top_builddir)/src/opt_control \
 	@F90_MODULE_FLAG@$(top_builddir)/src/sternheimer \
-	@F90_MODULE_FLAG@$(top_builddir)/libxc/src       \
 	@F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep 
 
 AM_CPPFLAGS = \
@@ -75,8 +74,7 @@ core_LIBS = \
 	$(octopus_LIBS)                               \
 	@LIBS_LAPACK@ @LIBS_BLAS@                     \
 	$(top_builddir)/liboct_parser/liboct_parser.a \
-	$(top_builddir)/libxc/src/.libs/libxc.a       \
-	@GSL_LIBS@ @GD_LIBS@ @FCEXTRALIBS@
+	@GSL_LIBS@ @GD_LIBS@ @LIBS_LIBXC@ @FCEXTRALIBS@ 
 
 external_LIBS = \
 	$(top_builddir)/external_libs/qshep/libqshep.a     \
@@ -106,7 +104,7 @@ endif
 # Since ETSF_IO depends on netCDF, it must be first in the list
 all_LIBS = $(core_LIBS) @LIBS_FFT@ @LIBS_SPARSKIT@ \
   @LIBS_ETSF_IO@ @LIBS_NETCDF@ $(external_LIBS) \
-  @LIBS_MPI@ @LIBS_LAPACK@ @LIBS_BLAS@
+  @LIBS_MPI@ @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_LIBXC@
 
 
 # ---------------------------------------------------------------
@@ -127,7 +125,7 @@ SUFFIXES = _oct.f90 .F90 .o .S .s
 	@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< > $*_oct.f90
 	$(top_srcdir)/build/preprocess.pl $*_oct.f90 \
 	  "@DEBUG@" "@LONG_LINES@" "@F90_ACCEPTS_LINE_NUMBERS@" "@F90_FORALL@"
-	@FC@ @FCFLAGS@ @FCFLAGS_NETCDF@ @FCFLAGS_ETSF_IO@ $(AM_FCFLAGS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
+	@FC@ @FCFLAGS@ @FCFLAGS_NETCDF@ @FCFLAGS_ETSF_IO@ @FCFLAGS_LIBXC@ $(AM_FCFLAGS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
 
 # This rule is basically to create a _oct.f90 file by hand for
