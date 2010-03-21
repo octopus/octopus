@@ -65,6 +65,7 @@ module mesh_m
     mesh_global_memory,        &
     mesh_local_memory,         &
     mesh_x_global,             &
+    mesh_check_fingerprint,    &
     mesh_compact_boundaries,   &
     translate_point
 
@@ -523,6 +524,41 @@ contains
     call pop_sub()
   end subroutine mesh_lxyz_dump
 
+  ! -----------------------------------------------------------------------
+  ! This function checks the fingerprint of a mesh written in
+  ! filename. If the mesh are equal (same fingerprint) it returns 0,
+  ! otherwise it returns the size of the mesh stored. If the
+  ! fingerprint cannot be read, it returns -1.
+
+  integer function mesh_check_fingerprint(mesh, filename) result(count)
+    type(mesh_t),     intent(in) :: mesh
+    character(len=*), intent(in) :: filename
+
+    character(len=20)  :: str
+    integer :: iunit, algorithm
+    integer(8) :: checksum
+
+    call push_sub('mesh.mesh_check_fingerprint')
+
+    iunit = io_open(trim(filename)//'.fingerprint', action='read', status='old', die=.false., is_tmp = .true., grp = mesh%mpi_grp)
+
+    if(iunit < 0) then
+      count = -1      
+    else
+
+      read(iunit, '(a20,i21)')  str, count
+      read(iunit, '(a20,i21)')  str, algorithm
+      read(iunit, '(a20,i21)')  str, checksum
+      
+      call io_close(iunit)
+      
+      if(count == mesh%np_part_global .and. algorithm == 1 .and. checksum == mesh%idx%checksum) count = 0
+
+    endif
+
+    call pop_sub()
+
+  end function mesh_check_fingerprint
 
   ! --------------------------------------------------------------
   !> Fill the lxyz and lxyz_inv arrays from a file

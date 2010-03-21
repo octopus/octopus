@@ -415,7 +415,7 @@ contains
     !if this next argument is present, the lr wfs are read instead of the gs wfs
     type(lr_t), optional, intent(inout) :: lr 
 
-    integer              :: iunit, iunit2, err, ik, ist, idim, int
+    integer              :: iunit, iunit2, err, ik, ist, idim, int, read_mesh_np
     character(len=12)    :: filename
     character(len=1)     :: char
     logical, allocatable :: filled(:, :, :)
@@ -457,17 +457,21 @@ contains
 
     ! open files to read
     iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp = .true., grp = gr%mesh%mpi_grp)
-    if(iunit < 0) then
-      ierr = -1
-    end if
+    if(iunit < 0) ierr = -1
 
     iunit2 = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = gr%mesh%mpi_grp)
-    if(iunit2 < 0) then
-      if(iunit > 0) call io_close(iunit, grp = gr%mesh%mpi_grp)
-      ierr = -1
-    end if
+    if(iunit2 < 0) ierr = -1
+    
+    ! now check that the mesh is compatible
+    read_mesh_np = mesh_check_fingerprint(gr%mesh, trim(dir)//'/lxyz')
+    if (read_mesh_np > 0) ierr = -1 
+    ! we should check for /= 0, but for the moment we continue restart
+    ! if we receive -1 so we can read old restart files that do not
+    ! have a fingerprint file.
 
     if(ierr .ne. 0) then
+      if(iunit > 0) call io_close(iunit, grp = gr%mesh%mpi_grp)
+      if(iunit2 > 0) call io_close(iunit2, grp = gr%mesh%mpi_grp)
       write(message(1),'(a)') 'Could not load any previous restart information.'
       call write_info(1)
       call messages_print_stress(stdout)
