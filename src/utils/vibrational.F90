@@ -102,12 +102,14 @@ program vibrational
       iunit = io_open('td.general/velocity_autocorrelation', action='write')
       
       do jj = ini_iter, end_iter
-        write(unit = iunit, iostat = ierr, fmt = *) time(jj), vaf(jj)
+        write(unit = iunit, iostat = ierr, fmt = *) &
+         &  units_from_atomic(units_out%time, time(jj)), vaf(jj)
       end do
       
       ! print again to see the matching
       do jj = ini_iter, end_iter
-        write(unit = iunit, iostat = ierr, fmt = *) (time(end_iter)-time(ini_iter)) + time(jj), vaf(jj)
+        write(unit = iunit, iostat = ierr, fmt = *) &
+         & units_from_atomic(units_out%time, (time(end_iter)-time(ini_iter)) + time(jj)), vaf(jj)
       end do
       
       call io_close(iunit)
@@ -118,7 +120,7 @@ program vibrational
       do ifreq = 1, max_freq
         ww = dw * ifreq
         write(unit = iunit, iostat = ierr, fmt = '(4e20.10)') &
-          units_from_atomic(unit_invcm, ww), abs(ftvaf(ifreq)), real(ftvaf(ifreq)), aimag(ftvaf(ifreq))
+         & units_from_atomic(unit_invcm, ww), abs(ftvaf(ifreq)), real(ftvaf(ifreq)), aimag(ftvaf(ifreq))
       end do
       
       call io_close(iunit)
@@ -147,7 +149,8 @@ program vibrational
         ww = dw * ifreq
         irtotal = sqrt(sum( abs(ftdipole(ifreq, 1:3))**2 ))
         write(unit = iunit, iostat = ierr, fmt = '(5e20.10)') &
-              units_from_atomic(unit_invcm, ww), ww*irtotal, ww*abs(ftdipole(ifreq, 1:3))
+         & units_from_atomic(unit_invcm, ww), units_from_atomic(units_out%length, units_from_atomic(units_out%time , ww*irtotal)), &
+         & units_from_atomic(units_out%length, units_from_atomic(units_out%time ,  ww*abs(ftdipole(ifreq, 1:3))))
       end do
       call io_close(iunit)
 
@@ -179,8 +182,8 @@ contains
     do while(.true.)
 
       read(unit = iunit, iostat = ierr, fmt = *) read_iter, time(iter), &
-           ((geo%atom(ii)%x(jj), jj = 1, 3), ii = 1, geo%natoms),&
-           ((geo%atom(ii)%v(jj), jj = 1, 3), ii = 1, geo%natoms)
+          & ((geo%atom(ii)%x(jj), jj = 1, 3), ii = 1, geo%natoms),&
+          & ((geo%atom(ii)%v(jj), jj = 1, 3), ii = 1, geo%natoms)
 
       time(iter) =  units_to_atomic(units_out%time, time(iter))
       forall( jj = 1: 3, ii = 1: geo%natoms) geo%atom(ii)%x(jj)=units_to_atomic( units_out%length,   geo%atom(ii)%x(jj))
@@ -243,7 +246,7 @@ contains
     do while(.true.)
 
       read(unit = iunit, iostat = ierr, fmt = *) read_iter, time(iter), &
-           charge, dipole(iter, 1), dipole(iter, 2), dipole(iter, 3)
+          & charge, dipole(iter, 1), dipole(iter, 2), dipole(iter, 3)
 
       time(iter) =  units_to_atomic(units_out%time, time(iter))
       forall(ii= 1: 3) dipole(iter, ii) = units_to_atomic(units_out%length, dipole(iter, ii)) !dipole moment has unit of charge*length, charge has the same unit in both systems
