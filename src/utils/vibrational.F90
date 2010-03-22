@@ -182,6 +182,10 @@ contains
            ((geo%atom(ii)%x(jj), jj = 1, 3), ii = 1, geo%natoms),&
            ((geo%atom(ii)%v(jj), jj = 1, 3), ii = 1, geo%natoms)
 
+      time(iter) =  units_to_atomic(units_out%time, time(iter))
+      forall( jj = 1: 3, ii = 1: geo%natoms) geo%atom(ii)%x(jj)=units_to_atomic( units_out%length,   geo%atom(ii)%x(jj))
+      forall( jj = 1: 3, ii = 1: geo%natoms) geo%atom(ii)%v(jj)=units_to_atomic( units_out%velocity, geo%atom(ii)%v(jj))
+
       if (ierr /= 0) then 
         iter = iter - 1 !last iteration is not valid
         exit
@@ -240,6 +244,9 @@ contains
 
       read(unit = iunit, iostat = ierr, fmt = *) read_iter, time(iter), &
            charge, dipole(iter, 1), dipole(iter, 2), dipole(iter, 3)
+
+      time(iter) =  units_to_atomic(units_out%time, time(iter))
+      forall(ii= 1: 3) dipole(iter, ii) = units_to_atomic(units_out%length, dipole(iter, ii)) !dipole moment has unit of charge*length, charge has the same unit in both systems
 
       if (ierr /= 0) then 
         iter = iter - 1 !last iteration is not valid
