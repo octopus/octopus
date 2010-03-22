@@ -100,6 +100,13 @@ program vibrational
 
       !print the vaf
       iunit = io_open('td.general/velocity_autocorrelation', action='write')
+
+  800 FORMAT(80('#'))      
+      write(unit = iunit, iostat = ierr, fmt = 800) 
+      write(unit = iunit, iostat = ierr, fmt = '(8a)')  '# HEADER'
+      write(unit = iunit, iostat = ierr, fmt = '(a1,4x,a6,a7,a1,10x,a10)') '#', &
+       &  'time [',units_out%time%abbrev,']', 'VAF [a.u.]'
+      write(unit = iunit, iostat = ierr, fmt = 800) 
       
       do jj = ini_iter, end_iter
         write(unit = iunit, iostat = ierr, fmt = *) &
@@ -116,6 +123,12 @@ program vibrational
       
       !and print the spectrum
       iunit = io_open('td.general/vibrational_spectrum', action='write')
+
+      write(unit = iunit, iostat = ierr, fmt = 800) 
+      write(unit = iunit, iostat = ierr, fmt = '(8a)')  '# HEADER'
+      write(unit = iunit, iostat = ierr, fmt = '(a17,8x,a15,5x,a13,5x,a13)') &
+        & '#   Energy [1/cm]', 'Spectrum [a.u.]', 'Re(FT of vaf)', 'Im(FT of vaf)'      
+      write(unit = iunit, iostat = ierr, fmt = 800 ) 
       
       do ifreq = 1, max_freq
         ww = dw * ifreq
@@ -144,6 +157,18 @@ program vibrational
 
       !and print the spectrum
       iunit = io_open('td.general/infrared', action='write')
+
+  100 FORMAT(100('#'))
+
+     write(unit = iunit, iostat = ierr, fmt = 100)
+     write(unit = iunit, iostat = ierr, fmt = '(8a)')  '# HEADER'
+     write(unit = iunit, iostat = ierr, fmt = '(a25,a1,a1,a10)') &
+      & '# all absorptions are in ',units_out%length%abbrev,'*',units_out%time%abbrev
+     write(unit = iunit, iostat = ierr, fmt = '(a1)') '#'
+     write(unit = iunit, iostat = ierr, fmt = '(a19,41x,a17)') '#        Energy    ', 'absorption'
+     write(unit = iunit, iostat = ierr, fmt = '(a15,13x,a5,15x,a7,13x,a7,13x,a7)') &
+      & '#        [1/cm]','total','FT(<x>)','FT(<y>)','FT(<z>)'
+     write(unit = iunit, iostat = ierr, fmt = 0100) 
       
       do ifreq = 1, max_freq
         ww = dw * ifreq
