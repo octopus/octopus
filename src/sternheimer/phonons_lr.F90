@@ -230,6 +230,7 @@ contains
           end do
         end do
       end do
+      call pop_sub()
 
     end subroutine build_ionic_dyn_matrix
 

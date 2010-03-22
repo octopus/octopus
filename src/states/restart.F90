@@ -97,7 +97,7 @@ contains
       if(mpi_grp_is_root(mpi_world)) call loct_rm('stop')
     end if
 
-    call pop_sub(); return
+    call pop_sub()
   end function clean_stop
 
 

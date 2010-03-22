@@ -230,6 +230,7 @@ contains
     if(this%dir  > 0 .and. this%atom1 > 0) this%ionic%mix1(this%atom1, this%dir ) = M_ONE
     if(this%dir2 > 0 .and. this%atom2 > 0) this%ionic%mix2(this%atom2, this%dir2) = M_ONE
 
+    call pop_sub()
   end subroutine pert_setup_ionic_pure
 
   ! --------------------------------------------------------------------

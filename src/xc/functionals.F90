@@ -86,7 +86,10 @@ contains
     ! initialize structure
     call xc_functl_init(functl, spin_channels)
 
-    if (.not.cdft) return
+    if (.not.cdft) then
+      call pop_sub()
+      return
+    end if
 
     !%Variable JFunctional
     !%Type integer

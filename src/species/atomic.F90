@@ -781,7 +781,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   call nrmlzg(g,s,n)
   call pop_sub(); return
 3 ierr = 1
-  call pop_sub(); return
+
+  call pop_sub()
   
   end subroutine egofv
 

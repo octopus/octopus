@@ -246,6 +246,7 @@ contains
     call push_sub('poisson_corrections.internal_dotp')
 
     res = dmf_dotp(mesh_pointer, xx, yy)
+    call pop_sub()
   end function internal_dotp
 
 
