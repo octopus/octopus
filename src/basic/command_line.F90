@@ -113,7 +113,8 @@ module command_line_m
     subroutine getopt_rotatory_strength
     end subroutine getopt_rotatory_strength
 
-    subroutine getopt_vibrational
+    subroutine getopt_vibrational(mode)
+      integer :: mode
     end subroutine getopt_vibrational
 
     subroutine getopt_xyz_anim

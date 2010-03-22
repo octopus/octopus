@@ -53,7 +53,8 @@ program vibrational
   ! Initialize stuff
   call global_init()
   call getopt_init(ierr)
-  if(ierr.eq.0) call getopt_vibrational
+  mode = SPEC_VIBRATIONAL
+  if(ierr.eq.0) call getopt_vibrational(mode)
   call parser_init()
   call datasets_init(1)
   call io_init()
@@ -71,21 +72,6 @@ program vibrational
 
     dw = max_energy/(max_freq-M_ONE) !Initializes the wavevector step dw
     
-  !%Variable VibrationalSpectrumType
-  !%Type integer
-  !%Default vibrational
-  !%Section Utilities::oct-vibrational
-  !%Description
-  !% This variable selects the kind of spectrum that will be
-  !% calculated from a molecular-dynamics run.
-  !%Option vibrational 1
-  !% Vibrational spectrum from the velocity autocorrelation function.
-  !%Option infrared    2
-  !% Infrared spectrum obtained from the dipole moment.
-  !%End
-  call parse_integer (datasets_check('VibrationalSpectrumType'), SPEC_VIBRATIONAL, mode)
-  if(.not.varinfo_valid_option('VibrationalSpectrumType', mode)) call input_error('VibrationalSpectrumType')
-
   if (end_time < M_ZERO) end_time = huge(end_time)
 
   SAFE_ALLOCATE(time(0:max_iter+1))

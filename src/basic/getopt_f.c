@@ -16,7 +16,7 @@
 	Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 	02111-1307, USA.
 
-	$Id: oscillator_strength_clarg.c 2516 2006-10-24 21:31:59Z acastro $
+	$Id: getopt_f.c 2516 2006-10-24 21:31:59Z acastro $
 */
 
 #include <config.h>
@@ -353,7 +353,7 @@ void octopus_help(){
 }
 
 void FC_FUNC_(getopt_octopus, GETOPT_OCTOPUS)
-     (STR_F_TYPE mode, STR_F_TYPE name STR_ARG2)
+     ()
 {
   int c;
 #if defined(HAVE_GETOPT_LONG)
@@ -400,7 +400,7 @@ void casida_spectrum_help(){
 }
 
 void FC_FUNC_(getopt_casida_spectrum, GETOPT_CASIDA_SPECTRUM)
-     (STR_F_TYPE mode, STR_F_TYPE name STR_ARG2)
+     ()
 {
   int c;
 #if defined(HAVE_GETOPT_LONG)
@@ -447,7 +447,7 @@ void center_geom_help(){
 }
 
 void FC_FUNC_(getopt_center_geom, GETOPT_CENTER_GEOM)
-     (STR_F_TYPE mode, STR_F_TYPE name STR_ARG2)
+     ()
 {
   int c;
 #if defined(HAVE_GETOPT_LONG)
@@ -494,7 +494,7 @@ void dielectric_function_help(){
 }
 
 void FC_FUNC_(getopt_dielectric_function, GETOPT_DIELECTRIC_FUNCTION)
-     (STR_F_TYPE mode, STR_F_TYPE name STR_ARG2)
+     ()
 {
   int c;
 #if defined(HAVE_GETOPT_LONG)
@@ -541,7 +541,7 @@ void propagation_spectrum_help(){
 }
 
 void FC_FUNC_(getopt_propagation_spectrum, GETOPT_PROPAGATION_SPECTRUM)
-     (STR_F_TYPE mode, STR_F_TYPE name STR_ARG2)
+     ()
 {
   int c;
 #if defined(HAVE_GETOPT_LONG)
@@ -588,7 +588,7 @@ void rotatory_strength_help(){
 }
 
 void FC_FUNC_(getopt_rotatory_strength, GETOPT_ROTATORY_STRENGTH)
-     (STR_F_TYPE mode, STR_F_TYPE name STR_ARG2)
+     ()
 {
   int c;
 #if defined(HAVE_GETOPT_LONG)
@@ -631,11 +631,14 @@ void vibrational_help(){
   printf("Options:\n");
   printf("  -h, --help            Prints this help and exits.\n");
   printf("  -v, --version         Prints octopus version.\n");
+  printf("  -m, --mode            Run mode: 1 to obtain the vibrational spectrum, .\n");
+  printf("                        through the velocity autocorrelation function, 2 to\n");
+  printf("                        obtain the infrared spectrum through the dipole.\n");
   exit(-1);
 }
 
 void FC_FUNC_(getopt_vibrational, GETOPT_VIBRATIONAL)
-     (STR_F_TYPE mode, STR_F_TYPE name STR_ARG2)
+     (int *mode)
 {
   int c;
 #if defined(HAVE_GETOPT_LONG)
@@ -643,6 +646,7 @@ void FC_FUNC_(getopt_vibrational, GETOPT_VIBRATIONAL)
     {
       {"help", no_argument, 0, 'h'},
       {"version", no_argument, 0, 'v'},
+      {"mode", required_argument, 0, 'm'},
       {0, 0, 0, 0}
     };
 #endif
@@ -650,9 +654,9 @@ void FC_FUNC_(getopt_vibrational, GETOPT_VIBRATIONAL)
   while (1) {
     int option_index = 0;
 #if defined(HAVE_GETOPT_LONG)
-    c = getopt_long(argc, argv, "hv", long_options, &option_index);
+    c = getopt_long(argc, argv, "hvm:", long_options, &option_index);
 #else
-    c = getopt(argc, argv, "hv");
+    c = getopt(argc, argv, "hvm:");
 #endif
     if (c == -1) break;
     switch (c) {
@@ -662,6 +666,9 @@ void FC_FUNC_(getopt_vibrational, GETOPT_VIBRATIONAL)
     case 'v':
       printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
       exit(0);
+    case 'm':
+      *mode = (int)atoi(optarg);
+      break;
     }
   }
   if (optind < argc) vibrational_help();
@@ -682,7 +689,7 @@ void xyz_anim_help(){
 }
 
 void FC_FUNC_(getopt_xyz_anim, GETOPT_XYZ_ANIM)
-     (STR_F_TYPE mode, STR_F_TYPE name STR_ARG2)
+     ()
 {
   int c;
 #if defined(HAVE_GETOPT_LONG)
