@@ -69,6 +69,8 @@ program vibrational
   call parse_float(datasets_check('PropagationSpectrumMaxEnergy'), &
     units_from_atomic(units_inp%energy, units_to_atomic(unit_invcm, CNST(10000.0))), max_energy, units_inp%energy)
 
+    dw = max_energy/(max_freq-M_ONE) !Initializes the wavevector step dw
+    
   !%Variable VibrationalSpectrumType
   !%Type integer
   !%Default vibrational
