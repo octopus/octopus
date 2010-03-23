@@ -22,14 +22,19 @@
 #include <config.h>
 typedef long long checksum_t;
 
+/* This function implements a very stupid checksum function. The only
+   important thing is that it produces different results for arrays
+   with the same numbers but in different orders. For more serious
+   applications a better function must be used. */
+
 void FC_FUNC_(checksum_calculate, CHECKSUM_CALCULATE)(const int * algorithm, const int * narray, const unsigned int * array, checksum_t * sum){
   int i;
-
+  checksum_t mult;
   *sum = 0;
-  for(i = 0; i < *narray; i++) *sum += array[i];
-
-}
-
-int FC_FUNC_(checksum_compare_int, CHECKSUM_COMPARE_INT)(const int * algorithm, const checksum_t * sum1, const checksum_t * sum2){
-  return (sum1 == sum2);
+  mult = 1;
+  for(i = 0; i < *narray; i++){
+    *sum += mult*array[i];
+    mult++;
+  }
+  *sum %= (1<<31);
 }

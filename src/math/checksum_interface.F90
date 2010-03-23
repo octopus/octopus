@@ -20,8 +20,7 @@
 module checksum_m
   
   public ::                 &
-    checksum_calculate,     &
-    checksum_compare
+    checksum_calculate
 
   interface
     subroutine checksum_calculate(algorithm, narray, array, checksum)
@@ -30,23 +29,6 @@ module checksum_m
       integer,    intent(in)  :: array
       integer(8), intent(out) :: checksum
     end subroutine checksum_calculate
-
-    integer function checksum_compare_int(algorithm, checksum1, checksum2)
-      integer,    intent(in)  :: algorithm
-      integer(8), intent(in)  :: checksum1
-      integer(8), intent(in)  :: checksum2
-    end function checksum_compare_int
   end interface
-
-  contains
-
-    logical function checksum_compare(algorithm, checksum1, checksum2)
-      integer,    intent(in)  :: algorithm
-      integer(8), intent(in)  :: checksum1
-      integer(8), intent(in)  :: checksum2
-
-      checksum_compare = (checksum_compare_int(algorithm, checksum1, checksum2) /= 0)
-
-    end function checksum_compare
 
 end module checksum_m
