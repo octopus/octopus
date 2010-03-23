@@ -18,8 +18,12 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-! Reads a function from file filename, and puts it into ff. The input file
-! may be a "plain" file (no extension), or a netcdf file ".ncdf" extension.
+!
+! Reads a mesh function from file filename, and puts it into ff. If
+! the map argument is passed, the subroutine will reorder the values
+! in the file according to it, missing values will be filled with
+! zeros. (For the moment this is only implemented for the obf format.)
+!
 ! On output, ierr signals how everything went:
 ! ierr > 0 => Error. The function ff was not read:
 !              1 : illegal filename (must have ".obf" or ".ncdf" extension).
@@ -127,56 +131,55 @@ subroutine X(input_function_global)(filename, mesh, ff, ierr, is_tmp, map)
   select case(trim(io_get_extension(filename)))
 #if defined(HAVE_NETCDF)
   case("ncdf")
-
-
-     file = io_workpath(filename, is_tmp=is_tmp)
-     status = nf90_open(trim(file), NF90_WRITE, ncid)
-     if(status.ne.NF90_NOERR) then
-         ierr = 2
-     else
+    ASSERT(.not. present(map))
+    file = io_workpath(filename, is_tmp=is_tmp)
+    status = nf90_open(trim(file), NF90_WRITE, ncid)
+    if(status.ne.NF90_NOERR) then
+      ierr = 2
+    else
 #if defined(R_TCOMPLEX)
-       call X(cf_new)(mesh%idx%ll, cube)
-       call dcf_new(mesh%idx%ll, re)
-       call dcf_new(mesh%idx%ll, im)
-       call X(cf_alloc_RS)(cube); call dcf_alloc_RS(re); call dcf_alloc_RS(im)
-       call read_netcdf()
-       cube%RS = re%RS + M_zI*im%RS
-       call X(cube_to_mesh) (mesh, cube, ff)
-       call X(cf_free)(cube); call dcf_free(re); call dcf_free(im)
+      call X(cf_new)(mesh%idx%ll, cube)
+      call dcf_new(mesh%idx%ll, re)
+      call dcf_new(mesh%idx%ll, im)
+      call X(cf_alloc_RS)(cube); call dcf_alloc_RS(re); call dcf_alloc_RS(im)
+      call read_netcdf()
+      cube%RS = re%RS + M_zI*im%RS
+      call X(cube_to_mesh) (mesh, cube, ff)
+      call X(cf_free)(cube); call dcf_free(re); call dcf_free(im)
 #else
-       call X(cf_new)(mesh%idx%ll, cube)
-       call X(cf_alloc_RS)(cube)
-       call read_netcdf()
-       call X(cube_to_mesh) (mesh, cube, ff)
-       call X(cf_free)(cube)
+      call X(cf_new)(mesh%idx%ll, cube)
+      call X(cf_alloc_RS)(cube)
+      call read_netcdf()
+      call X(cube_to_mesh) (mesh, cube, ff)
+      call X(cf_free)(cube)
 #endif
-     end if
+    end if
 #endif
-   case("obf")
+  case("obf")
 
-     if(present(map)) then
+    if(present(map)) then
 
-       call io_binary_get_info(filename, np, ierr)
+      call io_binary_get_info(filename, np, ierr)
 
-       SAFE_ALLOCATE(read_ff(1:np))
-       
-       call io_binary_read(filename, np, read_ff, ierr)
-       call profiling_count_transfers(np, read_ff(1))
-       
-       ff(1:mesh%np_global) = M_ZERO
-       do ip = 1, min(np, ubound(map, dim = 1))
-         if(map(ip) > 0) ff(map(ip)) = read_ff(ip)
-       end do
+      SAFE_ALLOCATE(read_ff(1:np))
 
-       SAFE_DEALLOCATE_P(read_ff)
+      call io_binary_read(filename, np, read_ff, ierr)
+      call profiling_count_transfers(np, read_ff(1))
 
-     else
-       call io_binary_read(filename, mesh%np_global, ff, ierr)
-       call profiling_count_transfers(mesh%np_global, ff(1))
-     end if
+      ff(1:mesh%np_global) = M_ZERO
+      do ip = 1, min(np, ubound(map, dim = 1))
+        if(map(ip) > 0) ff(map(ip)) = read_ff(ip)
+      end do
+
+      SAFE_DEALLOCATE_P(read_ff)
+
+    else
+      call io_binary_read(filename, mesh%np_global, ff, ierr)
+      call profiling_count_transfers(mesh%np_global, ff(1))
+    end if
 
   case default
-     ierr = 1
+    ierr = 1
   end select
 
   call pop_sub()
@@ -189,110 +192,110 @@ contains
   ! ---------------------------------------------------------
   subroutine read_netcdf()
     integer :: data_id, data_im_id, &
-        dim_data_id(MAX_DIM), ndim(MAX_DIM), xtype, file_kind
+      dim_data_id(MAX_DIM), ndim(MAX_DIM), xtype, file_kind
     FLOAT, allocatable :: xx(:, :, :)
 
     call push_sub('io_function_inc.Xinput_function_global.read_netcdf')
 
     !Inquire about dimensions
     if(status == NF90_NOERR) then
-       status = nf90_inq_dimid (ncid, "dim_1", dim_data_id(1))
-       call ncdf_error('nf90_inq_dimid', status, file, ierr)
+      status = nf90_inq_dimid (ncid, "dim_1", dim_data_id(1))
+      call ncdf_error('nf90_inq_dimid', status, file, ierr)
     end if
 
     if(status == NF90_NOERR) then
-       status = nf90_inq_dimid (ncid, "dim_2", dim_data_id(2))
-       call ncdf_error('nf90_inq_dimid', status, file, ierr)
+      status = nf90_inq_dimid (ncid, "dim_2", dim_data_id(2))
+      call ncdf_error('nf90_inq_dimid', status, file, ierr)
     end if
 
     if(status == NF90_NOERR) then
-       status = nf90_inq_dimid (ncid, "dim_3", dim_data_id(3))
-       call ncdf_error('nf90_inq_dimid', status, file, ierr)
+      status = nf90_inq_dimid (ncid, "dim_3", dim_data_id(3))
+      call ncdf_error('nf90_inq_dimid', status, file, ierr)
     end if
 
     if(status == NF90_NOERR) then
-       status = nf90_inquire_dimension (ncid, dim_data_id(1), len = ndim(3))
-       call ncdf_error('nf90_inquire_dimension', status, file, ierr)
+      status = nf90_inquire_dimension (ncid, dim_data_id(1), len = ndim(3))
+      call ncdf_error('nf90_inquire_dimension', status, file, ierr)
     end if
     if(status == NF90_NOERR) then
-       status = nf90_inquire_dimension (ncid, dim_data_id(2), len = ndim(2))
-       call ncdf_error('nf90_inquire_dimension', status, file, ierr)
+      status = nf90_inquire_dimension (ncid, dim_data_id(2), len = ndim(2))
+      call ncdf_error('nf90_inquire_dimension', status, file, ierr)
     end if
     if(status == NF90_NOERR) then
-       status = nf90_inquire_dimension (ncid, dim_data_id(3), len = ndim(1))
-       call ncdf_error('nf90_inquire_dimension', status, file, ierr)
+      status = nf90_inquire_dimension (ncid, dim_data_id(3), len = ndim(1))
+      call ncdf_error('nf90_inquire_dimension', status, file, ierr)
     end if
     if((ndim(1) .ne. cube%n(1)) .or. &
-         (ndim(2) .ne. cube%n(2)) .or. &
-         (ndim(3) .ne. cube%n(3))) then
-       ierr = 12
-       call pop_sub(); return
+      (ndim(2) .ne. cube%n(2)) .or. &
+      (ndim(3) .ne. cube%n(3))) then
+      ierr = 12
+      call pop_sub(); return
     end if
 
     if(status == NF90_NOERR) then
-       status = nf90_inq_varid (ncid, "rdata", data_id)
-       call ncdf_error('nf90_inq_varid', status, file, ierr)
+      status = nf90_inq_varid (ncid, "rdata", data_id)
+      call ncdf_error('nf90_inq_varid', status, file, ierr)
     end if
     status = nf90_inq_varid(ncid, "idata", data_im_id)
     if(status == 0) then
-       file_kind = -1
+      file_kind = -1
     else
-       file_kind = 1
+      file_kind = 1
     end if
     status = 0
 
     if(status == NF90_NOERR) then
-       status = nf90_inquire_variable (ncid, data_id, xtype = xtype)
-       call ncdf_error('nf90_inquire_variable', status, file, ierr)
+      status = nf90_inquire_variable (ncid, data_id, xtype = xtype)
+      call ncdf_error('nf90_inquire_variable', status, file, ierr)
     end if
 
     if(xtype == NF90_FLOAT) then
-       file_kind = file_kind*4
+      file_kind = file_kind*4
     else
-       file_kind = file_kind*8
+      file_kind = file_kind*8
     end if
     if(file_kind .ne. function_kind) then
-       select case(file_kind)
-       case(4);  ierr = -1
-       case(-4); ierr = -2
-       case(8);  ierr = -3
-       case(-8); ierr = -4
-       end select
+      select case(file_kind)
+      case(4);  ierr = -1
+      case(-4); ierr = -2
+      case(8);  ierr = -3
+      case(-8); ierr = -4
+      end select
     end if
 
     SAFE_ALLOCATE(xx(1:cube%n(3), 1:cube%n(2), 1:cube%n(1)))
 #if defined(R_TCOMPLEX)
     if(status == NF90_NOERR) then
-       select case(mesh%sb%dim)
-         case(1); status = nf90_get_var (ncid, data_id, xx(1, 1, :))
-         case(2); status = nf90_get_var (ncid, data_id, xx(1, :, :))
-         case(3); status = nf90_get_var (ncid, data_id, xx)
-       end select
-       call transpose3(xx, re%RS)
-       call ncdf_error('nf90_get_var', status, file, ierr)
+      select case(mesh%sb%dim)
+      case(1); status = nf90_get_var (ncid, data_id, xx(1, 1, :))
+      case(2); status = nf90_get_var (ncid, data_id, xx(1, :, :))
+      case(3); status = nf90_get_var (ncid, data_id, xx)
+      end select
+      call transpose3(xx, re%RS)
+      call ncdf_error('nf90_get_var', status, file, ierr)
     end if
     if(file_kind<0) then
-       if(status == NF90_NOERR) then
-         select case(mesh%sb%dim)
-           case(1); status = nf90_get_var (ncid, data_im_id, xx(1, 1, :))
-           case(2); status = nf90_get_var (ncid, data_im_id, xx(1, :, :))
-           case(3); status = nf90_get_var (ncid, data_im_id, xx)
-         end select
-         call transpose3(xx, im%RS)
-         call ncdf_error('nf90_get_var', status, file, ierr)
-       end if
+      if(status == NF90_NOERR) then
+        select case(mesh%sb%dim)
+        case(1); status = nf90_get_var (ncid, data_im_id, xx(1, 1, :))
+        case(2); status = nf90_get_var (ncid, data_im_id, xx(1, :, :))
+        case(3); status = nf90_get_var (ncid, data_im_id, xx)
+        end select
+        call transpose3(xx, im%RS)
+        call ncdf_error('nf90_get_var', status, file, ierr)
+      end if
     else
-       im%RS = M_ZERO
+      im%RS = M_ZERO
     end if
 #else
     if(status == NF90_NOERR) then
-       select case(mesh%sb%dim)
-         case(1); status = nf90_get_var (ncid, data_id, xx(1, 1, :))
-         case(2); status = nf90_get_var (ncid, data_id, xx(1, :, :))
-         case(3); status = nf90_get_var (ncid, data_id, xx)
-       end select
-       call transpose3(xx, cube%RS)
-       call ncdf_error('nf90_get_var', status, file, ierr)
+      select case(mesh%sb%dim)
+      case(1); status = nf90_get_var (ncid, data_id, xx(1, 1, :))
+      case(2); status = nf90_get_var (ncid, data_id, xx(1, :, :))
+      case(3); status = nf90_get_var (ncid, data_id, xx)
+      end select
+      call transpose3(xx, cube%RS)
+      call ncdf_error('nf90_get_var', status, file, ierr)
     end if
 #endif
     SAFE_DEALLOCATE_A(xx)

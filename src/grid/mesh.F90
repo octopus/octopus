@@ -52,7 +52,6 @@ module mesh_m
     mesh_init_from_file,       &
     mesh_lxyz_init_from_file,  &
     mesh_dump,                 &
-    mesh_lxyz_dump,            &
     mesh_end,                  &
     mesh_double_box,           &
     mesh_inborder,             &
@@ -65,7 +64,8 @@ module mesh_m
     mesh_global_memory,        &
     mesh_local_memory,         &
     mesh_x_global,             &
-    mesh_check_fingerprint,    &
+    mesh_write_fingerprint,    &
+    mesh_read_fingerprint,     &
     mesh_compact_boundaries,   &
     translate_point
 
@@ -502,36 +502,35 @@ contains
 
 
   ! --------------------------------------------------------------
-  subroutine mesh_lxyz_dump(mesh, filename)
+  subroutine mesh_write_fingerprint(mesh, filename)
     type(mesh_t),     intent(in) :: mesh
     character(len=*), intent(in) :: filename
 
     integer :: ierr, iunit
 
-    call push_sub('mesh.lxyz_dump')
+    call push_sub('mesh.mesh_write_fingerprint')
 
     if(mesh%sb%box_shape /= HYPERCUBE) then
 
-      iunit = io_open(trim(filename)//'.fingerprint', action='write', is_tmp=.true.)
+      iunit = io_open(trim(filename), action='write', is_tmp=.true.)
       write(iunit, '(a20,i21)')  'np_part_global=     ', mesh%np_part_global
       write(iunit, '(a20,i21)')  'np_global=          ', mesh%np_global
       write(iunit, '(a20,i21)')  'algorithm=          ', 1
       write(iunit, '(a20,i21)')  'checksum=           ', mesh%idx%checksum
       call io_close(iunit)
 
-      call io_binary_write(trim(filename)//'.obf', mesh%np_part_global*mesh%sb%dim, mesh%idx%lxyz, ierr)
     end if
 
     call pop_sub()
-  end subroutine mesh_lxyz_dump
+  end subroutine mesh_write_fingerprint
 
   ! -----------------------------------------------------------------------
-  ! This function checks the fingerprint of a mesh written in
+  ! This function reads the fingerprint of a mesh written in
   ! filename. If the mesh are equal (same fingerprint) return values
   ! are 0, otherwise it returns the size of the mesh stored. If the
   ! fingerprint cannot be read, it returns -1.
 
-  subroutine mesh_check_fingerprint(mesh, filename, read_np_part, read_np)
+  subroutine mesh_read_fingerprint(mesh, filename, read_np_part, read_np)
     type(mesh_t),     intent(in)  :: mesh
     character(len=*), intent(in)  :: filename
     integer,          intent(out) :: read_np_part
@@ -541,9 +540,9 @@ contains
     integer :: iunit, algorithm
     integer(8) :: checksum
 
-    call push_sub('mesh.mesh_check_fingerprint')
+    call push_sub('mesh.mesh_read_fingerprint')
 
-    iunit = io_open(trim(filename)//'.fingerprint', action='read', status='old', die=.false., is_tmp = .true., grp = mesh%mpi_grp)
+    iunit = io_open(trim(filename), action='read', status='old', die=.false., is_tmp = .true., grp = mesh%mpi_grp)
 
     if(iunit < 0) then
       read_np_part = -1
@@ -556,6 +555,8 @@ contains
       read(iunit, '(a20,i21)')  str, checksum
       
       call io_close(iunit)
+
+      ASSERT(read_np_part >= read_np)
       
       if(read_np_part == mesh%np_part_global &
         .and. read_np == mesh%np_global &
@@ -569,7 +570,7 @@ contains
 
     call pop_sub()
 
-  end subroutine mesh_check_fingerprint
+  end subroutine mesh_read_fingerprint
 
   ! --------------------------------------------------------------
   !> Fill the lxyz and lxyz_inv arrays from a file

@@ -272,7 +272,10 @@ contains
       call mesh_dump(gr%mesh, iunit_mesh)
       call io_close(iunit_mesh)
 
-      call mesh_lxyz_dump(gr%mesh, trim(dir)//'/lxyz')
+      call mesh_write_fingerprint(gr%mesh, trim(dir)//'/grid')
+
+      ! write the lxyz array
+      call io_binary_write(trim(dir)//'/lxyz.obf', gr%mesh%np_part_global*gr%mesh%sb%dim, gr%mesh%idx%lxyz, ierr)
 
       iunit_states = io_open(trim(dir)//'/states', action='write', is_tmp=.true.)
       call states_dump(st, iunit_states)
@@ -441,7 +444,7 @@ contains
     if(iunit2 < 0) ierr = -1
     
     ! now read the mesh information
-    call mesh_check_fingerprint(gr%mesh, trim(dir)//'/lxyz', read_np_part, read_np)
+    call mesh_read_fingerprint(gr%mesh, trim(dir)//'/grid', read_np_part, read_np)
 
     ! For the moment we continue reading if we receive -1 so we can
     ! read old restart files that do not have a fingerprint file.
