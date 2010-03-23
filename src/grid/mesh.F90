@@ -542,7 +542,7 @@ contains
 
     call push_sub('mesh.mesh_read_fingerprint')
 
-    iunit = io_open(trim(filename), action='read', status='old', die=.false., is_tmp = .true., grp = mesh%mpi_grp)
+    iunit = io_open(trim(filename), action='read', status='old', die=.false., is_tmp = .true.)
 
     if(iunit < 0) then
       read_np_part = -1
