@@ -524,10 +524,10 @@ contains
 
 
   !-----------------------------------------------------------------
-  ! This routine checks the Hartree solver selected in the input
-  ! file by calculating numerically and analytically the Hartree
-  ! potential originated by a Gaussian distribution of charge.
-  ! This only makes sense for finite systems.
+  !> This routine checks the Hartree solver selected in the input
+  !! file by calculating numerically and analytically the Hartree
+  !! potential originated by a Gaussian distribution of charge.
+  !! This only makes sense for finite systems.
   subroutine poisson_test(mesh)
     type(mesh_t), intent(inout) :: mesh
 

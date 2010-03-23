@@ -70,8 +70,8 @@ module lcao_m
 
   type lcao_t
     private
-    logical           :: initialized ! are k, s and v1 matrices filled?
-    integer           :: norbs
+    logical           :: initialized !< are k, s and v1 matrices filled?
+    integer           :: norbs !< number of orbitals
     integer           :: maxorbs
     integer, pointer  :: atom(:)
     integer, pointer  :: level(:)

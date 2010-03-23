@@ -18,7 +18,7 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-! conjugate-gradients method.
+!> conjugate-gradients method.
 subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff, verbose)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
@@ -265,7 +265,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 end subroutine X(eigensolver_cg2)
 
 ! ---------------------------------------------------------
-! The algorithm is essentially taken from Jiang et al. Phys. Rev. B 68, 165337 (2003).
+!> The algorithm is essentially taken from Jiang et al. Phys. Rev. B 68, 165337 (2003).
 subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, verbose)
   type(grid_t),        intent(in)    :: gr
   type(states_t),      intent(inout) :: st

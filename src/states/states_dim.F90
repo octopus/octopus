@@ -76,15 +76,15 @@ module states_dim_m
     SPIN_UP   = 2
   
   type states_dim_t
-    integer :: dim                  ! Dimension of the state (one or two for spinors)
-    integer :: nik                  ! Number of irreducible subspaces
-    integer :: nik_axis(MAX_DIM)    ! Number of k-points per axis
-    integer :: ispin                ! spin mode (unpolarized, spin-polarized, spinors)
-    integer :: nspin                ! dimension of rho (1, 2 or 4)
-    integer :: spin_channels        ! 1 or 2, whether spin is or not considered.
-    logical :: cdft                 ! Are we using current-DFT or not?
-    FLOAT, pointer :: kpoints(:,:)  ! obviously the k-points
-    FLOAT, pointer :: kweights(:)   ! weights for the k-point integrations
+    integer :: dim                  !< Dimension of the state (one or two for spinors)
+    integer :: nik                  !< Number of irreducible subspaces
+    integer :: nik_axis(MAX_DIM)    !< Number of k-points per axis
+    integer :: ispin                !< spin mode (unpolarized, spin-polarized, spinors)
+    integer :: nspin                !< dimension of rho (1, 2 or 4)
+    integer :: spin_channels        !< 1 or 2, whether spin is or not considered.
+    logical :: cdft                 !< Are we using current-DFT or not?
+    FLOAT, pointer :: kpoints(:,:)  !< obviously the k-points
+    FLOAT, pointer :: kweights(:)   !< weights for the k-point integrations
     type(distributed_t) :: kpt
     integer :: block_size
     integer :: window_size

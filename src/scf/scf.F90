@@ -78,8 +78,9 @@ module scf_m
     VERB_COMPACT = 1,   &
     VERB_FULL    = 3
   
-  type scf_t      ! some variables used for the SCF cycle
-    integer :: max_iter   ! maximum number of SCF iterations
+  !> some variables used for the SCF cycle
+  type scf_t
+    integer :: max_iter   !< maximum number of SCF iterations
 
     FLOAT :: lmm_r
 
@@ -316,17 +317,17 @@ contains
 
   ! ---------------------------------------------------------
   subroutine scf_run(scf, gr, geo, st, ks, hm, outp, gs_run, verbosity)
-    type(scf_t),          intent(inout) :: scf
-    type(grid_t),         intent(inout) :: gr
-    type(geometry_t),     intent(inout) :: geo
-    type(states_t),       intent(inout) :: st
-    type(v_ks_t),         intent(inout) :: ks
-    type(hamiltonian_t),  intent(inout) :: hm
+    type(scf_t),          intent(inout) :: scf !< self consistent cycle
+    type(grid_t),         intent(inout) :: gr !< grid
+    type(geometry_t),     intent(inout) :: geo !< geometry
+    type(states_t),       intent(inout) :: st !< States
+    type(v_ks_t),         intent(inout) :: ks !< Kohn-Sham
+    type(hamiltonian_t),  intent(inout) :: hm !< Hamiltonian
     type(h_sys_output_t), intent(in)    :: outp
     logical, optional,    intent(in)    :: gs_run
     integer, optional,    intent(in)    :: verbosity 
 
-    type(lcao_t) :: lcao
+    type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
     type(profile_t), save :: prof
 
     integer :: iter, is, idim, iatom, nspin, err

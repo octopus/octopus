@@ -49,15 +49,15 @@ module smear_m
     smear_is_semiconducting
 
   type smear_t
-    integer :: method       ! which smearing function to take
-    FLOAT   :: dsmear       ! the parameter defining this function
-    FLOAT   :: e_fermi      ! the Fermi energy
+    integer :: method       !< which smearing function to take
+    FLOAT   :: dsmear       !< the parameter defining this function
+    FLOAT   :: e_fermi      !< the Fermi energy
     
-    FLOAT   :: el_per_state ! How many electrons can we put in each state
-    logical :: fixed_occ    ! Are occupations fixed, or are we allowed to change them
-    FLOAT   :: ef_occ       ! Occupancy of the level at the Fermi energy
+    FLOAT   :: el_per_state !< How many electrons can we put in each state
+    logical :: fixed_occ    !< Are occupations fixed, or are we allowed to change them
+    FLOAT   :: ef_occ       !< Occupancy of the level at the Fermi energy
 
-    integer :: MP_n         ! order of Methfessel-Paxton smearing
+    integer :: MP_n         !< order of Methfessel-Paxton smearing
   end type smear_t
 
   integer, parameter, public ::       &
@@ -469,7 +469,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! This function is defined as \int_{-infty}^x y delta(y) dy
+  !> This function is defined as \int_{-infty}^x y delta(y) dy
   FLOAT function smear_entropy_function(this, xx) result(entropyf)
     type(smear_t), intent(in) :: this
     FLOAT,         intent(in) ::  xx
