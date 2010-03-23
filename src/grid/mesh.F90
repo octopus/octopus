@@ -514,6 +514,7 @@ contains
 
       iunit = io_open(trim(filename)//'.fingerprint', action='write', is_tmp=.true.)
       write(iunit, '(a20,i21)')  'np_part_global=     ', mesh%np_part_global
+      write(iunit, '(a20,i21)')  'np_global=          ', mesh%np_global
       write(iunit, '(a20,i21)')  'algorithm=          ', 1
       write(iunit, '(a20,i21)')  'checksum=           ', mesh%idx%checksum
       call io_close(iunit)
@@ -526,13 +527,15 @@ contains
 
   ! -----------------------------------------------------------------------
   ! This function checks the fingerprint of a mesh written in
-  ! filename. If the mesh are equal (same fingerprint) it returns 0,
-  ! otherwise it returns the size of the mesh stored. If the
+  ! filename. If the mesh are equal (same fingerprint) return values
+  ! are 0, otherwise it returns the size of the mesh stored. If the
   ! fingerprint cannot be read, it returns -1.
 
-  integer function mesh_check_fingerprint(mesh, filename) result(count)
-    type(mesh_t),     intent(in) :: mesh
-    character(len=*), intent(in) :: filename
+  subroutine mesh_check_fingerprint(mesh, filename, read_np_part, read_np)
+    type(mesh_t),     intent(in)  :: mesh
+    character(len=*), intent(in)  :: filename
+    integer,          intent(out) :: read_np_part
+    integer,          intent(out) :: read_np
 
     character(len=20)  :: str
     integer :: iunit, algorithm
@@ -543,22 +546,30 @@ contains
     iunit = io_open(trim(filename)//'.fingerprint', action='read', status='old', die=.false., is_tmp = .true., grp = mesh%mpi_grp)
 
     if(iunit < 0) then
-      count = -1      
+      read_np_part = -1
+      read_np = -1
     else
 
-      read(iunit, '(a20,i21)')  str, count
+      read(iunit, '(a20,i21)')  str, read_np_part
+      read(iunit, '(a20,i21)')  str, read_np
       read(iunit, '(a20,i21)')  str, algorithm
       read(iunit, '(a20,i21)')  str, checksum
       
       call io_close(iunit)
       
-      if(count == mesh%np_part_global .and. algorithm == 1 .and. checksum == mesh%idx%checksum) count = 0
+      if(read_np_part == mesh%np_part_global &
+        .and. read_np == mesh%np_global &
+        .and. algorithm == 1 &
+        .and. checksum == mesh%idx%checksum) then
+        read_np_part = 0
+        read_np = 0
+      end if
 
     endif
 
     call pop_sub()
 
-  end function mesh_check_fingerprint
+  end subroutine mesh_check_fingerprint
 
   ! --------------------------------------------------------------
   !> Fill the lxyz and lxyz_inv arrays from a file

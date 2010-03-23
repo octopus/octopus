@@ -37,17 +37,18 @@ end subroutine X(restart_write_function)
 
 
 ! ---------------------------------------------------------
-subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr)
+subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
   character(len=*), intent(in)    :: dir
   character(len=*), intent(in)    :: filename
   type(mesh_t),     intent(in)    :: mesh
   R_TYPE,           intent(inout) :: ff(1:mesh%np)
   integer,          intent(out)   :: ierr
+  integer, optional, intent(in)   :: map(:)
 
   call push_sub('restart_inc.Xrestart_read_function')
 
   ! try binary
-  call X(input_function) (trim(dir)//'/'//trim(filename)//'.obf', mesh, ff(1:mesh%np), ierr, is_tmp=.true.)
+  call X(input_function) (trim(dir)//'/'//trim(filename)//'.obf', mesh, ff(1:mesh%np), ierr, is_tmp=.true., map = map)
 
   call pop_sub()
 end subroutine X(restart_read_function)

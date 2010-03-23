@@ -36,13 +36,14 @@
 !             -4 : function in file is complex, dp.
 ! ---------------------------------------------------------
 
-subroutine X(input_function)(filename, mesh, ff, ierr, is_tmp)
+subroutine X(input_function)(filename, mesh, ff, ierr, is_tmp, map)
   character(len=*),  intent(in)    :: filename
   type(mesh_t),      intent(in)    :: mesh
   R_TYPE,            intent(inout) :: ff(:)
   integer,           intent(out)   :: ierr
   logical, optional, intent(in)    :: is_tmp
-
+  integer, optional, intent(in)    :: map(:)
+  
   logical :: is_tmp_ = .false.
 
 #if defined(HAVE_MPI)
@@ -63,7 +64,7 @@ subroutine X(input_function)(filename, mesh, ff, ierr, is_tmp)
     if(mpi_grp_is_root(mesh%mpi_grp)) then
       SAFE_DEALLOCATE_A(ff_global)
       SAFE_ALLOCATE(ff_global(1:mesh%np_global))
-      call X(input_function_global)(filename, mesh, ff_global, ierr, is_tmp_)
+      call X(input_function_global)(filename, mesh, ff_global, ierr, is_tmp_, map)
     end if
     if(in_debug_mode) call write_debug_newlines(2)
 
@@ -84,7 +85,7 @@ subroutine X(input_function)(filename, mesh, ff, ierr, is_tmp)
     ASSERT(.false.) 
 #endif
   else
-    call X(input_function_global)(filename, mesh, ff, ierr, is_tmp_)
+    call X(input_function_global)(filename, mesh, ff, ierr, is_tmp_, map)
   end if
 
   call pop_sub()
@@ -93,13 +94,15 @@ end subroutine X(input_function)
 
 
 ! ---------------------------------------------------------
-subroutine X(input_function_global)(filename, mesh, ff, ierr, is_tmp)
+subroutine X(input_function_global)(filename, mesh, ff, ierr, is_tmp, map)
   character(len=*),  intent(in)    :: filename
   type(mesh_t),      intent(in)    :: mesh
   R_TYPE,            intent(inout) :: ff(:)
   integer,           intent(out)   :: ierr
   logical,           intent(in)    :: is_tmp
+  integer, optional, intent(in)    :: map(:)
 
+  integer :: ip, np
 #if defined(HAVE_NETCDF)
   character(len=512) :: file
   integer :: ncid, status
@@ -109,6 +112,7 @@ subroutine X(input_function_global)(filename, mesh, ff, ierr, is_tmp)
   type(dcf_t) :: re, im
 #endif
 #endif
+  R_TYPE, pointer :: read_ff(:)
 
   call profiling_in(read_prof, "DISK_READ")
   call push_sub('io_function_inc.Xinput_function_global')
@@ -149,8 +153,28 @@ subroutine X(input_function_global)(filename, mesh, ff, ierr, is_tmp)
      end if
 #endif
    case("obf")
-     call io_binary_read(filename, mesh%np_global, ff, ierr)
-     call profiling_count_transfers(mesh%np_global, ff(1))
+
+     if(present(map)) then
+
+       call io_binary_get_info(filename, np, ierr)
+
+       SAFE_ALLOCATE(read_ff(1:np))
+       
+       call io_binary_read(filename, np, read_ff, ierr)
+       call profiling_count_transfers(np, read_ff(1))
+       
+       ff(1:mesh%np_global) = M_ZERO
+       do ip = 1, min(np, ubound(map, dim = 1))
+         if(map(ip) > 0) ff(map(ip)) = read_ff(ip)
+       end do
+
+       SAFE_DEALLOCATE_P(read_ff)
+
+     else
+       call io_binary_read(filename, mesh%np_global, ff, ierr)
+       call profiling_count_transfers(mesh%np_global, ff(1))
+     end if
+
   case default
      ierr = 1
   end select

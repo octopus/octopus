@@ -26,6 +26,7 @@ module restart_m
   use global_m
   use grid_m
   use io_m
+  use io_binary_m
   use io_function_m
   use lalg_basic_m
   use linear_response_m
@@ -391,15 +392,16 @@ contains
     !if this next argument is present, the lr wfs are read instead of the gs wfs
     type(lr_t), optional, intent(inout) :: lr 
 
-    integer              :: iunit, iunit2, err, ik, ist, idim, int, read_mesh_np
+    integer              :: iunit, iunit2, err, ik, ist, idim, int, read_np, read_np_part, read_ierr, ip, idir, xx(1:MAX_DIM)
     character(len=12)    :: filename
     character(len=1)     :: char
     logical, allocatable :: filled(:, :, :)
     character(len=256)   :: line
     character(len=50)    :: str
+    integer, allocatable :: read_lxyz(:, :), map(:)
 
     FLOAT                :: my_occ, flt
-    logical              :: read_occ_, gs_allocated, lr_allocated
+    logical              :: read_occ_, gs_allocated, lr_allocated, grid_changed, grid_reordered
 
     call push_sub('restart.restart_read')
 
@@ -438,12 +440,59 @@ contains
     iunit2 = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = gr%mesh%mpi_grp)
     if(iunit2 < 0) ierr = -1
     
-    ! now check that the mesh is compatible
-    read_mesh_np = mesh_check_fingerprint(gr%mesh, trim(dir)//'/lxyz')
-    if (read_mesh_np > 0) ierr = -1 
-    ! we should check for /= 0, but for the moment we continue restart
-    ! if we receive -1 so we can read old restart files that do not
-    ! have a fingerprint file.
+    ! now read the mesh information
+    call mesh_check_fingerprint(gr%mesh, trim(dir)//'/lxyz', read_np_part, read_np)
+
+    ! For the moment we continue reading if we receive -1 so we can
+    ! read old restart files that do not have a fingerprint file.
+    ! if (read_np < 0) ierr = -1
+
+    if (read_np > 0) then
+
+      grid_changed = .true.
+      
+      ! perhaps only the order of the points changed, this can only
+      ! happen if the number of points is the same and no points maps
+      ! to zero (this is checked below)
+      grid_reordered = (read_np == gr%mesh%np_global)
+
+      ! the grid is different, so we read the coordinates.
+      SAFE_ALLOCATE(read_lxyz(1:read_np_part, 1:gr%mesh%sb%dim))
+      call io_binary_read(trim(dir)//'/lxyz.obf', read_np_part*gr%mesh%sb%dim, read_lxyz, read_ierr)
+
+      ! and generate the map
+      SAFE_ALLOCATE(map(1:read_np))
+
+      do ip = 1, read_np
+        xx = 0
+        xx(1:gr%mesh%sb%dim) = read_lxyz(ip, 1:gr%mesh%sb%dim)
+        if(any(xx < gr%mesh%idx%nr(1, :)) .or. any(xx > gr%mesh%idx%nr(2, :))) then
+          map(ip) = 0
+          grid_reordered = .false.
+        else
+          map(ip) = gr%mesh%idx%lxyz_inv(xx(1), xx(2), xx(3))
+          if(map(ip) > gr%mesh%np_global) map(ip) = 0
+        end if
+      end do
+      
+      SAFE_DEALLOCATE_A(read_lxyz)
+
+      if(grid_reordered) then
+        message(1) = 'Octopus is attempting to restart from mesh with a different order of points.'
+        call write_warning(1)
+      else
+        message(1) = 'Octopus is attempting to restart from a different mesh.'
+        call write_warning(1)
+      end if
+!      do ip = 1, min(read_np, gr%mesh%np_global)
+!        do idir = 1, gr%mesh%sb%dim
+!          print*, read_lxyz(ip, idir), gr%mesh%idx%lxyz(ip, idir)
+!        end do
+!      end do
+    else
+      grid_changed = .false.
+      grid_reordered = .false.
+    end if
 
     if(ierr .ne. 0) then
       if(iunit > 0) call io_close(iunit, grp = gr%mesh%mpi_grp)
@@ -491,15 +540,31 @@ contains
 
         if( .not. present(lr) ) then 
           if (states_are_real(st)) then
-            call drestart_read_function(dir, filename, gr%mesh, st%dpsi(:, idim, ist, ik), err)
+            if (.not. grid_changed) then
+              call drestart_read_function(dir, filename, gr%mesh, st%dpsi(:, idim, ist, ik), err)
+            else
+              call drestart_read_function(dir, filename, gr%mesh, st%dpsi(:, idim, ist, ik), err, map)
+            end if
           else
-            call zrestart_read_function(dir, filename, gr%mesh, st%zpsi(:, idim, ist, ik), err)
+            if (.not. grid_changed) then
+              call zrestart_read_function(dir, filename, gr%mesh, st%zpsi(:, idim, ist, ik), err)
+            else
+              call zrestart_read_function(dir, filename, gr%mesh, st%zpsi(:, idim, ist, ik), err, map)
+            end if
           end if
         else
           if (states_are_real(st)) then
-            call drestart_read_function(dir, filename, gr%mesh, lr%ddl_psi(:, idim, ist, ik), err)
+            if (.not. grid_changed) then
+              call drestart_read_function(dir, filename, gr%mesh, lr%ddl_psi(:, idim, ist, ik), err)
+            else
+              call drestart_read_function(dir, filename, gr%mesh, lr%ddl_psi(:, idim, ist, ik), err, map)
+            end if
           else
-            call zrestart_read_function(dir, filename, gr%mesh, lr%zdl_psi(:, idim, ist, ik), err)
+            if (.not. grid_changed) then
+              call zrestart_read_function(dir, filename, gr%mesh, lr%zdl_psi(:, idim, ist, ik), err)
+            else
+              call zrestart_read_function(dir, filename, gr%mesh, lr%zdl_psi(:, idim, ist, ik), err, map)
+            end if
           end if
         end if
         if(err <= 0) then
@@ -557,6 +622,7 @@ contains
     end if
 
     SAFE_DEALLOCATE_A(filled)
+    SAFE_DEALLOCATE_A(map)
     call io_close(iunit, grp = gr%mesh%mpi_grp)
     call io_close(iunit2, grp = gr%mesh%mpi_grp)
 
