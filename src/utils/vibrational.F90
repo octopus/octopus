@@ -174,8 +174,8 @@ program vibrational
         ww = dw * ifreq
         irtotal = sqrt(sum( abs(ftdipole(ifreq, 1:3))**2 ))
         write(unit = iunit, iostat = ierr, fmt = '(5e20.10)') &
-         & units_from_atomic(unit_invcm, ww), units_from_atomic(units_out%length, units_from_atomic(units_out%time , ww*irtotal)), &
-         & units_from_atomic(units_out%length, units_from_atomic(units_out%time ,  ww*abs(ftdipole(ifreq, 1:3))))
+          units_from_atomic(unit_invcm, ww), units_from_atomic(units_out%length*units_out%time, ww*irtotal), &
+          (units_from_atomic(units_out%length*units_out%time,  ww*abs(ftdipole(ifreq, idir))), idir = 1, 3)
       end do
       call io_close(iunit)
 
