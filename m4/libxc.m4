@@ -30,8 +30,8 @@ AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
     i = xc_f90_info_number(info)
 ]), [acx_libxc_ok=yes; FCFLAGS_LIBXC="$libxc_fcflags"; LIBS_LIBXC="$libxc_libs"], [])
     if test "$acx_libxc_ok" = no; then
-    # try with two dashes in rpath
-      LIBS_LIBXC="-Wl,--rpath -Wl,$with_libxc_prefix/lib -L$with_libxc_prefix/lib -lxc"
+    # try without -Wl flags
+      LIBS_LIBXC="-L$with_libxc_prefix/lib -lxc"
       libxc_fcflags="$FCFLAGS_LIBXC"; libxc_libs="$LIBS_LIBXC"
 FCFLAGS="$libxc_fcflags $acx_libxc_save_FCFLAGS"
 LIBS="$libxc_libs $acx_libxc_save_LIBS"
