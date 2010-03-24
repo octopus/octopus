@@ -1586,9 +1586,9 @@ contains
        SAFE_ALLOCATE(theta(1:dim))      ! dim should be # of basis sets for a zero-Fourier-series (even number)
        forall(jj = 1:dim) theta(jj) = tdf(par_output%f(1), jj)    ! get the projection on my basis set of function f
        forall(jj = 1:dim - 1) grad(jj) =  M_TWO * parameters_alpha(par, 1) * xx(jj) - M_TWO * theta(jj + 1)
-       forall(jj = 1:(dim / 2) - 1) &
+       forall(jj = 1:(dim / 2) - 1)
          grad(jj) = grad(jj) + M_TWO * parameters_alpha(par, 1) * sum(xx(1:(dim / 2) - 1)) + M_TWO * theta(1)
-      
+       end forall
     case(ctr_fourier_series_h)
        SAFE_ALLOCATE(theta(1:dim))   ! dim = dof + 1 for fourier-series-h
        SAFE_ALLOCATE(grad_matrix(1:dim - 1, 1:dim))

@@ -112,8 +112,9 @@ contains
 
     !Initial point
     SAFE_ALLOCATE(coords(1:g_opt%dim * g_opt%geo%natoms))
-    forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim) &
+    forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim)
       coords(g_opt%dim * iatom + idir) = g_opt%geo%atom(iatom + 1)%x(idir)
+    end forall
 
     !Minimize
     select case(g_opt%method)
@@ -134,8 +135,9 @@ contains
     end if
 
     ! print out geometry
-    forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim) &
+    forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim)
       g_opt%geo%atom(iatom + 1)%x(idir) = coords(g_opt%dim * iatom + idir)
+    end forall
     call atom_write_xyz(".", "min", g_opt%geo, g_opt%dim)
 
     SAFE_DEALLOCATE_A(coords)
@@ -302,9 +304,9 @@ contains
 
     call push_sub("geom_opt.calc_point")
 
-    forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim) &
+    forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim)
       g_opt%geo%atom(iatom + 1)%x(idir) = coords(g_opt%dim * iatom + idir)
-
+    end forall
     call atom_write_xyz(".", "work-geom", g_opt%geo, g_opt%dim, append=.true.)
 
     call epot_generate(g_opt%hm%ep, g_opt%syst%gr, g_opt%syst%geo, g_opt%syst%st)
@@ -318,8 +320,9 @@ contains
 
     ! store results
     if(getgrad .eq. 1) then
-      forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim) &
+      forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim)
         df(g_opt%dim * iatom + idir) = -g_opt%geo%atom(iatom + 1)%f(idir)
+      end forall
     end if
 
     if(g_opt%what2minimize == MINWHAT_FORCES) then
@@ -375,8 +378,9 @@ contains
     write(title, '(f16.10)') units_from_atomic(units_out%energy, energy)
     call atom_write_xyz("geom", trim(c_geom_iter), g_opt%geo, g_opt%dim, comment=trim(title))
 
-    forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim) &
+    forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim)
       g_opt%geo%atom(iatom + 1)%x(idir) = coords(g_opt%dim * iatom + idir)
+    end forall
 
     message(1) = ""
     message(2) = ""

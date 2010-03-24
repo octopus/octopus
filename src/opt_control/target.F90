@@ -831,8 +831,7 @@ module opt_control_target_m
 
     case(oct_tg_td_local)
       !We assume that there is no time-independent operator.
-      forall(ik = 1:chi_out%d%nik, ist = chi_out%st_start:chi_out%st_end, &
-             idim = 1:chi_out%d%dim, ip = 1:gr%mesh%np)
+      forall(ik = 1:chi_out%d%nik, ist = chi_out%st_start:chi_out%st_end, idim = 1:chi_out%d%dim, ip = 1:gr%mesh%np)
         chi_out%zpsi(ip, idim, ist, ik) = M_z0
       end forall
 
