@@ -73,7 +73,7 @@ contains
     type(grid_t), target,        intent(inout) :: gr
     type(states_t), target,      intent(inout) :: st
 
-    integer                    :: idim, ip, ip_lead, il, np_intf, iter, np
+    integer                    :: il, iter, np
     integer, target            :: ist, ik
     FLOAT, target              :: energy
     FLOAT                      :: tol, res
@@ -123,9 +123,10 @@ contains
         end do
 
         ! Calculate right hand side e-T-V0-sum(a)[H_ca*g_a*H_ac].
-        call calc_rhs(st%zphi(:, :, ist, ik), rhs)
+        rhs = st%zphi(:, :, ist, ik)
+        call calc_rhs(rhs)
 
-        if (associated(hm%ep%A_static)) call calc_rhs(rhs, rhs, .true.) ! multiply transposed version
+        if (associated(hm%ep%A_static)) call calc_rhs(rhs, .true.) ! multiply transposed version
 
         ! Solve linear system lhs psi = rhs.
         iter = eigens%es_maxiter
@@ -183,9 +184,8 @@ contains
   ! ---------------------------------------------------------
   ! The right hand side of the Lippmann-Schwinger equation
   ! e-T-V0-sum(a)[H_ca*g_a*H_ac].
-  subroutine calc_rhs(zphi, rhs, transposed)
-    CMPLX, intent(in)             :: zphi(:, :)
-    CMPLX, intent(out)            :: rhs(:, :)
+  subroutine calc_rhs(rhs, transposed)
+    CMPLX, intent(inout)            :: rhs(:, :)
     logical, optional, intent(in) :: transposed ! needed only for the non hermitian part
 
     integer :: ip, idim, il
@@ -200,9 +200,9 @@ contains
     if(present(transposed)) transposed_ = transposed
 
     if(transposed_) then ! the usual conjugate trick for the hermitian part
-      tmp = conjg(zphi)
+      tmp = conjg(rhs)
     else
-      tmp = zphi
+      tmp = rhs
     end if
     ! Calculate right hand side e-T-V0-sum(a)[H_ca*g_a*H_ac].
     rhs(:, :) = M_z0
@@ -374,9 +374,8 @@ contains
   ! The left hand side of the Lippmann-Schwinger equation
   ! (e-H-sum(a)[H_ca*g_a*H_ac])^T.
   ! Used by the iterative linear solver.
-  subroutine lhs_t(x, y)
-    CMPLX, intent(in)  :: x(:)
-    CMPLX, intent(out) :: y(:)
+  subroutine lhs_t(y)
+    CMPLX, intent(inout) :: y(:)
 
     CMPLX, allocatable :: tmp_x(:, :)
     CMPLX, allocatable :: tmp_y(:, :)
@@ -391,7 +390,7 @@ contains
     SAFE_ALLOCATE(tmp_y(1:np_part, 1:dim))
 
     do idim = 1, dim
-      tmp_x(1:np_part, idim) = conjg(x(l(idim):u(idim)))
+      tmp_x(1:np_part, idim) = conjg(y(l(idim):u(idim)))
     end do
     call zhamiltonian_apply(hm_p, gr_p%der, tmp_x, tmp_y, ist_p, ik_p)
 
@@ -444,7 +443,7 @@ contains
 !    call push_sub('ob_lippmann_schwinger.lhs_symmetrized')
 
     call lhs(x, y)
-    call lhs_t(y, y)
+    call lhs_t(y)
 
 !    call pop_sub()
   end subroutine lhs_symmetrized

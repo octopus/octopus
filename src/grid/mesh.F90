@@ -94,9 +94,6 @@ module mesh_m
     integer  :: np_global        !< Global number of points in mesh.
     integer  :: np_part_global   !< Global number of inner points and boundary points.
     
-    integer, pointer :: boundary_indices(:,:) !< contains the list of mesh indices for boundary points
-    integer          :: boundary_np(6)        !< total number of boundary points
-    
     logical         :: parallel_in_domains !< will I run parallel in domains?
     type(mpi_grp_t) :: mpi_grp             !< the mpi group describing parallelization in domains
     type(pv_t)      :: vp                  !< describes parallel vectors defined on the mesh.
@@ -493,7 +490,7 @@ contains
     read(iunit, '(a20,1i10)') str, mesh%np_part
     read(iunit, '(a20,1i10)') str, mesh%np_global
     read(iunit, '(a20,1i10)') str, mesh%np_part_global
-    nullify(mesh%idx%lxyz, mesh%idx%lxyz_inv, mesh%boundary_indices, mesh%x, &
+    nullify(mesh%idx%lxyz, mesh%idx%lxyz_inv, mesh%x, &
       mesh%vol_pp, mesh%per_points, mesh%per_map, mesh%lead_unit_cell, mesh%resolution)
     mesh%parallel_in_domains = .false.
 
@@ -506,7 +503,7 @@ contains
     type(mesh_t),     intent(in) :: mesh
     character(len=*), intent(in) :: filename
 
-    integer :: ierr, iunit
+    integer :: iunit
 
     call push_sub('mesh.mesh_write_fingerprint')
 

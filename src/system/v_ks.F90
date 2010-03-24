@@ -365,7 +365,7 @@ contains
       FLOAT, allocatable :: rho(:, :)
       type(profile_t), save :: prof
       FLOAT, pointer :: vxc(:, :)
-      integer :: ispin, ierr
+      integer :: ispin
 
       call push_sub('v_ks.v_ks_calc.v_a_xc')
       call profiling_in(prof, "XC")

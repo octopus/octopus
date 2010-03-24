@@ -959,7 +959,7 @@ contains
     integer,      intent(in)    :: out_file
     type(spec_t), intent(inout) :: spectrum
 
-    integer :: istart, iend, ntiter, jj, isp, ie, idir, time_steps, no_e, nspin, trash, it
+    integer :: istart, iend, ntiter, jj, ie, idir, time_steps, no_e, nspin, trash, it
     FLOAT :: dump, dt, energy
     type(kick_t) :: kick
     CMPLX :: zz, sum1, sum2
