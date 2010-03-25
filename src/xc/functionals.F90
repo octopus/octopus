@@ -40,7 +40,8 @@ module xc_functl_m
   ! This adds to the constants defined in lib_xc. But since in that module
   ! the OEP functionals are not included, it is better to put it here.
   integer, public, parameter :: &
-    XC_OEP_X = 901     ! Exact exchange
+    XC_KS_INVERSION = 801,      &  ! inversion of Kohn-Sham potential
+    XC_OEP_X = 901                 ! Exact exchange
 
   type xc_functl_t
     integer         :: family            ! LDA, GGA, etc.
@@ -153,6 +154,8 @@ contains
       if(functl%family == XC_FAMILY_UNKNOWN) then
         if(functl%id == XC_OEP_X) then
           functl%family = XC_FAMILY_OEP
+        else if (functl%id == XC_KS_INVERSION) then
+          functl%family = XC_FAMILY_KS_INVERSION
         else
           call input_error('XCFunctional')
         end if
@@ -161,6 +164,9 @@ contains
 
     if(functl%family == XC_FAMILY_OEP) then
       functl%type = XC_EXCHANGE
+
+    else if(functl%family == XC_FAMILY_KS_INVERSION) then
+      functl%type = XC_EXCHANGE_CORRELATION
 
     else if(functl%family .eq. XC_FAMILY_NONE) then
       functl%type = -1
@@ -259,7 +265,8 @@ contains
 
     call push_sub('functionals.xc_functl_end')
 
-    if(functl%family.ne.XC_FAMILY_NONE.and.functl%family.ne.XC_FAMILY_OEP) then
+    if(functl%family.ne.XC_FAMILY_NONE .and. functl%family.ne.XC_FAMILY_OEP .and.  &
+         functl%family.ne.XC_FAMILY_KS_INVERSION ) then
       call XC_F90(func_end)(functl%conf)
     end if
 
@@ -285,6 +292,15 @@ contains
       case(XC_OEP_X)
         write(message(1), '(2x,a)') 'Exchange'
         write(message(2), '(4x,a)') 'Exact exchange'
+        call write_info(2, iunit)
+      end select
+
+    else if(functl%family == XC_FAMILY_KS_INVERSION) then
+      ! this is handled separately
+      select case(functl%id)
+      case(XC_KS_INVERSION)
+        write(message(1), '(2x,a)') 'Exchange-Correlation:'
+        write(message(2), '(4x,a)') '  KS Inversion'
         call write_info(2, iunit)
       end select
 

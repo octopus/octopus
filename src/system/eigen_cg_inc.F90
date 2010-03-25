@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id$
+!! $Id: eigen_cg_inc.F90 6376 2010-03-23 14:18:30Z joseba $
 
 ! ---------------------------------------------------------
 !> conjugate-gradients method.

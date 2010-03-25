@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2008 X. Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -15,22 +15,22 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id$
+!! $Id: eigen_rmmdiis.F90 5954 2009-10-17 20:53:52Z xavier $
 
 #include "global.h"
 
-module eigen_lobpcg_m
+module eigen_rmmdiis_m
   use batch_m
   use global_m
   use grid_m
   use hamiltonian_m
-  use iihash_m
   use io_m
   use lalg_basic_m
   use lalg_adv_m
   use loct_m
   use math_m
   use mesh_m
+  use mesh_batch_m
   use mesh_function_m
   use messages_m
   use mpi_m
@@ -39,26 +39,29 @@ module eigen_lobpcg_m
   use preconditioners_m
   use profiling_m
   use states_m
-  use states_block_m
+  use states_calc_m
+  use subspace_m
 
   implicit none
 
   private
-  public ::                  &
-    deigensolver_lobpcg,    &
-    zeigensolver_lobpcg
+  public ::                     &
+    deigensolver_rmmdiis,       &
+    zeigensolver_rmmdiis,       &
+    deigensolver_rmmdiis_start, &
+    zeigensolver_rmmdiis_start
   
   contains
 
 #include "real.F90"
-#include "eigen_lobpcg_inc.F90"
+#include "eigen_rmmdiis_inc.F90"
 #include "undef.F90"
 
 #include "complex.F90"
-#include "eigen_lobpcg_inc.F90"
+#include "eigen_rmmdiis_inc.F90"
 #include "undef.F90"
 
-end module eigen_lobpcg_m
+  end module eigen_rmmdiis_m
 
 
 !! Local Variables:

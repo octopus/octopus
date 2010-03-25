@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id$
+!! $Id: eigen_plan_inc.F90 6282 2010-01-27 21:12:31Z dstrubbe $
 
 !! This subroutine implements the preconditioned Lanczos eigensolver as
 !! described in the paper:

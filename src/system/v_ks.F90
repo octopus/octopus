@@ -35,6 +35,7 @@ module v_ks_m
   use messages_m
   use mpi_m
   use multigrid_m
+  use multicomm_m
   use poisson_m
   use poisson_sete_m
   use profiling_m
@@ -44,6 +45,7 @@ module v_ks_m
   use varinfo_m
   use xc_m
   use XC_F90(lib_m)
+  use xc_ks_inversion_m
   use xc_OEP_m
 
   implicit none
@@ -58,7 +60,6 @@ module v_ks_m
     v_ks_hartree,       &
     v_ks_freeze_hxc
 
-
   integer, parameter, public :: &
     sic_none   = 1,     &  ! no self-interaction correction
     sic_pz     = 2,     &  ! Perdew-Zunger SIC (OEP way)
@@ -69,10 +70,11 @@ module v_ks_m
 
     logical :: frozen_hxc ! For RPA and SAE calculations.
 
-    integer           :: xc_family  ! the XC stuff
-    integer           :: sic_type   ! what kind of self-interaction correction to apply
-    type(xc_t)        :: xc
-    type(xc_OEP_t)    :: oep
+    integer                  :: xc_family  ! the XC stuff
+    integer                  :: sic_type   ! what kind of self-interaction correction to apply
+    type(xc_t)               :: xc
+    type(xc_OEP_t)           :: oep
+    type(xc_ks_inversion_t)  :: ks_inversion
     type(poisson_t), pointer :: hartree_solver
     logical                  :: new_hartree
   end type v_ks_t
@@ -81,11 +83,12 @@ contains
 
   
   ! ---------------------------------------------------------
-  subroutine v_ks_init(ks, gr, d, geo, nel)
+  subroutine v_ks_init(ks, gr, d, geo, mc, nel)
     type(v_ks_t),        intent(out)   :: ks
     type(grid_t),        intent(inout) :: gr
     type(states_dim_t),  intent(in)    :: d
-    type(geometry_t),    intent(in)    :: geo
+    type(geometry_t),    intent(inout) :: geo
+    type(multicomm_t),   intent(in)    :: mc  
     FLOAT,               intent(in)    :: nel ! the total number of electrons
 
     call push_sub('v_ks.v_ks_init')
@@ -166,6 +169,7 @@ contains
       end if
 
       call xc_oep_init(ks%oep, ks%xc_family, gr, d)
+      call xc_ks_inversion_init(ks%ks_inversion, ks%xc_family, gr, geo, d, mc)
     end select
 
     ks%frozen_hxc = .false.
@@ -190,13 +194,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine v_ks_end(ks)
-    type(v_ks_t), intent(inout) :: ks
+  subroutine v_ks_end(ks, gr, geo)
+    type(v_ks_t),     intent(inout) :: ks
+    type(grid_t),     intent(inout) :: gr
+    type(geometry_t), intent(inout) :: geo
 
     call push_sub('v_ks.v_ks_end')
 
     select case(ks%theory_level)
     case(KOHN_SHAM_DFT)
+      call xc_ks_inversion_end(ks%ks_inversion, gr, geo)
       call xc_oep_end(ks%oep)
       call xc_end(ks%xc)
     end select
@@ -236,6 +243,9 @@ contains
 
       if(iand(ks%xc_family, XC_FAMILY_OEP).ne.0) then
         call xc_oep_write_info(ks%oep, iunit)
+      end if
+      if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION).ne.0) then
+        call xc_ks_inversion_write_info(ks%ks_inversion, iunit)
       end if
     end select
 
@@ -409,6 +419,13 @@ contains
         else
           call zxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
             gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
+        end if
+
+        ! Also treat KS inversion separately (not part of libxc)
+        if (states_are_real(st)) then
+          call dxc_ks_inversion_calc(ks%ks_inversion, gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
+        else
+          call zxc_ks_inversion_calc(ks%ks_inversion, gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
         end if
       end if
 

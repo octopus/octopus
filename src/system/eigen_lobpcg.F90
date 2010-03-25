@@ -15,14 +15,16 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id$
+!! $Id: eigen_lobpcg.F90 5954 2009-10-17 20:53:52Z xavier $
 
 #include "global.h"
 
-module eigen_cg_m
+module eigen_lobpcg_m
+  use batch_m
   use global_m
   use grid_m
   use hamiltonian_m
+  use iihash_m
   use io_m
   use lalg_basic_m
   use lalg_adv_m
@@ -37,28 +39,26 @@ module eigen_cg_m
   use preconditioners_m
   use profiling_m
   use states_m
-  use states_calc_m
+  use states_block_m
 
   implicit none
 
   private
   public ::                  &
-    deigensolver_cg2,       &
-    zeigensolver_cg2,       &
-    deigensolver_cg2_new,   &
-    zeigensolver_cg2_new
+    deigensolver_lobpcg,    &
+    zeigensolver_lobpcg
   
   contains
 
 #include "real.F90"
-#include "eigen_cg_inc.F90"
+#include "eigen_lobpcg_inc.F90"
 #include "undef.F90"
 
 #include "complex.F90"
-#include "eigen_cg_inc.F90"
+#include "eigen_lobpcg_inc.F90"
 #include "undef.F90"
 
-end module eigen_cg_m
+end module eigen_lobpcg_m
 
 
 !! Local Variables:

@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id$
+!! $Id: eigen_evolution_inc.F90 6257 2009-12-26 01:13:24Z xavier $
 
 ! ---------------------------------------------------------
 subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff, tau)

@@ -25,7 +25,13 @@ libsystem_a_SOURCES =         \
 	energy.F90            \
 	preconditioners.F90   \
 	linear_solver.F90     \
+	eigen_cg.F90          \
+	eigen_lobpcg.F90      \
+	eigen_rmmdiis.F90     \
+	eigen.F90             \
+	subspace.F90          \
 	xc_oep.F90            \
+	xc_ks_inversion.F90   \
 	v_ks.F90              \
 	output_me.F90         \
 	h_sys_output.F90      \
@@ -45,9 +51,17 @@ noinst_HEADERS =                        \
 	xc_oep_sic_inc.F90              \
 	xc_oep_kernel_inc.F90           \
 	xc_oep_inc.F90                  \
+	xc_ks_inversion_inc.F90         \
 	preconditioners_inc.F90         \
 	pert_inc.F90                    \
 	linear_solver_inc.F90           \
+	eigen_cg_inc.F90                \
+	eigen_plan_inc.F90              \
+	eigen_evolution_inc.F90         \
+	eigen_lobpcg_inc.F90            \
+	eigen_mg_inc.F90                \
+	eigen_rmmdiis_inc.F90           \
+	subspace_inc.F90                \
 	output_h_inc.F90                \
 	output_linear_response_inc.F90  \
 	output_me_inc.F90               \
@@ -61,9 +75,15 @@ depend:
 	@makedepf90 $(libsystem_a_SOURCES)
 
 preconditioners.o : preconditioners.F90 preconditioners_inc.F90 
+subspace.o : preconditioners.o
 linear_solver.o : linear_solver.F90 linear_solver_inc.F90 preconditioners.o 
+eigen_cg.o: eigen_cg.F90 eigen_cg_inc.F90 preconditioners.o
+eigen_lobpcg.o: eigen_cg.F90 eigen_lobpcg_inc.F90 preconditioners.o
+eigen.o: eigen.F90 eigen_evolution_inc.F90 eigen_plan_inc.F90 eigen_mg_inc.F90 eigen_cg.o subspace.o eigen_lobpcg.o eigen_rmmdiis.o exponential.o
+eigen_rmmdiis.o: eigen_rmmdiis.F90 eigen_rmmdiis_inc.F90 subspace.o
 xc_oep.o : xc_oep.F90 xc_oep_inc.F90 xc_oep_sic_inc.F90 xc_oep_x_inc.F90 xc_kli_inc.F90 linear_solver.o 
-v_ks.o : v_ks.F90 xc_oep.o energy.o magnetic.o
+xc_ks_inversion.o : eigen.o
+v_ks.o : v_ks.F90 xc_oep.o energy.o magnetic.o xc_ks_inversion.o
 system.o : system.F90 v_ks.o energy.o elf.o
 xc_oep_kernel.o : xc_oep_kernel.F90 xc_oep_kernel_inc.F90 xc_oep.o system.o 
 pert.o : pert.F90 pert_inc.F90

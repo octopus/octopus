@@ -94,7 +94,7 @@ contains
     call poisson_init(psolver, sys%gr%der, sys%geo)
     if(poisson_is_multigrid(psolver)) call grid_create_multigrid(sys%gr, sys%geo)
 
-    call v_ks_init(sys%ks, sys%gr, sys%st%d, sys%geo, sys%st%qtot)
+    call v_ks_init(sys%ks, sys%gr, sys%st%d, sys%geo, sys%mc, sys%st%qtot)
 
     !print the mesh information if it is required
     call print_r()
@@ -149,27 +149,27 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine system_end(s)
-    type(system_t), intent(inout) :: s
+  subroutine system_end(sys)
+    type(system_t), intent(inout) :: sys
 
     call push_sub('system.system_end')
 
 #if defined(HAVE_MPI)
-    call multicomm_end(s%mc)
+    call multicomm_end(sys%mc)
 #endif
 
     call poisson_end(psolver)
-    call v_ks_end(s%ks)
+    call v_ks_end(sys%ks, sys%gr, sys%geo)
 
-    if(associated(s%st)) then
-      call states_end(s%st)
-      SAFE_DEALLOCATE_P(s%st); nullify(s%st)
+    if(associated(sys%st)) then
+      call states_end(sys%st)
+      SAFE_DEALLOCATE_P(sys%st); nullify(sys%st)
     end if
 
-    call geometry_end(s%geo)
-    call simul_box_end(s%gr%sb)
-    call grid_end(s%gr)
-    SAFE_DEALLOCATE_P(s%gr);  nullify(s%gr)
+    call geometry_end(sys%geo)
+    call simul_box_end(sys%gr%sb)
+    call grid_end(sys%gr)
+    SAFE_DEALLOCATE_P(sys%gr);  nullify(sys%gr)
 
     call pop_sub()
   end subroutine system_end

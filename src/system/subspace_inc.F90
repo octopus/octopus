@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id$
+!! $Id: subspace_inc.F90 6258 2009-12-26 20:07:24Z xavier $
 
 ! ---------------------------------------------------------
 ! This routine diagonalises the Hamiltonian in the subspace defined by the states.

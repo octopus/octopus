@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id$
+!! $Id: eigen_rmmdiis_inc.F90 6342 2010-03-04 01:25:36Z dstrubbe $
 
 ! ---------------------------------------------------------
 ! See http://prola.aps.org/abstract/PRB/v54/i16/p11169_1
