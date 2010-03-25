@@ -222,6 +222,8 @@ contains
     FLOAT,        intent(out), optional :: coords(:) ! coords(sb%dim)
    
     FLOAT :: xx(MAX_DIM)
+
+    ! no push_sub because it is called too frequently
     
     xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
     if(present(origin)) xx(1:mesh%sb%dim) = xx(1:mesh%sb%dim) - origin(1:mesh%sb%dim)
