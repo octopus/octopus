@@ -223,8 +223,6 @@ contains
    
     FLOAT :: xx(MAX_DIM)
     
-    call push_sub('mesh.mesh_r')
-
     xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
     if(present(origin)) xx(1:mesh%sb%dim) = xx(1:mesh%sb%dim) - origin(1:mesh%sb%dim)
     rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
@@ -234,7 +232,6 @@ contains
       coords(1:mesh%sb%dim) = xx(1:mesh%sb%dim)
     end if
 
-    call pop_sub()
   end subroutine mesh_r
   
   
