@@ -41,7 +41,8 @@ module xc_functl_m
   ! the OEP functionals are not included, it is better to put it here.
   integer, public, parameter :: &
     XC_KS_INVERSION = 801,      &  ! inversion of Kohn-Sham potential
-    XC_OEP_X = 901                 ! Exact exchange
+    XC_OEP_X = 901,             &  ! Exact exchange
+    XC_FAMILY_KS_INVERSION = 64
 
   type xc_functl_t
     integer         :: family            ! LDA, GGA, etc.

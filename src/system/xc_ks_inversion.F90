@@ -45,6 +45,7 @@ module xc_ks_inversion_m
   use varinfo_m 
   use XC_F90(lib_m) 
   use xc_m 
+  use xc_functl_m
 
   implicit none
 
