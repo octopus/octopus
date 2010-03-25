@@ -170,7 +170,7 @@ contains
       end if
 
       call xc_oep_init(ks%oep, ks%xc_family, gr, d)
-      if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION).ne.0) call xc_ks_inversion_init(ks%ks_inversion, ks%xc_family, gr, geo, d, mc)
+      call xc_ks_inversion_init(ks%ks_inversion, ks%xc_family, gr, geo, d, mc)
     end select
 
     ks%frozen_hxc = .false.
@@ -204,7 +204,7 @@ contains
 
     select case(ks%theory_level)
     case(KOHN_SHAM_DFT)
-      if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION).ne.0) call xc_ks_inversion_end(ks%ks_inversion, gr, geo)
+      call xc_ks_inversion_end(ks%ks_inversion, gr, geo)
       call xc_oep_end(ks%oep)
       call xc_end(ks%xc)
     end select

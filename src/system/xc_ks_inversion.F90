@@ -161,11 +161,13 @@ contains
 
     call push_sub('xc_ks_inversion.xc_ks_inversion_end')
 
-    ! cleanup
-    call eigensolver_end(ks_inv%eigensolver)
-    !call hamiltonian_end(ks_inv%aux_hm, gr, geo)
-    call states_end(ks_inv%aux_st)
-    
+    if(ks_inv%level.ne.XC_KS_INVERSION_NONE) then
+      ! cleanup
+      call eigensolver_end(ks_inv%eigensolver)
+      !call hamiltonian_end(ks_inv%aux_hm, gr, geo)
+      call states_end(ks_inv%aux_st)
+    end if
+
     call pop_sub()
   end subroutine xc_ks_inversion_end
 
