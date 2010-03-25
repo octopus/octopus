@@ -7,7 +7,7 @@ dnl Check if the library was given in the command line
 AC_ARG_WITH(libxc-prefix, [AS_HELP_STRING([--with-libxc-prefix=DIR], [Directory where libxc was installed.])])
 case $with_libxc_prefix in
   no ) acx_libxc_ok=disable ;;
-  *) LIBS_LIBXC="-Wl,-rpath -Wl,$with_libxc_prefix/lib -L$with_libxc_prefix/lib -lxc"; FCFLAGS_LIBXC="$ax_cv_f90_modflag$with_libxc_prefix/include" ;;
+  *) LIBS_LIBXC="-L$with_libxc_prefix/lib -lxc"; FCFLAGS_LIBXC="$ax_cv_f90_modflag$with_libxc_prefix/include" ;;
 esac
 
 dnl Backup LIBS and FCFLAGS
@@ -29,20 +29,6 @@ AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
     integer :: i
     i = xc_f90_info_number(info)
 ]), [acx_libxc_ok=yes; FCFLAGS_LIBXC="$libxc_fcflags"; LIBS_LIBXC="$libxc_libs"], [])
-    if test "$acx_libxc_ok" = no; then
-    # try without -Wl flags
-      LIBS_LIBXC="-L$with_libxc_prefix/lib -lxc"
-      libxc_fcflags="$FCFLAGS_LIBXC"; libxc_libs="$LIBS_LIBXC"
-FCFLAGS="$libxc_fcflags $acx_libxc_save_FCFLAGS"
-LIBS="$libxc_libs $acx_libxc_save_LIBS"
-AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
-    use xc_f90_lib_m
-
-    type(xc_f90_pointer_t) :: info
-    integer :: i
-    i = xc_f90_info_number(info)
-]), [acx_libxc_ok=yes; FCFLAGS_LIBXC="$libxc_fcflags"; LIBS_LIBXC="$libxc_libs"], [])
-    fi
   else
     libxc_libs="-lxc"
 FCFLAGS="$libxc_fcflags $acx_libxc_save_FCFLAGS"
