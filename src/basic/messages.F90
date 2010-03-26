@@ -98,7 +98,7 @@ contains
   subroutine write_fatal(no_lines)
     integer, intent(in) :: no_lines
 
-    integer :: i
+    integer :: ii
 
     if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
       open(unit=iunit_err, file='messages.stderr', &
@@ -115,8 +115,8 @@ contains
     call flush_msg(stderr, msg)
 #endif
     call flush_msg(stderr, shyphens)
-    do i=1,no_lines
-      write(msg, '(a,1x,a)') '*', trim(message(i))
+    do ii = 1, no_lines
+      write(msg, '(a,1x,a)') '*', trim(message(ii))
       call flush_msg(stderr, msg)
     end do
 
@@ -128,8 +128,8 @@ contains
 
       write(msg, '(a)') '* Stack: '
       call flush_msg(stderr, msg, 'no')
-      do i = 1, no_sub_stack
-        write(msg, '(a,a)') ' > ', trim(sub_stack(i))
+      do ii = 1, no_sub_stack
+        write(msg, '(a,a)') ' > ', trim(sub_stack(ii))
         call flush_msg(stderr, msg, 'no')
       end do
       call flush_msg(stderr, " ")
@@ -137,7 +137,7 @@ contains
 
     call messages_print_stress(stderr)
 
-    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
+    if(flush_messages .and. mpi_grp_is_root(mpi_world)) then
       close(iunit_err)
     end if
 
@@ -157,7 +157,7 @@ contains
     integer,           intent(in) :: no_lines
     logical, optional, intent(in) :: all_nodes
 
-    integer :: i
+    integer :: il
     logical :: have_to_write
 #ifdef HAVE_MPI
     logical :: all_nodes_
@@ -188,8 +188,8 @@ contains
       end if
 #endif
 
-      do i = 1, no_lines
-        write(msg , '(a,3x,a)') '**', trim(message(i))
+      do il = 1, no_lines
+        write(msg , '(a,3x,a)') '**', trim(message(il))
         call flush_msg(stderr, msg)
       end do
       call flush_msg(stderr, '')
@@ -208,14 +208,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine write_info(no_lines, iunit, verbose_limit, stress)
-    integer, intent(in) :: no_lines
-    integer, intent(in), optional :: iunit
-    integer, intent(in), optional :: verbose_limit
+    integer,           intent(in) :: no_lines
+    integer, optional, intent(in) :: iunit
+    integer, optional, intent(in) :: verbose_limit
     logical, optional, intent(in) :: stress
 
-    integer :: i, iu
+    integer :: il, iu
 
-    if(.not.mpi_grp_is_root(mpi_world)) return
+    if(.not. mpi_grp_is_root(mpi_world)) return
 
     if(flush_messages) then
       open(unit=iunit_out, file='messages.stdout', &
@@ -232,12 +232,12 @@ contains
       call messages_print_stress(iu)
     end if
 
-    do i = 1, no_lines
-      if(.not.present(verbose_limit)) then
-        write(msg, '(a)') trim(message(i))
+    do il = 1, no_lines
+      if(.not. present(verbose_limit)) then
+        write(msg, '(a)') trim(message(il))
         call flush_msg(iu, msg)
       else if(in_debug_mode) then
-        write(msg, '(a)') trim(message(i))
+        write(msg, '(a)') trim(message(il))
         call flush_msg(iu, msg)
       end if
     end do
@@ -257,18 +257,18 @@ contains
   subroutine write_debug(no_lines)
     integer, intent(in) :: no_lines
 
-    integer             :: i, iunit
+    integer             :: il, iunit
 
     if(.not.in_debug_mode) return
 
-    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
+    if(flush_messages .and. mpi_grp_is_root(mpi_world)) then
       open(unit=iunit_out, file='messages.stdout', &
         action='write', position='append')
     end if
 
     call open_debug_trace(iunit)
-    do i = 1, no_lines
-      write(msg, '(a)') trim(message(i))
+    do il = 1, no_lines
+      write(msg, '(a)') trim(message(il))
       call flush_msg(iunit, msg)
     end do
     close(iunit)
@@ -284,9 +284,9 @@ contains
   subroutine write_debug_newlines(no_lines)
     integer, intent(in) :: no_lines
 
-    integer             :: i, iunit
+    integer             :: il, iunit
 
-    if(.not.in_debug_mode) return
+    if(.not. in_debug_mode) return
     if(mpi_grp_is_root(mpi_world)) return
 
     if(flush_messages) then
@@ -295,7 +295,7 @@ contains
     end if
 
     call open_debug_trace(iunit)
-    do i = 1, no_lines
+    do il = 1, no_lines
       write(msg, '(a)') '* -'
       call flush_msg(iunit, msg)
     end do
@@ -310,9 +310,9 @@ contains
   subroutine write_debug_marker(no)
     integer, intent(in) :: no
 
-    if(.not.in_debug_mode) return
+    if(.not. in_debug_mode) return
 
-    write(message(1), '(a,i3)') 'debug marker #',no
+    write(message(1), '(a,i3)') 'debug marker #', no
     call write_debug(1)
 
   end subroutine write_debug_marker
@@ -407,7 +407,7 @@ contains
       call messages_print_stress(stderr)
     end if
 
-    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
+    if(flush_messages .and. mpi_grp_is_root(mpi_world)) then
       close(iunit_out)
     end if
 
@@ -427,10 +427,14 @@ contains
     integer,          intent(in) :: iunit
     character(len=*), intent(in) :: var
     integer,          intent(in) :: value
+
     character(len=10) :: intstring
-    if(.not.mpi_grp_is_root(mpi_world)) return
+
+    if(.not. mpi_grp_is_root(mpi_world)) return
+
     write(intstring,'(i10)') value
     write(iunit,'(a)') 'Input: ['//trim(var)//' = '//trim(adjustl(intstring))//']'
+
   end subroutine messages_print_var_valuei
   ! ---------------------------------------------------------
 
@@ -440,10 +444,14 @@ contains
     integer,          intent(in) :: iunit
     character(len=*), intent(in) :: var
     FLOAT,            intent(in) :: value
+
     character(len=10) :: floatstring
-    if(.not.mpi_grp_is_root(mpi_world)) return
+
+    if(.not. mpi_grp_is_root(mpi_world)) return
+
     write(floatstring,'(g10.4)') value
     write(iunit,'(a)') 'Input: ['//trim(var)//' = '//trim(adjustl(floatstring))//']'
+
   end subroutine messages_print_var_valuer
   ! ---------------------------------------------------------
 
@@ -453,10 +461,14 @@ contains
     integer,          intent(in) :: iunit
     character(len=*), intent(in) :: var
     logical,          intent(in) :: value
+
     character(len=1) :: lstring
-    if(.not.mpi_grp_is_root(mpi_world)) return
+
+    if(.not. mpi_grp_is_root(mpi_world)) return
+
     write(lstring,'(l1)') value
     write(iunit,'(a)') 'Input: ['//trim(var)//' = '//lstring//']'
+
   end subroutine messages_print_var_valuel
   ! ---------------------------------------------------------
 
@@ -466,7 +478,7 @@ contains
     integer,          intent(in) :: iunit
     character(len=*), intent(in) :: var
 
-    if(.not.mpi_grp_is_root(mpi_world)) return
+    if(.not. mpi_grp_is_root(mpi_world)) return
 
     call varinfo_print(iunit, var)
   end subroutine messages_print_var_info
@@ -479,7 +491,7 @@ contains
     integer,          intent(in) :: option
     character(len=*), intent(in), optional :: pre
 
-    if(.not.mpi_grp_is_root(mpi_world)) return
+    if(.not. mpi_grp_is_root(mpi_world)) return
 
     if(flush_messages) then
       open(unit=iunit_out, file='messages.stdout', &
@@ -506,12 +518,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine messages_print_stress(iunit, msg)
-    integer, intent(in) :: iunit
-    character(len=*), intent(in), optional :: msg
+    integer,                    intent(in) :: iunit
+    character(len=*), optional, intent(in) :: msg
 
     integer, parameter :: max_len = 70
 
-    integer :: i, j, l
+    integer :: ii, jj, length
     character(len=70) :: str
 
     if(.not.mpi_grp_is_root(mpi_world)) return
@@ -522,31 +534,37 @@ contains
     end if
 
     if(present(msg)) then
-      l   = len(msg)
+      length = len(msg)
 
-      str = ''; j = 1
+      str = ''
+      jj = 1
 
-      do i = 1, (max_len - (l + 2))/2
-        str(j:j) = '*'; j = j + 1
+      do ii = 1, (max_len - (length + 2))/2
+        str(jj:jj) = '*'
+        jj = jj + 1
       end do
  
-      str(j:j) = ' '; j = j + 1
+      str(jj:jj) = ' '
+      jj = jj + 1
      
-      do i = 1, l
-        str(j:j) = msg(i:i); j = j + 1
+      do ii = 1, length
+        str(jj:jj) = msg(ii:ii)
+        jj = jj + 1
       end do
 
-      str(j:j) = ' '; j = j + 1
+      str(jj:jj) = ' '
+      jj = jj + 1
 
-      do i = j, max_len
-        str(j:j) = '*'; j = j + 1
+      do ii = jj, max_len
+        str(jj:jj) = '*'
+        jj = jj + 1
       end do
 
       call flush_msg(iunit, '')   ! empty line
       call flush_msg(iunit, str)  ! out nice line with the header
     else
-      do i = 1, max_len
-        str(i:i) = '*'
+      do ii = 1, max_len
+        str(ii:ii) = '*'
       end do
 
       call flush_msg(iunit, str)  ! out nice line with the header
@@ -563,9 +581,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine flush_msg(iunit, str, adv)
-    integer,            intent(in)           :: iunit
-    character(len = *), intent(in)           :: str
-    character(len = *), intent(in), optional :: adv
+    integer,                      intent(in) :: iunit
+    character(len = *),           intent(in) :: str
+    character(len = *), optional, intent(in) :: adv
 
     character(len = 20) :: adv_
 
@@ -573,9 +591,9 @@ contains
     if(present(adv)) adv_ = adv
 
     write(iunit, '(a)', advance=trim(adv_)) trim(str)
-    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
-      if(iunit.eq.stderr) write(iunit_err, '(a)', advance=trim(adv_)) trim(str)
-      if(iunit.eq.stdout) write(iunit_out, '(a)', advance=trim(adv_)) trim(str)
+    if(flush_messages .and. mpi_grp_is_root(mpi_world)) then
+      if(iunit .eq. stderr) write(iunit_err, '(a)', advance=trim(adv_)) trim(str)
+      if(iunit .eq. stdout) write(iunit_out, '(a)', advance=trim(adv_)) trim(str)
     end if
 
   end subroutine flush_msg
@@ -601,10 +619,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine epoch_time_diff(sec, usec)
-    integer, intent(inout) :: sec, usec
+    integer, intent(inout) :: sec
+    integer, intent(inout) :: usec
 
+    call push_sub('messages.epoch_time_diff')
     call time_diff(s_epoch_sec, s_epoch_usec, sec, usec)
 
+    call pop_sub('messages.epoch_time_diff')
   end subroutine epoch_time_diff
 
 
@@ -612,23 +633,28 @@ contains
   ! Computes t2 <- t2-t1. sec1,2 and usec1,2 are
   ! seconds,microseconds of t1,2
   subroutine time_diff(sec1, usec1, sec2, usec2)
-    integer, intent(in)    :: sec1, usec1
-    integer, intent(inout) :: sec2, usec2
+    integer, intent(in)    :: sec1
+    integer, intent(in)    :: usec1
+    integer, intent(inout) :: sec2
+    integer, intent(inout) :: usec2
+
+    call push_sub('messages.time_diff')
 
     ! Correct overflow.
-    if(usec2-usec1.lt.0) then
+    if(usec2 - usec1 .lt. 0) then
       usec2 = 1000000 + usec2
-      if(sec2.ge.sec1) then
-        sec2 = sec2-1
+      if(sec2 .ge. sec1) then
+        sec2 = sec2 - 1
       end if
     end if
 
     ! Replace values.
-    if(sec2.ge.sec1) then
-      sec2 = sec2-sec1
+    if(sec2 .ge. sec1) then
+      sec2 = sec2 - sec1
     end if
-    usec2 = usec2-usec1
+    usec2 = usec2 - usec1
 
+    call pop_sub('messages.time_diff')
   end subroutine time_diff
 
 
@@ -636,18 +662,23 @@ contains
   ! Computes t2 <- t1+t2. Parameters as in time_diff
   ! Assert: t1,2 <= 0.
   subroutine time_sum(sec1, usec1, sec2, usec2)
-    integer, intent(in)    :: sec1, usec1
-    integer, intent(inout) :: sec2, usec2
+    integer, intent(in)    :: sec1
+    integer, intent(in)    :: usec1
+    integer, intent(inout) :: sec2
+    integer, intent(inout) :: usec2
 
-    sec2  = sec1+sec2
-    usec2 = usec1+usec2
+    call push_sub('messages.time_sum')
+
+    sec2  = sec1 + sec2
+    usec2 = usec1 + usec2
 
     ! Carry?
-    if(usec2.ge.1000000) then
-      sec2  = sec2+1
-      usec2 = usec2-1000000
+    if(usec2 .ge. 1000000) then
+      sec2  = sec2 + 1
+      usec2 = usec2 - 1000000
     end if
 
+    call pop_sub('messages.time_sum')
   end subroutine time_sum
 
 
@@ -656,9 +687,9 @@ contains
   subroutine push_sub(sub_name)
     character(len=*), intent(in) :: sub_name
 
-    integer i, iunit, sec, usec
+    integer iunit, sec, usec
 
-    if(.not.in_debug_mode) return
+    if(.not. in_debug_mode) return
 
     call loct_gettimeofday(sec, usec)
     call epoch_time_diff(sec, usec)
@@ -681,7 +712,7 @@ contains
     end if
 
     ! also write to stderr if we are node 0
-    if(conf%debug_level.gt.1) then
+    if(conf%debug_level .gt. 1) then
       if (mpi_grp_is_root(mpi_world)) call push_sub_write(stderr)
     end if
 
@@ -690,11 +721,13 @@ contains
     subroutine push_sub_write(iunit_out)
       integer,  intent(in) :: iunit_out
 
+      integer :: ii
+
       write(iunit_out,'(a,i6,a,i6.6,f20.6,i8,a)', advance='no') "* I ", &
-        sec,'.',usec, &
+        sec, '.', usec, &
         loct_clock(), &
-        get_memory_usage()/1024, " | "
-      do i = no_sub_stack-1, 1, -1
+        get_memory_usage() / 1024, " | "
+      do ii = no_sub_stack - 1, 1, -1
         write(iunit_out,'(a)', advance='no') "..|"
       end do
       write(iunit_out,'(a)') trim(sub_name)
@@ -708,9 +741,9 @@ contains
   subroutine pop_sub(sub_name)
     character(len=*), intent(in) :: sub_name
 
-    integer i, iunit, sec, usec
+    integer iunit, sec, usec
 
-    if(.not.in_debug_mode) return
+    if(.not. in_debug_mode) return
 
     call loct_gettimeofday(sec, usec)
     call epoch_time_diff(sec, usec)
@@ -735,7 +768,7 @@ contains
     end if
 
     ! also write to stderr if we are node 0
-    if(conf%debug_level.gt.1) then
+    if(conf%debug_level .gt. 1) then
       if (mpi_grp_is_root(mpi_world)) call pop_sub_write(stderr)
     end if
     
@@ -746,11 +779,13 @@ contains
     subroutine pop_sub_write(iunit_out)
       integer, intent(in) :: iunit_out
 
+      integer :: ii
+
       write(iunit_out,'(a,i6,a,i6.6,f20.6,i8, a)', advance='no') "* O ", &
-        sec,'.',usec, &
-        loct_clock()-time_stack(no_sub_stack), &
-        get_memory_usage()/1024, " | "
-      do i = no_sub_stack-1, 1, -1
+        sec, '.', usec, &
+        loct_clock() - time_stack(no_sub_stack), &
+        get_memory_usage() / 1024, " | "
+      do ii = no_sub_stack - 1, 1, -1
         write(iunit_out,'(a)', advance='no') "..|"
       end do
       write(iunit_out,'(a)') trim(sub_stack(no_sub_stack))
@@ -760,6 +795,7 @@ contains
   end subroutine pop_sub
 #endif
   
+  ! ---------------------------------------------------------
   subroutine messages_obsolete_variable(name, rep)
     character(len=*),           intent(in) :: name
     character(len=*), optional, intent(in) :: rep
@@ -782,6 +818,7 @@ contains
     
   end subroutine messages_obsolete_variable
 
+  ! ---------------------------------------------------------
   subroutine messages_devel_version(name)
     character(len=*),           intent(in) :: name
     
@@ -797,14 +834,14 @@ contains
 
   end subroutine messages_devel_version
   
-  !--------------------------------------------------------------
 
+  !--------------------------------------------------------------
   subroutine messages_check_def(var, def, text)
     FLOAT,            intent(in) :: var
     FLOAT,            intent(in) :: def
     character(len=*), intent(in) :: text
 
-    call push_sub('simul_box.simul_box_init.check_def')
+    call push_sub('messages.messages_check_def')
 
     if(var > def) then
       write(message(1), '(3a)') "The value for '", text, "' does not match the recommended value"
@@ -812,11 +849,11 @@ contains
       call write_warning(2)
     end if
 
-    call pop_sub('simul_box.simul_box_init.check_def')
+    call pop_sub('messages.messages_check_def')
   end subroutine messages_check_def
 
-  ! ------------------------------------------------------------
 
+  ! ------------------------------------------------------------
   subroutine messages_not_implemented(feature)
     character(len=*), intent(in) :: feature
 
