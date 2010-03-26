@@ -275,7 +275,10 @@ contains
       call mesh_write_fingerprint(gr%mesh, trim(dir)//'/grid')
 
       ! write the lxyz array
-      call io_binary_write(trim(dir)//'/lxyz.obf', gr%mesh%np_part_global*gr%mesh%sb%dim, gr%mesh%idx%lxyz, ierr)
+      if(gr%mesh%sb%box_shape /= HYPERCUBE) then
+        ASSERT(associated(gr%mesh%idx%lxyz))
+        call io_binary_write(trim(dir)//'/lxyz.obf', gr%mesh%np_part_global*gr%mesh%sb%dim, gr%mesh%idx%lxyz, ierr)
+      end if
 
       iunit_states = io_open(trim(dir)//'/states', action='write', is_tmp=.true.)
       call states_dump(st, iunit_states)
@@ -455,7 +458,7 @@ contains
     ! read old restart files that do not have a fingerprint file.
     ! if (read_np < 0) ierr = -1
 
-    if (read_np > 0) then
+    if (read_np > 0 .and. gr%mesh%sb%box_shape /= HYPERCUBE) then
 
       grid_changed = .true.
       
@@ -466,6 +469,7 @@ contains
 
       ! the grid is different, so we read the coordinates.
       SAFE_ALLOCATE(read_lxyz(1:read_np_part, 1:gr%mesh%sb%dim))
+      ASSERT(associated(gr%mesh%idx%lxyz))
       call io_binary_read(trim(dir)//'/lxyz.obf', read_np_part*gr%mesh%sb%dim, read_lxyz, read_ierr)
 
       ! and generate the map
