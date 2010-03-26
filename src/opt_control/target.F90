@@ -187,11 +187,7 @@ module opt_control_target_m
     case(oct_tg_groundstate)
       message(1) =  'Info: Using Ground State for TargetOperator'
       call write_info(1)
-      call restart_read(trim(restart_dir)//GS_DIR, target%st, gr, geo, ierr)
-      if(ierr .ne. 0) then
-        write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(restart_dir)//GS_DIR//'.'
-        call write_fatal(1)
-      end if
+      call restart_read(trim(restart_dir)//GS_DIR, target%st, gr, geo, ierr, exact = .true.)
       
     case(oct_tg_excited) 
 
@@ -216,11 +212,7 @@ module opt_control_target_m
       call states_allocate_wfns(target%st, gr%mesh, M_CMPLX)
       target%st%node(:)  = 0
 
-      call restart_read(trim(restart_dir)//GS_DIR, target%st, gr, geo, ierr)
-      if(ierr .ne. 0) then
-        write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(restart_dir)//GS_DIR//'.'
-        call write_fatal(1)
-      end if
+      call restart_read(trim(restart_dir)//GS_DIR, target%st, gr, geo, ierr, exact = .true.)
       call excited_states_init(target%est, target%st, "oct-excited-state-target") 
 
     case(oct_tg_exclude_state)

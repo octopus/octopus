@@ -94,7 +94,7 @@ module opt_control_initst_m
     case(oct_is_groundstate) 
       message(1) =  'Info: Using ground state for initial state.'
       call write_info(1)
-      call restart_read(trim(restart_dir)//GS_DIR, initial_state, sys%gr, sys%geo, ierr)
+      call restart_read(trim(restart_dir)//GS_DIR, initial_state, sys%gr, sys%geo, ierr, exact = .true.)
 
     case(oct_is_excited)  
       message(1) = 'Error: Using an excited state as the starting state for an '

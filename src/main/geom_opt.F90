@@ -91,12 +91,7 @@ contains
     
     ! load wavefunctions
     if(.not. fromscratch) then
-      call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr)
-      if(ierr .ne. 0) then
-        message(1) = "Could not load wavefunctions: Starting from scratch."
-        call write_warning(1)
-        fromscratch = .true.
-      end if
+      call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr, exact = .true.)
     end if
 
     if(fromScratch) then

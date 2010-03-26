@@ -65,11 +65,7 @@ contains
     call init_()
 
     ! load wavefunctions
-    call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr)
-    if(ierr.ne.0) then
-      message(1) = "Could not load wavefunctions: Starting from scratch."
-      call write_warning(1)
-    end if
+    call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr, exact = .true.)
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'

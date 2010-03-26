@@ -84,19 +84,12 @@ contains
     call init_()
 
     ! load wavefunctions
-    call restart_read(trim(restart_dir)//GS_DIR, sys%st, gr, sys%geo, ierr)
+    call restart_read(trim(restart_dir)//GS_DIR, sys%st, gr, sys%geo, ierr, exact = .true.)
 
     if(simul_box_is_periodic(gr%sb)) then
       message(1) = "Electric field cannot be applied to a periodic system (currently)."
       call write_fatal(1)
     endif
-
-    if(ierr .ne. 0) then
-      message(1) = "Could not read KS orbitals from '"//trim(restart_dir)//GS_DIR//"'"
-      message(2) = "Please run a ground-state calculation first and/or"
-      message(3) = "give the correct RestartDataset in the input file."
-      call write_fatal(3)
-    end if
 
     ! set up Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'

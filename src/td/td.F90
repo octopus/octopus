@@ -429,11 +429,8 @@ contains
       if(fromScratch) then
 
         if(.not. st%only_userdef_istates) then
-          call restart_read(trim(restart_dir)//GS_DIR, st, gr, geo, ierr)
+          call restart_read(trim(restart_dir)//GS_DIR, st, gr, geo, ierr, exact = .true.)
           if(ierr.ne.0) then
-            message(1) = "Could not read KS orbitals from '"//trim(restart_dir)//GS_DIR//"'"
-            message(2) = "Please run a ground-state calculation first!"
-            call write_fatal(2)
           end if
           
           if(gr%sb%open_boundaries) then

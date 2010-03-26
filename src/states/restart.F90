@@ -151,17 +151,22 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine restart_look_and_read(st, gr, geo, is_complex, specify_dir)
+  subroutine restart_look_and_read(st, gr, geo, is_complex, specify_dir, exact)
     type(states_t),             intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
     type(geometry_t),           intent(in)    :: geo
     logical, optional,          intent(in)    :: is_complex
     character(len=*), optional, intent(in)    :: specify_dir
+    logical,          optional, intent(in)    :: exact ! if .true. we need all the wavefunctions and on the exact grid
 
     integer :: kpoints, dim, nst, ierr
     character(len=80) dir
+    logical :: exact_
 
     call push_sub('restart.restart_look_and_read')
+
+    exact_ = .true.
+    if(present(exact)) exact_ = exact
 
     if(present(specify_dir)) then
        dir = specify_dir
@@ -203,12 +208,7 @@ contains
     st%occ      = M_ZERO
 
     ! load wavefunctions
-    call restart_read(trim(dir)//GS_DIR, st, gr, geo, ierr)
-    if(ierr .ne. 0) then
-      message(1) = "Could not read KS orbitals from '"//trim(dir)//GS_DIR//"'"
-      message(2) = "Please run a calculation of the ground state first!"
-      call write_fatal(2)
-    end if
+    call restart_read(trim(dir)//GS_DIR, st, gr, geo, ierr, exact = exact_)
 
     call pop_sub()
   end subroutine restart_look_and_read
@@ -384,7 +384,7 @@ contains
   ! <0 => Fatal error
   ! =0 => read all wavefunctions
   ! >0 => could only read x wavefunctions
-  subroutine restart_read(dir, st, gr, geo, ierr, read_occ, iter, lr)
+  subroutine restart_read(dir, st, gr, geo, ierr, read_occ, iter, lr, exact)
     character(len=*),     intent(in)    :: dir
     type(states_t),       intent(inout) :: st
     type(grid_t),         intent(in)    :: gr
@@ -394,6 +394,7 @@ contains
     integer,    optional, intent(inout) :: iter
     !if this next argument is present, the lr wfs are read instead of the gs wfs
     type(lr_t), optional, intent(inout) :: lr 
+    logical,    optional, intent(in)    :: exact ! if .true. we need all the wavefunctions and on the exact grid
 
     integer              :: iunit, iunit2, err, ik, ist, idim, int, read_np, read_np_part, read_ierr, ip, idir, xx(1:MAX_DIM)
     character(len=12)    :: filename
@@ -405,10 +406,14 @@ contains
 
     FLOAT                :: my_occ, flt
     logical              :: read_occ_, gs_allocated, lr_allocated, grid_changed, grid_reordered
+    logical              :: exact_
 
     call push_sub('restart.restart_read')
 
     call profiling_in(prof_read, "RESTART_READ")
+
+    exact_ = .false.
+    if(present(exact)) exact_ = exact
 
     if(.not. present(lr)) then 
       write(message(1), '(a,i5)') 'Info: Loading restart information.'
@@ -486,12 +491,9 @@ contains
       else
         message(1) = 'Octopus is attempting to restart from a different mesh.'
         call write_warning(1)
+        if(exact_) ierr = -1
       end if
-!      do ip = 1, min(read_np, gr%mesh%np_global)
-!        do idir = 1, gr%mesh%sb%dim
-!          print*, read_lxyz(ip, idir), gr%mesh%idx%lxyz(ip, idir)
-!        end do
-!      end do
+
     else
       grid_changed = .false.
       grid_reordered = .false.
@@ -500,6 +502,7 @@ contains
     if(ierr .ne. 0) then
       if(iunit > 0) call io_close(iunit, grp = gr%mesh%mpi_grp)
       if(iunit2 > 0) call io_close(iunit2, grp = gr%mesh%mpi_grp)
+      if(exact_) call restart_fail()
       write(message(1),'(a)') 'Could not load any previous restart information.'
       call write_info(1)
       call messages_print_stress(stdout)
@@ -621,6 +624,8 @@ contains
           st%nst * st%d%nik * st%d%dim, ' could be read.'
         call write_info(1)
         call messages_print_stress(stdout)
+
+        if(ierr .ne. 0 .and. exact_) call restart_fail()
       endif
     end if
 
@@ -668,6 +673,12 @@ contains
 
       call pop_sub()
     end function index_is_wrong
+
+    subroutine restart_fail()
+      message(1) = "Could not read KS orbitals from '"//trim(dir)
+      message(2) = "Please run a ground-state calculation first!"
+      call write_fatal(2)
+    end subroutine restart_fail
 
   end subroutine restart_read
 

@@ -64,11 +64,7 @@ contains
 
     ! load wavefunctions
     call states_allocate_wfns(sys%st, sys%gr%mesh)
-    call restart_read(trim(tmpdir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr)
-    if(ierr.ne.0) then
-      message(1) = "Could not load wavefunctions."
-      call write_fatal(1)
-    end if
+    call restart_read(trim(tmpdir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr, exact = .true.)
 
     ! generate density
     call states_calc_dens(sys%st, sys%gr)
