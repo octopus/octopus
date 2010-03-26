@@ -65,10 +65,10 @@ module states_calc_m
     states_rotate
 
   public ::                         &
-    dstates_gram_schmidt,           &
-    zstates_gram_schmidt,           &
-    dstates_gram_schmidt_full,      &
-    zstates_gram_schmidt_full,      &
+    dstates_orthogonalization,      &
+    zstates_orthogonalization,      &
+    dstates_orthogonalization_full, &
+    zstates_orthogonalization_full, &
     dstates_normalize_orbital,      &
     zstates_normalize_orbital,      &
     dstates_residue,                &
@@ -124,9 +124,9 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
       if (states_are_real(st)) then
-        call dstates_gram_schmidt_full(st, st%nst, m, st%d%dim, st%dpsi(:, :, :, ik))
+        call dstates_orthogonalization_full(st, st%nst, m, st%d%dim, st%dpsi(:, :, :, ik))
       else
-        call zstates_gram_schmidt_full(st, st%nst, m, st%d%dim, st%zpsi(:, :, :, ik))
+        call zstates_orthogonalization_full(st, st%nst, m, st%d%dim, st%zpsi(:, :, :, ik))
       end if
     end do
 

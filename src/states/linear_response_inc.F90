@@ -76,7 +76,7 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik)
     end do
   end if
 
-  call X(states_gram_schmidt)(mesh, st%nst, st%d%dim, st%X(psi)(:, :, :, ik), vec(:, :), &
+  call X(states_orthogonalization)(mesh, st%nst, st%d%dim, st%X(psi)(:, :, :, ik), vec(:, :), &
     Theta_Fi=Theta_Fi(ist), beta_ij=beta_ij)
 
   SAFE_DEALLOCATE_A(beta_ij)

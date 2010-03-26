@@ -473,7 +473,7 @@ contains
           end if
 
           !orthogonalize against previous vectors
-          call zstates_gram_schmidt(der%mesh, iter - l + 1, hm%d%dim, v(:, :, l:iter), v(:, :, iter + 1), &
+          call zstates_orthogonalization(der%mesh, iter - l + 1, hm%d%dim, v(:, :, l:iter), v(:, :, iter + 1), &
             normalize = .true., overlap = hamilt(l:iter, iter), norm = hamilt(iter + 1, iter))
 
           call zlalg_exp(iter, pp, hamilt, expo, hamiltonian_hermitian(hm))
@@ -529,7 +529,7 @@ contains
             end if
 
             !orthogonalize against previous vectors
-            call zstates_gram_schmidt(der%mesh, iter - l + 1, hm%d%dim, v(:, :, l:iter), &
+            call zstates_orthogonalization(der%mesh, iter - l + 1, hm%d%dim, v(:, :, l:iter), &
               v(:, :, iter + 1), normalize = .true., overlap = hamilt(l:iter, iter), &
               norm = hamilt(iter + 1, iter))
 

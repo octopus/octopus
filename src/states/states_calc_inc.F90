@@ -21,7 +21,7 @@
 ! ---------------------------------------------------------
 ! Orthonormalizes nst orbitals in mesh (honours state
 ! parallelization).
-subroutine X(states_gram_schmidt_full)(st, nst, mesh, dim, psi)
+subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
   type(states_t),    intent(in)    :: st
   integer,           intent(in)    :: nst, dim
   type(mesh_t),      intent(in)    :: mesh
@@ -34,13 +34,13 @@ subroutine X(states_gram_schmidt_full)(st, nst, mesh, dim, psi)
   FLOAT   :: nrm2
 
   call profiling_in(prof, "GRAM_SCHMIDT_FULL")
-  call push_sub('states_calc_inc.Xstates_gram_schmidt_full')
+  call push_sub('states_calc_inc.Xstates_orthogonalization_full')
 
   if(.not. st%parallel_in_states) then
     wsize = st%d%window_size
     do st_start = 1, nst, wsize
       st_end = min(st_start + 2*wsize - 1, nst)
-      call X(states_gram_schmidt_block)(st, st_end - st_start + 1, mesh, dim, psi(:, :, st_start:))
+      call X(states_orthogonalization_block)(st, st_end - st_start + 1, mesh, dim, psi(:, :, st_start:))
     end do
   else
 
@@ -95,13 +95,13 @@ subroutine X(states_gram_schmidt_full)(st, nst, mesh, dim, psi)
   SAFE_DEALLOCATE_A(ss)
   SAFE_DEALLOCATE_A(qq)
 
-  call pop_sub('states_calc_inc.Xstates_gram_schmidt_full')
+  call pop_sub('states_calc_inc.Xstates_orthogonalization_full')
   call profiling_out(prof)
-end subroutine X(states_gram_schmidt_full)
+end subroutine X(states_orthogonalization_full)
 
 
 ! ---------------------------------------------------------
-subroutine X(states_gram_schmidt_block)(st, nst, mesh, dim, psi)
+subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
   type(states_t),    intent(in)    :: st
   integer,           intent(in)    :: nst
   type(mesh_t),      intent(in)    :: mesh
@@ -114,7 +114,7 @@ subroutine X(states_gram_schmidt_block)(st, nst, mesh, dim, psi)
   logical :: bof
   integer :: idim, nref, wsize, info
 
-  call push_sub('states_calc_inc.Xstates_gram_schmidt_block')
+  call push_sub('states_calc_inc.Xstates_orthogonalization_block')
 
   select case(st%d%orth_method)
   case(ORTH_GS)
@@ -181,8 +181,8 @@ subroutine X(states_gram_schmidt_block)(st, nst, mesh, dim, psi)
     psi = psi/sqrt(mesh%vol_pp(1))
 
   end select
-  call pop_sub('states_calc_inc.Xstates_gram_schmidt_block')
-end subroutine X(states_gram_schmidt_block)
+  call pop_sub('states_calc_inc.Xstates_orthogonalization_block')
+end subroutine X(states_orthogonalization_block)
 
 
 ! ---------------------------------------------------------
@@ -194,7 +194,7 @@ end subroutine X(states_gram_schmidt_block)
 ! If Theta_Fi and beta_ij are present, it performs the generalized orthogonalization
 !   (Theta_Fi - sum_j beta_ij |j><j|Phi>
 ! This is used in response for metals
-subroutine X(states_gram_schmidt)(mesh, nst, dim, psi, phi,  &
+subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
   normalize, mask, overlap, norm, Theta_fi, beta_ij)
   type(mesh_t),      intent(in)    :: mesh
   integer,           intent(in)    :: nst
@@ -220,7 +220,7 @@ subroutine X(states_gram_schmidt)(mesh, nst, dim, psi, phi,  &
 #endif
 
   call profiling_in(prof, "GRAM_SCHMIDT")
-  call push_sub('states_calc_inc.Xstates_gram_schmidt')
+  call push_sub('states_calc_inc.Xstates_orthogonalization')
 
   ! This routine uses blocking to optimize cache usage. One block of
   ! |phi> is loaded in cache L1 and then then we calculate the dot
@@ -345,9 +345,9 @@ subroutine X(states_gram_schmidt)(mesh, nst, dim, psi, phi,  &
 
   SAFE_DEALLOCATE_A(ss)
 
-  call pop_sub('states_calc_inc.Xstates_gram_schmidt')
+  call pop_sub('states_calc_inc.Xstates_orthogonalization')
   call profiling_out(prof)
-end subroutine X(states_gram_schmidt)
+end subroutine X(states_orthogonalization)
 
 
 ! ---------------------------------------------------------

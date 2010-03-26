@@ -1036,8 +1036,8 @@ contains
       !%Section Execution::Optimization
       !%Description
       !% Select the full orthogonalization method used by some
-      !% eigensolvers. The default is gram_schmidt.
-      !%Option gram_schmidt 1
+      !% eigensolvers. The default is orthogonalization.
+      !%Option orthogonalization 1
       !% The standard Gram-Schmidt orthogonalization implemented using
       !% Blas level 3 routines.
       !%Option qr 2

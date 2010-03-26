@@ -87,7 +87,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
 
 !            orth_mask(ist) = .true. ! projection on unperturbed wfn already removed in Sternheimer eqn
 
-            call X(states_gram_schmidt)(mesh, sys%st%nst, sys%st%d%dim, sys%st%X(psi)(1:mesh%np, 1:1, 1:sys%st%nst, ik), &
+            call X(states_orthogonalization)(mesh, sys%st%nst, sys%st%d%dim, sys%st%X(psi)(1:mesh%np, 1:1, 1:sys%st%nst, ik), &
               proj_dl_psi(1:mesh%np, 1:1), mask = orth_mask(1:sys%st%nst))
           endif
 

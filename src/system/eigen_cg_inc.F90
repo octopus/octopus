@@ -88,7 +88,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 
     ! Orthogonalize starting eigenfunctions to those already calculated...
     if(p > 1) then
-      call X(states_gram_schmidt)(gr%mesh, p - 1, st%d%dim, st%X(psi)(:, :, :, ik), st%X(psi)(:, :, p, ik), normalize = .true.)
+      call X(states_orthogonalization)(gr%mesh, p - 1, st%d%dim, st%X(psi)(:, :, :, ik), st%X(psi)(:, :, p, ik), normalize = .true.)
     end if
 
     ! Calculate starting gradient: |hpsi> = H|psi>
@@ -122,7 +122,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       end do
 
       ! Orthogonalize to lowest eigenvalues (already calculated)
-      if(p > 1) call X(states_gram_schmidt)(gr%mesh, p - 1, st%d%dim, st%X(psi)(:, :, :, ik), g, normalize = .false.)
+      if(p > 1) call X(states_orthogonalization)(gr%mesh, p - 1, st%d%dim, st%X(psi)(:, :, :, ik), g, normalize = .false.)
 
       if(iter .ne. 1) then
         gg1 = X(mf_dotp) (gr%mesh, st%d%dim, g, g0, reduce = .false.)
@@ -324,7 +324,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
 
     ! Orthogonalize starting eigenfunctions to those already calculated...
     if(ist.gt.1) then
-      call X(states_gram_schmidt)(gr%mesh, ist - 1, st%d%dim, st%X(psi)(:, :, 1:ist - 1, ik), &
+      call X(states_orthogonalization)(gr%mesh, ist - 1, st%d%dim, st%X(psi)(:, :, 1:ist - 1, ik), &
                                   st%X(psi)(:, :, ist, ik), normalize = .true.)
     end if
 
@@ -377,7 +377,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
       end do
 
       if(ist > 1) &
-           call X(states_gram_schmidt)(gr%mesh, ist - 1, dim, st%X(psi)(:, :, :, ik), sd, normalize = .false., mask = orthogonal)
+           call X(states_orthogonalization)(gr%mesh, ist - 1, dim, st%X(psi)(:, :, :, ik), sd, normalize = .false., mask = orthogonal)
 
       ! Get conjugate-gradient vector
       dot = X(mf_nrm2)(gr%mesh, dim, sd)**2
