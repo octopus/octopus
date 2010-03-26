@@ -234,7 +234,7 @@ contains
 
     nullify(lead_p, intf_p, dt_p, t_p, ist_p, ik_p, mem_type_p)
 
-    call pop_sub()
+    call pop_sub('ob_rti.ob_rti_init')
   end subroutine ob_rti_init
 
 
@@ -371,7 +371,7 @@ contains
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_A(tmp_wf)
     SAFE_DEALLOCATE_A(tmp_mem)
-    call pop_sub()
+    call pop_sub('ob_rti.cn_src_mem_dt')
   end subroutine cn_src_mem_dt
 
 
@@ -492,7 +492,7 @@ contains
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_A(tmp_wf)
     SAFE_DEALLOCATE_A(tmp_mem)
-    call pop_sub()
+    call pop_sub('ob_rti.cn_src_mem_dt')
   end subroutine cn_src_mem_sp_dt
 
 
@@ -516,7 +516,7 @@ contains
     y(1:gr_p%mesh%np) = tmp(1:gr_p%mesh%np, 1)
 
     SAFE_DEALLOCATE_A(tmp)
-    call pop_sub()
+    call pop_sub('ob_rti.h_eff_backward')
   end subroutine h_eff_backward
 
 
@@ -540,7 +540,7 @@ contains
     y(1:gr_p%mesh%np) = tmp(1:gr_p%mesh%np, 1)
 
     SAFE_DEALLOCATE_A(tmp)
-    call pop_sub()
+    call pop_sub('ob_rti.h_eff_backward_sp')
   end subroutine h_eff_backward_sp
 
 
@@ -562,7 +562,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('ob_rti.save_intf_wf')
   end subroutine save_intf_wf
 
 
@@ -617,7 +617,7 @@ contains
 
     SAFE_DEALLOCATE_A(intf_wf)
 
-    call pop_sub()
+    call pop_sub('ob_rti.apply_h_eff')
   end subroutine apply_h_eff
 
 
@@ -671,7 +671,7 @@ contains
 
     SAFE_DEALLOCATE_A(intf_wf)
 
-    call pop_sub()
+    call pop_sub('ob_rti.apply_h_eff_sp')
   end subroutine apply_h_eff_sp
 
 
@@ -692,7 +692,7 @@ contains
       zpsi(index, 1) = zpsi(index, 1) + src_wf(ii)
     end do
 
-    call pop_sub()
+    call pop_sub('ob_rti.apply_src')
   end subroutine apply_src
 
 
@@ -729,7 +729,7 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(mem_intf_wf)
-    call pop_sub()
+    call pop_sub('ob_rti.apply_mem')
   end subroutine apply_mem
 
   ! ---------------------------------------------------------
@@ -757,7 +757,7 @@ contains
     call apply_mem(tmem, intf, intf_wf, zpsi, factor, transposed)
     SAFE_DEALLOCATE_A(tmem)
 
-    call pop_sub()
+    call pop_sub('ob_rti.apply_sp_mem')
   end subroutine apply_sp_mem
 
 
@@ -783,7 +783,7 @@ contains
 
 !    SA FE_DEALLOCATE_A(diag)
 
-    call pop_sub()
+    call pop_sub('ob_rti.preconditioner')
   end subroutine precond_prop
 
 
@@ -835,7 +835,7 @@ contains
 
     call messages_print_stress(stdout)
 
-    call pop_sub()
+    call pop_sub('ob_rti.ob_rti_write_info')
   end subroutine ob_rti_write_info
 
 
@@ -856,7 +856,7 @@ contains
       SAFE_DEALLOCATE_P(ob%lead(il)%st_intface)
     end do
 
-    call pop_sub()
+    call pop_sub('ob_rti.ob_rti_end')
   end subroutine ob_rti_end
 
 

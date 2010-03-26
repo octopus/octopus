@@ -82,7 +82,7 @@ module born_charges_m
 
     call parse_logical(datasets_check('BornChargeSumRuleCorrection'), .true., this%correct)
 
-    call pop_sub()
+    call pop_sub('Born_charges.Born_charges_init')
   end subroutine Born_charges_init
 
   ! ---------------------------------------------------------
@@ -93,7 +93,7 @@ module born_charges_m
 
     SAFE_DEALLOCATE_P(this%charge)
 
-    call pop_sub()
+    call pop_sub('Born_charges.Born_charges_end')
   end subroutine Born_charges_end
 
   ! ---------------------------------------------------------
@@ -124,7 +124,7 @@ module born_charges_m
       enddo
     endif
 
-    call pop_sub()
+    call pop_sub('Born_charges.correct_Born_charges')
   end subroutine correct_Born_charges
 
   ! ---------------------------------------------------------
@@ -177,7 +177,7 @@ module born_charges_m
     call io_output_tensor(iunit, aimag(this%delta(:, :)), dim, unit_one)
 
     call io_close(iunit)
-    call pop_sub()
+    call pop_sub('Born_charges.out_Born_charges')
   end subroutine out_Born_charges
 
 end module Born_charges_m

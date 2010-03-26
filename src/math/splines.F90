@@ -363,7 +363,7 @@ contains
     call set_null(spl%spl)
     call set_null(spl%acc)
 
-    call pop_sub()
+    call pop_sub('splines.spline_init_0')
   end subroutine spline_init_0
 
 
@@ -379,7 +379,7 @@ contains
       call spline_init_0(spl(i))
     end do
 
-    call pop_sub()
+    call pop_sub('splines.spline_init_1')
   end subroutine spline_init_1
 
 
@@ -397,7 +397,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('splines.spline_init_2')
   end subroutine spline_init_2
 
 
@@ -413,7 +413,7 @@ contains
     call set_null(spl%spl)
     call set_null(spl%acc)
 
-    call pop_sub()
+    call pop_sub('splines.spline_end_0')
   end subroutine spline_end_0
 
 
@@ -429,7 +429,7 @@ contains
       call spline_end_0(spl(i))
     end do
 
-    call pop_sub()
+    call pop_sub('splines.spline_end_1')
   end subroutine spline_end_1
 
 
@@ -447,7 +447,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('splines.spline_end_2')
   end subroutine spline_end_2
 
 
@@ -474,7 +474,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
 
-    call pop_sub()
+    call pop_sub('splines.spline_copy')
   end subroutine spline_copy
 
 
@@ -490,7 +490,7 @@ contains
     spl%x_limit(2) = rofi(nrc)
     call oct_spline_fit(nrc, rofi(1), ffit(1), spl%spl, spl%acc)
 
-    call pop_sub()
+    call pop_sub('splines.spline_fit8')
   end subroutine spline_fit8
 
 
@@ -515,7 +515,7 @@ contains
     SAFE_DEALLOCATE_A(rofi8)
     SAFE_DEALLOCATE_A(ffit8)
 
-    call pop_sub()
+    call pop_sub('splines.spline_fit4')
   end subroutine spline_fit4
 
 
@@ -587,7 +587,7 @@ contains
     SAFE_DEALLOCATE_A(y)
     SAFE_DEALLOCATE_A(y2)
 
-    call pop_sub()
+    call pop_sub('splines.spline_sum')
   end subroutine spline_sum
 
 
@@ -616,7 +616,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
 
-    call pop_sub()
+    call pop_sub('splines.spline_times')
   end subroutine spline_times
 
 
@@ -634,7 +634,7 @@ contains
     res = oct_spline_eval_integ(spl%spl, x(1), x(npoints), spl%acc)
     SAFE_DEALLOCATE_A(x)
 
-    call pop_sub()
+    call pop_sub('splines.spline_integral_full')
   end function spline_integral_full
 
 
@@ -673,7 +673,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
 
-    call pop_sub()
+    call pop_sub('splines.spline_dotp')
   end function spline_dotp
 
 
@@ -746,7 +746,7 @@ contains
     SAFE_DEALLOCATE_A(xw)
     SAFE_DEALLOCATE_A(yw)
 
-    call pop_sub()
+    call pop_sub('splines.spline_3dft')
   end subroutine spline_3dft
 
 
@@ -812,7 +812,7 @@ contains
     SAFE_DEALLOCATE_A(xw)
     SAFE_DEALLOCATE_A(yw)
 
-    call pop_sub()
+    call pop_sub('splines.spline_besselft')
   end subroutine spline_besselft
 
 
@@ -835,7 +835,6 @@ contains
     call oct_spline_end(spl%spl, spl%acc)
     do i = npoints, 1, -1
       if(x(i)<cutoff) then
-        !call pop_sub(); ! MJV 1/2010: if this is really exit the loop, should not have a pop_sub
         exit
       endif
       y(i) = y(i) * exp(-beta*(x(i)/cutoff - CNST(1.0))**2)
@@ -845,7 +844,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
 
-    call pop_sub()
+    call pop_sub('splines.spline_cut')
   end subroutine spline_cut
 
 
@@ -880,7 +879,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
 
-    call pop_sub()
+    call pop_sub('splines.spline_div')
   end subroutine spline_div
 
 
@@ -918,7 +917,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
 
-    call pop_sub()
+    call pop_sub('splines.spline_mult')
   end subroutine spline_mult
 
 
@@ -952,7 +951,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
 
-    call pop_sub()
+    call pop_sub('splines.spline_der')
   end subroutine spline_der
 
 
@@ -986,7 +985,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
 
-    call pop_sub()
+    call pop_sub('splines.spline_der2')
   end subroutine spline_der2
 
 
@@ -1013,7 +1012,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
 
-    call pop_sub()
+    call pop_sub('splines.spline_print_0')
   end subroutine spline_print_0
 
 
@@ -1030,7 +1029,8 @@ contains
 
     n = size(spl)
     if(n<=0) then
-      call pop_sub(); return
+      call pop_sub('splines.spline_print_1')
+      return
     endif
 
     write(fm,'(i4)') n + 1; fm = adjustl(fm)
@@ -1047,7 +1047,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
 
-    call pop_sub()
+    call pop_sub('splines.spline_print_1')
   end subroutine spline_print_1
 
 
@@ -1064,7 +1064,8 @@ contains
 
     n1 = size(spl, 1); n2 = size(spl, 2)
     if(n1*n2<=0) then
-      call pop_sub(); return
+      call pop_sub('splines.spline_print_2')
+      return
     endif
 
     write(fm,'(i4)') n1*n2 + 1; fm = adjustl(fm)
@@ -1083,7 +1084,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
 
-    call pop_sub()
+    call pop_sub('splines.spline_print_2')
   end subroutine spline_print_2
 
  

@@ -69,7 +69,7 @@ subroutine X(physics_op_L)(der, ff, lf, ghost_update, set_bc)
   end select
 
   SAFE_DEALLOCATE_A(gf)
-  call pop_sub()
+  call pop_sub('physics_op_inc.Xphysics_op_L')
 end subroutine X(physics_op_L)
 
 
@@ -127,7 +127,7 @@ subroutine X(physics_op_L2)(der, ff, l2f, ghost_update, set_bc)
 
   SAFE_DEALLOCATE_A(gf)
   SAFE_DEALLOCATE_A(ggf)
-  call pop_sub()
+  call pop_sub('physics_op_inc.Xphysics_op_L2')
 end subroutine X(physics_op_L2)
 
 

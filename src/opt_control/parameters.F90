@@ -531,7 +531,7 @@ contains
     end if
 
     call messages_print_stress(stdout)
-    call pop_sub()
+    call pop_sub('parameters.parameters_mod_init')
   end subroutine parameters_mod_init
   ! ---------------------------------------------------------
 
@@ -646,7 +646,7 @@ contains
     ! Construct the transformation matrix, if needed.
     call parameters_trans_matrix(cp)
 
-    call pop_sub()
+    call pop_sub('parameters.parameters_init')
   end subroutine parameters_init
   ! ---------------------------------------------------------
 
@@ -675,7 +675,7 @@ contains
       call laser_get_phi(ep%lasers(1), cp%f(1))
     end select
 
-    call pop_sub()
+    call pop_sub('parameters.parameters_set')
   end subroutine parameters_set
   ! ---------------------------------------------------------
 
@@ -729,7 +729,7 @@ contains
     ! Move to the "native" representation, if necessary.
     call parameters_set_rep(par)
 
-    call pop_sub()
+    call pop_sub('parameters.parameters_prepare_initial')
   end subroutine parameters_prepare_initial
   ! ---------------------------------------------------------
 
@@ -755,7 +755,7 @@ contains
       end if
     end if
 
-    call pop_sub()
+    call pop_sub('parameters.parameters_set_rep')
   end subroutine parameters_set_rep
   ! ---------------------------------------------------------
 
@@ -803,7 +803,7 @@ contains
       end select
     end if
 
-    call pop_sub()
+    call pop_sub('parameters.parameters_to_basis')
   end subroutine parameters_to_basis
   ! ---------------------------------------------------------
 
@@ -818,7 +818,8 @@ contains
 
     select case(par%current_representation)
     case(ctr_real_time)
-      call pop_sub(); return
+      call pop_sub('parameters.parameters_to_realtime')
+      return
     case(ctr_sine_fourier_series_h)
       call parameters_theta_to_basis(par)
       do ipar = 1, par%no_parameters
@@ -847,7 +848,7 @@ contains
     end select
 
     par%current_representation = ctr_real_time
-    call pop_sub()
+    call pop_sub('parameters.parameters_to_realtime')
   end subroutine parameters_to_realtime
   ! ---------------------------------------------------------
 
@@ -867,7 +868,7 @@ contains
       res = res + tdf_diff(pp%f(ipar), qq%f(ipar))
     end do
 
-    call pop_sub()
+    call pop_sub('parameters.parameters_diff')
   end function parameters_diff
   ! ---------------------------------------------------------
 
@@ -880,7 +881,7 @@ contains
     call push_sub('parameters.parameters_dotp')
     res = sum(xx(:) * yy(:))
 
-    call pop_sub()
+    call pop_sub('parameters.parameters_dotp')
   end function parameters_dotp
   ! ---------------------------------------------------------
 
@@ -892,7 +893,7 @@ contains
     call push_sub('parameters.parameters_mixing_init')
     call mix_init(parameters_mix, par%dim, par%no_parameters, 1)
 
-    call pop_sub()
+    call pop_sub('parameters.parameters_mixing_init')
   end subroutine parameters_mixing_init
   ! ---------------------------------------------------------
 
@@ -902,7 +903,7 @@ contains
     call push_sub('parameters.parameters_mixing_end')
     call mix_end(parameters_mix)
 
-    call pop_sub()
+    call pop_sub('parameters.parameters_mixing_end')
   end subroutine parameters_mixing_end
   ! ---------------------------------------------------------
 
@@ -938,7 +939,7 @@ contains
     SAFE_DEALLOCATE_A(e_in)
     SAFE_DEALLOCATE_A(e_out)
     SAFE_DEALLOCATE_A(e_new)
-    call pop_sub()
+    call pop_sub('parameters.parameters_mixing')
   end subroutine parameters_mixing
   ! ---------------------------------------------------------
 
@@ -959,7 +960,7 @@ contains
       end do
     end if
 
-    call pop_sub()
+    call pop_sub('parameters.parameters_apply_envelope')
   end subroutine parameters_apply_envelope
   ! ---------------------------------------------------------
 
@@ -986,7 +987,7 @@ contains
     end select
 
     call parameters_end(par)
-    call pop_sub()
+    call pop_sub('parameters.parameters_to_h')
   end subroutine parameters_to_h
   ! ---------------------------------------------------------
 
@@ -1005,7 +1006,7 @@ contains
       call laser_set_f_value(ep%lasers(ipar), val, tdf(cp%f(ipar), val) )
     end do
 
-    call pop_sub()
+    call pop_sub('parameters.parameters_to_h_val')
   end subroutine parameters_to_h_val
   ! ---------------------------------------------------------
 
@@ -1026,7 +1027,7 @@ contains
     SAFE_DEALLOCATE_P(cp%utransfi)
     SAFE_DEALLOCATE_P(cp%theta)
 
-    call pop_sub()
+    call pop_sub('parameters.parameters_end')
   end subroutine parameters_end
   ! ---------------------------------------------------------
 
@@ -1189,7 +1190,7 @@ contains
     end if
 
     call parameters_end(par)
-    call pop_sub()
+    call pop_sub('parameters.parameters_write')
   end subroutine parameters_write
   ! ---------------------------------------------------------
 
@@ -1238,7 +1239,7 @@ contains
     end select
 
     call parameters_end(par_)
-    call pop_sub()
+    call pop_sub('parameters.parameters_fluence')
   end function parameters_fluence
   ! ---------------------------------------------------------
 
@@ -1309,7 +1310,7 @@ contains
     j2 = - par_%alpha(1) * (integral - par_common%targetfluence)
 
     call parameters_end(par_)
-    call pop_sub()
+    call pop_sub('parameters.parameters_j2')
   end function parameters_j2
   ! ---------------------------------------------------------
 
@@ -1327,7 +1328,7 @@ contains
       call tdf_scalar_multiply( sqrt(par_common%targetfluence / old_fluence), par%f(ipar) )
     end do
 
-    call pop_sub()
+    call pop_sub('parameters.parameters_set_fluence')
   end subroutine parameters_set_fluence
   ! ---------------------------------------------------------
 
@@ -1342,7 +1343,7 @@ contains
 
     par%alpha(:) = alpha
 
-    call pop_sub()
+    call pop_sub('parameters.parameters_set_alpha')
   end subroutine parameters_set_alpha
   ! ---------------------------------------------------------
 
@@ -1375,7 +1376,7 @@ contains
     call loct_pointer_copy(cp_out%utransfi, cp_in%utransfi)
     call loct_pointer_copy(cp_out%theta, cp_in%theta)
 
-    call pop_sub()
+    call pop_sub('parameters.parameters_copy')
   end subroutine parameters_copy
   ! ---------------------------------------------------------
 
@@ -1401,7 +1402,7 @@ contains
        call tdf_set_random(par%f(1))
      end select
 
-     call pop_sub()
+     call pop_sub('parameters.parameters_randomize')
   end subroutine parameters_randomize
   ! ---------------------------------------------------------
 
@@ -1444,7 +1445,7 @@ contains
         end do
     end select
 
-    call pop_sub()
+    call pop_sub('parameters.parameters_update')
   end subroutine parameters_update
   ! ---------------------------------------------------------
 
@@ -1495,7 +1496,7 @@ contains
       lower_bounds(dog)       = -M_PI
     end select
 
-    call pop_sub()
+    call pop_sub('parameters.parameters_bounds')
   end subroutine parameters_bounds
   ! ---------------------------------------------------------
 
@@ -1531,7 +1532,7 @@ contains
       call filter_apply(par%f(ipar), filter)
     end do
 
-    call pop_sub()
+    call pop_sub('parameters.parameters_filter')
   end subroutine parameters_filter
   ! ---------------------------------------------------------
 
@@ -1553,7 +1554,7 @@ contains
     nullify(par_common%td_penalty)
     SAFE_DEALLOCATE_P(par_common)
 
-    call pop_sub()
+    call pop_sub('parameters.parameters_mod_close')
   end subroutine parameters_mod_close
   ! ---------------------------------------------------------
 
@@ -1644,7 +1645,7 @@ contains
     end select
 
     SAFE_DEALLOCATE_A(theta)
-    call pop_sub()
+    call pop_sub('parameters.parameters_gradient')
   end subroutine parameters_gradient
   ! ---------------------------------------------------------
 

@@ -379,7 +379,7 @@ contains
         first, units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/gauge_field")))
     end if
 
-    call pop_sub()
+    call pop_sub('td_write.td_write_init')
   end subroutine td_write_init
 
 
@@ -404,7 +404,7 @@ contains
 
     if(writ%out(OUT_POPULATIONS)%write .or. writ%out(OUT_PROJ)%write) call states_end(writ%gs_st)
 
-    call pop_sub()
+    call pop_sub('td_write.td_write_end')
   end subroutine td_write_end
 
 
@@ -465,7 +465,7 @@ contains
       call td_write_gauge_field(writ%out(OUT_GAUGE_FIELD)%handle, hm, gr, iter)
 
     call profiling_out(prof)
-    call pop_sub()
+    call pop_sub('td_write.td_write_iter')
   end subroutine td_write_iter
 
 
@@ -499,7 +499,7 @@ contains
     call h_sys_output_all(outp, gr, geo, st, hm, filename)
 
     call profiling_out(prof)
-    call pop_sub()
+    call pop_sub('td.td_write_data')
   end subroutine td_write_data
 
 
@@ -551,7 +551,7 @@ contains
 
     end if
 
-    call pop_sub()
+    call pop_sub('td_write.td_write_spin')
   end subroutine td_write_spin
 
 
@@ -609,7 +609,7 @@ contains
       SAFE_DEALLOCATE_A(lmm)
     end if
 
-    call pop_sub()
+    call pop_sub('td_write.td_write_local_magnetic_moments')
   end subroutine td_write_local_magnetic_moments
 
 
@@ -690,7 +690,7 @@ contains
 
     SAFE_DEALLOCATE_A(ang)
     SAFE_DEALLOCATE_A(ang2)
-    call pop_sub()
+    call pop_sub('td_write.td_write_angular')
   end subroutine td_write_angular
 
 
@@ -794,7 +794,7 @@ contains
 
     SAFE_DEALLOCATE_A(nuclear_dipole)
     SAFE_DEALLOCATE_A(multipole)
-    call pop_sub()
+    call pop_sub('td_write.td_write_multipole')
   end subroutine td_write_multipole
 
   ! ---------------------------------------------------------
@@ -866,7 +866,7 @@ contains
       call write_iter_nl(out_ftchd)
     end if
 
-    call pop_sub()
+    call pop_sub('td_write.td_write_ftchd')
   end subroutine td_write_ftchd
 
   ! ---------------------------------------------------------
@@ -938,7 +938,7 @@ contains
     end do
     call write_iter_nl(out_coords)
 
-    call pop_sub()
+    call pop_sub('td_write.td_write_coordinates')
   end subroutine td_write_coordinates
 
 
@@ -975,7 +975,7 @@ contains
 
     call write_iter_nl(out_temperature)
 
-    call pop_sub()
+    call pop_sub('td_write.td_write_temperature')
   end subroutine td_write_temperature
 
 
@@ -1051,7 +1051,7 @@ contains
       SAFE_DEALLOCATE_A(excited_state_p)
     end if
     SAFE_DEALLOCATE_A(dotprodmatrix)
-    call pop_sub()
+    call pop_sub('td_write.td_write_populations')
   end subroutine td_write_populations
 
 
@@ -1102,7 +1102,7 @@ contains
     call write_iter_double(out_acc, acc, gr%mesh%sb%dim)
     call write_iter_nl(out_acc)
 
-    call pop_sub()
+    call pop_sub('td_write.td_write_acc')
   end subroutine td_write_acc
 
 
@@ -1194,7 +1194,7 @@ contains
 
     call write_iter_nl(out_laser)
 
-    call pop_sub()
+    call pop_sub('td_write.td_write_laser')
   end subroutine td_write_laser
 
 
@@ -1249,7 +1249,7 @@ contains
     call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%ec), 1)
     call write_iter_nl(out_energy)
 
-    call pop_sub()
+    call pop_sub('td_write.td_write_energy')
   end subroutine td_write_energy
 
   ! ---------------------------------------------------------
@@ -1321,7 +1321,7 @@ contains
     call write_iter_double(out_gauge, temp, gr%mesh%sb%dim)
 
     call write_iter_nl(out_gauge)
-    call pop_sub()
+    call pop_sub('td_write.td_write_gauge_field')
     
   end subroutine td_write_gauge_field
 
@@ -1435,7 +1435,7 @@ contains
     end if
 
     SAFE_DEALLOCATE_A(projections)
-    call pop_sub()
+    call pop_sub('td_write.td_write_proj')
 
   contains
     ! ---------------------------------------------------------
@@ -1458,7 +1458,7 @@ contains
       
       call distribute_projections()
 
-      call pop_sub()
+      call pop_sub('td_write.td_write_proj.calc_projections')
     end subroutine calc_projections
 
 
@@ -1495,7 +1495,7 @@ contains
 
       call distribute_projections()
 
-      call pop_sub()
+      call pop_sub('td_write.td_write_proj.dipole_matrix_elements')
     end subroutine dipole_matrix_elements
 
     subroutine distribute_projections
@@ -1515,7 +1515,7 @@ contains
         end do
       end do
 
-      call pop_sub()
+      call pop_sub('td_write.td_write_proj.distribute_projections')
 #endif
     end subroutine distribute_projections
 
@@ -1534,7 +1534,7 @@ contains
     call write_iter_string(out,'# HEADER')
     call write_iter_nl(out)
 
-    call pop_sub()
+    call pop_sub('td_write.td_write_print_header_init')
   end subroutine td_write_print_header_init
 
 
@@ -1547,7 +1547,7 @@ contains
     call write_iter_string(out,'################################################################################')
     call write_iter_nl(out)
 
-    call pop_sub()
+    call pop_sub('td_write.td_write_print_header_end')
   end subroutine td_write_print_header_end
 
 

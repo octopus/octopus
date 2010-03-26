@@ -71,7 +71,7 @@ contains
     call push_sub('atomic.valconf_null')
     c%z = 0; c%symbol = ""; c%type = 0; c%p = 0; c%n = 0; c%l = 0; c%occ = M_ZERO
 
-    call pop_sub()
+    call pop_sub('atomic.valconf_null')
   end subroutine valconf_null
 
   subroutine valconf_copy(cout, cin)
@@ -88,7 +88,7 @@ contains
     cout%l      = cin%l
     cout%occ    = cin%occ
 
-    call pop_sub()
+    call pop_sub('atomic.valconf_copy')
   end subroutine valconf_copy
 
   subroutine write_valconf(c, s)
@@ -102,7 +102,7 @@ contains
     write(s,'(i2,1x,a2,i1,1x,i1,a1,6(i1,a1,f6.3,a1))') c%z, c%symbol, c%type, c%p, ':',&
          (c%n(j),spec_notation(c%l(j)),c%occ(j,1),',',j=1,c%p)
 
-    call pop_sub()
+    call pop_sub('atomic.write_valconf')
   end subroutine write_valconf
 
   subroutine read_valconf(s, c)
@@ -128,7 +128,7 @@ contains
        end select
     end do
 
-    call pop_sub()
+    call pop_sub('atomic.read_valconf')
   end subroutine read_valconf
 
 
@@ -195,7 +195,7 @@ contains
     SAFE_DEALLOCATE_A(xc)
     SAFE_DEALLOCATE_A(rho)
 
-    call pop_sub()
+    call pop_sub('atomic.atomhxc')
   end subroutine atomhxc
 
 
@@ -489,7 +489,7 @@ contains
   call xc_f90_func_end(x_conf)
   call xc_f90_func_end(c_conf)
 
-  call pop_sub()
+  call pop_sub('atomic.atomxc')
 end subroutine atomxc
 
 
@@ -624,7 +624,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
     V(IR) = V(IR) + DV
   end do
 
-  call pop_sub()
+  call pop_sub('atomic.vhrtre')
   end subroutine vhrtre
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -779,10 +779,11 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   g(i)=y(i)/(M_ONE-t/CNST(12.))
 7 continue
   call nrmlzg(g,s,n)
-  call pop_sub(); return
+  call pop_sub('atomic.egofv')
+  return
 3 ierr = 1
 
-  call pop_sub()
+  call pop_sub('atomic.egofv')
   
   end subroutine egofv
 
@@ -880,7 +881,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   do 6 i=knk,n
   y(i) = y(i)*ratio
 6 continue
-  call pop_sub()
+  call pop_sub('atomic.yofe')
 
   end subroutine yofe
 
@@ -943,7 +944,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   g(i) = g(i)/srnrm
 5 continue
 
-  call pop_sub()
+  call pop_sub('atomic.nrmlzg')
   end subroutine nrmlzg
 
 
@@ -987,7 +988,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   d2=(d2-c1)/(M_ONE-c2)
 3 y2=(-M_ONE)/d2
 
-  call pop_sub()
+  call pop_sub('atomic.bcorgn')
   end subroutine bcorgn
 
 
@@ -1021,7 +1022,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   c3=-((M_ONE-tnp1/M_SIX)/(M_ONE-tnp1/CNST(12.)))
   yn=-((M_ONE-c1/c3)/(dn-c2/c3))
 
-  call pop_sub()
+  call pop_sub('atomic.bcrmax')
 
   end subroutine bcrmax
 
@@ -1079,7 +1080,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   knk=i
 
-  call pop_sub()
+  call pop_sub('atomic.numin')
   end subroutine numin
 
 
@@ -1132,7 +1133,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  the outward integration is now complete                                    !
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  call pop_sub()
+  call pop_sub('atomic.numout')
   end subroutine numout
 
 end module atomic_m

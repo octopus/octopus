@@ -183,7 +183,7 @@ contains
 
     call kpoints_init(sb%kpoints, sb%dim, sb%periodic_dim, sb%rlattice, sb%klattice, geo)
 
-    call pop_sub()
+    call pop_sub('simul_box.simul_box_init')
 
   contains
 
@@ -410,7 +410,7 @@ contains
         nullify(sb%lead_unit_cell)
       end if
 
-      call pop_sub()
+      call pop_sub('simul_box.simul_box_init.read_open_boundaries')
     end subroutine read_open_boundaries
 
 
@@ -550,7 +550,7 @@ contains
       if ((NLEADS < 0) .or. (NLEADS > 2 * MAX_DIM)) &
         call input_error('OpenBoundariesNLeads')
 
-      call pop_sub()
+      call pop_sub('simul_box.simul_box_init.read_misc')
     end subroutine read_misc
 
 
@@ -768,7 +768,7 @@ contains
         end do
       end select
 
-      call pop_sub()
+      call pop_sub('simul_box.simul_box_init.read_box')
     end subroutine read_box
 
     !--------------------------------------------------------------
@@ -797,7 +797,7 @@ contains
         sb%box_offset(1:sb%dim) = sb%box_offset(1)
       end if
 
-      call pop_sub()
+      call pop_sub('simul_box.simul_box_init.read_box_offset')
     end subroutine read_box_offset
 
     ! ------------------------------------------------------------
@@ -889,7 +889,7 @@ contains
       sb%klattice(jdim, idim) = sb%klattice_primitive(jdim, idim)*M_TWO*M_PI/(M_TWO*sb%lsize(idim))
     end forall
     
-    call pop_sub()
+    call pop_sub('simul_box.simul_box_build_lattice')
   end subroutine simul_box_build_lattice
 
   
@@ -987,7 +987,7 @@ contains
       SAFE_DEALLOCATE_A(lead_geo)
 
     end if
-    call pop_sub()
+    call pop_sub('simul_box.simul_box_add_lead_atoms')
   end subroutine simul_box_add_lead_atoms
 
 
@@ -1041,7 +1041,7 @@ contains
 
     end do
 
-    call pop_sub()
+    call pop_sub('simul_box.simul_box_atoms_in_box')
   end subroutine simul_box_atoms_in_box
 
 
@@ -1069,7 +1069,7 @@ contains
     kv(1:3, 2) = dcross_product(rv(:, 3), rv(:, 1))/volume
     kv(1:3, 3) = dcross_product(rv(:, 1), rv(:, 2))/volume    
 
-    call pop_sub()
+    call pop_sub('simul_box.reciprocal_lattice')
   end subroutine reciprocal_lattice
 
 
@@ -1094,7 +1094,7 @@ contains
     SAFE_DEALLOCATE_P(sb%hr_area%interp%ww)
     SAFE_DEALLOCATE_P(sb%hr_area%interp%posi)
 
-    call pop_sub()
+    call pop_sub('simul_box.simul_box_end')
   end subroutine simul_box_end
 
 
@@ -1194,7 +1194,7 @@ contains
       call write_info(5, iunit)
     end if
 
-    call pop_sub()
+    call pop_sub('simul_box.simul_box_write_info')
   end subroutine simul_box_write_info
 
 
@@ -1421,7 +1421,7 @@ contains
       write(iunit, '(a20,a32)')     'lead_restart_dir(R)=', sb%lead_restart_dir(RIGHT)
     end if
 
-    call pop_sub()
+    call pop_sub('simul_box.simul_box_dump')
   end subroutine simul_box_dump
 
 
@@ -1477,7 +1477,7 @@ contains
       call write_fatal(2)
     end if
 
-    call pop_sub()
+    call pop_sub('simul_box.read_lead_unit_cell')
   end subroutine read_lead_unit_cell
 
   ! --------------------------------------------------------------
@@ -1571,7 +1571,7 @@ contains
       end do
     end if
 
-    call pop_sub()
+    call pop_sub('simul_box.simul_box_init_from_file')
   end subroutine simul_box_init_from_file
 
   ! --------------------------------------------------------------
@@ -1624,7 +1624,7 @@ contains
 
     if(simul_box_is_periodic(sbin)) call symmetries_copy(sbin%symm, sbout%symm)
 
-    call pop_sub()
+    call pop_sub('simul_box.simul_box_copy')
   end subroutine simul_box_copy
 
 end module simul_box_m

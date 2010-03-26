@@ -82,7 +82,7 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik)
   SAFE_DEALLOCATE_A(beta_ij)
   SAFE_DEALLOCATE_A(Theta_Fi)
 
-  call pop_sub()
+  call pop_sub('linear_response_inc.Xlr_orth_vector')
 
 end subroutine X(lr_orth_vector)
 
@@ -137,7 +137,7 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
     end do
   end do
 
-  call pop_sub()
+  call pop_sub('linear_response_inc.Xlr_build_dl_rho')
 end subroutine X(lr_build_dl_rho)
 
 
@@ -159,7 +159,7 @@ subroutine X(lr_orth_response)(mesh, st, lr)
     end do
   end do
   
-  call pop_sub()
+  call pop_sub('linear_response_inc.Xlr_orth_response')
 end subroutine X(lr_orth_response)
 
 

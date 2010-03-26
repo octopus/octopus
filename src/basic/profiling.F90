@@ -225,7 +225,7 @@ contains
 
     in_profiling_mode = (prof_vars%mode > 0)
     if(.not.in_profiling_mode) then
-      call pop_sub()
+    call pop_sub('profiling.profiling_init')
       return
     end if
 
@@ -275,7 +275,7 @@ contains
 
     call init_profiles()
 
-    call pop_sub()
+    call pop_sub('profiling.profiling_init')
 
   contains
     ! ---------------------------------------------------------
@@ -301,7 +301,7 @@ contains
       call profile_init(C_PROFILING_LOBPCG_COPY,      'LOBPCG_COPY')
       call profile_init(C_PROFILING_LOBPCG_LOOP,      'LOBPCG_LOOP')
 
-      call pop_sub()
+      call pop_sub('profiling.profiling_init.init_profiles')
     end subroutine init_profiles
 
     ! ---------------------------------------------------------
@@ -322,7 +322,7 @@ contains
 
       if(mpi_grp_is_root(mpi_world)) call io_mkdir(trim(prof_vars%output_dir))
 
-      call pop_sub()
+      call pop_sub('profiling.profiling_init.get_output_dir')
     end subroutine get_output_dir
 
   end subroutine profiling_init
@@ -372,7 +372,7 @@ contains
       call io_close(prof_vars%mem_iunit)
     end if
 
-    call pop_sub()
+    call pop_sub('profiling.profiling_end')
   end subroutine profiling_end
 
 
@@ -411,7 +411,7 @@ contains
     call push_sub('profiling.profile_end')
     this%initialized = .false.
 
-    call pop_sub()
+    call pop_sub('profiling.profile_end')
   end subroutine profile_end
 
 
@@ -422,7 +422,7 @@ contains
     call push_sub('profiling.profile_is_initialized')
     profile_is_initialized = this%initialized
 
-    call pop_sub()
+    call pop_sub('profiling.profile_is_initialized')
   end function profile_is_initialized
 
 
@@ -711,7 +711,8 @@ contains
     if(iunit.lt.0) then
       message(1) = 'Could not write profiling results.'
       call write_warning(1)
-      call pop_sub(); return
+      call pop_sub('profiling.profiling_output')
+      return
     end if
 
     write(iunit, '(2a)')                                                                                    &
@@ -750,7 +751,7 @@ contains
 
     call io_close(iunit)
 
-    call pop_sub()
+    call pop_sub('profiling.profiling_output')
   end subroutine profiling_output
 
 
@@ -783,7 +784,7 @@ contains
     write(str, '(4a,i5,a)') var(1:jj), "(", trim(file), ":", line, ")"
     call compact(str)
 
-    call pop_sub()
+    call pop_sub('profiling.profiling_make_position_str')
   end subroutine profiling_make_position_str
 
 
@@ -808,7 +809,7 @@ contains
     write(prof_vars%mem_iunit, '(f16.6,1x,a,3i16,1x,a)') loct_clock() - prof_vars%start_time, &
          trim(type), size, prof_vars%total_memory, mem, trim(str)
 
-    call pop_sub()
+    call pop_sub('profiling.profiling_memory_log')
   end subroutine profiling_memory_log
 
 
@@ -880,7 +881,7 @@ contains
       end if
     end do
     
-    call pop_sub()
+    call pop_sub('profiling.profiling_memory_allocate')
   end subroutine profiling_memory_allocate
 
 
@@ -900,7 +901,7 @@ contains
       call profiling_memory_log('D ', var, file, line, -size)
     end if
 
-    call pop_sub()
+    call pop_sub('profiling.profiling_memory_deallocate')
   end subroutine profiling_memory_deallocate
  
 

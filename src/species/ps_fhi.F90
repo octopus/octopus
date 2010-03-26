@@ -88,7 +88,7 @@ contains
 
     call ps_cpi_file_to_grid(ps_fhi%cpi_file, ps_fhi%ps_grid)
 
-    call pop_sub()
+    call pop_sub('ps_fhi.ps_fhi_init')
   end subroutine ps_fhi_init
 
   
@@ -138,7 +138,7 @@ contains
     ! Calculate KB-projectors
     call ps_in_grid_kb_projectors(ps_fhi%ps_grid)
 
-    call pop_sub()
+    call pop_sub('ps_fhi.ps_fhi_process')
   end subroutine ps_fhi_process
 
 end module ps_fhi_m

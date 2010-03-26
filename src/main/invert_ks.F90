@@ -130,7 +130,7 @@ contains
 
     call xc_ks_inversion_end(sys%ks%ks_inversion, sys%gr, sys%geo)
 
-    call pop_sub()
+    call pop_sub('invert_ks.invert_ks_run')
     
   contains
 
@@ -195,7 +195,7 @@ contains
       SAFE_DEALLOCATE_A(xx)
       SAFE_DEALLOCATE_A(ff)
 
-      call pop_sub()
+      call pop_sub('invert_ks.invert_ks_run.read_target_rho')
     end subroutine read_target_rho
 
   end subroutine invert_ks_run

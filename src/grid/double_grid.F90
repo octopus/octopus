@@ -120,7 +120,7 @@ contains
 
     call calc_coefficients
 
-    call pop_sub()
+    call pop_sub('double_grid.double_grid_init')
 
     contains
 
@@ -139,7 +139,7 @@ contains
         call interpolation_coefficients(this%npoints, points, M_ZERO, this%co)
 
         SAFE_DEALLOCATE_A(points)
-        call pop_sub()
+        call pop_sub('double_grid.double_grid_init.calc_coefficients')
         
       end subroutine calc_coefficients
 
@@ -150,7 +150,7 @@ contains
  
     call push_sub('double_grid.double_grid_end')
     SAFE_DEALLOCATE_P(this%co)
-    call pop_sub()
+    call pop_sub('double_grid.double_grid_end')
 
   end subroutine double_grid_end
   
@@ -164,7 +164,7 @@ contains
       
     if(this%use_double_grid)  hmax = hmax / this%spacing_divisor    
 
-    call pop_sub()
+    call pop_sub('double_grid.double_grid_get_hmax')
   end function double_grid_get_hmax
 
   FLOAT function double_grid_get_rmax(this, spec, mesh) result(rmax)
@@ -183,7 +183,7 @@ contains
     end if
     nullify(ps)
 
-    call pop_sub()
+    call pop_sub('double_grid.double_grid_get_rmax')
   end function double_grid_get_rmax
 
   integer function double_grid_enlarge(this)
@@ -194,7 +194,7 @@ contains
     double_grid_enlarge = 0 
     if(this%use_double_grid) double_grid_enlarge = this%interpolation_max * this%nn
 
-    call pop_sub()
+    call pop_sub('double_grid.double_grid_enlarge')
   end function double_grid_enlarge
 
 #define profiler double_grid_local_prof

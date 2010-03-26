@@ -113,7 +113,7 @@ contains
 
     call distributed_copy(din%kpt, dout%kpt)
 
-    call pop_sub()
+    call pop_sub('states_dim.states_dim_copy')
   end subroutine states_dim_copy
 
   ! ---------------------------------------------------------
@@ -127,7 +127,7 @@ contains
     SAFE_DEALLOCATE_P(d%kpoints)
     SAFE_DEALLOCATE_P(d%kweights)
 
-    call pop_sub()
+    call pop_sub('states_dim.states_dim_end')
   end subroutine states_dim_end
 
 
@@ -140,7 +140,7 @@ contains
 
     is_spin_up = even(ik)
 
-    call pop_sub()
+    call pop_sub('states_dim.is_spin_up')
   end function is_spin_up
 
 
@@ -153,7 +153,7 @@ contains
 
     is_spin_down = odd(ik)
 
-    call pop_sub()
+    call pop_sub('states_dim.is_spin_down')
   end function is_spin_down
 
   integer function states_dim_get_spin_index(this, iq) result(index)
@@ -168,7 +168,7 @@ contains
       index = 1
     end if
     
-    call pop_sub()
+    call pop_sub('states_dim.states_dim_get_spin_index')
   end function states_dim_get_spin_index
   
   integer function states_dim_get_kpoint_index(this, iq) result(index)
@@ -183,7 +183,7 @@ contains
       index = iq
     end if
     
-    call pop_sub()
+    call pop_sub('states_dim.states_dim_get_kpoint_index')
   end function states_dim_get_kpoint_index
 
   subroutine kpoints_distribute(this, mc)
@@ -193,7 +193,7 @@ contains
     call push_sub('states_dim.kpoints_distribute')
     call distributed_init(this%kpt, this%nik, mc, P_STRATEGY_KPOINTS, "k-points")
 
-    call pop_sub()
+    call pop_sub('states_dim.kpoints_distribute')
   end subroutine kpoints_distribute
   
 #include "states_kpoints_inc.F90"

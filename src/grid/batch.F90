@@ -108,7 +108,7 @@ contains
     SAFE_DEALLOCATE_P(this%states)
     SAFE_DEALLOCATE_P(this%states_linear)
 
-    call pop_sub()
+    call pop_sub('batch.batch_end')
   end subroutine batch_end
 
 
@@ -140,7 +140,7 @@ contains
       nullify(this%states_linear(ist)%zpsi)
     end do
     
-    call pop_sub()
+    call pop_sub('batch.batch_init_empty')
     
   end subroutine batch_init_empty
 
@@ -168,7 +168,7 @@ contains
       nullify(this%states_linear(ist)%zpsi)
     end do
     
-    call pop_sub()
+    call pop_sub('batch.batch_init_empty_linear')
     
   end subroutine batch_init_empty_linear
 
@@ -189,7 +189,7 @@ contains
       end do
     end if
 
-    call pop_sub()
+    call pop_sub('batch.batch_is_ok')
   end function batch_is_ok
 
 
@@ -216,7 +216,7 @@ contains
       if(associated(bin%states_linear(ii)%zpsi)) bout%states_linear(ii)%zpsi => bin%states_linear(ii)%zpsi
     end do
 
-    call pop_sub()
+    call pop_sub('batch.batch_copy')
 
   end subroutine batch_copy
 

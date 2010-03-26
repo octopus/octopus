@@ -181,7 +181,7 @@ contains
     psf%rho_val(1) = linear_extrapolate(psf%rofi(1), psf%rofi(2), psf%rofi(3), &
       psf%rho_val(2), psf%rho_val(3))
 
-    call pop_sub()
+    call pop_sub('psf_psf_file.ps_psf_file_read')
   end subroutine ps_psf_file_read
 
 

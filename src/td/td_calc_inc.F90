@@ -64,7 +64,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, t)
   end do
 
   if(.not. hm%ep%non_local) then
-    call pop_sub()
+  call pop_sub('td_calc_inc.td_calc_tacc')
     return
   end if
 
@@ -127,7 +127,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, t)
 #endif
   acc = acc + x
 
-  call pop_sub()
+  call pop_sub('td_calc_inc.td_calc_tacc')
 end subroutine td_calc_tacc
 
 !! Local Variables:

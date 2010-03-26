@@ -48,7 +48,7 @@ contains
 
     stencil_cube_size_lapl = (2*order+1)**dim
 
-    call pop_sub()
+    call pop_sub('stencil_cube.stencil_cube_size_lapl')
   end function stencil_cube_size_lapl
 
 
@@ -69,7 +69,7 @@ contains
     end if
     stencil_cube_extent = extent
 
-    call pop_sub()
+    call pop_sub('stencil_cube.stencil_cube_extent')
   end function stencil_cube_extent
 
 
@@ -115,7 +115,7 @@ contains
 
     call stencil_init_center(this)
 
-    call pop_sub()
+    call pop_sub('stencil_cube.stencil_cube_get_lapl')
   end subroutine stencil_cube_get_lapl
 
 
@@ -157,7 +157,7 @@ contains
       end do
     end select
 
-    call pop_sub()
+    call pop_sub('stencil_cube.stencil_cube_polynomials_lapl')
   end subroutine stencil_cube_polynomials_lapl
 
 

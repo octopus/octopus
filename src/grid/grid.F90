@@ -186,7 +186,7 @@ contains
 
     call mesh_init_stage_2(gr%mesh, gr%sb, geo, gr%cv, gr%stencil)
 
-    call pop_sub()
+    call pop_sub('grid.grid_init_stage_1')
 
   end subroutine grid_init_stage_1
 
@@ -256,7 +256,7 @@ contains
     ! print info concerning the grid
     call grid_write_info(gr, geo, stdout)
 
-    call pop_sub()
+    call pop_sub('grid.grid_init_stage_2')
   end subroutine grid_init_stage_2
 
 
@@ -300,7 +300,7 @@ contains
 
     call stencil_end(gr%stencil)
 
-    call pop_sub()
+    call pop_sub('grid.grid_end')
   end subroutine grid_end
 
 
@@ -316,7 +316,8 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) then
       if(in_debug_mode) call write_debug_newlines(6)
-      call pop_sub(); return
+      call pop_sub('grid.grid_write_info')
+      return
     end if
 
     call messages_print_stress(iunit, "Grid")
@@ -343,7 +344,7 @@ contains
     end if
     call messages_print_stress(iunit)
 
-    call pop_sub()
+    call pop_sub('grid.grid_write_info')
   end subroutine grid_write_info
 
 
@@ -357,7 +358,7 @@ contains
     SAFE_ALLOCATE(gr%mgrid)
     call multigrid_init(gr%mgrid, geo, gr%cv, gr%mesh, gr%der, gr%stencil)
 
-    call pop_sub()
+    call pop_sub('grid.grid_create_multigrid')
   end subroutine grid_create_multigrid
 
 
@@ -411,7 +412,7 @@ contains
     ! multigrids are not initialized by default
     nullify(grout%mgrid)
 
-    call pop_sub()
+    call pop_sub('grid.grid_create_largergrid')
   end subroutine grid_create_largergrid
 
 end module grid_m

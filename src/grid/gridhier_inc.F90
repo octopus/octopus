@@ -45,7 +45,7 @@ subroutine X(gridhier_init)(this, base_der, np_part_size)
     der => der%coarser
   end do
   
-  call pop_sub()
+  call pop_sub('poisson_multigrid.gridhier_init')
 end subroutine X(gridhier_init)
 
 ! ---------------------------------------------------------
@@ -61,7 +61,7 @@ subroutine X(gridhier_end)(this)
 
   SAFE_DEALLOCATE_P(this%level)
   
-  call pop_sub()
+  call pop_sub('poisson_multigrid.gridhier_end')
 end subroutine X(gridhier_end)
 
 !! Local Variables:

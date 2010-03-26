@@ -72,7 +72,7 @@ contains
     nullify(this%node, this%range, this%num)
     call mpi_grp_init(this%mpi_grp, -1)
 
-    call pop_sub()
+    call pop_sub('distributed.distributed_nullify')
   end subroutine distributed_nullify
   
   subroutine distributed_init(this, total, mc, strategy, tag)
@@ -142,7 +142,7 @@ contains
     end if
 #endif
     
-    call pop_sub()
+    call pop_sub('distributed.distributed_init')
   end subroutine distributed_init
 
   subroutine distributed_copy(in, out)
@@ -180,7 +180,7 @@ contains
       out%num(0:size - 1) = in%num(0:size - 1)
     end if
 
-    call pop_sub()
+    call pop_sub('distributed.distributed_copy')
   end subroutine distributed_copy
 
   subroutine distributed_end(this)
@@ -192,7 +192,7 @@ contains
     SAFE_DEALLOCATE_P(this%range)
     SAFE_DEALLOCATE_P(this%num)
 
-    call pop_sub()
+    call pop_sub('distributed.distributed_end')
   end subroutine distributed_end
 
 end module distributed_m

@@ -170,7 +170,7 @@ subroutine td_init(td, sys, hm)
     call messages_print_stress(stdout)
   end if
 
-  call pop_sub()
+  call pop_sub('td_init.td_init')
 end subroutine td_init
 
 
@@ -185,7 +185,7 @@ subroutine td_end(td)
 
   if(td%dynamics == BO) call scf_end(td%scf)
   
-  call pop_sub()
+  call pop_sub('td_init.td_end')
 end subroutine td_end
 
 !! Local Variables:

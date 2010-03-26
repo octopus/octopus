@@ -261,7 +261,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 
   if(verbose_) call messages_print_stress(stdout)
 
-  call pop_sub()
+  call pop_sub('eigen_cg_inc.Xeigensolver_cg2')
 end subroutine X(eigensolver_cg2)
 
 ! ---------------------------------------------------------
@@ -467,7 +467,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
   SAFE_DEALLOCATE_A(orthogonal)
   if(verbose_) call messages_print_stress(stdout)
 
-  call pop_sub()
+  call pop_sub('eigen_cg_inc.Xeigensolver_cg2_new')
 end subroutine X(eigensolver_cg2_new)
 
 !! Local Variables:

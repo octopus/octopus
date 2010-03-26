@@ -421,7 +421,7 @@ contains
     if(outp%what.ne.0.and.outp%what.ne.output_matrix_elements) &
          call io_function_read_how(sb, outp%how)
 
-    call pop_sub()
+    call pop_sub('output_h_sys.h_sys_output_init')
   end subroutine h_sys_output_init
 
 
@@ -466,7 +466,7 @@ contains
     end if
 #endif
     
-    call pop_sub()
+    call pop_sub('output_h_sys.h_sys_output_all')
   end subroutine h_sys_output_all
 
   subroutine h_sys_output_localization_funct(st, hm, gr, dir, outp, geo)
@@ -556,7 +556,7 @@ contains
 
     SAFE_DEALLOCATE_A(f_loc)
 
-    call pop_sub()
+    call pop_sub('output_h_sys.h_sys_output_localization_funct')
   contains
     ! ---------------------------------------------------------
     subroutine out_basins(ff, filename)
@@ -583,7 +583,7 @@ contains
 
       call basins_end(basins)
 
-      call pop_sub()
+      call pop_sub('output_h_sys.h_sys_output_localization_funct.out_basins')
     end subroutine out_basins
 
   end subroutine h_sys_output_localization_funct
@@ -631,7 +631,7 @@ contains
       pressure(ii) = M_HALF*(M_ONE + pressure(ii)/sqrt(M_ONE + pressure(ii)**2))
     end do
 
-    call pop_sub()
+    call pop_sub('output_h_sys.h_sys_calc_electronic_pressure')
   end subroutine h_sys_calc_electronic_pressure
 
 

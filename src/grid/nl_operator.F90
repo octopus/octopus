@@ -193,7 +193,7 @@ contains
       end if
     end if
 
-    call pop_sub()
+    call pop_sub('nl_operator.nl_operator_global_init')
   end subroutine nl_operator_global_init
 
 
@@ -210,7 +210,7 @@ contains
     if(id == OP_AS)      str = 'AS'
     if(id == OP_BG)      str = 'BG'
     
-    call pop_sub()
+    call pop_sub('nl_operator.op_function_name')
   end function op_function_name
 
 
@@ -227,7 +227,7 @@ contains
 
     op%label = label
 
-    call pop_sub()
+    call pop_sub('nl_operator.nl_operator_init')
   end subroutine nl_operator_init
 
 
@@ -278,7 +278,7 @@ contains
       call loct_pointer_copy(opo%outer%ri,   opi%outer%ri)
     end if
 
-    call pop_sub()
+    call pop_sub('nl_operator.nl_operator_copy')
   end subroutine nl_operator_copy
 
 
@@ -523,7 +523,7 @@ contains
       if(dfunction_global == -1.or.zfunction_global == -1) call write_info(2)
     end if
 
-    call pop_sub()
+    call pop_sub('nl_operator.nl_operator_build')
 
   end subroutine nl_operator_build
 
@@ -566,7 +566,7 @@ contains
       call znl_operator_tune(opt)
     end if
 
-    call pop_sub()
+    call pop_sub('nl_operator.nl_operator_transpose')
   end subroutine nl_operator_transpose
 
   ! ---------------------------------------------------------
@@ -642,7 +642,7 @@ contains
     end if
 #endif
 
-    call pop_sub()
+    call pop_sub('nl_operator.nl_operator_skewadjoint')
   end subroutine nl_operator_skewadjoint
 
 
@@ -720,7 +720,7 @@ contains
     end if
 #endif
 
-    call pop_sub()
+    call pop_sub('nl_operator.nl_operator_selfadjoint')
   end subroutine nl_operator_selfadjoint
 
 
@@ -767,7 +767,7 @@ contains
       end do
     end if
 
-    call pop_sub()
+    call pop_sub('nl_operator.nl_operator_gather')
 
   end subroutine nl_operator_gather
 
@@ -793,7 +793,7 @@ contains
       end if
     end do
 
-    call pop_sub()
+    call pop_sub('nl_operator.nl_operator_scatter')
 
   end subroutine nl_operator_scatter
 
@@ -832,7 +832,7 @@ contains
       end do
     end if
 
-    call pop_sub()
+    call pop_sub('nl_operator.nl_operator_allgather')
 
   end subroutine nl_operator_allgather
 
@@ -881,7 +881,7 @@ contains
       end if
     end if
 
-    call pop_sub()
+    call pop_sub('nl_operator.nl_operator_common_copy')
 
   end subroutine nl_operator_common_copy
 
@@ -924,7 +924,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('nl_operator.nl_operator_translate_indices')
 
   end subroutine nl_operator_translate_indices
 
@@ -980,7 +980,7 @@ contains
     end if
     if(in_debug_mode) call write_debug_newlines(2)
 
-    call pop_sub()
+    call pop_sub('nl_operator.nl_operator_op_to_matrix')
 
   end subroutine nl_operator_op_to_matrix_cmplx
 
@@ -1031,7 +1031,7 @@ contains
     end if
     if(in_debug_mode) call write_debug_newlines(2)
 
-    call pop_sub()
+    call pop_sub('nl_operator.nl_operator_op_to_matrix')
 
   end subroutine nl_operator_op_to_matrix
 
@@ -1059,7 +1059,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('nl_operator.nl_operator_matrix_to_op')
   end subroutine nl_operator_matrix_to_op
 
 
@@ -1105,7 +1105,7 @@ contains
       SAFE_DEALLOCATE_A(aa)
     end if
 
-    call pop_sub()
+    call pop_sub('nl_operator.nl_operator_write')
 
   end subroutine nl_operator_write
 
@@ -1140,7 +1140,7 @@ contains
       SAFE_DEALLOCATE_A(aa)
     end if
 
-    call pop_sub()
+    call pop_sub('nl_operator.nl_operatorT_write')
 
   end subroutine nl_operatorT_write
 
@@ -1170,7 +1170,7 @@ contains
 
     call stencil_end(op%stencil)
 
-    call pop_sub()
+    call pop_sub('nl_operator.nl_operator_end')
   end subroutine nl_operator_end
 
 

@@ -139,7 +139,7 @@ subroutine X(cpmd_propagate)(this, gr, hm, st, iter, dt)
   SAFE_DEALLOCATE_A(xx)
 
   call profiling_out(cpmd_prop)
-  call pop_sub()
+  call pop_sub('cpmd_inc.Xcpmd_propagate')
 
 contains
 
@@ -181,7 +181,7 @@ contains
     SAFE_DEALLOCATE_A(ii)
     SAFE_DEALLOCATE_A(xxi)
 
-    call pop_sub()
+    call pop_sub('cpmd_inc.Xcpmd_propagate.calc_xx')
   end subroutine calc_xx
 
 end subroutine X(cpmd_propagate)
@@ -247,7 +247,7 @@ subroutine X(cpmd_propagate_vel)(this, gr, hm, st, dt)
   SAFE_DEALLOCATE_A(yy)
 
   call profiling_out(cpmd_prop)
-  call pop_sub()
+  call pop_sub('cpmd_inc.Xcpmd_propagate_vel')
 
 contains
 
@@ -264,7 +264,7 @@ contains
     yy = -M_HALF*(cc + transpose(cc))
 
     SAFE_DEALLOCATE_A(cc)
-    call pop_sub()
+    call pop_sub('cpmd_inc.Xcpmd_propagate_vel.calc_yy')
   end subroutine calc_yy
 
 end subroutine X(cpmd_propagate_vel)

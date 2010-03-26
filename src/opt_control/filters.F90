@@ -113,7 +113,8 @@ contains
       no_f = parse_block_n(blk)
 
       if(no_f <= 0) then
-        call pop_sub(); return
+        call pop_sub('filters.filter_init')
+        return
       end if
 
       filter%no_filters = no_f
@@ -134,7 +135,7 @@ contains
       call parse_block_end(blk)
     end if
 
-    call pop_sub()
+    call pop_sub('filters.filter_init')
   end subroutine filter_init
   ! ---------------------------------------------------------
 
@@ -150,7 +151,8 @@ contains
 
     no_f = filter%no_filters
     if(no_f <= 0) then
-      call pop_sub(); return
+      call pop_sub('filters.filter_apply')
+      return
     end if
     
     do i = 1, no_f
@@ -178,7 +180,7 @@ contains
 
     end do
 
-    call pop_sub()
+    call pop_sub('filters.filter_apply')
   end subroutine filter_apply
   ! ---------------------------------------------------------
 
@@ -232,7 +234,7 @@ contains
 
     end do
     
-    call pop_sub()
+    call pop_sub('filter.build_filter')
   end subroutine build_filter
   ! ---------------------------------------------------------
 
@@ -249,7 +251,8 @@ contains
     call push_sub('filters.filter_write')
 
     if(filter%no_filters <= 0) then
-      call pop_sub(); return
+      call pop_sub('filters.filter_write')
+      return
     end if
 
     do kk = 1, filter%no_filters
@@ -266,7 +269,7 @@ contains
       call io_close(iunit)
     end do
 
-    call pop_sub()
+    call pop_sub('filters.filter_write')
   end subroutine filter_write
   ! ---------------------------------------------------------
 
@@ -279,7 +282,8 @@ contains
     call push_sub('filter.filter_end')
 
     if(filter%no_filters <= 0) then
-      call pop_sub(); return
+      call pop_sub('filter.filter_end')
+      return
     end if
 
     do i = 1, filter%no_filters
@@ -290,7 +294,7 @@ contains
     SAFE_DEALLOCATE_P(filter%expression)
     SAFE_DEALLOCATE_P(filter%domain)
 
-    call pop_sub()
+    call pop_sub('filter.filter_end')
   end subroutine filter_end
   ! ---------------------------------------------------------
 
@@ -302,7 +306,7 @@ contains
     call push_sub('filters.filter_number')
     filter_number = filter%no_filters
 
-    call pop_sub()
+    call pop_sub('filters.filter_number')
   end function filter_number
   ! ---------------------------------------------------------
 

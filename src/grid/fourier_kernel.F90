@@ -63,7 +63,7 @@ contains
 
     call cubic_mesh_init(this%kernel, mesh, this%size_fourier)
 
-    call pop_sub()
+    call pop_sub('fourier_kernel.fourier_kernel_init')
   end subroutine fourier_kernel_init
 
 
@@ -74,7 +74,7 @@ contains
     call push_sub('fourier_kernel.fourier_kernel_end')
     call cubic_mesh_end(this%kernel)
 
-    call pop_sub()    
+    call pop_sub('fourier_kernel.fourier_kernel_end')
   end subroutine fourier_kernel_end
 
 
@@ -86,7 +86,7 @@ contains
     call push_sub('fourier_kernel.fourier_kernel_size_real')
     sizes = this%size_real
 
-    call pop_sub()
+    call pop_sub('fourier_kernel.fourier_kernel_size_real')
   end function fourier_kernel_size_real
 
 
@@ -98,7 +98,7 @@ contains
     call push_sub('fourier_kernel.fourier_kernel_size_fourier')
     sizes = this%size_fourier
 
-    call pop_sub()
+    call pop_sub('fourier_kernel.fourier_kernel_size_fourier')
   end function fourier_kernel_size_fourier
 
 
@@ -113,7 +113,7 @@ contains
     call push_sub('fourier_kernel.dfourier_kernel_set_value')
     call dcubic_mesh_set_point(this%kernel, ix, iy, iz, val)
 
-    call pop_sub()
+    call pop_sub('fourier_kernel.dfourier_kernel_set_value')
   end subroutine dfourier_kernel_set_value
 
 
@@ -141,7 +141,7 @@ contains
     call dcubic_mesh_to_mesh(cube, ff)
     call cubic_mesh_end(cube)
 
-    call pop_sub()
+    call pop_sub('fourier_kernel.dfourier_kernel_apply')
   end subroutine dfourier_kernel_apply
 
 end module fourier_kernel_m

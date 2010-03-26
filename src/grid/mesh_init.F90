@@ -137,7 +137,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
   mesh%idx%ll(:) = mesh%idx%nr(2, :) - mesh%idx%nr(1, :) + 1
 
   call profiling_out(mesh_init_prof)
-  call pop_sub()
+  call pop_sub('mesh_init.mesh_init_stage_1')
 
 contains
 
@@ -167,7 +167,7 @@ contains
       call mesh_lxyz_init_from_file(mm, trim(sb%lead_restart_dir(il))//'/'//GS_DIR//'lxyz')
     end do
 
-    call pop_sub()
+    call pop_sub('mesh_init.mesh_init_stage1_mesh_read_lead')
   end subroutine mesh_read_lead
 end subroutine mesh_init_stage_1
 
@@ -442,7 +442,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
 999 continue
 
   call profiling_out(mesh_init_prof)
-  call pop_sub()
+  call pop_sub('mesh_init.mesh_init_stage_2')
 end subroutine mesh_init_stage_2
 
 
@@ -503,7 +503,7 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
   call mesh_pbc_init()
 
   call profiling_out(mesh_init_prof)
-  call pop_sub()
+  call pop_sub('mesh_init.mesh_init_stage_3')
 
 contains
 
@@ -605,7 +605,7 @@ contains
     ASSERT(iin == mesh%np_global)
     ASSERT(ien == mesh%np_part_global)
     
-    call pop_sub()
+    call pop_sub('mesh_init.mesh_init_stage_3.create_x_Lxyz')
   end subroutine create_x_Lxyz
 
 
@@ -779,7 +779,7 @@ contains
     end do
 #endif
 
-    call pop_sub()
+    call pop_sub('mesh_init.mesh_init_stage_3.do_partition')
   end subroutine do_partition
 
 
@@ -958,7 +958,7 @@ contains
       end if
     end if
 
-    call pop_sub()
+    call pop_sub('mesh_init.mesh_init_stage_3.mesh_get_vol_pp')
 
   end subroutine mesh_get_vol_pp
   
@@ -1192,7 +1192,7 @@ contains
 
     end if
 
-    call pop_sub()
+    call pop_sub('mesh_init.mesh_init_stage_3.pbc_init')
   end subroutine mesh_pbc_init
 
 end subroutine mesh_init_stage_3
@@ -1475,7 +1475,7 @@ subroutine mesh_partition(mesh, lapl_stencil, part)
   ASSERT(all(part(1:mesh%np_global) <= npart))
 
   call stencil_end(stencil)
-  call pop_sub()
+  call pop_sub('mesh_init.mesh_partition')
   call profiling_out(prof)
 
 end subroutine mesh_partition
@@ -1564,7 +1564,7 @@ subroutine mesh_partition_boundaries(mesh, stencil, part)
 
   call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
 
-  call pop_sub()
+  call pop_sub('mesh_init.mesh_partition_boundaries')
 
 end subroutine mesh_partition_boundaries
 

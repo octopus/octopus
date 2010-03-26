@@ -126,7 +126,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   SAFE_DEALLOCATE_A(dd)
 
   call profiling_out(prof)
-  call pop_sub()
+  call pop_sub('mesh_function_inc.Xmf_dotp_batch')
 end subroutine X(mesh_batch_dotp_matrix)
 
 !-----------------------------------------------------------------
@@ -232,7 +232,7 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
 #endif
 
   call profiling_out(prof)
-  call pop_sub()
+  call pop_sub('mesh_function_inc.Xmf_dotp_batch')
 end subroutine X(mesh_batch_dotp_self)
 
 !-----------------------------------------------------------------

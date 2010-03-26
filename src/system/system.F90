@@ -99,7 +99,7 @@ contains
     !print the mesh information if it is required
     call print_r()
 
-    call pop_sub()
+    call pop_sub('system.system_init')
 
   contains
 
@@ -124,7 +124,7 @@ contains
       call multicomm_init(sys%mc, calc_mode_parallel_mask(), calc_mode_default_parallel_mask(), mpi_world%size, index_dim, &
          index_range, (/ 5000, 1, 1, 1 /))
 
-      call pop_sub()
+      call pop_sub('system.system_init.parallel_init')
     end subroutine parallel_init
 
     subroutine print_r()
@@ -142,7 +142,7 @@ contains
         end do
       end if
 
-      call pop_sub()
+      call pop_sub('system.system_init.print_r')      
     end subroutine print_r
     
   end subroutine system_init
@@ -171,7 +171,7 @@ contains
     call grid_end(sys%gr)
     SAFE_DEALLOCATE_P(sys%gr);  nullify(sys%gr)
 
-    call pop_sub()
+    call pop_sub('system.system_end')
   end subroutine system_end
 
 
@@ -189,7 +189,7 @@ contains
     call states_fermi(sys%st, sys%gr%mesh)                             ! occupations
     call total_energy(hm, sys%gr, sys%st, -1)
 
-    call pop_sub()
+    call pop_sub('system.system_h_setup')
   end subroutine system_h_setup
 
 end module system_m

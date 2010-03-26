@@ -115,7 +115,7 @@ contains
     call states_deallocate_wfns(sys%st)
     call states_deallocate_free_states(sys%st, sys%gr)
 
-    call pop_sub()
+    call pop_sub('ground_state.ground_state_run')
   end subroutine ground_state_run
 
 end module ground_state_m

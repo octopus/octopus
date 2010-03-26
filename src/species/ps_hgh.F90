@@ -134,7 +134,7 @@ contains
     SAFE_ALLOCATE(psp%eigen(1:psp%conf%p))
     psp%rphi = M_ZERO; psp%eigen = M_ZERO
 
-    call pop_sub()
+    call pop_sub('ps_hgh.hgh_init')
   end subroutine hgh_init
 
 
@@ -153,7 +153,7 @@ contains
     SAFE_DEALLOCATE_P(psp%eigen)
     call logrid_end(psp%g)
 
-    call pop_sub()
+    call pop_sub('ps_hgh.hgh_end')
   end subroutine hgh_end
 
 
@@ -195,7 +195,7 @@ contains
     ! Define the KB-projector cut-off radii
     call get_cutoff_radii(psp)
 
-    call pop_sub()
+    call pop_sub('ps_hgh.hgh_process')
   end subroutine hgh_process
 
 
@@ -229,13 +229,15 @@ contains
     if(j<1) read(line, *, iostat=iostat) params%atom_name, params%z_val, params%rlocal
     if( iostat.ne.0 ) then
       load_params = 1
-      call pop_sub(); return
+      call pop_sub('ps_hgh.load_params')
+      return
     end if
 
     read(unit,'(a)', iostat = iostat) line
     if(iostat .ne. 0) then
       load_params = 0
-      call pop_sub(); return
+      call pop_sub('ps_hgh.load_params')
+      return
     end if
     iostat = 1; j = 4
     do while((iostat .ne. 0) .and. (j > 0))
@@ -244,7 +246,8 @@ contains
     end do
     if(j < 0) then
       load_params = 2
-      call pop_sub(); return
+      call pop_sub('ps_hgh.load_params')
+      return
     end if
 
     kloop: do k = 1, 3
@@ -298,7 +301,7 @@ contains
     end do
 
     load_params = 0
-    call pop_sub()
+    call pop_sub('ps_hgh.load_params')
   end function load_params
 
 
@@ -324,7 +327,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('ps_hgh.get_cutoff_radii')
   end subroutine get_cutoff_radii
 
 
@@ -343,14 +346,15 @@ contains
 
     if(r < CNST(1.0e-7)) then
       vlocalr_scalar = - (M_TWO * p%z_val)/(sqrt(M_TWO*M_Pi)*p%rlocal) + p%c(1)
-      call pop_sub(); return
+      call pop_sub('ps_hgh.vlocalr_scalar')
+      return
     end if
 
     vlocalr_scalar = - (p%z_val/r)*loct_erf(r1/sqrt(M_TWO))   &
       + exp( -M_HALF*r2 ) *    &
       ( p%c(1) + p%c(2)*r2 + p%c(3)*r4 + p%c(4)*r6 )
 
-    call pop_sub()
+    call pop_sub('ps_hgh.vlocalr_scalar')
   end function vlocalr_scalar
 
 
@@ -369,7 +373,7 @@ contains
       vlocalr_vector(i) = vlocalr_scalar(r(i), p)
     end do
 
-    call pop_sub()
+    call pop_sub('ps_hgh.vlocalr_vector')
   end function vlocalr_vector
 
 
@@ -390,7 +394,7 @@ contains
       ( p%c(1) + p%c(2)*(M_THREE - g2) + p%c(3)*(CNST(15.0) - M_TEN*g2 + g4) + &
       p%c(4)*(CNST(105.0) -CNST(105.0)*g2 + CNST(21.0)*g4 - g6) )
 
-    call pop_sub()
+    call pop_sub('ps_hgh.vlocalg')
   end function vlocalg
 
 
@@ -416,7 +420,7 @@ contains
     projectorr_scalar = sqrt(M_TWO) * rr * exp(-r**2/(M_TWO*p%rc(l)**2)) / &
       (  p%rc(l)**(l + real(4*i-1, REAL_PRECISION)/M_TWO) * x )
 
-    call pop_sub()
+    call pop_sub('ps_hgh.projectorr_scalar')
   end function projectorr_scalar
 
 
@@ -436,7 +440,7 @@ contains
       projectorr_vector(j) = projectorr_scalar(r(j), p, i, l)
     end do
 
-    call pop_sub()
+    call pop_sub('ps_hgh.projectorr_vector')
   end function projectorr_vector
 
 
@@ -499,7 +503,7 @@ contains
       ! This should be checked. Probably will not be needed in an near future...
     end select
 
-    call pop_sub()
+    call pop_sub('ps_hgh.projectorg')
   end function projectorg
 
 
@@ -624,7 +628,7 @@ contains
     SAFE_DEALLOCATE_A(rho)
     SAFE_DEALLOCATE_A(ve)
 
-    call pop_sub()
+    call pop_sub('ps_hgh.solve_schroedinger')
   end subroutine solve_schroedinger
 
 
@@ -683,7 +687,7 @@ contains
     call io_close(hgh_unit); call io_close(loc_unit); call io_close(wav_unit)
     call io_close(dat_unit); call io_close(kbp_unit)
 
-    call pop_sub()
+    call pop_sub('ps_hgh.hgh_debug')
   end subroutine hgh_debug
 
 end module ps_hgh_m

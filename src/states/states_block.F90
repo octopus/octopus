@@ -134,7 +134,7 @@ contains
       end if
     end do
 
-    call pop_sub()
+    call pop_sub('states.states_block_local_idx')
   end subroutine states_block_local_idx
 
 

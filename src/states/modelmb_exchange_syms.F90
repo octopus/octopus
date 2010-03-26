@@ -299,7 +299,7 @@ contains
     SAFE_DEALLOCATE_A(ix)
     SAFE_DEALLOCATE_A(ixp)
 
-    call pop_sub()
+    call pop_sub('states.modelmb_sym_states')
   end subroutine modelmb_sym_state
   ! ---------------------------------------------------------
 

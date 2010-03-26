@@ -262,7 +262,7 @@ contains
     nullify(der%to_coarser)
     nullify(der%to_finer)
 
-    call pop_sub()
+    call pop_sub('derivatives.derivatives_init')
   end subroutine derivatives_init
 
 
@@ -288,7 +288,7 @@ contains
     nullify(der%to_coarser)
     nullify(der%to_finer)
 
-    call pop_sub()
+    call pop_sub('derivatives.derivatives_end')
   end subroutine derivatives_end
 
 
@@ -312,7 +312,7 @@ contains
         extent = stencil_cube_extent(dir, der%order)
       end select
       
-    call pop_sub()
+    call pop_sub('derivatives.stencil_extent')
   end function derivatives_stencil_extent
 
 
@@ -337,7 +337,7 @@ contains
       call stencil_starplus_get_lapl(der%lapl%stencil, der%dim, der%order)
     end select
 
-    call pop_sub()
+    call pop_sub('derivatives.derivatives_get_stencil_lapl')
 
   end subroutine derivatives_get_stencil_lapl
 
@@ -355,7 +355,7 @@ contains
     ! the Laplacian is a real operator
     call dnl_operator_operate_diag(der%lapl, lapl)
 
-    call pop_sub()
+    call pop_sub('derivatives.derivatives_lapl_diag')
 
   end subroutine derivatives_lapl_diag
 
@@ -389,7 +389,7 @@ contains
       end select
     end do
 
-    call pop_sub()
+    call pop_sub('derivatives.derivatives_get_stencil_grad')
 
   end subroutine derivatives_get_stencil_grad
 
@@ -502,7 +502,7 @@ contains
       call nl_operator_end(auxop)
     end if
 
-    call pop_sub()
+    call pop_sub('derivatives.derivatives_build')
 
   contains
 
@@ -528,7 +528,7 @@ contains
         end do
       end do
 
-      call pop_sub()
+      call pop_sub('derivatives.derivatives_build.get_rhs_lapl')
     end subroutine get_rhs_lapl
 
     ! ---------------------------------------------------------
@@ -552,7 +552,7 @@ contains
         if(this_one) rhs(j) = M_ONE
       end do
 
-      call pop_sub()
+      call pop_sub('derivatives.derivatives_build.get_rhs_grad')
     end subroutine get_rhs_grad
 
   end subroutine derivatives_build
@@ -628,7 +628,7 @@ contains
     SAFE_DEALLOCATE_A(sol)
     SAFE_DEALLOCATE_A(powers)
 
-    call pop_sub()
+    call pop_sub('derivatives.derivatives_make_discretization')
   end subroutine derivatives_make_discretization
 
 
@@ -641,7 +641,7 @@ contains
 
     overlap = this%comm_method /= BLOCKING  
 
-    call pop_sub()
+    call pop_sub('derivatives.derivatives_overlap')
   end function derivatives_overlap
 #endif
   

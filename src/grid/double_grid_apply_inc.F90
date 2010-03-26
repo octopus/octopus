@@ -165,7 +165,7 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
 
   nullify(ps)
 
-  call pop_sub()
+  call pop_sub('double_grid_apply.double_grid_apply')
 
 end subroutine double_grid_apply
 

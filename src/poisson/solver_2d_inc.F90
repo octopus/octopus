@@ -32,7 +32,7 @@ subroutine poisson2D_init(this)
     call poisson_fft_build_2d_2d(this%der%mesh)
   end select
 
-  call pop_sub()
+  call pop_sub('poisson2D.poisson2D_init')
 
 end subroutine poisson2D_init
 
@@ -95,7 +95,7 @@ subroutine poisson2D_solve(this, pot, rho)
   end if
 #endif
 
-  call pop_sub()
+  call pop_sub('poisson2D.poisson2D_solve')
 end subroutine poisson2D_solve
 
 !! Local Variables:

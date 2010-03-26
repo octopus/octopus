@@ -157,7 +157,7 @@ contains
     ! check norm of rphi
     call ps_upf_check_rphi(ps_upf)
 
-    call pop_sub()
+    call pop_sub('ps_upf.ps_upf_init')
   end subroutine ps_upf_init
 
   ! ---------------------------------------------------------
@@ -183,7 +183,7 @@ contains
     SAFE_DEALLOCATE_P(ps_upf%rho)
     SAFE_DEALLOCATE_P(ps_upf%proj_j)
 
-    call pop_sub()
+    call pop_sub('ps_upf.ps_upf_end')
   end subroutine ps_upf_end
 
   ! ---------------------------------------------------------
@@ -328,7 +328,7 @@ contains
       nullify(ps_upf%proj_j)
     end if
 
-    call pop_sub()
+    call pop_sub('ps_upf.ps_upf_file_read')
   end subroutine ps_upf_file_read
 
   subroutine init_tag(unit, string, go_back)
@@ -354,7 +354,7 @@ contains
       if (string_matches("<"//string//">", string2) ) exit
     end do
     
-    call pop_sub()
+    call pop_sub('ps_upf.init_tag')
   end subroutine init_tag
 
   logical function tag_isdef(unit, string)
@@ -382,7 +382,7 @@ contains
       end if
     end do
 
-    call pop_sub()
+    call pop_sub('ps_upf.tag_isdef')
   end function tag_isdef
 
   subroutine check_end_tag(unit, string)
@@ -400,7 +400,7 @@ contains
       call write_fatal(1)
     end if
 
-    call pop_sub()
+    call pop_sub('ps_upf.check_end_tag')
   end subroutine check_end_tag
 
   logical function string_matches(string1, string2)
@@ -452,7 +452,7 @@ contains
       ps_upf%kb_radius(i) = ps_upf%r(ir + 1)
     end do
     
-    call pop_sub()
+    call pop_sub('ps_upf.ps_upf_cutoff_radii')
   end subroutine ps_upf_cutoff_radii
 
 
@@ -477,7 +477,7 @@ contains
       end if
     end do
 
-    call pop_sub()
+    call pop_sub('ps_upf.ps_upf_check_rphi')
   end subroutine ps_upf_check_rphi
 
 end module ps_upf_m

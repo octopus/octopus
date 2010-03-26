@@ -286,7 +286,7 @@ contains
       units_from_atomic(units_inp%length, rmin * M_HALF), scf%lmm_r)
     scf%lmm_r = units_to_atomic(units_inp%length, scf%lmm_r)
 
-    call pop_sub()
+    call pop_sub('scf.scf_init')
   end subroutine scf_init
 
 
@@ -299,7 +299,7 @@ contains
     call eigensolver_end(scf%eigens)
     call mix_end(scf%smix)
 
-    call pop_sub()
+    call pop_sub('scf.scf_end')
   end subroutine scf_end
 
 
@@ -311,7 +311,7 @@ contains
 
     call mix_clear(scf%smix)
 
-    call pop_sub()
+    call pop_sub('scf.scf_mix_clear')
   end subroutine scf_mix_clear
 
 
@@ -589,7 +589,7 @@ contains
       call states_degeneracy_matrix(st)
     end if
 
-    call pop_sub()
+    call pop_sub('scf.scf_run')
 
   contains
 
@@ -672,7 +672,7 @@ contains
         call write_info(1)
       end if
 
-      call pop_sub()
+      call pop_sub('scf.scf_run.scf_write_iter')
     end subroutine scf_write_iter
 
 
@@ -795,7 +795,7 @@ contains
         call io_close(iunit)
       end if
 
-      call pop_sub()
+      call pop_sub('scf.scf_run.scf_write_static')
     end subroutine scf_write_static
 
 
@@ -842,7 +842,7 @@ contains
       
       SAFE_DEALLOCATE_A(lmm)
 
-      call pop_sub()
+      call pop_sub('scf.scf_run.write_magnetic_moments')
     end subroutine write_magnetic_moments
 
   end subroutine scf_run

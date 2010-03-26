@@ -56,7 +56,7 @@ subroutine X(ode_solver_init)(os)
 
   call X(ode_solver_create)(os)
 
-  call pop_sub()
+  call pop_sub('ode_solver_inc.ode_solver_init')
 end subroutine X(ode_solver_init)
 
 
@@ -90,7 +90,7 @@ subroutine X(ode_solver_create)(os)
   SAFE_ALLOCATE(os%c(1:os%vsize))
   SAFE_ALLOCATE(os%e(1:os%vsize))
 
-  call pop_sub()
+  call pop_sub('ode_solver_inc.Xode_solver_create')
 end subroutine X(ode_solver_create)
 
 
@@ -143,7 +143,7 @@ subroutine X(ode_solver_run)(os, func, startval, solutionp, solutionvec)
   end if
 
 
-  call pop_sub()
+  call pop_sub('ode_solver_inc.Xode_solver_run')
 end subroutine X(ode_solver_run)
 
 
@@ -209,7 +209,7 @@ subroutine X(ode_step)(os, func, startval, solutionp, solutionvec)
   SAFE_DEALLOCATE_A(yn)
   SAFE_DEALLOCATE_A(y0)
 
-  call pop_sub()
+  call pop_sub('ode_solver_inc.Xode_step')
 end subroutine X(ode_step)
 
 
@@ -225,7 +225,7 @@ subroutine X(ode_solver_end)(os)
   SAFE_DEALLOCATE_P(os%c)
   SAFE_DEALLOCATE_P(os%e)
 
-  call pop_sub()
+  call pop_sub('ode_solver_inc.Xode_solver_end')
 end subroutine X(ode_solver_end)
 
 

@@ -60,7 +60,7 @@ contains
     SAFE_ALLOCATE(this%map(1:mesh%np))
     this%map(1:mesh%np) = -1
 
-    call pop_sub()
+    call pop_sub('basins.basins_init')
   end subroutine basins_init
 
 
@@ -80,7 +80,7 @@ contains
       SAFE_DEALLOCATE_P(this%population);   nullify(this%population)
     end if
     
-    call pop_sub()
+    call pop_sub('basins.basins_end')
   end subroutine basins_end
 
 
@@ -117,7 +117,7 @@ contains
 
     call analyze()
 
-    call pop_sub()
+    call pop_sub('basins.basins_analyze')
   contains
 
     !----------------------------------------------------------------
@@ -130,7 +130,8 @@ contains
 
       if(this%map(ii) >= 0) then
         color = this%map(ii)
-        call pop_sub(); return
+        call pop_sub('basins.basins_analyze.steep_fill')
+        return
       end if
       this%map(ii) = -2
 
@@ -147,7 +148,7 @@ contains
       end if
       this%map(ii) = color
 
-      call pop_sub()
+      call pop_sub('basins.basins_analyze.steep_fill')
     end function steep_fill
 
 
@@ -196,7 +197,7 @@ contains
         end do
       end do     
 
-      call pop_sub()
+      call pop_sub('basins.basins_analyze.get_max')
     end function get_max
 
 
@@ -240,7 +241,7 @@ contains
         this%value(ii)    = f_max
       end do
 
-      call pop_sub()
+      call pop_sub('basins.basins_analyze.analyze')
     end subroutine analyze
 
   end subroutine basins_analyze
@@ -270,7 +271,7 @@ contains
       write(iunit, '(a,f12.6)') '  population = ', this%population(ii)
     end do
 
-    call pop_sub()
+    call pop_sub('basins.basins_write')
   end subroutine basins_write
 
 end module basins_m

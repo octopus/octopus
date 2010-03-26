@@ -91,7 +91,7 @@ contains
 
     if(iand(family, XC_FAMILY_KS_INVERSION).eq.0) then
       ks_inv%level = XC_KS_INVERSION_NONE
-      call pop_sub()
+    call pop_sub('xc_ks_inversion.xc_ks_inversion_init')
       return
     end if
 
@@ -149,7 +149,7 @@ contains
       call eigensolver_init(ks_inv%eigensolver, gr, ks_inv%aux_st)
     end if
 
-    call pop_sub()
+    call pop_sub('xc_ks_inversion.xc_ks_inversion_init')
   end subroutine xc_ks_inversion_init
 
 
@@ -168,7 +168,7 @@ contains
       call states_end(ks_inv%aux_st)
     end if
 
-    call pop_sub()
+    call pop_sub('xc_ks_inversion.xc_ks_inversion_end')
   end subroutine xc_ks_inversion_end
 
 
@@ -182,7 +182,7 @@ contains
     call push_sub('xc_ks_inversion.xc_ks_inversion_write_info')
     call messages_print_var_option(iunit, 'KS_Inversion_Level', ks_inversion%level)
 
-    call pop_sub()
+    call pop_sub('xc_ks_inversion.xc_ks_inversion_write_info')
   end subroutine xc_ks_inversion_write_info
 
 
@@ -228,7 +228,7 @@ contains
     SAFE_DEALLOCATE_A(sqrtrho)
     SAFE_DEALLOCATE_A(laplace)
 
-    call pop_sub()
+    call pop_sub('xc_ks_inversion.invertks_2part')
   end subroutine invertks_2part
 
 
@@ -335,7 +335,7 @@ contains
     SAFE_DEALLOCATE_A(vhxc_out)
     SAFE_DEALLOCATE_A(vhxc_mix)
 
-    call pop_sub()
+    call pop_sub('xc_ks_inversion.invertks_iter')
 
   end subroutine invertks_iter
 
@@ -513,7 +513,7 @@ contains
     SAFE_DEALLOCATE_A(vxc_mix)
     SAFE_DEALLOCATE_A(rho)
     
-    call pop_sub()
+    call pop_sub('xc_ks_inversion.invertvxc_iter')
 
   end subroutine invertvxc_iter
 
@@ -607,7 +607,7 @@ contains
     !call flush(200)
 #endif
 
-    call pop_sub()
+    call pop_sub('xc_ks_inversion.precond_kiks')
   
   end subroutine precond_kiks
 

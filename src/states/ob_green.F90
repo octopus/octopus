@@ -119,7 +119,7 @@ contains
       call lalg_trmm(np, np, 'L', 'T', 'R', M_z1, offdiag, self_energy)
     end if
 
-    call pop_sub()
+    call pop_sub('ob_green.lead_self_energy')
   end subroutine lead_self_energy
 
 
@@ -153,7 +153,7 @@ contains
       end if
     end if
 
-    call pop_sub()
+    call pop_sub('ob_green.fix_green')
   end subroutine fix_green
 
 
@@ -198,7 +198,7 @@ contains
     SAFE_DEALLOCATE_A(tmp1)
     SAFE_DEALLOCATE_A(tmp2)
 
-    call pop_sub()
+    call pop_sub('ob_green.calc_residual_green')
   end function calc_residual_green
 
 
@@ -296,7 +296,7 @@ contains
     SAFE_DEALLOCATE_A(tmp2)
     SAFE_DEALLOCATE_A(tmp3)
 
-    call pop_sub()
+    call pop_sub('ob_green.lead_green_sancho')
   end subroutine lead_green_sancho
 
 
@@ -349,7 +349,7 @@ contains
     SAFE_DEALLOCATE_A(x1)
     SAFE_DEALLOCATE_A(x2)
 
-    call pop_sub()
+    call pop_sub('ob_green.create_moeb_trans_matrix')
   end subroutine create_moeb_trans_matrix
 
   
@@ -390,7 +390,7 @@ contains
       v(1:np, 1:np, intf%nblocks) = offdiag(1:np, ni+1:ni+np)
     end if
 
-    call pop_sub()
+    call pop_sub('ob_green.extract_sub_matrices')
   end subroutine extract_sub_matrices
 
 
@@ -466,7 +466,7 @@ contains
     SAFE_DEALLOCATE_A(h)
     SAFE_DEALLOCATE_A(v)
 
-    call pop_sub()
+    call pop_sub('ob_green.lead_green_umerski')
   end subroutine lead_green_umerski
 
 end module ob_green_m

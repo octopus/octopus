@@ -158,7 +158,7 @@ contains
     intf%index_range(1) = intf%index(1)
     intf%index_range(2) = intf%index(intf%np_uc)
 
-    call pop_sub()
+    call pop_sub('ob_interface.interface_init')
   end subroutine interface_init
 
 
@@ -193,7 +193,7 @@ contains
       end do
     end if
 
-    call pop_sub()
+    call pop_sub('ob_interface.member_of_interface')
   end function member_of_interface
 
 
@@ -209,7 +209,7 @@ contains
 
     intf_wf(1:intf%np_uc) = zpsi(intf%index(1:intf%np_uc))
 
-    call pop_sub()
+    call pop_sub('ob_interface.get_intf_wf')
   end subroutine get_intf_wf
 
 
@@ -225,7 +225,7 @@ contains
 
     zpsi(intf%index(1:intf%np_uc)) = intf_wf(1:intf%np_uc)
 
-    call pop_sub()
+    call pop_sub('ob_interface.put_intf_wf')
   end subroutine put_intf_wf
 
 
@@ -254,7 +254,7 @@ contains
     SAFE_DEALLOCATE_A(intf_wf)
     SAFE_DEALLOCATE_A(op_intf_wf)
 
-    call pop_sub()
+    call pop_sub('ob_interface.interface_apply_op')
   end subroutine interface_apply_op
 
 
@@ -270,7 +270,7 @@ contains
       ' interface: ', intf%np_uc
     call write_info(1, iunit)
 
-    call pop_sub()
+    call pop_sub('ob_interface.interface_write_info')
   end subroutine interface_write_info
 
 
@@ -283,7 +283,7 @@ contains
 
     SAFE_DEALLOCATE_P(intf%index)
 
-    call pop_sub()
+    call pop_sub('ob_interface.intface_end')
   end subroutine interface_end
 
   ! --------------------------------------------------------------
@@ -306,7 +306,7 @@ contains
       lead_unit_cell_extent = -1
     end if
 
-    call pop_sub()
+    call pop_sub('simul_box.lead_unit_cell_extent')
   end function lead_unit_cell_extent
 
 end module ob_interface_m

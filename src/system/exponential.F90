@@ -304,7 +304,7 @@ contains
     end select
 
     call profiling_out(exp_prof)
-    call pop_sub()
+    call pop_sub('exponential.exponential_td')
   contains
 
     ! ---------------------------------------------------------
@@ -367,7 +367,7 @@ contains
       SAFE_DEALLOCATE_A(hzpsi1)
 
       if(present(order)) order = te%exp_order
-      call pop_sub()
+      call pop_sub('exponential.taylor_series')
     end subroutine taylor_series
     ! ---------------------------------------------------------
 
@@ -421,7 +421,7 @@ contains
       SAFE_DEALLOCATE_A(zpsi1)
 
       if(present(order)) order = te%exp_order
-      call pop_sub()
+      call pop_sub('exponential.cheby')
     end subroutine cheby
     ! ---------------------------------------------------------
 
@@ -563,7 +563,7 @@ contains
       SAFE_DEALLOCATE_A(expo)
       SAFE_DEALLOCATE_A(tmp)
       SAFE_DEALLOCATE_A(psi)
-      call pop_sub()
+      call pop_sub('exponential.lanczos')
     end subroutine lanczos
     ! ---------------------------------------------------------
 
@@ -583,7 +583,7 @@ contains
       call zexp_vlpsi (der%mesh, hm, zpsi, ik, time, -M_zI*deltat/M_TWO)
 
       if(present(order)) order = 0
-      call pop_sub()
+      call pop_sub('exponential.split')
     end subroutine split
     ! ---------------------------------------------------------
 
@@ -612,7 +612,7 @@ contains
       end do
 
       if(present(order)) order = 0
-      call pop_sub()
+      call pop_sub('exponential.suzuki')
     end subroutine suzuki
     ! ---------------------------------------------------------
 
@@ -715,7 +715,7 @@ contains
       SAFE_DEALLOCATE_A(hpsi1)
       
       call profiling_out(prof)
-      call pop_sub()
+      call pop_sub('exponential.taylor_series_batch')
     end subroutine taylor_series_batch
     
   end subroutine exponential_apply_batch
@@ -826,7 +826,7 @@ contains
 
     if(present(order)) order = te%exp_order*psi%d%nik*psi%nst ! This should be the correct number
 
-    call pop_sub()
+    call pop_sub('exponential.exponential_apply_all')
   end subroutine exponential_apply_all
 
 end module exponential_m

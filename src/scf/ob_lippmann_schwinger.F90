@@ -177,7 +177,7 @@ contains
       SAFE_DEALLOCATE_P(lead(il)%self_energy)
     end do
 
-    call pop_sub()
+    call pop_sub('ob_lippmann_schwinger.lippmann_schwinger')
   end subroutine lippmann_schwinger
 
 
@@ -235,7 +235,7 @@ contains
     end do
     
     SAFE_DEALLOCATE_A(tmp)
-    call pop_sub()
+    call pop_sub('ob_lippmann_schwinger.calc_rhs')
   end subroutine calc_rhs
 
 
@@ -259,7 +259,7 @@ contains
     end do
     dotu = dot
 
-!    call pop_sub()
+!    call pop_sub('ob_lippmann_schwinger.dotu')
 
   contains
 
@@ -291,7 +291,7 @@ contains
     end do
     nrm2 = nrm
 
-!    call pop_sub()
+!    call pop_sub('ob_lippmann_schwinger.nrm2')
 
   contains
 
@@ -352,7 +352,7 @@ contains
 
     SAFE_DEALLOCATE_A(tmp_x)
     SAFE_DEALLOCATE_A(tmp_y)
-!    call pop_sub()
+!    call pop_sub('ob_lippmann_schwinger.lhs')
 
   contains
 
@@ -414,7 +414,7 @@ contains
 
     SAFE_DEALLOCATE_A(tmp_x)
     SAFE_DEALLOCATE_A(tmp_y)
-!    call pop_sub()
+!    call pop_sub('ob_lippmann_schwinger.lhs_t')
 
   contains
 
@@ -445,7 +445,7 @@ contains
     call lhs(x, y)
     call lhs_t(y)
 
-!    call pop_sub()
+!    call pop_sub('ob_lippmann_schwinger.lhs_symmetrized')
   end subroutine lhs_symmetrized
 
 
@@ -461,7 +461,7 @@ contains
 
     y(:) = x(:)
 
-!    call pop_sub()
+!    call pop_sub('ob_lippmann_schwinger.precond')
   end subroutine precond
 end module ob_lippmann_schwinger_m
 

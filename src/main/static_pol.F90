@@ -368,7 +368,7 @@ contains
     SAFE_DEALLOCATE_A(tmp_rho)
     SAFE_DEALLOCATE_A(dipole)
     call end_()
-    call pop_sub()
+    call pop_sub('static_pol.static_pol_run')
 
   contains
 
@@ -453,7 +453,7 @@ contains
         verbosity = VERB_COMPACT
       endif
 
-      call pop_sub()
+      call pop_sub('static_pol.static_pol_run.init_')
     end subroutine init_
 
     ! ---------------------------------------------------------
@@ -463,7 +463,7 @@ contains
 
       call states_deallocate_wfns(sys%st)
 
-      call pop_sub()
+      call pop_sub('static_pol.end_')
     end subroutine end_
   
 
@@ -485,7 +485,7 @@ contains
         SAFE_ALLOCATE(lr_elfd(1:gr%mesh%np, 1:st%d%nspin))
       end if
       
-      call pop_sub()
+      call pop_sub('static_pol.output_init_')
     end subroutine output_init_
 
 
@@ -596,7 +596,7 @@ contains
 
       end if
 
-      call pop_sub()
+      call pop_sub('static_pol.output_cycle_')
     end subroutine output_cycle_
 
 
@@ -683,7 +683,7 @@ contains
         SAFE_DEALLOCATE_A(elfd)
       end if
 
-      call pop_sub()
+      call pop_sub('static_pol.output_end_')
     end subroutine output_end_
 
   end subroutine static_pol_run

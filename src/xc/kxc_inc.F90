@@ -46,7 +46,8 @@ subroutine xc_get_kxc(xcs, mesh, rho, ispin, kxc)
   end if
 
   if(xcs%kernel_family == XC_FAMILY_NONE) then
-    call pop_sub(); return ! nothing to do
+    call pop_sub('kxc_inc.xc_get_kxc')
+    return
   endif
 
   ! really start
@@ -83,7 +84,7 @@ subroutine xc_get_kxc(xcs, mesh, rho, ispin, kxc)
   ! clean up allocated memory
   call lda_end()
 
-  call pop_sub()
+  call pop_sub('kxc_inc.xc_get_kxc')
 
 contains
 
@@ -120,7 +121,7 @@ contains
       end select
     end do
 
-    call pop_sub()
+    call pop_sub('kxc_inc.xc_get_kxc.lda_init')
   end subroutine lda_init
 
 
@@ -134,7 +135,7 @@ contains
     SAFE_DEALLOCATE_A(l_dens)
     SAFE_DEALLOCATE_A(l_dedd)
 
-    call pop_sub()
+    call pop_sub('kxc_inc.xc_get_kxc.lda_end')
   end subroutine lda_end
 
 
@@ -159,7 +160,7 @@ contains
       end forall
     end if
 
-    call pop_sub()
+    call pop_sub('kxc_inc.xc_get_kxc.lda_process')
   end subroutine lda_process
 
 end subroutine xc_get_kxc

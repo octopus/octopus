@@ -125,7 +125,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('curv_modine.getf2')
   end subroutine getf2
 
   ! ---------------------------------------------------------
@@ -170,7 +170,7 @@ contains
 
     cv%natoms = geo%natoms
 
-    call pop_sub()
+    call pop_sub('curv_modine.curv_modine_init')
 
   contains
 
@@ -199,7 +199,7 @@ contains
         cv%chi_atoms(:, iatom) = nint(cv%chi_atoms(:, iatom) / spacing(:)) * spacing(:)
       end do
 
-      call pop_sub()
+      call pop_sub('curv_modine.curv_modine_init.find_atom_points')
     end subroutine find_atom_points
 
     subroutine optimize()
@@ -250,7 +250,7 @@ contains
 
       nullify(sb_p); nullify(cv_p)
 
-      call pop_sub()
+      call pop_sub('curv_modine.curv_modine_init.optimize')
     end subroutine optimize
 
   end subroutine curv_modine_init
@@ -266,7 +266,7 @@ contains
     SAFE_DEALLOCATE_P(cv%Jrange)
     SAFE_DEALLOCATE_P(cv%chi_atoms)
 
-    call pop_sub()
+    call pop_sub('curv_modine.curv_modine_end')
 
   end subroutine curv_modine_end
 
@@ -310,7 +310,7 @@ contains
       ! CHECK if Jacobian does not have to be negated!
     end do
 
-    call pop_sub()
+    call pop_sub('curv_modine.curv_modine_chi2chi2')
   end subroutine curv_modine_chi2chi2
 
   ! ---------------------------------------------------------
@@ -335,7 +335,7 @@ contains
       xx(:) = xx(:) - cv%Jlocal(iatom)*(chi2(:) - cv%csi(:, iatom)) * dd
     end do
 
-    call pop_sub()
+    call pop_sub('curv_modine.curv_modine_chi2x')
   end subroutine curv_modine_chi2x
 
 
@@ -381,7 +381,7 @@ contains
       Jac(idim, :) = Jac(idim, :) * J2(:)
     end do
 
-    call pop_sub()
+    call pop_sub('curv_modine.curv_modine_jacobian_inv')
   end subroutine curv_modine_jacobian_inv
 
 
@@ -395,7 +395,7 @@ contains
     call curv_modine_jacobian_inv(sb_p, cv_p, yy, ff, jf)
     ff(:) = ff(:) - x_p(:)
 
-    call pop_sub()
+    call pop_sub('curv_modine.getf')
   end subroutine getf 
 
 
@@ -431,7 +431,7 @@ contains
       call write_fatal(3)
     end if
 
-    call pop_sub()
+    call pop_sub('curv_modine.curv_modine_x2chi')
   end subroutine curv_modine_x2chi
 
 end module curv_modine_m

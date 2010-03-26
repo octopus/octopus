@@ -73,7 +73,7 @@ subroutine X(vlaser_operator_quadratic) (laser, der, std, psi, hpsi)
     end do
   end if
 
-  call pop_sub()
+  call pop_sub('lasers_inc.Xvlaser_operator_quadratic')
 end subroutine X(vlaser_operator_quadratic)
 
 ! ---------------------------------------------------------
@@ -231,7 +231,7 @@ subroutine X(vlaser_operator_linear) (laser, der, std, psi, hpsi, ik, gyromagnet
     SAFE_DEALLOCATE_A(grad)
   end if
 
-  call pop_sub()
+  call pop_sub('lasers_inc.Xvlaser_operator_linear')
 end subroutine X(vlaser_operator_linear)
 
 
@@ -274,7 +274,7 @@ subroutine X(vlasers) (lasers, nlasers, der, std, psi, hpsi, grad, ik, gyromagne
   if(vector_potential) call apply_vector_potential()
 
   call profiling_out(ext_fields_profile)
-  call pop_sub()
+  call pop_sub('lasers_inc.Xvlasers')
 
 contains
 
@@ -326,7 +326,7 @@ contains
 
     end do
 
-    call pop_sub()
+  call pop_sub('lasers_inc.Xvlasers.get_fields')
   end subroutine get_fields
 
 
@@ -339,7 +339,7 @@ contains
     end do
     SAFE_DEALLOCATE_A(vv)
 
-    call pop_sub()
+    call pop_sub('lasers_inc.Xvlasers.apply_electric_field')
   end subroutine apply_electric_field
 
 
@@ -402,7 +402,7 @@ contains
     SAFE_DEALLOCATE_A(aa)
     SAFE_DEALLOCATE_A(a_prime)
 
-    call pop_sub()
+    call pop_sub('lasers_inc.Xvlasers.apply_magnetic_field')
   end subroutine apply_magnetic_field
 
 
@@ -428,7 +428,7 @@ contains
       end do
     end select
 
-    call pop_sub()
+    call pop_sub('lasers_inc.Xvlasers.apply_vector_potential')
   end subroutine apply_vector_potential
 
 end subroutine X(vlasers)

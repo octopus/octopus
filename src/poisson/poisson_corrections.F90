@@ -113,7 +113,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('poisson_corrections.poisson_corrections_init')
 
   contains
 
@@ -126,7 +126,7 @@ contains
 
       isubl = M_HALF*loct_gamma(ll + M_HALF)*(M_ONE - loct_incomplete_gamma(ll+M_HALF, xx**2) )
 
-      call pop_sub()
+      call pop_sub('poisson_corrections.poisson_corrections_init.isubl')
     end function isubl
 
   end subroutine poisson_corrections_init
@@ -142,7 +142,7 @@ contains
     SAFE_DEALLOCATE_P(this%aux)
     SAFE_DEALLOCATE_P(this%gaussian)
 
-    call pop_sub()
+    call pop_sub('poisson_corrections.poisson_corrections_end')
   end subroutine poisson_corrections_end
 
 
@@ -198,7 +198,7 @@ contains
     SAFE_DEALLOCATE_A(betal)
 
     call profiling_out(prof)
-    call pop_sub()
+    call pop_sub('poisson_corrections.correct_rho')
   end subroutine correct_rho
 
 
@@ -223,7 +223,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('poisson_corrections.get_multipoles')
   end subroutine get_multipoles
 
   ! ---------------------------------------------------------
@@ -233,7 +233,7 @@ contains
 
     call push_sub('poisson_corrections.internal_laplacian_op')
     call dderivatives_lapl(der_pointer, xx, yy)
-    call pop_sub()
+    call pop_sub('poisson_corrections.internal_laplacian_op')
 
   end subroutine internal_laplacian_op
 
@@ -246,7 +246,7 @@ contains
     call push_sub('poisson_corrections.internal_dotp')
 
     res = dmf_dotp(mesh_pointer, xx, yy)
-    call pop_sub()
+    call pop_sub('poisson_corrections.internal_dotp')
   end function internal_dotp
 
 

@@ -95,7 +95,7 @@ subroutine X(states_gram_schmidt_full)(st, nst, mesh, dim, psi)
   SAFE_DEALLOCATE_A(ss)
   SAFE_DEALLOCATE_A(qq)
 
-  call pop_sub()
+  call pop_sub('states_calc_inc.Xstates_gram_schmidt_full')
   call profiling_out(prof)
 end subroutine X(states_gram_schmidt_full)
 
@@ -141,7 +141,7 @@ subroutine X(states_gram_schmidt_block)(st, nst, mesh, dim, psi)
 
   SAFE_DEALLOCATE_A(ss)
 
-  call pop_sub()
+  call pop_sub('states_calc_inc.Xstates_gram_schmidt_block')
 end subroutine X(states_gram_schmidt_block)
 
 
@@ -305,7 +305,7 @@ subroutine X(states_gram_schmidt)(mesh, nst, dim, psi, phi,  &
 
   SAFE_DEALLOCATE_A(ss)
 
-  call pop_sub()
+  call pop_sub('states_calc_inc.Xstates_gram_schmidt')
   call profiling_out(prof)
 end subroutine X(states_gram_schmidt)
 
@@ -326,7 +326,7 @@ subroutine X(states_normalize_orbital)(mesh, dim, psi)
 
   forall (idim = 1:dim, ip = 1:mesh%np) psi(ip, idim) = psi(ip, idim)/norm
   
-  call pop_sub()
+  call pop_sub('states_calc_inc.Xstates_normalize_orbital')
 end subroutine X(states_normalize_orbital)
 
 
@@ -356,7 +356,7 @@ FLOAT function X(states_residue)(mesh, dim, hf, ee, ff) result(rr)
 
   call profiling_out(prof)
 
-  call pop_sub()
+  call pop_sub('states_calc_inc.Xstates_residue')
 
 end function X(states_residue)
 
@@ -457,7 +457,7 @@ subroutine X(states_calc_momentum)(gr, st, momentum)
   end do
   SAFE_DEALLOCATE_A(grad)
 
-  call pop_sub()
+  call pop_sub('states_calc_inc.Xstates_calc_momentum')
 end subroutine X(states_calc_momentum)
 
 
@@ -513,7 +513,7 @@ subroutine X(states_angular_momentum)(gr, phi, ll, l2)
   end do
 
   SAFE_DEALLOCATE_A(lpsi)
-  call pop_sub()
+  call pop_sub('states_calc_inc.Xstates_angular_momemtum')
 end subroutine X(states_angular_momentum)
 
 
@@ -594,7 +594,7 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
 
   end do
 
-  call pop_sub()
+  call pop_sub('states_calc_inc.Xstates_matrix')
 end subroutine X(states_matrix)
 
 !! Local Variables:

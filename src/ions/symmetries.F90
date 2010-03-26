@@ -190,7 +190,7 @@ contains
 
     end if
 
-    call pop_sub()
+    call pop_sub('symmetries.symmetries_init')
   end subroutine symmetries_init
 
   ! -------------------------------------------------------------------------------
@@ -212,7 +212,7 @@ contains
       call symm_op_copy(inp%ops(iop), outp%ops(iop))
     end do
 
-    call pop_sub()
+    call pop_sub('symmetries.symmetries_copy')
   end subroutine symmetries_copy
 
   ! -------------------------------------------------------------------------------
@@ -229,7 +229,7 @@ contains
     end do
 
     SAFE_DEALLOCATE_P(this%ops)
-    call pop_sub()
+    call pop_sub('symmetries.symmetries_end')
   end subroutine symmetries_end
 
   ! -------------------------------------------------------------------------------
@@ -254,7 +254,7 @@ contains
 
     bb(1:3) = symm_op_apply_inv(this%ops(iop), aa(1:3))
 
-    call pop_sub()
+    call pop_sub('symmetries.symmetries_apply_kpoint')
   end subroutine symmetries_apply_kpoint
 
 end module symmetries_m

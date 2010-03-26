@@ -89,7 +89,7 @@ contains
       end if
     end if
 
-    call pop_sub()
+    call pop_sub('kpoints.kpoints_init')
 
   contains
     ! ---------------------------------------------------------
@@ -164,7 +164,7 @@ contains
       this%points_full_red(:,:) = M_ZERO
       this%weights_full(:)      = M_ONE / TOFLOAT(this%nik_full)
 
-      call pop_sub()
+      call pop_sub('kpoints.kpoints_init.read_MP')
     end subroutine read_MP
 
 
@@ -201,7 +201,7 @@ contains
          end do
       end do
 
-      call pop_sub()
+      call pop_sub('kpoints.kpoints_init.generate_MP')
 
     end subroutine generate_MP
 
@@ -251,7 +251,8 @@ contains
           reduced = .true.
         else
           read_user_kpoints = .false.
-          call pop_sub(); return
+          call pop_sub('kpoints.kpoints_init.read_user_kpoints')
+          return
         end if
       end if
       read_user_kpoints = .true.
@@ -298,7 +299,7 @@ contains
       write(message(1), '(a,i4,a)') 'Input: ', this%nik_full, ' k-points were read from the input file'
       call write_info(1)
 
-      call pop_sub()
+      call pop_sub('kpoints.kpoints_init.read_user_kpoints')
     end function read_user_kpoints
 
   end subroutine kpoints_init
@@ -329,7 +330,7 @@ contains
       kout(:) = kout(:) + kin(ii)*klattice(:, ii)
     end do
 
-    call pop_sub()
+    call pop_sub('kpoints.kpoints_to_absolute')
 
   end subroutine kpoints_to_absolute
 
@@ -350,7 +351,7 @@ contains
     end do
     kout(:) = kout(:) / (M_TWO*M_PI)
 
-    call pop_sub()
+    call pop_sub('kpoints.kpoints_to_reduced')
   end subroutine kpoints_to_reduced
 
 
@@ -374,7 +375,7 @@ contains
     kout%nik_axis = kin%nik_axis
     kout%shifts = kin%shifts
 
-    call pop_sub()
+    call pop_sub('kpoints.kpoints_copy')
   end subroutine kpoints_copy
 
 end module kpoints_m

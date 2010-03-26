@@ -43,7 +43,7 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
   call batch_end(psib)
   call batch_end(ppsib)
 
-  call pop_sub()
+  call pop_sub('projector_inc.project_psi')
 end subroutine X(project_psi)
 
 !-------------------------------------------------------------------------------------------
@@ -94,7 +94,8 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
   ! Check whether we have or not "real" projectors. If we do not, return.
   if(nreduce == 0) then
-    call pop_sub(); return
+    call pop_sub('projector_inc.project_psi_batch')
+    return
   end if
 
   SAFE_ALLOCATE(reduce_buffer(1:nreduce))
@@ -236,7 +237,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   SAFE_DEALLOCATE_A(reduce_buffer)
   SAFE_DEALLOCATE_A(ireduce)
 
-  call pop_sub()
+  call pop_sub('projector_inc.project_psi_batch')
 
 end subroutine X(project_psi_batch)
 
@@ -355,7 +356,7 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
   SAFE_DEALLOCATE_A(lpsi)
   SAFE_DEALLOCATE_A(plpsi)
 
-  call pop_sub()
+  call pop_sub('projector_inc.psia_project_psib')
 end function X(psia_project_psib)
 
 subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi)
@@ -393,7 +394,7 @@ subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi)
     end do
   end do
 
-  call pop_sub()
+  call pop_sub('projector_inc.project_sphere')
 end subroutine X(project_sphere)
 
 !This function calculates |cpsi> = [x,V_nl] |psi>
@@ -464,7 +465,7 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
     SAFE_DEALLOCATE_A(pxlpsi)
   end if
 
-  call pop_sub()
+  call pop_sub('projector_inc.Xprojector_commute_r')
 
 end subroutine X(projector_commute_r)
 

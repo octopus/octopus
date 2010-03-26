@@ -90,7 +90,7 @@ contains
 
     lr%is_allocated = .false.
 
-    call pop_sub()
+    call pop_sub('linear_response.lr_init')
 
   end subroutine lr_init
 
@@ -119,7 +119,7 @@ contains
 
     lr%is_allocated = .true.
     
-    call pop_sub()
+    call pop_sub('linear_response.lr_allocate')
 
   end subroutine lr_allocate
 
@@ -142,7 +142,7 @@ contains
     SAFE_DEALLOCATE_P(lr%zdl_de)
     SAFE_DEALLOCATE_P(lr%zdl_elf)
 
-    call pop_sub()
+    call pop_sub('linear_response.lr_dealloc')
 
   end subroutine lr_dealloc
 
@@ -178,7 +178,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('linear_response.lr_copy')
 
   end subroutine lr_copy
 
@@ -190,7 +190,7 @@ contains
     call push_sub('linear_response.lr_is_allocated')
     lr_is_allocated = this%is_allocated
 
-    call pop_sub()
+    call pop_sub('linear_response.lr_is_allocated')
   end function lr_is_allocated
 
 #include "undef.F90"

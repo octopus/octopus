@@ -91,7 +91,7 @@ contains
 
     if(iand(family, XC_FAMILY_OEP).eq.0) then
       oep%level = XC_OEP_NONE
-      call pop_sub()
+    call pop_sub('xc_oep.xc_oep_init')
       return
     end if
 
@@ -152,7 +152,7 @@ contains
       !oep%lr%conv_abs_dens = oep%lr%conv_abs_dens / (oep%mixing)
     end if
 
-    call pop_sub()
+    call pop_sub('xc_oep.xc_oep_init')
   end subroutine xc_oep_init
 
 
@@ -171,7 +171,7 @@ contains
       end if
     end if
 
-    call pop_sub()
+    call pop_sub('xc_oep.xc_oep_end')
   end subroutine xc_oep_end
 
 
@@ -185,7 +185,7 @@ contains
     call push_sub('xc_oep.xc_oep_write_info')
     call messages_print_var_option(iunit, 'OEP_level', oep%level)
 
-    call pop_sub()
+    call pop_sub('xc_oep.xc_oep_write_info')
   end subroutine xc_oep_write_info
 
 
@@ -209,7 +209,7 @@ contains
       ASSERT(.false.)
     end select
 
-    call pop_sub()
+    call pop_sub('xc_oep.xc_oep_SpinFactor')
   end subroutine xc_oep_SpinFactor
 
 
@@ -272,7 +272,7 @@ contains
 
     SAFE_DEALLOCATE_A(eigenval)
     SAFE_DEALLOCATE_A(occ)
-    call pop_sub()
+    call pop_sub('xc_oep.xc_oep_AnalyzeEigen')
   end subroutine xc_oep_AnalyzeEigen
 
 

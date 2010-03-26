@@ -111,7 +111,7 @@ contains
     call geometry_init_species(geo, print_info=print_info)
     call distributed_nullify(geo%atoms, geo%natoms)
 
-    call pop_sub()
+    call pop_sub('geometry.geometry_init')
   end subroutine geometry_init
 
 
@@ -239,7 +239,7 @@ contains
       call write_fatal(2)
     end if
 
-    call pop_sub()
+    call pop_sub('geometry.geometry_init_xyz')
   end subroutine geometry_init_xyz
 
 
@@ -317,7 +317,7 @@ contains
       geo%nlpp = (geo%nlpp .or. species_is_ps(geo%species(i)))
     end do
 
-    call pop_sub()
+    call pop_sub('geometry.geometry_init_species')
   end subroutine geometry_init_species
 
 
@@ -330,7 +330,7 @@ contains
 
     call distributed_init(geo%atoms, geo%natoms, mc, P_STRATEGY_STATES, "atoms")
 
-    call pop_sub()
+    call pop_sub('geometry.geometry_partition')
   end subroutine geometry_partition
 
 
@@ -390,7 +390,7 @@ contains
     end do
 991 continue
 
-    call pop_sub()
+    call pop_sub('geometry.loadPDB')
   end subroutine loadPDB
 
 
@@ -411,7 +411,7 @@ contains
     call species_end(geo%nspecies, geo%species)
     SAFE_DEALLOCATE_P(geo%species)
 
-    call pop_sub()
+    call pop_sub('geometry.geometry_end')
   end subroutine geometry_end
 
   ! ---------------------------------------------------------
@@ -425,7 +425,7 @@ contains
     call geometry_min_distance(geo, r)
     l = (r < CNST(1.0e-5) .and. geo%natoms > 1)
 
-    call pop_sub()
+    call pop_sub('geometry.geometry_atoms_are_too_close')
   end function geometry_atoms_are_too_close
 
   ! ---------------------------------------------------------
@@ -443,7 +443,7 @@ contains
     end do
     dipole = P_PROTON_CHARGE*dipole
 
-    call pop_sub()
+    call pop_sub('geometry.geometry_dipole')
   end subroutine geometry_dipole
 
 
@@ -467,7 +467,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('geometry.geometry_min_distance')
   end subroutine geometry_min_distance
 
 
@@ -488,7 +488,7 @@ contains
     end do
     pos = pos/m
 
-    call pop_sub()
+    call pop_sub('geometry.cm_pos')
   end subroutine cm_pos
 
 
@@ -509,7 +509,7 @@ contains
     end do
     vel = vel/m
 
-    call pop_sub()
+    call pop_sub('geometry.cm_vel')
   end subroutine cm_vel
 
 
@@ -559,7 +559,7 @@ contains
       call io_close(iunit)
     end if
 
-    call pop_sub()
+    call pop_sub('geometry.atom_write_xyz')
   end subroutine atom_write_xyz
 
 
@@ -577,7 +577,7 @@ contains
       val_charge = val_charge - species_zval(geo%atom(iatom)%spec)
     end do
 
-    call pop_sub()
+    call pop_sub('geometry.geometry_val_charge')
   end subroutine geometry_val_charge
 
 
@@ -597,7 +597,7 @@ contains
       def_rsize = max(def_rsize, species_def_rsize(geo%species(ispec)))
     end do
 
-    call pop_sub()
+    call pop_sub('geometry.geometry_grid_defaults')
   end subroutine geometry_grid_defaults
 
 
@@ -615,7 +615,7 @@ contains
     aout%f     = ain%f
     aout%move  = ain%move
 
-    call pop_sub()
+    call pop_sub('geometry.atom_copy')
   end subroutine atom_copy
 
 
@@ -647,7 +647,7 @@ contains
 
     call distributed_copy(geo_in%atoms, geo_out%atoms)
 
-    call pop_sub()
+    call pop_sub('geometry.geometry_copy')
   end subroutine geometry_copy
 
 

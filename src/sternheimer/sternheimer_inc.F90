@@ -285,7 +285,7 @@ subroutine X(sternheimer_solve)(                           &
   SAFE_DEALLOCATE_A(orth_mask)
 
   call profiling_out(prof)
-  call pop_sub()
+  call pop_sub('sternheimer_inc.Xsternheimer_solve')
 
 end subroutine X(sternheimer_solve)
 
@@ -347,7 +347,7 @@ subroutine X(sternheimer_calc_hvar)(this, sys, hm, lr, nsigma, hvar)
   end if
 
   call profiling_out(prof_hvar)
-  call pop_sub()
+  call pop_sub('sternheimer_inc.Xsternheimer_calc_hvar')
 end subroutine X(sternheimer_calc_hvar)
 
 
@@ -359,7 +359,7 @@ subroutine X(sternheimer_set_rhs)(this, rhs)
   call push_sub('sternheimer_inc.Xsternheimer_set_rhs')
   this%X(rhs) => rhs
 
-  call pop_sub()
+  call pop_sub('sternheimer_inc.Xsternheimer_set_rhs')
 end subroutine X(sternheimer_set_rhs)
 
 !! Local Variables:

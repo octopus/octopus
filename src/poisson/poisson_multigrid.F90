@@ -167,7 +167,7 @@ contains
       call parse_float(datasets_check('PoissonSolverMGRelaxationFactor'), M_ONE, this%relax_factor)
     end if
 
-    call pop_sub()
+    call pop_sub('poisson_multigrid.poisson_multigrid_init')
   end subroutine poisson_multigrid_init
 
 
@@ -179,7 +179,7 @@ contains
 
     call poisson_corrections_end(this%corrector)
 
-    call pop_sub()
+    call pop_sub('poisson_multigrid.poisson_multigrid_end')
   end subroutine poisson_multigrid_end
 
 
@@ -271,7 +271,7 @@ contains
     call gridhier_end(err)
     call gridhier_end(phi_ini)
 
-    call pop_sub()
+    call pop_sub('poisson_multigrid.poisson_multigrid_solver');
 
   contains
 
@@ -292,7 +292,7 @@ contains
 
       res = dmf_nrm2(der%mesh, tmp)
 
-      call pop_sub()
+      call pop_sub('poisson_multigrid.residue')
     end function residue
 
     ! ---------------------------------------------------------
@@ -342,7 +342,7 @@ contains
 
       end do
 
-      call pop_sub()
+      call pop_sub('poisson_multigrid.vcycle_fas')
     end subroutine vcycle_cs
 
   end subroutine poisson_multigrid_solver
@@ -412,7 +412,7 @@ contains
     end select
 
     call profiling_out(prof)
-    call pop_sub()
+    call pop_sub('poisson_multigrid.multigrid_relax')
 
   end subroutine multigrid_relax
 

@@ -119,7 +119,7 @@ contains
       call parse_integer(datasets_check('OutputMatrixElementsL'), 1, this%ks_multipoles)
     end if
 
-    call pop_sub()
+    call pop_sub('output_me.output_me_init')
   end subroutine output_me_init
 
 
@@ -188,7 +188,7 @@ contains
       end if
     end if
 
-    call pop_sub()
+    call pop_sub('output_me.output_me')
   end subroutine output_me
 
 
@@ -266,7 +266,7 @@ contains
     SAFE_DEALLOCATE_A(momentum)
     call io_close(iunit)
 
-    call pop_sub()
+    call pop_sub('output_me.output_me_out_momentum')   
   end subroutine output_me_out_momentum
 
 
@@ -404,7 +404,7 @@ contains
     SAFE_DEALLOCATE_A(ang)
     SAFE_DEALLOCATE_A(ang2)
     
-    call pop_sub()
+    call pop_sub('output_me.output_me_out_ang_momentum')
   end subroutine output_me_out_ang_momentum
 
 

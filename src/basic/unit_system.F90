@@ -169,7 +169,7 @@ contains
     call unit_system_get(units_inp, cinp)
     call unit_system_get(units_out, cout)
 
-    call pop_sub()
+    call pop_sub('unit_system.unit_system_init')
 
   end subroutine unit_system_init
 
@@ -189,7 +189,7 @@ contains
       call input_error('Units')
     end select
 
-    call pop_sub()
+    call pop_sub('unit_system.unit_system_get')
   end subroutine unit_system_get
 
 
@@ -242,7 +242,7 @@ contains
     uu%hyperpolarizability%name    = "Bohr^5"
     uu%hyperpolarizability%factor  = M_ONE
 
-    call pop_sub()
+    call pop_sub('unit_system.unit_system_init_atomic')
   end subroutine unit_system_init_atomic
 
 
@@ -283,7 +283,7 @@ contains
     uu%polarizability      = uu%length**3
     uu%hyperpolarizability = uu%length**5
 
-    call pop_sub()
+    call pop_sub('unit_system.unit_system_init_eV_Ang')
   end subroutine unit_system_init_eV_Ang
 
 
@@ -307,7 +307,8 @@ contains
     iunit = io_open(file = trim(fname), action = 'read', status = 'old', die = .false.)
     if(iunit < 0) then
       ierr = -2
-      call pop_sub(); return
+      call pop_sub('unit_system.unit_system_from_file')
+      return
     end if
 
     ierr = 0
@@ -316,16 +317,18 @@ contains
       if(ios.ne.0) exit
       if(index(line,'[A]').ne.0  .or.  index(line,'eV').ne.0) then
         call unit_system_get(uu, UNITS_EVA)
-        call pop_sub(); return
+        call pop_sub('unit_system.unit_system_from_file')
+        return
       elseif(index(line,'[b]').ne.0) then
         call unit_system_get(uu, UNITS_ATOMIC)
-        call pop_sub(); return
+        call pop_sub('unit_system.unit_system_from_file')
+        return
       end if
     end do
 
     ierr = -1
 
-    call pop_sub()
+    call pop_sub('unit_system.unit_system_from_file')
   end subroutine unit_system_from_file
 
 end module unit_system_m

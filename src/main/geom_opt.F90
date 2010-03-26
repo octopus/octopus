@@ -138,7 +138,7 @@ contains
     SAFE_DEALLOCATE_A(coords)
     call scf_end(g_opt%scfv)
     call end_()
-    call pop_sub()
+    call pop_sub('geom_opt.geom_opt_run')
 
   contains
 
@@ -265,7 +265,7 @@ contains
 
       call loct_rm("./work-geom.xyz")
 
-      call pop_sub()
+      call pop_sub('geom_opt.geom_opt_run.init_')
     end subroutine init_
 
 
@@ -281,7 +281,7 @@ contains
       nullify(g_opt%hm)
       nullify(g_opt%syst)
 
-      call pop_sub()
+      call pop_sub('geom_opt.geom_opt_run.end_')
     end subroutine end_
 
   end subroutine geom_opt_run
@@ -330,7 +330,7 @@ contains
       objective = g_opt%hm%etot
     end if
 
-    call pop_sub()
+    call pop_sub("geom_opt.calc_point")
   end subroutine calc_point
 
 
@@ -353,7 +353,7 @@ contains
     call calc_point(size, coords, objective, getgrad, df)
     SAFE_DEALLOCATE_A(df)
 
-    call pop_sub()
+    call pop_sub('geom_opt.calc_point_ng')
   end subroutine calc_point_ng
 
 
@@ -392,7 +392,7 @@ contains
     message(11) = ""
     call write_info(11)
 
-    call pop_sub()
+    call pop_sub("geom_opt.write_iter_info")
   end subroutine write_iter_info
 
   ! ---------------------------------------------------------
@@ -406,7 +406,7 @@ contains
     call push_sub('geom_opt.write_iter_info_ng')
     call write_iter_info(geom_iter, size, energy, maxdx, real(-M_ONE, 8), coords)
 
-    call pop_sub()
+    call pop_sub('geom_opt.write_iter_info_ng')
   end subroutine write_iter_info_ng
 
 end module geom_opt_m

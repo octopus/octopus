@@ -127,7 +127,7 @@ contains
 
     denmat%dirname = trim(dir)
 
-    call pop_sub()
+    call pop_sub('states.modelmb_density_matrix_init')
 
   end subroutine modelmb_density_matrix_init
 
@@ -303,7 +303,7 @@ contains
     SAFE_DEALLOCATE_A(npoints)
     SAFE_DEALLOCATE_A(dipole_moment)
 
-    call pop_sub()
+    call pop_sub('states.modelmb_density_matrix_write')
   end subroutine modelmb_density_matrix_write
   ! ---------------------------------------------------------
 
@@ -315,7 +315,7 @@ contains
     nullify(this%labels)
     nullify(this%particle_kept)
     nullify(this%nnatorb_prt)
-    call pop_sub()
+    call pop_sub('states.modelmb_density_matrix_nullify')
   end subroutine modelmb_density_matrix_nullify
 
   ! ---------------------------------------------------------
@@ -326,7 +326,7 @@ contains
     SAFE_DEALLOCATE_P(this%labels)
     SAFE_DEALLOCATE_P(this%particle_kept)
     SAFE_DEALLOCATE_P(this%nnatorb_prt)
-    call pop_sub()
+    call pop_sub('states.modelmb_density_matrix_end')
   end subroutine modelmb_density_matrix_end
 
 

@@ -174,7 +174,7 @@ contains
     call sternheimer_end(sh)
     call states_deallocate_wfns(st)
 
-    call pop_sub()
+    call pop_sub('phonons_lr.phonons_lr_run')
 
   contains
 
@@ -230,7 +230,7 @@ contains
           end do
         end do
       end do
-      call pop_sub()
+      call pop_sub('phonons_lr.phonons_lr_run.build_ionic_dyn_matrix')
 
     end subroutine build_ionic_dyn_matrix
 
@@ -259,7 +259,7 @@ contains
       end do
 
       call io_close(iunit)
-      call pop_sub()
+      call pop_sub('phonons_lr.phonons_lr_run.calc_infrared')
     end subroutine calc_infrared
 
     subroutine vib_modes_wavefunctions
@@ -304,7 +304,7 @@ contains
       end do
 
       call lr_dealloc(lrtmp)
-      call pop_sub()
+      call pop_sub('phonons_lr.phonons_lr_run.vib_modes_wavefunctions')
     end subroutine vib_modes_wavefunctions
 
   end subroutine phonons_lr_run
@@ -317,7 +317,7 @@ contains
     
     write(str, '(a,i4.4,a,i1)') 'phn_rho_', iatom, '_',  dir
 
-    call pop_sub()
+    call pop_sub('phonons_lr.phn_rho_tag')
 
   end function phn_rho_tag
   
@@ -328,7 +328,7 @@ contains
 
     write(str, '(a,i4.4,a,i1)') "phn_wfs_", iatom, "_", dir
 
-    call pop_sub()
+    call pop_sub('phonons_lr.phn_wfs_tag')
     
   end function phn_wfs_tag
 
@@ -339,7 +339,7 @@ contains
 
     write(str, '(a,i5.5)') "phn_nm_wfs_", inm
 
-    call pop_sub()
+    call pop_sub('phonons_lr.phn_wfs_tag')
     
   end function phn_nm_wfs_tag
 

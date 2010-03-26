@@ -202,7 +202,7 @@ contains
     if(this%solver == LS_MULTIGRID) call messages_devel_version("Multigrid linear solver")
     if(this%solver == LS_QMR_DOTP)  call messages_devel_version("QMR solver (symmetric with conjugated dot product)")
 
-    call pop_sub()
+    call pop_sub('linear_solver.linear_solver_init')
 
   end subroutine linear_solver_init
 

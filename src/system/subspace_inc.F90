@@ -139,7 +139,7 @@ subroutine X(subspace_diag)(der, st, hm, ik, eigenval, psi, diff)
 #endif
 
   call profiling_out(diagon_prof)
-  call pop_sub()
+  call pop_sub('subspace_inc.Xsubspace_diag')
 
 end subroutine X(subspace_diag)
 
@@ -212,7 +212,7 @@ subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
   SAFE_DEALLOCATE_A(ff)
   SAFE_DEALLOCATE_A(h_subspace)
   
-  call pop_sub()
+  call pop_sub('subspace_inc.Xsubspace_diag_par_states')
   
 end subroutine X(subspace_diag_par_states) 
 #endif

@@ -130,7 +130,8 @@ contains
         this%initialized = .false.
         write(message(1),'(a)') 'Cannot do LCAO initial calculation because there are not enough atomic orbitals.'
         call write_warning(1)
-        call pop_sub(); return
+        call pop_sub('lcao.lcao_init')
+        return
       end if
 
       ! generate tables to know which indices each atomic orbital has
@@ -220,7 +221,7 @@ contains
 
     end if
 
-    call pop_sub()
+    call pop_sub('lcao.lcao_init')
   end subroutine lcao_init
 
 
@@ -254,7 +255,8 @@ contains
       call v_ks_calc(sys%ks, sys%gr, hm, sys%st, calc_eigenval=.true.)
 
       if(st_start .gt. sys%st%nst) then ! nothing to be done in LCAO
-        call pop_sub(); return
+        call pop_sub('lcao.lcao_run')
+        return
       endif
     endif
 
@@ -346,7 +348,7 @@ contains
 
     end if
 
-    call pop_sub()
+    call pop_sub('lcao.lcao_run')
   end subroutine lcao_run
 
   ! ---------------------------------------------------------
@@ -360,7 +362,7 @@ contains
     SAFE_DEALLOCATE_P(this%ddim)
 
     this%initialized = .false.
-    call pop_sub()
+    call pop_sub('lcao.lcao_end')
   end subroutine lcao_end
 
 
@@ -397,7 +399,7 @@ contains
         call zlcao_wf(this, st, gr, geo, hm, start_)
       end if
     end if
-    call pop_sub()
+    call pop_sub('lcao.lcao_wf')
     call profiling_out(prof)
   end subroutine lcao_wf
 
@@ -409,7 +411,7 @@ contains
     call push_sub('lcao.lcao_is_available')
     available = this%initialized
 
-    call pop_sub()
+    call pop_sub('lcao.lcao_is_available')
   end function lcao_is_available
 
 
@@ -420,7 +422,7 @@ contains
     call push_sub('lcao.lcao_num_orbitals')
     norbs = this%norbs
 
-    call pop_sub()
+    call pop_sub('lcao.lcao_num_orbitals')
   end function lcao_num_orbitals
 
 #include "undef.F90"

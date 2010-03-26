@@ -92,7 +92,7 @@ contains
 
     zdotu_qmr = lalg_dotu(np_p, x, y)
 
-    call pop_sub()
+    call pop_sub('solvers.zdotu_qmr')
   end function zdotu_qmr
 
   FLOAT function ddotu_qmr(x, y)
@@ -103,7 +103,7 @@ contains
 
     ddotu_qmr = lalg_dot(np_p, x, y)
 
-    call pop_sub()
+    call pop_sub('solvers.ddotu_qmr')
   end function ddotu_qmr
 
 

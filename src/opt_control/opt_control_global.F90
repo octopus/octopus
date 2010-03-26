@@ -312,7 +312,7 @@ module opt_control_global_m
     call messages_print_var_value(stdout, "OCTRandomInitialGuess", oct%random_initial_guess)
 
     call messages_print_stress(stdout)
-    call pop_sub()
+    call pop_sub('opt_control_global.oct_read_inp')  
   end subroutine oct_read_inp
   ! ---------------------------------------------------------
 

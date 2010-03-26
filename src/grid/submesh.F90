@@ -244,7 +244,7 @@ contains
     this%has_points = (this%ns > 0)
 
     call profiling_out(submesh_init_prof)
-    call pop_sub()
+    call pop_sub('submesh.submesh_init_sphere')
   end subroutine submesh_init_sphere
 
   subroutine submesh_end(this)
@@ -259,7 +259,7 @@ contains
       SAFE_DEALLOCATE_P(this%x)
     end if
 
-    call pop_sub()
+    call pop_sub('submesh.submesh_end')
 
   end subroutine submesh_end
 
@@ -283,7 +283,7 @@ contains
     sm_out%jxyz(1:sm_out%ns_part) = sm_in%jxyz(1:sm_in%ns_part)
     sm_out%x(1:sm_out%ns_part, 0:MAX_DIM) = sm_in%x(1:sm_in%ns_part, 0:MAX_DIM)
 
-    call pop_sub()
+    call pop_sub('submesh.submesh_copy')
 
   end subroutine submesh_copy
 
@@ -298,7 +298,7 @@ contains
     jxyz_inv(1:this%np_part) = 0
     forall (is = 1:this%ns) jxyz_inv(this%jxyz(is)) = is
 
-    call pop_sub()
+    call pop_sub('submesh.submesh_get_inv')
   end subroutine submesh_get_inv
 
 #include "undef.F90"

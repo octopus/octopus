@@ -82,7 +82,7 @@ contains
     gf%n         = 0
     nullify(gf%atom)
 
-    call pop_sub()
+    call pop_sub('xyz_file.xyz_file_init')
   end subroutine xyz_file_init
 
 
@@ -97,7 +97,7 @@ contains
     end if
     call xyz_file_init(gf)
 
-    call pop_sub()
+    call pop_sub('xyz_file.xyz_file_end')
   end subroutine xyz_file_end
 
 
@@ -179,7 +179,7 @@ contains
       gf%atom(i)%x = units_to_atomic(units_inp%length, gf%atom(i)%x)
     end do
 
-    call pop_sub()
+    call pop_sub('xyz_file.xyz_file_read')
   end subroutine xyz_file_read
 
 
@@ -231,7 +231,7 @@ contains
     end do
 991 continue
 
-    call pop_sub()
+    call pop_sub('xyz_file.xyz_file_read_PDB')
   end subroutine xyz_file_read_PDB
 
 end module xyz_file_m

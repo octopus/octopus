@@ -147,7 +147,7 @@ contains
       end do
     end select
 
-    call pop_sub()
+    call pop_sub('states_inc.occupied_states')
   end subroutine occupied_states
 
 
@@ -364,7 +364,7 @@ contains
     SAFE_DEALLOCATE_A(filled)
     SAFE_DEALLOCATE_A(partially_filled)
     SAFE_DEALLOCATE_A(half_filled)
-    call pop_sub()
+    call pop_sub('excited_states.excited_states_init')
   end subroutine excited_states_init
 
 
@@ -380,7 +380,7 @@ contains
     SAFE_DEALLOCATE_P(excited_state%pair)
     SAFE_DEALLOCATE_P(excited_state%weight)
 
-    call pop_sub()
+    call pop_sub('excited_states.excited_states_kill')
   end subroutine excited_states_kill
 
 
@@ -400,7 +400,7 @@ contains
     end do
 
     call io_close(iunit)
-    call pop_sub()
+    call pop_sub('excited_states.excited_states_output')
   end subroutine excited_states_output
 
 

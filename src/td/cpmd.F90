@@ -122,7 +122,7 @@ contains
       SAFE_ALLOCATE(this%zpsi2(1:gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
     end if
 
-    call pop_sub()
+    call pop_sub('cpmd.cpmd_init')
 
   end subroutine cpmd_init
   
@@ -134,7 +134,7 @@ contains
     SAFE_DEALLOCATE_P(this%dpsi2)
     SAFE_DEALLOCATE_P(this%zpsi2)
 
-    call pop_sub()
+    call pop_sub('cpmd.cpmd_end')
 
   end subroutine cpmd_end
 
@@ -173,7 +173,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('cpmd.cpmd_restart_write')
 
   end subroutine cpmd_restart_write
 
@@ -203,13 +203,14 @@ contains
             call zrestart_read_function(trim(tmpdir)//'td/cpmd', filename, gr%mesh, this%zpsi2(:, idim, ist, ik), ierr)
           end if
           if(ierr /= 0) then
-            call pop_sub(); return
+            call pop_sub('cpmd.cpmd_restart_read')
+            return
           end if
         end do
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('cpmd.cpmd_restart_read')
 
   end subroutine cpmd_restart_read
 

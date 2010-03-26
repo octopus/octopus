@@ -179,7 +179,7 @@ contains
 
     divides = mod(b, a).eq.0
 
-    call pop_sub()
+    call pop_sub('math.divides')
   end function divides
 
 
@@ -194,7 +194,7 @@ contains
     ratio = a/b
     is_integer_multiple = ratio.app.TOFLOAT(nint(ratio))
 
-    call pop_sub()
+    call pop_sub('math.is_integer_multiple')
   end function is_integer_multiple
 
 
@@ -215,7 +215,7 @@ contains
       h = M_TWO*x*hermite(n-1,x) - M_TWO*(n-1)*hermite(n-2,x)
     end if
 
-    call pop_sub()
+    call pop_sub('math.hermite')
   end function hermite
 
 
@@ -248,7 +248,7 @@ contains
     iseed = mod(iseed*ia + ic, im)
     rnd = real(iseed, REAL_PRECISION)/real(im, REAL_PRECISION)
 
-    call pop_sub()
+    call pop_sub('math.quickrnd')
   end subroutine quickrnd
 
 
@@ -570,7 +570,7 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(x)
-    call pop_sub()
+    call pop_sub('math.weights')
   end subroutine weights
 
 
@@ -581,7 +581,7 @@ contains
     call push_sub('math.ddot_product')
     r = dot_product(a, b)
 
-    call pop_sub()
+    call pop_sub('math.ddot_product')
   end function ddot_product
 
 
@@ -592,7 +592,7 @@ contains
     call push_sub('math.zdot_product')
     r = sum(conjg(a(:))*b(:))
 
-    call pop_sub()
+    call pop_sub('math.zdot_product')
   end function zdot_product
 
 
@@ -645,7 +645,7 @@ contains
       if (inc <= 1) exit
     end do
 
-    call pop_sub()
+    call pop_sub('math.shellsort')
   end subroutine shellsort
 
 
@@ -698,7 +698,7 @@ contains
       if (inc <= 1) exit
     end do
 
-    call pop_sub()
+    call pop_sub('math.ishellsort')
   end subroutine ishellsort
 
 
@@ -732,7 +732,7 @@ contains
     n_divisors = n_divisors + 1
     divisors(n_divisors) = n
 
-    call pop_sub()
+    call pop_sub('math.divisors')
   end subroutine math_divisors
 
   subroutine set_app_threshold(thr)
@@ -741,7 +741,7 @@ contains
     call push_sub('math.set_app_threshold')
     APP_THRESHOLD = thr
 
-    call pop_sub()
+    call pop_sub('math.set_app_threshold')
   end subroutine set_app_threshold
 
   FLOAT pure function ddelta(i, j)
@@ -767,7 +767,7 @@ contains
     math_xor = ( a .or. b )
     if ( a .and. b ) math_xor = .false.
 
-    call pop_sub()
+    call pop_sub('math.math_xor')
   end function math_xor
 
 
@@ -796,7 +796,7 @@ contains
       end do
     end if
 
-    call pop_sub()
+    call pop_sub('math.make_idx_set')
   end subroutine make_idx_set
 
 
@@ -820,7 +820,7 @@ contains
       end if
     end do
 
-    call pop_sub()
+    call pop_sub('math.member')
   end function member
 
   ! ---------------------------------------------------------
@@ -842,7 +842,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('math.interpolation_coefficients')
   end subroutine interpolation_coefficients
 
 
@@ -855,7 +855,7 @@ contains
 
     even = mod(n, 2).eq.0
 
-    call pop_sub()
+    call pop_sub('math.even')
   end function even
 
 
@@ -868,7 +868,7 @@ contains
 
     odd = .not.even(n)
 
-    call pop_sub()
+    call pop_sub('math.odd')
   end function odd
 
   ! ---------------------------------------------------------
@@ -897,7 +897,7 @@ contains
       u(k) = atan2(sqrt(sumx2), x(k))
     end do
 
-    call pop_sub()
+    call pop_sub('math.cartesian2hyperspherical')
   end subroutine cartesian2hyperspherical
   ! ---------------------------------------------------------
 
@@ -943,7 +943,7 @@ contains
       x(n) = x(n) * sin(u(n-1))
     end if
 
-    call pop_sub()
+    call pop_sub('math.hyperspherical2cartesian')
   end subroutine hyperspherical2cartesian
   ! ---------------------------------------------------------
 
@@ -980,7 +980,7 @@ contains
     SAFE_DEALLOCATE_A(alpha)
     SAFE_DEALLOCATE_A(eigenvectors)
     SAFE_DEALLOCATE_A(eigenvalues)
-    call pop_sub()
+    call pop_sub('math.hypersphere_cut')
   end subroutine hypersphere_cut
   ! ---------------------------------------------------------
 
@@ -1019,7 +1019,7 @@ contains
     SAFE_DEALLOCATE_A(alpha)
     SAFE_DEALLOCATE_A(eigenvectors)
     SAFE_DEALLOCATE_A(eigenvalues)
-    call pop_sub()
+    call pop_sub('math.hypersphere_cut_back')
   end subroutine hypersphere_cut_back
   ! ---------------------------------------------------------
 
@@ -1063,7 +1063,7 @@ contains
        grad_matrix(m,n) = r*cos(x(m))*grad_matrix(m,n)*product(sin(x(1:m-1)))*product(sin(x(m+1:n-1)))
     end do
 
-    call pop_sub()
+    call pop_sub('math.hypersphere_grad_matrix')
   end subroutine  hypersphere_grad_matrix
   ! ---------------------------------------------------------
 

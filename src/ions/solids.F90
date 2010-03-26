@@ -66,7 +66,8 @@ contains
     if(.not. simul_box_is_periodic(sb)) then
       this%nbmin = 0
       this%nbmax = 0
-      call pop_sub(); return
+      call pop_sub('solids.periodic_copy_init')
+      return
     end if
 
     pd = sb%periodic_dim
@@ -81,7 +82,7 @@ contains
     this%nbmin(pd + 1:MAX_DIM) = 0
     this%nbmax(pd + 1:MAX_DIM) = 0
 
-    call pop_sub()
+    call pop_sub('solids.periodic_copy_init')
   end subroutine periodic_copy_init
 
   subroutine periodic_copy_end(this)
@@ -92,7 +93,7 @@ contains
     this%nbmin = 0
     this%nbmax = 0
 
-    call pop_sub()
+    call pop_sub('solids.periodic_copy_end')
   end subroutine periodic_copy_end
 
   integer pure function periodic_copy_num(this) result(num)
@@ -118,7 +119,8 @@ contains
 
     if(.not. simul_box_is_periodic(sb)) then
       pcopy = this%pos
-      call pop_sub(); return
+      call pop_sub('solids.periodic_copy_position')
+      return
     end if
 
     jj = 1
@@ -130,7 +132,8 @@ contains
             pcopy(1:pd) = this%pos_chi(1:pd) - M_TWO*sb%lsize(1:pd)*(/icell1, icell2, icell3/)
             pcopy(1:pd) = matmul(sb%rlattice_primitive(1:pd, 1:pd), pcopy(1:pd))
             pcopy(pd + 1:MAX_DIM) = this%pos(pd+1:MAX_DIM)
-            call pop_sub(); return
+            call pop_sub('solids.periodic_copy_position')
+            return
           end if
           jj = jj + 1
 
@@ -138,7 +141,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('solids.periodic_copy_position')
   end function periodic_copy_position
 
   ! This subroutine creates a crystal by replicating the geometry and
@@ -182,7 +185,7 @@ contains
 
     call io_close(iunit)
     
-    call pop_sub()
+    call pop_sub('solids.periodic_write_crystal')
   end subroutine periodic_write_crystal
 
 end module solids_m

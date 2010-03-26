@@ -74,7 +74,8 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
     SAFE_DEALLOCATE_A(rho_sigma)
     SAFE_DEALLOCATE_A(sqphi)
     call profiling_out(C_PROFILING_XC_KLI)
-    call pop_sub(); return
+    call pop_sub('xc_kli_inc.Xxc_KLI_solve')
+    return
   end if
 
   eigen_n = oep%eigen_n
@@ -162,7 +163,7 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
   SAFE_DEALLOCATE_A(v_bar_S)
   SAFE_DEALLOCATE_A(rho_sigma)
   SAFE_DEALLOCATE_A(sqphi)
-  call pop_sub()
+  call pop_sub('xc_kli_inc.Xxc_KLI_solve')
   call profiling_out(C_PROFILING_XC_KLI)
 end subroutine X(xc_KLI_solve)
 

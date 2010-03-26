@@ -32,7 +32,8 @@
     call push_sub('finalcheck_inc.oct_finalcheck')
 
     if(.not.oct%oct_double_check) then
-      call pop_sub(); return
+      call pop_sub('finalcheck_inc.oct_finalcheck')
+      return
     end if
 
     call oct_iterator_bestpar(par, iterator)
@@ -59,7 +60,7 @@
 
     nullify(par)
     call states_end(psi)
-    call pop_sub()
+    call pop_sub('finalcheck_inc.oct_finalcheck')
   end subroutine oct_finalcheck
 
 !! Local Variables:

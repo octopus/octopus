@@ -39,7 +39,7 @@ subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
     call X(batch_add_state)(this, ist, psi(:, :, ist))
   end do
 
-  call pop_sub()
+  call pop_sub('batch_inc.Xbatch_init_contiguous')
 
 end subroutine X(batch_init_contiguous)
 
@@ -67,7 +67,7 @@ subroutine X(batch_add_state)(this, ist, psi)
 
   this%current = this%current  + 1
 
-  call pop_sub()
+  call pop_sub('batch_inc.Xbatch_add_state')
 
 end subroutine X(batch_add_state)
 
@@ -83,7 +83,7 @@ subroutine X(batch_add_state_linear)(this, psi)
   this%states_linear(this%current)%X(psi) => psi
   this%current = this%current  + 1
 
-  call pop_sub()
+  call pop_sub('batch_inc.Xbatch_add_state_linear')
 
 end subroutine X(batch_add_state_linear)
 
@@ -105,7 +105,7 @@ subroutine X(batch_new)(this, st_start, st_end, np)
     call X(batch_add_state)(this, ist,this%X(psicont)(:, :, ist - st_start + 1))
   end do
 
-  call pop_sub()
+  call pop_sub('batch_inc.Xbatch_new')
 end subroutine X(batch_new)
 
 
@@ -117,7 +117,7 @@ subroutine X(batch_delete)(this)
 
   SAFE_DEALLOCATE_P(this%X(psicont))
 
-  call pop_sub()
+  call pop_sub('batch_inc.Xbatch_delete')
 end subroutine X(batch_delete)
 
 
@@ -137,7 +137,7 @@ subroutine X(batch_set)(this, np, psi)
     end do
   end do
 
-  call pop_sub()
+  call pop_sub('batch_inc.Xbatch_set')
 end subroutine X(batch_set)
 
 !! Local Variables:

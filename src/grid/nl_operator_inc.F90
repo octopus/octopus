@@ -161,7 +161,7 @@ subroutine X(nl_operator_tune)(op, best)
     write(iunit, '(a)') " "
     call io_close(iunit)
 
-  call pop_sub()
+  call pop_sub('nl_operator_inc.Xnl_operator_tune')
 
 end subroutine X(nl_operator_tune)
 
@@ -265,7 +265,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   end if
 
   if(profile_) call profiling_out(operate_batch_prof)
-  call pop_sub()
+  call pop_sub('nl_operator_inc.Xnl_operator_operate_batch')
 
 contains
 
@@ -375,7 +375,7 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
   call batch_end(batch_fi)
   call batch_end(batch_fo)
 
-  call pop_sub()
+  call pop_sub('nl_operator_inc.Xnl_operator_operate')
 end subroutine X(nl_operator_operate)
 
 
@@ -402,7 +402,7 @@ subroutine X(nl_operator_operate_diag)(op, fo)
     end if
   end if
   
-  call pop_sub()
+  call pop_sub('nl_operator_inc.Xnl_operator_operate_diag')
   
 end subroutine X(nl_operator_operate_diag)
 

@@ -115,7 +115,7 @@ contains
       call curv_modine_init(cv%modine, sb, geo, spacing)
     end select
 
-    call pop_sub()
+    call pop_sub('curvilinear.curvilinear_init')
   end subroutine curvilinear_init
 
 
@@ -133,7 +133,7 @@ contains
       call curv_modine_end(cv%modine)
     end select
 
-    call pop_sub()
+    call pop_sub('curvilinear.curvilinear_end')
   end subroutine curvilinear_end
   
 
@@ -182,7 +182,7 @@ contains
       call write_fatal(1)
     end select
 
-    call pop_sub()
+    call pop_sub('curvilinear.curvilinear_x2chi')
   end subroutine curvilinear_x2chi
 
 
@@ -224,7 +224,7 @@ contains
       SAFE_DEALLOCATE_A(Jac)
     end if
 
-    call pop_sub()
+    call pop_sub('curvilinear.curvilinear_det_Jac')
   end function curvilinear_det_Jac
 
   ! ---------------------------------------------------------
@@ -257,7 +257,7 @@ contains
 
     end select
 
-    call pop_sub()
+    call pop_sub('curvilinear.curvilinear_write_info')
   end subroutine curvilinear_write_info
 
   ! ---------------------------------------------------------

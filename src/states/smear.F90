@@ -134,7 +134,7 @@ contains
       call parse_integer(datasets_check('SmearingMPOrder'), 1, this%MP_n)
     end if
 
-    call pop_sub()
+    call pop_sub('smear.smear_init')
   end subroutine smear_init
 
 
@@ -153,7 +153,7 @@ contains
     to%ef_occ       = from%ef_occ
     to%MP_n         = from%MP_n
 
-    call pop_sub()
+    call pop_sub('smear.smear_copy')
   end subroutine smear_copy
 
 
@@ -271,7 +271,7 @@ contains
 
     end if
 
-    call pop_sub()
+    call pop_sub('smear.smear_find_fermi_energy')
   end subroutine smear_find_fermi_energy
 
 
@@ -313,7 +313,7 @@ contains
       end do
     end if
 
-    call pop_sub()
+    call pop_sub('smear.smear_fill_occupations')
   end subroutine smear_fill_occupations
 
 
@@ -340,7 +340,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('smear.smear_calc_entropy')
   end function smear_calc_entropy
 
 
@@ -396,7 +396,7 @@ contains
 
     end select
     
-    call pop_sub()
+    call pop_sub('smear.smear_delta_function')
   end function smear_delta_function
 
 
@@ -464,7 +464,7 @@ contains
 
     end select
 
-    call pop_sub()
+    call pop_sub('smear.smear_step_function')
   end function smear_step_function
 
 
@@ -522,7 +522,7 @@ contains
 
     end select
 
-    call pop_sub()
+    call pop_sub('smear.smear_entropy_function')
   end function smear_entropy_function
 
   logical function smear_is_semiconducting(this) result(answer)
@@ -532,7 +532,7 @@ contains
 
     answer = this%method .eq. SMEAR_SEMICONDUCTOR
 
-    call pop_sub()
+    call pop_sub('smear.smear_is_semiconducting')
   end function smear_is_semiconducting
 
 end module smear_m

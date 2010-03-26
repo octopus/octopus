@@ -68,7 +68,7 @@ module permutations_m
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('math.permutations_init')
   end subroutine permutations_init
 
   subroutine permutations_write (this)
@@ -82,7 +82,7 @@ module permutations_m
       call write_info(1)
     end do
     
-    call pop_sub()
+    call pop_sub('math.permutations_write')
   end subroutine permutations_write
 
   subroutine permutations_nullify (this)
@@ -90,7 +90,7 @@ module permutations_m
     call push_sub('math.permutations_nullify')
     nullify(this%allpermutations)
     nullify(this%permsign)
-    call pop_sub()
+    call pop_sub('math.permutations_nullify')
   end subroutine permutations_nullify
 
   subroutine permutations_copy (perm_in, perm_out)
@@ -104,7 +104,7 @@ module permutations_m
 
     call loct_pointer_copy(perm_out%allpermutations,perm_in%allpermutations)
     call loct_pointer_copy(perm_out%permsign,perm_in%permsign)
-    call pop_sub()
+    call pop_sub('math.permutations_copy')
   end subroutine permutations_copy
 
   subroutine permutations_end (this)
@@ -113,7 +113,7 @@ module permutations_m
     call push_sub('math.permutations_end')
     SAFE_DEALLOCATE_P (this%allpermutations)
     SAFE_DEALLOCATE_P (this%permsign)
-    call pop_sub()
+    call pop_sub('math.permutations_end')
   end subroutine permutations_end
 
 end module permutations_m

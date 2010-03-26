@@ -112,7 +112,7 @@ subroutine modelmb_particles_nullify(this)
   nullify(this%labels_densities)
   nullify(this%particle_kept_densities)
 
-  call pop_sub()
+  call pop_sub('modelmb_particles.modelmb_particles_nullify')
 end subroutine modelmb_particles_nullify
 
 
@@ -314,7 +314,7 @@ subroutine modelmb_particles_init (this,gr)
     nullify(this%particle_kept_densities)
   end if
 
-  call pop_sub()
+  call pop_sub('modelmb_particles.modelmb_particles_init')
 
 end subroutine modelmb_particles_init
 
@@ -336,7 +336,7 @@ subroutine modelmb_particles_end (this)
   SAFE_DEALLOCATE_P(this%labels_densities)
   SAFE_DEALLOCATE_P(this%particle_kept_densities)
 
-  call pop_sub()
+  call pop_sub('modelmb_particles.modelmb_particles_end')
 
 end subroutine modelmb_particles_end
 
@@ -364,7 +364,7 @@ subroutine modelmb_particles_copy(modelmb_out, modelmb_in)
   call loct_pointer_copy(modelmb_out%labels_densities,modelmb_in%labels_densities)
   call loct_pointer_copy(modelmb_out%particle_kept_densities,modelmb_in%particle_kept_densities)
 
-  call pop_sub()
+  call pop_sub('modelmb_particles.modelmb_particles_copy')
 
 end subroutine modelmb_particles_copy
 
@@ -388,7 +388,7 @@ subroutine modelmb_copy_masses (this,masses)
     dimcounter = dimcounter+this%ndim
   end do
 
-  call pop_sub()
+  call pop_sub('modelmb_particles.modelmb_copy_masses')
 
 end subroutine modelmb_copy_masses
 

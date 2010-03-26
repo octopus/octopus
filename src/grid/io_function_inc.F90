@@ -92,7 +92,7 @@ subroutine X(input_function)(filename, mesh, ff, ierr, is_tmp, map)
     call X(input_function_global)(filename, mesh, ff, ierr, is_tmp_, map)
   end if
 
-  call pop_sub()
+  call pop_sub('io_function_inc.Xinput_function')
 
 end subroutine X(input_function)
 
@@ -182,7 +182,7 @@ subroutine X(input_function_global)(filename, mesh, ff, ierr, is_tmp, map)
     ierr = 1
   end select
 
-  call pop_sub()
+  call pop_sub('io_function_inc.Xinput_function_global')
   call profiling_out(read_prof)
 
 #if defined(HAVE_NETCDF)
@@ -229,7 +229,8 @@ contains
       (ndim(2) .ne. cube%n(2)) .or. &
       (ndim(3) .ne. cube%n(3))) then
       ierr = 12
-      call pop_sub(); return
+      call pop_sub('io_function_inc.Xinput_function_global.read_netcdf')
+      return
     end if
 
     if(status == NF90_NOERR) then
@@ -301,7 +302,7 @@ contains
     SAFE_DEALLOCATE_A(xx)
 
     status = nf90_close(ncid)
-    call pop_sub()
+    call pop_sub('io_function_inc.Xinput_function_global.read_netcdf')
   end subroutine read_netcdf
 
 #endif
@@ -395,7 +396,7 @@ subroutine X(output_function) (how, dir, fname, mesh, ff, unit, ierr, is_tmp, ge
    endif
 #endif
 
-  call pop_sub()
+  call pop_sub('io_function_inc.Xoutput_function')
 end subroutine X(output_function)
 
 
@@ -470,7 +471,7 @@ subroutine X(output_function_global) (how, dir, fname, mesh, ff, unit, ierr, is_
   if(iand(how, output_netcdf)    .ne.0) call out_netcdf()
 #endif
 
-  call pop_sub()
+  call pop_sub('io_function_inc.Xoutput_function_global')
   call profiling_out(write_prof)
 
 contains
@@ -485,7 +486,7 @@ contains
     call io_binary_write(trim(workdir)//'/'//trim(fname)//'.obf', mesh%np_global, ff, ierr)
 
     call profiling_count_transfers(mesh%np_global, ff(1))
-    call pop_sub()
+    call pop_sub('io_function_inc.Xoutput_function_global.out_binary')
   end subroutine out_binary
 
 
@@ -514,7 +515,7 @@ contains
     end do
 
     call io_close(iunit)
-    call pop_sub()
+    call pop_sub('io_function_inc.Xoutput_function_global.out_axis')
   end subroutine out_axis
 
 
@@ -580,7 +581,7 @@ contains
     write(iunit, mformat, iostat=ierr)
     call io_close(iunit)
 
-    call pop_sub()
+    call pop_sub('io_function_inc.Xoutput_function_global.out_plane')
   end subroutine out_plane
 
 
@@ -660,7 +661,7 @@ contains
     SAFE_DEALLOCATE_A(out_vec)
     call io_close(iunit)
 
-    call pop_sub()
+    call pop_sub('io_function_inc.Xoutput_function_global.out_matlab')
   end subroutine out_matlab
 
 
@@ -691,7 +692,7 @@ contains
     if(ierr == 0) write(iunit, mformat, iostat=ierr)
     call io_close(iunit)
 
-    call pop_sub()
+    call pop_sub('io_function_inc.Xoutput_function_global.out_mesh_index')
   end subroutine out_mesh_index
 
 
@@ -753,7 +754,7 @@ contains
     call io_close(iunit)
     call X(cf_free) (cube)
 
-    call pop_sub()
+    call pop_sub('io_function_inc.Xoutput_function_global.out_dx')
   end subroutine out_dx
 
 
@@ -846,7 +847,7 @@ contains
     call io_close(iunit)
     call X(cf_free) (cube)
 
-    call pop_sub()
+    call pop_sub('io_function_inc.Xoutput_function_global.out_xcrysden')
   end subroutine out_xcrysden
 
 
@@ -877,7 +878,8 @@ contains
     status = nf90_create(trim(filename), NF90_CLOBBER, ncid)
     if(status.ne.NF90_NOERR) then
       ierr = 2
-      call pop_sub(); return
+      call pop_sub('io_function_inc.Xoutput_function_global.out_netcdf')
+      return
     end if
 
     ! dimensions
@@ -997,7 +999,7 @@ contains
     status = nf90_close(ncid)
     call X(cf_free) (cube)
 
-    call pop_sub()
+    call pop_sub('io_function_inc.Xoutput_function_global.out_netcdf')
   end subroutine out_netcdf
 
 
@@ -1018,7 +1020,7 @@ contains
       status = nf90_put_var (ncid, data_id, xx)
     end select
     
-    call pop_sub()
+    call pop_sub('io_function_inc.Xoutput_function_global.write_variable')
   end subroutine write_variable
 
 #endif /*defined(HAVE_NETCDF)*/
@@ -1063,7 +1065,7 @@ subroutine X(io_function_out_text)(dir, mesh, mm, wf)
 
   call io_close(iunit)
 
-  call pop_sub()
+  call pop_sub('io_function_inc.Xio_function_out_text')
 end subroutine X(io_function_out_text)
 
 #undef out_type

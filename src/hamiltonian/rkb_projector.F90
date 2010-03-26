@@ -204,7 +204,7 @@ contains
 
     SAFE_DEALLOCATE_A(bra)
 #ifndef USE_OMP
-    call pop_sub()
+    call pop_sub('rkb_projector.rkb_project_bra')
 #endif
   end subroutine rkb_project_bra
 
@@ -233,7 +233,7 @@ contains
       end do
     end do
 #ifndef USE_OMP
-    call pop_sub()
+    call pop_sub('rkb_projector.rkb_project_ket')
 #endif
   end subroutine rkb_project_ket
   

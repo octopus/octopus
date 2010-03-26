@@ -105,7 +105,7 @@ contains
       call write_info(2, iunit)
     end if
 
-    call pop_sub()
+    call pop_sub('xc.xc_write_info')
   end subroutine xc_write_info
 
 
@@ -209,7 +209,7 @@ contains
 
     end if
 
-    call pop_sub()
+    call pop_sub('xc.xc_init')
     
   contains 
     
@@ -259,7 +259,7 @@ contains
         xk_id = val - ck_id*1000  
       end if
 
-      call pop_sub()
+      call pop_sub('xc.xc_init.parse')
     end subroutine parse
 
   end subroutine xc_init
@@ -284,7 +284,7 @@ contains
     end do
     xcs%family = 0
 
-    call pop_sub()
+    call pop_sub('xc.xc_end')
   end subroutine xc_end
 
 

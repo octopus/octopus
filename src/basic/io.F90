@@ -234,7 +234,7 @@ contains
     if(stdin .ne.5) call io_close(stdin)
     if(stdout.ne.6) call io_close(stdout)
 
-    call pop_sub()
+    call pop_sub('io.io_end')
   end subroutine io_end
 
 
@@ -263,7 +263,7 @@ contains
       end if
     end do
 
-    call pop_sub()
+    call pop_sub('io.io_assign')
 
   end subroutine io_assign
 
@@ -277,7 +277,7 @@ contains
     if (lun .ge. min_lun .and. lun .le. max_lun) &
       lun_is_free(lun) = .true.
 
-    call pop_sub()
+    call pop_sub('io.io_free')
 
   end subroutine io_free
 
@@ -306,7 +306,7 @@ contains
       end if
     end if
 
-    call pop_sub()
+    call pop_sub('io.io_workpath')
 
   end function io_workpath
 
@@ -325,7 +325,7 @@ contains
 
     call loct_mkdir(trim(io_workpath(fname, is_tmp_)))
 
-    call pop_sub()
+    call pop_sub('io.io_mkdir')
 
   end subroutine io_mkdir
 
@@ -373,7 +373,8 @@ contains
           message(1) = 'Error: io_open.'
           call write_fatal(1)
         end if
-        call pop_sub(); return
+        call pop_sub('io.io_open')
+        return
       end if
 
       is_tmp_ = .false.
@@ -407,7 +408,7 @@ contains
     end if
 #endif
 
-    call pop_sub()
+    call pop_sub('io.io_open')
     
   end function io_open
 
@@ -441,7 +442,7 @@ contains
     end if
 #endif
 
-    call pop_sub()
+    call pop_sub('io.io_close')
 
   end subroutine io_close
 
@@ -474,7 +475,7 @@ contains
     end do
     write(iunit,'(a)') '********           ********'
 
-    call pop_sub()
+    call pop_sub('io.io_status')
 
   end subroutine io_status
 
@@ -512,7 +513,7 @@ contains
     end if
 
     call io_close(iunit)
-    call pop_sub()
+    call pop_sub('io.io_dump_file')
 
   end subroutine io_dump_file
 
@@ -535,7 +536,7 @@ contains
       ext = path(i+1:)
     end if
 
-    call pop_sub()
+    call pop_sub('io.io_get_extension')
 
   end function io_get_extension
 
@@ -560,7 +561,7 @@ contains
       call io_close(iunit)
     end if
 
-    call pop_sub()
+    call pop_sub('io.io_switch_status')
 
   end subroutine io_switch_status
 
@@ -604,7 +605,7 @@ contains
       end if
     end if
 
-    call pop_sub()
+    call pop_sub('io.io_debug_on_the_fly')
 
   end subroutine io_debug_on_the_fly
 
@@ -623,7 +624,7 @@ contains
       call write_warning(1)
     end if
 
-    call pop_sub()
+    call pop_sub('io.io_file_exists')
   end function io_file_exists
 
 
@@ -646,7 +647,7 @@ contains
     end if
 #endif
 
-    call pop_sub()
+    call pop_sub('out.iopar_read')
   end subroutine iopar_read
 
 
@@ -661,7 +662,7 @@ contains
       backspace(iunit)
     end if
 
-    call pop_sub()
+    call pop_sub('out.iopar_backspace')
 
   end subroutine iopar_backspace
 
@@ -681,7 +682,7 @@ contains
     end do
     backspace(iunit)
 
-    call pop_sub()
+    call pop_sub('io.io_skip_header')
 
   end subroutine io_skip_header
 

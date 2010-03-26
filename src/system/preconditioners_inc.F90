@@ -71,7 +71,7 @@ subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
 
   end select
 
-  call pop_sub()
+  call pop_sub('preconditioners_inc.Xpreconditioner_apply')
   call profiling_out(preconditioner_prof)
 contains
 
@@ -92,7 +92,7 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(diag)
-    call pop_sub()
+    call pop_sub('preconditioners_inc.Xpreconditioner_apply.apply_D_inverse')
   end subroutine apply_D_inverse
 
   ! -----------------------------------------------------
@@ -199,7 +199,7 @@ contains
 
     end do
 
-    call pop_sub()
+    call pop_sub('preconditioners_inc.Xpreconditioner_apply.multigrid')
   end subroutine multigrid
 
 
@@ -226,7 +226,7 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, aa, bb, omega)
     end do
   end select
 
-  call pop_sub()
+  call pop_sub('preconditioners_inc.Xpreconditioner_apply_batch')
 end subroutine X(preconditioner_apply_batch)
 !! Local Variables:
 !! mode: f90

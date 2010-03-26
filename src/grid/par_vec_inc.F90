@@ -42,7 +42,8 @@ subroutine X(vec_scatter)(vp, root, v, v_local)
   ! Skip the MPI call if domain parallelization is not used.
   if(vp%npart.lt.2) then
     v_local(1:vp%np) = v(1:vp%np)
-    call pop_sub(); return
+    call pop_sub('par_vec_inc.Xvec_scatter')
+    return
   end if
 
   ! Unfortunately, vp%xlocal ist not quite the required
@@ -75,7 +76,7 @@ subroutine X(vec_scatter)(vp, root, v, v_local)
   SAFE_DEALLOCATE_A(v_tmp)
   SAFE_DEALLOCATE_A(displs)
 
-  call pop_sub()
+  call pop_sub('par_vec_inc.Xvec_scatter')
 
 end subroutine X(vec_scatter)
 
@@ -124,7 +125,7 @@ subroutine X(vec_scatter_bndry)(vp, root, v, v_local)
   SAFE_DEALLOCATE_A(v_tmp)
   SAFE_DEALLOCATE_A(displs)
 
-  call pop_sub()
+  call pop_sub('par_vec_inc.Xvec_scatter_bndry')
 
 end subroutine X(vec_scatter_bndry)
 
@@ -142,7 +143,7 @@ subroutine X(vec_scatter_all)(vp, root, v, v_local)
   call X(vec_scatter)(vp, root, v, v_local)
   call X(vec_scatter_bndry)(vp, root, v, v_local)
 
-  call pop_sub()
+  call pop_sub('par_vec_inc.Xvec_scatter_all')
 
 end subroutine X(vec_scatter_all)
 
@@ -166,7 +167,8 @@ subroutine X(vec_gather)(vp, root, v, v_local)
   ! Skip the MPI call if domain parallelization is not used.
   if(vp%npart.lt.2) then
     v(1:vp%np) = v_local(1:vp%np)
-    call pop_sub(); return
+    call pop_sub('par_vec_inc.Xvec_gather')
+    return
   end if
 
   ! Unfortunately, vp%xlocal ist not quite the required
@@ -193,7 +195,7 @@ subroutine X(vec_gather)(vp, root, v, v_local)
   SAFE_DEALLOCATE_A(v_tmp)
   SAFE_DEALLOCATE_A(displs)
 
-  call pop_sub()
+  call pop_sub('par_vec_inc.Xvec_gather')
 
 end subroutine X(vec_gather)
 
@@ -233,7 +235,7 @@ subroutine X(vec_allgather)(vp, v, v_local)
   SAFE_DEALLOCATE_A(v_tmp)
   SAFE_DEALLOCATE_A(displs)
 
-  call pop_sub()
+  call pop_sub('par_vec_inc.Xvec_allgather')
 
 end subroutine X(vec_allgather)
 
@@ -267,7 +269,7 @@ subroutine X(vec_ghost_update)(vp, v_local)
 
   SAFE_DEALLOCATE_A(ghost_send)
 
-  call pop_sub()
+  call pop_sub('par_vec_inc.Xvec_ghost_update')
 
   call profiling_out(C_PROFILING_GHOST_UPDATE)
 end subroutine X(vec_ghost_update)
@@ -329,7 +331,7 @@ subroutine X(vec_ighost_update)(vp, v_local, handle)
     
   end select
 
-  call pop_sub()
+  call pop_sub('par_vec_inc.Xvec_ighost_update')
   call profiling_out(C_PROFILING_GHOST_UPDATE)
 
 end subroutine X(vec_ighost_update)
@@ -413,7 +415,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, comm_method, handle)
     end do
   end select
 
-  call pop_sub()
+  call pop_sub('par_vec_inc.Xghost_update_batch_start')
   call profiling_out(C_PROFILING_GHOST_UPDATE)
 
 end subroutine X(ghost_update_batch_start)
@@ -449,7 +451,7 @@ subroutine X(ghost_update_batch_finish)(handle)
   call batch_end(handle%ghost_send)
 
   call profiling_out(prof_wait)
-  call pop_sub()
+  call pop_sub('par_vec_inc.Xghost_update_batch_finish')
 end subroutine X(ghost_update_batch_finish)
 
 #endif

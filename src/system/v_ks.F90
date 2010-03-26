@@ -189,7 +189,7 @@ contains
       end if
      end if
 
-    call pop_sub()
+    call pop_sub('v_ks.v_ks_init')
   end subroutine v_ks_init
   ! ---------------------------------------------------------
 
@@ -213,7 +213,7 @@ contains
       SAFE_DEALLOCATE_P(ks%hartree_solver)
     end if
 
-    call pop_sub()
+    call pop_sub('v_ks.v_ks_end')
   end subroutine v_ks_end
   ! ---------------------------------------------------------
 
@@ -252,7 +252,7 @@ contains
 
     call messages_print_stress(iunit)
 
-    call pop_sub()
+    call pop_sub('v_ks.v_ks_write_info')
   end subroutine v_ks_write_info
   ! ---------------------------------------------------------
 
@@ -295,7 +295,8 @@ contains
           call zcalculate_eigenvalues(hm, gr%der, st)
         end if
       end if
-      call pop_sub(); return
+      call pop_sub('v_ks.v_ks_calc')
+      return
     end if
 
     hm%epot     = M_ZERO
@@ -367,7 +368,7 @@ contains
     end if
 
     call profiling_out(prof)
-    call pop_sub()
+    call pop_sub('v_ks.v_ks_calc')
 
   contains
 
@@ -456,7 +457,7 @@ contains
       end if
 
       call profiling_out(prof)
-      call pop_sub()
+      call pop_sub('v_ks.v_ks_calc.v_a_xc')
     end subroutine v_a_xc
   end subroutine v_ks_calc
   ! ---------------------------------------------------------
@@ -534,7 +535,7 @@ contains
     endif
 
     SAFE_DEALLOCATE_A(rho)
-    call pop_sub()
+    call pop_sub('v_ks.v_ks_hartree')
   end subroutine v_ks_hartree
   ! ---------------------------------------------------------
 
@@ -547,7 +548,7 @@ contains
 
     ks%frozen_hxc = .true.
     
-    call pop_sub()
+    call pop_sub('v_ks.v_ks_freeze_hxc')
   end subroutine v_ks_freeze_hxc
   ! ---------------------------------------------------------
 

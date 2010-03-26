@@ -40,7 +40,8 @@ subroutine xc_get_vxc_and_axc(der, xcs, st, rho, current_density, ispin, vxc, ax
 
   !do we have a current-dependent XC?
   if(iand(xcs%family, XC_FAMILY_LCA) == 0) then
-    call pop_sub(); return
+    call pop_sub('axc_inc.xc_get_vxc_and_axc')
+    return
   end if
 
   spin_channels = xcs%j_functl%spin_channels
@@ -108,7 +109,7 @@ subroutine xc_get_vxc_and_axc(der, xcs, st, rho, current_density, ispin, vxc, ax
   SAFE_DEALLOCATE_A(dedd)
   SAFE_DEALLOCATE_A(dedv)
 
-  call pop_sub()
+  call pop_sub('axc_inc.xc_get_vxc_and_axc')
 end subroutine xc_get_vxc_and_axc
 
 !! Local Variables:

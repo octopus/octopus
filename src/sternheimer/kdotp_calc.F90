@@ -55,7 +55,7 @@ contains
 
     write(str, '(a,i1)') 'rho_', dir
 
-    call pop_sub()
+    call pop_sub('kdotp_calc.kdotp_rho_tag')
 
   end function kdotp_rho_tag
   
@@ -68,7 +68,7 @@ contains
 
     write(str, '(a,i1)') "wfs_", dir
 
-    call pop_sub()
+    call pop_sub('kdotp_calc.kdotp_wfs_tag')
 
   end function kdotp_wfs_tag
 
@@ -109,7 +109,7 @@ subroutine zcalc_dipole_periodic(sys, lr, dipole)
     dipole(idir) = -moment
   enddo
 
-  call pop_sub()
+  call pop_sub('kdotp_calc.zcalc_dipole_periodic')
 
 end subroutine zcalc_dipole_periodic
 

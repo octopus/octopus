@@ -127,7 +127,7 @@ contains
       
     end if
 
-    call pop_sub()
+    call pop_sub('gauge_field.gauge_field_init')
   end subroutine gauge_field_init
 
   ! ---------------------------------------------------------
@@ -138,7 +138,7 @@ contains
     call push_sub('gauge_field.gauge_field_end')
     this%with_gauge_field = .false.
 
-    call pop_sub()
+    call pop_sub('gauge_field.gauge_field_end')
   end subroutine gauge_field_end
 
   ! ---------------------------------------------------------
@@ -158,7 +158,7 @@ contains
     call push_sub('gauge_field.gauge_field_set_vec_pot')
     this%vecpot = vec_pot
 
-    call pop_sub()
+    call pop_sub('gauge_field.gauge_field_set_vec_pot')
   end subroutine gauge_field_set_vec_pot
 
   ! ---------------------------------------------------------
@@ -170,7 +170,7 @@ contains
     call push_sub('gauge_field.gauge_field_set_vec_pot_vel')
     this%vecpot_vel = vec_pot_vel
 
-    call pop_sub()
+    call pop_sub('gauge_field.gauge_field_set_vec_pot_vel')
   end subroutine gauge_field_set_vec_pot_vel
 
   ! ---------------------------------------------------------
@@ -182,7 +182,7 @@ contains
     call push_sub('gauge_field.gauge_field_get_vec_pot')
     vec_pot = this%vecpot
 
-    call pop_sub()
+    call pop_sub('gauge_field.gauge_field_get_vec_pot')
   end function gauge_field_get_vec_pot
 
   ! ---------------------------------------------------------
@@ -194,7 +194,7 @@ contains
     call push_sub('gauge_field.gauge_field_get_vec_pot_vel')
     vec_pot_vel = this%vecpot_vel
 
-    call pop_sub()
+    call pop_sub('gauge_field.gauge_field_get_vec_pot_vel')
   end function gauge_field_get_vec_pot_vel
 
   ! ---------------------------------------------------------
@@ -206,7 +206,7 @@ contains
     call push_sub('gauge_field.gauge_field_get_vec_pot_acc')
     vec_pot_acc = this%vecpot_acc
 
-    call pop_sub()
+    call pop_sub('gauge_field.gauge_field_get_vec_pot_acc')
   end function gauge_field_get_vec_pot_acc
 
   ! ---------------------------------------------------------
@@ -222,7 +222,7 @@ contains
 
     this%vecpot = this%vecpot + dt*this%vecpot_vel + M_HALF*dt**2*force%vecpot
 
-    call pop_sub()
+    call pop_sub('gauge_field.gauge_field_propagate')
   end subroutine gauge_field_propagate
 
   ! ---------------------------------------------------------
@@ -235,7 +235,7 @@ contains
     call push_sub('gauge_field.gauge_field_propagate_vel')
     this%vecpot_vel = this%vecpot_vel + M_HALF*dt*(this%vecpot_acc + force%vecpot)
 
-    call pop_sub()
+    call pop_sub('gauge_field.gauge_field_propagate_vel')
   end subroutine gauge_field_propagate_vel
 
   ! ---------------------------------------------------------
@@ -263,7 +263,7 @@ contains
          units_from_atomic(units_out%energy, sqrt(this%wp2)), " ["//trim(units_abbrev(units_out%energy))//"]"
     call write_info(1)
 
-    call pop_sub()
+    call pop_sub('gauge_field.gauge_field_init_vec_pot')
   end subroutine gauge_field_init_vec_pot
 
   ! ---------------------------------------------------------
@@ -335,7 +335,7 @@ contains
     SAFE_DEALLOCATE_A(gpsi)
     SAFE_DEALLOCATE_A(cpsi)
 
-    call pop_sub()
+    call pop_sub('gauge_field.gauge_field_get_force')
   end subroutine gauge_field_get_force
 
   ! ---------------------------------------------------------
@@ -347,7 +347,7 @@ contains
     call push_sub('gauge_field.gauge_field_get_energy')
     energy = sb%rcell_volume/(M_EIGHT*M_PI*P_c**2)*sum(this%vecpot_vel(1:MAX_DIM)**2)
 
-    call pop_sub()
+    call pop_sub('gauge_field.gauge_field_get_energy')
   end function gauge_field_get_energy
 
   ! ---------------------------------------------------------
@@ -373,7 +373,7 @@ contains
       hpsi(ip, idim) = hpsi(ip, idim) + M_HALF*a2*psi(ip, idim) + M_zI*dot_product(vecpot(1:MAX_DIM), grad(ip, 1:MAX_DIM, idim))
     end forall
     
-    call pop_sub()
+    call pop_sub('gauge_field.gauge_field_apply')
   end subroutine gauge_field_apply
   
 end module gauge_field_m

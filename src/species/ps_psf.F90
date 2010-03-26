@@ -104,7 +104,7 @@ contains
 
     call file_to_grid(pstm%psf_file, pstm%ps_grid)
 
-    call pop_sub()
+    call pop_sub('ps_psf.ps_psf_init')
   end subroutine ps_psf_init
 
   
@@ -114,7 +114,7 @@ contains
     call push_sub('ps_psf.ps_psf_end')
     call ps_in_grid_end(ps_psf%ps_grid)
     call ps_psf_file_end(ps_psf%psf_file)
-    call pop_sub()
+    call pop_sub('ps_psf.ps_psf_end')
   end subroutine ps_psf_end
 
 
@@ -172,7 +172,7 @@ contains
       end if
     end do
 
-    call pop_sub()
+    call pop_sub('ps_psf.build_valconf')
   end subroutine build_valconf 
 
   !----------------------------------------------------------------
@@ -199,7 +199,7 @@ contains
     ps_grid%core_corrections = .true.
     if(trim(psf_file%icore) == 'nc') ps_grid%core_corrections = .false.
 
-    call pop_sub()
+    call pop_sub('ps_psf.file_to_grid')
   end subroutine file_to_grid
 
 
@@ -234,7 +234,7 @@ contains
     call ps_in_grid_kb_projectors(ps_psf%ps_grid)
 
     SAFE_DEALLOCATE_P(ps_psf%eigen)
-    call pop_sub()
+    call pop_sub('ps_psf.psf_process')
   end subroutine ps_psf_process
 
 
@@ -409,7 +409,7 @@ contains
     SAFE_DEALLOCATE_A(rho)
     SAFE_DEALLOCATE_A(prev)
 
-    call pop_sub()
+    call pop_sub('ps_psf.solve_schroedinger')
   end subroutine solve_schroedinger
 
 
@@ -499,7 +499,7 @@ contains
     SAFE_DEALLOCATE_A(s)
     SAFE_DEALLOCATE_A(ve)
 
-    call pop_sub()
+    call pop_sub('ps_psf.ghost_analysis')
   end subroutine ghost_analysis
 
 end module ps_psf_m

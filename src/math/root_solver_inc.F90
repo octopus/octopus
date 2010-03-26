@@ -114,7 +114,7 @@ subroutine X(root_solver_run)(rs, func, root, success, startval, interval_, coef
     call write_fatal(2)
   end select
 
-  call pop_sub()
+  call pop_sub('root_solver_inc.Xroot_solver_run')
 end subroutine X(root_solver_run)
 
 
@@ -125,7 +125,7 @@ subroutine X(root_solver_create)()
   call push_sub('root_solver_inc.Xroot_solver_create')
   ! do allocation stuff
 
-  call pop_sub()
+  call pop_sub('root_solver_inc.Xroot_solver_create')
 end subroutine X(root_solver_create)
 
 
@@ -134,7 +134,7 @@ subroutine X(root_solver_end)()
   call push_sub('root_solver_inc.Xroot_solver_end')
   ! do deallocation stuff
 
-  call pop_sub()
+  call pop_sub('root_solver_inc.Xroot_solver_end')
 end subroutine X(root_solver_end)
 
 
@@ -205,7 +205,7 @@ subroutine X(root_laguerre)(rs, root, startval, coeff)
   SAFE_DEALLOCATE_A(c)
   SAFE_DEALLOCATE_A(d)
 
-  call pop_sub()
+  call pop_sub('root_solver_inc.Xroot_laguerre')
 end subroutine X(root_laguerre)
 
 !! Local Variables:

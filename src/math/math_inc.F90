@@ -47,7 +47,7 @@ subroutine X(interpolate_2)(xa, ya, x, y)
   end do
 
   SAFE_DEALLOCATE_A(c)
-  call pop_sub()
+  call pop_sub('math_inc.Xinterpolate_2')
 end subroutine X(interpolate_2)
 
 
@@ -74,7 +74,7 @@ subroutine X(interpolate_1)(xa, ya, x, y)
   end do
 
   SAFE_DEALLOCATE_A(c)
-  call pop_sub()
+  call pop_sub('math_inc.Xinterpolate_1')
 end subroutine X(interpolate_1)
 
 
@@ -100,7 +100,7 @@ subroutine X(interpolate_0)(xa, ya, x, y)
   end do
 
   SAFE_DEALLOCATE_A(c)
-  call pop_sub()
+  call pop_sub('math_inc.Xinterpolate_0')
 end subroutine X(interpolate_0)
 
 ! ---------------------------------------------------------
@@ -145,7 +145,7 @@ subroutine X(shellsort1)(a, x)
   end do
 
   SAFE_DEALLOCATE_A(b)
-  call pop_sub()
+  call pop_sub('math_inc.Xshellsort1')
 end subroutine X(shellsort1)
 
 
@@ -192,7 +192,7 @@ subroutine X(shellsort2)(a, x)
   end do
 
   SAFE_DEALLOCATE_A(b)
-  call pop_sub()
+  call pop_sub('math_inc.Xshellsort2')
 end subroutine X(shellsort2)
 
 
@@ -214,7 +214,7 @@ logical function X(approximately_equal)(a, b) result(app)
     (abs(R_AIMAG(a)-R_AIMAG(b)) < APP_THRESHOLD)
 #endif
 
-  call pop_sub()
+  call pop_sub('math_inc.Xapproximately_equal')
 end function X(approximately_equal)
 
 
@@ -228,16 +228,18 @@ logical function X(approximately_equal_1)(a, b) result(app)
 
   app = .false.
   if(size(a).ne.size(b)) then
-    call pop_sub(); return
+    call pop_sub('math_inc.Xapproximately_equal_1')
+    return
   endif
   do i = 1, size(a)
     app = X(approximately_equal)(a(i), b(i))
     if(.not.app) then
-      call pop_sub(); return
+      call pop_sub('math_inc.Xapproximately_equal_1')
+      return
     endif
   end do
 
-  call pop_sub()
+  call pop_sub('math_inc.Xapproximately_equal_1')
 end function X(approximately_equal_1)
 
 
@@ -251,16 +253,18 @@ logical function X(approximately_equal_2)(a, b) result(app)
 
   app = .false.
   if(any(shape(a).ne.shape(b))) then
-    call pop_sub(); return
+    call pop_sub('math_inc.Xapproximately_equal_2')
+    return
   endif
   do i = 1, size(a, 1)
     app = X(approximately_equal_1)(a(i, :), b(i, :))
     if(.not.app) then
-      call pop_sub(); return
+      call pop_sub('math_inc.Xapproximately_equal_2')
+      return
     endif
   end do
 
-  call pop_sub()
+  call pop_sub('math_inc.Xapproximately_equal_2')
 end function X(approximately_equal_2)
 
 
@@ -274,16 +278,18 @@ logical function X(approximately_equal_3)(a, b) result(app)
 
   app = .false.
   if(any(shape(a).ne.shape(b))) then
-    call pop_sub(); return
+    call pop_sub('math_inc.Xapproximately_equal_3')
+    return
   endif
   do i = 1, size(a, 1)
     app = X(approximately_equal_2)(a(i, :, :), b(i, :, :))
     if(.not.app) then
-      call pop_sub(); return
+      call pop_sub('math_inc.Xapproximately_equal_3')
+      return
     endif
   end do
 
-  call pop_sub()
+  call pop_sub('math_inc.Xapproximately_equal_3')
 end function X(approximately_equal_3)
 
 
@@ -360,7 +366,7 @@ subroutine X(parker_traub)(nsize, vdm_base, vdm_inverse)
   SAFE_DEALLOCATE_A(ap)
   SAFE_DEALLOCATE_A(an)
   
-  call pop_sub()
+  call pop_sub('math_inc.Xparker_traub')
 end subroutine X(parker_traub)
 
 
@@ -399,7 +405,7 @@ subroutine X(matrix_newton_raphson)(nsteps, nsize, a, b)
   SAFE_DEALLOCATE_A(ab)
   SAFE_DEALLOCATE_A(bab)
 
-  call pop_sub()
+  call pop_sub('math_inc.Xmatrix_newton_raphson')
 end subroutine X(matrix_newton_raphson)
 
 
@@ -467,7 +473,7 @@ FLOAT function X(infinity_norm)(matrix)
   
   X(infinity_norm) = norm
 
-  call pop_sub()
+  call pop_sub('math_inc.Xinfinity_norm')
 end function X(infinity_norm)
 
 
@@ -492,7 +498,7 @@ subroutine X(matrix_symmetric_average)(matrix, np)
   end if
 
   SAFE_DEALLOCATE_A(tmp)
-  call pop_sub()
+  call pop_sub('math_inc.Xmatrix_symmetric_average')
 end subroutine X(matrix_symmetric_average)
 
 
@@ -510,7 +516,7 @@ subroutine X(matrix_symmetrize)(matrix, np)
     matrix(j+1:np,j) = matrix(j,j+1:np)
   end do
 
-  call pop_sub()
+  call pop_sub('math_inc.Xmatrix_symmetrize')
 end subroutine X(matrix_symmetrize)
 
 
@@ -547,7 +553,7 @@ subroutine X(matrix_sort)(np, matrix, eigenvals)
   SAFE_DEALLOCATE_A(unsorted_matrix)
   SAFE_DEALLOCATE_A(unsorted_eigenvals)
 
-  call pop_sub()
+  call pop_sub('math_inc.Xmatrix_sort')
 end subroutine X(matrix_sort)
 
 

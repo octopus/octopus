@@ -113,7 +113,7 @@ contains
     call push_sub('mesh_function.mesh_init_mesh_aux')
     mesh_aux => mesh
 
-    call pop_sub()
+    call pop_sub('mesh_function.mesh_init_mesh_aux')
   end subroutine mesh_init_mesh_aux
 
 #include "undef.F90"

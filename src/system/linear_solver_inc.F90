@@ -99,7 +99,7 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, omega, tol, occ_respo
   end select
 
   call profiling_out(prof)
-  call pop_sub()
+  call pop_sub('linear_solver_inc.Xsolve_HXeY')
 
 end subroutine X(solve_HXeY)
 
@@ -203,7 +203,7 @@ subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, omega, tol)
   SAFE_DEALLOCATE_A(p)
   SAFE_DEALLOCATE_A(Hp)
 
-  call pop_sub()
+  call pop_sub('linear_solver_inc.Xls_solver_cg')
 end subroutine X(ls_solver_cg)
 
 ! ---------------------------------------------------------
@@ -338,7 +338,7 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, tol, occ
   SAFE_DEALLOCATE_P(phat)
   SAFE_DEALLOCATE_P(shat)
 
-  call pop_sub()
+  call pop_sub('linear_solver_inc.Xls_solver_bicgstab')
 end subroutine X(ls_solver_bicgstab)
 
 
@@ -394,7 +394,7 @@ subroutine X(ls_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, omega, tol)
     call write_warning(1)
   endif
 
-  call pop_sub()
+  call pop_sub('linear_solver_inc.Xls_solver_multigrid')
 
 contains 
 
@@ -449,7 +449,7 @@ subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, hx)
   end do
 
   if(st%smear%fixed_occ .or. st%smear%method == SMEAR_SEMICONDUCTOR) then
-    call pop_sub()
+  call pop_sub('linear_solver_inc.Xls_solver_operator')
     return
   end if
 
@@ -468,7 +468,7 @@ subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, hx)
 
   end do
 
-  call pop_sub()
+  call pop_sub('linear_solver_inc.Xls_solver_operator')
 
 end subroutine X(ls_solver_operator)
 
@@ -562,7 +562,7 @@ subroutine X(ls_preconditioner) (x, hx)
 
   SAFE_DEALLOCATE_A(tmpx)
   SAFE_DEALLOCATE_A(tmpy)
-  call pop_sub()
+  call pop_sub('linear_solver_inc.Xls_preconditioner')
 
 end subroutine X(ls_preconditioner)
 
@@ -611,7 +611,7 @@ subroutine X(ls_solver_sos) (ls, hm, gr, st, ist, ik, x, y, omega)
   ls%iter = 1
 
   SAFE_DEALLOCATE_A(rr)
-  call pop_sub()
+  call pop_sub('linear_solver_inc.Xls_solver_sos')
 
 end subroutine X(ls_solver_sos)
 

@@ -190,7 +190,7 @@ contains
     how = iand(how, not(output_etsf))
 #endif
 
-    call pop_sub()
+    call pop_sub('io_function.io_function_read_how')
   end subroutine io_function_read_how
 
   ! -------------------------------------------------------------------
@@ -219,7 +219,7 @@ contains
     if(index(where, "NETCDF").ne.0)    how = ior(how, output_netcdf)
 #endif
 
-    call pop_sub()
+    call pop_sub('io_function.io_function_fill_how')
   end function io_function_fill_how
 
   ! ---------------------------------------------------------
@@ -261,7 +261,7 @@ contains
 
     call io_close(iunit)
 
-    call pop_sub()
+    call pop_sub('io_function.write_xsf_geometry_file')
   end subroutine write_xsf_geometry_file
 
   ! ---------------------------------------------------------
@@ -318,7 +318,7 @@ contains
       write(iunit, '()')
     enddo
 
-    call pop_sub()
+    call pop_sub('io_function.write_xsf_geometry')
   end subroutine write_xsf_geometry
 
 
@@ -333,7 +333,7 @@ contains
     call push_sub('io_function.ncdf_error')
 
     if(status .eq. NF90_NOERR) then
-      call pop_sub()
+    call pop_sub('io_function.ncdf_error')
       return
     endif
 
@@ -343,7 +343,7 @@ contains
     call write_warning(3)
     ierr = 5
 
-    call pop_sub()
+    call pop_sub('io_function.ncdf_error')
   end subroutine ncdf_error
 #endif
 
@@ -363,7 +363,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('io_function.transpose3')
   end subroutine transpose3
 
 
@@ -394,7 +394,7 @@ contains
 
     if(write_average_) write(iunit, '(a, f20.6)')  'Isotropic average', trace
 
-    call pop_sub()
+    call pop_sub('io_function.io_output_tensor')
   end subroutine io_output_tensor
 
 
@@ -415,7 +415,7 @@ contains
         units_from_atomic(units_out%length, dipole(idir)), units_from_atomic(unit_debye, dipole(idir))
     end do
 
-    call pop_sub()
+    call pop_sub('io_function.io_output_dipole')
   end subroutine io_output_dipole
 
 
@@ -438,7 +438,7 @@ contains
         write(ch,'(i1)') idir
     end select
 
-    call pop_sub()
+    call pop_sub('io_function.index2axis')
   end function index2axis
 
 

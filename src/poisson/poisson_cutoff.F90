@@ -161,7 +161,7 @@ contains
         - x*rmax*loct_bessel_j0(p*rmax)*loct_bessel_k1(x*rmax)
     end if
 
-    call pop_sub()
+    call pop_sub('poisson_cutoff.poisson_cutoff_inf_cylinder')
   end function poisson_cutoff_3D_1D
 
 
@@ -177,7 +177,7 @@ contains
       cutoff = M_ONE + exp(-p*r)*(z*sin(z*r)/p-cos(z*r))
     end if
 
-    call pop_sub()
+    call pop_sub('poisson_cutoff.poisson_cutoff_inf_cylinder')
   end function poisson_cutoff_3D_2D
   ! ---------------------------------------------------------
 

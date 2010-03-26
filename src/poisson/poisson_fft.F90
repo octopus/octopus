@@ -127,7 +127,7 @@ contains
     call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
-    call pop_sub()
+    call pop_sub('poisson_fft.poisson_fft_build_3d_3d')
   end subroutine poisson_fft_build_3d_3d
   !-----------------------------------------------------------------
 
@@ -211,7 +211,7 @@ contains
     call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
-    call pop_sub()
+    call pop_sub('poisson_fft.poisson_fft_build_3d_2d')
   end subroutine poisson_fft_build_3d_2d
   !-----------------------------------------------------------------
 
@@ -340,7 +340,7 @@ contains
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
-    call pop_sub()
+    call pop_sub('poisson_fft.poisson_fft_build_3d_1d')
   end subroutine poisson_fft_build_3d_1d
   !-----------------------------------------------------------------
 
@@ -439,7 +439,7 @@ contains
     call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
-    call pop_sub()
+    call pop_sub('poisson_fft.poisson_fft_build_3d_0d')
   end subroutine poisson_fft_build_3d_0d
   !-----------------------------------------------------------------
 
@@ -519,7 +519,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
     call spline_end(besselintf)
-    call pop_sub()
+    call pop_sub('poisson_fft.poisson_fft_build_2d_0d')
   end subroutine poisson_fft_build_2d_0d
   !-----------------------------------------------------------------
     
@@ -574,7 +574,7 @@ contains
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
 
-    call pop_sub()
+    call pop_sub('poisson_fft.poisson_fft_build_2d_1d')
   end subroutine poisson_fft_build_2d_1d
   !-----------------------------------------------------------------
 
@@ -614,7 +614,7 @@ contains
     call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
-    call pop_sub()
+    call pop_sub('poisson_fft.poisson_fft_build_2d_2d')
   end subroutine poisson_fft_build_2d_2d
   !-----------------------------------------------------------------
 
@@ -647,7 +647,7 @@ contains
     call dfourier_space_op_init(coulb, fft_cf, fft_coulb_fs)
     SAFE_DEALLOCATE_A(fft_coulb_fs)
     
-    call pop_sub()
+    call pop_sub('poisson_fft.poisson_fft_build_1d_1d')
   end subroutine poisson_fft_build_1d_1d
   !-----------------------------------------------------------------
 
@@ -685,7 +685,7 @@ contains
     call dfourier_space_op_init(coulb, fft_cf, fft_coulb_fs)
     SAFE_DEALLOCATE_A(fft_coulb_fs)
     
-    call pop_sub()
+    call pop_sub('poisson_fft.poisson_fft_build_1d_0d')
   end subroutine poisson_fft_build_1d_0d
   !-----------------------------------------------------------------
 
@@ -697,7 +697,7 @@ contains
     call dcf_free(fft_cf)
     call dfourier_space_op_end(coulb)
 
-    call pop_sub()
+    call pop_sub('poisson_fft.poisson_fft.end')
   end subroutine poisson_fft_end
 
   !-----------------------------------------------------------------
@@ -766,7 +766,7 @@ contains
       SAFE_DEALLOCATE_A(pot_global)
     end if
 
-    call pop_sub()
+    call pop_sub('poisson.poisson_fft')
   end subroutine poisson_fft
 
 end module poisson_fft_m

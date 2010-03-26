@@ -50,7 +50,7 @@ subroutine X(kb_project)(mesh, sm, kb_p, dim, psi, ppsi)
 
   call X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, ppsi)
 
-  call pop_sub()
+  call pop_sub('kb_projector_inc.kb_project')
 
 end subroutine X(kb_project)
 
@@ -102,7 +102,7 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
   end if
 
 #ifndef USE_OMP
-  call pop_sub()
+  call pop_sub('kb_projector_inc.kb_project_bra')
 #endif
 end subroutine X(kb_project_bra)
 
@@ -135,7 +135,7 @@ subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi)
 
   call profiling_count_operations(ns*dim*kb_p%n_c*2*R_ADD)
 #ifndef USE_OMP
-  call pop_sub()
+  call pop_sub('kb_projector_inc.kb_project_ket')
 #endif
 end subroutine X(kb_project_ket)
 

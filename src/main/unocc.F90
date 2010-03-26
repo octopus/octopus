@@ -149,7 +149,7 @@ contains
     call h_sys_output_states(sys%st, sys%gr, sys%geo, STATIC_DIR, sys%outp)
 
     call end_()
-    call pop_sub()
+    call pop_sub('unocc.unocc_run')
 
   contains
 
@@ -199,7 +199,7 @@ contains
       eigens%final_tol_iter = 2
       eigens%converged(1:st%d%nik) = st%nst - nus
 
-      call pop_sub()
+      call pop_sub('unocc.unocc_run.init_')
     end subroutine init_
 
 
@@ -210,7 +210,7 @@ contains
       call states_deallocate_wfns(sys%st)
       call eigensolver_end(eigens)
 
-      call pop_sub()
+      call pop_sub('unocc.unocc_run.end_')
     end subroutine end_
 
   end subroutine unocc_run

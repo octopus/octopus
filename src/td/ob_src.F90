@@ -72,7 +72,7 @@ contains
       ob%lead(il)%src_prev = M_z0
     end do
 
-    call pop_sub()
+    call pop_sub('ob_src.ob_src_init')
   end subroutine ob_src_init
 
 
@@ -113,7 +113,7 @@ contains
       end if
     end if
 
-    call pop_sub()
+    call pop_sub('ob_src.calc_source_wf')
   end subroutine calc_source_wf
 
 
@@ -149,7 +149,7 @@ contains
     call calc_source_wf(maxiter, m, np, il, offdiag, tmem, dt, psi0, u, f0, factor, lambda, src)
     SAFE_DEALLOCATE_A(tmem)
 
-    call pop_sub()
+    call pop_sub('ob_src.calc_source_wf_sp')
   end subroutine calc_source_wf_sp
 
 
@@ -166,7 +166,7 @@ contains
       SAFE_DEALLOCATE_P(ob%lead(il)%src_prev)
     end do
 
-    call pop_sub()
+    call pop_sub('ob_src.ob_src_end')
   end subroutine ob_src_end
 end module ob_src_m
 

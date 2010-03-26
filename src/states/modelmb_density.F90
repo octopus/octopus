@@ -105,7 +105,7 @@ contains
 
     den%dirname = trim(dir)
 
-    call pop_sub()
+    call pop_sub('states.modelmb_density_init')
 
   end subroutine modelmb_density_init
 
@@ -211,7 +211,7 @@ contains
     SAFE_DEALLOCATE_A(npoints)
     SAFE_DEALLOCATE_A(dipole_moment)
 
-    call pop_sub()
+    call pop_sub('states.modelmb_density_write')
   end subroutine modelmb_density_write
   ! ---------------------------------------------------------
 
@@ -223,7 +223,7 @@ contains
     nullify(this%labels)
     nullify(this%particle_kept)
 
-    call pop_sub()
+    call pop_sub('states.modelmb_density_nullify')
   end subroutine modelmb_density_nullify
 
   ! ---------------------------------------------------------
@@ -234,7 +234,7 @@ contains
     SAFE_DEALLOCATE_P(this%labels)
     SAFE_DEALLOCATE_P(this%particle_kept)
 
-    call pop_sub()
+    call pop_sub('states.modelmb_density_end')
   end subroutine modelmb_density_end
 
 #include "undef.F90"

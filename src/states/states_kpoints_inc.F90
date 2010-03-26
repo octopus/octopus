@@ -54,7 +54,8 @@ subroutine states_choose_kpoints(d, sb, geo)
     d%kpoints  = M_ZERO
     d%kweights = M_ONE
 
-    call pop_sub(); return
+    call pop_sub('states_kpoints_inc.states_choose_kpoints')
+    return
   end if
 
   ! if Monkhorst-Pack used, this variable will be reset
@@ -89,7 +90,8 @@ subroutine states_choose_kpoints(d, sb, geo)
     d%kpoints = units_to_atomic(unit_one / units_inp%length, d%kpoints) !k-points have 1/length units
 
     call print_kpoints_debug
-    call pop_sub(); return
+    call pop_sub('states_kpoints_inc.states_choose_kpoints')
+    return
   end if
 
   ! default when nothing specified: Gamma point only
@@ -110,7 +112,8 @@ subroutine states_choose_kpoints(d, sb, geo)
     d%kweights(1) = M_ONE
 
     call print_kpoints_debug
-    call pop_sub(); return
+    call pop_sub('states_kpoints_inc.states_choose_kpoints')
+    return
   end if
 
 ! now deal with Monkhorst-Pack
@@ -209,7 +212,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   SAFE_DEALLOCATE_A(kw)
   
   call print_kpoints_debug
-  call pop_sub()
+  call pop_sub('states_kpoints_inc.states_choose_kpoints')
 
 contains
   subroutine print_kpoints_debug
@@ -225,7 +228,7 @@ contains
 
     end if
 
-    call pop_sub()
+    call pop_sub('states_kpoints_inc.states_choose_kpoints.print_kpoints_debug')
   end subroutine print_kpoints_debug
 
 end subroutine states_choose_kpoints
@@ -260,7 +263,7 @@ subroutine kpoints_write_info(d, sbdim, iunit)
      call write_info(1, iunit, verbose_limit=80)
   end do
 
-  call pop_sub()
+  call pop_sub('states_kpoints_inc.kpoints_write_info')
 end subroutine kpoints_write_info
 
 logical pure function kpoint_is_gamma(this, ik)
@@ -287,7 +290,7 @@ integer function kpoint_index(this, ik) result(index)
      index = ik
   endif
 
-  call pop_sub()
+  call pop_sub('states_kpoints_inc.kpoint_index')
 end function kpoint_index
 
 !! Local Variables:

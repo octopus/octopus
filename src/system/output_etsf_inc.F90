@@ -380,7 +380,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     dims%real_or_complex_wavefunctions = 1
   end if
 
-  call pop_sub()
+  call pop_sub("output_etsf_inc.h_sys_output_etsf")
 end subroutine h_sys_output_etsf
 
 #endif

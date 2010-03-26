@@ -311,7 +311,7 @@ contains
     end if
 #endif
 
-    call pop_sub()
+    call pop_sub('td.td_run')
 
   contains
 
@@ -357,7 +357,7 @@ contains
         end if
       end if
 
-      call pop_sub()
+      call pop_sub('td.td_run.check_point')
     end subroutine check_point
 
    ! ---------------------------------------------------------
@@ -370,7 +370,7 @@ contains
       call ion_dynamics_end(td%ions)
       call td_end(td)
 
-      call pop_sub()
+      call pop_sub('td.td_run.end_')
     end subroutine end_
 
     ! ---------------------------------------------------------
@@ -550,7 +550,7 @@ contains
       call hamiltonian_span(hm, minval(gr%mesh%spacing(1:gr%mesh%sb%dim)), x)
       call total_energy(hm, gr, st, -1)
 
-      call pop_sub()
+      call pop_sub('td.td_run.init_wfs')
     end subroutine init_wfs
 
 
@@ -565,7 +565,7 @@ contains
       call apply_delta_field(td%kick)
       call td_rti_run_zero_iter(hm, td%tr)
 
-      call pop_sub()
+      call pop_sub('td.td_run.td_run_zero_iter')
     end subroutine td_run_zero_iter
 
 
@@ -702,7 +702,7 @@ contains
         SAFE_DEALLOCATE_A(kick_function)
       end if delta_strength
 
-      call pop_sub()
+      call pop_sub('td.td_run.apply_delta_field')
     end subroutine apply_delta_field
 
 
@@ -719,7 +719,8 @@ contains
         message(1) = "Could not open file '"//trim(io_workpath('td.general/coordinates'))//"'."
         message(2) = "Starting simulation from initial geometry."
         call write_warning(2)
-        call pop_sub(); return
+        call pop_sub('td.td_run.td_read_coordinates')
+        return
       end if
 
       call io_skip_header(iunit)
@@ -742,7 +743,7 @@ contains
       end do
 
       call io_close(iunit)
-      call pop_sub()
+      call pop_sub('td.td_run.td_read_coordinates')
     end subroutine td_read_coordinates
 
     ! ---------------------------------------------------------
@@ -760,7 +761,8 @@ contains
         message(1) = "Could not open file '"//trim(io_workpath('td.general/gauge_field'))//"'."
         message(2) = "Starting simulation from initial values."
         call write_warning(2)
-        call pop_sub(); return
+        call pop_sub('td.td_run.td_read_gauge_field')
+        return
       end if
 
       call io_skip_header(iunit)
@@ -783,7 +785,7 @@ contains
       call gauge_field_set_vec_pot_vel(hm%ep%gfield, vecpot_vel)
  
       call io_close(iunit)
-      call pop_sub()
+      call pop_sub('td.td_run.td_read_gauge_field')
     end subroutine td_read_gauge_field
 
     ! ---------------------------------------------------------
@@ -820,7 +822,7 @@ contains
 
       if(td%dynamics == CP) call cpmd_restart_write(td%cp_propagator, gr, st)
 
-      call pop_sub()
+      call pop_sub('td.td_run.td_save_restart')
     end subroutine td_save_restart
 
   end subroutine td_run

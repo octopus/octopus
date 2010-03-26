@@ -246,7 +246,7 @@ module gcm_m
     SAFE_DEALLOCATE_A(smatrix)
     SAFE_DEALLOCATE_A(hmatrix)
     SAFE_DEALLOCATE_A(slatdetnames)
-    call pop_sub()
+    call pop_sub('gcm.gcm_run')
   end subroutine gcm_run
   ! ---------------------------------------------------------
 
@@ -315,7 +315,7 @@ module gcm_m
       SAFE_DEALLOCATE_A(vh)
     end select
 
-    call pop_sub()
+    call pop_sub('gcm.mpdotp_twobody')
   end function mpdotp_twobody
   ! ---------------------------------------------------------
 

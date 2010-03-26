@@ -44,7 +44,7 @@ function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
   end do
 
   SAFE_DEALLOCATE_A(ff)
-  call pop_sub()
+  call pop_sub('casida_inc.Xks_matrix_elements')
 end function X(ks_matrix_elements)
 
 ! ---------------------------------------------------------
@@ -65,7 +65,7 @@ R_TYPE function X(transition_matrix_element) (cas, ia, xx) result(zz)
     zz = (M_ONE/sqrt(cas%w(ia))) * zz
   end if
 
-  call pop_sub()
+  call pop_sub('casida_inc.Xtransition_matrix_element')
 end function X(transition_matrix_element)
 
 ! ---------------------------------------------------------
@@ -94,7 +94,7 @@ subroutine X(transition_density) (cas, st, mesh, ia, n0I)
   end do
 
   SAFE_DEALLOCATE_A(xx)
-  call pop_sub()
+  call pop_sub('casida_inc.Xtransition_density')
 end subroutine X(transition_density)
 
 ! ---------------------------------------------------------
@@ -127,7 +127,7 @@ subroutine X(get_transition_densities) (cas, sys, trandens)
   end do
 
   SAFE_DEALLOCATE_A(n0I)
-  call pop_sub()
+  call pop_sub('casida_inc.Xget_transition_densities')
 end subroutine X(get_transition_densities)
 
 !! Local Variables:

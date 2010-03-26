@@ -97,7 +97,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
   SAFE_DEALLOCATE_A(ixp)
   SAFE_DEALLOCATE_A(ix_1part)
 
-  call pop_sub()
+  call pop_sub('modelmb_density_matrix_inc.Xmf_calculate_gamma')
 end subroutine X(mf_calculate_gamma)
 
 !! Local Variables:

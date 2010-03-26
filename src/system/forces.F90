@@ -126,7 +126,7 @@ contains
       end do
     end if
     
-    call pop_sub()
+    call pop_sub('epot.forces_calculate')
     call profiling_out(forces_prof)
 
   end subroutine forces_calculate

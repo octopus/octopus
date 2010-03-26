@@ -125,7 +125,7 @@ contains
 
     call messages_print_stress(stdout)
 
-    call pop_sub()
+    call pop_sub('poisson.poisson_init')
   contains
 
     !%Variable PoissonSolver
@@ -193,7 +193,7 @@ contains
       call messages_print_var_option(stdout, "PoissonSolver", this%method)
       call poisson1d_init(this)
 
-      call pop_sub()
+      call pop_sub('poisson.poisson_init.init_1D')
     end subroutine init_1D
 
 
@@ -229,7 +229,7 @@ contains
       call messages_print_var_option(stdout, "PoissonSolver", this%method)
       call poisson2D_init(this)
 
-      call pop_sub()
+      call pop_sub('poisson.poisson_init.init_2D')
     end subroutine init_2D
 
 
@@ -284,7 +284,7 @@ contains
       call messages_print_var_option(stdout, "PoissonSolver", this%method)
       call poisson3D_init(this, geo)
 
-      call pop_sub()
+      call pop_sub('poisson.poisson_init.init_3D')
     end subroutine init_3D
 
   end subroutine poisson_init
@@ -318,7 +318,7 @@ contains
     end select
     this%method = -99
 
-    call pop_sub()
+    call pop_sub('poisson.poisson_end')
   end subroutine poisson_end
 
   !-----------------------------------------------------------------
@@ -361,7 +361,7 @@ contains
     SAFE_DEALLOCATE_A(aux1)
     SAFE_DEALLOCATE_A(aux2)
 
-    call pop_sub()
+    call pop_sub('poisson.zpoisson_solve')
   end subroutine zpoisson_solve
 
   !-----------------------------------------------------------------
@@ -518,7 +518,7 @@ contains
 
     end select
 
-    call pop_sub()
+    call pop_sub('poisson.dpoisson_solve')
     call profiling_out(prof)
   end subroutine dpoisson_solve
 
@@ -540,7 +540,8 @@ contains
     if(calc_dim == 1) then
       write(message(1),'(a)') 'The Hartree integrator test is not implemented for the one-dimensional case.'
       call write_warning(1)
-      call pop_sub(); return
+      call pop_sub('poisson.poisson_test')
+      return
     endif
 
     n_gaussians = 4
@@ -630,7 +631,7 @@ contains
     SAFE_DEALLOCATE_A(vh)
     SAFE_DEALLOCATE_A(vh_exact)
     SAFE_DEALLOCATE_A(xx)
-    call pop_sub()
+    call pop_sub('poisson.poisson_test')
   end subroutine poisson_test
 
   ! -----------------------------------------------------------------

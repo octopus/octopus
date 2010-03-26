@@ -705,7 +705,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pop_sub()
+  subroutine pop_sub(sub_name)
+    character(len=*), intent(in) :: sub_name
+
     integer i, iunit, sec, usec
 
     if(.not.in_debug_mode) return
@@ -727,6 +729,11 @@ contains
       close(iunit)
     end if
       
+    if(sub_name .ne. sub_stack(no_sub_stack)) then
+      write (message(1),'(a,3x,a,3x,a)') 'Wrong sub name on pop_sub ', sub_name, sub_stack(no_sub_stack)
+      call write_fatal(1)
+    end if
+
     ! also write to stderr if we are node 0
     if(conf%debug_level.gt.1) then
       if (mpi_grp_is_root(mpi_world)) call pop_sub_write(stderr)
@@ -805,7 +812,7 @@ contains
       call write_warning(2)
     end if
 
-    call pop_sub()
+    call pop_sub('simul_box.simul_box_init.check_def')
   end subroutine messages_check_def
 
   ! ------------------------------------------------------------

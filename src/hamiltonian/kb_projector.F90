@@ -70,7 +70,7 @@ contains
 
     nullify(kb_p%p)
 
-    call pop_sub()
+    call pop_sub('kb_projector.kb_projector_null')
   end subroutine kb_projector_null
 
   ! ---------------------------------------------------------
@@ -113,7 +113,7 @@ contains
     end if
 
     nullify(ps)
-    call pop_sub()
+    call pop_sub('kb_projector.kb_projector_init')
   end subroutine kb_projector_init
 
   ! ---------------------------------------------------------
@@ -124,7 +124,7 @@ contains
 
     SAFE_DEALLOCATE_P(kb_p%p)
 
-    call pop_sub()
+    call pop_sub('kb_projector.kb_projector_end')
   end subroutine kb_projector_end
 
 #include "undef.F90"

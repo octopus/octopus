@@ -71,7 +71,7 @@ subroutine X(eigensolver_mg) (der, st, hm, tol, niter, converged, ik, diff)
 
   niter = iter*10
 
-  call pop_sub()
+  call pop_sub('eigen_cg.eigensolver_mg')
 end subroutine X(eigensolver_mg)
 
 ! -------------------------------------------------------------------------

@@ -113,7 +113,7 @@
 
     if(verbose_) call messages_print_stress(stdout)
 
-    call pop_sub()
+    call pop_sub('eigen_lobpcg_inc.Xeigensolver_lobpcg')
   end subroutine X(eigensolver_lobpcg)
 
 
@@ -595,7 +595,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     SAFE_DEALLOCATE_P(lnuc)
   end if
 
-  call pop_sub()
+  call pop_sub('eigen_lobpcg_inc.Xlobpcg')
 
 contains
 
@@ -613,7 +613,7 @@ contains
       call write_info(1)
     end if
     
-    call pop_sub()
+    call pop_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_info')
   end subroutine X(lobpcg_info)
 
 
@@ -634,7 +634,7 @@ contains
       end forall
     end do
 
-    call pop_sub()
+    call pop_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_res')
   end subroutine X(lobpcg_res)
 
 
@@ -666,7 +666,7 @@ contains
       call lmpi_gen_allgatherv(lnuc, luc, nuc, uc, st%mpi_grp)
     end if
 #endif
-    call pop_sub()
+    call pop_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_unconv_ev')
   end subroutine X(lobpcg_unconv_ev)
 
 
@@ -680,7 +680,7 @@ contains
     mask     = .true.
     mask(UC) = .false.
 
-    call pop_sub()
+    call pop_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_conv_mask')
   end subroutine X(lobpcg_conv_mask)
 
 
@@ -704,7 +704,8 @@ contains
     call lalg_cholesky(nuc, vv, bof=chol_failure)
     call profiling_out(C_PROFILING_LOBPCG_CHOL)
     if(chol_failure) then ! Failure in Cholesky decomposition.
-      call pop_sub(); return
+      call pop_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_orth')
+      return
     end if
     call profiling_in(C_PROFILING_LOBPCG_INV)
     call lalg_invert_upper_triangular(nuc, vv)
@@ -720,7 +721,7 @@ contains
     end do
     SAFE_DEALLOCATE_A(vv)
 
-    call pop_sub()
+    call pop_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_orth')
   end subroutine X(lobpcg_orth)
 
 
@@ -755,7 +756,7 @@ contains
     SAFE_DEALLOCATE_A(tmp1)
     SAFE_DEALLOCATE_A(tmp2)
     SAFE_DEALLOCATE_A(tmp3)
-    call pop_sub()
+    call pop_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_apply_constraints')
     call profiling_out(prof)
 
   end subroutine X(lobpcg_apply_constraints)
@@ -775,7 +776,7 @@ contains
     call states_blockt_mul(gr%mesh, st, st_start, st_end, st_start, st_end, &
       psi1, psi2, res, xpsi1=xpsi1, xpsi2=xpsi2, symm=symm)
 
-    call pop_sub()
+    call pop_sub('eigen_lobpcg_inc.Xlobpcg.Xblockt_mul')
   end subroutine X(blockt_mul)
 
 
@@ -794,7 +795,7 @@ contains
     call states_block_matr_mul_add(gr%mesh, st, alpha, st_start, st_end, st_start, st_end, &
       psi, matr, beta, res, xpsi=xpsi, xres=xres)
 
-    call pop_sub()
+    call pop_sub('eigen_lobpcg_inc.Xlobpcg.Xblock_matr_mul_add')
   end subroutine X(block_matr_mul_add)
 
 
@@ -811,7 +812,7 @@ contains
     call states_block_matr_mul(gr%mesh, st, st_start, st_end, st_start, st_end, &
       psi, matr, res, xpsi=xpsi, xres=xres)
 
-    call pop_sub()
+    call pop_sub('eigen_lobpcg_inc.Xlobpcg.Xblock_matr_mul')
   end subroutine X(block_matr_mul)
 end subroutine X(lobpcg)
 

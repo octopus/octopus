@@ -99,7 +99,7 @@ contains
     if(present(have_polynomial)) rs%have_polynomial = have_polynomial
     if(present(ws_radius))       rs%ws_radius       = ws_radius
 
-    call pop_sub()
+    call pop_sub('root_solver.root_solver_init')
   end subroutine root_solver_init
 
 
@@ -179,7 +179,7 @@ contains
     !%End
     call parse_float  (datasets_check('RootSolverWSRadius'),       CNST( 1.0), rs%ws_radius)
 
-    call pop_sub()
+    call pop_sub('root_solver_inc.root_solver_read')
   end subroutine root_solver_read
 
   ! ---------------------------------------------------------
@@ -189,7 +189,7 @@ contains
     message(1) = 'Not implemented yet.'
     call write_fatal(1)
 
-    call pop_sub()
+    call pop_sub('root_solver.droot_bisection')
   end subroutine droot_bisection
 
 
@@ -210,7 +210,7 @@ contains
 !!$  message(1) = 'Error: Not implemented yet.'
 !!$  call write_fatal(1)
 !!$
-!!$  call pop_sub()
+!!$  call pop_sub('root_solver.droot_brent')
 !!$end subroutine droot_brent
 
 
@@ -290,7 +290,7 @@ contains
     SAFE_DEALLOCATE_A(gcoeff)
     SAFE_DEALLOCATE_A(base_roots)
 
-    call pop_sub()
+    call pop_sub('root_solver.zroot_watterstrom')
 
   end subroutine zroot_watterstrom
 
@@ -325,7 +325,7 @@ contains
     SAFE_DEALLOCATE_A(numerator)
     SAFE_DEALLOCATE_A(denominator)
 
-    call pop_sub()
+    call pop_sub('root_solver.func_ws')
 
   end subroutine func_ws
 
@@ -378,7 +378,7 @@ contains
     SAFE_DEALLOCATE_A(jf)
     SAFE_DEALLOCATE_A(delta)
     SAFE_DEALLOCATE_A(rhs)
-    call pop_sub()
+    call pop_sub('root_solver.droot_newton')
   end subroutine droot_newton
 
 

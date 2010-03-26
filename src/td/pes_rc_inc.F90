@@ -66,7 +66,7 @@ subroutine PES_rc_init(pesrc, mesh, st, save_iter)
   call parse_block_end(blk)
 
   SAFE_ALLOCATE(pesrc%wf(1:pesrc%npoints, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik, 1:save_iter))
-  call pop_sub()
+  call pop_sub('pes_rc_inc.PES_rc_init')
 end subroutine PES_rc_init
 
 
@@ -82,7 +82,7 @@ subroutine PES_rc_end(pesrc)
     SAFE_DEALLOCATE_P(pesrc%wf)
   end if
 
-  call pop_sub()
+  call pop_sub('pes_rc_inc.PES_rc_end')
 end subroutine PES_rc_end
 
 
@@ -107,7 +107,7 @@ subroutine PES_rc_calc(pesrc, st, ii)
     end do
   end do
 
-  call pop_sub()
+  call pop_sub('pes_rc_inc.PES_rc_calc')
 end subroutine PES_rc_calc
 
 
@@ -163,7 +163,7 @@ subroutine PES_rc_output(pesrc, st, iter, save_iter, dt)
     call io_close(iunit)
   end do
 
-  call pop_sub()
+  call pop_sub('pes_rc_inc.PES_rc_output')
 end subroutine PES_rc_output
 
 !! Local Variables:

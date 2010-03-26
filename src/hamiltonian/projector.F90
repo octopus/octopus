@@ -119,7 +119,7 @@ contains
     nullify(p%phase)
     call submesh_null(p%sphere)
 
-    call pop_sub()
+    call pop_sub('projector.projector_null')
 
   end subroutine projector_null
   !---------------------------------------------------------
@@ -153,7 +153,8 @@ contains
 
     if(p%lmax == 0) then
       p%type = M_NONE
-      call pop_sub(); return
+      call pop_sub('projector.projector_init')
+      return
     end if
 
     p%lloc = ps%l_loc
@@ -187,7 +188,7 @@ contains
       p%reduce_size = 24
     end select
 
-    call pop_sub()
+    call pop_sub('projector.projector_init')
   end subroutine projector_init
 
   subroutine projector_init_phases(this, sb, kstart, kend, kpoints, vec_pot, vec_pot_var)
@@ -225,7 +226,7 @@ contains
 
     end do
 
-    call pop_sub()
+    call pop_sub('projector.projector_init_phases')
 
   end subroutine projector_init_phases
 
@@ -280,7 +281,7 @@ contains
 
     end select
 
-    call pop_sub()
+    call pop_sub('projector.projector_build')
   end subroutine projector_build
 
   !---------------------------------------------------------
@@ -331,7 +332,7 @@ contains
 
     SAFE_DEALLOCATE_P(p%phase)
 
-    call pop_sub()
+    call pop_sub('projector.projector_end')
   end subroutine projector_end
 
 #include "undef.F90"

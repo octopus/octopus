@@ -239,7 +239,7 @@ module opt_control_initst_m
       call v_ks_calc(sys%ks, sys%gr, hm, initial_state, calc_eigenval = .true.)
     end if
     
-    call pop_sub()
+    call pop_sub('initst.initial_state_init')
   end subroutine initial_state_init
 
 end module opt_control_initst_m

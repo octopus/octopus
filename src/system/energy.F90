@@ -144,7 +144,7 @@ contains
       end if
     end if
 
-    call pop_sub()
+    call pop_sub('energy.total_energy')
   end subroutine total_energy
 
 #include "undef.F90"

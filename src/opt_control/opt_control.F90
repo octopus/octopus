@@ -220,7 +220,7 @@ contains
     call target_end(target)
     call parameters_mod_close()
    
-    call pop_sub()
+    call pop_sub('opt_control.opt_control_run')
 
   contains
 
@@ -246,7 +246,7 @@ contains
 
       call parameters_end(par_new)
       call parameters_end(par_prev)
-      call pop_sub()
+      call pop_sub('opt_control.opt_control_run.scheme_straight_iteration')
     end subroutine scheme_straight_iteration
     ! ---------------------------------------------------------
 
@@ -280,7 +280,7 @@ contains
       call oct_prop_end(prop_psi)
       call parameters_end(par_new)
       call parameters_end(par_prev)
-      call pop_sub()
+      call pop_sub('opt_control.opt_control_run.scheme_mt03')
     end subroutine scheme_mt03
     ! ---------------------------------------------------------
 
@@ -316,7 +316,7 @@ contains
       call oct_prop_end(prop_psi)
       call parameters_end(par_new)
       call parameters_end(par_prev)
-      call pop_sub()
+      call pop_sub('opt_control.opt_control_run.scheme_wg05')
     end subroutine scheme_wg05
     ! ---------------------------------------------------------
 
@@ -356,7 +356,7 @@ contains
       call oct_prop_end(prop_psi)
       call parameters_end(par_new)
       call parameters_end(par_prev)
-      call pop_sub()
+      call pop_sub('opt_control.opt_control_run.scheme_zbr98')
     end subroutine scheme_zbr98
     ! ---------------------------------------------------------
 
@@ -413,7 +413,7 @@ contains
 
       SAFE_DEALLOCATE_A(x)
       SAFE_DEALLOCATE_A(theta)
-      call pop_sub()
+      call pop_sub('opt_control.opt_control_run.scheme_cg')
     end subroutine scheme_cg
     ! ---------------------------------------------------------
 
@@ -478,7 +478,7 @@ contains
 
       SAFE_DEALLOCATE_A(x)
       SAFE_DEALLOCATE_A(theta)
-      call pop_sub()
+      call pop_sub('opt_control.opt_control_run.scheme_direct')
     end subroutine scheme_direct
     ! ---------------------------------------------------------
 
@@ -539,7 +539,7 @@ contains
       SAFE_DEALLOCATE_A(xl)
       SAFE_DEALLOCATE_A(xu)
       SAFE_DEALLOCATE_A(w)
-      call pop_sub()
+      call pop_sub('opt_control.opt_control_run.scheme_newuoa')
 #endif
     end subroutine scheme_newuoa
     ! ---------------------------------------------------------
@@ -579,7 +579,7 @@ contains
 
     call states_end(chi)
     call parameters_end(par_chi)
-    call pop_sub()
+    call pop_sub('opt_control.f_zbr98')
   end subroutine f_zbr98
 
 
@@ -604,7 +604,8 @@ contains
       call states_copy(psi, initial_st)
       call propagate_forward(sys, hm, td, par, target, psi, prop_psi)
       j1 = j1_functional(target, sys%gr, psi)
-      call pop_sub(); return
+      call pop_sub('opt_control.f_wg05')
+      return
     end if
 
     call parameters_copy(parp, par)
@@ -634,7 +635,7 @@ contains
 
     call states_end(chi)
     call parameters_end(parp)
-    call pop_sub()
+    call pop_sub('opt_control.f_wg05')
   end subroutine f_wg05
   ! ---------------------------------------------------------
 
@@ -688,7 +689,7 @@ contains
     call parameters_end(par_chi)
     call oct_prop_end(prop_chi)
     call oct_prop_end(prop_psi)
-    call pop_sub()
+    call pop_sub('opt_control.f_striter')
   end subroutine f_striter
   ! ---------------------------------------------------------
 
@@ -713,7 +714,8 @@ contains
       call states_copy(psi, initial_st)
       call propagate_forward(sys, hm, td, par, target, psi, prop_psi)
       j1 = j1_functional(target, sys%gr, psi)
-      call pop_sub(); return
+      call pop_sub('opt_control.f_iter')
+      return
     end if
 
     call parameters_copy(par_chi, par)
@@ -737,7 +739,7 @@ contains
 
     call states_end(chi)
     call parameters_end(par_chi)
-    call pop_sub()
+    call pop_sub('opt_control.f_iter')
   end subroutine f_iter
   ! ---------------------------------------------------------
 
@@ -836,7 +838,7 @@ contains
     end if
 
     SAFE_DEALLOCATE_A(theta)
-    call pop_sub()
+    call pop_sub("opt_control.opt_control_cg_calc")
   end subroutine opt_control_cg_calc
   ! ---------------------------------------------------------
 
@@ -869,7 +871,7 @@ contains
 
     call iteration_manager_main(iterator, j, j1, j2, real(maxdx, REAL_PRECISION))
 
-    call pop_sub()
+    call pop_sub("opt_control.opt_control_cg_write_info")
   end subroutine opt_control_cg_write_info
   ! ---------------------------------------------------------
 
@@ -911,7 +913,7 @@ contains
     end if
 
     SAFE_DEALLOCATE_A(theta)
-    call pop_sub()
+    call pop_sub("opt_control.opt_control_direct_calc")
   end subroutine opt_control_direct_calc
   ! ---------------------------------------------------------
 
@@ -951,7 +953,7 @@ contains
 
     call iteration_manager_main(iterator, j, j1, j2, real(maxdx, REAL_PRECISION))
 
-    call pop_sub()
+    call pop_sub("opt_control.opt_control_direct_write_info")
   end subroutine opt_control_direct_write_info
   ! ---------------------------------------------------------
 

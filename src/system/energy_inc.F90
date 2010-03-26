@@ -96,7 +96,7 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
   end if
 
   call profiling_out(prof)
-  call pop_sub()
+  call pop_sub('energy_inc.Xcalculate_eigenvalues')
 end subroutine X(calculate_eigenvalues)
 
 ! ---------------------------------------------------------
@@ -139,7 +139,7 @@ FLOAT function X(electronic_kinetic_energy)(hm, gr, st) result(t0)
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(tpsi)
   SAFE_DEALLOCATE_A(t)
-  call pop_sub()
+  call pop_sub('energy_inc.Xelectronic_kinetic_energy')
 end function X(electronic_kinetic_energy)
 
 ! ---------------------------------------------------------
@@ -170,7 +170,7 @@ FLOAT function X(electronic_external_energy)(hm, gr, st) result(v)
 
   SAFE_DEALLOCATE_A(vpsi)
   SAFE_DEALLOCATE_A(t)
-  call pop_sub()
+  call pop_sub('energy_inc.Xelectronic_external_energy')
 end function X(electronic_external_energy)
 
 !! Local Variables:

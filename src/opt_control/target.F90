@@ -109,7 +109,7 @@ module opt_control_target_m
     call push_sub('target.target_get_state')
     call states_copy(st, target%st)
 
-    call pop_sub()
+    call pop_sub('target.target_get_state')
   end subroutine target_get_state
   ! ----------------------------------------------------------------------
 
@@ -473,7 +473,7 @@ module opt_control_target_m
       call write_fatal(1)
     end select
 
-    call pop_sub()
+    call pop_sub('target.target_init')
   end subroutine target_init
   ! ----------------------------------------------------------------------
 
@@ -500,7 +500,7 @@ module opt_control_target_m
       SAFE_DEALLOCATE_P(target%td_fitness); nullify(target%td_fitness)
     end if
 
-    call pop_sub()
+    call pop_sub('target.target_end')
   end subroutine target_end
   ! ----------------------------------------------------------------------
 
@@ -536,7 +536,7 @@ module opt_control_target_m
       call h_sys_output_states(target%st, gr, geo, trim(dir), outp)
     end select
 
-    call pop_sub()
+    call pop_sub('target.target_output')
   end subroutine target_output
   ! ----------------------------------------------------------------------
 
@@ -595,7 +595,7 @@ module opt_control_target_m
       stop 'Error at target.target_tdcalc.'
     end select
 
-    call pop_sub()
+    call pop_sub('target.target_tdcalc')
   end subroutine target_tdcalc
   ! ----------------------------------------------------------------------
 
@@ -624,7 +624,7 @@ module opt_control_target_m
       
     end select
 
-    call pop_sub()
+    call pop_sub('target.target_inh')
   end subroutine target_inh
   !----------------------------------------------------------
 
@@ -646,7 +646,7 @@ module opt_control_target_m
       target%rho(ip) = re
     end do
 
-    call pop_sub()
+    call pop_sub('target.target_build_tdlocal')
   end subroutine target_build_tdlocal
   !----------------------------------------------------------
 
@@ -753,7 +753,7 @@ module opt_control_target_m
 
     end select
 
-    call pop_sub()
+    call pop_sub('target.j1_functional')
   end function j1_functional
   ! ---------------------------------------------------------
 
@@ -942,7 +942,7 @@ module opt_control_target_m
 
     end select
 
-    call pop_sub()
+    call pop_sub('target.calc_chi')
   end subroutine calc_chi
 
 

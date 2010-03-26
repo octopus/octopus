@@ -202,7 +202,7 @@ contains
 
     end select
 
-    call pop_sub()
+    call pop_sub('species_pot.atom_density')
   end subroutine atom_density
   ! ---------------------------------------------------------
 
@@ -440,7 +440,7 @@ contains
     call write_info(1)
 
     SAFE_DEALLOCATE_A(atom_rho)
-    call pop_sub()
+    call pop_sub('species_pot.guess_density')
   end subroutine guess_density
   ! ---------------------------------------------------------
 
@@ -601,7 +601,7 @@ contains
 
     end select
 
-    call pop_sub()
+    call pop_sub('species_pot.species_get_density')
   end subroutine species_get_density
 
   subroutine func(xin, ff, jacobian)
@@ -638,7 +638,7 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(xrho)
-    call pop_sub()
+    call pop_sub('species_pot.func')
   end subroutine func
 
 
@@ -676,7 +676,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('species_pot.getrho')
   end subroutine getrho 
 
   ! ---------------------------------------------------------
@@ -760,7 +760,7 @@ contains
       end select
 
       call profiling_out(prof)
-      call pop_sub()
+    call pop_sub('species_pot.species_get_local')
   end subroutine species_get_local
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -839,7 +839,7 @@ contains
       end do
     end if
 
-    call pop_sub()
+    call pop_sub('species_pot.species_get_orbital')
   end subroutine species_get_orbital
 
   subroutine species_get_orbital_submesh(spec, submesh, j, dim, is, pos, phi)
@@ -909,7 +909,7 @@ contains
       
     end if
 
-    call pop_sub()
+    call pop_sub('species_pot.species_get_orbital_submesh')
   end subroutine species_get_orbital_submesh
 
 end module species_pot_m

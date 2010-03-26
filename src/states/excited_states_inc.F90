@@ -54,7 +54,7 @@ R_TYPE function X(states_mpdotp_x)(m, excited_state, st, mat) result(dotp)
   end do
 
   SAFE_DEALLOCATE_A(mat_local)
-  call pop_sub()
+  call pop_sub('states_inc.Xstates_mpdotp_x')
 end function X(states_mpdotp_x)
 
 
@@ -256,7 +256,7 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
   SAFE_DEALLOCATE_A(partially_filled2)
   SAFE_DEALLOCATE_A(half_filled1)
   SAFE_DEALLOCATE_A(half_filled2)
-  call pop_sub()
+  call pop_sub('excited_states_inc.Xstates_mpmatrixelement_g')
 end function X(states_mpmatrixelement_g)
 
 
@@ -375,7 +375,7 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
   SAFE_DEALLOCATE_A(partially_filled2)
   SAFE_DEALLOCATE_A(half_filled1)
   SAFE_DEALLOCATE_A(half_filled2)
-  call pop_sub()
+  call pop_sub('excited_states_inc.Xstates_mpdotp')
 end function X(states_mpdotp_g)
 
 

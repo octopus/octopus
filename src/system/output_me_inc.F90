@@ -78,7 +78,7 @@ subroutine X(output_me_ks_multipoles)(fname, st, gr, ll, mm, ik)
   SAFE_DEALLOCATE_A(multipole)
   call io_close(iunit)
 
-  call pop_sub()
+  call pop_sub('output_me_inc.output_me_ks_multipoles')
 end subroutine X(output_me_ks_multipoles)
 
 
@@ -149,7 +149,7 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
   SAFE_DEALLOCATE_A(gpsi)
 
   call io_close(iunit)
-  call pop_sub()
+  call pop_sub('output_me_inc.Xone_body')
 end subroutine X(one_body)
 
 
@@ -193,7 +193,7 @@ subroutine X(two_body) (dir, gr, st)
   end do
 
   call io_close(iunit)
-  call pop_sub()
+  call pop_sub('output_me_inc.Xtwo_body')
 end subroutine X(two_body)
 
 !! Local Variables:

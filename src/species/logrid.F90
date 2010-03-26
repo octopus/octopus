@@ -106,7 +106,7 @@ contains
       grid%r2ofi(ir) = grid%rofi(ir)**2
     end do
 
-    call pop_sub()
+    call pop_sub('logrid.logrid_init')
   end subroutine logrid_init
 
 
@@ -121,7 +121,7 @@ contains
     SAFE_DEALLOCATE_P(grid%drdi)
     SAFE_DEALLOCATE_P(grid%s)
 
-    call pop_sub()
+    call pop_sub('logrid.logrid_end')
   end subroutine logrid_end
 
 
@@ -147,7 +147,7 @@ contains
     grid_out%drdi(:)  = grid_in%drdi(:)
     grid_out%s(:)     = grid_in%s(:)
 
-    call pop_sub()
+    call pop_sub('logrid.logrid_copy')
   end subroutine logrid_copy
 
 
@@ -174,7 +174,7 @@ contains
 
     end do
 
-    call pop_sub()
+    call pop_sub('logrid.logrid_index')
   end function logrid_index
 
 
@@ -194,7 +194,7 @@ contains
     end do
     dfdr(grid%nrval) = (ff(grid%nrval) - ff(grid%nrval-1))/(grid%rofi(grid%nrval) - grid%rofi(grid%nrval-1))
 
-    call pop_sub()
+    call pop_sub('logrid.derivative_in_log_grid')
   end subroutine derivative_in_log_grid
 
 end module logrid_m

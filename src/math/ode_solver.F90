@@ -87,7 +87,7 @@ contains
 
     os%a(4,1:3) = (/ CNST(0.0),  CNST(0.0),  CNST(1.0) /)
 
-    call pop_sub()
+    call pop_sub('ode_solver.ode_rk4_coeff')
   end subroutine ode_rk4_coeff
 
 
@@ -233,7 +233,7 @@ contains
       CNST(   0.0),                                  &
       CNST(   1.0) /)
 
-    call pop_sub()
+    call pop_sub('ode_solver.ode_fb78_coeff')
   end subroutine ode_fb78_coeff
 
 
@@ -442,7 +442,7 @@ contains
       ( CNST(      0.0) ),                                              &
       ( CNST(   1260.0) / CNST(   233.0) ) /)
 
-    call pop_sub()
+    call pop_sub('ode_solver.ode_vr89_coeff')
   end subroutine ode_vr89_coeff
 
 
@@ -591,7 +591,7 @@ contains
       CNST(   248638103.0) / CNST( 1413531060.0),               &
       CNST(           0.0) /)
 
-    call pop_sub()
+    call pop_sub('ode_solver.ode_pd89_coeff')
   end subroutine ode_pd89_coeff
 
 

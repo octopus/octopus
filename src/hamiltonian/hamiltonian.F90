@@ -420,7 +420,7 @@ contains
 
     call scissor_nullify(hm%scissor)
 
-    call pop_sub()
+    call pop_sub('hamiltonian.hamiltonian_init')
 
   contains
 
@@ -436,7 +436,7 @@ contains
         hm%phase(ip, ik) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim) * hm%d%kpoints(1:gr%mesh%sb%dim, ik)))
       end forall
 
-      call pop_sub()      
+      call pop_sub('hamiltonian.hamiltonian_init.init_phase')
     end subroutine init_phase
 
 
@@ -478,7 +478,7 @@ contains
         end if
       end do
 
-      call pop_sub()
+      call pop_sub('hamiltonian.hamiltonian_init.init_abs_boundaries')
     end subroutine init_abs_boundaries
 
 
@@ -692,7 +692,7 @@ contains
         end if
       end do
 
-      call pop_sub()
+      call pop_sub('hamiltonian.hamiltonian_init.init_lead_h')
     end subroutine init_lead_h
   end subroutine hamiltonian_init
 
@@ -717,7 +717,7 @@ contains
         gr%mgrid%level(level)%mesh, hm%coarse_v%level(level - 1)%p, hm%coarse_v%level(level)%p, INJECTION)
     end do
 
-    call pop_sub()
+    call pop_sub('epot.epot_mg_init')
   end subroutine hamiltonian_mg_init
 
 
@@ -767,7 +767,7 @@ contains
     call scissor_end(hm%scissor)
     call states_end(hm%st)
 
-    call pop_sub()
+    call pop_sub('hamiltonian.hamiltonian_end')
   end subroutine hamiltonian_end
 
 
@@ -779,7 +779,7 @@ contains
     call push_sub('hamiltonian.hamiltonian_hermitian')
     hamiltonian_hermitian = .not.((hm%ab .eq. IMAGINARY_ABSORBING) .or. hamiltonian_oct_exchange(hm))
 
-    call pop_sub()
+    call pop_sub('hamiltonian.hamiltonian_hermitian')
   end function hamiltonian_hermitian
 
 
@@ -793,7 +793,7 @@ contains
     hm%spectral_middle_point = ((M_PI**2 / (2 * delta**2)) + emin) / M_TWO
     hm%spectral_half_span    = ((M_PI**2 / (2 * delta**2)) - emin) / M_TWO
 
-    call pop_sub()
+    call pop_sub('hamiltonian.hamiltonian_span')
   end subroutine hamiltonian_span
 
 
@@ -816,7 +816,7 @@ contains
     call states_copy(hm%inh_st, st)
     hm%inh_term = .true.
 
-    call pop_sub()
+    call pop_sub('hamiltonian.hamiltonian_set_inh')
   end subroutine hamiltonian_set_inh
 
 
@@ -831,7 +831,7 @@ contains
       hm%inh_term = .false.
     end if
 
-    call pop_sub()
+    call pop_sub('hamiltonian.hamiltonian_remove_inh')
   end subroutine hamiltonian_remove_inh
 
 
@@ -842,7 +842,7 @@ contains
     call push_sub('hamiltonian.hamiltonian_oct_exchange')
     oct_exchange = hm%oct_exchange
 
-    call pop_sub()
+    call pop_sub('hamiltonian.hamiltonian_oct_exchange')
   end function hamiltonian_oct_exchange
 
 
@@ -869,7 +869,7 @@ contains
     hm%oct_fxc = M_ZERO
     call xc_get_fxc(xc, gr%mesh, st%rho, st%d%ispin, hm%oct_fxc)
 
-    call pop_sub()
+    call pop_sub('hamiltonian.hamiltonian_set_oct_exchange')
   end subroutine hamiltonian_set_oct_exchange
 
 
@@ -883,7 +883,7 @@ contains
     hm%oct_exchange = .false.
     SAFE_DEALLOCATE_P(hm%oct_fxc)
 
-    call pop_sub()
+    call pop_sub('hamiltonian.hamiltonian_remove_oct_exchange')
   end subroutine hamiltonian_remove_oct_exchange
 
 
@@ -900,7 +900,7 @@ contains
       end if
     endif
 
-    call pop_sub()
+    call pop_sub('hamiltonian.hamiltonian_adjoint')
   end subroutine hamiltonian_adjoint
 
 
@@ -917,7 +917,7 @@ contains
       end if
     endif
 
-    call pop_sub()
+    call pop_sub('hamiltonian.hamiltonian_not_adjoint')
   end subroutine hamiltonian_not_adjoint
 
 
@@ -941,7 +941,7 @@ contains
     end do
     
     call profiling_count_operations(mesh%np * this%d%nspin)
-    call pop_sub()
+    call pop_sub('hamiltonian.hamiltonian_update_potential')
   end subroutine hamiltonian_update_potential
 
 
@@ -963,7 +963,7 @@ contains
 
     call hamiltonian_update_potential(this, gr%mesh)
 
-    call pop_sub()
+    call pop_sub('hamiltonian.hamiltonian_epot_generate')
   end subroutine hamiltonian_epot_generate
 
 #include "undef.F90"

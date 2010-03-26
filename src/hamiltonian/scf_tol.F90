@@ -183,7 +183,7 @@ contains
       call parse_integer(datasets_check(str), 10, this%iter_window)
     end if
 
-    call pop_sub()
+    call pop_sub('scf_tol.scf_tol_init')
 
   end subroutine scf_tol_init
     

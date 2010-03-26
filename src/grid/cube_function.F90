@@ -119,7 +119,7 @@ contains
               2*(cf%n(3)-2)**2 + 4*(cf%n(3)-2) + 8
     x = x/npoints
 
-    call pop_sub()
+    call pop_sub('cube_function.cf_surface_average')
   end function cf_surface_average
 
   ! ---------------------------------------------------------
@@ -156,7 +156,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('cube_function.cf_phase_factor')
   end subroutine cf_phase_factor
 
 

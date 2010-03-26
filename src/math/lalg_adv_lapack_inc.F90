@@ -80,7 +80,7 @@ subroutine dcholesky(n, a, bof, err_code)
   end if
 
   call profiling_out(cholesky_prof)
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.dcholesky')
 end subroutine dcholesky
 
 
@@ -125,7 +125,7 @@ subroutine zcholesky(n, a, bof, err_code)
   end if
 
   call profiling_out(cholesky_prof)
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.zcholesky')
 end subroutine zcholesky
 
 
@@ -193,7 +193,7 @@ subroutine dgeneigensolve(n, a, b, e, bof, err_code)
   end if
   
   call profiling_out(eigensolver_prof)
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.dgeneigensolve')
 end subroutine dgeneigensolve
 
 
@@ -264,7 +264,7 @@ subroutine zgeneigensolve(n, a, b, e, bof, err_code)
   end if
 
   call profiling_out(eigensolver_prof)
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.zgeneigensolve')
 end subroutine zgeneigensolve
 
 
@@ -334,7 +334,7 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side)
     err_code = info
   end if
 
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.zeigensolve_nonh')
 end subroutine zeigensolve_nonh
 
 
@@ -403,7 +403,7 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
     err_code = info
   end if
 
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.deigensolve_nonh')
 end subroutine deigensolve_nonh
 
 ! ---------------------------------------------------------
@@ -477,7 +477,7 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
     err_code = info
   end if
 
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.dlowest_geneigensolve')
 end subroutine dlowest_geneigensolve
 
 
@@ -552,7 +552,7 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
     err_code = info
   end if
 
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.zlowest_geneigensolve')
 end subroutine zlowest_geneigensolve
 
 
@@ -599,7 +599,7 @@ subroutine deigensolve(n, a, e, bof, err_code)
     err_code = info
   end if
 
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.deigensolve')
 end subroutine deigensolve
 
 
@@ -649,7 +649,7 @@ subroutine zeigensolve(n, a, e, bof, err_code)
     err_code = info
   end if
 
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.zeigensolve')
 end subroutine zeigensolve
 
 
@@ -701,7 +701,7 @@ subroutine dlowest_eigensolve(k, n, a, e, v)
     call write_fatal(1)
   end if
 
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.dlowest_eigensolve')
 end subroutine dlowest_eigensolve
 
 
@@ -754,7 +754,7 @@ subroutine zlowest_eigensolve(k, n, a, e, v)
     call write_fatal(1)
   end if
 
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.zlowest_eigensolve')
 end subroutine zlowest_eigensolve
 
 
@@ -818,7 +818,7 @@ FLOAT function ddeterminant(n, a, invert) result(d)
 
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(ipiv)
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.ddeterminant')
 end function ddeterminant
 
 
@@ -882,7 +882,7 @@ CMPLX function zdeterminant(n, a, invert) result(d)
 
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(ipiv)
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.zdeterminant')
 end function zdeterminant
 
 ! ---------------------------------------------------------
@@ -935,7 +935,7 @@ subroutine dsym_inverter(uplo, n, a)
 
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(ipiv)
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.dsym_inverter')
 end subroutine dsym_inverter
 
 ! ---------------------------------------------------------
@@ -987,7 +987,7 @@ subroutine zsym_inverter(uplo, n, a)
 
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(ipiv)
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.zsym_inverter')
 end subroutine zsym_inverter
 
 ! ---------------------------------------------------------
@@ -1052,7 +1052,7 @@ subroutine dlinsyssolve(n, nhrs, a, b, x)
   SAFE_DEALLOCATE_A(c)
   SAFE_DEALLOCATE_A(af)
 
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.dlinsyssolve')
 end subroutine dlinsyssolve
 
 ! ---------------------------------------------------------
@@ -1116,7 +1116,7 @@ subroutine zlinsyssolve(n, nhrs, a, b, x)
   SAFE_DEALLOCATE_A(c)
   SAFE_DEALLOCATE_A(af)
 
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.zlinsyssolve')
 end subroutine zlinsyssolve
 
 
@@ -1167,7 +1167,7 @@ subroutine zsingular_value_decomp(n, a, u, vt, sg_values)
 
   SAFE_DEALLOCATE_A(rwork)
   SAFE_DEALLOCATE_A(work)
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.zsingular_value_decomp')
 end subroutine zsingular_value_decomp
 
 
@@ -1216,7 +1216,7 @@ subroutine zsvd_inverse(n, a, threshold)
   SAFE_DEALLOCATE_A(sg_values)
   SAFE_DEALLOCATE_A(vt)
   SAFE_DEALLOCATE_A(u)
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.zsvd_inverse')
 end subroutine zsvd_inverse
 
 
@@ -1250,7 +1250,7 @@ subroutine dinvert_upper_triangular(n, a)
     call write_fatal(1)
   end if
 
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.dinvert_upper_triangular')
 end subroutine dinvert_upper_triangular
 
 
@@ -1284,7 +1284,7 @@ subroutine zinvert_upper_triangular(n, a)
     call write_fatal(1)
   end if
 
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.zinvert_upper_triangular')
 end subroutine zinvert_upper_triangular
 
 ! ---------------------------------------------------------
@@ -1317,7 +1317,7 @@ subroutine dinvert_lower_triangular(n, a)
     call write_fatal(1)
   end if
 
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.dinvert_lower_triangular')
 end subroutine dinvert_lower_triangular
 
 ! ---------------------------------------------------------
@@ -1350,7 +1350,7 @@ subroutine zinvert_lower_triangular(n, a)
     call write_fatal(1)
   end if
 
-  call pop_sub()
+  call pop_sub('lalg_adv_lapack_inc.zinvert_lower_triangular')
 end subroutine zinvert_lower_triangular
 
 

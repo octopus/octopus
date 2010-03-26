@@ -67,7 +67,7 @@ contains
       md(1:mesh%np, 3) = rho(1:mesh%np, 1) - rho(1:mesh%np, 2)
     end select
 
-    call pop_sub()
+    call pop_sub('states.magnetic_density')
   end subroutine magnetic_density
 
 
@@ -91,7 +91,7 @@ contains
 
     SAFE_DEALLOCATE_A(md)
 
-    call pop_sub()
+    call pop_sub('states.states_magnetic_moment')
   end subroutine magnetic_moment
 
 
@@ -129,7 +129,7 @@ contains
     SAFE_DEALLOCATE_A(md)
     SAFE_DEALLOCATE_A(aux)
 
-    call pop_sub()
+    call pop_sub('magnetic.magnetic_local_moments')
   end subroutine magnetic_local_moments
 
 
@@ -147,7 +147,7 @@ contains
     ! \todo
     ! Diamagnetic contribution to the physical current
 
-    call pop_sub()
+    call pop_sub('magnetic.calc_physical_current')
   end subroutine calc_physical_current
 
 
@@ -173,7 +173,8 @@ contains
     if(states_are_real(st)) then
       a_ind = M_ZERO
       b_ind = M_ZERO
-      call pop_sub(); return
+      call pop_sub('magnetic.magnetic_induced')
+      return
     end if
 
     SAFE_ALLOCATE(jj(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin))
@@ -191,7 +192,7 @@ contains
     call dderivatives_curl(der, a_ind, b_ind)
 
     SAFE_DEALLOCATE_A(jj)
-    call pop_sub()
+    call pop_sub('magnetic.magnetic_induced')
   end subroutine magnetic_induced
 
 

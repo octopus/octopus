@@ -158,7 +158,7 @@ contains
     call parse_integer(datasets_check('FFTPreparePlan'), fftw_measure, fft_prepare_plan)
     if(.not.varinfo_valid_option('FFTPreparePlan', fft_prepare_plan)) call input_error('FFTPreparePlan')
 
-    call pop_sub()
+    call pop_sub('fftw3.fft_all_init')
   end subroutine fft_all_init
 
 
@@ -178,7 +178,7 @@ contains
     end do
 
     call DFFTW(cleanup)
-    call pop_sub()
+    call pop_sub('fftw3.fft_all_end')
   end subroutine fft_all_end
 
 
@@ -236,7 +236,8 @@ contains
           is_real == fft_array(i)%is_real) then
           fft = fft_array(i)             ! return a copy
           fft_refs(i) = fft_refs(i) + 1  ! increment the ref count
-          call pop_sub(); return
+          call pop_sub('fftw3.fft_init')
+          return
         end if
       else
         j = i
@@ -294,7 +295,7 @@ contains
       n(1), ",", n(2), ",", n(3), ") in slot ", j
     call write_info(1)
 
-    call pop_sub()
+    call pop_sub('fftw3.fft_init')
   end subroutine fft_init
 
 
@@ -311,7 +312,7 @@ contains
     fft_o = fft_i
     fft_refs(fft_i%slot) = fft_refs(fft_i%slot) + 1
 
-    call pop_sub()
+    call pop_sub('fftw3.fft_copy')
   end subroutine fft_copy
 
 
@@ -339,7 +340,7 @@ contains
       end if
     end if
 
-    call pop_sub()
+    call pop_sub('fftw3.fft_end')
   end subroutine fft_end
 
 
@@ -351,7 +352,7 @@ contains
     call push_sub('fftw3.fft_getdim_real')
     d = fft%n
 
-    call pop_sub()
+    call pop_sub('fftw3.fft_getdim_real')
   end subroutine fft_getdim_real
 
 
@@ -365,7 +366,7 @@ contains
     d = fft%n
     if(fft%is_real == fft_real)  d(1) = d(1)/2 + 1
 
-    call pop_sub()
+    call pop_sub('fftw3.fft_getdim_complex')
   end subroutine fft_getdim_complex
 
 
@@ -381,7 +382,7 @@ contains
 
     call DFFTW(execute_dft_r2c) (fft%planf, r, c)
 
-    call pop_sub()
+    call pop_sub('fftw3.dfft_forward')
 
   end subroutine dfft_forward
 
@@ -398,7 +399,7 @@ contains
 
     call DFFTW(execute_dft_r2c) (fft%planf, r, c)
 
-    call pop_sub()
+    call pop_sub('fftw3.dfft_forward1')
 
   end subroutine dfft_forward1
 
@@ -417,7 +418,7 @@ contains
     call lalg_scal(fft%n(1), fft%n(2), fft%n(3), &
       M_ONE/real(fft%n(1)*fft%n(2)*fft%n(3), REAL_PRECISION), r)
 
-    call pop_sub()
+    call pop_sub('fftw3.dfft_backward')
 
   end subroutine dfft_backward
 
@@ -436,7 +437,7 @@ contains
     call lalg_scal(fft%n(1), &
       M_ONE/real(fft%n(1), REAL_PRECISION), r)
 
-    call pop_sub()
+    call pop_sub('fftw3.dfft_backward1')
 
   end subroutine dfft_backward1
 
@@ -452,7 +453,7 @@ contains
     
     call DFFTW(execute_dft) (fft%planf, in, out)
     
-    call pop_sub()
+    call pop_sub('fftw3.zfft_forward')
     
   end subroutine zfft_forward
 
@@ -471,7 +472,7 @@ contains
     call lalg_scal(fft%n(1), fft%n(2), fft%n(3), &
       M_z1/real(fft%n(1)*fft%n(2)*fft%n(3), REAL_PRECISION), out)
 
-    call pop_sub()
+    call pop_sub('fftw3.zfft_backward')
 
   end subroutine zfft_backward
 

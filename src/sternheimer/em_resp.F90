@@ -470,7 +470,7 @@ contains
     enddo
     call states_deallocate_wfns(sys%st)
 
-    call pop_sub()
+    call pop_sub('em_resp.em_resp_run')
 
   contains
 
@@ -641,7 +641,7 @@ contains
       call parse_logical(datasets_check('EMCalcBornCharges'), .false., em_vars%calc_Born)
       if (em_vars%calc_Born) call messages_devel_version("Calculation of Born effective charges")
 
-      call pop_sub()
+      call pop_sub('em_resp.em_resp_run.parse_input')
 
     end subroutine parse_input
 
@@ -677,7 +677,7 @@ contains
 
       call messages_print_stress(stdout)
 
-      call pop_sub()
+      call pop_sub('em_resp.em_resp_run.info')
 
     end subroutine info
 
@@ -729,7 +729,7 @@ contains
       endif
     end do
 
-    call pop_sub()
+    call pop_sub('em_resp.em_resp_output')
 
   contains
 
@@ -762,7 +762,7 @@ contains
       end do
       write(out_file,*)
 
-      call pop_sub()
+      call pop_sub('em_resp.out_polarizability.cross_section_header')
     end subroutine cross_section_header
 
 
@@ -814,7 +814,7 @@ contains
         call io_close(iunit)
       end if
       
-      call pop_sub()
+      call pop_sub('em_resp.out_polarizability')
     end subroutine out_polarizability
 
 
@@ -842,7 +842,7 @@ contains
       call io_output_tensor(iunit, aimag(epsilon(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim)), gr%mesh%sb%dim, unit_one)
   
       call io_close(iunit)
-      call pop_sub()
+      call pop_sub('em_resp.out_dielectric_constant')
     end subroutine out_dielectric_constant
 
 
@@ -884,7 +884,7 @@ contains
       write(iunit, '(1x)')
 
       call io_close(iunit)      
-      call pop_sub()
+      call pop_sub('em_resp.em_resp_output.out_susceptibility')
     end subroutine out_susceptibility
 
     ! ---------------------------------------------------------
@@ -945,7 +945,7 @@ contains
         end do ! dir
       end do !ik
 
-      call pop_sub()
+      call pop_sub('em_resp.em_resp_output.out_projections')
 
     end subroutine out_projections
 
@@ -980,7 +980,7 @@ contains
         end if
       end do
 
-      call pop_sub()
+      call pop_sub('em_resp.em_resp_output.out_wavefunctions')
 
     end subroutine out_wavefunctions
     
@@ -1032,7 +1032,7 @@ contains
         call io_close(iunit)
       end if
       
-      call pop_sub()
+      call pop_sub('em_resp.em_resp_output.out_circular_dichroism')
 
     end subroutine out_circular_dichroism
     
@@ -1124,7 +1124,7 @@ contains
     endif
 
     call io_close(iunit)
-    call pop_sub()
+    call pop_sub('em_resp.out_hyperpolarizability')
 
     contains
 
@@ -1221,7 +1221,7 @@ contains
                + (M_ONE   / CNST(35.0))  * HRS_E1 &
                - (M_ONE   / CNST(105.0)) * HRS_E2
   
-        call pop_sub()
+        call pop_sub('em_resp.out_hyperpolarizability.calc_beta_HRS')
     end subroutine calc_beta_HRS
 
   end subroutine out_hyperpolarizability

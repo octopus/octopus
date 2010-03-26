@@ -61,7 +61,7 @@ contains
     !%End
     call parse_logical(datasets_check('ELFWithCurrentTerm'), .true., with_current_term)
 
-    call pop_sub()
+    call pop_sub('elf.elf_init')
   end subroutine elf_init
 
   ! ---------------------------------------------------------
@@ -179,7 +179,7 @@ contains
     SAFE_DEALLOCATE_A(rho)
     SAFE_DEALLOCATE_A(kappa)
 
-    call pop_sub()
+    call pop_sub('elf.elf_calc')
   end subroutine elf_calc
 
 
@@ -299,7 +299,7 @@ contains
       call zcf_free(zcf_tmp)
     end if
 
-    call pop_sub()
+    call pop_sub('elf.elf_calc_fs')
 
   contains
 
@@ -320,7 +320,7 @@ contains
       call dcf_free_RS(cc)
       call dcf_free_FS(cc)
 
-      call pop_sub()
+      call pop_sub('elf.elf_calc_fs.dmf2mf_RS2FS')
     end subroutine dmf2mf_RS2FS
 
     ! ---------------------------------------------------------
@@ -340,7 +340,7 @@ contains
       call zcf_free_RS(cc)
       call zcf_free_FS(cc)
 
-      call pop_sub()
+      call pop_sub('elf.elf_calc_fs.zmf2mf_RS2FS')
     end subroutine zmf2mf_RS2FS
 
   end subroutine elf_calc_fs

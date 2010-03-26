@@ -100,7 +100,7 @@ contains
     message(3) = ''
     call write_info(3)
 
-    call pop_sub()
+    call pop_sub('zoltan.zoltan_method_info')
   end subroutine zoltan_method_info
 
   logical function zoltan_method_is_geometric(method) result(geometric)
@@ -110,7 +110,7 @@ contains
 
     geometric = method == RCB .or. method == RIB .or. method == HSFC .or. method == REFTREE
 
-    call pop_sub()
+    call pop_sub('zoltan.zoltan_method_is_geometric')
   end function zoltan_method_is_geometric
 
 end module zoltan_m

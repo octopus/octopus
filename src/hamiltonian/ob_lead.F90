@@ -108,7 +108,7 @@ contains
     ! Add potential. FIXME: add vector potential (A^2)
     forall(ip = 1:intf%np_uc) diag(ip, ip) = diag(ip, ip) + vks(ip)
 
-    call pop_sub()
+    call pop_sub('ob_lead.lead_diag')
   end subroutine lead_diag
 
 
@@ -200,7 +200,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('ob_lead.lead_offdiag')
   end subroutine lead_offdiag
 
 
@@ -224,7 +224,7 @@ contains
       call lalg_trmm(np, np, 'L', 'T', 'R', M_z1, offdiag, res)
     end if
 
-    call pop_sub()
+    call pop_sub('ob_lead.apply_coupling')
   end subroutine apply_coupling
 
 
@@ -265,7 +265,7 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(pot_im)
-    call pop_sub()
+    call pop_sub('ob_lead.lead_td_pot')
   end subroutine lead_td_pot
 
   
@@ -283,7 +283,7 @@ contains
     SAFE_ALLOCATE(lead%vks(1:np, 1:nspin))
     SAFE_ALLOCATE(lead%vhartree(1:np))
 
-    call pop_sub()
+    call pop_sub('ob_lead.lead_init_pot')
   end subroutine lead_init_pot
 
   ! init the kinetic part (diag and offdiag) of the lead
@@ -300,7 +300,7 @@ contains
     SAFE_ALLOCATE(lead%h_diag(1:np, 1:np, 1:dim))
     SAFE_ALLOCATE(lead%h_offdiag(1:np, 1:np))
 
-    call pop_sub()
+    call pop_sub('ob_lead.lead_init_kin')
   end subroutine lead_init_kin
 
 
@@ -315,7 +315,7 @@ contains
     SAFE_DEALLOCATE_P(lead%vks)
     SAFE_DEALLOCATE_P(lead%vhartree)
 
-    call pop_sub()
+    call pop_sub('ob_lead.lead_end')
   end subroutine lead_end
 
 
@@ -338,7 +338,7 @@ contains
     dst%vks(1:np, 1:nspin)        = src%vks(1:np, 1:nspin)
     dst%vhartree(1:np)            = src%vhartree(1:np)
 
-    call pop_sub()
+    call pop_sub('ob_lead.lead_copy')
   end subroutine lead_copy
 
 
@@ -379,7 +379,7 @@ contains
       call lead_end(old_lead)
     end if
 
-    call pop_sub()
+    call pop_sub('ob_lead.lead_resize')
   end subroutine lead_resize
 
 
@@ -396,7 +396,7 @@ contains
     ! This should be tested and also be generalized to periodic potentials.
     is_lead_transl_inv = .true.
 
-    call pop_sub()
+    call pop_sub('ob_lead.is_lead_transl_inv')
   end function is_lead_transl_inv
 
 

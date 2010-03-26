@@ -114,7 +114,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
     enddo !ist
   enddo !ik
 
-  call pop_sub()
+  call pop_sub('kdotp_calc_inc.Xcalc_eff_mass_inv')
 
 end subroutine X(calc_eff_mass_inv)
 
@@ -143,7 +143,7 @@ subroutine X(calc_band_velocity)(sys, hm, pert, velocity)
     enddo
   enddo
 
-  call pop_sub()
+  call pop_sub('kdotp_calc_inc.Xkdotp_calc_band_velocity')
 end subroutine X(calc_band_velocity)
   
 !! Local Variables:

@@ -206,7 +206,7 @@ contains
 
     call modelmb_particles_nullify(st%modelmbparticles)
 
-    call pop_sub()
+    call pop_sub('states.states_null')
   end subroutine states_null
 
 
@@ -528,7 +528,7 @@ contains
 
     if(st%symmetrize_density) call messages_devel_version("Symmetrization of the density")
 
-    call pop_sub()
+    call pop_sub('states.states_init')
 
   contains
 
@@ -585,7 +585,7 @@ contains
 
       call io_close(occs)
 
-      call pop_sub()
+      call pop_sub('states.states_init.read_ob_eigenval_and_occ')
     end subroutine read_ob_eigenval_and_occ
   end subroutine states_init
 
@@ -611,7 +611,7 @@ contains
       nullify(st%zphi)
     end if
 
-    call pop_sub()
+    call pop_sub('states.states_allocate_free_states')
   end subroutine states_allocate_free_states
 
 
@@ -632,7 +632,7 @@ contains
       end do
     end if
 
-    call pop_sub()
+    call pop_sub('states.states_deallocate_free_states')
   end subroutine states_deallocate_free_states
 
 
@@ -775,7 +775,7 @@ contains
       call write_fatal(2)
     end if
 
-    call pop_sub()
+    call pop_sub('states.states_read_initial_occs')
   end subroutine states_read_initial_occs
 
 
@@ -795,7 +795,8 @@ contains
 
     st%fixed_spins = .false.
     if(st%d%ispin .ne. SPINORS) then
-      call pop_sub(); return
+      call pop_sub('states.states_read_initial_spins')
+      return
     end if
 
     !%Variable InitialSpins
@@ -855,7 +856,7 @@ contains
       end do
     end if spin_fix
 
-    call pop_sub()
+    call pop_sub('states.states_read_initial_spins')
   end subroutine states_read_initial_spins
 
 
@@ -931,7 +932,7 @@ contains
 
     end if
 
-    call pop_sub()
+    call pop_sub('states.states_allocate_wfns')
   end subroutine states_allocate_wfns
 
 
@@ -956,7 +957,7 @@ contains
       end do
     end if
 
-    call pop_sub()
+    call pop_sub('states.states_deallocate_wfns')
   end subroutine states_deallocate_wfns
 
 
@@ -1022,7 +1023,7 @@ contains
     
     st%d%window_size = min(st%d%window_size, st%nst)
 
-    call pop_sub()
+    call pop_sub('states.states_densities_init')
   end subroutine states_densities_init
 
 
@@ -1074,7 +1075,7 @@ contains
 
     stout%symmetrize_density = stin%symmetrize_density
 
-    call pop_sub()
+    call pop_sub('states.states_copy')
   end subroutine states_copy
 
 
@@ -1123,7 +1124,7 @@ contains
 
     call modelmb_particles_end(st%modelmbparticles)
 
-    call pop_sub()
+    call pop_sub('states.states_end')
   end subroutine states_end
 
 
@@ -1151,7 +1152,7 @@ contains
 
     call batch_end(psib)
 
-    call pop_sub()
+    call pop_sub('states.states_dens_accumulate')
   end subroutine states_dens_accumulate
 
   ! ---------------------------------------------------
@@ -1244,7 +1245,7 @@ contains
     
     call profiling_out(prof)
 
-    call pop_sub()
+    call pop_sub('states.states_dens_accumulate_batch')
   end subroutine states_dens_accumulate_batch
 
   ! ---------------------------------------------------
@@ -1309,7 +1310,7 @@ contains
       SAFE_DEALLOCATE_A(symmrho)
     end if
 
-    call pop_sub()
+    call pop_sub('states.states_dens_reduce')
   end subroutine states_dens_reduce
 
 
@@ -1355,7 +1356,7 @@ contains
     call states_dens_reduce(st, gr, dens)
 
     nullify(dens)
-    call pop_sub()
+    call pop_sub('states.states_calc_dens')
   end subroutine states_calc_dens
 
   ! ---------------------------------------------------------
@@ -1447,7 +1448,7 @@ contains
 
     end select
 
-    call pop_sub()
+    call pop_sub('states.states_generate_random')
   end subroutine states_generate_random
 
   ! ---------------------------------------------------------
@@ -1506,7 +1507,7 @@ contains
       end do
     end if
 
-    call pop_sub()
+    call pop_sub('states.states_fermi')
   end subroutine states_fermi
 
 
@@ -1547,7 +1548,7 @@ contains
     end if
 #endif
 
-    call pop_sub()
+    call pop_sub('states.states_eigenvalues_sum')
   end function states_eigenvalues_sum
 
 
@@ -1575,7 +1576,8 @@ contains
     end if
 
     if(.not.mpi_grp_is_root(mpi_world)) then
-      call pop_sub(); return
+    call pop_sub('states.states_write_eigenvalues')
+return
     end if
 
     do ik = 1, st%d%nik, ns
@@ -1650,7 +1652,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('states.states_write_eigenvalues')
   end subroutine states_write_eigenvalues
 
 
@@ -1761,7 +1763,7 @@ contains
 
     SAFE_DEALLOCATE_A(iunit)
 
-    call pop_sub()
+    call pop_sub('states.states_write_bands')
   end subroutine states_write_bands
 
   ! ---------------------------------------------------------
@@ -1803,7 +1805,8 @@ contains
         message(1) = 'No orbital with half-occupancy found. TPA output is not written.'
         call write_warning(1)
 
-        call pop_sub(); return
+    call pop_sub('states.states_write_tpa')
+return
 
       end if
     end if
@@ -1948,7 +1951,7 @@ contains
       SAFE_DEALLOCATE_A(qvector)
     end if
   
-    call pop_sub()
+    call pop_sub('states.states_write_tpa')
  
   end subroutine states_write_tpa
 
@@ -2104,7 +2107,7 @@ contains
     SAFE_DEALLOCATE_A(iunit)
     SAFE_DEALLOCATE_A(dos)
 
-    call pop_sub()
+    call pop_sub('states.states_write_dos')
   end subroutine states_write_dos
 
 
@@ -2176,7 +2179,7 @@ contains
     call write_info(3, iunit)
     call io_close(iunit)
 
-    call pop_sub()
+    call pop_sub('states.states_write_fermi_energy')
   end subroutine states_write_fermi_energy
   ! ---------------------------------------------------------
 
@@ -2257,7 +2260,7 @@ contains
    end if
 #endif
 
-    call pop_sub()
+    call pop_sub('states.states_distribute_nodes')
   end subroutine states_distribute_nodes
 
 
@@ -2298,7 +2301,7 @@ contains
      write(iunit, '(a20,1i10)')  'dim=                ', st%d%dim
      write(iunit, '(a20,1i10)')  'nik=                ', st%d%nik
 
-     call pop_sub()
+     call pop_sub('states.states_dump')
   end subroutine states_dump
 
 
@@ -2463,7 +2466,7 @@ contains
       call reduce_all(st%d%kpt%mpi_grp)
     end if
 
-    call pop_sub()
+    call pop_sub('states.states_calc_tau_jp_gn')
 
   contains 
 
@@ -2502,7 +2505,7 @@ contains
       end do
       SAFE_DEALLOCATE_A(tmp_reduce)
 
-      call pop_sub()
+      call pop_sub('states.states_calc_tau_jp_gn.reduce_all')
     end subroutine reduce_all
 
 #endif            
@@ -2526,7 +2529,7 @@ contains
     s(3) = zmf_dotp(m, f1(:, 1), f1(:, 1)) - zmf_dotp(m, f1(:, 2), f1(:, 2))
     s = s * M_HALF ! spin is half the sigma matrix.
 
-    call pop_sub()
+    call pop_sub('states.state_spin')
   end function state_spin
 
 
@@ -2562,13 +2565,15 @@ contains
     iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=mpi_grp)
     if(iunit < 0) then
       ierr = -1
-      call pop_sub(); return
+    call pop_sub('states.states_look')
+return
     end if
     iunit2 = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp=.true., grp=mpi_grp)
     if(iunit2 < 0) then
       call io_close(iunit, grp = mpi_grp)
       ierr = -1
-      call pop_sub(); return
+    call pop_sub('states.states_look')
+return
     end if
 
     ! Skip two lines.
@@ -2611,7 +2616,7 @@ contains
       SAFE_DEALLOCATE_A(counter_nst)
     end if
 
-    call pop_sub()
+    call pop_sub('states.states_look')
   end subroutine states_look
 
 
@@ -2624,7 +2629,7 @@ contains
 
     state_is_local = ist.ge.st%st_start.and.ist.le.st%st_end
 
-    call pop_sub()
+    call pop_sub('states.state_is_local')
   end function state_is_local
 
 
@@ -2720,7 +2725,7 @@ contains
     end do
 
     call states_end(staux)
-    call pop_sub()
+    call pop_sub('states.states_freeze_orbitals')
   end subroutine states_freeze_orbitals
 
 
@@ -2754,7 +2759,7 @@ contains
       end forall
     end if
 
-    call pop_sub()
+    call pop_sub('states.states_total_density')
   end subroutine states_total_density
 
 
@@ -2769,7 +2774,7 @@ contains
     ! orbitals
     memory = memory + REAL_PRECISION*dble(mesh%np_part_global)*st%d%dim*dble(st%nst)*st%d%kpt%nglobal
 
-    call pop_sub()
+    call pop_sub('states.states_wfns_memory')
   end function states_wfns_memory
 
 
@@ -2862,7 +2867,7 @@ contains
     end do
     call messages_print_stress(stdout)
 
-    call pop_sub()
+    call pop_sub('states.states_init_self_energy')
   end subroutine states_init_self_energy
 
 
@@ -2915,7 +2920,8 @@ contains
               message(1) = 'Cannot write term for source term to file.'
               call write_warning(1)
               call io_close(iunit)
-              call pop_sub(); return
+    call pop_sub('states.write_proj_lead_wf')
+return
             end if
             ! Write parameters.
             write(iunit) np
@@ -2932,7 +2938,7 @@ contains
     SAFE_DEALLOCATE_A(hpsi)
     SAFE_DEALLOCATE_A(self_energy)
 
-    call pop_sub()
+    call pop_sub('states.write_proj_lead_wf')
   end subroutine states_write_proj_lead_wf
 
   ! ---------------------------------------------------------
@@ -2974,7 +2980,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('states.states_read_proj_lead_wf')
   end subroutine states_read_proj_lead_wf
 
 

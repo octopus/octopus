@@ -43,7 +43,7 @@ subroutine PES_mask_init(mask, mesh, sb, st)
   mask%k = M_z0
   mask%r = M_ZERO
 
-  call pop_sub()
+  call pop_sub('pes_mask_inc.PES_mask_init')
 end subroutine PES_mask_init
 
 
@@ -59,7 +59,7 @@ subroutine PES_mask_end(mask)
     SAFE_DEALLOCATE_P(mask%r)
   end if
 
-  call pop_sub()
+  call pop_sub('pes_mask_inc.PES_mask_end')
 end subroutine PES_mask_end
 
 
@@ -121,7 +121,7 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn)
 
   SAFE_DEALLOCATE_A(wf1)
   SAFE_DEALLOCATE_A(wf2)
-  call pop_sub()
+  call pop_sub('pes_mask_inc.PES_mask_calc')
 end subroutine PES_mask_calc
 
 
@@ -305,7 +305,7 @@ subroutine PES_mask_output(mask, mesh, st, file)
   SAFE_DEALLOCATE_A(npoints)
   SAFE_DEALLOCATE_A(ar_npoints)
 
-  call pop_sub()
+  call pop_sub('pes_mask_inc.PES_mask_output')
 end subroutine PES_mask_output
 
 !! Local Variables:

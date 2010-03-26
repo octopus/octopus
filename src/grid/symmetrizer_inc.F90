@@ -66,7 +66,7 @@ subroutine X(symmetrizer_apply)(this, field, symmfield)
 
   end do
 
-  call pop_sub()
+  call pop_sub('symmetrizer_inc.symmetrizer_apply')
 end subroutine X(symmetrizer_apply)
 
 ! ----------------------------------------------------------------------------------
@@ -120,7 +120,7 @@ subroutine X(symmetrizer_apply_vector)(this, field, symmfield)
 
   end do
 
-  call pop_sub()
+  call pop_sub('symmetrizer_inc.symmetrizer_apply_vector')
 end subroutine X(symmetrizer_apply_vector)
 
 !! Local Variables:

@@ -95,7 +95,7 @@ contains
     call vibrations_end(vib)
 
     call end_()
-    call pop_sub()
+    call pop_sub('phonons_fd.phonons_run')
 
   contains
 
@@ -105,7 +105,7 @@ contains
       call push_sub('phonons.phonons_run.init_')
       call states_allocate_wfns(sys%st, sys%gr%mesh)
 
-      call pop_sub()
+      call pop_sub('phonons.phonons_run.init_')
     end subroutine init_
 
     ! ---------------------------------------------------------
@@ -114,7 +114,7 @@ contains
       call push_sub('phonons_fd.phonons_run.end_')
       call states_deallocate_wfns(sys%st)
 
-      call pop_sub()
+      call pop_sub('phonons_fd.phonons_run.end_')
     end subroutine end_
 
   end subroutine phonons_run
@@ -194,7 +194,7 @@ contains
     call vibrations_normalize_dyn_matrix(vib, geo)
     call vibrations_diag_dyn_matrix(vib)
 
-    call pop_sub()
+    call pop_sub('phonons_fd.get_dyn_matrix')
   end subroutine get_dyn_matrix
 
 end module phonons_fd_m

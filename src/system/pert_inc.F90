@@ -80,7 +80,7 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
   endif
 
   call profiling_out(prof)
-  call pop_sub()
+   call pop_sub('pert_inc.Xpert_apply')
 
 contains
 
@@ -90,7 +90,7 @@ contains
 
     call push_sub('pert_inc.Xpert_apply.none')
     f_out(1:gr%mesh%np, 1) = M_ZERO
-    call pop_sub()
+    call pop_sub('pert_inc.Xpert_apply.none')
 
   end subroutine none
 
@@ -99,7 +99,7 @@ contains
 
     call push_sub('pert_inc.Xpert_apply.electric')
     f_out(1:gr%mesh%np, 1) = f_in(1:gr%mesh%np, 1)*gr%mesh%x(1:gr%mesh%np, this%dir)
-    call pop_sub()
+    call pop_sub('pert_inc.Xpert_apply.electric')
 
   end subroutine electric
 
@@ -133,7 +133,7 @@ contains
  
     SAFE_DEALLOCATE_A(grad)
     SAFE_DEALLOCATE_A(cpsi)
-    call pop_sub()
+    call pop_sub('pert_inc.Xpert_apply.kdotp')
     
   end subroutine kdotp
 
@@ -188,7 +188,7 @@ contains
       SAFE_DEALLOCATE_A(vrnl)
     end if
 
-    call pop_sub()
+    call pop_sub('pert_inc.Xpert_apply.magnetic')
 
   end subroutine magnetic
 
@@ -215,7 +215,7 @@ contains
     end do
       
     SAFE_DEALLOCATE_A(tmp)
-    call pop_sub()
+    call pop_sub('pert_inc.Xpert_apply.ionic')
 
   end subroutine ionic
 
@@ -265,7 +265,7 @@ subroutine X(ionic_perturbation)(this, gr, geo, hm, ik, f_in, f_out, iatom, idir
   SAFE_DEALLOCATE_A(fin)
   SAFE_DEALLOCATE_A(fout)
   SAFE_DEALLOCATE_A(vloc)
-  call pop_sub()
+  call pop_sub('pert_inc.Xionic_perturbation')
 
 end subroutine X(ionic_perturbation)
 
@@ -293,7 +293,7 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
     call magnetic()
   end select
 
-  call pop_sub()
+  call pop_sub('pert_inc.Xpert_apply_order2')
 
 contains
 
@@ -380,7 +380,7 @@ contains
       SAFE_DEALLOCATE_A(xf)
     end if apply_gauge
 
-    call pop_sub()
+    call pop_sub('pert_inc.Xpert_apply_order2.magnetic')
 
   end subroutine magnetic
 
@@ -412,7 +412,7 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(tmp)
-    call pop_sub()
+    call pop_sub('pert_inc.Xpert_apply_order2.ionic')
 
   end subroutine ionic
 
@@ -475,7 +475,7 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, hm, ik, f_in, f_out, ia
   call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, tmp2, tmp1, ik)
   forall(ip = 1:gr%mesh%np) f_out(ip) = f_out(ip) + tmp1(ip, 1)
 
-  call pop_sub()
+  call pop_sub('pert_inc.Xionic_perturbation_order2')
 
 end subroutine X(ionic_perturbation_order_2)
 
@@ -544,7 +544,7 @@ subroutine X(ionic_pert_matrix_elements_2)(this, gr, geo, hm, ik, st, psi, vib, 
     end do
   end do
   
-  call pop_sub()
+  call pop_sub('pert_inc.Xionic_pert_matrix_elements_2')
 end subroutine X(ionic_pert_matrix_elements_2)
 
 ! --------------------------------------------------------------------------
@@ -593,7 +593,7 @@ subroutine X(pert_expectation_density) (this, gr, geo, hm, st, psia, psib, densi
   end do
 
   SAFE_DEALLOCATE_A(pertpsib)
-  call pop_sub()
+  call pop_sub('pert_inc.Xpert_expectation_density')
 
 end subroutine X(pert_expectation_density)
 
@@ -636,7 +636,7 @@ R_TYPE function X(pert_expectation_value) (this, gr, geo, hm, st, psia, psib, pe
 #endif
 
   SAFE_DEALLOCATE_A(density)
-  call pop_sub()
+  call pop_sub('pert_inc.Xpert_expectation_value')
 
 end function X(pert_expectation_value)
 

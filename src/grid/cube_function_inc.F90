@@ -32,7 +32,7 @@ subroutine X(cf_new)(n, cf)
   cf%n = n
 
   nullify(cf%fft)
-  call pop_sub()
+  call pop_sub('cf_inc.Xcf_new')
 end subroutine X(cf_new)
 
 
@@ -55,7 +55,7 @@ subroutine X(cf_new_from)(cf, cf_i)
   else
     nullify(cf%fft)
   end if
-  call pop_sub()
+  call pop_sub('cf_inc.Xcf_new_from')
 end subroutine X(cf_new_from)
 
 
@@ -68,7 +68,7 @@ subroutine X(cf_alloc_RS)(cf)
   ASSERT(.not.associated(cf%RS))
   SAFE_ALLOCATE(cf%RS(1:cf%n(1), 1:cf%n(2), 1:cf%n(3)))
 
-  call pop_sub()
+  call pop_sub('cf_inc.Xcf_alloc_RS')
 end subroutine X(cf_alloc_RS)
 
 
@@ -82,7 +82,7 @@ subroutine X(cf_free_RS)(cf)
   SAFE_DEALLOCATE_P(cf%RS)
   nullify(cf%RS)
 
-  call pop_sub()
+  call pop_sub('cf_inc.Xcf_free_RS')
 end subroutine X(cf_free_RS)
 
 ! ---------------------------------------------------------
@@ -107,7 +107,7 @@ subroutine X(cf_free)(cf)
     nullify(cf%fft)
   end if
 
-  call pop_sub()
+  call pop_sub('cf_inc.Xcf_free')
 end subroutine X(cf_free)
 
 ! ---------------------------------------------------------
@@ -141,7 +141,7 @@ subroutine X(mesh_to_cube) (mesh, mf, cf)
     cf%RS(ix, iy, iz) = mf(ip)
   end do
 
-  call pop_sub()
+  call pop_sub('cf_inc.Xmesh_to_cube')
 end subroutine X(mesh_to_cube)
 
 ! ---------------------------------------------------------
@@ -165,7 +165,7 @@ subroutine X(cube_to_mesh) (mesh, cf, mf)
     mf(ip) = cf%RS(ix, iy, iz)
   end do
 
-  call pop_sub()
+  call pop_sub('cf_inc.Xcube_to_mesh')
 
 end subroutine X(cube_to_mesh)
 

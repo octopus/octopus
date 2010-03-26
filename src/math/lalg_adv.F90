@@ -181,7 +181,7 @@ contains
       SAFE_DEALLOCATE_A(zevalues)
     end if
 
-    call pop_sub()
+    call pop_sub('lalg_adv.zlalg_exp')
   end subroutine zlalg_exp
 
 
@@ -258,7 +258,7 @@ contains
       SAFE_DEALLOCATE_A(zevalues)
     end if
 
-    call pop_sub()
+    call pop_sub('lalg_adv.zlalg_phi')
   end subroutine zlalg_phi
 
 #ifdef HAVE_LAPACK

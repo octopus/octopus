@@ -64,7 +64,7 @@ module calc_mode_m
       call push_sub('calc_mode.calc_mode')
       calc_mode = calc_mode_id
 
-      call pop_sub()
+      call pop_sub('calc_mode.calc_mode')
     end function calc_mode
 
     logical function calc_mode_is(mode)
@@ -73,7 +73,7 @@ module calc_mode_m
       call push_sub('calc_mode.calc_mode_is')
       calc_mode_is = (calc_mode_id == mode)
 
-      call pop_sub()
+      call pop_sub('calc_mode.calc_mode_is')
     end function calc_mode_is
 
     integer function calc_mode_parallel_mask() result(par_mask)
@@ -91,7 +91,7 @@ module calc_mode_m
         par_mask = ibset(par_mask, P_STRATEGY_OTHER - 1)
       end select
 
-      call pop_sub()
+      call pop_sub('calc_mode.calc_mode_parallel_mask')
     end function calc_mode_parallel_mask
 
     ! This function returns the default modes used for a calculation,
@@ -110,7 +110,7 @@ module calc_mode_m
         par_mask = ibset(par_mask, P_STRATEGY_OTHER - 1)
       end select
 
-      call pop_sub()
+      call pop_sub('calc_mode.calc_mode_default_parallel_mask')
     end function calc_mode_default_parallel_mask
 
 end module calc_mode_m

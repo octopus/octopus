@@ -140,7 +140,7 @@ subroutine X(sym_conjugate_gradients)(np_part, np, x, b, op, dotp, iter, residue
   SAFE_DEALLOCATE_A(p)
   SAFE_DEALLOCATE_A(ap)
 
-  call pop_sub()
+  call pop_sub('solvers_inc.Xsym_conjugate_gradients')
 end subroutine X(sym_conjugate_gradients)
 
 
@@ -229,7 +229,7 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
   SAFE_DEALLOCATE_A(ap)
   SAFE_DEALLOCATE_A(atp)
 
-  call pop_sub()
+  call pop_sub('solvers_inc.Xbi_conjugate_gradients')
 end subroutine X(bi_conjugate_gradients)
 
   ! ---------------------------------------------------------
@@ -261,7 +261,7 @@ end subroutine X(bi_conjugate_gradients)
     call X(qmr_sym_gen_dotu)(np, x, b, op, X(dotu_qmr), X(nrm2_qmr), prec, iter, &
       residue, threshold, showprogress, converged)
 
-    call pop_sub()
+    call pop_sub('solvers_inc.Xqmr_sym_spec_dotu')
   end subroutine X(qmr_sym_spec_dotu)
 
   ! ---------------------------------------------------------
@@ -305,7 +305,7 @@ end subroutine X(bi_conjugate_gradients)
     call X(qmr_gen_dotu)(np, x, b, op, opt, X(dotu_qmr), X(nrm2_qmr), &
       prec, prect, iter, residue, threshold, showprogress, converged)
 
-    call pop_sub()
+    call pop_sub('solvers_inc.Xqmr_spec_dotu')
   end subroutine X(qmr_spec_dotu)
 
 
@@ -317,7 +317,7 @@ end subroutine X(bi_conjugate_gradients)
 
     X(nrm2_qmr) = lalg_nrm2(np_p, x(:))
 
-    call pop_sub()
+    call pop_sub('solvers_inc.Xnrm2_qmr')
   end function X(nrm2_qmr)
 
 
@@ -555,7 +555,7 @@ end subroutine X(bi_conjugate_gradients)
     SAFE_DEALLOCATE_A(deltax)
     SAFE_DEALLOCATE_A(deltar)
 
-    call pop_sub()
+    call pop_sub('solvers_inc.Xqmr_sym_gen_dotu')
   end subroutine X(qmr_sym_gen_dotu)
 
   ! ---------------------------------------------------------
@@ -784,7 +784,7 @@ end subroutine X(bi_conjugate_gradients)
     SAFE_DEALLOCATE_A(deltax)
     SAFE_DEALLOCATE_A(tmp)
 
-    call pop_sub()
+    call pop_sub('solvers_inc.Xqmr_gen_dotu')
   end subroutine X(qmr_gen_dotu)
 
 !! Local Variables:

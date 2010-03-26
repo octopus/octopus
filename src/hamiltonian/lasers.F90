@@ -93,7 +93,7 @@ contains
     call push_sub('lasers.laser_carrier_frequency')
     w0 = laser%omega
 
-    call pop_sub()
+    call pop_sub('lasers.laser_carrier_frequency')
   end function laser_carrier_frequency
   ! ---------------------------------------------------------
 
@@ -117,7 +117,7 @@ contains
     call push_sub('lasers.laser_polarization')
     pol(1:MAX_DIM) = laser%pol(1:MAX_DIM)
 
-    call pop_sub()
+    call pop_sub('lasers.laser_polarization')
   end function laser_polarization
   ! ---------------------------------------------------------
 
@@ -130,7 +130,7 @@ contains
     call push_sub('lasers.laser_get_f')
     call tdf_copy(ff, laser%f)
 
-    call pop_sub()
+    call pop_sub('lasers.laser_get_f')
   end subroutine laser_get_f
   ! ---------------------------------------------------------
 
@@ -145,7 +145,7 @@ contains
     call tdf_end(laser%f)
     call tdf_copy(laser%f, ff)
 
-    call pop_sub()
+    call pop_sub('lasers.laser_set_f')
   end subroutine laser_set_f
   ! ---------------------------------------------------------
 
@@ -158,7 +158,7 @@ contains
     call push_sub('lasers.laser_get_phi')
     call tdf_copy(phi, laser%phi)
 
-    call pop_sub()
+    call pop_sub('lasers.laser_get_phi')
   end subroutine laser_get_phi
   ! ---------------------------------------------------------
 
@@ -173,7 +173,7 @@ contains
     call tdf_end(laser%phi)
     call tdf_copy(laser%phi, phi)
 
-    call pop_sub()
+    call pop_sub('lasers.laser_set_phi')
   end subroutine laser_set_phi
   ! ---------------------------------------------------------
 
@@ -187,7 +187,7 @@ contains
     call push_sub('lasers.laser_set_f_value')
     call tdf_set_numerical(laser%f, ii, xx)
 
-    call pop_sub()
+    call pop_sub('lasers.laser_set_f_value')
   end subroutine laser_set_f_value
   ! ---------------------------------------------------------
 
@@ -221,7 +221,7 @@ contains
     call tdf_init_cw(laser%phi, M_ZERO, M_ZERO)
     laser%omega = M_ZERO
 
-    call pop_sub()
+    call pop_sub('lasers.lasers_to_numerical_all')
   end subroutine laser_to_numerical_all
   ! ---------------------------------------------------------
 
@@ -240,7 +240,7 @@ contains
     call tdf_to_numerical(laser%f, max_iter, dt, omegamax)
     call tdf_to_numerical(laser%phi, max_iter, dt, omegamax)
 
-    call pop_sub()
+    call pop_sub('lasers.lasers_to_numerical')
   end subroutine laser_to_numerical
   ! ---------------------------------------------------------
 
@@ -436,7 +436,7 @@ contains
       call parse_block_end(blk)
     end if
 
-    call pop_sub()
+    call pop_sub('lasers.laser_init')
 
   end subroutine laser_init
   ! ---------------------------------------------------------
@@ -465,7 +465,7 @@ contains
       SAFE_DEALLOCATE_P(lasers); nullify(lasers)
     end if
 
-    call pop_sub()
+    call pop_sub('laser.laser_end')
   end subroutine laser_end
   ! ---------------------------------------------------------
 
@@ -554,7 +554,7 @@ contains
 
     end do
 
-    call pop_sub()
+    call pop_sub('lasers.laser_write_info')
   end subroutine laser_write_info
   ! ---------------------------------------------------------
 
@@ -590,7 +590,7 @@ contains
       end do
     end select
 
-    call pop_sub()
+    call pop_sub('lasers.laser_potential')
   end subroutine laser_potential
   ! ---------------------------------------------------------
 
@@ -609,7 +609,7 @@ contains
       aa = laser%a
     end if
 
-    call pop_sub()
+    call pop_sub('lasers.laser_vector_potential')
   end subroutine laser_vector_potential
   ! ---------------------------------------------------------
 
@@ -627,7 +627,8 @@ contains
 
     field = M_ZERO
     if(laser%field .eq. E_FIELD_SCALAR_POTENTIAL) then
-      call pop_sub(); return
+      call pop_sub('lasers.laser_field')
+      return
     endif
     if(present(time)) then
       amp = tdf(laser%f, time) * exp(M_zI * ( laser%omega * time + tdf(laser%phi, time) ) )
@@ -636,7 +637,7 @@ contains
     end if
     field(1:sb%dim) = field(1:sb%dim) + real(amp*laser%pol(1:sb%dim))
 
-    call pop_sub()
+    call pop_sub('lasers.laser_field')
   end subroutine laser_field
   ! ---------------------------------------------------------
 
@@ -706,7 +707,7 @@ contains
       
     end select
     
-    call pop_sub()
+    call pop_sub('lasers.lasers_get_potential')
   end subroutine lasers_get_potentials
 
 #include "undef.F90"

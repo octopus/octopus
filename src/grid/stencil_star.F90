@@ -52,7 +52,7 @@ contains
 
     stencil_star_size_lapl = 2*dim*order + 1
 
-    call pop_sub()
+    call pop_sub('stencil_star.stencil_star_size_lapl')
   end function stencil_star_size_lapl
 
 
@@ -67,7 +67,7 @@ contains
 
     stencil_star_extent = order
 
-    call pop_sub()
+    call pop_sub('stencil_star.stencil_star_extent')
   end function stencil_star_extent
   
 
@@ -105,7 +105,7 @@ contains
 
     call stencil_init_center(this)
 
-    call pop_sub()
+    call pop_sub('stencil_star.stencil_star_get_lapl')
   end subroutine stencil_star_get_lapl
 
 
@@ -128,7 +128,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('stencil_star.stencil_star_polynomials_lapl')
   end subroutine stencil_star_polynomials_lapl
 
 
@@ -166,7 +166,7 @@ contains
 
     SAFE_DEALLOCATE_A(cc)
 
-    call pop_sub()
+    call pop_sub('stencil_star.stencil_star_coeff_lapl')
   end subroutine stencil_star_coeff_lapl
 
 
@@ -180,7 +180,7 @@ contains
 
     stencil_star_size_grad = 2*order + 1
 
-    call pop_sub()
+    call pop_sub('stencil_star.stencil_star_size_grad')
   end function stencil_star_size_grad
 
 
@@ -204,7 +204,7 @@ contains
 
     call stencil_init_center(this)
 
-    call pop_sub()
+    call pop_sub('stencil_star.stencil_star_get_grad')
   end subroutine stencil_star_get_grad
 
 
@@ -223,7 +223,7 @@ contains
       pol(dir, j+1) = j
     end do
 
-    call pop_sub()
+    call pop_sub('stencil_star.stencil_star_polynomials_grad')
   end subroutine stencil_star_polynomials_grad
 
 
@@ -259,7 +259,7 @@ contains
 
     SAFE_DEALLOCATE_A(cc)
 
-    call pop_sub()
+    call pop_sub('stencil_star.stencil_star_coeff_grad')
   end subroutine stencil_star_coeff_grad
 
 end module stencil_star_m

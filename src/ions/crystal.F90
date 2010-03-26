@@ -68,7 +68,7 @@ contains
        end do
     end do
     
-    call pop_sub()
+    call pop_sub('crystal.crystal_kpointsgrid_generate')
 
   end subroutine crystal_kpointsgrid_generate
 
@@ -111,7 +111,7 @@ contains
     write(message(1),'(a)') ''
     call write_info(1)
 
-    call pop_sub()
+    call pop_sub('crystal.crystal_init')
   end subroutine crystal_init
   
   subroutine crystal_kpointsgrid_reduce(symm, time_reversal, nkpoints, kpoints, weights)
@@ -192,7 +192,7 @@ contains
       kpoints(1:3, ik) = reduced(1:3, ik)
     end do
 
-    call pop_sub()
+    call pop_sub('crystal.crystal_kpointsgrid_reduce')
   end subroutine crystal_kpointsgrid_reduce
 
 end module crystal_m

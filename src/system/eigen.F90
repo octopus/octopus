@@ -263,7 +263,7 @@ contains
     eigens%converged(1:st%d%nik) = 0
     eigens%matvec    = 0
 
-    call pop_sub()
+    call pop_sub('eigen.eigensolver_init')
 
   end subroutine eigensolver_init
 
@@ -283,7 +283,7 @@ contains
     SAFE_DEALLOCATE_P(eigens%diff)
     nullify(eigens%diff)
 
-    call pop_sub()
+    call pop_sub('eigen.eigensolver_end')
   end subroutine eigensolver_end
 
 
@@ -453,7 +453,7 @@ contains
     end if
 #endif
 
-    call pop_sub()
+    call pop_sub('eigen.eigensolver_run')
     call profiling_out(prof)
   end subroutine eigensolver_run
 
@@ -469,7 +469,7 @@ contains
       par_stat = .true.
     end select
     
-    call pop_sub()
+    call pop_sub('eigen.eigensolver_parallel_in_states')
   end function eigensolver_parallel_in_states
     
   logical function eigensolver_has_progress_bar(this) result(has)
@@ -484,7 +484,7 @@ contains
       has = .true.
     end select
 
-    call pop_sub()
+    call pop_sub('eigen.eigensolver_has_progress_bar')
   end function eigensolver_has_progress_bar
   
 #include "undef.F90"

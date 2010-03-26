@@ -121,7 +121,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_un
     SAFE_DEALLOCATE_A(dtmp)
   end if
 
-  call pop_sub()
+  call pop_sub('output_linear_response.Xh_sys_output_lr')
 contains
 
   ! ---------------------------------------------------------
@@ -146,7 +146,7 @@ contains
         unit_one / pert_unit, ierr, geo = geo)
     end do
 
-    call pop_sub()
+    call pop_sub('output_linear_response.Xh_sys_output_lr.lr_elf')
 
   end subroutine lr_elf
 

@@ -141,7 +141,7 @@ contains
     tro%scf_propagation_steps = tri%scf_propagation_steps
     call loct_pointer_copy(tro%prev_psi, tri%prev_psi)
 
-    call pop_sub()
+    call pop_sub('tr_rti.tr_rti_copy')
   end subroutine td_rti_copy
   ! ---------------------------------------------------------
 
@@ -383,7 +383,7 @@ contains
       nullify(tr%prev_psi)
     end if
 
-    call pop_sub()
+    call pop_sub('td_rti.td_rti_init')
   end subroutine td_rti_init
   ! ---------------------------------------------------------
 
@@ -434,7 +434,7 @@ contains
     
     call exponential_end(tr%te)       ! clean propagator method
 
-    call pop_sub()
+    call pop_sub('td_rti.td_rti_end')
   end subroutine td_rti_end
   ! ---------------------------------------------------------
 
@@ -450,7 +450,7 @@ contains
     tr%v_old(:, :, 3) = hm%vhxc(:, :)
     tr%v_old(:, :, 1) = hm%vhxc(:, :)
 
-    call pop_sub()
+    call pop_sub('td_rti.td_rti_run_zero_iter')
   end subroutine td_rti_run_zero_iter
 
 
@@ -599,7 +599,7 @@ contains
       SAFE_DEALLOCATE_A(vaux)
     end if
 
-    call pop_sub()
+    call pop_sub('td_rti.td_rti_dt')
     call profiling_out(prof)
 
   contains
@@ -630,7 +630,7 @@ contains
         end do
       end do
 
-      call pop_sub()
+      call pop_sub('td_rti.td_rti_dt.td_split_operator')
     end subroutine td_split_operator
 
 
@@ -666,7 +666,7 @@ contains
         end do
       end do
 
-      call pop_sub()
+      call pop_sub('td_rti.td_rti_dt.td_suzuki_trotter')
     end subroutine td_suzuki_trotter
 
     ! ---------------------------------------------------------
@@ -773,7 +773,7 @@ contains
         SAFE_DEALLOCATE_A(vhxc_t2)
       end if
 
-      call pop_sub()
+      call pop_sub('td_rti.td_rti_dt.td_reversal')
     end subroutine td_reversal
 
 
@@ -818,7 +818,7 @@ contains
         end do
       end do
       
-      call pop_sub()
+      call pop_sub('td_rti.td_rti_dt.td_app_reversal')
     end subroutine td_app_reversal
 
 
@@ -862,7 +862,7 @@ contains
         call gauge_field_set_vec_pot_vel(hm%ep%gfield, vecpot_vel)
       end if
 
-      call pop_sub()
+      call pop_sub('td_rti.td_rti_dt.exponential_midpoint')
     end subroutine exponential_midpoint
 
 
@@ -961,7 +961,7 @@ contains
       end if
       SAFE_DEALLOCATE_A(zpsi_rhs_corr)
 
-      call pop_sub()
+      call pop_sub('td_rti.td_rti_dt.td_crank_nicholson_sparskit')
 #endif
     end subroutine td_crank_nicholson_sparskit
     ! ---------------------------------------------------------
@@ -1038,7 +1038,7 @@ contains
       SAFE_DEALLOCATE_A(zpsi_rhs)
       SAFE_DEALLOCATE_A(zpsi)
       SAFE_DEALLOCATE_A(rhs)
-      call pop_sub()
+      call pop_sub('td_rti.td_rti_dt.td_crank_nicholson')
     end subroutine td_crank_nicholson
     ! ---------------------------------------------------------
 
@@ -1097,7 +1097,7 @@ contains
       end do
 
       SAFE_DEALLOCATE_A(vaux)
-      call pop_sub()
+      call pop_sub('td_rti.td_rti_dt.td_magnus')
     end subroutine td_magnus
 
 
@@ -1113,7 +1113,7 @@ contains
         call cn_src_mem_sp_dt(tr%ob, st, ks, hm, gr, max_iter, dt, time, nt)
       end select
 
-      call pop_sub()
+      call pop_sub('td_rti.td_rti_dt.td_crank_nicholson_src_mem')
     end subroutine td_crank_nicholson_src_mem
 
     ! ---------------------------------------------------------
@@ -1240,7 +1240,7 @@ contains
         end do
       end do
 
-      call pop_sub()
+      call pop_sub('td_rti.td_rti_dt.td_visscher')
     end subroutine td_visscher
 
   end subroutine td_rti_dt
@@ -1270,7 +1270,7 @@ contains
     end forall
 
     SAFE_DEALLOCATE_A(zpsi)
-    call pop_sub()
+    call pop_sub('td_rti.td_rti_qmr_op')
   end subroutine td_rti_qmr_op
   ! ---------------------------------------------------------
 
@@ -1283,7 +1283,7 @@ contains
     call push_sub('td_rti.td_rti_qmr_prec')
     y = x
 
-    call pop_sub()
+    call pop_sub('td_rti.td_rti_qmr_prec')
   end subroutine td_rti_qmr_prec
   ! ---------------------------------------------------------
 
@@ -1307,7 +1307,7 @@ contains
     yre(1:grid_p%mesh%np) =  real(zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op))
     yim(1:grid_p%mesh%np) = aimag(zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op))
 #endif    
-    call pop_sub()
+    call pop_sub('td_rti.td_zop')
   end subroutine td_zop
   ! ---------------------------------------------------------
 
@@ -1334,7 +1334,7 @@ contains
     yre(1:grid_p%mesh%np) =    real(zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op))
     yim(1:grid_p%mesh%np) = - aimag(zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op))
 #endif        
-    call pop_sub()
+    call pop_sub('td_rti.td_zopt')
   end subroutine td_zopt
   ! ---------------------------------------------------------
 

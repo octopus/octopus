@@ -293,7 +293,7 @@ contains
 
     ps%is_separated = .false.
 
-    call pop_sub()
+    call pop_sub('ps.ps_init')
 
   end subroutine ps_init
 
@@ -360,7 +360,7 @@ contains
     
     ps%is_separated = .true.
 
-    call pop_sub()
+    call pop_sub('ps.ps_separate')
   end subroutine ps_separate
   
   ! ---------------------------------------------------------
@@ -378,7 +378,7 @@ contains
       end do
     end do
     
-    call pop_sub()
+    call pop_sub('ps.ps_getradius')
   end subroutine ps_getradius
 
 
@@ -396,7 +396,7 @@ contains
     end do
 
 
-    call pop_sub()
+    call pop_sub('ps.ps_derivatives')
   end subroutine ps_derivatives
 
 
@@ -453,7 +453,7 @@ contains
 
     end select
 
-    call pop_sub()
+    call pop_sub('ps.ps_filter')
   end subroutine ps_filter
 
 
@@ -543,7 +543,7 @@ contains
       call io_close(iunit)
     end if
 
-    call pop_sub()
+    call pop_sub('ps.ps_debug')
   end subroutine ps_debug
 
 
@@ -580,7 +580,7 @@ contains
     SAFE_DEALLOCATE_P(ps%h)
     SAFE_DEALLOCATE_P(ps%k)
 
-    call pop_sub()
+    call pop_sub('ps.ps_end')
   end subroutine ps_end
 
 
@@ -618,7 +618,7 @@ contains
     ! now we fit the splines
     call get_splines()
 
-    call pop_sub()
+    call pop_sub('ps.hgh_load')
 
   contains
     ! ---------------------------------------------------------
@@ -657,7 +657,7 @@ contains
       
       SAFE_DEALLOCATE_A(hato)
 
-      call pop_sub()
+      call pop_sub('ps.hgh_load.get_splines')
     end subroutine get_splines
   end subroutine hgh_load
 
@@ -687,7 +687,7 @@ contains
     ! Passes from Rydbergs to Hartrees.
     ps%h(0:ps%l_max,:,:)    = ps%h(0:ps%l_max,:,:)    / M_TWO
 
-    call pop_sub()
+    call pop_sub('ps.ps_grid_load')
 
   contains
 
@@ -747,7 +747,7 @@ contains
       end if
 
       SAFE_DEALLOCATE_A(hato)
-      call pop_sub()
+      call pop_sub('ps.ps_grid_load.get_splines')
     end subroutine get_splines
   end subroutine ps_grid_load
 
@@ -851,7 +851,7 @@ contains
 
     SAFE_DEALLOCATE_A(hato)
 
-    call pop_sub()
+    call pop_sub('ps.ps_upf_load')
   end subroutine ps_upf_load
 
 end module ps_m

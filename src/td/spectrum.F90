@@ -214,7 +214,7 @@ contains
     !%End
     call parse_float(datasets_check('PropagationSpectrumDampFactor'), CNST(0.15), spectrum%damp_factor, units_inp%time**(-1))
 
-    call pop_sub()
+    call pop_sub('spectrum.spectrum_init')
   end subroutine spectrum_init
 
 
@@ -285,7 +285,7 @@ contains
       end if
     end if
 
-    call pop_sub()
+    call pop_sub('spectrum.kick_write')
   end subroutine kick_write
 
 
@@ -324,7 +324,7 @@ contains
       read(iunit, '(15x,3f18.12)') kick%wprime(1:3)
     end if
 
-    call pop_sub()
+    call pop_sub('spectrum.kick_read')
   end subroutine kick_read
 
 
@@ -367,7 +367,8 @@ contains
       nullify(kick%l)
       nullify(kick%m)
       nullify(kick%weight)
-      call pop_sub(); return
+      call pop_sub('spectrum.kick_init')
+      return
     end if
 
     !%Variable TDDeltaStrengthMode
@@ -575,7 +576,7 @@ contains
       kick%qvector(:) = M_ZERO
     end if
 
-    call pop_sub()
+    call pop_sub('spectrum.kick_init')
   end subroutine kick_init
 
 
@@ -783,7 +784,7 @@ contains
     SAFE_DEALLOCATE_A(sigmaw)
     SAFE_DEALLOCATE_A(pp)
     SAFE_DEALLOCATE_A(ip)
-    call pop_sub()
+    call pop_sub('spectrum.spectrum_cross_section_tensor')
   end subroutine spectrum_cross_section_tensor
 
 
@@ -949,7 +950,7 @@ contains
 
     SAFE_DEALLOCATE_A(dipole)
     SAFE_DEALLOCATE_A(sigma)
-    call pop_sub()
+    call pop_sub('spectrum.spectrum_cross_section')
   end subroutine spectrum_cross_section
 
 
@@ -1055,7 +1056,7 @@ contains
         units_from_atomic(units_out%length**4, real(sp(ie)) * P_C / (M_THREE * max(ie, 1) * spectrum%energy_step))
     end do
 
-    call pop_sub()
+    call pop_sub('spectrum.spectrum_rotatory_strength')
   end subroutine spectrum_rotatory_strength
   ! ---------------------------------------------------------
 
@@ -1074,7 +1075,7 @@ contains
     SAFE_ALLOCATE(func_(0:niter))
     func_ = acc
 
-    call pop_sub()
+    call pop_sub('spectrum.spectrum_hsfunction_init')
   end subroutine spectrum_hsfunction_init
   ! ---------------------------------------------------------
 
@@ -1083,7 +1084,7 @@ contains
   subroutine spectrum_hsfunction_end
     call push_sub('spectrum.spectrum_hsfunction_end')
     SAFE_DEALLOCATE_A(func_)
-    call pop_sub()
+    call pop_sub('spectrum.spectrum_hsfunction_end')
   end subroutine spectrum_hsfunction_end
   ! ---------------------------------------------------------
 
@@ -1118,12 +1119,14 @@ contains
     if( hsa == minhsval ) then
       omega_min = aa
       func_min = hsval
-      call pop_sub(); return
+      call pop_sub('spectrum.spectrum_hsfunction_min')
+      return
     end if
     if( hsb == minhsval ) then
       omega_min = bb
       func_min = hsval
-      call pop_sub(); return
+      call pop_sub('spectrum.spectrum_hsfunction_min')
+      return
     end if
 
     ! Around xx, we call some GSL sophisticated search algorithm to find the minimum.
@@ -1141,7 +1144,7 @@ contains
     omega_min = xx
     func_min  = hsval
 
-    call pop_sub()
+    call pop_sub('spectrum.spectrum_hsfunction_min')
   end subroutine spectrum_hsfunction_min
   ! ---------------------------------------------------------
 
@@ -1168,7 +1171,7 @@ contains
     end do
     power = -abs(cc)**2 * time_step_**2
 
-    call pop_sub()
+    call pop_sub('spectrum.hsfunction')
   end subroutine hsfunction
   ! ---------------------------------------------------------
 
@@ -1241,7 +1244,7 @@ contains
     SAFE_DEALLOCATE_A(dipole)
     SAFE_DEALLOCATE_A(ddipole)
 
-    call pop_sub()
+    call pop_sub('spectrum.spectrum_hs_from_mult')
   end subroutine spectrum_hs_from_mult
   ! ---------------------------------------------------------
 
@@ -1295,7 +1298,7 @@ contains
     call spectrum_hsfunction_end()
 
     SAFE_DEALLOCATE_A(acc)
-    call pop_sub()
+    call pop_sub('spectrum.spectrum_hs_from_acc')
   end subroutine spectrum_hs_from_acc
   ! ---------------------------------------------------------
 
@@ -1364,7 +1367,7 @@ contains
 
     end if
 
-    call pop_sub()
+    call pop_sub('spectrum.spectrum_hs')
   end subroutine spectrum_hs
   ! ---------------------------------------------------------
 
@@ -1407,7 +1410,7 @@ contains
     call count_time_steps(iunit, time_steps, dt)
     dt = units_to_atomic(file_units%time, dt) ! units_out is OK
 
-    call pop_sub()
+    call pop_sub('spectrum.spectrum_mult_info')
   end subroutine spectrum_mult_info
   ! ---------------------------------------------------------
 
@@ -1440,7 +1443,7 @@ contains
       call write_fatal(1)
     end if
 
-    call pop_sub()
+    call pop_sub('spectrum.count_time_steps')
   end subroutine count_time_steps
   ! ---------------------------------------------------------
 
@@ -1479,7 +1482,7 @@ contains
       call write_fatal(1)
     end if
 
-    call pop_sub()
+    call pop_sub('spectrum.spectrum_cross_section_info')
   end subroutine spectrum_cross_section_info
 
 
@@ -1520,7 +1523,7 @@ contains
     end if
 
     rewind(iunit)
-    call pop_sub()
+    call pop_sub('spectrum.spectrum_acc_info')
   end subroutine spectrum_acc_info
 
 
@@ -1552,7 +1555,7 @@ contains
     iend = int(end_time / dt)
     ntiter = iend - istart + 1
 
-    call pop_sub()
+    call pop_sub('spectrum.spectrum_fix_time_limits')
   end subroutine spectrum_fix_time_limits
 
 end module spectrum_m

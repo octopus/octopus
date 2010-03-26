@@ -353,7 +353,7 @@ contains
       call write_fatal(1)
     end if
 
-    call pop_sub()
+    call pop_sub('species.species_read')
   end subroutine species_read
   ! ---------------------------------------------------------
 
@@ -468,7 +468,7 @@ contains
     SAFE_ALLOCATE(spec%iwf_i(1:spec%niwfs, 1:ispin))
     call species_iwf_fix_qn(spec, ispin)
 
-    call pop_sub()
+    call pop_sub('species.species_init')
   end subroutine species_init
   ! ---------------------------------------------------------
 
@@ -522,7 +522,7 @@ contains
       end if
     end if
 
-    call pop_sub()
+    call pop_sub('species.species_pot_init')
   end subroutine species_pot_init
   ! ---------------------------------------------------------
 
@@ -702,7 +702,7 @@ contains
          ( spec%type == SPEC_PS_FHI) .or. &
          ( spec%type == SPEC_PS_UPF)
     
-    call pop_sub()
+    call pop_sub('species.species_is_ps')
   end function species_is_ps
 
   ! ---------------------------------------------------------
@@ -729,7 +729,7 @@ contains
       if ( spec%ps%l_max /= 0 ) species_is_local = .false. 
     end if
 
-    call pop_sub()
+    call pop_sub('species.species_is_local')
   end function species_is_local
   ! ---------------------------------------------------------
 
@@ -840,7 +840,7 @@ contains
       radius = sqrt(-M_TWO*log(threshold)/spec%omega)
     end if
 
-    call pop_sub()
+    call pop_sub('species.species_get_iwf_radius')
 
   end function species_get_iwf_radius
   ! ---------------------------------------------------------
@@ -867,7 +867,7 @@ contains
       SAFE_DEALLOCATE_P(spec(i)%iwf_i)
     end do
 
-    call pop_sub()
+    call pop_sub('species.species_end')
   end subroutine species_end
   ! ---------------------------------------------------------
 
@@ -926,7 +926,7 @@ contains
     end if
 
     call io_close(iunit)
-    call pop_sub()
+    call pop_sub('species.species_debug')
   end subroutine species_debug
   ! ---------------------------------------------------------
 
@@ -963,7 +963,7 @@ contains
 
     read_data = 8
 
-    call pop_sub()
+    call pop_sub('species.read_from_default_file')
   end subroutine read_from_default_file
   ! ---------------------------------------------------------
 
@@ -1063,7 +1063,7 @@ contains
       call input_error('Species')
     end select
 
-    call pop_sub()
+    call pop_sub('species.read_from_block')
   end subroutine read_from_block
   ! ---------------------------------------------------------
 
@@ -1174,7 +1174,7 @@ contains
       end select
     end if
 
-    call pop_sub()
+    call pop_sub('species.species_iwf_fix_qn')
   end subroutine species_iwf_fix_qn
   ! ---------------------------------------------------------
 

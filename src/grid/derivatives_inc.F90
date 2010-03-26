@@ -54,7 +54,7 @@ subroutine X(derivatives_batch_set_bc)(der, batch_ff)
   if(der%periodic_bc)     call periodic()
   
   call profiling_out(set_bc_prof)
-  call pop_sub()
+  call pop_sub('derivatives_inc.Xderivatives_batch_set_bc')
 
 contains
   ! ---------------------------------------------------------
@@ -67,7 +67,7 @@ contains
       batch_ff%states_linear(ist)%X(psi)(ip) = R_TOTYPE(M_ZERO)
     end forall
 
-    call pop_sub()
+    call pop_sub('derivatives_inc.Xderivatives_batch_set_bc.zero_boundaries')
   end subroutine zero_boundaries
 
 
@@ -115,7 +115,7 @@ contains
       end do ! ip
     end do ! ist
 
-    call pop_sub()
+    call pop_sub('derivatives_inc.Xderivatives_batch_set_bc.multiresolution')
   end subroutine multiresolution
 
 
@@ -190,7 +190,7 @@ contains
     end if
 #endif
 
-    call pop_sub()
+    call pop_sub('derivatives_inc.Xderivatives_batch_set_bc.periodic')
   end subroutine periodic
 
 end subroutine X(derivatives_batch_set_bc)
@@ -211,7 +211,7 @@ subroutine X(derivatives_set_bc)(der, ff)
   call X(derivatives_batch_set_bc)(der, batch_ff)
 
   call batch_end(batch_ff)
-  call pop_sub()
+  call pop_sub('derivatives_inc.Xderivatives_set_bc')
 end subroutine X(derivatives_set_bc)
 
 
@@ -249,7 +249,7 @@ subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, s
   end if
 #endif
 
-  call pop_sub()
+  call pop_sub('derivatives_inc.Xderivatives_batch_start')
 end subroutine X(derivatives_batch_start)
 
 
@@ -275,7 +275,7 @@ subroutine X(derivatives_batch_finish)(handle)
   end if
 #endif
 
-  call pop_sub()
+  call pop_sub('derivatives_inc.Xderivatives_batch_finish')
 end subroutine X(derivatives_batch_finish)
 
 
@@ -295,7 +295,7 @@ subroutine X(derivatives_batch_perform)(op, der, ff, opff, ghost_update, set_bc)
   call X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, set_bc)
   call X(derivatives_batch_finish)(handle)
 
-  call pop_sub()
+  call pop_sub('derivatives_inc.Xderivatives_batch_perform')
 
 end subroutine X(derivatives_batch_perform)
 
@@ -325,7 +325,7 @@ subroutine X(derivatives_perform)(op, der, ff, op_ff, ghost_update, set_bc)
   call batch_end(batch_ff)
   call batch_end(batch_op_ff)
         
-  call pop_sub()
+  call pop_sub('derivatives_inc.Xderivatives_perform')
 
 end subroutine X(derivatives_perform)
 
@@ -342,7 +342,7 @@ subroutine X(derivatives_lapl)(der, ff, op_ff, ghost_update, set_bc)
 
   call X(derivatives_perform)(der%lapl, der, ff, op_ff, ghost_update, set_bc)
         
-  call pop_sub()
+  call pop_sub('derivatives_inc.Xderivatives_lapl')
 end subroutine X(derivatives_lapl)
 
 
@@ -375,7 +375,7 @@ subroutine X(derivatives_grad)(der, ff, op_ff, ghost_update, set_bc)
     ghost_update_ = .false. ! the boundary or ghost points
   end do
     
-  call pop_sub()
+  call pop_sub('derivatives_inc.Xderivatives_grad')
 end subroutine X(derivatives_grad)
 
 
@@ -406,7 +406,7 @@ subroutine X(derivatives_div)(der, ff, op_ff, ghost_update, set_bc)
 
   SAFE_DEALLOCATE_A(tmp)
 
-  call pop_sub()
+  call pop_sub('derivatives_inc.Xderivatives_div')
 end subroutine X(derivatives_div)
 
 
@@ -460,7 +460,7 @@ subroutine X(derivatives_curl)(der, ff, op_ff, ghost_update, set_bc)
   end select
 
   SAFE_DEALLOCATE_A(tmp)
-  call pop_sub()
+  call pop_sub('derivatives_inc.Xderivatives_curl')
 end subroutine X(derivatives_curl)
 
 

@@ -228,7 +228,7 @@ contains
 
     nullify(this%drhs)
     nullify(this%zrhs)
-    call pop_sub()
+    call pop_sub('sternheimer.sternheimer_init')
   end subroutine sternheimer_init
 
 
@@ -245,7 +245,7 @@ contains
       SAFE_DEALLOCATE_P(this%fxc)
     end if
 
-    call pop_sub()
+    call pop_sub('sternheimer.sternheimer_end')
   end subroutine sternheimer_end
 
 
@@ -276,7 +276,7 @@ contains
       call xc_oep_kernel_init(ks%oep)
     end if
 
-    call pop_sub()
+    call pop_sub('sternheimer.sternheimer_build_fxc')
 
   end subroutine sternheimer_build_fxc
 

@@ -345,7 +345,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   SAFE_DEALLOCATE_A(failed)
   SAFE_DEALLOCATE_A(fr)
 
-  call pop_sub()
+  call pop_sub('eigen_rmmdiis_inc.eigensolver_rmmdiis')
 
 end subroutine X(eigensolver_rmmdiis)
 
@@ -500,7 +500,7 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
   SAFE_DEALLOCATE_A(res)
   SAFE_DEALLOCATE_A(kres)
 
-  call pop_sub()
+  call pop_sub('eigen_rmmdiis.Xeigensolver_rmmdiis_start')
 
 end subroutine X(eigensolver_rmmdiis_start)
 

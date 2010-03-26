@@ -114,7 +114,7 @@ subroutine modelmb_1part_init(this, mesh, ikeeppart, ndim1part, box_offset)
     this%origin(idir) = box_offset(irealdir)
   end do
 
-  call pop_sub()
+  call pop_sub('states.modelmb_1part_init')
 end subroutine modelmb_1part_init
 
 
@@ -127,7 +127,7 @@ subroutine modelmb_1part_nullify(this)
   nullify(this%ll)
   nullify(this%h_1part)
   call hypercube_nullify(this%hypercube_1part)
-  call pop_sub()
+  call pop_sub('states.modelmb_1part_nullify')
 end subroutine modelmb_1part_nullify
 
 
@@ -140,7 +140,7 @@ subroutine modelmb_1part_end(this)
   SAFE_DEALLOCATE_P(this%ll)
   SAFE_DEALLOCATE_P(this%h_1part)
   call hypercube_end(this%hypercube_1part)
-  call pop_sub()
+  call pop_sub('states.modelmb_1part_end')
 end subroutine modelmb_1part_end
 
 

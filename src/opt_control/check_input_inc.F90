@@ -174,7 +174,7 @@
       end if
     end if
 
-    call pop_sub()      
+    call pop_sub('read.check_faulty_runmodes')
   end subroutine check_faulty_runmodes
 
 

@@ -73,7 +73,7 @@ contains
     hgh_p%h = M_ZERO
     hgh_p%k = M_ZERO
 
-    call pop_sub()
+    call pop_sub('hgh_projector.hgh_projector_null')
   end subroutine hgh_projector_null
 
   ! ---------------------------------------------------------
@@ -112,7 +112,7 @@ contains
     hgh_p%k(:, :) = ps%k(l, :, :)*so_strength
     nullify(ps)
 
-    call pop_sub()
+    call pop_sub('hgh_projector.hgh_projector_init')
   end subroutine hgh_projector_init
 
   ! ---------------------------------------------------------
@@ -124,7 +124,7 @@ contains
     SAFE_DEALLOCATE_P(hgh_p%p)
     SAFE_DEALLOCATE_P(hgh_p%lp)
 
-    call pop_sub()
+    call pop_sub('hgh_projector.hgh_projector_end')
   end subroutine hgh_projector_end
 
 #include "undef.F90"

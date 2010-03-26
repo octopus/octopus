@@ -34,7 +34,7 @@
     end if
     call exponential_apply_all(tr%te, gr%der, hm, st, dt, t - dt/M_TWO)
 
-    call pop_sub()
+    call pop_sub('td_rti.td_qoct_tddft_propagator')
   end subroutine td_qoct_tddft_propagator
   ! ---------------------------------------------------------
 
@@ -120,7 +120,7 @@
     SAFE_DEALLOCATE_A(zpsi)
     SAFE_DEALLOCATE_A(rhs)
     call states_end(st_op)
-    call pop_sub()
+    call pop_sub('td_rti.td_qoct_tddft_propagator_2')
   end subroutine td_qoct_tddft_propagator_2
   ! ---------------------------------------------------------
 

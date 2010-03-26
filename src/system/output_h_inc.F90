@@ -74,7 +74,7 @@
       end if
     end if
 
-    call pop_sub()
+    call pop_sub('output_h.h_sys_output_hamiltonian')
   end subroutine h_sys_output_hamiltonian
 
 !! Local Variables:

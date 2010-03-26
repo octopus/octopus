@@ -312,7 +312,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
   SAFE_DEALLOCATE_A(ham)
   SAFE_DEALLOCATE_A(hevec)
   SAFE_DEALLOCATE_A(aux)
-  call pop_sub()
+  call pop_sub('eigen_plan_inc.Xeigensolver_plan')
 
 contains
 
@@ -329,7 +329,7 @@ contains
     res = hv - ee*vv
     rr = X(mf_nrm2)(gr%mesh, dim, res)
 
-    call pop_sub()
+    call pop_sub('eigen_plan_inc.Xeigensolver_plan.residual')
   end subroutine residual
 
 end subroutine X(eigensolver_plan)

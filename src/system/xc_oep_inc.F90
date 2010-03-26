@@ -115,7 +115,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
   SAFE_DEALLOCATE_P(oep%X(lxc))
   SAFE_DEALLOCATE_P(oep%uxc_bar)
 
-  call pop_sub()
+  call pop_sub('xc_OEP_inc.Xxc_oep_calc')
   call profiling_out(C_PROFILING_XC_OEP)
 end subroutine X(xc_OEP_calc)
 
@@ -195,7 +195,7 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   SAFE_DEALLOCATE_A(s)
   SAFE_DEALLOCATE_A(vxc_old)
 
-  call pop_sub()
+  call pop_sub('xc_OEP_inc.Xxc_oep_solve')
   call profiling_out(C_PROFILING_XC_OEP_FULL)
 end subroutine X(xc_oep_solve)
 

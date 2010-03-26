@@ -129,7 +129,7 @@ contains
     call sternheimer_end(sh)
     call end_();
 
-    call pop_sub()
+    call pop_sub('vdw.vdw_run')
   contains
 
     ! --------------------------------------------------------------------
@@ -156,7 +156,7 @@ contains
       case default; ndir = min(3, sys%gr%mesh%sb%dim)
       end select
 
-      call pop_sub()
+      call pop_sub('vdw.vdw_run.input')
     end subroutine input
 
 
@@ -235,7 +235,7 @@ contains
       call io_mkdir(trim(tmpdir)//VDW_DIR) ! restart
       call io_mkdir(VDW_DIR)               ! output data
 
-      call pop_sub()
+      call pop_sub('vdw.vdw_run.init_')
     end subroutine init_
 
     ! --------------------------------------------------------------------
@@ -251,7 +251,7 @@ contains
         call lr_dealloc(lr(dir, 1))
       end do
 
-      call pop_sub()
+      call pop_sub('vdw.vdw_run.end_')
     end subroutine end_
 
 
@@ -288,7 +288,7 @@ contains
       get_pol = get_pol / real(sys%gr%mesh%sb%dim)
 
       call pert_end(perturbation)
-      call pop_sub()
+      call pop_sub('vdw.vdw_run.get_pol')
     end function get_pol
 
   end subroutine vdw_run

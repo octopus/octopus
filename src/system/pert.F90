@@ -164,7 +164,7 @@ contains
         .true., this%use_nonlocalpps)
     endif
 
-    call pop_sub()
+    call pop_sub('pert.pert_init')
   end subroutine pert_init
 
   ! --------------------------------------------------------------------
@@ -178,7 +178,7 @@ contains
       SAFE_DEALLOCATE_P(this%ionic%mix2)
     end if
 
-    call pop_sub()
+    call pop_sub('pert.pert_end')
   end subroutine pert_end
 
   ! --------------------------------------------------------------------
@@ -197,7 +197,7 @@ contains
       endif
     endif
    
-    call pop_sub()
+    call pop_sub('pert.pert_info')
   end subroutine pert_info
 
   ! --------------------------------------------------------------------
@@ -213,7 +213,7 @@ contains
 
     if(this%pert_type == PERTURBATION_IONIC) call pert_setup_ionic_pure(this)
 
-    call pop_sub()
+    call pop_sub('pert.pert_setup_dir')
   end subroutine pert_setup_dir
 
   ! --------------------------------------------------------------------
@@ -230,7 +230,7 @@ contains
     if(this%dir  > 0 .and. this%atom1 > 0) this%ionic%mix1(this%atom1, this%dir ) = M_ONE
     if(this%dir2 > 0 .and. this%atom2 > 0) this%ionic%mix2(this%atom2, this%dir2) = M_ONE
 
-    call pop_sub()
+    call pop_sub('pert.pert_setup_ionic_pure')
   end subroutine pert_setup_ionic_pure
 
   ! --------------------------------------------------------------------
@@ -246,7 +246,7 @@ contains
 
     if(this%pert_type == PERTURBATION_IONIC) call pert_setup_ionic_pure(this)
 
-    call pop_sub()
+    call pop_sub('pert.pert_setup_atom')
   end subroutine pert_setup_atom
 
   ! --------------------------------------------------------------------
@@ -275,7 +275,7 @@ contains
       ASSERT( .not. present(jatom) .and. .not. present(jdir) .and. .not. present(jatom) )
     end if
 
-    call pop_sub()
+    call pop_sub('pert.pert_setup_mixed_dir')
   end subroutine pert_setup_mixed_dir
     
   integer pure function pert_type(this)

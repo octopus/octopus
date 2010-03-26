@@ -216,7 +216,7 @@ contains
 
     call casida_type_end(cas)
 
-    call pop_sub()
+    call pop_sub('casida.casida_run')
   end subroutine casida_run
 
   ! ---------------------------------------------------------
@@ -282,7 +282,7 @@ contains
       call mpi_grp_init(cas%mpi_grp, -1)
     end if
 
-    call pop_sub()
+    call pop_sub('casida.casida_type_init')
   end subroutine casida_type_init
 
 
@@ -302,7 +302,7 @@ contains
     SAFE_DEALLOCATE_P(cas%n_occ)
     SAFE_DEALLOCATE_P(cas%n_unocc)
 
-    call pop_sub()
+    call pop_sub('casida.casida_type_end')
   end subroutine casida_type_end
 
 
@@ -373,7 +373,7 @@ contains
     end if
     SAFE_DEALLOCATE_A(saved_K)
 
-    call pop_sub()
+    call pop_sub('casida.casida_work')
   contains
 
     ! ---------------------------------------------------------
@@ -437,7 +437,7 @@ contains
 
       ! close restart file
       call io_close(iunit)
-      call pop_sub()
+      call pop_sub('casida.solve_petersilka')
     end subroutine solve_petersilka
 
 
@@ -592,7 +592,7 @@ contains
       end if
 #endif
 
-      call pop_sub()
+      call pop_sub('casida.solve_casida')
     end subroutine solve_casida
 
 
@@ -636,7 +636,7 @@ contains
       SAFE_DEALLOCATE_A(rho_i)
       SAFE_DEALLOCATE_A(rho_j)
 
-      call pop_sub()
+      call pop_sub('casida.K_term')
     end function K_term
 
     ! ---------------------------------------------------------
@@ -650,7 +650,8 @@ contains
       iunit = io_open(trim(tmpdir)//'casida-restart', action='read', &
         status='old', die=.false., is_tmp=.true.)
       if( iunit <= 0) then
-        call pop_sub(); return
+        call pop_sub('casida.load_saved')
+        return
       end if
 
       do
@@ -665,7 +666,7 @@ contains
       end do
 
       if(iunit > 0) call io_close(iunit)
-      call pop_sub()
+      call pop_sub('casida.load_saved')
     end subroutine load_saved
 
   end subroutine casida_work
@@ -716,7 +717,8 @@ contains
     ! output eigenvectors in Casida approach
 
     if(cas%type.ne.CASIDA_CASIDA) then
-      call pop_sub(); return
+      call pop_sub('casida.casida_write')
+      return
     end if
 
     call io_mkdir(CASIDA_DIR//'excitations')
@@ -747,7 +749,7 @@ contains
 
     SAFE_DEALLOCATE_A(w)
     SAFE_DEALLOCATE_A(ind)
-    call pop_sub()
+    call pop_sub('casida.casida_write')
   end subroutine casida_write
 
 

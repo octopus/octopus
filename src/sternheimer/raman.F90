@@ -119,7 +119,7 @@ contains
 
     call states_deallocate_wfns(sys%st)
 
-    call pop_sub()
+    call pop_sub('raman.raman_run')
   end subroutine raman_run
 
 end module raman_m

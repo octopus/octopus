@@ -231,7 +231,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
   SAFE_DEALLOCATE_P(send_buffer)
 
   call profiling_out(C_PROFILING_XC_EXX)
-  call pop_sub()
+  call pop_sub('xc_oep_x_inc.oep_x')
 end subroutine X(oep_x)
 
 !! Local Variables:

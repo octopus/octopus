@@ -226,7 +226,7 @@ contains
     SAFE_DEALLOCATE_P(kdotp_vars%eff_mass_inv)
     SAFE_DEALLOCATE_P(kdotp_vars%velocity)
 
-    call pop_sub()
+    call pop_sub('kdotp.kdotp_lr_run')
 
   contains
 
@@ -284,7 +284,7 @@ contains
       call parse_logical(datasets_check('KdotP_CalculateEffectiveMasses'), &
         .true., calc_eff_mass)
 
-      call pop_sub()
+      call pop_sub('kdotp.kdotp_lr_run.parse_input')
 
    end subroutine parse_input
 
@@ -308,7 +308,7 @@ contains
 
       call messages_print_stress(stdout)
       
-      call pop_sub()
+      call pop_sub('kdotp.kdotp_lr_run.info')
 
     end subroutine info
 
@@ -355,7 +355,7 @@ contains
     enddo
 
     call io_close(iunit)
-    call pop_sub()
+    call pop_sub('kdotp.kdotp_write_band_velocity')
   end subroutine kdotp_write_band_velocity
 
   ! ---------------------------------------------------------
@@ -407,7 +407,7 @@ contains
       call io_close(iunit)
     enddo
 
-    call pop_sub()
+    call pop_sub('kdotp.kdotp_write_eff_mass')
   end subroutine kdotp_write_eff_mass
 
   ! ---------------------------------------------------------
@@ -456,7 +456,7 @@ contains
       call write_info(1)
     enddo
 
-    call pop_sub()
+    call pop_sub('kdotp.kdotp_write_degeneracies')
   end subroutine kdotp_write_degeneracies
 
   ! ---------------------------------------------------------
@@ -468,7 +468,7 @@ contains
     write(str, '(i11)') ii
     str = trim(adjustl(str))
 
-    call pop_sub()
+    call pop_sub('kdotp.int2str')
   end function int2str
             
 end module kdotp_m

@@ -149,7 +149,7 @@ contains
       apout%schedule = apin%schedule
     end if    
 
-    call pop_sub()
+    call pop_sub('multicomm.all_pairs_copy')
   end subroutine multicomm_all_pairs_copy
 
   ! ---------------------------------------------------------
@@ -248,7 +248,7 @@ contains
 
     call messages_print_stress(stdout)
 
-    call pop_sub()
+    call pop_sub('multicomm.multicomm_init')
 
   contains
 
@@ -330,7 +330,7 @@ contains
       end if
       call write_info(1)
 
-      call pop_sub()
+      call pop_sub('multicomm.multicomm_init.strategy')
     end subroutine strategy
 
 
@@ -364,7 +364,7 @@ contains
         end if
       end do
 
-      call pop_sub()
+      call pop_sub('multicomm.multicomm_init.read_block')
     end subroutine read_block
 
     ! ---------------------------------------------------------
@@ -379,7 +379,7 @@ contains
         mc%group_sizes = 1
         mc%group_sizes(P_STRATEGY_DOMAINS) = mc%topo%maxgsize
         mc%group_sizes(P_STRATEGY_STATES)  = mc%topo%ng
-        call pop_sub()
+      call pop_sub('multicomm.multicomm_init.assign_nodes')
         return
       end if
 
@@ -424,7 +424,7 @@ contains
 
       SAFE_DEALLOCATE_A(n_group_max)
 
-      call pop_sub()
+      call pop_sub('multicomm.multicomm_init.assign_nodes')
     end subroutine assign_nodes
 
 
@@ -484,7 +484,7 @@ contains
         call write_info(1)
       end if
 
-      call pop_sub()
+      call pop_sub('multicomm.multicomm_init.sanity_check')
     end subroutine sanity_check
 
 
@@ -522,7 +522,7 @@ contains
       end if
 #endif
 
-      call pop_sub()
+      call pop_sub('multicomm.multicomm_init.cart_topology_create')
     end subroutine cart_topology_create
 
 
@@ -601,7 +601,7 @@ contains
         mc%who_am_i   = 0
 #endif
 
-      call pop_sub()
+      call pop_sub('multicomm.multicomm_init.group_comm_create')
     end subroutine group_comm_create
   end subroutine multicomm_init
   
@@ -631,7 +631,7 @@ contains
       SAFE_DEALLOCATE_P(mc%who_am_i)
     end if
 
-    call pop_sub()
+      call pop_sub('multicomm.multicomm_end')
   end subroutine multicomm_end
 
 
@@ -643,7 +643,7 @@ contains
     call push_sub('multicomm.multicomm_strategy_is_parallel')
     r = iand(mc%par_strategy, 2**(level-1)).ne.0
 
-    call pop_sub()
+    call pop_sub('multicomm.multicomm_strategy_is_parallel')
   end function multicomm_strategy_is_parallel
 
 
@@ -683,7 +683,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('multicomm.create_all_pairs')
 
   contains
 
@@ -699,7 +699,7 @@ contains
         get_partner = get_partner_odd(grp_size, in - 1, ir - 1) + 1
       end if
 
-      call pop_sub()
+      call pop_sub('multicomm.create_all_pairs.get_partner')
     end function get_partner
 
     integer function get_partner_even(grp_size, ii, rr) result(pp)
@@ -721,7 +721,7 @@ contains
         pp = modulo(2 * rr - ii + 1, 2 * mm - 1) + 1
       end if
 
-      call pop_sub()
+      call pop_sub('multicomm.create_all_pairs.get_partner_even')
     end function get_partner_even
 
     integer function get_partner_odd(grp_size, ii, rr) result(pp)
@@ -739,7 +739,7 @@ contains
         pp = ii
       end if
 
-      call pop_sub()
+      call pop_sub('multicomm.create_all_pairs.get_partner_odd')
     end function get_partner_odd
   end subroutine multicomm_create_all_pairs
 #endif
@@ -835,7 +835,7 @@ contains
       !convert to mpi ranks
       this%groups = this%groups - 1
 
-      call pop_sub()
+      call pop_sub('multicomm.topology_init')
 #endif
     end subroutine topology_init
 
@@ -845,7 +845,7 @@ contains
       call push_sub('multicomm.topology_groups_are_equal')
       are_equal = all(this%gsize(2:this%ng) == this%maxgsize)
 
-      call pop_sub()
+      call pop_sub('multicomm.topology_groups_are_equal')
     end function topology_groups_are_equal
 
     subroutine topology_end(this)
@@ -857,7 +857,7 @@ contains
       SAFE_DEALLOCATE_P(this%distance)
       SAFE_DEALLOCATE_P(this%gsize)
       
-      call pop_sub()
+      call pop_sub('multicomm.topology_end')
     end subroutine topology_end
 
   !---------------------------------------------------
@@ -900,7 +900,7 @@ contains
     
     ASSERT(sum(lsize(1:tsize)) == nn)
 
-    call pop_sub()
+    call pop_sub('multicomm.multicomm_divide_range')
   end subroutine multicomm_divide_range
 
 #ifdef USE_OMP
@@ -919,7 +919,7 @@ contains
     ini    = start(rank)
     nn_loc = lsize(rank)
 
-    call pop_sub()
+    call pop_sub('multicomm.multicomm_divide_range_omp')
   end subroutine multicomm_divide_range_omp
 #endif
 

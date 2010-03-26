@@ -32,7 +32,7 @@ subroutine X(restart_write_function)(dir, filename, gr, ff, ierr, size)
   call X(output_function)(restart_format, trim(dir), trim(filename), gr%mesh, ff(:), unit_one, ierr, is_tmp=.true.)
   ! all restart files are in atomic units
 
-  call pop_sub()
+  call pop_sub('restart_inc.Xrestart_write_function')
 end subroutine X(restart_write_function)
 
 
@@ -50,7 +50,7 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
   ! try binary
   call X(input_function) (trim(dir)//'/'//trim(filename)//'.obf', mesh, ff(1:mesh%np), ierr, is_tmp=.true., map = map)
 
-  call pop_sub()
+  call pop_sub('restart_inc.Xrestart_read_function')
 end subroutine X(restart_read_function)
 
 
@@ -75,7 +75,7 @@ subroutine X(restart_write_lr_rho)(lr, gr, nspin, restart_dir, rho_tag)
   end do
   call unblock_signals()
 
-  call pop_sub()
+  call pop_sub('restart_inc.Xrestart_write_lr_rho')
 end subroutine X(restart_write_lr_rho)
 
 
@@ -113,7 +113,7 @@ subroutine X(restart_read_lr_rho)(lr, gr, nspin, restart_subdir, rho_tag, ierr)
 
   end if
 
-  call pop_sub()
+  call pop_sub('restart_inc.Xrestart_read_lr_rho')
 end subroutine X(restart_read_lr_rho)
 
 

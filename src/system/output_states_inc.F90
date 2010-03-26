@@ -145,7 +145,7 @@
       call h_sys_output_modelmb (trim(dir), gr, st, geo, outp)
     end if
 
-    call pop_sub()
+    call pop_sub('output_states_inc.h_sys_output_states')
 
   end subroutine h_sys_output_states
 
@@ -255,7 +255,7 @@
       call modelmb_density_end (den)
     end if
  
-    call pop_sub()
+    call pop_sub('output_states_inc.h_sys_output_modelmb')
 
   end subroutine h_sys_output_modelmb
 
@@ -275,7 +275,8 @@
     call push_sub('output_states_inc.h_sys_output_current_flow')
 
     if(iand(outp%what, output_j_flow) == 0) then
-      call pop_sub(); return
+      call pop_sub('output_states_inc.h_sys_output_current_flow')
+      return
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
@@ -338,7 +339,7 @@
       call io_close(iunit)
     end if
 
-    call pop_sub()
+    call pop_sub('output_states_inc.h_sys_output_current_flow')
   end subroutine h_sys_output_current_flow
 
 !! Local Variables:

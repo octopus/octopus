@@ -69,7 +69,7 @@ contains
       this%translation(1:3) = M_ZERO
     end if
 
-    call pop_sub()
+    call pop_sub('symm_op.symm_op_init')
   end subroutine symm_op_init
   
   ! -------------------------------------------------------------------------------
@@ -83,7 +83,7 @@ contains
     outp%rotation(1:3, 1:3) =  inp%rotation(1:3, 1:3)
     outp%translation(1:3) =  inp%translation(1:3)
 
-    call pop_sub()
+    call pop_sub('symm_op.symm_op_copy')
   end subroutine symm_op_copy
   
   ! -------------------------------------------------------------------------------
@@ -95,7 +95,7 @@ contains
 
     !nothing to do for the moment
 
-    call pop_sub()
+    call pop_sub('symm_op.symm_op_end')
   end subroutine symm_op_end
   
   ! -------------------------------------------------------------------------------

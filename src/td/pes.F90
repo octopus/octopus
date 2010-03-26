@@ -102,7 +102,7 @@ contains
       end if
     end if
 
-    call pop_sub()
+    call pop_sub('pes.PES_init')
   end subroutine PES_init
 
 
@@ -115,7 +115,7 @@ contains
     if(pes%calc_rc)   call PES_rc_end  (pes%rc)
     if(pes%calc_mask) call PES_mask_end(pes%mask)
 
-    call pop_sub()
+    call pop_sub('pes.PES_end')
   end subroutine PES_end
 
 
@@ -133,7 +133,7 @@ contains
     if(pes%calc_rc)   call PES_rc_calc  (pes%rc, st, ii)
     if(pes%calc_mask) call PES_mask_calc(pes%mask, mesh, st, dt, mask)
 
-    call pop_sub()
+    call pop_sub('pes.PES_calc')
   end subroutine PES_calc
 
 
@@ -150,7 +150,7 @@ contains
     if(pes%calc_rc)   call PES_rc_output   (pes%rc, st, iter, save_iter, dt)
     if(pes%calc_mask) call PES_mask_output (pes%mask, mesh, st, "PES")
 
-    call pop_sub()
+    call pop_sub('pes.PES_output')
   end subroutine PES_output
 
 #include "pes_rc_inc.F90"

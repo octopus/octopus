@@ -47,7 +47,7 @@ contains
     if(dim == 2) n = n + 12
     if(dim == 3) n = n + 44
 
-    call pop_sub()
+    call pop_sub('stencil_starplus.stencil_starplus_size_lapl')
   end function stencil_starplus_size_lapl
 
 
@@ -72,7 +72,7 @@ contains
     end if
     stencil_starplus_extent = extent
 
-    call pop_sub()
+    call pop_sub('stencil_starplus.stencil_starplus_extent')
   end function stencil_starplus_extent
 
 
@@ -87,7 +87,7 @@ contains
     if(dim == 2) n = n + 2
     if(dim == 3) n = n + 4
 
-    call pop_sub()
+    call pop_sub('stencil_starplus.stencil_starplus_size_grad')
   end function stencil_starplus_size_grad
 
 
@@ -196,7 +196,7 @@ contains
 
     call stencil_init_center(this)
 
-    call pop_sub()
+    call pop_sub('stencil_starplus.stencil_starplus_get_lapl')
   end subroutine stencil_starplus_get_lapl
 
 
@@ -228,7 +228,7 @@ contains
 
     call stencil_init_center(this)
 
-    call pop_sub()
+    call pop_sub('stencil_starplus.stencil_star_get_grad')
   end subroutine stencil_starplus_get_grad
 
 
@@ -334,7 +334,7 @@ contains
 
     end select
 
-    call pop_sub()
+    call pop_sub('stencil_starplus.stencil_starplus_pol_lapl')
   end subroutine stencil_starplus_pol_lapl
 
 
@@ -385,7 +385,7 @@ contains
       end select
     end select
 
-    call pop_sub()
+    call pop_sub('stencil_starplus.stencil_starplus_pol_grad')
   end subroutine stencil_starplus_pol_grad
 
 end module stencil_starplus_m

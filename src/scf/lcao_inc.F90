@@ -84,7 +84,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, hm, geo, sb, psi, spin_chan
 
   SAFE_DEALLOCATE_A(ao)
 
-  call pop_sub()
+  call pop_sub('lcao_inc.Xlcao_atomic_orbital')
   call profiling_out(prof)
 
 end subroutine X(lcao_atomic_orbital)
@@ -230,7 +230,7 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
   SAFE_DEALLOCATE_A(lcaopsi)
   SAFE_DEALLOCATE_A(lcaopsi2)
 
-  call pop_sub()
+  call pop_sub('lcao_inc.Xlcao_wf')
 
 contains 
 
@@ -298,7 +298,7 @@ contains
       SAFE_DEALLOCATE_A(ao)
     end if
 
-    call pop_sub()
+    call pop_sub('lcao_inc.Xlcao_wf.init_orbitals')
 
   end subroutine init_orbitals
 
@@ -326,7 +326,7 @@ contains
       end if
     end if
 
-    call pop_sub()
+    call pop_sub('lcao_inc.Xlcao_wf.get_ao')
 
   end subroutine get_ao
 
@@ -575,7 +575,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   SAFE_DEALLOCATE_A(sphere)
   SAFE_DEALLOCATE_A(radius)
 
-  call pop_sub()
+  call pop_sub('lcao_inc.Xlcao_wf2')
 end subroutine X(lcao_wf2)
 
 !! Local Variables:

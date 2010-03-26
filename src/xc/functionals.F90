@@ -73,7 +73,7 @@ contains
     functl%id     = 0
     functl%spin_channels = spin_channels
 
-    call pop_sub()
+    call pop_sub('functionals.xc_functl_init')
   end subroutine xc_functl_init
 
 
@@ -89,7 +89,7 @@ contains
     call xc_functl_init(functl, spin_channels)
 
     if (.not.cdft) then
-      call pop_sub()
+    call pop_sub('functionals.xc_j_functl_init')
       return
     end if
 
@@ -123,7 +123,7 @@ contains
       call write_fatal(2)
     end select
 
-    call pop_sub()
+    call pop_sub('functionals.xc_j_functl_init')
   end subroutine xc_j_functl_init
 
 
@@ -256,7 +256,7 @@ contains
       
     end select
     
-    call pop_sub()
+    call pop_sub('functionals.xc_functl_init_functl')
   end subroutine xc_functl_init_functl
   
 
@@ -271,7 +271,7 @@ contains
       call XC_F90(func_end)(functl%conf)
     end if
 
-    call pop_sub()
+    call pop_sub('functionals.xc_functl_end')
   end subroutine xc_functl_end
 
 
@@ -335,7 +335,7 @@ contains
       end do
     end if
 
-    call pop_sub()
+    call pop_sub('functionals.xc_functl_write_info')
   end subroutine xc_functl_write_info
 
 end module xc_functl_m

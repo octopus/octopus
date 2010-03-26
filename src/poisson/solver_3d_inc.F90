@@ -143,7 +143,7 @@ subroutine poisson3D_init(this, geo)
      
   end select
 
-  call pop_sub()
+  call pop_sub('poisson3D.poisson3D_init')
 end subroutine poisson3D_init
 
 

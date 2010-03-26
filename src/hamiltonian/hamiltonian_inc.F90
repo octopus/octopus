@@ -191,7 +191,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, kinetic_o
   
   call batch_end(epsib)
 
-  call pop_sub()
+  call pop_sub('hamiltonian_inc.Xhamiltonian_apply_batch')
   call profiling_out(prof_hamiltonian)
 
 contains
@@ -227,7 +227,7 @@ subroutine X(get_grad)(hm, der, psi, grad)
     end do
   end if
   
-  call pop_sub()
+  call pop_sub('hamiltonian_inc.Xget_grad')
 end subroutine X(get_grad)       
 
 ! ---------------------------------------------------------
@@ -255,7 +255,7 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, kinetic_only
   call batch_end(psib)
   call batch_end(hpsib)
 
-  call pop_sub()
+  call pop_sub('hamiltonian_inc.Xhamiltonian_apply')
 end subroutine X(hamiltonian_apply)
 ! ---------------------------------------------------------
 
@@ -283,7 +283,7 @@ subroutine X(hamiltonian_apply_all) (hm, der, psi, hpsi, time)
   
   if(hamiltonian_oct_exchange(hm)) call X(oct_exchange_operator_all)(hm, der, psi, hpsi)
 
-  call pop_sub()
+  call pop_sub('hamiltonian_inc.Xhamiltonian_apply_all')
 end subroutine X(hamiltonian_apply_all)
 ! ---------------------------------------------------------
 
@@ -337,7 +337,7 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik)
 
   SAFE_DEALLOCATE_A(rho)
   SAFE_DEALLOCATE_A(pot)
-  call pop_sub()
+  call pop_sub('hamiltonian_inc.Xexchange_operator')
 end subroutine X(exchange_operator)
 ! ---------------------------------------------------------
 
@@ -387,7 +387,7 @@ subroutine X(oct_exchange_operator_all) (hm, der, psi, hpsi)
 
   SAFE_DEALLOCATE_A(rho)
   SAFE_DEALLOCATE_A(pot)
-  call pop_sub()
+  call pop_sub('hamiltonian_inc.Xoct_exchange_operator_all')
 end subroutine X(oct_exchange_operator_all)
 ! ---------------------------------------------------------
 
@@ -442,7 +442,7 @@ subroutine X(oct_exchange_operator) (hm, der, psi, hpsi, ik)
 
   SAFE_DEALLOCATE_A(rho)
   SAFE_DEALLOCATE_A(pot)
-  call pop_sub()
+  call pop_sub('hamiltonian_inc.Xoct_exchange_operator')
 end subroutine X(oct_exchange_operator)
 
 ! ---------------------------------------------------------
@@ -496,7 +496,7 @@ subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
 
   SAFE_DEALLOCATE_A(auxpsi)
   SAFE_DEALLOCATE_A(aux2psi)
-  call pop_sub()
+  call pop_sub('hamiltonian_inc.Xmagnus')
 end subroutine X(magnus)
 
 ! ---------------------------------------------------------
@@ -519,7 +519,8 @@ subroutine X(magnetic_terms) (der, hm, psi, hpsi, grad, ik)
   if(hm%d%cdft .or. associated(hm%ep%A_static)) then
     call X(get_grad)(hm, der, psi, grad)
   else
-    call pop_sub(); return
+    call pop_sub('hamiltonian_inc.Xmagnetic_terms')
+    return
   endif
 
   ! If we are using CDFT:
@@ -603,7 +604,7 @@ subroutine X(magnetic_terms) (der, hm, psi, hpsi, grad, ik)
     SAFE_DEALLOCATE_A(lhpsi)
   end if
 
-  call pop_sub()
+  call pop_sub('hamiltonian_inc.Xmagnetic_terms')
 end subroutine X(magnetic_terms)
 
 
@@ -620,7 +621,7 @@ subroutine X(vnlpsi) (hm, mesh, psi, hpsi, ik)
 
   call X(project_psi)(mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, psi, hpsi, ik)
     
-  call pop_sub()
+  call pop_sub('hamiltonian_inc.Xvnlpsi')
   call profiling_out(prof_vnlpsi)
 end subroutine X(vnlpsi)
 
@@ -638,7 +639,7 @@ subroutine X(vnlpsi_batch) (hm, mesh, psib, hpsib, ik)
 
   call X(project_psi_batch)(mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, psib, hpsib, ik)
 
-  call pop_sub()
+  call pop_sub('hamiltonian_inc.Xvnlpsi_batch')
   call profiling_out(prof_vnlpsi)
 end subroutine X(vnlpsi_batch)
 
@@ -680,7 +681,7 @@ subroutine X(vlpsi_batch) (hm, mesh, psib, hpsib, ik)
 
   end select
 
-  call pop_sub()
+  call pop_sub('hamiltonian_inc.Xvlpsi_batch')
   call profiling_out(prof_vlpsi)
 end subroutine X(vlpsi_batch)
 
@@ -703,7 +704,7 @@ subroutine X(vexternal) (hm, der, psi, hpsi, ik)
 
   if(hm%ep%non_local) call X(vnlpsi)(hm, der%mesh, psi, hpsi, ik)
 
-  call pop_sub()
+  call pop_sub('hamiltonian_inc.Xvexternal')
   call profiling_out(prof_vlpsi)
 end subroutine X(vexternal)
 
@@ -725,7 +726,7 @@ subroutine X(vborders) (der, hm, psi, hpsi)
     end do
   end if
 
-  call pop_sub()
+  call pop_sub('hamiltonian_inc.Xvborders')
 end subroutine X(vborders)
 
 
@@ -763,7 +764,7 @@ subroutine X(h_mgga_terms) (hm, der, psi, hpsi, ik, grad)
   SAFE_DEALLOCATE_A(cgrad)
   SAFE_DEALLOCATE_A(diverg)
 
-  call pop_sub()
+  call pop_sub('hamiltonian_inc.Xh_mgga_terms')
 end subroutine X(h_mgga_terms)
 
 
@@ -787,7 +788,7 @@ subroutine X(vmask) (gr, hm, st)
     end do
   end if
 
-  call pop_sub()
+  call pop_sub('hamiltonian_inc.Xvmask')
 end subroutine X(vmask)
 
 ! ---------------------------------------------------------
@@ -827,7 +828,7 @@ subroutine X(hamiltonian_diagonal) (hm, der, diag, ik)
     
   end select
     
-  call pop_sub()
+  call pop_sub('hamiltonian_inc.Xhamiltonian_diagonal')
 end subroutine X(hamiltonian_diagonal)
 
 

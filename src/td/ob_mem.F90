@@ -220,7 +220,7 @@ contains
 
     end do
 
-    call pop_sub()
+    call pop_sub('ob_mem.ob_mem_init')
   end subroutine ob_mem_init
 
 
@@ -296,7 +296,7 @@ contains
       SAFE_DEALLOCATE_A(q0)
     end if
 
-    call pop_sub()
+    call pop_sub('ob_mem.approx_coeff0')
   end subroutine approx_coeff0
 
 
@@ -368,7 +368,7 @@ contains
 
     SAFE_DEALLOCATE_A(q0)
 
-    call pop_sub()
+    call pop_sub('ob_mem.approx_sp_coeff0')
   end subroutine approx_sp_coeff0
 
 
@@ -491,7 +491,7 @@ contains
     SAFE_DEALLOCATE_A(m_l)
     SAFE_DEALLOCATE_A(m_r)
 
-    call pop_sub()
+    call pop_sub('ob_mem.calculate_coeffs_ni')
   end subroutine calculate_coeffs_ni
 
 
@@ -618,7 +618,7 @@ contains
     SAFE_DEALLOCATE_A(prefactor_minus)
     SAFE_DEALLOCATE_A(sp_tmp)
 
-    call pop_sub()
+    call pop_sub('ob_mem.calculate_sp_coeffs')
   end subroutine calculate_sp_coeffs
 
 
@@ -649,7 +649,8 @@ contains
       message(1) = 'Cannot write memory coefficients to file.'
       call write_warning(1)
       call io_close(iunit)
-      call pop_sub(); return
+      call pop_sub('ob_mem.write_coeffs')
+      return
     end if
 
     np = intf%np_intf
@@ -683,7 +684,7 @@ contains
 
     call io_close(iunit)
 
-    call pop_sub()
+    call pop_sub('ob_mem.write_coeffs')
   end subroutine write_coeffs
 
 
@@ -719,7 +720,8 @@ contains
     iunit = io_open(trim(dir)//trim(lead_name(il)), action='read', &
       status='old', die=.false., is_tmp=.true., form='unformatted')
     if(iunit.lt.0) then ! no file found
-      call pop_sub(); return
+      call pop_sub('ob_mem.read_coeffs')
+      return
     end if
 
     SAFE_ALLOCATE(s_vks(1:np))
@@ -770,7 +772,7 @@ contains
 
     SAFE_DEALLOCATE_A(s_vks)
 
-    call pop_sub()
+    call pop_sub('ob_mem.read_coeffs')
   end subroutine read_coeffs
 
 
@@ -801,7 +803,7 @@ contains
       end select
     end do
 
-    call pop_sub()
+    call pop_sub('ob_mem.mbytes_memory_term')
   end function mbytes_memory_term
 
 
@@ -850,7 +852,7 @@ contains
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_A(tmp2)
 
-    call pop_sub()
+    call pop_sub('ob_mem.make_sparse_matrix')
   end subroutine make_sparse_matrix
 
 
@@ -882,7 +884,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('ob_mem.mul_sp')
   end subroutine mul_sp
 
 
@@ -925,7 +927,7 @@ contains
     call matrix_symmetric_average(m, np)
 
     SAFE_DEALLOCATE_A(tmp)
-    call pop_sub()
+    call pop_sub('ob_mem.make_full_matrix')
   end subroutine make_full_matrix
 
 
@@ -945,7 +947,7 @@ contains
       SAFE_DEALLOCATE_P(ob%lead(il)%q_s)
     end do
 
-    call pop_sub()
+    call pop_sub('ob_mem.ob_mem_end')
   end subroutine ob_mem_end
 end module ob_mem_m
 

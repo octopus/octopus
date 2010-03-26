@@ -93,7 +93,7 @@ contains
     call zcf_free_RS(cf)
     call zcf_free_FS(cf)
 
-    call pop_sub()
+    call pop_sub('exponential_split.zexp_kinetic')
   end subroutine zexp_kinetic
 
 
@@ -143,7 +143,7 @@ contains
     end do
 
 
-    call pop_sub()
+    call pop_sub('exponential_split.zexp_vlpsi')
   end subroutine zexp_vlpsi
 
 
@@ -213,7 +213,7 @@ contains
 !!$
 !    SAFE_DEAL LOCATE_P(initzpsi)
 
-    call pop_sub()
+    call pop_sub('exponential_split.zexp_vnlpsi')
   end subroutine zexp_vnlpsi
 
 end module exponential_split_m

@@ -48,7 +48,7 @@ subroutine X(mixing)(smix, iter, vin, vout, vnew, dotp)
     
   end select
   
-  call pop_sub()
+  call pop_sub('mix_inc.Xmixing')
 end subroutine X(mixing)
 
 
@@ -63,7 +63,7 @@ subroutine X(mixing_linear)(alpha, d1, d2, d3, vin, vout, vnew)
   
   vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3)*(M_ONE - alpha) + alpha*vout(1:d1, 1:d2, 1:d3)
   
-  call pop_sub()
+  call pop_sub('mix_inc.Xmixing_linear')
 end subroutine X(mixing_linear)
 
 
@@ -133,7 +133,7 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter, dotp)
   
   SAFE_DEALLOCATE_A(f)
   
-  call pop_sub()
+  call pop_sub('mix_inc.Xmixing_broyden')
 end subroutine X(mixing_broyden)
 
 
@@ -161,7 +161,8 @@ subroutine X(broyden_extrapolation)(alpha, d1, d2, d3, vin, vnew, iter_used, f, 
   if (iter_used == 0) then
     ! linear mixing...
     vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3) + alpha*f(1:d1, 1:d2, 1:d3)
-    call pop_sub(); return
+    call pop_sub('mix_inc.Xbroyden_extrapolation')
+    return
   end if
   
   SAFE_ALLOCATE(beta(1:iter_used, 1:iter_used))
@@ -214,7 +215,7 @@ subroutine X(broyden_extrapolation)(alpha, d1, d2, d3, vin, vnew, iter_used, f, 
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(w)
   
-  call pop_sub()
+  call pop_sub('mix_inc.Xbroyden_extrapolation')
 end subroutine X(broyden_extrapolation)
 
 
@@ -285,7 +286,7 @@ subroutine X(mixing_grpulay)(smix, vin, vout, vnew, iter, dotp)
   
   SAFE_DEALLOCATE_A(f)
   
-  call pop_sub()
+  call pop_sub('mix_inc.Xmixing_grpulay')
 end subroutine X(mixing_grpulay)
 
 
@@ -332,7 +333,8 @@ subroutine X(pulay_extrapolation)(d1, d2, d3, vin, vout, vnew, iter_used, f, df,
   if (all(abs(a) < 1.0E-8)) then
       ! residuals are too small. Do not mix.
     vnew = vout
-    call pop_sub(); return
+    call pop_sub('mix_inc.Xpulay_extrapolation')
+    return
   end if
   
   alpha = lalg_inverter(iter_used, a)
@@ -353,7 +355,7 @@ subroutine X(pulay_extrapolation)(d1, d2, d3, vin, vout, vnew, iter_used, f, df,
   
   SAFE_DEALLOCATE_A(a)
   
-  call pop_sub()
+  call pop_sub('mix_inc.Xpulay_extrapolation')
 end subroutine X(pulay_extrapolation)
 
 

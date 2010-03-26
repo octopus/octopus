@@ -103,7 +103,7 @@ contains
       SAFE_ALLOCATE(ps%so_kb_radius(1:so_no_l))
     end if
 
-    call pop_sub()
+    call pop_sub('ps_in_grid.ps_in_grid_init')
   end subroutine ps_in_grid_init
 
 
@@ -132,7 +132,7 @@ contains
 
     call logrid_end(ps%g)
 
-    call pop_sub()
+    call pop_sub('ps_in_grid.ps_in_grid_end')
   end subroutine ps_in_grid_end
 
 
@@ -181,7 +181,7 @@ contains
       SAFE_DEALLOCATE_A(rho)
     end if
 
-    call pop_sub()
+    call pop_sub('tm.get_local')
   end subroutine ps_in_grid_vlocal
 
 
@@ -211,7 +211,7 @@ contains
         ps%so_KB(2, l), ps%so_KB(3, l))      
     end do
 
-    call pop_sub()
+    call pop_sub('ps_in_grid.ps_in_grid_kb_projectors')
   end subroutine ps_in_grid_kb_projectors
 
 
@@ -260,7 +260,7 @@ contains
       ps%so_dknorm(l) = M_ONE/(sqrt(dnrm) + CNST(1.0e-20))
     end do
 
-    call pop_sub()
+    call pop_sub('tm.calculate_kb_cosines')
   end subroutine ps_in_grid_kb_cosines
 
 
@@ -313,7 +313,7 @@ contains
       ps%so_kb_radius(l) = ps%g%rofi(ir + 1)
     end do
     
-    call pop_sub()
+    call pop_sub('ps_in_grid.ps_in_grid_cutoff_radii')
   end subroutine ps_in_grid_cutoff_radii
 
 
@@ -338,7 +338,7 @@ contains
       end if
     end do
 
-    call pop_sub()
+    call pop_sub('ps_in_grid.ps_in_grid_check_rphi')
   end subroutine ps_in_grid_check_rphi
 
 

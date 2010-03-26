@@ -168,7 +168,7 @@ contains
       mgrid%ep_part(i) = mgrid%tp      
     end do
 
-    call pop_sub()    
+    call pop_sub('multigrid.multigrid_init')
   end subroutine multigrid_init
 
   ! ---------------------------------------------------------
@@ -321,7 +321,7 @@ contains
     end if
 #endif
 
-    call pop_sub()
+    call pop_sub('multigrid.multigrid_get_transfer_tables')
   end subroutine multigrid_get_transfer_tables
 
   !/*---------------------------------------------------------------------------------
@@ -352,7 +352,7 @@ contains
     
     call mesh_init_stage_2(mesh_out, mesh_out%sb, geo, cv, stencil)
 
-    call pop_sub()
+    call pop_sub('multigrid.multigrid_mesh_half')
   end subroutine multigrid_mesh_half
 
   subroutine multigrid_mesh_double(geo, cv, mesh_in, mesh_out, stencil)    
@@ -379,7 +379,7 @@ contains
     
     call mesh_init_stage_2(mesh_out, mesh_out%sb, geo, cv, stencil)
 
-    call pop_sub()
+    call pop_sub('multigrid.multigrid_mesh_double')
   end subroutine multigrid_mesh_double
 
   ! ---------------------------------------------------------
@@ -415,7 +415,7 @@ contains
 
     SAFE_DEALLOCATE_P(mgrid%level)
 
-    call pop_sub()
+    call pop_sub('multigrid.multigrid_end')
   end subroutine multigrid_end
 
   integer function multigrid_number_of_levels(base_der) result(number)

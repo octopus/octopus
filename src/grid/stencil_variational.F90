@@ -128,7 +128,7 @@ contains
 
     SAFE_DEALLOCATE_A(fp)
 
-    call pop_sub()
+    call pop_sub('stencil_variational.stencil_variational_coeff_lapl')
   end subroutine stencil_variational_coeff_lapl
 
 
@@ -143,7 +143,7 @@ contains
 
     stencil_variational_extent = order
 
-    call pop_sub()
+    call pop_sub('stencil_variational.stencil_variational_extent')
   end function stencil_variational_extent
 end module stencil_variational_m
 

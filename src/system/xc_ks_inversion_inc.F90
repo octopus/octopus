@@ -41,7 +41,7 @@ subroutine X(xc_ks_inversion_calc)(ks_inversion, gr, hm, st, ex, ec, vxc)
     !       update vxc
   end select
   
-  call pop_sub()
+  call pop_sub('xc_ks_inversion_inc.Xxc_ks_inversion_calc')
 
 end subroutine X(xc_ks_inversion_calc)
 

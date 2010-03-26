@@ -89,7 +89,7 @@
     end do
 
     call profiling_out(interp_prof)
-    call pop_sub()
+    call pop_sub('multigrid.Xmultigrid_coarse2fine')
   end subroutine X(multigrid_coarse2fine)
 
   ! ---------------------------------------------------------
@@ -121,7 +121,7 @@
       call write_fatal(1)
     end select
 
-    call pop_sub()
+    call pop_sub('multigrid.multigrid_fine2coarse')
   end subroutine X(multigrid_fine2coarse)
 
 
@@ -141,7 +141,7 @@
     end do
 
     call profiling_out(injection_prof)
-    call pop_sub()
+    call pop_sub('multigrid.multigrid_injection')
   end subroutine X(multigrid_injection)
 
   ! ---------------------------------------------------------
@@ -214,7 +214,7 @@
 
     call profiling_count_operations(tt%n_coarse*(27*3 + 1))
     call profiling_out(restrict_prof)
-    call pop_sub()
+    call pop_sub('multigrid.multigrid_restriction')
   end subroutine X(multigrid_restriction)
 
 

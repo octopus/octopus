@@ -103,7 +103,7 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
   SAFE_DEALLOCATE_A(c)
   SAFE_DEALLOCATE_A(eig)
   SAFE_DEALLOCATE_A(phi)
-  call pop_sub()
+  call pop_sub('eigen_evolution.eigensolver_evolution')
 contains
 
   ! ---------------------------------------------------------

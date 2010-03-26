@@ -369,7 +369,7 @@ contains
       rho_nuc(1:gr%mesh%np)=M_ZERO
     end if
 
-    call pop_sub()
+    call pop_sub('epot.epot_init')
   end subroutine epot_init
 
 
@@ -420,7 +420,7 @@ contains
       SAFE_DEALLOCATE_A(rho_nuc)
     end if
 
-    call pop_sub()
+    call pop_sub('epot.epot_end')
 
   end subroutine epot_end
 
@@ -503,7 +503,7 @@ contains
     if (associated(ep%e_field)) ep%vpsl(1:mesh%np) = ep%vpsl(1:mesh%np) + ep%v_static(1:mesh%np)
 
 
-    call pop_sub()
+    call pop_sub('epot.epot_generate')
     call profiling_out(epot_generate_prof)
   end subroutine epot_generate
 
@@ -603,7 +603,7 @@ contains
     end if
 
     call profiling_out(prof)
-    call pop_sub()
+    call pop_sub('epot.epot_local_potential')
   end subroutine epot_local_potential
 
 
@@ -643,7 +643,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('epot.epot_generate_classical')
   end subroutine epot_generate_classical
 
 
@@ -714,7 +714,7 @@ contains
     dipole = -(2 * gr%sb%lsize(dir) / (2 * M_Pi)) * aimag(log(det)) * st%smear%el_per_state
 
     SAFE_DEALLOCATE_A(matrix)
-    call pop_sub()
+    call pop_sub('epot.epot_dipole_periodic')
   end function epot_dipole_periodic
 
 
@@ -746,7 +746,7 @@ contains
 
     ep%local_potential_precalculated = .true.
 
-    call pop_sub()
+    call pop_sub('epot.epot_precalc_local_potential')
   end subroutine epot_precalc_local_potential
 
 
@@ -816,7 +816,7 @@ contains
     end if
 
     call profiling_out(ion_ion_prof)
-    call pop_sub()
+    call pop_sub('epot.ion_interaction_calculate')
   end subroutine ion_interaction_calculate
 
 
@@ -929,7 +929,7 @@ contains
     !
     ! energy = energy - M_PI*charge**2/(M_TWO*alpha**2*sb%rcell_volume)
     
-    call pop_sub()
+    call pop_sub('epot.ion_interaction_periodic')
   end subroutine ion_interaction_periodic
 
 
@@ -989,7 +989,7 @@ contains
       write(68,*) "SETE Force:", iatom,ep%fii(1:sb%dim,iatom)
     enddo 
 
-    call pop_sub()
+    call pop_sub('epot.ion_interaction_sete')
    end subroutine ion_interaction_sete
       
 end module external_pot_m

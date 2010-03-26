@@ -130,7 +130,7 @@ contains
                                                 '               Delta'
     write(iterator%convergence_iunit, '(91(''#''))') 
 
-    call pop_sub()
+    call pop_sub('iter.oct_iterator_init')
   end subroutine oct_iterator_init
   ! ---------------------------------------------------------
 
@@ -148,7 +148,7 @@ contains
     write(iterator%convergence_iunit, '(91("#"))') 
     call io_close(iterator%convergence_iunit)
 
-    call pop_sub()
+    call pop_sub('iter.oct_iterator_end')
   end subroutine oct_iterator_end
   ! ---------------------------------------------------------
 
@@ -218,7 +218,7 @@ contains
 
     iterator%ctr_iter = iterator%ctr_iter + 1
 
-    call pop_sub()
+    call pop_sub('iter.iteration_manager')
   end function iteration_manager
   ! ---------------------------------------------------------
 
@@ -277,7 +277,7 @@ contains
 
     iterator%ctr_iter = iterator%ctr_iter + 1
 
-    call pop_sub()
+    call pop_sub('iter.iteration_manager_direct')
   end subroutine iteration_manager_direct
   ! ---------------------------------------------------------
 
@@ -296,7 +296,7 @@ contains
       '##', iterator%ctr_iter_main, j, j1, j2, delta
     write(iterator%convergence_iunit, '("###")')
 
-    call pop_sub()
+    call pop_sub('iter.iteration_manager_main')
   end subroutine iteration_manager_main
   ! ---------------------------------------------------------
 
@@ -313,7 +313,7 @@ contains
     write(filename,'(a,i3.3)') OCT_DIR//'laser.', iterator%ctr_iter
     call parameters_write(filename, par)
 
-    call pop_sub()
+    call pop_sub('iter.iterator_write')
   end subroutine iterator_write
   ! ---------------------------------------------------------
 
@@ -326,7 +326,7 @@ contains
     call push_sub('iter.oct_iterator_bestpar')
     par => iterator%best_par
 
-    call pop_sub()
+    call pop_sub('iter.oct_iterator_bestpar')
   end subroutine oct_iterator_bestpar
   ! ---------------------------------------------------------
 

@@ -294,7 +294,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
 
 999 continue
 
-  call pop_sub()
+  call pop_sub('vxc_inc.xc_get_vxc')
   call profiling_out(prof)
 
 contains
@@ -345,7 +345,7 @@ contains
       end select
     end do
 
-    call pop_sub()
+    call pop_sub('vxc_inc.xc_get_vxc.lda_init')
   end subroutine lda_init
 
 
@@ -365,7 +365,7 @@ contains
       SAFE_DEALLOCATE_A(dedd)
     end if
 
-    call pop_sub()
+    call pop_sub('vxc_inc.xc_get_vxc.lda_end')
   end subroutine lda_end
 
 
@@ -398,7 +398,7 @@ contains
       call lalg_axpy(der%mesh%np, M_ONE, dedd(:, 1), vxc(:, 1))
     end if
 
-    call pop_sub()
+    call pop_sub('vxc_inc.xc_get_vxc.lda_process')
   end subroutine lda_process
 
 
@@ -432,7 +432,7 @@ contains
       end if
     end do
 
-    call pop_sub()
+    call pop_sub('vxc_inc.xc_get_vxc.gga_init')
   end subroutine gga_init
 
 
@@ -448,7 +448,7 @@ contains
       SAFE_DEALLOCATE_A(dedgd)
     end if
 
-    call pop_sub()
+    call pop_sub('vxc_inc.xc_get_vxc.gga_end')
   end subroutine gga_end
 
 
@@ -484,7 +484,7 @@ contains
       SAFE_DEALLOCATE_A(gf)
     end if
 
-    call pop_sub()
+    call pop_sub('vxc_inc.xc_get_vxc.gga_process')
   end subroutine gga_process
 
 
@@ -510,7 +510,7 @@ contains
       SAFE_ALLOCATE(l_dedldens(1:spin_channels, 1:n_block))
     end if
 
-    call pop_sub()
+    call pop_sub('vxc_inc.xc_get_vxc.mgga_init')
   end subroutine mgga_init
 
 
@@ -553,7 +553,7 @@ contains
 
     SAFE_DEALLOCATE_A(gnon)
 
-    call pop_sub()
+    call pop_sub('vxc_inc.xc_get_vxc.calc_tb09_c')
   end subroutine calc_tb09_c
 
 
@@ -575,7 +575,7 @@ contains
       SAFE_DEALLOCATE_A(l_dedldens)
     end if
 
-    call pop_sub()
+    call pop_sub('vxc_inc.xc_get_vxc.mgga_end')
   end subroutine mgga_end
 
 
@@ -597,7 +597,7 @@ contains
     end do
     SAFE_DEALLOCATE_A(lf)
 
-    call pop_sub()
+    call pop_sub('vxc_inc.xc_get_vxc.mgga_process')
   end subroutine mgga_process
 
 end subroutine xc_get_vxc

@@ -156,7 +156,7 @@ contains
     end do
 #endif
 
-    call pop_sub()
+    call pop_sub('poisson_isf.poisson_isf_init')
   end subroutine poisson_isf_init
 
   ! ---------------------------------------------------------
@@ -247,7 +247,7 @@ contains
 
     call dcf_free_RS(rho_cf)
     
-    call pop_sub()
+    call pop_sub('poisson_isf.poisson_isf_solve')
   end subroutine poisson_isf_solve
 
   ! ---------------------------------------------------------
@@ -268,7 +268,7 @@ contains
 
     call dcf_free(rho_cf)
 
-    call pop_sub()
+    call pop_sub('poisson_isf.poisson_isf_end')
   end subroutine poisson_isf_end
 
 end module poisson_isf_m

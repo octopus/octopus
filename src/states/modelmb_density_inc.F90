@@ -83,7 +83,7 @@ subroutine X(modelmb_density_calculate)(ikeeppart, mb_1part, nparticles_dens, &
   SAFE_DEALLOCATE_A(ixp)
   SAFE_DEALLOCATE_A(ix_1part)
 
-  call pop_sub()
+  call pop_sub('modelmb_density_inc.Xmodelmb_density_calculate')
 
 end subroutine X(modelmb_density_calculate)
 

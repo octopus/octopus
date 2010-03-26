@@ -228,7 +228,8 @@ module tdf_m
     ierr = -3
     if(parse_block(datasets_check('TDFunctions'), blk) .ne. 0) then
       ierr = -1
-      call pop_sub(); return
+      call pop_sub('tdfunction.tdf_read')
+      return
     end if
 
     nrows = parse_block_n(blk)
@@ -262,7 +263,8 @@ module tdf_m
           case default
             ierr = -2
             call parse_block_end(blk)
-            call pop_sub(); return
+            call pop_sub('tdfunction.tdf_read')
+            return
         end select
 
         a0   = units_to_atomic(units_inp%energy/units_inp%length, a0)
@@ -290,7 +292,7 @@ module tdf_m
     end do row_loop
 
     call parse_block_end(blk)
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_read')
   end subroutine tdf_read
   !------------------------------------------------------------
 
@@ -339,7 +341,7 @@ module tdf_m
     nullify(f%valww)
     nullify(f%coeffs)
 
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_init')
   end subroutine tdf_init
   !------------------------------------------------------------
 
@@ -351,7 +353,7 @@ module tdf_m
     call push_sub('tdfunction.tdf_is_empty')
     tdf_is_empty = (f%mode == TDF_EMPTY)
 
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_is_empty')
   end function tdf_is_empty
   !------------------------------------------------------------
 
@@ -370,7 +372,7 @@ module tdf_m
     nullify(f%valww)
     nullify(f%coeffs)
 
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_init_cw')
   end subroutine tdf_init_cw
   !------------------------------------------------------------
 
@@ -391,7 +393,7 @@ module tdf_m
     nullify(f%valww)
     nullify(f%coeffs)
 
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_init_gaussian')
   end subroutine tdf_init_gaussian
   !------------------------------------------------------------
 
@@ -412,7 +414,7 @@ module tdf_m
     nullify(f%valww)
     nullify(f%coeffs)
 
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_init_cosinoidal')
   end subroutine tdf_init_cosinoidal
   !------------------------------------------------------------
 
@@ -434,7 +436,7 @@ module tdf_m
     nullify(f%valww)
     nullify(f%coeffs)
 
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_init_trapezoidal')
   end subroutine tdf_init_trapezoidal
   !------------------------------------------------------------
 
@@ -452,7 +454,7 @@ module tdf_m
     nullify(f%valww)
     nullify(f%coeffs)
     
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_init_fromexpr')
   end subroutine tdf_init_fromexpr
   !------------------------------------------------------------
 
@@ -504,7 +506,7 @@ module tdf_m
     nullify(f%coeffs)
     SAFE_DEALLOCATE_A(t)
     SAFE_DEALLOCATE_A(am)
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_init_fromfile')
   end subroutine tdf_init_fromfile
   !------------------------------------------------------------
 
@@ -573,7 +575,7 @@ module tdf_m
       end select
     end if
 
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_init_numerical')
   end subroutine tdf_init_numerical
   !------------------------------------------------------------
 
@@ -603,7 +605,7 @@ module tdf_m
       stop 'Error'
     end select
 
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_fourier_grid')
   end subroutine tdf_fourier_grid
   !------------------------------------------------------------
 
@@ -630,7 +632,7 @@ module tdf_m
 
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_P(f%val)
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_numerical_to_fourier')
   end subroutine tdf_numerical_to_fourier
   !------------------------------------------------------------
 
@@ -658,7 +660,7 @@ module tdf_m
 
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_P(f%valww)
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_fourier_to_numerical')
   end subroutine tdf_fourier_to_numerical
   !------------------------------------------------------------
 
@@ -675,7 +677,7 @@ module tdf_m
     f%valww(2:f%nfreqs) = f%valww(2:f%nfreqs) - s/f%nfreqs
     f%mode = TDF_ZERO_FOURIER
 
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_numerical_to_zerofourier')
   end subroutine tdf_numerical_to_zerofourier
   !------------------------------------------------------------
 
@@ -688,7 +690,7 @@ module tdf_m
     ASSERT(f%valww(1).eq.M_ZERO)
     call tdf_fourier_to_numerical(f)
 
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_zerofourier_to_numerical')
   end subroutine tdf_zerofourier_to_numerical
   !------------------------------------------------------------
 
@@ -711,7 +713,7 @@ module tdf_m
       f%valww(2:2*f%nfreqs-1) = values(1:2*f%nfreqs-2)
     end select
 
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_set_numericalr') 
   end subroutine tdf_set_numericalr
   !------------------------------------------------------------
 
@@ -735,7 +737,7 @@ module tdf_m
       f%valww(index+1) = value
     end select
 
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_set_numericalr1')
   end subroutine tdf_set_numericalr1
   !------------------------------------------------------------ 
 
@@ -794,7 +796,7 @@ module tdf_m
 
     call tdf_set_numerical(f, e)
     SAFE_DEALLOCATE_A(e)
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_set_random')
   end subroutine tdf_set_random
   !------------------------------------------------------------ 
 
@@ -825,7 +827,7 @@ module tdf_m
     call tdf_set_numerical(f, val)
 
     SAFE_DEALLOCATE_A(val)
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_to_numerical')
   end subroutine tdf_to_numerical
   !------------------------------------------------------------
 
@@ -858,7 +860,7 @@ module tdf_m
 
     call fft_end(f%fft_handler)
 
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_numerical_to_sineseries')
   end subroutine tdf_numerical_to_sineseries
   !------------------------------------------------------------
 
@@ -894,7 +896,7 @@ module tdf_m
     n(1:3) = (/ f%niter, 1, 1 /)
     call fft_init(n, fft_real, f%fft_handler, optimize = .false.)
 
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_sineseries_to_numerical')
   end subroutine tdf_sineseries_to_numerical
   !------------------------------------------------------------
 
@@ -989,7 +991,7 @@ module tdf_m
 
     end select
 
-    call pop_sub()
+    call pop_sub('tdfunction.tdft')
   end function tdft
   !------------------------------------------------------------
 
@@ -1014,7 +1016,7 @@ module tdf_m
     end select
     f%mode = TDF_EMPTY
 
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_end')
   end subroutine tdf_end
   !------------------------------------------------------------
 
@@ -1068,7 +1070,7 @@ module tdf_m
     end if
     fout%mode   = fin%mode
 
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_copy')
   end subroutine tdf_copy
   !------------------------------------------------------------
 
@@ -1093,7 +1095,7 @@ module tdf_m
       call spline_times(alpha, f%amplitude)
     end select
 
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_scalar_multiply')
   end subroutine tdf_scalar_multiply
   !------------------------------------------------------------
 
@@ -1116,7 +1118,7 @@ module tdf_m
       f%val(j) = f%val(j) * cos(omega*t)
     end do
 
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_cosine_multiply')
   end subroutine tdf_cosine_multiply
   !------------------------------------------------------------
 
@@ -1168,7 +1170,7 @@ module tdf_m
         ' [', trim(units_abbrev(units_out%energy)), ']'
     end if
 
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_write')
   end subroutine tdf_write
   !------------------------------------------------------------
 
@@ -1219,7 +1221,7 @@ module tdf_m
 
     end select
 
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_dot_product')
   end function tdf_dot_product
   !------------------------------------------------------------
 
@@ -1263,7 +1265,7 @@ module tdf_m
     fg = tdf_dot_product(fminusg, fminusg)
 
     call tdf_end(fminusg)
-    call pop_sub()
+    call pop_sub('tdfunction.tdf_diff')
   end function tdf_diff
   !------------------------------------------------------------
 

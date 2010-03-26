@@ -110,7 +110,7 @@ contains
       end do
     end if
 
-    call pop_sub()
+    call pop_sub('states_calc.states_rotate')
   end subroutine states_rotate
 
 
@@ -233,7 +233,7 @@ contains
     SAFE_DEALLOCATE_A(eindex)
     SAFE_DEALLOCATE_A(degeneracy_matrix)
 
-    call pop_sub()
+    call pop_sub('states_calc.states_degeneracy_matrix')
   end subroutine states_degeneracy_matrix
 
 #include "undef.F90"

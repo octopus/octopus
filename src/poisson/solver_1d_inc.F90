@@ -34,7 +34,7 @@ subroutine poisson1d_init(this)
     call poisson_fft_build_1d_1d(this%der%mesh, this%poisson_soft_coulomb_param)
   end select
 
-  call pop_sub()
+  call pop_sub('solver_1D.poisson1d_init')
 end subroutine poisson1d_init
 
 !-----------------------------------------------------------------
@@ -89,7 +89,7 @@ subroutine poisson1D_solve(this, pot, rho)
   end if
 #endif
 
-  call pop_sub()
+  call pop_sub('poisson1D.poisson1D_solve')
 end subroutine poisson1D_solve
 !-----------------------------------------------------------------
 

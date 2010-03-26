@@ -188,7 +188,7 @@ contains
 
     call mix_clear(smix, func_type_)
 
-    call pop_sub()
+    call pop_sub('mix.mix_init')
   end subroutine mix_init
 
 
@@ -238,7 +238,7 @@ contains
 
     smix%last_ipos = 0
 
-    call pop_sub()
+    call pop_sub('mix.mix_clear')
   end subroutine mix_clear
 
 
@@ -261,7 +261,7 @@ contains
       SAFE_DEALLOCATE_P(smix%zf_old)
     end if
 
-    call pop_sub()
+    call pop_sub('mix.mix_end')
   end subroutine mix_end
 
 
@@ -279,7 +279,7 @@ contains
     !  call write_fatal(1)
     endif
     
-    call pop_sub()
+    call pop_sub('mix.mix_set_mixing')
   end subroutine mix_set_mixing
 
 #include "undef.F90"

@@ -109,7 +109,7 @@ module opt_control_propagation_m
     zbr98_              = zbr98
     gradients_          = gradients
 
-    call pop_sub()
+    call pop_sub('propagation.propagation_mod_init')
   end subroutine propagation_mod_init
   ! ---------------------------------------------------------
 
@@ -188,7 +188,7 @@ module opt_control_propagation_m
     end do
 
     if(write_iter_) call td_write_end(write_handler)
-    call pop_sub()
+    call pop_sub('propagation.propagate_forward')
   end subroutine propagate_forward
   ! ---------------------------------------------------------
 
@@ -229,7 +229,7 @@ module opt_control_propagation_m
       call v_ks_calc(sys%ks, gr, hm, psi)
     end do
 
-    call pop_sub()
+    call pop_sub('propagation.propagate_backward')
   end subroutine propagate_backward
   ! ---------------------------------------------------------
 
@@ -330,7 +330,7 @@ module opt_control_propagation_m
     if(aux_fwd_propagation) call td_rti_end(tr_psi2)
     call states_end(chi)
     call td_rti_end(tr_chi)
-    call pop_sub()
+    call pop_sub('propagation.fwd_step')
   end subroutine fwd_step
   ! ---------------------------------------------------------
 
@@ -402,7 +402,7 @@ module opt_control_propagation_m
 
     call states_end(psi)
     call td_rti_end(tr_chi)
-    call pop_sub()
+    call pop_sub('propagation.bwd_step')
   end subroutine bwd_step
   ! ---------------------------------------------------------
 
@@ -477,7 +477,7 @@ module opt_control_propagation_m
 
     call td_rti_end(tr_chi)
 
-    call pop_sub()
+    call pop_sub('propagation.bwd_step_2')
   end subroutine bwd_step_2
   ! ----------------------------------------------------------
 
@@ -523,7 +523,7 @@ module opt_control_propagation_m
       call hamiltonian_update_potential(hm, gr%mesh)
     end if
 
-    call pop_sub()
+    call pop_sub('propagation.update_hamiltonian_chi')
   end subroutine update_hamiltonian_chi
   ! ---------------------------------------------------------
 
@@ -565,7 +565,7 @@ module opt_control_propagation_m
       call hamiltonian_update_potential(hm, gr%mesh)
     end if
 
-    call pop_sub()
+    call pop_sub('propagation.update_hamiltonian_psi')
   end subroutine update_hamiltonian_psi
   ! ---------------------------------------------------------
 
@@ -623,7 +623,7 @@ module opt_control_propagation_m
       end if
     end do
 
-    call pop_sub()
+    call pop_sub('propagation.calculate_g')
   end subroutine calculate_g
   ! ---------------------------------------------------------
 
@@ -686,7 +686,7 @@ module opt_control_propagation_m
     SAFE_DEALLOCATE_A(d)
     SAFE_DEALLOCATE_A(dl)
     SAFE_DEALLOCATE_A(dq)
-    call pop_sub()
+    call pop_sub('propagation.update_field')
   end subroutine update_field
   ! ---------------------------------------------------------
 
@@ -712,7 +712,7 @@ module opt_control_propagation_m
     end do
     prop%iter(prop%number_checkpoints+2) = niter_
 
-    call pop_sub()
+    call pop_sub('propagation.oct_prop_init')
   end subroutine oct_prop_init
   ! ---------------------------------------------------------
 
@@ -726,7 +726,7 @@ module opt_control_propagation_m
     SAFE_DEALLOCATE_P(prop%iter)
     ! This routine should maybe delete the files?
 
-    call pop_sub()
+    call pop_sub('propagation.oct_prop_end')
   end subroutine oct_prop_end
   ! ---------------------------------------------------------
 
@@ -769,7 +769,7 @@ module opt_control_propagation_m
      end if
     end do
 
-    call pop_sub()
+    call pop_sub('propagation.oct_prop_check')
   end subroutine oct_prop_check
   ! ---------------------------------------------------------
 
@@ -794,7 +794,7 @@ module opt_control_propagation_m
      end if
     end do
 
-    call pop_sub()
+    call pop_sub('propagation.oct_prop_read_state')
   end subroutine oct_prop_read_state
   ! ---------------------------------------------------------
 
@@ -818,7 +818,7 @@ module opt_control_propagation_m
       end if
     end do
 
-    call pop_sub()
+    call pop_sub('propagation.oct_prop_output')
   end subroutine oct_prop_output
   ! ---------------------------------------------------------
 

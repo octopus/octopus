@@ -114,7 +114,7 @@ contains
     SAFE_DEALLOCATE_A(bltmp)
     SAFE_DEALLOCATE_A(ostmp)
 
-    call pop_sub()
+    call pop_sub('subarray.subarray_init')
   end subroutine subarray_init
 
   subroutine subarray_end(this)
@@ -125,7 +125,7 @@ contains
     SAFE_DEALLOCATE_P(this%offsets)
     SAFE_DEALLOCATE_P(this%blength)
 
-    call pop_sub()
+    call pop_sub('subarray.subarray_end')
   end subroutine subarray_end
 
   integer pure function subarray_size(this) result(size)

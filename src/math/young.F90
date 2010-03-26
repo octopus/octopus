@@ -85,7 +85,7 @@ module young_m
     this%iyoung = 1
     call young_fill (this, nup+ndown)
 
-    call pop_sub()
+    call pop_sub('math.young_init')
   end subroutine young_init
 
 
@@ -99,7 +99,7 @@ module young_m
     call push_sub('math.young_fill')
 
     if (this%iyoung > this%nyoung) then
-      call pop_sub()
+    call pop_sub('math.young_fill')
       return
     end if
 
@@ -123,7 +123,7 @@ module young_m
     end do
 
     if (this%iyoung > this%nyoung) then
-      call pop_sub()
+    call pop_sub('math.young_fill')
       return
     end if
 
@@ -164,7 +164,7 @@ module young_m
     end do
 
     if (this%iyoung > this%nyoung) then
-      call pop_sub()
+    call pop_sub('math.young_fill')
       return
     end if
     
@@ -177,7 +177,7 @@ module young_m
 !      call write_fatal(1)
 !    end if
 
-    call pop_sub()
+    call pop_sub('math.young_fill')
   end subroutine
 
 
@@ -198,7 +198,7 @@ module young_m
       if(this%young_down(idown,this%iyoung) == nn+1) this%young_down(idown,this%iyoung) = -999
     end do
 
-    call pop_sub()
+    call pop_sub('young.young_reset_1val')
   end subroutine young_reset_1val
 
 
@@ -216,7 +216,7 @@ module young_m
       call young_write_one (iunit, this, iyoung)
     end do
     
-    call pop_sub()
+    call pop_sub('math.young_write')
   end subroutine young_write
 
 
@@ -233,7 +233,7 @@ module young_m
     write (iunit,'(10I7)') this%young_up(:, iyoung)
     write (iunit,'(10I7)') this%young_down(:, iyoung)
     
-    call pop_sub()
+    call pop_sub('math.young_write_one')
   end subroutine young_write_one
 
 
@@ -253,7 +253,7 @@ module young_m
       call young_write (iunit, this)
       call young_end (this)
     end do
-    call pop_sub()
+    call pop_sub('math.young_write_allspins')
 
   end subroutine young_write_allspins 
 
@@ -267,7 +267,7 @@ module young_m
     nullify(this%young_up)
     nullify(this%young_down)
 
-    call pop_sub()
+    call pop_sub('math.young_nullify')
   end subroutine young_nullify
 
 
@@ -284,7 +284,7 @@ module young_m
     call loct_pointer_copy(young_out%young_up,young_in%young_up)
     call loct_pointer_copy(young_out%young_down,young_in%young_down)
 
-    call pop_sub()
+    call pop_sub('math.young_copy')
   end subroutine young_copy
 
 
@@ -297,7 +297,7 @@ module young_m
     SAFE_DEALLOCATE_P (this%young_up)
     SAFE_DEALLOCATE_P (this%young_down)
 
-    call pop_sub()
+    call pop_sub('math.young_end')
   end subroutine young_end
 
 end module young_m

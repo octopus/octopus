@@ -54,7 +54,7 @@ contains
     call push_sub('poisson_cg.poisson_cg_init')
     threshold = thr
     maxiter = itr
-    call pop_sub()
+    call pop_sub('poisson_cg.poisson_cg_init')
   end subroutine poisson_cg_init
 
 
@@ -108,7 +108,7 @@ contains
 
     SAFE_DEALLOCATE_A(zk)
     SAFE_DEALLOCATE_A(pk)
-    call pop_sub()
+    call pop_sub('poisson_cg.poisson_cg1')
   end subroutine poisson_cg1
 
 
@@ -150,7 +150,7 @@ contains
     SAFE_DEALLOCATE_A(rhs)
     SAFE_DEALLOCATE_A(potc)
 
-    call pop_sub()
+    call pop_sub('poisson_cg.poisson_cg2')
   end subroutine poisson_cg2
 
 end module poisson_cg_m

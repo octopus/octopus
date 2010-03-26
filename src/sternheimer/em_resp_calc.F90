@@ -145,7 +145,7 @@ contains
       SAFE_DEALLOCATE_A(gdl_psi_m)
     end if
 
-    call pop_sub()
+    call pop_sub('em_resp_calc.lr_calc_current')
 
   end subroutine lr_calc_current
 
@@ -167,7 +167,7 @@ contains
     end if
     str = trim(adjustl(str))
 
-    call pop_sub()
+    call pop_sub('em_resp_calc.freq2str')
 
   end function freq2str
 
@@ -186,7 +186,7 @@ contains
     str_tmp = freq2str(freq)
     write(str, '(3a,i1)') 'rho_', trim(str_tmp), '_', dir
 
-    call pop_sub()
+    call pop_sub('em_resp_calc.em_rho_tag')
 
   end function em_rho_tag
   
@@ -199,7 +199,7 @@ contains
 
     write(str, '(a,i1,a,i1)') "wfs_", idir, "_", ifactor
 
-    call pop_sub()
+    call pop_sub('em_resp_calc.em_wfs_tag')
 
   end function em_wfs_tag
   

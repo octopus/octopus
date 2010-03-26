@@ -78,7 +78,7 @@ subroutine xc_get_fxc(xcs, mesh, rho, ispin, fxc)
   ! clean up allocated memory
   call  lda_end()
   
-  call pop_sub()
+  call pop_sub('fxc_inc.xc_get_fxc')
 
 
 contains
@@ -119,7 +119,7 @@ contains
       end select
     end do
 
-    call pop_sub()
+    call pop_sub('fxc_inc.xc_get_fxc.lda_init')
   end subroutine lda_init
 
 
@@ -133,7 +133,7 @@ contains
     SAFE_DEALLOCATE_A(l_dens)
     SAFE_DEALLOCATE_A(l_dedd)
 
-    call pop_sub()
+    call pop_sub('fxc_inc.xc_get_fxc.lda_end')
   end subroutine lda_end
 
 
@@ -155,7 +155,7 @@ contains
       call write_fatal(1)
     end select
 
-    call pop_sub()
+    call pop_sub('fxc_inc.xc_get_fxc.lda_process')
   end subroutine lda_process
 
 end subroutine xc_get_fxc

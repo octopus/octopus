@@ -130,7 +130,7 @@ contains
 
     call states_deallocate_wfns(sys%st)
 
-    call pop_sub()
+    call pop_sub('one_shot.one_shot_run')
   end subroutine one_shot_run
 
 end module one_shot_m

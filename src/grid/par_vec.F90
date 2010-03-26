@@ -457,7 +457,7 @@ contains
       call iihash_end(ghost_flag(inode))
     end do
 
-    call pop_sub()
+    call pop_sub('par_vec.vec_init')
 
   contains
     
@@ -514,7 +514,7 @@ contains
       
       vp%rcounts(1:vp%npart) = vp%np_ghost_neigh(vp%partno, 1:vp%npart)
 
-      call pop_sub()
+      call pop_sub('par_vec.vec_init.init_send_points')
     end subroutine init_send_points
 
   end subroutine vec_init
@@ -555,7 +555,7 @@ contains
       SAFE_DEALLOCATE_P(vp%global)
     end if
 
-    call pop_sub()
+    call pop_sub('par_vec.vec_end')
 
   end subroutine vec_end
 
@@ -581,7 +581,7 @@ contains
     end select
     nullify(this%ighost_send, this%dghost_send, this%zghost_send)
 
-    call pop_sub()
+    call pop_sub('par_vec.pv_handle_init')
   end subroutine pv_handle_init
 
 
@@ -601,7 +601,7 @@ contains
       SAFE_DEALLOCATE_P(this%status)
     end select
 
-    call pop_sub()
+    call pop_sub('par_vec.pv_handle_end')
   end subroutine pv_handle_end
 
 
@@ -619,7 +619,7 @@ contains
     case(NON_BLOCKING)
     end select
 
-    call pop_sub()
+    call pop_sub('par_vec.pv_handle_test')
   end subroutine pv_handle_test
 
 
@@ -644,7 +644,7 @@ contains
     SAFE_DEALLOCATE_P(this%zghost_send)
 
     call profiling_out(prof_wait)
-    call pop_sub()
+    call pop_sub('par_vec.pv_handle_wait')
   end subroutine pv_handle_wait
 
 

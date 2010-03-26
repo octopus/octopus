@@ -143,7 +143,7 @@ contains
     ! remove the mask function
     call spline_mult(spl, mask)
 
-    call pop_sub()
+    call pop_sub('filters.spline_filter_mask')
 
   end subroutine spline_filter_mask
 

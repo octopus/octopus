@@ -98,7 +98,7 @@ contains
       if(mpi_grp_is_root(mpi_world)) call loct_rm('stop')
     end if
 
-    call pop_sub()
+    call pop_sub('restart.clean_stop')
   end function clean_stop
 
 
@@ -146,7 +146,7 @@ contains
       restart_dir = trim(restart_dir)//'/'
     end if
 
-    call pop_sub()
+    call pop_sub('restart.restart_init')
   end subroutine restart_init
 
 
@@ -210,7 +210,7 @@ contains
     ! load wavefunctions
     call restart_read(trim(dir)//GS_DIR, st, gr, geo, ierr, exact = exact_)
 
-    call pop_sub()
+    call pop_sub('restart.restart_look_and_read')
   end subroutine restart_look_and_read
 
 
@@ -232,7 +232,7 @@ contains
 
     if(.not. restart_write_files) then
       ierr = 0
-      call pop_sub()
+    call pop_sub('restart.restart_write')
       return
     end if
 
@@ -340,7 +340,7 @@ contains
     call unblock_signals()
 
     call profiling_out(prof_write)
-    call pop_sub()
+    call pop_sub('restart.restart_write')
   end subroutine restart_write
 
 
@@ -375,7 +375,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('restart.restart_get_ob_intf')
   end subroutine restart_get_ob_intf
 
 
@@ -507,7 +507,7 @@ contains
       call write_info(1)
       call messages_print_stress(stdout)
       call profiling_out(prof_read)
-      call pop_sub()
+    call pop_sub('restart.restart_read')
       return
     end if
 
@@ -635,7 +635,7 @@ contains
     call io_close(iunit2, grp = gr%mesh%mpi_grp)
 
     call profiling_out(prof_read)
-    call pop_sub()
+    call pop_sub('restart.restart_read')
 
   contains
 
@@ -655,7 +655,7 @@ contains
         end do
       end do
 
-      call pop_sub()
+      call pop_sub('restart.restart_read.fill')
     end subroutine fill
 
 
@@ -671,7 +671,7 @@ contains
         index_is_wrong = .false.
       end if
 
-      call pop_sub()
+      call pop_sub('restart.restart_read.index_is_wrong')
     end function index_is_wrong
 
     subroutine restart_fail()
@@ -824,7 +824,7 @@ contains
     write(message(2),'(a,i3,a)') 'Info:', sum(jk(:)), ' occupied states read by program.'
     call write_info(2)
 
-    call pop_sub()
+    call pop_sub('restart.read_free_states')
 
   contains
 
@@ -852,7 +852,7 @@ contains
         end select
       end do
 
-      call pop_sub()
+      call pop_sub('restart.read_free_states.lead_dens_accum')
     end subroutine lead_dens_accum
   end subroutine read_free_states
 
@@ -1037,7 +1037,7 @@ contains
       call write_fatal(1)
     end if
 
-    call pop_sub()
+    call pop_sub('restart.restart_read_user_def_orbitals')
   end subroutine restart_read_user_def_orbitals
 
 #include "undef.F90"

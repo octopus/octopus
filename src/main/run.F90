@@ -133,7 +133,7 @@ contains
       call pulpo_print()
     end select
 
-    call pop_sub()
+    call pop_sub('run.run')
     
   end subroutine run
   
@@ -171,7 +171,7 @@ contains
       call input_error('ResponseMethod')
     end if
 
-    call pop_sub()
+    call pop_sub('run.get_resp_method')
   end function get_resp_method
   
   ! ---------------------------------------------------------
@@ -198,7 +198,7 @@ contains
       call restart_init()
     end if
 
-    call pop_sub()
+    call pop_sub('run.run_init')
   end subroutine run_init
 
 
@@ -217,7 +217,7 @@ contains
     call mpi_debug_statistics()
 #endif
 
-    call pop_sub()
+    call pop_sub('run.run_end')
   end subroutine run_end
 
 end module run_m

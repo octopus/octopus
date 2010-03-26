@@ -67,7 +67,7 @@ contains
 
     lmpi_translate_rank = to_rank(1)
 
-    call pop_sub()
+    call pop_sub('mpi_lib.lmpi_translate_rank')
   end function lmpi_translate_rank
 
 

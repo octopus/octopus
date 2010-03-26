@@ -275,7 +275,7 @@ contains
 
     end if
 
-    call pop_sub()
+    call pop_sub('ion_dynamics.ion_dynamics_init')
   end subroutine ion_dynamics_init
 
   subroutine ion_dynamics_end(this)
@@ -284,7 +284,7 @@ contains
     call push_sub('ion_dynamics.ion_dynamics_end')
     SAFE_DEALLOCATE_P(this%oldforce)
 
-    call pop_sub()
+    call pop_sub('ion_dynamics.ion_dynamics_end')
   end subroutine ion_dynamics_end
 
   subroutine ion_dynamics_propagate(this, sb, geo, time, dt)
@@ -338,7 +338,7 @@ contains
 
     end select
     
-    call pop_sub()
+    call pop_sub('ion_dynamics.ion_dynamics_propagate')
   end subroutine ion_dynamics_propagate
   
   subroutine chain(this, geo)
@@ -380,7 +380,7 @@ contains
     g2 = (this%nh1%mass*this%nh1%vel**2 - this%temp)/this%nh2%mass
     this%nh2%vel = this%nh2%vel + g2*dt/CNST(4.0)
     
-    call pop_sub()
+    call pop_sub('ion_dynamics.chain')
   end subroutine chain
   
   subroutine ion_dynamics_propagate_vel(this, geo)
@@ -416,7 +416,7 @@ contains
 
     end select
 
-    call pop_sub()
+    call pop_sub('ion_dynamics.ion_dynamics_propagate_vel')
   end subroutine ion_dynamics_propagate_vel
 
   subroutine ion_dynamics_save_state(this, geo, state)
@@ -438,7 +438,7 @@ contains
       state%vel(1:MAX_DIM, iatom) = geo%atom(iatom)%v(1:MAX_DIM)
     end do
 
-    call pop_sub()
+    call pop_sub('ion_dynamics.ion_dynamics_save_state')
   end subroutine ion_dynamics_save_state
 
   subroutine ion_dynamics_restore_state(this, geo, state)
@@ -460,7 +460,7 @@ contains
     SAFE_DEALLOCATE_P(state%pos)
     SAFE_DEALLOCATE_P(state%vel)
     
-    call pop_sub()
+    call pop_sub('ion_dynamics.ion_dynamics_restore_state')
   end subroutine ion_dynamics_restore_state
 
   logical pure function ion_dynamics_ions_move(this) result(ions_move)

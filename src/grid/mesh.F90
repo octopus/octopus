@@ -178,7 +178,7 @@ contains
       db(idir) = nint(sb%fft_alpha * (mesh%idx%ll(idir) - 1)) + 1
     end do
     
-    call pop_sub()
+    call pop_sub('mesh.mesh_double_box')
   end subroutine mesh_double_box
   
   
@@ -209,7 +209,7 @@ contains
       units_from_atomic(units_out%energy, M_PI**2 / (M_TWO * maxval(mesh%spacing)**2))
     call write_info(4, unit)
     
-    call pop_sub()
+    call pop_sub('mesh.mesh_write_info')
   end subroutine mesh_write_info
   
   
@@ -337,7 +337,7 @@ contains
     ! This may happen if the point is on more than one border at the same time.
     if(dist > width) dist = width
 
-    call pop_sub()
+    call pop_sub('mesh.mesh_inborder')
   end function mesh_inborder
   
   
@@ -386,7 +386,7 @@ contains
 #endif
     
     ind = imin
-    call pop_sub()
+    call pop_sub('mesh.mesh_nearest_point')
   end function mesh_nearest_point
   
   
@@ -417,7 +417,7 @@ contains
       tindex = -1
     end if
     
-    call pop_sub()
+    call pop_sub('mesh.translate_point')
   end function translate_point
   
   
@@ -432,7 +432,7 @@ contains
     call push_sub('mesh.mesh_gcutoff')
     gmax = M_PI / (maxval(mesh%spacing))
 
-    call pop_sub()
+    call pop_sub('mesh.mesh_gcutoff')
   end function mesh_gcutoff
   
   
@@ -453,7 +453,7 @@ contains
     write(iunit, '(a20,1i10)')  'np_global=          ', mesh%np_global
     write(iunit, '(a20,1i10)')  'np_part_global=     ', mesh%np_part_global
     
-    call pop_sub() 
+    call pop_sub('mesh.mesh_dump')
   end subroutine mesh_dump
   
   
@@ -493,7 +493,7 @@ contains
       mesh%vol_pp, mesh%per_points, mesh%per_map, mesh%lead_unit_cell, mesh%resolution)
     mesh%parallel_in_domains = .false.
 
-    call pop_sub()
+    call pop_sub('mesh.mesh_init_from_file')
   end subroutine mesh_init_from_file
 
 
@@ -517,7 +517,7 @@ contains
 
     end if
 
-    call pop_sub()
+    call pop_sub('mesh.mesh_write_fingerprint')
   end subroutine mesh_write_fingerprint
 
   ! -----------------------------------------------------------------------
@@ -564,7 +564,7 @@ contains
 
     endif
 
-    call pop_sub()
+    call pop_sub('mesh.mesh_read_fingerprint')
 
   end subroutine mesh_read_fingerprint
 
@@ -596,7 +596,7 @@ contains
       mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3)) = ip
     end do
 
-    call pop_sub()
+    call pop_sub('mesh.mesh_lxyz_init_from_file')
   end subroutine mesh_lxyz_init_from_file
 
 
@@ -643,7 +643,7 @@ contains
       end do
     end do
 
-    call pop_sub()
+    call pop_sub('mesh.mesh_subset_indices')
   end subroutine mesh_subset_indices
 
 
@@ -668,7 +668,7 @@ contains
 
     index_valid = valid
 
-    call pop_sub()
+    call pop_sub('mesh.index_valid')
   end function index_valid
 
 
@@ -738,7 +738,7 @@ contains
       SAFE_DEALLOCATE_P(mesh%lead_unit_cell)
     end if
     
-    call pop_sub()
+    call pop_sub('mesh.mesh_end')
   end subroutine mesh_end
 
   
@@ -767,7 +767,7 @@ contains
     
     ipp = mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3))
     
-    call pop_sub()
+    call pop_sub('mesh.mesh_periodic_point')
   end function mesh_periodic_point
   
 
