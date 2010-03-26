@@ -75,6 +75,11 @@ module states_dim_m
     SPIN_DOWN = 1,              &
     SPIN_UP   = 2
   
+  ! Orthogonalization methods
+  integer, public, parameter :: &
+    ORTH_GS = 1,                &
+    ORTH_QR = 2
+
   type states_dim_t
     integer :: dim                  !< Dimension of the state (one or two for spinors)
     integer :: nik                  !< Number of irreducible subspaces
@@ -88,6 +93,7 @@ module states_dim_m
     type(distributed_t) :: kpt
     integer :: block_size
     integer :: window_size
+    integer :: orth_method
   end type states_dim_t
 
 contains

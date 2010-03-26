@@ -983,47 +983,74 @@ contains
       st%rho_core(:) = M_ZERO
     end if
 
-    !%Variable StatesBlockSize
-    !%Type integer
-    !%Default max(4, 2*nthreads)
-    !%Section Execution::Optimization
-    !%Description
-    !% Some routines work over blocks of eigenfunctions, this
-    !% generally improves performance at the expense of increased
-    !% memory consumption. This variable selects the size of the
-    !% blocks to be used.
-    !%End
-
     ! This has to be here as it requires mc%nthreads that is not available in states_init
-    call parse_integer(datasets_check('StatesBlockSize'), max(4, 2*mc%nthreads), st%d%block_size)
-    if(st%d%block_size < 1) then
-      message(1) = "Error: The variable 'StatesBlockSize' must be greater than 0."
-      call write_fatal(1)
-    end if
-    
-    st%d%block_size = min(st%d%block_size, st%nst)
-
-    !%Variable StatesWindowSize
-    !%Type integer
-    !%Default nst
-    !%Section Execution::Optimization
-    !%Description
-    !% (experimental) The orthogonalization of the wavefunctions can
-    !% be done by windows; this value selects the size of the
-    !% windows. The default size is total number of states, which
-    !% disables window orthogonalization.
-    !%End
-
-    ! This has to be here as it requires mc%nthreads that is not available in states_init
-    call parse_integer(datasets_check('StatesWindowSize'), st%nst, st%d%window_size)
-    if(st%d%block_size < 1) then
-      message(1) = "Error: The variable 'StatesBlockSize' must be greater than 0."
-      call write_fatal(1)
-    end if
-    
-    st%d%window_size = min(st%d%window_size, st%nst)
+    call states_exec_init()
 
     call pop_sub('states.states_densities_init')
+    
+  contains
+
+    subroutine states_exec_init()
+
+      !%Variable StatesBlockSize
+      !%Type integer
+      !%Default max(4, 2*nthreads)
+      !%Section Execution::Optimization
+      !%Description
+      !% Some routines work over blocks of eigenfunctions, this
+      !% generally improves performance at the expense of increased
+      !% memory consumption. This variable selects the size of the
+      !% blocks to be used.
+      !%End
+
+      call parse_integer(datasets_check('StatesBlockSize'), max(4, 2*mc%nthreads), st%d%block_size)
+      if(st%d%block_size < 1) then
+        message(1) = "Error: The variable 'StatesBlockSize' must be greater than 0."
+        call write_fatal(1)
+      end if
+
+      st%d%block_size = min(st%d%block_size, st%nst)
+
+      !%Variable StatesWindowSize
+      !%Type integer
+      !%Default nst
+      !%Section Execution::Optimization
+      !%Description
+      !% (experimental) The orthogonalization of the wavefunctions can
+      !% be done by windows; this value selects the size of the
+      !% windows. The default size is total number of states, which
+      !% disables window orthogonalization.
+      !%End
+
+      call parse_integer(datasets_check('StatesWindowSize'), st%nst, st%d%window_size)
+      if(st%d%block_size < 1) then
+        message(1) = "Error: The variable 'StatesBlockSize' must be greater than 0."
+        call write_fatal(1)
+      end if
+
+      st%d%window_size = min(st%d%window_size, st%nst)
+
+      !%Variable StatesOrthogonalization
+      !%Type integer
+      !%Default gs
+      !%Section Execution::Optimization
+      !%Description
+      !% Select the full orthogonalization method used by some
+      !% eigensolvers. The default is gram_schmidt.
+      !%Option gram_schmidt 1
+      !% The standard Gram-Schmidt orthogonalization implemented using
+      !% Blas level 3 routines.
+      !%Option qr 2
+      !% (Experimental) Orthogonalization is performed based on a QR
+      !% decomposition based on Lapack routines _getrf and _orgqr.
+      !%End
+
+      call parse_integer(datasets_check('StatesOrthogonalization'), 1, st%d%orth_method)
+      if(st%d%orth_method == ORTH_QR) then
+        call messages_devel_version("QR Orthogonalization")
+      end if
+
+    end subroutine states_exec_init
   end subroutine states_densities_init
 
 

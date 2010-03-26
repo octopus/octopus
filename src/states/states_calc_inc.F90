@@ -108,39 +108,79 @@ subroutine X(states_gram_schmidt_block)(st, nst, mesh, dim, psi)
   integer,           intent(in)    :: dim
   R_TYPE, target,    intent(inout) :: psi(:, :, :)
 
-  R_TYPE, allocatable :: ss(:, :)
+  R_TYPE, allocatable :: ss(:, :), work(:), tau(:)
+  FLOAT :: tmp
   type(batch_t) :: psib
   logical :: bof
-  integer :: idim
+  integer :: idim, nref, wsize, info
 
   call push_sub('states_calc_inc.Xstates_gram_schmidt_block')
 
-  SAFE_ALLOCATE(ss(1:nst, 1:nst))
-  ss = M_ZERO
+  select case(st%d%orth_method)
+  case(ORTH_GS)
 
-  call batch_init(psib, st%d%dim, 1, nst, psi)
-  call X(mesh_batch_dotp_self)(mesh, psib, ss)
-  call batch_end(psib)
-  
-  bof = .false.
-  ! calculate the Cholesky decomposition
-  call lalg_cholesky(nst, ss, bof = bof)
-  
-  if(bof) then
-    message(1) = "Warning: Orthogonalization failed; probably your eigenvectors are not independent."
-    call write_warning(1)
-  end if
-  
-  do idim = 1, st%d%dim
-    ! multiply by the inverse of ss
-    call blas_trsm('R', 'U', 'N', 'N', mesh%np, nst, R_TOTYPE(M_ONE), ss(1, 1), nst, &
-      psi(1, idim, 1), ubound(psi, dim = 1)*st%d%dim)
-  end do
+    SAFE_ALLOCATE(ss(1:nst, 1:nst))
+    ss = M_ZERO
 
-  call profiling_count_operations(dble(mesh%np)*dble(nst)**2*(R_ADD + R_MUL))
+    call batch_init(psib, st%d%dim, 1, nst, psi)
+    call X(mesh_batch_dotp_self)(mesh, psib, ss)
+    call batch_end(psib)
 
-  SAFE_DEALLOCATE_A(ss)
+    bof = .false.
+    ! calculate the Cholesky decomposition
+    call lalg_cholesky(nst, ss, bof = bof)
 
+    if(bof) then
+      message(1) = "Warning: Orthogonalization failed; probably your eigenvectors are not independent."
+      call write_warning(1)
+    end if
+
+    do idim = 1, st%d%dim
+      ! multiply by the inverse of ss
+      call blas_trsm('R', 'U', 'N', 'N', mesh%np, nst, R_TOTYPE(M_ONE), ss(1, 1), nst, &
+        psi(1, idim, 1), ubound(psi, dim = 1)*st%d%dim)
+    end do
+
+    call profiling_count_operations(dble(mesh%np)*dble(nst)**2*(R_ADD + R_MUL))
+
+    SAFE_DEALLOCATE_A(ss)
+
+  case(ORTH_QR)
+
+    ASSERT(states_are_real(st))
+    ASSERT(.not. mesh%use_curvilinear)
+    ASSERT(.not. mesh%parallel_in_domains)
+
+    nref = min(nst, mesh%np)
+
+    SAFE_ALLOCATE(tau(1:nref))
+
+    tau = M_ZERO
+
+    ! get the optimal size of the work array
+    call dgeqrf(mesh%np, nst, psi(1, 1, 1), mesh%np_part, tau(1), tmp, -1, info)
+    wsize = nint(tmp)
+
+    ! calculate the QR decomposition
+    SAFE_ALLOCATE(work(1:wsize))
+    call dgeqrf(mesh%np, nst, psi(1, 1, 1), mesh%np_part, tau(1), work(1), mesh%np*20, info)
+    SAFE_DEALLOCATE_A(work)
+
+    ! get the optimal size of the work array
+    call dorgqr(mesh%np, nst, nref, psi(1, 1, 1), mesh%np_part, tau(1), tmp, -1, info)
+    wsize = nint(tmp)
+
+    ! now calculate Q
+    SAFE_ALLOCATE(work(1:wsize))
+    call dorgqr(mesh%np, nst, nref, psi(1, 1, 1), mesh%np_part, tau(1), work(1), wsize, info)
+    SAFE_DEALLOCATE_A(work)
+
+    SAFE_DEALLOCATE_A(tau)
+    
+    ! we need to scale by the volume element to get the proper normalization
+    psi = psi/sqrt(mesh%vol_pp(1))
+
+  end select
   call pop_sub('states_calc_inc.Xstates_gram_schmidt_block')
 end subroutine X(states_gram_schmidt_block)
 
