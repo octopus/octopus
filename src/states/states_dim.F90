@@ -74,11 +74,12 @@ module states_dim_m
   integer, public, parameter :: &
     SPIN_DOWN = 1,              &
     SPIN_UP   = 2
-  
+
   ! Orthogonalization methods
   integer, public, parameter :: &
-    ORTH_GS = 1,                &
-    ORTH_QR = 2
+    ORTH_GS  = 1,               &
+    ORTH_MGS = 2,               &
+    ORTH_QR  = 3
 
   type states_dim_t
     integer :: dim                  !< Dimension of the state (one or two for spinors)

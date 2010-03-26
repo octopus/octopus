@@ -180,8 +180,69 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
     ! we need to scale by the volume element to get the proper normalization
     psi = psi/sqrt(mesh%vol_pp(1))
 
+  case(ORTH_MGS)
+    call mgs()
   end select
   call pop_sub('states_calc_inc.Xstates_orthogonalization_block')
+  contains
+    subroutine mgs()
+      integer :: ist, jst, idim
+      R_TYPE, allocatable :: aa(:)
+      FLOAT,  allocatable :: bb(:)
+#ifdef HAVE_MPI
+      R_TYPE, allocatable :: aac(:)
+      FLOAT,  allocatable :: bbc(:)
+#endif      
+
+      SAFE_ALLOCATE(bb(1:nst))
+
+      do ist = 1, nst
+        bb(ist) = X(mf_dotp)(mesh, dim, psi(:, :, ist), psi(:, :, ist), reduce = .false.)
+      end do
+
+#ifdef HAVE_MPI
+      if(mesh%parallel_in_domains) then
+        SAFE_ALLOCATE(bbc(1:nst))
+        call MPI_Allreduce(bb(1), bbc(1), nst, MPI_FLOAT, MPI_SUM, mesh%mpi_grp%comm, mpi_err) 
+        bb = bbc
+        SAFE_DEALLOCATE_A(bbc)
+      end if
+#endif
+
+      do ist = 1, nst      
+        do idim = 1, dim
+          call lalg_scal(mesh%np, M_ONE/sqrt(bb(ist)), psi(:, idim, ist))
+        end do
+      end do
+
+      SAFE_DEALLOCATE_A(bb)
+
+      SAFE_ALLOCATE(aa(1:nst))
+
+      do ist = 1, nst
+        do jst = 1, ist - 1
+          aa(jst) = X(mf_dotp)(mesh, dim, psi(:, :, jst), psi(:, :, ist), reduce = .false.)
+        end do
+
+#ifdef HAVE_MPI
+        if(mesh%parallel_in_domains) then
+          SAFE_ALLOCATE(aac(1:nst))
+          call MPI_Allreduce(aa(1), aac(1), ist - 1, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
+          aa = aac
+          SAFE_DEALLOCATE_A(aac)
+        end if
+#endif
+
+        do jst = 1, ist - 1
+          do idim = 1, dim
+            call lalg_axpy(mesh%np, -aa(jst), psi(:, idim, jst), psi(:, idim, ist))
+          end do
+        end do
+      end do
+
+      SAFE_DEALLOCATE_A(aa)
+
+    end subroutine mgs
 end subroutine X(states_orthogonalization_block)
 
 
@@ -563,10 +624,10 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
   type(states_t), intent(in)  :: st1, st2
   R_TYPE,         intent(out) :: aa(:, :, :)
 
-  integer :: ist, ii, jj, dim, n1, n2, ik
+  integer :: ii, jj, dim, n1, n2, ik
 #if defined(HAVE_MPI)
   R_TYPE, allocatable :: phi2(:, :)
-  integer :: kk, ll
+  integer :: kk, ll, ist
   integer :: status(MPI_STATUS_SIZE)
   integer :: request
 #endif

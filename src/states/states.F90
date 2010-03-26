@@ -1036,19 +1036,19 @@ contains
       !%Section Execution::Optimization
       !%Description
       !% Select the full orthogonalization method used by some
-      !% eigensolvers. The default is orthogonalization.
-      !%Option orthogonalization 1
+      !% eigensolvers. The default is gram_schmidt.
+      !%Option gram_schmidt 1
       !% The standard Gram-Schmidt orthogonalization implemented using
       !% Blas level 3 routines.
-      !%Option qr 2
+      !%Option mgs 2
+      !% Modified Gram-Schmidt orthogonalization.
+      !%Option qr 3
       !% (Experimental) Orthogonalization is performed based on a QR
       !% decomposition based on Lapack routines _getrf and _orgqr.
       !%End
 
-      call parse_integer(datasets_check('StatesOrthogonalization'), 1, st%d%orth_method)
-      if(st%d%orth_method == ORTH_QR) then
-        call messages_devel_version("QR Orthogonalization")
-      end if
+      call parse_integer(datasets_check('StatesOrthogonalization'), ORTH_GS, st%d%orth_method)
+      if(st%d%orth_method == ORTH_QR) call messages_devel_version("QR Orthogonalization")
 
     end subroutine states_exec_init
   end subroutine states_densities_init
