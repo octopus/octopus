@@ -76,7 +76,6 @@ module td_rti_m
     PROP_CRANK_NICHOLSON_SPARSKIT= 6, &
     PROP_MAGNUS                  = 7, &
     PROP_CRANK_NICHOLSON_SRC_MEM = 8, &
-    PROP_VISSCHER                = 9, &
     PROP_QOCT_TDDFT_PROPAGATOR   = 10,&
     PROP_QOCT_TDDFT_PROPAGATOR_2 = 11
 
@@ -98,7 +97,6 @@ module td_rti_m
                                                  ! This variable holds the number of initial steps for
                                                  ! which the propagation is done self-consistently.
                                                  ! The default is 3.
-    FLOAT, pointer      :: prev_psi(:, :, :, :) => null()
     logical             :: first
   end type td_rti_t
 
@@ -139,7 +137,6 @@ contains
     call loct_pointer_copy(tro%v_old, tri%v_old)
     call exponential_copy(tro%te, tri%te)
     tro%scf_propagation_steps = tri%scf_propagation_steps
-    call loct_pointer_copy(tro%prev_psi, tri%prev_psi)
 
     call pop_sub('tr_rti.tr_rti_copy')
   end subroutine td_rti_copy
@@ -290,8 +287,6 @@ contains
     !%Option crank_nicholson_src_mem 8
     !% Crank-Nicholson propagator with source and memory term for transport
     !% calculations.
-    !%Option visscher 9
-    !% (experimental) Visscher integration scheme. <i>Computational Physics</i> <b>5</b>, 596 (1991).
     !%Option qoct_tddft_propagator 10
     !% WARNING: EXPERIMENTAL
     !%Option qoct_tddft_propagator_2 11
@@ -349,7 +344,6 @@ contains
       SAFE_ALLOCATE(tr%vmagnus(1:gr%mesh%np, 1:st%d%nspin, 1:2))
     case(PROP_CRANK_NICHOLSON_SRC_MEM)
       call ob_rti_init(st, gr, hm, tr%ob, dt, max_iter)
-    case(PROP_VISSCHER)
     case(PROP_QOCT_TDDFT_PROPAGATOR)
     case(PROP_QOCT_TDDFT_PROPAGATOR_2)
     case default
@@ -360,9 +354,8 @@ contains
     if(have_fields) then
       if(tr%method /= PROP_REVERSAL .and.    &
          tr%method /= PROP_APP_REVERSAL .and. &
-         tr%method /= PROP_VISSCHER .and. &
          tr%method /= PROP_EXPONENTIAL_MIDPOINT) then
-        message(1) = "To move the ions or put in a gauge field, use the etrs, aetrs, visscher or exp_mid propagators." 
+        message(1) = "To move the ions or put in a gauge field, use the etrs, aetrs or exp_mid propagators." 
         call write_fatal(1)
       end if
     end if
@@ -375,13 +368,6 @@ contains
     ! By default, the propagation is only self-consistent in the first iterations
     ! (unless we are doing a QOCT run)
     tr%scf_propagation_steps = 3
-
-    if(tr%method == PROP_VISSCHER) then
-      SAFE_ALLOCATE(tr%prev_psi(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
-      tr%first = .true.
-    else
-      nullify(tr%prev_psi)
-    end if
 
     call pop_sub('td_rti.td_rti_init')
   end subroutine td_rti_init
@@ -409,8 +395,6 @@ contains
     type(td_rti_t), intent(inout) :: tr
 
     call push_sub('td_rti.td_rti_end')
-
-    SAFE_DEALLOCATE_P(tr%prev_psi)
 
     ! sanity check
     ASSERT(associated(tr%v_old)) 
@@ -524,7 +508,6 @@ contains
     case(PROP_CRANK_NICHOLSON_SPARSKIT);call td_crank_nicholson_sparskit
     case(PROP_MAGNUS);                  call td_magnus
     case(PROP_CRANK_NICHOLSON_SRC_MEM); call td_crank_nicholson_src_mem
-    case(PROP_VISSCHER);                call td_visscher
     case(PROP_QOCT_TDDFT_PROPAGATOR)
       call td_qoct_tddft_propagator(hm, gr, st, tr, time, dt)
     case(PROP_QOCT_TDDFT_PROPAGATOR_2)
@@ -572,7 +555,6 @@ contains
           case(PROP_CRANK_NICHOLSON_SPARSKIT);call td_crank_nicholson_sparskit
           case(PROP_MAGNUS);                  call td_magnus
           case(PROP_CRANK_NICHOLSON_SRC_MEM); call td_crank_nicholson_src_mem
-          case(PROP_VISSCHER);                call td_visscher
           case(PROP_QOCT_TDDFT_PROPAGATOR)
             call td_qoct_tddft_propagator(hm, gr, st, tr, time, dt)
           case(PROP_QOCT_TDDFT_PROPAGATOR_2)
@@ -1116,133 +1098,6 @@ contains
       call pop_sub('td_rti.td_rti_dt.td_crank_nicholson_src_mem')
     end subroutine td_crank_nicholson_src_mem
 
-    ! ---------------------------------------------------------
-    subroutine td_visscher
-      integer :: ik, ist, idim, ip
-      FLOAT, allocatable :: dpsi(:, :), hpsi(:, :)
-      CMPLX, allocatable :: zpsi(:,:)
-
-      call push_sub('td_rti.td_rti_dt.td_visscher')
-      
-      SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
-      SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
-
-      ! we have to initialize the imaginary part of \psi at dt/2, so we
-      ! use the exponential midpoint rule.
-      if(tr%first) then
-
-        !propagate the Hamiltonian to t - dt/4
-        if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
-          call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time - CNST(0.75)*dt, hm%vhxc(:, :))
-        end if
-        
-        if(present(ions)) then
-          call ion_dynamics_propagate(ions, gr%sb, geo, time - CNST(0.75)*ionic_dt, CNST(0.25)*ionic_dt)
-          call hamiltonian_epot_generate(hm, gr, geo, st, time = time - CNST(0.75)/M_FOUR)
-        else
-          call hamiltonian_update_potential(hm, gr%mesh)
-        end if
-        
-        if(gauge_field_is_applied(hm%ep%gfield)) call gauge_field_propagate(hm%ep%gfield, gauge_force, CNST(0.25)*dt)
-        
-        SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:st%d%dim))
-        do ik = st%d%kpt%start, st%d%kpt%end
-          do ist = st%st_start, st%st_end
-            do idim = 1, st%d%dim
-              call lalg_copy(gr%mesh%np, st%zpsi(:, idim, ist, ik), zpsi(:, idim))
-            end do
-            call exponential_apply(tr%te, gr%der, hm, zpsi, ist, ik, dt/M_TWO, time - CNST(0.75)*dt)
-            forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) tr%prev_psi(ip, idim, ist, ik) = aimag(zpsi(ip, idim))
-          end do
-        end do
-        SAFE_DEALLOCATE_A(zpsi)
-        tr%first = .false.
-        
-        !finish to propagate the Hamiltonian to t - dt/2
-        
-        if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
-          call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time - CNST(0.5)*dt, hm%vhxc(:, :))
-        end if
-        
-        if(present(ions)) then
-          call ion_dynamics_propagate(ions, gr%sb, geo, time - CNST(0.5)*ionic_dt, CNST(0.25)*ionic_dt)
-          call hamiltonian_epot_generate(hm, gr, geo, st, time = time - CNST(0.5)/M_FOUR)
-        else
-          call hamiltonian_update_potential(hm, gr%mesh)
-        end if
-        
-        if(gauge_field_is_applied(hm%ep%gfield)) call gauge_field_propagate(hm%ep%gfield, gauge_force, CNST(0.25)*dt)
-        
-      else
-        
-        !directly propagate the Hamiltonian to t - dt/2
-        
-        if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
-          call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time - dt/M_TWO, hm%vhxc(:, :))
-          call hamiltonian_update_potential(hm, gr%mesh)
-        end if
-        
-        if(present(ions)) then
-          call ion_dynamics_propagate(ions, gr%sb, geo, time - ionic_dt/M_TWO, M_HALF*ionic_dt)
-          call hamiltonian_epot_generate(hm, gr, geo, st, time = time - ionic_dt/M_TWO)
-        end if
-        
-        if(gauge_field_is_applied(hm%ep%gfield)) call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt)
-        
-      end if
-
-      ! propagate the real part
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ist = st%st_start, st%st_end
-          
-          do idim = 1, st%d%dim
-            call lalg_copy(gr%mesh%np, tr%prev_psi(:, idim, ist, ik), dpsi(:, idim))
-          end do
-
-          call dhamiltonian_apply(hm, gr%der, dpsi, hpsi, ist, ik, time - dt/2)
-
-          forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) 
-            st%zpsi(ip, idim, ist, ik) = real(st%zpsi(ip, idim, ist, ik)) + cmplx(dt*hpsi(ip, idim), &
-                 ! the imaginary part is calculated as the average
-                 ! this is the first half
-                 CNST(0.5)*tr%prev_psi(ip, idim, ist, ik), REAL_PRECISION)
-          end forall
-
-        end do
-      end do
-
-      ! propagate the Hamiltonian to time t
-      call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 0), hm%vhxc)
-      call hamiltonian_update_potential(hm, gr%mesh)
-
-      if(present(ions)) then
-        call ion_dynamics_propagate(ions, gr%sb, geo, time, M_HALF*ionic_dt)
-        call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
-      end if
-
-      if(gauge_field_is_applied(hm%ep%gfield)) call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt)
-
-      ! propagate the imaginary part
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ist = st%st_start, st%st_end
-
-          forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) dpsi(ip, idim) = real(st%zpsi(ip, idim, ist, ik))
-
-          call dhamiltonian_apply(hm, gr%der, dpsi, hpsi, ist, ik, time)
-
-          forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-            tr%prev_psi(ip, idim, ist, ik) = tr%prev_psi(ip, idim, ist, ik) - dt*hpsi(ip, idim)
-            ! this is the second half of the average
-            st%zpsi(ip, idim, ist, ik) = st%zpsi(ip, idim, ist, ik) + &
-                 cmplx(M_ZERO, CNST(0.5)*tr%prev_psi(ip, idim, ist, ik), REAL_PRECISION)
-          end forall
-
-        end do
-      end do
-
-      call pop_sub('td_rti.td_rti_dt.td_visscher')
-    end subroutine td_visscher
-
   end subroutine td_rti_dt
   ! ---------------------------------------------------------
 
@@ -1344,7 +1199,7 @@ contains
     type(td_rti_t), intent(in) :: tr
 
     select case(tr%method)
-    case(PROP_REVERSAL, PROP_APP_REVERSAL, PROP_VISSCHER)
+    case(PROP_REVERSAL, PROP_APP_REVERSAL)
       propagated = .true.
     case default
       propagated = .false.

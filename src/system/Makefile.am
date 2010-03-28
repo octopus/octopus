@@ -75,7 +75,7 @@ depend:
 	@makedepf90 $(libsystem_a_SOURCES)
 
 preconditioners.o : preconditioners.F90 preconditioners_inc.F90 
-subspace.o : preconditioners.o
+subspace.o : preconditioners.o subspace_inc.F90
 linear_solver.o : linear_solver.F90 linear_solver_inc.F90 preconditioners.o 
 eigen_cg.o: eigen_cg.F90 eigen_cg_inc.F90 preconditioners.o
 eigen_lobpcg.o: eigen_cg.F90 eigen_lobpcg_inc.F90 preconditioners.o

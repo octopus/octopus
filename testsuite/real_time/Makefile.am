@@ -21,27 +21,24 @@
 
 sharedir = $(pkgdatadir)/testsuite/real_time
 
-dist_share_DATA =                    \
-	01-etrs.01-gs.inp            \
-	01-etrs.02-td.inp            \
-	01-etrs.03-td_lanczos.inp    \
-	01-etrs.test                 \
-	02-aetrs.01-gs.inp           \
-	02-aetrs.02-td.inp           \
-	02-aetrs.03-td_lanczos.inp   \
-	02-aetrs.04-kick.inp         \
-	02-aetrs.test                \
-	03-exp_mid.01-gs.inp         \
-	03-exp_mid.02-td.inp         \
-	03-exp_mid.test              \
-	04-etrs_single.test          \
-	05-cpmd.test                 \
-	05-cpmd.01-gs.inp            \
-	05-cpmd.02-verlet.inp        \
+dist_share_DATA =                      \
+	01-etrs.01-gs.inp              \
+	01-etrs.02-td.inp              \
+	01-etrs.03-td_lanczos.inp      \
+	01-etrs.test                   \
+	02-aetrs.01-gs.inp             \
+	02-aetrs.02-td.inp             \
+	02-aetrs.03-td_lanczos.inp     \
+	02-aetrs.04-kick.inp           \
+	02-aetrs.test                  \
+	03-exp_mid.01-gs.inp           \
+	03-exp_mid.02-td.inp           \
+	03-exp_mid.test                \
+	04-etrs_single.test            \
+	05-cpmd.test                   \
+	05-cpmd.01-gs.inp              \
+	05-cpmd.02-verlet.inp          \
 	05-cpmd.03-vel_verlet.inp      \
-	07-visscher.test               \
-	07-visscher.01-gs.inp          \
-	07-visscher.02-td.inp          \
 	08-laser.test                  \
 	08-laser.01-ground_state.inp   \
 	08-laser.02-length_gauge.inp   \
