@@ -24,10 +24,10 @@ module propagator_m
   use cube_function_m
   use datasets_m
   use exponential_m
-  use exponential_split_m
-  use fourier_space_m
   use gauge_field_m
+  use grid_m
   use geometry_m
+  use global_m
   use hamiltonian_m
   use ion_dynamics_m
   use lalg_basic_m
@@ -67,8 +67,6 @@ module propagator_m
     propagator_ions_are_propagated
 
   integer, public, parameter ::       &
-    PROP_SPLIT_OPERATOR          = 0, &
-    PROP_SUZUKI_TROTTER          = 1, &
     PROP_REVERSAL                = 2, &
     PROP_APP_REVERSAL            = 3, &
     PROP_EXPONENTIAL_MIDPOINT    = 4, &
@@ -88,7 +86,6 @@ module propagator_m
                                             ! Storage of the KS potential of previous iterations.
     FLOAT, pointer      :: vmagnus(:, :, :) => null() 
                                             ! Auxiliary function to store the Magnus potentials.
-    type(zcf_t)         :: cf               ! Auxiliary cube for split operator methods.
     type(ob_terms_t)    :: ob               ! For open boundaries: leads, memory
     integer             :: scf_propagation_steps ! Since the KS propagator is non-linear, each 
                                                  ! propagating step should be performed self-consistently.
@@ -123,10 +120,6 @@ contains
     tro%method = tri%method
 
     select case(tro%method)
-    case(PROP_SPLIT_OPERATOR)
-      call zcf_new_from(tro%cf, tri%cf)
-    case(PROP_SUZUKI_TROTTER)
-      call zcf_new_from(tro%cf, tri%cf)
     case(PROP_MAGNUS)
       call loct_pointer_copy(tro%vmagnus, tri%vmagnus)
     case(PROP_CRANK_NICHOLSON_SRC_MEM)
@@ -191,43 +184,6 @@ contains
     !% hope that in the future the optimal schemes are clearly identified. In the
     !% mean time, if you do not feel like testing, use the default choices and
     !% make sure the time step is small enough.
-    !%Option split 0
-    !% Split Operator (SO).
-    !% This is one of the most traditional methods. It splits the full Hamiltonian
-    !% into a kinetic and a potential part, performing the former in Fourier space,
-    !% and the latter in real space. The necessary transformations are performed
-    !% with the FFT algorithm.
-    !%
-    !% <MATH>
-    !%    U_{\rm SO}(t+\delta t, t) = \exp \lbrace - {i \over 2}\delta t T \rbrace
-    !%       \exp \lbrace -i\delta t V^* \rbrace
-    !%       \exp \lbrace - {i \over 2}\delta t T \rbrace
-    !% </MATH>
-    !%
-    !% Since those three exponentials may be calculated exactly, one does not
-    !% need to use any of the methods specified by variable <tt>TDExponentialMethod</tt>
-    !% to perform them. 
-    !%
-    !% The key point is the specification of <math>V^*</math>. Let <math>V(t)</math> be divided into
-    !% <math>V_{\rm int}(t)</math>, the "internal" potential which depends self-consistently
-    !% on the density, and <math>V_{\rm ext}(t)</math>, the external potential that we know
-    !% at all times since we impose it on the system (e.g. a laser field):
-    !% <math>V(t)=V_{\rm int}(t)+V_{\rm ext}(t)</math>. Then we define to be <math>V^*</math> to
-    !% be the sum of <math>V_{\rm ext}(t+\delta t/2)</math> and the internal potential built
-    !% from the wavefunctions <i>after</i> applying the right-most kinetic term
-    !% of the equation, <math>\exp \lbrace -i\delta t/2 T \rbrace</math>.
-    !%
-    !% It may the be demonstrated that the order of the error of the algorithm is the
-    !% same that the one that we would have by making use of the Exponential Midpoint Rule
-    !% (EM, described below), the SO algorithm to calculate the action of the 
-    !% exponential of the Hamiltonian, and a full self-consistent procedure.
-    !%Option suzuki_trotter 1
-    !% This is the generalization of the Suzuki-Trotter algorithm, described
-    !% as one of the choices of the <tt>TDExponentialMethod</tt>,
-    !% to the time-dependent problem. Consult the paper by O. Sugino and M. Miyamoto,
-    !% Phys. Rev. B <b>59</b>, 2579 (1999), for details.
-    !%
-    !% It requires Hamiltonian extrapolations.
     !%Option etrs 2
     !% The idea is to make use of time-reversal symmetry from the beginning:
     !%
@@ -312,19 +268,7 @@ contains
       call write_fatal(7)
     end if
 
-    if(tr%method .eq. SPLIT_OPERATOR .or. tr%method .eq. SUZUKI_TROTTER) then
-      message(1) = "You cannnot use the split-operator evolution method, or the"
-      message(2) = "Suzuki-Trotter, if the code was compiled without FFTW support."
-      call write_fatal(2)
-    end if
-
     select case(tr%method)
-    case(PROP_SPLIT_OPERATOR)
-      call zcf_new(gr%mesh%idx%ll, tr%cf)
-      call zcf_fft_init(tr%cf, gr%sb)
-    case(PROP_SUZUKI_TROTTER)
-      call zcf_new(gr%mesh%idx%ll, tr%cf)
-      call zcf_fft_init(tr%cf, gr%sb)
     case(PROP_REVERSAL)
     case(PROP_APP_REVERSAL)
     case(PROP_EXPONENTIAL_MIDPOINT)
@@ -410,8 +354,6 @@ contains
       call zsparskit_solver_end()
       SAFE_DEALLOCATE_A(zpsi_tmp)
 #endif
-    case(PROP_SUZUKI_TROTTER, PROP_SPLIT_OPERATOR)
-      call zcf_free(tr%cf)
     case(PROP_CRANK_NICHOLSON_SRC_MEM)
       call ob_rti_end(tr%ob)
     end select
@@ -499,8 +441,6 @@ contains
     call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), tr%v_old(:, :, 1:3), time, tr%v_old(:, :, 0))
 
     select case(tr%method)
-    case(PROP_SPLIT_OPERATOR);          call td_split_operator
-    case(PROP_SUZUKI_TROTTER);          call td_suzuki_trotter
     case(PROP_REVERSAL);                call td_reversal
     case(PROP_APP_REVERSAL);            call td_app_reversal
     case(PROP_EXPONENTIAL_MIDPOINT);    call exponential_midpoint
@@ -546,8 +486,6 @@ contains
           tr%v_old(:, :, 0) = hm%vhxc(:, :)
           vaux(:, :) = hm%vhxc(:, :)
           select case(tr%method)
-          case(PROP_SPLIT_OPERATOR);          call td_split_operator
-          case(PROP_SUZUKI_TROTTER);          call td_suzuki_trotter
           case(PROP_REVERSAL);                call td_reversal
           case(PROP_APP_REVERSAL);            call td_app_reversal
           case(PROP_EXPONENTIAL_MIDPOINT);    call exponential_midpoint
@@ -585,71 +523,6 @@ contains
     call profiling_out(prof)
 
   contains
-
-    ! ---------------------------------------------------------
-    ! Split operator.
-    subroutine td_split_operator
-      integer :: ik, ist
-      call push_sub('propagator.propagator_dt.td_split_operator')
-
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ist = 1, st%nst
-          call zexp_kinetic(gr%mesh, hm, st%zpsi(:, :, ist, ik), tr%cf, -M_HALF*M_zI*dt)
-        end do
-      end do
-      call states_calc_dens(st, gr)
-      call v_ks_calc(ks, gr, hm, st)
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ist = 1, st%nst
-          if (hm%ep%non_local) call zexp_vnlpsi (gr%mesh, hm, st%zpsi(:, :, ist, ik), -M_zI*dt, .true.)
-          call zexp_vlpsi(gr%mesh, hm, st%zpsi(:, :, ist, ik), ik, time - dt*M_HALF, -M_zI*dt)
-          if (hm%ep%non_local) call zexp_vnlpsi (gr%mesh, hm, st%zpsi(:, :, ist, ik), -M_zI*dt, .false.)
-        end do
-      end do
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ist = 1, st%nst
-          call zexp_kinetic(gr%mesh, hm, st%zpsi(:, :, ist, ik), tr%cf, -M_HALF*M_zI*dt)
-        end do
-      end do
-
-      call pop_sub('propagator.propagator_dt.td_split_operator')
-    end subroutine td_split_operator
-
-
-    ! ---------------------------------------------------------
-    ! Suzuki-Trotter.
-    subroutine td_suzuki_trotter
-      FLOAT :: p, pp(5), atime(5), dtime(5)
-      integer :: ik, ist, k
-
-      call push_sub('propagator.propagator_dt.td_suzuki_trotter')
-
-      p = M_ONE/(M_FOUR - M_FOUR**(M_THIRD))
-      pp = (/ p, p, M_ONE-M_FOUR*p, p, p /)
-      dtime = pp*dt
-      atime(1) = time - dt+pp(1)/M_TWO*dt
-      atime(2) = time - dt+(pp(1)+pp(2)/M_TWO)*dt
-      atime(3) = time - dt+(pp(1)+pp(2)+pp(3)/M_TWO)*dt
-      atime(4) = time - dt+(pp(1)+pp(2)+pp(3)+pp(4)/M_TWO)*dt
-      atime(5) = time - dt+(pp(1)+pp(2)+pp(3)+pp(4)+pp(5)/M_TWO)*dt
-
-      do k = 1, 5
-        call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), atime(k), hm%vhxc(:, :))
-        call hamiltonian_update_potential(hm, gr%mesh)
-        do ik = st%d%kpt%start, st%d%kpt%end
-          do ist = 1, st%nst
-            call zexp_vlpsi (gr%mesh, hm, st%zpsi(:, :, ist, ik), ik, atime(k), -M_zI*dtime(k)/M_TWO)
-            if (hm%ep%non_local) call zexp_vnlpsi (gr%mesh, hm, st%zpsi(:, :, ist, ik), -M_zI*dtime(k)/M_TWO, .true.)
-
-            call zexp_kinetic(gr%mesh, hm, st%zpsi(:, :, ist, ik), tr%cf, -M_zI*dtime(k))
-            if (hm%ep%non_local) call zexp_vnlpsi (gr%mesh, hm, st%zpsi(:, :, ist, ik), -M_zI*dtime(k)/M_TWO, .false.)
-            call zexp_vlpsi (gr%mesh, hm, st%zpsi(:, :, ist, ik), ik, atime(k), -M_zI*dtime(k)/M_TWO)
-          end do
-        end do
-      end do
-
-      call pop_sub('propagator.propagator_dt.td_suzuki_trotter')
-    end subroutine td_suzuki_trotter
 
     ! ---------------------------------------------------------
     ! Propagator with enforced time-reversal symmetry

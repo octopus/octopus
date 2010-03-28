@@ -25,14 +25,16 @@ module exponential_m
   use cube_function_m
   use datasets_m
   use derivatives_m
-  use exponential_split_m
+  use global_m
   use hardware_m
+  use hamiltonian_m
   use fourier_space_m
   use lalg_adv_m
   use lalg_basic_m
   use loct_math_m
   use parser_m
   use mesh_function_m
+  use messages_m
   use profiling_m
   use states_m
   use states_calc_m
@@ -51,8 +53,6 @@ module exponential_m
     exponential_apply_all
 
   integer, public, parameter :: &
-    SPLIT_OPERATOR     = 0,     &
-    SUZUKI_TROTTER     = 1,     &
     LANCZOS_EXPANSION  = 2,     &
     TAYLOR             = 3,     &
     CHEBYSHEV          = 4
@@ -61,7 +61,6 @@ module exponential_m
     integer     :: exp_method  ! which method is used to apply the exponential
     FLOAT       :: lanczos_tol ! tolerance for the Lanczos method
     integer     :: exp_order   ! order to which the propagator is expanded
-    type(zcf_t) :: cf          ! auxiliary cube for split operator methods
   end type exponential_t
 
 contains
@@ -82,38 +81,6 @@ contains
     !% In the case of using the Magnus method, described below, the action of the exponential
     !% of the Magnus operator is also calculated through the algorithm specified
     !% by this variable.
-    !%Option split 0
-    !% It is important to distinguish between applying the split-operator method
-    !% to calculate the exponential of the Hamiltonian at a given time -- which
-    !% is what this variable is referring to -- from the split-operator method
-    !% as an algorithm to approximate the full evolution operator <math>U(t+\delta t, t)</math>,
-    !% and which will be described below as one of the possibilities
-    !% of the variable <tt>TDEvolutionMethod</tt>.
-    !% The equation that describes the split-operator scheme is well known:
-    !%
-    !% <MATH>\exp_{\rm SO} (-i \delta t H) = \exp (-i \delta t/2 V) \exp (-i \delta t T) \exp (-i \delta t/2 V).</MATH>
-    !%
-    !% Note that this is a "kinetic-referenced SO", since the kinetic term is sandwiched in the
-    !% middle. This is so because in <tt>octopus</tt>, the states spend most of their time in real-space; doing
-    !% it "potential-referenced" would imply 4 FFTs instead of 2.
-    !% This split-operator technique may be used in combination with, for example,
-    !% the exponential midpoint rule as a means to approximate the evolution operator.
-    !% In that case, the potential operator <i>V</i> that appears in the equation would be
-    !% calculated at time <math>t+\delta t/2</math>, that is, in the middle of the time-step.
-    !% However, note that if the split-operator method is invoked as a means to approximate
-    !% the evolution operator (<tt>TDEvolutionMethod = 0</tt>), a different procedure is taken -- 
-    !% described below -- and in fact the variable <tt>TDExponentialMethod</tt> has no
-    !% effect at all.
-    !%Option suzuki_trotter 1
-    !% This is a higher-order SO-based algorithm. See O. Sugino and Y. Miyamoto,
-    !% Phys. Rev. B <b>59</b>, 2579 (1999). Allows for larger time-steps,
-    !% but requires five times more time than the normal SO.
-    !%
-    !% The considerations above for the SO algorithm about the distinction
-    !% between using the method as a means to approximate <math>U(t+\delta t)</math> or as a
-    !% means to approximate the exponential also apply here. Setting <tt>TDEvolutionMethod = 1</tt>
-    !% enforces the use of the ST as an algorithm to approximate the full evolution operator,
-    !% which is slightly different (see below).
     !%Option lanczos 2
     !% Allows for larger time-steps.
     !% However, the larger the time-step, the longer the computational time per time-step. 
@@ -175,9 +142,6 @@ contains
       call parse_float(datasets_check('TDLanczosTol'), CNST(1e-5), te%lanczos_tol)
       if (te%lanczos_tol <= M_ZERO) call input_error('TDLanczosTol')
 
-    case(SPLIT_OPERATOR)
-    case(SUZUKI_TROTTER)
-
     case default
       call input_error('TDExponentialMethod')
     end select
@@ -196,9 +160,6 @@ contains
       call parse_integer(datasets_check('TDExpOrder'), 4, te%exp_order)
       if (te%exp_order < 2) call input_error('TDExpOrder')
 
-    else if(te%exp_method==SPLIT_OPERATOR.or.te%exp_method==SUZUKI_TROTTER) then
-      call zcf_new(der%mesh%idx%ll, te%cf)
-      call zcf_fft_init(te%cf, der%mesh%sb)
     end if
 
   end subroutine exponential_init
@@ -206,8 +167,6 @@ contains
   ! ---------------------------------------------------------
   subroutine exponential_end(te)
     type(exponential_t), intent(inout) :: te
-
-    if(te%exp_method==SPLIT_OPERATOR.or.te%exp_method==SUZUKI_TROTTER) call zcf_free(te%cf)
 
   end subroutine exponential_end
 
@@ -219,7 +178,6 @@ contains
     teo%exp_method  = tei%exp_method
     teo%lanczos_tol = tei%lanczos_tol
     teo%exp_order   = tei%exp_order
-    if(teo%exp_method == SPLIT_OPERATOR .or. teo%exp_method == SUZUKI_TROTTER) call zcf_new_from(teo%cf, tei%cf)
 
   end subroutine exponential_copy
 
@@ -295,10 +253,6 @@ contains
       call taylor_series
     case(LANCZOS_EXPANSION)
       call lanczos
-    case(SPLIT_OPERATOR)
-      call split
-    case(SUZUKI_TROTTER)
-      call suzuki
     case(CHEBYSHEV)
       call cheby
     end select
@@ -565,55 +519,6 @@ contains
       SAFE_DEALLOCATE_A(psi)
       call pop_sub('exponential.lanczos')
     end subroutine lanczos
-    ! ---------------------------------------------------------
-
-    ! ---------------------------------------------------------
-    subroutine split
-      call push_sub('exponential.split')
-
-      if(hm%gauge == VELOCITY) then
-        message(1) = 'Split operator does not work well if velocity gauge is used.'
-        call write_fatal(1)
-      end if
-
-      call zexp_vlpsi(der%mesh, hm, zpsi, ik, time, -M_zI*deltat/M_TWO)
-      if(hm%ep%non_local) call zexp_vnlpsi (der%mesh, hm, zpsi, -M_zI*deltat/M_TWO, .true.)
-      call zexp_kinetic(der%mesh, hm, zpsi, te%cf, -M_zI*deltat)
-      if(hm%ep%non_local) call zexp_vnlpsi (der%mesh, hm, zpsi, -M_zI*deltat/M_TWO, .false.)
-      call zexp_vlpsi (der%mesh, hm, zpsi, ik, time, -M_zI*deltat/M_TWO)
-
-      if(present(order)) order = 0
-      call pop_sub('exponential.split')
-    end subroutine split
-    ! ---------------------------------------------------------
-
-    ! ---------------------------------------------------------
-    subroutine suzuki
-      FLOAT :: dt(5), p, pp(5)
-      integer :: k
-
-      call push_sub('exponential.suzuki')
-
-      if(hm%gauge == 2) then
-        message(1) = 'Suzuki-Trotter operator does not work well if velocity gauge is used.'
-        call write_fatal(1)
-      end if
-
-      p = M_ONE/(M_FOUR - M_FOUR**(M_THIRD))
-      pp = (/ p, p, M_ONE-M_FOUR*p, p, p /)
-      dt(1:5) = pp(1:5)*deltat
-
-      do k = 1, 5
-        call zexp_vlpsi(der%mesh, hm, zpsi, ik, time, -M_zI*dt(k)/M_TWO)
-        if (hm%ep%non_local) call zexp_vnlpsi (der%mesh, hm, zpsi, -M_zI*dt(k)/M_TWO, .true.)
-        call zexp_kinetic(der%mesh, hm, zpsi, te%cf, -M_zI*dt(k))
-        if (hm%ep%non_local) call zexp_vnlpsi (der%mesh, hm, zpsi, -M_zI*dt(k)/M_TWO, .false.)
-        call zexp_vlpsi(der%mesh, hm, zpsi, ik, time, -M_zI*dt(k)/M_TWO)
-      end do
-
-      if(present(order)) order = 0
-      call pop_sub('exponential.suzuki')
-    end subroutine suzuki
     ! ---------------------------------------------------------
 
   end subroutine exponential_apply

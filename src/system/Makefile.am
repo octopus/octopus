@@ -38,7 +38,6 @@ libsystem_a_SOURCES =         \
 	system.F90            \
 	xc_oep_kernel.F90     \
 	pert.F90              \
-	exponential_split.F90 \
 	exponential.F90       \
 	forces.F90            \
 	elf.F90               \
@@ -89,8 +88,7 @@ xc_oep_kernel.o : xc_oep_kernel.F90 xc_oep_kernel_inc.F90 xc_oep.o system.o
 pert.o : pert.F90 pert_inc.F90
 h_sys_output.o : h_sys_output.F90 output_states_inc.F90 output_h_inc.F90 output_linear_response_inc.F90 output_etsf_inc.F90 output_me.o elf.o magnetic.o
 output_me.o: output_me_inc.F90
-exponential_split.o : exponential_split.F90
-exponential.o : exponential.F90 exponential_split.o
+exponential.o : exponential.F90
 energy.o : energy.F90 energy_inc.F90
 forces.o : forces.F90 forces_inc.F90
 elf.o : elf.F90
