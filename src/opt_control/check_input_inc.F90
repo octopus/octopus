@@ -24,7 +24,7 @@
   subroutine check_faulty_runmodes(sys, hm, tr)
     type(system_t),                 intent(in)    :: sys
     type(hamiltonian_t),            intent(in)    :: hm
-    type(td_rti_t),                 intent(in)    :: tr
+    type(propagator_t),                 intent(in)    :: tr
 
     integer :: no_electrons, n_filled, n_partially_filled, n_half_filled
     call push_sub('read.check_faulty_runmodes')

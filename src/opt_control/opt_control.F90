@@ -58,7 +58,7 @@ module opt_control_m
   use string_m
   use system_m
   use td_m
-  use td_rti_m
+  use propagator_m
   use td_write_m
 !  use units_m
   use v_ks_m
@@ -109,7 +109,7 @@ contains
     ! Initialize the time propagator.
     call td_init(td, sys, hm)
     if(hm%theory_level .ne. INDEPENDENT_PARTICLES ) then
-      call td_rti_set_scf_prop(td%tr)
+      call propagator_set_scf_prop(td%tr)
     end if
 
 

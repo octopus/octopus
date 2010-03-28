@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module td_rti_m
+module propagator_m
   use batch_m
   use cube_function_m
   use datasets_m
@@ -51,20 +51,20 @@ module td_rti_m
 
   private
   public ::                   &
-    td_rti_t,                 &
-    td_rti_init,              &
-    td_rti_end,               &
-    td_rti_copy,              &
-    td_rti_run_zero_iter,     &
-    td_rti_dt,                &
+    propagator_t,                 &
+    propagator_init,              &
+    propagator_end,               &
+    propagator_copy,              &
+    propagator_run_zero_iter,     &
+    propagator_dt,                &
     td_zop,                   &
     td_zopt,                  &
-    td_rti_qmr_op,            &
-    td_rti_qmr2_op,           &
-    td_rti_qmr_prec,          &
-    td_rti_set_scf_prop,      &
-    td_rti_remove_scf_prop,   &
-    td_rti_ions_are_propagated
+    propagator_qmr_op,            &
+    propagator_qmr2_op,           &
+    propagator_qmr_prec,          &
+    propagator_set_scf_prop,      &
+    propagator_remove_scf_prop,   &
+    propagator_ions_are_propagated
 
   integer, public, parameter ::       &
     PROP_SPLIT_OPERATOR          = 0, &
@@ -81,7 +81,7 @@ module td_rti_m
 
   FLOAT, parameter :: scf_threshold = CNST(1.0e-3)
 
-  type td_rti_t
+  type propagator_t
     integer             :: method           ! Which evolution method to use.
     type(exponential_t) :: te               ! How to apply the propagator (e^{-i H \Delta t}).
     FLOAT, pointer      :: v_old(:, :, :) => null()
@@ -98,14 +98,14 @@ module td_rti_m
                                                  ! which the propagation is done self-consistently.
                                                  ! The default is 3.
     logical             :: first
-  end type td_rti_t
+  end type propagator_t
 
 #ifdef HAVE_SPARSKIT
   type(sparskit_solver_t), pointer, private :: tdsk
 #endif
   type(grid_t),            pointer, private :: grid_p
   type(hamiltonian_t),     pointer, private :: hm_p
-  type(td_rti_t),          pointer, private :: tr_p
+  type(propagator_t),      pointer, private :: tr_p
   CMPLX, allocatable,      private :: zpsi_tmp(:,:,:,:)
   integer,                 private :: ik_op, ist_op, idim_op, dim_op, nst_op
   type(states_t),          private :: st_op
@@ -115,9 +115,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_rti_copy(tro, tri)
-    type(td_rti_t), intent(inout) :: tro
-    type(td_rti_t), intent(in)    :: tri
+  subroutine propagator_copy(tro, tri)
+    type(propagator_t), intent(inout) :: tro
+    type(propagator_t), intent(in)    :: tri
     call push_sub('tr_rti.tr_rti_copy')
 
     tro%method = tri%method
@@ -130,7 +130,7 @@ contains
     case(PROP_MAGNUS)
       call loct_pointer_copy(tro%vmagnus, tri%vmagnus)
     case(PROP_CRANK_NICHOLSON_SRC_MEM)
-      message(1) = 'Internal error at td_rti_copy.'
+      message(1) = 'Internal error at propagator_copy.'
       call write_fatal(1)
     end select
 
@@ -139,25 +139,25 @@ contains
     tro%scf_propagation_steps = tri%scf_propagation_steps
 
     call pop_sub('tr_rti.tr_rti_copy')
-  end subroutine td_rti_copy
+  end subroutine propagator_copy
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine td_rti_init(gr, st, hm, tr, dt, max_iter, have_fields)
-    type(grid_t),   intent(in)      :: gr
-    type(states_t), intent(in)      :: st
-    type(hamiltonian_t), intent(in) :: hm
-    type(td_rti_t), intent(inout)   :: tr
-    FLOAT,          intent(in)      :: dt
-    integer,        intent(in)      :: max_iter
-    logical,        intent(in)      :: have_fields ! whether there is an associated "field"
-                                                   ! that must be propagated (currently ions
-                                                   ! or a gauge field).
+  subroutine propagator_init(gr, st, hm, tr, dt, max_iter, have_fields)
+    type(grid_t),        intent(in)    :: gr
+    type(states_t),      intent(in)    :: st
+    type(hamiltonian_t), intent(in)    :: hm
+    type(propagator_t),  intent(inout) :: tr
+    FLOAT,               intent(in)    :: dt
+    integer,             intent(in)    :: max_iter
+    logical,             intent(in)    :: have_fields ! whether there is an associated "field"
+                                                      ! that must be propagated (currently ions
+                                                      ! or a gauge field).
 
     integer :: default_propagator
 
-    call push_sub('td_rti.td_rti_init')
+    call push_sub('propagator.propagator_init')
 
     !%Variable TDEvolutionMethod
     !%Type integer
@@ -369,32 +369,32 @@ contains
     ! (unless we are doing a QOCT run)
     tr%scf_propagation_steps = 3
 
-    call pop_sub('td_rti.td_rti_init')
-  end subroutine td_rti_init
+    call pop_sub('propagator.propagator_init')
+  end subroutine propagator_init
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine td_rti_set_scf_prop(tr)
-    type(td_rti_t), intent(inout) :: tr
+  subroutine propagator_set_scf_prop(tr)
+    type(propagator_t), intent(inout) :: tr
     tr%scf_propagation_steps = huge(1)
-  end subroutine td_rti_set_scf_prop
+  end subroutine propagator_set_scf_prop
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine td_rti_remove_scf_prop(tr)
-    type(td_rti_t), intent(inout) :: tr
+  subroutine propagator_remove_scf_prop(tr)
+    type(propagator_t), intent(inout) :: tr
     tr%scf_propagation_steps = -1
-  end subroutine td_rti_remove_scf_prop
+  end subroutine propagator_remove_scf_prop
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine td_rti_end(tr)
-    type(td_rti_t), intent(inout) :: tr
+  subroutine propagator_end(tr)
+    type(propagator_t), intent(inout) :: tr
 
-    call push_sub('td_rti.td_rti_end')
+    call push_sub('propagator.propagator_end')
 
     ! sanity check
     ASSERT(associated(tr%v_old)) 
@@ -418,36 +418,36 @@ contains
     
     call exponential_end(tr%te)       ! clean propagator method
 
-    call pop_sub('td_rti.td_rti_end')
-  end subroutine td_rti_end
+    call pop_sub('propagator.propagator_end')
+  end subroutine propagator_end
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine td_rti_run_zero_iter(hm, tr)
-    type(hamiltonian_t), intent(in)    :: hm
-    type(td_rti_t),      intent(inout) :: tr
+  subroutine propagator_run_zero_iter(hm, tr)
+    type(hamiltonian_t),  intent(in)    :: hm
+    type(propagator_t),   intent(inout) :: tr
 
-    call push_sub('td_rti.td_rti_run_zero_iter')
+    call push_sub('propagator.propagator_run_zero_iter')
 
     tr%v_old(:, :, 2) = hm%vhxc(:, :)
     tr%v_old(:, :, 3) = hm%vhxc(:, :)
     tr%v_old(:, :, 1) = hm%vhxc(:, :)
 
-    call pop_sub('td_rti.td_rti_run_zero_iter')
-  end subroutine td_rti_run_zero_iter
+    call pop_sub('propagator.propagator_run_zero_iter')
+  end subroutine propagator_run_zero_iter
 
 
   ! ---------------------------------------------------------
   ! Propagates st from time - dt to t.
   ! If dt<0, it propagates *backwards* from t+|dt| to t
   ! ---------------------------------------------------------
-  subroutine td_rti_dt(ks, hm, gr, st, tr, time, dt, max_iter, nt, gauge_force, ions, geo, ionic_dt)
+  subroutine propagator_dt(ks, hm, gr, st, tr, time, dt, max_iter, nt, gauge_force, ions, geo, ionic_dt)
     type(v_ks_t),                    intent(inout) :: ks
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
-    type(td_rti_t),      target,     intent(inout) :: tr
+    type(propagator_t),  target,     intent(inout) :: tr
     FLOAT,                           intent(in)    :: time
     FLOAT,                           intent(in)    :: dt
     integer,                         intent(in)    :: max_iter
@@ -465,7 +465,7 @@ contains
     type(profile_t), save :: prof
 
     call profiling_in(prof, "TD_PROPAGATOR")
-    call push_sub('td_rti.td_rti_dt')
+    call push_sub('propagator.propagator_dt')
 
     if(present(ions)) then
       ASSERT(present(geo))
@@ -581,7 +581,7 @@ contains
       SAFE_DEALLOCATE_A(vaux)
     end if
 
-    call pop_sub('td_rti.td_rti_dt')
+    call pop_sub('propagator.propagator_dt')
     call profiling_out(prof)
 
   contains
@@ -590,7 +590,7 @@ contains
     ! Split operator.
     subroutine td_split_operator
       integer :: ik, ist
-      call push_sub('td_rti.td_rti_dt.td_split_operator')
+      call push_sub('propagator.propagator_dt.td_split_operator')
 
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = 1, st%nst
@@ -612,7 +612,7 @@ contains
         end do
       end do
 
-      call pop_sub('td_rti.td_rti_dt.td_split_operator')
+      call pop_sub('propagator.propagator_dt.td_split_operator')
     end subroutine td_split_operator
 
 
@@ -622,7 +622,7 @@ contains
       FLOAT :: p, pp(5), atime(5), dtime(5)
       integer :: ik, ist, k
 
-      call push_sub('td_rti.td_rti_dt.td_suzuki_trotter')
+      call push_sub('propagator.propagator_dt.td_suzuki_trotter')
 
       p = M_ONE/(M_FOUR - M_FOUR**(M_THIRD))
       pp = (/ p, p, M_ONE-M_FOUR*p, p, p /)
@@ -648,7 +648,7 @@ contains
         end do
       end do
 
-      call pop_sub('td_rti.td_rti_dt.td_suzuki_trotter')
+      call pop_sub('propagator.propagator_dt.td_suzuki_trotter')
     end subroutine td_suzuki_trotter
 
     ! ---------------------------------------------------------
@@ -659,7 +659,7 @@ contains
       integer :: ik, ist, ist2, idim, ste, sts
       type(batch_t) :: zpsib
 
-      call push_sub('td_rti.td_rti_dt.td_reversal')
+      call push_sub('propagator.propagator_dt.td_reversal')
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
 
@@ -755,7 +755,7 @@ contains
         SAFE_DEALLOCATE_A(vhxc_t2)
       end if
 
-      call pop_sub('td_rti.td_rti_dt.td_reversal')
+      call pop_sub('propagator.propagator_dt.td_reversal')
     end subroutine td_reversal
 
 
@@ -765,7 +765,7 @@ contains
       integer :: ik, sts, ste
       type(batch_t) :: zpsib
 
-      call push_sub('td_rti.td_rti_dt.td_app_reversal')
+      call push_sub('propagator.propagator_dt.td_app_reversal')
 
       ! propagate half of the time step with H(time - dt)
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -800,7 +800,7 @@ contains
         end do
       end do
       
-      call pop_sub('td_rti.td_rti_dt.td_app_reversal')
+      call pop_sub('propagator.propagator_dt.td_app_reversal')
     end subroutine td_app_reversal
 
 
@@ -811,7 +811,7 @@ contains
       type(ion_state_t) :: ions_state
       FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM)
 
-      call push_sub('td_rti.td_rti_dt.exponential_midpoint')
+      call push_sub('propagator.propagator_dt.exponential_midpoint')
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
         call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time - dt/M_TWO, hm%vhxc(:, :))
@@ -844,7 +844,7 @@ contains
         call gauge_field_set_vec_pot_vel(hm%ep%gfield, vecpot_vel)
       end if
 
-      call pop_sub('td_rti.td_rti_dt.exponential_midpoint')
+      call pop_sub('propagator.propagator_dt.exponential_midpoint')
     end subroutine exponential_midpoint
 
 
@@ -856,7 +856,7 @@ contains
       CMPLX, allocatable :: zpsi_rhs_pred(:,:,:,:), zpsi_rhs_corr(:,:,:,:)
       integer :: ik, ist, idim, np_part
 
-      call push_sub('td_rti.td_rti_dt.td_crank_nicholson_sparskit')
+      call push_sub('propagator.propagator_dt.td_crank_nicholson_sparskit')
 
       np_part = gr%mesh%np_part
       SAFE_ALLOCATE(zpsi_rhs_corr(1:np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
@@ -943,7 +943,7 @@ contains
       end if
       SAFE_DEALLOCATE_A(zpsi_rhs_corr)
 
-      call pop_sub('td_rti.td_rti_dt.td_crank_nicholson_sparskit')
+      call pop_sub('propagator.propagator_dt.td_crank_nicholson_sparskit')
 #endif
     end subroutine td_crank_nicholson_sparskit
     ! ---------------------------------------------------------
@@ -958,7 +958,7 @@ contains
       FLOAT :: cgtol = CNST(1.0e-8)
       logical :: converged
 
-      call push_sub('td_rti.td_rti_dt.td_crank_nicholson')
+      call push_sub('propagator.propagator_dt.td_crank_nicholson')
 
       np_part = gr%mesh%np_part
       np = gr%mesh%np
@@ -1000,7 +1000,7 @@ contains
 
           ist_op = ist; ik_op = ik; iter = 2000
           call zqmr_sym(np*st%d%dim, zpsi, rhs, &
-            td_rti_qmr_op, td_rti_qmr_prec, iter, dres, cgtol, &
+            propagator_qmr_op, propagator_qmr_prec, iter, dres, cgtol, &
             showprogress = .false., converged = converged)
 
           forall(idim = 1:st%d%dim)
@@ -1020,7 +1020,7 @@ contains
       SAFE_DEALLOCATE_A(zpsi_rhs)
       SAFE_DEALLOCATE_A(zpsi)
       SAFE_DEALLOCATE_A(rhs)
-      call pop_sub('td_rti.td_rti_dt.td_crank_nicholson')
+      call pop_sub('propagator.propagator_dt.td_crank_nicholson')
     end subroutine td_crank_nicholson
     ! ---------------------------------------------------------
 
@@ -1033,7 +1033,7 @@ contains
       FLOAT :: atime(2)
       FLOAT, allocatable :: vaux(:, :, :), pot(:)
 
-      call push_sub('td_rti.td_rti_dt.td_magnus')
+      call push_sub('propagator.propagator_dt.td_magnus')
 
       SAFE_ALLOCATE(vaux(1:gr%mesh%np, 1:st%d%nspin, 1:2))
 
@@ -1079,14 +1079,14 @@ contains
       end do
 
       SAFE_DEALLOCATE_A(vaux)
-      call pop_sub('td_rti.td_rti_dt.td_magnus')
+      call pop_sub('propagator.propagator_dt.td_magnus')
     end subroutine td_magnus
 
 
     ! ---------------------------------------------------------
     ! Crank-Nicholson scheme with source and memory term.
     subroutine td_crank_nicholson_src_mem()
-      call push_sub('td_rti.td_rti_dt.td_crank_nicholson_src_mem')
+      call push_sub('propagator.propagator_dt.td_crank_nicholson_src_mem')
       
       select case(tr%ob%mem_type)
       case(SAVE_CPU_TIME)
@@ -1095,22 +1095,22 @@ contains
         call cn_src_mem_sp_dt(tr%ob, st, ks, hm, gr, max_iter, dt, time, nt)
       end select
 
-      call pop_sub('td_rti.td_rti_dt.td_crank_nicholson_src_mem')
+      call pop_sub('propagator.propagator_dt.td_crank_nicholson_src_mem')
     end subroutine td_crank_nicholson_src_mem
 
-  end subroutine td_rti_dt
+  end subroutine propagator_dt
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
   ! operators for Crank-Nicholson scheme
-  subroutine td_rti_qmr_op(x, y)
+  subroutine propagator_qmr_op(x, y)
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
     integer :: idim
     CMPLX, allocatable :: zpsi(:, :)
 
-    call push_sub('td_rti.td_rti_qmr_op')
+    call push_sub('propagator.propagator_qmr_op')
 
     SAFE_ALLOCATE(zpsi(1:grid_p%mesh%np_part, 1:dim_op))
     zpsi = M_z0
@@ -1125,21 +1125,21 @@ contains
     end forall
 
     SAFE_DEALLOCATE_A(zpsi)
-    call pop_sub('td_rti.td_rti_qmr_op')
-  end subroutine td_rti_qmr_op
+    call pop_sub('propagator.propagator_qmr_op')
+  end subroutine propagator_qmr_op
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine td_rti_qmr_prec(x, y)
+  subroutine propagator_qmr_prec(x, y)
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
 
-    call push_sub('td_rti.td_rti_qmr_prec')
+    call push_sub('propagator.propagator_qmr_prec')
     y = x
 
-    call pop_sub('td_rti.td_rti_qmr_prec')
-  end subroutine td_rti_qmr_prec
+    call pop_sub('propagator.propagator_qmr_prec')
+  end subroutine propagator_qmr_prec
   ! ---------------------------------------------------------
 
 
@@ -1151,7 +1151,7 @@ contains
     FLOAT, intent(out) :: yre(:)
     FLOAT, intent(out) :: yim(:)
 
-    call push_sub('td_rti.td_zop')
+    call push_sub('propagator.td_zop')
 #ifdef HAVE_SPARSKIT    
     zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op) = &
       xre(1:grid_p%mesh%np) + M_zI * xim(1:grid_p%mesh%np)
@@ -1162,7 +1162,7 @@ contains
     yre(1:grid_p%mesh%np) =  real(zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op))
     yim(1:grid_p%mesh%np) = aimag(zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op))
 #endif    
-    call pop_sub('td_rti.td_zop')
+    call pop_sub('propagator.td_zop')
   end subroutine td_zop
   ! ---------------------------------------------------------
 
@@ -1175,7 +1175,7 @@ contains
     FLOAT, intent(out) :: yre(:)
     FLOAT, intent(out) :: yim(:)
     
-    call push_sub('td_rti.td_zopt')
+    call push_sub('propagator.td_zopt')
 #ifdef HAVE_SPARSKIT        
     ! To act with the transpose of H on the wfn we apply H to the conjugate of psi
     ! and conjugate the resulting hpsi (note that H is not a purely real operator
@@ -1189,14 +1189,14 @@ contains
     yre(1:grid_p%mesh%np) =    real(zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op))
     yim(1:grid_p%mesh%np) = - aimag(zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op))
 #endif        
-    call pop_sub('td_rti.td_zopt')
+    call pop_sub('propagator.td_zopt')
   end subroutine td_zopt
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  logical pure function td_rti_ions_are_propagated(tr) result(propagated)
-    type(td_rti_t), intent(in) :: tr
+  logical pure function propagator_ions_are_propagated(tr) result(propagated)
+    type(propagator_t), intent(in) :: tr
 
     select case(tr%method)
     case(PROP_REVERSAL, PROP_APP_REVERSAL)
@@ -1205,12 +1205,12 @@ contains
       propagated = .false.
     end select
 
-  end function td_rti_ions_are_propagated
+  end function propagator_ions_are_propagated
   ! ---------------------------------------------------------
 
-#include "td_rti_qoct_inc.F90"
+#include "propagator_qoct_inc.F90"
 
-end module td_rti_m
+end module propagator_m
 
 
 !! Local Variables:

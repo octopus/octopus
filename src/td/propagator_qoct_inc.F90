@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id: td_rti.F90 5406 2009-05-16 18:17:47Z xavier $
+!! $Id: propagator.F90 5406 2009-05-16 18:17:47Z xavier $
 
 
   ! ---------------------------------------------------------
@@ -24,9 +24,9 @@
     type(hamiltonian_t), intent(inout) :: hm
     type(grid_t),        intent(inout) :: gr
     type(states_t),      intent(inout) :: st
-    type(td_rti_t),      intent(inout) :: tr
+    type(propagator_t),      intent(inout) :: tr
     FLOAT,                           intent(in)    :: t, dt
-    call push_sub('td_rti.td_qoct_tddft_propagator')
+    call push_sub('propagator.td_qoct_tddft_propagator')
 
     if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
       call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t-dt/M_TWO, hm%vhxc(:, :))
@@ -34,7 +34,7 @@
     end if
     call exponential_apply_all(tr%te, gr%der, hm, st, dt, t - dt/M_TWO)
 
-    call pop_sub('td_rti.td_qoct_tddft_propagator')
+    call pop_sub('propagator.td_qoct_tddft_propagator')
   end subroutine td_qoct_tddft_propagator
   ! ---------------------------------------------------------
 
@@ -47,7 +47,7 @@
     type(hamiltonian_t), target, intent(inout) :: hm
     type(grid_t), target,        intent(inout) :: gr
     type(states_t),              intent(inout) :: st
-    type(td_rti_t), target,      intent(inout) :: tr
+    type(propagator_t), target,      intent(inout) :: tr
     FLOAT,                       intent(in)    :: t, dt
 
     CMPLX, allocatable :: zpsi(:), rhs(:)
@@ -56,7 +56,7 @@
     FLOAT :: cgtol = CNST(1.0e-8)
     logical :: converged
 
-    call push_sub('td_rti.td_qoct_tddft_propagator_2')
+    call push_sub('propagator.td_qoct_tddft_propagator_2')
 
     np_part = gr%mesh%np_part
     np = gr%mesh%np
@@ -99,7 +99,7 @@
 
     ik_op = 1; iter = 2000
     call zqmr_sym(st%nst*np*st%d%dim, zpsi, rhs, &
-      td_rti_qmr2_op, td_rti_qmr_prec, iter, dres, cgtol, &
+      propagator_qmr2_op, propagator_qmr_prec, iter, dres, cgtol, &
       showprogress = .false., converged = converged)
 
     if(.not.converged) then
@@ -120,14 +120,14 @@
     SAFE_DEALLOCATE_A(zpsi)
     SAFE_DEALLOCATE_A(rhs)
     call states_end(st_op)
-    call pop_sub('td_rti.td_qoct_tddft_propagator_2')
+    call pop_sub('propagator.td_qoct_tddft_propagator_2')
   end subroutine td_qoct_tddft_propagator_2
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
   ! operator for Crank-Nicholson scheme
-  subroutine td_rti_qmr2_op(x, y)
+  subroutine propagator_qmr2_op(x, y)
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
     integer :: idim, ist, np
@@ -145,7 +145,7 @@
         st_op%zpsi(1:np, idim, ist, ik_op)
     end forall
 
-  end subroutine td_rti_qmr2_op
+  end subroutine propagator_qmr2_op
   ! ---------------------------------------------------------
 
 !! Local Variables:

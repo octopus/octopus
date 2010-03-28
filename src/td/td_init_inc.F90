@@ -161,7 +161,7 @@ subroutine td_init(td, sys, hm)
   call parse_float(datasets_check('TDScissor'), CNST(0.0), td%scissor)
   td%scissor = units_to_atomic(units_inp%energy, td%scissor)
 
-  call td_rti_init(sys%gr, sys%st, hm, td%tr, td%dt, td%max_iter, &
+  call propagator_init(sys%gr, sys%st, hm, td%tr, td%dt, td%max_iter, &
        ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield))
   if(td%dynamics == BO)  call scf_init(td%scf, sys%gr, sys%geo, sys%st, hm)
   if(hm%ep%no_lasers>0.and.mpi_grp_is_root(mpi_world)) then
@@ -181,7 +181,7 @@ subroutine td_end(td)
   call push_sub('td_init.td_end')
 
   call PES_end(td%PESv)
-  call td_rti_end(td%tr)  ! clean the evolution method
+  call propagator_end(td%tr)  ! clean the evolution method
 
   if(td%dynamics == BO) call scf_end(td%scf)
   

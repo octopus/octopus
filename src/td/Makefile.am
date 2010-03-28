@@ -22,12 +22,12 @@
 noinst_LIBRARIES = libtd.a
 
 libtd_a_SOURCES = \
-	cpmd.F90 pes.F90 spectrum.F90 td_rti.F90 td_write.F90 td.F90 \
+	cpmd.F90 pes.F90 spectrum.F90 propagator.F90 td_write.F90 td.F90 \
 	ob_rti.F90 ob_src.F90 ob_mem.F90 ob_terms.F90
 
 noinst_HEADERS = \
 	pes_rc_inc.F90 pes_mask_inc.F90 td_init_inc.F90 td_calc_inc.F90 cpmd_inc.F90 \
-	td_rti_qoct_inc.F90
+	propagator_qoct_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -36,10 +36,10 @@ depend:
 
 pes.o: pes.F90 pes_mask_inc.F90 pes_rc_inc.F90
 spectrum.o: spectrum.F90
-td_rti.o: td_rti.F90 ob_rti.o
+propagator.o: propagator.F90 ob_rti.o
 ob_rti.o: ob_rti.F90 ob_mem.o ob_src.o ob_terms.o
 ob_mem.o: ob_mem.F90 ob_terms.o
 ob_src.o: ob_src.F90 ob_mem.o ob_terms.o
 td_write.o: td_write.F90 td_calc_inc.F90 spectrum.o
-td.o: td.F90 td_init_inc.F90 spectrum.o pes.o td_write.o td_rti.o cpmd.o
+td.o: td.F90 td_init_inc.F90 spectrum.o pes.o td_write.o propagator.o cpmd.o
 cpmd.o: cpmd.F90 cpmd_inc.F90

@@ -54,7 +54,7 @@ module td_m
   use states_calc_m
   use states_dim_m
   use system_m
-  use td_rti_m
+  use propagator_m
   use td_write_m
   use unit_m
   use unit_system_m
@@ -77,7 +77,7 @@ module td_m
        CP        = 3
   
   type td_t 
-    type(td_rti_t)       :: tr             ! contains the details of the time-evolution
+    type(propagator_t)       :: tr             ! contains the details of the time-evolution
     type(scf_t)          :: scf
     type(ion_dynamics_t) :: ions
     type(cpmd_t)         :: cp_propagator
@@ -214,10 +214,10 @@ contains
       select case(td%dynamics)
       case(EHRENFEST)
         if(ion_dynamics_ions_move(td%ions)) then
-          call td_rti_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt/td%mu, td%max_iter, iter, gauge_force, &
+          call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt/td%mu, td%max_iter, iter, gauge_force, &
             ions = td%ions, geo = sys%geo, ionic_dt = td%dt)
         else
-          call td_rti_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt/td%mu, td%max_iter, iter, gauge_force)
+          call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt/td%mu, td%max_iter, iter, gauge_force)
         end if
       case(BO)
         call scf_run(td%scf, sys%gr, geo, st, sys%ks, hm, sys%outp, gs_run = .false., verbosity = VERB_NO)
@@ -238,13 +238,13 @@ contains
       generate = .false.
 
       if(ion_dynamics_ions_move(td%ions)) then 
-        if(td%dynamics /= EHRENFEST .or. .not. td_rti_ions_are_propagated(td%tr)) then
+        if(td%dynamics /= EHRENFEST .or. .not. propagator_ions_are_propagated(td%tr)) then
           call ion_dynamics_propagate(td%ions, sys%gr%sb, sys%geo, iter*td%dt, td%dt)
           generate = .true.
         end if
       end if
 
-      if(gauge_field_is_applied(hm%ep%gfield) .and. .not. td_rti_ions_are_propagated(td%tr)) then
+      if(gauge_field_is_applied(hm%ep%gfield) .and. .not. propagator_ions_are_propagated(td%tr)) then
         call gauge_field_propagate(hm%ep%gfield, gauge_force, td%dt)
       end if
       
@@ -563,7 +563,7 @@ contains
       ! I apply the delta electric field *after* td_write_iter, otherwise the
       ! dipole matrix elements in write_proj are wrong
       call apply_delta_field(td%kick)
-      call td_rti_run_zero_iter(hm, td%tr)
+      call propagator_run_zero_iter(hm, td%tr)
 
       call pop_sub('td.td_run.td_run_zero_iter')
     end subroutine td_run_zero_iter
