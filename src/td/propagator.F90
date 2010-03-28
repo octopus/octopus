@@ -38,7 +38,7 @@ module propagator_m
   use mesh_function_m
   use messages_m
   use ob_mem_m
-  use ob_rti_m
+  use ob_propagator_m
   use ob_terms_m
   use profiling_m
   use solvers_m
@@ -287,7 +287,7 @@ contains
     case(PROP_MAGNUS)
       SAFE_ALLOCATE(tr%vmagnus(1:gr%mesh%np, 1:st%d%nspin, 1:2))
     case(PROP_CRANK_NICHOLSON_SRC_MEM)
-      call ob_rti_init(st, gr, hm, tr%ob, dt, max_iter)
+      call ob_propagator_init(st, gr, hm, tr%ob, dt, max_iter)
     case(PROP_QOCT_TDDFT_PROPAGATOR)
     case(PROP_QOCT_TDDFT_PROPAGATOR_2)
     case default
@@ -355,7 +355,7 @@ contains
       SAFE_DEALLOCATE_A(zpsi_tmp)
 #endif
     case(PROP_CRANK_NICHOLSON_SRC_MEM)
-      call ob_rti_end(tr%ob)
+      call ob_propagator_end(tr%ob)
     end select
     
     call exponential_end(tr%te)       ! clean propagator method
