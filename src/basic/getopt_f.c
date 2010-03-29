@@ -307,6 +307,7 @@ void FC_FUNC_(getopt_help, GETOPT_HELP)
 #else
     c = getopt(argc, argv, "hvls:p:");
 #endif
+    if(argc==1) help_help();
     if (c == -1) break;
     switch (c) {
 

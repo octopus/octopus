@@ -47,7 +47,6 @@ program oct_help
   call getopt_help(mode, varname)
 
   select case(mode)
-
   case("print")
     call varinfo_print(help_stdout, trim(varname), ierr)
     if (ierr /= 0) then
@@ -59,11 +58,6 @@ program oct_help
 
   case("list")
     call varinfo_search(help_stdout, "", ierr)
-
-  case default
-    write(help_stderr, '(a,a)') 'Unknown command: ', mode
-    write(help_stderr, '(a)') 'Usage: oct-help { print | search | list}'
-
   end select
     
   call global_end()
