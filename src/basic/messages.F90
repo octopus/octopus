@@ -622,10 +622,9 @@ contains
     integer, intent(inout) :: sec
     integer, intent(inout) :: usec
 
-    call push_sub('messages.epoch_time_diff')
-    call time_diff(s_epoch_sec, s_epoch_usec, sec, usec)
+    ! this is called by push/pop so there can not be a push/pop in this routine
 
-    call pop_sub('messages.epoch_time_diff')
+    call time_diff(s_epoch_sec, s_epoch_usec, sec, usec)
   end subroutine epoch_time_diff
 
 
@@ -638,7 +637,7 @@ contains
     integer, intent(inout) :: sec2
     integer, intent(inout) :: usec2
 
-    call push_sub('messages.time_diff')
+    ! this is called by push/pop so there can not be a push/pop in this routine
 
     ! Correct overflow.
     if(usec2 - usec1 .lt. 0) then
@@ -654,7 +653,6 @@ contains
     end if
     usec2 = usec2 - usec1
 
-    call pop_sub('messages.time_diff')
   end subroutine time_diff
 
 
