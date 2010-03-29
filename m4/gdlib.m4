@@ -17,7 +17,8 @@ AC_DEFUN([ACX_GDLIB],
       AC_DEFINE_UNQUOTED(HAVE_GDLIB, 1, [Define if libgd exists.])
 
       GD_CFLAGS=`$GDLIB_CONFIG --cflags`
-      GD_LIBS="`$GDLIB_CONFIG --ldflags` -lgd `$GDLIB_CONFIG --libs`"
+      GD_LIBS="`$GDLIB_CONFIG --ldflags` -lgd `$GDLIB_CONFIG --libs | awk '{if($NF=="@LIBICONV@"){$NF=""} print}'`"
+      dnl Sometimes GD installation strangely leaves this token @LIBICONV@ in --libs, which must be removed
       GD_MAJORVERSION=`$GDLIB_CONFIG --majorversion`
       GD_MINORVERSION=`$GDLIB_CONFIG --minorversion`
       GD_REVISION=`$GDLIB_CONFIG --revision`
@@ -76,7 +77,5 @@ dnl      fi
 
   CFLAGS="$CFLAGS $GD_CFLAGS"
   AC_SUBST(GD_CFLAGS)
-  AC_SUBST(LIBICONV) # @LIBICONV@ appears in GD_LIBS
   AC_SUBST(GD_LIBS)
-
 ])
