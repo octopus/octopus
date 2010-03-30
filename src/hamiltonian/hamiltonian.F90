@@ -104,6 +104,7 @@ module hamiltonian_m
     ! The Hamiltonian must know what are the "dimensions" of the spaces,
     ! in order to be able to operate on the states.
     type(states_dim_t) :: d
+    type(hamiltonian_base_t) :: hm_base
 
     FLOAT, pointer :: vhartree(:) ! Hartree potential
     FLOAT, pointer :: vxc(:,:)    ! XC potential
@@ -175,7 +176,6 @@ module hamiltonian_m
     logical :: multigrid_initialized
     type(dgridhier_t) :: coarse_v
 
-    type(hamiltonian_base_t), pointer :: hm_base(:) ! one electromagnetic field per spin channel
     type(scissor_t) :: scissor
   end type hamiltonian_t
 
@@ -222,6 +222,8 @@ contains
     hm%theory_level = theory_level
     hm%xc_family    = xc_family
     call states_dim_copy(hm%d, states_dim)
+
+    call hamiltonian_base_init(hm%hm_base, gr%mesh, hm%d%nspin)
 
     ! initialize variables
     hm%epot = M_ZERO
@@ -415,8 +417,6 @@ contains
     end if
 
     hm%multigrid_initialized = .false.
-
-    SAFE_ALLOCATE(hm%hm_base(1:hm%d%nspin))
 
     call scissor_nullify(hm%scissor)
 
@@ -731,11 +731,7 @@ contains
 
     call push_sub('hamiltonian.hamiltonian_end')
 
-    do ispin = 1, hm%d%nspin
-      call hamiltonian_base_end(hm%hm_base(ispin))
-    end do
-
-    SAFE_DEALLOCATE_P(hm%hm_base)
+    call hamiltonian_base_end(hm%hm_base)
 
     if(hm%multigrid_initialized) then
       call gridhier_end(hm%coarse_v)
@@ -930,17 +926,15 @@ contains
 
     call push_sub('hamiltonian.hamiltonian_update_potential')
 
-    do ispin = 1, this%d%nspin
-      
-      if(.not. associated(this%hm_base(ispin)%potential)) then
-        SAFE_ALLOCATE(this%hm_base(ispin)%potential(1:mesh%np))
-      end if
+    if(.not. associated(this%hm_base%potential)) then
+      SAFE_ALLOCATE(this%hm_base%potential(1:mesh%np, this%d%nspin))
+    end if
 
-      forall (ip = 1:mesh%np) this%hm_base(ispin)%potential(ip) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
-      
+    do ispin = 1, this%d%nspin
+      forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
     end do
     
-    call profiling_count_operations(mesh%np * this%d%nspin)
+    call profiling_count_operations(mesh%np*this%d%nspin)
     call pop_sub('hamiltonian.hamiltonian_update_potential')
   end subroutine hamiltonian_update_potential
 

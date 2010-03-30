@@ -52,26 +52,36 @@ module hamiltonian_base_m
     hamiltonian_base_t,                        &
     dhamiltonian_base_apply_batch,             &
     zhamiltonian_base_apply_batch,             &
+    hamiltonian_base_init,                     &
     hamiltonian_base_end
 
   ! This object stores and applies an electromagnetic potential that
   ! can be represented by different types of potentials.
 
   type hamiltonian_base_t
-    FLOAT, pointer :: potential(:)                => null()
-    FLOAT, pointer :: vector_potential(:, :)      => null()
-    FLOAT, pointer :: uniform_magnetic_field(:)   => null()
+    integer        :: nspin
+    FLOAT, pointer :: potential(:, :)
   end type hamiltonian_base_t
 
 contains
+
+
+  ! ---------------------------------------------------------
+  subroutine hamiltonian_base_init(this, mesh, nspin)
+    type(hamiltonian_base_t), intent(inout) :: this
+    type(mesh_t),             intent(in)    :: mesh
+    integer,                  intent(in)    :: nspin
+
+    this%nspin = nspin
+    SAFE_ALLOCATE(this%potential(mesh%np, this%nspin))
+
+  end subroutine hamiltonian_base_init
 
   ! ---------------------------------------------------------
   subroutine hamiltonian_base_end(this)
     type(hamiltonian_base_t), intent(inout) :: this
 
     SAFE_DEALLOCATE_P(this%potential)
-    SAFE_DEALLOCATE_P(this%vector_potential)
-    SAFE_DEALLOCATE_P(this%uniform_magnetic_field)
 
   end subroutine hamiltonian_base_end
 

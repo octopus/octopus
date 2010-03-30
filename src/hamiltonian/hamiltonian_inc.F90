@@ -661,7 +661,7 @@ subroutine X(vlpsi_batch) (hm, mesh, psib, hpsib, ik)
   select case(hm%d%ispin)
   case(UNPOLARIZED, SPIN_POLARIZED)
     ispin = states_dim_get_spin_index(hm%d, ik)
-    call X(hamiltonian_base_apply_batch)(hm%hm_base(ispin), mesh, psib, hpsib)
+    call X(hamiltonian_base_apply_batch)(hm%hm_base, mesh, ispin, psib, hpsib)
 
   case(SPINORS)
     !the spinor case is more complicated since it mixes the two components.

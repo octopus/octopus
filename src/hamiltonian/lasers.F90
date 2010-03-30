@@ -649,67 +649,6 @@ contains
     
   end function laser_requires_gradient
 
-  ! ---------------------------------------------------------
-  subroutine lasers_get_potentials(laser, mesh, time, hamiltonian_base)
-    type(laser_t),       intent(in)    :: laser
-    type(mesh_t),        intent(inout) :: mesh
-    FLOAT,               intent(in)    :: time
-    type(hamiltonian_base_t),    intent(inout) :: hamiltonian_base
-    
-    FLOAT, allocatable :: pot(:, :)
-    FLOAT :: mag(1:MAX_DIM)
-    integer :: ip, idir
-
-    call push_sub('lasers.lasers_get_potential')
-    
-    select case(laser_kind(laser))
-
-    case(E_FIELD_SCALAR_POTENTIAL, E_FIELD_ELECTRIC)
-      if(.not. associated(hamiltonian_base%potential)) then 
-        SAFE_ALLOCATE(hamiltonian_base%potential(1:mesh%np))
-        hamiltonian_base%potential = M_ZERO
-      end if
-      
-      SAFE_ALLOCATE(pot(1:mesh%np, 1:1))
-      
-      call laser_potential(mesh%sb, laser, mesh, pot(:, 1), time)
-      
-      forall(ip = 1:mesh%np) hamiltonian_base%potential(ip) = hamiltonian_base%potential(ip) + pot(ip, 1)
-
-      SAFE_DEALLOCATE_A(pot)
-      
-    case(E_FIELD_MAGNETIC)
-      if(.not. associated(hamiltonian_base%vector_potential)) then 
-        SAFE_ALLOCATE(hamiltonian_base%vector_potential(1:mesh%np, 1:mesh%sb%dim))
-        hamiltonian_base%vector_potential = M_ZERO
-      end if
-
-      SAFE_ALLOCATE(pot(1:mesh%np, 1:mesh%sb%dim))
-
-      call laser_vector_potential(laser, pot, time)
-      call laser_field(mesh%sb, laser, mag, time)
-
-      forall(idir = 1:mesh%sb%dim, ip = 1:mesh%np) 
-        hamiltonian_base%vector_potential(ip, idir) = hamiltonian_base%vector_potential(ip, idir) + pot(ip, idir)
-      end forall
-      forall(idir = 1:mesh%sb%dim) hamiltonian_base%uniform_magnetic_field(idir) = hamiltonian_base%uniform_magnetic_field(idir) + mag(idir)
-
-    case(E_FIELD_VECTOR_POTENTIAL)
-      if(.not. associated(hamiltonian_base%vector_potential)) then 
-        SAFE_ALLOCATE(hamiltonian_base%vector_potential(1:mesh%np, 1:MAX_DIM))
-        hamiltonian_base%vector_potential(mesh%np, 1:MAX_DIM) = M_ZERO
-      end if
-      
-      call laser_field(mesh%sb, laser, mag, time)
-      forall(idir = 1:mesh%sb%dim, ip = 1:mesh%np) 
-        hamiltonian_base%vector_potential(ip, idir) = hamiltonian_base%vector_potential(ip, idir) + mag(idir)
-      end forall
-      
-    end select
-    
-    call pop_sub('lasers.lasers_get_potential')
-  end subroutine lasers_get_potentials
-
 #include "undef.F90"
 #include "real.F90"
 #include "lasers_inc.F90"

@@ -17,9 +17,10 @@
 !!
 !! $Id: hamiltonian_base_inc.F90 3988 2008-03-31 15:06:50Z fnog $
 
-subroutine X(hamiltonian_base_apply_batch)(this, mesh, psib, vpsib)
+subroutine X(hamiltonian_base_apply_batch)(this, mesh, ispin, psib, vpsib)
   type(hamiltonian_base_t),    intent(in)    :: this
   type(mesh_t),                intent(in)    :: mesh
+  integer,                     intent(in)    :: ispin
   type(batch_t),               intent(in)    :: psib
   type(batch_t),               intent(inout) :: vpsib
 
@@ -29,7 +30,7 @@ subroutine X(hamiltonian_base_apply_batch)(this, mesh, psib, vpsib)
     !$omp parallel do private(idim, ip)
     do ist = 1, psib%nst
       forall (ip = 1:mesh%np, idim = 1:psib%dim)
-        vpsib%states(ist)%X(psi)(ip, idim) = this%potential(ip)*psib%states(ist)%X(psi)(ip, idim)
+        vpsib%states(ist)%X(psi)(ip, idim) = this%potential(ip, ispin)*psib%states(ist)%X(psi)(ip, idim)
       end forall
     end do
     !$omp end parallel do
@@ -40,18 +41,16 @@ subroutine X(hamiltonian_base_apply_batch)(this, mesh, psib, vpsib)
     
   end if
 
-  ASSERT(.not. associated(this%vector_potential))
-  ASSERT(.not. associated(this%uniform_magnetic_field))
-
 end subroutine X(hamiltonian_base_apply_batch)
 
-subroutine X(hamiltonian_base_apply)(this, std, mesh, time, psi, vpsi)
-  type(hamiltonian_base_t),    intent(in)    :: this
-  type(states_dim_t),  intent(in)    :: std
-  type(mesh_t),        intent(in)    :: mesh
-  FLOAT,               intent(in)    :: time
-  R_TYPE, target,      intent(inout) :: psi(:,:)
-  R_TYPE,              intent(out)   :: vpsi(:,:)
+subroutine X(hamiltonian_base_apply)(this, std, mesh, ispin, time, psi, vpsi)
+  type(hamiltonian_base_t),  intent(in)    :: this
+  type(states_dim_t),        intent(in)    :: std
+  type(mesh_t),              intent(in)    :: mesh
+  integer,                   intent(in)    :: ispin
+  FLOAT,                     intent(in)    :: time
+  R_TYPE, target,            intent(inout) :: psi(:,:)
+  R_TYPE,                    intent(out)   :: vpsi(:,:)
 
   type(batch_t) :: psib, vpsib
 
@@ -60,7 +59,7 @@ subroutine X(hamiltonian_base_apply)(this, std, mesh, time, psi, vpsi)
   call batch_init(vpsib, std%dim, 1)
   call batch_add_state(vpsib, 1, vpsi)
 
-  call X(hamiltonian_base_apply_batch)(this, mesh, psib, vpsib)
+  call X(hamiltonian_base_apply_batch)(this, mesh, ispin, psib, vpsib)
 
   call batch_end(psib)
   call batch_end(vpsib)
