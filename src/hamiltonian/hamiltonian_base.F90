@@ -33,6 +33,7 @@ module hamiltonian_base_m
   use mesh_function_m
   use mesh_m
   use messages_m
+  use nl_operator_m
   use simul_box_m
   use states_dim_m
   use logrid_m
@@ -42,6 +43,7 @@ module hamiltonian_base_m
   use states_m
   use submesh_m
   use profiling_m
+  use projector_m
   use varinfo_m
 
   implicit none
@@ -59,8 +61,10 @@ module hamiltonian_base_m
   ! can be represented by different types of potentials.
 
   type hamiltonian_base_t
-    integer        :: nspin
-    FLOAT, pointer :: potential(:, :)
+    integer                      :: nspin
+    type(nl_operator_t), pointer :: kinetic
+    FLOAT, pointer               :: potential(:, :)
+    type(projector_t),   pointer :: nlproj(:)
   end type hamiltonian_base_t
 
 contains
@@ -73,7 +77,7 @@ contains
     integer,                  intent(in)    :: nspin
 
     this%nspin = nspin
-    SAFE_ALLOCATE(this%potential(mesh%np, this%nspin))
+    
 
   end subroutine hamiltonian_base_init
 

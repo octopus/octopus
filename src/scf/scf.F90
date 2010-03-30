@@ -248,7 +248,6 @@ contains
         SAFE_ALLOCATE(gr%mgrid)
         call multigrid_init(gr%mgrid, geo, gr%cv,gr%mesh, gr%der, gr%stencil)
       end if
-      call hamiltonian_mg_init(hm, gr)
     end if
 
     !%Variable SCFinLCAO

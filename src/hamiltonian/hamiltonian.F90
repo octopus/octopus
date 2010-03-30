@@ -42,7 +42,6 @@ module hamiltonian_m
   use messages_m
   use mpi_m
   use mpi_lib_m
-  use multigrid_m
   use ob_interface_m
   use ob_lead_m
   use poisson_m
@@ -65,7 +64,6 @@ module hamiltonian_m
   public ::                          &
     hamiltonian_t,                   &
     hamiltonian_init,                &
-    hamiltonian_mg_init,             &
     hamiltonian_end,                 &
     hamiltonian_span,                &
     dhamiltonian_apply,              &
@@ -173,9 +171,6 @@ module hamiltonian_m
 
     CMPLX, pointer :: phase(:, :)
 
-    logical :: multigrid_initialized
-    type(dgridhier_t) :: coarse_v
-
     type(scissor_t) :: scissor
   end type hamiltonian_t
 
@@ -224,6 +219,11 @@ contains
     call states_dim_copy(hm%d, states_dim)
 
     call hamiltonian_base_init(hm%hm_base, gr%mesh, hm%d%nspin)
+    ASSERT(associated(gr%der%lapl))
+    hm%hm_base%kinetic => gr%der%lapl
+!    hm%hm_base%nlproj => hm%ep%proj
+
+    SAFE_ALLOCATE(hm%hm_base%potential(gr%mesh%np, hm%d%nspin))
 
     ! initialize variables
     hm%epot = M_ZERO
@@ -415,8 +415,6 @@ contains
       ! FIXME: now replace the potential of the extended simulation region
       ! with the potential of the leads
     end if
-
-    hm%multigrid_initialized = .false.
 
     call scissor_nullify(hm%scissor)
 
@@ -696,31 +694,6 @@ contains
     end subroutine init_lead_h
   end subroutine hamiltonian_init
 
-
-  ! ---------------------------------------------------------
-  subroutine hamiltonian_mg_init(hm, gr)
-    type(hamiltonian_t), intent(inout) :: hm
-    type(grid_t),        intent(inout) :: gr
-
-    integer :: level
-
-    call push_sub('epot.epot_mg_init')
-    
-    hm%multigrid_initialized = .true.
-
-    call gridhier_init(hm%coarse_v, gr%der, np_part_size = .false.)
-
-    hm%coarse_v%level(0)%p(1:gr%mesh%np) = hm%ep%vpsl(1:gr%mesh%np) + hm%vhxc(1:gr%mesh%np, 1)
-
-    do level = 1, gr%mgrid%n_levels
-      call dmultigrid_fine2coarse(gr%mgrid%level(level)%tt, gr%mgrid%level(level - 1)%der, &
-        gr%mgrid%level(level)%mesh, hm%coarse_v%level(level - 1)%p, hm%coarse_v%level(level)%p, INJECTION)
-    end do
-
-    call pop_sub('epot.epot_mg_init')
-  end subroutine hamiltonian_mg_init
-
-
   ! ---------------------------------------------------------
   subroutine hamiltonian_end(hm, gr, geo)
     type(hamiltonian_t), intent(inout) :: hm
@@ -732,10 +705,6 @@ contains
     call push_sub('hamiltonian.hamiltonian_end')
 
     call hamiltonian_base_end(hm%hm_base)
-
-    if(hm%multigrid_initialized) then
-      call gridhier_end(hm%coarse_v)
-    end if
 
     SAFE_DEALLOCATE_P(hm%phase)
     SAFE_DEALLOCATE_P(hm%vhartree)
@@ -954,6 +923,8 @@ contains
     else
       call epot_generate(this%ep, gr, geo, st)
     end if
+
+    this%hm_base%nlproj => this%ep%proj
 
     call hamiltonian_update_potential(this, gr%mesh)
 

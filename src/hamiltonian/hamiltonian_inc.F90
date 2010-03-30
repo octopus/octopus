@@ -92,7 +92,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, kinetic_o
   end do
 
   ! start the calculation of the Laplacian
-  call X(derivatives_batch_start)(der%lapl, der, epsib, laplb, handle, set_bc = .false.)
+  ASSERT(associated(hm%hm_base%kinetic))
+  call X(derivatives_batch_start)(hm%hm_base%kinetic, der, epsib, laplb, handle, set_bc = .false.)
     
   if (.not. kinetic_only_) then
     ! apply the potential
@@ -619,7 +620,7 @@ subroutine X(vnlpsi) (hm, mesh, psi, hpsi, ik)
   call profiling_in(prof_vnlpsi, "VNLPSI")
   call push_sub('hamiltonian_inc.Xvnlpsi')
 
-  call X(project_psi)(mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, psi, hpsi, ik)
+  call X(project_psi)(mesh, hm%hm_base%nlproj, hm%ep%natoms, hm%d%dim, psi, hpsi, ik)
     
   call pop_sub('hamiltonian_inc.Xvnlpsi')
   call profiling_out(prof_vnlpsi)

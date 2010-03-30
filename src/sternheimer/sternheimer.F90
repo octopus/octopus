@@ -214,7 +214,6 @@ contains
         SAFE_ALLOCATE(sys%gr%mgrid)
         call multigrid_init(sys%gr%mgrid, sys%geo, sys%gr%cv, sys%gr%mesh, sys%gr%der, sys%gr%stencil)
       end if
-      call hamiltonian_mg_init(hm, sys%gr)
     end if
 
     ! will not converge for non-self-consistent calculation unless LRTolScheme = fixed
