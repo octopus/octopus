@@ -288,7 +288,6 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
   ! product of it with the corresponding blocks of |psi_k>, next we
   ! load another block and do the same. This way we only have to load
   ! |psi> from the L2 or memory.
-
   block_size = hardware%X(block_size)
 
   SAFE_ALLOCATE(ss(1:nst))

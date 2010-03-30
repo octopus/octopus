@@ -74,7 +74,7 @@
 
     ! we (ab)use exponential_apply to compute (1-i\delta t/2 H_n)\psi^n
     ! exponential order needs to be only 1
-    tr%te%exp_method = TAYLOR
+    tr%te%exp_method = EXP_TAYLOR
     tr%te%exp_order  = 1
 
     SAFE_ALLOCATE(zpsi(1:np*st%d%dim*st%nst))

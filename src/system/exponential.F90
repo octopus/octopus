@@ -52,10 +52,10 @@ module exponential_m
     exponential_apply,           &
     exponential_apply_all
 
-  integer, public, parameter :: &
-    LANCZOS_EXPANSION  = 2,     &
-    TAYLOR             = 3,     &
-    CHEBYSHEV          = 4
+  integer, public, parameter ::  &
+    EXP_LANCZOS            = 2,  &
+    EXP_TAYLOR             = 3,  &
+    EXP_CHEBYSHEV          = 4
 
   type exponential_t
     integer     :: exp_method  ! which method is used to apply the exponential
@@ -122,12 +122,12 @@ contains
     !% 3967 (1984); R. Kosloff, Annu. Rev. Phys. Chem. <b>45</b>, 145 (1994);
     !% C. W. Clenshaw, MTAC <b>9</b>, 118 (1955).
     !%End
-    call parse_integer(datasets_check('TDExponentialMethod'), TAYLOR, te%exp_method)
+    call parse_integer(datasets_check('TDExponentialMethod'), EXP_TAYLOR, te%exp_method)
 
     select case(te%exp_method)
-    case(TAYLOR)
-    case(CHEBYSHEV)
-    case(LANCZOS_EXPANSION)
+    case(EXP_TAYLOR)
+    case(EXP_CHEBYSHEV)
+    case(EXP_LANCZOS)
       !%Variable TDLanczosTol
       !%Type float
       !%Default 1e-5
@@ -147,7 +147,7 @@ contains
     end select
     call messages_print_var_option(stdout, 'TDExponentialMethod', te%exp_method)
 
-    if(te%exp_method==TAYLOR.or.te%exp_method==CHEBYSHEV.or.te%exp_method==LANCZOS_EXPANSION) then
+    if(te%exp_method==EXP_TAYLOR.or.te%exp_method==EXP_CHEBYSHEV.or.te%exp_method==EXP_LANCZOS) then
       !%Variable TDExpOrder
       !%Type integer
       !%Default 4
@@ -223,7 +223,7 @@ contains
     ! However, I disconnect this check, because this routine is sometimes called in an
     ! auxiliary way, in order to compute (1-hm(t)*deltat)|zpsi>.
     ! This should be cleaned up.
-    !_ASSERT(.not.(hamiltonian_inh_term(hm) .and. (te%exp_method .ne. LANCZOS_EXPANSION)))
+    !_ASSERT(.not.(hamiltonian_inh_term(hm) .and. (te%exp_method .ne. EXP_LANCZOS)))
 
     apply_magnus = .false.
     if(present(vmagnus)) apply_magnus = .true.
@@ -234,7 +234,7 @@ contains
     if(present(imag_time)) then
       if(imag_time) then
         select case(te%exp_method)
-          case(TAYLOR, LANCZOS_EXPANSION)
+          case(EXP_TAYLOR, EXP_LANCZOS)
             timestep = M_zI*deltat
           case default
             write(message(1), '(a)') &
@@ -249,11 +249,11 @@ contains
     end if
 
     select case(te%exp_method)
-    case(TAYLOR)
+    case(EXP_TAYLOR)
       call taylor_series
-    case(LANCZOS_EXPANSION)
+    case(EXP_LANCZOS)
       call lanczos
-    case(CHEBYSHEV)
+    case(EXP_CHEBYSHEV)
       call cheby
     end select
 
@@ -535,7 +535,7 @@ contains
     integer :: ii, ist
     CMPLX, pointer :: psi(:, :)
 
-    if (te%exp_method == TAYLOR) then 
+    if (te%exp_method == EXP_TAYLOR) then 
       call taylor_series_batch
     else
       
@@ -561,7 +561,7 @@ contains
       type(profile_t), save :: prof
 
       call push_sub('exponential.taylor_series_batch')
-      call profiling_in(prof, "EXP_TAYLOR_BATCH")
+      call profiling_in(prof, "EXP_EXP_TAYLOR_BATCH")
 
       SAFE_ALLOCATE(psi1 (1:der%mesh%np_part, 1:hm%d%dim, 1:psib%nst))
       SAFE_ALLOCATE(hpsi1(1:der%mesh%np, 1:hm%d%dim, 1:psib%nst))
@@ -664,7 +664,7 @@ contains
 
     call push_sub('exponential.exponential_apply_all')
 
-    ASSERT(te%exp_method .eq. TAYLOR)
+    ASSERT(te%exp_method .eq. EXP_TAYLOR)
 
     apply_magnus = .false.
     if(present(vmagnus)) apply_magnus = .true.

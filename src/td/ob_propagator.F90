@@ -94,7 +94,7 @@ contains
 
     call push_sub('ob_propagator.ob_propagator_init')
 
-    taylor_1st%exp_method = TAYLOR
+    taylor_1st%exp_method = EXP_TAYLOR
     taylor_1st%exp_order  = 1
     order                 = gr%der%order
 
