@@ -74,12 +74,6 @@ module hamiltonian_m
     zhamiltonian_apply_batch,        &
     dhamiltonian_diagonal,           &
     zhamiltonian_diagonal,           &
-    dvlpsi_batch,                    &
-    zvlpsi_batch,                    &
-    dvnlpsi,                         &
-    zvnlpsi,                         &
-    dvnlpsi_batch,                   &
-    zvnlpsi_batch,                   &
     dmagnus,                         &
     zmagnus,                         &
     dvmask,                          &
@@ -94,9 +88,7 @@ module hamiltonian_m
     hamiltonian_not_adjoint,         &
     hamiltonian_hermitian,           &
     hamiltonian_epot_generate,       &
-    hamiltonian_update_potential,    &
-    dvexternal,                      &
-    zvexternal
+    hamiltonian_update_potential
 
   type hamiltonian_t
     ! The Hamiltonian must know what are the "dimensions" of the spaces,
@@ -158,7 +150,7 @@ module hamiltonian_m
 
     ! For the Hartree-Fock Hamiltonian, the Fock operator depends on the states.
     type(states_t) :: st
-
+    
     ! There may be an "inhomogeneous", "source", or "forcing" term (useful for the OCT formalism)
     logical :: inh_term
     type(states_t) :: inh_st
@@ -190,7 +182,7 @@ module hamiltonian_m
     HARTREE_FOCK          = 3, &
     KOHN_SHAM_DFT         = 4
 
-  type(profile_t), save :: prof_hamiltonian, prof_vlpsi, prof_vnlpsi, prof_kinetic
+  type(profile_t), save :: prof_hamiltonian, prof_vlpsi, prof_kinetic
 
 contains
 

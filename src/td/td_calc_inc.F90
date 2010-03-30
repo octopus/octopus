@@ -88,8 +88,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, t)
       end do
 
       do j = 1, gr%mesh%sb%dim
-        vnl_xzpsi = M_z0
-        call zvnlpsi(hm, gr%mesh, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
+        call zhamiltonian_apply(hm, gr%der, xzpsi(:, :, j), vnl_xzpsi, ist, ik, t, terms = TERM_NON_LOCAL_POTENTIAL)
 
         do idim = 1, st%d%dim
           x(j) = x(j) - 2*st%occ(ist, ik)*zmf_dotp(gr%mesh, hzpsi(1:gr%mesh%np, idim), vnl_xzpsi(:, idim) )
@@ -104,8 +103,8 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, t)
       end do
 
       do j = 1, gr%mesh%sb%dim
-        vnl_xzpsi = M_z0
-        call zvnlpsi(hm, gr%mesh, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
+        call zhamiltonian_apply(hm, gr%der, xzpsi(:, :, j), vnl_xzpsi, ist, ik, t, terms = TERM_NON_LOCAL_POTENTIAL)
+
         do idim = 1, st%d%dim
           x(j) = x(j) + 2*st%occ(ist, ik)* &
             zmf_dotp(gr%mesh, st%zpsi(1:gr%mesh%np, idim, ist, ik), vnl_xzpsi(:, idim) )

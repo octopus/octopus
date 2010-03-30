@@ -69,9 +69,11 @@ module hamiltonian_base_m
 
   integer, public ::                     &
     TERM_ALL                 = HUGE(1),  &
-    TERM_KINETIC             = 1,        &
-    TERM_LOCAL_POTENTIAL     = 2,        & 
-    TERM_NON_LOCAL_POTENTIAL = 4
+    TERM_KINETIC             =   1,      &
+    TERM_LOCAL_POTENTIAL     =   2,      & 
+    TERM_NON_LOCAL_POTENTIAL =   4,      &
+    TERM_OTHERS              =   8,      &
+    TERM_LOCAL_EXTERNAL      =  16
 
 contains
 

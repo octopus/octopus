@@ -95,37 +95,60 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
     end do
   end do
 
-  ! start the calculation of the Laplacian
-  ASSERT(associated(hm%hm_base%kinetic))
-  call X(derivatives_batch_start)(hm%hm_base%kinetic, der, epsib, laplb, handle, set_bc = .false.)
-    
-  if (.not. kinetic_only_) then
-    ! apply the potential
-    call X(vlpsi_batch)(hm, der%mesh, epsib, hpsib, ik)
-    if(hm%ep%non_local) call X(vnlpsi_batch)(hm, der%mesh, epsib, hpsib, ik)
+  if(iand(TERM_KINETIC, terms_) /= 0) then
+    ! start the calculation of the Laplacian
+    ASSERT(associated(hm%hm_base%kinetic))
+    call X(derivatives_batch_start)(hm%hm_base%kinetic, der, epsib, laplb, handle, set_bc = .false.)
   end if
 
-  call X(derivatives_batch_finish)(handle)
-  call batch_end(laplb)
+  ! apply the local potential
+  if (iand(TERM_LOCAL_POTENTIAL, terms_) /= 0) then
+
+    call X(vlpsi_batch)(hm, der%mesh, epsib, hpsib, ik)
+
+  else if(iand(TERM_LOCAL_EXTERNAL, terms_) /= 0) then
+
+    do ii = 1, nst
+      call set_pointers()
+      do idim = 1, hm%d%dim
+        hpsi(1:der%mesh%np, idim) = hm%ep%vpsl(1:der%mesh%np)*epsi(1:der%mesh%np, idim)
+      end do
+    end do
+
+  else
+
+    hpsi(1:der%mesh%np, 1:hm%d%dim) = M_ZERO
+
+  end if
+
+  ! and the non-local one
+  if (iand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
+    if(hm%ep%non_local) call X(project_psi_batch)(der%mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, epsib, hpsib, ik)
+  end if
+
+  if(iand(TERM_KINETIC, terms_) /= 0) then
+    call X(derivatives_batch_finish)(handle)
+    call batch_end(laplb)
+  end if
 
   do ii = 1, nst
     call set_pointers()
 
-    if (kinetic_only_) hpsi(1:der%mesh%np, 1:hm%d%dim) = M_ZERO
-
     ! finish the calculation of the Laplacian
-    call profiling_in(prof_kinetic, "KINETIC")
-    do idim = 1, hm%d%dim
+    if(iand(TERM_KINETIC, terms_) /= 0) then
+      call profiling_in(prof_kinetic, "KINETIC")
+      do idim = 1, hm%d%dim
 #ifdef R_TREAL
-      call blas_axpy(der%mesh%np, -M_HALF/hm%mass, lapl(1, idim, ii), 1, hpsi(1, idim), 1)
+        call blas_axpy(der%mesh%np, -M_HALF/hm%mass, lapl(1, idim, ii), 1, hpsi(1, idim), 1)
 #else
-      call blas_axpy(der%mesh%np, -M_HALF/hm%mass, lapl(1, idim, ii), hpsi(1, idim))
+        call blas_axpy(der%mesh%np, -M_HALF/hm%mass, lapl(1, idim, ii), hpsi(1, idim))
 #endif
-      call profiling_count_operations(der%mesh%np*CNST(2.0)*R_ADD)
-    end do
-    call profiling_out(prof_kinetic)
-    
-    if (.not. kinetic_only_) then
+        call profiling_count_operations(der%mesh%np*CNST(2.0)*R_ADD)
+      end do
+      call profiling_out(prof_kinetic)
+    end if
+
+    if (iand(TERM_OTHERS, terms_) /= 0) then
       
       ! all functions that require the gradient or other derivatives of
       ! epsi should go after this point and calculate it using Xget_grad
@@ -478,14 +501,14 @@ subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
     call lalg_copy(der%mesh%np, hpsi(:, idim), auxpsi(:, idim))
   end do
 
-  if (hm%ep%non_local) call X(vnlpsi)(hm, der%mesh, psi, auxpsi, ik)
+  if (hm%ep%non_local) call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL)
 
   hpsi(1:der%mesh%np, 1) = hpsi(1:der%mesh%np, 1) -  M_zI*vmagnus(1:der%mesh%np, ispin, 1)*auxpsi(1:der%mesh%np, 1)
   auxpsi(1:der%mesh%np, 1) = vmagnus(1:der%mesh%np, ispin, 1)*psi(1:der%mesh%np, 1)
 
   call X(hamiltonian_apply)(hm, der, auxpsi, aux2psi, ist = 1, ik = ik, terms = TERM_KINETIC)
 
-  if (hm%ep%non_local) call X(vnlpsi)(hm, der%mesh, auxpsi, aux2psi, ik)
+  if (hm%ep%non_local) call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL)
 
   hpsi(1:der%mesh%np, 1) = hpsi(1:der%mesh%np, 1) + M_zI*aux2psi(1:der%mesh%np, 1)
 
@@ -495,7 +518,7 @@ subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
 
   hpsi(1:der%mesh%np, 1) = hpsi(1:der%mesh%np, 1) + vmagnus(1:der%mesh%np, ispin, 2)*psi(1:der%mesh%np, 1)
 
-  if (hm%ep%non_local) call X(vnlpsi)(hm, der%mesh, psi, Hpsi, ik)
+  if (hm%ep%non_local) call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL)
 
   call X(vborders)(der, hm, psi, hpsi)
 
@@ -612,43 +635,6 @@ subroutine X(magnetic_terms) (der, hm, psi, hpsi, grad, ik)
   call pop_sub('hamiltonian_inc.Xmagnetic_terms')
 end subroutine X(magnetic_terms)
 
-
-! ---------------------------------------------------------
-subroutine X(vnlpsi) (hm, mesh, psi, hpsi, ik)
-  type(hamiltonian_t), intent(in)    :: hm
-  type(mesh_t),        intent(in)    :: mesh
-  R_TYPE,              intent(inout) :: psi(:,:)
-  R_TYPE,              intent(inout) :: hpsi(:,:)
-  integer,             intent(in)    :: ik
-
-  call profiling_in(prof_vnlpsi, "VNLPSI")
-  call push_sub('hamiltonian_inc.Xvnlpsi')
-
-  call X(project_psi)(mesh, hm%hm_base%nlproj, hm%ep%natoms, hm%d%dim, psi, hpsi, ik)
-    
-  call pop_sub('hamiltonian_inc.Xvnlpsi')
-  call profiling_out(prof_vnlpsi)
-end subroutine X(vnlpsi)
-
-
-! ---------------------------------------------------------
-subroutine X(vnlpsi_batch) (hm, mesh, psib, hpsib, ik)
-  type(hamiltonian_t), intent(in)    :: hm
-  type(mesh_t),        intent(in)    :: mesh
-  type(batch_t),       intent(in)    :: psib
-  type(batch_t),       intent(inout) :: hpsib
-  integer,             intent(in)    :: ik
-
-  call profiling_in(prof_vnlpsi, "VNLPSI")
-  call push_sub('hamiltonian_inc.Xvnlpsi_batch')
-
-  call X(project_psi_batch)(mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, psib, hpsib, ik)
-
-  call pop_sub('hamiltonian_inc.Xvnlpsi_batch')
-  call profiling_out(prof_vnlpsi)
-end subroutine X(vnlpsi_batch)
-
-
 ! ---------------------------------------------------------
 subroutine X(vlpsi_batch) (hm, mesh, psib, hpsib, ik)
   type(hamiltonian_t), intent(in)    :: hm
@@ -689,29 +675,6 @@ subroutine X(vlpsi_batch) (hm, mesh, psib, hpsib, ik)
   call pop_sub('hamiltonian_inc.Xvlpsi_batch')
   call profiling_out(prof_vlpsi)
 end subroutine X(vlpsi_batch)
-
-! ---------------------------------------------------------
-subroutine X(vexternal) (hm, der, psi, hpsi, ik)
-  type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(inout) :: der
-  R_TYPE,              intent(inout) :: psi(:,:)
-  R_TYPE,              intent(inout) :: hpsi(:,:)
-  integer,             intent(in)    :: ik
-
-  integer :: idim
-
-  call profiling_in(prof_vlpsi, "VLPSI")
-  call push_sub('hamiltonian_inc.Xvexternal')
-
-  do idim = 1, hm%d%dim
-    hpsi(1:der%mesh%np, idim) = hpsi(1:der%mesh%np, idim) + hm%ep%vpsl(1:der%mesh%np)*psi(1:der%mesh%np, idim)
-  end do
-
-  if(hm%ep%non_local) call X(vnlpsi)(hm, der%mesh, psi, hpsi, ik)
-
-  call pop_sub('hamiltonian_inc.Xvexternal')
-  call profiling_out(prof_vlpsi)
-end subroutine X(vexternal)
 
 ! ---------------------------------------------------------
 subroutine X(vborders) (der, hm, psi, hpsi)
@@ -835,7 +798,6 @@ subroutine X(hamiltonian_diagonal) (hm, der, diag, ik)
     
   call pop_sub('hamiltonian_inc.Xhamiltonian_diagonal')
 end subroutine X(hamiltonian_diagonal)
-
 
 !! Local Variables:
 !! mode: f90

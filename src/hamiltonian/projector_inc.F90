@@ -59,13 +59,14 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   integer :: ipj, nreduce, ii, ns, idim, ll, mm, is, ist
   R_TYPE, allocatable :: reduce_buffer(:), lpsi(:, :)
   integer, allocatable :: ireduce(:, :, :, :)
-  type(profile_t), save :: prof_scatter, prof_gather
+  type(profile_t), save :: prof_scatter, prof_gather, prof
 #if defined(HAVE_MPI)
   type(profile_t), save :: reduce_prof
   R_TYPE, allocatable   :: reduce_buffer_dest(:)
 #endif
 
   call push_sub('projector_inc.project_psi_batch')
+  call profiling_in(prof, "VNLPSI")
 
   ! To optimize the application of the non-local operator in parallel,
   ! the projectors are applied in steps. First the <p|psi> is
@@ -237,6 +238,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   SAFE_DEALLOCATE_A(reduce_buffer)
   SAFE_DEALLOCATE_A(ireduce)
 
+  call profiling_out(prof)
   call pop_sub('projector_inc.project_psi_batch')
 
 end subroutine X(project_psi_batch)
