@@ -15,13 +15,13 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id: em_field_inc.F90 3988 2008-03-31 15:06:50Z fnog $
+!! $Id: hamiltonian_base_inc.F90 3988 2008-03-31 15:06:50Z fnog $
 
-subroutine X(em_field_apply_batch)(this, mesh, psib, vpsib)
-  type(em_field_t),    intent(in)    :: this
-  type(mesh_t),        intent(in)    :: mesh
-  type(batch_t),       intent(in)    :: psib
-  type(batch_t),       intent(inout) :: vpsib
+subroutine X(hamiltonian_base_apply_batch)(this, mesh, psib, vpsib)
+  type(hamiltonian_base_t),    intent(in)    :: this
+  type(mesh_t),                intent(in)    :: mesh
+  type(batch_t),               intent(in)    :: psib
+  type(batch_t),               intent(inout) :: vpsib
 
   integer :: ist, idim, ip
 
@@ -43,10 +43,10 @@ subroutine X(em_field_apply_batch)(this, mesh, psib, vpsib)
   ASSERT(.not. associated(this%vector_potential))
   ASSERT(.not. associated(this%uniform_magnetic_field))
 
-end subroutine X(em_field_apply_batch)
+end subroutine X(hamiltonian_base_apply_batch)
 
-subroutine X(em_field_apply)(this, std, mesh, time, psi, vpsi)
-  type(em_field_t),    intent(in)    :: this
+subroutine X(hamiltonian_base_apply)(this, std, mesh, time, psi, vpsi)
+  type(hamiltonian_base_t),    intent(in)    :: this
   type(states_dim_t),  intent(in)    :: std
   type(mesh_t),        intent(in)    :: mesh
   FLOAT,               intent(in)    :: time
@@ -60,11 +60,11 @@ subroutine X(em_field_apply)(this, std, mesh, time, psi, vpsi)
   call batch_init(vpsib, std%dim, 1)
   call batch_add_state(vpsib, 1, vpsi)
 
-  call X(em_field_apply_batch)(this, mesh, psib, vpsib)
+  call X(hamiltonian_base_apply_batch)(this, mesh, psib, vpsib)
 
   call batch_end(psib)
   call batch_end(vpsib)
-end subroutine X(em_field_apply)
+end subroutine X(hamiltonian_base_apply)
 
 !! Local Variables:
 !! mode: f90

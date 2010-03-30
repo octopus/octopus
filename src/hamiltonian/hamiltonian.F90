@@ -24,7 +24,7 @@ module hamiltonian_m
   use blas_m
   use datasets_m
   use derivatives_m
-  use em_field_m
+  use hamiltonian_base_m
   use external_pot_m
   use gauge_field_m
   use geometry_m
@@ -175,7 +175,7 @@ module hamiltonian_m
     logical :: multigrid_initialized
     type(dgridhier_t) :: coarse_v
 
-    type(em_field_t), pointer :: total(:) ! one electromagnetic field per spin channel
+    type(hamiltonian_base_t), pointer :: hm_base(:) ! one electromagnetic field per spin channel
     type(scissor_t) :: scissor
   end type hamiltonian_t
 
@@ -416,7 +416,7 @@ contains
 
     hm%multigrid_initialized = .false.
 
-    SAFE_ALLOCATE(hm%total(1:hm%d%nspin))
+    SAFE_ALLOCATE(hm%hm_base(1:hm%d%nspin))
 
     call scissor_nullify(hm%scissor)
 
@@ -732,10 +732,10 @@ contains
     call push_sub('hamiltonian.hamiltonian_end')
 
     do ispin = 1, hm%d%nspin
-      call em_field_end(hm%total(ispin))
+      call hamiltonian_base_end(hm%hm_base(ispin))
     end do
 
-    SAFE_DEALLOCATE_P(hm%total)
+    SAFE_DEALLOCATE_P(hm%hm_base)
 
     if(hm%multigrid_initialized) then
       call gridhier_end(hm%coarse_v)
@@ -932,11 +932,11 @@ contains
 
     do ispin = 1, this%d%nspin
       
-      if(.not. associated(this%total(ispin)%potential)) then
-        SAFE_ALLOCATE(this%total(ispin)%potential(1:mesh%np))
+      if(.not. associated(this%hm_base(ispin)%potential)) then
+        SAFE_ALLOCATE(this%hm_base(ispin)%potential(1:mesh%np))
       end if
 
-      forall (ip = 1:mesh%np) this%total(ispin)%potential(ip) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
+      forall (ip = 1:mesh%np) this%hm_base(ispin)%potential(ip) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
       
     end do
     

@@ -21,29 +21,29 @@
 
 noinst_LIBRARIES = libhamiltonian.a
 
-libhamiltonian_a_SOURCES = \
-	lasers.F90         \
-	species_pot.F90    \
-	rkb_projector.F90  \
-	kb_projector.F90   \
-	hgh_projector.F90  \
-	projector.F90      \
-	epot.F90           \
-	em_field.F90       \
-	hamiltonian.F90    \
-	scf_tol.F90        \
-	gauge_field.F90    \
-	scissor.F90        \
-	ob_lead.F90        \
+libhamiltonian_a_SOURCES =         \
+	lasers.F90                 \
+	species_pot.F90            \
+	rkb_projector.F90          \
+	kb_projector.F90           \
+	hgh_projector.F90          \
+	projector.F90              \
+	epot.F90                   \
+	hamiltonian_base.F90       \
+	hamiltonian.F90            \
+	scf_tol.F90                \
+	gauge_field.F90            \
+	scissor.F90                \
+	ob_lead.F90                \
         born_charges.F90
 
-noinst_HEADERS =              \
-	lasers_inc.F90        \
-	kb_projector_inc.F90  \
-	hgh_projector_inc.F90 \
-	projector_inc.F90     \
-	em_field_inc.F90      \
-	scissor_inc.F90       \
+noinst_HEADERS =                      \
+	lasers_inc.F90                \
+	kb_projector_inc.F90          \
+	hgh_projector_inc.F90         \
+	projector_inc.F90             \
+	hamiltonian_base_inc.F90      \
+	scissor_inc.F90               \
 	hamiltonian_inc.F90
 
 include $(srcdir)/../common-rules.make
@@ -53,15 +53,15 @@ depend:
 
 ob_lead.o: ob_lead.F90
 gauge_field.o : gauge_field.F90 projector.o
-lasers.o : lasers.F90 lasers_inc.F90 em_field.o
+lasers.o : lasers.F90 lasers_inc.F90 hamiltonian_base.o
 species_pot.o : species_pot.F90 
 rkb_projector.o : rkb_projector.F90 species_pot.o 
 kb_projector.o : kb_projector.F90 kb_projector_inc.F90 species_pot.o 
 hgh_projector.o : hgh_projector.F90 hgh_projector_inc.F90 species_pot.o 
 projector.o : projector.F90 projector_inc.F90 rkb_projector.o kb_projector.o hgh_projector.o species_pot.o 
 epot.o : epot.F90 projector.o lasers.o species_pot.o gauge_field.o
-hamiltonian.o : hamiltonian.F90 hamiltonian_inc.F90 lasers.o projector.o epot.o gauge_field.o ob_lead.o em_field.o scissor.o
+hamiltonian.o : hamiltonian.F90 hamiltonian_inc.F90 lasers.o projector.o epot.o gauge_field.o ob_lead.o hamiltonian_base.o scissor.o
 scf_tol.o : scf_tol.F90 
-em_field.o : em_field.F90 em_field_inc.F90
+hamiltonian_base.o : hamiltonian_base.F90 hamiltonian_base_inc.F90
 scissor.o : scissor.F90 scissor_inc.F90
 born_charges.o : born_charges.F90

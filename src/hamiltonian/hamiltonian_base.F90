@@ -15,11 +15,11 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id: em_field.F90 3988 2008-03-31 15:06:50Z fnog $
+!! $Id: hamiltonian_base.F90 3988 2008-03-31 15:06:50Z fnog $
 
 #include "global.h"
 
-module em_field_m
+module hamiltonian_base_m
   use batch_m
   use datasets_m
   use derivatives_m
@@ -48,42 +48,42 @@ module em_field_m
 
   private
 
-  public ::                            &
-    em_field_t,                        &
-    dem_field_apply_batch,             &
-    zem_field_apply_batch,             &
-    em_field_end
+  public ::                                    &
+    hamiltonian_base_t,                        &
+    dhamiltonian_base_apply_batch,             &
+    zhamiltonian_base_apply_batch,             &
+    hamiltonian_base_end
 
   ! This object stores and applies an electromagnetic potential that
   ! can be represented by different types of potentials.
 
-  type em_field_t
+  type hamiltonian_base_t
     FLOAT, pointer :: potential(:)                => null()
     FLOAT, pointer :: vector_potential(:, :)      => null()
     FLOAT, pointer :: uniform_magnetic_field(:)   => null()
-  end type em_field_t
+  end type hamiltonian_base_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine em_field_end(this)
-    type(em_field_t), intent(inout) :: this
+  subroutine hamiltonian_base_end(this)
+    type(hamiltonian_base_t), intent(inout) :: this
 
     SAFE_DEALLOCATE_P(this%potential)
     SAFE_DEALLOCATE_P(this%vector_potential)
     SAFE_DEALLOCATE_P(this%uniform_magnetic_field)
 
-  end subroutine em_field_end
+  end subroutine hamiltonian_base_end
 
 #include "undef.F90"
 #include "real.F90"
-#include "em_field_inc.F90"
+#include "hamiltonian_base_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
-#include "em_field_inc.F90"
+#include "hamiltonian_base_inc.F90"
 
-end module em_field_m
+end module hamiltonian_base_m
 
 
 
