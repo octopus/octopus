@@ -2492,9 +2492,11 @@ return
     if(st%d%kpt%parallel) then
       call reduce_all(st%d%kpt%mpi_grp)
     end if
+#endif
 
     call pop_sub('states.states_calc_tau_jp_gn')
 
+#if defined(HAVE_MPI)
   contains 
 
     subroutine reduce_all(grp)
