@@ -126,9 +126,9 @@ FLOAT function X(electronic_kinetic_energy)(hm, gr, st) result(t0)
         do idim = 1, st%d%dim
           call lalg_copy(gr%mesh%np, st%X(psi)(:, idim, ist, ik), psi(:, idim))
         end do
-        call X(hamiltonian_apply)(hm, gr%der, psi, tpsi, ist, ik, kinetic_only = .true.)
+        call X(hamiltonian_apply)(hm, gr%der, psi, tpsi, ist, ik, terms = TERM_KINETIC)
       else
-        call X(hamiltonian_apply)(hm, gr%der, st%X(psi)(:, :, ist, ik), tpsi, ist, ik, kinetic_only = .true.)
+        call X(hamiltonian_apply)(hm, gr%der, st%X(psi)(:, :, ist, ik), tpsi, ist, ik, terms = TERM_KINETIC)
       end if
       t(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), tpsi)
     end do

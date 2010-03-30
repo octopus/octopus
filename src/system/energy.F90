@@ -30,6 +30,7 @@ module energy_m
   use global_m
   use grid_m
   use hamiltonian_m
+  use hamiltonian_base_m
   use io_m
   use io_function_m
   use lalg_basic_m

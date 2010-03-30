@@ -30,6 +30,7 @@ module gcm_m
   use grid_m
   use system_m
   use hamiltonian_m
+  use hamiltonian_base_m
   use states_m
   use states_dim_m
   use states_calc_m
@@ -183,7 +184,7 @@ module gcm_m
         do k = 1, phi(j)%nst
           opst%dpsi(:, :, k, 1) = M_ZERO
           call dhamiltonian_apply(hm, gr%der, &
-            phi(j)%dpsi(:, :, k, 1), opst%dpsi(:, :, k, 1), ist = k, ik = 1, kinetic_only = .true.)
+            phi(j)%dpsi(:, :, k, 1), opst%dpsi(:, :, k, 1), ist = k, ik = 1, terms = TERM_KINETIC)
           call dvexternal(hm, gr%der, phi(j)%dpsi(:, :, k, 1), opst%dpsi(:, :, k, 1), 1)
         end do
         kij = dstates_mpmatrixelement(gr%mesh, phi(i), phi(j), opst)

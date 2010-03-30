@@ -26,6 +26,11 @@ subroutine X(hamiltonian_base_apply_batch)(this, mesh, ispin, psib, vpsib)
 
   integer :: ist, idim, ip
 
+  
+
+
+
+
   if(associated(this%potential)) then
     !$omp parallel do private(idim, ip)
     do ist = 1, psib%nst
@@ -42,28 +47,6 @@ subroutine X(hamiltonian_base_apply_batch)(this, mesh, ispin, psib, vpsib)
   end if
 
 end subroutine X(hamiltonian_base_apply_batch)
-
-subroutine X(hamiltonian_base_apply)(this, std, mesh, ispin, time, psi, vpsi)
-  type(hamiltonian_base_t),  intent(in)    :: this
-  type(states_dim_t),        intent(in)    :: std
-  type(mesh_t),              intent(in)    :: mesh
-  integer,                   intent(in)    :: ispin
-  FLOAT,                     intent(in)    :: time
-  R_TYPE, target,            intent(inout) :: psi(:,:)
-  R_TYPE,                    intent(out)   :: vpsi(:,:)
-
-  type(batch_t) :: psib, vpsib
-
-  call batch_init(psib, std%dim, 1)
-  call batch_add_state(psib, 1, psi)
-  call batch_init(vpsib, std%dim, 1)
-  call batch_add_state(vpsib, 1, vpsi)
-
-  call X(hamiltonian_base_apply_batch)(this, mesh, ispin, psib, vpsib)
-
-  call batch_end(psib)
-  call batch_end(vpsib)
-end subroutine X(hamiltonian_base_apply)
 
 !! Local Variables:
 !! mode: f90

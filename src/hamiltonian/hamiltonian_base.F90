@@ -67,8 +67,13 @@ module hamiltonian_base_m
     type(projector_t),   pointer :: nlproj(:)
   end type hamiltonian_base_t
 
-contains
+  integer, public ::                     &
+    TERM_ALL                 = HUGE(1),  &
+    TERM_KINETIC             = 1,        &
+    TERM_LOCAL_POTENTIAL     = 2,        & 
+    TERM_NON_LOCAL_POTENTIAL = 4
 
+contains
 
   ! ---------------------------------------------------------
   subroutine hamiltonian_base_init(this, mesh, nspin)

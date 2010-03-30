@@ -18,14 +18,14 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, kinetic_only)
+subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   type(batch_t),       intent(inout) :: psib
   type(batch_t),       intent(inout) :: hpsib
   integer,             intent(in)    :: ik
   FLOAT, optional,     intent(in)    :: time
-  logical, optional,   intent(in)    :: kinetic_only
+  integer, optional,   intent(in)    :: terms
   
   integer :: nst, bs, sp
   R_TYPE, pointer     :: epsi(:,:)
@@ -39,13 +39,17 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, kinetic_o
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
   type(batch_t) :: epsib, laplb
   type(derivatives_handle_batch_t) :: handle
+  integer :: terms_
 
   call profiling_in(prof_hamiltonian, "HAMILTONIAN")
   call push_sub('hamiltonian_inc.Xhamiltonian_apply_batch')
 
-  kinetic_only_ = .false.
-  if(present(kinetic_only)) kinetic_only_ = kinetic_only
+  ! all terms are enabled by default
+  terms_ = TERM_ALL
+  if(present(terms)) terms_ = terms
 
+  kinetic_only_ = (ieor(terms_, TERM_KINETIC) == 0)
+  
   if(present(time).and.hm%d%cdft) then
     message(1) = "TDCDFT not yet implemented."
     call write_fatal(1)
@@ -232,7 +236,7 @@ subroutine X(get_grad)(hm, der, psi, grad)
 end subroutine X(get_grad)       
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, kinetic_only)
+subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, terms)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ist       ! the index of the state
@@ -240,7 +244,7 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, kinetic_only
   R_TYPE,   target,    intent(inout) :: psi(:,:)  ! psi(gr%mesh%np_part, hm%d%dim)
   R_TYPE,              intent(out)   :: hpsi(:,:) ! hpsi(gr%mesh%np, hm%d%dim)
   FLOAT,    optional,  intent(in)    :: time
-  logical,  optional,  intent(in)    :: kinetic_only
+  integer,  optional,  intent(in)    :: terms
 
   type(batch_t) :: psib, hpsib
 
@@ -251,7 +255,7 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, kinetic_only
   call batch_init(hpsib, hm%d%dim, 1)
   call batch_add_state(hpsib, ist, hpsi)
 
-  call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time, kinetic_only = kinetic_only)
+  call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time, terms = terms)
 
   call batch_end(psib)
   call batch_end(hpsib)
@@ -468,7 +472,7 @@ subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
 
   ispin = states_dim_get_spin_index(hm%d, ik)
 
-  call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, kinetic_only = .true.)
+  call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_KINETIC)
 
   do idim = 1, hm%d%dim
     call lalg_copy(der%mesh%np, hpsi(:, idim), auxpsi(:, idim))
@@ -479,7 +483,7 @@ subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
   hpsi(1:der%mesh%np, 1) = hpsi(1:der%mesh%np, 1) -  M_zI*vmagnus(1:der%mesh%np, ispin, 1)*auxpsi(1:der%mesh%np, 1)
   auxpsi(1:der%mesh%np, 1) = vmagnus(1:der%mesh%np, ispin, 1)*psi(1:der%mesh%np, 1)
 
-  call X(hamiltonian_apply)(hm, der, auxpsi, aux2psi, ist = 1, ik = ik, kinetic_only = .true.)
+  call X(hamiltonian_apply)(hm, der, auxpsi, aux2psi, ist = 1, ik = ik, terms = TERM_KINETIC)
 
   if (hm%ep%non_local) call X(vnlpsi)(hm, der%mesh, auxpsi, aux2psi, ik)
 

@@ -28,6 +28,7 @@ module ob_lippmann_schwinger_m
   use global_m
   use grid_m
   use hamiltonian_m
+  use hamiltonian_base_m
   use io_m
   use io_function_m
   use lalg_basic_m
@@ -207,7 +208,7 @@ contains
     ! Calculate right hand side e-T-V0-sum(a)[H_ca*g_a*H_ac].
     rhs(:, :) = M_z0
 
-    call zhamiltonian_apply(hm_p, gr_p%der, tmp, rhs, ist_p, ik_p, kinetic_only=.true.)
+    call zhamiltonian_apply(hm_p, gr_p%der, tmp, rhs, ist_p, ik_p, terms = TERM_KINETIC)
 
     ! Apply lead potential. Left and right lead potential are assumed to be equal.
     forall(ip = 1:gr_p%mesh%np )
