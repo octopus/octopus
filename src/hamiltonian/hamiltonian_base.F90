@@ -23,27 +23,27 @@ module hamiltonian_base_m
   use batch_m
   use datasets_m
   use derivatives_m
+  use geometry_m
   use global_m
-  use hardware_m
   use grid_m
+  use hardware_m
   use io_m
   use lalg_basic_m
-  use parser_m
-  use splines_m
-  use mesh_function_m
+  use logrid_m
   use mesh_m
+  use mesh_function_m
   use messages_m
   use nl_operator_m
-  use simul_box_m
-  use states_dim_m
-  use logrid_m
-  use species_m
-  use solids_m
-  use geometry_m
-  use states_m
-  use submesh_m
+  use parser_m
   use profiling_m
   use projector_m
+  use simul_box_m
+  use solids_m
+  use species_m
+  use splines_m
+  use states_m
+  use states_dim_m
+  use submesh_m
   use varinfo_m
 
   implicit none
@@ -83,17 +83,22 @@ contains
     type(mesh_t),             intent(in)    :: mesh
     integer,                  intent(in)    :: nspin
 
+    call push_sub('hamiltonian_base.hamiltonian_base_init')
+
     this%nspin = nspin
     
-
+    call pop_sub('hamiltonian_base.hamiltonian_base_init')
   end subroutine hamiltonian_base_init
 
   ! ---------------------------------------------------------
   subroutine hamiltonian_base_end(this)
     type(hamiltonian_base_t), intent(inout) :: this
 
+    call push_sub('hamiltonian_base.hamiltonian_base_end')
+
     SAFE_DEALLOCATE_P(this%potential)
 
+    call pop_sub('hamiltonian_base.hamiltonian_base_end')
   end subroutine hamiltonian_base_end
 
 #include "undef.F90"
