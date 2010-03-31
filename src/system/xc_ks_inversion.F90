@@ -1,4 +1,4 @@
-!! Copyright (C) 2010 H. Appel
+!! Copyright (C) 2010 H. Appel, N. Helbig
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -55,21 +55,26 @@ module xc_ks_inversion_m
     xc_ks_inversion_init,          &
     xc_ks_inversion_end,           &
     xc_ks_inversion_write_info,    &
-    dxc_ks_inversion_calc,         &
-    zxc_ks_inversion_calc,         &
+    xc_ks_inversion_calc,          &
     invertks_2part,                &
     invertks_iter,                 &
     invertvxc_iter
+
+  ! KS inversion methods/algorithms
+  integer, public, parameter ::            &
+    XC_INVERSION_METHOD_VS_ITER      = 1,  &
+    XC_INVERSION_METHOD_TWO_PARTICLE = 2,  &
+    XC_INVERSION_METHOD_VXC_ITER     = 3
 
   ! the KS inversion levels
   integer, public, parameter ::      &
     XC_KS_INVERSION_NONE      = 1,   &
     XC_KS_INVERSION_ADIABATIC = 2,   &   
-    XC_KS_INVERSION_GS_EXACT  = 3
+    XC_KS_INVERSION_TD_EXACT  = 3
 
   type xc_ks_inversion_t
-     integer             :: level       ! 1 = no ks_inversion, 2 = adiabatic
      integer             :: method
+     integer             :: level
      type(states_t)      :: aux_st
      type(hamiltonian_t) :: aux_hm
      type(eigensolver_t) :: eigensolver
@@ -91,7 +96,7 @@ contains
 
     if(iand(family, XC_FAMILY_KS_INVERSION).eq.0) then
       ks_inv%level = XC_KS_INVERSION_NONE
-    call pop_sub('xc_ks_inversion.xc_ks_inversion_init')
+      call pop_sub('xc_ks_inversion.xc_ks_inversion_init')
       return
     end if
 
@@ -109,16 +114,18 @@ contains
     !%Description
     !% Selects whether the exact two-particle method or the iterative scheme
     !% is used to invert the density to get the KS potential.
-    !%Option iterative 0
+    !%Option iterative 1
     !% Iterative scheme for v_s.
-    !%Option two_particle 1
+    !%Option two_particle 2
     !% Exact two-particle scheme.
-    !%Option iterativevxc 2
+    !%Option iterativevxc 3
     !% Iterative scheme for v_xc.
     !%End
-    call parse_integer(datasets_check('InvertKSmethod'), 0, ks_inv%method)
+    call parse_integer(datasets_check('InvertKSmethod'), &
+            XC_INVERSION_METHOD_VS_ITER, ks_inv%method)
 
-    if(ks_inv%method < 0 .or. ks_inv%method > 2) then
+    if(ks_inv%method < XC_INVERSION_METHOD_VS_ITER &
+      .or. ks_inv%method > XC_INVERSION_METHOD_VXC_ITER) then
       call input_error('InvertKSmethod')
       call write_fatal(1)
     endif
@@ -612,15 +619,51 @@ contains
   end subroutine precond_kiks
 
 
-#include "undef.F90"
-#include "real.F90"
-#include "xc_ks_inversion_inc.F90"
+  ! ---------------------------------------------------------
+  subroutine xc_ks_inversion_calc(ks_inversion, gr, hm, st, ex, ec, vxc)
+    use xc_functl_m
 
-#include "undef.F90"
-#include "complex.F90"
-#include "xc_ks_inversion_inc.F90"
+    type(xc_ks_inversion_t),  intent(inout) :: ks_inversion
+    type(grid_t),             intent(inout) :: gr
+    type(hamiltonian_t),      intent(inout) :: hm
+    type(states_t),           intent(inout) :: st
+    FLOAT,                    intent(inout) :: ex, ec
+    FLOAT, optional,          intent(inout) :: vxc(:,:) ! vxc(gr%mesh%np, st%d%nspin)
 
-#include "undef.F90"
+    if(ks_inversion%level == XC_KS_INVERSION_NONE) return
+
+    call push_sub('xc_ks_inversion_inc.Xxc_ks_inversion_calc')
+
+    call states_calc_dens(st, gr)
+    ks_inversion%aux_st%rho = st%rho
+
+    ks_inversion%aux_hm%epot     = M_ZERO
+    ks_inversion%aux_hm%ehartree = M_ZERO
+    ks_inversion%aux_hm%ex       = M_ZERO
+    ks_inversion%aux_hm%ec       = M_ZERO
+    ks_inversion%aux_hm%vhartree = M_ZERO
+    ks_inversion%aux_hm%vxc      = M_ZERO
+
+    ! compute ks inversion
+    select case (ks_inversion%method)
+    ! adiabatic ks inversion
+    case(XC_INVERSION_METHOD_TWO_PARTICLE)
+      call invertks_2part(ks_inversion%aux_st%rho, st%d%nspin,   &
+                          ks_inversion%aux_hm%vxc, gr)
+    case(XC_INVERSION_METHOD_VS_ITER)
+      call invertks_iter(ks_inversion%aux_st%rho, gr%mesh%np, st%d%nspin, &
+                         ks_inversion%aux_hm, gr,                        &
+                         ks_inversion%aux_st, ks_inversion%eigensolver)
+    case(XC_INVERSION_METHOD_VXC_ITER)
+      ! TODO: call to invertvxc_iter
+    end select
+
+    hm%vhxc = ks_inversion%aux_hm%vhxc
+
+    call pop_sub('xc_ks_inversion_inc.Xxc_ks_inversion_calc')
+
+  end subroutine xc_ks_inversion_calc
+
 
 end module xc_ks_inversion_m
 

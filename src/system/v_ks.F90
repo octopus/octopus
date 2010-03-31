@@ -424,11 +424,7 @@ contains
         end if
 
         ! Also treat KS inversion separately (not part of libxc)
-        if (states_are_real(st)) then
-          call dxc_ks_inversion_calc(ks%ks_inversion, gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
-        else
-          call zxc_ks_inversion_calc(ks%ks_inversion, gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
-        end if
+        call xc_ks_inversion_calc(ks%ks_inversion, gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
       end if
 
       ! Now we calculate Int[n vxc] = hm%epot

@@ -50,7 +50,6 @@ noinst_HEADERS =                        \
 	xc_oep_sic_inc.F90              \
 	xc_oep_kernel_inc.F90           \
 	xc_oep_inc.F90                  \
-	xc_ks_inversion_inc.F90         \
 	preconditioners_inc.F90         \
 	pert_inc.F90                    \
 	linear_solver_inc.F90           \
