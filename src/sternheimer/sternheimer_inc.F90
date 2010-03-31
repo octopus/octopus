@@ -116,7 +116,7 @@ subroutine X(sternheimer_solve)(                           &
          '   ik  ist                norm   iters            residual'
     call write_info(2)
 
-    dl_rhoin(1:mesh%np, 1:st%d%nspin, 1) = lr(1)%X(dl_rho)(1:mesh%np, 1:st%d%nspin)
+    forall(ip = 1:mesh%np) dl_rhoin(ip, 1:st%d%nspin, 1) = lr(1)%X(dl_rho)(ip, 1:st%d%nspin)
     call X(sternheimer_calc_hvar)(this, sys, hm, lr, nsigma, hvar)
 
     do ik = 1, st%d%nik
@@ -232,14 +232,14 @@ subroutine X(sternheimer_solve)(                           &
       call write_warning(1)
     end if
 
-    dl_rhotmp(1:mesh%np, 1:st%d%nspin, 1) = lr(1)%X(dl_rho)(1:mesh%np, 1:st%d%nspin)
+    forall(ip = 1:mesh%np) dl_rhotmp(ip, 1:st%d%nspin, 1) = lr(1)%X(dl_rho)(ip, 1:st%d%nspin)
 
     call X(mixing)(this%mixer, iter, dl_rhoin, dl_rhotmp, dl_rhonew, X(mf_dotp_aux))
 
     abs_dens = M_ZERO
 
     do ik = 1, st%d%nspin
-      tmp(1:mesh%np) = dl_rhoin(1:mesh%np, ik, 1) - dl_rhotmp(1:mesh%np, ik, 1)
+      forall(ip = 1:mesh%np) tmp(ip) = dl_rhoin(ip, ik, 1) - dl_rhotmp(ip, ik, 1)
       abs_dens = hypot(abs_dens, real(X(mf_nrm2)(mesh, tmp), 8))
     end do
 
@@ -266,8 +266,10 @@ subroutine X(sternheimer_solve)(                           &
       call write_info(2)
       exit
     else
-      lr(1)%X(dl_rho)(1:mesh%np, 1:st%d%nspin) = dl_rhonew(1:mesh%np, 1:st%d%nspin, 1)
-      if(nsigma == 2) lr(2)%X(dl_rho)(1:mesh%np, 1:st%d%nspin) = R_CONJ(dl_rhonew(1:mesh%np, 1:st%d%nspin, 1))
+      forall(ip = 1:mesh%np) lr(1)%X(dl_rho)(ip, 1:st%d%nspin) = dl_rhonew(ip, 1:st%d%nspin, 1)
+      if(nsigma == 2) then
+        forall(ip = 1:mesh%np) lr(2)%X(dl_rho)(ip, 1:st%d%nspin) = R_CONJ(dl_rhonew(ip, 1:st%d%nspin, 1))
+      end if
 
       tol = scf_tol_step(this%scf_tol, iter, TOFLOAT(abs_dens))
     end if
