@@ -692,7 +692,7 @@ contains
     type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(inout) :: geo
 
-    integer :: ispin, il
+    integer :: il
 
     call push_sub('hamiltonian.hamiltonian_end')
 
@@ -892,7 +892,11 @@ contains
     end if
 
     do ispin = 1, this%d%nspin
-      forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
+      if(ispin <= 2) then
+        forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
+      else
+        forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin)
+      end if
     end do
     
     call profiling_count_operations(mesh%np*this%d%nspin)

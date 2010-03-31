@@ -103,9 +103,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
   ! apply the local potential
   if (iand(TERM_LOCAL_POTENTIAL, terms_) /= 0) then
-
-    call X(vlpsi_batch)(hm, der%mesh, epsib, hpsib, ik)
-
+    call X(hamiltonian_base_local_batch)(hm%hm_base, der%mesh, hm%d, states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
   else if(iand(TERM_LOCAL_EXTERNAL, terms_) /= 0) then
 
     do ii = 1, nst
@@ -174,7 +172,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
         end if
 #ifdef R_TCOMPLEX
         if (gauge_field_is_applied(hm%ep%gfield)) then
-          call X(get_grad)(hm, der, psi, grad)
+          call X(get_grad)(hm, der, epsi, grad)
           call gauge_field_apply(hm%ep%gfield, der, hm%d%dim, epsi, grad, hpsi)
         end if
 #endif
@@ -634,47 +632,6 @@ subroutine X(magnetic_terms) (der, hm, psi, hpsi, grad, ik)
 
   call pop_sub('hamiltonian_inc.Xmagnetic_terms')
 end subroutine X(magnetic_terms)
-
-! ---------------------------------------------------------
-subroutine X(vlpsi_batch) (hm, mesh, psib, hpsib, ik)
-  type(hamiltonian_t), intent(in)    :: hm
-  type(mesh_t),        intent(in)    :: mesh
-  integer,             intent(in)    :: ik
-  type(batch_t),       intent(in)    :: psib
-  type(batch_t),       intent(inout) :: hpsib
-
-  integer :: ip, ii, ispin
-  R_TYPE, pointer :: psi(:, :), hpsi(:, :)
-
-  call profiling_in(prof_vlpsi, "VLPSI")
-  call push_sub('hamiltonian_inc.Xvlpsi_batch')
-
-  select case(hm%d%ispin)
-  case(UNPOLARIZED, SPIN_POLARIZED)
-    ispin = states_dim_get_spin_index(hm%d, ik)
-    call X(hamiltonian_base_apply_batch)(hm%hm_base, mesh, ispin, psib, hpsib)
-
-  case(SPINORS)
-    !the spinor case is more complicated since it mixes the two components.
-    do ii = 1, psib%nst
-      psi  => psib%states(ii)%X(psi)
-      hpsi => hpsib%states(ii)%X(psi)
-
-      do ip = 1, mesh%np
-        hpsi(ip, 1) = (hm%vhxc(ip, 1) + hm%ep%vpsl(ip))*psi(ip, 1) + &
-             (hm%vhxc(ip, 3) + M_zI*hm%vhxc(ip, 4))*psi(ip, 2)
-        hpsi(ip, 2) = (hm%vhxc(ip, 2) + hm%ep%vpsl(ip))*psi(ip, 2) + &
-             (hm%vhxc(ip, 3) - M_zI*hm%vhxc(ip, 4))*psi(ip, 1)
-      end do
-
-    end do
-    call profiling_count_operations((6*R_ADD + 2*R_MUL)*mesh%np*psib%nst)
-
-  end select
-
-  call pop_sub('hamiltonian_inc.Xvlpsi_batch')
-  call profiling_out(prof_vlpsi)
-end subroutine X(vlpsi_batch)
 
 ! ---------------------------------------------------------
 subroutine X(vborders) (der, hm, psi, hpsi)

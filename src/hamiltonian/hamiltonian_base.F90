@@ -52,8 +52,8 @@ module hamiltonian_base_m
 
   public ::                                    &
     hamiltonian_base_t,                        &
-    dhamiltonian_base_apply_batch,             &
-    zhamiltonian_base_apply_batch,             &
+    dhamiltonian_base_local_batch,             &
+    zhamiltonian_base_local_batch,             &
     hamiltonian_base_init,                     &
     hamiltonian_base_end
 
@@ -74,6 +74,8 @@ module hamiltonian_base_m
     TERM_NON_LOCAL_POTENTIAL =   4,      &
     TERM_OTHERS              =   8,      &
     TERM_LOCAL_EXTERNAL      =  16
+
+  type(profile_t), save :: prof_vlpsi
 
 contains
 
