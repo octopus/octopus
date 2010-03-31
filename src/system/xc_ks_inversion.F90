@@ -62,9 +62,9 @@ module xc_ks_inversion_m
 
   ! KS inversion methods/algorithms
   integer, public, parameter ::            &
-    XC_INVERSION_METHOD_VS_ITER      = 1,  &
-    XC_INVERSION_METHOD_TWO_PARTICLE = 2,  &
-    XC_INVERSION_METHOD_VXC_ITER     = 3
+    XC_INV_METHOD_VS_ITER      = 1,  &
+    XC_INV_METHOD_TWO_PARTICLE = 2,  &
+    XC_INV_METHOD_VXC_ITER     = 3
 
   ! the KS inversion levels
   integer, public, parameter ::      &
@@ -122,10 +122,10 @@ contains
     !% Iterative scheme for v_xc.
     !%End
     call parse_integer(datasets_check('InvertKSmethod'), &
-            XC_INVERSION_METHOD_VS_ITER, ks_inv%method)
+            XC_INV_METHOD_VS_ITER, ks_inv%method)
 
-    if(ks_inv%method < XC_INVERSION_METHOD_VS_ITER &
-      .or. ks_inv%method > XC_INVERSION_METHOD_VXC_ITER) then
+    if(ks_inv%method < XC_INV_METHOD_VS_ITER &
+      .or. ks_inv%method > XC_INV_METHOD_VXC_ITER) then
       call input_error('InvertKSmethod')
       call write_fatal(1)
     endif
@@ -647,14 +647,14 @@ contains
     ! compute ks inversion
     select case (ks_inversion%method)
     ! adiabatic ks inversion
-    case(XC_INVERSION_METHOD_TWO_PARTICLE)
+    case(XC_INV_METHOD_TWO_PARTICLE)
       call invertks_2part(ks_inversion%aux_st%rho, st%d%nspin,   &
                           ks_inversion%aux_hm%vxc, gr)
-    case(XC_INVERSION_METHOD_VS_ITER)
+    case(XC_INV_METHOD_VS_ITER)
       call invertks_iter(ks_inversion%aux_st%rho, gr%mesh%np, st%d%nspin, &
                          ks_inversion%aux_hm, gr,                        &
                          ks_inversion%aux_st, ks_inversion%eigensolver)
-    case(XC_INVERSION_METHOD_VXC_ITER)
+    case(XC_INV_METHOD_VXC_ITER)
       ! TODO: call to invertvxc_iter
     end select
 

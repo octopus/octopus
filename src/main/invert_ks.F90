@@ -80,10 +80,10 @@ contains
     ! do not change hxc potential outside this routine
     sys%ks%frozen_hxc = .true. 
     
-    if (sys%ks%ks_inversion%method == XC_INVERSION_METHOD_TWO_PARTICLE) then ! 2-particle exact inversion
+    if (sys%ks%ks_inversion%method == XC_INV_METHOD_TWO_PARTICLE) then ! 2-particle exact inversion
       call invertks_2part(target_rho, nspin, hm%vhxc, sys%gr)
     else ! iterative case
-      if (sys%ks%ks_inversion%method == XC_INVERSION_METHOD_VS_ITER) then ! iterative procedure for v_s 
+      if (sys%ks%ks_inversion%method == XC_INV_METHOD_VS_ITER) then ! iterative procedure for v_s 
         call invertks_iter(target_rho, np, nspin, hm, sys%gr, &
              sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver)
       else
@@ -115,7 +115,7 @@ contains
     call h_sys_output_all(sys%outp, sys%gr, sys%geo, sys%ks%ks_inversion%aux_st, &
          sys%ks%ks_inversion%aux_hm, STATIC_DIR)
     
-    if (sys%ks%ks_inversion%method == XC_INVERSION_METHOD_VXC_ITER) then
+    if (sys%ks%ks_inversion%method == XC_INV_METHOD_VXC_ITER) then
       call doutput_function(io_function_fill_how("AxisX"), &
            ".", "vxc", sys%gr%mesh, hm%vxc(:,1), units_out%energy, ierr)
     else
