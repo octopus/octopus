@@ -146,7 +146,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 #endif
 
       if( abs(gg) < M_EPSILON ) then
-        converged = converged + 1
+        if(converged == p - 1) converged = p ! only consider the first converged eigenvectors
         st%eigenval(p, ik) = es(1)
         res = sqrt(abs(gg))
         exit
@@ -225,7 +225,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 
       ! Test convergence.
       if(res < tol) then
-        converged = converged + 1
+        if(converged == p - 1) converged = p ! only consider the first converged eigenvectors
         exit iter_loop
       end if
 

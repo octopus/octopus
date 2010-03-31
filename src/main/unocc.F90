@@ -113,7 +113,7 @@ contains
       call write_info(1)
       call eigensolver_run(eigens, sys%gr, sys%st, hm, 1, converged, verbose = .true.)
 
-      if(converged) exit
+      if(converged.or.clean_stop()) exit
     end do
 
     ! write restart information.
