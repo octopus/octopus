@@ -13,12 +13,16 @@ AC_DEFUN([ACX_GDLIB],
 
   if test x"$acx_gdlib_ok" = xyes; then
     AC_PATH_PROG(GDLIB_CONFIG, gdlib-config)
-    if test -n "$GDLIB_CONFIG"; then
-      AC_DEFINE_UNQUOTED(HAVE_GDLIB, 1, [Define if libgd exists.])
 
-      GD_CFLAGS=`$GDLIB_CONFIG --cflags`
-      GD_LIBS="`$GDLIB_CONFIG --ldflags` -lgd `$GDLIB_CONFIG --libs | awk '{if($NF=="@LIBICONV@"){$NF=""} print}'`"
-      dnl Sometimes GD installation strangely leaves this token @LIBICONV@ in --libs, which must be removed
+    if test -n "$GDLIB_CONFIG"; then
+      if test "x$GD_CFLAGS" = x; then
+	GD_CFLAGS=`$GDLIB_CONFIG --cflags`
+      fi
+      if test "x$GD_LIBS" = x; then
+        GD_LIBS="`$GDLIB_CONFIG --ldflags` -lgd `$GDLIB_CONFIG --libs | awk '{if($NF=="@LIBICONV@"){$NF=""} print}'`"
+        dnl Sometimes GD installation strangely leaves this token @LIBICONV@ in --libs, which must be removed
+      fi
+
       GD_MAJORVERSION=`$GDLIB_CONFIG --majorversion`
       GD_MINORVERSION=`$GDLIB_CONFIG --minorversion`
       GD_REVISION=`$GDLIB_CONFIG --revision`
@@ -69,13 +73,25 @@ dnl      if test "x$gd_version_ok" = "xno"; then
 dnl        AC_MSG_ERROR(GD library version < $REQ_GD_MAJORVERSION.$REQ_GD_MINORVERSION.$REQ_GD_REVISION)
 dnl      fi
 
-    else
+    fi
+
+    dnl we only use PNG, JPEG, GIF
+    acx_save_LIBS="$LIBS"
+    LIBS="$LIBS $GD_LIBS"
+    AC_MSG_CHECKING([that gdlib works])
+    AC_TRY_LINK_FUNC(gdFontCacheSetup, [], [acx_gdlib_ok=no])
+    AC_MSG_RESULT([$acx_gdlib_ok])
+
+    LIBS=$acx_save_LIBS
+    if test $acx_gdlib_ok = no; then
       AC_MSG_WARN([GD library support has been disabled.
-                    *** Some esoteric parts of octopus will not work.])
+                   *** Some esoteric parts of octopus will not work.])
+    else
+      CFLAGS="$CFLAGS $GD_CFLAGS"
+      AC_DEFINE_UNQUOTED(HAVE_GDLIB, 1, [Define if libgd exists.])
     fi
   fi
 
-  CFLAGS="$CFLAGS $GD_CFLAGS"
   AC_SUBST(GD_CFLAGS)
   AC_SUBST(GD_LIBS)
 ])
