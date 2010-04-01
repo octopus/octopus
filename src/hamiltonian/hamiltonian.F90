@@ -913,7 +913,7 @@ contains
       end if
       this%hm_base%uniform_magnetic_field = M_ZERO
 
-      forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) this%hm_base%uniform_magnetic_field(idir) = this%ep%b_field(idir)
+      forall (idir = 1:mesh%sb%dim) this%hm_base%uniform_magnetic_field(idir) = this%ep%b_field(idir)
     end if
 
     call profiling_count_operations(mesh%np*this%d%nspin)

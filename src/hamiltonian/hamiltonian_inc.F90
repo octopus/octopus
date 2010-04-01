@@ -116,10 +116,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
     hpsi(1:der%mesh%np, 1:hm%d%dim) = M_ZERO
   end if
 
-  if (iand(TERM_OTHERS, terms_) /= 0) then
-    call X(hamiltonian_base_magnetic)(hm%hm_base, der, hm%d, hm%ep, states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
-  end if
-
   ! and the non-local one
   if (iand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
     if(hm%ep%non_local) call X(project_psi_batch)(der%mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, epsib, hpsib, ik)
@@ -128,6 +124,10 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   if(iand(TERM_KINETIC, terms_) /= 0) then
     call X(derivatives_batch_finish)(handle)
     call batch_end(laplb)
+  end if
+
+  if (iand(TERM_OTHERS, terms_) /= 0) then
+    call X(hamiltonian_base_magnetic)(hm%hm_base, der, hm%d, hm%ep, states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
   end if
 
   do ii = 1, nst
