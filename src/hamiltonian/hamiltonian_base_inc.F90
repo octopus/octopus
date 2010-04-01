@@ -37,7 +37,7 @@ subroutine X(hamiltonian_base_local_batch)(this, mesh, std, ispin, psib, vpsib)
     case(UNPOLARIZED, SPIN_POLARIZED)
       !$omp parallel do private(idim, ip)
       do ist = 1, psib%nst
-        forall (ip = 1:mesh%np, idim = 1:psib%dim)
+        forall (idim = 1:psib%dim, ip = 1:mesh%np)
           vpsib%states(ist)%X(psi)(ip, idim) = this%potential(ip, ispin)*psib%states(ist)%X(psi)(ip, idim)
         end forall
       end do

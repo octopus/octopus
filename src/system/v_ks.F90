@@ -336,7 +336,7 @@ contains
       end if
 
       if(hm%d%ispin == SPINORS) then
-        forall(ip = 1:gr%mesh%np, ispin = 3:4) hm%vhxc(ip, ispin) = hm%vxc(ip, ispin)
+        forall(ispin = 3:4, ip = 1:gr%mesh%np) hm%vhxc(ip, ispin) = hm%vxc(ip, ispin)
       end if
 
     end if

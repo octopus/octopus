@@ -41,6 +41,7 @@ while($_ = <IN>)
   }
   if($nf90_forall){
       if(m/^\s*forall\s*\(($NestedGuts)\)\s*(.*)$/xi){
+	  print OUT "! preprocessed forall\n";
 	  my $i;
 	  my $str  = $1;
 	  my $body = $2;
