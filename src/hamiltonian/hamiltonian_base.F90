@@ -23,6 +23,7 @@ module hamiltonian_base_m
   use batch_m
   use datasets_m
   use derivatives_m
+  use epot_m
   use geometry_m
   use global_m
   use grid_m
@@ -52,8 +53,10 @@ module hamiltonian_base_m
 
   public ::                                    &
     hamiltonian_base_t,                        &
-    dhamiltonian_base_local_batch,             &
-    zhamiltonian_base_local_batch,             &
+    dhamiltonian_base_local,                   &
+    zhamiltonian_base_local,                   &
+    dhamiltonian_base_magnetic,                &
+    zhamiltonian_base_magnetic,                &
     hamiltonian_base_init,                     &
     hamiltonian_base_end
 
@@ -63,8 +66,11 @@ module hamiltonian_base_m
   type hamiltonian_base_t
     integer                      :: nspin
     type(nl_operator_t), pointer :: kinetic
-    FLOAT, pointer               :: potential(:, :)
     type(projector_t),   pointer :: nlproj(:)
+    FLOAT,               pointer :: potential(:, :)
+    FLOAT,               pointer :: uniform_magnetic_field(:)
+    FLOAT,               pointer :: uniform_vector_potential(:)
+    FLOAT,               pointer :: vector_potential(:, :)
   end type hamiltonian_base_t
 
   integer, public ::                     &
@@ -75,7 +81,7 @@ module hamiltonian_base_m
     TERM_OTHERS              =   8,      &
     TERM_LOCAL_EXTERNAL      =  16
 
-  type(profile_t), save :: prof_vlpsi
+  type(profile_t), save :: prof_vlpsi, prof_magnetic
 
 contains
 
@@ -88,7 +94,12 @@ contains
     call push_sub('hamiltonian_base.hamiltonian_base_init')
 
     this%nspin = nspin
-    
+
+    nullify(this%potential)
+    nullify(this%uniform_magnetic_field)
+    nullify(this%uniform_vector_potential)
+    nullify(this%vector_potential)
+
     call pop_sub('hamiltonian_base.hamiltonian_base_init')
   end subroutine hamiltonian_base_init
 
@@ -99,9 +110,14 @@ contains
     call push_sub('hamiltonian_base.hamiltonian_base_end')
 
     SAFE_DEALLOCATE_P(this%potential)
+    SAFE_DEALLOCATE_P(this%vector_potential)
+    SAFE_DEALLOCATE_P(this%uniform_vector_potential)
+    SAFE_DEALLOCATE_P(this%uniform_magnetic_field)
 
     call pop_sub('hamiltonian_base.hamiltonian_base_end')
   end subroutine hamiltonian_base_end
+
+  ! -------------------------------------------------------
 
 #include "undef.F90"
 #include "real.F90"

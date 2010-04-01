@@ -61,10 +61,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   ASSERT(ik >= hm%d%kpt%start .and. ik <= hm%d%kpt%end)
   nst = psib%nst
   
-  SAFE_ALLOCATE(lapl(1:der%mesh%np, 1:hm%d%dim, 1:nst))
-
-  call batch_init(laplb, hm%d%dim, psib%states(1)%ist, psib%states(nst)%ist, lapl)
-
   apply_kpoint = simul_box_is_periodic(der%mesh%sb) .and. .not. kpoint_is_gamma(hm%d, ik)
 
   if(apply_kpoint) then
@@ -96,6 +92,9 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   end do
 
   if(iand(TERM_KINETIC, terms_) /= 0) then
+    SAFE_ALLOCATE(lapl(1:der%mesh%np, 1:hm%d%dim, 1:nst))
+    call batch_init(laplb, hm%d%dim, psib%states(1)%ist, psib%states(nst)%ist, lapl)
+
     ! start the calculation of the Laplacian
     ASSERT(associated(hm%hm_base%kinetic))
     call X(derivatives_batch_start)(hm%hm_base%kinetic, der, epsib, laplb, handle, set_bc = .false.)
@@ -103,7 +102,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
   ! apply the local potential
   if (iand(TERM_LOCAL_POTENTIAL, terms_) /= 0) then
-    call X(hamiltonian_base_local_batch)(hm%hm_base, der%mesh, hm%d, states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
+    call X(hamiltonian_base_local)(hm%hm_base, der%mesh, hm%d, states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
   else if(iand(TERM_LOCAL_EXTERNAL, terms_) /= 0) then
 
     do ii = 1, nst
@@ -114,9 +113,11 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
     end do
 
   else
-
     hpsi(1:der%mesh%np, 1:hm%d%dim) = M_ZERO
+  end if
 
+  if (iand(TERM_OTHERS, terms_) /= 0) then
+    call X(hamiltonian_base_magnetic)(hm%hm_base, der, hm%d, hm%ep, states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
   end if
 
   ! and the non-local one
@@ -184,7 +185,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
       if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) &
         call X(h_mgga_terms) (hm, der, epsi, hpsi, ik, grad)
 
-      call X(magnetic_terms)(der, hm, epsi, hpsi, grad, ik)
+!      call X(magnetic_terms)(der, hm, epsi, hpsi, grad, ik)
       
       if(present(time)) call X(vborders) (der, hm, epsi, hpsi)
 
@@ -524,114 +525,6 @@ subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
   SAFE_DEALLOCATE_A(aux2psi)
   call pop_sub('hamiltonian_inc.Xmagnus')
 end subroutine X(magnus)
-
-! ---------------------------------------------------------
-! Here we the terms arising from the presence of a possible static external
-! magnetic field, and the terms that come from CDFT.
-subroutine X(magnetic_terms) (der, hm, psi, hpsi, grad, ik)
-  type(derivatives_t), intent(in)    :: der
-  type(hamiltonian_t), intent(in)    :: hm
-  R_TYPE,              intent(inout) :: psi(:, :)
-  R_TYPE,              intent(inout) :: hpsi(:, :)
-  R_TYPE,              pointer       :: grad(:, :, :)
-  integer,             intent(in)    :: ik
-
-  integer :: k, idim
-  FLOAT,  allocatable :: div(:), tmp(:,:)
-  R_TYPE, allocatable :: lhpsi(:, :)
-
-  call push_sub('hamiltonian_inc.Xmagnetic_terms')
-
-  if(hm%d%cdft .or. associated(hm%ep%A_static)) then
-    call X(get_grad)(hm, der, psi, grad)
-  else
-    call pop_sub('hamiltonian_inc.Xmagnetic_terms')
-    return
-  endif
-
-  ! If we are using CDFT:
-  if(hm%d%cdft) then
-
-    SAFE_ALLOCATE(div(1:der%mesh%np))
-    SAFE_ALLOCATE(tmp(1:der%mesh%np_part, 1:der%mesh%sb%dim))
-    select case (hm%d%ispin)
-    case(UNPOLARIZED)
-      tmp(1:der%mesh%np, :) = hm%axc(1:der%mesh%np, :, 1)
-    case(SPIN_POLARIZED)
-      if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        tmp(1:der%mesh%np, :) = hm%axc(1:der%mesh%np, :, 1)
-      else
-        tmp(1:der%mesh%np, :) = hm%axc(1:der%mesh%np, :, 2)
-      end if
-    case(SPINORS)
-      write(message(1),'(a)') 'Current DFT not yet functional in spinors mode, sorry.'
-      call write_fatal(2)
-    end select
-    call dderivatives_div(der, tmp, div)
-    hpsi(1:der%mesh%np, 1) = hpsi(1:der%mesh%np, 1) - M_HALF*M_zI*div*psi(1:der%mesh%np, 1)
-    SAFE_DEALLOCATE_A(div)
-    SAFE_DEALLOCATE_A(tmp)
-
-    select case (hm%d%ispin)
-    case(UNPOLARIZED)
-      do k = 1, der%mesh%np
-        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(hm%axc(k, 1:der%mesh%sb%dim, 1), grad(k, 1:der%mesh%sb%dim, 1))
-      end do
-    case(SPIN_POLARIZED)
-      do k = 1, der%mesh%np
-        if(modulo(ik+1, 2) == 0) then ! we have a spin down
-          hpsi(k, 1) = hpsi(k, 1) - &
-               M_zI*dot_product(hm%axc(k, 1:der%mesh%sb%dim, 1), grad(k, 1:der%mesh%sb%dim, 1))
-        else
-          hpsi(k, 1) = hpsi(k, 1) - &
-               M_zI*dot_product(hm%axc(k, 1:der%mesh%sb%dim, 2), grad(k, 1:der%mesh%sb%dim, 1))
-        end if
-      end do
-    case(SPINORS)
-      ! Not yet implemented
-    end select
-
-  endif !CDT
-
-  ! If we have an external magnetic field
-  if (associated(hm%ep%A_static)) then
-    do k = 1, der%mesh%np
-      hpsi(k, :) = hpsi(k, :) + &
-           M_HALF*dot_product(hm%ep%A_static(k, 1:der%mesh%sb%dim), hm%ep%A_static(k, 1:der%mesh%sb%dim))*psi(k, :)
-      select case(hm%d%ispin)
-      case(UNPOLARIZED, SPIN_POLARIZED)
-        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(hm%ep%A_static(k, 1:der%mesh%sb%dim), grad(k, 1:der%mesh%sb%dim, 1))
-      case (SPINORS)
-        do idim = 1, hm%d%dim
-          hpsi(k, idim) = hpsi(k, idim) - &
-               M_zI*dot_product(hm%ep%A_static(k, 1:der%mesh%sb%dim), grad(k, 1:der%mesh%sb%dim, idim))
-        end do
-      end select
-    end do
-  end if
-
-  ! Zeeman term
-  if (associated(hm%ep%B_field) .and. hm%d%ispin /= UNPOLARIZED) then
-    SAFE_ALLOCATE(lhpsi(1:der%mesh%np, 1:hm%d%dim))
-    select case (hm%d%ispin)
-    case (SPIN_POLARIZED)
-      if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        lhpsi(1:der%mesh%np, 1) = - M_HALF/P_C*sqrt(dot_product(hm%ep%B_field, hm%ep%B_field))*psi(1:der%mesh%np, 1)
-      else
-        lhpsi(1:der%mesh%np, 1) = + M_HALF/P_C*sqrt(dot_product(hm%ep%B_field, hm%ep%B_field))*psi(1:der%mesh%np, 1)
-      end if
-    case (SPINORS)
-      lhpsi(1:der%mesh%np, 1) = M_HALF/P_C*( hm%ep%B_field(3)*psi(1:der%mesh%np, 1) &
-                                 + (hm%ep%B_field(1) - M_zI*hm%ep%B_field(2))*psi(1:der%mesh%np, 2))
-      lhpsi(1:der%mesh%np, 2) = M_HALF/P_C*(-hm%ep%B_field(3)*psi(1:der%mesh%np, 2) &
-                                 + (hm%ep%B_field(1) + M_zI*hm%ep%B_field(2))*psi(1:der%mesh%np, 1))
-    end select
-    hpsi(1:der%mesh%np, :) = hpsi(1:der%mesh%np, :) + (hm%ep%gyromagnetic_ratio * M_HALF) * lhpsi(1:der%mesh%np, :)
-    SAFE_DEALLOCATE_A(lhpsi)
-  end if
-
-  call pop_sub('hamiltonian_inc.Xmagnetic_terms')
-end subroutine X(magnetic_terms)
 
 ! ---------------------------------------------------------
 subroutine X(vborders) (der, hm, psi, hpsi)

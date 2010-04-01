@@ -22,7 +22,6 @@
 module lasers_m
   use datasets_m
   use derivatives_m
-  use hamiltonian_base_m
   use global_m
   use mpi_m
   use grid_m

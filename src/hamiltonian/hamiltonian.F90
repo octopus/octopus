@@ -213,7 +213,6 @@ contains
     call hamiltonian_base_init(hm%hm_base, gr%mesh, hm%d%nspin)
     ASSERT(associated(gr%der%lapl))
     hm%hm_base%kinetic => gr%der%lapl
-!    hm%hm_base%nlproj => hm%ep%proj
 
     SAFE_ALLOCATE(hm%hm_base%potential(gr%mesh%np, hm%d%nspin))
 
@@ -705,7 +704,7 @@ contains
     SAFE_DEALLOCATE_P(hm%axc)
     SAFE_DEALLOCATE_P(hm%a_ind)
     SAFE_DEALLOCATE_P(hm%b_ind)
-
+    
     if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) then
       SAFE_DEALLOCATE_P(hm%vtau)
     end if
@@ -883,7 +882,7 @@ contains
     type(hamiltonian_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
 
-    integer :: ispin, ip
+    integer :: ispin, ip, idir
 
     call push_sub('hamiltonian.hamiltonian_update_potential')
 
@@ -898,7 +897,25 @@ contains
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin)
       end if
     end do
-    
+
+    if(associated(this%ep%a_static)) then
+      if(.not. associated(this%hm_base%vector_potential)) then
+        SAFE_ALLOCATE(this%hm_base%vector_potential(1:MAX_DIM, 1:mesh%np))
+      end if
+      this%hm_base%vector_potential = M_ZERO
+      
+      forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) this%hm_base%vector_potential(idir, ip) = this%ep%A_static(ip, idir)
+    end if
+
+    if(associated(this%ep%b_field)) then
+      if(.not. associated(this%hm_base%uniform_magnetic_field)) then
+        SAFE_ALLOCATE(this%hm_base%uniform_magnetic_field(1:MAX_DIM))
+      end if
+      this%hm_base%uniform_magnetic_field = M_ZERO
+
+      forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) this%hm_base%uniform_magnetic_field(idir) = this%ep%b_field(idir)
+    end if
+
     call profiling_count_operations(mesh%np*this%d%nspin)
     call pop_sub('hamiltonian.hamiltonian_update_potential')
   end subroutine hamiltonian_update_potential
