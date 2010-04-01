@@ -1,0 +1,28 @@
+CalculationMode = gs
+
+%Coordinates
+ 'Al' | 0.0 | 0.0 | 0.0
+%
+
+%Species
+ 'Al' | 26.89 | spec_ps_hgh | 13 | 0 | 0
+%
+
+Radius = 6.0
+Spacing = 0.5
+
+ExtraStates = 2
+Smearing = 0.01
+SmearingFunction = fermi_dirac
+
+%StaticMagneticField 
+ 1.0 | -1.0 | 2.0
+%
+
+SpinComponents = non_collinear
+
+FromScratch = yes
+
+LCAOStart = no
+
+

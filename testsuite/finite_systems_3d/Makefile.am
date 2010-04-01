@@ -30,6 +30,13 @@ dist_share_DATA = \
 	02-curvilinear_coordinates.test \
 	04-jellium.01-ground_state.inp \
 	04-jellium.test \
+	03-magnetic.test                               \
+	03-magnetic.01-gs-unpolarized.inp              \
+	03-magnetic.02-td-unpolarized.inp              \
+	03-magnetic.03-gs-polarized.inp                \
+	03-magnetic.04-td-polarized.inp                \
+	03-magnetic.05-gs-spinors.inp                  \
+	03-magnetic.06-td-spinors.inp                  \
 	05-output.test                                 \
 	05-output.01-gs.inp                            \
 	06-restart.01-ground_state.inp \
