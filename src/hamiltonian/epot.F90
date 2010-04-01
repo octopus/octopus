@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module external_pot_m
+module epot_m
   use datasets_m
   use derivatives_m
   use double_grid_m
@@ -992,7 +992,7 @@ contains
     call pop_sub('epot.ion_interaction_sete')
    end subroutine ion_interaction_sete
       
-end module external_pot_m
+end module epot_m
 
 !! Local Variables:
 !! mode: f90

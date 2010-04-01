@@ -22,7 +22,7 @@
 module geom_opt_m
   use datasets_m
   use energy_m
-  use external_pot_m
+  use epot_m
   use geometry_m
   use global_m
   use hamiltonian_m

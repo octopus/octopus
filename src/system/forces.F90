@@ -23,7 +23,7 @@ module forces_m
   use born_charges_m
   use datasets_m
   use derivatives_m
-  use external_pot_m
+  use epot_m
   use gauge_field_m
   use global_m
   use grid_m

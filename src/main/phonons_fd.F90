@@ -22,7 +22,7 @@
 module phonons_fd_m
   use datasets_m
   use energy_m
-  use external_pot_m
+  use epot_m
   use geometry_m
   use global_m
   use grid_m

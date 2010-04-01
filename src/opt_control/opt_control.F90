@@ -23,7 +23,7 @@ module opt_control_m
   use datasets_m
   use excited_states_m
   use exponential_m
-  use external_pot_m
+  use epot_m
   use filter_m
   use geometry_m
   use global_m

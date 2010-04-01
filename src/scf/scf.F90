@@ -23,7 +23,7 @@ module scf_m
   use datasets_m
   use eigensolver_m
   use energy_m
-  use external_pot_m
+  use epot_m
   use forces_m
   use geometry_m
   use global_m

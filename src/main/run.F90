@@ -24,7 +24,7 @@ module run_m
   use casida_m
   use datasets_m
   use em_resp_m
-  use external_pot_m
+  use epot_m
   use fft_m
   use geom_opt_m
   use global_m

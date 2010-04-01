@@ -21,7 +21,7 @@
 
 module opt_control_parameters_m
   use datasets_m
-  use external_pot_m
+  use epot_m
   use filter_m
   use global_m
   use io_m
