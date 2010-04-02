@@ -606,7 +606,10 @@ contains
         call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
       end if
 
-      if(gauge_field_is_applied(hm%ep%gfield)) call gauge_field_propagate(hm%ep%gfield, gauge_force, dt)
+      if(gauge_field_is_applied(hm%ep%gfield)) then
+        call gauge_field_propagate(hm%ep%gfield, gauge_force, dt)
+        call hamiltonian_update_potential(hm, gr%mesh)
+      end if
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
         call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
@@ -661,7 +664,10 @@ contains
         call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
       end if
 
-      if(gauge_field_is_applied(hm%ep%gfield)) call gauge_field_propagate(hm%ep%gfield, gauge_force, dt)
+      if(gauge_field_is_applied(hm%ep%gfield)) then
+        call gauge_field_propagate(hm%ep%gfield, gauge_force, dt)
+        call hamiltonian_update_potential(hm, gr%mesh)
+      end if
 
       ! propagate the other half with H(t)
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -702,6 +708,7 @@ contains
         vecpot = gauge_field_get_vec_pot(hm%ep%gfield)
         vecpot_vel = gauge_field_get_vec_pot_vel(hm%ep%gfield)
         call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt)
+        call hamiltonian_update_potential(hm, gr%mesh)
       end if
 
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -715,6 +722,7 @@ contains
       if(gauge_field_is_applied(hm%ep%gfield)) then
         call gauge_field_set_vec_pot(hm%ep%gfield, vecpot)
         call gauge_field_set_vec_pot_vel(hm%ep%gfield, vecpot_vel)
+        call hamiltonian_update_potential(hm, gr%mesh)
       end if
 
       call pop_sub('propagator.propagator_dt.exponential_midpoint')

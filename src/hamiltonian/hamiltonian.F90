@@ -882,7 +882,7 @@ contains
     type(hamiltonian_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
 
-    integer :: ispin, ip, idir
+    integer :: ispin, ip, idir, iatom
 
     call push_sub('hamiltonian.hamiltonian_update_potential')
 
@@ -915,6 +915,12 @@ contains
 
       forall (idir = 1:mesh%sb%dim) this%hm_base%uniform_magnetic_field(idir) = this%ep%b_field(idir)
     end if
+
+    ! now re-generate the phases for the pseudopotentials
+    do iatom = 1, this%ep%natoms
+      call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d%kpt%start, this%d%kpt%end, this%d%kpoints, &
+        vec_pot = gauge_field_get_vec_pot(this%ep%gfield)/P_c, vec_pot_var = this%ep%a_static)
+    end do
 
     call profiling_count_operations(mesh%np*this%d%nspin)
     call pop_sub('hamiltonian.hamiltonian_update_potential')

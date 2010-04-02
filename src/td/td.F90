@@ -164,7 +164,6 @@ contains
       call forces_calculate(gr, geo, hm%ep, st, td%iter*td%dt)
 
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
-
     end if
 
     ! Calculate initial value of the gauge vector field
@@ -177,12 +176,7 @@ contains
       end if
 
       call gauge_field_get_force(hm%ep%gfield, gr, geo, hm%ep%proj, hm%phase, st, gauge_force)
-
-      do iatom = 1, geo%natoms
-         call projector_init_phases(hm%ep%proj(iatom), gr%sb, st%d%kpt%start, st%d%kpt%end, st%d%kpoints, &
-           vec_pot = gauge_field_get_vec_pot(hm%ep%gfield)/P_c, vec_pot_var = hm%ep%a_static)
-      end do
-
+      call hamiltonian_update_potential(hm, gr%mesh)
     end if
 
     if(td%iter == 0) call td_run_zero_iter()
@@ -246,6 +240,7 @@ contains
 
       if(gauge_field_is_applied(hm%ep%gfield) .and. .not. propagator_ions_are_propagated(td%tr)) then
         call gauge_field_propagate(hm%ep%gfield, gauge_force, td%dt)
+        call hamiltonian_update_potential(hm, gr%mesh)
       end if
       
       if(generate) call hamiltonian_epot_generate(hm, gr, sys%geo, st, time = iter*td%dt)
@@ -274,16 +269,8 @@ contains
       end if
 
       if(gauge_field_is_applied(hm%ep%gfield)) then
-
         call gauge_field_get_force(hm%ep%gfield, gr, geo, hm%ep%proj, hm%phase, st, gauge_force)
-
         call gauge_field_propagate_vel(hm%ep%gfield, gauge_force, td%dt)
-
-        do iatom = 1, geo%natoms
-          call projector_init_phases(hm%ep%proj(iatom), gr%sb, st%d%kpt%start, st%d%kpt%end, st%d%kpoints, &
-               vec_pot = gauge_field_get_vec_pot(hm%ep%gfield)/P_c, vec_pot_var = hm%ep%a_static)
-        end do
-
       end if
 
       call td_write_iter(write_handler, gr, st, hm, geo, td%kick, td%dt, iter)
@@ -783,7 +770,8 @@ contains
 
       call gauge_field_set_vec_pot(hm%ep%gfield, vecpot)
       call gauge_field_set_vec_pot_vel(hm%ep%gfield, vecpot_vel)
- 
+      call hamiltonian_update_potential(hm, gr%mesh)
+      
       call io_close(iunit)
       call pop_sub('td.td_run.td_read_gauge_field')
     end subroutine td_read_gauge_field
