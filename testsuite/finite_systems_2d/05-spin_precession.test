@@ -3,7 +3,7 @@
 
 Test       : Spin Precession
 Programs   : octopus; octopus_mpi
-TestGroups : long-run
+TestGroups : short-run
 Enabled    : Yes
 
 # This test demonstrates the precession of the spin of one single

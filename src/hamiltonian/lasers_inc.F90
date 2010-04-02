@@ -161,9 +161,13 @@ subroutine X(vlaser_operator_linear) (laser, der, std, psi, hpsi, ik, gyromagnet
     ! the time-dependent one defined as a "laser" (ideally one should just add them all and
     ! do the calculation only once...). Note that h%ep%a_static already has been divided
     ! by P_c, and therefore here we only divide by P_c, and not P_c**2.
+    !
+    ! We put a minus sign, since for the moment vector potential for
+    ! lasers and for the static magnetic field use a different
+    ! convetion.
     if(present(a_static)) then
       do ip = 1, der%mesh%np
-        hpsi(ip, :) = hpsi(ip, :) + dot_product(aa(ip, 1:der%mesh%sb%dim), a_static(ip, 1:der%mesh%sb%dim)) * psi(ip, :) / P_c
+        hpsi(ip, :) = hpsi(ip, :) - dot_product(aa(ip, 1:der%mesh%sb%dim), a_static(ip, 1:der%mesh%sb%dim)) * psi(ip, :) / P_c
       end do
     end if
 
@@ -356,9 +360,13 @@ contains
     ! the time-dependent one defined as a "laser" (ideally one should just add them all and
     ! do the calculation only once...). Note that h%ep%a_static already has been divided
     ! by P_c, and therefore here we only divide by P_c, and not P_c**2.
+    !
+    ! We put a minus sign, since for the moment vector potential for
+    ! lasers and for the static magnetic field use a different
+    ! convetion.
     if(present(a_static)) then
       do ip = 1, der%mesh%np
-        hpsi(ip, :) = hpsi(ip, :) + dot_product(aa(ip, 1:der%mesh%sb%dim), &
+        hpsi(ip, :) = hpsi(ip, :) - dot_product(aa(ip, 1:der%mesh%sb%dim), &
           a_static(ip, 1:der%mesh%sb%dim))*psi(ip, :) / P_c
       end do
     end if

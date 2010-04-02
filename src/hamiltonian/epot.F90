@@ -276,15 +276,14 @@ contains
         grx(1:gr%mesh%sb%dim) = gr%mesh%x(ip, 1:gr%mesh%sb%dim)
         select case (gr%mesh%sb%dim)
         case (2)
-          ep%A_static(ip, :) = (/grx(2), -grx(1)/) * ep%B_field(3)
+          ep%A_static(ip, :) = M_HALF/P_C*(/grx(2), -grx(1)/) * ep%B_field(3)
         case (3)
-          ep%A_static(ip, :) = (/grx(2) * ep%B_field(3) - grx(3) * ep%B_field(2), &
+          ep%A_static(ip, :) = M_HALF/P_C*(/grx(2) * ep%B_field(3) - grx(3) * ep%B_field(2), &
                                  grx(3) * ep%B_field(1) - grx(1) * ep%B_field(3), &
                                  grx(1) * ep%B_field(2) - grx(2) * ep%B_field(1)/)
         end select
       end do
       SAFE_DEALLOCATE_A(grx)
-      ep%A_static = -M_HALF / P_c * ep%A_static
 
     end if
     
