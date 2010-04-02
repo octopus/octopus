@@ -173,20 +173,12 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
         end if
       end if
       
-#ifdef R_TCOMPLEX
-      if (gauge_field_is_applied(hm%ep%gfield)) then
-        call X(get_grad)(hm, der, epsi, grad)
-        call gauge_field_apply(hm%ep%gfield, der, hm%d%dim, epsi, grad, hpsi)
-      end if
-#endif
       if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) &
         call X(exchange_operator)(hm, der, epsi, hpsi, ist, ik)
       
       if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) &
         call X(h_mgga_terms) (hm, der, epsi, hpsi, ik, grad)
 
-!      call X(magnetic_terms)(der, hm, epsi, hpsi, grad, ik)
-      
       if(present(time)) call X(vborders) (der, hm, epsi, hpsi)
 
       SAFE_DEALLOCATE_P(grad)
