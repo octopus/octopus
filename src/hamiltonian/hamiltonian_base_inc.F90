@@ -135,8 +135,8 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
         
       case (SPINORS)
         forall (ip = 1:der%mesh%np)
-          vpsi(ip, 1) = vpsi(ip, 1) + cc*(-bb(3)*psi(ip, 1) + b12*psi(ip, 2))
-          vpsi(ip, 2) = vpsi(ip, 2) + cc*(bb(3)*psi(ip, 2) + conjg(b12)*psi(ip, 1))
+          vpsi(ip, 1) = vpsi(ip, 1) + cc*(bb(3)*psi(ip, 1) + b12*psi(ip, 2))
+          vpsi(ip, 2) = vpsi(ip, 2) + cc*(-bb(3)*psi(ip, 2) + conjg(b12)*psi(ip, 1))
         end forall
         
       end select

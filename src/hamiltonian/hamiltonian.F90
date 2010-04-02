@@ -913,7 +913,7 @@ contains
       end if
       this%hm_base%uniform_magnetic_field = M_ZERO
 
-      forall (idir = 1:mesh%sb%dim) this%hm_base%uniform_magnetic_field(idir) = this%ep%b_field(idir)
+      forall (idir = 1:3) this%hm_base%uniform_magnetic_field(idir) = this%ep%b_field(idir)
     end if
 
     ! now re-generate the phases for the pseudopotentials
