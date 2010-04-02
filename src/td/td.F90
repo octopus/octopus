@@ -151,11 +151,6 @@ contains
       call scissor_init(hm%scissor, st, td%scissor, gspsi)
     end if
 
-    call gauge_field_init(hm%ep%gfield, gr%sb)
-
-    call td_write_init(write_handler, gr, st, hm, geo, &
-         ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), td%iter, td%max_iter, td%dt)
-
     ! Calculate initial forces and kinetic energy
     if(ion_dynamics_ions_move(td%ions)) then
       if(td%iter > 0) then
@@ -169,6 +164,8 @@ contains
     end if
 
     ! Calculate initial value of the gauge vector field
+    call gauge_field_init(hm%ep%gfield, gr%sb)
+
     if (gauge_field_is_applied(hm%ep%gfield)) then
 
       if(td%iter > 0) then
@@ -180,6 +177,9 @@ contains
       call gauge_field_get_force(hm%ep%gfield, gr, geo, hm%ep%proj, hm%phase, st, gauge_force)
       call hamiltonian_update_potential(hm, gr%mesh)
     end if
+
+    call td_write_init(write_handler, gr, st, hm, geo, &
+         ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), td%iter, td%max_iter, td%dt)
 
     if(td%iter == 0) call td_run_zero_iter()
 
