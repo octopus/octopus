@@ -916,10 +916,21 @@ contains
       forall (idir = 1:3) this%hm_base%uniform_magnetic_field(idir) = this%ep%b_field(idir)
     end if
 
+    if(gauge_field_is_applied(this%ep%gfield)) then
+      ASSERT(.not. associated(this%hm_base%vector_potential))
+
+      if(.not. associated(this%hm_base%uniform_vector_potential)) then
+        SAFE_ALLOCATE(this%hm_base%uniform_vector_potential(1:MAX_DIM))
+      end if
+
+      this%hm_base%uniform_vector_potential = M_ZERO
+      this%hm_base%uniform_vector_potential = gauge_field_get_vec_pot(this%ep%gfield)/P_c
+    end if
+ 
     ! now re-generate the phases for the pseudopotentials
     do iatom = 1, this%ep%natoms
       call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d%kpt%start, this%d%kpt%end, this%d%kpoints, &
-        vec_pot = gauge_field_get_vec_pot(this%ep%gfield)/P_c, vec_pot_var = this%ep%a_static)
+        vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%ep%a_static)
     end do
 
     call profiling_count_operations(mesh%np*this%d%nspin)

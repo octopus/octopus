@@ -100,16 +100,18 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
     do idim = 1, std%dim
       call X(derivatives_grad)(der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
     end do
-
-    if(associated(this%uniform_vector_potential)) then
-      
-      a2 = sum(this%uniform_vector_potential(1:MAX_DIM)**2)
-      
-      forall (idim = 1:psib%dim, ip = 1:der%mesh%np)
-        vpsi(ip, idim) = vpsi(ip, idim) + M_HALF*a2*psi(ip, idim) &
-          + M_zI*dot_product(this%uniform_vector_potential(1:MAX_DIM), grad(ip, 1:MAX_DIM, idim))
-      end forall
-    end if
+    grad(:, der%mesh%sb%dim + 1:MAX_DIM, :) = M_ZERO
+ 
+    !! this is commmented for the moment, since this is applied by gauge_field_apply
+    !    if(associated(this%uniform_vector_potential)) then
+    !      
+    !      a2 = sum(this%uniform_vector_potential(1:MAX_DIM)**2)
+    !      
+    !      forall (idim = 1:psib%dim, ip = 1:der%mesh%np)
+    !        vpsi(ip, idim) = vpsi(ip, idim) + M_HALF*a2*psi(ip, idim) &
+    !          + M_zI*dot_product(this%uniform_vector_potential(1:MAX_DIM), grad(ip, 1:MAX_DIM, idim))
+    !      end forall
+    !    end if
     
     if(associated(this%vector_potential)) then
       forall (idim = 1:std%dim, ip = 1:der%mesh%np)
