@@ -171,14 +171,14 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
               ik, hm%ep%gyromagnetic_ratio, time = time)
           end if
         end if
-#ifdef R_TCOMPLEX
-        if (gauge_field_is_applied(hm%ep%gfield)) then
-          call X(get_grad)(hm, der, epsi, grad)
-          call gauge_field_apply(hm%ep%gfield, der, hm%d%dim, epsi, grad, hpsi)
-        end if
-#endif
       end if
       
+#ifdef R_TCOMPLEX
+      if (gauge_field_is_applied(hm%ep%gfield)) then
+        call X(get_grad)(hm, der, epsi, grad)
+        call gauge_field_apply(hm%ep%gfield, der, hm%d%dim, epsi, grad, hpsi)
+      end if
+#endif
       if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) &
         call X(exchange_operator)(hm, der, epsi, hpsi, ist, ik)
       

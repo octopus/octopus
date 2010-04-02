@@ -55,6 +55,7 @@ module gauge_field_m
   public ::                               &
     gauge_force_t,                        &   
     gauge_field_t,                        &
+    gauge_field_nullify,                  &
     gauge_field_init,                     &
     gauge_field_init_vec_pot,             &
     gauge_field_is_applied,               &
@@ -85,6 +86,12 @@ module gauge_field_m
   end type gauge_field_t
 
 contains
+
+  subroutine gauge_field_nullify(this)
+    type(gauge_field_t),     intent(out)   :: this
+
+    this%with_gauge_field = .false.
+  end subroutine gauge_field_nullify
 
   ! ---------------------------------------------------------
   subroutine gauge_field_init(this, sb)

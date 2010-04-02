@@ -151,6 +151,8 @@ contains
       call scissor_init(hm%scissor, st, td%scissor, gspsi)
     end if
 
+    call gauge_field_init(hm%ep%gfield, gr%sb)
+
     call td_write_init(write_handler, gr, st, hm, geo, &
          ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), td%iter, td%max_iter, td%dt)
 

@@ -358,7 +358,7 @@ contains
 
     SAFE_ALLOCATE(ep%fii(1:MAX_DIM, 1:geo%natoms))
 
-    call gauge_field_init(ep%gfield, gr%sb)
+    call gauge_field_nullify(ep%gfield)
 
     nullify(ep%local_potential)
     ep%local_potential_precalculated = .false.
