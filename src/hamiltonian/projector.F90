@@ -197,8 +197,8 @@ contains
     integer,           intent(in)    :: kstart
     integer,           intent(in)    :: kend
     FLOAT,             intent(in)    :: kpoints(:, :)
-    FLOAT, optional,   intent(in)    :: vec_pot(1:MAX_DIM)
-    FLOAT,             pointer       :: vec_pot_var(:, :)
+    FLOAT, optional,   pointer       :: vec_pot(:)
+    FLOAT, optional,   pointer       :: vec_pot_var(:, :)
 
     integer :: ns, ik, is
     FLOAT   :: kr
@@ -219,8 +219,15 @@ contains
         ! this is only the correction to the global phase, that can
         ! appear if the sphere crossed the boundary of the cell.
         kr = sum(kpoints(1:ndim, ik)*(this%sphere%x(is, 1:ndim) - this%sphere%mesh%x(this%sphere%jxyz(is), 1:ndim)))
-        if(present(vec_pot)) kr = kr + sum(vec_pot(1:ndim)*this%sphere%x(is, 1:ndim))
-        if(associated(vec_pot_var)) kr = kr + sum(vec_pot_var(this%sphere%jxyz(is), 1:ndim)*this%sphere%x(is, 1:ndim))
+
+        if(present(vec_pot)) then
+          if(associated(vec_pot)) kr = kr + sum(vec_pot(1:ndim)*this%sphere%x(is, 1:ndim))
+        end if
+
+        if(present(vec_pot_var)) then
+          if(associated(vec_pot_var)) kr = kr + sum(vec_pot_var(this%sphere%jxyz(is), 1:ndim)*this%sphere%x(is, 1:ndim))
+        end if
+
         this%phase(is, ik) = exp(-M_zI*kr)
       end do
 

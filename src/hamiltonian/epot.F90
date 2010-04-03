@@ -488,11 +488,6 @@ contains
       ep%non_local = .true.
       call projector_end(ep%proj(ia))
       call projector_init(ep%proj(ia), gr%mesh, atm, st%d%dim, ep%reltype)
-
-      if(simul_box_is_periodic(sb) .or. associated(ep%a_static)) then
-        call projector_init_phases(ep%proj(ia), sb, st%d%kpt%start, st%d%kpt%end, st%d%kpoints, vec_pot_var = ep%a_static)
-      end if
-
       call projector_build(ep%proj(ia), gr, atm, ep%so_strength)
 
     end do
