@@ -898,24 +898,6 @@ contains
       end if
     end do
 
-    if(associated(this%ep%a_static)) then
-      if(.not. associated(this%hm_base%vector_potential)) then
-        SAFE_ALLOCATE(this%hm_base%vector_potential(1:MAX_DIM, 1:mesh%np))
-      end if
-      this%hm_base%vector_potential = M_ZERO
-      
-      forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) this%hm_base%vector_potential(idir, ip) = this%ep%A_static(ip, idir)
-    end if
-
-    if(associated(this%ep%b_field)) then
-      if(.not. associated(this%hm_base%uniform_magnetic_field)) then
-        SAFE_ALLOCATE(this%hm_base%uniform_magnetic_field(1:MAX_DIM))
-      end if
-      this%hm_base%uniform_magnetic_field = M_ZERO
-
-      forall (idir = 1:3) this%hm_base%uniform_magnetic_field(idir) = this%ep%b_field(idir)
-    end if
-
     if(gauge_field_is_applied(this%ep%gfield)) then
       ASSERT(.not. associated(this%hm_base%vector_potential))
 
@@ -926,11 +908,41 @@ contains
       this%hm_base%uniform_vector_potential = M_ZERO
       this%hm_base%uniform_vector_potential = gauge_field_get_vec_pot(this%ep%gfield)/P_c
     end if
+
+    if(associated(this%ep%a_static)) then
+      if(.not. associated(this%hm_base%vector_potential)) then
+        SAFE_ALLOCATE(this%hm_base%vector_potential(1:MAX_DIM, 1:mesh%np))
+      end if
+
+      this%hm_base%vector_potential = M_ZERO
+      
+      forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) this%hm_base%vector_potential(idir, ip) = this%ep%A_static(ip, idir)
+
+      if(associated(this%hm_base%uniform_vector_potential)) then
+        forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) 
+          this%hm_base%vector_potential(idir, ip) = &
+            this%hm_base%vector_potential(idir, ip) + this%hm_base%uniform_vector_potential(idir)
+        end forall
+        
+        SAFE_DEALLOCATE_P(this%hm_base%uniform_vector_potential)
+        nullify(this%hm_base%uniform_vector_potential)
+      end if
+
+    end if
+
+    if(associated(this%ep%b_field)) then
+      if(.not. associated(this%hm_base%uniform_magnetic_field)) then
+        SAFE_ALLOCATE(this%hm_base%uniform_magnetic_field(1:MAX_DIM))
+      end if
+      this%hm_base%uniform_magnetic_field = M_ZERO
+
+      forall (idir = 1:3) this%hm_base%uniform_magnetic_field(idir) = this%ep%b_field(idir)
+    end if
  
     ! now re-generate the phases for the pseudopotentials
     do iatom = 1, this%ep%natoms
       call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d%kpt%start, this%d%kpt%end, this%d%kpoints, &
-        vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%ep%a_static)
+        vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
     end do
 
     call profiling_count_operations(mesh%np*this%d%nspin)

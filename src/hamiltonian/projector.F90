@@ -225,7 +225,7 @@ contains
         end if
 
         if(present(vec_pot_var)) then
-          if(associated(vec_pot_var)) kr = kr + sum(vec_pot_var(this%sphere%jxyz(is), 1:ndim)*this%sphere%x(is, 1:ndim))
+          if(associated(vec_pot_var)) kr = kr + sum(vec_pot_var(1:ndim, this%sphere%jxyz(is))*this%sphere%x(is, 1:ndim))
         end if
 
         this%phase(is, ik) = exp(-M_zI*kr)
