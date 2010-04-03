@@ -1,0 +1,44 @@
+CalculationMode = gs
+
+a = 6.74
+
+PeriodicDimensions = 3
+
+BoxShape = parallelepiped
+Lsize = a/2
+Spacing = a/12
+
+%Coordinates
+  "C" |   0.0       | 0.0       | 0.0 
+  "C" |   a/2       | a/2       | 0.0
+  "C" |   a/2       | 0.0       | a/2
+  "C" |   0.0       | a/2       | a/2 
+  "C" |   a/4       | a/4       | a/4 
+  "C" |   a/4 + a/2 | a/4 + a/2 | a/4
+  "C" |   a/4 + a/2 | a/4       | a/4 + a/2
+  "C" |   a/4       | a/4 + a/2 | a/4 + a/2 
+%
+
+nk = 3
+
+%KPointsGrid
+nk | nk | nk
+%
+
+KPointsUseSymmetries = yes
+SymmetrizeDensity = yes
+
+ExtraStates = 2
+
+FromScratch = yes
+
+XCFunctional = mgga_x_tb09 + lda_c_pz
+
+What2Mix = potential
+
+DevelVersion = yes
+
+ConvRelEv = 1e-8
+
+Preconditioner = no
+
