@@ -384,7 +384,7 @@ contains
   ! Propagates st from time - dt to t.
   ! If dt<0, it propagates *backwards* from t+|dt| to t
   ! ---------------------------------------------------------
-  subroutine propagator_dt(ks, hm, gr, st, tr, time, dt, max_iter, nt, gauge_force, ions, geo, ionic_dt)
+  subroutine propagator_dt(ks, hm, gr, st, tr, time, dt, mu, max_iter, nt, gauge_force, ions, geo)
     type(v_ks_t),                    intent(inout) :: ks
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
@@ -392,12 +392,12 @@ contains
     type(propagator_t),  target,     intent(inout) :: tr
     FLOAT,                           intent(in)    :: time
     FLOAT,                           intent(in)    :: dt
+    FLOAT,                           intent(in)    :: mu
     integer,                         intent(in)    :: max_iter
     integer,                         intent(in)    :: nt
     type(gauge_force_t),  optional,  intent(inout) :: gauge_force
     type(ion_dynamics_t), optional,  intent(inout) :: ions
     type(geometry_t),     optional,  intent(inout) :: geo
-    FLOAT,                optional,  intent(in)    :: ionic_dt
 
     integer :: is, iter, ik, ist, idim
     FLOAT   :: d, d_max
@@ -411,7 +411,6 @@ contains
 
     if(present(ions)) then
       ASSERT(present(geo))
-      ASSERT(present(ionic_dt))
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
@@ -559,7 +558,7 @@ contains
             
             !propagate the state dt with H(time - dt)
             call batch_init(zpsib, st%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
-            call exponential_apply_batch(tr%te, gr%der, hm, zpsib, ik, dt, time - dt)
+            call exponential_apply_batch(tr%te, gr%der, hm, zpsib, ik, dt/mu, time - dt)
             call states_dens_accumulate_batch(st, gr, ik, zpsib, st%rho)
             call batch_end(zpsib)
 
@@ -593,7 +592,7 @@ contains
           ste = min(st%st_end, sts + st%d%block_size - 1)
 
           call batch_init(zpsib, st%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
-          call exponential_apply_batch(tr%te, gr%der, hm, zpsib, ik, dt/M_TWO, time - dt)
+          call exponential_apply_batch(tr%te, gr%der, hm, zpsib, ik, dt/(mu*M_TWO), time - dt)
           call batch_end(zpsib)
         end do
       end do
@@ -602,7 +601,7 @@ contains
 
       ! first move the ions to time t
       if(present(ions)) then
-        call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_dt)
+        call ion_dynamics_propagate(ions, gr%sb, geo, time, dt)
         call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
       end if
 
@@ -620,7 +619,7 @@ contains
           ste = min(st%st_end, sts + st%d%block_size - 1)
 
           call batch_init(zpsib, st%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
-          call exponential_apply_batch(tr%te, gr%der, hm, zpsib, ik, dt/M_TWO, time)
+          call exponential_apply_batch(tr%te, gr%der, hm, zpsib, ik, dt/(M_TWO*mu), time)
           call batch_end(zpsib)
         end do
       end do
@@ -648,7 +647,7 @@ contains
           ste = min(st%st_end, sts + st%d%block_size - 1)
 
           call batch_init(zpsib, st%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
-          call exponential_apply_batch(tr%te, gr%der, hm, zpsib, ik, dt/M_TWO, time - dt)
+          call exponential_apply_batch(tr%te, gr%der, hm, zpsib, ik, dt/(M_TWO*mu), time - dt)
           call batch_end(zpsib)
         end do
       end do
@@ -658,7 +657,7 @@ contains
 
       ! move the ions to time t
       if(present(ions)) then      
-        call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_dt)
+        call ion_dynamics_propagate(ions, gr%sb, geo, time, dt)
         call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
       end if
 
@@ -673,7 +672,7 @@ contains
         do sts = st%st_start, st%st_end, st%d%block_size
           ste = min(st%st_end, sts + st%d%block_size - 1)
           call batch_init(zpsib, hm%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
-          call exponential_apply_batch(tr%te, gr%der, hm, zpsib, ik, dt/M_TWO, time)
+          call exponential_apply_batch(tr%te, gr%der, hm, zpsib, ik, dt/(M_TWO*mu), time)
           call batch_end(zpsib)
         end do
       end do
@@ -698,8 +697,8 @@ contains
       !move the ions to time time - dt/2
       if(present(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
-        call ion_dynamics_propagate(ions, gr%sb, geo, time - ionic_dt/M_TWO, M_HALF*ionic_dt)
-        call hamiltonian_epot_generate(hm, gr, geo, st, time = time - ionic_dt/M_TWO)
+        call ion_dynamics_propagate(ions, gr%sb, geo, time - dt/M_TWO, M_HALF*dt)
+        call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt/M_TWO)
       end if
       
       if(gauge_field_is_applied(hm%ep%gfield)) then
@@ -712,7 +711,7 @@ contains
 
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
-          call exponential_apply(tr%te, gr%der, hm, st%zpsi(:,:, ist, ik), ist, ik, dt, time - dt/M_TWO)
+          call exponential_apply(tr%te, gr%der, hm, st%zpsi(:,:, ist, ik), ist, ik, dt/mu, time - dt/M_TWO)
         end do
       end do
 

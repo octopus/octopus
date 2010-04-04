@@ -209,10 +209,10 @@ contains
       select case(td%dynamics)
       case(EHRENFEST)
         if(ion_dynamics_ions_move(td%ions)) then
-          call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt/td%mu, td%max_iter, iter, gauge_force, &
-            ions = td%ions, geo = sys%geo, ionic_dt = td%dt)
+          call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%mu, td%max_iter, iter, gauge_force, &
+            ions = td%ions, geo = sys%geo)
         else
-          call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt/td%mu, td%max_iter, iter, gauge_force)
+          call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%mu, td%max_iter, iter, gauge_force)
         end if
       case(BO)
         call scf_run(td%scf, sys%gr, geo, st, sys%ks, hm, sys%outp, gs_run = .false., verbosity = VERB_NO)
