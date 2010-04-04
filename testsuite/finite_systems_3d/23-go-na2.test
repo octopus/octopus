@@ -3,7 +3,7 @@
 
 Test       : Geometry optimization
 Programs   : octopus_mpi; octopus; octopus_single
-TestGroups : short-run
+TestGroups : long-run
 Enabled    : Yes
 
 Input      : 23-go-na2.01-steep.inp
