@@ -36,7 +36,7 @@ depend:
 
 pes.o: pes.F90 pes_mask_inc.F90 pes_rc_inc.F90
 spectrum.o: spectrum.F90
-propagator.o: propagator.F90 ob_propagator.o
+propagator.o: propagator.F90 ob_propagator.o propagator_qoct_inc.F90
 ob_propagator.o: ob_propagator.F90 ob_mem.o ob_src.o ob_terms.o
 ob_mem.o: ob_mem.F90 ob_terms.o
 ob_src.o: ob_src.F90 ob_mem.o ob_terms.o
