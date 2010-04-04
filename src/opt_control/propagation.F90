@@ -156,7 +156,7 @@ module opt_control_propagation_m
 
     ! setup the Hamiltonian
     call states_calc_dens(psi, gr)
-    call v_ks_calc(sys%ks, gr, hm, psi)
+    call v_ks_calc(sys%ks, gr, hm, psi, time = M_ZERO)
     call propagator_run_zero_iter(hm, td%tr)
 
     if(present(prop)) call oct_prop_output(prop, 0, psi, gr)
@@ -169,7 +169,7 @@ module opt_control_propagation_m
 
       ! update
       call states_calc_dens(psi, gr)
-      call v_ks_calc(sys%ks, gr, hm, psi)
+      call v_ks_calc(sys%ks, gr, hm, psi, time = i*td%dt)
       call total_energy(hm, sys%gr, psi, -1)
 
       ! if td_target
@@ -305,12 +305,14 @@ module opt_control_propagation_m
     do i = 1, td%max_iter
       call update_field(i, par, gr, hm, psi, chi, par_chi, dir = 'f')
       call update_hamiltonian_chi(i, gr, sys%ks, hm, td, target, par_chi, psi2)
+      call hamiltonian_update_potential(hm, gr%mesh, time = (i - 1)*td%dt)
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, i*td%dt, td%dt, td%max_iter, i)
       if(aux_fwd_propagation) then
         call update_hamiltonian_psi(i, gr, sys%ks, hm, td, target, par_prev, psi2)
         call propagator_dt(sys%ks, hm, gr, psi2, tr_psi2, i*td%dt, td%dt, td%max_iter, i)
       end if
       call update_hamiltonian_psi(i, gr, sys%ks, hm, td, target, par, psi)
+      call hamiltonian_update_potential(hm, gr%mesh, time = (i - 1)*td%dt)
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, i*td%dt, td%dt, td%max_iter, i)
       call target_tdcalc(target, gr, psi, i) 
       call oct_prop_output(prop_psi, i, psi, gr)
@@ -388,9 +390,11 @@ module opt_control_propagation_m
       call oct_prop_check(prop_psi, psi, gr, sys%geo, i)
       call update_field(i, par_chi, gr, hm, psi, chi, par, dir = 'b')
       call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, target, par_chi, psi)
+      call hamiltonian_update_potential(hm, gr%mesh, abs(i*td%dt))
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%max_iter, i)
       call oct_prop_output(prop_chi, i-1, chi, gr)
       call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, target, par, psi)
+      call hamiltonian_update_potential(hm, gr%mesh, abs(i*td%dt))
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%max_iter, i)
     end do
     td%dt = -td%dt

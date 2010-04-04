@@ -88,7 +88,8 @@ module hamiltonian_m
     hamiltonian_not_adjoint,         &
     hamiltonian_hermitian,           &
     hamiltonian_epot_generate,       &
-    hamiltonian_update_potential
+    hamiltonian_update_potential,    &
+    hamiltonian_get_time
 
   type hamiltonian_t
     ! The Hamiltonian must know what are the "dimensions" of the spaces,
@@ -164,6 +165,8 @@ module hamiltonian_m
     CMPLX, pointer :: phase(:, :)
 
     type(scissor_t) :: scissor
+
+    FLOAT :: current_time
   end type hamiltonian_t
 
   integer, public, parameter :: &
@@ -878,13 +881,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_update_potential(this, mesh)
+  subroutine hamiltonian_update_potential(this, mesh, time)
     type(hamiltonian_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
+    FLOAT, optional,     intent(in)    :: time
 
     integer :: ispin, ip, idir, iatom
 
     call push_sub('hamiltonian.hamiltonian_update_potential')
+
+    if(present(time)) this%current_time = time
 
     if(.not. associated(this%hm_base%potential)) then
       SAFE_ALLOCATE(this%hm_base%potential(1:mesh%np, this%d%nspin))
@@ -968,10 +974,20 @@ contains
 
     this%hm_base%nlproj => this%ep%proj
 
-    call hamiltonian_update_potential(this, gr%mesh)
+    call hamiltonian_update_potential(this, gr%mesh, time)
 
     call pop_sub('hamiltonian.hamiltonian_epot_generate')
   end subroutine hamiltonian_epot_generate
+
+  ! -----------------------------------------------------------------
+  
+  FLOAT function hamiltonian_get_time(this) result(time)
+    type(hamiltonian_t),   intent(inout) :: this
+    
+    time = this%current_time
+  end function hamiltonian_get_time
+
+  ! -----------------------------------------------------------------
 
 #include "undef.F90"
 #include "real.F90"

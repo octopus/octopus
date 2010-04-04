@@ -459,7 +459,7 @@ contains
 
       ! First, compare the new potential to the extrapolated one.
       call states_calc_dens(st, gr)
-      call v_ks_calc(ks, gr, hm, st)
+      call v_ks_calc(ks, gr, hm, st, time = time - dt)
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
       d_max = M_ZERO
       do is = 1, st%d%nspin
@@ -500,7 +500,7 @@ contains
           end select
 
           call states_calc_dens(st, gr)
-          call v_ks_calc(ks, gr, hm, st)
+          call v_ks_calc(ks, gr, hm, st, time = time - dt)
           SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
           d_max = M_ZERO
           do is = 1, st%d%nspin
@@ -584,7 +584,7 @@ contains
 
         call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
         call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
-        call hamiltonian_update_potential(hm, gr%mesh)
+        call hamiltonian_update_potential(hm, gr%mesh, time = time - dt)
       end if
 
       ! propagate dt/2 with H(time - dt)
@@ -608,13 +608,12 @@ contains
 
       if(gauge_field_is_applied(hm%ep%gfield)) then
         call gauge_field_propagate(hm%ep%gfield, gauge_force, dt)
-        call hamiltonian_update_potential(hm, gr%mesh)
       end if
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
         call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
-        call hamiltonian_update_potential(hm, gr%mesh)
       end if
+      call hamiltonian_update_potential(hm, gr%mesh, time = time)
 
       do ik = st%d%kpt%start, st%d%kpt%end
         do sts = st%st_start, st%st_end, st%d%block_size
@@ -656,7 +655,6 @@ contains
 
       ! interpolate the Hamiltonian to time t
       call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 0), hm%vhxc)
-      call hamiltonian_update_potential(hm, gr%mesh)
 
       ! move the ions to time t
       if(present(ions)) then      
@@ -666,8 +664,9 @@ contains
 
       if(gauge_field_is_applied(hm%ep%gfield)) then
         call gauge_field_propagate(hm%ep%gfield, gauge_force, dt)
-        call hamiltonian_update_potential(hm, gr%mesh)
       end if
+
+      call hamiltonian_update_potential(hm, gr%mesh, time = time)
 
       ! propagate the other half with H(t)
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -694,7 +693,6 @@ contains
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
         call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time - dt/M_TWO, hm%vhxc(:, :))
-        call hamiltonian_update_potential(hm, gr%mesh)
       end if
 
       !move the ions to time time - dt/2
@@ -708,8 +706,9 @@ contains
         vecpot = gauge_field_get_vec_pot(hm%ep%gfield)
         vecpot_vel = gauge_field_get_vec_pot_vel(hm%ep%gfield)
         call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt)
-        call hamiltonian_update_potential(hm, gr%mesh)
       end if
+
+      call hamiltonian_update_potential(hm, gr%mesh, time = time - M_HALF*dt)
 
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end

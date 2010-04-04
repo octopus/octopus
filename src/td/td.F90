@@ -175,7 +175,6 @@ contains
       end if
 
       call gauge_field_get_force(hm%ep%gfield, gr, geo, hm%ep%proj, hm%phase, st, gauge_force)
-      call hamiltonian_update_potential(hm, gr%mesh)
     end if
 
     call td_write_init(write_handler, gr, st, hm, geo, &
@@ -248,7 +247,7 @@ contains
       if(generate) call hamiltonian_epot_generate(hm, gr, sys%geo, st, time = iter*td%dt)
 
       ! update Hamiltonian and eigenvalues (fermi is *not* called)
-      call v_ks_calc(sys%ks, gr, hm, st, calc_eigenval = .true.)
+      call v_ks_calc(sys%ks, gr, hm, st, calc_eigenval = .true., time = iter*td%dt)
 
       ! Get the energies.
       call total_energy(hm, sys%gr, st, iunit = -1)
@@ -513,21 +512,21 @@ contains
           ' orbitals have been frozen.', st%nst, ' will be propagated.'
         call write_info(1)
         call states_calc_dens(st, gr)
-        call v_ks_calc(sys%ks, gr, hm, st, calc_eigenval=.true.)
+        call v_ks_calc(sys%ks, gr, hm, st, calc_eigenval=.true., time = td%iter*td%dt)
       elseif(freeze_orbitals < 0) then
         ! This means SAE approximation. We calculate the Hxc first, then freeze all
         ! orbitals minus one.
         write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
         call write_info(1)
         call states_calc_dens(st, gr)
-        call v_ks_calc(sys%ks, sys%gr, hm, st, calc_eigenval=.true.)
+        call v_ks_calc(sys%ks, sys%gr, hm, st, calc_eigenval=.true., time = td%iter*td%dt)
         call states_freeze_orbitals(st, gr, sys%mc, n = st%nst-1)
         call v_ks_freeze_hxc(sys%ks)
         call states_calc_dens(st, gr)
       else
         ! Normal run.
         call states_calc_dens(st, gr)
-        call v_ks_calc(sys%ks, gr, hm, st, calc_eigenval=.true.)
+        call v_ks_calc(sys%ks, gr, hm, st, calc_eigenval=.true., time = td%iter*td%dt)
       end if
 
       x = minval(st%eigenval(st%st_start, :))

@@ -258,13 +258,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine v_ks_calc(ks, gr, hm, st, calc_eigenval)
+  subroutine v_ks_calc(ks, gr, hm, st, calc_eigenval, time)
     type(v_ks_t),           intent(inout) :: ks
     type(grid_t),           intent(inout) :: gr
     type(hamiltonian_t),    intent(inout) :: hm
     type(states_t),         intent(inout) :: st
     logical,      optional, intent(in)    :: calc_eigenval
-
+    FLOAT,        optional, intent(in)    :: time
+    
     FLOAT :: amaldi_factor
     integer :: ip, ispin
     type(profile_t), save :: prof
@@ -341,7 +342,7 @@ contains
 
     end if
     
-    call hamiltonian_update_potential(hm, gr%mesh)
+    call hamiltonian_update_potential(hm, gr%mesh, time)
     
     if(ks%theory_level==HARTREE.or.ks%theory_level==HARTREE_FOCK) then
       call states_end(hm%st)
