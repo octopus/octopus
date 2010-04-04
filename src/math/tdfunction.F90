@@ -699,7 +699,8 @@ module tdf_m
   subroutine tdf_set_numericalr(f, values)
     type(tdf_t), intent(inout) :: f
     FLOAT,       intent(in) :: values(:)
-    call push_sub('tdfunction.tdf_set_numericalr') 
+
+    ! no push_sub because it is called too frequently
 
     select case(f%mode)
     case(TDF_NUMERICAL)
@@ -713,7 +714,6 @@ module tdf_m
       f%valww(2:2*f%nfreqs-1) = values(1:2*f%nfreqs-2)
     end select
 
-    call pop_sub('tdfunction.tdf_set_numericalr') 
   end subroutine tdf_set_numericalr
   !------------------------------------------------------------
 
@@ -724,7 +724,7 @@ module tdf_m
     integer,     intent(in)    :: index
     FLOAT,       intent(in)    :: value
 
-    call push_sub('tdfunction.tdf_set_numericalr1')
+    ! no push_sub because it is called too frequently
 
     select case(f%mode)
     case(TDF_NUMERICAL)
@@ -737,7 +737,6 @@ module tdf_m
       f%valww(index+1) = value
     end select
 
-    call pop_sub('tdfunction.tdf_set_numericalr1')
   end subroutine tdf_set_numericalr1
   !------------------------------------------------------------ 
 
@@ -932,7 +931,7 @@ module tdf_m
     FLOAT :: r, fre, fim, tcu
     integer :: il, iu
 
-    call push_sub('tdfunction.tdft')
+    ! no push_sub because it is called too frequently
 
     select case(f%mode)
 
@@ -991,7 +990,6 @@ module tdf_m
 
     end select
 
-    call pop_sub('tdfunction.tdft')
   end function tdft
   !------------------------------------------------------------
 
