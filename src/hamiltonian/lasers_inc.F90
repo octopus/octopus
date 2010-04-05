@@ -260,26 +260,24 @@ subroutine X(vlasers) (lasers, nlasers, der, std, psi, hpsi, grad, ik, gyromagne
   FLOAT,    optional,  intent(in)    :: time
 
   integer :: ip, idim
-  logical :: electric_field, vector_potential, magnetic_field
+  logical :: vector_potential, magnetic_field
   R_TYPE, allocatable :: lhpsi(:, :)
   type(profile_t), save :: ext_fields_profile
 
   FLOAT :: a_field(1:MAX_DIM), a_field_prime(1:MAX_DIM), bb(1:MAX_DIM), b_prime(1:MAX_DIM)
 
-  FLOAT, allocatable :: vv(:), pot(:), aa(:, :), a_prime(:, :)
+  FLOAT, allocatable :: aa(:, :), a_prime(:, :)
 
   call push_sub('lasers_inc.Xvlasers')
   call profiling_in(ext_fields_profile, 'EXTERNAL_FIELDS')
 
   a_field = M_ZERO
 
-  electric_field = .false.
   vector_potential = .false.
   magnetic_field = .false.
 
   call get_fields()
   
-  if(electric_field)   call apply_electric_field()
   if(magnetic_field)   call apply_magnetic_field()
   if(vector_potential) call apply_vector_potential()
 
@@ -297,18 +295,6 @@ contains
     do il = 1, nlasers
 
       select case(laser_kind(lasers(il)))
-      case(E_FIELD_SCALAR_POTENTIAL, E_FIELD_ELECTRIC)
-        if(.not. allocated(vv)) then 
-          SAFE_ALLOCATE(vv(1:der%mesh%np))
-          vv = M_ZERO
-        end if
-        SAFE_ALLOCATE(pot(1:der%mesh%np))
-        pot = M_ZERO
-        call laser_potential(lasers(il), der%mesh, pot, time)
-        vv = vv + pot
-        electric_field = .true.
-        SAFE_DEALLOCATE_A(pot)
-        
       case(E_FIELD_MAGNETIC)
         if(.not. allocated(aa)) then 
           SAFE_ALLOCATE(aa(1:der%mesh%np_part, 1:der%mesh%sb%dim))
@@ -339,20 +325,6 @@ contains
 
   call pop_sub('lasers_inc.Xvlasers.get_fields')
   end subroutine get_fields
-
-
-  ! ---------------------------------------------------------
-  subroutine apply_electric_field()
-    call push_sub('lasers_inc.Xvlasers.apply_electric_field')
-
-    do idim = 1, std%dim
-      hpsi(1:der%mesh%np, idim) = hpsi(1:der%mesh%np, idim) + vv(1:der%mesh%np) * psi(1:der%mesh%np, idim)
-    end do
-    SAFE_DEALLOCATE_A(vv)
-
-    call pop_sub('lasers_inc.Xvlasers.apply_electric_field')
-  end subroutine apply_electric_field
-
 
   ! ---------------------------------------------------------
   subroutine apply_magnetic_field()

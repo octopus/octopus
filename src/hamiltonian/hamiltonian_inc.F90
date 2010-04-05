@@ -44,6 +44,10 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   call profiling_in(prof_hamiltonian, "HAMILTONIAN")
   call push_sub('hamiltonian_inc.Xhamiltonian_apply_batch')
 
+  if(present(time)) then
+    ASSERT(abs(time - hm%current_time) < CNST(1e-10))
+  end if
+
   ! all terms are enabled by default
   terms_ = TERM_ALL
   if(present(terms)) terms_ = terms

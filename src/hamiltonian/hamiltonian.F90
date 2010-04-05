@@ -886,9 +886,11 @@ contains
     type(mesh_t),        intent(in)    :: mesh
     FLOAT, optional,     intent(in)    :: time
 
-    integer :: ispin, ip, idir, iatom
+    integer :: ispin, ip, idir, iatom, ilaser
+    type(profile_t) :: prof
 
     call push_sub('hamiltonian.hamiltonian_update_potential')
+    call profiling_in(prof, "HAMILTONIAN_UPDATE")
 
     if(present(time)) this%current_time = time
 
@@ -902,8 +904,15 @@ contains
       else
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin)
       end if
-    end do
 
+      do ilaser = 1, this%ep%no_lasers
+        if(laser_kind(this%ep%lasers(ilaser)) == E_FIELD_SCALAR_POTENTIAL .or. &
+          laser_kind(this%ep%lasers(ilaser)) == E_FIELD_ELECTRIC) then
+          call laser_potential(this%ep%lasers(ilaser), mesh,  this%hm_base%potential(:, ispin), time)
+        end if
+      end do
+    end do
+    
     if(gauge_field_is_applied(this%ep%gfield)) then
       ASSERT(.not. associated(this%hm_base%vector_potential))
 
@@ -952,6 +961,8 @@ contains
     end do
 
     call profiling_count_operations(mesh%np*this%d%nspin)
+
+    call profiling_out(prof)
     call pop_sub('hamiltonian.hamiltonian_update_potential')
   end subroutine hamiltonian_update_potential
 
