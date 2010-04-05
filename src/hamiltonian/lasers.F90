@@ -57,9 +57,6 @@ module lasers_m
     laser_set_phi,                &
     laser_set_f_value,            &
     laser_carrier_frequency,      &
-    laser_requires_gradient,      &
-    dvlasers,                     &
-    zvlasers,                     &
     zvlaser_operator_linear,      &
     zvlaser_operator_quadratic
 
@@ -593,17 +590,22 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_vector_potential(laser, aa, time)
+  subroutine laser_vector_potential(laser, mesh, aa, time)
     type(laser_t),   intent(in)    :: laser
+    type(mesh_t),    intent(in)    :: mesh
     FLOAT,           intent(inout) :: aa(:, :)
     FLOAT, optional, intent(in)    :: time
+    
+    FLOAT   :: amp 
+    integer :: ip, idir
 
     call push_sub('lasers.laser_vector_potential')
 
     if(present(time)) then
-      aa = aa + laser%a*real(tdf(laser%f, time)*exp(M_zI*(laser%omega*time + tdf(laser%phi, time))))
+      amp = real(tdf(laser%f, time)*exp(M_zI*(laser%omega*time + tdf(laser%phi, time))))
+      forall(idir = 1:mesh%sb%dim, ip = 1:mesh%np) aa(ip, idir) = aa(ip, idir) + amp*laser%a(ip, idir)
     else
-      aa = aa + laser%a
+      forall(idir = 1:mesh%sb%dim, ip = 1:mesh%np) aa(ip, idir) = aa(ip, idir) + laser%a(ip, idir)
     end if
 
     call pop_sub('lasers.laser_vector_potential')
@@ -635,15 +637,6 @@ contains
 
     call pop_sub('lasers.laser_field')
   end subroutine laser_field
-  ! ---------------------------------------------------------
-
-  logical elemental function laser_requires_gradient(this) result(req)
-    type(laser_t),  intent(in)  :: this
-
-    ! no push_sub allowed in elemental function
-    req = (laser_kind(this) == E_FIELD_MAGNETIC .or. laser_kind(this) == E_FIELD_VECTOR_POTENTIAL)
-    
-  end function laser_requires_gradient
 
 #include "undef.F90"
 #include "real.F90"

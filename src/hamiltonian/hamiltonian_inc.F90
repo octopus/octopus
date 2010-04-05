@@ -161,22 +161,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
       nullify(grad)
       
-      if (present(time)) then
-        ! lasers
-        if(hm%ep%no_lasers > 0) then
-          if(any(laser_requires_gradient(hm%ep%lasers(1:hm%ep%no_lasers)))) then
-            call X(get_grad)(hm, der, epsi, grad)
-          end if
-          if(associated(hm%ep%a_static)) then
-            call X(vlasers)(hm%ep%lasers, hm%ep%no_lasers, der, hm%d, epsi, hpsi, grad, &
-              ik, hm%ep%gyromagnetic_ratio, hm%ep%a_static, time)
-          else
-            call X(vlasers)(hm%ep%lasers, hm%ep%no_lasers, der, hm%d, epsi, hpsi, grad, &
-              ik, hm%ep%gyromagnetic_ratio, time = time)
-          end if
-        end if
-      end if
-      
       if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) &
         call X(exchange_operator)(hm, der, epsi, hpsi, ist, ik)
       

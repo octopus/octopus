@@ -888,12 +888,17 @@ contains
 
     integer :: ispin, ip, idir, iatom, ilaser
     type(profile_t) :: prof
+    FLOAT :: aa(1:MAX_DIM)
+    FLOAT, allocatable :: vp(: , :)
 
     call push_sub('hamiltonian.hamiltonian_update_potential')
     call profiling_in(prof, "HAMILTONIAN_UPDATE")
 
     if(present(time)) this%current_time = time
     
+    ! set everything to zero
+    call hamiltonian_base_clear(this%hm_base)
+
     ! the xc, hartree and external potentials
     call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_POTENTIAL)
     do ispin = 1, this%d%nspin
@@ -905,31 +910,57 @@ contains
     end do
 
     ! the lasers
-    do ilaser = 1, this%ep%no_lasers
-      select case(laser_kind(this%ep%lasers(ilaser)))
-      case(E_FIELD_SCALAR_POTENTIAL, E_FIELD_ELECTRIC)
-        do ispin = 1, this%d%nspin
-          call laser_potential(this%ep%lasers(ilaser), mesh,  this%hm_base%potential(:, ispin), time)
-        end do
-      end select
-    end do
-    
+    if (present(time)) then
+
+      do ilaser = 1, this%ep%no_lasers
+        select case(laser_kind(this%ep%lasers(ilaser)))
+        case(E_FIELD_SCALAR_POTENTIAL, E_FIELD_ELECTRIC)
+          do ispin = 1, this%d%nspin
+            call laser_potential(this%ep%lasers(ilaser), mesh,  this%hm_base%potential(:, ispin), time)
+          end do
+        case(E_FIELD_MAGNETIC)
+          call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL + FIELD_UNIFORM_MAGNETIC_FIELD)
+          ! get the vector potential
+          SAFE_ALLOCATE(vp(1:mesh%np, 1:MAX_DIM))
+          vp = M_ZERO
+          call laser_vector_potential(this%ep%lasers(ilaser), mesh, vp, time)
+          forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) 
+            this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) - vp(ip, idir)/P_C
+          end forall
+          ! and the magnetic field
+          call laser_field(this%ep%lasers(ilaser), mesh%sb, this%hm_base%uniform_magnetic_field, time)
+          SAFE_DEALLOCATE_A(vp)
+        case(E_FIELD_VECTOR_POTENTIAL)
+          call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL)
+          ! get the uniform vector potential associated to a magnetic field
+          aa = M_ZERO
+          call laser_field(this%ep%lasers(ilaser), mesh%sb, aa, time)
+          this%hm_base%uniform_vector_potential = this%hm_base%uniform_vector_potential - aa/P_C
+        end select
+      end do
+
+    end if
+
     ! the gauge field
     if(gauge_field_is_applied(this%ep%gfield)) then
       call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL)
-      this%hm_base%uniform_vector_potential = gauge_field_get_vec_pot(this%ep%gfield)/P_c
+      this%hm_base%uniform_vector_potential = this%hm_base%uniform_vector_potential + gauge_field_get_vec_pot(this%ep%gfield)/P_c
     end if
 
     ! the vector potential of a static magnetic field
     if(associated(this%ep%a_static)) then
       call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL)
-      forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) this%hm_base%vector_potential(idir, ip) = this%ep%a_static(ip, idir)
+      forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) 
+        this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) + this%ep%a_static(ip, idir)
+      end forall
     end if
 
     ! and the static magentic field
     if(associated(this%ep%b_field)) then
       call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_MAGNETIC_FIELD)
-      forall (idir = 1:3) this%hm_base%uniform_magnetic_field(idir) = this%ep%b_field(idir)
+      forall (idir = 1:3) 
+        this%hm_base%uniform_magnetic_field(idir) = this%hm_base%uniform_magnetic_field(idir) + this%ep%b_field(idir)
+      end forall
     end if
 
     ! done, check that everything is ok

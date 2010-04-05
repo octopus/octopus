@@ -60,6 +60,7 @@ module hamiltonian_base_m
     hamiltonian_base_init,                     &
     hamiltonian_base_end,                      &
     hamiltonian_base_allocate,                 &
+    hamiltonian_base_clear,                    &
     hamiltonian_base_check
 
   ! This object stores and applies an electromagnetic potential that
@@ -125,6 +126,25 @@ contains
 
     call pop_sub('hamiltonian_base.hamiltonian_base_end')
   end subroutine hamiltonian_base_end
+
+  ! ---------------------------------------------------------- 
+  !
+  ! This functions sets to zero all field that are currently
+  ! allocated.
+  !
+  subroutine hamiltonian_base_clear(this)
+    type(hamiltonian_base_t), intent(inout) :: this
+
+    call push_sub('hamiltonian_base.hamiltonian_clear')
+
+    if(associated(this%potential))                this%potential = M_ZERO
+    if(associated(this%uniform_vector_potential)) this%uniform_vector_potential = M_ZERO
+    if(associated(this%vector_potential))         this%vector_potential = M_ZERO
+    if(associated(this%uniform_magnetic_field))   this%uniform_magnetic_field = M_ZERO
+
+    call pop_sub('hamiltonian_base.hamiltonian_clear')
+  end subroutine hamiltonian_base_clear
+
 
   ! ---------------------------------------------------------------
   ! This function ensures that the corresponding field is allocated.
