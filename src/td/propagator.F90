@@ -934,7 +934,8 @@ contains
           select case(laser_kind(hm%ep%lasers(i)))
           case(E_FIELD_ELECTRIC)
             SAFE_ALLOCATE(pot(1:gr%mesh%np))
-            call laser_potential(gr%sb, hm%ep%lasers(i), gr%mesh, pot, time - dt + atime(j))
+            pot = M_ZERO
+            call laser_potential(hm%ep%lasers(i), gr%mesh, pot, time - dt + atime(j))
             do is = 1, st%d%nspin
               vaux(:, is, j) = vaux(:, is, j) + pot(:)
             end do

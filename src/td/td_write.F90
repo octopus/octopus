@@ -1183,7 +1183,7 @@ contains
 
     do il = 1, hm%ep%no_lasers
       field = M_ZERO
-      call laser_field(gr%sb, hm%ep%lasers(il), field, iter*dt)
+      call laser_field(hm%ep%lasers(il), gr%sb, field, iter*dt)
       select case(laser_kind(hm%ep%lasers(il)))
       case(E_FIELD_ELECTRIC, E_FIELD_MAGNETIC)
         field = units_from_atomic(units_out%force, field)

@@ -105,7 +105,7 @@ contains
       do j = 1, ep%no_lasers
         select case(laser_kind(ep%lasers(j)))
         case(E_FIELD_ELECTRIC)
-          call laser_field(gr%sb, ep%lasers(j), x, t)
+          call laser_field(ep%lasers(j), gr%sb, x, t)
           do i = 1, geo%natoms
             geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) + &
               P_PROTON_CHARGE * species_zval(geo%atom(i)%spec) * x(1:gr%mesh%sb%dim)

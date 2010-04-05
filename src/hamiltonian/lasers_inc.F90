@@ -47,13 +47,16 @@ subroutine X(vlaser_operator_quadratic) (laser, der, std, psi, hpsi)
       SAFE_ALLOCATE(a_prime(1:der%mesh%np_part, 1:der%mesh%sb%dim))
       a_prime = M_ZERO
     end if
+    a_prime = M_ZERO
     call laser_vector_potential(laser, a_prime)
     aa = aa + a_prime
-    call laser_field(der%mesh%sb, laser, b_prime)
+    b_prime = M_ZERO
+    call laser_field(laser, der%mesh%sb, b_prime)
     bb = bb + b_prime
     magnetic_field = .true.
   case(E_FIELD_VECTOR_POTENTIAL)
-    call laser_field(der%mesh%sb, laser, a_field_prime)
+    a_field_prime = M_ZERO
+    call laser_field(laser, der%mesh%sb, a_field_prime)
     a_field = a_field + a_field_prime
     vector_potential = .true.
   end select
@@ -107,9 +110,9 @@ subroutine X(vlaser_operator_linear) (laser, der, std, psi, hpsi, ik, gyromagnet
   case(E_FIELD_SCALAR_POTENTIAL)
     if(.not. allocated(vv)) then 
       SAFE_ALLOCATE(vv(1:der%mesh%np))
-      vv = M_ZERO
     end if
-    call laser_potential(der%mesh%sb, laser, der%mesh, vv)
+    vv = M_ZERO
+    call laser_potential(laser, der%mesh, vv)
     electric_field = .true.
 
   case(E_FIELD_ELECTRIC)
@@ -117,9 +120,9 @@ subroutine X(vlaser_operator_linear) (laser, der, std, psi, hpsi, ik, gyromagnet
       SAFE_ALLOCATE(vv(1:der%mesh%np))
       vv = M_ZERO
       SAFE_ALLOCATE(pot(1:der%mesh%np))
-      pot = M_ZERO
     end if
-    call laser_potential(der%mesh%sb, laser, der%mesh, pot)
+    pot = M_ZERO
+    call laser_potential(laser, der%mesh, pot)
     vv = vv + pot
     electric_field = .true.
     SAFE_DEALLOCATE_A(pot)
@@ -131,13 +134,16 @@ subroutine X(vlaser_operator_linear) (laser, der, std, psi, hpsi, ik, gyromagnet
       SAFE_ALLOCATE(a_prime(1:der%mesh%np_part, 1:der%mesh%sb%dim))
       a_prime = M_ZERO
     end if
+    a_prime = M_ZERO
     call laser_vector_potential(laser, a_prime)
     aa = aa + a_prime
-    call laser_field(der%mesh%sb, laser, b_prime)
+    b_prime = M_ZERO
+    call laser_field(laser, der%mesh%sb, b_prime)
     bb = bb + b_prime
     magnetic_field = .true.
   case(E_FIELD_VECTOR_POTENTIAL)
-    call laser_field(der%mesh%sb, laser, a_field_prime)
+    a_field_prime = M_ZERO
+    call laser_field(laser, der%mesh%sb, a_field_prime)
     a_field = a_field + a_field_prime
     vector_potential = .true.
   end select
@@ -298,7 +304,7 @@ contains
         end if
         SAFE_ALLOCATE(pot(1:der%mesh%np))
         pot = M_ZERO
-        call laser_potential(der%mesh%sb, lasers(il), der%mesh, pot, time)
+        call laser_potential(lasers(il), der%mesh, pot, time)
         vv = vv + pot
         electric_field = .true.
         SAFE_DEALLOCATE_A(pot)
@@ -311,18 +317,19 @@ contains
           a_prime = M_ZERO
         end if
 
+        a_prime = M_ZERO
         call laser_vector_potential(lasers(il), a_prime, time)
         aa = aa + a_prime
-        if(present(time)) then
-          call laser_field(der%mesh%sb, lasers(il), b_prime, time)
-        else 
-          call laser_field(der%mesh%sb, lasers(il), b_prime)
-        end if
+
+        b_prime = M_ZERO
+        call laser_field(lasers(il), der%mesh%sb, b_prime, time)
         bb = bb + b_prime
+
         magnetic_field = .true.
         
       case(E_FIELD_VECTOR_POTENTIAL)
-        call laser_field(der%mesh%sb, lasers(il), a_field_prime, time)
+        a_field_prime = M_ZERO
+        call laser_field(lasers(il), der%mesh%sb, a_field_prime, time)
         a_field = a_field + a_field_prime
         vector_potential = .true.
         

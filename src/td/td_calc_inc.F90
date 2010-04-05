@@ -59,7 +59,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, t)
   ! Adds the laser contribution : i<[V_laser, p]>
   ! WARNING: this ignores the possibility of non-electric td external fields.
   do j = 1, hm%ep%no_lasers
-    call laser_field(gr%sb, hm%ep%lasers(j), field, t)
+    call laser_field(hm%ep%lasers(j), gr%sb, field, t)
     acc(1:gr%mesh%sb%dim) = acc(1:gr%mesh%sb%dim) - st%qtot*field(1:gr%mesh%sb%dim)
   end do
 

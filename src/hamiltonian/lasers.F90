@@ -559,12 +559,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_potential(sb, laser, mesh, pot, time)
-    type(simul_box_t), intent(in) :: sb
-    type(laser_t),     intent(in) :: laser
-    type(mesh_t),      intent(in) :: mesh
-    FLOAT,            intent(out) :: pot(:)
-    FLOAT, optional,   intent(in) :: time
+  subroutine laser_potential(laser, mesh, pot, time)
+    type(laser_t),     intent(in)    :: laser
+    type(mesh_t),      intent(in)    :: mesh
+    FLOAT,             intent(inout) :: pot(:)
+    FLOAT, optional,   intent(in)    :: time
 
     CMPLX :: amp
     integer :: ip
@@ -572,7 +571,6 @@ contains
 
     call push_sub('lasers.laser_potential')
 
-    pot = M_ZERO
     if(present(time)) then
       amp = tdf(laser%f, time) * exp(M_zI * ( laser%omega*time + tdf(laser%phi, time) ) )
     else
@@ -583,9 +581,9 @@ contains
     case(E_FIELD_SCALAR_POTENTIAL)
       pot(1:mesh%np) = pot(1:mesh%np) + real(amp)*laser%v(1:mesh%np)
     case default
-      field(1:sb%dim) = real(amp*laser%pol(1:sb%dim))
+      field(1:mesh%sb%dim) = real(amp*laser%pol(1:mesh%sb%dim))
       do ip = 1, mesh%np
-        pot(ip) = pot(ip) + sum(field(1:sb%dim)*mesh%x(ip, 1:sb%dim))
+        pot(ip) = pot(ip) + sum(field(1:mesh%sb%dim)*mesh%x(ip, 1:mesh%sb%dim))
       end do
     end select
 
@@ -596,16 +594,16 @@ contains
 
   ! ---------------------------------------------------------
   subroutine laser_vector_potential(laser, aa, time)
-    type(laser_t),   intent(in)  :: laser
-    FLOAT,           intent(out) :: aa(:, :)
-    FLOAT, optional, intent(in)  :: time
+    type(laser_t),   intent(in)    :: laser
+    FLOAT,           intent(inout) :: aa(:, :)
+    FLOAT, optional, intent(in)    :: time
 
     call push_sub('lasers.laser_vector_potential')
 
     if(present(time)) then
-      aa = laser%a * real( tdf(laser%f, time) * exp(M_zI * ( laser%omega * time + tdf(laser%phi, time)  ) ) )
+      aa = aa + laser%a*real(tdf(laser%f, time)*exp(M_zI*(laser%omega*time + tdf(laser%phi, time))))
     else
-      aa = laser%a
+      aa = aa + laser%a
     end if
 
     call pop_sub('lasers.laser_vector_potential')
@@ -614,17 +612,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_field(sb, laser, field, time)
-    type(simul_box_t), intent(in)  :: sb
-    type(laser_t),     intent(in)  :: laser
-    FLOAT,             intent(out) :: field(:)
-    FLOAT, optional,   intent(in)  :: time
+  subroutine laser_field(laser, sb, field, time)
+    type(laser_t),     intent(in)    :: laser
+    type(simul_box_t), intent(in)    :: sb
+    FLOAT,             intent(inout) :: field(:)
+    FLOAT, optional,   intent(in)    :: time
 
     CMPLX :: amp
 
     call push_sub('lasers.laser_field')
 
-    field = M_ZERO
     if(laser%field .eq. E_FIELD_SCALAR_POTENTIAL) then
       call pop_sub('lasers.laser_field')
       return
