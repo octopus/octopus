@@ -848,7 +848,7 @@ contains
       hm_p      => hm
       tr_p      => tr
       dt_op = dt
-      t_op  = time
+      t_op  = time - dt/M_TWO
       dim_op = st%d%dim
 
       ! we (ab)use exponential_apply to compute (1-i\delta t/2 H_n)\psi^n
@@ -861,14 +861,14 @@ contains
       SAFE_ALLOCATE(rhs(1:np*st%d%dim))
         
       call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time - dt/M_TWO, hm%vhxc(:, :))
-      call hamiltonian_update_potential(hm, gr%mesh)
+      call hamiltonian_update_potential(hm, gr%mesh, time = time - dt/M_TWO)
 
       ! solve (1+i\delta t/2 H_n)\psi^{predictor}_{n+1} = (1-i\delta t/2 H_n)\psi^n
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
 
           zpsi_rhs(:, :) = st%zpsi(:, :, ist, ik)
-          call exponential_apply(tr%te, gr%der, hm, zpsi_rhs, ist, ik, dt/M_TWO, time - dt)
+          call exponential_apply(tr%te, gr%der, hm, zpsi_rhs, ist, ik, dt/M_TWO, time - dt/M_TWO)
           if(hamiltonian_inh_term(hm)) &
             zpsi_rhs(:, :) = zpsi_rhs(:, :) + dt * hm%inh_st%zpsi(:, :, ist, ik)
 
