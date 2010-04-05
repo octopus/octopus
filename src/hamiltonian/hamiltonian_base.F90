@@ -58,7 +58,9 @@ module hamiltonian_base_m
     dhamiltonian_base_magnetic,                &
     zhamiltonian_base_magnetic,                &
     hamiltonian_base_init,                     &
-    hamiltonian_base_end
+    hamiltonian_base_end,                      &
+    hamiltonian_base_allocate,                 &
+    hamiltonian_base_check
 
   ! This object stores and applies an electromagnetic potential that
   ! can be represented by different types of potentials.
@@ -80,6 +82,13 @@ module hamiltonian_base_m
     TERM_NON_LOCAL_POTENTIAL =   4,      &
     TERM_OTHERS              =   8,      &
     TERM_LOCAL_EXTERNAL      =  16
+
+  integer, public ::                       &
+    FIELD_POTENTIAL                = 1,    &
+    FIELD_VECTOR_POTENTIAL         = 2,    &
+    FIELD_UNIFORM_VECTOR_POTENTIAL = 4,    &
+    FIELD_UNIFORM_MAGNETIC_FIELD   = 8
+  
 
   type(profile_t), save :: prof_vlpsi, prof_magnetic
 
@@ -117,8 +126,76 @@ contains
     call pop_sub('hamiltonian_base.hamiltonian_base_end')
   end subroutine hamiltonian_base_end
 
-  ! -------------------------------------------------------
+  ! ---------------------------------------------------------------
+  ! This function ensures that the corresponding field is allocated.
+  subroutine hamiltonian_base_allocate(this, mesh, field)
+    type(hamiltonian_base_t), intent(inout) :: this
+    type(mesh_t),             intent(in)    :: mesh
+    integer,                  intent(in)    :: field
+    call push_sub('hamiltonian_base.hamiltonian_allocate')
 
+    if(iand(FIELD_POTENTIAL, field) /= 0) then 
+      if(.not. associated(this%potential)) then
+        SAFE_ALLOCATE(this%potential(1:mesh%np, 1:this%nspin))
+        this%potential = M_ZERO
+      end if
+    end if
+
+    if(iand(FIELD_UNIFORM_VECTOR_POTENTIAL, field) /= 0) then 
+      if(.not. associated(this%uniform_vector_potential)) then
+        SAFE_ALLOCATE(this%uniform_vector_potential(1:MAX_DIM))
+        this%uniform_vector_potential = M_ZERO
+      end if
+    end if
+
+    if(iand(FIELD_VECTOR_POTENTIAL, field) /= 0) then 
+      if(.not. associated(this%vector_potential)) then
+        SAFE_ALLOCATE(this%vector_potential(1:MAX_DIM, 1:mesh%np))
+        this%vector_potential = M_ZERO
+      end if
+    end if
+
+    if(iand(FIELD_UNIFORM_MAGNETIC_FIELD, field) /= 0) then 
+      if(.not. associated(this%uniform_magnetic_field)) then
+        SAFE_ALLOCATE(this%uniform_magnetic_field(1:MAX_DIM))
+        this%uniform_magnetic_field = M_ZERO
+      end if
+    end if
+
+    call pop_sub('hamiltonian_base.hamiltonian_base_allocate')
+  end subroutine hamiltonian_base_allocate
+
+  ! ---------------------------------------------------------- 
+  !
+  ! If both a uniform and non-uniform vector potentials are allocated,
+  ! this function copies the uniform in the non-uniform one. In the
+  ! future it may perform other internal consistency operations.
+  !
+  subroutine hamiltonian_base_check(this, mesh)
+    type(hamiltonian_base_t), intent(inout) :: this
+    type(mesh_t),             intent(in)    :: mesh
+
+    integer :: idir, ip
+
+    call push_sub('hamiltonian_base.hamiltonian_check')
+
+    if(associated(this%uniform_vector_potential) .and. associated(this%vector_potential)) then
+
+      ! copy the uniform vector potential onto the non-uniform one
+      forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) 
+        this%vector_potential(idir, ip) = &
+          this%vector_potential(idir, ip) + this%uniform_vector_potential(idir)
+      end forall
+      
+      ! and deallocate
+      SAFE_DEALLOCATE_P(this%uniform_vector_potential)
+      nullify(this%uniform_vector_potential)
+
+    end if
+
+    call pop_sub('hamiltonian_base.hamiltonian_check')
+  end subroutine hamiltonian_base_check
+  
 #include "undef.F90"
 #include "real.F90"
 #include "hamiltonian_base_inc.F90"

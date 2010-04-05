@@ -893,74 +893,53 @@ contains
     call profiling_in(prof, "HAMILTONIAN_UPDATE")
 
     if(present(time)) this%current_time = time
-
-    if(.not. associated(this%hm_base%potential)) then
-      SAFE_ALLOCATE(this%hm_base%potential(1:mesh%np, this%d%nspin))
-    end if
-
+    
+    ! the xc, hartree and external potentials
+    call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_POTENTIAL)
     do ispin = 1, this%d%nspin
       if(ispin <= 2) then
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
       else
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin)
       end if
+    end do
 
-      do ilaser = 1, this%ep%no_lasers
-        if(laser_kind(this%ep%lasers(ilaser)) == E_FIELD_SCALAR_POTENTIAL .or. &
-          laser_kind(this%ep%lasers(ilaser)) == E_FIELD_ELECTRIC) then
+    ! the lasers
+    do ilaser = 1, this%ep%no_lasers
+      select case(laser_kind(this%ep%lasers(ilaser)))
+      case(E_FIELD_SCALAR_POTENTIAL, E_FIELD_ELECTRIC)
+        do ispin = 1, this%d%nspin
           call laser_potential(this%ep%lasers(ilaser), mesh,  this%hm_base%potential(:, ispin), time)
-        end if
-      end do
+        end do
+      end select
     end do
     
+    ! the gauge field
     if(gauge_field_is_applied(this%ep%gfield)) then
-      ASSERT(.not. associated(this%hm_base%vector_potential))
-
-      if(.not. associated(this%hm_base%uniform_vector_potential)) then
-        SAFE_ALLOCATE(this%hm_base%uniform_vector_potential(1:MAX_DIM))
-      end if
-
-      this%hm_base%uniform_vector_potential = M_ZERO
+      call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL)
       this%hm_base%uniform_vector_potential = gauge_field_get_vec_pot(this%ep%gfield)/P_c
     end if
 
+    ! the vector potential of a static magnetic field
     if(associated(this%ep%a_static)) then
-      if(.not. associated(this%hm_base%vector_potential)) then
-        SAFE_ALLOCATE(this%hm_base%vector_potential(1:MAX_DIM, 1:mesh%np))
-      end if
-
-      this%hm_base%vector_potential = M_ZERO
-      
-      forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) this%hm_base%vector_potential(idir, ip) = this%ep%A_static(ip, idir)
-
-      if(associated(this%hm_base%uniform_vector_potential)) then
-        forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) 
-          this%hm_base%vector_potential(idir, ip) = &
-            this%hm_base%vector_potential(idir, ip) + this%hm_base%uniform_vector_potential(idir)
-        end forall
-        
-        SAFE_DEALLOCATE_P(this%hm_base%uniform_vector_potential)
-        nullify(this%hm_base%uniform_vector_potential)
-      end if
-
+      call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL)
+      forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) this%hm_base%vector_potential(idir, ip) = this%ep%a_static(ip, idir)
     end if
 
+    ! and the static magentic field
     if(associated(this%ep%b_field)) then
-      if(.not. associated(this%hm_base%uniform_magnetic_field)) then
-        SAFE_ALLOCATE(this%hm_base%uniform_magnetic_field(1:MAX_DIM))
-      end if
-      this%hm_base%uniform_magnetic_field = M_ZERO
-
+      call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_MAGNETIC_FIELD)
       forall (idir = 1:3) this%hm_base%uniform_magnetic_field(idir) = this%ep%b_field(idir)
     end if
+
+    ! done, check that everything is ok
+    call hamiltonian_base_check(this%hm_base, mesh)
  
     ! now re-generate the phases for the pseudopotentials
     do iatom = 1, this%ep%natoms
       call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d%kpt%start, this%d%kpt%end, this%d%kpoints, &
         vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
     end do
-
-    call profiling_count_operations(mesh%np*this%d%nspin)
 
     call profiling_out(prof)
     call pop_sub('hamiltonian.hamiltonian_update_potential')
