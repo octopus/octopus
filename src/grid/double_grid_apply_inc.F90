@@ -30,7 +30,7 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
   integer, optional,      intent(in)    :: ic
 
   FLOAT :: r, xx(1:MAX_DIM)
-  FLOAT :: vv, tmp(1:MAX_DIM)
+  FLOAT :: vv, tmp(1:MAX_DIM), vv2
 
   integer :: is, is2, ip
   integer :: ii, jj, kk, ll, mm, nn
@@ -90,52 +90,8 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
             r = sqrt(sum(xx(1:3)**2))
 
             calc_pot(vv)
-
-            ip = sm%jxyz(is)
-#ifdef HAVE_MPI                    
-            if (mesh%parallel_in_domains) then
-              !map the local point to a global point
-              if (ip <= mesh%np) then
-                !inner points
-                ip = ip - 1 + mesh%vp%xlocal(mesh%vp%partno)
-                ip = mesh%vp%local(ip)
-              else if (ip <= mesh%np + mesh%vp%np_ghost(mesh%vp%partno)) then
-                !ghost points
-                ip = ip - 1 - mesh%np + mesh%vp%xghost(mesh%vp%partno) 
-                ip = mesh%vp%ghost(ip)
-              else
-                !boundary points
-                ip = ip - 1 - (mesh%np + mesh%vp%np_ghost(mesh%vp%partno)) + mesh%vp%xbndry(mesh%vp%partno)
-                ip = mesh%vp%bndry(ip)
-              end if
-            end if
-#endif
-            start(1:3) = mesh%idx%Lxyz(ip, 1:3) + this%interpolation_min * (/ii, jj, kk/)
             
-            pp = start(1)
-            do ll = this%interpolation_min, this%interpolation_max
-              
-              qq = start(2)
-              do mm = this%interpolation_min, this%interpolation_max
-                
-                rr = start(3)
-                do nn = this%interpolation_min, this%interpolation_max
-
-                    ip = mesh%idx%Lxyz_inv(pp, qq, rr)
-#ifdef HAVE_MPI      
-                    !map the global point to a local point
-                    if (mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
-#endif
-                    is2 = jxyz_inv(ip)
-                    vs(is2) = vs(is2)  + this%co(ll)*this%co(mm)*this%co(nn)*vv
-
-                    rr = rr + kk
-                  end do
-                  qq = qq + jj
-                end do
-                pp = pp + ii
-              end do
-
+            call apply_to_nb()
 
           end do !kk
         end do !jj
@@ -166,6 +122,55 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
   nullify(ps)
 
   call pop_sub('double_grid_apply.double_grid_apply')
+
+  contains 
+    subroutine apply_to_nb()
+      ip = sm%jxyz(is)
+#ifdef HAVE_MPI                    
+      if (mesh%parallel_in_domains) then
+        !map the local point to a global point
+        if (ip <= mesh%np) then
+          !inner points
+          ip = ip - 1 + mesh%vp%xlocal(mesh%vp%partno)
+          ip = mesh%vp%local(ip)
+        else if (ip <= mesh%np + mesh%vp%np_ghost(mesh%vp%partno)) then
+          !ghost points
+          ip = ip - 1 - mesh%np + mesh%vp%xghost(mesh%vp%partno) 
+          ip = mesh%vp%ghost(ip)
+        else
+          !boundary points
+          ip = ip - 1 - (mesh%np + mesh%vp%np_ghost(mesh%vp%partno)) + mesh%vp%xbndry(mesh%vp%partno)
+          ip = mesh%vp%bndry(ip)
+        end if
+      end if
+#endif
+
+      start(1:3) = mesh%idx%Lxyz(ip, 1:3) + this%interpolation_min * (/ii, jj, kk/)
+
+      pp = start(1)
+      do ll = this%interpolation_min, this%interpolation_max
+
+        qq = start(2)
+        do mm = this%interpolation_min, this%interpolation_max
+
+          rr = start(3)
+          do nn = this%interpolation_min, this%interpolation_max
+
+            ip = mesh%idx%Lxyz_inv(pp, qq, rr)
+#ifdef HAVE_MPI      
+            !map the global point to a local point
+            if (mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
+#endif
+            is2 = jxyz_inv(ip)
+            vv2 = this%co(ll)*this%co(mm)*this%co(nn)*vv
+            vs(is2) = vs(is2) + vv2
+            rr = rr + kk
+          end do
+          qq = qq + jj
+        end do
+        pp = pp + ii
+      end do
+    end subroutine apply_to_nb
 
 end subroutine double_grid_apply
 
