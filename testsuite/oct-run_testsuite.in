@@ -197,10 +197,14 @@ for y in $tests; do
 done
 }
 
+function trap_kill() {
+ kill $QUEUE > /dev/null 2>&1
+ echo "Killed"
+ exit 1
+}
 
 # Show usage info if no args at all.
 [ "$#" -eq 0 ] && usage;
-
 
 # Parse command line.
 
@@ -238,7 +242,6 @@ fi
 
 testfiles=`find_tests "$test_groups"`
 
-
 # Query mode? If so, list files and exit.
 if [ "$query" == "yes" ]; then
     echo "Testfiles for groups $test_groups:"
@@ -269,6 +272,9 @@ else
     if [ -z $OCT_TEST_NPROCS ]; then
 	OCT_TEST_NPROCS=1
     fi
+
+    # trap signals, so we kill all childs before dying
+    trap "trap_kill" TERM INT
 
     # Run testsuite.
     run_testsuite "$testfiles"
