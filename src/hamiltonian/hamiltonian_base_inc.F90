@@ -88,6 +88,8 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
   FLOAT :: a2, cc, b2, bb(1:MAX_DIM)
   CMPLX :: b12
 
+  if(.not. hamiltonian_base_has_magnetic(this)) return
+
   call profiling_in(prof_magnetic, "MAGNETIC")
   call push_sub('hamiltonian_base_inc.Xhamiltonian_base_magnetic')
 

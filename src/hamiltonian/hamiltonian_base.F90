@@ -57,6 +57,7 @@ module hamiltonian_base_m
     zhamiltonian_base_local,                   &
     dhamiltonian_base_magnetic,                &
     zhamiltonian_base_magnetic,                &
+    hamiltonian_base_has_magnetic,             &
     hamiltonian_base_init,                     &
     hamiltonian_base_end,                      &
     hamiltonian_base_allocate,                 &
@@ -216,6 +217,14 @@ contains
     call pop_sub('hamiltonian_base.hamiltonian_check')
   end subroutine hamiltonian_base_check
   
+  logical pure function hamiltonian_base_has_magnetic(this) result(has_magnetic)
+    type(hamiltonian_base_t), intent(in) :: this
+    
+    has_magnetic = associated(this%uniform_vector_potential) .or. associated(this%vector_potential) &
+      .or. associated(this%uniform_magnetic_field)
+    
+  end function hamiltonian_base_has_magnetic
+
 #include "undef.F90"
 #include "real.F90"
 #include "hamiltonian_base_inc.F90"
