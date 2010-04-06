@@ -7,9 +7,9 @@ dnl INCLUDES and LIBS for gd
 
 AC_DEFUN([ACX_GDLIB],
 [
-  dnl We disable GD support only if the user is requesting this explicitly
+  # We disable GD support only if the user is requesting this explicitly
   AC_ARG_ENABLE(gdlib, AS_HELP_STRING([--disable-gdlib], [Do not compile with GD image-processing library.]),[acx_gdlib_ok=$enableval],[acx_gdlib_ok=yes])
-  dnl GD library is enabled by default
+  # GD library is enabled by default
 
   if test x"$acx_gdlib_ok" = xyes; then
     AC_PATH_PROG(GDLIB_CONFIG, gdlib-config)
@@ -20,7 +20,7 @@ AC_DEFUN([ACX_GDLIB],
       fi
       if test "x$GD_LIBS" = x; then
         GD_LIBS="-L`$GDLIB_CONFIG --libdir` -lgd `$GDLIB_CONFIG --ldflags` `$GDLIB_CONFIG --libs | awk '{if($NF=="@LIBICONV@"){$NF=""} print}'`"
-        dnl Sometimes GD installation strangely leaves this token @LIBICONV@ in --libs, which must be removed
+      # Sometimes GD installation strangely leaves this token @LIBICONV@ in --libs, which must be removed
       fi
 
       GD_MAJORVERSION=`$GDLIB_CONFIG --majorversion`
@@ -75,19 +75,22 @@ dnl      fi
 
     fi
 
-    dnl we only use PNG, JPEG, GIF
+    # we only use PNG, JPEG, GIF
     acx_save_LIBS="$LIBS"
     LIBS="$LIBS $GD_LIBS"
-    AC_MSG_CHECKING([that gdlib works])
-    AC_TRY_LINK_FUNC(gdFontCacheSetup, [], [acx_gdlib_ok=no])
+    acx_save_CFLAGS="$CFLAGS"
+    CFLAGS="$CFLAGS $GD_CFLAGS"
+
+    AC_MSG_CHECKING([whether gdlib works])
+    AC_TRY_LINK([#include <gd.h>],[gdImagePtr im;],[], [acx_gdlib_ok=no])
     AC_MSG_RESULT([$acx_gdlib_ok])
 
-    LIBS=$acx_save_LIBS
+    LIBS="$acx_save_LIBS"
     if test $acx_gdlib_ok = no; then
       AC_MSG_WARN([GD library support has been disabled.
                    *** Some esoteric parts of octopus will not work.])
+      CFLAGS="$acx_save_CFLAGS"
     else
-      CFLAGS="$CFLAGS $GD_CFLAGS"
       AC_DEFINE_UNQUOTED(HAVE_GDLIB, 1, [Define if libgd exists.])
     fi
   fi
