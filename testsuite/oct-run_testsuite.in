@@ -98,6 +98,7 @@ function inqueue {
 
 function checkqueue {
     inqueue
+    test_name=`echo $OUTLIST | cut -f 1 -d " "`
     wait `echo $QUEUE | cut -f 1 -d " "`
     # Look for failed/passed/skipped testcases and add
     # to failure summary.
@@ -108,13 +109,13 @@ function checkqueue {
 	skipped_tests=$((skipped_tests + 1))
     else
 	failed_tests=$((failed_tests + 1))
-	test_name=`echo $y | sed "s|$testsuite/||"`
 	name_length=`echo -n $test_name | wc -m`
 	space_length=$((50 - name_length))
 	spaces=`for((i = 1; i <= space_length; i++)); do echo -n ' '; done`
 	failure_report="$failure_report    $test_name$spaces$failures\n"
     fi
-    cat `echo $OUTLIST | cut -f 1 -d " "`.log
+    cat `basename $test_name .test`.log
+    printf " ************************\n\n"
     if [ $NUM -eq 1 ] ; then
 	QUEUE=""
 	OUTLIST=""
@@ -139,8 +140,8 @@ fi
 
 for y in $tests; do
     total_tests=$((total_tests + 1))
-    ybase=`basename $y`
-    xybase=${ybase%.test}
+    test_name=`echo $y | sed "s|$testsuite/||"`
+    ybase=`basename $y .test`
     if [ "${local_run}" == "yes" ]; then
 	bin_directory=`pwd`/../src/main
 	runtest_directory=$testsuite
@@ -156,16 +157,15 @@ for y in $tests; do
     if [ -d "${bin_directory}" ]; then
 	CMD $runtest_directory/oct-run_regression_test.pl -l \
 	    $preserve_opt $suffix_opt -D $bin_directory -f $y \
-	    > ${xybase}.log 2>&1 &
+	    > ${ybase}.log 2>&1 &
 	ppid=$!
-	queue $ppid ${xybase}
+	queue $ppid $test_name
 	
-	if [ $NUM -ge $OCT_TEST_NPROCS ] # MAX PROCESSES
+	if [ $NUM -ge $OCT_TEST_NPROCS ]
 	then
 	    checkqueue
 	fi
     fi
-    [ -e out.log ] && mv out.log ${xybase}.out.log
 done
 while [ $NUM -ge 1 ]
 do
