@@ -19,7 +19,7 @@ AC_DEFUN([ACX_GDLIB],
 	GD_CFLAGS=`$GDLIB_CONFIG --cflags`
       fi
       if test "x$GD_LIBS" = x; then
-        GD_LIBS="`$GDLIB_CONFIG --ldflags` -lgd `$GDLIB_CONFIG --libs | awk '{if($NF=="@LIBICONV@"){$NF=""} print}'`"
+        GD_LIBS="-L`$GDLIB_CONFIG --libdir` -lgd `$GDLIB_CONFIG --ldflags` `$GDLIB_CONFIG --libs | awk '{if($NF=="@LIBICONV@"){$NF=""} print}'`"
         dnl Sometimes GD installation strangely leaves this token @LIBICONV@ in --libs, which must be removed
       fi
 
