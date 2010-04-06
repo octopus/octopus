@@ -34,7 +34,7 @@ skipped_tests=0
 passed_tests=0
 total_tests=0
 failure_report=""
-
+NUM=0
 
 # Usage.
 function usage() {
@@ -85,6 +85,45 @@ function find_tests() {
     echo "$testfiles"
 }
 
+function queue {
+	QUEUE="$QUEUE $1 "
+	OUTLIST="$OUTLIST $2 "
+	NUM=$(($NUM+1))
+}
+
+function inqueue {
+   printf "In execution: $OUTLIST\n\n"
+}
+
+
+function checkqueue {
+    inqueue
+    wait `echo $QUEUE | cut -f 1 -d " "`
+    # Look for failed/passed/skipped testcases and add
+    # to failure summary.
+    failures=$?
+    if [ "${failures}" -eq 0 ]; then
+	passed_tests=$((passed_tests + 1))
+    elif [ ${failures} -eq 255 ]; then
+	skipped_tests=$((skipped_tests + 1))
+    else
+	failed_tests=$((failed_tests + 1))
+	test_name=`echo $y | sed "s|$testsuite/||"`
+	name_length=`echo -n $test_name | wc -m`
+	space_length=$((50 - name_length))
+	spaces=`for((i = 1; i <= space_length; i++)); do echo -n ' '; done`
+	failure_report="$failure_report    $test_name$spaces$failures\n"
+    fi
+    cat `echo $OUTLIST | cut -f 1 -d " "`.log
+    if [ $NUM -eq 1 ] ; then
+	QUEUE=""
+	OUTLIST=""
+    else
+	QUEUE=`echo $QUEUE | cut -f 2- -d " "`
+	OUTLIST=`echo $OUTLIST |cut -f 2- -d " "`
+    fi
+    NUM=$(($NUM-1))
+}
 
 # Run all tests. Takes as first argument a list of testfile names.
 function run_testsuite() {
@@ -116,25 +155,21 @@ for y in $tests; do
     fi
     if [ -d "${bin_directory}" ]; then
 	CMD $runtest_directory/oct-run_regression_test.pl -l \
-	    $preserve_opt $suffix_opt -D $bin_directory -f $y | \
-	    tee ${xybase}.log
-	# Look for failed/passed/skipped testcases and add
-	# to failure summary.
-	failures=${PIPESTATUS[0]}
-	if [ "${failures}" -eq 0 ]; then
-	    passed_tests=$((passed_tests + 1))
-	elif [ ${failures} -eq 255 ]; then
-	    skipped_tests=$((skipped_tests + 1))
-	else
-	    failed_tests=$((failed_tests + 1))
-	    test_name=`echo $y | sed "s|$testsuite/||"`
-	    name_length=`echo -n $test_name | wc -m`
-	    space_length=$((50 - name_length))
-	    spaces=`for((i = 1; i <= space_length; i++)); do echo -n ' '; done`
-	    failure_report="$failure_report    $test_name$spaces$failures\n"
+	    $preserve_opt $suffix_opt -D $bin_directory -f $y \
+	    > ${xybase}.log 2>&1 &
+	ppid=$!
+	queue $ppid ${xybase}
+	
+	if [ $NUM -ge $OCT_TEST_NPROCS ] # MAX PROCESSES
+	then
+	    checkqueue
 	fi
     fi
     [ -e out.log ] && mv out.log ${xybase}.out.log
+done
+while [ $NUM -ge 1 ]
+do
+    checkqueue
 done
 }
 
@@ -230,6 +265,10 @@ if [ -z "$testfiles" ]; then
 else
     # Get epoch seconds at testsuite start.
     testsuite_start=$(date +%s) 
+
+    if [ -z $OCT_TEST_NPROCS ]; then
+	OCT_TEST_NPROCS=1
+    fi
 
     # Run testsuite.
     run_testsuite "$testfiles"
