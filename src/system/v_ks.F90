@@ -318,13 +318,13 @@ contains
       !if(RPA_first) then
       !  RPA_first = .false.
 
+        hm%ehartree = M_ZERO
+        call v_ks_hartree(ks, gr, st, hm, amaldi_factor)
+
         hm%vxc      = M_ZERO
         if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) hm%vtau = M_ZERO
         if(hm%d%cdft) hm%axc = M_ZERO
         if(ks%theory_level.ne.HARTREE) call v_a_xc()
-
-        hm%ehartree = M_ZERO
-        call v_ks_hartree(ks, gr, st, hm, amaldi_factor)
 
       !end if
 
@@ -498,10 +498,6 @@ contains
 
     if(.not. gr%have_fine_mesh) then
       pot => hm%vhartree
-      if(poisson_solver_is_iterative(ks%hartree_solver)) then
-        ! provide a better starting point (in the td case vhxc was interpolated)
-        forall(ip = 1:gr%mesh%np) pot(ip) = hm%vhxc(ip, 1) - hm%vxc(ip, 1)
-      end if
     else
       SAFE_ALLOCATE(pot(1:gr%fine%mesh%np_part))
       pot = M_ZERO

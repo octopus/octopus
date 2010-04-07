@@ -139,8 +139,9 @@ contains
     !%Option ks_inversion_none 1
     !% Do not compute KS inversion
     !%Option ks_inversion_adiabatic 2
-    !% Compute adiabatic vxc
+    !% Compute exact adiabatic vxc
     !%End
+    
     call parse_integer(datasets_check('KS_Inversion_Level'), XC_KS_INVERSION_ADIABATIC, ks_inv%level)
     if(.not.varinfo_valid_option('KS_Inversion_Level', ks_inv%level)) call input_error('KS_Inversion_Level')
 
@@ -240,10 +241,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine invertks_iter(target_rho, np, nspin, hm, gr, st, eigensolver)
+  subroutine invertks_iter(target_rho, np, nspin, aux_hm, gr, st, eigensolver)
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(inout) :: st
-    type(hamiltonian_t), intent(inout) :: hm
+    type(hamiltonian_t), intent(inout) :: aux_hm
     type(eigensolver_t), intent(inout) :: eigensolver
     integer,             intent(in)    :: np, nspin
     FLOAT,               intent(in)    :: target_rho(1:np, 1:nspin)
@@ -265,9 +266,6 @@ contains
       call input_error('InvertKSVerbosity')
       call write_fatal(1)
     endif
-    
-    !initialize the KS potential
-    hm%vhxc = M_ONE
        
     call mix_init(smix, np, nspin, 1, prefix_="InvertKS")
     
@@ -275,7 +273,7 @@ contains
     SAFE_ALLOCATE(vhxc_out(1:np, 1:nspin, 1:1))
     SAFE_ALLOCATE(vhxc_mix(1:np, 1:nspin, 1:1))
     
-    vhxc_in(1:np,1:nspin,1) = hm%vhxc(1:np,1:nspin)
+    vhxc_in(1:np,1:nspin,1) = aux_hm%vhxc(1:np,1:nspin)
          
     if(verbosity == 1 .or. verbosity == 2) then
       iunit = io_open('InvertKSconvergence', action = 'write')
@@ -291,26 +289,26 @@ contains
       if(verbosity == 2) then
         write(fname,'(i6.6)') counter
         call doutput_function(io_function_fill_how("AxisX"), &
-             ".", "vhxc"//fname, gr%mesh, hm%vhxc(:,1), units_out%energy, ierr)
+             ".", "vhxc"//fname, gr%mesh, aux_hm%vhxc(:,1), units_out%energy, ierr)
         call doutput_function(io_function_fill_how("AxisX"), &
              ".", "rho"//fname, gr%mesh, st%rho(:,1), units_out%length**(-gr%sb%dim), ierr)
       endif
 
-      call hamiltonian_update_potential(hm, gr%mesh)
+      call hamiltonian_update_potential(aux_hm, gr%mesh)
 
-      call eigensolver_run(eigensolver, gr, st, hm, 1, verbose = .false.)
+      call eigensolver_run(eigensolver, gr, st, aux_hm, 1, verbose = .false.)
 
       call states_calc_dens(st, gr)      
       
       vhxc_out(1:np, 1:nspin, 1) = &
         (st%rho(1:np,1:nspin) + stabilizer)/&
 	(target_rho(1:np,1:nspin) + stabilizer) &
-         * hm%vhxc(1:np, 1:nspin)
+         * aux_hm%vhxc(1:np, 1:nspin)
 
       call dmixing(smix, counter, vhxc_in, vhxc_out, vhxc_mix, dmf_dotp_aux)
 
-      hm%vhxc(1:np,1:nspin) = vhxc_mix(1:np, 1:nspin, 1)
-      vhxc_in(1:np, 1:nspin, 1) = hm%vhxc(1:np, 1:nspin)
+      aux_hm%vhxc(1:np,1:nspin) = vhxc_mix(1:np, 1:nspin, 1)
+      vhxc_in(1:np, 1:nspin, 1) = aux_hm%vhxc(1:np, 1:nspin)
       
       diffdensity = M_ZERO
       do jj = 1, nspin
@@ -630,19 +628,27 @@ contains
     FLOAT,                    intent(inout) :: ex, ec
     FLOAT, optional,          intent(inout) :: vxc(:,:) ! vxc(gr%mesh%np, st%d%nspin)
 
+    integer :: ii
+
     if(ks_inversion%level == XC_KS_INVERSION_NONE) return
 
     call push_sub('xc_ks_inversion_inc.Xxc_ks_inversion_calc')
 
     call states_calc_dens(st, gr)
+    
     ks_inversion%aux_st%rho = st%rho
 
     ks_inversion%aux_hm%epot     = M_ZERO
     ks_inversion%aux_hm%ehartree = M_ZERO
     ks_inversion%aux_hm%ex       = M_ZERO
     ks_inversion%aux_hm%ec       = M_ZERO
-    ks_inversion%aux_hm%vhartree = M_ZERO
-    ks_inversion%aux_hm%vxc      = M_ZERO
+    
+    ks_inversion%aux_hm%vhartree = hm%vhartree
+
+    do ii = 1, st%d%nspin
+      ks_inversion%aux_hm%vxc(:,ii)  = hm%ep%vpsl(:)
+      ks_inversion%aux_hm%vhxc(:,ii) = ks_inversion%aux_hm%vhartree(:) + ks_inversion%aux_hm%vxc(:,ii)
+    enddo
 
     ! compute ks inversion
     select case (ks_inversion%method)
