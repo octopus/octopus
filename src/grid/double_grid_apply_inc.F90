@@ -30,13 +30,12 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
   integer, optional,      intent(in)    :: ic
 
   FLOAT :: r, xx(1:MAX_DIM)
-  FLOAT :: vv, tmp(1:MAX_DIM), vv2
+  FLOAT :: vv, tmp(1:MAX_DIM)
 
-  integer :: is, is2, ip
-  integer :: ii, jj, kk, ll, mm, nn
-  integer :: start(1:3), pp, qq, rr
+  integer :: is
+  integer :: ii, jj, kk
   integer, allocatable :: jxyz_inv(:)
-  FLOAT, allocatable :: vs(:)
+  FLOAT,   allocatable :: vs(:)
   type(ps_t), pointer :: ps
 
 #ifdef USE_OMP
@@ -79,7 +78,7 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
     vs = M_ZERO
 
     !for each grid point
-    !$omp do private(ii, jj, kk, ip, ll, mm, nn, pp, qq, rr, is2, start, vv, tmp, r, xx)
+    !$omp do private(ii, jj, kk, vv, tmp, r, xx)
     do is = 1, sm%ns_part
 
       do ii = -this%nn, this%nn
@@ -91,7 +90,7 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
 
             calc_pot(vv)
             
-            call apply_to_nb()
+            call apply_to_nb(is, ii, jj, kk, vv, vs)
 
           end do !kk
         end do !jj
@@ -124,7 +123,20 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
   call pop_sub('double_grid_apply.double_grid_apply')
 
   contains 
-    subroutine apply_to_nb()
+    ! THREADSAFE
+    subroutine apply_to_nb(is, ii, jj, kk, vv, vs)
+      integer, intent(in)    :: is
+      integer, intent(in)    :: ii
+      integer, intent(in)    :: jj
+      integer, intent(in)    :: kk
+      FLOAT,   intent(in)    :: vv
+      FLOAT,   intent(inout) :: vs(0:)
+
+      integer :: start(1:3), pp, qq, rr
+      integer :: ll, mm, nn, ip, is2
+
+      ! no push_sub, threadsafe function
+
       ip = sm%jxyz(is)
 #ifdef HAVE_MPI                    
       if (mesh%parallel_in_domains) then
@@ -162,8 +174,7 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
             if (mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
 #endif
             is2 = jxyz_inv(ip)
-            vv2 = this%co(ll)*this%co(mm)*this%co(nn)*vv
-            vs(is2) = vs(is2) + vv2
+            vs(is2) = vs(is2) + this%co(ll)*this%co(mm)*this%co(nn)*vv
             rr = rr + kk
           end do
           qq = qq + jj
