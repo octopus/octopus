@@ -47,6 +47,7 @@ module simul_box_m
   private
   public ::                     &
     simul_box_t,                &
+    simul_box_ob_info_t,        &
     simul_box_init,             &
     simul_box_end,              &
     simul_box_write_info,       &
@@ -84,6 +85,13 @@ module simul_box_m
   character(len=6), dimension(2*4), parameter, public :: LEAD_NAME = &
     (/'left  ', 'right ', 'bottom', 'top   ', 'rear  ', 'front ', 'before', 'after '/)
 
+  ! open boundaries stuff
+  type simul_box_ob_info_t
+    integer             :: ucells         ! Number of additional unit cells.
+    character(len=32)   :: dataset        ! Dataset name of the periodic lead calculation.
+    character(len=32)   :: restart_dir    ! Directory where to find the lead restart files.
+    character(len=32)   :: static_dir     ! Static directory of the lead ground state.
+  end type simul_box_ob_info_t
 
   type, public :: interp_t
     integer          :: nn, order  ! interpolation points and order
@@ -133,23 +141,11 @@ module simul_box_m
 
     integer :: dim
     integer :: periodic_dim
+    integer :: transport_dim
 #ifdef HAVE_GDLIB
     integer :: image_size(1:2)
 #endif
 
-    ! For open boundaries, we need reference to the lead`s unit cell.
-    ! This unit cell is itself a simulation box.
-    logical           :: open_boundaries             ! Use open boundaries?
-    logical           :: transport_mode              ! transport mode switched on (during open boundaries)
-    integer           :: n_ucells                    ! Number of unit cells that fit in central region.
-    integer           :: add_unit_cells(2*MAX_DIM)   ! Number of additional unit cells.
-    character(len=32) :: lead_dataset(2*MAX_DIM)     ! Dataset name of the periodic lead calculation.
-    character(len=32) :: lead_restart_dir(2*MAX_DIM) ! Directory where to find the lead restart files.
-    character(len=32) :: lead_static_dir(2*MAX_DIM)  ! Static directory of the lead ground state.
-    type(simul_box_t), pointer :: lead_unit_cell(:)  ! Simulation box of the unit cells.
-    ! The next one does not really belong here but since the parsing happens in the simul_box_init
-    ! it makes things a bit easier.
-    character(len=2000) :: lead_td_pot_formula(2*MAX_DIM) ! Td-potential of lead.
   end type simul_box_t
 
   character(len=22), parameter :: dump_tag = '*** simul_box_dump ***'
@@ -157,9 +153,12 @@ module simul_box_m
 contains
 
   !--------------------------------------------------------------
-  subroutine simul_box_init(sb, geo)
+  subroutine simul_box_init(sb, geo, transport_mode, lead_sb, lead_info)
     type(simul_box_t), intent(inout) :: sb
     type(geometry_t),  intent(inout) :: geo
+    logical, optional, intent(in)    :: transport_mode
+    type(simul_box_t), optional, intent(inout)      :: lead_sb(:)
+    type(simul_box_ob_info_t), optional, intent(in) :: lead_info(:)
 
     ! some local stuff
     FLOAT :: def_h, def_rsize
@@ -167,6 +166,8 @@ contains
 
     call push_sub('simul_box.simul_box_init')
 
+    sb%transport_dim = 0
+    
     call geometry_grid_defaults(geo, def_h, def_rsize)
 
     call read_misc()                       ! Miscellaneous stuff.
@@ -174,9 +175,10 @@ contains
     call sb_lookup_init()
     call read_box_offset()                 ! Parameters defining the offset of the origin.
     call simul_box_build_lattice(sb)       ! Build lattice vectors.
-    call read_open_boundaries()            ! Parameters defining open boundaries.
-    call simul_box_add_lead_atoms(sb, geo) ! Add the atoms of the lead unit cells that are
-                                           ! included in the simulation box to geo.
+    if(present(transport_mode)) then
+      ASSERT(present(lead_sb).and.present(lead_info))
+      call ob_simul_box_init(sb, transport_mode, lead_sb, lead_info, geo)
+    end if
     call simul_box_atoms_in_box(sb, geo)   ! Put all the atoms inside the box.
 
     call symmetries_init(sb%symm, geo, sb%dim, sb%periodic_dim, sb%rlattice, sb%lsize)
@@ -186,233 +188,6 @@ contains
     call pop_sub('simul_box.simul_box_init')
 
   contains
-
-    !--------------------------------------------------------------
-    subroutine read_open_boundaries()
-      integer            :: nr, tag, nrows, ncols
-      type(block_t)      :: blk
-
-      integer, parameter ::   &
-        LEAD_DATASET     = 1, &
-        LEAD_RESTART_DIR = 2, &
-        LEAD_STATIC_DIR  = 3, &
-        ADD_UNIT_CELLS   = 4, &
-        TD_POT_FORMULA   = 5, &
-        TRANSPORT_MODE   = 6, &
-        transport_on     = 1, &
-        transport_off    = 0
-
-      integer :: il, ol, tmode
-
-      call push_sub('simul_box.simul_box_init.read_open_boundaries')
-
-      sb%open_boundaries = .false.
-
-      !%Variable OpenBoundaries
-      !%Type block
-      !%Section Mesh::Simulation Box
-      !%Description
-      !% Enables open boundaries in the <i>x</i>-direction and defines the character
-      !% of the leads attached to the left and right of the finite central system.
-      !%
-      !% The format is as follows:
-      !%
-      !% <pre>
-      !% %OpenBoundaries
-      !%  lead_dataset     | "dataset"   | "dataset"
-      !%  lead_restart_dir | "directory" | "directory"
-      !%  lead_static_dir  | "directory" | "directory"
-      !%  add_unit_cells   | nl          | nr
-      !%  td_pot_formula   | "formula"   | "formula"
-      !%  transport_mode   | transport_on
-      !% %
-      !% </pre>
-      !%
-      !% The left column specifies characteristics of the left lead and
-      !% and the right column characteristics of the right lead analogously.
-      !% If only one column is given, the value specified is used for both leads.
-      !%
-      !% All entries except <tt>lead_dataset</tt> are optional.
-      !%
-      !% Currently available only in development version.
-      !%
-      !%Option lead_dataset 1
-      !% Gives the name of the dataset used for the periodic calculation of the
-      !% ground states of the leads. It is used, <i>e.g.</i>, to read in the coordinates of the
-      !% atoms of the lead. Both entries for left and right have to be equal.
-      !%Option lead_restart_dir 2
-      !% <tt>lead_restart_dir</tt> gives the name of restart directory of the periodic
-      !% ground-state calculation for the lead unit cell. Though
-      !% one may give different datasets for the left and right lead, they have to
-      !% be identical due to the algorithm used to obtain extended eigenstates.
-      !% The default is <tt>&lt;lead_dataset&gt;restart</tt>.
-      !%Option lead_static_dir 3
-      !% The same as <tt>lead_restart_dir</tt> for the <tt>static</tt> directory.
-      !% <tt>Octopus</tt> needs the Kohn-Sham potential of the leads. Therefore, the periodic
-      !% run must include <tt>Output = potential</tt> in the input file. The default
-      !% of this entry is <tt>&lt;lead_dataset&gt;static</tt>.
-      !%Option add_unit_cells 4
-      !% <tt>add_unit_cells</tt> specifies how many lead unit cells should
-      !% be included in the computational domain. Suitable values highly depend
-      !% on the system under study but the numbers <tt>nl</tt> and <tt>nr</tt> should
-      !% be taken large enough for the potential to equilibrate because we assume
-      !% instaneous metallic screening in the leads. Furthermore, note that in
-      !% a ground-state calculation, one additional unit cell is added automatically
-      !% for each lead to the computational domain because the propagation
-      !% algorithm needs the knowledge of the initial state for the first unit cell
-      !% outside the simulation box. If omitted, no unit cells are included in the
-      !% simulation region (apart from the one which is automatically added in
-      !% ground-state calculations).
-      !%Option td_pot_formula 5
-      !% Defines a spatially local time-dependent potential in the leads as an
-      !% analytic expression.
-      !%Option transport_mode 6
-      !% If set to on (transport_on) the normal transport calculation is done,
-      !% otherwise (transport_off) an open system without the source term.
-      !% The initial state is to be assumed to be completely localized in
-      !% the central region. Default is transport_on.
-      !%
-      !%Option transport_on 1
-      !% Use transport (default).
-      !%Option transport_off 0
-      !% Just use open boundaries.
-      !%End
-      if(parse_block(datasets_check('OpenBoundaries'), blk).eq.0) then
-        
-        call messages_devel_version("Open boundaries")
-
-        ! Open boundaries are only possible for rectangular simulation boxes.
-        if(sb%box_shape.ne.PARALLELEPIPED) then
-          message(1) = 'Open boundaries are only possible with a parallelepiped'
-          message(2) = 'simulation box.'
-          call write_fatal(2)
-        end if
-        ! Simulation box must not be periodic in transport direction.
-        if(sb%periodic_dim.eq.1) then
-          message(1) = 'When using open boundaries, you cannot use periodic boundary'
-          message(2) = 'conditions in the x-direction.'
-          call write_fatal(2)
-        end if
-
-        sb%lead_dataset        = ''
-        sb%lead_restart_dir    = ''
-        sb%lead_static_dir     = ''
-        sb%lead_td_pot_formula = '0'
-        sb%add_unit_cells      = 0
-        sb%transport_mode      = .true.
-        nrows = parse_block_n(blk)
-        do nr = 0, nrows - 1
-          call parse_block_integer(blk, nr, 0, tag)
-          ncols = parse_block_cols(blk, nr)
-          if(ncols .gt. 3 .or. ncols .lt. 2) then
-            call input_error('OpenBoundaries')
-          end if
-
-          select case(tag)
-          case(LEAD_DATASET)
-            call parse_block_string(blk, nr, 1, sb%lead_dataset(LEFT))
-            if(ncols .eq. 3) then
-              call parse_block_string(blk, nr, 2, sb%lead_dataset(RIGHT))
-              if(trim(sb%lead_dataset(LEFT)) .ne. trim(sb%lead_dataset(RIGHT))) then
-                message(1) = 'Datasets for left and right lead unit cells must'
-                message(2) = 'be equal, i.e. only symmetric leads are possible.'
-                call write_fatal(2)
-              end if
-            else
-              forall(ol = 2:NLEADS) sb%lead_dataset(ol) = sb%lead_dataset(LEFT)
-            end if
-          case(LEAD_RESTART_DIR)
-            call parse_block_string(blk, nr, 1, sb%lead_restart_dir(LEFT))
-            if(ncols .eq. 3) then
-              call parse_block_string(blk, nr, 2, sb%lead_restart_dir(RIGHT))
-              if(trim(sb%lead_restart_dir(LEFT)) .ne. trim(sb%lead_restart_dir(RIGHT))) then
-                message(1) = 'Restart directories for left and right lead'
-                message(2) = 'unit cells must be equal, i.e. only symmetric'
-                message(3) = 'leads are possible.'
-                call write_fatal(3)
-              end if
-            else
-              forall(ol = 2:NLEADS) sb%lead_restart_dir(ol) = sb%lead_restart_dir(LEFT)
-            end if
-          case(LEAD_STATIC_DIR)
-            call parse_block_string(blk, nr, 1, sb%lead_static_dir(LEFT))
-            if(ncols .eq. 3) then
-              call parse_block_string(blk, nr, 2, sb%lead_static_dir(RIGHT))
-              if(trim(sb%lead_static_dir(LEFT)) .ne. trim(sb%lead_static_dir(RIGHT))) then
-                message(1) = 'Static directories for left and right lead'
-                message(2) = 'unit cells must be equal, i.e. only symmetric'
-                message(3) = 'leads are possible.'
-                call write_fatal(3)
-              end if
-            else
-              forall(ol = 2:NLEADS) sb%lead_static_dir(ol) = sb%lead_static_dir(LEFT)
-            end if
-          case(ADD_UNIT_CELLS)
-            call parse_block_integer(blk, nr, 1, sb%add_unit_cells(LEFT))
-            if(ncols .eq. 3) then
-              call parse_block_integer(blk, nr, 2, sb%add_unit_cells(RIGHT))
-            else
-              forall(ol = 2:NLEADS) sb%add_unit_cells(ol) = sb%add_unit_cells(LEFT)
-            end if
-            if(any(sb%add_unit_cells(1:NLEADS) .lt. 0)) then
-              message(1) = 'add_unit_cells in the OpenBoundaries block must not be negative.'
-              call write_fatal(1)
-            end if
-          case(TD_POT_FORMULA)
-            call parse_block_string(blk, nr, 1, sb%lead_td_pot_formula(LEFT))
-            if(ncols .eq. 3) then
-              call parse_block_string(blk, nr, 2, sb%lead_td_pot_formula(RIGHT))
-            else
-              forall(ol = 2:NLEADS) sb%lead_td_pot_formula(ol) = sb%lead_td_pot_formula(LEFT)
-            end if
-          case(TRANSPORT_MODE)
-            call parse_block_integer(blk, nr, 1, tmode)
-            select case(tmode)
-              case(transport_on)
-                sb%transport_mode = .true.
-              case(transport_off)
-                sb%transport_mode = .false.
-              case default
-            end select
-          case default
-          end select
-        end do
-        ! Check if necessary lead_dataset line has been provided.
-        if(all(sb%lead_dataset(1:NLEADS) .eq. '')) then
-          call input_error('OpenBoundaries')
-        end if
-        ! Set default restart directory.
-        if(all(sb%lead_restart_dir(1:NLEADS) .eq. '')) then
-          forall(il = 1:NLEADS) sb%lead_restart_dir(il) = trim(sb%lead_dataset(il)) // 'restart'
-        end if
-        ! Set default static directory.
-        if(all(sb%lead_static_dir(1:NLEADS) .eq. '')) then
-          forall(il = 1:NLEADS) sb%lead_static_dir(il) = trim(sb%lead_dataset(il)) // 'static'
-        end if
-        
-        sb%open_boundaries = .true.
-        ! Read and check the simulation boxes of the lead unit cells.
-        ! it has to be allocated directly to avoid problems with xlf 
-        allocate(sb%lead_unit_cell(1:NLEADS))
-        do il = 1, NLEADS
-          call read_lead_unit_cell(sb, il)
-        end do
-        ! Adjust the size of the simulation box by adding the proper number
-        ! of unit cells to the simulation region.
-        do il = LEFT, RIGHT
-          sb%lsize(TRANS_DIR) = sb%lsize(TRANS_DIR) + sb%add_unit_cells(il)*sb%lead_unit_cell(il)%lsize(TRANS_DIR)
-        end do
-        sb%n_ucells = nint(sb%lsize(TRANS_DIR)/sb%lead_unit_cell(LEFT)%lsize(TRANS_DIR))
-      else
-        sb%open_boundaries  = .false.
-        sb%add_unit_cells   = 0
-        sb%lead_restart_dir = ''
-        nullify(sb%lead_unit_cell)
-      end if
-
-      call pop_sub('simul_box.simul_box_init.read_open_boundaries')
-    end subroutine read_open_boundaries
-
 
     !--------------------------------------------------------------
     subroutine read_misc()
@@ -537,18 +312,6 @@ contains
         nullify(sb%hr_area%interp%ww)
         sb%mr_flag = .false.
       end if
-
-      !%Variable OpenBoundariesNLeads
-      !%Type integer
-      !%Default 2
-      !%Section Open Boundaries
-      !%Description
-      !% The number of leads connected to the central region. Defines the number
-      !% of open boundaries for a parallelepiped simulation box shape.
-      !%End
-      call parse_integer(datasets_check('OpenBoundariesNLeads'), 2, NLEADS)
-      if ((NLEADS < 0) .or. (NLEADS > 2 * MAX_DIM)) &
-        call input_error('OpenBoundariesNLeads')
 
       call pop_sub('simul_box.simul_box_init.read_misc')
     end subroutine read_misc
@@ -894,104 +657,6 @@ contains
 
   
   !--------------------------------------------------------------
-  ! Read the coordinates of the leads atoms and add them to the
-  ! simulation box (for open boundaries only, of course).
-  subroutine simul_box_add_lead_atoms(sb, geo)
-    type(simul_box_t), intent(in)    :: sb
-    type(geometry_t),  intent(inout) :: geo
-
-    type(geometry_t)  :: central_geo
-    type(geometry_t), allocatable  :: lead_geo(:)
-    character(len=32) :: label_bak
-    integer           :: il, icell, iatom, jatom, icatom, dir
-
-    call push_sub('simul_box.simul_box_add_lead_atoms')
-
-    if(sb%open_boundaries) then
-      SAFE_ALLOCATE(lead_geo(1:NLEADS))
-      do il = 1, NLEADS
-        ! We temporarily change the current label to read the
-        ! coordinates of another dataset, namely the lead dataset.
-        label_bak     = current_label
-        current_label = sb%lead_dataset(il)
-        call geometry_init(lead_geo(il), print_info=.false.)
-        current_label = label_bak
-        call simul_box_atoms_in_box(sb%lead_unit_cell(il), lead_geo(il))
-      end do
-
-      ! Merge the geometries of the lead and of the central region.
-      call geometry_copy(central_geo, geo)
-
-      ! Set the number of atoms and classical atoms to the number
-      ! of atoms coming from left and right lead and central part.
-      if(geo%natoms .gt. 0) then
-        SAFE_DEALLOCATE_P(geo%atom)
-      end if
-      geo%natoms = central_geo%natoms +                 &
-        sb%add_unit_cells(LEFT) * lead_geo(LEFT)%natoms + &
-        sb%add_unit_cells(RIGHT) * lead_geo(RIGHT)%natoms
-      SAFE_ALLOCATE(geo%atom(1:geo%natoms))
-      if(geo%ncatoms .gt. 0) then
-        SAFE_DEALLOCATE_P(geo%catom)
-      end if
-      geo%ncatoms = central_geo%ncatoms +                &
-        sb%add_unit_cells(LEFT) * lead_geo(LEFT)%ncatoms + &
-        sb%add_unit_cells(RIGHT) * lead_geo(RIGHT)%ncatoms
-      SAFE_ALLOCATE(geo%catom(1:geo%ncatoms))
-
-      geo%only_user_def = central_geo%only_user_def .and. all(lead_geo(:)%only_user_def)
-      geo%nlpp          = central_geo%nlpp .or. any(lead_geo(:)%nlpp)
-      geo%nlcc          = central_geo%nlcc .or. any(lead_geo(:)%nlcc)
-      geo%atoms%start   = 1
-      geo%atoms%end     = geo%natoms
-      geo%atoms%nlocal  = geo%natoms
-      
-      ! 1. Put the atoms of the central region into geo.
-      geo%atom(1:central_geo%natoms)   = central_geo%atom
-      geo%catom(1:central_geo%ncatoms) = central_geo%catom
-
-      ! 2. Put the atoms of the leads into geo and adjust their x-coordinates.
-      iatom  = central_geo%natoms + 1
-      icatom = central_geo%ncatoms + 1
-
-      do il = 1, NLEADS
-        dir = (-1)**il
-        ! We start from the "outer" unit cells of the lead.
-        do icell = 1, sb%add_unit_cells(il)
-          do jatom = 1, lead_geo(il)%natoms
-            geo%atom(iatom) = lead_geo(il)%atom(jatom)
-            geo%atom(iatom)%x(TRANS_DIR) = geo%atom(iatom)%x(TRANS_DIR) + &
-              dir * (sb%lsize(TRANS_DIR) - (2*(icell - 1) + 1) * sb%lead_unit_cell(il)%lsize(TRANS_DIR))
-            iatom = iatom + 1
-          end do
-
-          do jatom = 1, lead_geo(il)%ncatoms
-            geo%catom(icatom) = lead_geo(il)%catom(jatom)
-            geo%catom(icatom)%x(TRANS_DIR) = geo%catom(icatom)%x(TRANS_DIR) + &
-              dir * (sb%lsize(TRANS_DIR) - (2 * (icell - 1) + 1) * sb%lead_unit_cell(il)%lsize(TRANS_DIR))
-          end do
-        end do
-      end do
-
-      ! Initialize the species of the "extended" central system.
-      if(geo%nspecies.gt.0) then
-        SAFE_DEALLOCATE_P(geo%species)
-      end if
-      call geometry_init_species(geo, print_info=.false.)
-
-      do il = 1, NLEADS
-        call geometry_end(lead_geo(il))
-      end do
-
-      call geometry_end(central_geo)
-      SAFE_DEALLOCATE_A(lead_geo)
-
-    end if
-    call pop_sub('simul_box.simul_box_add_lead_atoms')
-  end subroutine simul_box_add_lead_atoms
-
-
-  !--------------------------------------------------------------
   subroutine simul_box_atoms_in_box(sb, geo)
     type(simul_box_t), intent(in)    :: sb
     type(geometry_t),  intent(inout) :: geo
@@ -1084,12 +749,6 @@ contains
     call lookup_end(sb%atom_lookup)
     call kpoints_end(sb%kpoints)
 
-    if(sb%open_boundaries) then
-      ! deallocated directly to avoid problems with xlf
-      if(associated(sb%lead_unit_cell)) deallocate(sb%lead_unit_cell)
-      nullify(sb%lead_unit_cell)
-    end if
-
     SAFE_DEALLOCATE_P(sb%hr_area%radius)
     SAFE_DEALLOCATE_P(sb%hr_area%interp%ww)
     SAFE_DEALLOCATE_P(sb%hr_area%interp%posi)
@@ -1179,19 +838,6 @@ contains
                                            idir2 = 1, sb%dim)
       end do
       call write_info(1+sb%dim, iunit)
-    end if
-
-    if(sb%open_boundaries) then
-      write(message(1), '(a)')       'Open boundaries in x-direction:'
-      write(message(2), '(a,2i4)') '  Additional unit cells left:    ', &
-        sb%add_unit_cells(LEFT)
-      write(message(3), '(a,2i4)') '  Additional unit cells right:   ', &
-        sb%add_unit_cells(RIGHT)
-      write(message(4), '(a)')     '  Left lead read from directory:  ' // &
-        trim(sb%lead_restart_dir(LEFT))
-      write(message(5), '(a)')     '  Right lead read from directory: ' // &
-        trim(sb%lead_restart_dir(RIGHT))
-      call write_info(5, iunit)
     end if
 
     call pop_sub('simul_box.simul_box_write_info')
@@ -1314,9 +960,9 @@ contains
       case(PARALLELEPIPED, HYPERCUBE) 
         llimit(1:sb%dim) = -sb%lsize(1:sb%dim) - DELTA
         ulimit(1:sb%dim) =  sb%lsize(1:sb%dim) + DELTA
-        ulimit(1:sb%periodic_dim) = sb%lsize(1:sb%periodic_dim) - DELTA
+        ulimit(1:sb%periodic_dim)  = sb%lsize(1:sb%periodic_dim) - DELTA
+        ulimit(1:sb%transport_dim) = sb%lsize(1:sb%transport_dim) - DELTA
 
-        if(sb%open_boundaries .and. sb%transport_mode) ulimit(TRANS_DIR) = sb%lsize(TRANS_DIR) - DELTA
         forall(ip = 1:npoints)
           in_box(ip) = all(xx(1:sb%dim, ip) >= llimit(1:sb%dim) .and. xx(1:sb%dim, ip) <= ulimit(1:sb%dim))
         end forall
@@ -1383,6 +1029,7 @@ contains
     write(iunit, '(a20,i4)')        'box_shape=          ', sb%box_shape
     write(iunit, '(a20,i4)')        'dim=                ', sb%dim
     write(iunit, '(a20,i4)')        'periodic_dim=       ', sb%periodic_dim
+    write(iunit, '(a20,i4)')        'transport_dim=      ', sb%transport_dim
     select case(sb%box_shape)
     case(SPHERE, MINIMUM)
       write(iunit, '(a20,e22.14)')  'rsize=              ', sb%rsize
@@ -1414,74 +1061,11 @@ contains
       write(iunit, '(a9,i1,a11,9e22.14)')    'rlattice(', i, ')=         ', &
         sb%rlattice_primitive(1:MAX_DIM, i)
     end do
-    write(iunit, '(a20,l7)')        'open_boundaries=    ', sb%open_boundaries
-    if(sb%open_boundaries) then
-      write(iunit, '(a20,2i4)')     'add_unit_cells=     ', sb%add_unit_cells(1:NLEADS) ! FIXME for NLEADS>2
-      write(iunit, '(a20,a32)')     'lead_restart_dir(L)=', sb%lead_restart_dir(LEFT)
-      write(iunit, '(a20,a32)')     'lead_restart_dir(R)=', sb%lead_restart_dir(RIGHT)
-    end if
 
     call pop_sub('simul_box.simul_box_dump')
   end subroutine simul_box_dump
 
-
-  !--------------------------------------------------------------
-  ! Read the simulation box for lead il from sb%lead_restart_dir(il) into
-  ! sb%lead_unit_cell(il).
-  subroutine read_lead_unit_cell(sb, il)
-    type(simul_box_t), intent(inout) :: sb
-    integer,           intent(in)    :: il
-
-    integer :: iunit
-
-    call push_sub('simul_box.read_lead_unit_cell')
-
-    iunit = io_open(trim(sb%lead_restart_dir(il)) // '/gs/mesh', action='read', is_tmp=.true., grp = mpi_world)
-    call simul_box_init_from_file(sb%lead_unit_cell(il), iunit)
-    call io_close(iunit)
-
-    ! Check whether
-    ! * simulation box is a parallelepiped,
-    ! * the extensions in y-, z-directions fit the central box,
-    ! * the central simulation box x-length is an integer multiple of
-    !   the unit cell x-length,
-    ! * periodic in one dimension, and
-    ! * of the same dimensionality as the central system.
-
-    if(sb%lead_unit_cell(il)%box_shape .ne. PARALLELEPIPED) then
-      message(1) = 'Simulation box of ' // LEAD_NAME(il) // ' lead is not a parallelepiped.'
-      call write_fatal(1)
-    end if
-
-    if(any(sb%lsize(2:3) .ne. sb%lead_unit_cell(il)%lsize(2:3))) then
-      message(1) = 'The size in y-, z-directions of the ' // LEAD_NAME(LEFT) // ' lead'
-      message(2) = 'does not fit the size of the y-, z-directions of the central system.'
-      call write_fatal(2)
-    end if
-
-    if(.not. is_integer_multiple(sb%lsize(1), sb%lead_unit_cell(il)%lsize(1))) then
-      message(1) = 'The length in x-direction of the central simulation'
-      message(2) = 'box is not an integer multiple of the x-length of'
-      message(3) = 'the ' // trim(LEAD_NAME(il)) // ' lead.'
-      call write_fatal(3)
-    end if
-
-    if(sb%lead_unit_cell(il)%periodic_dim .ne. 1) then
-      message(1) = 'Simulation box of ' // LEAD_NAME(il) // ' lead is not periodic in x-direction.'
-!      call write_fatal(1)
-      call write_warning(1)
-    end if
-    if(sb%lead_unit_cell(il)%dim .ne. calc_dim) then
-      message(1) = 'Simulation box of ' // LEAD_NAME(il) // ' has a different dimension than'
-      message(2) = 'the central system.'
-      call write_fatal(2)
-    end if
-
-    call pop_sub('simul_box.read_lead_unit_cell')
-  end subroutine read_lead_unit_cell
-
   ! --------------------------------------------------------------
-
   subroutine simul_box_init_from_file(sb, iunit)
     type(simul_box_t), intent(inout) :: sb
     integer,           intent(in)    :: iunit
@@ -1505,6 +1089,8 @@ contains
     read(line, *) str, sb%dim
     call iopar_read(mpi_world, iunit, line, ierr)
     read(line, *) str, sb%periodic_dim
+    call iopar_read(mpi_world, iunit, line, ierr)
+    read(line, *) str, sb%transport_dim
 
     select case(sb%box_shape)
     case(SPHERE, MINIMUM)
@@ -1557,19 +1143,6 @@ contains
     call simul_box_build_lattice(sb, rlattice_primitive)
 
     call iopar_read(mpi_world, iunit, line, ierr)
-    read(line, *) str, sb%open_boundaries
-    if(sb%open_boundaries) then
-      call iopar_read(mpi_world, iunit, line, ierr)
-      read(line, *) str, sb%add_unit_cells(LEFT), sb%add_unit_cells(RIGHT)
-      call iopar_read(mpi_world, iunit, line, ierr)
-      read(line, *) str, sb%lead_restart_dir(LEFT)
-      call iopar_read(mpi_world, iunit, line, ierr)
-      read(line, *) str, sb%lead_restart_dir(RIGHT)
-      SAFE_ALLOCATE(sb%lead_unit_cell(1:NLEADS))
-      do il = 1, NLEADS
-        call read_lead_unit_cell(sb, il)
-      end do
-    end if
 
     call pop_sub('simul_box.simul_box_init_from_file')
   end subroutine simul_box_init_from_file
@@ -1598,9 +1171,7 @@ contains
     sbout%fft_alpha               = sbin%fft_alpha
     sbout%dim                     = sbin%dim
     sbout%periodic_dim            = sbin%periodic_dim
-    sbout%open_boundaries         = sbin%open_boundaries
-    sbout%add_unit_cells          = sbin%add_unit_cells
-    sbout%lead_restart_dir        = sbin%lead_restart_dir
+    sbout%transport_dim           = sbin%transport_dim
     sbout%mr_flag                 = sbin%mr_flag
     sbout%hr_area%num_areas       = sbin%hr_area%num_areas
     sbout%hr_area%num_radii       = sbin%hr_area%num_radii
@@ -1613,19 +1184,214 @@ contains
       sbout%hr_area%radius(1:sbout%hr_area%num_radii) = sbin%hr_area%radius(1:sbout%hr_area%num_radii)
     end if
 
-    if(associated(sbin%lead_unit_cell)) then
-      SAFE_ALLOCATE(sbout%lead_unit_cell(1:NLEADS))
-      do il = 1, NLEADS
-        call simul_box_copy(sbout%lead_unit_cell(il), sbin%lead_unit_cell(il))
-      end do
-    end if
-
     call lookup_copy(sbin%atom_lookup, sbout%atom_lookup)
 
     if(simul_box_is_periodic(sbin)) call symmetries_copy(sbin%symm, sbout%symm)
 
     call pop_sub('simul_box.simul_box_copy')
   end subroutine simul_box_copy
+
+  !--------------------------------------------------------------
+  subroutine ob_simul_box_init(sb, transport_mode, lead_sb, lead_info, geo)
+    type(simul_box_t), intent(inout) :: sb
+    logical,           intent(in)    :: transport_mode
+    type(simul_box_t), intent(inout) :: lead_sb(:)
+    type(simul_box_ob_info_t), intent(in) :: lead_info(:)
+    type(geometry_t),  intent(inout) :: geo
+
+    ! some local stuff
+    FLOAT :: def_h, def_rsize
+    integer :: idir, il
+
+    call push_sub('ob_simul_box.ob_simul_box_init')
+
+    ! Open boundaries are only possible for rectangular simulation boxes.
+    if(sb%box_shape.ne.PARALLELEPIPED) then
+      message(1) = 'Open boundaries are only possible with a parallelepiped'
+      message(2) = 'simulation box.'
+      call write_fatal(2)
+    end if
+    ! Simulation box must not be periodic in transport direction.
+    if(sb%periodic_dim.eq.1) then
+      message(1) = 'When using open boundaries, you cannot use periodic boundary'
+      message(2) = 'conditions in the x-direction.'
+      call write_fatal(2)
+    end if
+
+    if(transport_mode) then
+      ! lowest index must be transport direction
+      ASSERT(TRANS_DIR.eq.1)
+      sb%transport_dim = TRANS_DIR
+      lead_sb(:)%transport_dim = TRANS_DIR
+    else ! just open boundaries
+      sb%transport_dim = 0
+      lead_sb(:)%transport_dim = 0
+    end if
+
+    call ob_read_lead_unit_cells(sb, lead_sb, lead_info(:)%restart_dir)
+    ! Adjust the size of the simulation box by adding the proper number
+    ! of unit cells to the simulation region.
+    do il = LEFT, RIGHT
+      sb%lsize(TRANS_DIR) = sb%lsize(TRANS_DIR) + lead_info(il)%ucells*lead_sb(il)%lsize(TRANS_DIR)
+    end do
+    ! Add the atoms of the lead unit cells that are included in the simulation box to geo.
+    call ob_simul_box_add_lead_atoms(sb, lead_sb, lead_info(:)%ucells, lead_info(:)%dataset, geo)
+
+    call pop_sub('ob_simul_box.ob_simul_box_init')
+
+  end subroutine ob_simul_box_init
+
+
+  !--------------------------------------------------------------
+  ! Read the simulation boxes of the leads
+  subroutine ob_read_lead_unit_cells(sb, lead_sb, dir)
+    type(simul_box_t), intent(inout) :: sb
+    type(simul_box_t), intent(inout) :: lead_sb(:)
+    character(len=*),  intent(in)    :: dir(:)
+
+    integer :: iunit, il
+
+    call push_sub('ob_simul_box.ob_read_lead_unit_cells')
+
+    do il = 1, NLEADS
+      iunit = io_open(trim(dir(il))//'/'//GS_DIR//'mesh', action = 'read', is_tmp = .true., grp = mpi_world)
+      call simul_box_init_from_file(lead_sb(il), iunit)
+      call io_close(iunit)
+
+      ! Check whether
+      ! * simulation box is a parallelepiped,
+      ! * the extensions in y-, z-directions fit the central box,
+      ! * the central simulation box x-length is an integer multiple of
+      !   the unit cell x-length,
+      ! * periodic in one dimension, and
+      ! * of the same dimensionality as the central system.
+
+      if(lead_sb(il)%box_shape .ne. PARALLELEPIPED) then
+        message(1) = 'Simulation box of ' // LEAD_NAME(il) // ' lead is not a parallelepiped.'
+        call write_fatal(1)
+      end if
+
+      if(any(sb%lsize(2:3) .ne. lead_sb(il)%lsize(2:3))) then
+        message(1) = 'The size in y-, z-directions of the ' // LEAD_NAME(il) // ' lead'
+        message(2) = 'does not fit the size of the y-, z-directions of the central system.'
+        call write_fatal(2)
+      end if
+
+      if(.not. is_integer_multiple(sb%lsize(1), lead_sb(il)%lsize(1))) then
+        message(1) = 'The length in x-direction of the central simulation'
+        message(2) = 'box is not an integer multiple of the x-length of'
+        message(3) = 'the ' // trim(LEAD_NAME(il)) // ' lead.'
+        call write_fatal(3)
+      end if
+
+      if(lead_sb(il)%periodic_dim .ne. 1) then
+        message(1) = 'Simulation box of ' // LEAD_NAME(il) // ' lead is not periodic in x-direction.'
+        message(2) = 'For now we assume the first unit cell to be the periodic representative.'
+        call write_warning(2)
+      end if
+      if(lead_sb(il)%dim .ne. calc_dim) then
+        message(1) = 'Simulation box of ' // LEAD_NAME(il) // ' has a different dimension than'
+        message(2) = 'the central system.'
+        call write_fatal(2)
+      end if
+    end do
+
+    call pop_sub('ob_simul_box.ob_read_lead_unit_cells')
+  end subroutine ob_read_lead_unit_cells
+
+  !--------------------------------------------------------------
+  ! Read the coordinates of the leads atoms and add them to the
+  ! simulation box
+  subroutine ob_simul_box_add_lead_atoms(sb, lead_sb, ucells, lead_dataset, geo)
+    type(simul_box_t), intent(inout) :: sb
+    type(simul_box_t), intent(inout) :: lead_sb(:)
+    integer,           intent(in)    :: ucells(:)
+    character(len=32), intent(in)    :: lead_dataset(:)
+    type(geometry_t),  intent(inout) :: geo
+
+    type(geometry_t)  :: central_geo
+    type(geometry_t), allocatable  :: lead_geo(:)
+    character(len=32) :: label_bak
+    integer           :: il, icell, iatom, jatom, icatom, dir
+
+    call push_sub('ob_simul_box.ob_simul_box_add_lead_atoms')
+
+    SAFE_ALLOCATE(lead_geo(1:NLEADS))
+    do il = 1, NLEADS
+      ! We temporarily change the current label to read the
+      ! coordinates of another dataset, namely the lead dataset.
+      label_bak     = current_label
+      current_label = lead_dataset(il)
+      call geometry_init(lead_geo(il), print_info=.false.)
+      current_label = label_bak
+      call simul_box_atoms_in_box(lead_sb(il), lead_geo(il))
+    end do
+
+    ! Merge the geometries of the lead and of the central region.
+    call geometry_copy(central_geo, geo)
+
+    ! Set the number of atoms and classical atoms to the number
+    ! of atoms coming from left and right lead and central part.
+    if(geo%natoms .gt. 0) then
+      SAFE_DEALLOCATE_P(geo%atom)
+    end if
+    geo%natoms = central_geo%natoms + ucells(LEFT)*lead_geo(LEFT)%natoms + ucells(RIGHT)*lead_geo(RIGHT)%natoms
+    SAFE_ALLOCATE(geo%atom(1:geo%natoms))
+    if(geo%ncatoms .gt. 0) then
+      SAFE_DEALLOCATE_P(geo%catom)
+    end if
+    geo%ncatoms = central_geo%ncatoms + ucells(LEFT)*lead_geo(LEFT)%ncatoms + ucells(RIGHT)*lead_geo(RIGHT)%ncatoms
+    SAFE_ALLOCATE(geo%catom(1:geo%ncatoms))
+
+    geo%only_user_def = central_geo%only_user_def .and. all(lead_geo(:)%only_user_def)
+    geo%nlpp          = central_geo%nlpp .or. any(lead_geo(:)%nlpp)
+    geo%nlcc          = central_geo%nlcc .or. any(lead_geo(:)%nlcc)
+    geo%atoms%start   = 1
+    geo%atoms%end     = geo%natoms
+    geo%atoms%nlocal  = geo%natoms
+
+    ! 1. Put the atoms of the central region into geo.
+    geo%atom(1:central_geo%natoms)   = central_geo%atom
+    geo%catom(1:central_geo%ncatoms) = central_geo%catom
+
+    ! 2. Put the atoms of the leads into geo and adjust their x-coordinates.
+    iatom  = central_geo%natoms + 1
+    icatom = central_geo%ncatoms + 1
+
+    do il = 1, NLEADS
+      dir = (-1)**il
+      ! We start from the "outer" unit cells of the lead.
+      do icell = 1, ucells(il)
+        do jatom = 1, lead_geo(il)%natoms
+          geo%atom(iatom) = lead_geo(il)%atom(jatom)
+          geo%atom(iatom)%x(TRANS_DIR) = geo%atom(iatom)%x(TRANS_DIR) + &
+            dir * (sb%lsize(TRANS_DIR) - (2*(icell - 1) + 1) * lead_sb(il)%lsize(TRANS_DIR))
+          iatom = iatom + 1
+        end do
+
+        do jatom = 1, lead_geo(il)%ncatoms
+          geo%catom(icatom) = lead_geo(il)%catom(jatom)
+          geo%catom(icatom)%x(TRANS_DIR) = geo%catom(icatom)%x(TRANS_DIR) + &
+            dir * (sb%lsize(TRANS_DIR) - (2 * (icell - 1) + 1) * lead_sb(il)%lsize(TRANS_DIR))
+        end do
+      end do
+    end do
+
+    ! Initialize the species of the "extended" central system.
+    if(geo%nspecies.gt.0) then
+      SAFE_DEALLOCATE_P(geo%species)
+    end if
+    call geometry_init_species(geo, print_info=.false.)
+
+    do il = 1, NLEADS
+      call geometry_end(lead_geo(il))
+    end do
+
+    call geometry_end(central_geo)
+    SAFE_DEALLOCATE_A(lead_geo)
+
+    call pop_sub('ob_simul_box.ob_simul_box_add_lead_atoms')
+  end subroutine ob_simul_box_add_lead_atoms
 
 end module simul_box_m
 
