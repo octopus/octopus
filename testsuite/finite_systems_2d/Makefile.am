@@ -41,5 +41,8 @@ dist_share_DATA = \
 	06-tdmagnetic.01-gs.inp \
 	06-tdmagnetic.02-unocc.inp \
 	06-tdmagnetic.03-td.inp
+	07-modelmb.test                                \
+	07-modelmb.01-gs.inp                           \
+	07-modelmb.02-td.inp
 
 CLEANFILES = *~ *.bak

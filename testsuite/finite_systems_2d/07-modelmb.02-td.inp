@@ -1,0 +1,59 @@
+NDimModelMB = 1
+NParticleModelMB = 2
+NTypeParticleModelMB = 1
+
+DevelVersion = yes
+
+CalculationMode = td
+TheoryLevel = independent_particles
+Dimensions = 2
+FromScratch = yes
+
+BoxShape = Hypercube
+acell = 10
+%Lsize 
+ acell | acell
+%
+spacing = 0.2
+
+b=0.5
+v = 0.9
+k=1.0
+
+%Species
+'Cosh2e' | 0.0 | spec_user_defined | 2 |"-v/(cosh(k*x)^2)-v/(cosh(k*y)^2)+b/(cosh(k*(x-y))^2)" 
+%
+
+%Coordinates
+ 'Cosh2e' | 0.0 | 0.0 | 0.0
+%
+
+%DescribeParticlesModelMB
+ "electron"  | 1 | 1.    | 1. | fermion
+ "electron"  | 1 | 1.    | 1. | fermion
+%
+
+%DensitiestoCalc
+"electron"      | 1
+%
+
+%DensityMatricestoCalc
+"electron"      | 1 | 3
+%
+
+Output = modelmb + density_matrix
+OutputHow = plane_z + axis_x
+
+TDTimeStep = 0.01
+TDMaximumIter = 200
+
+TDDeltaStrength = 0.1
+
+TDPolarizationDirection = 1
+
+%TDPolarization
+ 1/sqrt(2) | 1/sqrt(2) | 0
+ 0         | 1         | 0
+ 0         | 0         | 1
+%
+
