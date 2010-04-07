@@ -153,7 +153,7 @@ contains
     type(hamiltonian_base_t), intent(inout) :: this
     type(mesh_t),             intent(in)    :: mesh
     integer,                  intent(in)    :: field
-    call push_sub('hamiltonian_base.hamiltonian_allocate')
+    call push_sub('hamiltonian_base.hamiltonian_base_allocate')
 
     if(iand(FIELD_POTENTIAL, field) /= 0) then 
       if(.not. associated(this%potential)) then
