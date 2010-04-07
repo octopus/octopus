@@ -249,15 +249,13 @@ contains
     !% WARNING: EXPERIMENTAL
     !%End
 
-    if(gr%sb%open_boundaries) then
-      default_propagator = PROP_CRANK_NICHOLSON_SRC_MEM
-    else
-      default_propagator = PROP_REVERSAL
-    end if
+    default_propagator = PROP_REVERSAL
+    if(gr%ob_grid%open_boundaries) default_propagator = PROP_CRANK_NICHOLSON_SRC_MEM
+
     call parse_integer(datasets_check('TDEvolutionMethod'), default_propagator, tr%method)
     if(.not.varinfo_valid_option('TDEVolutionMethod', tr%method)) call input_error('TDEvolutionMethod')
 
-    if(gr%sb%open_boundaries.and.tr%method.ne.PROP_CRANK_NICHOLSON_SRC_MEM) then
+    if(gr%ob_grid%open_boundaries.and.tr%method.ne.PROP_CRANK_NICHOLSON_SRC_MEM) then
       message(1) = 'The time-evolution method for time-dependent run cannot'
       message(2) = 'be chosen freely. The Crank-Nicholson propagator'
       message(3) = 'with source and memory term has to be used. Either set'

@@ -78,10 +78,11 @@ contains
 
   ! ---------------------------------------------------------
   ! Calculate the member points of the interface region.
-  subroutine interface_init(der, intf, il, extent_uc)
+  subroutine interface_init(der, intf, il, lsize, extent_uc)
     type(derivatives_t), intent(in)  :: der
     type(interface_t),   intent(out) :: intf
     integer,             intent(in)  :: il
+    FLOAT,               intent(in)  :: lsize(:)
     integer, optional,   intent(in)  :: extent_uc ! new reduced extent of the unit cell
 
     integer :: from(MAX_DIM), to(MAX_DIM), ll(MAX_DIM), dir, tdir
@@ -100,7 +101,7 @@ contains
       ! this happens within hamiltonian->init_lead_h which calls this  subroutine
       intf%extent_uc = extent_uc
     else
-      intf%extent_uc = lead_unit_cell_extent(der%mesh, il)
+      intf%extent_uc = nint(2*lsize(tdir)/der%mesh%spacing(tdir))
     endif
 
     intf%reducible = mod(intf%extent_uc, derivatives_stencil_extent(der, tdir)).eq.0
@@ -285,29 +286,6 @@ contains
 
     call pop_sub('ob_interface.intface_end')
   end subroutine interface_end
-
-  ! --------------------------------------------------------------
-  ! Returns the extent of the lead unit cell of lead il in transport
-  ! direction. Returns -1 if open boundaries are not used.
-  integer function lead_unit_cell_extent(mesh, il)
-    type(mesh_t),      intent(in) :: mesh
-    integer,           intent(in) :: il
-
-    integer :: tdir ! transport direction
-    
-    call push_sub('simul_box.lead_unit_cell_extent')
-
-    ASSERT(associated(mesh%sb))
-    
-    if(mesh%sb%open_boundaries) then
-      tdir = (il+1)/2
-      lead_unit_cell_extent = nint(2*mesh%sb%lead_unit_cell(il)%lsize(tdir)/mesh%spacing(tdir))
-    else
-      lead_unit_cell_extent = -1
-    end if
-
-    call pop_sub('simul_box.lead_unit_cell_extent')
-  end function lead_unit_cell_extent
 
 end module ob_interface_m
 

@@ -167,16 +167,17 @@ contains
     !%Section Open Boundaries
     !%Description
     !% Sets the maximum number of used memory coefficients.
+    !% Can be used to pre-calculate memory coefficients.
     !%End
     call parse_integer(datasets_check('OpenBoundariesMaxMemCoeffs'), max_iter, ob%max_mem_coeffs)
     if(ob%max_mem_coeffs.le.0) then
       write(message(1), '(a,i6,a)') "Input : '", ob%max_mem_coeffs, "' is not a valid OpenBoundariesMaxMemCoeffs."
-      message(2) = '(0 < OpenBoundariesMaxMemCoeffs <= TDMaximumIter)'
+      message(2) = '(0 < OpenBoundariesMaxMemCoeffs)'
       call write_fatal(2)
     end if
-    ob%max_mem_coeffs = min(ob%max_mem_coeffs, max_iter)
-    if((iand(ob%additional_terms, SRC_TERM_FLAG).ne.0).and.(ob%max_mem_coeffs.ne.max_iter)) then
-      write(message(1), '(a,i6,a)') "Input OpenBoundariesMaxMemCoeffs: '", ob%max_mem_coeffs, "' is not equal to TDMaximumIter."
+    if((iand(ob%additional_terms, SRC_TERM_FLAG).ne.0).and.(ob%max_mem_coeffs.lt.max_iter)) then
+      write(message(1), '(a,i6,a)') "Input OpenBoundariesMaxMemCoeffs: '", ob%max_mem_coeffs,&
+                        "' is smaller than TDMaximumIter."
       message(2) = 'This is an experimental parameter, so handle with care.'
       message(3) = 'If an open system is being simulated, the source term should be'
       message(4) = 'switched off, or strange behavior can occur.'
@@ -185,7 +186,7 @@ contains
 
     ! Calculate td-potential.
     SAFE_ALLOCATE(td_pot(0:max_iter+1, 1:NLEADS))
-    call lead_td_pot(td_pot, gr%sb%lead_td_pot_formula(1:NLEADS), max_iter, dt)
+    call lead_td_pot(td_pot, gr%ob_grid%lead(1:NLEADS)%td_bias, max_iter, dt)
     ! Allocate memory for the src_mem_u (needed for source and memory term.
     SAFE_ALLOCATE(ob%src_mem_u(0:max_iter, 1:NLEADS))
     SAFE_ALLOCATE(um(1:NLEADS))
@@ -828,9 +829,9 @@ contains
     write(message(NLEADS+4), '(a,es10.1)') 'QMR residual tolerance:          ', qmr_tol
     write(message(NLEADS+5), '(a,a20)')    'Included additional terms:       ', trim(terms)
     write(message(NLEADS+6), '(a,a10)')    'TD left lead potential:          ', &
-      trim(gr%sb%lead_td_pot_formula(LEFT))
+      trim(gr%ob_grid%lead(LEFT)%td_bias)
     write(message(NLEADS+7), '(a,a10)')    'TD right lead potential:         ', &
-      trim(gr%sb%lead_td_pot_formula(RIGHT))
+      trim(gr%ob_grid%lead(RIGHT)%td_bias)
     call write_info(NLEADS+7, stdout)
 
     call messages_print_stress(stdout)

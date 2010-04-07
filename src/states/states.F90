@@ -132,7 +132,7 @@ module states_m
     type(states_dim_t)  :: ob_d              !< Dims. of the unscattered systems.
     integer             :: ob_nst            !< nst of the unscattered systems.
     integer             :: ob_ncs            !< No. of continuum states of open system.
-                                            !< ob_ncs = ob_nst*st%ob_d%nik / st%d%nik
+                                             !< ob_ncs = ob_nst*st%ob_d%nik / st%d%nik
     FLOAT, pointer      :: ob_occ(:, :)      !< occupations
     type(states_lead_t) :: ob_lead(2*MAX_DIM)
 
@@ -141,11 +141,11 @@ module states_m
     character(len=1024), pointer :: user_def_states(:,:,:)
 
     !> the densities and currents (after all we are doing DFT :)
-    FLOAT, pointer :: rho(:,:)      !< rho(gr%mesh%np_part, st%d%nspin)
-    FLOAT, pointer :: current(:, :, :)      !<   current(gr%mesh%np_part, gr%sb%dim, st%d%nspin)
+    FLOAT, pointer :: rho(:,:)         !< rho(gr%mesh%np_part, st%d%nspin)
+    FLOAT, pointer :: current(:, :, :) !<   current(gr%mesh%np_part, gr%sb%dim, st%d%nspin)
 
-    logical        :: nlcc          !< do we have non-linear core corrections
-    FLOAT, pointer :: rho_core(:)   !< core charge for nl core corrections
+    logical        :: nlcc             !< do we have non-linear core corrections
+    FLOAT, pointer :: rho_core(:)      !< core charge for nl core corrections
 
     !> It may be required to "freeze" the deepest orbitals during the evolution; the density
     !! of these orbitals is kept in frozen_rho. It is different from rho_core.
@@ -219,6 +219,7 @@ contains
     FLOAT :: excess_charge
     integer :: nempty, ierr, il
     integer, allocatable :: ob_k(:), ob_st(:), ob_d(:)
+    character(len=256)   :: restart_dir
 
     call push_sub('states.states_init')
 
@@ -298,9 +299,7 @@ contains
 
     call geometry_val_charge(geo, st%val_charge)
     
-    if(gr%sb%open_boundaries) then
-      excess_charge = -st%val_charge
-    end if
+    if(gr%ob_grid%open_boundaries) excess_charge = -st%val_charge
 
     st%qtot = -(st%val_charge + excess_charge)
 
@@ -310,21 +309,20 @@ contains
     st%open_boundaries = .false.
     ! When doing open-boundary calculations the number of free states is
     ! determined by the previous periodic calculation.
-    st%open_boundaries = gr%sb%open_boundaries
-    if(gr%sb%open_boundaries) then
+    st%open_boundaries = gr%ob_grid%open_boundaries
+    if(gr%ob_grid%open_boundaries) then
       SAFE_ALLOCATE( ob_k(1:NLEADS))
       SAFE_ALLOCATE(ob_st(1:NLEADS))
       SAFE_ALLOCATE( ob_d(1:NLEADS))
       do il = 1, NLEADS
+        restart_dir = trim(trim(gr%ob_grid%lead(il)%info%restart_dir)//'/'// GS_DIR)
         ! first get nst and kpoints of all states
-        call states_look(trim(gr%sb%lead_restart_dir(il))//'/'//GS_DIR, mpi_world, &
-          ob_k(il), ob_d(il), ob_st(il), ierr)
+        call states_look(restart_dir, mpi_world, ob_k(il), ob_d(il), ob_st(il), ierr)
           ! then count the occupied ones
-        call states_look(trim(gr%sb%lead_restart_dir(il))//'/'//GS_DIR, mpi_world, &
-          ob_k(il), ob_d(il), ob_st(il), ierr, .true.)
+        call states_look(restart_dir, mpi_world, ob_k(il), ob_d(il), ob_st(il), ierr, .true.)
         if(ierr.ne.0) then
           message(1) = 'Could not read the number of states of the periodic calculation'
-          message(2) = 'from '//trim(gr%sb%lead_restart_dir(il))//'/'//GS_DIR//'.'
+          message(2) = 'from '//restart_dir//'.'
           call write_fatal(2)
         end if
       end do
@@ -347,7 +345,8 @@ contains
       if((st%d%ispin.eq.UNPOLARIZED.and.st%ob_d%dim.ne.1) .or.   &
         (st%d%ispin.eq.SPIN_POLARIZED.and.st%ob_d%dim.ne.1) .or. &
         (st%d%ispin.eq.SPINORS.and.st%ob_d%dim.ne.2)) then
-        message(1) = 'The spin type of the leads calculation from '//gr%sb%lead_restart_dir(LEFT)
+        message(1) = 'The spin type of the leads calculation from '&
+                     //gr%ob_grid%lead(LEFT)%info%restart_dir
         message(2) = 'and SpinComponents of the current run do not match.'
         call write_fatal(2)
       end if
@@ -418,7 +417,7 @@ contains
     ! FIXME: For now, open-boundary calculations are only possible for
     ! continuum states, i.e. for those states treated by the Lippmann-
     ! Schwinger approach during SCF.
-    if(gr%sb%open_boundaries) then
+    if(gr%ob_grid%open_boundaries) then
       if(st%nst.ne.st%ob_nst .or. st%d%nik.ne.st%ob_d%nik) then
         message(1) = 'Open-boundary calculations for possibly bound states'
         message(2) = 'are not possible yet. You have to match your number'
@@ -466,9 +465,7 @@ contains
     endif
 
     ! Calculations with open boundaries require complex wavefunctions.
-    if(gr%sb%open_boundaries) then
-      st%priv%wfs_type = M_CMPLX
-    end if
+    if(gr%ob_grid%open_boundaries) st%priv%wfs_type = M_CMPLX
 
     !%Variable OnlyUserDefinedInitialStates
     !%Type logical
@@ -540,7 +537,7 @@ contains
 
       call push_sub('states.states_init.read_ob_eigenval_and_occ')
 
-      restart_dir = trim(gr%sb%lead_restart_dir(LEFT))//'/'//GS_DIR
+      restart_dir = trim(gr%ob_grid%lead(LEFT)%info%restart_dir)//'/'//GS_DIR
 
       occs = io_open(trim(restart_dir)//'/occs', action='read', is_tmp=.true., grp=mpi_world)
       if(occs.lt.0) then
@@ -567,7 +564,10 @@ contains
           kweights, char, chars, char, ik, char, ist, char, idim
         if(occ > M_EPSILON) then
           if(st%d%ispin.eq.SPIN_POLARIZED) then
+              message(1) = 'Spin-Transport not implemented!'
+              call write_fatal(1)
             if(is_spin_up(ik)) then
+              !FIXME
 !              st%ob_eigenval(jst, SPIN_UP) = eigenval
 !              st%ob_occ(jst, SPIN_UP)      = occ
             else
@@ -601,7 +601,7 @@ contains
     call push_sub('states.states_allocate_free_states')
 
     ! FIXME: spin-polarized free states ignored.
-    if(gr%sb%open_boundaries) then
+    if(gr%ob_grid%open_boundaries) then
       SAFE_ALLOCATE(st%zphi(1:gr%mesh%np_part, 1:st%ob_d%dim, 1:st%ob_nst, 1:st%ob_d%nik))
       do il = 1, NLEADS
         SAFE_ALLOCATE(st%ob_lead(il)%rho(1:gr%mesh%lead_unit_cell(il)%np, 1:st%d%nspin))
@@ -625,7 +625,7 @@ contains
 
     call push_sub('states.states_deallocate_free_states')
 
-    if(gr%sb%open_boundaries) then
+    if(gr%ob_grid%open_boundaries) then
       SAFE_DEALLOCATE_P(st%zphi)
       do il = 1, NLEADS
         SAFE_DEALLOCATE_P(st%ob_lead(il)%rho)

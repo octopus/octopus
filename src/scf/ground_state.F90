@@ -66,7 +66,7 @@ contains
     call states_allocate_wfns(sys%st, sys%gr%mesh)
 
     ! Read free states for ground-state open-boundary calculation.
-    if(sys%gr%sb%open_boundaries) then
+    if(sys%gr%ob_grid%open_boundaries) then
       call states_allocate_free_states(sys%st, sys%gr)
       call read_free_states(sys%st, sys%gr)
       ! allocate self_energy and calculate

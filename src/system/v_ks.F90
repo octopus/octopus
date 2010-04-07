@@ -293,7 +293,7 @@ contains
         if (states_are_real(st)) then
           call dcalculate_eigenvalues(hm, gr%der, st)
         else
-          call zcalculate_eigenvalues(hm, gr%der, st)
+          call zcalculate_eigenvalues(hm, gr%der, st, open_boundaries = gr%ob_grid%open_boundaries)
         end if
       end if
       call pop_sub('v_ks.v_ks_calc')
@@ -364,7 +364,7 @@ contains
       if (states_are_real(st)) then
         call dcalculate_eigenvalues(hm, gr%der, st)
       else
-        call zcalculate_eigenvalues(hm, gr%der, st)
+        call zcalculate_eigenvalues(hm, gr%der, st, open_boundaries = gr%ob_grid%open_boundaries)
       end if
     end if
 

@@ -20,14 +20,16 @@
 
 ! ---------------------------------------------------------
 ! calculates the eigenvalues of the real orbitals
-subroutine X(calculate_eigenvalues)(hm, der, st, time)
+subroutine X(calculate_eigenvalues)(hm, der, st, time, open_boundaries)
   type(hamiltonian_t), intent(inout) :: hm
   type(derivatives_t), intent(inout) :: der
   type(states_t),      intent(inout) :: st
-  FLOAT,  optional,    intent(in)    :: time
+  FLOAT,   optional,   intent(in)    :: time
+  logical, optional,   intent(in)    :: open_boundaries
 
   R_TYPE, allocatable :: hpsi(:, :, :), psi(:, :, :)
   integer :: ik, ist, minst, maxst
+  logical :: open_boundaries_
   type(batch_t) :: psib, hpsib
   type(profile_t), save :: prof
 
@@ -39,7 +41,10 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
     call write_info(1)
   end if
 
-  if(der%mesh%sb%open_boundaries .and. calc_mode_is(CM_GS)) then
+  open_boundaries_ = .false.
+  if(present(open_boundaries)) open_boundaries_ = open_boundaries
+
+  if(open_boundaries_ .and. calc_mode_is(CM_GS)) then
     ! For open boundaries we know the eigenvalues.
     st%eigenval = st%ob_eigenval
   else

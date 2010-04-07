@@ -28,6 +28,7 @@ module mesh_init_m
   use index_m
   use io_m
   use loct_m
+  use ob_grid_m
   use parser_m
   use math_m
   use mesh_m
@@ -57,12 +58,13 @@ contains
 #define ENLARGEMENT_POINT 2
 #define INNER_POINT 1
 ! ---------------------------------------------------------
-subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
+subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge, ob_grid)
   type(mesh_t),                intent(inout) :: mesh
   type(simul_box_t),   target, intent(in)    :: sb
   type(curvilinear_t), target, intent(in)    :: cv
   FLOAT,                       intent(in)    :: spacing(1:MAX_DIM)
   integer,                     intent(in)    :: enlarge(MAX_DIM)
+  type(ob_grid_t),             intent(in)    :: ob_grid
 
 
   integer :: idir, jj
@@ -116,7 +118,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
     mesh%idx%nr(2, idir) = mesh%idx%nr(2, idir) - 1
   end do
 
-  if(sb%open_boundaries) then
+  if(ob_grid%open_boundaries) then
     ! The upper boundary must be discarded to preserve periodicity in the leads.
     ! Example in 1D, 2 point unit cell, central region of 8 unit cells, 2
     ! additional unit cells at each end in simulation box:
@@ -127,7 +129,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
     !                       L   |               C               |^  R
     !
     ! The indicated point (^) must be omitted to preserve correct periodicity.
-    if(sb%transport_mode) mesh%idx%nr(2, TRANS_DIR) = mesh%idx%nr(2, TRANS_DIR) - 1
+    if(ob_grid%transport_mode) mesh%idx%nr(2, TRANS_DIR) = mesh%idx%nr(2, TRANS_DIR) - 1
 
     call mesh_read_lead()
   else
@@ -157,14 +159,14 @@ contains
       mm%sb => mesh%sb
       mm%cv => mesh%cv
       mm%parallel_in_domains = mesh%parallel_in_domains
-      iunit = io_open(trim(sb%lead_restart_dir(il))//'/'//GS_DIR//'mesh', action='read', is_tmp=.true.)
+      iunit = io_open(trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR//'mesh', action='read', is_tmp=.true.)
       call mesh_init_from_file(mm, iunit)
       call io_close(iunit)
       ! Read the lxyz maps.
       nr = mm%idx%nr
       SAFE_ALLOCATE(mm%idx%Lxyz(1:mm%np_part, 1:3))
       SAFE_ALLOCATE(mm%idx%Lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
-      call mesh_lxyz_init_from_file(mm, trim(sb%lead_restart_dir(il))//'/'//GS_DIR//'lxyz')
+      call mesh_lxyz_init_from_file(mm, trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR//'lxyz')
     end do
 
     call pop_sub('mesh_init.mesh_init_stage1_mesh_read_lead')

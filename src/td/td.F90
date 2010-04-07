@@ -415,16 +415,14 @@ contains
       end if
 
       if(fromScratch) then
-
         if(.not. st%only_userdef_istates) then
           call restart_read(trim(restart_dir)//GS_DIR, st, gr, geo, ierr, exact = .true.)
           if(ierr.ne.0) then
+            write(message(1), '(3a)') 'Unsuccessful read of states.'
+            call write_fatal(1)
           end if
-          
-          if(gr%sb%open_boundaries) then
-            ! extract the interface wave function
-            call restart_get_ob_intf(st, gr)
-          end if
+          ! extract the interface wave function
+          if(gr%ob_grid%open_boundaries) call restart_get_ob_intf(st, gr)
         end if
 
         ! check if we should deploy user-defined wavefunctions. 

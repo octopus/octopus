@@ -27,6 +27,7 @@ module grid_m
   use geometry_m
   use global_m
   use ob_interface_m
+  use ob_grid_m
   use mesh_m
   use mesh_init_m
   use messages_m
@@ -62,6 +63,7 @@ module grid_m
     type(derivatives_t)         :: der
     type(curvilinear_t)         :: cv
     type(multigrid_t), pointer  :: mgrid
+    type(ob_grid_t)             :: ob_grid
     type(double_grid_t)         :: dgrid
     logical                     :: have_fine_mesh
     type(stencil_t)             :: stencil
@@ -176,7 +178,7 @@ contains
     enlarge = max(enlarge, gr%der%n_ghost)
 
     ! now we generate the mesh and the derivatives
-    call mesh_init_stage_1(gr%mesh, gr%sb, gr%cv, spacing, enlarge)
+    call mesh_init_stage_1(gr%mesh, gr%sb, gr%cv, spacing, enlarge, gr%ob_grid)
 
     ! the stencil used to generate the grid is a union of a cube (for
     ! multigrid) and the Laplacian.
@@ -212,9 +214,10 @@ contains
     call nl_operator_global_init()
     call derivatives_build(gr%der, gr%mesh)
 
-    if(gr%sb%open_boundaries) then
+    ! we need the derivative for the interface, therefore do the initialization here
+    if(gr%ob_grid%open_boundaries) then
       do il = 1, NLEADS
-        call interface_init(gr%der, gr%intf(il), il)
+        call interface_init(gr%der, gr%intf(il), il, gr%ob_grid%lead(il)%sb%lsize)
       end do
     end if
 
@@ -255,6 +258,7 @@ contains
 
     ! print info concerning the grid
     call grid_write_info(gr, geo, stdout)
+    if(gr%ob_grid%open_boundaries) call ob_grid_write_info(gr%ob_grid, stdout)
 
     call pop_sub('grid.grid_init_stage_2')
   end subroutine grid_init_stage_2
@@ -292,7 +296,7 @@ contains
       SAFE_DEALLOCATE_P(gr%mgrid)
     end if
 
-    if(gr%sb%open_boundaries) then
+    if(gr%ob_grid%open_boundaries) then
       do il=1, NLEADS
         call interface_end(gr%intf(il))
       end do
@@ -334,7 +338,7 @@ contains
     call write_info(1, iunit)
     call mesh_write_info(gr%fine%mesh, iunit)
 
-    if(gr%sb%open_boundaries) then
+    if(gr%ob_grid%open_boundaries) then
       do il = 1, NLEADS
         call interface_write_info(gr%intf(il), iunit)
       end do

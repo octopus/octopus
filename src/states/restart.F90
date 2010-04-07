@@ -719,7 +719,7 @@ contains
 
     np = m_lead%np
     SAFE_ALLOCATE(tmp(1:np, 1:st%d%dim))
-    restart_dir = trim(sb%lead_restart_dir(LEFT))//'/'// GS_DIR
+    restart_dir = trim(gr%ob_grid%lead(LEFT)%info%restart_dir)//'/'// GS_DIR
 
     wfns = io_open(trim(restart_dir)//'/wfns', action='read', is_tmp=.true., grp=mpi_grp)
     if(wfns .lt. 0) then
@@ -776,15 +776,17 @@ contains
         cycle
       end if
 
-      call zrestart_read_function(trim(sb%lead_restart_dir(LEFT))//'/'//GS_DIR, fname, m_lead, tmp(:, idim), err)
+      call zrestart_read_function(trim(restart_dir), fname, m_lead, tmp(:, idim), err)
 
       call lead_dens_accum()
 
 
       ! This loop replicates the lead wavefunction into the central region.
       ! It only works in this compact form because the transport-direction (x) is
-      ! the index running slowest.          
-      do icell = 1, gr%sb%n_ucells
+      ! the index running slowest.
+      ! FIXME: rewrite to get it working with MeshBlockSizexy > 1
+      ! loop the numbers of unit cells that fit in central region
+      do icell = 1, nint(gr%sb%lsize(TRANS_DIR)/gr%ob_grid%lead(LEFT)%sb%lsize(TRANS_DIR))
         st%zphi((icell - 1) * np + 1:icell * np, idim, ist, jk(ist)) = tmp(1:np, idim)
       end do
 
@@ -823,8 +825,7 @@ contains
     call io_close(occs)
     SAFE_DEALLOCATE_A(tmp)
 
-    message(1) = "Info: Sucessfully initialized free states from '"// &
-      trim(sb%lead_restart_dir(LEFT))//"/"//GS_DIR//"'"
+    message(1) = "Info: Sucessfully initialized free states from '"//trim(restart_dir)//"'"
     write(message(2),'(a,i3,a)') 'Info:', sum(jk(:)), ' occupied states read by program.'
     call write_info(2)
 

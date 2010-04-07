@@ -325,7 +325,7 @@ contains
       ! wavefunctions are calculated by the Lippmann-Schwinger
       ! equation.
       ! Use free states as initial wavefunctions.
-      if(sys%gr%sb%open_boundaries) then
+      if(sys%gr%ob_grid%open_boundaries) then
         ASSERT(sys%st%ob_nst .eq. sys%st%nst)
         ASSERT(sys%st%ob_d%nik .eq. sys%st%d%nik)
         s1 = sys%st%st_start

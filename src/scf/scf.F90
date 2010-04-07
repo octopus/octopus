@@ -408,7 +408,7 @@ contains
         ! FIXME: Currently, only the eigensolver or the
         ! Lippmann-Schwinger approach can be used (exclusively),
         ! i.e. no bound states for open boundaries.
-        if(gr%sb%open_boundaries) then
+        if(gr%ob_grid%open_boundaries) then
           call lippmann_schwinger(scf%eigens, hm, gr, st)
         else
           scf%eigens%converged = 0
@@ -576,10 +576,8 @@ contains
       call scf_write_static(STATIC_DIR, "info")
       call h_sys_output_all(outp, gr, geo, st, hm, STATIC_DIR)
 
-      if(gr%sb%open_boundaries) then ! write part of the source term s(0)
-        call states_write_proj_lead_wf('open_boundaries/', gr%intf, st)
-      end if
-
+      ! write part of the source term s(0)
+      if(gr%ob_grid%open_boundaries) call states_write_proj_lead_wf('open_boundaries/', gr%intf, st)
     end if
 
     if(simul_box_is_periodic(gr%sb).and.st%d%nik > st%d%nspin) then

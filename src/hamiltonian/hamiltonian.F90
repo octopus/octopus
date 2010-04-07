@@ -399,15 +399,13 @@ contains
     nullify(hm%phase)
     if (simul_box_is_periodic(gr%sb)) call init_phase()
 
-    if(gr%sb%open_boundaries) then
+    if(gr%ob_grid%open_boundaries) then
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
         message(1) = 'Open-boundary calculations for interacting electrons are'
         message(2) = 'not yet possible.'
         call write_fatal(2)
       end if
       call init_lead_h
-      ! FIXME: now replace the potential of the extended simulation region
-      ! with the potential of the leads
     end if
 
     call scissor_nullify(hm%scissor)
@@ -481,7 +479,7 @@ contains
       integer               :: np, np_part, il, ierr, pot, ix, iy
       integer               :: irow, diag, offdiag
       character             :: channel
-      character(len=256)    :: fname, fmt
+      character(len=256)    :: fname, fmt, static_dir
       type(mesh_t), pointer :: mesh
       logical               :: t_inv
 
@@ -495,6 +493,8 @@ contains
       do il = 1, NLEADS
         np = gr%intf(il)%np_uc
         np_part = gr%intf(il)%np_part_uc
+        static_dir = gr%ob_grid%lead(il)%info%static_dir
+        
         call lead_init_pot(hm%lead(il), np, np_part, hm%d%nspin)
         
         do ispin = 1, hm%d%nspin
@@ -503,14 +503,14 @@ contains
           ! Try vks-ispin first.
           ! OBF.
           if(ubound(hm%lead(il)%vks(:, ispin), dim = 1).eq.gr%mesh%lead_unit_cell(il)%np) then
-            fname = trim(gr%sb%lead_static_dir(il))//'/vks-'//trim(channel)//'.obf'
+            fname = trim(static_dir)//'/vks-'//trim(channel)//'.obf'
             call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vks(:, ispin), ierr)
             if(ierr.eq.0) then
               message(1) = 'Info: Successfully read KS potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
               call write_info(1)
             else
               ! NetCDF.
-              fname = trim(gr%sb%lead_static_dir(il))//'/vks-'//trim(channel)//'.ncdf'
+              fname = trim(static_dir)//'/vks-'//trim(channel)//'.ncdf'
               call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vks(:, ispin), ierr)
               if(ierr.eq.0) then
                 message(1) = 'Info: Successfully read KS potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
@@ -518,7 +518,7 @@ contains
               else
                 ! Now try v0.
                 ! OBF.
-                fname = trim(gr%sb%lead_static_dir(il))//'/v0.obf'
+                fname = trim(static_dir)//'/v0.obf'
                 call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vks(:, ispin), ierr)
                 if(ierr.eq.0) then
                   message(1) = 'Info: Successfully read external potential of the '// &
@@ -526,7 +526,7 @@ contains
                   call write_info(1)
                 else
                   ! NetCDF.
-                  fname = trim(gr%sb%lead_static_dir(il))//'/v0.ncdf'
+                  fname = trim(static_dir)//'/v0.ncdf'
                   call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vks(:, ispin), ierr)
                   if(ierr.eq.0) then
                     message(1) = 'Info: Successfully read external potential of the '// &
@@ -535,7 +535,7 @@ contains
                   else
                     ! Reading potential failed.
                     message(1) = 'Could neither read vks-x nor v0 from the directory'
-                    message(2) = trim(gr%sb%lead_static_dir(il))//' for the '//trim(LEAD_NAME(il))//' lead.'
+                    message(2) = trim(static_dir)//' for the '//trim(LEAD_NAME(il))//' lead.'
                     message(3) = 'Please include'
                     message(4) = ''
                     message(5) = '  Output = potential'
@@ -575,14 +575,14 @@ contains
         hm%lead(il)%vhartree(:) = M_ZERO
         if(ubound(hm%lead(il)%vhartree(:), dim = 1).eq.gr%mesh%lead_unit_cell(il)%np) then
           if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
-            fname = trim(gr%sb%lead_static_dir(il))//'/vh.obf'
+            fname = trim(static_dir)//'/vh.obf'
             call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vhartree(:), ierr)
             if(ierr.eq.0) then
               message(1) = 'Info: Successfully read Hartree potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
               call write_info(1)
             else
               ! NetCDF.
-              fname = trim(gr%sb%lead_static_dir(il))//'/vh.ncdf'
+              fname = trim(static_dir)//'/vh.ncdf'
               call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vhartree(:), ierr)
               if(ierr.eq.0) then
                 message(1) = 'Info: Successfully read Hartree potential of the '//trim(LEAD_NAME(il))&
@@ -625,7 +625,8 @@ contains
           call interface_end(gr%intf(il))
           ! then re-initialize interface
           ! \todo generalize to find the smallest periodicity of the leads
-          call interface_init(gr%der, gr%intf(il), il, derivatives_stencil_extent(gr%der, (il+1)/2))
+          call interface_init(gr%der, gr%intf(il), il, gr%ob_grid%lead(il)%sb%lsize, &
+                              derivatives_stencil_extent(gr%der, (il+1)/2))
           np = gr%intf(il)%np_uc
           np_part =  gr%intf(il)%np_part_uc
           call lead_init_kin(hm%lead(il), np, np_part, st%d%dim)
@@ -716,7 +717,7 @@ contains
 
     SAFE_DEALLOCATE_P(hm%ab_pot)
 
-    if(gr%sb%open_boundaries) then
+    if(gr%ob_grid%open_boundaries) then
       do il = 1, NLEADS
         call lead_end(hm%lead(il))
       end do

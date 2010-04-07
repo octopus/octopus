@@ -34,6 +34,7 @@ module system_m
   use modelmb_particles_m
   use mpi_m
   use multicomm_m
+  use ob_grid_m
   use poisson_m
   use profiling_m
   use simul_box_m
@@ -75,7 +76,13 @@ contains
     call messages_obsolete_variable('SystemName')
 
     call geometry_init(sys%geo)
-    call simul_box_init(sys%gr%sb, sys%geo)
+    call ob_grid_init(sys%gr%ob_grid, sys%geo)
+    if(sys%gr%ob_grid%open_boundaries) then
+      call simul_box_init(sys%gr%sb, sys%geo, sys%gr%ob_grid%transport_mode, &
+        sys%gr%ob_grid%lead(:)%sb, sys%gr%ob_grid%lead(:)%info)
+    else
+      call simul_box_init(sys%gr%sb, sys%geo)
+    end if
     call states_init(sys%st, sys%gr, sys%geo)
     call grid_init_stage_1(sys%gr, sys%geo)
     ! if independent particles in N dimensions are being used, need to initialize them
@@ -168,6 +175,7 @@ contains
 
     call geometry_end(sys%geo)
     call simul_box_end(sys%gr%sb)
+    call ob_grid_end(sys%gr%ob_grid)
     call grid_end(sys%gr)
     SAFE_DEALLOCATE_P(sys%gr);  nullify(sys%gr)
 

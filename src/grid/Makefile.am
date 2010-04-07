@@ -21,9 +21,9 @@
 
 noinst_LIBRARIES = libgrid.a
 
-libgrid_a_SOURCES =             \
+libgrid_a_SOURCES =       \
 	curv_gygi.F90           \
-        curv_briggs.F90         \
+  curv_briggs.F90         \
 	curv_modine.F90         \
 	curvilinear.F90         \
 	index.F90               \
@@ -43,6 +43,7 @@ libgrid_a_SOURCES =             \
 	basins.F90              \
 	io_function.F90         \
 	multigrid.F90           \
+	ob_grid.F90             \
 	gridhier.F90            \
 	double_grid.F90         \
 	grid.F90                \
@@ -53,7 +54,7 @@ libgrid_a_SOURCES =             \
 	zoltan_low.c            \
 	zoltan.F90              \
 	hypercube.F90           \
-        modelmb_1part.F90       \
+  modelmb_1part.F90       \
 	cubic_mesh.F90          \
 	cubic_mesh_low.c        \
 	cubic_mesh_fft.c        \
@@ -62,7 +63,7 @@ libgrid_a_SOURCES =             \
 	mesh_batch.F90          \
 	symmetrizer.F90
 
-noinst_HEADERS =                  \
+noinst_HEADERS =            \
 	par_vec_inc.F90           \
 	derivatives_inc.F90       \
 	cube_function_inc.F90     \
@@ -91,7 +92,8 @@ curvilinear.o : curvilinear.F90  curv_modine.o curv_gygi.o curv_briggs.o
 index.o : index.F90 hypercube.o
 par_vec.o : par_vec.F90 par_vec_inc.F90 index.o stencil.o batch.o
 mesh.o : mesh.F90 par_vec.o index.o curvilinear.o
-mesh_init.o : mesh_init.F90 mesh.o par_vec.o zoltan.o stencil_star.o stencil.o
+ob_grid.o : ob_grid.F90 mesh.o ob_interface.o
+mesh_init.o : mesh_init.F90 mesh.o par_vec.o zoltan.o stencil_star.o stencil.o ob_grid.o
 modelmb_1part.o : modelmb_1part.F90 mesh.o hypercube.o
 nl_operator.o : nl_operator.F90 nl_operator_inc.F90 par_vec.o mesh.o index.o batch.o stencil.o
 submesh.o : submesh.F90 submesh_inc.F90  mesh.o batch.o
