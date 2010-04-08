@@ -71,7 +71,7 @@ module nl_operator_m
 
   type nl_operator_t
     type(stencil_t)       :: stencil
-    type(mesh_t), pointer :: m         ! pointer to the underlying mesh
+    type(mesh_t), pointer :: mesh      ! pointer to the underlying mesh
     integer               :: np        ! number of points in mesh
     integer               :: der_zero_max
     ! When running in parallel mode, the next three
@@ -221,7 +221,7 @@ contains
 
     call push_sub('nl_operator.nl_operator_init')
 
-    nullify(op%m, op%i, op%w_re, op%w_im, op%ri, op%rimap, op%rimap_inv)
+    nullify(op%mesh, op%i, op%w_re, op%w_im, op%ri, op%rimap, op%rimap_inv)
     nullify(op%inner%imin, op%inner%imax, op%inner%ri)
     nullify(op%outer%imin, op%outer%imax, op%outer%ri)
 
@@ -243,7 +243,7 @@ contains
     call stencil_copy(opi%stencil, opo%stencil)
 
     opo%np           =  opi%np
-    opo%m            => opi%m
+    opo%mesh         => opi%mesh
     opo%der_zero_max = opi%der_zero_max
 
     call loct_pointer_copy(opo%i,    opi%i)
@@ -266,7 +266,7 @@ contains
     opo%dfunction = opi%dfunction
     opo%zfunction = opi%zfunction
 
-    if(opi%m%parallel_in_domains) then
+    if(opi%mesh%parallel_in_domains) then
       opo%inner%nri = opi%inner%nri
       call loct_pointer_copy(opo%inner%imin, opi%inner%imin)
       call loct_pointer_copy(opo%inner%imax, opi%inner%imax)
@@ -310,7 +310,7 @@ contains
 
     ! store values in structure
     op%np       = np
-    op%m        => mesh
+    op%mesh     => mesh
     op%const_w  = .false.
     op%cmplx_op = .false.
     if(present(const_w )) op%const_w  = const_w
@@ -444,7 +444,7 @@ contains
     SAFE_DEALLOCATE_A(st2)
 
 #ifdef HAVE_MPI
-    if(op%m%parallel_in_domains) then
+    if(op%mesh%parallel_in_domains) then
       !now build the arrays required to apply the nl_operator by parts
 
       !count points
@@ -743,7 +743,7 @@ contains
     ! are independent from the partitions, i.e. everything
     ! except op%i and -- in the non-constant case -- op%w_re
     ! op%w_im.
-    if(op%m%vp%rank.eq.op%m%vp%root) then
+    if(op%mesh%vp%rank.eq.op%mesh%vp%root) then
       call nl_operator_common_copy(op, opg)
     end if
     if(in_debug_mode) call write_debug_newlines(4)
@@ -752,9 +752,9 @@ contains
     ! Collect for every point in the stencil in a single step.
     ! This permits to use ivec_gather.
     do ip = 1, op%stencil%size
-      call ivec_gather(op%m%vp, op%m%vp%root, opg%i(ip, :), op%i(ip, :))
+      call ivec_gather(op%mesh%vp, op%mesh%vp%root, opg%i(ip, :), op%i(ip, :))
     end do
-    if(op%m%vp%rank.eq.op%m%vp%root) then
+    if(op%mesh%vp%rank.eq.op%mesh%vp%root) then
       call nl_operator_translate_indices(opg)
     end if
     if(in_debug_mode) call write_debug_newlines(2)
@@ -762,8 +762,8 @@ contains
     ! Weights have to be collected only if they are not constant.
     if(.not.op%const_w) then
       do ip = 1, op%stencil%size
-        call dvec_gather(op%m%vp, op%m%vp%root, opg%w_re(ip, :), op%w_re(ip, :))
-        if(op%cmplx_op) call dvec_gather(op%m%vp, op%m%vp%root, opg%w_im(ip, :), op%w_im(ip, :))
+        call dvec_gather(op%mesh%vp, op%mesh%vp%root, opg%w_re(ip, :), op%w_re(ip, :))
+        if(op%cmplx_op) call dvec_gather(op%mesh%vp, op%mesh%vp%root, opg%w_im(ip, :), op%w_im(ip, :))
       end do
     end if
 
@@ -784,12 +784,12 @@ contains
     call push_sub('nl_operator.nl_operator_scatter')
 
     call nl_operator_init(op, op%label)
-    call nl_operator_build(opg%m, op, opg%m%np, opg%const_w, opg%cmplx_op)
+    call nl_operator_build(opg%mesh, op, opg%mesh%np, opg%const_w, opg%cmplx_op)
 
     do ip = 1, opg%stencil%size
-      call dvec_scatter(opg%m%vp, op%m%vp%root, opg%w_re(ip, :), op%w_re(ip, :))
+      call dvec_scatter(opg%mesh%vp, op%mesh%vp%root, opg%w_re(ip, :), op%w_re(ip, :))
       if(opg%cmplx_op) then
-        call dvec_scatter(opg%m%vp, op%m%vp%root, opg%w_im(ip, :), op%w_im(ip, :))
+        call dvec_scatter(opg%mesh%vp, op%mesh%vp%root, opg%w_im(ip, :), op%w_im(ip, :))
       end if
     end do
 
@@ -820,15 +820,15 @@ contains
     ! Collect for every point in the stencil in a single step.
     ! This permits to use ivec_gather.
     do ip = 1, op%stencil%size
-      call ivec_allgather(op%m%vp, opg%i(ip, :), op%i(ip, :))
+      call ivec_allgather(op%mesh%vp, opg%i(ip, :), op%i(ip, :))
     end do
     call nl_operator_translate_indices(opg)
 
     ! Weights have to be collected only if they are not constant.
     if(.not.op%const_w) then
       do ip = 1, op%stencil%size
-        call dvec_allgather(op%m%vp, opg%w_re(ip, :), op%w_re(ip, :))
-        if(op%cmplx_op) call dvec_allgather(op%m%vp, opg%w_im(ip, :), op%w_im(ip, :))
+        call dvec_allgather(op%mesh%vp, opg%w_re(ip, :), op%w_re(ip, :))
+        if(op%cmplx_op) call dvec_allgather(op%mesh%vp, opg%w_im(ip, :), op%w_im(ip, :))
       end do
     end if
 
@@ -857,20 +857,20 @@ contains
 
     call stencil_copy(op%stencil, opg%stencil)
 
-    SAFE_ALLOCATE(opg%i(1:op%stencil%size, 1:op%m%np_global))
+    SAFE_ALLOCATE(opg%i(1:op%stencil%size, 1:op%mesh%np_global))
     if(op%const_w) then
       SAFE_ALLOCATE(opg%w_re(1:op%stencil%size, 1:1))
       if(op%cmplx_op) then
         SAFE_ALLOCATE(opg%w_im(1:op%stencil%size, 1:1))
       end if
     else
-      SAFE_ALLOCATE(opg%w_re(1:op%stencil%size, 1:op%m%np_global))
+      SAFE_ALLOCATE(opg%w_re(1:op%stencil%size, 1:op%mesh%np_global))
       if(op%cmplx_op) then
-        SAFE_ALLOCATE(opg%w_im(1:op%stencil%size, 1:op%m%np_global))
+        SAFE_ALLOCATE(opg%w_im(1:op%stencil%size, 1:op%mesh%np_global))
       end if
     end if
-    opg%m        => op%m
-    opg%np       =  op%m%np_global
+    opg%mesh        => op%mesh
+    opg%np       =  op%mesh%np_global
     opg%cmplx_op =  op%cmplx_op
     opg%const_w  =  op%const_w
     opg%nri      =  op%nri
@@ -900,9 +900,9 @@ contains
     ASSERT(associated(opg%i))
 
     do ip = 1, opg%stencil%size
-      do jp = 1, opg%m%np_global
-        il = opg%m%vp%np_local(opg%m%vp%part(jp))
-        ig = il+opg%m%vp%np_ghost(opg%m%vp%part(jp))
+      do jp = 1, opg%mesh%np_global
+        il = opg%mesh%vp%np_local(opg%mesh%vp%part(jp))
+        ig = il+opg%mesh%vp%np_ghost(opg%mesh%vp%part(jp))
         ! opg%i(ip, jp) is a local point number, i.e. it can be
         ! a real local point (i.e. the local point number
         ! is less or equal than the number of local points of
@@ -910,15 +910,15 @@ contains
         if(opg%i(ip, jp).le.il) then
           ! Write the global point number from the lookup
           ! table in op_(ip, jp).
-          opg%i(ip, jp) = opg%m%vp%local(opg%m%vp%xlocal(opg%m%vp%part(jp)) &
+          opg%i(ip, jp) = opg%mesh%vp%local(opg%mesh%vp%xlocal(opg%mesh%vp%part(jp)) &
             +opg%i(ip, jp)-1)
           ! Or a ghost point:
         else if(opg%i(ip, jp).gt.il.and.opg%i(ip, jp).le.ig) then
-          opg%i(ip, jp) = opg%m%vp%ghost(opg%m%vp%xghost(opg%m%vp%part(jp)) &
+          opg%i(ip, jp) = opg%mesh%vp%ghost(opg%mesh%vp%xghost(opg%mesh%vp%part(jp)) &
             +opg%i(ip, jp)-1-il)
           ! Or a boundary point:
         else if(opg%i(ip, jp).gt.ig) then
-          opg%i(ip, jp) = opg%m%vp%bndry(opg%m%vp%xbndry(opg%m%vp%part(jp)) &
+          opg%i(ip, jp) = opg%mesh%vp%bndry(opg%mesh%vp%xbndry(opg%mesh%vp%part(jp)) &
             +opg%i(ip, jp)-1-ig)
         end if
       end do
@@ -949,31 +949,31 @@ contains
 
     call push_sub('nl_operator.nl_operator_op_to_matrix')
 
-    if(op%m%parallel_in_domains) then
 #if defined(HAVE_MPI)
+    if(op%mesh%parallel_in_domains) then
       SAFE_ALLOCATE(opg)
       call nl_operator_gather(op, opg)
-#else
-      ASSERT(.false.)
-#endif
     else
+#endif
       opg => op
+#if defined(HAVE_MPI)
     end if
+#endif
 
-    if(mpi_grp_is_root(op%m%mpi_grp)) then
+    if(mpi_grp_is_root(op%mesh%mpi_grp)) then
       kp = 1
-      do ip = 1, op%m%np_global
+      do ip = 1, op%mesh%np_global
         if(.not.op%const_w) kp = ip
         do jp = 1, op%stencil%size
           index = nl_operator_get_index(opg, jp, ip)
-          if(index <= op%m%np_global) then
+          if(index <= op%mesh%np_global) then
             aa(ip, index) = opg%w_re(jp, kp)
             if (op%cmplx_op) aa(ip, index) = aa(ip, index) + opg%w_im(jp, kp)
           end if
         end do
       end do
       
-      if(op%m%parallel_in_domains) then 
+      if(op%mesh%parallel_in_domains) then 
         call nl_operator_end(opg)
         SAFE_DEALLOCATE_P(opg)
       end if
@@ -1000,7 +1000,7 @@ contains
 
     call push_sub('nl_operator.nl_operator_op_to_matrix')
 
-    if(op%m%parallel_in_domains) then
+    if(op%mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
       SAFE_ALLOCATE(opg)
       call nl_operator_gather(op, opg)
@@ -1011,20 +1011,20 @@ contains
       opg => op
     end if
 
-    if(mpi_grp_is_root(op%m%mpi_grp)) then
+    if(mpi_grp_is_root(op%mesh%mpi_grp)) then
       kp = 1
-      do ip = 1, op%m%np_global
+      do ip = 1, op%mesh%np_global
         if(.not.op%const_w) kp = ip
         do jp = 1, op%stencil%size
           index = nl_operator_get_index(opg, jp, ip)
-          if(index <= op%m%np_global) then
+          if(index <= op%mesh%np_global) then
             aa(ip, index) = opg%w_re(jp, kp)
             if (op%cmplx_op) bb(ip, index) = opg%w_im(jp, kp)
           end if
         end do
       end do
       
-      if(op%m%parallel_in_domains) then 
+      if(op%mesh%parallel_in_domains) then 
         call nl_operator_end(opg)
         SAFE_DEALLOCATE_P(opg)
       end if
@@ -1081,24 +1081,24 @@ contains
     call push_sub('nl_operator.nl_operator_write')
 
 
-    if(mpi_grp_is_root(op%m%mpi_grp)) then
-      SAFE_ALLOCATE(aa(1:op%m%np_global, 1:op%m%np_global))
+    if(mpi_grp_is_root(op%mesh%mpi_grp)) then
+      SAFE_ALLOCATE(aa(1:op%mesh%np_global, 1:op%mesh%np_global))
       aa = M_ZERO
     end if
 
     call nl_operator_op_to_matrix(op, aa)
 
-    if(mpi_grp_is_root(op%m%mpi_grp)) then
+    if(mpi_grp_is_root(op%mesh%mpi_grp)) then
       unit = io_open(filename, action='write')
       if(unit < 0) then
         message(1) = 'Could not open file '//filename//' to write operator.'
         call write_fatal(1)
       end if
-      do ip = 1, op%m%np_global
-        do jp = 1, op%m%np_global - 1
+      do ip = 1, op%mesh%np_global
+        do jp = 1, op%mesh%np_global - 1
           write(unit, fmt = '(f9.4)', advance ='no') aa(ip, jp)
         end do
-        write(unit, fmt = '(f9.4)') aa(ip, op%m%np_global)
+        write(unit, fmt = '(f9.4)') aa(ip, op%mesh%np_global)
       end do
       call io_close(unit)
 
@@ -1122,19 +1122,19 @@ contains
     call push_sub('nl_operator.nl_operatorT_write')
 
 
-    if(mpi_grp_is_root(op%m%mpi_grp)) then
-      SAFE_ALLOCATE(aa(1:op%m%np_global, 1:op%m%np_global))
+    if(mpi_grp_is_root(op%mesh%mpi_grp)) then
+      SAFE_ALLOCATE(aa(1:op%mesh%np_global, 1:op%mesh%np_global))
       aa = M_ZERO
     end if
 
     call nl_operator_op_to_matrix(op, aa)
 
-    if(mpi_grp_is_root(op%m%mpi_grp)) then
-      do ip = 1, op%m%np_global
-        do jp = 1, op%m%np_global - 1
+    if(mpi_grp_is_root(op%mesh%mpi_grp)) then
+      do ip = 1, op%mesh%np_global
+        do jp = 1, op%mesh%np_global - 1
           write(unit, fmt = '(f9.4)', advance ='no') aa(jp, ip)
         end do
-        write(unit, fmt = '(f9.4)') aa(op%m%np_global, ip)
+        write(unit, fmt = '(f9.4)') aa(op%mesh%np_global, ip)
       end do
 
       SAFE_DEALLOCATE_A(aa)
@@ -1151,7 +1151,7 @@ contains
 
     call push_sub('nl_operator.nl_operator_end')
 
-    if(op%m%parallel_in_domains) then
+    if(op%mesh%parallel_in_domains) then
       SAFE_DEALLOCATE_P(op%inner%imin)
       SAFE_DEALLOCATE_P(op%inner%imax)
       SAFE_DEALLOCATE_P(op%inner%ri)

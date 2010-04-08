@@ -50,14 +50,14 @@ subroutine X(nl_operator_tune)(op, best)
   call push_sub('nl_operator_inc.Xnl_operator_tune')
   
   !count the total number of floating point operations  
-  noperations =  op%m%np*op%stencil%size*M_TWO*R_OPS
+  noperations =  op%mesh%np*op%stencil%size*M_TWO*R_OPS
 
   !the volume of data that has to be moved in bytes
-  dvolume = (op%m%np_part + op%m%np) * R_OPS * R_SIZE + (op%nri + 1)*op%stencil%size*M_FOUR
+  dvolume = (op%mesh%np_part + op%mesh%np) * R_OPS * R_SIZE + (op%nri + 1)*op%stencil%size*M_FOUR
 
   !measure performance of each function
-  SAFE_ALLOCATE(in(1:op%m%np_part))
-  SAFE_ALLOCATE(out(1:op%m%np))
+  SAFE_ALLOCATE(in(1:op%mesh%np_part))
+  SAFE_ALLOCATE(out(1:op%mesh%np))
   in(:) = M_ZERO
   flops = M_ZERO
 
@@ -131,12 +131,12 @@ subroutine X(nl_operator_tune)(op, best)
 #else
     write (iunit, '(3a)')   'Operator       = ', trim(op%label), " real"
 #endif
-    write (iunit, '(a,i8)') 'Grid points    = ', op%m%np
+    write (iunit, '(a,i8)') 'Grid points    = ', op%mesh%np
     write (iunit, '(a,i8)') 'Stencils       = ', op%nri
     write (iunit, '(a,i8)') 'Stencil points = ', op%stencil%size
 
 #ifdef HAVE_MPI
-    if(op%m%parallel_in_domains) then
+    if(op%mesh%parallel_in_domains) then
       write (iunit, '(a,i8)') 'Inner points   = ', sum(op%inner%imax(1:op%inner%nri) - op%inner%imin(1:op%inner%nri))
       write (iunit, '(a,i8)') 'Inner stencils = ', op%inner%nri
       write (iunit, '(a,i8)') 'Outer points   = ', sum(op%outer%imax(1:op%outer%nri) - op%outer%imin(1:op%outer%nri))
@@ -188,8 +188,8 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   call push_sub('nl_operator_inc.Xnl_operator_operate_batch')
   
   do ist = 1, fi%nst_linear
-    ASSERT(ubound(fi%states_linear(ist)%X(psi)(:), dim=1) == op%m%np_part)
-    ASSERT(ubound(fo%states_linear(ist)%X(psi)(:), dim=1) >= op%m%np)
+    ASSERT(ubound(fi%states_linear(ist)%X(psi)(:), dim=1) == op%mesh%np_part)
+    ASSERT(ubound(fo%states_linear(ist)%X(psi)(:), dim=1) >= op%mesh%np)
   end do
 
   points_ = OP_ALL
@@ -205,9 +205,9 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   if(present(ghost_update)) ghost_update_ = ghost_update
 
 #ifdef HAVE_MPI
-  if(op%m%parallel_in_domains .and. ghost_update_) then
+  if(op%mesh%parallel_in_domains .and. ghost_update_) then
     do ist = 1, fi%nst_linear
-      call X(vec_ghost_update)(op%m%vp, fi%states_linear(ist)%X(psi)(:))
+      call X(vec_ghost_update)(op%mesh%vp, fi%states_linear(ist)%X(psi)(:))
     end do
   end if
 #endif
