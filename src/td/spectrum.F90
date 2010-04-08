@@ -599,7 +599,7 @@ contains
     equiv_axes = 3 - n_files + 1
 
     call spectrum_cross_section_info(in_file(1), nspin, kick, energy_steps, dw)
-    ! on subsequent calls, don't overwrite energy_steps and dw
+    ! on subsequent calls, do not overwrite energy_steps and dw
     call io_skip_header(in_file(1))
 
     SAFE_ALLOCATE(sigma (1:3, 1:3, 0:energy_steps, 1:nspin))

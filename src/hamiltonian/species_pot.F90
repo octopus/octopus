@@ -315,15 +315,18 @@ contains
       !%Type block
       !%Section Hamiltonian
       !%Description
-      !% This option is only used when <tt>GuessMagnetDensity</tt> is set to 
-      !% <tt>user_defined</tt>. It provides a direction for each atom's magnetization 
-      !% vector when building the guess density. In order to do that, the user should
-      !% specify the coordinates of a vector that has the desired direction and norm.
-      !% Note that it is necessary to maintain the ordering in which the species
-      !% were defined in the coordinates specifications.
+      !% This option is only used when <tt>GuessMagnetDensity</tt> is
+      !% set to <tt>user_defined</tt>. It provides a direction for the
+      !% magnetization vector of each atom when building the guess
+      !% density. In order to do that, the user should specify the
+      !% coordinates of a vector that has the desired direction and
+      !% norm.  Note that it is necessary to maintain the ordering in
+      !% which the species were defined in the coordinates
+      !% specifications.
       !%
-      !% For spin-polarized calculations, the vectors should have only one component;
-      !% for non-collinear-spin calculations, they should have three components.
+      !% For spin-polarized calculations, the vectors should have only
+      !% one component; for non-collinear-spin calculations, they
+      !% should have three components.
       !%End
       if(parse_block(datasets_check('AtomsMagnetDirection'), blk) < 0) then
         message(1) = "AtomsMagnetDirection block is not defined."
