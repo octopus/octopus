@@ -863,6 +863,7 @@ contains
   !---------------------------------------------------
   !> Function to divide the range of numbers from 1 to nn
   !! between size processors.
+  !! THREADSAFE
   subroutine multicomm_divide_range(nn, tsize, start, final, lsize)
     integer, intent(in)    :: nn
     integer, intent(in)    :: tsize
@@ -871,9 +872,9 @@ contains
     integer, intent(out)   :: lsize(:)
 
     integer :: ii, jj, rank
-    
-    call push_sub('multicomm.multicomm_divide_range')
 
+    ! no push_sub, threadsafe
+    
     if(tsize <= nn ) then
       
       do rank = 0, tsize - 1
@@ -900,10 +901,10 @@ contains
     
     ASSERT(sum(lsize(1:tsize)) == nn)
 
-    call pop_sub('multicomm.multicomm_divide_range')
   end subroutine multicomm_divide_range
 
 #ifdef USE_OMP
+  ! THREADSAFE
   subroutine multicomm_divide_range_omp(nn, ini, nn_loc)
     integer, intent(in)    :: nn
     integer, intent(out)   :: ini
@@ -911,15 +912,14 @@ contains
     
     integer :: start(MAX_OMP_THREADS), end(MAX_OMP_THREADS), lsize(MAX_OMP_THREADS), rank
 
-    call push_sub('multicomm.multicomm_divide_range_omp')
-
+    ! no push_sub, threadsafe
+    
     call multicomm_divide_range(nn, omp_get_num_threads(), start, end, lsize)
 
     rank   = 1 + omp_get_thread_num()
     ini    = start(rank)
     nn_loc = lsize(rank)
 
-    call pop_sub('multicomm.multicomm_divide_range_omp')
   end subroutine multicomm_divide_range_omp
 #endif
 
