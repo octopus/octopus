@@ -30,7 +30,8 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
   integer, optional,      intent(in)    :: ic
 
   FLOAT :: r, xx(1:MAX_DIM)
-  FLOAT :: vv, tmp(1:MAX_DIM)
+  FLOAT :: vv
+  FLOAT :: tmp(1:MAX_DIM)
 
   integer :: is
   integer :: ii, jj, kk
@@ -81,6 +82,7 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
     !$omp do private(ii, jj, kk, vv, tmp, r, xx)
     do is = 1, sm%ns_part
 
+      ! iterate over the fine grid
       do ii = -this%nn, this%nn
         do jj = -this%nn, this%nn
           do kk = -this%nn, this%nn
@@ -88,9 +90,11 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
             xx(1:3) = mesh%x(sm%jxyz(is), 1:3) + mesh%spacing(1:3)/this%spacing_divisor * (/ii, jj, kk/) - x_atom(1:3)
             r = sqrt(sum(xx(1:3)**2))
 
+            ! calculate the value of the potential at that point
             calc_pot(vv)
-            
-            call apply_to_nb(is, ii, jj, kk, vv, vs)
+
+            ! and apply the corresponding term to all neighbouring grid points
+            call apply_to_nb(this, mesh, is, ii, jj, kk, sm%jxyz, jxyz_inv, vv, vs)
 
           end do !kk
         end do !jj
@@ -121,68 +125,6 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
   nullify(ps)
 
   call pop_sub('double_grid_apply.double_grid_apply')
-
-  contains 
-    ! THREADSAFE
-    subroutine apply_to_nb(is, ii, jj, kk, vv, vs)
-      integer, intent(in)    :: is
-      integer, intent(in)    :: ii
-      integer, intent(in)    :: jj
-      integer, intent(in)    :: kk
-      FLOAT,   intent(in)    :: vv
-      FLOAT,   intent(inout) :: vs(0:)
-
-      integer :: start(1:3), pp, qq, rr
-      integer :: ll, mm, nn, ip, is2
-
-      ! no push_sub, threadsafe function
-
-      ip = sm%jxyz(is)
-#ifdef HAVE_MPI                    
-      if (mesh%parallel_in_domains) then
-        !map the local point to a global point
-        if (ip <= mesh%np) then
-          !inner points
-          ip = ip - 1 + mesh%vp%xlocal(mesh%vp%partno)
-          ip = mesh%vp%local(ip)
-        else if (ip <= mesh%np + mesh%vp%np_ghost(mesh%vp%partno)) then
-          !ghost points
-          ip = ip - 1 - mesh%np + mesh%vp%xghost(mesh%vp%partno) 
-          ip = mesh%vp%ghost(ip)
-        else
-          !boundary points
-          ip = ip - 1 - (mesh%np + mesh%vp%np_ghost(mesh%vp%partno)) + mesh%vp%xbndry(mesh%vp%partno)
-          ip = mesh%vp%bndry(ip)
-        end if
-      end if
-#endif
-
-      start(1:3) = mesh%idx%Lxyz(ip, 1:3) + this%interpolation_min * (/ii, jj, kk/)
-
-      pp = start(1)
-      do ll = this%interpolation_min, this%interpolation_max
-
-        qq = start(2)
-        do mm = this%interpolation_min, this%interpolation_max
-
-          rr = start(3)
-          do nn = this%interpolation_min, this%interpolation_max
-
-            ip = mesh%idx%Lxyz_inv(pp, qq, rr)
-#ifdef HAVE_MPI      
-            !map the global point to a local point
-            if (mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
-#endif
-            is2 = jxyz_inv(ip)
-            vs(is2) = vs(is2) + this%co(ll)*this%co(mm)*this%co(nn)*vv
-            rr = rr + kk
-          end do
-          qq = qq + jj
-        end do
-        pp = pp + ii
-      end do
-    end subroutine apply_to_nb
-
 end subroutine double_grid_apply
 
 !! Local Variables:
