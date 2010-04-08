@@ -72,6 +72,7 @@ module nl_operator_m
   type nl_operator_t
     type(stencil_t)       :: stencil
     type(mesh_t), pointer :: mesh      ! pointer to the underlying mesh
+    integer, pointer      :: nn(:)     ! the size of the stencil at each point (for curvilinear coordinates)
     integer               :: np        ! number of points in mesh
     integer               :: der_zero_max
     ! When running in parallel mode, the next three
@@ -224,6 +225,7 @@ contains
     nullify(op%mesh, op%i, op%w_re, op%w_im, op%ri, op%rimap, op%rimap_inv)
     nullify(op%inner%imin, op%inner%imax, op%inner%ri)
     nullify(op%outer%imin, op%outer%imax, op%outer%ri)
+    nullify(op%nn)
 
     op%label = label
 
@@ -246,6 +248,7 @@ contains
     opo%mesh         => opi%mesh
     opo%der_zero_max = opi%der_zero_max
 
+    call loct_pointer_copy(opo%nn, opi%nn)
     call loct_pointer_copy(opo%i,    opi%i)
     call loct_pointer_copy(opo%w_re, opi%w_re)
     call loct_pointer_copy(opo%w_im, opi%w_im)
@@ -428,6 +431,13 @@ contains
         op%rimap     = 0
         op%rimap_inv = 0
         current      = 0
+
+        ! the sizes
+        if(mesh%use_curvilinear) then
+          SAFE_ALLOCATE(op%nn(1:op%nri))
+          ! for the moment all the sizes are the same
+          op%nn = op%stencil%size
+        end if
       end if
 
     end do
@@ -1167,6 +1177,7 @@ contains
     SAFE_DEALLOCATE_P(op%ri)
     SAFE_DEALLOCATE_P(op%rimap)
     SAFE_DEALLOCATE_P(op%rimap_inv)
+    SAFE_DEALLOCATE_P(op%nn)
 
     call stencil_end(op%stencil)
 

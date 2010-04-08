@@ -324,11 +324,10 @@ contains
   subroutine operate_non_const_weights()
     integer :: nn, ll, ii, ist
   
-    nn = op%stencil%size
-
     if(op%cmplx_op) then
       !$omp parallel do private(ll, ist, ii)
       do ll = 1, nri
+        nn = op%nn(ll)
         forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
           fo%states_linear(ist)%X(psi)(ii) = sum(cmplx(op%w_re(1:nn, ii), op%w_im(1:nn, ii)) * &
             fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
@@ -338,6 +337,7 @@ contains
     else
       !$omp parallel do private(ll, ist, ii)
       do ll = 1, nri
+        nn = op%nn(ll)
         forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
           fo%states_linear(ist)%X(psi)(ii) = sum(op%w_re(1:nn, ii)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
         end forall
