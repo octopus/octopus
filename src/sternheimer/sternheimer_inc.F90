@@ -50,7 +50,7 @@ subroutine X(sternheimer_solve)(                           &
   type(mesh_t), pointer :: mesh
   type(states_t), pointer :: st
 
-  integer :: total_iter, idim, ip
+  integer :: total_iter, idim, ip, ispin
 
   character(len=100) :: dirname
 
@@ -116,7 +116,10 @@ subroutine X(sternheimer_solve)(                           &
          '   ik  ist                norm   iters            residual'
     call write_info(2)
 
-    forall(ip = 1:mesh%np) dl_rhoin(ip, 1:st%d%nspin, 1) = lr(1)%X(dl_rho)(ip, 1:st%d%nspin)
+    do ispin = 1, st%d%nspin
+       call lalg_copy(mesh%np, lr(1)%X(dl_rho)(:, ispin), dl_rhoin(:, ispin, 1))
+    end do
+
     call X(sternheimer_calc_hvar)(this, sys, hm, lr, nsigma, hvar)
 
     do ik = 1, st%d%nik
@@ -193,11 +196,11 @@ subroutine X(sternheimer_solve)(                           &
         end do !sigma
       end do !ist
     end do !ik
-
+    
     call X(lr_build_dl_rho)(mesh, st, lr, nsigma)
-
+    
     dl_rhonew(1:mesh%np, 1:st%d%nspin, 1) = M_ZERO
-
+    
     !write restart info
     call X(restart_write_lr_rho)(lr(1), sys%gr, st%d%nspin, restart_dir, rho_tag)
 
@@ -232,7 +235,9 @@ subroutine X(sternheimer_solve)(                           &
       call write_warning(1)
     end if
 
-    forall(ip = 1:mesh%np) dl_rhotmp(ip, 1:st%d%nspin, 1) = lr(1)%X(dl_rho)(ip, 1:st%d%nspin)
+    do ispin = 1, st%d%nspin
+      call lalg_copy(mesh%np, lr(1)%X(dl_rho)(:, ispin),  dl_rhotmp(:, ispin, 1))
+    end do
 
     call X(mixing)(this%mixer, iter, dl_rhoin, dl_rhotmp, dl_rhonew, X(mf_dotp_aux))
 
@@ -266,11 +271,18 @@ subroutine X(sternheimer_solve)(                           &
       call write_info(2)
       exit
     else
-      forall(ip = 1:mesh%np) lr(1)%X(dl_rho)(ip, 1:st%d%nspin) = dl_rhonew(ip, 1:st%d%nspin, 1)
+      do ispin = 1, st%d%nspin
+        call lalg_copy(mesh%np, dl_rhonew(:, ispin, 1), lr(1)%X(dl_rho)(:, ispin))
+      end do
+      
       if(nsigma == 2) then
-        forall(ip = 1:mesh%np) lr(2)%X(dl_rho)(ip, 1:st%d%nspin) = R_CONJ(dl_rhonew(ip, 1:st%d%nspin, 1))
+        ! we do it in this way to avoid a bug in ifort 11.1
+        dl_rhonew(:, :, 1) = R_CONJ(dl_rhonew(:, :, 1))
+        do ispin = 1, st%d%nspin
+          call lalg_copy(mesh%np, dl_rhonew(:, ispin, 1), lr(2)%X(dl_rho)(:, ispin))
+        end do
       end if
-
+      
       tol = scf_tol_step(this%scf_tol, iter, TOFLOAT(abs_dens))
     end if
     
