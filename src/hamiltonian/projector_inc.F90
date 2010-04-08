@@ -95,6 +95,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
   ! Check whether we have or not "real" projectors. If we do not, return.
   if(nreduce == 0) then
+    call profiling_out(prof)
     call pop_sub('projector_inc.project_psi_batch')
     return
   end if

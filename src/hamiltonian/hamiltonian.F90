@@ -888,7 +888,7 @@ contains
     FLOAT, optional,     intent(in)    :: time
 
     integer :: ispin, ip, idir, iatom, ilaser
-    type(profile_t) :: prof
+    type(profile_t), save :: prof
     FLOAT :: aa(1:MAX_DIM)
     FLOAT, allocatable :: vp(: , :)
 
