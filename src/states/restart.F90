@@ -710,7 +710,7 @@ contains
     call push_sub('restart.read_free_states')
 
     sb       => gr%sb
-    m_lead   => gr%mesh%lead_unit_cell(LEFT)
+    m_lead   => gr%ob_grid%lead(LEFT)%mesh
     m_center => gr%mesh
     lead_nr(1, :) = m_lead%idx%nr(1, :) + m_lead%idx%enlarge
     lead_nr(1, :) = m_lead%idx%nr(2, :) - m_lead%idx%enlarge

@@ -114,8 +114,6 @@ module mesh_m
     integer, pointer :: zrecv_type(:)
 #endif
     
-    type(mesh_t), pointer :: lead_unit_cell(:) !< Meshes of the lead unit cells for open boundary.
-                                               !! calculations.
   end type mesh_t
   
   !> This data type defines a plane, and a regular grid defined on 
@@ -490,7 +488,7 @@ contains
     read(iunit, '(a20,1i10)') str, mesh%np_global
     read(iunit, '(a20,1i10)') str, mesh%np_part_global
     nullify(mesh%idx%lxyz, mesh%idx%lxyz_inv, mesh%x, &
-      mesh%vol_pp, mesh%per_points, mesh%per_map, mesh%lead_unit_cell, mesh%resolution)
+      mesh%vol_pp, mesh%per_points, mesh%per_map, mesh%resolution)
     mesh%parallel_in_domains = .false.
 
     call pop_sub('mesh.mesh_init_from_file')
@@ -731,13 +729,6 @@ contains
     SAFE_DEALLOCATE_P(mesh%per_points)
     SAFE_DEALLOCATE_P(mesh%per_map)
 
-    if(associated(mesh%lead_unit_cell)) then
-      do il = 1, NLEADS
-        call mesh_end(mesh%lead_unit_cell(il), .true.)
-      end do
-      SAFE_DEALLOCATE_P(mesh%lead_unit_cell)
-    end if
-    
     call pop_sub('mesh.mesh_end')
   end subroutine mesh_end
 

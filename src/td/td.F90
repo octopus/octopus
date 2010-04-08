@@ -137,7 +137,12 @@ contains
       !complex wfs are required for Ehrenfest
       call states_allocate_wfns(st, gr%mesh, M_CMPLX)
     else
-      call states_allocate_wfns(st, gr%mesh)
+      if(gr%ob_grid%open_boundaries) then
+        ASSERT(associated(gr%ob_grid%lead))
+        call states_allocate_wfns(st, gr%mesh, ob_mesh = gr%ob_grid%lead(:)%mesh)
+      else
+        call states_allocate_wfns(st, gr%mesh)
+      end if
     end if
 
     ! CP has to be initialized after wavefunction type is set

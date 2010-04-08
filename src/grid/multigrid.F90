@@ -337,8 +337,6 @@ contains
 
     call push_sub('multigrid.multigrid_mesh_half')
 
-    nullify(mesh_out%lead_unit_cell)
-
     mesh_out%sb              => mesh_in%sb
     mesh_out%idx%sb          => mesh_in%idx%sb
     mesh_out%use_curvilinear =  mesh_in%use_curvilinear
@@ -363,8 +361,6 @@ contains
     type(stencil_t),    intent(in)    :: stencil
 
     call push_sub('multigrid.multigrid_mesh_double')
-
-    nullify(mesh_out%lead_unit_cell)
 
     mesh_out%sb             => mesh_in%sb
     mesh_out%idx%sb         => mesh_in%idx%sb

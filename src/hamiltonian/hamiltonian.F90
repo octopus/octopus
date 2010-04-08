@@ -502,16 +502,16 @@ contains
 
           ! Try vks-ispin first.
           ! OBF.
-          if(ubound(hm%lead(il)%vks(:, ispin), dim = 1).eq.gr%mesh%lead_unit_cell(il)%np) then
+          if(ubound(hm%lead(il)%vks(:, ispin), dim = 1).eq.gr%ob_grid%lead(il)%mesh%np) then
             fname = trim(static_dir)//'/vks-'//trim(channel)//'.obf'
-            call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vks(:, ispin), ierr)
+            call dinput_function(trim(fname), gr%ob_grid%lead(il)%mesh, hm%lead(il)%vks(:, ispin), ierr)
             if(ierr.eq.0) then
               message(1) = 'Info: Successfully read KS potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
               call write_info(1)
             else
               ! NetCDF.
               fname = trim(static_dir)//'/vks-'//trim(channel)//'.ncdf'
-              call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vks(:, ispin), ierr)
+              call dinput_function(trim(fname), gr%ob_grid%lead(il)%mesh, hm%lead(il)%vks(:, ispin), ierr)
               if(ierr.eq.0) then
                 message(1) = 'Info: Successfully read KS potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
                 call write_info(1)
@@ -519,7 +519,7 @@ contains
                 ! Now try v0.
                 ! OBF.
                 fname = trim(static_dir)//'/v0.obf'
-                call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vks(:, ispin), ierr)
+                call dinput_function(trim(fname), gr%ob_grid%lead(il)%mesh, hm%lead(il)%vks(:, ispin), ierr)
                 if(ierr.eq.0) then
                   message(1) = 'Info: Successfully read external potential of the '// &
                     trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
@@ -527,7 +527,7 @@ contains
                 else
                   ! NetCDF.
                   fname = trim(static_dir)//'/v0.ncdf'
-                  call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vks(:, ispin), ierr)
+                  call dinput_function(trim(fname), gr%ob_grid%lead(il)%mesh, hm%lead(il)%vks(:, ispin), ierr)
                   if(ierr.eq.0) then
                     message(1) = 'Info: Successfully read external potential of the '// &
                       trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
@@ -560,7 +560,7 @@ contains
             call io_mkdir('debug/open_boundaries')
             fname = 'debug/open_boundaries/v_lead-'//trim(LEAD_NAME(il))//'-'//trim(channel)
             pot = io_open(trim(fname), action='write', is_tmp=.false., grp=gr%mesh%mpi_grp)
-            mesh => gr%mesh%lead_unit_cell(il)
+            mesh => gr%ob_grid%lead(il)%mesh
             do ix = mesh%idx%nr(1, 1)+mesh%idx%enlarge(1), mesh%idx%nr(2, 1)-mesh%idx%enlarge(1)
               do iy = mesh%idx%nr(1, 2)+mesh%idx%enlarge(2), mesh%idx%nr(2, 2)-mesh%idx%enlarge(2)
                 write(pot, '(2i8,e24.16)') ix, iy, hm%lead(il)%vks(mesh%idx%Lxyz_inv(ix, iy, 0), ispin)
@@ -573,17 +573,17 @@ contains
         ! Read Hartree potential.
         ! OBF.
         hm%lead(il)%vhartree(:) = M_ZERO
-        if(ubound(hm%lead(il)%vhartree(:), dim = 1).eq.gr%mesh%lead_unit_cell(il)%np) then
+        if(ubound(hm%lead(il)%vhartree(:), dim = 1).eq.gr%ob_grid%lead(il)%mesh%np) then
           if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
             fname = trim(static_dir)//'/vh.obf'
-            call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vhartree(:), ierr)
+            call dinput_function(trim(fname), gr%ob_grid%lead(il)%mesh, hm%lead(il)%vhartree(:), ierr)
             if(ierr.eq.0) then
               message(1) = 'Info: Successfully read Hartree potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
               call write_info(1)
             else
               ! NetCDF.
               fname = trim(static_dir)//'/vh.ncdf'
-              call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead(il)%vhartree(:), ierr)
+              call dinput_function(trim(fname), gr%ob_grid%lead(il)%mesh, hm%lead(il)%vhartree(:), ierr)
               if(ierr.eq.0) then
                 message(1) = 'Info: Successfully read Hartree potential of the '//trim(LEAD_NAME(il))&
                               //' lead from '//trim(fname)//'.'

@@ -604,7 +604,7 @@ contains
     if(gr%ob_grid%open_boundaries) then
       SAFE_ALLOCATE(st%zphi(1:gr%mesh%np_part, 1:st%ob_d%dim, 1:st%ob_nst, 1:st%ob_d%nik))
       do il = 1, NLEADS
-        SAFE_ALLOCATE(st%ob_lead(il)%rho(1:gr%mesh%lead_unit_cell(il)%np, 1:st%d%nspin))
+        SAFE_ALLOCATE(st%ob_lead(il)%rho(1:gr%ob_grid%lead(il)%mesh%np, 1:st%d%nspin))
       end do
       st%zphi = M_z0
     else
@@ -862,12 +862,13 @@ contains
 
   ! ---------------------------------------------------------
   ! Allocates the KS wavefunctions defined within a states_t structure.
-  subroutine states_allocate_wfns(st, mesh, wfs_type)
-    type(states_t),    intent(inout) :: st
-    type(mesh_t),      intent(in)    :: mesh
-    integer, optional, intent(in)    :: wfs_type
+  subroutine states_allocate_wfns(st, mesh, wfs_type, ob_mesh)
+    type(states_t),    intent(inout)   :: st
+    type(mesh_t),      intent(in)      :: mesh
+    integer, optional, intent(in)      :: wfs_type
+    type(mesh_t), optional, intent(in) :: ob_mesh(:)
 
-    integer :: np, ip, ik, ist, idim, st1, st2, k1, k2, size, il
+    integer :: ip, ik, ist, idim, st1, st2, k1, k2, size, il
     logical :: force
 
     call push_sub('states.states_allocate_wfns')
@@ -923,10 +924,9 @@ contains
       end forall
     end if
 
-    if(calc_mode_is(CM_TD).and.st%open_boundaries) then
+    if(present(ob_mesh).and.calc_mode_is(CM_TD).and.st%open_boundaries) then
       do il = 1, NLEADS
-        np = mesh%lead_unit_cell(il)%np
-        SAFE_ALLOCATE(st%ob_lead(il)%intf_psi(1:np, 1:st%d%dim, st1:st2, k1:k2))
+        SAFE_ALLOCATE(st%ob_lead(il)%intf_psi(1:ob_mesh(il)%np, 1:st%d%dim, st1:st2, k1:k2))
         st%ob_lead(il)%intf_psi = M_z0
       end do
 

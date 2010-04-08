@@ -132,8 +132,6 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge, ob_grid)
     if(ob_grid%transport_mode) mesh%idx%nr(2, TRANS_DIR) = mesh%idx%nr(2, TRANS_DIR) - 1
 
     call mesh_read_lead()
-  else
-    nullify(mesh%lead_unit_cell)
   end if
 
   mesh%idx%ll(:) = mesh%idx%nr(2, :) - mesh%idx%nr(1, :) + 1
@@ -152,10 +150,8 @@ contains
 
     call push_sub('mesh_init.mesh_init_stage1_mesh_read_lead')
 
-    SAFE_ALLOCATE(mesh%lead_unit_cell(1:NLEADS))
-
     do il = 1, NLEADS
-      mm => mesh%lead_unit_cell(il)
+      mm => ob_grid%lead(il)%mesh
       mm%sb => mesh%sb
       mm%cv => mesh%cv
       mm%parallel_in_domains = mesh%parallel_in_domains
