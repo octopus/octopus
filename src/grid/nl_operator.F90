@@ -74,7 +74,6 @@ module nl_operator_m
     type(mesh_t), pointer :: mesh      ! pointer to the underlying mesh
     integer, pointer      :: nn(:)     ! the size of the stencil at each point (for curvilinear coordinates)
     integer               :: np        ! number of points in mesh
-    integer               :: der_zero_max
     ! When running in parallel mode, the next three
     ! arrays are unique on each node.
     integer, pointer  :: i(:,:)    ! index of the points
@@ -246,7 +245,6 @@ contains
 
     opo%np           =  opi%np
     opo%mesh         => opi%mesh
-    opo%der_zero_max = opi%der_zero_max
 
     call loct_pointer_copy(opo%nn, opi%nn)
     call loct_pointer_copy(opo%i,    opi%i)
@@ -346,7 +344,6 @@ contains
     SAFE_ALLOCATE(st2(1:op%stencil%size))
 
     op%nri = 0
-    op%der_zero_max = mesh%np + 1
     do time = 1, 2
       st2 = 0
       do ii = 1, np
@@ -375,7 +372,11 @@ contains
             st1(jj) = vec_global2local(mesh%vp, st1(jj), mesh%vp%partno)
           end if
 #endif
-          if(mesh_compact_boundaries(mesh)) then
+          ! if boundary conditions are zero, we can remap boundry
+          ! points to reduce memory accesses. We cannot do this for the
+          ! first point, since it is used to build the weights, so it
+          ! has to have the positions right
+          if(ii > 1 .and. mesh_compact_boundaries(mesh)) then
             st1(jj) = min(st1(jj), mesh%np + 1)
           end if
           ASSERT(st1(jj) > 0)
@@ -401,10 +402,7 @@ contains
 
           change = any(st1r /= st2)
 
-          if(.not. change) then
-            st1 = st1r
-            op%der_zero_max = max(op%der_zero_max, maxval(st1) + ii)
-          end if
+          if(.not. change) st1 = st1r
         end if
 
         ! if the stencil changes
