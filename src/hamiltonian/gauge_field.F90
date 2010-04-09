@@ -304,7 +304,8 @@ contains
           call zderivatives_set_bc(gr%der, st%zpsi(:, idim, ist, ik))
 
           if(simul_box_is_periodic(gr%sb)) then
-            epsi(1:gr%mesh%np_part, idim) = phases(1:gr%mesh%np_part, ik - st%d%kpt%start + 1)*st%zpsi(1:gr%mesh%np_part, idim, ist, ik)
+            epsi(1:gr%mesh%np_part, idim) = &
+              phases(1:gr%mesh%np_part, ik - st%d%kpt%start + 1)*st%zpsi(1:gr%mesh%np_part, idim, ist, ik)
           end if
 
           call zderivatives_grad(gr%der, epsi(:, idim), gpsi(:, :, idim), set_bc = .false.)

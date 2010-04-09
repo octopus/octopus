@@ -568,7 +568,7 @@ contains
     FLOAT,                  intent(inout) :: rhs(:,:)
     type(nl_operator_t),    intent(inout) :: op(:)
 
-    integer :: p, p_max, i, j, k, pow_max
+    integer :: p, p_max, i, j, k, pow_max, nn
     FLOAT   :: x(MAX_DIM)
     FLOAT, allocatable :: mat(:,:), sol(:,:), powers(:,:)
 
@@ -589,9 +589,11 @@ contains
     p_max = op(1)%np
     if(op(1)%const_w) p_max = 1
 
+    nn = op(1)%stencil%size
     do p = 1, p_max
       mat(1,:) = M_ONE
-      do i = 1, op(1)%stencil%size
+      if(mesh%use_curvilinear) nn = op(1)%nn(op(1)%rimap(p))
+      do i = 1, nn
         if(mesh%use_curvilinear) then
           forall(j = 1:dim) x(j) = mesh%x(p + op(1)%ri(i, op(1)%rimap(p)), j) - mesh%x(p, j)
         else
@@ -609,7 +611,7 @@ contains
         end do
 
         ! generate the matrix
-        do j = 2, op(1)%stencil%size
+        do j = 2, nn
           mat(j, i) = powers(1, pol(1, j))
           do k = 2, dim
             mat(j, i) = mat(j, i)*powers(k, pol(k, j))
@@ -617,9 +619,10 @@ contains
         end do
       end do
 
-      call lalg_linsyssolve(op(1)%stencil%size, n, mat, rhs, sol)
+      call lalg_linsyssolve(nn, n, mat, rhs, sol)
       do i = 1, n
-        op(i)%w_re(:, p) = sol(:, n)
+        op(i)%w_re(:, p) = M_ZERO
+        op(i)%w_re(1:nn, p) = sol(1:nn, n)
       end do
 
     end do
