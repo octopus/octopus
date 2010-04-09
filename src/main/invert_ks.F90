@@ -30,6 +30,7 @@ module invert_ks_m
   use mesh_function_m 
   use messages_m 
   use parser_m 
+  use poisson_m
   use profiling_m 
   use states_m 
   use system_m 
@@ -52,7 +53,7 @@ contains
     integer :: ii, jj, ierr, np, ndim, nspin, idiffmax
     integer :: verbosity
     FLOAT   :: diffdensity
-    FLOAT, allocatable :: target_rho(:,:)
+    FLOAT, allocatable :: target_rho(:,:), rho(:)
       
     call push_sub('invert_ks.invert_ks_run')
 
@@ -67,16 +68,34 @@ contains
     nspin   = sys%st%d%nspin
 
     ! read target density
-    SAFE_ALLOCATE(target_rho(1:np, 1:nspin))    
+    SAFE_ALLOCATE(target_rho(1:np, 1:nspin)) 
+    SAFE_ALLOCATE(rho(1:np)) 
+       
     call read_target_rho()
 
     hm%epot     = M_ZERO
     hm%ehartree = M_ZERO
     hm%ex       = M_ZERO
     hm%ec       = M_ZERO
-    hm%vhartree = M_ZERO
     hm%vxc      = M_ZERO
 
+    ! calculate total density
+    rho = M_ZERO
+    do ii = 1, nspin
+      do jj = 1, np
+        rho(jj) = rho(jj) + target_rho(jj, ii)
+      enddo
+    enddo
+    
+    call poisson_init(sys%ks%hartree_solver, sys%gr%der, sys%geo)
+    
+    ! calculate the Hartree potential
+    call dpoisson_solve(sys%ks%hartree_solver, hm%vhartree, rho)
+    
+    do ii = 1, nspin
+      hm%vhxc(:,ii) = hm%vhartree(:)
+    enddo
+    
     ! do not change hxc potential outside this routine
     sys%ks%frozen_hxc = .true. 
     
@@ -127,6 +146,7 @@ contains
            ".", "rho", sys%gr%mesh, sys%ks%ks_inversion%aux_st%rho(:,1), units_out%length**(-sys%gr%sb%dim), ierr)
 
     SAFE_DEALLOCATE_A(target_rho)
+    SAFE_DEALLOCATE_A(rho)
 
     call xc_ks_inversion_end(sys%ks%ks_inversion, sys%gr, sys%geo)
 
