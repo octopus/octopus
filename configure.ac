@@ -246,7 +246,7 @@ AC_SUBST(DEBUG)
 dnl set the default extension for the programs
 EXEEXT="${MYEXT}${EXEEXT}"
 
-dnl we only generate the utilities if single precision and mpi are off
+dnl we only generate the utilities if single precision and MPI are off
 if test x"$enable_mpi" = x"no" -a -z "${SINGLE_PRECISION}"; then
   UTILITY_PROGRAMS='$(EXTRA_PROGRAMS)'
   msg="+ utilities"
@@ -256,7 +256,7 @@ else
 fi
 AC_SUBST(UTILITY_PROGRAMS)
 
-AC_ARG_WITH(max-dim, [  --with-max-dim=NDIM     maximum number of dimension Octopus can use,
+AC_ARG_WITH(max-dim, [  --with-max-dim=NDIM     maximum number of dimensions Octopus can use,
                           the default is 3 (other values are experimental)],
   [maxdim=$withval], [maxdim=3])
 
@@ -274,6 +274,9 @@ ACX_LIBXC
 
 dnl check for BLAS
 ACX_BLAS([], AC_MSG_ERROR([could not find required BLAS library]))
+
+dnl test zdotc in BLAS
+ACX_ZDOTC
 
 dnl check for LAPACK
 ACX_LAPACK([], AC_MSG_ERROR([could not find required LAPACK library]))

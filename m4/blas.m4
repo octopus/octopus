@@ -8,7 +8,7 @@ AC_LANG([Fortran])
 acx_blas_ok=no
 
 dnl Get fortran linker names of BLAS functions to check for.
-dnl if not compiling with fortran, convert the names
+dnl if not compiling with Fortran, convert the names
 m4_if(_AC_LANG, Fortran, [
 sgemm=sgemm
 dgemm=dgemm
