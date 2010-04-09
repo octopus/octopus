@@ -36,10 +36,8 @@ end do
 result2 = cmplx(0.0d0,0.0d0)
 result2 = zdotc(nn,f1,1,f2,1)
 
-print *, abs(result1-result2)
-
 open(1, file='conf.zdotc')
-if(abs(result1-result2) .lt. 1d-5) then
+if(abs(result1-result2) .lt. 1d-6) then
   write(1, '(a)') 'success'
 endif
 
