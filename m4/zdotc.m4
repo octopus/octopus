@@ -58,7 +58,12 @@ end program
   LIBS="$acx_blas_save_LIBS"
 
   if test "x$acx_zdotc_ok" = "xno"; then
-    AC_MSG_WARN([Substituting simple loop for zdotc routine.])
-    AC_DEFINE_UNQUOTED(ZDOTC_BAD, 1, [Define if zdotc cannot be used.])
+    AC_MSG_ERROR([
+
+    Blas was found, but the zdotc subroutine does not work
+    properly. This probably means that your Blas implementation is
+    incompatible with your Fortran compiler.
+
+    ])
   fi
 ])
