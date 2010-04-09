@@ -358,6 +358,7 @@ subroutine X(derivatives_grad)(der, ff, op_ff, ghost_update, set_bc)
   logical :: set_bc_, ghost_update_
   
   call push_sub('derivatives_inc.Xderivatives_grad')
+  call profiling_in(gradient_prof, "GRADIENT")
 
   ASSERT(ubound(op_ff, DIM=2) >= der%dim)
 
@@ -368,13 +369,13 @@ subroutine X(derivatives_grad)(der, ff, op_ff, ghost_update, set_bc)
   if(present(ghost_update)) ghost_update_ = ghost_update
     
   do idir = 1, der%dim
-    call X(derivatives_perform) (der%grad(idir), der, ff, op_ff(:, idir), &
-      ghost_update_, set_bc_)
+    call X(derivatives_perform) (der%grad(idir), der, ff, op_ff(:, idir), ghost_update_, set_bc_)
 
     set_bc_       = .false. ! there is no need to update again
     ghost_update_ = .false. ! the boundary or ghost points
   end do
-    
+
+  call profiling_out(gradient_prof)
   call pop_sub('derivatives_inc.Xderivatives_grad')
 end subroutine X(derivatives_grad)
 
@@ -388,24 +389,26 @@ subroutine X(derivatives_div)(der, ff, op_ff, ghost_update, set_bc)
   logical, optional,   intent(in)    :: set_bc
 
   R_TYPE, allocatable :: tmp(:)
-  integer             :: idim, ii
+  integer             :: idir, ii
 
   call push_sub('derivatives_inc.Xderivatives_div')
+  call profiling_in(divergence_prof, "DIVERGENCE")
 
   ASSERT(ubound(ff, DIM=2) >= der%dim)
 
-  SAFE_ALLOCATE(tmp(1:der%mesh%np))
-  forall(ii = 1:der%mesh%np) op_ff(ii) = R_TOTYPE(M_ZERO)
+  call X(derivatives_perform) (der%grad(1), der, ff(:, 1), op_ff, ghost_update, set_bc)
 
-  do idim = 1, der%dim
-    call X(derivatives_perform) (der%grad(idim), der, ff(:, idim), tmp, &
-      ghost_update, set_bc)
+  SAFE_ALLOCATE(tmp(1:der%mesh%np))
+
+  do idir = 2, der%dim
+    call X(derivatives_perform) (der%grad(idir), der, ff(:, idir), tmp, ghost_update, set_bc)
 
     forall(ii = 1:der%mesh%np) op_ff(ii) = op_ff(ii) + tmp(ii)
   end do
 
   SAFE_DEALLOCATE_A(tmp)
 
+  call profiling_out(divergence_prof)
   call pop_sub('derivatives_inc.Xderivatives_div')
 end subroutine X(derivatives_div)
 
@@ -425,6 +428,7 @@ subroutine X(derivatives_curl)(der, ff, op_ff, ghost_update, set_bc)
   integer             :: ii, np
 
   call push_sub('derivatives_inc.Xderivatives_curl')
+  call profiling_in(curl_prof, "CURL")
 
   ASSERT(der%dim==2 .or. der%dim==3)
   ASSERT(ubound(ff,    DIM=2) >= der%dim)
@@ -460,6 +464,7 @@ subroutine X(derivatives_curl)(der, ff, op_ff, ghost_update, set_bc)
   end select
 
   SAFE_DEALLOCATE_A(tmp)
+  call profiling_out(curl_prof)
   call pop_sub('derivatives_inc.Xderivatives_curl')
 end subroutine X(derivatives_curl)
 

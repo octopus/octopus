@@ -129,7 +129,7 @@ module derivatives_m
     logical                      :: ghost_update
   end type derivatives_handle_batch_t
 
-
+  type(profile_t), save :: gradient_prof, divergence_prof, curl_prof
   type(profile_t), save :: set_bc_prof
 #ifdef HAVE_MPI
   type(profile_t), save :: set_bc_comm_prof

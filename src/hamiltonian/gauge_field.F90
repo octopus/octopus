@@ -284,10 +284,12 @@ contains
 
     integer :: ik, ist, idir, idim, iatom
     CMPLX, allocatable :: gpsi(:, :, :), cpsi(:, :), epsi(:, :)
+    type(profile_t), save :: prof
 #ifdef HAVE_MPI
     FLOAT :: force_tmp(1:MAX_DIM)
 #endif
 
+    call profiling_in(prof, "GAUGE_FIELD_FORCE")
     call push_sub('gauge_field.gauge_field_get_force')
 
     SAFE_ALLOCATE(epsi(1:gr%mesh%np_part, 1:st%d%dim))
@@ -344,7 +346,7 @@ contains
 
     SAFE_DEALLOCATE_A(gpsi)
     SAFE_DEALLOCATE_A(cpsi)
-
+    call profiling_out(prof)
     call pop_sub('gauge_field.gauge_field_get_force')
   end subroutine gauge_field_get_force
 
