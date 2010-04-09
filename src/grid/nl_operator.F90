@@ -299,7 +299,7 @@ contains
 #ifdef HAVE_MPI
     integer :: ir, maxp, iinner, iouter
 #endif
-    logical :: change
+    logical :: change, force_change
 
     call push_sub('nl_operator.nl_operator_build')
 
@@ -383,8 +383,12 @@ contains
 
         st1(1:op%stencil%size) = st1(1:op%stencil%size) - ii
 
-        change = any(st1 /= st2)
-        
+        change = any(st1 /= st2) 
+
+        !the next is to detect when we move from a point that does not
+        !have boundary points as neighbours to one that has
+        force_change = any(st1 + ii > mesh%np) .and. all(st2 + ii - 1 <= mesh%np) 
+
         if(change .and. mesh_compact_boundaries(mesh)) then 
           !try to repair it by changing the boundary points
           do jj = 1, op%stencil%size
@@ -404,7 +408,7 @@ contains
         end if
 
         ! if the stencil changes
-        if (change) then 
+        if (change .or. force_change) then 
           !store it
           st2 = st1
 
