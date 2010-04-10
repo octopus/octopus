@@ -362,7 +362,9 @@ contains
             call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, idir2, ik, f_in2(:, :, idir2), vrnl)
 
             ! -x vnl |f>
-            forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) dnl(ip, idim, idir) = dnl(ip, idim, idir) - gr%mesh%x(ip, idir)*vrnl(ip, idim)
+            forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) 
+              dnl(ip, idim, idir) = dnl(ip, idim, idir) - gr%mesh%x(ip, idir)*vrnl(ip, idim)
+            end forall
 
             ! vnl x |f>
             forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) xf(ip, idim) = gr%mesh%x(ip, idir) * f_in2(ip, idim, idir2)
