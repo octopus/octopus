@@ -57,13 +57,14 @@ subroutine X(derivatives_batch_set_bc)(der, batch_ff)
   call pop_sub('derivatives_inc.Xderivatives_batch_set_bc')
 
 contains
+
   ! ---------------------------------------------------------
   subroutine zero_boundaries()
     integer :: ist, ip
 
     call push_sub('derivatives_inc.Xderivatives_batch_set_bc.zero_boundaries')
 
-    forall (ist=1:batch_ff%nst_linear, ip=bndry_start:bndry_end)
+    forall (ist = 1:batch_ff%nst_linear, ip = bndry_start:bndry_end)
       batch_ff%states_linear(ist)%X(psi)(ip) = R_TOTYPE(M_ZERO)
     end forall
 
@@ -91,7 +92,7 @@ contains
         i_lev = der%mesh%resolution(ix,iy,iz)
 
         ! resolution is 2**num_radii for outer boundary points, but now we want inner boundary points
-        if(i_lev.ne.2**der%mesh%sb%hr_area%num_radii) then
+        if(i_lev .ne. 2**der%mesh%sb%hr_area%num_radii) then
           dx = abs(mod(ix, 2**(i_lev)))
           dy = abs(mod(iy, 2**(i_lev)))
           dz = abs(mod(iz, 2**(i_lev)))
@@ -99,14 +100,14 @@ contains
           do ii = 1, der%mesh%sb%hr_area%interp%nn
             do jj = 1, der%mesh%sb%hr_area%interp%nn
               do kk = 1, der%mesh%sb%hr_area%interp%nn
-                weight = der%mesh%sb%hr_area%interp%ww(ii)* &
-                  der%mesh%sb%hr_area%interp%ww(jj)*        &
+                weight = der%mesh%sb%hr_area%interp%ww(ii) * &
+                  der%mesh%sb%hr_area%interp%ww(jj) *        &
                   der%mesh%sb%hr_area%interp%ww(kk)
 
                 ff(ip) = ff(ip) + weight * ff(der%mesh%idx%Lxyz_inv(   &
-                  ix + der%mesh%sb%hr_area%interp%posi(ii)*dx,        &
-                  iy + der%mesh%sb%hr_area%interp%posi(jj)*dy,        &
-                  iz + der%mesh%sb%hr_area%interp%posi(kk)*dz))
+                  ix + der%mesh%sb%hr_area%interp%posi(ii) * dx,       &
+                  iy + der%mesh%sb%hr_area%interp%posi(jj) * dy,       &
+                  iz + der%mesh%sb%hr_area%interp%posi(kk) * dz))
               end do
             end do
           end do
@@ -136,7 +137,7 @@ contains
       call profiling_in(set_bc_comm_prof, 'SET_BC_COMMUNICATION')
       
       ! get the points that are copies from other nodes
-      SAFE_ALLOCATE(req(1:2*der%mesh%vp%npart*batch_ff%nst_linear))
+      SAFE_ALLOCATE(req(1:2 * der%mesh%vp%npart * batch_ff%nst_linear))
 
       nreq = 0
 
@@ -163,7 +164,7 @@ contains
       end do
       
       call profiling_count_transfers(  &
-        sum(der%mesh%nsend(1:der%mesh%vp%npart) + der%mesh%nrecv(1:der%mesh%vp%npart))*batch_ff%nst_linear, &
+        sum(der%mesh%nsend(1:der%mesh%vp%npart) + der%mesh%nrecv(1:der%mesh%vp%npart)) * batch_ff%nst_linear, &
         R_TOTYPE(M_ONE))
       
       call profiling_out(set_bc_comm_prof)

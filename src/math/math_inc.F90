@@ -51,6 +51,7 @@ subroutine X(interpolate_2)(xa, ya, x, y)
 end subroutine X(interpolate_2)
 
 
+! ---------------------------------------------------------
 subroutine X(interpolate_1)(xa, ya, x, y)
   FLOAT,  intent(in)  :: xa(:)
   R_TYPE, intent(in)  :: ya(:, :)
@@ -78,6 +79,7 @@ subroutine X(interpolate_1)(xa, ya, x, y)
 end subroutine X(interpolate_1)
 
 
+! ---------------------------------------------------------
 subroutine X(interpolate_0)(xa, ya, x, y)
   FLOAT,  intent(in)  :: xa(:)
   R_TYPE, intent(in)  :: ya(:)
@@ -102,6 +104,7 @@ subroutine X(interpolate_0)(xa, ya, x, y)
   SAFE_DEALLOCATE_A(c)
   call pop_sub('math_inc.Xinterpolate_0')
 end subroutine X(interpolate_0)
+
 
 ! ---------------------------------------------------------
 subroutine X(shellsort1)(a, x)
@@ -439,6 +442,8 @@ FLOAT function X(matrix_inv_residual)(nsize, a, b) result(residual)
 
 end function X(matrix_inv_residual)
 
+
+! ---------------------------------------------------------
 pure function X(cross_product)(a, b) result(c)
   R_TYPE, intent(in) :: a(1:3)
   R_TYPE, intent(in) :: b(1:3)
@@ -452,7 +457,7 @@ end function X(cross_product)
 
 
 ! ---------------------------------------------------------
-! Caclulate infinity-norm of matrix.
+! Calculate infinity-norm of matrix.
 FLOAT function X(infinity_norm)(matrix)
   R_TYPE, intent(in) :: matrix(:, :)
 
