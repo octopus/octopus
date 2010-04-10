@@ -286,7 +286,7 @@ contains
     type(gauge_force_t),  intent(out)   :: force
 
     integer :: ik, ist, idir, idim, iatom, ip
-    CMPLX, allocatable :: gpsi(:, :, :), cpsi(:, :), epsi(:, :)
+    CMPLX, allocatable :: gpsi(:, :, :), epsi(:, :)
     type(profile_t), save :: prof
 #ifdef HAVE_MPI
     FLOAT :: force_tmp(1:MAX_DIM)
@@ -297,7 +297,6 @@ contains
 
     SAFE_ALLOCATE(epsi(1:gr%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gpsi(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%dim))
-    SAFE_ALLOCATE(cpsi(1:gr%mesh%np, 1:st%d%dim))
 
     force%vecpot(1:MAX_DIM) = M_ZERO
     
@@ -319,8 +318,7 @@ contains
         do idir = 1, gr%sb%dim
           do iatom = 1, geo%natoms
             if(species_is_ps(geo%atom(iatom)%spec)) then
-              call zprojector_commute_r(pj(iatom), gr, st%d%dim, idir, ik, epsi, cpsi)
-              forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) gpsi(ip, idir, idim) = gpsi(ip, idir, idim) + cpsi(ip, idim)
+              call zprojector_commute_r(pj(iatom), gr, st%d%dim, idir, ik, epsi, gpsi(:, idir, :))
             end if
           end do
         end do
@@ -352,7 +350,7 @@ contains
     !    force%vecpot(1:MAX_DIM) = force%vecpot(1:MAX_DIM) - this%wp2*this%vecpot(1:MAX_DIM)
 
     SAFE_DEALLOCATE_A(gpsi)
-    SAFE_DEALLOCATE_A(cpsi)
+
     call profiling_out(prof)
     call pop_sub('gauge_field.gauge_field_get_force')
   end subroutine gauge_field_get_force

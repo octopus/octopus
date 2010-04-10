@@ -408,7 +408,7 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
   integer,               intent(in)     :: idir
   integer,               intent(in)     :: ik
   R_TYPE,                intent(in)     :: psi(:, :)
-  R_TYPE,                intent(out)    :: cpsi(:,:)
+  R_TYPE,                intent(inout)  :: cpsi(:,:)
 
   integer ::  ns, idim
   R_TYPE, allocatable :: lpsi(:, :), pxlpsi(:,:), xplpsi(:,:)
@@ -418,8 +418,6 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
 
   call push_sub('projector_inc.Xprojector_commute_r')
   call profiling_in(prof, "PROJ_COMMUTE")
-
-  cpsi(1:gr%mesh%np, 1:dim) = M_ZERO
 
   if(pj%type .ne. M_NONE) then
 

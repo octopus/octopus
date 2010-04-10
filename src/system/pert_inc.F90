@@ -130,6 +130,7 @@ contains
     if (this%use_nonlocalpps) then
       do iatom = 1, geo%natoms
         if(species_is_ps(geo%atom(iatom)%spec)) then
+          cpsi = M_ZERO
           call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, this%dir, ik, f_in_copy, cpsi)
           forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = f_out(ip, idim) + cpsi(ip, idim)
         end if
@@ -166,7 +167,8 @@ contains
       vrnl(1:gr%mesh%np, 1:hm%d%dim, this%dir) = M_ZERO
       
       do iatom = 1, geo%natoms
-        
+
+        vrnl = M_ZERO
         do idir = 1, gr%mesh%sb%dim
           if(this%dir == idir) cycle ! this direction is not used in the cross product
           call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, idir, ik, f_in_copy, vrnl(:, :, idir))
@@ -358,6 +360,7 @@ contains
         dnl = R_TOTYPE(M_ZERO)
         do idir = 1, gr%sb%dim
           do idir2 = 1, gr%sb%dim
+            vrnl = M_ZERO
             !calculate dnl |f_in2> = -[x,vnl] |f_in2>
             call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, idir2, ik, f_in2(:, :, idir2), vrnl)
 
@@ -369,6 +372,7 @@ contains
             ! vnl x |f>
             forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) xf(ip, idim) = gr%mesh%x(ip, idir) * f_in2(ip, idim, idir2)
 
+            vrnl = M_ZERO
             call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, idir2, ik, xf, vrnl)
 
             forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) dnl(ip, idim, idir) = dnl(ip, idim, idir) + vrnl(ip, idim)
