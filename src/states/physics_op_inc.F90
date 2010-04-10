@@ -36,7 +36,7 @@ subroutine X(physics_op_L)(der, ff, lf, ghost_update, set_bc)
 
   call push_sub('physics_op_inc.Xphysics_op_L')
 
-  ASSERT(der%mesh%sb%dim.ne.1)
+  ASSERT(der%mesh%sb%dim .ne. 1)
 
   SAFE_ALLOCATE(gf(1:der%mesh%np, 1:der%mesh%sb%dim))
 
@@ -54,16 +54,16 @@ subroutine X(physics_op_L)(der, ff, lf, ghost_update, set_bc)
       x1 = der%mesh%x(ip, 1)
       x2 = der%mesh%x(ip, 2)
       x3 = der%mesh%x(ip, 3)
-      lf(ip, 1) = factor*(x2*gf(ip, 3) - x3*gf(ip, 2))
-      lf(ip, 2) = factor*(x3*gf(ip, 1) - x1*gf(ip, 3))
-      lf(ip, 3) = factor*(x1*gf(ip, 2) - x2*gf(ip, 1))
+      lf(ip, 1) = factor * (x2 * gf(ip, 3) - x3 * gf(ip, 2))
+      lf(ip, 2) = factor * (x3 * gf(ip, 1) - x1 * gf(ip, 3))
+      lf(ip, 3) = factor * (x1 * gf(ip, 2) - x2 * gf(ip, 1))
     end do
 
   case(2)
     do ip = 1, der%mesh%np
       x1 = der%mesh%x(ip, 1)
       x2 = der%mesh%x(ip, 2)
-      lf(ip, 1) = factor*(x1*gf(ip, 2) - x2*gf(ip, 1))
+      lf(ip, 1) = factor * (x1 * gf(ip, 2) - x2 * gf(ip, 1))
     end do
 
   end select

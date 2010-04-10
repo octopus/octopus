@@ -99,6 +99,7 @@ module states_dim_m
 
 contains
 
+  ! ---------------------------------------------------------
   subroutine states_dim_copy(dout, din)
     type(states_dim_t), intent(out) :: dout
     type(states_dim_t), intent(in)  :: din
@@ -123,23 +124,24 @@ contains
     call pop_sub('states_dim.states_dim_copy')
   end subroutine states_dim_copy
 
+
   ! ---------------------------------------------------------
-  subroutine states_dim_end(d)
-    type(states_dim_t), intent(inout) :: d
+  subroutine states_dim_end(dim)
+    type(states_dim_t), intent(inout) :: dim
 
     call push_sub('states_dim.states_dim_end')
 
-    call distributed_end(d%kpt)
+    call distributed_end(dim%kpt)
 
-    SAFE_DEALLOCATE_P(d%kpoints)
-    SAFE_DEALLOCATE_P(d%kweights)
+    SAFE_DEALLOCATE_P(dim%kpoints)
+    SAFE_DEALLOCATE_P(dim%kweights)
 
     call pop_sub('states_dim.states_dim_end')
   end subroutine states_dim_end
 
 
   ! ---------------------------------------------------------
-  ! Returns if k-point ik denotes spin-up, in spin-polarized case.
+  ! Returns true if k-point ik denotes spin-up, in spin-polarized case.
   logical function is_spin_up(ik)
     integer, intent(in) :: ik
 
@@ -152,7 +154,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Returns if k-point ik denotes spin-down, in spin-polarized case.
+  ! Returns true if k-point ik denotes spin-down, in spin-polarized case.
   logical function is_spin_down(ik)
     integer, intent(in) :: ik
 
@@ -163,6 +165,8 @@ contains
     call pop_sub('states_dim.is_spin_down')
   end function is_spin_down
 
+
+  ! ---------------------------------------------------------
   integer function states_dim_get_spin_index(this, iq) result(index)
     type(states_dim_t), intent(in) :: this
     integer,            intent(in) :: iq
@@ -178,6 +182,8 @@ contains
     call pop_sub('states_dim.states_dim_get_spin_index')
   end function states_dim_get_spin_index
   
+
+  ! ---------------------------------------------------------
   integer function states_dim_get_kpoint_index(this, iq) result(index)
     type(states_dim_t), intent(in) :: this
     integer,            intent(in) :: iq
@@ -193,6 +199,8 @@ contains
     call pop_sub('states_dim.states_dim_get_kpoint_index')
   end function states_dim_get_kpoint_index
 
+
+  ! ---------------------------------------------------------
   subroutine kpoints_distribute(this, mc)
     type(states_dim_t), intent(inout) :: this
     type(multicomm_t),  intent(in)    :: mc
