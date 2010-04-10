@@ -308,11 +308,10 @@ contains
 
           call zderivatives_set_bc(gr%der, st%zpsi(:, idim, ist, ik))
 
-          if(simul_box_is_periodic(gr%sb)) then
-            epsi(1:gr%mesh%np_part, idim) = &
-              phases(1:gr%mesh%np_part, ik - st%d%kpt%start + 1) * st%zpsi(1:gr%mesh%np_part, idim, ist, ik)
-          end if
-
+          ! Apply the phase that contains both the K point and vector potential terms.
+          epsi(1:gr%mesh%np_part, idim) = &
+            phases(1:gr%mesh%np_part, ik - st%d%kpt%start + 1) * st%zpsi(1:gr%mesh%np_part, idim, ist, ik)
+          
           call zderivatives_grad(gr%der, epsi(:, idim), gpsi(:, :, idim), set_bc = .false.)
 
         end do
@@ -345,7 +344,12 @@ contains
     end if
 #endif
 
-    force%vecpot(1:MAX_DIM) = force%vecpot(1:MAX_DIM) - this%wp2 * this%vecpot(1:MAX_DIM)
+    ! The line below should not be added: since the vector potential
+    ! is applied as a phase to the states, this term appears
+    ! automatically. I keep it with this comment to alert possible
+    ! readers of the code who might think that the term is missing.
+    !
+    !    force%vecpot(1:MAX_DIM) = force%vecpot(1:MAX_DIM) - this%wp2*this%vecpot(1:MAX_DIM)
 
     SAFE_DEALLOCATE_A(gpsi)
     SAFE_DEALLOCATE_A(cpsi)

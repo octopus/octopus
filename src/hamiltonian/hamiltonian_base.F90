@@ -220,7 +220,7 @@ contains
   logical pure function hamiltonian_base_has_magnetic(this) result(has_magnetic)
     type(hamiltonian_base_t), intent(in) :: this
     
-    has_magnetic = associated(this%uniform_vector_potential) .or. associated(this%vector_potential) &
+    has_magnetic = associated(this%vector_potential) &
       .or. associated(this%uniform_magnetic_field)
     
   end function hamiltonian_base_has_magnetic

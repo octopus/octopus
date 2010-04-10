@@ -104,16 +104,6 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
     end do
     grad(:, der%mesh%sb%dim + 1:MAX_DIM, :) = M_ZERO
  
-    if(associated(this%uniform_vector_potential)) then
-      
-      a2 = sum(this%uniform_vector_potential(1:MAX_DIM)**2)
-      
-      forall (idim = 1:psib%dim, ip = 1:der%mesh%np)
-        vpsi(ip, idim) = vpsi(ip, idim) + M_HALF*a2*psi(ip, idim) &
-          + M_zI*dot_product(this%uniform_vector_potential(1:MAX_DIM), grad(ip, 1:MAX_DIM, idim))
-      end forall
-    end if
-    
     if(associated(this%vector_potential)) then
       forall (idim = 1:std%dim, ip = 1:der%mesh%np)
         vpsi(ip, idim) = vpsi(ip, idim) + M_HALF*sum(this%vector_potential(1:MAX_DIM, ip)**2)*psi(ip, idim) &

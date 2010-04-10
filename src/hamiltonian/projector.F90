@@ -221,7 +221,8 @@ contains
         kr = sum(kpoints(1:ndim, ik)*(this%sphere%x(is, 1:ndim) - this%sphere%mesh%x(this%sphere%jxyz(is), 1:ndim)))
 
         if(present(vec_pot)) then
-          if(associated(vec_pot)) kr = kr + sum(vec_pot(1:ndim)*this%sphere%x(is, 1:ndim))
+          if(associated(vec_pot)) kr = kr + &
+            sum(vec_pot(1:ndim)*(this%sphere%x(is, 1:ndim)- this%sphere%mesh%x(this%sphere%jxyz(is), 1:ndim)))
         end if
 
         if(present(vec_pot_var)) then

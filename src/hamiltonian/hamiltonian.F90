@@ -973,8 +973,28 @@ contains
         vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
     end do
 
+    call build_phase()
+
     call profiling_out(prof)
     call pop_sub('hamiltonian.hamiltonian_update_potential')
+  contains
+
+    subroutine build_phase()
+      integer :: ik
+
+      if(associated(this%hm_base%uniform_vector_potential)) then 
+        if(.not. associated(this%phase)) then
+          SAFE_ALLOCATE(this%phase(1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
+        end if
+        
+        forall (ik = this%d%kpt%start:this%d%kpt%end, ip = 1:mesh%np_part)
+          this%phase(ip, ik) = exp(-M_zI*sum(mesh%x(ip, 1:mesh%sb%dim)*(this%d%kpoints(1:mesh%sb%dim, ik) &
+            + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
+        end forall
+      end if
+
+    end subroutine build_phase
+
   end subroutine hamiltonian_update_potential
 
 

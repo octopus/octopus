@@ -34,7 +34,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   R_TYPE, allocatable :: psi_copy(:, :, :)
 
   type(profile_t), save :: phase_prof
-  logical :: kinetic_only_, apply_kpoint
+  logical :: kinetic_only_, apply_phase
   integer :: ii, ist, idim, ip
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
   type(batch_t) :: epsib, laplb
@@ -65,9 +65,9 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   ASSERT(ik >= hm%d%kpt%start .and. ik <= hm%d%kpt%end)
   nst = psib%nst
   
-  apply_kpoint = simul_box_is_periodic(der%mesh%sb) .and. .not. kpoint_is_gamma(hm%d, ik)
+  apply_phase = associated(hm%phase)
 
-  if(apply_kpoint) then
+  if(apply_phase) then
     SAFE_ALLOCATE(psi_copy(1:der%mesh%np_part, 1:hm%d%dim, 1:nst))
     call batch_init(epsib, hm%d%dim, psib%states(1)%ist, psib%states(nst)%ist, psi_copy)
   else
@@ -82,7 +82,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
     do ii = 1, nst
       call set_pointers()
       
-      if(apply_kpoint) then ! we copy psi to epsi applying the exp(i k.r) phase
+      if(apply_phase) then ! we copy psi to epsi applying the exp(i k.r) phase
         call profiling_in(phase_prof, "PBC_PHASE_APPLY")
       
         forall (idim = 1:hm%d%dim, ip = sp:min(sp + bs - 1, der%mesh%np_part)) 
@@ -178,7 +178,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
   SAFE_DEALLOCATE_A(lapl)
 
-  if(apply_kpoint) then
+  if(apply_phase) then
     ! now we need to remove the exp(-i k.r) factor
     do sp = 1, der%mesh%np, bs
       do ii = 1, nst
