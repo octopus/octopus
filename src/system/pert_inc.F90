@@ -29,19 +29,22 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
   R_TYPE,               intent(in)    :: f_in(:, :)
   R_TYPE,               intent(out)   :: f_out(:, :)
 
-  R_TYPE, allocatable :: f_in_copy(:)
-   logical :: apply_kpoint
+  R_TYPE, allocatable :: f_in_copy(:, :)
+  logical :: apply_kpoint
+  integer :: ip, idim
 
-   call push_sub('pert_inc.Xpert_apply')
+  call push_sub('pert_inc.Xpert_apply')
 
   call profiling_in(prof, "PERT_APPLY")
 
   ASSERT(this%dir .ne. -1)
 
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
-     SAFE_ALLOCATE(f_in_copy(1:gr%mesh%np_part))
-     call lalg_copy(gr%mesh%np_part, f_in(:, 1), f_in_copy)
-     call X(derivatives_set_bc(gr%der, f_in_copy(:)))
+    do idim = 1, hm%d%dim
+      SAFE_ALLOCATE(f_in_copy(1:gr%mesh%np_part, hm%d%dim))
+      call lalg_copy(gr%mesh%np_part, f_in(:, idim), f_in_copy(:, idim))
+      call X(derivatives_set_bc(gr%der, f_in_copy(:, idim)))
+    end do
   endif
   ! no derivatives in electric, so ghost points not needed
 
@@ -50,7 +53,7 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
   ! electric does not need it since (e^-ikr)r(e^ikr) = r
 
   if (apply_kpoint) then
-    f_in_copy(1:gr%mesh%np_part) = hm%phase(1:gr%mesh%np_part, ik)*f_in_copy(1:gr%mesh%np_part)
+    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np_part) f_in_copy(ip, idim) = hm%phase(ip, ik)*f_in_copy(ip, idim)
   endif
 
   select case(this%pert_type)
@@ -72,7 +75,7 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
   end select
   
   if (apply_kpoint) then
-    f_out(1:gr%mesh%np, 1) = conjg(hm%phase(1:gr%mesh%np, ik))*f_out(1:gr%mesh%np, 1)
+    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = conjg(hm%phase(ip, ik))*f_out(ip, idim)
   endif
 
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
@@ -89,7 +92,7 @@ contains
   subroutine none()
 
     call push_sub('pert_inc.Xpert_apply.none')
-    f_out(1:gr%mesh%np, 1) = M_ZERO
+    f_out(1:gr%mesh%np, 1:hm%d%dim) = M_ZERO
     call pop_sub('pert_inc.Xpert_apply.none')
 
   end subroutine none
@@ -98,7 +101,7 @@ contains
   subroutine electric()
 
     call push_sub('pert_inc.Xpert_apply.electric')
-    f_out(1:gr%mesh%np, 1) = f_in(1:gr%mesh%np, 1)*gr%mesh%x(1:gr%mesh%np, this%dir)
+    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = f_in(ip, idim)*gr%mesh%x(ip, this%dir)
     call pop_sub('pert_inc.Xpert_apply.electric')
 
   end subroutine electric
@@ -106,31 +109,33 @@ contains
   ! --------------------------------------------------------------------------
   subroutine kdotp()
   ! perturbation is i d/dk (=r)
-    R_TYPE, allocatable :: grad(:,:), cpsi(:,:)
-    integer iatom
+    R_TYPE, allocatable :: grad(:, :, :), cpsi(:,:)
+    integer :: iatom, idim
 
     call push_sub('pert_inc.Xpert_apply.kdotp')
 
     SAFE_ALLOCATE(cpsi(1:gr%mesh%np_part, 1:hm%d%dim))
-    SAFE_ALLOCATE(grad(1:gr%mesh%np, 1:gr%sb%dim))
+    SAFE_ALLOCATE(grad(1:gr%mesh%np, 1:gr%sb%dim, 1:hm%d%dim))
 
-    call X(derivatives_grad) (gr%der, f_in_copy, grad, set_bc = .false.)
-    ! set_bc done already separately
-    f_out(1:gr%mesh%np, 1) = grad(1:gr%mesh%np, this%dir)
+    do idim = 1, hm%d%dim
+      call X(derivatives_grad) (gr%der, f_in_copy(:, idim), grad(:, :, idim), set_bc = .false.)
+      ! set_bc done already separately
+    end do
+
+    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = grad(ip, this%dir, idim)
+
     ! i delta_H_k = i (-i*grad + k) . delta_k
     ! representation on psi is just grad . delta_k
     ! note that second-order term is left out
-
     if (this%use_nonlocalpps) then
       do iatom = 1, geo%natoms
         if(species_is_ps(geo%atom(iatom)%spec)) then
-          call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, this%dir, ik, f_in_copy, cpsi(:, :))
-          f_out(1:gr%mesh%np, 1) = f_out(1:gr%mesh%np, 1) + cpsi(1:gr%mesh%np, 1)
-          ! using only the first spinor component
+          call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, this%dir, ik, f_in_copy, cpsi)
+          forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = f_out(ip, idim) + cpsi(ip, idim)
         end if
       end do
     endif
- 
+    
     SAFE_DEALLOCATE_A(grad)
     SAFE_DEALLOCATE_A(cpsi)
     call pop_sub('pert_inc.Xpert_apply.kdotp')
@@ -143,55 +148,59 @@ contains
     R_TYPE :: cross(1:MAX_DIM), vv(1:MAX_DIM)
     FLOAT :: xx(1:MAX_DIM)
     integer :: iatom, idir, ip
-
+    
     call push_sub('pert_inc.Xpert_apply.magnetic')
 
     SAFE_ALLOCATE(lf(1:gr%mesh%np, 1:gr%sb%dim))
 
-    ! Note that we leave out the term 1/P_c
-    call X(physics_op_L)(gr%der, f_in_copy, lf, set_bc = .false.)
-    f_out(1:gr%mesh%np, 1) = M_HALF*lf(1:gr%mesh%np, this%dir)
+    do idim = 1, hm%d%dim
+      ! Note that we leave out the term 1/P_c
+      call X(physics_op_L)(gr%der, f_in_copy(:, idim), lf, set_bc = .false.)
+      f_out(1:gr%mesh%np, idim) = M_HALF*lf(1:gr%mesh%np, this%dir)
+    end do
 
     SAFE_DEALLOCATE_A(lf)
 
     if(this%gauge == GAUGE_GIPAW .or. this%gauge == GAUGE_ICL) then
       SAFE_ALLOCATE(vrnl(1:gr%mesh%np, 1:hm%d%dim, 1:gr%sb%dim))
       vrnl(1:gr%mesh%np, 1:hm%d%dim, this%dir) = M_ZERO
-
+      
       do iatom = 1, geo%natoms
-
+        
         do idir = 1, gr%mesh%sb%dim
           if(this%dir == idir) cycle ! this direction is not used in the cross product
           call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, idir, ik, f_in_copy, vrnl(:, :, idir))
         end do
-
+        
         xx(1:gr%mesh%sb%dim) = geo%atom(iatom)%x(1:gr%mesh%sb%dim)
-
-        do ip = 1, gr%mesh%np
-
-          if(this%gauge == GAUGE_ICL) xx(1:gr%mesh%sb%dim) = gr%mesh%x(ip, 1:gr%mesh%sb%dim)
-         
-          vv(1:gr%mesh%sb%dim) = vrnl(ip, 1, 1:gr%mesh%sb%dim)
-
-          cross(1) = xx(2) * vv(3) - xx(3) * vv(2)
-          cross(2) = xx(3) * vv(1) - xx(1) * vv(3)
-          cross(3) = xx(1) * vv(2) - xx(2) * vv(1)
-
+        
+        do idim = 1, hm%d%dim
+          do ip = 1, gr%mesh%np
+            
+            if(this%gauge == GAUGE_ICL) xx(1:gr%mesh%sb%dim) = gr%mesh%x(ip, 1:gr%mesh%sb%dim)
+            
+            vv(1:gr%mesh%sb%dim) = vrnl(ip, idim, 1:gr%mesh%sb%dim)
+            
+            cross(1) = xx(2) * vv(3) - xx(3) * vv(2)
+            cross(2) = xx(3) * vv(1) - xx(1) * vv(3)
+            cross(3) = xx(1) * vv(2) - xx(2) * vv(1)
+            
 #if !defined(R_TCOMPLEX)
-          f_out(ip, 1) = f_out(ip, 1) + M_HALF*cross(this%dir)
+            f_out(ip, idim) = f_out(ip, idim) + M_HALF*cross(this%dir)
 #else
-          f_out(ip, 1) = f_out(ip, 1) - M_zI*M_HALF*cross(this%dir)
+            f_out(ip, idim) = f_out(ip, idim) - M_zI*M_HALF*cross(this%dir)
 #endif
+          end do
         end do
       end do
 
       SAFE_DEALLOCATE_A(vrnl)
     end if
-
+    
     call pop_sub('pert_inc.Xpert_apply.magnetic')
-
+    
   end subroutine magnetic
-
+  
   ! --------------------------------------------------------------------------
   subroutine ionic
     integer :: iatom, idir
@@ -199,7 +208,9 @@ contains
 
     call push_sub('pert_inc.Xpert_apply.ionic')
     SAFE_ALLOCATE(tmp(1:gr%mesh%np))
-    
+
+    ASSERT(hm%d%dim == 1)
+
     f_out(1:gr%mesh%np, 1) = M_ZERO
     
     do iatom = 1, geo%natoms
@@ -207,7 +218,7 @@ contains
 
         if (this%ionic%pure_dir .and. iatom /= this%atom1 .and. idir /= this%dir) cycle
 
-        call X(ionic_perturbation)(this, gr, geo, hm, ik, f_in_copy, tmp, iatom, idir)
+        call X(ionic_perturbation)(this, gr, geo, hm, ik, f_in_copy(:, 1), tmp, iatom, idir)
         
         call lalg_axpy(gr%mesh%np, this%ionic%mix1(iatom, idir), tmp, f_out(:, 1))
 
@@ -299,18 +310,20 @@ contains
 
   ! --------------------------------------------------------------------------
   subroutine magnetic()
-    R_TYPE, allocatable :: f_in2(:,:), dnl(:,:), vrnl(:,:), xf(:)
+    R_TYPE, allocatable :: f_in2(:, :, :), dnl(:, :, :), vrnl(:,:), xf(:, :)
     R_TYPE :: cross1(1:3), bdir(1:MAX_DIM, 2)
     FLOAT  :: rdelta
     R_TYPE :: contr
 
-    integer :: iatom, idir, idir2, ip
+    integer :: iatom, idir, idir2, ip, idim
 
     call push_sub('pert_inc.Xpert_apply_order2.magnetic')
 
-    do ip = 1, gr%mesh%np
-      rdelta = sum(gr%mesh%x(ip, 1:MAX_DIM)**2)*ddelta(this%dir, this%dir2)
-      f_out(ip, 1) = M_FOURTH*(rdelta - gr%mesh%x(ip, this%dir)*gr%mesh%x(ip, this%dir2))*f_in(ip, 1)
+    do idim = 1, hm%d%dim
+      do ip = 1, gr%mesh%np
+        rdelta = sum(gr%mesh%x(ip, 1:MAX_DIM)**2)*ddelta(this%dir, this%dir2)
+        f_out(ip, idim) = M_FOURTH*(rdelta - gr%mesh%x(ip, this%dir)*gr%mesh%x(ip, this%dir2))*f_in(ip, idim)
+      end do
     end do
 
     ! gauge correction
@@ -319,12 +332,12 @@ contains
       bdir(this%dir,  1)   = M_ONE
       bdir(this%dir2, 2)   = M_ONE
 
-      SAFE_ALLOCATE(f_in2(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))
+      SAFE_ALLOCATE(f_in2(1:gr%mesh%np_part, 1:hm%d%dim, 1:gr%mesh%sb%dim))
       SAFE_ALLOCATE( vrnl(1:gr%mesh%np_part, 1:hm%d%dim))
-      SAFE_ALLOCATE(  dnl(1:gr%mesh%np, 1:gr%mesh%sb%dim))
-      SAFE_ALLOCATE(   xf(1:gr%mesh%np))
+      SAFE_ALLOCATE(  dnl(1:gr%mesh%np, 1:hm%d%dim, 1:gr%mesh%sb%dim))
+      SAFE_ALLOCATE(   xf(1:gr%mesh%np, 1:hm%d%dim))
 
-      f_in2(gr%mesh%np:gr%mesh%np_part,:) = R_TOTYPE(M_ZERO)
+      f_in2  = R_TOTYPE(M_ZERO)
       atoms: do iatom = 1, geo%natoms
 
         ! This calculates f_in2 = (B x r) f_in
@@ -336,24 +349,27 @@ contains
             cross1 = X(cross_product)(bdir(:, 2), R_TOTYPE(gr%mesh%x(ip, :)))
           end select
 
-          f_in2(ip, 1:gr%sb%dim) = cross1(1:gr%sb%dim)*f_in(ip, 1)
+          do idim = 1,hm%d%dim
+            f_in2(ip, idim, 1:gr%sb%dim) = cross1(1:gr%sb%dim)*f_in(ip, idim)
+          end do
         end do
 
         ! let us now get sum_beta Dnl f_in2
-        dnl(1:gr%mesh%np, 1:gr%mesh%sb%dim) = R_TOTYPE(M_ZERO)
+        dnl = R_TOTYPE(M_ZERO)
         do idir = 1, gr%sb%dim
           do idir2 = 1, gr%sb%dim
             !calculate dnl |f_in2> = -[x,vnl] |f_in2>
-            call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, idir2, ik, f_in2(:, idir2), vrnl(:, :))
+            call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, idir2, ik, f_in2(:, :, idir2), vrnl)
 
             ! -x vnl |f>
-            dnl(1:gr%mesh%np, idir) = dnl(1:gr%mesh%np, idir) - gr%mesh%x(1:gr%mesh%np, idir) * vrnl(1:gr%mesh%np, 1)
+            forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) dnl(ip, idim, idir) = dnl(ip, idim, idir) - gr%mesh%x(ip, idir)*vrnl(ip, idim)
 
             ! vnl x |f>
-            xf(1:gr%mesh%np) = gr%mesh%x(1:gr%mesh%np, idir) * f_in2(1:gr%mesh%np, idir2)
-            call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, idir2, ik, xf, vrnl(:, :))
+            forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) xf(ip, idim) = gr%mesh%x(ip, idir) * f_in2(ip, idim, idir2)
 
-            dnl(1:gr%mesh%np, idir) = dnl(1:gr%mesh%np, idir) + vrnl(1:gr%mesh%np, 1)
+            call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, idir2, ik, xf, vrnl)
+
+            forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) dnl(ip, idim, idir) = dnl(ip, idim, idir) + vrnl(ip, idim)
           end do
         end do
 
@@ -365,13 +381,14 @@ contains
             cross1 = X(cross_product)(bdir(:, 1), R_TOTYPE(gr%mesh%x(ip, :)))
           end select
 
-          contr = M_ZERO
-          do idir = 1, gr%sb%dim
-            contr = contr + cross1(idir) * dnl(ip, idir)
+          do idim = 1, hm%d%dim
+            contr = M_ZERO
+            do idir = 1, gr%sb%dim
+              contr = contr + cross1(idir)*dnl(ip, idim, idir)
+            end do
+            f_out(ip, idim) = f_out(ip, idim) + M_FOURTH * contr
           end do
-          f_out(ip, 1) = f_out(ip, 1) + M_FOURTH * contr
         end do
-
       end do atoms
 
       SAFE_DEALLOCATE_A(f_in2)
@@ -390,6 +407,8 @@ contains
     R_TYPE, allocatable  :: tmp(:)
     
     call push_sub('pert_inc.Xpert_apply_order2.ionic')
+
+    ASSERT(hm%d%dim == 1)
 
     SAFE_ALLOCATE(tmp(1:gr%mesh%np))
     

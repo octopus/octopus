@@ -407,7 +407,7 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
   integer,               intent(in)     :: dim
   integer,               intent(in)     :: idir
   integer,               intent(in)     :: ik
-  R_TYPE,                intent(in)     :: psi(:)
+  R_TYPE,                intent(in)     :: psi(:, :)
   R_TYPE,                intent(out)    :: cpsi(:,:)
 
   integer ::  ns, idim
@@ -431,11 +431,11 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
 
     if(simul_box_is_periodic(gr%mesh%sb)) then
       do idim = 1, dim
-        lpsi(1:ns, idim) = psi(jxyz(1:ns)) * pj%phase(1:ns, ik)
+        lpsi(1:ns, idim) = psi(jxyz(1:ns), idim)*pj%phase(1:ns, ik)
       end do
     else
       do idim = 1, dim
-        lpsi(1:ns, idim) = psi(jxyz(1:ns))
+        lpsi(1:ns, idim) = psi(jxyz(1:ns), idim)
       end do
     end if
 

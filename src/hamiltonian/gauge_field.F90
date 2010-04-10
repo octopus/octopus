@@ -285,7 +285,7 @@ contains
     type(states_t),       intent(inout) :: st
     type(gauge_force_t),  intent(out)   :: force
 
-    integer :: ik, ist, idir, idim, iatom
+    integer :: ik, ist, idir, idim, iatom, ip
     CMPLX, allocatable :: gpsi(:, :, :), cpsi(:, :), epsi(:, :)
     type(profile_t), save :: prof
 #ifdef HAVE_MPI
@@ -320,8 +320,8 @@ contains
         do idir = 1, gr%sb%dim
           do iatom = 1, geo%natoms
             if(species_is_ps(geo%atom(iatom)%spec)) then
-              call zprojector_commute_r(pj(iatom), gr, st%d%dim, idir, ik, epsi(:, 1), cpsi(:, :))
-              gpsi(1:gr%mesh%np, idir, 1:st%d%dim) = gpsi(1:gr%mesh%np, idir, 1:st%d%dim) + cpsi(1:gr%mesh%np, 1:st%d%dim)
+              call zprojector_commute_r(pj(iatom), gr, st%d%dim, idir, ik, epsi, cpsi)
+              forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) gpsi(ip, idir, idim) = gpsi(ip, idir, idim) + cpsi(ip, idim)
             end if
           end do
         end do
