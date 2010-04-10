@@ -327,8 +327,8 @@ contains
         end do
         
         do idir = 1, gr%sb%dim
-          force%vecpot(idir) = force%vecpot(idir) + M_FOUR * M_PI * P_c / gr%sb%rcell_volume * st%d%kweights(ik) * st%occ(ist, ik) * &
-               aimag(zmf_dotp(gr%mesh, st%d%dim, epsi, gpsi(:, idir, :)))
+          force%vecpot(idir) = force%vecpot(idir) + M_FOUR * M_PI * P_c / gr%sb%rcell_volume * &
+            st%d%kweights(ik) * st%occ(ist, ik) * aimag(zmf_dotp(gr%mesh, st%d%dim, epsi, gpsi(:, idir, :)))
         end do
         
       end do
