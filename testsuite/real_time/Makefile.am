@@ -42,6 +42,10 @@ dist_share_DATA =                      \
 	08-laser.test                  \
 	08-laser.01-ground_state.inp   \
 	08-laser.02-length_gauge.inp   \
-	08-laser.03-velocity_gauge.inp
+	08-laser.03-velocity_gauge.inp         \
+	09-angular_momentum.test               \
+	09-angular_momentum.01-gs.inp          \
+	09-angular_momentum.02-td_gipaw.inp    \
+	09-angular_momentum.03-td_icl.inp
 
 CLEANFILES = *~ *.bak
