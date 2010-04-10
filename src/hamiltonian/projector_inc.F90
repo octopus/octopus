@@ -414,8 +414,10 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
   R_TYPE, allocatable :: lpsi(:, :), pxlpsi(:,:), xplpsi(:,:)
   integer, pointer :: jxyz(:)
   FLOAT,   pointer :: smx(:, :)
+  type(profile_t), save :: prof
 
   call push_sub('projector_inc.Xprojector_commute_r')
+  call profiling_in(prof, "PROJ_COMMUTE")
 
   cpsi(1:gr%mesh%np, 1:dim) = M_ZERO
 
@@ -467,7 +469,7 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
     SAFE_DEALLOCATE_A(xplpsi)
     SAFE_DEALLOCATE_A(pxlpsi)
   end if
-
+  call profiling_out(prof)
   call pop_sub('projector_inc.Xprojector_commute_r')
 
 end subroutine X(projector_commute_r)

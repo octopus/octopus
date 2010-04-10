@@ -27,7 +27,7 @@ BoxShape = parallelepiped
 KPointsUseSymmetries = no
 
 %GaugeVectorField
-0.1 | 0.0 | 0.0
+10.0 | 0.0 | 0.0
 %
 
 TDEvolutionMethod = aetrs
