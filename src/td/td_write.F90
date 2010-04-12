@@ -626,27 +626,17 @@ contains
 
     integer :: ik, ist, idir
     character(len=130) :: aux
-    FLOAT :: angular(MAX_DIM), lsquare
-    FLOAT, allocatable :: ang(:, :, :), ang2(:, :)
+    FLOAT :: angular(MAX_DIM)
     type(pert_t)        :: angular_momentum
 
     call push_sub('td_write.td_write_angular')
-
-    SAFE_ALLOCATE(ang (st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end, 1:3))
-    SAFE_ALLOCATE(ang2(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ist = st%st_start, st%st_end
-        call zstates_angular_momentum(gr, st%zpsi(:, :, ist, ik), ang(ist, ik, :), ang2(ist, ik))
-      end do
-    end do
-    lsquare    =  states_eigenvalues_sum(st, ang2)
 
     call pert_init(angular_momentum, PERTURBATION_MAGNETIC, gr, geo)
 
     do idir = 1, 3
        call pert_setup_dir(angular_momentum, idir)
        !we have to multiply by 2, because the perturbation returns L/2
-       angular(idir) = M_TWO * zpert_expectation_value(angular_momentum, gr, geo, hm, st, st%zpsi, st%zpsi)
+       angular(idir) = M_TWO*zpert_expectation_value(angular_momentum, gr, geo, hm, st, st%zpsi, st%zpsi)
     end do
 
     call pert_end(angular_momentum)
@@ -670,13 +660,14 @@ contains
         call write_iter_header(out_angular, aux)
         write(aux, '(a4,18x)') '<Lz>'
         call write_iter_header(out_angular, aux)
-        write(aux, '(a4,18x)') '<L2>'
-        call write_iter_header(out_angular, aux)
         call write_iter_nl(out_angular)
 
-        !third line -> should hold the units. Now unused (assumes atomic units)
+        !third line -> should hold the units.
         call write_iter_string(out_angular, '#[Iter n.]')
         call write_iter_header(out_angular, '[' // trim(units_abbrev(units_out%time)) // ']')
+        call write_iter_header(out_angular, '[hbar]')
+        call write_iter_header(out_angular, '[hbar]')
+        call write_iter_header(out_angular, '[hbar]')
         call write_iter_nl(out_angular)
 
         call td_write_print_header_end(out_angular)
@@ -684,13 +675,10 @@ contains
 
       call write_iter_start(out_angular)
       call write_iter_double(out_angular, angular(1:3), 3)
-      call write_iter_double(out_angular, lsquare, 1)
       call write_iter_nl(out_angular)
 
     end if
 
-    SAFE_DEALLOCATE_A(ang)
-    SAFE_DEALLOCATE_A(ang2)
     call pop_sub('td_write.td_write_angular')
   end subroutine td_write_angular
 
