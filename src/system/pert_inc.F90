@@ -130,9 +130,7 @@ contains
     if (this%use_nonlocalpps) then
       do iatom = 1, geo%natoms
         if(species_is_ps(geo%atom(iatom)%spec)) then
-          cpsi = M_ZERO
-          call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, this%dir, ik, f_in_copy, cpsi)
-          forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = f_out(ip, idim) + cpsi(ip, idim)
+          call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, this%dir, ik, f_in_copy, f_out)
         end if
       end do
     endif
@@ -164,7 +162,6 @@ contains
 
     if(this%gauge == GAUGE_GIPAW .or. this%gauge == GAUGE_ICL) then
       SAFE_ALLOCATE(vrnl(1:gr%mesh%np, 1:hm%d%dim, 1:gr%sb%dim))
-      vrnl(1:gr%mesh%np, 1:hm%d%dim, this%dir) = M_ZERO
       
       do iatom = 1, geo%natoms
 
