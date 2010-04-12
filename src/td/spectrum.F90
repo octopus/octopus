@@ -974,7 +974,7 @@ contains
     call spectrum_mult_info(in_file, nspin, kick, time_steps, dt, file_units)
     call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
 
-    ! load dipole from file
+    ! load angular momentum from file
     SAFE_ALLOCATE(angular(0:time_steps, 1:3))
     call io_skip_header(in_file)
     do ie = 0, time_steps
@@ -988,7 +988,6 @@ contains
 
     no_e = spectrum%max_energy / spectrum%energy_step
     SAFE_ALLOCATE(sp(0:no_e))
-    sp = M_z0
     sum1 = M_z0
     sum2 = M_z0
 
@@ -1011,12 +1010,13 @@ contains
 
     do ie = 0, no_e
       energy = ie * spectrum%energy_step
+      sp(ie) = M_z0
       do it = istart, iend
 
         jj = it - istart
 
         zz = exp(M_zI * energy * jj *dt)
-        sp(ie) = sp(ie) + zz * damp(ie) * sum(angular(ie, :) * kick%pol(1:3, kick%pol_dir))
+        sp(ie) = sp(ie) + zz * damp(it)*sum(angular(it, :)*kick%pol(1:3, kick%pol_dir))
 
       end do
       sp(ie) = M_zI / (M_TWO * P_c * kick%delta_strength) * sp(ie) * dt
