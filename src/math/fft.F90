@@ -28,8 +28,6 @@
 
 #if HAVE_FFT == 3
 # include "fftw3.F90"
-#elif HAVE_FFT == cuda
-# include "fft_cuda_inc.F90"
 #endif
 
 !! Local Variables:

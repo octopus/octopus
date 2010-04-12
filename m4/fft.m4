@@ -23,8 +23,7 @@ AC_DEFUN([ACX_FFT],
 acx_fft_ok=no
 
 AC_ARG_WITH(fft, [  --with-fft=ARG    FFT support
-      ARG=fftw3       FFTW3 support through libfftw3 (default)
-      ARG=cuda        NVIDIA CUFFT Library (single-precision only, experimental)],
+      ARG=fftw3       FFTW3 support through libfftw3 (default))],
   [fft=$withval], [fft=fftw3])
 
 case $fft in
@@ -36,15 +35,6 @@ case $fft in
     else
       fft_func="dfftw_plan_dft_1d"
       fft_libs="fftw3"
-    fi
-    ;;
-  cuda*)
-    fft=cuda
-    if test "x${SINGLE_PRECISION}" == x; then
-      AC_MSG_ERROR([CUFFT can only be used with single-precision])
-    else
-      fft_func="cufftPlan3d"
-      fft_libs="cufft cufftemu"
     fi
     ;;
 esac
@@ -61,40 +51,6 @@ esac
 
   acx_fft_save_LIBS="$LIBS"
   LIBS="$LIBS_FFT $LIBS $FLIBS"
-
-  if test $fft = cuda ; then
-    AC_LANG_PUSH(C)
-    AC_CHECK_HEADER(cufft.h,[],[AC_MSG_ERROR([Can not find CUFFT header])])
-
-    dnl First, check LIBS_FFT environment variable
-    if test $acx_fft_ok = no; then
-      if test "x$LIBS_FFT" != x; then
-        AC_MSG_CHECKING([for $fft_func in $LIBS_FFT])
-        AC_TRY_LINK_FUNC($fft_func, [acx_fft_ok=yes], [])
-        if test $acx_fft_ok = no; then
-          AC_MSG_RESULT([$acx_fft_ok])
-        else
-          AC_MSG_RESULT([$acx_fft_ok ($LIBS_FFT)])
-        fi
-      fi
-    fi
-
-    dnl linked to by default?
-    if test $acx_fft_ok = no; then
-      AC_CHECK_FUNC($fft_func, [acx_fft_ok=yes])
-    fi
-
-    dnl search libraries
-    for fftl in $fft_libs; do
-      if test $acx_fft_ok = no; then
-        AC_CHECK_LIB($fftl, $fft_func,
-          [acx_fft_ok=yes; LIBS_FFT="$LIBS_FFT -l$fftl"], [], [$FLIBS])
-      fi
-    done
-
-    AC_LANG_POP(C)
-
-  else
 
     dnl First, check LIBS_FFT environment variable
     if test $acx_fft_ok = no; then
@@ -122,14 +78,12 @@ esac
       fi
     done
 
-  fi
-
 AC_SUBST(LIBS_FFT)
 LIBS="$acx_fft_save_LIBS"
 
 # Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_fft_ok" = xyes; then
-  AC_DEFINE_UNQUOTED(HAVE_FFT, [$fft], [FFT library (fftw3 | cuda)])
+  AC_DEFINE_UNQUOTED(HAVE_FFT, [$fft], [FFT library (fftw3)])
   $1
 else
   if test $acx_fft_ok != disable; then
