@@ -26,7 +26,7 @@ libmath_a_SOURCES =                      \
 	checksum.c                       \
 	checksum_interface.F90           \
 	dablas.c                         \
-	fft.F90                          \
+	fftw3.F90                        \
 	filters.F90                      \
 	gauss_legendre.F90               \
 	lalg_basic.F90                   \
@@ -49,7 +49,6 @@ libmath_a_SOURCES =                      \
 	young.F90
 
 noinst_HEADERS =                         \
-	fftw3.F90                        \
 	lalg_basic_blas.F90              \
 	lalg_adv_lapack_inc.F90          \
 	math_inc.F90                     \
@@ -69,7 +68,7 @@ blas.o : blas.F90
 checksum.o : checksum.c
 checksum_interface.o : checksum_interface.F90
 dablas.o : dablas.c 
-fft.o : fft.F90 fftw3.F90 lalg_basic.o loct_math.o
+fftw3.o : fftw3.F90 lalg_basic.o loct_math.o
 filters.o: filters.F90 splines.o
 gauss_legendre.o : gauss_legendre.F90 
 lalg_basic.o : lalg_basic.F90 lalg_basic_blas.F90 blas.o 

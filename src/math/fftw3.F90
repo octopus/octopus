@@ -17,6 +17,11 @@
 !!
 !! $Id$
 
+#include "global.h"
+
+#define FFT_MAX 10
+#define FFT_NULL -1
+
 #if defined(SINGLE_PRECISION)
 #  define DFFTW(x) sfftw_ ## x
 #else
@@ -130,7 +135,7 @@ contains
     !%End
     call parse_logical(datasets_check('FFTOptimize'), .true., fft_optimize)
     do i = 1, FFT_MAX
-      fft_refs(i) = NULL
+      fft_refs(i) = FFT_NULL
     end do
 
     !%Variable FFTPreparePlan
@@ -170,10 +175,10 @@ contains
     call push_sub('fftw3.fft_all_end')
 
     do i = 1, FFT_MAX
-      if(fft_refs(i).ne.NULL) then
+      if(fft_refs(i) /= FFT_NULL) then
         call DFFTW(destroy_plan) (fft_array(i)%planf)
         call DFFTW(destroy_plan) (fft_array(i)%planb)
-        fft_refs(i) = NULL
+        fft_refs(i) = FFT_NULL
       end if
     end do
 
@@ -231,7 +236,7 @@ contains
     ! find out if fft has already been allocated
     j = 0
     do i = FFT_MAX, 1, -1
-      if(fft_refs(i).ne.NULL) then
+      if(fft_refs(i) /= FFT_NULL) then
         if(n(1) == fft_array(i)%n(1).and.n(2) == fft_array(i)%n(2).and.n(3) == fft_array(i)%n(3).and. &
           is_real == fft_array(i)%is_real) then
           fft = fft_array(i)             ! return a copy
@@ -325,14 +330,14 @@ contains
     call push_sub('fftw3.fft_end')
 
     i = fft%slot
-    if(fft_refs(i)==NULL) then
+    if(fft_refs(i) == FFT_NULL) then
       message(1) = "Trying to deallocate FFT that has not been allocated"
       call write_warning(1)
     else
       if(fft_refs(i) > 1) then
         fft_refs(i) = fft_refs(i) - 1
       else
-        fft_refs(i) = NULL
+        fft_refs(i) = FFT_NULL
         call DFFTW(destroy_plan) (fft_array(i)%planf)
         call DFFTW(destroy_plan) (fft_array(i)%planb)
         write(message(1), '(a,i4,a,i4,a,i4,a,i2)') "Info: FFT deallocated from slot ", i

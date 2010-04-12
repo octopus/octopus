@@ -82,10 +82,7 @@ AC_SUBST(LIBS_FFT)
 LIBS="$acx_fft_save_LIBS"
 
 # Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
-if test x"$acx_fft_ok" = xyes; then
-  AC_DEFINE_UNQUOTED(HAVE_FFT, [$fft], [FFT library (fftw3)])
-  $1
-else
+if test x"$acx_fft_ok" != xyes; then
   if test $acx_fft_ok != disable; then
     AC_MSG_ERROR([Could not find required FFT library.])
   fi
