@@ -583,7 +583,6 @@ contains
     if(simul_box_is_periodic(gr%sb).and.st%d%nik > st%d%nspin) then
       call states_write_bands(STATIC_DIR, st%nst, st, gr%sb)
       call states_write_fermi_energy(STATIC_DIR, st, gr%mesh, gr%sb)
-      call states_degeneracy_matrix(st)
     end if
 
     call pop_sub('scf.scf_run')
