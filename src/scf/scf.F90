@@ -632,7 +632,7 @@ contains
         end if
 
         write(message(1),'(a)') ''
-        write(message(2),'(a,f14.2)') 'Elapsed time for SCF step :', etime
+        write(message(2),'(a,i5,a,f14.2)') 'Elapsed time for SCF step ', iter,':', etime
         call write_info(2)
 
         if(conf%report_memory) then
