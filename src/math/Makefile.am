@@ -85,6 +85,6 @@ solvers.o : solvers.F90 solvers_inc.F90 lalg_adv.o
 splines.o : splines.F90 loct_math.o
 sparskit.o : sparskit.F90
 symm_op.o : symm_op.F90 symm_op_inc.F90
-tdfunction.o : tdfunction.F90 splines.o
+tdfunction.o : tdfunction.F90 splines.o fftw3.o
 ylm.o : ylm.c
 young.o : young.F90 math.o

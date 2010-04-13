@@ -103,7 +103,8 @@ dnl and with OpenMP threads.
 dnl these are the --enable/--disable possible in octopus
 AC_ARG_ENABLE(single, AS_HELP_STRING([--enable-single], [octopus in single-precision]))
 AC_ARG_ENABLE(debug, AS_HELP_STRING([--disable-debug], [debug mode]), [DEBUG=${enableval}])
-AC_ARG_ENABLE(openmp, AS_HELP_STRING([--enable-openmp], [Multi-threaded parallel version using OpenMP (experimental)]))
+AC_ARG_ENABLE(openmp, AS_HELP_STRING([--enable-openmp], [Multi-threaded parallel version using OpenMP]))
+AC_ARG_ENABLE(opencl, AS_HELP_STRING([--enable-opencl], [OpenCL support (experimental)]))
 
 if test -n "${enable_single}" -a x"${enable_single}" != x"no"; then
   SINGLE_PRECISION=1
@@ -112,6 +113,15 @@ fi
 if test -n "${enable_openmp}" -a x"${enable_openmp}" != x"no"; then
   USE_OMP=1
 fi
+
+if test x"${enable_opencl}" == x"yes" ; then
+  AC_DEFINE(HAVE_OPENCL, 1, [defined if opencl support is enabled])
+  AC_MSG_WARN([
+  
+	Experimental OpenCL support enabled.
+  ])
+fi
+AM_CONDITIONAL(COMPILE_OPENCL, test x"${enable_opencl}" == x"yes")
 
 dnl workaround for xlf compilers
 ac_enable_f90_forall=yes

@@ -38,6 +38,10 @@ if COMPILE_BG
  libbeak_a_SOURCES += operate_bg.c
 endif
 
+if COMPILE_OPENCL
+ libbeak_a_SOURCES += opencl.c opencl_f.F90
+endif
+
 noinst_HEADERS =           \
 	beak.h             \
 	operate_ia64.S

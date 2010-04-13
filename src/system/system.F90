@@ -35,6 +35,9 @@ module system_m
   use mpi_m
   use multicomm_m
   use ob_grid_m
+#ifdef HAVE_OPENCL
+  use opencl_m
+#endif
   use poisson_m
   use profiling_m
   use simul_box_m
@@ -72,7 +75,11 @@ contains
 
     SAFE_ALLOCATE(sys%gr)
     SAFE_ALLOCATE(sys%st)
-    
+
+#ifdef HAVE_OPENCL    
+    call opencl_init(opencl)
+#endif
+
     call messages_obsolete_variable('SystemName')
 
     call geometry_init(sys%geo)
@@ -177,6 +184,11 @@ contains
     call simul_box_end(sys%gr%sb)
     call ob_grid_end(sys%gr%ob_grid)
     call grid_end(sys%gr)
+
+#ifdef HAVE_OPENCL
+    call opencl_end(opencl)
+#endif
+    
     SAFE_DEALLOCATE_P(sys%gr);  nullify(sys%gr)
 
     call pop_sub('system.system_end')
