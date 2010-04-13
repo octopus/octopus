@@ -48,7 +48,7 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
   endif
   ! no derivatives in electric, so ghost points not needed
 
-  apply_kpoint = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(hm%d, ik) &
+  apply_kpoint = associated(hm%phase) .and. .not. kpoint_is_gamma(hm%d, ik) &
     .and. this%pert_type /= PERTURBATION_ELECTRIC
   ! electric does not need it since (e^-ikr)r(e^ikr) = r
 
@@ -109,12 +109,11 @@ contains
   ! --------------------------------------------------------------------------
   subroutine kdotp()
   ! perturbation is i d/dk (=r)
-    R_TYPE, allocatable :: grad(:, :, :), cpsi(:,:)
+    R_TYPE, allocatable :: grad(:, :, :)
     integer :: iatom, idim
 
     call push_sub('pert_inc.Xpert_apply.kdotp')
 
-    SAFE_ALLOCATE(cpsi(1:gr%mesh%np_part, 1:hm%d%dim))
     SAFE_ALLOCATE(grad(1:gr%mesh%np, 1:gr%sb%dim, 1:hm%d%dim))
 
     do idim = 1, hm%d%dim
@@ -136,7 +135,6 @@ contains
     endif
     
     SAFE_DEALLOCATE_A(grad)
-    SAFE_DEALLOCATE_A(cpsi)
     call pop_sub('pert_inc.Xpert_apply.kdotp')
     
   end subroutine kdotp

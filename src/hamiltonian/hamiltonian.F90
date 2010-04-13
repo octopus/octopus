@@ -128,7 +128,7 @@ module hamiltonian_m
     type(epot_t) :: ep         ! handles the external potential
 
     ! gauge
-    integer :: gauge              ! in which gauge shall we work in
+    integer :: gauge              ! in which gauge shall we work
 
     ! absorbing boundaries
     logical :: adjoint
@@ -198,9 +198,8 @@ contains
     integer,                intent(in)    :: theory_level
     integer,                intent(in)    :: xc_family
 
-    integer                     :: iline, icol, ispin
+    integer :: iline, icol, ispin
     type(states_dim_t), pointer :: states_dim
-
     integer :: ncols
     type(block_t) :: blk
 
@@ -400,7 +399,7 @@ contains
     if (simul_box_is_periodic(gr%sb)) call init_phase()
 
     if(gr%ob_grid%open_boundaries) then
-      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+      if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
         message(1) = 'Open-boundary calculations for interacting electrons are'
         message(2) = 'not yet possible.'
         call write_fatal(2)
@@ -982,6 +981,8 @@ contains
     subroutine build_phase()
       integer :: ik
 
+      call push_sub('hamiltonian.hamiltonian_update_potential.build_phase')
+
       if(associated(this%hm_base%uniform_vector_potential)) then 
         if(.not. associated(this%phase)) then
           SAFE_ALLOCATE(this%phase(1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
@@ -993,6 +994,7 @@ contains
         end forall
       end if
 
+      call pop_sub('hamiltonian.hamiltonian_update_potential.build_phase')
     end subroutine build_phase
 
   end subroutine hamiltonian_update_potential
