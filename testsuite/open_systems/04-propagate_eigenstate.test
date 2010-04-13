@@ -4,7 +4,7 @@
 Test       : Propagate eigenstate of 1D square well
 Programs   : octopus; octopus_mpi
 TestGroups : short-run
-Enabled    : yes
+Enabled    : Yes
 
 # Calculate eigenstate of 1d attractive square-potential barrier.
 Input: 04-propagate_eigenstate.01-square_well_1d.inp
