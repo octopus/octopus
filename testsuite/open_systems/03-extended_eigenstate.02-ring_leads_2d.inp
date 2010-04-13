@@ -72,7 +72,7 @@ KPointsUseSymmetries = false
 
 ring_lead_EigenSolverMaxIter = 5000
 EigensolverFinalTolerance = 1e-9
-Eigensolver = lobpcg
+Eigensolver = plan
 
 Output = potential
 OutputHow = binary

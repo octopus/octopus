@@ -8,7 +8,7 @@ DevelVersion = yes
 DebugLevel = 0
 
 ParallelizationStrategy = par_kpoints
-Eigensolver = lobpcg
+Eigensolver = plan
 EigensolverFinalTolerance = 1e-9
 
 MeshBlockSizeXY = 1
