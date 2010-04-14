@@ -329,7 +329,14 @@ foreach my $octopus_exe (@executables){
       }
 
     } else {
-      if ( $_ =~ /^RUN/) { print " skipping test\n"; }
+      if ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
+        if ( $enabled eq "No") {
+          print stderr "Test disabled: skipping test\n\n";
+	  exit 255;
+        } else {
+	  die "Unknown option 'Enabled = $enabled' in testsuite file.\n\n";
+        }
+      }
     }
 
   }
