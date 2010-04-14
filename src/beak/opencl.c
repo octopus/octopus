@@ -22,6 +22,7 @@
 
 #include <config.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <CL/cl.h>
 
 typedef struct{
@@ -32,17 +33,56 @@ typedef struct{
 } opencl_t;
 
 void FC_FUNC_(opencl_init,OPENCL_INIT)(opencl_t * this){
-  size_t ParamDataBytes, leng;
+  size_t ParamDataBytes;
+  char device_string[2048];
+  cl_uint dim;
+  cl_ulong mem;
+  cl_platform_id platform;
+  cl_int status;
+  cl_context_properties cps[3];
 
-  this->GPUContext = clCreateContextFromType(0, CL_DEVICE_TYPE_GPU,NULL, NULL, &this->numerr);
-  if (this->numerr != CL_SUCCESS) return;
+  /* Just get the first platform */
+  status = clGetPlatformIDs(1, &platform, NULL);
+
+  if(status != CL_SUCCESS){
+    printf("OpenCL initialization failed: %d\n", this->numerr);
+    return;
+  }
+  
+  cps[0] = CL_CONTEXT_PLATFORM;
+  cps[1] = (cl_context_properties)platform;
+  cps[2] = 0;
+  
+  this->GPUContext = clCreateContextFromType(cps, CL_DEVICE_TYPE_ALL,NULL, NULL, &this->numerr);
+
+  if (this->numerr != CL_SUCCESS){
+    printf("OpenCL initialization failed: %d\n", this->numerr);
+    return;
+  };
 
   clGetContextInfo(this->GPUContext, CL_CONTEXT_DEVICES ,0 , NULL, &ParamDataBytes);
   this->GPUDevices = (cl_device_id*) malloc(ParamDataBytes);
 
   clGetContextInfo(this->GPUContext, CL_CONTEXT_DEVICES, ParamDataBytes, this->GPUDevices, NULL);
 
-  this->GPUCommandQueue = clCreateCommandQueue(this->GPUContext, this->GPUDevices[0],CL_QUEUE_PROFILING_ENABLE ,&this->numerr);
+  /* print some info about the device */
+  clGetDeviceInfo(this->GPUDevices[0], CL_DEVICE_NAME, sizeof(device_string), &device_string, NULL);
+  printf("OpenCL device : %s\n", device_string);
+
+  clGetDeviceInfo (this->GPUDevices[0], CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &dim, NULL);
+  printf("Compute units : %d\n", dim);
+
+  clGetDeviceInfo (this->GPUDevices[0], CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &mem, NULL);
+  mem /= (1024*1024); /* convert to megabytes */
+  printf("Device memory : %d [Mb]\n", mem);
+
+  clGetDeviceInfo(this->GPUDevices[0], CL_DEVICE_EXTENSIONS, sizeof(device_string), &device_string, NULL);
+  printf("Extensions    : %s\n", device_string);
+
+  /* start command queue */
+  this->GPUCommandQueue = clCreateCommandQueue(this->GPUContext, this->GPUDevices[0], CL_QUEUE_PROFILING_ENABLE ,&this->numerr);
+
+
 
 }
 

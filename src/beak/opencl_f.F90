@@ -42,7 +42,7 @@ module opencl_m
     subroutine opencl_end(this)
       use c_pointer_m
 
-      type(c_ptr), intent(out) :: this
+      type(c_ptr), intent(inout) :: this
     end subroutine opencl_end
   end interface
 
