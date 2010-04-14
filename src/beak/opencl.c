@@ -27,12 +27,12 @@
 
 typedef struct{
   int numerr;
-  cl_context GPUContext;
-  cl_device_id * GPUDevices;
-  cl_command_queue GPUCommandQueue;
+  cl_context Context;
+  cl_device_id * Devices;
+  cl_command_queue CommandQueue;
 } opencl_t;
 
-void FC_FUNC_(opencl_init,OPENCL_INIT)(opencl_t * this){
+void FC_FUNC_(opencl_init,OPENCL_INIT)(opencl_t ** thisptr){
   size_t ParamDataBytes;
   char device_string[2048];
   cl_uint dim;
@@ -40,6 +40,10 @@ void FC_FUNC_(opencl_init,OPENCL_INIT)(opencl_t * this){
   cl_platform_id platform;
   cl_int status;
   cl_context_properties cps[3];
+  opencl_t * this;
+
+  this = (opencl_t *) malloc(sizeof(opencl_t));
+  *thisptr = this;
 
   /* Just get the first platform */
   status = clGetPlatformIDs(1, &platform, NULL);
@@ -53,39 +57,42 @@ void FC_FUNC_(opencl_init,OPENCL_INIT)(opencl_t * this){
   cps[1] = (cl_context_properties)platform;
   cps[2] = 0;
   
-  this->GPUContext = clCreateContextFromType(cps, CL_DEVICE_TYPE_ALL,NULL, NULL, &this->numerr);
+  this->Context = clCreateContextFromType(cps, CL_DEVICE_TYPE_ALL,NULL, NULL, &this->numerr);
 
   if (this->numerr != CL_SUCCESS){
     printf("OpenCL initialization failed: %d\n", this->numerr);
     return;
   };
 
-  clGetContextInfo(this->GPUContext, CL_CONTEXT_DEVICES ,0 , NULL, &ParamDataBytes);
-  this->GPUDevices = (cl_device_id*) malloc(ParamDataBytes);
+  clGetContextInfo(this->Context, CL_CONTEXT_DEVICES ,0 , NULL, &ParamDataBytes);
+  this->Devices = (cl_device_id*) malloc(ParamDataBytes);
 
-  clGetContextInfo(this->GPUContext, CL_CONTEXT_DEVICES, ParamDataBytes, this->GPUDevices, NULL);
+  clGetContextInfo(this->Context, CL_CONTEXT_DEVICES, ParamDataBytes, this->Devices, NULL);
 
   /* print some info about the device */
-  clGetDeviceInfo(this->GPUDevices[0], CL_DEVICE_NAME, sizeof(device_string), &device_string, NULL);
+  clGetDeviceInfo(this->Devices[0], CL_DEVICE_NAME, sizeof(device_string), &device_string, NULL);
   printf("OpenCL device : %s\n", device_string);
 
-  clGetDeviceInfo (this->GPUDevices[0], CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &dim, NULL);
+  clGetDeviceInfo (this->Devices[0], CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &dim, NULL);
   printf("Compute units : %d\n", dim);
 
-  clGetDeviceInfo (this->GPUDevices[0], CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &mem, NULL);
+  clGetDeviceInfo (this->Devices[0], CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &mem, NULL);
   mem /= (1024*1024); /* convert to megabytes */
   printf("Device memory : %d [Mb]\n", mem);
 
-  clGetDeviceInfo(this->GPUDevices[0], CL_DEVICE_EXTENSIONS, sizeof(device_string), &device_string, NULL);
+  clGetDeviceInfo(this->Devices[0], CL_DEVICE_EXTENSIONS, sizeof(device_string), &device_string, NULL);
   printf("Extensions    : %s\n", device_string);
 
   /* start command queue */
-  this->GPUCommandQueue = clCreateCommandQueue(this->GPUContext, this->GPUDevices[0], CL_QUEUE_PROFILING_ENABLE ,&this->numerr);
-
-
+  this->CommandQueue = clCreateCommandQueue(this->Context, this->Devices[0], CL_QUEUE_PROFILING_ENABLE ,&this->numerr);
 
 }
 
-void FC_FUNC_(opencl_end,OPENCL_END)(opencl_t * this){
-  free(this->GPUDevices);
+void FC_FUNC_(opencl_end,OPENCL_END)(opencl_t ** thisptr){
+  opencl_t * this;
+
+  this = *thisptr;
+
+  free(this->Devices);
+  free(this);
 }
