@@ -25,12 +25,7 @@
 #include <stdio.h>
 #include <CL/cl.h>
 
-typedef struct{
-  int numerr;
-  cl_context Context;
-  cl_device_id * Devices;
-  cl_command_queue CommandQueue;
-} opencl_t;
+#include "opencl.h"
 
 void FC_FUNC_(opencl_init,OPENCL_INIT)(opencl_t ** thisptr){
   size_t ParamDataBytes;
