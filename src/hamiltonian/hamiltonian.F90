@@ -396,7 +396,10 @@ contains
     hm%adjoint = .false.
 
     nullify(hm%phase)
-    if (simul_box_is_periodic(gr%sb)) call init_phase()
+    if (simul_box_is_periodic(gr%sb) .and. &
+        .not. (hm%d%nik == 1 .and. kpoint_is_gamma(hm%d, 1))) &
+      call init_phase()
+    ! no e^ik phase needed for Gamma-point-only periodic calculations
 
     if(gr%ob_grid%open_boundaries) then
       if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
@@ -966,7 +969,7 @@ contains
     ! done, check that everything is ok
     call hamiltonian_base_check(this%hm_base, mesh)
  
-    ! now re-generate the phases for the pseudopotentials
+    ! now regenerate the phases for the pseudopotentials
     do iatom = 1, this%ep%natoms
       call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d%kpt%start, this%d%kpt%end, this%d%kpoints, &
         vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)

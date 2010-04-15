@@ -48,8 +48,7 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
   endif
   ! no derivatives in electric, so ghost points not needed
 
-  apply_kpoint = associated(hm%phase) .and. .not. kpoint_is_gamma(hm%d, ik) &
-    .and. this%pert_type /= PERTURBATION_ELECTRIC
+  apply_kpoint = associated(hm%phase) .and. this%pert_type /= PERTURBATION_ELECTRIC
   ! electric does not need it since (e^-ikr)r(e^ikr) = r
 
   if (apply_kpoint) then
