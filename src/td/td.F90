@@ -35,6 +35,7 @@ module td_m
   use io_m
   use io_function_m
   use lasers_m
+  use lalg_basic_m
   use loct_m
   use loct_math_m
   use parser_m
@@ -116,7 +117,6 @@ contains
     logical                   :: generate
     type(gauge_force_t)       :: gauge_force
     CMPLX, allocatable        :: gspsi(:, :, :, :)
-
     type(profile_t), save :: prof
 
     call push_sub('td.td_run')
@@ -220,7 +220,11 @@ contains
           call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%mu, td%max_iter, iter, gauge_force)
         end if
       case(BO)
-        call scf_run(td%scf, sys%gr, geo, st, sys%ks, hm, sys%outp, gs_run = .false., verbosity = VERB_NO)
+        ! move the hamiltonian to time t
+        call ion_dynamics_propagate(td%ions, sys%gr%sb, sys%geo, iter*td%dt, td%dt)
+        call hamiltonian_epot_generate(hm, gr, sys%geo, st, time = iter*td%dt)
+        ! now calculate the eigenfunctions
+        call scf_run(td%scf, sys%gr, geo, st, sys%ks, hm, sys%outp, gs_run = .false., verbosity = VERB_COMPACT)
       case(CP)
         if(states_are_real(st)) then
           call dcpmd_propagate(td%cp_propagator, sys%gr, hm, st, iter, td%dt)
@@ -238,7 +242,7 @@ contains
       generate = .false.
 
       if(ion_dynamics_ions_move(td%ions)) then 
-        if(td%dynamics /= EHRENFEST .or. .not. propagator_ions_are_propagated(td%tr)) then
+        if(td%dynamics == CP .or. .not. propagator_ions_are_propagated(td%tr)) then
           call ion_dynamics_propagate(td%ions, sys%gr%sb, sys%geo, iter*td%dt, td%dt)
           generate = .true.
         end if
@@ -246,7 +250,6 @@ contains
 
       if(gauge_field_is_applied(hm%ep%gfield) .and. .not. propagator_ions_are_propagated(td%tr)) then
         call gauge_field_propagate(hm%ep%gfield, gauge_force, td%dt)
-        call hamiltonian_update_potential(hm, gr%mesh)
       end if
       
       if(generate) call hamiltonian_epot_generate(hm, gr, sys%geo, st, time = iter*td%dt)
@@ -267,7 +270,7 @@ contains
       
       ! Recalculate forces, update velocities...
       if(ion_dynamics_ions_move(td%ions)) then
-        call forces_calculate(gr, sys%geo, hm%ep, st, iter*td%dt)
+        if(td%dynamics /= BO) call forces_calculate(gr, sys%geo, hm%ep, st, iter*td%dt)
 
         call ion_dynamics_propagate_vel(td%ions, sys%geo)
 
@@ -275,7 +278,7 @@ contains
       end if
 
       if(gauge_field_is_applied(hm%ep%gfield)) then
-        call gauge_field_get_force(hm%ep%gfield, gr, geo, hm%ep%proj, hm%phase, st, gauge_force)
+        if(td%dynamics /= BO) call gauge_field_get_force(hm%ep%gfield, gr, geo, hm%ep%proj, hm%phase, st, gauge_force)
         call gauge_field_propagate_vel(hm%ep%gfield, gauge_force, td%dt)
       end if
 
