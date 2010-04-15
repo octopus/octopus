@@ -39,7 +39,7 @@ if COMPILE_BG
 endif
 
 if COMPILE_OPENCL
- libbeak_a_SOURCES += opencl.c opencl_f.F90 operate_opencl.F90
+ libbeak_a_SOURCES += opencl.c opencl_f.F90 operate_opencl.c
 endif
 
 noinst_HEADERS =           \
