@@ -1,0 +1,31 @@
+CalculationMode = td
+
+FromScratch = yes
+
+bond_length = 2.4
+
+%Coordinates
+ "C" |  -bond_length/2 |  0.0 |  0.0 | yes
+ "C" |   bond_length/2 |  0.0 |  0.0 | yes
+%
+
+%Velocities
+ "C" |  0.001 | 0.0 | 0.0
+ "C" | -0.001 | 0.0 | 0.0
+%
+
+Spacing = 0.6
+
+Radius = 6
+
+MoveIons = vel_verlet
+
+TDDynamics = bo
+
+TDTimeStep = 10.0
+
+TDMaximumIter = 4
+
+ParallelizationStrategy = par_domains
+
+FilterPotentials = filter_ts

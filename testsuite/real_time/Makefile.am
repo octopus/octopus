@@ -46,6 +46,11 @@ dist_share_DATA =                      \
 	09-angular_momentum.test               \
 	09-angular_momentum.01-gs.inp          \
 	09-angular_momentum.02-td_gipaw.inp    \
-	09-angular_momentum.03-td_icl.inp
+	09-angular_momentum.03-td_icl.inp      \
+	10-bomd.test                           \
+	10-bomd.01-gs.inp                      \
+	10-bomd.02-td.inp                      \
+	10-bomd.03-td_restart.inp
+
 
 CLEANFILES = *~ *.bak
