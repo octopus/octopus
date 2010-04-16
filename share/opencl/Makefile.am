@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-## Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+## Copyright (C) 2010 X. Andrade
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -17,37 +17,9 @@
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 ## 02111-1307, USA.
 ##
-## $Id$
+## $Id: Makefile.am 2789 2007-03-24 12:47:37Z lorenzen $
 
-SUBDIRS = PP recipes util samples opencl
+opencldir = $(pkgdatadir)/opencl
 
-dta1dir = $(pkgdatadir)
-dist_dta1_DATA = logo filter_mask.data
-
-dta2dir = $(pkgdatadir)
-dist_dta2_DATA = variables varinfo
-
-CLEANFILES = variables varinfo varinfo_orig
-
-varinfo: RUN_SCRIPT
-
-variables: RUN_SCRIPT
-
-RUN_SCRIPT:
-	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
-
-check:
-	@for f in $(dist_dta1_DATA) $(dist_dta2_DATA); do \
-	  if [ ! -e $$f -o $$f -ot $(srcdir)/$$f ]; then \
-	    cp $(srcdir)/$$f $$f; \
-	  fi \
-	done
-
-check-full: check
-
-clean-local:
-	if [ -n "$(top_builddir)" -a "$(top_builddir)" != "$(top_srcdir)" ]; then \
-	  rm -f $(dist_dta1_DATA); \
-	fi
-
-.PHONY: check check-full
+dist_opencl_DATA =    \
+        operate.cl
