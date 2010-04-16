@@ -55,6 +55,11 @@ contains
     
     this%mesh => mesh
 
+    if(this%mesh%parallel_in_domains) then
+      message(1) = "Error: symmetrization not implemented for domain parallelization."
+      call write_fatal(1)
+    end if
+
   end subroutine symmetrizer_init
 
   ! ---------------------------------------------------------

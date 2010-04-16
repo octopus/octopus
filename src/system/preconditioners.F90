@@ -112,12 +112,12 @@ contains
     end if
 
     if (parse_isdef(datasets_check(trim(prefix_)//'Preconditioner')) /= 0 ) then 
-      call parse_integer(datasets_check(trim(prefix_)//'Preconditioner'), PRE_FILTER, this%which)
+      call parse_integer(datasets_check(trim(prefix_)//'Preconditioner'), default, this%which)
       if(.not.varinfo_valid_option('Preconditioner', this%which)) &
         call input_error('Preconditioner')
       call messages_print_var_option(stdout, 'Preconditioner', this%which, prefix_)
     else
-      call parse_integer(datasets_check('Preconditioner'), PRE_FILTER, this%which)
+      call parse_integer(datasets_check('Preconditioner'), default, this%which)
       if(.not.varinfo_valid_option('Preconditioner', this%which)) &
         call input_error('Preconditioner')
       call messages_print_var_option(stdout, 'Preconditioner', this%which)
