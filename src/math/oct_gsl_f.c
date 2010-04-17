@@ -176,6 +176,13 @@ double FC_FUNC_(oct_ran_gaussian, OCT_RAN_GAUSSIAN)
 }
 
 
+double FC_FUNC_(oct_ran_flat, OCT_RAN_FLAT)
+     (gsl_rng **r, double *a, double *b)
+{
+  return gsl_ran_flat(*r, *a, *b);
+}
+
+
 /* Interpolation */
 void FC_FUNC_(oct_spline_end, OCT_SPLINE_END)
 		 (void **spl, void **acc)

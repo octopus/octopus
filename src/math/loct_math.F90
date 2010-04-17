@@ -44,6 +44,7 @@ module loct_math_m
     loct_ran_init,           &
     loct_ran_end,            &
     loct_ran_gaussian,       &
+    loct_ran_flat,           &
     loct_fft_optimize,       &
     loct_1dminimize,         &
     loct_minimize,           &
@@ -217,6 +218,17 @@ module loct_math_m
       real(8),   intent(in) :: sigma
     end function oct_ran_gaussian
     module procedure oct_ran_gaussian4
+  end interface
+
+  interface loct_ran_flat
+    function oct_ran_flat(r, a, b)
+      use c_pointer_m
+      real(8) :: oct_ran_flat
+      type(c_ptr), intent(in) :: r
+      real(8),     intent(in) :: a
+      real(8),     intent(in) :: b
+    end function oct_ran_flat
+    module procedure oct_ran_flat4
   end interface
 
   interface loct_1dminimize
@@ -413,6 +425,15 @@ contains
 
     oct_ran_gaussian4 = real(oct_ran_gaussian(r, real(sigma, kind=8)), kind=4)
   end function oct_ran_gaussian4
+
+  real(4) function oct_ran_flat4(r, a, b)
+    use c_pointer_m
+    type(c_ptr), intent(in) :: r
+    real(4),     intent(in) :: a
+    real(4),     intent(in) :: b
+
+    oct_ran_flat4 = real(oct_ran_flat(r, real(a, kind=8), real(b, kind=8)), kind=4)
+  end function oct_ran_flat4
 
 end module loct_math_m
 
