@@ -266,7 +266,9 @@ contains
       integer :: ip
 
       do ip = 1, this%npoints
-        if(loct_ran_flat(rng, M_ZERO, M_ONE) < CNST(0.01)) this%point_to_part(ip) = nint(loct_ran_flat(rng, M_ZERO, M_ONE)*this%npart + M_HALF)
+        if(loct_ran_flat(rng, M_ZERO, M_ONE) < CNST(0.01)) then
+          this%point_to_part(ip) = nint(loct_ran_flat(rng, M_ZERO, M_ONE)*this%npart + M_HALF)
+        end if
       end do
     end subroutine mutate_all
     
