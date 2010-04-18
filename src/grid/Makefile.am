@@ -51,10 +51,12 @@ libgrid_a_SOURCES =       \
 	mesh_init.F90           \
 	metis.c                 \
 	ob_interface.F90        \
+	partition.F90           \
+	partitioner.F90         \
 	zoltan_low.c            \
 	zoltan.F90              \
 	hypercube.F90           \
-  modelmb_1part.F90       \
+	modelmb_1part.F90       \
 	cubic_mesh.F90          \
 	cubic_mesh_low.c        \
 	cubic_mesh_fft.c        \
@@ -93,7 +95,7 @@ index.o : index.F90 hypercube.o
 par_vec.o : par_vec.F90 par_vec_inc.F90 index.o stencil.o batch.o
 mesh.o : mesh.F90 par_vec.o index.o curvilinear.o
 ob_grid.o : ob_grid.F90 mesh.o ob_interface.o
-mesh_init.o : mesh_init.F90 mesh.o par_vec.o zoltan.o stencil_star.o stencil.o ob_grid.o
+mesh_init.o : mesh_init.F90 mesh.o par_vec.o zoltan.o stencil_star.o stencil.o ob_grid.o partition.o partitioner.o
 modelmb_1part.o : modelmb_1part.F90 mesh.o hypercube.o
 nl_operator.o : nl_operator.F90 nl_operator_inc.F90 par_vec.o mesh.o index.o batch.o stencil.o
 submesh.o : submesh.F90 submesh_inc.F90  mesh.o batch.o
@@ -124,3 +126,5 @@ transfer_table.o : transfer_table.F90
 mesh_batch.o : mesh_batch.F90 mesh_batch_inc.F90 mesh.o
 fourier_kernel.o : fourier_kernel.F90 cubic_mesh.o
 symmetrizer.o : symmetrizer.F90 symmetrizer_inc.F90 mesh.o
+partition.o : partition.F90 mesh.o
+partitioner.o : partitioner.F90 partition.o

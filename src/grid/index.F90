@@ -28,11 +28,12 @@ module index_m
   implicit none
 
   private
-  public ::                  &
-       index_t,              &
-       index_from_coords,    &
+  public ::                   &
+       index_t,               &
+       index_from_coords,     &
+       index_from_coords_vec, &
        index_to_coords
-  
+
   type index_t
     type(hypercube_t)          :: hypercube
     type(simul_box_t), pointer :: sb
@@ -68,6 +69,30 @@ contains
     end if
     
   end function index_from_coords
+
+  subroutine index_from_coords_vec(idx, dim, npoints, ix, index)
+    type(index_t),      intent(in)    :: idx
+    integer,            intent(in)    :: dim
+    integer,            intent(in)    :: npoints
+    integer,            intent(in)    :: ix(:, :)
+    integer,            intent(out)   :: index(:)
+
+    integer :: ix2(MAX_DIM), idir, ip
+
+    ix2 = 0
+
+    if(idx%sb%box_shape /= HYPERCUBE) then
+      do ip = 1, npoints
+        forall (idir = 1:dim) ix2(idir) = ix(idir, ip)
+        index(ip) = idx%Lxyz_inv(ix2(1), ix2(2), ix2(3))
+      end do
+    else
+      do ip = 1, npoints
+        call hypercube_x_to_i(idx%hypercube, dim, idx%nr, idx%enlarge(1), ix, index(ip))
+      end do
+    end if
+    
+  end subroutine index_from_coords_vec
 
   !
   ! Given a _global_ point index, this function returns the set of
