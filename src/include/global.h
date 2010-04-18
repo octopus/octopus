@@ -147,6 +147,8 @@
 #define STRINGIFY(x) #x
 #define TOSTRING(x)  STRINGIFY(x)
 
+#define INCR(x, y) x = x + y
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
