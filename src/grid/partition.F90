@@ -228,8 +228,8 @@ contains
   ! -----------------------------------------------------------------------
   
   subroutine partition_randomize(this, rng)
-    type(partition_t), intent(in) :: this
-    type(c_ptr),       intent(in) :: rng
+    type(partition_t), intent(inout) :: this
+    type(c_ptr),       intent(in)    :: rng
 
     integer :: ip
     FLOAT :: rand
@@ -245,10 +245,10 @@ contains
   ! ----------------------------------------------------------------------
 
   subroutine partition_mutate(this, rng, mesh, stencil)
-    type(partition_t), intent(in) :: this
-    type(c_ptr),       intent(in) :: rng
-    type(mesh_t),      intent(in) :: mesh
-    type(stencil_t),   intent(in) :: stencil
+    type(partition_t), intent(inout) :: this
+    type(c_ptr),       intent(in)    :: rng
+    type(mesh_t),      intent(in)    :: mesh
+    type(stencil_t),   intent(in)    :: stencil
 
     FLOAT :: random
 
