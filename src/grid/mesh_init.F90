@@ -1018,7 +1018,7 @@ contains
         if(ip /= ip_inner .and. ip_inner /= 0 .and. ip_inner <= mesh%np) then 
           mesh%nper = mesh%nper + 1
 #ifdef HAVE_MPI
-        else if(ip /= ip_inner) then
+        else if(mesh%parallel_in_domains .and. ip /= ip_inner) then
           nper_recv = nper_recv + 1
 #endif
         end if
@@ -1062,7 +1062,7 @@ contains
           mesh%per_map(iper) = ip_inner
 
 #ifdef HAVE_MPI
-        else if(ip /= ip_inner) then ! the point is in another node
+        else if(mesh%parallel_in_domains .and. ip /= ip_inner) then ! the point is in another node
           ! find in which paritition it is
           do ipart = 1, mesh%vp%npart
             if(ipart == mesh%vp%partno) cycle

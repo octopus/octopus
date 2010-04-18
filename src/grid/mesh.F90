@@ -745,7 +745,7 @@ contains
     
     integer :: ix(MAX_DIM), nr(2, MAX_DIM), idim
     
-    call push_sub('mesh.mesh_periodic_point')
+    ! no push_sub, called too frequently
 
     ix = mesh%idx%Lxyz(ip, :)
     nr(1, :) = mesh%idx%nr(1, :) + mesh%idx%enlarge(:)
@@ -758,7 +758,6 @@ contains
     
     ipp = mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3))
     
-    call pop_sub('mesh.mesh_periodic_point')
   end function mesh_periodic_point
   
 
