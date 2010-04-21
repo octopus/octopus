@@ -161,8 +161,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
       nullify(grad)
       
-      if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) &
-        call X(exchange_operator)(hm, der, epsi, hpsi, ist, ik)
+      if(hm%theory_level == HARTREE_FOCK) call X(exchange_operator)(hm, der, epsi, hpsi, ist, ik)
       
       if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) &
         call X(h_mgga_terms) (hm, der, epsi, hpsi, ik, grad)
@@ -328,11 +327,11 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik)
         rho(ip) = rho(ip) + R_CONJ(hm%st%X(psi)(ip, idim, jst, ik))*psi(ip, idim)
       end forall
     end do
-
+    
     call X(poisson_solve)(psolver, pot, rho)
 
     ff = hm%st%occ(jst, ik)
-    if(hm%d%ispin == UNPOLARIZED) ff = CNST(0.5)*ff
+    if(hm%d%ispin == UNPOLARIZED) ff = M_HALF*ff
 
     do idim = 1, hm%st%d%dim
       forall(ip = 1:der%mesh%np)
@@ -593,8 +592,8 @@ end subroutine X(vmask)
 subroutine X(hamiltonian_diagonal) (hm, der, diag, ik)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
-  integer,             intent(in)    :: ik
   R_TYPE,              intent(out)   :: diag(:,:) ! hpsi(gr%mesh%np, hm%d%dim)
+  integer,             intent(in)    :: ik
 
   integer :: idim, ip, ispin
 
