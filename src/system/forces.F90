@@ -86,6 +86,7 @@ contains
     call profiling_in(forces_prof, "FORCES")
     call push_sub('epot.forces_calculate')
 
+    x(:) = M_ZERO
     time = M_ZERO
     if(present(t)) time = t
 
