@@ -1045,7 +1045,7 @@ module opt_control_target_m
 
 
   ! ----------------------------------------------------------------------
-  integer pure function target_move_ions(target)
+  logical pure function target_move_ions(target)
     type(target_t), intent(in) :: target
     
     target_move_ions = target%move_ions
