@@ -26,9 +26,7 @@ BoxShape = sphere
 Radius = 10.0
 Spacing = 0.2
 
-DerivativesOrder = 4
-
-TheoryLevel = hartree_fock
+TheoryLevel = hartree
 
 SpinComponents = spin_polarized
 
@@ -41,3 +39,5 @@ EigenSolverFinalTolerance = 1e-6
 EigenSolverMaxIter = 25
 TypeOfMixing = linear
 Mixing = 1.0
+
+DevelVersion = yes

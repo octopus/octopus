@@ -6,6 +6,13 @@ Programs   : octopus; octopus_single; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
+Input: 02-xc_2d.00-hartree.inp
+match ; Hartree energy                           ; GREP(static/info, 'Total       =', 20)   ;  1.11152575
+match ; Hartree eigenvalue 1 up                  ; GREP(static/info, '  1   up', 13) ; 0.607023
+match ; Hartree eigenvalue 2 up                  ; GREP(static/info, '  2   up', 13) ; 0.821527
+match ; Hartree eigenvalue 1 dn                  ; GREP(static/info, '  1   dn', 13) ; 1.156287
+match ; Hartree eigenvalue 2 dn                  ; GREP(static/info, '  2   dn', 13) ; 1.221884
+
 # This tests the Hartree-Fock implementation. It reproduces one number
 # given in: [B. Reusch et al., Phys. Rev. B 63, 113313]. I have chose
 # a 2D calculation because of the great computational load produced by
