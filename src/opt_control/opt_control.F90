@@ -439,7 +439,7 @@ contains
 
       call states_copy(psi, initial_st)
       call propagate_forward(sys, hm, td, par, target, psi)
-      f = - j1_functional(target, sys%gr, psi) - parameters_j2(par)
+      f = - j1_functional(target, sys%gr, psi, sys%geo) - parameters_j2(par)
       if(oct%dump_intermediate) call iterator_write(iterator, par)
       call iteration_manager_direct(-f, par, iterator)
       call states_end(psi)
@@ -898,7 +898,7 @@ contains
       ! We only need the value of the target functional.
       call states_copy(psi, initial_st)
       call propagate_forward(sys_, hm_, td_, par_, target, psi)
-      f = - j1_functional(target, sys_%gr, psi) - parameters_j2(par_)
+      f = - j1_functional(target, sys_%gr, psi, sys_%geo) - parameters_j2(par_)
       if(oct%dump_intermediate) call iterator_write(iterator, par_)
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator)
       call states_end(psi)

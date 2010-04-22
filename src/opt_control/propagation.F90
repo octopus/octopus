@@ -45,6 +45,9 @@ module opt_control_propagation_m
   use td_write_m
   use v_ks_m
   use varinfo_m
+  use forces_m
+  use species_m
+  use epot_m
 
   implicit none
 
@@ -133,6 +136,9 @@ module opt_control_propagation_m
     logical :: write_iter_ = .false.
     type(grid_t),  pointer :: gr
     type(td_write_t)           :: write_handler
+    FLOAT, allocatable :: x_initial(:,:)
+    logical :: vel_target_ = .false. , move_ions_ = .false.
+    integer :: iatom
 
     call push_sub('propagation.propagate_forward')
 
@@ -159,6 +165,17 @@ module opt_control_propagation_m
     call v_ks_calc(sys%ks, gr, hm, psi, time = M_ZERO)
     call propagator_run_zero_iter(hm, td%tr)
 
+    if(target_mode(target) .eq. oct_tg_velocity) then
+       SAFE_ALLOCATE(x_initial(1:sys%geo%natoms,1:MAX_DIM))
+       vel_target_ = .true.
+       do iatom=1, sys%geo%natoms
+          sys%geo%atom(iatom)%f(1:MAX_DIM) = M_ZERO
+          sys%geo%atom(iatom)%v(1:MAX_DIM) = M_ZERO
+          x_initial(iatom,1:MAX_DIM) = sys%geo%atom(iatom)%x(1:MAX_DIM)
+       end do
+       if(target_move_ions(target)) move_ions_ = .true.
+    end if
+
     if(present(prop)) call oct_prop_output(prop, 0, psi, gr)
     ii = 1
     do i = 1, td%max_iter
@@ -175,6 +192,20 @@ module opt_control_propagation_m
       ! if td_target
       call target_tdcalc(target, gr, psi, i)
 
+      ! calculate velocity and new position of each atom
+      if(vel_target_) then
+         call forces_calculate(gr, sys%geo, hm%ep, psi, i*td%dt)
+         do iatom=1, sys%geo%natoms
+            sys%geo%atom(iatom)%v(1:MAX_DIM) = sys%geo%atom(iatom)%v(1:MAX_DIM) + &
+                 sys%geo%atom(iatom)%f(1:MAX_DIM)*td%dt/species_weight(sys%geo%atom(iatom)%spec)
+            if(move_ions_) then
+               sys%geo%atom(iatom)%x(1:MAX_DIM) = sys%geo%atom(iatom)%x(1:MAX_DIM) + &
+                    sys%geo%atom(iatom)%v(1:MAX_DIM)*td%dt
+            end if
+         end do
+         call hamiltonian_epot_generate(hm, gr, sys%geo, psi, i*td%dt)
+      end if
+
       ! only write in final run
       if(write_iter_) then
         call td_write_iter(write_handler, gr, psi, hm, sys%geo, td%kick, td%dt, i)
@@ -186,6 +217,13 @@ module opt_control_propagation_m
         end if
       end if
     end do
+
+    if(vel_target_) then
+       do iatom=1, sys%geo%natoms
+          sys%geo%atom(iatom)%x(1:MAX_DIM) = x_initial(iatom,1:MAX_DIM)
+       end do
+       SAFE_DEALLOCATE_A(x_initial)
+    end if
 
     if(write_iter_) call td_write_end(write_handler)
     call pop_sub('propagation.propagate_forward')

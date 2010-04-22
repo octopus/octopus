@@ -61,7 +61,9 @@ module opt_control_target_m
             target_mode,      &
             target_type,      &
             j1_functional,    &
-            calc_chi
+            calc_chi,         &
+            target_move_ions, &
+            parse_velocity_target
 
   integer, public, parameter ::       &
     oct_tg_groundstate      = 1,      &
@@ -72,7 +74,8 @@ module opt_control_target_m
     oct_tg_local            = 6,      &
     oct_tg_td_local         = 7,      &
     oct_tg_exclude_state    = 8,      &
-    oct_tg_hhg              = 9
+    oct_tg_hhg              = 9,      &
+    oct_tg_velocity         = 10
 
   integer, public, parameter ::       &
     oct_targetmode_static = 0,        &
@@ -87,6 +90,8 @@ module opt_control_target_m
     FLOAT, pointer :: td_fitness(:) => null()
     character(len=200) :: td_local_target
     character(len=80) :: excluded_states_list
+    character(len=4096) :: vel_input_string
+    logical :: move_ions
     integer :: hhg_nks
     integer, pointer :: hhg_k(:) => null()
     FLOAT,   pointer :: hhg_alpha(:) => null()
@@ -172,6 +177,9 @@ module opt_control_target_m
     !% operator minus the projector onto that state.
     !%Option oct_tg_hhg 9
     !% The target is the optimization of the HHG yield.
+    !%Option oct_tg_velocity 10
+    !% The target is a function of the velocities of the nuclei at the end of the influence of
+    !% the external field, defined by <tt>OCTVelocityTarget</tt>
     !%End
     call parse_integer(datasets_check('OCTTargetOperator'), oct_tg_gstransformation, target%type)
     if(.not.varinfo_valid_option('OCTTargetOperator', target%type)) &
@@ -468,6 +476,58 @@ module opt_control_target_m
       SAFE_ALLOCATE(target%td_fitness(0:td%max_iter))
       target%td_fitness = M_ZERO
 
+    case(oct_tg_velocity)
+      !%Variable OCTVelocityTarget
+      !%Type block
+      !%Section Calculation Modes::Optimal Control
+      !%Description
+      !% If <tt>OCTTargetOperator = oct_tg_velocity</tt>, then one must supply the 
+      !% target to optimize in terms of the ionic velocities. This is done by 
+      !% supplying a string trough the block <tt>OCTVelocityTarget</tt>.
+      !% Each velocity component is supplied by <tt>"v[n_atom,vec_comp]"</tt>,
+      !% while "n_atom" is the respective atom number, corresponding to the 
+      !% <tt>Coordinates</tt> block and "vec_comp" is the corresponding
+      !% vector component of the velocity. The target string can be
+      !% supplied by using several lines in the OCTTargetOperator block.
+      !% As an example, the following target can be used to maximize the
+      !% velocity difference between atom 1 and 2 (in a 3D system):
+      !%
+      !% <tt>%OCTVelocityTarget</tt>
+      !% <tt> "(v[1,1]-v[2,1])^2 + (v[1,2]-v[2,2])^2 + "</tt>
+      !% <tt> "(v[1,3]-v[2,3])^2"</tt>
+      !% <tt>%</tt>
+      !%
+      !%End
+       
+      !%Variable OCTMoveIons
+      !%Type logical
+      !%Section Calculation Modes::Optimal Control
+      !%Description
+      !% If <tt>OCTTargetOperator = oct_tg_velocity</tt>, then one must specify
+      !% if the ions are assumed to be fixed or if they can move by setting
+      !% <tt>OCTMoveIons</tt> to <tt>true</tt> or <tt>false</tt>.
+      !%End
+       
+       if(parse_block(datasets_check('OCTVelocityTarget'),blk)==0) then
+          target%vel_input_string = " "
+          do jj=0, parse_block_n(blk)-1
+             call parse_block_string(blk, jj, 0, expression)
+             target%vel_input_string = trim(target%vel_input_string) // trim(expression)
+          end do
+       else
+          message(1) = 'If OCTTargetOperator = oct_tg_velocity, then you must give the shape'
+          message(2) = 'of this target in the block "OCTVelocityTarget".'
+          call write_fatal(2)
+       end if
+       
+       if(parse_isdef('OCTMoveIons') .eq. 0) then
+          message(1) = 'If OCTTargetOperator = oct_tg_velocity, then you must supply'
+          message(2) = 'the variable "OCTMoveIons".'
+          call write_fatal(2)
+       else
+          call parse_logical('OCTMoveIons', .false., target%move_ions)
+       end if
+
     case default
       write(message(1),'(a)') "Target Operator not properly defined."
       call write_fatal(1)
@@ -657,16 +717,19 @@ module opt_control_target_m
   ! case, or else \int_0^T dt <Psi(t)|\hat{O}(t)|Psi(t) in 
   ! the time-dependent case.
   ! ---------------------------------------------------------
-  FLOAT function j1_functional(target, gr, psi) result(j1)
+  FLOAT function j1_functional(target, gr, psi, geo) result(j1)
     type(target_t), intent(inout)   :: target
     type(grid_t),   intent(inout)   :: gr
     type(states_t), intent(inout)   :: psi
+    type(geometry_t), intent(in), optional :: geo
 
     integer :: ip, ist, iter, jj, maxiter, ik
     FLOAT :: omega, aa, maxhh, ww
     FLOAT, allocatable :: local_function(:)
     CMPLX, allocatable :: ddipole(:)
     CMPLX, allocatable :: opsi(:, :)
+    FLOAT :: f_re, dummy(3)
+    character(len=4096) :: inp_string
 
     call push_sub('target.j1_functional')
 
@@ -741,6 +804,15 @@ module opt_control_target_m
       call spectrum_hsfunction_end()
 
       SAFE_DEALLOCATE_A(ddipole)
+
+    case(oct_tg_velocity)
+       f_re = M_ZERO
+       dummy(:) = M_ZERO
+       inp_string = target%vel_input_string
+       call parse_velocity_target(inp_string, geo)
+       call conv_to_C_string(inp_string)
+       call parse_expression(f_re, dummy(1), 1, dummy(1:3), dummy(1), dummy(1), inp_string)
+       j1 = f_re
 
     case default
       do ik = 1, psi%d%nik
@@ -953,6 +1025,8 @@ module opt_control_target_m
     select case(target%type)
     case(oct_tg_td_local, oct_tg_hhg)
       target_mode = oct_targetmode_td
+    case(oct_tg_velocity)
+      target_mode = oct_tg_velocity
     case default
       target_mode = oct_targetmode_static
     end select
@@ -967,6 +1041,53 @@ module opt_control_target_m
     target_type = target%type
 
   end function target_type
+  ! ----------------------------------------------------------------------
+
+
+  ! ----------------------------------------------------------------------
+  integer pure function target_move_ions(target)
+    type(target_t), intent(in) :: target
+    
+    target_move_ions = target%move_ions
+
+  end function target_move_ions
+  ! ----------------------------------------------------------------------
+
+
+  ! ----------------------------------------------------------------------
+  ! replaces the "v[:,:]" from inp_string by the corresponding
+  ! numbers from geo%atom(:)%v(:) so that the parser can handle inp_string
+  ! ----------------------------------------------------------------------
+  subroutine parse_velocity_target(inp_string, geo)
+    character(len=*), intent(inout)  :: inp_string  ! input string --> OCTVelocityTarget
+    type(geometry_t), intent(in)     :: geo         ! velocities of the atoms --> geo%atom(n_atom)%v(coord)
+    integer              :: i,m,n_atom,coord,string_length
+    CHARACTER (LEN=100)  :: v_string
+    
+    string_length = len(inp_string)
+    do i=1, string_length 
+       if(inp_string(i:i+1) == "v[") then
+          m = 0
+          if(inp_string(i+3:i+3) == ",") m = 1
+          if(inp_string(i+4:i+4) == ",") m = 2
+          if(m == 0) then
+             message(1) = "OCTVelocityTarget Input error!"
+             message(2) = "Atom number is either larger than 99 or not defined."
+             call write_fatal(2)
+          end if
+          read(inp_string(i+2:i+1+m),*) n_atom
+          read(inp_string(i+3+m:i+3+m),*) coord
+          if(coord < 1 .or. coord > 3) then
+             message(1) = "OCTVelocityTarget Input error!"
+             message(2) = "Vector component is either larger than 3 or smaller than 1."
+             call write_fatal(2)
+          end if
+          write(v_string,*) geo%atom(n_atom)%v(coord)
+          inp_string = inp_string(:i-1) // "(" // trim(v_string) // ")" // inp_string(i+5+m:)
+       end if
+    end do
+    
+  end subroutine parse_velocity_target
   ! ----------------------------------------------------------------------
 
 
