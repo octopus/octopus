@@ -73,6 +73,12 @@ module casida_m
     FLOAT,   pointer  :: f(:)           !< The (dipole) strengths
     FLOAT,   pointer  :: s(:)           !< The diagonal part of the S-matrix
 
+    ! variables for momentum transfer dependent calculation
+    logical           :: qcalc
+    FLOAT             :: qvector(MAX_DIM)
+    CMPLX,   pointer  :: qtm(:)
+    FLOAT,   pointer  :: qf(:)
+
     logical           :: parallel_in_eh_pairs
     type(mpi_grp_t)   :: mpi_grp
   end type casida_t
@@ -93,7 +99,8 @@ contains
     logical,             intent(inout) :: fromScratch
 
     type(casida_t) :: cas
-    integer :: i, nk, n_filled, n_partially_filled, n_half_filled
+    type(block_t) :: blk
+    integer :: idir, i, nk, n_filled, n_partially_filled, n_half_filled
     character(len=80) :: trandens
 
     call push_sub('casida.casida_run')
@@ -177,6 +184,29 @@ contains
     !%End
     call parse_string(datasets_check('CasidaTransitionDensities'), "0", trandens)
 
+    !%Variable CasidaMomentumTransfer
+    !%Type block
+    !%Section Linear Response::Response
+    !%Description
+    !% Momentum-transfer vector for the calculation of the dynamic structure
+    !% factor. When this variable is set, the transition rates are determined
+    !% using an exponential operator instead of the normal dipole one.
+    !%End
+
+    if(parse_block(datasets_check('CasidaMomentumTransfer'), blk)==0) then
+      do idir = 1, MAX_DIM
+        call parse_block_float(blk, 0, idir - 1, cas%qvector(idir))
+        cas%qvector(idir) = units_to_atomic(unit_one / units_inp%length, cas%qvector(idir))
+      end do
+      call parse_block_end(blk)
+      message(1) = "Info: Calculating IXS/EELS transition rates."
+      call write_info(1)
+      cas%qcalc = .true.
+    else
+      cas%qvector(:) = M_ZERO
+      cas%qcalc = .false.
+    end if
+
     ! Initialize structure
     call casida_type_init(cas, sys%gr%sb%dim, nk, sys%mc)
 
@@ -204,6 +234,7 @@ contains
       cas%type = CASIDA_CASIDA
       call casida_work(sys, hm, cas)
       call casida_write(cas, 'casida')
+      if(cas%qcalc) call qcasida_write(cas, 'qcasida')
 
     end if
 
@@ -257,6 +288,11 @@ contains
     SAFE_ALLOCATE(   cas%s(1:cas%n_pairs))
     SAFE_ALLOCATE(   cas%w(1:cas%n_pairs))
 
+    if(cas%qcalc) then
+      SAFE_ALLOCATE(cas%qtm(1:cas%n_pairs))
+      SAFE_ALLOCATE( cas%qf(1:cas%n_pairs))
+    end if
+
     ! create pairs
     j = 1
     do k = 1, nk
@@ -299,6 +335,11 @@ contains
     SAFE_DEALLOCATE_P(cas%f)
     SAFE_DEALLOCATE_P(cas%w)
 
+    if(cas%qcalc) then
+      SAFE_DEALLOCATE_P(cas%qtm)
+      SAFE_DEALLOCATE_P(cas%qf)
+    end if
+
     SAFE_DEALLOCATE_P(cas%n_occ)
     SAFE_DEALLOCATE_P(cas%n_unocc)
 
@@ -338,6 +379,10 @@ contains
     cas%f   = M_ZERO
     cas%w   = M_ZERO
     cas%s   = M_ZERO
+    if(cas%qcalc) then
+      cas%qtm  = M_ZERO
+      cas%qf   = M_ZERO
+    end if
 
     ! load saved matrix elements
     call load_saved()
@@ -444,9 +489,10 @@ contains
     ! ---------------------------------------------------------
     subroutine solve_casida()
       FLOAT :: temp
-      integer :: ia, jb, idir
+      integer :: ip, ia, jb, idir
       integer :: max, actual, iunit, counter
       FLOAT, allocatable :: deltav(:)
+      CMPLX, allocatable :: zf(:)
 
       FLOAT, allocatable :: dx(:), tmp(:,:)
       CMPLX, allocatable :: zx(:)
@@ -552,6 +598,30 @@ contains
 
         SAFE_ALLOCATE(deltav(1:mesh%np))
         if (states_are_real(st)) then
+
+          if(cas%qcalc) then
+             SAFE_ALLOCATE(zf(1:mesh%np))
+             SAFE_ALLOCATE(zx(1:cas%n_pairs))
+
+             ! calculate the matrix element zx
+             do ia = 1, cas%n_pairs
+               do ip = 1, mesh%np
+                 zf(ip) = exp(M_zI*dot_product(cas%qvector(:), mesh%x(ip, :))) * &
+                          st%dpsi(ip, 1, cas%pair(ia)%i, cas%pair(ia)%sigma) * &
+                          st%dpsi(ip, 1, cas%pair(ia)%a, cas%pair(ia)%sigma)
+               end do
+               zx(ia) = zmf_integrate(mesh, zf)
+             end do
+
+             ! and then the transition matrix elements
+             do ia = 1, cas%n_pairs
+               cas%qtm(ia) = ztransition_matrix_element(cas, ia, zx)
+             end do
+             SAFE_DEALLOCATE_A(zf)
+             SAFE_DEALLOCATE_A(zx)
+
+          end if
+
           SAFE_ALLOCATE(dx(1:cas%n_pairs))
           do idir = 1, mesh%sb%dim
             deltav(1:mesh%np) = mesh%x(1:mesh%np, idir)
@@ -583,6 +653,12 @@ contains
         do ia = 1, cas%n_pairs
           cas%f(ia) = (M_TWO / mesh%sb%dim) * cas%w(ia) * sum( (abs(cas%tm(ia, :)))**2 )
         end do
+
+        if (cas%qcalc) then
+          do ia = 1, cas%n_pairs
+            cas%qf(ia) = abs(cas%qtm(ia))**2
+          end do
+        end if
 
       end if
 
@@ -670,6 +746,45 @@ contains
     end subroutine load_saved
 
   end subroutine casida_work
+
+  ! ---------------------------------------------------------
+  subroutine qcasida_write(cas, filename)
+    type(casida_t), intent(in) :: cas
+    character(len=*),  intent(in) :: filename
+
+    character(len=5) :: str
+    integer :: iunit, ia, jb, idim, dim
+    FLOAT   :: temp
+    integer, allocatable :: ind(:)
+    FLOAT, allocatable :: w(:)
+
+    if(.not.mpi_grp_is_root(mpi_world)) return
+
+    call push_sub('casida.qcasida_write')
+
+    dim = size(cas%tm, 2)
+
+    SAFE_ALLOCATE(  w(1:cas%n_pairs))
+    SAFE_ALLOCATE(ind(1:cas%n_pairs))
+    w = cas%w
+    call sort(w, ind)
+
+    call io_mkdir(CASIDA_DIR)
+    iunit = io_open(CASIDA_DIR//trim(filename), action='write')
+    write(iunit, '(a1,a14,1x,a14,1x,a10,3es15.8,a2)') '#','E' , '<S(q,omega)>','; q = (',cas%qvector(1:MAX_DIM),')'
+    do ia = 1, cas%n_pairs
+      write(iunit, '(es15.8,es15.8)') units_from_atomic(units_out%energy, cas%w(ind(ia))), &
+                                      units_from_atomic(unit_one / units_out%energy, cas%qf(ind(ia)))
+    end do
+
+    call io_close(iunit)
+
+    SAFE_DEALLOCATE_A(w)
+    SAFE_DEALLOCATE_A(ind)
+
+    call pop_sub('casida.qcasida_write')
+
+  end subroutine qcasida_write
 
 
   ! ---------------------------------------------------------
