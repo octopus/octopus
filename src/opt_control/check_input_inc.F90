@@ -174,6 +174,16 @@
       end if
     end if
 
+    if(target_type(target) .eq. oct_tg_velocity) then
+       if( (oct%algorithm .ne. oct_algorithm_direct) .and. &
+            (oct%algorithm .ne. oct_algorithm_newuoa) ) then
+          write(message(1), '(a)') 'If "OCTTargetOperator = oct_tg_velocity", you can only use'
+          write(message(2), '(a)') '"OCTScheme = oct_algorithm_direct" or'
+          write(message(3), '(a)') '"OCTScheme = oct_algorithm_newuoa" for the optimization.'
+          call write_fatal(3)
+       end if
+    end if
+
     call pop_sub('read.check_faulty_runmodes')
   end subroutine check_faulty_runmodes
 
