@@ -506,7 +506,7 @@ contains
 
       call states_copy(psi, initial_st)
       call propagate_forward(sys, hm, td, par, target, psi)
-      f = - j1_functional(target, sys%gr, psi) - parameters_j2(par)
+      f = - j1_functional(target, sys%gr, psi, sys%geo) - parameters_j2(par)
       if(oct%dump_intermediate) call iterator_write(iterator, par)
       call iteration_manager_direct(-f, par, iterator)      
       call states_end(psi)
