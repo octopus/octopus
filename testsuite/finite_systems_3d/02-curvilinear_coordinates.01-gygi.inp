@@ -10,7 +10,7 @@ CalculationMode = gs
 %
 
 %Coordinates
-  "He" | 0 | 0 | 0 | no
+  "He" | 0 | 0 | 0 
 %
 
 BoxShape = sphere

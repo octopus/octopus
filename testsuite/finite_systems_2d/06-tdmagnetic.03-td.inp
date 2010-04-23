@@ -10,7 +10,7 @@ dist = 3.0
 %
 
 %Coordinates
-"qd" | 0 | 0 | 0 | no
+"qd" | 0 | 0 | 0 
 %
 
 BoxShape = sphere

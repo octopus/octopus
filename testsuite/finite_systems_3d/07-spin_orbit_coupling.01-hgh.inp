@@ -1,8 +1,6 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id: 07-spin_orbit_coupling.01-ground_state.inp 2655 2007-01-19 17:38:16Z xavier $
 
-DebugLevel = 0
-
 Units = ev_angstrom
 
 CalculationMode = gs
@@ -17,8 +15,8 @@ Spacing = 0.35
 %
 
 %Coordinates
-  "Xe" | -1.5 | 0 | 0 | no
-  "Xe" |  1.5 | 0 | 0 | no
+  "Xe" | -1.5 | 0 | 0 
+  "Xe" |  1.5 | 0 | 0 
 %
 ExcessCharge = 1
 

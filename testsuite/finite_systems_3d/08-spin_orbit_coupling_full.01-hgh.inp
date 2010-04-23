@@ -14,8 +14,8 @@ Spacing = 0.35
 %
 
 %Coordinates
-  "Xe" | -1.5 | 0 | 0 | no
-  "Xe" |  1.5 | 0 | 0 | no
+  "Xe" | -1.5 | 0 | 0 
+  "Xe" |  1.5 | 0 | 0 
 %
 ExcessCharge = 1
 

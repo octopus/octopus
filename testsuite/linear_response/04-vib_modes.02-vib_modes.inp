@@ -1,8 +1,6 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-DebugLevel = 0
-
 CalculationMode = vib_modes
 fromScratch = yes
 

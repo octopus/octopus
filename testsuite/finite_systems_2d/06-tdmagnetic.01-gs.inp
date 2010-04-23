@@ -11,7 +11,7 @@ dist = 3.0
 NumberUnoccStates = 1
 
 %Coordinates
-"qd" | 0 | 0 | 0 | no
+"qd" | 0 | 0 | 0 
 %
 
 BoxShape = sphere

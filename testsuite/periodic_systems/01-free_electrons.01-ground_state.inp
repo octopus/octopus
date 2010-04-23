@@ -23,7 +23,7 @@ TheoryLevel = independent_particles
 %
 
 %Coordinates
- "Zero" | 0 | 0 | 0 | yes
+ "Zero" | 0 | 0 | 0 
 %
 
 BoxShape = parallelepiped

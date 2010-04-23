@@ -11,8 +11,6 @@
 # The numbers provided in that Table should match the values that octopus
 # prints in the excited_states_static/eigenvalues file.
 
-DebugLevel = 0
-
 %CalculationMode
 gs              | unocc
 "ground_state_" | "excited_states_"

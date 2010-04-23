@@ -1,11 +1,9 @@
-DebugLevel = 0
-
 fromScratch = yes
 
 CalculationMode = gs
 
 %Coordinates
-  "H" | 0 | 0 | 0 | no
+  "H" | 0 | 0 | 0 
 %
 
 %Species

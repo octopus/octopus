@@ -15,8 +15,6 @@
 # In this case, the electron-electron interaction is not exactly a soft-Coulomb
 # interaction. The total energy reproduces the -77.3eV quoted in the paper.
 
-DebugLevel = 0
-
 CalculationMode = gs
 Dimensions = 2
 fromScratch = yes

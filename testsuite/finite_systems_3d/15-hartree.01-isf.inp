@@ -1,7 +1,7 @@
 Units = ev_angstrom
 
 %Coordinates
-"Na" | 0.0 | 0.0 |  0.0	| yes
+"Na" | 0.0 | 0.0 |  0.0	
 %
 
 BoxShape = sphere

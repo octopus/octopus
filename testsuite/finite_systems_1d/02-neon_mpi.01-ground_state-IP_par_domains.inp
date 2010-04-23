@@ -2,7 +2,7 @@
 # $Id$
 #
 
-FromScratch=yes
+FromScratch = yes
 
 CalculationMode = gs
 

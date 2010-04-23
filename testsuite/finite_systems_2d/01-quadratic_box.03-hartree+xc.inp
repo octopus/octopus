@@ -17,7 +17,7 @@ Dimensions = 2
 %
 
 %Coordinates
-"qd" | 0 | 0 | 0 | no
+"qd" | 0 | 0 | 0 
 %
 
 BoxShape = parallelepiped

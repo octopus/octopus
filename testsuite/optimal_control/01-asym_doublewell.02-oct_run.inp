@@ -1,7 +1,6 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-DebugLevel = 0
 Dimensions = 1
 fromScratch = yes
 

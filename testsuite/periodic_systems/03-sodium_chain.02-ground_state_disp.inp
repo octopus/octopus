@@ -18,7 +18,7 @@ unocc_RestartDir = "gs_restart"
 %
 
 %Coordinates
-  "Na" |  -1.99932905 | 0.0 | 0.0 | no
+  "Na" |  -1.99932905 | 0.0 | 0.0 
 %
 
 BoxShape = parallelepiped

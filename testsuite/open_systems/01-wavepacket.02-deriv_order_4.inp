@@ -6,8 +6,6 @@
 # left and right transparent boundaries.
 # The kinetic energy is calculated by a nine-point formula.
 
-DebugLevel = 0
-
 ParallelizationStrategy = par_kpoints
 MeshBlockSizeXY = 1
 MeshBlockSizeZ = 1

@@ -1,8 +1,6 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-DebugLevel = 0
-
 %CalculationMode
  gs              | unocc            | casida
  "ground_state_" |  "unocc_states_" | "lrtddft_"
@@ -17,8 +15,8 @@ FromScratch = yes
 bond_length = 2.0744
 
 %Coordinates
-"N" |  -bond_length/2 |  0.0 |  0.0 | no
-"N" |   bond_length/2 |  0.0 |  0.0 | no
+"N" |  -bond_length/2 |  0.0 |  0.0 
+"N" |   bond_length/2 |  0.0 |  0.0 
 %
 
 %Species

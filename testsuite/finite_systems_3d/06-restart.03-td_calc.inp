@@ -3,8 +3,6 @@
 
 # Start a time-dependent calculation
 
-DebugLevel = 0
-
 CalculationMode = td
 fromScratch = yes
 Radius = 7.0

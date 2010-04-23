@@ -5,8 +5,8 @@ FromScratch = yes
 bond_length = 2.8
 
 %Coordinates
- "C" |  -bond_length/2 |  0.0 |  0.0 | yes
- "C" |   bond_length/2 |  0.0 |  0.0 | yes
+ "C" |  -bond_length/2 |  0.0 |  0.0 
+ "C" |   bond_length/2 |  0.0 |  0.0 
 %
 
 Spacing = 0.6

@@ -3,8 +3,8 @@ CalculationMode = td
 bond_length = 2.4
 
 %Coordinates
- "C" |  -bond_length/2 |  0.0 |  0.0 | yes
- "C" |   bond_length/2 |  0.0 |  0.0 | yes
+ "C" |  -bond_length/2 |  0.0 |  0.0 
+ "C" |   bond_length/2 |  0.0 |  0.0 
 %
 
 %Velocities

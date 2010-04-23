@@ -4,8 +4,6 @@
 # This input file is the same as 01-carbon_atom.01-ground_state.inp
 # except for the use of parallel LOBPCG.
 
-DebugLevel = 0
-
 ParallelizationStrategy = par_states
 
 CalculationMode = gs

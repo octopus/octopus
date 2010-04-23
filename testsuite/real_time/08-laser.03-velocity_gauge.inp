@@ -8,8 +8,8 @@ FromScratch = yes
 bondlength = 1.7/0.529177
 
 %Coordinates
-"Na" | 0.0 | 0.0 |  bondlength | yes
-"Na" | 0.0 | 0.0 | -bondlength | yes
+"Na" | 0.0 | 0.0 |  bondlength 
+"Na" | 0.0 | 0.0 | -bondlength 
 %
 
 BoxShape = sphere

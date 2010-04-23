@@ -6,8 +6,8 @@ FromScratch = yes
 
 bond_length = 2.7
 %Coordinates
-"N" |  -bond_length/2 |  0.0 |  0.0 | no
-"N" |   bond_length/2 |  0.0 |  0.0 | no
+"N" |  -bond_length/2 |  0.0 |  0.0 
+"N" |   bond_length/2 |  0.0 |  0.0 
 %
 
 BoxShape = sphere

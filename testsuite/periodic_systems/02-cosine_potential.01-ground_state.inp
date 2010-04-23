@@ -1,8 +1,6 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-DebugLevel = 0
-
 %CalculationMode 
    gs   |  unocc
   "gs_" | "unocc_"
@@ -26,7 +24,7 @@ TheoryLevel = independent_particles
 %
 
 %Coordinates
- "Cosine" | 0 | 0 | 0 | yes
+ "Cosine" | 0 | 0 | 0 
 %
 
 

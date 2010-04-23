@@ -1,8 +1,8 @@
 CalculationMode = gs
 
 %Coordinates
-'O' |  1.1432843 | 0.0 | 0.0 | yes
-'O' | -1.1432843 | 0.0 | 0.0 | yes
+'O' |  1.1432843 | 0.0 | 0.0 
+'O' | -1.1432843 | 0.0 | 0.0 
 %
 
 SpinComponents = spin_polarized

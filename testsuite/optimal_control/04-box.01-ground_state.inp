@@ -5,7 +5,7 @@
 # V(x) = -5*step(x+5)*step(5-x)
 # are calculated. 
 
-DebugLevel = 0
+
 
 %CalculationMode
 gs              | unocc

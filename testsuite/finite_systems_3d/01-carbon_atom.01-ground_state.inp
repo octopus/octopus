@@ -17,8 +17,6 @@
 # It would be nice to investigate the reason for the small
 # discrepancy...
 
-DebugLevel = 0
-
 CalculationMode = gs
 fromScratch = yes
 units = ev_angstrom
