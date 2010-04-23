@@ -253,21 +253,22 @@ contains
   ! ---------------------------------------------------------
   !> allocates stuff, and constructs the arrays pair_i and pair_j
   subroutine casida_type_init(cas, dim, nk, mc)
-    type(casida_t), intent(inout) :: cas
-    integer, intent(in) :: dim, nk
-    type(multicomm_t), intent(in) :: mc
+    type(casida_t),    intent(inout) :: cas
+    integer,           intent(in)    :: dim
+    integer,           intent(in)    :: nk
+    type(multicomm_t), intent(in)    :: mc
 
-    integer :: i, a, j, k
+    integer :: ist, ast, jpair, ik
 
     call push_sub('casida.casida_type_init')
 
     ! count pairs
     cas%n_pairs = 0
-    do k = 1, nk
-      do a = cas%n_occ(k)+1, cas%n_occ(k) + cas%n_unocc(k)
-        if(loct_isinstringlist(a, cas%wfn_list)) then
-          do i = 1, cas%n_occ(k)
-            if(loct_isinstringlist(i, cas%wfn_list)) then
+    do ik = 1, nk
+      do ast = cas%n_occ(ik) + 1, cas%n_occ(ik) + cas%n_unocc(ik)
+        if(loct_isinstringlist(ast, cas%wfn_list)) then
+          do ist = 1, cas%n_occ(ik)
+            if(loct_isinstringlist(ist, cas%wfn_list)) then
               cas%n_pairs = cas%n_pairs + 1
             end if
           end do
@@ -294,16 +295,16 @@ contains
     end if
 
     ! create pairs
-    j = 1
-    do k = 1, nk
-      do a = cas%n_occ(k)+1, cas%n_occ(k) + cas%n_unocc(k)
-        if(loct_isinstringlist(a, cas%wfn_list)) then
-          do i = 1, cas%n_occ(k)
-            if(loct_isinstringlist(i, cas%wfn_list)) then
-              cas%pair(j)%i = i
-              cas%pair(j)%a = a
-              cas%pair(j)%sigma = k
-              j = j + 1
+    jpair = 1
+    do ik = 1, nk
+      do ast = cas%n_occ(ik) + 1, cas%n_occ(ik) + cas%n_unocc(ik)
+        if(loct_isinstringlist(ast, cas%wfn_list)) then
+          do ist = 1, cas%n_occ(ik)
+            if(loct_isinstringlist(ist, cas%wfn_list)) then
+              cas%pair(jpair)%i = ist
+              cas%pair(jpair)%a = ast
+              cas%pair(jpair)%sigma = ik
+              jpair = jpair + 1
             end if
           end do
         end if
@@ -325,6 +326,7 @@ contains
   ! ---------------------------------------------------------
   subroutine casida_type_end(cas)
     type(casida_t), intent(inout) :: cas
+
     call push_sub('casida.casida_type_end')
 
     ASSERT(associated(cas%pair))

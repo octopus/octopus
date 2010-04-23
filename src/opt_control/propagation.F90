@@ -22,7 +22,9 @@
 module opt_control_propagation_m
   use datasets_m
   use energy_m
+  use epot_m
   use excited_states_m
+  use forces_m
   use gauge_field_m
   use geometry_m
   use global_m
@@ -38,6 +40,7 @@ module opt_control_propagation_m
   use opt_control_target_m
   use profiling_m
   use restart_m
+  use species_m
   use states_m
   use system_m
   use td_m
@@ -45,9 +48,6 @@ module opt_control_propagation_m
   use td_write_m
   use v_ks_m
   use varinfo_m
-  use forces_m
-  use species_m
-  use epot_m
 
   implicit none
 

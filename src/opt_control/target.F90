@@ -1063,6 +1063,8 @@ module opt_control_target_m
     type(geometry_t), intent(in)     :: geo         ! velocities of the atoms --> geo%atom(n_atom)%v(coord)
     integer              :: i,m,n_atom,coord,string_length
     CHARACTER (LEN=100)  :: v_string
+
+    call push_sub('target.parse_velocity_target')
     
     string_length = len(inp_string)
     do i=1, string_length 
@@ -1087,6 +1089,7 @@ module opt_control_target_m
        end if
     end do
     
+    call pop_sub('target.parse_velocity_target')
   end subroutine parse_velocity_target
   ! ----------------------------------------------------------------------
 

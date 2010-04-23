@@ -130,7 +130,7 @@ contains
 
   ! ---------------------------------------------------------- 
   !
-  ! This functions sets to zero all field that are currently
+  ! This functions sets to zero all fields that are currently
   ! allocated.
   !
   subroutine hamiltonian_base_clear(this)

@@ -27,7 +27,7 @@ subroutine X(symmetrizer_apply)(this, field, symmfield)
   R_TYPE  :: acc
   FLOAT   :: weight
 
-  call push_sub('symmetrizer_inc.symmetrizer_apply')
+  call push_sub('symmetrizer_inc.Xsymmetrizer_apply')
   
   nops = symmetries_number(this%mesh%sb%symm)
   weight = M_ONE/nops
@@ -67,7 +67,7 @@ subroutine X(symmetrizer_apply)(this, field, symmfield)
 
   end do
 
-  call pop_sub('symmetrizer_inc.symmetrizer_apply')
+  call pop_sub('symmetrizer_inc.Xsymmetrizer_apply')
 end subroutine X(symmetrizer_apply)
 
 ! ----------------------------------------------------------------------------------
@@ -81,7 +81,7 @@ subroutine X(symmetrizer_apply_vector)(this, field, symmfield)
   integer :: destpoint(1:3), srcpoint(1:3), lsize(1:3), offset(1:3)
   FLOAT   :: weight
 
-  call push_sub('symmetrizer_inc.symmetrizer_apply_vector')
+  call push_sub('symmetrizer_inc.Xsymmetrizer_apply_vector')
 
   nops = symmetries_number(this%mesh%sb%symm)
   weight = M_ONE/nops
@@ -121,7 +121,7 @@ subroutine X(symmetrizer_apply_vector)(this, field, symmfield)
 
   end do
 
-  call pop_sub('symmetrizer_inc.symmetrizer_apply_vector')
+  call pop_sub('symmetrizer_inc.Xsymmetrizer_apply_vector')
 end subroutine X(symmetrizer_apply_vector)
 
 !! Local Variables:
