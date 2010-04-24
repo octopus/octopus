@@ -95,30 +95,44 @@ module messages_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine write_fatal(no_lines)
-    integer, intent(in) :: no_lines
+  subroutine write_fatal(no_lines, only_root_writes)
+    integer,           intent(in) :: no_lines
+    logical, optional, intent(in) :: only_root_writes
 
     integer :: ii
+    logical :: only_root_writes_, should_write
 
-    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
+    if(present(only_root_writes)) then
+      should_write = mpi_grp_is_root(mpi_world) .or. (.not. only_root_writes)
+      only_root_writes_ = only_root_writes
+    else
+      should_write = .true.
+      only_root_writes_ = .false.
+    endif
+
+    if(flush_messages .and. mpi_grp_is_root(mpi_world)) then
       open(unit=iunit_err, file='messages.stderr', &
         action='write', position='append')
     end if
 
-    call messages_print_stress(stderr, "FATAL ERROR")
-    write(msg, '(a)') '*** Fatal Error (description follows)'
-    call flush_msg(stderr, msg)
+    if(should_write) then
+      call messages_print_stress(stderr, "FATAL ERROR")
+      write(msg, '(a)') '*** Fatal Error (description follows)'
+      call flush_msg(stderr, msg)
 
 #ifdef HAVE_MPI
-    call flush_msg(stderr, shyphens)
-    write(msg, '(a,i4)') "* From node = ", mpi_world%rank
-    call flush_msg(stderr, msg)
+      if(.not. only_root_writes) then
+        call flush_msg(stderr, shyphens)
+        write(msg, '(a,i4)') "* From node = ", mpi_world%rank
+        call flush_msg(stderr, msg)
+      endif
 #endif
-    call flush_msg(stderr, shyphens)
-    do ii = 1, no_lines
-      write(msg, '(a,1x,a)') '*', trim(message(ii))
-      call flush_msg(stderr, msg)
-    end do
+      call flush_msg(stderr, shyphens)
+      do ii = 1, no_lines
+        write(msg, '(a,1x,a)') '*', trim(message(ii))
+        call flush_msg(stderr, msg)
+      end do
+    endif
 
     ! We only dump the stack in debug mode because subroutine invocations
     ! are only recorded in debug mode (via push_sub/pop_sub). Otherwise,
@@ -135,7 +149,9 @@ contains
       call flush_msg(stderr, " ")
     end if
 
-    call messages_print_stress(stderr)
+    if(should_write) then
+      call messages_print_stress(stderr)
+    endif
 
     if(flush_messages .and. mpi_grp_is_root(mpi_world)) then
       close(iunit_err)
@@ -818,12 +834,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine messages_devel_version(name)
-    character(len=*),           intent(in) :: name
+    character(len=*), intent(in) :: name
     
     if(.not. conf%devel_version) then
       write(message(1), '(a)') 'Error: '//trim(name)//' is under development.'
       write(message(2), '(a)') 'To use it (at your own risk) set variable DevelVersion to yes.'
-      call write_fatal(2)
+      call write_fatal(2, only_root_writes = .true.)
     else
       write(message(1), '(a)') trim(name)//' is under development.'
       write(message(2), '(a)') 'It might not work or produce wrong results.'
@@ -855,9 +871,12 @@ contains
   subroutine messages_not_implemented(feature)
     character(len=*), intent(in) :: feature
 
-    message(1) = trim(feature)//" not implemented."
-    call write_fatal(1)
+    call push_sub('messages.messages_not_implemented')
 
+    message(1) = trim(feature)//" not implemented."
+    call write_fatal(1, only_root_writes = .true.)
+
+    call pop_sub('messages.messages_not_implemented')
   end subroutine messages_not_implemented
 
   ! ------------------------------------------------------------
