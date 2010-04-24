@@ -24,10 +24,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <CL/cl.h>
+#include <string_f.h>
 
 #include "opencl.h"
 
-void FC_FUNC_(opencl_init,OPENCL_INIT)(opencl_t ** thisptr){
+void FC_FUNC_(opencl_init,OPENCL_INIT)(opencl_t ** thisptr, STR_F_TYPE source_path_f STR_ARG1){
   size_t ParamDataBytes;
   char device_string[2048];
   cl_uint dim;
@@ -81,6 +82,7 @@ void FC_FUNC_(opencl_init,OPENCL_INIT)(opencl_t ** thisptr){
   /* start command queue */
   this->CommandQueue = clCreateCommandQueue(this->Context, this->Devices[0], CL_QUEUE_PROFILING_ENABLE ,&this->numerr);
 
+  TO_C_STR1(source_path_f, this->source_path);
 }
 
 void FC_FUNC_(opencl_end,OPENCL_END)(opencl_t ** thisptr){
@@ -88,6 +90,7 @@ void FC_FUNC_(opencl_end,OPENCL_END)(opencl_t ** thisptr){
 
   this = *thisptr;
 
+  free(this->source_path);
   free(this->Devices);
   free(this);
 }

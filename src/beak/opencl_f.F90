@@ -33,10 +33,11 @@ module opencl_m
   type(c_ptr), public :: opencl
 
   interface
-    subroutine opencl_init(this)
+    subroutine opencl_init(this, source_path)
       use c_pointer_m
 
-      type(c_ptr), intent(out) :: this
+      type(c_ptr),      intent(out) :: this
+      character(len=*), intent(in)  :: source_path
     end subroutine opencl_init
 
     subroutine opencl_end(this)
