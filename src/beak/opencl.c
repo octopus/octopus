@@ -254,3 +254,16 @@ void FC_FUNC_(f90_opencl_write_buffer, F90_OPENCL_WRITE_BUFFER)
 
 }
 
+
+void FC_FUNC_(f90_opencl_read_buffer, F90_OPENCL_READ_BUFFER)
+     (cl_mem ** buffer, opencl_env_t ** env, const size_t * size, const size_t * offset, void * data){
+  cl_int ierr;
+
+  ierr = clEnqueueReadBuffer(env[0]->CommandQueue, **buffer, CL_TRUE, *offset, *size, data, 0, NULL, NULL);
+
+  if(ierr != CL_SUCCESS){
+    fprintf(stderr, "Error: buffer read failed. Error code %d\n", ierr);
+    exit(1);
+  }
+
+}

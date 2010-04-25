@@ -36,6 +36,7 @@ module opencl_m
     opencl_mem_t,             &
     opencl_create_buffer,     &
     opencl_write_buffer,      &
+    opencl_read_buffer,       &
     opencl_release_buffer,    &
     opencl_padded_size
 
@@ -116,12 +117,16 @@ module opencl_m
 
   end interface
 
+  interface opencl_create_buffer
+    module procedure opencl_create_buffer_4, opencl_create_buffer_8
+  end interface
+
   interface opencl_write_buffer
     module procedure iopencl_write_buffer, dopencl_write_buffer, zopencl_write_buffer
   end interface
 
-  interface opencl_create_buffer
-    module procedure opencl_create_buffer_4, opencl_create_buffer_8
+  interface opencl_read_buffer
+    module procedure iopencl_read_buffer, dopencl_read_buffer, zopencl_read_buffer
   end interface
 
   contains

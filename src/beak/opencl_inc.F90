@@ -35,6 +35,24 @@ subroutine X(opencl_write_buffer)(this, opencl, size, data, offset)
 
 end subroutine X(opencl_write_buffer)
 
+! -----------------------------------------------------------------------------
+
+subroutine X(opencl_read_buffer)(this, opencl, size, data, offset)
+  type(opencl_mem_t),               intent(inout) :: this
+  type(opencl_t),                   intent(inout) :: opencl
+  integer,                          intent(in)    :: size
+  R_TYPE,                           intent(out)   :: data(:)
+  integer(SIZEOF_SIZE_T), optional, intent(in)    :: offset
+
+  integer(SIZEOF_SIZE_T) :: fsize, offset_
+  
+  fsize = size*R_SIZEOF
+  offset_ = 0
+  if(present(offset)) offset_ = offset*R_SIZEOF
+
+  call f90_opencl_read_buffer(this%mem, opencl%env, fsize, offset_, data(1))
+
+end subroutine X(opencl_read_buffer)
 
 !! Local Variables:
 !! mode: f90

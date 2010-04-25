@@ -37,7 +37,10 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   if(associated(this%potential)) then
 #ifdef HAVE_OPENCL
     if(opencl_is_available(opencl) .and. std%ispin == UNPOLARIZED) then
-      call batch_to_opencl_buffer(psib, opencl, mesh%np, CL_MEM_READ_ONLY, psi_buf)
+      call batch_create_opencl_buffer(psib, opencl, mesh%np, CL_MEM_READ_ONLY, psi_buf)
+      call batch_write_to_opencl_buffer(psib, opencl, mesh%np, psi_buf)
+      call batch_read_from_opencl_buffer(vpsib, opencl, mesh%np, psi_buf)
+      call opencl_release_buffer(psi_buf)
     end if
 #endif
     select case(std%ispin)
