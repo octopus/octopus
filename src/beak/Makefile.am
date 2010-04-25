@@ -39,7 +39,9 @@ if COMPILE_BG
 endif
 
 if COMPILE_OPENCL
- libbeak_a_SOURCES += opencl.c opencl_f.F90 operate_opencl.c
+ libbeak_a_SOURCES +=      \
+	opencl.c           \
+	opencl_f.F90
 endif
 
 noinst_HEADERS =           \
@@ -58,4 +60,3 @@ operate_ri_vec.o : operate_ri_vec.c beak.h
 operate_as.S : operate_ia64.S
 operate_bg.o : operate_bg.c beak.h
 opencl.o : opencl.c opencl.h
-operate_opencl.o : operate_opencl.c opencl.h

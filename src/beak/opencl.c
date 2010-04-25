@@ -25,10 +25,11 @@
 #include <stdio.h>
 #include <CL/cl.h>
 #include <string_f.h>
+#include <string.h>
 
 #include "opencl.h"
 
-void FC_FUNC_(opencl_init,OPENCL_INIT)(opencl_t ** thisptr, STR_F_TYPE source_path_f STR_ARG1){
+void FC_FUNC_(opencl_env_init,OPENCL_ENV_INIT)(opencl_env_t ** thisptr, STR_F_TYPE source_path_f STR_ARG1){
   size_t ParamDataBytes;
   char device_string[2048];
   cl_uint dim;
@@ -36,9 +37,9 @@ void FC_FUNC_(opencl_init,OPENCL_INIT)(opencl_t ** thisptr, STR_F_TYPE source_pa
   cl_platform_id platform;
   cl_int status;
   cl_context_properties cps[3];
-  opencl_t * this;
+  opencl_env_t * this;
 
-  this = (opencl_t *) malloc(sizeof(opencl_t));
+  this = (opencl_env_t *) malloc(sizeof(opencl_env_t));
   *thisptr = this;
 
   /* Just get the first platform */
@@ -65,19 +66,25 @@ void FC_FUNC_(opencl_init,OPENCL_INIT)(opencl_t ** thisptr, STR_F_TYPE source_pa
 
   clGetContextInfo(this->Context, CL_CONTEXT_DEVICES, ParamDataBytes, this->Devices, NULL);
 
-  /* print some info about the device */
+  /* print some info about the device */  
+  clGetDeviceInfo(this->Devices[0], CL_DEVICE_VENDOR, sizeof(device_string), &device_string, NULL);
+  printf("OpenCL device         : %s", device_string);
+
   clGetDeviceInfo(this->Devices[0], CL_DEVICE_NAME, sizeof(device_string), &device_string, NULL);
-  printf("OpenCL device : %s\n", device_string);
+  printf(" %s\n", device_string);
 
   clGetDeviceInfo (this->Devices[0], CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &dim, NULL);
-  printf("Compute units : %d\n", dim);
+  printf("Compute units         : %d\n", dim);
 
   clGetDeviceInfo (this->Devices[0], CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &mem, NULL);
   mem /= (1024*1024); /* convert to megabytes */
-  printf("Device memory : %d [Mb]\n", mem);
+  printf("Device memory         : %d [Mb]\n", mem);
 
   clGetDeviceInfo(this->Devices[0], CL_DEVICE_EXTENSIONS, sizeof(device_string), &device_string, NULL);
-  printf("Extensions    : %s\n", device_string);
+  printf("Extensions            : %s\n", device_string);
+
+  clGetDeviceInfo(this->Devices[0], CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(this->max_workgroup_size), &this->max_workgroup_size, NULL);
+  printf("Maximum workgroup size: %d\n", this->max_workgroup_size);
 
   /* start command queue */
   this->CommandQueue = clCreateCommandQueue(this->Context, this->Devices[0], CL_QUEUE_PROFILING_ENABLE ,&this->numerr);
@@ -85,8 +92,8 @@ void FC_FUNC_(opencl_init,OPENCL_INIT)(opencl_t ** thisptr, STR_F_TYPE source_pa
   TO_C_STR1(source_path_f, this->source_path);
 }
 
-void FC_FUNC_(opencl_end,OPENCL_END)(opencl_t ** thisptr){
-  opencl_t * this;
+void FC_FUNC_(opencl_env_end,OPENCL_ENV_END)(opencl_env_t ** thisptr){
+  opencl_env_t * this;
 
   this = *thisptr;
 
@@ -94,3 +101,104 @@ void FC_FUNC_(opencl_end,OPENCL_END)(opencl_t ** thisptr){
   free(this->Devices);
   free(this);
 }
+
+void opencl_kernel_init(opencl_kernel_t * this, opencl_env_t * env, const char * file_name, char * kernel_base_name){
+  FILE * source_file;
+  cl_int numerr;
+  cl_program OpenCLProgram;
+  int len;
+  char * kernel_name;
+  char * full_file_name;
+  size_t szSourceLength;
+  char* cSourceString;
+
+  /* build the full path of the source file */
+  full_file_name = (char *) malloc((strlen(env->source_path) + strlen(file_name) + 1)*sizeof(char));
+  strcpy(full_file_name, env->source_path);
+  strcat(full_file_name, file_name);
+
+  /* open the OpenCL source code file */
+  source_file = fopen(full_file_name, "rb");
+  if(source_file == 0){
+    fprintf(stderr, "Error: Failed to open file %s\n", full_file_name);
+    exit(1);
+  } else {
+    printf("Info: compiling OpenCL code %s\n", full_file_name);
+  }
+
+  /* get the length of the source code */
+  fseek(source_file, 0, SEEK_END); 
+  szSourceLength = ftell(source_file);
+  fseek(source_file, 0, SEEK_SET); 
+  
+  /* allocate a buffer for the source code string and read it in */
+  cSourceString = (char *) malloc((szSourceLength + 1)*sizeof(char));
+  fread(cSourceString, szSourceLength, 1, source_file);
+  fclose(source_file);
+    
+  cSourceString[szSourceLength] = '\0';
+
+  OpenCLProgram = clCreateProgramWithSource(env->Context, 1, (const char**)&cSourceString, NULL, &numerr); 
+  numerr = clBuildProgram(OpenCLProgram, 0, NULL, "-cl-mad-enable", NULL, NULL);
+  
+  if(numerr != CL_SUCCESS){
+    size_t len;
+    char buffer[2048];
+    clGetProgramBuildInfo (OpenCLProgram, env->Devices[0],
+			   CL_PROGRAM_BUILD_LOG, sizeof (buffer), buffer,
+			   &len);    
+    fprintf(stderr, "Error: compilation of file %s failed.\nCompilation log:\n%s\n", full_file_name, buffer);
+    exit(1);
+  }
+
+  len = strlen(kernel_base_name);
+  kernel_name = (char *) malloc((len + 2)*sizeof(char));
+
+  /* Create a handle to the compiled OpenCL function (Kernel) */
+  kernel_name[0] = 'd';
+  kernel_name[1] = '\0';
+  strcat(kernel_name, kernel_base_name);
+  this->kernel_double = clCreateKernel(OpenCLProgram, kernel_name, &numerr);
+
+  if(numerr != CL_SUCCESS){
+    fprintf(stderr, "Error: creation of kernel '%s' failed with error %d.\n", kernel_name, numerr);
+    exit(1);
+  }
+
+  kernel_name[0] = 'z';
+  kernel_name[1] = '\0';
+  strcat(kernel_name, kernel_base_name);
+  this->kernel_complex = clCreateKernel(OpenCLProgram, kernel_name, &numerr);
+
+  if(numerr != CL_SUCCESS){
+    fprintf(stderr, "Error: creation of kernel  '%s' failed with error %d.\n", kernel_name, numerr);
+    exit(1);
+  }
+
+  free(kernel_name);
+  free(full_file_name);
+}
+
+void FC_FUNC_(f90_opencl_kernel_init, F90_OPENCL_KERNEL_INIT)
+     (opencl_kernel_t ** this, opencl_env_t ** env, STR_F_TYPE file_name_f, STR_F_TYPE kernel_base_name_f STR_ARG2){
+  char * file_name,  * kernel_base_name;
+
+  *this = (opencl_kernel_t *) malloc(sizeof(opencl_kernel_t));
+  TO_C_STR1(file_name_f, file_name);
+  TO_C_STR2(kernel_base_name_f, kernel_base_name);
+  opencl_kernel_init(*this, *env, file_name, kernel_base_name);
+  free(file_name);
+  free(kernel_base_name);
+}
+
+void opencl_kernel_end(opencl_kernel_t * this){
+  clReleaseKernel(this->kernel_double);
+  clReleaseKernel(this->kernel_complex);
+}
+
+
+void FC_FUNC_(f90_opencl_kernel_end, F90_OPENCL_KERNEL_END)(opencl_kernel_t ** this){
+  opencl_kernel_end(*this);
+  free(*this);
+}
+

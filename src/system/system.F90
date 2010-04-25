@@ -77,7 +77,7 @@ contains
     SAFE_ALLOCATE(sys%st)
 
 #ifdef HAVE_OPENCL    
-    call opencl_init(opencl, trim(conf%share)//'/opencl/')
+    call opencl_init(opencl)
 #endif
 
     call messages_obsolete_variable('SystemName')

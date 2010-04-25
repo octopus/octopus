@@ -22,4 +22,5 @@
 opencldir = $(pkgdatadir)/opencl
 
 dist_opencl_DATA =    \
-        operate.cl
+	vpsi.cl
+

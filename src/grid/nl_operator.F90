@@ -33,9 +33,6 @@ module nl_operator_m
   use messages_m
   use multicomm_m
   use mpi_m
-#ifdef HAVE_OPENCL
-  use opencl_m
-#endif
   use par_vec_m
   use profiling_m
   use simul_box_m
@@ -126,9 +123,6 @@ module nl_operator_m
 
   type(profile_t), save :: nl_operate_profile
   type(profile_t), save :: operate_batch_prof
-#ifdef HAVE_OPENCL
-  type(c_ptr) :: op_ocl
-#endif
 
 contains
   
@@ -198,10 +192,6 @@ contains
         call write_fatal(1)
       end if
     end if
-
-#ifdef HAVE_OPENCL
-    call operate_opencl_init(op_ocl, opencl, trim(conf%share)//'/opencl/operate.cl')
-#endif
 
     call pop_sub('nl_operator.nl_operator_global_init')
   end subroutine nl_operator_global_init
