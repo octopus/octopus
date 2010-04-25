@@ -40,18 +40,18 @@ module opencl_m
   type(opencl_t), public :: opencl
 
   interface
-    subroutine opencl_env_init(this, source_path)
+    subroutine f90_opencl_env_init(this, source_path)
       use c_pointer_m
 
       type(c_ptr),      intent(out) :: this
       character(len=*), intent(in)  :: source_path
-    end subroutine opencl_env_init
+    end subroutine f90_opencl_env_init
 
-    subroutine opencl_env_end(this)
+    subroutine f90_opencl_env_end(this)
       use c_pointer_m
 
       type(c_ptr), intent(inout) :: this
-    end subroutine opencl_env_end
+    end subroutine f90_opencl_env_end
 
     subroutine f90_opencl_kernel_init(this, env, source_file, kernel_base_name)
       use c_pointer_m
@@ -74,7 +74,7 @@ module opencl_m
     subroutine opencl_init(this)
       type(opencl_t), intent(out) :: this
 
-      call opencl_env_init(this%env, trim(conf%share)//'/opencl/')      
+      call f90_opencl_env_init(this%env, trim(conf%share)//'/opencl/')      
 
       ! now initialize the kernels
       call f90_opencl_kernel_init(this%kernel_vpsi, this%env, "vpsi.cl", "vpsi");
@@ -85,7 +85,7 @@ module opencl_m
       type(opencl_t), intent(inout) :: this
       
       call f90_opencl_kernel_end(this%kernel_vpsi);
-      call opencl_env_end(this%env)
+      call f90_opencl_env_end(this%env)
     end subroutine opencl_end
 
 end module opencl_m

@@ -29,7 +29,7 @@ dist_upf_DATA = \
 # the `distcheck' target) the pseudopotential files have to be accessible
 # in the build tree.
 check:
-	@for f in $(dist_upf_DATA); do \
+	for f in $(dist_upf_DATA); do \
 	  if [ ! -e $$f -o $$f -ot $(srcdir)/$$f ]; then \
 	    cp $(srcdir)/$$f $$f; \
 	  fi \

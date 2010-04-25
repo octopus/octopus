@@ -29,7 +29,7 @@ dist_pp_DATA = defaults
 # the `distcheck' target) the pseudopotential files have to be accessible
 # in the build tree.
 check:
-	@for f in $(dist_pp_DATA); do \
+	for f in $(dist_pp_DATA); do \
 	  if [ ! -e $$f -o $$f -ot $(srcdir)/$$f ]; then \
 	    cp $(srcdir)/$$f $$f; \
 	  fi \

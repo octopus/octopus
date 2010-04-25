@@ -29,7 +29,7 @@
 
 #include "opencl.h"
 
-void FC_FUNC_(opencl_env_init,OPENCL_ENV_INIT)(opencl_env_t ** thisptr, STR_F_TYPE source_path_f STR_ARG1){
+void FC_FUNC_(f90_opencl_env_init,F90_OPENCL_ENV_INIT)(opencl_env_t ** thisptr, STR_F_TYPE source_path_f STR_ARG1){
   size_t ParamDataBytes;
   char device_string[2048];
   cl_uint dim;
@@ -92,7 +92,7 @@ void FC_FUNC_(opencl_env_init,OPENCL_ENV_INIT)(opencl_env_t ** thisptr, STR_F_TY
   TO_C_STR1(source_path_f, this->source_path);
 }
 
-void FC_FUNC_(opencl_env_end,OPENCL_ENV_END)(opencl_env_t ** thisptr){
+void FC_FUNC_(f90_opencl_env_end,F90_OPENCL_ENV_END)(opencl_env_t ** thisptr){
   opencl_env_t * this;
 
   this = *thisptr;
