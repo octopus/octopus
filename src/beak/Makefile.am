@@ -47,7 +47,8 @@ endif
 noinst_HEADERS =           \
 	beak.h             \
 	operate_ia64.S     \
-	opencl.h
+	opencl.h           \
+	opencl_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -60,3 +61,4 @@ operate_ri_vec.o : operate_ri_vec.c beak.h
 operate_as.S : operate_ia64.S
 operate_bg.o : operate_bg.c beak.h
 opencl.o : opencl.c opencl.h
+opencl_f.o : opencl_f.F90 opencl_inc.F90

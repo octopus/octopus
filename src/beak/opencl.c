@@ -202,3 +202,44 @@ void FC_FUNC_(f90_opencl_kernel_end, F90_OPENCL_KERNEL_END)(opencl_kernel_t ** t
   free(*this);
 }
 
+void FC_FUNC_(f90_opencl_create_buffer, F90_OPENCL_CREATE_BUFFER)
+     (cl_mem ** buffer, opencl_env_t ** env, const int * flags, const size_t * size){
+  cl_int ierr;
+
+  *buffer = (cl_mem *) malloc(sizeof(cl_mem));
+  **buffer = clCreateBuffer(env[0]->Context, *flags, (size_t) *size, NULL, &ierr);
+
+  if(ierr != CL_SUCCESS){
+    fprintf(stderr, "Error: buffer of size %d creation failed. Error code %d\n", *size, ierr);
+    exit(1);
+  }
+
+}
+
+void FC_FUNC_(f90_opencl_release_buffer, F90_OPENCL_RELEASE_BUFFER)(cl_mem ** buffer){
+  cl_int ierr;
+
+  ierr = clReleaseMemObject(**buffer);
+
+  if(ierr != CL_SUCCESS){
+    fprintf(stderr, "Error: buffer release failed. Error code %d\n", ierr);
+    exit(1);
+  }
+
+  free(*buffer);
+  
+}
+
+void FC_FUNC_(f90_opencl_write_buffer, F90_OPENCL_WRITE_BUFFER)
+     (cl_mem ** buffer, opencl_env_t ** env, const size_t * size, const size_t * offset, const void * data){
+  cl_int ierr;
+  
+  ierr = clEnqueueWriteBuffer(env[0]->CommandQueue, **buffer, CL_TRUE, *offset, *size, data, 0, NULL, NULL);
+
+  if(ierr != CL_SUCCESS){
+    fprintf(stderr, "Error: buffer write failed. Error code %d\n", ierr);
+    exit(1);
+  }
+
+}
+

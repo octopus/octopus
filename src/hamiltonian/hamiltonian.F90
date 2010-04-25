@@ -216,8 +216,6 @@ contains
     ASSERT(associated(gr%der%lapl))
     hm%hm_base%kinetic => gr%der%lapl
 
-    SAFE_ALLOCATE(hm%hm_base%potential(gr%mesh%np, hm%d%nspin))
-
     ! initialize variables
     hm%epot = M_ZERO
     hm%ex = M_ZERO

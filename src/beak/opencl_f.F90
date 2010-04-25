@@ -27,17 +27,33 @@ module opencl_m
 
   private
 
-  public ::             &
-    opencl_t,           &
-    opencl_init,        &
-    opencl_end
+  public ::                   &
+    opencl_t,                 &
+    opencl_init,              &
+    opencl_end,               &
+    opencl_mem_t,             &
+    dopencl_create_buffer,    &
+    zopencl_create_buffer,    &
+    iopencl_create_buffer,    &
+    opencl_write_buffer,      &
+    opencl_release_buffer
 
   type opencl_t 
     type(c_ptr) :: env
     type(c_ptr) :: kernel_vpsi
   end type opencl_t
 
+  type opencl_mem_t
+    type(c_ptr) :: mem
+  end type opencl_mem_t
+
   type(opencl_t), public :: opencl
+
+  ! this values are copied from OpenCL include CL/cl.h
+  integer, parameter, public ::        &
+    CL_MEM_READ_WRITE = 1,             &
+    CL_MEM_WRITE_ONLY = 2,             &
+    CL_MEM_READ_ONLY  = 4
 
   interface
     subroutine f90_opencl_env_init(this, source_path)
@@ -47,11 +63,15 @@ module opencl_m
       character(len=*), intent(in)  :: source_path
     end subroutine f90_opencl_env_init
 
+    ! ----------------------------------------------------
+
     subroutine f90_opencl_env_end(this)
       use c_pointer_m
 
       type(c_ptr), intent(inout) :: this
     end subroutine f90_opencl_env_end
+
+    ! ----------------------------------------------------
 
     subroutine f90_opencl_kernel_init(this, env, source_file, kernel_base_name)
       use c_pointer_m
@@ -62,18 +82,46 @@ module opencl_m
       character(len=*), intent(in)    :: kernel_base_name
     end subroutine f90_opencl_kernel_init
 
+    ! ----------------------------------------------------
+
     subroutine f90_opencl_kernel_end(this)
       use c_pointer_m
 
       type(c_ptr), intent(inout) :: this
     end subroutine f90_opencl_kernel_end
+
+    ! ----------------------------------------------------
+
+    subroutine f90_opencl_create_buffer(this, env, flags, size)
+      use c_pointer_m
+
+      type(c_ptr),            intent(inout) :: this
+      type(c_ptr),            intent(inout) :: env
+      integer,                intent(in)    :: flags
+      integer(SIZEOF_SIZE_T), intent(in)    :: size
+    end subroutine f90_opencl_create_buffer
+    
+    ! ----------------------------------------------------
+
+    subroutine f90_opencl_release_buffer(this)
+      use c_pointer_m
+
+      type(c_ptr),            intent(inout) :: this
+    end subroutine f90_opencl_release_buffer
+
+    ! ----------------------------------------------------
+
+  end interface
+
+  interface opencl_write_buffer
+    module procedure iopencl_write_buffer, dopencl_write_buffer, zopencl_write_buffer
   end interface
 
   contains
     
     subroutine opencl_init(this)
       type(opencl_t), intent(out) :: this
-
+      type(c_ptr) :: buf
       call f90_opencl_env_init(this%env, trim(conf%share)//'/opencl/')      
 
       ! now initialize the kernels
@@ -81,12 +129,35 @@ module opencl_m
     end subroutine opencl_init
 
     ! ------------------------------------------
+
     subroutine opencl_end(this)
       type(opencl_t), intent(inout) :: this
       
       call f90_opencl_kernel_end(this%kernel_vpsi);
       call f90_opencl_env_end(this%env)
     end subroutine opencl_end
+
+    ! ------------------------------------------
+
+    subroutine opencl_release_buffer(this)
+      type(opencl_mem_t), intent(inout) :: this
+
+      call f90_opencl_release_buffer(this%mem)
+    end subroutine opencl_release_buffer
+
+    ! ------------------------------------------
+
+#include "undef.F90"
+#include "real.F90"
+#include "opencl_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "opencl_inc.F90"
+
+#include "undef.F90"
+#include "integer.F90"
+#include "opencl_inc.F90"
 
 end module opencl_m
 

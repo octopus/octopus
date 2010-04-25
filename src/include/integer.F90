@@ -29,6 +29,7 @@
 #define R_CONJ(x)   (x)
 #define R_REAL(x)   (x)
 #define R_AIMAG(x)  (M_ZERO)
+#define R_SIZEOF    4
 
 #if defined(DISABLE_DEBUG)
 #define TS(x)       x

@@ -35,6 +35,9 @@ module hamiltonian_base_m
   use mesh_function_m
   use messages_m
   use nl_operator_m
+#ifdef HAVE_OPENCL
+  use opencl_m
+#endif
   use parser_m
   use profiling_m
   use projector_m
@@ -75,6 +78,9 @@ module hamiltonian_base_m
     FLOAT,               pointer :: uniform_magnetic_field(:)
     FLOAT,               pointer :: uniform_vector_potential(:)
     FLOAT,               pointer :: vector_potential(:, :)
+#ifdef HAVE_OPENCL
+    type(opencl_mem_t)           :: potential_opencl
+#endif
   end type hamiltonian_base_t
 
   integer, public ::                     &
@@ -159,6 +165,9 @@ contains
       if(.not. associated(this%potential)) then
         SAFE_ALLOCATE(this%potential(1:mesh%np, 1:this%nspin))
         this%potential = M_ZERO
+#ifdef HAVE_OPENCL
+        call dopencl_create_buffer(this%potential_opencl, opencl, CL_MEM_READ_ONLY, mesh%np)
+#endif
       end if
     end if
 
@@ -213,6 +222,12 @@ contains
       nullify(this%uniform_vector_potential)
 
     end if
+
+#ifdef HAVE_OPENCL
+    if(associated(this%potential)) then
+      call opencl_write_buffer(this%potential_opencl, opencl, mesh%np, this%potential(:, 1))
+    end if
+#endif
 
     call pop_sub('hamiltonian_base.hamiltonian_check')
   end subroutine hamiltonian_base_check
