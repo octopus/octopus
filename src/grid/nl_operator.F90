@@ -37,6 +37,7 @@ module nl_operator_m
   use profiling_m
   use simul_box_m
   use stencil_m
+  use types_m
 
   implicit none
 
@@ -179,7 +180,7 @@ contains
 
     call parse_integer(datasets_check('OperateDouble'),  -1, dfunction_global)
     if(dfunction_global.ne.-1) then
-      if(op_is_available(dfunction_global, M_REAL)  == 0) then
+      if(op_is_available(dfunction_global, TYPE_FLOAT)  == 0) then
         message(1) = 'OperateDouble option chosen is not available on this platform.'
         call write_fatal(1)
       end if
@@ -187,7 +188,7 @@ contains
 
     call parse_integer(datasets_check('OperateComplex'), -1, zfunction_global)
     if(zfunction_global.ne.-1) then
-      if(op_is_available(zfunction_global, M_CMPLX) == 0) then
+      if(op_is_available(zfunction_global, TYPE_CMPLX) == 0) then
         message(1) = 'OperateComplex option chosen is not available on this platform.'
         call write_fatal(1)
       end if

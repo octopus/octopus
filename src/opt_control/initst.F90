@@ -35,6 +35,7 @@ module opt_control_initst_m
   use system_m
   use v_ks_m
   use varinfo_m
+  use types_m
 
   implicit none
 
@@ -68,7 +69,7 @@ module opt_control_initst_m
 
     call states_copy(initial_state, sys%st)
     call states_deallocate_wfns(initial_state)
-    call states_allocate_wfns(initial_state, sys%gr%mesh, M_CMPLX)
+    call states_allocate_wfns(initial_state, sys%gr%mesh, TYPE_CMPLX)
 
     !%Variable OCTInitialState
     !%Type integer

@@ -52,8 +52,8 @@ typedef struct {
 #define OP_AS      3
 #define OP_BG      4
 
-#define M_REAL     1
-#define M_CMPLX    2
+#define TYPE_REAL     1
+#define TYPE_CMPLX    2
 
 #define MAX_OP_N   400
 

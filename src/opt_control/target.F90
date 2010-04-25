@@ -46,6 +46,7 @@ module opt_control_target_m
   use td_m
   use unit_m
   use unit_system_m
+  use types_m
   use varinfo_m
 
   implicit none
@@ -187,7 +188,7 @@ module opt_control_target_m
 
     call states_copy(target%st, stin)
     call states_deallocate_wfns(target%st)
-    call states_allocate_wfns(target%st, gr%mesh, M_CMPLX)
+    call states_allocate_wfns(target%st, gr%mesh, TYPE_CMPLX)
 
     nullify(target%td_fitness)
 
@@ -217,7 +218,7 @@ module opt_control_target_m
         SAFE_DEALLOCATE_P(target%st%spin)
         SAFE_ALLOCATE(target%st%spin(1:3, 1:target%st%nst, 1:target%st%d%nik))
       end if
-      call states_allocate_wfns(target%st, gr%mesh, M_CMPLX)
+      call states_allocate_wfns(target%st, gr%mesh, TYPE_CMPLX)
       target%st%node(:)  = 0
 
       call restart_read(trim(restart_dir)//GS_DIR, target%st, gr, geo, ierr, exact = .true.)

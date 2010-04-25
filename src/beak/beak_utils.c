@@ -66,7 +66,7 @@ int FC_FUNC_(op_is_available, OP_IS_AVAILABLE)
 #ifndef HAVE_BLUE_GENE
   if( *opid == OP_BG ) result = 0;
 #endif
-  if((*opid == OP_BG) && (*type == M_REAL)) result = 0;
+  if((*opid == OP_BG) && (*type == TYPE_REAL)) result = 0;
 
 #ifdef SINGLE_PRECISION
   if( *opid == OP_AS ) result = 0;

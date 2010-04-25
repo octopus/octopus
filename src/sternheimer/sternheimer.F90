@@ -51,6 +51,7 @@ module sternheimer_m
   use system_m
   use unit_m
   use unit_system_m
+  use types_m
   use v_ks_m
   use xc_m
   use XC_F90(lib_m)

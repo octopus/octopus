@@ -47,6 +47,7 @@ module restart_m
   use string_m
   use unit_m
   use unit_system_m
+  use types_m
   use varinfo_m
 
   implicit none
@@ -188,9 +189,9 @@ contains
 
     if (present(is_complex)) then
       if ( is_complex ) then 
-        call states_allocate_wfns(st, gr%mesh, M_CMPLX)
+        call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
       else 
-        call states_allocate_wfns(st, gr%mesh, M_REAL)
+        call states_allocate_wfns(st, gr%mesh, TYPE_FLOAT)
       end if
     else
       ! allow states_allocate_wfns to decide for itself whether complex or real needed

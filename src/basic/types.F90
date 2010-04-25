@@ -29,14 +29,14 @@ module types_m
     types_get_size
 
   integer, public, parameter ::   &
-    TYPE_INTEGER          =   1,  &
-    TYPE_FLOAT            =   2,  &
-    TYPE_CMPLX            =   3
+    TYPE_FLOAT            =   1,  &
+    TYPE_CMPLX            =   2,  &
+    TYPE_INTEGER          =   3
   
 #ifdef SINGLE_PRECISION
-  integer :: sizes(3) = (/4, 4, 8/)
+  integer :: sizes(3) = (/4, 8, 4/)
 #else
-  integer :: sizes(3) = (/4, 8, 16/)
+  integer :: sizes(3) = (/8, 16, 4/)
 #endif
 
   contains

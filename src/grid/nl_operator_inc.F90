@@ -65,9 +65,9 @@ subroutine X(nl_operator_tune)(op, best)
 
     !skip methods that are not available
 #ifdef R_TCOMPLEX
-    if (op_is_available(method, M_CMPLX) == 0) cycle
+    if (op_is_available(method, TYPE_CMPLX) == 0) cycle
 #else
-    if (op_is_available(method, M_REAL)  == 0) cycle
+    if (op_is_available(method, TYPE_FLOAT)  == 0) cycle
 #endif
     op%X(function) = method
 
@@ -146,9 +146,9 @@ subroutine X(nl_operator_tune)(op, best)
 
     do method = OP_MIN, OP_MAX
 #ifdef R_TCOMPLEX
-      if (op_is_available(method, M_CMPLX) == 0) cycle
+      if (op_is_available(method, TYPE_CMPLX) == 0) cycle
 #else
-      if (op_is_available(method, M_REAL)  == 0) cycle
+      if (op_is_available(method, TYPE_FLOAT)  == 0) cycle
 #endif
       marker = '  '
       if(method == op%X(function)) marker = '* '

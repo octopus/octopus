@@ -55,6 +55,7 @@ module states_m
   use symmetrizer_m
   use unit_m
   use unit_system_m
+  use types_m
   use varinfo_m
 
   implicit none
@@ -112,7 +113,7 @@ module states_m
 
   type states_priv_t
     private
-    integer :: wfs_type              !< real (M_REAL) or complex (M_CMPLX) wavefunctions
+    integer :: wfs_type              !< real (TYPE_FLOAT) or complex (TYPE_CMPLX) wavefunctions
   end type states_priv_t
 
   type states_t
@@ -202,7 +203,7 @@ contains
     nullify(st%st_range, st%st_num)
 
     ! By default, calculations use real wavefunctions
-    st%priv%wfs_type = M_REAL
+    st%priv%wfs_type = TYPE_FLOAT
 
     call modelmb_particles_nullify(st%modelmbparticles)
 
@@ -250,7 +251,7 @@ contains
     if(.not.varinfo_valid_option('SpinComponents', st%d%ispin)) call input_error('SpinComponents')
     call messages_print_var_option(stdout, 'SpinComponents', st%d%ispin)
     ! Use of spinors requires complex wavefunctions.
-    if (st%d%ispin == SPINORS) st%priv%wfs_type = M_CMPLX
+    if (st%d%ispin == SPINORS) st%priv%wfs_type = TYPE_CMPLX
 
 
     !%Variable ExcessCharge
@@ -446,7 +447,7 @@ contains
       call messages_devel_version('Current DFT')
 
       ! Use of CDFT requires complex wavefunctions
-      st%priv%wfs_type = M_CMPLX
+      st%priv%wfs_type = TYPE_CMPLX
 
       if(st%d%ispin == SPINORS) then
         message(1) = "Sorry, current DFT not working yet for spinors."
@@ -460,12 +461,12 @@ contains
     ! but not if it is Gamma-point only
     if(simul_box_is_periodic(gr%sb)) then
       if(.not. (st%d%nik == 1 .and. kpoint_is_gamma(st%d, 1))) then
-        st%priv%wfs_type = M_CMPLX
+        st%priv%wfs_type = TYPE_CMPLX
       endif
     endif
 
     ! Calculations with open boundaries require complex wavefunctions.
-    if(gr%ob_grid%open_boundaries) st%priv%wfs_type = M_CMPLX
+    if(gr%ob_grid%open_boundaries) st%priv%wfs_type = TYPE_CMPLX
 
     !%Variable OnlyUserDefinedInitialStates
     !%Type logical
@@ -879,7 +880,7 @@ contains
     end if
     
     if (present(wfs_type)) then
-      ASSERT(wfs_type == M_REAL .or. wfs_type == M_CMPLX)
+      ASSERT(wfs_type == TYPE_FLOAT .or. wfs_type == TYPE_CMPLX)
       st%priv%wfs_type = wfs_type
     end if
 
@@ -1430,7 +1431,7 @@ contains
 
     case(SPINORS)
 
-      ASSERT(st%priv%wfs_type == M_CMPLX)
+      ASSERT(st%priv%wfs_type == TYPE_CMPLX)
 
       if(st%fixed_spins) then
         
@@ -1514,7 +1515,7 @@ contains
     if(st%d%ispin == SPINORS) then
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
-          if (st%priv%wfs_type == M_REAL) then
+          if (st%priv%wfs_type == TYPE_FLOAT) then
             write(message(1),'(a)') 'Internal error in states_fermi.'
             call write_fatal(1)
           else
@@ -2295,7 +2296,7 @@ return
   subroutine states_set_complex(st)
     type(states_t),    intent(inout) :: st
 
-    st%priv%wfs_type = M_CMPLX
+    st%priv%wfs_type = TYPE_CMPLX
 
   end subroutine states_set_complex
 
@@ -2303,7 +2304,7 @@ return
   pure logical function states_are_complex(st) result (wac)
     type(states_t),    intent(in) :: st
 
-    wac = (st%priv%wfs_type == M_CMPLX)
+    wac = (st%priv%wfs_type == TYPE_CMPLX)
 
   end function states_are_complex
 
@@ -2312,7 +2313,7 @@ return
   pure logical function states_are_real(st) result (war)
     type(states_t),    intent(in) :: st
 
-    war = (st%priv%wfs_type == M_REAL)
+    war = (st%priv%wfs_type == TYPE_FLOAT)
 
   end function states_are_real
 
@@ -2700,7 +2701,7 @@ return
 
     call states_deallocate_wfns(st)
     call states_distribute_nodes(st, mc)
-    call states_allocate_wfns(st, gr%mesh, M_CMPLX)
+    call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
 
 #if defined(HAVE_MPI) 
 

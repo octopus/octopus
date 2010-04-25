@@ -59,6 +59,7 @@ module td_m
   use td_write_m
   use unit_m
   use unit_system_m
+  use types_m
   use v_ks_m
   use varinfo_m
 
@@ -139,7 +140,7 @@ contains
         call states_allocate_wfns(st, gr%mesh, ob_mesh = gr%ob_grid%lead(:)%mesh)
       else
         !complex wfs are required for Ehrenfest
-        call states_allocate_wfns(st, gr%mesh, M_CMPLX)
+        call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
       end if
     else
       call states_allocate_wfns(st, gr%mesh)

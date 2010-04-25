@@ -27,6 +27,7 @@ module mix_m
   use messages_m
   use parser_m
   use profiling_m
+  use types_m
   use varinfo_m
 
   implicit none
@@ -89,7 +90,7 @@ contains
     if(present(func_type)) then 
       func_type_ = func_type
     else 
-      func_type_ = M_REAL
+      func_type_ = TYPE_FLOAT
     end if
     prefix = ""
     if(present(prefix_)) prefix = prefix_
@@ -159,7 +160,7 @@ contains
 
     select case (smix%type_of_mixing)
     case (MIX_GRPULAY)
-      if(func_type_ == M_REAL) then 
+      if(func_type_ == TYPE_FLOAT) then 
         SAFE_ALLOCATE(     smix%ddf(1:d1, 1:d2, 1:d3, 1:smix%ns + 1))
         SAFE_ALLOCATE(smix%dvin_old(1:d1, 1:d2, 1:d3))
         SAFE_ALLOCATE(     smix%ddv(1:d1, 1:d2, 1:d3, 1:smix%ns + 1))
@@ -172,7 +173,7 @@ contains
       end if
 
     case (MIX_BROYDEN)
-      if(func_type_ == M_REAL) then 
+      if(func_type_ == TYPE_FLOAT) then 
         SAFE_ALLOCATE(     smix%ddf(1:d1, 1:d2, 1:d3, 1:smix%ns))
         SAFE_ALLOCATE(smix%dvin_old(1:d1, 1:d2, 1:d3))
         SAFE_ALLOCATE(     smix%ddv(1:d1, 1:d2, 1:d3, 1:smix%ns))
@@ -204,12 +205,12 @@ contains
     if(present(func_type)) then 
       func_type_ = func_type
     else 
-      func_type_ = M_REAL
+      func_type_ = TYPE_FLOAT
     end if
 
     select case (smix%type_of_mixing)
     case (MIX_GRPULAY)
-      if(func_type_ == M_REAL) then 
+      if(func_type_ == TYPE_FLOAT) then 
         smix%ddf = M_ZERO
         smix%ddv = M_ZERO
         smix%dvin_old = M_ZERO
@@ -222,7 +223,7 @@ contains
       end if
 
     case (MIX_BROYDEN)
-      if(func_type_ == M_REAL) then 
+      if(func_type_ == TYPE_FLOAT) then 
         smix%ddf = M_ZERO
         smix%ddv = M_ZERO
         smix%dvin_old = M_ZERO

@@ -60,10 +60,6 @@ module global_m
 
   FLOAT, public, parameter :: r_small = CNST(0.0001)
 
-  !the types for wfns
-  integer, public, parameter :: M_REAL  = 1
-  integer, public, parameter :: M_CMPLX = 2
-
   ! some mathematical constants
   FLOAT, public, parameter :: M_Pi        = CNST(3.1415926535897932384626433832795029)
   FLOAT, public, parameter :: M_E         = CNST(2.7182818284590452353602874713526625)  

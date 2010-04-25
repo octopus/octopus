@@ -63,9 +63,9 @@ subroutine X(sternheimer_solve)(                           &
   st => sys%st
   
 #ifdef R_TREAL
-  call mix_init(this%mixer, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type = M_REAL)
+  call mix_init(this%mixer, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type = TYPE_FLOAT)
 #else
-  call mix_init(this%mixer, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type = M_CMPLX)
+  call mix_init(this%mixer, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type = TYPE_CMPLX)
 #endif
 
   call mesh_init_mesh_aux(sys%gr%mesh)
