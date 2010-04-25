@@ -26,7 +26,11 @@ module batch_m
   use lalg_basic_m
   use parser_m
   use messages_m
+#ifdef HAVE_OPENCL
+  use opencl_m
+#endif
   use profiling_m
+  use types_m
   use varinfo_m
 
   implicit none
@@ -45,6 +49,9 @@ module batch_m
     dbatch_delete,           &
     zbatch_delete,           &
     batch_set,               &
+#ifdef HAVE_OPENCL
+    batch_to_opencl_buffer,  &
+#endif
     batch_is_ok
 
   !--------------------------------------------------------------
@@ -220,6 +227,42 @@ contains
 
   end subroutine batch_copy
 
+  integer pure function batch_type(this) result(btype)
+    type(batch_t),      intent(in)    :: this
+
+    if(associated(this%states_linear(1)%dpsi)) btype = TYPE_FLOAT
+    if(associated(this%states_linear(1)%zpsi)) btype = TYPE_CMPLX
+  end function batch_type
+
+  ! ----------------------------------------------------
+#ifdef HAVE_OPENCL
+  subroutine batch_to_opencl_buffer(this, opencl, np, flags, buffer)
+    type(batch_t),      intent(in)    :: this
+    type(opencl_t),     intent(inout) :: opencl
+    integer,            intent(in)    :: np
+    integer,            intent(in)    :: flags
+    type(opencl_mem_t), intent(out)   :: buffer
+
+    integer(SIZEOF_SIZE_T) :: size, pnp
+    integer :: ist
+
+    pnp = opencl_padded_size(opencl, np, batch_type(this))
+    size = pnp*this%nst_linear
+
+    ASSERT(batch_is_ok(this))
+
+    call opencl_create_buffer(buffer, opencl, flags, batch_type(this), size)
+
+    do ist = 1, this%nst_linear
+      if(batch_type(this) == TYPE_FLOAT) then
+        call opencl_write_buffer(buffer, opencl, np, this%states_linear(ist)%dpsi, offset = (ist - 1)*pnp)
+      else
+        call opencl_write_buffer(buffer, opencl, np, this%states_linear(ist)%zpsi, offset = (ist - 1)*pnp)
+      end if
+    end do
+
+  end subroutine batch_to_opencl_buffer
+#endif
 
 #include "undef.F90"
 #include "real.F90"

@@ -167,7 +167,9 @@ contains
         SAFE_ALLOCATE(this%potential(1:mesh%np, 1:this%nspin))
         this%potential = M_ZERO
 #ifdef HAVE_OPENCL
-        call opencl_create_buffer(this%potential_opencl, opencl, CL_MEM_READ_ONLY, TYPE_FLOAT, mesh%np)
+        if(opencl_is_available(opencl)) then
+          call opencl_create_buffer(this%potential_opencl, opencl, CL_MEM_READ_ONLY, TYPE_FLOAT, mesh%np)
+        end if
 #endif
       end if
     end if
@@ -225,7 +227,7 @@ contains
     end if
 
 #ifdef HAVE_OPENCL
-    if(associated(this%potential)) then
+    if(associated(this%potential) .and. opencl_is_available(opencl)) then
       call opencl_write_buffer(this%potential_opencl, opencl, mesh%np, this%potential(:, 1))
     end if
 #endif

@@ -207,6 +207,12 @@ void FC_FUNC_(f90_opencl_create_buffer, F90_OPENCL_CREATE_BUFFER)
   cl_int ierr;
 
   *buffer = (cl_mem *) malloc(sizeof(cl_mem));
+  
+  /*
+  printf("\nCreateBuffer\n");
+  printf("queue=%ld buffer=%ld size=%d\n", env[0]->CommandQueue, **buffer, *size);
+  */
+
   **buffer = clCreateBuffer(env[0]->Context, *flags, (size_t) *size, NULL, &ierr);
 
   if(ierr != CL_SUCCESS){
@@ -233,7 +239,12 @@ void FC_FUNC_(f90_opencl_release_buffer, F90_OPENCL_RELEASE_BUFFER)(cl_mem ** bu
 void FC_FUNC_(f90_opencl_write_buffer, F90_OPENCL_WRITE_BUFFER)
      (cl_mem ** buffer, opencl_env_t ** env, const size_t * size, const size_t * offset, const void * data){
   cl_int ierr;
-  
+
+  /*
+  printf("\nWriteBuffer\n");
+  printf("queue=%ld buffer=%ld data=%ld offest=%ld size=%d\n", env[0]->CommandQueue, **buffer, data, *offset, *size);
+  */
+
   ierr = clEnqueueWriteBuffer(env[0]->CommandQueue, **buffer, CL_TRUE, *offset, *size, data, 0, NULL, NULL);
 
   if(ierr != CL_SUCCESS){

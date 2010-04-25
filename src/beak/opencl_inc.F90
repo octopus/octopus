@@ -18,18 +18,20 @@
 !! $Id: opencl_inc.F90 3587 2007-11-22 16:43:00Z xavier $
 
 
-subroutine X(opencl_write_buffer)(this, opencl, size, data)
-  type(opencl_mem_t), intent(inout) :: this
-  type(opencl_t),     intent(inout) :: opencl
-  integer,            intent(in)    :: size
-  R_TYPE,             intent(in)    :: data(:)
-  
-  integer(SIZEOF_SIZE_T) :: fsize, offset
+subroutine X(opencl_write_buffer)(this, opencl, size, data, offset)
+  type(opencl_mem_t),               intent(inout) :: this
+  type(opencl_t),                   intent(inout) :: opencl
+  integer,                          intent(in)    :: size
+  R_TYPE,                           intent(in)    :: data(:)
+  integer(SIZEOF_SIZE_T), optional, intent(in)    :: offset
+
+  integer(SIZEOF_SIZE_T) :: fsize, offset_
   
   fsize = size*R_SIZEOF
-  offset = 0
+  offset_ = 0
+  if(present(offset)) offset_ = offset*R_SIZEOF
 
-  call f90_opencl_write_buffer(this%mem, opencl%env, fsize, offset, data(1))
+  call f90_opencl_write_buffer(this%mem, opencl%env, fsize, offset_, data(1))
 
 end subroutine X(opencl_write_buffer)
 

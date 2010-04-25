@@ -27,12 +27,19 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
 
   integer :: ist, idim, ip
   R_TYPE, pointer :: psi(:, :), vpsi(:, :)
+#ifdef HAVE_OPENCL
+  type(opencl_mem_t) :: psi_buf
+#endif
 
   call profiling_in(prof_vlpsi, "VLPSI")
   call push_sub('hamiltonian_base_inc.Xhamiltonian_base_local')
 
   if(associated(this%potential)) then
-
+#ifdef HAVE_OPENCL
+    if(opencl_is_available(opencl) .and. std%ispin == UNPOLARIZED) then
+      call batch_to_opencl_buffer(psib, opencl, mesh%np, CL_MEM_READ_ONLY, psi_buf)
+    end if
+#endif
     select case(std%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
       !$omp parallel do private(idim, ip)

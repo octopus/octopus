@@ -29,13 +29,15 @@ module opencl_m
   private
 
   public ::                   &
+    opencl_is_available,      &
     opencl_t,                 &
     opencl_init,              &
     opencl_end,               &
     opencl_mem_t,             &
     opencl_create_buffer,     &
     opencl_write_buffer,      &
-    opencl_release_buffer
+    opencl_release_buffer,    &
+    opencl_padded_size
 
   type opencl_t 
     type(c_ptr) :: env
@@ -55,6 +57,8 @@ module opencl_m
     CL_MEM_READ_ONLY  = 4
 
   interface
+    ! ---------------------------------------------------
+
     subroutine f90_opencl_env_init(this, source_path)
       use c_pointer_m
 
@@ -116,11 +120,23 @@ module opencl_m
     module procedure iopencl_write_buffer, dopencl_write_buffer, zopencl_write_buffer
   end interface
 
+  interface opencl_create_buffer
+    module procedure opencl_create_buffer_4, opencl_create_buffer_8
+  end interface
+
   contains
+
+    pure logical function opencl_is_available(this) result(available)
+      type(opencl_t), intent(in) :: this
     
+      available = .true.
+    end function opencl_is_available
+
+    ! ------------------------------------------
+
     subroutine opencl_init(this)
       type(opencl_t), intent(out) :: this
-      type(c_ptr) :: buf
+
       call f90_opencl_env_init(this%env, trim(conf%share)//'/opencl/')      
 
       ! now initialize the kernels
@@ -138,7 +154,7 @@ module opencl_m
 
     ! ------------------------------------------
 
-    subroutine opencl_create_buffer(this, opencl, flags, type, size)
+    subroutine opencl_create_buffer_4(this, opencl, flags, type, size)
       type(opencl_mem_t), intent(inout) :: this
       type(opencl_t),     intent(inout) :: opencl
       integer,            intent(in)    :: flags
@@ -151,7 +167,24 @@ module opencl_m
       
       call f90_opencl_create_buffer(this%mem, opencl%env, flags, fsize)
       
-    end subroutine opencl_create_buffer
+    end subroutine opencl_create_buffer_4
+
+    ! ------------------------------------------
+
+    subroutine opencl_create_buffer_8(this, opencl, flags, type, size)
+      type(opencl_mem_t),     intent(inout) :: this
+      type(opencl_t),         intent(inout) :: opencl
+      integer,                intent(in)    :: flags
+      integer,                intent(in)    :: type
+      integer(SIZEOF_SIZE_T), intent(in)    :: size
+      
+      integer(SIZEOF_SIZE_T) :: fsize
+      
+      fsize = size*types_get_size(type)
+
+      call f90_opencl_create_buffer(this%mem, opencl%env, flags, fsize)
+      
+    end subroutine opencl_create_buffer_8
 
     ! ------------------------------------------
 
@@ -162,6 +195,21 @@ module opencl_m
     end subroutine opencl_release_buffer
 
     ! ------------------------------------------
+
+    integer(SIZEOF_SIZE_T) function opencl_padded_size(this, nn, type) result(psize)
+      type(opencl_t), intent(in) :: this
+      integer,        intent(in) :: nn
+      integer,        intent(in) :: type
+
+      integer :: modnn, bsize
+
+      bsize = 1024/types_get_size(type)
+
+      psize = nn
+      modnn = mod(nn, bsize)
+      if(modnn /= 0) psize = psize + bsize - modnn
+      
+    end function opencl_padded_size
 
 #include "undef.F90"
 #include "real.F90"
