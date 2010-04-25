@@ -85,7 +85,7 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
   integer :: ist, idim, ip
   R_TYPE, pointer :: psi(:, :), vpsi(:, :)
   R_TYPE, allocatable :: grad(:, :, :)
-  FLOAT :: a2, cc, b2, bb(1:MAX_DIM)
+  FLOAT :: cc, b2, bb(1:MAX_DIM)
   CMPLX :: b12
 
   if(.not. hamiltonian_base_has_magnetic(this)) return

@@ -22,6 +22,7 @@
 #define X(x)        i ## x
 
 #define R_TYPE      integer
+#define R_TYPE_VAL  TYPE_INTEGER
 #define R_MPITYPE   MPI_INTEGER
 #define R_TOTYPE(x) (x)
 

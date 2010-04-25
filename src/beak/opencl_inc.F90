@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2010 X. Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -15,34 +15,23 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id$
+!! $Id: opencl_inc.F90 3587 2007-11-22 16:43:00Z xavier $
 
-#define R_TCOMPLEX 1
 
-#define R_TYPE      CMPLX
-#define R_SINGLE    complex(4)
-#define R_DOUBLE    complex(8)
-#define R_MPITYPE   MPI_CMPLX
-#define R_TYPE_VAL  TYPE_CMPLX
-#define R_TOTYPE(x) cmplx(x, M_ZERO, REAL_PRECISION)
-#define R_TOPREC(x) cmplx(real(x), aimag(x), REAL_PRECISION)
+subroutine X(opencl_write_buffer)(this, opencl, size, data)
+  type(opencl_mem_t), intent(inout) :: this
+  type(opencl_t),     intent(inout) :: opencl
+  integer,            intent(in)    :: size
+  R_TYPE,             intent(in)    :: data(:)
+  
+  integer(SIZEOF_SIZE_T) :: fsize, offset
+  
+  fsize = size*R_SIZEOF
+  offset = 0
 
-#define R_ABS(x)    abs(x)
-#define R_CONJ(x)   conjg(x)
-#define R_REAL(x)   real(x, REAL_PRECISION)
-#define R_AIMAG(x)  aimag(x)
+  call f90_opencl_write_buffer(this%mem, opencl%env, fsize, offset, data(1))
 
-#define R_SIZEOF    16
-#define R_ADD       2
-#define R_MUL       6
-
-#define X(x)        z ## x
-
-#if defined(DISABLE_DEBUG)
-#define TS(x)       x
-#else
-#define TS(x)       TSZ_ ## x
-#endif
+end subroutine X(opencl_write_buffer)
 
 
 !! Local Variables:

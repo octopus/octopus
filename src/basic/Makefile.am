@@ -41,7 +41,8 @@ libbasic_a_SOURCES = \
 	signals.c        \
 	subarray.F90     \
 	io_binary_f.F90  \
-	lookup.F90
+	lookup.F90       \
+	types.F90
 
 if COMPILE_PAPI
 libbasic_a_SOURCES += papi.c papi_f.F90
@@ -101,3 +102,4 @@ io_binary_f.o : io_binary_f.F90 io_binary.h messages.o
 papi.o : papi.c
 papi_f.o : papi_f.F90
 lookup.o : lookup.F90 global.o messages.o profiling.o
+types.o : types.F90

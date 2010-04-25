@@ -22,6 +22,7 @@
 module opencl_m
   use c_pointer_m
   use global_m
+  use types_m
 
   implicit none 
 
@@ -32,9 +33,7 @@ module opencl_m
     opencl_init,              &
     opencl_end,               &
     opencl_mem_t,             &
-    dopencl_create_buffer,    &
-    zopencl_create_buffer,    &
-    iopencl_create_buffer,    &
+    opencl_create_buffer,     &
     opencl_write_buffer,      &
     opencl_release_buffer
 
@@ -136,6 +135,23 @@ module opencl_m
       call f90_opencl_kernel_end(this%kernel_vpsi);
       call f90_opencl_env_end(this%env)
     end subroutine opencl_end
+
+    ! ------------------------------------------
+
+    subroutine opencl_create_buffer(this, opencl, flags, type, size)
+      type(opencl_mem_t), intent(inout) :: this
+      type(opencl_t),     intent(inout) :: opencl
+      integer,            intent(in)    :: flags
+      integer,            intent(in)    :: type
+      integer,            intent(in)    :: size
+      
+      integer(SIZEOF_SIZE_T) :: fsize
+      
+      fsize = size*types_get_size(type)
+      
+      call f90_opencl_create_buffer(this%mem, opencl%env, flags, fsize)
+      
+    end subroutine opencl_create_buffer
 
     ! ------------------------------------------
 

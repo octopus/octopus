@@ -48,6 +48,7 @@ module hamiltonian_base_m
   use states_m
   use states_dim_m
   use submesh_m
+  use types_m
   use varinfo_m
 
   implicit none
@@ -166,7 +167,7 @@ contains
         SAFE_ALLOCATE(this%potential(1:mesh%np, 1:this%nspin))
         this%potential = M_ZERO
 #ifdef HAVE_OPENCL
-        call dopencl_create_buffer(this%potential_opencl, opencl, CL_MEM_READ_ONLY, mesh%np)
+        call opencl_create_buffer(this%potential_opencl, opencl, CL_MEM_READ_ONLY, TYPE_FLOAT, mesh%np)
 #endif
       end if
     end if

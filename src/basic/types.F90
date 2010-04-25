@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2010 X. Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -15,35 +15,39 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id$
+!! $Id: calc_mode.F90 6441 2010-04-03 23:00:15Z xavier $
 
-#define R_TCOMPLEX 1
+#include "global.h"
 
-#define R_TYPE      CMPLX
-#define R_SINGLE    complex(4)
-#define R_DOUBLE    complex(8)
-#define R_MPITYPE   MPI_CMPLX
-#define R_TYPE_VAL  TYPE_CMPLX
-#define R_TOTYPE(x) cmplx(x, M_ZERO, REAL_PRECISION)
-#define R_TOPREC(x) cmplx(real(x), aimag(x), REAL_PRECISION)
+module types_m
+  
+  implicit none
+  
+  private
 
-#define R_ABS(x)    abs(x)
-#define R_CONJ(x)   conjg(x)
-#define R_REAL(x)   real(x, REAL_PRECISION)
-#define R_AIMAG(x)  aimag(x)
+  public ::            &
+    types_get_size
 
-#define R_SIZEOF    16
-#define R_ADD       2
-#define R_MUL       6
-
-#define X(x)        z ## x
-
-#if defined(DISABLE_DEBUG)
-#define TS(x)       x
+  integer, public, parameter ::   &
+    TYPE_INTEGER          =   1,  &
+    TYPE_FLOAT            =   2,  &
+    TYPE_CMPLX            =   3
+  
+#ifdef SINGLE_PRECISION
+  integer :: sizes(3) = (/4, 4, 8/)
 #else
-#define TS(x)       TSZ_ ## x
+  integer :: sizes(3) = (/4, 8, 16/)
 #endif
 
+  contains
+
+  integer function types_get_size(type) result(size)
+    integer, intent(in) :: type
+    
+    size = sizes(type)
+  end function types_get_size
+
+end module types_m
 
 !! Local Variables:
 !! mode: f90
