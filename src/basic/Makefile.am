@@ -48,13 +48,21 @@ if COMPILE_PAPI
 libbasic_a_SOURCES += papi.c papi_f.F90
 endif
 
+if COMPILE_OPENCL
+ libbasic_a_SOURCES +=      \
+	opencl_low.c        \
+	opencl.F90
+endif
+
 noinst_HEADERS =          \
 	mpi_debug_inc.F90 \
 	mpi_lib_inc.F90   \
 	loct_inc.F90      \
 	subarray_inc.F90  \
 	varia.h           \
-	io_binary.h
+	io_binary.h       \
+	opencl.h          \
+	opencl_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -103,3 +111,4 @@ papi.o : papi.c
 papi_f.o : papi_f.F90
 lookup.o : lookup.F90 global.o messages.o profiling.o
 types.o : types.F90
+opencl.o : opencl.F90 opencl_inc.F90 global.o c_pointer.o types.o

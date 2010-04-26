@@ -25,7 +25,6 @@ libbeak_a_SOURCES =   \
 	beak_utils.c  \
 	operate_ri.c
 
-
 if COMPILE_VEC
 libbeak_a_SOURCES += operate_ri_vec.c
 endif
@@ -38,17 +37,9 @@ if COMPILE_BG
  libbeak_a_SOURCES += operate_bg.c
 endif
 
-if COMPILE_OPENCL
- libbeak_a_SOURCES +=      \
-	opencl.c           \
-	opencl_f.F90
-endif
-
 noinst_HEADERS =           \
 	beak.h             \
-	operate_ia64.S     \
-	opencl.h           \
-	opencl_inc.F90
+	operate_ia64.S
 
 include $(srcdir)/../common-rules.make
 
@@ -60,5 +51,3 @@ operate_ri.o : operate_ri.c beak.h
 operate_ri_vec.o : operate_ri_vec.c beak.h 
 operate_as.S : operate_ia64.S
 operate_bg.o : operate_bg.c beak.h
-opencl.o : opencl.c opencl.h
-opencl_f.o : opencl_f.F90 opencl_inc.F90
