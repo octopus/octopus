@@ -206,7 +206,7 @@ module loct_math_m
   interface loct_ran_end
     subroutine oct_ran_end(r)
       use c_pointer_m
-      type(c_ptr), intent(out) :: r
+      type(c_ptr), intent(inout) :: r
     end subroutine oct_ran_end
   end interface
 

@@ -20,7 +20,7 @@
 #include "global.h"
 
 #ifndef F2003_C_PTR 
-module types_m 
+module c_pointer_types_m 
 
   implicit none 
   
@@ -29,14 +29,14 @@ module types_m
     integer, pointer :: p 
   end type c_ptr
   
-end module types_m
+end module c_pointer_types_m
 #endif
 
 module c_pointer_m
 #ifdef F2003_C_PTR
   use iso_c_binding
 #else
-  use types_m
+  use c_pointer_types_m
 #endif
 
   ! This module must be public, because the Sun compiler cannot
@@ -47,14 +47,14 @@ module c_pointer_m
 #ifndef F2003_C_PTR
   interface
     subroutine set_null(ptr)
-      use types_m
+      use c_pointer_types_m
       type(c_ptr), intent(out) :: ptr
     end subroutine set_null
   end interface
 
   interface
     function is_null_int(ptr)
-      use types_m
+      use c_pointer_types_m
       type(c_ptr), intent(in) :: ptr
       integer :: is_null_int
     end function is_null_int
