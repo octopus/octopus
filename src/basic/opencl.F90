@@ -37,7 +37,8 @@ module opencl_m
     opencl_write_buffer,      &
     opencl_read_buffer,       &
     opencl_release_buffer,    &
-    opencl_padded_size
+    opencl_padded_size,       &
+    opencl_finish
 
   type opencl_t 
     type(c_ptr) :: env
@@ -111,6 +112,14 @@ module opencl_m
 
       type(c_ptr),            intent(inout) :: this
     end subroutine f90_opencl_release_buffer
+
+    ! ----------------------------------------------------
+
+    subroutine f90_opencl_finish(this)
+      use c_pointer_m
+
+      type(c_ptr),            intent(inout) :: this
+    end subroutine f90_opencl_finish
 
     ! ----------------------------------------------------
 
@@ -207,6 +216,12 @@ module opencl_m
       if(modnn /= 0) psize = psize + bsize - modnn
       
     end function opencl_padded_size
+
+    ! ------------------------------------------
+
+    subroutine opencl_finish()
+      call f90_opencl_finish(opencl%env)
+    end subroutine opencl_finish
 
 #include "undef.F90"
 #include "real.F90"

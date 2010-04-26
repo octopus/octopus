@@ -48,7 +48,7 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
 !      call opencl_run_kernel(kernel_vpsi, R_TYPE_VAL, (/pnp/), (/opencl_max_workgroup_size(opencl%env)/))   
       call batch_read_from_opencl_buffer(vpsib, mesh%np, psi_buf)
       call opencl_release_buffer(psi_buf)
-!      call opencl_finish()
+      call opencl_finish()
     end if
 #endif
     select case(std%ispin)

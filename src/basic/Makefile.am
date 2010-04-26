@@ -21,20 +21,36 @@
 
 noinst_LIBRARIES = libbasic.a
 
-libbasic_a_SOURCES = \
-	loct.F90 string.F90 varinfo.F90 mpi.F90 global.F90 \
-	parser.F90 datasets.F90 messages.F90 io.F90   \
-	io_binary.c mpi_lib.F90 c_pointer.F90 \
-	unit.F90        \
-	unit_system.F90 \
-	mpi_debug.F90 profiling.F90 utils.F90      \
-	multicomm.F90 periodic_table.F90 getopt_f.c command_line.F90 \
-	distributed.F90 \
-	hardware.F90 ialist.F90 iihash.F90 calc_mode.F90 \
-	recipes.c      \
-	varia.c        \
-	oct_f.c        \
-	oct_gdlib_f.c  \
+libbasic_a_SOURCES =     \
+	loct.F90         \
+	string.F90       \
+	varinfo.F90      \
+	mpi.F90          \
+	global.F90       \
+	parser.F90       \
+	datasets.F90     \
+	messages.F90     \
+	io.F90           \
+	io_binary.c      \
+	mpi_lib.F90      \
+	c_pointer.F90    \
+	unit.F90         \
+	unit_system.F90  \
+	mpi_debug.F90    \
+	profiling.F90    \
+	utils.F90        \
+	multicomm.F90    \
+	getopt_f.c       \
+	command_line.F90 \
+	distributed.F90  \
+	hardware.F90     \
+	ialist.F90       \
+	iihash.F90       \
+	calc_mode.F90    \
+	recipes.c        \
+	varia.c          \
+	oct_f.c          \
+	oct_gdlib_f.c    \
 	write_iter.F90   \
 	write_iter_low.c \
 	varinfo_low.c    \
@@ -77,38 +93,36 @@ include $(srcdir)/../common-rules.make
 depend:
 	@makedepf90 $(libbasic_a_SOURCES)
 
+types.o : types.F90
 mpi.o : mpi.F90 
 hardware.o : hardware.F90
-ialist.o : ialist.F90 messages.o profiling.o
 c_pointer.o : c_pointer.F90
-command_line.o : command_line.F90 messages.o profiling.o
-periodic_table.o : periodic_table.F90
-loct.o : loct.F90 loct_inc.F90 c_pointer.o
-string.o : string.F90 c_pointer.o
 varinfo.o : varinfo.F90 string.o c_pointer.o
+string.o : string.F90 c_pointer.o
+loct.o : loct.F90 loct_inc.F90 c_pointer.o
 global.o : global.F90 mpi.o loct.o hardware.o Makefile
+unit.o : unit.F90 global.o
 parser.o : parser.F90 mpi.o loct.o global.o c_pointer.o unit.o
 datasets.o : datasets.F90 parser.o c_pointer.o
 messages.o : messages.F90 varinfo.o string.o mpi.o parser.o loct.o global.o datasets.o 
-io.o : io.F90 mpi.o messages.o parser.o loct.o global.o datasets.o 
-mpi_lib.o : mpi_lib.F90 mpi_lib_inc.F90 mpi_debug.o mpi.o messages.o global.o profiling.o
-unit.o : unit.F90 global.o
-unit_system.o : unit_system.F90 unit.o io.o messages.o parser.o global.o datasets.o  varinfo.o
-mpi_debug.o : mpi_debug.F90 mpi_debug_inc.F90 mpi.o messages.o loct.o global.o 
-profiling.o : profiling.F90 mpi.o messages.o loct.o io.o global.o papi_f.o
-utils.o : utils.F90 messages.o global.o 
-multicomm.o : multicomm.F90 varinfo.o utils.o mpi.o messages.o parser.o io.o global.o datasets.o profiling.o
-iihash.o : iihash.F90 ialist.o global.o
-calc_mode.o : calc_mode.F90 multicomm.o messages.o
-distributed.o: distributed.F90 multicomm.o profiling.o
-varia.o : varia.c varia.h
-io_binary.o : io_binary.c io_binary.h
-getopt_f.o : getopt_f.c
-write_iter.o : write_iter.F90 c_pointer.o
-subarray.o : subarray.F90 subarray_inc.F90 profiling.o
-io_binary_f.o : io_binary_f.F90 io_binary.h messages.o
-papi.o : papi.c
 papi_f.o : papi_f.F90
-lookup.o : lookup.F90 global.o messages.o profiling.o
-types.o : types.F90
+profiling.o : profiling.F90 mpi.o messages.o loct.o io.o global.o papi_f.o
+
+command_line.o : command_line.F90 messages.o profiling.o
+io.o : io.F90 mpi.o messages.o parser.o loct.o global.o datasets.o 
+unit_system.o : unit_system.F90 unit.o io.o messages.o parser.o global.o datasets.o  varinfo.o
+write_iter.o : write_iter.F90 c_pointer.o
+io_binary_f.o : io_binary_f.F90 io_binary.h messages.o
+
 opencl.o : opencl.F90 opencl_inc.F90 global.o c_pointer.o types.o
+mpi_debug.o : mpi_debug.F90 mpi_debug_inc.F90 mpi.o messages.o loct.o global.o 
+mpi_lib.o : mpi_lib.F90 mpi_lib_inc.F90 mpi_debug.o mpi.o messages.o global.o profiling.o
+multicomm.o : multicomm.F90 varinfo.o utils.o mpi.o messages.o parser.o io.o global.o datasets.o profiling.o
+distributed.o: distributed.F90 multicomm.o profiling.o
+calc_mode.o : calc_mode.F90 multicomm.o messages.o
+
+ialist.o : ialist.F90 messages.o profiling.o
+iihash.o : iihash.F90 ialist.o global.o
+lookup.o : lookup.F90 global.o messages.o profiling.o
+subarray.o : subarray.F90 subarray_inc.F90 profiling.o
+utils.o : utils.F90 messages.o global.o 

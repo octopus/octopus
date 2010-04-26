@@ -267,3 +267,16 @@ void FC_FUNC_(f90_opencl_read_buffer, F90_OPENCL_READ_BUFFER)
   }
 
 }
+
+
+void FC_FUNC_(f90_opencl_finish, F90_OPENCL_FINISH)(opencl_env_t ** env){
+  cl_int ierr;
+
+  ierr = clFinish(env[0]->CommandQueue);
+
+  if(ierr != CL_SUCCESS){
+    fprintf(stderr, "Error: clFinish failed. Error code %d\n", ierr);
+    exit(1);
+  }
+
+}
