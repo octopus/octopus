@@ -18,9 +18,8 @@
 !! $Id: opencl_inc.F90 3587 2007-11-22 16:43:00Z xavier $
 
 
-subroutine X(opencl_write_buffer)(this, opencl, size, data, offset)
+subroutine X(opencl_write_buffer)(this, size, data, offset)
   type(opencl_mem_t),               intent(inout) :: this
-  type(opencl_t),                   intent(inout) :: opencl
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(in)    :: data(:)
   integer(SIZEOF_SIZE_T), optional, intent(in)    :: offset
@@ -37,9 +36,8 @@ end subroutine X(opencl_write_buffer)
 
 ! -----------------------------------------------------------------------------
 
-subroutine X(opencl_read_buffer)(this, opencl, size, data, offset)
+subroutine X(opencl_read_buffer)(this, size, data, offset)
   type(opencl_mem_t),               intent(inout) :: this
-  type(opencl_t),                   intent(inout) :: opencl
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(out)   :: data(:)
   integer(SIZEOF_SIZE_T), optional, intent(in)    :: offset

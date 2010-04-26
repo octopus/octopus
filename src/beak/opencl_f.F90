@@ -30,7 +30,6 @@ module opencl_m
 
   public ::                   &
     opencl_is_available,      &
-    opencl_t,                 &
     opencl_init,              &
     opencl_end,               &
     opencl_mem_t,             &
@@ -42,14 +41,14 @@ module opencl_m
 
   type opencl_t 
     type(c_ptr) :: env
-    type(c_ptr) :: kernel_vpsi
   end type opencl_t
 
   type opencl_mem_t
     type(c_ptr) :: mem
   end type opencl_mem_t
 
-  type(opencl_t), public :: opencl
+  type(opencl_t) :: opencl
+  type(c_ptr), public :: kernel_vpsi
 
   ! this values are copied from OpenCL include CL/cl.h
   integer, parameter, public ::        &
@@ -131,37 +130,32 @@ module opencl_m
 
   contains
 
-    pure logical function opencl_is_available(this) result(available)
-      type(opencl_t), intent(in) :: this
+    pure logical function opencl_is_available() result(available)
     
       available = .true.
     end function opencl_is_available
 
     ! ------------------------------------------
 
-    subroutine opencl_init(this)
-      type(opencl_t), intent(out) :: this
-
-      call f90_opencl_env_init(this%env, trim(conf%share)//'/opencl/')      
+    subroutine opencl_init()
+      call f90_opencl_env_init(opencl%env, trim(conf%share)//'/opencl/')      
 
       ! now initialize the kernels
-      call f90_opencl_kernel_init(this%kernel_vpsi, this%env, "vpsi.cl", "vpsi");
+      call f90_opencl_kernel_init(kernel_vpsi, opencl%env, "vpsi.cl", "vpsi");
     end subroutine opencl_init
 
     ! ------------------------------------------
 
-    subroutine opencl_end(this)
-      type(opencl_t), intent(inout) :: this
+    subroutine opencl_end()
       
-      call f90_opencl_kernel_end(this%kernel_vpsi);
-      call f90_opencl_env_end(this%env)
+      call f90_opencl_kernel_end(kernel_vpsi)
+      call f90_opencl_env_end(opencl%env)
     end subroutine opencl_end
 
     ! ------------------------------------------
 
-    subroutine opencl_create_buffer_4(this, opencl, flags, type, size)
+    subroutine opencl_create_buffer_4(this, flags, type, size)
       type(opencl_mem_t), intent(inout) :: this
-      type(opencl_t),     intent(inout) :: opencl
       integer,            intent(in)    :: flags
       integer,            intent(in)    :: type
       integer,            intent(in)    :: size
@@ -176,9 +170,8 @@ module opencl_m
 
     ! ------------------------------------------
 
-    subroutine opencl_create_buffer_8(this, opencl, flags, type, size)
+    subroutine opencl_create_buffer_8(this, flags, type, size)
       type(opencl_mem_t),     intent(inout) :: this
-      type(opencl_t),         intent(inout) :: opencl
       integer,                intent(in)    :: flags
       integer,                intent(in)    :: type
       integer(SIZEOF_SIZE_T), intent(in)    :: size
@@ -201,8 +194,7 @@ module opencl_m
 
     ! ------------------------------------------
 
-    integer(SIZEOF_SIZE_T) function opencl_padded_size(this, nn, type) result(psize)
-      type(opencl_t), intent(in) :: this
+    integer(SIZEOF_SIZE_T) function opencl_padded_size(nn, type) result(psize)
       integer,        intent(in) :: nn
       integer,        intent(in) :: type
 

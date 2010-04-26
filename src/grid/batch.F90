@@ -238,43 +238,41 @@ contains
 
   ! ----------------------------------------------------
 #ifdef HAVE_OPENCL
-  subroutine batch_create_opencl_buffer(this, opencl, np, flags, buffer)
+  subroutine batch_create_opencl_buffer(this, np, flags, buffer)
     type(batch_t),      intent(in)    :: this
-    type(opencl_t),     intent(inout) :: opencl
     integer,            intent(in)    :: np
     integer,            intent(in)    :: flags
     type(opencl_mem_t), intent(out)   :: buffer
 
     integer(SIZEOF_SIZE_T) :: size, pnp
 
-    pnp = opencl_padded_size(opencl, np, batch_type(this))
+    pnp = opencl_padded_size(np, batch_type(this))
     size = pnp*this%nst_linear
 
     ASSERT(batch_is_ok(this))
 
-    call opencl_create_buffer(buffer, opencl, flags, batch_type(this), size)
+    call opencl_create_buffer(buffer, flags, batch_type(this), size)
   end subroutine batch_create_opencl_buffer
 
   ! ------------------------------------------------------------------
 
-  subroutine batch_write_to_opencl_buffer(this, opencl, np, buffer)
+  subroutine batch_write_to_opencl_buffer(this, np, buffer)
     type(batch_t),      intent(in)    :: this
-    type(opencl_t),     intent(inout) :: opencl
     integer,            intent(in)    :: np
     type(opencl_mem_t), intent(out)   :: buffer
 
     integer(SIZEOF_SIZE_T) :: size, pnp
     integer :: ist
 
-    pnp = opencl_padded_size(opencl, np, batch_type(this))
+    pnp = opencl_padded_size(np, batch_type(this))
     size = pnp*this%nst_linear
 
     ASSERT(batch_is_ok(this))
     do ist = 1, this%nst_linear
       if(batch_type(this) == TYPE_FLOAT) then
-        call opencl_write_buffer(buffer, opencl, np, this%states_linear(ist)%dpsi, offset = (ist - 1)*pnp)
+        call opencl_write_buffer(buffer, np, this%states_linear(ist)%dpsi, offset = (ist - 1)*pnp)
       else
-        call opencl_write_buffer(buffer, opencl, np, this%states_linear(ist)%zpsi, offset = (ist - 1)*pnp)
+        call opencl_write_buffer(buffer, np, this%states_linear(ist)%zpsi, offset = (ist - 1)*pnp)
       end if
     end do
 
@@ -282,24 +280,23 @@ contains
 
   ! ------------------------------------------------------------------
 
-  subroutine batch_read_from_opencl_buffer(this, opencl, np, buffer)
+  subroutine batch_read_from_opencl_buffer(this, np, buffer)
     type(batch_t),      intent(inout) :: this
-    type(opencl_t),     intent(inout) :: opencl
     integer,            intent(in)    :: np
     type(opencl_mem_t), intent(out)   :: buffer
 
     integer(SIZEOF_SIZE_T) :: size, pnp
     integer :: ist
 
-    pnp = opencl_padded_size(opencl, np, batch_type(this))
+    pnp = opencl_padded_size(np, batch_type(this))
     size = pnp*this%nst_linear
 
     ASSERT(batch_is_ok(this))
     do ist = 1, this%nst_linear
       if(batch_type(this) == TYPE_FLOAT) then
-        call opencl_read_buffer(buffer, opencl, np, this%states_linear(ist)%dpsi, offset = (ist - 1)*pnp)
+        call opencl_read_buffer(buffer, np, this%states_linear(ist)%dpsi, offset = (ist - 1)*pnp)
       else
-        call opencl_read_buffer(buffer, opencl, np, this%states_linear(ist)%zpsi, offset = (ist - 1)*pnp)
+        call opencl_read_buffer(buffer, np, this%states_linear(ist)%zpsi, offset = (ist - 1)*pnp)
       end if
     end do
 

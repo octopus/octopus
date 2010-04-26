@@ -32,6 +32,7 @@
 #undef X
 #undef TS
 #undef R_TYPE
+#undef R_TYPE_VAL
 #undef R_DOUBLE
 #undef R_SINGLE  
 #undef R_MPITYPE

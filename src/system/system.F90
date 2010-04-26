@@ -77,7 +77,7 @@ contains
     SAFE_ALLOCATE(sys%st)
 
 #ifdef HAVE_OPENCL    
-    call opencl_init(opencl)
+    call opencl_init()
 #endif
 
     call messages_obsolete_variable('SystemName')
@@ -186,7 +186,7 @@ contains
     call grid_end(sys%gr)
 
 #ifdef HAVE_OPENCL
-    call opencl_end(opencl)
+    call opencl_end()
 #endif
     
     SAFE_DEALLOCATE_P(sys%gr);  nullify(sys%gr)

@@ -28,6 +28,7 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   integer :: ist, idim, ip
   R_TYPE, pointer :: psi(:, :), vpsi(:, :)
 #ifdef HAVE_OPENCL
+  integer :: pnp
   type(opencl_mem_t) :: psi_buf
 #endif
 
@@ -36,11 +37,18 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
 
   if(associated(this%potential)) then
 #ifdef HAVE_OPENCL
-    if(opencl_is_available(opencl) .and. std%ispin == UNPOLARIZED) then
-      call batch_create_opencl_buffer(psib, opencl, mesh%np, CL_MEM_READ_ONLY, psi_buf)
-      call batch_write_to_opencl_buffer(psib, opencl, mesh%np, psi_buf)
-      call batch_read_from_opencl_buffer(vpsib, opencl, mesh%np, psi_buf)
+    if(opencl_is_available() .and. std%ispin == UNPOLARIZED) then
+      pnp = opencl_padded_size(mesh%np, TYPE_FLOAT)
+      call batch_create_opencl_buffer(psib, mesh%np, CL_MEM_READ_ONLY, psi_buf)
+      call batch_write_to_opencl_buffer(psib, mesh%np, psi_buf)
+!      call opencl_set_kernel_argument(kernel_vpsi, 0, pnp)
+!      call opencl_set_kernel_argument(kernel_vpsi, 1, psib%nst)
+!      call opencl_set_kernel_argument(kernel_vpsi, 2, this%potential_opencl)
+!      call opencl_set_kernel_argument(kernel_vpsi, 3, psi_buf)
+!      call opencl_run_kernel(kernel_vpsi, R_TYPE_VAL, (/pnp/), (/opencl_max_workgroup_size(opencl%env)/))   
+      call batch_read_from_opencl_buffer(vpsib, mesh%np, psi_buf)
       call opencl_release_buffer(psi_buf)
+!      call opencl_finish()
     end if
 #endif
     select case(std%ispin)
