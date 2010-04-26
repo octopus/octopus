@@ -703,13 +703,12 @@ contains
 
     ! ---------------------------------------------------------
     subroutine td_read_coordinates() ! reads the pos and vel from coordinates file
-      integer :: iatom, iter, iunit, record_length
+      integer :: iatom, iter, iunit
       call push_sub('td.td_run.td_read_coordinates')
 
-      record_length = 28 + 3 * geo%natoms * 3 * 20
       call io_assign(iunit)
-      open(unit = iunit, file = io_workpath('td.general/coordinates'), &
-        action='read', status='old', recl = record_length)
+      open(unit = iunit, file = io_workpath('td.general/coordinates'), action='read', status='old')
+
       if(iunit < 0) then
         message(1) = "Could not open file '"//trim(io_workpath('td.general/coordinates'))//"'."
         message(2) = "Starting simulation from initial geometry."
