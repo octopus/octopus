@@ -38,7 +38,9 @@ module opencl_m
     opencl_read_buffer,       &
     opencl_release_buffer,    &
     opencl_padded_size,       &
-    opencl_finish
+    opencl_finish,            &
+    opencl_set_kernel_arg,    &
+    opencl_kernel_run
 
   type opencl_t 
     type(c_ptr) :: env
@@ -57,6 +59,7 @@ module opencl_m
     CL_MEM_WRITE_ONLY = 2,             &
     CL_MEM_READ_ONLY  = 4
 
+  ! this function are defined in opencl_low.c
   interface
     ! ---------------------------------------------------
 
@@ -123,6 +126,28 @@ module opencl_m
 
     ! ----------------------------------------------------
 
+    subroutine f90_opencl_set_kernel_arg_buf(kernel, type, index, buffer)
+      use c_pointer_m
+
+      type(c_ptr), intent(inout) :: kernel
+      integer,     intent(in)    :: type
+      integer,     intent(in)    :: index
+      type(c_ptr), intent(in)    :: buffer
+    end subroutine f90_opencl_set_kernel_arg_buf
+    
+    ! ----------------------------------------------------
+
+    subroutine f90_opencl_kernel_run(kernel, env, type, dim, globalsizes, localsizes)
+      use c_pointer_m
+
+      type(c_ptr),            intent(inout) :: kernel
+      type(c_ptr),            intent(inout) :: env
+      integer,                intent(in)    :: type
+      integer,                intent(in)    :: dim
+      integer(SIZEOF_SIZE_T), intent(in)    :: globalsizes
+      integer(SIZEOF_SIZE_T), intent(in)    :: localsizes
+    end subroutine f90_opencl_kernel_run
+
   end interface
 
   interface opencl_create_buffer
@@ -137,6 +162,14 @@ module opencl_m
     module procedure iopencl_read_buffer, dopencl_read_buffer, zopencl_read_buffer
   end interface
 
+  interface opencl_set_kernel_arg
+    module procedure                 &
+      opencl_set_kernel_arg_buffer,  &
+      iopencl_set_kernel_arg_data,   &
+      dopencl_set_kernel_arg_data,   &
+      zopencl_set_kernel_arg_data
+  end interface
+  
   contains
 
     pure logical function opencl_is_available() result(available)
@@ -209,11 +242,11 @@ module opencl_m
 
       integer :: modnn, bsize
 
-      bsize = 1024/types_get_size(type)
+!      bsize = 1024/types_get_size(type)
 
       psize = nn
-      modnn = mod(nn, bsize)
-      if(modnn /= 0) psize = psize + bsize - modnn
+!      modnn = mod(nn, bsize)
+!      if(modnn /= 0) psize = psize + bsize - modnn
       
     end function opencl_padded_size
 
@@ -222,6 +255,40 @@ module opencl_m
     subroutine opencl_finish()
       call f90_opencl_finish(opencl%env)
     end subroutine opencl_finish
+
+    ! ------------------------------------------
+
+    subroutine opencl_set_kernel_arg_buffer(kernel, type, narg, buffer)
+      type(c_ptr),        intent(inout) :: kernel
+      integer,            intent(in)    :: type
+      integer,            intent(in)    :: narg
+      type(opencl_mem_t), intent(in)    :: buffer
+      
+      call f90_opencl_set_kernel_arg_buf(kernel, type, narg, buffer%mem)
+
+    end subroutine opencl_set_kernel_arg_buffer
+
+    ! ------------------------------------------
+
+    subroutine opencl_kernel_run(kernel, type, globalsizes, localsizes)
+      type(c_ptr),        intent(inout) :: kernel
+      integer,            intent(in)    :: type
+      integer,            intent(in)    :: globalsizes(:)
+      integer,            intent(in)    :: localsizes(:)
+      
+      integer :: dim
+      integer(SIZEOF_SIZE_T) :: gsizes(1:3)
+      integer(SIZEOF_SIZE_T) :: lsizes(1:3)
+
+      dim = ubound(globalsizes, dim = 1)
+      ASSERT(dim == ubound(localsizes, dim = 1))
+      
+      gsizes(1:dim) = int(globalsizes(1:dim), SIZEOF_SIZE_T)
+      lsizes(1:dim) = int(localsizes(1:dim), SIZEOF_SIZE_T)
+
+      call f90_opencl_kernel_run(kernel, opencl%env, type, dim, gsizes(1), lsizes(1))
+
+    end subroutine opencl_kernel_run
 
 #include "undef.F90"
 #include "real.F90"

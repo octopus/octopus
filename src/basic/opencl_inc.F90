@@ -52,6 +52,18 @@ subroutine X(opencl_read_buffer)(this, size, data, offset)
 
 end subroutine X(opencl_read_buffer)
 
+! ---------------------------------------------------------------------------
+
+subroutine X(opencl_set_kernel_arg_data)(kernel, type, narg, data)
+  type(c_ptr),        intent(inout) :: kernel
+  integer,            intent(in)    :: type
+  integer,            intent(in)    :: narg
+  R_TYPE,             intent(in)    :: data
+  
+  call f90_opencl_set_kernel_arg_data(kernel, type, narg, R_SIZEOF, data)
+  
+end subroutine X(opencl_set_kernel_arg_data)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

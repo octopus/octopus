@@ -1,40 +1,40 @@
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-__kernel void svpsi(const int nn, const int npsi, const __global float * vv, const __global float * psi, __global float * vpsi){
+__kernel void svpsi(const int nn, const int npsi, const __global float * vv, __global float * psi){
   int i = get_global_id(0);
 
   float vi = vv[i];
   for(int j = 0; j < npsi; j++){
-    vpsi[j*nn + i] = vi*psi[j*nn + i];
+    psi[j*nn + i] = vi*psi[j*nn + i];
   }
 }
 
-__kernel void dvpsi(const int nn, const int npsi, const __global double * vv, const __global double * psi, __global double * vpsi){
+__kernel void dvpsi(const int nn, const int npsi, const __global double * vv, __global double * psi){
   int i = get_global_id(0);
-  
+
   double vi = vv[i];
   for(int j = 0; j < npsi; j++){
-    vpsi[j*nn + i] = vi*psi[j*nn + i];
+    psi[j*nn + i] = vi*psi[j*nn + i];
   }
 
 }
 
-__kernel void cvpsi(const int nn, const int npsi, const __global float * vv, const __global float2 * psi, __global float2 * vpsi){
+__kernel void cvpsi(const int nn, const int npsi, const __global float * vv, __global float2 * psi){
   int i = get_global_id(0);
 
   float vi = vv[i];
   for(int j = 0; j < npsi; j++){
-    vpsi[j*nn + i] = vi*psi[j*nn + i];
+    psi[j*nn + i] = vi*psi[j*nn + i];
   }
 
 }
 
-__kernel void zvpsi(const int nn, const int npsi, const __global double * vv, const __global double2 * psi, __global double2 * vpsi){
+__kernel void zvpsi(const int nn, const int npsi, const __global double * vv, __global double2 * psi){
   int i = get_global_id(0);
 
   double vi = vv[i];
   for(int j = 0; j < npsi; j++){
-    vpsi[j*nn + i] = vi*psi[j*nn + i];
+    psi[j*nn + i] = vi*psi[j*nn + i];
   }
 
 }

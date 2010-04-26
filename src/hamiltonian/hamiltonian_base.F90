@@ -168,7 +168,7 @@ contains
         this%potential = M_ZERO
 #ifdef HAVE_OPENCL
         if(opencl_is_available()) then
-          call opencl_create_buffer(this%potential_opencl, CL_MEM_READ_ONLY, TYPE_FLOAT, mesh%np)
+          call opencl_create_buffer(this%potential_opencl, CL_MEM_READ_ONLY, TYPE_FLOAT, opencl_padded_size(mesh%np, TYPE_FLOAT))
         end if
 #endif
       end if

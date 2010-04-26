@@ -280,3 +280,67 @@ void FC_FUNC_(f90_opencl_finish, F90_OPENCL_FINISH)(opencl_env_t ** env){
   }
 
 }
+
+void FC_FUNC_(f90_opencl_set_kernel_arg_buf, F90_OPENCL_SET_KERNEL_ARG_BUF)
+     (opencl_kernel_t ** kernel, const int * type, const int * index, cl_mem ** buffer){
+  cl_int ierr;
+  
+  /*printf("index=%d\n", *index);*/
+
+  if(1 == *type){
+    ierr = clSetKernelArg(kernel[0]->kernel_double, *index, sizeof(cl_mem), *buffer);
+  } else {
+    ierr = clSetKernelArg(kernel[0]->kernel_complex, *index, sizeof(cl_mem), *buffer);
+  }
+  
+  if(ierr != CL_SUCCESS){
+    fprintf(stderr, "Error: clSetKernelArg with buffer failed. Error code %d\n", ierr);
+    exit(1);
+  }
+}
+
+void FC_FUNC_(f90_opencl_set_kernel_arg_data, F90_OPENCL_SET_KERNEL_ARG_DATA)
+     (opencl_kernel_t ** kernel, const int * type, const int * index, const int * sizeof_data, const void * data){
+  cl_int ierr;
+  
+  /*printf("index=%d\n", *index);*/
+
+  if(1 == *type){
+    ierr = clSetKernelArg(kernel[0]->kernel_double, *index, *sizeof_data, data);
+  } else {
+    ierr = clSetKernelArg(kernel[0]->kernel_complex, *index, *sizeof_data, data);
+  }
+  
+  if(ierr != CL_SUCCESS){
+    fprintf(stderr, "Error: clSetKernelArg with buffer failed. Error code %d\n", ierr);
+    exit(1);
+  }
+}
+
+void FC_FUNC_(f90_opencl_kernel_run, F90_OPENCL_KERNEL_RUN)
+     (opencl_kernel_t ** kernel, opencl_env_t ** env, const int * type, const int * dim, 
+      const size_t * globalsizes, const size_t * localsizes){
+
+  cl_int ierr;
+  /*
+  cl_uint numargs;
+
+  clGetKernelInfo(kernel[0]->kernel_double, CL_KERNEL_NUM_ARGS, sizeof(numargs), &numargs, NULL);
+  printf("Num args %d\n", numargs);
+  */
+  /*  printf("WG size  %d %d\n", globalsizes[0], localsizes[0]);
+   */
+
+  if(1 == *type){
+    ierr = clEnqueueNDRangeKernel(env[0]->CommandQueue, kernel[0]->kernel_double, *dim,
+				NULL,  globalsizes, localsizes, 0, NULL, NULL);
+  } else {
+    ierr = clEnqueueNDRangeKernel(env[0]->CommandQueue, kernel[0]->kernel_complex, *dim,
+				NULL,  globalsizes, localsizes, 0, NULL, NULL);
+  }
+
+  if(ierr != CL_SUCCESS){
+    fprintf(stderr, "Error: kernel execution failed. Error code %d\n", ierr);
+    exit(1);
+  }
+}

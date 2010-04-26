@@ -41,14 +41,18 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
       pnp = opencl_padded_size(mesh%np, TYPE_FLOAT)
       call batch_create_opencl_buffer(psib, mesh%np, CL_MEM_READ_ONLY, psi_buf)
       call batch_write_to_opencl_buffer(psib, mesh%np, psi_buf)
-!      call opencl_set_kernel_argument(kernel_vpsi, 0, pnp)
-!      call opencl_set_kernel_argument(kernel_vpsi, 1, psib%nst)
-!      call opencl_set_kernel_argument(kernel_vpsi, 2, this%potential_opencl)
-!      call opencl_set_kernel_argument(kernel_vpsi, 3, psi_buf)
-!      call opencl_run_kernel(kernel_vpsi, R_TYPE_VAL, (/pnp/), (/opencl_max_workgroup_size(opencl%env)/))   
+      call opencl_set_kernel_arg(kernel_vpsi, R_TYPE_VAL, 0, pnp)
+      call opencl_set_kernel_arg(kernel_vpsi, R_TYPE_VAL, 1, psib%nst)
+      call opencl_set_kernel_arg(kernel_vpsi, R_TYPE_VAL, 2, this%potential_opencl)
+      call opencl_set_kernel_arg(kernel_vpsi, R_TYPE_VAL, 3, psi_buf)
+      call opencl_kernel_run(kernel_vpsi, R_TYPE_VAL, (/pnp/), (/1/))   
       call batch_read_from_opencl_buffer(vpsib, mesh%np, psi_buf)
       call opencl_release_buffer(psi_buf)
       call opencl_finish()
+
+      call profiling_out(prof_vlpsi)
+      call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_local')
+      return
     end if
 #endif
     select case(std%ispin)
