@@ -96,7 +96,8 @@ void FC_FUNC_(f90_opencl_env_end,F90_OPENCL_ENV_END)(opencl_env_t ** thisptr){
   opencl_env_t * this;
 
   this = *thisptr;
-
+  clReleaseCommandQueue(this->CommandQueue);
+  clReleaseContext(this->Context);
   free(this->source_path);
   free(this->Devices);
   free(this);
@@ -174,7 +175,7 @@ void opencl_kernel_init(opencl_kernel_t * this, opencl_env_t * env, const char *
     fprintf(stderr, "Error: creation of kernel  '%s' failed with error %d.\n", kernel_name, numerr);
     exit(1);
   }
-
+  clReleaseProgram(OpenCLProgram);
   free(kernel_name);
   free(full_file_name);
 }

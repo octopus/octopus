@@ -38,18 +38,21 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   if(associated(this%potential)) then
 #ifdef HAVE_OPENCL
     if(opencl_is_available() .and. std%ispin == UNPOLARIZED) then
-      pnp = opencl_padded_size(mesh%np, TYPE_FLOAT)
+      pnp = opencl_padded_size(mesh%np)
       call batch_create_opencl_buffer(psib, mesh%np, CL_MEM_READ_ONLY, psi_buf)
       call batch_write_to_opencl_buffer(psib, mesh%np, psi_buf)
       call opencl_set_kernel_arg(kernel_vpsi, R_TYPE_VAL, 0, pnp)
       call opencl_set_kernel_arg(kernel_vpsi, R_TYPE_VAL, 1, psib%nst)
       call opencl_set_kernel_arg(kernel_vpsi, R_TYPE_VAL, 2, this%potential_opencl)
       call opencl_set_kernel_arg(kernel_vpsi, R_TYPE_VAL, 3, psi_buf)
-      call opencl_kernel_run(kernel_vpsi, R_TYPE_VAL, (/pnp/), (/1/))   
+      call opencl_kernel_run(kernel_vpsi, R_TYPE_VAL, (/pnp/), (/256/))   
       call batch_read_from_opencl_buffer(vpsib, mesh%np, psi_buf)
       call opencl_release_buffer(psi_buf)
       call opencl_finish()
 
+      call profiling_count_operations((R_MUL*psib%nst)*mesh%np)
+      call profiling_count_transfers(mesh%np, M_ONE)
+      call profiling_count_transfers(mesh%np*psib%nst, R_TOTYPE(M_ONE))
       call profiling_out(prof_vlpsi)
       call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_local')
       return

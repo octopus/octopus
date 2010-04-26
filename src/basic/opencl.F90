@@ -236,18 +236,17 @@ module opencl_m
 
     ! ------------------------------------------
 
-    integer(SIZEOF_SIZE_T) function opencl_padded_size(nn, type) result(psize)
+    integer(SIZEOF_SIZE_T) function opencl_padded_size(nn) result(psize)
       integer,        intent(in) :: nn
-      integer,        intent(in) :: type
 
       integer :: modnn, bsize
 
-!      bsize = 1024/types_get_size(type)
+      bsize = 512
 
       psize = nn
-!      modnn = mod(nn, bsize)
-!      if(modnn /= 0) psize = psize + bsize - modnn
-      
+      modnn = mod(nn, bsize)
+      if(modnn /= 0) psize = psize + bsize - modnn
+
     end function opencl_padded_size
 
     ! ------------------------------------------
@@ -285,6 +284,8 @@ module opencl_m
       
       gsizes(1:dim) = int(globalsizes(1:dim), SIZEOF_SIZE_T)
       lsizes(1:dim) = int(localsizes(1:dim), SIZEOF_SIZE_T)
+
+      ASSERT(all(mod(gsizes, lsizes) == 0))
 
       call f90_opencl_kernel_run(kernel, opencl%env, type, dim, gsizes(1), lsizes(1))
 

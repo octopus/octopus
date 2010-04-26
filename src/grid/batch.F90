@@ -246,7 +246,7 @@ contains
 
     integer(SIZEOF_SIZE_T) :: size, pnp
 
-    pnp = opencl_padded_size(np, batch_type(this))
+    pnp = opencl_padded_size(np)
     size = pnp*this%nst_linear
 
     ASSERT(batch_is_ok(this))
@@ -264,7 +264,7 @@ contains
     integer(SIZEOF_SIZE_T) :: size, pnp
     integer :: ist
 
-    pnp = opencl_padded_size(np, batch_type(this))
+    pnp = opencl_padded_size(np)
     size = pnp*this%nst_linear
 
     ASSERT(batch_is_ok(this))
@@ -288,7 +288,7 @@ contains
     integer(SIZEOF_SIZE_T) :: size, pnp
     integer :: ist
 
-    pnp = opencl_padded_size(np, batch_type(this))
+    pnp = opencl_padded_size(np)
     size = pnp*this%nst_linear
 
     ASSERT(batch_is_ok(this))
