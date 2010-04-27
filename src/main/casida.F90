@@ -22,6 +22,7 @@
 module casida_m
   use datasets_m
   use excited_states_m
+  use gauss_legendre_m
   use global_m
   use hamiltonian_m
   use io_function_m
@@ -76,8 +77,9 @@ module casida_m
     ! variables for momentum transfer dependent calculation
     logical           :: qcalc
     FLOAT             :: qvector(MAX_DIM)
-    CMPLX,   pointer  :: qtm(:)
     FLOAT,   pointer  :: qf(:)
+    FLOAT,   pointer  :: qf_avg(:)      !< Directionally averaged intensity
+    integer           :: avg_order      !< Quadrature order for directional averaging (Gauss-Legendre scheme) 
 
     logical           :: parallel_in_eh_pairs
     type(mpi_grp_t)   :: mpi_grp
@@ -207,6 +209,18 @@ contains
       cas%qcalc = .false.
     end if
 
+    !%Variable CasidaQuadratureOrder
+    !%Type block
+    !%Section Linear Response::Response
+    !%Description
+    !% Directionally averaged dynamic structure factor is calculated by
+    !% averaging over the results from a set of q-vectors. The vectors
+    !% are generated using Gauss-Legendre quadrature scheme [see e.g.
+    !% K. Atkinson, J. Austral. Math. Soc. 23, 332 (1982)], and this
+    !% variable determines the order of the scheme.
+    !%End
+    call parse_integer(datasets_check('CasidaQuadratureOrder'), 5, cas%avg_order)
+
     ! Initialize structure
     call casida_type_init(cas, sys%gr%sb%dim, nk, sys%mc)
 
@@ -290,8 +304,8 @@ contains
     SAFE_ALLOCATE(   cas%w(1:cas%n_pairs))
 
     if(cas%qcalc) then
-      SAFE_ALLOCATE(cas%qtm(1:cas%n_pairs))
-      SAFE_ALLOCATE( cas%qf(1:cas%n_pairs))
+      SAFE_ALLOCATE( cas%qf    (1:cas%n_pairs))
+      SAFE_ALLOCATE( cas%qf_avg(1:cas%n_pairs))
     end if
 
     ! create pairs
@@ -338,8 +352,8 @@ contains
     SAFE_DEALLOCATE_P(cas%w)
 
     if(cas%qcalc) then
-      SAFE_DEALLOCATE_P(cas%qtm)
       SAFE_DEALLOCATE_P(cas%qf)
+      SAFE_DEALLOCATE_P(cas%qf_avg)
     end if
 
     SAFE_DEALLOCATE_P(cas%n_occ)
@@ -382,8 +396,8 @@ contains
     cas%w   = M_ZERO
     cas%s   = M_ZERO
     if(cas%qcalc) then
-      cas%qtm  = M_ZERO
-      cas%qf   = M_ZERO
+      cas%qf     = M_ZERO
+      cas%qf_avg = M_ZERO
     end if
 
     ! load saved matrix elements
@@ -499,6 +513,12 @@ contains
       FLOAT, allocatable :: dx(:), tmp(:,:)
       CMPLX, allocatable :: zx(:)
       type(states_pair_t), pointer :: p, q
+
+      FLOAT, allocatable :: gaus_leg_points(:), gaus_leg_weights(:)
+      integer :: ii, jj
+      FLOAT :: theta, phi, qlen
+      FLOAT :: qvect(MAX_DIM)
+
 #ifdef HAVE_MPI
       FLOAT, allocatable :: mpi_mat(:,:)
 #endif
@@ -605,7 +625,7 @@ contains
              SAFE_ALLOCATE(zf(1:mesh%np))
              SAFE_ALLOCATE(zx(1:cas%n_pairs))
 
-             ! calculate the matrix element zx
+             ! matrix element
              do ia = 1, cas%n_pairs
                do ip = 1, mesh%np
                  zf(ip) = exp(M_zI*dot_product(cas%qvector(:), mesh%x(ip, :))) * &
@@ -615,10 +635,59 @@ contains
                zx(ia) = zmf_integrate(mesh, zf)
              end do
 
-             ! and then the transition matrix elements
+             ! intensity
              do ia = 1, cas%n_pairs
-               cas%qtm(ia) = ztransition_matrix_element(cas, ia, zx)
+               cas%qf(ia) = abs(ztransition_matrix_element(cas, ia, zx))**2
              end do
+
+             ! do we calculate the average
+             if(cas%avg_order.gt.0) then
+
+               ! use Gauss-Legendre quadrature scheme
+               SAFE_ALLOCATE(gaus_leg_points (1:cas%avg_order))
+               SAFE_ALLOCATE(gaus_leg_weights(1:cas%avg_order))
+               call gauss_legendre_points(cas%avg_order, gaus_leg_points, gaus_leg_weights)
+
+               qlen = sqrt(dot_product(cas%qvector, cas%qvector))
+               do ii = 1, cas%avg_order
+                 do jj = 1, 2*cas%avg_order
+
+                   ! construct the q-vector
+                   phi   = acos(gaus_leg_points(ii))
+                   theta = M_PI*jj/cas%avg_order
+                   qvect(1) = qlen*cos(theta)*sin(phi)
+                   qvect(2) = qlen*sin(theta)*sin(phi)
+                   qvect(3) = qlen*cos(phi)
+
+                   ! matrix elements
+                   zx(:) = M_ZERO
+                   zf(:) = M_ZERO
+                   do ia = 1, cas%n_pairs
+                     forall(ip = 1:mesh%np) zf(ip) = exp(M_zI*dot_product(qvect(1:3), mesh%x(ip, 1:3))) * &
+                                                         st%dpsi(ip, 1, cas%pair(ia)%i, cas%pair(ia)%sigma) * &
+                                                         st%dpsi(ip, 1, cas%pair(ia)%a, cas%pair(ia)%sigma)
+                     zx(ia) = zmf_integrate(mesh, zf)
+                   end do
+
+                   ! intensities
+                   do ia = 1, cas%n_pairs
+                     cas%qf_avg(ia) = cas%qf_avg(ia) + &
+                                      gaus_leg_weights(ii)*abs(ztransition_matrix_element(cas, ia, zx))**2
+                   end do
+
+                 end do ! jj (thetas)
+               end do ! ii (phis)
+
+               ! normalize: for integral over sphere one would multiply by pi/N, but since
+               !            we want the average, the integral must be divided by 4*pi
+               forall(ia = 1:cas%n_pairs) cas%qf_avg(ia) = cas%qf_avg(ia) / (4*cas%avg_order)
+
+               ! and finalize
+               SAFE_DEALLOCATE_A(gaus_leg_points)
+               SAFE_DEALLOCATE_A(gaus_leg_weights)
+ 
+             end if ! averaging
+
              SAFE_DEALLOCATE_A(zf)
              SAFE_DEALLOCATE_A(zx)
 
@@ -655,12 +724,6 @@ contains
         do ia = 1, cas%n_pairs
           cas%f(ia) = (M_TWO / mesh%sb%dim) * cas%w(ia) * sum( (abs(cas%tm(ia, :)))**2 )
         end do
-
-        if (cas%qcalc) then
-          do ia = 1, cas%n_pairs
-            cas%qf(ia) = abs(cas%qtm(ia))**2
-          end do
-        end if
 
       end if
 
@@ -773,11 +836,24 @@ contains
 
     call io_mkdir(CASIDA_DIR)
     iunit = io_open(CASIDA_DIR//trim(filename), action='write')
-    write(iunit, '(a1,a14,1x,a14,1x,a10,3es15.8,a2)') '#','E' , '<S(q,omega)>','; q = (',cas%qvector(1:MAX_DIM),')'
-    do ia = 1, cas%n_pairs
-      write(iunit, '(es15.8,es15.8)') units_from_atomic(units_out%energy, cas%w(ind(ia))), &
-                                      units_from_atomic(unit_one / units_out%energy, cas%qf(ind(ia)))
-    end do
+    write(iunit, '(a1,a14,1x,a24,1x,a24,1x,a10,3es15.8,a2)') '#','E' , '|<f|exp(iq.r)|i>|^2', &
+                                                             '<|<f|exp(iq.r)|i>|^2>','; q = (',cas%qvector(1:MAX_DIM),')'
+    write(iunit, '(a1,a14,1x,a24,1x,a24,1x,10x,a15)')        '#', trim(units_abbrev(units_out%energy)), &
+                                                                  trim('-'), &
+                                                                  trim('-'), &
+                                                                  trim('a.u.')
+
+    if(cas%avg_order.eq.0) then
+      do ia = 1, cas%n_pairs
+        write(iunit, '(es15.8,es15.8)') units_from_atomic(units_out%energy, cas%w(ind(ia))), cas%qf(ind(ia))
+      end do
+    else
+      do ia = 1, cas%n_pairs
+        write(iunit, '(3es15.8)') units_from_atomic(units_out%energy, cas%w(ind(ia))), &
+                                  cas%qf    (ind(ia)), &
+                                  cas%qf_avg(ind(ia))
+      end do
+    end if
 
     call io_close(iunit)
 
