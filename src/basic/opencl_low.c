@@ -46,19 +46,19 @@ void FC_FUNC_(f90_opencl_env_init,F90_OPENCL_ENV_INIT)(opencl_env_t ** thisptr, 
   status = clGetPlatformIDs(1, &platform, NULL);
 
   if(status != CL_SUCCESS){
-    printf("OpenCL initialization failed: %d\n", this->numerr);
-    return;
+    printf("OpenCL initialization failed. Error code: %d\n", status);
+    exit(1);
   }
   
   cps[0] = CL_CONTEXT_PLATFORM;
   cps[1] = (cl_context_properties)platform;
   cps[2] = 0;
   
-  this->Context = clCreateContextFromType(cps, CL_DEVICE_TYPE_ALL,NULL, NULL, &this->numerr);
+  this->Context = clCreateContextFromType(cps, CL_DEVICE_TYPE_ALL, NULL, NULL, &status);
 
-  if (this->numerr != CL_SUCCESS){
-    printf("OpenCL initialization failed: %d\n", this->numerr);
-    return;
+  if (status != CL_SUCCESS){
+    printf("OpenCL initialization failed. Error code: %d\n", status);
+    exit(1);
   };
 
   clGetContextInfo(this->Context, CL_CONTEXT_DEVICES ,0 , NULL, &ParamDataBytes);
@@ -78,18 +78,19 @@ void FC_FUNC_(f90_opencl_env_init,F90_OPENCL_ENV_INIT)(opencl_env_t ** thisptr, 
 
   clGetDeviceInfo (this->Devices[0], CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &mem, NULL);
   mem /= (1024*1024); /* convert to megabytes */
-  printf("Device memory         : %d [Mb]\n", mem);
+  printf("Device memory         : %ld [Mb]\n", mem);
 
   clGetDeviceInfo(this->Devices[0], CL_DEVICE_EXTENSIONS, sizeof(device_string), &device_string, NULL);
   printf("Extensions            : %s\n", device_string);
 
   clGetDeviceInfo(this->Devices[0], CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(this->max_workgroup_size), &this->max_workgroup_size, NULL);
-  printf("Maximum workgroup size: %d\n", this->max_workgroup_size);
+  printf("Maximum workgroup size: %zd\n", this->max_workgroup_size);
 
   /* start command queue */
-  this->CommandQueue = clCreateCommandQueue(this->Context, this->Devices[0], CL_QUEUE_PROFILING_ENABLE ,&this->numerr);
+  this->CommandQueue = clCreateCommandQueue(this->Context, this->Devices[0], CL_QUEUE_PROFILING_ENABLE, &status);
 
   TO_C_STR1(source_path_f, this->source_path);
+
 }
 
 void FC_FUNC_(f90_opencl_env_end,F90_OPENCL_ENV_END)(opencl_env_t ** thisptr){
@@ -217,7 +218,7 @@ void FC_FUNC_(f90_opencl_create_buffer, F90_OPENCL_CREATE_BUFFER)
   **buffer = clCreateBuffer(env[0]->Context, *flags, (size_t) *size, NULL, &ierr);
 
   if(ierr != CL_SUCCESS){
-    fprintf(stderr, "Error: buffer of size %d creation failed. Error code %d\n", *size, ierr);
+    fprintf(stderr, "Error: buffer of size %zd creation failed. Error code %d\n", *size, ierr);
     exit(1);
   }
 

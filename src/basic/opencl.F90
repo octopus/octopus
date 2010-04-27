@@ -22,6 +22,7 @@
 module opencl_m
   use c_pointer_m
   use global_m
+  use messages_m
   use types_m
   use profiling_m
 
@@ -206,11 +207,14 @@ module opencl_m
       integer,            intent(in)    :: size
       
       integer(SIZEOF_SIZE_T) :: fsize
+
+      call push_sub('opencl.opencl_create_buffer_4')
       
       fsize = size*types_get_size(type)
       
       call f90_opencl_create_buffer(this%mem, opencl%env, flags, fsize)
-      
+
+      call pop_sub('opencl.opencl_create_buffer_4')
     end subroutine opencl_create_buffer_4
 
     ! ------------------------------------------
@@ -223,10 +227,13 @@ module opencl_m
       
       integer(SIZEOF_SIZE_T) :: fsize
       
+      call push_sub('opencl.opencl_create_buffer_8')
+
       fsize = size*types_get_size(type)
 
       call f90_opencl_create_buffer(this%mem, opencl%env, flags, fsize)
       
+      call pop_sub('opencl.opencl_create_buffer_8')
     end subroutine opencl_create_buffer_8
 
     ! ------------------------------------------
@@ -266,7 +273,9 @@ module opencl_m
       integer,            intent(in)    :: narg
       type(opencl_mem_t), intent(in)    :: buffer
       
+      call push_sub('opencl.opencl_set_kernel_arg_buffer')
       call f90_opencl_set_kernel_arg_buf(kernel, type, narg, buffer%mem)
+      call pop_sub('opencl.opencl_set_kernel_arg_buffer')
 
     end subroutine opencl_set_kernel_arg_buffer
 
@@ -282,6 +291,7 @@ module opencl_m
       integer(SIZEOF_SIZE_T) :: gsizes(1:3)
       integer(SIZEOF_SIZE_T) :: lsizes(1:3)
 
+      call push_sub('opencl.opencl_kernel_run')
       call profiling_in(prof_kernel_run, "CL_KERNEL_RUN")
 
       dim = ubound(globalsizes, dim = 1)
@@ -295,7 +305,7 @@ module opencl_m
       call f90_opencl_kernel_run(kernel, opencl%env, type, dim, gsizes(1), lsizes(1))
       call opencl_finish()
       call profiling_out(prof_kernel_run)
-
+      call pop_sub('opencl.opencl_kernel_run')
     end subroutine opencl_kernel_run
 
 #include "undef.F90"

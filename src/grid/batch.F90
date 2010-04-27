@@ -246,12 +246,16 @@ contains
 
     integer(SIZEOF_SIZE_T) :: size, pnp
 
+    call push_sub('batch.batch_create_opencl_buffer')
+
     pnp = opencl_padded_size(np)
     size = pnp*this%nst_linear
 
     ASSERT(batch_is_ok(this))
 
     call opencl_create_buffer(buffer, flags, batch_type(this), size)
+
+    call pop_sub('batch.batch_create_opencl_buffer')
   end subroutine batch_create_opencl_buffer
 
   ! ------------------------------------------------------------------
@@ -263,6 +267,8 @@ contains
 
     integer(SIZEOF_SIZE_T) :: size, pnp
     integer :: ist
+
+    call push_sub('batch.batch_write_to_opencl_buffer')
 
     pnp = opencl_padded_size(np)
     size = pnp*this%nst_linear
@@ -276,6 +282,7 @@ contains
       end if
     end do
 
+    call pop_sub('batch.batch_write_to_opencl_buffer')
   end subroutine batch_write_to_opencl_buffer
 
   ! ------------------------------------------------------------------
@@ -287,6 +294,8 @@ contains
 
     integer(SIZEOF_SIZE_T) :: size, pnp
     integer :: ist
+
+    call push_sub('batch.batch_read_from_opencl_buffer')
 
     pnp = opencl_padded_size(np)
     size = pnp*this%nst_linear
@@ -300,6 +309,7 @@ contains
       end if
     end do
 
+    call pop_sub('batch.batch_write_to_opencl_buffer')
   end subroutine batch_read_from_opencl_buffer
 
 #endif

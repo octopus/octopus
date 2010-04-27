@@ -26,7 +26,6 @@
 #include <CL/cl.h>
 
 typedef struct{
-  int numerr;
   cl_context Context;
   cl_device_id * Devices;
   cl_command_queue CommandQueue;
