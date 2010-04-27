@@ -53,7 +53,10 @@ module opencl_m
   end type opencl_mem_t
 
   type(opencl_t) :: opencl
-  type(c_ptr), public :: kernel_vpsi
+
+  ! the kernels
+  type(c_ptr), public :: dvpsi
+  type(c_ptr), public :: zvpsi
 
   ! this values are copied from OpenCL include CL/cl.h
   integer, parameter, public ::        &
@@ -77,32 +80,61 @@ module opencl_m
     subroutine f90_opencl_env_end(this)
       use c_pointer_m
 
+      implicit none
+
       type(c_ptr), intent(inout) :: this
     end subroutine f90_opencl_env_end
 
     ! ----------------------------------------------------
 
-    subroutine f90_opencl_kernel_init(this, env, source_file, kernel_base_name)
+    subroutine f90_opencl_build_program(prog, env, source_file)
       use c_pointer_m
 
-      type(c_ptr),      intent(out)   :: this
+      implicit none
+
+      type(c_ptr),      intent(out)   :: prog
       type(c_ptr),      intent(inout) :: env
       character(len=*), intent(in)    :: source_file
-      character(len=*), intent(in)    :: kernel_base_name
-    end subroutine f90_opencl_kernel_init
+    end subroutine f90_opencl_build_program
 
     ! ----------------------------------------------------
 
-    subroutine f90_opencl_kernel_end(this)
+    subroutine f90_opencl_release_program(prog)
       use c_pointer_m
 
-      type(c_ptr), intent(inout) :: this
-    end subroutine f90_opencl_kernel_end
+      implicit none
+
+      type(c_ptr), intent(inout) :: prog
+    end subroutine f90_opencl_release_program
+
+    ! ----------------------------------------------------
+
+    subroutine f90_opencl_create_kernel(kernel, prog, kernel_name)
+      use c_pointer_m
+
+      implicit none
+
+      type(c_ptr),      intent(out)   :: kernel
+      type(c_ptr),      intent(inout) :: prog
+      character(len=*), intent(in)    :: kernel_name
+    end subroutine f90_opencl_create_kernel
+
+    ! ----------------------------------------------------
+
+    subroutine f90_opencl_release_kernel(kernel)
+      use c_pointer_m
+
+      implicit none
+
+      type(c_ptr), intent(inout) :: kernel
+    end subroutine f90_opencl_release_kernel
 
     ! ----------------------------------------------------
 
     subroutine f90_opencl_create_buffer(this, env, flags, size)
       use c_pointer_m
+
+      implicit none
 
       type(c_ptr),            intent(inout) :: this
       type(c_ptr),            intent(inout) :: env
@@ -128,23 +160,23 @@ module opencl_m
 
     ! ----------------------------------------------------
 
-    subroutine f90_opencl_set_kernel_arg_buf(kernel, type, index, buffer)
+    subroutine f90_opencl_set_kernel_arg_buf(kernel, index, buffer)
       use c_pointer_m
 
+      implicit none
+
       type(c_ptr), intent(inout) :: kernel
-      integer,     intent(in)    :: type
       integer,     intent(in)    :: index
       type(c_ptr), intent(in)    :: buffer
     end subroutine f90_opencl_set_kernel_arg_buf
     
     ! ----------------------------------------------------
 
-    subroutine f90_opencl_kernel_run(kernel, env, type, dim, globalsizes, localsizes)
+    subroutine f90_opencl_kernel_run(kernel, env, dim, globalsizes, localsizes)
       use c_pointer_m
 
       type(c_ptr),            intent(inout) :: kernel
       type(c_ptr),            intent(inout) :: env
-      integer,                intent(in)    :: type
       integer,                intent(in)    :: dim
       integer(SIZEOF_SIZE_T), intent(in)    :: globalsizes
       integer(SIZEOF_SIZE_T), intent(in)    :: localsizes
@@ -184,17 +216,24 @@ module opencl_m
     ! ------------------------------------------
 
     subroutine opencl_init()
+      type(c_ptr) :: prog
+
       call f90_opencl_env_init(opencl%env, trim(conf%share)//'/opencl/')      
 
       ! now initialize the kernels
-      call f90_opencl_kernel_init(kernel_vpsi, opencl%env, "vpsi.cl", "vpsi");
+      call f90_opencl_build_program(prog, opencl%env, "vpsi.cl")
+      call f90_opencl_create_kernel(dvpsi, prog, "dvpsi")
+      call f90_opencl_create_kernel(zvpsi, prog, "zvpsi")
+      call f90_opencl_release_program(prog)
+
     end subroutine opencl_init
 
     ! ------------------------------------------
 
     subroutine opencl_end()
       
-      call f90_opencl_kernel_end(kernel_vpsi)
+      call f90_opencl_release_kernel(dvpsi)
+      call f90_opencl_release_kernel(zvpsi)
       call f90_opencl_env_end(opencl%env)
     end subroutine opencl_end
 
@@ -267,23 +306,23 @@ module opencl_m
 
     ! ------------------------------------------
 
-    subroutine opencl_set_kernel_arg_buffer(kernel, type, narg, buffer)
+    subroutine opencl_set_kernel_arg_buffer(kernel, narg, buffer)
       type(c_ptr),        intent(inout) :: kernel
-      integer,            intent(in)    :: type
       integer,            intent(in)    :: narg
       type(opencl_mem_t), intent(in)    :: buffer
       
       call push_sub('opencl.opencl_set_kernel_arg_buffer')
-      call f90_opencl_set_kernel_arg_buf(kernel, type, narg, buffer%mem)
+
+      call f90_opencl_set_kernel_arg_buf(kernel, narg, buffer%mem)
+
       call pop_sub('opencl.opencl_set_kernel_arg_buffer')
 
     end subroutine opencl_set_kernel_arg_buffer
 
     ! ------------------------------------------
 
-    subroutine opencl_kernel_run(kernel, type, globalsizes, localsizes)
+    subroutine opencl_kernel_run(kernel, globalsizes, localsizes)
       type(c_ptr),        intent(inout) :: kernel
-      integer,            intent(in)    :: type
       integer,            intent(in)    :: globalsizes(:)
       integer,            intent(in)    :: localsizes(:)
       
@@ -302,7 +341,7 @@ module opencl_m
 
       ASSERT(all(mod(gsizes, lsizes) == 0))
 
-      call f90_opencl_kernel_run(kernel, opencl%env, type, dim, gsizes(1), lsizes(1))
+      call f90_opencl_kernel_run(kernel, opencl%env, dim, gsizes(1), lsizes(1))
       call opencl_finish()
       call profiling_out(prof_kernel_run)
       call pop_sub('opencl.opencl_kernel_run')

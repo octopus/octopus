@@ -104,19 +104,22 @@ void FC_FUNC_(f90_opencl_env_end,F90_OPENCL_ENV_END)(opencl_env_t ** thisptr){
   free(this);
 }
 
-void opencl_kernel_init(opencl_kernel_t * this, opencl_env_t * env, const char * file_name, char * kernel_base_name){
+void FC_FUNC_(f90_opencl_build_program, F90_OPENCL_BUILD_PROGRAM)
+     (cl_program ** program, opencl_env_t ** env, STR_F_TYPE file_name_f STR_ARG1){
   FILE * source_file;
-  cl_int numerr;
-  cl_program OpenCLProgram;
-  int len;
-  char * kernel_name;
+  cl_int status;
   char * full_file_name;
   size_t szSourceLength;
   char* cSourceString;
+  char * file_name;
+
+  *program = (cl_program *) malloc(sizeof(cl_program));
+
+  TO_C_STR1(file_name_f, file_name);
 
   /* build the full path of the source file */
-  full_file_name = (char *) malloc((strlen(env->source_path) + strlen(file_name) + 1)*sizeof(char));
-  strcpy(full_file_name, env->source_path);
+  full_file_name = (char *) malloc((strlen(env[0]->source_path) + strlen(file_name) + 1)*sizeof(char));
+  strcpy(full_file_name, env[0]->source_path);
   strcat(full_file_name, file_name);
 
   /* open the OpenCL source code file */
@@ -140,68 +143,55 @@ void opencl_kernel_init(opencl_kernel_t * this, opencl_env_t * env, const char *
     
   cSourceString[szSourceLength] = '\0';
 
-  OpenCLProgram = clCreateProgramWithSource(env->Context, 1, (const char**)&cSourceString, NULL, &numerr); 
-  numerr = clBuildProgram(OpenCLProgram, 0, NULL, "-cl-mad-enable", NULL, NULL);
+  **program = clCreateProgramWithSource(env[0]->Context, 1, (const char**)&cSourceString, NULL, &status); 
+  status = clBuildProgram(**program, 0, NULL, "-cl-mad-enable", NULL, NULL);
   
-  if(numerr != CL_SUCCESS){
+  if(status != CL_SUCCESS){
     size_t len;
     char buffer[2048];
-    clGetProgramBuildInfo (OpenCLProgram, env->Devices[0],
+    clGetProgramBuildInfo (**program, env[0]->Devices[0],
 			   CL_PROGRAM_BUILD_LOG, sizeof (buffer), buffer,
 			   &len);    
     fprintf(stderr, "Error: compilation of file %s failed.\nCompilation log:\n%s\n", full_file_name, buffer);
     exit(1);
   }
 
-  len = strlen(kernel_base_name);
-  kernel_name = (char *) malloc((len + 2)*sizeof(char));
-
-  /* Create a handle to the compiled OpenCL function (Kernel) */
-  kernel_name[0] = 'd';
-  kernel_name[1] = '\0';
-  strcat(kernel_name, kernel_base_name);
-  this->kernel_double = clCreateKernel(OpenCLProgram, kernel_name, &numerr);
-
-  if(numerr != CL_SUCCESS){
-    fprintf(stderr, "Error: creation of kernel '%s' failed with error %d.\n", kernel_name, numerr);
-    exit(1);
-  }
-
-  kernel_name[0] = 'z';
-  kernel_name[1] = '\0';
-  strcat(kernel_name, kernel_base_name);
-  this->kernel_complex = clCreateKernel(OpenCLProgram, kernel_name, &numerr);
-
-  if(numerr != CL_SUCCESS){
-    fprintf(stderr, "Error: creation of kernel  '%s' failed with error %d.\n", kernel_name, numerr);
-    exit(1);
-  }
-  clReleaseProgram(OpenCLProgram);
-  free(kernel_name);
-  free(full_file_name);
-}
-
-void FC_FUNC_(f90_opencl_kernel_init, F90_OPENCL_KERNEL_INIT)
-     (opencl_kernel_t ** this, opencl_env_t ** env, STR_F_TYPE file_name_f, STR_F_TYPE kernel_base_name_f STR_ARG2){
-  char * file_name,  * kernel_base_name;
-
-  *this = (opencl_kernel_t *) malloc(sizeof(opencl_kernel_t));
-  TO_C_STR1(file_name_f, file_name);
-  TO_C_STR2(kernel_base_name_f, kernel_base_name);
-  opencl_kernel_init(*this, *env, file_name, kernel_base_name);
   free(file_name);
-  free(kernel_base_name);
+
 }
 
-void opencl_kernel_end(opencl_kernel_t * this){
-  clReleaseKernel(this->kernel_double);
-  clReleaseKernel(this->kernel_complex);
+void FC_FUNC_(f90_opencl_release_program, F90_OPENCL_RELEASE_PROGRAM)
+     (cl_program ** program, opencl_env_t ** env, STR_F_TYPE file_name_f STR_ARG1){
+  cl_int status;
+
+  clReleaseProgram(**program);
+  free(*program);
 }
 
+void FC_FUNC_(f90_opencl_create_kernel, F90_OPENCL_CREATE_KERNEL)
+     (cl_kernel ** kernel, cl_program ** program, STR_F_TYPE kernel_name_f STR_ARG1){
+  char * kernel_name;
+  cl_int status;
 
-void FC_FUNC_(f90_opencl_kernel_end, F90_OPENCL_KERNEL_END)(opencl_kernel_t ** this){
-  opencl_kernel_end(*this);
-  free(*this);
+  TO_C_STR1(kernel_name_f, kernel_name);
+
+  *kernel = (cl_kernel *) malloc(sizeof(cl_kernel));
+
+  **kernel = clCreateKernel(**program, kernel_name, &status);
+
+  /*printf("kernel = %ld\n", *kernel);*/
+
+  if(status != CL_SUCCESS){
+    fprintf(stderr, "Error: creation of kernel '%s' failed with error %d.\n", kernel_name, status);
+    exit(1);
+  }
+
+  free(kernel_name);
+}
+
+void FC_FUNC_(f90_opencl_release_kernel, F90_OPENCL_RELEASE_KERNEL)(cl_kernel ** kernel){
+  clReleaseKernel(**kernel);
+  free(*kernel);
 }
 
 void FC_FUNC_(f90_opencl_create_buffer, F90_OPENCL_CREATE_BUFFER)
@@ -284,16 +274,12 @@ void FC_FUNC_(f90_opencl_finish, F90_OPENCL_FINISH)(opencl_env_t ** env){
 }
 
 void FC_FUNC_(f90_opencl_set_kernel_arg_buf, F90_OPENCL_SET_KERNEL_ARG_BUF)
-     (opencl_kernel_t ** kernel, const int * type, const int * index, cl_mem ** buffer){
+     (cl_kernel ** kernel, const int * index, cl_mem ** buffer){
   cl_int ierr;
   
   /*printf("index=%d\n", *index);*/
 
-  if(1 == *type){
-    ierr = clSetKernelArg(kernel[0]->kernel_double, *index, sizeof(cl_mem), *buffer);
-  } else {
-    ierr = clSetKernelArg(kernel[0]->kernel_complex, *index, sizeof(cl_mem), *buffer);
-  }
+  ierr = clSetKernelArg(**kernel, *index, sizeof(cl_mem), *buffer);
   
   if(ierr != CL_SUCCESS){
     fprintf(stderr, "Error: clSetKernelArg with buffer failed. Error code %d\n", ierr);
@@ -302,16 +288,12 @@ void FC_FUNC_(f90_opencl_set_kernel_arg_buf, F90_OPENCL_SET_KERNEL_ARG_BUF)
 }
 
 void FC_FUNC_(f90_opencl_set_kernel_arg_data, F90_OPENCL_SET_KERNEL_ARG_DATA)
-     (opencl_kernel_t ** kernel, const int * type, const int * index, const int * sizeof_data, const void * data){
+     (cl_kernel ** kernel, const int * index, const int * sizeof_data, const void * data){
   cl_int ierr;
   
-  /*printf("index=%d\n", *index);*/
+  /* printf("kernel=%ld index=%d\n", *kernel, *index);*/
 
-  if(1 == *type){
-    ierr = clSetKernelArg(kernel[0]->kernel_double, *index, *sizeof_data, data);
-  } else {
-    ierr = clSetKernelArg(kernel[0]->kernel_complex, *index, *sizeof_data, data);
-  }
+  ierr = clSetKernelArg(**kernel, *index, *sizeof_data, data);
   
   if(ierr != CL_SUCCESS){
     fprintf(stderr, "Error: clSetKernelArg with buffer failed. Error code %d\n", ierr);
@@ -320,26 +302,20 @@ void FC_FUNC_(f90_opencl_set_kernel_arg_data, F90_OPENCL_SET_KERNEL_ARG_DATA)
 }
 
 void FC_FUNC_(f90_opencl_kernel_run, F90_OPENCL_KERNEL_RUN)
-     (opencl_kernel_t ** kernel, opencl_env_t ** env, const int * type, const int * dim, 
-      const size_t * globalsizes, const size_t * localsizes){
+     (cl_kernel ** kernel, opencl_env_t ** env, const int * dim, const size_t * globalsizes, const size_t * localsizes){
 
   cl_int ierr;
   /*
   cl_uint numargs;
 
-  clGetKernelInfo(kernel[0]->kernel_double, CL_KERNEL_NUM_ARGS, sizeof(numargs), &numargs, NULL);
+  clGetKernelInfo(**kernel, CL_KERNEL_NUM_ARGS, sizeof(numargs), &numargs, NULL);
   printf("Num args %d\n", numargs);
   */
   /*  printf("WG size  %d %d\n", globalsizes[0], localsizes[0]);
    */
 
-  if(1 == *type){
-    ierr = clEnqueueNDRangeKernel(env[0]->CommandQueue, kernel[0]->kernel_double, *dim,
+  ierr = clEnqueueNDRangeKernel(env[0]->CommandQueue, **kernel, *dim,
 				NULL,  globalsizes, localsizes, 0, NULL, NULL);
-  } else {
-    ierr = clEnqueueNDRangeKernel(env[0]->CommandQueue, kernel[0]->kernel_complex, *dim,
-				NULL,  globalsizes, localsizes, 0, NULL, NULL);
-  }
 
   if(ierr != CL_SUCCESS){
     fprintf(stderr, "Error: kernel execution failed. Error code %d\n", ierr);

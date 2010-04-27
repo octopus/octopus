@@ -33,9 +33,4 @@ typedef struct{
   size_t max_workgroup_size;
 } opencl_env_t;
 
-typedef struct{
-  cl_kernel kernel_double;
-  cl_kernel kernel_complex;
-} opencl_kernel_t;
-
 #endif
