@@ -23,6 +23,7 @@ module opencl_m
   use c_pointer_m
   use global_m
   use types_m
+  use profiling_m
 
   implicit none 
 
@@ -170,6 +171,8 @@ module opencl_m
       zopencl_set_kernel_arg_data
   end interface
   
+  type(profile_t), save :: prof_read, prof_write, prof_kernel_run
+  
   contains
 
     pure logical function opencl_is_available() result(available)
@@ -279,6 +282,8 @@ module opencl_m
       integer(SIZEOF_SIZE_T) :: gsizes(1:3)
       integer(SIZEOF_SIZE_T) :: lsizes(1:3)
 
+      call profiling_in(prof_kernel_run, "CL_KERNEL_RUN")
+
       dim = ubound(globalsizes, dim = 1)
       ASSERT(dim == ubound(localsizes, dim = 1))
       
@@ -288,6 +293,8 @@ module opencl_m
       ASSERT(all(mod(gsizes, lsizes) == 0))
 
       call f90_opencl_kernel_run(kernel, opencl%env, type, dim, gsizes(1), lsizes(1))
+      call opencl_finish()
+      call profiling_out(prof_kernel_run)
 
     end subroutine opencl_kernel_run
 
