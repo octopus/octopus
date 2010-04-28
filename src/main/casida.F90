@@ -663,9 +663,11 @@ contains
                    zx(:) = M_ZERO
                    zf(:) = M_ZERO
                    do ia = 1, cas%n_pairs
-                     forall(ip = 1:mesh%np) zf(ip) = exp(M_zI*dot_product(qvect(1:3), mesh%x(ip, 1:3))) * &
-                                                         st%dpsi(ip, 1, cas%pair(ia)%i, cas%pair(ia)%sigma) * &
-                                                         st%dpsi(ip, 1, cas%pair(ia)%a, cas%pair(ia)%sigma)
+                     forall(ip = 1:mesh%np)
+                       zf(ip) = exp(M_zI*dot_product(qvect(1:3), mesh%x(ip, 1:3))) * &
+                         st%dpsi(ip, 1, cas%pair(ia)%i, cas%pair(ia)%sigma) * &
+                         st%dpsi(ip, 1, cas%pair(ia)%a, cas%pair(ia)%sigma)
+                     end forall
                      zx(ia) = zmf_integrate(mesh, zf)
                    end do
 
