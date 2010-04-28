@@ -252,12 +252,12 @@ contains
     
     FLOAT, intent(out) :: vaf(0:)
 
-    FLOAT, allocatable :: vsys(:,:)
+    FLOAT, allocatable :: vsys(:,:), norm(:)
     
     integer:: nvelocities
     
-    FLOAT:: norm, summand
-  
+    FLOAT:: summand
+    
     ! Opens the coordinates files.
     iunit = io_open('td.general/coordinates', action='read')
 
@@ -315,19 +315,27 @@ contains
 
     !calculating the vaf
     vaf=M_ZERO
-
+    
+    SAFE_ALLOCATE(norm(1:nvaf))
+    
+    norm = M_ZERO
+    do ii = 1, nvaf
+      do kk = 1, nvelocities
+         norm(ii) = norm(ii) + vsys(ii,kk)*vsys(ii,kk)
+      end do   
+    end do
+    
     do ntime = 0, nvaf
       do ii = 1, nvaf
-       norm = M_ZERO
        summand = M_ZERO
        do kk = 1,nvelocities
         summand = summand + vsys(ii,kk)*vsys(ii+ntime,kk)
-	norm = norm + vsys(ii,kk)*vsys(ii,kk)
 	end do
-	vaf(ntime) = vaf(ntime) + summand/norm
+	vaf(ntime) = vaf(ntime) + summand/norm(ii)
       end do
     end do
-
+    
+    SAFE_DEALLOCATE_A(norm)
     SAFE_DEALLOCATE_A(vsys)
 
   end subroutine read_vaf
