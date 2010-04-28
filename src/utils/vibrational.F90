@@ -252,7 +252,7 @@ contains
     
     FLOAT, intent(out) :: vaf(0:)
 
-    FLOAT, allocatable :: vini(:,:), vsys(:,:)
+    FLOAT, allocatable :: vsys(:,:)
     
     integer:: nvelocities
     
@@ -388,14 +388,14 @@ contains
 
     !apply an envelope
     do jj = ini_iter, end_iter
-      fi(jj) = fi(jj) * sin((time(jj)-time(ini_iter+1))*M_PI/(time(end_iter)-time(ini_iter)))
+      fi(jj) = fi(jj) * sin((time(jj)-time(ini_iter+1))*M_PI/(time(end_iter)-time(ini_iter))) !we only consider time- and therefore indexdifferences (so there is no prob with the index conversion)
     end do
 
     !remove the DC component
     av = M_ZERO
     count = 0
     do jj = ini_iter, end_iter
-      av = av + fi(jj) * M_HALF*(time(jj+1)-time(jj-1))
+      av = av + fi(jj) * M_HALF*(time(jj+1)-time(jj-1)) !we only consider time- and therefore indexdifferences (so there is no prob with the index conversion)
       count = count + 1
     end do
     
