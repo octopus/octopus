@@ -112,8 +112,9 @@ program vibrational
        end do
     
       if (mod(ntime,2) > CNST(1e-12)) then
-         write(message(1), '(a)') "WARNING: Velocity autocorrelation function needs even number of input points, the last point will be ignored."
-         call write_info(1)
+         write(message(1), '(a)') "WARNING: Velocity autocorrelation function needs even number of input points,"
+         write(message(2), '(a)') "the last point will be ignored."
+         call write_info(2)
          nvaf=int((ntime-1)/2)
        
       else 
