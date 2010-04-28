@@ -388,19 +388,19 @@ contains
 
     !apply an envelope
     do jj = ini_iter, end_iter
-      fi(jj) = fi(jj) * sin((time(jj)-time(ini_iter+1))*M_PI/(time(end_iter)-time(ini_iter))) !we only consider time- and therefore indexdifferences (so there is no prob with the index conversion)
+      fi(jj) = fi(jj) * sin((time(jj)-time(ini_iter+1))*M_PI/(time(end_iter)-time(ini_iter))) !we only consider time- and therefore indexdifferences (so the indices are also ok for the vaf)
     end do
 
     !remove the DC component
     av = M_ZERO
     count = 0
     do jj = ini_iter, end_iter
-      av = av + fi(jj) * M_HALF*(time(jj+1)-time(jj-1)) !we only consider time- and therefore indexdifferences (so there is no prob with the index conversion)
+      av = av + fi(jj) * M_HALF*(time(jj+1)-time(jj-1)) !we only consider time- and therefore indexdifferences (so the indices are also ok for the vaf)
       count = count + 1
     end do
     
     do jj = ini_iter, end_iter
-  !    fi(jj) = fi(jj) - av/(M_HALF*(time(jj+1)-time(jj-1))*count)
+      fi(jj) = fi(jj) - av/(M_HALF*(time(jj+1)-time(jj-1))*count) !we only consider time- and therefore indexdifferences (so the indices are also ok for the vaf)
     end do
 
     write (message(1), '(a)') "Taking the fourier transform."
