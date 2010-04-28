@@ -39,7 +39,7 @@ program vibrational
   
   integer :: mode
 
-  integer :: iunit, ierr, ii, jj, iter, read_iter, max_iter, ini_iter, end_iter
+  integer :: iunit, ierr, ii, jj, kk, iter, read_iter, max_iter, ini_iter, end_iter, ntime, nvaf
   FLOAT :: start_time, end_time
   FLOAT, allocatable :: vaf(:), time(:), dipole(:,:)
   CMPLX, allocatable :: ftvaf(:), ftdipole(:,:)
@@ -51,7 +51,7 @@ program vibrational
   integer, parameter :: max_freq = 10000
   
   ! Initialize stuff
-  call global_init()
+  call global_init()		 
   call getopt_init(ierr)
   mode = SPEC_VIBRATIONAL
   if(ierr.eq.0) call getopt_vibrational(mode)
@@ -81,22 +81,75 @@ program vibrational
 
       call geometry_init(geo)
 
-      SAFE_ALLOCATE(vaf(0:max_iter))
+      ! Opens the coordinates files.
+      iunit = io_open('td.general/coordinates', action='read')
+
+      call io_skip_header(iunit)
+       
+       ntime = 0
+       iter = 0
+       
+       ! for the allocation of vaf we need to check how many timesteps are there 
+       do
+        read(unit = iunit, iostat = ierr, fmt = *) read_iter, time(iter), &
+          & ((geo%atom(ii)%x(jj), jj = 1, 3), ii = 1, geo%natoms),&
+          & ((geo%atom(ii)%v(jj), jj = 1, 3), ii = 1, geo%natoms)
+
+        time(iter) =  units_to_atomic(units_out%time, time(iter))
+  
+          if(ierr.ne.0) then
+	    iter = iter - 1	! last iteration is not valid
+	    exit
+          end if
+          
+          ASSERT(iter == read_iter)
+          
+          if (time(iter) >= end_time) exit
+          
+          if (time(iter) >= start_time) ntime = ntime + 1 !ntime counts how many steps are gonna be used
+                   
+          iter = iter + 1 !counts number of timesteps (with time larger than zero up to SpecEndTime)
+       end do
+    
+      if (mod(ntime,2) > CNST(1e-12)) then
+         write(message(1), '(a)') "WARNING: Velocity autocorrelation function needs even number of input points, the last point will be ignored."
+         call write_info(1)
+         nvaf=int((ntime-1)/2)
+       
+      else 
+         nvaf=int(ntime/2)
+    
+      end if
+   
+
+
+      call io_close(iunit)
+      
+           
+      SAFE_ALLOCATE(vaf(0:nvaf))
+
 
       call read_vaf(vaf)
 
-      av = maxval(abs(vaf(ini_iter:end_iter)))
+      av = maxval(abs(vaf))
+
       
       if( av < CNST(1e-12)) then 
         write (message(1), '(a)') "Error: Velocity autocorrelation function is zero."
         call write_fatal(1)
       end if
       
-      vaf(ini_iter:end_iter) = vaf(ini_iter:end_iter)/av
-      
-      SAFE_ALLOCATE(ftvaf(1:max_freq))
+      vaf = vaf/av
+
     
+      SAFE_ALLOCATE(ftvaf(1:max_freq))
+
+      !ini_iter and end_iter are nessesary to apply the envelope function for the fouriertransform, in the case of mode=vib spectrum they refer to the indices of vaf which goes from 1 to nvaf
+      ini_iter=1
+      end_iter=nvaf
+
       call fourier(vaf, ftvaf)
+
 
       !print the vaf
       iunit = io_open('td.general/velocity_autocorrelation', action='write')
@@ -107,20 +160,20 @@ program vibrational
       write(unit = iunit, iostat = ierr, fmt = '(a1,4x,a6,a7,a1,10x,a10)') '#', &
        &  'time [',units_out%time%abbrev,']', 'VAF [a.u.]'
       write(unit = iunit, iostat = ierr, fmt = 800) 
-      
+   
       do jj = ini_iter, end_iter
         write(unit = iunit, iostat = ierr, fmt = *) &
          &  units_from_atomic(units_out%time, time(jj)), vaf(jj)
       end do
-      
-      ! print again to see the matching
+
+       !print again to see the matching
       do jj = ini_iter, end_iter
         write(unit = iunit, iostat = ierr, fmt = *) &
          & units_from_atomic(units_out%time, (time(end_iter)-time(ini_iter)) + time(jj)), vaf(jj)
       end do
       
       call io_close(iunit)
-      
+
       !and print the spectrum
       iunit = io_open('td.general/vibrational_spectrum', action='write')
 
@@ -129,19 +182,23 @@ program vibrational
       write(unit = iunit, iostat = ierr, fmt = '(a17,8x,a15,5x,a13,5x,a13)') &
         & '#   Energy [1/cm]', 'Spectrum [a.u.]', 'Re(FT of vaf)', 'Im(FT of vaf)'      
       write(unit = iunit, iostat = ierr, fmt = 800 ) 
-      
+
       do ifreq = 1, max_freq
         ww = dw * ifreq
         write(unit = iunit, iostat = ierr, fmt = '(4e20.10)') &
          & units_from_atomic(unit_invcm, ww), abs(ftvaf(ifreq)), real(ftvaf(ifreq)), aimag(ftvaf(ifreq))
       end do
-      
-      call io_close(iunit)
-      
-      SAFE_DEALLOCATE_A(vaf)
-      SAFE_DEALLOCATE_A(ftvaf)
 
+      call io_close(iunit)
+
+      SAFE_DEALLOCATE_A(vaf)
+ 
+      SAFE_DEALLOCATE_A(ftvaf)
+ 
       call geometry_end(geo)
+
+
+
 
     case(SPEC_INFRARED)
 
@@ -191,68 +248,87 @@ program vibrational
 contains
 
   subroutine read_vaf(vaf)
+    implicit none
+    
     FLOAT, intent(out) :: vaf(0:)
 
-    FLOAT, allocatable :: vini(:,:)
-
-    SAFE_ALLOCATE(vini(1:3, 1:geo%natoms))
-
+    FLOAT, allocatable :: vini(:,:), vsys(:,:)
+    
+    integer:: nvelocities
+    
+    FLOAT:: norm, summand
+  
     ! Opens the coordinates files.
     iunit = io_open('td.general/coordinates', action='read')
 
     call io_skip_header(iunit)
+  
+    nvelocities=3*geo%natoms
 
-    ini_iter = -1
+    SAFE_ALLOCATE(vsys(1:ntime, 1:nvelocities))
+
+    !reading in data    
     iter = 0
-    do while(.true.)
-
-      read(unit = iunit, iostat = ierr, fmt = *) read_iter, time(iter), &
+    ntime = 0
+        
+    do
+        read(unit = iunit, iostat = ierr, fmt = *) read_iter, time(iter), &
           & ((geo%atom(ii)%x(jj), jj = 1, 3), ii = 1, geo%natoms),&
           & ((geo%atom(ii)%v(jj), jj = 1, 3), ii = 1, geo%natoms)
-
-      time(iter) =  units_to_atomic(units_out%time, time(iter))
-      forall( jj = 1: 3, ii = 1: geo%natoms) geo%atom(ii)%x(jj)=units_to_atomic( units_out%length,   geo%atom(ii)%x(jj))
-      forall( jj = 1: 3, ii = 1: geo%natoms) geo%atom(ii)%v(jj)=units_to_atomic( units_out%velocity, geo%atom(ii)%v(jj))
-
-      if (ierr /= 0) then 
-        iter = iter - 1 !last iteration is not valid
-        exit
-      end if
-
-      ASSERT(iter == read_iter)
-
-      if (time(iter) >= end_time) exit
-
-      if (time(iter) >= start_time) then
-
-        if(ini_iter == -1) then 
-          ini_iter = iter
-          do ii = 1, geo%natoms
-            vini(1:3, ii) = geo%atom(ii)%v(1:3)
-          end do
+      
+        time(iter) =  units_to_atomic(units_out%time, time(iter))
+        forall( jj = 1: 3, ii = 1: geo%natoms) geo%atom(ii)%x(jj)=units_to_atomic( units_out%length,   geo%atom(ii)%x(jj))
+        forall( jj = 1: 3, ii = 1: geo%natoms) geo%atom(ii)%v(jj)=units_to_atomic( units_out%velocity, geo%atom(ii)%v(jj))  
+      
+  
+        if(ierr.ne.0) then
+	  iter = iter - 1	! last iteration is not valid
+          exit
         end if
 
-        !calculate the vaf
-        vaf(iter) = M_ZERO
-        do ii = 1, geo%natoms
-          vaf(iter) = vaf(iter) + sum(geo%atom(ii)%v(1:3) * vini(1:3, ii))
-        end do
-
-      end if
-
-      iter = iter + 1
+        ASSERT(iter == read_iter)
+          
+        if (time(iter) >= end_time) exit
+                        
+        iter = iter + 1 !counts number of timesteps (lines in coordinatefile)
+                        
+        if (time(iter)>=start_time) then  
+           ntime = ntime + 1 
+           kk=1
+           do while (kk<=nvelocities)
+		do ii = 1,geo%natoms
+		  do jj = 1, 3
+		      vsys(ntime, kk) = geo%atom(ii)%v(jj)
+		      kk = kk + 1 
+                  end do
+                end do  
+           end do
+        end if
+ 
     end do
 
     call io_close(iunit)
 
-    if(ini_iter == 0 ) ini_iter = 1
-    end_iter = iter - 1
-
     write (message(1), '(a)') "Read velocities from '"// &
       trim(io_workpath('td.general/coordinates'))//"'"
     call write_info(1)
-    
-    SAFE_DEALLOCATE_A(vini)
+
+    !calculating the vaf
+    vaf=M_ZERO
+
+    do ntime = 0, nvaf
+      do ii = 1, nvaf
+       norm = M_ZERO
+       summand = M_ZERO
+       do kk = 1,nvelocities
+        summand = summand + vsys(ii,kk)*vsys(ii+ntime,kk)
+	norm = norm + vsys(ii,kk)*vsys(ii,kk)
+	end do
+	vaf(ntime) = vaf(ntime) + summand/norm
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(vsys)
 
   end subroutine read_vaf
 
@@ -303,6 +379,7 @@ contains
   end subroutine read_dipole
   
   subroutine fourier(fi, ftfi)
+  implicit none
     FLOAT, intent(inout)  :: fi(:)
     CMPLX, intent(out)    :: ftfi(:)
 
@@ -323,7 +400,7 @@ contains
     end do
     
     do jj = ini_iter, end_iter
-      fi(jj) = fi(jj) - av/(M_HALF*(time(jj+1)-time(jj-1))*count)
+  !    fi(jj) = fi(jj) - av/(M_HALF*(time(jj+1)-time(jj-1))*count)
     end do
 
     write (message(1), '(a)') "Taking the fourier transform."
