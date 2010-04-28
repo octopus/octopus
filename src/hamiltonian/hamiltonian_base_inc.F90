@@ -167,6 +167,73 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
   call profiling_out(prof_magnetic)
 end subroutine X(hamiltonian_base_magnetic)
 
+subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
+  type(hamiltonian_base_t),    intent(in)    :: this
+  type(mesh_t),                intent(in)    :: mesh
+  type(states_dim_t),          intent(in)    :: std
+  integer,                     intent(in)    :: ik
+  type(batch_t),               intent(in)    :: psib
+  type(batch_t),               intent(inout) :: vpsib
+
+  integer :: ist, ip, iproj, imat
+  integer :: npoints, nprojs, nst
+  R_TYPE, allocatable :: psi(:, :), vpsi(:, :), projection(:,  :)
+  type(projector_matrix_t), pointer :: pmat
+#ifdef HAVE_MPI
+  R_TYPE, allocatable :: projection_red(:, :)
+#endif
+
+  if(.not. this%apply_projector_matrices) return
+
+  call profiling_in(prof_vnlpsi, "VNLPSI_MAT")
+  call push_sub('hamiltonian_base_inc.Xhamiltonian_base_non_local')
+  
+  do imat = 1, this%nprojector_matrices
+    pmat => this%projector_matrices(imat)
+
+    npoints = pmat%npoints
+    nprojs = pmat%nprojs
+    nst = psib%nst_linear
+
+    SAFE_ALLOCATE(psi(1:npoints, 1:nst))
+    SAFE_ALLOCATE(vpsi(1:npoints, 1:nst))
+    SAFE_ALLOCATE(projection(1:nprojs, 1:nst))
+
+    forall(ist = 1:psib%nst, ip = 1:npoints)
+      psi(ip, ist) = psib%states_linear(ist)%X(psi)(pmat%map(ip))
+      !MISSING: phases
+    end forall
+
+    projection(1:nprojs, 1:nst) = matmul(transpose(pmat%projectors(1:npoints, 1:nprojs)), psi(1:npoints, 1:nst))
+
+    forall(ist = 1:nst, iproj = 1:nprojs) projection(iproj, ist) = projection(iproj, ist)*pmat%scal(iproj)
+
+#ifdef HAVE_MPI
+    if(mesh%parallel_in_domains) then
+      SAFE_ALLOCATE(projection_red(1:nprojs, 1:nst))
+      forall(ist = 1:nst, iproj = 1:nprojs) projection_red(iproj, ist) = projection(iproj, ist)
+      call MPI_Allreduce(projection_red(1, 1), projection(1, 1), nst*nprojs, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+      SAFE_DEALLOCATE_A(projection_red)
+    end if
+#endif
+
+    vpsi(1:npoints, 1:nst) = matmul(pmat%projectors(1:npoints, 1:nprojs), projection(1:nprojs, 1:nst))
+
+    forall(ist = 1:nst, ip = 1:npoints)
+      vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) + vpsi(ip, ist)
+      !MISSING: phases
+    end forall
+
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(vpsi)
+    SAFE_DEALLOCATE_A(projection)
+  end do
+
+  call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_non_local')
+  call profiling_out(prof_vlpsi)
+end subroutine X(hamiltonian_base_non_local)
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

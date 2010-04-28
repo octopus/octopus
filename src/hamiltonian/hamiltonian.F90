@@ -964,8 +964,7 @@ contains
       end forall
     end if
 
-    ! done, check that everything is ok
-    call hamiltonian_base_check(this%hm_base, mesh)
+    call hamiltonian_base_update(this%hm_base, mesh)
  
     ! now regenerate the phases for the pseudopotentials
     do iatom = 1, this%ep%natoms
@@ -1016,9 +1015,7 @@ contains
     else
       call epot_generate(this%ep, gr, geo, st)
     end if
-
-    this%hm_base%nlproj => this%ep%proj
-
+    call hamiltonian_base_build_proj(this%hm_base, gr%mesh, this%ep, geo)
     call hamiltonian_update_potential(this, gr%mesh, time)
 
     call pop_sub('hamiltonian.hamiltonian_epot_generate')

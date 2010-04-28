@@ -29,11 +29,12 @@ module hamiltonian_base_m
   use grid_m
   use hardware_m
   use io_m
+  use kb_projector_m
   use lalg_basic_m
-  use logrid_m
   use mesh_m
   use mesh_function_m
   use messages_m
+  use mpi_m
   use nl_operator_m
 #ifdef HAVE_OPENCL
   use opencl_m
@@ -41,10 +42,10 @@ module hamiltonian_base_m
   use parser_m
   use profiling_m
   use projector_m
+  use projector_matrix_m
+  use ps_m
   use simul_box_m
-  use solids_m
   use species_m
-  use splines_m
   use states_m
   use states_dim_m
   use submesh_m
@@ -61,24 +62,29 @@ module hamiltonian_base_m
     zhamiltonian_base_local,                   &
     dhamiltonian_base_magnetic,                &
     zhamiltonian_base_magnetic,                &
+    dhamiltonian_base_non_local,               &
+    zhamiltonian_base_non_local,               &
     hamiltonian_base_has_magnetic,             &
     hamiltonian_base_init,                     &
     hamiltonian_base_end,                      &
     hamiltonian_base_allocate,                 &
     hamiltonian_base_clear,                    &
-    hamiltonian_base_check
+    hamiltonian_base_build_proj,               &
+    hamiltonian_base_update
 
   ! This object stores and applies an electromagnetic potential that
   ! can be represented by different types of potentials.
 
   type hamiltonian_base_t
-    integer                      :: nspin
-    type(nl_operator_t), pointer :: kinetic
-    type(projector_t),   pointer :: nlproj(:)
-    FLOAT,               pointer :: potential(:, :)
-    FLOAT,               pointer :: uniform_magnetic_field(:)
-    FLOAT,               pointer :: uniform_vector_potential(:)
-    FLOAT,               pointer :: vector_potential(:, :)
+    integer                           :: nspin
+    type(nl_operator_t),      pointer :: kinetic
+    type(projector_matrix_t), pointer :: projector_matrices(:) 
+    FLOAT,                    pointer :: potential(:, :)
+    FLOAT,                    pointer :: uniform_magnetic_field(:)
+    FLOAT,                    pointer :: uniform_vector_potential(:)
+    FLOAT,                    pointer :: vector_potential(:, :)
+    integer                           :: nprojector_matrices
+    logical                           :: apply_projector_matrices
 #ifdef HAVE_OPENCL
     type(opencl_mem_t)           :: potential_opencl
 #endif
@@ -99,7 +105,7 @@ module hamiltonian_base_m
     FIELD_UNIFORM_MAGNETIC_FIELD   = 8
   
 
-  type(profile_t), save :: prof_vlpsi, prof_magnetic
+  type(profile_t), save :: prof_vlpsi, prof_magnetic, prof_vnlpsi
 
 contains
 
@@ -117,6 +123,9 @@ contains
     nullify(this%uniform_magnetic_field)
     nullify(this%uniform_vector_potential)
     nullify(this%vector_potential)
+    nullify(this%projector_matrices)
+    this%apply_projector_matrices = .false.
+    this%nprojector_matrices = 0
 
     call pop_sub('hamiltonian_base.hamiltonian_base_init')
   end subroutine hamiltonian_base_init
@@ -131,6 +140,7 @@ contains
     SAFE_DEALLOCATE_P(this%vector_potential)
     SAFE_DEALLOCATE_P(this%uniform_vector_potential)
     SAFE_DEALLOCATE_P(this%uniform_magnetic_field)
+    call hamiltonian_base_destroy_proj(this)
 
     call pop_sub('hamiltonian_base.hamiltonian_base_end')
   end subroutine hamiltonian_base_end
@@ -204,26 +214,14 @@ contains
   ! this function copies the uniform in the non-uniform one. In the
   ! future it may perform other internal consistency operations.
   !
-  subroutine hamiltonian_base_check(this, mesh)
+  subroutine hamiltonian_base_update(this, mesh)
     type(hamiltonian_base_t), intent(inout) :: this
     type(mesh_t),             intent(in)    :: mesh
-
-    integer :: idir, ip
 
     call push_sub('hamiltonian_base.hamiltonian_check')
 
     if(associated(this%uniform_vector_potential) .and. associated(this%vector_potential)) then
-
-      ! copy the uniform vector potential onto the non-uniform one
-      forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) 
-        this%vector_potential(idir, ip) = &
-          this%vector_potential(idir, ip) + this%uniform_vector_potential(idir)
-      end forall
-      
-      ! and deallocate
-      SAFE_DEALLOCATE_P(this%uniform_vector_potential)
-      nullify(this%uniform_vector_potential)
-
+      call unify_vector_potentials()
     end if
 
 #ifdef HAVE_OPENCL
@@ -233,8 +231,126 @@ contains
 #endif
 
     call pop_sub('hamiltonian_base.hamiltonian_check')
-  end subroutine hamiltonian_base_check
+
+  contains
+
+    subroutine unify_vector_potentials()
+      integer :: idir, ip
+      
+      ! copy the uniform vector potential onto the non-uniform one
+      forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) 
+        this%vector_potential(idir, ip) = &
+          this%vector_potential(idir, ip) + this%uniform_vector_potential(idir)
+      end forall
+      
+      ! and deallocate
+      SAFE_DEALLOCATE_P(this%uniform_vector_potential)
+      nullify(this%uniform_vector_potential)
+      
+    end subroutine unify_vector_potentials
+
+  end subroutine hamiltonian_base_update
   
+  !--------------------------------------------------------
+
+  subroutine hamiltonian_base_destroy_proj(this)
+    type(hamiltonian_base_t), intent(inout) :: this
+
+    integer :: iproj
+    
+    if(associated(this%projector_matrices)) then
+      do iproj = 1, this%nprojector_matrices
+        call projector_matrix_deallocate(this%projector_matrices(1))
+      end do
+      SAFE_DEALLOCATE_P(this%projector_matrices)
+    end if
+  end subroutine hamiltonian_base_destroy_proj
+
+  !-----------------------------------------------------------------
+    
+  subroutine hamiltonian_base_build_proj(this, mesh, epot, geo)
+    type(hamiltonian_base_t), intent(inout) :: this
+    type(mesh_t),             intent(in)    :: mesh
+    type(epot_t),             intent(in)    :: epot
+    type(geometry_t),         intent(in)    :: geo
+
+    integer :: iatom, iproj, ll, lmax, lloc, mm, ic
+    integer :: nmat, imat, ip
+    type(ps_t), pointer :: ps
+    type(projector_matrix_t), pointer :: pmat
+    type(kb_projector_t),     pointer :: kb_p
+
+    ! deallocate previous projectors
+    call hamiltonian_base_destroy_proj(this)
+
+    ! count projectors
+    this%nprojector_matrices = 0
+    this%apply_projector_matrices = .false.
+
+    do iatom = 1, epot%natoms
+      if(projector_is(epot%proj(iatom), M_KB)) then
+        INCR(this%nprojector_matrices, 1)
+        this%apply_projector_matrices = .true.
+      else if(.not. projector_is_null(epot%proj(iatom))) then
+        ! for the moment only KB projectors are supported
+        this%apply_projector_matrices = .false.
+        exit
+      end if
+    end do
+
+    if(mesh%use_curvilinear) this%apply_projector_matrices = .false.
+    if(simul_box_is_periodic(mesh%sb)) this%apply_projector_matrices = .false.
+
+    if(.not. this%apply_projector_matrices) return
+    
+    SAFE_ALLOCATE(this%projector_matrices(1:this%nprojector_matrices))
+
+    iproj = 0
+    do iatom = 1, epot%natoms
+      if(.not. projector_is(epot%proj(iatom), M_KB)) cycle
+      INCR(iproj, 1)
+
+      lmax = epot%proj(iatom)%lmax
+      lloc = epot%proj(iatom)%lloc
+
+      ! count the number of projectors for this matrix
+      nmat = 0
+      do ll = 0, lmax
+        if (ll == lloc) cycle
+        do mm = -ll, ll
+          INCR(nmat, epot%proj(iatom)%kb_p(ll, mm)%n_c)
+        end do
+      end do
+
+      ps => species_ps(geo%atom(iatom)%spec)
+      pmat => this%projector_matrices(iproj)
+
+      call projector_matrix_allocate(pmat, epot%proj(iatom)%sphere%ns, nmat)
+
+      ! generate the matrix
+      pmat%projectors = M_ZERO
+
+      imat = 1
+      do ll = 0, lmax
+        if (ll == lloc) cycle
+        do mm = -ll, ll
+          kb_p =>  epot%proj(iatom)%kb_p(ll, mm)
+          do ic = 1, kb_p%n_c
+            forall(ip = 1:pmat%npoints) pmat%projectors(ip, imat) = kb_p%p(ip, ic)
+            pmat%scal(imat) = kb_p%e(ic)*mesh%vol_pp(1)
+            INCR(imat, 1)
+          end do
+        end do
+      end do
+
+      forall(ip = 1:pmat%npoints) pmat%map(ip) = epot%proj(iatom)%sphere%jxyz(ip)
+
+    end do
+      
+  end subroutine hamiltonian_base_build_proj
+    
+  ! ----------------------------------------------------------------------------------
+
   logical pure function hamiltonian_base_has_magnetic(this) result(has_magnetic)
     type(hamiltonian_base_t), intent(in) :: this
     

@@ -53,6 +53,7 @@ module projector_m
        projector_t,               &
        projector_null,            &
        projector_is_null,         &
+       projector_is,              &
        projector_init,            &
        projector_init_phases,     &
        projector_build,           &
@@ -74,7 +75,7 @@ module projector_m
        M_KB   = 2,  &
        M_RKB  = 3
 
-  integer, parameter :: MAX_REDUCE_SIZE = 24
+  integer, parameter :: MAX_NPROJECTIONS = 24
   integer, parameter :: MAX_L = 5
 
   ! The projector data type is intended to hold the local and
@@ -89,9 +90,8 @@ module projector_m
   ! Kleinman-Bylander projector (includes spin-orbit)
 
   type projector_t
-    private
     integer :: type = M_NONE
-    integer :: reduce_size
+    integer :: nprojections
     integer :: lmax
     integer :: lloc
     integer :: nik
@@ -126,12 +126,17 @@ contains
 
 
   !---------------------------------------------------------
-  logical pure function projector_is_null(p)
+  logical elemental function projector_is_null(p)
     type(projector_t), intent(in) :: p
     projector_is_null = (p%type == M_NONE)
   end function projector_is_null
   !---------------------------------------------------------
 
+  logical elemental function projector_is(p, type)
+    type(projector_t), intent(in) :: p
+    integer,           intent(in) :: type
+    projector_is = (p%type == type)
+  end function projector_is
 
   !---------------------------------------------------------
   subroutine projector_init(p, mesh, atm, dim, reltype)
@@ -181,11 +186,11 @@ contains
     
     select case(p%type)
     case(M_KB)
-      p%reduce_size = dim * ps%kbc
+      p%nprojections = dim * ps%kbc
     case(M_RKB)
-      p%reduce_size = 4
+      p%nprojections = 4
     case(M_HGH)
-      p%reduce_size = 24
+      p%nprojections = 24
     end select
 
     call pop_sub('projector.projector_init')

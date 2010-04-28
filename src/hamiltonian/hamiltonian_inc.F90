@@ -122,7 +122,11 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
   ! and the non-local one
   if (iand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
-    if(hm%ep%non_local) call X(project_psi_batch)(der%mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, epsib, hpsib, ik)
+    if(hm%hm_base%apply_projector_matrices) then
+      call X(hamiltonian_base_non_local)(hm%hm_base, der%mesh, hm%d, ik, epsib, hpsib)
+    else
+      if(hm%ep%non_local) call X(project_psi_batch)(der%mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, epsib, hpsib, ik)
+    end if
   end if
 
   if(iand(TERM_KINETIC, terms_) /= 0) then

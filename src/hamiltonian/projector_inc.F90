@@ -87,7 +87,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
         if (ll == pj(ipj)%lloc) cycle
         do mm = -ll, ll
           ireduce(ipj, ll, mm, ist) = 1 + nreduce
-          nreduce = nreduce + pj(ipj)%reduce_size
+          nreduce = nreduce + pj(ipj)%nprojections
         end do
       end do
     end do
@@ -298,7 +298,7 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
       end if
     end do
 
-    SAFE_ALLOCATE(uvpsi(1:pj%reduce_size, 1:2, 0:pj%lmax, -pj%lmax:pj%lmax))
+    SAFE_ALLOCATE(uvpsi(1:pj%nprojections, 1:2, 0:pj%lmax, -pj%lmax:pj%lmax))
     uvpsi = R_TOTYPE(M_ZERO)
 
     ASSERT(associated(pj%kb_p))
@@ -313,9 +313,9 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
 
 #if defined(HAVE_MPI)
     if(mesh%parallel_in_domains) then
-      SAFE_ALLOCATE(uvpsi_tmp(1:pj%reduce_size, 1:2, 0:pj%lmax, -pj%lmax:pj%lmax))
+      SAFE_ALLOCATE(uvpsi_tmp(1:pj%nprojections, 1:2, 0:pj%lmax, -pj%lmax:pj%lmax))
       uvpsi_tmp = R_TOTYPE(M_ZERO)
-      size = pj%reduce_size*2*(pj%lmax + 1)*(2*pj%lmax + 1)
+      size = pj%nprojections*2*(pj%lmax + 1)*(2*pj%lmax + 1)
       call MPI_Allreduce(uvpsi(1, 1, 0, -pj%lmax), uvpsi_tmp(1, 1, 0, -pj%lmax), size, &
         R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
       uvpsi = uvpsi_tmp
