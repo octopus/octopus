@@ -199,7 +199,7 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
     SAFE_ALLOCATE(vpsi(1:npoints, 1:nst))
     SAFE_ALLOCATE(projection(1:nprojs, 1:nst))
 
-    forall(ist = 1:psib%nst, ip = 1:npoints)
+    forall(ist = 1:nst, ip = 1:npoints)
       psi(ip, ist) = psib%states_linear(ist)%X(psi)(pmat%map(ip))
       !MISSING: phases
     end forall
