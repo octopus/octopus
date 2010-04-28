@@ -21,6 +21,7 @@
 
 module hamiltonian_base_m
   use batch_m
+  use blas_m
   use datasets_m
   use derivatives_m
   use epot_m
@@ -105,7 +106,7 @@ module hamiltonian_base_m
     FIELD_UNIFORM_MAGNETIC_FIELD   = 8
   
 
-  type(profile_t), save :: prof_vlpsi, prof_magnetic, prof_vnlpsi
+  type(profile_t), save :: prof_vlpsi, prof_magnetic, prof_vnlpsi, prof_gather, prof_scatter
 
 contains
 

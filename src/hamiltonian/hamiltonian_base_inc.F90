@@ -199,12 +199,20 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
     SAFE_ALLOCATE(vpsi(1:npoints, 1:nst))
     SAFE_ALLOCATE(projection(1:nprojs, 1:nst))
 
+    call profiling_in(prof_gather, "PROJ_MAT_GATHER")
     forall(ist = 1:nst, ip = 1:npoints)
       psi(ip, ist) = psib%states_linear(ist)%X(psi)(pmat%map(ip))
       !MISSING: phases
     end forall
+    call profiling_out(prof_gather)
 
+#ifdef R_TREAL
+    call blas_gemm('T', 'N', nprojs, nst, npoints, &
+      M_ONE, pmat%projectors(1, 1), npoints, psi(1, 1), npoints, &
+      M_ZERO, projection(1, 1), nprojs)
+#else
     projection(1:nprojs, 1:nst) = matmul(transpose(pmat%projectors(1:npoints, 1:nprojs)), psi(1:npoints, 1:nst))
+#endif
 
     forall(ist = 1:nst, iproj = 1:nprojs) projection(iproj, ist) = projection(iproj, ist)*pmat%scal(iproj)
 
@@ -217,20 +225,36 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
     end if
 #endif
 
+#ifdef R_TREAL
+    call blas_gemm('N', 'N', npoints, nst, nprojs, &
+      M_ONE, pmat%projectors(1, 1), npoints, projection(1, 1), nprojs, &
+      M_ZERO, vpsi(1, 1), npoints)
+#else
     vpsi(1:npoints, 1:nst) = matmul(pmat%projectors(1:npoints, 1:nprojs), projection(1:nprojs, 1:nst))
+#endif
 
-    forall(ist = 1:nst, ip = 1:npoints)
-      vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) + vpsi(ip, ist)
-      !MISSING: phases
-    end forall
+    call profiling_count_operations(M_TWO*nst*nprojs*M_TWO*npoints*R_ADD + nst*nprojs*R_ADD)
+
+    call profiling_in(prof_scatter, "PROJ_MAT_SCATTER")
+
+    do ist = 1, nst
+      forall(ip = 1:npoints)
+        vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) + vpsi(ip, ist)
+        !MISSING: phases
+      end forall
+    end do
+
+    call profiling_count_operations(nst*npoints*R_ADD)
+    call profiling_out(prof_scatter)
 
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(vpsi)
     SAFE_DEALLOCATE_A(projection)
+
   end do
 
   call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_non_local')
-  call profiling_out(prof_vlpsi)
+  call profiling_out(prof_vnlpsi)
 end subroutine X(hamiltonian_base_non_local)
 
 
