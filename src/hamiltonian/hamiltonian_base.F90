@@ -171,6 +171,7 @@ contains
     type(hamiltonian_base_t), intent(inout) :: this
     type(mesh_t),             intent(in)    :: mesh
     integer,                  intent(in)    :: field
+
     call push_sub('hamiltonian_base.hamiltonian_base_allocate')
 
     if(iand(FIELD_POTENTIAL, field) /= 0) then 
@@ -179,7 +180,7 @@ contains
         this%potential = M_ZERO
 #ifdef HAVE_OPENCL
         if(opencl_is_available()) then
-          call opencl_create_buffer(this%potential_opencl, CL_MEM_READ_ONLY, TYPE_FLOAT, opencl_padded_size(mesh%np))
+          call opencl_create_buffer(this%potential_opencl, CL_MEM_READ_ONLY, TYPE_FLOAT, opencl_padded_size(mesh%np)*this%nspin)
         end if
 #endif
       end if
@@ -219,6 +220,9 @@ contains
     type(hamiltonian_base_t), intent(inout) :: this
     type(mesh_t),             intent(in)    :: mesh
 
+    integer :: ispin
+    integer(SIZEOF_SIZE_T) :: offset
+
     call push_sub('hamiltonian_base.hamiltonian_check')
 
     if(associated(this%uniform_vector_potential) .and. associated(this%vector_potential)) then
@@ -227,7 +231,13 @@ contains
 
 #ifdef HAVE_OPENCL
     if(associated(this%potential) .and. opencl_is_available()) then
-      call opencl_write_buffer(this%potential_opencl, mesh%np, this%potential(:, 1))
+
+      offset = 0
+      do ispin = 1, this%nspin
+        call opencl_write_buffer(this%potential_opencl, mesh%np, this%potential(:, ispin), offset = offset)
+        offset = offset + opencl_padded_size(mesh%np)
+      end do
+
     end if
 #endif
 

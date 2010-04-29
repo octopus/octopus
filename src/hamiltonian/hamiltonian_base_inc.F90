@@ -37,15 +37,30 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
 
   if(associated(this%potential)) then
 #ifdef HAVE_OPENCL
-    if(opencl_is_available() .and. std%ispin == UNPOLARIZED) then
+    if(opencl_is_available()) then
       pnp = opencl_padded_size(mesh%np)
       call batch_create_opencl_buffer(psib, mesh%np, CL_MEM_READ_ONLY, psi_buf)
       call batch_write_to_opencl_buffer(psib, mesh%np, psi_buf)
-      call opencl_set_kernel_arg(X(vpsi), 0, pnp)
-      call opencl_set_kernel_arg(X(vpsi), 1, psib%nst)
-      call opencl_set_kernel_arg(X(vpsi), 2, this%potential_opencl)
-      call opencl_set_kernel_arg(X(vpsi), 3, psi_buf)
-      call opencl_kernel_run(X(vpsi), (/pnp/), (/256/))   
+
+      select case(std%ispin)
+
+      case(UNPOLARIZED, SPIN_POLARIZED)
+        call opencl_set_kernel_arg(X(vpsi), 0, pnp)
+        call opencl_set_kernel_arg(X(vpsi), 1, psib%nst)
+        call opencl_set_kernel_arg(X(vpsi), 2, pnp*(ispin - 1))
+        call opencl_set_kernel_arg(X(vpsi), 3, this%potential_opencl)
+        call opencl_set_kernel_arg(X(vpsi), 4, psi_buf)
+        call opencl_kernel_run(X(vpsi), (/pnp/), (/256/))
+
+      case(SPINORS)
+        call opencl_set_kernel_arg(zvpsi_spinors, 0, pnp)
+        call opencl_set_kernel_arg(zvpsi_spinors, 1, psib%nst)
+        call opencl_set_kernel_arg(zvpsi_spinors, 2, this%potential_opencl)
+        call opencl_set_kernel_arg(zvpsi_spinors, 3, psi_buf)
+        call opencl_kernel_run(zvpsi_spinors, (/pnp/), (/256/))
+
+      end select
+
       call batch_read_from_opencl_buffer(vpsib, mesh%np, psi_buf)
       call opencl_release_buffer(psi_buf)
       call opencl_finish()

@@ -57,6 +57,7 @@ module opencl_m
   ! the kernels
   type(c_ptr), public :: dvpsi
   type(c_ptr), public :: zvpsi
+  type(c_ptr), public :: zvpsi_spinors
 
   ! this values are copied from OpenCL include CL/cl.h
   integer, parameter, public ::        &
@@ -224,6 +225,7 @@ module opencl_m
       call f90_opencl_build_program(prog, opencl%env, "vpsi.cl")
       call f90_opencl_create_kernel(dvpsi, prog, "dvpsi")
       call f90_opencl_create_kernel(zvpsi, prog, "zvpsi")
+      call f90_opencl_create_kernel(zvpsi_spinors, prog, "zvpsi_spinors")
       call f90_opencl_release_program(prog)
 
     end subroutine opencl_init
