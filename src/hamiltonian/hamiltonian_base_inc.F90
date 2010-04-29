@@ -177,7 +177,7 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
 
   integer :: ist, ip, iproj, imat
   integer :: npoints, nprojs, nst
-  R_TYPE, allocatable :: psi(:, :), vpsi(:, :), projection(:,  :)
+  R_TYPE, allocatable :: psi(:, :), projection(:,  :)
   type(projector_matrix_t), pointer :: pmat
 #ifdef HAVE_MPI
   R_TYPE, allocatable :: projection_red(:, :)
@@ -187,7 +187,7 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
 
   call profiling_in(prof_vnlpsi, "VNLPSI_MAT")
   call push_sub('hamiltonian_base_inc.Xhamiltonian_base_non_local')
-  
+
   do imat = 1, this%nprojector_matrices
     pmat => this%projector_matrices(imat)
 
@@ -195,27 +195,44 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
     nprojs = pmat%nprojs
     nst = psib%nst_linear
 
-    SAFE_ALLOCATE(psi(1:npoints, 1:nst))
-    SAFE_ALLOCATE(vpsi(1:npoints, 1:nst))
     SAFE_ALLOCATE(projection(1:nprojs, 1:nst))
 
-    call profiling_in(prof_gather, "PROJ_MAT_GATHER")
-    forall(ist = 1:nst, ip = 1:npoints)
-      psi(ip, ist) = psib%states_linear(ist)%X(psi)(pmat%map(ip))
-      !MISSING: phases
-    end forall
-    call profiling_out(prof_gather)
+    if(npoints == 0) then
+      ! With domain parallelization it might happen that this
+      ! processor does not have any point. In this case we only need
+      ! to call MPI_Allreduce with zero.
 
+      projection = M_ZERO
+
+    else
+
+      SAFE_ALLOCATE(psi(1:npoints, 1:nst))
+
+      ! collect all the points we need in a continous array
+      call profiling_in(prof_gather, "PROJ_MAT_GATHER")
+      forall(ist = 1:nst, ip = 1:npoints)
+        psi(ip, ist) = psib%states_linear(ist)%X(psi)(pmat%map(ip))
+        !MISSING: phases
+      end forall
+      call profiling_out(prof_gather)
+
+      ! Now matrix-multiply to calculate the projections. Since the
+      ! projector matrix is always real we can only use blas in the
+      ! real case.
 #ifdef R_TREAL
-    call blas_gemm('T', 'N', nprojs, nst, npoints, &
-      M_ONE, pmat%projectors(1, 1), npoints, psi(1, 1), npoints, &
-      M_ZERO, projection(1, 1), nprojs)
+      call blas_gemm('T', 'N', nprojs, nst, npoints, &
+        M_ONE, pmat%projectors(1, 1), npoints, psi(1, 1), npoints, &
+        M_ZERO, projection(1, 1), nprojs)
 #else
-    projection(1:nprojs, 1:nst) = matmul(transpose(pmat%projectors(1:npoints, 1:nprojs)), psi(1:npoints, 1:nst))
+      projection(1:nprojs, 1:nst) = matmul(transpose(pmat%projectors(1:npoints, 1:nprojs)), psi(1:npoints, 1:nst))
 #endif
 
-    forall(ist = 1:nst, iproj = 1:nprojs) projection(iproj, ist) = projection(iproj, ist)*pmat%scal(iproj)
+      ! apply the scale
+      forall(ist = 1:nst, iproj = 1:nprojs) projection(iproj, ist) = projection(iproj, ist)*pmat%scal(iproj)
 
+    end if
+
+    ! now reduce the projections
 #ifdef HAVE_MPI
     if(mesh%parallel_in_domains) then
       SAFE_ALLOCATE(projection_red(1:nprojs, 1:nst))
@@ -225,21 +242,28 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
     end if
 #endif
 
+    if(npoints ==  0) then
+      SAFE_DEALLOCATE_A(projection)
+      cycle
+    end if
+
+    ! Matrix-multiply again.
 #ifdef R_TREAL
     call blas_gemm('N', 'N', npoints, nst, nprojs, &
       M_ONE, pmat%projectors(1, 1), npoints, projection(1, 1), nprojs, &
-      M_ZERO, vpsi(1, 1), npoints)
+      M_ZERO, psi(1, 1), npoints)
 #else
-    vpsi(1:npoints, 1:nst) = matmul(pmat%projectors(1:npoints, 1:nprojs), projection(1:nprojs, 1:nst))
+    psi(1:npoints, 1:nst) = matmul(pmat%projectors(1:npoints, 1:nprojs), projection(1:nprojs, 1:nst))
 #endif
 
     call profiling_count_operations(M_TWO*nst*nprojs*M_TWO*npoints*R_ADD + nst*nprojs*R_ADD)
 
     call profiling_in(prof_scatter, "PROJ_MAT_SCATTER")
 
+    ! and copy the points from the local buffer to its position
     do ist = 1, nst
       forall(ip = 1:npoints)
-        vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) + vpsi(ip, ist)
+        vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) + psi(ip, ist)
         !MISSING: phases
       end forall
     end do
@@ -248,7 +272,6 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
     call profiling_out(prof_scatter)
 
     SAFE_DEALLOCATE_A(psi)
-    SAFE_DEALLOCATE_A(vpsi)
     SAFE_DEALLOCATE_A(projection)
 
   end do

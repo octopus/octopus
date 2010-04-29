@@ -281,6 +281,8 @@ contains
     type(projector_matrix_t), pointer :: pmat
     type(kb_projector_t),     pointer :: kb_p
 
+    call push_sub('hamiltonian_base.hamiltonian_base_build_proj')
+
     ! deallocate previous projectors
     call hamiltonian_base_destroy_proj(this)
 
@@ -348,6 +350,7 @@ contains
 
     end do
       
+    call pop_sub('hamiltonian_base.hamiltonian_base_build_proj')
   end subroutine hamiltonian_base_build_proj
     
   ! ----------------------------------------------------------------------------------
