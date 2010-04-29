@@ -22,12 +22,13 @@
   ! Tries to avoid ill-defined combinations of run modes.
   ! ---------------------------------------------------------
   subroutine check_faulty_runmodes(sys, hm, tr)
-    type(system_t),                 intent(in)    :: sys
-    type(hamiltonian_t),            intent(in)    :: hm
-    type(propagator_t),                 intent(in)    :: tr
+    type(system_t),      intent(in) :: sys
+    type(hamiltonian_t), intent(in) :: hm
+    type(propagator_t),  intent(in) :: tr
 
     integer :: no_electrons, n_filled, n_partially_filled, n_half_filled
-    call push_sub('read.check_faulty_runmodes')
+
+    call push_sub('check_input_inc.check_faulty_runmodes')
 
     ! Only dipole approximation in length gauge.
     if(hm%gauge.ne.LENGTH) then
@@ -49,27 +50,27 @@
       call occupied_states(sys%st, 1, n_filled, n_partially_filled, n_half_filled)
       no_electrons = 2*n_filled + n_half_filled
       if(n_partially_filled > 0 ) then
-        write(message(1),'(a)') 'No partially filled orbitals are allowd in OCT calculations'
+        write(message(1),'(a)') 'No partially filled orbitals are allowed in OCT calculations.'
         call write_fatal(1)
       end if
     case(SPIN_POLARIZED)
       call occupied_states(sys%st, 1, n_filled, n_partially_filled, n_half_filled)
       if(n_partially_filled > 0 .or. n_half_filled > 0) then
-        write(message(1),'(a)') 'No partially filled orbitals are allowd in OCT calculations'
+        write(message(1),'(a)') 'No partially filled orbitals are allowed in OCT calculations.'
         call write_fatal(1)
       end if
       no_electrons = n_filled
       call occupied_states(sys%st, 2, n_filled, n_partially_filled, n_half_filled)
       no_electrons = n_filled + no_electrons
       if(n_partially_filled > 0 .or. n_half_filled > 0) then
-        write(message(1),'(a)') 'No partially filled orbitals are allowd in OCT calculations'
+        write(message(1),'(a)') 'No partially filled orbitals are allowed in OCT calculations.'
         call write_fatal(1)
       end if
     case(SPINORS)
       call occupied_states(sys%st, 1, n_filled, n_partially_filled, n_half_filled)
       no_electrons = n_filled
       if(n_partially_filled > 0 .or. n_half_filled > 0) then
-        write(message(1),'(a)') 'No partially filled orbitals are allowd in OCT calculations'
+        write(message(1),'(a)') 'No partially filled orbitals are allowed in OCT calculations.'
         call write_fatal(1)
       end if
     end select
@@ -184,7 +185,7 @@
        end if
     end if
 
-    call pop_sub('read.check_faulty_runmodes')
+    call pop_sub('check_input_inc.check_faulty_runmodes')
   end subroutine check_faulty_runmodes
 
 

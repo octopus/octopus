@@ -408,7 +408,7 @@ contains
   subroutine input_error(var)
     character(len=*), intent(in) :: var
 
-    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
+    if(flush_messages .and. mpi_grp_is_root(mpi_world)) then
       open(unit=iunit_out, file='messages.stdout', &
         action='write', position='append')
     end if
@@ -823,9 +823,9 @@ contains
         write(message(3), '(a)') 'Equivalent functionality can be obtained with the '//trim(rep)
         write(message(4), '(a)') 'variable, check the documentation for details.'
         write(message(5), '(a)') '(You can use the `oct-help show '//trim(rep)//'` command).'
-        call write_fatal(5)
+        call write_fatal(5, only_root_writes = .true.)
       else
-        call write_fatal(1)
+        call write_fatal(1, only_root_writes = .true.)
       end if
 
     end if

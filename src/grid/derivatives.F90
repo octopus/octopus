@@ -230,7 +230,7 @@ contains
 #ifndef HAVE_LIBNBC
     if(der%comm_method == NON_BLOCKING_COLLECTIVE) then
       message(1) = "Error: libnbc is not available. Check the ParallelizationOfDerivatives variable."
-      call write_fatal(1)
+      call write_fatal(1, only_root_writes = .true.)
     end if
 #endif
 

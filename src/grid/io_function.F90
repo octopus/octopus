@@ -176,7 +176,7 @@ contains
 
     if(how .eq. 0) then
       write(message(1), '(a)') 'Must specify output method with variable OutputHow.'
-      call write_fatal(1)
+      call write_fatal(1, only_root_writes = .true.)
      endif
 
     ! some modes are not available in some circumstances, so we reset how
@@ -204,19 +204,19 @@ contains
     call push_sub('io_function.io_function_fill_how')
 
     how = 0
-    if(index(where, "AxisX").ne.0)     how = ior(how, output_axis_x)
-    if(index(where, "AxisY").ne.0)     how = ior(how, output_axis_y)
-    if(index(where, "AxisZ").ne.0)     how = ior(how, output_axis_z)
-    if(index(where, "PlaneX").ne.0)    how = ior(how, output_plane_x)
-    if(index(where, "PlaneY").ne.0)    how = ior(how, output_plane_y)
-    if(index(where, "PlaneZ").ne.0)    how = ior(how, output_plane_z)
-    if(index(where, "DX").ne.0)        how = ior(how, output_dx)
-    if(index(where, "XCrySDen").ne.0)  how = ior(how, output_xcrysden)
-    if(index(where, "Binary").ne.0)    how = ior(how, output_binary)
-    if(index(where, "MeshIndex").ne.0) how = ior(how, output_mesh_index)
-    if(index(where, "XYZ").ne.0) how = ior(how, output_xyz)
+    if(index(where, "AxisX")     .ne. 0) how = ior(how, output_axis_x)
+    if(index(where, "AxisY")     .ne. 0) how = ior(how, output_axis_y)
+    if(index(where, "AxisZ")     .ne. 0) how = ior(how, output_axis_z)
+    if(index(where, "PlaneX")    .ne. 0) how = ior(how, output_plane_x)
+    if(index(where, "PlaneY")    .ne. 0) how = ior(how, output_plane_y)
+    if(index(where, "PlaneZ")    .ne. 0) how = ior(how, output_plane_z)
+    if(index(where, "DX")        .ne. 0) how = ior(how, output_dx)
+    if(index(where, "XCrySDen")  .ne. 0) how = ior(how, output_xcrysden)
+    if(index(where, "Binary")    .ne. 0) how = ior(how, output_binary)
+    if(index(where, "MeshIndex") .ne. 0) how = ior(how, output_mesh_index)
+    if(index(where, "XYZ")       .ne. 0) how = ior(how, output_xyz)
 #if defined(HAVE_NETCDF)
-    if(index(where, "NETCDF").ne.0)    how = ior(how, output_netcdf)
+    if(index(where, "NETCDF")    .ne. 0) how = ior(how, output_netcdf)
 #endif
 
     call pop_sub('io_function.io_function_fill_how')
