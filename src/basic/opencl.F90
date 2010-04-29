@@ -30,22 +30,25 @@ module opencl_m
 
   private
 
-  public ::                   &
-    opencl_is_available,      &
-    opencl_init,              &
-    opencl_end,               &
-    opencl_mem_t,             &
-    opencl_create_buffer,     &
-    opencl_write_buffer,      &
-    opencl_read_buffer,       &
-    opencl_release_buffer,    &
-    opencl_padded_size,       &
-    opencl_finish,            &
-    opencl_set_kernel_arg,    &
+  public ::                       &
+    opencl_is_available,          &
+    opencl_init,                  &
+    opencl_end,                   &
+    opencl_mem_t,                 &
+    opencl_create_buffer,         &
+    opencl_write_buffer,          &
+    opencl_read_buffer,           &
+    opencl_release_buffer,        &
+    opencl_padded_size,           &
+    opencl_finish,                &
+    opencl_set_kernel_arg,        &
+    opencl_max_workgroup_size,    &
+    opencl_kernel_workgroup_size, &
     opencl_kernel_run
 
   type opencl_t 
     type(c_ptr) :: env
+    integer     :: max_workgroup_size
   end type opencl_t
 
   type opencl_mem_t
@@ -69,22 +72,34 @@ module opencl_m
   interface
     ! ---------------------------------------------------
 
-    subroutine f90_opencl_env_init(this, source_path)
+    subroutine f90_opencl_env_init(env, source_path)
       use c_pointer_m
 
-      type(c_ptr),      intent(out) :: this
+      implicit none
+
+      type(c_ptr),      intent(out) :: env
       character(len=*), intent(in)  :: source_path
     end subroutine f90_opencl_env_init
 
     ! ----------------------------------------------------
 
-    subroutine f90_opencl_env_end(this)
+    subroutine f90_opencl_env_end(env)
       use c_pointer_m
 
       implicit none
 
-      type(c_ptr), intent(inout) :: this
+      type(c_ptr), intent(inout) :: env
     end subroutine f90_opencl_env_end
+
+    ! ----------------------------------------------------
+
+    integer function f90_opencl_max_workgroup_size(env)
+      use c_pointer_m
+
+      implicit none
+
+      type(c_ptr), intent(inout) :: env
+    end function f90_opencl_max_workgroup_size
 
     ! ----------------------------------------------------
 
@@ -132,6 +147,17 @@ module opencl_m
 
     ! ----------------------------------------------------
 
+    integer function f90_opencl_kernel_wgroup_size(kernel, env)
+      use c_pointer_m
+      
+      implicit none
+      
+      type(c_ptr), intent(inout) :: kernel
+      type(c_ptr), intent(inout) :: env
+    end function f90_opencl_kernel_wgroup_size
+
+    ! ----------------------------------------------------
+
     subroutine f90_opencl_create_buffer(this, env, flags, size)
       use c_pointer_m
 
@@ -148,6 +174,8 @@ module opencl_m
     subroutine f90_opencl_release_buffer(this)
       use c_pointer_m
 
+      implicit none
+
       type(c_ptr),            intent(inout) :: this
     end subroutine f90_opencl_release_buffer
 
@@ -155,6 +183,8 @@ module opencl_m
 
     subroutine f90_opencl_finish(this)
       use c_pointer_m
+
+      implicit none
 
       type(c_ptr),            intent(inout) :: this
     end subroutine f90_opencl_finish
@@ -175,6 +205,8 @@ module opencl_m
 
     subroutine f90_opencl_kernel_run(kernel, env, dim, globalsizes, localsizes)
       use c_pointer_m
+
+      implicit none
 
       type(c_ptr),            intent(inout) :: kernel
       type(c_ptr),            intent(inout) :: env
@@ -219,8 +251,10 @@ module opencl_m
     subroutine opencl_init()
       type(c_ptr) :: prog
 
-      call f90_opencl_env_init(opencl%env, trim(conf%share)//'/opencl/')      
+      call f90_opencl_env_init(opencl%env, trim(conf%share)//'/opencl/')   
 
+      opencl%max_workgroup_size = f90_opencl_max_workgroup_size(opencl%env)
+      
       ! now initialize the kernels
       call f90_opencl_build_program(prog, opencl%env, "vpsi.cl")
       call f90_opencl_create_kernel(dvpsi, prog, "dvpsi")
@@ -292,7 +326,7 @@ module opencl_m
 
       integer :: modnn, bsize
 
-      bsize = 512
+      bsize = opencl_max_workgroup_size()
 
       psize = nn
       modnn = mod(nn, bsize)
@@ -336,18 +370,32 @@ module opencl_m
       call profiling_in(prof_kernel_run, "CL_KERNEL_RUN")
 
       dim = ubound(globalsizes, dim = 1)
+
       ASSERT(dim == ubound(localsizes, dim = 1))
-      
+      ASSERT(all(localsizes <= opencl_max_workgroup_size()))
+      ASSERT(all(mod(globalsizes, localsizes) == 0))
+     
       gsizes(1:dim) = int(globalsizes(1:dim), SIZEOF_SIZE_T)
       lsizes(1:dim) = int(localsizes(1:dim), SIZEOF_SIZE_T)
-
-      ASSERT(all(mod(gsizes, lsizes) == 0))
 
       call f90_opencl_kernel_run(kernel, opencl%env, dim, gsizes(1), lsizes(1))
       call opencl_finish()
       call profiling_out(prof_kernel_run)
       call pop_sub('opencl.opencl_kernel_run')
     end subroutine opencl_kernel_run
+
+    ! -----------------------------------------------
+
+    integer pure function opencl_max_workgroup_size() result(max_workgroup_size)
+      max_workgroup_size = opencl%max_workgroup_size
+    end function opencl_max_workgroup_size
+
+    ! -----------------------------------------------
+    integer function opencl_kernel_workgroup_size(kernel) result(workgroup_size)
+      type(c_ptr), intent(inout) :: kernel
+      
+      workgroup_size = f90_opencl_kernel_wgroup_size(kernel, opencl%env)
+    end function opencl_kernel_workgroup_size
 
 #include "undef.F90"
 #include "real.F90"

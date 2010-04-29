@@ -29,7 +29,7 @@
 
 #include "opencl.h"
 
-void FC_FUNC_(f90_opencl_env_init,F90_OPENCL_ENV_INIT)(opencl_env_t ** thisptr, STR_F_TYPE source_path_f STR_ARG1){
+void FC_FUNC_(f90_opencl_env_init,F90_OPENCL_ENV_INIT)(opencl_env_t ** env, STR_F_TYPE source_path_f STR_ARG1){
   size_t ParamDataBytes;
   char device_string[2048];
   cl_uint dim;
@@ -38,9 +38,10 @@ void FC_FUNC_(f90_opencl_env_init,F90_OPENCL_ENV_INIT)(opencl_env_t ** thisptr, 
   cl_int status;
   cl_context_properties cps[3];
   opencl_env_t * this;
+  size_t max_workgroup_size;
 
   this = (opencl_env_t *) malloc(sizeof(opencl_env_t));
-  *thisptr = this;
+  *env = this;
 
   /* Just get the first platform */
   status = clGetPlatformIDs(1, &platform, NULL);
@@ -83,8 +84,8 @@ void FC_FUNC_(f90_opencl_env_init,F90_OPENCL_ENV_INIT)(opencl_env_t ** thisptr, 
   clGetDeviceInfo(this->Devices[0], CL_DEVICE_EXTENSIONS, sizeof(device_string), &device_string, NULL);
   printf("Extensions            : %s\n", device_string);
 
-  clGetDeviceInfo(this->Devices[0], CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(this->max_workgroup_size), &this->max_workgroup_size, NULL);
-  printf("Maximum workgroup size: %zd\n", this->max_workgroup_size);
+  clGetDeviceInfo(this->Devices[0], CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(max_workgroup_size), &max_workgroup_size, NULL);
+  printf("Maximum workgroup size: %zd\n", max_workgroup_size);
 
   /* start command queue */
   this->CommandQueue = clCreateCommandQueue(this->Context, this->Devices[0], CL_QUEUE_PROFILING_ENABLE, &status);
@@ -93,10 +94,16 @@ void FC_FUNC_(f90_opencl_env_init,F90_OPENCL_ENV_INIT)(opencl_env_t ** thisptr, 
 
 }
 
-void FC_FUNC_(f90_opencl_env_end,F90_OPENCL_ENV_END)(opencl_env_t ** thisptr){
+int FC_FUNC_(f90_opencl_max_workgroup_size, F90_OPENCL_MAX_WORKGROUP_SIZE)(opencl_env_t ** env){
+  size_t max_workgroup_size;
+  clGetDeviceInfo(env[0]->Devices[0], CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(max_workgroup_size), &max_workgroup_size, NULL);
+  return (int) max_workgroup_size;
+}
+
+void FC_FUNC_(f90_opencl_env_end,F90_OPENCL_ENV_END)(opencl_env_t ** env){
   opencl_env_t * this;
 
-  this = *thisptr;
+  this = *env;
   clReleaseCommandQueue(this->CommandQueue);
   clReleaseContext(this->Context);
   free(this->source_path);
@@ -192,6 +199,12 @@ void FC_FUNC_(f90_opencl_create_kernel, F90_OPENCL_CREATE_KERNEL)
 void FC_FUNC_(f90_opencl_release_kernel, F90_OPENCL_RELEASE_KERNEL)(cl_kernel ** kernel){
   clReleaseKernel(**kernel);
   free(*kernel);
+}
+
+int FC_FUNC_(f90_opencl_kernel_wgroup_size, F90_OPENCL_KERNEL_WGROUP_SIZE)(cl_kernel ** kernel, opencl_env_t ** env){
+  size_t workgroup_size;
+  clGetKernelWorkGroupInfo(**kernel, env[0]->Devices[0], CL_KERNEL_WORK_GROUP_SIZE, sizeof(workgroup_size), &workgroup_size, NULL);
+  return (int) workgroup_size;
 }
 
 void FC_FUNC_(f90_opencl_create_buffer, F90_OPENCL_CREATE_BUFFER)

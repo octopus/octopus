@@ -30,7 +30,6 @@ typedef struct{
   cl_device_id * Devices;
   cl_command_queue CommandQueue;
   char * source_path;
-  size_t max_workgroup_size;
 } opencl_env_t;
 
 #endif
