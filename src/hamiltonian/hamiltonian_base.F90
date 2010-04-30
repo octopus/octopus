@@ -314,7 +314,10 @@ contains
     if(mesh%use_curvilinear) this%apply_projector_matrices = .false.
     if(simul_box_is_periodic(mesh%sb)) this%apply_projector_matrices = .false.
 
-    if(.not. this%apply_projector_matrices) return
+    if(.not. this%apply_projector_matrices) then
+      call pop_sub('hamiltonian_base.hamiltonian_base_build_proj')
+      return
+    end if
     
     SAFE_ALLOCATE(this%projector_matrices(1:this%nprojector_matrices))
 
@@ -359,7 +362,7 @@ contains
       forall(ip = 1:pmat%npoints) pmat%map(ip) = epot%proj(iatom)%sphere%jxyz(ip)
 
     end do
-      
+    
     call pop_sub('hamiltonian_base.hamiltonian_base_build_proj')
   end subroutine hamiltonian_base_build_proj
     

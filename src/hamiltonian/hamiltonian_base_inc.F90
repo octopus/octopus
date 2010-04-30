@@ -29,7 +29,7 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   R_TYPE, pointer :: psi(:, :), vpsi(:, :)
 #ifdef HAVE_OPENCL
   integer :: pnp
-  type(opencl_mem_t) :: psi_buf
+  type(opencl_mem_t) :: psi_buf, vpsi_buf
 #endif
 
   call profiling_in(prof_vlpsi, "VLPSI")
@@ -41,6 +41,7 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
       pnp = opencl_padded_size(mesh%np)
       call batch_create_opencl_buffer(psib, mesh%np, CL_MEM_READ_ONLY, psi_buf)
       call batch_write_to_opencl_buffer(psib, mesh%np, psi_buf)
+      call batch_create_opencl_buffer(vpsib, mesh%np, CL_MEM_WRITE_ONLY, vpsi_buf)
 
       select case(std%ispin)
 
@@ -50,6 +51,7 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
         call opencl_set_kernel_arg(X(vpsi), 2, pnp*(ispin - 1))
         call opencl_set_kernel_arg(X(vpsi), 3, this%potential_opencl)
         call opencl_set_kernel_arg(X(vpsi), 4, psi_buf)
+        call opencl_set_kernel_arg(X(vpsi), 5, vpsi_buf)
         call opencl_kernel_run(X(vpsi), (/pnp/), (/256/))
 
       case(SPINORS)
@@ -57,12 +59,14 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
         call opencl_set_kernel_arg(zvpsi_spinors, 1, psib%nst)
         call opencl_set_kernel_arg(zvpsi_spinors, 2, this%potential_opencl)
         call opencl_set_kernel_arg(zvpsi_spinors, 3, psi_buf)
+        call opencl_set_kernel_arg(zvpsi_spinors, 4, vpsi_buf)        
         call opencl_kernel_run(zvpsi_spinors, (/pnp/), (/256/))
 
       end select
 
-      call batch_read_from_opencl_buffer(vpsib, mesh%np, psi_buf)
+      call batch_read_from_opencl_buffer(vpsib, mesh%np, vpsi_buf)
       call opencl_release_buffer(psi_buf)
+      call opencl_release_buffer(vpsi_buf)
       call opencl_finish()
 
       call profiling_count_operations((R_MUL*psib%nst)*mesh%np)
