@@ -106,7 +106,15 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
   ! apply the local potential
   if (iand(TERM_LOCAL_POTENTIAL, terms_) /= 0) then
+#ifdef HAVE_OPENCL
+    call batch_move_to_buffer(epsib)
+    call batch_move_to_buffer(hpsib, copy = .false.)
+#endif
     call X(hamiltonian_base_local)(hm%hm_base, der%mesh, hm%d, states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
+#ifdef HAVE_OPENCL
+    call batch_move_from_buffer(epsib)
+    call batch_move_from_buffer(hpsib)
+#endif
   else if(iand(TERM_LOCAL_EXTERNAL, terms_) /= 0) then
 
     do ii = 1, nst

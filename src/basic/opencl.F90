@@ -52,7 +52,10 @@ module opencl_m
   end type opencl_t
 
   type opencl_mem_t
-    type(c_ptr) :: mem
+    private
+    type(c_ptr)            :: mem
+    integer(SIZEOF_SIZE_T) :: size
+    integer                :: type
   end type opencl_mem_t
 
   type(opencl_t) :: opencl
@@ -284,7 +287,9 @@ module opencl_m
       integer(SIZEOF_SIZE_T) :: fsize
 
       call push_sub('opencl.opencl_create_buffer_4')
-      
+
+      this%type = type
+      this%size = size      
       fsize = size*types_get_size(type)
       
       call f90_opencl_create_buffer(this%mem, opencl%env, flags, fsize)
@@ -304,6 +309,9 @@ module opencl_m
       
       call push_sub('opencl.opencl_create_buffer_8')
 
+      this%type = type
+      this%size = size
+
       fsize = size*types_get_size(type)
 
       call f90_opencl_create_buffer(this%mem, opencl%env, flags, fsize)
@@ -316,10 +324,28 @@ module opencl_m
     subroutine opencl_release_buffer(this)
       type(opencl_mem_t), intent(inout) :: this
 
+      this%size = 0
       call f90_opencl_release_buffer(this%mem)
+
     end subroutine opencl_release_buffer
 
     ! ------------------------------------------
+
+    integer(SIZEOF_SIZE_T) pure function opencl_get_buffer_size(this) result(size)
+      type(opencl_mem_t), intent(in) :: this
+
+      size = this%size
+    end function opencl_get_buffer_size
+
+    ! -----------------------------------------
+
+    integer pure function opencl_get_buffer_type(this) result(type)
+      type(opencl_mem_t), intent(in) :: this
+
+      type = this%type
+    end function opencl_get_buffer_type
+
+    ! -----------------------------------------
 
     integer(SIZEOF_SIZE_T) function opencl_padded_size(nn) result(psize)
       integer,        intent(in) :: nn

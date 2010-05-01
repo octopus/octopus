@@ -29,7 +29,6 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   R_TYPE, pointer :: psi(:, :), vpsi(:, :)
 #ifdef HAVE_OPENCL
   integer :: pnp
-  type(opencl_mem_t) :: psi_buf, vpsi_buf
 #endif
 
   call profiling_in(prof_vlpsi, "VLPSI")
@@ -37,37 +36,37 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
 
   if(associated(this%potential)) then
 #ifdef HAVE_OPENCL
-    if(opencl_is_available()) then
+    if(opencl_is_available() .and. batch_is_in_buffer(psib)) then
+      ASSERT(batch_is_in_buffer(vpsib))
+      
       pnp = opencl_padded_size(mesh%np)
-      call batch_create_opencl_buffer(psib, mesh%np, CL_MEM_READ_ONLY, psi_buf)
-      call batch_write_to_opencl_buffer(psib, mesh%np, psi_buf)
-      call batch_create_opencl_buffer(vpsib, mesh%np, CL_MEM_WRITE_ONLY, vpsi_buf)
 
       select case(std%ispin)
 
       case(UNPOLARIZED, SPIN_POLARIZED)
-        call opencl_set_kernel_arg(X(vpsi), 0, pnp)
-        call opencl_set_kernel_arg(X(vpsi), 1, psib%nst)
-        call opencl_set_kernel_arg(X(vpsi), 2, pnp*(ispin - 1))
-        call opencl_set_kernel_arg(X(vpsi), 3, this%potential_opencl)
-        call opencl_set_kernel_arg(X(vpsi), 4, psi_buf)
-        call opencl_set_kernel_arg(X(vpsi), 5, vpsi_buf)
+        call opencl_set_kernel_arg(X(vpsi), 0, psib%nst)
+        call opencl_set_kernel_arg(X(vpsi), 1, pnp*(ispin - 1))
+        call opencl_set_kernel_arg(X(vpsi), 2, this%potential_opencl)
+        call opencl_set_kernel_arg(X(vpsi), 3, psib%buffer)
+        call opencl_set_kernel_arg(X(vpsi), 4, batch_buffer_ubound(psib))
+        call opencl_set_kernel_arg(X(vpsi), 5, vpsib%buffer)
+        call opencl_set_kernel_arg(X(vpsi), 6, batch_buffer_ubound(vpsib))
+
         call opencl_kernel_run(X(vpsi), (/pnp/), (/256/))
 
       case(SPINORS)
-        call opencl_set_kernel_arg(zvpsi_spinors, 0, pnp)
-        call opencl_set_kernel_arg(zvpsi_spinors, 1, psib%nst)
-        call opencl_set_kernel_arg(zvpsi_spinors, 2, this%potential_opencl)
-        call opencl_set_kernel_arg(zvpsi_spinors, 3, psi_buf)
-        call opencl_set_kernel_arg(zvpsi_spinors, 4, vpsi_buf)        
+        call opencl_set_kernel_arg(zvpsi_spinors, 0, psib%nst)
+        call opencl_set_kernel_arg(zvpsi_spinors, 1, this%potential_opencl)
+        call opencl_set_kernel_arg(zvpsi_spinors, 2, pnp)
+        call opencl_set_kernel_arg(zvpsi_spinors, 3, psib%buffer)
+        call opencl_set_kernel_arg(zvpsi_spinors, 4, batch_buffer_ubound(psib))
+        call opencl_set_kernel_arg(zvpsi_spinors, 5, vpsib%buffer)
+        call opencl_set_kernel_arg(zvpsi_spinors, 6, batch_buffer_ubound(vpsib))
         call opencl_kernel_run(zvpsi_spinors, (/pnp/), (/256/))
 
       end select
 
-      call batch_read_from_opencl_buffer(vpsib, mesh%np, vpsi_buf)
-      call opencl_release_buffer(psi_buf)
-      call opencl_release_buffer(vpsi_buf)
-      call opencl_finish()
+      call batch_buffer_was_modified(vpsib)
 
       call profiling_count_operations((R_MUL*psib%nst)*mesh%np)
       call profiling_count_transfers(mesh%np, M_ONE)

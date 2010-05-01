@@ -36,23 +36,28 @@ module batch_m
   implicit none
 
   private
-  public ::                  &
-    batch_state_t,           &
-    batch_state_l_t,         &
-    batch_t,                 &
-    batch_init,              &
-    batch_copy,              &
-    batch_end,               &
-    batch_add_state,         &
-    dbatch_new,              &
-    zbatch_new,              &
-    dbatch_delete,           &
-    zbatch_delete,           &
-    batch_set,               &
+  public ::                         &
+    batch_state_t,                  &
+    batch_state_l_t,                &
+    batch_t,                        &
+    batch_init,                     &
+    batch_copy,                     &
+    batch_end,                      &
+    batch_add_state,                &
+    dbatch_new,                     &
+    zbatch_new,                     &
+    dbatch_delete,                  &
+    zbatch_delete,                  &
+    batch_set,                      &
+    batch_is_in_buffer,             &
+    batch_buffer_was_modified,      &
 #ifdef HAVE_OPENCL
-    batch_create_opencl_buffer,    &
-    batch_write_to_opencl_buffer,  &
-    batch_read_from_opencl_buffer,   &
+    batch_buffer_ubound,            &
+    batch_move_to_buffer,           &
+    batch_move_from_buffer,         &
+    batch_create_opencl_buffer,     &
+    batch_write_to_opencl_buffer,   &
+    batch_read_from_opencl_buffer,  &
 #endif
     batch_is_ok
 
@@ -81,6 +86,13 @@ module batch_m
     !> If the memory is contiguous, we can perform some operations faster.
     FLOAT,               pointer   :: dpsicont(:, :, :)
     CMPLX,               pointer   :: zpsicont(:, :, :)
+
+    logical                        :: in_buffer ! whether there is a copy in the opencl buffer
+    logical                        :: dirty     ! if this is true, the buffer has different data
+#ifdef HAVE_OPENCL
+    type(opencl_mem_t)             :: buffer
+    integer                        :: ubound
+#endif
   end type batch_t
 
   !--------------------------------------------------------------
@@ -120,7 +132,6 @@ contains
     call pop_sub('batch.batch_end')
   end subroutine batch_end
 
-
   !--------------------------------------------------------------
   subroutine batch_init_empty (this, dim, nst)
     type(batch_t), intent(out)   :: this
@@ -149,6 +160,8 @@ contains
       nullify(this%states_linear(ist)%zpsi)
     end do
     
+    this%in_buffer = .false.
+
     call pop_sub('batch.batch_init_empty')
     
   end subroutine batch_init_empty
@@ -176,7 +189,9 @@ contains
       nullify(this%states_linear(ist)%dpsi)
       nullify(this%states_linear(ist)%zpsi)
     end do
-    
+
+    this%in_buffer = .false.
+
     call pop_sub('batch.batch_init_empty_linear')
     
   end subroutine batch_init_empty_linear
@@ -237,7 +252,99 @@ contains
   end function batch_type
 
   ! ----------------------------------------------------
+
+  logical pure function batch_is_in_buffer(this) result(in_buffer)
+    type(batch_t),      intent(in)    :: this
+
+#ifndef HAVE_OPENCL
+    in_buffer = .false.
+#else
+    in_buffer = this%in_buffer
+#endif
+  end function batch_is_in_buffer
+
+  ! ----------------------------------------------------
+
+  integer pure function batch_max_size(this) result(size)
+    type(batch_t),      intent(in)    :: this
+
+    integer :: ist
+
+    size = 0
+    do ist = 1, this%nst
+      if(associated(this%states(ist)%dpsi)) then
+        size = max(size, ubound(this%states(ist)%dpsi, dim = 1))
+      else
+        size = max(size, ubound(this%states(ist)%zpsi, dim = 1))
+      end if
+    end do
+
+  end function batch_max_size
+
+  ! ----------------------------------------------------
+
+  subroutine batch_buffer_was_modified(this)
+    type(batch_t),      intent(inout) :: this
+
+    this%dirty = .true.
+  end subroutine batch_buffer_was_modified
+
 #ifdef HAVE_OPENCL
+
+  ! ----------------------------------------------------
+
+  integer pure function batch_buffer_ubound(this) result(size)
+    type(batch_t),      intent(in)    :: this
+
+    size = this%ubound
+  end function batch_buffer_ubound
+
+  ! ----------------------------------------------------
+
+  subroutine batch_move_to_buffer(this, copy)
+    type(batch_t),      intent(inout) :: this
+    logical, optional,  intent(in)    :: copy
+
+    logical :: copy_
+
+    copy_ = .true.
+    if(present(copy)) copy_ = copy
+    
+    this%ubound = opencl_padded_size(batch_max_size(this))
+    this%in_buffer = .true.
+    call batch_create_opencl_buffer(this, batch_max_size(this), CL_MEM_READ_WRITE, this%buffer)
+
+    if(copy_) then
+      this%dirty = .false.
+      call batch_write_to_opencl_buffer(this, batch_max_size(this), this%buffer)
+    else
+      this%dirty = .true.
+    end if
+
+  end subroutine batch_move_to_buffer
+
+  ! ----------------------------------------------------
+
+  subroutine batch_move_from_buffer(this, copy)
+    type(batch_t),      intent(inout) :: this
+    logical, optional,  intent(in)    :: copy
+
+    logical :: copy_
+
+    copy_ = .true.
+    if(present(copy)) copy_ = copy
+
+    if(copy_ .and. this%dirty) then
+      call batch_read_from_opencl_buffer(this, batch_max_size(this), this%buffer)
+    end if
+    
+    this%in_buffer = .false.
+    call opencl_release_buffer(this%buffer)
+
+  end subroutine batch_move_from_buffer
+
+  ! ----------------------------------------------------
+
   subroutine batch_create_opencl_buffer(this, np, flags, buffer)
     type(batch_t),      intent(in)    :: this
     integer,            intent(in)    :: np
