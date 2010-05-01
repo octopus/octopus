@@ -208,8 +208,8 @@ contains
     integer :: ist
     
     call push_sub('batch.batch_is_ok')
-
-    ok = (this%nst >= 1)
+    
+    ok = (this%nst_linear >= 1)
     if(ok) then
       do ist = 1, this%nst_linear
         ok = ok.and. &
@@ -275,11 +275,11 @@ contains
     integer :: ist
 
     size = 0
-    do ist = 1, this%nst
-      if(associated(this%states(ist)%dpsi)) then
-        size = max(size, ubound(this%states(ist)%dpsi, dim = 1))
+    do ist = 1, this%nst_linear
+      if(associated(this%states_linear(ist)%dpsi)) then
+        size = max(size, ubound(this%states_linear(ist)%dpsi, dim = 1))
       else
-        size = max(size, ubound(this%states(ist)%zpsi, dim = 1))
+        size = max(size, ubound(this%states_linear(ist)%zpsi, dim = 1))
       end if
     end do
 
@@ -359,6 +359,8 @@ contains
 
     call push_sub('batch.batch_create_opencl_buffer')
 
+    ASSERT(np > 0)
+
     pnp = opencl_padded_size(np)
     size = pnp*this%nst_linear
 
@@ -420,7 +422,7 @@ contains
       end if
     end do
 
-    call pop_sub('batch.batch_write_to_opencl_buffer')
+    call pop_sub('batch.batch_read_from_opencl_buffer')
   end subroutine batch_read_from_opencl_buffer
 
 #endif

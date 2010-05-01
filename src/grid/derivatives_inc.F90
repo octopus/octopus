@@ -28,15 +28,15 @@
 ! Set all boundary points in ff to zero to implement zero
 ! boundary conditions for the derivatives, in finite system;
 ! or set according to periodic boundary conditions.
-subroutine X(derivatives_batch_set_bc)(der, batch_ff)
+subroutine X(derivatives_batch_set_bc)(der, ffb)
   type(derivatives_t), intent(in)    :: der
-  type(batch_t),       intent(inout) :: batch_ff
+  type(batch_t),       intent(inout) :: ffb
 
   integer :: pp, bndry_start, bndry_end
 
   call push_sub('derivatives_inc.Xderivatives_batch_set_bc')
   call profiling_in(set_bc_prof, 'SET_BC')
-
+  
   pp = der%mesh%vp%partno
 
   ! The boundary points are at different locations depending on the presence
@@ -48,11 +48,19 @@ subroutine X(derivatives_batch_set_bc)(der, batch_ff)
     bndry_start = der%mesh%np + 1
     bndry_end   = der%mesh%np_part
   end if
-  
+
+#ifdef HAVE_OPENCL
+  call batch_move_to_buffer(ffb)
+#endif
   if(der%zero_bc)         call zero_boundaries()
+#ifdef HAVE_OPENCL
+  call batch_move_from_buffer(ffb)
+#endif
+
   if(der%mesh%sb%mr_flag) call multiresolution()
   if(der%periodic_bc)     call periodic()
   
+
   call profiling_out(set_bc_prof)
   call pop_sub('derivatives_inc.Xderivatives_batch_set_bc')
 
@@ -61,12 +69,41 @@ contains
   ! ---------------------------------------------------------
   subroutine zero_boundaries()
     integer :: ist, ip
+#ifdef HAVE_OPENCL
+    integer :: localsize, globalsize
+#endif
 
     call push_sub('derivatives_inc.Xderivatives_batch_set_bc.zero_boundaries')
 
-    forall (ist = 1:batch_ff%nst_linear, ip = bndry_start:bndry_end)
-      batch_ff%states_linear(ist)%X(psi)(ip) = R_TOTYPE(M_ZERO)
-    end forall
+
+#ifdef HAVE_OPENCL
+    if(batch_is_in_buffer(ffb)) then
+
+      call opencl_set_kernel_arg(X(set_zero_part), 0, ffb%nst_linear)
+      call opencl_set_kernel_arg(X(set_zero_part), 1, bndry_start - 1)
+      call opencl_set_kernel_arg(X(set_zero_part), 2, bndry_end - 1)
+      call opencl_set_kernel_arg(X(set_zero_part), 3, ffb%buffer)
+      call opencl_set_kernel_arg(X(set_zero_part), 4, batch_buffer_ubound(ffb))
+
+      localsize = opencl_max_workgroup_size()
+      globalsize = bndry_end - bndry_start + 1
+
+      if(mod(globalsize, localsize) /= 0) then
+        globalsize = globalsize + localsize - mod(globalsize, localsize)
+      end if
+
+      call opencl_kernel_run(X(set_zero_part), (/globalsize/), (/localsize/))
+      call batch_buffer_was_modified(ffb)
+
+    else
+#endif
+      do ist = 1, ffb%nst_linear
+        forall (ip = bndry_start:bndry_end) ffb%states_linear(ist)%X(psi)(ip) = R_TOTYPE(M_ZERO)
+      end do
+
+#ifdef HAVE_OPENCL
+    end if
+#endif
 
     call pop_sub('derivatives_inc.Xderivatives_batch_set_bc.zero_boundaries')
   end subroutine zero_boundaries
@@ -81,8 +118,8 @@ contains
 
     call push_sub('derivatives_inc.Xderivatives_batch_set_bc.multiresolution')
 
-    do ist = 1, batch_ff%nst_linear
-      ff => batch_ff%states_linear(ist)%X(psi)
+    do ist = 1, ffb%nst_linear
+      ff => ffb%states_linear(ist)%X(psi)
 
       do ip = bndry_start, bndry_end
         ix = der%mesh%idx%Lxyz(ip, 1)
@@ -137,26 +174,26 @@ contains
       call profiling_in(set_bc_comm_prof, 'SET_BC_COMMUNICATION')
       
       ! get the points that are copies from other nodes
-      SAFE_ALLOCATE(req(1:2 * der%mesh%vp%npart * batch_ff%nst_linear))
+      SAFE_ALLOCATE(req(1:2 * der%mesh%vp%npart * ffb%nst_linear))
 
       nreq = 0
 
-      do ist = 1, batch_ff%nst_linear
+      do ist = 1, ffb%nst_linear
         do ipart = 1, der%mesh%vp%npart
           if(ipart == der%mesh%vp%partno .or. der%mesh%nrecv(ipart) == 0) cycle
 
-          ff => batch_ff%states_linear(ist)%X(psi)
+          ff => ffb%states_linear(ist)%X(psi)
           nreq = nreq + 1
           call MPI_Irecv(ff(1), 1, der%mesh%X(recv_type)(ipart), ipart - 1, 3, &
             der%mesh%vp%comm, req(nreq), mpi_err)
         end do
       end do
       
-      do ist = 1, batch_ff%nst_linear
+      do ist = 1, ffb%nst_linear
         do ipart = 1, der%mesh%vp%npart
           if(ipart == der%mesh%vp%partno .or. der%mesh%nsend(ipart) == 0) cycle
 
-          ff => batch_ff%states_linear(ist)%X(psi)
+          ff => ffb%states_linear(ist)%X(psi)
           nreq = nreq + 1
           call MPI_Isend(ff(1), 1, der%mesh%X(send_type)(ipart), ipart - 1, 3, &
             der%mesh%vp%comm, req(nreq), mpi_err)
@@ -164,15 +201,15 @@ contains
       end do
       
       call profiling_count_transfers(  &
-        sum(der%mesh%nsend(1:der%mesh%vp%npart) + der%mesh%nrecv(1:der%mesh%vp%npart)) * batch_ff%nst_linear, &
+        sum(der%mesh%nsend(1:der%mesh%vp%npart) + der%mesh%nrecv(1:der%mesh%vp%npart)) * ffb%nst_linear, &
         R_TOTYPE(M_ONE))
       
       call profiling_out(set_bc_comm_prof)
     end if
 #endif
     
-    do ist = 1, batch_ff%nst_linear
-      ff => batch_ff%states_linear(ist)%X(psi)
+    do ist = 1, ffb%nst_linear
+      ff => ffb%states_linear(ist)%X(psi)
       forall (ip = 1:der%mesh%nper)
         ff(der%mesh%per_points(ip)) = ff(der%mesh%per_map(ip))
       end forall
@@ -208,6 +245,8 @@ subroutine X(derivatives_set_bc)(der, ff)
 
   call batch_init     (batch_ff, 1)
   call batch_add_state(batch_ff, ff)
+
+  ASSERT(batch_is_ok(batch_ff))
 
   call X(derivatives_batch_set_bc)(der, batch_ff)
 
@@ -320,6 +359,9 @@ subroutine X(derivatives_perform)(op, der, ff, op_ff, ghost_update, set_bc)
 
   call batch_init     (batch_op_ff, 1)
   call batch_add_state(batch_op_ff, op_ff)
+
+  ASSERT(batch_is_ok(batch_ff))
+  ASSERT(batch_is_ok(batch_op_ff))
 
   call X(derivatives_batch_perform) (op, der, batch_ff, batch_op_ff, ghost_update, set_bc)
 
