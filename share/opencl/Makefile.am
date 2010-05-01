@@ -21,8 +21,9 @@
 
 opencldir = $(pkgdatadir)/opencl
 
-dist_opencl_DATA =    \
-	vpsi.cl
+dist_opencl_DATA =              \
+	vpsi.cl                 \
+	set_zero.cl
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use
 # the `distcheck' target) the pseudopotential files have to be accessible

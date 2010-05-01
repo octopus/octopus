@@ -49,6 +49,7 @@ module batch_m
     dbatch_delete,                  &
     zbatch_delete,                  &
     batch_set,                      &
+    batch_set_zero,                 &
     batch_is_in_buffer,             &
     batch_buffer_was_modified,      &
     batch_is_ok
@@ -423,6 +424,52 @@ contains
   end subroutine batch_read_from_opencl_buffer
 
 #endif
+
+!--------------------------------------------------------------
+
+  subroutine batch_set_zero(this)
+    type(batch_t),     intent(inout) :: this
+
+    integer :: ist_linear
+#ifdef HAVE_OPENCL
+    integer :: bsize
+#endif
+
+    call push_sub('batch.batch_set_zero')
+
+    if(batch_is_in_buffer(this)) then
+
+#ifdef HAVE_OPENCL
+      bsize = batch_buffer_ubound(this)*this%nst_linear
+      if(associated(this%states_linear(1)%zpsi)) then
+        bsize = bsize*2
+      end if
+
+      call opencl_set_kernel_arg(set_zero, 0, this%buffer)
+      call opencl_kernel_run(set_zero, (/bsize/), (/opencl_max_workgroup_size()/))
+      call batch_buffer_was_modified(this)
+#endif
+      
+    else if (associated(this%dpsicont)) then
+      this%dpsicont = M_ZERO
+    else if (associated(this%zpsicont)) then
+      this%zpsicont = M_ZERO
+    else
+
+      do ist_linear = 1, this%nst
+        if(associated(this%states_linear(ist_linear)%dpsi)) then
+          this%states_linear(ist_linear)%dpsi = M_ZERO
+        else
+          this%states_linear(ist_linear)%zpsi = M_ZERO
+        end if
+      end do
+
+    end if
+
+    call pop_sub('batch.batch_set_zero')
+  end subroutine batch_set_zero
+
+! --------------------------------------------------------------
 
 #include "undef.F90"
 #include "real.F90"

@@ -125,7 +125,13 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
     end do
 
   else
-    hpsi(1:der%mesh%np, 1:hm%d%dim) = M_ZERO
+#ifdef HAVE_OPENCL
+    call batch_move_to_buffer(hpsib, copy = .false.)
+#endif
+    call batch_set_zero(hpsib)
+#ifdef HAVE_OPENCL
+    call batch_move_from_buffer(hpsib)
+#endif
   end if
 
   ! and the non-local one
