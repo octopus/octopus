@@ -51,15 +51,18 @@ module batch_m
     batch_set,                      &
     batch_is_in_buffer,             &
     batch_buffer_was_modified,      &
+    batch_is_ok
+
 #ifdef HAVE_OPENCL
+  public ::                         &
     batch_buffer_ubound,            &
     batch_move_to_buffer,           &
     batch_move_from_buffer,         &
     batch_create_opencl_buffer,     &
     batch_write_to_opencl_buffer,   &
-    batch_read_from_opencl_buffer,  &
+    batch_read_from_opencl_buffer
 #endif
-    batch_is_ok
+
 
   !--------------------------------------------------------------
   type batch_state_t
