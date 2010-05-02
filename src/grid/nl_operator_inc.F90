@@ -220,7 +220,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
     else if(op%cmplx_op .or. op%X(function)==OP_FORTRAN) then
       call operate_const_weights()
 #ifdef HAVE_OPENCL
-    else if(opencl_is_available() .and. batch_is_in_buffer(fi) .and. batch_is_in_buffer(fo)) then
+    else if(opencl_is_enabled() .and. batch_is_in_buffer(fi) .and. batch_is_in_buffer(fo)) then
       call operate_opencl()
 #endif
     else

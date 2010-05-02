@@ -21,9 +21,11 @@
 
 module opencl_m
   use c_pointer_m
+  use datasets_m
   use global_m
   use messages_m
   use types_m
+  use parser_m
   use profiling_m
 
   implicit none 
@@ -31,7 +33,7 @@ module opencl_m
   private
 
   public ::                       &
-    opencl_is_available,          &
+    opencl_is_enabled,            &
     opencl_init,                  &
     opencl_end,                   &
     opencl_mem_t,                 &
@@ -49,6 +51,7 @@ module opencl_m
   type opencl_t 
     type(c_ptr) :: env
     integer     :: max_workgroup_size
+    logical     :: enabled
   end type opencl_t
 
   type opencl_mem_t
@@ -250,18 +253,38 @@ module opencl_m
   
   contains
 
-    pure logical function opencl_is_available() result(available)
-    
-      available = .true.
-    end function opencl_is_available
+    pure logical function opencl_is_enabled() result(enabled)
+      
+      enabled = opencl%enabled
+    end function opencl_is_enabled
 
     ! ------------------------------------------
 
     subroutine opencl_init()
       type(c_ptr) :: prog
+      logical  :: disable
+
+      call push_sub('opencl.opencl_init')
+      
+      !%Variable DisableOpenCL
+      !%Type logical
+      !%Default yes
+      !%Section Execution::OpenCL
+      !%Description
+      !% If Octopus was compiled with OpenCL support, it will try to
+      !% initialize and use an OpenCL device. By setting this variable
+      !% to <tt>yes</tt> you tell Octopus not to use OpenCL.
+      !%End
+      call parse_logical(datasets_check('DisableOpenCL'), .true., disable)
+      opencl%enabled = .not. disable
+      
+      if(disable) then
+        call pop_sub('opencl.opencl_init')
+        return
+      end if
 
       call f90_opencl_env_init(opencl%env, trim(conf%share)//'/opencl/')   
-
+      
       opencl%max_workgroup_size = f90_opencl_max_workgroup_size(opencl%env)
       
       ! now initialize the kernels
@@ -270,27 +293,34 @@ module opencl_m
       call f90_opencl_create_kernel(zvpsi, prog, "zvpsi")
       call f90_opencl_create_kernel(zvpsi_spinors, prog, "zvpsi_spinors")
       call f90_opencl_release_program(prog)
-
+      
       call f90_opencl_build_program(prog, opencl%env, "set_zero.cl")
       call f90_opencl_create_kernel(set_zero, prog, "set_zero")
       call f90_opencl_create_kernel(dset_zero_part, prog, "dset_zero_part")
       call f90_opencl_create_kernel(zset_zero_part, prog, "zset_zero_part")
       call f90_opencl_release_program(prog)
-
+      
       call f90_opencl_build_program(prog, opencl%env, "operate.cl")
       call f90_opencl_create_kernel(doperate, prog, "doperate")
       call f90_opencl_create_kernel(zoperate, prog, "zoperate")
       call f90_opencl_release_program(prog)
 
+      call pop_sub('opencl.opencl_init')
     end subroutine opencl_init
 
     ! ------------------------------------------
 
     subroutine opencl_end()
-      
-      call f90_opencl_release_kernel(dvpsi)
-      call f90_opencl_release_kernel(zvpsi)
-      call f90_opencl_env_end(opencl%env)
+
+      call push_sub('opencl.opencl_end')
+
+      if(opencl_is_enabled()) then
+        call f90_opencl_release_kernel(dvpsi)
+        call f90_opencl_release_kernel(zvpsi)
+        call f90_opencl_env_end(opencl%env)
+      end if
+
+      call pop_sub('opencl.opencl_end')
     end subroutine opencl_end
 
     ! ------------------------------------------

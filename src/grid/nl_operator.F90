@@ -526,7 +526,7 @@ contains
 #endif
 
 #ifdef HAVE_OPENCL
-    if(opencl_is_available() .and. op%const_w) then
+    if(opencl_is_enabled() .and. op%const_w) then
       call opencl_create_buffer(op%buff_ri, CL_MEM_READ_ONLY, TYPE_INTEGER, op%nri*op%stencil%size)
       call opencl_write_buffer(op%buff_ri, op%nri*op%stencil%size, op%ri)
       
@@ -1187,7 +1187,7 @@ contains
     call push_sub('nl_operator.nl_operator_end')
 
 #ifdef HAVE_OPENCL
-    if(opencl_is_available() .and. op%const_w) then
+    if(opencl_is_enabled() .and. op%const_w) then
       call opencl_release_buffer(op%buff_ri)
       call opencl_release_buffer(op%buff_imin)
       call opencl_release_buffer(op%buff_imax)

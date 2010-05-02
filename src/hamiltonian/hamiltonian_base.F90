@@ -179,7 +179,7 @@ contains
         SAFE_ALLOCATE(this%potential(1:mesh%np, 1:this%nspin))
         this%potential = M_ZERO
 #ifdef HAVE_OPENCL
-        if(opencl_is_available()) then
+        if(opencl_is_enabled()) then
           call opencl_create_buffer(this%potential_opencl, CL_MEM_READ_ONLY, TYPE_FLOAT, opencl_padded_size(mesh%np)*this%nspin)
         end if
 #endif
@@ -230,7 +230,7 @@ contains
     end if
 
 #ifdef HAVE_OPENCL
-    if(associated(this%potential) .and. opencl_is_available()) then
+    if(associated(this%potential) .and. opencl_is_enabled()) then
 
       offset = 0
       do ispin = 1, this%nspin

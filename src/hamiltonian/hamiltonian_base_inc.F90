@@ -36,7 +36,7 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
 
   if(associated(this%potential)) then
 #ifdef HAVE_OPENCL
-    if(opencl_is_available() .and. batch_is_in_buffer(psib)) then
+    if(opencl_is_enabled() .and. batch_is_in_buffer(psib)) then
       ASSERT(batch_is_in_buffer(vpsib))
       
       pnp = opencl_padded_size(mesh%np)
