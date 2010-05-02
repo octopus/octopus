@@ -44,6 +44,9 @@ module hamiltonian_m
   use mpi_lib_m
   use ob_interface_m
   use ob_lead_m
+#ifdef HAVE_OPENCL
+  use opencl_m
+#endif
   use poisson_m
   use profiling_m
   use projector_m

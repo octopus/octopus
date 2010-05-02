@@ -49,13 +49,7 @@ subroutine X(derivatives_batch_set_bc)(der, ffb)
     bndry_end   = der%mesh%np_part
   end if
 
-#ifdef HAVE_OPENCL
-  call batch_move_to_buffer(ffb)
-#endif
   if(der%zero_bc)         call zero_boundaries()
-#ifdef HAVE_OPENCL
-  call batch_move_from_buffer(ffb)
-#endif
 
   if(der%mesh%sb%mr_flag) call multiresolution()
   if(der%periodic_bc)     call periodic()

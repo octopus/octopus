@@ -315,17 +315,19 @@ contains
 
     copy_ = .true.
     if(present(copy)) copy_ = copy
-    
-    this%ubound = opencl_padded_size(batch_max_size(this))
-    this%in_buffer = .true.
-    call batch_create_opencl_buffer(this, batch_max_size(this), CL_MEM_READ_WRITE, this%buffer)
 
-    if(copy_) then
-      this%dirty = .false.
-      call batch_write_to_opencl_buffer(this, batch_max_size(this), this%buffer)
-    else
+    if(.not. this%in_buffer) then
+      this%ubound = opencl_padded_size(batch_max_size(this))
+      call batch_create_opencl_buffer(this, batch_max_size(this), CL_MEM_READ_WRITE, this%buffer)
       this%dirty = .true.
     end if
+
+    if(this%dirty .and. copy_) then
+      this%dirty = .false.
+      call batch_write_to_opencl_buffer(this, batch_max_size(this), this%buffer)
+    end if
+
+    this%in_buffer = .true.
 
   end subroutine batch_move_to_buffer
 
@@ -337,15 +339,17 @@ contains
 
     logical :: copy_
 
-    copy_ = .true.
-    if(present(copy)) copy_ = copy
-
-    if(copy_ .and. this%dirty) then
-      call batch_read_from_opencl_buffer(this, batch_max_size(this), this%buffer)
+    if(this%in_buffer) then
+      copy_ = .true.
+      if(present(copy)) copy_ = copy
+      
+      if(copy_ .and. this%dirty) then
+        call batch_read_from_opencl_buffer(this, batch_max_size(this), this%buffer)
+      end if
+      
+      this%in_buffer = .false.
+      call opencl_release_buffer(this%buffer)
     end if
-    
-    this%in_buffer = .false.
-    call opencl_release_buffer(this%buffer)
 
   end subroutine batch_move_from_buffer
 

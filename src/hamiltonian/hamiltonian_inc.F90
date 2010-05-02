@@ -103,6 +103,13 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
       call batch_add_state(laplb, psib%states(1)%ist, lapl(:, :, ii))
     end do
 
+#ifdef HAVE_OPENCL
+    if(opencl_is_available()) then
+      call batch_move_to_buffer(laplb)
+      call batch_move_to_buffer(epsib)
+    end if
+#endif
+
     ! start the calculation of the Laplacian
     ASSERT(associated(hm%hm_base%kinetic))
     call X(derivatives_batch_start)(hm%hm_base%kinetic, der, epsib, laplb, handle, set_bc = .false.)
@@ -111,14 +118,9 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   ! apply the local potential
   if (iand(TERM_LOCAL_POTENTIAL, terms_) /= 0) then
 #ifdef HAVE_OPENCL
-    call batch_move_to_buffer(epsib)
-    call batch_move_to_buffer(hpsib, copy = .false.)
+    if(opencl_is_available() .and. batch_is_in_buffer(epsib)) call batch_move_to_buffer(hpsib, copy = .false.)
 #endif
     call X(hamiltonian_base_local)(hm%hm_base, der%mesh, hm%d, states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
-#ifdef HAVE_OPENCL
-    call batch_move_from_buffer(epsib)
-    call batch_move_from_buffer(hpsib)
-#endif
   else if(iand(TERM_LOCAL_EXTERNAL, terms_) /= 0) then
 
     do ii = 1, nst
@@ -129,16 +131,16 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
     end do
 
   else
-#ifdef HAVE_OPENCL
-    call batch_move_to_buffer(hpsib, copy = .false.)
-#endif
     call batch_set_zero(hpsib)
-#ifdef HAVE_OPENCL
-    call batch_move_from_buffer(hpsib)
-#endif
   end if
 
-  ! and the non-local one
+#ifdef HAVE_OPENCL
+  if(opencl_is_available()) call batch_move_from_buffer(hpsib)
+#endif
+
+  ! and the non-local one (this is a hack, here epsib is in buffer and
+  ! dirty (because of the boundaries), but the central part is ok, so
+  ! we can use it)
   if (iand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
     if(hm%hm_base%apply_projector_matrices) then
       call X(hamiltonian_base_non_local)(hm%hm_base, der%mesh, hm%d, ik, epsib, hpsib)
@@ -149,6 +151,12 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
   if(iand(TERM_KINETIC, terms_) /= 0) then
     call X(derivatives_batch_finish)(handle)
+#ifdef HAVE_OPENCL
+    if(opencl_is_available()) then
+      call batch_move_from_buffer(epsib)
+      call batch_move_from_buffer(laplb)
+    end if
+#endif
     call batch_end(laplb)
   end if
 

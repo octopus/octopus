@@ -220,7 +220,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
     else if(op%cmplx_op .or. op%X(function)==OP_FORTRAN) then
       call operate_const_weights()
 #ifdef HAVE_OPENCL
-    else if(opencl_is_available()) then
+    else if(opencl_is_available() .and. batch_is_in_buffer(fi) .and. batch_is_in_buffer(fo)) then
       call operate_opencl()
 #endif
     else
@@ -363,9 +363,6 @@ contains
     call opencl_create_buffer(buff_weights, CL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size)
     call opencl_write_buffer(buff_weights, op%stencil%size, op%w_re(:, 1))
 
-    call batch_move_to_buffer(fi)
-    call batch_move_to_buffer(fo, copy = .false.)
-
     call opencl_set_kernel_arg(X(operate),  0, fi%nst_linear)
     call opencl_set_kernel_arg(X(operate),  1, op%stencil%size)
     call opencl_set_kernel_arg(X(operate),  2, nri)
@@ -385,8 +382,6 @@ contains
     call opencl_kernel_run(X(operate), (/pnri/), (/bsize/))
 
     call batch_buffer_was_modified(fo)
-    call batch_move_from_buffer(fo)
-    call batch_move_from_buffer(fi)
 
     call opencl_release_buffer(buff_weights)
   end subroutine operate_opencl
