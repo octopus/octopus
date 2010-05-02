@@ -278,6 +278,8 @@ subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, s
   handle%ff   => ff
   handle%opff => opff
 
+  ASSERT(handle%ff%nst_linear == handle%opff%nst_linear)
+
   set_bc_ = .true.
   if(present(set_bc)) set_bc_ = set_bc
   if(set_bc_) call X(derivatives_batch_set_bc)(der, ff)
@@ -308,7 +310,7 @@ subroutine X(derivatives_batch_finish)(handle)
     call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update=.false., points=OP_OUTER)
   else
 #endif
-    
+
     call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update=handle%ghost_update)
     
 #ifdef HAVE_MPI

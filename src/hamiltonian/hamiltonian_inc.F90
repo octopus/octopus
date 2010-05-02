@@ -97,7 +97,11 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
   if(iand(TERM_KINETIC, terms_) /= 0) then
     SAFE_ALLOCATE(lapl(1:der%mesh%np, 1:hm%d%dim, 1:nst))
-    call batch_init(laplb, hm%d%dim, psib%states(1)%ist, psib%states(nst)%ist, lapl)
+    call batch_init(laplb, hm%d%dim, nst)
+
+    do ii  = 1, nst
+      call batch_add_state(laplb, psib%states(1)%ist, lapl(:, :, ii))
+    end do
 
     ! start the calculation of the Laplacian
     ASSERT(associated(hm%hm_base%kinetic))

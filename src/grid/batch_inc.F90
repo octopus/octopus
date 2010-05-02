@@ -35,6 +35,8 @@ subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
 
   this%X(psicont) => psi(:, :, st_start:)
 
+  ASSERT(ubound(psi, dim = 3) >= st_end)
+
   do ist = st_start, st_end
     call X(batch_add_state)(this, ist, psi(:, :, ist))
   end do
