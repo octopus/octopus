@@ -248,6 +248,8 @@ contains
 
   end subroutine batch_copy
 
+  ! ----------------------------------------------------
+
   integer pure function batch_type(this) result(btype)
     type(batch_t),      intent(in)    :: this
 
@@ -458,7 +460,7 @@ contains
       this%zpsicont = M_ZERO
     else
 
-      do ist_linear = 1, this%nst
+      do ist_linear = 1, this%nst_linear
         if(associated(this%states_linear(ist_linear)%dpsi)) then
           this%states_linear(ist_linear)%dpsi = M_ZERO
         else
