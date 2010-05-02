@@ -67,6 +67,8 @@ module opencl_m
   type(c_ptr), public :: set_zero
   type(c_ptr), public :: dset_zero_part
   type(c_ptr), public :: zset_zero_part
+  type(c_ptr), public :: doperate
+  type(c_ptr), public :: zoperate
 
   ! this values are copied from OpenCL include CL/cl.h
   integer, parameter, public ::        &
@@ -228,7 +230,8 @@ module opencl_m
   end interface
 
   interface opencl_write_buffer
-    module procedure iopencl_write_buffer, dopencl_write_buffer, zopencl_write_buffer
+    module procedure iopencl_write_buffer, dopencl_write_buffer, zopencl_write_buffer, &
+      iopencl_write_buffer_2, dopencl_write_buffer_2, zopencl_write_buffer_2
   end interface
 
   interface opencl_read_buffer
@@ -272,6 +275,11 @@ module opencl_m
       call f90_opencl_create_kernel(set_zero, prog, "set_zero")
       call f90_opencl_create_kernel(dset_zero_part, prog, "dset_zero_part")
       call f90_opencl_create_kernel(zset_zero_part, prog, "zset_zero_part")
+      call f90_opencl_release_program(prog)
+
+      call f90_opencl_build_program(prog, opencl%env, "operate.cl")
+      call f90_opencl_create_kernel(doperate, prog, "doperate")
+      call f90_opencl_create_kernel(zoperate, prog, "zoperate")
       call f90_opencl_release_program(prog)
 
     end subroutine opencl_init

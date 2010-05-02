@@ -186,7 +186,12 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 #endif
 
   call push_sub('nl_operator_inc.Xnl_operator_operate_batch')
-  
+
+  if(fi%nst_linear /= fo%nst_linear) then
+    print*, "differentes"
+  end if
+  ASSERT(fi%nst_linear == fo%nst_linear)
+
   do ist = 1, fi%nst_linear
     ASSERT(ubound(fi%states_linear(ist)%X(psi)(:), dim=1) == op%mesh%np_part)
     ASSERT(ubound(fo%states_linear(ist)%X(psi)(:), dim=1) >= op%mesh%np)
@@ -215,42 +220,44 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   if(nri > 0) then
     if(.not.op%const_w) then
       call operate_non_const_weights()
-    else
-      if(op%cmplx_op .or. op%X(function)==OP_FORTRAN) then
-        call operate_const_weights()
-      else
-        !$omp parallel private(ini, nri_loc, ws, ist, pfi, pfo)
-#ifdef USE_OMP
-        call multicomm_divide_range_omp(nri, ini, nri_loc)
-#else 
-        ini = 1
-        nri_loc = nri
+    else if(op%cmplx_op .or. op%X(function)==OP_FORTRAN) then
+      call operate_const_weights()
+#ifdef HAVE_OPENCL
+    else if(opencl_is_available()) then
+      call operate_opencl()
 #endif
-        do ist = 1, fi%nst_linear
-          pfi => fi%states_linear(ist)%X(psi)(:)
-          pfo => fo%states_linear(ist)%X(psi)(:)
-          select case(op%X(function))
-          case(OP_C)
-            call X(operate_ri)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
+    else
+      !$omp parallel private(ini, nri_loc, ws, ist, pfi, pfo)
+#ifdef USE_OMP
+      call multicomm_divide_range_omp(nri, ini, nri_loc)
+#else 
+      ini = 1
+      nri_loc = nri
+#endif
+      do ist = 1, fi%nst_linear
+        pfi => fi%states_linear(ist)%X(psi)(:)
+        pfo => fo%states_linear(ist)%X(psi)(:)
+        select case(op%X(function))
+        case(OP_C)
+          call X(operate_ri)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
 #ifdef HAVE_VEC
-          case(OP_VEC)
-            call X(operate_ri_vec)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
+        case(OP_VEC)
+          call X(operate_ri_vec)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
 #endif
 #if defined(HAVE_BLUE_GENE) && defined(R_TCOMPLEX)
-          case(OP_BG)
-            call X(operate_bg)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
+        case(OP_BG)
+          call X(operate_bg)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
 #endif
 #ifdef HAVE_AS
-          case(OP_AS)
-            nns(1) = op%stencil%size
-            nns(2) = nri_loc
-            call X(operate_as)(nns, op%w_re(1, 1), ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1), ws(1))
+        case(OP_AS)
+          nns(1) = op%stencil%size
+          nns(2) = nri_loc
+          call X(operate_as)(nns, op%w_re(1, 1), ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1), ws(1))
 #endif
-          end select
+        end select
 
-        end do
-        !$omp end parallel
-      end if
+      end do
+      !$omp end parallel
     end if
 
     ! count operations
@@ -296,7 +303,7 @@ contains
   ! ---------------------------------------------------------
   subroutine operate_const_weights()
     integer :: nn, ll, ii, ist
-  
+
     nn = op%stencil%size
 
     if(op%cmplx_op) then
@@ -323,7 +330,7 @@ contains
   ! ---------------------------------------------------------
   subroutine operate_non_const_weights()
     integer :: nn, ll, ii, ist
-  
+
     if(op%cmplx_op) then
       !$omp parallel do private(ll, ist, ii)
       do ll = 1, nri
@@ -344,9 +351,62 @@ contains
       end do
       !$omp end parallel do
     end if
-    
+
   end subroutine operate_non_const_weights
 
+#ifdef HAVE_OPENCL
+
+  ! ------------------------------------------
+  subroutine operate_opencl()
+    type(opencl_mem_t) :: buff_weights, buff_ri, buff_imin, buff_imax
+    integer :: pnri, bsize
+
+    ASSERT(.not. op%mesh%parallel_in_domains)
+
+    call opencl_create_buffer(buff_weights, CL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size)
+    call opencl_write_buffer(buff_weights, op%stencil%size, op%w_re(:, 1))
+
+    call opencl_create_buffer(buff_ri, CL_MEM_READ_ONLY, TYPE_INTEGER, nri*op%stencil%size)
+    call opencl_write_buffer(buff_ri, nri*op%stencil%size, ri)
+
+    call opencl_create_buffer(buff_imin, CL_MEM_READ_ONLY, TYPE_INTEGER, nri)
+    call opencl_write_buffer(buff_imin, nri, imin)
+
+    call opencl_create_buffer(buff_imax, CL_MEM_READ_ONLY, TYPE_INTEGER, nri)
+    call opencl_write_buffer(buff_imax, nri, imax)
+
+    call batch_move_to_buffer(fi)
+    call batch_move_to_buffer(fo, copy = .false.)
+
+    call opencl_set_kernel_arg(X(operate),  0, fi%nst_linear)
+    call opencl_set_kernel_arg(X(operate),  1, op%stencil%size)
+    call opencl_set_kernel_arg(X(operate),  2, nri)
+    call opencl_set_kernel_arg(X(operate),  3, buff_ri)
+    call opencl_set_kernel_arg(X(operate),  4, buff_imin)
+    call opencl_set_kernel_arg(X(operate),  5, buff_imax)
+    call opencl_set_kernel_arg(X(operate),  6, buff_weights)
+    call opencl_set_kernel_arg(X(operate),  7, fi%buffer)
+    call opencl_set_kernel_arg(X(operate),  8, batch_buffer_ubound(fi))
+    call opencl_set_kernel_arg(X(operate),  9, fo%buffer)
+    call opencl_set_kernel_arg(X(operate), 10, batch_buffer_ubound(fo))
+
+    pnri = nri
+    bsize = opencl_max_workgroup_size()
+    if(mod(pnri, bsize) /= 0) pnri = pnri + bsize - mod(pnri, bsize)
+
+    call opencl_kernel_run(X(operate), (/pnri/), (/bsize/))
+
+    call batch_buffer_was_modified(fo)
+    call batch_move_from_buffer(fo)
+    call batch_move_from_buffer(fi)
+
+    call opencl_release_buffer(buff_weights)
+    call opencl_release_buffer(buff_ri)
+    call opencl_release_buffer(buff_imin)
+    call opencl_release_buffer(buff_imax)
+  end subroutine operate_opencl
+
+#endif
 
 end subroutine X(nl_operator_operate_batch)
 

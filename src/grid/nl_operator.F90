@@ -33,6 +33,9 @@ module nl_operator_m
   use messages_m
   use multicomm_m
   use mpi_m
+#ifdef HAVE_OPENCL
+  use opencl_m
+#endif
   use par_vec_m
   use profiling_m
   use simul_box_m

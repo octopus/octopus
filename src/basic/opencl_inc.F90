@@ -42,6 +42,30 @@ end subroutine X(opencl_write_buffer)
 
 ! -----------------------------------------------------------------------------
 
+subroutine X(opencl_write_buffer_2)(this, size, data, offset)
+  type(opencl_mem_t),               intent(inout) :: this
+  integer,                          intent(in)    :: size
+  R_TYPE,                           intent(in)    :: data(:, :)
+  integer(SIZEOF_SIZE_T), optional, intent(in)    :: offset
+
+  integer(SIZEOF_SIZE_T) :: fsize, offset_
+
+  call profiling_in(prof_write, "CL_WRITE_BUFFER")
+
+  fsize = size*R_SIZEOF
+  offset_ = 0
+  if(present(offset)) offset_ = offset*R_SIZEOF
+
+  call f90_opencl_write_buffer(this%mem, opencl%env, fsize, offset_, data(1, 1))
+
+  call profiling_count_transfers(size, data(1, 1))
+  call opencl_finish()
+  call profiling_out(prof_write)
+
+end subroutine X(opencl_write_buffer_2)
+
+! -----------------------------------------------------------------------------
+
 subroutine X(opencl_read_buffer)(this, size, data, offset)
   type(opencl_mem_t),               intent(inout) :: this
   integer,                          intent(in)    :: size
