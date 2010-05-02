@@ -143,6 +143,39 @@ subroutine X(batch_set)(this, np, psi)
   call pop_sub('batch_inc.Xbatch_set')
 end subroutine X(batch_set)
 
+! --------------------------------------------------------------
+
+subroutine X(batch_axpy)(np, aa, xx, yy)
+  integer,           intent(in)    :: np
+  R_TYPE,            intent(in)    :: aa
+  type(batch_t),     intent(in)    :: xx
+  type(batch_t),     intent(inout) :: yy
+
+  integer :: ist
+
+  call push_sub('batch_inc.Xbatch_axpy')
+
+  ASSERT(batch_type(yy) == batch_type(xx))
+  ASSERT(xx%nst_linear == yy%nst_linear)
+
+  do ist = 1, yy%nst_linear
+    if(batch_type(yy) == TYPE_CMPLX) then
+      call lalg_axpy(np, aa, xx%states_linear(ist)%zpsi, yy%states_linear(ist)%zpsi)
+    else
+#ifdef R_TREAL
+      call lalg_axpy(np, aa, xx%states_linear(ist)%dpsi, yy%states_linear(ist)%dpsi)
+#else
+      ASSERT(.false.)
+#endif
+    end if
+  end do
+
+  call pop_sub('batch_inc.Xbatch_axpy')
+end subroutine X(batch_axpy)
+
+! --------------------------------------------------------------
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

@@ -52,7 +52,8 @@ module batch_m
     batch_set_zero,                 &
     batch_is_in_buffer,             &
     batch_buffer_was_modified,      &
-    batch_is_ok
+    batch_is_ok,                    &
+    batch_axpy
 
 #ifdef HAVE_OPENCL
   public ::                         &
@@ -119,6 +120,11 @@ module batch_m
     module procedure zbatch_set
   end interface
 
+  interface batch_axpy
+    module procedure dbatch_axpy
+    module procedure zbatch_axpy
+  end interface
+
 contains
 
   !--------------------------------------------------------------
@@ -126,6 +132,8 @@ contains
     type(batch_t), intent(inout) :: this
 
     call push_sub('batch.batch_end')
+
+    ASSERT(.not. batch_is_in_buffer(this))
 
     nullify(this%dpsicont)
     nullify(this%zpsicont)
@@ -220,8 +228,8 @@ contains
     call pop_sub('batch.batch_is_ok')
   end function batch_is_ok
 
-
   !--------------------------------------------------------------
+
   subroutine batch_copy(bin, bout)
     type(batch_t), intent(in)    :: bin
     type(batch_t), intent(out)   :: bout
@@ -449,9 +457,7 @@ contains
 
 #ifdef HAVE_OPENCL
       bsize = batch_buffer_ubound(this)*this%nst_linear
-      if(associated(this%states_linear(1)%zpsi)) then
-        bsize = bsize*2
-      end if
+      if(batch_type(this) == TYPE_CMPLX) bsize = bsize*2
 
       call opencl_set_kernel_arg(set_zero, 0, this%buffer)
       call opencl_kernel_run(set_zero, (/bsize/), (/opencl_max_workgroup_size()/))
@@ -477,9 +483,6 @@ contains
     call pop_sub('batch.batch_set_zero')
   end subroutine batch_set_zero
 
-! --------------------------------------------------------------
-
-#include "undef.F90"
 #include "real.F90"
 #include "batch_inc.F90"
 #include "undef.F90"

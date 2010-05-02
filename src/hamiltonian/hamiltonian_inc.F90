@@ -157,29 +157,22 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
       call batch_move_from_buffer(laplb)
     end if
 #endif
-    call batch_end(laplb)
   end if
 
   if (iand(TERM_OTHERS, terms_) /= 0 .and. hamiltonian_base_has_magnetic(hm%hm_base)) then
     call X(hamiltonian_base_magnetic)(hm%hm_base, der, hm%d, hm%ep, states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
   end if
+  
+  ! finish the calculation of the Laplacian
+  if(iand(TERM_KINETIC, terms_) /= 0) then
+    call profiling_in(prof_kinetic, "KINETIC")
+    call batch_axpy(der%mesh%np, -M_HALF/hm%mass, laplb, hpsib)
+    call batch_end(laplb)
+    call profiling_out(prof_kinetic)
+  end if
 
   do ii = 1, nst
     call set_pointers()
-
-    ! finish the calculation of the Laplacian
-    if(iand(TERM_KINETIC, terms_) /= 0) then
-      call profiling_in(prof_kinetic, "KINETIC")
-      do idim = 1, hm%d%dim
-#ifdef R_TREAL
-        call blas_axpy(der%mesh%np, -M_HALF/hm%mass, lapl(1, idim, ii), 1, hpsi(1, idim), 1)
-#else
-        call blas_axpy(der%mesh%np, -M_HALF/hm%mass, lapl(1, idim, ii), hpsi(1, idim))
-#endif
-        call profiling_count_operations(der%mesh%np*CNST(2.0)*R_ADD)
-      end do
-      call profiling_out(prof_kinetic)
-    end if
 
     if (iand(TERM_OTHERS, terms_) /= 0) then
       
