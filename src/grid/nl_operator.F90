@@ -101,6 +101,12 @@ module nl_operator_m
     
     type(nl_operator_index_t) :: inner
     type(nl_operator_index_t) :: outer
+
+#ifdef HAVE_OPENCL
+    type(opencl_mem_t) :: buff_imin
+    type(opencl_mem_t) :: buff_imax
+    type(opencl_mem_t) :: buff_ri
+#endif
   end type nl_operator_t
 
   integer, parameter :: &
@@ -516,6 +522,19 @@ contains
         end do
       end do
       
+    end if
+#endif
+
+#ifdef HAVE_OPENCL
+    if(opencl_is_available() .and. op%const_w) then
+      call opencl_create_buffer(op%buff_ri, CL_MEM_READ_ONLY, TYPE_INTEGER, op%nri*op%stencil%size)
+      call opencl_write_buffer(op%buff_ri, op%nri*op%stencil%size, op%ri)
+      
+      call opencl_create_buffer(op%buff_imin, CL_MEM_READ_ONLY, TYPE_INTEGER, op%nri)
+      call opencl_write_buffer(op%buff_imin, op%nri, op%rimap_inv(1:))
+      
+      call opencl_create_buffer(op%buff_imax, CL_MEM_READ_ONLY, TYPE_INTEGER, op%nri)
+      call opencl_write_buffer(op%buff_imax, op%nri, op%rimap_inv(2:))
     end if
 #endif
 
@@ -1166,6 +1185,14 @@ contains
     type(nl_operator_t), intent(inout) :: op
 
     call push_sub('nl_operator.nl_operator_end')
+
+#ifdef HAVE_OPENCL
+    if(opencl_is_available() .and. op%const_w) then
+      call opencl_release_buffer(op%buff_ri)
+      call opencl_release_buffer(op%buff_imin)
+      call opencl_release_buffer(op%buff_imax)
+    end if
+#endif
 
     if(op%mesh%parallel_in_domains) then
       SAFE_DEALLOCATE_P(op%inner%imin)

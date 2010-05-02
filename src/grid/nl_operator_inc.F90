@@ -187,9 +187,6 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 
   call push_sub('nl_operator_inc.Xnl_operator_operate_batch')
 
-  if(fi%nst_linear /= fo%nst_linear) then
-    print*, "differentes"
-  end if
   ASSERT(fi%nst_linear == fo%nst_linear)
 
   do ist = 1, fi%nst_linear
@@ -358,7 +355,7 @@ contains
 
   ! ------------------------------------------
   subroutine operate_opencl()
-    type(opencl_mem_t) :: buff_weights, buff_ri, buff_imin, buff_imax
+    type(opencl_mem_t) :: buff_weights
     integer :: pnri, bsize
 
     ASSERT(.not. op%mesh%parallel_in_domains)
@@ -366,24 +363,15 @@ contains
     call opencl_create_buffer(buff_weights, CL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size)
     call opencl_write_buffer(buff_weights, op%stencil%size, op%w_re(:, 1))
 
-    call opencl_create_buffer(buff_ri, CL_MEM_READ_ONLY, TYPE_INTEGER, nri*op%stencil%size)
-    call opencl_write_buffer(buff_ri, nri*op%stencil%size, ri)
-
-    call opencl_create_buffer(buff_imin, CL_MEM_READ_ONLY, TYPE_INTEGER, nri)
-    call opencl_write_buffer(buff_imin, nri, imin)
-
-    call opencl_create_buffer(buff_imax, CL_MEM_READ_ONLY, TYPE_INTEGER, nri)
-    call opencl_write_buffer(buff_imax, nri, imax)
-
     call batch_move_to_buffer(fi)
     call batch_move_to_buffer(fo, copy = .false.)
 
     call opencl_set_kernel_arg(X(operate),  0, fi%nst_linear)
     call opencl_set_kernel_arg(X(operate),  1, op%stencil%size)
     call opencl_set_kernel_arg(X(operate),  2, nri)
-    call opencl_set_kernel_arg(X(operate),  3, buff_ri)
-    call opencl_set_kernel_arg(X(operate),  4, buff_imin)
-    call opencl_set_kernel_arg(X(operate),  5, buff_imax)
+    call opencl_set_kernel_arg(X(operate),  3, op%buff_ri)
+    call opencl_set_kernel_arg(X(operate),  4, op%buff_imin)
+    call opencl_set_kernel_arg(X(operate),  5, op%buff_imax)
     call opencl_set_kernel_arg(X(operate),  6, buff_weights)
     call opencl_set_kernel_arg(X(operate),  7, fi%buffer)
     call opencl_set_kernel_arg(X(operate),  8, batch_buffer_ubound(fi))
@@ -401,9 +389,6 @@ contains
     call batch_move_from_buffer(fi)
 
     call opencl_release_buffer(buff_weights)
-    call opencl_release_buffer(buff_ri)
-    call opencl_release_buffer(buff_imin)
-    call opencl_release_buffer(buff_imax)
   end subroutine operate_opencl
 
 #endif
