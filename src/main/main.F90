@@ -209,6 +209,9 @@ program octopus
 #ifdef HAVE_MPI
     message(1) = trim(message(1))//' mpi'
 #endif
+#ifdef HAVE_OPENCL
+    message(1) = trim(message(1))//' opencl'
+#endif
 
     message(2) = &
       'Optional libraries     :'

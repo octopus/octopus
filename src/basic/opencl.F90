@@ -275,7 +275,7 @@ module opencl_m
       !% initialize and use an OpenCL device. By setting this variable
       !% to <tt>yes</tt> you tell Octopus not to use OpenCL.
       !%End
-      call parse_logical(datasets_check('DisableOpenCL'), .true., disable)
+      call parse_logical(datasets_check('DisableOpenCL'), .false., disable)
       opencl%enabled = .not. disable
       
       if(disable) then
