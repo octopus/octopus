@@ -63,12 +63,6 @@ dist_share_DATA = \
 	13-full_potential_hydrogen.01-gs.inp \
 	13-full_potential_hydrogen.02-gs-cg.inp \
 	13-full_potential_hydrogen.test \
-	15-hartree.test                         \
-	15-hartree.01-isf.inp                   \
-	15-hartree.02-multigrid.inp             \
-	15-hartree.03-fft.inp                   \
-	15-hartree.04-fft_corrected.inp         \
-	15-hartree.05-cg_corrected.inp          \
 	18-current.01-current.inp \
 	18-current.test \
 	20-eigensolver.01-lobpcg.inp \
