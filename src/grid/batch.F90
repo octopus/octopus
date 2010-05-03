@@ -20,11 +20,13 @@
 #include "global.h"
 
 module batch_m
+  use c_pointer_m
   use datasets_m
   use global_m
   use lalg_adv_m
   use lalg_basic_m
   use parser_m
+  use math_m
   use messages_m
 #ifdef HAVE_OPENCL
   use opencl_m

@@ -151,24 +151,70 @@ subroutine X(batch_axpy)(np, aa, xx, yy)
   type(batch_t),     intent(in)    :: xx
   type(batch_t),     intent(inout) :: yy
 
-  integer :: ist
+  integer :: ist, localsize
+  type(c_ptr) :: axpy_kernel
 
   call push_sub('batch_inc.Xbatch_axpy')
 
   ASSERT(batch_type(yy) == batch_type(xx))
   ASSERT(xx%nst_linear == yy%nst_linear)
 
-  do ist = 1, yy%nst_linear
-    if(batch_type(yy) == TYPE_CMPLX) then
-      call lalg_axpy(np, aa, xx%states_linear(ist)%zpsi, yy%states_linear(ist)%zpsi)
-    else
+#ifdef HAVE_OPENCL
+  if(batch_is_in_buffer(yy) .or. batch_is_in_buffer(xx)) then
+    ASSERT(batch_is_in_buffer(xx))
+    ASSERT(batch_is_in_buffer(yy))
+
 #ifdef R_TREAL
-      call lalg_axpy(np, aa, xx%states_linear(ist)%dpsi, yy%states_linear(ist)%dpsi)
-#else
-      ASSERT(.false.)
-#endif
+
+    if(batch_type(yy) == TYPE_FLOAT) then
+      axpy_kernel = daxpy
+    else
+      axpy_kernel = dzaxpy
     end if
-  end do
+
+    call opencl_set_kernel_arg(axpy_kernel, 0, aa)
+    call opencl_set_kernel_arg(axpy_kernel, 1, xx%buffer)
+    call opencl_set_kernel_arg(axpy_kernel, 2, batch_buffer_ubound(xx))
+    call opencl_set_kernel_arg(axpy_kernel, 3, yy%buffer)
+    call opencl_set_kernel_arg(axpy_kernel, 4, batch_buffer_ubound(yy))
+
+#else
+    
+    ASSERT(batch_type(yy) == TYPE_CMPLX)
+
+    axpy_kernel = zaxpy
+
+    call opencl_set_kernel_arg(axpy_kernel, 0, real(aa, REAL_PRECISION))
+    call opencl_set_kernel_arg(axpy_kernel, 1, aimag(aa))
+    call opencl_set_kernel_arg(axpy_kernel, 2, xx%buffer)
+    call opencl_set_kernel_arg(axpy_kernel, 3, batch_buffer_ubound(xx))
+    call opencl_set_kernel_arg(axpy_kernel, 4, yy%buffer)
+    call opencl_set_kernel_arg(axpy_kernel, 5, batch_buffer_ubound(yy))
+#endif
+
+    localsize = opencl_max_workgroup_size()
+    call opencl_kernel_run(axpy_kernel, (/pad(np, localsize), yy%nst_linear/), (/localsize, 1/))
+
+    call batch_buffer_was_modified(yy)
+    
+  else
+#endif
+
+    do ist = 1, yy%nst_linear
+      if(batch_type(yy) == TYPE_CMPLX) then
+        call lalg_axpy(np, aa, xx%states_linear(ist)%zpsi, yy%states_linear(ist)%zpsi)
+      else
+#ifdef R_TREAL
+        call lalg_axpy(np, aa, xx%states_linear(ist)%dpsi, yy%states_linear(ist)%dpsi)
+#else
+        ASSERT(.false.)
+#endif
+      end if
+    end do
+
+#ifdef HAVE_OPENCL
+  end if
+#endif
 
   call pop_sub('batch_inc.Xbatch_axpy')
 end subroutine X(batch_axpy)

@@ -72,6 +72,9 @@ module opencl_m
   type(c_ptr), public :: zset_zero_part
   type(c_ptr), public :: doperate
   type(c_ptr), public :: zoperate
+  type(c_ptr), public :: daxpy
+  type(c_ptr), public :: zaxpy
+  type(c_ptr), public :: dzaxpy
 
   ! this values are copied from OpenCL include CL/cl.h
   integer, parameter, public ::        &
@@ -303,6 +306,12 @@ module opencl_m
       call f90_opencl_build_program(prog, opencl%env, "operate.cl")
       call f90_opencl_create_kernel(doperate, prog, "doperate")
       call f90_opencl_create_kernel(zoperate, prog, "zoperate")
+      call f90_opencl_release_program(prog)
+
+      call f90_opencl_build_program(prog, opencl%env, "axpy.cl")
+      call f90_opencl_create_kernel(daxpy, prog, "daxpy")
+      call f90_opencl_create_kernel(dzaxpy, prog, "dzaxpy")
+      call f90_opencl_create_kernel(zaxpy, prog, "zaxpy")
       call f90_opencl_release_program(prog)
 
       call pop_sub('opencl.opencl_init')

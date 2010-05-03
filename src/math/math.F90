@@ -76,7 +76,8 @@ module math_m
     hyperspherical2cartesian,   &
     hypersphere_cut,            &
     hypersphere_cut_back,       &
-    hypersphere_grad_matrix
+    hypersphere_grad_matrix,    &
+    pad
 
   !------------------------------------------------------------------------------
   ! This is the common interface to a simple-minded polynomical interpolation
@@ -1066,6 +1067,20 @@ contains
     call pop_sub('math.hypersphere_grad_matrix')
   end subroutine  hypersphere_grad_matrix
   ! ---------------------------------------------------------
+
+  integer pure function pad(size, blk)
+    integer, intent(in) :: size
+    integer, intent(in) :: blk
+    
+    integer :: mm
+    
+    mm = mod(size, blk)
+    if(mm == 0) then
+      pad = size
+    else
+      pad = size + blk - mm
+    end if
+  end function pad
 
 
 #include "undef.F90"

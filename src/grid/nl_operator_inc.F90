@@ -301,6 +301,8 @@ contains
   subroutine operate_const_weights()
     integer :: nn, ll, ii, ist
 
+    ASSERT(.not. (batch_is_in_buffer(fi) .or. batch_is_in_buffer(fo)))
+
     nn = op%stencil%size
 
     if(op%cmplx_op) then
@@ -327,6 +329,8 @@ contains
   ! ---------------------------------------------------------
   subroutine operate_non_const_weights()
     integer :: nn, ll, ii, ist
+
+    ASSERT(.not. (batch_is_in_buffer(fi) .or. batch_is_in_buffer(fo)))
 
     if(op%cmplx_op) then
       !$omp parallel do private(ll, ist, ii)

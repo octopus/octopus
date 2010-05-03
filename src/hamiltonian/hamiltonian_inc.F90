@@ -105,7 +105,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
 #ifdef HAVE_OPENCL
     if(opencl_is_enabled()) then
-      call batch_move_to_buffer(laplb)
+      call batch_move_to_buffer(laplb, copy = .false.)
       call batch_move_to_buffer(epsib)
     end if
 #endif
@@ -151,12 +151,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
   if(iand(TERM_KINETIC, terms_) /= 0) then
     call X(derivatives_batch_finish)(handle)
-#ifdef HAVE_OPENCL
-    if(opencl_is_enabled()) then
-      call batch_move_from_buffer(epsib)
-      call batch_move_from_buffer(laplb)
-    end if
-#endif
   end if
 
   if (iand(TERM_OTHERS, terms_) /= 0 .and. hamiltonian_base_has_magnetic(hm%hm_base)) then
@@ -165,10 +159,25 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   
   ! finish the calculation of the Laplacian
   if(iand(TERM_KINETIC, terms_) /= 0) then
+
+#ifdef HAVE_OPENCL
+    if(opencl_is_enabled()) then
+      call batch_move_from_buffer(epsib)
+      if(batch_is_in_buffer(laplb)) call batch_move_to_buffer(hpsib)
+    end if
+#endif
     call profiling_in(prof_kinetic, "KINETIC")
     call batch_axpy(der%mesh%np, -M_HALF/hm%mass, laplb, hpsib)
-    call batch_end(laplb)
     call profiling_out(prof_kinetic)
+
+#ifdef HAVE_OPENCL
+    if(opencl_is_enabled()) then
+      call batch_move_from_buffer(laplb)
+      call batch_move_from_buffer(hpsib)
+    end if
+#endif
+
+    call batch_end(laplb)
   end if
 
   do ii = 1, nst
