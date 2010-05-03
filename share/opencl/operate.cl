@@ -31,12 +31,14 @@ __kernel void doperate(const int nst,
 		       __global const double * fi, const int ldfi,
 		       __global double * fo, const int ldfo){
 
-  int l = get_global_id(0);
+  int k = get_global_id(0);
+  int nk = get_global_size(0);
+  int l = get_global_id(1);
+
   __global const int * index = ri + nn*l;
 
   if(l >= nri) return;
-
-  for(int i = imin[l]; i < imax[l]; i++){
+  for(int i = imin[l] + k; i < imax[l]; i += nk){
     for(int kst = 0; kst < nst; kst++){
       double a0 = 0.0;
       for(int j = 0; j < nn; j++){
@@ -58,12 +60,15 @@ __kernel void zoperate(const int nst,
 		       __global const double2 * fi, const int ldfi,
 		       __global double2 * fo, const int ldfo){
 
-  int l = get_global_id(0);
+  int k = get_global_id(0);
+  int nk = get_global_size(0);
+  int l = get_global_id(1);
+
   __global const int * index = ri + nn*l;
 
   if(l >= nri) return;
 
-  for(int i = imin[l]; i < imax[l]; i++){
+  for(int i = imin[l] + k; i < imax[l]; i += nk){
     for(int kst = 0; kst < nst; kst++){
       double2 a0 = 0.0;
       for(int j = 0; j < nn; j++){
@@ -74,3 +79,12 @@ __kernel void zoperate(const int nst,
   }
   
 }
+
+
+/*
+ Local Variables:
+ mode: c
+ coding: utf-8
+ End:
+*/
+

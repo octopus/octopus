@@ -301,7 +301,9 @@ contains
   subroutine operate_const_weights()
     integer :: nn, ll, ii, ist
 
+#ifdef HAVE_OPENCL
     ASSERT(.not. (batch_is_in_buffer(fi) .or. batch_is_in_buffer(fo)))
+#endif
 
     nn = op%stencil%size
 
@@ -330,7 +332,9 @@ contains
   subroutine operate_non_const_weights()
     integer :: nn, ll, ii, ist
 
+#ifdef HAVE_OPENCL
     ASSERT(.not. (batch_is_in_buffer(fi) .or. batch_is_in_buffer(fo)))
+#endif
 
     if(op%cmplx_op) then
       !$omp parallel do private(ll, ist, ii)
@@ -360,7 +364,7 @@ contains
   ! ------------------------------------------
   subroutine operate_opencl()
     type(opencl_mem_t) :: buff_weights
-    integer :: pnri, bsize
+    integer :: pnri, bsize, isize
 
     ASSERT(.not. op%mesh%parallel_in_domains)
 
@@ -379,11 +383,11 @@ contains
     call opencl_set_kernel_arg(X(operate),  9, fo%buffer)
     call opencl_set_kernel_arg(X(operate), 10, batch_buffer_ubound(fo))
 
-    pnri = nri
-    bsize = opencl_max_workgroup_size()
-    if(mod(pnri, bsize) /= 0) pnri = pnri + bsize - mod(pnri, bsize)
+    bsize = 128
+    isize = 8
+    pnri = pad(nri, bsize)
 
-    call opencl_kernel_run(X(operate), (/pnri/), (/bsize/))
+    call opencl_kernel_run(X(operate), (/isize, pnri/), (/isize, bsize/isize/))
 
     call batch_buffer_was_modified(fo)
 
