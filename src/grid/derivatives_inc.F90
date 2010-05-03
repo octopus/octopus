@@ -548,7 +548,8 @@ subroutine X(derivatives_test)(this)
 
   forall(ip = 1:this%mesh%np) 
     opff(ip, 1) = opff(ip, 1) - &
-      (M_FOUR*aa**2*bb*sum(this%mesh%x(ip, :)**2)*exp(-aa*sum(this%mesh%x(ip, :)**2)) - this%mesh%sb%dim*M_TWO*aa*bb*exp(-aa*sum(this%mesh%x(ip, :)**2)))
+      (M_FOUR*aa**2*bb*sum(this%mesh%x(ip, :)**2)*exp(-aa*sum(this%mesh%x(ip, :)**2)) &
+      - this%mesh%sb%dim*M_TWO*aa*bb*exp(-aa*sum(this%mesh%x(ip, :)**2)))
   end forall
 
   write(message(1), '(a, es16.10)') '      Error in the Laplacian = ', X(mf_nrm2)(this%mesh, opff(:, 1))
