@@ -22,6 +22,7 @@
 program oct_test
   use command_line_m
   use datasets_m
+  use derivatives_m
   use fft_m
   use global_m
   use io_m
@@ -41,11 +42,12 @@ program oct_test
   implicit none
 
   integer :: which_test
-  integer, parameter :: HARTREE_TEST = 1
+  integer, parameter ::              &
+    HARTREE_TEST       =   1,        &
+    DER_TEST           =   2
 
   call global_init()
   call parser_init()
-  call profiling_init()
 
   conf%devel_version = .true.
 
@@ -64,6 +66,8 @@ program oct_test
   !% Decides what kind of test should be performed.
   !%Option hartree_test 1
   !% Tests the various Hartree solvers.
+  !%Option derivatives 2
+  !% Tests the implementation of the finite difference operators, used to calculate derivatives.
   !%End
   call parse_integer('WhichTest', HARTREE_TEST, which_test)
   !if(.not.varinfo_valid_option('CalculationMode', calc_mode)) call input_error('CalculationMode')
@@ -73,6 +77,7 @@ program oct_test
   if( calc_dim > 3 .or. calc_dim < 1) call input_error('Dimensions')
 
   call io_init()
+  call profiling_init()
 
   call messages_print_stress(stdout, "Which Test")
   call messages_print_var_option(stdout, "WhichTest", which_test)
@@ -82,13 +87,14 @@ program oct_test
   call unit_system_init()
 
   select case(which_test)
-  case(HARTREE_TEST); call test_hartree
+  case(HARTREE_TEST); call test_hartree()
+  case(DER_TEST); call test_derivatives()
   end select
 
   call fft_all_end()
+  call profiling_end()
   call io_end()
   call datasets_end()
-  call profiling_end()
   call parser_end()
   call global_end()
 
@@ -102,6 +108,21 @@ program oct_test
     call system_end(sys)
 
   end subroutine test_hartree
+
+  subroutine test_derivatives()
+    type(system_t) :: sys
+
+    call system_init(sys)
+
+    message(1) = 'Info: Testing the finite-differences derivatives'
+    message(2) = ''
+    call write_info(2)
+
+    call dderivatives_test(sys%gr%der)
+    call zderivatives_test(sys%gr%der)
+
+    call system_end(sys)
+  end subroutine test_derivatives
 
 end program oct_test
 

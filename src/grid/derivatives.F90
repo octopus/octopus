@@ -29,6 +29,7 @@ module derivatives_m
   use parser_m
   use math_m
   use mesh_m
+  use mesh_function_m
   use messages_m
   use mpi_m
   use nl_operator_m
@@ -55,6 +56,8 @@ module derivatives_m
     derivatives_build,                  &
     derivatives_stencil_extent,         &
     derivatives_handle_batch_t,         &
+    dderivatives_test,                  &
+    zderivatives_test,                  &
     dderivatives_set_bc,                &
     zderivatives_set_bc,                &
     dderivatives_batch_set_bc,          &
@@ -633,7 +636,6 @@ contains
 
     call pop_sub('derivatives.derivatives_make_discretization')
   end subroutine derivatives_make_discretization
-
 
 #ifdef HAVE_MPI    
   ! ---------------------------------------------------------

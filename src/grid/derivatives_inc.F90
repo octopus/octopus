@@ -508,6 +508,67 @@ subroutine X(derivatives_curl)(der, ff, op_ff, ghost_update, set_bc)
 end subroutine X(derivatives_curl)
 
 
+! ----------------------------------------------------------
+
+subroutine X(derivatives_test)(this)
+  type(derivatives_t), intent(in)  :: this
+
+  R_TYPE, allocatable :: ff(:), opff(:, :)
+  R_TYPE :: aa, bb, cc
+  integer :: ip, idir
+
+#ifdef R_TREAL
+  write(message(1), '(a)') '      Real functions'
+#else
+  write(message(1), '(a)') '      Complex functions'
+#endif
+  call write_info(1)
+
+  SAFE_ALLOCATE(ff(1:this%mesh%np_part))
+  SAFE_ALLOCATE(opff(1:this%mesh%np, 1:this%mesh%sb%dim))
+
+  ! Note: here we need to use a constant function or anything that
+  ! is constant at the borders, since we assume that all boundary
+  ! points have equal values to optimize the application of the nl-operator.
+
+  aa = CNST(1.0)/this%mesh%sb%lsize(1)
+  bb = CNST(10.0)
+  cc = CNST(100.0)
+
+#ifdef R_TCOMPLEX
+  ! we make things more "complex"
+  aa = aa + M_ZI*CNST(0.01)
+  bb = bb*exp(M_ZI*CNST(0.345))
+  cc = cc - M_ZI*CNST(50.0)
+#endif
+
+  forall(ip = 1:this%mesh%np_part) ff(ip) = bb*exp(-aa*sum(this%mesh%x(ip, :)**2)) + cc
+
+  call X(derivatives_lapl)(this, ff, opff(:, 1), set_bc = .false.)
+
+  forall(ip = 1:this%mesh%np) 
+    opff(ip, 1) = opff(ip, 1) - &
+      (M_FOUR*aa**2*bb*sum(this%mesh%x(ip, :)**2)*exp(-aa*sum(this%mesh%x(ip, :)**2)) - this%mesh%sb%dim*M_TWO*aa*bb*exp(-aa*sum(this%mesh%x(ip, :)**2)))
+  end forall
+
+  write(message(1), '(a, es16.10)') '      Error in the Laplacian = ', X(mf_nrm2)(this%mesh, opff(:, 1))
+  call write_info(1)
+
+  call X(derivatives_grad)(this, ff, opff, set_bc = .false.)
+
+  forall(idir = 1:this%mesh%sb%dim, ip = 1:this%mesh%np) 
+    opff(ip, idir) = opff(ip, idir) - (-M_TWO*aa*bb*this%mesh%x(ip, idir)*exp(-aa*sum(this%mesh%x(ip, :)**2)))
+  end forall
+
+  write(message(1), '(a, es16.10)') '      Error in the gradient  = ', X(mf_nrm2)(this%mesh, this%mesh%sb%dim, opff)
+  message(2) = ''
+  call write_info(2)
+
+  SAFE_DEALLOCATE_A(ff)
+
+end subroutine X(derivatives_test)
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

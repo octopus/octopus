@@ -23,7 +23,7 @@ noinst_LIBRARIES = libgrid.a
 
 libgrid_a_SOURCES =       \
 	curv_gygi.F90           \
-  curv_briggs.F90         \
+	curv_briggs.F90         \
 	curv_modine.F90         \
 	curvilinear.F90         \
 	index.F90               \
@@ -103,7 +103,7 @@ stencil_star.o : stencil_star.F90 nl_operator.o stencil.o
 stencil_variational.o : stencil_variational.F90 nl_operator.o stencil.o
 stencil_cube.o : stencil_cube.F90 stencil.o
 stencil_starplus.o : stencil_starplus.F90 stencil.o
-derivatives.o : derivatives.F90 derivatives_inc.F90 stencil_variational.o stencil_starplus.o stencil_star.o stencil_cube.o  nl_operator.o mesh.o batch.o io_function.o transfer_table.o
+derivatives.o : derivatives.F90 derivatives_inc.F90 stencil_variational.o stencil_starplus.o stencil_star.o stencil_cube.o  nl_operator.o mesh.o batch.o io_function.o transfer_table.o mesh_function.o
 cube_function.o : cube_function.F90 cube_function_inc.F90  mesh.o 
 fourier_space.o : fourier_space.F90 fourier_space_inc.F90 cube_function.o mesh.o 
 mesh_function.o : mesh_function.F90 mesh_function_inc.F90 par_vec.o mesh.o cube_function.o modelmb_1part.o
