@@ -29,14 +29,18 @@ __kernel void doperate(const int nst,
 		       __global const int * imax,
 		       __constant const double * weights,
 		       __global const double * fi, const int ldfi,
-		       __global double * fo, const int ldfo){
+		       __global double * fo, const int ldfo,
+		       __local int * indexl){
 
   int k = get_global_id(0);
   int nk = get_global_size(0);
   int l = get_global_id(1);
 
-  __global const int * index = ri + nn*l;
+  __local int * index = indexl + nn*get_local_id(1);
 
+  for(int j = k; j < nn; j += nk) index[j] = ri[nn*l + j];
+  barrier(CLK_LOCAL_MEM_FENCE);
+  
   if(l >= nri) return;
   for(int i = imin[l] + k; i < imax[l]; i += nk){
     for(int kst = 0; kst < nst; kst++){
@@ -58,13 +62,17 @@ __kernel void zoperate(const int nst,
 		       __global const int * imax,
 		       __constant const double * weights,
 		       __global const double2 * fi, const int ldfi,
-		       __global double2 * fo, const int ldfo){
+		       __global double2 * fo, const int ldfo,
+		       __local int * indexl){
 
   int k = get_global_id(0);
   int nk = get_global_size(0);
   int l = get_global_id(1);
 
-  __global const int * index = ri + nn*l;
+  __local int * index = indexl + nn*get_local_id(1);
+
+  for(int j = k; j < nn; j += nk) index[j] = ri[nn*l + j];
+  barrier(CLK_LOCAL_MEM_FENCE);
 
   if(l >= nri) return;
 
