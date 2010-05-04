@@ -321,8 +321,10 @@ foreach my $octopus_exe (@executables){
 	if(run_match_new($_) && $return_value == 0){
 	  print "$name: \t [ $color_start{green}  OK  $color_end{green} ] \n";
 	  $test_succeeded = 1;
+	  if ($opt_v) { print_hline(); }
 	} else {
 	  print "$name: \t [ $color_start{red} FAIL $color_end{red} ] \n";
+	  print_hline();
 	  $test_succeeded = 0;
 	  $failures++;
 	}
@@ -437,8 +439,6 @@ sub run_match_new(){
     return 0;
   }
 
-  printf("%s\n", $pre_command) if ($opt_v);
-
   my $value = `cd $workdir; $pre_command`;
 
   # append the command and the regexp also to the shell script matches.sh in the
@@ -458,8 +458,9 @@ echo";
 
   $success = (abs(($value)-($ref_value)) <= $precnum);
 
-  if(!$success) {
-    print "\n  Match Failed\n";
+  if(!$success || $opt_v) {
+    print_hline();
+    print "Match".$name.":\n\n";
     print "   Calculated value : ".$value."\n";
     print "   Reference value  : ".$ref_value."\n";
     print "   Difference       : ".abs($ref_value - $value)."\n";
@@ -469,3 +470,6 @@ echo";
   return $success;
 }
 
+sub print_hline(){
+  print "\n-----------------------------------------\n\n";
+}
