@@ -174,11 +174,11 @@ contains
     call read_box()                        ! Parameters defining the simulation box.
     call sb_lookup_init()
     call read_box_offset()                 ! Parameters defining the offset of the origin.
-    call simul_box_build_lattice(sb)       ! Build lattice vectors.
     if(present(transport_mode)) then
       ASSERT(present(lead_sb).and.present(lead_info))
       call ob_simul_box_init(sb, transport_mode, lead_sb, lead_info, geo)
     end if
+    call simul_box_build_lattice(sb)       ! Build lattice vectors.
     call simul_box_atoms_in_box(sb, geo)   ! Put all the atoms inside the box.
 
     call symmetries_init(sb%symm, geo, sb%dim, sb%periodic_dim, sb%rlattice, sb%lsize)
