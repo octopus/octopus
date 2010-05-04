@@ -90,6 +90,30 @@ end subroutine X(opencl_read_buffer)
 
 ! ---------------------------------------------------------------------------
 
+subroutine X(opencl_read_buffer_2)(this, size, data, offset)
+  type(opencl_mem_t),               intent(inout) :: this
+  integer,                          intent(in)    :: size
+  R_TYPE,                           intent(out)   :: data(:, :)
+  integer(SIZEOF_SIZE_T), optional, intent(in)    :: offset
+
+  integer(SIZEOF_SIZE_T) :: fsize, offset_
+  
+  call profiling_in(prof_read, "CL_READ_BUFFER")
+
+  fsize = size*R_SIZEOF
+  offset_ = 0
+  if(present(offset)) offset_ = offset*R_SIZEOF
+
+  call f90_opencl_read_buffer(this%mem, opencl%env, fsize, offset_, data(1, 1))
+
+  call profiling_count_transfers(size, data(1, 1))
+  call opencl_finish()
+  call profiling_out(prof_read)
+  
+end subroutine X(opencl_read_buffer_2)
+
+! ---------------------------------------------------------------------------
+
 subroutine X(opencl_set_kernel_arg_data)(kernel, narg, data)
   type(c_ptr),        intent(inout) :: kernel
   integer,            intent(in)    :: narg

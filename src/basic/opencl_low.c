@@ -245,9 +245,9 @@ void FC_FUNC_(f90_opencl_write_buffer, F90_OPENCL_WRITE_BUFFER)
      (cl_mem ** buffer, opencl_env_t ** env, const size_t * size, const size_t * offset, const void * data){
   cl_int ierr;
 
-  /*
-  printf("\nWriteBuffer\n");
-  printf("queue=%ld buffer=%ld data=%ld offest=%ld size=%d\n", env[0]->CommandQueue, **buffer, data, *offset, *size);
+  /*  
+      printf("\nWriteBuffer\n");
+      printf("queue=%ld buffer=%ld data=%ld offest=%ld size=%d\n", env[0]->CommandQueue, **buffer, data, *offset, *size);
   */
 
   ierr = clEnqueueWriteBuffer(env[0]->CommandQueue, **buffer, CL_TRUE, *offset, *size, data, 0, NULL, NULL);
@@ -263,6 +263,8 @@ void FC_FUNC_(f90_opencl_write_buffer, F90_OPENCL_WRITE_BUFFER)
 void FC_FUNC_(f90_opencl_read_buffer, F90_OPENCL_READ_BUFFER)
      (cl_mem ** buffer, opencl_env_t ** env, const size_t * size, const size_t * offset, void * data){
   cl_int ierr;
+  
+  /*printf("queue=%ld buffer=%ld data=%ld offest=%ld size=%d\n", env[0]->CommandQueue, **buffer, data, *offset, *size);*/
 
   ierr = clEnqueueReadBuffer(env[0]->CommandQueue, **buffer, CL_TRUE, *offset, *size, data, 0, NULL, NULL);
 

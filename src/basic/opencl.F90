@@ -75,6 +75,10 @@ module opencl_m
   type(c_ptr), public :: daxpy
   type(c_ptr), public :: zaxpy
   type(c_ptr), public :: dzaxpy
+  type(c_ptr), public :: dprojector_gather
+  type(c_ptr), public :: zprojector_gather
+  type(c_ptr), public :: dprojector_scatter
+  type(c_ptr), public :: zprojector_scatter
 
   ! this values are copied from OpenCL include CL/cl.h
   integer, parameter, public ::        &
@@ -253,7 +257,8 @@ module opencl_m
   end interface
 
   interface opencl_read_buffer
-    module procedure iopencl_read_buffer, dopencl_read_buffer, zopencl_read_buffer
+    module procedure iopencl_read_buffer, dopencl_read_buffer, zopencl_read_buffer, &
+      iopencl_read_buffer_2, dopencl_read_buffer_2, zopencl_read_buffer_2
   end interface
 
   interface opencl_set_kernel_arg
@@ -325,6 +330,13 @@ module opencl_m
       call f90_opencl_create_kernel(daxpy, prog, "daxpy")
       call f90_opencl_create_kernel(dzaxpy, prog, "dzaxpy")
       call f90_opencl_create_kernel(zaxpy, prog, "zaxpy")
+      call f90_opencl_release_program(prog)
+
+      call f90_opencl_build_program(prog, opencl%env, "projector.cl")
+      call f90_opencl_create_kernel(dprojector_gather, prog, "dprojector_gather")
+      call f90_opencl_create_kernel(zprojector_gather, prog, "zprojector_gather")
+      call f90_opencl_create_kernel(dprojector_scatter, prog, "dprojector_scatter")
+      call f90_opencl_create_kernel(zprojector_scatter, prog, "zprojector_scatter")
       call f90_opencl_release_program(prog)
 
       call pop_sub('opencl.opencl_init')

@@ -200,6 +200,9 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
 #ifdef HAVE_MPI
   R_TYPE, allocatable :: projection_red(:, :)
 #endif
+#ifdef HAVE_OPENCL
+  type(opencl_mem_t) :: buff_map
+#endif
 
   if(.not. this%apply_projector_matrices) return
 
@@ -212,6 +215,13 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
     npoints = pmat%npoints
     nprojs = pmat%nprojs
     nst = psib%nst_linear
+
+#ifdef HAVE_OPENCL
+    if(batch_is_in_buffer(psib) .or. batch_is_in_buffer(vpsib)) then
+      call opencl_create_buffer(buff_map, CL_MEM_READ_ONLY, TYPE_INTEGER, npoints)
+      call opencl_write_buffer(buff_map, npoints, pmat%map)
+    end if
+#endif
 
     SAFE_ALLOCATE(projection(1:nprojs, 1:nst))
 
@@ -226,12 +236,16 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
 
       SAFE_ALLOCATE(psi(1:npoints, 1:nst))
 
-      ! collect all the points we need in a continous array
       call profiling_in(prof_gather, "PROJ_MAT_GATHER")
-      forall(ist = 1:nst, ip = 1:npoints)
-        psi(ip, ist) = psib%states_linear(ist)%X(psi)(pmat%map(ip))
+      if(batch_is_in_buffer(psib)) then
+        call gather_opencl()
+      else
+        ! collect all the points we need in a continous array
+        forall(ist = 1:nst, ip = 1:npoints)
+          psi(ip, ist) = psib%states_linear(ist)%X(psi)(pmat%map(ip))
         !MISSING: phases
-      end forall
+        end forall
+      endif
       call profiling_out(prof_gather)
 
       ! Now matrix-multiply to calculate the projections. Since the
@@ -278,13 +292,17 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
 
     call profiling_in(prof_scatter, "PROJ_MAT_SCATTER")
 
-    ! and copy the points from the local buffer to its position
-    do ist = 1, nst
-      forall(ip = 1:npoints)
-        vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) + psi(ip, ist)
-        !MISSING: phases
-      end forall
-    end do
+    if(batch_is_in_buffer(vpsib)) then
+      call scatter_opencl()
+    else
+      ! and copy the points from the local buffer to its position
+      do ist = 1, nst
+        forall(ip = 1:npoints)
+          vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) + psi(ip, ist)
+          !MISSING: phases
+        end forall
+      end do
+    end if
 
     call profiling_count_operations(nst*npoints*R_ADD)
     call profiling_out(prof_scatter)
@@ -292,10 +310,65 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(projection)
 
+#ifdef HAVE_OPENCL
+    if(batch_is_in_buffer(psib) .or. batch_is_in_buffer(vpsib)) then
+      call opencl_release_buffer(buff_map)
+    end if
+#endif
   end do
 
   call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_non_local')
   call profiling_out(prof_vnlpsi)
+contains
+
+  subroutine gather_opencl()
+#ifdef HAVE_OPENCL
+    type(opencl_mem_t) :: buff_psi
+    integer :: wgsize
+
+    call opencl_create_buffer(buff_psi, CL_MEM_WRITE_ONLY, R_TYPE_VAL, npoints*psib%nst_linear)
+    
+    call opencl_set_kernel_arg(X(projector_gather), 0, npoints)
+    call opencl_set_kernel_arg(X(projector_gather), 1, buff_map)
+    call opencl_set_kernel_arg(X(projector_gather), 2, psib%buffer)
+    call opencl_set_kernel_arg(X(projector_gather), 3, batch_buffer_ubound(psib))
+    call opencl_set_kernel_arg(X(projector_gather), 4, buff_psi)
+    call opencl_set_kernel_arg(X(projector_gather), 5, npoints)
+
+    wgsize = opencl_max_workgroup_size()
+
+    call opencl_kernel_run(X(projector_gather), (/pad(npoints, wgsize), psib%nst_linear/), (/wgsize, 1/))
+    
+    call opencl_read_buffer(buff_psi, npoints*psib%nst_linear, psi)
+    call opencl_release_buffer(buff_psi)
+#endif
+  end subroutine gather_opencl
+
+  subroutine scatter_opencl()
+#ifdef HAVE_OPENCL
+    type(opencl_mem_t) :: buff_psi
+    integer :: wgsize
+
+    call opencl_create_buffer(buff_psi, CL_MEM_READ_ONLY, R_TYPE_VAL, npoints*vpsib%nst_linear)
+    call opencl_write_buffer(buff_psi, npoints*vpsib%nst_linear, psi)
+    
+    call opencl_set_kernel_arg(X(projector_scatter), 0, npoints)
+    call opencl_set_kernel_arg(X(projector_scatter), 1, buff_map)
+    call opencl_set_kernel_arg(X(projector_scatter), 2, buff_psi)
+    call opencl_set_kernel_arg(X(projector_scatter), 3, npoints)
+    call opencl_set_kernel_arg(X(projector_scatter), 4, vpsib%buffer)
+    call opencl_set_kernel_arg(X(projector_scatter), 5, batch_buffer_ubound(vpsib))
+
+    wgsize = opencl_max_workgroup_size()
+
+    call opencl_kernel_run(X(projector_scatter), (/pad(npoints, wgsize), vpsib%nst_linear/), (/wgsize, 1/))
+    
+    call batch_buffer_was_modified(vpsib)
+
+    call opencl_release_buffer(buff_psi)
+#endif
+  end subroutine scatter_opencl
+
 end subroutine X(hamiltonian_base_non_local)
 
 

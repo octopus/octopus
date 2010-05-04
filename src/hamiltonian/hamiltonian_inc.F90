@@ -134,26 +134,31 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
     call batch_set_zero(hpsib)
   end if
 
-#ifdef HAVE_OPENCL
-  if(opencl_is_enabled()) call batch_move_from_buffer(hpsib)
-#endif
-
-  ! and the non-local one (this is a hack, here epsib is in buffer and
-  ! dirty (because of the boundaries), but the central part is ok, so
-  ! we can use it)
+  ! and the non-local one 
   if (iand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
     if(hm%hm_base%apply_projector_matrices) then
       call X(hamiltonian_base_non_local)(hm%hm_base, der%mesh, hm%d, ik, epsib, hpsib)
     else
+      ! (here epsib is in buffer and dirty (because of the
+      ! boundaries), but the central part is ok, so we can use it)
+#ifdef HAVE_OPENCL
+      if(opencl_is_enabled()) call batch_move_from_buffer(hpsib)
+#endif
       if(hm%ep%non_local) call X(project_psi_batch)(der%mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, epsib, hpsib, ik)
     end if
   end if
 
   if(iand(TERM_KINETIC, terms_) /= 0) then
     call X(derivatives_batch_finish)(handle)
+#ifdef HAVE_OPENCL
+    if(opencl_is_enabled()) call batch_move_from_buffer(epsib)
+#endif
   end if
 
   if (iand(TERM_OTHERS, terms_) /= 0 .and. hamiltonian_base_has_magnetic(hm%hm_base)) then
+#ifdef HAVE_OPENCL
+    if(opencl_is_enabled()) call batch_move_from_buffer(hpsib)
+#endif
     call X(hamiltonian_base_magnetic)(hm%hm_base, der, hm%d, hm%ep, states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
   end if
   
@@ -162,8 +167,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
 #ifdef HAVE_OPENCL
     if(opencl_is_enabled()) then
-      call batch_move_from_buffer(epsib)
-      if(batch_is_in_buffer(laplb)) call batch_move_to_buffer(hpsib)
+      if(batch_is_in_buffer(laplb) .and. .not. batch_is_in_buffer(hpsib)) call batch_move_to_buffer(hpsib)
     end if
 #endif
     call profiling_in(prof_kinetic, "KINETIC")
