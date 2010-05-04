@@ -309,7 +309,21 @@ void FC_FUNC_(f90_opencl_set_kernel_arg_data, F90_OPENCL_SET_KERNEL_ARG_DATA)
   ierr = clSetKernelArg(**kernel, *index, *sizeof_data, data);
   
   if(ierr != CL_SUCCESS){
-    fprintf(stderr, "Error: clSetKernelArg with buffer failed. Error code %d\n", ierr);
+    fprintf(stderr, "Error: clSetKernelArg with data failed. Error code %d\n", ierr);
+    exit(1);
+  }
+}
+
+void FC_FUNC_(f90_opencl_set_kernel_arg_local, F90_OPENCL_SET_KERNEL_ARG_LOCAL)
+     (cl_kernel ** kernel, const int * index, const int * size_of_local){
+  cl_int ierr;
+  
+  /* printf("kernel=%ld index=%d\n", *kernel, *index);*/
+
+  ierr = clSetKernelArg(**kernel, *index, *size_of_local, NULL);
+  
+  if(ierr != CL_SUCCESS){
+    fprintf(stderr, "Error: clSetKernelArg with local failed. Error code %d\n", ierr);
     exit(1);
   }
 }

@@ -217,6 +217,18 @@ module opencl_m
     
     ! ----------------------------------------------------
 
+    subroutine f90_opencl_set_kernel_arg_local(kernel, index, size)
+      use c_pointer_m
+
+      implicit none
+
+      type(c_ptr), intent(inout) :: kernel
+      integer,     intent(in)    :: index
+      integer,     intent(in)    :: size
+    end subroutine f90_opencl_set_kernel_arg_local
+    
+    ! ----------------------------------------------------
+
     subroutine f90_opencl_kernel_run(kernel, env, dim, globalsizes, localsizes)
       use c_pointer_m
 
@@ -249,7 +261,8 @@ module opencl_m
       opencl_set_kernel_arg_buffer,  &
       iopencl_set_kernel_arg_data,   &
       dopencl_set_kernel_arg_data,   &
-      zopencl_set_kernel_arg_data
+      zopencl_set_kernel_arg_data,   &
+      opencl_set_kernel_arg_local
   end interface
   
   type(profile_t), save :: prof_read, prof_write, prof_kernel_run
@@ -436,6 +449,22 @@ module opencl_m
       call pop_sub('opencl.opencl_set_kernel_arg_buffer')
 
     end subroutine opencl_set_kernel_arg_buffer
+
+    ! ------------------------------------------
+
+    subroutine opencl_set_kernel_arg_local(kernel, narg, type, size)
+      type(c_ptr),        intent(inout) :: kernel
+      integer,            intent(in)    :: narg
+      integer,            intent(in)    :: type
+      integer,            intent(in)    :: size
+      
+      call push_sub('opencl.opencl_set_kernel_arg_local')
+
+      call f90_opencl_set_kernel_arg_local(kernel, narg, size*types_get_size(type))
+
+      call pop_sub('opencl.opencl_set_kernel_arg_local')
+
+    end subroutine opencl_set_kernel_arg_local
 
     ! ------------------------------------------
 
