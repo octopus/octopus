@@ -6,11 +6,11 @@ Programs   : oct-test; oct-test_mpi
 TestGroups : short-run
 Enabled    : Yes
 
-Precision : 1.0e-10
+Precision : 1.0e-11
 Input: 01-derivatives_1d.01.inp
 match ; Real laplacian  ; GREP(out, 'Real functions', 31, 1) ; 2.7801274971E-09
 match ; Complex laplacian  ; GREP(out, 'Complex functions', 31, 1) ; 3.4710603750E-09
-Precision : 1.0e-12
+Precision : 1.0e-13
 match ; Real gradient   ; GREP(out, 'Real functions', 31, 2) ; 1.1709414428E-11
 match ; Complex gradient   ; GREP(out, 'Complex functions', 31, 2) ; 1.4055457659E-11
 
