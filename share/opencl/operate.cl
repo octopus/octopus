@@ -27,7 +27,7 @@ __kernel void doperate(const int nst,
 		       __global const int * ri,
 		       __global const int * imin,
 		       __global const int * imax,
-		       __global const double * weights,
+		       __constant const double * weights,
 		       __global const double * fi, const int ldfi,
 		       __global double * fo, const int ldfo){
 
@@ -56,7 +56,7 @@ __kernel void zoperate(const int nst,
 		       __global const int * ri,
 		       __global const int * imin,
 		       __global const int * imax,
-		       __global const double * weights,
+		       __constant const double * weights,
 		       __global const double2 * fi, const int ldfi,
 		       __global double2 * fo, const int ldfo){
 
