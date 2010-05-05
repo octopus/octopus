@@ -79,6 +79,10 @@ module opencl_m
   type(c_ptr), public :: zprojector_gather
   type(c_ptr), public :: dprojector_scatter
   type(c_ptr), public :: zprojector_scatter
+  type(c_ptr), public :: dpack
+  type(c_ptr), public :: zpack
+  type(c_ptr), public :: dunpack
+  type(c_ptr), public :: zunpack
 
   ! this values are copied from OpenCL include CL/cl.h
   integer, parameter, public ::        &
@@ -337,6 +341,14 @@ module opencl_m
       call f90_opencl_create_kernel(zprojector_gather, prog, "zprojector_gather")
       call f90_opencl_create_kernel(dprojector_scatter, prog, "dprojector_scatter")
       call f90_opencl_create_kernel(zprojector_scatter, prog, "zprojector_scatter")
+      call f90_opencl_release_program(prog)
+
+      call f90_opencl_build_program(prog, opencl%env, "pack.cl")
+      call f90_opencl_create_kernel(dpack, prog, "dpack")
+      call f90_opencl_create_kernel(zpack, prog, "zpack")
+      call f90_opencl_create_kernel(dunpack, prog, "dunpack")
+      call f90_opencl_create_kernel(zunpack, prog, "zunpack")
+
       call f90_opencl_release_program(prog)
 
       call pop_sub('opencl.opencl_init')

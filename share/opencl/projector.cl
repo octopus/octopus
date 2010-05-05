@@ -29,7 +29,7 @@ __kernel void dprojector_gather(const int npoints,
   int ip = get_global_id(0);
   int ist = get_global_id(1);
   
-  if(ip < npoints) lpsi[ldlpsi*ist + ip] = psi[ldpsi*ist + map[ip] - 1];
+  if(ip < npoints) lpsi[ldlpsi*ist + ip] = psi[ldpsi*(map[ip] - 1) + ist];
 }
 
 __kernel void zprojector_gather(const int npoints,
@@ -40,7 +40,7 @@ __kernel void zprojector_gather(const int npoints,
   int ip = get_global_id(0);
   int ist = get_global_id(1);
   
-  if(ip < npoints) lpsi[ldlpsi*ist + ip] = psi[ldpsi*ist + map[ip] - 1];
+  if(ip < npoints) lpsi[ldlpsi*ist + ip] = psi[ldpsi*(map[ip] - 1) + ist];
 }
 
 __kernel void dprojector_scatter(const int npoints,
@@ -52,7 +52,7 @@ __kernel void dprojector_scatter(const int npoints,
   int ip = get_global_id(0);
   int ist = get_global_id(1);
   
-  if(ip < npoints) psi[ldpsi*ist + map[ip] - 1] += lpsi[ldlpsi*ist + ip];
+  if(ip < npoints) psi[ldpsi*(map[ip] - 1) + ist] += lpsi[ldlpsi*ist + ip];
 }
 
 __kernel void zprojector_scatter(const int npoints,
@@ -64,7 +64,7 @@ __kernel void zprojector_scatter(const int npoints,
   int ip = get_global_id(0);
   int ist = get_global_id(1);
   
-  if(ip < npoints) psi[ldpsi*ist + map[ip] - 1] += lpsi[ldlpsi*ist + ip];
+  if(ip < npoints) psi[ldpsi*(map[ip] - 1) + ist] += lpsi[ldlpsi*ist + ip];
 }
 
 /*

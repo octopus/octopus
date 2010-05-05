@@ -98,7 +98,7 @@ module batch_m
     logical                        :: dirty     ! if this is true, the buffer has different data
 #ifdef HAVE_OPENCL
     type(opencl_mem_t)             :: buffer
-    integer                        :: ubound
+    integer                        :: ubound(1:2)
 #endif
   end type batch_t
 
@@ -312,7 +312,7 @@ contains
   integer pure function batch_buffer_ubound(this) result(size)
     type(batch_t),      intent(in)    :: this
 
-    size = this%ubound
+    size = this%ubound(1)
   end function batch_buffer_ubound
 
   ! ----------------------------------------------------
@@ -327,7 +327,8 @@ contains
     if(present(copy)) copy_ = copy
 
     if(.not. this%in_buffer) then
-      this%ubound = opencl_padded_size(batch_max_size(this))
+      this%ubound(1) = this%nst_linear
+      this%ubound(2) = opencl_padded_size(batch_max_size(this))
       call batch_create_opencl_buffer(this, batch_max_size(this), CL_MEM_READ_WRITE, this%buffer)
       this%dirty = .true.
     end if
@@ -394,23 +395,39 @@ contains
     integer,            intent(in)    :: np
     type(opencl_mem_t), intent(out)   :: buffer
 
-    integer(SIZEOF_SIZE_T) :: size, pnp
+    integer :: pnp
     integer :: ist
+    type(opencl_mem_t) :: tmp
+    type(c_ptr) :: kernel
 
     call push_sub('batch.batch_write_to_opencl_buffer')
 
-    pnp = opencl_padded_size(np)
-    size = pnp*this%nst_linear
+    pnp = pad(np, opencl_max_workgroup_size())
 
     ASSERT(batch_is_ok(this))
+
+    call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), pnp)
+
     do ist = 1, this%nst_linear
       if(batch_type(this) == TYPE_FLOAT) then
-        call opencl_write_buffer(buffer, np, this%states_linear(ist)%dpsi, offset = (ist - 1)*pnp)
+        kernel = dpack
+        call opencl_write_buffer(tmp, np, this%states_linear(ist)%dpsi)
       else
-        call opencl_write_buffer(buffer, np, this%states_linear(ist)%zpsi, offset = (ist - 1)*pnp)
+        kernel = zpack
+        call opencl_write_buffer(tmp, np, this%states_linear(ist)%zpsi)
       end if
+     
+      call opencl_set_kernel_arg(kernel, 0, this%nst_linear)
+      call opencl_set_kernel_arg(kernel, 1, ist - 1)
+      call opencl_set_kernel_arg(kernel, 2, tmp)
+      call opencl_set_kernel_arg(kernel, 3, this%buffer)
+
+      call opencl_kernel_run(kernel, (/pnp/), (/opencl_max_workgroup_size()/))
+      
     end do
 
+    call opencl_release_buffer(tmp)
+    
     call pop_sub('batch.batch_write_to_opencl_buffer')
   end subroutine batch_write_to_opencl_buffer
 
@@ -421,22 +438,40 @@ contains
     integer,            intent(in)    :: np
     type(opencl_mem_t), intent(out)   :: buffer
 
-    integer(SIZEOF_SIZE_T) :: size, pnp
+    integer :: pnp
     integer :: ist
+    type(opencl_mem_t) :: tmp
+    type(c_ptr) :: kernel
 
     call push_sub('batch.batch_read_from_opencl_buffer')
 
-    pnp = opencl_padded_size(np)
-    size = pnp*this%nst_linear
-
     ASSERT(batch_is_ok(this))
+
+    pnp = opencl_padded_size(np)
+    call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), pnp)
+
+    if(batch_type(this) == TYPE_FLOAT) then
+      kernel = dunpack
+    else
+      kernel = zunpack
+    end if
+
     do ist = 1, this%nst_linear
+      call opencl_set_kernel_arg(kernel, 0, this%nst_linear)
+      call opencl_set_kernel_arg(kernel, 1, ist - 1)
+      call opencl_set_kernel_arg(kernel, 2, this%buffer)
+      call opencl_set_kernel_arg(kernel, 3, tmp)
+
+      call opencl_kernel_run(kernel, (/pnp/), (/opencl_max_workgroup_size()/))
+
       if(batch_type(this) == TYPE_FLOAT) then
-        call opencl_read_buffer(buffer, np, this%states_linear(ist)%dpsi, offset = (ist - 1)*pnp)
+        call opencl_read_buffer(tmp, np, this%states_linear(ist)%dpsi)
       else
-        call opencl_read_buffer(buffer, np, this%states_linear(ist)%zpsi, offset = (ist - 1)*pnp)
+        call opencl_read_buffer(tmp, np, this%states_linear(ist)%zpsi)
       end if
     end do
+
+    call opencl_release_buffer(tmp)
 
     call pop_sub('batch.batch_read_from_opencl_buffer')
   end subroutine batch_read_from_opencl_buffer
@@ -458,7 +493,7 @@ contains
     if(batch_is_in_buffer(this)) then
 
 #ifdef HAVE_OPENCL
-      bsize = batch_buffer_ubound(this)*this%nst_linear
+      bsize = product(this%ubound)
       if(batch_type(this) == TYPE_CMPLX) bsize = bsize*2
 
       call opencl_set_kernel_arg(set_zero, 0, this%buffer)

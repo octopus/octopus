@@ -16,40 +16,47 @@
  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  02111-1307, USA.
 
- $Id: vpsi.cl 2146 2006-05-23 17:36:00Z xavier $
+ $Id: pack.cl 2146 2006-05-23 17:36:00Z xavier $
 */
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-__kernel void daxpy(const double aa, 
-		    const __global double * xx, const int ldxx,
-		    __global double * yy, const int ldyy){
+__kernel void dpack(const int npsi,
+		    const int ipsi,
+		    const __global double * src, 
+		    __global double * dest){
   int ip = get_global_id(0);
-  int ist = get_global_id(1);
-  
-  yy[ip*ldyy + ist] += aa*xx[ip*ldxx + ist];
 
+  dest[ipsi + ip*npsi] = src[ip];
 }
 
-__kernel void dzaxpy(const double aa, 
-		     const __global double2 * xx, const int ldxx,
-		     __global double2 * yy, const int ldyy){
+__kernel void zpack(const int npsi,
+		    const int ipsi,
+		    const __global double2 * src, 
+		    __global double2 * dest){
   int ip = get_global_id(0);
-  int ist = get_global_id(1);
 
-  yy[ip*ldyy + ist] += aa*xx[ip*ldxx + ist];
+  dest[ipsi + ip*npsi] = src[ip];
 }
 
-__kernel void zaxpy(const double re_aa, const double im_aa, 
-		    const __global double2 * xx, const int ldxx,
-		    __global double2 * yy, const int ldyy){
-  int ip = get_global_id(0);
-  int ist = get_global_id(1);
+__kernel void dunpack(const int npsi,
+		    const int ipsi,
+		    const __global double * src, 
+		    __global double * dest){
+  int i = get_global_id(0);
 
-  double2 xxi = xx[ip*ldxx + ist];
-  yy[ip*ldyy + ist] += (double2)(re_aa*xxi.x - im_aa*xxi.y, re_aa*xxi.y + im_aa*xxi.x);
-
+  dest[i] = src[ipsi + i*npsi];
 }
+
+__kernel void zunpack(const int npsi,
+		    const int ipsi,
+		    const __global double2 * src, 
+		    __global double2 * dest){
+  int i = get_global_id(0);
+
+  dest[i] = src[ipsi + i*npsi];
+}
+
 
 /*
  Local Variables:

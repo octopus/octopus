@@ -46,9 +46,9 @@ __kernel void doperate(const int nst,
     for(int kst = 0; kst < nst; kst++){
       double a0 = 0.0;
       for(int j = 0; j < nn; j++){
-	a0 += weights[j]*fi[ldfi*kst + index[j] + i];
+	a0 += weights[j]*fi[ldfi*(index[j] + i) + kst];
       }
-      fo[ldfo*kst + i] = a0;
+      fo[ldfo*i + kst] = a0;
     }
   }
   
@@ -80,9 +80,9 @@ __kernel void zoperate(const int nst,
     for(int kst = 0; kst < nst; kst++){
       double2 a0 = 0.0;
       for(int j = 0; j < nn; j++){
-	a0 += weights[j]*fi[ldfi*kst + index[j] + i];
+	a0 += weights[j]*fi[ldfi*(index[j] + i) + kst];
       }
-      fo[ldfo*kst + i] = a0;
+      fo[ldfo*i + kst] = a0;
     }
   }
   
