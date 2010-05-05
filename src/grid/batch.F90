@@ -324,7 +324,7 @@ contains
     if(present(copy)) copy_ = copy
 
     if(.not. this%in_buffer) then
-      this%ubound(1) = this%nst_linear
+      this%ubound(1) = pad_pow2(this%nst_linear)
       this%ubound(2) = opencl_padded_size(batch_max_size(this))
       
       call opencl_create_buffer(this%buffer, CL_MEM_READ_WRITE, batch_type(this), product(this%ubound))
@@ -386,7 +386,7 @@ contains
         call opencl_write_buffer(tmp, ubound(this%states_linear(ist)%zpsi, dim = 1), this%states_linear(ist)%zpsi)
       end if
      
-      call opencl_set_kernel_arg(kernel, 0, this%nst_linear)
+      call opencl_set_kernel_arg(kernel, 0, this%ubound(1))
       call opencl_set_kernel_arg(kernel, 1, ist - 1)
       call opencl_set_kernel_arg(kernel, 2, tmp)
       call opencl_set_kernel_arg(kernel, 3, this%buffer)
@@ -422,7 +422,7 @@ contains
     end if
 
     do ist = 1, this%nst_linear
-      call opencl_set_kernel_arg(kernel, 0, this%nst_linear)
+      call opencl_set_kernel_arg(kernel, 0, this%ubound(1))
       call opencl_set_kernel_arg(kernel, 1, ist - 1)
       call opencl_set_kernel_arg(kernel, 2, this%buffer)
       call opencl_set_kernel_arg(kernel, 3, tmp)
