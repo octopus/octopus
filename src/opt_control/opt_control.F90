@@ -153,7 +153,7 @@ contains
 
     ! Figure out the starting wavefunction(s), and the target.
     call initial_state_init(sys, hm, initial_st)
-    call target_init(sys%gr, sys%geo, initial_st, td, parameters_w0(par), target)
+    call target_init(sys%gr, sys%geo, initial_st, td, parameters_w0(par), target, oct)
 
 
     ! Sanity checks.
@@ -217,7 +217,7 @@ contains
     call filter_end(filter)
     call td_end(td)
     call states_end(initial_st)
-    call target_end(target)
+    call target_end(target, oct)
     call parameters_mod_close()
    
     call pop_sub('opt_control.opt_control_run')
@@ -375,7 +375,7 @@ contains
 
       call states_copy(psi, initial_st)
       call propagate_forward(sys, hm, td, par, target, psi)
-      f = - j1_functional(target, sys%gr, psi) - parameters_j2(par)
+      f = - j1_functional(target, sys%gr, psi, sys%geo) - parameters_j2(par)
       if(oct%dump_intermediate) call iterator_write(iterator, par)
       call iteration_manager_direct(-f, par, iterator)
       call states_end(psi)
@@ -611,7 +611,7 @@ contains
     call parameters_copy(parp, par)
 
     call states_copy(chi, psi)
-    call calc_chi(target, sys%gr, psi, chi)
+    call calc_chi(target, sys%gr, psi, chi, sys%geo)
     call bwd_step(sys, td, hm, target, par, parp, chi, prop_chi, prop_psi)
 
     call parameters_filter(parp, filter)
@@ -667,11 +667,11 @@ contains
     call propagate_forward(sys, hm, td, par, target, psi, prop_psi)
 
     ! Check the performance.
-    j1 = j1_functional(target, sys%gr, psi)
+    j1 = j1_functional(target, sys%gr, psi, sys%geo)
 
     ! Set the boundary condition for the backward propagation.
     call states_copy(chi, psi)
-    call calc_chi(target, sys%gr, psi, chi)
+    call calc_chi(target, sys%gr, psi, chi, sys%geo)
 
     ! Backward propagation, while at the same time finding the output field, 
     ! which is placed at par_chi
@@ -728,7 +728,7 @@ contains
     end if
     
     call states_copy(chi, psi)
-    call calc_chi(target, sys%gr, psi, chi)
+    call calc_chi(target, sys%gr, psi, chi, sys%geo)
     call bwd_step(sys, td, hm, target, par, par_chi, chi, prop_chi, prop_psi)
 
     call states_end(psi)
@@ -793,14 +793,14 @@ contains
           call parameters_theta_to_basis(par_)
           call states_copy(psi, initial_st)
           call propagate_forward(sys_, hm_, td_, par_, target, psi)
-          fdf = - j1_functional(target, sys_%gr, psi) - parameters_j2(par_)
+          fdf = - j1_functional(target, sys_%gr, psi, sys_%geo) - parameters_j2(par_)
 
           xdx(j) = xdx(j) - CNST(2.0)*dx
           call parameters_set_theta(par_, xdx)
           call parameters_theta_to_basis(par_)
           call states_copy(psi, initial_st)
           call propagate_forward(sys_, hm_, td_, par_, target, psi)
-          fmdf = - j1_functional(target, sys_%gr, psi) - parameters_j2(par_)
+          fmdf = - j1_functional(target, sys_%gr, psi, sys_%geo) - parameters_j2(par_)
 
           dfn(j) = (fdf - fmdf)/(CNST(2.0)*dx)
         end do
@@ -831,7 +831,7 @@ contains
       call parameters_theta_to_basis(par_)
       call states_copy(psi, initial_st)
       call propagate_forward(sys_, hm_, td_, par_, target, psi)
-      f = - j1_functional(target, sys_%gr, psi) - parameters_j2(par_)
+      f = - j1_functional(target, sys_%gr, psi, sys_%geo) - parameters_j2(par_)
       call states_end(psi)
       if(oct%dump_intermediate) call iterator_write(iterator, par_)
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator)

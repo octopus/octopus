@@ -174,17 +174,32 @@
         call write_fatal(3)
       end if
     end if
-
+    
     if(target_type(target) .eq. oct_tg_velocity) then
        if( (oct%algorithm .ne. oct_algorithm_direct) .and. &
-            (oct%algorithm .ne. oct_algorithm_newuoa) ) then
+            (oct%algorithm .ne. oct_algorithm_newuoa) .and. & 
+            (oct%algorithm .ne. oct_algorithm_cg) ) then
           write(message(1), '(a)') 'If "OCTTargetOperator = oct_tg_velocity", you can only use'
           write(message(2), '(a)') '"OCTScheme = oct_algorithm_direct" or'
-          write(message(3), '(a)') '"OCTScheme = oct_algorithm_newuoa" for the optimization.'
+          write(message(3), '(a)') '"OCTScheme = oct_algorithm_newuoa" or'
+          write(message(4), '(a)') '"OCTScheme = oct_algorithm_cg" for the optimization.'
+          call write_fatal(4)
+       end if
+       if((oct%algorithm .eq. oct_algorithm_cg) .and. target_move_ions(target)) then
+          write(message(1), '(a)') 'If "OCTTargetOperator = oct_tg_velocity", and'
+          write(message(2), '(a)') '"OCTScheme = oct_algorithm_cg", then you have to'
+          write(message(3), '(a)') 'set "OCTMoveIons = false"'
+          call write_fatal(3)
+       end if
+       if((oct%algorithm .eq. oct_algorithm_cg) .and. &
+            (parameters_representation() .ne. ctr_zero_fourier_series_h)) then
+          write(message(1), '(a)') 'For the velocity optimization and the CG algorithm only'
+          write(message(2), '(a)') '"OCTParameterRepresentation = control_zero_fourier_series_h"'
+          write(message(3), '(a)') 'works at the moment.'
           call write_fatal(3)
        end if
     end if
-
+    
     call pop_sub('check_input_inc.check_faulty_runmodes')
   end subroutine check_faulty_runmodes
 

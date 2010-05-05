@@ -165,7 +165,7 @@ module opt_control_propagation_m
     call v_ks_calc(sys%ks, gr, hm, psi, time = M_ZERO)
     call propagator_run_zero_iter(hm, td%tr)
 
-    if(target_mode(target) .eq. oct_tg_velocity) then
+    if(target_type(target) .eq. oct_tg_velocity) then
        SAFE_ALLOCATE(x_initial(1:sys%geo%natoms,1:MAX_DIM))
        vel_target_ = .true.
        do iatom=1, sys%geo%natoms

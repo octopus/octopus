@@ -21,6 +21,7 @@
 
 module opt_control_target_m
   use datasets_m
+  use derivatives_m
   use excited_states_m
   use geometry_m
   use global_m
@@ -31,13 +32,16 @@ module opt_control_target_m
   use lalg_adv_m
   use lalg_basic_m
   use loct_m
-  use parser_m
   use math_m
   use mesh_m
   use mesh_function_m
   use messages_m
+  use opt_control_global_m
+  use parser_m
   use profiling_m
   use restart_m
+  use species_m
+  use species_pot_m
   use spectrum_m
   use states_m
   use states_calc_m
@@ -92,6 +96,8 @@ module opt_control_target_m
     character(len=200) :: td_local_target
     character(len=80) :: excluded_states_list
     character(len=4096) :: vel_input_string
+    character(len=1024), pointer :: vel_der_array(:,:) => null()
+    FLOAT, pointer :: grad_local_pot(:,:,:) => null()
     logical :: move_ions
     integer :: hhg_nks
     integer, pointer :: hhg_k(:) => null()
@@ -123,17 +129,20 @@ module opt_control_target_m
   ! ----------------------------------------------------------------------
   ! The target is initialized, mainly by reading from the inp file.
   ! ----------------------------------------------------------------------
-  subroutine target_init(gr, geo, stin, td, w0, target)
+  subroutine target_init(gr, geo, stin, td, w0, target, oct)
     type(grid_t),     intent(in)    :: gr
     type(geometry_t), intent(in)    :: geo
     type(states_t),   intent(in)    :: stin
     type(td_t),       intent(in)    :: td
     FLOAT,            intent(in)    :: w0
     type(target_t),   intent(inout) :: target
+    type(oct_t),      intent(in)    :: oct
 
-    integer             :: ierr, ip, ist, jst, jj
+    integer             :: ierr, ip, ist, jst, jj, iatom
     type(block_t)       :: blk
     FLOAT               :: xx(MAX_DIM), rr, psi_re, psi_im
+    FLOAT, allocatable  :: vl(:), vl_grad(:,:)
+    FLOAT               :: stencil_size, point_dist
     CMPLX, allocatable  :: rotation_matrix(:, :)
     type(states_t)      :: tmp_st
     character(len=1024) :: expression
@@ -499,6 +508,35 @@ module opt_control_target_m
       !% <tt>%</tt>
       !%
       !%End
+
+      !%Variable OCTVelocityDerivatives
+      !%Type block
+      !%Section Calculation Modes::Optimal Control
+      !%Description
+      !% If <tt>OCTTargetOperator = oct_tg_velocity</tt>, and
+      !% <tt>OCTScheme = oct_algorithm_cg</tt> then you must supply 
+      !% the target in terms of the ionic velocities AND the derivatives
+      !% of the target with respect to the ionic velocity components.
+      !% The derivatives are supplied via strings trough the block
+      !% <tt>OCTVelocityDerivatives</tt>.
+      !% Each velocity component is supplied by <tt>"v[n_atom,vec_comp]"</tt>,
+      !% while "n_atom" is the atom number, corresponding to the 
+      !% <tt>Coordinates</tt> block and "vec_comp" is the corresponding
+      !% vector component of the velocity. The first line of the 
+      !% <tt>OCTVelocityDerivatives</tt> block contains the derivatives
+      !% with respect to "v[1,*]", the second with respect to "v[2,*]" and so
+      !% on. The first column contains all derivatives with respect "v[*,1]",
+      !% the second with respect to "v[*,2]" and the third w.r.t. "v[*,3]".
+      !% As an example, we show the <tt>OCTVelocityDerivatives</tt> block
+      !% corresponding to the target shown in the <tt>OCTVelocityTarget</tt> 
+      !% help section:
+      !%
+      !% <tt>%OCTVelocityDerivatives</tt>
+      !% <tt> " 2*(v[1,1]-v[2,1])" | " 2*(v[1,2]-v[2,2])" | " 2*(v[1,3]-v[2,3])" </tt>
+      !% <tt> "-2*(v[1,1]-v[2,1])" | "-2*(v[1,2]-v[2,2])" | "-2*(v[1,3]-v[2,3])" </tt>
+      !% <tt>%</tt>
+      !%
+      !%End
        
       !%Variable OCTMoveIons
       !%Type logical
@@ -528,7 +566,56 @@ module opt_control_target_m
        else
           call parse_logical('OCTMoveIons', .false., target%move_ions)
        end if
+       
+       if(oct%algorithm .eq. oct_algorithm_cg) then
+          if(parse_block(datasets_check('OCTVelocityDerivatives'),blk)==0) then
+             SAFE_ALLOCATE(target%vel_der_array(1:geo%natoms,1:gr%sb%dim))
+             do ist=0, geo%natoms-1
+                do jst=0, gr%sb%dim-1
+                   call parse_block_string(blk, ist, jst, target%vel_der_array(ist+1, jst+1))
+                end do
+             end do
+          else
+             message(1) = 'If OCTTargetOperator = oct_tg_velocity, and'
+             message(2) = 'OCTScheme = oct_algorithm_cg, then you must define the'
+             message(3) = 'blocks "OCTVelocityTarget" AND "OCTVelocityDerivatives"'
+             call write_fatal(3)
+          end if
+          
+          SAFE_ALLOCATE(target%grad_local_pot(1:geo%natoms, 1:gr%mesh%np, 1:gr%sb%dim))
+          SAFE_ALLOCATE(vl(1:gr%mesh%np_part))
+          SAFE_ALLOCATE(vl_grad(1:gr%mesh%np, 1:gr%sb%dim))
+          SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
 
+          ! calculate gradient of each species potential
+          do iatom=1, geo%natoms
+             vl(:) = M_ZERO
+             vl_grad(:,:) = M_ZERO
+             call species_get_local(geo%atom(iatom)%spec, gr%mesh, geo%atom(iatom)%x(1:gr%sb%dim), vl, M_ZERO)
+             call dderivatives_grad(gr%der, vl, vl_grad)
+             forall(ist=1:gr%mesh%np, jst=1:gr%sb%dim)
+                target%grad_local_pot(iatom, ist, jst) = vl_grad(ist, jst)
+             end forall
+          end do
+          SAFE_DEALLOCATE_A(vl)
+          SAFE_DEALLOCATE_A(vl_grad)
+          
+          ! fix gradient jump on boundary - PRELIMINARY
+          stencil_size = (real(gr%der%order+1)*gr%mesh%spacing(1))**2
+          do ist=1, gr%mesh%np
+             do jst=gr%mesh%np, gr%mesh%np_part
+                point_dist = M_ZERO
+                do ip=1, MAX_DIM
+                   point_dist = point_dist +(gr%mesh%x(ist,ip)-gr%mesh%x(jst,ip))**2
+                end do
+                if(point_dist < stencil_size) then
+                   target%grad_local_pot(1:geo%natoms, ist, 1:gr%sb%dim) = M_ZERO
+                   exit
+                end if
+             end do
+          end do
+       end if
+       
     case default
       write(message(1),'(a)') "Target Operator not properly defined."
       call write_fatal(1)
@@ -540,8 +627,9 @@ module opt_control_target_m
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_end(target)
+  subroutine target_end(target, oct)
     type(target_t), intent(inout) :: target
+    type(oct_t), intent(in)       :: oct
 
     call push_sub('target.target_end')
 
@@ -560,7 +648,14 @@ module opt_control_target_m
     if(target_mode(target).eq.oct_targetmode_td) then
       SAFE_DEALLOCATE_P(target%td_fitness); nullify(target%td_fitness)
     end if
-
+    if(target_type(target).eq.oct_tg_velocity) then
+       if(oct%algorithm .eq. oct_algorithm_cg) then
+          SAFE_DEALLOCATE_P(target%vel_der_array)
+          SAFE_DEALLOCATE_P(target%grad_local_pot)
+          SAFE_DEALLOCATE_P(target%rho)
+       end if
+    end if
+    
     call pop_sub('target.target_end')
   end subroutine target_end
   ! ----------------------------------------------------------------------
@@ -617,6 +712,7 @@ module opt_control_target_m
     FLOAT, allocatable :: multipole(:, :)
     integer :: ist, ip, is
 
+    if(target_type(target)  .eq. oct_tg_velocity) return
     if(target_mode(target)  .ne. oct_targetmode_td) return
 
     call push_sub('target.target_tdcalc')
@@ -681,6 +777,12 @@ module opt_control_target_m
       call target_build_tdlocal(target, gr, time)
       forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, idim = 1:inh%d%dim, ip = 1:gr%mesh%np)
         inh%zpsi(ip, idim, ist, ik) = -target%rho(ip) * psi%zpsi(ip, idim, ist, ik)
+      end forall
+      
+   case(oct_tg_velocity)
+      ! set -(dF/dn)*psi_j as inhomogenous term --> !!! D_KS(r,t) is not implemented yet !!!
+      forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, idim = 1:inh%d%dim, ip = 1:gr%mesh%np)
+         inh%zpsi(ip, idim, ist, ik) = -target%rho(ip) * psi%zpsi(ip, idim, ist, ik)
       end forall
       
     end select
@@ -834,15 +936,18 @@ module opt_control_target_m
   ! ---------------------------------------------------------
   ! calculate |chi(T)> = \hat{O}(T) |psi(T)>
   ! ---------------------------------------------------------
-  subroutine calc_chi(target, gr, psi_in, chi_out)
+  subroutine calc_chi(target, gr, psi_in, chi_out, geo)
     type(target_t),    intent(inout) :: target
     type(grid_t),      intent(inout) :: gr
     type(states_t),    intent(inout) :: psi_in
     type(states_t),    intent(inout) :: chi_out
+    type(geometry_t),  intent(in)    :: geo
     
     CMPLX :: olap, zdet
     CMPLX, allocatable :: cI(:), dI(:), mat(:, :, :), mm(:, :, :, :), mk(:, :), lambda(:, :)
     integer :: ik, ip, ist, jst, idim, no_electrons, ia, ib, n_pairs, nst, kpoints, jj
+    character(len=1024) :: temp_string
+    FLOAT :: df_dv, dummy(3)
 
     call push_sub('target.calc_chi')
 
@@ -1003,6 +1108,27 @@ module opt_control_target_m
         end if
       end do
 
+   case(oct_tg_velocity)
+      !we have a time-dependent target --> Chi(T)=0
+      forall(ip=1:gr%mesh%np, idim=1:chi_out%d%dim, ist=chi_out%st_start:chi_out%st_end, ik=1:chi_out%d%nik)
+         chi_out%zpsi(ip, idim, ist, ik) = M_z0
+      end forall
+      
+      !calculate dF/dn, which is the time-independent part of the inhomogenous term for the propagation of Chi
+      !NOTE: D_KS(r,t) is not calculated here
+      df_dv = M_ZERO
+      dummy(:) = M_ZERO
+      target%rho(:) = M_ZERO
+      do ist=1, geo%natoms
+         do jst=1, gr%sb%dim
+            temp_string = target%vel_der_array(ist, jst)
+            call parse_velocity_target(temp_string, geo)
+            call conv_to_C_string(temp_string)
+            call parse_expression(df_dv, dummy(1), 1, dummy(1:3), dummy(1), dummy(1), temp_string)
+            target%rho(:) = target%rho(:) + df_dv*target%grad_local_pot(ist,:,jst)/species_weight(geo%atom(ist)%spec)
+         end do
+      end do
+      
     case default
 
       !olap = zstates_mpdotp(gr%mesh, target%st, psi_in)
@@ -1024,10 +1150,8 @@ module opt_control_target_m
     type(target_t), intent(in) :: target
 
     select case(target%type)
-    case(oct_tg_td_local, oct_tg_hhg)
+    case(oct_tg_td_local, oct_tg_hhg, oct_tg_velocity)
       target_mode = oct_targetmode_td
-    case(oct_tg_velocity)
-      target_mode = oct_tg_velocity
     case default
       target_mode = oct_targetmode_static
     end select
