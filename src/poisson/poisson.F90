@@ -494,12 +494,6 @@ contains
       end do
 
       call poisson_sete_solve(this%sete_solver, icase, rh0, vh0, nx, ny, nz, xl, yl, zl, icalc)
-      !      write(91,*) "vh0 rh0"
-      !      do  i=1,nx
-      !       do j=1,ny
-      !       write(91,*) i,j,vh0(i,11,j), rh0(i,11,j)
-      !       enddo 
-      !      enddo
 
       do counter = 1, der%mesh%np
 

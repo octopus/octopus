@@ -80,7 +80,7 @@
       DOUBLE PRECISION R, TA, TTA 
       INTEGER I, IIT, IJ, IT, J, JJT, JT, K, KK, L, M, NN 
 !     .. Local Arrays ..                                                
-      INTEGER IL(21), IU(21) 
+      INTEGER IL(100), IU(100) 
 !     .. External Subroutines ..                                        
       EXTERNAL XERMSG 
 !     .. Intrinsic Functions ..                                         

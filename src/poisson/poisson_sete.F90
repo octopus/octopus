@@ -39,18 +39,22 @@ module poisson_sete_m
   public ::              &
     rho_nuc,             &
     count_atoms,         &
-    count_old
+    calc_gate_energy
 
   type poisson_sete_t
     integer, pointer :: ipio(:,:,:)
     FLOAT,   pointer :: adiag(:)
     FLOAT,   pointer :: qs(:)
     FLOAT,   pointer :: vbound(:,:,:)
+    FLOAT,   pointer :: vbound_lap(:,:,:)
+    FLOAT,   pointer :: top(:,:)
+    FLOAT,   pointer :: bottom(:,:)
     integer, pointer :: iad(:)
     integer, pointer :: jad(:)
     FLOAT,   pointer :: aw(:)
     FLOAT,   pointer :: dielectric(:,:,:)
     FLOAT,   pointer :: vh_big(:,:,:)
+    FLOAT,   pointer :: vh_lap(:,:,:)
     integer, pointer :: iy(:)
     integer, pointer :: jy(:)
     integer, pointer :: ky(:)
@@ -74,14 +78,20 @@ module poisson_sete_m
     FLOAT            :: dx
     FLOAT            :: dy
     FLOAT            :: dz
+    FLOAT            :: zwidth
+    integer          :: po
+    integer          :: free
+    FLOAT,   pointer :: vt(:)
+    FLOAT,   pointer :: nucp(:,:,:)
+    FLOAT,   pointer :: v_lap(:)
   end type poisson_sete_t
 
-  integer :: lenw, leniw, idev, isym = 0, itol = 2, itmax = 2001, itermin = 5, iter, ierr, iunit = 0, nxl, nyl, test=0, test1=0
-  FLOAT, allocatable :: xg(:), yg(:), zg(:), dxg(:), dyg(:), dz(:), dxl(:), dyl(:),x2(:)
+  integer :: lenw, leniw, idev, isym = 0, itol = 2, itmax = 2001, itermin = 5, iter, ierr, iunit = 0, nxl, nyl, test=0, nuc_or_elec=0, add_bias=0, calc_egate=1, egate_just_field=0, nuc_egate=1
+  FLOAT, allocatable :: xg(:), yg(:), zg(:), dxg(:), dyg(:), dz(:), dxl(:), dyl(:),x2(:), x2_lap(:)
 
   ! these variables must be local for the moment
   FLOAT, allocatable :: rho_nuc(:)
-  integer :: count_atoms, count_old
+  integer :: count_atoms, calc_gate_energy
 
   FLOAT, parameter :: hartree = CNST(2.0*13.60569193), BOHR = CNST(0.52917720859) 
   
@@ -103,8 +113,8 @@ contains
     FLOAT :: bohrnm, angsnm
     integer :: i, j, ngates
     FLOAT :: zcen, xcen, ycen, dielectric0
-    FLOAT, allocatable :: vtv(:), vt(:), q2(:)
-    FLOAT :: xwidth, ywidth, zwidth, pconst
+    FLOAT, allocatable :: vtv(:), q2(:), q2_lap(:)
+    FLOAT :: xwidth, ywidth,  pconst
 
     pconst = CNST(4.0)*M_PI ! need 4 pi for Hartrees I think (??)
     bohrnm = BOHR*CNST(0.1) 
@@ -112,6 +122,7 @@ contains
     this%tol = 0.01 
     this%noatoms = number_atoms
     count_atoms = 0
+    calc_gate_energy = 0
     this%counter = 0
     this%tot_nuc_charge_energy=0.0
 
@@ -129,9 +140,9 @@ contains
     if(idev == 1) then
 
       ! physical device characteristics
-      read(57,*) zwidth
+      read(57,*) this%zwidth
 
-      zwidth = zwidth*angsnm  ! distance between plates (nm)
+      this%zwidth = this%zwidth*angsnm  ! distance between plates (nm)
 
       read(57,*) zcen
       zcen = zcen*angsnm
@@ -139,10 +150,11 @@ contains
       read(57,*) ngates
 
       SAFE_ALLOCATE(vtv(1:ngates))
-      SAFE_ALLOCATE(vt(1:ngates))
+      SAFE_ALLOCATE(this%vt(1:ngates))
 
       read(57,*)vtv(1),vtv(2) ! voltage on plates 
-      vt=vtv/HARTREE
+      !this%vt=vtv/(hartree*(this%noatoms+1))
+      this%vt=vtv/(hartree)!*(this%noatoms+1))
 
       SAFE_DEALLOCATE_A(vtv)
 
@@ -162,24 +174,31 @@ contains
       this%dy=this%dy*angsnm
       this%dz=this%dz*angsnm
       READ(57,*)nxl,nyl       ! padding points (to sim zone edge)
-      allocate(dxl(nxl)); allocate(dyl(nyl))
+      allocate(dxl(nxl)); 
+      allocate(dyl(nyl))
       READ(57,*)(dxl(i),i=1,nxl)
       READ(57,*)(dyl(j),j=1,nyl)
+      read(57,*)this%po
+      read(57,*)this%free
     ELSE
       WRITE(6,*)' IDEV not supported '
       RETURN
     end if
 
-    call xyzgrid(this, nx, ny, nz, xl, yl, zl, xcen, ycen, zcen, xwidth, ywidth, zwidth)  ! establish x-y-z grids
+    call xyzgrid(this, nx, ny, nz, xl, yl, zl, xcen, ycen, zcen, xwidth, ywidth)!, this%zwidth)  ! establish x-y-z grids
 
-    call cbsurf(this, vt) !Assign boundaries 
+    call cbsurf(this) !Assign boundaries 
 
     this%nelt=32+20*((this%nxtot-2)+(this%nytot-2)+(this%nztot-2))+ &
       12*((this%nxtot-2)*(this%nytot-2)+(this%nxtot-2)*(this%nztot-2)+(this%nytot-2)*(this%nztot-2)) + &
       7*(this%nxtot-2)*(this%nytot-2)*(this%nztot-2)
+    if (this%nelt<=0) then
+	  write(6,*) "this%nelt", this%nelt
+          stop ' GOTTA QUIT '
+  end if
+
     lenw=this%nelt+9*this%nxtot*this%nytot*this%nztot
     leniw=this%nelt+5*this%nxtot*this%nytot*this%nztot+12
-    !write(6,*)' Initial this%nelt ',this%nelt
 
     SAFE_ALLOCATE(q2(1:this%ntot))
     SAFE_ALLOCATE(this%aw(1:this%nelt))
@@ -187,6 +206,9 @@ contains
     SAFE_ALLOCATE(this%adiag(1:this%ntot))
     SAFE_ALLOCATE(this%iad(1:this%nelt))
     SAFE_ALLOCATE(this%jad(1:this%nelt))
+    
+    SAFE_ALLOCATE(this%v_lap(1:this%ntot))
+    this%v_lap(1:this%ntot)=M_ZERO
 
     call poissonm(this)
 
@@ -219,9 +241,15 @@ contains
 
       FLOAT   :: av(7)
       INTEGER :: joff(7)
-      FLOAT   :: d1, d2, dconst, del
-      integer :: i, j, k, ia, iav, icol, idebug, iec, n, ii
+      FLOAT   :: d1, d2, dconst, del, err
+      integer :: i, j, k, ia, iav, icol, idebug, iec, n, ii, m
+      FLOAT,   allocatable :: q2_lap(:), rwork(:)
+      integer, allocatable :: iwork(:) 
       !
+    SAFE_ALLOCATE(q2_lap(1:this%ntot))
+
+
+
       idebug=0
       if(idebug == 1)then
         open(57,file='this%aw.dat',status='unknown')
@@ -238,6 +266,7 @@ contains
       IEC=1 ! counter for number of non-zero entries in this%AW.
 
       q2(1:this%ntot) = M_ZERO
+      q2_lap(1:this%ntot) = M_ZERO
 
       DO ia=1,this%ntot
         av=M_ZERO
@@ -256,17 +285,18 @@ contains
               d1=dz(k); d2=dyg(j)
               SELECT CASE(this%ipio(I-1,J,K))
               CASE(1) ! Dirichlet boundary point
-                del=CNST(0.5)*dxg(i)*dz(k)
+                del=M_HALF*dxg(i)*dz(k)
                 dconst=this%dielectric(I,J,K)
                 av(iav)=M_ZERO 
                 av(4)=av(4)+dconst*d1*d2/del
                 q2(ia)=q2(iA)+this%vbound(i-1,j,k)*dconst*d1*d2/del
+                q2_lap(ia)=q2_lap(iA)+this%vbound_lap(i-1,j,k)*dconst*d1*d2/del
               CASE(2) ! Neumann boundary point
                 av(iav)=M_ZERO
                 del=M_ZERO
               CASE DEFAULT ! interior point
-                del=CNST(0.5)*(dxg(i)+dxg(i-1))*dz(k)
-                dconst=CNST(0.5)*(this%dielectric(i-1,j,k)+this%dielectric(I,J,K))
+                del=M_HALF*(dxg(i)+dxg(i-1))*dz(k)
+                dconst=M_HALF*(this%dielectric(i-1,j,k)+this%dielectric(I,J,K))
                 av(iav)=-dconst*d1*d2/del 
                 av(4)=av(4)+dconst*d1*d2/del
               END SELECT
@@ -275,17 +305,18 @@ contains
               d2=dxg(i)
               SELECT CASE(this%ipio(I,J-1,K))
               CASE(1) ! Dirichlet
-                del=CNST(0.5)*dyg(j)*dz(k)
+                del=M_HALF*dyg(j)*dz(k)
                 dconst=this%dielectric(I,J,K)
                 av(iav)=M_ZERO 
                 av(4)=av(4)+dconst*d1*d2/del
                 q2(ia)=q2(ia)+this%vbound(i,j-1,k)*dconst*d1*d2/del
+                q2_lap(ia)=q2_lap(ia)+this%vbound_lap(i,j-1,k)*dconst*d1*d2/del
               CASE(2) ! Neumann
                 av(iav)=M_ZERO 
 		del=M_ZERO
               CASE DEFAULT! interior point
-                del=CNST(0.5)*(dyg(j)+dyg(j-1))*dz(k)
-                DCONST=CNST(0.5)*(this%dielectric(I,J,K)+this%dielectric(I,J-1,K))
+                del=M_HALF*(dyg(j)+dyg(j-1))*dz(k)
+                dconst=M_HALF*(this%dielectric(i ,j ,k)+this%dielectric(i,j-1,k))
                 av(iav)=-dconst*d1*d2/del 
                 av(4)=av(4)+dconst*d1*d2/del
               END SELECT
@@ -293,16 +324,17 @@ contains
               D1=DXG(I); D2=DYG(J)
               SELECT CASE(this%ipio(I,J,K-1))
               CASE(1) ! Dirichlet
-                DEL=CNST(0.5)*DZ(K)*DZ(K)
+                DEL=M_HALF*DZ(K)*DZ(K)
                 DCONST=this%dielectric(I,J,K)
                 AV(IAV)=M_ZERO 
 		av(4)=av(4)+DCONST*D1*D2/DEL
-                Q2(IA)=Q2(IA)+this%VBOUND(I,J,K-1)*DCONST*D1*D2/DEL
+                q2(ia)=q2(ia)+this%vbound(i,j,k-1)*dconst*d1*d2/del
+                q2_lap(ia)=q2_lap(ia)+this%vbound_lap(i,j,k-1)*dconst*d1*d2/del
               CASE(2) ! Neumann
                 av(iav)=M_ZERO; DEL=M_ZERO
               CASE DEFAULT! interior point
-                DEL=CNST(0.5)*(DZ(K)+DZ(K-1))*DZ(K)
-                DCONST=CNST(0.5)*(this%dielectric(I,J,K)+this%dielectric(I,J,K-1))
+                DEL=M_HALF*(DZ(K)+DZ(K-1))*DZ(K)
+                DCONST=M_HALF*(this%dielectric(I,J,K)+this%dielectric(I,J,K-1))
                 av(iav)=-dconst*d1*d2/del 
 		av(4)=av(4)+dconst*d1*d2/del
               END SELECT
@@ -310,16 +342,17 @@ contains
               D1=DXG(I); D2=DYG(J)
               SELECT CASE(this%ipio(I,J,K+1))
               CASE(1) ! Dirichlet
-                DEL=CNST(0.5)*DZ(K)*DZ(K)
+                DEL=M_HALF*DZ(K)*DZ(K)
                 DCONST=this%dielectric(I,J,K)
                 AV(IAV)=M_ZERO 
 		av(4)=av(4)+DCONST*D1*D2/DEL
-                Q2(IA)=Q2(IA)+this%VBOUND(I,J,K+1)*DCONST*D1*D2/DEL
+                q2(ia)=q2(ia)+THIS%vbound(i,j,k+1)*dconst*d1*d2/del
+                q2_lap(ia)=q2_lap(ia)+THIS%vbound_lap(i,j,k+1)*dconst*d1*d2/del
               CASE(2) ! Neumann
                 AV(IAV)=M_ZERO; DEL=M_ZERO
               CASE DEFAULT! interior point
-                del=CNST(0.5)*(dz(k)+dz(k+1))*dz(k)
-                dconst=CNST(0.5)*(this%dielectric(i,j,k)+this%dielectric(i,j,k+1))
+                del=M_HALF*(dz(k)+dz(k+1))*dz(k)
+                dconst=M_HALF*(this%dielectric(i,j,k)+this%dielectric(i,j,k+1))
                 av(iav)=-dconst*d1*d2/del 
                 av(4)=av(4)+dconst*d1*d2/del
               END SELECT
@@ -327,17 +360,18 @@ contains
               D1=DZ(K); D2=DXG(I)
               SELECT CASE(this%ipio(I,J+1,K))
               CASE(1) ! Dirichlet
-                DEL=CNST(0.5)*DYG(J)*DZ(K)
+                DEL=M_HALF*DYG(J)*DZ(K)
                 DCONST=this%dielectric(I,J,K)
                 AV(IAV)=M_ZERO 
 		AV(4)=AV(4)+DCONST*D1*D2/DEL
                 Q2(IA)=Q2(IA)+this%VBOUND(I,J+1,K)*DCONST*D1*D2/DEL
+                q2_lap(IA)=q2_lap(IA)+this%vbound_lap(I,J+1,K)*dconst*d1*d2/del
               CASE(2) ! Neumann
                 AV(IAV)=M_ZERO 
 		DEL=M_ZERO
               CASE DEFAULT
-                DEL=CNST(0.5)*(DYG(J)+DYG(J+1))*DZ(K)
-                DCONST=CNST(0.5)*(this%dielectric(I,J,K)+this%dielectric(I,J+1,K))
+                DEL=M_HALF*(DYG(J)+DYG(J+1))*DZ(K)
+                DCONST=M_HALF*(this%dielectric(I,J,K)+this%dielectric(I,J+1,K))
                 AV(IAV)=-DCONST*D1*D2/DEL 
 		AV(4)=AV(4)+DCONST*D1*D2/DEL
               END SELECT
@@ -345,17 +379,18 @@ contains
               D1=DZ(K); D2=DYG(J)
               SELECT CASE(this%ipio(I+1,J,K))
               CASE(1) ! Dirichlet
-                del=CNST(0.5)*dxg(i)*dz(k)
+                del=M_HALF*dxg(i)*dz(k)
                 dconst=this%dielectric(i,j,k)
                 av(iav)=M_ZERO 
 		av(4)=av(4)+dconst*d1*d2/del
                 q2(ia)=q2(ia)+this%vbound(i+1,j,k)*dconst*d1*d2/del
+                q2_lap(ia)=q2_lap(ia)+this%vbound_lap(i+1,j,k)*dconst*d1*d2/del
               CASE(2) ! Neumann
                 av(iav)=M_ZERO 
 		del=M_ZERO
               CASE DEFAULT
-                del=CNST(0.5)*(dxg(i)+dxg(i+1))*dz(k)
-                dconst=CNST(0.5)*(this%dielectric(I,J,K)+this%dielectric(i+1,j,k))
+                del=M_HALF*(dxg(i)+dxg(i+1))*dz(k)
+                dconst=M_HALF*(this%dielectric(I,J,K)+this%dielectric(i+1,j,k))
                 av(iav)=-dconst*d1*d2/del
                 av(4)=av(4)+dconst*d1*d2/del
               END SELECT
@@ -398,6 +433,8 @@ contains
       IEC=IEC-1 ! overcounted non-zero elements by one.
       !write(6,*)' this%nelt, iec ',this%nelt,iec
       this%nelt = iec
+      write(6,*) "this%nelt", this%nelt
+
 
       ! in case THIS%NELT in static differs from that counted here
 !!$        allocate(this%AWP(THIS%NELT))
@@ -409,6 +446,31 @@ contains
 !!$        this%AW=this%AWP
 !!$        deallocate(this%AWP)
 
+     
+    do i=1,this%ntot
+      q2_lap(i)=q2_lap(i)/this%adiag(i)!! Laplacian scaled with diagonal elements
+    enddo
+    allocate(rwork(lenw))
+    allocate(iwork(leniw))
+
+	this%tol=0.000001
+    call dslucs(this%ntot,q2_lap,this%v_lap,this%nelt,this%iad,this%jad,this%aw, &
+    isym,itol, this%tol,itmax,iter,itermin,err,ierr,iunit,rwork,lenw, &
+      iwork,leniw)
+!    this%tol = 0.01 
+!	    do m=1,this%ntot
+!	    i=this%iy(m) 
+!	    j=this%jy(m)
+! 	    k=this%ky(m)
+!              if(i==22.and.j==22) then
+!		 write(225,*) k, zg(k), this%v_lap(m)*27.2
+!	      endif
+!	      enddo
+
+    deallocate(rwork)
+    deallocate(iwork)
+    SAFE_DEALLOCATE_P(this%vbound)
+    SAFE_DEALLOCATE_A(q2_lap)
       if(idebug == 1)then
         close(57)
       endif
@@ -416,9 +478,8 @@ contains
 
     !---------------------------------------------------------
 
-    subroutine cbsurf(this, vt)
+    subroutine cbsurf(this)
       type(poisson_sete_t), intent(inout) :: this
-      FLOAT,                intent(in)    :: vt(:)
 
       integer :: k
 
@@ -434,20 +495,42 @@ contains
       ! This is a combination of cbsurfser and spaceser located on
       ! /home/stopa/surfER/build
       allocate(this%ipio(0:THIS%NXTOT+1,0:THIS%NYTOT+1,0:THIS%NZTOT+1))
-      allocate(THIS%VH_BIG(1:THIS%NXTOT,1:THIS%NYTOT,1:THIS%NZTOT))
-      this%vh_big(1:THIS%NXTOT,1:THIS%NYTOT,1:THIS%NZTOT)= M_ZERO
-      allocate(this%VBOUND(0:THIS%NXTOT+1,0:THIS%NYTOT+1,0:THIS%NZTOT+1))
+      allocate(this%vh_big(1:this%nxtot,1:this%nytot,1:this%nztot))
+      this%vh_big(1:this%nxtot,1:this%nytot,1:this%nztot)= M_ZERO
+      if (egate_just_field==0) then
+      allocate(this%nucp(1:this%nxtot,1:this%nytot,1:this%nztot))
+      this%nucp(1:this%nxtot,1:this%nytot,1:this%nztot)= M_ZERO
+      endif
+      allocate(this%vbound(0:THIS%NXTOT+1,0:THIS%NYTOT+1,0:THIS%NZTOT+1))
+      allocate(this%vbound_lap(0:THIS%NXTOT+1,0:THIS%NYTOT+1,0:THIS%NZTOT+1))
       allocate(this%dielectric(0:THIS%NXTOT+1,0:THIS%NYTOT+1,0:THIS%NZTOT+1))
-      this%ipio=0; this%VBOUND= M_ZERO
+      this%ipio=0; 
+      this%vbound= M_ZERO
+      this%vbound_lap= M_ZERO
+      
+      if (this%po==1) then
+      SAFE_ALLOCATE(this%top(1:this%nxtot,1:this%nytot))
+      SAFE_ALLOCATE(this%bottom(1:this%nxtot,1:this%nytot))
+      do i=1,this%nxtot
+      do j=1,this%nytot
+      this%top(i,j)=M_ZERO
+      this%bottom(i,j)=M_ZERO
+      enddo
+      enddo
+      endif
       !write(68,*) "IDEV," , idev
       IF(IDEV == 1)THEN ! parallel plates
         this%dielectric=dielectric0
         this%ipio(:,:,0)=1
         this%ipio(:,:,THIS%NZTOT+1)=1
-        this%VBOUND(:,:,0)=VT(1)
-        this%VBOUND(:,:,THIS%NZTOT+1)=VT(2)
-        DO K=1,THIS%NZTOT
-          IF(K /= 0 .AND. K /= THIS%NZTOT+1)THEN !Redundant?
+
+        this%vbound(:,:,0)=0.0
+        this%vbound(:,:,this%nztot+1)=0.0
+        this%vbound_lap(:,:,0)=this%vt(1)
+        this%vbound_lap(:,:,this%nztot+1)=this%vt(2)
+
+        DO k=1,this%nztot
+          IF(k /= 0 .AND. k /= this%nztot+1)THEN !Redundant?
             ! lateral BC`s
             this%ipio(0,:,K)=2
             this%ipio(THIS%NXTOT+1,:,K)=2
@@ -461,7 +544,7 @@ contains
 
     !---------------------------------------------------------
 
-    subroutine xyzgrid(this, nx, ny, nz, xl, yl, zl, xcen, ycen, zcen, xwidth, ywidth, zwidth)
+    subroutine xyzgrid(this, nx, ny, nz, xl, yl, zl, xcen, ycen, zcen, xwidth, ywidth)
       type(poisson_sete_t), intent(inout) :: this
       integer,              intent(in)    :: nx
       integer,              intent(in)    :: ny
@@ -474,21 +557,22 @@ contains
       FLOAT,                intent(in)    :: zcen
       FLOAT,                intent(in)    :: xwidth
       FLOAT,                intent(in)    :: ywidth
-      FLOAT,                intent(in)    :: zwidth
 
       ! Input: NX, NY, NZ -> No. of octopus grid points in each dimension
       ! Input: XL, YL, ZL -> Size of the octopus box
+      ! Input : zwidth is now this%zwidth
 
       FLOAT   :: dx1b, dx1t, dx_oct, xbot, xtest, xtop, xwidth_big
       FLOAT   :: dy1b, dy1t, dy_oct, ybot, ytop, ywidth_big
       FLOAT   :: dz1b, dz1t, dz_oct, zbot, ztest, ztop
+      FLOAT   :: temp
       integer :: i, j, k, m
       integer :: nxtop, nytop, nztop
       integer :: nxtot_0, nytot_0
 
       ! inputs:  NZ,NZ2,NX,NX2,NY,NY2
       !          XCEN,YCEN,ZCEN
-      !          XWIDTH,YWIDTH,ZWIDTH
+      !          XWIDTH,YWIDTH,this%zwidth
       !          XL,YL,ZL
       !
       ! outputs: ZG,XG,YG        
@@ -498,42 +582,51 @@ contains
 
 
       !top and bottom z coordinates.
-      !Depend on POISSON_SETE (ZWIDTH) 
+      !Depend on POISSON_SETE (this%zwidth) 
       !and Octopus (ZL)parameters.
       dz_oct=(zl/TOFLOAT((nz-1))) 
-      ztop = CNST(0.5)*zwidth - zcen - ((nz-1)/2)*dz_oct -CNST(0.5)*dz_oct
-      zbot = CNST(0.5)*zwidth + zcen - ((nz-1)/2)*dz_oct -CNST(0.5)*dz_oct
-      if (ztop<0.0.and.zbot<0.0) then
+      ztop = M_HALF*this%zwidth - zcen - ((nz-1)/2)*dz_oct -M_HALF*dz_oct
+      zbot = M_HALF*this%zwidth + zcen - ((nz-1)/2)*dz_oct -M_HALF*dz_oct
+      if (ztop<M_ZERO.and.zbot<M_ZERO) then
 	      write(*,*) "ztop and zbot are less than zero", ztop, zbot
 	      stop
       endif
       
-      if (ztop<0.0) then
-	      ztop=0.0
+      if (ztop<=M_ZERO) then
+	      ztop=M_ZERO
+	      nztop=0
+	      dz1t=M_ZERO
+      else
+	      dz1t=this%dz
+	      write(70,*) 'dz1t', dz1t
+	      nztop=ztop/dz1t
+	      write(70,*) 'nztop', nztop
+	      if (mod(ztop,this%dz)/=M_ZERO) then
+		      nztop=nztop+1
+		      write(70,*) 'nztop', nztop
+		      dz1t=ztop/nztop
+		      write(70,*) 'dz1t', dz1t
+	      endif
       endif
-      if (zbot<0.0) then
-	      zbot=0.0
+      if (zbot<=M_ZERO) then
+	      zbot=M_ZERO
+	      this%nzbot=0
+	      dz1b=M_ZERO
+      else
+	      dz1b=this%dz
+	      this%nzbot = zbot/dz1b
+	      if (mod(zbot,this%dz)/=M_ZERO) then
+		      this%nzbot=this%nzbot+1
+		      dz1b=zbot/this%nzbot
+	      endif
       endif
-      this%nztot = nz + this%nz2
 
+      this%nz2=this%nzbot+nztop
+      this%nztot = nz + this%nz2
       allocate(zg(this%nztot))
       allocate(dz(this%nztot))
-      if (ztop==0.0) then
-	      nztop=0
-	      dz1t=0.0
-      else
-	      nztop = int(this%nz2*ztop/(ztop + zbot))
-	      DZ1T=ZTOP/TOFLOAT(NZTOP)
-      endif
-      if (zbot==0.0) then
-              this%nzbot=0
-	      DZ1B=0.0
-      else
-              this%nzbot = this%nz2 - nztop
-	      DZ1B=ZBOT/TOFLOAT(THIS%NZBOT)
-      endif
-      DO K=1,THIS%NZBOT
-        DZ(K)=DZ1B
+      DO k=1,this%nzbot
+        dz(k)=dz1b
       end do
       !DZ_OCT=ZL/TOFLOAT(NZ)
 
@@ -544,15 +637,16 @@ contains
       DO K=THIS%NZBOT+NZ+1,THIS%NZTOT
         DZ(K)=DZ1T
       end do
-      write(70,*)"zwidth, nz-1/2,factor",zwidth, (nz-1)/2, ((nz-1)/2)*dz_oct ! Differences, experimental
+      write(70,*)"this%zwidth, ",this%zwidth 
       write(70,*)"zbot ztop",zbot,ztop ! Differences, experimental
       write(70,*)"dz1b, dz1t, dz_oct",dz1b,dz1t, dz_oct  ! Differences, experimental
+      write(70,*)"nztot, nzbot nztop", this%nztot, this%nzbot, nztop
 
-      ZG(1)=-CNST(0.5)*ZWIDTH+CNST(0.5)*DZ(1)
+      ZG(1)=-M_HALF*this%zwidth+M_HALF*DZ(1)
       DO K=2,THIS%NZTOT-1 
-      ZG(K)=ZG(K-1)+CNST(0.5)*(DZ(K-1)+DZ(K))
+      ZG(K)=ZG(K-1)+M_HALF*(DZ(K-1)+DZ(K))
       end do
-      ZG(THIS%NZTOT)=CNST(0.5)*ZWIDTH-CNST(0.5)*DZ(THIS%NZTOT)
+      ZG(THIS%NZTOT)=M_HALF*this%zwidth-M_HALF*DZ(THIS%NZTOT)
 
       do i=1,this%nztot
       write(70,*) "i,zg, dz",i, zg(i), dz(i)
@@ -560,18 +654,46 @@ contains
       ztest=zg(this%nztot)
       ! x-mesh
       dx_oct=xl/TOFLOAT(nx-1)  ! Octopus region
-      xtop=CNST(0.5)*xwidth-xcen-((nx-1)/2)*dx_oct-CNST(0.5)*dx_oct
-      xbot=CNST(0.5)*xwidth+xcen-((nx-1)/2)*dx_oct-CNST(0.5)*dx_oct
-      if (xtop<0.0) then
-	      xtop=0.0
+      xtop=M_HALF*xwidth-xcen-((nx-1)/2)*dx_oct-M_HALF*dx_oct
+      xbot=M_HALF*xwidth+xcen-((nx-1)/2)*dx_oct-M_HALF*dx_oct
+      if (xtop<M_ZERO.and.xbot<M_ZERO) then
+	      write(*,*) "ztop and zbot are less than zero", ztop, zbot
+	      stop
       endif
-      if (xbot<0.0) then
-	      xbot=0.0
+      if (xtop<=M_ZERO) then
+	      xtop=M_ZERO
+	      nxtop=0
+	      dx1t=M_ZERO
+      else
+	      dx1t=this%dx
+	      write(70,*) 'dx1t', dx1t
+	      nxtop=xtop/dx1t
+	      write(70,*) 'nxtop', nxtop
+	      if (mod(xtop,this%dx)/=M_ZERO) then
+		      nxtop=nxtop+1
+		      write(70,*) 'nxtop', nxtop
+		      dx1t=xtop/nxtop
+		      write(70,*) 'dx1t', dx1t
+	      endif
       endif
+      if (xbot<=M_ZERO) then
+	      xbot=M_ZERO
+	      this%nxbot=0
+	      dx1b=M_ZERO
+      else
+	      dx1b=this%dx
+	      this%nxbot = xbot/dx1b
+	      if (mod(xbot,this%dx)/=M_ZERO) then
+		      this%nxbot=this%nxbot+1
+		      dx1b=xbot/this%nxbot
+	      endif
+      endif
+      this%nx2=this%nxbot+nxtop
       nxtot_0=nx+this%nx2
       this%nxtot=nxtot_0+2*nxl
       allocate(xg(this%nxtot))
       allocate(dxg(this%nxtot))
+
       DO I=1,NXL  !  border points
 	DXG(I)=DXL(I)
       end do
@@ -596,11 +718,11 @@ contains
         DXG(I)=DX_OCT
       end do
       XWIDTH_BIG=SUM(DXG)
-      XG(1)=-CNST(0.5)*XWIDTH_BIG+CNST(0.5)*DXG(1)
+      XG(1)=-M_HALF*XWIDTH_BIG+M_HALF*DXG(1)
       DO I=2,THIS%NXTOT-1
-        XG(I)=XG(I-1)+CNST(0.5)*(DXG(I-1)+DXG(I))
+        XG(I)=XG(I-1)+M_HALF*(DXG(I-1)+DXG(I))
       end do
-      XG(THIS%NXTOT)=CNST(0.5)*XWIDTH_BIG-CNST(0.5)*DXG(THIS%NXTOT)
+      XG(THIS%NXTOT)=M_HALF*XWIDTH_BIG-M_HALF*DXG(THIS%NXTOT)
       do i=1,this%nxtot
       write(70,*) "i, xg, dx",i, xg(i), dxg(i)
       enddo
@@ -608,22 +730,49 @@ contains
       XTEST=XG(THIS%NXTOT)
       ! Y-mesh
       dy_oct=yl/TOFLOAT(ny-1)  ! Octopus region
-      ytop=CNST(0.5)*ywidth-ycen-((ny-1)/2)*dy_oct-CNST(0.5)*dy_oct
-      ybot=CNST(0.5)*ywidth+ycen-((ny-1)/2)*dy_oct-CNST(0.5)*dy_oct
-      if (ytop<0.0) then
-	      ytop=0.0
+      ytop=M_HALF*ywidth-ycen-((ny-1)/2)*dy_oct-M_HALF*dy_oct
+      ybot=M_HALF*ywidth+ycen-((ny-1)/2)*dy_oct-M_HALF*dy_oct
+      if (ytop<M_ZERO.and.ybot<M_ZERO) then
+	      write(*,*) "ztop and zbot are less than zero", ztop, zbot
+	      stop
       endif
-      if (ybot<0.0) then
-	      ybot=0.0
+      if (ytop<=M_ZERO) then
+	      ytop=M_ZERO
+	      nytop=0
+	      dy1t=M_ZERO
+      else
+	      dy1t=this%dy
+	      write(70,*) 'dy1t', dy1t
+	      nytop=ytop/dy1t
+	      write(70,*) 'nytop', nytop
+	      if (mod(ytop,this%dy)/=M_ZERO) then
+		      nytop=nytop+1
+		      write(70,*) 'nytop', nytop
+		      dy1t=ytop/nytop
+		      write(70,*) 'dy1t', dy1t
+	      endif
       endif
-      NYTOT_0=NY+this%NY2  ! excluding border points
-      THIS%NYTOT=NYTOT_0+2*NYL  ! all Poisson Y mesh point
+      if (ybot<=M_ZERO) then
+	      ybot=M_ZERO
+	      this%nybot=0
+	      dy1b=M_ZERO
+      else
+	      dy1b=this%dy
+	      this%nybot = ybot/dy1b
+	      if (mod(ybot,this%dy)/=M_ZERO) then
+		      this%nybot=this%nybot+1
+		      dy1b=ybot/this%nybot
+	      endif
+      endif
+      this%ny2=this%nybot+nytop
+      nytot_0=ny+THIS%ny2  ! excluding border points
+      this%nytot=nytot_0+2*nyl  ! all Poisson Y mesh point
       allocate(yg(this%nytot))
       allocate(dyg(this%nytot))
       DO I=1,NYL  !  border points
         DYG(I)=DYL(I)
       end do
-      DO I=NYL+NYTOT_0+1,THIS%NYTOT
+      do i=nyl+nytot_0+1,this%nytot
         DYG(I)=DYL(THIS%NYTOT-I+1)
       end do
       NYTOP=INT(this%NY2*YTOP/(YTOP+YBOT))
@@ -641,17 +790,17 @@ contains
       end do
 
       YWIDTH_BIG=SUM(DYG)
-      YG(1)=-CNST(0.5)*YWIDTH_BIG+CNST(0.5)*DYG(1)
+      YG(1)=-M_HALF*YWIDTH_BIG+M_HALF*DYG(1)
       DO I=2,THIS%NYTOT-1
-        YG(I)=YG(I-1)+CNST(0.5)*(DYG(I-1)+DYG(I))
+        YG(I)=YG(I-1)+M_HALF*(DYG(I-1)+DYG(I))
       end do
-      YG(THIS%NYTOT)=CNST(0.5)*YWIDTH_BIG-CNST(0.5)*DYG(THIS%NYTOT)
+      YG(THIS%NYTOT)=M_HALF*YWIDTH_BIG-M_HALF*DYG(THIS%NYTOT)
 
       write(70,*)"ywidth", ywidth ! Differences, experimental
       write(70,*)"ybot ytop", ybot,ytop ! Differences, experimental
       write(70,*)"dy1b, dy1t, dy_oct",dy1b,dy1t, dy_oct  ! Differences, experimental
       write(70,*)"nytot, nybot, nytop ny2",this%nytot,this%nybot, nytop, this%ny2
-      do i=1,this%nxtot
+      do i=1,this%nytot
       write(70,*) "i, yg, dy",i, yg(i), dyg(i)
       enddo
 
@@ -696,43 +845,59 @@ contains
     ! Input: XL, YL, ZL -> Size of the octopus box
 
     FLOAT        :: bohrnm, angsnm, err
-    integer      :: j1, k1, m, i, j, k, i1,idum, archt
+    integer      :: j1, k1, m, i, j, k, i1,idum, archt, kk
     FLOAT :: VHMIN, VHMAX
     FLOAT :: pconst
+    FLOAT :: field
+    FLOAT :: m_half_zwidth
 
     integer, allocatable :: iwork(:)
-    FLOAT,   allocatable :: rhotest(:,:,:), rwork(:), q2(:)!, x2(:)
+    FLOAT,   allocatable :: rhotest(:,:,:), rwork(:), q2(:)!, q2_lap(:)!, x2(:)
 
     PCONST=CNST(4.0)*M_PI ! need 4 pi for Hartrees I think (??)
     BOHRNM=BOHR/CNST(10.0)
     ANGSNM=CNST(10.0)/BOHR
 
     SAFE_ALLOCATE(q2(1:THIS%NTOT))
-    SAFE_ALLOCATE(rhotest(1:this%nxtot, 1:this%nytot, 1:this%nztot))
+!    SAFE_ALLOCATE(rhotest(1:this%nxtot, 1:this%nytot, 1:this%nztot))
 
 
-    if (rho(nx/2,ny/2,nz/2)<0.and.test1==1) then
-	test1=0
+    if (rho(nx/2,ny/2,nz/2)<0.and.nuc_or_elec==1) then
+	!When the electron calculation ends and starts calling the 
+	!nuclear energy term.
+	nuc_or_elec=0
+	calc_egate=0
+        add_bias=0
 	this%tol=0.000001
         SAFE_DEALLOCATE_A(X2)
     endif
 
-
-    if (rho(nx/2,ny/2,nz/2)<0.and.test1==0) then
-      test1=0
+    if (rho(nx/2,ny/2,nz/2)<M_ZERO.and.nuc_or_elec==0) then
+	    !Nuclear potential calculation
+      nuc_or_elec=0
 	this%tol=0.000001
       idum = count_atoms
+      add_bias=0
+      !To ensure that it does not add the laplacian solver to v0
+      if (calc_gate_energy==1) then
+	      add_bias=1
+      endif
       SAFE_ALLOCATE(X2(1:THIS%NTOT))
       do i = 1, this%ntot
         call quickrnd(idum,x2(i))
         if (x2(i) > M_ZERO) then
             x2(i) = - x2(i)
         endif
+      idum = count_atoms
       enddo
 
-    else if (rho(nx/2,ny/2,nz/2)>0.and.test1==0) then
-      test1=1
-	this%tol=0.01
+    else if (rho(nx/2,ny/2,nz/2)>0.and.nuc_or_elec==0) then
+	    !Electronic potential calculation
+      nuc_or_elec=1
+      calc_egate=1
+      write(200,*) "Electronic"
+      add_bias=1
+      this%tol=0.01
       SAFE_ALLOCATE(x2(1:this%ntot))
       x2(1:this%ntot) = M_ZERO
       idum = count_atoms + 1
@@ -745,13 +910,13 @@ contains
      enddo
     endif
 
-    do i=1,this%nxtot
-     do j=1, this%nytot
-      do k=1, this%nztot
-        rhotest(i,j,k) = M_ZERO
-      enddo
-     enddo
-    enddo
+!    do i=1,this%nxtot
+!     do j=1, this%nytot
+!      do k=1, this%nztot
+!        rhotest(i,j,k) = M_ZERO
+!      enddo
+!     enddo
+!    enddo
 
     do i = 1, this%ntot
       q2(i) = this%qs(i) ! recall stored BC info
@@ -766,9 +931,9 @@ contains
           I1=I-(NXL+THIS%NXBOT)
           J1=J-(NYL+THIS%NYBOT)
           K1=K-(THIS%NZBOT)
-          IF(I1.GT.0.AND.J1.GT.0.AND.K1.GT.0)THEN ! this is redundant
-            Q2(M)=Q2(M)+DYG(J)*DXG(I)*RHO(I1,J1,K1)
-            rhotest(i,j,k)=rho(i1,j1,k1)
+          if(i1.gt.0.and.j1.gt.0.and.k1.gt.0)then ! this is redundant
+            q2(m)=q2(m)+dyg(j)*dxg(i)*rho(i1,j1,k1)
+!            rhotest(i,j,k)=rho(i1,j1,k1)
           end if
         end if
       ELSE
@@ -787,20 +952,61 @@ contains
       IWORK,LENIW)
     if (ierr /= 0) then
 	    write(*,*) "DSLUCS error number:", ierr, err
-	    STOP
+	    stop
     endif
     leniw = iwork(9)
     lenw  = iwork(10) ! new work array lengths
 
+
     deallocate(rwork)
     deallocate(iwork)
 
-    do m = 1, this%ntot ! store x2(m) i,j,k wise
-      i = this%iy(m)
-      j = this%jy(m)
-      k = this%ky(m)
-      this%vh_big(i, j, k) = x2(m)
-    end do
+    if ((add_bias==1).or.(add_bias==2)) then
+	    do m=1,this%ntot
+	    i=this%iy(m) 
+	    j=this%jy(m)
+ 	    k=this%ky(m)
+	    x2(m)=x2(m)+this%v_lap(m)
+	 enddo
+ endif
+
+    !Only calculate once.
+    !Test 1: Just use the voltage bias
+    if (egate_just_field==1) then
+    if (rho(nx/2,ny/2,nz/2)>0.and.calc_egate==1) then
+	    !field=(this%vt(2)-this%vt(1))/(this%zwidth)!zg(this%nztot)-zg(1))
+	    do m = 1, this%ntot ! store x2(m) i,j,k wise
+	      i = this%iy(m)
+	      j = this%jy(m)
+	      k = this%ky(m)
+              this%vh_big(i, j, k) = this%v_lap(m)
+	      enddo
+    endif 
+    else
+      if (calc_egate==1) then
+	      if (rho(nx/2,ny/2,nz/2)<0.and.nuc_egate==1) then
+		      do m = 1, this%ntot ! store x2(m) i,j,k wise
+		      i = this%iy(m)
+		      j = this%jy(m)
+		      k = this%ky(m)
+		      this%nucp(i,j,k) = this%nucp(i,j,k)+x2(m)
+		      enddo
+		if (idum==this%noatoms.and.nuc_egate==1) then
+		    nuc_egate=0
+		    endif
+               else if (rho(nx/2,ny/2,nz/2)>0) then
+		      !The electronic potential should already have the field in.
+		      do m = 1, this%ntot ! store x2(m) i,j,k wise
+		      i = this%iy(m)
+		      j = this%jy(m)
+		      k = this%ky(m)
+                      this%vh_big(i, j, k) = x2(m) + this%nucp(i, j, k)
+		      enddo
+               endif
+        endif
+    endif
+
+
 
     do m = 1, this%ntot
       I=THIS%IY(M); J=THIS%JY(M); K=THIS%KY(M)
@@ -816,17 +1022,20 @@ contains
       end if
     end do
 
+
+    if (rho(nx/2,ny/2,nz/2)>0.and.calc_egate==1) then
+    !if (rho(nx/2,ny/2,nz/2)>0) then
+    !if (calc_egate==1) then
     call egate(this)
+    endif
     vhmin = minval(vh)
     vhmax = maxval(vh)
 
     deallocate(Q2)
-    deallocate(rhotest)
-    if (rho(nx/2,ny/2,nz/2)<0.and.test1==0) then
+!    deallocate(rhotest)
+    if (rho(nx/2,ny/2,nz/2)<0.and.nuc_or_elec==0) then
           SAFE_DEALLOCATE_A(x2)
     endif
-
-    count_old = count_atoms
 
     !deallocate(THIS%VH_BIG);
 
@@ -838,17 +1047,19 @@ contains
     type(poisson_sete_t), intent(inout) :: this
 
     SAFE_DEALLOCATE_P(this%ipio)
-    SAFE_DEALLOCATE_P(this%vbound)
     SAFE_DEALLOCATE_P(this%qs)
+    SAFE_DEALLOCATE_P(this%vbound_lap)
     SAFE_DEALLOCATE_P(this%iad)
     SAFE_DEALLOCATE_P(this%JAD)
 
     deallocate(this%adiag)
-    if (test1==1) then
-            test1=0
+    if (nuc_or_elec==1) then
+            nuc_or_elec=0
             SAFE_DEALLOCATE_A(X2)
+	    write(77,*) "deAllocating x2 poisson_sete_end"
     endif
-    deallocate(DXL);deallocate(DYL)
+    deallocate(DXL)
+    deallocate(DYL)
     deallocate(this%dielectric)
     deallocate(zg)
     deallocate(xg)
@@ -860,7 +1071,16 @@ contains
     deallocate(this%jy)
     deallocate(this%ky)
     deallocate(this%vh_big)
+    deallocate(this%v_lap)
     deallocate(this%aw)
+    if (this%po==1) then
+	    deallocate(this%top)
+	    deallocate(this%bottom)
+	    deallocate(this%vt)
+    endif
+    if (egate_just_field==0) then
+	    deallocate(this%nucp)
+    endif
   end subroutine poisson_sete_end
 
   !--------------------------------------------
@@ -870,6 +1090,8 @@ contains
 
     integer :: i, j, k
     FLOAT, allocatable :: sig(:, :, :, :) 
+!    FLOAT, allocatable :: ttop(:, :, :)
+!    FLOAT, allocatable :: tbot(:, :, :)
     FLOAT :: cs1, cs2, cs3,temporary
     FLOAT :: charge_top, charge_surf, charge_bot
 
@@ -878,54 +1100,96 @@ contains
     !  compute capacitances of six surfaces
     
     SAFE_ALLOCATE(sig(1:this%nxtot, 1:this%nytot, 1:this%nztot, 1:6))
+!    SAFE_ALLOCATE(ttop(1:this%nxtot, 1:this%nytot))
+!    SAFE_ALLOCATE(tbot(1:this%nxtot, 1:this%nytot))
 
+
+    !this%vbound(:,:,0)=this%vt(1)
+    !this%vbound(:,:,this%nztot+1)=this%vt(2)
     call cap(this, sig)
 
-    THIS%ESURF = M_ZERO
-    CHARGE_SURF = M_ZERO
-    CHARGE_TOP = M_ZERO
-
-    CHARGE_BOT = M_ZERO
-    CS1 = M_ZERO
-    CS2 = M_ZERO
-    CS3 = M_ZERO
+    this%esurf = M_ZERO
+    charge_surf = M_ZERO
+    charge_top = M_ZERO
+    charge_bot = M_ZERO
+    cs1 = M_ZERO
+    cs2 = M_ZERO
+    cs3 = M_ZERO
     !write(*,*) "Begin cycle ", THIS%NXTOT, THIS%NYTOT, THIS%NZTOT
-    DO I=1,THIS%NXTOT
-      DO J=1,THIS%NYTOT
-        DO K=1,THIS%NZTOT ! N.B. [SIG]=charge (not charge/Area)
-          THIS%ESURF=THIS%ESURF+this%VBOUND(I-1,J,K)*SIG(I,J,K,1)
-          THIS%ESURF=THIS%ESURF+this%VBOUND(I+1,J,K)*SIG(I,J,K,2)
-          THIS%ESURF=THIS%ESURF+this%VBOUND(I,J-1,K)*SIG(I,J,K,3)
-          THIS%ESURF=THIS%ESURF+this%VBOUND(I,J+1,K)*SIG(I,J,K,4)
-          THIS%ESURF=THIS%ESURF+this%VBOUND(I,J,K-1)*SIG(I,J,K,5)
-          THIS%ESURF=THIS%ESURF+this%VBOUND(I,J,K+1)*SIG(I,J,K,6)
-          CS1=CS1+SIG(I,J,K,1)+SIG(I,J,K,2)
-          CS2=CS2+SIG(I,J,K,3)+SIG(I,J,K,4)
-          CS3=CS3+SIG(I,J,K,5)+SIG(I,J,K,6)
-        end do
-        CHARGE_TOP=CHARGE_TOP+SIG(I,J,1,5)+SIG(I,J,1,6)
-        CHARGE_BOT=CHARGE_BOT+SIG(I,J,THIS%NZTOT,5)+SIG(I,J,THIS%NZTOT,6)
+    do i=1,this%nxtot
+      do j=1,this%nytot
+        do k=1,this%nztot ! n.b. [sig]=CHARGE (NOT CHARGE/aREA)
+          this%esurf=this%esurf+this%vbound_lap(i-1,j,k)*sig(i,j,k,1)
+          this%esurf=this%esurf+this%vbound_lap(i+1,j,k)*sig(i,j,k,2)
+          this%esurf=this%esurf+this%vbound_lap(i,j-1,k)*sig(i,j,k,3)
+          this%esurf=this%esurf+this%vbound_lap(i,j+1,k)*sig(i,j,k,4)
+          this%esurf=this%esurf+this%vbound_lap(i,j,k-1)*sig(i,j,k,5)
+          this%esurf=this%esurf+this%vbound_lap(i,j,k+1)*sig(i,j,k,6)
+          cs1=cs1+sig(i,j,k,1)+sig(i,j,k,2)
+          cs2=cs2+sig(i,j,k,3)+sig(i,j,k,4)
+          cs3=cs3+sig(i,j,k,5)+sig(i,j,k,6)
+        END DO
+        charge_top=charge_top+sig(i,j,1,5)+sig(i,j,1,6)
+        charge_bot=charge_bot+sig(i,j,this%nztot,5)+sig(i,j,this%nztot,6)
       end do
     end do
+    !this%vbound(:,:,0)=0.0!this%vt(1)
+    !this%vbound(:,:,this%nztot+1)=0.0!this%vt(2)
 
-    SAFE_DEALLOCATE_A(sig)
     
-    this%esurf = CNST(0.5)*this%esurf
+    this%esurf = -M_HALF*this%esurf
     charge_surf = cs1 + cs2 + cs3
 
-    !    WRITE(520,*)THIS%ESURF*hartree*CNST(0.5)
-    !    write(521,*)' CS1 ',CS1,' CS2 ',CS2,' CS3 ',CS3
+    !    WRITE(520,*)THIS%ESURF*hartree*M_HALF
+        write(521,*)' CS1 ',CS1,' CS2 ',CS2,' CS3 ',CS3
+	write(521,*) this%counter, 'Charge top', charge_top, sig(this%nxtot/2,this%nytot/2,1,5)
+	write(521,*) this%counter, 'Charge bot', charge_bot, sig(this%nxtot/2,this%nytot/2,this%nztot,6)
 
 
-    if (this%counter<this%noatoms) then
-      this%counter=this%counter+1
-      this%tot_nuc_charge_energy=this%tot_nuc_charge_energy+THIS%ESURF
-!      write(523,*)this%tot_nuc_charge_energy,THIS%ESURF
-    else if (this%counter == this%noatoms) then
-      temporary=THIS%ESURF
-      THIS%ESURF=THIS%ESURF+this%tot_nuc_charge_energy 
+!    if (this%counter<this%noatoms) then
+!      this%counter=this%counter+1
+!      this%tot_nuc_charge_energy=this%tot_nuc_charge_energy+this%esurf
+!      write(523,*) "nuc",this%tot_nuc_charge_energy*CNST(2.0*13.60569193), this%esurf
+!      if (this%po==1) then
+!!       open(unit=550+this%counter,action="write",status='replace')
+!!       write(550+this%counter,*) "#Gate 1, x, y, Total Charge"
+!      do i=1,this%nxtot
+!        do j=1,this%nytot
+!	 this%top(i,j)=this%top(i,j)+sig(i,j,1,5)+sig(i,j,1,6)
+!	 this%bottom(i,j)=this%bottom(i,j)+sig(i,j,this%nztot,5)+sig(i,j,this%nztot,6)
+!           write(550+this%counter,50) xg(i), yg(j), sig(i,j,1,5)
+!	enddo
+!           write(550+this%counter,30)
+!      enddo
+!      close(550+this%counter)
+!      endif
+!    else if ((this%counter == this%noatoms).and.(sig(this%nxtot/2,this%nytot/2,1,5)<0)) then
+!      temporary=this%esurf
+!      this%esurf=this%esurf+this%tot_nuc_charge_energy 
+      write(523,*)this%tot_nuc_charge_energy*CNST(2.0*13.60569193), this%esurf
+      if (this%po==1) then
+       open(unit=524, file="V1.charge",action="write",status='replace')
+       open(unit=525, file="V2.charge",action="write",status='replace')
+       write(524,*) "#Gate 1, x, y, Total Charge, Electron Charge, Nuclear Charge", this%counter
+       write(525,*) "#Gate 1, x, y, Total Charge, Electron Charge, Nuclear Charge", this%counter
+       do i=1,this%nxtot
+         do j=1,this%nytot
+           write(524,40) xg(i), yg(j), this%top(i,j)+sig(i,j,1,5), sig(i,j,1,5), this%top(i,j)
+           write(525,40) xg(i), yg(j), this%bottom(i,j)+sig(i,j,this%nztot,6),sig(i,j,this%nztot,6),this%bottom(i,j)
+         enddo
+           write(524,30)
+           write(525,30)
+       enddo
+       close(524)
+       close(525)
+      endif
+      30 format()
+      40 format(5E24.16)
+      50 format(3E24.16)
+
 !      WRITE(522,*)this%counter,this%tot_nuc_charge_energy*hartree,temporary*hartree,THIS%ESURF*hartree
-    endif
+!    endif
+    SAFE_DEALLOCATE_A(sig)
 
   contains
 
@@ -967,32 +1231,36 @@ contains
           DO K=1,THIS%NZTOT
             IF(this%ipio(I,J,K) == 0)THEN ! I,J,K is in Poisson grid
               IF(this%ipio(I-1,J,K) == 1)THEN
-                BORDER=2*(THIS%VH_BIG(I,J,K)-this%VBOUND(I-1,J,K))/DXG(I)
+                BORDER=2*(THIS%VH_BIG(I,J,K)-this%vbound_lap(I-1,J,K))/DXG(I)
                 SIG(I,J,K,1)=SIG(I,J,K,1)-BORDER*DYG(J)*DZ(K)* &
                   this%dielectric(I,J,K)
               end if
               IF(this%ipio(I+1,J,K) == 1)THEN
-                BORDER=2*(THIS%VH_BIG(I,J,K)-this%VBOUND(I+1,J,K))/DXG(I)
+                BORDER=2*(THIS%VH_BIG(I,J,K)-this%vbound_lap(I+1,J,K))/DXG(I)
                 SIG(I,J,K,2)=SIG(I,J,K,2)-BORDER*DYG(J)*DZ(K)* &
                   this%dielectric(I,J,K)
               end if
               IF(this%ipio(I,J-1,K) == 1)THEN
-                BORDER=2*(THIS%VH_BIG(I,J,K)-this%VBOUND(I,J-1,K))/DYG(J)
+                BORDER=2*(THIS%VH_BIG(I,J,K)-this%vbound_lap(I,J-1,K))/DYG(J)
                 SIG(I,J,K,3)=SIG(I,J,K,3)-BORDER*DXG(I)*DZ(K)* &
                   this%dielectric(I,J,K)
               end if
               IF(this%ipio(I,J+1,K) == 1)THEN
-                BORDER=2*(THIS%VH_BIG(I,J,K)-this%VBOUND(I,J+1,K))/DYG(J)
+                BORDER=2*(THIS%VH_BIG(I,J,K)-this%vbound_lap(I,J+1,K))/DYG(J)
                 SIG(I,J,K,4)=SIG(I,J,K,4)-BORDER*DXG(I)*DZ(K)* &
                   this%dielectric(I,J,K)
               end if
               IF(this%ipio(I,J,K-1) == 1)THEN
-                BORDER=2*(THIS%VH_BIG(I,J,K)-this%VBOUND(I,J,K-1))/DZ(K)
+                BORDER=2*(THIS%VH_BIG(I,J,K)-this%vbound_lap(I,J,K-1))/DZ(K)
+		if (i==47.and.j==47) then
+		endif
                 SIG(I,J,K,5)=SIG(I,J,K,5)-BORDER*DXG(I)*DYG(J)* &
                   this%dielectric(I,J,K)
               end if
               IF(this%ipio(I,J,K+1) == 1)THEN
-                BORDER=2*(THIS%VH_BIG(I,J,K)-this%VBOUND(I,J,K+1))/DZ(K)
+                BORDER=2*(THIS%VH_BIG(I,J,K)-this%vbound_lap(I,J,K+1))/DZ(K)
+		if (i==47.and.j==47) then
+		endif
                 SIG(I,J,K,6)=SIG(I,J,K,6)-BORDER*DXG(I)*DYG(J)* &
                   this%dielectric(I,J,K)
               end if
@@ -1009,7 +1277,11 @@ contains
   FLOAT function poisson_sete_energy(this) result(energy)
     type(poisson_sete_t), intent(in)    :: this
 
-    energy = this%esurf
+    if (this%free==1) then
+     energy = this%esurf
+    else
+     energy = 0.0
+    endif
   end function poisson_sete_energy
 
 end module poisson_sete_m

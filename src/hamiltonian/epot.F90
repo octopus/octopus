@@ -943,12 +943,13 @@ contains
     call push_sub('epot.ion_interaction_sete')
 
     write(68,*) "ep%eii values top", ep%eii
-    write(*,'(a)') "WIP Entering the interaction zone"
 
     do jatom = geo%natoms,2, -1
       SAFE_ALLOCATE(v2(1:gr%mesh%np))
       SAFE_ALLOCATE(rho2(1:gr%mesh%np))
       v2(1:gr%mesh%np)= M_ZERO
+      count_atoms=jatom
+      calc_gate_energy=1
       call epot_local_potential(ep, gr%der, gr%dgrid, psolver, geo, jatom, v2, time1)
       write(68,*) "time1,", time1
 
@@ -981,6 +982,7 @@ contains
         ep%fii(1:sb%dim, iatom) = M_ZERO         
       enddo
       write(68,*) "SETE Force:", iatom,ep%fii(1:sb%dim,iatom)
+      calc_gate_energy=0
     enddo 
 
     call pop_sub('epot.ion_interaction_sete')
