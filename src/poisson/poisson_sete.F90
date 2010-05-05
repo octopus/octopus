@@ -86,7 +86,8 @@ module poisson_sete_m
     FLOAT,   pointer :: v_lap(:)
   end type poisson_sete_t
 
-  integer :: lenw, leniw, idev, isym = 0, itol = 2, itmax = 2001, itermin = 5, iter, ierr, iunit = 0, nxl, nyl, test=0, nuc_or_elec=0, add_bias=0, calc_egate=1, egate_just_field=0, nuc_egate=1
+  integer :: lenw, leniw, idev, isym = 0, itol = 2, itmax = 2001, itermin = 5, iter, ierr, iunit = 0 
+  integer :: nxl, nyl, test=0, nuc_or_elec=0, add_bias=0, calc_egate=1, egate_just_field=0, nuc_egate=1
   FLOAT, allocatable :: xg(:), yg(:), zg(:), dxg(:), dyg(:), dz(:), dxl(:), dyl(:),x2(:), x2_lap(:)
 
   ! these variables must be local for the moment
@@ -1090,8 +1091,6 @@ contains
 
     integer :: i, j, k
     FLOAT, allocatable :: sig(:, :, :, :) 
-!    FLOAT, allocatable :: ttop(:, :, :)
-!    FLOAT, allocatable :: tbot(:, :, :)
     FLOAT :: cs1, cs2, cs3,temporary
     FLOAT :: charge_top, charge_surf, charge_bot
 
@@ -1100,8 +1099,6 @@ contains
     !  compute capacitances of six surfaces
     
     SAFE_ALLOCATE(sig(1:this%nxtot, 1:this%nytot, 1:this%nztot, 1:6))
-!    SAFE_ALLOCATE(ttop(1:this%nxtot, 1:this%nytot))
-!    SAFE_ALLOCATE(tbot(1:this%nxtot, 1:this%nytot))
 
 
     !this%vbound(:,:,0)=this%vt(1)
