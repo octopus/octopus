@@ -124,6 +124,8 @@ module batch_m
     module procedure zbatch_axpy
   end interface
 
+  type(profile_t), save :: axpy_prof
+
 contains
 
   !--------------------------------------------------------------
@@ -370,9 +372,11 @@ contains
     integer :: ist
     type(opencl_mem_t) :: tmp
     type(c_ptr) :: kernel
+    type(profile_t), save :: prof
 
     call push_sub('batch.batch_write_to_opencl_buffer')
-
+    call profiling_in(prof, "BATCH_TO_BUFFER")
+    
     ASSERT(batch_is_ok(this))
 
     call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), this%ubound(2))
@@ -396,7 +400,8 @@ contains
     end do
 
     call opencl_release_buffer(tmp)
-    
+
+    call profiling_out(prof)
     call pop_sub('batch.batch_write_to_opencl_buffer')
   end subroutine batch_write_to_opencl_buffer
 
@@ -408,8 +413,10 @@ contains
     integer :: ist
     type(opencl_mem_t) :: tmp
     type(c_ptr) :: kernel
+    type(profile_t), save :: prof
 
     call push_sub('batch.batch_read_from_opencl_buffer')
+    call profiling_in(prof, "BATCH_FROM_BUFFER")
 
     ASSERT(batch_is_ok(this))
 
@@ -438,6 +445,7 @@ contains
 
     call opencl_release_buffer(tmp)
 
+    call profiling_out(prof)
     call pop_sub('batch.batch_read_from_opencl_buffer')
   end subroutine batch_read_from_opencl_buffer
 

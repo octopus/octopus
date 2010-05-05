@@ -21,69 +21,52 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-__kernel void doperate(const int nst,
-		       const int nn,
+__kernel void doperate(const int nn,
 		       const int nri,
 		       __global const int * ri,
 		       __global const int * imin,
 		       __global const int * imax,
 		       __constant const double * weights,
 		       __global const double * fi, const int ldfi,
-		       __global double * fo, const int ldfo,
-		       __local int * indexl){
+		       __global double * fo, const int ldfo){
 
-  int k = get_global_id(0);
-  int nk = get_global_size(0);
+  int ist = get_global_id(0);
   int l = get_global_id(1);
-
-  __local int * index = indexl + nn*get_local_id(1);
-
-  for(int j = k; j < nn; j += nk) index[j] = ri[nn*l + j];
-  barrier(CLK_LOCAL_MEM_FENCE);
-  
+  __global int * index = ri + nn*l;
+   
   if(l >= nri) return;
-  for(int i = imin[l] + k; i < imax[l]; i += nk){
-    for(int kst = 0; kst < nst; kst++){
-      double a0 = 0.0;
-      for(int j = 0; j < nn; j++){
-	a0 += weights[j]*fi[ldfi*(index[j] + i) + kst];
-      }
-      fo[ldfo*i + kst] = a0;
+
+  for(int i = imin[l]; i < imax[l]; i++){
+    double a0 = 0.0;
+    for(int j = 0; j < nn; j++){
+      a0 += weights[j]*fi[ldfi*(index[j] + i) + ist];
     }
+    fo[ldfo*i + ist] = a0;
   }
   
 }
 
-__kernel void zoperate(const int nst,
-		       const int nn,
+__kernel void zoperate(const int nn,
 		       const int nri,
 		       __global const int * ri,
 		       __global const int * imin,
 		       __global const int * imax,
 		       __constant const double * weights,
 		       __global const double2 * fi, const int ldfi,
-		       __global double2 * fo, const int ldfo,
-		       __local int * indexl){
+		       __global double2 * fo, const int ldfo){
 
-  int k = get_global_id(0);
-  int nk = get_global_size(0);
+  int ist = get_global_id(0);
   int l = get_global_id(1);
-
-  __local int * index = indexl + nn*get_local_id(1);
-
-  for(int j = k; j < nn; j += nk) index[j] = ri[nn*l + j];
-  barrier(CLK_LOCAL_MEM_FENCE);
+  __global int * index = ri + nn*l;
 
   if(l >= nri) return;
 
-  for(int i = imin[l] + k; i < imax[l]; i += nk){
-    for(int kst = 0; kst < nst; kst++){
-      double2 a0 = 0.0;
-      for(int j = 0; j < nn; j++){
-	a0 += weights[j]*fi[ldfi*(index[j] + i) + kst];
-      }
-      fo[ldfo*i + kst] = a0;
+  for(int i = imin[l]; i < imax[l]; i++){
+    double2 a0 = 0.0;
+    for(int j = 0; j < nn; j++){
+      a0 += weights[j]*fi[ldfi*(index[j] + i) + ist];
     }
+    fo[ldfo*i + ist] = a0;
   }
   
 }

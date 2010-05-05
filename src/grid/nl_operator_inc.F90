@@ -371,25 +371,22 @@ contains
     call opencl_create_buffer(buff_weights, CL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size)
     call opencl_write_buffer(buff_weights, op%stencil%size, op%w_re(:, 1))
 
-    call opencl_set_kernel_arg(X(operate),  0, fi%nst_linear)
-    call opencl_set_kernel_arg(X(operate),  1, op%stencil%size)
-    call opencl_set_kernel_arg(X(operate),  2, nri)
-    call opencl_set_kernel_arg(X(operate),  3, op%buff_ri)
-    call opencl_set_kernel_arg(X(operate),  4, op%buff_imin)
-    call opencl_set_kernel_arg(X(operate),  5, op%buff_imax)
-    call opencl_set_kernel_arg(X(operate),  6, buff_weights)
-    call opencl_set_kernel_arg(X(operate),  7, fi%buffer)
-    call opencl_set_kernel_arg(X(operate),  8, batch_buffer_ubound(fi))
-    call opencl_set_kernel_arg(X(operate),  9, fo%buffer)
-    call opencl_set_kernel_arg(X(operate), 10, batch_buffer_ubound(fo))
+    call opencl_set_kernel_arg(X(operate), 0, op%stencil%size)
+    call opencl_set_kernel_arg(X(operate), 1, nri)
+    call opencl_set_kernel_arg(X(operate), 2, op%buff_ri)
+    call opencl_set_kernel_arg(X(operate), 3, op%buff_imin)
+    call opencl_set_kernel_arg(X(operate), 4, op%buff_imax)
+    call opencl_set_kernel_arg(X(operate), 5, buff_weights)
+    call opencl_set_kernel_arg(X(operate), 6, fi%buffer)
+    call opencl_set_kernel_arg(X(operate), 7, batch_buffer_ubound(fi))
+    call opencl_set_kernel_arg(X(operate), 8, fo%buffer)
+    call opencl_set_kernel_arg(X(operate), 9, batch_buffer_ubound(fo))
 
     bsize = 128
     isize = 8
     pnri = pad(nri, bsize)
 
-    call opencl_set_kernel_arg(X(operate), 11, TYPE_INTEGER, op%stencil%size*bsize/isize)
-
-    call opencl_kernel_run(X(operate), (/isize, pnri/), (/isize, bsize/isize/))
+    call opencl_kernel_run(X(operate), (/fi%ubound(1), pnri/), (/fi%ubound(1), bsize/(fi%ubound(1))/))
 
     call batch_buffer_was_modified(fo)
 

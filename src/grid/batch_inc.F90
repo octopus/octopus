@@ -155,6 +155,7 @@ subroutine X(batch_axpy)(np, aa, xx, yy)
   type(c_ptr) :: axpy_kernel
 
   call push_sub('batch_inc.Xbatch_axpy')
+  call profiling_in(axpy_prof, "BATCH_AXPY")
 
   ASSERT(batch_type(yy) == batch_type(xx))
   ASSERT(xx%nst_linear == yy%nst_linear)
@@ -193,7 +194,7 @@ subroutine X(batch_axpy)(np, aa, xx, yy)
 #endif
 
     localsize = opencl_max_workgroup_size()
-    call opencl_kernel_run(axpy_kernel, (/pad(np, localsize), yy%nst_linear/), (/localsize, 1/))
+    call opencl_kernel_run(axpy_kernel, (/yy%ubound(1), pad(np, localsize)/), (/yy%ubound(1), localsize/yy%ubound(1)/))
 
     call batch_buffer_was_modified(yy)
     
@@ -216,6 +217,7 @@ subroutine X(batch_axpy)(np, aa, xx, yy)
   end if
 #endif
 
+  call profiling_out(axpy_prof)
   call pop_sub('batch_inc.Xbatch_axpy')
 end subroutine X(batch_axpy)
 
