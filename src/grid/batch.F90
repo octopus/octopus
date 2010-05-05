@@ -61,10 +61,7 @@ module batch_m
   public ::                         &
     batch_buffer_ubound,            &
     batch_move_to_buffer,           &
-    batch_move_from_buffer,         &
-    batch_create_opencl_buffer,     &
-    batch_write_to_opencl_buffer,   &
-    batch_read_from_opencl_buffer
+    batch_move_from_buffer
 #endif
 
 
@@ -329,13 +326,14 @@ contains
     if(.not. this%in_buffer) then
       this%ubound(1) = this%nst_linear
       this%ubound(2) = opencl_padded_size(batch_max_size(this))
-      call batch_create_opencl_buffer(this, batch_max_size(this), CL_MEM_READ_WRITE, this%buffer)
+      
+      call opencl_create_buffer(this%buffer, CL_MEM_READ_WRITE, batch_type(this), product(this%ubound))
       this%dirty = .true.
     end if
 
     if(this%dirty .and. copy_) then
       this%dirty = .false.
-      call batch_write_to_opencl_buffer(this, batch_max_size(this), this%buffer)
+      call batch_write_to_opencl_buffer(this)
     end if
 
     this%in_buffer = .true.
@@ -355,7 +353,7 @@ contains
       if(present(copy)) copy_ = copy
       
       if(copy_ .and. this%dirty) then
-        call batch_read_from_opencl_buffer(this, batch_max_size(this), this%buffer)
+        call batch_read_from_opencl_buffer(this)
       end if
       
       this%in_buffer = .false.
@@ -366,55 +364,26 @@ contains
 
   ! ----------------------------------------------------
 
-  subroutine batch_create_opencl_buffer(this, np, flags, buffer)
+  subroutine batch_write_to_opencl_buffer(this)
     type(batch_t),      intent(in)    :: this
-    integer,            intent(in)    :: np
-    integer,            intent(in)    :: flags
-    type(opencl_mem_t), intent(out)   :: buffer
 
-    integer(SIZEOF_SIZE_T) :: size, pnp
-
-    call push_sub('batch.batch_create_opencl_buffer')
-
-    ASSERT(np > 0)
-
-    pnp = opencl_padded_size(np)
-    size = pnp*this%nst_linear
-
-    ASSERT(batch_is_ok(this))
-
-    call opencl_create_buffer(buffer, flags, batch_type(this), size)
-
-    call pop_sub('batch.batch_create_opencl_buffer')
-  end subroutine batch_create_opencl_buffer
-
-  ! ------------------------------------------------------------------
-
-  subroutine batch_write_to_opencl_buffer(this, np, buffer)
-    type(batch_t),      intent(in)    :: this
-    integer,            intent(in)    :: np
-    type(opencl_mem_t), intent(out)   :: buffer
-
-    integer :: pnp
     integer :: ist
     type(opencl_mem_t) :: tmp
     type(c_ptr) :: kernel
 
     call push_sub('batch.batch_write_to_opencl_buffer')
 
-    pnp = pad(np, opencl_max_workgroup_size())
-
     ASSERT(batch_is_ok(this))
 
-    call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), pnp)
+    call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), this%ubound(2))
 
     do ist = 1, this%nst_linear
       if(batch_type(this) == TYPE_FLOAT) then
         kernel = dpack
-        call opencl_write_buffer(tmp, np, this%states_linear(ist)%dpsi)
+        call opencl_write_buffer(tmp, ubound(this%states_linear(ist)%dpsi, dim = 1), this%states_linear(ist)%dpsi)
       else
         kernel = zpack
-        call opencl_write_buffer(tmp, np, this%states_linear(ist)%zpsi)
+        call opencl_write_buffer(tmp, ubound(this%states_linear(ist)%zpsi, dim = 1), this%states_linear(ist)%zpsi)
       end if
      
       call opencl_set_kernel_arg(kernel, 0, this%nst_linear)
@@ -422,7 +391,7 @@ contains
       call opencl_set_kernel_arg(kernel, 2, tmp)
       call opencl_set_kernel_arg(kernel, 3, this%buffer)
 
-      call opencl_kernel_run(kernel, (/pnp/), (/opencl_max_workgroup_size()/))
+      call opencl_kernel_run(kernel, (/this%ubound(2)/), (/opencl_max_workgroup_size()/))
       
     end do
 
@@ -433,12 +402,9 @@ contains
 
   ! ------------------------------------------------------------------
 
-  subroutine batch_read_from_opencl_buffer(this, np, buffer)
+  subroutine batch_read_from_opencl_buffer(this)
     type(batch_t),      intent(inout) :: this
-    integer,            intent(in)    :: np
-    type(opencl_mem_t), intent(out)   :: buffer
 
-    integer :: pnp
     integer :: ist
     type(opencl_mem_t) :: tmp
     type(c_ptr) :: kernel
@@ -447,8 +413,7 @@ contains
 
     ASSERT(batch_is_ok(this))
 
-    pnp = opencl_padded_size(np)
-    call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), pnp)
+    call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), this%ubound(2))
 
     if(batch_type(this) == TYPE_FLOAT) then
       kernel = dunpack
@@ -462,12 +427,12 @@ contains
       call opencl_set_kernel_arg(kernel, 2, this%buffer)
       call opencl_set_kernel_arg(kernel, 3, tmp)
 
-      call opencl_kernel_run(kernel, (/pnp/), (/opencl_max_workgroup_size()/))
+      call opencl_kernel_run(kernel, (/this%ubound(2)/), (/opencl_max_workgroup_size()/))
 
       if(batch_type(this) == TYPE_FLOAT) then
-        call opencl_read_buffer(tmp, np, this%states_linear(ist)%dpsi)
+        call opencl_read_buffer(tmp, ubound(this%states_linear(ist)%dpsi, dim = 1), this%states_linear(ist)%dpsi)
       else
-        call opencl_read_buffer(tmp, np, this%states_linear(ist)%zpsi)
+        call opencl_read_buffer(tmp, ubound(this%states_linear(ist)%zpsi, dim = 1), this%states_linear(ist)%zpsi)
       end if
     end do
 

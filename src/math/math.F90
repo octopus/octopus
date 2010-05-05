@@ -77,7 +77,8 @@ module math_m
     hypersphere_cut,            &
     hypersphere_cut_back,       &
     hypersphere_grad_matrix,    &
-    pad
+    pad,                        &
+    pad_pow2
 
   !------------------------------------------------------------------------------
   ! This is the common interface to a simple-minded polynomical interpolation
@@ -1082,6 +1083,31 @@ contains
     end if
   end function pad
 
+  ! ---------------------------------------------------------
+
+  integer pure function pad_pow2(size)
+    integer, intent(in) :: size
+
+    integer :: mm, mm2, res
+    
+    mm = size
+    pad_pow2 = 1
+    
+    ! first we divide by two all the times we can, so we catch exactly
+    ! the case when size is already a power of two
+    do
+      mm2 = mm/2
+      if(mm - 2*mm2 /= 0) exit
+      pad_pow2 = pad_pow2*2
+      mm = mm2
+    end do
+    
+    ! the rest is handled by log2
+    if(mm /= 1) then
+      pad_pow2 = pad_pow2*2**(ceiling(log(dble(mm))/log(2.0_8)))
+    end if
+
+  end function pad_pow2
 
 #include "undef.F90"
 #include "complex.F90"
