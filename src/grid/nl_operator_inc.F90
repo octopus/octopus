@@ -386,6 +386,9 @@ contains
     isize = 8
     pnri = pad(nri, bsize)
 
+    call opencl_set_kernel_arg(X(operate), 10, TYPE_INTEGER, op%stencil%size*bsize/(fi%ubound(1)))
+    call opencl_set_kernel_arg(X(operate), 11, TYPE_FLOAT, op%stencil%size)
+
     call opencl_kernel_run(X(operate), (/fi%ubound(1), pnri/), (/fi%ubound(1), bsize/(fi%ubound(1))/))
 
     call batch_buffer_was_modified(fo)
