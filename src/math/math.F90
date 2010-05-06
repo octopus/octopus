@@ -78,8 +78,9 @@ module math_m
     hypersphere_cut_back,       &
     hypersphere_grad_matrix,    &
     pad,                        &
-    pad_pow2
-
+    pad_pow2,                   &
+    log2
+  
   !------------------------------------------------------------------------------
   ! This is the common interface to a simple-minded polynomical interpolation
   ! procedure (simple use of the classical formula of Lagrange).
@@ -167,6 +168,10 @@ module math_m
 
   interface matrix_sort
     module procedure dmatrix_sort, zmatrix_sort
+  end interface
+
+  interface log2
+    module procedure dlog2, ilog2
   end interface
 
 contains
@@ -1088,7 +1093,7 @@ contains
   integer pure function pad_pow2(size)
     integer, intent(in) :: size
 
-    integer :: mm, mm2, res
+    integer :: mm, mm2
     
     mm = size
     pad_pow2 = 1
@@ -1108,6 +1113,22 @@ contains
     end if
 
   end function pad_pow2
+
+  ! -------------------------------------------------------
+
+  FLOAT pure function dlog2(xx)
+    FLOAT, intent(in) :: xx
+
+    dlog2 = log(xx)/log(CNST(2.0))
+  end function dlog2
+
+  ! -------------------------------------------------------
+
+  integer pure function ilog2(xx)
+    integer, intent(in) :: xx
+
+    ilog2 = nint(log2(real(xx, REAL_PRECISION)))
+  end function ilog2
 
 #include "undef.F90"
 #include "complex.F90"
