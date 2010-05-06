@@ -195,68 +195,93 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine invertks_2part(target_rho, nspin, vhxc, grid)
+  subroutine invertks_2part(target_rho, nspin, aux_hm, gr, st, eigensolver)
+    
+    type(grid_t),        intent(in)    :: gr
+    type(states_t),      intent(inout) :: st
+    type(hamiltonian_t), intent(inout) :: aux_hm
+    type(eigensolver_t), intent(inout) :: eigensolver
     integer, intent(in)      :: nspin
-    type(grid_t), intent(in) :: grid
-    FLOAT,   intent(in)      :: target_rho(1:grid%mesh%np, 1:nspin)
-    FLOAT,   intent(out)     :: vhxc(1:grid%mesh%np, 1:nspin)
+    FLOAT,   intent(in)      :: target_rho(1:gr%mesh%np, 1:nspin)
            
     integer :: ii, jj 
-    integer :: np, np_part, ndim
-    FLOAT   :: spacing(1:MAX_DIM)
-    FLOAT, allocatable :: sqrtrho(:,:), laplace(:,:)
+    integer :: np_part, ndim, np
+    FLOAT   :: spacing(1:MAX_DIM), stabilizer
+    FLOAT, allocatable :: sqrtrho(:,:), laplace(:,:), vks(:,:)
 
     call push_sub('xc_ks_inversion.invertks_2part')
     
-    ndim = grid%sb%dim
-    spacing = grid%mesh%spacing
-    np = grid%mesh%np
+    call parse_float(datasets_check('InvertKSStabilizer'), M_HALF, stabilizer)
     
-    SAFE_ALLOCATE(sqrtrho(1:grid%der%mesh%np_part, 1:nspin))
-    SAFE_ALLOCATE(laplace(1:grid%der%mesh%np, 1:nspin))
+    ndim = gr%sb%dim
+    spacing = gr%mesh%spacing
+    np = gr%mesh%np
+    
+    SAFE_ALLOCATE(sqrtrho(1:gr%der%mesh%np_part, 1:nspin))
+    SAFE_ALLOCATE(vks(1:np, 1:nspin))
+    SAFE_ALLOCATE(laplace(1:gr%der%mesh%np, 1:nspin))
     
     sqrtrho = M_ZERO
     
     do jj = 1, nspin
-      do ii = 1, grid%der%mesh%np
+      do ii = 1, gr%der%mesh%np
         sqrtrho(ii, jj) = sqrt(target_rho(ii, jj))
       enddo
     enddo   
     
     do jj = 1, nspin
-      call dderivatives_lapl(grid%der, sqrtrho(:,jj), laplace(:,jj))
+      call dderivatives_lapl(gr%der, sqrtrho(:,jj), laplace(:,jj))
     enddo
     
     do jj = 1, nspin
       do ii = 1, np
-        vhxc(ii, jj) = laplace(ii, jj)/(M_TWO*sqrtrho(ii, jj))
+        !if(target_rho(ii,jj)>1d-10) then
+          vks(ii, jj) = laplace(ii, jj)/(M_TWO*sqrtrho(ii, jj))
+        !else
+	 ! vhxc(ii,jj) =M_ZERO
+	!endif
       enddo
     enddo
     
+    do jj = 1, nspin 
+      aux_hm%vxc(:,jj) = vks(:,jj) - aux_hm%ep%vpsl(:) - aux_hm%vhartree(:)
+      aux_hm%vhxc(:,jj) = aux_hm%vxc(:,jj) + aux_hm%vhartree(:)
+    enddo
+    
+    call hamiltonian_update_potential(aux_hm, gr%mesh)
+    
+    call eigensolver_run(eigensolver, gr, st, aux_hm, 1, verbose = .false.)
+
+    call states_calc_dens(st, gr)   
+    
     SAFE_DEALLOCATE_A(sqrtrho)
     SAFE_DEALLOCATE_A(laplace)
+    SAFE_DEALLOCATE_A(vks)
 
     call pop_sub('xc_ks_inversion.invertks_2part')
   end subroutine invertks_2part
 
 
   ! ---------------------------------------------------------
-  subroutine invertks_iter(target_rho, np, nspin, aux_hm, gr, st, eigensolver)
+  subroutine invertks_iter(target_rho, nspin, aux_hm, gr, st, eigensolver)
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(inout) :: st
     type(hamiltonian_t), intent(inout) :: aux_hm
     type(eigensolver_t), intent(inout) :: eigensolver
-    integer,             intent(in)    :: np, nspin
-    FLOAT,               intent(in)    :: target_rho(1:np, 1:nspin)
+    integer,             intent(in)    :: nspin
+    FLOAT,               intent(in)    :: target_rho(1:gr%mesh%np, 1:nspin)
         
-    integer :: ii, jj, ierr, idiffmax
-    integer :: iunit, verbosity, counter
-    FLOAT :: stabilizer, convdensity, diffdensity
-    FLOAT, allocatable :: vhxc_in(:,:,:), vhxc_out(:,:,:), vhxc_mix(:,:,:)
     type(mix_t) :: smix
+    integer :: ii, jj, ierr, idiffmax
+    integer :: iunit, verbosity, counter, np
+    FLOAT :: stabilizer, convdensity, diffdensity, aa
+    FLOAT, allocatable :: vhxc(:,:)
+
     character(len=256) :: fname
 
     call push_sub('xc_ks_inversion.invertks_iter')
+
+    np = gr%mesh%np
 
     ! Variables defined in routine invertvxc_iter
     call parse_float(datasets_check('InvertKSConvAbsDens'), 1d-5, convdensity)
@@ -266,14 +291,10 @@ contains
       call input_error('InvertKSVerbosity')
       call write_fatal(1)
     endif
-       
-    call mix_init(smix, np, nspin, 1, prefix_="InvertKS")
-    
-    SAFE_ALLOCATE(vhxc_in(1:np, 1:nspin, 1:1))
-    SAFE_ALLOCATE(vhxc_out(1:np, 1:nspin, 1:1))
-    SAFE_ALLOCATE(vhxc_mix(1:np, 1:nspin, 1:1))
-    
-    vhxc_in(1:np,1:nspin,1) = aux_hm%vhxc(1:np,1:nspin)
+           
+    SAFE_ALLOCATE(vhxc(1:np, 1:nspin))
+
+    vhxc(1:np,1:nspin) = aux_hm%vhxc(1:np,1:nspin)
          
     if(verbosity == 1 .or. verbosity == 2) then
       iunit = io_open('InvertKSconvergence', action = 'write')
@@ -299,16 +320,19 @@ contains
       call eigensolver_run(eigensolver, gr, st, aux_hm, 1, verbose = .false.)
 
       call states_calc_dens(st, gr)      
+ 
+      aa = 0.1
+
+      vhxc(1:np, 1:nspin) = vhxc(1:np, 1:nspin) *  &
+        (-M_ONE/aa +  &
+         (M_TWO/aa + M_ONE)*((st%rho(1:np,1:nspin) + stabilizer)/(target_rho(1:np,1:nspin)+ stabilizer)) + &
+         -M_ONE/aa*((st%rho(1:np,1:nspin) + stabilizer)/(target_rho(1:np,1:nspin)+ stabilizer))**2)
+
+      aux_hm%vhxc(1:np,1:nspin) = vhxc(1:np, 1:nspin)
       
-      vhxc_out(1:np, 1:nspin, 1) = &
-        (st%rho(1:np,1:nspin) + stabilizer)/&
-	(target_rho(1:np,1:nspin) + stabilizer) &
-         * aux_hm%vhxc(1:np, 1:nspin)
-
-      call dmixing(smix, counter, vhxc_in, vhxc_out, vhxc_mix, dmf_dotp_aux)
-
-      aux_hm%vhxc(1:np,1:nspin) = vhxc_mix(1:np, 1:nspin, 1)
-      vhxc_in(1:np, 1:nspin, 1) = aux_hm%vhxc(1:np, 1:nspin)
+      do jj = 1, nspin
+        aux_hm%vxc(:,jj) = vhxc(:,jj) - aux_hm%vhartree(:)
+      enddo
       
       diffdensity = M_ZERO
       do jj = 1, nspin
@@ -330,15 +354,18 @@ contains
      
     end do
 
-    write(message(1),'(a,I8)') "Invert KS: iterations needed:", counter
+    !calculate final density
+
+    call hamiltonian_update_potential(aux_hm, gr%mesh)
+    call eigensolver_run(eigensolver, gr, st, aux_hm, 1, verbose = .false.)
+    call states_calc_dens(st, gr)
+    
+    write(message(1),'(a,I8)') "Iterative KS inversion, iterations needed:", counter
     call write_info(1)
     
     call io_close(iunit)      
-    call mix_end(smix)
 
-    SAFE_DEALLOCATE_A(vhxc_in)
-    SAFE_DEALLOCATE_A(vhxc_out)
-    SAFE_DEALLOCATE_A(vhxc_mix)
+    SAFE_DEALLOCATE_A(vhxc)
 
     call pop_sub('xc_ks_inversion.invertks_iter')
 
@@ -650,21 +677,32 @@ contains
       ks_inversion%aux_hm%vhxc(:,ii) = ks_inversion%aux_hm%vhartree(:) + ks_inversion%aux_hm%vxc(:,ii)
     enddo
 
-    ! compute ks inversion
+    ! compute ks inversion, vhxc contains total KS potential
+    
     select case (ks_inversion%method)
     ! adiabatic ks inversion
     case(XC_INV_METHOD_TWO_PARTICLE)
-      call invertks_2part(ks_inversion%aux_st%rho, st%d%nspin,   &
-                          ks_inversion%aux_hm%vxc, gr)
+      call invertks_2part(ks_inversion%aux_st%rho, st%d%nspin, ks_inversion%aux_hm, gr, &
+                         ks_inversion%aux_st, ks_inversion%eigensolver)
     case(XC_INV_METHOD_VS_ITER)
-      call invertks_iter(ks_inversion%aux_st%rho, gr%mesh%np, st%d%nspin, &
-                         ks_inversion%aux_hm, gr,                        &
+      call invertks_iter(ks_inversion%aux_st%rho, st%d%nspin, ks_inversion%aux_hm, gr, &
                          ks_inversion%aux_st, ks_inversion%eigensolver)
     case(XC_INV_METHOD_VXC_ITER)
       ! TODO: call to invertvxc_iter
     end select
 
-    hm%vhxc = ks_inversion%aux_hm%vhxc
+    !subtract external and Hartree potentials, ATTENTION: subtracts true external potential not adiabatic one 
+    
+    do ii = 1, st%d%nspin
+      ks_inversion%aux_hm%vhxc(:,ii) = ks_inversion%aux_hm%vhxc(:,ii) - hm%ep%vpsl(:)
+      ks_inversion%aux_hm%vxc(:,ii)  = ks_inversion%aux_hm%vhxc(:,ii) - ks_inversion%aux_hm%vhartree(:)
+    enddo
+
+    hm%vxc = ks_inversion%aux_hm%vxc
+    
+    do ii = 1, st%d%nspin
+      hm%vhxc(:,ii) = hm%vhartree(:) + hm%vxc(:,ii)
+    enddo
 
     call pop_sub('xc_ks_inversion_inc.Xxc_ks_inversion_calc')
 

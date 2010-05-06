@@ -32,6 +32,7 @@ module invert_ks_m
   use parser_m 
   use poisson_m
   use profiling_m 
+  use restart_m
   use states_m 
   use system_m 
   use unit_m 
@@ -51,7 +52,7 @@ contains
     type(hamiltonian_t),         intent(inout) :: hm
 
     integer :: ii, jj, ierr, np, ndim, nspin, idiffmax
-    integer :: verbosity
+    integer :: verbosity, err
     FLOAT   :: diffdensity
     FLOAT, allocatable :: target_rho(:,:), rho(:)
       
@@ -80,41 +81,54 @@ contains
     hm%vxc      = M_ZERO
 
     ! calculate total density
+    
     rho = M_ZERO
     do ii = 1, nspin
-      do jj = 1, np
-        rho(jj) = rho(jj) + target_rho(jj, ii)
-      enddo
+      rho(:) = rho(:) + target_rho(:,ii)
     enddo
     
     call poisson_init(sys%ks%hartree_solver, sys%gr%der, sys%geo)
     
     ! calculate the Hartree potential
     call dpoisson_solve(sys%ks%hartree_solver, hm%vhartree, rho)
+
+    call hamiltonian_update_potential(hm, sys%gr%mesh)
+    call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
+                         sys%ks%ks_inversion%aux_st, hm, 1, verbose = .false.)
+    call states_calc_dens(sys%ks%ks_inversion%aux_st, sys%gr)
     
     do ii = 1, nspin
       hm%vhxc(:,ii) = hm%vhartree(:)
     enddo
-    
-    ! do not change hxc potential outside this routine
-    sys%ks%frozen_hxc = .true. 
-    
+   
+    write(message(1),'(a)') "Calculating KS potential"
+    call write_info(1)
+       
     if (sys%ks%ks_inversion%method == XC_INV_METHOD_TWO_PARTICLE) then ! 2-particle exact inversion
-      call invertks_2part(target_rho, nspin, hm%vhxc, sys%gr)
+     
+      call invertks_2part(target_rho, nspin, hm, sys%gr, &
+             sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver)
+     
     else ! iterative case
       if (sys%ks%ks_inversion%method == XC_INV_METHOD_VS_ITER) then ! iterative procedure for v_s 
-        call invertks_iter(target_rho, np, nspin, hm, sys%gr, &
+        call invertks_iter(target_rho, nspin, hm, sys%gr, &
              sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver)
       else
-        call invertvxc_iter(target_rho, np, nspin, hm, sys%ks%xc, &
-             sys%ks%hartree_solver, sys%ks%frozen_hxc, sys%gr, &
-             sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver)
+       !TODO: iterative vxc
+       
+       ! call invertvxc_iter(target_rho, np, nspin, hm, sys%ks%xc, &
+       !      sys%ks%hartree_solver, sys%ks%frozen_hxc, sys%gr, &
+       !      sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver)
       endif
     end if
 
     ! output quality of KS inversion
+    
+    call hamiltonian_update_potential(hm, sys%gr%mesh)
+    
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
          sys%ks%ks_inversion%aux_st, hm, 1, verbose = .false.)
+    
     call states_calc_dens(sys%ks%ks_inversion%aux_st, sys%gr)
 
     diffdensity = M_ZERO
@@ -131,19 +145,10 @@ contains
     call write_info(1)
 
     ! output for all cases    
-    call h_sys_output_all(sys%outp, sys%gr, sys%geo, sys%ks%ks_inversion%aux_st, &
-         sys%ks%ks_inversion%aux_hm, STATIC_DIR)
-    
-    if (sys%ks%ks_inversion%method == XC_INV_METHOD_VXC_ITER) then
-      call doutput_function(io_function_fill_how("AxisX"), &
-           ".", "vxc", sys%gr%mesh, hm%vxc(:,1), units_out%energy, ierr)
-    else
-      call doutput_function(io_function_fill_how("AxisX"), &
-           ".", "vks", sys%gr%mesh, hm%vhxc(:,1), units_out%energy, ierr)
-    endif
-    
-    call doutput_function(io_function_fill_how("AxisX"), &
-           ".", "rho", sys%gr%mesh, sys%ks%ks_inversion%aux_st%rho(:,1), units_out%length**(-sys%gr%sb%dim), ierr)
+    call h_sys_output_all(sys%outp, sys%gr, sys%geo, sys%ks%ks_inversion%aux_st, hm, STATIC_DIR)
+        
+    ! save files in restart format
+    call restart_write(trim(tmpdir) // GS_DIR, sys%ks%ks_inversion%aux_st, sys%gr, err, 0)
 
     SAFE_DEALLOCATE_A(target_rho)
     SAFE_DEALLOCATE_A(rho)
