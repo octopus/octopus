@@ -179,8 +179,6 @@ program octopus
 
     call profiling_init()
 
-    call profiling_in(C_PROFILING_COMPLETE_DATASET)
-
     ! Let us print our logo
     if(mpi_grp_is_root(mpi_world)) then
       call io_dump_file(stdout, trim(trim(conf%share) // '/logo'))
@@ -297,8 +295,6 @@ program octopus
     call io_switch_status('finished')
     call io_end()
 
-    call profiling_out(C_PROFILING_COMPLETE_DATASET)
-    call profiling_output()
     call profiling_end()
 
     call print_date("Calculation ended on ")

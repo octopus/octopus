@@ -515,7 +515,9 @@ subroutine X(derivatives_test)(this)
 
   R_TYPE, allocatable :: ff(:), opff(:, :)
   R_TYPE :: aa, bb, cc
-  integer :: ip, idir
+  integer :: ip, idir, ist
+  type(batch_t) :: ffb, opffb
+  integer, parameter :: blocksize = 15
 
 #ifdef R_TREAL
   write(message(1), '(a)') '      Real functions'
@@ -544,16 +546,45 @@ subroutine X(derivatives_test)(this)
 
   forall(ip = 1:this%mesh%np_part) ff(ip) = bb*exp(-aa*sum(this%mesh%x(ip, :)**2)) + cc
 
-  call X(derivatives_lapl)(this, ff, opff(:, 1), set_bc = .false.)
+  call batch_init(ffb, 1, blocksize)
+  call X(batch_new)(ffb, 1, blocksize, this%mesh%np_part)
+
+  call batch_init(opffb, 1, blocksize)
+  call X(batch_new)(opffb, 1, blocksize, this%mesh%np)
+
+  forall(ist = 1:blocksize, ip = 1:this%mesh%np_part)
+    ffb%states_linear(ist)%X(psi)(ip) = ff(ip)
+  end forall
+
+#ifdef HAVE_OPENCL
+  if(opencl_is_enabled()) then
+    call batch_move_to_buffer(ffb)
+    call batch_move_to_buffer(opffb, copy = .false.)
+  end if
+#endif
+
+  call X(derivatives_batch_perform)(this%lapl, this, ffb, opffb, set_bc = .false.)
+
+#ifdef HAVE_OPENCL
+  if(opencl_is_enabled()) then
+    call batch_move_from_buffer(ffb, copy = .false.)
+    call batch_move_from_buffer(opffb)
+  end if
+#endif
 
   forall(ip = 1:this%mesh%np) 
-    opff(ip, 1) = opff(ip, 1) - &
+    opffb%states_linear(1)%X(psi)(ip) = opffb%states_linear(1)%X(psi)(ip) - &
       (M_FOUR*aa**2*bb*sum(this%mesh%x(ip, :)**2)*exp(-aa*sum(this%mesh%x(ip, :)**2)) &
       - this%mesh%sb%dim*M_TWO*aa*bb*exp(-aa*sum(this%mesh%x(ip, :)**2)))
   end forall
 
-  write(message(1), '(a, es16.10)') '      Error in the Laplacian = ', X(mf_nrm2)(this%mesh, opff(:, 1))
+  write(message(1), '(a, es16.10)') '      Error in the Laplacian = ', X(mf_nrm2)(this%mesh, opffb%states_linear(1)%X(psi))
   call write_info(1)
+
+  call X(batch_delete)(ffb)
+  call batch_end(ffb)
+  call X(batch_delete)(opffb)
+  call batch_end(opffb)
 
   call X(derivatives_grad)(this, ff, opff, set_bc = .false.)
 

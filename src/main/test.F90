@@ -92,6 +92,7 @@ program oct_test
   end select
 
   call fft_all_end()
+  call profiling_output()
   call profiling_end()
   call io_end()
   call datasets_end()

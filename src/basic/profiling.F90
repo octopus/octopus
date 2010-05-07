@@ -275,6 +275,8 @@ contains
 
     call init_profiles()
 
+    call profiling_in(C_PROFILING_COMPLETE_DATASET)
+
     call pop_sub('profiling.profiling_init')
 
   contains
@@ -335,6 +337,9 @@ contains
 
     if(.not. in_profiling_mode) return
     call push_sub('profiling.profiling_end')
+
+    call profiling_out(C_PROFILING_COMPLETE_DATASET)
+    call profiling_output()
 
 #ifdef HAVE_PAPI
     call papi_end()
