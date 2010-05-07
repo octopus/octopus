@@ -326,7 +326,7 @@ contains
       vhxc(1:np, 1:nspin) = vhxc(1:np, 1:nspin) *  &
         (-M_ONE/aa +  &
          (M_TWO/aa + M_ONE)*((st%rho(1:np,1:nspin) + stabilizer)/(target_rho(1:np,1:nspin)+ stabilizer)) + &
-         -M_ONE/aa*((st%rho(1:np,1:nspin) + stabilizer)/(target_rho(1:np,1:nspin)+ stabilizer))**2)
+         (-M_ONE)/aa*((st%rho(1:np,1:nspin) + stabilizer)/(target_rho(1:np,1:nspin)+ stabilizer))**2)
 
       aux_hm%vhxc(1:np,1:nspin) = vhxc(1:np, 1:nspin)
       
