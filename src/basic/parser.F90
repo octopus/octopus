@@ -355,16 +355,20 @@ contains
   ! ---------------------------------------------------------
 
   subroutine oct_parse_double4_unit(name, def4, res4, unit)
-    character(len=*), intent(in)  :: name
-    real(4),          intent(in)  :: def4
-    real(4),          intent(out) :: res4
-    type(unit_t),     intent(in)  :: unit
+    character(len=*),       intent(in)  :: name
+    real(4),                intent(in)  :: def4
+    real(4),                intent(out) :: res4
+    type(unit_t), optional, intent(in)  :: unit
 
     real(8) :: res8
-    
-    call oct_parse_double(name, units_from_atomic(unit, real(def4, 8)), res8)
 
-    res4 = real(units_to_atomic(unit, res8), kind=4)
+    if(present(unit)) then
+      call oct_parse_double(name, units_from_atomic(unit, real(def4, 8)), res8)
+      res4 = real(units_to_atomic(unit, res8), kind=4)
+    else
+      call oct_parse_double(name, real(def4, 8), res8)
+      res4 = real(res8, kind=4)
+    end if
     
   end subroutine oct_parse_double4_unit
 

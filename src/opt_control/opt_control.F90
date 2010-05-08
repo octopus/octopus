@@ -762,7 +762,7 @@ contains
     integer :: j
     type(oct_control_parameters_t) :: par_new
     FLOAT :: j1, fdf, dx, fmdf
-    FLOAT, allocatable :: theta(:), xdx(:), dfn(:)
+    FLOAT, allocatable :: theta(:), xdx(:), dfn(:), dff(:)
     type(states_t) :: psi
 
     call push_sub("opt_control.opt_control_cg_calc")
@@ -778,7 +778,10 @@ contains
       if(oct%dump_intermediate) call iterator_write(iterator, par_)
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator)
       call parameters_set_rep(par_new)
-      call parameters_gradient(x, par_, par_new, df)
+      SAFE_ALLOCATE(dff(1:n))
+      dff = df
+      call parameters_gradient(real(x, REAL_PRECISION), par_, par_new, dff)
+      df = dff
 
       ! Check if the gradient has been computed properly... This should be done only
       ! for debugging purposes.

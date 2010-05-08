@@ -98,7 +98,7 @@ contains
     integer, allocatable :: typs(:)
     type(block_t) :: blk
     integer, allocatable :: rotation(:, :, :)
-    FLOAT,   allocatable :: translation(:, :)
+    real(8), allocatable :: translation(:, :)
     type(symm_op_t) :: tmpop
 
     call push_sub('symmetries.symmetries_init')
@@ -172,10 +172,10 @@ contains
       ! direction invariant and (for the moment) that do not have a translation
       this%nops = 0
       do iop = 1, fullnops
-        call symm_op_init(tmpop, rotation(:, :, iop), translation(:, iop))
+        call symm_op_init(tmpop, rotation(:, :, iop), real(translation(:, iop), REAL_PRECISION))
 
-        if(symm_op_invariant(tmpop, this%breakdir, symprec) &
-          .and. .not. symm_op_has_translation(tmpop, symprec)) then
+        if(symm_op_invariant(tmpop, this%breakdir, real(symprec, REAL_PRECISION)) &
+          .and. .not. symm_op_has_translation(tmpop, real(symprec, REAL_PRECISION))) then
           this%nops = this%nops + 1
           call symm_op_copy(tmpop, this%ops(this%nops))
         end if

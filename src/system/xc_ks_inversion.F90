@@ -284,7 +284,7 @@ contains
     np = gr%mesh%np
 
     ! Variables defined in routine invertvxc_iter
-    call parse_float(datasets_check('InvertKSConvAbsDens'), 1d-5, convdensity)
+    call parse_float(datasets_check('InvertKSConvAbsDens'), CNST(1e-5), convdensity)
     call parse_float(datasets_check('InvertKSStabilizer'), M_HALF, stabilizer)
     call parse_integer(datasets_check('InvertKSVerbosity'), 0, verbosity)  
     if(verbosity < 0 .or. verbosity > 2) then
@@ -404,7 +404,7 @@ contains
     !% inversion. Has to be larger than the convergence of the density in the SCF run.
     !%End
     
-    call parse_float(datasets_check('InvertKSConvAbsDens'), 1d-5, convdensity)
+    call parse_float(datasets_check('InvertKSConvAbsDens'), CNST(1e-5), convdensity)
     
     !%Variable InvertKSStabilizer
     !%Type float
