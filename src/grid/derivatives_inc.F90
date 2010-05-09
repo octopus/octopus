@@ -517,7 +517,12 @@ subroutine X(derivatives_test)(this)
   R_TYPE :: aa, bb, cc
   integer :: ip, idir, ist
   type(batch_t) :: ffb, opffb
-  integer, parameter :: blocksize = 15
+  integer :: blocksize
+
+  call parse_integer(datasets_check('StatesBlockSize'), 4, blocksize)
+  write(message(1), '(a,i4)') '   Blocksize = ', blocksize
+  message(2) = ''
+  call write_info(2)
 
 #ifdef R_TREAL
   write(message(1), '(a)') '      Real functions'
