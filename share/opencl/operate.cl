@@ -21,7 +21,7 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-__kernel void doperate(const int nn,
+__kernel void operate(const int nn,
 		       const int nri,
 		       __global const int * ri,
 		       __global const int * imin,
@@ -49,42 +49,6 @@ __kernel void doperate(const int nn,
   const int imaxl = imax[l];
   for(int i = imin[l]; i < imaxl; i++){
     double a0 = 0.0;
-    for(int j = 0; j < nn; j++){
-      a0 += weightsl[j]*fi[ldfi*i + index[j] + ist];
-    }
-    fo[ldfo*i + ist] = a0;
-  }
-  
-}
-
-__kernel void zoperate(const int nn,
-		       const int nri,
-		       __global const int * ri,
-		       __global const int * imin,
-		       __global const int * imax,
-		       __constant const double * weights,
-		       __global const double2 * fi, const int ldfi,
-		       __global double2 * fo, const int ldfo,
-		       __local  int * indexl,
-		       __local double * weightsl){
-
-  const int ist = get_global_id(0);
-  const int nst = get_global_size(0);
-  const int l = get_global_id(1);
-
-  // copy the indexes and the weights to local memory
-  __local int * index = indexl + nn*get_local_id(1);
-  for(int j = ist; j < nn; j+=nst){
-    index[j] = ri[nn*l + j]*ldfi;
-    weightsl[j] = weights[j];
-  }
-  barrier(CLK_LOCAL_MEM_FENCE);
-
-  if(l >= nri) return;
-
-  const int imaxl = imax[l];
-  for(int i = imin[l]; i < imaxl; i++){
-    double2 a0 = 0.0;
     for(int j = 0; j < nn; j++){
       a0 += weightsl[j]*fi[ldfi*i + index[j] + ist];
     }

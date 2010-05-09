@@ -374,44 +374,44 @@ contains
 
     select case(function_opencl)
     case(OP_INVMAP)
-      call opencl_set_kernel_arg(X(operate), 0, op%stencil%size)
-      call opencl_set_kernel_arg(X(operate), 1, nri)
-      call opencl_set_kernel_arg(X(operate), 2, op%buff_ri)
-      call opencl_set_kernel_arg(X(operate), 3, op%buff_imin)
-      call opencl_set_kernel_arg(X(operate), 4, op%buff_imax)
-      call opencl_set_kernel_arg(X(operate), 5, op%buff_weights)
-      call opencl_set_kernel_arg(X(operate), 6, fi%buffer)
-      call opencl_set_kernel_arg(X(operate), 7, batch_buffer_ubound(fi))
-      call opencl_set_kernel_arg(X(operate), 8, fo%buffer)
-      call opencl_set_kernel_arg(X(operate), 9, batch_buffer_ubound(fo))
+      call opencl_set_kernel_arg(operate, 0, op%stencil%size)
+      call opencl_set_kernel_arg(operate, 1, nri)
+      call opencl_set_kernel_arg(operate, 2, op%buff_ri)
+      call opencl_set_kernel_arg(operate, 3, op%buff_imin)
+      call opencl_set_kernel_arg(operate, 4, op%buff_imax)
+      call opencl_set_kernel_arg(operate, 5, op%buff_weights)
+      call opencl_set_kernel_arg(operate, 6, fi%buffer)
+      call opencl_set_kernel_arg(operate, 7, batch_buffer_ubound(fi)*cfactor)
+      call opencl_set_kernel_arg(operate, 8, fo%buffer)
+      call opencl_set_kernel_arg(operate, 9, batch_buffer_ubound(fo)*cfactor)
       
       bsize = 128
       isize = 8
       pnri = pad(nri, bsize)
       
-      call opencl_set_kernel_arg(X(operate), 10, TYPE_INTEGER, op%stencil%size*bsize/(fi%ubound(1)))
-      call opencl_set_kernel_arg(X(operate), 11, TYPE_FLOAT, op%stencil%size)
+      call opencl_set_kernel_arg(operate, 10, TYPE_INTEGER, op%stencil%size*bsize/(fi%ubound(1)))
+      call opencl_set_kernel_arg(operate, 11, TYPE_FLOAT, op%stencil%size)
       
-      call opencl_kernel_run(X(operate), (/fi%ubound(1), pnri/), (/fi%ubound(1), bsize/(fi%ubound(1))/))
+      call opencl_kernel_run(operate, (/fi%ubound(1)*cfactor, pnri/), (/fi%ubound(1)*cfactor, bsize/(fi%ubound(1)*cfactor)/))
       
     case(OP_MAP)
-      call opencl_set_kernel_arg(doperate, 0, op%stencil%size)
-      call opencl_set_kernel_arg(doperate, 1, op%mesh%np)
-      call opencl_set_kernel_arg(doperate, 2, op%buff_ri)
-      call opencl_set_kernel_arg(doperate, 3, op%buff_map)
-      call opencl_set_kernel_arg(doperate, 4, op%buff_weights)
-      call opencl_set_kernel_arg(doperate, 5, fi%buffer)
-      call opencl_set_kernel_arg(doperate, 6, log2(batch_buffer_ubound(fi)*cfactor))
-      call opencl_set_kernel_arg(doperate, 7, fo%buffer)
-      call opencl_set_kernel_arg(doperate, 8, log2(batch_buffer_ubound(fo)*cfactor))
+      call opencl_set_kernel_arg(operate, 0, op%stencil%size)
+      call opencl_set_kernel_arg(operate, 1, op%mesh%np)
+      call opencl_set_kernel_arg(operate, 2, op%buff_ri)
+      call opencl_set_kernel_arg(operate, 3, op%buff_map)
+      call opencl_set_kernel_arg(operate, 4, op%buff_weights)
+      call opencl_set_kernel_arg(operate, 5, fi%buffer)
+      call opencl_set_kernel_arg(operate, 6, log2(batch_buffer_ubound(fi)*cfactor))
+      call opencl_set_kernel_arg(operate, 7, fo%buffer)
+      call opencl_set_kernel_arg(operate, 8, log2(batch_buffer_ubound(fo)*cfactor))
       
       bsize = 128
       isize = bsize/(cfactor*fi%ubound(1))
       pnri = pad(nri, bsize)
 
-      call opencl_set_kernel_arg(doperate, 9, TYPE_INTEGER, isize*op%stencil%size)
+      call opencl_set_kernel_arg(operate, 9, TYPE_INTEGER, isize*op%stencil%size)
 
-      call opencl_kernel_run(doperate, (/cfactor*fi%ubound(1), pad(op%mesh%np, bsize)/), (/cfactor*fi%ubound(1), isize/))
+      call opencl_kernel_run(operate, (/cfactor*fi%ubound(1), pad(op%mesh%np, bsize)/), (/cfactor*fi%ubound(1), isize/))
       
       call profiling_count_transfers(op%stencil%size*op%nri + op%mesh%np, isize)
       do ist = 1, fi%nst_linear

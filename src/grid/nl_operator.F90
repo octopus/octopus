@@ -147,8 +147,7 @@ module nl_operator_m
   type(profile_t), save :: operate_batch_prof
 
 #ifdef HAVE_OPENCL
-  type(c_ptr), public :: doperate
-  type(c_ptr), public :: zoperate
+  type(c_ptr), public :: operate
 #endif
 
 contains
@@ -244,11 +243,9 @@ contains
       call opencl_build_program(prog, "operate.cl")
       select case(function_opencl)
       case(OP_MAP)
-        ! the same version can be used for complex and real
-        call opencl_create_kernel(doperate, prog, "operate_map")
+        call opencl_create_kernel(operate, prog, "operate_map")
       case(OP_INVMAP)
-        call opencl_create_kernel(doperate, prog, "doperate")
-        call opencl_create_kernel(zoperate, prog, "zoperate")
+        call opencl_create_kernel(operate, prog, "operate")
       end select
       call opencl_release_program(prog)
     
