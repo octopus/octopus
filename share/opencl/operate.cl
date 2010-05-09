@@ -93,6 +93,48 @@ __kernel void zoperate(const int nn,
   
 }
 
+__kernel void doperate_map(const int nn,
+			   const int np,
+			   __global const int * ri,
+			   __global const int * map,
+			   __constant const double * weights,
+			   __global const double * fi, const int ldfi,
+			   __global double * fo, const int ldfo){
+
+  const int ist = get_global_id(0);
+  const int ip  = get_global_id(1);
+
+  if(ip >= np) return;
+
+  double a0 = 0.0;
+  for(int j = 0; j < nn; j++){
+    a0 += weights[j]*fi[((ri[(map[ip] - 1)*nn + j] + ip)<<ldfi) + ist];
+  }
+  fo[(ip<<ldfo) + ist] = a0;
+  
+}
+
+__kernel void zoperate_map(const int nn,
+			   const int np,
+			   __global const int * ri,
+			   __global const int * map,
+			   __constant const double * weights,
+			   __global const double2 * fi, const int ldfi,
+			   __global double2 * fo, const int ldfo){
+  
+  const int ist = get_global_id(0);
+  const int ip  = get_global_id(1);
+
+  if(ip >= np) return;
+
+  double2 a0 = 0.0;
+  for(int j = 0; j < nn; j++){
+    a0 += weights[j]*fi[((ri[(map[ip] - 1)*nn + j] + ip)<<ldfi) + ist];
+  }
+  fo[(ip<<ldfo) + ist] = a0;
+  
+}
+
 /*
  Local Variables:
  mode: c

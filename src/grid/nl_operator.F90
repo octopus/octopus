@@ -64,6 +64,7 @@ module nl_operator_m
     nl_operator_selfadjoint,    &
     nl_operator_get_index,      &
     nl_operator_write,          &
+    nl_operator_update_weights, &
     nl_operator_op_to_matrix_cmplx
 
   type nl_operator_index_t
@@ -106,6 +107,8 @@ module nl_operator_m
     type(opencl_mem_t) :: buff_imin
     type(opencl_mem_t) :: buff_imax
     type(opencl_mem_t) :: buff_ri
+    type(opencl_mem_t) :: buff_map
+    type(opencl_mem_t) :: buff_weights
 #endif
   end type nl_operator_t
 
@@ -117,7 +120,13 @@ module nl_operator_m
        OP_BG      = 4,  &
        OP_MIN     = OP_FORTRAN, &
        OP_MAX     = OP_BG
-  
+
+#ifdef HAVE_OPENCL  
+  integer, parameter ::  &
+    OP_INVMAP    = 1,       &
+    OP_MAP       = 2
+#endif
+
   integer, public, parameter :: OP_ALL = 3, OP_INNER = 1, OP_OUTER = 2
 
   logical :: initialized = .false.
@@ -130,14 +139,25 @@ module nl_operator_m
 
   integer :: dfunction_global = -1
   integer :: zfunction_global = -1
+#ifdef HAVE_OPENCL
+  integer :: function_opencl
+#endif
 
   type(profile_t), save :: nl_operate_profile
   type(profile_t), save :: operate_batch_prof
+
+#ifdef HAVE_OPENCL
+  type(c_ptr), public :: doperate
+  type(c_ptr), public :: zoperate
+#endif
 
 contains
   
   ! ---------------------------------------------------------
   subroutine nl_operator_global_init()
+#ifdef HAVE_OPENCL
+    type(c_ptr) :: prog
+#endif
 
     call push_sub('nl_operator.nl_operator_global_init')
 
@@ -202,6 +222,38 @@ contains
         call write_fatal(1)
       end if
     end if
+
+#ifdef HAVE_OPENCL
+    !%Variable OperateOpenCL
+    !%Type integer
+    !%Default autodetect
+    !%Section Execution::Optimization
+    !%Description
+    !% This variable selects the subroutine used to apply non-local
+    !% operators over the grid when opencl is used. The default is
+    !% map.
+    !%Option invmap 1
+    !% The standard implementation ported to OpenCL.
+    !%Option map 2
+    !% A different version, more suitable for GPUs.
+    !%End
+
+    if(opencl_is_enabled()) then
+      call parse_integer(datasets_check('OperateOpenCL'),  OP_MAP, function_opencl)
+
+      call opencl_build_program(prog, "operate.cl")
+      select case(function_opencl)
+      case(OP_MAP)
+        call opencl_create_kernel(doperate, prog, "doperate_map")
+        call opencl_create_kernel(zoperate, prog, "zoperate_map")
+      case(OP_INVMAP)
+        call opencl_create_kernel(doperate, prog, "doperate")
+        call opencl_create_kernel(zoperate, prog, "zoperate")
+      end select
+      call opencl_release_program(prog)
+    
+    end if
+#endif
 
     call pop_sub('nl_operator.nl_operator_global_init')
   end subroutine nl_operator_global_init
@@ -529,12 +581,19 @@ contains
     if(opencl_is_enabled() .and. op%const_w) then
       call opencl_create_buffer(op%buff_ri, CL_MEM_READ_ONLY, TYPE_INTEGER, op%nri*op%stencil%size)
       call opencl_write_buffer(op%buff_ri, op%nri*op%stencil%size, op%ri)
-      
-      call opencl_create_buffer(op%buff_imin, CL_MEM_READ_ONLY, TYPE_INTEGER, op%nri)
-      call opencl_write_buffer(op%buff_imin, op%nri, op%rimap_inv(1:))
-      
-      call opencl_create_buffer(op%buff_imax, CL_MEM_READ_ONLY, TYPE_INTEGER, op%nri)
-      call opencl_write_buffer(op%buff_imax, op%nri, op%rimap_inv(2:))
+
+      call opencl_create_buffer(op%buff_weights, CL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size)
+
+      select case(function_opencl)
+      case(OP_INVMAP)
+        call opencl_create_buffer(op%buff_imin, CL_MEM_READ_ONLY, TYPE_INTEGER, op%nri)
+        call opencl_write_buffer(op%buff_imin, op%nri, op%rimap_inv(1:))
+        call opencl_create_buffer(op%buff_imax, CL_MEM_READ_ONLY, TYPE_INTEGER, op%nri)
+        call opencl_write_buffer(op%buff_imax, op%nri, op%rimap_inv(2:))
+      case(OP_MAP)
+        call opencl_create_buffer(op%buff_map, CL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%mesh%np, opencl_max_workgroup_size()))
+        call opencl_write_buffer(op%buff_map, op%mesh%np, op%rimap)
+      end select
     end if
 #endif
 
@@ -561,6 +620,18 @@ contains
     call pop_sub('nl_operator.nl_operator_build')
 
   end subroutine nl_operator_build
+
+  ! ---------------------------------------------------------
+  subroutine nl_operator_update_weights(this)
+    type(nl_operator_t), intent(inout)  :: this
+
+#ifdef HAVE_OPENCL
+    if(opencl_is_enabled()) then
+      call opencl_write_buffer(this%buff_weights, this%stencil%size, this%w_re(:, 1))
+    end if
+#endif
+
+  end subroutine nl_operator_update_weights
 
   ! ---------------------------------------------------------
   subroutine nl_operator_transpose(op, opt)
@@ -1189,8 +1260,14 @@ contains
 #ifdef HAVE_OPENCL
     if(opencl_is_enabled() .and. op%const_w) then
       call opencl_release_buffer(op%buff_ri)
-      call opencl_release_buffer(op%buff_imin)
-      call opencl_release_buffer(op%buff_imax)
+      call opencl_release_buffer(op%buff_weights)
+      select case(function_opencl)
+      case(OP_INVMAP)
+        call opencl_release_buffer(op%buff_imin)
+        call opencl_release_buffer(op%buff_imax)
+      case(OP_MAP)
+        call opencl_release_buffer(op%buff_map)
+      end select
     end if
 #endif
 

@@ -46,7 +46,10 @@ module opencl_m
     opencl_set_kernel_arg,        &
     opencl_max_workgroup_size,    &
     opencl_kernel_workgroup_size, &
-    opencl_kernel_run
+    opencl_kernel_run,            &
+    opencl_build_program,         &
+    opencl_release_program,       &
+    opencl_create_kernel
 
   type opencl_t 
     type(c_ptr) :: env
@@ -70,8 +73,6 @@ module opencl_m
   type(c_ptr), public :: set_zero
   type(c_ptr), public :: dset_zero_part
   type(c_ptr), public :: zset_zero_part
-  type(c_ptr), public :: doperate
-  type(c_ptr), public :: zoperate
   type(c_ptr), public :: daxpy
   type(c_ptr), public :: zaxpy
   type(c_ptr), public :: dzaxpy
@@ -273,7 +274,7 @@ module opencl_m
       zopencl_set_kernel_arg_data,   &
       opencl_set_kernel_arg_local
   end interface
-  
+
   type(profile_t), save :: prof_read, prof_write, prof_kernel_run
   
   contains
@@ -325,11 +326,6 @@ module opencl_m
       call f90_opencl_create_kernel(zset_zero_part, prog, "zset_zero_part")
       call f90_opencl_release_program(prog)
       
-      call f90_opencl_build_program(prog, opencl%env, "operate.cl")
-      call f90_opencl_create_kernel(doperate, prog, "doperate")
-      call f90_opencl_create_kernel(zoperate, prog, "zoperate")
-      call f90_opencl_release_program(prog)
-
       call f90_opencl_build_program(prog, opencl%env, "axpy.cl")
       call f90_opencl_create_kernel(daxpy, prog, "daxpy")
       call f90_opencl_create_kernel(dzaxpy, prog, "dzaxpy")
@@ -531,6 +527,32 @@ module opencl_m
       
       workgroup_size = f90_opencl_kernel_wgroup_size(kernel, opencl%env)
     end function opencl_kernel_workgroup_size
+
+    ! -----------------------------------------------
+
+    subroutine opencl_build_program(prog, filename)
+      type(c_ptr),      intent(inout) :: prog
+      character(len=*), intent(in)    :: filename
+
+      call f90_opencl_build_program(prog, opencl%env, filename)
+    end subroutine opencl_build_program
+
+    ! -----------------------------------------------
+
+    subroutine opencl_release_program(prog)
+      type(c_ptr),      intent(inout) :: prog
+
+      call f90_opencl_release_program(prog)
+    end subroutine opencl_release_program
+
+    ! -----------------------------------------------
+    subroutine opencl_create_kernel(kernel, prog, name)
+      type(c_ptr),      intent(inout) :: kernel
+      type(c_ptr),      intent(inout) :: prog
+      character(len=*), intent(in)    :: name
+
+      call f90_opencl_create_kernel(kernel, prog, name)
+    end subroutine opencl_create_kernel
 
 #include "undef.F90"
 #include "real.F90"

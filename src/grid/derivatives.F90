@@ -629,6 +629,9 @@ contains
       end do
 
     end do
+    do i = 1, n
+      call nl_operator_update_weights(op(i))
+    end do
 
     SAFE_DEALLOCATE_A(mat)
     SAFE_DEALLOCATE_A(sol)

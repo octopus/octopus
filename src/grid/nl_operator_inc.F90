@@ -363,37 +363,53 @@ contains
 
   ! ------------------------------------------
   subroutine operate_opencl()
-    type(opencl_mem_t) :: buff_weights
     integer :: pnri, bsize, isize
 
     ASSERT(.not. op%mesh%parallel_in_domains)
 
-    call opencl_create_buffer(buff_weights, CL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size)
-    call opencl_write_buffer(buff_weights, op%stencil%size, op%w_re(:, 1))
-
-    call opencl_set_kernel_arg(X(operate), 0, op%stencil%size)
-    call opencl_set_kernel_arg(X(operate), 1, nri)
-    call opencl_set_kernel_arg(X(operate), 2, op%buff_ri)
-    call opencl_set_kernel_arg(X(operate), 3, op%buff_imin)
-    call opencl_set_kernel_arg(X(operate), 4, op%buff_imax)
-    call opencl_set_kernel_arg(X(operate), 5, buff_weights)
-    call opencl_set_kernel_arg(X(operate), 6, fi%buffer)
-    call opencl_set_kernel_arg(X(operate), 7, batch_buffer_ubound(fi))
-    call opencl_set_kernel_arg(X(operate), 8, fo%buffer)
-    call opencl_set_kernel_arg(X(operate), 9, batch_buffer_ubound(fo))
-
-    bsize = 128
-    isize = 8
-    pnri = pad(nri, bsize)
-
-    call opencl_set_kernel_arg(X(operate), 10, TYPE_INTEGER, op%stencil%size*bsize/(fi%ubound(1)))
-    call opencl_set_kernel_arg(X(operate), 11, TYPE_FLOAT, op%stencil%size)
-
-    call opencl_kernel_run(X(operate), (/fi%ubound(1), pnri/), (/fi%ubound(1), bsize/(fi%ubound(1))/))
-
+    select case(function_opencl)
+    case(OP_INVMAP)
+      call opencl_set_kernel_arg(X(operate), 0, op%stencil%size)
+      call opencl_set_kernel_arg(X(operate), 1, nri)
+      call opencl_set_kernel_arg(X(operate), 2, op%buff_ri)
+      call opencl_set_kernel_arg(X(operate), 3, op%buff_imin)
+      call opencl_set_kernel_arg(X(operate), 4, op%buff_imax)
+      call opencl_set_kernel_arg(X(operate), 5, op%buff_weights)
+      call opencl_set_kernel_arg(X(operate), 6, fi%buffer)
+      call opencl_set_kernel_arg(X(operate), 7, batch_buffer_ubound(fi))
+      call opencl_set_kernel_arg(X(operate), 8, fo%buffer)
+      call opencl_set_kernel_arg(X(operate), 9, batch_buffer_ubound(fo))
+      
+      bsize = 128
+      isize = 8
+      pnri = pad(nri, bsize)
+      
+      call opencl_set_kernel_arg(X(operate), 10, TYPE_INTEGER, op%stencil%size*bsize/(fi%ubound(1)))
+      call opencl_set_kernel_arg(X(operate), 11, TYPE_FLOAT, op%stencil%size)
+      
+      call opencl_kernel_run(X(operate), (/fi%ubound(1), pnri/), (/fi%ubound(1), bsize/(fi%ubound(1))/))
+      
+    case(OP_MAP)
+      call opencl_set_kernel_arg(X(operate), 0, op%stencil%size)
+      call opencl_set_kernel_arg(X(operate), 1, op%mesh%np)
+      call opencl_set_kernel_arg(X(operate), 2, op%buff_ri)
+      call opencl_set_kernel_arg(X(operate), 3, op%buff_map)
+      call opencl_set_kernel_arg(X(operate), 4, op%buff_weights)
+      call opencl_set_kernel_arg(X(operate), 5, fi%buffer)
+      call opencl_set_kernel_arg(X(operate), 6, log2(batch_buffer_ubound(fi)))
+      call opencl_set_kernel_arg(X(operate), 7, fo%buffer)
+      call opencl_set_kernel_arg(X(operate), 8, log2(batch_buffer_ubound(fo)))
+      
+      bsize = 128
+      isize = bsize/(fi%ubound(1))
+      pnri = pad(nri, bsize)
+      
+      call opencl_kernel_run(X(operate), (/fi%ubound(1), pad(op%mesh%np, bsize)/), (/fi%ubound(1), isize/))
+      
+    end select
+    
     call batch_buffer_was_modified(fo)
-
-    call opencl_release_buffer(buff_weights)
+    
   end subroutine operate_opencl
 
 #endif
