@@ -363,7 +363,12 @@ contains
 
   ! ------------------------------------------
   subroutine operate_opencl()
-    integer :: pnri, bsize, isize
+    integer :: pnri, bsize, isize, ist
+#ifdef R_TCOMPLEX
+    integer, parameter :: cfactor = 2
+#else
+    integer, parameter :: cfactor = 1
+#endif
 
     ASSERT(.not. op%mesh%parallel_in_domains)
 
@@ -390,22 +395,28 @@ contains
       call opencl_kernel_run(X(operate), (/fi%ubound(1), pnri/), (/fi%ubound(1), bsize/(fi%ubound(1))/))
       
     case(OP_MAP)
-      call opencl_set_kernel_arg(X(operate), 0, op%stencil%size)
-      call opencl_set_kernel_arg(X(operate), 1, op%mesh%np)
-      call opencl_set_kernel_arg(X(operate), 2, op%buff_ri)
-      call opencl_set_kernel_arg(X(operate), 3, op%buff_map)
-      call opencl_set_kernel_arg(X(operate), 4, op%buff_weights)
-      call opencl_set_kernel_arg(X(operate), 5, fi%buffer)
-      call opencl_set_kernel_arg(X(operate), 6, log2(batch_buffer_ubound(fi)))
-      call opencl_set_kernel_arg(X(operate), 7, fo%buffer)
-      call opencl_set_kernel_arg(X(operate), 8, log2(batch_buffer_ubound(fo)))
+      call opencl_set_kernel_arg(doperate, 0, op%stencil%size)
+      call opencl_set_kernel_arg(doperate, 1, op%mesh%np)
+      call opencl_set_kernel_arg(doperate, 2, op%buff_ri)
+      call opencl_set_kernel_arg(doperate, 3, op%buff_map)
+      call opencl_set_kernel_arg(doperate, 4, op%buff_weights)
+      call opencl_set_kernel_arg(doperate, 5, fi%buffer)
+      call opencl_set_kernel_arg(doperate, 6, log2(batch_buffer_ubound(fi)*cfactor))
+      call opencl_set_kernel_arg(doperate, 7, fo%buffer)
+      call opencl_set_kernel_arg(doperate, 8, log2(batch_buffer_ubound(fo)*cfactor))
       
       bsize = 128
-      isize = bsize/(fi%ubound(1))
+      isize = bsize/(cfactor*fi%ubound(1))
       pnri = pad(nri, bsize)
+
+      call opencl_set_kernel_arg(doperate, 9, TYPE_INTEGER, isize*op%stencil%size)
+
+      call opencl_kernel_run(doperate, (/cfactor*fi%ubound(1), pad(op%mesh%np, bsize)/), (/cfactor*fi%ubound(1), isize/))
       
-      call opencl_kernel_run(X(operate), (/fi%ubound(1), pad(op%mesh%np, bsize)/), (/fi%ubound(1), isize/))
-      
+      call profiling_count_transfers(op%stencil%size*op%nri + op%mesh%np, isize)
+      do ist = 1, fi%nst_linear
+        call profiling_count_transfers(op%mesh%np_part*op%stencil%size + op%mesh%np, R_TOTYPE(M_ONE))
+      end do
     end select
     
     call batch_buffer_was_modified(fo)

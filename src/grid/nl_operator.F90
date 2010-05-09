@@ -244,8 +244,8 @@ contains
       call opencl_build_program(prog, "operate.cl")
       select case(function_opencl)
       case(OP_MAP)
-        call opencl_create_kernel(doperate, prog, "doperate_map")
-        call opencl_create_kernel(zoperate, prog, "zoperate_map")
+        ! the same version can be used for complex and real
+        call opencl_create_kernel(doperate, prog, "operate_map")
       case(OP_INVMAP)
         call opencl_create_kernel(doperate, prog, "doperate")
         call opencl_create_kernel(zoperate, prog, "zoperate")
@@ -592,7 +592,7 @@ contains
         call opencl_write_buffer(op%buff_imax, op%nri, op%rimap_inv(2:))
       case(OP_MAP)
         call opencl_create_buffer(op%buff_map, CL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%mesh%np, opencl_max_workgroup_size()))
-        call opencl_write_buffer(op%buff_map, op%mesh%np, op%rimap)
+        call opencl_write_buffer(op%buff_map, op%mesh%np, (op%rimap - 1)*op%stencil%size)
       end select
     end if
 #endif
