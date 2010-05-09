@@ -113,14 +113,41 @@ program oct_test
   subroutine test_derivatives()
     type(system_t) :: sys
 
+    integer, parameter :: &
+      TEST_REAL    = 1,   &
+      TEST_COMPLEX = 2,   &
+      TEST_ALL     = 3
+
+    integer :: test
+
     call system_init(sys)
+
+    !%Variable TestDerivatives
+    !%Type integer
+    !%Default hartree_test
+    !%Section Utilities::oct-test
+    !%Description
+    !% Decides what derivatives test should be performed, the default is all.
+    !%Option real 1
+    !% Tests derivatives for real functions.
+    !%Option complex 2
+    !% Tests derivatives for complex functions.
+    !%Option all 3
+    !% Tests derivatives for both real and complex functions.
+    !%End
+    call parse_integer('TestDerivatives', TEST_ALL, test)
 
     message(1) = 'Info: Testing the finite-differences derivatives'
     message(2) = ''
     call write_info(2)
 
-    call dderivatives_test(sys%gr%der)
-    call zderivatives_test(sys%gr%der)
+    if(test == TEST_ALL .or. test == TEST_REAL) then
+      call dderivatives_test(sys%gr%der)
+    end if
+
+    if(test == TEST_ALL .or. test == TEST_COMPLEX) then
+      call zderivatives_test(sys%gr%der)
+    end if
 
     call system_end(sys)
   end subroutine test_derivatives
