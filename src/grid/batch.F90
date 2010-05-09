@@ -96,6 +96,7 @@ module batch_m
 #ifdef HAVE_OPENCL
     type(opencl_mem_t)             :: buffer
     integer                        :: ubound(1:2)
+    integer                        :: ubound_real(1:2)
 #endif
   end type batch_t
 
@@ -328,7 +329,10 @@ contains
     if(.not. this%in_buffer) then
       this%ubound(1) = pad_pow2(this%nst_linear)
       this%ubound(2) = opencl_padded_size(batch_max_size(this))
-      
+
+      this%ubound_real = this%ubound
+      if(batch_type(this) == TYPE_CMPLX) this%ubound_real(1) = 2*this%ubound_real(1)
+
       call opencl_create_buffer(this%buffer, CL_MEM_READ_WRITE, batch_type(this), product(this%ubound))
       this%dirty = .true.
     end if

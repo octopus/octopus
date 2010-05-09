@@ -1,4 +1,4 @@
-!! Copyright (C) 2010 X. Andrade
+  !! Copyright (C) 2010 X. Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -67,9 +67,8 @@ module opencl_m
   type(opencl_t) :: opencl
 
   ! the kernels
-  type(c_ptr), public :: dvpsi
-  type(c_ptr), public :: zvpsi
-  type(c_ptr), public :: zvpsi_spinors
+  type(c_ptr), public :: kernel_vpsi
+  type(c_ptr), public :: kernel_vpsi_spinors
   type(c_ptr), public :: set_zero
   type(c_ptr), public :: dset_zero_part
   type(c_ptr), public :: zset_zero_part
@@ -315,9 +314,8 @@ module opencl_m
       
       ! now initialize the kernels
       call f90_opencl_build_program(prog, opencl%env, "vpsi.cl")
-      call f90_opencl_create_kernel(dvpsi, prog, "dvpsi")
-      call f90_opencl_create_kernel(zvpsi, prog, "zvpsi")
-      call f90_opencl_create_kernel(zvpsi_spinors, prog, "zvpsi_spinors")
+      call f90_opencl_create_kernel(kernel_vpsi, prog, "vpsi")
+      call f90_opencl_create_kernel(kernel_vpsi_spinors, prog, "vpsi_spinors")
       call f90_opencl_release_program(prog)
       
       call f90_opencl_build_program(prog, opencl%env, "set_zero.cl")
@@ -357,8 +355,8 @@ module opencl_m
       call push_sub('opencl.opencl_end')
 
       if(opencl_is_enabled()) then
-        call f90_opencl_release_kernel(dvpsi)
-        call f90_opencl_release_kernel(zvpsi)
+        call f90_opencl_release_kernel(kernel_vpsi)
+        call f90_opencl_release_kernel(kernel_vpsi_spinors)
         call f90_opencl_env_end(opencl%env)
       end if
 

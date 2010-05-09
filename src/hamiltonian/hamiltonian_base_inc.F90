@@ -25,7 +25,7 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   type(batch_t),               intent(in)    :: psib
   type(batch_t),               intent(inout) :: vpsib
 
-  integer :: ist, idim, ip
+  integer :: ist, idim, ip, iprange
   R_TYPE, pointer :: psi(:, :), vpsi(:, :)
 #ifdef HAVE_OPENCL
   integer :: pnp
@@ -44,23 +44,27 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
       select case(std%ispin)
 
       case(UNPOLARIZED, SPIN_POLARIZED)
-        call opencl_set_kernel_arg(X(vpsi), 0, pnp*(ispin - 1))
-        call opencl_set_kernel_arg(X(vpsi), 1, this%potential_opencl)
-        call opencl_set_kernel_arg(X(vpsi), 2, psib%buffer)
-        call opencl_set_kernel_arg(X(vpsi), 3, batch_buffer_ubound(psib))
-        call opencl_set_kernel_arg(X(vpsi), 4, vpsib%buffer)
-        call opencl_set_kernel_arg(X(vpsi), 5, batch_buffer_ubound(vpsib))
-        
-        call opencl_kernel_run(X(vpsi), (/psib%ubound(1), pnp/), (/psib%ubound(1), opencl_max_workgroup_size()/psib%ubound(1)/))
+        call opencl_set_kernel_arg(kernel_vpsi, 0, pnp*(ispin - 1))
+        call opencl_set_kernel_arg(kernel_vpsi, 1, this%potential_opencl)
+        call opencl_set_kernel_arg(kernel_vpsi, 2, psib%buffer)
+        call opencl_set_kernel_arg(kernel_vpsi, 3, log2(psib%ubound_real(1)))
+        call opencl_set_kernel_arg(kernel_vpsi, 4, vpsib%buffer)
+        call opencl_set_kernel_arg(kernel_vpsi, 5, log2(vpsib%ubound_real(1)))
+
+        iprange = opencl_max_workgroup_size()/psib%ubound_real(1)
+
+        call opencl_kernel_run(kernel_vpsi, (/psib%ubound_real(1), pnp/), (/psib%ubound_real(1), iprange/))
 
       case(SPINORS)
-        call opencl_set_kernel_arg(zvpsi_spinors, 0, this%potential_opencl)
-        call opencl_set_kernel_arg(zvpsi_spinors, 1, pnp)
-        call opencl_set_kernel_arg(zvpsi_spinors, 2, psib%buffer)
-        call opencl_set_kernel_arg(zvpsi_spinors, 3, batch_buffer_ubound(psib))
-        call opencl_set_kernel_arg(zvpsi_spinors, 4, vpsib%buffer)
-        call opencl_set_kernel_arg(zvpsi_spinors, 5, batch_buffer_ubound(vpsib))
-        call opencl_kernel_run(zvpsi_spinors, (/psib%ubound(1)/2, pnp/), (/psib%ubound(1)/2, 2*opencl_max_workgroup_size()/psib%ubound(1)/))
+        call opencl_set_kernel_arg(kernel_vpsi_spinors, 0, this%potential_opencl)
+        call opencl_set_kernel_arg(kernel_vpsi_spinors, 1, pnp)
+        call opencl_set_kernel_arg(kernel_vpsi_spinors, 2, psib%buffer)
+        call opencl_set_kernel_arg(kernel_vpsi_spinors, 3, batch_buffer_ubound(psib))
+        call opencl_set_kernel_arg(kernel_vpsi_spinors, 4, vpsib%buffer)
+        call opencl_set_kernel_arg(kernel_vpsi_spinors, 5, batch_buffer_ubound(vpsib))
+
+        call opencl_kernel_run(kernel_vpsi_spinors, (/psib%ubound(1)/2, pnp/), &
+          (/psib%ubound(1)/2, 2*opencl_max_workgroup_size()/psib%ubound(1)/))
 
       end select
 

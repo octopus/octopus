@@ -21,34 +21,21 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-__kernel void dvpsi(const int offset, 
+__kernel void vpsi(const int offset, 
 		    const __global double * vv, 
 		    const __global double * psi, const int ldpsi,
-		    __global double * vpsi, const int ldvpsi){
+		   __global double * vpsi, const int ldvpsi){
 
   int ist = get_global_id(0);
-  int ip = get_global_id(1);
+  int ip  = get_global_id(1);
 
-  double vi = vv[offset + ip];
-  vpsi[ip*ldvpsi + ist] = vi*psi[ip*ldpsi + ist];
+  vpsi[(ip<<ldvpsi) + ist] = vv[offset + ip]*psi[(ip<<ldpsi) + ist];
 
 }
 
-__kernel void zvpsi(const int offset, 
-		    const __global double * vv, 
-		    const __global double2 * psi, const int ldpsi,
-		    __global double2 * vpsi, const int ldvpsi){
-  int ist = get_global_id(0);
-  int ip = get_global_id(1);
-
-  double vi = vv[offset + ip];
-  vpsi[ip*ldvpsi + ist] = vi*psi[ip*ldpsi + ist];
-
-}
-
-__kernel void zvpsi_spinors(const __global double * vv, const int ldvv,
-			    const __global double2 * psi, const int ldpsi,
-			    __global double2 * vpsi, const int ldvpsi){
+__kernel void vpsi_spinors(const __global double * vv, const int ldvv,
+			   const __global double2 * psi, const int ldpsi,
+			   __global double2 * vpsi, const int ldvpsi){
   int ist = 2*get_global_id(0);
   int ip = get_global_id(1);
 
