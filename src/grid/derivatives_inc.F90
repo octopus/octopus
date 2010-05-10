@@ -73,20 +73,16 @@ contains
 #ifdef HAVE_OPENCL
     if(batch_is_in_buffer(ffb)) then
 
-      call opencl_set_kernel_arg(X(set_zero_part), 0, ffb%nst_linear)
-      call opencl_set_kernel_arg(X(set_zero_part), 1, bndry_start - 1)
-      call opencl_set_kernel_arg(X(set_zero_part), 2, bndry_end - 1)
-      call opencl_set_kernel_arg(X(set_zero_part), 3, ffb%buffer)
-      call opencl_set_kernel_arg(X(set_zero_part), 4, batch_buffer_ubound(ffb))
+      call opencl_set_kernel_arg(set_zero_part, 0, bndry_start - 1)
+      call opencl_set_kernel_arg(set_zero_part, 1, bndry_end - 1)
+      call opencl_set_kernel_arg(set_zero_part, 2, ffb%buffer)
+      call opencl_set_kernel_arg(set_zero_part, 3, log2(ffb%ubound_real(1)))
 
-      localsize = opencl_max_workgroup_size()
-      globalsize = bndry_end - bndry_start + 1
+      localsize = opencl_max_workgroup_size()/ffb%ubound_real(1)
+      globalsize = pad(bndry_end - bndry_start + 1, localsize)
+      
+      call opencl_kernel_run(set_zero_part, (/ffb%ubound_real(1), globalsize/), (/ffb%ubound_real(1), localsize/))
 
-      if(mod(globalsize, localsize) /= 0) then
-        globalsize = globalsize + localsize - mod(globalsize, localsize)
-      end if
-
-      call opencl_kernel_run(X(set_zero_part), (/globalsize/), (/localsize/))
       call batch_buffer_was_modified(ffb)
 
     else

@@ -67,14 +67,14 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   
   apply_phase = associated(hm%phase)
 
+  call X(derivatives_batch_set_bc)(der, psib)
+
   if(apply_phase) then
     SAFE_ALLOCATE(psi_copy(1:der%mesh%np_part, 1:hm%d%dim, 1:nst))
     call batch_init(epsib, hm%d%dim, psib%states(1)%ist, psib%states(nst)%ist, psi_copy)
   else
     call batch_copy(psib, epsib)
   end if
-
-  call X(derivatives_batch_set_bc)(der, psib)
 
   bs = hardware%X(block_size)
 

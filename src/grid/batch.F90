@@ -323,6 +323,8 @@ contains
 
     logical :: copy_
 
+    ASSERT(batch_is_ok(this))
+
     copy_ = .true.
     if(present(copy)) copy_ = copy
 

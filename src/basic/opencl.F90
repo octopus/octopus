@@ -1,4 +1,4 @@
-  !! Copyright (C) 2010 X. Andrade
+!! Copyright (C) 2010 X. Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -70,8 +70,7 @@ module opencl_m
   type(c_ptr), public :: kernel_vpsi
   type(c_ptr), public :: kernel_vpsi_spinors
   type(c_ptr), public :: set_zero
-  type(c_ptr), public :: dset_zero_part
-  type(c_ptr), public :: zset_zero_part
+  type(c_ptr), public :: set_zero_part
   type(c_ptr), public :: daxpy
   type(c_ptr), public :: zaxpy
   type(c_ptr), public :: dzaxpy
@@ -320,8 +319,7 @@ module opencl_m
       
       call f90_opencl_build_program(prog, opencl%env, "set_zero.cl")
       call f90_opencl_create_kernel(set_zero, prog, "set_zero")
-      call f90_opencl_create_kernel(dset_zero_part, prog, "dset_zero_part")
-      call f90_opencl_create_kernel(zset_zero_part, prog, "zset_zero_part")
+      call f90_opencl_create_kernel(set_zero_part, prog, "set_zero_part")
       call f90_opencl_release_program(prog)
       
       call f90_opencl_build_program(prog, opencl%env, "axpy.cl")
@@ -342,7 +340,6 @@ module opencl_m
       call f90_opencl_create_kernel(zpack, prog, "zpack")
       call f90_opencl_create_kernel(dunpack, prog, "dunpack")
       call f90_opencl_create_kernel(zunpack, prog, "zunpack")
-
       call f90_opencl_release_program(prog)
 
       call pop_sub('opencl.opencl_init')

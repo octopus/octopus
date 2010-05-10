@@ -25,25 +25,15 @@ __kernel void set_zero(__global double * aa){
   aa[get_global_id(0)] = 0.0;
 }
 
-__kernel void dset_zero_part(const int nst, const int start, const int end, __global double * aa, const int ldaa){
-  int i = get_global_id(0);
+__kernel void set_zero_part(const int start, const int end, __global double * aa, const int ldaa){
+  int ist = get_global_id(0);
+  int ip  = get_global_id(1);
 
-  if(i < end - start + 1){
-    for(int j = 0; j < nst; j++){
-      aa[j*ldaa + start + i] = 0.0;
-    }
+  if(ip < end - start + 1){
+    aa[ist + ((start + ip)<<ldaa)] = 0.0;
   }
 }
 
-__kernel void zset_zero_part(const int nst, const int start, const int end, __global double2 * aa, const int ldaa){
-  int i = get_global_id(0);
-
-  if(i < end - start + 1){
-    for(int j = 0; j < nst; j++){
-      aa[j*ldaa + start + i] = 0.0;
-    }
-  }
-}
 
 /*
  Local Variables:
