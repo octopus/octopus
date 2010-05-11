@@ -24,27 +24,19 @@
 __kernel void daxpy(const double aa, 
 		    const __global double * xx, const int ldxx,
 		    __global double * yy, const int ldyy){
-  int ip = get_global_id(1);
+
   int ist = get_global_id(0);
+  int ip = get_global_id(1);
   
-  yy[ip*ldyy + ist] += aa*xx[ip*ldxx + ist];
+  yy[(ip<<ldyy) + ist] += aa*xx[(ip<<ldxx) + ist];
 
-}
-
-__kernel void dzaxpy(const double aa, 
-		     const __global double2 * xx, const int ldxx,
-		     __global double2 * yy, const int ldyy){
-  int ip = get_global_id(1);
-  int ist = get_global_id(0);
-
-  yy[ip*ldyy + ist] += aa*xx[ip*ldxx + ist];
 }
 
 __kernel void zaxpy(const double re_aa, const double im_aa, 
 		    const __global double2 * xx, const int ldxx,
 		    __global double2 * yy, const int ldyy){
-  int ip = get_global_id(1);
   int ist = get_global_id(0);
+  int ip = get_global_id(1);
 
   double2 xxi = xx[ip*ldxx + ist];
   yy[ip*ldyy + ist] += (double2)(re_aa*xxi.x - im_aa*xxi.y, re_aa*xxi.y + im_aa*xxi.x);

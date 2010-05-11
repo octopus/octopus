@@ -73,7 +73,6 @@ module opencl_m
   type(c_ptr), public :: set_zero_part
   type(c_ptr), public :: daxpy
   type(c_ptr), public :: zaxpy
-  type(c_ptr), public :: dzaxpy
   type(c_ptr), public :: dprojector_gather
   type(c_ptr), public :: zprojector_gather
   type(c_ptr), public :: dprojector_scatter
@@ -324,7 +323,6 @@ module opencl_m
       
       call f90_opencl_build_program(prog, opencl%env, "axpy.cl")
       call f90_opencl_create_kernel(daxpy, prog, "daxpy")
-      call f90_opencl_create_kernel(dzaxpy, prog, "dzaxpy")
       call f90_opencl_create_kernel(zaxpy, prog, "zaxpy")
       call f90_opencl_release_program(prog)
 

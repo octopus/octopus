@@ -167,17 +167,16 @@ subroutine X(batch_axpy)(np, aa, xx, yy)
 
 #ifdef R_TREAL
 
-    if(batch_type(yy) == TYPE_FLOAT) then
-      axpy_kernel = daxpy
-    else
-      axpy_kernel = dzaxpy
-    end if
+    axpy_kernel = daxpy
 
     call opencl_set_kernel_arg(axpy_kernel, 0, aa)
     call opencl_set_kernel_arg(axpy_kernel, 1, xx%buffer)
-    call opencl_set_kernel_arg(axpy_kernel, 2, batch_buffer_ubound(xx))
+    call opencl_set_kernel_arg(axpy_kernel, 2, log2(xx%ubound_real(1)))
     call opencl_set_kernel_arg(axpy_kernel, 3, yy%buffer)
-    call opencl_set_kernel_arg(axpy_kernel, 4, batch_buffer_ubound(yy))
+    call opencl_set_kernel_arg(axpy_kernel, 4, log2(yy%ubound_real(1)))
+
+    localsize = opencl_max_workgroup_size()/yy%ubound_real(1)
+    call opencl_kernel_run(axpy_kernel, (/yy%ubound_real(1), pad(np, localsize)/), (/yy%ubound_real(1), localsize/))
 
 #else
     
@@ -191,10 +190,11 @@ subroutine X(batch_axpy)(np, aa, xx, yy)
     call opencl_set_kernel_arg(axpy_kernel, 3, batch_buffer_ubound(xx))
     call opencl_set_kernel_arg(axpy_kernel, 4, yy%buffer)
     call opencl_set_kernel_arg(axpy_kernel, 5, batch_buffer_ubound(yy))
-#endif
 
     localsize = opencl_max_workgroup_size()
     call opencl_kernel_run(axpy_kernel, (/yy%ubound(1), pad(np, localsize)/), (/yy%ubound(1), localsize/yy%ubound(1)/))
+
+#endif
 
     call batch_buffer_was_modified(yy)
     
