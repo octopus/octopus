@@ -32,7 +32,7 @@ subroutine X(opencl_write_buffer)(this, size, data, offset)
   offset_ = 0
   if(present(offset)) offset_ = offset*R_SIZEOF
 
-  call f90_opencl_write_buffer(this%mem, opencl%env, fsize, offset_, data(1))
+  call f90_cl_write_buffer(this%mem, opencl%env, fsize, offset_, data(1))
 
   call profiling_count_transfers(size, data(1))
   call opencl_finish()
@@ -56,7 +56,7 @@ subroutine X(opencl_write_buffer_2)(this, size, data, offset)
   offset_ = 0
   if(present(offset)) offset_ = offset*R_SIZEOF
 
-  call f90_opencl_write_buffer(this%mem, opencl%env, fsize, offset_, data(1, 1))
+  call f90_cl_write_buffer(this%mem, opencl%env, fsize, offset_, data(1, 1))
 
   call profiling_count_transfers(size, data(1, 1))
   call opencl_finish()
@@ -80,7 +80,7 @@ subroutine X(opencl_read_buffer)(this, size, data, offset)
   offset_ = 0
   if(present(offset)) offset_ = offset*R_SIZEOF
 
-  call f90_opencl_read_buffer(this%mem, opencl%env, fsize, offset_, data(1))
+  call f90_cl_read_buffer(this%mem, opencl%env, fsize, offset_, data(1))
 
   call profiling_count_transfers(size, data(1))
   call opencl_finish()
@@ -104,7 +104,7 @@ subroutine X(opencl_read_buffer_2)(this, size, data, offset)
   offset_ = 0
   if(present(offset)) offset_ = offset*R_SIZEOF
 
-  call f90_opencl_read_buffer(this%mem, opencl%env, fsize, offset_, data(1, 1))
+  call f90_cl_read_buffer(this%mem, opencl%env, fsize, offset_, data(1, 1))
 
   call profiling_count_transfers(size, data(1, 1))
   call opencl_finish()
@@ -119,8 +119,11 @@ subroutine X(opencl_set_kernel_arg_data)(kernel, narg, data)
   integer,            intent(in)    :: narg
   R_TYPE,             intent(in)    :: data
   
-  call f90_opencl_set_kernel_arg_data(kernel, narg, R_SIZEOF, data)
-  
+  integer :: ierr
+
+  call f90_cl_set_kernel_arg_data(kernel, narg, R_SIZEOF, data, ierr)
+  if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_data")
+
 end subroutine X(opencl_set_kernel_arg_data)
 
 !! Local Variables:

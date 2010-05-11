@@ -70,15 +70,16 @@ if COMPILE_OPENCL
 	opencl.F90
 endif
 
-noinst_HEADERS =          \
-	mpi_debug_inc.F90 \
-	mpi_lib_inc.F90   \
-	loct_inc.F90      \
-	subarray_inc.F90  \
-	varia.h           \
-	io_binary.h       \
-	opencl.h          \
-	opencl_inc.F90
+noinst_HEADERS =               \
+	mpi_debug_inc.F90      \
+	mpi_lib_inc.F90        \
+	loct_inc.F90           \
+	subarray_inc.F90       \
+	varia.h                \
+	io_binary.h            \
+	opencl.h               \
+	opencl_inc.F90         \
+	opencl_iface_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -114,7 +115,7 @@ unit_system.o : unit_system.F90 unit.o io.o messages.o parser.o global.o dataset
 write_iter.o : write_iter.F90 c_pointer.o
 io_binary_f.o : io_binary_f.F90 io_binary.h messages.o
 
-opencl.o : opencl.F90 opencl_inc.F90 global.o c_pointer.o types.o profiling.o messages.o parser.o
+opencl.o : opencl.F90 opencl_inc.F90 opencl_iface_inc.F90 global.o c_pointer.o types.o profiling.o messages.o parser.o 
 mpi_debug.o : mpi_debug.F90 mpi_debug_inc.F90 mpi.o messages.o loct.o global.o 
 mpi_lib.o : mpi_lib.F90 mpi_lib_inc.F90 mpi_debug.o mpi.o messages.o global.o profiling.o
 multicomm.o : multicomm.F90 varinfo.o utils.o mpi.o messages.o parser.o io.o global.o datasets.o profiling.o

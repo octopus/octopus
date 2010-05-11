@@ -82,172 +82,7 @@ module opencl_m
   type(c_ptr), public :: dunpack
   type(c_ptr), public :: zunpack
 
-  ! this values are copied from OpenCL include CL/cl.h
-  integer, parameter, public ::        &
-    CL_MEM_READ_WRITE = 1,             &
-    CL_MEM_WRITE_ONLY = 2,             &
-    CL_MEM_READ_ONLY  = 4
-
-  ! this function are defined in opencl_low.c
-  interface
-    ! ---------------------------------------------------
-
-    subroutine f90_opencl_env_init(env, source_path)
-      use c_pointer_m
-
-      implicit none
-
-      type(c_ptr),      intent(out) :: env
-      character(len=*), intent(in)  :: source_path
-    end subroutine f90_opencl_env_init
-
-    ! ----------------------------------------------------
-
-    subroutine f90_opencl_env_end(env)
-      use c_pointer_m
-
-      implicit none
-
-      type(c_ptr), intent(inout) :: env
-    end subroutine f90_opencl_env_end
-
-    ! ----------------------------------------------------
-
-    integer function f90_opencl_max_workgroup_size(env)
-      use c_pointer_m
-
-      implicit none
-
-      type(c_ptr), intent(inout) :: env
-    end function f90_opencl_max_workgroup_size
-
-    ! ----------------------------------------------------
-
-    subroutine f90_opencl_build_program(prog, env, source_file)
-      use c_pointer_m
-
-      implicit none
-
-      type(c_ptr),      intent(out)   :: prog
-      type(c_ptr),      intent(inout) :: env
-      character(len=*), intent(in)    :: source_file
-    end subroutine f90_opencl_build_program
-
-    ! ----------------------------------------------------
-
-    subroutine f90_opencl_release_program(prog)
-      use c_pointer_m
-
-      implicit none
-
-      type(c_ptr), intent(inout) :: prog
-    end subroutine f90_opencl_release_program
-
-    ! ----------------------------------------------------
-
-    subroutine f90_opencl_create_kernel(kernel, prog, kernel_name)
-      use c_pointer_m
-
-      implicit none
-
-      type(c_ptr),      intent(out)   :: kernel
-      type(c_ptr),      intent(inout) :: prog
-      character(len=*), intent(in)    :: kernel_name
-    end subroutine f90_opencl_create_kernel
-
-    ! ----------------------------------------------------
-
-    subroutine f90_opencl_release_kernel(kernel)
-      use c_pointer_m
-
-      implicit none
-
-      type(c_ptr), intent(inout) :: kernel
-    end subroutine f90_opencl_release_kernel
-
-    ! ----------------------------------------------------
-
-    integer function f90_opencl_kernel_wgroup_size(kernel, env)
-      use c_pointer_m
-      
-      implicit none
-      
-      type(c_ptr), intent(inout) :: kernel
-      type(c_ptr), intent(inout) :: env
-    end function f90_opencl_kernel_wgroup_size
-
-    ! ----------------------------------------------------
-
-    subroutine f90_opencl_create_buffer(this, env, flags, size)
-      use c_pointer_m
-
-      implicit none
-
-      type(c_ptr),            intent(inout) :: this
-      type(c_ptr),            intent(inout) :: env
-      integer,                intent(in)    :: flags
-      integer(SIZEOF_SIZE_T), intent(in)    :: size
-    end subroutine f90_opencl_create_buffer
-    
-    ! ----------------------------------------------------
-
-    subroutine f90_opencl_release_buffer(this)
-      use c_pointer_m
-
-      implicit none
-
-      type(c_ptr),            intent(inout) :: this
-    end subroutine f90_opencl_release_buffer
-
-    ! ----------------------------------------------------
-
-    subroutine f90_opencl_finish(this)
-      use c_pointer_m
-
-      implicit none
-
-      type(c_ptr),            intent(inout) :: this
-    end subroutine f90_opencl_finish
-
-    ! ----------------------------------------------------
-
-    subroutine f90_opencl_set_kernel_arg_buf(kernel, index, buffer)
-      use c_pointer_m
-
-      implicit none
-
-      type(c_ptr), intent(inout) :: kernel
-      integer,     intent(in)    :: index
-      type(c_ptr), intent(in)    :: buffer
-    end subroutine f90_opencl_set_kernel_arg_buf
-    
-    ! ----------------------------------------------------
-
-    subroutine f90_opencl_set_kernel_arg_local(kernel, index, size)
-      use c_pointer_m
-
-      implicit none
-
-      type(c_ptr), intent(inout) :: kernel
-      integer,     intent(in)    :: index
-      integer,     intent(in)    :: size
-    end subroutine f90_opencl_set_kernel_arg_local
-    
-    ! ----------------------------------------------------
-
-    subroutine f90_opencl_kernel_run(kernel, env, dim, globalsizes, localsizes)
-      use c_pointer_m
-
-      implicit none
-
-      type(c_ptr),            intent(inout) :: kernel
-      type(c_ptr),            intent(inout) :: env
-      integer,                intent(in)    :: dim
-      integer(SIZEOF_SIZE_T), intent(in)    :: globalsizes
-      integer(SIZEOF_SIZE_T), intent(in)    :: localsizes
-    end subroutine f90_opencl_kernel_run
-
-  end interface
+#include "opencl_iface_inc.F90"
 
   interface opencl_create_buffer
     module procedure opencl_create_buffer_4, opencl_create_buffer_8
@@ -306,39 +141,39 @@ module opencl_m
         return
       end if
 
-      call f90_opencl_env_init(opencl%env, trim(conf%share)//'/opencl/')   
+      call f90_cl_env_init(opencl%env, trim(conf%share)//'/opencl/')   
       
-      opencl%max_workgroup_size = f90_opencl_max_workgroup_size(opencl%env)
+      opencl%max_workgroup_size = f90_cl_max_workgroup_size(opencl%env)
       
       ! now initialize the kernels
-      call f90_opencl_build_program(prog, opencl%env, "vpsi.cl")
-      call f90_opencl_create_kernel(kernel_vpsi, prog, "vpsi")
-      call f90_opencl_create_kernel(kernel_vpsi_spinors, prog, "vpsi_spinors")
-      call f90_opencl_release_program(prog)
+      call f90_cl_build_program(prog, opencl%env, "vpsi.cl")
+      call f90_cl_create_kernel(kernel_vpsi, prog, "vpsi")
+      call f90_cl_create_kernel(kernel_vpsi_spinors, prog, "vpsi_spinors")
+      call opencl_release_program(prog)
       
-      call f90_opencl_build_program(prog, opencl%env, "set_zero.cl")
-      call f90_opencl_create_kernel(set_zero, prog, "set_zero")
-      call f90_opencl_create_kernel(set_zero_part, prog, "set_zero_part")
-      call f90_opencl_release_program(prog)
+      call f90_cl_build_program(prog, opencl%env, "set_zero.cl")
+      call f90_cl_create_kernel(set_zero, prog, "set_zero")
+      call f90_cl_create_kernel(set_zero_part, prog, "set_zero_part")
+      call opencl_release_program(prog)
       
-      call f90_opencl_build_program(prog, opencl%env, "axpy.cl")
-      call f90_opencl_create_kernel(daxpy, prog, "daxpy")
-      call f90_opencl_create_kernel(zaxpy, prog, "zaxpy")
-      call f90_opencl_release_program(prog)
+      call f90_cl_build_program(prog, opencl%env, "axpy.cl")
+      call f90_cl_create_kernel(daxpy, prog, "daxpy")
+      call f90_cl_create_kernel(zaxpy, prog, "zaxpy")
+      call opencl_release_program(prog)
 
-      call f90_opencl_build_program(prog, opencl%env, "projector.cl")
-      call f90_opencl_create_kernel(dprojector_gather, prog, "dprojector_gather")
-      call f90_opencl_create_kernel(zprojector_gather, prog, "zprojector_gather")
-      call f90_opencl_create_kernel(dprojector_scatter, prog, "dprojector_scatter")
-      call f90_opencl_create_kernel(zprojector_scatter, prog, "zprojector_scatter")
-      call f90_opencl_release_program(prog)
+      call f90_cl_build_program(prog, opencl%env, "projector.cl")
+      call f90_cl_create_kernel(dprojector_gather, prog, "dprojector_gather")
+      call f90_cl_create_kernel(zprojector_gather, prog, "zprojector_gather")
+      call f90_cl_create_kernel(dprojector_scatter, prog, "dprojector_scatter")
+      call f90_cl_create_kernel(zprojector_scatter, prog, "zprojector_scatter")
+      call opencl_release_program(prog)
 
-      call f90_opencl_build_program(prog, opencl%env, "pack.cl")
-      call f90_opencl_create_kernel(dpack, prog, "dpack")
-      call f90_opencl_create_kernel(zpack, prog, "zpack")
-      call f90_opencl_create_kernel(dunpack, prog, "dunpack")
-      call f90_opencl_create_kernel(zunpack, prog, "zunpack")
-      call f90_opencl_release_program(prog)
+      call f90_cl_build_program(prog, opencl%env, "pack.cl")
+      call f90_cl_create_kernel(dpack, prog, "dpack")
+      call f90_cl_create_kernel(zpack, prog, "zpack")
+      call f90_cl_create_kernel(dunpack, prog, "dunpack")
+      call f90_cl_create_kernel(zunpack, prog, "zunpack")
+      call opencl_release_program(prog)
 
       call pop_sub('opencl.opencl_init')
     end subroutine opencl_init
@@ -350,9 +185,9 @@ module opencl_m
       call push_sub('opencl.opencl_end')
 
       if(opencl_is_enabled()) then
-        call f90_opencl_release_kernel(kernel_vpsi)
-        call f90_opencl_release_kernel(kernel_vpsi_spinors)
-        call f90_opencl_env_end(opencl%env)
+        call f90_cl_release_kernel(kernel_vpsi)
+        call f90_cl_release_kernel(kernel_vpsi_spinors)
+        call f90_cl_env_end(opencl%env)
       end if
 
       call pop_sub('opencl.opencl_end')
@@ -374,7 +209,7 @@ module opencl_m
       this%size = size      
       fsize = size*types_get_size(type)
       
-      call f90_opencl_create_buffer(this%mem, opencl%env, flags, fsize)
+      call f90_cl_create_buffer(this%mem, opencl%env, flags, fsize)
 
       call pop_sub('opencl.opencl_create_buffer_4')
     end subroutine opencl_create_buffer_4
@@ -396,7 +231,7 @@ module opencl_m
 
       fsize = size*types_get_size(type)
 
-      call f90_opencl_create_buffer(this%mem, opencl%env, flags, fsize)
+      call f90_cl_create_buffer(this%mem, opencl%env, flags, fsize)
       
       call pop_sub('opencl.opencl_create_buffer_8')
     end subroutine opencl_create_buffer_8
@@ -407,7 +242,7 @@ module opencl_m
       type(opencl_mem_t), intent(inout) :: this
 
       this%size = 0
-      call f90_opencl_release_buffer(this%mem)
+      call f90_cl_release_buffer(this%mem)
 
     end subroutine opencl_release_buffer
 
@@ -445,7 +280,7 @@ module opencl_m
     ! ------------------------------------------
 
     subroutine opencl_finish()
-      call f90_opencl_finish(opencl%env)
+      call f90_cl_finish(opencl%env)
     end subroutine opencl_finish
 
     ! ------------------------------------------
@@ -455,9 +290,12 @@ module opencl_m
       integer,            intent(in)    :: narg
       type(opencl_mem_t), intent(in)    :: buffer
       
+      integer :: ierr
+
       call push_sub('opencl.opencl_set_kernel_arg_buffer')
 
-      call f90_opencl_set_kernel_arg_buf(kernel, narg, buffer%mem)
+      call f90_cl_set_kernel_arg_buf(kernel, narg, buffer%mem, ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_buf")
 
       call pop_sub('opencl.opencl_set_kernel_arg_buffer')
 
@@ -470,10 +308,13 @@ module opencl_m
       integer,            intent(in)    :: narg
       integer,            intent(in)    :: type
       integer,            intent(in)    :: size
-      
+
+      integer :: ierr
+
       call push_sub('opencl.opencl_set_kernel_arg_local')
 
-      call f90_opencl_set_kernel_arg_local(kernel, narg, size*types_get_size(type))
+      call f90_cl_set_kernel_arg_local(kernel, narg, size*types_get_size(type), ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_buf")
 
       call pop_sub('opencl.opencl_set_kernel_arg_local')
 
@@ -486,7 +327,7 @@ module opencl_m
       integer,            intent(in)    :: globalsizes(:)
       integer,            intent(in)    :: localsizes(:)
       
-      integer :: dim
+      integer :: dim, ierr
       integer(SIZEOF_SIZE_T) :: gsizes(1:3)
       integer(SIZEOF_SIZE_T) :: lsizes(1:3)
 
@@ -502,7 +343,8 @@ module opencl_m
       gsizes(1:dim) = int(globalsizes(1:dim), SIZEOF_SIZE_T)
       lsizes(1:dim) = int(localsizes(1:dim), SIZEOF_SIZE_T)
 
-      call f90_opencl_kernel_run(kernel, opencl%env, dim, gsizes(1), lsizes(1))
+      call f90_cl_kernel_run(kernel, opencl%env, dim, gsizes(1), lsizes(1), ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "kernel_run")
       call opencl_finish()
       call profiling_out(prof_kernel_run)
       call pop_sub('opencl.opencl_kernel_run')
@@ -518,7 +360,7 @@ module opencl_m
     integer function opencl_kernel_workgroup_size(kernel) result(workgroup_size)
       type(c_ptr), intent(inout) :: kernel
       
-      workgroup_size = f90_opencl_kernel_wgroup_size(kernel, opencl%env)
+      workgroup_size = f90_cl_kernel_wgroup_size(kernel, opencl%env)
     end function opencl_kernel_workgroup_size
 
     ! -----------------------------------------------
@@ -527,7 +369,7 @@ module opencl_m
       type(c_ptr),      intent(inout) :: prog
       character(len=*), intent(in)    :: filename
 
-      call f90_opencl_build_program(prog, opencl%env, filename)
+      call f90_cl_build_program(prog, opencl%env, filename)
     end subroutine opencl_build_program
 
     ! -----------------------------------------------
@@ -535,7 +377,10 @@ module opencl_m
     subroutine opencl_release_program(prog)
       type(c_ptr),      intent(inout) :: prog
 
-      call f90_opencl_release_program(prog)
+      integer :: ierr
+
+      call f90_cl_release_program(prog, ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "release_program")
     end subroutine opencl_release_program
 
     ! -----------------------------------------------
@@ -544,8 +389,71 @@ module opencl_m
       type(c_ptr),      intent(inout) :: prog
       character(len=*), intent(in)    :: name
 
-      call f90_opencl_create_kernel(kernel, prog, name)
+      call f90_cl_create_kernel(kernel, prog, name)
     end subroutine opencl_create_kernel
+
+    ! ------------------------------------------------
+    
+    subroutine opencl_print_error(ierr, name)
+      integer,          intent(in) :: ierr
+      character(len=*), intent(in) :: name
+
+      character(len=40) :: errcode
+    
+      select case(ierr)
+      case(CL_SUCCESS); errcode = 'CL_SUCCESS '
+      case(CL_DEVICE_NOT_FOUND); errcode = 'CL_DEVICE_NOT_FOUND '
+      case(CL_DEVICE_NOT_AVAILABLE); errcode = 'CL_DEVICE_NOT_AVAILABLE '
+      case(CL_COMPILER_NOT_AVAILABLE); errcode = 'CL_COMPILER_NOT_AVAILABLE '
+      case(CL_MEM_OBJECT_ALLOCATION_FAIL); errcode = 'CL_MEM_OBJECT_ALLOCATION_FAILURE '
+      case(CL_OUT_OF_RESOURCES); errcode = 'CL_OUT_OF_RESOURCES '
+      case(CL_OUT_OF_HOST_MEMORY); errcode = 'CL_OUT_OF_HOST_MEMORY '
+      case(CL_PROFILING_INFO_NOT_AVAILABLE); errcode = 'CL_PROFILING_INFO_NOT_AVAILABLE '
+      case(CL_MEM_COPY_OVERLAP); errcode = 'CL_MEM_COPY_OVERLAP '
+      case(CL_IMAGE_FORMAT_MISMATCH); errcode = 'CL_IMAGE_FORMAT_MISMATCH '
+      case(CL_IMAGE_FORMAT_NOT_SUPPORTED); errcode = 'CL_IMAGE_FORMAT_NOT_SUPPORTED '
+      case(CL_BUILD_PROGRAM_FAILURE); errcode = 'CL_BUILD_PROGRAM_FAILURE '
+      case(CL_MAP_FAILURE); errcode = 'CL_MAP_FAILURE '
+      case(CL_INVALID_VALUE); errcode = 'CL_INVALID_VALUE '
+      case(CL_INVALID_DEVICE_TYPE); errcode = 'CL_INVALID_DEVICE_TYPE '
+      case(CL_INVALID_PLATFORM); errcode = 'CL_INVALID_PLATFORM '
+      case(CL_INVALID_DEVICE); errcode = 'CL_INVALID_DEVICE '
+      case(CL_INVALID_CONTEXT); errcode = 'CL_INVALID_CONTEXT '
+      case(CL_INVALID_QUEUE_PROPERTIES); errcode = 'CL_INVALID_QUEUE_PROPERTIES '
+      case(CL_INVALID_COMMAND_QUEUE); errcode = 'CL_INVALID_COMMAND_QUEUE '
+      case(CL_INVALID_HOST_PTR); errcode = 'CL_INVALID_HOST_PTR '
+      case(CL_INVALID_MEM_OBJECT); errcode = 'CL_INVALID_MEM_OBJECT '
+      case(CL_INVALID_IMAGE_FORMAT_DESC); errcode = 'CL_INVALID_IMAGE_FORMAT_DESCRIPTOR '
+      case(CL_INVALID_IMAGE_SIZE); errcode = 'CL_INVALID_IMAGE_SIZE '
+      case(CL_INVALID_SAMPLER); errcode = 'CL_INVALID_SAMPLER '
+      case(CL_INVALID_BINARY); errcode = 'CL_INVALID_BINARY '
+      case(CL_INVALID_BUILD_OPTIONS); errcode = 'CL_INVALID_BUILD_OPTIONS '
+      case(CL_INVALID_PROGRAM); errcode = 'CL_INVALID_PROGRAM '
+      case(CL_INVALID_PROGRAM_EXECUTABLE); errcode = 'CL_INVALID_PROGRAM_EXECUTABLE '
+      case(CL_INVALID_KERNEL_NAME); errcode = 'CL_INVALID_KERNEL_NAME '
+      case(CL_INVALID_KERNEL_DEFINITION); errcode = 'CL_INVALID_KERNEL_DEFINITION '
+      case(CL_INVALID_KERNEL); errcode = 'CL_INVALID_KERNEL '
+      case(CL_INVALID_ARG_INDEX); errcode = 'CL_INVALID_ARG_INDEX '
+      case(CL_INVALID_ARG_VALUE); errcode = 'CL_INVALID_ARG_VALUE '
+      case(CL_INVALID_ARG_SIZE); errcode = 'CL_INVALID_ARG_SIZE '
+      case(CL_INVALID_KERNEL_ARGS); errcode = 'CL_INVALID_KERNEL_ARGS '
+      case(CL_INVALID_WORK_DIMENSION); errcode = 'CL_INVALID_WORK_DIMENSION '
+      case(CL_INVALID_WORK_GROUP_SIZE); errcode = 'CL_INVALID_WORK_GROUP_SIZE '
+      case(CL_INVALID_WORK_ITEM_SIZE); errcode = 'CL_INVALID_WORK_ITEM_SIZE '
+      case(CL_INVALID_GLOBAL_OFFSET); errcode = 'CL_INVALID_GLOBAL_OFFSET '
+      case(CL_INVALID_EVENT_WAIT_LIST); errcode = 'CL_INVALID_EVENT_WAIT_LIST '
+      case(CL_INVALID_EVENT); errcode = 'CL_INVALID_EVENT '
+      case(CL_INVALID_OPERATION); errcode = 'CL_INVALID_OPERATION '
+      case(CL_INVALID_GL_OBJECT); errcode = 'CL_INVALID_GL_OBJECT '
+      case(CL_INVALID_BUFFER_SIZE); errcode = 'CL_INVALID_BUFFER_SIZE '
+      case(CL_INVALID_MIP_LEVEL); errcode = 'CL_INVALID_MIP_LEVEL '
+      case(CL_INVALID_GLOBAL_WORK_SIZE); errcode = 'CL_INVALID_GLOBAL_WORK_SIZE '
+      end select
+
+      message(1) = 'Error: OpenCL '//trim(name)//' '//trim(errcode)
+      call write_fatal(1)
+  
+    end subroutine opencl_print_error
 
 #include "undef.F90"
 #include "real.F90"
