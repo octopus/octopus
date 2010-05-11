@@ -49,6 +49,7 @@ module opencl_m
     opencl_kernel_run,            &
     opencl_build_program,         &
     opencl_release_program,       &
+    opencl_release_kernel,        &
     opencl_create_kernel
 
   type opencl_t 
@@ -146,33 +147,33 @@ module opencl_m
       opencl%max_workgroup_size = f90_cl_max_workgroup_size(opencl%env)
       
       ! now initialize the kernels
-      call f90_cl_build_program(prog, opencl%env, "vpsi.cl")
-      call f90_cl_create_kernel(kernel_vpsi, prog, "vpsi")
-      call f90_cl_create_kernel(kernel_vpsi_spinors, prog, "vpsi_spinors")
+      call opencl_build_program(prog, "vpsi.cl")
+      call opencl_create_kernel(kernel_vpsi, prog, "vpsi")
+      call opencl_create_kernel(kernel_vpsi_spinors, prog, "vpsi_spinors")
       call opencl_release_program(prog)
       
-      call f90_cl_build_program(prog, opencl%env, "set_zero.cl")
-      call f90_cl_create_kernel(set_zero, prog, "set_zero")
-      call f90_cl_create_kernel(set_zero_part, prog, "set_zero_part")
+      call opencl_build_program(prog, "set_zero.cl")
+      call opencl_create_kernel(set_zero, prog, "set_zero")
+      call opencl_create_kernel(set_zero_part, prog, "set_zero_part")
       call opencl_release_program(prog)
       
-      call f90_cl_build_program(prog, opencl%env, "axpy.cl")
-      call f90_cl_create_kernel(daxpy, prog, "daxpy")
-      call f90_cl_create_kernel(zaxpy, prog, "zaxpy")
+      call opencl_build_program(prog, "axpy.cl")
+      call opencl_create_kernel(daxpy, prog, "daxpy")
+      call opencl_create_kernel(zaxpy, prog, "zaxpy")
       call opencl_release_program(prog)
 
-      call f90_cl_build_program(prog, opencl%env, "projector.cl")
-      call f90_cl_create_kernel(dprojector_gather, prog, "dprojector_gather")
-      call f90_cl_create_kernel(zprojector_gather, prog, "zprojector_gather")
-      call f90_cl_create_kernel(dprojector_scatter, prog, "dprojector_scatter")
-      call f90_cl_create_kernel(zprojector_scatter, prog, "zprojector_scatter")
+      call opencl_build_program(prog, "projector.cl")
+      call opencl_create_kernel(dprojector_gather, prog, "dprojector_gather")
+      call opencl_create_kernel(zprojector_gather, prog, "zprojector_gather")
+      call opencl_create_kernel(dprojector_scatter, prog, "dprojector_scatter")
+      call opencl_create_kernel(zprojector_scatter, prog, "zprojector_scatter")
       call opencl_release_program(prog)
 
-      call f90_cl_build_program(prog, opencl%env, "pack.cl")
-      call f90_cl_create_kernel(dpack, prog, "dpack")
-      call f90_cl_create_kernel(zpack, prog, "zpack")
-      call f90_cl_create_kernel(dunpack, prog, "dunpack")
-      call f90_cl_create_kernel(zunpack, prog, "zunpack")
+      call opencl_build_program(prog, "pack.cl")
+      call opencl_create_kernel(dpack, prog, "dpack")
+      call opencl_create_kernel(zpack, prog, "zpack")
+      call opencl_create_kernel(dunpack, prog, "dunpack")
+      call opencl_create_kernel(zunpack, prog, "zunpack")
       call opencl_release_program(prog)
 
       call pop_sub('opencl.opencl_init')
@@ -185,8 +186,8 @@ module opencl_m
       call push_sub('opencl.opencl_end')
 
       if(opencl_is_enabled()) then
-        call f90_cl_release_kernel(kernel_vpsi)
-        call f90_cl_release_kernel(kernel_vpsi_spinors)
+        call opencl_release_kernel(kernel_vpsi)
+        call opencl_release_kernel(kernel_vpsi_spinors)
         call f90_cl_env_end(opencl%env)
       end if
 
@@ -202,6 +203,7 @@ module opencl_m
       integer,            intent(in)    :: size
       
       integer(SIZEOF_SIZE_T) :: fsize
+      integer :: ierr
 
       call push_sub('opencl.opencl_create_buffer_4')
 
@@ -209,7 +211,8 @@ module opencl_m
       this%size = size      
       fsize = size*types_get_size(type)
       
-      call f90_cl_create_buffer(this%mem, opencl%env, flags, fsize)
+      call f90_cl_create_buffer(this%mem, opencl%env, flags, fsize, ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "create_buffer")
 
       call pop_sub('opencl.opencl_create_buffer_4')
     end subroutine opencl_create_buffer_4
@@ -223,7 +226,8 @@ module opencl_m
       integer(SIZEOF_SIZE_T), intent(in)    :: size
       
       integer(SIZEOF_SIZE_T) :: fsize
-      
+      integer :: ierr
+
       call push_sub('opencl.opencl_create_buffer_8')
 
       this%type = type
@@ -231,8 +235,9 @@ module opencl_m
 
       fsize = size*types_get_size(type)
 
-      call f90_cl_create_buffer(this%mem, opencl%env, flags, fsize)
-      
+      call f90_cl_create_buffer(this%mem, opencl%env, flags, fsize, ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "create_buffer")
+
       call pop_sub('opencl.opencl_create_buffer_8')
     end subroutine opencl_create_buffer_8
 
@@ -241,9 +246,11 @@ module opencl_m
     subroutine opencl_release_buffer(this)
       type(opencl_mem_t), intent(inout) :: this
 
-      this%size = 0
-      call f90_cl_release_buffer(this%mem)
+      integer :: ierr
 
+      this%size = 0
+      call f90_cl_release_buffer(this%mem, ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "release_buffer")
     end subroutine opencl_release_buffer
 
     ! ------------------------------------------
@@ -384,12 +391,26 @@ module opencl_m
     end subroutine opencl_release_program
 
     ! -----------------------------------------------
+
+    subroutine opencl_release_kernel(prog)
+      type(c_ptr),      intent(inout) :: prog
+
+      integer :: ierr
+
+      call f90_cl_release_kernel(prog, ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "release_kernel")
+    end subroutine opencl_release_kernel
+
+    ! -----------------------------------------------
     subroutine opencl_create_kernel(kernel, prog, name)
       type(c_ptr),      intent(inout) :: kernel
       type(c_ptr),      intent(inout) :: prog
       character(len=*), intent(in)    :: name
 
-      call f90_cl_create_kernel(kernel, prog, name)
+      integer :: ierr
+
+      call f90_cl_create_kernel(kernel, prog, name, ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "create_kernel")
     end subroutine opencl_create_kernel
 
     ! ------------------------------------------------

@@ -114,11 +114,11 @@ void FC_FUNC_(f90_cl_env_end,F90_CL_ENV_END)(opencl_env_t ** env){
 void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
      (cl_program ** program, opencl_env_t ** env, STR_F_TYPE file_name_f STR_ARG1){
   FILE * source_file;
-  cl_int status;
   char * full_file_name;
   size_t szSourceLength;
   char* cSourceString;
   char * file_name;
+  cl_int status;
 
   *program = (cl_program *) malloc(sizeof(cl_program));
 
@@ -150,7 +150,7 @@ void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
     
   cSourceString[szSourceLength] = '\0';
 
-  **program = clCreateProgramWithSource(env[0]->Context, 1, (const char**)&cSourceString, NULL, &status); 
+  **program = clCreateProgramWithSource(env[0]->Context, 1, (const char**)&cSourceString, NULL, &status);
   status = clBuildProgram(**program, 0, NULL, "-cl-mad-enable", NULL, NULL);
   
   if(status != CL_SUCCESS){
@@ -176,7 +176,7 @@ void FC_FUNC_(f90_cl_release_program, F90_CL_RELEASE_PROGRAM)
 }
 
 void FC_FUNC_(f90_cl_create_kernel, F90_CL_CREATE_KERNEL)
-     (cl_kernel ** kernel, cl_program ** program, STR_F_TYPE kernel_name_f STR_ARG1){
+     (cl_kernel ** kernel, cl_program ** program, STR_F_TYPE kernel_name_f, int * ierr STR_ARG1){
   char * kernel_name;
   cl_int status;
 
@@ -184,20 +184,15 @@ void FC_FUNC_(f90_cl_create_kernel, F90_CL_CREATE_KERNEL)
 
   *kernel = (cl_kernel *) malloc(sizeof(cl_kernel));
 
-  **kernel = clCreateKernel(**program, kernel_name, &status);
+  **kernel = clCreateKernel(**program, kernel_name, ierr);
 
   /*printf("kernel = %ld\n", *kernel);*/
-
-  if(status != CL_SUCCESS){
-    fprintf(stderr, "Error: creation of kernel '%s' failed with error %d.\n", kernel_name, status);
-    exit(1);
-  }
 
   free(kernel_name);
 }
 
-void FC_FUNC_(f90_cl_release_kernel, F90_CL_RELEASE_KERNEL)(cl_kernel ** kernel){
-  clReleaseKernel(**kernel);
+void FC_FUNC_(f90_cl_release_kernel, F90_CL_RELEASE_KERNEL)(cl_kernel ** kernel, int * ierr){
+  *ierr = clReleaseKernel(**kernel);
   free(*kernel);
 }
 
@@ -208,8 +203,7 @@ int FC_FUNC_(f90_cl_kernel_wgroup_size, F90_CL_KERNEL_WGROUP_SIZE)(cl_kernel ** 
 }
 
 void FC_FUNC_(f90_cl_create_buffer, F90_CL_CREATE_BUFFER)
-     (cl_mem ** buffer, opencl_env_t ** env, const int * flags, const size_t * size){
-  cl_int ierr;
+     (cl_mem ** buffer, opencl_env_t ** env, const int * flags, const size_t * size, int * ierr){
 
   *buffer = (cl_mem *) malloc(sizeof(cl_mem));
   
@@ -218,27 +212,14 @@ void FC_FUNC_(f90_cl_create_buffer, F90_CL_CREATE_BUFFER)
   printf("queue=%ld buffer=%ld size=%d\n", env[0]->CommandQueue, **buffer, *size);
   */
 
-  **buffer = clCreateBuffer(env[0]->Context, *flags, (size_t) *size, NULL, &ierr);
-
-  if(ierr != CL_SUCCESS){
-    fprintf(stderr, "Error: buffer of size %zd creation failed. Error code %d\n", *size, ierr);
-    exit(1);
-  }
+  **buffer = clCreateBuffer(env[0]->Context, *flags, (size_t) *size, NULL, ierr);
 
 }
 
-void FC_FUNC_(f90_cl_release_buffer, F90_CL_RELEASE_BUFFER)(cl_mem ** buffer){
-  cl_int ierr;
+void FC_FUNC_(f90_cl_release_buffer, F90_CL_RELEASE_BUFFER)(cl_mem ** buffer, int * ierr){
 
-  ierr = clReleaseMemObject(**buffer);
-
-  if(ierr != CL_SUCCESS){
-    fprintf(stderr, "Error: buffer release failed. Error code %d\n", ierr);
-    exit(1);
-  }
-
+  *ierr = clReleaseMemObject(**buffer);
   free(*buffer);
-  
 }
 
 void FC_FUNC_(f90_cl_write_buffer, F90_CL_WRITE_BUFFER)

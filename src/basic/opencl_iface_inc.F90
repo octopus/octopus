@@ -132,7 +132,7 @@
 
     ! ----------------------------------------------------
 
-    subroutine f90_cl_create_kernel(kernel, prog, kernel_name)
+    subroutine f90_cl_create_kernel(kernel, prog, kernel_name, ierr)
       use c_pointer_m
 
       implicit none
@@ -140,16 +140,18 @@
       type(c_ptr),      intent(out)   :: kernel
       type(c_ptr),      intent(inout) :: prog
       character(len=*), intent(in)    :: kernel_name
+      integer,          intent(in)    :: ierr
     end subroutine f90_cl_create_kernel
 
     ! ----------------------------------------------------
 
-    subroutine f90_cl_release_kernel(kernel)
+    subroutine f90_cl_release_kernel(kernel, ierr)
       use c_pointer_m
 
       implicit none
 
       type(c_ptr), intent(inout) :: kernel
+      integer,     intent(in)    :: ierr
     end subroutine f90_cl_release_kernel
 
     ! ----------------------------------------------------
@@ -165,7 +167,7 @@
 
     ! ----------------------------------------------------
 
-    subroutine f90_cl_create_buffer(this, env, flags, size)
+    subroutine f90_cl_create_buffer(this, env, flags, size, ierr)
       use c_pointer_m
 
       implicit none
@@ -174,16 +176,18 @@
       type(c_ptr),            intent(inout) :: env
       integer,                intent(in)    :: flags
       integer(SIZEOF_SIZE_T), intent(in)    :: size
+      integer,                intent(in)    :: ierr
     end subroutine f90_cl_create_buffer
 
     ! ----------------------------------------------------
 
-    subroutine f90_cl_release_buffer(this)
+    subroutine f90_cl_release_buffer(this, ierr)
       use c_pointer_m
 
       implicit none
 
       type(c_ptr),            intent(inout) :: this
+      integer,                intent(in)    :: ierr
     end subroutine f90_cl_release_buffer
 
     ! ----------------------------------------------------
