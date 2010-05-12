@@ -137,14 +137,12 @@ contains
   subroutine multicomm_all_pairs_copy(apout, apin)
     type(multicomm_all_pairs_t), intent(inout) :: apout
     type(multicomm_all_pairs_t), intent(in)    :: apin
-    integer :: i
 
     call push_sub('multicomm.all_pairs_copy')
 
     call mpi_grp_copy(apout%grp, apin%grp)
     apout%rounds = apin%rounds
     if(associated(apin%schedule)) then
-      i = size(apin%schedule, 1)*size(apin%schedule, 2)
       SAFE_ALLOCATE(apout%schedule(1:size(apin%schedule, 1), 1:size(apin%schedule, 2)))
       apout%schedule = apin%schedule
     end if    
@@ -160,7 +158,7 @@ contains
     integer,           intent(inout):: index_range(:)
     integer,           intent(in)   :: min_range(:)
 
-    integer   :: i
+    integer :: ii
     type(block_t) :: blk
 
     call push_sub('multicomm.multicomm_init')
@@ -236,8 +234,8 @@ contains
       end if
 
       ! clear parallel strategies that were available but will not be used
-      do i = 1, mc%n_index
-        if(mc%group_sizes(i) == 1) mc%par_strategy = ibclr(mc%par_strategy, i-1)
+      do ii = 1, mc%n_index
+        if(mc%group_sizes(ii) == 1) mc%par_strategy = ibclr(mc%par_strategy, ii - 1)
       end do
 
       ! reset
@@ -254,7 +252,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine strategy()
-      integer :: i, j,  par_mask
+      integer :: jj,  par_mask
 
       call push_sub('multicomm.multicomm_init.strategy')
 
@@ -297,14 +295,14 @@ contains
         if(mc%par_strategy == P_STRATEGY_SERIAL) then
           message(1) = "More than one node is available, but this run mode cannot run in parallel."
           message(2) = "Please select a ParallelizationStrategy compatible with"
-          j = 2
-          do i = 1, n_par_types
-            if(iand(par_mask, 2**(i-1)).ne.0) then
-              j = j + 1
-              write(message(j), '(2a)') "  - ", par_types(i)
+          jj = 2
+          do ii = 1, n_par_types
+            if(iand(par_mask, 2**(ii - 1)) .ne. 0) then
+              jj = jj + 1
+              write(message(jj), '(2a)') "  - ", par_types(ii)
             end if
           end do
-          call write_fatal(j)
+          call write_fatal(jj, only_root_writes = .true.)
         end if
       else
         mc%par_strategy = P_STRATEGY_SERIAL
@@ -338,28 +336,28 @@ contains
     subroutine read_block(blk)
       type(block_t), intent(inout) :: blk
 
-      integer :: i, n
+      integer :: ii, nn
       logical :: fill_used
 
       call push_sub('multicomm.multicomm_init.read_block')
 
-      n = parse_block_cols(blk, 0)
+      nn = parse_block_cols(blk, 0)
 
       mc%group_sizes = 1
-      do i = 1, min(n, mc%n_index)
-        if(multicomm_strategy_is_parallel(mc, i)) then
-          call parse_block_integer(blk, 0, i-1, mc%group_sizes(i))
+      do ii = 1, min(nn, mc%n_index)
+        if(multicomm_strategy_is_parallel(mc, ii)) then
+          call parse_block_integer(blk, 0, ii - 1, mc%group_sizes(ii))
         end if
       end do
 
       fill_used = .false.
-      do i = 1, mc%n_index
-        if(mc%group_sizes(i) == -1) then
+      do ii = 1, mc%n_index
+        if(mc%group_sizes(ii) == -1) then
           if(fill_used) then
             message = "Error: The 'fill' value can be used only once in ParallelizationGroupRanks."
-            call write_fatal(1)
+            call write_fatal(1, only_root_writes = .true.)
           end if
-          mc%group_sizes(i) = -mpi_world%size/product(mc%group_sizes)
+          mc%group_sizes(ii) = -mpi_world%size / product(mc%group_sizes)
           fill_used = .true.
         end if
       end do
@@ -369,9 +367,9 @@ contains
 
     ! ---------------------------------------------------------
     subroutine assign_nodes()
-      integer :: i, n, k, n_divisors, divisors(50)
+      integer :: ii, nn, kk, n_divisors, divisors(50)
       integer, allocatable :: n_group_max(:)
-      FLOAT   :: f
+      FLOAT   :: ff
 
       call push_sub('multicomm.multicomm_init.assign_nodes')
 
@@ -379,47 +377,47 @@ contains
         mc%group_sizes = 1
         mc%group_sizes(P_STRATEGY_DOMAINS) = mc%topo%maxgsize
         mc%group_sizes(P_STRATEGY_STATES)  = mc%topo%ng
-      call pop_sub('multicomm.multicomm_init.assign_nodes')
+        call pop_sub('multicomm.multicomm_init.assign_nodes')
         return
       end if
 
       SAFE_ALLOCATE(n_group_max(1:mc%n_index))
 
-      n = mc%n_node
+      nn = mc%n_node
 
       ! this is the maximum number of processors in each group
       n_group_max(1:mc%n_index) = max(index_range(1:mc%n_index), 1)
-      do k = 1, mc%n_index
-        if(.not.multicomm_strategy_is_parallel(mc, k)) n_group_max(k) = 1
+      do kk = 1, mc%n_index
+        if(.not. multicomm_strategy_is_parallel(mc, kk)) n_group_max(kk) = 1
       end do
 
       ! for each index
-      do k = 1, mc%n_index
-        if(n_group_max(k) == 1) then ! not parallel in this group
-          mc%group_sizes(k) = 1
+      do kk = 1, mc%n_index
+        if(n_group_max(kk) == 1) then ! not parallel in this group
+          mc%group_sizes(kk) = 1
           cycle
         end if
 
         ! distibute the nodes so that domains is the last
-        f = real(n, REAL_PRECISION)
-        do i = k+1, mc%n_index
-          f = f/real(n_group_max(i), REAL_PRECISION)
+        ff = real(nn, REAL_PRECISION)
+        do ii = kk + 1, mc%n_index
+          ff = ff / real(n_group_max(ii), REAL_PRECISION)
         end do
 
-        ! get divisors of n
+        ! get divisors of nn
         n_divisors = 50 ! maximum number of divisors
-        call get_divisors(n, n_divisors, divisors)
+        call get_divisors(nn, n_divisors, divisors)
 
-        ! get the divisor of n >= f
-        mc%group_sizes(k) = n
-        do i = 1, n_divisors
-          if(real(divisors(i), REAL_PRECISION) >= f) then
-            mc%group_sizes(k) = divisors(i)
+        ! get the divisor of nn >= ff
+        mc%group_sizes(kk) = nn
+        do ii = 1, n_divisors
+          if(real(divisors(ii), REAL_PRECISION) >= ff) then
+            mc%group_sizes(kk) = divisors(ii)
             exit
           end if
         end do
 
-        n = n/mc%group_sizes(k)
+        nn = nn / mc%group_sizes(kk)
       end do
 
       SAFE_DEALLOCATE_A(n_group_max)
@@ -432,22 +430,22 @@ contains
     !> check if a balanced distribution of nodes will be used
     subroutine sanity_check()
       FLOAT :: frac
-      integer :: i, k, n_max
+      integer :: ii, kk, n_max
 
       call push_sub('multicomm.multicomm_init.sanity_check')
 
       ! print out some info
-      i = 0
-      do k = 1, mc%n_index
-        if(.not.multicomm_strategy_is_parallel(mc, k)) cycle
-        i = i + 1
-        write(message(i),'(3a,i6,a,i8,a)') 'Info: Number of nodes in ', &
-          par_types(k), ' group:', mc%group_sizes(k), ' (', index_range(k), ')'
+      ii = 0
+      do kk = 1, mc%n_index
+        if(.not. multicomm_strategy_is_parallel(mc, kk)) cycle
+        ii = ii + 1
+        write(message(ii),'(3a,i6,a,i8,a)') 'Info: Number of nodes in ', &
+          par_types(kk), ' group:', mc%group_sizes(kk), ' (', index_range(kk), ')'
       end do
-      call write_info(i)
+      call write_info(ii)
 
       ! do we have the correct number of processors
-      if(product(mc%group_sizes(1:mc%n_index)).ne.mpi_world%size) then
+      if(product(mc%group_sizes(1:mc%n_index)) .ne. mpi_world%size) then
         write(message(1),'(a,i4,a,i4,a)') "Inconsistent number of processors (", &
           product(mc%group_sizes(1:mc%n_index)), ".ne.", mpi_world%size, ")"
         message(2) = "You probably have a problem in the block 'ParallelizationGroupRanks'"
@@ -460,7 +458,7 @@ contains
         call write_fatal(2)
       end if
 
-      if(any(index_range(1:mc%n_index)/mc%group_sizes(1:mc%n_index) < min_range(1:mc%n_index))) then
+      if(any(index_range(1:mc%n_index) / mc%group_sizes(1:mc%n_index) < min_range(1:mc%n_index))) then
         message(1) = "I have fewer elements in a parallel group than recommended."
         message(2) = "Maybe you should reduce the number of nodes."
         call write_warning(2)
@@ -468,18 +466,18 @@ contains
 
       ! calculate fraction of idle time
       frac = M_ONE
-      do i = 1, mc%n_index
-        n_max = ceiling(real(index_range(i), REAL_PRECISION)/real(mc%group_sizes(i), REAL_PRECISION))
-        k = n_max * mc%group_sizes(i)
-        frac = frac * (M_ONE - real(k - index_range(i), REAL_PRECISION)/real(k, REAL_PRECISION))
+      do ii = 1, mc%n_index
+        n_max = ceiling(real(index_range(ii), REAL_PRECISION) / real(mc%group_sizes(ii), REAL_PRECISION))
+        kk = n_max * mc%group_sizes(ii)
+        frac = frac * (M_ONE - real(kk - index_range(ii), REAL_PRECISION) / real(kk, REAL_PRECISION))
       end do
 
       write(message(1), '(a,f5.2,a)') "Info: Octopus will waste at least ", &
-        (M_ONE - frac)*CNST(100.), "% of computer time."
+        (M_ONE - frac) * CNST(100.), "% of computer time."
       if(frac < CNST(0.8)) then
         message(2) = "I decided this is too much. Change the number of processors and try again."
         message(3) = "Usually a number of processors which is a multiple of small primes is best."
-        call write_fatal(3)
+        call write_fatal(3, only_root_writes = .true.)
       else
         call write_info(1)
       end if
@@ -603,6 +601,7 @@ contains
 
       call pop_sub('multicomm.multicomm_init.group_comm_create')
     end subroutine group_comm_create
+
   end subroutine multicomm_init
   
 
@@ -611,17 +610,17 @@ contains
       type(multicomm_t), intent(inout) :: mc
 
 #if defined(HAVE_MPI)
-      integer :: i
+      integer :: ii
 #endif
 
       call push_sub('multicomm.multicomm_end')
 
-    if(mc%par_strategy.ne.P_STRATEGY_SERIAL) then
+    if(mc%par_strategy .ne. P_STRATEGY_SERIAL) then
 #if defined(HAVE_MPI)
       ! Delete communicators.
-      do i = 1, mc%n_index
-        if(.not.multicomm_strategy_is_parallel(mc, i)) cycle
-        call MPI_Comm_free(mc%group_comm(i), mpi_err)
+      do ii = 1, mc%n_index
+        if(.not. multicomm_strategy_is_parallel(mc, ii)) cycle
+        call MPI_Comm_free(mc%group_comm(ii), mpi_err)
       end do
       call MPI_Comm_free(mc%dom_st_comm, mpi_err)
 #endif
@@ -636,12 +635,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  logical function multicomm_strategy_is_parallel(mc, level) result(r)
+  logical function multicomm_strategy_is_parallel(mc, level) result(rr)
     type(multicomm_t), intent(in) :: mc
     integer,           intent(in) :: level
 
     call push_sub('multicomm.multicomm_strategy_is_parallel')
-    r = iand(mc%par_strategy, 2**(level-1)).ne.0
+    rr = iand(mc%par_strategy, 2**(level - 1)) .ne. 0
 
     call pop_sub('multicomm.multicomm_strategy_is_parallel')
   end function multicomm_strategy_is_parallel
@@ -665,21 +664,21 @@ contains
     call push_sub('multicomm.create_all_pairs')
 
     ap%grp = mpi_grp
-    grp_size   = mpi_grp%size
+    grp_size = mpi_grp%size
 
     ! Number of rounds.
-    if(mod(grp_size, 2).eq.0) then
-      rounds = grp_size-1
+    if(mod(grp_size, 2) .eq. 0) then
+      rounds = grp_size - 1
     else
       rounds = grp_size
     end if
     ap%rounds = rounds
 
     ! Calculate schedule.
-    SAFE_ALLOCATE(ap%schedule(0:grp_size-1, 1:rounds))
+    SAFE_ALLOCATE(ap%schedule(0:grp_size - 1, 1:rounds))
     do ir = 1, rounds
-      do in = 0, grp_size-1
-        ap%schedule(in, ir) = get_partner(in+1, ir)-1
+      do in = 0, grp_size - 1
+        ap%schedule(in, ir) = get_partner(in + 1, ir) - 1
       end do
     end do
 
@@ -687,6 +686,7 @@ contains
 
   contains
 
+    ! ---------------------------------------------------------
     ! Those are from the paper cited above.
     integer function get_partner(in, ir)
       integer, intent(in) :: in, ir
@@ -702,6 +702,7 @@ contains
       call pop_sub('multicomm.create_all_pairs.get_partner')
     end function get_partner
 
+    ! ---------------------------------------------------------
     integer function get_partner_even(grp_size, ii, rr) result(pp)
       integer, intent(in) :: grp_size, ii, rr
 
@@ -724,7 +725,8 @@ contains
       call pop_sub('multicomm.create_all_pairs.get_partner_even')
     end function get_partner_even
 
-    integer function get_partner_odd(grp_size, ii, rr) result(pp)
+    ! ---------------------------------------------------------
+      integer function get_partner_odd(grp_size, ii, rr) result(pp)
       integer, intent(in) :: grp_size, ii, rr
 
       integer :: mm
@@ -741,6 +743,7 @@ contains
 
       call pop_sub('multicomm.create_all_pairs.get_partner_odd')
     end function get_partner_odd
+
   end subroutine multicomm_create_all_pairs
 #endif
 
@@ -839,6 +842,8 @@ contains
 #endif
     end subroutine topology_init
 
+
+    ! ---------------------------------------------------------
     logical function topology_groups_are_equal(this) result(are_equal)
       type(topology_t), intent(in) :: this
       
@@ -848,6 +853,8 @@ contains
       call pop_sub('multicomm.topology_groups_are_equal')
     end function topology_groups_are_equal
 
+
+    ! ---------------------------------------------------------
     subroutine topology_end(this)
       type(topology_t), intent(inout) :: this
 
@@ -859,6 +866,7 @@ contains
       
       call pop_sub('multicomm.topology_end')
     end subroutine topology_end
+
 
   !---------------------------------------------------
   !> Function to divide the range of numbers from 1 to nn
@@ -903,7 +911,9 @@ contains
 
   end subroutine multicomm_divide_range
 
+
 #ifdef USE_OMP
+  ! ---------------------------------------------------------
   ! THREADSAFE
   subroutine multicomm_divide_range_omp(nn, ini, nn_loc)
     integer, intent(in)    :: nn
