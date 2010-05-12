@@ -19,13 +19,13 @@
 
 ! ---------------------------------------------------------
 subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
-  type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(in)    :: der
-  type(batch_t),       intent(inout) :: psib
-  type(batch_t),       intent(inout) :: hpsib
-  integer,             intent(in)    :: ik
-  FLOAT, optional,     intent(in)    :: time
-  integer, optional,   intent(in)    :: terms
+  type(hamiltonian_t),   intent(in)    :: hm
+  type(derivatives_t),   intent(in)    :: der
+  type(batch_t), target, intent(inout) :: psib
+  type(batch_t),         intent(inout) :: hpsib
+  integer,               intent(in)    :: ik
+  FLOAT, optional,       intent(in)    :: time
+  integer, optional,     intent(in)    :: terms
   
   integer :: nst, bs, sp
   R_TYPE, pointer     :: epsi(:,:)
@@ -37,7 +37,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   logical :: kinetic_only_, apply_phase
   integer :: ii, ist, idim, ip
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
-  type(batch_t) :: epsib, laplb
+  type(batch_t) :: laplb
+  type(batch_t), pointer :: epsib
   type(derivatives_handle_batch_t) :: handle
   integer :: terms_
 
@@ -71,9 +72,10 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
   if(apply_phase) then
     SAFE_ALLOCATE(psi_copy(1:der%mesh%np_part, 1:hm%d%dim, 1:nst))
+    SAFE_ALLOCATE(epsib)
     call batch_init(epsib, hm%d%dim, psib%states(1)%ist, psib%states(nst)%ist, psi_copy)
   else
-    call batch_copy(psib, epsib)
+    epsib => psib
   end if
 
   bs = hardware%X(block_size)
@@ -104,10 +106,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
     end do
 
 #ifdef HAVE_OPENCL
-    if(opencl_is_enabled()) then
-      call batch_move_to_buffer(laplb, copy = .false.)
-      call batch_move_to_buffer(epsib)
-    end if
+    if(batch_is_in_buffer(epsib)) call batch_move_to_buffer(laplb, copy = .false.)
 #endif
 
     ! start the calculation of the Laplacian
@@ -117,9 +116,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
   ! apply the local potential
   if (iand(TERM_LOCAL_POTENTIAL, terms_) /= 0) then
-#ifdef HAVE_OPENCL
-    if(opencl_is_enabled() .and. batch_is_in_buffer(epsib)) call batch_move_to_buffer(hpsib, copy = .false.)
-#endif
     call X(hamiltonian_base_local)(hm%hm_base, der%mesh, hm%d, states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
   else if(iand(TERM_LOCAL_EXTERNAL, terms_) /= 0) then
 
@@ -141,46 +137,26 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
     else
       ! (here epsib is in buffer and dirty (because of the
       ! boundaries), but the central part is ok, so we can use it)
-#ifdef HAVE_OPENCL
-      if(opencl_is_enabled()) call batch_move_from_buffer(hpsib)
-#endif
       if(hm%ep%non_local) call X(project_psi_batch)(der%mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, epsib, hpsib, ik)
     end if
   end if
 
   if(iand(TERM_KINETIC, terms_) /= 0) then
     call X(derivatives_batch_finish)(handle)
-#ifdef HAVE_OPENCL
-    if(opencl_is_enabled()) call batch_move_from_buffer(epsib)
-#endif
   end if
 
   if (iand(TERM_OTHERS, terms_) /= 0 .and. hamiltonian_base_has_magnetic(hm%hm_base)) then
-#ifdef HAVE_OPENCL
-    if(opencl_is_enabled()) call batch_move_from_buffer(hpsib)
-#endif
     call X(hamiltonian_base_magnetic)(hm%hm_base, der, hm%d, hm%ep, states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
   end if
   
   ! finish the calculation of the Laplacian
   if(iand(TERM_KINETIC, terms_) /= 0) then
-
-#ifdef HAVE_OPENCL
-    if(opencl_is_enabled()) then
-      if(batch_is_in_buffer(laplb) .and. .not. batch_is_in_buffer(hpsib)) call batch_move_to_buffer(hpsib)
-    end if
-#endif
     call profiling_in(prof_kinetic, "KINETIC")
     call batch_axpy(der%mesh%np, -M_HALF/hm%mass, laplb, hpsib)
-    call profiling_out(prof_kinetic)
-
 #ifdef HAVE_OPENCL
-    if(opencl_is_enabled()) then
-      call batch_move_from_buffer(laplb)
-      call batch_move_from_buffer(hpsib)
-    end if
+    if(batch_is_in_buffer(epsib)) call batch_move_from_buffer(laplb, copy = .false.)
 #endif
-
+    call profiling_out(prof_kinetic)
     call batch_end(laplb)
   end if
 
@@ -229,10 +205,10 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
         
       end do
     end do
+    call batch_end(epsib)
+    SAFE_DEALLOCATE_P(epsib)
   end if
   
-  call batch_end(epsib)
-
   call pop_sub('hamiltonian_inc.Xhamiltonian_apply_batch')
   call profiling_out(prof_hamiltonian)
 

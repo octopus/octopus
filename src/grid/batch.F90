@@ -254,6 +254,16 @@ contains
       if(associated(bin%states_linear(ii)%zpsi)) bout%states_linear(ii)%zpsi => bin%states_linear(ii)%zpsi
     end do
 
+#ifdef HAVE_OPENCL
+    if(opencl_is_enabled()) then
+      bout%in_buffer = bin%in_buffer
+      bout%dirty = bin%dirty
+      bout%buffer = bin%buffer
+      bout%ubound(1:2) = bin%ubound(1:2)
+      bout%ubound_real(1:2) = bin%ubound_real(1:2)
+    end if
+#endif    
+
     call pop_sub('batch.batch_copy')
 
   end subroutine batch_copy

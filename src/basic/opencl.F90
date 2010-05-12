@@ -72,8 +72,8 @@ module opencl_m
   type(c_ptr), public :: kernel_vpsi_spinors
   type(c_ptr), public :: set_zero
   type(c_ptr), public :: set_zero_part
-  type(c_ptr), public :: daxpy
-  type(c_ptr), public :: zaxpy
+  type(c_ptr), public :: kernel_daxpy
+  type(c_ptr), public :: kernel_zaxpy
   type(c_ptr), public :: dprojector_gather
   type(c_ptr), public :: zprojector_gather
   type(c_ptr), public :: dprojector_scatter
@@ -158,8 +158,8 @@ module opencl_m
       call opencl_release_program(prog)
       
       call opencl_build_program(prog, "axpy.cl")
-      call opencl_create_kernel(daxpy, prog, "daxpy")
-      call opencl_create_kernel(zaxpy, prog, "zaxpy")
+      call opencl_create_kernel(kernel_daxpy, prog, "daxpy")
+      call opencl_create_kernel(kernel_zaxpy, prog, "zaxpy")
       call opencl_release_program(prog)
 
       call opencl_build_program(prog, "projector.cl")
@@ -188,6 +188,8 @@ module opencl_m
       if(opencl_is_enabled()) then
         call opencl_release_kernel(kernel_vpsi)
         call opencl_release_kernel(kernel_vpsi_spinors)
+        call opencl_release_kernel(kernel_daxpy)
+        call opencl_release_kernel(kernel_zaxpy)
         call f90_cl_env_end(opencl%env)
       end if
 

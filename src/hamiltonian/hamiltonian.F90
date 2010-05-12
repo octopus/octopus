@@ -92,7 +92,8 @@ module hamiltonian_m
     hamiltonian_hermitian,           &
     hamiltonian_epot_generate,       &
     hamiltonian_update_potential,    &
-    hamiltonian_get_time
+    hamiltonian_get_time,            &
+    hamiltonian_apply_in_buffer
 
   type hamiltonian_t
     ! The Hamiltonian must know what are the "dimensions" of the spaces,
@@ -1033,6 +1034,19 @@ contains
   end function hamiltonian_get_time
 
   ! -----------------------------------------------------------------
+
+  logical pure function hamiltonian_apply_in_buffer(this) result(apply)
+    type(hamiltonian_t),   intent(in) :: this
+
+    apply = .true.
+    if(associated(this%phase)) apply = .false.
+    if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.
+    if(this%ab .eq. IMAGINARY_ABSORBING) apply = .false.
+    if(this%scissor%apply) apply = .false.
+    if(this%theory_level == HARTREE .or. this%theory_level == HARTREE_FOCK) apply = .false.
+    if(iand(this%xc_family, XC_FAMILY_MGGA).ne.0)  apply = .false.
+
+  end function hamiltonian_apply_in_buffer
 
 #include "undef.F90"
 #include "real.F90"

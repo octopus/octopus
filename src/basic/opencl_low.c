@@ -172,7 +172,7 @@ void FC_FUNC_(f90_cl_release_program, F90_CL_RELEASE_PROGRAM)
   cl_int status;
 
   *ierr = clReleaseProgram(**program);
-  if(*ierr /= CL_SUCCESS) free(*program);
+  if(*ierr != CL_SUCCESS) free(*program);
 }
 
 void FC_FUNC_(f90_cl_create_kernel, F90_CL_CREATE_KERNEL)

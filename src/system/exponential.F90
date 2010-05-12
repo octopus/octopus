@@ -35,6 +35,9 @@ module exponential_m
   use parser_m
   use mesh_function_m
   use messages_m
+#ifdef HAVE_OPENCL
+  use opencl_m
+#endif
   use profiling_m
   use states_m
   use states_calc_m
@@ -586,11 +589,23 @@ contains
         zfact = zfact*(-M_zI*deltat)/iter
         zfact_is_real = .not. zfact_is_real
 
-! FIXME: need a test here for runaway exponential, e.g. for too large dt.
-!  in runaway case the problem is really hard to trace back: the positions
-!  go haywire on the first step of dynamics (often NaN) and with debugging options
-!  the code stops in ZAXPY below without saying why.
+        ! FIXME: need a test here for runaway exponential, e.g. for too large dt.
+        !  in runaway case the problem is really hard to trace back: the positions
+        !  go haywire on the first step of dynamics (often NaN) and with debugging options
+        !  the code stops in ZAXPY below without saying why.
+#ifdef HAVE_OPENCL
+        if(opencl_is_enabled() .and. hamiltonian_apply_in_buffer(hm)) then
+          call batch_move_to_buffer(psi1b)
+          call batch_move_to_buffer(hpsi1b)
+        end if
+#endif
         call zhamiltonian_apply_batch(hm, der, psi1b, hpsi1b, ik, time)
+#ifdef HAVE_OPENCL
+        if(opencl_is_enabled() .and. hamiltonian_apply_in_buffer(hm)) then
+          call batch_move_from_buffer(psi1b)
+          call batch_move_from_buffer(hpsi1b)
+        end if
+#endif
 
         !$omp parallel do private(ii, idim, ip, bsize)
         do ii = 1, psib%nst

@@ -152,7 +152,6 @@ subroutine X(batch_axpy)(np, aa, xx, yy)
   type(batch_t),     intent(inout) :: yy
 
   integer :: ist, localsize
-  type(c_ptr) :: axpy_kernel
 
   call push_sub('batch_inc.Xbatch_axpy')
   call profiling_in(axpy_prof, "BATCH_AXPY")
@@ -167,32 +166,28 @@ subroutine X(batch_axpy)(np, aa, xx, yy)
 
 #ifdef R_TREAL
 
-    axpy_kernel = daxpy
-
-    call opencl_set_kernel_arg(axpy_kernel, 0, aa)
-    call opencl_set_kernel_arg(axpy_kernel, 1, xx%buffer)
-    call opencl_set_kernel_arg(axpy_kernel, 2, log2(xx%ubound_real(1)))
-    call opencl_set_kernel_arg(axpy_kernel, 3, yy%buffer)
-    call opencl_set_kernel_arg(axpy_kernel, 4, log2(yy%ubound_real(1)))
+    call opencl_set_kernel_arg(kernel_daxpy, 0, aa)
+    call opencl_set_kernel_arg(kernel_daxpy, 1, xx%buffer)
+    call opencl_set_kernel_arg(kernel_daxpy, 2, log2(xx%ubound_real(1)))
+    call opencl_set_kernel_arg(kernel_daxpy, 3, yy%buffer)
+    call opencl_set_kernel_arg(kernel_daxpy, 4, log2(yy%ubound_real(1)))
 
     localsize = opencl_max_workgroup_size()/yy%ubound_real(1)
-    call opencl_kernel_run(axpy_kernel, (/yy%ubound_real(1), pad(np, localsize)/), (/yy%ubound_real(1), localsize/))
+    call opencl_kernel_run(kernel_daxpy, (/yy%ubound_real(1), pad(np, localsize)/), (/yy%ubound_real(1), localsize/))
 
 #else
     
     ASSERT(batch_type(yy) == TYPE_CMPLX)
 
-    axpy_kernel = zaxpy
-
-    call opencl_set_kernel_arg(axpy_kernel, 0, real(aa, REAL_PRECISION))
-    call opencl_set_kernel_arg(axpy_kernel, 1, aimag(aa))
-    call opencl_set_kernel_arg(axpy_kernel, 2, xx%buffer)
-    call opencl_set_kernel_arg(axpy_kernel, 3, batch_buffer_ubound(xx))
-    call opencl_set_kernel_arg(axpy_kernel, 4, yy%buffer)
-    call opencl_set_kernel_arg(axpy_kernel, 5, batch_buffer_ubound(yy))
+    call opencl_set_kernel_arg(kernel_zaxpy, 0, real(aa, REAL_PRECISION))
+    call opencl_set_kernel_arg(kernel_zaxpy, 1, aimag(aa))
+    call opencl_set_kernel_arg(kernel_zaxpy, 2, xx%buffer)
+    call opencl_set_kernel_arg(kernel_zaxpy, 3, batch_buffer_ubound(xx))
+    call opencl_set_kernel_arg(kernel_zaxpy, 4, yy%buffer)
+    call opencl_set_kernel_arg(kernel_zaxpy, 5, batch_buffer_ubound(yy))
 
     localsize = opencl_max_workgroup_size()
-    call opencl_kernel_run(axpy_kernel, (/yy%ubound(1), pad(np, localsize)/), (/yy%ubound(1), localsize/yy%ubound(1)/))
+    call opencl_kernel_run(kernel_zaxpy, (/yy%ubound(1), pad(np, localsize)/), (/yy%ubound(1), localsize/yy%ubound(1)/))
 
 #endif
 
