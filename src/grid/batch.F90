@@ -20,6 +20,7 @@
 #include "global.h"
 
 module batch_m
+  use blas_m
   use c_pointer_m
   use datasets_m
   use global_m
@@ -55,7 +56,8 @@ module batch_m
     batch_is_in_buffer,             &
     batch_buffer_was_modified,      &
     batch_is_ok,                    &
-    batch_axpy
+    batch_axpy,                     &
+    batch_copy_data
 
 #ifdef HAVE_OPENCL
   public ::                         &
@@ -508,6 +510,57 @@ contains
 
     call pop_sub('batch.batch_set_zero')
   end subroutine batch_set_zero
+
+! --------------------------------------------------------------
+
+subroutine batch_copy_data(np, xx, yy)
+  integer,           intent(in)    :: np
+  type(batch_t),     intent(in)    :: xx
+  type(batch_t),     intent(inout) :: yy
+
+  integer :: ist, localsize
+  type(profile_t), save :: prof
+
+  call push_sub('batch.batch_copy_data')
+  call profiling_in(prof, "BATCH_COPY_DATA")
+
+  ASSERT(batch_type(yy) == batch_type(xx))
+  ASSERT(xx%nst_linear == yy%nst_linear)
+
+#ifdef HAVE_OPENCL
+  if(batch_is_in_buffer(yy) .or. batch_is_in_buffer(xx)) then
+    ASSERT(batch_is_in_buffer(xx))
+    ASSERT(batch_is_in_buffer(yy))
+
+    call opencl_set_kernel_arg(kernel_copy, 0, xx%buffer)
+    call opencl_set_kernel_arg(kernel_copy, 1, log2(xx%ubound_real(1)))
+    call opencl_set_kernel_arg(kernel_copy, 2, yy%buffer)
+    call opencl_set_kernel_arg(kernel_copy, 3, log2(yy%ubound_real(1)))
+
+    localsize = opencl_max_workgroup_size()/yy%ubound_real(1)
+    call opencl_kernel_run(kernel_copy, (/yy%ubound_real(1), pad(np, localsize)/), (/yy%ubound_real(1), localsize/))
+
+    call batch_buffer_was_modified(yy)
+    
+  else
+#endif
+
+    !$ omp parallel do private(ist)
+    do ist = 1, yy%nst_linear
+      if(batch_type(yy) == TYPE_CMPLX) then
+        call blas_copy(np, xx%states_linear(ist)%zpsi(1), 1, yy%states_linear(ist)%zpsi(1), 1)
+      else
+        call blas_copy(np, xx%states_linear(ist)%dpsi(1), 1, yy%states_linear(ist)%dpsi(1), 1)
+      end if
+    end do
+
+#ifdef HAVE_OPENCL
+  end if
+#endif
+
+  call profiling_out(prof)
+  call pop_sub('batch.batch_copy_data')
+end subroutine batch_copy_data
 
 #include "real.F90"
 #include "batch_inc.F90"

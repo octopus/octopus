@@ -578,12 +578,15 @@ contains
       call batch_init(psi1b, hm%d%dim, st_start, st_end, psi1)
       call batch_init(hpsi1b, hm%d%dim, st_start, st_end, hpsi1)
 
-      !$omp parallel do private(ii, idim)
-      do ii = 1, psib%nst
-        do idim = 1, psib%dim
-          call lalg_copy(der%mesh%np, psib%states(ii)%zpsi(:, idim), psi1b%states(ii)%zpsi(:, idim))
-        end do
-      end do
+#ifdef HAVE_OPENCL
+      if(opencl_is_enabled() .and. hamiltonian_apply_in_buffer(hm)) then
+        call batch_move_to_buffer(psib)
+        call batch_move_to_buffer(psi1b, copy = .false.)
+        call batch_move_to_buffer(hpsi1b, copy = .false.)
+      end if
+#endif
+      
+      call batch_copy_data(der%mesh%np, psib, psi1b)
 
       do iter = 1, te%exp_order
         zfact = zfact*(-M_zI*deltat)/iter
@@ -593,39 +596,49 @@ contains
         !  in runaway case the problem is really hard to trace back: the positions
         !  go haywire on the first step of dynamics (often NaN) and with debugging options
         !  the code stops in ZAXPY below without saying why.
-#ifdef HAVE_OPENCL
-        if(opencl_is_enabled() .and. hamiltonian_apply_in_buffer(hm)) then
-          call batch_move_to_buffer(psi1b)
-          call batch_move_to_buffer(hpsi1b)
-        end if
-#endif
+
         call zhamiltonian_apply_batch(hm, der, psi1b, hpsi1b, ik, time)
-#ifdef HAVE_OPENCL
+
+#ifdef HAVE_OPENCL        
         if(opencl_is_enabled() .and. hamiltonian_apply_in_buffer(hm)) then
-          call batch_move_from_buffer(psi1b)
-          call batch_move_from_buffer(hpsi1b)
+          if(zfact_is_real) then
+            call batch_axpy(der%mesh%np, real(zfact, REAL_PRECISION), hpsi1b, psib)
+          else
+            call batch_axpy(der%mesh%np, zfact, hpsi1b, psib)
+          end if
+          if(iter /= te%exp_order) call batch_copy_data(der%mesh%np, hpsi1b, psi1b)
+        else
+#endif
+          !$omp parallel do private(ii, idim, ip, bsize)
+          do ii = 1, psib%nst
+            do idim = 1, hm%d%dim
+              
+              do ip = 1, der%mesh%np, hardware%zblock_size
+                bsize = min(hardware%zblock_size, der%mesh%np - ip + 1)
+                if(zfact_is_real) then
+                  call blas_axpy(bsize, real(zfact, REAL_PRECISION), hpsi1(ip, idim, ii), psib%states(ii)%zpsi(ip, idim))
+                else
+                  call blas_axpy(bsize, zfact, hpsi1(ip, idim, ii), 1, psib%states(ii)%zpsi(ip, idim), 1)
+                end if
+                if(iter /= te%exp_order) call blas_copy(bsize, hpsi1(ip, idim, ii), 1, psi1(ip, idim, ii), 1)
+              end do
+              
+            end do
+          end do
+          !$omp end parallel do
+#ifdef HAVE_OPENCL
         end if
 #endif
 
-        !$omp parallel do private(ii, idim, ip, bsize)
-        do ii = 1, psib%nst
-          do idim = 1, hm%d%dim
-    
-            do ip = 1, der%mesh%np, hardware%zblock_size
-              bsize = min(hardware%zblock_size, der%mesh%np - ip + 1)
-              if(zfact_is_real) then
-                call blas_axpy(bsize, real(zfact, REAL_PRECISION), hpsi1(ip, idim, ii), psib%states(ii)%zpsi(ip, idim))
-              else
-                call blas_axpy(bsize, zfact, hpsi1(ip, idim, ii), 1, psib%states(ii)%zpsi(ip, idim), 1)
-              end if
-              if(iter /= te%exp_order) call blas_copy(bsize, hpsi1(ip, idim, ii), 1, psi1(ip, idim, ii), 1)
-            end do
-
-          end do
-        end do
-        !$omp end parallel do
       end do
-      
+
+#ifdef HAVE_OPENCL
+      if(opencl_is_enabled() .and. hamiltonian_apply_in_buffer(hm)) then
+        call batch_move_from_buffer(psib)
+        call batch_move_from_buffer(psi1b, copy = .false.)
+        call batch_move_from_buffer(hpsi1b, copy = .false.)
+      end if
+#endif
       call batch_end(hpsi1b)
       call batch_end(psi1b)
 

@@ -74,6 +74,7 @@ module opencl_m
   type(c_ptr), public :: set_zero_part
   type(c_ptr), public :: kernel_daxpy
   type(c_ptr), public :: kernel_zaxpy
+  type(c_ptr), public :: kernel_copy
   type(c_ptr), public :: dprojector_gather
   type(c_ptr), public :: zprojector_gather
   type(c_ptr), public :: dprojector_scatter
@@ -176,6 +177,10 @@ module opencl_m
       call opencl_create_kernel(zunpack, prog, "zunpack")
       call opencl_release_program(prog)
 
+      call opencl_build_program(prog, "copy.cl")
+      call opencl_create_kernel(kernel_copy, prog, "copy")
+      call opencl_release_program(prog)
+
       call pop_sub('opencl.opencl_init')
     end subroutine opencl_init
 
@@ -189,6 +194,7 @@ module opencl_m
         call opencl_release_kernel(kernel_vpsi)
         call opencl_release_kernel(kernel_vpsi_spinors)
         call opencl_release_kernel(kernel_daxpy)
+        call opencl_release_kernel(kernel_copy)
         call opencl_release_kernel(kernel_zaxpy)
         call f90_cl_env_end(opencl%env)
       end if
