@@ -83,12 +83,13 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
       !$omp parallel do private(idim, ip)
       do ist = 1, psib%nst
         forall (idim = 1:psib%dim, ip = 1:mesh%np)
-          vpsib%states(ist)%X(psi)(ip, idim) = this%potential(ip, ispin)*psib%states(ist)%X(psi)(ip, idim)
+          vpsib%states(ist)%X(psi)(ip, idim) = vpsib%states(ist)%X(psi)(ip, idim) + &
+            this%potential(ip, ispin)*psib%states(ist)%X(psi)(ip, idim)
         end forall
       end do
       !$omp end parallel do
 
-      call profiling_count_operations((R_MUL*psib%nst)*mesh%np)
+      call profiling_count_operations((2*R_ADD*psib%nst)*mesh%np)
       call profiling_count_transfers(mesh%np, M_ONE)
       call profiling_count_transfers(mesh%np*psib%nst, R_TOTYPE(M_ONE))
 
@@ -99,9 +100,9 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
         vpsi => vpsib%states(ist)%X(psi)
 
         forall(ip = 1:mesh%np)
-          vpsi(ip, 1) = this%potential(ip, 1)*psi(ip, 1) + &
+          vpsi(ip, 1) = vpsi(ip, 1) + this%potential(ip, 1)*psi(ip, 1) + &
             (this%potential(ip, 3) + M_zI*this%potential(ip, 4))*psi(ip, 2)
-          vpsi(ip, 2) = this%potential(ip, 2)*psi(ip, 2) + &
+          vpsi(ip, 2) = vpsi(ip, 2) + this%potential(ip, 2)*psi(ip, 2) + &
             (this%potential(ip, 3) - M_zI*this%potential(ip, 4))*psi(ip, 1)
         end forall
 

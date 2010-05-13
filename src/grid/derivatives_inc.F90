@@ -247,7 +247,7 @@ end subroutine X(derivatives_set_bc)
 
 ! ---------------------------------------------------------
 ! This are the workhorse routines that handle the calculation of derivatives
-subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, set_bc)
+subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, set_bc, factor)
   type(nl_operator_t),      target, intent(in)    :: op
   type(derivatives_t),      target, intent(in)    :: der
   type(batch_t),            target, intent(inout) :: ff
@@ -255,6 +255,7 @@ subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, s
   type(derivatives_handle_batch_t), intent(out)   :: handle
   logical,                optional, intent(in)    :: ghost_update
   logical,                optional, intent(in)    :: set_bc
+  FLOAT,                  optional, intent(in)    :: factor
 
   logical :: set_bc_
 
@@ -267,6 +268,12 @@ subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, s
   handle%der  => der
   handle%ff   => ff
   handle%opff => opff
+  if(present(factor)) then
+    handle%factor_present = .true.
+    handle%factor = factor
+  else
+    handle%factor_present = .false.
+  end if
 
   ASSERT(handle%ff%nst_linear == handle%opff%nst_linear)
 
@@ -293,15 +300,31 @@ subroutine X(derivatives_batch_finish)(handle)
 
 #ifdef HAVE_MPI
   if(derivatives_overlap(handle%der) .and. handle%der%mesh%parallel_in_domains .and. handle%ghost_update) then
-    call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update=.false., points=OP_INNER)
+
+    if(handle%factor_present) then
+      call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, &
+        ghost_update=.false., points=OP_INNER, factor = handle%factor)
+    else
+      call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update=.false., points=OP_INNER)
+    end if
 
     call X(ghost_update_batch_finish)(handle%pv_h)
 
-    call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update=.false., points=OP_OUTER)
+    if(handle%factor_present) then
+      call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, &
+        ghost_update = .false., points = OP_OUTER, factor = handle%factor)
+    else
+      call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update = .false., points = OP_OUTER)
+    end if
+
   else
 #endif
-
-    call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update=handle%ghost_update)
+    if(handle%factor_present) then
+      call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, &
+        ghost_update = handle%ghost_update, factor = handle%factor)
+    else
+      call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update = handle%ghost_update)
+    end if
     
 #ifdef HAVE_MPI
   end if

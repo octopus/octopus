@@ -167,19 +167,21 @@ end subroutine X(nl_operator_tune)
 
 
 ! ---------------------------------------------------------
-subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, points)
+subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, points, factor)
   type(nl_operator_t), intent(in)    :: op
   type(batch_t),       intent(inout) :: fi
   type(batch_t),       intent(inout) :: fo
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: profile
   integer, optional,   intent(in)    :: points
+  FLOAT,   optional,   intent(in)    :: factor
 
   integer :: ist, points_, cop
   logical :: ghost_update_, profile_
   integer :: nri, nri_loc, ini
   integer, pointer :: imin(:), imax(:), ri(:, :)
   R_TYPE,  pointer ::  pfi(:), pfo(:)
+  FLOAT,   pointer :: wre(:), wim(:)
   real(8) :: ws(400)
 #ifdef HAVE_AS
   integer nns(1:2)
@@ -214,6 +216,23 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   end if
 #endif
 
+  nullify(wre)
+  nullify(wim)
+
+  if(op%const_w) then
+    if(present(factor)) then
+      SAFE_ALLOCATE(wre(1:op%stencil%size))
+      wre = op%w_re(:, 1)*factor
+      if(op%cmplx_op) then
+        SAFE_ALLOCATE(wim(1:op%stencil%size))
+        wim = op%w_im(:, 1)*factor
+      end if
+    else
+      wre => op%w_re(:, 1)
+      if(op%cmplx_op) wim => op%w_im(:, 1)
+    end if
+  end if
+
   if(nri > 0) then
     if(.not.op%const_w) then
       call operate_non_const_weights()
@@ -236,20 +255,20 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
         pfo => fo%states_linear(ist)%X(psi)(:)
         select case(op%X(function))
         case(OP_C)
-          call X(operate_ri)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
+          call X(operate_ri)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
 #ifdef HAVE_VEC
         case(OP_VEC)
-          call X(operate_ri_vec)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
+          call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
 #endif
 #if defined(HAVE_BLUE_GENE) && defined(R_TCOMPLEX)
         case(OP_BG)
-          call X(operate_bg)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
+          call X(operate_bg)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
 #endif
 #ifdef HAVE_AS
         case(OP_AS)
           nns(1) = op%stencil%size
           nns(2) = nri_loc
-          call X(operate_as)(nns, op%w_re(1, 1), ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1), ws(1))
+          call X(operate_as)(nns, wre(1), ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1), ws(1))
 #endif
         end select
 
@@ -311,7 +330,7 @@ contains
       !$omp parallel do private(ll, ist, ii)
       do ll = 1, nri
         forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%states_linear(ist)%X(psi)(ii) = sum(cmplx(op%w_re(1:nn, 1), op%w_im(1:nn, 1)) * &
+          fo%states_linear(ist)%X(psi)(ii) = sum(cmplx(wre(1:nn), wim(1:nn)) * &
             fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
         end forall
       end do
@@ -320,7 +339,7 @@ contains
       !$omp parallel do private(ll, ist, ii)
       do ll = 1, nri
         forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%states_linear(ist)%X(psi)(ii) = sum(op%w_re(1:nn, 1)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
+          fo%states_linear(ist)%X(psi)(ii) = sum(wre(1:nn)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
         end forall
       end do
       !$omp end parallel do
@@ -331,17 +350,20 @@ contains
   ! ---------------------------------------------------------
   subroutine operate_non_const_weights()
     integer :: nn, ll, ii, ist
-
+    FLOAT :: factor_
 #ifdef HAVE_OPENCL
     ASSERT(.not. (batch_is_in_buffer(fi) .or. batch_is_in_buffer(fo)))
 #endif
+
+    factor_ = M_ONE
+    if(present(factor)) factor_ = factor
 
     if(op%cmplx_op) then
       !$omp parallel do private(ll, ist, ii)
       do ll = 1, nri
         nn = op%nn(ll)
         forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%states_linear(ist)%X(psi)(ii) = sum(cmplx(op%w_re(1:nn, ii), op%w_im(1:nn, ii)) * &
+          fo%states_linear(ist)%X(psi)(ii) = factor_*sum(cmplx(op%w_re(1:nn, ii), op%w_im(1:nn, ii)) * &
             fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
         end forall
       end do
@@ -351,7 +373,7 @@ contains
       do ll = 1, nri
         nn = op%nn(ll)
         forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%states_linear(ist)%X(psi)(ii) = sum(op%w_re(1:nn, ii)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
+          fo%states_linear(ist)%X(psi)(ii) = factor_*sum(op%w_re(1:nn, ii)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
         end forall
       end do
       !$omp end parallel do
@@ -371,6 +393,8 @@ contains
 #endif
 
     ASSERT(.not. op%mesh%parallel_in_domains)
+
+    call opencl_write_buffer(op%buff_weights, this%stencil%size, wre)
 
     select case(function_opencl)
     case(OP_INVMAP)

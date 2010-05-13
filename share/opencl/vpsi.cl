@@ -29,7 +29,7 @@ __kernel void vpsi(const int offset,
   int ist = get_global_id(0);
   int ip  = get_global_id(1);
 
-  vpsi[(ip<<ldvpsi) + ist] = vv[offset + ip]*psi[(ip<<ldpsi) + ist];
+  vpsi[(ip<<ldvpsi) + ist] += vv[offset + ip]*psi[(ip<<ldpsi) + ist];
 
 }
 
@@ -47,8 +47,8 @@ __kernel void vpsi_spinors(const __global double * vv, const int ldvv,
   double2 psi1 = psi[ip*ldpsi + ist];
   double2 psi2 = psi[ip*ldpsi + ist + 1];
   
-  vpsi[ip*ldvpsi + ist] = vi1*psi1 + (double2)(vi3*psi2.x - vi4*psi2.y, vi3*psi2.y + vi4*psi2.x);
-  vpsi[ip*ldvpsi + ist + 1] = vi2*psi2 + (double2)(vi3*psi1.x + vi4*psi1.y, vi3*psi1.y - vi4*psi1.x);
+  vpsi[ip*ldvpsi + ist] += vi1*psi1 + (double2)(vi3*psi2.x - vi4*psi2.y, vi3*psi2.y + vi4*psi2.x);
+  vpsi[ip*ldvpsi + ist + 1] += vi2*psi2 + (double2)(vi3*psi1.x + vi4*psi1.y, vi3*psi1.y - vi4*psi1.x);
 }
 
 /*
