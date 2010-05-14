@@ -234,7 +234,7 @@ include "mpif.h"
  !Local variables
  integer :: ierr,istart,iend,jend,jproc,i_allocated,i_stat
  real(kind=8) :: scal
- real(kind=8), dimension(:,:,:), allocatable :: zf
+ real(kind=8), dimension(:,:,:), allocatable :: zf, lrhopot(:, :, :)
  integer, dimension(:,:), allocatable :: gather_arr
  integer count1,count2,count_rate,count_max
  real(kind=8) t1,t0,tel
@@ -287,21 +287,22 @@ include "mpif.h"
  istart=min(iproc*(md2/nproc),m2-1)
  jend=max(min(md2/nproc,m2-md2/nproc*iproc),0)
  iend=istart+jend
- rhopot(:,:,istart+1:iend)=&
-      zf(1:m1,1:m3,1:jend)
+
+ allocate(lrhopot(m1, m3, jend))
+ lrhopot(1:m1, 1:m3, 1:jend) = zf(1:m1, 1:m3, 1:jend)
 
  !gather all the results in the same rhopot array
 !       call cpu_time(t0)
 !       call system_clock(count1,count_rate,count_max)
-      call MPI_Allgatherv(rhopot(:,1,istart+1),gather_arr(iproc,1),MPI_DOUBLE_PRECISION,rhopot(:, 1, 1),gather_arr(:,1),&
-      gather_arr(:,2),MPI_DOUBLE_PRECISION,comm,ierr)
+ call MPI_Allgatherv(lrhopot(:,1,1),gather_arr(iproc,1),MPI_DOUBLE_PRECISION,rhopot(:, 1, 1),gather_arr(:,1),&
+    gather_arr(:,2),MPI_DOUBLE_PRECISION,comm,ierr)
 !       call cpu_time(t1)
 !       call system_clock(count2,count_rate,count_max)
 !       tel=dble(count2-count1)/dble(count_rate)
 !       write(78,*) 'PSolver: ALLGATHERV TIME',iproc,t1-t0,tel
 !       write(78,*) '----------------------------------------------'
 
- deallocate(zf,gather_arr)
+ deallocate(zf,lrhopot,gather_arr)
 
 #endif
 end subroutine pconvxc_off
