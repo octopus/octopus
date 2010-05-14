@@ -271,7 +271,7 @@ contains
   end subroutine batch_copy
 
   ! ----------------------------------------------------
-
+  ! THREADSAFE
   integer pure function batch_type(this) result(btype)
     type(batch_t),      intent(in)    :: this
 
@@ -545,7 +545,7 @@ subroutine batch_copy_data(np, xx, yy)
   else
 #endif
 
-    !$ omp parallel do private(ist)
+    !$omp parallel do private(ist)
     do ist = 1, yy%nst_linear
       if(batch_type(yy) == TYPE_CMPLX) then
         call blas_copy(np, xx%states_linear(ist)%zpsi(1), 1, yy%states_linear(ist)%zpsi(1), 1)

@@ -396,10 +396,12 @@ contains
 #else
     integer, parameter :: cfactor = 1
 #endif
-
+    type(opencl_mem_t) :: buff_weights
+    
     ASSERT(.not. op%mesh%parallel_in_domains)
-
-    call opencl_write_buffer(op%buff_weights, this%stencil%size, wre)
+    
+    call opencl_create_buffer(buff_weights, CL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size)
+    call opencl_write_buffer(buff_weights, op%stencil%size, wre)
 
     select case(function_opencl)
     case(OP_INVMAP)
@@ -408,7 +410,7 @@ contains
       call opencl_set_kernel_arg(operate, 2, op%buff_ri)
       call opencl_set_kernel_arg(operate, 3, op%buff_imin)
       call opencl_set_kernel_arg(operate, 4, op%buff_imax)
-      call opencl_set_kernel_arg(operate, 5, op%buff_weights)
+      call opencl_set_kernel_arg(operate, 5, buff_weights)
       call opencl_set_kernel_arg(operate, 6, fi%buffer)
       call opencl_set_kernel_arg(operate, 7, batch_buffer_ubound(fi)*cfactor)
       call opencl_set_kernel_arg(operate, 8, fo%buffer)
@@ -428,7 +430,7 @@ contains
       call opencl_set_kernel_arg(operate, 1, op%mesh%np)
       call opencl_set_kernel_arg(operate, 2, op%buff_ri)
       call opencl_set_kernel_arg(operate, 3, op%buff_map)
-      call opencl_set_kernel_arg(operate, 4, op%buff_weights)
+      call opencl_set_kernel_arg(operate, 4, buff_weights)
       call opencl_set_kernel_arg(operate, 5, fi%buffer)
       call opencl_set_kernel_arg(operate, 6, log2(fi%ubound_real(1)))
       call opencl_set_kernel_arg(operate, 7, fo%buffer)
@@ -442,7 +444,7 @@ contains
 
       call opencl_kernel_run(operate, (/fi%ubound_real(1), pad(op%mesh%np, bsize)/), (/fi%ubound_real(1), isize/))
       
-!      call profiling_count_transfers(op%stencil%size*op%mesh%np + op%mesh%np, isize)
+      call profiling_count_transfers(op%stencil%size*op%mesh%np + op%mesh%np, isize)
       do ist = 1, fi%nst_linear
         call profiling_count_transfers(op%mesh%np_part*op%stencil%size + op%mesh%np, R_TOTYPE(M_ONE))
       end do
@@ -450,6 +452,7 @@ contains
     
     call batch_buffer_was_modified(fo)
     
+    call opencl_release_buffer(buff_weights)
   end subroutine operate_opencl
 
 #endif

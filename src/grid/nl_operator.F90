@@ -108,7 +108,6 @@ module nl_operator_m
     type(opencl_mem_t) :: buff_imax
     type(opencl_mem_t) :: buff_ri
     type(opencl_mem_t) :: buff_map
-    type(opencl_mem_t) :: buff_weights
 #endif
   end type nl_operator_t
 
@@ -579,8 +578,6 @@ contains
       call opencl_create_buffer(op%buff_ri, CL_MEM_READ_ONLY, TYPE_INTEGER, op%nri*op%stencil%size)
       call opencl_write_buffer(op%buff_ri, op%nri*op%stencil%size, op%ri)
 
-      call opencl_create_buffer(op%buff_weights, CL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size)
-
       select case(function_opencl)
       case(OP_INVMAP)
         call opencl_create_buffer(op%buff_imin, CL_MEM_READ_ONLY, TYPE_INTEGER, op%nri)
@@ -622,11 +619,7 @@ contains
   subroutine nl_operator_update_weights(this)
     type(nl_operator_t), intent(inout)  :: this
 
-#ifdef HAVE_OPENCL
-    if(opencl_is_enabled()) then
-      call opencl_write_buffer(this%buff_weights, this%stencil%size, this%w_re(:, 1))
-    end if
-#endif
+    !nothing to here at the moment
 
   end subroutine nl_operator_update_weights
 
@@ -1257,7 +1250,6 @@ contains
 #ifdef HAVE_OPENCL
     if(opencl_is_enabled() .and. op%const_w) then
       call opencl_release_buffer(op%buff_ri)
-      call opencl_release_buffer(op%buff_weights)
       select case(function_opencl)
       case(OP_INVMAP)
         call opencl_release_buffer(op%buff_imin)
