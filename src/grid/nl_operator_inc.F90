@@ -287,6 +287,11 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
     end if
   end if
 
+  if(op%const_w .and. present(factor)) then
+    SAFE_DEALLOCATE_P(wre)
+    SAFE_DEALLOCATE_P(wim)
+  end if
+
   if(profile_) call profiling_out(operate_batch_prof)
   call pop_sub('nl_operator_inc.Xnl_operator_operate_batch')
 
