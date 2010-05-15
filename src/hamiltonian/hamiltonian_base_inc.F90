@@ -204,7 +204,7 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
   R_TYPE, allocatable :: projection_red(:, :)
 #endif
 #ifdef HAVE_OPENCL
-  type(opencl_mem_t) :: buff_map, buff_matrix, buff_projection, buff_scal
+  type(opencl_mem_t) :: buff_projection
 #endif
 
   if(.not. this%apply_projector_matrices) return
@@ -221,17 +221,7 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
 
 #ifdef HAVE_OPENCL
     if(batch_is_in_buffer(psib) .or. batch_is_in_buffer(vpsib)) then
-      call opencl_create_buffer(buff_map, CL_MEM_READ_ONLY, TYPE_INTEGER, npoints)
-      call opencl_write_buffer(buff_map, npoints, pmat%map)
-
-      call opencl_create_buffer(buff_scal, CL_MEM_READ_ONLY, TYPE_FLOAT, nprojs)
-      call opencl_write_buffer(buff_scal, nprojs, pmat%scal)
-
-      call opencl_create_buffer(buff_matrix, CL_MEM_READ_ONLY, TYPE_FLOAT, nprojs*npoints)
-      call opencl_write_buffer(buff_matrix, nprojs*npoints, pmat%projectors)
-
-     call opencl_create_buffer(buff_projection, CL_MEM_READ_WRITE, R_TYPE_VAL, nprojs*psib%ubound_real(1))
-
+      call opencl_create_buffer(buff_projection, CL_MEM_READ_WRITE, R_TYPE_VAL, nprojs*psib%ubound_real(1))
     end if
 #endif
 
@@ -326,9 +316,6 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
 
 #ifdef HAVE_OPENCL
     if(batch_is_in_buffer(psib) .or. batch_is_in_buffer(vpsib)) then
-      call opencl_release_buffer(buff_map)
-      call opencl_release_buffer(buff_matrix)
-      call opencl_release_buffer(buff_scal)
       call opencl_release_buffer(buff_projection)
     end if
 #endif
@@ -345,9 +332,9 @@ contains
 
     call opencl_set_kernel_arg(kernel_projector_bra, 0, npoints)
     call opencl_set_kernel_arg(kernel_projector_bra, 1, nprojs)
-    call opencl_set_kernel_arg(kernel_projector_bra, 2, buff_map)
-    call opencl_set_kernel_arg(kernel_projector_bra, 3, buff_scal)
-    call opencl_set_kernel_arg(kernel_projector_bra, 4, buff_matrix)
+    call opencl_set_kernel_arg(kernel_projector_bra, 2, pmat%buff_map)
+    call opencl_set_kernel_arg(kernel_projector_bra, 3, pmat%buff_scal)
+    call opencl_set_kernel_arg(kernel_projector_bra, 4, pmat%buff_projectors)
     call opencl_set_kernel_arg(kernel_projector_bra, 5, npoints)
     call opencl_set_kernel_arg(kernel_projector_bra, 6, psib%buffer)
     call opencl_set_kernel_arg(kernel_projector_bra, 7, psib%ubound_real(1))
@@ -369,8 +356,8 @@ contains
 
     call opencl_set_kernel_arg(kernel_projector_ket, 0, npoints)
     call opencl_set_kernel_arg(kernel_projector_ket, 1, nprojs)
-    call opencl_set_kernel_arg(kernel_projector_ket, 2, buff_map)
-    call opencl_set_kernel_arg(kernel_projector_ket, 3, buff_matrix)
+    call opencl_set_kernel_arg(kernel_projector_ket, 2, pmat%buff_map)
+    call opencl_set_kernel_arg(kernel_projector_ket, 3, pmat%buff_projectors)
     call opencl_set_kernel_arg(kernel_projector_ket, 4, npoints)
     call opencl_set_kernel_arg(kernel_projector_ket, 5, buff_projection)
     call opencl_set_kernel_arg(kernel_projector_ket, 6, psib%ubound_real(1))

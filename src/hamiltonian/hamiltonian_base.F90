@@ -269,7 +269,6 @@ contains
     type(hamiltonian_base_t), intent(inout) :: this
 
     integer :: iproj
-    
     if(associated(this%projector_matrices)) then
       do iproj = 1, this%nprojector_matrices
         call projector_matrix_deallocate(this%projector_matrices(1))
@@ -362,6 +361,13 @@ contains
 
       forall(ip = 1:pmat%npoints) pmat%map(ip) = epot%proj(iatom)%sphere%jxyz(ip)
 
+#ifdef HAVE_OPENCL
+      if(opencl_is_enabled()) then
+        call opencl_write_buffer(pmat%buff_map, pmat%npoints, pmat%map)
+        call opencl_write_buffer(pmat%buff_scal, pmat%nprojs, pmat%scal)
+        call opencl_write_buffer(pmat%buff_projectors, pmat%nprojs*pmat%npoints, pmat%projectors)
+      end if
+#endif
     end do
     
     call pop_sub('hamiltonian_base.hamiltonian_base_build_proj')

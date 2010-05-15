@@ -22,6 +22,10 @@
 module projector_matrix_m
   use global_m
   use messages_m
+#ifdef HAVE_OPENCL
+  use opencl_m
+#endif
+  use types_m
   use profiling_m
 
   implicit none
@@ -40,6 +44,12 @@ module projector_matrix_m
     FLOAT,   pointer :: scal(:)
     integer          :: npoints
     integer          :: nprojs
+#ifdef HAVE_OPENCL
+    type(opencl_mem_t) :: buff_map
+    type(opencl_mem_t) :: buff_projectors
+    type(opencl_mem_t) :: buff_scal
+    logical            :: buffers_allocated
+#endif    
   end type projector_matrix_t
 
 contains
@@ -50,6 +60,7 @@ contains
     nullify(this%map)
     nullify(this%projectors)
     nullify(this%scal)
+    this%buffers_allocated = .false.
 
   end subroutine projector_matrix_nullify
   
@@ -66,6 +77,14 @@ contains
     SAFE_ALLOCATE(this%map(1:npoints))
     SAFE_ALLOCATE(this%projectors(1:npoints, 1:nprojs))
     SAFE_ALLOCATE(this%scal(1:nprojs))
+#ifdef HAVE_OPENCL
+    if(opencl_is_enabled()) then
+      this%buffers_allocated = .true.
+      call opencl_create_buffer(this%buff_map, CL_MEM_READ_ONLY, TYPE_INTEGER, npoints)
+      call opencl_create_buffer(this%buff_scal, CL_MEM_READ_ONLY, TYPE_FLOAT, nprojs)
+      call opencl_create_buffer(this%buff_projectors, CL_MEM_READ_ONLY, TYPE_FLOAT, nprojs*npoints)
+    end if
+#endif
   end subroutine projector_matrix_allocate
 
   ! -------------------------------------------------
@@ -76,7 +95,14 @@ contains
     SAFE_DEALLOCATE_P(this%map)
     SAFE_DEALLOCATE_P(this%projectors)
     SAFE_DEALLOCATE_P(this%scal)
-
+#ifdef HAVE_OPENCL
+    if(opencl_is_enabled() .and. this%buffers_allocated) then
+      this%buffers_allocated = .false.
+      call opencl_release_buffer(this%buff_map)
+      call opencl_release_buffer(this%buff_scal)
+      call opencl_release_buffer(this%buff_projectors)
+    end if
+#endif
   end subroutine projector_matrix_deallocate
 
   ! -------------------------------------------------
