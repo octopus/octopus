@@ -223,20 +223,13 @@ void FC_FUNC_(f90_cl_release_buffer, F90_CL_RELEASE_BUFFER)(cl_mem ** buffer, in
 }
 
 void FC_FUNC_(f90_cl_write_buffer, F90_CL_WRITE_BUFFER)
-     (cl_mem ** buffer, opencl_env_t ** env, const size_t * size, const size_t * offset, const void * data){
-  cl_int ierr;
-
+     (cl_mem ** buffer, opencl_env_t ** env, const size_t * size, const size_t * offset, const void * data, int * ierr){
   /*  
       printf("\nWriteBuffer\n");
       printf("queue=%ld buffer=%ld data=%ld offest=%ld size=%d\n", env[0]->CommandQueue, **buffer, data, *offset, *size);
   */
 
-  ierr = clEnqueueWriteBuffer(env[0]->CommandQueue, **buffer, CL_TRUE, *offset, *size, data, 0, NULL, NULL);
-
-  if(ierr != CL_SUCCESS){
-    fprintf(stderr, "Error: buffer write failed. Error code %d\n", ierr);
-    exit(1);
-  }
+  *ierr = clEnqueueWriteBuffer(env[0]->CommandQueue, **buffer, CL_TRUE, *offset, *size, data, 0, NULL, NULL);
 
 }
 

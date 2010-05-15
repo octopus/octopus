@@ -76,9 +76,8 @@ module opencl_m
   type(c_ptr), public :: kernel_zaxpy
   type(c_ptr), public :: kernel_copy
   type(c_ptr), public :: dprojector_gather
-  type(c_ptr), public :: zprojector_gather
-  type(c_ptr), public :: dprojector_scatter
-  type(c_ptr), public :: zprojector_scatter
+  type(c_ptr), public :: kernel_projector_bra
+  type(c_ptr), public :: kernel_projector_ket
   type(c_ptr), public :: dpack
   type(c_ptr), public :: zpack
   type(c_ptr), public :: dunpack
@@ -164,10 +163,8 @@ module opencl_m
       call opencl_release_program(prog)
 
       call opencl_build_program(prog, "projector.cl")
-      call opencl_create_kernel(dprojector_gather, prog, "dprojector_gather")
-      call opencl_create_kernel(zprojector_gather, prog, "zprojector_gather")
-      call opencl_create_kernel(dprojector_scatter, prog, "dprojector_scatter")
-      call opencl_create_kernel(zprojector_scatter, prog, "zprojector_scatter")
+      call opencl_create_kernel(kernel_projector_ket, prog, "projector_ket")
+      call opencl_create_kernel(kernel_projector_bra, prog, "projector_bra")
       call opencl_release_program(prog)
 
       call opencl_build_program(prog, "pack.cl")
@@ -196,6 +193,8 @@ module opencl_m
         call opencl_release_kernel(kernel_daxpy)
         call opencl_release_kernel(kernel_copy)
         call opencl_release_kernel(kernel_zaxpy)
+        call opencl_release_kernel(kernel_projector_ket)
+        call opencl_release_kernel(kernel_projector_bra)
         call f90_cl_env_end(opencl%env)
       end if
 

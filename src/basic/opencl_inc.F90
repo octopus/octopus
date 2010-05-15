@@ -25,6 +25,7 @@ subroutine X(opencl_write_buffer)(this, size, data, offset)
   integer(SIZEOF_SIZE_T), optional, intent(in)    :: offset
 
   integer(SIZEOF_SIZE_T) :: fsize, offset_
+  integer :: ierr
 
   call profiling_in(prof_write, "CL_WRITE_BUFFER")
 
@@ -32,7 +33,9 @@ subroutine X(opencl_write_buffer)(this, size, data, offset)
   offset_ = 0
   if(present(offset)) offset_ = offset*R_SIZEOF
 
-  call f90_cl_write_buffer(this%mem, opencl%env, fsize, offset_, data(1))
+  call f90_cl_write_buffer(this%mem, opencl%env, fsize, offset_, data(1), ierr)
+
+  if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "write_buffer")
 
   call profiling_count_transfers(size, data(1))
   call opencl_finish()
@@ -49,6 +52,7 @@ subroutine X(opencl_write_buffer_2)(this, size, data, offset)
   integer(SIZEOF_SIZE_T), optional, intent(in)    :: offset
 
   integer(SIZEOF_SIZE_T) :: fsize, offset_
+  integer :: ierr
 
   call profiling_in(prof_write, "CL_WRITE_BUFFER")
 
@@ -56,7 +60,9 @@ subroutine X(opencl_write_buffer_2)(this, size, data, offset)
   offset_ = 0
   if(present(offset)) offset_ = offset*R_SIZEOF
 
-  call f90_cl_write_buffer(this%mem, opencl%env, fsize, offset_, data(1, 1))
+  call f90_cl_write_buffer(this%mem, opencl%env, fsize, offset_, data(1, 1), ierr)
+
+  if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "write_buffer")
 
   call profiling_count_transfers(size, data(1, 1))
   call opencl_finish()

@@ -21,50 +21,48 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-__kernel void dprojector_gather(const int npoints,
-				__global const int * map,
-				__global const double * psi, const int ldpsi,
-				__global double * lpsi, const int ldlpsi){
-
-  int ip = get_global_id(0);
-  int ist = get_global_id(1);
+__kernel void projector_bra(const int npoints,
+			    const int nprojs,
+			    __global const int * map,
+			    __constant const double * scal,
+			    __global const double * matrix, const int ldmatrix,
+			    __global const double * psi, const int ldpsi,
+			    __global double * projection, const int ldprojection
+			    ){
   
-  if(ip < npoints) lpsi[ldlpsi*ist + ip] = psi[ldpsi*(map[ip] - 1) + ist];
+  int ist = get_global_id(0);
+  int ipj = get_global_id(1);
+  
+  if(ipj >= nprojs) return;
+  
+  double aa = 0.0;
+  for(int ip = 0; ip < npoints; ip++){
+    aa += matrix[ip + ldmatrix*ipj]*psi[ldpsi*(map[ip] - 1) + ist];
+  }
+  projection[ist + ldprojection*ipj] = scal[ipj]*aa;
+
 }
 
-__kernel void zprojector_gather(const int npoints,
-				__global const int * map,
-				__global const double2 * psi, const int ldpsi,
-				__global double2 * lpsi, const int ldlpsi){
-
-  int ip = get_global_id(0);
-  int ist = get_global_id(1);
+__kernel void projector_ket(const int npoints,
+			    const int nprojs,
+			    __global const int * map,
+			    __global const double * matrix, const int ldmatrix,
+			    __global const double * projection, const int ldprojection,
+			    __global double * psi, const int ldpsi
+			    ){
   
-  if(ip < npoints) lpsi[ldlpsi*ist + ip] = psi[ldpsi*(map[ip] - 1) + ist];
-}
+  int ist = get_global_id(0);
+  int ip = get_global_id(1);
 
-__kernel void dprojector_scatter(const int npoints,
-				 __global const int * map,
-				 __global const double * lpsi, const int ldlpsi,
-				 __global double * psi, const int ldpsi){
-				
+  if(ip >= npoints) return;
 
-  int ip = get_global_id(0);
-  int ist = get_global_id(1);
-  
-  if(ip < npoints) psi[ldpsi*(map[ip] - 1) + ist] += lpsi[ldlpsi*ist + ip];
-}
+  double aa = 0.0;
+  for(int ipj = 0; ipj < nprojs; ipj++){
+    aa += matrix[ip + ldmatrix*ipj]*projection[ist + ldprojection*ipj];
+  }
+  psi[ldpsi*(map[ip] - 1) + ist] += aa;
 
-__kernel void zprojector_scatter(const int npoints,
-				 __global const int * map,
-				 __global const double2 * lpsi, const int ldlpsi,
-				 __global double2 * psi, const int ldpsi){
-				
 
-  int ip = get_global_id(0);
-  int ist = get_global_id(1);
-  
-  if(ip < npoints) psi[ldpsi*(map[ip] - 1) + ist] += lpsi[ldlpsi*ist + ip];
 }
 
 /*
