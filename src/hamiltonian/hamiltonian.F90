@@ -233,6 +233,7 @@ contains
     ! In the case of spinors, vxc_11 = hm%vxc(:, 1), vxc_22 = hm%vxc(:, 2), Re(vxc_12) = hm%vxc(:. 3);
     ! Im(vxc_12) = hm%vxc(:, 4)
     SAFE_ALLOCATE(hm%vhxc(1:gr%mesh%np, 1:hm%d%nspin))
+    hm%vhxc(1:gr%mesh%np, 1:hm%d%nspin) = M_ZERO
 
     if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
       SAFE_ALLOCATE(hm%vhartree(1:gr%mesh%np))
@@ -246,7 +247,6 @@ contains
       hm%vhartree(1:gr%mesh%np) = M_ZERO
 
       do ispin = 1, hm%d%nspin
-        hm%vhxc(1:gr%mesh%np, ispin) = M_ZERO
         hm%vxc(1:gr%mesh%np, ispin) = M_ZERO
         if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) hm%vtau(1:gr%mesh%np, ispin) = M_ZERO
       end do
