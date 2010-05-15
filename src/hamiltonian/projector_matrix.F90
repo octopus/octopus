@@ -60,8 +60,9 @@ contains
     nullify(this%map)
     nullify(this%projectors)
     nullify(this%scal)
+#ifdef HAVE_OPENCL
     this%buffers_allocated = .false.
-
+#endif
   end subroutine projector_matrix_nullify
   
   ! -------------------------------------------------

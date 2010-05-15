@@ -238,16 +238,15 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
 
       SAFE_ALLOCATE(psi(1:npoints, 1:nst))
 
-      call profiling_in(prof_gather, "PROJ_MAT_GATHER")
       if(batch_is_in_buffer(psib)) then
         call bra_opencl()
       else
+        call profiling_in(prof_gather, "PROJ_MAT_GATHER")
         ! collect all the points we need in a continous array
         forall(ist = 1:nst, ip = 1:npoints)
           psi(ip, ist) = psib%states_linear(ist)%X(psi)(pmat%map(ip))
           !MISSING: phases
         end forall
-
         call profiling_out(prof_gather)
 
         ! Now matrix-multiply to calculate the projections. Since the
@@ -284,7 +283,6 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
 
     call profiling_count_operations(M_TWO*nst*nprojs*M_TWO*npoints*R_ADD + nst*nprojs*R_ADD)
 
-    call profiling_in(prof_scatter, "PROJ_MAT_SCATTER")
 
     if(batch_is_in_buffer(vpsib)) then
       call ket_opencl()
@@ -299,6 +297,7 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
       psi(1:npoints, 1:nst) = matmul(pmat%projectors(1:npoints, 1:nprojs), projection(1:nprojs, 1:nst))
 #endif
 
+      call profiling_in(prof_scatter, "PROJ_MAT_SCATTER")
       ! and copy the points from the local buffer to its position
       do ist = 1, nst
         forall(ip = 1:npoints)
@@ -306,10 +305,11 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
           !MISSING: phases
         end forall
       end do
+      call profiling_count_operations(nst*npoints*R_ADD)
+      call profiling_out(prof_scatter)
+
     end if
 
-    call profiling_count_operations(nst*npoints*R_ADD)
-    call profiling_out(prof_scatter)
 
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(projection)
