@@ -329,6 +329,9 @@ contains
 #ifdef HAVE_OPENCL
     integer :: padnprojs
     integer :: wgsize
+    type(profile_t), save :: prof
+
+    call profiling_in(prof, "CL_PROJ_BRA")
 
     call opencl_set_kernel_arg(kernel_projector_bra, 0, npoints)
     call opencl_set_kernel_arg(kernel_projector_bra, 1, nprojs)
@@ -340,19 +343,24 @@ contains
     call opencl_set_kernel_arg(kernel_projector_bra, 7, psib%ubound_real(1))
     call opencl_set_kernel_arg(kernel_projector_bra, 8, buff_projection)
     call opencl_set_kernel_arg(kernel_projector_bra, 9, psib%ubound_real(1))
+    call opencl_set_kernel_arg(kernel_projector_bra, 10, R_TYPE_VAL, nprojs*npoints)
 
-    padnprojs = pad(nprojs, 4)
-    wgsize = min(padnprojs, opencl_max_workgroup_size()/psib%ubound_real(1))
+    padnprojs = pad_pow2(nprojs)
+    wgsize = opencl_max_workgroup_size()/(psib%ubound_real(1)*padnprojs)
 
     call opencl_kernel_run(kernel_projector_bra, &
-      (/psib%ubound_real(1), padnprojs/), (/psib%ubound_real(1), wgsize/))
+      (/psib%ubound_real(1), padnprojs, wgsize/), (/psib%ubound_real(1), padnprojs, wgsize/))
 
+    call profiling_out(prof)
 #endif
   end subroutine bra_opencl
 
   subroutine ket_opencl()
 #ifdef HAVE_OPENCL
     integer :: wgsize
+    type(profile_t), save :: prof
+
+    call profiling_in(prof, "CL_PROJ_KET")
 
     call opencl_set_kernel_arg(kernel_projector_ket, 0, npoints)
     call opencl_set_kernel_arg(kernel_projector_ket, 1, nprojs)
@@ -370,6 +378,8 @@ contains
       (/psib%ubound_real(1), pad(npoints, wgsize)/), (/psib%ubound_real(1), wgsize/))
 
     call batch_buffer_was_modified(vpsib)
+    
+    call profiling_out(prof)
 #endif
   end subroutine ket_opencl
 

@@ -397,7 +397,10 @@ contains
     integer, parameter :: cfactor = 1
 #endif
     type(opencl_mem_t) :: buff_weights
-    
+    type(profile_t), save :: prof
+
+    call profiling_in(prof, "CL_NL_OPERATOR")
+
     ASSERT(.not. op%mesh%parallel_in_domains)
     
     call opencl_create_buffer(buff_weights, CL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size)
@@ -453,6 +456,8 @@ contains
     call batch_buffer_was_modified(fo)
     
     call opencl_release_buffer(buff_weights)
+
+    call profiling_out(prof)
   end subroutine operate_opencl
 
 #endif

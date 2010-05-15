@@ -24,22 +24,35 @@
 __kernel void projector_bra(const int npoints,
 			    const int nprojs,
 			    __global const int * map,
-			    __constant const double * scal,
+			    __global const double * scal,
 			    __global const double * matrix, const int ldmatrix,
 			    __global const double * psi, const int ldpsi,
-			    __global double * projection, const int ldprojection
+			    __global double * projection, const int ldprojection,
+			    __local double * lprojection
 			    ){
   
   int ist = get_global_id(0);
   int ipj = get_global_id(1);
-  
+  int k = get_global_id(2);
+  int nk = get_global_size(2);
+
   if(ipj >= nprojs) return;
   
   double aa = 0.0;
-  for(int ip = 0; ip < npoints; ip++){
+  for(int ip = k; ip < npoints; ip += nk){
     aa += matrix[ip + ldmatrix*ipj]*psi[ldpsi*(map[ip] - 1) + ist];
   }
-  projection[ist + ldprojection*ipj] = scal[ipj]*aa;
+  aa *= scal[ipj];
+
+  // this can be improved by doing a parallel reduction
+  if(k == 0) lprojection[ist + ldprojection*ipj] = aa;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  for(int k2 = 1; k2 < nk; k2++){
+    if(k2 == k) lprojection[ist + ldprojection*ipj] += aa;
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+
+  if(k == 0) projection[ist + ldprojection*ipj] = lprojection[ist + ldprojection*ipj];
 
 }
 
