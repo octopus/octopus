@@ -87,11 +87,20 @@ void FC_FUNC_(f90_cl_env_init,F90_CL_ENV_INIT)(opencl_env_t ** env, STR_F_TYPE s
   clGetDeviceInfo(this->Devices[0], CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(max_workgroup_size), &max_workgroup_size, NULL);
   printf("Maximum workgroup size: %zd\n", max_workgroup_size);
 
-  /* start command queue */
-  this->CommandQueue = clCreateCommandQueue(this->Context, this->Devices[0], CL_QUEUE_PROFILING_ENABLE, &status);
-
   TO_C_STR1(source_path_f, this->source_path);
 
+}
+
+/* clCreateCommandQueue */
+void FC_FUNC(flcreatecommandqueue, FLCREATECOMMANDQUEUE)(cl_command_queue ** command_queue, opencl_env_t ** env, const int * device, int * ierr){
+  *command_queue = (cl_command_queue *) malloc(sizeof(cl_command_queue));
+  **command_queue = clCreateCommandQueue(env[0]->Context, env[0]->Devices[*device], CL_QUEUE_PROFILING_ENABLE, ierr);
+}
+
+/* clReleaseCommandQueue */
+void FC_FUNC(flreleasecommandqueue, FLRELEASECOMMANDQUEUE)(cl_command_queue ** command_queue, int * ierr){
+  *ierr = clReleaseCommandQueue(**command_queue);
+  free(*command_queue);
 }
 
 int FC_FUNC_(f90_cl_max_workgroup_size, F90_CL_MAX_WORKGROUP_SIZE)(opencl_env_t ** env){
@@ -104,7 +113,6 @@ void FC_FUNC_(f90_cl_env_end,F90_CL_ENV_END)(opencl_env_t ** env){
   opencl_env_t * this;
 
   this = *env;
-  clReleaseCommandQueue(this->CommandQueue);
   clReleaseContext(this->Context);
   free(this->source_path);
   free(this->Devices);
@@ -169,7 +177,6 @@ void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
 
 void FC_FUNC_(f90_cl_release_program, F90_CL_RELEASE_PROGRAM)
      (cl_program ** program, int * ierr){
-  cl_int status;
 
   *ierr = clReleaseProgram(**program);
   if(*ierr != CL_SUCCESS) free(*program);
@@ -178,7 +185,6 @@ void FC_FUNC_(f90_cl_release_program, F90_CL_RELEASE_PROGRAM)
 void FC_FUNC_(f90_cl_create_kernel, F90_CL_CREATE_KERNEL)
      (cl_kernel ** kernel, cl_program ** program, STR_F_TYPE kernel_name_f, int * ierr STR_ARG1){
   char * kernel_name;
-  cl_int status;
 
   TO_C_STR1(kernel_name_f, kernel_name);
 
@@ -222,36 +228,25 @@ void FC_FUNC_(f90_cl_release_buffer, F90_CL_RELEASE_BUFFER)(cl_mem ** buffer, in
   free(*buffer);
 }
 
-void FC_FUNC_(f90_cl_write_buffer, F90_CL_WRITE_BUFFER)
-     (cl_mem ** buffer, opencl_env_t ** env, const size_t * size, const size_t * offset, const void * data, int * ierr){
-  /*  
-      printf("\nWriteBuffer\n");
-      printf("queue=%ld buffer=%ld data=%ld offest=%ld size=%d\n", env[0]->CommandQueue, **buffer, data, *offset, *size);
-  */
 
-  *ierr = clEnqueueWriteBuffer(env[0]->CommandQueue, **buffer, CL_TRUE, *offset, *size, data, 0, NULL, NULL);
+/* clEnqueueWriteBuffer */
+void FC_FUNC(flenqueuewritebuffer, FLENQUEUEWRITEBUFFER)
+     (cl_mem ** buffer, cl_command_queue ** cq, const size_t * size, const size_t * offset, const void * data, int * ierr){
+
+  *ierr = clEnqueueWriteBuffer(**cq, **buffer, CL_TRUE, *offset, *size, data, 0, NULL, NULL);
 
 }
 
+/* clEnqueueReadBuffer */
+void FC_FUNC(flenqueuereadbuffer, FLENQUEUEREADBUFFER)
+     (cl_mem ** buffer, cl_command_queue ** cq, const size_t * size, const size_t * offset, void * data, int * ierr){
 
-void FC_FUNC_(f90_cl_read_buffer, F90_CL_READ_BUFFER)
-     (cl_mem ** buffer, opencl_env_t ** env, const size_t * size, const size_t * offset, void * data){
-  cl_int ierr;
-  
-  /*printf("queue=%ld buffer=%ld data=%ld offest=%ld size=%d\n", env[0]->CommandQueue, **buffer, data, *offset, *size);*/
-
-  ierr = clEnqueueReadBuffer(env[0]->CommandQueue, **buffer, CL_TRUE, *offset, *size, data, 0, NULL, NULL);
-
-  if(ierr != CL_SUCCESS){
-    fprintf(stderr, "Error: buffer read failed. Error code %d\n", ierr);
-    exit(1);
-  }
-
+  *ierr = clEnqueueReadBuffer(**cq, **buffer, CL_TRUE, *offset, *size, data, 0, NULL, NULL);
 }
 
 
-void FC_FUNC_(f90_cl_finish, F90_CL_FINISH)(opencl_env_t ** env, int * ierr){
-  *ierr = clFinish(env[0]->CommandQueue);
+void FC_FUNC(flfinish, FLFINISH)(cl_command_queue ** cq, int * ierr){
+  *ierr = clFinish(**cq);
 }
 
 void FC_FUNC_(f90_cl_set_kernel_arg_buf, F90_CL_SET_KERNEL_ARG_BUF)
@@ -277,19 +272,11 @@ void FC_FUNC_(f90_cl_set_kernel_arg_local, F90_CL_SET_KERNEL_ARG_LOCAL)
   *ierr = clSetKernelArg(**kernel, *index, *size_of_local, NULL);
 }
 
-void FC_FUNC_(f90_cl_kernel_run, F90_CL_KERNEL_RUN)
-     (cl_kernel ** kernel, opencl_env_t ** env, const int * dim, const size_t * globalsizes, const size_t * localsizes, int * ierr){
+/* clEnqueueNDRangeKernel*/
+void FC_FUNC(flenqueuendrangekernel, FLENQUEUENDRANGEKERNEL)
+     (cl_kernel ** kernel, cl_command_queue ** cq, const int * dim, const size_t * globalsizes, const size_t * localsizes, int * ierr){
 
-  /*
-  cl_uint numargs;
-
-  clGetKernelInfo(**kernel, CL_KERNEL_NUM_ARGS, sizeof(numargs), &numargs, NULL);
-  printf("Num args %d\n", numargs);
-  */
-  /*  printf("WG size  %d %d\n", globalsizes[0], localsizes[0]);
-   */
-
-  *ierr = clEnqueueNDRangeKernel(env[0]->CommandQueue, **kernel, *dim,
+  *ierr = clEnqueueNDRangeKernel(**cq, **kernel, *dim,
 				NULL,  globalsizes, localsizes, 0, NULL, NULL);
 
 }

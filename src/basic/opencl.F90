@@ -54,6 +54,7 @@ module opencl_m
 
   type opencl_t 
     type(c_ptr) :: env
+    type(c_ptr) :: command_queue
     integer     :: max_workgroup_size
     logical     :: enabled
   end type opencl_t
@@ -122,6 +123,7 @@ module opencl_m
     subroutine opencl_init()
       type(c_ptr) :: prog
       logical  :: disable
+      integer  :: ierr
 
       call push_sub('opencl.opencl_init')
       
@@ -143,6 +145,8 @@ module opencl_m
       end if
 
       call f90_cl_env_init(opencl%env, trim(conf%share)//'/opencl/')   
+      call flCreateCommandQueue(opencl%command_queue, opencl%env, 0, ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "CreateCommandQueue")
       
       opencl%max_workgroup_size = f90_cl_max_workgroup_size(opencl%env)
       
@@ -184,7 +188,8 @@ module opencl_m
     ! ------------------------------------------
 
     subroutine opencl_end()
-
+      integer :: ierr
+      
       call push_sub('opencl.opencl_end')
 
       if(opencl_is_enabled()) then
@@ -195,6 +200,8 @@ module opencl_m
         call opencl_release_kernel(kernel_zaxpy)
         call opencl_release_kernel(kernel_projector_ket)
         call opencl_release_kernel(kernel_projector_bra)
+        call flReleaseCommandQueue(opencl%command_queue, ierr)
+        if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "ReleaseCommandQueue")
         call f90_cl_env_end(opencl%env)
       end if
 
@@ -296,7 +303,7 @@ module opencl_m
     subroutine opencl_finish()
       integer :: ierr
       
-      call f90_cl_finish(opencl%env, ierr)
+      call flFinish(opencl%command_queue, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'cl_finish') 
     end subroutine opencl_finish
 
@@ -360,8 +367,9 @@ module opencl_m
       gsizes(1:dim) = int(globalsizes(1:dim), SIZEOF_SIZE_T)
       lsizes(1:dim) = int(localsizes(1:dim), SIZEOF_SIZE_T)
 
-      call f90_cl_kernel_run(kernel, opencl%env, dim, gsizes(1), lsizes(1), ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "kernel_run")
+      call flEnqueueNDRangeKernel(kernel, opencl%command_queue, dim, gsizes(1), lsizes(1), ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
+
       call opencl_finish()
       call profiling_out(prof_kernel_run)
       call pop_sub('opencl.opencl_kernel_run')

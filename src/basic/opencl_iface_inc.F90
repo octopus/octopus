@@ -99,6 +99,32 @@
 
     ! ----------------------------------------------------
 
+    subroutine flCreateCommandQueue(command_queue, env, device, ierr)
+      use c_pointer_m
+
+      implicit none
+
+      type(c_ptr), intent(inout) :: command_queue
+      type(c_ptr), intent(inout) :: env
+      integer,     intent(in)    :: device
+      integer,     intent(out)   :: ierr
+      
+    end subroutine flCreateCommandQueue
+
+    ! ----------------------------------------------------
+
+    subroutine flReleaseCommandQueue(command_queue, ierr)
+      use c_pointer_m
+
+      implicit none
+
+      type(c_ptr), intent(inout) :: command_queue
+      integer,     intent(out)   :: ierr
+      
+    end subroutine flReleaseCommandQueue
+
+    ! ----------------------------------------------------
+
     integer function f90_cl_max_workgroup_size(env)
       use c_pointer_m
 
@@ -192,15 +218,15 @@
 
     ! ----------------------------------------------------
 
-    subroutine f90_cl_finish(this, ierr)
+    subroutine flFinish(command_queue, ierr)
       use c_pointer_m
 
       implicit none
 
-      type(c_ptr),            intent(inout) :: this
+      type(c_ptr),            intent(inout) :: command_queue
       integer,                intent(out)   :: ierr
-    end subroutine f90_cl_finish
-
+    end subroutine flFinish
+    
     ! ----------------------------------------------------
 
     subroutine f90_cl_set_kernel_arg_buf(kernel, index, buffer, ierr)
@@ -229,18 +255,18 @@
 
     ! ----------------------------------------------------
 
-    subroutine f90_cl_kernel_run(kernel, env, dim, globalsizes, localsizes, ierr)
+    subroutine flEnqueueNDRangeKernel(kernel, command_queue, dim, globalsizes, localsizes, ierr)
       use c_pointer_m
 
       implicit none
 
       type(c_ptr),            intent(inout) :: kernel
-      type(c_ptr),            intent(inout) :: env
+      type(c_ptr),            intent(inout) :: command_queue
       integer,                intent(in)    :: dim
       integer(SIZEOF_SIZE_T), intent(in)    :: globalsizes
       integer(SIZEOF_SIZE_T), intent(in)    :: localsizes
       integer,                intent(in)    :: ierr
-    end subroutine f90_cl_kernel_run
+    end subroutine flEnqueueNDRangeKernel
 
   end interface
 

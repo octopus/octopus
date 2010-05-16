@@ -28,7 +28,6 @@
 typedef struct{
   cl_context Context;
   cl_device_id * Devices;
-  cl_command_queue CommandQueue;
   char * source_path;
 } opencl_env_t;
 
