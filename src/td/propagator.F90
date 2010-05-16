@@ -67,8 +67,8 @@ module propagator_m
     propagator_ions_are_propagated
 
   integer, public, parameter ::       &
-    PROP_REVERSAL                = 2, &
-    PROP_APP_REVERSAL            = 3, &
+    PROP_ETRS                    = 2, &
+    PROP_AETRS                   = 3, &
     PROP_EXPONENTIAL_MIDPOINT    = 4, &
     PROP_CRANK_NICHOLSON         = 5, &
     PROP_CRANK_NICHOLSON_SPARSKIT= 6, &
@@ -249,7 +249,7 @@ contains
     !% WARNING: EXPERIMENTAL
     !%End
 
-    default_propagator = PROP_REVERSAL
+    default_propagator = PROP_ETRS
     if(gr%ob_grid%open_boundaries) default_propagator = PROP_CRANK_NICHOLSON_SRC_MEM
 
     call parse_integer(datasets_check('TDEvolutionMethod'), default_propagator, tr%method)
@@ -267,8 +267,8 @@ contains
     end if
 
     select case(tr%method)
-    case(PROP_REVERSAL)
-    case(PROP_APP_REVERSAL)
+    case(PROP_ETRS)
+    case(PROP_AETRS)
     case(PROP_EXPONENTIAL_MIDPOINT)
     case(PROP_CRANK_NICHOLSON)
     case(PROP_CRANK_NICHOLSON_SPARSKIT)
@@ -294,8 +294,8 @@ contains
     call messages_print_var_option(stdout, 'TDEvolutionMethod', tr%method)
 
     if(have_fields) then
-      if(tr%method /= PROP_REVERSAL .and.    &
-         tr%method /= PROP_APP_REVERSAL .and. &
+      if(tr%method /= PROP_ETRS .and.    &
+         tr%method /= PROP_AETRS .and. &
          tr%method /= PROP_EXPONENTIAL_MIDPOINT) then
         message(1) = "To move the ions or put in a gauge field, use the etrs, aetrs or exp_mid propagators." 
         call write_fatal(1)
@@ -438,8 +438,8 @@ contains
     call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), tr%v_old(:, :, 1:3), time, tr%v_old(:, :, 0))
 
     select case(tr%method)
-    case(PROP_REVERSAL);                call td_reversal
-    case(PROP_APP_REVERSAL);            call td_app_reversal
+    case(PROP_ETRS);                    call td_etrs
+    case(PROP_AETRS);                   call td_aetrs
     case(PROP_EXPONENTIAL_MIDPOINT);    call exponential_midpoint
     case(PROP_CRANK_NICHOLSON);         call td_crank_nicholson
     case(PROP_CRANK_NICHOLSON_SPARSKIT);call td_crank_nicholson_sparskit
@@ -483,8 +483,8 @@ contains
           tr%v_old(:, :, 0) = hm%vhxc(:, :)
           vaux(:, :) = hm%vhxc(:, :)
           select case(tr%method)
-          case(PROP_REVERSAL);                call td_reversal
-          case(PROP_APP_REVERSAL);            call td_app_reversal
+          case(PROP_ETRS);                    call td_etrs
+          case(PROP_AETRS);                   call td_aetrs
           case(PROP_EXPONENTIAL_MIDPOINT);    call exponential_midpoint
           case(PROP_CRANK_NICHOLSON);         call td_crank_nicholson
           case(PROP_CRANK_NICHOLSON_SPARSKIT);call td_crank_nicholson_sparskit
@@ -523,13 +523,13 @@ contains
 
     ! ---------------------------------------------------------
     ! Propagator with enforced time-reversal symmetry
-    subroutine td_reversal
+    subroutine td_etrs
       FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
       CMPLX, allocatable :: zpsi1(:,:,:)
       integer :: ik, ist, ist2, idim, ste, sts
       type(batch_t) :: zpsib
 
-      call push_sub('propagator.propagator_dt.td_reversal')
+      call push_sub('propagator.propagator_dt.td_etrs')
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
 
@@ -627,17 +627,17 @@ contains
         SAFE_DEALLOCATE_A(vhxc_t2)
       end if
 
-      call pop_sub('propagator.propagator_dt.td_reversal')
-    end subroutine td_reversal
+      call pop_sub('propagator.propagator_dt.td_etrs')
+    end subroutine td_etrs
 
 
     ! ---------------------------------------------------------
     ! Propagator with approximate enforced time-reversal symmetry
-    subroutine td_app_reversal
+    subroutine td_aetrs
       integer :: ik, sts, ste
       type(batch_t) :: zpsib
 
-      call push_sub('propagator.propagator_dt.td_app_reversal')
+      call push_sub('propagator.propagator_dt.td_aetrs')
 
       ! propagate half of the time step with H(time - dt)
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -675,8 +675,8 @@ contains
         end do
       end do
       
-      call pop_sub('propagator.propagator_dt.td_app_reversal')
-    end subroutine td_app_reversal
+      call pop_sub('propagator.propagator_dt.td_aetrs')
+    end subroutine td_aetrs
 
 
     ! ---------------------------------------------------------
@@ -1077,7 +1077,7 @@ contains
     type(propagator_t), intent(in) :: tr
 
     select case(tr%method)
-    case(PROP_REVERSAL, PROP_APP_REVERSAL)
+    case(PROP_ETRS, PROP_AETRS)
       propagated = .true.
     case default
       propagated = .false.
