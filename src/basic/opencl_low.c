@@ -250,16 +250,8 @@ void FC_FUNC_(f90_cl_read_buffer, F90_CL_READ_BUFFER)
 }
 
 
-void FC_FUNC_(f90_cl_finish, F90_CL_FINISH)(opencl_env_t ** env){
-  cl_int ierr;
-
-  ierr = clFinish(env[0]->CommandQueue);
-
-  if(ierr != CL_SUCCESS){
-    fprintf(stderr, "Error: clFinish failed. Error code %d\n", ierr);
-    exit(1);
-  }
-
+void FC_FUNC_(f90_cl_finish, F90_CL_FINISH)(opencl_env_t ** env, int * ierr){
+  *ierr = clFinish(env[0]->CommandQueue);
 }
 
 void FC_FUNC_(f90_cl_set_kernel_arg_buf, F90_CL_SET_KERNEL_ARG_BUF)

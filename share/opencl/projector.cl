@@ -36,23 +36,23 @@ __kernel void projector_bra(const int npoints,
   int k = get_global_id(2);
   int nk = get_global_size(2);
 
-  if(ipj >= nprojs) return;
+
   
   double aa = 0.0;
   for(int ip = k; ip < npoints; ip += nk){
-    aa += matrix[ip + ldmatrix*ipj]*psi[ldpsi*(map[ip] - 1) + ist];
+      if(ipj < nprojs) aa += matrix[ip + ldmatrix*ipj]*psi[ldpsi*(map[ip] - 1) + ist];
   }
   aa *= scal[ipj];
-
+  
   // this can be improved by doing a parallel reduction
-  if(k == 0) lprojection[ist + ldprojection*ipj] = aa;
+  if(ipj < nprojs && k == 0) lprojection[ist + ldprojection*ipj] = aa;
   barrier(CLK_LOCAL_MEM_FENCE);
   for(int k2 = 1; k2 < nk; k2++){
-    if(k2 == k) lprojection[ist + ldprojection*ipj] += aa;
+    if(ipj < nprojs && k2 == k) lprojection[ist + ldprojection*ipj] += aa;
     barrier(CLK_LOCAL_MEM_FENCE);
   }
 
-  if(k == 0) projection[ist + ldprojection*ipj] = lprojection[ist + ldprojection*ipj];
+  if(ipj < nprojs && k == 0) projection[ist + ldprojection*ipj] = lprojection[ist + ldprojection*ipj];
 
 }
 

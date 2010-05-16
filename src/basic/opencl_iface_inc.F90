@@ -192,12 +192,13 @@
 
     ! ----------------------------------------------------
 
-    subroutine f90_cl_finish(this)
+    subroutine f90_cl_finish(this, ierr)
       use c_pointer_m
 
       implicit none
 
       type(c_ptr),            intent(inout) :: this
+      integer,                intent(out)   :: ierr
     end subroutine f90_cl_finish
 
     ! ----------------------------------------------------

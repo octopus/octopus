@@ -294,7 +294,10 @@ module opencl_m
     ! ------------------------------------------
 
     subroutine opencl_finish()
-      call f90_cl_finish(opencl%env)
+      integer :: ierr
+      
+      call f90_cl_finish(opencl%env, ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'cl_finish') 
     end subroutine opencl_finish
 
     ! ------------------------------------------
