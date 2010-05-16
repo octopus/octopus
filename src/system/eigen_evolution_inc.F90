@@ -70,11 +70,11 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
     do i = 1, st%nst
       c(:, i) = c(:, i) / sqrt(eig(i))
     end do
-    ! Internally the BLAS does the Winograd-Strassen algorithm?
+    
     call lalg_gemm(gr%mesh%np_part * st%d%dim, st%nst, st%nst, R_TOTYPE(M_ONE), &
          st%X(psi)(:, :, :, ik), c, R_TOTYPE(M_ZERO), phi)
     do i = 1, st%nst
-      st%X(psi)(:, :, i, ik) = phi(:, :, st%nst -i + 1)
+      st%X(psi)(1:gr%mesh%np, :, i, ik) = phi(1:gr%mesh%np, :, st%nst -i + 1)
     end do
 
     ! Get the eigenvalues and the residues.
@@ -114,13 +114,13 @@ contains
 
 #if defined(R_TREAL)
     SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:st%d%dim))
-    zpsi = psi
+    zpsi(1:gr%mesh%np, 1:st%d%dim) = psi(1:gr%mesh%np, 1:st%d%dim)
 #else
     zpsi => psi
 #endif
     call exponential_apply(te, gr%der, hm, zpsi, ist, ik, -tau, M_ZERO, order = j, imag_time = .true.)
 #if defined(R_TREAL)
-    psi = zpsi
+    psi(1:gr%mesh%np, 1:st%d%dim) = zpsi(1:gr%mesh%np, 1:st%d%dim)
     SAFE_DEALLOCATE_P(zpsi)
 #else
     nullify(zpsi)

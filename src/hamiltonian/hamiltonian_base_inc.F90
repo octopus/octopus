@@ -346,7 +346,7 @@ contains
     call opencl_set_kernel_arg(kernel_projector_bra, 10, R_TYPE_VAL, nprojs*npoints)
 
     padnprojs = pad_pow2(nprojs)
-    wgsize = opencl_max_workgroup_size()/(psib%ubound_real(1)*padnprojs)
+    wgsize = min(pad_pow2(npoints)/2, opencl_max_workgroup_size()/((psib%ubound_real(1)*padnprojs)))
 
     call opencl_kernel_run(kernel_projector_bra, &
       (/psib%ubound_real(1), padnprojs, wgsize/), (/psib%ubound_real(1), padnprojs, wgsize/))

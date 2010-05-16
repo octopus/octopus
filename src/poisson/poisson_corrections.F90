@@ -122,11 +122,8 @@ contains
       integer, intent(in) :: ll
       FLOAT,   intent(in) :: xx
 
-      call push_sub('poisson_corrections.poisson_corrections_init.isubl')
-
       isubl = M_HALF*loct_gamma(ll + M_HALF)*(M_ONE - loct_incomplete_gamma(ll+M_HALF, xx**2) )
 
-      call pop_sub('poisson_corrections.poisson_corrections_init.isubl')
     end function isubl
 
   end subroutine poisson_corrections_init

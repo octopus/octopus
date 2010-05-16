@@ -1045,6 +1045,7 @@ contains
     if(this%scissor%apply) apply = .false.
     if(this%theory_level == HARTREE .or. this%theory_level == HARTREE_FOCK) apply = .false.
     if(iand(this%xc_family, XC_FAMILY_MGGA).ne.0)  apply = .false.
+    if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
 
   end function hamiltonian_apply_in_buffer
 

@@ -88,7 +88,7 @@ module hamiltonian_base_m
     integer                           :: nprojector_matrices
     logical                           :: apply_projector_matrices
 #ifdef HAVE_OPENCL
-    type(opencl_mem_t)           :: potential_opencl
+    type(opencl_mem_t)                :: potential_opencl
 #endif
   end type hamiltonian_base_t
 

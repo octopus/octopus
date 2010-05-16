@@ -42,7 +42,7 @@ __kernel void projector_bra(const int npoints,
   for(int ip = k; ip < npoints; ip += nk){
       if(ipj < nprojs) aa += matrix[ip + ldmatrix*ipj]*psi[ldpsi*(map[ip] - 1) + ist];
   }
-  aa *= scal[ipj];
+  if(ipj < nprojs) aa *= scal[ipj];
   
   // this can be improved by doing a parallel reduction
   if(ipj < nprojs && k == 0) lprojection[ist + ldprojection*ipj] = aa;
