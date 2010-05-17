@@ -29,7 +29,7 @@
 
 #include "opencl.h"
 
-void FC_FUNC_(f90_cl_env_init,F90_CL_ENV_INIT)(opencl_env_t ** env, STR_F_TYPE source_path_f STR_ARG1){
+void FC_FUNC_(f90_cl_env_init,F90_CL_ENV_INIT)(opencl_env_t ** env, const int * idevice, STR_F_TYPE source_path_f STR_ARG1){
   size_t ParamDataBytes;
   char device_string[2048];
   cl_uint dim;
@@ -62,29 +62,31 @@ void FC_FUNC_(f90_cl_env_init,F90_CL_ENV_INIT)(opencl_env_t ** env, STR_F_TYPE s
     exit(1);
   };
 
+  this->idevice = *idevice;
+
   clGetContextInfo(this->Context, CL_CONTEXT_DEVICES ,0 , NULL, &ParamDataBytes);
   this->Devices = (cl_device_id*) malloc(ParamDataBytes);
 
   clGetContextInfo(this->Context, CL_CONTEXT_DEVICES, ParamDataBytes, this->Devices, NULL);
 
   /* print some info about the device */  
-  clGetDeviceInfo(this->Devices[0], CL_DEVICE_VENDOR, sizeof(device_string), &device_string, NULL);
+  clGetDeviceInfo(this->Devices[this->idevice], CL_DEVICE_VENDOR, sizeof(device_string), &device_string, NULL);
   printf("OpenCL device         : %s", device_string);
 
-  clGetDeviceInfo(this->Devices[0], CL_DEVICE_NAME, sizeof(device_string), &device_string, NULL);
+  clGetDeviceInfo(this->Devices[this->idevice], CL_DEVICE_NAME, sizeof(device_string), &device_string, NULL);
   printf(" %s\n", device_string);
 
-  clGetDeviceInfo (this->Devices[0], CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &dim, NULL);
+  clGetDeviceInfo (this->Devices[this->idevice], CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &dim, NULL);
   printf("Compute units         : %d\n", dim);
 
-  clGetDeviceInfo (this->Devices[0], CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &mem, NULL);
+  clGetDeviceInfo (this->Devices[this->idevice], CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &mem, NULL);
   mem /= (1024*1024); /* convert to megabytes */
   printf("Device memory         : %ld [Mb]\n", mem);
 
-  clGetDeviceInfo(this->Devices[0], CL_DEVICE_EXTENSIONS, sizeof(device_string), &device_string, NULL);
+  clGetDeviceInfo(this->Devices[this->idevice], CL_DEVICE_EXTENSIONS, sizeof(device_string), &device_string, NULL);
   printf("Extensions            : %s\n", device_string);
 
-  clGetDeviceInfo(this->Devices[0], CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(max_workgroup_size), &max_workgroup_size, NULL);
+  clGetDeviceInfo(this->Devices[this->idevice], CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(max_workgroup_size), &max_workgroup_size, NULL);
   printf("Maximum workgroup size: %zd\n", max_workgroup_size);
 
   TO_C_STR1(source_path_f, this->source_path);
@@ -105,7 +107,7 @@ void FC_FUNC(flreleasecommandqueue, FLRELEASECOMMANDQUEUE)(cl_command_queue ** c
 
 int FC_FUNC_(f90_cl_max_workgroup_size, F90_CL_MAX_WORKGROUP_SIZE)(opencl_env_t ** env){
   size_t max_workgroup_size;
-  clGetDeviceInfo(env[0]->Devices[0], CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(max_workgroup_size), &max_workgroup_size, NULL);
+  clGetDeviceInfo(env[0]->Devices[env[0]->idevice], CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(max_workgroup_size), &max_workgroup_size, NULL);
   return (int) max_workgroup_size;
 }
 
@@ -164,7 +166,7 @@ void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
   if(status != CL_SUCCESS){
     size_t len;
     char buffer[2048];
-    clGetProgramBuildInfo (**program, env[0]->Devices[0],
+    clGetProgramBuildInfo (**program, env[0]->Devices[env[0]->idevice],
 			   CL_PROGRAM_BUILD_LOG, sizeof (buffer), buffer,
 			   &len);    
     fprintf(stderr, "Error: compilation of file %s failed.\nCompilation log:\n%s\n", full_file_name, buffer);
@@ -204,7 +206,7 @@ void FC_FUNC_(f90_cl_release_kernel, F90_CL_RELEASE_KERNEL)(cl_kernel ** kernel,
 
 int FC_FUNC_(f90_cl_kernel_wgroup_size, F90_CL_KERNEL_WGROUP_SIZE)(cl_kernel ** kernel, opencl_env_t ** env){
   size_t workgroup_size;
-  clGetKernelWorkGroupInfo(**kernel, env[0]->Devices[0], CL_KERNEL_WORK_GROUP_SIZE, sizeof(workgroup_size), &workgroup_size, NULL);
+  clGetKernelWorkGroupInfo(**kernel, env[0]->Devices[env[0]->idevice], CL_KERNEL_WORK_GROUP_SIZE, sizeof(workgroup_size), &workgroup_size, NULL);
   return (int) workgroup_size;
 }
 

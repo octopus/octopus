@@ -123,7 +123,7 @@ module opencl_m
     subroutine opencl_init()
       type(c_ptr) :: prog
       logical  :: disable
-      integer  :: ierr
+      integer  :: ierr, idevice
 
       call push_sub('opencl.opencl_init')
       
@@ -138,14 +138,24 @@ module opencl_m
       !%End
       call parse_logical(datasets_check('DisableOpenCL'), .false., disable)
       opencl%enabled = .not. disable
-      
+
+      !%Variable OpenCLDevice
+      !%Type integer
+      !%Default 0
+      !%Section Execution::OpenCL
+      !%Description
+      !% This variable selects the OpenCL device that Octopus will
+      !% use. Device 0 is used by default.
+      !%End
+      call parse_integer(datasets_check('OpenCLDevice'), 0, idevice)
+
       if(disable) then
         call pop_sub('opencl.opencl_init')
         return
       end if
 
-      call f90_cl_env_init(opencl%env, trim(conf%share)//'/opencl/')   
-      call flCreateCommandQueue(opencl%command_queue, opencl%env, 0, ierr)
+      call f90_cl_env_init(opencl%env, idevice, trim(conf%share)//'/opencl/')   
+      call flCreateCommandQueue(opencl%command_queue, opencl%env, idevice, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "CreateCommandQueue")
       
       opencl%max_workgroup_size = f90_cl_max_workgroup_size(opencl%env)

@@ -78,12 +78,13 @@
   interface
     ! ---------------------------------------------------
 
-    subroutine f90_cl_env_init(env, source_path)
+    subroutine f90_cl_env_init(env, idevice, source_path)
       use c_pointer_m
 
       implicit none
 
       type(c_ptr),      intent(out) :: env
+      integer,          intent(in)  :: idevice
       character(len=*), intent(in)  :: source_path
     end subroutine f90_cl_env_init
 
@@ -99,14 +100,14 @@
 
     ! ----------------------------------------------------
 
-    subroutine flCreateCommandQueue(command_queue, env, device, ierr)
+    subroutine flCreateCommandQueue(command_queue, env, idevice, ierr)
       use c_pointer_m
 
       implicit none
 
       type(c_ptr), intent(inout) :: command_queue
       type(c_ptr), intent(inout) :: env
-      integer,     intent(in)    :: device
+      integer,     intent(in)    :: idevice
       integer,     intent(out)   :: ierr
       
     end subroutine flCreateCommandQueue
