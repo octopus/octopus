@@ -141,11 +141,15 @@ subroutine X(input_function_global)(filename, mesh, ff, ierr, is_tmp, map)
       call X(cf_new)(mesh%idx%ll, cube)
       call dcf_new(mesh%idx%ll, re)
       call dcf_new(mesh%idx%ll, im)
-      call X(cf_alloc_RS)(cube); call dcf_alloc_RS(re); call dcf_alloc_RS(im)
+      call X(cf_alloc_RS)(cube)
+      call dcf_alloc_RS(re)
+      call dcf_alloc_RS(im)
       call read_netcdf()
       cube%RS = re%RS + M_zI*im%RS
       call X(cube_to_mesh) (mesh, cube, ff)
-      call X(cf_free)(cube); call dcf_free(re); call dcf_free(im)
+      call X(cf_free)(cube)
+      call dcf_free(re)
+      call dcf_free(im)
 #else
       call X(cf_new)(mesh%idx%ll, cube)
       call X(cf_alloc_RS)(cube)
@@ -257,10 +261,14 @@ contains
     end if
     if(file_kind .ne. function_kind) then
       select case(file_kind)
-      case(4);  ierr = -1
-      case(-4); ierr = -2
-      case(8);  ierr = -3
-      case(-8); ierr = -4
+      case(4)
+        ierr = -1
+      case(-4)
+        ierr = -2
+      case(8)
+        ierr = -3
+      case(-8)
+        ierr = -4
       end select
     end if
 
@@ -268,9 +276,12 @@ contains
 #if defined(R_TCOMPLEX)
     if(status == NF90_NOERR) then
       select case(mesh%sb%dim)
-      case(1); status = nf90_get_var (ncid, data_id, xx(1, 1, :))
-      case(2); status = nf90_get_var (ncid, data_id, xx(1, :, :))
-      case(3); status = nf90_get_var (ncid, data_id, xx)
+      case(1)
+        status = nf90_get_var (ncid, data_id, xx(1, 1, :))
+      case(2)
+        status = nf90_get_var (ncid, data_id, xx(1, :, :))
+      case(3)
+        status = nf90_get_var (ncid, data_id, xx)
       end select
       call transpose3(xx, re%RS)
       call ncdf_error('nf90_get_var', status, file, ierr)
@@ -278,9 +289,12 @@ contains
     if(file_kind<0) then
       if(status == NF90_NOERR) then
         select case(mesh%sb%dim)
-        case(1); status = nf90_get_var (ncid, data_im_id, xx(1, 1, :))
-        case(2); status = nf90_get_var (ncid, data_im_id, xx(1, :, :))
-        case(3); status = nf90_get_var (ncid, data_im_id, xx)
+        case(1)
+          status = nf90_get_var (ncid, data_im_id, xx(1, 1, :))
+        case(2)
+          status = nf90_get_var (ncid, data_im_id, xx(1, :, :))
+        case(3)
+          status = nf90_get_var (ncid, data_im_id, xx)
         end select
         call transpose3(xx, im%RS)
         call ncdf_error('nf90_get_var', status, file, ierr)
@@ -291,9 +305,12 @@ contains
 #else
     if(status == NF90_NOERR) then
       select case(mesh%sb%dim)
-      case(1); status = nf90_get_var (ncid, data_id, xx(1, 1, :))
-      case(2); status = nf90_get_var (ncid, data_id, xx(1, :, :))
-      case(3); status = nf90_get_var (ncid, data_id, xx)
+      case(1)
+        status = nf90_get_var (ncid, data_id, xx(1, 1, :))
+      case(2)
+        status = nf90_get_var (ncid, data_id, xx(1, :, :))
+      case(3)
+        status = nf90_get_var (ncid, data_id, xx)
       end select
       call transpose3(xx, cube%RS)
       call ncdf_error('nf90_get_var', status, file, ierr)
@@ -602,20 +619,22 @@ contains
     max_d3 = mesh%idx%nr(2, d3) - mesh%idx%enlarge(d3)    
     
     if(iand(how, boundary_points).ne.0) then
-      min_d2 = mesh%idx%nr(1, d2); max_d2 = mesh%idx%nr(2, d2); 
-      min_d3 = mesh%idx%nr(1, d3); max_d3 = mesh%idx%nr(2, d3); 
+      min_d2 = mesh%idx%nr(1, d2)
+      max_d2 = mesh%idx%nr(2, d2)
+      min_d3 = mesh%idx%nr(1, d3)
+      max_d3 = mesh%idx%nr(2, d3)
     end if
 
     select case(out_what)      
-    case(1:3);  filename = &
-      trim(dir)//'/'//trim(fname)//"."//index2axis(d1)//"=0.matlab"
+    case(1:3)
+      filename = trim(dir)//'/'//trim(fname)//"."//index2axis(d1)//"=0.matlab"
 #if defined(R_TCOMPLEX)
       filename = trim(filename)//"."//trim(index2label(out_what))
 #endif
-    case(4);    filename = &
-      trim(dir)//'/meshgrid.'//index2axis(d1)//"=0."//trim(index2axis(d3))      ! meshgrid d3
-    case(5);    filename = &
-      trim(dir)//'/meshgrid.'//index2axis(d1)//"=0."//trim(index2axis(d2))      ! meshgrid d2
+    case(4)
+      filename = trim(dir)//'/meshgrid.'//index2axis(d1)//"=0."//trim(index2axis(d3)) ! meshgrid d3
+    case(5)
+      filename = trim(dir)//'/meshgrid.'//index2axis(d1)//"=0."//trim(index2axis(d2)) ! meshgrid d2
     end select
 
     record_length = (max_d3 - min_d3 + 1)*23  ! 23 because of F23.14 below
@@ -631,14 +650,19 @@ contains
       do iy = min_d3, max_d3
         
         select case(d1)
-        case(1); ip = mesh%idx%Lxyz_inv( 0, ix, iy)    ! plane_x
-        case(2); ip = mesh%idx%Lxyz_inv(ix,  0, iy)    ! plane_y
-        case(3); ip = mesh%idx%Lxyz_inv(ix, iy,  0)    ! plane_z
+        case(1)
+          ip = mesh%idx%Lxyz_inv( 0, ix, iy)    ! plane_x
+        case(2)
+          ip = mesh%idx%Lxyz_inv(ix,  0, iy)    ! plane_y
+        case(3)
+          ip = mesh%idx%Lxyz_inv(ix, iy,  0)    ! plane_z
         end select
 
         select case(out_what)
-        case(4); out_vec(iy) = mesh%x(ip, d2)      ! meshgrid d2 (this is swapped wrt. 
-        case(5); out_vec(iy) = mesh%x(ip, d3)      ! meshgrid d3  to the filenames)
+        case(4)
+          out_vec(iy) = mesh%x(ip, d2)      ! meshgrid d2 (this is swapped wrt. 
+        case(5)
+          out_vec(iy) = mesh%x(ip, d3)      ! meshgrid d3  to the filenames)
         end select
 
         if (ip < 1 .or. ip > np_max) cycle
@@ -646,9 +670,12 @@ contains
         fu = units_from_atomic(unit, ff(ip))
 
         select case(out_what)
-        case(1); out_vec(iy) = R_REAL(fu)  ! real part
-        case(2); out_vec(iy) = R_AIMAG(fu) ! imaginary part
-        case(3); out_vec(iy) = R_ABS(fu)   ! absolute value
+        case(1)
+          out_vec(iy) = R_REAL(fu)  ! real part
+        case(2)
+          out_vec(iy) = R_AIMAG(fu) ! imaginary part
+        case(3)
+          out_vec(iy) = R_ABS(fu)   ! absolute value
         end select
         
       end do
@@ -1012,11 +1039,11 @@ contains
     call push_sub('io_function_inc.Xoutput_function_global.write_variable')
 
     select case(mesh%sb%dim)
-    case(1);
+    case(1)
       status = nf90_put_var (ncid, data_id, xx(1,1,:))
-    case(2); 
+    case(2)
       status = nf90_put_var (ncid, data_id, xx(1,:,:))
-    case(3);
+    case(3)
       status = nf90_put_var (ncid, data_id, xx)
     end select
     
