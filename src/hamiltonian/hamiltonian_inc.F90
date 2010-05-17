@@ -26,7 +26,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   integer,               intent(in)    :: ik
   FLOAT, optional,       intent(in)    :: time
   integer, optional,     intent(in)    :: terms
-  
+
   integer :: nst, bs, sp
   R_TYPE, pointer     :: epsi(:,:)
   R_TYPE, pointer     :: grad(:, :, :)
@@ -34,6 +34,9 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
   type(profile_t), save :: phase_prof
   logical :: kinetic_only_, apply_phase
+#ifdef HAVE_OPENCL
+  logical :: moved_to_buffer
+#endif
   integer :: ii, ist, idim, ip
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
   type(batch_t), pointer :: epsib
@@ -66,7 +69,18 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   
   apply_phase = associated(hm%phase)
 
+  ASSERT(batch_is_in_buffer(psib) .eqv. batch_is_in_buffer(hpsib))
+
   call X(derivatives_batch_set_bc)(der, psib)
+
+#ifdef HAVE_OPENCL
+  moved_to_buffer = .false.
+  if(opencl_is_enabled() .and. hamiltonian_apply_in_buffer(hm) .and. .not. batch_is_in_buffer(psib)) then
+    moved_to_buffer = .true.
+    call batch_move_to_buffer(psib)
+    call batch_move_to_buffer(hpsib, copy = .false.)
+  end if
+#endif
 
   if(apply_phase) then
     SAFE_ALLOCATE(psi_copy(1:der%mesh%np_part, 1:hm%d%dim, 1:nst))
@@ -120,13 +134,13 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   end if
 
   ! and the non-local one 
-  if (iand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
+  if (hm%ep%non_local .and. iand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
     if(hm%hm_base%apply_projector_matrices) then
       call X(hamiltonian_base_non_local)(hm%hm_base, der%mesh, hm%d, ik, epsib, hpsib)
     else
       ! (here epsib is in buffer and dirty (because of the
       ! boundaries), but the central part is ok, so we can use it)
-      if(hm%ep%non_local) call X(project_psi_batch)(der%mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, epsib, hpsib, ik)
+      call X(project_psi_batch)(der%mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, epsib, hpsib, ik)
     end if
   end if
 
@@ -180,7 +194,14 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
     call batch_end(epsib)
     SAFE_DEALLOCATE_P(epsib)
   end if
-  
+
+#ifdef HAVE_OPENCL  
+  if(moved_to_buffer) then
+    call batch_move_from_buffer(psib, copy = .false.)
+    call batch_move_from_buffer(hpsib)
+  end if
+#endif
+
   call pop_sub('hamiltonian_inc.Xhamiltonian_apply_batch')
   call profiling_out(prof_hamiltonian)
 
