@@ -117,7 +117,7 @@ contains
     !%Section SCF::Convergence
     !%Description
     !% Maximum number of SCF iterations. The code will stop even if convergence
-    !% has not been achieved. 0 means unlimited.
+    !% has not been achieved. -1 means unlimited.
     !%End
     call parse_integer  (datasets_check('MaximumIter'), 200, scf%max_iter)
 
@@ -191,7 +191,7 @@ contains
     call parse_float(datasets_check('ConvForce'), M_ZERO, scf%conv_abs_force)
     scf%conv_abs_force = units_to_atomic(units_inp%force, scf%conv_abs_force)
 
-    if(scf%max_iter <= 0 .and. &
+    if(scf%max_iter < 0 .and. &
       scf%conv_abs_dens <= M_ZERO .and. scf%conv_rel_dens <= M_ZERO .and. &
       scf%conv_abs_ev <= M_ZERO .and. scf%conv_rel_ev <= M_ZERO .and. &
       scf%conv_abs_force <= M_ZERO) then
@@ -201,7 +201,7 @@ contains
       call write_fatal(3)
     end if
 
-    if(scf%max_iter <= 0) scf%max_iter = huge(scf%max_iter)
+    if(scf%max_iter < 0) scf%max_iter = huge(scf%max_iter)
 
     !%Variable What2Mix
     !%Type integer
@@ -393,7 +393,11 @@ contains
     endif
 
     if ( verbosity_ /= VERB_NO ) then
-      write(message(1),'(a)') 'Info: Starting SCF iteration.'
+      if(scf%max_iter > 0) then
+        write(message(1),'(a)') 'Info: Starting SCF iteration.'
+      else
+        write(message(1),'(a)') 'Info: No SCF iterations will be done.'
+      endif
       call write_info(1)
     end if
 
