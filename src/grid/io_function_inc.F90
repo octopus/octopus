@@ -697,6 +697,8 @@ contains
     FLOAT :: xx(1:MAX_DIM)
     R_TYPE :: fu
 
+    integer :: idir
+
     call push_sub('io_function_inc.Xoutput_function_global.out_mesh_index')
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".mesh_index", action='write', is_tmp=is_tmp)
@@ -713,7 +715,8 @@ contains
           x0 = xx(1)
        end if
        fu = units_from_atomic(unit, ff(ip))
-       if(ierr==0) write(iunit, mformat2, iostat=ierr) ip, xx(1), xx(2), xx(3), R_REAL(fu), R_AIMAG(fu)
+       if(ierr==0) write(iunit, mformat2, iostat=ierr) ip, &
+         (units_from_atomic(units_out%length, xx(idir)), idir = 1, 3), R_REAL(fu), R_AIMAG(fu)
     end do
 
     if(ierr == 0) write(iunit, mformat, iostat=ierr)
@@ -792,6 +795,7 @@ contains
   ! extended to plot a function on a 2D plane.
   subroutine out_xcrysden()
     integer :: ix, iy, iz, idir2, ix2, iy2, iz2, my_n(3)
+    FLOAT :: lattice_vectors(3,3)
     FLOAT :: offset(3)
     type(X(cf_t)) :: cube
 
@@ -810,9 +814,9 @@ contains
 
     ! The corner of the cell is always (0,0,0) to XCrySDen
     ! so the offset is applied to the atomic coordinates.
-    ! offset in periodic directions
+    ! Offset in periodic directions:
     offset = -matmul(mesh%sb%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3))
-    ! offset in aperiodic directions
+    ! Offset in aperiodic directions:
     do idir = mesh%sb%periodic_dim + 1, 3
       offset(idir) = -(mesh%idx%ll(idir) - 1)/2 * mesh%spacing(idir)
     end do
@@ -824,6 +828,13 @@ contains
     my_n(1:mesh%sb%periodic_dim) = mesh%idx%ll(1:mesh%sb%periodic_dim) + 1
     my_n(mesh%sb%periodic_dim + 1:3) = mesh%idx%ll(mesh%sb%periodic_dim + 1:3)
 
+    ! This differs from mesh%sb%rlattice if it is not an integer multiple of the spacing
+    do idir = 1, 3
+      do idir2 = 1, 3
+        lattice_vectors(idir, idir2) = mesh%spacing(idir) * (my_n(idir) - 1) * mesh%sb%rlattice_primitive(idir2, idir)
+      enddo
+    enddo
+    
     iunit = io_open(trim(dir)//'/'//trim(fname)//".xsf", action='write', is_tmp=is_tmp)
 
     ASSERT(present(geo))
@@ -838,7 +849,7 @@ contains
 
     do idir = 1, 3
       write(iunit, '(3f12.6)') (units_from_atomic(units_out%length, &
-        mesh%sb%rlattice(idir2, idir)), idir2 = 1, 3)
+        lattice_vectors(idir2, idir)), idir2 = 1, 3)
     enddo
 
     do iz = 1, my_n(3)
@@ -1084,9 +1095,11 @@ subroutine X(io_function_out_text)(dir, mesh, mm, wf)
     xx = mesh_x_global(mesh, ip)
     ! print out wavefunction
     do idir = 1, mesh%sb%dim
-      write(iunit,'(es24.15)', ADVANCE='no') xx(idir)
+      write(iunit,'(es24.15)', ADVANCE='no') units_from_atomic(units_out%length, xx(idir))
     end do ! idir
-    write(iunit,'(es24.15,es24.15)') R_REAL(wf(ip)), R_AIMAG(wf(ip))
+    write(iunit,'(es24.15,es24.15)') &
+      units_from_atomic(sqrt(units_out%length**(-mesh%sb%dim)), R_REAL(wf(ip))), &
+      units_from_atomic(sqrt(units_out%length**(-mesh%sb%dim)), R_AIMAG(wf(ip)))
 
   end do ! ip
 
@@ -1094,8 +1107,6 @@ subroutine X(io_function_out_text)(dir, mesh, mm, wf)
 
   call pop_sub('io_function_inc.Xio_function_out_text')
 end subroutine X(io_function_out_text)
-
-#undef out_type
 
 !! Local Variables:
 !! mode: f90
