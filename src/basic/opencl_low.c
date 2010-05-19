@@ -26,10 +26,9 @@
 #include <CL/cl.h>
 #include <string_f.h>
 #include <string.h>
+#include <assert.h>
 
-#include "opencl.h"
-
-void FC_FUNC_(f90_cl_env_init,F90_CL_ENV_INIT)(opencl_env_t ** env, const int * idevice){
+void FC_FUNC_(f90_cl_env_init,F90_CL_ENV_INIT)(const int * idevice, cl_context * context, cl_device_id * device){
   size_t ParamDataBytes;
   char device_string[2048];
   cl_uint dim;
@@ -37,11 +36,8 @@ void FC_FUNC_(f90_cl_env_init,F90_CL_ENV_INIT)(opencl_env_t ** env, const int * 
   cl_platform_id platform;
   cl_int status;
   cl_context_properties cps[3];
-  opencl_env_t * this;
   size_t max_workgroup_size;
-
-  this = (opencl_env_t *) malloc(sizeof(opencl_env_t));
-  *env = this;
+  cl_device_id * Devices;
 
   /* Just get the first platform */
   status = clGetPlatformIDs(1, &platform, NULL);
@@ -55,78 +51,74 @@ void FC_FUNC_(f90_cl_env_init,F90_CL_ENV_INIT)(opencl_env_t ** env, const int * 
   cps[1] = (cl_context_properties)platform;
   cps[2] = 0;
   
-  this->Context = clCreateContextFromType(cps, CL_DEVICE_TYPE_ALL, NULL, NULL, &status);
+  *context = clCreateContextFromType(cps, CL_DEVICE_TYPE_ALL, NULL, NULL, &status);
 
   if (status != CL_SUCCESS){
     printf("OpenCL initialization failed. Error code: %d\n", status);
     exit(1);
   };
 
-  this->idevice = *idevice;
+  clGetContextInfo(*context, CL_CONTEXT_DEVICES, 0 , NULL, &ParamDataBytes);
+  Devices = (cl_device_id*) malloc(ParamDataBytes);
 
-  clGetContextInfo(this->Context, CL_CONTEXT_DEVICES ,0 , NULL, &ParamDataBytes);
-  this->Devices = (cl_device_id*) malloc(ParamDataBytes);
+  clGetContextInfo(*context, CL_CONTEXT_DEVICES, ParamDataBytes, Devices, NULL);
 
-  clGetContextInfo(this->Context, CL_CONTEXT_DEVICES, ParamDataBytes, this->Devices, NULL);
+  assert(sizeof(cl_device_id) == sizeof(void *));
+
+  *device = Devices[*idevice];
+
+  free(Devices);
 
   /* print some info about the device */  
-  clGetDeviceInfo(this->Devices[this->idevice], CL_DEVICE_VENDOR, sizeof(device_string), &device_string, NULL);
+  clGetDeviceInfo(*device, CL_DEVICE_VENDOR, sizeof(device_string), &device_string, NULL);
   printf("OpenCL device         : %s", device_string);
 
-  clGetDeviceInfo(this->Devices[this->idevice], CL_DEVICE_NAME, sizeof(device_string), &device_string, NULL);
+  clGetDeviceInfo(*device, CL_DEVICE_NAME, sizeof(device_string), &device_string, NULL);
   printf(" %s\n", device_string);
 
-  clGetDeviceInfo (this->Devices[this->idevice], CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &dim, NULL);
+  clGetDeviceInfo (*device, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &dim, NULL);
   printf("Compute units         : %d\n", dim);
 
-  clGetDeviceInfo (this->Devices[this->idevice], CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &mem, NULL);
+  clGetDeviceInfo (*device, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &mem, NULL);
   mem /= (1024*1024); /* convert to megabytes */
   printf("Device memory         : %ld [Mb]\n", mem);
 
-  clGetDeviceInfo(this->Devices[this->idevice], CL_DEVICE_EXTENSIONS, sizeof(device_string), &device_string, NULL);
+  clGetDeviceInfo(*device, CL_DEVICE_EXTENSIONS, sizeof(device_string), &device_string, NULL);
   printf("Extensions            : %s\n", device_string);
 
-  clGetDeviceInfo(this->Devices[this->idevice], CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(max_workgroup_size), &max_workgroup_size, NULL);
+  clGetDeviceInfo(*device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(max_workgroup_size), &max_workgroup_size, NULL);
   printf("Maximum workgroup size: %zd\n", max_workgroup_size);
 
 }
 
 /* clCreateCommandQueue */
-void FC_FUNC(flcreatecommandqueue, FLCREATECOMMANDQUEUE)(cl_command_queue ** command_queue, opencl_env_t ** env, const int * device, int * ierr){
-  *command_queue = (cl_command_queue *) malloc(sizeof(cl_command_queue));
-  **command_queue = clCreateCommandQueue(env[0]->Context, env[0]->Devices[*device], CL_QUEUE_PROFILING_ENABLE, ierr);
+void FC_FUNC(flcreatecommandqueue, FLCREATECOMMANDQUEUE)
+     (cl_command_queue * command_queue, cl_context * context, cl_device_id * device, int * ierr){
+  *command_queue = clCreateCommandQueue(*context, *device, CL_QUEUE_PROFILING_ENABLE, ierr);
 }
 
 /* clReleaseCommandQueue */
-void FC_FUNC(flreleasecommandqueue, FLRELEASECOMMANDQUEUE)(cl_command_queue ** command_queue, int * ierr){
-  *ierr = clReleaseCommandQueue(**command_queue);
-  free(*command_queue);
+void FC_FUNC(flreleasecommandqueue, FLRELEASECOMMANDQUEUE)(cl_command_queue * command_queue, int * ierr){
+  *ierr = clReleaseCommandQueue(*command_queue);
 }
 
-int FC_FUNC_(f90_cl_max_workgroup_size, F90_CL_MAX_WORKGROUP_SIZE)(opencl_env_t ** env){
+int FC_FUNC_(f90_cl_max_workgroup_size, F90_CL_MAX_WORKGROUP_SIZE)(cl_device_id * device){
   size_t max_workgroup_size;
-  clGetDeviceInfo(env[0]->Devices[env[0]->idevice], CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(max_workgroup_size), &max_workgroup_size, NULL);
+  clGetDeviceInfo(*device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(max_workgroup_size), &max_workgroup_size, NULL);
   return (int) max_workgroup_size;
 }
 
-void FC_FUNC_(f90_cl_env_end,F90_CL_ENV_END)(opencl_env_t ** env){
-  opencl_env_t * this;
-
-  this = *env;
-  clReleaseContext(this->Context);
-  free(this->Devices);
-  free(this);
+void FC_FUNC(flreleasecontext, FLRELEASECONTEXT)(cl_context * context){
+  clReleaseContext(*context);
 }
 
 void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
-     (cl_program ** program, opencl_env_t ** env, STR_F_TYPE file_name_f STR_ARG1){
+     (cl_program * program, cl_context * context, cl_device_id * device, STR_F_TYPE file_name_f STR_ARG1){
   FILE * source_file;
   size_t szSourceLength;
   char* cSourceString;
   char * file_name;
   cl_int status;
-
-  *program = (cl_program *) malloc(sizeof(cl_program));
 
   TO_C_STR1(file_name_f, file_name);
 
@@ -151,13 +143,13 @@ void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
     
   cSourceString[szSourceLength] = '\0';
 
-  **program = clCreateProgramWithSource(env[0]->Context, 1, (const char**)&cSourceString, NULL, &status);
-  status = clBuildProgram(**program, 0, NULL, "-cl-mad-enable", NULL, NULL);
+  *program = clCreateProgramWithSource(*context, 1, (const char**)&cSourceString, NULL, &status);
+  status = clBuildProgram(*program, 0, NULL, "-cl-mad-enable", NULL, NULL);
   
   if(status != CL_SUCCESS){
     size_t len;
     char buffer[2048];
-    clGetProgramBuildInfo (**program, env[0]->Devices[env[0]->idevice],
+    clGetProgramBuildInfo (*program, *device,
 			   CL_PROGRAM_BUILD_LOG, sizeof (buffer), buffer,
 			   &len);    
     fprintf(stderr, "Error: compilation of file %s failed.\nCompilation log:\n%s\n", file_name, buffer);
@@ -169,107 +161,91 @@ void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
 }
 
 void FC_FUNC_(f90_cl_release_program, F90_CL_RELEASE_PROGRAM)
-     (cl_program ** program, int * ierr){
+     (cl_program * program, int * ierr){
 
-  *ierr = clReleaseProgram(**program);
-  if(*ierr != CL_SUCCESS) free(*program);
+  *ierr = clReleaseProgram(*program);
 }
 
 void FC_FUNC_(f90_cl_create_kernel, F90_CL_CREATE_KERNEL)
-     (cl_kernel ** kernel, cl_program ** program, STR_F_TYPE kernel_name_f, int * ierr STR_ARG1){
+     (cl_kernel * kernel, cl_program * program, STR_F_TYPE kernel_name_f, int * ierr STR_ARG1){
   char * kernel_name;
 
   TO_C_STR1(kernel_name_f, kernel_name);
 
-  *kernel = (cl_kernel *) malloc(sizeof(cl_kernel));
-
-  **kernel = clCreateKernel(**program, kernel_name, ierr);
-
-  /*printf("kernel = %ld\n", *kernel);*/
+  *kernel = clCreateKernel(*program, kernel_name, ierr);
 
   free(kernel_name);
 }
 
-void FC_FUNC_(f90_cl_release_kernel, F90_CL_RELEASE_KERNEL)(cl_kernel ** kernel, int * ierr){
-  *ierr = clReleaseKernel(**kernel);
-  free(*kernel);
+void FC_FUNC_(f90_cl_release_kernel, F90_CL_RELEASE_KERNEL)(cl_kernel * kernel, int * ierr){
+  *ierr = clReleaseKernel(*kernel);
 }
 
-int FC_FUNC_(f90_cl_kernel_wgroup_size, F90_CL_KERNEL_WGROUP_SIZE)(cl_kernel ** kernel, opencl_env_t ** env){
+int FC_FUNC_(f90_cl_kernel_wgroup_size, F90_CL_KERNEL_WGROUP_SIZE)(cl_kernel * kernel, cl_device_id * device){
   size_t workgroup_size;
-  clGetKernelWorkGroupInfo(**kernel, env[0]->Devices[env[0]->idevice], CL_KERNEL_WORK_GROUP_SIZE, sizeof(workgroup_size), &workgroup_size, NULL);
+  clGetKernelWorkGroupInfo(*kernel, *device, CL_KERNEL_WORK_GROUP_SIZE, sizeof(workgroup_size), &workgroup_size, NULL);
   return (int) workgroup_size;
 }
 
 void FC_FUNC_(f90_cl_create_buffer, F90_CL_CREATE_BUFFER)
-     (cl_mem ** buffer, opencl_env_t ** env, const int * flags, const size_t * size, int * ierr){
+     (cl_mem * buffer, cl_context * context, const int * flags, const size_t * size, int * ierr){
 
-  *buffer = (cl_mem *) malloc(sizeof(cl_mem));
-  
-  /*
-  printf("\nCreateBuffer\n");
-  printf("queue=%ld buffer=%ld size=%d\n", env[0]->CommandQueue, **buffer, *size);
-  */
-
-  **buffer = clCreateBuffer(env[0]->Context, *flags, (size_t) *size, NULL, ierr);
+  *buffer = clCreateBuffer(*context, *flags, (size_t) *size, NULL, ierr);
 
 }
 
-void FC_FUNC_(f90_cl_release_buffer, F90_CL_RELEASE_BUFFER)(cl_mem ** buffer, int * ierr){
+void FC_FUNC_(f90_cl_release_buffer, F90_CL_RELEASE_BUFFER)(cl_mem * buffer, int * ierr){
 
-  *ierr = clReleaseMemObject(**buffer);
-  free(*buffer);
+  *ierr = clReleaseMemObject(*buffer);
 }
 
 
 /* clEnqueueWriteBuffer */
 void FC_FUNC(flenqueuewritebuffer, FLENQUEUEWRITEBUFFER)
-     (cl_mem ** buffer, cl_command_queue ** cq, const size_t * size, const size_t * offset, const void * data, int * ierr){
+     (cl_mem * buffer, cl_command_queue * cq, const size_t * size, const size_t * offset, const void * data, int * ierr){
 
-  *ierr = clEnqueueWriteBuffer(**cq, **buffer, CL_TRUE, *offset, *size, data, 0, NULL, NULL);
+  *ierr = clEnqueueWriteBuffer(*cq, *buffer, CL_TRUE, *offset, *size, data, 0, NULL, NULL);
 
 }
 
 /* clEnqueueReadBuffer */
 void FC_FUNC(flenqueuereadbuffer, FLENQUEUEREADBUFFER)
-     (cl_mem ** buffer, cl_command_queue ** cq, const size_t * size, const size_t * offset, void * data, int * ierr){
+     (cl_mem * buffer, cl_command_queue * cq, const size_t * size, const size_t * offset, void * data, int * ierr){
 
-  *ierr = clEnqueueReadBuffer(**cq, **buffer, CL_TRUE, *offset, *size, data, 0, NULL, NULL);
+  *ierr = clEnqueueReadBuffer(*cq, *buffer, CL_TRUE, *offset, *size, data, 0, NULL, NULL);
 }
 
 
-void FC_FUNC(flfinish, FLFINISH)(cl_command_queue ** cq, int * ierr){
-  *ierr = clFinish(**cq);
+void FC_FUNC(flfinish, FLFINISH)(cl_command_queue * cq, int * ierr){
+  *ierr = clFinish(*cq);
 }
 
 void FC_FUNC_(f90_cl_set_kernel_arg_buf, F90_CL_SET_KERNEL_ARG_BUF)
-     (cl_kernel ** kernel, const int * index, cl_mem ** buffer, int * ierr){
+     (cl_kernel * kernel, const int * index, cl_mem * buffer, int * ierr){
 
-  /*printf("index=%d\n", *index);*/
-
-  *ierr = clSetKernelArg(**kernel, *index, sizeof(cl_mem), *buffer);
+  *ierr = clSetKernelArg(*kernel, *index, sizeof(cl_mem), buffer);
 }
 
 void FC_FUNC_(f90_cl_set_kernel_arg_data, F90_CL_SET_KERNEL_ARG_DATA)
-     (cl_kernel ** kernel, const int * index, const int * sizeof_data, const void * data, int * ierr){
+     (cl_kernel * kernel, const int * index, const int * sizeof_data, const void * data, int * ierr){
   /* printf("kernel=%ld index=%d\n", *kernel, *index);*/
 
-  *ierr = clSetKernelArg(**kernel, *index, *sizeof_data, data);
+  *ierr = clSetKernelArg(*kernel, *index, *sizeof_data, data);
 }
 
 void FC_FUNC_(f90_cl_set_kernel_arg_local, F90_CL_SET_KERNEL_ARG_LOCAL)
-     (cl_kernel ** kernel, const int * index, const int * size_of_local, int * ierr){
+     (cl_kernel * kernel, const int * index, const int * size_of_local, int * ierr){
   
   /* printf("kernel=%ld index=%d\n", *kernel, *index);*/
 
-  *ierr = clSetKernelArg(**kernel, *index, *size_of_local, NULL);
+  *ierr = clSetKernelArg(*kernel, *index, *size_of_local, NULL);
 }
 
 /* clEnqueueNDRangeKernel*/
 void FC_FUNC(flenqueuendrangekernel, FLENQUEUENDRANGEKERNEL)
-     (cl_kernel ** kernel, cl_command_queue ** cq, const int * dim, const size_t * globalsizes, const size_t * localsizes, int * ierr){
+     (cl_kernel * kernel, cl_command_queue * cq, const int * dim, const size_t * globalsizes, const size_t * localsizes, int * ierr){
 
-  *ierr = clEnqueueNDRangeKernel(**cq, **kernel, *dim,
+  *ierr = clEnqueueNDRangeKernel(*cq, *kernel, *dim,
 				NULL,  globalsizes, localsizes, 0, NULL, NULL);
 
 }

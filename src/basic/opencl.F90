@@ -53,8 +53,9 @@ module opencl_m
     opencl_create_kernel
 
   type opencl_t 
-    type(c_ptr) :: env
+    type(c_ptr) :: context
     type(c_ptr) :: command_queue
+    type(c_ptr) :: device
     integer     :: max_workgroup_size
     logical     :: enabled
   end type opencl_t
@@ -154,11 +155,11 @@ module opencl_m
         return
       end if
 
-      call f90_cl_env_init(opencl%env, idevice)
-      call flCreateCommandQueue(opencl%command_queue, opencl%env, idevice, ierr)
+      call f90_cl_env_init(idevice, opencl%context, opencl%device)
+      call flCreateCommandQueue(opencl%command_queue, opencl%context, opencl%device, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "CreateCommandQueue")
       
-      opencl%max_workgroup_size = f90_cl_max_workgroup_size(opencl%env)
+      opencl%max_workgroup_size = f90_cl_max_workgroup_size(opencl%device)
       
       ! now initialize the kernels
       call opencl_build_program(prog, trim(conf%share)//'/opencl/vpsi.cl')
@@ -212,7 +213,7 @@ module opencl_m
         call opencl_release_kernel(kernel_projector_bra)
         call flReleaseCommandQueue(opencl%command_queue, ierr)
         if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "ReleaseCommandQueue")
-        call f90_cl_env_end(opencl%env)
+        call flReleaseContext(opencl%context)
       end if
 
       call pop_sub('opencl.opencl_end')
@@ -235,7 +236,7 @@ module opencl_m
       this%size = size      
       fsize = size*types_get_size(type)
       
-      call f90_cl_create_buffer(this%mem, opencl%env, flags, fsize, ierr)
+      call f90_cl_create_buffer(this%mem, opencl%context, flags, fsize, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "create_buffer")
 
       call pop_sub('opencl.opencl_create_buffer_4')
@@ -259,7 +260,7 @@ module opencl_m
 
       fsize = size*types_get_size(type)
 
-      call f90_cl_create_buffer(this%mem, opencl%env, flags, fsize, ierr)
+      call f90_cl_create_buffer(this%mem, opencl%context, flags, fsize, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "create_buffer")
 
       call pop_sub('opencl.opencl_create_buffer_8')
@@ -395,7 +396,7 @@ module opencl_m
     integer function opencl_kernel_workgroup_size(kernel) result(workgroup_size)
       type(c_ptr), intent(inout) :: kernel
       
-      workgroup_size = f90_cl_kernel_wgroup_size(kernel, opencl%env)
+      workgroup_size = f90_cl_kernel_wgroup_size(kernel, opencl%device)
     end function opencl_kernel_workgroup_size
 
     ! -----------------------------------------------
@@ -404,7 +405,7 @@ module opencl_m
       type(c_ptr),      intent(inout) :: prog
       character(len=*), intent(in)    :: filename
 
-      call f90_cl_build_program(prog, opencl%env, filename)
+      call f90_cl_build_program(prog, opencl%context, opencl%device, filename)
     end subroutine opencl_build_program
 
     ! -----------------------------------------------

@@ -78,35 +78,36 @@
   interface
     ! ---------------------------------------------------
 
-    subroutine f90_cl_env_init(env, idevice)
+    subroutine f90_cl_env_init(idevice, context, device)
       use c_pointer_m
 
       implicit none
 
-      type(c_ptr),      intent(out) :: env
       integer,          intent(in)  :: idevice
+      type(c_ptr),      intent(out) :: context
+      type(c_ptr),      intent(out) :: device
     end subroutine f90_cl_env_init
 
     ! ----------------------------------------------------
 
-    subroutine f90_cl_env_end(env)
+    subroutine flReleaseContext(context)
       use c_pointer_m
 
       implicit none
 
-      type(c_ptr), intent(inout) :: env
-    end subroutine f90_cl_env_end
+      type(c_ptr), intent(inout) :: context
+    end subroutine flReleaseContext
 
     ! ----------------------------------------------------
 
-    subroutine flCreateCommandQueue(command_queue, env, idevice, ierr)
+    subroutine flCreateCommandQueue(command_queue, context, device, ierr)
       use c_pointer_m
 
       implicit none
 
       type(c_ptr), intent(inout) :: command_queue
-      type(c_ptr), intent(inout) :: env
-      integer,     intent(in)    :: idevice
+      type(c_ptr), intent(inout) :: context
+      type(c_ptr), intent(inout) :: device
       integer,     intent(out)   :: ierr
       
     end subroutine flCreateCommandQueue
@@ -125,23 +126,24 @@
 
     ! ----------------------------------------------------
 
-    integer function f90_cl_max_workgroup_size(env)
+    integer function f90_cl_max_workgroup_size(device)
       use c_pointer_m
 
       implicit none
 
-      type(c_ptr), intent(inout) :: env
+      type(c_ptr), intent(inout) :: device
     end function f90_cl_max_workgroup_size
 
     ! ----------------------------------------------------
 
-    subroutine f90_cl_build_program(prog, env, source_file)
+    subroutine f90_cl_build_program(prog, context, device, source_file)
       use c_pointer_m
 
       implicit none
 
       type(c_ptr),      intent(out)   :: prog
-      type(c_ptr),      intent(inout) :: env
+      type(c_ptr),      intent(inout) :: context
+      type(c_ptr),      intent(inout) :: device
       character(len=*), intent(in)    :: source_file
     end subroutine f90_cl_build_program
 
@@ -182,24 +184,24 @@
 
     ! ----------------------------------------------------
 
-    integer function f90_cl_kernel_wgroup_size(kernel, env)
+    integer function f90_cl_kernel_wgroup_size(kernel, device)
       use c_pointer_m
 
       implicit none
 
       type(c_ptr), intent(inout) :: kernel
-      type(c_ptr), intent(inout) :: env
+      type(c_ptr), intent(inout) :: device
     end function f90_cl_kernel_wgroup_size
 
     ! ----------------------------------------------------
 
-    subroutine f90_cl_create_buffer(this, env, flags, size, ierr)
+    subroutine f90_cl_create_buffer(this, context, flags, size, ierr)
       use c_pointer_m
 
       implicit none
 
       type(c_ptr),            intent(inout) :: this
-      type(c_ptr),            intent(inout) :: env
+      type(c_ptr),            intent(inout) :: context
       integer,                intent(in)    :: flags
       integer(SIZEOF_SIZE_T), intent(in)    :: size
       integer,                intent(in)    :: ierr

@@ -77,7 +77,6 @@ noinst_HEADERS =               \
 	subarray_inc.F90       \
 	varia.h                \
 	io_binary.h            \
-	opencl.h               \
 	opencl_inc.F90         \
 	opencl_iface_inc.F90
 
