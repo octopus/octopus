@@ -34,22 +34,30 @@
 
     call push_sub('output_states_inc.h_sys_output_states')
 
-    if(iand(outp%what, output_density).ne.0) then
+    if(iand(outp%what, output_density) .ne. 0) then
       fn_unit = units_out%length**(-gr%mesh%sb%dim)
       do is = 1, st%d%nspin
-        write(fname, '(a,i1)') 'density-sp', is
+        if(st%d%nspin == 1) then
+          write(fname, '(a)') 'density'
+        else
+          write(fname, '(a,i1)') 'density-sp', is
+        endif
         call doutput_function(outp%how, dir, fname, gr%fine%mesh, &
           st%rho(:, is), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
       end do
     end if
 
-    if(iand(outp%what, output_pol_density).ne.0) then
+    if(iand(outp%what, output_pol_density) .ne. 0) then
       fn_unit = units_out%length**(1-gr%mesh%sb%dim)
       SAFE_ALLOCATE(dtmp(1:gr%fine%mesh%np))
       do idir = 1, gr%sb%dim
         do is = 1, st%d%nspin
           forall (ip = 1:gr%fine%mesh%np) dtmp(ip) = st%rho(ip, is) * gr%fine%mesh%x(ip, idir)
-          write(fname, '(a,i1,2a)') 'dipole_density-sp', is, '-', index2axis(idir)
+          if(st%d%nspin == 1) then
+            write(fname, '(2a)') 'dipole_density-', index2axis(idir)
+          else
+            write(fname, '(a,i1,2a)') 'dipole_density-sp', is, '-', index2axis(idir)
+          endif
           call doutput_function(outp%how, dir, fname, gr%fine%mesh, &
             dtmp(:), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
         end do
@@ -57,19 +65,28 @@
       SAFE_DEALLOCATE_A(dtmp)
     end if
 
-    if( (iand(outp%what, output_current).ne.0) .and. (states_are_complex(st)) ) then
-      fn_unit = units_out%time * units_out%length**(-gr%mesh%sb%dim)
-      ! calculate current first
-      SAFE_ALLOCATE(current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
-      call states_calc_tau_jp_gn(gr%der, st, jp = current)
-      do is = 1, st%d%nspin
-        do idir = 1, gr%mesh%sb%dim
-          write(fname, '(a,i1,2a)') 'current-sp', is, '-', index2axis(idir)
-          call doutput_function(outp%how, dir, fname, gr%mesh, &
-            current(:, idir, is), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
+    if(iand(outp%what, output_current) .ne. 0) then
+      if(states_are_complex(st)) then
+        fn_unit = units_out%time * units_out%length**(-gr%mesh%sb%dim)
+        ! calculate current first
+        SAFE_ALLOCATE(current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
+        call states_calc_tau_jp_gn(gr%der, st, jp = current)
+        do is = 1, st%d%nspin
+          do idir = 1, gr%mesh%sb%dim
+            if(st%d%nspin == 1) then
+              write(fname, '(2a)') 'current-', index2axis(idir)
+            else
+              write(fname, '(a,i1,2a)') 'current-sp', is, '-', index2axis(idir)
+            endif
+            call doutput_function(outp%how, dir, fname, gr%mesh, &
+              current(:, idir, is), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
+          end do
         end do
-      end do
-      SAFE_DEALLOCATE_A(current)
+        SAFE_DEALLOCATE_A(current)
+      else
+        message(1) = 'No current density output for real states since it is identically zero.'
+        call write_warning(1)
+      endif
     end if
 
     if(iand(outp%what, output_wfs).ne.0) then
@@ -78,7 +95,20 @@
         if(loct_isinstringlist(ist, outp%wfs_list)) then
           do ik = st%d%kpt%start, st%d%kpt%end
             do idim = 1, st%d%dim
-              write(fname, '(a,i3.3,a,i4.4,a,i1)') 'wf-k', ik, '-st', ist, '-sp', idim
+              if(st%d%nik > 1) then
+                if(st%d%dim > 1) then
+                  write(fname, '(a,i3.3,a,i4.4,a,i1)') 'wf-k', ik, '-st', ist, '-sp', idim
+                else
+                  write(fname, '(a,i3.3,a,i4.4)')      'wf-k', ik, '-st', ist
+                endif
+              else
+                if(st%d%dim > 1) then
+                  write(fname, '(a,i4.4,a,i1)')        'wf-st', ist, '-sp', idim
+                else
+                  write(fname, '(a,i4.4)')             'wf-st', ist
+                endif
+              endif
+                
               if (states_are_real(st)) then
                 call doutput_function(outp%how, dir, fname, gr%mesh, &
                      st%dpsi(1:, idim, ist, ik), fn_unit, ierr, is_tmp = .false., geo = geo)
@@ -99,7 +129,20 @@
         if(loct_isinstringlist(ist, outp%wfs_list)) then
           do ik = st%d%kpt%start, st%d%kpt%end
             do idim = 1, st%d%dim
-              write(fname, '(a,i3.3,a,i4.4,a,i1)') 'sqm-wf-k', ik, '-st', ist, '-sp', idim
+              if(st%d%nik > 1) then
+                if(st%d%dim > 1) then
+                  write(fname, '(a,i3.3,a,i4.4,a,i1)') 'sqm-wf-k', ik, '-st', ist, '-sp', idim
+                else
+                  write(fname, '(a,i3.3,a,i4.4)')      'sqm-wf-k', ik, '-st', ist
+                endif
+              else
+                if(st%d%dim > 1) then
+                  write(fname, '(a,i4.4,a,i1)')        'sqm-wf-st', ist, '-sp', idim
+                else
+                  write(fname, '(a,i4.4)')             'sqm-wf-st', ist
+                endif
+              endif
+
               if (states_are_real(st)) then
                 dtmp = abs(st%dpsi(:, idim, ist, ik))**2
               else
@@ -150,6 +193,7 @@
   end subroutine h_sys_output_states
 
 
+  ! ---------------------------------------------------------
   !
   !  routine for output of model many-body quantities.
   !

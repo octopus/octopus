@@ -45,11 +45,19 @@
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
         call doutput_function(outp%how, dir, 'vh', mesh, hm%vhartree, units_out%energy, err, geo = geo)
         do is = 1, min(hm%d%ispin, 2)
-          write(fname, '(a,i1)') 'vxc-sp', is
+          if(hm%d%ispin == 1) then
+            write(fname, '(a)') 'vxc'
+          else
+            write(fname, '(a,i1)') 'vxc-sp', is
+          endif
           call doutput_function(outp%how, dir, fname, mesh, hm%vxc(:, is), units_out%energy, err, geo = geo)
 
           ! finally the full KS potential (without non-local PP contributions)
-          write(fname, '(a,i1)') 'vks-sp', is
+          if(hm%d%ispin == 1) then
+            write(fname, '(a)') 'vks'
+          else
+            write(fname, '(a,i1)') 'vks-sp', is
+          endif
           if (hm%ep%classical_pot > 0) then
             call doutput_function(outp%how, dir, fname, mesh, &
               hm%ep%vpsl + hm%ep%Vclassical + hm%vhxc(:, is), units_out%energy, err, geo = geo)
