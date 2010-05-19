@@ -78,14 +78,13 @@
   interface
     ! ---------------------------------------------------
 
-    subroutine f90_cl_env_init(env, idevice, source_path)
+    subroutine f90_cl_env_init(env, idevice)
       use c_pointer_m
 
       implicit none
 
       type(c_ptr),      intent(out) :: env
       integer,          intent(in)  :: idevice
-      character(len=*), intent(in)  :: source_path
     end subroutine f90_cl_env_init
 
     ! ----------------------------------------------------

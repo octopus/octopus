@@ -154,41 +154,41 @@ module opencl_m
         return
       end if
 
-      call f90_cl_env_init(opencl%env, idevice, trim(conf%share)//'/opencl/')   
+      call f90_cl_env_init(opencl%env, idevice)
       call flCreateCommandQueue(opencl%command_queue, opencl%env, idevice, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "CreateCommandQueue")
       
       opencl%max_workgroup_size = f90_cl_max_workgroup_size(opencl%env)
       
       ! now initialize the kernels
-      call opencl_build_program(prog, "vpsi.cl")
+      call opencl_build_program(prog, trim(conf%share)//'/opencl/vpsi.cl')
       call opencl_create_kernel(kernel_vpsi, prog, "vpsi")
       call opencl_create_kernel(kernel_vpsi_spinors, prog, "vpsi_spinors")
       call opencl_release_program(prog)
       
-      call opencl_build_program(prog, "set_zero.cl")
+      call opencl_build_program(prog, trim(conf%share)//'/opencl/set_zero.cl')
       call opencl_create_kernel(set_zero, prog, "set_zero")
       call opencl_create_kernel(set_zero_part, prog, "set_zero_part")
       call opencl_release_program(prog)
       
-      call opencl_build_program(prog, "axpy.cl")
+      call opencl_build_program(prog, trim(conf%share)//'/opencl/axpy.cl')
       call opencl_create_kernel(kernel_daxpy, prog, "daxpy")
       call opencl_create_kernel(kernel_zaxpy, prog, "zaxpy")
       call opencl_release_program(prog)
 
-      call opencl_build_program(prog, "projector.cl")
+      call opencl_build_program(prog, trim(conf%share)//'/opencl/projector.cl')
       call opencl_create_kernel(kernel_projector_ket, prog, "projector_ket")
       call opencl_create_kernel(kernel_projector_bra, prog, "projector_bra")
       call opencl_release_program(prog)
 
-      call opencl_build_program(prog, "pack.cl")
+      call opencl_build_program(prog, trim(conf%share)//'/opencl/pack.cl')
       call opencl_create_kernel(dpack, prog, "dpack")
       call opencl_create_kernel(zpack, prog, "zpack")
       call opencl_create_kernel(dunpack, prog, "dunpack")
       call opencl_create_kernel(zunpack, prog, "zunpack")
       call opencl_release_program(prog)
 
-      call opencl_build_program(prog, "copy.cl")
+      call opencl_build_program(prog, trim(conf%share)//'/opencl/copy.cl')
       call opencl_create_kernel(kernel_copy, prog, "copy")
       call opencl_release_program(prog)
 

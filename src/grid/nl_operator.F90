@@ -239,7 +239,7 @@ contains
     if(opencl_is_enabled()) then
       call parse_integer(datasets_check('OperateOpenCL'),  OP_MAP, function_opencl)
 
-      call opencl_build_program(prog, "operate.cl")
+      call opencl_build_program(prog, trim(conf%share)//'/opencl/operate.cl')
       select case(function_opencl)
       case(OP_MAP)
         call opencl_create_kernel(operate, prog, "operate_map")

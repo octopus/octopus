@@ -29,7 +29,7 @@
 
 #include "opencl.h"
 
-void FC_FUNC_(f90_cl_env_init,F90_CL_ENV_INIT)(opencl_env_t ** env, const int * idevice, STR_F_TYPE source_path_f STR_ARG1){
+void FC_FUNC_(f90_cl_env_init,F90_CL_ENV_INIT)(opencl_env_t ** env, const int * idevice){
   size_t ParamDataBytes;
   char device_string[2048];
   cl_uint dim;
@@ -89,8 +89,6 @@ void FC_FUNC_(f90_cl_env_init,F90_CL_ENV_INIT)(opencl_env_t ** env, const int * 
   clGetDeviceInfo(this->Devices[this->idevice], CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(max_workgroup_size), &max_workgroup_size, NULL);
   printf("Maximum workgroup size: %zd\n", max_workgroup_size);
 
-  TO_C_STR1(source_path_f, this->source_path);
-
 }
 
 /* clCreateCommandQueue */
@@ -116,7 +114,6 @@ void FC_FUNC_(f90_cl_env_end,F90_CL_ENV_END)(opencl_env_t ** env){
 
   this = *env;
   clReleaseContext(this->Context);
-  free(this->source_path);
   free(this->Devices);
   free(this);
 }
@@ -124,7 +121,6 @@ void FC_FUNC_(f90_cl_env_end,F90_CL_ENV_END)(opencl_env_t ** env){
 void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
      (cl_program ** program, opencl_env_t ** env, STR_F_TYPE file_name_f STR_ARG1){
   FILE * source_file;
-  char * full_file_name;
   size_t szSourceLength;
   char* cSourceString;
   char * file_name;
@@ -134,18 +130,13 @@ void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
 
   TO_C_STR1(file_name_f, file_name);
 
-  /* build the full path of the source file */
-  full_file_name = (char *) malloc((strlen(env[0]->source_path) + strlen(file_name) + 1)*sizeof(char));
-  strcpy(full_file_name, env[0]->source_path);
-  strcat(full_file_name, file_name);
-
   /* open the OpenCL source code file */
-  source_file = fopen(full_file_name, "rb");
+  source_file = fopen(file_name, "rb");
   if(source_file == 0){
-    fprintf(stderr, "Error: Failed to open file %s\n", full_file_name);
+    fprintf(stderr, "Error: Failed to open file %s\n", file_name);
     exit(1);
   } else {
-    printf("Info: compiling OpenCL code %s\n", full_file_name);
+    printf("Info: compiling OpenCL code %s\n", file_name);
   }
 
   /* get the length of the source code */
@@ -169,7 +160,7 @@ void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
     clGetProgramBuildInfo (**program, env[0]->Devices[env[0]->idevice],
 			   CL_PROGRAM_BUILD_LOG, sizeof (buffer), buffer,
 			   &len);    
-    fprintf(stderr, "Error: compilation of file %s failed.\nCompilation log:\n%s\n", full_file_name, buffer);
+    fprintf(stderr, "Error: compilation of file %s failed.\nCompilation log:\n%s\n", file_name, buffer);
     exit(1);
   }
 
