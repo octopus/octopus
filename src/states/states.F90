@@ -2017,7 +2017,7 @@ return
     !%Section Output
     !%Description
     !% Upper bound for the energy mesh of the DOS.
-    !% The default is the lowest eigenvalue, minus a quarter of the total range of eigenvalues.
+    !% The default is the highest eigenvalue, plus a quarter of the total range of eigenvalues.
     !%End
     call parse_float(datasets_check('DOSEnergyMax'), units_from_atomic(units_inp%energy, evalmax + eextend), emax)
     emax = units_to_atomic(units_inp%energy, emax)
