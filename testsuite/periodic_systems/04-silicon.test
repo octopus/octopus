@@ -39,4 +39,4 @@ match ; k-point 4 (z) ; GREP(static/info, '#k =   4', 42) ; 0.384999
 match ; Eigenvalue  1 ; GREP(static/info, '#k =   4', 12,  2) ; -0.224975
 match ; Eigenvalue  8 ; GREP(static/info, '#k =   4', 12,  9) ; -0.067070
 match ; Eigenvalue 16 ; GREP(static/info, '#k =   4', 12, 17) ;  0.110018
-match ; Eigenvalue 17 ; GREP(static/info, '#k =   4', 12, 18) ;  0.215619
+match ; Eigenvalue 17 ; GREP(static/info, '#k =   4', 12, 18) ;  0.214328

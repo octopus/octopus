@@ -132,7 +132,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       end do
 
       ! get lambda 
-      call X(preconditioner_apply_batch)(pre, gr, hm, resb(1), psib(2))
+      call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb(1), psib(2))
       call X(hamiltonian_apply_batch)(hm, gr%der, psib(2), resb(2), ik)
       nops = nops + bsize - sum(done)
 
@@ -176,7 +176,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       do iter = 2, niter
 
         ! for iter == 2 the preconditioning was done already
-        if(iter > 2) call X(preconditioner_apply_batch)(pre, gr, hm, resb(iter - 1), psib(iter))
+        if(iter > 2) call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb(iter - 1), psib(iter))
 
         do ist = jst, maxst
           ib = ist - jst + 1
@@ -278,7 +278,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
         if(.not. failed(ib)) then
           ! end with a trial move
-          call X(preconditioner_apply)(pre, gr, hm, res(:, :, iter - 1, ib), st%X(psi)(: , :, ist, ik))
+          call X(preconditioner_apply)(pre, gr, hm, ik, res(:, :, iter - 1, ib), st%X(psi)(: , :, ist, ik))
 
           forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
             st%X(psi)(ip, idim, ist, ik) = psi(ip, idim, iter - 1, ib) + lambda(ib) * st%X(psi)(ip, idim, ist, ik)
@@ -440,7 +440,7 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
           end do
         end do
 
-        call X(preconditioner_apply_batch)(pre, gr, hm, resb, kresb)
+        call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb, kresb)
         
         call X(hamiltonian_apply_batch)(hm, gr%der, kresb, resb, ik)
 

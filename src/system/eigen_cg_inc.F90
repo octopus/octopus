@@ -101,8 +101,8 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
     iter_loop: do iter = 1, maxter
 
       ! inverse preconditioner....
-      call  X(preconditioner_apply)(pre, gr, hm, h_psi(:,:), g(:,:))
-      call  X(preconditioner_apply)(pre, gr, hm, st%X(psi)(:,:, p, ik), ppsi(:,:))
+      call  X(preconditioner_apply)(pre, gr, hm, ik, h_psi(:,:), g(:,:))
+      call  X(preconditioner_apply)(pre, gr, hm, ik, st%X(psi)(:,:, p, ik), ppsi(:,:))
 
       es(1) = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:,:, p, ik), g, reduce = .false.)
       es(2) = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:,:, p, ik), ppsi, reduce = .false.)
@@ -131,7 +131,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       end if
 
       ! Approximate inverse preconditioner...
-      call  X(preconditioner_apply)(pre, gr, hm, g(:,:), g0(:,:))
+      call  X(preconditioner_apply)(pre, gr, hm, ik, g(:,:), g0(:,:))
 
       gg = X(mf_dotp) (gr%mesh, st%d%dim, g, g0, reduce = .false.)
 

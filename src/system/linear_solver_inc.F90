@@ -281,7 +281,7 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, tol, occ
     end if
 
     ! preconditioning 
-    call X(preconditioner_apply)(ls%pre, gr, hm, p, phat, omega)
+    call X(preconditioner_apply)(ls%pre, gr, hm, ik, p, phat, omega)
     call X(ls_solver_operator)(hm, gr, st, ist, ik, omega, phat, Hp)
     
     alpha = rho_1/X(mf_dotp)(gr%mesh, st%d%dim, rs, Hp)
@@ -298,7 +298,7 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, tol, occ
       exit
     end if
 
-    call X(preconditioner_apply)(ls%pre, gr, hm, s, shat, omega)
+    call X(preconditioner_apply)(ls%pre, gr, hm, ik, s, shat, omega)
     call X(ls_solver_operator)(hm, gr, st, ist, ik, omega, shat, Hs)
 
     w = X(mf_dotp)(gr%mesh, st%d%dim, Hs, s)/X(mf_dotp) (gr%mesh, st%d%dim, Hs, Hs)
@@ -557,7 +557,7 @@ subroutine X(ls_preconditioner) (x, hx)
   SAFE_ALLOCATE(tmpy(1:args%gr%mesh%np_part, 1:1))
 
   call lalg_copy(args%gr%mesh%np, x, tmpx(:, 1))
-  call X(preconditioner_apply)(args%ls%pre, args%gr, args%hm, tmpx, tmpy, args%X(omega))
+  call X(preconditioner_apply)(args%ls%pre, args%gr, args%hm, args%ik, tmpx, tmpy, args%X(omega))
   call lalg_copy(args%gr%mesh%np, tmpy(:, 1), hx)
 
   SAFE_DEALLOCATE_A(tmpx)

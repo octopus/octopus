@@ -18,10 +18,11 @@
 !! $Id$
 
 ! --------------------------------------------------------- 
-subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
+subroutine X(preconditioner_apply)(pre, gr, hm, ik, a, b, omega)
   type(preconditioner_t), intent(in)    :: pre
   type(grid_t),           intent(in)    :: gr
   type(hamiltonian_t),    intent(in)    :: hm
+  integer,                intent(in)    :: ik
   R_TYPE,                 intent(inout) :: a(:,:)
   R_TYPE,                 intent(inout) :: b(:,:)
   R_TYPE,       optional, intent(in)    :: omega
@@ -29,7 +30,10 @@ subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
   integer :: idim
   FLOAT   :: omega_
   type(profile_t), save :: preconditioner_prof
+#ifndef R_TREAL
   R_TYPE, allocatable :: a_copy(:)
+  integer :: ip
+#endif
 
   call profiling_in(preconditioner_prof, "PRECONDITIONER")
   call push_sub('preconditioners_inc.Xpreconditioner_apply')
@@ -44,14 +48,24 @@ subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
     end do
 
   case(PRE_FILTER)
-    SAFE_ALLOCATE(a_copy(1:gr%mesh%np_part))
+    if(associated(hm%phase)) then
+#ifndef R_TREAL
+      SAFE_ALLOCATE(a_copy(1:gr%mesh%np_part))
+      
+      do idim = 1, hm%d%dim
+        call X(derivatives_set_bc)(gr%der, a(:, idim))
+        forall (ip = 1:gr%mesh%np_part) a_copy(ip) = hm%phase(ip, ik)*a(ip, idim)
+        call X(derivatives_perform)(pre%op, gr%der, a_copy(:), b(:, idim), set_bc = .false.)
+        forall (ip = 1:gr%mesh%np) b(ip, idim) = conjg(hm%phase(ip, ik))*b(ip, idim)
+      end do
 
-    do idim = 1, hm%d%dim
-      call lalg_copy(gr%mesh%np, a(:, idim), a_copy(:))
-      call X(derivatives_perform)(pre%op, gr%der, a_copy(:), b(:, idim))
-    end do
-
-    SAFE_DEALLOCATE_A(a_copy)
+      SAFE_DEALLOCATE_A(a_copy)
+#endif
+    else
+      do idim = 1, hm%d%dim
+        call X(derivatives_perform)(pre%op, gr%der, a(:, idim), b(:, idim))
+      end do
+    end if
 
   case(PRE_JACOBI)
     call apply_D_inverse(a, b)
@@ -205,10 +219,11 @@ contains
 
 end subroutine X(preconditioner_apply)
 
-subroutine X(preconditioner_apply_batch)(pre, gr, hm, aa, bb, omega)
+subroutine X(preconditioner_apply_batch)(pre, gr, hm, ik, aa, bb, omega)
   type(preconditioner_t), intent(in)    :: pre
   type(grid_t),           intent(in)    :: gr
   type(hamiltonian_t),    intent(in)    :: hm
+  integer,                intent(in)    :: ik
   type(batch_t),          intent(inout) :: aa
   type(batch_t),          intent(out)   :: bb
   R_TYPE,       optional, intent(in)    :: omega
@@ -217,14 +232,13 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, aa, bb, omega)
 
   call push_sub('preconditioners_inc.Xpreconditioner_apply_batch')
 
-  select case(pre%which)
-  case(PRE_FILTER)
+  if(pre%which == PRE_FILTER .and. .not. associated(hm%phase)) then
     call X(derivatives_batch_perform)(pre%op, gr%der, aa, bb)
-  case default
+  else
     do ii = 1, aa%nst
-      call X(preconditioner_apply)(pre, gr, hm, aa%states(ii)%X(psi), bb%states(ii)%X(psi), omega)
+      call X(preconditioner_apply)(pre, gr, hm, ik, aa%states(ii)%X(psi), bb%states(ii)%X(psi), omega)
     end do
-  end select
+  end if
 
   call pop_sub('preconditioners_inc.Xpreconditioner_apply_batch')
 end subroutine X(preconditioner_apply_batch)

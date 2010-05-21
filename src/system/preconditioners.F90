@@ -105,7 +105,7 @@ contains
     prefix_ = ""
     if(present(prefix)) prefix_ = prefix
 
-    if(gr%mesh%use_curvilinear .or. simul_box_is_periodic(gr%mesh%sb)) then
+    if(gr%mesh%use_curvilinear) then
       default = PRE_NONE
     else
       default = PRE_FILTER

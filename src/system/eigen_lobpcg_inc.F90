@@ -372,7 +372,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     ! Apply the preconditioner.
     do i = 1, lnuc
       ist = luc(i)
-      call X(preconditioner_apply)(pre, gr, hm, res(:, :, ist), tmp(:, :, ist))
+      call X(preconditioner_apply)(pre, gr, hm, ik, res(:, :, ist), tmp(:, :, ist))
       call lalg_copy(nps, tmp(:, 1, ist), res(:, 1, ist))
     end do
 
