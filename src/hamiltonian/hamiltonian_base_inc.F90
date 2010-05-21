@@ -196,9 +196,9 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
   type(batch_t),               intent(in)    :: psib
   type(batch_t),               intent(inout) :: vpsib
 
-  integer :: ist, ip, iproj, imat
+  integer :: ist, ip, iproj, imat, nreal
   integer :: npoints, nprojs, nst
-  R_TYPE, allocatable :: psi(:, :), projection(:,  :)
+  R_TYPE, allocatable :: psi(:, :), projection(:, :)
   type(projector_matrix_t), pointer :: pmat
 #ifdef HAVE_MPI
   R_TYPE, allocatable :: projection_red(:, :)
@@ -212,20 +212,40 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
   call profiling_in(prof_vnlpsi, "VNLPSI_MAT")
   call push_sub('hamiltonian_base_inc.Xhamiltonian_base_non_local')
 
+  nst = psib%nst_linear
+#ifdef R_TCOMPLEX
+  nreal = 2*nst
+#else
+  nreal = nst
+#endif
+
+#ifdef HAVE_OPENCL
+  if(batch_is_in_buffer(psib) .or. batch_is_in_buffer(vpsib)) then
+    do imat = 1, this%nprojector_matrices
+      pmat => this%projector_matrices(imat)
+
+      npoints = pmat%npoints
+      nprojs = pmat%nprojs
+
+      call opencl_create_buffer(buff_projection, CL_MEM_READ_WRITE, R_TYPE_VAL, nprojs*psib%ubound_real(1))
+      call bra_opencl()
+      call ket_opencl()
+      call opencl_release_buffer(buff_projection)
+    end do
+
+    call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_non_local')
+    call profiling_out(prof_vnlpsi)
+    return
+  end if
+#endif
+
   do imat = 1, this%nprojector_matrices
     pmat => this%projector_matrices(imat)
 
     npoints = pmat%npoints
     nprojs = pmat%nprojs
-    nst = psib%nst_linear
 
-#ifdef HAVE_OPENCL
-    if(batch_is_in_buffer(psib) .or. batch_is_in_buffer(vpsib)) then
-      call opencl_create_buffer(buff_projection, CL_MEM_READ_WRITE, R_TYPE_VAL, nprojs*psib%ubound_real(1))
-    end if
-#endif
-
-    SAFE_ALLOCATE(projection(1:nprojs, 1:nst))
+    SAFE_ALLOCATE(projection(1:nst, 1:nprojs))
 
     if(npoints == 0) then
       ! With domain parallelization it might happen that this
@@ -236,93 +256,65 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
 
     else
 
-      SAFE_ALLOCATE(psi(1:npoints, 1:nst))
+      SAFE_ALLOCATE(psi(1:nst, 1:npoints))
 
-      if(batch_is_in_buffer(psib)) then
-        call bra_opencl()
-      else
-        call profiling_in(prof_gather, "PROJ_MAT_GATHER")
-        ! collect all the points we need in a continous array
-        forall(ist = 1:nst, ip = 1:npoints)
-          psi(ip, ist) = psib%states_linear(ist)%X(psi)(pmat%map(ip))
-          !MISSING: phases
-        end forall
-        call profiling_out(prof_gather)
+      call profiling_in(prof_gather, "PROJ_MAT_GATHER")
+      ! collect all the points we need in a continous array
+      forall(ist = 1:nst, ip = 1:npoints)
+        psi(ist, ip) = psib%states_linear(ist)%X(psi)(pmat%map(ip))
+        !MISSING: phases
+      end forall
+      call profiling_out(prof_gather)
 
-        ! Now matrix-multiply to calculate the projections. Since the
-        ! projector matrix is always real we can only use blas in the
-        ! real case.
-#ifdef R_TREAL
-        call blas_gemm('T', 'N', nprojs, nst, npoints, &
-          M_ONE, pmat%projectors(1, 1), npoints, psi(1, 1), npoints, &
-          M_ZERO, projection(1, 1), nprojs)
-#else
-        projection(1:nprojs, 1:nst) = matmul(transpose(pmat%projectors(1:npoints, 1:nprojs)), psi(1:npoints, 1:nst))
-#endif
+      ! Now matrix-multiply to calculate the projections.
+      ! the line below does:
+      !   projection(1:nst, 1:nprojs) = matmul(psi(1:nst, 1:npoints), pmat%projectors(1:npoints, 1:nprojs))
+      call dgemm('N', 'N', nreal, nprojs, npoints, M_ONE, psi(1, 1), nreal, pmat%projectors(1, 1), npoints, &
+        M_ZERO,  projection(1, 1), nreal)
 
-        ! apply the scale
-        forall(ist = 1:nst, iproj = 1:nprojs) projection(iproj, ist) = projection(iproj, ist)*pmat%scal(iproj)
+      ! apply the scale
+      forall(ist = 1:nst, iproj = 1:nprojs) projection(ist, iproj) = projection(ist, iproj)*pmat%scal(iproj)
 
-      endif
     end if
 
     ! now reduce the projections
 #ifdef HAVE_MPI
     if(mesh%parallel_in_domains) then
-      SAFE_ALLOCATE(projection_red(1:nprojs, 1:nst))
-      forall(ist = 1:nst, iproj = 1:nprojs) projection_red(iproj, ist) = projection(iproj, ist)
+      SAFE_ALLOCATE(projection_red(1:nst, 1:nprojs))
+      forall(ist = 1:nst, iproj = 1:nprojs) projection_red(ist, iproj) = projection(ist, iproj)
       call MPI_Allreduce(projection_red(1, 1), projection(1, 1), nst*nprojs, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
       SAFE_DEALLOCATE_A(projection_red)
     end if
 #endif
 
-    if(npoints ==  0) then
-      SAFE_DEALLOCATE_A(projection)
-      cycle
-    end if
+    if(npoints /=  0) then
+      call profiling_count_operations(M_TWO*nst*nprojs*M_TWO*npoints*R_ADD + nst*nprojs*R_ADD)
 
-    call profiling_count_operations(M_TWO*nst*nprojs*M_TWO*npoints*R_ADD + nst*nprojs*R_ADD)
-
-
-    if(batch_is_in_buffer(vpsib)) then
-      call ket_opencl()
-    else
-
-    ! Matrix-multiply again.
-#ifdef R_TREAL
-      call blas_gemm('N', 'N', npoints, nst, nprojs, &
-        M_ONE, pmat%projectors(1, 1), npoints, projection(1, 1), nprojs, &
-        M_ZERO, psi(1, 1), npoints)
-#else
-      psi(1:npoints, 1:nst) = matmul(pmat%projectors(1:npoints, 1:nprojs), projection(1:nprojs, 1:nst))
-#endif
-
+      ! Matrix-multiply again.
+      ! the line below does:
+      !   psi(1:nst, 1:npoints) = matmul(projection(1:nst, 1:nprojs), transpose(pmat%projectors(1:npoints, 1:nprojs)) )
+      call dgemm('N', 'T', nreal, npoints, nprojs, M_ONE, projection(1, 1), nreal, pmat%projectors(1, 1), npoints, &
+        M_ZERO,  psi(1, 1), nreal)
+      
       call profiling_in(prof_scatter, "PROJ_MAT_SCATTER")
       ! and copy the points from the local buffer to its position
       do ist = 1, nst
         forall(ip = 1:npoints)
-          vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) + psi(ip, ist)
+          vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) + psi(ist, ip)
           !MISSING: phases
         end forall
       end do
       call profiling_count_operations(nst*npoints*R_ADD)
       call profiling_out(prof_scatter)
-
     end if
-
 
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(projection)
-
-#ifdef HAVE_OPENCL
-    if(batch_is_in_buffer(psib) .or. batch_is_in_buffer(vpsib)) then
-      call opencl_release_buffer(buff_projection)
-    end if
-#endif
   end do
 
   call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_non_local')
   call profiling_out(prof_vnlpsi)
+
 contains
 
   subroutine bra_opencl()
@@ -375,7 +367,7 @@ contains
       (/psib%ubound_real(1), pad(npoints, wgsize)/), (/psib%ubound_real(1), wgsize/))
 
     call batch_buffer_was_modified(vpsib)
-    
+
     call profiling_out(prof)
 #endif
   end subroutine ket_opencl

@@ -21,7 +21,8 @@
 
 module hamiltonian_base_m
   use batch_m
-  use blas_m
+  ! do not include blas, since we pass complex values to dgemm
+  ! use blas_m
   use datasets_m
   use derivatives_m
   use epot_m
@@ -87,6 +88,7 @@ module hamiltonian_base_m
     FLOAT,                    pointer :: vector_potential(:, :)
     integer                           :: nprojector_matrices
     logical                           :: apply_projector_matrices
+    integer                           :: full_projection_size
 #ifdef HAVE_OPENCL
     type(opencl_mem_t)                :: potential_opencl
 #endif
@@ -321,6 +323,7 @@ contains
     
     SAFE_ALLOCATE(this%projector_matrices(1:this%nprojector_matrices))
 
+    this%full_projection_size = 0
     iproj = 0
     do iatom = 1, epot%natoms
       if(.not. projector_is(epot%proj(iatom), M_KB)) cycle
@@ -360,6 +363,8 @@ contains
       end do
 
       forall(ip = 1:pmat%npoints) pmat%map(ip) = epot%proj(iatom)%sphere%jxyz(ip)
+
+       INCR(this%full_projection_size, pmat%nprojs)
 
 #ifdef HAVE_OPENCL
       if(opencl_is_enabled()) then
