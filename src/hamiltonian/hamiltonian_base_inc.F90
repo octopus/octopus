@@ -196,7 +196,7 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
   type(batch_t),               intent(in)    :: psib
   type(batch_t),               intent(inout) :: vpsib
 
-  integer :: ist, ip, iproj, imat, nreal
+  integer :: ist, ip, iproj, imat, nreal, iprojection
   integer :: npoints, nprojs, nst
   R_TYPE, allocatable :: psi(:, :), projection(:, :)
   type(projector_matrix_t), pointer :: pmat
@@ -239,22 +239,17 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
   end if
 #endif
 
+  SAFE_ALLOCATE(projection(1:nst, 1:this%full_projection_size))
+  projection = M_ZERO
+  iprojection = 0
+
   do imat = 1, this%nprojector_matrices
     pmat => this%projector_matrices(imat)
 
     npoints = pmat%npoints
     nprojs = pmat%nprojs
 
-    SAFE_ALLOCATE(projection(1:nst, 1:nprojs))
-
-    if(npoints == 0) then
-      ! With domain parallelization it might happen that this
-      ! processor does not have any point. In this case we only need
-      ! to call MPI_Allreduce with zero.
-
-      projection = M_ZERO
-
-    else
+    if(npoints /= 0) then
 
       SAFE_ALLOCATE(psi(1:nst, 1:npoints))
 
@@ -270,30 +265,48 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
       ! the line below does:
       !   projection(1:nst, 1:nprojs) = matmul(psi(1:nst, 1:npoints), pmat%projectors(1:npoints, 1:nprojs))
       call dgemm('N', 'N', nreal, nprojs, npoints, M_ONE, psi(1, 1), nreal, pmat%projectors(1, 1), npoints, &
-        M_ZERO,  projection(1, 1), nreal)
+        M_ZERO,  projection(1, iprojection + 1), nreal)
 
       ! apply the scale
-      forall(ist = 1:nst, iproj = 1:nprojs) projection(ist, iproj) = projection(ist, iproj)*pmat%scal(iproj)
+      forall(ist = 1:nst, iproj = 1:nprojs)
+        projection(ist, iprojection + iproj) = projection(ist, iprojection + iproj)*pmat%scal(iproj)
+      end forall
 
     end if
 
-    ! now reduce the projections
+    SAFE_DEALLOCATE_A(psi)
+
+    INCR(iprojection, nprojs)
+  end do
+
+  ! now reduce the projections
 #ifdef HAVE_MPI
-    if(mesh%parallel_in_domains) then
-      SAFE_ALLOCATE(projection_red(1:nst, 1:nprojs))
-      forall(ist = 1:nst, iproj = 1:nprojs) projection_red(ist, iproj) = projection(ist, iproj)
-      call MPI_Allreduce(projection_red(1, 1), projection(1, 1), nst*nprojs, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-      SAFE_DEALLOCATE_A(projection_red)
-    end if
+  if(mesh%parallel_in_domains) then
+    SAFE_ALLOCATE(projection_red(1:nst, 1:this%full_projection_size))
+    projection_red = projection
+    call MPI_Allreduce(projection_red(1, 1), projection(1, 1), nst*this%full_projection_size, R_MPITYPE, MPI_SUM, &
+      mesh%vp%comm, mpi_err)
+    SAFE_DEALLOCATE_A(projection_red)
+  end if
 #endif
 
+  iprojection = 0
+  do imat = 1, this%nprojector_matrices
+    pmat => this%projector_matrices(imat)
+
+    npoints = pmat%npoints
+    nprojs = pmat%nprojs
+
     if(npoints /=  0) then
+
+      SAFE_ALLOCATE(psi(1:nst, 1:npoints))
+
       call profiling_count_operations(M_TWO*nst*nprojs*M_TWO*npoints*R_ADD + nst*nprojs*R_ADD)
 
       ! Matrix-multiply again.
       ! the line below does:
       !   psi(1:nst, 1:npoints) = matmul(projection(1:nst, 1:nprojs), transpose(pmat%projectors(1:npoints, 1:nprojs)) )
-      call dgemm('N', 'T', nreal, npoints, nprojs, M_ONE, projection(1, 1), nreal, pmat%projectors(1, 1), npoints, &
+      call dgemm('N', 'T', nreal, npoints, nprojs, M_ONE, projection(1, iprojection + 1), nreal, pmat%projectors(1, 1), npoints, &
         M_ZERO,  psi(1, 1), nreal)
       
       call profiling_in(prof_scatter, "PROJ_MAT_SCATTER")
@@ -309,8 +322,11 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
     end if
 
     SAFE_DEALLOCATE_A(psi)
-    SAFE_DEALLOCATE_A(projection)
+    
+    INCR(iprojection, nprojs)
   end do
+
+  SAFE_DEALLOCATE_A(projection)
 
   call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_non_local')
   call profiling_out(prof_vnlpsi)
