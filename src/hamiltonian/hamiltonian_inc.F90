@@ -42,6 +42,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   type(batch_t), pointer :: epsib
   type(derivatives_handle_batch_t) :: handle
   integer :: terms_
+  type(projection_t) :: projection
 
   call profiling_in(prof_hamiltonian, "HAMILTONIAN")
   call push_sub('hamiltonian_inc.Xhamiltonian_apply_batch')
@@ -136,7 +137,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   ! and the non-local one 
   if (hm%ep%non_local .and. iand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
     if(hm%hm_base%apply_projector_matrices) then
-      call X(hamiltonian_base_non_local)(hm%hm_base, der%mesh, hm%d, ik, epsib, hpsib)
+      call X(hamiltonian_base_nlocal_start)(hm%hm_base, der%mesh, hm%d, ik, epsib, projection)
+      call X(hamiltonian_base_nlocal_finish)(hm%hm_base, der%mesh, hm%d, ik, projection, hpsib)
     else
       ! (here epsib is in buffer and dirty (because of the
       ! boundaries), but the central part is ok, so we can use it)

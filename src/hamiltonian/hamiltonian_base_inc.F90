@@ -25,10 +25,10 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   type(batch_t),               intent(in)    :: psib
   type(batch_t),               intent(inout) :: vpsib
 
-  integer :: ist, idim, ip, iprange
+  integer :: ist, idim, ip
   R_TYPE, pointer :: psi(:, :), vpsi(:, :)
 #ifdef HAVE_OPENCL
-  integer :: pnp
+  integer :: pnp, iprange
 #endif
 
   call profiling_in(prof_vlpsi, "VLPSI")
@@ -188,29 +188,25 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
   call profiling_out(prof_magnetic)
 end subroutine X(hamiltonian_base_magnetic)
 
-subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
+! ---------------------------------------------------------------------------------------
+
+subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projection)
   type(hamiltonian_base_t),    intent(in)    :: this
   type(mesh_t),                intent(in)    :: mesh
   type(states_dim_t),          intent(in)    :: std
   integer,                     intent(in)    :: ik
   type(batch_t),               intent(in)    :: psib
-  type(batch_t),               intent(inout) :: vpsib
+  type(projection_t),          intent(out)   :: projection
 
   integer :: ist, ip, iproj, imat, nreal, iprojection
   integer :: npoints, nprojs, nst
-  R_TYPE, allocatable :: psi(:, :), projection(:, :)
+  R_TYPE, allocatable :: psi(:, :)
   type(projector_matrix_t), pointer :: pmat
-#ifdef HAVE_MPI
-  R_TYPE, allocatable :: projection_red(:, :)
-#endif
-#ifdef HAVE_OPENCL
-  type(opencl_mem_t) :: buff_projection
-#endif
 
   if(.not. this%apply_projector_matrices) return
 
   call profiling_in(prof_vnlpsi, "VNLPSI_MAT")
-  call push_sub('hamiltonian_base_inc.Xhamiltonian_base_non_local')
+  call push_sub('hamiltonian_base_inc.Xhamiltonian_base_nlocal_start')
 
   nst = psib%nst_linear
 #ifdef R_TCOMPLEX
@@ -220,27 +216,26 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
 #endif
 
 #ifdef HAVE_OPENCL
-  if(batch_is_in_buffer(psib) .or. batch_is_in_buffer(vpsib)) then
+  if(batch_is_in_buffer(psib)) then
     do imat = 1, this%nprojector_matrices
       pmat => this%projector_matrices(imat)
 
       npoints = pmat%npoints
       nprojs = pmat%nprojs
 
-      call opencl_create_buffer(buff_projection, CL_MEM_READ_WRITE, R_TYPE_VAL, nprojs*psib%ubound_real(1))
-      call bra_opencl()
-      call ket_opencl()
-      call opencl_release_buffer(buff_projection)
+      call opencl_create_buffer(projection%buff_projection, CL_MEM_READ_WRITE, R_TYPE_VAL, nprojs*psib%ubound_real(1))
+      call start_opencl()
+
     end do
 
-    call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_non_local')
+    call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_nlocal_finish')
     call profiling_out(prof_vnlpsi)
     return
   end if
 #endif
 
-  SAFE_ALLOCATE(projection(1:nst, 1:this%full_projection_size))
-  projection = M_ZERO
+  SAFE_ALLOCATE(projection%X(projection)(1:nst, 1:this%full_projection_size))
+  projection%X(projection) = M_ZERO
   iprojection = 0
 
   do imat = 1, this%nprojector_matrices
@@ -262,14 +257,13 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
       call profiling_out(prof_gather)
 
       ! Now matrix-multiply to calculate the projections.
-      ! the line below does:
-      !   projection(1:nst, 1:nprojs) = matmul(psi(1:nst, 1:npoints), pmat%projectors(1:npoints, 1:nprojs))
+      ! the line below does: projection = matmul(psi, pmat%projectors)
       call dgemm('N', 'N', nreal, nprojs, npoints, M_ONE, psi(1, 1), nreal, pmat%projectors(1, 1), npoints, &
-        M_ZERO,  projection(1, iprojection + 1), nreal)
+        M_ZERO,  projection%X(projection)(1, iprojection + 1), nreal)
 
       ! apply the scale
       forall(ist = 1:nst, iproj = 1:nprojs)
-        projection(ist, iprojection + iproj) = projection(ist, iprojection + iproj)*pmat%scal(iproj)
+        projection%X(projection)(ist, iprojection + iproj) = projection%X(projection)(ist, iprojection + iproj)*pmat%scal(iproj)
       end forall
 
     end if
@@ -279,12 +273,95 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
     INCR(iprojection, nprojs)
   end do
 
-  ! now reduce the projections
+  call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_nlocal_start')
+  call profiling_out(prof_vnlpsi)
+contains
+
+  subroutine start_opencl()
+#ifdef HAVE_OPENCL
+    integer :: padnprojs
+    type(profile_t), save :: prof
+
+    call profiling_in(prof, "CL_PROJ_BRA")
+
+    call opencl_set_kernel_arg(kernel_projector_bra, 0, npoints)
+    call opencl_set_kernel_arg(kernel_projector_bra, 1, nprojs)
+    call opencl_set_kernel_arg(kernel_projector_bra, 2, pmat%buff_map)
+    call opencl_set_kernel_arg(kernel_projector_bra, 3, pmat%buff_scal)
+    call opencl_set_kernel_arg(kernel_projector_bra, 4, pmat%buff_projectors)
+    call opencl_set_kernel_arg(kernel_projector_bra, 5, npoints)
+    call opencl_set_kernel_arg(kernel_projector_bra, 6, psib%buffer)
+    call opencl_set_kernel_arg(kernel_projector_bra, 7, psib%ubound_real(1))
+    call opencl_set_kernel_arg(kernel_projector_bra, 8, projection%buff_projection)
+    call opencl_set_kernel_arg(kernel_projector_bra, 9, psib%ubound_real(1))
+
+    padnprojs = pad_pow2(nprojs)
+
+    call opencl_kernel_run(kernel_projector_bra, &
+      (/psib%ubound_real(1), padnprojs/), (/psib%ubound_real(1), padnprojs/))
+
+    call profiling_out(prof)
+#endif
+  end subroutine start_opencl
+
+end subroutine X(hamiltonian_base_nlocal_start)
+
+! ---------------------------------------------------------------------------------------
+
+subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vpsib)
+  type(hamiltonian_base_t),    intent(in)    :: this
+  type(mesh_t),                intent(in)    :: mesh
+  type(states_dim_t),          intent(in)    :: std
+  integer,                     intent(in)    :: ik
+  type(projection_t),          intent(inout) :: projection
+  type(batch_t),               intent(inout) :: vpsib
+
+  integer :: ist, ip, iproj, imat, nreal, iprojection
+  integer :: npoints, nprojs, nst
+  R_TYPE, allocatable :: psi(:, :)
+  type(projector_matrix_t), pointer :: pmat
+#ifdef HAVE_MPI
+  R_TYPE, allocatable :: projection_red(:, :)
+#endif
+
+  if(.not. this%apply_projector_matrices) return
+
+  call profiling_in(prof_vnlpsi, "VNLPSI_MAT")
+  call push_sub('hamiltonian_base_inc.Xhamiltonian_base_nlocal_finish')
+
+  ASSERT(associated(projection%X(projection)))
+
+  nst = vpsib%nst_linear
+#ifdef R_TCOMPLEX
+  nreal = 2*nst
+#else
+  nreal = nst
+#endif
+
+#ifdef HAVE_OPENCL
+  if(batch_is_in_buffer(vpsib)) then
+    do imat = 1, this%nprojector_matrices
+      pmat => this%projector_matrices(imat)
+
+      npoints = pmat%npoints
+      nprojs = pmat%nprojs
+
+      call finish_opencl()
+      call opencl_release_buffer(projection%buff_projection)
+    end do
+
+    call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_nlocal_finish')
+    call profiling_out(prof_vnlpsi)
+    return
+  end if
+#endif
+
+  ! reduce the projections
 #ifdef HAVE_MPI
   if(mesh%parallel_in_domains) then
     SAFE_ALLOCATE(projection_red(1:nst, 1:this%full_projection_size))
-    projection_red = projection
-    call MPI_Allreduce(projection_red(1, 1), projection(1, 1), nst*this%full_projection_size, R_MPITYPE, MPI_SUM, &
+    projection_red = projection%X(projection)
+    call MPI_Allreduce(projection_red(1, 1), projection%X(projection)(1, 1), nst*this%full_projection_size, R_MPITYPE, MPI_SUM, &
       mesh%vp%comm, mpi_err)
     SAFE_DEALLOCATE_A(projection_red)
   end if
@@ -304,9 +381,9 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
       call profiling_count_operations(M_TWO*nst*nprojs*M_TWO*npoints*R_ADD + nst*nprojs*R_ADD)
 
       ! Matrix-multiply again.
-      ! the line below does:
-      !   psi(1:nst, 1:npoints) = matmul(projection(1:nst, 1:nprojs), transpose(pmat%projectors(1:npoints, 1:nprojs)) )
-      call dgemm('N', 'T', nreal, npoints, nprojs, M_ONE, projection(1, iprojection + 1), nreal, pmat%projectors(1, 1), npoints, &
+      ! the line below does: psi = matmul(projection, transpose(pmat%projectors))
+      call dgemm('N', 'T', nreal, npoints, nprojs, &
+        M_ONE, projection%X(projection)(1, iprojection + 1), nreal, pmat%projectors(1, 1), npoints, &
         M_ZERO,  psi(1, 1), nreal)
       
       call profiling_in(prof_scatter, "PROJ_MAT_SCATTER")
@@ -326,41 +403,14 @@ subroutine X(hamiltonian_base_non_local)(this, mesh, std, ik, psib, vpsib)
     INCR(iprojection, nprojs)
   end do
 
-  SAFE_DEALLOCATE_A(projection)
+  SAFE_DEALLOCATE_P(projection%X(projection))
 
-  call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_non_local')
+  call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_nlocal_finish')
   call profiling_out(prof_vnlpsi)
 
 contains
 
-  subroutine bra_opencl()
-#ifdef HAVE_OPENCL
-    integer :: padnprojs
-    type(profile_t), save :: prof
-
-    call profiling_in(prof, "CL_PROJ_BRA")
-
-    call opencl_set_kernel_arg(kernel_projector_bra, 0, npoints)
-    call opencl_set_kernel_arg(kernel_projector_bra, 1, nprojs)
-    call opencl_set_kernel_arg(kernel_projector_bra, 2, pmat%buff_map)
-    call opencl_set_kernel_arg(kernel_projector_bra, 3, pmat%buff_scal)
-    call opencl_set_kernel_arg(kernel_projector_bra, 4, pmat%buff_projectors)
-    call opencl_set_kernel_arg(kernel_projector_bra, 5, npoints)
-    call opencl_set_kernel_arg(kernel_projector_bra, 6, psib%buffer)
-    call opencl_set_kernel_arg(kernel_projector_bra, 7, psib%ubound_real(1))
-    call opencl_set_kernel_arg(kernel_projector_bra, 8, buff_projection)
-    call opencl_set_kernel_arg(kernel_projector_bra, 9, psib%ubound_real(1))
-
-    padnprojs = pad_pow2(nprojs)
-
-    call opencl_kernel_run(kernel_projector_bra, &
-      (/psib%ubound_real(1), padnprojs/), (/psib%ubound_real(1), padnprojs/))
-
-    call profiling_out(prof)
-#endif
-  end subroutine bra_opencl
-
-  subroutine ket_opencl()
+  subroutine finish_opencl()
 #ifdef HAVE_OPENCL
     integer :: wgsize
     type(profile_t), save :: prof
@@ -372,23 +422,23 @@ contains
     call opencl_set_kernel_arg(kernel_projector_ket, 2, pmat%buff_map)
     call opencl_set_kernel_arg(kernel_projector_ket, 3, pmat%buff_projectors)
     call opencl_set_kernel_arg(kernel_projector_ket, 4, npoints)
-    call opencl_set_kernel_arg(kernel_projector_ket, 5, buff_projection)
-    call opencl_set_kernel_arg(kernel_projector_ket, 6, psib%ubound_real(1))
+    call opencl_set_kernel_arg(kernel_projector_ket, 5, projection%buff_projection)
+    call opencl_set_kernel_arg(kernel_projector_ket, 6, vpsib%ubound_real(1))
     call opencl_set_kernel_arg(kernel_projector_ket, 7, vpsib%buffer)
     call opencl_set_kernel_arg(kernel_projector_ket, 8, vpsib%ubound_real(1))
 
-    wgsize = opencl_max_workgroup_size()/psib%ubound_real(1)
+    wgsize = opencl_max_workgroup_size()/vpsib%ubound_real(1)
 
     call opencl_kernel_run(kernel_projector_ket, &
-      (/psib%ubound_real(1), pad(npoints, wgsize)/), (/psib%ubound_real(1), wgsize/))
+      (/vpsib%ubound_real(1), pad(npoints, wgsize)/), (/vpsib%ubound_real(1), wgsize/))
 
     call batch_buffer_was_modified(vpsib)
 
     call profiling_out(prof)
 #endif
-  end subroutine ket_opencl
+  end subroutine finish_opencl
 
-end subroutine X(hamiltonian_base_non_local)
+end subroutine X(hamiltonian_base_nlocal_finish)
 
 
 !! Local Variables:

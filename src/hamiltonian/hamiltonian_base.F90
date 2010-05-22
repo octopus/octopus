@@ -65,15 +65,18 @@ module hamiltonian_base_m
     zhamiltonian_base_local,                   &
     dhamiltonian_base_magnetic,                &
     zhamiltonian_base_magnetic,                &
-    dhamiltonian_base_non_local,               &
-    zhamiltonian_base_non_local,               &
+    dhamiltonian_base_nlocal_start,            &
+    zhamiltonian_base_nlocal_start,            &
+    dhamiltonian_base_nlocal_finish,           &
+    zhamiltonian_base_nlocal_finish,           &
     hamiltonian_base_has_magnetic,             &
     hamiltonian_base_init,                     &
     hamiltonian_base_end,                      &
     hamiltonian_base_allocate,                 &
     hamiltonian_base_clear,                    &
     hamiltonian_base_build_proj,               &
-    hamiltonian_base_update
+    hamiltonian_base_update,                   &
+    projection_t
 
   ! This object stores and applies an electromagnetic potential that
   ! can be represented by different types of potentials.
@@ -93,6 +96,14 @@ module hamiltonian_base_m
     type(opencl_mem_t)                :: potential_opencl
 #endif
   end type hamiltonian_base_t
+
+  type projection_t
+    FLOAT, pointer     :: dprojection(:, :)
+    CMPLX, pointer     :: zprojection(:, :)
+#ifdef HAVE_OPENCL
+    type(opencl_mem_t) :: buff_projection
+#endif
+  end type projection_t
 
   integer, public ::                     &
     TERM_ALL                 = HUGE(1),  &
