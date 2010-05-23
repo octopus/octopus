@@ -115,6 +115,17 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
     ASSERT(associated(hm%hm_base%kinetic))
     call profiling_in(prof_kinetic, "KINETIC")
     call X(derivatives_batch_start)(hm%hm_base%kinetic, der, epsib, hpsib, handle, set_bc = .false., factor = -M_HALF/hm%mass)
+    call profiling_out(prof_kinetic)
+  end if
+
+  if (hm%ep%non_local .and. iand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
+    if(hm%hm_base%apply_projector_matrices) then
+      call X(hamiltonian_base_nlocal_start)(hm%hm_base, der%mesh, hm%d, ik, epsib, projection)
+    end if
+  end if
+
+  if(iand(TERM_KINETIC, terms_) /= 0) then
+    call profiling_in(prof_kinetic, "KINETIC")
     call X(derivatives_batch_finish)(handle)
     call profiling_out(prof_kinetic)
   else
@@ -137,11 +148,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   ! and the non-local one 
   if (hm%ep%non_local .and. iand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
     if(hm%hm_base%apply_projector_matrices) then
-      call X(hamiltonian_base_nlocal_start)(hm%hm_base, der%mesh, hm%d, ik, epsib, projection)
       call X(hamiltonian_base_nlocal_finish)(hm%hm_base, der%mesh, hm%d, ik, projection, hpsib)
     else
-      ! (here epsib is in buffer and dirty (because of the
-      ! boundaries), but the central part is ok, so we can use it)
       call X(project_psi_batch)(der%mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, epsib, hpsib, ik)
     end if
   end if

@@ -216,6 +216,11 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 #endif
 
 #ifdef HAVE_OPENCL
+  call opencl_create_buffer(projection%buff_projection, CL_MEM_READ_WRITE, R_TYPE_VAL, &
+    this%full_projection_size*psib%ubound_real(1))
+
+  iprojection = 0
+
   if(batch_is_in_buffer(psib)) then
     do imat = 1, this%nprojector_matrices
       pmat => this%projector_matrices(imat)
@@ -223,9 +228,8 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
       npoints = pmat%npoints
       nprojs = pmat%nprojs
 
-      call opencl_create_buffer(projection%buff_projection, CL_MEM_READ_WRITE, R_TYPE_VAL, nprojs*psib%ubound_real(1))
       call start_opencl()
-
+      INCR(iprojection, nprojs)
     end do
 
     call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_nlocal_finish')
@@ -294,6 +298,7 @@ contains
     call opencl_set_kernel_arg(kernel_projector_bra, 7, psib%ubound_real(1))
     call opencl_set_kernel_arg(kernel_projector_bra, 8, projection%buff_projection)
     call opencl_set_kernel_arg(kernel_projector_bra, 9, psib%ubound_real(1))
+    call opencl_set_kernel_arg(kernel_projector_bra, 10, iprojection*psib%ubound_real(1))
 
     padnprojs = pad_pow2(nprojs)
 
@@ -329,8 +334,6 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
   call profiling_in(prof_vnlpsi, "VNLPSI_MAT")
   call push_sub('hamiltonian_base_inc.Xhamiltonian_base_nlocal_finish')
 
-  ASSERT(associated(projection%X(projection)))
-
   nst = vpsib%nst_linear
 #ifdef R_TCOMPLEX
   nreal = 2*nst
@@ -340,6 +343,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
 
 #ifdef HAVE_OPENCL
   if(batch_is_in_buffer(vpsib)) then
+    iprojection = 0
     do imat = 1, this%nprojector_matrices
       pmat => this%projector_matrices(imat)
 
@@ -347,8 +351,10 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
       nprojs = pmat%nprojs
 
       call finish_opencl()
-      call opencl_release_buffer(projection%buff_projection)
+      INCR(iprojection, nprojs)
     end do
+
+    call opencl_release_buffer(projection%buff_projection)
 
     call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_nlocal_finish')
     call profiling_out(prof_vnlpsi)
@@ -366,6 +372,8 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
     SAFE_DEALLOCATE_A(projection_red)
   end if
 #endif
+
+  ASSERT(associated(projection%X(projection)))
 
   iprojection = 0
   do imat = 1, this%nprojector_matrices
@@ -424,8 +432,9 @@ contains
     call opencl_set_kernel_arg(kernel_projector_ket, 4, npoints)
     call opencl_set_kernel_arg(kernel_projector_ket, 5, projection%buff_projection)
     call opencl_set_kernel_arg(kernel_projector_ket, 6, vpsib%ubound_real(1))
-    call opencl_set_kernel_arg(kernel_projector_ket, 7, vpsib%buffer)
-    call opencl_set_kernel_arg(kernel_projector_ket, 8, vpsib%ubound_real(1))
+    call opencl_set_kernel_arg(kernel_projector_ket, 7, iprojection*vpsib%ubound_real(1))
+    call opencl_set_kernel_arg(kernel_projector_ket, 8, vpsib%buffer)
+    call opencl_set_kernel_arg(kernel_projector_ket, 9, vpsib%ubound_real(1))
 
     wgsize = opencl_max_workgroup_size()/vpsib%ubound_real(1)
 

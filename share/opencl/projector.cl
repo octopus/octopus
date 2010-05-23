@@ -27,7 +27,7 @@ __kernel void projector_bra(const int npoints,
 			    __constant const double * scal,
 			    __global const double * matrix, const int ldmatrix,
 			    __global const double * psi, const int ldpsi,
-			    __global double * projection, const int ldprojection
+			    __global double * projection, const int ldprojection, const int projection_offset
 			    ){
   
   int ist = get_global_id(0);
@@ -39,7 +39,7 @@ __kernel void projector_bra(const int npoints,
   for(int ip = 0; ip < npoints; ip++){
     aa += matrix[ip + ldmatrix*ipj]*psi[ldpsi*(map[ip] - 1) + ist];
   }
-  projection[ist + ldprojection*ipj] = scal[ipj]*aa;
+  projection[projection_offset + ist + ldprojection*ipj] = scal[ipj]*aa;
 
 }
 
@@ -47,7 +47,7 @@ __kernel void projector_ket(const int npoints,
 			    const int nprojs,
 			    __global const int * map,
 			    __global const double * matrix, const int ldmatrix,
-			    __global const double * projection, const int ldprojection,
+			    __global const double * projection, const int ldprojection, const int projection_offset,
 			    __global double * psi, const int ldpsi
 			    ){
   
@@ -58,7 +58,7 @@ __kernel void projector_ket(const int npoints,
 
   double aa = 0.0;
   for(int ipj = 0; ipj < nprojs; ipj++){
-    aa += matrix[ip + ldmatrix*ipj]*projection[ist + ldprojection*ipj];
+    aa += matrix[ip + ldmatrix*ipj]*projection[projection_offset + ist + ldprojection*ipj];
   }
   psi[ldpsi*(map[ip] - 1) + ist] += aa;
 
