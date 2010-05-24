@@ -367,8 +367,8 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
   if(mesh%parallel_in_domains) then
     SAFE_ALLOCATE(projection_red(1:nst, 1:this%full_projection_size))
     projection_red = projection%X(projection)
-    call MPI_Allreduce(projection_red(1, 1), projection%X(projection)(1, 1), nst*this%full_projection_size, R_MPITYPE, MPI_SUM, &
-      mesh%vp%comm, mpi_err)
+    call MPI_Allreduce(projection_red(1, 1), projection%X(projection)(1, 1), nst*this%full_projection_size, &
+      R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
     SAFE_DEALLOCATE_A(projection_red)
   end if
 #endif
