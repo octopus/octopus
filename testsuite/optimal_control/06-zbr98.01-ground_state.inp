@@ -70,6 +70,3 @@ EigenSolverMaxIter = 1000
 ExtraStates = 1
 
 ConvRelDens = 1.0e-7
-
-TypeOfMixing = linear
-Mixing = 1.0

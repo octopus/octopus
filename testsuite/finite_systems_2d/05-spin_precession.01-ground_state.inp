@@ -22,7 +22,6 @@ TheoryLevel = independent_particles
 
 SpinComponents = spinors
 
-
 ConvAbsDens = 1e-5
 
 # We cannot use the LCAO because otherwise the InitialSpins don't work.
@@ -36,5 +35,3 @@ EigenSolver = cg
 EigenSolverInitTolerance = 1e-6
 EigenSolverFinalTolerance = 1e-6
 EigenSolverMaxIter = 250
-TypeOfMixing = linear
-Mixing = 1.0

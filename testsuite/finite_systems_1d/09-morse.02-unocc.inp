@@ -68,7 +68,3 @@ EigenSolver = cg_new
 EigenSolverInitTolerance = 1e-6
 EigenSolverFinalTolerance = 1e-6
 EigenSolverFinalToleranceIteration = 6
-
-TypeOfMixing = linear
-Mixing = 1.0
-

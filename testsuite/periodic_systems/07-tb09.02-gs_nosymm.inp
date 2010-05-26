@@ -33,8 +33,6 @@ FromScratch = yes
 
 XCFunctional = mgga_x_tb09 + lda_c_pz
 
-What2Mix = potential
-
 DevelVersion = yes
 
 ConvRelEv = 1e-8

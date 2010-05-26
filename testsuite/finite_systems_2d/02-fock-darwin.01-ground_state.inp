@@ -41,8 +41,6 @@ EigenSolver = cg
 EigenSolverInitTolerance = 1e-6
 EigenSolverFinalTolerance = 1e-6
 EigenSolverMaxIter = 250
-TypeOfMixing = linear
-Mixing = 1.0
 
 # P_c is the speed of light in atomic units.
 P_c = 137.036

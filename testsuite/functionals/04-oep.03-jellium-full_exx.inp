@@ -53,7 +53,6 @@ EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 25
 Preconditioner = no
 
-What2Mix = potential
 LinearSolver = cg
 
 ParallelizationStrategy=par_domains

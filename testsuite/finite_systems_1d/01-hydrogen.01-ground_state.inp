@@ -36,7 +36,4 @@ TheoryLevel = independent_particles
 "Hydrogen1D" | 0 | 0 | 0
 %
 
-Mixing = 1.0
-TypeOfMixing = linear
-
 NumberUnoccStates = 9

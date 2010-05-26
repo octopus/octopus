@@ -13,8 +13,6 @@ fromScratch = yes
 
 TheoryLevel = independent_particles
 
-TypeOfMixing = linear
-Mixing = 1.0
 EigenSolverMaxIter = 300
 
 EigenSolver = cg_new

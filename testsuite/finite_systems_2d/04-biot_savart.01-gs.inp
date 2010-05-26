@@ -25,7 +25,6 @@ EigenSolver = cg_new
 EigenSolverInitTolerance = 1.0e-5
 EigenSolverFinalTolerance = 1.0e-5
 EigenSolverMaxIter = 1000
-Mixing = 1.0
 
 ConvRelDens = 1.0e-2
 

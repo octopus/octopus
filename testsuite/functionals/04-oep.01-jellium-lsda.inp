@@ -52,6 +52,6 @@ EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 25
 Preconditioner = no
 
-What2Mix = potential
+MixField = potential
 
 ParallelizationStrategy=par_domains

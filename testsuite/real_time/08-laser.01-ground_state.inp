@@ -26,8 +26,4 @@ EigenSolverFinalTolerance = 1e-7
 EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 200
 
-TypeOfMixing = linear
-Mixing = 1.0
-
 ParallelizationStrategy=par_domains
-

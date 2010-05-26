@@ -27,9 +27,6 @@ EigenSolverFinalTolerance = 1e-5
 EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 25
 
-# With orbital dependent xc potentials, one should mix the potential.
-What2Mix = potential
-
 ConvRelDens = 5.0e-3
 
 PoissonSolver = fft_corrected

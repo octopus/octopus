@@ -11,8 +11,6 @@ Spacing = 0.2
 Radius = 50.0
 ExtraStates = 1
 
-What2Mix = potential
-
 XCFunctional = oep_x
 OEP_Level = oep_kli
 

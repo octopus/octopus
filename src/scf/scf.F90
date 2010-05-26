@@ -58,6 +58,7 @@ module scf_m
   use unit_system_m
   use v_ks_m
   use varinfo_m
+  use XC_F90(lib_m)
 
   implicit none
 
@@ -70,6 +71,7 @@ module scf_m
     scf_end
 
   integer, parameter :: &
+    MIXNONE = 0,        &
     MIXPOT  = 1,        &
     MIXDENS = 2
 
@@ -88,7 +90,7 @@ module scf_m
     FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev, conv_abs_force
     FLOAT :: abs_dens, rel_dens, abs_ev, rel_ev, abs_force
 
-    integer :: what2mix
+    integer :: mix_field
     logical :: lcao_restricted
     logical :: calc_force
     type(mix_t) :: smix
@@ -108,6 +110,7 @@ contains
     type(hamiltonian_t), intent(inout) :: hm
 
     FLOAT :: rmin
+    integer :: mixdefault
 
     call push_sub('scf.scf_init')
 
@@ -203,42 +206,63 @@ contains
 
     if(scf%max_iter < 0) scf%max_iter = huge(scf%max_iter)
 
-    !%Variable What2Mix
+    call messages_obsolete_variable('What2Mix', 'MixField')
+
+    !%Variable MixField
     !%Type integer
     !%Default density
     !%Section SCF::Mixing
     !%Description
-    !% Selects what should be mixed during the SCF cycle.
-    !% Note that currently the exact-exchange part of hybrid functionals is not mixed at all,
-    !% which would require wavefunction-mixing, not yet implemented. This may lead to
-    !% instabilities in the SCF cycle, so starting from a converged LDA calculation is
-    !% recommended for hybrid functionals.
+    !% Selects what should be mixed during the SCF cycle.  Note that
+    !% currently the exact-exchange part of hybrid functionals is not
+    !% mixed at all, which would require wavefunction-mixing, not yet
+    !% implemented. This may lead to instabilities in the SCF cycle,
+    !% so starting from a converged LDA/GGA calculation is recommended
+    !% for hybrid functionals. The default depends on the TheoryLevel
+    !% and the exchange and correlation potential used.
+    !%Option none 0
+    !% No mixing is done. This is the default for independent
+    !% particles.
     !%Option potential 1
-    !% The Kohn-Sham potential.
+    !% The Kohn-Sham potential is mixed. This is the default for OEP
+    !% or MGGA calculations.
     !%Option density 2
-    !% The density.
+    !% Mix the density. This is the default for other cases, including
+    !% LDA/GGA calculations.
     !%End
-    call parse_integer(datasets_check('What2Mix'), MIXDENS, scf%what2mix)
-    if(.not.varinfo_valid_option('What2Mix', scf%what2mix)) call input_error('What2Mix')
-    call messages_print_var_option(stdout, "What2Mix", scf%what2mix, "what to mix during SCF cycles")
 
-    if (scf%what2mix == MIXPOT.and.hm%theory_level==INDEPENDENT_PARTICLES) then
+    mixdefault = MIXDENS
+    if(hm%theory_level==INDEPENDENT_PARTICLES) mixdefault = MIXNONE
+    if(iand(hm%xc_family, XC_FAMILY_OEP + XC_FAMILY_MGGA) /= 0) mixdefault = MIXPOT
+
+    call parse_integer(datasets_check('MixField'), mixdefault, scf%mix_field)
+    if(.not.varinfo_valid_option('MixField', scf%mix_field)) call input_error('MixField')
+    call messages_print_var_option(stdout, 'MixField', scf%mix_field, "what to mix during SCF cycles")
+
+    if (scf%mix_field == MIXPOT.and.hm%theory_level==INDEPENDENT_PARTICLES) then
       message(1) = "Input: Cannot mix the potential for non-interacting particles."
       call write_fatal(1)
     end if
 
-    ! Handle mixing now...
-
-    if (scf%what2mix == MIXPOT) then
-      scf%mixdim1 = gr%mesh%np
-    else
-      scf%mixdim1 = gr%fine%mesh%np
+    if(scf%mix_field == MIXDENS .and. iand(hm%xc_family, XC_FAMILY_OEP + XC_FAMILY_MGGA) /= 0) then
+      message(1) = "Input: You have selected to mix the density with OEP or MGGA XC functionals."
+      message(2) = "       This might produce convergence problems. Mix the potential instead."
+      call write_warning(2)
     end if
 
-    scf%mixdim2 = 1
-    if (hm%d%cdft) scf%mixdim2 = 1 + gr%mesh%sb%dim
+    ! Handle mixing now...
+    select case(scf%mix_field)
+    case(MIXPOT)
+      scf%mixdim1 = gr%mesh%np
+    case(MIXDENS)
+      scf%mixdim1 = gr%fine%mesh%np
+    end select
 
-    call mix_init(scf%smix, scf%mixdim1, scf%mixdim2, st%d%nspin)
+    scf%mixdim2 = 1
+    if(hm%d%cdft) scf%mixdim2 = 1 + gr%mesh%sb%dim
+    if(scf%mix_field /= MIXNONE) then
+      call mix_init(scf%smix, scf%mixdim1, scf%mixdim2, st%d%nspin)
+    end if
 
     ! now the eigensolver stuff
     call eigensolver_init(scf%eigens, gr, st)
@@ -296,7 +320,7 @@ contains
     call push_sub('scf.scf_end')
 
     call eigensolver_end(scf%eigens)
-    call mix_end(scf%smix)
+    if(scf%mix_field /= MIXNONE) call mix_end(scf%smix)
 
     call pop_sub('scf.scf_end')
   end subroutine scf_end
@@ -367,7 +391,8 @@ contains
       rhoin(1:gr%fine%mesh%np, 2:scf%mixdim2, 1:nspin) = st%current(1:gr%fine%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
     end if
     
-    if (scf%what2mix == MIXPOT) then
+    select case(scf%mix_field)
+    case(MIXPOT)
       SAFE_ALLOCATE(vout(1:gr%mesh%np, 1:scf%mixdim2, 1:nspin))
       SAFE_ALLOCATE( vin(1:gr%mesh%np, 1:scf%mixdim2, 1:nspin))
       SAFE_ALLOCATE(vnew(1:gr%mesh%np, 1:scf%mixdim2, 1:nspin))
@@ -375,9 +400,9 @@ contains
       vin(1:gr%mesh%np, 1, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
       vout = M_ZERO
       if (st%d%cdft) vin(1:gr%mesh%np, 2:scf%mixdim2, 1:nspin) = hm%axc(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
-    else
+    case(MIXDENS)
       SAFE_ALLOCATE(rhonew(1:gr%fine%mesh%np, 1:scf%mixdim2, 1:nspin))
-    end if
+    end select
 
     evsum_in = states_eigenvalues_sum(st)
 
@@ -431,7 +456,7 @@ contains
         call calc_physical_current(gr%der, st, st%current)
         rhoout(1:gr%mesh%np, 2:scf%mixdim2, 1:nspin) = st%current(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
       end if
-      if (scf%what2mix == MIXPOT) then
+      if (scf%mix_field == MIXPOT) then
         call v_ks_calc(ks, gr, hm, st)
         vout(1:gr%mesh%np, 1, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
         if (hm%d%cdft) vout(1:gr%mesh%np, 2:scf%mixdim2, 1:nspin) = hm%axc(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
@@ -484,7 +509,7 @@ contains
       call scf_write_iter
 
       ! mixing
-      select case (scf%what2mix)
+      select case (scf%mix_field)
       case (MIXDENS)
         !set the pointer for dmf_dotp_aux
         call mesh_init_mesh_aux(gr%fine%mesh)
@@ -536,7 +561,7 @@ contains
       ! save information for the next iteration
       rhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
       if (hm%d%cdft) rhoin(1:gr%mesh%np, 2:scf%mixdim2, 1:nspin) = st%current(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
-      if (scf%what2mix == MIXPOT) then
+      if (scf%mix_field == MIXPOT) then
         vin(1:gr%mesh%np, 1, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
         if (hm%d%cdft) vin(1:gr%mesh%np, 2:scf%mixdim2, 1:nspin) = hm%axc(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
       end if
@@ -555,15 +580,19 @@ contains
 
       call profiling_out(prof)
     end do
-
-    if (scf%what2mix == MIXPOT) then
+    
+    select case(scf%mix_field)
+    case(MIXPOT)
       call v_ks_calc(ks, gr, hm, st)
       SAFE_DEALLOCATE_A(vout)
       SAFE_DEALLOCATE_A(vin)
       SAFE_DEALLOCATE_A(vnew)
-    else
+    case(MIXDENS)
       SAFE_DEALLOCATE_A(rhonew)
-    end if
+    case(MIXNONE)
+      call v_ks_calc(ks, gr, hm, st)
+    end select
+
     SAFE_DEALLOCATE_A(rhoout)
     SAFE_DEALLOCATE_A(rhoin)
 

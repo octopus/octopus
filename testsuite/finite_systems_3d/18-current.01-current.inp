@@ -35,9 +35,6 @@ EigenSolverFinalTolerance = 1e-4
 EigenSolverFinalToleranceIteration = 2
 EigenSolverMaxIter = 300
 
-TypeOfMixing = linear
-Mixing = 1.0
-
 %StaticMagneticField
 0.0 | 0.0 | 0.5
 %

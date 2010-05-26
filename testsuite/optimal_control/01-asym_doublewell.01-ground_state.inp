@@ -37,7 +37,5 @@ TheoryLevel = independent_particles
 EigenSolverInitTolerance = 1.0e-6
 EigenSolverFinalTolerance = 1.0e-6
 EigenSolverMaxIter = 1000
-Mixing = 1.0
-TypeOfMixing = linear
 
 NumberUnoccStates = 1

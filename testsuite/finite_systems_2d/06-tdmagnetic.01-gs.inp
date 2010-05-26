@@ -30,8 +30,6 @@ EigenSolver = plan
 EigenSolverInitTolerance = 1e-7
 EigenSolverFinalTolerance = 1e-7
 EigenSolverMaxIter = 5000
-TypeOfMixing = linear
-Mixing = 1.0
 
 magfield = 3.0
 
