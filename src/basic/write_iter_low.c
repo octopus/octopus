@@ -147,7 +147,7 @@ void FC_FUNC_(write_iter_start, WRITE_ITER_START)
 {
 	write_iter *w=(write_iter *)*v;
 	write_iter_realloc(w, 8+20);
-	sprintf(w->buf+w->pos, "%8u%20.12e", w->iter, w->iter*w->dt); w->pos+=8+20;
+	sprintf(w->buf+w->pos, "%8u%20.12e", (unsigned)(w->iter), w->iter*w->dt); w->pos+=8+20;
 	w->iter++;
 }
 

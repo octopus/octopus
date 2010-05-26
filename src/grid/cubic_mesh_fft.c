@@ -1,7 +1,7 @@
 #include <config.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <assert.h>
-
 #include "cubic_mesh.h"
 
 /*#include <fftw3.h>*/

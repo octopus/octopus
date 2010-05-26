@@ -147,7 +147,6 @@ void get_edges(void *data, int dim_gid, int dim_lid, ZOLTAN_ID_PTR global_id, ZO
   for(iedge = mesh.xedges[gid]; iedge < mesh.xedges[gid + 1]; iedge++){
     nbor_global_id[ii] = mesh.edges[iedge - 1] - 1;
     assert(nbor_global_id[ii] < mesh.np);
-    assert(nbor_global_id[ii] >= 0);
     nbor_procs[ii] = mesh.part[nbor_global_id[ii]] - 1; 
     ii++;
   }
@@ -182,7 +181,8 @@ void FC_FUNC_(zoltan_partition, ZOLTAN_PARTITION)(const int * method,
 						  ){
   struct Zoltan_Struct *zz;
   int ii;
-  char argv[] = "octopus_mpi";
+  char name[] = "octopus_mpi";
+  char* argv = name; 
   float version;
   int rc;
   MPI_Comm comm;

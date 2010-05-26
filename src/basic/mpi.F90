@@ -99,10 +99,7 @@ contains
 #endif
   end subroutine mpi_grp_init
 
-  subroutine mpi_grp_copy_equal(mpi_grp_out, mpi_grp_in)
-    type(mpi_grp_t), intent(out) :: mpi_grp_out
-    type(mpi_grp_t), intent(in)  :: mpi_grp_in
-
+  subroutine mpi_grp_copy_equal()
     stop "mpi_grp_copy_equal"
   end subroutine mpi_grp_copy_equal
 
