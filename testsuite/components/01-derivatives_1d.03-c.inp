@@ -1,0 +1,15 @@
+WhichTest = derivatives
+
+%Coordinates
+"Na" | 0.0 | 0.0 |  0.0
+%
+
+Dimensions = 1
+BoxShape = sphere
+Radius  = 100.0
+Spacing = 0.01
+
+OperateDouble = c
+OperateComplex = c
+
+DisableOpenCL = yes

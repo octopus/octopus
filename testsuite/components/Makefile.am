@@ -24,6 +24,10 @@ sharedir = $(pkgdatadir)/testsuite/components
 dist_share_DATA =                                  \
 	01-derivatives_1d.test                     \
 	01-derivatives_1d.01.inp                   \
+	01-derivatives_1d.02-fortran.inp           \
+	01-derivatives_1d.03-c.inp                 \
+	02-derivatives_2d.test                     \
+	02-derivatives_2d.01.inp                   \
 	03-hartree_3d.test                         \
 	03-hartree_3d.01-isf.inp                   \
 	03-hartree_3d.02-multigrid.inp             \
