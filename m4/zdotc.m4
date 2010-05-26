@@ -42,14 +42,15 @@ if(abs(result1-result2) .lt. 1d-6) then
 endif
 
 end program
-], [], [acx_zdotc_ok=no], [echo $ac_n "cross compiling; assumed OK... $ac_c"])
-
+], [  
   if test "x$acx_zdotc_ok" = "xyes"; then
     if test "x`cat conf.zdotc`" != "xsuccess"; then
       acx_zdotc_ok=no
       # program didn't crash, but gave wrong answer
     fi
   fi
+], [acx_zdotc_ok=no], [acx_zdotc_ok="cross compiling; assumed OK... $ac_c"])
+
 
   rm -f conf.zdotc
   AC_MSG_RESULT([$acx_zdotc_ok])
