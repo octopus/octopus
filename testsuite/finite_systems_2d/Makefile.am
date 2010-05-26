@@ -37,10 +37,6 @@ dist_share_DATA = \
 	05-spin_precession.test \
 	05-spin_precession.01-ground_state.inp \
 	05-spin_precession.02-time_propagation.inp \
-	06-tdmagnetic.test \
-	06-tdmagnetic.01-gs.inp \
-	06-tdmagnetic.02-unocc.inp \
-	06-tdmagnetic.03-td.inp
 	07-modelmb.test                                \
 	07-modelmb.01-gs.inp                           \
 	07-modelmb.02-td.inp

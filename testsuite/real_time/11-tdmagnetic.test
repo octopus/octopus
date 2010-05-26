@@ -30,14 +30,14 @@ Enabled    : Yes
 # The time-propagation is then performed with the symmetric
 # potential.
 
-Input: 06-tdmagnetic.01-gs.inp
+Input: 11-tdmagnetic.01-gs.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; 1.79226552
 
-Input: 06-tdmagnetic.02-unocc.inp
+Input: 11-tdmagnetic.02-unocc.inp
 
 match ; Unoccupied state 1; GREP(static/eigenvalues, '1   --', 12) ; 1.792266
 
-Input: 06-tdmagnetic.03-td.inp
+Input: 11-tdmagnetic.03-td.inp
 match ; <x>(t) ; LINE(td.general/multipoles, -1, 50) ; 1.448208882702e+00
 match ; <y>(t) ; LINE(td.general/multipoles, -1, 70) ; -1.105531371295e-02
 
