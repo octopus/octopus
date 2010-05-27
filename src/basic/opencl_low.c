@@ -94,7 +94,7 @@ void FC_FUNC_(f90_cl_env_init,F90_CL_ENV_INIT)(const int * idevice, cl_context *
 /* clCreateCommandQueue */
 void FC_FUNC(flcreatecommandqueue, FLCREATECOMMANDQUEUE)
      (cl_command_queue * command_queue, cl_context * context, cl_device_id * device, int * ierr){
-  *command_queue = clCreateCommandQueue(*context, *device, CL_QUEUE_PROFILING_ENABLE, ierr);
+  *command_queue = clCreateCommandQueue(*context, *device, CL_QUEUE_PROFILING_ENABLE | CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, ierr);
 }
 
 /* clReleaseCommandQueue */

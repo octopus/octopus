@@ -85,6 +85,8 @@ contains
 
       call batch_buffer_was_modified(ffb)
 
+      call opencl_finish()
+
     else
 #endif
       do ist = 1, ffb%nst_linear

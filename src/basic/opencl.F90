@@ -313,8 +313,13 @@ module opencl_m
 
     subroutine opencl_finish()
       integer :: ierr
-      
+
+      call profiling_in(prof_kernel_run, "CL_KERNEL_RUN")
+
       call flFinish(opencl%command_queue, ierr)
+
+      call profiling_out(prof_kernel_run)
+
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'cl_finish') 
     end subroutine opencl_finish
 
@@ -381,7 +386,6 @@ module opencl_m
       call flEnqueueNDRangeKernel(kernel, opencl%command_queue, dim, gsizes(1), lsizes(1), ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
 
-      call opencl_finish()
       call profiling_out(prof_kernel_run)
       call pop_sub('opencl.opencl_kernel_run')
     end subroutine opencl_kernel_run

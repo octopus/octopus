@@ -415,6 +415,7 @@ contains
 
       call opencl_kernel_run(kernel, (/this%ubound(2)/), (/opencl_max_workgroup_size()/))
       
+      call opencl_finish()
     end do
 
     call opencl_release_buffer(tmp)
@@ -453,6 +454,7 @@ contains
       call opencl_set_kernel_arg(kernel, 3, tmp)
 
       call opencl_kernel_run(kernel, (/this%ubound(2)/), (/opencl_max_workgroup_size()/))
+      call opencl_finish()
 
       if(batch_type(this) == TYPE_FLOAT) then
         call opencl_read_buffer(tmp, ubound(this%states_linear(ist)%dpsi, dim = 1), this%states_linear(ist)%dpsi)
@@ -490,6 +492,7 @@ contains
       call opencl_set_kernel_arg(set_zero, 0, this%buffer)
       call opencl_kernel_run(set_zero, (/bsize/), (/opencl_max_workgroup_size()/))
       call batch_buffer_was_modified(this)
+      call opencl_finish()
 #endif
       
     else if (associated(this%dpsicont)) then
@@ -542,6 +545,8 @@ subroutine batch_copy_data(np, xx, yy)
 
     call batch_buffer_was_modified(yy)
     
+    call opencl_finish()
+
   else
 #endif
 

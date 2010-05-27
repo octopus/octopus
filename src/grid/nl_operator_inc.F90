@@ -454,7 +454,8 @@ contains
     end select
     
     call batch_buffer_was_modified(fo)
-    
+    call opencl_finish()
+
     call opencl_release_buffer(buff_weights)
 
     call profiling_out(prof)

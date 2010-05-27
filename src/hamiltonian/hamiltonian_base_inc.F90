@@ -70,6 +70,8 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
 
       call batch_buffer_was_modified(vpsib)
 
+      call opencl_finish()
+
       call profiling_count_operations((R_MUL*psib%nst)*mesh%np)
       call profiling_count_transfers(mesh%np, M_ONE)
       call profiling_count_transfers(mesh%np*psib%nst, R_TOTYPE(M_ONE))
@@ -216,12 +218,13 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 #endif
 
 #ifdef HAVE_OPENCL
-  call opencl_create_buffer(projection%buff_projection, CL_MEM_READ_WRITE, R_TYPE_VAL, &
-    this%full_projection_size*psib%ubound_real(1))
-
-  iprojection = 0
-
   if(batch_is_in_buffer(psib)) then
+   
+    call opencl_create_buffer(projection%buff_projection, CL_MEM_READ_WRITE, R_TYPE_VAL, &
+      this%full_projection_size*psib%ubound_real(1))
+    
+    iprojection = 0
+    
     do imat = 1, this%nprojector_matrices
       pmat => this%projector_matrices(imat)
 
@@ -231,6 +234,8 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
       call start_opencl()
       INCR(iprojection, nprojs)
     end do
+
+    call opencl_finish()
 
     call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_nlocal_finish')
     call profiling_out(prof_vnlpsi)
@@ -442,6 +447,7 @@ contains
       (/vpsib%ubound_real(1), pad(npoints, wgsize)/), (/vpsib%ubound_real(1), wgsize/))
 
     call batch_buffer_was_modified(vpsib)
+    call opencl_finish()
 
     call profiling_out(prof)
 #endif

@@ -192,6 +192,7 @@ subroutine X(batch_axpy)(np, aa, xx, yy)
 #endif
 
     call batch_buffer_was_modified(yy)
+    call opencl_finish()
     
   else
 #endif
