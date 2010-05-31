@@ -388,15 +388,15 @@ module opt_control_target_m
       !%Type string
       !%Section Calculation Modes::Optimal Control
       !%Description
-      !% If <tt>OCTTargetOperator = oct_tg_local</tt>, then one must supply the target density
-      !% that should be searched for. One can do this by supplying a string through
+      !% If <tt>OCTTargetOperator = oct_tg_local</tt>, then one must supply a function
+      !% that defines the target. This should be done by defining it through a string, using 
       !% the variable <tt>OCTLocalTarget</tt>.
       !%End
 
-      if(parse_isdef('OCTTargetLocal') .ne. 0) then
+      if(parse_isdef('OCTLocalTarget') .ne. 0) then
         SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
         target%rho = M_ZERO
-        call parse_string('OCTTargetLocal', "0", expression)
+        call parse_string('OCTLocalTarget', "0", expression)
         call conv_to_C_string(expression)
         do ip = 1, gr%mesh%np
           call mesh_r(gr%mesh, ip, rr, coords = xx)
@@ -406,7 +406,7 @@ module opt_control_target_m
         end do
       else
         message(1) = 'If OCTTargetOperator = oct_tg_local, then you must give the shape'
-        message(2) = 'of this target in variable "OCTTargetLocal".'
+        message(2) = 'of this target in variable "OCTLocalTarget".'
         call write_fatal(2)
       end if
 
@@ -859,7 +859,7 @@ module opt_control_target_m
           do ip = 1, gr%mesh%np
             opsi(ip, 1) = target%rho(ip) * psi%zpsi(ip, 1, ist, 1)
           end do
-          j1 = j1 + zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, ist, 1), opsi(:, :))
+          j1 = j1 + psi%occ(ist, 1) * zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, ist, 1), opsi(:, :))
         end do
         SAFE_DEALLOCATE_A(opsi)
       case(SPIN_POLARIZED); stop 'Error'
