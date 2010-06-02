@@ -336,6 +336,13 @@ contains
       if(oct%dump_intermediate) call iterator_write(iterator, par)
       stop_loop = iteration_manager(j1, par, par_prev, iterator)
       call parameters_end(par_prev)
+      if(clean_stop() .or. stop_loop) then
+        call states_end(psi)
+        call oct_prop_end(prop_chi)
+        call oct_prop_end(prop_psi)
+        call pop_sub('opt_control.opt_control_run.scheme_zbr98')
+        return        
+      end if
 
       call parameters_copy(par_new, par)
       ctr_loop: do
@@ -379,6 +386,11 @@ contains
       if(oct%dump_intermediate) call iterator_write(iterator, par)
       call iteration_manager_direct(-f, par, iterator)
       call states_end(psi)
+      if(oct_iterator_maxiter(iterator).eq.0) then
+        ! Nothing to do.
+        call pop_sub('opt_control.opt_control_run.scheme_cg')
+        return
+      end if
 
       ! Set the module pointers, so that the direct_opt_calc and direct_opt_write_info routines
       ! can use them.
@@ -431,11 +443,7 @@ contains
       call push_sub('opt_control.opt_control_run.scheme_direct')
 
       call parameters_set_rep(par)
-
       dim = parameters_dof(par)
-
-      SAFE_ALLOCATE(x(1:dim))
-      SAFE_ALLOCATE(theta(1:dim))
 
       call states_copy(psi, initial_st)
       call propagate_forward(sys, hm, td, par, target, psi)
@@ -443,6 +451,14 @@ contains
       if(oct%dump_intermediate) call iterator_write(iterator, par)
       call iteration_manager_direct(-f, par, iterator)
       call states_end(psi)
+      if(oct_iterator_maxiter(iterator).eq.0) then
+        ! Nothing to do.
+        call pop_sub('opt_control.opt_control_run.scheme_cg')
+        return
+      end if
+
+      SAFE_ALLOCATE(x(1:dim))
+      SAFE_ALLOCATE(theta(1:dim))
 
       if(oct%random_initial_guess) call parameters_randomize(par)
 
@@ -497,19 +513,24 @@ contains
 
       call parameters_set_rep(par)
 
-      dim = parameters_dof(par)
-      SAFE_ALLOCATE( x(1:dim))
-      SAFE_ALLOCATE(theta(1:dim))
-      SAFE_ALLOCATE(xl(1:dim))
-      SAFE_ALLOCATE(xu(1:dim))
-      call parameters_bounds(par, xl, xu)
-
       call states_copy(psi, initial_st)
       call propagate_forward(sys, hm, td, par, target, psi)
       f = - j1_functional(target, sys%gr, psi, sys%geo) - parameters_j2(par)
       if(oct%dump_intermediate) call iterator_write(iterator, par)
       call iteration_manager_direct(-f, par, iterator)      
       call states_end(psi)
+      if(oct_iterator_maxiter(iterator).eq.0) then
+        ! Nothing to do.
+        call pop_sub('opt_control.opt_control_run.scheme_cg')
+        return
+      end if
+
+      dim = parameters_dof(par)
+      SAFE_ALLOCATE( x(1:dim))
+      SAFE_ALLOCATE(theta(1:dim))
+      SAFE_ALLOCATE(xl(1:dim))
+      SAFE_ALLOCATE(xu(1:dim))
+      call parameters_bounds(par, xl, xu)
 
       if(oct%random_initial_guess) call parameters_randomize(par)
 
