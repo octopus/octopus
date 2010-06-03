@@ -301,7 +301,6 @@ sub print_vars(){
 	  $first = 0;
 	}
 	print OUT "<li><b>$2</b>";
-	print OUT " ($1)" if($1);
 	print OUT ": ", $vars{$key}{$k}, "</li>\n";
       }
     }
@@ -369,7 +368,6 @@ are given in parenthesis.
 	  $first = 0;
 	}
 	print OUT "\@item \@strong{", to_texi($2), "}";
-	print OUT " (", to_texi($1), ")" if($1);
 	print OUT ": ", to_texi($vars{$key}{$k});
       }
     }
