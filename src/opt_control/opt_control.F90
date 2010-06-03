@@ -384,7 +384,7 @@ contains
       call propagate_forward(sys, hm, td, par, target, psi)
       f = - j1_functional(target, sys%gr, psi, sys%geo) - parameters_j2(par)
       if(oct%dump_intermediate) call iterator_write(iterator, par)
-      call iteration_manager_direct(-f, par, iterator)
+      call iteration_manager_direct(-f, par, iterator, sys)
       call states_end(psi)
       if(oct_iterator_maxiter(iterator).eq.0) then
         ! Nothing to do.
@@ -449,7 +449,7 @@ contains
       call propagate_forward(sys, hm, td, par, target, psi)
       f = - j1_functional(target, sys%gr, psi, sys%geo) - parameters_j2(par)
       if(oct%dump_intermediate) call iterator_write(iterator, par)
-      call iteration_manager_direct(-f, par, iterator)
+      call iteration_manager_direct(-f, par, iterator, sys)
       call states_end(psi)
       if(oct_iterator_maxiter(iterator).eq.0) then
         ! Nothing to do.
@@ -517,7 +517,7 @@ contains
       call propagate_forward(sys, hm, td, par, target, psi)
       f = - j1_functional(target, sys%gr, psi, sys%geo) - parameters_j2(par)
       if(oct%dump_intermediate) call iterator_write(iterator, par)
-      call iteration_manager_direct(-f, par, iterator)      
+      call iteration_manager_direct(-f, par, iterator, sys)      
       call states_end(psi)
       if(oct_iterator_maxiter(iterator).eq.0) then
         ! Nothing to do.
@@ -797,7 +797,7 @@ contains
       call f_striter(sys_, hm_, td_, par_new, j1)
       f = - j1 - parameters_j2(par_)
       if(oct%dump_intermediate) call iterator_write(iterator, par_)
-      call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator)
+      call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_)
       call parameters_set_rep(par_new)
       SAFE_ALLOCATE(dff(1:n))
       dff = df
@@ -858,7 +858,7 @@ contains
       f = - j1_functional(target, sys_%gr, psi, sys_%geo) - parameters_j2(par_)
       call states_end(psi)
       if(oct%dump_intermediate) call iterator_write(iterator, par_)
-      call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator)
+      call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_)
     end if
 
     SAFE_DEALLOCATE_A(theta)
@@ -924,7 +924,7 @@ contains
       call propagate_forward(sys_, hm_, td_, par_, target, psi)
       f = - j1_functional(target, sys_%gr, psi, sys_%geo) - parameters_j2(par_)
       if(oct%dump_intermediate) call iterator_write(iterator, par_)
-      call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator)
+      call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_)
       call states_end(psi)
     else
       call parameters_copy(par_new, par_)
@@ -932,7 +932,7 @@ contains
       delta = parameters_diff(par_, par_new)
       f = - oct%eta * j1 + oct%delta * delta
       if(oct%dump_intermediate) call iterator_write(iterator, par_)
-      call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, delta)
+      call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_, delta)
       call parameters_end(par_new)
     end if
 

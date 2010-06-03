@@ -30,6 +30,7 @@ module opt_control_iter_m
   use opt_control_parameters_m
   use profiling_m
   use states_m
+  use system_m
   use varinfo_m
 
   implicit none
@@ -45,7 +46,8 @@ module opt_control_iter_m
             oct_iterator_current,     &
             oct_iterator_maxiter,     &
             oct_iterator_tolerance,   &
-            iteration_manager_main
+            iteration_manager_main,   &
+            velocities_write
 
 
   type oct_iterator_t
@@ -60,6 +62,7 @@ module opt_control_iter_m
     integer            :: bestJ1_ctr_iter
     type(oct_control_parameters_t), pointer :: best_par
     integer            :: convergence_iunit
+    integer            :: velocities_iunit
   end type oct_iterator_t
 
 contains
@@ -130,6 +133,10 @@ contains
                                                 '               Delta'
     write(iterator%convergence_iunit, '(91(''#''))') 
 
+    if(parse_isdef('OCTVelocityTarget')) then
+       iterator%velocities_iunit = io_open(OCT_DIR//'velocities', action='write')
+    end if
+
     call pop_sub('iter.oct_iterator_init')
   end subroutine oct_iterator_init
   ! ---------------------------------------------------------
@@ -147,6 +154,10 @@ contains
     SAFE_DEALLOCATE_P(iterator%best_par)
     write(iterator%convergence_iunit, '(91("#"))') 
     call io_close(iterator%convergence_iunit)
+
+    if(parse_isdef('OCTVelocityTarget')) then
+       call io_close(iterator%velocities_iunit)
+    end if
 
     call pop_sub('iter.oct_iterator_end')
   end subroutine oct_iterator_end
@@ -224,10 +235,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine iteration_manager_direct(j, par, iterator, dx)
+  subroutine iteration_manager_direct(j, par, iterator, sys, dx)
     FLOAT, intent(in) :: j
     type(oct_control_parameters_t), intent(in)  :: par
     type(oct_iterator_t), intent(inout) :: iterator
+    type(system_t), intent(in) :: sys
     FLOAT, optional, intent(in) :: dx
 
     FLOAT :: j1, j2, fluence, delta
@@ -274,6 +286,10 @@ contains
 
     write(iterator%convergence_iunit, '(i11,4f20.8)')                &
       iterator%ctr_iter, j, j1, j2, delta
+
+    if(parse_isdef('OCTVelocityTarget')) then
+       call velocities_write(iterator, sys)
+    end if
 
     iterator%ctr_iter = iterator%ctr_iter + 1
 
@@ -352,6 +368,49 @@ contains
     type(oct_iterator_t), intent(in)     :: iterator
     oct_iterator_tolerance = iterator%eps
   end function oct_iterator_tolerance
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine velocities_write(iterator, sys)
+    type(oct_iterator_t),    intent(in) :: iterator
+    type(system_t),          intent(in) :: sys
+
+    CHARACTER (LEN=100) :: temp_str
+    CHARACTER (LEN=2) :: atoms_str
+    CHARACTER (LEN=1) :: dim_str
+    integer :: i, j, n_atoms, dim
+
+    n_atoms = sys%geo%natoms
+    dim = sys%gr%sb%dim
+
+    ! write header of the velocities output file
+    if(iterator%ctr_iter == 0) then
+       write(iterator%velocities_iunit,'(100("#"))')
+       write(iterator%velocities_iunit,'("#  iter")',advance='no')
+       do i=1, n_atoms
+          write(atoms_str,'(i2.2)') i
+          do j=1, dim
+             write(dim_str,'(i1)') j
+             temp_str = "v[" // atoms_str // "," // dim_str // "]"
+             write(iterator%velocities_iunit,'(a16)',advance='no') trim(temp_str)
+          end do
+       end do
+       write(iterator%velocities_iunit,'("")')
+       write(iterator%velocities_iunit,'(100("#"))')
+    end if
+    
+    ! write data
+    write(iterator%velocities_iunit,'(i7)',advance='no') iterator%ctr_iter
+    do i=1, n_atoms
+       do j=1, dim
+          write(iterator%velocities_iunit,'(4(" "),(f12.10))',advance='no') &
+               sys%geo%atom(i)%v(j)
+       end do
+    end do
+    write(iterator%velocities_iunit,'("")')
+
+  end subroutine velocities_write
   ! ---------------------------------------------------------
 
 
