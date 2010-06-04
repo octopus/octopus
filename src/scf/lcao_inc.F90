@@ -369,7 +369,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
     maxorb = max(maxorb, species_niwfs(geo%atom(iatom)%spec) )
     nbasis = nbasis + species_niwfs(geo%atom(iatom)%spec)
   end do
-
+  
   write(message(1),'(a,i6,a)') 'Info: Performing LCAO calculation with ', nbasis, ' orbitals.'
   call write_info(1)
 
@@ -403,7 +403,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
     ! initialize the radial grid
     call submesh_init_sphere(sphere(iatom), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, maxradius)
     call batch_init(orbitals(iatom), 1, norbs)
-    call X(batch_new)(orbitals(iatom), 1, norbs, sphere(iatom)%ns)
+    call dbatch_new(orbitals(iatom), 1, norbs, sphere(iatom)%ns)
   end do
 
   do ispin = 1, st%d%spin_channels
@@ -537,13 +537,19 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
 
       do ist = st%st_start, st%st_end
-        st%eigenval(ist, ik) = ev(ist)
-        do idim = 1, st%d%dim
-          forall(ip = 1:gr%mesh%np) st%X(psi)(ip, idim, ist, ik) = R_TOTYPE(M_ZERO)
-        end do
+        if(ist <= nbasis) then
+          st%eigenval(ist, ik) = ev(ist)
+          do idim = 1, st%d%dim
+            forall(ip = 1:gr%mesh%np) st%X(psi)(ip, idim, ist, ik) = R_TOTYPE(M_ZERO)
+          end do
+        else
+          !we do not have enough basis functions, so randomize the missing orbitals
+          call X(mf_random)(gr%mesh, st%X(psi)(:, 1, ist, ik))
+          st%X(psi)(1:gr%mesh%np, 2:st%d%dim, ist, ik) = R_TOTYPE(M_ZERO)
+        end if
       end do
 
-      call batch_init(psib, st%d%dim, st%st_start, st%st_end, st%X(psi)(:, :, :, ik))
+      call batch_init(psib, st%d%dim, st%st_start,  min(st%st_end, nbasis), st%X(psi)(:, :, :, ik))
 
       ibasis = 0
       do iatom = 1, geo%natoms

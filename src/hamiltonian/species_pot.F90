@@ -863,6 +863,8 @@ contains
 
     call push_sub('species_pot.species_get_orbital_submesh')
 
+    ASSERT(ubound(phi, dim = 1) >= submesh%ns)
+
     call species_iwf_ilm(spec, j, is, i, l, m)
 
     if(species_is_ps(spec)) then
