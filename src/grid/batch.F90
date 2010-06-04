@@ -93,7 +93,7 @@ module batch_m
     FLOAT,               pointer   :: dpsicont(:, :, :)
     CMPLX,               pointer   :: zpsicont(:, :, :)
 
-    logical                        :: in_buffer ! whether there is a copy in the opencl buffer
+    integer                        :: in_buffer_count ! whether there is a copy in the opencl buffer
     logical                        :: dirty     ! if this is true, the buffer has different data
 #ifdef HAVE_OPENCL
     type(opencl_mem_t)             :: buffer
@@ -176,7 +176,7 @@ contains
       nullify(this%states_linear(ist)%zpsi)
     end do
     
-    this%in_buffer = .false.
+    this%in_buffer_count = 0
 
     call pop_sub('batch.batch_init_empty')
     
@@ -206,7 +206,7 @@ contains
       nullify(this%states_linear(ist)%zpsi)
     end do
 
-    this%in_buffer = .false.
+    this%in_buffer_count = 0
 
     call pop_sub('batch.batch_init_empty_linear')
     
@@ -256,9 +256,10 @@ contains
       if(associated(bin%states_linear(ii)%zpsi)) bout%states_linear(ii)%zpsi => bin%states_linear(ii)%zpsi
     end do
 
+    bout%in_buffer_count = bin%in_buffer_count
+
 #ifdef HAVE_OPENCL
     if(opencl_is_enabled()) then
-      bout%in_buffer = bin%in_buffer
       bout%dirty = bin%dirty
       bout%buffer = bin%buffer
       bout%ubound(1:2) = bin%ubound(1:2)
@@ -284,11 +285,7 @@ contains
   logical pure function batch_is_in_buffer(this) result(in_buffer)
     type(batch_t),      intent(in)    :: this
 
-#ifndef HAVE_OPENCL
-    in_buffer = .false.
-#else
-    in_buffer = this%in_buffer
-#endif
+    in_buffer = this%in_buffer_count > 0
   end function batch_is_in_buffer
 
   ! ----------------------------------------------------
@@ -335,12 +332,14 @@ contains
 
     logical :: copy_
 
+    call push_sub('batch.batch_move_to_buffer')
+
     ASSERT(batch_is_ok(this))
 
     copy_ = .true.
     if(present(copy)) copy_ = copy
 
-    if(.not. this%in_buffer) then
+    if(.not. batch_is_in_buffer(this)) then
       this%ubound(1) = pad_pow2(this%nst_linear)
       this%ubound(2) = opencl_padded_size(batch_max_size(this))
 
@@ -348,16 +347,18 @@ contains
       if(batch_type(this) == TYPE_CMPLX) this%ubound_real(1) = 2*this%ubound_real(1)
 
       call opencl_create_buffer(this%buffer, CL_MEM_READ_WRITE, batch_type(this), product(this%ubound))
-      this%dirty = .true.
+
+      if(copy_) then
+        this%dirty = .false.
+        call batch_write_to_opencl_buffer(this)
+      else
+        this%dirty = .true.
+      end if
     end if
 
-    if(this%dirty .and. copy_) then
-      this%dirty = .false.
-      call batch_write_to_opencl_buffer(this)
-    end if
+    INCR(this%in_buffer_count, 1)
 
-    this%in_buffer = .true.
-
+    call pop_sub('batch.batch_move_to_buffer')
   end subroutine batch_move_to_buffer
 
   ! ----------------------------------------------------
@@ -368,18 +369,25 @@ contains
 
     logical :: copy_
 
-    if(this%in_buffer) then
-      copy_ = .true.
-      if(present(copy)) copy_ = copy
-      
-      if(copy_ .and. this%dirty) then
-        call batch_read_from_opencl_buffer(this)
+    call push_sub('batch.batch_move_from_buffer')
+
+
+    if(batch_is_in_buffer(this)) then
+      INCR(this%in_buffer_count, -1)
+
+      if(this%in_buffer_count == 0) then
+        copy_ = .true.
+        if(present(copy)) copy_ = copy
+        
+        if(copy_ .and. this%dirty) then
+          call batch_read_from_opencl_buffer(this)
+        end if
+        
+        call opencl_release_buffer(this%buffer)
       end if
-      
-      this%in_buffer = .false.
-      call opencl_release_buffer(this%buffer)
     end if
 
+    call pop_sub('batch.batch_move_from_buffer')
   end subroutine batch_move_from_buffer
 
   ! ----------------------------------------------------

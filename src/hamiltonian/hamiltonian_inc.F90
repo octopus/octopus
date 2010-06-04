@@ -34,9 +34,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
   type(profile_t), save :: phase_prof
   logical :: kinetic_only_, apply_phase
-#ifdef HAVE_OPENCL
-  logical :: moved_to_buffer
-#endif
   integer :: ii, ist, idim, ip
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
   type(batch_t), pointer :: epsib
@@ -70,14 +67,10 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   
   apply_phase = associated(hm%phase)
 
-  ASSERT(batch_is_in_buffer(psib) .eqv. batch_is_in_buffer(hpsib))
-
   call X(derivatives_batch_set_bc)(der, psib)
 
 #ifdef HAVE_OPENCL
-  moved_to_buffer = .false.
-  if(opencl_is_enabled() .and. hamiltonian_apply_in_buffer(hm) .and. .not. batch_is_in_buffer(psib)) then
-    moved_to_buffer = .true.
+  if(hamiltonian_apply_in_buffer(hm)) then
     call batch_move_to_buffer(psib)
     call batch_move_to_buffer(hpsib, copy = .false.)
   end if
@@ -206,7 +199,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   end if
 
 #ifdef HAVE_OPENCL  
-  if(moved_to_buffer) then
+  if(hamiltonian_apply_in_buffer(hm)) then
     call batch_move_from_buffer(psib, copy = .false.)
     call batch_move_from_buffer(hpsib)
   end if
