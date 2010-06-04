@@ -49,6 +49,7 @@ libgrid_a_SOURCES =       \
 	grid.F90                \
 	batch.F90               \
 	mesh_init.F90           \
+	mesh_partition.F90      \
 	metis.c                 \
 	ob_interface.F90        \
 	partition.F90           \
@@ -95,7 +96,8 @@ index.o : index.F90 hypercube.o
 par_vec.o : par_vec.F90 par_vec_inc.F90 index.o stencil.o batch.o
 mesh.o : mesh.F90 par_vec.o index.o curvilinear.o
 ob_grid.o : ob_grid.F90 mesh.o ob_interface.o
-mesh_init.o : mesh_init.F90 mesh.o par_vec.o zoltan.o stencil_star.o stencil.o ob_grid.o partition.o partitioner.o
+mesh_init.o : mesh_init.F90 mesh.o par_vec.o stencil.o ob_grid.o partition.o partitioner.o mesh_partition.o
+mesh_partition.o : mesh_partition.F90 mesh.o zoltan.o stencil_star.o stencil.o partition.o partitioner.o 
 modelmb_1part.o : modelmb_1part.F90 mesh.o hypercube.o
 nl_operator.o : nl_operator.F90 nl_operator_inc.F90 par_vec.o mesh.o index.o batch.o stencil.o
 submesh.o : submesh.F90 submesh_inc.F90  mesh.o batch.o
