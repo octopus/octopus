@@ -74,7 +74,7 @@ module casida_m
     FLOAT,   pointer  :: f(:)           !< The (dipole) strengths
     FLOAT,   pointer  :: s(:)           !< The diagonal part of the S-matrix
 
-    ! variables for momentum transfer dependent calculation
+    ! variables for momentum-transfer-dependent calculation
     logical           :: qcalc
     FLOAT             :: qvector(MAX_DIM)
     FLOAT,   pointer  :: qf(:)
@@ -103,7 +103,7 @@ contains
     type(casida_t) :: cas
     type(block_t) :: blk
     integer :: idir, i, nk, n_filled, n_partially_filled, n_half_filled
-    character(len=80) :: trandens
+    character(len=80) :: trandens, nst_string, default
 
     call push_sub('casida.casida_run')
 
@@ -152,6 +152,7 @@ contains
     !%Variable CasidaKohnShamStates
     !%Type string
     !%Section Linear Response::Casida
+    !%Default all states
     !%Description
     !% The calculation of the excitation spectrum of a system in the Casida frequency-domain
     !% formulation of linear-response time-dependent density functional theory (TDDFT)
@@ -167,19 +168,21 @@ contains
     !% valid. You should include a non-zero number of unoccupied states and a non-zero number
     !% of occupied states.
     !%End
-    call parse_string(datasets_check('CasidaKohnShamStates'), "1-1024", cas%wfn_list)
-    write(message(1),'(a,a)') "Info: States that form the basis: ",trim(cas%wfn_list)
+
+    write(nst_string,'(i6)') sys%st%nst
+    write(default,'(a,a)') "1-", trim(adjustl(nst_string))
+    call parse_string(datasets_check('CasidaKohnShamStates'), default, cas%wfn_list)
+    write(message(1),'(a,a)') "Info: States that form the basis: ", trim(cas%wfn_list)
     Call write_info(1)
 
     !%Variable CasidaTransitionDensities
     !%Type string
     !%Section Linear Response::Casida
+    !%Default none
     !%Description
     !% Specifies which transition densities are to be calculated and written down. The
     !% transition density for the many-body state <i>n</i> will be written to a file called
     !% <tt>casida/rho0n</tt>.
-    !% 
-    !% By default, no transition density is calculated. 
     !%
     !% This variable is a string in list form, <i>i.e.</i> expressions such as "1,2-5,8-15" are
     !% valid.
@@ -189,6 +192,7 @@ contains
     !%Variable CasidaMomentumTransfer
     !%Type block
     !%Section Linear Response::Response
+    !%Default 0
     !%Description
     !% Momentum-transfer vector for the calculation of the dynamic structure
     !% factor. When this variable is set, the transition rates are determined
@@ -210,13 +214,14 @@ contains
     end if
 
     !%Variable CasidaQuadratureOrder
-    !%Type block
+    !%Type integer
     !%Section Linear Response::Response
+    !%Default 5
     !%Description
     !% Directionally averaged dynamic structure factor is calculated by
-    !% averaging over the results from a set of q-vectors. The vectors
-    !% are generated using Gauss-Legendre quadrature scheme [see e.g.
-    !% K. Atkinson, J. Austral. Math. Soc. 23, 332 (1982)], and this
+    !% averaging over the results from a set of <i>q</i>-vectors. The vectors
+    !% are generated using Gauss-Legendre quadrature scheme [see <i>e.g.</i>
+    !% K. Atkinson, <i>J. Austral. Math. Soc.</i> <b>23</b>, 332 (1982)], and this
     !% variable determines the order of the scheme.
     !%End
     call parse_integer(datasets_check('CasidaQuadratureOrder'), 5, cas%avg_order)
@@ -289,6 +294,9 @@ contains
         end if
       end do
     end do
+
+    write(message(1), '(a,i9)') "Number of occupied-unoccupied pairs: ", cas%n_pairs
+    call write_info(1)
 
     if(cas%n_pairs < 1) then
       message(1) = "Error: Maybe there are no unoccupied states?"

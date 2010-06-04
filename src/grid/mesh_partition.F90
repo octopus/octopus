@@ -102,7 +102,7 @@ contains
     integer :: default
 
     call profiling_in(prof, "MESH_PARTITION")
-    call push_sub('mesh_init.mesh_partition')
+    call push_sub('mesh_partition.mesh_partition')
 
     if(mesh%np_global == 0) then
       message(1) = 'The mesh is empty and cannot be partitioned.'
@@ -356,7 +356,7 @@ contains
     ASSERT(all(part(1:mesh%np_global) <= npart))
 
     call stencil_end(stencil)
-    call pop_sub('mesh_init.mesh_partition')
+    call pop_sub('mesh_partition.mesh_partition')
     call profiling_out(prof)
 
   end subroutine mesh_partition
@@ -373,7 +373,7 @@ contains
     logical, allocatable :: winner(:)
     integer :: ip, maxvotes
 
-    call push_sub('mesh_init.mesh_partition_boundaries')
+    call push_sub('mesh_partition.mesh_partition_boundaries')
 
     npart = mesh%mpi_grp%size
 
@@ -409,6 +409,8 @@ contains
     SAFE_DEALLOCATE_A(votes)
     SAFE_DEALLOCATE_A(bps)
     SAFE_DEALLOCATE_A(winner)
+
+    call push_sub('mesh_partition.mesh_partition_boundaries')
   end subroutine mesh_partition_boundaries
 
   subroutine mesh_partition_write_debug(mesh, part)
@@ -420,8 +422,9 @@ contains
     integer              :: iunit          ! For debug output to files.
     character(len=3)     :: filenum
 
+    call push_sub('mesh_partition.mesh_partition_write_debug')
 
-    if(in_debug_mode.and.mpi_grp_is_root(mpi_world)) then
+    if(in_debug_mode .and. mpi_grp_is_root(mpi_world)) then
 
       call io_mkdir('debug/mesh_partition')
 
@@ -461,7 +464,7 @@ contains
     call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
 #endif
 
-    call pop_sub('mesh_init.mesh_partition_boundaries')
+    call pop_sub('mesh_partition.mesh_partition_write_debug')
 
   end subroutine mesh_partition_write_debug
 
