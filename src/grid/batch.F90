@@ -29,9 +29,7 @@ module batch_m
   use parser_m
   use math_m
   use messages_m
-#ifdef HAVE_OPENCL
   use opencl_m
-#endif
   use profiling_m
   use types_m
   use varinfo_m

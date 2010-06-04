@@ -39,9 +39,7 @@ module hamiltonian_base_m
   use messages_m
   use mpi_m
   use nl_operator_m
-#ifdef HAVE_OPENCL
   use opencl_m
-#endif
   use parser_m
   use profiling_m
   use projector_m

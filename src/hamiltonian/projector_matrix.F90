@@ -22,9 +22,7 @@
 module projector_matrix_m
   use global_m
   use messages_m
-#ifdef HAVE_OPENCL
   use opencl_m
-#endif
   use types_m
   use profiling_m
 

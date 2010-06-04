@@ -33,9 +33,7 @@ module derivatives_m
   use messages_m
   use mpi_m
   use nl_operator_m
-#ifdef HAVE_OPENCL
   use opencl_m
-#endif
   use par_vec_m
   use profiling_m
   use simul_box_m

@@ -33,7 +33,10 @@ module opencl_m
   private
 
   public ::                       &
-    opencl_is_enabled,            &
+    opencl_is_enabled
+
+#ifdef HAVE_OPENCL
+  public ::                       &
     opencl_init,                  &
     opencl_end,                   &
     opencl_mem_t,                 &
@@ -111,14 +114,19 @@ module opencl_m
   end interface
 
   type(profile_t), save :: prof_read, prof_write, prof_kernel_run
-  
+#endif
+
   contains
 
     pure logical function opencl_is_enabled() result(enabled)
-      
+#ifdef HAVE_OPENCL
       enabled = opencl%enabled
+#else
+      enabled = .false.
+#endif
     end function opencl_is_enabled
 
+#ifdef HAVE_OPENCL
     ! ------------------------------------------
 
     subroutine opencl_init()
@@ -520,7 +528,7 @@ module opencl_m
 #include "undef.F90"
 #include "integer.F90"
 #include "opencl_inc.F90"
-
+#endif
 end module opencl_m
 
 !! Local Variables:

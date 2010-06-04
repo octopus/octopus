@@ -35,9 +35,7 @@ module system_m
   use mpi_m
   use multicomm_m
   use ob_grid_m
-#ifdef HAVE_OPENCL
   use opencl_m
-#endif
   use poisson_m
   use profiling_m
   use simul_box_m

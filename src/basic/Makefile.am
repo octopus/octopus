@@ -58,16 +58,15 @@ libbasic_a_SOURCES =     \
 	subarray.F90     \
 	io_binary_f.F90  \
 	lookup.F90       \
-	types.F90
+	types.F90        \
+	opencl.F90
 
 if COMPILE_PAPI
 libbasic_a_SOURCES += papi.c papi_f.F90
 endif
 
 if COMPILE_OPENCL
- libbasic_a_SOURCES +=      \
-	opencl_low.c        \
-	opencl.F90
+ libbasic_a_SOURCES += opencl_low.c
 endif
 
 noinst_HEADERS =               \

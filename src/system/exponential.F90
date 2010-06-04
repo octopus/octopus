@@ -35,9 +35,7 @@ module exponential_m
   use parser_m
   use mesh_function_m
   use messages_m
-#ifdef HAVE_OPENCL
   use opencl_m
-#endif
   use profiling_m
   use states_m
   use states_calc_m
