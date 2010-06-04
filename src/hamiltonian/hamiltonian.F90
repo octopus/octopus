@@ -1037,8 +1037,11 @@ contains
 
   logical pure function hamiltonian_apply_in_buffer(this) result(apply)
     type(hamiltonian_t),   intent(in) :: this
-
+    
+    apply = .false.
+#ifdef HAVE_OPENCL
     apply = opencl_is_enabled()
+#endif
     if(associated(this%phase)) apply = .false.
     if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.
     if(this%ab .eq. IMAGINARY_ABSORBING) apply = .false.
