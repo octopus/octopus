@@ -393,7 +393,7 @@ contains
   ! ----------------------------------------------------
 
   subroutine batch_write_to_opencl_buffer(this)
-    type(batch_t),      intent(in)    :: this
+    type(batch_t),      intent(inout)  :: this
 
     integer :: ist
     type(opencl_mem_t) :: tmp
@@ -402,31 +402,43 @@ contains
 
     call push_sub('batch.batch_write_to_opencl_buffer')
     call profiling_in(prof, "BATCH_TO_BUFFER")
-    
+
     ASSERT(batch_is_ok(this))
 
-    call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), this%ubound(2))
-
-    do ist = 1, this%nst_linear
+    if(this%nst_linear == 1) then
+      ! we can copy directly
       if(batch_type(this) == TYPE_FLOAT) then
-        kernel = dpack
-        call opencl_write_buffer(tmp, ubound(this%states_linear(ist)%dpsi, dim = 1), this%states_linear(ist)%dpsi)
+        call opencl_write_buffer(this%buffer, ubound(this%states_linear(1)%dpsi, dim = 1), this%states_linear(1)%dpsi)
       else
-        kernel = zpack
-        call opencl_write_buffer(tmp, ubound(this%states_linear(ist)%zpsi, dim = 1), this%states_linear(ist)%zpsi)
+        call opencl_write_buffer(this%buffer, ubound(this%states_linear(1)%zpsi, dim = 1), this%states_linear(1)%zpsi)
       end if
-     
-      call opencl_set_kernel_arg(kernel, 0, this%ubound(1))
-      call opencl_set_kernel_arg(kernel, 1, ist - 1)
-      call opencl_set_kernel_arg(kernel, 2, tmp)
-      call opencl_set_kernel_arg(kernel, 3, this%buffer)
 
-      call opencl_kernel_run(kernel, (/this%ubound(2)/), (/opencl_max_workgroup_size()/))
-      
-      call opencl_finish()
-    end do
+    else
+      ! we copy to a temporary array and then we re-arrange data
+      call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), this%ubound(2))
 
-    call opencl_release_buffer(tmp)
+      do ist = 1, this%nst_linear
+        if(batch_type(this) == TYPE_FLOAT) then
+          kernel = dpack
+          call opencl_write_buffer(tmp, ubound(this%states_linear(ist)%dpsi, dim = 1), this%states_linear(ist)%dpsi)
+        else
+          kernel = zpack
+          call opencl_write_buffer(tmp, ubound(this%states_linear(ist)%zpsi, dim = 1), this%states_linear(ist)%zpsi)
+        end if
+
+        call opencl_set_kernel_arg(kernel, 0, this%ubound(1))
+        call opencl_set_kernel_arg(kernel, 1, ist - 1)
+        call opencl_set_kernel_arg(kernel, 2, tmp)
+        call opencl_set_kernel_arg(kernel, 3, this%buffer)
+
+        call opencl_kernel_run(kernel, (/this%ubound(2)/), (/opencl_max_workgroup_size()/))
+
+        call opencl_finish()
+      end do
+
+      call opencl_release_buffer(tmp)
+
+    end if
 
     call profiling_out(prof)
     call pop_sub('batch.batch_write_to_opencl_buffer')
@@ -447,31 +459,41 @@ contains
 
     ASSERT(batch_is_ok(this))
 
-    call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), this%ubound(2))
-
-    if(batch_type(this) == TYPE_FLOAT) then
-      kernel = dunpack
+    if(this%nst_linear == 1) then
+      ! we can copy directly
+      if(batch_type(this) == TYPE_FLOAT) then
+        call opencl_read_buffer(this%buffer, ubound(this%states_linear(1)%dpsi, dim = 1), this%states_linear(1)%dpsi)
+      else
+        call opencl_read_buffer(this%buffer, ubound(this%states_linear(1)%zpsi, dim = 1), this%states_linear(1)%zpsi)
+      end if
     else
-      kernel = zunpack
-    end if
-
-    do ist = 1, this%nst_linear
-      call opencl_set_kernel_arg(kernel, 0, this%ubound(1))
-      call opencl_set_kernel_arg(kernel, 1, ist - 1)
-      call opencl_set_kernel_arg(kernel, 2, this%buffer)
-      call opencl_set_kernel_arg(kernel, 3, tmp)
-
-      call opencl_kernel_run(kernel, (/this%ubound(2)/), (/opencl_max_workgroup_size()/))
-      call opencl_finish()
+      ! we use a kernel to move to a temporary array and then we read
+      call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), this%ubound(2))
 
       if(batch_type(this) == TYPE_FLOAT) then
-        call opencl_read_buffer(tmp, ubound(this%states_linear(ist)%dpsi, dim = 1), this%states_linear(ist)%dpsi)
+        kernel = dunpack
       else
-        call opencl_read_buffer(tmp, ubound(this%states_linear(ist)%zpsi, dim = 1), this%states_linear(ist)%zpsi)
+        kernel = zunpack
       end if
-    end do
 
-    call opencl_release_buffer(tmp)
+      do ist = 1, this%nst_linear
+        call opencl_set_kernel_arg(kernel, 0, this%ubound(1))
+        call opencl_set_kernel_arg(kernel, 1, ist - 1)
+        call opencl_set_kernel_arg(kernel, 2, this%buffer)
+        call opencl_set_kernel_arg(kernel, 3, tmp)
+
+        call opencl_kernel_run(kernel, (/this%ubound(2)/), (/opencl_max_workgroup_size()/))
+        call opencl_finish()
+
+        if(batch_type(this) == TYPE_FLOAT) then
+          call opencl_read_buffer(tmp, ubound(this%states_linear(ist)%dpsi, dim = 1), this%states_linear(ist)%dpsi)
+        else
+          call opencl_read_buffer(tmp, ubound(this%states_linear(ist)%zpsi, dim = 1), this%states_linear(ist)%zpsi)
+        end if
+      end do
+
+      call opencl_release_buffer(tmp)
+    end if
 
     call profiling_out(prof)
     call pop_sub('batch.batch_read_from_opencl_buffer')
