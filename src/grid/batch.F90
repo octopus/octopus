@@ -398,7 +398,7 @@ contains
     integer :: ist
     type(opencl_mem_t) :: tmp
     type(c_ptr) :: kernel
-    type(profile_t), save :: prof
+    type(profile_t), save :: prof, prof_pack
 
     call push_sub('batch.batch_write_to_opencl_buffer')
     call profiling_in(prof, "BATCH_TO_BUFFER")
@@ -431,9 +431,11 @@ contains
         call opencl_set_kernel_arg(kernel, 2, tmp)
         call opencl_set_kernel_arg(kernel, 3, this%buffer)
 
+        call profiling_in(prof_pack, "CL_PACK")
         call opencl_kernel_run(kernel, (/this%ubound(2)/), (/opencl_max_workgroup_size()/))
-
         call opencl_finish()
+        call profiling_out(prof_pack)
+
       end do
 
       call opencl_release_buffer(tmp)
@@ -452,7 +454,7 @@ contains
     integer :: ist
     type(opencl_mem_t) :: tmp
     type(c_ptr) :: kernel
-    type(profile_t), save :: prof
+    type(profile_t), save :: prof, prof_unpack
 
     call push_sub('batch.batch_read_from_opencl_buffer')
     call profiling_in(prof, "BATCH_FROM_BUFFER")
@@ -482,8 +484,10 @@ contains
         call opencl_set_kernel_arg(kernel, 2, this%buffer)
         call opencl_set_kernel_arg(kernel, 3, tmp)
 
+        call profiling_in(prof_unpack, "CL_UNPACK")
         call opencl_kernel_run(kernel, (/this%ubound(2)/), (/opencl_max_workgroup_size()/))
         call opencl_finish()
+        call profiling_out(prof_unpack)
 
         if(batch_type(this) == TYPE_FLOAT) then
           call opencl_read_buffer(tmp, ubound(this%states_linear(ist)%dpsi, dim = 1), this%states_linear(ist)%dpsi)
