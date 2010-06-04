@@ -71,7 +71,7 @@ contains
 
 
 #ifdef HAVE_OPENCL
-    if(batch_is_in_buffer(ffb)) then
+    if(batch_is_packed(ffb)) then
 
       call opencl_set_kernel_arg(set_zero_part, 0, bndry_start - 1)
       call opencl_set_kernel_arg(set_zero_part, 1, bndry_end - 1)
@@ -83,7 +83,7 @@ contains
       
       call opencl_kernel_run(set_zero_part, (/ffb%ubound_real(1), globalsize/), (/ffb%ubound_real(1), localsize/))
 
-      call batch_buffer_was_modified(ffb)
+      call batch_pack_was_modified(ffb)
 
       call opencl_finish()
 
@@ -584,8 +584,8 @@ subroutine X(derivatives_test)(this)
 
 #ifdef HAVE_OPENCL
   if(opencl_is_enabled()) then
-    call batch_move_to_buffer(ffb)
-    call batch_move_to_buffer(opffb, copy = .false.)
+    call batch_pack(ffb)
+    call batch_pack(opffb, copy = .false.)
   end if
 #endif
 
@@ -593,8 +593,8 @@ subroutine X(derivatives_test)(this)
 
 #ifdef HAVE_OPENCL
   if(opencl_is_enabled()) then
-    call batch_move_from_buffer(ffb, copy = .false.)
-    call batch_move_from_buffer(opffb)
+    call batch_unpack(ffb, copy = .false.)
+    call batch_unpack(opffb)
   end if
 #endif
 

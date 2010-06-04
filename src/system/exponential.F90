@@ -578,9 +578,9 @@ contains
 
 #ifdef HAVE_OPENCL
       if(opencl_is_enabled() .and. hamiltonian_apply_in_buffer(hm)) then
-        call batch_move_to_buffer(psib)
-        call batch_move_to_buffer(psi1b, copy = .false.)
-        call batch_move_to_buffer(hpsi1b, copy = .false.)
+        call batch_pack(psib)
+        call batch_pack(psi1b, copy = .false.)
+        call batch_pack(hpsi1b, copy = .false.)
       end if
 #endif
       
@@ -632,9 +632,9 @@ contains
 
 #ifdef HAVE_OPENCL
       if(opencl_is_enabled() .and. hamiltonian_apply_in_buffer(hm)) then
-        call batch_move_from_buffer(psib)
-        call batch_move_from_buffer(psi1b, copy = .false.)
-        call batch_move_from_buffer(hpsi1b, copy = .false.)
+        call batch_unpack(psib)
+        call batch_unpack(psi1b, copy = .false.)
+        call batch_unpack(hpsi1b, copy = .false.)
       end if
 #endif
       call batch_end(hpsi1b)

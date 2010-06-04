@@ -160,9 +160,9 @@ subroutine X(batch_axpy)(np, aa, xx, yy)
   ASSERT(xx%nst_linear == yy%nst_linear)
 
 #ifdef HAVE_OPENCL
-  if(batch_is_in_buffer(yy) .or. batch_is_in_buffer(xx)) then
-    ASSERT(batch_is_in_buffer(xx))
-    ASSERT(batch_is_in_buffer(yy))
+  if(batch_is_packed(yy) .or. batch_is_packed(xx)) then
+    ASSERT(batch_is_packed(xx))
+    ASSERT(batch_is_packed(yy))
 
 #ifdef R_TREAL
 
@@ -182,16 +182,16 @@ subroutine X(batch_axpy)(np, aa, xx, yy)
     call opencl_set_kernel_arg(kernel_zaxpy, 0, real(aa, REAL_PRECISION))
     call opencl_set_kernel_arg(kernel_zaxpy, 1, aimag(aa))
     call opencl_set_kernel_arg(kernel_zaxpy, 2, xx%buffer)
-    call opencl_set_kernel_arg(kernel_zaxpy, 3, batch_buffer_ubound(xx))
+    call opencl_set_kernel_arg(kernel_zaxpy, 3, xx%ubound(1))
     call opencl_set_kernel_arg(kernel_zaxpy, 4, yy%buffer)
-    call opencl_set_kernel_arg(kernel_zaxpy, 5, batch_buffer_ubound(yy))
+    call opencl_set_kernel_arg(kernel_zaxpy, 5, yy%ubound(1))
 
     localsize = opencl_max_workgroup_size()
     call opencl_kernel_run(kernel_zaxpy, (/yy%ubound(1), pad(np, localsize)/), (/yy%ubound(1), localsize/yy%ubound(1)/))
 
 #endif
 
-    call batch_buffer_was_modified(yy)
+    call batch_pack_was_modified(yy)
     call opencl_finish()
     
   else

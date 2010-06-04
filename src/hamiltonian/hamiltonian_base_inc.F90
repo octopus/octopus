@@ -36,8 +36,8 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
 
   if(associated(this%potential)) then
 #ifdef HAVE_OPENCL
-    if(opencl_is_enabled() .and. batch_is_in_buffer(psib)) then
-      ASSERT(batch_is_in_buffer(vpsib))
+    if(opencl_is_enabled() .and. batch_is_packed(psib)) then
+      ASSERT(batch_is_packed(vpsib))
       
       pnp = opencl_padded_size(mesh%np)
 
@@ -59,16 +59,16 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
         call opencl_set_kernel_arg(kernel_vpsi_spinors, 0, this%potential_opencl)
         call opencl_set_kernel_arg(kernel_vpsi_spinors, 1, pnp)
         call opencl_set_kernel_arg(kernel_vpsi_spinors, 2, psib%buffer)
-        call opencl_set_kernel_arg(kernel_vpsi_spinors, 3, batch_buffer_ubound(psib))
+        call opencl_set_kernel_arg(kernel_vpsi_spinors, 3, psib%ubound(1))
         call opencl_set_kernel_arg(kernel_vpsi_spinors, 4, vpsib%buffer)
-        call opencl_set_kernel_arg(kernel_vpsi_spinors, 5, batch_buffer_ubound(vpsib))
+        call opencl_set_kernel_arg(kernel_vpsi_spinors, 5, vpsib%ubound(1))
 
         call opencl_kernel_run(kernel_vpsi_spinors, (/psib%ubound(1)/2, pnp/), &
           (/psib%ubound(1)/2, 2*opencl_max_workgroup_size()/psib%ubound(1)/))
 
       end select
 
-      call batch_buffer_was_modified(vpsib)
+      call batch_pack_was_modified(vpsib)
 
       call opencl_finish()
 
@@ -218,7 +218,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 #endif
 
 #ifdef HAVE_OPENCL
-  if(batch_is_in_buffer(psib)) then
+  if(batch_is_packed(psib)) then
    
     call opencl_create_buffer(projection%buff_projection, CL_MEM_READ_WRITE, R_TYPE_VAL, &
       this%full_projection_size*psib%ubound_real(1))
@@ -347,7 +347,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
 #endif
 
 #ifdef HAVE_OPENCL
-  if(batch_is_in_buffer(vpsib)) then
+  if(batch_is_packed(vpsib)) then
     iprojection = 0
     do imat = 1, this%nprojector_matrices
       pmat => this%projector_matrices(imat)
@@ -446,7 +446,7 @@ contains
     call opencl_kernel_run(kernel_projector_ket, &
       (/vpsib%ubound_real(1), pad(npoints, wgsize)/), (/vpsib%ubound_real(1), wgsize/))
 
-    call batch_buffer_was_modified(vpsib)
+    call batch_pack_was_modified(vpsib)
     call opencl_finish()
 
     call profiling_out(prof)

@@ -71,8 +71,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
 #ifdef HAVE_OPENCL
   if(hamiltonian_apply_in_buffer(hm)) then
-    call batch_move_to_buffer(psib)
-    call batch_move_to_buffer(hpsib, copy = .false.)
+    call batch_pack(psib)
+    call batch_pack(hpsib, copy = .false.)
   end if
 #endif
 
@@ -200,8 +200,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
 #ifdef HAVE_OPENCL  
   if(hamiltonian_apply_in_buffer(hm)) then
-    call batch_move_from_buffer(psib, copy = .false.)
-    call batch_move_from_buffer(hpsib)
+    call batch_unpack(psib, copy = .false.)
+    call batch_unpack(hpsib)
   end if
 #endif
 

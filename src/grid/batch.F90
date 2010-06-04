@@ -51,17 +51,16 @@ module batch_m
     zbatch_delete,                  &
     batch_set,                      &
     batch_set_zero,                 &
-    batch_is_in_buffer,             &
-    batch_buffer_was_modified,      &
+    batch_is_packed,                &
+    batch_pack_was_modified,        &
     batch_is_ok,                    &
     batch_axpy,                     &
     batch_copy_data
 
 #ifdef HAVE_OPENCL
   public ::                         &
-    batch_buffer_ubound,            &
-    batch_move_to_buffer,           &
-    batch_move_from_buffer
+    batch_pack,                     &
+    batch_unpack
 #endif
 
 
@@ -135,7 +134,7 @@ contains
 
     call push_sub('batch.batch_end')
 
-    ASSERT(.not. batch_is_in_buffer(this))
+    ASSERT(.not. batch_is_packed(this))
 
     nullify(this%dpsicont)
     nullify(this%zpsicont)
@@ -280,11 +279,11 @@ contains
 
   ! ----------------------------------------------------
 
-  logical pure function batch_is_in_buffer(this) result(in_buffer)
+  logical pure function batch_is_packed(this) result(in_buffer)
     type(batch_t),      intent(in)    :: this
 
     in_buffer = this%in_buffer_count > 0
-  end function batch_is_in_buffer
+  end function batch_is_packed
 
   ! ----------------------------------------------------
 
@@ -306,38 +305,30 @@ contains
 
   ! ----------------------------------------------------
 
-  subroutine batch_buffer_was_modified(this)
+  subroutine batch_pack_was_modified(this)
     type(batch_t),      intent(inout) :: this
 
     this%dirty = .true.
-  end subroutine batch_buffer_was_modified
+  end subroutine batch_pack_was_modified
 
 #ifdef HAVE_OPENCL
 
   ! ----------------------------------------------------
 
-  integer pure function batch_buffer_ubound(this) result(size)
-    type(batch_t),      intent(in)    :: this
-
-    size = this%ubound(1)
-  end function batch_buffer_ubound
-
-  ! ----------------------------------------------------
-
-  subroutine batch_move_to_buffer(this, copy)
+  subroutine batch_pack(this, copy)
     type(batch_t),      intent(inout) :: this
     logical, optional,  intent(in)    :: copy
 
     logical :: copy_
 
-    call push_sub('batch.batch_move_to_buffer')
+    call push_sub('batch.batch_pack')
 
     ASSERT(batch_is_ok(this))
 
     copy_ = .true.
     if(present(copy)) copy_ = copy
 
-    if(.not. batch_is_in_buffer(this)) then
+    if(.not. batch_is_packed(this)) then
       this%ubound(1) = pad_pow2(this%nst_linear)
       this%ubound(2) = opencl_padded_size(batch_max_size(this))
 
@@ -356,21 +347,21 @@ contains
 
     INCR(this%in_buffer_count, 1)
 
-    call pop_sub('batch.batch_move_to_buffer')
-  end subroutine batch_move_to_buffer
+    call pop_sub('batch.batch_pack')
+  end subroutine batch_pack
 
   ! ----------------------------------------------------
 
-  subroutine batch_move_from_buffer(this, copy)
+  subroutine batch_unpack(this, copy)
     type(batch_t),      intent(inout) :: this
     logical, optional,  intent(in)    :: copy
 
     logical :: copy_
 
-    call push_sub('batch.batch_move_from_buffer')
+    call push_sub('batch.batch_unpack')
 
 
-    if(batch_is_in_buffer(this)) then
+    if(batch_is_packed(this)) then
       INCR(this%in_buffer_count, -1)
 
       if(this%in_buffer_count == 0) then
@@ -385,8 +376,8 @@ contains
       end if
     end if
 
-    call pop_sub('batch.batch_move_from_buffer')
-  end subroutine batch_move_from_buffer
+    call pop_sub('batch.batch_unpack')
+  end subroutine batch_unpack
 
   ! ----------------------------------------------------
 
@@ -515,7 +506,7 @@ contains
 
     call push_sub('batch.batch_set_zero')
 
-    if(batch_is_in_buffer(this)) then
+    if(batch_is_packed(this)) then
 
 #ifdef HAVE_OPENCL
       bsize = product(this%ubound)
@@ -523,7 +514,7 @@ contains
 
       call opencl_set_kernel_arg(set_zero, 0, this%buffer)
       call opencl_kernel_run(set_zero, (/bsize/), (/opencl_max_workgroup_size()/))
-      call batch_buffer_was_modified(this)
+      call batch_pack_was_modified(this)
       call opencl_finish()
 #endif
       
@@ -563,9 +554,9 @@ subroutine batch_copy_data(np, xx, yy)
   ASSERT(xx%nst_linear == yy%nst_linear)
 
 #ifdef HAVE_OPENCL
-  if(batch_is_in_buffer(yy) .or. batch_is_in_buffer(xx)) then
-    ASSERT(batch_is_in_buffer(xx))
-    ASSERT(batch_is_in_buffer(yy))
+  if(batch_is_packed(yy) .or. batch_is_packed(xx)) then
+    ASSERT(batch_is_packed(xx))
+    ASSERT(batch_is_packed(yy))
 
     call opencl_set_kernel_arg(kernel_copy, 0, xx%buffer)
     call opencl_set_kernel_arg(kernel_copy, 1, log2(xx%ubound_real(1)))
@@ -575,7 +566,7 @@ subroutine batch_copy_data(np, xx, yy)
     localsize = opencl_max_workgroup_size()/yy%ubound_real(1)
     call opencl_kernel_run(kernel_copy, (/yy%ubound_real(1), pad(np, localsize)/), (/yy%ubound_real(1), localsize/))
 
-    call batch_buffer_was_modified(yy)
+    call batch_pack_was_modified(yy)
     
     call opencl_finish()
 

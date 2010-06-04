@@ -239,7 +239,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
     else if(op%cmplx_op .or. op%X(function)==OP_FORTRAN) then
       call operate_const_weights()
 #ifdef HAVE_OPENCL
-    else if(opencl_is_enabled() .and. batch_is_in_buffer(fi) .and. batch_is_in_buffer(fo)) then
+    else if(opencl_is_enabled() .and. batch_is_packed(fi) .and. batch_is_packed(fo)) then
       call operate_opencl()
 #endif
     else
@@ -326,7 +326,7 @@ contains
     integer :: nn, ll, ii, ist
 
 #ifdef HAVE_OPENCL
-    ASSERT(.not. (batch_is_in_buffer(fi) .or. batch_is_in_buffer(fo)))
+    ASSERT(.not. (batch_is_packed(fi) .or. batch_is_packed(fo)))
 #endif
 
     nn = op%stencil%size
@@ -357,7 +357,7 @@ contains
     integer :: nn, ll, ii, ist
     FLOAT :: factor_
 #ifdef HAVE_OPENCL
-    ASSERT(.not. (batch_is_in_buffer(fi) .or. batch_is_in_buffer(fo)))
+    ASSERT(.not. (batch_is_packed(fi) .or. batch_is_packed(fo)))
 #endif
 
     factor_ = M_ONE
@@ -391,11 +391,6 @@ contains
   ! ------------------------------------------
   subroutine operate_opencl()
     integer :: pnri, bsize, isize, ist
-#ifdef R_TCOMPLEX
-    integer, parameter :: cfactor = 2
-#else
-    integer, parameter :: cfactor = 1
-#endif
     type(opencl_mem_t) :: buff_weights
     type(profile_t), save :: prof
 
@@ -415,9 +410,9 @@ contains
       call opencl_set_kernel_arg(operate, 4, op%buff_imax)
       call opencl_set_kernel_arg(operate, 5, buff_weights)
       call opencl_set_kernel_arg(operate, 6, fi%buffer)
-      call opencl_set_kernel_arg(operate, 7, batch_buffer_ubound(fi)*cfactor)
+      call opencl_set_kernel_arg(operate, 7, fi%ubound_real(1))
       call opencl_set_kernel_arg(operate, 8, fo%buffer)
-      call opencl_set_kernel_arg(operate, 9, batch_buffer_ubound(fo)*cfactor)
+      call opencl_set_kernel_arg(operate, 9, fo%ubound_real(1))
       
       bsize = 128
       isize = 8
@@ -426,7 +421,7 @@ contains
       call opencl_set_kernel_arg(operate, 10, TYPE_INTEGER, op%stencil%size*bsize/(fi%ubound(1)))
       call opencl_set_kernel_arg(operate, 11, TYPE_FLOAT, op%stencil%size)
       
-      call opencl_kernel_run(operate, (/fi%ubound(1)*cfactor, pnri/), (/fi%ubound(1)*cfactor, bsize/(fi%ubound(1)*cfactor)/))
+      call opencl_kernel_run(operate, (/fi%ubound_real(1), pnri/), (/fi%ubound_real(1), bsize/(fi%ubound_real(1))/))
       
     case(OP_MAP)
       call opencl_set_kernel_arg(operate, 0, op%stencil%size)
@@ -453,7 +448,7 @@ contains
       end do
     end select
     
-    call batch_buffer_was_modified(fo)
+    call batch_pack_was_modified(fo)
     call opencl_finish()
 
     call opencl_release_buffer(buff_weights)
