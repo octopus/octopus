@@ -435,7 +435,7 @@ contains
 
       call io_mkdir('restart', is_tmp = .true.)
       call io_mkdir('restart/partition', is_tmp = .true.)
-      call mesh_write_fingerprint(mesh, 'restart/partition/grid')
+      call mesh_write_fingerprint(mesh, 'restart/partition/grid_'//trim(numstring))
       call io_binary_write('restart/partition/partition_'//trim(numstring)//'.obf', mesh%np_part_global, part, ierr)
     end if
 
@@ -455,7 +455,7 @@ contains
 
       write(numstring, '(i6.6)') mesh%mpi_grp%size
 
-      call mesh_read_fingerprint(mesh, 'restart/partition/grid', read_np_part, ierr)
+      call mesh_read_fingerprint(mesh, 'restart/partition/grid_'//trim(numstring), read_np_part, ierr)
 
       if (ierr == 0) then
         call io_binary_read('restart/partition/partition_'//trim(numstring)//'.obf', mesh%np_part_global, part, ierr)
