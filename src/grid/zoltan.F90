@@ -23,9 +23,13 @@ module zoltan_m
   use messages_m
   
   private
-  
+
+#ifdef HAVE_MPI  
   public ::                         &
-       zoltan_partition,            &
+       zoltan_partition
+#endif
+
+  public ::                         &
        zoltan_method_info,          &
        zoltan_method_is_geometric 
   
@@ -58,6 +62,7 @@ module zoltan_m
   !% Hypergraph partitioning.
   !%End
 
+#ifdef HAVE_MPI
   interface
     subroutine zoltan_partition(method, sbdim, np_global, np_part_global, x_global, estart, xedges, edges, ipart, part, fcomm)
       integer, intent(in)    :: method  
@@ -73,6 +78,7 @@ module zoltan_m
       integer, intent(in)    :: fcomm             ! the communicator
     end subroutine zoltan_partition
   end interface
+#endif
 
 contains
 

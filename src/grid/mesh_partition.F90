@@ -309,9 +309,11 @@ contains
         xglobal(ip, 1:MAX_DIM) = mesh_x_global(mesh, ip)
       end do
 
+#ifdef HAVE_MPI
       !assign all points to one node
       call zoltan_partition(method, mesh%sb%dim, mesh%np_global, mesh%np_part_global, &
         xglobal(1, 1),  start(ipart), xadj(1), adjncy(1), ipart, part(1), mesh%mpi_grp%comm)
+#endif
 
       SAFE_DEALLOCATE_A(xglobal)
 
