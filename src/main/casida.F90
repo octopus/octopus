@@ -63,6 +63,7 @@ module casida_m
 
     integer, pointer  :: n_occ(:)       !< number of occupied states
     integer, pointer  :: n_unocc(:)     !< number of unoccupied states
+    integer           :: nspin
     character(len=80) :: wfn_list
 
     integer           :: n_pairs        !< number of pairs to take into account
@@ -102,7 +103,7 @@ contains
 
     type(casida_t) :: cas
     type(block_t) :: blk
-    integer :: idir, i, nk, n_filled, n_partially_filled, n_half_filled
+    integer :: idir, ik, nk, n_filled, n_partially_filled, n_half_filled
     character(len=80) :: trandens, nst_string, default
 
     call push_sub('casida.casida_run')
@@ -117,28 +118,34 @@ contains
 
     call restart_look_and_read(sys%st, sys%gr, sys%geo)
 
-    nk = 1
-    if (sys%st%d%ispin == SPIN_POLARIZED) nk = 2
+    if (sys%st%d%ispin == SPIN_POLARIZED) then
+      cas%nspin = 2
+      nk = 2
+    else
+      cas%nspin = 1
+      nk = 1
+    endif
+
     SAFE_ALLOCATE(  cas%n_occ(1:nk))
     SAFE_ALLOCATE(cas%n_unocc(1:nk))
 
     cas%n_occ(:) = 0
-    do i = 1, nk
-      call occupied_states(sys%st, i, n_filled, n_partially_filled, n_half_filled)
-      cas%n_occ(i) = n_filled + n_partially_filled + n_half_filled
-      cas%n_unocc(i) = sys%st%nst - cas%n_occ(i)
+    do ik = 1, nk
+      call occupied_states(sys%st, ik, n_filled, n_partially_filled, n_half_filled)
+      cas%n_occ(ik) = n_filled + n_partially_filled + n_half_filled
+      cas%n_unocc(ik) = sys%st%nst - cas%n_occ(ik)
     end do
 
     select case(sys%st%d%ispin)
     case(UNPOLARIZED, SPINORS)
-      write(message(1),'(a,i4,a)') "Info: Found",cas%n_occ(1)," occupied states."
-      write(message(2),'(a,i4,a)') "Info: Found",cas%n_unocc(1)," unoccupied states."
+      write(message(1),'(a,i4,a)') "Info: Found", cas%n_occ(1), " occupied states."
+      write(message(2),'(a,i4,a)') "Info: Found", cas%n_unocc(1), " unoccupied states."
       call write_info(2)
     case(SPIN_POLARIZED)
-      write(message(1),'(a,i4,a)') "Info: Found",cas%n_occ(1)," occupied states with spin up."
-      write(message(2),'(a,i4,a)') "Info: Found",cas%n_unocc(1)," unoccupied states with spin up."
-      write(message(3),'(a,i4,a)') "Info: Found",cas%n_occ(2)," occupied states with spin down."
-      write(message(4),'(a,i4,a)') "Info: Found",cas%n_unocc(2)," unoccupied states with spin down."
+      write(message(1),'(a,i4,a)') "Info: Found", cas%n_occ(1), " occupied states with spin up."
+      write(message(2),'(a,i4,a)') "Info: Found", cas%n_unocc(1), " unoccupied states with spin up."
+      write(message(3),'(a,i4,a)') "Info: Found", cas%n_occ(2), " occupied states with spin down."
+      write(message(4),'(a,i4,a)') "Info: Found", cas%n_unocc(2), " unoccupied states with spin down."
       call write_info(4)
     end select
 
@@ -178,7 +185,7 @@ contains
     !%Variable CasidaTransitionDensities
     !%Type string
     !%Section Linear Response::Casida
-    !%Default none
+    !%Default write none
     !%Description
     !% Specifies which transition densities are to be calculated and written down. The
     !% transition density for the many-body state <i>n</i> will be written to a file called
@@ -384,12 +391,12 @@ contains
     type(mesh_t),   pointer :: mesh
 
     FLOAT, allocatable :: rho(:, :), fxc(:,:,:), pot(:)
-    integer :: j_old, b_old, mu_old
+    integer :: qi_old, qa_old, mu_old
 
     call push_sub('casida.casida_work')
 
     ! sanity checks
-    ASSERT(cas%type>=CASIDA_EPS_DIFF.and.cas%type<=CASIDA_CASIDA)
+    ASSERT(cas%type >= CASIDA_EPS_DIFF .and. cas%type <= CASIDA_CASIDA)
 
     ! some shortcuts
     st => sys%st
@@ -414,7 +421,9 @@ contains
     if (cas%type /= CASIDA_EPS_DIFF) then
       ! This is to be allocated here, and is used inside K_term.
       SAFE_ALLOCATE(pot(1:mesh%np))
-      j_old = -1; b_old = -1; mu_old = -1
+      qi_old = -1
+      qa_old = -1
+      mu_old = -1
       
       ! We calculate here the kernel, since it will be needed later.
       SAFE_ALLOCATE(rho(1:mesh%np, 1:st%d%nspin))
@@ -451,7 +460,7 @@ contains
       FLOAT   :: ff
       FLOAT, allocatable :: deltav(:), xx(:)
 
-      call push_sub('casida.solve_petersilka')
+      call push_sub('casida.casida_work.solve_petersilka')
 
       ! initialize progress bar
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, cas%n_pairs)
@@ -499,14 +508,14 @@ contains
       SAFE_DEALLOCATE_A(deltav)
 
       do ia = 1, cas%n_pairs
-        cas%f(ia) = (M_TWO/mesh%sb%dim)*sum((abs(cas%tm(ia, :)))**2)
+        cas%f(ia) = (M_TWO / mesh%sb%dim) * sum((abs(cas%tm(ia, :)))**2)
       end do
 
       if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
 
       ! close restart file
       call io_close(iunit)
-      call pop_sub('casida.solve_petersilka')
+      call pop_sub('casida.casida_work.solve_petersilka')
     end subroutine solve_petersilka
 
 
@@ -531,7 +540,7 @@ contains
       FLOAT, allocatable :: mpi_mat(:,:)
 #endif
 
-      call push_sub('casida.solve_casida')
+      call push_sub('casida.casida_work.solve_casida')
 
       max = (cas%n_pairs*(1 + cas%n_pairs)/2)/cas%mpi_grp%size
       counter = 0
@@ -636,7 +645,7 @@ contains
              ! matrix element
              do ia = 1, cas%n_pairs
                do ip = 1, mesh%np
-                 zf(ip) = exp(M_zI*dot_product(cas%qvector(:), mesh%x(ip, :))) * &
+                 zf(ip) = exp(M_zI * dot_product(cas%qvector(:), mesh%x(ip, :))) * &
                           st%dpsi(ip, 1, cas%pair(ia)%i, cas%pair(ia)%sigma) * &
                           st%dpsi(ip, 1, cas%pair(ia)%a, cas%pair(ia)%sigma)
                end do
@@ -649,7 +658,7 @@ contains
              end do
 
              ! do we calculate the average
-             if(cas%avg_order.gt.0) then
+             if(cas%avg_order .gt. 0) then
 
                ! use Gauss-Legendre quadrature scheme
                SAFE_ALLOCATE(gaus_leg_points (1:cas%avg_order))
@@ -672,7 +681,7 @@ contains
                    zf(:) = M_ZERO
                    do ia = 1, cas%n_pairs
                      forall(ip = 1:mesh%np)
-                       zf(ip) = exp(M_zI*dot_product(qvect(1:3), mesh%x(ip, 1:3))) * &
+                       zf(ip) = exp(M_zI * dot_product(qvect(1:3), mesh%x(ip, 1:3))) * &
                          st%dpsi(ip, 1, cas%pair(ia)%i, cas%pair(ia)%sigma) * &
                          st%dpsi(ip, 1, cas%pair(ia)%a, cas%pair(ia)%sigma)
                      end forall
@@ -743,51 +752,59 @@ contains
       end if
 #endif
 
-      call pop_sub('casida.solve_casida')
+      call pop_sub('casida.casida_work.solve_casida')
     end subroutine solve_casida
 
 
     ! ---------------------------------------------------------
     ! return the matrix element of <i(p),a(p)|v + fxc|j(q),b(q)>
-    function K_term(p, q)
+    function K_term(pp, qq)
       FLOAT :: K_term
-      type(states_pair_t), intent(in) :: p, q
+      type(states_pair_t), intent(in) :: pp, qq
 
-      integer :: i, j, sigma, a, b, mu
+      integer :: pi, qi, sigma, pa, qa, mu
       FLOAT, allocatable :: rho_i(:), rho_j(:)
 
-      call push_sub('casida.K_term')
+      call push_sub('casida.casida_work.K_term')
 
-      i = p%i; a = p%a; sigma = p%sigma
-      j = q%i; b = q%a; mu = q%sigma
+      pi = pp%i
+      pa = pp%a
+      sigma = pp%sigma
+
+      qi = qq%i
+      qa = qq%a
+      mu = qq%sigma
 
       SAFE_ALLOCATE(rho_i(1:mesh%np))
       SAFE_ALLOCATE(rho_j(1:mesh%np))
 
       if (states_are_real(st)) then
-        rho_i(1:mesh%np) =  st%dpsi(1:mesh%np, 1, i, sigma) * st%dpsi(1:mesh%np, 1, a, sigma)
-        rho_j(1:mesh%np) =  st%dpsi(1:mesh%np, 1, j, mu) * st%dpsi(1:mesh%np, 1, b, mu)
+        rho_i(1:mesh%np) =        st%dpsi(1:mesh%np, 1, pi, sigma) *       st%dpsi(1:mesh%np, 1, pa, sigma)
+        rho_j(1:mesh%np) =        st%dpsi(1:mesh%np, 1, qi, mu)    *       st%dpsi(1:mesh%np, 1, qa, mu)
       else
-        rho_i(1:mesh%np) =  st%zpsi(1:mesh%np, 1, i, sigma) * conjg(st%zpsi(1:mesh%np, 1, a, sigma))
-        rho_j(1:mesh%np) =  conjg(st%zpsi(1:mesh%np, 1, j, mu)) * st%zpsi(1:mesh%np, 1, b, mu)
+        rho_i(1:mesh%np) =        st%zpsi(1:mesh%np, 1, pi, sigma) * conjg(st%zpsi(1:mesh%np, 1, pa, sigma))
+        rho_j(1:mesh%np) =  conjg(st%zpsi(1:mesh%np, 1, qi, mu))   *       st%zpsi(1:mesh%np, 1, qa, mu)
       end if
 
       !  first the Hartree part (only works for real wfs...)
-      if( j.ne.j_old  .or.   b.ne.b_old   .or.  mu.ne.mu_old) then
+      if( qi .ne. qi_old  .or.   qa .ne. qa_old   .or.  mu .ne. mu_old) then
         pot(1:mesh%np) = M_ZERO
-        if(hm%theory_level.ne.INDEPENDENT_PARTICLES) call dpoisson_solve(psolver, pot, rho_j, all_nodes=.false.)
+        if(hm%theory_level .ne. INDEPENDENT_PARTICLES) &
+          call dpoisson_solve(psolver, pot, rho_j, all_nodes=.false.)
       end if
 
       K_term = dmf_dotp(mesh, rho_i(:), pot(:))
       rho(1:mesh%np, 1) = rho_i(1:mesh%np) * rho_j(1:mesh%np) * fxc(1:mesh%np, sigma, mu)
       K_term = K_term + dmf_integrate(mesh, rho(:, 1))
 
-      j_old = j; b_old = b; mu_old = mu
+      qi_old = qi
+      qa_old = qa
+      mu_old = mu
 
       SAFE_DEALLOCATE_A(rho_i)
       SAFE_DEALLOCATE_A(rho_j)
 
-      call pop_sub('casida.K_term')
+      call pop_sub('casida.casida_work.K_term')
     end function K_term
 
     ! ---------------------------------------------------------
@@ -796,19 +813,19 @@ contains
       integer :: ia, jb
       FLOAT   :: val
 
-      call push_sub('casida.load_saved')
+      call push_sub('casida.casida_work.load_saved')
 
       iunit = io_open(trim(tmpdir)//'casida-restart', action='read', &
         status='old', die=.false., is_tmp=.true.)
       if( iunit <= 0) then
-        call pop_sub('casida.load_saved')
+        call pop_sub('casida.casida_work.load_saved')
         return
       end if
 
       do
         read(iunit, fmt=*, iostat=err) ia, jb, val
         if(err.ne.0) exit
-        if((ia > 0.and.ia <= cas%n_pairs) .and. (jb > 0.and.jb <= cas%n_pairs)) then
+        if((ia > 0 .and. ia <= cas%n_pairs) .and. (jb > 0 .and. jb <= cas%n_pairs)) then
           cas%mat(ia, jb) = val
           saved_K(ia, jb) = .true.
           cas%mat(jb, ia) = val
@@ -817,7 +834,7 @@ contains
       end do
 
       if(iunit > 0) call io_close(iunit)
-      call pop_sub('casida.load_saved')
+      call pop_sub('casida.casida_work.load_saved')
     end subroutine load_saved
 
   end subroutine casida_work
@@ -901,25 +918,33 @@ contains
     call io_mkdir(CASIDA_DIR)
     iunit = io_open(CASIDA_DIR//trim(filename), action='write')
 
-    if(cas%type == CASIDA_EPS_DIFF) write(iunit, '(2a4)', advance='no') 'From', ' To '
+    if(cas%type == CASIDA_EPS_DIFF .or. (cas%type == CASIDA_PETERSILKA)) then
+      write(iunit, '(2a4)', advance='no') 'From', '  To'
+      if(cas%nspin == 2) then
+        write(iunit, '(a5)', advance='no') 'Spin'
+      endif
+    endif
 
     select case(dim)
-    case(1); write(iunit, '(3(a15,1x))') 'E' , '<x>', '<f>'
-    case(2); write(iunit, '(4(a15,1x))') 'E' , '<x>', '<y>', '<f>'
-    case(3); write(iunit, '(5(a15,1x))') 'E' , '<x>', '<y>', '<z>', '<f>'
+    case(1); write(iunit, '(3(1x,a15))') 'E' , '<x>', '<f>'
+    case(2); write(iunit, '(4(1x,a15))') 'E' , '<x>', '<y>', '<f>'
+    case(3); write(iunit, '(5(1x,a15))') 'E' , '<x>', '<y>', '<z>', '<f>'
     end select
     do ia = 1, cas%n_pairs
-      if((cas%type==CASIDA_EPS_DIFF).or.(cas%type==CASIDA_PETERSILKA)) then
+      if((cas%type == CASIDA_EPS_DIFF) .or. (cas%type == CASIDA_PETERSILKA)) then
         write(iunit, '(2i4)', advance='no') cas%pair(ind(ia))%i, cas%pair(ind(ia))%a
+        if(cas%nspin == 2) then
+          write(iunit, '(i5)', advance='no') cas%pair(ind(ia))%sigma
+        endif
       end if
-      write(iunit, '(5(es15.8,1x))') units_from_atomic(units_out%energy, cas%w(ind(ia))), &
+      write(iunit, '(5(1x,es15.8))') units_from_atomic(units_out%energy, cas%w(ind(ia))), &
         (units_from_atomic(units_out%length, cas%tm(ind(ia), idim)), idim=1,dim), cas%f(ind(ia))
     end do
     call io_close(iunit)
 
     ! output eigenvectors in Casida approach
 
-    if(cas%type.ne.CASIDA_CASIDA) then
+    if(cas%type .ne. CASIDA_CASIDA) then
       call pop_sub('casida.casida_write')
       return
     end if
