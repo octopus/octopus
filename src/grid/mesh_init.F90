@@ -618,6 +618,9 @@ contains
     integer              :: graph_comm, iedge, reorder
     logical              :: use_topo
     type(partition_t)    :: partition
+    integer              :: ierr
+
+    logical :: from_scratch
 
     call push_sub('mesh_init.mesh_init_stage_3.do_partition')
 
@@ -625,21 +628,39 @@ contains
 
     SAFE_ALLOCATE(part(1:mesh%np_part_global))
 
-    if(.not. present(parent)) then
-      call mesh_partition(mesh, stencil, part)
-    else
-      ! if there is a parent grid, use its partition
-      do ip = 1, mesh%np_global
-        ix = 2*mesh%idx%Lxyz(ip, 1)
-        iy = 2*mesh%idx%Lxyz(ip, 2)
-        iz = 2*mesh%idx%Lxyz(ip, 3)
-        i = parent%idx%Lxyz_inv(ix, iy, iz)
-        part(ip) = parent%vp%part(i)
-      end do
-    end if
+    !%Variable MeshPartitionFromScratch
+    !%Type logical
+    !%Default false
+    !%Section Execution::Parallelization
+    !%Description
+    !% If set to no (the default) Octopus will try to use the mesh
+    !% partition from a previous run if available.
+    !%End
+    call parse_logical(datasets_check('MeshPartitionFromScratch'), .false., from_scratch)
 
+    ierr = -1
+    if(.not. from_scratch) call mesh_partition_read(mesh, part, ierr)
     
-    call mesh_partition_boundaries(mesh, stencil, part)
+    if(ierr /= 0) then
+      
+      if(.not. present(parent)) then
+        call mesh_partition(mesh, stencil, part)
+      else
+        ! if there is a parent grid, use its partition
+        do ip = 1, mesh%np_global
+          ix = 2*mesh%idx%Lxyz(ip, 1)
+          iy = 2*mesh%idx%Lxyz(ip, 2)
+          iz = 2*mesh%idx%Lxyz(ip, 3)
+          i = parent%idx%Lxyz_inv(ix, iy, iz)
+          part(ip) = parent%vp%part(i)
+        end do
+      end if
+      
+      call mesh_partition_boundaries(mesh, stencil, part)
+      
+      call mesh_partition_write(mesh, part)
+
+    end if
 
     call partition_init(partition, mesh)
     partition%point_to_part = part

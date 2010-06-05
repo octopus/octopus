@@ -27,6 +27,7 @@ module mesh_partition_m
   use hypercube_m
   use index_m
   use io_m
+  use io_binary_m
   use loct_m
   use parser_m
   use math_m
@@ -48,6 +49,8 @@ module mesh_partition_m
   public ::                      &
     mesh_partition,              &
     mesh_partition_boundaries,   &
+    mesh_partition_write,        &
+    mesh_partition_read,         &
     mesh_partition_write_debug
 
 contains
@@ -361,6 +364,8 @@ contains
 
   end subroutine mesh_partition
 
+  ! --------------------------------------------------------
+
   subroutine mesh_partition_boundaries(mesh, stencil, part)
     type(mesh_t),    intent(in)    :: mesh
     type(stencil_t), intent(in)    :: stencil
@@ -412,6 +417,66 @@ contains
 
     call push_sub('mesh_partition.mesh_partition_boundaries')
   end subroutine mesh_partition_boundaries
+
+  ! ----------------------------------------------------
+
+  subroutine mesh_partition_write(mesh, part)
+    type(mesh_t),    intent(in)    :: mesh
+    integer,         intent(in)    :: part(:)
+    
+    character(len=6) :: numstring
+    integer          :: ierr
+
+    if(mpi_grp_is_root(mpi_world)) then
+
+      write(numstring, '(i6.6)') mesh%mpi_grp%size
+
+      call io_mkdir('restart', is_tmp = .true.)
+      call io_mkdir('restart/partition', is_tmp = .true.)
+      call mesh_write_fingerprint(mesh, 'restart/partition/grid')
+      call io_binary_write('restart/partition/partition_'//trim(numstring)//'.obf', mesh%np_part_global, part, ierr)
+    end if
+
+  end subroutine mesh_partition_write
+
+  ! ----------------------------------------------------
+
+  subroutine mesh_partition_read(mesh, part, ierr)
+    type(mesh_t),    intent(in)    :: mesh
+    integer,         intent(out)   :: part(:)
+    integer,         intent(out)   :: ierr
+    
+    character(len=6) :: numstring
+    integer :: read_np_part
+
+    if(mpi_grp_is_root(mpi_world)) then
+
+      write(numstring, '(i6.6)') mesh%mpi_grp%size
+
+      call mesh_read_fingerprint(mesh, 'restart/partition/grid', read_np_part, ierr)
+
+      if (ierr == 0) then
+        call io_binary_read('restart/partition/partition_'//trim(numstring)//'.obf', mesh%np_part_global, part, ierr)
+      else
+        ierr = -1
+      end if
+
+      if(ierr == 0) then
+        message(1) = "Info: Found a compatible mesh partition."
+      else
+        message(1) = "Info: Could not find a compatible mesh partition."
+      end if
+      call write_info(1)
+    end if
+
+    if (ierr /= 0) part(1:mesh%np_part_global) = 1
+#ifdef HAVE_MPI
+    call MPI_Bcast(part(1), mesh%np_part_global, MPI_INTEGER, 0, mesh%mpi_grp%comm, mpi_err)
+#endif
+
+  end subroutine mesh_partition_read
+
+  ! ----------------------------------------------------
 
   subroutine mesh_partition_write_debug(mesh, part)
     type(mesh_t),    intent(in)    :: mesh
