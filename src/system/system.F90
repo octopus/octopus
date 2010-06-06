@@ -187,7 +187,7 @@ contains
     call opencl_end()
 #endif
     
-    SAFE_DEALLOCATE_P(sys%gr);  nullify(sys%gr)
+    SAFE_DEALLOCATE_P(sys%gr)
 
     call pop_sub('system.system_end')
   end subroutine system_end

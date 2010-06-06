@@ -24,19 +24,19 @@ module casida_m
   use excited_states_m
   use gauss_legendre_m
   use global_m
+  use h_sys_output_m
   use hamiltonian_m
-  use io_function_m
   use io_m
+  use io_function_m
   use lalg_adv_m
   use loct_m
   use parser_m
   use math_m
-  use mesh_function_m
   use mesh_m
+  use mesh_function_m
   use messages_m
   use mpi_m
   use multicomm_m
-  use h_sys_output_m
   use poisson_m
   use profiling_m
   use restart_m
@@ -154,7 +154,6 @@ contains
     message(1) = 'Info: Setting up Hamiltonian.'
     call write_info(1)
     call system_h_setup(sys, hm)
-
 
     !%Variable CasidaKohnShamStates
     !%Type string
@@ -472,6 +471,10 @@ contains
       do ia = 1, cas%n_pairs
         cas%w(ia) = st%eigenval(cas%pair(ia)%a, cas%pair(ia)%sigma) - &
                     st%eigenval(cas%pair(ia)%i, cas%pair(ia)%sigma)
+        if(cas%w(ia) < -M_EPSILON) then
+          message(1) = "There are negative unocc-occ KS eigenvalue differences."
+          call write_warning(1)
+        endif
 
         if(cas%type == CASIDA_PETERSILKA) then
           if(saved_K(ia, ia)) then
@@ -615,8 +618,8 @@ contains
         SAFE_DEALLOCATE_A(tmp)
 
         do ia = 1, cas%n_pairs
-          if(cas%w(ia) < M_ZERO) then
-            write(message(1),'(a,i4,a)') 'For whatever reason, the excitation energy', ia, ' is negative.'
+          if(cas%w(ia) < -M_EPSILON) then
+            write(message(1),'(a,i4,a)') 'For whatever reason, excitation energy', ia, ' is negative.'
             write(message(2),'(a)')      'This should not happen.'
             call write_warning(2)
             cas%w(ia) = M_ZERO
@@ -667,14 +670,14 @@ contains
 
                qlen = sqrt(dot_product(cas%qvector, cas%qvector))
                do ii = 1, cas%avg_order
-                 do jj = 1, 2*cas%avg_order
+                 do jj = 1, 2 * cas%avg_order
 
                    ! construct the q-vector
                    phi   = acos(gaus_leg_points(ii))
-                   theta = M_PI*jj/cas%avg_order
-                   qvect(1) = qlen*cos(theta)*sin(phi)
-                   qvect(2) = qlen*sin(theta)*sin(phi)
-                   qvect(3) = qlen*cos(phi)
+                   theta = M_PI * jj / cas%avg_order
+                   qvect(1) = qlen * cos(theta) * sin(phi)
+                   qvect(2) = qlen * sin(theta) * sin(phi)
+                   qvect(3) = qlen * cos(phi)
 
                    ! matrix elements
                    zx(:) = M_ZERO

@@ -302,12 +302,12 @@ contains
 
     hm%epot     = M_ZERO
 
-    ! check if we should introduce the Amaldi SIC correction
+    ! check whether we should introduce the Amaldi SIC correction
     amaldi_factor = M_ONE
     if(ks%sic_type == sic_amaldi) amaldi_factor = (st%qtot-1)/st%qtot
 
 
-    if(ks%theory_level==INDEPENDENT_PARTICLES .or. amaldi_factor==M_ZERO) then
+    if(ks%theory_level == INDEPENDENT_PARTICLES .or. amaldi_factor == M_ZERO) then
       hm%vhxc     = M_ZERO
       hm%epot     = M_ZERO
       hm%ehartree = M_ZERO
@@ -322,13 +322,13 @@ contains
         call v_ks_hartree(ks, gr, st, hm, amaldi_factor)
 
         hm%vxc      = M_ZERO
-        if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) hm%vtau = M_ZERO
+        if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) hm%vtau = M_ZERO
         if(hm%d%cdft) hm%axc = M_ZERO
         if(ks%theory_level.ne.HARTREE) call v_a_xc()
 
       !end if
 
-      ! Build Hartree + xc potential
+      ! Build Hartree + XC potential
 
        forall(ip = 1:gr%mesh%np) hm%vhxc(ip, 1) = hm%vxc(ip, 1) + hm%vhartree(ip)
 

@@ -1193,7 +1193,7 @@ contains
     FLOAT, target,  intent(inout) :: rho(:,:)
     
     integer :: ist, ist2, ip, ispin
-    CMPLX   :: c, psi1, psi2
+    CMPLX   :: term, psi1, psi2
     FLOAT, pointer :: dpsi(:, :)
     CMPLX, pointer :: zpsi(:, :)
     FLOAT, pointer :: crho(:)
@@ -1206,7 +1206,6 @@ contains
     ASSERT(ubound(rho, dim = 1) == gr%fine%mesh%np .or. ubound(rho, dim = 1) == gr%fine%mesh%np_part)
 
     ispin = states_dim_get_spin_index(st%d, ik)
-
 
     if(gr%have_fine_mesh) then
       SAFE_ALLOCATE(crho(1:gr%mesh%np_part))
@@ -1221,7 +1220,7 @@ contains
         dpsi => psib%states(ist)%dpsi
 
         forall(ip = 1:gr%mesh%np)
-          crho(ip) = crho(ip) + st%d%kweights(ik)*st%occ(ist2, ik)*dpsi(ip, 1)**2
+          crho(ip) = crho(ip) + st%d%kweights(ik) * st%occ(ist2, ik) * dpsi(ip, 1)**2
         end forall
       end do
     else
@@ -1230,8 +1229,8 @@ contains
         zpsi => psib%states(ist)%zpsi
 
         forall(ip = 1:gr%mesh%np)
-          crho(ip) = crho(ip) + st%d%kweights(ik)*st%occ(ist2, ik)*( &
-            real(zpsi(ip, 1), REAL_PRECISION)**2 + aimag(zpsi(ip, 1))**2)
+          crho(ip) = crho(ip) + st%d%kweights(ik) * st%occ(ist2, ik) * &
+            (real(zpsi(ip, 1), REAL_PRECISION)**2 + aimag(zpsi(ip, 1))**2)
         end forall
       end do
     end if
@@ -1261,11 +1260,11 @@ contains
           psi2 = zpsi(ip, 2)
           
           rho(ip, 2) = rho(ip, 2) + &
-            st%d%kweights(ik)*st%occ(ist2, ik)*(real(psi2, REAL_PRECISION)**2 + aimag(psi2)**2)
+            st%d%kweights(ik) * st%occ(ist2, ik) * (real(psi2, REAL_PRECISION)**2 + aimag(psi2)**2)
         
-          c = st%d%kweights(ik)*st%occ(ist2, ik)*psi1*conjg(psi2)
-          rho(ip, 3) = rho(ip, 3) + real(c, REAL_PRECISION)
-          rho(ip, 4) = rho(ip, 4) + aimag(c)
+          term = st%d%kweights(ik) * st%occ(ist2, ik) * psi1 * conjg(psi2)
+          rho(ip, 3) = rho(ip, 3) + real(term, REAL_PRECISION)
+          rho(ip, 4) = rho(ip, 4) + aimag(term)
 
         end do
       end do
@@ -1353,7 +1352,6 @@ contains
     FLOAT, optional, target, intent(out)    :: rho(:,:)
 
     integer :: ik
-
     FLOAT, pointer :: dens(:, :)
     type(batch_t)  :: psib
 
@@ -1488,7 +1486,7 @@ contains
     integer            :: ist, ik
     FLOAT              :: charge
 #if defined(HAVE_MPI)
-    integer            :: j
+    integer            :: jj
     integer            :: tmp
     FLOAT, allocatable :: lspin(:, :) ! To exchange spin.
 #endif
@@ -1526,8 +1524,8 @@ contains
         if(st%parallel_in_states) then
           SAFE_ALLOCATE(lspin(1:3, 1:st%lnst))
           lspin = st%spin(1:3, st%st_start:st%st_end, ik)
-          do j = 1, 3
-            call lmpi_gen_allgatherv(st%lnst, lspin(j, :), tmp, st%spin(j, :, ik), st%mpi_grp)
+          do jj = 1, 3
+            call lmpi_gen_allgatherv(st%lnst, lspin(jj, :), tmp, st%spin(jj, :, ik), st%mpi_grp)
           end do
           SAFE_DEALLOCATE_A(lspin)
         end if
@@ -1541,38 +1539,38 @@ contains
 
   ! ---------------------------------------------------------
   !> function to calculate the eigenvalues sum using occupations as weights
-  function states_eigenvalues_sum(st, x) result(e)
+  function states_eigenvalues_sum(st, alt_eig) result(tot)
     type(states_t), intent(in)  :: st
-    FLOAT, optional, intent(in) :: x(st%st_start:st%st_end, 1:st%d%nik)
-    FLOAT                       :: e
+    FLOAT, optional, intent(in) :: alt_eig(st%st_start:st%st_end, 1:st%d%nik)
+    FLOAT                       :: tot
 
     integer :: ik
 #ifdef HAVE_MPI
-    FLOAT   :: s
+    FLOAT :: tot_temp
 #endif
 
     call push_sub('states.states_eigenvalues_sum')
 
-    e = M_ZERO
+    tot = M_ZERO
     do ik = st%d%kpt%start, st%d%kpt%end
-      if(present(x)) then
-        e = e + st%d%kweights(ik) * sum(st%occ(st%st_start:st%st_end, ik)* &
-          x(st%st_start:st%st_end, ik))
+      if(present(alt_eig)) then
+        tot = tot + st%d%kweights(ik) * sum(st%occ(st%st_start:st%st_end, ik) * &
+          alt_eig(st%st_start:st%st_end, ik))
       else
-        e = e + st%d%kweights(ik) * sum(st%occ(st%st_start:st%st_end, ik)* &
+        tot = tot + st%d%kweights(ik) * sum(st%occ(st%st_start:st%st_end, ik) * &
           st%eigenval(st%st_start:st%st_end, ik))
       end if
     end do
 
 #ifdef HAVE_MPI
     if(st%parallel_in_states) then
-      call MPI_Allreduce(e, s, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-      e = s
+      call MPI_Allreduce(tot, tot_temp, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+      tot = tot_temp
     end if
 
     if(st%d%kpt%parallel) then
-      call MPI_Allreduce(e, s, 1, MPI_FLOAT, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
-      e = s
+      call MPI_Allreduce(tot, tot_temp, 1, MPI_FLOAT, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
+      tot = tot_temp
     end if
 #endif
 
@@ -1603,9 +1601,9 @@ contains
       call write_info(1, iunit)
     end if
 
-    if(.not.mpi_grp_is_root(mpi_world)) then
-    call pop_sub('states.states_write_eigenvalues')
-return
+    if(.not. mpi_grp_is_root(mpi_world)) then
+      call pop_sub('states.states_write_eigenvalues')
+      return
     end if
 
     do ik = 1, st%d%nik, ns
@@ -1644,9 +1642,9 @@ return
             occ = st%occ(j, ik+is)
           end if
 
-          if(is.eq.0) cspin = 'up'
-          if(is.eq.1) cspin = 'dn'
-          if(st%d%ispin.eq.UNPOLARIZED.or.st%d%ispin.eq.SPINORS) cspin = '--'
+          if(is .eq. 0) cspin = 'up'
+          if(is .eq. 1) cspin = 'dn'
+          if(st%d%ispin .eq. UNPOLARIZED .or. st%d%ispin .eq. SPINORS) cspin = '--'
 
           write(tmp_str(1), '(i4,3x,a2)') j, trim(cspin)
           if(simul_box_is_periodic(sb)) then

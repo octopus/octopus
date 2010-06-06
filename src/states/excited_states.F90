@@ -21,17 +21,17 @@
 
 module excited_states_m
   use global_m
+  use grid_m
   use io_m
-  use loct_m
   use lalg_adv_m
+  use loct_m
   use mesh_m
   use messages_m
   use mpi_m
-  use grid_m
   use profiling_m
   use states_m
-  use states_dim_m
   use states_calc_m
+  use states_dim_m
 
   implicit none
 
@@ -99,14 +99,15 @@ contains
   !   orbitals are, respectively.
   subroutine occupied_states(st, ik, n_filled, n_partially_filled, n_half_filled, &
                              filled, partially_filled, half_filled)
-    type(states_t), intent(in) :: st
-    integer, intent(in)  :: ik
-    integer, intent(out) :: n_filled, n_partially_filled, n_half_filled
+    type(states_t),    intent(in)  :: st
+    integer,           intent(in)  :: ik
+    integer,           intent(out) :: n_filled, n_partially_filled, n_half_filled
     integer, optional, intent(out) :: filled(:), partially_filled(:), half_filled(:)
 
     integer :: ist
     FLOAT, parameter :: M_THRESHOLD = CNST(1.0e-6)
-    call push_sub('states_inc.occupied_states')
+
+    call push_sub('excited_states.occupied_states')
 
     if(present(filled))           filled(:) = 0
     if(present(partially_filled)) partially_filled(:) = 0
@@ -147,12 +148,12 @@ contains
       end do
     end select
 
-    call pop_sub('states_inc.occupied_states')
+    call pop_sub('excited_states.occupied_states')
   end subroutine occupied_states
 
 
   ! ---------------------------------------------------------
-  ! Fills in a excited_state structure, by reading a file called
+  ! Fills in an excited_state structure, by reading a file called
   ! "filename". This file describes the "promotions" from occupied
   ! to unoccupied levels that change the initial Slater determinant
   ! structure specified in ground_state. These promotions are a set
