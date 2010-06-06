@@ -77,6 +77,7 @@ module lcao_m
     integer, pointer  :: level(:)
     integer, pointer  :: ddim(:)
     logical           :: alternative
+    logical           :: derivative
   end type lcao_t
 
 contains
@@ -112,6 +113,22 @@ contains
     if(this%alternative) then
       message(1) = "Info: Using LCAO alternative implementation."
       call write_info(1)
+
+      call messages_devel_version('LCAO alternative implementation')
+
+      !%Variable LCAOExtraOrbitals
+      !%Type logical
+      !%Default false
+      !%Section SCF
+      !%Description
+      !% (experimental) If this variable is set to yes, the LCAO
+      !% procedure will add an extra set of numerical orbitals (by
+      !% using the derivative of the radial part) of the original
+      !% orbitals.
+      !%End
+      call parse_logical(datasets_check('LCAOExtraOrbitals'), .false., this%derivative)
+
+      if(this%derivative) call messages_devel_version('LCAO extra orbitals')
     end if
 
     if(.not. this%alternative) then

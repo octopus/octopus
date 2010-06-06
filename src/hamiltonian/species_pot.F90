@@ -845,7 +845,7 @@ contains
     call pop_sub('species_pot.species_get_orbital')
   end subroutine species_get_orbital
 
-  subroutine species_get_orbital_submesh(spec, submesh, j, dim, is, pos, phi)
+  subroutine species_get_orbital_submesh(spec, submesh, j, dim, is, pos, phi, derivative)
     type(species_t),   intent(in)  :: spec
     type(submesh_t),   intent(in)  :: submesh
     integer,           intent(in)  :: j
@@ -853,31 +853,49 @@ contains
     integer,           intent(in)  :: is
     FLOAT,             intent(in)  :: pos(:)
     FLOAT,             intent(out) :: phi(:)
+    logical, optional, intent(in)  :: derivative
 
     integer :: i, l, m, ip
     FLOAT :: r2, x(1:MAX_DIM), sqrtw, ww
     FLOAT, allocatable :: xf(:, :), ylm(:)
     type(ps_t), pointer :: ps
-
+    type(spline_t) :: dur
+    logical :: derivative_
+    
     if(submesh%ns == 0) return
 
     call push_sub('species_pot.species_get_orbital_submesh')
+
+    derivative_ = .false.
+    if(present(derivative)) derivative_ = derivative
 
     ASSERT(ubound(phi, dim = 1) >= submesh%ns)
 
     call species_iwf_ilm(spec, j, is, i, l, m)
 
     if(species_is_ps(spec)) then
-
       ps => species_ps(spec)
+      
+      if(derivative_) then
+        call spline_init(dur)
+        call spline_der(ps%ur(i, is), dur)
+      end if
+
       SAFE_ALLOCATE(xf(1:submesh%ns, 1:MAX_DIM))
       SAFE_ALLOCATE(ylm(1:submesh%ns))
       do ip = 1, submesh%ns
         x(1:MAX_DIM) = submesh%mesh%x(submesh%jxyz(ip), 1:MAX_DIM) - pos(1:MAX_DIM)
         phi(ip) = sum(x(1:MAX_DIM)**2)
+        if(derivative_) phi(ip) = sqrt(phi(ip))
         xf(ip, 1:MAX_DIM) = x(1:MAX_DIM)
       end do
-      call spline_eval_vec(ps%ur_sq(i, is), submesh%ns, phi)
+
+      if(.not. derivative_) then
+        call spline_eval_vec(ps%ur_sq(i, is), submesh%ns, phi)
+      else
+        call spline_eval_vec(dur, submesh%ns, phi)
+      end if
+
       call loct_ylm(submesh%ns, xf(1, 1), xf(1, 2), xf(1, 3), l, m, ylm(1))
 
       do ip = 1, submesh%ns
@@ -887,8 +905,12 @@ contains
       SAFE_DEALLOCATE_A(xf)
       SAFE_DEALLOCATE_A(ylm)
 
+      if(derivative_) call spline_end(dur)
       nullify(ps)
     else
+      
+      ASSERT(.not. derivative_)
+
       ww = species_omega(spec)
       sqrtw = sqrt(ww)
 

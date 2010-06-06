@@ -355,13 +355,19 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   type(batch_t), allocatable :: orbitals(:)
   FLOAT :: dist2, lapdist, maxradius
   type(profile_t), save :: prof_orbitals, prof_matrix, prof_wavefunction
-
 #ifdef HAVE_MPI
   R_TYPE, allocatable :: tmp(:, :)
   type(profile_t), save :: comm2prof
 #endif
+  integer :: mult
 
   call push_sub('lcao_inc.Xlcao_wf2')
+
+  if(this%derivative) then
+    mult = 2
+  else
+    mult = 1
+  end if
 
   maxorb = 0
   nbasis = 0
@@ -369,7 +375,10 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
     maxorb = max(maxorb, species_niwfs(geo%atom(iatom)%spec) )
     nbasis = nbasis + species_niwfs(geo%atom(iatom)%spec)
   end do
-  
+
+  maxorb = maxorb*mult
+  nbasis = nbasis*mult
+
   write(message(1),'(a,i6,a)') 'Info: Performing LCAO calculation with ', nbasis, ' orbitals.'
   call write_info(1)
 
@@ -387,23 +396,26 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   SAFE_ALLOCATE(atom_orb_basis(1:geo%natoms, 1:maxorb))
 
   ! This is the extra distance that the Laplacian adds to the localization radius.
-  lapdist = maxval(abs(gr%mesh%idx%enlarge) * gr%mesh%spacing)
+  lapdist = maxval(abs(gr%mesh%idx%enlarge)*gr%mesh%spacing)
 
   call profiling_in(prof_orbitals, "LCAO_ORBITALS")
 
   do iatom = 1, geo%natoms
     norbs = species_niwfs(geo%atom(iatom)%spec)
+
     maxradius = M_ZERO
     do iorb = 1, norbs
       maxradius = max(maxradius, species_get_iwf_radius(geo%atom(iatom)%spec, iorb, is = 1))
     end do
 
+    if(this%derivative) maxradius = maxradius + lapdist
+
     radius(iatom) = maxradius
 
     ! initialize the radial grid
     call submesh_init_sphere(sphere(iatom), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, maxradius)
-    call batch_init(orbitals(iatom), 1, norbs)
-    call dbatch_new(orbitals(iatom), 1, norbs, sphere(iatom)%ns)
+    call batch_init(orbitals(iatom), 1, mult*norbs)
+    call dbatch_new(orbitals(iatom), 1, mult*norbs, sphere(iatom)%ns)
   end do
 
   do ispin = 1, st%d%spin_channels
@@ -422,7 +434,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
     do iatom = 1, geo%natoms
       norbs = species_niwfs(geo%atom(iatom)%spec)
 
-      do iorb = 1, norbs
+      do iorb = 1, mult*norbs
         ibasis = ibasis + 1
         atom_orb_basis(iatom, iorb) = ibasis
         basis_atom(ibasis) = iatom
@@ -433,6 +445,10 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
         ! allocate and calculate the orbitals
         call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere(iatom), iorb, st%d%dim, ispin, &
           geo%atom(iatom)%x, orbitals(iatom)%states(iorb)%dpsi(:, 1))
+        if(this%derivative) then
+          call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere(iatom), iorb, st%d%dim, ispin, &
+            geo%atom(iatom)%x, orbitals(iatom)%states(iorb + norbs)%dpsi(:, 1), derivative = .true.)
+        end if
       end do
 
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, nbasis)
@@ -457,7 +473,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, geo%natoms)
 
       do iatom = 1, geo%natoms
-        norbs = species_niwfs(geo%atom(iatom)%spec)
+        norbs = mult*species_niwfs(geo%atom(iatom)%spec)
 
         psii = M_ZERO
 
@@ -553,7 +569,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
       ibasis = 0
       do iatom = 1, geo%natoms
-        norbs = species_niwfs(geo%atom(iatom)%spec)
+        norbs = mult*species_niwfs(geo%atom(iatom)%spec)
         call X(submesh_batch_add_matrix)(sphere(iatom), hamiltonian(ibasis + 1:, st%st_start:), orbitals(iatom), psib)
         ibasis = ibasis + norbs
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, nbasis)
