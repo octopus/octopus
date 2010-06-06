@@ -40,6 +40,7 @@ module batch_m
   public ::                         &
     batch_state_t,                  &
     batch_state_l_t,                &
+    batch_pack_t,                   &
     batch_t,                        &
     batch_init,                     &
     batch_copy,                     &
