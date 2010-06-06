@@ -382,6 +382,18 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   write(message(1),'(a,i6,a)') 'Info: Performing LCAO calculation with ', nbasis, ' orbitals.'
   call write_info(1)
 
+  if (nbasis < st%nst) then
+    write(message(1), '(a)') 'Not enough atomic orbitals to initialize all states,'
+    write(message(2), '(i6,a)') st%nst - nbasis, ' states will be randomized.'
+    if(this%derivative) then
+      call write_warning(2)
+    else
+      write(message(3), '(a)') 'You can duplicate the number of atomic orbitals by setting'
+      write(message(4), '(a)') 'LCAOExtraOrbitals to yes.'
+      call write_warning(4)
+    end if
+  end if
+
   SAFE_ALLOCATE(hamiltonian(1:nbasis, 1:nbasis))
   SAFE_ALLOCATE(overlap(1:nbasis, 1:nbasis))
   SAFE_ALLOCATE(ev(1:nbasis))
@@ -539,6 +551,9 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       end if
 #endif
 
+      message(1) = "Info: Diagonalizing Hamiltonian."
+      call write_info(1)
+
       call lalg_geneigensolve(nbasis, hamiltonian, overlap, ev)
 
       call profiling_out(prof_matrix)
@@ -559,6 +574,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
             forall(ip = 1:gr%mesh%np) st%X(psi)(ip, idim, ist, ik) = R_TOTYPE(M_ZERO)
           end do
         else
+          st%eigenval(ist, ik) = HUGE(M_ONE)
           !we do not have enough basis functions, so randomize the missing orbitals
           call X(mf_random)(gr%mesh, st%X(psi)(:, 1, ist, ik))
           st%X(psi)(1:gr%mesh%np, 2:st%d%dim, ist, ik) = R_TOTYPE(M_ZERO)
