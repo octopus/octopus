@@ -167,13 +167,13 @@ subroutine X(batch_axpy)(np, aa, xx, yy)
 #ifdef R_TREAL
 
     call opencl_set_kernel_arg(kernel_daxpy, 0, aa)
-    call opencl_set_kernel_arg(kernel_daxpy, 1, xx%buffer)
-    call opencl_set_kernel_arg(kernel_daxpy, 2, log2(xx%ubound_real(1)))
-    call opencl_set_kernel_arg(kernel_daxpy, 3, yy%buffer)
-    call opencl_set_kernel_arg(kernel_daxpy, 4, log2(yy%ubound_real(1)))
+    call opencl_set_kernel_arg(kernel_daxpy, 1, xx%pack%buffer)
+    call opencl_set_kernel_arg(kernel_daxpy, 2, log2(xx%pack%size_real(1)))
+    call opencl_set_kernel_arg(kernel_daxpy, 3, yy%pack%buffer)
+    call opencl_set_kernel_arg(kernel_daxpy, 4, log2(yy%pack%size_real(1)))
 
-    localsize = opencl_max_workgroup_size()/yy%ubound_real(1)
-    call opencl_kernel_run(kernel_daxpy, (/yy%ubound_real(1), pad(np, localsize)/), (/yy%ubound_real(1), localsize/))
+    localsize = opencl_max_workgroup_size()/yy%pack%size_real(1)
+    call opencl_kernel_run(kernel_daxpy, (/yy%pack%size_real(1), pad(np, localsize)/), (/yy%pack%size_real(1), localsize/))
 
 #else
     
@@ -181,13 +181,13 @@ subroutine X(batch_axpy)(np, aa, xx, yy)
 
     call opencl_set_kernel_arg(kernel_zaxpy, 0, real(aa, REAL_PRECISION))
     call opencl_set_kernel_arg(kernel_zaxpy, 1, aimag(aa))
-    call opencl_set_kernel_arg(kernel_zaxpy, 2, xx%buffer)
-    call opencl_set_kernel_arg(kernel_zaxpy, 3, xx%ubound(1))
-    call opencl_set_kernel_arg(kernel_zaxpy, 4, yy%buffer)
-    call opencl_set_kernel_arg(kernel_zaxpy, 5, yy%ubound(1))
+    call opencl_set_kernel_arg(kernel_zaxpy, 2, xx%pack%buffer)
+    call opencl_set_kernel_arg(kernel_zaxpy, 3, xx%pack%size(1))
+    call opencl_set_kernel_arg(kernel_zaxpy, 4, yy%pack%buffer)
+    call opencl_set_kernel_arg(kernel_zaxpy, 5, yy%pack%size(1))
 
     localsize = opencl_max_workgroup_size()
-    call opencl_kernel_run(kernel_zaxpy, (/yy%ubound(1), pad(np, localsize)/), (/yy%ubound(1), localsize/yy%ubound(1)/))
+    call opencl_kernel_run(kernel_zaxpy, (/yy%pack%size(1), pad(np, localsize)/), (/yy%pack%size(1), localsize/yy%pack%size(1)/))
 
 #endif
 

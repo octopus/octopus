@@ -75,6 +75,14 @@ module batch_m
     FLOAT, pointer :: dpsi(:)
     CMPLX, pointer :: zpsi(:)
   end type batch_state_l_t
+
+  type batch_pack_t
+    integer                        :: size(1:2)
+    integer                        :: size_real(1:2)
+#ifdef HAVE_OPENCL
+    type(opencl_mem_t)             :: buffer
+#endif
+  end type batch_pack_t
   
   type batch_t
     type(batch_state_t), pointer   :: states(:)
@@ -92,11 +100,7 @@ module batch_m
 
     integer                        :: in_buffer_count ! whether there is a copy in the opencl buffer
     logical                        :: dirty     ! if this is true, the buffer has different data
-#ifdef HAVE_OPENCL
-    type(opencl_mem_t)             :: buffer
-    integer                        :: ubound(1:2)
-    integer                        :: ubound_real(1:2)
-#endif
+    type(batch_pack_t)             :: pack
   end type batch_t
 
   !--------------------------------------------------------------
@@ -253,14 +257,14 @@ contains
       if(associated(bin%states_linear(ii)%zpsi)) bout%states_linear(ii)%zpsi => bin%states_linear(ii)%zpsi
     end do
 
-    bout%in_buffer_count = bin%in_buffer_count
-
+    bout%in_buffer_count     = bin%in_buffer_count
+    bout%dirty               = bin%dirty
+    bout%pack%size(1:2)      = bin%pack%size(1:2)
+    bout%pack%size_real(1:2) = bin%pack%size_real(1:2)
+      
 #ifdef HAVE_OPENCL
     if(opencl_is_enabled()) then
-      bout%dirty = bin%dirty
-      bout%buffer = bin%buffer
-      bout%ubound(1:2) = bin%ubound(1:2)
-      bout%ubound_real(1:2) = bin%ubound_real(1:2)
+      bout%pack%buffer = bin%pack%buffer
     end if
 #endif    
 
@@ -329,13 +333,13 @@ contains
     if(present(copy)) copy_ = copy
 
     if(.not. batch_is_packed(this)) then
-      this%ubound(1) = pad_pow2(this%nst_linear)
-      this%ubound(2) = opencl_padded_size(batch_max_size(this))
+      this%pack%size(1) = pad_pow2(this%nst_linear)
+      this%pack%size(2) = opencl_padded_size(batch_max_size(this))
 
-      this%ubound_real = this%ubound
-      if(batch_type(this) == TYPE_CMPLX) this%ubound_real(1) = 2*this%ubound_real(1)
+      this%pack%size_real = this%pack%size
+      if(batch_type(this) == TYPE_CMPLX) this%pack%size_real(1) = 2*this%pack%size_real(1)
 
-      call opencl_create_buffer(this%buffer, CL_MEM_READ_WRITE, batch_type(this), product(this%ubound))
+      call opencl_create_buffer(this%pack%buffer, CL_MEM_READ_WRITE, batch_type(this), product(this%pack%size))
 
       if(copy_) then
         this%dirty = .false.
@@ -372,7 +376,7 @@ contains
           call batch_read_from_opencl_buffer(this)
         end if
         
-        call opencl_release_buffer(this%buffer)
+        call opencl_release_buffer(this%pack%buffer)
       end if
     end if
 
@@ -397,14 +401,14 @@ contains
     if(this%nst_linear == 1) then
       ! we can copy directly
       if(batch_type(this) == TYPE_FLOAT) then
-        call opencl_write_buffer(this%buffer, ubound(this%states_linear(1)%dpsi, dim = 1), this%states_linear(1)%dpsi)
+        call opencl_write_buffer(this%pack%buffer, ubound(this%states_linear(1)%dpsi, dim = 1), this%states_linear(1)%dpsi)
       else
-        call opencl_write_buffer(this%buffer, ubound(this%states_linear(1)%zpsi, dim = 1), this%states_linear(1)%zpsi)
+        call opencl_write_buffer(this%pack%buffer, ubound(this%states_linear(1)%zpsi, dim = 1), this%states_linear(1)%zpsi)
       end if
 
     else
       ! we copy to a temporary array and then we re-arrange data
-      call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), this%ubound(2))
+      call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), this%pack%size(2))
 
       do ist = 1, this%nst_linear
         if(batch_type(this) == TYPE_FLOAT) then
@@ -415,13 +419,13 @@ contains
           call opencl_write_buffer(tmp, ubound(this%states_linear(ist)%zpsi, dim = 1), this%states_linear(ist)%zpsi)
         end if
 
-        call opencl_set_kernel_arg(kernel, 0, this%ubound(1))
+        call opencl_set_kernel_arg(kernel, 0, this%pack%size(1))
         call opencl_set_kernel_arg(kernel, 1, ist - 1)
         call opencl_set_kernel_arg(kernel, 2, tmp)
-        call opencl_set_kernel_arg(kernel, 3, this%buffer)
+        call opencl_set_kernel_arg(kernel, 3, this%pack%buffer)
 
         call profiling_in(prof_pack, "CL_PACK")
-        call opencl_kernel_run(kernel, (/this%ubound(2)/), (/opencl_max_workgroup_size()/))
+        call opencl_kernel_run(kernel, (/this%pack%size(2)/), (/opencl_max_workgroup_size()/))
         call opencl_finish()
         call profiling_out(prof_pack)
 
@@ -453,13 +457,13 @@ contains
     if(this%nst_linear == 1) then
       ! we can copy directly
       if(batch_type(this) == TYPE_FLOAT) then
-        call opencl_read_buffer(this%buffer, ubound(this%states_linear(1)%dpsi, dim = 1), this%states_linear(1)%dpsi)
+        call opencl_read_buffer(this%pack%buffer, ubound(this%states_linear(1)%dpsi, dim = 1), this%states_linear(1)%dpsi)
       else
-        call opencl_read_buffer(this%buffer, ubound(this%states_linear(1)%zpsi, dim = 1), this%states_linear(1)%zpsi)
+        call opencl_read_buffer(this%pack%buffer, ubound(this%states_linear(1)%zpsi, dim = 1), this%states_linear(1)%zpsi)
       end if
     else
       ! we use a kernel to move to a temporary array and then we read
-      call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), this%ubound(2))
+      call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), this%pack%size(2))
 
       if(batch_type(this) == TYPE_FLOAT) then
         kernel = dunpack
@@ -468,13 +472,13 @@ contains
       end if
 
       do ist = 1, this%nst_linear
-        call opencl_set_kernel_arg(kernel, 0, this%ubound(1))
+        call opencl_set_kernel_arg(kernel, 0, this%pack%size(1))
         call opencl_set_kernel_arg(kernel, 1, ist - 1)
-        call opencl_set_kernel_arg(kernel, 2, this%buffer)
+        call opencl_set_kernel_arg(kernel, 2, this%pack%buffer)
         call opencl_set_kernel_arg(kernel, 3, tmp)
 
         call profiling_in(prof_unpack, "CL_UNPACK")
-        call opencl_kernel_run(kernel, (/this%ubound(2)/), (/opencl_max_workgroup_size()/))
+        call opencl_kernel_run(kernel, (/this%pack%size(2)/), (/opencl_max_workgroup_size()/))
         call opencl_finish()
         call profiling_out(prof_unpack)
 
@@ -509,10 +513,10 @@ contains
     if(batch_is_packed(this)) then
 
 #ifdef HAVE_OPENCL
-      bsize = product(this%ubound)
+      bsize = product(this%pack%size)
       if(batch_type(this) == TYPE_CMPLX) bsize = bsize*2
 
-      call opencl_set_kernel_arg(set_zero, 0, this%buffer)
+      call opencl_set_kernel_arg(set_zero, 0, this%pack%buffer)
       call opencl_kernel_run(set_zero, (/bsize/), (/opencl_max_workgroup_size()/))
       call batch_pack_was_modified(this)
       call opencl_finish()
@@ -558,13 +562,13 @@ subroutine batch_copy_data(np, xx, yy)
     ASSERT(batch_is_packed(xx))
     ASSERT(batch_is_packed(yy))
 
-    call opencl_set_kernel_arg(kernel_copy, 0, xx%buffer)
-    call opencl_set_kernel_arg(kernel_copy, 1, log2(xx%ubound_real(1)))
-    call opencl_set_kernel_arg(kernel_copy, 2, yy%buffer)
-    call opencl_set_kernel_arg(kernel_copy, 3, log2(yy%ubound_real(1)))
+    call opencl_set_kernel_arg(kernel_copy, 0, xx%pack%buffer)
+    call opencl_set_kernel_arg(kernel_copy, 1, log2(xx%pack%size_real(1)))
+    call opencl_set_kernel_arg(kernel_copy, 2, yy%pack%buffer)
+    call opencl_set_kernel_arg(kernel_copy, 3, log2(yy%pack%size_real(1)))
 
-    localsize = opencl_max_workgroup_size()/yy%ubound_real(1)
-    call opencl_kernel_run(kernel_copy, (/yy%ubound_real(1), pad(np, localsize)/), (/yy%ubound_real(1), localsize/))
+    localsize = opencl_max_workgroup_size()/yy%pack%size_real(1)
+    call opencl_kernel_run(kernel_copy, (/yy%pack%size_real(1), pad(np, localsize)/), (/yy%pack%size_real(1), localsize/))
 
     call batch_pack_was_modified(yy)
     

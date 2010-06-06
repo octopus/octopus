@@ -46,25 +46,25 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
       case(UNPOLARIZED, SPIN_POLARIZED)
         call opencl_set_kernel_arg(kernel_vpsi, 0, pnp*(ispin - 1))
         call opencl_set_kernel_arg(kernel_vpsi, 1, this%potential_opencl)
-        call opencl_set_kernel_arg(kernel_vpsi, 2, psib%buffer)
-        call opencl_set_kernel_arg(kernel_vpsi, 3, log2(psib%ubound_real(1)))
-        call opencl_set_kernel_arg(kernel_vpsi, 4, vpsib%buffer)
-        call opencl_set_kernel_arg(kernel_vpsi, 5, log2(vpsib%ubound_real(1)))
+        call opencl_set_kernel_arg(kernel_vpsi, 2, psib%pack%buffer)
+        call opencl_set_kernel_arg(kernel_vpsi, 3, log2(psib%pack%size_real(1)))
+        call opencl_set_kernel_arg(kernel_vpsi, 4, vpsib%pack%buffer)
+        call opencl_set_kernel_arg(kernel_vpsi, 5, log2(vpsib%pack%size_real(1)))
 
-        iprange = opencl_max_workgroup_size()/psib%ubound_real(1)
+        iprange = opencl_max_workgroup_size()/psib%pack%size_real(1)
 
-        call opencl_kernel_run(kernel_vpsi, (/psib%ubound_real(1), pnp/), (/psib%ubound_real(1), iprange/))
+        call opencl_kernel_run(kernel_vpsi, (/psib%pack%size_real(1), pnp/), (/psib%pack%size_real(1), iprange/))
 
       case(SPINORS)
         call opencl_set_kernel_arg(kernel_vpsi_spinors, 0, this%potential_opencl)
         call opencl_set_kernel_arg(kernel_vpsi_spinors, 1, pnp)
-        call opencl_set_kernel_arg(kernel_vpsi_spinors, 2, psib%buffer)
-        call opencl_set_kernel_arg(kernel_vpsi_spinors, 3, psib%ubound(1))
-        call opencl_set_kernel_arg(kernel_vpsi_spinors, 4, vpsib%buffer)
-        call opencl_set_kernel_arg(kernel_vpsi_spinors, 5, vpsib%ubound(1))
+        call opencl_set_kernel_arg(kernel_vpsi_spinors, 2, psib%pack%buffer)
+        call opencl_set_kernel_arg(kernel_vpsi_spinors, 3, psib%pack%size(1))
+        call opencl_set_kernel_arg(kernel_vpsi_spinors, 4, vpsib%pack%buffer)
+        call opencl_set_kernel_arg(kernel_vpsi_spinors, 5, vpsib%pack%size(1))
 
-        call opencl_kernel_run(kernel_vpsi_spinors, (/psib%ubound(1)/2, pnp/), &
-          (/psib%ubound(1)/2, 2*opencl_max_workgroup_size()/psib%ubound(1)/))
+        call opencl_kernel_run(kernel_vpsi_spinors, (/psib%pack%size(1)/2, pnp/), &
+          (/psib%pack%size(1)/2, 2*opencl_max_workgroup_size()/psib%pack%size(1)/))
 
       end select
 
@@ -221,7 +221,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   if(batch_is_packed(psib)) then
    
     call opencl_create_buffer(projection%buff_projection, CL_MEM_READ_WRITE, R_TYPE_VAL, &
-      this%full_projection_size*psib%ubound_real(1))
+      this%full_projection_size*psib%pack%size_real(1))
     
     iprojection = 0
     
@@ -299,16 +299,16 @@ contains
     call opencl_set_kernel_arg(kernel_projector_bra, 3, pmat%buff_scal)
     call opencl_set_kernel_arg(kernel_projector_bra, 4, pmat%buff_projectors)
     call opencl_set_kernel_arg(kernel_projector_bra, 5, npoints)
-    call opencl_set_kernel_arg(kernel_projector_bra, 6, psib%buffer)
-    call opencl_set_kernel_arg(kernel_projector_bra, 7, psib%ubound_real(1))
+    call opencl_set_kernel_arg(kernel_projector_bra, 6, psib%pack%buffer)
+    call opencl_set_kernel_arg(kernel_projector_bra, 7, psib%pack%size_real(1))
     call opencl_set_kernel_arg(kernel_projector_bra, 8, projection%buff_projection)
-    call opencl_set_kernel_arg(kernel_projector_bra, 9, psib%ubound_real(1))
-    call opencl_set_kernel_arg(kernel_projector_bra, 10, iprojection*psib%ubound_real(1))
+    call opencl_set_kernel_arg(kernel_projector_bra, 9, psib%pack%size_real(1))
+    call opencl_set_kernel_arg(kernel_projector_bra, 10, iprojection*psib%pack%size_real(1))
 
     padnprojs = pad_pow2(nprojs)
 
     call opencl_kernel_run(kernel_projector_bra, &
-      (/psib%ubound_real(1), padnprojs/), (/psib%ubound_real(1), padnprojs/))
+      (/psib%pack%size_real(1), padnprojs/), (/psib%pack%size_real(1), padnprojs/))
 
     call profiling_out(prof)
 #endif
@@ -436,15 +436,15 @@ contains
     call opencl_set_kernel_arg(kernel_projector_ket, 3, pmat%buff_projectors)
     call opencl_set_kernel_arg(kernel_projector_ket, 4, npoints)
     call opencl_set_kernel_arg(kernel_projector_ket, 5, projection%buff_projection)
-    call opencl_set_kernel_arg(kernel_projector_ket, 6, vpsib%ubound_real(1))
-    call opencl_set_kernel_arg(kernel_projector_ket, 7, iprojection*vpsib%ubound_real(1))
-    call opencl_set_kernel_arg(kernel_projector_ket, 8, vpsib%buffer)
-    call opencl_set_kernel_arg(kernel_projector_ket, 9, vpsib%ubound_real(1))
+    call opencl_set_kernel_arg(kernel_projector_ket, 6, vpsib%pack%size_real(1))
+    call opencl_set_kernel_arg(kernel_projector_ket, 7, iprojection*vpsib%pack%size_real(1))
+    call opencl_set_kernel_arg(kernel_projector_ket, 8, vpsib%pack%buffer)
+    call opencl_set_kernel_arg(kernel_projector_ket, 9, vpsib%pack%size_real(1))
 
-    wgsize = opencl_max_workgroup_size()/vpsib%ubound_real(1)
+    wgsize = opencl_max_workgroup_size()/vpsib%pack%size_real(1)
 
     call opencl_kernel_run(kernel_projector_ket, &
-      (/vpsib%ubound_real(1), pad(npoints, wgsize)/), (/vpsib%ubound_real(1), wgsize/))
+      (/vpsib%pack%size_real(1), pad(npoints, wgsize)/), (/vpsib%pack%size_real(1), wgsize/))
 
     call batch_pack_was_modified(vpsib)
     call opencl_finish()
