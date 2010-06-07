@@ -333,6 +333,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
 #ifdef HAVE_MPI
   R_TYPE, allocatable :: projection_red(:, :)
 #endif
+  type(profile_t), save :: reduce_prof
 
   if(.not. this%apply_projector_matrices) return
 
@@ -370,11 +371,13 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
   ! reduce the projections
 #ifdef HAVE_MPI
   if(mesh%parallel_in_domains) then
+    call profiling_in(reduce_prof, "VNLPSI_MAT_REDUCE")
     SAFE_ALLOCATE(projection_red(1:nst, 1:this%full_projection_size))
     projection_red = projection%X(projection)
     call MPI_Allreduce(projection_red(1, 1), projection%X(projection)(1, 1), nst*this%full_projection_size, &
       R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
     SAFE_DEALLOCATE_A(projection_red)
+    call profiling_out(reduce_prof)
   end if
 #endif
 

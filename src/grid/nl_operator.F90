@@ -201,6 +201,8 @@ contains
     !% by all compilers).
     !%Option as 3
     !% Hand-written assembler version, currently only available on Itanium systems.
+    !%Option bg 4
+    !% Blue-gene optimized version.
     !%End
 
     call parse_integer(datasets_check('OperateDouble'),  -1, dfunction_global)
