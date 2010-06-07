@@ -69,12 +69,10 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
   call X(derivatives_batch_set_bc)(der, psib)
 
-#ifdef HAVE_OPENCL
   if(hamiltonian_apply_in_buffer(hm)) then
     call batch_pack(psib)
     call batch_pack(hpsib, copy = .false.)
   end if
-#endif
 
   if(apply_phase) then
     SAFE_ALLOCATE(psi_copy(1:der%mesh%np_part, 1:hm%d%dim, 1:nst))
@@ -198,12 +196,10 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
     SAFE_DEALLOCATE_P(epsib)
   end if
 
-#ifdef HAVE_OPENCL  
   if(hamiltonian_apply_in_buffer(hm)) then
     call batch_unpack(psib, copy = .false.)
     call batch_unpack(hpsib)
   end if
-#endif
 
   call pop_sub('hamiltonian_inc.Xhamiltonian_apply_batch')
   call profiling_out(prof_hamiltonian)

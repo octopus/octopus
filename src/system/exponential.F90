@@ -597,7 +597,6 @@ contains
 
         call zhamiltonian_apply_batch(hm, der, psi1b, hpsi1b, ik, time)
 
-#ifdef HAVE_OPENCL        
         if(opencl_is_enabled() .and. hamiltonian_apply_in_buffer(hm)) then
           if(zfact_is_real) then
             call batch_axpy(der%mesh%np, real(zfact, REAL_PRECISION), hpsi1b, psib)
@@ -606,7 +605,7 @@ contains
           end if
           if(iter /= te%exp_order) call batch_copy_data(der%mesh%np, hpsi1b, psi1b)
         else
-#endif
+
           !$omp parallel do private(ii, idim, ip, bsize)
           do ii = 1, psib%nst
             do idim = 1, hm%d%dim
@@ -624,19 +623,16 @@ contains
             end do
           end do
           !$omp end parallel do
-#ifdef HAVE_OPENCL
         end if
-#endif
 
       end do
 
-#ifdef HAVE_OPENCL
       if(opencl_is_enabled() .and. hamiltonian_apply_in_buffer(hm)) then
         call batch_unpack(psib)
         call batch_unpack(psi1b, copy = .false.)
         call batch_unpack(hpsi1b, copy = .false.)
       end if
-#endif
+
       call batch_end(hpsi1b)
       call batch_end(psi1b)
 

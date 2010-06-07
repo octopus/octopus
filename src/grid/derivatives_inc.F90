@@ -582,21 +582,17 @@ subroutine X(derivatives_test)(this)
     ffb%states_linear(ist)%X(psi)(ip) = ff(ip)
   end forall
 
-#ifdef HAVE_OPENCL
   if(opencl_is_enabled()) then
     call batch_pack(ffb)
     call batch_pack(opffb, copy = .false.)
   end if
-#endif
 
   call X(derivatives_batch_perform)(this%lapl, this, ffb, opffb, set_bc = .false.)
 
-#ifdef HAVE_OPENCL
   if(opencl_is_enabled()) then
     call batch_unpack(ffb, copy = .false.)
     call batch_unpack(opffb)
   end if
-#endif
 
   forall(ip = 1:this%mesh%np) 
     opffb%states_linear(1)%X(psi)(ip) = opffb%states_linear(1)%X(psi)(ip) - &

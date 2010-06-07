@@ -151,7 +151,10 @@ subroutine X(batch_axpy)(np, aa, xx, yy)
   type(batch_t),     intent(in)    :: xx
   type(batch_t),     intent(inout) :: yy
 
-  integer :: ist, localsize
+  integer :: ist
+#ifdef HAVE_OPENCL
+  integer :: localsize
+#endif
 
   call push_sub('batch_inc.Xbatch_axpy')
   call profiling_in(axpy_prof, "BATCH_AXPY")

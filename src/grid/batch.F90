@@ -56,14 +56,9 @@ module batch_m
     batch_pack_was_modified,        &
     batch_is_ok,                    &
     batch_axpy,                     &
-    batch_copy_data
-
-#ifdef HAVE_OPENCL
-  public ::                         &
+    batch_copy_data,                &
     batch_pack,                     &
     batch_unpack
-#endif
-
 
   !--------------------------------------------------------------
   type batch_state_t
@@ -76,10 +71,11 @@ module batch_m
     FLOAT, pointer :: dpsi(:)
     CMPLX, pointer :: zpsi(:)
   end type batch_state_l_t
-
+  
   type batch_pack_t
     integer                        :: size(1:2)
     integer                        :: size_real(1:2)
+    FLOAT, pointer                 :: psi(:, :)
 #ifdef HAVE_OPENCL
     type(opencl_mem_t)             :: buffer
 #endif
@@ -316,8 +312,6 @@ contains
     this%dirty = .true.
   end subroutine batch_pack_was_modified
 
-#ifdef HAVE_OPENCL
-
   ! ----------------------------------------------------
 
   subroutine batch_pack(this, copy)
@@ -335,16 +329,30 @@ contains
 
     if(.not. batch_is_packed(this)) then
       this%pack%size(1) = pad_pow2(this%nst_linear)
-      this%pack%size(2) = opencl_padded_size(batch_max_size(this))
-
+      this%pack%size(2) = batch_max_size(this)
+#ifdef HAVE_OPENCL
+      if(opencl_is_enabled()) this%pack%size(2) = opencl_padded_size(this%pack%size(2))
+#endif
       this%pack%size_real = this%pack%size
       if(batch_type(this) == TYPE_CMPLX) this%pack%size_real(1) = 2*this%pack%size_real(1)
 
-      call opencl_create_buffer(this%pack%buffer, CL_MEM_READ_WRITE, batch_type(this), product(this%pack%size))
+      if(opencl_is_enabled()) then
+#ifdef HAVE_OPENCL
+        call opencl_create_buffer(this%pack%buffer, CL_MEM_READ_WRITE, batch_type(this), product(this%pack%size))
+#endif
+      else
+        SAFE_ALLOCATE(this%pack%psi(1:this%pack%size_real(1), 1:this%pack%size_real(2)))
+      end if
 
       if(copy_) then
         this%dirty = .false.
-        call batch_write_to_opencl_buffer(this)
+        if(opencl_is_enabled()) then
+#ifdef HAVE_OPENCL
+          call batch_write_to_opencl_buffer(this)
+#endif
+        else
+          call pack_copy()
+        end if
       else
         this%dirty = .true.
       end if
@@ -353,6 +361,28 @@ contains
     INCR(this%in_buffer_count, 1)
 
     call pop_sub('batch.batch_pack')
+
+  contains
+
+    subroutine pack_copy()
+      integer :: ist, ip
+
+      if(batch_type(this) == TYPE_FLOAT) then
+        do ist = 1, this%nst_linear
+          forall(ip = 1:ubound(this%states_linear(ist)%dpsi, dim = 1))
+            this%pack%psi(ist, ip) = this%states_linear(ist)%dpsi(ip)
+          end forall
+        end do
+      else
+        do ist = 1, this%nst_linear
+          forall(ip = 1:ubound(this%states_linear(ist)%zpsi, dim = 1))
+            this%pack%psi(2*ist - 1, ip) = real(this%states_linear(ist)%zpsi(ip), REAL_PRECISION)
+            this%pack%psi(2*ist    , ip) = aimag(this%states_linear(ist)%zpsi(ip))
+          end forall
+        end do
+      end if
+    end subroutine pack_copy
+
   end subroutine batch_pack
 
   ! ----------------------------------------------------
@@ -374,18 +404,52 @@ contains
         if(present(copy)) copy_ = copy
         
         if(copy_ .and. this%dirty) then
-          call batch_read_from_opencl_buffer(this)
+          if(opencl_is_enabled()) then
+#ifdef HAVE_OPENCL
+            call batch_read_from_opencl_buffer(this)
+#endif
+          else
+            call unpack_copy()
+          end if
         end if
         
-        call opencl_release_buffer(this%pack%buffer)
+        if(opencl_is_enabled()) then
+#ifdef HAVE_OPENCL
+          call opencl_release_buffer(this%pack%buffer)
+#endif
+        else
+          SAFE_DEALLOCATE_P(this%pack%psi)
+        end if
       end if
     end if
 
     call pop_sub('batch.batch_unpack')
+    
+  contains
+
+    subroutine unpack_copy()
+      integer :: ist, ip
+
+      if(batch_type(this) == TYPE_FLOAT) then
+        do ist = 1, this%nst_linear
+          forall(ip = 1:ubound(this%states_linear(ist)%dpsi, dim = 1))
+            this%states_linear(ist)%dpsi(ip) = this%pack%psi(ist, ip) 
+          end forall
+        end do
+      else
+        do ist = 1, this%nst_linear
+          forall(ip = 1:ubound(this%states_linear(ist)%zpsi, dim = 1))
+            this%states_linear(ist)%zpsi(ip) = cmplx(this%pack%psi(2*ist - 1, ip), this%pack%psi(2*ist, ip))
+          end forall
+        end do
+      end if
+    end subroutine unpack_copy
+
   end subroutine batch_unpack
 
   ! ----------------------------------------------------
 
+#ifdef HAVE_OPENCL
   subroutine batch_write_to_opencl_buffer(this)
     type(batch_t),      intent(inout)  :: this
 
@@ -549,8 +613,11 @@ subroutine batch_copy_data(np, xx, yy)
   type(batch_t),     intent(in)    :: xx
   type(batch_t),     intent(inout) :: yy
 
-  integer :: ist, localsize
+  integer :: ist
   type(profile_t), save :: prof
+#ifdef HAVE_OPENCL
+  integer :: localsize
+#endif
 
   call push_sub('batch.batch_copy_data')
   call profiling_in(prof, "BATCH_COPY_DATA")
