@@ -164,10 +164,9 @@ contains
     !%Description
     !% This variable selects the subroutine used to apply non-local
     !% operators over the grid for real functions. By default the best
-    !% subroutine for your system is detected at runtime, but by using
-    !% this variable you can skip the autodetection.
-    !%Option autodetect -1
-    !% Automatically discover the fastest function.
+    !% subroutine for your system is selected.
+    !%Option best -1
+    !% Select the fastest function for your system.
     !%Option fortran 0
     !% The standard Fortran function.
     !%Option c 1
@@ -187,10 +186,9 @@ contains
     !%Description
     !% This variable selects the subroutine used to apply non-local
     !% operators over the grid for complex functions. By default the best
-    !% subroutine for your system is detected at runtime, but by using
-    !% this variable you can skip the detection.
-    !%Option autodetect -1
-    !% Automatically discover the fastest function.
+    !% subroutine for your system is selected.
+    !%Option best -1
+    !% Select the fastest function for your system.
     !%Option fortran 0
     !% The standard Fortran function.
     !%Option c 1
@@ -351,7 +349,6 @@ contains
 
     integer :: ii, jj, p1(MAX_DIM), time, current
     integer, allocatable :: st1(:), st2(:), st1r(:)
-    FLOAT :: dbest, zbest
 #ifdef HAVE_MPI
     integer :: ir, maxp, iinner, iouter
 #endif
@@ -591,24 +588,16 @@ contains
     end if
 #endif
 
-    if(op%const_w .and. .not. op%cmplx_op) then
-      message(1) = 'Info: '//trim(op%label)
-      message(2) = '      Total throughput (MFlops)'
-      if(dfunction_global == -1) then
-        call dnl_operator_tune(op, dbest)
-        write(message(2), '(2a,i7)') trim(message(2)), ' real = ', int(dbest)
-      else
-        op%dfunction = dfunction_global
-      end if
-
-      if(zfunction_global == -1) then
-        call znl_operator_tune(op, zbest)
-        write(message(2), '(2a,i7)') trim(message(2)), ' complex = ', int(zbest)
-      else
-        op%zfunction = zfunction_global
-      end if
-
-      if(dfunction_global == -1.or.zfunction_global == -1) call write_info(2)
+    if(dfunction_global == -1) then
+      call dnl_operator_tune(op)
+    else
+      op%dfunction = dfunction_global
+    end if
+    
+    if(zfunction_global == -1) then
+      call znl_operator_tune(op)
+    else
+      op%zfunction = zfunction_global
     end if
 
     call pop_sub('nl_operator.nl_operator_build')

@@ -18,51 +18,14 @@
 !! $Id$
 
 !----------------------------------------------------
-subroutine X(nl_operator_tune)(op, best)
+subroutine X(nl_operator_tune)(op)
   type(nl_operator_t), intent(inout) :: op
-  FLOAT,  optional,    intent(out)   :: best
 
-  R_TYPE, allocatable :: in(:), out(:)
-  real(8) :: noperations, flops(OP_MIN:OP_MAX), itime, ftime, bwidth(OP_MIN:OP_MAX), dvolume
-  integer :: method, ii, reps, iunit
-  character(len=2)  :: marker
-  character(len=6)  :: filenum
-  character(len=30) :: filename
-
-#ifdef R_TCOMPLEX
-  character(len=*), parameter :: type = 'complex'
-  FLOAT, parameter            :: R_OPS = M_TWO
-#else
-  character(len=*), parameter :: type = 'real'
-  FLOAT, parameter            :: R_OPS = M_ONE
-#endif
-
-#ifdef SINGLE_PRECISION
-  FLOAT, parameter :: R_SIZE = M_FOUR
-#else
-  FLOAT, parameter :: R_SIZE = M_EIGHT
-#endif
-
-#ifdef HAVE_MPI
-  integer :: ierr
-#endif
+  integer :: method
 
   call push_sub('nl_operator_inc.Xnl_operator_tune')
-  
-  !count the total number of floating point operations  
-  noperations =  op%mesh%np*op%stencil%size*M_TWO*R_OPS
 
-  !the volume of data that has to be moved in bytes
-  dvolume = (op%mesh%np_part + op%mesh%np) * R_OPS * R_SIZE + (op%nri + 1)*op%stencil%size*M_FOUR
-
-  !measure performance of each function
-  SAFE_ALLOCATE(in(1:op%mesh%np_part))
-  SAFE_ALLOCATE(out(1:op%mesh%np))
-  in(:) = M_ZERO
-  flops = M_ZERO
-
-  do method = OP_MIN, OP_MAX
-
+  do method = OP_MAX, OP_MIN, -1
     !skip methods that are not available
 #ifdef R_TCOMPLEX
     if (op_is_available(method, TYPE_CMPLX) == 0) cycle
@@ -70,103 +33,15 @@ subroutine X(nl_operator_tune)(op, best)
     if (op_is_available(method, TYPE_FLOAT)  == 0) cycle
 #endif
     op%X(function) = method
-
-    ! set the number of repetitions so the total time is about 0.1
-    ! secs at 1 Gigaflop (we restrict the value between 1 and 30)
-    reps = min(30, max(1, nint(CNST(1e8)/noperations)))
-
-    if(in_debug_mode) then
-      write(message(1), '(6a)') 'Info: Profiling non-local operator: ', trim(op%label), ' - ', &
-        trim(type), ' - ', op_function_name(method)
-      call write_info(1)
-    end if
-
-    itime = loct_clock()
-#ifdef HAVE_MPI
-    call MPI_Barrier(mpi_world%comm, ierr)
-#endif
-    do ii = 1, reps
-      call X(nl_operator_operate)(op, in, out, ghost_update = .false., profile = .false.)
-    end do
-#ifdef HAVE_MPI
-    call MPI_Barrier(mpi_world%comm, ierr)
-#endif
-    ftime = loct_clock()
-
-    flops(method) = noperations * reps / (ftime - itime) 
-    bwidth(method) = dvolume * reps / (ftime - itime)
-    
+    exit
   end do
-
-  SAFE_DEALLOCATE_A(in)
-  SAFE_DEALLOCATE_A(out)
-
-  ! choose the best method
-  op%X(function) = OP_MIN
-  do method = OP_MIN + 1, OP_MAX
-    if(flops(method) > flops(op%X(function))) op%X(function) = method
-  end do
-
-  if(present(best)) then
-#ifdef HAVE_MPI
-    call MPI_Allreduce(flops(op%X(function)), best, 1, &
-      MPI_DOUBLE_PRECISION, MPI_SUM, mpi_world%comm, ierr)
-    best = best/CNST(1e6)
-#else
-    best = flops(op%X(function))/CNST(1e6)
-#endif
-  end if
-
-  write(filenum, '(i6.6)') mpi_world%rank
-  filename = 'exec/nl_operator_prof.'//trim(filenum)
-  
-  !print to file
-  if(.not. initialized) call loct_rm(trim(filename))
-  initialized = .true.
-  
-  iunit = io_open(trim(filename), action='write', position='append', is_tmp = .true.)
-    
-#ifdef R_TCOMPLEX
-    write (iunit, '(3a)')   'Operator       = ', trim(op%label), " complex"
-#else
-    write (iunit, '(3a)')   'Operator       = ', trim(op%label), " real"
-#endif
-    write (iunit, '(a,i8)') 'Grid points    = ', op%mesh%np
-    write (iunit, '(a,i8)') 'Stencils       = ', op%nri
-    write (iunit, '(a,i8)') 'Stencil points = ', op%stencil%size
-
-#ifdef HAVE_MPI
-    if(op%mesh%parallel_in_domains) then
-      write (iunit, '(a,i8)') 'Inner points   = ', sum(op%inner%imax(1:op%inner%nri) - op%inner%imin(1:op%inner%nri))
-      write (iunit, '(a,i8)') 'Inner stencils = ', op%inner%nri
-      write (iunit, '(a,i8)') 'Outer points   = ', sum(op%outer%imax(1:op%outer%nri) - op%outer%imin(1:op%outer%nri))
-      write (iunit, '(a,i8)') 'Outer stencils = ', op%outer%nri
-    end if
-#endif
-
-    do method = OP_MIN, OP_MAX
-#ifdef R_TCOMPLEX
-      if (op_is_available(method, TYPE_CMPLX) == 0) cycle
-#else
-      if (op_is_available(method, TYPE_FLOAT)  == 0) cycle
-#endif
-      marker = '  '
-      if(method == op%X(function)) marker = '* '
-      write (iunit, '(2a, f8.1, a, f8.1, a)') &
-           marker, op_function_name(method), &
-           flops(method)/CNST(1e6), ' MFlops  ',&
-           bwidth(method)/CNST(1e6), ' MBytes/s'
-    end do
-    
-    write(iunit, '(a)') " "
-    call io_close(iunit)
 
   call pop_sub('nl_operator_inc.Xnl_operator_tune')
 
 end subroutine X(nl_operator_tune)
 
-
 ! ---------------------------------------------------------
+
 subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, points, factor)
   type(nl_operator_t), intent(in)    :: op
   type(batch_t),       intent(inout) :: fi
