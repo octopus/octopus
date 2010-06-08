@@ -121,7 +121,7 @@ contains
       call flush_msg(stderr, msg)
 
 #ifdef HAVE_MPI
-      if(.not. only_root_writes) then
+      if(.not. only_root_writes_) then
         call flush_msg(stderr, shyphens)
         write(msg, '(a,i4)') "* From node = ", mpi_world%rank
         call flush_msg(stderr, msg)

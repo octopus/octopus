@@ -449,13 +449,13 @@ contains
         write(message(1),'(a,i4,a,i4,a)') "Inconsistent number of processors (", &
           product(mc%group_sizes(1:mc%n_index)), ".ne.", mpi_world%size, ")"
         message(2) = "You probably have a problem in the block 'ParallelizationGroupRanks'"
-        call write_fatal(2)
+        call write_fatal(2, only_root_writes = .true.)
       end if
 
       if(any(mc%group_sizes(1:mc%n_index) > index_range(1:mc%n_index))) then
         message(1) = "Could not distribute nodes in parallel job. Most likely you are trying to"
         message(2) = "use too many nodes for the job."
-        call write_fatal(2)
+        call write_fatal(2, only_root_writes = .true.)
       end if
 
       if(any(index_range(1:mc%n_index) / mc%group_sizes(1:mc%n_index) < min_range(1:mc%n_index))) then
