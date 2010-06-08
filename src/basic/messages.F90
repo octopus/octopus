@@ -356,10 +356,10 @@ contains
   subroutine open_debug_trace(iunit)
     integer, intent(out) :: iunit
 
-    character(len=4) :: filenum
+    character(len=6) :: filenum
 
     iunit = mpi_world%rank + unit_offset
-    write(filenum, '(i3.3)') iunit - unit_offset
+    write(filenum, '(i6.6)') iunit - unit_offset
     call loct_mkdir(trim(current_label)//'debug')
     open(iunit, file=trim(current_label)//'debug/debug_trace.node.'//filenum, &
       action='write', status='unknown', position='append')
@@ -370,10 +370,10 @@ contains
   subroutine delete_debug_trace()
 
     integer :: iunit
-    character(len=4) :: filenum
+    character(len=6) :: filenum
 
     iunit = mpi_world%rank + unit_offset
-    write(filenum, '(i3.3)') iunit - unit_offset
+    write(filenum, '(i6.6)') iunit - unit_offset
     call loct_mkdir(trim(current_label)//'debug')
     call loct_rm(trim(current_label)//'debug/debug_trace.node.'//filenum)
 
@@ -723,11 +723,9 @@ contains
       call push_sub_write(iunit)
       ! close file to ensure flushing
       close(iunit)
-    end if
-
-    ! also write to stderr if we are node 0
-    if(conf%debug_level .gt. 1) then
-      if (mpi_grp_is_root(mpi_world)) call push_sub_write(stderr)
+    else if(conf%debug_level > 1 .and. mpi_grp_is_root(mpi_world)) then
+      ! write to stderr if we are node 0
+      call push_sub_write(stderr)
     end if
 
   contains
@@ -769,21 +767,20 @@ contains
       call write_fatal(1)
     end if
 
-    if(conf%debug_level .ge. 99) then
-      call open_debug_trace(iunit)
-      call pop_sub_write(iunit)
-      ! close file to ensure flushing
-      close(iunit)
-    end if
-      
     if(sub_name .ne. sub_stack(no_sub_stack)) then
       write (message(1),'(a,3x,a,3x,a)') 'Wrong sub name on pop_sub ', sub_name, sub_stack(no_sub_stack)
       call write_fatal(1)
     end if
 
-    ! also write to stderr if we are node 0
-    if(conf%debug_level .gt. 1) then
-      if (mpi_grp_is_root(mpi_world)) call pop_sub_write(stderr)
+
+    if(conf%debug_level .ge. 99) then
+      call open_debug_trace(iunit)
+      call pop_sub_write(iunit)
+      ! close file to ensure flushing
+      close(iunit)
+    else if (conf%debug_level .gt. 1 .and. mpi_grp_is_root(mpi_world)) then
+      ! write to stderr if we are node 0
+      call pop_sub_write(stderr)
     end if
     
     no_sub_stack = no_sub_stack - 1
