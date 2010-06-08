@@ -524,7 +524,7 @@ contains
         ! mix input and output potentials
         call dmixing(scf%smix, iter, vin, vout, vnew, dmf_dotp_aux)
         hm%vhxc(1:gr%mesh%np, 1:nspin) = vnew(1:gr%mesh%np, 1, 1:nspin)
-        call hamiltonian_update_potential(hm, gr%mesh)
+        call hamiltonian_update(hm, gr%mesh)
         if (hm%d%cdft) hm%axc(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin) = vnew(1:gr%mesh%np, 2:scf%mixdim2, 1:nspin)
       end select
 

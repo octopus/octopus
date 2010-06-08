@@ -32,7 +32,7 @@
       call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t-dt/M_TWO, hm%vhxc(:, :))
     end if
 
-    call hamiltonian_update_potential(hm, gr%mesh, time = t-dt/M_TWO)
+    call hamiltonian_update(hm, gr%mesh, time = t-dt/M_TWO)
     call exponential_apply_all(tr%te, gr%der, hm, st, dt, t - dt/M_TWO)
 
     call pop_sub('propagator.td_qoct_tddft_propagator')
@@ -82,7 +82,7 @@
     SAFE_ALLOCATE(rhs(1:np*st%d%dim*st%nst))
         
     call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t - dt/M_TWO, hm%vhxc(:, :))
-    call hamiltonian_update_potential(hm, gr%mesh, time = t - dt/M_TWO)
+    call hamiltonian_update(hm, gr%mesh, time = t - dt/M_TWO)
 
     call exponential_apply_all(tr%te, gr%der, hm, st_op, dt/M_TWO, t-dt)
 

@@ -171,7 +171,7 @@ contains
     ! now calculate the dipole without field
 
     hm%ep%vpsl(1:gr%mesh%np) = vpsl_save(1:gr%mesh%np)
-    call hamiltonian_update_potential(hm, gr%mesh)
+    call hamiltonian_update(hm, gr%mesh)
 
     ! set barrier before the first communication takes place
     ! this ensures proper debug timing of MPI calls
@@ -218,7 +218,7 @@ contains
         ! there is an extra factor of -1 in here that is for the electronic charge
 
         hm%ep%vpsl(1:gr%mesh%np) = vpsl_save(1:gr%mesh%np) + (-1)**isign * gr%mesh%x(1:gr%mesh%np, ii) * e_field
-        call hamiltonian_update_potential(hm, gr%mesh)
+        call hamiltonian_update(hm, gr%mesh)
 
         if(isign == 1) then
           sign_char = '+'
@@ -295,7 +295,7 @@ contains
   
       hm%ep%vpsl(1:gr%mesh%np) = vpsl_save(1:gr%mesh%np) &
         - (gr%mesh%x(1:gr%mesh%np, 2) + gr%mesh%x(1:gr%mesh%np, 3)) * e_field
-      call hamiltonian_update_potential(hm, gr%mesh)
+      call hamiltonian_update(hm, gr%mesh)
   
       if(isign == 1) then
         sign_char = '+'

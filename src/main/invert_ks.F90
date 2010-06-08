@@ -92,7 +92,7 @@ contains
     ! calculate the Hartree potential
     call dpoisson_solve(sys%ks%hartree_solver, hm%vhartree, rho)
 
-    call hamiltonian_update_potential(hm, sys%gr%mesh)
+    call hamiltonian_update(hm, sys%gr%mesh)
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
                          sys%ks%ks_inversion%aux_st, hm, 1, verbose = .false.)
     call states_calc_dens(sys%ks%ks_inversion%aux_st, sys%gr)
@@ -124,7 +124,7 @@ contains
 
     ! output quality of KS inversion
     
-    call hamiltonian_update_potential(hm, sys%gr%mesh)
+    call hamiltonian_update(hm, sys%gr%mesh)
     
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
          sys%ks%ks_inversion%aux_st, hm, 1, verbose = .false.)

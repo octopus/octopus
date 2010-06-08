@@ -248,7 +248,7 @@ contains
       aux_hm%vhxc(:,jj) = aux_hm%vxc(:,jj) + aux_hm%vhartree(:)
     enddo
     
-    call hamiltonian_update_potential(aux_hm, gr%mesh)
+    call hamiltonian_update(aux_hm, gr%mesh)
     
     call eigensolver_run(eigensolver, gr, st, aux_hm, 1, verbose = .false.)
 
@@ -315,7 +315,7 @@ contains
              ".", "rho"//fname, gr%mesh, st%rho(:,1), units_out%length**(-gr%sb%dim), ierr)
       endif
 
-      call hamiltonian_update_potential(aux_hm, gr%mesh)
+      call hamiltonian_update(aux_hm, gr%mesh)
 
       call eigensolver_run(eigensolver, gr, st, aux_hm, 1, verbose = .false.)
 
@@ -356,7 +356,7 @@ contains
 
     !calculate final density
 
-    call hamiltonian_update_potential(aux_hm, gr%mesh)
+    call hamiltonian_update(aux_hm, gr%mesh)
     call eigensolver_run(eigensolver, gr, st, aux_hm, 1, verbose = .false.)
     call states_calc_dens(st, gr)
     
@@ -466,7 +466,7 @@ contains
     call doutput_function(io_function_fill_how("AxisX"), &
            ".", "vext", gr%mesh, hm%ep%vpsl(:), units_out%energy, ierr)
     
-    call hamiltonian_update_potential(hm, gr%mesh)
+    call hamiltonian_update(hm, gr%mesh)
     
     frozen_hxc = .true.
     
@@ -510,7 +510,7 @@ contains
       hm%vxc(1:np,1:nspin) = vxc_mix(1:np, 1:nspin, 1)
       vxc_in(1:np, 1:nspin, 1) = hm%vxc(1:np, 1:nspin)
       
-      call hamiltonian_update_potential(hm, gr%mesh)
+      call hamiltonian_update(hm, gr%mesh)
       
       diffdensity = M_ZERO
       do jj = 1, nspin

@@ -342,7 +342,7 @@ contains
 
     end if
     
-    call hamiltonian_update_potential(hm, gr%mesh, time)
+    call hamiltonian_update(hm, gr%mesh, time)
     
     if(ks%theory_level==HARTREE.or.ks%theory_level==HARTREE_FOCK) then
       call states_end(hm%st)

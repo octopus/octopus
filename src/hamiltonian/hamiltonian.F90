@@ -89,7 +89,7 @@ module hamiltonian_m
     hamiltonian_not_adjoint,         &
     hamiltonian_hermitian,           &
     hamiltonian_epot_generate,       &
-    hamiltonian_update_potential,    &
+    hamiltonian_update,    &
     hamiltonian_get_time,            &
     hamiltonian_apply_in_buffer
 
@@ -884,7 +884,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_update_potential(this, mesh, time)
+  subroutine hamiltonian_update(this, mesh, time)
     type(hamiltonian_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
     FLOAT, optional,     intent(in)    :: time
@@ -894,7 +894,7 @@ contains
     FLOAT :: aa(1:MAX_DIM)
     FLOAT, allocatable :: vp(: , :)
 
-    call push_sub('hamiltonian.hamiltonian_update_potential')
+    call push_sub('hamiltonian.hamiltonian_update')
     call profiling_in(prof, "HAMILTONIAN_UPDATE")
 
     if(present(time)) this%current_time = time
@@ -977,13 +977,13 @@ contains
     call build_phase()
 
     call profiling_out(prof)
-    call pop_sub('hamiltonian.hamiltonian_update_potential')
+    call pop_sub('hamiltonian.hamiltonian_update')
   contains
 
     subroutine build_phase()
       integer :: ik
 
-      call push_sub('hamiltonian.hamiltonian_update_potential.build_phase')
+      call push_sub('hamiltonian.hamiltonian_update.build_phase')
 
       if(associated(this%hm_base%uniform_vector_potential)) then 
         if(.not. associated(this%phase)) then
@@ -996,10 +996,10 @@ contains
         end forall
       end if
 
-      call pop_sub('hamiltonian.hamiltonian_update_potential.build_phase')
+      call pop_sub('hamiltonian.hamiltonian_update.build_phase')
     end subroutine build_phase
 
-  end subroutine hamiltonian_update_potential
+  end subroutine hamiltonian_update
 
 
   ! ---------------------------------------------------------
@@ -1018,7 +1018,7 @@ contains
       call epot_generate(this%ep, gr, geo, st)
     end if
     call hamiltonian_base_build_proj(this%hm_base, gr%mesh, this%ep, geo)
-    call hamiltonian_update_potential(this, gr%mesh, time)
+    call hamiltonian_update(this, gr%mesh, time)
 
     call pop_sub('hamiltonian.hamiltonian_epot_generate')
   end subroutine hamiltonian_epot_generate
