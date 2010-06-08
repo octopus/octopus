@@ -429,6 +429,7 @@ contains
     character(len=6) :: numstring
     integer          :: ierr
 
+    ! here we assume that all nodes have the same partition
     if(mpi_grp_is_root(mpi_world)) then
 
       write(numstring, '(i6.6)') mesh%mpi_grp%size
@@ -451,7 +452,7 @@ contains
     character(len=6) :: numstring
     integer :: read_np_part
 
-    if(mpi_grp_is_root(mpi_world)) then
+    if(mpi_grp_is_root(mesh%mpi_grp)) then
 
       write(numstring, '(i6.6)') mesh%mpi_grp%size
 
@@ -470,10 +471,11 @@ contains
       end if
       call write_info(1)
     end if
-
-    if (ierr /= 0) part(1:mesh%np_part_global) = 1
+    
+    !broadcast the result
 #ifdef HAVE_MPI
-    call MPI_Bcast(part(1), mesh%np_part_global, MPI_INTEGER, 0, mesh%mpi_grp%comm, mpi_err)
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, mesh%mpi_grp%comm, mpi_err)
+    if (ierr == 0) call MPI_Bcast(part(1), mesh%np_part_global, MPI_INTEGER, 0, mesh%mpi_grp%comm, mpi_err)
 #endif
 
   end subroutine mesh_partition_read
