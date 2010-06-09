@@ -17,7 +17,7 @@
 !!
 !! $Id$
 
-!------ -----------------------------------------------------------------------
+!------------------------------------------------------------------------------
 ! X(project_psi) calculates the action of a projector on the psi wavefunction.
 ! The result is summed up to ppsi
 subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
@@ -31,7 +31,7 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
 
   type(batch_t) :: psib, ppsib
 
-  call push_sub('projector_inc.project_psi')
+  call push_sub('projector_inc.Xproject_psi')
 
   call batch_init(psib, dim, 1)
   call batch_add_state(psib, 1, psi)
@@ -43,10 +43,11 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
   call batch_end(psib)
   call batch_end(ppsib)
 
-  call pop_sub('projector_inc.project_psi')
+  call pop_sub('projector_inc.Xproject_psi')
 end subroutine X(project_psi)
 
-!-------------------------------------------------------------------------------------------
+
+!------------------------------------------------------------------------------
 subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   type(mesh_t),      intent(in)    :: mesh
   type(projector_t), intent(in)    :: pj(:)
@@ -65,7 +66,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   R_TYPE, allocatable   :: reduce_buffer_dest(:)
 #endif
 
-  call push_sub('projector_inc.project_psi_batch')
+  call push_sub('projector_inc.Xproject_psi_batch')
   call profiling_in(prof, "VNLPSI")
 
   ! To optimize the application of the non-local operator in parallel,
@@ -96,7 +97,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   ! Check whether we have or not "real" projectors. If we do not, return.
   if(nreduce == 0) then
     call profiling_out(prof)
-    call pop_sub('projector_inc.project_psi_batch')
+    call pop_sub('projector_inc.Xproject_psi_batch')
     return
   end if
 
@@ -240,9 +241,10 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   SAFE_DEALLOCATE_A(ireduce)
 
   call profiling_out(prof)
-  call pop_sub('projector_inc.project_psi_batch')
+  call pop_sub('projector_inc.Xproject_psi_batch')
 
 end subroutine X(project_psi_batch)
+
 
 !------------------------------------------------------------------------------
 ! X(psia_project_psib) calculates <psia|projector|psib>
@@ -262,7 +264,7 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
 #endif
   type(mesh_t), pointer :: mesh
 
-  call push_sub('projector_inc.psia_project_psib')
+  call push_sub('projector_inc.Xpsia_project_psib')
 
   ns = pj%sphere%ns
 
@@ -359,9 +361,10 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
   SAFE_DEALLOCATE_A(lpsi)
   SAFE_DEALLOCATE_A(plpsi)
 
-  call pop_sub('projector_inc.psia_project_psib')
+  call pop_sub('projector_inc.Xpsia_project_psib')
 end function X(psia_project_psib)
 
+!------------------------------------------------------------------------------
 subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi)
   type(mesh_t),      intent(in)    :: mesh
   type(projector_t), intent(in)    :: pj
@@ -371,7 +374,7 @@ subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi)
 
   integer :: ll, mm
 
-  call push_sub('projector_inc.project_sphere')
+  call push_sub('projector_inc.Xproject_sphere')
 
   ppsi = M_ZERO
 
@@ -397,10 +400,12 @@ subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi)
     end do
   end do
 
-  call pop_sub('projector_inc.project_sphere')
+  call pop_sub('projector_inc.Xproject_sphere')
 end subroutine X(project_sphere)
 
-!This function calculates |cpsi> = [x,V_nl] |psi>
+
+!------------------------------------------------------------------------------
+!This function calculates |cpsi> += [x, V_nl] |psi>
 subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
   type(projector_t),     intent(in)     :: pj
   type(grid_t),          intent(in)     :: gr
