@@ -1,7 +1,7 @@
 <execution>
 
-<execute cname="Cray-XT4-Louhi">
-  <input files="../../platform/Cray-XT4-Louhi/cray_qsub.job.in" />  
+<execute cname="Cray-XT5-Shanghai-Louhi">
+  <input files="../../platform/Cray-XT4-Louhi/cray_qsub.shanghai.job.in" />  
 
   <substitute infile="cray_qsub.job.in" outfile="cray_qsub.job">
     <sub from="#OUTDIR#"            to="$outdir" />
@@ -32,7 +32,44 @@
   </environment>
   
   <command>
-    qsub cray_qsub.job # -q prace
+    qsub cray_qsub.job
+  </command>
+</execute>
+
+
+<execute cname="Cray-XT5-Barcelona-Louhi">
+  <input files="../../platform/Cray-XT5-Louhi/cray_qsub.job.in" />
+
+  <substitute infile="cray_qsub.job.in" outfile="cray_qsub.job">
+    <sub from="#OUTDIR#"            to="$outdir" />
+    <sub from="#STDOUTLOGFILE#"     to="$stdoutlogfile" />
+    <sub from="#STDERRLOGFILE#"     to="$stderrlogfile" />
+    <sub from="#BENCHNAME#"         to="octopus_$nodes" />
+    <sub from="#TASKS#"             to="$tasks" />
+    <sub from="#TIME_LIMIT#"        to="02:00:00" />
+    <sub from="#NODES#"             to="$nodes" />
+    <sub from="#TASKSPERNODE#"      to="$taskspernode" />
+    <sub from="#MEMORYPERTASK#"     to="1000M" />
+    <sub from="#NOTIFICATION#"      to="n" />
+    <sub from="#NOTIFY_EMAIL#"      to="n" />
+    <sub from="#THREADSPERTASK#"    to="$threadspertask" />
+    <sub from="#EXECUTABLE#"        to="./bin/octopus_mpi" />
+    <sub from="#ENV#"               to="$env" />
+    <sub from="#PREPROCESS#"        to="module load xt-craypat;
+                                        rm -f *.xf ./*/*.xf" />
+    <sub from="#POSTPROCESS#"       to="cat *profiling*/time.000000" />
+    <sub from="#STARTER#"           to="aprun -n $tasks -N $taskspernode" />
+    <sub from="#ARGS_STARTER#"      to="" />
+    <sub from="#MEASUREMENT#"       to="" />
+    <sub from="#ARGS_EXECUTABLE#"   to="" />
+  </substitute>
+  <environment>
+    <env var="PAT_RT_HWPC" value="$CRAYPAT_HWC" />
+    <env var="OCTOPUS_SHARE" value="./share/octopus" />
+  </environment>
+  
+  <command>
+    qsub cray_qsub.job
   </command>
 </execute>
 

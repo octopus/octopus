@@ -1,0 +1,37 @@
+CalculationMode = td
+
+ParallelizationOfDerivatives = non_blocking_collective
+%td_ParallelizationGroupRanks
+  16 | fill
+%
+
+DevelVersion = yes
+TmpDir = "restart/"
+RestartDir = "restart/"
+FromScratch = no
+td_RestartFileFormat = none
+ProfilingMode = prof_time
+
+EigenSolver = rmmdiis
+LCAOAlternative = yes
+
+ConvRelDens = 1e-4
+ExtraStates = 53
+MaximumIter = 2
+
+SmearingFunction = fermi_dirac
+Smearing = 0.01
+Mixing = 0.2
+XCFunctional = lda_xc_teter93
+
+TDMaximumIter = 5
+TDTimeStep = 0.001
+
+XYZCoordinates = "chlorophyll_650.xyz"
+
+Spacing = 0.25
+Radius = 3.75
+
+%Species
+ "Mg" | 24.305 | spec_ps_fhi | 12 | 2  | 2
+%

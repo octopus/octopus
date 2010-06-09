@@ -14,11 +14,10 @@
   </command>
 </verify>
 
-<verify cname="clorophyll">
+<verify cname="chlorophyll">
   <command>
-    perl ./verify-clorophyll.pl $subdir/verify.xml $subdir
+    perl ./verify-chlorophyll.pl $subdir/verify.xml $subdir
   </command>
 </verify>
-
 
 </verification>

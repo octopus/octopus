@@ -1,4 +1,7 @@
-CalculationMode = td
+%CalculationMode
+   gs   |  td
+  "gs_" | "td_"
+%
 
 %td_ParallelizationGroupRanks
   8 | fill
@@ -7,8 +10,6 @@ CalculationMode = td
 DevelVersion = yes
 TmpDir = "restart/"
 RestartDir = "restart/"
-FromScratch = no
-td_RestartFileFormat = none
 ProfilingMode = prof_time
 
 EigenSolver = rmmdiis
@@ -19,5 +20,6 @@ ExtraStates = 50
 
 TDMaximumIter = 15
 TDEvolutionMethod = aetrs
+td_RestartFileFormat = none
 
 XYZCoordinates = "c240.xyz"

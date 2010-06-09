@@ -3,6 +3,7 @@
   "gs_" | "td_"
 %
 
+ParallelizationOfDerivatives = non_blocking_collective
 %td_ParallelizationGroupRanks
   16 | fill
 %
@@ -28,7 +29,7 @@ TDMaximumIter = 5
 TDTimeStep = 0.001
 td_RestartFileFormat = none
 
-XYZCoordinates = "clorophyll_650.xyz"
+XYZCoordinates = "chlorophyll_650.xyz"
 
 Spacing = 0.25
 Radius = 3.75

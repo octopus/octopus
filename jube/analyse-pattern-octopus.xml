@@ -1,7 +1,7 @@
 <patterns>
 
 <!-- ******************************************************************************** -->
-<!-- **** application specific patterns for analyse of NAMD results              **** -->
+<!-- **** application specific patterns for analysis of octopus results          **** -->
 <!-- ******************************************************************************** -->
 
 <parm name="walltime"  unit="s" mode="line,add" type="float">COMPLETE_DATASET\s+$patnint\s+$patfp\s*</parm>

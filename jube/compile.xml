@@ -5,12 +5,14 @@
 <!--   $id     -> identifier of this benchmark run-->
 
 <!-- compile GSL: ./configure - -prefix=$HOME/gsl - -disable-shared -->
-<compile cname="Cray-XT4-Louhi">
+<compile cname="Cray-XT5-Shanghai-Louhi">
   <src directory="./octopus" files="." />
 
   <command>
     source /opt/modules/default/init/bash ;
-    module swap PrgEnv-pgi/2.1.56HD PrgEnv-intel ;
+    module unload PrgEnv-pgi pgi;
+    module load intel PrgEnv-intel;
+    module swap xtpe-barcelona xtpe-shanghai;
     module load acml;
     module load fftw;
     autoreconf -i;
@@ -20,7 +22,34 @@
     export FCFLAGS="-nbs -p $CFLAGS";
     ./configure --prefix=$outdir \
       --with-gsl-prefix=$HOME/gsl \
-      --enable-mpi;
+      --enable-mpi \
+      --disable-gdlib;
+    make;
+    make install;
+    make clean;
+
+    tar -C $outdir -cf $execname bin lib include share;
+  </command>
+</compile>
+
+<compile cname="Cray-XT5-Barcelona-Louhi">
+  <src directory="./octopus" files="." />
+
+  <command>
+    source /opt/modules/default/init/bash ;
+    module unload PrgEnv-pgi pgi;
+    module load intel PrgEnv-intel;
+    module load acml;
+    module load fftw;
+    autoreconf -i;
+    export CC=cc;
+    export FC=ftn;
+    export CFLAGS="-u -fpp1 -pc80 -align -unroll -O3 -ip -no-fp-port -mno-ieee-fp -vec-report0 -no-prec-div";
+    export FCFLAGS="-nbs -p $CFLAGS";
+    ./configure --prefix=$outdir \
+      --with-gsl-prefix=$HOME/gsl \
+      --enable-mpi \
+      --disable-gdlib;
     make;
     make install;
     make clean;

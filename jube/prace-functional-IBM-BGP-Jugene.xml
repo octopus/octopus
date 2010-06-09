@@ -1,0 +1,23 @@
+<!--
+    PRACE Benchmark Suite
+
+    JUBE benchmark configuration schema for: Jugene
+
+    Contact: fnog@teor.fis.uc.pt
+
+--> 
+<bench name="octopus" platform="IBM-BGP-Jugene" >
+<!-- ********************************************************** -->
+
+<benchmark name="functional_check" active="1">
+    <compile     cname="$platform" version="reuse" />
+    <tasks       threadspertask="4" taskspernode="1" nodes="32,64" />
+    <prepare     cname="functional_jugene" />
+    <execution   cname="$platform" iteration="1" />
+    <verify      cname="c240" />
+    <analyse     cname="standard" />
+</benchmark>
+
+<!-- ********************************************************** -->
+</bench>
+

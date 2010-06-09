@@ -1,5 +1,6 @@
 CalculationMode = td
 
+ParallelizationOfDerivatives = non_blocking_collective
 %td_ParallelizationGroupRanks
   8 | fill
 %

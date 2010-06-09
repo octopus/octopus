@@ -9,19 +9,10 @@
 <bench name="octopus" platform="IBM-SP6-Huygens" >
 <!-- ********************************************************** -->
 
-<benchmark name="c240" active="1">
+<benchmark name="scaling" active="1">
     <compile     cname="$platform" version="reuse" />
-    <tasks       threadspertask="1" taskspernode="32" nodes="2,4,8,16,32" />
-    <prepare     cname="c240" />
-    <execution   cname="$platform" iteration="1" />
-    <verify      cname="c240" />
-    <analyse     cname="standard" />
-</benchmark>
-
-<benchmark name="chlorophyll" active="1">
-    <compile     cname="$platform" version="reuse" />
-    <tasks       threadspertask="1" taskspernode="32" nodes="4,8,16,32,64" />
-    <prepare     cname="chlorophyll" />
+    <tasks       threadspertask="1" taskspernode="32" nodes="4,8,16" />
+    <prepare     cname="scaling" />
     <execution   cname="$platform" iteration="1" />
     <verify      cname="chlorophyll" />
     <analyse     cname="standard" />

@@ -1,0 +1,23 @@
+<!--
+    PRACE Benchmark Suite
+
+    JUBE benchmark configuration schema for: Louhi
+
+    Contact: fnog@teor.fis.uc.pt
+
+--> 
+<bench name="octopus" platform="Cray-XT5-Barcelona-Louhi" >
+<!-- ********************************************************** -->
+
+<benchmark name="scaling" active="1">
+    <compile     cname="$platform" version="reuse" />
+    <tasks       threadspertask="1" taskspernode="8" nodes="8,16,32" />
+    <prepare     cname="scaling" />
+    <execution   cname="$platform" iteration="1" />
+    <verify      cname="chlorophyll" />
+    <analyse     cname="standard" />
+</benchmark>
+
+<!-- ********************************************************** -->
+</bench>
+
