@@ -118,7 +118,8 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
 
 end subroutine X(calc_eff_mass_inv)
 
-  ! ---------------------------------------------------------
+! ---------------------------------------------------------
+! v = (dE_nk/dk)/hbar = < u_nk | -i grad | u_nk >
 subroutine X(calc_band_velocity)(sys, hm, pert, velocity)
   type(system_t),      intent(inout) :: sys
   type(hamiltonian_t), intent(in)    :: hm
@@ -137,8 +138,8 @@ subroutine X(calc_band_velocity)(sys, hm, pert, velocity)
       do idir = 1, sys%gr%sb%periodic_dim
         call pert_setup_dir(pert, idir)
         call X(pert_apply)(pert, sys%gr, sys%geo, hm, ik, sys%st%X(psi)(:, :, ist, ik), pertpsi)
-        velocity(ik, ist, idir) = REAL(X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, &
-                                                  sys%st%X(psi)(:, :, ist, ik), pertpsi(:, :)))
+        velocity(ik, ist, idir) = -R_AIMAG(X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, &
+                                                      sys%st%X(psi)(:, :, ist, ik), pertpsi(:, :)))
       enddo
     enddo
   enddo

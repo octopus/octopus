@@ -107,7 +107,7 @@ contains
 
   ! --------------------------------------------------------------------------
   subroutine kdotp()
-  ! perturbation is i d/dk (=r)
+  ! perturbation is grad
     R_TYPE, allocatable :: grad(:, :, :)
     integer :: iatom, idim
 
