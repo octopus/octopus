@@ -138,8 +138,8 @@ subroutine X(calc_band_velocity)(sys, hm, pert, velocity)
       do idir = 1, sys%gr%sb%periodic_dim
         call pert_setup_dir(pert, idir)
         call X(pert_apply)(pert, sys%gr, sys%geo, hm, ik, sys%st%X(psi)(:, :, ist, ik), pertpsi)
-        velocity(ik, ist, idir) = -R_AIMAG(X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, &
-                                     sys%st%X(psi)(:, :, ist, ik), pertpsi(:, :)))
+        velocity(ik, ist, idir) = &
+          -R_AIMAG(X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(psi)(:, :, ist, ik), pertpsi(:, :)))
       enddo
     enddo
   enddo
