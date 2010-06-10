@@ -572,7 +572,7 @@ contains
       integer :: im, iatom
       integer :: ik, ist, idim, ip
       CMPLX   :: cc(2), kick_value
-      FLOAT   :: ylm, rr
+      FLOAT   :: ylm, gylm(1:MAX_DIM), rr
       FLOAT   :: xx(MAX_DIM)
       CMPLX, allocatable :: kick_function(:)
 
@@ -583,7 +583,7 @@ contains
       delta_strength: if(kick%delta_strength .ne. M_ZERO) then
 
         SAFE_ALLOCATE(kick_function(1:gr%mesh%np))
-        if(sum(kick%qvector(:)**2) .gt. 1.0e-6) then ! q-vector is set
+        if(kick%qlength .gt. M_ZERO) then ! q-vector is set
 
           select case (kick%qkick_mode)
             case (QKICKMODE_COS)
@@ -594,6 +594,9 @@ contains
               write(message(1), '(a,3F9.6,a)') 'Info: Using sin(q.r)+cos(q.r) field with q = (', kick%qvector(:), ')'
             case (QKICKMODE_EXP)
               write(message(1), '(a,3F9.6,a)') 'Info: Using exp(iq.r) field with q = (', kick%qvector(:), ')'
+            case (QKICKMODE_BESSEL)
+              write(message(1), '(a,I2,a,I2,a,F9.6)') 'Info: Using j_l(qr)*Y_lm(r) field with (l,m)= (', &
+                                                      kick%qbessel_l, ",", kick%qbessel_m,') and q = ', kick%qlength
             case default
               write(message(1), '(a,3F9.6,a)') 'Info: Unknown field type!'
           end select
@@ -611,6 +614,9 @@ contains
                 kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:) * xx(:)));
               case (QKICKMODE_EXP)
                 kick_function(ip) = kick_function(ip) + exp(M_zI * sum(kick%qvector(:) * xx(:)));
+              case (QKICKMODE_BESSEL)
+                call grylmr(gr%mesh%x(ip, 1), gr%mesh%x(ip, 2), gr%mesh%x(ip, 3), kick%qbessel_l, kick%qbessel_m, ylm, gylm)
+                kick_function(ip) = kick_function(ip) + loct_sph_bessel(kick%qbessel_l, kick%qlength*sqrt(sum(xx(:)**2)))*ylm
             end select
           end do
 

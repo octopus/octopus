@@ -34,8 +34,10 @@ module td_write_m
   use ion_dynamics_m
   use lasers_m
   use loct_m
+  use loct_math_m
   use parser_m
   use magnetic_m
+  use math_m
   use mesh_function_m
   use mesh_m
   use messages_m
@@ -170,6 +172,8 @@ contains
     !%Option ftchd       4096
     !% Write Fourier transform of the electron density to the file <tt>ftchds</tt>.
     !% This is needed for calculating the dynamic structure factor.
+    !% In the case that the kick mode is qbessel, the written quantity is integral over
+    !% density, multiplied by spherical Bessel function times real spherical harmonic.
     !%End
 
     ! by default print multipoles, ftchd, coordinates and energy
@@ -798,7 +802,10 @@ contains
 
     integer :: is, ip, idir
     character(len=120) :: aux, aux2
+    FLOAT   :: ftchd_bessel
     CMPLX   :: ftchd
+    FLOAT   :: ylm, gylm(1:MAX_DIM)
+    FLOAT, allocatable :: integrand_bessel(:)
     CMPLX, allocatable :: integrand(:)
 
     call push_sub('td_write.td_write_ftchd')
@@ -825,7 +832,11 @@ contains
       call write_iter_nl(out_ftchd)
 
       call write_iter_header_start(out_ftchd)
-      write(aux,'(a12)') 'Real, Imag'
+      if(kick%qkick_mode.eq.QKICKMODE_BESSEL) then
+        write(aux,'(a17)') 'int(j_l*Y_lm*rho)'
+      else
+        write(aux,'(a12)') 'Real, Imag'
+      end if
       call write_iter_header(out_ftchd, aux)
       call write_iter_nl(out_ftchd)
 
@@ -839,20 +850,40 @@ contains
 
     ftchd = M_ZERO
 
-    SAFE_ALLOCATE(integrand(1:gr%mesh%np))
-    integrand = M_ZERO
-    do is = 1, st%d%nspin
-      forall(ip = 1:gr%mesh%np)
-        integrand(ip) = integrand(ip) + st%rho(ip, is) * exp(-M_zI*sum(gr%mesh%x(ip,:)*kick%qvector(:)))
-      end forall
-    end do
-    ftchd = zmf_integrate(gr%mesh, integrand)
-    SAFE_DEALLOCATE_A(integrand)
+    ! If kick mode is exp, sin, or cos, apply the normal Fourier transform
+    if(kick%qkick_mode.ne.QKICKMODE_BESSEL) then
+      SAFE_ALLOCATE(integrand(1:gr%mesh%np))
+      integrand = M_ZERO
+      do is = 1, st%d%nspin
+        forall(ip = 1:gr%mesh%np)
+          integrand(ip) = integrand(ip) + st%rho(ip, is) * exp(-M_zI*sum(gr%mesh%x(ip,:)*kick%qvector(:)))
+        end forall
+      end do
+      ftchd = zmf_integrate(gr%mesh, integrand)
+      SAFE_DEALLOCATE_A(integrand)
+    else
+      ftchd_bessel = M_ZERO
+      SAFE_ALLOCATE(integrand_bessel(1:gr%mesh%np))
+      integrand_bessel = M_ZERO
+      do is = 1, st%d%nspin
+        do ip = 1, gr%mesh%np
+          call grylmr(gr%mesh%x(ip, 1), gr%mesh%x(ip, 2), gr%mesh%x(ip, 3), kick%qbessel_l, kick%qbessel_m, ylm, gylm)
+          integrand_bessel(ip) = integrand_bessel(ip) + st%rho(ip, is) * &
+                                 loct_sph_bessel(kick%qbessel_l, kick%qlength*sqrt(sum(gr%mesh%x(ip, :)**2)))*ylm
+        end do
+      end do
+      ftchd_bessel = dmf_integrate(gr%mesh, integrand_bessel)
+      SAFE_DEALLOCATE_A(integrand_bessel)
+    end if
 
     if(mpi_grp_is_root(mpi_world)) then
       call write_iter_start(out_ftchd)
-      call write_iter_double(out_ftchd, real(ftchd), 1)
-      call write_iter_double(out_ftchd, aimag(ftchd), 1)
+      if(kick%qkick_mode.eq.QKICKMODE_BESSEL) then
+        call write_iter_double(out_ftchd, ftchd_bessel, 1)
+      else ! exp, sin, cos
+        call write_iter_double(out_ftchd, real(ftchd), 1)
+        call write_iter_double(out_ftchd, aimag(ftchd), 1)
+      end if
       call write_iter_nl(out_ftchd)
     end if
 

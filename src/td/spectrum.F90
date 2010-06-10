@@ -76,7 +76,8 @@ module spectrum_m
   integer, public, parameter ::    &
     QKICKMODE_EXP            = 1,  &
     QKICKMODE_COS            = 2,  &
-    QKICKMODE_SIN            = 3
+    QKICKMODE_SIN            = 3,  &
+    QKICKMODE_BESSEL         = 4
 
 
   type spec_t
@@ -108,7 +109,9 @@ module spectrum_m
     integer, pointer  :: l(:), m(:)
     FLOAT, pointer    :: weight(:)
     FLOAT             :: qvector(MAX_DIM)
+    FLOAT             :: qlength
     integer           :: qkick_mode
+    integer           :: qbessel_l, qbessel_m
   end type kick_t
 
   ! Module variables, necessary to compute the function hsfunction, called by
@@ -559,6 +562,9 @@ contains
     !% External field is cos(<i>q.r</i>).
     !%Option qsin 3
     !% External field is sin(<i>q.r</i>).
+    !%Option qbessel 4
+    !% External field is j_l(qr)*Y_lm(r), where q is the length of the momentum-transfer vector.
+    !% In this case the block has to include two extra values (l and m).
     !%End
 
     if(parse_block(datasets_check('TDMomentumTransfer'), blk)==0) then
@@ -566,11 +572,27 @@ contains
         call parse_block_float(blk, 0, idir - 1, kick%qvector(idir))
         kick%qvector(idir) = units_to_atomic(unit_one / units_inp%length, kick%qvector(idir))
       end do
+
+      kick%qlength = sqrt(sum(kick%qvector(:)**2))
+
+      ! Read the calculation mode (exp, cos, sin, or bessel)
       if(parse_block_cols(blk, 0).gt.MAX_DIM) then
+
         call parse_block_integer(blk, 0, idir - 1, kick%qkick_mode)
+
+        ! Read l and m if bessel mode (j_l*Y_lm) is used
+        if(kick%qkick_mode.eq.QKICKMODE_BESSEL .and. parse_block_cols(blk, 0).eq.MAX_DIM+3) then
+          call parse_block_integer(blk, 0, idir + 0, kick%qbessel_l)
+          call parse_block_integer(blk, 0, idir + 1, kick%qbessel_m)
+        else
+          kick%qbessel_l = M_ZERO
+          kick%qbessel_m = M_ZERO
+        end if
+
       else
         kick%qkick_mode = QKICKMODE_EXP
       end if
+
       call parse_block_end(blk)
     else
       kick%qvector(:) = M_ZERO
