@@ -109,7 +109,7 @@ contains
     !%End
     call parse_string('stderr', '-', filename)
     stderr = 0
-    if(trim(filename).ne.'-') then
+    if(trim(filename) .ne. '-') then
       close(stderr)
       open(stderr, file=filename, status='unknown')
     end if
@@ -126,7 +126,7 @@ contains
     !%End
     call parse_string('WorkDir', '.', work_dir)
     ! ... and if necessary create workdir (will not harm if work_dir is already there)
-    if (work_dir.ne.'.') call loct_mkdir(trim(work_dir))
+    if (work_dir .ne. '.') call loct_mkdir(trim(work_dir))
 
     !%Variable FlushMessages
     !%Type logical

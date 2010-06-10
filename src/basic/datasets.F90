@@ -47,7 +47,7 @@ contains
     integer,                 intent(in) :: calc_mode
     type(block_t), optional, intent(in) :: blk
 
-    integer :: i, n_rows, n_cols
+    integer :: ids, n_rows, n_cols
     integer, allocatable :: order(:)
 #ifdef HAVE_MPI
     integer :: mpi_err
@@ -78,14 +78,14 @@ contains
       dataset_label(1)     = ''
       dataset_run_order(1) = 1
     else
-      do i = 1, no_datasets
-        write(dataset_label(i), '(a,i2.2,a)') "ds", i, "_"
-        dataset_run_order(i) = i
+      do ids = 1, no_datasets
+        write(dataset_label(ids), '(a,i2.2,a)') "ds", ids, "_"
+        dataset_run_order(ids) = ids
       end do
 
       ! get run modes
-      do i = 1, no_datasets
-        call parse_block_integer(blk, 0, i-1, dataset_runmode(i))
+      do ids = 1, no_datasets
+        call parse_block_integer(blk, 0, ids - 1, dataset_runmode(ids))
       end do
 
       ! the rest of the information is optional
@@ -94,16 +94,16 @@ contains
       ! first we get the labels
       if(n_rows >= 2) then
         n_cols = parse_block_cols(blk, 1)
-        do i = 1, n_cols
-          call parse_block_string(blk, 1, i-1, dataset_label(i))
+        do ids = 1, n_cols
+          call parse_block_string(blk, 1, ids - 1, dataset_label(ids))
         end do
       end if
 
       ! and now the order
       if(n_rows >= 3) then
         n_cols = parse_block_cols(blk, 1)
-        do i = 1, n_cols
-          call parse_block_integer(blk, 2, i-1, dataset_run_order(i))
+        do ids = 1, n_cols
+          call parse_block_integer(blk, 2, ids - 1, dataset_run_order(ids))
         end do
       end if
 
@@ -113,12 +113,12 @@ contains
     ! consistency check: does the order match the run modes?
     allocate(order(no_datasets))
     order(:) = 1
-    do i = 1, no_datasets
-      if(dataset_run_order(i) >= 1 .and. dataset_run_order(i) <= no_datasets) then
-        order(dataset_run_order(i)) = 0
+    do ids = 1, no_datasets
+      if(dataset_run_order(ids) >= 1 .and. dataset_run_order(ids) <= no_datasets) then
+        order(dataset_run_order(ids)) = 0
       end if
     end do
-    if(.not.all(order(:) == 0)) then
+    if(.not. all(order(:) == 0)) then
       write(6,'(a)') '*** Fatal Error (description follows)'
       write(6,'(a)') 'Ordering of the datasets seems to be wrong in block "%CalculationMode"'
 #ifdef HAVE_MPI
@@ -148,7 +148,7 @@ contains
 
     composite_name = trim(current_label)//trim(variable)
 
-    if(parse_isdef(composite_name).ne.0) then
+    if(parse_isdef(composite_name) .ne. 0) then
       ! composite name has been defined in the input file
       var_name = composite_name
     else

@@ -113,12 +113,12 @@ contains
       call write_info(1)
       call eigensolver_run(eigens, sys%gr, sys%st, hm, 1, converged, verbose = .true.)
 
-      if(converged.or.clean_stop()) exit
+      if(converged .or. clean_stop()) exit
     end do
 
     ! write restart information.
     call restart_write (trim(tmpdir)//GS_DIR, sys%st, sys%gr, ierr)
-    if(ierr.ne.0) then
+    if(ierr .ne. 0) then
       message(1) = 'Unsuccessful write of "'//trim(tmpdir)//GS_DIR//'"'
       call write_fatal(1)
     end if

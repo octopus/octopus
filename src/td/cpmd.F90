@@ -35,6 +35,7 @@ module cpmd_m
   use mesh_m
   use mesh_function_m
   use messages_m
+  use mpi_m
   use profiling_m
   use restart_m
   use scf_m
@@ -79,6 +80,7 @@ module cpmd_m
 
 contains
 
+  ! ---------------------------------------------------------
   subroutine cpmd_init(this, gr, st)
     type(cpmd_t),        intent(out)   :: this
     type(grid_t),        intent(inout) :: gr
@@ -126,6 +128,8 @@ contains
 
   end subroutine cpmd_init
   
+
+  ! ---------------------------------------------------------
   subroutine cpmd_end(this)
     type(cpmd_t), intent(inout) :: this
 
@@ -138,6 +142,8 @@ contains
 
   end subroutine cpmd_end
 
+
+  ! ---------------------------------------------------------
   FLOAT function cpmd_electronic_energy(this)
     type(cpmd_t),        intent(in)    :: this
 
@@ -145,6 +151,8 @@ contains
     
   end function cpmd_electronic_energy
 
+
+  ! ---------------------------------------------------------
   subroutine cpmd_restart_write(this, gr, st)
     type(cpmd_t),        intent(in)    :: this
     type(grid_t),        intent(in)    :: gr
@@ -155,7 +163,9 @@ contains
 
     call push_sub('cpmd.cpmd_restart_write')
 
-    call io_mkdir(trim(tmpdir)//'td/cpmd')
+    if(mpi_grp_is_root(mpi_world)) then
+      call io_mkdir(trim(tmpdir)//'td/cpmd', is_tmp=.true.)
+    endif
 
     ii = 0
     do ik = 1, st%d%nik
@@ -177,6 +187,8 @@ contains
 
   end subroutine cpmd_restart_write
 
+
+  ! ---------------------------------------------------------
   subroutine cpmd_restart_read(this, gr, st, ierr)
     type(cpmd_t),        intent(inout) :: this
     type(grid_t),        intent(in)    :: gr

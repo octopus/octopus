@@ -39,6 +39,7 @@ module kdotp_m
   use mesh_function_m
   use messages_m
   use mix_m
+  use mpi_m
   use pert_m
   use profiling_m
   use restart_m
@@ -135,9 +136,6 @@ contains
     end if
     call write_info(1)
 
-    call io_mkdir(trim(tmpdir)//KDOTP_DIR) ! restart
-    call io_mkdir(KDOTP_DIR)               ! data output
-
     message(1) = 'Calculating band velocities.'
     call write_info(1)
 
@@ -146,7 +144,12 @@ contains
     else
       call zcalc_band_velocity(sys, hm, kdotp_vars%perturbation, kdotp_vars%velocity(:,:,:))
     endif
-    call kdotp_write_band_velocity(sys%st, sys%gr%sb%periodic_dim, kdotp_vars%velocity(:,:,:))
+
+    if(mpi_grp_is_root(mpi_world)) then
+      call io_mkdir(trim(tmpdir)//KDOTP_DIR, is_tmp=.true.) ! restart
+      call io_mkdir(KDOTP_DIR) ! data output
+      call kdotp_write_band_velocity(sys%st, sys%gr%sb%periodic_dim, kdotp_vars%velocity(:,:,:))
+    endif
 
     call sternheimer_init(sh, sys, hm, "KdotP_", &
          set_ham_var = 0, set_occ_response = (kdotp_vars%occ_solution_method == 0))
@@ -157,14 +160,14 @@ contains
       call lr_allocate(kdotp_vars%lr(idir, 1), sys%st, sys%gr%mesh)
 
       ! load wavefunctions
-      if(.not.fromScratch) then
-        str_tmp =  kdotp_wfs_tag(idir)
+      if(.not. fromScratch) then
+        str_tmp = kdotp_wfs_tag(idir)
         write(dirname,'(3a)') KDOTP_DIR, trim(str_tmp), '_1'
         ! 1 is the sigma index which is used in em_resp
         call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
           ierr, lr=kdotp_vars%lr(idir, 1))
           
-        if(ierr.ne.0) then
+        if(ierr .ne. 0) then
           message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//trim(dirname)//"'"
           call write_warning(1)
         end if      

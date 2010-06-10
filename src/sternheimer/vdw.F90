@@ -232,8 +232,10 @@ contains
         end if
       end do
 
-      call io_mkdir(trim(tmpdir)//VDW_DIR) ! restart
-      call io_mkdir(VDW_DIR)               ! output data
+      if(mpi_grp_is_root(mpi_world)) then
+        call io_mkdir(trim(tmpdir)//VDW_DIR, is_tmp=.true.) ! restart
+        call io_mkdir(VDW_DIR)               ! output data
+      endif
 
       call pop_sub('vdw.vdw_run.init_')
     end subroutine init_

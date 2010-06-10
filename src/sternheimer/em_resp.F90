@@ -42,6 +42,7 @@ module em_resp_m
   use mesh_function_m
   use messages_m
   use mix_m
+  use mpi_m
   use pert_m
   use profiling_m
   use restart_m
@@ -185,10 +186,11 @@ contains
       ! otherwise, use default, which is hartree + fxc
     endif
 
-    call io_mkdir(trim(tmpdir)//EM_RESP_DIR) ! restart
-    call info()
-
-    call io_mkdir(EM_RESP_DIR) ! output
+    if(mpi_grp_is_root(mpi_world)) then
+      call io_mkdir(trim(tmpdir)//EM_RESP_DIR, is_tmp=.true.) ! restart
+      call info()
+      call io_mkdir(EM_RESP_DIR) ! output
+    endif
 
     do ifactor = 1, em_vars%nfactor
       do idir = 1, sys%gr%sb%dim

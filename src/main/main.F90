@@ -42,7 +42,7 @@ program octopus
 
   call global_init()
   call getopt_init(ierr)
-  if(ierr.eq.0) call getopt_octopus
+  if(ierr .eq. 0) call getopt_octopus
   call parser_init()
 
   !%Variable DevelVersion
@@ -152,6 +152,15 @@ program octopus
   !% Run mode used to invert the Kohn-Sham equations. Currently available only in development version.
   !%Option recipe 99
   !% Prints out a tasty recipe.
+  !%
+  !% May also be used as a block for multi-dataset mode. The first line is a list of calculation modes,
+  !% the second is labels (optional), and the third is the order for the runs (optional). Example:
+  !%
+  !% <tt>%CalculationMode
+  !%   gs | unocc | td
+  !%   "run1" | "run2"
+  !%   1 | 2 | 3
+  !% %</tt>
   !%End
   if(parse_block('CalculationMode', blk) == 0) then
     call datasets_init(inp_calc_mode, blk)
