@@ -48,6 +48,7 @@ module grid_m
   private
   public ::                &
     grid_t,                &
+    grid_init_stage_0,     &
     grid_init_stage_1,     &
     grid_init_stage_2,     &
     grid_end,              &
@@ -71,6 +72,28 @@ module grid_m
 
 
 contains
+
+  !-------------------------------------------------------------------
+  !>
+  !! "Zero-th" stage of grid initialization. It initializes the open boundaries stuff
+  !! (if necessary), and the simulation box.
+  subroutine grid_init_stage_0(gr, geo)
+    type(grid_t),      intent(inout) :: gr
+    type(geometry_t),  intent(inout) :: geo
+
+    call push_sub('grid.grid_init_stage_0')
+
+    call ob_grid_init(gr%ob_grid, geo)
+    if(gr%ob_grid%open_boundaries) then
+      call simul_box_init(gr%sb, geo, gr%ob_grid%transport_mode, &
+        gr%ob_grid%lead(:)%sb, gr%ob_grid%lead(:)%info)
+    else
+      call simul_box_init(gr%sb, geo)
+    end if
+
+    call pop_sub('grid.grid_init_stage_0')
+  end subroutine grid_init_stage_0
+
 
   !-------------------------------------------------------------------
   subroutine grid_init_stage_1(gr, geo)
@@ -271,6 +294,8 @@ contains
     integer :: il
 
     call push_sub('grid.grid_end')
+
+    call ob_grid_end(gr%ob_grid)
 
     if(gr%have_fine_mesh) then
       call derivatives_end(gr%fine%der)
