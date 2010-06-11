@@ -28,29 +28,6 @@
 #define _XOPEN_SOURCE 600
 #include <stdlib.h>
 
-#if defined(USE_FAKE_MALLOC)
-#include <errno.h>
-
-/* 
-Override calls to malloc with calls to posix_memalign. 
-
-Not the most elegant thing in the world, but it appears that most x86
-Fortran compilers can't be instructed to align allocated memory to 16
-bytes boundary as required by SSE.  */
-
-void * malloc (size_t size){
-  int err;
-  void * ptr;
-  err = posix_memalign((void *) &ptr, 16, size);
-  if( err == 0 ) return ptr;
-  else {
-    errno = ENOMEM;
-    return NULL;
-  }
-}
-
-#endif /* USE_FAKE_MALLOC */
-
 int FC_FUNC_(op_is_available, OP_IS_AVAILABLE)
   (const int * opid, const int * type){
   int result = 1;
@@ -70,7 +47,7 @@ int FC_FUNC_(op_is_available, OP_IS_AVAILABLE)
 
 #ifdef SINGLE_PRECISION
   if( *opid == OP_AS ) result = 0;
+  if( *opid == OP_VEC ) result = 0
 #endif
   return result;
 }
-
