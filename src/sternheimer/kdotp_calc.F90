@@ -39,7 +39,6 @@ module kdotp_calc_m
   public ::                        &
     dcalc_eff_mass_inv,            &
     zcalc_eff_mass_inv,            &
-    dcalc_band_velocity,           &
     zcalc_band_velocity,           &
     zcalc_dipole_periodic,         &
     kdotp_wfs_tag,                 &
@@ -71,6 +70,36 @@ contains
     call pop_sub('kdotp_calc.kdotp_wfs_tag')
 
   end function kdotp_wfs_tag
+
+! ---------------------------------------------------------
+! v = (dE_nk/dk)/hbar = -Im < u_nk | -i grad | u_nk >
+! This is identically zero for real wavefunctions.
+subroutine zcalc_band_velocity(sys, hm, pert, velocity)
+  type(system_t),      intent(inout) :: sys
+  type(hamiltonian_t), intent(in)    :: hm
+  type(pert_t),        intent(inout) :: pert
+  FLOAT,               intent(out)   :: velocity(:,:,:)
+
+  integer :: ik, ist, idir, idim
+  CMPLX, allocatable :: pertpsi(:,:)
+
+  call push_sub('kdotp_calc_inc.zkdotp_calc_band_velocity')
+
+  SAFE_ALLOCATE(pertpsi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
+
+  do ik = 1, sys%st%d%nik
+    do ist = 1, sys%st%nst
+      do idir = 1, sys%gr%sb%periodic_dim
+        call pert_setup_dir(pert, idir)
+        call zpert_apply(pert, sys%gr, sys%geo, hm, ik, sys%st%zpsi(:, :, ist, ik), pertpsi)
+        velocity(ik, ist, idir) = &
+          -aimag(zmf_dotp(sys%gr%mesh, sys%st%d%dim, sys%st%zpsi(:, :, ist, ik), pertpsi(:, :)))
+      enddo
+    enddo
+  enddo
+
+  call pop_sub('kdotp_calc_inc.zkdotp_calc_band_velocity')
+end subroutine zcalc_band_velocity
 
 ! ---------------------------------------------------------
 ! This routine cannot be used with d/dk wavefunctions calculated

@@ -140,7 +140,7 @@ contains
     call write_info(1)
 
     if(states_are_real(sys%st)) then
-      call dcalc_band_velocity(sys, hm, kdotp_vars%perturbation, kdotp_vars%velocity(:,:,:))
+      kdotp_vars%velocity(:,:,:) = M_ZERO
     else
       call zcalc_band_velocity(sys, hm, kdotp_vars%perturbation, kdotp_vars%velocity(:,:,:))
     endif

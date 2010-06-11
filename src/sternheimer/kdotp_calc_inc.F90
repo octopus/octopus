@@ -117,35 +117,6 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
   call pop_sub('kdotp_calc_inc.Xcalc_eff_mass_inv')
 
 end subroutine X(calc_eff_mass_inv)
-
-! ---------------------------------------------------------
-! v = (dE_nk/dk)/hbar = < u_nk | -i grad | u_nk >
-subroutine X(calc_band_velocity)(sys, hm, pert, velocity)
-  type(system_t),      intent(inout) :: sys
-  type(hamiltonian_t), intent(in)    :: hm
-  type(pert_t),        intent(inout) :: pert
-  FLOAT,               intent(out)   :: velocity(:,:,:)
-
-  integer :: ik, ist, idir, idim
-  R_TYPE, allocatable :: pertpsi(:,:)
-
-  call push_sub('kdotp_calc_inc.Xkdotp_calc_band_velocity')
-
-  SAFE_ALLOCATE(pertpsi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
-
-  do ik = 1, sys%st%d%nik
-    do ist = 1, sys%st%nst
-      do idir = 1, sys%gr%sb%periodic_dim
-        call pert_setup_dir(pert, idir)
-        call X(pert_apply)(pert, sys%gr, sys%geo, hm, ik, sys%st%X(psi)(:, :, ist, ik), pertpsi)
-        velocity(ik, ist, idir) = &
-          -R_AIMAG(X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(psi)(:, :, ist, ik), pertpsi(:, :)))
-      enddo
-    enddo
-  enddo
-
-  call pop_sub('kdotp_calc_inc.Xkdotp_calc_band_velocity')
-end subroutine X(calc_band_velocity)
   
 !! Local Variables:
 !! mode: f90
