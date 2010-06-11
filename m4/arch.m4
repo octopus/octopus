@@ -63,6 +63,7 @@ x86_64*)
 ACX_M128D
 oct_arch=x86_64
 vector=$acx_m128d
+vector_type="(sse2)"
 assembler=no
 AC_DEFINE(OCT_ARCH_X86_64, 1, [This an x86_64 system])
 ;;
@@ -70,7 +71,7 @@ i?86*)
 ACX_M128D
 vector=$acx_m128d
 oct_arch=x86
-
+vector_type="(sse2)"
 if test x$vector = xyes ; then
 # We allow explicit disabling of SSE2
 ac_enable_sse2=no
@@ -106,6 +107,7 @@ AC_DEFINE(OCT_ARCH_POWERPC, 1, [This a PowerPC system])
 ACX_BLUE_GENE
 blue_gene=$acx_blue_gene
 vector=$acx_blue_gene
+vector_type="(bg)"
 ;;
 *)
 oct_arch=unknown
@@ -146,7 +148,7 @@ fi
 AC_MSG_NOTICE([ Architecture-specific code:
 ***************************
 This is a $oct_arch processor:
-vectorial code: $vector 
+vectorial code: $vector $vector_type
 assembler code: $assembler
 Blue Gene code: $blue_gene
 ***************************])
