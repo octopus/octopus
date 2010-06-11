@@ -583,7 +583,8 @@ contains
       delta_strength: if(kick%delta_strength .ne. M_ZERO) then
 
         SAFE_ALLOCATE(kick_function(1:gr%mesh%np))
-        if(kick%qlength .gt. M_ZERO) then ! q-vector is set
+
+        if(abs(kick%qlength) > M_EPSILON) then ! q-vector is set
 
           select case (kick%qkick_mode)
             case (QKICKMODE_COS)

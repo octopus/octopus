@@ -573,8 +573,6 @@ contains
         kick%qvector(idir) = units_to_atomic(unit_one / units_inp%length, kick%qvector(idir))
       end do
 
-      kick%qlength = sqrt(sum(kick%qvector(:)**2))
-
       ! Read the calculation mode (exp, cos, sin, or bessel)
       if(parse_block_cols(blk, 0).gt.MAX_DIM) then
 
@@ -597,6 +595,8 @@ contains
     else
       kick%qvector(:) = M_ZERO
     end if
+
+    kick%qlength = sqrt(sum(kick%qvector(:)**2))
 
     call pop_sub('spectrum.kick_init')
   end subroutine kick_init
