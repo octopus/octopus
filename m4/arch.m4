@@ -105,6 +105,7 @@ oct_arch=powerpc
 AC_DEFINE(OCT_ARCH_POWERPC, 1, [This a PowerPC system])
 ACX_BLUE_GENE
 blue_gene=$acx_blue_gene
+vector=$acx_blue_gene
 ;;
 *)
 oct_arch=unknown

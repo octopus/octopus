@@ -30,7 +30,6 @@
 
 #include <assert.h>
 
-#define VEC_SSE2
 #include "vectors.h"
 
 void FC_FUNC_(doperate_ri_vec, DOPERATE_RI_VEC)(const int * opn, 
@@ -48,7 +47,7 @@ void FC_FUNC_(doperate_ri_vec, DOPERATE_RI_VEC)(const int * opn,
   int l, i, j;
   const int * restrict index;
   int indexj;
-
+  
   for (l = 0; l < nri ; l++) {
     register ffloat a;
 
@@ -127,7 +126,7 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
 
       for (; i < (rimap_inv_max[l] - 4 + 1) ; i+=4){
 
-	a0 = a1 = a2 = a3 = _mm_setzero_pd();
+	a0 = a1 = a2 = a3 = VEC_ZERO;
       
 	for(j = 0; j < n; j++) {
 	  register VEC_TYPE wj = VEC_SCAL(w[j]);
@@ -172,7 +171,7 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
 
       for (; i < (rimap_inv_max[l] - 4 + 1) ; i+=4){
 
-	a0 = a1 = a2 = a3 = _mm_setzero_pd();
+	a0 = a1 = a2 = a3 = VEC_ZERO;
       
 	for(j = 0; j < n; j++) {
 	  register VEC_TYPE wj = VEC_SCAL(w[j]);

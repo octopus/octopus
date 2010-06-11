@@ -19,7 +19,12 @@
  $Id: vectors.h 2146 2006-05-23 17:36:00Z xavier $
 */
 
-#ifdef VEC_SSE2
+#include <config.h>
+
+#ifndef VECTORS_H
+#define VECTORS_H
+
+#ifdef HAVE_M128D
 #include <emmintrin.h>
 #define VEC_SIZE 2
 #define VEC_TYPE __m128d
@@ -32,7 +37,7 @@
 #define VEC_ZERO _mm_setzero_pd()
 #endif
 
-#ifdef VEC_BG
+#ifdef HAVE_BLUE_GENE
 #define VEC_SIZE 2
 #define VEC_TYPE double _Complex
 #define VEC_LD(addr) __lfpd(addr)
@@ -42,4 +47,6 @@
 #define VEC_FMA(aa, bb, cc) __fpmadd(cc, aa, bb)
 #define VEC_SCAL(aa) __cmplx(aa, aa)
 #define VEC_ZERO __cmplx(0.0, 0.0)
+#endif
+
 #endif
