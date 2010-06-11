@@ -38,7 +38,7 @@ void FC_FUNC_(doperate_ri_vec, DOPERATE_RI_VEC)(const int * opn,
 						const int * opri,
 						const int * rimap_inv,
 						const int * rimap_inv_max,
-						const ffloat * fi, 
+						const ffloat * restrict fi, 
 						ffloat * restrict fo){
   
   const int n = opn[0];
@@ -55,10 +55,16 @@ void FC_FUNC_(doperate_ri_vec, DOPERATE_RI_VEC)(const int * opn,
     
     i = rimap_inv[l];
 
-    for (; i < rimap_inv_max[l] - 4*VEC_SIZE + 1; i+=4*VEC_SIZE){
+    for (; i < rimap_inv_max[l] - DEPTH*VEC_SIZE + 1; i += DEPTH*VEC_SIZE){
 
       register VEC_TYPE a0, a1, a2, a3;
+#ifdef DEPTH > 4
+      register VEC_TYPE a4, a5, a6, a7;
+#endif
       a0 = a1 = a2 = a3 = VEC_ZERO;
+#ifdef DEPTH > 4
+      a4 = a5 = a6 = a7 = VEC_ZERO;
+#endif
 
       for(j = 0; j < n; j++){
 	register VEC_TYPE wj = VEC_SCAL(w[j]);
@@ -68,13 +74,24 @@ void FC_FUNC_(doperate_ri_vec, DOPERATE_RI_VEC)(const int * opn,
 	a1 = VEC_FMA(wj, VEC_LDU(fi + indexj + 1*VEC_SIZE), a1);
 	a2 = VEC_FMA(wj, VEC_LDU(fi + indexj + 2*VEC_SIZE), a2);
 	a3 = VEC_FMA(wj, VEC_LDU(fi + indexj + 3*VEC_SIZE), a3);
+#ifdef DEPTH > 4
+	a4 = VEC_FMA(wj, VEC_LDU(fi + indexj + 4*VEC_SIZE), a4);
+	a5 = VEC_FMA(wj, VEC_LDU(fi + indexj + 5*VEC_SIZE), a5);
+	a6 = VEC_FMA(wj, VEC_LDU(fi + indexj + 6*VEC_SIZE), a6);
+	a7 = VEC_FMA(wj, VEC_LDU(fi + indexj + 7*VEC_SIZE), a7);
+#endif
       }
 
       VEC_STU(fo + i             , a0);
       VEC_STU(fo + i + 1*VEC_SIZE, a1);
       VEC_STU(fo + i + 2*VEC_SIZE, a2);
       VEC_STU(fo + i + 3*VEC_SIZE, a3);
-
+#ifdef DEPTH > 4
+      VEC_STU(fo + i + 4*VEC_SIZE, a4);
+      VEC_STU(fo + i + 5*VEC_SIZE, a5);
+      VEC_STU(fo + i + 6*VEC_SIZE, a6);
+      VEC_STU(fo + i + 7*VEC_SIZE, a7);
+#endif
     }
 
     for (; i < rimap_inv_max[l]; i++){
@@ -93,7 +110,7 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
 					       const int * opri,
 					       const int * rimap_inv,
 					       const int * rimap_inv_max,
-					       const double * fi, 
+					       const double * restrict fi, 
 					       double * restrict fo){
 
   const int n = opn[0];
@@ -101,7 +118,6 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
 
   int l, i, j, aligned;
   const int * restrict index;
-  const double * ffi[MAX_OP_N];
 
   /* check whether we got aligned vectors or not */
   aligned = 1;
@@ -111,41 +127,50 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
   if(aligned){
    
     for (l = 0; l < nri ; l++) {
-      register VEC_TYPE a0, a1, a2, a3;;
-
       index = opri + n * l;
       i = rimap_inv[l];
 
-      a0 = VEC_ZERO;
-      for(j = 0; j < n; j++) {
-	ffi[j] = fi + index[j]*2;
-	a0 = VEC_FMA(VEC_SCAL(w[j]), VEC_LD(ffi[j] + i*2), a0);
-      }
-      VEC_ST(fo + i*2, a0);
-      i++;
-
-      for (; i < (rimap_inv_max[l] - 4 + 1) ; i+=4){
+      for (; i < (rimap_inv_max[l] - DEPTH + 1) ; i += DEPTH){
+	register VEC_TYPE a0, a1, a2, a3;
+#if DEPTH > 4
+	register VEC_TYPE a4, a5, a6, a7;
+#endif
 
 	a0 = a1 = a2 = a3 = VEC_ZERO;
-      
+#if DEPTH > 4
+      	a4 = a5 = a6 = a7 = VEC_ZERO;
+#endif
 	for(j = 0; j < n; j++) {
 	  register VEC_TYPE wj = VEC_SCAL(w[j]);
-	  a0 = VEC_FMA(wj, VEC_LD(ffi[j] + i*2    ), a0);
-	  a1 = VEC_FMA(wj, VEC_LD(ffi[j] + i*2 + 2), a1);
-	  a2 = VEC_FMA(wj, VEC_LD(ffi[j] + i*2 + 4), a2);
-	  a3 = VEC_FMA(wj, VEC_LD(ffi[j] + i*2 + 6), a3);
+	  int indexj = (index[j] + i)*2;
+	  a0 = VEC_FMA(wj, VEC_LD(fi + indexj    ), a0);
+	  a1 = VEC_FMA(wj, VEC_LD(fi + indexj + 2), a1);
+	  a2 = VEC_FMA(wj, VEC_LD(fi + indexj + 4), a2);
+	  a3 = VEC_FMA(wj, VEC_LD(fi + indexj + 6), a3);
+#if DEPTH > 4
+	  a4 = VEC_FMA(wj, VEC_LD(fi + indexj + 8), a4);
+	  a5 = VEC_FMA(wj, VEC_LD(fi + indexj + 10), a5);
+	  a6 = VEC_FMA(wj, VEC_LD(fi + indexj + 12), a6);
+	  a7 = VEC_FMA(wj, VEC_LD(fi + indexj + 14), a7);
+#endif
 	}
 	VEC_ST(fo + i*2    , a0);
 	VEC_ST(fo + i*2 + 2, a1);
 	VEC_ST(fo + i*2 + 4, a2);
 	VEC_ST(fo + i*2 + 6, a3);
+#if DEPTH > 4
+	VEC_ST(fo + i*2 + 8, a4);
+	VEC_ST(fo + i*2 + 10, a5);
+	VEC_ST(fo + i*2 + 12, a6);
+	VEC_ST(fo + i*2 + 14, a7);
+#endif
       }
 
       for (; i < rimap_inv_max[l]; i++){
       
 	a0 = VEC_ZERO;
 	for(j = 0; j < n; j++) {
-	  a0 = VEC_FMA(VEC_SCAL(w[j]), VEC_LD(ffi[j] + i*2), a0);
+	  a0 = VEC_FMA(VEC_SCAL(w[j]), VEC_LD(fi + (index[j] + i)*2), a0);
 	}
 	VEC_ST(fo + i*2, a0);
       }
@@ -161,24 +186,17 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
       index = opri + n * l;
       i = rimap_inv[l];
 
-      a0 = VEC_ZERO;
-      for(j = 0; j < n; j++) {
-	ffi[j] = fi + index[j]*2;
-	a0 = VEC_FMA(VEC_SCAL(w[j]), VEC_LDU(ffi[j] + i*2), a0);
-      }
-      VEC_STU(fo + i*2, a0);
-      i++;
-
       for (; i < (rimap_inv_max[l] - 4 + 1) ; i+=4){
 
 	a0 = a1 = a2 = a3 = VEC_ZERO;
       
 	for(j = 0; j < n; j++) {
 	  register VEC_TYPE wj = VEC_SCAL(w[j]);
-	  a0 = VEC_FMA(wj, VEC_LDU(ffi[j] + i*2    ), a0);
-	  a1 = VEC_FMA(wj, VEC_LDU(ffi[j] + i*2 + 2), a1);
-	  a2 = VEC_FMA(wj, VEC_LDU(ffi[j] + i*2 + 4), a2);
-	  a3 = VEC_FMA(wj, VEC_LDU(ffi[j] + i*2 + 6), a3);
+	  int indexj = (index[j] + i)*2;
+	  a0 = VEC_FMA(wj, VEC_LDU(fi + indexj    ), a0);
+	  a1 = VEC_FMA(wj, VEC_LDU(fi + indexj + 2), a1);
+	  a2 = VEC_FMA(wj, VEC_LDU(fi + indexj + 4), a2);
+	  a3 = VEC_FMA(wj, VEC_LDU(fi + indexj + 6), a3);
 	}
 	VEC_STU(fo + i*2    , a0);
 	VEC_STU(fo + i*2 + 2, a1);
@@ -190,7 +208,7 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
       
 	a0 = VEC_ZERO;
 	for(j = 0; j < n; j++) {
-	  a0 = VEC_FMA(VEC_SCAL(w[j]), VEC_LDU(ffi[j] + i*2), a0);
+	  a0 = VEC_FMA(VEC_SCAL(w[j]), VEC_LDU(fi + (index[j] + i)*2), a0);
 	}
 	VEC_STU(fo + i*2, a0);
       }

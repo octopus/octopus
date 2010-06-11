@@ -35,6 +35,8 @@
 #define VEC_FMA(aa, bb, cc) _mm_add_pd(cc, _mm_mul_pd(aa, bb))
 #define VEC_SCAL(aa) _mm_set1_pd(aa)
 #define VEC_ZERO _mm_setzero_pd()
+
+#define DEPTH 4
 #endif
 
 #ifdef HAVE_BLUE_GENE
@@ -47,6 +49,8 @@
 #define VEC_FMA(aa, bb, cc) __fpmadd(cc, aa, bb)
 #define VEC_SCAL(aa) __cmplx(aa, aa)
 #define VEC_ZERO __cmplx(0.0, 0.0)
+
+#define DEPTH 8
 #endif
 
 #endif
