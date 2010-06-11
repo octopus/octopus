@@ -56,13 +56,12 @@ void FC_FUNC_(doperate_ri_vec, DOPERATE_RI_VEC)(const int * opn,
     i = rimap_inv[l];
 
     for (; i < rimap_inv_max[l] - DEPTH*VEC_SIZE + 1; i += DEPTH*VEC_SIZE){
-
       register VEC_TYPE a0, a1, a2, a3;
-#ifdef DEPTH > 4
+#if DEPTH > 4
       register VEC_TYPE a4, a5, a6, a7;
 #endif
       a0 = a1 = a2 = a3 = VEC_ZERO;
-#ifdef DEPTH > 4
+#if DEPTH > 4
       a4 = a5 = a6 = a7 = VEC_ZERO;
 #endif
 
@@ -74,7 +73,7 @@ void FC_FUNC_(doperate_ri_vec, DOPERATE_RI_VEC)(const int * opn,
 	a1 = VEC_FMA(wj, VEC_LDU(fi + indexj + 1*VEC_SIZE), a1);
 	a2 = VEC_FMA(wj, VEC_LDU(fi + indexj + 2*VEC_SIZE), a2);
 	a3 = VEC_FMA(wj, VEC_LDU(fi + indexj + 3*VEC_SIZE), a3);
-#ifdef DEPTH > 4
+#if DEPTH > 4
 	a4 = VEC_FMA(wj, VEC_LDU(fi + indexj + 4*VEC_SIZE), a4);
 	a5 = VEC_FMA(wj, VEC_LDU(fi + indexj + 5*VEC_SIZE), a5);
 	a6 = VEC_FMA(wj, VEC_LDU(fi + indexj + 6*VEC_SIZE), a6);
@@ -86,7 +85,7 @@ void FC_FUNC_(doperate_ri_vec, DOPERATE_RI_VEC)(const int * opn,
       VEC_STU(fo + i + 1*VEC_SIZE, a1);
       VEC_STU(fo + i + 2*VEC_SIZE, a2);
       VEC_STU(fo + i + 3*VEC_SIZE, a3);
-#ifdef DEPTH > 4
+#if DEPTH > 4
       VEC_STU(fo + i + 4*VEC_SIZE, a4);
       VEC_STU(fo + i + 5*VEC_SIZE, a5);
       VEC_STU(fo + i + 6*VEC_SIZE, a6);
@@ -167,8 +166,7 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
       }
 
       for (; i < rimap_inv_max[l]; i++){
-      
-	a0 = VEC_ZERO;
+	register VEC_TYPE a0 = VEC_ZERO;
 	for(j = 0; j < n; j++) {
 	  a0 = VEC_FMA(VEC_SCAL(w[j]), VEC_LD(fi + (index[j] + i)*2), a0);
 	}
