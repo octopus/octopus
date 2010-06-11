@@ -39,7 +39,8 @@ endif
 
 noinst_HEADERS =           \
 	beak.h             \
-	operate_ia64.S
+	operate_ia64.S     \
+	vectors.h
 
 include $(srcdir)/../common-rules.make
 

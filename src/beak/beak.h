@@ -16,7 +16,7 @@
  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  02111-1307, USA.
 
- $Id: operate.c 2146 2006-05-23 17:36:00Z xavier $
+ $Id: beak.h 2146 2006-05-23 17:36:00Z xavier $
 */
 
 #ifndef OCTOPUS_BEAK_H

@@ -23,19 +23,15 @@
 #include <config.h>
 #include "beak.h"
 #include <stdio.h>
-#include <emmintrin.h>
 
 #ifndef HAVE_VEC
 #error Internal error, compiling vector code without vector support
 #endif
 
-#define VECSIZE 2
-#define ADD   _mm_add_pd
-#define MUL   _mm_mul_pd
-#define LOAD  _mm_loadu_pd
-#define STORE _mm_storeu_pd
-
 #include <assert.h>
+
+#define VEC_SSE2
+#include "vectors.h"
 
 void FC_FUNC_(doperate_ri_vec, DOPERATE_RI_VEC)(const int * opn, 
 						const ffloat * restrict w, 
@@ -53,11 +49,6 @@ void FC_FUNC_(doperate_ri_vec, DOPERATE_RI_VEC)(const int * opn,
   const int * restrict index;
   int indexj;
 
-  __m128d vw[MAX_OP_N] __attribute__((aligned(16)));
-  for(j = 0; j < n ; j++) vw[j] =_mm_set1_pd(w[j]);
-
-  assert(((long long) vw)%16 == 0);
-
   for (l = 0; l < nri ; l++) {
     register ffloat a;
 
@@ -65,23 +56,25 @@ void FC_FUNC_(doperate_ri_vec, DOPERATE_RI_VEC)(const int * opn,
     
     i = rimap_inv[l];
 
-    for (; i < rimap_inv_max[l] - 4*VECSIZE + 1; i+=4*VECSIZE){
+    for (; i < rimap_inv_max[l] - 4*VEC_SIZE + 1; i+=4*VEC_SIZE){
 
-      register __m128d a0, a1, a2, a3;
-      a0 = a1 = a2 = a3 = _mm_setzero_pd();
+      register VEC_TYPE a0, a1, a2, a3;
+      a0 = a1 = a2 = a3 = VEC_ZERO;
 
       for(j = 0; j < n; j++){
+	register VEC_TYPE wj = VEC_SCAL(w[j]);
 	indexj = index[j] + i;
-	a0 = ADD (a0, MUL (vw[j], LOAD (fi + indexj            ) ));
-	a1 = ADD (a1, MUL (vw[j], LOAD (fi + indexj + 1*VECSIZE) ));
-	a2 = ADD (a2, MUL (vw[j], LOAD (fi + indexj + 2*VECSIZE) ));
-	a3 = ADD (a3, MUL (vw[j], LOAD (fi + indexj + 3*VECSIZE) ));
+
+	a0 = VEC_FMA(wj, VEC_LDU(fi + indexj             ), a0);
+	a1 = VEC_FMA(wj, VEC_LDU(fi + indexj + 1*VEC_SIZE), a1);
+	a2 = VEC_FMA(wj, VEC_LDU(fi + indexj + 2*VEC_SIZE), a2);
+	a3 = VEC_FMA(wj, VEC_LDU(fi + indexj + 3*VEC_SIZE), a3);
       }
 
-      STORE (fo + i            , a0);
-      STORE (fo + i + 1*VECSIZE, a1);
-      STORE (fo + i + 2*VECSIZE, a2);
-      STORE (fo + i + 3*VECSIZE, a3);
+      VEC_STU(fo + i             , a0);
+      VEC_STU(fo + i + 1*VEC_SIZE, a1);
+      VEC_STU(fo + i + 2*VEC_SIZE, a2);
+      VEC_STU(fo + i + 3*VEC_SIZE, a3);
 
     }
 
@@ -101,19 +94,15 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
 					       const int * opri,
 					       const int * rimap_inv,
 					       const int * rimap_inv_max,
-					       const __m128d * fi, 
-					       __m128d * restrict fo){
+					       const double * fi, 
+					       double * restrict fo){
 
   const int n = opn[0];
   const int nri = opnri[0];
 
   int l, i, j, aligned;
   const int * restrict index;
-  const __m128d * ffi[MAX_OP_N];
-
-  __m128d vw[MAX_OP_N] __attribute__((aligned(16)));
-
-  for(j = 0; j < n ; j++) vw[j] =_mm_set1_pd(w[j]);
+  const double * ffi[MAX_OP_N];
 
   /* check whether we got aligned vectors or not */
   aligned = 1;
@@ -121,43 +110,45 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
   aligned = aligned && (((long long) fo)%16 == 0);
 
   if(aligned){
-
+   
     for (l = 0; l < nri ; l++) {
+      register VEC_TYPE a0, a1, a2, a3;;
 
       index = opri + n * l;
-
-      register __m128d a0, a1, a2, a3;
       i = rimap_inv[l];
 
-      a0 = _mm_setzero_pd();
-      for(j = 0; j < n; j++){
-	ffi[j] = fi + index[j];
-	a0 = _mm_add_pd(a0, _mm_mul_pd(vw[j], ffi[j][i]));
+      a0 = VEC_ZERO;
+      for(j = 0; j < n; j++) {
+	ffi[j] = fi + index[j]*2;
+	a0 = VEC_FMA(VEC_SCAL(w[j]), VEC_LD(ffi[j] + i*2), a0);
       }
-      fo[i++] = a0;
+      VEC_ST(fo + i*2, a0);
+      i++;
 
       for (; i < (rimap_inv_max[l] - 4 + 1) ; i+=4){
 
 	a0 = a1 = a2 = a3 = _mm_setzero_pd();
       
 	for(j = 0; j < n; j++) {
-	  a0 = _mm_add_pd(a0, _mm_mul_pd(vw[j], ffi[j][i+0]));
-	  a1 = _mm_add_pd(a1, _mm_mul_pd(vw[j], ffi[j][i+1]));
-	  a2 = _mm_add_pd(a2, _mm_mul_pd(vw[j], ffi[j][i+2]));
-	  a3 = _mm_add_pd(a3, _mm_mul_pd(vw[j], ffi[j][i+3]));
+	  register VEC_TYPE wj = VEC_SCAL(w[j]);
+	  a0 = VEC_FMA(wj, VEC_LD(ffi[j] + i*2    ), a0);
+	  a1 = VEC_FMA(wj, VEC_LD(ffi[j] + i*2 + 2), a1);
+	  a2 = VEC_FMA(wj, VEC_LD(ffi[j] + i*2 + 4), a2);
+	  a3 = VEC_FMA(wj, VEC_LD(ffi[j] + i*2 + 6), a3);
 	}
-	fo[i  ] = a0;
-	fo[i+1] = a1;
-	fo[i+2] = a2;
-	fo[i+3] = a3;
+	VEC_ST(fo + i*2    , a0);
+	VEC_ST(fo + i*2 + 2, a1);
+	VEC_ST(fo + i*2 + 4, a2);
+	VEC_ST(fo + i*2 + 6, a3);
       }
 
       for (; i < rimap_inv_max[l]; i++){
-	a0 = _mm_setzero_pd();
+      
+	a0 = VEC_ZERO;
 	for(j = 0; j < n; j++) {
-	  a0 = _mm_add_pd(a0, _mm_mul_pd(vw[j],ffi[j][i]));
+	  a0 = VEC_FMA(VEC_SCAL(w[j]), VEC_LD(ffi[j] + i*2), a0);
 	}
-	fo[i] = a0;
+	VEC_ST(fo + i*2, a0);
       }
 
     }
@@ -166,17 +157,17 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
     /* not aligned */
     
     for (l = 0; l < nri ; l++) {
+      register VEC_TYPE a0, a1, a2, a3;;
 
       index = opri + n * l;
-      register __m128d a0, a1, a2, a3;;
       i = rimap_inv[l];
 
-      a0 = _mm_setzero_pd();      
+      a0 = VEC_ZERO;
       for(j = 0; j < n; j++) {
-	ffi[j] = fi + index[j];
-	a0 = _mm_add_pd(a0, _mm_mul_pd(vw[j], _mm_loadu_pd((double *)(ffi[j] + i))));
+	ffi[j] = fi + index[j]*2;
+	a0 = VEC_FMA(VEC_SCAL(w[j]), VEC_LDU(ffi[j] + i*2), a0);
       }
-      _mm_storeu_pd((double *)(fo + i), a0);
+      VEC_STU(fo + i*2, a0);
       i++;
 
       for (; i < (rimap_inv_max[l] - 4 + 1) ; i+=4){
@@ -184,24 +175,25 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
 	a0 = a1 = a2 = a3 = _mm_setzero_pd();
       
 	for(j = 0; j < n; j++) {
-	  a0 = _mm_add_pd(a0, _mm_mul_pd(vw[j], _mm_loadu_pd((double *) (ffi[j] + i + 0))));
-	  a1 = _mm_add_pd(a1, _mm_mul_pd(vw[j], _mm_loadu_pd((double *) (ffi[j] + i + 1))));
-	  a2 = _mm_add_pd(a2, _mm_mul_pd(vw[j], _mm_loadu_pd((double *) (ffi[j] + i + 2))));
-	  a3 = _mm_add_pd(a3, _mm_mul_pd(vw[j], _mm_loadu_pd((double *) (ffi[j] + i + 3))));
+	  register VEC_TYPE wj = VEC_SCAL(w[j]);
+	  a0 = VEC_FMA(wj, VEC_LDU(ffi[j] + i*2    ), a0);
+	  a1 = VEC_FMA(wj, VEC_LDU(ffi[j] + i*2 + 2), a1);
+	  a2 = VEC_FMA(wj, VEC_LDU(ffi[j] + i*2 + 4), a2);
+	  a3 = VEC_FMA(wj, VEC_LDU(ffi[j] + i*2 + 6), a3);
 	}
-	_mm_storeu_pd((double *) (fo + i    ), a0);
-	_mm_storeu_pd((double *) (fo + i + 1), a1);
-	_mm_storeu_pd((double *) (fo + i + 2), a2);
-	_mm_storeu_pd((double *) (fo + i + 3), a3);
+	VEC_STU(fo + i*2    , a0);
+	VEC_STU(fo + i*2 + 2, a1);
+	VEC_STU(fo + i*2 + 4, a2);
+	VEC_STU(fo + i*2 + 6, a3);
       }
 
       for (; i < rimap_inv_max[l]; i++){
       
-	a0 = _mm_setzero_pd();
+	a0 = VEC_ZERO;
 	for(j = 0; j < n; j++) {
-	  a0 = _mm_add_pd(a0, _mm_mul_pd(vw[j], _mm_loadu_pd((double *) (ffi[j] + i))));
+	  a0 = VEC_FMA(VEC_SCAL(w[j]), VEC_LDU(ffi[j] + i*2), a0);
 	}
-	_mm_storeu_pd((double *) (fo + i), a0);
+	VEC_STU(fo + i*2, a0);
       }
 
     }
