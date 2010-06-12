@@ -114,11 +114,10 @@ module nl_operator_m
        OP_C       = 1,  &
        OP_VEC     = 2,  &
        OP_AS      = 3,  &
-       OP_BG      = 4,  &
        OP_MIN     = OP_FORTRAN, &
-       OP_MAX     = OP_BG
+       OP_MAX     = OP_AS
 
-#ifdef HAVE_OPENCL  
+#ifdef HAVE_OPENCL
   integer, parameter ::  &
     OP_INVMAP    = 1,       &
     OP_MAP       = 2
@@ -199,8 +198,6 @@ contains
     !% by all compilers).
     !%Option as 3
     !% Hand-written assembler version, currently only available on Itanium systems.
-    !%Option bg 4
-    !% Blue-gene optimized version.
     !%End
 
     call parse_integer(datasets_check('OperateDouble'),  -1, dfunction_global)
@@ -264,7 +261,6 @@ contains
     if(id == OP_C)       str = 'C'
     if(id == OP_VEC)     str = 'Vector'
     if(id == OP_AS)      str = 'AS'
-    if(id == OP_BG)      str = 'BG'
     
     call pop_sub('nl_operator.op_function_name')
   end function op_function_name

@@ -33,10 +33,6 @@ if COMPILE_AS
  libbeak_a_SOURCES += operate_as.S
 endif
 
-if COMPILE_BG
- libbeak_a_SOURCES += operate_bg.c
-endif
-
 noinst_HEADERS =           \
 	beak.h             \
 	operate_ia64.S     \
