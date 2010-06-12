@@ -131,10 +131,8 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
         select case(op%X(function))
         case(OP_C)
           call X(operate_ri)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
-#ifdef HAVE_VEC
         case(OP_VEC)
           call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
-#endif
 #ifdef HAVE_AS
         case(OP_AS)
           nns(1) = op%stencil%size

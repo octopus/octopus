@@ -24,6 +24,8 @@
 #ifndef VECTORS_H
 #define VECTORS_H
 
+#ifdef HAVE_VEC
+
 #ifdef HAVE_M128D
 #include <emmintrin.h>
 #define VEC_SIZE 2
@@ -49,6 +51,23 @@
 #define VEC_FMA(aa, bb, cc) __fpmadd(cc, aa, bb)
 #define VEC_SCAL(aa) __cmplx(aa, aa)
 #define VEC_ZERO __cmplx(0.0, 0.0)
+
+#define DEPTH 8
+#endif
+
+#endif
+
+#ifndef VEC_SIZE
+
+#define VEC_SIZE 1
+#define VEC_TYPE double
+#define VEC_LD(addr) (addr)[0]
+#define VEC_LDU(addr) VEC_LD(addr)
+#define VEC_ST(addr, vec) (addr)[0] = vec
+#define VEC_STU(addr, vec) VEC_ST(addr, vec)
+#define VEC_FMA(aa, bb, cc) aa*bb + cc
+#define VEC_SCAL(aa) aa
+#define VEC_ZERO 0.0
 
 #define DEPTH 8
 #endif

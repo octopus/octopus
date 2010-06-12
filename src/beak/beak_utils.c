@@ -32,10 +32,6 @@ int FC_FUNC_(op_is_available, OP_IS_AVAILABLE)
   (const int * opid, const int * type){
   int result = 1;
   
-#ifndef HAVE_VEC
-  if( *opid == OP_VEC ) result = 0;
-#endif
-
 #ifndef HAVE_AS
   if( *opid == OP_AS ) result = 0;
 #endif
