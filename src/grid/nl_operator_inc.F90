@@ -114,7 +114,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
       call operate_opencl()
 #endif
     else
-      !$omp parallel private(ini, nri_loc, ws, ist, pfi, pfo)
+      !$omp parallel private(ini, nri_loc, ist, pfi, pfo)
 #ifdef USE_OMP
       call multicomm_divide_range_omp(nri, ini, nri_loc)
 #else 
