@@ -303,6 +303,9 @@ contains
     !% The potential is read from a file, whose name is given in column 5.
     !%End
 
+    call messages_obsolete_variable('SpecieAllElectronSigma', 'Species')
+    call messages_obsolete_variable('SpeciesAllElectronSigma', 'Species')
+
     ! First, find out if there is a Species block.
     n_spec_block = 0
     if(parse_block(datasets_check('Species'), blk) == 0) then

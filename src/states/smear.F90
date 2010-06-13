@@ -115,6 +115,8 @@ contains
       call parse_float(datasets_check('Smearing'), CNST(0.1) / (M_TWO * P_Ry), this%dsmear, units_inp%energy)
     end if
 
+    call messages_obsolete_variable("ElectronicTemperature", "Smearing")
+
     this%fixed_occ = fixed_occ
     this%el_per_state = M_ONE
     if(ispin == 1) & ! unpolarized

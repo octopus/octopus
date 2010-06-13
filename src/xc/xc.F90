@@ -236,6 +236,9 @@ contains
       c_id = val / 1000
       x_id = val - c_id*1000
 
+      call messages_obsolete_variable('XFunctional', 'XCFunctional')
+      call messages_obsolete_variable('CFunctional', 'XCFunctional')
+
       !%Variable XCKernel
       !%Type integer
       !%Default lda_x+lda_c_pz_mod

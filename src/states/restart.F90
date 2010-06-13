@@ -110,6 +110,8 @@ contains
 
     call push_sub('restart.restart_init')
 
+    call messages_obsolete_variable('RestartFileFormat', 'RestartWrite')
+
     !%Variable RestartWrite
     !%Type logical
     !%Default true

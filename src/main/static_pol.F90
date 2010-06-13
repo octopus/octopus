@@ -382,6 +382,7 @@ contains
 
       call states_allocate_wfns(st, gr%mesh)
 
+      call messages_obsolete_variable("EMStaticField", "EMStaticElectricField")
       !%Variable EMStaticElectricField
       !%Type float
       !%Default 0.01 a.u.

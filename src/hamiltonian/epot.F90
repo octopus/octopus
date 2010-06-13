@@ -204,6 +204,9 @@ contains
     ! lasers
     call laser_init(ep%no_lasers, ep%lasers, gr%mesh)
 
+    ! No more "UserDefinedTDPotential" from this version on.
+    call messages_obsolete_variable('UserDefinedTDPotential', 'TDExternalFields')
+
     !%Variable StaticElectricField
     !%Type block
     !%Section Hamiltonian

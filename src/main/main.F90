@@ -44,7 +44,6 @@ program octopus
   call getopt_init(ierr)
   if(ierr .eq. 0) call getopt_octopus
   call parser_init()
-  call messages_mass_grave()
 
   !%Variable DevelVersion
   !%Type logical

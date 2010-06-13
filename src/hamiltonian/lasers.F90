@@ -256,6 +256,7 @@ contains
 
     call push_sub('lasers.laser_init')
 
+    call messages_obsolete_variable("TDLasers", "TDExternalFields")
     !%Variable TDExternalFields
     !%Type block
     !%Section Time-Dependent
