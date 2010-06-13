@@ -17,29 +17,6 @@
 !!
 !! $Id$
 
-!----------------------------------------------------
-subroutine X(nl_operator_tune)(op)
-  type(nl_operator_t), intent(inout) :: op
-
-  integer :: method
-
-  call push_sub('nl_operator_inc.Xnl_operator_tune')
-
-  do method = OP_MAX, OP_MIN, -1
-    !skip methods that are not available
-#ifdef R_TCOMPLEX
-    if (op_is_available(method, TYPE_CMPLX) == 0) cycle
-#else
-    if (op_is_available(method, TYPE_FLOAT)  == 0) cycle
-#endif
-    op%X(function) = method
-    exit
-  end do
-
-  call pop_sub('nl_operator_inc.Xnl_operator_tune')
-
-end subroutine X(nl_operator_tune)
-
 ! ---------------------------------------------------------
 
 subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, points, factor)
@@ -107,7 +84,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   if(nri > 0) then
     if(.not.op%const_w) then
       call operate_non_const_weights()
-    else if(op%cmplx_op .or. op%X(function)==OP_FORTRAN) then
+    else if(op%cmplx_op .or. X(function_global) == OP_FORTRAN) then
       call operate_const_weights()
 #ifdef HAVE_OPENCL
     else if(opencl_is_enabled() .and. batch_is_packed(fi) .and. batch_is_packed(fo)) then
@@ -124,13 +101,8 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
       do ist = 1, fi%nst_linear
         pfi => fi%states_linear(ist)%X(psi)(:)
         pfo => fo%states_linear(ist)%X(psi)(:)
-        select case(op%X(function))
-        case(OP_C)
-          call X(operate_ri)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
-        case(OP_VEC)
-          call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
-        end select
 
+        call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
       end do
       !$omp end parallel
     end if

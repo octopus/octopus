@@ -22,7 +22,6 @@
 noinst_LIBRARIES = libbeak.a
 
 libbeak_a_SOURCES =           \
-	beak_utils.c          \
 	operate_ri.c          \
 	operate_ri_vec.c
 

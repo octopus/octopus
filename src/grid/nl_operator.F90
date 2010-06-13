@@ -39,6 +39,7 @@ module nl_operator_m
   use simul_box_m
   use stencil_m
   use types_m
+  use varinfo_m
 
   implicit none
 
@@ -87,9 +88,6 @@ module nl_operator_m
     logical               :: const_w   ! are the weights independent of index i
     logical               :: cmplx_op  ! .true. if we have also imaginary weights
 
-    integer :: dfunction
-    integer :: zfunction
-
     character(len=40) :: label
 
     !the compressed index of grid points
@@ -111,8 +109,7 @@ module nl_operator_m
 
   integer, parameter :: &
        OP_FORTRAN = 0,  &
-       OP_C       = 1,  &
-       OP_VEC     = 2,  &
+       OP_VEC     = 1,  &
        OP_MIN     = OP_FORTRAN, &
        OP_MAX     = OP_VEC
 
@@ -149,6 +146,7 @@ contains
   
   ! ---------------------------------------------------------
   subroutine nl_operator_global_init()
+    integer :: default
 #ifdef HAVE_OPENCL
     type(c_ptr) :: prog
 #endif
@@ -161,20 +159,12 @@ contains
     !%Section Execution::Optimization
     !%Description
     !% This variable selects the subroutine used to apply non-local
-    !% operators over the grid for real functions. By default the best
-    !% subroutine for your system is selected.
-    !%Option best -1
-    !% Select the fastest function for your system.
+    !% operators over the grid for real functions.
+    !% By default the optimized version is used.
     !%Option fortran 0
     !% The standard Fortran function.
-    !%Option c 1
-    !% The C version of the function, unrolled by hand.
-    !%Option vec 2
-    !% This version has been optimized using vector primitives,
-    !% available on x86 (with SSE2) and x86-64 systems (not supported
-    !% by all compilers).
-    !%Option as 3
-    !% Hand-written assembler version, currently only available on Itanium systems.
+    !%Option optimized 1
+    !% This version is optimized using vector primitives (if available).
     !%End
 
     !%Variable OperateComplex
@@ -183,35 +173,25 @@ contains
     !%Section Execution::Optimization
     !%Description
     !% This variable selects the subroutine used to apply non-local
-    !% operators over the grid for complex functions. By default the best
-    !% subroutine for your system is selected.
-    !%Option best -1
-    !% Select the fastest function for your system.
+    !% operators over the grid for complex functions. 
+    !% By default the optimized version is used.
     !%Option fortran 0
     !% The standard Fortran function.
-    !%Option c 1
-    !% The C version of the function, unrolled by hand.
-    !%Option vec 2
-    !% This version has been optimized using vector primitives,
-    !% available on x86 (with SSE2) and x86-64 systems (not supported
-    !% by all compilers).
+    !%Option optimized 1
+    !% This version is optimized using vector primitives (if available).
     !%End
 
-    call parse_integer(datasets_check('OperateDouble'),  -1, dfunction_global)
-    if(dfunction_global.ne.-1) then
-      if(op_is_available(dfunction_global, TYPE_FLOAT)  == 0) then
-        message(1) = 'OperateDouble option chosen is not available on this platform.'
-        call write_fatal(1)
-      end if
-    end if
+#ifndef SINGLE_PRECISION
+    default = OP_VEC
+#else
+    default = OP_FORTRAN
+#endif
 
-    call parse_integer(datasets_check('OperateComplex'), -1, zfunction_global)
-    if(zfunction_global.ne.-1) then
-      if(op_is_available(zfunction_global, TYPE_CMPLX) == 0) then
-        message(1) = 'OperateComplex option chosen is not available on this platform.'
-        call write_fatal(1)
-      end if
-    end if
+    call parse_integer(datasets_check('OperateDouble'),  default, dfunction_global)
+    if(.not.varinfo_valid_option('OperateDouble', dfunction_global)) call input_error('OperateDouble')
+
+    call parse_integer(datasets_check('OperateComplex'), default, zfunction_global)
+    if(.not.varinfo_valid_option('OperateComplex', dfunction_global)) call input_error('OperateComplex')
 
 #ifdef HAVE_OPENCL
     !%Variable OperateOpenCL
@@ -255,7 +235,6 @@ contains
     
     str = 'unknown'
     if(id == OP_FORTRAN) str = 'Fortran'
-    if(id == OP_C)       str = 'C'
     if(id == OP_VEC)     str = 'Vector'
     
     call pop_sub('nl_operator.op_function_name')
@@ -302,9 +281,6 @@ contains
     opo%const_w   = opi%const_w
     opo%cmplx_op  = opi%cmplx_op
 
-    opo%dfunction = opi%dfunction
-    opo%zfunction = opi%zfunction
-
     opo%nri       =  opi%nri
     ASSERT(associated(opi%ri))
 
@@ -312,9 +288,6 @@ contains
     call loct_pointer_copy(opo%rimap, opi%rimap)
     call loct_pointer_copy(opo%rimap_inv, opi%rimap_inv)
     
-    opo%dfunction = opi%dfunction
-    opo%zfunction = opi%zfunction
-
     if(opi%mesh%parallel_in_domains) then
       opo%inner%nri = opi%inner%nri
       call loct_pointer_copy(opo%inner%imin, opi%inner%imin)
@@ -580,18 +553,6 @@ contains
     end if
 #endif
 
-    if(dfunction_global == -1) then
-      call dnl_operator_tune(op)
-    else
-      op%dfunction = dfunction_global
-    end if
-    
-    if(zfunction_global == -1) then
-      call znl_operator_tune(op)
-    else
-      op%zfunction = zfunction_global
-    end if
-
     call pop_sub('nl_operator.nl_operator_build')
 
   end subroutine nl_operator_build
@@ -637,11 +598,6 @@ contains
         end if
       end do
     end do
-
-    if(opt%const_w .and. .not. opt%cmplx_op) then
-      call dnl_operator_tune(opt)
-      call znl_operator_tune(opt)
-    end if
 
     call pop_sub('nl_operator.nl_operator_transpose')
   end subroutine nl_operator_transpose

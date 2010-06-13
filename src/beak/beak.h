@@ -47,9 +47,7 @@ typedef struct {
    src/grid/nl_operator.F90 */
 
 #define OP_FORTRAN 0
-#define OP_C       1
-#define OP_VEC     2
-#define OP_AS      3
+#define OP_VEC     1
 
 #define TYPE_REAL     1
 #define TYPE_CMPLX    2
