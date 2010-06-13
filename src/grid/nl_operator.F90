@@ -113,9 +113,8 @@ module nl_operator_m
        OP_FORTRAN = 0,  &
        OP_C       = 1,  &
        OP_VEC     = 2,  &
-       OP_AS      = 3,  &
        OP_MIN     = OP_FORTRAN, &
-       OP_MAX     = OP_AS
+       OP_MAX     = OP_VEC
 
 #ifdef HAVE_OPENCL
   integer, parameter ::  &
@@ -196,8 +195,6 @@ contains
     !% This version has been optimized using vector primitives,
     !% available on x86 (with SSE2) and x86-64 systems (not supported
     !% by all compilers).
-    !%Option as 3
-    !% Hand-written assembler version, currently only available on Itanium systems.
     !%End
 
     call parse_integer(datasets_check('OperateDouble'),  -1, dfunction_global)
@@ -260,7 +257,6 @@ contains
     if(id == OP_FORTRAN) str = 'Fortran'
     if(id == OP_C)       str = 'C'
     if(id == OP_VEC)     str = 'Vector'
-    if(id == OP_AS)      str = 'AS'
     
     call pop_sub('nl_operator.op_function_name')
   end function op_function_name

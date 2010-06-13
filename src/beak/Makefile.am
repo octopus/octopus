@@ -26,13 +26,8 @@ libbeak_a_SOURCES =           \
 	operate_ri.c          \
 	operate_ri_vec.c
 
-if COMPILE_AS
- libbeak_a_SOURCES += operate_as.S
-endif
-
-noinst_HEADERS =           \
-	beak.h             \
-	operate_ia64.S     \
+noinst_HEADERS =              \
+	beak.h                \
 	vectors.h
 
 include $(srcdir)/../common-rules.make
@@ -43,4 +38,3 @@ depend:
 beak_utils.o : beak_utils.c beak.h 
 operate_ri.o : operate_ri.c beak.h 
 operate_ri_vec.o : operate_ri_vec.c beak.h vectors.h
-operate_as.S : operate_ia64.S

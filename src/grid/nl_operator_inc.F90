@@ -57,10 +57,6 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   integer, pointer :: imin(:), imax(:), ri(:, :)
   R_TYPE,  pointer ::  pfi(:), pfo(:)
   FLOAT,   pointer :: wre(:), wim(:)
-  real(8) :: ws(400)
-#ifdef HAVE_AS
-  integer nns(1:2)
-#endif
 
   call push_sub('nl_operator_inc.Xnl_operator_operate_batch')
 
@@ -133,12 +129,6 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
           call X(operate_ri)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
         case(OP_VEC)
           call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
-#ifdef HAVE_AS
-        case(OP_AS)
-          nns(1) = op%stencil%size
-          nns(2) = nri_loc
-          call X(operate_as)(nns, wre(1), ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1), ws(1))
-#endif
         end select
 
       end do

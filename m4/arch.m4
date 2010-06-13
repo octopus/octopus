@@ -86,7 +86,6 @@ AC_DEFINE(OCT_ARCH_X86_64, 1, [This an x86 system])
 ;;	
 ia64*)
 oct_arch=ia64
-assembler=yes
 AC_DEFINE(OCT_ARCH_IA64, 1, [This an Itanium system])
 ;;
 sparc*)
@@ -122,32 +121,17 @@ if test x"${ac_enable_sse2}" = x"no"; then
 vector=disabled
 fi
 
-# We allow explicit disabling of assembler
-ac_enable_assembler=yes
-AC_ARG_ENABLE(assembler, AS_HELP_STRING([--disable-assembler], [Disable the use of assembler code (ia64)]), 
-	[ac_enable_assembler=${enableval}])
-
-if test x"${ac_enable_assembler}" = x"no"; then
-assembler=disabled
-fi
-
 AC_DEFINE_UNQUOTED(OCT_ARCH, $oct_arch, [The architecture of this system])
 
-AM_CONDITIONAL(COMPILE_AS, test x$assembler = xyes)
 AM_CONDITIONAL(COMPILE_VEC, test x$vector = xyes)
 
 if test x$vector = xyes ; then
 AC_DEFINE(HAVE_VEC, 1, [Define to 1 if vectorial routines are to be compiled])
 fi
 
-if test x$assembler = xyes ; then
-AC_DEFINE(HAVE_AS, 1, [Define to 1 if assembler routines are to be compiled])
-fi
-
 AC_MSG_NOTICE([ Architecture-specific code:
 ***************************
 This is a $oct_arch processor:
 vectorial code: $vector $vector_type
-assembler code: $assembler
 ***************************])
 ])
