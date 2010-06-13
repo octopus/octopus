@@ -484,12 +484,6 @@ contains
 
       call push_sub('em_resp.em_resp_run.parse_input')
 
-      call messages_obsolete_variable('PolFreqs               ', 'EMFreqs             ')
-      call messages_obsolete_variable('PolHyper               ', 'EMHyperpol          ')
-      call messages_obsolete_variable('PolEta                 ', 'EMEta               ')
-      call messages_obsolete_variable('PolConvAbsDens         ', 'LRConvAbsDens       ')
-      call messages_obsolete_variable('PolHamiltonianVariation', 'HamiltonianVariation')
-
       !%Variable EMFreqs
       !%Type block
       !%Section Linear Response::Polarizabilities

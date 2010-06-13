@@ -102,8 +102,6 @@ contains
 
       call push_sub('kpoints.kpoints_init.read_MP')
 
-      call messages_obsolete_variable('KPointsMonkhorstPack', 'KPointsGrid')
-
       !%Variable KPointsGrid
       !%Type block
       !%Default Gamma-point only

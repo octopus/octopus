@@ -179,9 +179,6 @@ contains
     !%End
     call parse_float(datasets_check('ConvRelEv'), M_ZERO, scf%conv_rel_ev)
 
-    call messages_obsolete_variable("ConvAbsForce", "ConvForce")
-    call messages_obsolete_variable("ConvRelForce", "ConvForce")
-
     !%Variable ConvForce
     !%Type float
     !%Default 0.0
@@ -205,8 +202,6 @@ contains
     end if
 
     if(scf%max_iter < 0) scf%max_iter = huge(scf%max_iter)
-
-    call messages_obsolete_variable('What2Mix', 'MixField')
 
     !%Variable MixField
     !%Type integer

@@ -267,8 +267,6 @@ contains
 
     ! Fix the threshold to calculate the radius of the projector-function localization spheres:
 
-    call messages_obsolete_variable('SpecieProjectorSphereThreshold', 'SpeciesProjectorSphereThreshold')
-
     !%Variable SpeciesProjectorSphereThreshold
     !%Type float
     !%Default 0.001

@@ -77,8 +77,6 @@ contains
     call opencl_init()
 #endif
 
-    call messages_obsolete_variable('SystemName')
-
     call geometry_init(sys%geo)
     call grid_init_stage_0(sys%gr, sys%geo)
     call states_init(sys%st, sys%gr, sys%geo)

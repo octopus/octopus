@@ -70,9 +70,6 @@ program harmonic_spectrum
 
   call spectrum_init(spectrum)
 
-  call messages_obsolete_variable('HarmonicSpectrumPolarization')
-  call messages_obsolete_variable('HarmonicSpectrumMode')
-
   if( (pol.ne.'x') .and. &
       (pol.ne.'y') .and. &
       (pol.ne.'z') .and. &

@@ -240,7 +240,6 @@ contains
     end if
 #endif
 
-    call messages_obsolete_variable('OverlapDerivatives', 'ParallelizationOfDerivatives')
 #endif
 
     ! if needed, der%masses should be initialized in modelmb_particles_init

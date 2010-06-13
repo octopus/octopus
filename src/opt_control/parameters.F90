@@ -370,7 +370,6 @@ contains
     end if 
 
     ! Fix the carrier frequency
-    call messages_obsolete_variable('OCTCarrierFrequency')
     par_common%w0 = laser_carrier_frequency(ep%lasers(1))
 
     ! Fix the number of control functions: if we have "traditional" QOCT (i.e. the control functions

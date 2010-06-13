@@ -53,7 +53,7 @@ module messages_m
     messages_print_var_info,    &
     messages_print_var_option,  &
     messages_print_var_value,   &
-    messages_obsolete_variable, &
+    messages_mass_grave,        &
     messages_devel_version,     &
     messages_check_def,         &
     messages_not_implemented
@@ -805,8 +805,44 @@ contains
 
   end subroutine pop_sub
 #endif
+
+
+  ! ---------------------------------------------------------
+  !> Prints out warning messages if the input file contains obsolete variables.
+  !> For each obsolete variable, it calls messages_obsolete_variable.
+  subroutine messages_mass_grave()
+    call messages_obsolete_variable('OverlapDerivatives', 'ParallelizationOfDerivatives')
+    call messages_obsolete_variable('UserDefinedTDPotential', 'TDExternalFields')
+    call messages_obsolete_variable("TDLasers", "TDExternalFields")
+    call messages_obsolete_variable('KPointsMonkhorstPack', 'KPointsGrid')
+    call messages_obsolete_variable("EMStaticField", "EMStaticElectricField")
+    call messages_obsolete_variable('OCTCarrierFrequency')
+    call messages_obsolete_variable("ConvAbsForce", "ConvForce")
+    call messages_obsolete_variable("ConvRelForce", "ConvForce")
+    call messages_obsolete_variable('What2Mix', 'MixField')
+    call messages_obsolete_variable('SpecieProjectorSphereThreshold', 'SpeciesProjectorSphereThreshold')
+    call messages_obsolete_variable('SpecieAllElectronSigma', 'Species')
+    call messages_obsolete_variable('SpeciesAllElectronSigma', 'Species')
+    call messages_obsolete_variable('RestartFileFormat', 'RestartWrite')
+    call messages_obsolete_variable("ElectronicTemperature", "Smearing")
+    call messages_obsolete_variable('PolFreqs               ', 'EMFreqs             ')
+    call messages_obsolete_variable('PolHyper               ', 'EMHyperpol          ')
+    call messages_obsolete_variable('PolEta                 ', 'EMEta               ')
+    call messages_obsolete_variable('PolConvAbsDens         ', 'LRConvAbsDens       ')
+    call messages_obsolete_variable('PolHamiltonianVariation', 'HamiltonianVariation')
+    call messages_obsolete_variable('SystemName')
+    call messages_obsolete_variable('NonInteractingElectrons', 'TheoryLevel')
+    call messages_obsolete_variable('HartreeFock', 'TheoryLevel')
+    call messages_obsolete_variable('HarmonicSpectrumPolarization')
+    call messages_obsolete_variable('HarmonicSpectrumMode')
+    call messages_obsolete_variable('XFunctional', 'XCFunctional')
+    call messages_obsolete_variable('CFunctional', 'XCFunctional')
+  end subroutine
+
   
   ! ---------------------------------------------------------
+  !> Prints out a message if the input file contains an obsolete variable.
+  !> If the optional argument "rep" is present, then it is offered as a replacement.
   subroutine messages_obsolete_variable(name, rep)
     character(len=*),           intent(in) :: name
     character(len=*), optional, intent(in) :: rep
