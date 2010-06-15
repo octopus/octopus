@@ -74,11 +74,11 @@ oct_arch=x86
 vector_type="(sse2)"
 if test x$vector = xyes ; then
 # We allow explicit disabling of SSE2
-ac_enable_sse2=no
-AC_ARG_ENABLE(sse2, AS_HELP_STRING([--enable-sse2], [Enable the use of SSE2 instructions (x86)]), 
-	[ac_enable_sse2=${enableval}])
+ac_enable_vectors=no
+AC_ARG_ENABLE(vectors, AS_HELP_STRING([--enable-vectors], [Enable the use of vectorial instructions (x86)]), 
+	[ac_enable_vectors=${enableval}])
 
-if test x"${ac_enable_sse2}" = x"no"; then
+if test x"${ac_enable_vectors}" = x"no"; then
 vector=disabled
 fi
 fi
@@ -113,11 +113,11 @@ oct_arch=unknown
 ;;
 esac
 
-ac_enable_sse2=yes
-AC_ARG_ENABLE(sse2, AS_HELP_STRING([--disable-sse2], [Disable the use of SSE2 instructions (x86_64)]), 
-	[ac_enable_sse2=${enableval}])
+ac_enable_vectors=yes
+AC_ARG_ENABLE(vectors, AS_HELP_STRING([--disable-vectors], [Disable the use of vectorial instructions (x86_64 and Blue Gene)]), 
+	[ac_enable_vectors=${enableval}])
 
-if test x"${ac_enable_sse2}" = x"no"; then
+if test x"${ac_enable_vectors}" = x"no"; then
 vector=disabled
 fi
 
