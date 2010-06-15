@@ -302,6 +302,16 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
   endif
   ! no derivatives in electric, so ghost points not needed
 
+  apply_kpoint = associated(hm%phase) .and. this%pert_type /= PERTURBATION_ELECTRIC &
+    .and. this%pert_type /= PERTURBATION_KDOTP
+  ! electric does not need it since (e^-ikr)r(e^ikr) = r
+  ! kdotp has the perturbation written in terms of the periodic part with the phase
+
+  if (apply_kpoint) then
+    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np_part) &
+      f_in_copy(ip, idim) = hm%phase(ip, ik) * f_in_copy(ip, idim)
+  endif
+
   select case(this%pert_type)
 
   case(PERTURBATION_ELECTRIC)
@@ -315,6 +325,11 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
   case(PERTURBATION_NONE)
     f_out(1:gr%mesh%np, 1:hm%d%dim) = R_TOTYPE(M_ZERO)
   end select
+
+  if (apply_kpoint) then
+    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) &
+      f_out(ip, idim) = conjg(hm%phase(ip, ik)) * f_out(ip, idim)
+  endif
 
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
     SAFE_DEALLOCATE_A(f_in_copy)
@@ -456,7 +471,7 @@ contains
   end subroutine ionic
 
 
-! --------------------------------------------------------------------------
+  ! --------------------------------------------------------------------------
   ! d^2/dki dkj (-(1/2) ki kj [ri,[rj,H]])
   ! for i  = j : 1 - [ri,[rj,Vnl]]
   ! for i != j : -(1/2) [ri,[rj,Vnl]]
