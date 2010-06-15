@@ -83,22 +83,22 @@ contains
     call push_sub('ob_mem.ob_mem_init')
 
       do il=1, NLEADS
-        ASSERT(intf(il)%np_intf.eq.intf(il)%np_uc)
+        ASSERT(intf(il)%np_intf .eq. intf(il)%np_uc)
       end do
 
     ! Allocate arrays depending on the type of coefficients requested.
     select case(ob%mem_type)
     case(SAVE_CPU_TIME)
-      do il=1, NLEADS
+      do il = 1, NLEADS
         np = intf(il)%np_intf
         SAFE_ALLOCATE(ob%lead(il)%q(1:np, 1:np, 0:max_iter))
         nullify(ob%lead(il)%q_sp, ob%lead(il)%q_s, ob%lead(il)%sp2full_map)
         ob%lead(il)%q = M_z0
       end do
     case(SAVE_RAM_USAGE) ! FIXME: only 2D.
-      ASSERT(calc_dim.eq.2)
+      ASSERT(calc_dim .eq. 2)
       ! sp_coeff has the size ny*nz*do**2, (np=ny*nz*do).
-      do il=1, NLEADS
+      do il = 1, NLEADS
         np = intf(il)%np_intf
         SAFE_ALLOCATE(ob%lead(il)%q_sp(1:np*order, 0:max_iter))
         SAFE_ALLOCATE(ob%lead(il)%q_s(1:np, 1:np, 1:2))
@@ -126,7 +126,7 @@ contains
     !% Decides when to consider the memory coefficients converged.
     !%End
     call parse_float(datasets_check('MemoryTol'), CNST(1e-12), mem_tolerance)
-    if(mem_tolerance.le.M_ZERO) then
+    if(mem_tolerance .le. M_ZERO) then
       write(message(1), '(a,f14.6,a)') "Input : '", mem_tolerance, "' is not a valid MemoryTol."
       message(2) = '(0 < TDTransMemTol)'
       call write_fatal(2)
@@ -140,7 +140,7 @@ contains
     !% Sets the maximum iteration number to converge the memory coefficients.
     !%End
     call parse_integer(datasets_check('MemoryMaxIter'), 500, mem_iter)
-    if(mem_iter.le.0) then
+    if(mem_iter .le. 0) then
       write(message(1), '(a,i6,a)') "Input : '", mem_iter, "' is not a valid MemoryMaxIter."
       message(2) = '(0 <= TDTransMemMaxIter)'
       call write_fatal(2)
@@ -152,8 +152,8 @@ contains
       call read_coeffs(trim(restart_dir)//'open_boundaries/', saved_iter, ob, hm, intf(il), &
                        calc_dim, max_iter, spacing, delta, op%stencil%size, order)
 
-      if (saved_iter.lt.max_iter) then ! Calculate missing coefficients.
-        if (saved_iter.gt.0) then
+      if (saved_iter .lt. max_iter) then ! Calculate missing coefficients.
+        if (saved_iter .gt. 0) then
           write(message(1),'(a,i5,a)') 'Info: Successfully loaded the first', saved_iter, &
             ' memory coefficients of '//trim(lead_name(il))//' lead.'
           call write_info(1)
@@ -166,15 +166,15 @@ contains
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, max_iter+1)
 
         ! FIXME: the spinor index of hm%lead(il)%h_diag is ignored here.
-        ASSERT(hm%d%ispin.ne.SPINORS)
-        if(saved_iter.eq.0) then 
+        ASSERT(hm%d%ispin .ne. SPINORS)
+        if(saved_iter .eq. 0) then 
           ! Get anchor for recursion.
           select case(ob%mem_type)
           case(SAVE_CPU_TIME)
             call approx_coeff0(intf(il), delta, hm%lead(il)%h_diag(:, :, 1),   &
               hm%lead(il)%h_offdiag(:, :), ob%lead(il)%q(:, :, 0))
           case(SAVE_RAM_USAGE) ! FIXME: only 2D.
-            ASSERT(calc_dim.eq.2)
+            ASSERT(calc_dim .eq. 2)
             call approx_sp_coeff0(intf(il), delta, hm%lead(il)%h_diag(:, :, 1), &
                  hm%lead(il)%h_offdiag(:, :), ob%lead(il)%q_sp(:, 0), &
                  ob%lead(il)%q_s(:,:,:), order, ob%lead(il)%sp2full_map)
@@ -187,7 +187,7 @@ contains
           call calculate_coeffs_ni(saved_iter+1, max_iter, delta, intf(il), hm%lead(il)%h_diag(:, :, 1), &
             hm%lead(il)%h_offdiag(:, :), ob%lead(il)%q(:, :, :))
         case(SAVE_RAM_USAGE) ! FIXME: only 2D.
-          ASSERT(calc_dim.eq.2)
+          ASSERT(calc_dim .eq. 2)
           call apply_coupling(ob%lead(il)%q(:, :, 0), hm%lead(il)%h_offdiag(:, :),&
               ob%lead(il)%q(:, :, 0), np, il)
           call calculate_sp_coeffs(saved_iter+1, max_iter, delta, intf(il), hm%lead(il)%h_diag(:, :, 1), &
@@ -195,7 +195,7 @@ contains
             order, calc_dim, ob%lead(il)%sp2full_map, spacing)
         end select
 
-        if(saved_iter.lt.max_iter) then
+        if(saved_iter .lt. max_iter) then
           message(1) = ''
           message(2) = 'Info: Writing memory coefficients of '// &
             trim(lead_name(il))//' lead.'
@@ -211,7 +211,7 @@ contains
         call write_info(1)
       end if
 
-      if(ob%mem_type.eq.SAVE_CPU_TIME) then
+      if(ob%mem_type .eq. SAVE_CPU_TIME) then
         do ii=0, max_iter
           call apply_coupling(ob%lead(il)%q(:, :, ii), hm%lead(il)%h_offdiag(:, :),&
               ob%lead(il)%q(:, :, ii), np, il)
@@ -235,10 +235,10 @@ contains
     CMPLX,             intent(in)  :: offdiag(:, :)
     CMPLX,             intent(out) :: coeff0(:, :)
 
-    integer            :: i, j, np
+    integer            :: iter, ip, np
     CMPLX, allocatable :: q0(:, :)
     FLOAT              :: norm, old_norm, d2
-    CMPLX              :: h
+    CMPLX              :: hh
 
     call push_sub('ob_mem.approx_coeff0')
 
@@ -247,10 +247,10 @@ contains
 
     ! If we are in 1D and have only a number we can solve the equation explicitly.
     ! So check this first for faster calculation.
-    if(np.eq.1) then
-      h            = M_z1 + M_zI*delta*diag(1,1)
+    if(np .eq. 1) then
+      hh = M_z1 + M_zI*delta*diag(1,1)
       if(infinity_norm(offdiag) > M_ZERO) then
-        coeff0(1, 1) = (-h + sqrt(h**2 + d2*(M_TWO*offdiag(1,1))**2)) / (M_TWO*d2*offdiag(1,1)**2)
+        coeff0(1, 1) = (-hh + sqrt(hh**2 + d2*(M_TWO*offdiag(1,1))**2)) / (M_TWO*d2*offdiag(1,1)**2)
       else
         message(1) = 'Error in approx_coeff0:'
         message(2) = 'Off-diagonal term of Hamiltonian must not be the zero matrix!'
@@ -268,18 +268,18 @@ contains
       q0(:, :) = M_z0
 
       old_norm = M_ZERO
-      do i = 1, mem_iter
+      do iter = 1, mem_iter
         ! Calculate 1 + i*delta*h + delta^2*coeff0_old
         coeff0(:, :) = M_zI*delta*diag(:, :) + d2*q0(:, :)
-        do j = 1, np
-          coeff0(j, j) = M_ONE + coeff0(j, j)
+        do ip = 1, np
+          coeff0(ip, ip) = M_ONE + coeff0(ip, ip)
         end do
 
         ! Invert.
         call lalg_sym_inverter('U', np, coeff0)
         call matrix_symmetrize(coeff0, np)
         norm = infinity_norm(coeff0)
-        if((abs(old_norm/norm-M_ONE)).lt.mem_tolerance) then
+        if((abs(old_norm/norm-M_ONE)) .lt. mem_tolerance) then
           exit
         end if
         ! Apply coupling matrices.
@@ -287,7 +287,7 @@ contains
         call matrix_symmetric_average(q0, np)
         old_norm = norm
       end do
-      if(i.gt.mem_iter) then
+      if(iter .gt. mem_iter) then
         write(message(1), '(a,i6,a)') 'Memory coefficent for time step 0, ' &
           //trim(lead_name(intf%il))//' lead, not converged'
         call write_warning(1)
@@ -314,7 +314,7 @@ contains
     integer,           intent(in)  :: order
     integer,           intent(in)  :: mapping(:)     ! Mapping.
 
-    integer            :: i, j, np
+    integer            :: iter, ip, np
     CMPLX, allocatable :: q0(:, :)
     FLOAT              :: norm, old_norm, d2
 
@@ -334,18 +334,18 @@ contains
     q0(:, :) = M_z0
 
     old_norm = M_ZERO
-    do i = 1, mem_iter
+    do iter = 1, mem_iter
       ! Calculate 1 + i*delta*h + delta^2*coeff0_old
       q0(:, :) = M_zI*delta*diag(:, :) + d2*q0(:, :)
-      do j = 1, np
-        q0(j, j) = M_ONE + q0(j, j)
+      do ip = 1, np
+        q0(ip, ip) = M_ONE + q0(ip, ip)
       end do
 
       ! Invert.
       call lalg_sym_inverter('U', np, q0)
       call matrix_symmetrize(q0, np)
       norm = infinity_norm(q0)
-      if((abs(old_norm/norm-M_ONE)).lt.mem_tolerance) then
+      if((abs(old_norm/norm-M_ONE)) .lt. mem_tolerance) then
         exit
       end if
       ! Apply coupling matrices.
@@ -353,7 +353,7 @@ contains
       call matrix_symmetric_average(q0, np)
       old_norm = norm
     end do
-    if(i.gt.mem_iter) then
+    if(iter .gt. mem_iter) then
       write(message(1), '(a,i6,a)') 'Memory coefficent for time step 0, ' &
         //trim(lead_name(intf%il))//' lead, not converged'
       call write_warning(1)
@@ -392,7 +392,7 @@ contains
     CMPLX,             intent(in)    :: offdiag(:, :)
     CMPLX,             intent(inout) :: coeffs(intf%np_intf, intf%np_intf, 0:iter)
 
-    integer            :: i,j, k, np
+    integer            :: ip, ii, ji, ki, np
     CMPLX, allocatable :: tmp(:, :), tmp2(:, :), m0(:, :), m_l(:, :), m_r(:, :)
     FLOAT              :: norm, old_norm
 
@@ -408,15 +408,15 @@ contains
 
     m0 = M_z0
     tmp(:, :) = -M_zI*delta*diag(:, :)
-    do i = 1, np
-      tmp(i, i) = M_ONE + tmp(i, i)
+    do ip = 1, np
+      tmp(ip, ip) = M_ONE + tmp(ip, ip)
     end do
 
     call lalg_symm(np, np, 'L', M_z1, coeffs(:, :, 0), tmp, M_z0, m0)
 
     m_l(:, :) = delta*coeffs(:, :, 0)
     m_r(:, :) = m_l(:, :)
-    if(mod(intf%il+1,2)+1.eq.1) then
+    if(mod(intf%il+1,2)+1 .eq. 1) then
       call lalg_trmm(np, np, 'U', 'N', 'R', M_z1, offdiag, m_l)
       call lalg_trmm(np, np, 'U', 'T', 'L', M_z1, offdiag, m_r)
     else
@@ -424,62 +424,62 @@ contains
       call lalg_trmm(np, np, 'L', 'T', 'L', M_z1, offdiag, m_r)
     end if
 
-    do i = start_iter, iter
-      ! The part of the sum independent of coeff_p(:, :, i),
+    do ii = start_iter, iter
+      ! The part of the sum independent of coeff_p(:, :, ii),
       ! accumulated in tmp2.
       tmp2 = M_z0
-      if(i.gt.1) then
-        tmp(:, :) = M_TWO*coeffs(:, :, i-1) + coeffs(:, :, i-2)
+      if(ii .gt. 1) then
+        tmp(:, :) = M_TWO*coeffs(:, :, ii-1) + coeffs(:, :, ii-2)
       else
-        tmp(:, :) = M_TWO*coeffs(:, :, i-1)
+        tmp(:, :) = M_TWO*coeffs(:, :, ii-1)
       end if
       call lalg_symm(np, np, 'L', M_z1, tmp, m_r, M_z0, tmp2)
       
-      do k = 1, i-1       
-        if(k.gt.1) then
-          tmp(:, :) = coeffs(:, :, k) + M_TWO*coeffs(:, :, k-1) + coeffs(:, :, k-2)
+      do ki = 1, ii-1       
+        if(ki .gt. 1) then
+          tmp(:, :) = coeffs(:, :, ki) + M_TWO*coeffs(:, :, ki-1) + coeffs(:, :, ki-2)
         else
-          tmp(:, :) = coeffs(:, :, k) + M_TWO*coeffs(:, :, k-1)
+          tmp(:, :) = coeffs(:, :, ki) + M_TWO*coeffs(:, :, ki-1)
         end if
         if(mod(intf%il+1,2)+1.eq.1) then
           call lalg_trmm(np, np, 'U', 'T', 'R', M_z1, offdiag, tmp)
         else
           call lalg_trmm(np, np, 'L', 'T', 'R', M_z1, offdiag, tmp)
         end if
-        call lalg_symm(np, np, 'R', TOCMPLX(delta, M_ZERO), coeffs(:, :, i-k), tmp, M_z1, tmp2)
+        call lalg_symm(np, np, 'R', TOCMPLX(delta, M_ZERO), coeffs(:, :, ii-ki), tmp, M_z1, tmp2)
       end do
 
-      call lalg_symm(np, np, 'R', M_z1, coeffs(:, :, i-1), m0, M_z0, tmp)
+      call lalg_symm(np, np, 'R', M_z1, coeffs(:, :, ii-1), m0, M_z0, tmp)
       call lalg_gemm(np, np, np, -M_z1, m_l, tmp2, M_z1, tmp)
       call matrix_symmetric_average(tmp, np)
 
       
       ! initialize coefficient
-      coeffs(:, :, i) = tmp(:, :)
-      old_norm = infinity_norm(coeffs(:, :, i))
+      coeffs(:, :, ii) = tmp(:, :)
+      old_norm = infinity_norm(coeffs(:, :, ii))
       ! The convergence loop.
-      do j = 1, mem_iter
-        call lalg_symm(np, np, 'L', M_z1, coeffs(:, :, i), m_r, M_z0, tmp2)
-!        call lalg_gemm(np, np, np, M_z1, coeffs(:, :, i), m_r, M_z0, tmp2)
-        call lalg_gemm(np, np, np, M_z1, m_l, tmp2, M_z0, coeffs(:, :, i))
-        coeffs(:, :, i) = tmp(:, :) - coeffs(:, :, i)
-        call matrix_symmetric_average(coeffs(:, :, i), np)
+      do ji = 1, mem_iter
+        call lalg_symm(np, np, 'L', M_z1, coeffs(:, :, ii), m_r, M_z0, tmp2)
+!        call lalg_gemm(np, np, np, M_z1, coeffs(:, :, ii), m_r, M_z0, tmp2)
+        call lalg_gemm(np, np, np, M_z1, m_l, tmp2, M_z0, coeffs(:, :, ii))
+        coeffs(:, :, ii) = tmp(:, :) - coeffs(:, :, ii)
+        call matrix_symmetric_average(coeffs(:, :, ii), np)
 
-        norm = infinity_norm(coeffs(:, :, i))
-        if(abs(old_norm/norm-M_ONE).lt.mem_tolerance) then
+        norm = infinity_norm(coeffs(:, :, ii))
+        if(abs(old_norm/norm-M_ONE) .lt. mem_tolerance) then
           exit
         end if
         old_norm = norm
       end do
 
       ! Write a warning if a coefficient is not converged.
-      if(j.gt.mem_iter) then
-        write(message(1), '(a,i6,a)') 'Memory coefficent for time step ', i, &
+      if(ji .gt. mem_iter) then
+        write(message(1), '(a,i6,a)') 'Memory coefficent for time step ', ii, &
           ', '//trim(lead_name(intf%il))//' lead, not converged.'
         call write_warning(1)
       end if
 
-      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(i+1, iter+1)
+      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ii+1, iter+1)
     end do
 
     message(1) = ''
@@ -516,7 +516,7 @@ contains
     integer,           intent(in)    :: mapping(:)   ! the mapping
     FLOAT,             intent(in)    :: spacing
 
-    integer            :: i,j, k, np
+    integer            :: ip, ii, ji, ki, np
     CMPLX, allocatable :: tmp1(:, :), tmp2(:, :), tmp3(:, :), inv_offdiag(:, :)
     CMPLX, allocatable :: prefactor_plus(:, :), prefactor_minus(:, :)
     CMPLX, allocatable :: sp_tmp(:)
@@ -539,12 +539,12 @@ contains
     prefactor_plus  = M_zI*delta*diag(:, :)
     prefactor_minus = -M_zI*delta*diag(:, :)
 
-    do i = 1, np
-      prefactor_plus(i, i)  = M_ONE + prefactor_plus(i, i)
-      prefactor_minus(i, i) = M_ONE + prefactor_minus(i, i)
+    do ip = 1, np
+      prefactor_plus(ip, ip)  = M_ONE + prefactor_plus(ip, ip)
+      prefactor_minus(ip, ip) = M_ONE + prefactor_minus(ip, ip)
     end do
     inv_offdiag(:, :) = offdiag(:, :)
-    if (mod(intf%il+1,2)+1.eq.1) then
+    if (mod(intf%il+1,2)+1 .eq. 1) then
       call lalg_invert_upper_triangular(np, inv_offdiag)
     else
       call lalg_invert_lower_triangular(np, inv_offdiag)
@@ -560,21 +560,21 @@ contains
       call lalg_trmm(np, np, 'L', 'N', 'R', M_z1, inv_offdiag, prefactor_minus)
     end if
 
-    do i = start_iter, iter
-      sp_coeffs(:, i) = M_z0
+    do ii = start_iter, iter
+      sp_coeffs(:, ii) = M_z0
       old_norm = M_ZERO
 
-      do j = 1, mem_iter
+      do ji = 1, mem_iter
         tmp2(:, :) = M_z0
         ! k = 0 to k = m.
-        do k = 0, i
+        do ki = 0, ii
           tmp1(:, :) = M_z0
-          sp_tmp = sp_coeffs(:, k)
-          if(k.gt.0) then
-            sp_tmp = sp_tmp + M_TWO*sp_coeffs(:, k-1)
+          sp_tmp = sp_coeffs(:, ki)
+          if(ki.gt.0) then
+            sp_tmp = sp_tmp + M_TWO*sp_coeffs(:, ki-1)
           end if
-          if(k.gt.1) then
-            sp_tmp = sp_tmp + sp_coeffs(:, k-2)
+          if(ki.gt.1) then
+            sp_tmp = sp_tmp + sp_coeffs(:, ki-2)
           end if
           call make_full_matrix(np, order, dim, sp_tmp, mem_s, tmp1, mapping)
           if (intf%il.eq.LEFT) then
@@ -582,29 +582,29 @@ contains
           else
             call lalg_trmm(np, np, 'L', 'N', 'R', M_z1, inv_offdiag, tmp1)
           end if
-          call make_full_matrix(np, order, dim, sp_coeffs(:, i-k), mem_s, tmp3, mapping)
+          call make_full_matrix(np, order, dim, sp_coeffs(:, ii-ki), mem_s, tmp3, mapping)
           call lalg_symm(np, np, 'R', M_z1, tmp3, tmp1, M_z1, tmp2)
         end do
-        call make_full_matrix(np, order, dim, sp_coeffs(:, i-1), mem_s, tmp3, mapping)
+        call make_full_matrix(np, order, dim, sp_coeffs(:, ii-1), mem_s, tmp3, mapping)
         call lalg_symm(np, np, 'R', M_z1, tmp3, prefactor_minus, TOCMPLX(-delta**2, M_ZERO), tmp2)
         call lalg_gemm(np, np, np, M_z1, prefactor_plus, tmp2, M_z0, tmp1)
         ! Use for numerical stability.
         call matrix_symmetrize(tmp1, np)
-        call make_sparse_matrix(np, order, dim, tmp1, mem_s, sp_coeffs(:, i), mapping)
+        call make_sparse_matrix(np, order, dim, tmp1, mem_s, sp_coeffs(:, ii), mapping)
         norm = infinity_norm(tmp1)
-        if((abs(norm-old_norm)*sp2).lt.mem_tolerance) then
+        if((abs(norm-old_norm)*sp2) .lt. mem_tolerance) then
           exit
         end if
         old_norm = norm
       end do
       ! Write a warning if a coefficient is not converged.
-      if(j.gt.mem_iter) then
-        write(message(1), '(a,i6,a)') 'Memory coefficent for time step ', i, &
+      if(ji .gt. mem_iter) then
+        write(message(1), '(a,i6,a)') 'Memory coefficent for time step ', ii, &
           ', '//trim(lead_name(intf%il))//' lead, not converged.'
         call write_warning(1)
       end if
 
-      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(i+1, iter+1)
+      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ii+1, iter+1)
     end do
 
     message(1) = ''
@@ -627,18 +627,18 @@ contains
   ! FIXME: this routine writes compiler- and/or system-dependent binary files.
   ! It should be changed to a platform-independent format.
   subroutine write_coeffs(dir, ob, hm, intf, dim, iter, spacing, delta, op_n, order)
-    character(len=*), intent(in) :: dir
-    type(ob_terms_t), intent(inout) :: ob
-    type(hamiltonian_t), intent(in) :: hm
-    type(interface_t),   intent(in) :: intf
-    integer,          intent(in) :: dim                       ! Dimension.
-    integer,          intent(in) :: iter                      ! Number of coefficients.
-    FLOAT,            intent(in) :: spacing                   ! Grid spacing.
-    FLOAT,            intent(in) :: delta                     ! Timestep.
-    integer,          intent(in) :: op_n                      ! Number of operator points.
-    integer,          intent(in) :: order                     ! discretization order
+    character(len=*),    intent(in)    :: dir
+    type(ob_terms_t),    intent(inout) :: ob
+    type(hamiltonian_t), intent(in)    :: hm
+    type(interface_t),   intent(in)    :: intf
+    integer,             intent(in)    :: dim             ! Dimension.
+    integer,             intent(in)    :: iter            ! Number of coefficients.
+    FLOAT,               intent(in)    :: spacing         ! Grid spacing.
+    FLOAT,               intent(in)    :: delta           ! Timestep.
+    integer,             intent(in)    :: op_n            ! Number of operator points.
+    integer,             intent(in)    :: order           ! discretization order
 
-    integer :: ntime, j, iunit, np
+    integer :: ntime, ip, iunit, np
 
     call push_sub('ob_mem.write_coeffs')
 
@@ -670,8 +670,8 @@ contains
     select case(ob%mem_type)
     case(SAVE_CPU_TIME)
       do ntime = 0, iter
-        do j = 1, np
-          write(iunit) ob%lead(intf%il)%q(j, j:np, ntime)
+        do ip = 1, np
+          write(iunit) ob%lead(intf%il)%q(ip, ip:np, ntime)
         end do
       end do
     case(SAVE_RAM_USAGE) ! FIXME: only 2D.
@@ -693,19 +693,19 @@ contains
   ! FIXME: this routine reads compiler- and/or system-dependent binary files.
   ! It should be chanegd to a platform-independent format.
   subroutine read_coeffs(dir, s_iter, ob, hm, intf, dim, iter, spacing, delta, op_n, order)
-    character(len=*), intent(in)    :: dir
-    integer,          intent(out)   :: s_iter                        ! Number of saved coefficients.
-    type(ob_terms_t), intent(inout) :: ob
-    type(hamiltonian_t), intent(in) :: hm
-    type(interface_t),intent(in)    :: intf
-    integer,          intent(in)    :: dim                           ! Dimension of the problem.
-    integer,          intent(in)    :: iter                          ! Number of coefficients.
-    FLOAT,            intent(in)    :: spacing                       ! Spacing.
-    FLOAT,            intent(in)    :: delta                         ! Timestep.
-    integer,          intent(in)    :: op_n                          ! Number of operator points.
-    integer,          intent(in)    :: order                         ! discretization order
+    character(len=*),    intent(in)    :: dir
+    integer,             intent(out)   :: s_iter       ! Number of saved coefficients.
+    type(ob_terms_t),    intent(inout) :: ob
+    type(hamiltonian_t), intent(in)    :: hm
+    type(interface_t),   intent(in)    :: intf
+    integer,             intent(in)    :: dim          ! Dimension of the problem.
+    integer,             intent(in)    :: iter         ! Number of coefficients.
+    FLOAT,               intent(in)    :: spacing      ! Spacing.
+    FLOAT,               intent(in)    :: delta        ! Timestep.
+    integer,             intent(in)    :: op_n         ! Number of operator points.
+    integer,             intent(in)    :: order        ! discretization order
 
-    integer :: ntime, j, iunit, s_dim, s_np, s_op_n, s_mem_type, np, il
+    integer :: ntime, ip, iunit, s_dim, s_np, s_op_n, s_mem_type, np, il
     FLOAT   :: s_spacing, s_delta, det
     FLOAT, allocatable :: s_vks(:)
     logical :: s_reducible
@@ -719,7 +719,7 @@ contains
     ! Try to open file.
     iunit = io_open(trim(dir)//trim(lead_name(il)), action='read', &
       status='old', die=.false., is_tmp=.true., form='unformatted')
-    if(iunit.lt.0) then ! no file found
+    if(iunit .lt. 0) then ! no file found
       call pop_sub('ob_mem.read_coeffs')
       return
     end if
@@ -747,9 +747,9 @@ contains
         ! Read the coefficients.
         if (ob%mem_type.eq.SAVE_CPU_TIME) then ! Full (upper half) matrices.
           do ntime = 0, min(iter, s_iter)
-            do j = 1, np
-              read(iunit) ob%lead(il)%q(j, j:np, ntime)
-              ob%lead(il)%q(j:np, j, ntime) = ob%lead(il)%q(j, j:np, ntime)
+            do ip = 1, np
+              read(iunit) ob%lead(il)%q(ip, ip:np, ntime)
+              ob%lead(il)%q(ip:np, ip, ntime) = ob%lead(il)%q(ip, ip:np, ntime)
             end do
           end do
         else ! Packed matrices (FIXME: yet only 2D).
@@ -810,37 +810,37 @@ contains
   ! ---------------------------------------------------------
   ! Create sparse matrix out of the full matrix.
   ! Only 2D case.
-  ! sp = s^(-1).m.s
-  subroutine make_sparse_matrix(np, order, dim, m, s, sp, mapping)
-    integer, intent(in)  :: np          ! Matrix size.
-    integer, intent(in)  :: order       ! Derivative order.
-    integer, intent(in)  :: dim         ! Dimension
-    CMPLX,   intent(in)  :: m(np, np)   ! Full matrix.
-    CMPLX,   intent(in)  :: s(np, np, 2)! Diagonalization matrices.
-    CMPLX,   intent(out) :: sp(:)       ! Sparse matrix.
-    integer, intent(in)  :: mapping(:)  ! Mapping.
+  ! sp = ss^(-1).mm.ss
+  subroutine make_sparse_matrix(np, order, dim, mm, ss, sp, mapping)
+    integer, intent(in)  :: np            ! Matrix size.
+    integer, intent(in)  :: order         ! Derivative order.
+    integer, intent(in)  :: dim           ! Dimension
+    CMPLX,   intent(in)  :: mm(np, np)    ! Full matrix.
+    CMPLX,   intent(in)  :: ss(np, np, 2) ! Diagonalization matrices.
+    CMPLX,   intent(out) :: sp(:)         ! Sparse matrix.
+    integer, intent(in)  :: mapping(:)    ! Mapping.
 
-    integer            :: id, i
+    integer            :: id, ip
     CMPLX, allocatable :: tmp(:, :), tmp2(:, :)
 
     call push_sub('ob_mem.make_sparse_matrix')
 
-    ASSERT(dim.eq.2)
+    ASSERT(dim .eq. 2)
 
     SAFE_ALLOCATE( tmp(1:np, 1:np))
     SAFE_ALLOCATE(tmp2(1:np, 1:np))
 
     ! Now calculate [S^(-1)*sp*S] to get the sparse matrix.
     ! FIXME: s, inv_s and sp are symmetric.
-    call lalg_gemm(np, np, np, M_z1, s(:, :, 2), m, M_z0, tmp)
-    call lalg_gemm(np, np, np, M_z1, tmp, s(:, :, 1), M_z0, tmp2)
+    call lalg_gemm(np, np, np, M_z1, ss(:, :, 2), mm, M_z0, tmp)
+    call lalg_gemm(np, np, np, M_z1, tmp, ss(:, :, 1), M_z0, tmp2)
 
     select case(dim)
     case(2)
       ! For each row.
-      do i = 0, np-1
+      do ip = 0, np-1
         do id = 1, order
-          sp(i*order+id) = tmp2(i+1, mapping(i*order+id))
+          sp(ip*order+id) = tmp2(ip+1, mapping(ip*order+id))
         end do
       end do
     case default
@@ -858,27 +858,27 @@ contains
 
   ! ---------------------------------------------------------
   ! Fast multiplication of the sparse matrix with a dense matrix
-  ! res = sp*m.
-  subroutine mul_sp(np, order, dim, sp, m, mapping, res)
-    integer, intent(in)  :: np          ! matrix size (np**2)
-    integer, intent(in)  :: order       ! derivative order
-    integer, intent(in)  :: dim         ! dimension
-    CMPLX,   intent(in)  :: sp(:)       ! sparse matrix (np*order)
-    CMPLX,   intent(in)  :: m(np, np)   ! the matrix to multipliy
-    integer, intent(in)  :: mapping(:)  ! the mapping
-    CMPLX,   intent(out) :: res(np, np) ! the full matrix
+  ! res = sp*mm.
+  subroutine mul_sp(np, order, dim, sp, mm, mapping, res)
+    integer, intent(in)  :: np           ! matrix size (np**2)
+    integer, intent(in)  :: order        ! derivative order
+    integer, intent(in)  :: dim          ! dimension
+    CMPLX,   intent(in)  :: sp(:)        ! sparse matrix (np*order)
+    CMPLX,   intent(in)  :: mm(np, np)   ! the matrix to multipliy
+    integer, intent(in)  :: mapping(:)   ! the mapping
+    CMPLX,   intent(out) :: res(np, np)  ! the full matrix
 
     integer :: ii,ij,ik, ijo
     CMPLX   :: tmp
 
     call push_sub('ob_mem.mul_sp')
 
-    do ij=1, np
-      do ii=1, np
+    do ij = 1, np
+      do ii = 1, np
         tmp = M_z0
         ijo = (ij-1)*order
-        do ik=1,order
-          tmp = tmp + sp(ijo+ik)*m(mapping(ijo+ik),ii)
+        do ik = 1, order
+          tmp = tmp + sp(ijo+ik)*mm(mapping(ijo+ik),ii)
         end do
         res(ij,ii) = tmp
       end do
@@ -890,18 +890,18 @@ contains
 
   ! ---------------------------------------------------------
   ! Create the original matrix out of the sparse matrix.
-  ! m = s.sp.s^(-1)
-  subroutine make_full_matrix(np, order, dim, sp, s, m, mapping)
-    integer, intent(in)  :: np          ! matrix size (np**2)
-    integer, intent(in)  :: order       ! derivative order
-    integer, intent(in)  :: dim         ! dimension
-    CMPLX,   intent(in)  :: sp(:)       ! sparse matrix (np*order)
-    CMPLX,   intent(in)  :: s(np, np, 2)! diagonalization matrix
-    CMPLX,   intent(out) :: m(np, np)   ! the full matrix
-    integer, intent(in)  :: mapping(:)  ! the mapping
+  ! mm = ss.sp.ss^(-1)
+  subroutine make_full_matrix(np, order, dim, sp, ss, mm, mapping)
+    integer, intent(in)  :: np            ! matrix size (np**2)
+    integer, intent(in)  :: order         ! derivative order
+    integer, intent(in)  :: dim           ! dimension
+    CMPLX,   intent(in)  :: sp(:)         ! sparse matrix (np*order)
+    CMPLX,   intent(in)  :: ss(np, np, 2) ! diagonalization matrix
+    CMPLX,   intent(out) :: mm(np, np)    ! the full matrix
+    integer, intent(in)  :: mapping(:)    ! the mapping
 
     CMPLX, allocatable :: tmp(:, :)
-    integer            :: id, i
+    integer            :: id, ip
 
     call push_sub('ob_mem.make_full_matrix')
 
@@ -909,22 +909,22 @@ contains
 
     ! make a full matrix of the packed storage form
     ! the sparse matrix has a (symmetric) banded form
-    m = M_z0
+    mm = M_z0
     select case(dim)
     case(2)
-      do i=0, np-1
-        do id=1, order
-          m(i+1,mapping(i*order+id)) = sp(i*order+id)
+      do ip = 0, np-1
+        do id = 1, order
+          mm(ip+1,mapping(ip*order+id)) = sp(ip*order+id)
         end do
       end do
     case(3)
       ! FIXME (not yet done)
     end select
-    ! now calculate [S*sp*S^(-1)] to get the dense matrix
-    call mul_sp(np, order, dim, sp, s(:,:,2), mapping, tmp)
-!    call lalg_gemm(np,np,np,M_z1,m,s(:,:,2),M_z0,tmp)
-    call lalg_gemm(np,np,np,M_z1,s(:,:,1),tmp,M_z0,m)
-    call matrix_symmetric_average(m, np)
+    ! now calculate [ss*sp*ss^(-1)] to get the dense matrix
+    call mul_sp(np, order, dim, sp, ss(:,:,2), mapping, tmp)
+!    call lalg_gemm(np, np, np, M_z1, mm, ss(:,:,2), M_z0, tmp)
+    call lalg_gemm(np, np, np, M_z1, ss(:,:,1), tmp, M_z0, mm)
+    call matrix_symmetric_average(mm, np)
 
     SAFE_DEALLOCATE_A(tmp)
     call pop_sub('ob_mem.make_full_matrix')

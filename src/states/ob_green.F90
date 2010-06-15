@@ -39,7 +39,7 @@ module ob_green_m
 
 contains
 
-  ! calculate the lead self energy
+  ! calculate the lead self-energy
   ! prefer the fast method if possible, but if not converged check also other method
   subroutine lead_self_energy(energy, diag, offdiag, intf, self_energy, h_is_real)
     FLOAT,             intent(in)  :: energy        ! Energy to calculate Green`s function for.
@@ -99,7 +99,7 @@ contains
           if(residual2.lt.residual) then
             self_energy = green2
           end if
-          message(1) = 'The surface Green`s function did not converge properly'
+          message(1) = "The surface Green's function did not converge properly"
           message(2) = 'with either the decimation technique nor the closed form!'
           write(message(3), '(a,e10.3)') 'Umerski-Residual = ', residual
           write(message(4), '(a,e10.3)') 'Sancho-Residual  = ', residual2
@@ -110,7 +110,7 @@ contains
         SAFE_DEALLOCATE_A(green2)
       end if
     end if
-    ! now calculate the self energy
+    ! now calculate the self-energy
     if(intf%il.eq.LEFT) then
       call lalg_trmm(np, np, 'U', 'N', 'L', M_z1, offdiag, self_energy)
       call lalg_trmm(np, np, 'U', 'T', 'R', M_z1, offdiag, self_energy)
