@@ -70,8 +70,6 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
       enddo
 
       do idir1 = 1, sys%gr%sb%dim
-        eff_mass_inv(ik, ist, idir1, idir1) = M_ONE
-
         do idir2 = 1, sys%gr%sb%dim
 
           if (idir2 < idir1) then

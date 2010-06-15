@@ -288,10 +288,19 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
   R_TYPE,               intent(out)   :: f_out(:, :)
 
   integer :: ip, idim
+  R_TYPE, allocatable :: f_in_copy(:,:)
+  logical :: apply_kpoint
 
   call push_sub('pert_inc.Xpert_apply_order_2')
 
-  ! FIX ME: need to apply phases here
+  if (this%pert_type /= PERTURBATION_ELECTRIC) then
+    SAFE_ALLOCATE(f_in_copy(1:gr%mesh%np_part, 1:hm%d%dim))
+    do idim = 1, hm%d%dim
+      call lalg_copy(gr%mesh%np_part, f_in(:, idim), f_in_copy(:, idim))
+      call X(derivatives_set_bc(gr%der, f_in_copy(:, idim)))
+    end do
+  endif
+  ! no derivatives in electric, so ghost points not needed
 
   select case(this%pert_type)
 
@@ -306,6 +315,10 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
   case(PERTURBATION_NONE)
     f_out(1:gr%mesh%np, 1:hm%d%dim) = R_TOTYPE(M_ZERO)
   end select
+
+  if (this%pert_type /= PERTURBATION_ELECTRIC) then
+    SAFE_DEALLOCATE_A(f_in_copy)
+  endif
 
   call pop_sub('pert_inc.Xpert_apply_order_2')
 
@@ -325,7 +338,7 @@ contains
     do idim = 1, hm%d%dim
       do ip = 1, gr%mesh%np
         rdelta = sum(gr%mesh%x(ip, 1:MAX_DIM)**2)*ddelta(this%dir, this%dir2)
-        f_out(ip, idim) = M_FOURTH*(rdelta - gr%mesh%x(ip, this%dir)*gr%mesh%x(ip, this%dir2))*f_in(ip, idim)
+        f_out(ip, idim) = M_FOURTH*(rdelta - gr%mesh%x(ip, this%dir)*gr%mesh%x(ip, this%dir2))*f_in_copy(ip, idim)
       end do
     end do
 
@@ -343,7 +356,7 @@ contains
       f_in2  = R_TOTYPE(M_ZERO)
       atoms: do iatom = 1, geo%natoms
 
-        ! This calculates f_in2 = (B x r) f_in
+        ! This calculates f_in2 = (B x r) f_in_copy
         do ip = 1, gr%mesh%np
           select case(this%gauge)
           case(GAUGE_GIPAW)
@@ -353,7 +366,7 @@ contains
           end select
 
           do idim = 1,hm%d%dim
-            f_in2(ip, idim, 1:gr%sb%dim) = cross1(1:gr%sb%dim)*f_in(ip, idim)
+            f_in2(ip, idim, 1:gr%sb%dim) = cross1(1:gr%sb%dim)*f_in_copy(ip, idim)
           end do
         end do
 
@@ -429,7 +442,7 @@ contains
                .and. iatom /= this%atom1 .and. idir /= this%dir &
                .and. iatom /= this%atom2 .and. jdir /= this%dir2) cycle
 
-          call X(ionic_perturbation_order_2)(this, gr, geo, hm, ik, f_in(:, 1), tmp, iatom, idir, jdir)
+          call X(ionic_perturbation_order_2)(this, gr, geo, hm, ik, f_in_copy(:, 1), tmp, iatom, idir, jdir)
           
           call lalg_axpy(gr%mesh%np, this%ionic%mix1(iatom, idir)*this%ionic%mix2(iatom, jdir), tmp, f_out(:, 1))
           
@@ -461,7 +474,7 @@ contains
     if(this%use_nonlocalpps) then
       do iatom = 1, geo%natoms
         if(species_is_ps(geo%atom(iatom)%spec)) then
-          call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, this%dir, ik, f_in, cpsi(:, :))
+          call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, this%dir, ik, f_in_copy, cpsi(:, :))
         endif
       enddo
 
@@ -472,7 +485,7 @@ contains
 
     if(this%dir == this%dir2) then
       ! add delta_ij
-      forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = - f_out(ip, idim) + f_in(ip, idim)
+      forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = - f_out(ip, idim) + f_in_copy(ip, idim)
     else
       forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = - M_HALF * f_out(ip, idim)
     endif
