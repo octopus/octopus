@@ -22,12 +22,12 @@
 noinst_LIBRARIES = libbeak.a
 
 libbeak_a_SOURCES =           \
-	operate_ri.c          \
-	operate_ri_vec.c
+	operate_ri.c
 
 noinst_HEADERS =              \
 	beak.h                \
-	vectors.h
+	vectors.h             \
+	operate_ri_vec.c
 
 include $(srcdir)/../common-rules.make
 
@@ -35,5 +35,5 @@ depend:
 	@makedepf90 $(libbeak_a_SOURCES)
 
 beak_utils.o : beak_utils.c beak.h 
-operate_ri.o : operate_ri.c beak.h 
-operate_ri_vec.o : operate_ri_vec.c beak.h vectors.h
+operate_ri.o : operate_ri.c beak.h operate_ri_vec.c vectors.h
+
