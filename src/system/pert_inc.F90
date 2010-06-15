@@ -40,8 +40,8 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
   ASSERT(this%dir .ne. -1)
 
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
+    SAFE_ALLOCATE(f_in_copy(1:gr%mesh%np_part, 1:hm%d%dim))
     do idim = 1, hm%d%dim
-      SAFE_ALLOCATE(f_in_copy(1:gr%mesh%np_part, hm%d%dim))
       call lalg_copy(gr%mesh%np_part, f_in(:, idim), f_in_copy(:, idim))
       call X(derivatives_set_bc(gr%der, f_in_copy(:, idim)))
     end do
@@ -52,7 +52,7 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
   ! electric does not need it since (e^-ikr)r(e^ikr) = r
 
   if (apply_kpoint) then
-    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np_part) f_in_copy(ip, idim) = hm%phase(ip, ik)*f_in_copy(ip, idim)
+    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np_part) f_in_copy(ip, idim) = hm%phase(ip, ik) * f_in_copy(ip, idim)
   endif
 
   select case(this%pert_type)
@@ -74,15 +74,15 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
   end select
   
   if (apply_kpoint) then
-    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = conjg(hm%phase(ip, ik))*f_out(ip, idim)
+    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = conjg(hm%phase(ip, ik)) * f_out(ip, idim)
   endif
 
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
-     SAFE_DEALLOCATE_A(f_in_copy)
+    SAFE_DEALLOCATE_A(f_in_copy)
   endif
 
   call profiling_out(prof)
-   call pop_sub('pert_inc.Xpert_apply')
+  call pop_sub('pert_inc.Xpert_apply')
 
 contains
 
@@ -100,16 +100,17 @@ contains
   subroutine electric()
 
     call push_sub('pert_inc.Xpert_apply.electric')
-    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = f_in(ip, idim)*gr%mesh%x(ip, this%dir)
+    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) &
+      f_out(ip, idim) = f_in(ip, idim)*gr%mesh%x(ip, this%dir)
     call pop_sub('pert_inc.Xpert_apply.electric')
 
   end subroutine electric
 
   ! --------------------------------------------------------------------------
   subroutine kdotp()
-  ! perturbation is grad
+  ! perturbation is grad + [V,r]
     R_TYPE, allocatable :: grad(:, :, :)
-    integer :: iatom, idim
+    integer :: iatom
 
     call push_sub('pert_inc.Xpert_apply.kdotp')
 
@@ -125,7 +126,7 @@ contains
     ! i delta_H_k = i (-i*grad + k) . delta_k
     ! representation on psi is just grad . delta_k
     ! note that second-order term is left out
-    if (this%use_nonlocalpps) then
+    if(this%use_nonlocalpps) then
       do iatom = 1, geo%natoms
         if(species_is_ps(geo%atom(iatom)%spec)) then
           call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, this%dir, ik, f_in_copy, f_out)
@@ -143,7 +144,7 @@ contains
     R_TYPE, allocatable :: lf(:,:), vrnl(:,:,:)
     R_TYPE :: cross(1:MAX_DIM), vv(1:MAX_DIM)
     FLOAT :: xx(1:MAX_DIM)
-    integer :: iatom, idir, ip
+    integer :: iatom, idir
     
     call push_sub('pert_inc.Xpert_apply.magnetic')
 
@@ -288,7 +289,7 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
 
 ! FIX ME: need to apply phases here
 
-  call push_sub('pert_inc.Xpert_apply_order2')
+  call push_sub('pert_inc.Xpert_apply_order_2')
 
   select case(this%pert_type)
 
@@ -300,7 +301,7 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
     call magnetic()
   end select
 
-  call pop_sub('pert_inc.Xpert_apply_order2')
+  call pop_sub('pert_inc.Xpert_apply_order_2')
 
 contains
 
@@ -313,7 +314,7 @@ contains
 
     integer :: iatom, idir, idir2, ip, idim
 
-    call push_sub('pert_inc.Xpert_apply_order2.magnetic')
+    call push_sub('pert_inc.Xpert_apply_order_2.magnetic')
 
     do idim = 1, hm%d%dim
       do ip = 1, gr%mesh%np
@@ -397,7 +398,7 @@ contains
       SAFE_DEALLOCATE_A(xf)
     end if apply_gauge
 
-    call pop_sub('pert_inc.Xpert_apply_order2.magnetic')
+    call pop_sub('pert_inc.Xpert_apply_order_2.magnetic')
 
   end subroutine magnetic
 
@@ -406,7 +407,7 @@ contains
     integer :: iatom, idir, jdir
     R_TYPE, allocatable  :: tmp(:)
     
-    call push_sub('pert_inc.Xpert_apply_order2.ionic')
+    call push_sub('pert_inc.Xpert_apply_order_2.ionic')
 
     ASSERT(hm%d%dim == 1)
 
@@ -431,7 +432,7 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(tmp)
-    call pop_sub('pert_inc.Xpert_apply_order2.ionic')
+    call pop_sub('pert_inc.Xpert_apply_order_2.ionic')
 
   end subroutine ionic
 
@@ -455,7 +456,7 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, hm, ik, f_in, f_out, ia
   FLOAT,  allocatable :: vloc(:)
   integer :: ip
 
-  call push_sub('pert_inc.Xionic_perturbation_order2')
+  call push_sub('pert_inc.Xionic_perturbation_order_2')
 
   SAFE_ALLOCATE( fin(1:gr%mesh%np_part, 1:1))
   SAFE_ALLOCATE(tmp1(1:gr%mesh%np_part, 1:1))
@@ -494,7 +495,7 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, hm, ik, f_in, f_out, ia
   call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, tmp2, tmp1, ik)
   forall(ip = 1:gr%mesh%np) f_out(ip) = f_out(ip) + tmp1(ip, 1)
 
-  call pop_sub('pert_inc.Xionic_perturbation_order2')
+  call pop_sub('pert_inc.Xionic_perturbation_order_2')
 
 end subroutine X(ionic_perturbation_order_2)
 
