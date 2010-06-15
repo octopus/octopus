@@ -1,4 +1,4 @@
-!!! Copyright (C) 2008-2009 David Strubbe
+!!! Copyright (C) 2008-2010 David Strubbe
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@ module kdotp_calc_m
   use mesh_m
   use mesh_function_m
   use messages_m
+  use mpi_m
   use pert_m
   use profiling_m
   use states_m
@@ -82,13 +83,21 @@ subroutine zcalc_band_velocity(sys, hm, pert, velocity)
 
   integer :: ik, ist, idir, idim
   CMPLX, allocatable :: pertpsi(:,:)
+#ifdef HAVE_MPI
+  FLOAT, allocatable :: vel_temp(:,:,:)
+#endif
 
   call push_sub('kdotp_calc_inc.zkdotp_calc_band_velocity')
 
   SAFE_ALLOCATE(pertpsi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
+#ifdef HAVE_MPI
+  SAFE_ALLOCATE(vel_temp(1:sys%st%d%nik, 1:sys%st%nst, 1:sys%gr%mesh%sb%dim))
+#endif
 
-  do ik = 1, sys%st%d%nik
-    do ist = 1, sys%st%nst
+  velocity(:,:,:) = M_ZERO
+
+  do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+    do ist = sys%st%st_start, sys%st%st_end
       do idir = 1, sys%gr%sb%periodic_dim
         call pert_setup_dir(pert, idir)
         call zpert_apply(pert, sys%gr, sys%geo, hm, ik, sys%st%zpsi(:, :, ist, ik), pertpsi)
@@ -97,6 +106,20 @@ subroutine zcalc_band_velocity(sys, hm, pert, velocity)
       enddo
     enddo
   enddo
+
+#ifdef HAVE_MPI
+  if(sys%st%parallel_in_states) then
+    call MPI_Allreduce(velocity, vel_temp, sys%st%d%nik * sys%st%nst * sys%gr%mesh%sb%dim, &
+      MPI_FLOAT, MPI_SUM, sys%st%mpi_grp%comm, mpi_err)
+    velocity(:,:,:) = vel_temp(:,:,:)
+  endif
+  if(sys%st%d%kpt%parallel) then
+    call MPI_Allreduce(velocity, vel_temp, sys%st%d%nik * sys%st%nst * sys%gr%mesh%sb%dim, &
+      MPI_FLOAT, MPI_SUM, sys%st%d%kpt%mpi_grp%comm, mpi_err)
+    velocity(:,:,:) = vel_temp(:,:,:)
+  endif
+  SAFE_DEALLOCATE_A(vel_temp)
+#endif
 
   call pop_sub('kdotp_calc_inc.zkdotp_calc_band_velocity')
 end subroutine zcalc_band_velocity
