@@ -24,16 +24,16 @@
 !
 ! WARNING!!!!: periodic systems are not considered in these expressions.
 ! -------------------------------------------------------------
-R_TYPE function X(states_mpdotp_x)(m, excited_state, st, mat) result(dotp)
-  type(mesh_t),           intent(in) :: m
+R_TYPE function X(states_mpdotp_x)(mesh, excited_state, st, mat) result(dotp)
+  type(mesh_t),           intent(in) :: mesh
   type(excited_states_t), intent(in) :: excited_state
   type(states_t),         intent(in) :: st
   R_TYPE,       optional, intent(in) :: mat(:, :, :)
 
-  integer :: j
+  integer :: jj
   R_TYPE, allocatable :: mat_local(:, :, :)
 
-  call push_sub('states_inc.Xstates_mpdotp_x')
+  call push_sub('excited_states_inc.Xstates_mpdotp_x')
 
   dotp = M_ZERO
 
@@ -44,17 +44,17 @@ R_TYPE function X(states_mpdotp_x)(m, excited_state, st, mat) result(dotp)
   if(present(mat)) then
       mat_local = mat
   else 
-    call X(states_matrix)(m, excited_state%st, st, mat_local)
+    call X(states_matrix)(mesh, excited_state%st, st, mat_local)
   end if
 
-  do j = 1, excited_state%n_pairs
-    call X(states_matrix_swap)(mat_local, excited_state%pair(j))
-    dotp = dotp + excited_state%weight(j) * X(states_mpdotp_g)(m, excited_state%st, st, mat_local) 
-    call X(states_matrix_swap)(mat_local, excited_state%pair(j))
+  do jj = 1, excited_state%n_pairs
+    call X(states_matrix_swap)(mat_local, excited_state%pair(jj))
+    dotp = dotp + excited_state%weight(jj) * X(states_mpdotp_g)(mesh, excited_state%st, st, mat_local) 
+    call X(states_matrix_swap)(mat_local, excited_state%pair(jj))
   end do
 
   SAFE_DEALLOCATE_A(mat_local)
-  call pop_sub('states_inc.Xstates_mpdotp_x')
+  call pop_sub('excited_states_inc.Xstates_mpdotp_x')
 end function X(states_mpdotp_x)
 
 
@@ -72,21 +72,24 @@ subroutine X(states_matrix_swap)(mat, pair)
   R_TYPE,              intent(inout) :: mat(:, :, :)
   type(states_pair_t), intent(in)    :: pair
 
-  integer :: i, a, ik
+  integer :: ii, aa, ik
   R_TYPE, allocatable :: row(:)
 
-  i  = pair%i
-  a  = pair%a
+  call push_sub('excited_states_inc.Xstates_matrix_swap')
+
+  ii = pair%i
+  aa = pair%a
   ik = pair%sigma
 
   SAFE_ALLOCATE(row(1:size(mat, 2)))
 
   ! swap row
-  row(:) = mat(i, :, ik)
-  mat(i, :, ik) = mat(a, :, ik)
-  mat(a, :, ik) = row(:)
+  row(:) = mat(ii, :, ik)
+  mat(ii, :, ik) = mat(aa, :, ik)
+  mat(aa, :, ik) = row(:)
 
   SAFE_DEALLOCATE_A(row)
+  call pop_sub('excited_states_inc.Xstates_matrix_swap')
 end subroutine X(states_matrix_swap)
 
 
@@ -102,17 +105,17 @@ end subroutine X(states_matrix_swap)
 ! The routine directly applies Lowdin`s formula [P.-O. Lowdin,
 ! Phys. Rev. 97, 1474; Eq. 49].
 ! -------------------------------------------------------------
-R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
-  type(mesh_t),     intent(in) :: m
+R_TYPE function X(states_mpmatrixelement_g)(mesh, st1, st2, opst2) result(st1opst2)
+  type(mesh_t),     intent(in) :: mesh
   type(states_t),   intent(in) :: st1, st2, opst2
 
-  integer :: ispin, nik, nst, ik, i1, j1, k1, i2, j2, k2, i, j
+  integer :: ispin, nik, nst, ik, i1, j1, k1, i2, j2, k2, ii, jj
   integer, allocatable :: filled1(:), filled2(:), &
                           partially_filled1(:), partially_filled2(:), &
                           half_filled1(:), half_filled2(:)
   R_TYPE, allocatable :: overlap_mat(:, :, :), op_mat(:, :, :)
-  R_TYPE, allocatable :: b(:, :), c(:, :)
-  R_TYPE :: z, det
+  R_TYPE, allocatable :: bb(:, :), cc(:, :)
+  R_TYPE :: zz, det
 
   call push_sub('excited_states_inc.Xstates_mpmatrixelement_g')
 
@@ -120,9 +123,9 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
   st1opst2 = R_TOTYPE(M_ONE)
 
   ispin = st1%d%ispin
-  ASSERT(ispin.eq.st2%d%ispin)
+  ASSERT(ispin .eq. st2%d%ispin)
   nik   = st1%d%nik
-  ASSERT(nik.eq.st2%d%nik)
+  ASSERT(nik .eq. st2%d%nik)
   ! Can only consider the number of states of the state that comes with fewer states.
   nst = min(st1%nst, st2%nst)
 
@@ -139,8 +142,8 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
   select case(ispin)
   case(UNPOLARIZED)
 
-    call X(states_matrix)(m, st1, st2, overlap_mat)
-    call X(states_matrix)(m, st1, opst2, op_mat)
+    call X(states_matrix)(mesh, st1, st2, overlap_mat)
+    call X(states_matrix)(mesh, st1, opst2, op_mat)
 
     do ik = 1, nik
 
@@ -155,53 +158,56 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
         call write_fatal(1)
       end if
 
-      SAFE_ALLOCATE(b(1:i1+k1, 1:i1+k1))
-      SAFE_ALLOCATE(c(1:i1+k1, 1:i1+k1))
-      do i = 1, i1
-        do j = 1, i1
-          b(i, j) = op_mat(filled1(i), filled2(j), ik)
-          c(i, j) = overlap_mat(filled1(i), filled2(j), ik)
+      SAFE_ALLOCATE(bb(1:i1+k1, 1:i1+k1))
+      SAFE_ALLOCATE(cc(1:i1+k1, 1:i1+k1))
+      do ii = 1, i1
+        do jj = 1, i1
+          bb(ii, jj) = op_mat(filled1(ii), filled2(jj), ik)
+          cc(ii, jj) = overlap_mat(filled1(ii), filled2(jj), ik)
         end do
-        do j = i1 + 1, i1 + k1
-          b(i, j) = op_mat(filled1(i), half_filled2(j), ik)
-          c(i, j) = overlap_mat(filled1(i), half_filled2(j), ik)
+        do jj = i1 + 1, i1 + k1
+          bb(ii, jj) = op_mat(filled1(ii), half_filled2(jj), ik)
+          cc(ii, jj) = overlap_mat(filled1(ii), half_filled2(jj), ik)
         end do
       end do
-      do i = i1 + 1, i1 + k1
-        do j = 1, i1
-          b(i, j) = op_mat(half_filled1(i), filled2(j), ik)
-          c(i, j) = overlap_mat(half_filled1(i), filled2(j), ik)
+      do ii = i1 + 1, i1 + k1
+        do jj = 1, i1
+          bb(ii, jj) = op_mat(half_filled1(ii), filled2(jj), ik)
+          cc(ii, jj) = overlap_mat(half_filled1(ii), filled2(jj), ik)
         end do
-        do j = i1 + 1, i1 + k1
-          b(i, j) = op_mat(half_filled1(i), half_filled2(j), ik)
-          c(i, j) = overlap_mat(half_filled1(i), half_filled2(j), ik)
+        do jj = i1 + 1, i1 + k1
+          bb(ii, jj) = op_mat(half_filled1(ii), half_filled2(jj), ik)
+          cc(ii, jj) = overlap_mat(half_filled1(ii), half_filled2(jj), ik)
         end do
       end do
 
-      det = lalg_determinant(i1+k1, c, invert = .true.)
-      c = det * transpose(c)
+      det = lalg_determinant(i1+k1, cc, invert = .true.)
+      cc = det * transpose(cc)
 
       ! And now, apply Lowdin`s formula.
       ! <U|O|V> = 2 D`_{UV} \sum_{jk} <phi^U_j|o|phi^V_k> D`_{UV}(j|k)
       ! where D`_{UV} is the determinant of the overlap matrix between the
       ! spatial orbitals of U and V (dimension = N/2), and D`_{UV}(j|k) is
       ! the (j,k) minor of this matrix.
-      z = M_ZERO
-      do i = 1, i1 + k1
-        do j = 1, i1 + k1
-           z = z + b(i, j) * c(i, j) * (-1)**(i+j)
+      zz = M_ZERO
+      do ii = 1, i1 + k1
+        do jj = 1, i1 + k1
+           zz = zz + bb(ii, jj) * cc(ii, jj) * (-1)**(ii+jj)
         end do
       end do
-      z = M_TWO * det * z
+      zz = M_TWO * det * zz
 
-      st1opst2 = st1opst2 * z ** st1%d%kweights(ik)
+      st1opst2 = st1opst2 * zz ** st1%d%kweights(ik)
+
+      SAFE_DEALLOCATE_A(bb)
+      SAFE_DEALLOCATE_A(cc)
 
     end do
 
   case(SPIN_POLARIZED, SPINORS)
 
-    call X(states_matrix) (m, st1, st2, overlap_mat)
-    call X(states_matrix) (m, st1, opst2, op_mat)
+    call X(states_matrix) (mesh, st1, st2, overlap_mat)
+    call X(states_matrix) (mesh, st1, opst2, op_mat)
 
     do ik = 1, nik
 
@@ -217,31 +223,31 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
       end if
 
       if(i1 > 0) then
-        SAFE_ALLOCATE(b(1:i1, 1:i1))
-        SAFE_ALLOCATE(c(1:i1, 1:i1))
-        do i = 1, i1
-          do j = 1, i1
-            b(i, j) = op_mat(filled1(i), filled2(j), ik)
-            c(i, j) = overlap_mat(filled1(i), filled2(j), ik)
+        SAFE_ALLOCATE(bb(1:i1, 1:i1))
+        SAFE_ALLOCATE(cc(1:i1, 1:i1))
+        do ii = 1, i1
+          do jj = 1, i1
+            bb(ii, jj) = op_mat(filled1(ii), filled2(jj), ik)
+            cc(ii, jj) = overlap_mat(filled1(ii), filled2(jj), ik)
           end do
         end do
 
         ! Get the matrix of cofactors.
-        z = lalg_determinant(i1, c, invert = .true.)
-        c = z * transpose(c)
+        zz = lalg_determinant(i1, cc, invert = .true.)
+        cc = zz * transpose(cc)
 
         ! And now, apply Lowdin`s formula.
-        z = M_ZERO
-        do i = 1, i1
-          do j = 1, i1
-             z = z + b(i, j) * c(i, j) * (-1)**(i+j)
+        zz = M_ZERO
+        do ii = 1, i1
+          do jj = 1, i1
+             zz = zz + bb(ii, jj) * cc(ii, jj) * (-1)**(ii+jj)
           end do
         end do
 
-        st1opst2 = st1opst2 * z ** st1%d%kweights(ik)
+        st1opst2 = st1opst2 * zz ** st1%d%kweights(ik)
 
-        SAFE_DEALLOCATE_A(b)
-        SAFE_DEALLOCATE_A(c)
+        SAFE_DEALLOCATE_A(bb)
+        SAFE_DEALLOCATE_A(cc)
       end if
 
     end do
@@ -256,6 +262,7 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
   SAFE_DEALLOCATE_A(partially_filled2)
   SAFE_DEALLOCATE_A(half_filled1)
   SAFE_DEALLOCATE_A(half_filled2)
+
   call pop_sub('excited_states_inc.Xstates_mpmatrixelement_g')
 end function X(states_mpmatrixelement_g)
 
@@ -264,25 +271,26 @@ end function X(states_mpmatrixelement_g)
 ! Returns the dot product of two many-body states st1 and st2.
 ! \warning: it does not permit fractional occupation numbers.
 ! -------------------------------------------------------------
-R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
-  type(mesh_t),     intent(in) :: m
+R_TYPE function X(states_mpdotp_g)(mesh, st1, st2, mat) result(dotp)
+  type(mesh_t),     intent(in) :: mesh
   type(states_t),   intent(in) :: st1, st2
   R_TYPE, optional, intent(in) :: mat(:, :, :)
 
-  integer :: ik, ispin, nik, nst, i1, j1, i2, j2, k1, k2, i, j
+  integer :: ik, ispin, nik, nst, i1, j1, i2, j2, k1, k2, ii, jj
   integer, allocatable :: filled1(:), filled2(:), partially_filled1(:), partially_filled2(:), &
                           half_filled1(:), half_filled2(:)
-  R_TYPE, allocatable :: a(:, :, :), b(:, :)
-  call push_sub('excited_states_inc.Xstates_mpdotp')
+  R_TYPE, allocatable :: aa(:, :, :), bb(:, :)
+
+  call push_sub('excited_states_inc.Xstates_mpdotp_g')
 
   ispin = st1%d%ispin
-  ASSERT(ispin.eq.st2%d%ispin)
+  ASSERT(ispin .eq. st2%d%ispin)
   nik   = st1%d%nik
-  ASSERT(nik.eq.st2%d%nik)
+  ASSERT(nik .eq. st2%d%nik)
   ! Can only consider the number of states of the state that comes with fewer states.
   nst = min(st1%nst, st2%nst)
 
-  SAFE_ALLOCATE(a(1:st1%nst, 1:st2%nst, 1:st1%d%nik))
+  SAFE_ALLOCATE(aa(1:st1%nst, 1:st2%nst, 1:st1%d%nik))
   dotp = M_ONE
 
   SAFE_ALLOCATE(          filled1(1:nst))
@@ -293,9 +301,9 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
   SAFE_ALLOCATE(     half_filled2(1:nst))
 
   if(present(mat)) then
-    a(1:st1%nst, 1:st2%nst, 1:st1%d%nik) = mat(1:st1%nst, 1:st2%nst, 1:st1%d%nik)
+    aa(1:st1%nst, 1:st2%nst, 1:st1%d%nik) = mat(1:st1%nst, 1:st2%nst, 1:st1%d%nik)
   else
-    call X(states_matrix) (m, st1, st2, a)
+    call X(states_matrix) (mesh, st1, st2, aa)
   end if
 
   select case(ispin)
@@ -310,31 +318,31 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
         call write_fatal(1)
       end if
       if(  (i1 .ne. i2)  .or.  (k1 .ne. k2) ) then
-        message(1) = 'Internal Error: different number of occupied states in states_mpdotp'
+        message(1) = 'Internal Error: different number of occupied states in states_mpdotp_g'
         call write_fatal(1)
       end if
 
-      SAFE_ALLOCATE(b(1:i1+k1, 1:i1+k1))
-      do i = 1, i1
-        do j = 1, i1
-          b(i, j) = a(filled1(i), filled2(j), ik)
+      SAFE_ALLOCATE(bb(1:i1+k1, 1:i1+k1))
+      do ii = 1, i1
+        do jj = 1, i1
+          bb(ii, jj) = aa(filled1(ii), filled2(jj), ik)
         end do
-        do j = i1 + 1, i1 + k1
-          b(i, j) = a(filled1(i), half_filled2(j), ik)
+        do jj = i1 + 1, i1 + k1
+          bb(ii, jj) = aa(filled1(ii), half_filled2(jj), ik)
         end do
       end do
-      do i = i1 + 1, i1 + k1
-        do j = 1, i1
-          b(i, j) = a(half_filled1(i), filled2(j), ik)
+      do ii = i1 + 1, i1 + k1
+        do jj = 1, i1
+          bb(ii, jj) = aa(half_filled1(ii), filled2(jj), ik)
         end do
-        do j = i1 + 1, i1 + k1
-          b(i, j) = a(half_filled1(i), half_filled2(j), ik)
+        do jj = i1 + 1, i1 + k1
+          bb(ii, jj) = aa(half_filled1(ii), half_filled2(jj), ik)
         end do
       end do
 
-      dotp = dotp * (lalg_determinant(i1+k1, b, invert = .false.)) ** st1%d%kweights(ik)
+      dotp = dotp * (lalg_determinant(i1+k1, bb, invert = .false.)) ** st1%d%kweights(ik)
       if(i1 > 0) then
-        dotp = dotp * (lalg_determinant(i1, b(1:i1, 1:i1), invert = .false.)) ** st1%d%kweights(ik)
+        dotp = dotp * (lalg_determinant(i1, bb(1:i1, 1:i1), invert = .false.)) ** st1%d%kweights(ik)
       end if
 
     end do
@@ -354,28 +362,28 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
       end if
 
       if(i1 > 0) then
-        SAFE_ALLOCATE(b(1:i1, 1:i1))
-        do i = 1, i1
-          do j = 1, i1
-            b(i, j) = a(filled1(i), filled2(j), ik)
+        SAFE_ALLOCATE(bb(1:i1, 1:i1))
+        do ii = 1, i1
+          do jj = 1, i1
+            bb(ii, jj) = aa(filled1(ii), filled2(jj), ik)
           end do
         end do
 
-        dotp = dotp * lalg_determinant(i1, b, invert = .false.) ** st1%d%kweights(ik)
-        SAFE_DEALLOCATE_A(b)
+        dotp = dotp * lalg_determinant(i1, bb, invert = .false.) ** st1%d%kweights(ik)
+        SAFE_DEALLOCATE_A(bb)
       end if
 
     end do
   end select
 
-  SAFE_DEALLOCATE_A(a)
+  SAFE_DEALLOCATE_A(aa)
   SAFE_DEALLOCATE_A(filled1)
   SAFE_DEALLOCATE_A(filled2)
   SAFE_DEALLOCATE_A(partially_filled1)
   SAFE_DEALLOCATE_A(partially_filled2)
   SAFE_DEALLOCATE_A(half_filled1)
   SAFE_DEALLOCATE_A(half_filled2)
-  call pop_sub('excited_states_inc.Xstates_mpdotp')
+  call pop_sub('excited_states_inc.Xstates_mpdotp_g')
 end function X(states_mpdotp_g)
 
 
