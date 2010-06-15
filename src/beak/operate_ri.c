@@ -36,67 +36,10 @@ void FC_FUNC_(doperate_ri_vec, DOPERATE_RI_VEC)(const int * opn,
 						const int * rimap_inv_max,
 						const ffloat * restrict fi, 
 						ffloat * restrict fo){
-  
-  const int n = opn[0];
-  const int nri = opnri[0];
-  
-  int l, i, j;
-  const int * restrict index;
-  int indexj;
-  
-  for (l = 0; l < nri ; l++) {
-    register ffloat a;
-
-    index  = opri + n * l;
-    
-    i = rimap_inv[l];
-
-    for (; i < rimap_inv_max[l] - DEPTH*VEC_SIZE + 1; i += DEPTH*VEC_SIZE){
-      register VEC_TYPE a0, a1, a2, a3;
-#if DEPTH > 4
-      register VEC_TYPE a4, a5, a6, a7;
-#endif
-      a0 = a1 = a2 = a3 = VEC_ZERO;
-#if DEPTH > 4
-      a4 = a5 = a6 = a7 = VEC_ZERO;
-#endif
-
-      for(j = 0; j < n; j++){
-	register VEC_TYPE wj = VEC_SCAL(w[j]);
-	indexj = index[j] + i;
-
-	a0 = VEC_FMA(wj, VEC_LDU(fi + indexj             ), a0);
-	a1 = VEC_FMA(wj, VEC_LDU(fi + indexj + 1*VEC_SIZE), a1);
-	a2 = VEC_FMA(wj, VEC_LDU(fi + indexj + 2*VEC_SIZE), a2);
-	a3 = VEC_FMA(wj, VEC_LDU(fi + indexj + 3*VEC_SIZE), a3);
-#if DEPTH > 4
-	a4 = VEC_FMA(wj, VEC_LDU(fi + indexj + 4*VEC_SIZE), a4);
-	a5 = VEC_FMA(wj, VEC_LDU(fi + indexj + 5*VEC_SIZE), a5);
-	a6 = VEC_FMA(wj, VEC_LDU(fi + indexj + 6*VEC_SIZE), a6);
-	a7 = VEC_FMA(wj, VEC_LDU(fi + indexj + 7*VEC_SIZE), a7);
-#endif
-      }
-
-      VEC_STU(fo + i             , a0);
-      VEC_STU(fo + i + 1*VEC_SIZE, a1);
-      VEC_STU(fo + i + 2*VEC_SIZE, a2);
-      VEC_STU(fo + i + 3*VEC_SIZE, a3);
-#if DEPTH > 4
-      VEC_STU(fo + i + 4*VEC_SIZE, a4);
-      VEC_STU(fo + i + 5*VEC_SIZE, a5);
-      VEC_STU(fo + i + 6*VEC_SIZE, a6);
-      VEC_STU(fo + i + 7*VEC_SIZE, a7);
-#endif
-    }
-
-    for (; i < rimap_inv_max[l]; i++){
-      a = 0.0;
-      for(j = 0; j < n; j++) a += w[j]*(fi + index[j])[i];
-      fo[i] = a;
-    }
-
-  }
-
+#define LDF 1
+/* not aligned */
+#include "operate_ri_vec.c"
+#undef LDF
 }
 
 void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn, 
@@ -115,15 +58,16 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
 
   if(aligned){
 
+#define LDF 2
 #define ALIGNED
-#include "operate_ri_vec.c"   
+#include "operate_ri_vec.c"
 #undef ALIGNED
 
   } else { 
     /* not aligned */
-   
 #include "operate_ri_vec.c"   
   }
+#undef LDF
 
 }
 
