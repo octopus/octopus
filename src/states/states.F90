@@ -108,7 +108,7 @@ module states_m
   type states_lead_t
     CMPLX, pointer     :: intf_psi(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
     FLOAT, pointer     :: rho(:, :)   !< Density of the lead unit cells.
-    CMPLX, pointer     :: self_energy(:, :, :, :, :) !< (np, np, nspin, ncs, nik) self energy of the leads.
+    CMPLX, pointer     :: self_energy(:, :, :, :, :) !< (np, np, nspin, ncs, nik) self-energy of the leads.
   end type states_lead_t
 
   type states_priv_t
@@ -901,8 +901,10 @@ contains
 
     if(force) call states_set_complex(st)
 
-    st1 = st%st_start; st2 = st%st_end
-    k1 = st%d%kpt%start; k2 = st%d%kpt%end
+    st1 = st%st_start
+    st2 = st%st_end
+    k1 = st%d%kpt%start
+    k2 = st%d%kpt%end
     
     if(st%np_size) then
       size = mesh%np
@@ -1392,7 +1394,7 @@ contains
     type(mesh_t),      intent(in)    :: mesh
     integer, optional, intent(in)    :: ist_start_, ist_end_
 
-    integer :: ist, ik, id, ist_start, ist_end, j, seed
+    integer :: ist, ik, id, ist_start, ist_end, jst, seed
     CMPLX   :: alpha, beta
 
     call push_sub('states.states_generate_random')
@@ -1444,10 +1446,10 @@ contains
             ! Note that here we orthonormalize the orbital part. This ensures that the spinors
             ! are untouched later in the general orthonormalization, and therefore the spin values
             ! of each spinor remain the same.
-            do j = ist_start, ist - 1
+            do jst = ist_start, ist - 1
               st%zpsi(:, 1, ist, ik) = st%zpsi(:, 1, ist, ik) - &
-                                       zmf_dotp(mesh, st%zpsi(:, 1, ist, ik), st%zpsi(:, 1, j, ik)) * &
-                                       st%zpsi(:, 1, j, ik)
+                                       zmf_dotp(mesh, st%zpsi(:, 1, ist, ik), st%zpsi(:, 1, jst, ik)) * &
+                                       st%zpsi(:, 1, jst, ik)
             end do
             st%zpsi(:, 1, ist, ik) = st%zpsi(:, 1, ist, ik) / zmf_nrm2(mesh, st%zpsi(:, 1, ist, ik))
             st%zpsi(:, 2, ist, ik) = st%zpsi(:, 1, ist, ik)
@@ -1585,7 +1587,7 @@ contains
     type(simul_box_t), intent(in) :: sb
     FLOAT, optional,   intent(in) :: error(nst, st%d%nik)
 
-    integer ik, j, ns, is
+    integer ik, ist, ns, is
     FLOAT :: occ
     character(len=80) tmp_str(MAX_DIM), cspin
 
@@ -1606,66 +1608,66 @@ contains
       return
     end if
 
+    if(present(error)) then
+      if(st%d%ispin .eq. SPINORS) then
+        write(message(1), '(a4,1x,a5,1x,a12,1x,a12,2x,a4,4x,a4,4x,a4,5x,a5)')   &
+          '#st',' Spin',' Eigenvalue', 'Occupation ', '<Sx>', '<Sy>', '<Sz>', 'Error'
+      else
+        write(message(1), '(a4,1x,a5,1x,a12,4x,a12,1x,a10)')   &
+          '#st',' Spin',' Eigenvalue', 'Occupation ', 'Error'
+      end if
+    else
+      if(st%d%ispin .eq. SPINORS) then
+        write(message(1), '(a4,1x,a5,1x,a12,1x,a12,2x,a4,4x,a4,4x,a4)')   &
+          '#st',' Spin',' Eigenvalue', 'Occupation ', '<Sx>', '<Sy>', '<Sz>'
+      else
+        write(message(1), '(a4,1x,a5,1x,a12,4x,a12,1x)')       &
+          '#st',' Spin',' Eigenvalue', 'Occupation '
+      end if
+    end if
+    call write_info(1, iunit)
+
     do ik = 1, st%d%nik, ns
       if(st%d%nik > ns) then
-        write(message(1), '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
+        write(message(1), '(a,i4,3(a,f12.6),a)') '#k =', ik, ', k = (',  &
           units_from_atomic(unit_one/units_out%length, st%d%kpoints(1, ik)), ',', &
-          units_from_atomic(unit_one/units_out%length, st%d%kpoints(2, ik)), ',',            &
+          units_from_atomic(unit_one/units_out%length, st%d%kpoints(2, ik)), ',', &
           units_from_atomic(unit_one/units_out%length, st%d%kpoints(3, ik)), ')'
         call write_info(1, iunit)
       end if
 
-      if(present(error)) then
-        if(st%d%ispin .eq. SPINORS) then
-          write(message(1), '(a4,1x,a5,1x,a12,1x,a12,2x,a4,4x,a4,4x,a4,5x,a5)')   &
-            '#st',' Spin',' Eigenvalue', 'Occupation ', '<Sx>', '<Sy>', '<Sz>', 'Error'
-        else
-          write(message(1), '(a4,1x,a5,1x,a12,4x,a12,1x,a10)')   &
-            '#st',' Spin',' Eigenvalue', 'Occupation ', 'Error'
-        end if
-      else
-        if(st%d%ispin .eq. SPINORS) then
-          write(message(1), '(a4,1x,a5,1x,a12,1x,a12,2x,a4,4x,a4,4x,a4)')   &
-            '#st',' Spin',' Eigenvalue', 'Occupation ', '<Sx>', '<Sy>', '<Sz>'
-        else
-          write(message(1), '(a4,1x,a5,1x,a12,4x,a12,1x)')       &
-            '#st',' Spin',' Eigenvalue', 'Occupation '
-        end if
-      end if
-      call write_info(1, iunit)
-
-      do j = 1, nst
+      do ist = 1, nst
         do is = 0, ns-1
-          if(j > st%nst) then
+          if(ist > st%nst) then
             occ = M_ZERO
           else
-            occ = st%occ(j, ik+is)
+            occ = st%occ(ist, ik+is)
           end if
 
           if(is .eq. 0) cspin = 'up'
           if(is .eq. 1) cspin = 'dn'
           if(st%d%ispin .eq. UNPOLARIZED .or. st%d%ispin .eq. SPINORS) cspin = '--'
 
-          write(tmp_str(1), '(i4,3x,a2)') j, trim(cspin)
+          write(tmp_str(1), '(i4,3x,a2)') ist, trim(cspin)
           if(simul_box_is_periodic(sb)) then
             if(st%d%ispin == SPINORS) then
               write(tmp_str(2), '(1x,f12.6,3x,4f5.2)') &
-                units_from_atomic(units_out%energy, st%eigenval(j, ik)), occ, st%spin(1:3, j, ik)
-              if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(j, ik+is), ')'
+                units_from_atomic(units_out%energy, st%eigenval(ist, ik)), occ, st%spin(1:3, ist, ik)
+              if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(ist, ik+is), ')'
             else
               write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
-                units_from_atomic(units_out%energy, st%eigenval(j, ik+is)), occ
-              if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(j, ik), ')'
+                units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), occ
+              if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(ist, ik), ')'
             end if
           else
             if(st%d%ispin == SPINORS) then
               write(tmp_str(2), '(1x,f12.6,5x,f5.2,3x,3f8.4)') &
-                units_from_atomic(units_out%energy, st%eigenval(j, ik)), occ, st%spin(1:3, j, ik)
-              if(present(error)) write(tmp_str(3), '(a3,es7.1,a1)')'  (', error(j, ik+is), ')'
+                units_from_atomic(units_out%energy, st%eigenval(ist, ik)), occ, st%spin(1:3, ist, ik)
+              if(present(error)) write(tmp_str(3), '(a3,es7.1,a1)')'  (', error(ist, ik+is), ')'
             else
               write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
-                units_from_atomic(units_out%energy, st%eigenval(j, ik+is)), occ
-              if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(j, ik), ')'
+                units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), occ
+              if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(ist, ik), ')'
             end if
           end if
           if(present(error)) then
@@ -1689,7 +1691,7 @@ contains
     type(states_t),    intent(in) :: st
     type(simul_box_t), intent(in) :: sb
 
-    integer :: i, ik, j, ns, is
+    integer :: idir, ist, ik, ns, is
     integer, allocatable :: iunit(:)
     FLOAT   :: factor(MAX_DIM)
     logical :: grace_mode, gnuplot_mode
@@ -1724,14 +1726,14 @@ contains
     SAFE_ALLOCATE(iunit(0:ns-1))
 
     ! define the scaling factor to output k_i/G_i, instead of k_i
-    do i = 1, MAX_DIM
-      factor(i) = M_ONE
-      if (sb%klattice(i,i) /= M_ZERO) factor(i) = sb%klattice(i,i)
+    do idir = 1, MAX_DIM
+      factor(idir) = M_ONE
+      if (sb%klattice(idir, idir) /= M_ZERO) factor(idir) = sb%klattice(idir, idir)
     end do
 
     if (gnuplot_mode) then
       do is = 0, ns-1
-        if (ns.gt.1) then
+        if (ns .gt. 1) then
           write(filename, '(a,i1.1,a)') 'bands-gp-', is+1,'.dat'
         else
           write(filename, '(a)') 'bands-gp.dat'
@@ -1742,13 +1744,13 @@ contains
       end do
 
       ! output bands in gnuplot format
-      do j = 1, nst
+      do ist = 1, nst
         do ik = 1, st%d%nik, ns
           do is = 0, ns-1
             write(iunit(is), '(1x,6f14.8,3x,f14.8)')            &
               st%d%kpoints(1:sb%dim, ik+is),                   & ! unscaled
               st%d%kpoints(1:sb%dim, ik+is)/factor(1:sb%dim), & ! scaled
-              units_from_atomic(units_out%energy, st%eigenval(j, ik + is))
+              units_from_atomic(units_out%energy, st%eigenval(ist, ik + is))
           end do
         end do
         do is = 0, ns-1
@@ -1779,7 +1781,7 @@ contains
           write(iunit(is), '(1x,6f14.8,3x,16384f14.8)')         &
             st%d%kpoints(1:MAX_DIM, ik+is),                     & ! unscaled
             st%d%kpoints(1:MAX_DIM, ik+is)/factor(1:MAX_DIM),   & ! scaled
-            (units_from_atomic(units_out%energy, st%eigenval(j, ik+is)), j = 1, nst)
+            (units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), ist = 1, nst)
         end do
       end do
       do is = 0, ns-1
@@ -1919,7 +1921,7 @@ return
       ! final states are the unoccupied ones
       if (abs(st%occ(ist,tpa_initialk)) .lt. M_THRESHOLD) then
 
-        osc_strength=M_ZERO;
+        osc_strength=M_ZERO
         transition_energy=st%eigenval(ist,tpa_initialk)-st%eigenval(tpa_initialst,tpa_initialk)
 
         ! dipole matrix elements <f|x|i> etc. -> oscillator strengths
@@ -1968,11 +1970,11 @@ return
       call io_close(iunit)
     end if
 
-    SAFE_DEALLOCATE_A(ff);
+    SAFE_DEALLOCATE_A(ff)
     if(use_qvector) then
-      SAFE_DEALLOCATE_A(cff);
+      SAFE_DEALLOCATE_A(cff)
     end if
-    SAFE_DEALLOCATE_A(osc);
+    SAFE_DEALLOCATE_A(osc)
     if (use_qvector) then
       SAFE_DEALLOCATE_A(qvector)
     end if
@@ -2138,26 +2140,26 @@ return
 
 
   ! ---------------------------------------------------------
-  subroutine states_write_fermi_energy(dir, st, m, sb)
+  subroutine states_write_fermi_energy(dir, st, mesh, sb)
     character(len=*),  intent(in) :: dir
     type(states_t), intent(inout) :: st
-    type(mesh_t),      intent(in) :: m
+    type(mesh_t),      intent(in) :: mesh
     type(simul_box_t), intent(in) :: sb
 
-    integer :: iunit, i
+    integer :: iunit, idir
     FLOAT :: maxdos
     FLOAT :: factor(MAX_DIM)
 
     call push_sub('states.states_write_fermi_energy')
 
-    call states_fermi(st, m)
+    call states_fermi(st, mesh)
 
     iunit = io_open(trim(dir)//'/'//'bands-efermi.dat', action='write')    
 
     ! define the scaling factor to output k_i/G_i, instead of k_i
-    do i = 1, MAX_DIM
-      factor(i) = M_ONE
-      if (sb%klattice(i,i) /= M_ZERO) factor(i) = sb%klattice(i,i)
+    do idir = 1, MAX_DIM
+      factor(idir) = M_ONE
+      if (sb%klattice(idir, idir) /= M_ZERO) factor(idir) = sb%klattice(idir, idir)
     end do
 
     ! write Fermi energy in a format that can be used together 
@@ -2175,7 +2177,7 @@ return
 
     ! Gamma point
     write(message(3), '(7f12.6)')          &
-      (M_ZERO, i = 1, 6),                  &
+      (M_ZERO, idir = 1, 6),               &
       units_from_atomic(units_out%energy, st%smear%e_fermi)
 
     write(message(4), '(7f12.6)')          &
@@ -2605,8 +2607,10 @@ return
     end if
 
     ! Skip two lines.
-    call iopar_read(mpi_grp, iunit, line, err); call iopar_read(mpi_grp, iunit, line, err)
-    call iopar_read(mpi_grp, iunit2, line, err); call iopar_read(mpi_grp, iunit2, line, err)
+    call iopar_read(mpi_grp, iunit, line, err)
+    call iopar_read(mpi_grp, iunit, line, err)
+    call iopar_read(mpi_grp, iunit2, line, err)
+    call iopar_read(mpi_grp, iunit2, line, err)
 
     kpoints = 1
     dim = 1
@@ -2807,7 +2811,7 @@ return
 
 
   ! ---------------------------------------------------------
-  !> initialize the self energy of the leads
+  !> initialize the self-energy of the leads
   subroutine states_init_self_energy(st, gr, nspin, d_ispin, lead)
     type(states_t),      intent(inout) :: st
     type(grid_t),        intent(in)    :: gr
@@ -2823,17 +2827,21 @@ return
 
     call push_sub('states.states_init_self_energy')
 
-    ! Calculate self energy of the leads.
+    ! Calculate self-energy of the leads.
     ! FIXME: For spinors, this calculation is almost certainly wrong.
     ASSERT(st%ob_nst == st%nst)
     ASSERT(st%ob_d%nik == st%d%nik)
-    s1 = st%st_start; s2 = st%st_end
-    k1 = st%d%kpt%start; k2 = st%d%kpt%end
+
+    s1 = st%st_start
+    s2 = st%st_end
+    k1 = st%d%kpt%start
+    k2 = st%d%kpt%end
+
     do il = 1, NLEADS
       np = gr%intf(il)%np_intf
       SAFE_ALLOCATE(st%ob_lead(il)%self_energy(1:np, 1:np, 1:nspin, s1:s2, k1:k2))
     end do
-    call messages_print_stress(stdout, "Lead self energy")
+    call messages_print_stress(stdout, "Lead self-energy")
     message(1) = ' st#     k#  Spin      Lead     Energy'
     call write_info(1)
 #ifdef HAVE_MPI 
@@ -2872,7 +2880,7 @@ return
             call lead_self_energy(energy, lead(il)%h_diag(:, :, ispin), lead(il)%h_offdiag(:, :), &
               gr%intf(il), st%ob_lead(il)%self_energy(:, :, ispin, ist, ik), .true.)
 
-            ! Write the entire self energy to a file.
+            ! Write the entire self-energy to a file.
             if(in_debug_mode) then
               call io_mkdir('debug/open_boundaries')
               write(fname_real, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/self-energy-', &
@@ -2887,7 +2895,8 @@ return
                 write(green_real, fmt) real(st%ob_lead(il)%self_energy(irow, :, ispin, ist, ik))
                 write(green_imag, fmt) aimag(st%ob_lead(il)%self_energy(irow, :, ispin, ist, ik))
               end do
-              call io_close(green_real); call io_close(green_imag)
+              call io_close(green_real)
+              call io_close(green_imag)
             end if
           end do
         end do
