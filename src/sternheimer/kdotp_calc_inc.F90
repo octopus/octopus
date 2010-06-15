@@ -28,7 +28,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
   integer,                intent(in)    :: occ_solution_method
   FLOAT,                  intent(in)    :: degen_thres
 
-! m^-1[ij] = delta[ij] + 2*Re<psi0|H'i|psi'j>
+! m^-1[ij] = <psi0|H2ij|psi0> + 2*Re<psi0|H'i|psi'j>
 ! for each state, spin, and k-point
 ! This routine is not set up for spinors.
 ! The off-diagonal elements are not correct in a degenerate subspace
@@ -36,6 +36,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
   integer ik, ist, ist2, idir1, idir2
   R_TYPE term
   R_TYPE, allocatable   :: pertpsi(:,:,:)     ! H`i|psi0>
+  R_TYPE, allocatable   :: pertpsi2(:,:)      ! H2i|psi0>
   R_TYPE, allocatable   :: proj_dl_psi(:,:)   ! (1-Pn`)|psi`j>
   type(mesh_t), pointer :: mesh
   logical, allocatable  :: orth_mask(:)
@@ -48,7 +49,8 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
   mesh => sys%gr%mesh
 
   SAFE_ALLOCATE(pertpsi(1:mesh%np, 1:hm%d%dim, 1:sys%gr%sb%dim))
-  SAFE_ALLOCATE(proj_dl_psi(1:mesh%np, 1)) ! second index should be sys%st%d%dim, i.e. spinors
+  SAFE_ALLOCATE(pertpsi2(1:mesh%np, 1:hm%d%dim))
+  SAFE_ALLOCATE(proj_dl_psi(1:mesh%np, 1:hm%d%dim))
   SAFE_ALLOCATE(orth_mask(1:sys%st%nst))
 #ifdef HAVE_MPI
   SAFE_ALLOCATE(eff_mass_inv_temp(1:sys%st%d%nik, 1:sys%st%nst, 1:sys%gr%mesh%sb%dim, 1:sys%gr%mesh%sb%dim))
@@ -114,6 +116,13 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
              enddo
           endif
 
+          call pert_setup_dir(perturbation, idir1, idir2)
+          call X(pert_apply_order_2)(perturbation, sys%gr, sys%geo, hm, ik, &
+            sys%st%X(psi)(1:mesh%np, 1:hm%d%dim, ist, ik), pertpsi2(1:mesh%np, 1:hm%d%dim))
+          eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) + &
+            X(mf_dotp)(mesh, hm%d%dim, sys%st%X(psi)(1:mesh%np, 1:hm%d%dim, ist, ik), &
+            pertpsi2(1:mesh%np, 1:hm%d%dim))
+
         enddo !idir2
       enddo !idir1
     enddo !ist
@@ -134,6 +143,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
 #endif
 
   SAFE_DEALLOCATE_A(pertpsi)
+  SAFE_DEALLOCATE_A(pertpsi2)
   SAFE_DEALLOCATE_A(proj_dl_psi)
   SAFE_DEALLOCATE_A(orth_mask)
 

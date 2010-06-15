@@ -101,7 +101,7 @@ contains
 
     call push_sub('pert_inc.Xpert_apply.electric')
     forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) &
-      f_out(ip, idim) = f_in(ip, idim)*gr%mesh%x(ip, this%dir)
+      f_out(ip, idim) = f_in(ip, idim) * gr%mesh%x(ip, this%dir)
     call pop_sub('pert_inc.Xpert_apply.electric')
 
   end subroutine electric
@@ -287,9 +287,11 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
   R_TYPE,               intent(in)    :: f_in(:, :)
   R_TYPE,               intent(out)   :: f_out(:, :)
 
-! FIX ME: need to apply phases here
+  integer :: ip, idim
 
   call push_sub('pert_inc.Xpert_apply_order_2')
+
+  ! FIX ME: need to apply phases here
 
   select case(this%pert_type)
 
@@ -299,6 +301,10 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
     call ionic()
   case(PERTURBATION_MAGNETIC)
     call magnetic()
+  case(PERTURBATION_KDOTP)
+    call kdotp()
+  case(PERTURBATION_NONE)
+    f_out(1:gr%mesh%np, 1:hm%d%dim) = R_TOTYPE(M_ZERO)
   end select
 
   call pop_sub('pert_inc.Xpert_apply_order_2')
@@ -436,7 +442,47 @@ contains
 
   end subroutine ionic
 
+
+! --------------------------------------------------------------------------
+  ! d^2/dki dkj (-(1/2) ki kj [ri,[rj,H]])
+  ! for i  = j : 1 - [ri,[rj,Vnl]]
+  ! for i != j : -(1/2) [ri,[rj,Vnl]]
+  ! Ref: Eq. 3 from M Cardona and FH Pollak, Phys. Rev. 142, 530-543 (1966)
+  subroutine kdotp
+    integer :: iatom
+    R_TYPE, allocatable :: cpsi(:,:)
+
+    call push_sub('pert_inc.Xpert_apply_order_2.kdotp')
+
+    f_out(1:gr%mesh%np, 1:hm%d%dim) = M_ZERO
+    SAFE_ALLOCATE(cpsi(1:gr%mesh%np_part, 1:hm%d%dim))
+    cpsi(1:gr%mesh%np_part, 1:hm%d%dim) = M_ZERO
+    
+    if(this%use_nonlocalpps) then
+      do iatom = 1, geo%natoms
+        if(species_is_ps(geo%atom(iatom)%spec)) then
+          call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, this%dir, ik, f_in, cpsi(:, :))
+        endif
+      enddo
+
+      forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) &
+        f_out(ip, idim) = f_out(ip, idim) + gr%mesh%x(ip, this%dir2) * cpsi(ip, idim) &
+                                          - cpsi(ip, idim) * gr%mesh%x(ip, this%dir2)
+    endif
+
+    if(this%dir == this%dir2) then
+      ! add delta_ij
+      forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = - f_out(ip, idim) + f_in(ip, idim)
+    else
+      forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = - M_HALF * f_out(ip, idim)
+    endif
+
+    SAFE_DEALLOCATE_A(cpsi)
+    call pop_sub('pert_inc.Xpert_apply_order_2.kdotp')
+  end subroutine kdotp
+
 end subroutine X(pert_apply_order_2)
+
 
 ! --------------------------------------------------------------------------
 subroutine X(ionic_perturbation_order_2) (this, gr, geo, hm, ik, f_in, f_out, iatom, idir, jdir)
