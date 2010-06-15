@@ -124,7 +124,7 @@ contains
     !%Option zoltan 3
     !% Zoltan library.
     !%Option ga 4
-    !% (Experimental) Genetic algorithm optimization of the grid partition.
+    !% (Experimental) Genetic-algorithm optimization of the grid partition.
     !%End
     default = ZOLTAN
 #ifdef HAVE_METIS
@@ -417,7 +417,7 @@ contains
     SAFE_DEALLOCATE_A(bps)
     SAFE_DEALLOCATE_A(winner)
 
-    call push_sub('mesh_partition.mesh_partition_boundaries')
+    call pop_sub('mesh_partition.mesh_partition_boundaries')
   end subroutine mesh_partition_boundaries
 
   ! ----------------------------------------------------
@@ -428,6 +428,8 @@ contains
     
     character(len=6) :: numstring
     integer          :: ierr
+
+    call push_sub('mesh_partition.mesh_partition_write')
 
     ! here we assume that all nodes have the same partition
     if(mpi_grp_is_root(mpi_world)) then
@@ -440,6 +442,7 @@ contains
       call io_binary_write('restart/partition/partition_'//trim(numstring)//'.obf', mesh%np_part_global, part, ierr)
     end if
 
+    call pop_sub('mesh_partition.mesh_partition_write')
   end subroutine mesh_partition_write
 
   ! ----------------------------------------------------
@@ -451,6 +454,8 @@ contains
     
     character(len=6) :: numstring
     integer :: read_np_part
+
+    call push_sub('mesh_partition.mesh_partition_read')
 
     if(mpi_grp_is_root(mesh%mpi_grp)) then
 
@@ -477,6 +482,8 @@ contains
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, mesh%mpi_grp%comm, mpi_err)
     if (ierr == 0) call MPI_Bcast(part(1), mesh%np_part_global, MPI_INTEGER, 0, mesh%mpi_grp%comm, mpi_err)
 #endif
+
+    call pop_sub('mesh_partition.mesh_partition_read')
 
   end subroutine mesh_partition_read
 
@@ -507,14 +514,14 @@ contains
         iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
           action='write')
         do jj = 1, mesh%np_global
-          if(part(jj).eq.ii) write(iunit, '(i8,3f18.8)') jj, mesh_x_global(mesh, jj)
+          if(part(jj) .eq. ii) write(iunit, '(i8,3f18.8)') jj, mesh_x_global(mesh, jj)
         end do
         call io_close(iunit)
 
         iunit = io_open('debug/mesh_partition/mesh_partition_all.'//filenum, &
           action='write')
         do jj = 1, mesh%np_part_global
-          if(part(jj).eq.ii) write(iunit, '(i8,3f18.8)') jj, mesh_x_global(mesh, jj)
+          if(part(jj) .eq. ii) write(iunit, '(i8,3f18.8)') jj, mesh_x_global(mesh, jj)
         end do
         call io_close(iunit)
 

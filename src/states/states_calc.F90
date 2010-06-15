@@ -22,18 +22,18 @@
 module states_calc_m
   use batch_m
   use blas_m
-  use derivatives_m
   use calc_mode_m
   use crystal_m
   use datasets_m
+  use derivatives_m
   use geometry_m
   use global_m
   use grid_m
   use hardware_m
-  use io_function_m
   use io_m
-  use lalg_basic_m
+  use io_function_m
   use lalg_adv_m
+  use lalg_basic_m
   use loct_m
   use parser_m
   use math_m
@@ -47,10 +47,10 @@ module states_calc_m
   use physics_op_m
   use profiling_m
   use simul_box_m
-  use states_m
-  use states_dim_m
-  use states_block_m
   use smear_m
+  use states_m
+  use states_block_m
+  use states_dim_m
   use unit_m
   use unit_system_m
   use varinfo_m
@@ -84,16 +84,16 @@ contains
 
   ! ---------------------------------------------------------
   ! This routine transforms the orbitals of state "st", according
-  ! to the transformation matrix "u".
+  ! to the transformation matrix "uu".
   !
   ! Each row of u contains the coefficients of the new orbitals
   ! in terms of the old ones.
   ! ---------------------------------------------------------
-  subroutine states_rotate(mesh, st, stin, u)
+  subroutine states_rotate(mesh, st, stin, uu)
     type(mesh_t),      intent(in)    :: mesh
     type(states_t),    intent(inout) :: st
     type(states_t),    intent(in)    :: stin
-    CMPLX,             intent(in)    :: u(:, :)
+    CMPLX,             intent(in)    :: uu(:, :)
 
     integer :: ik
 
@@ -102,12 +102,12 @@ contains
     if(states_are_real(st)) then
       do ik = st%d%kpt%start, st%d%kpt%end
         call lalg_gemm(mesh%np_part*st%d%dim, st%nst, stin%nst, M_ONE, stin%dpsi(:, :, 1:stin%nst, ik), &
-          transpose(real(u(:, :), REAL_PRECISION)), M_ZERO, st%dpsi(:, :, :, ik))
+          transpose(real(uu(:, :), REAL_PRECISION)), M_ZERO, st%dpsi(:, :, :, ik))
       end do
     else
       do ik = st%d%kpt%start, st%d%kpt%end
         call lalg_gemm(mesh%np_part*st%d%dim, st%nst, stin%nst, M_z1, stin%zpsi(:, :, 1:stin%nst, ik), &
-          transpose(u(:, :)), M_z0, st%zpsi(:, :, :, ik))
+          transpose(uu(:, :)), M_z0, st%zpsi(:, :, :, ik))
       end do
     end if
 
@@ -116,20 +116,23 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_orthogonalize(st, m)
+  subroutine states_orthogonalize(st, mesh)
     type(states_t),    intent(inout) :: st
-    type(mesh_t),      intent(in)    :: m
+    type(mesh_t),      intent(in)    :: mesh
 
     integer :: ik
 
+    call push_sub('states_calc.states_orthogonalize')
+
     do ik = st%d%kpt%start, st%d%kpt%end
       if (states_are_real(st)) then
-        call dstates_orthogonalization_full(st, st%nst, m, st%d%dim, st%dpsi(:, :, :, ik))
+        call dstates_orthogonalization_full(st, st%nst, mesh, st%d%dim, st%dpsi(:, :, :, ik))
       else
-        call zstates_orthogonalization_full(st, st%nst, m, st%d%dim, st%zpsi(:, :, :, ik))
+        call zstates_orthogonalization_full(st, st%nst, mesh, st%d%dim, st%zpsi(:, :, :, ik))
       end if
     end do
 
+    call pop_sub('states_calc.states_orthogonalize')
   end subroutine states_orthogonalize
 
 

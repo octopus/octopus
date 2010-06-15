@@ -149,7 +149,7 @@ contains
     type(mesh_t), pointer :: mm
     integer :: nr(1:2, 1:MAX_DIM)
 
-    call push_sub('mesh_init.mesh_init_stage1_mesh_read_lead')
+    call push_sub('mesh_init.mesh_init_stage_1.mesh_read_lead')
 
     do il = 1, NLEADS
       mm => ob_grid%lead(il)%mesh
@@ -166,7 +166,7 @@ contains
       call mesh_lxyz_init_from_file(mm, trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR//'lxyz')
     end do
 
-    call pop_sub('mesh_init.mesh_init_stage1_mesh_read_lead')
+    call pop_sub('mesh_init.mesh_init_stage_1.mesh_read_lead')
   end subroutine mesh_read_lead
 end subroutine mesh_init_stage_1
 
@@ -366,8 +366,9 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
             mesh%idx%Lxyz_inv(i, j, k) = ibset(mesh%idx%Lxyz_inv(i, j, k), ENLARGEMENT_POINT)
 
             ! If the point is not an inner point, and if its resolution can be decreased, do it now
-            if(.not.btest(mesh%idx%Lxyz_inv(i, j, k), INNER_POINT)) then
-              if(mesh%resolution(i,j,k).eq.0 .or. mesh%resolution(i,j,k).gt.res) mesh%resolution(i,j,k) = res
+            if(.not. btest(mesh%idx%Lxyz_inv(i, j, k), INNER_POINT)) then
+              if(mesh%resolution(i, j, k) .eq. 0 .or. mesh%resolution(i, j, k) .gt. res) &
+                mesh%resolution(i,j,k) = res
             end if
  
           end do
@@ -958,6 +959,8 @@ contains
 
   end subroutine mesh_get_vol_pp
   
+
+  ! ---------------------------------------------------------
   subroutine mesh_pbc_init()
     integer :: sp, ip, ip_inner, iper, ip_global
 #ifdef HAVE_MPI

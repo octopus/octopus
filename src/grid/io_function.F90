@@ -196,7 +196,7 @@ contains
   ! -------------------------------------------------------------------
   ! Use this function to quickly plot functions for debugging purposes:
   ! call doutput_function(io_function_fill_how("AxisX_and_PlaneX_and_DX"), &
-  !                       ".", "func", m, sb, func, M_ONE, ierr)
+  !                       ".", "func", mesh, sb, func, M_ONE, ierr)
   ! -------------------------------------------------------------------
   integer function io_function_fill_how(where) result(how)
     character(len=*), intent(in) :: where
@@ -411,7 +411,7 @@ contains
     write(iunit, '(a,a20,a17)') 'Dipole:', '[' // trim(units_abbrev(units_out%length)) // ']', &
           '[' // trim(units_abbrev(unit_debye)) // ']'
     do idir = 1, ndim
-      write(iunit, '(6x,a,i1,a,es14.5,3x,2es14.5)') '<x', idir, '> = ', &
+      write(iunit, '(6x,3a,es14.5,3x,2es14.5)') '<', index2axis(idir), '> = ', &
         units_from_atomic(units_out%length, dipole(idir)), units_from_atomic(unit_debye, dipole(idir))
     end do
 
