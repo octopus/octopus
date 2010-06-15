@@ -1,4 +1,4 @@
-!!! Copyright (C) 2008-2009 David Strubbe
+!!! Copyright (C) 2008-2010 David Strubbe
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -130,9 +130,9 @@ contains
     call system_h_setup(sys, hm)
     
     if(states_are_real(sys%st)) then
-      message(1) = 'Info: SCF using real wavefunctions.'
+      message(1) = 'Info: Using real wavefunctions.'
     else
-      message(1) = 'Info: SCF using complex wavefunctions.'
+      message(1) = 'Info: Using complex wavefunctions.'
     end if
     call write_info(1)
 

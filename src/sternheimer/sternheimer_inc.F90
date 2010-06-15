@@ -122,13 +122,13 @@ subroutine X(sternheimer_solve)(                           &
 
     call X(sternheimer_calc_hvar)(this, sys, hm, lr, nsigma, hvar)
 
-    do ik = 1, st%d%nik
+    do ik = st%d%kpt%start, st%d%kpt%end
       !now calculate response for each state
       is = states_dim_get_spin_index(sys%st%d, ik)
 
       states_conv = .true.
 
-      do ist = 1, st%nst
+      do ist = st%st_start, st%st_end
         do sigma = 1, nsigma
           !calculate the RHS of the Sternheimer eq
           if(sternheimer_have_rhs(this)) then

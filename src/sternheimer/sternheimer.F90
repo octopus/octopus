@@ -282,23 +282,23 @@ contains
 
 
   !-----------------------------------------------------------
-  logical function sternheimer_add_fxc(this) result(r)
+  logical function sternheimer_add_fxc(this) result(rr)
     type(sternheimer_t), intent(in) :: this
-    r = this%add_fxc
+    rr = this%add_fxc
   end function sternheimer_add_fxc
 
 
   !-----------------------------------------------------------
-  logical function sternheimer_add_hartree(this) result(r)
+  logical function sternheimer_add_hartree(this) result(rr)
     type(sternheimer_t), intent(in) :: this
-    r = this%add_hartree
+    rr = this%add_hartree
   end function sternheimer_add_hartree
 
 
   !-----------------------------------------------------------
-  logical function sternheimer_has_converged(this) result(r)
+  logical function sternheimer_has_converged(this) result(rr)
     type(sternheimer_t), intent(in) :: this
-    r = this%ok
+    rr = this%ok
   end function sternheimer_has_converged
 
   !-----------------------------------------------------------
