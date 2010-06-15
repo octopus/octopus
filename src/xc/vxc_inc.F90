@@ -41,7 +41,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
   FLOAT, allocatable :: ldens(:,:), tau(:,:), dedldens(:,:), symmtmp(:, :)
 
   integer :: ib, ib2, ip, isp, families, ixc, spin_channels
-  FLOAT   :: r
+  FLOAT   :: rr
   logical :: gga, mgga
   type(profile_t), save :: prof
 
@@ -88,13 +88,13 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
     end do
   else if(mgga) then
 
-    ! We calculate everything from the wave-functions to benefit from
-    ! the error cancelation between the gradient of the density and
+    ! We calculate everything from the wavefunctions to benefit from
+    ! the error cancellation between the gradient of the density and
     ! tau.
     call states_calc_tau_jp_gn(der, st, grho=gdens, tau=tau, lrho=ldens)    
 
     ! We have to symmetrize everything as they are calculated from the
-    ! wave-functions.
+    ! wavefunctions.
     if(st%symmetrize_density) then
       SAFE_ALLOCATE(symmtmp(1:der%mesh%np, 1:3))
       call symmetrizer_init(symmetrizer, der%mesh)
@@ -151,7 +151,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
     ! Calculate the potential/gradient density in local reference frame.
     functl_loop: do ixc = 1, 2
 
-      if(.not.present(vxc)) then ! get only the xc energy
+      if(.not. present(vxc)) then ! get only the xc energy
 
         if(iand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC).ne.0) then
           select case(functl(ixc)%family)
@@ -209,9 +209,9 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
             l_vsigma = M_ZERO
 
             if(functl(ixc)%id == XC_GGA_XC_LB) then
-              call mesh_r(der%mesh, ip, r)
+              call mesh_r(der%mesh, ip, rr)
               call XC_F90(gga_lb_modified)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), &
-                r, l_dedd(1,1))
+                rr, l_dedd(1,1))
             else
               call XC_F90(gga_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), &
                 l_dedd(1,1), l_vsigma(1,1))

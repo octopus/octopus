@@ -307,7 +307,7 @@ contains
 
           call zderivatives_set_bc(gr%der, st%zpsi(:, idim, ist, ik))
 
-          ! Apply the phase that contains both the K point and vector potential terms.
+          ! Apply the phase that contains both the k-point and vector-potential terms.
           epsi(1:gr%mesh%np_part, idim) = &
             phases(1:gr%mesh%np_part, ik - st%d%kpt%start + 1) * st%zpsi(1:gr%mesh%np_part, idim, ist, ik)
           
