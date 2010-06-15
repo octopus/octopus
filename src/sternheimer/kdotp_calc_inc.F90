@@ -24,7 +24,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
   type(hamiltonian_t),    intent(in)    :: hm
   type(lr_t),             intent(in)    :: lr(:,:)
   type(pert_t),           intent(inout) :: perturbation
-  FLOAT,                  intent(out)   :: eff_mass_inv(:, :, :, :)
+  FLOAT,                  intent(out)   :: eff_mass_inv(:,:,:,:)
   integer,                intent(in)    :: occ_solution_method
   FLOAT,                  intent(in)    :: degen_thres
 
@@ -35,10 +35,13 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
 
   integer ik, ist, ist2, idir1, idir2
   R_TYPE term
-  R_TYPE, allocatable   :: pertpsi(:, :, :)       ! H`i|psi0>
-  R_TYPE, allocatable   :: proj_dl_psi(:, :)   ! (1-Pn`)|psi`j>
+  R_TYPE, allocatable   :: pertpsi(:,:,:)     ! H`i|psi0>
+  R_TYPE, allocatable   :: proj_dl_psi(:,:)   ! (1-Pn`)|psi`j>
   type(mesh_t), pointer :: mesh
   logical, allocatable  :: orth_mask(:)
+#ifdef HAVE_MPI
+  FLOAT, allocatable :: eff_mass_inv_temp(:,:,:,:)
+#endif
 
   call push_sub('kdotp_calc_inc.Xcalc_eff_mass_inv')
 
@@ -47,12 +50,15 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
   SAFE_ALLOCATE(pertpsi(1:mesh%np, 1:hm%d%dim, 1:sys%gr%sb%dim))
   SAFE_ALLOCATE(proj_dl_psi(1:mesh%np, 1)) ! second index should be sys%st%d%dim, i.e. spinors
   SAFE_ALLOCATE(orth_mask(1:sys%st%nst))
+#ifdef HAVE_MPI
+  SAFE_ALLOCATE(eff_mass_inv_temp(1:sys%st%d%nik, 1:sys%st%nst, 1:sys%gr%mesh%sb%dim, 1:sys%gr%mesh%sb%dim))
+#endif
 
-  eff_mass_inv(:, :, :, :) = 0
+  eff_mass_inv(:, :, :, :) = M_ZERO
 
-  do ik = 1, sys%st%d%nik
+  do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
 
-    do ist = 1, sys%st%nst
+    do ist = sys%st%st_start, sys%st%st_end
 
       ! start by computing all the wavefunctions acted on by perturbation
       do idir1 = 1, sys%gr%sb%dim
@@ -62,7 +68,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
       enddo
 
       do idir1 = 1, sys%gr%sb%dim
-        eff_mass_inv(ik, ist, idir1, idir1) = 1
+        eff_mass_inv(ik, ist, idir1, idir1) = M_ONE
 
         do idir2 = 1, sys%gr%sb%dim
 
@@ -72,7 +78,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
             cycle
           end if
 
-          proj_dl_psi(1:mesh%np, 1) = lr(idir2, 1)%X(dl_psi)(1:mesh%np, 1, ist, ik)
+          proj_dl_psi(1:mesh%np, 1:hm%d%dim) = lr(idir2, 1)%X(dl_psi)(1:mesh%np, 1:hm%d%dim, ist, ik)
           
           if (occ_solution_method == 0) then
           ! project out components of other states in degenerate subspace
@@ -87,8 +93,9 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
 
 !            orth_mask(ist) = .true. ! projection on unperturbed wfn already removed in Sternheimer eqn
 
-            call X(states_orthogonalization)(mesh, sys%st%nst, sys%st%d%dim, sys%st%X(psi)(1:mesh%np, 1:1, 1:sys%st%nst, ik), &
-              proj_dl_psi(1:mesh%np, 1:1), mask = orth_mask(1:sys%st%nst))
+            call X(states_orthogonalization)(mesh, sys%st%nst, hm%d%dim, &
+              sys%st%X(psi)(1:mesh%np, 1:hm%d%dim, 1:sys%st%nst, ik), &
+              proj_dl_psi(1:mesh%np, 1:hm%d%dim), mask = orth_mask(1:sys%st%nst))
           endif
 
           ! contribution from Sternheimer equation
@@ -97,8 +104,6 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
 
           if (occ_solution_method == 1) then
           ! contribution from linear-response projection onto occupied states, by sum over states and perturbation theory
-          ! this could be sped up yet more by storing each (ist,ist2) term, which will be used again as the complex
-          !   conjugate as the (ist2,ist) term.  same will apply to hyperpolarizability
              do ist2 = 1, sys%st%nst
                 if (ist2 == ist .or. abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) cycle
 
@@ -113,6 +118,24 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
       enddo !idir1
     enddo !ist
   enddo !ik
+
+#ifdef HAVE_MPI
+  if(sys%st%parallel_in_states) then
+    call MPI_Allreduce(eff_mass_inv, eff_mass_inv_temp, sys%st%d%nik * sys%st%nst * sys%gr%mesh%sb%dim**2, &
+      MPI_FLOAT, MPI_SUM, sys%st%mpi_grp%comm, mpi_err)
+    eff_mass_inv(:,:,:,:) = eff_mass_inv_temp(:,:,:,:)
+  endif
+  if(sys%st%d%kpt%parallel) then
+    call MPI_Allreduce(eff_mass_inv, eff_mass_inv_temp, sys%st%d%nik * sys%st%nst * sys%gr%mesh%sb%dim**2, &
+      MPI_FLOAT, MPI_SUM, sys%st%d%kpt%mpi_grp%comm, mpi_err)
+    eff_mass_inv(:,:,:,:) = eff_mass_inv_temp(:,:,:,:)
+  endif
+  SAFE_DEALLOCATE_A(eff_mass_inv_temp)
+#endif
+
+  SAFE_DEALLOCATE_A(pertpsi)
+  SAFE_DEALLOCATE_A(proj_dl_psi)
+  SAFE_DEALLOCATE_A(orth_mask)
 
   call pop_sub('kdotp_calc_inc.Xcalc_eff_mass_inv')
 
