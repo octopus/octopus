@@ -404,7 +404,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
 
           i_lev = mesh%resolution(ix,iy,iz)
 
-          ! include enlargement points that are not inner points nor outer boundary points.
+          ! include enlargement points that are neither inner points nor outer boundary points.
           if( .not. btest(mesh%idx%Lxyz_inv(ix, iy, iz),ENLARGEMENT_POINT)) cycle
           if(  btest(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)) cycle
           if(  i_lev.eq.2**mesh%sb%hr_area%num_radii ) cycle

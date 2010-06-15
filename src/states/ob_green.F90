@@ -100,7 +100,7 @@ contains
             self_energy = green2
           end if
           message(1) = "The surface Green's function did not converge properly"
-          message(2) = 'with either the decimation technique nor the closed form!'
+          message(2) = 'with either the decimation technique or the closed form!'
           write(message(3), '(a,e10.3)') 'Umerski-Residual = ', residual
           write(message(4), '(a,e10.3)') 'Sancho-Residual  = ', residual2
           message(5) = 'The better converged version is taken.'

@@ -536,7 +536,7 @@ contains
                     call write_info(1)
                   else
                     ! Reading potential failed.
-                    message(1) = 'Could neither read vks-x nor v0 from the directory'
+                    message(1) = 'Could read neither vks-x nor v0 from the directory'
                     message(2) = trim(static_dir)//' for the '//trim(LEAD_NAME(il))//' lead.'
                     message(3) = 'Please include'
                     message(4) = ''

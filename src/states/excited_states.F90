@@ -92,8 +92,8 @@ contains
   !   n_half_filled is only meaningful if ispin = UNPOLARIZED. It 
   !            is the number of orbitals where there is only one 
   !            electron in the orbital.
-  !   n_partially_filled is the number of orbitals that are not filled
-  !            or half-filled, nor empty.
+  !   n_partially_filled is the number of orbitals that are neither filled,
+  !            half-filled, nor empty.
   ! The integer arrays filled, partially_filled and half_filled point
   !   to the indexes where the filled, partially filled and half_filled
   !   orbitals are, respectively.
