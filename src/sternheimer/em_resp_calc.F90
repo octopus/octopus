@@ -33,6 +33,7 @@ module em_resp_calc_m
   use mesh_m
   use mesh_function_m
   use messages_m
+  use mpi_m
   use poisson_m
   use pert_m
   use profiling_m

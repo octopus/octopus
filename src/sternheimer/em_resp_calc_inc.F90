@@ -260,9 +260,13 @@ subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, n
   CMPLX,                  intent(out)   :: zpol(1:MAX_DIM, 1:MAX_DIM)
   integer, optional,      intent(in)    :: ndir
 
-  integer :: dir1, dir2, ndir_, ist, ik, idim
+  integer :: dir1, dir2, ndir_, ist, ik
   CMPLX :: term, subterm
   type(mesh_t), pointer :: mesh
+#ifdef HAVE_MPI
+  CMPLX :: zpol_temp(1:MAX_DIM, 1:MAX_DIM)
+#endif
+
   mesh => sys%gr%mesh
 
   call push_sub('em_resp_calc_inc.Xcalc_polarizability_periodic')
@@ -278,28 +282,39 @@ subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, n
 
       zpol(dir1, dir2) = M_ZERO
 
-      do ik = 1, sys%st%d%nik
+      do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
         term = M_ZERO
-        do ist = 1, sys%st%nst
-          do idim = 1, sys%st%d%dim
-            subterm = - X(mf_dotp)(mesh, kdotp_lr(dir1)%X(dl_psi)(1:mesh%np, idim, ist, ik), &
-              em_lr(dir2, 1)%X(dl_psi)(1:mesh%np, idim, ist, ik))
-            term = term + subterm
+        do ist = sys%st%st_start, sys%st%st_end
+          subterm = - X(mf_dotp)(mesh, sys%st%d%dim, &
+            kdotp_lr(dir1)%X(dl_psi)(1:mesh%np, 1:sys%st%d%dim, ist, ik), &
+            em_lr(dir2, 1)%X(dl_psi)(1:mesh%np, 1:sys%st%d%dim, ist, ik))
+          term = term + subterm
 
-            if(nsigma == 1) then
-              term = term + conjg(subterm)
-            else
-              term = term - X(mf_dotp)(mesh, em_lr(dir2, 2)%X(dl_psi)(1:mesh%np, idim, ist, ik), & 
-                kdotp_lr(dir1)%X(dl_psi)(1:mesh%np, idim, ist, ik))
-            end if
-          enddo
+          if(nsigma == 1) then
+            term = term + conjg(subterm)
+          else
+            term = term - X(mf_dotp)(mesh, sys%st%d%dim, &
+              em_lr(dir2, 2)%X(dl_psi)(1:mesh%np, 1:sys%st%d%dim, ist, ik), & 
+              kdotp_lr(dir1)%X(dl_psi)(1:mesh%np, 1:sys%st%d%dim, ist, ik))
+          end if
         enddo
 
         zpol(dir1, dir2) = zpol(dir1, dir2) + &
-          term * sys%st%d%kweights(ik) * sys%st%smear%el_per_state
+          term * sys%st%d%kweights(ik) * sys%st%occ(ist, ik)
       enddo
     enddo
   enddo
+
+#ifdef HAVE_MPI
+  if(sys%st%parallel_in_states) then
+    call MPI_Allreduce(zpol, zpol_temp, MAX_DIM**2, MPI_CMPLX, MPI_SUM, sys%st%mpi_grp%comm, mpi_err)
+    zpol(1:MAX_DIM, 1:MAX_DIM) = zpol_temp(1:MAX_DIM, 1:MAX_DIM)
+  endif
+  if(sys%st%d%kpt%parallel) then
+    call MPI_Allreduce(zpol, zpol_temp, MAX_DIM**2, MPI_CMPLX, MPI_SUM, sys%st%d%kpt%mpi_grp%comm, mpi_err)
+    zpol(1:MAX_DIM, 1:MAX_DIM) = zpol_temp(1:MAX_DIM, 1:MAX_DIM)
+  endif
+#endif
 
   call pop_sub('em_resp_calc_inc.Xcalc_polarizability_periodic')
 
@@ -572,22 +587,22 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
 
 contains
 
-  subroutine get_permutation(i, p)
-    integer, intent(in)  :: i
-    integer, intent(out) :: p(1:3)
+  subroutine get_permutation(ii, pp)
+    integer, intent(in)  :: ii
+    integer, intent(out) :: pp(1:3)
 
     call push_sub('em_resp_calc_inc.Xlr_calc_beta.get_permutation')
 
-    ASSERT( i>=1 .and. i <= 6)
+    ASSERT( ii >= 1 .and. ii <= 6)
 
-    select case(i)
+    select case(ii)
 
-    case(1) ; p(1)=1 ; p(2)=2 ; p(3)=3
-    case(2) ; p(1)=2 ; p(2)=3 ; p(3)=1
-    case(3) ; p(1)=3 ; p(2)=1 ; p(3)=2
-    case(4) ; p(1)=3 ; p(2)=2 ; p(3)=1
-    case(5) ; p(1)=1 ; p(2)=3 ; p(3)=2
-    case(6) ; p(1)=2 ; p(2)=1 ; p(3)=3
+    case(1) ; pp(1)=1 ; pp(2)=2 ; pp(3)=3
+    case(2) ; pp(1)=2 ; pp(2)=3 ; pp(3)=1
+    case(3) ; pp(1)=3 ; pp(2)=1 ; pp(3)=2
+    case(4) ; pp(1)=3 ; pp(2)=2 ; pp(3)=1
+    case(5) ; pp(1)=1 ; pp(2)=3 ; pp(3)=2
+    case(6) ; pp(1)=2 ; pp(2)=1 ; pp(3)=3
 
     end select
 

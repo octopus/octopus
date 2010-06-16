@@ -101,6 +101,11 @@ contains
 
     call messages_devel_version("k.p perturbation and calculation of effective masses")
 
+    if(hm%theory_level == HARTREE_FOCK) then
+      message(1) = "Commutator of Fock operator not yet implemented."
+      call write_warning(1)
+    endif
+
     gr => sys%gr
 
     if(.not. simul_box_is_periodic(gr%sb)) then
@@ -458,6 +463,9 @@ contains
       write(message(1),'()')
       call write_info(1)
     enddo
+
+    message(1) = "Velocities and effective masses are not correct within degenerate subspaces."
+    call write_warning(1)
 
     call pop_sub('kdotp.kdotp_write_degeneracies')
   end subroutine kdotp_write_degeneracies

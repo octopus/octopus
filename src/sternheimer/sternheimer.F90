@@ -161,7 +161,7 @@ contains
       end if
     end if
 
-    if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+    if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
       this%add_fxc = ((ham_var / 2) == 1)
       this%add_hartree = (mod(ham_var, 2) == 1)
     else

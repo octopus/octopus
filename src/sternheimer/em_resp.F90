@@ -1142,23 +1142,23 @@ contains
 
         CMPLX :: HRS_A, HRS_B, HRS_C, HRS_D, HRS_E
         CMPLX :: HRS_B1, HRS_B2, HRS_C1, HRS_C2, HRS_C3, HRS_D1, HRS_D2, HRS_D3, HRS_E1, HRS_E2
-        integer :: i, j
+        integer :: ii, jj
         
         call push_sub('em_resp.out_hyperpolarizability.calc_beta_HRS')
         
         ! first calculate VV (vertical-vertical) polarization, FFF in Decius et al.
         HRS_A = M_ZERO
-        do i = 1, sb%dim
-          HRS_A = HRS_A + beta(i,i,i)**2
+        do ii = 1, sb%dim
+          HRS_A = HRS_A + beta(ii,ii,ii)**2
         enddo
 
         HRS_B = M_ZERO
         HRS_C = M_ZERO
-        do i = 1, sb%dim
-          do j = 1, sb%dim
-            if (i .ne. j) then
-              HRS_B = HRS_B + beta(i,i,i) * (beta(i,j,j) + beta(j,i,j) + beta(j,j,i))
-              HRS_C = HRS_C + (beta(i,i,j) + beta(i,j,i) + beta(j,i,i))**2
+        do ii = 1, sb%dim
+          do jj = 1, sb%dim
+            if (ii .ne. jj) then
+              HRS_B = HRS_B + beta(ii,ii,ii) * (beta(ii,jj,jj) + beta(jj,ii,jj) + beta(jj,jj,ii))
+              HRS_C = HRS_C + (beta(ii,ii,jj) + beta(ii,jj,ii) + beta(jj,ii,ii))**2
             endif
           enddo
         enddo
@@ -1181,14 +1181,14 @@ contains
         HRS_C1 = M_ZERO
         HRS_C2 = M_ZERO
         HRS_C3 = M_ZERO
-        do i = 1, sb%dim
-          do j = 1, sb%dim
-            if (i .ne. j) then
-              HRS_B1 = HRS_B1 + beta(i,i,i) * beta(i,j,j)
-              HRS_B2 = HRS_B2 + beta(i,i,i) * (beta(j,i,j) + beta(j,j,i))
-              HRS_C1 = HRS_C1 + (beta(i,i,j) + beta(i,j,i))**2
-              HRS_C2 = HRS_C2 + beta(j,i,i) * (beta(i,i,j) + beta(i,j,i))
-              HRS_C3 = HRS_C3 + beta(j,i,i)**2
+        do ii = 1, sb%dim
+          do jj = 1, sb%dim
+            if (ii .ne. jj) then
+              HRS_B1 = HRS_B1 + beta(ii,ii,ii) * beta(ii,jj,jj)
+              HRS_B2 = HRS_B2 + beta(ii,ii,ii) * (beta(jj,ii,jj) + beta(jj,jj,ii))
+              HRS_C1 = HRS_C1 + (beta(ii,ii,jj) + beta(ii,jj,ii))**2
+              HRS_C2 = HRS_C2 + beta(jj,ii,ii) * (beta(ii,ii,jj) + beta(ii,jj,ii))
+              HRS_C3 = HRS_C3 + beta(jj,ii,ii)**2
             endif
           enddo
         enddo
