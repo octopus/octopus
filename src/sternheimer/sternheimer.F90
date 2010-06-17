@@ -66,6 +66,8 @@ module sternheimer_m
        sternheimer_end,           &
        dsternheimer_solve,        & 
        zsternheimer_solve,        &
+       dsternheimer_solve_order2, & 
+       zsternheimer_solve_order2, &
        sternheimer_add_fxc,       &
        sternheimer_add_hartree,   &
        dsternheimer_calc_hvar,    &
@@ -224,7 +226,7 @@ contains
       call scf_tol_init(this%scf_tol, prefix)
     end if
 
-    if(this%add_fxc) call sternheimer_build_fxc(this, sys%gr%mesh, sys%st, sys%ks) 
+    if(this%add_fxc) call sternheimer_build_fxc(this, sys%gr%mesh, sys%st, sys%ks)
 
     nullify(this%drhs)
     nullify(this%zrhs)

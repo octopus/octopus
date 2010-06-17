@@ -35,7 +35,6 @@ module raman_m
   use mesh_m
   use mesh_function_m
   use messages_m
-  use pert_m
   use phonons_lr_m
   use restart_m
   use states_m

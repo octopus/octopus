@@ -833,7 +833,7 @@ subroutine generate_signal(order, observable)
   ! Sets the observation operator
   select case(observable(1))
     case(-1)
-      ! This means that the "observabation operator" should be equal 
+      ! This means that the "observation operator" should be equal 
       ! to the "perturbation operator", i.e., the kick.
       call local_operator_copy(obs, kick_operator)
     case(0)

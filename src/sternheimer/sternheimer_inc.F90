@@ -46,12 +46,9 @@ subroutine X(sternheimer_solve)(                           &
   logical, allocatable :: orth_mask(:)
 
   logical :: conv_last, conv, states_conv
-
   type(mesh_t), pointer :: mesh
   type(states_t), pointer :: st
-
   integer :: total_iter, idim, ip, ispin
-
   character(len=100) :: dirname
 
   call push_sub('sternheimer_inc.Xsternheimer_solve')
@@ -375,6 +372,33 @@ subroutine X(sternheimer_set_rhs)(this, rhs)
 
   call pop_sub('sternheimer_inc.Xsternheimer_set_rhs')
 end subroutine X(sternheimer_set_rhs)
+
+
+!--------------------------------------------------------------
+subroutine X(sternheimer_solve_order2)( &
+     this, sys, hm, lr, nsigma, omega, perturbation,       &
+     restart_dir, rho_tag, wfs_tag, have_restart_rho)
+  type(sternheimer_t),    intent(inout) :: this
+  type(system_t), target, intent(inout) :: sys
+  type(hamiltonian_t),    intent(inout) :: hm
+  type(lr_t),             intent(inout) :: lr(:) 
+  integer,                intent(in)    :: nsigma 
+  R_TYPE,                 intent(in)    :: omega
+  type(pert_t),           intent(in)    :: perturbation
+  character(len=*),       intent(in)    :: restart_dir
+  character(len=*),       intent(in)    :: rho_tag
+  character(len=*),       intent(in)    :: wfs_tag
+  logical,      optional, intent(in)    :: have_restart_rho
+
+  call push_sub('sternheimer_inc.Xsternheimer_solve_order2')
+
+  ! construct inhomogeneous RHS term from first-order solution
+  ! call X(sternheimer_solve) for sum frequency
+  ! call X(sternheimer_solve) for difference frequency
+  ! unless of course they are identical (one or both freqs the same)
+
+  call pop_sub('sternheimer_inc.Xsternheimer_solve_order2')
+end subroutine X(sternheimer_solve_order2)
 
 !! Local Variables:
 !! mode: f90
