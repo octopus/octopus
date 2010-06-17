@@ -47,5 +47,3 @@ match ; vg(x) k1 st1  ; LINE(kdotp/velocity,     5, 20) ;  0.06521
 match ; vg(y) k2 st10 ; LINE(kdotp/velocity,    34, 32) ; -0.32181
 match ; vg(z) k3 st17 ; LINE(kdotp/velocity,    61, 45) ; -0.14590
 match ; 1/m*  k1 st1  ; LINE(kdotp/kpoint_1_1,  11, 25) ;  0.859626
-match ; 1/m*  k2 st10 ; LINE(kdotp/kpoint_2_1,  65, 25) ; -0.430580
-match ; 1/m*  k3 st17 ; LINE(kdotp/kpoint_3_1, 107, 25) ;  3.117873

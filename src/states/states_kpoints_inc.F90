@@ -18,12 +18,12 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine states_choose_kpoints(d, sb, geo)
-  type(states_dim_t), intent(inout) :: d
+subroutine states_choose_kpoints(dd, sb, geo)
+  type(states_dim_t), intent(inout) :: dd
   type(simul_box_t),  intent(in)    :: sb
   type(geometry_t),   intent(in)    :: geo
 
-  integer   :: i, nkmax, ik, idim
+  integer :: idir, iatom, nkmax, ik
   type(block_t) :: blk
 
   ! local variables for the crystal_init call
@@ -39,55 +39,55 @@ subroutine states_choose_kpoints(d, sb, geo)
 
   ! if not periodic just return the Gamma point
   if (sb%periodic_dim == 0) then
-    select case(d%ispin)
+    select case(dd%ispin)
     case(1,3)
-      d%nik = 1
+      dd%nik = 1
     case(2)
-      d%nik = 2
+      dd%nik = 2
     case default
       message(1) = 'Input: invalid SpinComponents'
       call write_fatal(1)
     end select
 
-    SAFE_ALLOCATE(d%kpoints (1:MAX_DIM, 1:d%nik))
-    SAFE_ALLOCATE(d%kweights(1:d%nik))
-    d%kpoints  = M_ZERO
-    d%kweights = M_ONE
+    SAFE_ALLOCATE(dd%kpoints (1:MAX_DIM, 1:dd%nik))
+    SAFE_ALLOCATE(dd%kweights(1:dd%nik))
+    dd%kpoints  = M_ZERO
+    dd%kweights = M_ONE
 
     call pop_sub('states_kpoints_inc.states_choose_kpoints')
     return
   end if
 
   ! if Monkhorst-Pack used, this variable will be reset
-  d%nik_axis(:) = 0
+  dd%nik_axis(:) = 0
 
   ! documented in ions/kpoints.F90
   if(parse_block(datasets_check('KPoints'), blk) == 0) then
 
-    if (d%ispin == 2) then
+    if (dd%ispin == 2) then
       message(1) = 'Not implemented yet.'
       call write_fatal(1)
     end if
 
     !we have a block with the k-points given explicitly
-    d%nik = parse_block_n(blk)
-    write(message(1), '(a,i4,a)') 'Input: ', d%nik, ' k-points will be read from the input file'
+    dd%nik = parse_block_n(blk)
+    write(message(1), '(a,i4,a)') 'Input: ', dd%nik, ' k-points will be read from the input file'
     call write_info(1)
 
-    SAFE_ALLOCATE( d%kpoints(1:MAX_DIM, 1:d%nik))
-    SAFE_ALLOCATE(d%kweights(1:d%nik))
+    SAFE_ALLOCATE(dd%kpoints(1:MAX_DIM, 1:dd%nik))
+    SAFE_ALLOCATE(dd%kweights(1:dd%nik))
 
-    d%kpoints  = M_ZERO
-    d%kweights = M_ZERO
+    dd%kpoints  = M_ZERO
+    dd%kweights = M_ZERO
 
-    do ik = 1, d%nik
-      call parse_block_float(blk, ik - 1, 0, d%kweights(ik))
-      do idim = 1, sb%periodic_dim
-        call parse_block_float(blk, ik - 1, idim, d%kpoints(idim, ik))
+    do ik = 1, dd%nik
+      call parse_block_float(blk, ik - 1, 0, dd%kweights(ik))
+      do idir = 1, sb%periodic_dim
+        call parse_block_float(blk, ik - 1, idir, dd%kpoints(idir, ik))
       end do
     end do
 
-    d%kpoints = units_to_atomic(unit_one / units_inp%length, d%kpoints) !k-points have 1/length units
+    dd%kpoints = units_to_atomic(unit_one / units_inp%length, dd%kpoints) !k-points have 1/length units
 
     call print_kpoints_debug
     call pop_sub('states_kpoints_inc.states_choose_kpoints')
@@ -97,19 +97,19 @@ subroutine states_choose_kpoints(d, sb, geo)
   ! default when nothing specified: Gamma point only
   if(parse_block(datasets_check('KPointsGrid'), blk) .ne. 0) then
 
-    if (d%ispin == 2) then
+    if (dd%ispin == 2) then
       message(1) = 'Not implemented yet.'
       call write_fatal(1)
     end if
 
-    d%nik = 1
+    dd%nik = 1
 
-    SAFE_ALLOCATE(d%kpoints(1:MAX_DIM, 1:d%nik))
-    SAFE_ALLOCATE(d%kweights(1:d%nik))
+    SAFE_ALLOCATE(dd%kpoints(1:MAX_DIM, 1:dd%nik))
+    SAFE_ALLOCATE(dd%kweights(1:dd%nik))
 
-    d%kpoints     = M_ZERO
-    d%kweights    = M_ZERO
-    d%kweights(1) = M_ONE
+    dd%kpoints     = M_ZERO
+    dd%kweights    = M_ZERO
+    dd%kweights(1) = M_ONE
 
     call print_kpoints_debug
     call pop_sub('states_kpoints_inc.states_choose_kpoints')
@@ -117,21 +117,21 @@ subroutine states_choose_kpoints(d, sb, geo)
   end if
 
 ! now deal with Monkhorst-Pack
-  d%nik_axis(:) = 1
-  do i = 1, sb%periodic_dim
-    call parse_block_integer(blk, 0, i-1, d%nik_axis(i))
+  dd%nik_axis(:) = 1
+  do idir = 1, sb%periodic_dim
+    call parse_block_integer(blk, 0, idir - 1, dd%nik_axis(idir))
   end do
-  if (any(d%nik_axis < 1)) then
+  if (any(dd%nik_axis < 1)) then
     message(1) = 'Input: KPointsMonkhorstPack is not valid'
     call write_fatal(1)
   end if
-  nkmax = PRODUCT(d%nik_axis)
+  nkmax = PRODUCT(dd%nik_axis)
 
   kshifts = M_ZERO
 
   if(parse_block_n(blk) > 1) then ! we have a shift
-    do i = 1, sb%periodic_dim
-      call parse_block_float(blk, 1, i-1, kshifts(i))
+    do idir = 1, sb%periodic_dim
+      call parse_block_float(blk, 1, idir - 1, kshifts(idir))
     end do
   end if
   call parse_block_end(blk)
@@ -143,9 +143,16 @@ subroutine states_choose_kpoints(d, sb, geo)
   !%Description
   !% This variable defines whether symmetries are taken into account
   !% or not for the choice of <i>k</i>-points. If it is set to no, the <i>k</i>-point
-  !% sampling will range over the full Brillouin zone. The default is yes.
+  !% sampling will range over the full Brillouin zone.
+  !% Symmetries should not be used whenever a perturbation is applied to the system.
   !%End
   call parse_logical(datasets_check('KPointsUseSymmetries'), .false., use_symmetries)
+
+  if(calc_mode_is(CM_LR_POL) .or. calc_mode_is(CM_VDW) .or. calc_mode_is(CM_PHONONS_LR) .or. &
+    calc_mode_is(CM_RAMAN) .or. calc_mode_is(CM_KDOTP)) then
+    message(1) = "KPointsUseSymmetries should not be used when a perturbation is applied."
+    call write_warning(1)
+  endif
 
   !%Variable KPointsUseTimeReversal
   !%Type logical
@@ -167,43 +174,44 @@ subroutine states_choose_kpoints(d, sb, geo)
 
   natom  = 0
   coorat = M_ZERO
-  do i = 1, geo%natoms
-    is = species_index(geo%atom(i)%spec)
+  do iatom = 1, geo%natoms
+    is = species_index(geo%atom(iatom)%spec)
     natom(is) = natom(is) + 1
-    coorat(is, natom(is), 1:sb%dim) = geo%atom(i)%x(1:sb%dim)
+    coorat(is, natom(is), 1:sb%dim) = geo%atom(iatom)%x(1:sb%dim)
   end do
 
-  do i = 1, sb%dim
-    coorat(:,:,i) = coorat(:,:,i) / sb%rlattice(i, i) + M_HALF
+  do idir = 1, sb%dim
+    coorat(:, :, idir) = coorat(:, :, idir) / sb%rlattice(idir, idir) + M_HALF
   end do
 
   SAFE_ALLOCATE(kp(1:3, 1:nkmax))
   SAFE_ALLOCATE(kw(1:nkmax))
 
   ! choose k-points according to Monkhorst-Pack scheme
-  call crystal_init(geo, sb, d%nik_axis, kshifts, use_symmetries, use_time_reversal, nkmax, kp, kw)
+  call crystal_init(geo, sb, dd%nik_axis, kshifts, use_symmetries, use_time_reversal, nkmax, kp, kw)
   nk = nkmax
 
-  ! double d%nik and copy points for spin-polarized calc
-  select case(d%ispin)
+  ! double dd%nik and copy points for spin-polarized calc
+  select case(dd%ispin)
   case(UNPOLARIZED, SPINORS)
-    d%nik = nk
-    SAFE_ALLOCATE( d%kpoints(1:3, 1:d%nik))
-    SAFE_ALLOCATE(d%kweights(1:d%nik))
-    do i = 1, 3
-      d%kpoints(i, 1:d%nik) = kp(i, 1:d%nik)*sb%klattice(i,i)
+    dd%nik = nk
+    SAFE_ALLOCATE(dd%kpoints(1:3, 1:dd%nik))
+    SAFE_ALLOCATE(dd%kweights(1:dd%nik))
+    do idir = 1, 3
+      dd%kpoints(idir, 1:dd%nik) = kp(idir, 1:dd%nik)*sb%klattice(idir, idir)
     end do
-    d%kweights(1:d%nik) = kw(1:d%nik)
+    dd%kweights(1:dd%nik) = kw(1:dd%nik)
   case(SPIN_POLARIZED)
-    d%nik = 2 * nk
-    SAFE_ALLOCATE( d%kpoints(1:3, 1:d%nik))
-    SAFE_ALLOCATE(d%kweights(1:d%nik))
-    do i = 1,3
-      d%kpoints(i,::2)  = kp(i, 1:nk)*sb%klattice(i,i)
-      d%kpoints(i,2::2) = kp(i, 1:nk)*sb%klattice(i,i)
+    dd%nik = 2 * nk
+    SAFE_ALLOCATE(dd%kpoints(1:3, 1:dd%nik))
+    SAFE_ALLOCATE(dd%kweights(1:dd%nik))
+    do idir = 1, 3
+      dd%kpoints(idir, 1::2)  = kp(idir, 1:nk)*sb%klattice(idir, idir)
+      dd%kpoints(idir, 2::2) = kp(idir, 1:nk)*sb%klattice(idir, idir)
     end do
-    d%kweights(::2)  = kw(1:nk)
-    d%kweights(2::2) = kw(1:nk)
+    ! 1::2 means every 2nd element, starting with the first
+    dd%kweights(1::2) = kw(1:nk)
+    dd%kweights(2::2) = kw(1:nk)
   end select
 
   SAFE_DEALLOCATE_A(natom)
@@ -223,7 +231,7 @@ contains
     if(in_debug_mode) then
       
       iunit = io_open('debug/kpoints', action = 'write')
-      call kpoints_write_info(d, sb%dim, iunit)      
+      call kpoints_write_info(dd, sb%dim, iunit)      
       call io_close(iunit)
 
     end if
@@ -235,21 +243,21 @@ end subroutine states_choose_kpoints
 
 
 ! ---------------------------------------------------------
-subroutine kpoints_write_info(d, sbdim, iunit)
-  type(states_dim_t), intent(in) :: d
+subroutine kpoints_write_info(dd, sbdim, iunit)
+  type(states_dim_t), intent(in) :: dd
   integer,            intent(in) :: sbdim
   integer,            intent(in) :: iunit
 
-  integer :: ik, idim
+  integer :: ik, idir
 
   call push_sub('states_kpoints_inc.kpoints_write_info')
 
-  if(d%nik_axis(1) .ne. 0) then
-    write(message(1),'(a,9(i3,1x))') 'Number of k-points in each direction = ', d%nik_axis(1:sbdim)
+  if(dd%nik_axis(1) .ne. 0) then
+    write(message(1),'(a,9(i3,1x))') 'Number of k-points in each direction = ', dd%nik_axis(1:sbdim)
     call write_info(1, iunit)
   else
     ! a Monkhorst-Pack grid was not used
-    write(message(1),'(a,9(i3,1x))') 'Number of k-points = ', kpoint_index(d, d%nik)
+    write(message(1),'(a,9(i3,1x))') 'Number of k-points = ', kpoint_index(dd, dd%nik)
     call write_info(1, iunit)
   endif
 
@@ -257,15 +265,17 @@ subroutine kpoints_write_info(d, sbdim, iunit)
   message(2) = '   --------------------------------------------------'
   call write_info(2, iunit, verbose_limit=80)
 
-  do ik = 1, d%nik
+  do ik = 1, dd%nik
      write(message(1),'(i4,1x,4f12.4)') &
-       ik, (units_from_atomic(unit_one/units_out%length, d%kpoints(idim,ik)), idim=1,sbdim), d%kweights(ik)
+       ik, (units_from_atomic(unit_one/units_out%length, dd%kpoints(idir, ik)), idir=1, sbdim), dd%kweights(ik)
      call write_info(1, iunit, verbose_limit=80)
   end do
 
   call pop_sub('states_kpoints_inc.kpoints_write_info')
 end subroutine kpoints_write_info
 
+
+! ---------------------------------------------------------
 logical pure function kpoint_is_gamma(this, ik)
   type(states_dim_t), intent(in) :: this
   integer,            intent(in) :: ik
@@ -274,6 +284,8 @@ logical pure function kpoint_is_gamma(this, ik)
 
 end function kpoint_is_gamma
 
+
+! ---------------------------------------------------------
 integer function kpoint_index(this, ik) result(index)
   type(states_dim_t), intent(in) :: this
   integer,            intent(in) :: ik

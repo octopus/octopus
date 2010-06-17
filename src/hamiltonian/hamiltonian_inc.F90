@@ -164,7 +164,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
       
       if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) call X(exchange_operator)(hm, der, epsi, hpsi, ist, ik)
       
-      if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) &
+      if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) &
         call X(h_mgga_terms) (hm, der, epsi, hpsi, ik, grad)
 
       if(present(time)) call X(vborders) (der, hm, epsi, hpsi)

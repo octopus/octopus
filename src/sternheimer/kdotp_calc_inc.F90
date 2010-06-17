@@ -56,7 +56,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
   SAFE_ALLOCATE(eff_mass_inv_temp(1:sys%st%d%nik, 1:sys%st%nst, 1:sys%gr%mesh%sb%dim, 1:sys%gr%mesh%sb%dim))
 #endif
 
-  eff_mass_inv(:, :, :, :) = M_ZERO
+  eff_mass_inv(:,:,:,:) = M_ZERO
 
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
 
