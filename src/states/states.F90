@@ -2422,9 +2422,9 @@ return
                 ww*aimag(conjg(wf_psi(1:der%mesh%np, 1))*gwf_psi(1:der%mesh%np, i_dim, 1))
             if(present( tau)) then
               tau (1:der%mesh%np, is)        = tau (1:der%mesh%np, is)        + &
-                ww*abs(gwf_psi(1:der%mesh%np, i_dim, 1))**2 - &
-                ww*abs(st%d%kpoints(i_dim, ik))**2*abs(wf_psi(1:der%mesh%np, 1))**2 + &
-                ww*2*aimag(-CONJG(wf_psi(1:der%mesh%np, 1))*st%d%kpoints(i_dim, ik)*gwf_psi(1:der%mesh%np, i_dim, 1) )
+                ww*abs(gwf_psi(1:der%mesh%np, i_dim, 1))**2  &
+                + ww*abs(st%d%kpoints(i_dim, ik))**2*abs(wf_psi(1:der%mesh%np, 1))**2  &
+                - ww*M_TWO*aimag(conjg(wf_psi(1:der%mesh%np, 1))*st%d%kpoints(i_dim, ik)*gwf_psi(1:der%mesh%np, i_dim, 1) )
             end if
 
             if(st%d%ispin == SPINORS) then
