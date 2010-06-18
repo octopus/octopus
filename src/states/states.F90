@@ -2418,8 +2418,9 @@ return
               lrho(1:der%mesh%np, is) = lrho(1:der%mesh%np, is)         + &
                 ww*M_TWO*real(conjg(gwf_psi(1:der%mesh%np, i_dim, 1))*gwf_psi(1:der%mesh%np, i_dim, 1))
             if(present(  jp)) &
-              jp  (1:der%mesh%np, i_dim, is) = jp  (1:der%mesh%np, i_dim, is) + &
-                ww*aimag(conjg(wf_psi(1:der%mesh%np, 1))*gwf_psi(1:der%mesh%np, i_dim, 1))
+                 jp  (1:der%mesh%np, i_dim, is) = jp  (1:der%mesh%np, i_dim, is) + &
+                 ww*aimag(conjg(wf_psi(1:der%mesh%np, 1))*gwf_psi(1:der%mesh%np, i_dim, 1) - &
+                 M_zI*(wf_psi(1:der%mesh%np, 1))**2*st%d%kpoints(i_dim, ik)  )
             if(present( tau)) then
               tau (1:der%mesh%np, is)        = tau (1:der%mesh%np, is)        + &
                 ww*abs(gwf_psi(1:der%mesh%np, i_dim, 1))**2  &
