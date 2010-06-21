@@ -46,4 +46,5 @@ Input      : 04-silicon.02-kdotp.inp
 match ; vg(x) k1 st1  ; LINE(kdotp/velocity,     5, 20) ;  0.06521
 match ; vg(y) k2 st10 ; LINE(kdotp/velocity,    34, 32) ; -0.32181
 match ; vg(z) k3 st17 ; LINE(kdotp/velocity,    61, 45) ; -0.14590
+Precision : 0.0005
 match ; 1/m*  k1 st1  ; LINE(kdotp/kpoint_1_1,  11, 25) ;  0.859626
