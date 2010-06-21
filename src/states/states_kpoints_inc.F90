@@ -148,8 +148,8 @@ subroutine states_choose_kpoints(dd, sb, geo)
   !%End
   call parse_logical(datasets_check('KPointsUseSymmetries'), .false., use_symmetries)
 
-  if(calc_mode_is(CM_LR_POL) .or. calc_mode_is(CM_VDW) .or. calc_mode_is(CM_PHONONS_LR) .or. &
-    calc_mode_is(CM_RAMAN) .or. calc_mode_is(CM_KDOTP)) then
+  if((calc_mode_is(CM_LR_POL) .or. calc_mode_is(CM_VDW) .or. calc_mode_is(CM_PHONONS_LR) .or. &
+    calc_mode_is(CM_RAMAN) .or. calc_mode_is(CM_KDOTP)) .and. use_symmetries) then
     message(1) = "KPointsUseSymmetries should not be used when a perturbation is applied."
     call write_warning(1)
   endif
