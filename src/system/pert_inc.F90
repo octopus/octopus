@@ -42,7 +42,7 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
     SAFE_ALLOCATE(f_in_copy(1:gr%mesh%np_part, 1:hm%d%dim))
     do idim = 1, hm%d%dim
-      call lalg_copy(gr%mesh%np_part, f_in(:, idim), f_in_copy(:, idim))
+      call lalg_copy(gr%mesh%np, f_in(:, idim), f_in_copy(:, idim))
       call X(derivatives_set_bc(gr%der, f_in_copy(:, idim)))
     end do
   endif
@@ -296,7 +296,7 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
     SAFE_ALLOCATE(f_in_copy(1:gr%mesh%np_part, 1:hm%d%dim))
     do idim = 1, hm%d%dim
-      call lalg_copy(gr%mesh%np_part, f_in(:, idim), f_in_copy(:, idim))
+      call lalg_copy(gr%mesh%np, f_in(:, idim), f_in_copy(:, idim))
       call X(derivatives_set_bc(gr%der, f_in_copy(:, idim)))
     end do
   endif
