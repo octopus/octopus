@@ -422,7 +422,6 @@ subroutine X(states_normalize_orbital)(mesh, dim, psi)
   call push_sub('states_calc_inc.Xstates_normalize_orbital')
 
   norm = X(mf_nrm2) (mesh, dim, psi)
-  norm = sqrt(norm)
 
   forall (idim = 1:dim, ip = 1:mesh%np) psi(ip, idim) = psi(ip, idim)/norm
   
