@@ -283,8 +283,9 @@ subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, n
       zpol(dir1, dir2) = M_ZERO
 
       do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
-        term = M_ZERO
         do ist = sys%st%st_start, sys%st%st_end
+          term = M_ZERO
+        
           subterm = - X(mf_dotp)(mesh, sys%st%d%dim, &
             kdotp_lr(dir1)%X(dl_psi)(1:mesh%np, 1:sys%st%d%dim, ist, ik), &
             em_lr(dir2, 1)%X(dl_psi)(1:mesh%np, 1:sys%st%d%dim, ist, ik))
@@ -297,10 +298,11 @@ subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, n
               em_lr(dir2, 2)%X(dl_psi)(1:mesh%np, 1:sys%st%d%dim, ist, ik), & 
               kdotp_lr(dir1)%X(dl_psi)(1:mesh%np, 1:sys%st%d%dim, ist, ik))
           end if
+
+          zpol(dir1, dir2) = zpol(dir1, dir2) + &
+            term * sys%st%d%kweights(ik) * sys%st%occ(ist, ik)
         enddo
 
-        zpol(dir1, dir2) = zpol(dir1, dir2) + &
-          term * sys%st%d%kweights(ik) * sys%st%occ(ist, ik)
       enddo
     enddo
   enddo
