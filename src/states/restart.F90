@@ -430,7 +430,7 @@ contains
     ! cannot read the occupations, otherwise these overwrite the ones from
     ! the input file. The same is true when reading a linear response restart
     read_occ_ = .true.
-    if(present(read_occ).or.present(read_occ)) read_occ_ = .false.
+    if(present(read_occ)) read_occ_ = .false.
     
     ! sanity check
     gs_allocated = (associated(st%dpsi) .and. states_are_real(st)) .or. &
@@ -542,9 +542,11 @@ contains
       end if
 
       call iopar_read(gr%mesh%mpi_grp, iunit2, line, err)
-      read(line, *) my_occ, char, st%eigenval(ist, ik), char, flt, char, flt,&
-                    char, flt, char, st%d%kweights(ik)
-      if(read_occ_) st%occ(ist, ik) = my_occ
+      if(.not.present(lr)) then ! do not read eigenvalues when reading linear response
+        read(line, *) my_occ, char, st%eigenval(ist, ik), char, flt, char, flt,&
+          char, flt, char, st%d%kweights(ik)
+        if(read_occ_) st%occ(ist, ik) = my_occ
+      end if
 
       if(ist >= st%st_start .and. ist <= st%st_end .and. &
         st%d%kpt%start <= ik .and. st%d%kpt%end >= ik) then
