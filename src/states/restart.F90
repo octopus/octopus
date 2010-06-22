@@ -428,9 +428,9 @@ contains
 
     ! If one restarts a GS calculation changing the %Occupations block, one
     ! cannot read the occupations, otherwise these overwrite the ones from
-    ! the input file
+    ! the input file. The same is true when reading a linear response restart
     read_occ_ = .true.
-    if(present(read_occ)) read_occ_ = .false.
+    if(present(read_occ).or.present(read_occ)) read_occ_ = .false.
     
     ! sanity check
     gs_allocated = (associated(st%dpsi) .and. states_are_real(st)) .or. &
