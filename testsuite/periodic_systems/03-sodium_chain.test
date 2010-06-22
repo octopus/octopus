@@ -8,33 +8,33 @@ Enabled    : Yes
 
 
 Input: 03-sodium_chain.01-ground_state.inp
-match ; Bands n=1,k=1; GREP(unocc_static/eigenvalues, '#k =   1', 12, 2) ; -3.648593
-match ; Bands n=1,k=2; GREP(unocc_static/eigenvalues, '#k =   2', 12, 2) ; -3.552608
-match ; Bands n=1,k=3; GREP(unocc_static/eigenvalues, '#k =   3', 12, 2) ; -3.265539
-match ; Bands n=1,k=4; GREP(unocc_static/eigenvalues, '#k =   4', 12, 2) ; -2.790094
-match ; Bands n=1,k=5; GREP(unocc_static/eigenvalues, '#k =   5', 12, 2) ; -2.131387
-match ; Bands n=1,k=6; GREP(unocc_static/eigenvalues, '#k =   6', 12, 2) ; -1.368580
+match ; Bands n=1,k=1; GREP(unocc_static/eigenvalues, '#k =   1', 12, 1) ; -3.648593
+match ; Bands n=1,k=2; GREP(unocc_static/eigenvalues, '#k =   2', 12, 1) ; -3.552608
+match ; Bands n=1,k=3; GREP(unocc_static/eigenvalues, '#k =   3', 12, 1) ; -3.265539
+match ; Bands n=1,k=4; GREP(unocc_static/eigenvalues, '#k =   4', 12, 1) ; -2.790094
+match ; Bands n=1,k=5; GREP(unocc_static/eigenvalues, '#k =   5', 12, 1) ; -2.131387
+match ; Bands n=1,k=6; GREP(unocc_static/eigenvalues, '#k =   6', 12, 1) ; -1.368580
 
-match ; Bands n=2,k=1; GREP(unocc_static/eigenvalues, '#k =   1', 12, 3) ; -1.236907
-match ; Bands n=2,k=2; GREP(unocc_static/eigenvalues, '#k =   2', 12, 3) ; -1.145361
-match ; Bands n=2,k=3; GREP(unocc_static/eigenvalues, '#k =   3', 12, 3) ; -0.870845
-match ; Bands n=2,k=4; GREP(unocc_static/eigenvalues, '#k =   4', 12, 3) ; -0.413978
-match ; Bands n=2,k=5; GREP(unocc_static/eigenvalues, '#k =   5', 12, 3) ; -0.281613
-match ; Bands n=2,k=6; GREP(unocc_static/eigenvalues, '#k =   6', 12, 3) ; -1.210874
+match ; Bands n=2,k=1; GREP(unocc_static/eigenvalues, '#k =   1', 12, 2) ; -1.236907
+match ; Bands n=2,k=2; GREP(unocc_static/eigenvalues, '#k =   2', 12, 2) ; -1.145361
+match ; Bands n=2,k=3; GREP(unocc_static/eigenvalues, '#k =   3', 12, 2) ; -0.870845
+match ; Bands n=2,k=4; GREP(unocc_static/eigenvalues, '#k =   4', 12, 2) ; -0.413978
+match ; Bands n=2,k=5; GREP(unocc_static/eigenvalues, '#k =   5', 12, 2) ; -0.281613
+match ; Bands n=2,k=6; GREP(unocc_static/eigenvalues, '#k =   6', 12, 2) ; -1.210874
 
 
 Input: 03-sodium_chain.02-ground_state_disp.inp
-match ; Bands n=1,k=1; GREP(unocc_static/eigenvalues, '#k =   1', 12, 2) ; -3.648589
-match ; Bands n=1,k=2; GREP(unocc_static/eigenvalues, '#k =   2', 12, 2) ; -3.552604
-match ; Bands n=1,k=3; GREP(unocc_static/eigenvalues, '#k =   3', 12, 2) ; -3.265535
-match ; Bands n=1,k=4; GREP(unocc_static/eigenvalues, '#k =   4', 12, 2) ; -2.790090
-match ; Bands n=1,k=5; GREP(unocc_static/eigenvalues, '#k =   5', 12, 2) ; -2.131382
-match ; Bands n=1,k=6; GREP(unocc_static/eigenvalues, '#k =   6', 12, 2) ; -1.368568
+match ; Bands n=1,k=1; GREP(unocc_static/eigenvalues, '#k =   1', 12, 1) ; -3.648589
+match ; Bands n=1,k=2; GREP(unocc_static/eigenvalues, '#k =   2', 12, 1) ; -3.552604
+match ; Bands n=1,k=3; GREP(unocc_static/eigenvalues, '#k =   3', 12, 1) ; -3.265535
+match ; Bands n=1,k=4; GREP(unocc_static/eigenvalues, '#k =   4', 12, 1) ; -2.790090
+match ; Bands n=1,k=5; GREP(unocc_static/eigenvalues, '#k =   5', 12, 1) ; -2.131382
+match ; Bands n=1,k=6; GREP(unocc_static/eigenvalues, '#k =   6', 12, 1) ; -1.368568
 
-match ; Bands n=2,k=1; GREP(unocc_static/eigenvalues, '#k =   1', 12, 3) ; -1.236903
-match ; Bands n=2,k=2; GREP(unocc_static/eigenvalues, '#k =   2', 12, 3) ; -1.145357
-match ; Bands n=2,k=3; GREP(unocc_static/eigenvalues, '#k =   3', 12, 3) ; -0.870841
-match ; Bands n=2,k=4; GREP(unocc_static/eigenvalues, '#k =   4', 12, 3) ; -0.413974
-match ; Bands n=2,k=5; GREP(unocc_static/eigenvalues, '#k =   5', 12, 3) ; -0.281608
-match ; Bands n=2,k=6; GREP(unocc_static/eigenvalues, '#k =   6', 12, 3) ; -1.210870
+match ; Bands n=2,k=1; GREP(unocc_static/eigenvalues, '#k =   1', 12, 2) ; -1.236903
+match ; Bands n=2,k=2; GREP(unocc_static/eigenvalues, '#k =   2', 12, 2) ; -1.145357
+match ; Bands n=2,k=3; GREP(unocc_static/eigenvalues, '#k =   3', 12, 2) ; -0.870841
+match ; Bands n=2,k=4; GREP(unocc_static/eigenvalues, '#k =   4', 12, 2) ; -0.413974
+match ; Bands n=2,k=5; GREP(unocc_static/eigenvalues, '#k =   5', 12, 2) ; -0.281608
+match ; Bands n=2,k=6; GREP(unocc_static/eigenvalues, '#k =   6', 12, 2) ; -1.210870
 
