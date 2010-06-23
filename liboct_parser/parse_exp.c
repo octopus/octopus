@@ -107,6 +107,13 @@ static int yylex (){
     return EQUAL;
   }
 
+  /*
+  if (c == ':' && par_string[par_pos] == '='){
+    par_pos++;
+    return SET;
+  }
+  */
+
   if (c == '&' && par_string[par_pos] == '&'){
     par_pos++;
     return LAND;

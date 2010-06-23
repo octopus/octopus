@@ -21,6 +21,7 @@
 
 #include <gsl/gsl_complex_math.h>
 #include <gsl/gsl_sf_erf.h>
+#include <math.h>
 
 
 /* ------------------------------------------------------ */
@@ -29,14 +30,14 @@ gsl_complex gsl_complex_step_real (gsl_complex a)
   gsl_complex z;
 	
   if (GSL_REAL(a) < 0)
-	{
-		GSL_SET_COMPLEX (&z, 0, 0);
-	}
+    {
+      GSL_SET_COMPLEX (&z, 0, 0);
+    }
   else
-	{
-		GSL_SET_COMPLEX (&z, 1, 0);
-	}
-
+    {
+      GSL_SET_COMPLEX (&z, 1, 0);
+    }
+  
   return z;
 }
 
@@ -47,7 +48,7 @@ gsl_complex gsl_complex_min_real (gsl_complex a, gsl_complex b)
   gsl_complex z;
   double min;
 	
-	/* just consider real parts */
+  /* just consider real parts */
   min = GSL_REAL(a) < GSL_REAL(b) ? GSL_REAL(a) : GSL_REAL(b);
   GSL_SET_COMPLEX (&z, min, 0);
 	
@@ -61,7 +62,7 @@ gsl_complex gsl_complex_max_real (gsl_complex a, gsl_complex b)
   gsl_complex z;
   double max;
 	
-	/* just consider real parts */
+  /* just consider real parts */
   max = GSL_REAL(a) > GSL_REAL(b) ? GSL_REAL(a) : GSL_REAL(b);
   GSL_SET_COMPLEX (&z, max, 0);
 	
@@ -73,7 +74,7 @@ gsl_complex gsl_complex_carg (gsl_complex a)
 {        
   gsl_complex z;
 
-	GSL_SET_COMPLEX (&z, gsl_complex_arg(a), 0);
+  GSL_SET_COMPLEX (&z, gsl_complex_arg(a), 0);
 
   return z;
 }
@@ -83,7 +84,7 @@ gsl_complex gsl_complex_cabs (gsl_complex a)
 {        
   gsl_complex z;
 
-	GSL_SET_COMPLEX (&z, gsl_complex_abs(a), 0);
+  GSL_SET_COMPLEX (&z, gsl_complex_abs(a), 0);
 
   return z;
 }
@@ -93,7 +94,7 @@ gsl_complex gsl_complex_cabs2 (gsl_complex a)
 {        
   gsl_complex z;
 
-	GSL_SET_COMPLEX (&z, gsl_complex_abs2(a), 0);
+  GSL_SET_COMPLEX (&z, gsl_complex_abs2(a), 0);
 
   return z;
 }
@@ -103,7 +104,7 @@ gsl_complex gsl_complex_clogabs (gsl_complex a)
 {        
   gsl_complex z;
 
-	GSL_SET_COMPLEX (&z, gsl_complex_logabs(a), 0);
+  GSL_SET_COMPLEX (&z, gsl_complex_logabs(a), 0);
 
   return z;
 }
@@ -113,7 +114,39 @@ gsl_complex gsl_complex_erf (gsl_complex a)
 {        
   gsl_complex z;
 
-	GSL_SET_COMPLEX (&z, gsl_sf_erf(GSL_REAL(a)), 0);
+  GSL_SET_COMPLEX (&z, gsl_sf_erf(GSL_REAL(a)), 0);
 
   return z;
 }
+
+/* ------------------------------------------------------ */
+gsl_complex gsl_complex_arctan2 (gsl_complex a, gsl_complex b)
+{        
+  gsl_complex z, p;
+
+  if(GSL_REAL(b) != 0.0)
+    {
+      z = gsl_complex_arctan(gsl_complex_div(a, b));
+      if(GSL_REAL(b) < 0.0){
+	GSL_SET_COMPLEX (&p, M_PI, 0);
+	if(GSL_REAL(a) >= 0.0)
+	  z = gsl_complex_add(z, p);
+	else
+	  z = gsl_complex_sub(z, p);
+      }
+    }
+  else
+    {
+      if(GSL_REAL(a) >= 0.0)
+	{
+	  GSL_SET_COMPLEX (&z, M_PI/2.0, 0.0);
+	}
+      else
+	{
+	  GSL_SET_COMPLEX (&z, -M_PI/2.0, 0.0);
+	}
+    }
+
+  return z;
+}
+

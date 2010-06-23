@@ -23,7 +23,8 @@
 #define __GSL_USERDEF_H__
 
 /* Heaviside step function */
-gsl_complex gsl_complex_step_real (double a);                   
+gsl_complex gsl_complex_step_real (double a);
+
 /* Minimum and maximum of two arguments (comparing real parts) */  
 gsl_complex gsl_complex_min_real (gsl_complex a, gsl_complex b);
 gsl_complex gsl_complex_max_real (gsl_complex a, gsl_complex b);
@@ -36,5 +37,8 @@ gsl_complex gsl_complex_clogabs (gsl_complex a);
 
 /* error function */
 gsl_complex gsl_complex_erf(gsl_complex a);
+
+/* atan2 function */
+gsl_complex gsl_complex_arctan2 (gsl_complex a, gsl_complex b);
 
 #endif /* __GSL_USERDEF_H__ */

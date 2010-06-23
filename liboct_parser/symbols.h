@@ -35,6 +35,8 @@ typedef struct symrec{
   symrec_type type;            /* type of symbol: either VAR or FNCT */
   int def;                     /* has this symbol been defined */
 
+  int nargs;                   /* if type==FNCT contains the number of arguments of the function */
+
   union {
     gsl_complex c;             /* value of a VAR */
     char *str;                 /* value of a STRING */
@@ -51,8 +53,10 @@ extern char *reserved_symbols[];
 
 symrec *putsym (char *sym_name, symrec_type sym_type);
 symrec *getsym (char *sym_name);
-int rmsym (char *sym_name);
+int      rmsym (char *sym_name);
+
 void sym_notdef(symrec *sym);
+void sym_wrong_arg(symrec *sym);
 void sym_init_table();
 void sym_clear_reserved();
 void sym_end_table();

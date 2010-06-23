@@ -91,7 +91,8 @@ int rmsym (char *sym_name)
 
 struct init_fntc{
   char *fname;
-  gsl_complex (*fnct)();
+  int  nargs;
+  gsl_complex (*fnctptr)();
 };
 
 void sym_notdef (symrec *sym)
@@ -100,58 +101,66 @@ void sym_notdef (symrec *sym)
   exit(1);
 }
 
+void sym_wrong_arg (symrec *sym)
+{
+  fprintf(stderr, "Input error:\n\tfunction '%s' accepts %d argument\n", sym->name, sym->nargs);
+  exit(1);
+}
+
 static struct init_fntc arith_fncts[] = {
-  {"sqrt",   gsl_complex_sqrt},
-  {"exp",    gsl_complex_exp},
-  {"ln",     gsl_complex_log},
-  {"log",    gsl_complex_log},
-  {"log10",  gsl_complex_log10},
+  {"sqrt",   1, gsl_complex_sqrt},
+  {"exp",    1, gsl_complex_exp},
+  {"ln",     1, gsl_complex_log},
+  {"log",    1, gsl_complex_log},
+  {"log10",  1, gsl_complex_log10},
+  {"logb",   2, gsl_complex_log_b}, /* takes two arguments logb(z, b) = log_b(z) */
 
-  {"arg",    gsl_complex_carg},
-  {"abs",    gsl_complex_cabs},
-  {"abs2",   gsl_complex_cabs2},
-  {"logabs", gsl_complex_clogabs},
+  {"arg",    1, gsl_complex_carg},
+  {"abs",    1, gsl_complex_cabs},
+  {"abs2",   1, gsl_complex_cabs2},
+  {"logabs", 1, gsl_complex_clogabs},
 
-  {"conjg",  gsl_complex_conjugate},
-  {"inv",    gsl_complex_inverse},
+  {"conjg",  1, gsl_complex_conjugate},
+  {"inv",    1, gsl_complex_inverse},
   
-  {"sin",  gsl_complex_sin},
-  {"cos",  gsl_complex_cos},
-  {"tan",  gsl_complex_tan},
-  {"sec",  gsl_complex_sec},
-  {"csc",  gsl_complex_csc},
-  {"cot",  gsl_complex_cot},
+  {"sin",    1, gsl_complex_sin},
+  {"cos",    1, gsl_complex_cos},
+  {"tan",    1, gsl_complex_tan},
+  {"sec",    1, gsl_complex_sec},
+  {"csc",    1, gsl_complex_csc},
+  {"cot",    1, gsl_complex_cot},
 
-  {"asin", gsl_complex_arcsin},
-  {"acos", gsl_complex_arccos},
-  {"atan", gsl_complex_arctan},
-  {"asec", gsl_complex_arcsec},
-  {"acsc", gsl_complex_arccsc},
-  {"acot", gsl_complex_arccot},
+  {"asin",   1, gsl_complex_arcsin},
+  {"acos",   1, gsl_complex_arccos},
+  {"atan",   1, gsl_complex_arctan},
+  {"atan2",  2, gsl_complex_arctan2}, /* takes two arguments atan2(y,x) = atan(y/x) */
+  {"asec",   1, gsl_complex_arcsec},
+  {"acsc",   1, gsl_complex_arccsc},
+  {"acot",   1, gsl_complex_arccot},
 
-  {"sinh", gsl_complex_sinh},
-  {"cosh", gsl_complex_cosh},
-  {"tanh", gsl_complex_tanh},
-  {"sech", gsl_complex_sech},
-  {"csch", gsl_complex_csch},
-  {"coth", gsl_complex_coth},
+  {"sinh",   1, gsl_complex_sinh},
+  {"cosh",   1, gsl_complex_cosh},
+  {"tanh",   1, gsl_complex_tanh},
+  {"sech",   1, gsl_complex_sech},
+  {"csch",   1, gsl_complex_csch},
+  {"coth",   1, gsl_complex_coth},
 	
-  {"asinh", gsl_complex_arcsinh},
-  {"acosh", gsl_complex_arccosh},
-  {"atanh", gsl_complex_arctanh},
-  {"asech", gsl_complex_arcsech},
-  {"acsch", gsl_complex_arccsch},
-  {"acoth", gsl_complex_arccoth},	
+  {"asinh",  1, gsl_complex_arcsinh},
+  {"acosh",  1, gsl_complex_arccosh},
+  {"atanh",  1, gsl_complex_arctanh},
+  {"asech",  1, gsl_complex_arcsech},
+  {"acsch",  1, gsl_complex_arccsch},
+  {"acoth",  1, gsl_complex_arccoth},	
  
 /* user defined step function. this is not available in GSL, 
    but we use GSL namespacing and macros here. */
-  {"step", gsl_complex_step_real},
+  {"step",   1, gsl_complex_step_real},
 
 /* Minimum and maximum of two arguments (comparing real parts) */  
-  {"min", gsl_complex_min_real},
-  {"max", gsl_complex_max_real},
+  {"min",    2, gsl_complex_min_real},
+  {"max",    2, gsl_complex_max_real},
 
-  {"erf", gsl_complex_erf}, 
+  {"erf",    1, gsl_complex_erf}, 
 
   {0, 0}
 };
@@ -186,7 +195,8 @@ void sym_init_table ()  /* puts arithmetic functions in table. */
   for (i = 0; arith_fncts[i].fname != 0; i++){
     ptr = putsym (arith_fncts[i].fname, S_FNCT);
     ptr->def = 1;
-    ptr->value.fnctptr = arith_fncts[i].fnct;
+    ptr->nargs = arith_fncts[i].nargs;
+    ptr->value.fnctptr = arith_fncts[i].fnctptr;
   }
 
   /* now the constants */
