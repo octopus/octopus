@@ -32,6 +32,7 @@ module states_m
   use hardware_m
   use io_m
   use io_function_m
+  use kpoints_m
   use lalg_adv_m
   use lalg_basic_m
   use loct_m
@@ -459,7 +460,7 @@ contains
     ! Periodic systems require complex wavefunctions
     ! but not if it is Gamma-point only
     if(simul_box_is_periodic(gr%sb)) then
-      if(.not. (st%d%nik == 1 .and. kpoint_is_gamma(st%d, 1))) then
+      if(.not. (kpoints_number(gr%sb%kpoints) == 1 .and. kpoints_point_is_gamma(gr%sb%kpoints, 1))) then
         st%priv%wfs_type = TYPE_CMPLX
       endif
     endif

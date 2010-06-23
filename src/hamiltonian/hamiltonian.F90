@@ -34,6 +34,7 @@ module hamiltonian_m
   use hardware_m
   use io_m
   use io_function_m
+  use kpoints_m
   use lalg_basic_m
   use lasers_m
   use parser_m
@@ -397,7 +398,7 @@ contains
 
     nullify(hm%phase)
     if (simul_box_is_periodic(gr%sb) .and. &
-        .not. (hm%d%nik == 1 .and. kpoint_is_gamma(hm%d, 1))) &
+        .not. (kpoints_number(gr%sb%kpoints) == 1 .and. kpoints_point_is_gamma(gr%sb%kpoints, 1))) &
       call init_phase()
     ! no e^ik phase needed for Gamma-point-only periodic calculations
 

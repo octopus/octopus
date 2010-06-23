@@ -339,7 +339,7 @@ contains
 
     do ik = 1, st%d%nik
       ispin = states_dim_get_spin_index(st%d, ik)
-      ik2 = kpoint_index(st%d, ik)
+      ik2 = states_dim_get_kpoint_index(st%d, ik)
       tmp = int2str(ik2)
 
       write(iunit,'(a,i1,a,a)') '# spin = ', ispin, ', k-point = ', trim(tmp)
@@ -380,7 +380,7 @@ contains
 
     do ik = 1, st%d%nik
       ispin = states_dim_get_spin_index(st%d, ik)
-      ik2 = kpoint_index(st%d, ik)
+      ik2 = states_dim_get_kpoint_index(st%d, ik)
 
       tmp = int2str(ik2)
       write(filename, '(3a, i1)') KDOTP_DIR//'kpoint_', trim(tmp), '_', ispin
@@ -432,7 +432,7 @@ contains
 
     do ik = 1, st%d%nik
       ispin = states_dim_get_spin_index(st%d, ik)
-      ik2 = kpoint_index(st%d, ik)
+      ik2 = states_dim_get_kpoint_index(st%d, ik)
 
       tmp = int2str(ik2)
       write(message(1), '(3a, i1)') 'k-point ', trim(tmp), ', spin ', ispin 

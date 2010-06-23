@@ -32,6 +32,7 @@ module scf_m
   use hamiltonian_m
   use io_m
   use io_function_m
+  use kpoints_m
   use lcao_m
   use loct_m
   use parser_m
@@ -721,7 +722,7 @@ contains
         call grid_write_info(gr, geo, iunit)
 
         if(simul_box_is_periodic(gr%sb)) then
-          call kpoints_write_info(st%d, gr%mesh%sb, iunit)
+          call kpoints_write_info(gr%mesh%sb%kpoints, iunit)
           write(iunit,'(1x)')
         end if
 

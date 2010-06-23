@@ -60,10 +60,7 @@ module states_dim_m
     states_choose_kpoints,            &
     states_dim_get_spin_index,        &
     states_dim_get_kpoint_index,      &
-    kpoints_write_info,               &
-    kpoints_distribute,               &
-    kpoint_is_gamma,                  &
-    kpoint_index
+    kpoints_distribute
 
   ! Parameters...
   integer, public, parameter :: &
@@ -212,7 +209,50 @@ contains
     call pop_sub('states_dim.kpoints_distribute')
   end subroutine kpoints_distribute
   
-#include "states_kpoints_inc.F90"
+  ! ---------------------------------------------------------
+  subroutine states_choose_kpoints(dd, sb, geo)
+    type(states_dim_t), intent(inout) :: dd
+    type(simul_box_t),  intent(in)    :: sb
+    type(geometry_t),   intent(in)    :: geo
+
+    integer :: ik, iq
+
+    call push_sub('states_dim.states_choose_kpoints')
+
+    dd%nik = kpoints_number(sb%kpoints)
+
+    if (dd%ispin == SPIN_POLARIZED) dd%nik = 2*dd%nik
+
+    SAFE_ALLOCATE(dd%kpoints (1:MAX_DIM, 1:dd%nik))
+    SAFE_ALLOCATE(dd%kweights(1:dd%nik))
+
+    do iq = 1, dd%nik
+      ik = states_dim_get_kpoint_index(dd, iq)
+      dd%kpoints(1:3, iq) = kpoints_get_point(sb%kpoints, ik)
+      dd%kweights(iq) = kpoints_get_weight(sb%kpoints, ik)
+    end do
+
+    call print_kpoints_debug
+    call pop_sub('states_dim.states_choose_kpoints')
+
+  contains
+    subroutine print_kpoints_debug
+      integer :: iunit
+
+      call push_sub('states_dim.states_choose_kpoints.print_kpoints_debug')
+
+      if(in_debug_mode) then
+
+        iunit = io_open('debug/kpoints', action = 'write')
+        call kpoints_write_info(sb%kpoints, iunit)      
+        call io_close(iunit)
+
+      end if
+
+      call pop_sub('states_dim.states_choose_kpoints.print_kpoints_debug')
+    end subroutine print_kpoints_debug
+
+  end subroutine states_choose_kpoints
 
 end module states_dim_m
 

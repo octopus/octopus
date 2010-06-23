@@ -35,15 +35,17 @@ module kpoints_m
   
   private
   
-  public ::              &
-    kpoints_grid_t,      &
-    kpoints_t,           &
-    kpoints_init,        &
-    kpoints_end,         &
-    kpoints_copy,        &
-    kpoints_number,      &
-    kpoints_get_weight,  &
-    kpoints_get_point
+  public ::                  &
+    kpoints_grid_t,          &
+    kpoints_t,               &
+    kpoints_init,            &
+    kpoints_end,             &
+    kpoints_copy,            &
+    kpoints_number,          &
+    kpoints_get_weight,      &
+    kpoints_get_point,       &
+    kpoints_write_info,      &
+    kpoints_point_is_gamma
 
   type kpoints_grid_t
     FLOAT, pointer :: point(:, :)
@@ -66,7 +68,7 @@ module kpoints_m
     FLOAT          :: shifts(MAX_DIM)      ! 
   end type kpoints_t
 
-  integer, public, parameter ::        &
+  integer, parameter ::                &
     KPOINTS_GAMMA       =  1,          &
     KPOINTS_MONKH_PACK  =  2,          &
     KPOINTS_USER        =  3
@@ -588,6 +590,48 @@ contains
 
     call pop_sub('kpoints.kpoints_grid_reduce')
   end subroutine kpoints_grid_reduce
+
+  ! ---------------------------------------------------------
+
+  subroutine kpoints_write_info(this, iunit)
+    type(kpoints_t),    intent(in) :: this
+    integer,            intent(in) :: iunit
+    
+    integer :: ik, idir
+    
+    call push_sub('kpoints.kpoints_write_info')
+    
+    if(this%method == KPOINTS_MONKH_PACK) then
+      write(message(1),'(a,9(i3,1x))') 'Number of k-points in each direction = ', this%nik_axis(1:3)
+      call write_info(1, iunit)
+    else
+      ! a Monkhorst-Pack grid was not used
+      write(message(1),'(a,9(i3,1x))') 'Number of k-points = ', kpoints_number(this)
+      call write_info(1, iunit)
+    endif
+    
+    write(message(1), '(3x,a,7x,a,9x,a,9x,a,8x,a)') 'ik', 'K_x', 'K_y', 'K_z', 'Weight'
+    message(2) = '   --------------------------------------------------'
+    call write_info(2, iunit, verbose_limit=80)
+    
+    do ik = 1, kpoints_number(this)
+      write(message(1),'(i4,1x,4f12.4)') ik, &
+        (units_from_atomic(unit_one/units_out%length, this%reduced%red_point(idir, ik)), idir=1, 3), kpoints_get_weight(this, ik)
+      call write_info(1, iunit, verbose_limit=80)
+    end do
+    
+    call pop_sub('kpoints.kpoints_write_info')
+  end subroutine kpoints_write_info
+  
+
+  ! ---------------------------------------------------------
+  logical pure function kpoints_point_is_gamma(this, ik) result(is_gamma)
+    type(kpoints_t),    intent(in) :: this
+    integer,            intent(in) :: ik
+    
+    is_gamma = (maxval(abs(kpoints_get_point(this, ik))) < M_EPSILON)
+    
+  end function kpoints_point_is_gamma
 
 end module kpoints_m
 

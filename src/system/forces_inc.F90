@@ -95,7 +95,8 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
           call X(derivatives_set_bc)(gr%der, dl_psi2(:, idim))
         endif
 
-        if(simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(st%d, ik)) then
+        if(simul_box_is_periodic(gr%sb) .and. &
+          .not. kpoints_point_is_gamma(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))) then
           do ip = 1, np_part
             phase = exp(-M_zI*sum(st%d%kpoints(1:gr%sb%dim, ik)*gr%mesh%x(ip, 1:gr%sb%dim)))
             psi(ip, idim) = phase*psi(ip, idim)
