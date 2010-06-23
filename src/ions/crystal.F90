@@ -9,7 +9,6 @@ module crystal_m
   use geometry_m
   use lalg_adv_m
   use messages_m
-  use simul_box_m
   use symmetries_m
   use profiling_m
 
@@ -17,8 +16,11 @@ module crystal_m
 
   private
   
-  public :: crystal_init
-  
+  public :: &
+    crystal_init,                 &
+    crystal_kpointsgrid_generate, &
+    crystal_kpointsgrid_reduce
+
 contains
 
   ! Generates the k-points grid
@@ -31,8 +33,8 @@ contains
   ! directions dermined by the lattice vectors.
   ! shift(i) and sz shift the grid of integration points from the origin.
 
-  subroutine crystal_kpointsgrid_generate(sb, naxis, shift, nkpoints, kpoints)    
-    type(simul_box_t), intent(in)  :: sb
+  subroutine crystal_kpointsgrid_generate(periodic_dim, naxis, shift, nkpoints, kpoints)  
+    integer,           intent(in)  :: periodic_dim
     integer,           intent(in)  :: naxis(1:MAX_DIM)
     FLOAT,             intent(in)  :: shift(1:MAX_DIM)
     integer,           intent(out) :: nkpoints
@@ -53,7 +55,7 @@ contains
           do kk = 1, naxis(3)
              ix(1:3) = (/ii, jj, kk/)
              nkpoints = nkpoints + 1
-             do idir = 1,sb%periodic_dim
+             do idir = 1, periodic_dim
                 if ( (mod(naxis(idir),2) .ne. 0 ) ) then    
                    kpoints(idir, nkpoints) = &
                         & (real(2*ix(idir) - naxis(idir) - 1, REAL_PRECISION) + 2*shift(idir))*dx(idir)
@@ -72,25 +74,26 @@ contains
 
   end subroutine crystal_kpointsgrid_generate
 
-  subroutine crystal_init(geo, sb, nk_axis, shift, use_symmetries, use_time_reversal, nkpoints, kpoints, weights)
-    type(geometry_t),  intent(in)    :: geo
-    type(simul_box_t), intent(in)    :: sb
-    integer,           intent(in)    :: nk_axis(MAX_DIM)
-    FLOAT,             intent(in)    :: shift(MAX_DIM)
-    logical,           intent(in)    :: use_symmetries
-    logical,           intent(in)    :: use_time_reversal
-    integer,           intent(inout) :: nkpoints
-    FLOAT,             intent(out)   :: kpoints(:, :)
-    FLOAT,             intent(out)   :: weights(:)
+  subroutine crystal_init(geo, symm, periodic_dim, nk_axis, shift, use_symmetries, use_time_reversal, nkpoints, kpoints, weights)
+    type(geometry_t),   intent(in)    :: geo
+    type(symmetries_t), intent(in)    :: symm
+    integer,            intent(in)    :: periodic_dim
+    integer,            intent(in)    :: nk_axis(MAX_DIM)
+    FLOAT,              intent(in)    :: shift(MAX_DIM)
+    logical,            intent(in)    :: use_symmetries
+    logical,            intent(in)    :: use_time_reversal
+    integer,            intent(inout) :: nkpoints
+    FLOAT,              intent(out)   :: kpoints(:, :)
+    FLOAT,              intent(out)   :: weights(:)
 
     integer :: ik
 
     call push_sub('crystal.crystal_init')
 
-    call crystal_kpointsgrid_generate(sb, nk_axis, shift, nkpoints, kpoints)
+    call crystal_kpointsgrid_generate(periodic_dim, nk_axis, shift, nkpoints, kpoints)
     
     if(use_symmetries) then
-      call crystal_kpointsgrid_reduce(sb%symm, use_time_reversal, nkpoints, kpoints, weights)
+      call crystal_kpointsgrid_reduce(symm, use_time_reversal, nkpoints, kpoints, weights)
     else
       forall(ik = 1:nkpoints) weights(ik) = M_ONE/dble(nkpoints)
     end if

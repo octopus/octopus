@@ -183,7 +183,7 @@ contains
 
     call symmetries_init(sb%symm, geo, sb%dim, sb%periodic_dim, sb%rlattice, sb%lsize)
 
-    call kpoints_init(sb%kpoints, sb%dim, sb%periodic_dim, sb%rlattice, sb%klattice, geo)
+    call kpoints_init(sb%kpoints, sb%symm, sb%dim, sb%periodic_dim, sb%rlattice, sb%klattice, geo)
 
     call pop_sub('simul_box.simul_box_init')
 
@@ -1177,7 +1177,7 @@ contains
     sbout%hr_area%num_radii       = sbin%hr_area%num_radii
     sbout%hr_area%center(1:MAX_DIM)=sbin%hr_area%center(1:MAX_DIM)
     
-    call kpoints_copy(sbout%kpoints, sbin%kpoints)
+    call kpoints_copy(sbin%kpoints, sbout%kpoints)
 
     if(sbout%mr_flag) then
       SAFE_ALLOCATE(sbout%hr_area%radius(1:sbout%hr_area%num_radii))

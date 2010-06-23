@@ -20,6 +20,7 @@
 #include "global.h"
   
 module kpoints_m
+  use crystal_m
   use datasets_m
   use geometry_m
   use global_m
@@ -27,6 +28,7 @@ module kpoints_m
   use parser_m
   use messages_m
   use profiling_m
+  use symmetries_m
   use unit_m
   use unit_system_m
   
@@ -39,23 +41,25 @@ module kpoints_m
     kpoints_end,  &
     kpoints_copy
 
+  type kpoints_grid_t
+    FLOAT, pointer :: point(:, :)
+    FLOAT, pointer :: red_point(:, :)
+    FLOAT, pointer :: weight(:)
+    integer        :: npoints
+  end type kpoints_grid_t
 
   type kpoints_t
+    type(kpoints_grid_t) :: full
+    type(kpoints_grid_t) :: reduced
+
     integer        :: method
 
-    integer        :: nik_full             ! number of k-points in full Brillouin zone
-    FLOAT, pointer :: points_full(:,:)     ! k-points in absolute coordinates
-    FLOAT, pointer :: points_full_red(:,:) ! k-points in reduced coordinates
-    FLOAT, pointer :: weights_full(:)      ! weights for the k-point integrations
-
-    integer        :: nik                  ! number of k-points in the irreducible zone
     logical        :: use_symmetries
-    logical        :: use_inversion
+    logical        :: use_time_reversal
 
     ! For the modified Monkhorst-Pack  scheme
     integer        :: nik_axis(MAX_DIM)    ! number of MP divisions
     FLOAT          :: shifts(MAX_DIM)      ! 
-
   end type kpoints_t
 
   integer, parameter ::        &
@@ -65,27 +69,90 @@ module kpoints_m
 
 contains
 
+  subroutine kpoints_grid_init(this, npoints)
+    type(kpoints_grid_t), intent(out) :: this
+    integer,             intent(in)  :: npoints
+
+    this%npoints = npoints
+    SAFE_ALLOCATE(this%red_point(1:3, npoints))
+    SAFE_ALLOCATE(this%point(1:3, npoints))
+    SAFE_ALLOCATE(this%weight(npoints))
+  end subroutine kpoints_grid_init
 
   ! ---------------------------------------------------------
-  subroutine kpoints_init(this, dim, periodic_dim, rlattice, klattice, geo)
+
+  subroutine kpoints_grid_end(this)
+    type(kpoints_grid_t), intent(out) :: this
+
+    SAFE_DEALLOCATE_P(this%red_point)
+    SAFE_DEALLOCATE_P(this%point)
+    SAFE_DEALLOCATE_P(this%weight)
+  end subroutine kpoints_grid_end
+
+  ! ---------------------------------------------------------
+
+  subroutine kpoints_grid_copy(bb, aa)
+    type(kpoints_grid_t), intent(in)  :: bb
+    type(kpoints_grid_t), intent(out) :: aa
+
+    call push_sub('kpoints.kpoints_grid_copy')
+    
+    call kpoints_grid_init(aa, bb%npoints)
+    
+    aa%weight = bb%weight
+    aa%point  = bb%point
+    aa%red_point  = bb%red_point
+
+    call pop_sub('kpoints.kpoints_grid_copy')
+  end subroutine kpoints_grid_copy
+
+  ! ---------------------------------------------------------
+
+  subroutine kpoints_init(this, symm, dim, periodic_dim, rlattice, klattice, geo)
     type(kpoints_t),    intent(out) :: this
-    integer,            intent(in)  :: dim, periodic_dim
+    type(symmetries_t), intent(in)  :: symm
+    integer,            intent(in)  :: dim
+    integer,            intent(in)  :: periodic_dim
     FLOAT,              intent(in)  :: rlattice(:,:), klattice(:,:)
     type(geometry_t),   intent(in)  :: geo
 
     call push_sub('kpoints.kpoints_init')
 
-    if(periodic_dim==0) then
+    !%Variable KPointsUseSymmetries
+    !%Type logical
+    !%Default no
+    !%Section Mesh::KPoints
+    !%Description
+    !% This variable defines whether symmetries are taken into account
+    !% or not for the choice of <i>k</i>-points. If it is set to no, the <i>k</i>-point
+    !% sampling will range over the full Brillouin zone.
+    !% Symmetries should not be used whenever a perturbation is applied to the system.
+    !%End
+    call parse_logical(datasets_check('KPointsUseSymmetries'), .false., this%use_symmetries)
+
+    !%Variable KPointsUseTimeReversal
+    !%Type logical
+    !%Default yes
+    !%Section Mesh::KPoints
+    !%Description
+    !% <b>WARNING: This variable does not seem to work.</b>
+    !% This variable defines whether time-reversal symmetry is taken into account
+    !% or not for the choice of <i>k</i>-points. If it is set to no, the <i>k</i>-point
+    !% sampling will not be reduced according to time-reversal symmetry. The default is
+    !% yes. If <tt>KPointsUseSymmetries = no</tt>, this variable is ignored, and time-reversal
+    !% symmetry is not used.
+    !%End
+    call parse_logical(datasets_check('KPointsUseTimeReversal'), .true., this%use_time_reversal)
+
+    if(periodic_dim == 0) then
       this%method = KPOINTS_GAMMA
       call read_MP(.true.)
-      call generate_MP()
     else
       if(read_user_kpoints()) then
         this%method = KPOINTS_USER
       else
         this%method = KPOINTS_MONKH_PACK
         call read_MP(.false.)
-        call generate_MP()
       end if
     end if
 
@@ -93,7 +160,7 @@ contains
 
   contains
     ! ---------------------------------------------------------
-    subroutine read_MP(gamma_only)
+    subroutine read_mp(gamma_only)
       logical, intent(in) :: gamma_only
 
       logical       :: gamma_only_
@@ -137,7 +204,7 @@ contains
 
       if(.not.gamma_only_) then
         do ii = 1, periodic_dim
-          call parse_block_integer(blk, 0, ii-1, this%nik_axis(ii))
+          call parse_block_integer(blk, 0, ii - 1, this%nik_axis(ii))
         end do
 
         if (any(this%nik_axis < 1)) then
@@ -147,70 +214,34 @@ contains
 
         if(parse_block_n(blk) > 1) then ! we have a shift
           do ii = 1, periodic_dim
-            call parse_block_float(blk, 1, ii-1, this%shifts(ii))
+            call parse_block_float(blk, 1, ii - 1, this%shifts(ii))
           end do
         end if
 
         call parse_block_end(blk)
       end if
 
-      this%nik_full = product(this%nik_axis(:))
+      call kpoints_grid_init(this%full, product(this%nik_axis))
 
-      SAFE_ALLOCATE(this%points_full    (1:MAX_DIM, 1:this%nik_full))
-      SAFE_ALLOCATE(this%points_full_red(1:MAX_DIM, 1:this%nik_full))
-      SAFE_ALLOCATE(this%weights_full(1:this%nik_full))
+      call crystal_kpointsgrid_generate(periodic_dim, this%nik_axis, this%shifts, this%full%npoints, this%full%point)
 
-      this%points_full(:,:)     = M_ZERO
-      this%points_full_red(:,:) = M_ZERO
-      this%weights_full(:)      = M_ONE / TOFLOAT(this%nik_full)
+      this%full%weight = M_ONE/real(this%full%npoints, REAL_PRECISION)
+
+      call kpoints_grid_copy(this%full, this%reduced)
+
+      if(this%use_symmetries) then
+        call crystal_kpointsgrid_reduce(symm, this%use_time_reversal, &
+          this%reduced%npoints, this%reduced%point, this%reduced%weight)
+      end if
 
       call pop_sub('kpoints.kpoints_init.read_MP')
-    end subroutine read_MP
-
-
-    ! ---------------------------------------------------------
-    subroutine generate_MP()
-      !generate k-points using the MP scheme
-      FLOAT :: dx(1:MAX_DIM)
-      integer :: ii, jj, kk, ix(1:MAX_DIM), idir, ikp, odd_shifts(1:MAX_DIM)
-
-      call push_sub('kpoints.kpoints_init.generate_MP')
-
-      dx(:) = M_ONE/TOFLOAT(2*this%nik_axis(:))
-      odd_shifts(:) = M_ZERO
-      do idir = 1, periodic_dim
-        if(mod(this%nik_axis(idir), 2) == 1) odd_shifts(idir) = 1
-      end do
-
-      ikp = 0
-      ix(:) = M_ZERO
-      do ii = 1, this%nik_axis(1)
-         do jj = 1, this%nik_axis(2)
-            do kk = 1, this%nik_axis(3)
-               ikp = ikp + 1
-               ix(1:3) = (/ii, jj, kk/)
-
-               do idir = 1, periodic_dim
-                  this%points_full_red(idir, ikp) = TOFLOAT(2*ix(idir) - this%nik_axis(idir) - odd_shifts(idir))
-                  this%points_full_red(idir, ikp) = (this%points_full_red(idir, ikp) + M_TWO*this%shifts(idir))*dx(idir)
-                  this%points_full_red(idir, ikp) = mod(this%points_full_red(idir, ikp) + M_HALF, M_ONE) - M_HALF
-                   
-               end do
-               
-            end do
-         end do
-      end do
-
-      call pop_sub('kpoints.kpoints_init.generate_MP')
-
-    end subroutine generate_MP
-
+    end subroutine read_mp
 
     ! ---------------------------------------------------------
     logical function read_user_kpoints()
       type(block_t) :: blk
       logical :: reduced
-      integer :: ik, idim
+      integer :: ik, idir
 
       call push_sub('kpoints.kpoints_init.read_user_kpoints')
 
@@ -244,9 +275,8 @@ contains
       !% coordinates.
       !%End
 
-      this%nik_full = 0
       reduced = .false.
-      if(parse_block(datasets_check('KPoints'), blk).ne.0) then
+      if(parse_block(datasets_check('KPoints'), blk) /= 0) then
         if(parse_block(datasets_check('KPointsReduced'), blk) == 0) then
           reduced = .true.
         else
@@ -257,46 +287,42 @@ contains
       end if
       read_user_kpoints = .true.
 
-      this%nik_full = parse_block_n(blk)
+      call kpoints_grid_init(this%full, parse_block_n(blk))
 
-      SAFE_ALLOCATE(this%points_full(1:MAX_DIM, 1:this%nik_full))
-      SAFE_ALLOCATE(this%points_full_red(1:MAX_DIM, 1:this%nik_full))
-      SAFE_ALLOCATE(this%weights_full(1:this%nik_full))
-
-      this%points_full  = M_ZERO
-      this%weights_full = M_ZERO
+      this%full%point = M_ZERO
+      this%full%weight = M_ZERO
 
       if(reduced) then
-        do ik = 1, this%nik_full
-          call parse_block_float(blk, ik - 1, 0, this%weights_full(ik))
-          do idim = 1, periodic_dim
-            call parse_block_float(blk, ik - 1, idim, this%points_full_red(idim, ik))
+        do ik = 1, this%full%npoints
+          call parse_block_float(blk, ik - 1, 0, this%full%weight(ik))
+          do idir = 1, periodic_dim
+            call parse_block_float(blk, ik - 1, idir, this%full%red_point(idir, ik))
           end do
         end do
 
         ! generate also the absolute coordinates
-        do ik = 1, this%nik_full
-          call kpoints_to_absolute(klattice, this%points_full_red(:,ik), this%points_full(:,ik))
+        do ik = 1, this%full%npoints
+          call kpoints_to_absolute(klattice, this%full%red_point(:, ik), this%full%point(:, ik))
         end do
       else
-        do ik = 1, this%nik_full
-          call parse_block_float(blk, ik - 1, 0, this%weights_full(ik))
-          do idim = 1, periodic_dim
-            call parse_block_float(blk, ik - 1, idim, this%points_full(idim, ik))
+        do ik = 1, this%full%npoints
+          call parse_block_float(blk, ik - 1, 0, this%full%weight(ik))
+          do idir = 1, periodic_dim
+            call parse_block_float(blk, ik - 1, idir, this%full%red_point(idir, ik), unit_one/units_inp%length)
           end do
         end do
 
-        do ik = 1, this%nik_full
-          ! k-points have 1/length units
-          this%points_full(:, ik) = units_to_atomic(unit_one/units_inp%length, this%points_full(:, ik))
-
+        do ik = 1, this%full%npoints
           ! generate also the reduced coordinates
-          call kpoints_to_reduced(rlattice, this%points_full(:,ik), this%points_full_red(:,ik))
+          call kpoints_to_reduced(rlattice, this%full%point(:, ik), this%full%red_point(:, ik))
         end do
       end if
       call parse_block_end(blk)
 
-      write(message(1), '(a,i4,a)') 'Input: ', this%nik_full, ' k-points were read from the input file'
+      ! for the moment we do not apply symmetries to user kpoints
+      call kpoints_grid_copy(this%full, this%reduced)
+
+      write(message(1), '(a,i4,a)') 'Input: ', this%full%npoints, ' k-points were read from the input file'
       call write_info(1)
 
       call pop_sub('kpoints.kpoints_init.read_user_kpoints')
@@ -309,9 +335,8 @@ contains
   subroutine kpoints_end(this)
     type(kpoints_t), intent(inout) :: this
 
-    SAFE_DEALLOCATE_P(this%points_full)
-    SAFE_DEALLOCATE_P(this%points_full_red)
-    SAFE_DEALLOCATE_P(this%weights_full)
+    call kpoints_grid_end(this%full)
+    call kpoints_grid_end(this%reduced)
 
   end subroutine kpoints_end
 
@@ -322,15 +347,13 @@ contains
     FLOAT, intent(out) :: kout(:)
 
     integer :: ii
-
-    call push_sub('kpoints.kpoints_to_absolute')
+    
+    ! short
 
     kout(:) = M_ZERO
     do ii = 1, MAX_DIM
       kout(:) = kout(:) + kin(ii)*klattice(:, ii)
     end do
-
-    call pop_sub('kpoints.kpoints_to_absolute')
 
   end subroutine kpoints_to_absolute
 
@@ -343,7 +366,7 @@ contains
 
     integer :: ii
 
-    call push_sub('kpoints.kpoints_to_reduced')
+    ! short
 
     kout(:) = M_ZERO
     do ii = 1, MAX_DIM
@@ -351,26 +374,23 @@ contains
     end do
     kout(:) = kout(:) / (M_TWO*M_PI)
 
-    call pop_sub('kpoints.kpoints_to_reduced')
   end subroutine kpoints_to_reduced
 
 
   ! ---------------------------------------------------------
-  subroutine kpoints_copy(kout, kin)
-    type(kpoints_t), intent(out) :: kout
+  subroutine kpoints_copy(kin, kout)
     type(kpoints_t), intent(in)  :: kin
+    type(kpoints_t), intent(out) :: kout
 
     call push_sub('kpoints.kpoints_copy')
 
     kout%method = kin%method
-    kout%nik_full = kin%nik_full
-    call loct_pointer_copy(kout%points_full, kin%points_full)
-    call loct_pointer_copy(kout%points_full_red, kin%points_full_red)
-    call loct_pointer_copy(kout%weights_full, kin%weights_full)
 
-    kout%nik = kin%nik
+    call kpoints_grid_copy(kin%full, kout%full)
+    call kpoints_grid_copy(kin%reduced, kout%reduced)
+
     kout%use_symmetries = kin%use_symmetries
-    kout%use_inversion  = kin%use_inversion
+    kout%use_time_reversal = kin%use_time_reversal
 
     kout%nik_axis = kin%nik_axis
     kout%shifts = kin%shifts

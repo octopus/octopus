@@ -116,7 +116,7 @@ subroutine states_choose_kpoints(dd, sb, geo)
     return
   end if
 
-! now deal with Monkhorst-Pack
+  ! now deal with Monkhorst-Pack
   dd%nik_axis(:) = 1
   do idir = 1, sb%periodic_dim
     call parse_block_integer(blk, 0, idir - 1, dd%nik_axis(idir))
@@ -188,7 +188,7 @@ subroutine states_choose_kpoints(dd, sb, geo)
   SAFE_ALLOCATE(kw(1:nkmax))
 
   ! choose k-points according to Monkhorst-Pack scheme
-  call crystal_init(geo, sb, dd%nik_axis, kshifts, use_symmetries, use_time_reversal, nkmax, kp, kw)
+  call crystal_init(geo, sb%symm, sb%periodic_dim, dd%nik_axis, kshifts, use_symmetries, use_time_reversal, nkmax, kp, kw)
   nk = nkmax
 
   ! double dd%nik and copy points for spin-polarized calc
