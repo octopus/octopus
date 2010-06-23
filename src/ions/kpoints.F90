@@ -20,7 +20,6 @@
 #include "global.h"
   
 module kpoints_m
-  use crystal_m
   use datasets_m
   use geometry_m
   use global_m
@@ -247,14 +246,14 @@ contains
 
       call kpoints_grid_init(this%full, product(this%nik_axis))
 
-      call crystal_kpointsgrid_generate(periodic_dim, this%nik_axis, this%shifts, this%full%npoints, this%full%red_point)
+      call kpoints_grid_generate(periodic_dim, this%nik_axis, this%shifts, this%full%npoints, this%full%red_point)
 
       this%full%weight = M_ONE/real(this%full%npoints, REAL_PRECISION)
 
       call kpoints_grid_copy(this%full, this%reduced)
 
       if(this%use_symmetries) then
-        call crystal_kpointsgrid_reduce(symm, this%use_time_reversal, &
+        call kpoints_grid_reduce(symm, this%use_time_reversal, &
           this%reduced%npoints, this%reduced%red_point, this%reduced%weight)
       end if
 
@@ -444,6 +443,7 @@ contains
     point(1:3) = this%reduced%point(1:3, ik)
 
   end function kpoints_get_point
+
   ! ----------------------------------------------------------
 
   FLOAT pure function kpoints_get_weight(this, ik) result(weight)
@@ -453,6 +453,141 @@ contains
     weight = this%reduced%weight(ik)
 
   end function kpoints_get_weight
+
+  ! ----------------------------------------------------------
+  ! Generates the k-points grid
+  ! Sets up a uniform array of k-points. Use a modification of the normal Monkhorst-Pack scheme, 
+  ! which is equivalent to the normal MP scheme in the case of even number of kpoints (i.e. naxis (i) even)  
+  ! used with a shift of (1/2, 1/2, 1/2)
+  ! For the original MP scheme, see (PRB 13, 518 (1976))
+  ! and (PRB 16, 1748 (1977))
+  ! naxis(i) are the number of points in the three
+  ! directions dermined by the lattice vectors.
+  ! shift(i) and sz shift the grid of integration points from the origin.
+
+  subroutine kpoints_grid_generate(periodic_dim, naxis, shift, nkpoints, kpoints)  
+    integer,           intent(in)  :: periodic_dim
+    integer,           intent(in)  :: naxis(1:MAX_DIM)
+    FLOAT,             intent(in)  :: shift(1:MAX_DIM)
+    integer,           intent(out) :: nkpoints
+    FLOAT,             intent(out) :: kpoints(:, :)
+  
+    FLOAT :: dx(1:MAX_DIM)
+    integer :: ii, jj, kk, idir, ix(1:MAX_DIM)
+
+    call push_sub('kpoints.kpoints_grid_generate')
+    
+    dx(1:MAX_DIM) = M_ONE/real(2*naxis(1:MAX_DIM), REAL_PRECISION)
+
+    kpoints = M_ZERO
+    nkpoints = 0
+    ix=1
+    do ii = 1, naxis(1)
+       do jj = 1, naxis(2)
+          do kk = 1, naxis(3)
+             ix(1:3) = (/ii, jj, kk/)
+             nkpoints = nkpoints + 1
+             do idir = 1, periodic_dim
+                if ( (mod(naxis(idir),2) .ne. 0 ) ) then    
+                   kpoints(idir, nkpoints) = &
+                        & (real(2*ix(idir) - naxis(idir) - 1, REAL_PRECISION) + 2*shift(idir))*dx(idir)
+                else 
+                   kpoints(idir, nkpoints) = &
+                        & (real(2*ix(idir) - naxis(idir) , REAL_PRECISION) + 2*shift(idir))*dx(idir)
+                end if
+		! bring back point to first Brillouin zone
+                kpoints(idir, nkpoints) = mod(kpoints(idir, nkpoints) + M_HALF, M_ONE) - M_HALF
+             end do
+          end do
+       end do
+    end do
+    
+    call pop_sub('kpoints.kpoints_grid_generate')
+
+  end subroutine kpoints_grid_generate
+  
+  ! --------------------------------------------------------------------------------------------
+
+  subroutine kpoints_grid_reduce(symm, time_reversal, nkpoints, kpoints, weights)
+    type(symmetries_t), intent(in)    :: symm
+    logical,            intent(in)    :: time_reversal
+    integer,            intent(inout) :: nkpoints
+    FLOAT,              intent(inout) :: kpoints(:, :)
+    FLOAT,              intent(out)   :: weights(:)
+
+    integer :: nreduced
+    FLOAT, allocatable :: reduced(:, :)
+    
+    FLOAT :: dw
+    integer ik, iop, ik2
+    FLOAT :: tran(3), tran_inv(3)
+    integer, allocatable :: kmap(:)
+
+    call push_sub('kpoints.kpoints_grid_reduce')
+
+    ! reduce to irreducible zone
+
+    ! kmap is used to mark reducible k-points and also to
+    ! map reducible to irreducible k-points
+
+    SAFE_ALLOCATE(kmap(1:nkpoints))
+    SAFE_ALLOCATE(reduced(1:3, 1:nkpoints))
+
+    forall(ik = 1:nkpoints) kmap(ik) = ik
+    
+    dw = M_ONE/real(nkpoints, REAL_PRECISION)
+
+    nreduced = 0
+
+    do ik = 1, nkpoints
+      if (kmap(ik) /= ik) cycle
+      
+      ! new irreducible point
+      ! mareduced with negative kmap
+      
+      nreduced = nreduced + 1
+      reduced(1:3, nreduced) = kpoints(1:3, ik)
+      
+      kmap(ik) = -nreduced
+      
+      weights(nreduced) = dw
+
+      if (ik == nkpoints) cycle
+      
+      ! operate with the symmetry operations
+      
+      do iop = 1, symmetries_number(symm)
+        call symmetries_apply_kpoint(symm, iop, reduced(:, nreduced), tran)
+        tran_inv(1:3) = -tran(1:3)
+           
+        ! remove (mark) k-points related to irreducible reduced by symmetry
+        do ik2 = ik + 1, nkpoints
+          if (kmap(ik2) /= ik2) cycle
+          
+          ! both the transformed rk ...
+          if (all( abs(tran(1:3) - kpoints(1:3, ik2)) <= CNST(1.0e-5))) then
+            weights(nreduced) = weights(nreduced) + dw
+            kmap(ik2) = nreduced
+            cycle
+          end if
+
+          ! and its inverse
+          if (time_reversal .and. all(abs(tran_inv(1:3) - kpoints(1:3, ik2)) <= CNST(1.0e-5)) ) then
+            weights(nreduced) = weights(nreduced) + dw
+            kmap(ik2) = nreduced
+          end if
+          
+        end do
+      end do
+    end do
+    
+    nkpoints = nreduced
+    do ik = 1, nreduced
+      kpoints(1:3, ik) = reduced(1:3, ik)
+    end do
+
+    call pop_sub('kpoints.kpoints_grid_reduce')
+  end subroutine kpoints_grid_reduce
 
 end module kpoints_m
 
