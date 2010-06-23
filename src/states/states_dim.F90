@@ -30,6 +30,7 @@ module states_dim_m
   use grid_m
   use io_m
   use io_function_m
+  use kpoints_m
   use lalg_basic_m
   use loct_m
   use parser_m

@@ -35,11 +35,16 @@ module kpoints_m
   implicit none
   
   private
-  public ::       &
-    kpoints_t,    &
-    kpoints_init, &
-    kpoints_end,  &
-    kpoints_copy
+  
+  public ::              &
+    kpoints_grid_t,      &
+    kpoints_t,           &
+    kpoints_init,        &
+    kpoints_end,         &
+    kpoints_copy,        &
+    kpoints_number,      &
+    kpoints_get_weight,  &
+    kpoints_get_point
 
   type kpoints_grid_t
     FLOAT, pointer :: point(:, :)
@@ -62,9 +67,9 @@ module kpoints_m
     FLOAT          :: shifts(MAX_DIM)      ! 
   end type kpoints_t
 
-  integer, parameter ::        &
-    KPOINTS_GAMMA       =  1,  &
-    KPOINTS_MONKH_PACK  =  2,  &
+  integer, public, parameter ::        &
+    KPOINTS_GAMMA       =  1,          &
+    KPOINTS_MONKH_PACK  =  2,          &
     KPOINTS_USER        =  3
 
 contains
@@ -116,6 +121,8 @@ contains
     FLOAT,              intent(in)  :: rlattice(:,:), klattice(:,:)
     type(geometry_t),   intent(in)  :: geo
 
+    integer :: ik
+
     call push_sub('kpoints.kpoints_init')
 
     !%Variable KPointsUseSymmetries
@@ -155,6 +162,23 @@ contains
         call read_MP(.false.)
       end if
     end if
+
+    write(message(1),'(a)') ' '
+    write(message(2),'(1x,i3,a)') this%reduced%npoints, ' k-points generated from parameters :'
+    write(message(3),'(1x,a)') '---------------------------------------------------'
+    write(message(4),'(4x,a,3i5,6x,a,3f6.2)') 'n =', this%nik_axis(1:3), 's = ', this%shifts(1:3)
+    write(message(5),'(a)') ' '
+    write(message(6),'(a)') ' index |    weight    |              coordinates              |'
+    call write_info(6)
+
+    do ik = 1, this%reduced%npoints
+      write(message(1), &
+        '(i6,a,f12.6,a,3f12.6, a)') ik, " | ", this%reduced%weight(ik), " | ", this%reduced%red_point(1:3, ik), "  |"
+      call write_info(1)
+    end do
+  
+    write(message(1),'(a)') ''
+    call write_info(1)
 
     call pop_sub('kpoints.kpoints_init')
 
@@ -223,7 +247,7 @@ contains
 
       call kpoints_grid_init(this%full, product(this%nik_axis))
 
-      call crystal_kpointsgrid_generate(periodic_dim, this%nik_axis, this%shifts, this%full%npoints, this%full%point)
+      call crystal_kpointsgrid_generate(periodic_dim, this%nik_axis, this%shifts, this%full%npoints, this%full%red_point)
 
       this%full%weight = M_ONE/real(this%full%npoints, REAL_PRECISION)
 
@@ -231,8 +255,16 @@ contains
 
       if(this%use_symmetries) then
         call crystal_kpointsgrid_reduce(symm, this%use_time_reversal, &
-          this%reduced%npoints, this%reduced%point, this%reduced%weight)
+          this%reduced%npoints, this%reduced%red_point, this%reduced%weight)
       end if
+
+      do ik = 1, this%full%npoints
+        call kpoints_to_absolute(klattice, this%full%red_point(:, ik), this%full%point(:, ik))
+      end do
+
+      do ik = 1, this%reduced%npoints
+        call kpoints_to_absolute(klattice, this%reduced%red_point(:, ik), this%reduced%point(:, ik))
+      end do
 
       call pop_sub('kpoints.kpoints_init.read_MP')
     end subroutine read_mp
@@ -289,7 +321,7 @@ contains
 
       call kpoints_grid_init(this%full, parse_block_n(blk))
 
-      this%full%point = M_ZERO
+      this%full%red_point = M_ZERO
       this%full%weight = M_ZERO
 
       if(reduced) then
@@ -298,26 +330,21 @@ contains
           do idir = 1, periodic_dim
             call parse_block_float(blk, ik - 1, idir, this%full%red_point(idir, ik))
           end do
-        end do
-
-        ! generate also the absolute coordinates
-        do ik = 1, this%full%npoints
+          ! generate also the absolute coordinates
           call kpoints_to_absolute(klattice, this%full%red_point(:, ik), this%full%point(:, ik))
         end do
       else
         do ik = 1, this%full%npoints
           call parse_block_float(blk, ik - 1, 0, this%full%weight(ik))
           do idir = 1, periodic_dim
-            call parse_block_float(blk, ik - 1, idir, this%full%red_point(idir, ik), unit_one/units_inp%length)
+            call parse_block_float(blk, ik - 1, idir, this%full%point(idir, ik), unit_one/units_inp%length)
           end do
-        end do
-
-        do ik = 1, this%full%npoints
           ! generate also the reduced coordinates
           call kpoints_to_reduced(rlattice, this%full%point(:, ik), this%full%red_point(:, ik))
         end do
       end if
       call parse_block_end(blk)
+
 
       ! for the moment we do not apply symmetries to user kpoints
       call kpoints_grid_copy(this%full, this%reduced)
@@ -397,6 +424,35 @@ contains
 
     call pop_sub('kpoints.kpoints_copy')
   end subroutine kpoints_copy
+
+  ! ----------------------------------------------------------
+
+  integer pure function kpoints_number(this) result(number)
+    type(kpoints_t), intent(in) :: this
+
+    number = this%reduced%npoints
+    
+  end function kpoints_number
+
+  ! ----------------------------------------------------------
+
+  pure function kpoints_get_point(this, ik) result(point)
+    type(kpoints_t), intent(in) :: this
+    integer,         intent(in) :: ik
+    FLOAT                       :: point(1:3)
+
+    point(1:3) = this%reduced%point(1:3, ik)
+
+  end function kpoints_get_point
+  ! ----------------------------------------------------------
+
+  FLOAT pure function kpoints_get_weight(this, ik) result(weight)
+    type(kpoints_t), intent(in) :: this
+    integer,         intent(in) :: ik
+
+    weight = this%reduced%weight(ik)
+
+  end function kpoints_get_weight
 
 end module kpoints_m
 

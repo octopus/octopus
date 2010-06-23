@@ -721,7 +721,7 @@ contains
         call grid_write_info(gr, geo, iunit)
 
         if(simul_box_is_periodic(gr%sb)) then
-          call kpoints_write_info(st%d, gr%mesh%sb%dim, iunit)
+          call kpoints_write_info(st%d, gr%mesh%sb, iunit)
           write(iunit,'(1x)')
         end if
 
