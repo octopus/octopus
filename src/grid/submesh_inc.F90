@@ -26,6 +26,8 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
   R_TYPE :: tmp
 #endif
 
+  call push_sub('submesh_inc.Xsm_integrate')
+
   if (mesh%use_curvilinear) then
     res = sum(ff(1:sm%ns)*mesh%vol_pp(sm%jxyz(1:sm%ns)) )
   else
@@ -39,6 +41,7 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
   end if
 #endif
 
+  call pop_sub('submesh_inc.Xsm_integrate')
 end function X(sm_integrate)
 
 subroutine X(dsubmesh_add_to_mesh)(this, sphi, phi, factor)
@@ -49,12 +52,15 @@ subroutine X(dsubmesh_add_to_mesh)(this, sphi, phi, factor)
 
   integer :: is
 
+  call push_sub('submesh_inc.Xdsubmesh_add_to_mesh')
+
   if(present(factor)) then
     forall(is = 1:this%ns) phi(this%jxyz(is)) = phi(this%jxyz(is)) + factor*sphi(is)
   else
     forall(is = 1:this%ns) phi(this%jxyz(is)) = phi(this%jxyz(is)) + sphi(is)
   end if
 
+  call pop_sub('submesh_inc.Xdsubmesh_add_to_mesh')
 end subroutine X(dsubmesh_add_to_mesh)
 
 R_TYPE function X(dsubmesh_to_mesh_dotp)(this, dim, sphi, phi, reduce) result(dotp)
@@ -66,6 +72,8 @@ R_TYPE function X(dsubmesh_to_mesh_dotp)(this, dim, sphi, phi, reduce) result(do
 
   integer :: is, idim
   logical :: reduce_
+
+  call push_sub('submesh_inc.Xdsubmesh_to mesh_dotp')
 
   reduce_ = .false.
   if(present(reduce)) reduce_ = reduce
@@ -89,6 +97,7 @@ R_TYPE function X(dsubmesh_to_mesh_dotp)(this, dim, sphi, phi, reduce) result(do
     dotp = dotp*this%mesh%vol_pp(1)
   end if
 
+  call pop_sub('submesh_inc.Xdsubmesh_to mesh_dotp')
 end function X(dsubmesh_to_mesh_dotp)
 
 !------------------------------------------------------------ 
@@ -105,6 +114,8 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
   type(batch_t),    intent(inout) :: mm
 
   integer :: ist, jst, idim, jdim, is
+
+  call push_sub('submesh_inc.Xsubmesh_batch_add_matrix')
 
   !$omp parallel do private(ist, idim, jdim, jst, is)
   do ist =  1, mm%nst
@@ -127,6 +138,7 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
   end do
   !$omp end parallel do
   
+  call pop_sub('submesh_inc.Xsubmesh_batch_add_matrix')
 end subroutine X(submesh_batch_add_matrix)
 
 
@@ -143,6 +155,8 @@ subroutine X(submesh_batch_add)(this, ss, mm)
   type(batch_t),    intent(inout) :: mm
 
   integer :: ist, idim, jdim, is
+
+  call push_sub('submesh_inc.Xsubmesh_batch_add')
 
   ASSERT(mm%nst == ss%nst)
 
@@ -170,6 +184,7 @@ subroutine X(submesh_batch_add)(this, ss, mm)
   end do
   !$omp end parallel do
   
+  call pop_sub('submesh_inc.Xsubmesh_batch_add')
 end subroutine X(submesh_batch_add)
 
 !----------------------------------------------------------------------------------
@@ -184,6 +199,8 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
   integer :: ist, jst, idim, jdim, is
   logical :: reduce_
   R_TYPE :: dotp
+
+  call push_sub('submesh_inc.Xsubmesh_batch_dotp_matrix')
 
   reduce_ = .false.
   if(present(reduce)) reduce_ = reduce
@@ -253,6 +270,7 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
     
   end if
   
+  call pop_sub('submesh_inc.Xsubmesh_batch_dotp_matrix')
 end subroutine X(submesh_batch_dotp_matrix)
 
 
