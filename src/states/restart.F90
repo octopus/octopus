@@ -28,6 +28,7 @@ module restart_m
   use io_m
   use io_binary_m
   use io_function_m
+  use kpoints_m
   use lalg_basic_m
   use linear_response_m
   use loct_m
@@ -228,6 +229,7 @@ contains
     integer :: iunit, iunit2, iunit_mesh, iunit_states, err, ik, ist, idim, itot
     character(len=80) :: filename, mformat
     logical :: wfns_are_associated, lr_wfns_are_associated
+    FLOAT   :: kpoint(1:MAX_DIM)
 
     call push_sub('restart.restart_write')
 
@@ -288,6 +290,9 @@ contains
 
     itot = 1
     do ik = 1, st%d%nik
+      kpoint = M_ZERO
+      kpoint = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+
       do ist = 1, st%nst
         do idim = 1, st%d%dim
           write(filename,'(i10.10)') itot
@@ -295,7 +300,7 @@ contains
           if(mpi_grp_is_root(mpi_world)) then
             write(unit=iunit,  fmt=*) ik, ' | ', ist, ' | ', idim, ' | "', trim(filename), '"'
             write(unit=iunit2, fmt=mformat) st%occ(ist,ik), ' | ', st%eigenval(ist, ik), ' | ',   &
-                 st%d%kpoints(1,ik), ' | ', st%d%kpoints(2,ik), ' | ', st%d%kpoints(3,ik) , ' | ', &
+                 kpoint(1), ' | ', kpoint(2), ' | ', kpoint(3) , ' | ', &
                  st%d%kweights(ik), ' | ', itot, ' | ', ik, ' | ', ist, ' | ', idim
           end if
 
@@ -709,6 +714,7 @@ contains
     CMPLX                      :: phase
     CMPLX, allocatable         :: tmp(:, :)
     type(mpi_grp_t)            :: mpi_grp
+    FLOAT                      :: kpoint(1:MAX_DIM)
 
     call push_sub('restart.read_free_states')
 
@@ -743,7 +749,7 @@ contains
     call iopar_read(mpi_grp, occs, line, err)
 
     jk(:)  = 0 ! reset counter for k-points
-    st%d%kpoints(:, :) = M_ZERO
+!    st%d%kpoints(:, :) = M_ZERO
     st%d%kweights(:) = M_ZERO
 
     forall(il = 1:NLEADS) st%ob_lead(il)%rho = M_ZERO
@@ -770,7 +776,7 @@ contains
         ! count the occupied k-points (with idim == 1)
         if(idim.eq.1) jk(ist) = jk(ist) + 1
 
-        st%d%kpoints(:, jk(ist)) = (/k_x, k_y, k_z/)
+!        st%d%kpoints(:, jk(ist)) = (/k_x, k_y, k_z/)
         st%d%kweights(jk(ist)) = w_k
         st%occ(ist, jk(ist)) = occ
         ! if not in the corresponding node cycle
@@ -794,8 +800,10 @@ contains
       end do
 
       ! Apply phase.
+      kpoint = M_ZERO
+      kpoint(1:3) = (/k_x, k_y, k_z/)
       do ip = 1, gr%mesh%np
-        phase = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim) * st%d%kpoints(1:gr%mesh%sb%dim, jk(ist))))
+        phase = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim)*kpoint(1:gr%mesh%sb%dim)))
         st%zphi(ip, idim, ist, jk(ist)) = phase * st%zphi(ip, idim, ist, jk(ist))
       end do
 
@@ -816,6 +824,7 @@ contains
 
     end do ! Loop over all free states.
 
+    ! WARNING: K-points were not read here
     ! renormalize weigths
     w_sum = sum(st%d%kweights(:))
     st%d%kweights(:) = st%d%kweights(:)/w_sum

@@ -32,9 +32,8 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
   ! lr is for +omega, lr2 is for -omega.
   ! for each atom, Z*(i,j) = dF(j)/dE(i)
 
-  integer :: iatom, ist, ik, idim, idir, np, np_part, ip
-  FLOAT :: ff
-
+  integer :: iatom, ist, iq, idim, idir, np, np_part, ip, ikpoint
+  FLOAT :: ff, kpoint(1:MAX_DIM)
   R_TYPE, allocatable :: psi(:, :)
   R_TYPE, allocatable :: dl_psi(:, :)
   R_TYPE, allocatable :: dl_psi2(:, :)
@@ -81,24 +80,28 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
   endif
 
   !THE NON-LOCAL PART (parallel in states and k-points)
-  do ik = st%d%kpt%start, st%d%kpt%end
+  do iq = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
 
-        call lalg_copy(gr%mesh%np_part, st%X(psi)(:, idim, ist, ik), psi(:, idim))
+        call lalg_copy(gr%mesh%np_part, st%X(psi)(:, idim, ist, iq), psi(:, idim))
         call X(derivatives_set_bc)(gr%der, psi(:, idim))
         
         if (present(lr)) then
-          call lalg_copy(gr%mesh%np_part, lr%X(dl_psi)(:, idim, ist, ik), dl_psi(:, idim))
+          call lalg_copy(gr%mesh%np_part, lr%X(dl_psi)(:, idim, ist, iq), dl_psi(:, idim))
           call X(derivatives_set_bc)(gr%der, dl_psi(:, idim))
-          call lalg_copy(gr%mesh%np_part, lr2%X(dl_psi)(:, idim, ist, ik), dl_psi2(:, idim))
+          call lalg_copy(gr%mesh%np_part, lr2%X(dl_psi)(:, idim, ist, iq), dl_psi2(:, idim))
           call X(derivatives_set_bc)(gr%der, dl_psi2(:, idim))
         endif
 
-        if(simul_box_is_periodic(gr%sb) .and. &
-          .not. kpoints_point_is_gamma(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))) then
+        ikpoint = states_dim_get_kpoint_index(st%d, iq)
+        if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(gr%sb%kpoints, ikpoint)) then
+
+          kpoint = M_ZERO
+          kpoint = kpoints_get_point(gr%sb%kpoints, ikpoint)
+
           do ip = 1, np_part
-            phase = exp(-M_zI*sum(st%d%kpoints(1:gr%sb%dim, ik)*gr%mesh%x(ip, 1:gr%sb%dim)))
+            phase = exp(-M_zI*sum(kpoint(1:gr%sb%dim)*gr%mesh%x(ip, 1:gr%sb%dim)))
             psi(ip, idim) = phase*psi(ip, idim)
             if(present(lr)) then
               dl_psi(ip, idim) = phase*dl_psi(ip, idim)
@@ -126,7 +129,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
 
         !accumulate to calculate the gradient of the density
         if (present(lr)) then
-          ff = st%d%kweights(ik) * st%occ(ist, ik)
+          ff = st%d%kweights(iq) * st%occ(ist, iq)
           do idir = 1, gr%mesh%sb%dim
             do ip = 1, np
               grad_rho(ip, idir) = grad_rho(ip, idir) + ff * &
@@ -135,7 +138,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
             end do
           end do
         else
-          ff = st%d%kweights(ik) * st%occ(ist, ik) * M_TWO
+          ff = st%d%kweights(iq) * st%occ(ist, iq) * M_TWO
           do idir = 1, gr%mesh%sb%dim
             do ip = 1, np
               grad_rho(ip, idir) = grad_rho(ip, idir) + &
@@ -154,14 +157,14 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
         do idir = 1, gr%mesh%sb%dim
 
           if(present(lr)) then
-            force(idir, iatom) = force(idir, iatom) - st%d%kweights(ik) * st%occ(ist, ik) * &
-               (X(psia_project_psib)(ep%proj(iatom), st%d%dim, grad_psi(:, idir, :), dl_psi, ik) &
-              + X(psia_project_psib)(ep%proj(iatom), st%d%dim, psi, grad_dl_psi(:, idir, :), ik) &
-              + X(psia_project_psib)(ep%proj(iatom), st%d%dim, dl_psi2, grad_psi(:, idir, :), ik) &
-              + X(psia_project_psib)(ep%proj(iatom), st%d%dim, grad_dl_psi2(:, idir, :), psi, ik))
+            force(idir, iatom) = force(idir, iatom) - st%d%kweights(iq) * st%occ(ist, iq) * &
+               (X(psia_project_psib)(ep%proj(iatom), st%d%dim, grad_psi(:, idir, :), dl_psi, iq) &
+              + X(psia_project_psib)(ep%proj(iatom), st%d%dim, psi, grad_dl_psi(:, idir, :), iq) &
+              + X(psia_project_psib)(ep%proj(iatom), st%d%dim, dl_psi2, grad_psi(:, idir, :), iq) &
+              + X(psia_project_psib)(ep%proj(iatom), st%d%dim, grad_dl_psi2(:, idir, :), psi, iq))
           else
-            force(idir, iatom) = force(idir, iatom) - M_TWO * st%d%kweights(ik) * st%occ(ist, ik) * &
-              X(psia_project_psib)(ep%proj(iatom), st%d%dim, psi, grad_psi(:, idir, :), ik)
+            force(idir, iatom) = force(idir, iatom) - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
+              X(psia_project_psib)(ep%proj(iatom), st%d%dim, psi, grad_psi(:, idir, :), iq)
           endif
 
         end do

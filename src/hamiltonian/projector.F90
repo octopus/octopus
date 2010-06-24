@@ -28,6 +28,7 @@ module projector_m
   use hgh_projector_m
   use io_m
   use kb_projector_m
+  use kpoints_m
   use lalg_basic_m
   use math_m
   use mesh_function_m
@@ -44,6 +45,7 @@ module projector_m
   use rkb_projector_m
   use simul_box_m
   use species_m
+  use states_dim_m
   use varinfo_m
 
   implicit none
@@ -196,17 +198,15 @@ contains
     call pop_sub('projector.projector_init')
   end subroutine projector_init
 
-  subroutine projector_init_phases(this, sb, kstart, kend, kpoints, vec_pot, vec_pot_var)
-    type(projector_t), intent(inout) :: this
-    type(simul_box_t), intent(in)    :: sb
-    integer,           intent(in)    :: kstart
-    integer,           intent(in)    :: kend
-    FLOAT,             intent(in)    :: kpoints(:, :)
-    FLOAT, optional,   pointer       :: vec_pot(:)
-    FLOAT, optional,   pointer       :: vec_pot_var(:, :)
+  subroutine projector_init_phases(this, sb, std, vec_pot, vec_pot_var)
+    type(projector_t),  intent(inout) :: this
+    type(simul_box_t),  intent(in)    :: sb
+    type(states_dim_t), intent(in)    :: std
+    FLOAT, optional,    pointer       :: vec_pot(:)
+    FLOAT, optional,    pointer       :: vec_pot_var(:, :)
 
-    integer :: ns, ik, is
-    FLOAT   :: kr
+    integer :: ns, iq, is, ikpoint
+    FLOAT   :: kr, kpoint(1:MAX_DIM)
     integer :: ndim
 
     call push_sub('projector.projector_init_phases')
@@ -215,15 +215,23 @@ contains
     ndim = sb%dim
 
     if(.not. associated(this%phase)) then
-      SAFE_ALLOCATE(this%phase(1:ns, kstart:kend))
+      SAFE_ALLOCATE(this%phase(1:ns, std%kpt%start:std%kpt%end))
     end if
 
-    do ik = kstart, kend
+    do iq = std%kpt%start, std%kpt%end
+      ikpoint = states_dim_get_kpoint_index(std, iq)
 
+      ! if this fails, it probably means that sb is not compatible with std
+      ASSERT(ikpoint <= kpoints_number(sb%kpoints))
+      
+      kpoint = M_ZERO
+      kpoint = kpoints_get_point(sb%kpoints, ikpoint)
+        
       do is = 1, ns
         ! this is only the correction to the global phase, that can
         ! appear if the sphere crossed the boundary of the cell.
-        kr = sum(kpoints(1:ndim, ik)*(this%sphere%x(is, 1:ndim) - this%sphere%mesh%x(this%sphere%jxyz(is), 1:ndim)))
+        
+        kr = sum(kpoint(1:ndim)*(this%sphere%x(is, 1:ndim) - this%sphere%mesh%x(this%sphere%jxyz(is), 1:ndim)))
 
         if(present(vec_pot)) then
           if(associated(vec_pot)) kr = kr + &
@@ -234,7 +242,7 @@ contains
           if(associated(vec_pot_var)) kr = kr + sum(vec_pot_var(1:ndim, this%sphere%jxyz(is))*this%sphere%x(is, 1:ndim))
         end if
 
-        this%phase(is, ik) = exp(-M_zI*kr)
+        this%phase(is, iq) = exp(-M_zI*kr)
       end do
 
     end do

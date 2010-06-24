@@ -87,7 +87,6 @@ module states_dim_m
     integer :: nspin                !< dimension of rho (1, 2 or 4)
     integer :: spin_channels        !< 1 or 2, whether spin is or not considered.
     logical :: cdft                 !< Are we using current-DFT or not?
-    FLOAT, pointer :: kpoints(:,:)  !< obviously the k-points
     FLOAT, pointer :: kweights(:)   !< weights for the k-point integrations
     type(distributed_t) :: kpt
     integer :: block_size
@@ -114,7 +113,6 @@ contains
     dout%block_size     = din%block_size
     dout%window_size    = din%window_size
 
-    call loct_pointer_copy(dout%kpoints, din%kpoints)
     call loct_pointer_copy(dout%kweights, din%kweights)
 
     call distributed_copy(din%kpt, dout%kpt)
@@ -131,7 +129,6 @@ contains
 
     call distributed_end(dim%kpt)
 
-    SAFE_DEALLOCATE_P(dim%kpoints)
     SAFE_DEALLOCATE_P(dim%kweights)
 
     call pop_sub('states_dim.states_dim_end')
@@ -165,36 +162,30 @@ contains
 
 
   ! ---------------------------------------------------------
-  integer function states_dim_get_spin_index(this, iq) result(index)
+  integer pure function states_dim_get_spin_index(this, iq) result(index)
     type(states_dim_t), intent(in) :: this
     integer,            intent(in) :: iq
-    
-    call push_sub('states_dim.states_dim_get_spin_index')
 
     if(this%ispin == SPIN_POLARIZED) then
       index = 1 + mod(iq - 1, 2)
     else
       index = 1
     end if
-    
-    call pop_sub('states_dim.states_dim_get_spin_index')
+
   end function states_dim_get_spin_index
-  
+
 
   ! ---------------------------------------------------------
-  integer function states_dim_get_kpoint_index(this, iq) result(index)
+  integer pure function states_dim_get_kpoint_index(this, iq) result(index)
     type(states_dim_t), intent(in) :: this
     integer,            intent(in) :: iq
     
-    call push_sub('states_dim.states_dim_get_kpoint_index')
-
     if(this%ispin == SPIN_POLARIZED) then
       index = 1 + (iq - 1)/2
     else
       index = iq
     end if
     
-    call pop_sub('states_dim.states_dim_get_kpoint_index')
   end function states_dim_get_kpoint_index
 
 
@@ -223,12 +214,10 @@ contains
 
     if (dd%ispin == SPIN_POLARIZED) dd%nik = 2*dd%nik
 
-    SAFE_ALLOCATE(dd%kpoints (1:MAX_DIM, 1:dd%nik))
     SAFE_ALLOCATE(dd%kweights(1:dd%nik))
 
     do iq = 1, dd%nik
       ik = states_dim_get_kpoint_index(dd, iq)
-      dd%kpoints(1:3, iq) = kpoints_get_point(sb%kpoints, ik)
       dd%kweights(iq) = kpoints_get_weight(sb%kpoints, ik)
     end do
 

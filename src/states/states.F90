@@ -199,7 +199,7 @@ contains
     end do
     nullify(st%ob_eigenval, st%ob_occ)
     nullify(st%occ, st%spin, st%node, st%user_def_states)
-    nullify(st%d%kpoints, st%d%kweights)
+    nullify(st%d%kweights)
     nullify(st%st_range, st%st_num)
 
     ! By default, calculations use real wavefunctions
@@ -356,18 +356,13 @@ contains
       ! k-index; we therefore divide by st%d%nik.
       st%ob_ncs = st%ob_d%nik*st%ob_nst / st%d%nik
       st%ob_ncs = 1
-      SAFE_DEALLOCATE_P(st%d%kpoints)
       SAFE_DEALLOCATE_P(st%d%kweights)
-      SAFE_ALLOCATE( st%d%kpoints(1:MAX_DIM, 1:st%d%nik))
       SAFE_ALLOCATE(st%d%kweights(1:st%d%nik))
-      st%d%kpoints  = M_ZERO
       st%d%kweights = M_ZERO
       st%d%kweights(1) = M_ONE
-      SAFE_ALLOCATE(st%ob_d%kpoints(1:MAX_DIM, 1:st%ob_d%nik))
       SAFE_ALLOCATE(st%ob_d%kweights(1:st%ob_d%nik))
       SAFE_ALLOCATE(st%ob_eigenval(1:st%ob_nst, 1:st%ob_d%nik))
       SAFE_ALLOCATE(st%ob_occ(1:st%ob_nst, 1:st%ob_d%nik))
-      st%ob_d%kpoints  = M_ZERO
       st%ob_d%kweights = M_ZERO
       st%ob_eigenval   = huge(st%ob_eigenval)
       st%ob_occ        = M_ZERO
@@ -1588,7 +1583,7 @@ contains
     FLOAT, optional,   intent(in) :: error(nst, st%d%nik)
 
     integer ik, ist, ns, is
-    FLOAT :: occ
+    FLOAT :: occ, kpoint(1:3)
     character(len=80) tmp_str(MAX_DIM), cspin
 
     call push_sub('states.states_write_eigenvalues')
@@ -1629,10 +1624,9 @@ contains
 
     do ik = 1, st%d%nik, ns
       if(st%d%nik > ns) then
-        write(message(1), '(a,i4,3(a,f12.6),a)') '#k =', ik, ', k = (',  &
-          units_from_atomic(unit_one/units_out%length, st%d%kpoints(1, ik)), ',', &
-          units_from_atomic(unit_one/units_out%length, st%d%kpoints(2, ik)), ',', &
-          units_from_atomic(unit_one/units_out%length, st%d%kpoints(3, ik)), ')'
+        kpoint = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+        kpoint = units_from_atomic(unit_one/units_out%length, kpoint)
+        write(message(1), '(a,i4,3(a,f12.6),a)') '#k =', ik, ', k = (',  kpoint(1), ',', kpoint(2), ',', kpoint(3), ')'
         call write_info(1, iunit)
       end if
 
@@ -1693,7 +1687,7 @@ contains
 
     integer :: idir, ist, ik, ns, is
     integer, allocatable :: iunit(:)
-    FLOAT   :: factor(MAX_DIM)
+    FLOAT   :: factor(MAX_DIM), kpoint(1:MAX_DIM)
     logical :: grace_mode, gnuplot_mode
     character(len=80) :: filename    
 
@@ -1746,10 +1740,12 @@ contains
       ! output bands in gnuplot format
       do ist = 1, nst
         do ik = 1, st%d%nik, ns
-          do is = 0, ns-1
+          do is = 0, ns - 1
+            kpoint = M_ZERO
+            kpoint = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik + is))
             write(iunit(is), '(1x,6f14.8,3x,f14.8)')            &
-              st%d%kpoints(1:sb%dim, ik+is),                   & ! unscaled
-              st%d%kpoints(1:sb%dim, ik+is)/factor(1:sb%dim), & ! scaled
+              kpoint(1:sb%dim),                                 & ! unscaled
+              kpoint(1:sb%dim)/factor(1:sb%dim),                & ! scaled
               units_from_atomic(units_out%energy, st%eigenval(ist, ik + is))
           end do
         end do
@@ -1778,9 +1774,11 @@ contains
       ! k_x, k_y, k_z, e_1, e_2, ..., e_n
       do ik = 1, st%d%nik, ns
         do is = 0, ns-1
+          kpoint = M_ZERO
+          kpoint = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik + is))
           write(iunit(is), '(1x,6f14.8,3x,16384f14.8)')         &
-            st%d%kpoints(1:MAX_DIM, ik+is),                     & ! unscaled
-            st%d%kpoints(1:MAX_DIM, ik+is)/factor(1:MAX_DIM),   & ! scaled
+            kpoint(1:MAX_DIM),                                  & ! unscaled
+            kpoint(1:MAX_DIM)/factor(1:MAX_DIM),                & ! scaled
             (units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), ist = 1, nst)
         end do
       end do
@@ -2167,12 +2165,12 @@ return
     write(message(1), '(a)') '# Fermi energy in a format compatible with bands-gp.dat'
 
     write(message(2), '(7f12.6)')          &
-      minval(st%d%kpoints(1,:)),           &
-      minval(st%d%kpoints(2,:)),           &
-      minval(st%d%kpoints(3,:)),           &
-      minval(st%d%kpoints(1,:)/factor(1)), &
-      minval(st%d%kpoints(2,:)/factor(2)), &
-      minval(st%d%kpoints(3,:)/factor(3)), &
+      minval(sb%kpoints%reduced%point(1,:)),           &
+      minval(sb%kpoints%reduced%point(2,:)),           &
+      minval(sb%kpoints%reduced%point(3,:)),           &
+      minval(sb%kpoints%reduced%point(1,:)/factor(1)), &
+      minval(sb%kpoints%reduced%point(2,:)/factor(2)), &
+      minval(sb%kpoints%reduced%point(3,:)/factor(3)), &
       units_from_atomic(units_out%energy, st%smear%e_fermi)
 
     ! Gamma point
@@ -2181,12 +2179,12 @@ return
       units_from_atomic(units_out%energy, st%smear%e_fermi)
 
     write(message(4), '(7f12.6)')          &
-      maxval(st%d%kpoints(1,:)),           &
-      maxval(st%d%kpoints(2,:)),           &
-      maxval(st%d%kpoints(3,:)),           &
-      maxval(st%d%kpoints(1,:)/factor(1)), &
-      maxval(st%d%kpoints(2,:)/factor(2)), &
-      maxval(st%d%kpoints(3,:)/factor(3)), &
+      maxval(sb%kpoints%reduced%point(1,:)),           &
+      maxval(sb%kpoints%reduced%point(2,:)),           &
+      maxval(sb%kpoints%reduced%point(3,:)),           &
+      maxval(sb%kpoints%reduced%point(1,:)/factor(1)), &
+      maxval(sb%kpoints%reduced%point(2,:)/factor(2)), &
+      maxval(sb%kpoints%reduced%point(3,:)/factor(3)), &
       units_from_atomic(units_out%energy, st%smear%e_fermi)
 
     call write_info(4, iunit)
@@ -2345,7 +2343,7 @@ return
     CMPLX, allocatable :: wf_psi(:,:), gwf_psi(:,:,:), lwf_psi(:,:)
     CMPLX   :: c_tmp
     integer :: sp, is, ik, ik_tmp, ist, i_dim, st_dim, ii
-    FLOAT   :: ww
+    FLOAT   :: ww, kpoint(1:MAX_DIM)
 
 #if defined(HAVE_MPI)
     FLOAT, allocatable :: tmp_reduce(:)
@@ -2371,6 +2369,9 @@ return
     do is = 1, sp
       do ik_tmp = st%d%kpt%start, st%d%kpt%end, sp
         ik = ik_tmp + is - 1
+
+        kpoint = M_ZERO
+        kpoint = kpoints_get_point(der%mesh%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
 
         do ist = st%st_start, st%st_end
 
@@ -2420,12 +2421,12 @@ return
             if(present(  jp)) &
                  jp  (1:der%mesh%np, i_dim, is) = jp  (1:der%mesh%np, i_dim, is) + &
                  ww*aimag(conjg(wf_psi(1:der%mesh%np, 1))*gwf_psi(1:der%mesh%np, i_dim, 1) - &
-                 M_zI*(wf_psi(1:der%mesh%np, 1))**2*st%d%kpoints(i_dim, ik)  )
+                 M_zI*(wf_psi(1:der%mesh%np, 1))**2*kpoint(i_dim)  )
             if(present( tau)) then
               tau (1:der%mesh%np, is)        = tau (1:der%mesh%np, is)        + &
                 ww*abs(gwf_psi(1:der%mesh%np, i_dim, 1))**2  &
-                + ww*abs(st%d%kpoints(i_dim, ik))**2*abs(wf_psi(1:der%mesh%np, 1))**2  &
-                - ww*M_TWO*aimag(conjg(wf_psi(1:der%mesh%np, 1))*st%d%kpoints(i_dim, ik)*gwf_psi(1:der%mesh%np, i_dim, 1) )
+                + ww*abs(kpoint(i_dim))**2*abs(wf_psi(1:der%mesh%np, 1))**2  &
+                - ww*M_TWO*aimag(conjg(wf_psi(1:der%mesh%np, 1))*kpoint(i_dim)*gwf_psi(1:der%mesh%np, i_dim, 1) )
             end if
 
             if(st%d%ispin == SPINORS) then
@@ -2911,7 +2912,8 @@ return
 
   ! ---------------------------------------------------------
   ! write H_(C,apha)*Psi_(alpha) without using Psi_(alpha)
-  subroutine states_write_proj_lead_wf(dir, intf, st)
+  subroutine states_write_proj_lead_wf(sb, dir, intf, st)
+    type(simul_box_t), intent(in) :: sb
     character(len=*),  intent(in) :: dir   ! directory
     type(interface_t), intent(in) :: intf(:)
     type(states_t),    intent(in) :: st
@@ -2919,6 +2921,7 @@ return
     integer :: ik, ist, idim, il, np, ip, iunit
     CMPLX, allocatable :: psi(:, :), phi(:, :), hpsi(:, :), self_energy(:, :)
     character(len=256) :: fname
+    FLOAT :: kpoint(1:3)
 
     call push_sub('states.write_proj_lead_wf')
 
@@ -2937,6 +2940,9 @@ return
 #endif
 
     do ik = st%d%kpt%start, st%d%kpt%end
+
+      kpoint = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+
       do ist = st%st_start, st%st_end
         do il = 1, NLEADS
           np = intf(il)%np_intf
@@ -2947,7 +2953,7 @@ return
           do idim = 1, st%d%dim
             self_energy(1:np, 1:np) = st%ob_lead(il)%self_energy(1:np, 1:np, idim, ist, ik)
             call lalg_gemv(np, np, M_z1, self_energy(1:np, 1:np), psi(1:np, idim), M_z0, hpsi(1:np, idim))
-            if((il.eq.LEFT).and.(-st%d%kpoints(1, ik).gt.M_ZERO) .or. (il.eq.RIGHT).and.(-st%d%kpoints(1, ik).lt.M_ZERO)) then
+            if((il.eq.LEFT).and.(-kpoint(1).gt.M_ZERO) .or. (il.eq.RIGHT).and.(-kpoint(1).lt.M_ZERO)) then
               ! add the reflecting part
               self_energy(1:np, 1:np) = transpose(conjg(self_energy(1:np, 1:np))) - self_energy(1:np, 1:np)
               call lalg_gemv(np, np, M_z1, self_energy(1:np, 1:np), phi(1:np, idim), M_z1, hpsi(1:np, idim))

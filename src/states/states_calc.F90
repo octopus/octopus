@@ -31,6 +31,7 @@ module states_calc_m
   use hardware_m
   use io_m
   use io_function_m
+  use kpoints_m
   use lalg_adv_m
   use lalg_basic_m
   use loct_m
@@ -136,8 +137,9 @@ contains
 
 
   ! -------------------------------------------------------
-  subroutine states_degeneracy_matrix(st)
-    type(states_t), intent(in) :: st
+  subroutine states_degeneracy_matrix(sb, st)
+    type(simul_box_t), intent(in) :: sb
+    type(states_t),    intent(in) :: st
 
     integer :: is, js, inst, inik, iunit
     integer, allocatable :: eindex(:,:), sindex(:)
@@ -213,7 +215,8 @@ contains
       write(iunit, '(a)') '# index  kx ky kz  eigenvalue  degeneracy matrix'
 
       do is = 1, st%nst*st%d%nik
-        write(iunit, '(i6,4e24.16,32767i3)') is, st%d%kpoints(1:3, eindex(2, sindex(is))), &
+        write(iunit, '(i6,4e24.16,32767i3)') is, &
+          kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, eindex(2, sindex(is)))), &
           eigenval_sorted(is), (degeneracy_matrix(is, js), js = 1, st%nst*st%d%nik)
       end do
 

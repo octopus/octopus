@@ -29,6 +29,7 @@ module eigensolver_m
   use global_m
   use grid_m
   use hamiltonian_m
+  use kpoints_m
   use lalg_adv_m
   use lalg_basic_m
   use loct_m
@@ -299,7 +300,7 @@ contains
 
     logical :: verbose_
     integer :: maxiter, ik, ns
-    FLOAT :: tol
+    FLOAT :: tol, kpoint(1:MAX_DIM)
 #ifdef HAVE_MPI
     logical :: conv_reduced
     integer :: outcount, ist
@@ -336,10 +337,14 @@ contains
       maxiter = eigens%es_maxiter
       if(verbose_) then
         if(st%d%nik > ns) then
+
+          kpoint = M_ZERO
+          kpoint = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+
           write(message(1), '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
-               units_from_atomic(unit_one / units_out%length, st%d%kpoints(1, ik)), ',', &
-               units_from_atomic(unit_one / units_out%length, st%d%kpoints(2, ik)), ',', &
-               units_from_atomic(unit_one / units_out%length, st%d%kpoints(3, ik)), ')'
+               units_from_atomic(unit_one / units_out%length, kpoint(1)), ',', &
+               units_from_atomic(unit_one / units_out%length, kpoint(2)), ',', &
+               units_from_atomic(unit_one / units_out%length, kpoint(3)), ')'
           call write_info(1)
         end if
       end if

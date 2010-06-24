@@ -30,6 +30,7 @@ module output_me_m
   use mesh_m
   use mesh_function_m
   use messages_m
+  use kpoints_m
   use loct_math_m
   use parser_m
   use mpi_m
@@ -200,7 +201,7 @@ contains
 
     integer            :: ik, j, is, ns, iunit
     character(len=80)  :: cspin
-    FLOAT              :: o
+    FLOAT              :: o, kpoint(1:MAX_DIM)
     FLOAT, allocatable :: momentum(:,:,:)
 
     call push_sub('output_me.output_me_out_momentum')   
@@ -226,11 +227,14 @@ contains
     end if
 
     do ik = 1, st%d%nik, ns
+      kpoint = M_ZERO
+      kpoint = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+
       if(st%d%nik > ns) then
         write(message(1), '(a,i4,3(a,f12.6),a)') '#k =', ik, ', k = (',  &
-             units_from_atomic(unit_one/units_out%length, st%d%kpoints(1, ik)), ',', &
-             units_from_atomic(unit_one/units_out%length, st%d%kpoints(2, ik)), ',', &
-             units_from_atomic(unit_one/units_out%length, st%d%kpoints(3, ik)), ')'
+             units_from_atomic(unit_one/units_out%length, kpoint(1)), ',', &
+             units_from_atomic(unit_one/units_out%length, kpoint(2)), ',', &
+             units_from_atomic(unit_one/units_out%length, kpoint(3)), ')'
         call write_info(1, iunit)
       end if
 
@@ -278,7 +282,7 @@ contains
 
     integer            :: iunit, ik, ist, is, ns, j
     character(len=80)  :: tmp_str(MAX_DIM), cspin
-    FLOAT              :: angular(3), lsquare, o
+    FLOAT              :: angular(3), lsquare, o, kpoint(1:MAX_DIM)
     FLOAT, allocatable :: ang(:, :, :), ang2(:, :)
 #if defined(HAVE_MPI)
     integer            :: tmp
@@ -323,10 +327,14 @@ contains
 
     do ik = 1, st%d%nik, ns
       if(st%d%nik > ns) then
+
+        kpoint = M_ZERO
+        kpoint = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+        
         write(message(1), '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
-             units_from_atomic(unit_one/units_out%length, st%d%kpoints(1, ik)), ',', &
-             units_from_atomic(unit_one/units_out%length, st%d%kpoints(2, ik)), ',', &
-             units_from_atomic(unit_one/units_out%length, st%d%kpoints(3, ik)), ')'
+             units_from_atomic(unit_one/units_out%length, kpoint(1)), ',', &
+             units_from_atomic(unit_one/units_out%length, kpoint(2)), ',', &
+             units_from_atomic(unit_one/units_out%length, kpoint(3)), ')'
         call write_info(1, iunit)
       end if
       

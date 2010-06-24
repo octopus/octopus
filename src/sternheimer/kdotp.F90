@@ -29,6 +29,7 @@ module kdotp_m
   use io_m
   use io_function_m
   use kdotp_calc_m
+  use kpoints_m
   use lalg_adv_m
   use lalg_basic_m
   use linear_response_m
@@ -388,7 +389,7 @@ contains
 
       write(iunit,'(a, i10)')    '# spin    index = ', ispin
       write(iunit,'(a, i10)')    '# k-point index = ', ik2
-      write(iunit,'(a, 3f12.8)') '# k-point coordinates = ', st%d%kpoints(1:gr%mesh%sb%dim, ik)
+      write(iunit,'(a, 3f12.8)') '# k-point coordinates = ', kpoints_get_point(gr%sb%kpoints, ik2)
       if (.not. kdotp_vars%ok) write(iunit, '(a)') "# WARNING: not converged"      
       
       write(iunit,'(a)')

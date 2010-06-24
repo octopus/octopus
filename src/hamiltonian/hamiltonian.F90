@@ -420,14 +420,19 @@ contains
     ! ---------------------------------------------------------
     subroutine init_phase
       integer :: ip, ik
+      FLOAT   :: kpoint(1:MAX_DIM)
 
       call push_sub('hamiltonian.hamiltonian_init.init_phase')
       
       SAFE_ALLOCATE(hm%phase(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
-      
-      forall (ik = hm%d%kpt%start:hm%d%kpt%end, ip = 1:gr%mesh%np_part)
-        hm%phase(ip, ik) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim) * hm%d%kpoints(1:gr%mesh%sb%dim, ik)))
-      end forall
+
+      kpoint = M_ZERO
+      do ik = hm%d%kpt%start, hm%d%kpt%end
+        kpoint = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+        forall (ip = 1:gr%mesh%np_part)
+          hm%phase(ip, ik) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim) * kpoint(1:gr%mesh%sb%dim)))
+        end forall
+      end do
 
       call pop_sub('hamiltonian.hamiltonian_init.init_phase')
     end subroutine init_phase
@@ -971,7 +976,7 @@ contains
  
     ! now regenerate the phases for the pseudopotentials
     do iatom = 1, this%ep%natoms
-      call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d%kpt%start, this%d%kpt%end, this%d%kpoints, &
+      call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, &
         vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
     end do
 
@@ -983,18 +988,23 @@ contains
 
     subroutine build_phase()
       integer :: ik
-
+      FLOAT   :: kpoint(1:MAX_DIM)
       call push_sub('hamiltonian.hamiltonian_update.build_phase')
 
       if(associated(this%hm_base%uniform_vector_potential)) then 
         if(.not. associated(this%phase)) then
           SAFE_ALLOCATE(this%phase(1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
         end if
-        
-        forall (ik = this%d%kpt%start:this%d%kpt%end, ip = 1:mesh%np_part)
-          this%phase(ip, ik) = exp(-M_zI*sum(mesh%x(ip, 1:mesh%sb%dim)*(this%d%kpoints(1:mesh%sb%dim, ik) &
-            + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
-        end forall
+
+        kpoint = M_ZERO
+        do ik = this%d%kpt%start, this%d%kpt%end
+          kpoint = kpoints_get_point(mesh%sb%kpoints, states_dim_get_kpoint_index(this%d, ik))
+          
+          forall (ip = 1:mesh%np_part)
+            this%phase(ip, ik) = exp(-M_zI*sum(mesh%x(ip, 1:mesh%sb%dim)*(kpoint(1:mesh%sb%dim) &
+              + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
+          end forall
+        end do
       end if
 
       call pop_sub('hamiltonian.hamiltonian_update.build_phase')

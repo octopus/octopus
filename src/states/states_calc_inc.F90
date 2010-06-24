@@ -475,7 +475,8 @@ subroutine X(states_calc_momentum)(gr, st, momentum)
 
   integer             :: idim, ist, ik, idir
   CMPLX               :: expect_val_p
-  R_TYPE, allocatable :: grad(:,:,:)  
+  R_TYPE, allocatable :: grad(:,:,:)
+  FLOAT               :: kpoint(1:MAX_DIM)  
 #if defined(HAVE_MPI)
   integer             :: tmp
   FLOAT, allocatable  :: lmomentum(:), gmomentum(:)
@@ -513,8 +514,10 @@ subroutine X(states_calc_momentum)(gr, st, momentum)
 
       ! have to add the momentum vector in the case of periodic systems, 
       ! since st%X(psi) contains only u_k
+      kpoint = M_ZERO
+      kpoint = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
       do idir = 1, gr%sb%periodic_dim
-        momentum(idir, ist, ik) = momentum(idir, ist, ik) + st%d%kpoints(idir, ik)
+        momentum(idir, ist, ik) = momentum(idir, ist, ik) + kpoint(idir)
       end do
     end do
 
