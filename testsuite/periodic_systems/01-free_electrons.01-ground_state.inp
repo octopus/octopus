@@ -1,19 +1,12 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-%CalculationMode
-   gs   |  unocc
-  "gs_" | "unocc_"
-%
-
-unocc_RestartDir = "gs_restart"
+CalculationMode = gs
 
 FromScratch = yes
 
 Dimensions = 1
 PeriodicDimensions = 1
-
-NumberUnoccStates = 4
 
 OnlyUserDef = yes
 TheoryLevel = independent_particles

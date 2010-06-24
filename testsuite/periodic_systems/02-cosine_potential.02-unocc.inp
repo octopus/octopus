@@ -1,13 +1,14 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-CalculationMode = gs
+CalculationMode = unocc
 
 FromScratch = yes
 
 Dimensions = 1
 PeriodicDimensions = 1
 
+NumberUnoccStates = 4
 ConvAbsDens = 1e-6
 
 OnlyUserDef = yes
@@ -20,7 +21,6 @@ TheoryLevel = independent_particles
 %Coordinates
  "Cosine" | 0 | 0 | 0 
 %
-
 
 BoxShape = parallelepiped
 
