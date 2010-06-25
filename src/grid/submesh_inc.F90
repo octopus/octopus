@@ -28,11 +28,15 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
 
   call push_sub('submesh_inc.Xsm_integrate')
 
-  if (mesh%use_curvilinear) then
-    res = sum(ff(1:sm%ns)*mesh%vol_pp(sm%jxyz(1:sm%ns)) )
+  if(sm%ns > 0) then
+    if (mesh%use_curvilinear) then
+      res = sum(ff(1:sm%ns)*mesh%vol_pp(sm%jxyz(1:sm%ns)) )
+    else
+      res = sum(ff(1:sm%ns))*mesh%vol_pp(1)
+    end if
   else
-    res = sum(ff(1:sm%ns))*mesh%vol_pp(1)
-  end if
+    res = M_ZERO
+  endif
 
 #if defined(HAVE_MPI)
   if(mesh%parallel_in_domains) then

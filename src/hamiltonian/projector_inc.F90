@@ -353,7 +353,8 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
           plpsi(is, idim) = R_CONJ(psia(pj%sphere%jxyz(is), idim))*plpsi(is, idim)
         end do
       end if
-      apb = apb + X(sm_integrate)(mesh, pj%sphere, plpsi(1:ns, idim))
+
+      if(ns > 0) apb = apb + X(sm_integrate)(mesh, pj%sphere, plpsi(1:ns, idim))
     end do
 
   end if
