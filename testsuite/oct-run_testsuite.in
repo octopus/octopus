@@ -130,6 +130,9 @@ function checkqueue {
 function run_testsuite() {
 
 tests="$1"
+echo "*****************************"
+echo "  Running octopus testsuite  "
+echo "*****************************"
 
 # Check for 'preserve working directories' flag.
 if [ "$cleanup" == "yes" ]; then
@@ -155,6 +158,10 @@ for y in $tests; do
 	suffix_opt=""
     fi
     if [ -d "${bin_directory}" ]; then
+	if [ $OCT_TEST_NPROCS -gt 1 ]
+	then
+	    echo Running test: $test_name
+	fi
 	CMD $runtest_directory/oct-run_regression_test.pl -l \
 	    $preserve_opt $suffix_opt -D $bin_directory -f $y \
 	    > ${ybase}.log 2>&1 &
