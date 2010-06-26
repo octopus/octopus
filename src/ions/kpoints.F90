@@ -114,13 +114,13 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine kpoints_init(this, symm, dim, periodic_dim, rlattice, klattice, geo)
+  subroutine kpoints_init(this, symm, dim, rlattice, klattice, geo, only_gamma)
     type(kpoints_t),    intent(out) :: this
     type(symmetries_t), intent(in)  :: symm
     integer,            intent(in)  :: dim
-    integer,            intent(in)  :: periodic_dim
     FLOAT,              intent(in)  :: rlattice(:,:), klattice(:,:)
     type(geometry_t),   intent(in)  :: geo
+    logical,            intent(in)  :: only_gamma
 
     integer :: ik
 
@@ -152,7 +152,7 @@ contains
     !%End
     call parse_logical(datasets_check('KPointsUseTimeReversal'), .true., this%use_time_reversal)
 
-    if(periodic_dim == 0) then
+    if(only_gamma) then
       this%method = KPOINTS_GAMMA
       call read_MP(.true.)
     else
@@ -228,7 +228,7 @@ contains
       this%shifts(:)   = M_ZERO
 
       if(.not.gamma_only_) then
-        do ii = 1, periodic_dim
+        do ii = 1, dim
           call parse_block_integer(blk, 0, ii - 1, this%nik_axis(ii))
         end do
 
@@ -238,7 +238,7 @@ contains
         end if
 
         if(parse_block_n(blk) > 1) then ! we have a shift
-          do ii = 1, periodic_dim
+          do ii = 1, dim
             call parse_block_float(blk, 1, ii - 1, this%shifts(ii))
           end do
         end if
@@ -248,7 +248,7 @@ contains
 
       call kpoints_grid_init(this%full, product(this%nik_axis))
 
-      call kpoints_grid_generate(periodic_dim, this%nik_axis, this%shifts, this%full%npoints, this%full%red_point)
+      call kpoints_grid_generate(dim, this%nik_axis, this%shifts, this%full%npoints, this%full%red_point)
 
       this%full%weight = M_ONE/real(this%full%npoints, REAL_PRECISION)
 
@@ -328,7 +328,7 @@ contains
       if(reduced) then
         do ik = 1, this%full%npoints
           call parse_block_float(blk, ik - 1, 0, this%full%weight(ik))
-          do idir = 1, periodic_dim
+          do idir = 1, dim
             call parse_block_float(blk, ik - 1, idir, this%full%red_point(idir, ik))
           end do
           ! generate also the absolute coordinates
@@ -337,7 +337,7 @@ contains
       else
         do ik = 1, this%full%npoints
           call parse_block_float(blk, ik - 1, 0, this%full%weight(ik))
-          do idir = 1, periodic_dim
+          do idir = 1, dim
             call parse_block_float(blk, ik - 1, idir, this%full%point(idir, ik), unit_one/units_inp%length)
           end do
           ! generate also the reduced coordinates
@@ -467,8 +467,8 @@ contains
   ! directions dermined by the lattice vectors.
   ! shift(i) and sz shift the grid of integration points from the origin.
 
-  subroutine kpoints_grid_generate(periodic_dim, naxis, shift, nkpoints, kpoints)  
-    integer,           intent(in)  :: periodic_dim
+  subroutine kpoints_grid_generate(dim, naxis, shift, nkpoints, kpoints)  
+    integer,           intent(in)  :: dim
     integer,           intent(in)  :: naxis(1:MAX_DIM)
     FLOAT,             intent(in)  :: shift(1:MAX_DIM)
     integer,           intent(out) :: nkpoints
@@ -489,7 +489,7 @@ contains
           do kk = 1, naxis(3)
              ix(1:3) = (/ii, jj, kk/)
              nkpoints = nkpoints + 1
-             do idir = 1, periodic_dim
+             do idir = 1, dim
                 if ( (mod(naxis(idir),2) .ne. 0 ) ) then    
                    kpoints(idir, nkpoints) = &
                         & (real(2*ix(idir) - naxis(idir) - 1, REAL_PRECISION) + 2*shift(idir))*dx(idir)

@@ -163,6 +163,7 @@ contains
     ! some local stuff
     FLOAT :: def_h, def_rsize
     integer :: idir
+    logical :: only_gamma_kpoint
 
     call push_sub('simul_box.simul_box_init')
 
@@ -183,7 +184,9 @@ contains
 
     call symmetries_init(sb%symm, geo, sb%dim, sb%periodic_dim, sb%rlattice, sb%lsize)
 
-    call kpoints_init(sb%kpoints, sb%symm, sb%dim, sb%periodic_dim, sb%rlattice, sb%klattice, geo)
+    ! we need k-points for periodic systems or for open boundaries
+    only_gamma_kpoint = sb%periodic_dim == 0 .and. .not. present(transport_mode)
+    call kpoints_init(sb%kpoints, sb%symm, sb%dim, sb%rlattice, sb%klattice, geo, only_gamma_kpoint)
 
     call pop_sub('simul_box.simul_box_init')
 
