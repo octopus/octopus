@@ -80,8 +80,8 @@ contains
     integer,             intent(in)  :: npoints
 
     this%npoints = npoints
-    SAFE_ALLOCATE(this%red_point(1:3, npoints))
-    SAFE_ALLOCATE(this%point(1:3, npoints))
+    SAFE_ALLOCATE(this%red_point(1:MAX_DIM, npoints))
+    SAFE_ALLOCATE(this%point(1:MAX_DIM, npoints))
     SAFE_ALLOCATE(this%weight(npoints))
   end subroutine kpoints_grid_init
 
@@ -177,7 +177,7 @@ contains
         '(i6,a,f12.6,a,3f12.6, a)') ik, " | ", this%reduced%weight(ik), " | ", this%reduced%red_point(1:3, ik), "  |"
       call write_info(1)
     end do
-  
+
     write(message(1),'(a)') ''
     call write_info(1)
 
@@ -323,6 +323,7 @@ contains
       call kpoints_grid_init(this%full, parse_block_n(blk))
 
       this%full%red_point = M_ZERO
+      this%full%point = M_ZERO
       this%full%weight = M_ZERO
 
       if(reduced) then
@@ -440,9 +441,9 @@ contains
   pure function kpoints_get_point(this, ik) result(point)
     type(kpoints_t), intent(in) :: this
     integer,         intent(in) :: ik
-    FLOAT                       :: point(1:3)
+    FLOAT                       :: point(1:MAX_DIM)
 
-    point(1:3) = this%reduced%point(1:3, ik)
+    point(1:MAX_DIM) = this%reduced%point(1:MAX_DIM, ik)
 
   end function kpoints_get_point
 

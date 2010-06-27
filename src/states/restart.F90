@@ -749,7 +749,6 @@ contains
     call iopar_read(mpi_grp, occs, line, err)
 
     jk(:)  = 0 ! reset counter for k-points
-!    st%d%kpoints(:, :) = M_ZERO
     st%d%kweights(:) = M_ZERO
 
     forall(il = 1:NLEADS) st%ob_lead(il)%rho = M_ZERO
@@ -776,7 +775,6 @@ contains
         ! count the occupied k-points (with idim == 1)
         if(idim.eq.1) jk(ist) = jk(ist) + 1
 
-!        st%d%kpoints(:, jk(ist)) = (/k_x, k_y, k_z/)
         st%d%kweights(jk(ist)) = w_k
         st%occ(ist, jk(ist)) = occ
         ! if not in the corresponding node cycle
@@ -799,9 +797,13 @@ contains
         st%zphi((icell - 1) * np + 1:icell * np, idim, ist, jk(ist)) = tmp(1:np, idim)
       end do
 
-      ! Apply phase.
+      ! Apply phase. Here the kpoint read from the file is different
+      ! from the one calculated by octopus, since the box size
+      ! changed. I dont know what is correct. XA
+
       kpoint = M_ZERO
       kpoint(1:3) = (/k_x, k_y, k_z/)
+
       do ip = 1, gr%mesh%np
         phase = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim)*kpoint(1:gr%mesh%sb%dim)))
         st%zphi(ip, idim, ist, jk(ist)) = phase * st%zphi(ip, idim, ist, jk(ist))
@@ -824,7 +826,6 @@ contains
 
     end do ! Loop over all free states.
 
-    ! WARNING: K-points were not read here
     ! renormalize weigths
     w_sum = sum(st%d%kweights(:))
     st%d%kweights(:) = st%d%kweights(:)/w_sum

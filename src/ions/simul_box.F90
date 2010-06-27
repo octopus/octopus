@@ -649,12 +649,12 @@ contains
     end select
 
     call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, sb%volume_element)
-    
+
     sb%klattice = M_ZERO
-    forall(idim=1:sb%periodic_dim, jdim=1:MAX_DIM)
+    forall(idim = 1:sb%dim, jdim = 1:sb%dim)
       sb%klattice(jdim, idim) = sb%klattice_primitive(jdim, idim)*M_TWO*M_PI/(M_TWO*sb%lsize(idim))
     end forall
-    
+
     call pop_sub('simul_box.simul_box_build_lattice')
   end subroutine simul_box_build_lattice
 
