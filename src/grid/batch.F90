@@ -75,7 +75,8 @@ module batch_m
   type batch_pack_t
     integer                        :: size(1:2)
     integer                        :: size_real(1:2)
-    FLOAT, pointer                 :: psi(:, :)
+    FLOAT, pointer                 :: dpsi(:, :)
+    CMPLX, pointer                 :: zpsi(:, :)
 #ifdef HAVE_OPENCL
     type(opencl_mem_t)             :: buffer
 #endif
@@ -176,6 +177,9 @@ contains
     
     this%in_buffer_count = 0
 
+    nullify(this%pack%dpsi)
+    nullify(this%pack%zpsi)
+
     call pop_sub('batch.batch_init_empty')
     
   end subroutine batch_init_empty
@@ -205,6 +209,9 @@ contains
     end do
 
     this%in_buffer_count = 0
+
+    nullify(this%pack%dpsi)
+    nullify(this%pack%zpsi)
 
     call pop_sub('batch.batch_init_empty_linear')
     
@@ -341,7 +348,11 @@ contains
         call opencl_create_buffer(this%pack%buffer, CL_MEM_READ_WRITE, batch_type(this), product(this%pack%size))
 #endif
       else
-        SAFE_ALLOCATE(this%pack%psi(1:this%pack%size_real(1), 1:this%pack%size_real(2)))
+        if(batch_type(this) == TYPE_FLOAT) then
+          SAFE_ALLOCATE(this%pack%dpsi(1:this%pack%size(1), 1:this%pack%size(2)))
+        else
+          SAFE_ALLOCATE(this%pack%zpsi(1:this%pack%size(1), 1:this%pack%size(2)))
+        end if
       end if
 
       if(copy_) then
@@ -370,14 +381,13 @@ contains
       if(batch_type(this) == TYPE_FLOAT) then
         do ist = 1, this%nst_linear
           forall(ip = 1:ubound(this%states_linear(ist)%dpsi, dim = 1))
-            this%pack%psi(ist, ip) = this%states_linear(ist)%dpsi(ip)
+            this%pack%dpsi(ist, ip) = this%states_linear(ist)%dpsi(ip)
           end forall
         end do
       else
         do ist = 1, this%nst_linear
           forall(ip = 1:ubound(this%states_linear(ist)%zpsi, dim = 1))
-            this%pack%psi(2*ist - 1, ip) = real(this%states_linear(ist)%zpsi(ip), REAL_PRECISION)
-            this%pack%psi(2*ist    , ip) = aimag(this%states_linear(ist)%zpsi(ip))
+            this%pack%zpsi(ist, ip) = this%states_linear(ist)%zpsi(ip)
           end forall
         end do
       end if
@@ -418,7 +428,8 @@ contains
           call opencl_release_buffer(this%pack%buffer)
 #endif
         else
-          SAFE_DEALLOCATE_P(this%pack%psi)
+          SAFE_DEALLOCATE_P(this%pack%dpsi)
+          SAFE_DEALLOCATE_P(this%pack%zpsi)
         end if
       end if
     end if
@@ -433,13 +444,13 @@ contains
       if(batch_type(this) == TYPE_FLOAT) then
         do ist = 1, this%nst_linear
           forall(ip = 1:ubound(this%states_linear(ist)%dpsi, dim = 1))
-            this%states_linear(ist)%dpsi(ip) = this%pack%psi(ist, ip) 
+            this%states_linear(ist)%dpsi(ip) = this%pack%dpsi(ist, ip) 
           end forall
         end do
       else
         do ist = 1, this%nst_linear
           forall(ip = 1:ubound(this%states_linear(ist)%zpsi, dim = 1))
-            this%states_linear(ist)%zpsi(ip) = cmplx(this%pack%psi(2*ist - 1, ip), this%pack%psi(2*ist, ip))
+            this%states_linear(ist)%zpsi(ip) = this%pack%zpsi(ist, ip)
           end forall
         end do
       end if
