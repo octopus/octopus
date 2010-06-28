@@ -171,8 +171,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
       SAFE_DEALLOCATE_P(grad)
    
-      if(hm%scissor%apply) call X(scissor_apply)(hm%scissor, der%mesh, ik, epsi, hpsi)
-
     end if
   end do
 

@@ -49,7 +49,6 @@ module hamiltonian_m
   use poisson_m
   use profiling_m
   use projector_m
-  use scissor_m
   use simul_box_m
   use smear_m
   use states_m
@@ -166,8 +165,6 @@ module hamiltonian_m
     FLOAT, pointer :: oct_fxc(:, :, :)
 
     CMPLX, pointer :: phase(:, :)
-
-    type(scissor_t) :: scissor
 
     FLOAT :: current_time
   end type hamiltonian_t
@@ -410,8 +407,6 @@ contains
       end if
       call init_lead_h
     end if
-
-    call scissor_nullify(hm%scissor)
 
     call pop_sub('hamiltonian.hamiltonian_init')
 
@@ -732,7 +727,6 @@ contains
     end if
 
     call states_dim_end(hm%d)
-    call scissor_end(hm%scissor)
     call states_end(hm%st)
 
     call pop_sub('hamiltonian.hamiltonian_end')
@@ -1051,7 +1045,6 @@ contains
     if(associated(this%phase)) apply = .false.
     if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.
     if(this%ab .eq. IMAGINARY_ABSORBING) apply = .false.
-    if(this%scissor%apply) apply = .false.
     if(this%theory_level == HARTREE .or. this%theory_level == HARTREE_FOCK) apply = .false.
     if(iand(this%xc_family, XC_FAMILY_MGGA).ne.0)  apply = .false.
     if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.

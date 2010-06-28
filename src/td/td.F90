@@ -48,7 +48,6 @@ module td_m
   use projector_m
   use restart_m
   use scf_m
-  use scissor_m
   use species_m
   use spectrum_m
   use states_m
@@ -95,7 +94,6 @@ module td_m
 
     FLOAT                :: mu
     integer              :: dynamics
-    FLOAT                :: scissor
   end type td_t
 
 
@@ -117,7 +115,6 @@ contains
     real(8)                   :: etime
     logical                   :: generate
     type(gauge_force_t)       :: gauge_force
-    CMPLX, allocatable        :: gspsi(:, :, :, :)
     type(profile_t), save :: prof
 
     call push_sub('td.td_run')
@@ -150,12 +147,6 @@ contains
     if(td%dynamics == CP) call cpmd_init(td%cp_propagator, sys%gr, sys%st)
 
     call init_wfs()
-
-    if(td%scissor > M_EPSILON) then
-      SAFE_ALLOCATE(gspsi(1:gr%mesh%np, 1:st%d%dim, 1:st%nst, 1:st%d%nik))
-      gspsi(1:gr%mesh%np, 1:st%d%dim, 1:st%nst, 1:st%d%nik) = st%zpsi(1:gr%mesh%np, 1:st%d%dim, 1:st%nst, 1:st%d%nik)
-      call scissor_init(hm%scissor, st, td%scissor, gspsi)
-    end if
 
     ! Calculate initial forces and kinetic energy
     if(ion_dynamics_ions_move(td%ions)) then
