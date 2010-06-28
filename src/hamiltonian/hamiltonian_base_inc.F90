@@ -218,7 +218,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 #endif
 
 #ifdef HAVE_OPENCL
-  if(batch_is_packed(psib)) then
+  if(batch_is_packed(psib) .and. opencl_is_enabled()) then
    
     call opencl_create_buffer(projection%buff_projection, CL_MEM_READ_WRITE, R_TYPE_VAL, &
       this%full_projection_size*psib%pack%size_real(1))
@@ -258,13 +258,21 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
       SAFE_ALLOCATE(psi(1:nst, 1:npoints))
 
       call profiling_in(prof_gather, "PROJ_MAT_GATHER")
-      ! collect all the points we need in a continous array
-      forall(ist = 1:nst, ip = 1:npoints)
-        psi(ist, ip) = psib%states_linear(ist)%X(psi)(pmat%map(ip))
-        !MISSING: phases
-      end forall
-      call profiling_out(prof_gather)
 
+      ! collect all the points we need in a continous array
+      ! MISSING: phases
+      if(batch_is_packed(psib)) then
+        forall(ist = 1:nst, ip = 1:npoints)
+          psi(ist, ip) = psib%pack%X(psi)(ist, pmat%map(ip))
+        end forall
+      else
+        forall(ist = 1:nst, ip = 1:npoints)
+          psi(ist, ip) = psib%states_linear(ist)%X(psi)(pmat%map(ip))
+        end forall
+      end if
+
+      call profiling_out(prof_gather)
+      
       ! Now matrix-multiply to calculate the projections.
       ! the line below does: projection = matmul(psi, pmat%projectors)
       call dgemm('N', 'N', nreal, nprojs, npoints, M_ONE, psi(1, 1), nreal, pmat%projectors(1, 1), npoints, &
@@ -348,7 +356,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
 #endif
 
 #ifdef HAVE_OPENCL
-  if(batch_is_packed(vpsib)) then
+  if(batch_is_packed(vpsib) .and. opencl_is_enabled()) then
     iprojection = 0
     do imat = 1, this%nprojector_matrices
       pmat => this%projector_matrices(imat)
@@ -404,12 +412,19 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
       
       call profiling_in(prof_scatter, "PROJ_MAT_SCATTER")
       ! and copy the points from the local buffer to its position
-      do ist = 1, nst
-        forall(ip = 1:npoints)
-          vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) + psi(ist, ip)
-          !MISSING: phases
+      ! MISSING: phases
+      if(batch_is_packed(vpsib)) then
+        forall(ist = 1:nst, ip = 1:npoints)
+          vpsib%pack%X(psi)(ist, pmat%map(ip)) = vpsib%pack%X(psi)(ist, pmat%map(ip)) + psi(ist, ip)
         end forall
-      end do
+        call batch_pack_was_modified(vpsib)
+      else
+        do ist = 1, nst
+          forall(ip = 1:npoints)
+            vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) + psi(ist, ip)
+          end forall
+        end do
+      end if
       call profiling_count_operations(nst*npoints*R_ADD)
       call profiling_out(prof_scatter)
     end if
