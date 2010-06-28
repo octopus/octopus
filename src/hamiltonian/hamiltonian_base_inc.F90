@@ -25,8 +25,9 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   type(batch_t),               intent(in)    :: psib
   type(batch_t),               intent(inout) :: vpsib
 
-  integer :: ist, idim, ip
+  integer :: ist, ip
   R_TYPE, pointer :: psi(:, :), vpsi(:, :)
+  R_TYPE  :: psi1, psi2
 #ifdef HAVE_OPENCL
   integer :: pnp, iprange
 #endif
@@ -34,11 +35,18 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   call profiling_in(prof_vlpsi, "VLPSI")
   call push_sub('hamiltonian_base_inc.Xhamiltonian_base_local')
 
-  if(associated(this%potential)) then
+  if(.not. associated(this%potential)) then
+    call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_local')
+    call profiling_out(prof_vlpsi)
+  end if
+
+  if(batch_is_packed(psib) .or. batch_is_packed(vpsib)) then
+    ASSERT(batch_is_packed(vpsib))
+
+    call batch_pack_was_modified(vpsib)
+
+    if(opencl_is_enabled()) then
 #ifdef HAVE_OPENCL
-    if(opencl_is_enabled() .and. batch_is_packed(psib)) then
-      ASSERT(batch_is_packed(vpsib))
-      
       pnp = opencl_padded_size(mesh%np)
 
       select case(std%ispin)
@@ -68,8 +76,6 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
 
       end select
 
-      call batch_pack_was_modified(vpsib)
-
       call opencl_finish()
 
       call profiling_count_operations((R_MUL*psib%nst)*mesh%np)
@@ -78,15 +84,49 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
       call profiling_out(prof_vlpsi)
       call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_local')
       return
-    end if
 #endif
+    else
+
+      select case(std%ispin)
+      case(UNPOLARIZED, SPIN_POLARIZED)
+        !$omp parallel do private(ip)
+        do ist = 1, psib%nst_linear
+          forall (ip = 1:mesh%np)
+            vpsib%pack%X(psi)(ist, ip) = vpsib%pack%X(psi)(ist, ip) + this%potential(ip, ispin)*psib%pack%X(psi)(ist, ip)
+          end forall
+        end do
+        !$omp end parallel do
+
+        call profiling_count_operations((2*R_ADD*psib%nst_linear)*mesh%np)
+        call profiling_count_transfers(mesh%np, M_ONE)
+        call profiling_count_transfers(mesh%np*psib%nst_linear, R_TOTYPE(M_ONE))
+
+      case(SPINORS)
+        ASSERT(mod(psib%nst_linear, 2) == 0)
+        !the spinor case is more complicated since it mixes the two components.
+        do ist = 1, psib%nst_linear, 2
+          do ip = 1, mesh%np
+            psi1 = psib%pack%zpsi(ist    , ip)
+            psi2 = psib%pack%zpsi(ist + 1, ip)
+            vpsib%pack%zpsi(ist    , ip) = vpsib%pack%zpsi(ist    , ip) + &
+              this%potential(ip, 1)*psi1 + (this%potential(ip, 3) + M_zI*this%potential(ip, 4))*psi2
+            vpsib%pack%zpsi(ist + 1, ip) = vpsib%pack%zpsi(ist + 1, ip) + &
+              this%potential(ip, 2)*psi2 + (this%potential(ip, 3) - M_zI*this%potential(ip, 4))*psi1
+          end do
+        end do
+        call profiling_count_operations((6*R_ADD + 2*R_MUL)*mesh%np*psib%nst)
+        
+      end select
+    end if
+
+  else
+
     select case(std%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
-      !$omp parallel do private(idim, ip)
+      !$omp parallel do private(ip)
       do ist = 1, psib%nst
-        forall (idim = 1:psib%dim, ip = 1:mesh%np)
-          vpsib%states(ist)%X(psi)(ip, idim) = vpsib%states(ist)%X(psi)(ip, idim) + &
-            this%potential(ip, ispin)*psib%states(ist)%X(psi)(ip, idim)
+        forall (ip = 1:mesh%np)
+          vpsib%states(ist)%X(psi)(ip, 1) = vpsib%states(ist)%X(psi)(ip, 1) + this%potential(ip, ispin)*psib%states(ist)%X(psi)(ip, 1)
         end forall
       end do
       !$omp end parallel do
@@ -115,8 +155,6 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
 
   end if
 
-  call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_local')
-  call profiling_out(prof_vlpsi)
 end subroutine X(hamiltonian_base_local)
 
 ! ---------------------------------------------------------------------------------------
