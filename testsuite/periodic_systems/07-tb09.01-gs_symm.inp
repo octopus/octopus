@@ -41,3 +41,5 @@ ConvRelEv = 1e-8
 Preconditioner = no
 
 ParallelizationStrategy = par_kpoints
+
+JpcurrentInTau = no

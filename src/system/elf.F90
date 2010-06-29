@@ -99,7 +99,7 @@ contains
     SAFE_ALLOCATE(grho(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
     SAFE_ALLOCATE(  jj(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
 
-    call states_calc_tau_jp_gn(gr%der, st, kappa, jj, grho)
+    call states_calc_tau_jp_gn(gr%der, st, tau=kappa, jp=jj, grho=grho)
 
     ! spin-dependent quantities
     if(st%d%ispin == UNPOLARIZED) then

@@ -91,7 +91,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
     ! We calculate everything from the wavefunctions to benefit from
     ! the error cancellation between the gradient of the density and
     ! tau.
-    call states_calc_tau_jp_gn(der, st, grho=gdens, tau=tau, lrho=ldens)    
+    call states_calc_tau_jp_gn(der, st, rho, grho=gdens, tau=tau, lrho=ldens)    
 
     ! We have to symmetrize everything as they are calculated from the
     ! wavefunctions.

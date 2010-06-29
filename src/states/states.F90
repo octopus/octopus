@@ -147,7 +147,8 @@ module states_m
 
     logical        :: nlcc             !< do we have non-linear core corrections
     FLOAT, pointer :: rho_core(:)      !< core charge for nl core corrections
-
+    logical        :: jpcurrent_in_tau   !< are we using in tau the term which depends on the paramagnetic current?  
+    
     !> It may be required to "freeze" the deepest orbitals during the evolution; the density
     !! of these orbitals is kept in frozen_rho. It is different from rho_core.
     FLOAT, pointer :: frozen_rho(:, :)
@@ -473,6 +474,16 @@ contains
     !% to load ground-state orbitals from a previous ground-state run.
     !%End
     call parse_logical(datasets_check('OnlyUserDefinedInitialStates'), .false., st%only_userdef_istates)
+
+    !%Variable JpcurrentInTau
+    !%Type logical
+    !%Default yes
+    !%Section States
+    !%Description
+    !% If true, a term including the paramagnetic current is included in the calculation ot the kinetic energy density 
+    !%End
+    call parse_logical(datasets_check('JpcurrentInTau'), .true., st%jpcurrent_in_tau)
+
 
     ! we now allocate some arrays
     SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
@@ -2332,9 +2343,11 @@ return
 
 
   ! ---------------------------------------------------------
-  subroutine states_calc_tau_jp_gn(der, st, tau, jp, grho, lrho)
+  subroutine states_calc_tau_jp_gn(der, st, rho, tau, jp, grho, lrho)
     type(derivatives_t),    intent(in)    :: der
     type(states_t),         intent(inout) :: st
+    
+    FLOAT, optional,        intent(in)    :: rho(:,:)
     FLOAT, optional,        intent(out)   :: tau(:,:)    !< (gr%mesh%np, st%d%nspin)
     FLOAT, optional,        intent(out)   :: jp(:,:,:)   !< (gr%mesh%np, gr%mesh%sb%dim, st%d%nspin)
     FLOAT, optional,        intent(out)   :: grho(:,:,:) !< (gr%mesh%np, gr%mesh%sb%dim, st%d%nspin)
@@ -2410,26 +2423,36 @@ return
                          wf_psi(1:der%mesh%np, 1)*conjg(lwf_psi(1:der%mesh%np, 2)))
             end if
           end if
-
+          
           do i_dim = 1, der%mesh%sb%dim
             if(present(grho)) &
               grho(1:der%mesh%np, i_dim, is) = grho(1:der%mesh%np, i_dim, is) + &
-                ww*M_TWO*real(conjg(wf_psi(1:der%mesh%np, 1))*gwf_psi(1:der%mesh%np, i_dim, 1))
+              ww*M_TWO*real(conjg(wf_psi(1:der%mesh%np, 1))*gwf_psi(1:der%mesh%np, i_dim, 1))
             if(present(lrho)) &
               lrho(1:der%mesh%np, is) = lrho(1:der%mesh%np, is)         + &
                 ww*M_TWO*real(conjg(gwf_psi(1:der%mesh%np, i_dim, 1))*gwf_psi(1:der%mesh%np, i_dim, 1))
-            if(present(  jp)) &
-                 jp  (1:der%mesh%np, i_dim, is) = jp  (1:der%mesh%np, i_dim, is) + &
-                 ww*aimag(conjg(wf_psi(1:der%mesh%np, 1))*gwf_psi(1:der%mesh%np, i_dim, 1) - &
-                 M_zI*(wf_psi(1:der%mesh%np, 1))**2*kpoint(i_dim)  )
-            if(present( tau)) then
-              tau (1:der%mesh%np, is)        = tau (1:der%mesh%np, is)        + &
+            
+            if(present(jp)) then
+              if ( .not.(states_are_real(st)) ) then
+                jp (1:der%mesh%np, i_dim, is) = jp (1:der%mesh%np, i_dim, is) + &
+                  ww*aimag(conjg(wf_psi(1:der%mesh%np, 1))*gwf_psi(1:der%mesh%np, i_dim, 1) - &
+                  M_zI*(wf_psi(1:der%mesh%np, 1))**2*kpoint(i_dim ) )
+              else
+                jp (1:der%mesh%np, i_dim, is) = M_ZERO
+              end if
+            end if
+          
+            if (present( tau)) then 
+              tau (1:der%mesh%np, is)   = tau (1:der%mesh%np, is)        + &
                 ww*abs(gwf_psi(1:der%mesh%np, i_dim, 1))**2  &
                 + ww*abs(kpoint(i_dim))**2*abs(wf_psi(1:der%mesh%np, 1))**2  &
                 - ww*M_TWO*aimag(conjg(wf_psi(1:der%mesh%np, 1))*kpoint(i_dim)*gwf_psi(1:der%mesh%np, i_dim, 1) )
+                if (present(jp) .and. st%jpcurrent_in_tau) then
+                  tau (1:der%mesh%np, is)  = tau (1:der%mesh%np, is)  - jp(1:der%mesh%np, i_dim, 1)**2/rho(1:der%mesh%np, 1)
+                end if
             end if
 
-            if(st%d%ispin == SPINORS) then
+        if(st%d%ispin == SPINORS) then
               if(present(grho)) then
                 grho(1:der%mesh%np, i_dim, 2) = grho(1:der%mesh%np, i_dim, 2) + &
                   ww*M_TWO*real(conjg(wf_psi(1:der%mesh%np, 2))*gwf_psi(1:der%mesh%np, i_dim, 2))
@@ -2439,7 +2462,7 @@ return
                 grho(1:der%mesh%np, i_dim, 4) = grho(1:der%mesh%np, i_dim, 4) + ww* &
                   aimag(gwf_psi(1:der%mesh%np, i_dim, 1)*conjg(wf_psi(1:der%mesh%np, 2)) + &
                     wf_psi(1:der%mesh%np, 1)*conjg(gwf_psi(1:der%mesh%np, i_dim, 2)))
-              end if
+            end if
 
               if(present(lrho)) then
                 lrho(1:der%mesh%np, 2) = lrho(1:der%mesh%np, 2)         + &
