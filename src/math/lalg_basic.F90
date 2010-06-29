@@ -104,6 +104,8 @@ module lalg_basic_m
     module procedure axpy_4_4
     module procedure axpy_5_3
     module procedure axpy_5_4
+    module procedure axpy_6_3
+    module procedure axpy_6_4
   end interface
 
   interface lalg_copy
