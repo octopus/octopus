@@ -654,9 +654,9 @@ subroutine batch_copy_data(np, xx, yy)
       call opencl_finish()
 #endif
     else if(batch_type(yy) == TYPE_FLOAT) then
-      call blas_copy(np*xx%nst_linear, xx%pack%dpsi(1, 1), 1, yy%pack%dpsi(1, 1), 1)
+      call blas_copy(np*xx%pack%size(1), xx%pack%dpsi(1, 1), 1, yy%pack%dpsi(1, 1), 1)
     else
-      call blas_copy(np*xx%nst_linear, xx%pack%zpsi(1, 1), 1, yy%pack%zpsi(1, 1), 1)
+      call blas_copy(np*xx%pack%size(1), xx%pack%zpsi(1, 1), 1, yy%pack%zpsi(1, 1), 1)
     end if
 
   else

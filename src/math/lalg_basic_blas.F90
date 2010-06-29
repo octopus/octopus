@@ -257,6 +257,25 @@ subroutine FNAME(axpy_5)(n1, da, dx, dy)
   call profiling_out(axpy_profile)
 
 end subroutine FNAME(axpy_5)
+
+subroutine FNAME(axpy_6)(n1, n2, da, dx, dy)
+  integer, intent(in)    :: n1
+  integer, intent(in)    :: n2
+  TYPE2,   intent(in)    :: da
+  TYPE1,   intent(in)    :: dx(1:n1, 1:n2)
+  TYPE1,   intent(inout) :: dy(1:n1, 1:n2)
+
+  if (n1 < 1) return
+  
+  call profiling_in(axpy_profile, "BLAS_AXPY")
+
+  call blas_axpy(n1*n2, da, dx(1, 1), dy(1, 1))
+
+  call profiling_count_operations(n1*n2*4)
+
+  call profiling_out(axpy_profile)
+
+end subroutine FNAME(axpy_6)
 #endif
 
 ! ------------------------------------------------------------------
