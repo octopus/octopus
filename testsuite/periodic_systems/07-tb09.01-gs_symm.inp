@@ -42,4 +42,4 @@ Preconditioner = no
 
 ParallelizationStrategy = par_kpoints
 
-JpcurrentInTau = no
+CurrentInTau = no

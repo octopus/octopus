@@ -37,7 +37,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
   FLOAT, allocatable :: l_tau(:,:), l_ldens(:,:), l_dedtau(:,:), l_dedldens(:,:)
 
   FLOAT, allocatable :: dens(:,:), dedd(:,:), ex_per_vol(:), ec_per_vol(:)
-  FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:)
+  FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:), current(:,:,:)
   FLOAT, allocatable :: ldens(:,:), tau(:,:), dedldens(:,:), symmtmp(:, :)
 
   integer :: ib, ib2, ip, isp, families, ixc, spin_channels
@@ -91,7 +91,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
     ! We calculate everything from the wavefunctions to benefit from
     ! the error cancellation between the gradient of the density and
     ! tau.
-    call states_calc_tau_jp_gn(der, st, rho, grho=gdens, tau=tau, lrho=ldens)    
+    call states_calc_tau_jp_gn(der, st, rho, tau=tau, jp=current,  grho=gdens, lrho=ldens)    
 
     ! We have to symmetrize everything as they are calculated from the
     ! wavefunctions.
@@ -497,6 +497,7 @@ contains
 
     ! allocate variables
     SAFE_ALLOCATE( tau(1:der%mesh%np, 1:spin_channels))
+    SAFE_ALLOCATE( current (1:der%mesh%np, 1:der%mesh%sb%dim, 1:spin_channels) )
     SAFE_ALLOCATE(ldens(1:der%mesh%np, 1:spin_channels))
 
     SAFE_ALLOCATE(l_tau  (1:spin_channels, 1:n_block))
@@ -563,6 +564,7 @@ contains
     call push_sub('vxc_inc.xc_get_vxc.mgga_end')
 
     SAFE_DEALLOCATE_A(tau)
+    SAFE_DEALLOCATE_A(current)
     SAFE_DEALLOCATE_A(ldens)
 
     SAFE_DEALLOCATE_A(l_tau)

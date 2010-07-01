@@ -147,7 +147,7 @@ module states_m
 
     logical        :: nlcc             !< do we have non-linear core corrections
     FLOAT, pointer :: rho_core(:)      !< core charge for nl core corrections
-    logical        :: jpcurrent_in_tau   !< are we using in tau the term which depends on the paramagnetic current?  
+    logical        :: current_in_tau   !< are we using in tau the term which depends on the paramagnetic current?  
     
     !> It may be required to "freeze" the deepest orbitals during the evolution; the density
     !! of these orbitals is kept in frozen_rho. It is different from rho_core.
@@ -475,14 +475,14 @@ contains
     !%End
     call parse_logical(datasets_check('OnlyUserDefinedInitialStates'), .false., st%only_userdef_istates)
 
-    !%Variable JpcurrentInTau
+    !%Variable CurrentInTau
     !%Type logical
     !%Default yes
     !%Section States
     !%Description
-    !% If true, a term including the paramagnetic current is included in the calculation ot the kinetic energy density 
+    !% If true, a term including the (paramagnetic or total) current is included in the calculation ot the kinetic energy density 
     !%End
-    call parse_logical(datasets_check('JpcurrentInTau'), .true., st%jpcurrent_in_tau)
+    call parse_logical(datasets_check('CurrentInTau'), .true., st%current_in_tau)
 
 
     ! we now allocate some arrays
@@ -2443,13 +2443,14 @@ return
             end if
           
             if (present( tau)) then 
+              ASSERT(present( jp))
               tau (1:der%mesh%np, is)   = tau (1:der%mesh%np, is)        + &
                 ww*abs(gwf_psi(1:der%mesh%np, i_dim, 1))**2  &
                 + ww*abs(kpoint(i_dim))**2*abs(wf_psi(1:der%mesh%np, 1))**2  &
                 - ww*M_TWO*aimag(conjg(wf_psi(1:der%mesh%np, 1))*kpoint(i_dim)*gwf_psi(1:der%mesh%np, i_dim, 1) )
-                if (present(jp) .and. st%jpcurrent_in_tau) then
-                  tau (1:der%mesh%np, is)  = tau (1:der%mesh%np, is)  - jp(1:der%mesh%np, i_dim, 1)**2/rho(1:der%mesh%np, 1)
-                end if
+              if (st%current_in_tau) then
+                tau (1:der%mesh%np, is)  = tau (1:der%mesh%np, is)  - jp(1:der%mesh%np, i_dim, 1)**2/rho(1:der%mesh%np, 1)
+              end if
             end if
 
         if(st%d%ispin == SPINORS) then
