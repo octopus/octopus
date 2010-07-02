@@ -1038,10 +1038,12 @@ contains
 
   ! -----------------------------------------------------------------
 
-  logical pure function hamiltonian_apply_in_buffer(this) result(apply)
+  logical pure function hamiltonian_apply_in_buffer(this, mesh) result(apply)
     type(hamiltonian_t),   intent(in) :: this
+    type(mesh_t),          intent(in) :: mesh
     
-    apply = opencl_is_enabled()
+    apply = .true.
+    if(mesh%use_curvilinear) apply = .false.
     if(associated(this%phase)) apply = .false.
     if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.
     if(this%ab .eq. IMAGINARY_ABSORBING) apply = .false.

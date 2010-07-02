@@ -35,7 +35,9 @@ void FC_FUNC_(doperate_ri_vec, DOPERATE_RI_VEC)(const int * opn,
 						const int * rimap_inv,
 						const int * rimap_inv_max,
 						const ffloat * restrict fi, 
+						const int * ldfp,
 						ffloat * restrict fo){
+  const int ldf = ldfp[0];
 #define LDF 1
 /* not aligned */
 #include "operate_ri_vec.c"
@@ -48,8 +50,10 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
 					       const int * opri,
 					       const int * rimap_inv,
 					       const int * rimap_inv_max,
-					       const double * restrict fi, 
+					       const double * restrict fi,
+					       const int * ldfp,
 					       double * restrict fo){
+  const int ldf = ldfp[0];
 
   /* check whether we got aligned vectors or not */
   int aligned = 1;
@@ -65,7 +69,7 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
 
   } else { 
     /* not aligned */
-#include "operate_ri_vec.c"   
+#include "operate_ri_vec.c"
   }
 #undef LDF
 

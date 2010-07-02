@@ -577,7 +577,7 @@ contains
       call batch_init(hpsi1b, hm%d%dim, st_start, st_end, hpsi1)
 
 #ifdef HAVE_OPENCL
-      if(opencl_is_enabled() .and. hamiltonian_apply_in_buffer(hm)) then
+      if(opencl_is_enabled() .and. hamiltonian_apply_in_buffer(hm, der%mesh)) then
         call batch_pack(psib)
         call batch_pack(psi1b, copy = .false.)
         call batch_pack(hpsi1b, copy = .false.)
@@ -597,7 +597,7 @@ contains
 
         call zhamiltonian_apply_batch(hm, der, psi1b, hpsi1b, ik, time)
 
-        if(opencl_is_enabled() .and. hamiltonian_apply_in_buffer(hm)) then
+        if(opencl_is_enabled() .and. hamiltonian_apply_in_buffer(hm, der%mesh)) then
           if(zfact_is_real) then
             call batch_axpy(der%mesh%np, real(zfact, REAL_PRECISION), hpsi1b, psib)
           else
@@ -627,7 +627,7 @@ contains
 
       end do
 
-      if(opencl_is_enabled() .and. hamiltonian_apply_in_buffer(hm)) then
+      if(opencl_is_enabled() .and. hamiltonian_apply_in_buffer(hm, der%mesh)) then
         call batch_unpack(psib)
         call batch_unpack(psi1b, copy = .false.)
         call batch_unpack(hpsi1b, copy = .false.)

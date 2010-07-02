@@ -32,15 +32,15 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   integer :: pnp, iprange
 #endif
 
+  if(.not. associated(this%potential)) then
+    return
+  end if
+
   call profiling_in(prof_vlpsi, "VLPSI")
   call push_sub('hamiltonian_base_inc.Xhamiltonian_base_local')
 
-  if(.not. associated(this%potential)) then
-    call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_local')
-    call profiling_out(prof_vlpsi)
-  end if
-
   if(batch_is_packed(psib) .or. batch_is_packed(vpsib)) then
+    ASSERT(batch_is_packed(psib))
     ASSERT(batch_is_packed(vpsib))
 
     call batch_pack_was_modified(vpsib)
@@ -82,11 +82,10 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
       call profiling_count_transfers(mesh%np, M_ONE)
       call profiling_count_transfers(mesh%np*psib%nst, R_TOTYPE(M_ONE))
       call profiling_out(prof_vlpsi)
-      call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_local')
-      return
+
 #endif
     else
-
+      
       select case(std%ispin)
       case(UNPOLARIZED, SPIN_POLARIZED)
         !$omp parallel do private(ip)
@@ -118,7 +117,7 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
         
       end select
     end if
-
+    
   else
 
     select case(std%ispin)
@@ -155,6 +154,9 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
 
   end if
 
+  call profiling_out(prof_vlpsi)
+  call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_local')
+  
 end subroutine X(hamiltonian_base_local)
 
 ! ---------------------------------------------------------------------------------------

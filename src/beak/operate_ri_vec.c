@@ -18,6 +18,7 @@
 
  $Id: operate_ri_vec.c 2146 2006-05-23 17:36:00Z xavier $
 */
+
 #ifdef ALIGNED
 #define LOAD VEC_LD
 #define STORE VEC_ST
@@ -29,7 +30,8 @@
 {
   const int n = opn[0];
   const int nri = opnri[0];
-  const int unroll = DEPTH*VEC_SIZE/LDF;
+  int unroll = DEPTH*VEC_SIZE >> ldf;
+  if(unroll == 0) unroll = 1;
 
   int l, i, j;
   const int * restrict index;
@@ -39,72 +41,54 @@
     i = rimap_inv[l];
 
     for (; i < (rimap_inv_max[l] - unroll + 1) ; i += unroll){
-      register VEC_TYPE a0, a1, a2, a3;
+      int k;
+      for(k = 0; k < (1<<ldf); k += DEPTH*VEC_SIZE){
+	register VEC_TYPE a0, a1, a2, a3;
 #if DEPTH > 4
-      register VEC_TYPE a4, a5, a6, a7;
+	register VEC_TYPE a4, a5, a6, a7;
 #endif
-
-      a0 = a1 = a2 = a3 = VEC_ZERO;
+	
+	a0 = a1 = a2 = a3 = VEC_ZERO;
 #if DEPTH > 4
-      a4 = a5 = a6 = a7 = VEC_ZERO;
-#endif
-      for(j = 0; j < n; j++) {
-	register VEC_TYPE wj = VEC_SCAL(w[j]);
-	int indexj = (index[j] + i)*LDF;
-	a0 = VEC_FMA(wj, LOAD(fi + indexj             ), a0);
-	a1 = VEC_FMA(wj, LOAD(fi + indexj + 1*VEC_SIZE), a1);
-	a2 = VEC_FMA(wj, LOAD(fi + indexj + 2*VEC_SIZE), a2);
-	a3 = VEC_FMA(wj, LOAD(fi + indexj + 3*VEC_SIZE), a3);
-#if DEPTH > 4
-	a4 = VEC_FMA(wj, LOAD(fi + indexj + 4*VEC_SIZE), a4);
-	a5 = VEC_FMA(wj, LOAD(fi + indexj + 5*VEC_SIZE), a5);
-	a6 = VEC_FMA(wj, LOAD(fi + indexj + 6*VEC_SIZE), a6);
-	a7 = VEC_FMA(wj, LOAD(fi + indexj + 7*VEC_SIZE), a7);
-#endif
-      }
-      STORE(fo + i*LDF             , a0);
-      STORE(fo + i*LDF + 1*VEC_SIZE, a1);
-      STORE(fo + i*LDF + 2*VEC_SIZE, a2);
-      STORE(fo + i*LDF + 3*VEC_SIZE, a3);
-#if DEPTH > 4
-      STORE(fo + i*LDF + 4*VEC_SIZE, a4);
-      STORE(fo + i*LDF + 5*VEC_SIZE, a5);
-      STORE(fo + i*LDF + 6*VEC_SIZE, a6);
-      STORE(fo + i*LDF + 7*VEC_SIZE, a7);
-#endif
-    }
-
-    if (unroll > 1){
-
-#if VEC_SIZE <= LDF
-
-      for (; i < rimap_inv_max[l]; i++){
-	register VEC_TYPE a0 = VEC_ZERO;
-#if VEC_SIZE < LDF
-	register VEC_TYPE a1 = VEC_ZERO;
+	a4 = a5 = a6 = a7 = VEC_ZERO;
 #endif
 	for(j = 0; j < n; j++) {
-	  a0 = VEC_FMA(VEC_SCAL(w[j]), LOAD(fi + (index[j] + i)*LDF    ), a0);
-#if VEC_SIZE < LDF
-	  a1 = VEC_FMA(VEC_SCAL(w[j]), LOAD(fi + (index[j] + i)*LDF + 1), a1);
+	  register VEC_TYPE wj = VEC_SCAL(w[j]);
+	  int indexj = (index[j] + i)<<ldf;
+	  a0 = VEC_FMA(wj, LOAD(fi + indexj              + k), a0);
+	  a1 = VEC_FMA(wj, LOAD(fi + indexj + 1*VEC_SIZE + k), a1);
+	  a2 = VEC_FMA(wj, LOAD(fi + indexj + 2*VEC_SIZE + k), a2);
+	  a3 = VEC_FMA(wj, LOAD(fi + indexj + 3*VEC_SIZE + k), a3);
+#if DEPTH > 4
+	  a4 = VEC_FMA(wj, LOAD(fi + indexj + 4*VEC_SIZE + k), a4);
+	  a5 = VEC_FMA(wj, LOAD(fi + indexj + 5*VEC_SIZE + k), a5);
+	  a6 = VEC_FMA(wj, LOAD(fi + indexj + 6*VEC_SIZE + k), a6);
+	  a7 = VEC_FMA(wj, LOAD(fi + indexj + 7*VEC_SIZE + k), a7);
 #endif
 	}
-	STORE(fo + i*LDF    , a0);
-#if VEC_SIZE < LDF
-	STORE(fo + i*LDF + 1, a1);
+	STORE(fo + (i<<ldf)              + k, a0);
+	STORE(fo + (i<<ldf) + 1*VEC_SIZE + k, a1);
+	STORE(fo + (i<<ldf) + 2*VEC_SIZE + k, a2);
+	STORE(fo + (i<<ldf) + 3*VEC_SIZE + k, a3);
+#if DEPTH > 4
+	STORE(fo + (i<<ldf) + 4*VEC_SIZE + k, a4);
+	STORE(fo + (i<<ldf) + 5*VEC_SIZE + k, a5);
+	STORE(fo + (i<<ldf) + 6*VEC_SIZE + k, a6);
+	STORE(fo + (i<<ldf) + 7*VEC_SIZE + k, a7);
 #endif
       }
+    }
 
-#else
     for (; i < rimap_inv_max[l]; i++){
-      double a = 0.0;
-      for(j = 0; j < n; j++) a += w[j]*(fi + index[j]*LDF)[i];
-      fo[i] = a;
+      int k;
+      for(k = 0; k < (1<<ldf); k++){
+	double a = 0.0;
+	  for(j = 0; j < n; j++) a += w[j]*fi[((index[j] + i)<<ldf) + k];
+	  fo[(i<<ldf) + k] = a;
+      }
     }
-#endif
 
-    }
-  }
+  } /* l */
 
 }
 

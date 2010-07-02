@@ -90,6 +90,11 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
     else if(opencl_is_enabled() .and. batch_is_packed(fi) .and. batch_is_packed(fo)) then
       call operate_opencl()
 #endif
+    else if(batch_is_packed(fi) .and. batch_is_packed(fo)) then
+      ini = 1
+      nri_loc = nri
+      call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), &
+        fi%pack%X(psi)(1, 1), log2(fi%pack%size_real(1)), fo%pack%X(psi)(1, 1))
     else
       !$omp parallel private(ini, nri_loc, ist, pfi, pfo)
 #ifdef USE_OMP
@@ -102,7 +107,13 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
         pfi => fi%states_linear(ist)%X(psi)(:)
         pfo => fo%states_linear(ist)%X(psi)(:)
 
-        call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
+#ifdef R_TREAL
+#define LOGLDF 0
+#else
+#define LOGLDF 1
+#endif
+
+        call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), LOGLDF, pfo(1))
       end do
       !$omp end parallel
     end if
@@ -116,6 +127,9 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
       end if
       call profiling_count_operations(cop)
     end if
+
+    call batch_pack_was_modified(fo)
+
   end if
 
   if(op%const_w .and. present(factor)) then
@@ -156,13 +170,11 @@ contains
   subroutine operate_const_weights()
     integer :: nn, ll, ii, ist
 
-#ifdef HAVE_OPENCL
-    ASSERT(.not. (batch_is_packed(fi) .or. batch_is_packed(fo)))
-#endif
-
     nn = op%stencil%size
 
     if(op%cmplx_op) then
+      ASSERT(.not. (batch_is_packed(fi) .or. batch_is_packed(fo)))
+
       !$omp parallel do private(ll, ist, ii)
       do ll = 1, nri
         forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
@@ -171,14 +183,27 @@ contains
         end forall
       end do
       !$omp end parallel do
+
     else
-      !$omp parallel do private(ll, ist, ii)
-      do ll = 1, nri
-        forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%states_linear(ist)%X(psi)(ii) = sum(wre(1:nn)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
-        end forall
-      end do
-      !$omp end parallel do
+
+      if(batch_is_packed(fi)) then
+        !$omp parallel do private(ll, ist, ii)
+        do ll = 1, nri
+          forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
+            fo%pack%X(psi)(ist, ii) = sum(wre(1:nn)*fi%pack%X(psi)(ist, ii + ri(1:nn, ll)))
+          end forall
+        end do
+        !$omp end parallel do
+      else   
+        !$omp parallel do private(ll, ist, ii)
+        do ll = 1, nri
+          forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
+            fo%states_linear(ist)%X(psi)(ii) = sum(wre(1:nn)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
+          end forall
+        end do
+        !$omp end parallel do
+      end if
+
     end if
   end subroutine operate_const_weights
 
@@ -187,9 +212,8 @@ contains
   subroutine operate_non_const_weights()
     integer :: nn, ll, ii, ist
     FLOAT :: factor_
-#ifdef HAVE_OPENCL
+
     ASSERT(.not. (batch_is_packed(fi) .or. batch_is_packed(fo)))
-#endif
 
     factor_ = M_ONE
     if(present(factor)) factor_ = factor
@@ -279,7 +303,6 @@ contains
       end do
     end select
     
-    call batch_pack_was_modified(fo)
     call opencl_finish()
 
     call opencl_release_buffer(buff_weights)

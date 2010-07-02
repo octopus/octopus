@@ -69,7 +69,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
   call X(derivatives_batch_set_bc)(der, psib)
 
-  if(hamiltonian_apply_in_buffer(hm)) then
+  if(hamiltonian_apply_in_buffer(hm, der%mesh) .and. nst > 1) then
     call batch_pack(psib)
     call batch_pack(hpsib, copy = .false.)
   end if
@@ -194,7 +194,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
     SAFE_DEALLOCATE_P(epsib)
   end if
 
-  if(hamiltonian_apply_in_buffer(hm)) then
+  if(hamiltonian_apply_in_buffer(hm, der%mesh) .and. nst > 1) then
     call batch_unpack(psib, copy = .false.)
     call batch_unpack(hpsib)
   end if
