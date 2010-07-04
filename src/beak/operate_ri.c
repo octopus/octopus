@@ -28,23 +28,7 @@
 #include "beak.h"
 #include "vectors.h"
 
-void FC_FUNC_(doperate_ri_vec, DOPERATE_RI_VEC)(const int * opn, 
-						const ffloat * restrict w, 
-						const int * opnri,
-						const int * opri,
-						const int * rimap_inv,
-						const int * rimap_inv_max,
-						const ffloat * restrict fi, 
-						const int * ldfp,
-						ffloat * restrict fo){
-  const int ldf = ldfp[0];
-#define LDF 1
-/* not aligned */
-#include "operate_ri_vec.c"
-#undef LDF
-}
-
-void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn, 
+void FC_FUNC_(operate_ri_vec,OPERATE_RI_VEC)(const int * opn, 
 					       const ffloat * restrict w, 
 					       const int * opnri,
 					       const int * opri,
@@ -59,19 +43,17 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
   int aligned = 1;
   aligned = aligned && (((long long) fi)%16 == 0);
   aligned = aligned && (((long long) fo)%16 == 0);
+  aligned = aligned && ((1<<ldf)%VEC_SIZE == 0);
 
   if(aligned){
-
-#define LDF 2
 #define ALIGNED
 #include "operate_ri_vec.c"
 #undef ALIGNED
 
-  } else { 
+  } else {
     /* not aligned */
 #include "operate_ri_vec.c"
   }
-#undef LDF
 
 }
 

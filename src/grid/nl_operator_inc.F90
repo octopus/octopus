@@ -93,7 +93,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
     else if(batch_is_packed(fi) .and. batch_is_packed(fo)) then
       ini = 1
       nri_loc = nri
-      call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), &
+      call operate_ri_vec(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), &
         fi%pack%X(psi)(1, 1), log2(fi%pack%size_real(1)), fo%pack%X(psi)(1, 1))
     else
       !$omp parallel private(ini, nri_loc, ist, pfi, pfo)
@@ -113,7 +113,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 #define LOGLDF 1
 #endif
 
-        call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), LOGLDF, pfo(1))
+        call operate_ri_vec(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), LOGLDF, pfo(1))
       end do
       !$omp end parallel
     end if
