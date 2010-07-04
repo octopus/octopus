@@ -28,7 +28,8 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   integer, optional,   intent(in)    :: points
   FLOAT,   optional,   intent(in)    :: factor
 
-  integer :: ist, points_, cop
+  integer :: ist, points_
+  real(8) :: cop
   logical :: ghost_update_, profile_
   integer :: nri, nri_loc, ini
   integer, pointer :: imin(:), imax(:), ri(:, :)
@@ -121,9 +122,9 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
     ! count operations
     if(profile_) then
       if(op%cmplx_op) then
-        cop = fi%nst_linear*(imax(nri) - imin(1))*op%stencil%size*(R_ADD + R_MUL)
+        cop = fi%nst_linear*dble(imax(nri) - imin(1))*op%stencil%size*(R_ADD + R_MUL)
       else
-        cop = fi%nst_linear*(imax(nri) - imin(1))*op%stencil%size*2*R_ADD
+        cop = fi%nst_linear*dble(imax(nri) - imin(1))*op%stencil%size*2*R_ADD
       end if
       call profiling_count_operations(cop)
     end if

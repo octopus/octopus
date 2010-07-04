@@ -54,4 +54,6 @@ typedef struct {
 
 #define MAX_OP_N   400
 
+#define max1(x) (((x) > 0)?(x):1)
+
 #endif /* OCTOPUS_BEAK_H */

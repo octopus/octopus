@@ -582,25 +582,21 @@ subroutine X(derivatives_test)(this)
     ffb%states_linear(ist)%X(psi)(ip) = ff(ip)
   end forall
 
-!  if(opencl_is_enabled()) then
-    call batch_pack(ffb)
-    call batch_pack(opffb, copy = .false.)
-!  end if
-
+  call batch_pack(ffb)
+  call batch_pack(opffb, copy = .false.)
+  
   call X(derivatives_batch_perform)(this%lapl, this, ffb, opffb, set_bc = .false.)
 
-!  if(opencl_is_enabled()) then
-    call batch_unpack(ffb, copy = .false.)
-    call batch_unpack(opffb)
-!  end if
+  call batch_unpack(ffb, copy = .false.)
+  call batch_unpack(opffb)
 
   forall(ip = 1:this%mesh%np) 
-    opffb%states_linear(1)%X(psi)(ip) = opffb%states_linear(1)%X(psi)(ip) - &
+    opffb%states_linear(blocksize)%X(psi)(ip) = opffb%states_linear(blocksize)%X(psi)(ip) - &
       (M_FOUR*aa**2*bb*sum(this%mesh%x(ip, :)**2)*exp(-aa*sum(this%mesh%x(ip, :)**2)) &
       - this%mesh%sb%dim*M_TWO*aa*bb*exp(-aa*sum(this%mesh%x(ip, :)**2)))
   end forall
 
-  write(message(1), '(a, es16.10)') '      Error in the Laplacian = ', X(mf_nrm2)(this%mesh, opffb%states_linear(1)%X(psi))
+  write(message(1), '(a, es16.10)') '      Error in the Laplacian = ', X(mf_nrm2)(this%mesh, opffb%states_linear(blocksize)%X(psi))
   call write_info(1)
 
   call X(batch_delete)(ffb)

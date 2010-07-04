@@ -38,7 +38,7 @@
 #define VEC_SCAL(aa) _mm_set1_pd(aa)
 #define VEC_ZERO _mm_setzero_pd()
 
-#define DEPTH 4
+#define DEPTH 16
 #endif
 
 #ifdef HAVE_BLUE_GENE
