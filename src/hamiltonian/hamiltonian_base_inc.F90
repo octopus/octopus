@@ -28,6 +28,7 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   integer :: ist, ip
   R_TYPE, pointer :: psi(:, :), vpsi(:, :)
   R_TYPE  :: psi1, psi2
+  FLOAT   :: vv
 #ifdef HAVE_OPENCL
   integer :: pnp, iprange
 #endif
@@ -88,13 +89,12 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
       
       select case(std%ispin)
       case(UNPOLARIZED, SPIN_POLARIZED)
-        !$omp parallel do private(ip)
-        do ist = 1, psib%nst_linear
-          forall (ip = 1:mesh%np)
-            vpsib%pack%X(psi)(ist, ip) = vpsib%pack%X(psi)(ist, ip) + this%potential(ip, ispin)*psib%pack%X(psi)(ist, ip)
+        do ip = 1, mesh%np
+          vv = this%potential(ip, ispin)
+          forall (ist = 1:psib%nst_linear)
+            vpsib%pack%X(psi)(ist, ip) = vpsib%pack%X(psi)(ist, ip) + vv*psib%pack%X(psi)(ist, ip)
           end forall
         end do
-        !$omp end parallel do
 
         call profiling_count_operations((2*R_ADD*psib%nst_linear)*mesh%np)
         call profiling_count_transfers(mesh%np, M_ONE)

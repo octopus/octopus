@@ -326,8 +326,10 @@ contains
     logical, optional,  intent(in)    :: copy
 
     logical :: copy_
+    type(profile_t), save :: prof
 
     call push_sub('batch.batch_pack')
+    call profiling_in(prof, "BATCH_PACK")
 
     ASSERT(batch_is_ok(this))
 
@@ -371,6 +373,7 @@ contains
 
     INCR(this%in_buffer_count, 1)
 
+    call profiling_out(prof)
     call pop_sub('batch.batch_pack')
 
   contains
@@ -379,17 +382,17 @@ contains
       integer :: ist, ip
 
       if(batch_type(this) == TYPE_FLOAT) then
-        do ist = 1, this%nst_linear
-          forall(ip = 1:ubound(this%states_linear(ist)%dpsi, dim = 1))
+        forall(ip = 1:this%pack%size(2))
+          forall(ist = 1:this%nst_linear)
             this%pack%dpsi(ist, ip) = this%states_linear(ist)%dpsi(ip)
           end forall
-        end do
+        end forall
       else
-        do ist = 1, this%nst_linear
-          forall(ip = 1:ubound(this%states_linear(ist)%zpsi, dim = 1))
+        forall(ip = 1:this%pack%size(2))
+          forall(ist = 1:this%nst_linear)
             this%pack%zpsi(ist, ip) = this%states_linear(ist)%zpsi(ip)
           end forall
-        end do
+        end forall
       end if
     end subroutine pack_copy
 
@@ -402,9 +405,10 @@ contains
     logical, optional,  intent(in)    :: copy
 
     logical :: copy_
+    type(profile_t), save :: prof
 
     call push_sub('batch.batch_unpack')
-
+    call profiling_in(prof, "BATCH_UNPACK")
 
     if(batch_is_packed(this)) then
       INCR(this%in_buffer_count, -1)
@@ -434,6 +438,7 @@ contains
       end if
     end if
 
+    call profiling_out(prof)
     call pop_sub('batch.batch_unpack')
     
   contains
@@ -442,17 +447,17 @@ contains
       integer :: ist, ip
 
       if(batch_type(this) == TYPE_FLOAT) then
-        do ist = 1, this%nst_linear
-          forall(ip = 1:ubound(this%states_linear(ist)%dpsi, dim = 1))
+       forall(ip = 1:this%pack%size(2))
+          forall(ist = 1:this%nst_linear)
             this%states_linear(ist)%dpsi(ip) = this%pack%dpsi(ist, ip) 
           end forall
-        end do
+        end forall
       else
-        do ist = 1, this%nst_linear
-          forall(ip = 1:ubound(this%states_linear(ist)%zpsi, dim = 1))
+        forall(ip = 1:this%pack%size(2))
+          forall(ist = 1:this%nst_linear)
             this%states_linear(ist)%zpsi(ip) = this%pack%zpsi(ist, ip)
           end forall
-        end do
+        end forall
       end if
     end subroutine unpack_copy
 
@@ -467,10 +472,9 @@ contains
     integer :: ist
     type(opencl_mem_t) :: tmp
     type(c_ptr) :: kernel
-    type(profile_t), save :: prof, prof_pack
+    type(profile_t), save :: prof_pack
 
     call push_sub('batch.batch_write_to_opencl_buffer')
-    call profiling_in(prof, "BATCH_TO_BUFFER")
 
     ASSERT(batch_is_ok(this))
 
@@ -511,7 +515,6 @@ contains
 
     end if
 
-    call profiling_out(prof)
     call pop_sub('batch.batch_write_to_opencl_buffer')
   end subroutine batch_write_to_opencl_buffer
 
@@ -523,10 +526,9 @@ contains
     integer :: ist
     type(opencl_mem_t) :: tmp
     type(c_ptr) :: kernel
-    type(profile_t), save :: prof, prof_unpack
+    type(profile_t), save :: prof_unpack
 
     call push_sub('batch.batch_read_from_opencl_buffer')
-    call profiling_in(prof, "BATCH_FROM_BUFFER")
 
     ASSERT(batch_is_ok(this))
 
@@ -568,7 +570,6 @@ contains
       call opencl_release_buffer(tmp)
     end if
 
-    call profiling_out(prof)
     call pop_sub('batch.batch_read_from_opencl_buffer')
   end subroutine batch_read_from_opencl_buffer
 
