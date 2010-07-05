@@ -58,7 +58,8 @@ module batch_m
     batch_axpy,                     &
     batch_copy_data,                &
     batch_pack,                     &
-    batch_unpack
+    batch_unpack,                   &
+    batch_status
 
   !--------------------------------------------------------------
   type batch_state_t
@@ -95,7 +96,7 @@ module batch_m
     !> If the memory is contiguous, we can perform some operations faster.
     FLOAT,               pointer   :: dpsicont(:, :, :)
     CMPLX,               pointer   :: zpsicont(:, :, :)
-
+    integer                        :: status
     integer                        :: in_buffer_count ! whether there is a copy in the opencl buffer
     logical                        :: dirty     ! if this is true, the buffer has different data
     type(batch_pack_t)             :: pack
@@ -127,6 +128,11 @@ module batch_m
   end interface
 
   type(profile_t), save :: axpy_prof
+
+  integer, public, parameter :: &
+    BATCH_NOT_PACKED = 0,       &
+    BATCH_PACKED     = 1,       &
+    BATCH_CL_PACKED  = 2
 
 contains
 
@@ -176,6 +182,7 @@ contains
     end do
     
     this%in_buffer_count = 0
+    this%status = BATCH_NOT_PACKED
 
     nullify(this%pack%dpsi)
     nullify(this%pack%zpsi)
@@ -209,6 +216,7 @@ contains
     end do
 
     this%in_buffer_count = 0
+    this%status = BATCH_NOT_PACKED
 
     nullify(this%pack%dpsi)
     nullify(this%pack%zpsi)
@@ -261,6 +269,7 @@ contains
       if(associated(bin%states_linear(ii)%zpsi)) bout%states_linear(ii)%zpsi => bin%states_linear(ii)%zpsi
     end do
 
+    bout%status              = bin%status
     bout%in_buffer_count     = bin%in_buffer_count
     bout%dirty               = bin%dirty
     bout%pack%size(1:2)      = bin%pack%size(1:2)
@@ -285,6 +294,14 @@ contains
     if(associated(this%states_linear(1)%zpsi)) btype = TYPE_CMPLX
   end function batch_type
 
+  ! ----------------------------------------------------
+  ! THREADSAFE
+  integer pure function batch_status(this) result(bstatus)
+    type(batch_t),      intent(in)    :: this
+
+    bstatus = this%status
+  end function batch_status
+  
   ! ----------------------------------------------------
 
   logical pure function batch_is_packed(this) result(in_buffer)
@@ -346,10 +363,12 @@ contains
       if(batch_type(this) == TYPE_CMPLX) this%pack%size_real(1) = 2*this%pack%size_real(1)
 
       if(opencl_is_enabled()) then
+        this%status = BATCH_CL_PACKED
 #ifdef HAVE_OPENCL
         call opencl_create_buffer(this%pack%buffer, CL_MEM_READ_WRITE, batch_type(this), product(this%pack%size))
 #endif
       else
+        this%status = BATCH_PACKED
         if(batch_type(this) == TYPE_FLOAT) then
           SAFE_ALLOCATE(this%pack%dpsi(1:this%pack%size(1), 1:this%pack%size(2)))
         else
@@ -412,6 +431,7 @@ contains
 
     if(batch_is_packed(this)) then
       INCR(this%in_buffer_count, -1)
+      this%status = BATCH_NOT_PACKED
 
       if(this%in_buffer_count == 0) then
         copy_ = .true.
