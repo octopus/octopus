@@ -89,7 +89,7 @@ module states_m
     states_dens_accumulate_batch,     &
     states_dens_reduce,               &
     states_calc_dens,                 &
-    states_calc_tau_jp_gn,            &
+    states_calc_quantities,           &
     state_is_local,                   &
     states_dump,                      &
     states_distribute_nodes,          &
@@ -2342,42 +2342,69 @@ return
   end subroutine states_dump
 
 
-  ! ---------------------------------------------------------
-  subroutine states_calc_tau_jp_gn(der, st, rho, tau, jp, grho, lrho)
-    type(derivatives_t),    intent(in)    :: der
-    type(states_t),         intent(inout) :: st
-    
-    FLOAT, optional,        intent(in)    :: rho(:,:)
-    FLOAT, optional,        intent(out)   :: tau(:,:)    !< (gr%mesh%np, st%d%nspin)
-    FLOAT, optional,        intent(out)   :: jp(:,:,:)   !< (gr%mesh%np, gr%mesh%sb%dim, st%d%nspin)
-    FLOAT, optional,        intent(out)   :: grho(:,:,:) !< (gr%mesh%np, gr%mesh%sb%dim, st%d%nspin)
-    FLOAT, optional,        intent(out)   :: lrho(:,:)   !< (gr%mesh%np, st%d%nspin)
+  ! --------------------------------------------------------- 
+  !
+  !> This function can calculate several quantities that depend on
+  !! derivatives of the orbitals from the states and the density.
+  !! The quantities to be calculated depend on the arguments passed.
+  subroutine states_calc_quantities(der, st, &
+    kinetic_energy_density, paramagnetic_current, density_gradient, density_laplacian, gi_kinetic_energy_density)
+    type(derivatives_t),     intent(in)    :: der
+    type(states_t),          intent(inout) :: st
+    FLOAT, optional, target, intent(out)   :: kinetic_energy_density(:,:)       !< The kinetic energy density.
+    FLOAT, optional, target, intent(out)   :: paramagnetic_current(:,:,:)       !< The paramagnetic current.
+    FLOAT, optional,         intent(out)   :: density_gradient(:,:,:)           !< The gradient of the density.
+    FLOAT, optional,         intent(out)   :: density_laplacian(:,:)            !< The Laplacian of the density.
+    FLOAT, optional,         intent(out)   :: gi_kinetic_energy_density(:,:)    !< The gauge-invariant kinetic energy density.
 
+    FLOAT, pointer :: jp(:, :, :)
+    FLOAT, pointer :: tau(:, :)
     CMPLX, allocatable :: wf_psi(:,:), gwf_psi(:,:,:), lwf_psi(:,:)
     CMPLX   :: c_tmp
     integer :: sp, is, ik, ik_tmp, ist, i_dim, st_dim, ii
     FLOAT   :: ww, kpoint(1:MAX_DIM)
-
+    logical :: something_to_do
 #if defined(HAVE_MPI)
     FLOAT, allocatable :: tmp_reduce(:)
     integer :: mpi_err
 #endif
 
-    call push_sub('states.states_calc_tau_jp_gn')
+    call push_sub('states.states_calc_quantities')
 
-    ASSERT(present(tau) .or. present(jp) .or. present(grho) .or. present(lrho))
+    something_to_do = present(kinetic_energy_density) .or. present(paramagnetic_current) .or. &
+      present(density_gradient) .or. present(density_laplacian)
+    ASSERT(something_to_do)
 
     SAFE_ALLOCATE( wf_psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%dim))
-    if(present(lrho)) SAFE_ALLOCATE(lwf_psi(1:der%mesh%np, 1:st%d%dim))
+    if(present(density_laplacian)) SAFE_ALLOCATE(lwf_psi(1:der%mesh%np, 1:st%d%dim))
 
     sp = 1
     if(st%d%ispin == SPIN_POLARIZED) sp = 2
 
-    if(present( tau))  tau(:,:)   = M_ZERO
-    if(present(  jp))   jp(:,:,:) = M_ZERO
-    if(present(grho)) grho(:,:,:) = M_ZERO
-    if(present(lrho)) lrho(:,:)   = M_ZERO
+
+    nullify(tau)
+    if(present(kinetic_energy_density)) tau => kinetic_energy_density
+
+    nullify(jp)
+    if(present(paramagnetic_current)) jp => paramagnetic_current
+
+    ! for the gauge-invariant kinetic energy density we need the
+    ! current and the kinetic energy density
+    if(present(gi_kinetic_energy_density)) then 
+      if(.not. present(paramagnetic_current) .and. states_are_complex(st)) then
+        SAFE_ALLOCATE(jp(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%nspin))
+      end if
+      if(.not. present(kinetic_energy_density)) then
+        SAFE_ALLOCATE(tau(1:der%mesh%np, 1:st%d%nspin))
+      end if
+    end if
+
+    if(associated(tau)) tau = M_ZERO
+    if(associated(jp)) jp = M_ZERO
+    if(present(density_gradient)) density_gradient(:,:,:) = M_ZERO
+    if(present(density_laplacian)) density_laplacian(:,:) = M_ZERO
+    if(present(gi_kinetic_energy_density)) gi_kinetic_energy_density = M_ZERO
 
     do is = 1, sp
       do ik_tmp = st%d%kpt%start, st%d%kpt%end, sp
@@ -2401,7 +2428,7 @@ return
           end do
 
           ! calculate the Laplacian of the wavefunction
-          if (present(lrho)) then
+          if (present(density_laplacian)) then
             do st_dim = 1, st%d%dim
               call zderivatives_lapl(der, wf_psi(:,st_dim), lwf_psi(:,st_dim))
             end do
@@ -2409,76 +2436,82 @@ return
 
           ww = st%d%kweights(ik)*st%occ(ist, ik)
 
-          if(present(lrho)) then
-            lrho(1:der%mesh%np, is) = lrho(1:der%mesh%np, is) + &
+          if(present(density_laplacian)) then
+            density_laplacian(1:der%mesh%np, is) = density_laplacian(1:der%mesh%np, is) + &
               ww*M_TWO*real(conjg(wf_psi(1:der%mesh%np, 1))*lwf_psi(1:der%mesh%np, 1))
             if(st%d%ispin == SPINORS) then
-              lrho(1:der%mesh%np, 2) = lrho(1:der%mesh%np, 2) + &
-                   ww*M_TWO*real(conjg(wf_psi(1:der%mesh%np, 2))*lwf_psi(1:der%mesh%np, 2))
-              lrho(1:der%mesh%np, 3) = lrho(1:der%mesh%np, 3) + &
+              density_laplacian(1:der%mesh%np, 2) = density_laplacian(1:der%mesh%np, 2) + &
+                ww*M_TWO*real(conjg(wf_psi(1:der%mesh%np, 2))*lwf_psi(1:der%mesh%np, 2))
+              density_laplacian(1:der%mesh%np, 3) = density_laplacian(1:der%mesh%np, 3) + &
                 ww*real (lwf_psi(1:der%mesh%np, 1)*conjg(wf_psi(1:der%mesh%np, 2)) + &
-                         wf_psi(1:der%mesh%np, 1)*conjg(lwf_psi(1:der%mesh%np, 2)))
-              lrho(1:der%mesh%np, 4) = lrho(1:der%mesh%np, 4) + &
+                wf_psi(1:der%mesh%np, 1)*conjg(lwf_psi(1:der%mesh%np, 2)))
+              density_laplacian(1:der%mesh%np, 4) = density_laplacian(1:der%mesh%np, 4) + &
                 ww*aimag(lwf_psi(1:der%mesh%np, 1)*conjg(wf_psi(1:der%mesh%np, 2)) + &
-                         wf_psi(1:der%mesh%np, 1)*conjg(lwf_psi(1:der%mesh%np, 2)))
+                wf_psi(1:der%mesh%np, 1)*conjg(lwf_psi(1:der%mesh%np, 2)))
             end if
           end if
-          
+
           do i_dim = 1, der%mesh%sb%dim
-            if(present(grho)) &
-              grho(1:der%mesh%np, i_dim, is) = grho(1:der%mesh%np, i_dim, is) + &
+            if(present(density_gradient)) &
+              density_gradient(1:der%mesh%np, i_dim, is) = density_gradient(1:der%mesh%np, i_dim, is) + &
               ww*M_TWO*real(conjg(wf_psi(1:der%mesh%np, 1))*gwf_psi(1:der%mesh%np, i_dim, 1))
-            if(present(lrho)) &
-              lrho(1:der%mesh%np, is) = lrho(1:der%mesh%np, is)         + &
-                ww*M_TWO*real(conjg(gwf_psi(1:der%mesh%np, i_dim, 1))*gwf_psi(1:der%mesh%np, i_dim, 1))
-            
-            if(present(jp)) then
-              if ( .not.(states_are_real(st)) ) then
-                jp (1:der%mesh%np, i_dim, is) = jp (1:der%mesh%np, i_dim, is) + &
+            if(present(density_laplacian)) &
+              density_laplacian(1:der%mesh%np, is) = density_laplacian(1:der%mesh%np, is)         + &
+              ww*M_TWO*real(conjg(gwf_psi(1:der%mesh%np, i_dim, 1))*gwf_psi(1:der%mesh%np, i_dim, 1))
+
+            if(associated(jp)) then
+              if (.not.(states_are_real(st))) then
+                jp(1:der%mesh%np, i_dim, is) = jp(1:der%mesh%np, i_dim, is) + &
                   ww*aimag(conjg(wf_psi(1:der%mesh%np, 1))*gwf_psi(1:der%mesh%np, i_dim, 1) - &
                   M_zI*(wf_psi(1:der%mesh%np, 1))**2*kpoint(i_dim ) )
               else
-                jp (1:der%mesh%np, i_dim, is) = M_ZERO
+                jp(1:der%mesh%np, i_dim, is) = M_ZERO
               end if
             end if
-          
-            if (present( tau)) then 
-              ASSERT(present( jp))
+
+            if (associated(tau)) then 
               tau (1:der%mesh%np, is)   = tau (1:der%mesh%np, is)        + &
                 ww*abs(gwf_psi(1:der%mesh%np, i_dim, 1))**2  &
                 + ww*abs(kpoint(i_dim))**2*abs(wf_psi(1:der%mesh%np, 1))**2  &
                 - ww*M_TWO*aimag(conjg(wf_psi(1:der%mesh%np, 1))*kpoint(i_dim)*gwf_psi(1:der%mesh%np, i_dim, 1) )
-              if (st%current_in_tau) then
-                tau (1:der%mesh%np, is)  = tau (1:der%mesh%np, is)  - jp(1:der%mesh%np, i_dim, 1)**2/rho(1:der%mesh%np, 1)
+            end if
+
+            if(present(gi_kinetic_energy_density)) then
+              ASSERT(associated(tau))
+              if(states_are_complex(st) .and. st%current_in_tau) then
+                ASSERT(associated(jp))
+                gi_kinetic_energy_density(1:der%mesh%np, is) = tau(1:der%mesh%np, is) - jp(1:der%mesh%np, i_dim, 1)**2/st%rho(1:der%mesh%np, 1)
+              else
+                gi_kinetic_energy_density(1:der%mesh%np, is) = tau(1:der%mesh%np, is)
               end if
             end if
 
-        if(st%d%ispin == SPINORS) then
-              if(present(grho)) then
-                grho(1:der%mesh%np, i_dim, 2) = grho(1:der%mesh%np, i_dim, 2) + &
+            if(st%d%ispin == SPINORS) then
+              if(present(density_gradient)) then
+                density_gradient(1:der%mesh%np, i_dim, 2) = density_gradient(1:der%mesh%np, i_dim, 2) + &
                   ww*M_TWO*real(conjg(wf_psi(1:der%mesh%np, 2))*gwf_psi(1:der%mesh%np, i_dim, 2))
-                grho(1:der%mesh%np, i_dim, 3) = grho(1:der%mesh%np, i_dim, 3) + ww* &
+                density_gradient(1:der%mesh%np, i_dim, 3) = density_gradient(1:der%mesh%np, i_dim, 3) + ww* &
                   real (gwf_psi(1:der%mesh%np, i_dim, 1)*conjg(wf_psi(1:der%mesh%np, 2)) + &
-                    wf_psi(1:der%mesh%np, 1)*conjg(gwf_psi(1:der%mesh%np, i_dim, 2)))
-                grho(1:der%mesh%np, i_dim, 4) = grho(1:der%mesh%np, i_dim, 4) + ww* &
+                  wf_psi(1:der%mesh%np, 1)*conjg(gwf_psi(1:der%mesh%np, i_dim, 2)))
+                density_gradient(1:der%mesh%np, i_dim, 4) = density_gradient(1:der%mesh%np, i_dim, 4) + ww* &
                   aimag(gwf_psi(1:der%mesh%np, i_dim, 1)*conjg(wf_psi(1:der%mesh%np, 2)) + &
-                    wf_psi(1:der%mesh%np, 1)*conjg(gwf_psi(1:der%mesh%np, i_dim, 2)))
-            end if
+                  wf_psi(1:der%mesh%np, 1)*conjg(gwf_psi(1:der%mesh%np, i_dim, 2)))
+              end if
 
-              if(present(lrho)) then
-                lrho(1:der%mesh%np, 2) = lrho(1:der%mesh%np, 2)         + &
-                   ww*M_TWO*real(conjg(gwf_psi(1:der%mesh%np, i_dim, 2))*gwf_psi(1:der%mesh%np, i_dim, 2))
-                lrho(1:der%mesh%np, 3) = lrho(1:der%mesh%np, 3)         + &
+              if(present(density_laplacian)) then
+                density_laplacian(1:der%mesh%np, 2) = density_laplacian(1:der%mesh%np, 2)         + &
+                  ww*M_TWO*real(conjg(gwf_psi(1:der%mesh%np, i_dim, 2))*gwf_psi(1:der%mesh%np, i_dim, 2))
+                density_laplacian(1:der%mesh%np, 3) = density_laplacian(1:der%mesh%np, 3)         + &
                   ww*M_TWO*real (gwf_psi(1:der%mesh%np, i_dim, 1)*conjg(gwf_psi(1:der%mesh%np, i_dim, 2)))
-                lrho(1:der%mesh%np, 4) = lrho(1:der%mesh%np, 4)         + &
+                density_laplacian(1:der%mesh%np, 4) = density_laplacian(1:der%mesh%np, 4)         + &
                   ww*M_TWO*aimag(gwf_psi(1:der%mesh%np, i_dim, 1)*conjg(gwf_psi(1:der%mesh%np, i_dim, 2)))
               end if
- 
+
               ! the expression for the paramagnetic current with spinors is
               !     j = ( jp(1)             jp(3) + i jp(4) ) 
               !         (-jp(3) + i jp(4)   jp(2)           )
-              if(present(  jp)) then
-                jp  (1:der%mesh%np, i_dim, 2) = jp  (1:der%mesh%np, i_dim, 2) + &
+              if(associated(jp)) then
+                jp(1:der%mesh%np, i_dim, 2) = jp(1:der%mesh%np, i_dim, 2) + &
                   ww*aimag(conjg(wf_psi(1:der%mesh%np, 2))*gwf_psi(1:der%mesh%np, i_dim, 2))
                 do ii = 1, der%mesh%np
                   c_tmp = conjg(wf_psi(ii, 1))*gwf_psi(ii, i_dim, 2) - wf_psi(ii, 2)*conjg(gwf_psi(ii, i_dim, 1))
@@ -2490,7 +2523,7 @@ return
               ! the expression for the paramagnetic current with spinors is
               !     t = ( tau(1)              tau(3) + i tau(4) ) 
               !         ( tau(3) - i tau(4)   tau(2)            )
-              if(present( tau)) then
+              if(associated(tau)) then
                 tau (1:der%mesh%np, 2) = tau (1:der%mesh%np, 2) + ww*abs(gwf_psi(1:der%mesh%np, i_dim, 2))**2
                 do ii = 1, der%mesh%np
                   c_tmp = conjg(gwf_psi(ii, i_dim, 1))*gwf_psi(ii, i_dim, 2)
@@ -2498,8 +2531,11 @@ return
                   tau(ii, 4) = tau(ii, 4) + ww*aimag(c_tmp)
                 end do
               end if
+
+              ASSERT(.not. present(gi_kinetic_energy_density))
               
-            end if
+            end if !SPINORS
+
           end do
 
         end do
@@ -2508,8 +2544,16 @@ return
 
     SAFE_DEALLOCATE_A(wf_psi)
     SAFE_DEALLOCATE_A(gwf_psi)
-    if (present(lrho)) then
+    if (present(density_laplacian)) then
       SAFE_DEALLOCATE_A(lwf_psi)
+    end if
+
+    if(.not. present(paramagnetic_current)) then
+      SAFE_DEALLOCATE_P(jp)
+    end if
+
+    if(.not. present(kinetic_energy_density)) then
+      SAFE_DEALLOCATE_P(tau)
     end if
 
 #if defined(HAVE_MPI)
@@ -2521,7 +2565,7 @@ return
     end if
 #endif
 
-    call pop_sub('states.states_calc_tau_jp_gn')
+    call pop_sub('states.states_calc_quantities')
 
 #if defined(HAVE_MPI)
   contains 
@@ -2529,43 +2573,46 @@ return
     subroutine reduce_all(grp)
       type(mpi_grp_t), intent(in)  :: grp
 
-      call push_sub('states.states_calc_tau_jp_gn.reduce_all')
+      call push_sub('states.states_calc_quantities.reduce_all')
 
       SAFE_ALLOCATE(tmp_reduce(1:der%mesh%np))
 
       do is = 1, st%d%nspin
-        if(present(tau)) then
+        if(associated(tau)) then
           call MPI_Allreduce(tau(1, is), tmp_reduce(1), der%mesh%np, MPI_FLOAT, MPI_SUM, grp%comm, mpi_err)
           tau(1:der%mesh%np, is) = tmp_reduce(1:der%mesh%np)       
         end if
 
-        if (present(lrho)) then
-          call MPI_Allreduce(lrho(1, is), tmp_reduce(1), der%mesh%np, MPI_FLOAT, MPI_SUM, grp%comm, mpi_err)
-          lrho(1:der%mesh%np, is) = tmp_reduce(1:der%mesh%np)       
+        if(present(gi_kinetic_energy_density)) then
+          call MPI_Allreduce(gi_kinetic_energy_density(1, is), tmp_reduce(1), der%mesh%np, MPI_FLOAT, MPI_SUM, grp%comm, mpi_err)
+          gi_kinetic_energy_density(1:der%mesh%np, is) = tmp_reduce(1:der%mesh%np)       
+        end if
+
+        if (present(density_laplacian)) then
+          call MPI_Allreduce(density_laplacian(1, is), tmp_reduce(1), der%mesh%np, MPI_FLOAT, MPI_SUM, grp%comm, mpi_err)
+          density_laplacian(1:der%mesh%np, is) = tmp_reduce(1:der%mesh%np)       
         end if
 
         do i_dim = 1, der%mesh%sb%dim
-          if(present(jp)) then
-            call MPI_Allreduce(jp(1, i_dim, is), tmp_reduce(1), der%mesh%np, MPI_FLOAT, MPI_SUM, &
-                 grp%comm, mpi_err)
+          if(associated(jp)) then
+            call MPI_Allreduce(jp(1, i_dim, is), tmp_reduce(1), der%mesh%np, MPI_FLOAT, MPI_SUM, grp%comm, mpi_err)
             jp(1:der%mesh%np, i_dim, is) = tmp_reduce(1:der%mesh%np)
           end if
 
-          if(present(grho)) then
-            call MPI_Allreduce(grho(1, i_dim, is), tmp_reduce(1), der%mesh%np, MPI_FLOAT, MPI_SUM, &
-                 grp%comm, mpi_err)
-            grho(1:der%mesh%np, i_dim, is) = tmp_reduce(1:der%mesh%np)
+          if(present(density_gradient)) then
+            call MPI_Allreduce(density_gradient(1, i_dim, is), tmp_reduce(1), der%mesh%np, MPI_FLOAT, MPI_SUM, grp%comm, mpi_err)
+            density_gradient(1:der%mesh%np, i_dim, is) = tmp_reduce(1:der%mesh%np)
           end if
         end do
 
       end do
       SAFE_DEALLOCATE_A(tmp_reduce)
 
-      call pop_sub('states.states_calc_tau_jp_gn.reduce_all')
+      call pop_sub('states.states_calc_quantities.reduce_all')
     end subroutine reduce_all
 
 #endif            
-  end subroutine states_calc_tau_jp_gn
+  end subroutine states_calc_quantities
 
 
   ! ---------------------------------------------------------
