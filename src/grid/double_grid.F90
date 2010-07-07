@@ -39,7 +39,7 @@ module double_grid_m
   use submesh_m
   use ps_m
 
-#ifdef USE_OMP
+#ifdef HAVE_OPENMP
   use omp_lib
 #endif
 

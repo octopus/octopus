@@ -226,7 +226,7 @@ module lalg_basic_m
     module procedure gemv_2_4
   end interface
 
-#ifdef USE_OMP
+#ifdef HAVE_OPENMP
   interface hypot
     real(8) function oct_hypotd(x, y)
       real(8) :: x, y

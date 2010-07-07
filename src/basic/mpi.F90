@@ -48,12 +48,12 @@ contains
   subroutine mpi_mod_init()
 #if defined(HAVE_MPI)
     integer :: mpi_err
-#ifdef USE_OMP
+#ifdef HAVE_OPENMP
     integer :: provided
 #endif
 
     ! initialize MPI
-#if defined(USE_OMP) && defined(HAVE_MPI2)
+#if defined(HAVE_OPENMP) && defined(HAVE_MPI2)
     call MPI_INIT_THREAD(MPI_THREAD_FUNNELED, provided, mpi_err)
 #else
     call MPI_Init(mpi_err)

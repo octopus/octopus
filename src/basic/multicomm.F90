@@ -55,7 +55,7 @@
     use profiling_m
     use utils_m
     use varinfo_m
-#if defined(USE_OMP)
+#if defined(HAVE_OPENMP)
     use omp_lib
 #endif
 
@@ -65,7 +65,7 @@
 
   public ::                          &
     multicomm_divide_range,          &
-#ifdef USE_OMP
+#ifdef HAVE_OPENMP
     multicomm_divide_range_omp,      &
 #endif
 #if defined(HAVE_MPI)
@@ -309,7 +309,7 @@ contains
       end if
 
       mc%nthreads = 1
-#if defined(USE_OMP)
+#if defined(HAVE_OPENMP)
       !$omp parallel
       !$omp master
       mc%nthreads = omp_get_num_threads()
@@ -912,7 +912,7 @@ contains
   end subroutine multicomm_divide_range
 
 
-#ifdef USE_OMP
+#ifdef HAVE_OPENMP
   ! ---------------------------------------------------------
   ! THREADSAFE
   subroutine multicomm_divide_range_omp(nn, ini, nn_loc)

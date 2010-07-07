@@ -112,7 +112,7 @@ if test -n "${enable_single}" -a x"${enable_single}" != x"no"; then
 fi
 
 if test -n "${enable_openmp}" -a x"${enable_openmp}" != x"no"; then
-  USE_OMP=1
+  HAVE_OPENMP=1
 fi
 
 if test x"${enable_opencl}" == x"yes" ; then
@@ -229,8 +229,8 @@ AX_F90_MODULE_FLAG
 F90_MODULE_FLAG=$ax_cv_f90_modflag
 AC_SUBST([F90_MODULE_FLAG])
 
-if test "${USE_OMP}"; then
-  AC_DEFINE(USE_OMP, 1, [enable OpenMP support])
+if test "${HAVE_OPENMP}"; then
+  AC_DEFINE(HAVE_OPENMP, 1, [enable OpenMP support])
   AX_OPENMP(,AC_MSG_ERROR([Fortran compiler does not support OpenMP]))
   FCFLAGS="$FCFLAGS $OPENMP_FCFLAGS"
 fi

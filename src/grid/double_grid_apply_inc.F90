@@ -39,7 +39,7 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
   FLOAT,   allocatable :: vs(:)
   type(ps_t), pointer :: ps
 
-#ifdef USE_OMP
+#ifdef HAVE_OPENMP
   integer(kind=omp_lock_kind) :: lock
 #endif
 
@@ -66,7 +66,7 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
     SAFE_ALLOCATE(jxyz_inv(1:sm%np_part))
     call submesh_get_inv(sm, jxyz_inv)
 
-#ifdef USE_OMP
+#ifdef HAVE_OPENMP
     vl(1:sm%ns) = M_ZERO
     call omp_init_lock(lock)
     !$omp parallel private(vs)
@@ -103,7 +103,7 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
     end do !is
     !$omp end do nowait
 
-#ifndef USE_OMP
+#ifndef HAVE_OPENMP
     vl(1:sm%ns) = vs(1:sm%ns)/(this%spacing_divisor**3)
 #else
     call omp_set_lock(lock)
@@ -113,7 +113,7 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
 
     SAFE_DEALLOCATE_A(vs)
 
-#ifdef USE_OMP
+#ifdef HAVE_OPENMP
     !$omp end parallel
     call omp_destroy_lock(lock)
 #endif

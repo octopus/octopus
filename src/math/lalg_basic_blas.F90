@@ -287,7 +287,7 @@ subroutine FNAME(copy_1)(n1, dx, dy)
   TYPE1,   intent(in)  :: dx(:)
   TYPE1,   intent(out) :: dy(:)
 
-#ifdef USE_OMP
+#ifdef HAVE_OPENMP
   integer :: ini, nn_loc
 #endif
 

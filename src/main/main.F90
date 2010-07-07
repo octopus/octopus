@@ -210,7 +210,7 @@ program octopus
     write(message(1), '(a, i1)') &
       'Configuration options  : max-dim=', MAX_DIM
 
-#ifdef USE_OMP
+#ifdef HAVE_OPENMP
     message(1) = trim(message(1))//' openmp'
 #endif
 #ifdef HAVE_MPI
