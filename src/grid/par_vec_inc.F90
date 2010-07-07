@@ -350,6 +350,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, comm_method, handle)
   call push_sub('par_vec_inc.Xghost_update_batch_start')
 
   ASSERT(v_local%nst_linear > 0)
+  ASSERT(.not. batch_is_packed(v_local))
 
   call batch_init(handle%ghost_send, 1, v_local%nst_linear)
 
@@ -380,12 +381,8 @@ subroutine X(ghost_update_batch_start)(vp, v_local, comm_method, handle)
   end if
 
   !now pack the data for sending
-  !$omp parallel do
-  do ii = 1, v_local%nst_linear
-    call X(subarray_gather)(vp%sendpoints, v_local%states_linear(ii)%X(psi), handle%ghost_send%states_linear(ii)%X(psi))
-  end do
-  !$omp end parallel do
-  
+  call X(subarray_gather_batch)(vp%sendpoints, v_local, handle%ghost_send)
+    
   select case(handle%comm_method)
 #ifdef HAVE_LIBNBC
   case(NON_BLOCKING_COLLECTIVE)

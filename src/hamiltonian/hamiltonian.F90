@@ -1044,6 +1044,7 @@ contains
     
     apply = .true.
     if(mesh%use_curvilinear) apply = .false.
+    if(mesh%parallel_in_domains) apply = .false.
     if(associated(this%phase)) apply = .false.
     if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.
     if(this%ab .eq. IMAGINARY_ABSORBING) apply = .false.

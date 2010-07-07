@@ -41,27 +41,33 @@ subroutine X(subarray_gather)(this, array, subarray)
 end subroutine X(subarray_gather)
 
 #if defined(R_TREAL) || defined(R_TCOMPLEX)
-subroutine X(subarray_gather_batch)(this, arrayb, subarray)
-    type(subarray_t),    intent(in)  :: this
-    type(batch_t),       intent(in)  :: arrayb
-    R_TYPE,              intent(out) :: subarray(:, :)
+subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
+    type(subarray_t),    intent(in)    :: this
+    type(batch_t),       intent(in)    :: arrayb
+    type(batch_t),       intent(inout) :: subarrayb
 
     type(profile_t), save :: prof
     integer :: iblock, ii, isa, ist
+    R_TYPE  :: aa
 
     call profiling_in(prof, "SUBARRAY_GATHER_BATCH")
 
+
+    ASSERT(batch_status(arrayb) == batch_status(subarrayb))
+
+    !$omp parallel do private(isa, iblock, ii)
     do ist = 1, arrayb%nst_linear
       isa = 0
       do iblock = 1, this%nblocks
         forall(ii = 1:this%blength(iblock))
-          subarray(ist, isa + ii) = arrayb%states_linear(ist)%X(psi)(this%offsets(iblock) + ii - 1)
+          subarrayb%states_linear(ist)%X(psi)(isa + ii) = &
+            arrayb%states_linear(ist)%X(psi)(this%offsets(iblock) + ii - 1)
         end forall
         isa = isa + this%blength(iblock)
       end do
     end do
 
-    call profiling_count_transfers(arrayb%nst_linear*this%npoints, subarray(1, 1))
+    call profiling_count_transfers(arrayb%nst_linear*this%npoints, aa)
 
     call profiling_out(prof)
 end subroutine X(subarray_gather_batch)
