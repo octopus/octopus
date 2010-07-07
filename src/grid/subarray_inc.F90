@@ -54,18 +54,36 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
 
 
     ASSERT(batch_status(arrayb) == batch_status(subarrayb))
+    
+    select case(batch_status(arrayb))
+    case(BATCH_CL_PACKED)
+      ASSERT(.false.)
 
-    !$omp parallel do private(isa, iblock, ii)
-    do ist = 1, arrayb%nst_linear
+    case(BATCH_PACKED)
       isa = 0
       do iblock = 1, this%nblocks
         forall(ii = 1:this%blength(iblock))
-          subarrayb%states_linear(ist)%X(psi)(isa + ii) = &
-            arrayb%states_linear(ist)%X(psi)(this%offsets(iblock) + ii - 1)
+          forall(ist = 1:arrayb%pack%size(1))
+            subarrayb%pack%X(psi)(ist, isa + ii) = arrayb%pack%X(psi)(ist, this%offsets(iblock) + ii - 1)
+          end forall
         end forall
         isa = isa + this%blength(iblock)
       end do
-    end do
+      
+    case(BATCH_NOT_PACKED)
+      !$omp parallel do private(isa, iblock, ii)
+      do ist = 1, arrayb%nst_linear
+        isa = 0
+        do iblock = 1, this%nblocks
+          forall(ii = 1:this%blength(iblock))
+            subarrayb%states_linear(ist)%X(psi)(isa + ii) = &
+              arrayb%states_linear(ist)%X(psi)(this%offsets(iblock) + ii - 1)
+          end forall
+          isa = isa + this%blength(iblock)
+        end do
+      end do
+
+    end select
 
     call profiling_count_transfers(arrayb%nst_linear*this%npoints, aa)
 
