@@ -69,10 +69,9 @@ contains
 
     call push_sub('derivatives_inc.Xderivatives_batch_set_bc.zero_boundaries')
 
-
+    select case(batch_status(ffb))
 #ifdef HAVE_OPENCL
-    if(batch_is_packed(ffb)) then
-
+    case(BATCH_CL_PACKED)
       call opencl_set_kernel_arg(set_zero_part, 0, bndry_start - 1)
       call opencl_set_kernel_arg(set_zero_part, 1, bndry_end - 1)
       call opencl_set_kernel_arg(set_zero_part, 2, ffb%pack%buffer)
@@ -82,20 +81,24 @@ contains
       globalsize = pad(bndry_end - bndry_start + 1, localsize)
       
       call opencl_kernel_run(set_zero_part, (/ffb%pack%size_real(1), globalsize/), (/ffb%pack%size_real(1), localsize/))
-
-      call batch_pack_was_modified(ffb)
-
       call opencl_finish()
 
-    else
 #endif
+    case(BATCH_PACKED)
+      forall(ip = bndry_start:bndry_end) 
+        forall(ist = 1:ffb%nst_linear)
+          ffb%pack%X(psi)(ist, ip) = R_TOTYPE(M_ZERO)
+        end forall
+      end forall
+
+    case(BATCH_NOT_PACKED)
       do ist = 1, ffb%nst_linear
         forall (ip = bndry_start:bndry_end) ffb%states_linear(ist)%X(psi)(ip) = R_TOTYPE(M_ZERO)
       end do
 
-#ifdef HAVE_OPENCL
-    end if
-#endif
+    end select
+
+    call batch_pack_was_modified(ffb)
 
     call pop_sub('derivatives_inc.Xderivatives_batch_set_bc.zero_boundaries')
   end subroutine zero_boundaries

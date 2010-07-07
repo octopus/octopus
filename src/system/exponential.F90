@@ -35,10 +35,10 @@ module exponential_m
   use parser_m
   use mesh_function_m
   use messages_m
-  use opencl_m
   use profiling_m
   use states_m
   use states_calc_m
+  use types_m
   use varinfo_m
 
   implicit none
@@ -536,6 +536,8 @@ contains
     integer :: ii, ist
     CMPLX, pointer :: psi(:, :)
 
+    ASSERT(batch_type(psib) == TYPE_CMPLX)
+
     if (te%exp_method == EXP_TAYLOR) then 
       call taylor_series_batch
     else
@@ -576,13 +578,11 @@ contains
       call batch_init(psi1b, hm%d%dim, st_start, st_end, psi1)
       call batch_init(hpsi1b, hm%d%dim, st_start, st_end, hpsi1)
 
-#ifdef HAVE_OPENCL
-      if(opencl_is_enabled() .and. hamiltonian_apply_in_buffer(hm, der%mesh)) then
+      if(hamiltonian_apply_in_buffer(hm, der%mesh)) then
         call batch_pack(psib)
         call batch_pack(psi1b, copy = .false.)
         call batch_pack(hpsi1b, copy = .false.)
       end if
-#endif
       
       call batch_copy_data(der%mesh%np, psib, psi1b)
 
@@ -597,37 +597,17 @@ contains
 
         call zhamiltonian_apply_batch(hm, der, psi1b, hpsi1b, ik, time)
 
-        if(opencl_is_enabled() .and. hamiltonian_apply_in_buffer(hm, der%mesh)) then
-          if(zfact_is_real) then
-            call batch_axpy(der%mesh%np, real(zfact, REAL_PRECISION), hpsi1b, psib)
-          else
-            call batch_axpy(der%mesh%np, zfact, hpsi1b, psib)
-          end if
-          if(iter /= te%exp_order) call batch_copy_data(der%mesh%np, hpsi1b, psi1b)
+        if(zfact_is_real) then
+          call batch_axpy(der%mesh%np, real(zfact, REAL_PRECISION), hpsi1b, psib)
         else
-
-          !$omp parallel do private(ii, idim, ip, bsize)
-          do ii = 1, psib%nst
-            do idim = 1, hm%d%dim
-              
-              do ip = 1, der%mesh%np, hardware%zblock_size
-                bsize = min(hardware%zblock_size, der%mesh%np - ip + 1)
-                if(zfact_is_real) then
-                  call blas_axpy(bsize, real(zfact, REAL_PRECISION), hpsi1(ip, idim, ii), psib%states(ii)%zpsi(ip, idim))
-                else
-                  call blas_axpy(bsize, zfact, hpsi1(ip, idim, ii), 1, psib%states(ii)%zpsi(ip, idim), 1)
-                end if
-                if(iter /= te%exp_order) call blas_copy(bsize, hpsi1(ip, idim, ii), 1, psi1(ip, idim, ii), 1)
-              end do
-              
-            end do
-          end do
-          !$omp end parallel do
+          call batch_axpy(der%mesh%np, zfact, hpsi1b, psib)
         end if
+
+        if(iter /= te%exp_order) call batch_copy_data(der%mesh%np, hpsi1b, psi1b)
 
       end do
 
-      if(opencl_is_enabled() .and. hamiltonian_apply_in_buffer(hm, der%mesh)) then
+      if(hamiltonian_apply_in_buffer(hm, der%mesh)) then
         call batch_unpack(psib)
         call batch_unpack(psi1b, copy = .false.)
         call batch_unpack(hpsi1b, copy = .false.)

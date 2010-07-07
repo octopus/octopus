@@ -59,7 +59,8 @@ module batch_m
     batch_copy_data,                &
     batch_pack,                     &
     batch_unpack,                   &
-    batch_status
+    batch_status,                   &
+    batch_type
 
   !--------------------------------------------------------------
   type batch_state_t
@@ -431,9 +432,9 @@ contains
 
     if(batch_is_packed(this)) then
       INCR(this%in_buffer_count, -1)
-      this%status = BATCH_NOT_PACKED
 
       if(this%in_buffer_count == 0) then
+        this%status = BATCH_NOT_PACKED
         copy_ = .true.
         if(present(copy)) copy_ = copy
         
@@ -655,33 +656,30 @@ subroutine batch_copy_data(np, xx, yy)
 
   ASSERT(batch_type(yy) == batch_type(xx))
   ASSERT(xx%nst_linear == yy%nst_linear)
+  ASSERT(batch_status(xx) == batch_status(yy))
 
-  call batch_pack_was_modified(yy)
-
-  if(batch_is_packed(yy) .or. batch_is_packed(xx)) then
-    ASSERT(batch_is_packed(xx))
-    ASSERT(batch_is_packed(yy))
-
-    if(opencl_is_enabled()) then
+  select case(batch_status(xx))
+  case(BATCH_CL_PACKED)
 #ifdef HAVE_OPENCL
-      call opencl_set_kernel_arg(kernel_copy, 0, xx%pack%buffer)
-      call opencl_set_kernel_arg(kernel_copy, 1, log2(xx%pack%size_real(1)))
-      call opencl_set_kernel_arg(kernel_copy, 2, yy%pack%buffer)
-      call opencl_set_kernel_arg(kernel_copy, 3, log2(yy%pack%size_real(1)))
-      
-      localsize = opencl_max_workgroup_size()/yy%pack%size_real(1)
-      call opencl_kernel_run(kernel_copy, (/yy%pack%size_real(1), pad(np, localsize)/), (/yy%pack%size_real(1), localsize/))
-      
-      call opencl_finish()
+    call opencl_set_kernel_arg(kernel_copy, 0, xx%pack%buffer)
+    call opencl_set_kernel_arg(kernel_copy, 1, log2(xx%pack%size_real(1)))
+    call opencl_set_kernel_arg(kernel_copy, 2, yy%pack%buffer)
+    call opencl_set_kernel_arg(kernel_copy, 3, log2(yy%pack%size_real(1)))
+    
+    localsize = opencl_max_workgroup_size()/yy%pack%size_real(1)
+    call opencl_kernel_run(kernel_copy, (/yy%pack%size_real(1), pad(np, localsize)/), (/yy%pack%size_real(1), localsize/))
+    
+    call opencl_finish()
 #endif
-    else if(batch_type(yy) == TYPE_FLOAT) then
+
+  case(BATCH_PACKED)
+    if(batch_type(yy) == TYPE_FLOAT) then
       call blas_copy(np*xx%pack%size(1), xx%pack%dpsi(1, 1), 1, yy%pack%dpsi(1, 1), 1)
     else
       call blas_copy(np*xx%pack%size(1), xx%pack%zpsi(1, 1), 1, yy%pack%zpsi(1, 1), 1)
     end if
 
-  else
-
+  case(BATCH_NOT_PACKED)
     !$omp parallel do private(ist)
     do ist = 1, yy%nst_linear
       if(batch_type(yy) == TYPE_CMPLX) then
@@ -691,7 +689,9 @@ subroutine batch_copy_data(np, xx, yy)
       end if
     end do
 
-  end if
+  end select
+
+  call batch_pack_was_modified(yy)
 
   call profiling_out(prof)
   call pop_sub('batch.batch_copy_data')

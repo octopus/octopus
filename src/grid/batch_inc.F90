@@ -160,68 +160,65 @@ subroutine X(batch_axpy)(np, aa, xx, yy)
   call profiling_in(axpy_prof, "BATCH_AXPY")
 
   ASSERT(batch_type(yy) == batch_type(xx))
+#ifdef R_TCMPLX
+  !if aa is complex, the functions must be complex
+  ASSERT(batch_type(yy) == TYPE_CMPLX)
+#endif
   ASSERT(xx%nst_linear == yy%nst_linear)
+  ASSERT(batch_status(xx) == batch_status(yy))
 
-  if(batch_is_packed(yy) .or. batch_is_packed(xx)) then
-    ASSERT(batch_is_packed(xx))
-    ASSERT(batch_is_packed(yy))
-
-    call batch_pack_was_modified(yy)
-
-    if(opencl_is_enabled()) then
+  select case(batch_status(xx))
+  case(BATCH_CL_PACKED)
 #ifdef HAVE_OPENCL
 #ifdef R_TREAL
 
-      call opencl_set_kernel_arg(kernel_daxpy, 0, aa)
-      call opencl_set_kernel_arg(kernel_daxpy, 1, xx%pack%buffer)
-      call opencl_set_kernel_arg(kernel_daxpy, 2, log2(xx%pack%size_real(1)))
-      call opencl_set_kernel_arg(kernel_daxpy, 3, yy%pack%buffer)
-      call opencl_set_kernel_arg(kernel_daxpy, 4, log2(yy%pack%size_real(1)))
+    call opencl_set_kernel_arg(kernel_daxpy, 0, aa)
+    call opencl_set_kernel_arg(kernel_daxpy, 1, xx%pack%buffer)
+    call opencl_set_kernel_arg(kernel_daxpy, 2, log2(xx%pack%size_real(1)))
+    call opencl_set_kernel_arg(kernel_daxpy, 3, yy%pack%buffer)
+    call opencl_set_kernel_arg(kernel_daxpy, 4, log2(yy%pack%size_real(1)))
 
-      localsize = opencl_max_workgroup_size()/yy%pack%size_real(1)
-      call opencl_kernel_run(kernel_daxpy, (/yy%pack%size_real(1), pad(np, localsize)/), (/yy%pack%size_real(1), localsize/))
+    localsize = opencl_max_workgroup_size()/yy%pack%size_real(1)
+    call opencl_kernel_run(kernel_daxpy, (/yy%pack%size_real(1), pad(np, localsize)/), (/yy%pack%size_real(1), localsize/))
 
 #else
+    call opencl_set_kernel_arg(kernel_zaxpy, 0, real(aa, REAL_PRECISION))
+    call opencl_set_kernel_arg(kernel_zaxpy, 1, aimag(aa))
+    call opencl_set_kernel_arg(kernel_zaxpy, 2, xx%pack%buffer)
+    call opencl_set_kernel_arg(kernel_zaxpy, 3, xx%pack%size(1))
+    call opencl_set_kernel_arg(kernel_zaxpy, 4, yy%pack%buffer)
+    call opencl_set_kernel_arg(kernel_zaxpy, 5, yy%pack%size(1))
 
-      ASSERT(batch_type(yy) == TYPE_CMPLX)
-
-      call opencl_set_kernel_arg(kernel_zaxpy, 0, real(aa, REAL_PRECISION))
-      call opencl_set_kernel_arg(kernel_zaxpy, 1, aimag(aa))
-      call opencl_set_kernel_arg(kernel_zaxpy, 2, xx%pack%buffer)
-      call opencl_set_kernel_arg(kernel_zaxpy, 3, xx%pack%size(1))
-      call opencl_set_kernel_arg(kernel_zaxpy, 4, yy%pack%buffer)
-      call opencl_set_kernel_arg(kernel_zaxpy, 5, yy%pack%size(1))
-
-      localsize = opencl_max_workgroup_size()
-      call opencl_kernel_run(kernel_zaxpy, (/yy%pack%size(1), pad(np, localsize)/), (/yy%pack%size(1), localsize/yy%pack%size(1)/))
+    localsize = opencl_max_workgroup_size()
+    call opencl_kernel_run(kernel_zaxpy, (/yy%pack%size(1), pad(np, localsize)/), (/yy%pack%size(1), localsize/yy%pack%size(1)/))
 
 #endif
 
-      call opencl_finish()
+    call opencl_finish()
 #endif
 
+  case(BATCH_PACKED)
+    if(batch_type(yy) == TYPE_CMPLX) then
+      call lalg_axpy(xx%pack%size(1), np, aa, xx%pack%zpsi, yy%pack%zpsi)
+    else
 #ifdef R_TREAL
-    else if(batch_type(yy) == TYPE_FLOAT) then
       call lalg_axpy(xx%pack%size(1), np, aa, xx%pack%dpsi, yy%pack%dpsi)
 #endif
-    else
-      call lalg_axpy(xx%pack%size(1), np, aa, xx%pack%zpsi, yy%pack%zpsi)
     end if
 
-  else
-
+  case(BATCH_NOT_PACKED)
     do ist = 1, yy%nst_linear
       if(batch_type(yy) == TYPE_CMPLX) then
         call lalg_axpy(np, aa, xx%states_linear(ist)%zpsi, yy%states_linear(ist)%zpsi)
       else
 #ifdef R_TREAL
         call lalg_axpy(np, aa, xx%states_linear(ist)%dpsi, yy%states_linear(ist)%dpsi)
-#else
-        ASSERT(.false.)
 #endif
       end if
     end do
-  end if
+  end select
+
+  call batch_pack_was_modified(yy)
 
   call profiling_out(axpy_prof)
   call pop_sub('batch_inc.Xbatch_axpy')
