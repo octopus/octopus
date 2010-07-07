@@ -90,6 +90,7 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
 
     select case(std%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
+      !$omp parallel do private(vv, ist)
       do ip = 1, mesh%np
         vv = this%potential(ip, ispin)
         forall (ist = 1:psib%nst_linear)
@@ -104,8 +105,10 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
     case(SPINORS)
       ASSERT(mod(psib%nst_linear, 2) == 0)
       !the spinor case is more complicated since it mixes the two components.
-      do ist = 1, psib%nst_linear, 2
-        do ip = 1, mesh%np
+
+      !$omp parallel do private(psi1, psi2, ist)
+      do ip = 1, mesh%np
+        do ist = 1, psib%nst_linear, 2
           psi1 = psib%pack%zpsi(ist    , ip)
           psi2 = psib%pack%zpsi(ist + 1, ip)
           vpsib%pack%zpsi(ist    , ip) = vpsib%pack%zpsi(ist    , ip) + &
@@ -114,6 +117,7 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
             this%potential(ip, 2)*psi2 + (this%potential(ip, 3) - M_zI*this%potential(ip, 4))*psi1
         end do
       end do
+
       call profiling_count_operations((6*R_ADD + 2*R_MUL)*mesh%np*psib%nst)
 
     end select
@@ -302,8 +306,10 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
       ! collect all the points we need in a continous array
       ! MISSING: phases
       if(batch_is_packed(psib)) then
-        forall(ist = 1:nst, ip = 1:npoints)
-          psi(ist, ip) = psib%pack%X(psi)(ist, pmat%map(ip))
+        forall(ip = 1:npoints)
+          forall(ist = 1:nst)
+            psi(ist, ip) = psib%pack%X(psi)(ist, pmat%map(ip))
+          end forall
         end forall
       else
         forall(ist = 1:nst, ip = 1:npoints)
@@ -322,6 +328,8 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
       forall(ist = 1:nst, iproj = 1:nprojs)
         projection%X(projection)(ist, iprojection + iproj) = projection%X(projection)(ist, iprojection + iproj)*pmat%scal(iproj)
       end forall
+
+      call profiling_count_operations(nreal*nprojs*M_TWO*npoints + nst*nprojs)
 
     end if
 
@@ -442,21 +450,24 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
 
       SAFE_ALLOCATE(psi(1:nst, 1:npoints))
 
-      call profiling_count_operations(M_TWO*nst*nprojs*M_TWO*npoints*R_ADD + nst*nprojs*R_ADD)
-
       ! Matrix-multiply again.
       ! the line below does: psi = matmul(projection, transpose(pmat%projectors))
       call dgemm('N', 'T', nreal, npoints, nprojs, &
         M_ONE, projection%X(projection)(1, iprojection + 1), nreal, pmat%projectors(1, 1), npoints, &
         M_ZERO,  psi(1, 1), nreal)
       
+      call profiling_count_operations(nreal*nprojs*M_TWO*npoints)
+
       call profiling_in(prof_scatter, "PROJ_MAT_SCATTER")
       ! and copy the points from the local buffer to its position
       ! MISSING: phases
       if(batch_is_packed(vpsib)) then
-        forall(ist = 1:nst, ip = 1:npoints)
-          vpsib%pack%X(psi)(ist, pmat%map(ip)) = vpsib%pack%X(psi)(ist, pmat%map(ip)) + psi(ist, ip)
+        forall(ip = 1:npoints)
+          forall(ist = 1:nst)
+            vpsib%pack%X(psi)(ist, pmat%map(ip)) = vpsib%pack%X(psi)(ist, pmat%map(ip)) + psi(ist, ip)
+          end forall
         end forall
+
         call batch_pack_was_modified(vpsib)
       else
         do ist = 1, nst

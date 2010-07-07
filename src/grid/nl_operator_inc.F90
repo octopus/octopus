@@ -91,12 +91,8 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
     else if(opencl_is_enabled() .and. batch_is_packed(fi) .and. batch_is_packed(fo)) then
       call operate_opencl()
 #endif
-    else if(batch_is_packed(fi) .and. batch_is_packed(fo)) then
-      ini = 1
-      nri_loc = nri
-      call operate_ri_vec(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), &
-        fi%pack%X(psi)(1, 1), log2(fi%pack%size_real(1)), fo%pack%X(psi)(1, 1))
-    else
+    else 
+
       !$omp parallel private(ini, nri_loc, ist, pfi, pfo)
 #ifdef USE_OMP
       call multicomm_divide_range_omp(nri, ini, nri_loc)
@@ -104,18 +100,24 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
       ini = 1
       nri_loc = nri
 #endif
-      do ist = 1, fi%nst_linear
-        pfi => fi%states_linear(ist)%X(psi)(:)
-        pfo => fo%states_linear(ist)%X(psi)(:)
-
+      
+      if(batch_is_packed(fi) .and. batch_is_packed(fo)) then
+        call operate_ri_vec(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), &
+          fi%pack%X(psi)(1, 1), log2(fi%pack%size_real(1)), fo%pack%X(psi)(1, 1))
+      else
+        do ist = 1, fi%nst_linear
+          pfi => fi%states_linear(ist)%X(psi)(:)
+          pfo => fo%states_linear(ist)%X(psi)(:)
+          
 #ifdef R_TREAL
 #define LOGLDF 0
 #else
 #define LOGLDF 1
 #endif
-
-        call operate_ri_vec(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), LOGLDF, pfo(1))
-      end do
+          
+          call operate_ri_vec(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), LOGLDF, pfo(1))
+        end do
+      end if
       !$omp end parallel
     end if
 
