@@ -20,9 +20,11 @@
 #include "global.h"
 
 module subarray_m
+  use batch_m
   use global_m
   use messages_m
   use profiling_m
+
 
   implicit none
 
@@ -36,6 +38,8 @@ module subarray_m
        isubarray_gather,         &
        dsubarray_gather,         &
        zsubarray_gather,         &
+       dsubarray_gather_batch,   &
+       zsubarray_gather_batch,   &
        get_blocks
   
   type subarray_t

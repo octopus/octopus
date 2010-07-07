@@ -64,6 +64,7 @@ libgrid_a_SOURCES =       \
 	transfer_table.F90      \
 	fourier_kernel.F90      \
 	mesh_batch.F90          \
+	subarray.F90            \
 	symmetrizer.F90
 
 noinst_HEADERS =            \
@@ -81,6 +82,7 @@ noinst_HEADERS =            \
 	gridhier_inc.F90          \
 	cubic_mesh.h              \
 	mesh_batch_inc.F90        \
+	subarray_inc.F90          \
 	symmetrizer_inc.F90
 
 include $(srcdir)/../common-rules.make
@@ -93,7 +95,7 @@ curv_briggs.o : curv_briggs.F90
 curv_modine.o : curv_modine.F90  
 curvilinear.o : curvilinear.F90  curv_modine.o curv_gygi.o curv_briggs.o 
 index.o : index.F90 hypercube.o
-par_vec.o : par_vec.F90 par_vec_inc.F90 index.o stencil.o batch.o
+par_vec.o : par_vec.F90 par_vec_inc.F90 index.o stencil.o batch.o subarray.o
 mesh.o : mesh.F90 par_vec.o index.o curvilinear.o
 ob_grid.o : ob_grid.F90 mesh.o ob_interface.o
 mesh_init.o : mesh_init.F90 mesh.o par_vec.o stencil.o ob_grid.o partition.o partitioner.o mesh_partition.o
@@ -130,3 +132,5 @@ fourier_kernel.o : fourier_kernel.F90 cubic_mesh.o
 symmetrizer.o : symmetrizer.F90 symmetrizer_inc.F90 mesh.o
 partition.o : partition.F90 mesh.o
 partitioner.o : partitioner.F90 partition.o
+subarray.o : subarray.F90 subarray_inc.F90 batch.o
+

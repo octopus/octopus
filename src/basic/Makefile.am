@@ -55,7 +55,6 @@ libbasic_a_SOURCES =     \
 	write_iter_low.c \
 	varinfo_low.c    \
 	signals.c        \
-	subarray.F90     \
 	io_binary_f.F90  \
 	lookup.F90       \
 	types.F90        \
@@ -73,7 +72,6 @@ noinst_HEADERS =               \
 	mpi_debug_inc.F90      \
 	mpi_lib_inc.F90        \
 	loct_inc.F90           \
-	subarray_inc.F90       \
 	varia.h                \
 	io_binary.h            \
 	opencl_inc.F90         \
@@ -123,5 +121,4 @@ calc_mode.o : calc_mode.F90 multicomm.o messages.o
 ialist.o : ialist.F90 messages.o profiling.o
 iihash.o : iihash.F90 ialist.o global.o
 lookup.o : lookup.F90 global.o messages.o profiling.o
-subarray.o : subarray.F90 subarray_inc.F90 profiling.o
 utils.o : utils.F90 messages.o global.o 
