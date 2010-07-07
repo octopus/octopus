@@ -141,12 +141,10 @@ module par_vec_m
 
   integer :: SEND = 1, RECV = 2
 
-  integer, public, parameter :: BLOCKING = 1, NON_BLOCKING = 2, NON_BLOCKING_COLLECTIVE = 3
+  integer, public, parameter :: BLOCKING = 1, NON_BLOCKING = 2
 
   type pv_handle_t
     private
-    integer          :: comm_method
-    type(c_ptr)      :: nbc_h
     integer          :: nnb
     integer, pointer :: requests(:)
     integer, pointer :: status(:, :)
@@ -158,9 +156,7 @@ module par_vec_m
   type pv_handle_batch_t
     private
     type(batch_t)        :: ghost_send
-    type(c_ptr), pointer :: nbc_h(:)
     integer,     pointer :: requests(:)
-    integer              :: comm_method
     integer              :: nnb
   end type pv_handle_batch_t
 
@@ -559,31 +555,20 @@ contains
 
   end subroutine vec_end
 
-
   ! ---------------------------------------------------------
-  subroutine pv_handle_init(this, vp, comm_method)
+  subroutine pv_handle_init(this, vp)
     type(pv_handle_t), intent(out) :: this
     type(pv_t),        intent(in)  :: vp
-    integer,           intent(in)  :: comm_method
 
     call push_sub('par_vec.pv_handle_init')
 
-    this%comm_method = comm_method
+    SAFE_ALLOCATE(this%requests(1:vp%npart*2))
+    SAFE_ALLOCATE(this%status(1:MPI_STATUS_SIZE, 1:vp%npart*2))
 
-    select case(this%comm_method)
-#ifdef HAVE_LIBNBC
-    case(NON_BLOCKING_COLLECTIVE)
-      call NBCF_Newhandle(this%nbc_h)
-#endif
-    case(NON_BLOCKING)
-      SAFE_ALLOCATE(this%requests(1:vp%npart*2))
-      SAFE_ALLOCATE(this%status(1:MPI_STATUS_SIZE, 1:vp%npart*2))
-    end select
     nullify(this%ighost_send, this%dghost_send, this%zghost_send)
 
     call pop_sub('par_vec.pv_handle_init')
   end subroutine pv_handle_init
-
 
   ! ---------------------------------------------------------
   subroutine pv_handle_end(this)
@@ -591,15 +576,8 @@ contains
 
     call push_sub('par_vec.pv_handle_end')
 
-    select case(this%comm_method)
-#ifdef HAVE_LIBNBC
-    case(NON_BLOCKING_COLLECTIVE)
-      call NBCF_Freehandle(this%nbc_h)
-#endif
-    case(NON_BLOCKING)
-      SAFE_DEALLOCATE_P(this%requests)
-      SAFE_DEALLOCATE_P(this%status)
-    end select
+    SAFE_DEALLOCATE_P(this%requests)
+    SAFE_DEALLOCATE_P(this%status)
 
     call pop_sub('par_vec.pv_handle_end')
   end subroutine pv_handle_end
@@ -610,14 +588,6 @@ contains
     type(pv_handle_t), intent(inout) :: this
     
     call push_sub('par_vec.pv_handle_test')
-
-    select case(this%comm_method)
-#ifdef HAVE_LIBNBC
-    case(NON_BLOCKING_COLLECTIVE)
-      call NBCF_Test(this%nbc_h, mpi_err)
-#endif
-    case(NON_BLOCKING)
-    end select
 
     call pop_sub('par_vec.pv_handle_test')
   end subroutine pv_handle_test
@@ -630,14 +600,7 @@ contains
     call push_sub('par_vec.pv_handle_wait')
     call profiling_in(prof_wait, "GHOST_UPDATE_WAIT")
 
-    select case(this%comm_method)
-#ifdef HAVE_LIBNBC
-    case(NON_BLOCKING_COLLECTIVE)
-      call NBCF_Wait(this%nbc_h, mpi_err)
-#endif
-    case(NON_BLOCKING)
-      call MPI_Waitall(this%nnb, this%requests, this%status, mpi_err)
-    end select
+    call MPI_Waitall(this%nnb, this%requests, this%status, mpi_err)
 
     SAFE_DEALLOCATE_P(this%ighost_send)
     SAFE_DEALLOCATE_P(this%dghost_send)

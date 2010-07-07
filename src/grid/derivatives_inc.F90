@@ -289,7 +289,7 @@ subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, s
 #ifdef HAVE_MPI
 
   if(derivatives_overlap(der) .and. der%mesh%parallel_in_domains .and. handle%ghost_update) then
-    call X(ghost_update_batch_start)(der%mesh%vp, ff, der%comm_method, handle%pv_h)
+    call X(ghost_update_batch_start)(der%mesh%vp, ff, handle%pv_h)
   end if
 #endif
 

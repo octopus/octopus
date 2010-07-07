@@ -288,60 +288,42 @@ subroutine X(vec_ighost_update)(vp, v_local, handle)
 
   nullify(handle%ighost_send, handle%dghost_send, handle%zghost_send)
 
-  select case(handle%comm_method)
-#ifdef HAVE_LIBNBC
-  case(NON_BLOCKING_COLLECTIVE)
-
-    ! pack the data for sending
-    nsend = subarray_size(vp%sendpoints)
-    SAFE_ALLOCATE(handle%X(ghost_send)(1:nsend))
-    call X(subarray_gather)(vp%sendpoints, v_local, handle%X(ghost_send))
-
-    ! use a collective non-blocking call
-    call NBCF_Ialltoallv(handle%X(ghost_send), vp%np_ghost_neigh(1, vp%partno), vp%sdispls(1),  &
-         R_MPITYPE, v_local(vp%np_local(vp%partno)+1), vp%rcounts(1), vp%rdispls(1), R_MPITYPE, &
-         vp%comm, handle%nbc_h, mpi_err)
+  ! use a series of p2p non-blocking calls
+  handle%nnb = 0
+  do ipart = 1, vp%npart
+    if(vp%np_ghost_neigh(vp%partno, ipart) == 0) cycle
     
-#endif
-  case(NON_BLOCKING)
-
-    ! use a series of p2p non-blocking calls
-    handle%nnb = 0
-    do ipart = 1, vp%npart
-      if(vp%np_ghost_neigh(vp%partno, ipart) == 0) cycle
-      
-      handle%nnb = handle%nnb + 1
-      pos = vp%np_local(vp%partno) + 1 + vp%rdispls(ipart)
-      call MPI_Irecv(v_local(pos), vp%rcounts(ipart), R_MPITYPE, ipart - 1, 0, &
-           vp%comm, handle%requests(handle%nnb), mpi_err)
-    end do
-
-    ! pack the data for sending
-    nsend = subarray_size(vp%sendpoints)
-    SAFE_ALLOCATE(handle%X(ghost_send)(1:nsend))
-    call X(subarray_gather)(vp%sendpoints, v_local, handle%X(ghost_send))
-
-    do ipart = 1, vp%npart
-      if(vp%np_ghost_neigh(ipart, vp%partno) == 0) cycle
-      
-      handle%nnb = handle%nnb + 1
-      call MPI_Isend(handle%X(ghost_send)(vp%sendpos(ipart)), vp%np_ghost_neigh(ipart, vp%partno), &
-        R_MPITYPE, ipart - 1, 0, vp%comm, handle%requests(handle%nnb), mpi_err)
-    end do
+    handle%nnb = handle%nnb + 1
+    pos = vp%np_local(vp%partno) + 1 + vp%rdispls(ipart)
+    call MPI_Irecv(v_local(pos), vp%rcounts(ipart), R_MPITYPE, ipart - 1, 0, &
+      vp%comm, handle%requests(handle%nnb), mpi_err)
+  end do
+  
+  ! pack the data for sending
+  nsend = subarray_size(vp%sendpoints)
+  SAFE_ALLOCATE(handle%X(ghost_send)(1:nsend))
+  call X(subarray_gather)(vp%sendpoints, v_local, handle%X(ghost_send))
+  
+  do ipart = 1, vp%npart
+    if(vp%np_ghost_neigh(ipart, vp%partno) == 0) cycle
     
-  end select
-
+    handle%nnb = handle%nnb + 1
+    call MPI_Isend(handle%X(ghost_send)(vp%sendpos(ipart)), vp%np_ghost_neigh(ipart, vp%partno), &
+      R_MPITYPE, ipart - 1, 0, vp%comm, handle%requests(handle%nnb), mpi_err)
+  end do
+  
   call pop_sub('par_vec_inc.Xvec_ighost_update')
   call profiling_out(C_PROFILING_GHOST_UPDATE)
 
 end subroutine X(vec_ighost_update)
 
 #if defined(R_TREAL) || defined(R_TCOMPLEX)
+
 ! ---------------------------------------------------------
-subroutine X(ghost_update_batch_start)(vp, v_local, comm_method, handle)
+
+subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   type(pv_t),               intent(in)    :: vp
   type(batch_t),            intent(inout) :: v_local
-  integer,                  intent(in)    :: comm_method
   type(pv_handle_batch_t),  intent(out)   :: handle
 
   integer :: ipart, pos, nsend, ii, tag
@@ -358,64 +340,43 @@ subroutine X(ghost_update_batch_start)(vp, v_local, comm_method, handle)
 
   call X(batch_new)(handle%ghost_send, 1, v_local%nst_linear, nsend)
 
-  handle%comm_method = comm_method
   handle%nnb = 0
 
-  if(handle%comm_method == NON_BLOCKING) then
-    ! first post the receptions
-
-    SAFE_ALLOCATE(handle%requests(1:2*vp%npart*v_local%nst_linear))
-
-    do ii = 1, v_local%nst_linear
-      do ipart = 1, vp%npart
-        if(vp%np_ghost_neigh(vp%partno, ipart) == 0) cycle
-
-        handle%nnb = handle%nnb + 1
-        tag = ii
-        pos = vp%np_local(vp%partno) + 1 + vp%rdispls(ipart)
-        call MPI_Irecv(v_local%states_linear(ii)%X(psi)(pos), vp%rcounts(ipart), R_MPITYPE, ipart - 1, tag, &
-          vp%comm, handle%requests(handle%nnb), mpi_err)
-      end do
+  ! first post the receptions
+  
+  SAFE_ALLOCATE(handle%requests(1:2*vp%npart*v_local%nst_linear))
+  
+  do ii = 1, v_local%nst_linear
+    do ipart = 1, vp%npart
+      if(vp%np_ghost_neigh(vp%partno, ipart) == 0) cycle
+      
+      handle%nnb = handle%nnb + 1
+      tag = ii
+      pos = vp%np_local(vp%partno) + 1 + vp%rdispls(ipart)
+      call MPI_Irecv(v_local%states_linear(ii)%X(psi)(pos), vp%rcounts(ipart), R_MPITYPE, ipart - 1, tag, &
+        vp%comm, handle%requests(handle%nnb), mpi_err)
     end do
-
-  end if
-
+  end do
+  
   !now pack the data for sending
   call X(subarray_gather_batch)(vp%sendpoints, v_local, handle%ghost_send)
-    
-  select case(handle%comm_method)
-#ifdef HAVE_LIBNBC
-  case(NON_BLOCKING_COLLECTIVE)
-    ! use a collective non-blocking call
-
-    SAFE_ALLOCATE(handle%nbc_h(1:vp%npart*v_local%nst_linear))
-
-    do ii = 1, v_local%nst_linear
+  
+  do ii = 1, v_local%nst_linear
+    do ipart = 1, vp%npart
+      if(vp%np_ghost_neigh(ipart, vp%partno) == 0) cycle
       handle%nnb = handle%nnb + 1
-      call NBCF_Newhandle(handle%nbc_h(handle%nnb))
-      call NBCF_Ialltoallv(handle%ghost_send%states_linear(ii)%X(psi)(1), vp%np_ghost_neigh(1, vp%partno), vp%sdispls(1), &
-        R_MPITYPE, v_local%states_linear(ii)%X(psi)(vp%np_local(vp%partno) + 1), vp%rcounts(1), vp%rdispls(1), &
-        R_MPITYPE, vp%comm, handle%nbc_h(handle%nnb), mpi_err)
+      tag = ii
+      call MPI_Isend(handle%ghost_send%states_linear(ii)%X(psi)(vp%sendpos(ipart)), vp%np_ghost_neigh(ipart, vp%partno), &
+        R_MPITYPE, ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
     end do
-#endif
-
-  case(NON_BLOCKING)
-
-    do ii = 1, v_local%nst_linear
-      do ipart = 1, vp%npart
-        if(vp%np_ghost_neigh(ipart, vp%partno) == 0) cycle
-        handle%nnb = handle%nnb + 1
-        tag = ii
-        call MPI_Isend(handle%ghost_send%states_linear(ii)%X(psi)(vp%sendpos(ipart)), vp%np_ghost_neigh(ipart, vp%partno), &
-          R_MPITYPE, ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
-      end do
-    end do
-  end select
+  end do
 
   call pop_sub('par_vec_inc.Xghost_update_batch_start')
   call profiling_out(C_PROFILING_GHOST_UPDATE)
 
 end subroutine X(ghost_update_batch_start)
+
+! ---------------------------------------------------------
 
 subroutine X(ghost_update_batch_finish)(handle)
   type(pv_handle_batch_t),  intent(inout)   :: handle
@@ -428,21 +389,10 @@ subroutine X(ghost_update_batch_finish)(handle)
   
   ASSERT(handle%nnb > 0)
 
-  select case(handle%comm_method)
-#ifdef HAVE_LIBNBC
-  case(NON_BLOCKING_COLLECTIVE)
-    do inb = 1, handle%nnb
-      call NBCF_Wait(handle%nbc_h(inb), mpi_err)
-      call NBCF_Freehandle(handle%nbc_h(inb))
-    end do
-    SAFE_DEALLOCATE_P(handle%nbc_h)
-#endif
-  case(NON_BLOCKING)
-    SAFE_ALLOCATE(status(1:MPI_STATUS_SIZE, 1:handle%nnb))
-    call MPI_Waitall(handle%nnb, handle%requests(1), status(1, 1), mpi_err)
-    SAFE_DEALLOCATE_A(status)
-    SAFE_DEALLOCATE_P(handle%requests)
-  end select
+  SAFE_ALLOCATE(status(1:MPI_STATUS_SIZE, 1:handle%nnb))
+  call MPI_Waitall(handle%nnb, handle%requests(1), status(1, 1), mpi_err)
+  SAFE_DEALLOCATE_A(status)
+  SAFE_DEALLOCATE_P(handle%requests)
 
   call X(batch_delete)(handle%ghost_send)
   call batch_end(handle%ghost_send)
