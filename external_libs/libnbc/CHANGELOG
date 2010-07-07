@@ -1,8 +1,0 @@
-0.8.1:
-- initial public release 
-
-0.8.2:
-- fixed minor bug in NBC_Iallgatherv()
-- added full Fortran bindings (use cmake)
-- improved performance of NBC_{Test,Wait}
-- MPI_IN_PLACE support

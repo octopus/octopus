@@ -92,10 +92,6 @@ if COMPILE_ZOLTAN
   AM_CPPFLAGS += -I$(top_srcdir)/external_libs/zoltan/include
 endif
 
-if COMPILE_LIBNBC
-  external_LIBS += $(top_builddir)/external_libs/libnbc/libnbc.a
-endif
-
 if COMPILE_NEWUOA
   external_LIBS += $(top_builddir)/external_libs/newuoa/libnewuoa.a
   AM_FCFLAGS += @F90_MODULE_FLAG@$(top_builddir)/external_libs/newuoa

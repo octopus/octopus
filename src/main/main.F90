@@ -240,9 +240,6 @@ program octopus
 #ifdef HAVE_GDLIB
     message(2) = trim(message(2))//' gdlib'
 #endif
-#ifdef HAVE_LIBNBC
-    message(2) = trim(message(2))//' libnbc'
-#endif
 #ifdef HAVE_PAPI
     message(2) = trim(message(2))//' papi'
 #endif

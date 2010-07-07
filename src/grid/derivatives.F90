@@ -218,13 +218,11 @@ contains
     !%Default non_blocking
     !%Section Execution::Parallelization
     !%Description
-    !% This option selects how the communication required for the synchronization is performed.
+    !% This option selects how the communication of mesh boundaries is performed.
     !%Option blocking 1
     !% Blocking communication.
     !%Option non_blocking 2
-    !% Communication is based on non-blocking point-to-point communication.
-    !%Option non_blocking_collective 3
-    !% Non-blocking collective communication (requires <tt>libnbc</tt>).
+    !% Communication is based on non-blocking point-to-point communication. This is the default.
     !%End
     
     call parse_integer(datasets_check('ParallelizationOfDerivatives'), NON_BLOCKING, der%comm_method)
@@ -232,13 +230,6 @@ contains
     if(.not. varinfo_valid_option('ParallelizationOfDerivatives', der%comm_method)) then
       call input_error('ParallelizationOfDerivatives')
     end if
-
-#ifndef HAVE_LIBNBC
-    if(der%comm_method == NON_BLOCKING_COLLECTIVE) then
-      message(1) = "Error: libnbc is not available. Check the ParallelizationOfDerivatives variable."
-      call write_fatal(1, only_root_writes = .true.)
-    end if
-#endif
 
     call messages_obsolete_variable('OverlapDerivatives', 'ParallelizationOfDerivatives')
 #endif

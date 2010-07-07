@@ -141,12 +141,6 @@ if test x"$enable_mpi" != x"no"; then
 fi
 AM_CONDITIONAL(COMPILE_METIS, test x${HAVE_METIS} = x1)
   
-dnl check for LibNBC
-if test x"$enable_mpi" != x"no"; then
- ACX_LIBNBC
-fi
-AM_CONDITIONAL(COMPILE_LIBNBC, test x${HAVE_LIBNBC} = x1)
-
 dnl check for NEWUOA
 ACX_NEWUOA
 AM_CONDITIONAL(COMPILE_NEWUOA, test x${HAVE_NEWUOA} = x1)
@@ -343,7 +337,6 @@ AC_CONFIG_FILES([Makefile
   external_libs/spglib/Makefile
   external_libs/spglib/src/Makefile
   external_libs/poisson_isf/Makefile
-  external_libs/libnbc/Makefile
   external_libs/newuoa/Makefile
   external_libs/zoltan/Makefile
   external_libs/slatec/Makefile
