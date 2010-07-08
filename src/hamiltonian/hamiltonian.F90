@@ -91,7 +91,7 @@ module hamiltonian_m
     hamiltonian_epot_generate,       &
     hamiltonian_update,    &
     hamiltonian_get_time,            &
-    hamiltonian_apply_in_buffer
+    hamiltonian_apply_packed
 
   type hamiltonian_t
     ! The Hamiltonian must know what are the "dimensions" of the spaces,
@@ -167,6 +167,7 @@ module hamiltonian_m
     CMPLX, pointer :: phase(:, :)
 
     FLOAT :: current_time
+    logical :: apply_packed  !< This is initialized by the StatesPack variable.
   end type hamiltonian_t
 
   integer, public, parameter :: &
@@ -407,6 +408,17 @@ contains
       end if
       call init_lead_h
     end if
+
+    !%Variable StatesPack
+    !%Type logical
+    !%Default yes
+    !%Section Execution::Optimization
+    !%Description
+    !% If set to yes (the default), Octopus will 'pack' the
+    !% wave-functions when operating with them. This involves some
+    !% additional copying but makes operations more efficient.
+    !%End
+    call parse_logical(datasets_check('StatesPack'), .true., hm%apply_packed)
 
     call pop_sub('hamiltonian.hamiltonian_init')
 
@@ -1038,11 +1050,11 @@ contains
 
   ! -----------------------------------------------------------------
 
-  logical pure function hamiltonian_apply_in_buffer(this, mesh) result(apply)
+  logical pure function hamiltonian_apply_packed(this, mesh) result(apply)
     type(hamiltonian_t),   intent(in) :: this
     type(mesh_t),          intent(in) :: mesh
     
-    apply = .true.
+    apply = this%apply_packed
     if(mesh%use_curvilinear) apply = .false.
     if(mesh%parallel_in_domains .and. opencl_is_enabled()) apply = .false.
     if(associated(this%phase)) apply = .false.
@@ -1052,7 +1064,7 @@ contains
     if(iand(this%xc_family, XC_FAMILY_MGGA).ne.0)  apply = .false.
     if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
 
-  end function hamiltonian_apply_in_buffer
+  end function hamiltonian_apply_packed
 
 #include "undef.F90"
 #include "real.F90"

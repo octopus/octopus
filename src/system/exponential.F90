@@ -578,7 +578,7 @@ contains
       call batch_init(psi1b, hm%d%dim, st_start, st_end, psi1)
       call batch_init(hpsi1b, hm%d%dim, st_start, st_end, hpsi1)
 
-      if(hamiltonian_apply_in_buffer(hm, der%mesh)) then
+      if(hamiltonian_apply_packed(hm, der%mesh)) then
         call batch_pack(psib)
         call batch_pack(psi1b, copy = .false.)
         call batch_pack(hpsi1b, copy = .false.)
@@ -607,7 +607,7 @@ contains
 
       end do
 
-      if(hamiltonian_apply_in_buffer(hm, der%mesh)) then
+      if(hamiltonian_apply_packed(hm, der%mesh)) then
         call batch_unpack(psib)
         call batch_unpack(psi1b, copy = .false.)
         call batch_unpack(hpsi1b, copy = .false.)
