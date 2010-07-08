@@ -21,6 +21,7 @@
 
 module derivatives_m
   use batch_m
+  use boundaries_m
   use datasets_m
   use global_m
   use io_function_m
@@ -90,6 +91,9 @@ module derivatives_m
     DER_CUBE         = 3,   &
     DER_STARPLUS     = 4
 
+  integer, parameter ::     &
+    BLOCKING = 1,           &
+    NON_BLOCKING = 2 
 
   type derivatives_t
     type(mesh_t), pointer :: mesh          ! pointer to the underlying mesh

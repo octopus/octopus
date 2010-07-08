@@ -65,9 +65,10 @@ libgrid_a_SOURCES =       \
 	fourier_kernel.F90      \
 	mesh_batch.F90          \
 	subarray.F90            \
-	symmetrizer.F90
+	symmetrizer.F90         \
+	boundaries.F90
 
-noinst_HEADERS =            \
+noinst_HEADERS =                  \
 	par_vec_inc.F90           \
 	derivatives_inc.F90       \
 	cube_function_inc.F90     \
@@ -83,7 +84,8 @@ noinst_HEADERS =            \
 	cubic_mesh.h              \
 	mesh_batch_inc.F90        \
 	subarray_inc.F90          \
-	symmetrizer_inc.F90
+	symmetrizer_inc.F90       \
+	boundaries_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -95,25 +97,25 @@ curv_briggs.o : curv_briggs.F90
 curv_modine.o : curv_modine.F90  
 curvilinear.o : curvilinear.F90  curv_modine.o curv_gygi.o curv_briggs.o 
 index.o : index.F90 hypercube.o
-par_vec.o : par_vec.F90 par_vec_inc.F90 index.o stencil.o batch.o subarray.o
+par_vec.o : par_vec.F90 par_vec_inc.F90 index.o stencil.o subarray.o
 mesh.o : mesh.F90 par_vec.o index.o curvilinear.o
 ob_grid.o : ob_grid.F90 mesh.o ob_interface.o
 mesh_init.o : mesh_init.F90 mesh.o par_vec.o stencil.o ob_grid.o partition.o partitioner.o mesh_partition.o
 mesh_partition.o : mesh_partition.F90 mesh.o zoltan.o stencil_star.o stencil.o partition.o partitioner.o 
 modelmb_1part.o : modelmb_1part.F90 mesh.o hypercube.o
-nl_operator.o : nl_operator.F90 nl_operator_inc.F90 par_vec.o mesh.o index.o batch.o stencil.o
+nl_operator.o : nl_operator.F90 nl_operator_inc.F90 par_vec.o mesh.o index.o batch.o stencil.o boundaries.o
 submesh.o : submesh.F90 submesh_inc.F90  mesh.o batch.o
 stencil_star.o : stencil_star.F90 nl_operator.o stencil.o
 stencil_variational.o : stencil_variational.F90 nl_operator.o stencil.o
 stencil_cube.o : stencil_cube.F90 stencil.o
 stencil_starplus.o : stencil_starplus.F90 stencil.o
-derivatives.o : derivatives.F90 derivatives_inc.F90 stencil_variational.o stencil_starplus.o stencil_star.o stencil_cube.o  nl_operator.o mesh.o batch.o io_function.o transfer_table.o mesh_function.o
+derivatives.o : derivatives.F90 derivatives_inc.F90 stencil_variational.o stencil_starplus.o stencil_star.o stencil_cube.o  nl_operator.o mesh.o batch.o io_function.o transfer_table.o mesh_function.o boundaries.o
 cube_function.o : cube_function.F90 cube_function_inc.F90  mesh.o 
 fourier_space.o : fourier_space.F90 fourier_space_inc.F90 cube_function.o mesh.o 
 mesh_function.o : mesh_function.F90 mesh_function_inc.F90 par_vec.o mesh.o cube_function.o modelmb_1part.o
 basins.o : basins.F90 par_vec.o index.o mesh.o 
 io_function.o : io_function.F90 io_function_inc.F90 par_vec.o mesh.o  cube_function.o 
-multigrid.o : multigrid.F90 multigrid_inc.F90 mesh.o curvilinear.o derivatives.o mesh_init.o transfer_table.o
+multigrid.o : multigrid.F90 multigrid_inc.F90 mesh.o curvilinear.o derivatives.o mesh_init.o transfer_table.o boundaries.o
 double_grid.o : double_grid.F90 double_grid_apply_inc.F90 submesh.o mesh_function.o mesh.o curvilinear.o 
 grid.o : grid.F90  multigrid.o mesh.o double_grid.o curvilinear.o ob_interface.o mesh_init.o
 gridhier.o : gridhier.F90 gridhier_inc.F90 multigrid.o
@@ -133,4 +135,4 @@ symmetrizer.o : symmetrizer.F90 symmetrizer_inc.F90 mesh.o
 partition.o : partition.F90 mesh.o
 partitioner.o : partitioner.F90 partition.o
 subarray.o : subarray.F90 subarray_inc.F90 batch.o
-
+boundaries.o : boundaries.F90 boundaries_inc.F90 subarray.o batch.o par_vec.o

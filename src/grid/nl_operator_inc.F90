@@ -114,8 +114,8 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 #else
 #define LOGLDF 1
 #endif
-          
           call operate_ri_vec(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), LOGLDF, pfo(1))
+#undef LOGLDF
         end do
       end if
       !$omp end parallel

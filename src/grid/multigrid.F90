@@ -20,6 +20,7 @@
 #include "global.h"
 
 module multigrid_m
+  use boundaries_m
   use curvilinear_m
   use derivatives_m
   use datasets_m

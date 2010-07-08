@@ -20,6 +20,7 @@
 #include "global.h"
 
 module poisson_multigrid_m
+  use boundaries_m
   use datasets_m
   use derivatives_m
   use global_m

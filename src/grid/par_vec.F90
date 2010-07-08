@@ -77,9 +77,6 @@
   !! deallocate(ul, vl, wl)
 
 module par_vec_m
-
-  use batch_m
-  use c_pointer_m
   use global_m
   use iihash_m
   use index_m
@@ -94,7 +91,35 @@ module par_vec_m
   implicit none
 
   private
-  public :: pv_t
+
+  public ::                        &
+    pv_t
+
+#if defined(HAVE_MPI)
+  public ::                        &
+    vec_init,                      &
+    vec_end,                       &
+    vec_global2local,              &
+    dvec_scatter,                  &
+    zvec_scatter,                  &
+    ivec_scatter,                  &
+    dvec_scatter_bndry,            &
+    zvec_scatter_bndry,            &
+    ivec_scatter_bndry,            &
+    dvec_scatter_all,              &
+    zvec_scatter_all,              &
+    ivec_scatter_all,              &
+    dvec_gather,                   &
+    zvec_gather,                   &
+    ivec_gather,                   &
+    dvec_selective_gather,         &
+    zvec_selective_gather,         &
+    dvec_selective_scatter,        &
+    zvec_selective_scatter,        &
+    dvec_allgather,                &
+    zvec_allgather,                &
+    ivec_allgather
+#endif
 
   type pv_t
     ! The content of these members is node-dependent.
@@ -138,52 +163,6 @@ module par_vec_m
   end type pv_t
 
 #if defined(HAVE_MPI)
-
-  integer :: SEND = 1, RECV = 2
-
-  integer, public, parameter :: BLOCKING = 1, NON_BLOCKING = 2
-
-  type pv_handle_batch_t
-    private
-    type(batch_t)        :: ghost_send
-    integer,     pointer :: requests(:)
-    integer              :: nnb
-  end type pv_handle_batch_t
-
-  type(profile_t), save :: C_PROFILING_GHOST_UPDATE     
-  type(profile_t), save :: prof_wait
-    
-  public ::                &
-    pv_handle_batch_t,     &
-    vec_init,              &
-    vec_end,               &
-    vec_global2local,      &
-    dvec_scatter,          &
-    zvec_scatter,          &
-    ivec_scatter,          &
-    dvec_scatter_bndry,    &
-    zvec_scatter_bndry,    &
-    ivec_scatter_bndry,    &
-    dvec_scatter_all,      &
-    zvec_scatter_all,      &
-    ivec_scatter_all,      &
-    dvec_gather,           &
-    zvec_gather,           &
-    ivec_gather,           &
-    dvec_selective_gather, &
-    zvec_selective_gather, &
-    dvec_selective_scatter,&
-    zvec_selective_scatter,&
-    dvec_allgather,        &
-    zvec_allgather,        &
-    ivec_allgather,        &
-    dvec_ghost_update,     &
-    zvec_ghost_update,     &
-    ivec_ghost_update,     &
-    dghost_update_batch_start,  &
-    zghost_update_batch_start,  &
-    dghost_update_batch_finish, &
-    zghost_update_batch_finish
 
 contains
 
