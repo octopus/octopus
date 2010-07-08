@@ -2480,7 +2480,8 @@ return
               ASSERT(associated(tau))
               if(states_are_complex(st) .and. st%current_in_tau) then
                 ASSERT(associated(jp))
-                gi_kinetic_energy_density(1:der%mesh%np, is) = tau(1:der%mesh%np, is) - jp(1:der%mesh%np, i_dim, 1)**2/st%rho(1:der%mesh%np, 1)
+                gi_kinetic_energy_density(1:der%mesh%np, is) = tau(1:der%mesh%np, is) - &
+                  jp(1:der%mesh%np, i_dim, 1)**2/st%rho(1:der%mesh%np, 1)
               else
                 gi_kinetic_energy_density(1:der%mesh%np, is) = tau(1:der%mesh%np, is)
               end if
