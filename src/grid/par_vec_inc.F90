@@ -274,49 +274,6 @@ subroutine X(vec_ghost_update)(vp, v_local)
   call profiling_out(C_PROFILING_GHOST_UPDATE)
 end subroutine X(vec_ghost_update)
 
-! ---------------------------------------------------------
-!> The same as Xvec_ghost_update but in a non-blocking fashion.
-subroutine X(vec_ighost_update)(vp, v_local, handle)
-  type(pv_t),         intent(in)    :: vp
-  R_TYPE,             intent(inout) :: v_local(:)
-  type(pv_handle_t),  intent(inout) :: handle
-
-  integer :: ipart, pos, nsend
-
-  call profiling_in(C_PROFILING_GHOST_UPDATE, "GHOST_UPDATE")
-  call push_sub('par_vec_inc.Xvec_ighost_update')
-
-  nullify(handle%ighost_send, handle%dghost_send, handle%zghost_send)
-
-  ! use a series of p2p non-blocking calls
-  handle%nnb = 0
-  do ipart = 1, vp%npart
-    if(vp%np_ghost_neigh(vp%partno, ipart) == 0) cycle
-    
-    handle%nnb = handle%nnb + 1
-    pos = vp%np_local(vp%partno) + 1 + vp%rdispls(ipart)
-    call MPI_Irecv(v_local(pos), vp%rcounts(ipart), R_MPITYPE, ipart - 1, 0, &
-      vp%comm, handle%requests(handle%nnb), mpi_err)
-  end do
-  
-  ! pack the data for sending
-  nsend = subarray_size(vp%sendpoints)
-  SAFE_ALLOCATE(handle%X(ghost_send)(1:nsend))
-  call X(subarray_gather)(vp%sendpoints, v_local, handle%X(ghost_send))
-  
-  do ipart = 1, vp%npart
-    if(vp%np_ghost_neigh(ipart, vp%partno) == 0) cycle
-    
-    handle%nnb = handle%nnb + 1
-    call MPI_Isend(handle%X(ghost_send)(vp%sendpos(ipart)), vp%np_ghost_neigh(ipart, vp%partno), &
-      R_MPITYPE, ipart - 1, 0, vp%comm, handle%requests(handle%nnb), mpi_err)
-  end do
-  
-  call pop_sub('par_vec_inc.Xvec_ighost_update')
-  call profiling_out(C_PROFILING_GHOST_UPDATE)
-
-end subroutine X(vec_ighost_update)
-
 #if defined(R_TREAL) || defined(R_TCOMPLEX)
 
 ! ---------------------------------------------------------
@@ -382,7 +339,6 @@ subroutine X(ghost_update_batch_finish)(handle)
   type(pv_handle_batch_t),  intent(inout)   :: handle
 
   integer, allocatable :: status(:, :)
-  integer :: inb
 
   call profiling_in(prof_wait, "GHOST_UPDATE_WAIT")
   call push_sub('par_vec_inc.Xghost_update_batch_finish')

@@ -143,16 +143,6 @@ module par_vec_m
 
   integer, public, parameter :: BLOCKING = 1, NON_BLOCKING = 2
 
-  type pv_handle_t
-    private
-    integer          :: nnb
-    integer, pointer :: requests(:)
-    integer, pointer :: status(:, :)
-    integer, pointer :: ighost_send(:)
-    FLOAT,   pointer :: dghost_send(:)
-    CMPLX,   pointer :: zghost_send(:)
-  end type pv_handle_t
-
   type pv_handle_batch_t
     private
     type(batch_t)        :: ghost_send
@@ -163,15 +153,8 @@ module par_vec_m
   type(profile_t), save :: C_PROFILING_GHOST_UPDATE     
   type(profile_t), save :: prof_wait
     
-  public ::              &
-    pv_handle_t,         &
-    pv_handle_batch_t,   &
-    pv_handle_init,      &
-    pv_handle_test,      &
-    pv_handle_wait,      &
-    pv_handle_end
-
   public ::                &
+    pv_handle_batch_t,     &
     vec_init,              &
     vec_end,               &
     vec_global2local,      &
@@ -197,13 +180,10 @@ module par_vec_m
     dvec_ghost_update,     &
     zvec_ghost_update,     &
     ivec_ghost_update,     &
-    dvec_ighost_update,         &
-    zvec_ighost_update,         &
     dghost_update_batch_start,  &
     zghost_update_batch_start,  &
     dghost_update_batch_finish, &
-    zghost_update_batch_finish, &
-    ivec_ighost_update
+    zghost_update_batch_finish
 
 contains
 
@@ -554,62 +534,6 @@ contains
     call pop_sub('par_vec.vec_end')
 
   end subroutine vec_end
-
-  ! ---------------------------------------------------------
-  subroutine pv_handle_init(this, vp)
-    type(pv_handle_t), intent(out) :: this
-    type(pv_t),        intent(in)  :: vp
-
-    call push_sub('par_vec.pv_handle_init')
-
-    SAFE_ALLOCATE(this%requests(1:vp%npart*2))
-    SAFE_ALLOCATE(this%status(1:MPI_STATUS_SIZE, 1:vp%npart*2))
-
-    nullify(this%ighost_send, this%dghost_send, this%zghost_send)
-
-    call pop_sub('par_vec.pv_handle_init')
-  end subroutine pv_handle_init
-
-  ! ---------------------------------------------------------
-  subroutine pv_handle_end(this)
-    type(pv_handle_t), intent(inout) :: this
-
-    call push_sub('par_vec.pv_handle_end')
-
-    SAFE_DEALLOCATE_P(this%requests)
-    SAFE_DEALLOCATE_P(this%status)
-
-    call pop_sub('par_vec.pv_handle_end')
-  end subroutine pv_handle_end
-
-
-  ! ---------------------------------------------------------
-  subroutine pv_handle_test(this)
-    type(pv_handle_t), intent(inout) :: this
-    
-    call push_sub('par_vec.pv_handle_test')
-
-    call pop_sub('par_vec.pv_handle_test')
-  end subroutine pv_handle_test
-
-
-  ! ---------------------------------------------------------
-  subroutine pv_handle_wait(this)
-    type(pv_handle_t), intent(inout) :: this
-
-    call push_sub('par_vec.pv_handle_wait')
-    call profiling_in(prof_wait, "GHOST_UPDATE_WAIT")
-
-    call MPI_Waitall(this%nnb, this%requests, this%status, mpi_err)
-
-    SAFE_DEALLOCATE_P(this%ighost_send)
-    SAFE_DEALLOCATE_P(this%dghost_send)
-    SAFE_DEALLOCATE_P(this%zghost_send)
-
-    call profiling_out(prof_wait)
-    call pop_sub('par_vec.pv_handle_wait')
-  end subroutine pv_handle_wait
-
 
   ! ---------------------------------------------------------
   !> Returns local number of global point ip on partition inode.
