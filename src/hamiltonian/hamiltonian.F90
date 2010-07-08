@@ -970,7 +970,7 @@ contains
       end forall
     end if
 
-    ! and the static magentic field
+    ! and the static magnetic field
     if(associated(this%ep%b_field)) then
       call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_MAGNETIC_FIELD)
       forall (idir = 1:3) 
