@@ -585,17 +585,13 @@ subroutine X(derivatives_test)(this)
     ffb%states_linear(ist)%X(psi)(ip) = ff(ip)
   end forall
 
-  if (.not. this%mesh%parallel_in_domains) then
-    call batch_pack(ffb)
-    call batch_pack(opffb, copy = .false.)
-  end if
+  call batch_pack(ffb)
+  call batch_pack(opffb, copy = .false.)
 
   call X(derivatives_batch_perform)(this%lapl, this, ffb, opffb, set_bc = .false.)
 
-  if (.not. this%mesh%parallel_in_domains) then
-    call batch_unpack(ffb, copy = .false.)
-    call batch_unpack(opffb)
-  end if
+  call batch_unpack(ffb, copy = .false.)
+  call batch_unpack(opffb)
 
   forall(ip = 1:this%mesh%np) 
     opffb%states_linear(blocksize)%X(psi)(ip) = opffb%states_linear(blocksize)%X(psi)(ip) - &
