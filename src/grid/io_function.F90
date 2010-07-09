@@ -38,6 +38,7 @@ module io_function_m
   use par_vec_m
   use profiling_m
   use simul_box_m
+  use species_m
   use unit_m
   use unit_system_m
   use varinfo_m
@@ -76,7 +77,8 @@ module io_function_m
     boundary_points   =  8192,    &
     output_binary     = 16384,    &
     output_etsf       = 32768,    &
-    output_xyz        = 65536
+    output_xyz        = 65536,    &
+    output_cube       =131072
 
   ! doutput_kind => real variables; zoutput_kind => complex variables.
   integer, parameter, private ::  &
@@ -168,6 +170,8 @@ contains
     !% Requires the ETSF_IO library.
     !%Option xyz 65536
     !% Geometry will be output in XYZ format. Does not affect other outputs.
+    !%Option cube 131072
+    !% Generates output in the cube file format (<tt>http://local.wasp.uwa.edu.au/~pbourke/dataformats/cube/</tt>)
     !%End
     call parse_integer(datasets_check('OutputHow'), 0, how)
     if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
@@ -182,7 +186,7 @@ contains
     ! some modes are not available in some circumstances, so we reset how
     if(sb%dim == 1) how = iand(how, not(output_axis_y + output_plane_z))
     if(sb%dim <= 2) how = iand(how, not(output_axis_z + &
-      output_plane_x + output_plane_y + output_dx))
+      output_plane_x + output_plane_y + output_dx + output_cube))
 #if !defined(HAVE_NETCDF)
     how = iand(how, not(output_netcdf))
 #endif
@@ -218,6 +222,7 @@ contains
 #if defined(HAVE_NETCDF)
     if(index(where, "NETCDF")    .ne. 0) how = ior(how, output_netcdf)
 #endif
+    if(index(where, "Cube")      .ne. 0) how = ior(how, output_cube)
 
     call pop_sub('io_function.io_function_fill_how')
   end function io_function_fill_how
