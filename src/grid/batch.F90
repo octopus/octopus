@@ -347,7 +347,6 @@ contains
     type(profile_t), save :: prof
 
     call push_sub('batch.batch_pack')
-    call profiling_in(prof, "BATCH_PACK")
 
     ASSERT(batch_is_ok(this))
 
@@ -376,8 +375,10 @@ contains
           SAFE_ALLOCATE(this%pack%zpsi(1:this%pack%size(1), 1:this%pack%size(2)))
         end if
       end if
-
+      
       if(copy_) then
+        call profiling_in(prof, "BATCH_PACK")
+
         this%dirty = .false.
         if(opencl_is_enabled()) then
 #ifdef HAVE_OPENCL
@@ -386,6 +387,8 @@ contains
         else
           call pack_copy()
         end if
+
+        call profiling_out(prof)
       else
         this%dirty = .true.
       end if
@@ -393,7 +396,6 @@ contains
 
     INCR(this%in_buffer_count, 1)
 
-    call profiling_out(prof)
     call pop_sub('batch.batch_pack')
 
   contains
@@ -428,7 +430,6 @@ contains
     type(profile_t), save :: prof
 
     call push_sub('batch.batch_unpack')
-    call profiling_in(prof, "BATCH_UNPACK")
 
     if(batch_is_packed(this)) then
       INCR(this%in_buffer_count, -1)
@@ -439,6 +440,8 @@ contains
         if(present(copy)) copy_ = copy
         
         if(copy_ .and. this%dirty) then
+          call profiling_in(prof, "BATCH_UNPACK")
+
           if(opencl_is_enabled()) then
 #ifdef HAVE_OPENCL
             call batch_read_from_opencl_buffer(this)
@@ -446,6 +449,8 @@ contains
           else
             call unpack_copy()
           end if
+
+          call profiling_out(prof)
         end if
         
         if(opencl_is_enabled()) then
@@ -459,7 +464,6 @@ contains
       end if
     end if
 
-    call profiling_out(prof)
     call pop_sub('batch.batch_unpack')
     
   contains
