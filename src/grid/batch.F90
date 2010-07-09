@@ -404,14 +404,14 @@ contains
       integer :: ist, ip
 
       if(batch_type(this) == TYPE_FLOAT) then
-        forall(ip = 1:this%pack%size(2))
-          forall(ist = 1:this%nst_linear)
+        forall(ist = 1:this%nst_linear)
+          forall(ip = 1:this%pack%size(2))
             this%pack%dpsi(ist, ip) = this%states_linear(ist)%dpsi(ip)
           end forall
         end forall
       else
-        forall(ip = 1:this%pack%size(2))
-          forall(ist = 1:this%nst_linear)
+        forall(ist = 1:this%nst_linear)
+          forall(ip = 1:this%pack%size(2))
             this%pack%zpsi(ist, ip) = this%states_linear(ist)%zpsi(ip)
           end forall
         end forall
