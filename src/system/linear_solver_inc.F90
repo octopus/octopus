@@ -589,10 +589,12 @@ subroutine X(ls_solver_sos) (ls, hm, gr, st, ist, ik, x, y, omega)
   
   dsmear = max(CNST(1e-14), st%smear%dsmear)
   do jst = 1, st%nst
+    if(ist == jst) cycle
+
     alpha_j = max(st%smear%e_fermi + M_THREE*dsmear - st%eigenval(jst, ik), M_ZERO)
 
     aa = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, jst, ik), y)
-    aa = aa/(st%eigenval(jst, ik) - st%eigenval(ist, ik) + alpha_j + omega)
+    aa = aa/(st%eigenval(jst, ik) + alpha_j + omega)
 
     do idim = 1, st%d%dim
       call lalg_axpy(gr%mesh%np, aa, st%X(psi)(:, idim, jst, ik), x(:, idim))
