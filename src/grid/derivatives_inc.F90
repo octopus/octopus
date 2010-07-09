@@ -542,8 +542,11 @@ subroutine X(derivatives_test)(this)
   integer :: ip, idir, ist
   type(batch_t) :: ffb, opffb
   integer :: blocksize
+  logical :: packstates
 
   call parse_integer(datasets_check('StatesBlockSize'), 4, blocksize)
+  call parse_logical(datasets_check('StatesPack'), .true., packstates)
+
   write(message(1), '(a,i4)') '   Blocksize = ', blocksize
   message(2) = ''
   call write_info(2)
@@ -585,13 +588,17 @@ subroutine X(derivatives_test)(this)
     ffb%states_linear(ist)%X(psi)(ip) = ff(ip)
   end forall
 
-  call batch_pack(ffb)
-  call batch_pack(opffb, copy = .false.)
+  if(packstates) then
+    call batch_pack(ffb)
+    call batch_pack(opffb, copy = .false.)
+  end if
 
   call X(derivatives_batch_perform)(this%lapl, this, ffb, opffb, set_bc = .false.)
 
-  call batch_unpack(ffb, copy = .false.)
-  call batch_unpack(opffb)
+  if(packstates) then
+    call batch_unpack(ffb, copy = .false.)
+    call batch_unpack(opffb)
+  end if
 
   forall(ip = 1:this%mesh%np) 
     opffb%states_linear(blocksize)%X(psi)(ip) = opffb%states_linear(blocksize)%X(psi)(ip) - &
