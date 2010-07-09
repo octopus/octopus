@@ -823,7 +823,7 @@ contains
         mesh%spacing(idir)*mesh%sb%rlattice_primitive(idir2, idir)), idir2 = 1, 3)
     end do
     do iatom = 1, geo%natoms
-      write(iunit, '(i5,3f12.6)') int(species_z(geo%atom(iatom)%spec)),  &
+      write(iunit, '(i5,4f12.6)') int(species_z(geo%atom(iatom)%spec)),  M_ZERO, &
         (units_from_atomic(units_out%length, geo%atom(iatom)%x(idir)), idir = 1, 3)
     end do
 
