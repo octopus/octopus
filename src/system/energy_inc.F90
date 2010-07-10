@@ -27,7 +27,7 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time, open_boundaries)
   FLOAT,   optional,   intent(in)    :: time
   logical, optional,   intent(in)    :: open_boundaries
 
-  R_TYPE, allocatable :: hpsi(:, :, :), psi(:, :, :)
+  R_TYPE, allocatable :: hpsi(:, :, :)
   integer :: ik, ist, minst, maxst
   logical :: open_boundaries_
   type(batch_t) :: psib, hpsib
@@ -59,20 +59,11 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time, open_boundaries)
     do ik = st%d%kpt%start, st%d%kpt%end
 
       SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:st%d%dim, 1:st%d%block_size))
-      if(st%np_size) then
-        SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim, 1:st%d%block_size))
-      end if
 
       do minst = st%st_start, st%st_end, st%d%block_size
         maxst = min(st%st_end, minst + st%d%block_size - 1)
 
-        if(st%np_size) then
-          call batch_init(psib, st%d%dim, minst, maxst, psi)
-          call batch_set(psib, der%mesh%np,  st%X(psi)(:, :, minst:, ik))
-        else
-          call batch_init(psib, st%d%dim, minst, maxst, st%X(psi)(:, :, minst:, ik))
-        end if
-
+        call batch_init(psib, st%d%dim, minst, maxst, st%X(psi)(:, :, minst:, ik))
         call batch_init(hpsib, st%d%dim, minst, maxst, hpsi)
 
         if(present(time)) then
@@ -91,9 +82,6 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time, open_boundaries)
 
       end do
 
-      if(st%np_size) then
-        SAFE_DEALLOCATE_A(psi)
-      end if
       SAFE_DEALLOCATE_A(hpsi)
 
     end do
@@ -116,9 +104,6 @@ FLOAT function X(electronic_kinetic_energy)(hm, gr, st) result(t0)
 
   call push_sub('energy_inc.Xelectronic_kinetic_energy')
 
-  if(st%np_size) then
-    SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
-  end if
   SAFE_ALLOCATE(tpsi(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(t(st%st_start:st%st_end, 1:st%d%nik))
 
@@ -127,14 +112,7 @@ FLOAT function X(electronic_kinetic_energy)(hm, gr, st) result(t0)
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       tpsi = R_TOTYPE(M_ZERO)
-      if(st%np_size) then
-        do idim = 1, st%d%dim
-          call lalg_copy(gr%mesh%np, st%X(psi)(:, idim, ist, ik), psi(:, idim))
-        end do
-        call X(hamiltonian_apply)(hm, gr%der, psi, tpsi, ist, ik, terms = TERM_KINETIC)
-      else
-        call X(hamiltonian_apply)(hm, gr%der, st%X(psi)(:, :, ist, ik), tpsi, ist, ik, terms = TERM_KINETIC)
-      end if
+      call X(hamiltonian_apply)(hm, gr%der, st%X(psi)(:, :, ist, ik), tpsi, ist, ik, terms = TERM_KINETIC)
       t(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), tpsi)
     end do
   end do

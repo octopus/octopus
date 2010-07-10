@@ -28,7 +28,7 @@ subroutine X(subspace_diag)(der, st, hm, ik, eigenval, psi, diff)
   R_TYPE,              intent(inout) :: psi(:, :, :)
   FLOAT, optional,     intent(out)   :: diff(:)
 
-  R_TYPE, allocatable :: h_subspace(:, :), f(:, :, :), psi2(:, :, :)
+  R_TYPE, allocatable :: h_subspace(:, :), f(:, :, :)
   integer             :: ist, ist2, jst, size, idim
   FLOAT               :: nrm2
   type(profile_t),     save    :: diagon_prof
@@ -50,20 +50,11 @@ subroutine X(subspace_diag)(der, st, hm, ik, eigenval, psi, diff)
     SAFE_ALLOCATE(h_subspace(1:st%nst, 1:st%nst))
     SAFE_ALLOCATE(f(1:der%mesh%np, 1:st%d%dim, 1:st%d%block_size))
 
-    if(st%np_size) then
-      SAFE_ALLOCATE(psi2(1:der%mesh%np_part, 1:st%d%dim, 1:st%d%block_size))
-    end if
-
     ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
     do ist = st%st_start, st%st_end, st%d%block_size
       size = min(st%d%block_size, st%st_end - ist + 1)
 
-      if(st%np_size) then
-        call batch_init(psib, hm%d%dim, ist, ist + size - 1, psi2)
-        call batch_set(psib, der%mesh%np, psi(:, :, ist:))
-      else
-        call batch_init(psib, hm%d%dim, ist, ist + size - 1, psi(:, :, ist:))
-      end if
+      call batch_init(psib, hm%d%dim, ist, ist + size - 1, psi(:, :, ist:))
 
       call batch_init(hpsib, hm%d%dim, ist, ist + size - 1, f)
 
@@ -107,12 +98,7 @@ subroutine X(subspace_diag)(der, st, hm, ik, eigenval, psi, diff)
       do ist = st%st_start, st%st_end, st%d%block_size
         size = min(st%d%block_size, st%st_end - ist + 1)
 
-        if(st%np_size) then
-          call batch_init(psib, hm%d%dim, ist, ist + size - 1, psi2)
-          call batch_set(psib, der%mesh%np, psi(:, :, ist:))
-        else
-          call batch_init(psib, hm%d%dim, ist, ist + size - 1, psi(:, :, ist:))
-        end if
+        call batch_init(psib, hm%d%dim, ist, ist + size - 1, psi(:, :, ist:))
         call batch_init(hpsib, hm%d%dim, ist, ist + size - 1, f)
         
         call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik)
@@ -125,10 +111,6 @@ subroutine X(subspace_diag)(der, st, hm, ik, eigenval, psi, diff)
         end do
       end do
 
-    end if
-
-    if(st%np_size) then
-      SAFE_DEALLOCATE_A(psi2)
     end if
 
     SAFE_DEALLOCATE_A(f)

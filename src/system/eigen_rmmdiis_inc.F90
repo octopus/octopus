@@ -306,12 +306,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   do jst = st%st_start, st%st_end, blocksize
     maxst = min(jst + blocksize - 1, st%st_end)
 
-    if(st%np_size) then
-      call batch_init(psib(1), st%d%dim, jst, maxst, psi(:, :, 1, :))
-      call batch_set(psib(1), gr%mesh%np, st%X(psi)(:, :, jst:, ik))
-    else
-      call batch_init(psib(1), st%d%dim, jst, maxst, st%X(psi)(:, :, jst:, ik))
-    end if
+    call batch_init(psib(1), st%d%dim, jst, maxst, st%X(psi)(:, :, jst:, ik))
     call batch_init(resb(1), st%d%dim, jst, maxst, res(:, :, 1, :))
     
     call X(hamiltonian_apply_batch)(hm, gr%der, psib(1), resb(1), ik)
@@ -368,7 +363,6 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
   integer :: isweep, isd, ist, idim, sst, est, bsize, ib
   R_TYPE  :: lambda, ca, cb, cc
   
-  R_TYPE, allocatable :: psi(:, :, :)
   R_TYPE, allocatable :: res(:, :, :)
   R_TYPE, allocatable :: kres(:, :, :)
   R_TYPE, allocatable :: me1(:, :), me2(:, :)
@@ -385,10 +379,6 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
   SAFE_ALLOCATE(res(1:gr%mesh%np_part, 1:st%d%dim, 1:blocksize))
   SAFE_ALLOCATE(kres(1:gr%mesh%np_part, 1:st%d%dim, 1:blocksize))
 
-  if(st%np_size) then
-    SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim, 1:blocksize))
-  end if
-
   niter = 0
 
   do isweep = 1, sweeps
@@ -399,12 +389,7 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
       est = min(sst + blocksize - 1, st%st_end)
       bsize = est - sst + 1
 
-      if(st%np_size) then
-        call batch_init(psib, st%d%dim, sst, est, psi)
-        call batch_set(psib, gr%mesh%np, st%X(psi)(:, :, sst:, ik))
-      else
-        call batch_init(psib, st%d%dim, sst, est, st%X(psi)(:, :, sst:, ik))
-      end if
+      call batch_init(psib, st%d%dim, sst, est, st%X(psi)(:, :, sst:, ik))
 
       call batch_init(resb, st%d%dim, sst, est, res)
       call batch_init(kresb, st%d%dim, sst, est, kres)
