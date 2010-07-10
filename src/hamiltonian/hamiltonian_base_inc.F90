@@ -83,7 +83,6 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
     call profiling_count_operations((R_MUL*psib%nst)*mesh%np)
     call profiling_count_transfers(mesh%np, M_ONE)
     call profiling_count_transfers(mesh%np*psib%nst, R_TOTYPE(M_ONE))
-    call profiling_out(prof_vlpsi)
 
 #endif
   case(BATCH_PACKED)
@@ -281,7 +280,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
     call opencl_finish()
 
-    call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_nlocal_finish')
+    call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_nlocal_start')
     call profiling_out(prof_vnlpsi)
     return
   end if
@@ -479,14 +478,14 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
       call profiling_count_operations(nst*npoints*R_ADD)
       call profiling_out(prof_scatter)
     end if
-
+    
     SAFE_DEALLOCATE_A(psi)
     
     INCR(iprojection, nprojs)
   end do
-
+  
   SAFE_DEALLOCATE_P(projection%X(projection))
-
+  
   call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_nlocal_finish')
   call profiling_out(prof_vnlpsi)
 

@@ -81,11 +81,18 @@ __kernel void operate_map(const int nn,
   if(ip >= np) return;
 
   double a0 = 0.0;
-  for(int j = 0; j < nn; j++){
-    a0 += weights[j]*fi[((index[j] + ip)<<ldfi) + ist];
+  double a1 = 0.0;
+
+  for(int j = 0; j < nn - 2 + 1; j += 2){
+    a0 += weights[j    ]*fi[((index[j    ] + ip)<<ldfi) + ist];
+    a1 += weights[j + 1]*fi[((index[j + 1] + ip)<<ldfi) + ist];
   }
-  fo[(ip<<ldfo) + ist] = a0;
-  
+
+  // if nn is odd, we still have to do the last iteration
+  if(nn & 1) a0 += weights[nn - 1]*fi[((index[nn - 1] + ip)<<ldfi) + ist];
+
+  fo[(ip<<ldfo) + ist] = a0 + a1;
+
 }
 
 /*
