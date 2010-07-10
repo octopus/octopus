@@ -52,7 +52,7 @@
 #define VEC_SCAL(aa) __cmplx(aa, aa)
 #define VEC_ZERO __cmplx(0.0, 0.0)
 
-#define DEPTH 8
+#define DEPTH 16
 #endif
 
 #endif
@@ -71,5 +71,7 @@
 
 #define DEPTH 8
 #endif
+
+#define max1(x) (((x) > 0)?(x):1)
 
 #endif

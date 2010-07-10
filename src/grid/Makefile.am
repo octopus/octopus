@@ -66,7 +66,8 @@ libgrid_a_SOURCES =       \
 	mesh_batch.F90          \
 	subarray.F90            \
 	symmetrizer.F90         \
-	boundaries.F90
+	boundaries.F90          \
+	operate.c
 
 noinst_HEADERS =                  \
 	par_vec_inc.F90           \
@@ -85,7 +86,8 @@ noinst_HEADERS =                  \
 	mesh_batch_inc.F90        \
 	subarray_inc.F90          \
 	symmetrizer_inc.F90       \
-	boundaries_inc.F90
+	boundaries_inc.F90        \
+	operate_inc.c
 
 include $(srcdir)/../common-rules.make
 
@@ -136,3 +138,4 @@ partition.o : partition.F90 mesh.o
 partitioner.o : partitioner.F90 partition.o
 subarray.o : subarray.F90 subarray_inc.F90 batch.o
 boundaries.o : boundaries.F90 boundaries_inc.F90 subarray.o batch.o par_vec.o
+operate.o : operate.c operate_inc.c

@@ -345,7 +345,6 @@ AC_CONFIG_FILES([Makefile
   src/include/Makefile
   src/basic/Makefile
   src/math/Makefile
-  src/beak/Makefile
   src/species/Makefile
   src/ions/Makefile
   src/grid/Makefile

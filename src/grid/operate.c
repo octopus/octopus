@@ -21,15 +21,12 @@
 
 
 #include <config.h>
-#include "beak.h"
 
 #include <assert.h>
-
-#include "beak.h"
-#include "vectors.h"
+#include <vectors.h>
 
 void FC_FUNC_(operate_ri_vec,OPERATE_RI_VEC)(const int * opn, 
-					       const ffloat * restrict w, 
+					       const double * restrict w, 
 					       const int * opnri,
 					       const int * opri,
 					       const int * rimap_inv,
@@ -47,53 +44,41 @@ void FC_FUNC_(operate_ri_vec,OPERATE_RI_VEC)(const int * opn,
 
   if(aligned){
 #define ALIGNED
-#include "operate_ri_vec.c"
+#include "operate_inc.c"
 #undef ALIGNED
 
   } else {
     /* not aligned */
-#include "operate_ri_vec.c"
+#include "operate_inc.c"
   }
 
 }
 
 void FC_FUNC_(dgauss_seidel,DGAUSS_SEIDEL)(const int * opn, 
-				           const ffloat * restrict w, 
+				           const double * restrict w, 
 				           const int * opnri,
 				           const int * opri,
 				           const int * rimap_inv,
 				           const int * rimap_inv_max,
-					   ffloat * restrict factor,
-				           ffloat * pot, 
-				           ffloat * restrict rho){
+					   double * restrict factor,
+				           double * pot, 
+				           double * restrict rho){
 
   const int n = opn[0];
   const int nri = opnri[0];
 
   int l, i, j;
   const int * index;
-  register ffloat a0;
-  const ffloat * ffi[MAX_OP_N];
-  register const ffloat fac = factor[0];
-  assert(MAX_OP_N >= n);
+  register double a0;
+  register const double fac = factor[0];
 
   for (l = 0; l < nri ; l++) {
-
     index  = opri + n*l;
-
     i = rimap_inv[l];
-
-    a0 = 0.0;
-    for(j = 0; j < n ; j++) {
-      ffi[j] = pot + index[j];
-      a0 += w[j]*ffi[j][i];
-    }
-    pot[i] += fac*(a0 - rho[i]);
-    i++;
 
     for (; i < rimap_inv_max[l]; i++){
       a0 = 0.0;
-      for(j = 0; j < n; j++) a0 += w[j] * ffi[j][i];
+      for(j = 0; j < n; j++) a0 += w[j]*(pot + index[j])[i];
       pot[i] += fac*(a0 - rho[i]);
     }
 
