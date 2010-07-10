@@ -23,11 +23,11 @@
 
 module smear_m
   use datasets_m
-  use loct_math_m
-  use parser_m
   use global_m
+  use loct_math_m
   use math_m
   use messages_m
+  use parser_m
   use profiling_m
   use unit_m
   use unit_system_m

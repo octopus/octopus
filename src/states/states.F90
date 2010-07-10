@@ -163,6 +163,7 @@ module states_m
     FLOAT          :: qtot          !< (-) The total charge in the system (used in Fermi)
     FLOAT          :: val_charge    !< valence charge
 
+    logical        :: extrastates   ! are there extra states?
     type(smear_t)  :: smear         ! smearing of the electronic occupations
 
     !> This is stuff needed for the parallelization in states.
@@ -295,6 +296,8 @@ contains
       message(2) = '(0 <= ExtraStates)'
       call write_fatal(2)
     end if
+
+    st%extrastates = (nempty > 0)
 
     ! For non-periodic systems this should just return the Gamma point
     call states_choose_kpoints(st%d, gr%sb, geo)
@@ -770,6 +773,11 @@ contains
     end if
 
     call smear_init(st%smear, st%d%ispin, st%fixed_occ)
+
+    if(.not. smear_is_semiconducting(st%smear) .and. .not. st%extrastates) then
+      message(1) = "Non-semiconductor smearing needs ExtraStates > 0 to be useful."
+      call write_warning(1)
+    endif
 
     ! sanity check
     charge = M_ZERO
