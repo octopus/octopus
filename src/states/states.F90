@@ -390,7 +390,6 @@ contains
       st%nst = int(st%qtot/2)
       if(st%nst*2 < st%qtot) st%nst = st%nst + 1
       st%nst = st%nst + nempty + st%ob_ncs
-      ! st%d%nik = st%d%nik*2
       st%d%nspin = 2
       st%d%spin_channels = 2
     case(SPINORS)
@@ -1010,25 +1009,6 @@ contains
       end if
 
       st%d%block_size = min(st%d%block_size, st%nst)
-
-      !%Variable StatesWindowSize
-      !%Type integer
-      !%Default nst
-      !%Section Execution::Optimization
-      !%Description
-      !% (experimental) The orthogonalization of the wavefunctions can
-      !% be done by windows; this value selects the size of the
-      !% windows. The default size is total number of states, which
-      !% disables window orthogonalization.
-      !%End
-
-      call parse_integer(datasets_check('StatesWindowSize'), st%nst, st%d%window_size)
-      if(st%d%block_size < 1) then
-        message(1) = "Error: The variable 'StatesBlockSize' must be greater than 0."
-        call write_fatal(1)
-      end if
-
-      st%d%window_size = min(st%d%window_size, st%nst)
 
       !%Variable StatesOrthogonalization
       !%Type integer

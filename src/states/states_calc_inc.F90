@@ -37,11 +37,7 @@ subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
   call push_sub('states_calc_inc.Xstates_orthogonalization_full')
 
   if(.not. st%parallel_in_states) then
-    wsize = st%d%window_size
-    do st_start = 1, nst, wsize
-      st_end = min(st_start + 2*wsize - 1, nst)
-      call X(states_orthogonalization_block)(st, st_end - st_start + 1, mesh, dim, psi(:, :, st_start:))
-    end do
+    call X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
   else
 
     SAFE_ALLOCATE(qq(1:st%nst, 1:st%nst))
