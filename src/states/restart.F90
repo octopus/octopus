@@ -182,7 +182,9 @@ contains
       message(1) = 'Could not properly read wavefunctions from "'//trim(dir)//GS_DIR//'".'
       call write_fatal(1)
     end if
-
+    
+    ! FIXME: This wrong, one cannot just change the number of states
+    ! without updating the internal structures.
     st%nst    = nst
     st%st_end = nst
     SAFE_DEALLOCATE_P(st%eigenval)

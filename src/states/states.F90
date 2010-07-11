@@ -119,13 +119,18 @@ module states_m
   type states_t
     type(states_dim_t)       :: d
     type(modelmb_particle_t) :: modelmbparticles
-    type(states_priv_t)      :: priv !< the private components 
-    integer :: nst                   !< Number of states in each irreducible subspace
+    type(states_priv_t)      :: priv                  !< the private components 
+    integer                  :: nst                   !< Number of states in each irreducible subspace
 
     ! pointers to the wavefunctions 
-    logical :: only_userdef_istates !< only use user-defined states as initial states in propagation
-    FLOAT, pointer :: dpsi(:,:,:,:) !< dpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
-    CMPLX, pointer :: zpsi(:,:,:,:) !< zpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
+    logical                  :: only_userdef_istates  !< only use user-defined states as initial states in propagation
+    FLOAT, pointer           :: dpsi(:,:,:,:)         !< dpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
+    CMPLX, pointer           :: zpsi(:,:,:,:)         !< zpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
+
+    type(batch_t), pointer   :: psib(:, :)            !< A set of wave-functions blocks
+    integer                  :: nblocks               !< The number of blocks
+    integer, pointer         :: iblock(:, :)          !< A map, that for each state index, returns the index of block that contains it. 
+    logical, pointer         :: block_is_local(:, :)  !< It is true if the block is in this node.
 
     logical             :: open_boundaries
     CMPLX, pointer      :: zphi(:, :, :, :)  !< Free states for open-boundary calculations.
@@ -928,11 +933,93 @@ contains
         SAFE_ALLOCATE(st%ob_lead(il)%intf_psi(1:ob_mesh(il)%np, 1:st%d%dim, st1:st2, k1:k2))
         st%ob_lead(il)%intf_psi = M_z0
       end do
-
     end if
+
+    call states_init_block(st)
 
     call pop_sub('states.states_allocate_wfns')
   end subroutine states_allocate_wfns
+  
+  ! -----------------------------------------------------
+  
+  subroutine states_init_block(st)
+    type(states_t),    intent(inout)   :: st
+
+    integer :: ib, iq, ist
+    logical :: same_node
+    integer, allocatable :: bstart(:), bend(:)
+
+    SAFE_ALLOCATE(bstart(1:st%nst))
+    SAFE_ALLOCATE(bend(1:st%nst))
+    SAFE_ALLOCATE(st%iblock(1:st%nst, 1:st%d%nik))
+    st%iblock = 0
+
+    ! count and assign blocks
+    ib = 0
+    st%nblocks = 0
+    bstart(1) = 1
+    do ist = 1, st%nst
+      INCR(ib, 1)
+
+      st%iblock(ist, st%d%kpt%start:st%d%kpt%end) = st%nblocks + 1
+
+      same_node = .true.
+      if(st%parallel_in_states .and. ist /= st%nst) then
+        ! We have to avoid that states that are in different nodes end
+        ! up in the same block
+        same_node = (st%node(ist + 1) == st%node(ist))
+      end if
+
+      if(ib == st%d%block_size .or. ist == st%nst .or. .not. same_node) then
+        ib = 0
+        INCR(st%nblocks, 1)
+        bend(st%nblocks) = ist
+        if(ist /= st%nst) bstart(st%nblocks + 1) = ist + 1
+      end if
+    end do
+
+!!$    ! some debug output that I will keep here for the moment
+!!$    if(mpi_grp_is_root(mpi_world)) then
+!!$      print*, "NST       ", st%nst
+!!$      print*, "BLOCKSIZE ", st%d%block_size
+!!$      print*, "NBLOCKS   ", st%nblocks
+!!$        
+!!$      print*, "===============" 
+!!$      do ist = 1, st%nst
+!!$        print*, st%node(ist), ist, st%iblock(ist, 1)
+!!$      end do
+!!$      print*, "===============" 
+!!$      
+!!$      do ib = 1, st%nblocks
+!!$        print*, ib, bstart(ib), bend(ib)
+!!$      end do
+!!$      
+!!$    end if
+    
+    SAFE_ALLOCATE(st%psib(1:st%nblocks, 1:st%d%nik))
+    SAFE_ALLOCATE(st%block_is_local(1:st%nblocks, 1:st%d%nik))
+    st%block_is_local = .false.
+
+    do ib = 1, st%nblocks
+      if(bstart(ib) >= st%st_start .and. bend(ib) <= st%st_end) then
+        do iq = st%d%kpt%start, st%d%kpt%end
+          st%block_is_local(ib, iq) = .true.
+
+          if (states_are_real(st)) then
+            ASSERT(associated(st%dpsi))
+            call batch_init(st%psib(ib, iq), st%d%dim, bstart(ib), bend(ib), st%dpsi(:, :, bstart(ib):bend(ib), iq))
+          else
+            ASSERT(associated(st%zpsi))
+            call batch_init(st%psib(ib, iq), st%d%dim, bstart(ib), bend(ib), st%zpsi(:, :, bstart(ib):bend(ib), iq))
+          end if
+          
+        end do
+      end if
+    end do
+
+    SAFE_DEALLOCATE_A(bstart)
+    SAFE_DEALLOCATE_A(bend)
+  end subroutine states_init_block
 
 
   ! ---------------------------------------------------------
@@ -940,7 +1027,7 @@ contains
   subroutine states_deallocate_wfns(st)
     type(states_t), intent(inout) :: st
 
-    integer :: il
+    integer :: il, ib, iq
 
     call push_sub('states.states_deallocate_wfns')
 
@@ -949,6 +1036,16 @@ contains
     else
       SAFE_DEALLOCATE_P(st%zpsi)
     end if
+
+    do ib = 1, st%nblocks
+      do iq = st%d%kpt%start, st%d%kpt%end
+        if(st%block_is_local(ib, iq)) call batch_end(st%psib(ib, iq))
+      end do
+    end do
+
+    SAFE_DEALLOCATE_P(st%psib)
+    SAFE_DEALLOCATE_P(st%block_is_local)
+    SAFE_DEALLOCATE_P(st%iblock)
 
     if(st%open_boundaries .and. calc_mode_is(CM_TD)) then
       do il = 1, NLEADS
@@ -1080,6 +1177,10 @@ contains
     ! Some of the "open boundaries" variables are not copied.
 
     stout%symmetrize_density = stin%symmetrize_density
+
+    if(associated(stout%dpsi) .or. associated(stout%zpsi)) then
+      call states_init_block(stout)
+    end if
 
     call pop_sub('states.states_copy')
   end subroutine states_copy

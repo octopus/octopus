@@ -272,7 +272,7 @@ module opt_control_target_m
       if(parse_isdef(datasets_check('OCTTargetTransformStates')) .ne. 0) then
         if(parse_block(datasets_check('OCTTargetTransformStates'), blk) == 0) then
           call states_copy(tmp_st, target%st)
-          SAFE_DEALLOCATE_P(tmp_st%zpsi)
+          call states_deallocate_wfns(tmp_st)
           call restart_look_and_read(tmp_st, gr, geo)
           SAFE_ALLOCATE(rotation_matrix(1:target%st%nst, 1:tmp_st%nst))
           rotation_matrix = M_z0
