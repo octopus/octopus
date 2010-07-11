@@ -51,8 +51,8 @@ contains
     type(system_t),              intent(inout) :: sys
     type(hamiltonian_t),         intent(inout) :: hm
 
-    integer :: ii, jj, ierr, np, ndim, nspin, idiffmax
-    integer :: verbosity, err
+    integer :: ii, jj, np, ndim, nspin, idiffmax
+    integer :: err
     FLOAT   :: diffdensity
     FLOAT, allocatable :: target_rho(:,:), rho(:)
       

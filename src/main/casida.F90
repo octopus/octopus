@@ -847,9 +847,7 @@ contains
     type(casida_t), intent(in) :: cas
     character(len=*),  intent(in) :: filename
 
-    character(len=5) :: str
-    integer :: iunit, ia, jb, idim, dim
-    FLOAT   :: temp
+    integer :: iunit, ia, dim
     integer, allocatable :: ind(:)
     FLOAT, allocatable :: w(:)
 
@@ -901,7 +899,7 @@ contains
     character(len=*),  intent(in) :: filename
 
     character(len=5) :: str
-    integer :: iunit, ia, jb, idim, dim
+    integer :: iunit, ia, jb, dim, idim
     FLOAT   :: temp
     integer, allocatable :: ind(:)
     FLOAT, allocatable :: w(:)

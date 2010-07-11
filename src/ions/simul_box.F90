@@ -1155,8 +1155,6 @@ contains
     type(simul_box_t), intent(out) :: sbout
     type(simul_box_t), intent(in)  :: sbin
 
-    integer :: il
-
     call push_sub('simul_box.simul_box_copy')
 
     sbout%box_shape               = sbin%box_shape
@@ -1203,8 +1201,7 @@ contains
     type(geometry_t),  intent(inout) :: geo
 
     ! some local stuff
-    FLOAT :: def_h, def_rsize
-    integer :: idir, il
+    integer :: il
 
     call push_sub('ob_simul_box.ob_simul_box_init')
 

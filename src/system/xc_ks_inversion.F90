@@ -205,7 +205,7 @@ contains
     FLOAT,   intent(in)      :: target_rho(1:gr%mesh%np, 1:nspin)
            
     integer :: ii, jj 
-    integer :: np_part, ndim, np
+    integer :: ndim, np
     FLOAT   :: spacing(1:MAX_DIM), stabilizer
     FLOAT, allocatable :: sqrtrho(:,:), laplace(:,:), vks(:,:)
 
@@ -271,7 +271,6 @@ contains
     integer,             intent(in)    :: nspin
     FLOAT,               intent(in)    :: target_rho(1:gr%mesh%np, 1:nspin)
         
-    type(mix_t) :: smix
     integer :: ii, jj, ierr, idiffmax
     integer :: iunit, verbosity, counter, np
     FLOAT :: stabilizer, convdensity, diffdensity, aa

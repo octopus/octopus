@@ -81,7 +81,7 @@ subroutine zcalc_band_velocity(sys, hm, pert, velocity)
   type(pert_t),        intent(inout) :: pert
   FLOAT,               intent(out)   :: velocity(:,:,:)
 
-  integer :: ik, ist, idir, idim
+  integer :: ik, ist, idir
   CMPLX, allocatable :: pertpsi(:,:)
 #ifdef HAVE_MPI
   FLOAT, allocatable :: vel_temp(:,:,:)

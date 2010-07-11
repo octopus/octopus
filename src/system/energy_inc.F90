@@ -98,7 +98,7 @@ FLOAT function X(electronic_kinetic_energy)(hm, gr, st) result(t0)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
 
-  integer :: ik, ist, idim
+  integer :: ik, ist
   R_TYPE, allocatable :: tpsi(:, :), psi(:, :)
   FLOAT, allocatable  :: t(:, :)
 

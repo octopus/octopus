@@ -94,9 +94,8 @@ contains
     type(sternheimer_t)     :: sh
     logical                 :: calc_eff_mass, complex_response
 
-    integer              :: idir, ierr, is, ist, ik
+    integer              :: idir, ierr
     character(len=100)   :: dirname, str_tmp
-    logical, allocatable :: orth_mask(:)
 
     call push_sub('kdotp.kdotp_lr_run')
 
@@ -374,7 +373,7 @@ contains
     type(kdotp_t),        intent(inout) :: kdotp_vars
 
     character(len=80) :: filename, tmp
-    integer :: iunit, ik, ist, ist2, ik2, ispin
+    integer :: iunit, ik, ist, ik2, ispin
     FLOAT :: determinant
 
     call push_sub('kdotp.kdotp_write_eff_mass')

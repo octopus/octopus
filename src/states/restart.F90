@@ -405,7 +405,7 @@ contains
     type(lr_t), optional, intent(inout) :: lr 
     logical,    optional, intent(in)    :: exact ! if .true. we need all the wavefunctions and on the exact grid
 
-    integer              :: iunit, iunit2, err, ik, ist, idim, int, read_np, read_np_part, read_ierr, ip, idir, xx(1:MAX_DIM)
+    integer              :: iunit, iunit2, err, ik, ist, idim, int, read_np, read_np_part, read_ierr, ip, xx(1:MAX_DIM)
     character(len=12)    :: filename
     character(len=1)     :: char
     logical, allocatable :: filled(:, :, :)

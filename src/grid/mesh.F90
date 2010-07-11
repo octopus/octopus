@@ -675,9 +675,7 @@ contains
     type(mesh_t), intent(inout)   :: mesh
     logical, intent(in), optional :: is_lead
 
-    integer :: il
     logical :: is_lead_
-
 #ifdef HAVE_MPI
     integer :: ipart
 #endif

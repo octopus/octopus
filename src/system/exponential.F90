@@ -556,11 +556,10 @@ contains
     subroutine taylor_series_batch()
       CMPLX :: zfact
       CMPLX, allocatable :: psi1(:, :, :), hpsi1(:, :, :)
-      integer :: iter, idim
+      integer :: iter
       logical :: zfact_is_real
       integer :: st_start, st_end
       type(batch_t) :: psi1b, hpsi1b
-      integer :: bsize, ip
       type(profile_t), save :: prof
 
       call push_sub('exponential.taylor_series_batch')

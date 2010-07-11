@@ -29,8 +29,7 @@ subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
 
   R_TYPE, allocatable :: ss(:, :), qq(:, :), psi_tmp(:, :, :)
   type(profile_t), save :: prof
-  integer :: idim, ist, jst, kst, wsize
-  integer :: st_start, st_end
+  integer :: idim, ist, jst, kst
   FLOAT   :: nrm2
 
   call profiling_in(prof, "GRAM_SCHMIDT_FULL")

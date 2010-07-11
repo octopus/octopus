@@ -2864,7 +2864,7 @@ return
     type(lead_t),        intent(in)    :: lead(:) ! Diagonal and off-diagonal block of the lead Hamiltonian.
 
     character(len=2)      :: spin
-    character(len=256)    :: fmt, fname, fname_real, fname_imag
+    character(len=256)    :: fmt, fname_real, fname_imag
     FLOAT                 :: energy
     integer  :: np, ik, ist, il, ispin, s1, s2, k1, k2
     integer  :: green_real, green_imag, irow
@@ -3034,7 +3034,7 @@ return
     type(states_t),    intent(in)    :: st
     CMPLX,             intent(inout) :: src0(:, : ,:, :)
 
-    integer :: ik, ist, idim, np, ip, iunit
+    integer :: ik, ist, idim, np, iunit
     character(len=256) :: fname
 
     call push_sub('states.states_read_proj_lead_wf')

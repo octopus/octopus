@@ -566,7 +566,6 @@ contains
       FLOAT   :: dx1b, dx1t, dx_oct, xbot, xtest, xtop, xwidth_big
       FLOAT   :: dy1b, dy1t, dy_oct, ybot, ytop, ywidth_big
       FLOAT   :: dz1b, dz1t, dz_oct, zbot, ztest, ztop
-      FLOAT   :: temp
       integer :: i, j, k, m
       integer :: nxtop, nytop, nztop
       integer :: nxtot_0, nytot_0
@@ -1182,7 +1181,6 @@ contains
       endif
       30 format()
       40 format(5E24.16)
-      50 format(3E24.16)
 
 !      WRITE(522,*)this%counter,this%tot_nuc_charge_energy*hartree,temporary*hartree,THIS%ESURF*hartree
 !    endif

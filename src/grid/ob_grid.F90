@@ -285,8 +285,6 @@ contains
   subroutine ob_grid_end(ob_grid)
     type(ob_grid_t), intent(inout) :: ob_grid
 
-    integer :: il
-
     call push_sub('ob_grid.ob_grid_end')
 
     if(associated(ob_grid%lead)) then

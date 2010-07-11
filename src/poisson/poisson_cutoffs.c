@@ -351,14 +351,15 @@ double FC_FUNC_(c_poisson_cutoff_1d_0d, C_POISSON_CUTOFF_1D_0D)
   const double epsilon_abs = 1e-3;
   const double epsilon_rel = 1e-3;
   int status;
+  gsl_integration_workspace * ws;
+  gsl_function F;
 
   if((*g) <= 0.0){return 2.0*asinh((*rc)/(*a));};
   if((*g)*(*rc) > 100.0*M_PI){return 2.0*gsl_sf_bessel_K0((*a)*(*g));};
 
   gsl_set_error_handler_off();
 
-  gsl_integration_workspace * ws = gsl_integration_workspace_alloc (wrk_size);
-  gsl_function F;
+  ws = gsl_integration_workspace_alloc (wrk_size);
 
   params.g = *g;
   params.a = *a;
