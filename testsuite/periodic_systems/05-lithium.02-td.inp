@@ -37,3 +37,5 @@ TDMaximumIter = 20
 DevelVersion = yes
 
 ParallelizationStrategy = par_kpoints
+
+TDEnergyUpdateIter = 5

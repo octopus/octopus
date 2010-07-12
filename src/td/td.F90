@@ -94,6 +94,7 @@ module td_m
 
     FLOAT                :: mu
     integer              :: dynamics
+    integer              :: energy_update_iter
   end type td_t
 
 
@@ -110,13 +111,13 @@ contains
     type(grid_t),     pointer :: gr   ! some shortcuts
     type(states_t),   pointer :: st
     type(geometry_t), pointer :: geo
-    logical                   :: stopping
+    logical                   :: stopping, update_energy
     integer                   :: iter, ii, ierr, iatom, mpi_err
     real(8)                   :: etime
     logical                   :: generate
     type(gauge_force_t)       :: gauge_force
-    type(profile_t), save :: prof
-
+    type(profile_t),     save :: prof
+    
     call push_sub('td.td_run')
 
     ! some shortcuts
@@ -246,11 +247,13 @@ contains
       
       if(generate) call hamiltonian_epot_generate(hm, gr, sys%geo, st, time = iter*td%dt)
 
+      update_energy = (mod(iter, td%energy_update_iter) == 0) .or. iter == td%max_iter
+
       ! update Hamiltonian and eigenvalues (fermi is *not* called)
-      call v_ks_calc(sys%ks, gr, hm, st, calc_eigenval = .true., time = iter*td%dt)
+      call v_ks_calc(sys%ks, gr, hm, st, calc_eigenval = update_energy, time = iter*td%dt)
 
       ! Get the energies.
-      call total_energy(hm, sys%gr, st, iunit = -1)
+      if(update_energy) call total_energy(hm, sys%gr, st, iunit = -1)
 
       if (td%dynamics == CP) then
         if(states_are_real(st)) then

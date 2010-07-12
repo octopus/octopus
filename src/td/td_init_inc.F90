@@ -160,6 +160,20 @@ subroutine td_init(td, sys, hm)
     call messages_print_stress(stdout)
   end if
 
+  !%Variable TDEnergyUpdateIter
+  !%Type integer
+  !%Default 10
+  !%Section Time-Dependent::Propagation
+  !%Description
+  !% This variable controls how often Octopus updates the total energy
+  !% during a time propagation run. The default is every 10
+  !% iterations. For iterations where the energy is not updated, the
+  !% last calculated value is reported. If you set this variable to 1,
+  !% the energy will be calculated in each step.
+  !%End 
+
+  call parse_integer(datasets_check('TDEnergyUpdateIter'), 10, td%energy_update_iter)
+
   call pop_sub('td_init.td_init')
 end subroutine td_init
 

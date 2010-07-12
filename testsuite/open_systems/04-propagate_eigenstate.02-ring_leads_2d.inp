@@ -96,3 +96,6 @@ lead_Output = potential + density + wfs_sqmod + wfs
 ring_lead_Output = density
 OutputHow = binary + plane_z
 #OutputEvery = 10
+
+TDEnergyUpdateIter = 25
+

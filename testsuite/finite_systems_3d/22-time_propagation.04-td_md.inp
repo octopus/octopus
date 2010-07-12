@@ -47,3 +47,4 @@ TDMaximumIter = 10
 2 | 2
 %
 
+TDEnergyUpdateIter = 5

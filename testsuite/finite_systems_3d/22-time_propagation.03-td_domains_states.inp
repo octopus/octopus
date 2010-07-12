@@ -30,3 +30,5 @@ TDMaximumIter = 10
 %ParallelizationGroupRanks
 2 | 2
 %
+
+TDEnergyUpdateIter = 5

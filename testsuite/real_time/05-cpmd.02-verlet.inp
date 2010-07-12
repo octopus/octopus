@@ -35,3 +35,5 @@ ParallelizationStrategy = par_domains + par_states
 %
 
 FilterPotentials = filter_ts
+
+TDEnergyUpdateIter = 5

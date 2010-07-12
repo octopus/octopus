@@ -29,3 +29,5 @@ TDDeltaStrength = 0.1
 
 TDOutput = energy + angular
 MagneticGaugeCorrection = gipaw
+
+TDEnergyUpdateIter = 25

@@ -33,3 +33,5 @@ TDTimeStep = 0.02
 TDMaximumIter = 30
 
 DevelVersion = yes
+
+TDEnergyUpdateIter = 5

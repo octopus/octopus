@@ -25,3 +25,5 @@ ParallelizationStrategy = par_domains
 
 TDTimeStep = 0.1
 TDMaximumIter = 10
+
+TDEnergyUpdateIter = 5

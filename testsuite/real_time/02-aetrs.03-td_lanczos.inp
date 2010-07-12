@@ -36,3 +36,5 @@ TDExpOrder = 10
 FromScratch = yes
 
 FilterPotentials = filter_ts
+
+TDEnergyUpdateIter = 5

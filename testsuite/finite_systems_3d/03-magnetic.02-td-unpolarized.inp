@@ -26,3 +26,5 @@ FromScratch = yes
 
 TDDeltaStrength  = 0.1
 TDPolarizationDirection = 1
+
+TDEnergyUpdateIter = 5
