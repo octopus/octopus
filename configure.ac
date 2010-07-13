@@ -116,11 +116,14 @@ if test -n "${enable_openmp}" -a x"${enable_openmp}" != x"no"; then
 fi
 
 if test x"${enable_opencl}" == x"yes" ; then
-  AC_DEFINE(HAVE_OPENCL, 1, [defined if opencl support is enabled])
   AC_MSG_WARN([
   
 	Experimental OpenCL support enabled.
   ])
+  AC_CHECK_HEADER(CL/cl.h, [], [AC_MSG_ERROR([Cannot find the OpenCL header.])], [])
+  AC_CHECK_FUNC(clGetPlatformIDs, [], [LIBS=$LIBS" -lOpenCL"])
+  AC_CHECK_FUNC(clFinish, [], [AC_MSG_ERROR([Cannot find the OpenCL library.])])
+  AC_DEFINE(HAVE_OPENCL, 1, [defined if opencl support is enabled])
 fi
 AM_CONDITIONAL(COMPILE_OPENCL, test x"${enable_opencl}" == x"yes")
 
