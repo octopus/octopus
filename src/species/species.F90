@@ -425,6 +425,7 @@ contains
         write(message(1),'(a)') 'Species read from file "'//trim(spec%filename)//'".'
         call write_info(1)
       end if
+      spec%niwfs = 2*spec%z_val
       spec%omega = CNST(0.1)
 
     case(SPEC_JELLI, SPEC_POINT)
