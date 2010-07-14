@@ -539,7 +539,7 @@ contains
     if (present(comment)) then
       write(iunit, '(1x,a)') comment
     else
-      write(iunit, '(1x)')
+      write(iunit, '(1x,a,a)') 'units: ', trim(units_abbrev(units_out%length))
     endif
     do iatom = 1, geo%natoms
       write(iunit, '(6x,a,2x,9f12.6)') geo%atom(iatom)%label, &
