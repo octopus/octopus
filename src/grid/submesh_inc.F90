@@ -20,13 +20,15 @@
 R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
   type(mesh_t),      intent(in) :: mesh
   type(submesh_t),   intent(in) :: sm
-  R_TYPE,            intent(in) :: ff(:)
+  R_TYPE, optional,  intent(in) :: ff(:)
 
 #if defined(HAVE_MPI)
   R_TYPE :: tmp
 #endif
 
   call push_sub('submesh_inc.Xsm_integrate')
+
+  ASSERT(present(ff) .or. sm%ns .eq. 0)
 
   if(sm%ns > 0) then
     if (mesh%use_curvilinear) then

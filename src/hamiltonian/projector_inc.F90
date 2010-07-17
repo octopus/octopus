@@ -354,7 +354,11 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
         end do
       end if
 
-      if(ns > 0) apb = apb + X(sm_integrate)(mesh, pj%sphere, plpsi(1:ns, idim))
+      if(ns > 0) then
+        apb = apb + X(sm_integrate)(mesh, pj%sphere, plpsi(1:ns, idim))
+      else
+        apb = apb + X(sm_integrate)(mesh, pj%sphere)
+      endif  
     end do
 
   end if

@@ -435,7 +435,7 @@ contains
 
     ! If one restarts a GS calculation changing the %Occupations block, one
     ! cannot read the occupations, otherwise these overwrite the ones from
-    ! the input file. The same is true when reading a linear response restart
+    ! the input file. The same is true when reading a linear response restart.
     read_occ_ = .true.
     if(present(read_occ)) read_occ_ = .false.
     
@@ -515,11 +515,11 @@ contains
       if(iunit > 0) call io_close(iunit, grp = gr%mesh%mpi_grp)
       if(iunit2 > 0) call io_close(iunit2, grp = gr%mesh%mpi_grp)
       if(exact_) call restart_fail()
-      write(message(1),'(a)') 'Could not load any previous restart information.'
+      write(message(1),'(a)') 'Could not load restart information.'
       call write_info(1)
       call messages_print_stress(stdout)
       call profiling_out(prof_read)
-    call pop_sub('restart.restart_read')
+      call pop_sub('restart.restart_read')
       return
     end if
 
