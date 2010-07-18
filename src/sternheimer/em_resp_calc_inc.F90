@@ -419,7 +419,7 @@ subroutine X(lr_calc_susceptibility)(sys, hm, lr, nsigma, perturbation, chi_para
 end subroutine X(lr_calc_susceptibility)
 
 ! ---------------------------------------------------------
-subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr)
+subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr, occ_response)
 ! Note: correctness for spinors is unclear
 ! See (16) in X Andrade et al., J. Chem. Phys. 126, 184106 (2006) for finite systems
 ! and (10) in A Dal Corso et al., Phys. Rev. B 15, 15638 (1996) for periodic systems
@@ -435,6 +435,10 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   CMPLX,                   intent(out)   :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
   type(lr_t),    optional, intent(in)    :: kdotp_lr(:)
   type(lr_t),    optional, intent(in)    :: kdotp_em_lr(:,:,:,:)
+  logical,       optional, intent(in)    :: occ_response ! do the wfns include the occ subspace?
+
+  ! occ_response = yes is based on Baroni et al., RMP 73, 515 (2001), eqn 122
+  ! occ_response = no  is based on Baroni et al., RMP 73, 515 (2001), eqn 123
 
   type(states_t), pointer :: st
   type(mesh_t),   pointer :: mesh
@@ -448,6 +452,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   type(matrix_t), allocatable :: me11(:, :, :, :, :, :)
   FLOAT,  allocatable :: rho(:,:), kxc(:, :, :, :)
   R_TYPE, allocatable :: hpol_density(:)
+  logical :: occ_response_
 
   call push_sub('em_resp_calc_inc.Xlr_calc_beta')
 
@@ -457,6 +462,9 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   mesh => sys%gr%mesh
   np   =  mesh%np
   ndim =  sys%gr%sb%dim
+
+  occ_response_ = .false.
+  if(present(occ_response)) occ_response_ = occ_response
 
   ASSERT(present(kdotp_lr) .eqv. present(kdotp_em_lr))
   ! either both are absent for finite, or both present for periodic
@@ -532,6 +540,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
                     * X(mf_dotp)(mesh, em_lr(u(1), op_sigma, w(1))%X(dl_psi)(1:np, idim, ist, ik), tmp(1:np, 1))
                   
                   do ist2 = 1, st%nst
+                    if(occ_response_ .and. ist2 .ne. ist) continue 
                     beta(ii, jj, kk) = beta(ii, jj, kk) + & 
                       M_HALF * st%d%kweights(ik)*st%smear%el_per_state*me010(ist2, ist, u(2), w(2), ik)*&
                       me11(u(1), u(3), w(1), w(3), isigma, ik)%X(matrix)(ist, ist2)

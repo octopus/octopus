@@ -103,6 +103,8 @@ subroutine X(sternheimer_solve)(                           &
     if (this%add_fxc .or. this%add_hartree) then
       write(message(1), '(a, i3)') "LR SCF Iteration: ", iter
       call write_info(1)
+    else
+      conv_last = .true.
     endif
     ! otherwise it is not actually SCF, and there can only be one pass through
 
@@ -145,9 +147,7 @@ subroutine X(sternheimer_solve)(                           &
           ! For a non-SCF run, we will apply Pn` if occ_response, and Pc if !occ_response.
           ! I am not sure what the generalization of this scheme is for metals, so we will just use Pc if there is smearing.
 
-!         Using the commented option may cause problems for calculation of beta, so I revert for now. -DAS
-!          if ((this%occ_response .or. conv_last) .and. st%smear%method == SMEAR_SEMICONDUCTOR) then
-          if (this%occ_response) then
+          if (conv_last .and. (smear_is_semiconducting(st%smear) .or. st%fixed_occ)) then
             ! project out only the component of the unperturbed wavefunction
             proj = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist, ik), y(:, :, sigma))
             do idim = 1, st%d%dim

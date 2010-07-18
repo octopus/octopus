@@ -47,6 +47,7 @@ module em_resp_m
   use profiling_m
   use restart_m
   use simul_box_m
+  use smear_m
   use species_m
   use states_m
   use states_dim_m
@@ -109,7 +110,7 @@ contains
 
     integer :: sigma, ndim, idir, ierr, iomega, ifactor
     character(len=100) :: dirname, str_tmp
-    logical :: complex_response, have_to_calculate, use_kdotp
+    logical :: complex_response, have_to_calculate, use_kdotp, occ_response
 
     FLOAT :: closest_omega
 
@@ -122,6 +123,7 @@ contains
 
     complex_response = (em_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
     call restart_look_and_read(sys%st, sys%gr, sys%geo, is_complex = complex_response)
+    occ_response = smear_is_semiconducting(sys%st%smear) .or. sys%st%fixed_occ
 
     if (states_are_real(sys%st)) then
       message(1) = 'Info: SCF using real wavefunctions.'
@@ -429,9 +431,9 @@ contains
           call write_info(1)
 
           if(states_are_complex(sys%st)) then
-            call zlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta)
+            call zlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, occ_response = occ_response)
           else
-            call dlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta)
+            call dlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, occ_response = occ_response)
           end if
         end if
 
