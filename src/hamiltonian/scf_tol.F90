@@ -91,7 +91,7 @@ contains
     !% The tolerance in the variation of the density, to determine if
     !% the SCF for linear response is converged.
     !%End
-    str = 'LRConvAnsDens'
+    str = 'LRConvAbsDens'
     if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
          str = trim(prefix)//trim(str)
     call parse_float(datasets_check(str), CNST(1e-5), this%conv_abs_dens)
@@ -102,8 +102,8 @@ contains
     !%Section Linear Response::SCF in LR calculations
     !%Description
     !% The scheme used to adjust the tolerance of the solver during
-    !% the SCF iteration. For kdotp and magnetic em_resp modes, or
-    !% whenever HamiltonianVariation = V_ext_only, the
+    !% the SCF iteration. For <tt>kdotp</tt> and magnetic <tt>em_resp</tt> modes, or
+    !% whenever <tt>HamiltonianVariation = V_ext_only</tt>, the
     !% scheme is set to fixed, and this variable is ignored.
     !%Option tol_fixed 0
     !% The solver tolerance is fixed for all the iterations; this
@@ -112,9 +112,9 @@ contains
     !% The tolerance is increased according to the level of
     !% convergence of the SCF.
     !%Option tol_linear 2
-    !% The tolerance decreases linearly for the first LRTolIterWindow iterations
+    !% The tolerance decreases linearly for the first <tt>LRTolIterWindow</tt> iterations.
     !%Option tol_exp 3
-    !% The tolerance decreases exponentially for the first LRTolIterWindow iterations
+    !% The tolerance decreases exponentially for the first <tt>LRTolIterWindow</tt> iterations.
     !%End
     if(present(tol_scheme)) then
       this%scheme = tol_scheme
@@ -133,7 +133,7 @@ contains
     !%Section Linear Response::Solver
     !%Description
     !% This is the tolerance to determine that the linear solver has converged,
-    !% for the first SCF iteration. Ignored if LRTolScheme = fixed.
+    !% for the first SCF iteration. Ignored if <tt>LRTolScheme = fixed</tt>.
     !%End
     str = 'LRTolInitTol'
     if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
@@ -141,7 +141,7 @@ contains
     call parse_float(datasets_check(str), CNST(1e-2), this%initial_tol)
     this%current_tol = this%initial_tol
 
-    !%Variable LinearSolverTol
+    !%Variable LRTolFinalTol
     !%Type float
     !%Default 1e-6
     !%Section Linear Response::Solver
@@ -163,7 +163,7 @@ contains
       !% during the self-consistency process. Smaller values mean that
       !% tolerance is decreased faster. The default is 0.9.
       !%End
-      str = 'LRAdaptiveTolFactor'
+      str = 'LRTolAdaptiveFactor'
       if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
            str = trim(prefix)//trim(str)
       call parse_float(datasets_check(str), CNST(0.1), this%dynamic_tol_factor)
