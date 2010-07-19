@@ -19,14 +19,12 @@
 
 #include "global.h"
 
-! ----------------------------------------------------------------------
-! This module contains the definition of the oct_t data type, which
-! contains some of the basic information about how the OCT run will
-! be done.
-! The "oct" variable (whose datatype is oct_t) is declared in the main
-! OCT module, oct_control_m (as a module variable). It is initialized
-! by calling oct_read_inp, defined below in this module.
-! ----------------------------------------------------------------------
+!> This module contains the definition of the oct_t data type, which
+!! contains some of the basic information about how the OCT run will
+!! be done.
+!! The "oct" variable (whose datatype is oct_t) is declared in the main
+!! OCT module, opt_control_m (as a module variable). It is initialized
+!! by calling oct_read_inp, defined below in this module.
 module opt_control_global_m
   use datasets_m
   use global_m
@@ -36,6 +34,9 @@ module opt_control_global_m
 
   implicit none
 
+  !> The oct_t datatype stores the basic information about how the OCT run
+  !! is done: which algorithm, how the control funtion is stored, should the
+  !! intermediate results be stored for debugging, etc.
   type oct_t
     integer :: ctr_function_rep
     logical :: mode_fixed_fluence
@@ -70,12 +71,11 @@ module opt_control_global_m
   contains
 
 
-  ! ---------------------------------------------------------
-  ! Reads, from the inp file, some global information about how the QOCT run
-  ! should be. It uses this information to fill the "oct" variable. All the components
-  ! of oct are filled, except for mode_fixed_fluence, which is filled when the control
-  ! parameters module is initialized.
-  ! ---------------------------------------------------------
+
+  !> Reads, from the inp file, some global information about how the QOCT run
+  !! should be. It uses this information to fill the "oct" variable. All the components
+  !! of oct are filled, except for mode_fixed_fluence, which is filled when the control
+  !! parameters module is initialized.
   subroutine oct_read_inp(oct)
     type(oct_t), intent(inout) :: oct
     call push_sub('opt_control_global.oct_read_inp')  
@@ -94,7 +94,7 @@ module opt_control_global_m
     !% the coefficients of its expansion in a given basis). The particular choice
     !% for these parameters is specified by variable <tt>OCTParameterRepresentation</tt>
     !% (this variable will be ignored if the control function is to be represented
-    !% in real space).
+    !% directly in real time).
     !%Option control_function_real_time 1
     !% The control functions are represented directly in real time.
     !%Option control_function_parametrized 2
@@ -317,10 +317,9 @@ module opt_control_global_m
   ! ---------------------------------------------------------
 
 
-  ! ---------------------------------------------------------
-  ! Returns .true. if the algorithm to be used is one of the "direct" or "gradient-less"
-  ! algorithms -- the ones that do not require backwards propagations. Returns .false. otherwise
-  ! ---------------------------------------------------------
+
+  !> Returns .true. if the algorithm to be used is one of the "direct" or "gradient-less"
+  !! algorithms -- the ones that do not require backwards propagations. Returns .false. otherwise
   logical pure function oct_algorithm_is_direct(oct)
     type(oct_t), intent(in) :: oct
     oct_algorithm_is_direct = (oct%algorithm >= oct_algorithm_direct)

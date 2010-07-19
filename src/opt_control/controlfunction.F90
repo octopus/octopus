@@ -19,7 +19,11 @@
 
 #include "global.h"
 
-module opt_control_parameters_m
+!> This module contains the definition of the data type that holds a "control function"
+!! used for OCT runs. 
+!!
+!! In addition, the module also contains the necessary procedures to manipulate these objects.
+module controlfunction_m
   use datasets_m
   use epot_m
   use filter_m
@@ -46,44 +50,44 @@ module opt_control_parameters_m
   implicit none
 
   private
-  public :: oct_control_parameters_t,     &
-            parameters_mod_init,          &
-            parameters_mod_close,         &
-            parameters_init,              &
-            parameters_representation,    &
-            parameters_set,               &
-            parameters_end,               &
-            parameters_copy,              &
-            parameters_to_h,              &
-            parameters_to_h_val,          &
-            parameters_write,             &
-            parameters_mixing,            &
-            parameters_mixing_init,       &
-            parameters_mixing_end,        &
-            parameters_diff,              &
-            parameters_apply_envelope,    &
-            parameters_set_fluence,       &
-            parameters_set_alpha,         &
-            parameters_set_rep,           &
-            parameters_to_realtime,       &
-            parameters_to_basis,          &
-            parameters_prepare_initial,   &
-            parameters_fluence,           &
-            parameters_j2,                &
-            parameters_basis_to_theta,    &
-            parameters_theta_to_basis,    &
-            parameters_get_theta,         &
-            parameters_set_theta,         &
-            parameters_randomize,         &
-            parameters_update,            &
-            parameters_number,            &
-            parameters_bounds,            &
-            parameters_dof,               &
-            parameters_w0,                &
-            parameters_alpha,             &
-            parameters_targetfluence,     &
-            parameters_filter,            &
-            parameters_gradient
+  public :: controlfunction_t,     &
+            controlfunction_mod_init,          &
+            controlfunction_mod_close,         &
+            controlfunction_init,              &
+            controlfunction_representation,    &
+            controlfunction_set,               &
+            controlfunction_end,               &
+            controlfunction_copy,              &
+            controlfunction_to_h,              &
+            controlfunction_to_h_val,          &
+            controlfunction_write,             &
+            controlfunction_mixing,            &
+            controlfunction_mixing_init,       &
+            controlfunction_mixing_end,        &
+            controlfunction_diff,              &
+            controlfunction_apply_envelope,    &
+            controlfunction_set_fluence,       &
+            controlfunction_set_alpha,         &
+            controlfunction_set_rep,           &
+            controlfunction_to_realtime,       &
+            controlfunction_to_basis,          &
+            controlfunction_prepare_initial,   &
+            controlfunction_fluence,           &
+            controlfunction_j2,                &
+            controlfunction_basis_to_theta,    &
+            controlfunction_theta_to_basis,    &
+            controlfunction_get_theta,         &
+            controlfunction_set_theta,         &
+            controlfunction_randomize,         &
+            controlfunction_update,            &
+            controlfunction_number,            &
+            controlfunction_bounds,            &
+            controlfunction_dof,               &
+            controlfunction_w0,                &
+            controlfunction_alpha,             &
+            controlfunction_targetfluence,     &
+            controlfunction_filter,            &
+            controlfunction_gradient
 
 
   integer, public, parameter ::     &
@@ -95,20 +99,24 @@ module opt_control_parameters_m
     ctr_zero_fourier_series    = 6
 
 
-  integer, parameter :: parameter_mode_none      = 0, &
-                        parameter_mode_epsilon   = 1, &
-                        parameter_mode_f         = 2, &
-                        parameter_mode_phi       = 3
+  integer, parameter :: controlfunction_mode_none      = 0, &
+                        controlfunction_mode_epsilon   = 1, &
+                        controlfunction_mode_f         = 2, &
+                        controlfunction_mode_phi       = 3
 
-  type oct_parameters_common_t
+  !> This data type contains information that is filled when the module
+  !! is initialized ("controlfunction_mod_init"), and stored while the module
+  !! is in use (until "controlfunction_mod_close" is called). It is information
+  !! more or less common to all control functions.
+  type controlfunction_common_t
     private
     integer :: representation      = 0
     FLOAT   :: omegamax            = M_ZERO
     FLOAT   :: targetfluence       = M_ZERO
     logical :: fix_initial_fluence = .false.
     FLOAT   :: w0                  = M_ZERO
-    integer :: mode                = parameter_mode_none
-    integer :: no_parameters       = 0
+    integer :: mode                = controlfunction_mode_none
+    integer :: no_controlfunctions = 0
     FLOAT,       pointer :: alpha(:)      => NULL()
     type(tdf_t), pointer :: td_penalty(:) => NULL()
 
@@ -116,14 +124,20 @@ module opt_control_parameters_m
     type(tdf_t)    :: f ! This is the envelope of the laser field, only used in the phase-only
                         ! optimization (necessary to store it in order to calculate fluences)
 
-  end type oct_parameters_common_t
+  end type controlfunction_common_t
 
-
-  type oct_control_parameters_t
+  !> This is the data type used to hold a control function.
+  type controlfunction_t
     private
-    integer :: no_parameters = 0
-    integer :: dim           = 0
-    integer :: dof           = 0
+    integer :: no_controlfunctions = 0           ! In fact, not only one control function may be used
+                                                 ! to control the propagation, but several. This is the variable that holds
+                                                 ! this number.
+    integer :: dim           = 0                 ! If the control function is not represented directly in real time, but through
+                                                 ! a number of control functions, it will actually be expanded in a basis set. This is the 
+                                                 ! the dimension of the basis set. However, this does not mean necessarily that the 
+                                                 ! parameters are the coefficients of the basis set.
+    integer :: dof           = 0                 ! This is the number of degrees of freedom, or number of parameters, used to represent
+                                                 ! a control function (this may be different -- smaller -- than "dim").
     FLOAT   :: intphi        = M_ZERO
     type(tdf_t), pointer :: f(:) => NULL()
     FLOAT, pointer :: alpha(:)   => NULL()
@@ -135,26 +149,25 @@ module opt_control_parameters_m
     FLOAT, pointer :: utransfi(:, :) => NULL()
 
     FLOAT, pointer :: theta(:) => NULL()
-  end type oct_control_parameters_t
+  end type controlfunction_t
   
   ! the next variable has to be a pointer to avoid a bug in the IBM compiler
-  type(oct_parameters_common_t), pointer :: par_common => NULL()
-  type(mix_t) :: parameters_mix
+  type(controlfunction_common_t), pointer :: par_common => NULL()
+  type(mix_t) :: controlfunction_mix
 
 contains
 
 
-  ! ---------------------------------------------------------
-  ! Initializes the module, should be the first subroutine to be called (the last one
-  ! should be parameters_mod_close, when the module is no longer to be used.
-  !
-  ! It fills the module variable "par_common", whose type is par_common_t, with 
-  ! information obtained from the inp file.
-  !
-  ! Output argument "mode_fixed_fluence" is also given a value, depending on whether
-  ! the user requires a fixed-fluence run (.true.) or not (.false.).
-  ! ---------------------------------------------------------
-  subroutine parameters_mod_init(ep, dt, max_iter, mode_fixed_fluence, parametrized_controls)
+
+  !> Initializes the module, should be the first subroutine to be called (the last one
+  !! should be controlfunction_mod_close, when the module is no longer to be used.
+  !!
+  !! It fills the module variable "par_common", whose type is par_common_t, with 
+  !! information obtained from the inp file.
+  !!
+  !! Output argument "mode_fixed_fluence" is also given a value, depending on whether
+  !! the user requires a fixed-fluence run (.true.) or not (.false.).
+  subroutine controlfunction_mod_init(ep, dt, max_iter, mode_fixed_fluence, parametrized_controls)
     type(epot_t), intent(inout)                   :: ep
     FLOAT, intent(in)                             :: dt
     integer, intent(in)                           :: max_iter
@@ -167,7 +180,7 @@ contains
     CMPLX   :: pol(MAX_DIM)
     type(block_t) :: blk
 
-    call push_sub('parameters.parameters_mod_init')
+    call push_sub('controlfunction.controlfunction_mod_init')
 
     if(.not. associated(par_common)) then
       SAFE_ALLOCATE(par_common)
@@ -309,24 +322,24 @@ contains
     !%
     !% Note that, if <tt>OCTControlRepresentation = control_function_real_time</tt>, then the control
     !% function must <b>always</b> determine the full external field.
-    !%Option parameter_mode_epsilon   1
+    !%Option controlfunction_mode_epsilon   1
     !% In this case, the control function determines the full control function: namely,
     !% if we are considering the electric field of a laser, the time-dependent electric field.
-    !%Option parameter_mode_f         2
+    !%Option controlfunction_mode_f         2
     !% The optimization process attempts to find the best possible envelope. The full 
     !% control field is this envelope times a cosine function with a "carrier" frequency. 
     !% This carrier frequencey is given by the carrier frequency of the <tt>TDExternalFields</tt> 
     !% in the <tt>inp</tt> file.
-    !%Option parameter_mode_phi       3
+    !%Option controlfunction_mode_phi       3
     !% The optimization process attempts to find the best possible time-dependent phase. That is,
     !% the external field would be given by a function in the form e(t) = f(t)*cos(w0*t+phi(t)), 
     !% where f(t) is an "envelope", w0 a carrier frequency, and phi(t) the td phase that we 
     !% wish to optimize.
     !%End
-    call parse_integer(datasets_check('OCTControlFunctionType'), parameter_mode_epsilon, par_common%mode)
+    call parse_integer(datasets_check('OCTControlFunctionType'), controlfunction_mode_epsilon, par_common%mode)
     if(.not.varinfo_valid_option('OCTControlFunctionType', par_common%mode)) &
       call input_error('OCTControlFunctionType')
-    if ( (.not.parametrized_controls)  .and.  (par_common%mode .ne. parameter_mode_epsilon) ) &
+    if ( (.not.parametrized_controls)  .and.  (par_common%mode .ne. controlfunction_mode_epsilon) ) &
       call input_error('OCTControlFunctionType')
     call messages_print_var_option(stdout, 'OCTControlFunctionType', par_common%mode)
 
@@ -353,10 +366,10 @@ contains
     ! can be in "non-numerical" representation (i.e. described with a set of parameters, e.g. frequency, 
     ! width, etc). We need them to be in numerical form (i.e. time grid, values at the time grid). 
     ! Here we do the transformation.
-    ! It cannot be done before calling parameters_mod_init because we need to pass the omegamax value.
+    ! It cannot be done before calling controlfunction_mod_init because we need to pass the omegamax value.
     do il = 1, ep%no_lasers
       select case(par_common%mode)
-      case(parameter_mode_epsilon)
+      case(controlfunction_mode_epsilon)
         call laser_to_numerical_all(ep%lasers(il), dt, max_iter, par_common%omegamax)
       case default
         call laser_to_numerical(ep%lasers(il), dt, max_iter, par_common%omegamax)
@@ -365,7 +378,7 @@ contains
 
     ! For phase-only optimization, we need to store the envelope, in order to be able
     ! to calculate the fluence.
-    if(par_common%mode .eq. parameter_mode_phi) then
+    if(par_common%mode .eq. controlfunction_mode_phi) then
       call laser_get_f(ep%lasers(1), par_common%f)
     end if 
 
@@ -384,11 +397,10 @@ contains
         write(message(2), '(a)') 'have only one external field in the input file.'
         call write_fatal(2)
       end if
-      par_common%no_parameters = 1
+      par_common%no_controlfunctions = 1
     else
-      par_common%no_parameters = ep%no_lasers
+      par_common%no_controlfunctions = ep%no_lasers
     end if
-
 
     mode_fixed_fluence = .false.
     select case(par_common%representation)
@@ -432,12 +444,12 @@ contains
     !%
     !% All penalty factors must be positive. 
     !%End
-    SAFE_ALLOCATE(par_common%alpha(1:par_common%no_parameters))
+    SAFE_ALLOCATE(par_common%alpha(1:par_common%no_controlfunctions))
     par_common%alpha = M_ZERO
     if(parse_block('OCTPenalty', blk) == 0) then
       ! We have a block
       ncols = parse_block_cols(blk, 0)
-      if(ncols .ne. par_common%no_parameters) then
+      if(ncols .ne. par_common%no_controlfunctions) then
         call input_error('OCTPenalty')
       else
         do ipar = 1, ncols
@@ -448,7 +460,7 @@ contains
     else
       ! We have the same penalty for all the control functions.
       call parse_float(datasets_check('OCTPenalty'), M_ONE, octpenalty)
-      par_common%alpha(1:par_common%no_parameters) = octpenalty
+      par_common%alpha(1:par_common%no_controlfunctions) = octpenalty
     end if
 
 
@@ -460,8 +472,8 @@ contains
     !% This can be achieved by making the penalty factor time-dependent. 
     !% Here, you may specify the required time-dependent envelope.
     !%
-    !% It is possible to choose different envelopes for different control parameters.
-    !% There should be one line for each control parameter. Each line should
+    !% It is possible to choose different envelopes for different control functions.
+    !% There should be one line for each control function. Each line should
     !% have only one element: a string with the function that defines the
     !% <b>inverse</b> of the time-dependent penalty, which is then defined as
     !% 1 divided by (this function + 1.0e-7) (to avoid possible singularities).
@@ -474,22 +486,22 @@ contains
     !% <math> \frac{1}{\alpha(t)} = \frac{1}{2}( erf((100/T)*(t-T/20))+ erf(-(100/T)*(t-T+T/20)) </math>
     !%End
     steps = max_iter
-    SAFE_ALLOCATE(par_common%td_penalty(1:par_common%no_parameters))
-    do ipar = 1, par_common%no_parameters
+    SAFE_ALLOCATE(par_common%td_penalty(1:par_common%no_controlfunctions))
+    do ipar = 1, par_common%no_controlfunctions
       call tdf_init_numerical(par_common%td_penalty(ipar), steps, dt, -M_ONE, initval = M_ONE)
     end do
 
     if (parse_block(datasets_check('OCTLaserEnvelope'), blk)==0) then
 
-      ! Cannot have this unless we have the "usual" parameter_mode_epsilon.
-      if(par_common%mode .ne. parameter_mode_epsilon) then
+      ! Cannot have this unless we have the "usual" controlfunction_mode_epsilon.
+      if(par_common%mode .ne. controlfunction_mode_epsilon) then
         write(message(1),'(a)') 'The block "OCTLaserEnvelope" is only compatible with the option'
-        write(message(2),'(a)') '"OCTControlFunctionType = parameter_mode_epsilon".'
+        write(message(2),'(a)') '"OCTControlFunctionType = controlfunction_mode_epsilon".'
         call write_fatal(2)
       end if
 
       no_lines = parse_block_n(blk)
-      if(no_lines .ne. par_common%no_parameters) call input_error('OCTLaserEnvelope')
+      if(no_lines .ne. par_common%no_controlfunctions) call input_error('OCTLaserEnvelope')
 
       do irow = 1, no_lines
         call parse_block_string(blk, irow - 1, 0, expression)
@@ -518,10 +530,10 @@ contains
         do istep = 1, steps + 1
           time = (istep - 1) * dt
           write(iunit, '(f14.8)', advance='no') time
-          do ipar = 1, par_common%no_parameters - 1
+          do ipar = 1, par_common%no_controlfunctions - 1
             write(iunit, '(es20.8e3)') M_ONE / tdf(par_common%td_penalty(ipar), istep)
           end do
-          write(iunit, '(es20.8e3)') M_ONE / tdf(par_common%td_penalty(par_common%no_parameters), istep)
+          write(iunit, '(es20.8e3)') M_ONE / tdf(par_common%td_penalty(par_common%no_controlfunctions), istep)
         end do
         write(iunit,'()')
         call io_close(iunit)
@@ -531,33 +543,32 @@ contains
     end if
 
     call messages_print_stress(stdout)
-    call pop_sub('parameters.parameters_mod_init')
-  end subroutine parameters_mod_init
+    call pop_sub('controlfunction.controlfunction_mod_init')
+  end subroutine controlfunction_mod_init
   ! ---------------------------------------------------------
 
 
-  ! ---------------------------------------------------------
-  ! Before using an oct_control_parameters_t variable, it needs
-  ! to be initialized, either by calling parameters_init, or
-  ! by copying another initialized variable through
-  ! parameters_copy.
-  ! ---------------------------------------------------------
-  subroutine parameters_init(cp, dt, ntiter)
-    type(oct_control_parameters_t), intent(inout) :: cp
+
+  !> Before using an controlfunction_t variable, it needs
+  !! to be initialized, either by calling controlfunction_init, or
+  !! by copying another initialized variable through
+  !! controlfunction_copy.
+  subroutine controlfunction_init(cp, dt, ntiter)
+    type(controlfunction_t), intent(inout) :: cp
     FLOAT, intent(in) :: dt
     integer, intent(in) :: ntiter
 
     integer :: ipar
 
-    call push_sub('parameters.parameters_init')
+    call push_sub('controlfunction.controlfunction_init')
 
-    cp%w0              = par_common%w0
-    cp%no_parameters   = par_common%no_parameters
+    cp%w0                  = par_common%w0
+    cp%no_controlfunctions = par_common%no_controlfunctions
     cp%current_representation = ctr_real_time
     call loct_pointer_copy(cp%alpha, par_common%alpha)
 
-    SAFE_ALLOCATE(cp%f(1:cp%no_parameters))
-    do ipar = 1, cp%no_parameters
+    SAFE_ALLOCATE(cp%f(1:cp%no_controlfunctions))
+    do ipar = 1, cp%no_controlfunctions
       call tdf_init_numerical(cp%f(ipar), ntiter, dt, par_common%omegamax)
     end do
 
@@ -605,7 +616,7 @@ contains
     ! add further constraints, and do a coordinate transformation to account for them.
     select case(par_common%representation)
     case(ctr_real_time)
-      cp%dof = cp%no_parameters * cp%dim
+      cp%dof = cp%no_controlfunctions * cp%dim
     case(ctr_sine_fourier_series_h, ctr_fourier_series_h)
       ! The number of degrees of freedom is one fewer than the number of basis coefficients, since we
       ! add the constraint of fixed fluence.
@@ -633,7 +644,7 @@ contains
       call write_fatal(2)
     else
       if(par_common%representation .ne. ctr_real_time) then
-        write(message(1), '(a)')      'Info: The expansion of the control parameters in a Fourier series'
+        write(message(1), '(a)')      'Info: The expansion of the control functions in a Fourier series'
         write(message(2), '(a,i6,a)') '      expansion implies the use of ', cp%dim, ' basis-set functions.'
         write(message(3), '(a,i6,a)') '      The number of degrees of freedom is ', cp%dof,'.'
         call write_info(3)
@@ -644,63 +655,63 @@ contains
     end if
 
     ! Construct the transformation matrix, if needed.
-    call parameters_trans_matrix(cp)
+    call controlfunction_trans_matrix(cp)
 
-    call pop_sub('parameters.parameters_init')
-  end subroutine parameters_init
+    call pop_sub('controlfunction.controlfunction_init')
+  end subroutine controlfunction_init
   ! ---------------------------------------------------------
 
 
-  ! ---------------------------------------------------------
-  ! The external fields defined in epot_t "ep" are transferred to
-  ! the control functions described in "cp". This should have been
-  ! initialized previously.
-  ! ---------------------------------------------------------
-  subroutine parameters_set(cp, ep)
-    type(oct_control_parameters_t), intent(inout) :: cp
+
+  !> The external fields defined in epot_t "ep" are transferred to
+  !! the control functions described in "cp". This should have been
+  !! initialized previously.
+  subroutine controlfunction_set(cp, ep)
+    type(controlfunction_t), intent(inout) :: cp
     type(epot_t), intent(in) :: ep
 
     integer :: ipar
 
-    call push_sub('parameters.parameters_set')
+    call push_sub('controlfunction.controlfunction_set')
 
     select case(par_common%mode)
-    case(parameter_mode_epsilon, parameter_mode_f)
-      do ipar = 1, cp%no_parameters
+    case(controlfunction_mode_epsilon, controlfunction_mode_f)
+      do ipar = 1, cp%no_controlfunctions
         call tdf_end(cp%f(ipar))
         call laser_get_f(ep%lasers(ipar), cp%f(ipar))
       end do
-    case(parameter_mode_phi)
+    case(controlfunction_mode_phi)
       call tdf_end(cp%f(1))
       call laser_get_phi(ep%lasers(1), cp%f(1))
     end select
 
-    call pop_sub('parameters.parameters_set')
-  end subroutine parameters_set
+    call pop_sub('controlfunction.controlfunction_set')
+  end subroutine controlfunction_set
   ! ---------------------------------------------------------
 
 
-  ! ---------------------------------------------------------
-  integer pure function parameters_representation()
-    parameters_representation = par_common%representation
-  end function parameters_representation
+  !> Returns the representation type for the control functions used in the OCT run.
+  integer pure function controlfunction_representation()
+    controlfunction_representation = par_common%representation
+  end function controlfunction_representation
   ! ---------------------------------------------------------
 
 
-  ! ---------------------------------------------------------
-  subroutine parameters_prepare_initial(par)
-    type(oct_control_parameters_t), intent(inout) :: par
+  !> "Prepares" the initial guess control field: maybe it has to be normalized to
+  !! a certain fluence, maybe it should be randomized, etc.
+  subroutine controlfunction_prepare_initial(par)
+    type(controlfunction_t), intent(inout) :: par
 
     FLOAT   :: dt
     integer :: ntiter
 
-    call push_sub('parameters.parameters_prepare_initial')
+    call push_sub('controlfunction.controlfunction_prepare_initial')
 
-    call parameters_apply_envelope(par)
+    call controlfunction_apply_envelope(par)
 
     if(par_common%targetfluence .ne. M_ZERO) then
       if(par_common%targetfluence < M_ZERO) then
-        par_common%targetfluence = parameters_fluence(par) 
+        par_common%targetfluence = controlfunction_fluence(par) 
         write(message(1), '(a)')         'Info: The QOCT run will attempt to find a solution with the same'
         write(message(2), '(a,f10.5,a)') '      fluence as the input external fields: F = ', &
           par_common%targetfluence, ' a.u.'
@@ -709,12 +720,12 @@ contains
         write(message(2), '(a,f10.5,a)') '      fluence: F = ', par_common%targetfluence, ' a.u.'
       end if
       call write_info(2)
-      if(par_common%fix_initial_fluence) call parameters_set_fluence(par)
+      if(par_common%fix_initial_fluence) call controlfunction_set_fluence(par)
     end if
 
     ! Now we have to find the "fluence" of the phase, in order to keep it constant.
     select case(par_common%mode)
-    case(parameter_mode_phi)
+    case(controlfunction_mode_phi)
       par%intphi = tdf_dot_product(par%f(1), par%f(1))
       if(par%intphi <= M_ZERO) then
         dt = tdf_dt(par%f(1))
@@ -727,203 +738,198 @@ contains
     end select
 
     ! Move to the "native" representation, if necessary.
-    call parameters_set_rep(par)
+    call controlfunction_set_rep(par)
 
-    call pop_sub('parameters.parameters_prepare_initial')
-  end subroutine parameters_prepare_initial
+    call pop_sub('controlfunction.controlfunction_prepare_initial')
+  end subroutine controlfunction_prepare_initial
   ! ---------------------------------------------------------
 
 
-  ! ---------------------------------------------------------
-  ! Transforms the control function to frequency space, if
-  ! this is the space in which the functions are defined (and it
-  ! is necessary to perform the transformation). 
-  ! And, transforms the control function to real-time space, if
-  ! this is the space in which the functions are defined (and it
-  ! is necessary to perform the transformation). 
-  ! ---------------------------------------------------------
-  subroutine parameters_set_rep(par)
-    type(oct_control_parameters_t), intent(inout) :: par
+  !> Transforms the control function to frequency space, if
+  !! this is the space in which the functions are defined (and it
+  !! is necessary to perform the transformation). 
+  !! And, transforms the control function to real-time space, if
+  !! this is the space in which the functions are defined (and it
+  !! is necessary to perform the transformation). 
+  subroutine controlfunction_set_rep(par)
+    type(controlfunction_t), intent(inout) :: par
 
-    call push_sub('parameters.parameters_set_rep')
+    call push_sub('controlfunction.controlfunction_set_rep')
 
     if(par%current_representation .ne. par_common%representation) then
       if(par_common%representation .eq. ctr_real_time) then
-        call parameters_to_realtime(par)
+        call controlfunction_to_realtime(par)
       else
-        call parameters_to_basis(par)
+        call controlfunction_to_basis(par)
       end if
     end if
 
-    call pop_sub('parameters.parameters_set_rep')
-  end subroutine parameters_set_rep
+    call pop_sub('controlfunction.controlfunction_set_rep')
+  end subroutine controlfunction_set_rep
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_to_basis(par)
-    type(oct_control_parameters_t), intent(inout) :: par
+  subroutine controlfunction_to_basis(par)
+    type(controlfunction_t), intent(inout) :: par
 
     integer :: ipar
 
-    call push_sub('parameters.parameters_to_basis')
+    call push_sub('controlfunction.controlfunction_to_basis')
 
     if(par%current_representation.eq.ctr_real_time) then
       select case(par_common%representation)
       case(ctr_sine_fourier_series_h)
-        do ipar = 1, par%no_parameters
+        do ipar = 1, par%no_controlfunctions
           call tdf_numerical_to_sineseries(par%f(ipar))
         end do
         par%current_representation = ctr_sine_fourier_series_h
-        call parameters_basis_to_theta(par)
+        call controlfunction_basis_to_theta(par)
       case(ctr_fourier_series_h)
-        do ipar = 1, par%no_parameters
+        do ipar = 1, par%no_controlfunctions
           call tdf_numerical_to_fourier(par%f(ipar))
         end do
         par%current_representation = ctr_fourier_series_h
-        call parameters_basis_to_theta(par)
+        call controlfunction_basis_to_theta(par)
       case(ctr_zero_fourier_series_h)
-        do ipar = 1, par%no_parameters
+        do ipar = 1, par%no_controlfunctions
           call tdf_numerical_to_zerofourier(par%f(ipar))
         end do
         par%current_representation = ctr_zero_fourier_series_h
-        call parameters_basis_to_theta(par)
+        call controlfunction_basis_to_theta(par)
       case(ctr_fourier_series)
-        do ipar = 1, par%no_parameters
+        do ipar = 1, par%no_controlfunctions
           call tdf_numerical_to_fourier(par%f(ipar))
         end do
         par%current_representation = ctr_fourier_series
-        call parameters_basis_to_theta(par)
+        call controlfunction_basis_to_theta(par)
       case(ctr_zero_fourier_series)
-        do ipar = 1, par%no_parameters
+        do ipar = 1, par%no_controlfunctions
           call tdf_numerical_to_zerofourier(par%f(ipar))
         end do
         par%current_representation = ctr_zero_fourier_series
-        call parameters_basis_to_theta(par)
+        call controlfunction_basis_to_theta(par)
       end select
     end if
 
-    call pop_sub('parameters.parameters_to_basis')
-  end subroutine parameters_to_basis
+    call pop_sub('controlfunction.controlfunction_to_basis')
+  end subroutine controlfunction_to_basis
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_to_realtime(par)
-    type(oct_control_parameters_t), intent(inout) :: par
+  subroutine controlfunction_to_realtime(par)
+    type(controlfunction_t), intent(inout) :: par
 
     integer :: ipar
 
-    call push_sub('parameters.parameters_to_realtime')
+    call push_sub('controlfunction.controlfunction_to_realtime')
 
     select case(par%current_representation)
     case(ctr_real_time)
-      call pop_sub('parameters.parameters_to_realtime')
+      call pop_sub('controlfunction.controlfunction_to_realtime')
       return
     case(ctr_sine_fourier_series_h)
-      call parameters_theta_to_basis(par)
-      do ipar = 1, par%no_parameters
+      call controlfunction_theta_to_basis(par)
+      do ipar = 1, par%no_controlfunctions
         call tdf_sineseries_to_numerical(par%f(ipar))
       end do
     case(ctr_fourier_series_h)
-      call parameters_theta_to_basis(par)
-      do ipar = 1, par%no_parameters
+      call controlfunction_theta_to_basis(par)
+      do ipar = 1, par%no_controlfunctions
         call tdf_fourier_to_numerical(par%f(ipar))
       end do
     case(ctr_zero_fourier_series_h)
-      call parameters_theta_to_basis(par)
-      do ipar = 1, par%no_parameters
+      call controlfunction_theta_to_basis(par)
+      do ipar = 1, par%no_controlfunctions
         call tdf_zerofourier_to_numerical(par%f(ipar))
       end do
     case(ctr_fourier_series)
-      call parameters_theta_to_basis(par)
-      do ipar = 1, par%no_parameters
+      call controlfunction_theta_to_basis(par)
+      do ipar = 1, par%no_controlfunctions
         call tdf_fourier_to_numerical(par%f(ipar))
       end do
     case(ctr_zero_fourier_series)
-      call parameters_theta_to_basis(par)
-      do ipar = 1, par%no_parameters
+      call controlfunction_theta_to_basis(par)
+      do ipar = 1, par%no_controlfunctions
         call tdf_fourier_to_numerical(par%f(ipar))
       end do
     end select
 
     par%current_representation = ctr_real_time
-    call pop_sub('parameters.parameters_to_realtime')
-  end subroutine parameters_to_realtime
+    call pop_sub('controlfunction.controlfunction_to_realtime')
+  end subroutine controlfunction_to_realtime
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  FLOAT function parameters_diff(pp, qq) result(res)
-    type(oct_control_parameters_t), intent(in) :: pp, qq
+  FLOAT function controlfunction_diff(pp, qq) result(res)
+    type(controlfunction_t), intent(in) :: pp, qq
 
     integer :: ipar
 
-    call push_sub('parameters.parameters_diff')
+    call push_sub('controlfunction.controlfunction_diff')
 
     ASSERT(pp%current_representation .eq. qq%current_representation)
 
     res = M_ZERO
-    do ipar = 1, pp%no_parameters
+    do ipar = 1, pp%no_controlfunctions
       res = res + tdf_diff(pp%f(ipar), qq%f(ipar))
     end do
 
-    call pop_sub('parameters.parameters_diff')
-  end function parameters_diff
+    call pop_sub('controlfunction.controlfunction_diff')
+  end function controlfunction_diff
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  FLOAT function parameters_dotp(xx, yy) result(res)
+  FLOAT function controlfunction_dotp(xx, yy) result(res)
     FLOAT, intent(in) :: xx(:)
     FLOAT, intent(in) :: yy(:)
 
-    call push_sub('parameters.parameters_dotp')
+    call push_sub('controlfunction.controlfunction_dotp')
     res = sum(xx(:) * yy(:))
 
-    call pop_sub('parameters.parameters_dotp')
-  end function parameters_dotp
+    call pop_sub('controlfunction.controlfunction_dotp')
+  end function controlfunction_dotp
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_mixing_init(par)
-    type(oct_control_parameters_t), intent(in) :: par
-
-    call push_sub('parameters.parameters_mixing_init')
-    call mix_init(parameters_mix, par%dim, par%no_parameters, 1)
-
-    call pop_sub('parameters.parameters_mixing_init')
-  end subroutine parameters_mixing_init
+  subroutine controlfunction_mixing_init(par)
+    type(controlfunction_t), intent(in) :: par
+    call push_sub('controlfunction.controlfunction_mixing_init')
+    call mix_init(controlfunction_mix, par%dim, par%no_controlfunctions, 1)
+    call pop_sub('controlfunction.controlfunction_init')
+  end subroutine controlfunction_mixing_init
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_mixing_end
-    call push_sub('parameters.parameters_mixing_end')
-    call mix_end(parameters_mix)
-
-    call pop_sub('parameters.parameters_mixing_end')
-  end subroutine parameters_mixing_end
+  subroutine controlfunction_mixing_end
+    call push_sub('controlfunction.controlfunction_mixing_end')
+    call mix_end(controlfunction_mix)
+    call pop_sub('controlfunction.controlfunction_mixing_end')
+  end subroutine controlfunction_mixing_end
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_mixing(iter, par_in, par_out, par_new)
+  subroutine controlfunction_mixing(iter, par_in, par_out, par_new)
     integer, intent(in) :: iter
-    type(oct_control_parameters_t), intent(in) :: par_in, par_out
-    type(oct_control_parameters_t), intent(inout) :: par_new
+    type(controlfunction_t), intent(in) :: par_in, par_out
+    type(controlfunction_t), intent(inout) :: par_new
 
     integer :: ipar, idir, dim
     FLOAT, allocatable :: e_in(:, :, :), e_out(:, :, :), e_new(:, :, :)
-    call push_sub('parameters.parameters_mixing')
+    call push_sub('controlfunction.controlfunction_mixing')
 
     dim = par_in%dim
-    SAFE_ALLOCATE(e_in (1:dim, 1:par_in%no_parameters, 1:1))
-    SAFE_ALLOCATE(e_out(1:dim, 1:par_in%no_parameters, 1:1))
-    SAFE_ALLOCATE(e_new(1:dim, 1:par_in%no_parameters, 1:1))
+    SAFE_ALLOCATE(e_in (1:dim, 1:par_in%no_controlfunctions, 1:1))
+    SAFE_ALLOCATE(e_out(1:dim, 1:par_in%no_controlfunctions, 1:1))
+    SAFE_ALLOCATE(e_new(1:dim, 1:par_in%no_controlfunctions, 1:1))
 
-    do ipar = 1, par_in%no_parameters
+    do ipar = 1, par_in%no_controlfunctions
       do idir = 1, dim
         e_in (idir, ipar, 1) = tdf(par_in%f(ipar), idir)
         e_out(idir, ipar, 1) = tdf(par_out%f(ipar), idir)
@@ -931,94 +937,94 @@ contains
     end do
 
     e_new = M_ZERO
-    call dmixing(parameters_mix, iter, e_in, e_out, e_new, parameters_dotp)
-    do ipar = 1, par_out%no_parameters
+    call dmixing(controlfunction_mix, iter, e_in, e_out, e_new, controlfunction_dotp)
+    do ipar = 1, par_out%no_controlfunctions
       call tdf_set_numerical(par_new%f(ipar), e_new(:, ipar, 1))
     end do
 
     SAFE_DEALLOCATE_A(e_in)
     SAFE_DEALLOCATE_A(e_out)
     SAFE_DEALLOCATE_A(e_new)
-    call pop_sub('parameters.parameters_mixing')
-  end subroutine parameters_mixing
+    call pop_sub('controlfunction.controlfunction_mixing')
+  end subroutine controlfunction_mixing
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_apply_envelope(cp)
-    type(oct_control_parameters_t), intent(inout) :: cp
+  subroutine controlfunction_apply_envelope(cp)
+    type(controlfunction_t), intent(inout) :: cp
     integer :: ipar, iter
 
-    call push_sub('parameters.parameters_apply_envelope')
+    call push_sub('controlfunction.controlfunction_apply_envelope')
 
-    ! Do not apply the envelope if the parameters are represented as a sine-Fourier series.
+    ! Do not apply the envelope if the control functions are represented as a sine-Fourier series.
     if(par_common%representation .eq. ctr_real_time) then
-      do ipar = 1, cp%no_parameters
+      do ipar = 1, cp%no_controlfunctions
         do iter = 1, tdf_niter(cp%f(ipar)) + 1
           call tdf_set_numerical(cp%f(ipar), iter, tdf(cp%f(ipar), iter) / tdf(par_common%td_penalty(ipar), iter) )
         end do
       end do
     end if
 
-    call pop_sub('parameters.parameters_apply_envelope')
-  end subroutine parameters_apply_envelope
+    call pop_sub('controlfunction.controlfunction_apply_envelope')
+  end subroutine controlfunction_apply_envelope
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_to_h(cp, ep)
-    type(oct_control_parameters_t), intent(in) :: cp
+  subroutine controlfunction_to_h(cp, ep)
+    type(controlfunction_t), intent(in) :: cp
     type(epot_t), intent(inout) :: ep
 
     integer :: ipar
-    type(oct_control_parameters_t) :: par
-    call push_sub('parameters.parameters_to_h')
+    type(controlfunction_t) :: par
+    call push_sub('controlfunction.controlfunction_to_h')
 
-    call parameters_copy(par, cp)
-    call parameters_to_realtime(par)
+    call controlfunction_copy(par, cp)
+    call controlfunction_to_realtime(par)
 
     select case(par_common%mode)
-    case(parameter_mode_epsilon, parameter_mode_f)
-      do ipar = 1, cp%no_parameters
+    case(controlfunction_mode_epsilon, controlfunction_mode_f)
+      do ipar = 1, cp%no_controlfunctions
         call laser_set_f(ep%lasers(ipar), par%f(ipar))
       end do
-    case(parameter_mode_phi)
+    case(controlfunction_mode_phi)
       call laser_set_phi(ep%lasers(1), par%f(1))
     end select
 
-    call parameters_end(par)
-    call pop_sub('parameters.parameters_to_h')
-  end subroutine parameters_to_h
+    call controlfunction_end(par)
+    call pop_sub('controlfunction.controlfunction_to_h')
+  end subroutine controlfunction_to_h
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_to_h_val(cp, ep, val)
-    type(oct_control_parameters_t), intent(in) :: cp
+  subroutine controlfunction_to_h_val(cp, ep, val)
+    type(controlfunction_t), intent(in) :: cp
     type(epot_t), intent(inout) :: ep
     integer, intent(in) :: val
 
     integer :: ipar
 
-    call push_sub('parameters.parameters_to_h_val')
+    call push_sub('controlfunction.controlfunction_to_h_val')
 
-    do ipar = 1, cp%no_parameters
+    do ipar = 1, cp%no_controlfunctions
       call laser_set_f_value(ep%lasers(ipar), val, tdf(cp%f(ipar), val) )
     end do
 
-    call pop_sub('parameters.parameters_to_h_val')
-  end subroutine parameters_to_h_val
+    call pop_sub('controlfunction.controlfunction_to_h_val')
+  end subroutine controlfunction_to_h_val
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_end(cp)
-    type(oct_control_parameters_t), intent(inout) :: cp
+  subroutine controlfunction_end(cp)
+    type(controlfunction_t), intent(inout) :: cp
     integer :: ipar
 
-    call push_sub('parameters.parameters_end')
+    call push_sub('controlfunction.controlfunction_end')
 
-    do ipar = 1, cp%no_parameters
+    do ipar = 1, cp%no_controlfunctions
       call tdf_end(cp%f(ipar))
     end do
     SAFE_DEALLOCATE_P(cp%f)
@@ -1027,44 +1033,44 @@ contains
     SAFE_DEALLOCATE_P(cp%utransfi)
     SAFE_DEALLOCATE_P(cp%theta)
 
-    call pop_sub('parameters.parameters_end')
-  end subroutine parameters_end
+    call pop_sub('controlfunction.controlfunction_end')
+  end subroutine controlfunction_end
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_write(filename, cp)
+  subroutine controlfunction_write(filename, cp)
     character(len=*), intent(in) :: filename
-    type(oct_control_parameters_t), intent(in) :: cp
+    type(controlfunction_t), intent(in) :: cp
 
     integer :: iter, ipar, ifreq, iunit, niter, nfreqs, idof
     FLOAT :: time, wmax, dw, ww, wa, wb, dt
     FLOAT, allocatable :: func(:, :)
     CMPLX :: ft, ez, ezdt
     character(len=2) :: digit
-    type(oct_control_parameters_t) :: par
+    type(controlfunction_t) :: par
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
-    call push_sub('parameters.parameters_write')
+    call push_sub('controlfunction.controlfunction_write')
 
     call io_mkdir(trim(filename))
 
-    call parameters_copy(par, cp)
-    call parameters_to_realtime(par)
+    call controlfunction_copy(par, cp)
+    call controlfunction_to_realtime(par)
 
     iunit = io_open(trim(filename)//'/Fluence', action='write')
-    write(iunit, '(a,es20.8e3)') 'Fluence = ', parameters_fluence(par)
+    write(iunit, '(a,es20.8e3)') 'Fluence = ', controlfunction_fluence(par)
     call io_close(iunit)
 
     niter = tdf_niter(par%f(1))
-    SAFE_ALLOCATE(func(1:niter + 1, 1:cp%no_parameters))
+    SAFE_ALLOCATE(func(1:niter + 1, 1:cp%no_controlfunctions))
 
     select case(par_common%mode)
-    case(parameter_mode_epsilon)
+    case(controlfunction_mode_epsilon)
 
-      do ipar = 1, cp%no_parameters
-        if(cp%no_parameters > 1) then
+      do ipar = 1, cp%no_controlfunctions
+        if(cp%no_controlfunctions > 1) then
           write(digit,'(i2.2)') ipar
           iunit = io_open(trim(filename)//'/cp-'//digit, action='write')
         else
@@ -1079,10 +1085,10 @@ contains
         call io_close(iunit)
       end do
 
-    case(parameter_mode_f)
+    case(controlfunction_mode_f)
 
-      do ipar = 1, cp%no_parameters
-        if(cp%no_parameters > 1) then
+      do ipar = 1, cp%no_controlfunctions
+        if(cp%no_controlfunctions > 1) then
           write(digit,'(i2.2)') ipar
           iunit = io_open(trim(filename)//'/cp-'//digit, action='write')
         else
@@ -1097,9 +1103,9 @@ contains
         call io_close(iunit)
       end do
 
-    case(parameter_mode_phi)
+    case(controlfunction_mode_phi)
 
-      ! In this case, there is only one parameter (for the moment)
+      ! In this case, there is only one control function (for the moment)
       iunit = io_open(trim(filename)//'/cp', action='write')
       write(iunit,'(4a20)') '#       t [a.u]      ', '        e(t)         ', &
                             '         f(t)        ', '       phi(t)        ' 
@@ -1116,10 +1122,10 @@ contains
 
     !Now, the Fourier transforms.
     select case(par_common%mode)
-    case(parameter_mode_epsilon)
+    case(controlfunction_mode_epsilon)
 
-      do ipar = 1, cp%no_parameters
-        if(cp%no_parameters > 1) then
+      do ipar = 1, cp%no_controlfunctions
+        if(cp%no_controlfunctions > 1) then
           write(digit,'(i2.2)') ipar
           iunit = io_open(trim(filename)//'/cpw-'//digit, action='write')
         else
@@ -1151,7 +1157,7 @@ contains
       end do
       call io_close(iunit)
 
-    case(parameter_mode_f, parameter_mode_phi)
+    case(controlfunction_mode_f, controlfunction_mode_phi)
       iunit = io_open(trim(filename)//'/cpw', action='write')
       write(iunit,'(3a20)') '#       w [a.u]      ', '      Re[e(w)]       ', &
                             '      Im[e(w)]       '
@@ -1189,43 +1195,43 @@ contains
       call io_close(iunit)
     end if
 
-    call parameters_end(par)
-    call pop_sub('parameters.parameters_write')
-  end subroutine parameters_write
+    call controlfunction_end(par)
+    call pop_sub('controlfunction.controlfunction_write')
+  end subroutine controlfunction_write
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
   ! Gets the fluence of the laser field, defined as:
-  ! parameters_fluence = \sum_i^{no_parameters} \integrate_0^T |epsilon(t)|^2
+  ! controlfunction_fluence = \sum_i^{no_controlfunctions} \integrate_0^T |epsilon(t)|^2
   ! ---------------------------------------------------------
-  FLOAT function parameters_fluence(par)
-    type(oct_control_parameters_t), intent(in) :: par
-    type(oct_control_parameters_t)             :: par_
+  FLOAT function controlfunction_fluence(par)
+    type(controlfunction_t), intent(in) :: par
+    type(controlfunction_t)             :: par_
     integer :: iter, ipar
     FLOAT :: time, fi, phi
     type(tdf_t) :: ff
-    call push_sub('parameters.parameters_fluence')
+    call push_sub('controlfunction.controlfunction_fluence')
 
-    call parameters_copy(par_, par)
-    call parameters_to_realtime(par_)
+    call controlfunction_copy(par_, par)
+    call controlfunction_to_realtime(par_)
 
-    parameters_fluence = M_ZERO
+    controlfunction_fluence = M_ZERO
 
     select case(par_common%mode)
-    case(parameter_mode_epsilon)
-      do ipar = 1, par_%no_parameters
-        parameters_fluence = parameters_fluence + tdf_dot_product(par_%f(ipar), par_%f(ipar))
+    case(controlfunction_mode_epsilon)
+      do ipar = 1, par_%no_controlfunctions
+        controlfunction_fluence = controlfunction_fluence + tdf_dot_product(par_%f(ipar), par_%f(ipar))
       end do
-    case(parameter_mode_f)
-      do ipar = 1, par%no_parameters
+    case(controlfunction_mode_f)
+      do ipar = 1, par%no_controlfunctions
         call tdf_init(ff)
         call tdf_copy(ff, par_%f(ipar))
         call tdf_cosine_multiply(par%w0, ff)
-        parameters_fluence = parameters_fluence + tdf_dot_product(ff, ff)
+        controlfunction_fluence = controlfunction_fluence + tdf_dot_product(ff, ff)
         call tdf_end(ff)
       end do
-    case(parameter_mode_phi)
+    case(controlfunction_mode_phi)
       call tdf_init(ff)
       call tdf_copy(ff, par_%f(1))
       do iter = 1, tdf_niter(ff) + 1
@@ -1234,13 +1240,13 @@ contains
         phi = real(tdf(ff, iter)) 
         call tdf_set_numerical(ff, iter, fi * cos(par%w0 * time + phi))
       end do
-      parameters_fluence = tdf_dot_product(ff, ff)
+      controlfunction_fluence = tdf_dot_product(ff, ff)
       call tdf_end(ff)
     end select
 
-    call parameters_end(par_)
-    call pop_sub('parameters.parameters_fluence')
-  end function parameters_fluence
+    call controlfunction_end(par_)
+    call pop_sub('controlfunction.controlfunction_fluence')
+  end function controlfunction_fluence
   ! ---------------------------------------------------------
 
 
@@ -1248,24 +1254,24 @@ contains
   ! Gets the J2 functional (which is the fluence, but weighted
   ! by a penalty function.
   ! ---------------------------------------------------------
-  FLOAT function parameters_j2(par) result(j2)
-    type(oct_control_parameters_t), intent(in) :: par
-    type(oct_control_parameters_t)             :: par_
+  FLOAT function controlfunction_j2(par) result(j2)
+    type(controlfunction_t), intent(in) :: par
+    type(controlfunction_t)             :: par_
     integer :: iter, ipar
     FLOAT   :: time, integral, fi, phi, tdp
     type(tdf_t) :: ff
 
-    call push_sub('parameters.parameters_j2')
+    call push_sub('controlfunction.controlfunction_j2')
 
     ASSERT(par%current_representation .eq. par_common%representation)
 
-    call parameters_copy(par_, par)
-    call parameters_to_realtime(par_)
+    call controlfunction_copy(par_, par)
+    call controlfunction_to_realtime(par_)
 
     integral = M_ZERO
     select case(par_common%mode)
-    case(parameter_mode_epsilon)
-      do ipar = 1, par_%no_parameters
+    case(controlfunction_mode_epsilon)
+      do ipar = 1, par_%no_controlfunctions
         call tdf_init(ff)
         call tdf_copy(ff, par_%f(ipar))
         do iter = 1, tdf_niter(ff) + 1
@@ -1277,8 +1283,8 @@ contains
         integral = integral + tdf_dot_product(ff, ff)
         call tdf_end(ff)
       end do
-    case(parameter_mode_f)
-      do ipar = 1, par_%no_parameters
+    case(controlfunction_mode_f)
+      do ipar = 1, par_%no_controlfunctions
         call tdf_init(ff)
         call tdf_copy(ff, par_%f(ipar))
         if(par_%current_representation .eq. ctr_sine_fourier_series_h) then
@@ -1293,7 +1299,7 @@ contains
         integral = integral + tdf_dot_product(ff, ff)
         call tdf_end(ff)
       end do
-    case(parameter_mode_phi)
+    case(controlfunction_mode_phi)
       call tdf_init(ff)
       call tdf_copy(ff, par_%f(1))
       do iter = 1, tdf_niter(ff) + 1
@@ -1309,55 +1315,55 @@ contains
 
     j2 = - par_%alpha(1) * (integral - par_common%targetfluence)
 
-    call parameters_end(par_)
-    call pop_sub('parameters.parameters_j2')
-  end function parameters_j2
+    call controlfunction_end(par_)
+    call pop_sub('controlfunction.controlfunction_j2')
+  end function controlfunction_j2
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_set_fluence(par)
-    type(oct_control_parameters_t), intent(inout) :: par
+  subroutine controlfunction_set_fluence(par)
+    type(controlfunction_t), intent(inout) :: par
     FLOAT   :: old_fluence
     integer :: ipar
 
-    call push_sub('parameters.parameters_set_fluence')
+    call push_sub('controlfunction.controlfunction_set_fluence')
 
-    old_fluence = parameters_fluence(par) 
-    do ipar = 1, par%no_parameters
+    old_fluence = controlfunction_fluence(par) 
+    do ipar = 1, par%no_controlfunctions
       call tdf_scalar_multiply( sqrt(par_common%targetfluence / old_fluence), par%f(ipar) )
     end do
 
-    call pop_sub('parameters.parameters_set_fluence')
-  end subroutine parameters_set_fluence
+    call pop_sub('controlfunction.controlfunction_set_fluence')
+  end subroutine controlfunction_set_fluence
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_set_alpha(par, alpha)
-    type(oct_control_parameters_t), intent(inout) :: par
+  subroutine controlfunction_set_alpha(par, alpha)
+    type(controlfunction_t), intent(inout) :: par
 
     FLOAT, intent(in) :: alpha
 
-    call push_sub('parameters.parameters_set_alpha')
+    call push_sub('controlfunction.controlfunction_set_alpha')
 
     par%alpha(:) = alpha
 
-    call pop_sub('parameters.parameters_set_alpha')
-  end subroutine parameters_set_alpha
+    call pop_sub('controlfunction.controlfunction_set_alpha')
+  end subroutine controlfunction_set_alpha
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_copy(cp_out, cp_in)
-    type(oct_control_parameters_t), intent(inout) :: cp_out
-    type(oct_control_parameters_t), intent(in)    :: cp_in
+  subroutine controlfunction_copy(cp_out, cp_in)
+    type(controlfunction_t), intent(inout) :: cp_out
+    type(controlfunction_t), intent(in)    :: cp_in
 
     integer :: ipar
 
-    call push_sub('parameters.parameters_copy')
+    call push_sub('controlfunction.controlfunction_copy')
 
-    cp_out%no_parameters = cp_in%no_parameters
+    cp_out%no_controlfunctions = cp_in%no_controlfunctions
     cp_out%dim = cp_in%dim
     cp_out%dof = cp_in%dof
     cp_out%intphi = cp_in%intphi
@@ -1365,9 +1371,9 @@ contains
     cp_out%w0 = cp_in%w0
 
     call loct_pointer_copy(cp_out%alpha, cp_in%alpha)
-    SAFE_ALLOCATE(cp_out%f(1:cp_out%no_parameters))
+    SAFE_ALLOCATE(cp_out%f(1:cp_out%no_controlfunctions))
 
-    do ipar = 1, cp_in%no_parameters
+    do ipar = 1, cp_in%no_controlfunctions
       call tdf_init(cp_out%f(ipar))
       call tdf_copy(cp_out%f(ipar), cp_in%f(ipar))
     end do
@@ -1376,58 +1382,57 @@ contains
     call loct_pointer_copy(cp_out%utransfi, cp_in%utransfi)
     call loct_pointer_copy(cp_out%theta, cp_in%theta)
 
-    call pop_sub('parameters.parameters_copy')
-  end subroutine parameters_copy
+    call pop_sub('controlfunction.controlfunction_copy')
+  end subroutine controlfunction_copy
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_randomize(par)
-    type(oct_control_parameters_t), intent(inout) :: par
+  subroutine controlfunction_randomize(par)
+    type(controlfunction_t), intent(inout) :: par
 
      integer :: ipar
 
-     call push_sub('parameters.parameters_randomize')
+     call push_sub('controlfunction.controlfunction_randomize')
 
      ASSERT(par_common%representation .ne. ctr_real_time)
 
-     call parameters_set_rep(par)
+     call controlfunction_set_rep(par)
 
      select case(par_common%mode)
-     case(parameter_mode_epsilon, parameter_mode_f)
-       do ipar = 1, par%no_parameters
+     case(controlfunction_mode_epsilon, controlfunction_mode_f)
+       do ipar = 1, par%no_controlfunctions
          call tdf_set_random(par%f(ipar))
        end do
-     case(parameter_mode_phi)
+     case(controlfunction_mode_phi)
        call tdf_set_random(par%f(1))
      end select
 
-     call pop_sub('parameters.parameters_randomize')
-  end subroutine parameters_randomize
+     call pop_sub('controlfunction.controlfunction_randomize')
+  end subroutine controlfunction_randomize
   ! ---------------------------------------------------------
 
 
-  ! ---------------------------------------------------------
-  ! Update the control function(s) given in "cp", according to the formula
-  ! cp = (1 - mu) * cpp + mu * dd / (td_penalty - 2 * dq)
-  ! ---------------------------------------------------------
-  subroutine parameters_update(cp, cpp, dir, iter, mu, dd, dq)
-    type(oct_control_parameters_t), intent(inout) :: cp
-    type(oct_control_parameters_t), intent(in)    :: cpp
-    character(len=1),               intent(in)    :: dir
-    integer,                        intent(in)    :: iter
-    FLOAT,                          intent(in)    :: mu
-    FLOAT,                          intent(in)    :: dd(:)
-    CMPLX,                          intent(in)    :: dq(:)
+
+  !> Update the control function(s) given in "cp", according to the formula
+  !! cp = (1 - mu) * cpp + mu * dd / (td_penalty - 2 * dq)
+  subroutine controlfunction_update(cp, cpp, dir, iter, mu, dd, dq)
+    type(controlfunction_t), intent(inout) :: cp
+    type(controlfunction_t), intent(in)    :: cpp
+    character(len=1),        intent(in)    :: dir
+    integer,                 intent(in)    :: iter
+    FLOAT,                   intent(in)    :: mu
+    FLOAT,                   intent(in)    :: dd(:)
+    CMPLX,                   intent(in)    :: dq(:)
 
     FLOAT :: value
     integer :: ipar
     
-    call push_sub('parameters.parameters_update')
+    call push_sub('controlfunction.controlfunction_update')
 
     select case(dir)
       case('f')
-        do ipar = 1, cp%no_parameters
+        do ipar = 1, cp%no_controlfunctions
           value = dd(ipar) / ( tdf(par_common%td_penalty(ipar), iter) - M_TWO * aimag(dq(ipar)) )
           value = (M_ONE - mu) * tdf(cpp%f(ipar), iter) + mu * value
           call tdf_set_numerical(cp%f(ipar), iter, value)
@@ -1436,7 +1441,7 @@ contains
         end do
 
       case('b')
-        do ipar = 1, cp%no_parameters
+        do ipar = 1, cp%no_controlfunctions
           value = dd(ipar) / ( tdf(par_common%td_penalty(ipar), iter + 1) - M_TWO * aimag(dq(ipar)) )
           value = (M_ONE - mu) * tdf(cpp%f(ipar), iter + 1) + mu * value
           call tdf_set_numerical(cp%f(ipar), iter + 1, value)
@@ -1445,108 +1450,102 @@ contains
         end do
     end select
 
-    call pop_sub('parameters.parameters_update')
-  end subroutine parameters_update
+    call pop_sub('controlfunction.controlfunction_update')
+  end subroutine controlfunction_update
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  FLOAT pure function parameters_alpha(par, ipar)
-    type(oct_control_parameters_t), intent(in) :: par
-    integer,                        intent(in) :: ipar
-
-    parameters_alpha = par%alpha(ipar)
-
-  end function parameters_alpha
+  FLOAT pure function controlfunction_alpha(par, ipar)
+    type(controlfunction_t), intent(in) :: par
+    integer,                 intent(in) :: ipar
+    controlfunction_alpha = par%alpha(ipar)
+  end function controlfunction_alpha
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  FLOAT pure function parameters_targetfluence()
-    parameters_targetfluence = par_common%targetfluence
-  end function parameters_targetfluence
+  FLOAT pure function controlfunction_targetfluence()
+    controlfunction_targetfluence = par_common%targetfluence
+  end function controlfunction_targetfluence
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  integer pure function parameters_number(par)
-    type(oct_control_parameters_t), intent(in) :: par
-
-    parameters_number = par%no_parameters
-
-  end function parameters_number
+  integer pure function controlfunction_number(par)
+    type(controlfunction_t), intent(in) :: par
+    controlfunction_number = par%no_controlfunctions
+  end function controlfunction_number
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_bounds(par, lower_bounds, upper_bounds)
-    type(oct_control_parameters_t), intent(in)  :: par
-    FLOAT,                          intent(out) :: lower_bounds(:)
-    FLOAT,                          intent(out) :: upper_bounds(:)
+  subroutine controlfunction_bounds(par, lower_bounds, upper_bounds)
+    type(controlfunction_t), intent(in)  :: par
+    FLOAT,                   intent(out) :: lower_bounds(:)
+    FLOAT,                   intent(out) :: upper_bounds(:)
     integer :: dog
 
-    call push_sub('parameters.parameters_bounds')
+    call push_sub('controlfunction.controlfunction_bounds')
 
     upper_bounds = M_PI
-    dog = parameters_dof(par)
+    dog = controlfunction_dof(par)
 
     select case(par_common%mode)
-    case(parameter_mode_epsilon, parameter_mode_f, parameter_mode_phi)
+    case(controlfunction_mode_epsilon, controlfunction_mode_f, controlfunction_mode_phi)
       lower_bounds(1:dog - 1) = M_ZERO
       lower_bounds(dog)       = -M_PI
     end select
 
-    call pop_sub('parameters.parameters_bounds')
-  end subroutine parameters_bounds
+    call pop_sub('controlfunction.controlfunction_bounds')
+  end subroutine controlfunction_bounds
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  integer pure function parameters_dof(par)
-    type(oct_control_parameters_t), intent(in) :: par
-
-    parameters_dof = par%dof
-  end function parameters_dof
+  integer pure function controlfunction_dof(par)
+    type(controlfunction_t), intent(in) :: par
+    controlfunction_dof = par%dof
+  end function controlfunction_dof
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  FLOAT pure function parameters_w0(par)
-    type(oct_control_parameters_t), intent(in) :: par
-
-    parameters_w0 = par%w0
-  end function parameters_w0
+  FLOAT pure function controlfunction_w0(par)
+    type(controlfunction_t), intent(in) :: par
+    controlfunction_w0 = par%w0
+  end function controlfunction_w0
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_filter(par, filter)
-    type(oct_control_parameters_t), intent(inout) :: par
-    type(filter_t),                 intent(inout) :: filter
+  subroutine controlfunction_filter(par, filter)
+    type(controlfunction_t), intent(inout) :: par
+    type(filter_t),          intent(inout) :: filter
 
     integer :: ipar
 
-    call push_sub('parameters.parameters_filter')
+    call push_sub('controlfunction.controlfunction_filter')
 
-    do ipar = 1, par%no_parameters
+    do ipar = 1, par%no_controlfunctions
       call filter_apply(par%f(ipar), filter)
     end do
 
-    call pop_sub('parameters.parameters_filter')
-  end subroutine parameters_filter
+    call pop_sub('controlfunction.controlfunction_filter')
+  end subroutine controlfunction_filter
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_mod_close()
+  subroutine controlfunction_mod_close()
     integer :: ipar
 
-    call push_sub('parameters.parameters_mod_close')
+    call push_sub('controlfunction.controlfunction_mod_close')
 
     SAFE_DEALLOCATE_P(par_common%alpha)
     nullify(par_common%alpha)
 
-    do ipar = 1, par_common%no_parameters
+    do ipar = 1, par_common%no_controlfunctions
       call tdf_end(par_common%td_penalty(ipar))
     end do
 
@@ -1554,41 +1553,40 @@ contains
     nullify(par_common%td_penalty)
     SAFE_DEALLOCATE_P(par_common)
 
-    call pop_sub('parameters.parameters_mod_close')
-  end subroutine parameters_mod_close
+    call pop_sub('controlfunction.controlfunction_mod_close')
+  end subroutine controlfunction_mod_close
   ! ---------------------------------------------------------
 
 
 
-  ! ---------------------------------------------------------
-  ! parameters_gradient computes the gradient with respect
-  ! to the theta basis (dim=dof)
-  ! ---------------------------------------------------------
-  subroutine parameters_gradient(xx, par, par_output, grad)
-    FLOAT,                          intent(in)    :: xx(:)
-    type(oct_control_parameters_t), intent(in)    :: par, par_output
-    FLOAT,                          intent(inout) :: grad(:)
+
+  !> controlfunction_gradient computes the gradient with respect
+  !! to the theta basis (dim=dof)
+  subroutine controlfunction_gradient(xx, par, par_output, grad)
+    FLOAT,                   intent(in)    :: xx(:)
+    type(controlfunction_t), intent(in)    :: par, par_output
+    FLOAT,                   intent(inout) :: grad(:)
 
     integer :: dim, jj, mm, kk, ss, tt
     FLOAT :: rr
     FLOAT, allocatable :: theta(:), grad_matrix(:,:), eigenvectors(:,:), eigenvalues(:), aa(:)
     
-    call push_sub('parameters.parameters_gradient')
+    call push_sub('controlfunction.controlfunction_gradient')
 
     dim = par%dim
 
     select case(par%current_representation)
     case(ctr_fourier_series)
        SAFE_ALLOCATE(theta(1:dim)) ! dim = dof for fourier-series
-       call parameters_get_theta(par_output, theta)
-       forall(jj = 1:dim) grad(jj) =  M_TWO * parameters_alpha(par, 1) * xx(jj) - M_TWO * theta(jj)
+       call controlfunction_get_theta(par_output, theta)
+       forall(jj = 1:dim) grad(jj) =  M_TWO * controlfunction_alpha(par, 1) * xx(jj) - M_TWO * theta(jj)
 
     case(ctr_zero_fourier_series)
        SAFE_ALLOCATE(theta(1:dim))      ! dim should be # of basis sets for a zero-Fourier-series (even number)
        forall(jj = 1:dim) theta(jj) = tdf(par_output%f(1), jj)    ! get the projection on my basis set of function f
-       forall(jj = 1:dim - 1) grad(jj) =  M_TWO * parameters_alpha(par, 1) * xx(jj) - M_TWO * theta(jj + 1)
+       forall(jj = 1:dim - 1) grad(jj) =  M_TWO * controlfunction_alpha(par, 1) * xx(jj) - M_TWO * theta(jj + 1)
        forall(jj = 1:(dim / 2) - 1)
-         grad(jj) = grad(jj) + M_TWO * parameters_alpha(par, 1) * sum(xx(1:(dim / 2) - 1)) + M_TWO * theta(1)
+         grad(jj) = grad(jj) + M_TWO * controlfunction_alpha(par, 1) * sum(xx(1:(dim / 2) - 1)) + M_TWO * theta(1)
        end forall
     case(ctr_fourier_series_h)
        SAFE_ALLOCATE(theta(1:dim))   ! dim = dof + 1 for fourier-series-h
@@ -1645,13 +1643,13 @@ contains
     end select
 
     SAFE_DEALLOCATE_A(theta)
-    call pop_sub('parameters.parameters_gradient')
-  end subroutine parameters_gradient
+    call pop_sub('controlfunction.controlfunction_gradient')
+  end subroutine controlfunction_gradient
   ! ---------------------------------------------------------
 
-#include "parameters_trans_inc.F90"
+#include "controlfunction_trans_inc.F90"
 
-end module opt_control_parameters_m
+end module controlfunction_m
 
 !! Local Variables:
 !! mode: f90

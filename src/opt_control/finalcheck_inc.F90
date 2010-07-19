@@ -27,7 +27,7 @@
     type(states_t) :: psi
     FLOAT :: j1, jfunctional, fluence, j2
 
-    type(oct_control_parameters_t), pointer :: par
+    type(controlfunction_t), pointer :: par
 
     call push_sub('finalcheck_inc.oct_finalcheck')
 
@@ -43,8 +43,8 @@
     call propagate_forward(sys, hm, td, par, target, psi, write_iter = .true.)
 
     j1 = j1_functional(target, sys%gr, psi)
-    fluence = parameters_fluence(par)
-    j2 = parameters_j2(par)
+    fluence = controlfunction_fluence(par)
+    j2 = controlfunction_j2(par)
     jfunctional = j1 + j2
 
     write(message(1), '(a)') 'Final propagation with the best field'

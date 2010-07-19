@@ -20,6 +20,7 @@
 #include "global.h"
 
 module opt_control_propagation_m
+  use controlfunction_m
   use datasets_m
   use energy_m
   use epot_m
@@ -36,7 +37,6 @@ module opt_control_propagation_m
   use loct_m
   use mesh_function_m
   use messages_m
-  use opt_control_parameters_m
   use opt_control_target_m
   use profiling_m
   use restart_m
@@ -86,13 +86,12 @@ module opt_control_propagation_m
   contains
 
 
-  ! ---------------------------------------------------------
-  ! This subroutine must be called before any QOCT propagations are
-  ! done. It simply stores in the module some data that is needed for
-  ! the propagations, and which should stay invariant during the whole
-  ! run.
-  ! There is no need for any propagation_mod_close.
-  ! ---------------------------------------------------------
+
+  !> This subroutine must be called before any QOCT propagations are
+  !! done. It simply stores in the module some data that is needed for
+  !! the propagations, and which should stay invariant during the whole
+  !! run.
+  !! There is no need for any propagation_mod_close.
   subroutine propagation_mod_init(niter, eta, delta, number_checkpoints, zbr98, gradients)
     integer, intent(in) :: niter
     FLOAT,   intent(in) :: eta
@@ -126,7 +125,7 @@ module opt_control_propagation_m
     type(system_t),             intent(inout)  :: sys
     type(hamiltonian_t),        intent(inout)  :: hm
     type(td_t),                 intent(inout)  :: td
-    type(oct_control_parameters_t), intent(in) :: par
+    type(controlfunction_t),    intent(in)     :: par
     type(target_t),             intent(inout)  :: target
     type(states_t),             intent(inout)  :: psi
     type(oct_prop_t), optional, intent(in)     :: prop
@@ -145,7 +144,7 @@ module opt_control_propagation_m
     message(1) = "Info: Forward propagation."
     call write_info(1)
 
-    call parameters_to_h(par, hm%ep)
+    call controlfunction_to_h(par, hm%ep)
 
     write_iter_ = .false.
     if(present(write_iter)) write_iter_ = write_iter
@@ -275,23 +274,23 @@ module opt_control_propagation_m
   ! ---------------------------------------------------------
   ! Performs a forward propagation on the state psi and on the
   ! Lagrange-multiplier state chi. It also updates the control
-  ! parameter par,  according to the following scheme:
+  ! function par,  according to the following scheme:
   ! 
   ! |chi> --> U[par_chi](T, 0)|chi>
   ! par = par[|psi>, |chi>]
   ! |psi> --> U[par](T, 0)|psi>
   !
-  ! Note that the control parameters "par" are updated on the
+  ! Note that the control functions "par" are updated on the
   ! fly, so that the propagation of psi is performed with the
-  ! "new" parameters.
+  ! "new" control functions.
   ! --------------------------------------------------------
   subroutine fwd_step(sys, td, hm, target, par, par_chi, psi, prop_chi, prop_psi)
     type(system_t), intent(inout)                 :: sys
     type(td_t), intent(inout)                     :: td
     type(hamiltonian_t), intent(inout)            :: hm
     type(target_t), intent(inout)                 :: target
-    type(oct_control_parameters_t), intent(inout) :: par
-    type(oct_control_parameters_t), intent(in)    :: par_chi
+    type(controlfunction_t), intent(inout)        :: par
+    type(controlfunction_t), intent(in)           :: par_chi
     type(states_t), intent(inout)                 :: psi
     type(oct_prop_t), intent(in)                  :: prop_chi
     type(oct_prop_t), intent(in)                  :: prop_psi
@@ -300,7 +299,7 @@ module opt_control_propagation_m
     logical :: aux_fwd_propagation
     type(states_t) :: psi2
     type(states_t) :: chi
-    type(oct_control_parameters_t) :: par_prev
+    type(controlfunction_t) :: par_prev
     type(grid_t), pointer :: gr
     type(propagator_t) :: tr_chi
     type(propagator_t) :: tr_psi2
@@ -322,7 +321,7 @@ module opt_control_propagation_m
                             .not.sys%ks%frozen_hxc ) )
     if(aux_fwd_propagation) then
       call states_copy(psi2, psi)
-      call parameters_copy(par_prev, par)
+      call controlfunction_copy(par_prev, par)
     end if
 
     
@@ -364,7 +363,7 @@ module opt_control_propagation_m
     if( target_mode(target) == oct_targetmode_td .or. &
         (hm%theory_level.ne.INDEPENDENT_PARTICLES .and. (.not.sys%ks%frozen_hxc) ) ) then
       call states_end(psi2)
-      call parameters_end(par_prev)
+      call controlfunction_end(par_prev)
     end if
 
     if(aux_fwd_propagation) call propagator_end(tr_psi2)
@@ -389,8 +388,8 @@ module opt_control_propagation_m
     type(td_t), intent(inout)                     :: td
     type(hamiltonian_t), intent(inout)            :: hm
     type(target_t), intent(inout)                 :: target
-    type(oct_control_parameters_t), intent(in)    :: par
-    type(oct_control_parameters_t), intent(inout) :: par_chi
+    type(controlfunction_t), intent(in)           :: par
+    type(controlfunction_t), intent(inout)        :: par_chi
     type(states_t), intent(inout)                 :: chi
     type(oct_prop_t), intent(in)                  :: prop_chi
     type(oct_prop_t), intent(in)                  :: prop_psi
@@ -466,8 +465,8 @@ module opt_control_propagation_m
     type(td_t), intent(inout)                     :: td
     type(hamiltonian_t), intent(inout)            :: hm
     type(target_t), intent(inout)                 :: target
-    type(oct_control_parameters_t), intent(in)    :: par
-    type(oct_control_parameters_t), intent(inout) :: par_chi
+    type(controlfunction_t), intent(in)           :: par
+    type(controlfunction_t), intent(inout)        :: par_chi
     type(states_t), intent(inout)                 :: chi
     type(oct_prop_t), intent(in)                  :: prop_chi
     type(oct_prop_t), intent(in)                  :: prop_psi
@@ -534,7 +533,7 @@ module opt_control_propagation_m
     type(hamiltonian_t), intent(inout)         :: hm
     type(td_t), intent(inout)                  :: td
     type(target_t), intent(inout)              :: target
-    type(oct_control_parameters_t), intent(in) :: par_chi
+    type(controlfunction_t), intent(in)        :: par_chi
     type(states_t), intent(inout)              :: st
     type(states_t)                             :: inh
 
@@ -556,7 +555,7 @@ module opt_control_propagation_m
 
     do j = iter - 2, iter + 2
       if(j >= 0 .and. j<=td%max_iter) then
-        call parameters_to_h_val(par_chi, hm%ep, j+1)
+        call controlfunction_to_h_val(par_chi, hm%ep, j+1)
       end if
     end do
     if(hm%theory_level.ne.INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
@@ -580,7 +579,7 @@ module opt_control_propagation_m
     type(hamiltonian_t), intent(inout)         :: hm
     type(td_t), intent(inout)                  :: td
     type(target_t), intent(inout)              :: target
-    type(oct_control_parameters_t), intent(in) :: par
+    type(controlfunction_t), intent(in)        :: par
     type(states_t), intent(inout)              :: st
 
     integer :: j
@@ -598,7 +597,7 @@ module opt_control_propagation_m
 
     do j = iter - 2, iter + 2
       if(j >= 0 .and. j<=td%max_iter) then
-        call parameters_to_h_val(par, hm%ep, j+1)
+        call controlfunction_to_h_val(par, hm%ep, j+1)
       end if
     end do
     if(hm%theory_level.ne.INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
@@ -671,28 +670,27 @@ module opt_control_propagation_m
 
 
 
-  ! ---------------------------------------------------------
-  ! Calculates the value of the control parameters at iteration
-  ! iter, from the state psi and the Lagrange-multiplier chi.
-  !
-  ! If dir = 'f', the field must be updated for a forward
-  ! propagation. In that case, the propagation step that is
-  ! going to be done moves from (iter-1)*|dt| to iter*|dt|.
-  !
-  ! If dir = 'b', the field must be updated for a backward
-  ! propagation. In taht case, the propagation step that is
-  ! going to be done moves from iter*|dt| to (iter-1)*|dt|.
-  !
-  ! cp = (1-eta)*cpp - (eta/alpha) * <chi|V|Psi>
-  ! ---------------------------------------------------------
+
+  !> Calculates the value of the control functions at iteration
+  !! iter, from the state psi and the Lagrange-multiplier chi.
+  !!
+  !! If dir = 'f', the field must be updated for a forward
+  !! propagation. In that case, the propagation step that is
+  !! going to be done moves from (iter-1)*|dt| to iter*|dt|.
+  !!
+  !! If dir = 'b', the field must be updated for a backward
+  !! propagation. In taht case, the propagation step that is
+  !! going to be done moves from iter*|dt| to (iter-1)*|dt|.
+  !!
+  !! cp = (1-eta)*cpp - (eta/alpha) * <chi|V|Psi>
   subroutine update_field(iter, cp, gr, hm, psi, chi, cpp, dir)
     integer, intent(in)        :: iter
-    type(oct_control_parameters_t), intent(inout) :: cp
+    type(controlfunction_t), intent(inout) :: cp
     type(grid_t), intent(inout)   :: gr
     type(hamiltonian_t), intent(in) :: hm
     type(states_t), intent(inout) :: psi
     type(states_t), intent(inout) :: chi
-    type(oct_control_parameters_t), intent(in) :: cpp
+    type(controlfunction_t), intent(in) :: cpp
     character(len=1),intent(in) :: dir
 
     CMPLX :: d1
@@ -702,7 +700,7 @@ module opt_control_propagation_m
 
     call push_sub('propagation.update_field')
 
-    no_parameters = parameters_number(cp)
+    no_parameters = controlfunction_number(cp)
     
     SAFE_ALLOCATE(dl(1:no_parameters))
     SAFE_ALLOCATE(dq(1:no_parameters))
@@ -712,17 +710,17 @@ module opt_control_propagation_m
     d1 = M_z1
     if(zbr98_) then
       d1 = zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, 1, 1), chi%zpsi(:, :, 1, 1))
-      forall(j = 1:no_parameters) d(j) = aimag(d1*dl(j)) / parameters_alpha(cp, j) 
+      forall(j = 1:no_parameters) d(j) = aimag(d1*dl(j)) / controlfunction_alpha(cp, j) 
     elseif(gradients_) then
       forall(j = 1:no_parameters) d(j) = aimag(dl(j))
     else
-      forall(j = 1:no_parameters) d(j) = aimag(dl(j)) / parameters_alpha(cp, j) 
+      forall(j = 1:no_parameters) d(j) = aimag(dl(j)) / controlfunction_alpha(cp, j) 
     end if
 
     if(dir == 'f') then
-      call parameters_update(cp, cpp, dir, iter, delta_, d, dq)
+      call controlfunction_update(cp, cpp, dir, iter, delta_, d, dq)
     else
-      call parameters_update(cp, cpp, dir, iter, eta_, d, dq)
+      call controlfunction_update(cp, cpp, dir, iter, eta_, d, dq)
     end if
 
     SAFE_DEALLOCATE_A(d)

@@ -27,7 +27,7 @@ module opt_control_iter_m
   use io_m
   use parser_m
   use messages_m
-  use opt_control_parameters_m
+  use controlfunction_m
   use profiling_m
   use states_m
   use system_m
@@ -60,7 +60,7 @@ module opt_control_iter_m
     FLOAT              :: bestJ1_fluence
     FLOAT              :: bestJ1_J
     integer            :: bestJ1_ctr_iter
-    type(oct_control_parameters_t), pointer :: best_par
+    type(controlfunction_t), pointer :: best_par
     integer            :: convergence_iunit
     integer            :: velocities_iunit
   end type oct_iterator_t
@@ -71,7 +71,7 @@ contains
   ! ---------------------------------------------------------
   subroutine oct_iterator_init(iterator, par)
     type(oct_iterator_t), intent(inout)        :: iterator
-    type(oct_control_parameters_t), intent(in) :: par
+    type(controlfunction_t), intent(in) :: par
 
     call push_sub('iter.oct_iterator_init')
 
@@ -122,7 +122,7 @@ contains
     iterator%bestJ1_ctr_iter = 0
 
     SAFE_ALLOCATE(iterator%best_par)
-    call parameters_copy(iterator%best_par, par)
+    call controlfunction_copy(iterator%best_par, par)
 
     iterator%convergence_iunit = io_open(OCT_DIR//'convergence', action='write')
 
@@ -148,9 +148,9 @@ contains
 
     call push_sub('iter.oct_iterator_end')
 
-    call parameters_write(OCT_DIR//'laser.bestJ1', iterator%best_par)
+    call controlfunction_write(OCT_DIR//'laser.bestJ1', iterator%best_par)
 
-    call parameters_end(iterator%best_par)
+    call controlfunction_end(iterator%best_par)
     SAFE_DEALLOCATE_P(iterator%best_par)
     write(iterator%convergence_iunit, '(91("#"))') 
     call io_close(iterator%convergence_iunit)
@@ -167,8 +167,8 @@ contains
   ! ---------------------------------------------------------
   logical function iteration_manager(j1, par, par_prev, iterator) result(stoploop)
     FLOAT, intent(in) :: j1
-    type(oct_control_parameters_t), intent(in)  :: par
-    type(oct_control_parameters_t), intent(in)  :: par_prev
+    type(controlfunction_t), intent(in)  :: par
+    type(controlfunction_t), intent(in)  :: par_prev
     type(oct_iterator_t), intent(inout) :: iterator
 
     FLOAT :: fluence, jfunctional, j2, delta
@@ -178,10 +178,10 @@ contains
     
     stoploop = .false.
 
-    fluence = parameters_fluence(par)
-    j2 = parameters_j2(par)
+    fluence = controlfunction_fluence(par)
+    j2 = controlfunction_j2(par)
     jfunctional = j1 + j2
-    delta = parameters_diff(par, par_prev)
+    delta = controlfunction_diff(par, par_prev)
     
     if(iterator%ctr_iter .eq. iterator%ctr_iter_max) then
       message(1) = "Info: Maximum number of iterations reached."
@@ -204,7 +204,7 @@ contains
     write(message(2), '(6x,a,f12.5)')  " => J        = ", jfunctional
     write(message(3), '(6x,a,f12.5)')  " => J2       = ", j2
     write(message(4), '(6x,a,f12.5)')  " => Fluence  = ", fluence
-    write(message(5), '(6x,a,f12.5)')  " => Penalty  = ", parameters_alpha(par, 1)
+    write(message(5), '(6x,a,f12.5)')  " => Penalty  = ", controlfunction_alpha(par, 1)
     write(message(6), '(6x,a,es12.2)') " => D[e,e']  = ", delta
     if(iterator%ctr_iter .ne. 0) then
       call write_info(6)
@@ -220,12 +220,12 @@ contains
       iterator%bestJ1_J        = jfunctional
       iterator%bestJ1_fluence  = fluence       
       iterator%bestJ1_ctr_iter = iterator%ctr_iter
-      call parameters_end(iterator%best_par)
-      call parameters_copy(iterator%best_par, par)
+      call controlfunction_end(iterator%best_par)
+      call controlfunction_copy(iterator%best_par, par)
     end if
 
     write(iterator%convergence_iunit, '(i11,4f20.8)')                &
-      iterator%ctr_iter, jfunctional, j1, j2, parameters_diff(par, par_prev)
+      iterator%ctr_iter, jfunctional, j1, j2, controlfunction_diff(par, par_prev)
 
     iterator%ctr_iter = iterator%ctr_iter + 1
 
@@ -237,7 +237,7 @@ contains
   ! ---------------------------------------------------------
   subroutine iteration_manager_direct(j, par, iterator, sys, dx)
     FLOAT, intent(in) :: j
-    type(oct_control_parameters_t), intent(in)  :: par
+    type(controlfunction_t), intent(in)  :: par
     type(oct_iterator_t), intent(inout) :: iterator
     type(system_t), intent(in) :: sys
     FLOAT, optional, intent(in) :: dx
@@ -245,8 +245,8 @@ contains
     FLOAT :: j1, j2, fluence, delta
     call push_sub('iter.iteration_manager_direct')
 
-    fluence = parameters_fluence(par)
-    j2 = parameters_j2(par)
+    fluence = controlfunction_fluence(par)
+    j2 = controlfunction_j2(par)
     j1 = j - j2
 
     if(present(dx)) then
@@ -280,8 +280,8 @@ contains
       iterator%bestJ1_J        = j
       iterator%bestJ1_fluence  = fluence       
       iterator%bestJ1_ctr_iter = iterator%ctr_iter
-      call parameters_end(iterator%best_par)
-      call parameters_copy(iterator%best_par, par)
+      call controlfunction_end(iterator%best_par)
+      call controlfunction_copy(iterator%best_par, par)
     end if
 
     write(iterator%convergence_iunit, '(i11,4f20.8)')                &
@@ -320,14 +320,14 @@ contains
   ! ---------------------------------------------------------
   subroutine iterator_write(iterator, par)
     type(oct_iterator_t),           intent(in) :: iterator
-    type(oct_control_parameters_t), intent(in) :: par
+    type(controlfunction_t),        intent(in) :: par
 
     character(len=80)  :: filename
 
     call push_sub('iter.iterator_write')
 
     write(filename,'(a,i3.3)') OCT_DIR//'laser.', iterator%ctr_iter
-    call parameters_write(filename, par)
+    call controlfunction_write(filename, par)
 
     call pop_sub('iter.iterator_write')
   end subroutine iterator_write
@@ -336,8 +336,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine oct_iterator_bestpar(par, iterator)
-    type(oct_iterator_t), intent(inout)     :: iterator
-    type(oct_control_parameters_t), pointer :: par
+    type(oct_iterator_t), intent(inout) :: iterator
+    type(controlfunction_t), pointer    :: par
 
     call push_sub('iter.oct_iterator_bestpar')
     par => iterator%best_par

@@ -19,12 +19,12 @@
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_basis_to_theta(par)
-    type(oct_control_parameters_t), intent(inout) :: par
+  subroutine controlfunction_basis_to_theta(par)
+    type(controlfunction_t), intent(inout) :: par
     integer :: j, n, dof
     FLOAT, allocatable :: ep(:), e(:), y(:), a(:), x(:)
 
-    call push_sub('parameters_trans_inc.parameters_basis_to_theta')
+    call push_sub('controlfunction_trans_inc.controlfunction_basis_to_theta')
 
     ASSERT(par%current_representation .ne. ctr_real_time)
 
@@ -84,19 +84,19 @@
       
     end select
 
-    call pop_sub('parameters_trans_inc.parameters_basis_to_theta')
-  end subroutine parameters_basis_to_theta
+    call pop_sub('controlfunction_trans_inc.controlfunction_basis_to_theta')
+  end subroutine controlfunction_basis_to_theta
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_theta_to_basis(par)
-    type(oct_control_parameters_t), intent(inout) :: par
+  subroutine controlfunction_theta_to_basis(par)
+    type(controlfunction_t), intent(inout) :: par
 
     FLOAT, allocatable :: y(:), a(:), e(:), ep(:), x(:)
     integer :: n, dof, j
 
-    call push_sub('parameters_trans_inc.parameters_theta_to_basis')
+    call push_sub('controlfunction_trans_inc.controlfunction_theta_to_basis')
 
     ASSERT(par%current_representation .ne. ctr_real_time)
 
@@ -167,40 +167,40 @@
 
     end select
 
-    call pop_sub('parameters_trans_inc.parameters_theta_to_basis')
-  end subroutine parameters_theta_to_basis
+    call pop_sub('controlfunction_trans_inc.controlfunction_theta_to_basis')
+  end subroutine controlfunction_theta_to_basis
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_get_theta(par, theta)
-    type(oct_control_parameters_t), intent(in) :: par
+  subroutine controlfunction_get_theta(par, theta)
+    type(controlfunction_t), intent(in) :: par
     FLOAT, intent(inout) :: theta(:)
 
-    call push_sub('parameters_trans_inc.parameters_get_theta')
+    call push_sub('controlfunction_trans_inc.controlfunction_get_theta')
     theta = par%theta
 
-    call pop_sub('parameters_trans_inc.parameters_get_theta')
-  end subroutine parameters_get_theta
+    call pop_sub('controlfunction_trans_inc.controlfunction_get_theta')
+  end subroutine controlfunction_get_theta
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_set_theta(par, theta)
-    type(oct_control_parameters_t), intent(inout) :: par
+  subroutine controlfunction_set_theta(par, theta)
+    type(controlfunction_t), intent(inout) :: par
     FLOAT, intent(in) :: theta(:)
 
-    call push_sub('parameters_trans_inc.parameters_set_theta')
+    call push_sub('controlfunction_trans_inc.controlfunction_set_theta')
     par%theta = theta
 
-    call pop_sub('parameters_trans_inc.parameters_set_theta')
-  end subroutine parameters_set_theta
+    call pop_sub('controlfunction_trans_inc.controlfunction_set_theta')
+  end subroutine controlfunction_set_theta
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_trans_matrix(par)
-    type(oct_control_parameters_t), intent(inout) :: par
+  subroutine controlfunction_trans_matrix(par)
+    type(controlfunction_t), intent(inout) :: par
 
     integer :: i, mm, nn
     FLOAT :: t, det
@@ -209,7 +209,7 @@
 
     if(par_common%representation .eq. ctr_real_time) return
 
-    call push_sub('parameters.parameters_trans_matrix')
+    call push_sub('controlfunction.controlfunction_trans_matrix')
 
     SAFE_ALLOCATE(par%utransf (1:par%dim, 1:par%dim))
     SAFE_ALLOCATE(par%utransfi(1:par%dim, 1:par%dim))
@@ -220,7 +220,7 @@
 
     ! WARNING: Here we are missing the cases in which par_common%representation is
     ! either ctr_fourier_series or ctr_zero_fourier_series.
-    if( par_common%mode .eq. parameter_mode_f ) then
+    if( par_common%mode .eq. controlfunction_mode_f ) then
       ! If the object to optimize is the envelope of the
       ! the laser pulse. Being e(t) the laser pulse, it is assumed that it
       ! has the form:
@@ -327,8 +327,8 @@
 
     end if
 
-    call pop_sub('parameters.parameters_trans_matrix')
-  end subroutine parameters_trans_matrix
+    call pop_sub('controlfunction.controlfunction_trans_matrix')
+  end subroutine controlfunction_trans_matrix
   ! ---------------------------------------------------------
 
 
