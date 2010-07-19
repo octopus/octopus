@@ -48,10 +48,10 @@ modelmb_density_matrix.o : modelmb_density_matrix.F90 modelmb_density_matrix_inc
 modelmb_density.o : modelmb_density.F90 modelmb_density_inc.F90 modelmb_particles.o states.o
 modelmb_exchange_syms.o : modelmb_exchange_syms.F90 modelmb_density.o modelmb_particles.o states.o
 physics_op.o : physics_op_inc.F90
-states.o : states.F90 states_dim.o ob_green.o modelmb_particles.o
+states.o : states.F90 states_dim.o ob_green.o modelmb_particles.o smear.o
 states_dim.o : states_dim.F90
-states_calc.o : states_calc.F90 states_calc_inc.F90 states.o states_block.o
+states_calc.o : states_calc.F90 states_calc_inc.F90 states.o states_block.o smear.o
 states_block.o : states_block.F90 states_block_inc.F90 states.o
 excited_states.o : excited_states.F90 excited_states_inc.F90 states.o states_calc.o
-linear_response.o : linear_response.F90 linear_response_inc.F90 states.o states_calc.o
+linear_response.o : linear_response.F90 linear_response_inc.F90 states.o states_calc.o smear.o
 restart.o : restart.F90 restart_inc.F90 states.o linear_response.o states_calc.o

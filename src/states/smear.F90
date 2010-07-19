@@ -54,7 +54,6 @@ module smear_m
     FLOAT   :: e_fermi      !< the Fermi energy
     
     FLOAT   :: el_per_state !< How many electrons can we put in each state
-    logical :: fixed_occ    !< Are occupations fixed, or are we allowed to change them
     FLOAT   :: ef_occ       !< Occupancy of the level at the Fermi energy
 
     integer :: MP_n         !< order of Methfessel-Paxton smearing
@@ -65,7 +64,8 @@ module smear_m
     SMEAR_FERMI_DIRAC       = 2,      &
     SMEAR_COLD              = 3,      &
     SMEAR_METHFESSEL_PAXTON = 4,      &
-    SMEAR_SPLINE            = 5
+    SMEAR_SPLINE            = 5,      &
+    SMEAR_FIXED_OCC         = 6
   
 contains
 
@@ -83,6 +83,7 @@ contains
     !%Section States
     !%Description
     !% This is the function used to smear the electronic occupations.
+    !% It is ignored if the <tt>Occupations</tt> block is set.
     !%Option semiconducting 1
     !% Semiconducting occupations, <i>i.e.</i> the lowest lying states are occupied
     !% until no more electrons are left.
@@ -97,9 +98,13 @@ contains
     !%Option spline_smearing 5
     !% Nearly identical to Gaussian smearing.
     !%End
-    call parse_integer(datasets_check('SmearingFunction'), SMEAR_SEMICONDUCTOR, this%method)
-    if(.not. varinfo_valid_option('SmearingFunction', this%method)) call input_error('SmearingFunction')
-    call messages_print_var_option(stdout, 'SmearingFunction', this%method)
+    if(fixed_occ) then
+      this%method = SMEAR_FIXED_OCC
+    else
+      call parse_integer(datasets_check('SmearingFunction'), SMEAR_SEMICONDUCTOR, this%method)
+      if(.not. varinfo_valid_option('SmearingFunction', this%method)) call input_error('SmearingFunction')
+      call messages_print_var_option(stdout, 'SmearingFunction', this%method)
+    endif
 
     !%Variable Smearing
     !%Type float
@@ -111,13 +116,12 @@ contains
     !% among the existing states.
     !%End
     this%dsmear = CNST(1e-14)
-    if(this%method .ne. SMEAR_SEMICONDUCTOR) then
+    if(this%method .ne. SMEAR_SEMICONDUCTOR .and. this%method .ne. SMEAR_FIXED_OCC) then
       call parse_float(datasets_check('Smearing'), CNST(0.1) / (M_TWO * P_Ry), this%dsmear, units_inp%energy)
     end if
 
     call messages_obsolete_variable("ElectronicTemperature", "Smearing")
 
-    this%fixed_occ = fixed_occ
     this%el_per_state = M_ONE
     if(ispin == 1) & ! unpolarized
       this%el_per_state = M_TWO
@@ -149,7 +153,6 @@ contains
     to%dsmear       = from%dsmear
     to%e_fermi      = from%e_fermi
     to%el_per_state = from%el_per_state
-    to%fixed_occ    = from%fixed_occ
     to%ef_occ       = from%ef_occ
     to%MP_n         = from%MP_n
 
@@ -189,7 +192,7 @@ contains
     end if
 
     conv = .true.
-    if(this%fixed_occ) then ! Fermi energy: last of occupied states
+    if(this%method == SMEAR_FIXED_OCC) then ! Fermi energy: last of occupied states
       ist_cycle: do ist = nst, 1, -1
         do ik = 1, nik
           if(occupations(ist, ik) > CNST(1e-5)) then
@@ -287,7 +290,7 @@ contains
 
     call push_sub('smear.smear_fill_occupations')
 
-    if(this%fixed_occ) then
+    if(this%method == SMEAR_FIXED_OCC) then
       ! do nothing
     else if(this%method == SMEAR_SEMICONDUCTOR) then
       do ik = 1, nik

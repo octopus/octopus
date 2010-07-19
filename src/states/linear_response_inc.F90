@@ -39,7 +39,7 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik)
 
   SAFE_ALLOCATE(beta_ij(1:st%nst))
 
-  if(st%smear%fixed_occ .or. smear_is_semiconducting(st%smear)) then
+  if(st%smear%method == SMEAR_FIXED_OCC .or. smear_is_semiconducting(st%smear)) then
     ! This scheme may not work for partial occupations.
     theta = st%occ(ist, ik) / st%smear%el_per_state
     do jst = 1, st%nst
@@ -86,7 +86,7 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik)
     Theta_Fi=theta, beta_ij=beta_ij)
 
   SAFE_DEALLOCATE_A(beta_ij)
-  if(.not. (st%fixed_occ .or. smear_is_semiconducting(st%smear))) then
+  if(.not. (st%smear%method == SMEAR_FIXED_OCC .or. smear_is_semiconducting(st%smear))) then
     SAFE_DEALLOCATE_A(Theta_Fi)
   endif  
 

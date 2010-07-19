@@ -149,7 +149,7 @@ contains
         call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
           ierr, lr=kdotp_lr(idir, 1))
 
-        if(ierr.ne.0) then
+        if(ierr .ne. 0) then
           message(1) = "Could not load kdotp wavefunctions from '"//trim(tmpdir)//trim(dirname)//"'"
           message(2) = "Previous kdotp calculation required."
           call write_fatal(2)
@@ -655,7 +655,7 @@ contains
       !%End
 
       call parse_logical(datasets_check('EMOccupiedResponse'), .false., em_vars%occ_response)
-      if(em_vars%occ_response .and. .not. (smear_is_semiconducting(sys%st%smear) .or. sys%st%fixed_occ)) then
+      if(em_vars%occ_response .and. .not. (smear_is_semiconducting(sys%st%smear) .or. sys%st%smear%method == SMEAR_FIXED_OCC)) then
         message(1) = "EMOccupiedResponse cannot be used if there are partial occupations."
         call write_fatal(1)
       endif
