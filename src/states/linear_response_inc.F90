@@ -30,31 +30,33 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik)
   integer,             intent(in)    :: ist, ik
 
   integer :: jst
-  FLOAT :: xx, theta_ij, theta_ji, alpha_j, delta_e, dsmear
+  FLOAT :: xx, theta, theta_ij, theta_ji, alpha_j, delta_e, dsmear
   FLOAT, allocatable :: theta_Fi(:), beta_ij(:)
 
   call push_sub('linear_response_inc.Xlr_orth_vector')
 
   dsmear = max(CNST(1e-14), st%smear%dsmear)
 
-  SAFE_ALLOCATE(theta_Fi(1:st%nst))
-  do jst = 1, st%nst
-    ! epsilon has to be added or we have problem with semiconducting smearing
-    xx = (st%smear%e_fermi - st%eigenval(jst, ik) + CNST(1e-14))/dsmear
-    theta_Fi(jst) = smear_step_function(st%smear, xx)
-  end do
-
   SAFE_ALLOCATE(beta_ij(1:st%nst))
 
-  if(st%smear%fixed_occ .or. st%smear%method == SMEAR_SEMICONDUCTOR) then
+  if(st%smear%fixed_occ .or. smear_is_semiconducting(st%smear)) then
+    theta = st%occ(ist, ik) / st%smear%el_per_state
     do jst = 1, st%nst
-      if(Theta_Fi(ist).ne.M_ZERO .and. Theta_Fi(jst).ne.M_ZERO) then
-        beta_ij(jst) = Theta_Fi(jst)
+      if(st%occ(ist, ik) .gt. M_EPSILON .and. st%occ(jst, ik) .gt. M_EPSILON) then
+        beta_ij(jst) = st%occ(jst, ik) / st%smear%el_per_state
       else
         beta_ij(jst) = M_ZERO
       end if
     end do
   else
+    SAFE_ALLOCATE(theta_Fi(1:st%nst))
+
+    do jst = 1, st%nst
+      ! epsilon has to be added or we have problem with semiconducting smearing
+      xx = (st%smear%e_fermi - st%eigenval(jst, ik) + CNST(1e-14))/dsmear
+      theta_Fi(jst) = smear_step_function(st%smear, xx)
+    end do
+
     beta_ij = M_ZERO
     do jst = 1, st%nst
       xx = (st%eigenval(ist, ik) - st%eigenval(jst, ik))/dsmear
@@ -74,13 +76,17 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik)
           (-smear_delta_function(st%smear,  xx)/dsmear)
       end if
     end do
+
+    theta = theta_Fi(ist)
   end if
 
   call X(states_orthogonalization)(mesh, st%nst, st%d%dim, st%X(psi)(:, :, :, ik), vec(:, :), &
-    Theta_Fi=Theta_Fi(ist), beta_ij=beta_ij)
+    Theta_Fi=theta, beta_ij=beta_ij)
 
   SAFE_DEALLOCATE_A(beta_ij)
-  SAFE_DEALLOCATE_A(Theta_Fi)
+  if(.not. (st%fixed_occ .or. smear_is_semiconducting(st%smear))) then
+    SAFE_DEALLOCATE_A(Theta_Fi)
+  endif  
 
   call pop_sub('linear_response_inc.Xlr_orth_vector')
 
