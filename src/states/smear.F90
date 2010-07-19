@@ -129,7 +129,7 @@ contains
       !%Default 1
       !%Section States
       !%Description
-      !% Sets the order of the Methfessel-Paxton smearing function
+      !% Sets the order of the Methfessel-Paxton smearing function.
       !%End
       call parse_integer(datasets_check('SmearingMPOrder'), 1, this%MP_n)
     end if

@@ -675,7 +675,7 @@ subroutine X(pert_expectation_density) (this, gr, geo, hm, st, psia, psib, densi
 
       if(order == 1) then 
         call X(pert_apply)(this, gr, geo, hm, ik, psib(:, :, ist, ik), pertpsib)
-        ikweight = st%d%kweights(ik)*st%smear%el_per_state
+        ikweight = st%d%kweights(ik)*st%occ(ist, ik)
       else
         call X(pert_apply_order_2)(this, gr, geo, hm, ik, psib(:, :, ist, ik), pertpsib)
         ikweight = st%d%kweights(ik)*st%occ(ist, ik)

@@ -40,9 +40,11 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik)
   SAFE_ALLOCATE(beta_ij(1:st%nst))
 
   if(st%smear%fixed_occ .or. smear_is_semiconducting(st%smear)) then
+    ! This scheme may not work for partial occupations.
     theta = st%occ(ist, ik) / st%smear%el_per_state
     do jst = 1, st%nst
-      if(st%occ(ist, ik) .gt. M_EPSILON .and. st%occ(jst, ik) .gt. M_EPSILON) then
+      ! in some smearing schemes, occupations can actually be negative...
+      if(abs(st%occ(ist, ik)) .gt. M_EPSILON .and. abs(st%occ(jst, ik)) .gt. M_EPSILON) then
         beta_ij(jst) = st%occ(jst, ik) / st%smear%el_per_state
       else
         beta_ij(jst) = M_ZERO
