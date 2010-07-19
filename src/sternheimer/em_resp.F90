@@ -92,6 +92,7 @@ module em_resp_m
 
     logical :: calc_Born                         ! whether to calculate Born effective charges
     type(Born_charges_t) :: Born_charges(3)      ! one set for each frequency factor
+    logical :: occ_response                      ! whether to calculate full response in Sternheimer eqn.
     
   end type em_resp_t
 
@@ -110,7 +111,7 @@ contains
 
     integer :: sigma, ndim, idir, ierr, iomega, ifactor
     character(len=100) :: dirname, str_tmp
-    logical :: complex_response, have_to_calculate, use_kdotp, occ_response
+    logical :: complex_response, have_to_calculate, use_kdotp
 
     FLOAT :: closest_omega
 
@@ -123,7 +124,6 @@ contains
 
     complex_response = (em_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
     call restart_look_and_read(sys%st, sys%gr, sys%geo, is_complex = complex_response)
-    occ_response = smear_is_semiconducting(sys%st%smear) .or. sys%st%fixed_occ
 
     if (states_are_real(sys%st)) then
       message(1) = 'Info: SCF using real wavefunctions.'
@@ -181,10 +181,10 @@ contains
     call system_h_setup(sys, hm)
 
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
-      call sternheimer_init(sh, sys, hm, "EM", set_ham_var = 0)
+      call sternheimer_init(sh, sys, hm, "EM", set_ham_var = 0, set_last_occ_response = em_vars%occ_response)
       ! set HamiltonVariation to V_ext_only, in magnetic case
     else
-      call sternheimer_init(sh, sys, hm, "EM")
+      call sternheimer_init(sh, sys, hm, "EM", set_last_occ_response = em_vars%occ_response)
       ! otherwise, use default, which is hartree + fxc
     endif
 
@@ -431,9 +431,9 @@ contains
           call write_info(1)
 
           if(states_are_complex(sys%st)) then
-            call zlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, occ_response = occ_response)
+            call zlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, occ_response = em_vars%occ_response)
           else
-            call dlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, occ_response = occ_response)
+            call dlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, occ_response = em_vars%occ_response)
           end if
         end if
 
@@ -644,6 +644,21 @@ contains
 
       call parse_logical(datasets_check('EMCalcBornCharges'), .false., em_vars%calc_Born)
       if (em_vars%calc_Born) call messages_devel_version("Calculation of Born effective charges")
+
+      !%Variable EMOccupiedResponse
+      !%Type logical
+      !%Default false
+      !%Section Linear Response::Polarizabilities
+      !%Description
+      !% Solve for full response without projector into unoccupied subspace.
+      !% Not possible if there are partial occupations.
+      !%End
+
+      call parse_logical(datasets_check('EMOccupiedResponse'), .false., em_vars%occ_response)
+      if(em_vars%occ_response .and. .not. (smear_is_semiconducting(sys%st%smear) .or. sys%st%fixed_occ)) then
+        message(1) = "EMOccupiedResponse cannot be used if there are partial occupations."
+        call write_fatal(1)
+      endif
 
       call pop_sub('em_resp.em_resp_run.parse_input')
 

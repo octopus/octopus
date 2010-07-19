@@ -156,8 +156,8 @@ contains
       call kdotp_write_band_velocity(sys%st, sys%gr%sb%periodic_dim, kdotp_vars%velocity(:,:,:))
     endif
 
-    call sternheimer_init(sh, sys, hm, "KdotP_", &
-         set_ham_var = 0, set_occ_response = (kdotp_vars%occ_solution_method == 0))
+    call sternheimer_init(sh, sys, hm, "KdotP_", set_ham_var = 0, &
+      set_occ_response = (kdotp_vars%occ_solution_method == 0), set_last_occ_response = (kdotp_vars%occ_solution_method == 0))
     ! ham_var_set = 0 results in HamiltonianVariation = V_ext_only
 
     do idir = 1, gr%mesh%sb%dim

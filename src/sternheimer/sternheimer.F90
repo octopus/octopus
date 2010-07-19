@@ -90,6 +90,7 @@ module sternheimer_m
      logical               :: add_hartree
      logical               :: ok
      logical               :: occ_response
+     logical               :: last_occ_response
      logical               :: preorthogonalization
      logical               :: oep_kernel
   end type sternheimer_t
@@ -99,13 +100,14 @@ module sternheimer_m
 contains
   
   !-----------------------------------------------------------
-  subroutine sternheimer_init(this, sys, hm, prefix, set_ham_var, set_occ_response, set_default_solver)
+  subroutine sternheimer_init(this, sys, hm, prefix, set_ham_var, set_occ_response, set_last_occ_response, set_default_solver)
     type(sternheimer_t), intent(out)   :: this
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: hm
     character(len=*),    intent(in)    :: prefix
     integer, optional,   intent(in)    :: set_ham_var
     logical, optional,   intent(in)    :: set_occ_response
+    logical, optional,   intent(in)    :: set_last_occ_response
     integer, optional,   intent(in)    :: set_default_solver
 
     integer :: ham_var, default_solver
@@ -175,6 +177,12 @@ contains
        this%occ_response = set_occ_response
     else
        this%occ_response = .false.
+    endif
+
+    if(present(set_last_occ_response)) then
+       this%last_occ_response = set_last_occ_response
+    else
+       this%last_occ_response = .false.
     endif
 
     message(1) = "Variation of the Hamiltonian in Sternheimer equation: V_ext"

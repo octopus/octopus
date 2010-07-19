@@ -420,7 +420,6 @@ end subroutine X(lr_calc_susceptibility)
 
 ! ---------------------------------------------------------
 subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr, occ_response)
-! Note: correctness for spinors is unclear
 ! See (16) in X Andrade et al., J. Chem. Phys. 126, 184106 (2006) for finite systems
 ! and (10) in A Dal Corso et al., Phys. Rev. B 15, 15638 (1996) for periodic systems
 ! Supply only em_lr for finite systems, and both kdotp_lr and kdotp_em_lr for periodic
@@ -443,7 +442,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   type(states_t), pointer :: st
   type(mesh_t),   pointer :: mesh
 
-  integer :: ifreq, jfreq, isigma, idim, ispin, np, ndim, idir, ist, ik
+  integer :: ifreq, jfreq, isigma, idim, ispin, np, ndir, idir, ist, ik
   integer :: ii, jj, kk, iperm, op_sigma, ist2, ip
   integer :: perm(1:3), u(1:3), w(1:3), ijk(1:3)
 
@@ -461,7 +460,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   st   => sys%st
   mesh => sys%gr%mesh
   np   =  mesh%np
-  ndim =  sys%gr%sb%dim
+  ndir =  sys%gr%sb%dim
 
   occ_response_ = .false.
   if(present(occ_response)) occ_response_ = occ_response
@@ -481,13 +480,13 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
 
   SAFE_ALLOCATE(tmp(1:np, 1:st%d%dim))
   SAFE_ALLOCATE(ppsi(1:np, 1:st%d%dim))
-  SAFE_ALLOCATE(hvar(1:np, 1:st%d%nspin, 1:2, 1:st%d%dim, 1:ndim, 1:3))
+  SAFE_ALLOCATE(hvar(1:np, 1:st%d%nspin, 1:2, 1:st%d%dim, 1:ndir, 1:3))
   SAFE_ALLOCATE(hpol_density(1:np))
   SAFE_ALLOCATE(me010(1:st%nst, 1:st%nst, 1:MAX_DIM, 1:3, st%d%kpt%start:st%d%kpt%end))
   SAFE_ALLOCATE(me11(1:MAX_DIM, 1:MAX_DIM, 1:3, 1:3, 1:2, st%d%kpt%start:st%d%kpt%end))
 
   do ifreq = 1, 3
-    do idir = 1, ndim
+    do idir = 1, ndir
       do idim = 1, st%d%dim
         call X(sternheimer_calc_hvar)(sh, sys, hm, em_lr(idir, :, ifreq), 2, hvar(:, :, :, idim, idir, ifreq))
       end do !idim
@@ -498,9 +497,9 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
 
   beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM) = M_ZERO
 
-  do ii = 1, ndim
-    do jj = 1, ndim
-      do kk = 1, ndim
+  do ii = 1, ndir
+    do jj = 1, ndir
+      do kk = 1, ndir
 
         ijk = (/ ii, jj, kk /)
 
@@ -572,8 +571,8 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   end do !ii
 
   do ik = st%d%kpt%start, st%d%kpt%end
-    do ii = 1, ndim
-      do jj = 1, ndim
+    do ii = 1, ndir
+      do jj = 1, ndir
         do ifreq = 1, 3
           do jfreq = 1, 3
             do isigma = 1,2
@@ -627,7 +626,9 @@ contains
       ispin = states_dim_get_spin_index(sys%st%d, ik)
       do ist = 1, st%nst
         do ist2 = 1, st%nst
-          do ii = 1, ndim
+
+          if(occ_response_ .and. ist2 .ne. ist) continue
+          do ii = 1, ndir
             do ifreq = 1, 3
 
               if (present(kdotp_lr)) then
@@ -651,19 +652,27 @@ contains
     end do
 
     do ik = st%d%kpt%start, st%d%kpt%end
-      do ii = 1, ndim
-        do jj = 1, ndim
+      do ii = 1, ndir
+        do jj = 1, ndir
           do ifreq = 1, 3
             do jfreq = 1, 3
               do isigma = 1, 2
                 op_sigma = 2 
                 if(isigma == 2) op_sigma = 1
-
                 SAFE_ALLOCATE(me11(ii, jj, ifreq, jfreq, isigma, ik)%X(matrix)(1:st%nst, 1:st%nst))
-                call states_blockt_mul(mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
-                  em_lr(ii, op_sigma, ifreq)%X(dl_psi)(:, :, :, ik), &
-                  em_lr(jj, isigma, jfreq)%X(dl_psi)(:, :, :, ik), &
-                  me11(ii, jj, ifreq, jfreq, isigma, ik)%X(matrix))
+
+                if(occ_response_) then
+                  do ist = 1, st%nst
+                    me11(ii, jj, ifreq, jfreq, isigma, ik)%X(matrix)(ist, ist) = &
+                      X(mf_dotp)(mesh, st%d%dim, em_lr(ii, op_sigma, ifreq)%X(dl_psi)(:, :, ist, ik), &
+                                                 em_lr(jj, isigma,   jfreq)%X(dl_psi)(:, :, ist, ik))
+                  enddo
+                else
+                  call states_blockt_mul(mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
+                    em_lr(ii, op_sigma, ifreq)%X(dl_psi)(:, :, :, ik), &
+                    em_lr(jj, isigma, jfreq)%X(dl_psi)(:, :, :, ik), &
+                    me11(ii, jj, ifreq, jfreq, isigma, ik)%X(matrix))
+                endif
 
               end do
             end do
