@@ -44,11 +44,11 @@ K = mu * 1822.8885
 ParticleMass = K
 
 %Species
-"morse" | 1 | spec_user_defined | 1 | "D*(exp(-beta*(x-r0))-1)^2 - D"
+"morse" | 1 | spec_user_defined | 1 | "D*(exp(-beta*x)-1)^2 - D"
 %
 
 %Coordinates
-"morse" | -r0 | 0 | 0 
+"morse" | 0 | 0 | 0 
 %
 
 BoxShape = sphere
