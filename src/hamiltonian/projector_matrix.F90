@@ -23,8 +23,8 @@ module projector_matrix_m
   use global_m
   use messages_m
   use opencl_m
-  use types_m
   use profiling_m
+  use types_m
 
   implicit none
 
@@ -70,6 +70,8 @@ contains
     integer,                  intent(in)  :: npoints
     integer,                  intent(in)  :: nprojs
 
+    call push_sub('projector_matrix.projector_matrix_allocate')
+
     this%npoints = npoints
     this%nprojs = nprojs
 
@@ -84,12 +86,16 @@ contains
       call opencl_create_buffer(this%buff_projectors, CL_MEM_READ_ONLY, TYPE_FLOAT, nprojs*npoints)
     end if
 #endif
+
+    call pop_sub('projector_matrix.projector_matrix_allocate')
   end subroutine projector_matrix_allocate
 
   ! -------------------------------------------------
 
   subroutine projector_matrix_deallocate(this)
     type(projector_matrix_t), intent(out) :: this
+
+    call push_sub('projector_matrix.projector_matrix_deallocate')
 
     SAFE_DEALLOCATE_P(this%map)
     SAFE_DEALLOCATE_P(this%projectors)
@@ -102,6 +108,8 @@ contains
       call opencl_release_buffer(this%buff_projectors)
     end if
 #endif
+
+    call pop_sub('projector_matrix.projector_matrix_deallocate')
   end subroutine projector_matrix_deallocate
 
   ! -------------------------------------------------

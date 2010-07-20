@@ -110,7 +110,7 @@ contains
     type(lr_t)              :: kdotp_lr(MAX_DIM, 1)
 
     integer :: sigma, ndim, idir, ierr, iomega, ifactor
-    character(len=100) :: dirname, str_tmp
+    character(len=100) :: dirname_restart, dirname_output, str_tmp
     logical :: complex_response, have_to_calculate, use_kdotp
 
     FLOAT :: closest_omega
@@ -144,13 +144,13 @@ contains
 
         ! load wavefunctions
         str_tmp = kdotp_wfs_tag(idir)
-        write(dirname,'(3a)') KDOTP_DIR, trim(str_tmp), '_1'
+        write(dirname_restart,'(3a)') KDOTP_DIR, trim(str_tmp), '_1'
         ! 1 is the sigma index which is used in em_resp
-        call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
+        call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, sys%geo, &
           ierr, lr=kdotp_lr(idir, 1))
 
         if(ierr .ne. 0) then
-          message(1) = "Could not load kdotp wavefunctions from '"//trim(tmpdir)//trim(dirname)//"'"
+          message(1) = "Could not load kdotp wavefunctions from '"//trim(tmpdir)//trim(dirname_restart)//"'"
           message(2) = "Previous kdotp calculation required."
           call write_fatal(2)
         end if
@@ -257,12 +257,12 @@ contains
               if(iomega == 1) then
                 do sigma = 1, em_vars%nsigma
                   str_tmp =  em_wfs_tag(idir, ifactor)
-                  write(dirname,'(3a, i1)') EM_RESP_DIR, trim(str_tmp), '_', sigma
-                  call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
+                  write(dirname_restart,'(3a, i1)') EM_RESP_DIR, trim(str_tmp), '_', sigma
+                  call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, sys%geo, &
                     ierr, lr=em_vars%lr(idir, sigma, ifactor))
 
                   if(ierr.ne.0) then
-                    message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//trim(dirname)//"'"
+                    message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//trim(dirname_restart)//"'"
                     call write_warning(1)
                   end if
                 end do
@@ -368,15 +368,15 @@ contains
           end if
 
         end do ! idir
-      end do ! ifactor
 
-      if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
+        if(.not. have_to_calculate) cycle
 
-        ! calculate polarizability
-        message(1) = "Info: Calculating polarizabilities."
-        call write_info(1)
-
-        do ifactor = 1, em_vars%nfactor
+        if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
+    
+          ! calculate polarizability
+          message(1) = "Info: Calculating polarizabilities."
+          call write_info(1)
+    
           if(use_kdotp .and. states_are_complex(sys%st)) then
             call zcalc_polarizability_periodic(sys, em_vars%lr(:, :, ifactor), kdotp_lr(:, 1), &
               em_vars%nsigma, em_vars%alpha(:, :, ifactor))
@@ -390,14 +390,12 @@ contains
             call dcalc_polarizability_finite(sys, hm, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
               em_vars%perturbation, em_vars%alpha(:, :, ifactor))
           end if
-        end do
-
-        if(em_vars%calc_Born) then
-          ! calculate Born effective charges
-          message(1) = "Info: Calculating (frequency-dependent) Born effective charges."
-          call write_info(1)
-
-          do ifactor = 1, em_vars%nfactor
+    
+          if(em_vars%calc_Born) then
+            ! calculate Born effective charges
+            message(1) = "Info: Calculating (frequency-dependent) Born effective charges."
+            call write_info(1)
+    
             do idir = 1, sys%gr%sb%dim
               ! time = M_ZERO
               if(states_are_complex(sys%st)) then
@@ -422,26 +420,12 @@ contains
                 endif
               endif
             enddo
-          enddo
-        endif
-
-        ! calculate hyperpolarizability
-        if(em_vars%calc_hyperpol) then
-          write(message(1), '(a)') 'Info: Calculating hyperpolarizabilities.'
+          endif
+    
+        else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
+          message(1) = "Info: Calculating magnetic susceptibilities."
           call write_info(1)
-
-          if(states_are_complex(sys%st)) then
-            call zlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, occ_response = em_vars%occ_response)
-          else
-            call dlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, occ_response = em_vars%occ_response)
-          end if
-        end if
-
-      else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
-        message(1) = "Info: Calculating magnetic susceptibilities."
-        call write_info(1)
-
-        do ifactor = 1, em_vars%nfactor
+    
           if(states_are_complex(sys%st)) then 
             call zlr_calc_susceptibility(sys, hm, em_vars%lr(:,:, ifactor), em_vars%nsigma, em_vars%perturbation, &
               em_vars%chi_para(:,:, ifactor), em_vars%chi_dia(:,:, ifactor))
@@ -449,10 +433,27 @@ contains
             call dlr_calc_susceptibility(sys, hm, em_vars%lr(:,:, ifactor), em_vars%nsigma, em_vars%perturbation, &
               em_vars%chi_para(:,:, ifactor), em_vars%chi_dia(:,:, ifactor))
           end if
-        end do
-      end if
+        end if
 
-      call em_resp_output(sys%st, sys%gr, hm, sys%geo, sys%outp, em_vars, iomega)
+        call em_resp_output(sys%st, sys%gr, hm, sys%geo, sys%outp, em_vars, iomega, ifactor)
+
+      end do ! ifactor
+
+      ! calculate hyperpolarizability
+      if(em_vars%calc_hyperpol) then
+        write(message(1), '(a)') 'Info: Calculating hyperpolarizabilities.'
+        call write_info(1)
+
+        if(states_are_complex(sys%st)) then
+          call zlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, occ_response = em_vars%occ_response)
+        else
+          call dlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, occ_response = em_vars%occ_response)
+        end if
+
+        str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(1)*em_vars%omega(iomega)))
+        write(dirname_output, '(a, a)') EM_RESP_DIR//'freq_', trim(str_tmp)
+        call out_hyperpolarizability(gr%sb, em_vars%beta, em_vars%ok(1), dirname_output)
+      end if
 
     end do ! iomega
 
@@ -704,7 +705,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine em_resp_output(st, gr, hm, geo, outp, em_vars, iomega)
+  subroutine em_resp_output(st, gr, hm, geo, outp, em_vars, iomega, ifactor)
     type(states_t),       intent(inout) :: st
     type(grid_t),         intent(inout) :: gr
     type(hamiltonian_t),  intent(inout) :: hm
@@ -712,41 +713,36 @@ contains
     type(h_sys_output_t), intent(in)    :: outp
     type(em_resp_t),      intent(inout) :: em_vars
     integer,              intent(in)    :: iomega
+    integer,              intent(in)    :: ifactor
     
-    integer :: iunit, ifactor
+    integer :: iunit
     character(len=80) :: dirname, str_tmp
 
     call push_sub('em_resp.em_resp_output')
 
-    do ifactor = 1, em_vars%nfactor
-      str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(ifactor)*em_vars%omega(iomega)))
-      write(dirname, '(a, a)') EM_RESP_DIR//'freq_', trim(str_tmp)
-      call io_mkdir(trim(dirname))
+    str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(ifactor)*em_vars%omega(iomega)))
+    write(dirname, '(a, a)') EM_RESP_DIR//'freq_', trim(str_tmp)
+    call io_mkdir(trim(dirname))
 
-      if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
-        call out_polarizability()
-
-        if(em_vars%calc_Born) call out_Born_charges(em_vars%Born_charges(ifactor), geo, gr%mesh%sb%dim, dirname)
-
-        if(em_vars%calc_hyperpol .and. ifactor == 1) &
-          call out_hyperpolarizability(gr%sb, em_vars%beta, em_vars%ok(ifactor), dirname)
-      else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
-        call out_susceptibility()
-      end if
+    if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
+      call out_polarizability()
+      if(em_vars%calc_Born) call out_Born_charges(em_vars%Born_charges(ifactor), geo, gr%mesh%sb%dim, dirname)
+    else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
+      call out_susceptibility()
+    end if
 
 !      call out_projections()
 !      This routine does not give any useful information.
 
-      call out_wavefunctions()
+    call out_wavefunctions()
 
-      if(gr%sb%periodic_dim .eq. 3) then
-        call out_dielectric_constant()
+    if(gr%sb%periodic_dim .eq. 3) then
+      call out_dielectric_constant()
       endif
 
-      if(.not. simul_box_is_periodic(gr%sb) .or. em_vars%force_no_kdotp) then
-        call out_circular_dichroism()
-      endif
-    end do
+    if(.not. simul_box_is_periodic(gr%sb) .or. em_vars%force_no_kdotp) then
+      call out_circular_dichroism()
+    endif
 
     call pop_sub('em_resp.em_resp_output')
 

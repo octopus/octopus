@@ -448,17 +448,20 @@ subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, hx)
     call lalg_axpy(gr%mesh%np, omega, x(:, idim), Hx(:, idim))
   end do
 
-  if(st%smear%method == SMEAR_FIXED_OCC .or. st%smear%method == SMEAR_SEMICONDUCTOR) then
+  if(st%smear%method == SMEAR_SEMICONDUCTOR) then
     call pop_sub('linear_solver_inc.Xls_solver_operator')
     return
   end if
 
   ! This is the Q term in Eq. (11) of PRB 51, 6773 (1995)
   ASSERT(.not. st%parallel_in_states)
-
   dsmear = max(CNST(1e-14), st%smear%dsmear)
   do jst = 1, st%nst
-    alpha_j = max(st%smear%e_fermi + M_THREE * dsmear - st%eigenval(jst, ik), M_ZERO)
+    if(st%smear%method == SMEAR_FIXED_OCC) then
+      alpha_j = max(st%occ(jst, ik) / st%smear%el_per_state, M_ZERO)
+    else
+      alpha_j = max(st%smear%e_fermi + M_THREE * dsmear - st%eigenval(jst, ik), M_ZERO)
+    endif
     if(alpha_j == M_ZERO) cycle
       
     proj = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:, :, jst, ik), x)
