@@ -146,7 +146,8 @@ contains
       if(this%maxorbs < st%nst) then
         this%initialized = .false.
         write(message(1),'(a)') 'Cannot do LCAO initial calculation because there are not enough atomic orbitals.'
-        call write_warning(1)
+        write(message(2),'(a,i6,a,i6,a)') 'Required: ', st%nst, '. Available: ', this%maxorbs, '.'
+        call write_warning(2)
         call pop_sub('lcao.lcao_init')
         return
       end if
