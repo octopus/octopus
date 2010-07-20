@@ -41,6 +41,7 @@ module propagator_m
   use ob_propagator_m
   use ob_terms_m
   use profiling_m
+  use states_dim_m
   use solvers_m
   use sparskit_m
   use states_m
@@ -66,16 +67,17 @@ module propagator_m
     propagator_remove_scf_prop,   &
     propagator_ions_are_propagated
 
-  integer, public, parameter ::       &
-    PROP_ETRS                    = 2, &
-    PROP_AETRS                   = 3, &
-    PROP_EXPONENTIAL_MIDPOINT    = 4, &
-    PROP_CRANK_NICHOLSON         = 5, &
-    PROP_CRANK_NICHOLSON_SPARSKIT= 6, &
-    PROP_MAGNUS                  = 7, &
-    PROP_CRANK_NICHOLSON_SRC_MEM = 8, &
-    PROP_QOCT_TDDFT_PROPAGATOR   = 10,&
-    PROP_QOCT_TDDFT_PROPAGATOR_2 = 11
+  integer, public, parameter ::        &
+    PROP_ETRS                    = 2,  &
+    PROP_AETRS                   = 3,  &
+    PROP_EXPONENTIAL_MIDPOINT    = 4,  &
+    PROP_CRANK_NICHOLSON         = 5,  &
+    PROP_CRANK_NICHOLSON_SPARSKIT= 6,  &
+    PROP_MAGNUS                  = 7,  &
+    PROP_CRANK_NICHOLSON_SRC_MEM = 8,  &
+    PROP_QOCT_TDDFT_PROPAGATOR   = 10, &
+    PROP_QOCT_TDDFT_PROPAGATOR_2 = 11, &
+    PROP_CAETRS                  = 12
 
   FLOAT, parameter :: scf_threshold = CNST(1.0e-3)
 
@@ -210,6 +212,10 @@ contains
     !% The only difference is the procedure to estimate @math{H_{n+1}}: in this case
     !% it is extrapolated via a second-order polynomial by making use of the
     !% Hamiltonian at time @math{t-2\delta t}, @math{t-\delta t} and @math{t}.
+    !%Option caetrs 12
+    !% (experimental) Corrected Approximated Enforced Time-Reversal
+    !% Symmetry (AETRS), this is the previous propagator but including
+    !% a correction step to the exponential.
     !%Option exp_mid 4
     !% Exponential Midpoint Rule (EM).
     !% This is maybe the simplest method, but it is very well grounded theoretically:
@@ -268,7 +274,7 @@ contains
 
     select case(tr%method)
     case(PROP_ETRS)
-    case(PROP_AETRS)
+    case(PROP_AETRS, PROP_CAETRS)
     case(PROP_EXPONENTIAL_MIDPOINT)
     case(PROP_CRANK_NICHOLSON)
     case(PROP_CRANK_NICHOLSON_SPARSKIT)
@@ -401,7 +407,7 @@ contains
     FLOAT   :: d, d_max
     logical :: self_consistent
     CMPLX, allocatable :: zpsi1(:, :, :, :)
-    FLOAT, allocatable :: dtmp(:), vaux(:, :)
+    FLOAT, allocatable :: dtmp(:), vaux(:, :), vold(:, :)
     type(profile_t), save :: prof
 
     call profiling_in(prof, "TD_PROPAGATOR")
@@ -416,7 +422,7 @@ contains
     end if
 
     self_consistent = .false.
-    if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
+    if(hm%theory_level .ne. INDEPENDENT_PARTICLES .and. tr%method /= PROP_CAETRS) then
       if(time < tr%scf_propagation_steps*abs(dt) ) then
         self_consistent = .true.
         SAFE_ALLOCATE(zpsi1(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
@@ -432,14 +438,19 @@ contains
       end if
     end if
 
+    if(tr%method == PROP_CAETRS) then
+      SAFE_ALLOCATE(vold(1:gr%mesh%np, 1:st%d%nspin))
+      call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 1), vold)
+    end if
+
     call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 2), tr%v_old(:, :, 3))
     call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 1), tr%v_old(:, :, 2))
-    call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc(:, :),      tr%v_old(:, :, 1))
+    call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc(:, :),     tr%v_old(:, :, 1))
     call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), tr%v_old(:, :, 1:3), time, tr%v_old(:, :, 0))
 
     select case(tr%method)
     case(PROP_ETRS);                    call td_etrs
-    case(PROP_AETRS);                   call td_aetrs
+    case(PROP_AETRS, PROP_CAETRS);      call td_aetrs
     case(PROP_EXPONENTIAL_MIDPOINT);    call exponential_midpoint
     case(PROP_CRANK_NICHOLSON);         call td_crank_nicholson
     case(PROP_CRANK_NICHOLSON_SPARSKIT);call td_crank_nicholson_sparskit
@@ -484,7 +495,7 @@ contains
           vaux(:, :) = hm%vhxc(:, :)
           select case(tr%method)
           case(PROP_ETRS);                    call td_etrs
-          case(PROP_AETRS);                   call td_aetrs
+          case(PROP_AETRS, PROP_CAETRS);      call td_aetrs
           case(PROP_EXPONENTIAL_MIDPOINT);    call exponential_midpoint
           case(PROP_CRANK_NICHOLSON);         call td_crank_nicholson
           case(PROP_CRANK_NICHOLSON_SPARSKIT);call td_crank_nicholson_sparskit
@@ -515,7 +526,9 @@ contains
       SAFE_DEALLOCATE_A(zpsi1)
       SAFE_DEALLOCATE_A(vaux)
     end if
-
+    
+    SAFE_DEALLOCATE_A(vold)
+    
     call pop_sub('propagator.propagator_dt')
     call profiling_out(prof)
 
@@ -634,10 +647,16 @@ contains
     ! ---------------------------------------------------------
     ! Propagator with approximate enforced time-reversal symmetry
     subroutine td_aetrs
-      integer :: ik, sts, ste
+      integer :: ik, sts, ste, ispin, idim, ip, ist
       type(batch_t) :: zpsib
+      CMPLX :: phase
 
       call push_sub('propagator.propagator_dt.td_aetrs')
+
+      if(tr%method == PROP_CAETRS) then
+        call lalg_copy(gr%mesh%np, st%d%nspin, vold, hm%vhxc)
+        call hamiltonian_update(hm, gr%mesh, time = time - dt)
+      end if
 
       ! propagate half of the time step with H(time - dt)
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -649,6 +668,20 @@ contains
           call batch_end(zpsib)
         end do
       end do
+
+      if(tr%method == PROP_CAETRS) then
+
+        do ik = st%d%kpt%start, st%d%kpt%end
+          ispin = states_dim_get_spin_index(st%d, ik)
+          do ip = 1, gr%mesh%np
+            phase = exp(-M_ZI*dt/(M_TWO*mu)*(tr%v_old(ip, ispin, 1) - hm%vhxc(ip, ispin)))
+            forall(idim = 1:st%d%dim, ist = st%st_start:st%st_end)
+              st%zpsi(ip, idim, ist, ik) = st%zpsi(ip, idim, ist, ik)*phase
+            end forall
+          end do
+        end do
+
+      end if
 
       ! interpolate the Hamiltonian to time t
       call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 0), hm%vhxc)
