@@ -645,6 +645,11 @@ subroutine X(ionic_pert_matrix_elements_2)(this, gr, geo, hm, ik, st, psi, vib, 
 end subroutine X(ionic_pert_matrix_elements_2)
 
 ! --------------------------------------------------------------------------
+! This routine includes occupations for psib if pert_order == 2, correct if used
+! as <psi(0)|H(2)|psi(0)>. It does not include occupations if pert_order == 1,
+! correct if used as <psi(0)|H(1)|psi(1)> since the LR wavefunctions include the
+! occupation. This routine must be modified if used differently than these two
+! ways.
 subroutine X(pert_expectation_density) (this, gr, geo, hm, st, psia, psib, density, pert_order)
   type(pert_t),         intent(in)    :: this
   type(grid_t),         intent(inout) :: gr
@@ -671,19 +676,19 @@ subroutine X(pert_expectation_density) (this, gr, geo, hm, st, psia, psib, densi
   density(1:gr%mesh%np) = R_TOTYPE(M_ZERO)
 
   do ik = st%d%kpt%start, st%d%kpt%end
-    do ist  = st%st_start, st%st_end
+    do ist = st%st_start, st%st_end
 
       if(order == 1) then 
         call X(pert_apply)(this, gr, geo, hm, ik, psib(:, :, ist, ik), pertpsib)
-        ikweight = st%d%kweights(ik)*st%occ(ist, ik)
+        ikweight = st%d%kweights(ik) * st%smear%el_per_state
       else
         call X(pert_apply_order_2)(this, gr, geo, hm, ik, psib(:, :, ist, ik), pertpsib)
-        ikweight = st%d%kweights(ik)*st%occ(ist, ik)
+        ikweight = st%d%kweights(ik) * st%occ(ist, ik)
       end if
 
       do idim = 1, st%d%dim
         density(1:gr%mesh%np) = density(1:gr%mesh%np) + ikweight * &
-          R_CONJ(psia(1:gr%mesh%np, idim, ist, ik))*pertpsib(1:gr%mesh%np, idim)
+          R_CONJ(psia(1:gr%mesh%np, idim, ist, ik)) * pertpsib(1:gr%mesh%np, idim)
       end do
 
     end do
