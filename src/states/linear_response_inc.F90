@@ -67,7 +67,7 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik)
       
       beta_ij(jst) = theta_Fi(ist)*Theta_ij + Theta_Fi(jst)*Theta_ji
         
-      alpha_j = max(st%smear%e_fermi + M_THREE*dsmear - st%eigenval(jst, ik), M_ZERO)
+      alpha_j = lr_alpha_j(st, jst, ik)
       delta_e = st%eigenval(ist, ik) - st%eigenval(jst, ik)
       
       if(abs(delta_e) >= CNST(1e-5)) then

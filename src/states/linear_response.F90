@@ -50,6 +50,7 @@ module linear_response_m
        zlr_build_dl_rho,  &
        dlr_orth_response, &
        zlr_orth_response, &
+       lr_alpha_j,        &
        lr_dealloc,        &
        lr_is_allocated
 
@@ -192,6 +193,23 @@ contains
 
     call pop_sub('linear_response.lr_is_allocated')
   end function lr_is_allocated
+
+
+  ! ---------------------------------------------------------
+  FLOAT function lr_alpha_j(st, jst, ik) 
+    type(states_t), intent(in) :: st
+    integer,        intent(in) :: jst
+    integer,        intent(in) :: ik
+
+    FLOAT :: dsmear
+
+    call push_sub('linear_response.lr_alpha_j')
+
+    dsmear = max(CNST(1e-14), st%smear%dsmear)
+    lr_alpha_j = max(st%smear%e_fermi + M_THREE*dsmear - st%eigenval(jst, ik), M_ZERO)
+
+    call pop_sub('linear_response.lr_alpha_j')
+  end function lr_alpha_j
 
 #include "undef.F90"
 #include "real.F90"

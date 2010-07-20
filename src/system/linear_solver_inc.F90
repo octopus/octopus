@@ -437,7 +437,7 @@ subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, hx)
   R_TYPE,                intent(in)    :: omega
 
   integer :: idim, jst
-  FLOAT   :: alpha_j, proj, dsmear
+  FLOAT   :: alpha_j, proj
 
   call push_sub('linear_solver_inc.Xls_solver_operator')
 
@@ -455,9 +455,8 @@ subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, hx)
 
   ! This is the Q term in Eq. (11) of PRB 51, 6773 (1995)
   ASSERT(.not. st%parallel_in_states)
-  dsmear = max(CNST(1e-14), st%smear%dsmear)
   do jst = 1, st%nst
-    alpha_j = max(st%smear%e_fermi + M_THREE * dsmear - st%eigenval(jst, ik), M_ZERO)
+    alpha_j = lr_alpha_j(st, jst, ik)
     if(alpha_j == M_ZERO) cycle
       
     proj = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:, :, jst, ik), x)
@@ -579,21 +578,17 @@ subroutine X(ls_solver_sos) (ls, hm, gr, st, ist, ik, x, y, omega)
 
   integer :: jst, idim
   R_TYPE  :: aa
-  FLOAT   :: alpha_j, dsmear
   R_TYPE, allocatable  :: rr(:, :)
 
   call push_sub('linear_solver_inc.Xls_solver_sos')
 
   x(1:gr%mesh%np, 1:st%d%dim) = M_ZERO
   
-  dsmear = max(CNST(1e-14), st%smear%dsmear)
   do jst = 1, st%nst
     if(ist == jst) cycle
 
-    alpha_j = max(st%smear%e_fermi + M_THREE*dsmear - st%eigenval(jst, ik), M_ZERO)
-
     aa = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, jst, ik), y)
-    aa = aa/(st%eigenval(jst, ik) + alpha_j + omega)
+    aa = aa/(st%eigenval(jst, ik) + lr_alpha_j(st, jst, ik) + omega)
 
     do idim = 1, st%d%dim
       call lalg_axpy(gr%mesh%np, aa, st%X(psi)(:, idim, jst, ik), x(:, idim))
