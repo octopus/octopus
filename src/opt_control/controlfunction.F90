@@ -313,7 +313,7 @@ contains
     !%Variable OCTControlFunctionType
     !%Type integer
     !%Section Calculation Modes::Optimal Control
-    !%Default 1
+    !%Default controlfunction_mode_epsilon
     !%Description
     !% The control function may fully determine the time-dependent form of the 
     !% external field, or only the envelope function of this external field, or its phase. 

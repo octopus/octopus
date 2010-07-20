@@ -41,7 +41,7 @@ OCTParameterRepresentation = control_sine_fourier_series_h
 OCTParameterOmegaMax = 0.05
 OCTFixFluenceTo = -1
 
-OCTControlFunctionType = parameter_mode_f
+OCTControlFunctionType = controlfunction_mode_f
 
 OCTDoubleCheck = no
 OCTMixing = no
