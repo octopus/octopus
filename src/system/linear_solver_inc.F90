@@ -64,7 +64,7 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, omega, tol, occ_respo
     call X(ls_solver_multigrid)(this, hm, gr, st, ist, ik, x, y, omega, tol)
 
   case(LS_QMR_SYMMETRIC)   
-    ! complex symmetric: never the case in the Sternheimer equation
+    ! complex symmetric: for Sternheimer, only if wfns are real
     call X(qmr_sym)(gr%mesh%np, x(:, 1), y(:, 1), &
       X(ls_solver_operator_na), X(ls_dotu_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), &
       this%iter, residue = this%abs_psi, threshold = tol, showprogress = .false.)
@@ -448,7 +448,7 @@ subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, hx)
     call lalg_axpy(gr%mesh%np, omega, x(:, idim), Hx(:, idim))
   end do
 
-  if(st%smear%method == SMEAR_SEMICONDUCTOR) then
+  if(st%smear%method == SMEAR_FIXED_OCC .or. st%smear%method == SMEAR_SEMICONDUCTOR) then
     call pop_sub('linear_solver_inc.Xls_solver_operator')
     return
   end if
@@ -457,11 +457,7 @@ subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, hx)
   ASSERT(.not. st%parallel_in_states)
   dsmear = max(CNST(1e-14), st%smear%dsmear)
   do jst = 1, st%nst
-    if(st%smear%method == SMEAR_FIXED_OCC) then
-      alpha_j = max(st%occ(jst, ik) / st%smear%el_per_state, M_ZERO)
-    else
-      alpha_j = max(st%smear%e_fermi + M_THREE * dsmear - st%eigenval(jst, ik), M_ZERO)
-    endif
+    alpha_j = max(st%smear%e_fermi + M_THREE * dsmear - st%eigenval(jst, ik), M_ZERO)
     if(alpha_j == M_ZERO) cycle
       
     proj = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:, :, jst, ik), x)
