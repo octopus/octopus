@@ -539,7 +539,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
                     * X(mf_dotp)(mesh, em_lr(u(1), op_sigma, w(1))%X(dl_psi)(1:np, idim, ist, ik), tmp(1:np, 1))
                   
                   do ist2 = 1, st%nst
-                    if(occ_response_ .and. ist2 .ne. ist) continue 
+                    if(occ_response_ .and. ist2 .ne. ist) cycle
                     beta(ii, jj, kk) = beta(ii, jj, kk) + & 
                       M_HALF * st%d%kweights(ik)*st%smear%el_per_state*me010(ist2, ist, u(2), w(2), ik)*&
                       me11(u(1), u(3), w(1), w(3), isigma, ik)%X(matrix)(ist, ist2)
@@ -627,7 +627,7 @@ contains
       do ist = 1, st%nst
         do ist2 = 1, st%nst
 
-          if(occ_response_ .and. ist2 .ne. ist) continue
+          if(occ_response_ .and. ist2 .ne. ist) cycle
           do ii = 1, ndir
             do ifreq = 1, 3
 
