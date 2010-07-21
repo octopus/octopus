@@ -202,7 +202,6 @@ contains
               call write_fatal(2)
             end if
           else
-!            forall(ol = 2:NLEADS) ob_grid%lead(ol)%info%dataset = ob_grid%lead(LEFT)%info%dataset
             do ol = 2, NLEADS
               ob_grid%lead(ol)%info%dataset = ob_grid%lead(LEFT)%info%dataset
             end do
@@ -218,7 +217,6 @@ contains
               call write_fatal(3)
             end if
           else
-!            forall(ol = 2:NLEADS) ob_grid%lead(ol)%info%restart_dir = ob_grid%lead(LEFT)%info%restart_dir
             do ol = 2, NLEADS
               ob_grid%lead(ol)%info%restart_dir = ob_grid%lead(LEFT)%info%restart_dir
             end do
@@ -234,7 +232,6 @@ contains
               call write_fatal(3)
             end if
           else
-!            forall(ol = 2:NLEADS) ob_grid%lead(ol)%info%static_dir = ob_grid%lead(LEFT)%info%static_dir
             do ol = 2, NLEADS
               ob_grid%lead(ol)%info%static_dir = ob_grid%lead(LEFT)%info%static_dir
             end do
@@ -244,7 +241,6 @@ contains
           if(ncols .eq. 3) then
             call parse_block_integer(blk, nr, 2, ob_grid%lead(RIGHT)%info%ucells)
           else
-!            forall(ol = 2:NLEADS) ob_grid%lead(ol)%info%ucells = ob_grid%lead(LEFT)%info%ucells
             do ol = 2, NLEADS
               ob_grid%lead(ol)%info%ucells = ob_grid%lead(LEFT)%info%ucells
             end do
@@ -258,7 +254,6 @@ contains
           if(ncols .eq. 3) then
             call parse_block_string(blk, nr, 2, ob_grid%lead(RIGHT)%td_bias)
           else
-!            forall(ol = 2:NLEADS) ob_grid%lead(ol)%td_bias = ob_grid%lead(LEFT)%td_bias
             do ol = 2, NLEADS
               ob_grid%lead(ol)%td_bias = ob_grid%lead(LEFT)%td_bias
             end do
@@ -281,14 +276,12 @@ contains
       end if
       ! Set default restart directory.
       if(all(ob_grid%lead(1:NLEADS)%info%restart_dir .eq. '')) then
-!        forall(il = 1:NLEADS) ob_grid%lead(il)%info%restart_dir = trim(ob_grid%lead(il)%info%dataset) // 'restart'
         do il = 1, NLEADS
           ob_grid%lead(il)%info%restart_dir = trim(ob_grid%lead(il)%info%dataset) // 'restart'
         end do
       end if
       ! Set default static directory.
       if(all(ob_grid%lead(1:NLEADS)%info%static_dir .eq. '')) then
-!        forall(il = 1:NLEADS) ob_grid%lead(il)%info%static_dir = trim(ob_grid%lead(il)%info%dataset) // 'static'
         do il = 1, NLEADS
           ob_grid%lead(il)%info%static_dir = trim(ob_grid%lead(il)%info%dataset) // 'static'
         end do
