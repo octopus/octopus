@@ -580,7 +580,7 @@ contains
       call io_debug_on_the_fly()
 
       call profiling_out(prof)
-    end do
+    end do !iter
     
     select case(scf%mix_field)
     case(MIXPOT)

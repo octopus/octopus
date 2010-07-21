@@ -45,7 +45,7 @@ subroutine X(sternheimer_solve)(                           &
   R_TYPE :: omega_sigma, proj
   logical, allocatable :: orth_mask(:)
 
-  logical :: conv_last, conv, states_conv
+  logical :: conv_last, conv, states_conv, forced_finish
   type(mesh_t), pointer :: mesh
   type(states_t), pointer :: st
   integer :: total_iter, idim, ip, ispin
@@ -269,6 +269,13 @@ subroutine X(sternheimer_solve)(                           &
       call write_info(2)
       exit
     else
+      ! not quitting if converged allows results to be calculated if possible
+      ! before dying on the next direction or frequency
+      if(clean_stop()) then
+        message(1) = "Exiting cleanly."
+        call write_fatal(1)
+      endif
+
       do ispin = 1, st%d%nspin
         call lalg_copy(mesh%np, dl_rhonew(:, ispin, 1), lr(1)%X(dl_rho)(:, ispin))
       end do
