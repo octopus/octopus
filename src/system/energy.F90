@@ -118,7 +118,12 @@ contains
 
     end select
     
-    hm%entropy = smear_calc_entropy(st%smear, st%eigenval, st%d%nik, st%nst, st%d%kweights)
+    hm%entropy = smear_calc_entropy(st%smear, st%eigenval, st%d%nik, st%nst, st%d%kweights, st%occ)
+    if(st%smear%method == SMEAR_FIXED_OCC) then ! no temperature available
+      hm%TS = M_ZERO
+    else
+      hm%TS = st%smear%dsmear * hm%entropy
+    endif
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
       hm%etot = hm%etot + gauge_field_get_energy(hm%ep%gfield, gr%sb)
@@ -126,7 +131,7 @@ contains
 
     if (iunit > 0) then
       write(message(1), '(6x,a, f18.8)')'Total       = ', units_from_atomic(units_out%energy, hm%etot)
-      write(message(2), '(6x,a, f18.8)')'Free        = ', units_from_atomic(units_out%energy, hm%etot+hm%entropy)
+      write(message(2), '(6x,a, f18.8)')'Free        = ', units_from_atomic(units_out%energy, hm%etot - hm%TS)
       write(message(3), '(6x,a)') '-----------'
       call write_info(3, iunit)
 
@@ -136,8 +141,9 @@ contains
       write(message(4), '(6x,a, f18.8)')'Int[n*v_xc] = ', units_from_atomic(units_out%energy, hm%epot)
       write(message(5), '(6x,a, f18.8)')'Exchange    = ', units_from_atomic(units_out%energy, hm%ex)
       write(message(6), '(6x,a, f18.8)')'Correlation = ', units_from_atomic(units_out%energy, hm%ec)
-      write(message(7), '(6x,a, f18.8)')'-TS         = ', units_from_atomic(units_out%energy, hm%entropy)
-      call write_info(7, iunit)
+      write(message(7), '(6x,a, f18.8)')'Entropy     = ', hm%entropy ! the dimensionless sigma of Kittel&Kroemer
+      write(message(8), '(6x,a, f18.8)')'-TS         = ', -units_from_atomic(units_out%energy, hm%TS)
+      call write_info(8, iunit)
       if(full_) then  ! maybe it is full_ that is the problem
         write(message(1), '(6x,a, f18.8)')'Kinetic     = ', units_from_atomic(units_out%energy, hm%t0)
         write(message(2), '(6x,a, f18.8)')'External    = ', units_from_atomic(units_out%energy, hm%eext)

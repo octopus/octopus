@@ -95,6 +95,7 @@ contains
     !%Option methfessel_paxton 4
     !% M Methfessel and AT Paxton, <i>Phys. Rev. B</i> <b>40</b>, 3616 (1989).
     !% In this case, the variable <tt>SmearingMPOrder</tt> sets the order of the smearing.
+    !% Occupations may be negative.
     !%Option spline_smearing 5
     !% Nearly identical to Gaussian smearing.
     !%End
@@ -112,7 +113,7 @@ contains
     !%Section States
     !%Description
     !% If <tt>Occupations</tt> is not set, <tt>Smearing</tt> is the
-    !% smearing used in the <tt>SmearingFunction</tt> used to distribute the electrons
+    !% smearing width used in the <tt>SmearingFunction</tt> to distribute the electrons
     !% among the existing states.
     !%End
     this%dsmear = CNST(1e-14)
@@ -322,26 +323,47 @@ contains
 
   !--------------------------------------------------
   FLOAT function smear_calc_entropy(this, eigenvalues, &
-    nik, nst, kweights) result(entropy)
-    type(smear_t), intent(inout) :: this
-    FLOAT,         intent(in)    :: eigenvalues(:,:)
-    FLOAT,         intent(in)    :: kweights(:)
-    integer,       intent(in)    :: nik, nst
+    nik, nst, kweights, occ) result(entropy)
+    type(smear_t),  intent(inout) :: this
+    FLOAT,          intent(in)    :: eigenvalues(:,:)
+    FLOAT,          intent(in)    :: kweights(:)
+    integer,        intent(in)    :: nik, nst
+    FLOAT,          intent(in)    :: occ(:, :) ! used if fixed_occ
 
     integer :: ist, ik
-    FLOAT :: dsmear, xx
+    FLOAT :: dsmear, xx, term, ff
 
     call push_sub('smear.smear_calc_entropy')
 
-    dsmear = max(CNST(1e-14), this%dsmear)
     entropy = M_ZERO
-    do ik = 1, nik
-      do ist = 1, nst
-        xx = (this%e_fermi - eigenvalues(ist, ik)) / dsmear
-        entropy = entropy + kweights(ik) * this%el_per_state *  &
-          dsmear * smear_entropy_function(this, xx)
+
+    if(this%method .eq. SMEAR_FIXED_OCC) then
+    ! Fermi-Dirac entropy, not quite the same as will be obtained with true smearing
+    ! RM Wentzcovitch, JL Martins, and PB Allen, Phys. Rev. B 45, 11372 (1992) eqn (5)
+    ! also N Marzari PhD thesis p 117, http://quasiamore.mit.edu/phd/Marzari_PhD.pdf
+
+      do ik = 1, nik
+        do ist = 1, nst
+          ff = occ(ist, ik) / this%el_per_state
+          if(ff .gt. M_ZERO .and. ff .lt. M_ONE) then
+            term = ff * log(ff) + (1 - ff) * log (1 - ff)
+          else ! we have semiconducting smearing, or perverse occupations as in Methfessel-Paxton
+            term = M_ZERO      
+          endif
+          entropy = entropy - kweights(ik) * this%el_per_state * term
+        enddo
+      enddo
+    else
+      dsmear = max(CNST(1e-14), this%dsmear)
+  
+      do ik = 1, nik
+        do ist = 1, nst
+          xx = (this%e_fermi - eigenvalues(ist, ik)) / dsmear
+          entropy = entropy + kweights(ik) * this%el_per_state *  &
+            smear_entropy_function(this, xx)
+        end do
       end do
-    end do
+    endif
 
     call pop_sub('smear.smear_calc_entropy')
   end function smear_calc_entropy
@@ -360,6 +382,10 @@ contains
 
     deltaf = M_ZERO
     select case(this%method)
+    case(SMEAR_FIXED_OCC)
+      message(1) = "smear_delta_function is not defined for SMEAR_FIXED_OCC."
+      call write_fatal(1)
+
     case(SMEAR_SEMICONDUCTOR)
       if(xx == M_ZERO) &
         deltaf = this%ef_occ
@@ -416,6 +442,10 @@ contains
 
     stepf = M_ZERO
     select case(this%method)
+    case(SMEAR_FIXED_OCC)
+      message(1) = "smear_step_function is not defined for SMEAR_FIXED_OCC."
+      call write_fatal(1)
+
     case(SMEAR_SEMICONDUCTOR)
       if(xx > M_ZERO) then
         stepf = M_ONE
@@ -485,6 +515,10 @@ contains
 
     entropyf = M_ZERO
     select case(this%method)
+    case(SMEAR_FIXED_OCC)
+      message(1) = "smear_entropy_function is not defined for SMEAR_FIXED_OCC."
+      call write_fatal(1)
+
     case(SMEAR_SEMICONDUCTOR)
 
     case(SMEAR_FERMI_DIRAC)

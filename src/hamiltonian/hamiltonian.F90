@@ -122,7 +122,8 @@ module hamiltonian_m
              ehartree,&  ! Hartree      U = (1/2)*Int [n v_Hartree]
              t0,      &  ! Kinetic energy of the non-interacting (KS) system of electrons
              eext,    &  ! External     V = <Phi|V|Phi> = Int[n v] (if no non-local pseudos exist)
-             entropy     ! Entropy (-TS)
+             entropy, &  ! Entropy
+             TS          ! TS
 
     integer :: theory_level    ! copied from sys%ks
     integer :: xc_family       ! copied from sys%ks
