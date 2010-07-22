@@ -767,7 +767,7 @@ contains
 
     call smear_init(st%smear, st%d%ispin, st%fixed_occ)
 
-    if(.not. smear_is_semiconducting(st%smear) .and. st%nst * st%smear%el_per_state .le. st%qtot) then
+    if(.not. smear_is_semiconducting(st%smear) .and. st%nst * 2 .le. st%qtot) then
       message(1) = "Non-semiconductor smearing needs unoccupied states (via ExtraStates) to be useful."
       call write_warning(1)
     endif
