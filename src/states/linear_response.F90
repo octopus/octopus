@@ -205,8 +205,12 @@ contains
 
     call push_sub('linear_response.lr_alpha_j')
 
-    dsmear = max(CNST(1e-14), st%smear%dsmear)
-    lr_alpha_j = max(st%smear%e_fermi + M_THREE*dsmear - st%eigenval(jst, ik), M_ZERO)
+    if(st%smear%method == SMEAR_FIXED_OCC) then
+      lr_alpha_j = st%occ(jst, ik) / st%smear%el_per_state
+    else
+      dsmear = max(CNST(1e-14), st%smear%dsmear)
+      lr_alpha_j = max(st%smear%e_fermi + M_THREE*dsmear - st%eigenval(jst, ik), M_ZERO)
+    endif
 
     call pop_sub('linear_response.lr_alpha_j')
   end function lr_alpha_j

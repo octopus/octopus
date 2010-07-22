@@ -448,7 +448,7 @@ subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, hx)
     call lalg_axpy(gr%mesh%np, omega, x(:, idim), Hx(:, idim))
   end do
 
-  if(st%smear%method == SMEAR_FIXED_OCC .or. st%smear%method == SMEAR_SEMICONDUCTOR) then
+  if(st%smear%method == SMEAR_SEMICONDUCTOR) then
     call pop_sub('linear_solver_inc.Xls_solver_operator')
     return
   end if

@@ -39,12 +39,10 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik)
 
   SAFE_ALLOCATE(beta_ij(1:st%nst))
 
-  if(st%smear%method == SMEAR_FIXED_OCC .or. smear_is_semiconducting(st%smear)) then
-    ! This scheme may not work for partial occupations.
+  if(smear_is_semiconducting(st%smear)) then
     theta = st%occ(ist, ik) / st%smear%el_per_state
     do jst = 1, st%nst
-      ! in some smearing schemes, occupations can actually be negative...
-      if(abs(st%occ(ist, ik)) .gt. M_EPSILON .and. abs(st%occ(jst, ik)) .gt. M_EPSILON) then
+      if(abs(st%occ(ist, ik) * st%occ(jst, ik)) .gt. M_EPSILON) then
         beta_ij(jst) = st%occ(jst, ik) / st%smear%el_per_state
       else
         beta_ij(jst) = M_ZERO
@@ -52,43 +50,52 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik)
     end do
   else
     SAFE_ALLOCATE(theta_Fi(1:st%nst))
+    theta_Fi(1:st%nst) = st%occ(1:st%nst, ik) / st%smear%el_per_state
 
     do jst = 1, st%nst
-      ! epsilon has to be added or we have problem with semiconducting smearing
-      xx = (st%smear%e_fermi - st%eigenval(jst, ik) + CNST(1e-14))/dsmear
-      theta_Fi(jst) = smear_step_function(st%smear, xx)
-    end do
-
-    beta_ij = M_ZERO
-    do jst = 1, st%nst
-      xx = (st%eigenval(ist, ik) - st%eigenval(jst, ik))/dsmear
-      theta_ij = smear_step_function(st%smear,  xx)
-      theta_ji = smear_step_function(st%smear, -xx)
-      
-      beta_ij(jst) = theta_Fi(ist)*Theta_ij + Theta_Fi(jst)*Theta_ji
-        
-      alpha_j = lr_alpha_j(st, jst, ik)
-      delta_e = st%eigenval(ist, ik) - st%eigenval(jst, ik)
-      
-      if(abs(delta_e) >= CNST(1e-5)) then
-        beta_ij(jst) = beta_ij(jst) + alpha_j*Theta_ji*(Theta_Fi(ist) - Theta_Fi(jst))/delta_e
+      if(st%smear%method .eq. SMEAR_FIXED_OCC) then
+        theta_ij = theta_Fi(ist) / (theta_Fi(ist) + theta_Fi(jst))
+        theta_ji = theta_Fi(jst) / (theta_Fi(ist) + theta_Fi(jst))
       else
-        xx = (st%smear%e_fermi - st%eigenval(ist, ik) + CNST(1e-14))/dsmear
-        beta_ij(jst) = beta_ij(jst) + alpha_j*Theta_ji*  &
-          (-smear_delta_function(st%smear,  xx)/dsmear)
-      end if
+        xx = (st%eigenval(ist, ik) - st%eigenval(jst, ik))/dsmear
+        theta_ij = smear_step_function(st%smear,  xx)
+        theta_ji = smear_step_function(st%smear, -xx)
+        ! In principle, theta_ji = 1 - theta_ji as approximations to a step function,
+        ! but in practice, only fermi_dirac, semiconducting, and fixed_occ formulations
+        ! satisfy this.
+      endif
+      
+      if(abs(st%occ(ist, ik) * st%occ(jst, ik)) .lt. M_EPSILON) then
+        ! Supposedly beta_ij = 0 if i or j is unoccupied. In practice, this may not be
+        ! true with the general formula, and must be explicitly enforced.
+        beta_ij(jst) = M_ZERO
+      else  
+        beta_ij(jst) = theta_Fi(ist)*Theta_ij + Theta_Fi(jst)*Theta_ji
+          
+        alpha_j = lr_alpha_j(st, jst, ik)
+        delta_e = st%eigenval(ist, ik) - st%eigenval(jst, ik)
+        
+        if(abs(delta_e) >= CNST(1e-5)) then
+          beta_ij(jst) = beta_ij(jst) + alpha_j*Theta_ji*(Theta_Fi(ist) - Theta_Fi(jst))/delta_e
+        else
+          if(st%smear%method .ne. SMEAR_FIXED_OCC) then 
+            xx = (st%smear%e_fermi - st%eigenval(ist, ik) + CNST(1e-14))/dsmear
+            beta_ij(jst) = beta_ij(jst) + alpha_j*Theta_ji*  &
+              (-smear_delta_function(st%smear,  xx)/dsmear)
+          endif
+        end if
+      endif  
+
     end do
 
     theta = theta_Fi(ist)
+    SAFE_DEALLOCATE_A(theta_Fi)
   end if
 
   call X(states_orthogonalization)(mesh, st%nst, st%d%dim, st%X(psi)(:, :, :, ik), vec(:, :), &
     Theta_Fi=theta, beta_ij=beta_ij)
 
   SAFE_DEALLOCATE_A(beta_ij)
-  if(.not. (st%smear%method == SMEAR_FIXED_OCC .or. smear_is_semiconducting(st%smear))) then
-    SAFE_DEALLOCATE_A(Theta_Fi)
-  endif  
 
   call pop_sub('linear_response_inc.Xlr_orth_vector')
 
