@@ -749,7 +749,7 @@ contains
         endif
         write(iunit, '(1x)')
 
-        write(iunit, '(3a)') 'Energy [', units_abbrev(units_out%energy), ']:'
+        write(iunit, '(3a)') 'Energy [', trim(units_abbrev(units_out%energy)), ']:'
       else
         iunit = 0
       end if
