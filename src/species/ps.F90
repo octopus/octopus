@@ -145,7 +145,7 @@ contains
     ps%label   = label
     ps%ispin   = ispin
     ! Initialization and processing.
-    ASSERT(flavour>=PS_TYPE_PSF.and.flavour<=PS_TYPE_UPF)
+    ASSERT(flavour >= PS_TYPE_PSF .and. flavour <= PS_TYPE_UPF)
 
     select case(flavour)
     case(PS_TYPE_PSF)
@@ -233,6 +233,9 @@ contains
       ps%g%r2ofi = ps%g%rofi**2
 
     end select
+
+    write(message(1), '(a,i2,a)') "Info: l = ", ps%l_max, " is maximum angular momentum considered."
+    call write_info(1)
 
     ! We allocate all the stuff
     SAFE_ALLOCATE(ps%kb   (0:ps%l_max, 1:ps%kbc))

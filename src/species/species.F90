@@ -976,14 +976,14 @@ contains
     type(species_t), intent(inout) :: spec
     integer,         intent(out)   :: read_data
 
-    integer :: n
+    integer :: nn
 
     call push_sub('species.read_from_block')
 
     read_data = 0
 
     call parse_block_float (blk, row, 1, spec%weight)
-    call parse_block_integer   (blk, row, 2, spec%type)
+    call parse_block_integer (blk, row, 2, spec%type)
 
     select case(spec%type)
     case(SPEC_USDEF) ! user-defined
@@ -1029,7 +1029,7 @@ contains
       read_data = 5
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF) ! a pseudopotential file
-      n = parse_block_cols(blk, row)
+      nn = parse_block_cols(blk, row)
 
       call parse_block_float (blk, row, 3, spec%Z)
 
@@ -1038,23 +1038,23 @@ contains
         call messages_devel_version("UPF pseudopotentials support")
       end if
 
-      if(n>4) then
+      if(nn > 4) then
         call parse_block_integer (blk, row, 4, spec%lmax)
         read_data = 5
       end if
 
-      if(n>5) then
+      if(nn > 5) then
         call parse_block_integer (blk, row, 5, spec%lloc)
         read_data = 6
       end if
 
-      if(n>6) then
+      if(nn > 6) then
         call parse_block_float (blk, row, 6, spec%def_h)
         spec%def_h = units_to_atomic(units_inp%length, spec%def_h)
         read_data = 7
       end if
 
-      if(n>7) then
+      if(nn > 7) then
         call parse_block_float (blk, row, 7, spec%def_rsize)
         spec%def_rsize = units_to_atomic(units_inp%length, spec%def_rsize)
         read_data = 8

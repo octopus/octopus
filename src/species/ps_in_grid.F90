@@ -107,6 +107,7 @@ contains
   end subroutine ps_in_grid_init
 
 
+  ! ---------------------------------------------------------
   subroutine ps_in_grid_end(ps)
     type(ps_in_grid_t), intent(inout) :: ps
 
@@ -146,21 +147,21 @@ contains
     FLOAT :: a, b, qtot
     FLOAT, allocatable :: rho(:)
 
-    call push_sub('tm.get_local')
+    call push_sub('ps_in_grid.ps_in_grid_vlocal')
 
     if(l_loc >= 0) then
-      write(message(1), '(a,i2,a)') "Info: l = ", l_loc, " component used as local potential"
+      write(message(1), '(a,i2,a)') "Info: l = ", l_loc, " component used as local potential."
       call write_info(1)
 
       ps%vlocal(:) = ps%vps(:, l_loc+1)
 
     else if(l_loc == -1) then
-      if(ps%g%flavor.ne.LOGRID_PSF) then
-        message(1) = "For the moment, Vanderbilt local potentials are only possible with tm grids"
+      if(ps%g%flavor .ne. LOGRID_PSF) then
+        message(1) = "For the moment, Vanderbilt local potentials are only possible with tm grids."
         call write_fatal(1)
       end if
 
-      message(1) = "Info: Vanderbilt function local potential"
+      message(1) = "Info: Vanderbilt function local potential."
       call write_info(1)
 
       a = CNST(1.82) / rcore
@@ -181,7 +182,7 @@ contains
       SAFE_DEALLOCATE_A(rho)
     end if
 
-    call pop_sub('tm.get_local')
+    call push_sub('ps_in_grid.ps_in_grid_vlocal')
   end subroutine ps_in_grid_vlocal
 
 
@@ -228,7 +229,7 @@ contains
     integer :: ir, l
     FLOAT :: dnrm, avgv, vphi
 
-    call push_sub('tm.calculate_kb_cosines')
+    call push_sub('ps_in_grid.ps_in_grid_kb_cosines')
 
     do l = 1, ps%no_l_channels
       if(l-1 == lloc) then
@@ -260,7 +261,7 @@ contains
       ps%so_dknorm(l) = M_ONE/(sqrt(dnrm) + CNST(1.0e-20))
     end do
 
-    call pop_sub('tm.calculate_kb_cosines')
+    call push_sub('ps_in_grid.ps_in_grid_kb_cosines')
   end subroutine ps_in_grid_kb_cosines
 
 
@@ -346,10 +347,10 @@ contains
   FLOAT function linear_extrapolate(x0, x1, x2, y1, y2) result(y0)
     FLOAT, intent(in) :: x0, x1, x2, y1, y2
     
-    FLOAT :: m
+    FLOAT :: mm
 
-    m = (y2 - y1)/(x2 - x1)
-    y0 = y1 + m*(x0 - x1)
+    mm = (y2 - y1)/(x2 - x1)
+    y0 = y1 + mm*(x0 - x1)
   end function linear_extrapolate
 
 end module ps_in_grid_m
