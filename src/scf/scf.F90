@@ -50,6 +50,7 @@ module scf_m
   use profiling_m
   use restart_m
   use simul_box_m
+  use smear_m
   use solids_m
   use species_m
   use states_m
@@ -614,7 +615,7 @@ contains
       if(gr%ob_grid%open_boundaries) call states_write_proj_lead_wf(gr%sb, 'open_boundaries/', gr%intf, st)
     end if
 
-    if(simul_box_is_periodic(gr%sb).and.st%d%nik > st%d%nspin) then
+    if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) then
       call states_write_bands(STATIC_DIR, st%nst, st, gr%sb)
       call states_write_fermi_energy(STATIC_DIR, st, gr%mesh, gr%sb)
     end if
@@ -660,6 +661,11 @@ contains
         else
           call states_write_eigenvalues(stdout, st%nst, st, gr%sb)
         end if
+
+        if(st%smear%method .ne. SMEAR_SEMICONDUCTOR .and. st%smear%method .ne. SMEAR_FIXED_OCC) then
+          write(message(1), '(a,f12.6,a)') "Fermi energy = ", units_from_atomic(units_out%energy, st%smear%e_fermi)
+          call write_info(1)
+        endif
 
         if(st%d%ispin > UNPOLARIZED) then
           call write_magnetic_moments(stdout, gr%mesh, st)
@@ -737,9 +743,13 @@ contains
         write(iunit, '(1x)')
 
         call states_write_eigenvalues(iunit, st%nst, st, gr%sb)
+        if(st%smear%method .ne. SMEAR_SEMICONDUCTOR .and. st%smear%method .ne. SMEAR_FIXED_OCC) then
+          write(message(1), '(a,f12.6,a)') "Fermi energy = ", units_from_atomic(units_out%energy, st%smear%e_fermi)
+          call write_info(1, iunit)
+        endif
         write(iunit, '(1x)')
 
-        write(iunit, '(a)') 'Energy:'
+        write(iunit, '(3a)') 'Energy [', units_abbrev(units_out%energy), ']:'
       else
         iunit = 0
       end if
