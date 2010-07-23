@@ -111,9 +111,12 @@ contains
   ! ---------------------------------------------------------
   subroutine ps_psf_end(ps_psf)
     type(ps_psf_t), intent(inout) :: ps_psf
+
     call push_sub('ps_psf.ps_psf_end')
+
     call ps_in_grid_end(ps_psf%ps_grid)
     call ps_psf_file_end(ps_psf%psf_file)
+
     call pop_sub('ps_psf.ps_psf_end')
   end subroutine ps_psf_end
 
@@ -400,7 +403,6 @@ contains
     end if spin_polarized
 
     ! Exit this...
-    message(1) = '      Done.'; call write_info(1)
     SAFE_DEALLOCATE_A(s)
     SAFE_DEALLOCATE_A(hato)
     SAFE_DEALLOCATE_A(gg)

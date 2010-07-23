@@ -599,9 +599,6 @@ contains
 
     end do self_consistent
 
-    message(1) = '      Done.'
-    call write_info(1)
-
     !  checking normalization of the calculated wavefunctions
     !do l = 0, psp%l_max_occ
     do n = 1, psp%conf%p
