@@ -55,7 +55,7 @@ module smear_m
     
     FLOAT   :: el_per_state !< How many electrons can we put in each state
     FLOAT   :: ef_occ       !< Occupancy of the level at the Fermi energy
-
+    logical :: integral_occs !< for fixed_occ, are they all integers?
     integer :: MP_n         !< order of Methfessel-Paxton smearing
   end type smear_t
 
@@ -70,10 +70,11 @@ module smear_m
 contains
 
   !--------------------------------------------------
-  subroutine smear_init(this, ispin, fixed_occ)
+  subroutine smear_init(this, ispin, fixed_occ, integral_occs)
     type(smear_t), intent(out) :: this
     integer,       intent(in)  :: ispin
     logical,       intent(in)  :: fixed_occ
+    logical,       intent(in)  :: integral_occs
 
     call push_sub('smear.smear_init')
 
@@ -101,6 +102,7 @@ contains
     !%End
     if(fixed_occ) then
       this%method = SMEAR_FIXED_OCC
+      this%integral_occs = integral_occs
     else
       call parse_integer(datasets_check('SmearingFunction'), SMEAR_SEMICONDUCTOR, this%method)
       if(.not. varinfo_valid_option('SmearingFunction', this%method)) call input_error('SmearingFunction')

@@ -39,7 +39,7 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik)
 
   SAFE_ALLOCATE(beta_ij(1:st%nst))
 
-  if(smear_is_semiconducting(st%smear)) then
+  if(smear_is_semiconducting(st%smear) .or. st%smear%integral_occs) then
     theta = st%occ(ist, ik) / st%smear%el_per_state
     do jst = 1, st%nst
       if(abs(st%occ(ist, ik) * st%occ(jst, ik)) .gt. M_EPSILON) then

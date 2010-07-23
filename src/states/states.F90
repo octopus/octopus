@@ -651,9 +651,10 @@ contains
     type(states_t), intent(inout) :: st
     FLOAT,          intent(in)    :: excess_charge
 
-    integer :: ik, ist, ispin, nspin, ncols
+    integer :: ik, ist, ispin, nspin, ncols, el_per_state
     type(block_t) :: blk
     FLOAT :: rr, charge
+    logical :: integral_occs
 
     call push_sub('states.states_read_initial_occs')
     !%Variable Occupations
@@ -702,6 +703,8 @@ contains
     !% is read, and the previous occupations are used.
     !%End
 
+    integral_occs = .true.
+
     if(st%open_boundaries) then
       st%fixed_occ = .true.
       st%occ  = st%ob_occ
@@ -723,24 +726,29 @@ contains
           call input_error("Occupations")
         end if
         ! Now we fill all the "missing" states with the maximum occupation.
+        if(st%d%ispin == UNPOLARIZED) then
+          el_per_state = M_TWO
+        else
+          el_per_state = M_ONE
+        endif
+
         do ik = 1, st%d%nik
           do ist = 1, st%nst - ncols
-            if(st%d%ispin == UNPOLARIZED) then
-              st%occ(ist, ik) = M_TWO
-            else
-              st%occ(ist, ik) = M_ONE
-            end if
+            st%occ(ist, ik) = el_per_state
           end do
         end do
         do ik = 1, st%d%nik
           do ist = st%nst - ncols + 1, st%nst 
             call parse_block_float(blk, ik-1, ist-1-(st%nst-ncols), st%occ(ist, ik))
+            integral_occs = integral_occs .and. &
+              abs((st%occ(ist, ik) - el_per_state) * st%occ(ist, ik)) .le. M_EPSILON
           end do
         end do
         call parse_block_end(blk)
 
       else
         st%fixed_occ = .false.
+        integral_occs = .false.
 
         ! first guess for occupation...paramagnetic configuration
         rr = M_ONE
@@ -765,7 +773,7 @@ contains
       end if occ_fix
     end if
 
-    call smear_init(st%smear, st%d%ispin, st%fixed_occ)
+    call smear_init(st%smear, st%d%ispin, st%fixed_occ, integral_occs)
 
     if(.not. smear_is_semiconducting(st%smear) .and. .not. st%smear%method == SMEAR_FIXED_OCC .and. st%nst * 2 .le. st%qtot) then
       message(1) = "Smearing needs unoccupied states (via ExtraStates) to be useful."
