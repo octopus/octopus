@@ -1,0 +1,16 @@
+CalculationMode = gs
+
+FromScratch = yes
+
+bond_length = 2.8
+
+%Coordinates
+ "C" |  -bond_length/2 |  0.0 |  0.0 
+ "C" |   bond_length/2 |  0.0 |  0.0 
+%
+
+Spacing = 0.6
+
+Radius = 6
+
+FilterPotentials = filter_ts

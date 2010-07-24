@@ -39,6 +39,9 @@ dist_share_DATA =                      \
 	05-cpmd.01-gs.inp              \
 	05-cpmd.02-verlet.inp          \
 	05-cpmd.03-vel_verlet.inp      \
+	06-caetrs.01-gs.inp            \
+	06-caetrs.02-kick.inp          \
+	06-caetrs.test                 \
 	08-laser.test                  \
 	08-laser.01-ground_state.inp   \
 	08-laser.02-length_gauge.inp   \
