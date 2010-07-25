@@ -16,3 +16,13 @@ match ; mx           ; GREP(static/info, 'Local Magnetic Moments', 20, 2) ; 0.38
 match ; my           ; GREP(static/info, 'Local Magnetic Moments', 33, 2) ; 0.385559
 match ; mz           ; GREP(static/info, 'Local Magnetic Moments', 46, 2) ; 0.838265
 
+Input: 09-spinors.02-rmmdiis.inp
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.17669588
+match ; Eigenvalue   ; GREP(static/info, '1   --', 13) ; -0.085321
+match ; <Sx>         ; GREP(static/info, '1   --', 36) ;  0.1984
+match ; <Sy>         ; GREP(static/info, '1   --', 44) ;  0.1984
+match ; <Sz>         ; GREP(static/info, '1   --', 52) ;  0.4138
+match ; mx           ; GREP(static/info, 'Local Magnetic Moments', 20, 2) ; 0.396824
+match ; my           ; GREP(static/info, 'Local Magnetic Moments', 33, 2) ; 0.396824
+match ; mz           ; GREP(static/info, 'Local Magnetic Moments', 46, 2) ; 0.827684
+
