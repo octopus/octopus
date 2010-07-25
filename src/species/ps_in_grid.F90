@@ -182,7 +182,7 @@ contains
       SAFE_DEALLOCATE_A(rho)
     end if
 
-    call push_sub('ps_in_grid.ps_in_grid_vlocal')
+    call pop_sub('ps_in_grid.ps_in_grid_vlocal')
   end subroutine ps_in_grid_vlocal
 
 
@@ -261,7 +261,7 @@ contains
       ps%so_dknorm(l) = M_ONE/(sqrt(dnrm) + CNST(1.0e-20))
     end do
 
-    call push_sub('ps_in_grid.ps_in_grid_kb_cosines')
+    call pop_sub('ps_in_grid.ps_in_grid_kb_cosines')
   end subroutine ps_in_grid_kb_cosines
 
 
