@@ -75,9 +75,13 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   end if
 
   if(apply_phase) then
-    SAFE_ALLOCATE(psi_copy(1:der%mesh%np_part, 1:hm%d%dim, 1:nst))
     SAFE_ALLOCATE(epsib)
-    call batch_init(epsib, hm%d%dim, psib%states(1)%ist, psib%states(nst)%ist, psi_copy)
+    SAFE_ALLOCATE(psi_copy(1:der%mesh%np_part, 1:hm%d%dim, 1:nst))
+    call batch_init(epsib, hm%d%dim, nst)
+    do ii = 1, nst
+      call batch_add_state(epsib, psib%states(ii)%ist, psi_copy(:, :, ii))
+    end do
+    ASSERT(batch_is_ok(epsib))
   else
     epsib => psib
   end if

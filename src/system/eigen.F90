@@ -198,7 +198,7 @@ contains
     case(RS_LOBPCG)
     case(RS_RMMDIIS)
       default_iter = 3
-      call messages_devel_version("RMMDIIS eigensolver")
+      if(gr%mesh%use_curvilinear) call messages_devel_version("RMMDIIS eigensolver for curvilinear coordinates")
     case default
       call input_error('Eigensolver')
     end select

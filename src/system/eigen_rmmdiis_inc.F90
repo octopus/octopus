@@ -41,7 +41,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   R_TYPE, allocatable :: fr(:, :)
   type(profile_t), save :: prof
   type(batch_t), allocatable :: psib(:), resb(:)
-  type(batch_t) :: psibit, resbit
+  type(batch_t) :: psibit, resbit, stpsib
   integer, allocatable :: done(:), last(:)
   logical, allocatable :: failed(:)
 #ifdef HAVE_MPI
@@ -70,14 +70,13 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     maxst = min(jst + blocksize - 1, st%st_end)
     bsize = maxst - jst + 1
 
-    do ist = jst, maxst
-      ib = ist - jst + 1
-      do idim = 1, st%d%dim
-        call lalg_copy(gr%mesh%np, st%X(psi)(:, idim, ist, ik), psi(:, idim, 1, ib))
-      end do
-    end do
-
+    call batch_init(stpsib, st%d%dim, jst, maxst, st%X(psi)(:, :, jst:, ik))
     call batch_init(psib(1), st%d%dim, jst, maxst, psi(:, :, 1, :))
+
+    call batch_copy_data(gr%mesh%np, stpsib, psib(1))
+
+    call batch_end(stpsib)
+
     call batch_init(resb(1), st%d%dim, jst, maxst, res(:, :, 1, :))
 
     call X(hamiltonian_apply_batch)(hm, gr%der, psib(1), resb(1), ik)
@@ -115,10 +114,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     end do
 
     if(any(done(1:bsize) == 0)) then
-
       ! initialize the batch objects
       do iter = 1, niter
-
         call batch_init(psib(iter), st%d%dim, maxst - jst + 1 - sum(done))
         call batch_init(resb(iter), st%d%dim, maxst - jst + 1 - sum(done))
 

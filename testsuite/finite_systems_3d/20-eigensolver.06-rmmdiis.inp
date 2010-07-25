@@ -20,8 +20,6 @@ Spacing = 0.25
 
 EigenSolver = rmmdiis
 
-DevelVersion = yes
-
 # This is commented since parallelization over states is currently
 # disabled.
 #
@@ -30,4 +28,5 @@ DevelVersion = yes
 #%ParallelizationGroupRanks
 # 2 | 2
 #%
+
 ExtraStates = 1 

@@ -17,5 +17,4 @@ GuessMagnetDensity = user_defined
 
 Eigensolver = rmmdiis
 
-DevelVersion = yes
 
