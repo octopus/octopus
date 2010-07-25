@@ -72,8 +72,17 @@ contains
 
     call push_sub('unocc.unocc_run')
 
-    ! read the maximum number of eigensolver iterations
-    call parse_integer(datasets_check('MaximumIter'), 20, max_iter)
+    !%Variable UnoccMaximumIter
+    !%Type integer
+    !%Default 50
+    !%Section CalculationModes::UnoccupiedStates
+    !%Description
+    !% Maximum number of eigensolver iterations. The code will stop even if convergence
+    !% has not been achieved. -1 means unlimited.
+    !%End
+    call parse_integer(datasets_check('UnoccMaximumIter'), 50, max_iter)
+    if(max_iter < 0) max_iter = huge(max_iter)
+    call messages_obsolete_variable('MaximumIter', 'UnoccMaximumIter')
 
     occupied_states = sys%st%nst
     call init_(sys%gr%mesh, sys%st)
