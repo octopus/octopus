@@ -273,7 +273,7 @@ subroutine X(sternheimer_solve)(                           &
       ! before dying on the next direction or frequency
       if(clean_stop()) then
         message(1) = "Exiting cleanly."
-        call write_fatal(1)
+        call write_fatal(1, only_root_writes = .true.)
       endif
 
       do ispin = 1, st%d%nspin

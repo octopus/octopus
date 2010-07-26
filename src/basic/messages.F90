@@ -763,7 +763,7 @@ contains
     if(no_sub_stack <= 0) then
       no_sub_stack = 1
       sub_stack(1) = 'pop_sub'
-      message(1) = 'Too few recursion levels'
+      message(1) = 'Too few recursion levels.'
       call write_fatal(1)
     end if
 
@@ -818,7 +818,7 @@ contains
       if(present(rep)) then
         write(message(2), '(a)') ' '
         write(message(3), '(a)') 'Equivalent functionality can be obtained with the '//trim(rep)
-        write(message(4), '(a)') 'variable, check the documentation for details.'
+        write(message(4), '(a)') 'variable. Check the documentation for details.'
         write(message(5), '(a)') '(You can use the `oct-help show '//trim(rep)//'` command).'
         call write_fatal(5, only_root_writes = .true.)
       else
@@ -855,7 +855,7 @@ contains
     call push_sub('messages.messages_check_def')
 
     if(var > def) then
-      write(message(1), '(3a)') "The value for '", text, "' does not match the recommended value"
+      write(message(1), '(3a)') "The value for '", text, "' does not match the recommended value."
       write(message(2), '(f8.3,a,f8.3)') var, ' > ', def
       call write_warning(2)
     end if
