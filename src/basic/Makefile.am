@@ -22,6 +22,7 @@
 noinst_LIBRARIES = libbasic.a
 
 libbasic_a_SOURCES =     \
+	io_csv.c         \
 	loct.F90         \
 	string.F90       \
 	varinfo.F90      \
@@ -56,9 +57,10 @@ libbasic_a_SOURCES =     \
 	varinfo_low.c    \
 	signals.c        \
 	io_binary_f.F90  \
+	io_csv_f.F90     \
 	lookup.F90       \
 	types.F90        \
-	opencl.F90
+	opencl.F90       
 
 if COMPILE_PAPI
 libbasic_a_SOURCES += papi.c papi_f.F90
@@ -74,6 +76,7 @@ noinst_HEADERS =               \
 	loct_inc.F90           \
 	varia.h                \
 	io_binary.h            \
+	io_csv.h               \
 	opencl_inc.F90         \
 	opencl_iface_inc.F90
 
@@ -110,6 +113,7 @@ io.o : io.F90 mpi.o messages.o parser.o loct.o global.o datasets.o
 unit_system.o : unit_system.F90 unit.o io.o messages.o parser.o global.o datasets.o  varinfo.o
 write_iter.o : write_iter.F90 c_pointer.o
 io_binary_f.o : io_binary_f.F90 io_binary.h messages.o
+io_csv_f.o : io_csv_f.F90 io_csv.h 
 
 opencl.o : opencl.F90 opencl_inc.F90 opencl_iface_inc.F90 global.o c_pointer.o types.o profiling.o messages.o parser.o 
 mpi_debug.o : mpi_debug.F90 mpi_debug_inc.F90 mpi.o messages.o loct.o global.o 

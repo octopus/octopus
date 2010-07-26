@@ -106,12 +106,16 @@ subroutine X(input_function_global)(filename, mesh, ff, ierr, is_tmp, map)
   logical,           intent(in)    :: is_tmp
   integer, optional, intent(in)    :: map(:)
 
-  integer :: ip, np
+  integer :: ip, np, ii, jj, kk
+  integer(8) :: dims(3)
+  FLOAT, allocatable :: x_in(:, :)
+  FLOAT, allocatable :: x_out(:, :)
+  type(X(cf_t)) :: cube
+  
 #if defined(HAVE_NETCDF)
   character(len=512) :: file
   integer :: ncid, status
   integer :: function_kind
-  type(X(cf_t)) :: cube
 #if defined(R_TCOMPLEX)
   type(dcf_t) :: re, im
 #endif
@@ -181,7 +185,106 @@ subroutine X(input_function_global)(filename, mesh, ff, ierr, is_tmp, map)
       call io_binary_read(filename, mesh%np_global, ff, ierr)
       call profiling_count_transfers(mesh%np_global, ff(1))
     end if
+  case("csv")
+    if (mesh%sb%box_shape .ne. PARALLELEPIPED) then
+      message(1) = "Box shape must be parallelepiped when a .csv file is used."
+      call write_fatal(1)
+    end if 
+  
+    call X(cf_new)(mesh%idx%ll, cube)
+    call X(cf_alloc_RS)(cube)
+    
+    call io_csv_get_info(filename, dims, ierr)
+    
+    if (ierr .ne. 0) then
+      message(1) = "Error: Could not read file "//trim(filename)//""
+      call write_fatal(1)
+    end if
+    
+    SAFE_ALLOCATE(read_ff(1:dims(1)*dims(2)*dims(3)))
+    call io_csv_read(filename, dims(1)*dims(2)*dims(3), read_ff, ierr)
 
+    if (ierr .ne. 0) then
+      message(1) = "Error: Could not read file "//trim(filename)//""
+      call write_fatal(1)
+    end if
+
+    if(mesh%sb%dim == 1) then
+      SAFE_ALLOCATE(x_in(1:dims(1), 1:1))
+      SAFE_ALLOCATE(x_out(1:cube%n(1), 1:1))
+      
+      do ii = 1, dims(1)
+        x_in(ii,:) = (/ real(ii-1)*(real(cube%n(1)-1)/(dims(1)-1)) /)
+      end do
+
+      
+      do ii = 1, cube%n(1)
+        x_out(ii,1) = real(ii-1)
+      end do
+        
+      call X(mf_interpolate_points)(2, int(dims(1),4), x_in(:,:),&
+           &read_ff, cube%n(1), x_out(:,:), ff)
+           
+      SAFE_DEALLOCATE_A(x_in)
+      SAFE_DEALLOCATE_A(x_out)
+      
+    else if(mesh%sb%dim == 2) then
+      SAFE_ALLOCATE(x_in(1:(dims(1)*dims(2)), 1:2))
+      SAFE_ALLOCATE(x_out(1:(cube%n(1)*cube%n(2)), 1:2))
+      
+      do ii = 1, dims(2)
+        do jj = 1, dims(1)
+          x_in((ii-1)*dims(1) + jj,:) = & 
+              &(/ real(jj-1)*(real(cube%n(1)-1)/(dims(1)-1)),&
+              &   real(ii-1)*(real(cube%n(2)-1)/(dims(2)-1)) /)
+        end do
+      end do
+      
+      do ii = 1, cube%n(2)
+        do jj = 1, cube%n(1)
+          x_out((ii-1)*cube%n(1) + jj,:) = (/ real(jj-1), real(ii-1) /)
+        end do
+      end do
+      call X(mf_interpolate_points)(2, int(dims(1)*dims(2),4), x_in(:,:),&
+           &read_ff, cube%n(1)*cube%n(2), x_out(:,:), ff)
+           
+      SAFE_DEALLOCATE_A(x_in)
+      SAFE_DEALLOCATE_A(x_out)
+    else if(mesh%sb%dim == 3) then
+      SAFE_ALLOCATE(x_in(1:(dims(1)*dims(2)*dims(3)), 1:3))
+      SAFE_ALLOCATE(x_out(1:(cube%n(1)*cube%n(2)*cube%n(3)), 1:3))
+      
+      do ii = 1, dims(3)
+        do jj = 1, dims(2)
+          do kk = 1, dims(1)
+            x_in((ii-1)*dims(1)*dims(2) + (jj-1)*dims(1) + kk,:) = &
+              &(/ real(kk-1)*(real(cube%n(1)-1)/(dims(1)-1))  ,&
+              &   real(jj-1)*(real(cube%n(2)-1)/(dims(2)-1))  ,&
+              &   real(ii-1)*(real(cube%n(3)-1)/(dims(3)-1))  /)
+          end do
+        end do
+      end do
+    
+      do ii = 1, cube%n(3)
+        do jj = 1, cube%n(2)
+          do kk = 1, cube%n(1)
+            x_out((ii-1)*cube%n(1)*cube%n(2) + (jj-1)*cube%n(1) + kk,:) = &
+              &(/ real(kk-1), real(jj-1), real(ii-1) /)
+            end do
+          end do
+        end do
+      call X(mf_interpolate_points)(3, int(dims(1)*dims(2)*dims(3),4), x_in(:,:),&
+           &read_ff, cube%n(1)*cube%n(2)*cube%n(3), x_out(:,:), ff)
+      SAFE_DEALLOCATE_A(x_in)
+      SAFE_DEALLOCATE_A(x_out)
+    end if
+    
+    cube%RS = reshape(ff, (/ cube%n(1), cube%n(2), cube%n(3) /))
+    
+    call X(cube_to_mesh) (mesh, cube, ff)
+    call X(cf_free)(cube)
+    
+    SAFE_DEALLOCATE_P(read_ff)
   case default
     ierr = 1
   end select
