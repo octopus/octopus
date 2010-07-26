@@ -75,7 +75,7 @@ contains
     !%Variable UnoccMaximumIter
     !%Type integer
     !%Default 50
-    !%Section CalculationModes::UnoccupiedStates
+    !%Section Calculation Modes::UnoccupiedStates
     !%Description
     !% Maximum number of eigensolver iterations. The code will stop even if convergence
     !% has not been achieved. -1 means unlimited.
