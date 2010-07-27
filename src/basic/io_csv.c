@@ -169,7 +169,7 @@ void FC_FUNC_(read_csv,READ_CSV)
 }
 
 void FC_FUNC_(get_info_csv,GET_INFO_CSV)
-     (int32_t * dims [], int * ierr, STR_F_TYPE fname STR_ARG1)
+     (int32_t * dims, int * ierr, STR_F_TYPE fname STR_ARG1)
 {
   char * filename;
   char * buf;

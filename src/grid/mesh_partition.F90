@@ -66,9 +66,9 @@ contains
   !! (mesh_partition_end should be called later.)
   ! ---------------------------------------------------------------
   subroutine mesh_partition(mesh, lapl_stencil, part)
-    type(mesh_t),            intent(in)  :: mesh
-    type(stencil_t), target, intent(in)  :: lapl_stencil
-    integer,                 intent(out) :: part(:)
+    type(mesh_t),    intent(in)  :: mesh
+    type(stencil_t), intent(in)  :: lapl_stencil
+    integer,         intent(out) :: part(:)
 
     integer              :: iv, jp, inb
     integer              :: ix(1:MAX_DIM), jx(1:MAX_DIM)

@@ -132,7 +132,7 @@ contains
   subroutine curv_modine_init(cv, sb, geo, spacing)
     type(curv_modine_t), target, intent(out)  :: cv
     type(simul_box_t),   target, intent(in)   :: sb
-    type(geometry_t),    target, intent(in)   :: geo
+    type(geometry_t),            intent(in)   :: geo
     FLOAT,                       intent(in)   :: spacing(:)
 
     call push_sub('curv_modine.curv_modine_init')

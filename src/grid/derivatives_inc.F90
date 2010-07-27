@@ -341,12 +341,12 @@ end subroutine X(derivatives_batch_finish)
 
 ! ---------------------------------------------------------
 subroutine X(derivatives_batch_perform)(op, der, ff, opff, ghost_update, set_bc)
-  type(nl_operator_t),      target, intent(in)    :: op
-  type(derivatives_t),      target, intent(in)    :: der
-  type(batch_t),            target, intent(inout) :: ff
-  type(batch_t),            target, intent(inout) :: opff
-  logical,                optional, intent(in)    :: ghost_update
-  logical,                optional, intent(in)    :: set_bc
+  type(nl_operator_t), intent(in)    :: op
+  type(derivatives_t), intent(in)    :: der
+  type(batch_t),       intent(inout) :: ff
+  type(batch_t),       intent(inout) :: opff
+  logical,   optional, intent(in)    :: ghost_update
+  logical,   optional, intent(in)    :: set_bc
 
   type(derivatives_handle_batch_t) :: handle
 

@@ -128,7 +128,7 @@ end subroutine X(batch_delete)
 subroutine X(batch_set)(this, np, psi)
   type(batch_t),  intent(inout) :: this
   integer,        intent(in)    :: np
-  R_TYPE, target, intent(in)    :: psi(:, :, :)
+  R_TYPE,         intent(in)    :: psi(:, :, :)
 
   integer :: ist, idim
 
