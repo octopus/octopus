@@ -290,17 +290,16 @@ void FC_FUNC_(break_c_string, BREAK_C_STRING)
 
 /* 
 
-This functions searchs in directory given by dirname, all files that have the following name:
+This function searches in directory given by dirname all files that have the following name:
 
 *_<real_number>_<integer>*
 
-It returns the value of <real_number> found that it is closer to freq
-and which value of <integer> matches with the tag argument.
+It returns the value of <real_number> found that is closest to freq (or abs(freq))
+and for which the value of <integer> matches with the tag argument.
 
 The value found is returned in the freq argument.
 
-On error, ierr is set to something different of 0, actual values are:
-
+ierr results:
 0 : value found
 1 : no matching file found
 2 : cannot open the directory
@@ -338,7 +337,7 @@ void FC_FUNC_(oct_search_file_lr, OCT_SEARCH_FILE_LR)
     num_start = strchr(ent -> d_name, '_');
 
     if(num_start != NULL) {
-      num_start++; /*now this point to the beginning of the number */
+      num_start++; /* now this points to the beginning of the number */
 
       /* take the numerical value from the string */
       read_value = strtod(num_start, &num_end);
@@ -348,7 +347,7 @@ void FC_FUNC_(oct_search_file_lr, OCT_SEARCH_FILE_LR)
       /* check that we have the correct tag */
       if(num_end[0] == '_') {
 
-	num_start=num_end+1;
+	num_start = num_end + 1;
 	read_tag = (int) strtol(num_start, &num_end, 10);
 	if ( num_end == num_start ) continue; /* no tag found */
 	if ( read_tag != *tag ) continue; /* tag does not match */
@@ -357,7 +356,7 @@ void FC_FUNC_(oct_search_file_lr, OCT_SEARCH_FILE_LR)
 
 
       /* if this is the first number we found or the value is closer than previous */
-      if ( !found_something || (fabs(min-*freq) > fabs(read_value-*freq)) ) {
+      if ( !found_something || (fabs(fabs(min)-fabs(*freq)) > fabs(fabs(read_value)-fabs(*freq))) ) {
 	min = read_value;
 	found_something = 1;
       }
@@ -376,7 +375,7 @@ void FC_FUNC_(oct_search_file_lr, OCT_SEARCH_FILE_LR)
 
 #else
 #warning directory search not compiled
-  printf("Warning: Directory search not implemented\n");
+  printf("Warning: Directory search not implemented.\n");
 
 #endif
 

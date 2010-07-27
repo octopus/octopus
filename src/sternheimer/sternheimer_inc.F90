@@ -23,7 +23,7 @@
 !--------------------------------------------------------------
 subroutine X(sternheimer_solve)(                           &
      this, sys, hm, lr, nsigma, omega, perturbation,       &
-     restart_dir, rho_tag, wfs_tag, have_restart_rho)
+     restart_dir, rho_tag, wfs_tag, have_restart_rho, have_exact_freq)
   type(sternheimer_t),    intent(inout) :: this
   type(system_t), target, intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: hm
@@ -35,9 +35,10 @@ subroutine X(sternheimer_solve)(                           &
   character(len=*),       intent(in)    :: rho_tag
   character(len=*),       intent(in)    :: wfs_tag
   logical,      optional, intent(in)    :: have_restart_rho
+  logical,      optional, intent(in)    :: have_exact_freq
 
   FLOAT :: dpsimod, tol
-  integer :: iter, sigma, ik, ist, is, err
+  integer :: iter, sigma, sigma_alt, ik, ist, is, err
   R_TYPE, allocatable :: dl_rhoin(:, :, :), dl_rhonew(:, :, :), dl_rhotmp(:, :, :)
   R_TYPE, allocatable :: Y(:, :, :), hvar(:, :, :)
   R_TYPE, allocatable :: tmp(:)
@@ -45,7 +46,7 @@ subroutine X(sternheimer_solve)(                           &
   R_TYPE :: omega_sigma, proj
   logical, allocatable :: orth_mask(:)
 
-  logical :: conv_last, conv, states_conv, forced_finish
+  logical :: conv_last, conv, states_conv, forced_finish, have_restart_rho_
   type(mesh_t), pointer :: mesh
   type(states_t), pointer :: st
   integer :: total_iter, idim, ip, ispin
@@ -78,11 +79,9 @@ subroutine X(sternheimer_solve)(                           &
   conv = .false.
   conv_last = .false.
 
-  if (present(have_restart_rho)) then 
-    if (.not. have_restart_rho) call X(lr_build_dl_rho)(mesh, st, lr, nsigma)
-  else
-    call X(lr_build_dl_rho)(mesh, st, lr, nsigma)
-  end if
+  have_restart_rho_ = .false.
+  if(present(have_restart_rho)) have_restart_rho_ = have_restart_rho
+  if(.not. have_restart_rho_) call X(lr_build_dl_rho)(mesh, st, lr, nsigma)
   
   message(1)="--------------------------------------------"
   call write_info(1)
@@ -96,7 +95,12 @@ subroutine X(sternheimer_solve)(                           &
     enddo
   endif
 
+  !this call is required to reset the scf_tol object, whether we want its result or not
   tol = scf_tol_step(this%scf_tol, 0, M_ONE)
+  if(have_restart_rho_ .and. present(have_exact_freq)) then
+    if(have_exact_freq) tol = scf_tol_final(this%scf_tol)
+    ! if rho is converged already, then we should try to solve fully for the wavefunctions
+  endif
 
   !self-consistency iteration for response
   iter_loop: do iter = 1, this%scf_tol%max_iter
@@ -200,10 +204,21 @@ subroutine X(sternheimer_solve)(                           &
     dl_rhonew(1:mesh%np, 1:st%d%nspin, 1) = M_ZERO
     
     !write restart info
-    call X(restart_write_lr_rho)(lr(1), sys%gr, st%d%nspin, restart_dir, rho_tag)
+    !save all frequencies as positive
+    if(R_REAL(omega) >= M_ZERO) then
+      sigma_alt = 1
+    else
+      sigma_alt = 2
+    endif
+    call X(restart_write_lr_rho)(lr(sigma_alt), sys%gr, st%d%nspin, &
+      restart_dir, rho_tag)
 
     do sigma = 1, nsigma 
-      write(dirname,'(a,a,i1)') trim(restart_dir)//trim(wfs_tag), '_', sigma
+      !save all frequencies as positive
+      sigma_alt = sigma
+      if(R_REAL(omega) < M_ZERO) sigma_alt = swap_sigma(sigma)
+
+      write(dirname,'(a,a,i1)') trim(restart_dir)//trim(wfs_tag), '_', sigma_alt
       call restart_write(trim(tmpdir)//dirname, st, sys%gr, err, iter=iter, lr=lr(sigma))
     end do
     
@@ -214,8 +229,8 @@ subroutine X(sternheimer_solve)(                           &
       this%ok = states_conv
 
       if (.not. this%ok) then
-         message(1) = "Linear solver failed to converge all states."
-         call write_warning(1)
+        message(1) = "Linear solver failed to converge all states."
+        call write_warning(1)
       endif
 
       message(1)="--------------------------------------------"
@@ -234,7 +249,7 @@ subroutine X(sternheimer_solve)(                           &
     end if
 
     do ispin = 1, st%d%nspin
-      call lalg_copy(mesh%np, lr(1)%X(dl_rho)(:, ispin),  dl_rhotmp(:, ispin, 1))
+      call lalg_copy(mesh%np, lr(1)%X(dl_rho)(:, ispin), dl_rhotmp(:, ispin, 1))
     end do
 
     call X(mixing)(this%mixer, iter, dl_rhoin, dl_rhotmp, dl_rhonew, X(mf_dotp_aux))

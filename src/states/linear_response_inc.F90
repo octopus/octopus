@@ -178,6 +178,42 @@ subroutine X(lr_orth_response)(mesh, st, lr)
 end subroutine X(lr_orth_response)
 
 
+! ---------------------------------------------------------
+subroutine X(lr_swap_sigma)(st, mesh, plus, minus)
+  type(states_t), intent(in)    :: st
+  type(mesh_t),   intent(in)    :: mesh
+  type(lr_t),     intent(inout) :: plus
+  type(lr_t),     intent(inout) :: minus
+
+  integer :: ik, idim, ist
+  R_TYPE, allocatable :: tmp(:)
+
+  call push_sub('linear_response_inc.Xlr_swap_sigma')
+
+  SAFE_ALLOCATE(tmp(1:mesh%np))
+
+  do ik = 1, st%d%nspin
+    call lalg_copy(mesh%np, plus%X(dl_rho)(:, ik), tmp(:))
+    call lalg_copy(mesh%np, minus%X(dl_rho)(:, ik), plus%X(dl_rho)(:, ik))
+    call lalg_copy(mesh%np, tmp(:), minus%X(dl_rho)(:, ik))
+  enddo
+
+  do ik = 1, st%d%nik
+    do ist = 1, st%nst
+      do idim = 1, st%d%dim
+        call lalg_copy(mesh%np_part, plus%X(dl_psi)(:, idim, ist, ik), tmp(:))
+        call lalg_copy(mesh%np_part, minus%X(dl_psi)(:, idim, ist, ik), plus%X(dl_psi)(:, idim, ist, ik))
+        call lalg_copy(mesh%np_part, tmp(:), minus%X(dl_psi)(:, idim, ist, ik))
+      end do
+    end do
+  end do
+
+  SAFE_DEALLOCATE_A(tmp)
+  call pop_sub('linear_response_inc.Xlr_swap_sigma')
+
+end subroutine X(lr_swap_sigma)
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

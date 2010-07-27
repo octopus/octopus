@@ -52,7 +52,9 @@ module linear_response_m
        zlr_orth_response, &
        lr_alpha_j,        &
        lr_dealloc,        &
-       lr_is_allocated
+       lr_is_allocated,   &
+       dlr_swap_sigma,    &
+       zlr_swap_sigma
 
 
   type lr_t
@@ -160,7 +162,7 @@ contains
     call push_sub('linear_response.lr_copy')
 
     do ik = 1, st%d%nspin
-      if( states_are_complex(st)) then
+      if(states_are_complex(st)) then
         call lalg_copy(mesh%np, src%zdl_rho(:, ik), dest%zdl_rho(:, ik))
       else
         call lalg_copy(mesh%np, src%ddl_rho(:, ik), dest%ddl_rho(:, ik))
@@ -170,7 +172,7 @@ contains
     do ik = 1, st%d%nik
       do ist = 1, st%nst
         do idim = 1, st%d%dim
-          if( states_are_complex(st)) then
+          if(states_are_complex(st)) then
             call lalg_copy(mesh%np_part, src%zdl_psi(:, idim, ist, ik), dest%zdl_psi(:, idim, ist, ik))
           else 
             call lalg_copy(mesh%np_part, src%ddl_psi(:, idim, ist, ik), dest%ddl_psi(:, idim, ist, ik))

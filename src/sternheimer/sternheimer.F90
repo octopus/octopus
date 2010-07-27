@@ -76,8 +76,9 @@ module sternheimer_m
        zsternheimer_set_rhs,      &
        sternheimer_have_rhs,      &
        sternheimer_unset_rhs,     &
-       sternheimer_has_converged
-  
+       sternheimer_has_converged, &
+       swap_sigma
+
   type sternheimer_t
      private
      type(linear_solver_t) :: solver
@@ -325,6 +326,18 @@ contains
     nullify(this%drhs)
     nullify(this%zrhs)
   end subroutine sternheimer_unset_rhs
+
+  !-----------------------------------------------------------
+  integer pure function swap_sigma(sigma)
+    integer, intent(in) :: sigma
+    
+    if(sigma == 1) then
+      swap_sigma = 2
+    else
+      swap_sigma = 1
+    endif
+
+  end function swap_sigma
   
 #include "complex.F90"
 #include "sternheimer_inc.F90"
