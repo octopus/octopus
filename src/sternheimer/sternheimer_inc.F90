@@ -25,7 +25,7 @@ subroutine X(sternheimer_solve)(                           &
      this, sys, hm, lr, nsigma, omega, perturbation,       &
      restart_dir, rho_tag, wfs_tag, have_restart_rho, have_exact_freq)
   type(sternheimer_t),    intent(inout) :: this
-  type(system_t), target, intent(inout) :: sys
+  type(system_t),         intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: hm
   type(lr_t),             intent(inout) :: lr(:) 
   integer,                intent(in)    :: nsigma 
@@ -46,7 +46,7 @@ subroutine X(sternheimer_solve)(                           &
   R_TYPE :: omega_sigma, proj
   logical, allocatable :: orth_mask(:)
 
-  logical :: conv_last, conv, states_conv, forced_finish, have_restart_rho_
+  logical :: conv_last, conv, states_conv, have_restart_rho_
   type(mesh_t), pointer :: mesh
   type(states_t), pointer :: st
   integer :: total_iter, idim, ip, ispin

@@ -326,7 +326,8 @@ contains
                     EM_RESP_DIR, em_rho_tag(closest_omega, idir), ierr)
                 end if
 
-                if(ierr == 0 .and. abs(abs(closest_omega) - abs(em_vars%freq_factor(ifactor) * em_vars%omega(iomega))) < M_EPSILON) &
+                if(ierr == 0 .and. &
+                  abs(abs(closest_omega) - abs(em_vars%freq_factor(ifactor) * em_vars%omega(iomega))) < M_EPSILON) &
                   exact_freq = .true.
               end if
 

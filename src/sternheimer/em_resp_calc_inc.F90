@@ -701,7 +701,7 @@ subroutine X(lr_calc_2np1) (sh, hm, st, geo, gr, lr1, lr2, lr3, pert1, pert2, pe
   type(pert_t),            intent(in)    :: pert3
   R_TYPE,                  intent(out)   :: val
 
-  integer :: ik, ist, jst, idim
+  integer :: ik, ist, jst
   R_TYPE :: term
   R_TYPE, allocatable :: tmp(:, :), me23(:, :)
 
@@ -711,7 +711,6 @@ subroutine X(lr_calc_2np1) (sh, hm, st, geo, gr, lr1, lr2, lr3, pert1, pert2, pe
   SAFE_ALLOCATE(me23(1:st%nst, 1:st%nst))
 
   val = R_TOTYPE(M_ZERO)
-  idim = 1
 
   do ik = st%d%kpt%start, st%d%kpt%end
 
