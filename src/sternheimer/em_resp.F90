@@ -299,15 +299,16 @@ contains
               endif
 
               ! if opposite sign from last frequency, swap signs to get a closer frequency
-              if(iomega > 1 .and. em_vars%nsigma == 2 .and. &
-                 em_vars%omega(iomega - 1) * em_vars%omega(iomega) < M_ZERO) then
-                if(states_are_complex(sys%st)) then
-                  call zlr_swap_sigma(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
-                else
-                  call dlr_swap_sigma(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
+              if(iomega > 1 .and. em_vars%nsigma == 2) then
+                if(em_vars%omega(iomega - 1) * em_vars%omega(iomega) < M_ZERO) then
+                  if(states_are_complex(sys%st)) then
+                    call zlr_swap_sigma(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
+                  else
+                    call dlr_swap_sigma(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
+                  endif
                 endif
-              endif
-
+              end if
+                
               !search for the density of the closest frequency, including negative
               exact_freq = .false.
               closest_omega = em_vars%freq_factor(ifactor) * em_vars%omega(iomega)
