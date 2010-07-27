@@ -24,6 +24,7 @@ module solids_m
   use global_m
   use io_m
   use messages_m
+  use profiling_m
   use simul_box_m
   use unit_m
   use unit_system_m
@@ -46,6 +47,7 @@ module solids_m
     FLOAT :: pos_chi(1:MAX_DIM)
     FLOAT :: range
     integer :: nbmax(MAX_DIM), nbmin(MAX_DIM)
+    integer, pointer :: icell(:, :)
   end type periodic_copy_t
 
 contains
@@ -57,11 +59,13 @@ contains
     FLOAT,                 intent(in)  :: range
 
     integer :: pd
-    
+    integer :: icell1, icell2, icell3, jj, num
+
     call push_sub('solids.periodic_copy_init')
 
     this%range = range
     this%pos = pos
+    nullify(this%icell)
 
     if(.not. simul_box_is_periodic(sb)) then
       this%nbmin = 0
@@ -82,19 +86,38 @@ contains
     this%nbmin(pd + 1:MAX_DIM) = 0
     this%nbmax(pd + 1:MAX_DIM) = 0
 
+    SAFE_ALLOCATE(this%icell(1:MAX_DIM, 1:periodic_copy_num(this)))
+
+    jj = 1
+    do icell1 = this%nbmin(1), this%nbmax(1)
+      do icell2 = this%nbmin(2), this%nbmax(2)
+        do icell3 = this%nbmin(3), this%nbmax(3)
+          this%icell(1:MAX_DIM, jj) = 0
+          this%icell(1:3, jj) = (/icell1, icell2, icell3/)
+          jj = jj + 1
+        end do
+      end do
+    end do
+
     call pop_sub('solids.periodic_copy_init')
   end subroutine periodic_copy_init
+
+  ! ----------------------------------------------------------------
 
   subroutine periodic_copy_end(this)
     type(periodic_copy_t), intent(inout) :: this
 
     call push_sub('solids.periodic_copy_end')
 
+    SAFE_DEALLOCATE_P(this%icell)
+
     this%nbmin = 0
     this%nbmax = 0
 
     call pop_sub('solids.periodic_copy_end')
   end subroutine periodic_copy_end
+
+  ! ----------------------------------------------------------------
 
   integer pure function periodic_copy_num(this) result(num)
     type(periodic_copy_t), intent(in)    :: this
@@ -103,6 +126,8 @@ contains
     num = product(this%nbmax - this%nbmin + 1)
 
   end function periodic_copy_num
+  
+  ! ----------------------------------------------------------------
 
   function periodic_copy_position(this, sb, ii) result(pcopy)
     type(periodic_copy_t),   intent(in)  :: this
@@ -110,7 +135,6 @@ contains
     integer, intent(in)                  :: ii
     FLOAT                                :: pcopy(MAX_DIM) 
     
-    integer :: icell1, icell2, icell3, jj
     integer :: pd
 
     call push_sub('solids.periodic_copy_position')
@@ -123,27 +147,14 @@ contains
       return
     end if
 
-    jj = 1
-    do icell1 = this%nbmin(1), this%nbmax(1)
-      do icell2 = this%nbmin(2), this%nbmax(2)
-        do icell3 = this%nbmin(3), this%nbmax(3)
-          
-          if (jj == ii) then 
-            pcopy(1:pd) = this%pos_chi(1:pd) - M_TWO*sb%lsize(1:pd)*(/icell1, icell2, icell3/)
-            pcopy(1:pd) = matmul(sb%rlattice_primitive(1:pd, 1:pd), pcopy(1:pd))
-            pcopy(pd + 1:MAX_DIM) = this%pos(pd+1:MAX_DIM)
-            call pop_sub('solids.periodic_copy_position')
-            return
-          end if
-          jj = jj + 1
-
-        end do
-      end do
-    end do
+    pcopy(1:pd) = this%pos_chi(1:pd) - M_TWO*sb%lsize(1:pd)*this%icell(1:pd, ii)
+    pcopy(1:pd) = matmul(sb%rlattice_primitive(1:pd, 1:pd), pcopy(1:pd))
+    pcopy(pd + 1:MAX_DIM) = this%pos(pd+1:MAX_DIM)
 
     call pop_sub('solids.periodic_copy_position')
   end function periodic_copy_position
 
+  ! ----------------------------------------------------------------
   ! This subroutine creates a crystal by replicating the geometry and
   ! writes the result to dir//'crystal.xyz'
   subroutine periodic_write_crystal(sb, geo, dir)
