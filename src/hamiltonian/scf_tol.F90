@@ -41,7 +41,8 @@ module scf_tol_m
        scf_tol_init, & 
        scf_tol_end, & 
        scf_tol_stop, & 
-       scf_tol_step
+       scf_tol_step, &
+       scf_tol_final
        
   type scf_tol_t
      integer           :: max_iter
@@ -196,6 +197,8 @@ contains
 
     FLOAT :: logi, logf
 
+    call push_sub('scf_tol.scf_tol_step')
+
     if(iter == 0) this%current_tol = M_HUGE
 
     select case(this%scheme)
@@ -228,21 +231,39 @@ contains
 
     this%current_tol = r
 
+    call pop_sub('scf_tol.scf_tol_step')
   end function scf_tol_step
 
 
   !-----------------------------------------------------------------
   subroutine scf_tol_stop(this)
     type(scf_tol_t),     intent(inout) :: this
+
+    call push_sub('scf_tol.scf_tol_stop')
     this%current_tol = M_ZERO
+
+    call pop_sub('scf_tol.scf_tol_stop')
   end subroutine scf_tol_stop
 
 
   !-----------------------------------------------------------------
   subroutine scf_tol_end(this)
     type(scf_tol_t),     intent(inout) :: this
+
+    call push_sub('scf_tol.scf_tol_end')
     this%current_tol = M_ZERO
+
+    call pop_sub('scf_tol.scf_tol_end')
   end subroutine scf_tol_end
+
+
+  !-----------------------------------------------------------------
+  FLOAT function scf_tol_final(this)
+    type(scf_tol_t), intent(in) :: this
+
+    scf_tol_final = this%final_tol
+
+  end function scf_tol_final
 
 end module scf_tol_m
 
