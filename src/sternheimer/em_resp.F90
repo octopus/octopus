@@ -76,7 +76,7 @@ module em_resp_m
     integer :: nomega ! number of frequencies to consider
 
     FLOAT :: eta                     ! small imaginary part to add to the frequency
-    FLOAT :: freq_factor(MAX_DIM)    !
+    FLOAT :: freq_factor(3)
     FLOAT,      pointer :: omega(:)  ! the frequencies to consider
     type(lr_t), pointer :: lr(:,:,:) ! linear response for (gr%mesh%sb%dim, nsigma, nfactor)
 
@@ -490,7 +490,7 @@ contains
 
         str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(1)*em_vars%omega(iomega)))
         write(dirname_output, '(a, a)') EM_RESP_DIR//'freq_', trim(str_tmp)
-        call out_hyperpolarizability(gr%sb, em_vars%beta, em_vars%ok(1), dirname_output)
+        call out_hyperpolarizability(gr%sb, em_vars%beta, em_vars%freq_factor(:), em_vars%ok(1), dirname_output)
       end if
 
       last_omega = em_vars%freq_factor(em_vars%nfactor) * em_vars%omega(iomega)
@@ -1106,15 +1106,19 @@ contains
   end subroutine em_resp_output
 
   ! ---------------------------------------------------------
-  subroutine out_hyperpolarizability(sb, beta, converged, dirname)
+  ! Ref: David M Bishop, Rev Mod Phys 62, 343 (1990)
+  ! beta // and _L are eqn (154), beta  k is eqn (155)
+  ! generalized to lack of Kleinman symmetry
+  subroutine out_hyperpolarizability(sb, beta, freq_factor, converged, dirname)
     type(simul_box_t),  intent(in) :: sb
     CMPLX,              intent(in) :: beta(:, :, :)
+    FLOAT,              intent(in) :: freq_factor(:)
     logical,            intent(in) :: converged
     character(len=*),   intent(in) :: dirname
 
     CMPLX :: bpar(1:MAX_DIM), bper(1:MAX_DIM), bk(1:MAX_DIM)
     CMPLX :: HRS_VV, HRS_HV
-    integer :: i, j, k, iunit
+    integer :: ii, jj, kk, iunit, ifactor
 
     call push_sub('em_resp.out_hyperpolarizability')
 
@@ -1123,18 +1127,19 @@ contains
 
     if (.not. converged) write(iunit, '(a)') "# WARNING: not converged"
 
-    write(iunit, '(3a)', advance='no') 'First hyperpolarizability tensor: beta [', &
+    write(iunit, '(a,3(f4.1,a),2a)', advance='no') 'First hyperpolarizability tensor: beta(', &
+         freq_factor(1), ', ', freq_factor(2), ', ', freq_factor(3), ') [', &
          trim(units_abbrev(units_out%hyperpolarizability)), ']'
 
     write(iunit, '()')
 
-    do i = 1, sb%dim
-      do j = 1, sb%dim
-        do k = 1, sb%dim
+    do ii = 1, sb%dim
+      do jj = 1, sb%dim
+        do kk = 1, sb%dim
           write(iunit,'(a,e20.8,e20.8)') 'beta '// &
-               index2axis(i)//index2axis(j)//index2axis(k)//' ', &
-               units_from_atomic(units_out%hyperpolarizability, real( beta(i, j, k))), &
-               units_from_atomic(units_out%hyperpolarizability, aimag(beta(i, j, k)))
+               index2axis(ii)//index2axis(jj)//index2axis(kk)//' ', &
+               units_from_atomic(units_out%hyperpolarizability, real( beta(ii, jj, kk))), &
+               units_from_atomic(units_out%hyperpolarizability, aimag(beta(ii, jj, kk)))
         end do
       end do
     end do
@@ -1143,10 +1148,10 @@ contains
       bpar = M_ZERO
       bper = M_ZERO
 
-      do i = 1, sb%dim
-        do j = 1, sb%dim
-          bpar(i) = bpar(i) + beta(i, j, j) + beta(j, i, j) + beta(j, j, i)
-          bper(i) = bper(i) + M_TWO*beta(i, j, j) - M_THREE*beta(j, i, j) + M_TWO*beta(j, j, i)
+      do ii = 1, sb%dim
+        do jj = 1, sb%dim
+          bpar(ii) = bpar(ii) + beta(ii, jj, jj) + beta(jj, ii, jj) + beta(jj, jj, ii)
+          bper(ii) = bper(ii) + M_TWO*beta(ii, jj, jj) - M_THREE*beta(jj, ii, jj) + M_TWO*beta(jj, jj, ii)
         end do
       end do
 
@@ -1156,26 +1161,26 @@ contains
       bper = bper / M_FIVE
       bk(1:sb%dim) = M_THREE*M_HALF*(bpar(1:sb%dim) - bper(1:sb%dim))
 
-      do i = 1, sb%dim
-        write(iunit, '(a, 2e20.8)') 'beta // '//index2axis(i), &
-          units_from_atomic(units_out%hyperpolarizability, real(bpar(i))), &
-          units_from_atomic(units_out%hyperpolarizability, aimag(bpar(i)))
+      do ii = 1, sb%dim
+        write(iunit, '(a, 2e20.8)') 'beta // '//index2axis(ii), &
+          units_from_atomic(units_out%hyperpolarizability, real(bpar(ii))), &
+          units_from_atomic(units_out%hyperpolarizability, aimag(bpar(ii)))
       end do
 
       write(iunit, '()')
 
-      do i = 1, sb%dim
-        write(iunit, '(a, 2e20.8)') 'beta _L '//index2axis(i), &
-          units_from_atomic(units_out%hyperpolarizability, real(bper(i))), &
-          units_from_atomic(units_out%hyperpolarizability, aimag(bper(i)))
+      do ii = 1, sb%dim
+        write(iunit, '(a, 2e20.8)') 'beta _L '//index2axis(ii), &
+          units_from_atomic(units_out%hyperpolarizability, real(bper(ii))), &
+          units_from_atomic(units_out%hyperpolarizability, aimag(bper(ii)))
       end do
 
       write(iunit, '()')
 
-      do i = 1, sb%dim
-        write(iunit, '(a, 2e20.8)') 'beta  k '//index2axis(i), &
-          units_from_atomic(units_out%hyperpolarizability, real(bk(i))), &
-          units_from_atomic(units_out%hyperpolarizability, aimag(bk(i)))
+      do ii = 1, sb%dim
+        write(iunit, '(a, 2e20.8)') 'beta  k '//index2axis(ii), &
+          units_from_atomic(units_out%hyperpolarizability, real(bk(ii))), &
+          units_from_atomic(units_out%hyperpolarizability, aimag(bk(ii)))
       end do
 
       call calc_beta_HRS(sb, beta, HRS_VV, HRS_HV)
