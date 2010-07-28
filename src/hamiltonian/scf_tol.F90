@@ -99,7 +99,7 @@ contains
 
     !%Variable LRTolScheme
     !%Type integer
-    !%Default adaptive
+    !%Default tol_adaptive
     !%Section Linear Response::SCF in LR calculations
     !%Description
     !% The scheme used to adjust the tolerance of the solver during
@@ -157,12 +157,12 @@ contains
     if(this%scheme == SCF_TOL_ADAPTIVE) then 
       !%Variable LRTolAdaptiveFactor
       !%Type float
-      !%Default 0.9
+      !%Default 0.1
       !%Section Linear Response::SCF in LR calculations
       !%Description
       !% This factor controls how much the tolerance is decreased
       !% during the self-consistency process. Smaller values mean that
-      !% tolerance is decreased faster. The default is 0.9.
+      !% tolerance is decreased faster.
       !%End
       str = 'LRTolAdaptiveFactor'
       if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &

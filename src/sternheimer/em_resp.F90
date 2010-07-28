@@ -93,6 +93,7 @@ module em_resp_m
     logical :: calc_Born                         ! whether to calculate Born effective charges
     type(Born_charges_t) :: Born_charges(3)      ! one set for each frequency factor
     logical :: occ_response                      ! whether to calculate full response in Sternheimer eqn.
+    logical :: wfns_from_scratch                 ! whether to ignore restart LR wfns and initialize to zero
     
   end type em_resp_t
 
@@ -280,7 +281,7 @@ contains
             if(.not. fromscratch) then 
 
               ! try to load wavefunctions, if first frequency; otherwise will already be initialized
-              if(iomega == 1) then
+              if(iomega == 1 .and. .not. em_vars%wfns_from_scratch) then
                 do sigma = 1, em_vars%nsigma
                   sigma_alt = sigma
                   if(em_vars%freq_factor(ifactor) * em_vars%omega(iomega) < M_ZERO .and. em_vars%nsigma == 2) &
@@ -699,6 +700,18 @@ contains
         message(1) = "EMOccupiedResponse cannot be used if there are partial occupations."
         call write_fatal(1)
       endif
+
+      !%Variable EMWavefunctionsFromScratch
+      !%Type logical
+      !%Default false
+      !%Section Linear Response::Polarizabilities
+      !%Description
+      !% Do not use saved linear-response wavefunctions from a previous run as starting guess.
+      !% Instead initialize to zero as in <tt>FromScratch</tt>, but restart densities will still
+      !% be used. Restart wavefunctions from a very different frequency can hinder convergence.
+      !%End
+
+      call parse_logical(datasets_check('EMWavefunctionsFromScratch'), .false., em_vars%wfns_from_scratch)
 
       call pop_sub('em_resp.em_resp_run.parse_input')
 

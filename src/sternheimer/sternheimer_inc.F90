@@ -37,7 +37,7 @@ subroutine X(sternheimer_solve)(                           &
   logical,      optional, intent(in)    :: have_restart_rho
   logical,      optional, intent(in)    :: have_exact_freq
 
-  FLOAT :: dpsimod, tol
+  FLOAT :: dpsimod, tol, tol_trash
   integer :: iter, sigma, sigma_alt, ik, ist, is, err
   R_TYPE, allocatable :: dl_rhoin(:, :, :), dl_rhonew(:, :, :), dl_rhotmp(:, :, :)
   R_TYPE, allocatable :: Y(:, :, :), hvar(:, :, :)
@@ -98,8 +98,10 @@ subroutine X(sternheimer_solve)(                           &
   !this call is required to reset the scf_tol object, whether we want its result or not
   tol = scf_tol_step(this%scf_tol, 0, M_ONE)
   if(have_restart_rho_ .and. present(have_exact_freq)) then
-    if(have_exact_freq) tol = scf_tol_final(this%scf_tol)
-    ! if rho is converged already, then we should try to solve fully for the wavefunctions
+    if(have_exact_freq) then
+      tol = scf_tol_final(this%scf_tol) * M_TEN
+      ! if rho is converged already, then we should try to solve fully for the wavefunctions
+    endif
   endif
 
   !self-consistency iteration for response
@@ -222,16 +224,16 @@ subroutine X(sternheimer_solve)(                           &
       call restart_write(trim(tmpdir)//dirname, st, sys%gr, err, iter=iter, lr=lr(sigma))
     end do
     
+    if (.not. states_conv) then
+      message(1) = "Linear solver failed to converge all states."
+      call write_warning(1)
+    endif
+
     if (.not.(this%add_fxc .or. this%add_hartree)) then
     ! no need to deal with mixing, SCF iterations, etc.
     ! dealing with restart density above not necessary, but easier to just leave it
     ! convergence criterion is now about individual states, rather than SCF residual
       this%ok = states_conv
-
-      if (.not. this%ok) then
-        message(1) = "Linear solver failed to converge all states."
-        call write_warning(1)
-      endif
 
       message(1)="--------------------------------------------"
       write(message(2), '(a, i8)') &
@@ -267,7 +269,8 @@ subroutine X(sternheimer_solve)(                           &
     call write_info(2)
       
     if( abs_dens <= this%scf_tol%conv_abs_dens ) then 
-      if(conv_last) then 
+      if(conv_last .and. states_conv) then 
+        ! if not all states are converged, keep working
         conv = .true.
       else
         conv_last = .true.
