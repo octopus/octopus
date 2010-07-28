@@ -490,7 +490,7 @@ contains
 
         str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(1)*em_vars%omega(iomega)))
         write(dirname_output, '(a, a)') EM_RESP_DIR//'freq_', trim(str_tmp)
-        call out_hyperpolarizability(gr%sb, em_vars%beta, em_vars%freq_factor(:), em_vars%ok(1), dirname_output)
+        call out_hyperpolarizability(gr%sb, em_vars%beta, em_vars%freq_factor(1:3), em_vars%ok(1), dirname_output)
       end if
 
       last_omega = em_vars%freq_factor(em_vars%nfactor) * em_vars%omega(iomega)
@@ -1112,7 +1112,7 @@ contains
   subroutine out_hyperpolarizability(sb, beta, freq_factor, converged, dirname)
     type(simul_box_t),  intent(in) :: sb
     CMPLX,              intent(in) :: beta(:, :, :)
-    FLOAT,              intent(in) :: freq_factor(:)
+    FLOAT,              intent(in) :: freq_factor(3)
     logical,            intent(in) :: converged
     character(len=*),   intent(in) :: dirname
 

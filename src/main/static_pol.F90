@@ -606,6 +606,7 @@ contains
       CMPLX :: beta(MAX_DIM, MAX_DIM, MAX_DIM)
       integer :: iunit, idir
       type(unit_t) fn_unit
+      FLOAT :: freq_factor(3)
 
       call push_sub('static_pol.output_end_')
 
@@ -665,7 +666,8 @@ contains
         call io_output_tensor(iunit, alpha, gr%mesh%sb%dim, units_out%polarizability)
         call io_close(iunit)
         
-        call out_hyperpolarizability(gr%sb, beta, .true., EM_RESP_FD_DIR)
+        freq_factor(1:3) = M_ZERO ! for compatibility with em_resp version
+        call out_hyperpolarizability(gr%sb, beta, freq_factor(1:3), .true., EM_RESP_FD_DIR)
 
         if(calc_Born) call out_Born_charges(Born_charges, sys%geo, gr%mesh%sb%dim, EM_RESP_FD_DIR)
       end if
