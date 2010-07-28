@@ -379,8 +379,9 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   maxorb = maxorb*mult
   nbasis = nbasis*mult
 
-  write(message(1),'(a,i6,a)') 'Info: Performing LCAO calculation with ', nbasis, ' orbitals.'
-  call write_info(1)
+  write(message(1), '(a,i6,a)') 'Info: Performing LCAO calculation with ', nbasis, ' orbitals.'
+  write(message(2), '(a)') ' '
+  call write_info(2)
 
   if (nbasis < st%nst) then
     write(message(1), '(a)') 'Not enough atomic orbitals to initialize all states,'
@@ -422,6 +423,8 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
     if(this%derivative) maxradius = maxradius + lapdist
 
+    maxradius = min(maxradius, M_TWO*maxval(gr%mesh%sb%lsize(1:gr%mesh%sb%dim)))
+
     radius(iatom) = maxradius
 
     ! initialize the radial grid
@@ -433,11 +436,13 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   do ispin = 1, st%d%spin_channels
 
     if(st%d%spin_channels > 1) then
-      write(message(1), '(a,i1)') 'Info: LCAO for spin channel ', ispin
-      call write_info(1)
+      write(message(1), '(a)') ' '
+      write(message(2), '(a,i1)') 'LCAO for spin channel ', ispin
+      write(message(3), '(a)') ' '
+      call write_info(3)
     end if
 
-    message(1) = "Info: Calculating atomic orbitals."
+    message(1) = 'Calculating atomic orbitals.'
     call write_info(1)
 
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, nbasis)
@@ -473,8 +478,14 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
     do ik = st%d%kpt%start, st%d%kpt%end
       if(ispin /= states_dim_get_spin_index(st%d, ik)) cycle
 
-      message(1) = 'Info: Calculating matrix elements.'
-      if(st%d%nik > st%d%spin_channels) write(message(1), '(a,a,i5)') message(1), ' for k-point ', ik
+      if(st%d%nik > st%d%spin_channels) then
+        write(message(1), '(a)') ' '
+        write(message(2), '(a,i5)') 'LCAO for k-point ', states_dim_get_kpoint_index(st%d, ik)
+        write(message(3), '(a)') ' '
+        call write_info(3)
+      end if
+
+      message(1) = 'Calculating matrix elements.'
       call write_info(1)
 
       call profiling_in(prof_matrix, "LCAO_MATRIX")
@@ -498,7 +509,6 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
         do jatom = 1, geo%natoms
           if(jatom < iatom) cycle
-
 
           dist2 = sum((geo%atom(iatom)%x(1:MAX_DIM) - geo%atom(jatom)%x(1:MAX_DIM))**2)
 
@@ -551,7 +561,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       end if
 #endif
 
-      message(1) = "Info: Diagonalizing Hamiltonian."
+      message(1) = 'Diagonalizing Hamiltonian.'
       call write_info(1)
 
       call lalg_geneigensolve(nbasis, hamiltonian, overlap, ev)
@@ -560,8 +570,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
       call profiling_in(prof_wavefunction, "LCAO_WAVEFUNCTIONS")
 
-      message(1) = "Info: Generating wavefunctions."
-      if(st%d%nik > st%d%spin_channels) write(message(1), '(a,a,i5)') message(1), ' for k-point ', ik
+      message(1) = 'Generating wavefunctions.'
       call write_info(1)
 
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, nbasis)
