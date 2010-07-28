@@ -2665,7 +2665,8 @@ return
         end if
 
         if(present(gi_kinetic_energy_density)) then
-          call MPI_Allreduce(gi_kinetic_energy_density(1, is), tmp_reduce(1), der%mesh%np, MPI_FLOAT, MPI_SUM, grp%comm, mpi_err)
+          call MPI_Allreduce(gi_kinetic_energy_density(1, is), tmp_reduce(1), der%mesh%np, &
+               MPI_FLOAT, MPI_SUM, grp%comm, mpi_err)
           gi_kinetic_energy_density(1:der%mesh%np, is) = tmp_reduce(1:der%mesh%np)       
         end if
 
@@ -2681,7 +2682,8 @@ return
           end if
 
           if(present(density_gradient)) then
-            call MPI_Allreduce(density_gradient(1, i_dim, is), tmp_reduce(1), der%mesh%np, MPI_FLOAT, MPI_SUM, grp%comm, mpi_err)
+            call MPI_Allreduce(density_gradient(1, i_dim, is), tmp_reduce(1), der%mesh%np, &
+                 MPI_FLOAT, MPI_SUM, grp%comm, mpi_err)
             density_gradient(1:der%mesh%np, i_dim, is) = tmp_reduce(1:der%mesh%np)
           end if
         end do
