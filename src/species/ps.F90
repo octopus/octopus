@@ -48,6 +48,7 @@ module ps_m
     ps_getradius,               &
     ps_derivatives,             &
     ps_debug,                   &
+    ps_niwfs
     ps_end
 
   integer, parameter, public :: &
@@ -856,6 +857,33 @@ contains
 
     call pop_sub('ps.ps_upf_load')
   end subroutine ps_upf_load
+
+
+  !> Returns the number of atomic orbitals that can be used for LCAO calculations.
+  !!
+  pure integer function ps_niwfs(ps)
+    type(ps_t), intent(in) :: ps
+
+    integer :: i, l
+
+    ps_niwfs = 0
+    select case(ps%flavour)
+    case(PS_TYPE_PSF, PS_TYPE_CPI, PS_TYPE_FHI)
+      ! In this case we do not count the orbitals whose "l" number is larger than the "l_max" of the pseudo-potential.
+      do i = 1, ps%conf%p
+        l = ps%conf%l(i)
+        if(l <= ps%l_max) ps_niwfs = ps_niwfs + (2*l+1)
+      end do
+
+    case(PS_TYPE_HGH, PS_TYPE_UPF)
+      do i = 1, ps%conf%p
+        l = ps%conf%l(i)
+        ps_niwfs = ps_niwfs + (2*l+1)
+      end do
+    end select
+
+  end function ps_niwfs
+  ! ---------------------------------------------------------
 
 end module ps_m
 

@@ -365,7 +365,7 @@ contains
     logical, optional, intent(in)    :: print_info
 
     logical :: print_info_
-    integer :: i, l
+    integer :: i
     FLOAT   :: pot_re, pot_im, xx(MAX_DIM), rr
 
     call push_sub('species.species_init')
@@ -387,18 +387,7 @@ contains
       call ps_init(spec%ps, spec%label, spec%type, spec%Z, spec%lmax, spec%lloc, ispin)
       spec%z_val = spec%ps%z_val
       spec%nlcc = (spec%ps%icore /= 'nc  ' )
-      spec%niwfs = 0
-      do i = 1, spec%ps%conf%p
-        l = spec%ps%conf%l(i)
-
-        ! the input pseudo determines the maximum l we use
-        if(l <= spec%lmax) spec%niwfs = spec%niwfs + (2*l+1)
-
-        ! Another choice would be to use only the occupied atomic states,
-        ! usually yielding a slightly smaller basis. To use this strategy
-        ! uncomment the following line
-        !if(sum(spec%ps%conf%occ(i, :)).ne.M_ZERO) spec%niwfs = spec%niwfs + (2*l+1)
-      end do
+      spec%niwfs = ps_niwfs(spec%ps)
 
     case(SPEC_USDEF)
       if(print_info_) then
@@ -1082,10 +1071,8 @@ contains
       do is = 1, ispin
         n = 1
         do i = 1, spec%ps%conf%p
+          if(n > spec%niwfs) exit          
           l = spec%ps%conf%l(i)
-
-          ! the input pseudo determines the maximum l we use
-          if(l > spec%lmax) cycle
 
           do m = -l, l
             spec%iwf_i(n, is) = i
