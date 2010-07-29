@@ -48,7 +48,7 @@ module ps_m
     ps_getradius,               &
     ps_derivatives,             &
     ps_debug,                   &
-    ps_niwfs
+    ps_niwfs,                   &
     ps_end
 
   integer, parameter, public :: &
