@@ -729,7 +729,7 @@ contains
       SAFE_DEALLOCATE_P(hm%vtau)
     end if
 
-    call epot_end(hm%ep, gr, geo)
+    call epot_end(hm%ep, geo)
 
     SAFE_DEALLOCATE_P(hm%ab_pot)
 

@@ -131,7 +131,7 @@ contains
     type(geometry_t), intent(inout) :: geo
     integer,          intent(in)    :: ispin
 
-    integer :: ispec, ip, idir, ia
+    integer :: ispec, ip, idir, ia, gauge_2d
     type(block_t) :: blk
     FLOAT, allocatable :: grx(:)
     integer :: filter
@@ -237,6 +237,8 @@ contains
       end do
     end if
 
+
+
     !%Variable StaticMagneticField
     !%Type block
     !%Section Hamiltonian
@@ -257,6 +259,22 @@ contains
     nullify(ep%B_field, ep%A_static)
     if(parse_block(datasets_check('StaticMagneticField'), blk) == 0) then
 
+      !%Variable StaticMagneticField2DGauge
+      !%Type integer
+      !%Default 0
+      !%Section Hamiltonian
+      !%Description
+      !% The gauge of the static vector potential A when a magnetic field B = (0,0,B_z) is applied onto a 2D-system.
+      !%Option linear_xy 0
+      !% Linear gauge with A = ((1/2)/P_c)*(-y,x)*B_z. This is the default.
+      !%Option linear_y 1
+      !% Linear gauge with A = (1/P_c)*(-y,0)*B_z
+      !%End
+      call parse_integer(datasets_check('StaticMagneticField2DGauge'), 0, gauge_2d)
+      if(.not.varinfo_valid_option('StaticMagneticField2DGauge', gauge_2d)) &
+        call input_error('StaticMagneticField2DGauge')
+
+
       SAFE_ALLOCATE(ep%B_field(1:3))
       do idir = 1, 3
         call parse_block_float(blk, 0, idir - 1, ep%B_field(idir))
@@ -272,17 +290,30 @@ contains
       ! Compute the vector potential
       SAFE_ALLOCATE(ep%A_static(1:gr%mesh%np, 1:gr%mesh%sb%dim))
       SAFE_ALLOCATE(grx(1:gr%mesh%sb%dim))
-      do ip = 1, gr%mesh%np
-        grx(1:gr%mesh%sb%dim) = gr%mesh%x(ip, 1:gr%mesh%sb%dim)
-        select case (gr%mesh%sb%dim)
-        case (2)
-          ep%A_static(ip, :) = M_HALF/P_C*(/grx(2), -grx(1)/) * ep%B_field(3)
-        case (3)
-          ep%A_static(ip, :) = M_HALF/P_C*(/grx(2) * ep%B_field(3) - grx(3) * ep%B_field(2), &
-                                 grx(3) * ep%B_field(1) - grx(1) * ep%B_field(3), &
-                                 grx(1) * ep%B_field(2) - grx(2) * ep%B_field(1)/)
+
+      select case(gr%mesh%sb%dim)
+      case(2)
+        select case(gauge_2d)
+        case(0) ! linear_xy
+          do ip = 1, gr%mesh%np
+            grx(1:gr%mesh%sb%dim) = gr%mesh%x(ip, 1:gr%mesh%sb%dim)
+            ep%A_static(ip, :) = M_HALF/P_C*(/grx(2), -grx(1)/) * ep%B_field(3)
+          end do
+        case(1) ! linear y
+          do ip = 1, gr%mesh%np
+            grx(1:gr%mesh%sb%dim) = gr%mesh%x(ip, 1:gr%mesh%sb%dim)
+            ep%A_static(ip, :) = M_ONE/P_C*(/grx(2), M_ZERO/) * ep%B_field(3)
+          end do
         end select
-      end do
+      case(3)
+        do ip = 1, gr%mesh%np
+          grx(1:gr%mesh%sb%dim) = gr%mesh%x(ip, 1:gr%mesh%sb%dim)
+          ep%A_static(ip, :) = M_HALF/P_C*(/grx(2) * ep%B_field(3) - grx(3) * ep%B_field(2), &
+                               grx(3) * ep%B_field(1) - grx(1) * ep%B_field(3), &
+                               grx(1) * ep%B_field(2) - grx(2) * ep%B_field(1)/)
+        end do
+      end select
+
       SAFE_DEALLOCATE_A(grx)
 
     end if
@@ -373,9 +404,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine epot_end(ep, gr, geo)
+  subroutine epot_end(ep, geo)
     type(epot_t),      intent(inout) :: ep
-    type(grid_t),      intent(in)    :: gr
     type(geometry_t),  intent(inout) :: geo
 
     integer :: iproj
