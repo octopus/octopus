@@ -29,12 +29,11 @@ module poisson_isf_m
   use par_vec_m
   use parser_m
   use profiling_m
-  !use loct_m
-
+  
   implicit none
-
+  
   private
-
+  
   public ::               &
        poisson_isf_init,  &
        poisson_isf_solve, & 
@@ -136,59 +135,53 @@ contains
 
     default_nodes = 0 !All nodes
 
-	!%Variable PoissonSolverNodes
+    !%Variable PoissonSolverNodes
     !%Type integer
     !%Section Hamiltonian::Poisson
     !%Description
     !% Defines how much nodes to use to solve the Poisson equation. Default:
-	!% AllNodes
-	!%Option serial -1
-	!% Uses only one node to execute Poisson solver.
+    !% AllNodes
+    !%Option domain_nodes -2
+    !% Uses domain nodes to execute Poisson solver.
+    !%Option serial_nodes -1
+    !% Uses only one node to execute Poisson solver.
     !%Option all_nodes 0
     !% Uses all avaible MPI nodes to execute Poisson solver.
-    !%Option domain 1
-    !% Uses domain nodes to execute Poisson solver.
-    !%Option other_number 2
+    !%Option other_specific_nodes 1
     !% Uses specified number of node will be used.
     !%End
-	call parse_integer(datasets_check('PoissonSolverNodes'), default_nodes, nodes)
-	if (nodes >= 2) then
-
-	  do ii = 1,nodes
-		ranks(ii)=ii-1
-	  end do
-
-	  !create new communicator
-	  if (nodes >= 2) then
-
-		!Extract the original group handle and create new comm.
-	    call MPI_Comm_group(mpi_world%comm, world_grp, ierr)
-        call MPI_Group_incl(world_grp, nodes, ranks, poisson_grp, ierr)
-	    call MPI_Comm_create(mpi_world%comm,poisson_grp,specific_grp%comm,ierr)
-        !Fill the new data structure, for all nodes
-        if (mpi_world%rank < nodes) then
-	    	call MPI_Comm_rank(specific_grp%comm,specific_grp%rank,ierr)
-	    	call MPI_Comm_size(specific_grp%comm,specific_grp%size,ierr)
-    	else
-    	  specific_grp%comm = -1
-    	  specific_grp%rank = -1
-    	  specific_grp%size = -1
-    	end if
+    call parse_integer(datasets_check('PoissonSolverNodes'), default_nodes, nodes)
+    if (nodes >= 1) then    
+      do ii = 1,nodes
+        ranks(ii)=ii-1
+      end do
+      !create new communicator
+      !Extract the original group handle and create new comm.
+      call MPI_Comm_group(mpi_world%comm, world_grp, ierr)
+      call MPI_Group_incl(world_grp, nodes, ranks, poisson_grp, ierr)
+      call MPI_Comm_create(mpi_world%comm,poisson_grp,specific_grp%comm,ierr)
+      !Fill the new data structure, for all nodes
+      if (mpi_world%rank < nodes) then
+        call MPI_Comm_rank(specific_grp%comm,specific_grp%rank,ierr)
+        call MPI_Comm_size(specific_grp%comm,specific_grp%size,ierr)
+      else
+        specific_grp%comm = -1
+        specific_grp%rank = -1
+        specific_grp%size = -1
       end if
-
-	end if
+    end if
     ! Allocate to configurations. The initialisation, especially the kernel,
     ! depends on the number of nodes used for the calculations. To avoid
     ! recalculating the kernel on each call of poisson_isf_solve depending on
     ! the all_nodes argument, both kernels are calculated.
     mpi_world_orig = mpi_world
-	if (nodes >= 2) then
+    if (nodes >= 1) then
       cnf(world)%mpi_grp = specific_grp
     else
       cnf(world)%mpi_grp = mpi_world
     end if
     cnf(domain)%mpi_grp = mesh%mpi_grp
-
+    
     ! Build the kernel for all configurations. At the moment, this is
     ! solving the poisson equation with all nodes (i_cnf == world) and
     ! with the domain nodes only (i_cnf == domain).
@@ -199,8 +192,7 @@ contains
         nullify(cnf(i_cnf)%kernel)
         cycle
       end if
-      !hemen aldatu in barko litzateke mpi_world aldagaia nik aldatu gabe daukatelako.
-	  if (cnf(i_cnf)%mpi_grp%rank /= -1 .or. i_cnf /= world ) then
+      if (cnf(i_cnf)%mpi_grp%rank /= -1 .or. i_cnf /= world ) then
         call par_calculate_dimensions(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),         &
           m1, m2, m3, n1, n2, n3, md1, md2, md3, cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, &
           cnf(i_cnf)%nfft3, cnf(i_cnf)%mpi_grp%size)
