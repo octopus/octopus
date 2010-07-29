@@ -21,12 +21,15 @@
 
 module poisson_isf_m
   use cube_function_m
+  use datasets_m
   use global_m
   use messages_m
   use mesh_m
   use mpi_m
   use par_vec_m
+  use parser_m
   use profiling_m
+  !use loct_m
 
   implicit none
 
@@ -51,8 +54,11 @@ module poisson_isf_m
   integer, parameter :: domain = 3
   integer, parameter :: n_cnf = 3
 
+  ! Save the original MPI group
+  type(mpi_grp_t) :: mpi_world_orig
+
   type(dcf_t)                  :: rho_cf
-  type(isf_cnf_t)              :: cnf(1:3)
+  type(isf_cnf_t)              :: cnf(1:4)
   integer, parameter           :: order_scaling_function = 8 
 
   ! Interface to the Poisson solver calls
@@ -91,7 +97,16 @@ contains
     integer :: n(3)
     integer :: i_cnf
     logical :: init_world_
+	integer :: default_nodes
+	type(mpi_grp_t) :: specific_grp
+	integer :: ierr, world_grp, poisson_grp, ii
+	integer :: ranks(1000)
+	!data ranks /0, 1/
 #endif
+	integer :: nodes 	!< -1 = one node
+	  				 	!! 0 = all nodes
+	   					!! 1 = domain_nodes
+	   					!! +2 number specified. A new communicator will be created for that
 
     call push_sub('poisson_isf.poisson_isf_init')
 
@@ -117,13 +132,61 @@ contains
         cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3, &
         real(mesh%spacing(1), 8), order_scaling_function, cnf(serial)%kernel)
     end if
-
 #if defined(HAVE_MPI)
+
+    default_nodes = 0 !All nodes
+
+	!%Variable PoissonSolverNodes
+    !%Type integer
+    !%Section Hamiltonian::Poisson
+    !%Description
+    !% Defines how much nodes to use to solve the Poisson equation. Default:
+	!% AllNodes
+	!%Option serial -1
+	!% Uses only one node to execute Poisson solver.
+    !%Option all_nodes 0
+    !% Uses all avaible MPI nodes to execute Poisson solver.
+    !%Option domain 1
+    !% Uses domain nodes to execute Poisson solver.
+    !%Option other_number 2
+    !% Uses specified number of node will be used.
+    !%End
+	call parse_integer(datasets_check('PoissonSolverNodes'), default_nodes, nodes)
+	if (nodes >= 2) then
+
+	  do ii = 1,nodes
+		ranks(ii)=ii-1
+	  end do
+
+	  !create new communicator
+	  if (nodes >= 2) then
+
+		!Extract the original group handle and create new comm.
+	    call MPI_Comm_group(mpi_world%comm, world_grp, ierr)
+        call MPI_Group_incl(world_grp, nodes, ranks, poisson_grp, ierr)
+	    call MPI_Comm_create(mpi_world%comm,poisson_grp,specific_grp%comm,ierr)
+        !Fill the new data structure, for all nodes
+        if (mpi_world%rank < nodes) then
+	    	call MPI_Comm_rank(specific_grp%comm,specific_grp%rank,ierr)
+	    	call MPI_Comm_size(specific_grp%comm,specific_grp%size,ierr)
+    	else
+    	  specific_grp%comm = -1
+    	  specific_grp%rank = -1
+    	  specific_grp%size = -1
+    	end if
+      end if
+
+	end if
     ! Allocate to configurations. The initialisation, especially the kernel,
     ! depends on the number of nodes used for the calculations. To avoid
     ! recalculating the kernel on each call of poisson_isf_solve depending on
     ! the all_nodes argument, both kernels are calculated.
-    cnf(world)%mpi_grp = mpi_world
+    mpi_world_orig = mpi_world
+	if (nodes >= 2) then
+      cnf(world)%mpi_grp = specific_grp
+    else
+      cnf(world)%mpi_grp = mpi_world
+    end if
     cnf(domain)%mpi_grp = mesh%mpi_grp
 
     ! Build the kernel for all configurations. At the moment, this is
@@ -136,23 +199,28 @@ contains
         nullify(cnf(i_cnf)%kernel)
         cycle
       end if
+      !hemen aldatu in barko litzateke mpi_world aldagaia nik aldatu gabe daukatelako.
+	  if (cnf(i_cnf)%mpi_grp%rank /= -1 .or. i_cnf /= world ) then
+        call par_calculate_dimensions(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),         &
+          m1, m2, m3, n1, n2, n3, md1, md2, md3, cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, &
+          cnf(i_cnf)%nfft3, cnf(i_cnf)%mpi_grp%size)
 
-      call par_calculate_dimensions(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),         &
-        m1, m2, m3, n1, n2, n3, md1, md2, md3, cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, &
-        cnf(i_cnf)%nfft3, cnf(i_cnf)%mpi_grp%size)
+        ! Shortcuts to avoid to "line too long" errors.
+        n(1) = cnf(i_cnf)%nfft1
+        n(2) = cnf(i_cnf)%nfft2
+        n(3) = cnf(i_cnf)%nfft3
 
-      ! Shortcuts to avoid to "line too long" errors.
-      n(1) = cnf(i_cnf)%nfft1
-      n(2) = cnf(i_cnf)%nfft2
-      n(3) = cnf(i_cnf)%nfft3
+        SAFE_ALLOCATE(cnf(i_cnf)%kernel(1:n(1), 1:n(2), 1:n(3)/cnf(i_cnf)%mpi_grp%size))
 
-      SAFE_ALLOCATE(cnf(i_cnf)%kernel(1:n(1), 1:n(2), 1:n(3)/cnf(i_cnf)%mpi_grp%size))
-
-    call par_build_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), n1, n2, n3,     &
-      cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, cnf(i_cnf)%nfft3,                      &
-      mesh%spacing(1), order_scaling_function,                                            &
-      cnf(i_cnf)%mpi_grp%rank, cnf(i_cnf)%mpi_grp%size, cnf(i_cnf)%mpi_grp%comm, &
-      cnf(i_cnf)%kernel)
+        call par_build_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), n1, n2, n3,     &
+          cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, cnf(i_cnf)%nfft3,                      &
+          mesh%spacing(1), order_scaling_function,                                            &
+          cnf(i_cnf)%mpi_grp%rank, cnf(i_cnf)%mpi_grp%size, cnf(i_cnf)%mpi_grp%comm, &
+          cnf(i_cnf)%kernel)
+      else
+      	nullify(cnf(i_cnf)%kernel)
+      	cycle
+      end if
     end do
 #endif
 
@@ -172,12 +240,19 @@ contains
     FLOAT, allocatable :: pot_global(:)
 #endif
     real(8), pointer :: rhop(:,:,:)
+    
+    !variables to meassure the global comunications time
+    real :: t0,t1,tel
+    !integer :: count1,count2,count_rate,count_max
+    !integer :: sec1,sec2,usec1,usec2,sec1_t,sec2_t,usec1_t,usec2_t
 
     call push_sub('poisson_isf.poisson_isf_solve')
+    !call loct_gettimeofday(sec1_t,usec1_t)
 
     call dcf_alloc_RS(rho_cf)
 
     if(mesh%parallel_in_domains) then
+    
 #if defined(HAVE_MPI)
       SAFE_ALLOCATE(rho_global(1:mesh%np_global))
       SAFE_ALLOCATE(pot_global(1:mesh%np_global))
@@ -185,7 +260,14 @@ contains
       ! At this point, dvec_allgather is required because the ISF solver
       ! uses another data distribution algorithm than for the mesh functions
       ! for which every node requires the full data.
+
+      !call loct_gettimeofday(sec1,usec1)
       call dvec_allgather(mesh%vp, rho_global, rho)
+      !call loct_gettimeofday(sec2,usec2)
+      !call time_diff(sec1,usec1,sec2,usec2)
+     
+      !write(78,*) 'PSolver: 1st DVEC_ALLGATHER TIME',sec2,'us',usec2
+     
       call dmesh_to_cube(mesh, rho_global, rho_cf)
 #endif
     else
@@ -227,26 +309,38 @@ contains
 
 #if defined(HAVE_MPI)
     else
-      call par_psolver_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), &
-        cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, cnf(i_cnf)%nfft3,  &
-        real(mesh%spacing(1), 8), cnf(i_cnf)%kernel, rho_cf%RS,                      &
-        cnf(i_cnf)%mpi_grp%rank, cnf(i_cnf)%mpi_grp%size, cnf(i_cnf)%mpi_grp%comm)
+      if (cnf(i_cnf)%mpi_grp%size /= -1 .or. i_cnf /= world) then
+        call par_psolver_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), &
+          cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, cnf(i_cnf)%nfft3,  &
+          real(mesh%spacing(1), 8), cnf(i_cnf)%kernel, rho_cf%RS,                      &
+          cnf(i_cnf)%mpi_grp%rank, cnf(i_cnf)%mpi_grp%size, cnf(i_cnf)%mpi_grp%comm)
+      end if
 #endif
-    endif
+    end if
 
     if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
-      call dcube_to_mesh(mesh, rho_cf, pot_global)
-      call dvec_scatter(mesh%vp, mesh%vp%root, pot_global, pot)
-      SAFE_DEALLOCATE_A(rho_global)
-      SAFE_DEALLOCATE_A(pot_global)
+       call dcube_to_mesh(mesh, rho_cf, pot_global)
+
+       !call loct_gettimeofday(sec1,usec1)
+       call dvec_scatter(mesh%vp, mesh%vp%root, pot_global, pot)
+       !call loct_gettimeofday(sec2,usec2)
+       !call time_diff(sec1,usec1,sec2,usec2)
+       
+       !write(78,*) 'PSolver: 1st DVEC_SCATTER TIME',sec2,'us',usec2
+
+       SAFE_DEALLOCATE_A(rho_global)
+       SAFE_DEALLOCATE_A(pot_global)
 #endif
     else
-      call dcube_to_mesh(mesh, rho_cf, pot)
+       call dcube_to_mesh(mesh, rho_cf, pot)
     end if
-
+    
     call dcf_free_RS(rho_cf)
     
+    !call loct_gettimeofday(sec2_t,usec2_t)
+    !call time_diff(sec1_t,usec1_t,sec2_t,usec2_t)
+    !write(78,*) 'PoissonTime: iteration POISSON TIME',sec2_t,'us',usec2_t
     call pop_sub('poisson_isf.poisson_isf_solve')
   end subroutine poisson_isf_solve
 
