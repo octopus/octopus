@@ -100,20 +100,7 @@ module mesh_m
     
     FLOAT, pointer :: x(:,:)            !< The (local) points,
     integer, pointer :: resolution(:, :, :)
-    FLOAT, pointer :: vol_pp(:)         !< Element of volume for integrations
-    ! for local points.
-    integer :: nper                     !< the number of points that correpond to pbc
-    integer, pointer :: per_points(:)   !< (1:nper) the list of points that correspond to pbc 
-    integer, pointer :: per_map(:)      !< (1:nper) the inner point that corresponds to each pbc point
-#ifdef HAVE_MPI
-    integer, pointer :: nsend(:)
-    integer, pointer :: nrecv(:)
-    integer, pointer :: dsend_type(:)
-    integer, pointer :: zsend_type(:)
-    integer, pointer :: drecv_type(:)
-    integer, pointer :: zrecv_type(:)
-#endif
-    
+    FLOAT, pointer               :: vol_pp(:)         !< Element of volume for integrations of local points.
   end type mesh_t
   
   !> This data type defines a plane, and a regular grid defined on 
@@ -487,8 +474,7 @@ contains
     read(iunit, '(a20,1i10)') str, mesh%np_part
     read(iunit, '(a20,1i10)') str, mesh%np_global
     read(iunit, '(a20,1i10)') str, mesh%np_part_global
-    nullify(mesh%idx%lxyz, mesh%idx%lxyz_inv, mesh%x, &
-      mesh%vol_pp, mesh%per_points, mesh%per_map, mesh%resolution)
+    nullify(mesh%idx%lxyz, mesh%idx%lxyz_inv, mesh%x, mesh%vol_pp, mesh%resolution)
     mesh%parallel_in_domains = .false.
 
     call pop_sub('mesh.mesh_init_from_file')
@@ -701,31 +687,8 @@ contains
     if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
       call vec_end(mesh%vp)
-      if(simul_box_is_periodic(mesh%sb)) then
-
-        do ipart = 1, mesh%vp%npart
-          if(mesh%nsend(ipart) /= 0) then 
-            call MPI_Type_free(mesh%dsend_type(ipart), mpi_err)
-            call MPI_Type_free(mesh%zsend_type(ipart), mpi_err)
-          end if
-          if(mesh%nrecv(ipart) /= 0) then 
-            call MPI_Type_free(mesh%drecv_type(ipart), mpi_err)
-            call MPI_Type_free(mesh%zrecv_type(ipart), mpi_err)
-          end if
-        end do
-
-        SAFE_DEALLOCATE_P(mesh%dsend_type)
-        SAFE_DEALLOCATE_P(mesh%zsend_type)
-        SAFE_DEALLOCATE_P(mesh%drecv_type)
-        SAFE_DEALLOCATE_P(mesh%zrecv_type)
-        SAFE_DEALLOCATE_P(mesh%nsend)
-        SAFE_DEALLOCATE_P(mesh%nrecv)
-      end if
 #endif
     end if
-
-    SAFE_DEALLOCATE_P(mesh%per_points)
-    SAFE_DEALLOCATE_P(mesh%per_map)
 
     call pop_sub('mesh.mesh_end')
   end subroutine mesh_end

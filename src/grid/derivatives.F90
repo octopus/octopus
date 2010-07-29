@@ -96,6 +96,7 @@ module derivatives_m
     NON_BLOCKING = 2 
 
   type derivatives_t
+    type(boundaries_t)    :: boundaries
     type(mesh_t), pointer :: mesh          ! pointer to the underlying mesh
     integer               :: dim           ! dimensionality of the space (sb%dim)
     integer               :: order         ! order of the discretization (value depends on stencil)
@@ -289,6 +290,8 @@ contains
     nullify(der%to_coarser)
     nullify(der%to_finer)
 
+    call boundaries_end(der%boundaries)
+
     call pop_sub('derivatives.derivatives_end')
   end subroutine derivatives_end
 
@@ -408,6 +411,8 @@ contains
     type(nl_operator_t) :: auxop
 
     call push_sub('derivatives.derivatives_build')
+
+    call boundaries_init(der%boundaries, mesh)
 
     ASSERT(associated(der%op))
     ASSERT(der%stencil_type>=DER_STAR .and. der%stencil_type<=DER_STARPLUS)

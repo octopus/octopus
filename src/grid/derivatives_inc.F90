@@ -175,28 +175,28 @@ contains
 
       do ist = 1, ffb%nst_linear
         do ipart = 1, der%mesh%vp%npart
-          if(ipart == der%mesh%vp%partno .or. der%mesh%nrecv(ipart) == 0) cycle
+          if(ipart == der%mesh%vp%partno .or. der%boundaries%nrecv(ipart) == 0) cycle
 
           ff => ffb%states_linear(ist)%X(psi)
           nreq = nreq + 1
-          call MPI_Irecv(ff(1), 1, der%mesh%X(recv_type)(ipart), ipart - 1, 3, &
+          call MPI_Irecv(ff(1), 1, der%boundaries%X(recv_type)(ipart), ipart - 1, 3, &
             der%mesh%vp%comm, req(nreq), mpi_err)
         end do
       end do
       
       do ist = 1, ffb%nst_linear
         do ipart = 1, der%mesh%vp%npart
-          if(ipart == der%mesh%vp%partno .or. der%mesh%nsend(ipart) == 0) cycle
+          if(ipart == der%mesh%vp%partno .or. der%boundaries%nsend(ipart) == 0) cycle
 
           ff => ffb%states_linear(ist)%X(psi)
           nreq = nreq + 1
-          call MPI_Isend(ff(1), 1, der%mesh%X(send_type)(ipart), ipart - 1, 3, &
+          call MPI_Isend(ff(1), 1, der%boundaries%X(send_type)(ipart), ipart - 1, 3, &
             der%mesh%vp%comm, req(nreq), mpi_err)
         end do
       end do
       
       call profiling_count_transfers(  &
-        sum(der%mesh%nsend(1:der%mesh%vp%npart) + der%mesh%nrecv(1:der%mesh%vp%npart)) * ffb%nst_linear, &
+        sum(der%boundaries%nsend(1:der%mesh%vp%npart) + der%boundaries%nrecv(1:der%mesh%vp%npart)) * ffb%nst_linear, &
         R_TOTYPE(M_ONE))
       
       call profiling_out(set_bc_comm_prof)
@@ -205,8 +205,8 @@ contains
     
     do ist = 1, ffb%nst_linear
       ff => ffb%states_linear(ist)%X(psi)
-      forall (ip = 1:der%mesh%nper)
-        ff(der%mesh%per_points(ip)) = ff(der%mesh%per_map(ip))
+      forall (ip = 1:der%boundaries%nper)
+        ff(der%boundaries%per_points(ip)) = ff(der%boundaries%per_map(ip))
       end forall
     end do
     

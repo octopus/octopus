@@ -140,6 +140,6 @@ symmetrizer.o : symmetrizer.F90 symmetrizer_inc.F90 mesh.o
 partition.o : partition.F90 mesh.o
 partitioner.o : partitioner.F90 partition.o
 subarray.o : subarray.F90 subarray_inc.F90 batch.o
-boundaries.o : boundaries.F90 boundaries_inc.F90 subarray.o batch.o par_vec.o
+boundaries.o : boundaries.F90 boundaries_inc.F90 subarray.o batch.o par_vec.o mesh.o
 operate.o : operate.c operate_inc.c
 mesh_alltoall.o : mesh_alltoall.F90 mesh.o batch.o mesh_alltoall_inc.F90
