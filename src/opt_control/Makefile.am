@@ -22,7 +22,7 @@
 noinst_LIBRARIES = libopt_control.a
 
 libopt_control_a_SOURCES = \
-	opt_control_global.F90 filters.F90 controlfunction.F90 iter.F90 \
+	opt_control_global.F90 opt_control_state.F90 filters.F90 controlfunction.F90 iter.F90 \
 	target.F90 propagation.F90 initst.F90 opt_control.F90
 
 noinst_HEADERS = \

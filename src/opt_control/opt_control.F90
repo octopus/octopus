@@ -40,6 +40,7 @@ module opt_control_m
   use newuoa_m
 #endif
   use opt_control_global_m
+  use opt_control_state_m
   use opt_control_propagation_m
   use opt_control_iter_m
   use opt_control_target_m
