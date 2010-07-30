@@ -39,6 +39,7 @@ module mesh_alltoall_m
 
 #if defined(HAVE_MPI)
   public ::                        &
+    mesh_alltoall_t,               &
     mesh_alltoall_init,            &
     mesh_alltoall_end,             &
     dmesh_alltoall_batch_start,    &
