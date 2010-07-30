@@ -92,6 +92,8 @@ module hamiltonian_base_m
     integer                           :: full_projection_size
 #ifdef HAVE_OPENCL
     type(opencl_mem_t)                :: potential_opencl
+    type(opencl_mem_t)                :: buff_matrices_offsets
+    type(opencl_mem_t)                :: buff_matrices
 #endif
   end type hamiltonian_base_t
 
@@ -233,7 +235,7 @@ contains
     type(mesh_t),             intent(in)    :: mesh
 
     integer :: ispin
-    integer(SIZEOF_SIZE_T) :: offset
+    integer :: offset
 
     call push_sub('hamiltonian_base.hamiltonian_check')
 
@@ -280,12 +282,22 @@ contains
     type(hamiltonian_base_t), intent(inout) :: this
 
     integer :: iproj
+
     if(associated(this%projector_matrices)) then
+
+#ifdef HAVE_OPENCL
+      if(opencl_is_enabled()) then
+        call opencl_release_buffer(this%buff_matrices)
+        call opencl_release_buffer(this%buff_matrices_offsets)
+      end if
+#endif
+
       do iproj = 1, this%nprojector_matrices
         call projector_matrix_deallocate(this%projector_matrices(1))
       end do
       SAFE_DEALLOCATE_P(this%projector_matrices)
     end if
+
   end subroutine hamiltonian_base_destroy_proj
 
   !-----------------------------------------------------------------
@@ -379,12 +391,53 @@ contains
       if(opencl_is_enabled()) then
         call opencl_write_buffer(pmat%buff_map, pmat%npoints, pmat%map)
         call opencl_write_buffer(pmat%buff_scal, pmat%nprojs, pmat%scal)
-        call opencl_write_buffer(pmat%buff_projectors, pmat%nprojs*pmat%npoints, pmat%projectors)
       end if
 #endif
     end do
-    
+
+#ifdef HAVE_OPENCL
+    if(opencl_is_enabled()) call build_opencl()
+#endif
+
     call pop_sub('hamiltonian_base.hamiltonian_base_build_proj')
+  contains
+
+    subroutine build_opencl()
+#ifdef HAVE_OPENCL
+      integer              :: matrix_size
+      integer, allocatable :: matrix_offsets(:)
+
+      SAFE_ALLOCATE(matrix_offsets(1:this%nprojector_matrices))
+
+      ! first we count
+      matrix_size = 0
+      do imat = 1, this%nprojector_matrices
+        pmat => this%projector_matrices(imat)
+
+        matrix_offsets(imat) = matrix_size
+        INCR(matrix_size, pmat%npoints*pmat%nprojs)
+      end do
+        
+      ! allocate
+      call opencl_create_buffer(this%buff_matrices, CL_MEM_READ_ONLY, TYPE_FLOAT, matrix_size)
+    
+      ! now copy
+      do imat = 1, this%nprojector_matrices
+        pmat => this%projector_matrices(imat)
+        
+        call opencl_write_buffer(this%buff_matrices, pmat%nprojs*pmat%npoints, pmat%projectors, offset = matrix_offsets(imat))
+      end do
+
+      ! now write the offsets
+      call opencl_create_buffer(this%buff_matrices_offsets, CL_MEM_READ_ONLY, TYPE_INTEGER, this%nprojector_matrices)
+      call opencl_write_buffer(this%buff_matrices_offsets, this%nprojector_matrices, matrix_offsets)
+
+      SAFE_DEALLOCATE_A(matrix_offsets)
+
+#endif  
+
+    end subroutine build_opencl
+
   end subroutine hamiltonian_base_build_proj
     
   ! ----------------------------------------------------------------------------------

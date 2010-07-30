@@ -22,7 +22,7 @@ subroutine X(opencl_write_buffer)(this, size, data, offset)
   type(opencl_mem_t),               intent(inout) :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(in)    :: data(:)
-  integer(SIZEOF_SIZE_T), optional, intent(in)    :: offset
+  integer,                optional, intent(in)    :: offset
 
   integer(SIZEOF_SIZE_T) :: fsize, offset_
   integer :: ierr
@@ -49,7 +49,7 @@ subroutine X(opencl_write_buffer_2)(this, size, data, offset)
   type(opencl_mem_t),               intent(inout) :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(in)    :: data(:, :)
-  integer(SIZEOF_SIZE_T), optional, intent(in)    :: offset
+  integer,                optional, intent(in)    :: offset
 
   integer(SIZEOF_SIZE_T) :: fsize, offset_
   integer :: ierr
@@ -76,7 +76,7 @@ subroutine X(opencl_read_buffer)(this, size, data, offset)
   type(opencl_mem_t),               intent(inout) :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(out)   :: data(:)
-  integer(SIZEOF_SIZE_T), optional, intent(in)    :: offset
+  integer,                optional, intent(in)    :: offset
 
   integer(SIZEOF_SIZE_T) :: fsize, offset_
   integer :: ierr
@@ -102,7 +102,7 @@ subroutine X(opencl_read_buffer_2)(this, size, data, offset)
   type(opencl_mem_t),               intent(inout) :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(out)   :: data(:, :)
-  integer(SIZEOF_SIZE_T), optional, intent(in)    :: offset
+  integer,                optional, intent(in)    :: offset
 
   integer(SIZEOF_SIZE_T) :: fsize, offset_
   integer :: ierr

@@ -44,7 +44,6 @@ module projector_matrix_m
     integer          :: nprojs
 #ifdef HAVE_OPENCL
     type(opencl_mem_t) :: buff_map
-    type(opencl_mem_t) :: buff_projectors
     type(opencl_mem_t) :: buff_scal
     logical            :: buffers_allocated
 #endif    
@@ -83,7 +82,6 @@ contains
       this%buffers_allocated = .true.
       call opencl_create_buffer(this%buff_map, CL_MEM_READ_ONLY, TYPE_INTEGER, npoints)
       call opencl_create_buffer(this%buff_scal, CL_MEM_READ_ONLY, TYPE_FLOAT, nprojs)
-      call opencl_create_buffer(this%buff_projectors, CL_MEM_READ_ONLY, TYPE_FLOAT, nprojs*npoints)
     end if
 #endif
 
@@ -105,7 +103,6 @@ contains
       this%buffers_allocated = .false.
       call opencl_release_buffer(this%buff_map)
       call opencl_release_buffer(this%buff_scal)
-      call opencl_release_buffer(this%buff_projectors)
     end if
 #endif
 

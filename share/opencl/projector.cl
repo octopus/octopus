@@ -21,11 +21,12 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-__kernel void projector_bra(const int npoints,
+__kernel void projector_bra(const int imat,
+			    const int npoints,
 			    const int nprojs,
 			    __global const int * map,
 			    __constant const double * scal,
-			    __global const double * matrix, const int ldmatrix,
+			    const __global int * matrix_offsets, __global const double * matrix,
 			    __global const double * psi, const int ldpsi,
 			    __global double * projection, const int ldprojection, const int projection_offset
 			    ){
@@ -37,16 +38,17 @@ __kernel void projector_bra(const int npoints,
   
   double aa = 0.0;
   for(int ip = 0; ip < npoints; ip++){
-    aa += matrix[ip + ldmatrix*ipj]*psi[ldpsi*(map[ip] - 1) + ist];
+    aa += matrix[matrix_offsets[imat] + ip + npoints*ipj]*psi[ldpsi*(map[ip] - 1) + ist];
   }
   projection[projection_offset + ist + ldprojection*ipj] = scal[ipj]*aa;
 
 }
 
-__kernel void projector_ket(const int npoints,
+__kernel void projector_ket(const int imat, 
+			    const int npoints,
 			    const int nprojs,
 			    __global const int * map,
-			    __global const double * matrix, const int ldmatrix,
+			    const __global int * matrix_offsets, __global const double * matrix,
 			    __global const double * projection, const int ldprojection, const int projection_offset,
 			    __global double * psi, const int ldpsi
 			    ){
@@ -58,7 +60,7 @@ __kernel void projector_ket(const int npoints,
 
   double aa = 0.0;
   for(int ipj = 0; ipj < nprojs; ipj++){
-    aa += matrix[ip + ldmatrix*ipj]*projection[projection_offset + ist + ldprojection*ipj];
+    aa += matrix[matrix_offsets[imat] + ip + npoints*ipj]*projection[projection_offset + ist + ldprojection*ipj];
   }
   psi[ldpsi*(map[ip] - 1) + ist] += aa;
 
