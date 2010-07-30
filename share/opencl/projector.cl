@@ -24,31 +24,37 @@
 __kernel void projector_bra(const int imat,
 			    const int npoints,
 			    const int nprojs,
+			    const __global int * offsets,
+			    __global const double * matrix,
 			    __global const int * map,
-			    __constant const double * scal,
-			    const __global int * matrix_offsets, __global const double * matrix,
+			    __global const double * scal,
 			    __global const double * psi, const int ldpsi,
 			    __global double * projection, const int ldprojection, const int projection_offset
 			    ){
   
-  int ist = get_global_id(0);
-  int ipj = get_global_id(1);
-  
+  const int ist = get_global_id(0);
+  const int ipj = get_global_id(1);
+
   if(ipj >= nprojs) return;
   
+  const int matrix_offset = offsets[4*imat    ];
+  const int map_offset    = offsets[4*imat + 1];
+  const int scal_offset   = offsets[4*imat + 2];
+
   double aa = 0.0;
   for(int ip = 0; ip < npoints; ip++){
-    aa += matrix[matrix_offsets[imat] + ip + npoints*ipj]*psi[ldpsi*(map[ip] - 1) + ist];
+    aa += matrix[matrix_offset + ip + npoints*ipj]*psi[ldpsi*(map[map_offset + ip] - 1) + ist];
   }
-  projection[projection_offset + ist + ldprojection*ipj] = scal[ipj]*aa;
+  projection[projection_offset + ist + ldprojection*ipj] = scal[scal_offset + ipj]*aa;
 
 }
 
 __kernel void projector_ket(const int imat, 
 			    const int npoints,
 			    const int nprojs,
+			    const __global int * offsets,
+			    __global const double * matrix,
 			    __global const int * map,
-			    const __global int * matrix_offsets, __global const double * matrix,
 			    __global const double * projection, const int ldprojection, const int projection_offset,
 			    __global double * psi, const int ldpsi
 			    ){
@@ -58,11 +64,14 @@ __kernel void projector_ket(const int imat,
 
   if(ip >= npoints) return;
 
+  const int matrix_offset = offsets[4*imat    ];
+  const int map_offset    = offsets[4*imat + 1];
+
   double aa = 0.0;
   for(int ipj = 0; ipj < nprojs; ipj++){
-    aa += matrix[matrix_offsets[imat] + ip + npoints*ipj]*projection[projection_offset + ist + ldprojection*ipj];
+    aa += matrix[matrix_offset + ip + npoints*ipj]*projection[projection_offset + ist + ldprojection*ipj];
   }
-  psi[ldpsi*(map[ip] - 1) + ist] += aa;
+  psi[ldpsi*(map[map_offset + ip] - 1) + ist] += aa;
 
 
 }
