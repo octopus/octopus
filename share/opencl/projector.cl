@@ -21,7 +21,8 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-__kernel void projector_bra(const __global int * sizes,
+__kernel void projector_bra(const int nmat,
+			    const __global int * sizes,
 			    const __global int * offsets,
 			    __global const double * matrix,
 			    __global const int * map,
@@ -40,7 +41,7 @@ __kernel void projector_bra(const __global int * sizes,
   const int map_offset    = offsets[4*imat + 1];
   const int scal_offset   = offsets[4*imat + 2];
 
-  if(ipj >= nprojs) return;
+  if(ipj >= nprojs || imat >= nmat) return;
 
   double aa = 0.0;
   for(int ip = 0; ip < npoints; ip++){

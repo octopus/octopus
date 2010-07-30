@@ -333,25 +333,27 @@ contains
 
   subroutine start_opencl()
 #ifdef HAVE_OPENCL
-    integer :: padnprojs
+    integer :: padnprojs, wgsize
     type(profile_t), save :: prof
 
     call profiling_in(prof, "CL_PROJ_BRA")
 
-    call opencl_set_kernel_arg(kernel_projector_bra, 0, this%buff_sizes)
-    call opencl_set_kernel_arg(kernel_projector_bra, 1, this%buff_offsets)
-    call opencl_set_kernel_arg(kernel_projector_bra, 2, this%buff_matrices)
-    call opencl_set_kernel_arg(kernel_projector_bra, 3, this%buff_maps)
-    call opencl_set_kernel_arg(kernel_projector_bra, 4, this%buff_scals)
-    call opencl_set_kernel_arg(kernel_projector_bra, 5, psib%pack%buffer)
-    call opencl_set_kernel_arg(kernel_projector_bra, 6, psib%pack%size_real(1))
-    call opencl_set_kernel_arg(kernel_projector_bra, 7, projection%buff_projection)
-    call opencl_set_kernel_arg(kernel_projector_bra, 8, psib%pack%size_real(1))
-    
+    call opencl_set_kernel_arg(kernel_projector_bra, 0, this%nprojector_matrices)
+    call opencl_set_kernel_arg(kernel_projector_bra, 1, this%buff_sizes)
+    call opencl_set_kernel_arg(kernel_projector_bra, 2, this%buff_offsets)
+    call opencl_set_kernel_arg(kernel_projector_bra, 3, this%buff_matrices)
+    call opencl_set_kernel_arg(kernel_projector_bra, 4, this%buff_maps)
+    call opencl_set_kernel_arg(kernel_projector_bra, 5, this%buff_scals)
+    call opencl_set_kernel_arg(kernel_projector_bra, 6, psib%pack%buffer)
+    call opencl_set_kernel_arg(kernel_projector_bra, 7, psib%pack%size_real(1))
+    call opencl_set_kernel_arg(kernel_projector_bra, 8, projection%buff_projection)
+    call opencl_set_kernel_arg(kernel_projector_bra, 9, psib%pack%size_real(1))
+
     padnprojs = pad_pow2(this%max_nprojs)
+    wgsize = opencl_max_workgroup_size()/(psib%pack%size_real(1)*padnprojs)
 
     call opencl_kernel_run(kernel_projector_bra, &
-      (/psib%pack%size_real(1), padnprojs, this%nprojector_matrices/), (/psib%pack%size_real(1), padnprojs, 1/))
+      (/psib%pack%size_real(1), padnprojs, pad(this%nprojector_matrices, wgsize)/), (/psib%pack%size_real(1), padnprojs, wgsize/))
 
     call profiling_out(prof)
 #endif
@@ -476,7 +478,8 @@ contains
     type(profile_t), save :: prof
 
     ! In this case we run one kernel per projector, since all write to
-    ! the wave-function.
+    ! the wave-function. Otherwise we would need to do atomic
+    ! operations.
 
     do imat = 1, this%nprojector_matrices
 
