@@ -21,56 +21,62 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-__kernel void projector_bra(const int imat,
-			    const int npoints,
-			    const int nprojs,
+__kernel void projector_bra(const __global int * sizes,
 			    const __global int * offsets,
 			    __global const double * matrix,
 			    __global const int * map,
 			    __global const double * scal,
 			    __global const double * psi, const int ldpsi,
-			    __global double * projection, const int ldprojection, const int projection_offset
+			    __global double * projection, const int ldprojection
 			    ){
   
   const int ist = get_global_id(0);
   const int ipj = get_global_id(1);
+  const int imat = get_global_id(2);
 
-  if(ipj >= nprojs) return;
-  
+  const int npoints = sizes[2*imat    ];
+  const int nprojs  = sizes[2*imat + 1];  
   const int matrix_offset = offsets[4*imat    ];
   const int map_offset    = offsets[4*imat + 1];
   const int scal_offset   = offsets[4*imat + 2];
+
+  if(ipj >= nprojs) return;
 
   double aa = 0.0;
   for(int ip = 0; ip < npoints; ip++){
     aa += matrix[matrix_offset + ip + npoints*ipj]*psi[ldpsi*(map[map_offset + ip] - 1) + ist];
   }
-  projection[projection_offset + ist + ldprojection*ipj] = scal[scal_offset + ipj]*aa;
+  projection[ist + ldprojection*(scal_offset + ipj)] = scal[scal_offset + ipj]*aa;
 
 }
 
-__kernel void projector_ket(const int imat, 
-			    const int npoints,
-			    const int nprojs,
+__kernel void projector_ket(const int imat,
+			    const __global int * sizes,
 			    const __global int * offsets,
 			    __global const double * matrix,
 			    __global const int * map,
-			    __global const double * projection, const int ldprojection, const int projection_offset,
+			    __global const double * projection, const int ldprojection,
 			    __global double * psi, const int ldpsi
 			    ){
   
-  int ist = get_global_id(0);
-  int ip = get_global_id(1);
+  const int ist = get_global_id(0);
+  const int ip = get_global_id(1);
+
+  const int npoints = sizes[2*imat    ];
+  const int nprojs  = sizes[2*imat + 1];
+  const int matrix_offset = offsets[4*imat    ];
+  const int map_offset    = offsets[4*imat + 1];
+  const int scal_offset   = offsets[4*imat + 2];
 
   if(ip >= npoints) return;
 
-  const int matrix_offset = offsets[4*imat    ];
-  const int map_offset    = offsets[4*imat + 1];
-
   double aa = 0.0;
   for(int ipj = 0; ipj < nprojs; ipj++){
-    aa += matrix[matrix_offset + ip + npoints*ipj]*projection[projection_offset + ist + ldprojection*ipj];
+    aa += matrix[matrix_offset + ip + npoints*ipj]*projection[ist + ldprojection*(scal_offset + ipj)];
   }
+
+  // This update would have to be done in an atomic fashion if we wanted
+  // to parallelize over imat.
   psi[ldpsi*(map[map_offset + ip] - 1) + ist] += aa;
 
 

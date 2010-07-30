@@ -91,8 +91,11 @@ module hamiltonian_base_m
     logical                           :: apply_projector_matrices
     integer                           :: full_projection_size
 #ifdef HAVE_OPENCL
+    integer                           :: max_npoints
+    integer                           :: max_nprojs
     type(opencl_mem_t)                :: potential_opencl
     type(opencl_mem_t)                :: buff_offsets
+    type(opencl_mem_t)                :: buff_sizes
     type(opencl_mem_t)                :: buff_matrices
     type(opencl_mem_t)                :: buff_maps
     type(opencl_mem_t)                :: buff_scals
@@ -289,8 +292,9 @@ contains
 
 #ifdef HAVE_OPENCL
       if(opencl_is_enabled()) then
-        call opencl_release_buffer(this%buff_matrices)
+        call opencl_release_buffer(this%buff_sizes)
         call opencl_release_buffer(this%buff_offsets)
+        call opencl_release_buffer(this%buff_matrices)
         call opencl_release_buffer(this%buff_maps)
         call opencl_release_buffer(this%buff_scals)
       end if
@@ -403,18 +407,29 @@ contains
     subroutine build_opencl()
 #ifdef HAVE_OPENCL
       integer              :: matrix_size, map_size, scal_size
+      integer, allocatable :: sizes(:, :)
       integer, allocatable :: offsets(:, :)
+      integer, parameter   :: POINTS = 1, PROJS = 2
       integer, parameter   :: MATRIX = 1, MAP = 2, SCAL = 3
 
       SAFE_ALLOCATE(offsets(1:4, 1:this%nprojector_matrices))
+      SAFE_ALLOCATE(sizes(1:2, 1:this%nprojector_matrices))
 
       ! first we count
       matrix_size = 0
       map_size = 0
       scal_size = 0
+      this%max_npoints = 0
+      this%max_nprojs = 0
       do imat = 1, this%nprojector_matrices
         pmat => this%projector_matrices(imat)
+
+        this%max_npoints = max(this%max_npoints, pmat%npoints)
+        this%max_nprojs = max(this%max_nprojs, pmat%nprojs)
         
+        sizes(POINTS, imat) = pmat%npoints
+        sizes(PROJS, imat) = pmat%nprojs
+
         offsets(MATRIX, imat) = matrix_size
         INCR(matrix_size, pmat%npoints*pmat%nprojs)
         
@@ -439,7 +454,11 @@ contains
         call opencl_write_buffer(this%buff_scals, pmat%nprojs, pmat%scal, offset = offsets(SCAL, imat))
       end do
 
-      ! now write the offsets
+      ! write the sizes
+      call opencl_create_buffer(this%buff_sizes, CL_MEM_READ_ONLY, TYPE_INTEGER, 2*this%nprojector_matrices)
+      call opencl_write_buffer(this%buff_sizes, 2*this%nprojector_matrices, sizes)
+
+      ! write the offsets
       call opencl_create_buffer(this%buff_offsets, CL_MEM_READ_ONLY, TYPE_INTEGER, 4*this%nprojector_matrices)
       call opencl_write_buffer(this%buff_offsets, 4*this%nprojector_matrices, offsets)
 
