@@ -47,7 +47,7 @@ TDTimeStep = dt
 # --------------
 
 OCTControlRepresentation = control_function_parametrized
-OCTParameterRepresentation = control_fourier_series
+OCTControlFunctionRepresentation = control_fourier_series
 
 OCTPenalty = 1.0
 OCTMaxIter = 1
@@ -61,7 +61,7 @@ OCTTargetOperator = oct_tg_td_local
 %
 
 OCTScheme = oct_algorithm_cg
-OCTParameterOmegaMax = 0.40
+OCTControlFunctionOmegaMax = 0.40
 
 OCTDirectStep = 0.1
 

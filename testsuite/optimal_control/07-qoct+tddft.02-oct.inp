@@ -70,8 +70,8 @@ OCTDirectStep = 0.1
 OCTNumberCheckPoints = 10
 OCTScheme = oct_algorithm_cg
 #OCTCheckGradient = 0.0001
-OCTParameterOmegaMax = 8.0
-OCTParameterRepresentation = control_fourier_series
+OCTControlFunctionOmegaMax = 8.0
+OCTControlFunctionRepresentation = control_fourier_series
 
 OCTDoubleCheck = no
 

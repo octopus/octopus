@@ -39,7 +39,7 @@
       forall(j = 1: n) ep(j) = tdf(par%f(1), j)
       e = matmul(par%utransf, ep)
 
-      if(par_common%representation .eq. ctr_zero_fourier_series_h) then
+      if(cf_common%representation .eq. ctr_zero_fourier_series_h) then
         SAFE_ALLOCATE(a(1:n-1))
         SAFE_ALLOCATE(y(1:n-1))
         a = M_ZERO
@@ -111,7 +111,7 @@
       SAFE_ALLOCATE(x(1:dof))
       x = par%theta
 
-      if(par_common%representation .eq. ctr_zero_fourier_series_h) then
+      if(cf_common%representation .eq. ctr_zero_fourier_series_h) then
         call hyperspherical2cartesian(x, ep(2:n))
         SAFE_ALLOCATE(a(1:n-1))
         SAFE_ALLOCATE(y(1:n-1))
@@ -119,14 +119,14 @@
         a(1:n/2-1) = M_ONE
         call hypersphere_cut_back(ep(2:n), a, e(2:n))
         e(1) = -sum(e(2:n/2))
-        e = sqrt(par_common%targetfluence) * e
+        e = sqrt(cf_common%targetfluence) * e
         ep = matmul(par%utransfi, e)
         call tdf_set_numerical(par%f(1), ep)
         SAFE_DEALLOCATE_A(a)
         SAFE_DEALLOCATE_A(y)
       else
         call hyperspherical2cartesian(x(1:n-1), e)
-        e = sqrt(par_common%targetfluence) * e
+        e = sqrt(cf_common%targetfluence) * e
         ep = matmul(par%utransfi, e)
         call tdf_set_numerical(par%f(1), ep)
       end if
@@ -207,7 +207,7 @@
     type(tdf_t) :: fn, fm
     FLOAT, allocatable :: eigenvec(:, :), eigenval(:)
 
-    if(par_common%representation .eq. ctr_real_time) return
+    if(cf_common%representation .eq. ctr_real_time) return
 
     call push_sub('controlfunction.controlfunction_trans_matrix')
 
@@ -218,9 +218,9 @@
     forall(mm = 1:par%dim) par%utransf(mm, mm) = M_ONE
     forall(mm = 1:par%dim) par%utransfi(mm, mm) = M_ONE
 
-    ! WARNING: Here we are missing the cases in which par_common%representation is
+    ! WARNING: Here we are missing the cases in which cf_common%representation is
     ! either ctr_fourier_series or ctr_zero_fourier_series.
-    if( par_common%mode .eq. controlfunction_mode_f ) then
+    if( cf_common%mode .eq. controlfunction_mode_f ) then
       ! If the object to optimize is the envelope of the
       ! the laser pulse. Being e(t) the laser pulse, it is assumed that it
       ! has the form:
@@ -243,19 +243,19 @@
       par%utransfi = M_ZERO
 
       do mm = 1, par%dim
-        select case(par_common%representation)
+        select case(cf_common%representation)
         case(ctr_sine_fourier_series_h)
           call tdf_init_numerical(fm, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
-            par_common%omegamax, rep = TDF_SINE_SERIES)
+            cf_common%omegamax, rep = TDF_SINE_SERIES)
         case(ctr_fourier_series_h)
           call tdf_init_numerical(fm, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
-            par_common%omegamax, rep = TDF_FOURIER_SERIES)
+            cf_common%omegamax, rep = TDF_FOURIER_SERIES)
         case(ctr_zero_fourier_series_h)
           call tdf_init_numerical(fm, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
-            par_common%omegamax, rep = TDF_ZERO_FOURIER)
+            cf_common%omegamax, rep = TDF_ZERO_FOURIER)
         end select
         call tdf_set_numerical(fm, mm, M_ONE)
-        select case(par_common%representation)
+        select case(cf_common%representation)
           case(ctr_sine_fourier_series_h); call tdf_sineseries_to_numerical(fm)
           case(ctr_fourier_series_h);      call tdf_fourier_to_numerical(fm)
           case(ctr_zero_fourier_series_h); call tdf_zerofourier_to_numerical(fm)
@@ -266,19 +266,19 @@
         end do
 
         do nn = mm, par%dim
-          select case(par_common%representation)
+          select case(cf_common%representation)
           case(ctr_sine_fourier_series_h)
             call tdf_init_numerical(fn, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
-              par_common%omegamax, rep = TDF_SINE_SERIES)
+              cf_common%omegamax, rep = TDF_SINE_SERIES)
           case(ctr_fourier_series_h)
             call tdf_init_numerical(fn, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
-              par_common%omegamax, rep = TDF_FOURIER_SERIES)
+              cf_common%omegamax, rep = TDF_FOURIER_SERIES)
           case(ctr_zero_fourier_series_h)
             call tdf_init_numerical(fn, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
-              par_common%omegamax, rep = TDF_ZERO_FOURIER)
+              cf_common%omegamax, rep = TDF_ZERO_FOURIER)
           end select
           call tdf_set_numerical(fn, nn, M_ONE)
-          select case(par_common%representation)
+          select case(cf_common%representation)
             case(ctr_sine_fourier_series_h); call tdf_sineseries_to_numerical(fn)
             case(ctr_fourier_series_h);      call tdf_fourier_to_numerical(fn)
             case(ctr_zero_fourier_series_h); call tdf_zerofourier_to_numerical(fn)

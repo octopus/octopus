@@ -37,8 +37,8 @@ OCTTargetOperator = oct_tg_gstransformation
 %
 
 OCTScheme = oct_algorithm_direct
-OCTParameterRepresentation = control_sine_fourier_series_h
-OCTParameterOmegaMax = 0.10
+OCTControlFunctionRepresentation = control_sine_fourier_series_h
+OCTControlFunctionOmegaMax = 0.10
 OCTFixFluenceTo = -1
 
 OCTDoubleCheck = no

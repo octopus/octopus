@@ -152,7 +152,7 @@ module controlfunction_m
   end type controlfunction_t
   
   ! the next variable has to be a pointer to avoid a bug in the IBM compiler
-  type(controlfunction_common_t), pointer :: par_common => NULL()
+  type(controlfunction_common_t), pointer :: cf_common => NULL()
   type(mix_t) :: controlfunction_mix
 
 contains
@@ -162,7 +162,7 @@ contains
   !> Initializes the module, should be the first subroutine to be called (the last one
   !! should be controlfunction_mod_close, when the module is no longer to be used.
   !!
-  !! It fills the module variable "par_common", whose type is par_common_t, with 
+  !! It fills the module variable "cf_common", whose type is controlfunction_common_t, with 
   !! information obtained from the inp file.
   !!
   !! Output argument "mode_fixed_fluence" is also given a value, depending on whether
@@ -182,13 +182,13 @@ contains
 
     call push_sub('controlfunction.controlfunction_mod_init')
 
-    if(.not. associated(par_common)) then
-      SAFE_ALLOCATE(par_common)
+    if(.not. associated(cf_common)) then
+      SAFE_ALLOCATE(cf_common)
     end if
 
     call messages_print_stress(stdout, "OCT: Info about control functions")
 
-    !%Variable OCTParameterRepresentation
+    !%Variable OCTControlFunctionRepresentation
     !%Type integer
     !%Section Calculation Modes::Optimal Control
     !%Default control_fourier_series_h
@@ -226,11 +226,11 @@ contains
     !% coefficients is zero).
     !%End
     if (parametrized_controls) then
-      call parse_integer(datasets_check('OCTParameterRepresentation'), &
-        ctr_fourier_series_h, par_common%representation)
-      if(.not.varinfo_valid_option('OCTParameterRepresentation', par_common%representation)) &
-        call input_error('OCTParameterRepresentation')
-      select case(par_common%representation)
+      call parse_integer(datasets_check('OCTControlFunctionRepresentation'), &
+        ctr_fourier_series_h, cf_common%representation)
+      if(.not.varinfo_valid_option('OCTControlFunctionRepresentation', cf_common%representation)) &
+        call input_error('OCTControlFunctionRepresentation')
+      select case(cf_common%representation)
       case(ctr_sine_fourier_series_h)
         write(message(1), '(a)') 'Info: The OCT control functions will be represented as a sine '
         write(message(2), '(a)') '      Fourier series, and then a transformation to hyperspherical'
@@ -258,12 +258,12 @@ contains
         call write_info(4)
       end select
     else
-      par_common%representation = ctr_real_time
+      cf_common%representation = ctr_real_time
       write(message(1), '(a)') 'Info: The OCT control functions will be represented in real time.'
       call write_info(1)
     end if
 
-    !%Variable OCTParameterOmegaMax
+    !%Variable OCTControlFunctionOmegaMax
     !%Type float
     !%Section Calculation Modes::Optimal Control
     !%Default -1.0
@@ -271,11 +271,11 @@ contains
     !% The Fourier series that can be used to represent the control functions must be truncated;
     !% the truncation is given by a cut-off frequency which is determined by this variable.
     !%End
-    call parse_float(datasets_check('OCTParameterOmegaMax'), -M_ONE, par_common%omegamax)
-    if(par_common%representation .ne. ctr_real_time) then
+    call parse_float(datasets_check('OCTControlFunctionOmegaMax'), -M_ONE, cf_common%omegamax)
+    if(cf_common%representation .ne. ctr_real_time) then
       write(message(1), '(a)')         'Info: The representation of the OCT control parameters will be restricted'
       write(message(2), '(a,f10.5,a)') '      with an energy cut-off of ', &
-        units_from_atomic(units_out%energy, par_common%omegamax), ' ['//trim(units_abbrev(units_out%energy)) // ']'
+        units_from_atomic(units_out%energy, cf_common%omegamax), ' ['//trim(units_abbrev(units_out%energy)) // ']'
     end if
 
     !%Variable OCTFixFluenceTo
@@ -295,7 +295,7 @@ contains
     !% first the code applies the envelope provided by the <tt>OCTLaserEnvelope</tt> input
     !% option, and afterwards it calculates the fluence.
     !%End
-    call parse_float(datasets_check('OCTFixFluenceTo'), M_ZERO, par_common%targetfluence)
+    call parse_float(datasets_check('OCTFixFluenceTo'), M_ZERO, cf_common%targetfluence)
 
     !%Variable OCTFixInitialFluence
     !%Type logical
@@ -308,7 +308,7 @@ contains
     !% guess, no matter the fluence, by setting <tt>OCTFixInitialFluence = no</tt>.
     !%End
     call parse_logical(datasets_check('OCTFixInitialFluence'), .true., &
-      par_common%fix_initial_fluence)
+      cf_common%fix_initial_fluence)
 
     !%Variable OCTControlFunctionType
     !%Type integer
@@ -336,12 +336,12 @@ contains
     !% where f(t) is an "envelope", w0 a carrier frequency, and phi(t) the td phase that we 
     !% wish to optimize.
     !%End
-    call parse_integer(datasets_check('OCTControlFunctionType'), controlfunction_mode_epsilon, par_common%mode)
-    if(.not.varinfo_valid_option('OCTControlFunctionType', par_common%mode)) &
+    call parse_integer(datasets_check('OCTControlFunctionType'), controlfunction_mode_epsilon, cf_common%mode)
+    if(.not.varinfo_valid_option('OCTControlFunctionType', cf_common%mode)) &
       call input_error('OCTControlFunctionType')
-    if ( (.not.parametrized_controls)  .and.  (par_common%mode .ne. controlfunction_mode_epsilon) ) &
+    if ( (.not.parametrized_controls)  .and.  (cf_common%mode .ne. controlfunction_mode_epsilon) ) &
       call input_error('OCTControlFunctionType')
-    call messages_print_var_option(stdout, 'OCTControlFunctionType', par_common%mode)
+    call messages_print_var_option(stdout, 'OCTControlFunctionType', cf_common%mode)
 
 
     ! Check that there are no complex polarization vectors.
@@ -368,23 +368,23 @@ contains
     ! Here we do the transformation.
     ! It cannot be done before calling controlfunction_mod_init because we need to pass the omegamax value.
     do il = 1, ep%no_lasers
-      select case(par_common%mode)
+      select case(cf_common%mode)
       case(controlfunction_mode_epsilon)
-        call laser_to_numerical_all(ep%lasers(il), dt, max_iter, par_common%omegamax)
+        call laser_to_numerical_all(ep%lasers(il), dt, max_iter, cf_common%omegamax)
       case default
-        call laser_to_numerical(ep%lasers(il), dt, max_iter, par_common%omegamax)
+        call laser_to_numerical(ep%lasers(il), dt, max_iter, cf_common%omegamax)
       end select
     end do
 
     ! For phase-only optimization, we need to store the envelope, in order to be able
     ! to calculate the fluence.
-    if(par_common%mode .eq. controlfunction_mode_phi) then
-      call laser_get_f(ep%lasers(1), par_common%f)
+    if(cf_common%mode .eq. controlfunction_mode_phi) then
+      call laser_get_f(ep%lasers(1), cf_common%f)
     end if 
 
     ! Fix the carrier frequency
     call messages_obsolete_variable('OCTCarrierFrequency')
-    par_common%w0 = laser_carrier_frequency(ep%lasers(1))
+    cf_common%w0 = laser_carrier_frequency(ep%lasers(1))
 
     ! Fix the number of control functions: if we have "traditional" QOCT (i.e. the control functions
     ! are represented directly in real time, then the number of control functions can be larger than
@@ -397,30 +397,30 @@ contains
         write(message(2), '(a)') 'have only one external field in the input file.'
         call write_fatal(2)
       end if
-      par_common%no_controlfunctions = 1
+      cf_common%no_controlfunctions = 1
     else
-      par_common%no_controlfunctions = ep%no_lasers
+      cf_common%no_controlfunctions = ep%no_lasers
     end if
 
     mode_fixed_fluence = .false.
-    select case(par_common%representation)
+    select case(cf_common%representation)
     case(ctr_sine_fourier_series_h, ctr_fourier_series_h, ctr_zero_fourier_series_h)
-      if(par_common%targetfluence .eq. M_ZERO) then
-        write(message(1), '(a)') 'Error: If you set "OCTParameterRepresentation" to either "control_sine_fourier_series_h",'
+      if(cf_common%targetfluence .eq. M_ZERO) then
+        write(message(1), '(a)') 'Error: If you set "OCTControlFunctionRepresentation" to either "control_sine_fourier_series_h",'
         write(message(2), '(a)') '       "control_fourier_series_h", or "control_zero_fourier_series_h", then the run'
         write(message(3), '(a)') '       must be done in fixed fluence mode.'
         call write_fatal(3)
       end if
       mode_fixed_fluence = .true.
     case(ctr_fourier_series, ctr_zero_fourier_series)
-      if(par_common%targetfluence .ne. M_ZERO) then
-        write(message(1), '(a)') 'Error: If you set "OCTParameterRepresentation" to "control_fourier_series",'
+      if(cf_common%targetfluence .ne. M_ZERO) then
+        write(message(1), '(a)') 'Error: If you set "OCTControlFunctionRepresentation" to "control_fourier_series",'
         write(message(2), '(a)') '       then you cannot run in fixed fluence mode.'
         call write_fatal(2)
       end if
       mode_fixed_fluence = .false.
     case default
-      if (par_common%targetfluence .ne. M_ZERO) mode_fixed_fluence = .true.
+      if (cf_common%targetfluence .ne. M_ZERO) mode_fixed_fluence = .true.
     end select
 
 
@@ -444,23 +444,23 @@ contains
     !%
     !% All penalty factors must be positive. 
     !%End
-    SAFE_ALLOCATE(par_common%alpha(1:par_common%no_controlfunctions))
-    par_common%alpha = M_ZERO
+    SAFE_ALLOCATE(cf_common%alpha(1:cf_common%no_controlfunctions))
+    cf_common%alpha = M_ZERO
     if(parse_block('OCTPenalty', blk) == 0) then
       ! We have a block
       ncols = parse_block_cols(blk, 0)
-      if(ncols .ne. par_common%no_controlfunctions) then
+      if(ncols .ne. cf_common%no_controlfunctions) then
         call input_error('OCTPenalty')
       else
         do ipar = 1, ncols
-          call parse_block_float(blk, 0, ipar - 1, par_common%alpha(ipar))
-          if(par_common%alpha(ipar) <= M_ZERO) call input_error('OCTPenalty')
+          call parse_block_float(blk, 0, ipar - 1, cf_common%alpha(ipar))
+          if(cf_common%alpha(ipar) <= M_ZERO) call input_error('OCTPenalty')
         end do
       end if
     else
       ! We have the same penalty for all the control functions.
       call parse_float(datasets_check('OCTPenalty'), M_ONE, octpenalty)
-      par_common%alpha(1:par_common%no_controlfunctions) = octpenalty
+      cf_common%alpha(1:cf_common%no_controlfunctions) = octpenalty
     end if
 
 
@@ -468,7 +468,7 @@ contains
     !%Type block
     !%Section Calculation Modes::Optimal Control
     !%Description
-    !% Often a pre-defined time-dependent envelope on the control parameter is desired. 
+    !% Often a pre-defined time-dependent envelope on the control function is desired. 
     !% This can be achieved by making the penalty factor time-dependent. 
     !% Here, you may specify the required time-dependent envelope.
     !%
@@ -486,22 +486,22 @@ contains
     !% <math> \frac{1}{\alpha(t)} = \frac{1}{2}( erf((100/T)*(t-T/20))+ erf(-(100/T)*(t-T+T/20)) </math>
     !%End
     steps = max_iter
-    SAFE_ALLOCATE(par_common%td_penalty(1:par_common%no_controlfunctions))
-    do ipar = 1, par_common%no_controlfunctions
-      call tdf_init_numerical(par_common%td_penalty(ipar), steps, dt, -M_ONE, initval = M_ONE)
+    SAFE_ALLOCATE(cf_common%td_penalty(1:cf_common%no_controlfunctions))
+    do ipar = 1, cf_common%no_controlfunctions
+      call tdf_init_numerical(cf_common%td_penalty(ipar), steps, dt, -M_ONE, initval = M_ONE)
     end do
 
     if (parse_block(datasets_check('OCTLaserEnvelope'), blk)==0) then
 
       ! Cannot have this unless we have the "usual" controlfunction_mode_epsilon.
-      if(par_common%mode .ne. controlfunction_mode_epsilon) then
+      if(cf_common%mode .ne. controlfunction_mode_epsilon) then
         write(message(1),'(a)') 'The block "OCTLaserEnvelope" is only compatible with the option'
         write(message(2),'(a)') '"OCTControlFunctionType = controlfunction_mode_epsilon".'
         call write_fatal(2)
       end if
 
       no_lines = parse_block_n(blk)
-      if(no_lines .ne. par_common%no_controlfunctions) call input_error('OCTLaserEnvelope')
+      if(no_lines .ne. cf_common%no_controlfunctions) call input_error('OCTLaserEnvelope')
 
       do irow = 1, no_lines
         call parse_block_string(blk, irow - 1, 0, expression)
@@ -511,7 +511,7 @@ contains
             time = (istep - 1) * dt
             f_re = M_HALF * (loct_erf((CNST(100.0) / total_time) * (time - CNST(0.05) * total_time)) + &
               loct_erf(-(CNST(100.0) / total_time) * (time - total_time + CNST(0.05) * total_time)) )
-            call tdf_set_numerical(par_common%td_penalty(irow), istep, &
+            call tdf_set_numerical(cf_common%td_penalty(irow), istep, &
               TOFLOAT(M_ONE / (f_re + CNST(1.0e-7)))  )
           end do
         else
@@ -519,7 +519,7 @@ contains
           do istep = 1, steps + 1
             time = (istep - 1) * dt
             call parse_expression(f_re, f_im, "t", time, expression)
-            call tdf_set_numerical(par_common%td_penalty(irow), istep, &
+            call tdf_set_numerical(cf_common%td_penalty(irow), istep, &
               TOFLOAT(M_ONE / (f_re + CNST(1.0e-7)))  )
           end do
         end if
@@ -530,10 +530,10 @@ contains
         do istep = 1, steps + 1
           time = (istep - 1) * dt
           write(iunit, '(f14.8)', advance='no') time
-          do ipar = 1, par_common%no_controlfunctions - 1
-            write(iunit, '(es20.8e3)') M_ONE / tdf(par_common%td_penalty(ipar), istep)
+          do ipar = 1, cf_common%no_controlfunctions - 1
+            write(iunit, '(es20.8e3)') M_ONE / tdf(cf_common%td_penalty(ipar), istep)
           end do
-          write(iunit, '(es20.8e3)') M_ONE / tdf(par_common%td_penalty(par_common%no_controlfunctions), istep)
+          write(iunit, '(es20.8e3)') M_ONE / tdf(cf_common%td_penalty(cf_common%no_controlfunctions), istep)
         end do
         write(iunit,'()')
         call io_close(iunit)
@@ -562,14 +562,14 @@ contains
 
     call push_sub('controlfunction.controlfunction_init')
 
-    cp%w0                  = par_common%w0
-    cp%no_controlfunctions = par_common%no_controlfunctions
+    cp%w0                  = cf_common%w0
+    cp%no_controlfunctions = cf_common%no_controlfunctions
     cp%current_representation = ctr_real_time
-    call loct_pointer_copy(cp%alpha, par_common%alpha)
+    call loct_pointer_copy(cp%alpha, cf_common%alpha)
 
     SAFE_ALLOCATE(cp%f(1:cp%no_controlfunctions))
     do ipar = 1, cp%no_controlfunctions
-      call tdf_init_numerical(cp%f(ipar), ntiter, dt, par_common%omegamax)
+      call tdf_init_numerical(cp%f(ipar), ntiter, dt, cf_common%omegamax)
     end do
 
     ! If the control function is represented directly in real time, the "dimension" (cp%dim) is
@@ -581,7 +581,7 @@ contains
     ! the parameters are not directly the coefficients of the control function in this basis-set 
     ! expansion, but are constructed from them (e.g. by performing a coordinate transformation to 
     ! hyperspherical coordinates). The "dimension" (cp%dim) is the dimension of this basis set.
-    select case(par_common%representation)
+    select case(cf_common%representation)
     case(ctr_real_time)
       cp%dim = ntiter + 1
     case(ctr_sine_fourier_series_h)
@@ -614,7 +614,7 @@ contains
     ! control functions, times the "dimension", which in this case is the number of time discretization 
     ! points). This is not equal to the dimension of the basis set employed (cp%dim), because we may 
     ! add further constraints, and do a coordinate transformation to account for them.
-    select case(par_common%representation)
+    select case(cf_common%representation)
     case(ctr_real_time)
       cp%dof = cp%no_controlfunctions * cp%dim
     case(ctr_sine_fourier_series_h, ctr_fourier_series_h)
@@ -643,7 +643,7 @@ contains
       write(message(2),'(a)') '       is less than or equal to zero. This should not happen. Please review your input file.'
       call write_fatal(2)
     else
-      if(par_common%representation .ne. ctr_real_time) then
+      if(cf_common%representation .ne. ctr_real_time) then
         write(message(1), '(a)')      'Info: The expansion of the control functions in a Fourier series'
         write(message(2), '(a,i6,a)') '      expansion implies the use of ', cp%dim, ' basis-set functions.'
         write(message(3), '(a,i6,a)') '      The number of degrees of freedom is ', cp%dof,'.'
@@ -674,7 +674,7 @@ contains
 
     call push_sub('controlfunction.controlfunction_set')
 
-    select case(par_common%mode)
+    select case(cf_common%mode)
     case(controlfunction_mode_epsilon, controlfunction_mode_f)
       do ipar = 1, cp%no_controlfunctions
         call tdf_end(cp%f(ipar))
@@ -692,7 +692,7 @@ contains
 
   !> Returns the representation type for the control functions used in the OCT run.
   integer pure function controlfunction_representation()
-    controlfunction_representation = par_common%representation
+    controlfunction_representation = cf_common%representation
   end function controlfunction_representation
   ! ---------------------------------------------------------
 
@@ -709,22 +709,22 @@ contains
 
     call controlfunction_apply_envelope(par)
 
-    if(par_common%targetfluence .ne. M_ZERO) then
-      if(par_common%targetfluence < M_ZERO) then
-        par_common%targetfluence = controlfunction_fluence(par) 
+    if(cf_common%targetfluence .ne. M_ZERO) then
+      if(cf_common%targetfluence < M_ZERO) then
+        cf_common%targetfluence = controlfunction_fluence(par) 
         write(message(1), '(a)')         'Info: The QOCT run will attempt to find a solution with the same'
         write(message(2), '(a,f10.5,a)') '      fluence as the input external fields: F = ', &
-          par_common%targetfluence, ' a.u.'
+          cf_common%targetfluence, ' a.u.'
       else
         write(message(1), '(a)')         'Info: The QOCT run will attempt to find a solution with a predefined'
-        write(message(2), '(a,f10.5,a)') '      fluence: F = ', par_common%targetfluence, ' a.u.'
+        write(message(2), '(a,f10.5,a)') '      fluence: F = ', cf_common%targetfluence, ' a.u.'
       end if
       call write_info(2)
-      if(par_common%fix_initial_fluence) call controlfunction_set_fluence(par)
+      if(cf_common%fix_initial_fluence) call controlfunction_set_fluence(par)
     end if
 
     ! Now we have to find the "fluence" of the phase, in order to keep it constant.
-    select case(par_common%mode)
+    select case(cf_common%mode)
     case(controlfunction_mode_phi)
       par%intphi = tdf_dot_product(par%f(1), par%f(1))
       if(par%intphi <= M_ZERO) then
@@ -756,8 +756,8 @@ contains
 
     call push_sub('controlfunction.controlfunction_set_rep')
 
-    if(par%current_representation .ne. par_common%representation) then
-      if(par_common%representation .eq. ctr_real_time) then
+    if(par%current_representation .ne. cf_common%representation) then
+      if(cf_common%representation .eq. ctr_real_time) then
         call controlfunction_to_realtime(par)
       else
         call controlfunction_to_basis(par)
@@ -778,7 +778,7 @@ contains
     call push_sub('controlfunction.controlfunction_to_basis')
 
     if(par%current_representation.eq.ctr_real_time) then
-      select case(par_common%representation)
+      select case(cf_common%representation)
       case(ctr_sine_fourier_series_h)
         do ipar = 1, par%no_controlfunctions
           call tdf_numerical_to_sineseries(par%f(ipar))
@@ -958,10 +958,10 @@ contains
     call push_sub('controlfunction.controlfunction_apply_envelope')
 
     ! Do not apply the envelope if the control functions are represented as a sine-Fourier series.
-    if(par_common%representation .eq. ctr_real_time) then
+    if(cf_common%representation .eq. ctr_real_time) then
       do ipar = 1, cp%no_controlfunctions
         do iter = 1, tdf_niter(cp%f(ipar)) + 1
-          call tdf_set_numerical(cp%f(ipar), iter, tdf(cp%f(ipar), iter) / tdf(par_common%td_penalty(ipar), iter) )
+          call tdf_set_numerical(cp%f(ipar), iter, tdf(cp%f(ipar), iter) / tdf(cf_common%td_penalty(ipar), iter) )
         end do
       end do
     end if
@@ -983,7 +983,7 @@ contains
     call controlfunction_copy(par, cp)
     call controlfunction_to_realtime(par)
 
-    select case(par_common%mode)
+    select case(cf_common%mode)
     case(controlfunction_mode_epsilon, controlfunction_mode_f)
       do ipar = 1, cp%no_controlfunctions
         call laser_set_f(ep%lasers(ipar), par%f(ipar))
@@ -1066,7 +1066,7 @@ contains
     niter = tdf_niter(par%f(1))
     SAFE_ALLOCATE(func(1:niter + 1, 1:cp%no_controlfunctions))
 
-    select case(par_common%mode)
+    select case(cf_common%mode)
     case(controlfunction_mode_epsilon)
 
       do ipar = 1, cp%no_controlfunctions
@@ -1111,9 +1111,9 @@ contains
                             '         f(t)        ', '       phi(t)        ' 
       do iter = 1, tdf_niter(par%f(ipar)) + 1
         time = (iter - 1) * tdf_dt(par%f(ipar))
-        write(iunit, '(4es20.8e3)') time, tdf(par_common%f, time) * &
-          cos(par%w0 * time + tdf(par%f(1), time) ), tdf(par_common%f, time), tdf(par%f(1), time)
-        func(iter, 1) = tdf(par_common%f, time) * cos(par%w0 * time + tdf(par%f(1), time) )
+        write(iunit, '(4es20.8e3)') time, tdf(cf_common%f, time) * &
+          cos(par%w0 * time + tdf(par%f(1), time) ), tdf(cf_common%f, time), tdf(par%f(1), time)
+        func(iter, 1) = tdf(cf_common%f, time) * cos(par%w0 * time + tdf(par%f(1), time) )
       end do
       call io_close(iunit)
 
@@ -1121,7 +1121,7 @@ contains
 
 
     !Now, the Fourier transforms.
-    select case(par_common%mode)
+    select case(cf_common%mode)
     case(controlfunction_mode_epsilon)
 
       do ipar = 1, cp%no_controlfunctions
@@ -1163,9 +1163,9 @@ contains
                             '      Im[e(w)]       '
       
       nfreqs = 1000
-      wa = cp%w0 - M_THREE * par_common%omegamax
-      wb = cp%w0 + M_THREE * par_common%omegamax
-      wmax = CNST(6.0)*par_common%omegamax
+      wa = cp%w0 - M_THREE * cf_common%omegamax
+      wb = cp%w0 + M_THREE * cf_common%omegamax
+      wmax = CNST(6.0)*cf_common%omegamax
       dw = wmax/(nfreqs-1)
       dt = tdf_dt(par%f(1))
 
@@ -1187,7 +1187,7 @@ contains
     end select
 
     ! Now, in case of a parametrized control function, the parameters.
-    if(par_common%representation .ne. ctr_real_time) then
+    if(cf_common%representation .ne. ctr_real_time) then
       iunit = io_open(trim(filename)//'/theta', action='write')
       do idof = 1, par%dof
         write(iunit,'(i5,es20.8e3)') idof, par%theta(idof)
@@ -1218,7 +1218,7 @@ contains
 
     controlfunction_fluence = M_ZERO
 
-    select case(par_common%mode)
+    select case(cf_common%mode)
     case(controlfunction_mode_epsilon)
       do ipar = 1, par_%no_controlfunctions
         controlfunction_fluence = controlfunction_fluence + tdf_dot_product(par_%f(ipar), par_%f(ipar))
@@ -1236,7 +1236,7 @@ contains
       call tdf_copy(ff, par_%f(1))
       do iter = 1, tdf_niter(ff) + 1
         time = (iter - 1) * tdf_dt(ff)
-        fi = tdf(par_common%f, iter)
+        fi = tdf(cf_common%f, iter)
         phi = real(tdf(ff, iter)) 
         call tdf_set_numerical(ff, iter, fi * cos(par%w0 * time + phi))
       end do
@@ -1263,13 +1263,13 @@ contains
 
     call push_sub('controlfunction.controlfunction_j2')
 
-    ASSERT(par%current_representation .eq. par_common%representation)
+    ASSERT(par%current_representation .eq. cf_common%representation)
 
     call controlfunction_copy(par_, par)
     call controlfunction_to_realtime(par_)
 
     integral = M_ZERO
-    select case(par_common%mode)
+    select case(cf_common%mode)
     case(controlfunction_mode_epsilon)
       do ipar = 1, par_%no_controlfunctions
         call tdf_init(ff)
@@ -1277,7 +1277,7 @@ contains
         do iter = 1, tdf_niter(ff) + 1
           time = (iter - 1) * tdf_dt(ff)
           fi = tdf(par_%f(ipar), iter)
-          tdp = sqrt(real(tdf(par_common%td_penalty(ipar), iter), kind=REAL_PRECISION))
+          tdp = sqrt(real(tdf(cf_common%td_penalty(ipar), iter), kind=REAL_PRECISION))
           call tdf_set_numerical(ff, iter, fi * tdp)
         end do
         integral = integral + tdf_dot_product(ff, ff)
@@ -1293,7 +1293,7 @@ contains
         do iter = 1, tdf_niter(ff) + 1
           time = (iter - 1) * tdf_dt(ff)
           fi = tdf(par_%f(ipar), iter)
-          tdp = sqrt(real(tdf(par_common%td_penalty(ipar), iter)))
+          tdp = sqrt(real(tdf(cf_common%td_penalty(ipar), iter)))
           call tdf_set_numerical(ff, iter, fi * tdp * cos(par_%w0 * time))
         end do
         integral = integral + tdf_dot_product(ff, ff)
@@ -1304,16 +1304,16 @@ contains
       call tdf_copy(ff, par_%f(1))
       do iter = 1, tdf_niter(ff) + 1
         time = (iter - 1) * tdf_dt(ff)
-        fi = tdf(par_common%f, iter)
+        fi = tdf(cf_common%f, iter)
         phi = real(tdf(par_%f(1), iter), kind=REAL_PRECISION)
-        tdp = sqrt(real(tdf(par_common%td_penalty(1), iter), kind=REAL_PRECISION))
+        tdp = sqrt(real(tdf(cf_common%td_penalty(1), iter), kind=REAL_PRECISION))
         call tdf_set_numerical(ff, iter, fi * cos(par_%w0 * time + phi))
       end do
       integral = tdf_dot_product(ff, ff)
       call tdf_end(ff)
     end select
 
-    j2 = - par_%alpha(1) * (integral - par_common%targetfluence)
+    j2 = - par_%alpha(1) * (integral - cf_common%targetfluence)
 
     call controlfunction_end(par_)
     call pop_sub('controlfunction.controlfunction_j2')
@@ -1331,7 +1331,7 @@ contains
 
     old_fluence = controlfunction_fluence(par) 
     do ipar = 1, par%no_controlfunctions
-      call tdf_scalar_multiply( sqrt(par_common%targetfluence / old_fluence), par%f(ipar) )
+      call tdf_scalar_multiply( sqrt(cf_common%targetfluence / old_fluence), par%f(ipar) )
     end do
 
     call pop_sub('controlfunction.controlfunction_set_fluence')
@@ -1395,11 +1395,11 @@ contains
 
      call push_sub('controlfunction.controlfunction_randomize')
 
-     ASSERT(par_common%representation .ne. ctr_real_time)
+     ASSERT(cf_common%representation .ne. ctr_real_time)
 
      call controlfunction_set_rep(par)
 
-     select case(par_common%mode)
+     select case(cf_common%mode)
      case(controlfunction_mode_epsilon, controlfunction_mode_f)
        do ipar = 1, par%no_controlfunctions
          call tdf_set_random(par%f(ipar))
@@ -1433,7 +1433,7 @@ contains
     select case(dir)
       case('f')
         do ipar = 1, cp%no_controlfunctions
-          value = dd(ipar) / ( tdf(par_common%td_penalty(ipar), iter) - M_TWO * aimag(dq(ipar)) )
+          value = dd(ipar) / ( tdf(cf_common%td_penalty(ipar), iter) - M_TWO * aimag(dq(ipar)) )
           value = (M_ONE - mu) * tdf(cpp%f(ipar), iter) + mu * value
           call tdf_set_numerical(cp%f(ipar), iter, value)
           if(iter + 1 <= tdf_niter(cp%f(ipar)) + 1)  call tdf_set_numerical(cp%f(ipar), iter+1, value)
@@ -1442,7 +1442,7 @@ contains
 
       case('b')
         do ipar = 1, cp%no_controlfunctions
-          value = dd(ipar) / ( tdf(par_common%td_penalty(ipar), iter + 1) - M_TWO * aimag(dq(ipar)) )
+          value = dd(ipar) / ( tdf(cf_common%td_penalty(ipar), iter + 1) - M_TWO * aimag(dq(ipar)) )
           value = (M_ONE - mu) * tdf(cpp%f(ipar), iter + 1) + mu * value
           call tdf_set_numerical(cp%f(ipar), iter + 1, value)
           if(iter > 0) call tdf_set_numerical(cp%f(ipar), iter, value)
@@ -1466,7 +1466,7 @@ contains
 
   ! ---------------------------------------------------------
   FLOAT pure function controlfunction_targetfluence()
-    controlfunction_targetfluence = par_common%targetfluence
+    controlfunction_targetfluence = cf_common%targetfluence
   end function controlfunction_targetfluence
   ! ---------------------------------------------------------
 
@@ -1491,7 +1491,7 @@ contains
     upper_bounds = M_PI
     dog = controlfunction_dof(par)
 
-    select case(par_common%mode)
+    select case(cf_common%mode)
     case(controlfunction_mode_epsilon, controlfunction_mode_f, controlfunction_mode_phi)
       lower_bounds(1:dog - 1) = M_ZERO
       lower_bounds(dog)       = -M_PI
@@ -1542,16 +1542,16 @@ contains
 
     call push_sub('controlfunction.controlfunction_mod_close')
 
-    SAFE_DEALLOCATE_P(par_common%alpha)
-    nullify(par_common%alpha)
+    SAFE_DEALLOCATE_P(cf_common%alpha)
+    nullify(cf_common%alpha)
 
-    do ipar = 1, par_common%no_controlfunctions
-      call tdf_end(par_common%td_penalty(ipar))
+    do ipar = 1, cf_common%no_controlfunctions
+      call tdf_end(cf_common%td_penalty(ipar))
     end do
 
-    SAFE_DEALLOCATE_P(par_common%td_penalty)
-    nullify(par_common%td_penalty)
-    SAFE_DEALLOCATE_P(par_common)
+    SAFE_DEALLOCATE_P(cf_common%td_penalty)
+    nullify(cf_common%td_penalty)
+    SAFE_DEALLOCATE_P(cf_common)
 
     call pop_sub('controlfunction.controlfunction_mod_close')
   end subroutine controlfunction_mod_close
@@ -1593,7 +1593,7 @@ contains
        SAFE_ALLOCATE(grad_matrix(1:dim - 1, 1:dim))
 
        forall(jj = 1:dim) theta(jj) = M_TWO * tdf(par_output%f(1), jj) ! get the projection on my basis set of function (theta=b)
-       rr = sqrt(par_common%targetfluence)
+       rr = sqrt(cf_common%targetfluence)
        call hypersphere_grad_matrix(grad_matrix, rr, xx)
        grad = matmul(grad_matrix, theta)
        grad = -grad  ! the CG algorithm minimizes, so we need to give the negative gradient for maximization
@@ -1609,7 +1609,7 @@ contains
        SAFE_ALLOCATE(aa(1:dim - 1))
        
        forall(jj = 1:dim) theta(jj) = M_TWO * tdf(par_output%f(1), jj) !get the projection on my basis set of function f
-       rr = sqrt(par_common%targetfluence)
+       rr = sqrt(cf_common%targetfluence)
        call hypersphere_grad_matrix(grad_matrix, rr, xx)
        
        ! create matrix S
