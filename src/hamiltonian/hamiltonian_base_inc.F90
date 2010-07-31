@@ -350,7 +350,7 @@ contains
     call opencl_set_kernel_arg(kernel_projector_bra, 9, psib%pack%size_real(1))
 
     padnprojs = pad_pow2(this%max_nprojs)
-    wgsize = opencl_max_workgroup_size()/(psib%pack%size_real(1)*padnprojs)
+    wgsize = min(32, opencl_kernel_workgroup_size(kernel_projector_bra)/(psib%pack%size_real(1)*padnprojs))
 
     call opencl_kernel_run(kernel_projector_bra, &
       (/psib%pack%size_real(1), padnprojs, pad(this%nprojector_matrices, wgsize)/), (/psib%pack%size_real(1), padnprojs, wgsize/))

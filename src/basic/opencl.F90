@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id: opencl_f.F90 3587 2007-11-22 16:43:00Z xavier $
+!! $Id: opencl.F90 3587 2007-11-22 16:43:00Z xavier $
 
 #include "global.h"
 
