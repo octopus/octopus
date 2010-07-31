@@ -247,7 +247,10 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   integer :: npoints, nprojs, nst
   R_TYPE, allocatable :: psi(:, :)
   type(projector_matrix_t), pointer :: pmat
-
+#ifdef HAVE_OPENCL
+  integer :: padnprojs, wgsize
+  type(profile_t), save :: cl_prof
+#endif
   if(.not. this%apply_projector_matrices) return
 
   call profiling_in(prof_vnlpsi, "VNLPSI_MAT")
@@ -266,9 +269,37 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
     call opencl_create_buffer(projection%buff_projection, CL_MEM_READ_WRITE, R_TYPE_VAL, &
       this%full_projection_size*psib%pack%size_real(1))
     
-    call start_opencl()
+    call profiling_in(cl_prof, "CL_PROJ_BRA")
+
+    call opencl_set_kernel_arg(kernel_projector_bra, 0, this%nprojector_matrices)
+    call opencl_set_kernel_arg(kernel_projector_bra, 1, this%buff_sizes)
+    call opencl_set_kernel_arg(kernel_projector_bra, 2, this%buff_offsets)
+    call opencl_set_kernel_arg(kernel_projector_bra, 3, this%buff_matrices)
+    call opencl_set_kernel_arg(kernel_projector_bra, 4, this%buff_maps)
+    call opencl_set_kernel_arg(kernel_projector_bra, 5, this%buff_scals)
+    call opencl_set_kernel_arg(kernel_projector_bra, 6, psib%pack%buffer)
+    call opencl_set_kernel_arg(kernel_projector_bra, 7, psib%pack%size_real(1))
+    call opencl_set_kernel_arg(kernel_projector_bra, 8, projection%buff_projection)
+    call opencl_set_kernel_arg(kernel_projector_bra, 9, psib%pack%size_real(1))
+
+    padnprojs = pad_pow2(this%max_nprojs)
+    wgsize = min(32, opencl_kernel_workgroup_size(kernel_projector_bra)/(psib%pack%size_real(1)*padnprojs))
+
+    call opencl_kernel_run(kernel_projector_bra, &
+      (/psib%pack%size_real(1), padnprojs, pad(this%nprojector_matrices, wgsize)/), (/psib%pack%size_real(1), padnprojs, wgsize/))
+
+    do imat = 1, this%nprojector_matrices
+      pmat => this%projector_matrices(imat)
+      
+      npoints = pmat%npoints
+      nprojs = pmat%nprojs
+      
+      call profiling_count_operations(nreal*nprojs*M_TWO*npoints + nst*nprojs)
+    end do
 
     call opencl_finish()
+
+    call profiling_out(cl_prof)
 
     call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_nlocal_start')
     call profiling_out(prof_vnlpsi)
@@ -329,36 +360,6 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
   call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_nlocal_start')
   call profiling_out(prof_vnlpsi)
-contains
-
-  subroutine start_opencl()
-#ifdef HAVE_OPENCL
-    integer :: padnprojs, wgsize
-    type(profile_t), save :: prof
-
-    call profiling_in(prof, "CL_PROJ_BRA")
-
-    call opencl_set_kernel_arg(kernel_projector_bra, 0, this%nprojector_matrices)
-    call opencl_set_kernel_arg(kernel_projector_bra, 1, this%buff_sizes)
-    call opencl_set_kernel_arg(kernel_projector_bra, 2, this%buff_offsets)
-    call opencl_set_kernel_arg(kernel_projector_bra, 3, this%buff_matrices)
-    call opencl_set_kernel_arg(kernel_projector_bra, 4, this%buff_maps)
-    call opencl_set_kernel_arg(kernel_projector_bra, 5, this%buff_scals)
-    call opencl_set_kernel_arg(kernel_projector_bra, 6, psib%pack%buffer)
-    call opencl_set_kernel_arg(kernel_projector_bra, 7, psib%pack%size_real(1))
-    call opencl_set_kernel_arg(kernel_projector_bra, 8, projection%buff_projection)
-    call opencl_set_kernel_arg(kernel_projector_bra, 9, psib%pack%size_real(1))
-
-    padnprojs = pad_pow2(this%max_nprojs)
-    wgsize = min(32, opencl_kernel_workgroup_size(kernel_projector_bra)/(psib%pack%size_real(1)*padnprojs))
-
-    call opencl_kernel_run(kernel_projector_bra, &
-      (/psib%pack%size_real(1), padnprojs, pad(this%nprojector_matrices, wgsize)/), (/psib%pack%size_real(1), padnprojs, wgsize/))
-
-    call profiling_out(prof)
-#endif
-  end subroutine start_opencl
-
 end subroutine X(hamiltonian_base_nlocal_start)
 
 ! ---------------------------------------------------------------------------------------
@@ -475,15 +476,15 @@ contains
   subroutine finish_opencl()
 #ifdef HAVE_OPENCL
     integer :: wgsize, imat
-    type(profile_t), save :: prof
+    type(profile_t), save :: cl_prof
 
     ! In this case we run one kernel per projector, since all write to
     ! the wave-function. Otherwise we would need to do atomic
     ! operations.
 
-    do imat = 1, this%nprojector_matrices
+    call profiling_in(cl_prof, "CL_PROJ_KET")
 
-      call profiling_in(prof, "CL_PROJ_KET")
+    do imat = 1, this%nprojector_matrices
 
       call opencl_set_kernel_arg(kernel_projector_ket, 0, imat - 1)
       call opencl_set_kernel_arg(kernel_projector_ket, 1, this%buff_sizes)
@@ -500,11 +501,18 @@ contains
       call opencl_kernel_run(kernel_projector_ket, &
         (/vpsib%pack%size_real(1), pad(this%max_npoints, wgsize)/), (/vpsib%pack%size_real(1), wgsize/))
 
+      pmat => this%projector_matrices(imat)
+      npoints = pmat%npoints
+      nprojs = pmat%nprojs
+      call profiling_count_operations(nreal*nprojs*M_TWO*npoints)
+      call profiling_count_operations(nst*npoints*R_ADD)
+
       call batch_pack_was_modified(vpsib)
       call opencl_finish()
 
-      call profiling_out(prof)
     end do
+
+    call profiling_out(cl_prof)
 
 #endif
   end subroutine finish_opencl
