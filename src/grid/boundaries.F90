@@ -327,31 +327,40 @@ contains
     
     integer :: ipart
 
-    if(simul_box_is_periodic(this%mesh%sb)) then    
+    call push_sub('boundaries.boundaries_end')
+
+    if(simul_box_is_periodic(this%mesh%sb)) then
 #ifdef HAVE_MPI
-      do ipart = 1, this%mesh%vp%npart
-        if(this%nsend(ipart) /= 0) then 
-          call MPI_Type_free(this%dsend_type(ipart), mpi_err)
-          call MPI_Type_free(this%zsend_type(ipart), mpi_err)
-        end if
-        if(this%nrecv(ipart) /= 0) then 
-          call MPI_Type_free(this%drecv_type(ipart), mpi_err)
-          call MPI_Type_free(this%zrecv_type(ipart), mpi_err)
-        end if
-      end do
-
-      SAFE_DEALLOCATE_P(this%dsend_type)
-      SAFE_DEALLOCATE_P(this%zsend_type)
-      SAFE_DEALLOCATE_P(this%drecv_type)
-      SAFE_DEALLOCATE_P(this%zrecv_type)
-      SAFE_DEALLOCATE_P(this%nsend)
-      SAFE_DEALLOCATE_P(this%nrecv)
+      if(this%mesh%parallel_in_domains) then    
+        
+        ASSERT(associated(this%nsend))
+        ASSERT(associated(this%nrecv))
+        
+        do ipart = 1, this%mesh%vp%npart
+          if(this%nsend(ipart) /= 0) then 
+            call MPI_Type_free(this%dsend_type(ipart), mpi_err)
+            call MPI_Type_free(this%zsend_type(ipart), mpi_err)
+          end if
+          if(this%nrecv(ipart) /= 0) then 
+            call MPI_Type_free(this%drecv_type(ipart), mpi_err)
+            call MPI_Type_free(this%zrecv_type(ipart), mpi_err)
+          end if
+        end do
+        
+        SAFE_DEALLOCATE_P(this%dsend_type)
+        SAFE_DEALLOCATE_P(this%zsend_type)
+        SAFE_DEALLOCATE_P(this%drecv_type)
+        SAFE_DEALLOCATE_P(this%zrecv_type)
+        SAFE_DEALLOCATE_P(this%nsend)
+        SAFE_DEALLOCATE_P(this%nrecv)
+      end if
 #endif
-
+      
       SAFE_DEALLOCATE_P(this%per_points)
       SAFE_DEALLOCATE_P(this%per_map)
     end if
 
+    call pop_sub('boundaries.boundaries_end')
   end subroutine boundaries_end
 
 #if defined(HAVE_MPI)
