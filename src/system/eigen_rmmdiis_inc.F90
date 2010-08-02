@@ -34,6 +34,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   R_TYPE, allocatable :: res(:, :, :, :)
   R_TYPE, allocatable :: psi(:, :, :, :)
   R_TYPE, allocatable :: mm(:, :, :, :), evec(:, :)
+  R_TYPE, allocatable :: eigen(:)
   FLOAT,  allocatable :: eval(:)
   FLOAT, allocatable :: lambda(:)
   integer :: ist, jst, idim, ip, ii, iter, nops, maxst, ib, bsize
@@ -82,6 +83,14 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     call X(hamiltonian_apply_batch)(hm, gr%der, psib(1), resb(1), ik)
     nops = nops + bsize
 
+    SAFE_ALLOCATE(eigen(1:bsize))
+
+    call X(mesh_batch_dotp_vector)(gr%mesh, psib(1), resb(1), eigen)
+
+    st%eigenval(jst:maxst, ik) = eigen(1:bsize)
+
+    SAFE_DEALLOCATE_A(eigen)
+
     call batch_end(psib(1))
     call batch_end(resb(1))
 
@@ -90,26 +99,10 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     do ist = jst, maxst
       ib = ist - jst + 1
 
-      st%eigenval(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, psi(:, :, 1, ib), res(:, :, 1, ib), reduce = .false.)
-    end do
-
-#ifdef HAVE_MPI
-    ! perform all the reductions at once
-    if(gr%mesh%parallel_in_domains) then
-      SAFE_ALLOCATE(fbuff(1:bsize))
-      fbuff(1:bsize) = st%eigenval(jst:maxst, ik)
-      call MPI_Allreduce(fbuff(1), st%eigenval(jst, ik), bsize, MPI_FLOAT, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
-      SAFE_DEALLOCATE_A(fbuff)
-    end if
-#endif
-
-    do ist = jst, maxst
-      ib = ist - jst + 1
-
       do idim = 1, st%d%dim
         call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), psi(:, idim, 1, ib), res(:, idim, 1, ib))
       end do
-
+      
       if(X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, 1, ib)) < tol) done(ib) = 1
     end do
 
