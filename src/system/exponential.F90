@@ -563,7 +563,7 @@ contains
       type(profile_t), save :: prof
 
       call push_sub('exponential.taylor_series_batch')
-      call profiling_in(prof, "EXP_EXP_TAYLOR_BATCH")
+      call profiling_in(prof, "EXP_TAYLOR_BATCH")
 
       SAFE_ALLOCATE(psi1 (1:der%mesh%np_part, 1:hm%d%dim, 1:psib%nst))
       SAFE_ALLOCATE(hpsi1(1:der%mesh%np, 1:hm%d%dim, 1:psib%nst))
@@ -607,9 +607,9 @@ contains
       end do
 
       if(hamiltonian_apply_packed(hm, der%mesh)) then
-        call batch_unpack(psib)
         call batch_unpack(psi1b, copy = .false.)
         call batch_unpack(hpsi1b, copy = .false.)
+        call batch_unpack(psib)
       end if
 
       call batch_end(hpsi1b)

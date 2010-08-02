@@ -134,7 +134,7 @@ cubic_mesh.o : cubic_mesh.F90 mesh.o
 cubic_mesh_low.o : cubic_mesh_low.c cubic_mesh.h
 cubic_mesh_fft.o : cubic_mesh_fft.c cubic_mesh.h
 transfer_table.o : transfer_table.F90
-mesh_batch.o : mesh_batch.F90 mesh_batch_inc.F90 mesh.o
+mesh_batch.o : mesh_batch.F90 mesh_batch_inc.F90 mesh.o mesh_function.o
 fourier_kernel.o : fourier_kernel.F90 cubic_mesh.o
 symmetrizer.o : symmetrizer.F90 symmetrizer_inc.F90 mesh.o
 partition.o : partition.F90 mesh.o

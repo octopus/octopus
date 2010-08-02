@@ -28,7 +28,8 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time, open_boundaries)
   logical, optional,   intent(in)    :: open_boundaries
 
   R_TYPE, allocatable :: hpsi(:, :, :)
-  integer :: ik, ist, minst, maxst
+  R_TYPE, allocatable :: eigen(:)
+  integer :: ik, minst, maxst
   logical :: open_boundaries_
   type(batch_t) :: psib, hpsib
   type(profile_t), save :: prof
@@ -55,10 +56,11 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time, open_boundaries)
     ! e = <  Psi_C | H_CL H_CC H_CR | Psi_C  >
     !      \ Psi_R | 0    H_RC H_RR | Psi_R /
     ! But I am not sure how to calculate this right now.
+    
+    SAFE_ALLOCATE(eigen(st%st_start:st%st_end))
+    SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:st%d%dim, 1:st%d%block_size))
 
     do ik = st%d%kpt%start, st%d%kpt%end
-
-      SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:st%d%dim, 1:st%d%block_size))
 
       do minst = st%st_start, st%st_end, st%d%block_size
         maxst = min(st%st_end, minst + st%d%block_size - 1)
@@ -66,25 +68,20 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time, open_boundaries)
         call batch_init(psib, st%d%dim, minst, maxst, st%X(psi)(:, :, minst:, ik))
         call batch_init(hpsib, st%d%dim, minst, maxst, hpsi)
 
-        if(present(time)) then
-          call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time)
-        else
-          call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik)
-        end if
+        call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time)
+        call X(mesh_batch_dotp_vector)(der%mesh, psib, hpsib, eigen(minst:maxst))
 
         call batch_end(psib)
         call batch_end(hpsib)
         
-        do ist = minst, maxst 
-          st%eigenval(ist, ik) = &
-            R_REAL(X(mf_dotp)(der%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), hpsi(:, :, ist - minst + 1)))
-        end do
-
       end do
 
-      SAFE_DEALLOCATE_A(hpsi)
+      st%eigenval(st%st_start:st%st_end, ik) = eigen(st%st_start:st%st_end)
 
     end do
+
+    SAFE_DEALLOCATE_A(hpsi)
+    SAFE_DEALLOCATE_A(eigen)
 
   end if
 

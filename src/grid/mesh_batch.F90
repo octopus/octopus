@@ -29,6 +29,7 @@ module mesh_batch_m
   use loct_math_m
   use math_m
   use mesh_m
+  use mesh_function_m
   use messages_m
   use mpi_m
   use profiling_m
@@ -39,6 +40,8 @@ module mesh_batch_m
   public ::                         &
     dmesh_batch_dotp_matrix,        &
     zmesh_batch_dotp_matrix,        &
+    dmesh_batch_dotp_vector,        &
+    zmesh_batch_dotp_vector,        &
     dmesh_batch_dotp_self,          &
     zmesh_batch_dotp_self,          &
     dmesh_batch_rotate,             &
