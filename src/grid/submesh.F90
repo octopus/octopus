@@ -35,35 +35,38 @@ module submesh_m
   implicit none
   private 
 
-  public ::                 &
-       submesh_t,           &
-       submesh_null,        &
-       submesh_init_sphere, &
-       submesh_copy,        &
-       submesh_get_inv,     &
-       dsm_integrate,       &
-       zsm_integrate,       &
-       submesh_add_to_mesh, &
-       dsubmesh_batch_add,  &
-       zsubmesh_batch_add,  &
-       submesh_to_mesh_dotp,&
-       dsubmesh_batch_add_matrix, &
-       zsubmesh_batch_add_matrix, &
-       dsubmesh_batch_dotp_matrix,&
-       zsubmesh_batch_dotp_matrix,&
+  public ::                         &
+       submesh_t,                   &
+       submesh_null,                &
+       submesh_init_sphere,         &
+       submesh_copy,                &
+       submesh_get_inv,             &
+       dsm_integrate,               &
+       zsm_integrate,               &
+       submesh_add_to_mesh,         &
+       dsubmesh_batch_add,          &
+       zsubmesh_batch_add,          &
+       submesh_to_mesh_dotp,        &
+       dsubmesh_batch_add_matrix,   &
+       zsubmesh_batch_add_matrix,   &
+       dsubmesh_batch_dotp_matrix,  &
+       zsubmesh_batch_dotp_matrix,  &
+       submesh_overlap,             &
        submesh_end
 
   type submesh_t
-     integer               :: ns = -1        ! number of points inside the submesh
-     integer               :: ns_part        ! number of points inside the submesh including ghost points
-     integer               :: np_part
-     integer,      pointer :: jxyz(:) => null()       ! index in the mesh of the points inside the sphere
-     FLOAT,        pointer :: x(:,:)  => null()
-     type(mesh_t), pointer :: mesh
-     logical               :: has_points
+    FLOAT                 :: center(1:MAX_DIM)
+    FLOAT                 :: radius
+    integer               :: ns = -1        !< number of points inside the submesh
+    integer               :: ns_part        !< number of points inside the submesh including ghost points
+    integer               :: np_part
+    integer,      pointer :: jxyz(:) => null() !< index in the mesh of the points inside the sphere
+    FLOAT,        pointer :: x(:,:)  => null()
+    type(mesh_t), pointer :: mesh
+    logical               :: has_points
 #ifdef HAVE_MPI
-     integer,      pointer :: psize(:) => null()      ! the number of points each processor holds
-     type(mpi_grp_t)       :: mpi_grp
+    integer,      pointer :: psize(:) => null()      ! the number of points each processor holds
+    type(mpi_grp_t)       :: mpi_grp
 #endif
   end type submesh_t
   
@@ -112,6 +115,11 @@ contains
 
     this%np_part = mesh%np_part
     this%mesh => mesh
+
+    this%center = M_ZERO
+    this%center(1:sb%dim) = center(1:sb%dim)
+
+    this%radius = rc
 
     ! The spheres are generated differently for periodic coordinates,
     ! mainly for performance reasons.
@@ -273,6 +281,9 @@ contains
 
     sm_out%mesh => sm_in%mesh
 
+    sm_out%center = sm_in%center
+    sm_out%radius = sm_in%radius
+
     sm_out%ns = sm_in%ns
     sm_out%ns_part = sm_in%ns_part
     sm_out%np_part  = sm_in%np_part
@@ -300,6 +311,21 @@ contains
 
     call pop_sub('submesh.submesh_get_inv')
   end subroutine submesh_get_inv
+
+  ! --------------------------------------------------------------
+
+  logical pure function submesh_overlap(sm1, sm2) result(overlap)
+    type(submesh_t),      intent(in)   :: sm1
+    type(submesh_t),      intent(in)   :: sm2
+    
+    FLOAT :: distance
+
+    distance = sum((sm1%center(1:MAX_DIM) - sm2%center(1:MAX_DIM))**2)
+    overlap = distance + CNST(100.0)*M_EPSILON <= (sm1%radius + sm2%radius)**2
+
+  end function submesh_overlap
+  
+
 
 #include "undef.F90"
 #include "real.F90"
