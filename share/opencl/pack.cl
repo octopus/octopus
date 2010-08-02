@@ -21,40 +21,44 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-__kernel void dpack(const int npsi,
-		    const int ipsi,
+__kernel void dpack(const int nst,
+		    const int ist,
 		    const __global double * src, 
 		    __global double * dest){
-  int ip = get_global_id(0);
+  const int ip = get_global_id(0);
+  const int ist2 = get_global_id(1);
 
-  dest[ipsi + ip*npsi] = src[ip];
+  dest[ist + ist2 + ip*nst] = src[ip + ist2*get_global_size(0)];
 }
 
-__kernel void zpack(const int npsi,
-		    const int ipsi,
+__kernel void zpack(const int nst,
+		    const int ist,
 		    const __global double2 * src, 
 		    __global double2 * dest){
-  int ip = get_global_id(0);
+  const int ip = get_global_id(0);
+  const int ist2 = get_global_id(1);
 
-  dest[ipsi + ip*npsi] = src[ip];
+  dest[ist + ist2 + ip*nst] = src[ip + ist2*get_global_size(0)];
 }
 
-__kernel void dunpack(const int npsi,
-		    const int ipsi,
-		    const __global double * src, 
-		    __global double * dest){
-  int i = get_global_id(0);
+__kernel void dunpack(const int nst,
+		      const int ist,
+		      const __global double * src, 
+		      __global double * dest){
+  const int ist2 = get_global_id(0);
+  const int ip = get_global_id(1);
 
-  dest[i] = src[ipsi + i*npsi];
+  dest[ip + ist2*get_global_size(1)] = src[ist + ist2 + ip*nst];
 }
 
-__kernel void zunpack(const int npsi,
-		    const int ipsi,
-		    const __global double2 * src, 
-		    __global double2 * dest){
-  int i = get_global_id(0);
+__kernel void zunpack(const int nst,
+		      const int ist,
+		      const __global double2 * src, 
+		      __global double2 * dest){
+  const int ist2 = get_global_id(0);
+  const int ip = get_global_id(1);
 
-  dest[i] = src[ipsi + i*npsi];
+  dest[ip + ist2*get_global_size(1)] = src[ist + ist2 + ip*nst];
 }
 
 

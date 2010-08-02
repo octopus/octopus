@@ -135,6 +135,9 @@ module batch_m
     BATCH_PACKED     = 1,       &
     BATCH_CL_PACKED  = 2
 
+  integer, parameter :: CL_PACK_MAX_BUFFER_SIZE = 4 !< this value controls the size (in number of wave-functions)
+                                                    !! of the buffer used to copy states to the opencl device.
+
 contains
 
   !--------------------------------------------------------------
@@ -494,7 +497,7 @@ contains
   subroutine batch_write_to_opencl_buffer(this)
     type(batch_t),      intent(inout)  :: this
 
-    integer :: ist
+    integer :: ist, ist2, unroll
     type(opencl_mem_t) :: tmp
     type(c_ptr) :: kernel
     type(profile_t), save :: prof_pack
@@ -513,24 +516,46 @@ contains
 
     else
       ! we copy to a temporary array and then we re-arrange data
-      call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), this%pack%size(2))
 
-      do ist = 1, this%nst_linear
-        if(batch_type(this) == TYPE_FLOAT) then
-          kernel = dpack
-          call opencl_write_buffer(tmp, ubound(this%states_linear(ist)%dpsi, dim = 1), this%states_linear(ist)%dpsi)
-        else
-          kernel = zpack
-          call opencl_write_buffer(tmp, ubound(this%states_linear(ist)%zpsi, dim = 1), this%states_linear(ist)%zpsi)
-        end if
+      if(batch_type(this) == TYPE_FLOAT) then
+        kernel = dpack
+      else
+        kernel = zpack
+      end if
+      
+      unroll = min(CL_PACK_MAX_BUFFER_SIZE, this%pack%size(1))
 
+      call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), unroll*this%pack%size(2))
+      
+      do ist = 1, this%nst_linear, unroll
+        
+        ! copy a number 'unroll' of states to the buffer
+        do ist2 = ist, min(ist + unroll - 1, this%nst_linear)
+
+          if(batch_type(this) == TYPE_FLOAT) then
+            call opencl_write_buffer(tmp, ubound(this%states_linear(ist2)%dpsi, dim = 1), this%states_linear(ist2)%dpsi, &
+              offset = (ist2 - ist)*this%pack%size(2))
+          else
+            call opencl_write_buffer(tmp, ubound(this%states_linear(ist2)%zpsi, dim = 1), this%states_linear(ist2)%zpsi, &
+              offset = (ist2 - ist)*this%pack%size(2))
+          end if
+        end do
+
+        ! now call an opencl kernel to rearrange the data
         call opencl_set_kernel_arg(kernel, 0, this%pack%size(1))
         call opencl_set_kernel_arg(kernel, 1, ist - 1)
         call opencl_set_kernel_arg(kernel, 2, tmp)
         call opencl_set_kernel_arg(kernel, 3, this%pack%buffer)
 
         call profiling_in(prof_pack, "CL_PACK")
-        call opencl_kernel_run(kernel, (/this%pack%size(2)/), (/opencl_max_workgroup_size()/))
+        call opencl_kernel_run(kernel, (/this%pack%size(2), unroll/), (/opencl_max_workgroup_size()/unroll, unroll/))
+
+        if(batch_type(this) == TYPE_FLOAT) then
+          call profiling_count_transfers(unroll*this%pack%size(2), M_ONE)
+        else
+          call profiling_count_transfers(unroll*this%pack%size(2), M_ZI)
+        end if
+
         call opencl_finish()
         call profiling_out(prof_pack)
 
@@ -548,7 +573,7 @@ contains
   subroutine batch_read_from_opencl_buffer(this)
     type(batch_t),      intent(inout) :: this
 
-    integer :: ist
+    integer :: ist, ist2, unroll
     type(opencl_mem_t) :: tmp
     type(c_ptr) :: kernel
     type(profile_t), save :: prof_unpack
@@ -565,8 +590,11 @@ contains
         call opencl_read_buffer(this%pack%buffer, ubound(this%states_linear(1)%zpsi, dim = 1), this%states_linear(1)%zpsi)
       end if
     else
+
+      unroll = min(CL_PACK_MAX_BUFFER_SIZE, this%pack%size(1))
+
       ! we use a kernel to move to a temporary array and then we read
-      call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), this%pack%size(2))
+      call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), unroll*this%pack%size(2))
 
       if(batch_type(this) == TYPE_FLOAT) then
         kernel = dunpack
@@ -574,22 +602,36 @@ contains
         kernel = zunpack
       end if
 
-      do ist = 1, this%nst_linear
+      do ist = 1, this%nst_linear, unroll
         call opencl_set_kernel_arg(kernel, 0, this%pack%size(1))
         call opencl_set_kernel_arg(kernel, 1, ist - 1)
         call opencl_set_kernel_arg(kernel, 2, this%pack%buffer)
         call opencl_set_kernel_arg(kernel, 3, tmp)
 
         call profiling_in(prof_unpack, "CL_UNPACK")
-        call opencl_kernel_run(kernel, (/this%pack%size(2)/), (/opencl_max_workgroup_size()/))
+        call opencl_kernel_run(kernel, (/unroll, this%pack%size(2)/), (/unroll, opencl_max_workgroup_size()/unroll/))
+
+        if(batch_type(this) == TYPE_FLOAT) then
+          call profiling_count_transfers(unroll*this%pack%size(2), M_ONE)
+        else
+          call profiling_count_transfers(unroll*this%pack%size(2), M_ZI)
+        end if
+
         call opencl_finish()
         call profiling_out(prof_unpack)
 
-        if(batch_type(this) == TYPE_FLOAT) then
-          call opencl_read_buffer(tmp, ubound(this%states_linear(ist)%dpsi, dim = 1), this%states_linear(ist)%dpsi)
-        else
-          call opencl_read_buffer(tmp, ubound(this%states_linear(ist)%zpsi, dim = 1), this%states_linear(ist)%zpsi)
-        end if
+        ! copy a number 'unroll' of states from the buffer
+        do ist2 = ist, min(ist + unroll - 1, this%nst_linear)
+          
+          if(batch_type(this) == TYPE_FLOAT) then
+            call opencl_read_buffer(tmp, ubound(this%states_linear(ist2)%dpsi, dim = 1), this%states_linear(ist2)%dpsi, &
+              offset = (ist2 - ist)*this%pack%size(2))
+          else
+            call opencl_read_buffer(tmp, ubound(this%states_linear(ist2)%zpsi, dim = 1), this%states_linear(ist2)%zpsi, &
+              offset = (ist2 - ist)*this%pack%size(2))
+          end if
+        end do
+
       end do
 
       call opencl_release_buffer(tmp)
