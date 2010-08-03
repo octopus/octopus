@@ -21,6 +21,7 @@
 
 module v_ks_m
   use datasets_m
+  use derivatives_m
   use energy_m
   use geometry_m
   use global_m
@@ -78,6 +79,8 @@ module v_ks_m
     type(xc_ks_inversion_t)  :: ks_inversion
     type(poisson_t), pointer :: hartree_solver
     logical                  :: new_hartree
+    logical                  :: tail_correction
+    FLOAT                    :: tail_correction_tol
   end type v_ks_t
 
 contains
@@ -165,8 +168,41 @@ contains
 
         ! Perdew-Zunger corrections
         if(ks%sic_type == sic_pz) ks%xc_family = ior(ks%xc_family, XC_FAMILY_OEP)
+      
       else
         ks%sic_type = sic_none
+      end if
+
+      !%Variable XCTailCorrection
+      !%Type logical
+      !%Default no
+      !%Section Hamiltonian::XC
+      !%Description
+      !% (Experimental) This variable enables a mechanism to correct
+      !% the value of the XC functional in near-zero-density
+      !% regions. This zone might have numerical noise or it might
+      !% even be set to zero by libxc.
+      !% The correction is performed by calculating the "XC density", 
+      !% a charge density that would generate an
+      !% equivalent XC potential. This XC density is a localized
+      !% quantity, so we can remove the noise by cutting in the
+      !% regions where the density is small.
+      !%End
+      call parse_logical(datasets_check('XCTailCorrection'), .false., ks%tail_correction)
+      
+      if(ks%tail_correction) then 
+        call messages_devel_version("XC tail correction")
+        
+        !%Variable XCTailCorrectionTol
+        !%Type float
+        !%Default 1-e6
+        !%Section Hamiltonian::XC
+        !%Description
+        !% This variable sets the threshold to cut the XC density when
+        !% XCTailCorrection is enabled. The value is always assumed to
+        !% be in atomic units.
+        !%End
+        call parse_float(datasets_check('XCTailCorrectionTol'), CNST(1e-6), ks%tail_correction_tol)
       end if
 
       call xc_oep_init(ks%oep, ks%xc_family, gr, d)
@@ -378,7 +414,8 @@ contains
       FLOAT, allocatable :: rho(:, :)
       type(profile_t), save :: prof
       FLOAT, pointer :: vxc(:, :)
-      integer :: ispin
+      FLOAT, allocatable :: vxcc(:), nxc(:)
+      integer :: ispin, ierr, ip
 
       call push_sub('v_ks.v_ks_calc.v_a_xc')
       call profiling_in(prof, "XC")
@@ -410,6 +447,41 @@ contains
       else
         call xc_get_vxc(gr%fine%der, ks%xc, st, rho, st%d%ispin, hm%ex, hm%ec, &
              -minval(st%eigenval(st%nst, :)), st%qtot, vxc, vtau=hm%vtau)
+      end if
+
+
+      if(ks%tail_correction) then
+
+        SAFE_ALLOCATE(nxc(1:gr%fine%mesh%np))
+        SAFE_ALLOCATE(vxcc(1:gr%fine%mesh%np_part))
+        
+        do ispin = 1, st%d%nspin
+          
+          vxcc(1:gr%fine%mesh%np) = hm%vxc(1:gr%fine%mesh%np, ispin)
+          
+          call dderivatives_lapl(gr%fine%der, vxcc, nxc)
+          
+          ! These output calls and the ones below are for debugging, XA and FB.
+          ! call doutput_function(output_axis_x, "./", "vxc", gr%fine%mesh, vxcc, unit_one, ierr)
+          ! call doutput_function(output_axis_x, "./", "nxc", gr%fine%mesh, nxc, unit_one, ierr)
+          
+          do ip = 1, gr%fine%mesh%np
+            if(rho(ip, 1) < ks%tail_correction_tol) nxc(ip) = M_ZERO
+          end do
+
+          call dpoisson_solve(ks%hartree_solver, vxcc, nxc)
+          vxcc(1:gr%fine%mesh%np) = -vxcc(1:gr%fine%mesh%np)/(CNST(4.0)*M_PI)
+
+          ! call doutput_function(output_axis_x, "./", "nxc2", gr%fine%mesh, nxc, unit_one, ierr)
+          ! call doutput_function(output_axis_x, "./", "vxc2", gr%fine%mesh, vxcc, unit_one, ierr)
+          
+          hm%vxc(1:gr%fine%mesh%np, ispin) = vxcc(1:gr%fine%mesh%np)
+
+        end do
+
+        SAFE_DEALLOCATE_A(nxc)
+        SAFE_DEALLOCATE_A(vxcc)
+
       end if
 
       SAFE_DEALLOCATE_A(rho)
