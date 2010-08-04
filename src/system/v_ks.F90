@@ -449,6 +449,19 @@ contains
              -minval(st%eigenval(st%nst, :)), st%qtot, vxc, vtau=hm%vtau)
       end if
 
+      if(ks%theory_level == KOHN_SHAM_DFT) then
+        ! The OEP family has to be handled specially
+        if (states_are_real(st)) then
+          call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
+            gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
+        else
+          call zxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
+            gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
+        end if
+
+        ! Also treat KS inversion separately (not part of libxc)
+        call xc_ks_inversion_calc(ks%ks_inversion, gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
+      end if
 
       if(ks%tail_correction) then
 
@@ -485,20 +498,6 @@ contains
       end if
 
       SAFE_DEALLOCATE_A(rho)
-
-      if(ks%theory_level == KOHN_SHAM_DFT) then
-        ! The OEP family has to be handled specially
-        if (states_are_real(st)) then
-          call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
-            gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
-        else
-          call zxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
-            gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
-        end if
-
-        ! Also treat KS inversion separately (not part of libxc)
-        call xc_ks_inversion_calc(ks%ks_inversion, gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
-      end if
 
       ! Now we calculate Int[n vxc] = hm%epot
       select case(hm%d%ispin)
