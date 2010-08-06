@@ -1674,7 +1674,7 @@ contains
     FLOAT, optional,   intent(in) :: error(nst, st%d%nik)
 
     integer ik, ist, ns, is
-    FLOAT :: occ, kpoint(1:3)
+    FLOAT :: occ, kpoint(1:MAX_DIM)
     character(len=80) tmp_str(MAX_DIM), cspin
 
     call push_sub('states.states_write_eigenvalues')
@@ -3075,7 +3075,7 @@ return
     integer :: ik, ist, idim, il, np, ip, iunit
     CMPLX, allocatable :: psi(:, :), phi(:, :), hpsi(:, :), self_energy(:, :)
     character(len=256) :: fname
-    FLOAT :: kpoint(1:3)
+    FLOAT :: kpoint(1:MAX_DIM)
 
     call push_sub('states.write_proj_lead_wf')
 
