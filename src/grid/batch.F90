@@ -24,6 +24,7 @@ module batch_m
   use c_pointer_m
   use datasets_m
   use global_m
+  use hardware_m
   use lalg_adv_m
   use lalg_basic_m
   use parser_m
@@ -404,20 +405,29 @@ contains
   contains
 
     subroutine pack_copy()
-      integer :: ist, ip
-
+      integer :: ist, ip, sp, ep
+      
       if(batch_type(this) == TYPE_FLOAT) then
-        forall(ist = 1:this%nst_linear)
-          forall(ip = 1:this%pack%size(2))
-            this%pack%dpsi(ist, ip) = this%states_linear(ist)%dpsi(ip)
+        
+        do sp = 1, this%pack%size(2), hardware%dblock_size
+          ep = min(sp + hardware%dblock_size - 1, this%pack%size(2))
+          forall(ist = 1:this%nst_linear)
+            forall(ip = sp:ep)
+              this%pack%dpsi(ist, ip) = this%states_linear(ist)%dpsi(ip)
+            end forall
           end forall
-        end forall
+        end do
+
+        call profiling_count_transfers(this%nst_linear*this%pack%size(2), M_ONE)
       else
-        forall(ist = 1:this%nst_linear)
-          forall(ip = 1:this%pack%size(2))
-            this%pack%zpsi(ist, ip) = this%states_linear(ist)%zpsi(ip)
+        do sp = 1, this%pack%size(2), hardware%zblock_size
+          ep = min(sp + hardware%zblock_size - 1, this%pack%size(2))
+          forall(ist = 1:this%nst_linear)
+            forall(ip = sp:ep)
+              this%pack%zpsi(ist, ip) = this%states_linear(ist)%zpsi(ip)
+            end forall
           end forall
-        end forall
+        end do
       end if
     end subroutine pack_copy
 
@@ -472,20 +482,28 @@ contains
   contains
 
     subroutine unpack_copy()
-      integer :: ist, ip
+      integer :: ist, ip, sp, ep
 
       if(batch_type(this) == TYPE_FLOAT) then
-       forall(ip = 1:this%pack%size(2))
+        do sp = 1, this%pack%size(2), hardware%dblock_size
+          ep = min(sp + hardware%dblock_size - 1, this%pack%size(2))
           forall(ist = 1:this%nst_linear)
-            this%states_linear(ist)%dpsi(ip) = this%pack%dpsi(ist, ip) 
+            forall(ip = sp:ep)
+              this%states_linear(ist)%dpsi(ip) = this%pack%dpsi(ist, ip) 
+            end forall
           end forall
-        end forall
+        end do
+
+        call profiling_count_transfers(this%nst_linear*this%pack%size(2), M_ONE)
       else
-        forall(ip = 1:this%pack%size(2))
+        do sp = 1, this%pack%size(2), hardware%zblock_size
+          ep = min(sp + hardware%zblock_size - 1, this%pack%size(2))
           forall(ist = 1:this%nst_linear)
-            this%states_linear(ist)%zpsi(ip) = this%pack%zpsi(ist, ip)
+            forall(ip = sp:ep)
+              this%states_linear(ist)%zpsi(ip) = this%pack%zpsi(ist, ip)
+            end forall
           end forall
-        end forall
+        end do
       end if
     end subroutine unpack_copy
 
