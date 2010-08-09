@@ -405,12 +405,16 @@ contains
   contains
 
     subroutine pack_copy()
-      integer :: ist, ip, sp, ep
+      integer :: ist, ip, sp, ep, bsize
       
+ 
       if(batch_type(this) == TYPE_FLOAT) then
-        
-        do sp = 1, this%pack%size(2), hardware%dblock_size
-          ep = min(sp + hardware%dblock_size - 1, this%pack%size(2))
+
+        bsize = hardware%dblock_size
+      
+        !$omp parallel do private(ep, ist, ip)
+        do sp = 1, this%pack%size(2), bsize
+          ep = min(sp + bsize - 1, this%pack%size(2))
           forall(ist = 1:this%nst_linear)
             forall(ip = sp:ep)
               this%pack%dpsi(ist, ip) = this%states_linear(ist)%dpsi(ip)
@@ -420,15 +424,22 @@ contains
 
         call profiling_count_transfers(this%nst_linear*this%pack%size(2), M_ONE)
       else
-        do sp = 1, this%pack%size(2), hardware%zblock_size
-          ep = min(sp + hardware%zblock_size - 1, this%pack%size(2))
+
+        bsize = hardware%zblock_size
+
+        !$omp parallel do private(ep, ist, ip)
+        do sp = 1, this%pack%size(2), bsize
+          ep = min(sp + bsize - 1, this%pack%size(2))
           forall(ist = 1:this%nst_linear)
             forall(ip = sp:ep)
               this%pack%zpsi(ist, ip) = this%states_linear(ist)%zpsi(ip)
             end forall
           end forall
         end do
-      end if
+
+        call profiling_count_transfers(this%nst_linear*this%pack%size(2), M_ZI)
+     end if
+
     end subroutine pack_copy
 
   end subroutine batch_pack
@@ -485,25 +496,25 @@ contains
       integer :: ist, ip, sp, ep
 
       if(batch_type(this) == TYPE_FLOAT) then
-        do sp = 1, this%pack%size(2), hardware%dblock_size
-          ep = min(sp + hardware%dblock_size - 1, this%pack%size(2))
-          forall(ist = 1:this%nst_linear)
-            forall(ip = sp:ep)
-              this%states_linear(ist)%dpsi(ip) = this%pack%dpsi(ist, ip) 
-            end forall
-          end forall
-        end do
+
+         !$omp parallel do private(ist)
+         do ip = 1, this%pack%size(2)
+           forall(ist = 1:this%nst_linear)
+             this%states_linear(ist)%dpsi(ip) = this%pack%dpsi(ist, ip) 
+           end forall
+         end do
 
         call profiling_count_transfers(this%nst_linear*this%pack%size(2), M_ONE)
       else
-        do sp = 1, this%pack%size(2), hardware%zblock_size
-          ep = min(sp + hardware%zblock_size - 1, this%pack%size(2))
+         
+        !$omp parallel do private(ist)
+        do ip = 1, this%pack%size(2)
           forall(ist = 1:this%nst_linear)
-            forall(ip = sp:ep)
-              this%states_linear(ist)%zpsi(ip) = this%pack%zpsi(ist, ip)
-            end forall
+            this%states_linear(ist)%zpsi(ip) = this%pack%zpsi(ist, ip) 
           end forall
         end do
+
+        call profiling_count_transfers(this%nst_linear*this%pack%size(2), M_ZI)
       end if
     end subroutine unpack_copy
 
