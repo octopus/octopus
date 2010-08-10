@@ -20,27 +20,27 @@
 #include "global.h"
 
 module mesh_m
-  use datasets_m
   use checksum_m
   use curvilinear_m
+  use datasets_m
   use geometry_m
   use global_m
   use hypercube_m
-  use io_m
-  use math_m
   use index_m
+  use io_m
   use io_binary_m
+  use math_m
   use messages_m
-  use multicomm_m
   use mpi_m
+  use multicomm_m
   use loct_m
-  use parser_m
   use par_vec_m
+  use parser_m
   use profiling_m
   use simul_box_m
+  use species_m
   use unit_m
   use unit_system_m
-  use species_m
 
   implicit none
   
@@ -362,7 +362,7 @@ contains
     if(mesh%parallel_in_domains) then
       min_loc_in(1) = dmin
       min_loc_in(2) = mesh%np_global * mesh%mpi_grp%rank  + real(imin, REAL_PRECISION) 
-      call mpi_allreduce(min_loc_in, min_loc_out, 1, MPI_DOUBLE_PRECISION, &
+      call MPI_Allreduce(min_loc_in, min_loc_out, 1, MPI_FLOAT, &
         MPI_MINLOC, mesh%mpi_grp%comm, mpi_err)
       dmin = min_loc_out(1)
       imin = mod(nint(min_loc_out(2)), mesh%np_global)

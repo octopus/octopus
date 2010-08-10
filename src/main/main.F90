@@ -72,7 +72,7 @@ program octopus
   !% This is useful for developers and you should include this output when
   !% submitting a bug report.
   !%Option 99
-  !% The debug output is additionally written to files in the debug
+  !% The debug output is additionally written to files in the <tt>debug</tt>
   !% directory. For each node (when running in parallel) there is a file called
   !% <tt>debug_trace.&lt;rank&gt;</tt>. Writing these files slows down the code by a huge factor and
   !% it is usually only necessary for parallel runs. In the serial case all

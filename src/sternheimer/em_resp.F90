@@ -614,7 +614,7 @@ contains
 
       ! reset the values of these variables
       em_vars%calc_hyperpol = .false.
-      em_vars%freq_factor(1:MAX_DIM) = M_ONE
+      em_vars%freq_factor(1:3) = M_ONE
 
       !%Variable EMPerturbationType
       !%Type integer
