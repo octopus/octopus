@@ -42,17 +42,19 @@ subroutine poisson3D_init(this, geo)
   !%Variable PoissonSolverMaxIter
   !%Type integer
   !%Section Hamiltonian::Poisson
+  !%Default 400
   !%Description
-  !% The maximum number of iterations for conjugate gradient
-  !% Poisson solvers. Default is 400.
+  !% The maximum number of iterations for conjugate-gradient
+  !% Poisson solvers.
   !%End
 
   !%Variable PoissonSolverThreshold
-  !%Type integer
+  !%Type float
   !%Section Hamiltonian::Poisson
+  !%Default 1e-5
   !%Description
   !% The tolerance for the Poisson solution, used by the <tt>cg</tt> and
-  !% <tt>multigrid</tt> solvers. Default is <math>10^{-5}</math>.
+  !% <tt>multigrid</tt> solvers.
   !%End
 
   !! This variable is disabled for the moment

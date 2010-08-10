@@ -138,17 +138,11 @@ contains
     !%Variable PoissonSolverNodes
     !%Type integer
     !%Section Hamiltonian::Poisson
+    !%Default all_nodes
     !%Description
-    !% Defines how much nodes to use to solve the Poisson equation. Default:
-    !% AllNodes
-    !%Option domain_nodes -2
-    !% Uses domain nodes to execute Poisson solver.
-    !%Option serial_nodes -1
-    !% Uses only one node to execute Poisson solver.
-    !%Option all_nodes 0
-    !% Uses all avaible MPI nodes to execute Poisson solver.
-    !%Option other_specific_nodes 1
-    !% Uses specified number of node will be used.
+    !% How many nodes to use to solve the Poisson equation. Special values:
+    !% -2 = only domain nodes. -1 = serial. 0 = all available MPI nodes.
+    !% Integers 1 or greater specify the actual number of nodes to use.
     !%End
     call parse_integer(datasets_check('PoissonSolverNodes'), default_nodes, nodes)
     if (nodes >= 1) then    
