@@ -2353,8 +2353,8 @@ return
      call multicomm_divide_range(st%nst, st%mpi_grp%size, st%st_range(1, :), st%st_range(2, :), st%st_num)
 
      do k = 0, st%mpi_grp%size - 1
-       write(message(1),'(a,i4,a,i7,a,i7)') &
-            'Info: Nodes in states-group ', k, ' will manage states', st%st_range(1, k), " - ", st%st_range(2, k)
+       write(message(1),'(a,i4,a,i5,a,i6,a,i6)') &
+            'Info: Nodes in states-group ', k, ' will manage ', st%st_num(k), ' states:', st%st_range(1, k), " - ", st%st_range(2, k)
        call write_info(1)
        if(st%mpi_grp%rank .eq. k) then
          st%st_start = st%st_range(1, k)
