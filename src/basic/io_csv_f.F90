@@ -40,7 +40,7 @@ contains
 
   subroutine sread_csv(fname, np, ff, ierr)
     character(len=*),    intent(in)   :: fname
-    integer(8),             intent(in)   :: np
+    integer(8),          intent(in)   :: np
     real(4),             intent(out)  :: ff(:)
     integer,             intent(out)  :: ierr
 
@@ -56,7 +56,7 @@ contains
 
   subroutine dread_csv(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
-    integer(8),             intent(in)  :: np
+    integer(8),          intent(in)  :: np
     real(8),             intent(out) :: ff(:)
     integer,             intent(out) :: ierr
 
@@ -72,40 +72,60 @@ contains
   
   subroutine cread_csv(fname, np, ff, ierr)
     character(len=*),    intent(in)   :: fname
-    integer(8),             intent(in)   :: np
+    integer(8),          intent(in)   :: np
     complex(4),          intent(out)  :: ff(:)
     integer,             intent(out)  :: ierr
     
+    call push_sub('io_csv_f.cread_csv')
+
     ierr = 1
+    ff(:) = M_ZERO
+
+    call pop_sub('io_csv_f.cread_csv')
   end subroutine cread_csv
   
 ! some ugly stub functions just to satisfy the linker
 
   subroutine zread_csv(fname, np, ff, ierr)
     character(len=*),    intent(in)   :: fname
-    integer(8),             intent(in)   :: np
+    integer(8),          intent(in)   :: np
     complex(8),          intent(out)  :: ff(:)
     integer,             intent(out)  :: ierr
     
+    call push_sub('io_csv_f.zread_csv')
+
     ierr = 1
+    ff(:) = M_ZERO
+
+    call pop_sub('io_csv_f.zread_csv')
   end subroutine zread_csv
   
   subroutine iread_csv(fname, np, ff, ierr)
     character(len=*),    intent(in)   :: fname
-    integer(8),             intent(in)   :: np
+    integer(8),          intent(in)   :: np
     integer(4),          intent(out)  :: ff(:)
     integer,             intent(out)  :: ierr
     
+    call push_sub('io_csv_f.iread_csv')
+
     ierr = 1
+    ff(:) = M_ZERO
+
+    call pop_sub('io_csv_f.iread_csv')
   end subroutine iread_csv
   
   subroutine lread_csv(fname, np, ff, ierr)
     character(len=*),    intent(in)   :: fname
-    integer(8),             intent(in)   :: np
+    integer(8),          intent(in)   :: np
     integer(8),          intent(out)  :: ff(:)
     integer,             intent(out)  :: ierr
-    
+
+    call push_sub('io_csv_f.lread_csv')
+
     ierr = 1
+    ff(:) = M_ZERO
+
+    call pop_sub('io_csv_f.lread_csv')
   end subroutine lread_csv
 
 ! some ugly stub functions end

@@ -185,6 +185,7 @@ subroutine X(input_function_global)(filename, mesh, ff, ierr, is_tmp, map)
       call io_binary_read(filename, mesh%np_global, ff, ierr)
       call profiling_count_transfers(mesh%np_global, ff(1))
     end if
+
   case("csv")
     if (mesh%sb%box_shape .ne. PARALLELEPIPED) then
       message(1) = "Box shape must be parallelepiped when a .csv file is used."

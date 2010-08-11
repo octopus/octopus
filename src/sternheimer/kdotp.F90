@@ -192,11 +192,11 @@ contains
       if(states_are_real(sys%st)) then
         call dsternheimer_solve(sh, sys, hm, kdotp_vars%lr(idir,:), 1, &
           M_ZERO, kdotp_vars%perturbation, KDOTP_DIR, &
-          "", kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
+          "", kdotp_wfs_tag(idir), have_restart_rho = .false.)
       else
         call zsternheimer_solve(sh, sys, hm, kdotp_vars%lr(idir,:), 1, &
           M_zI * kdotp_vars%eta, kdotp_vars%perturbation, KDOTP_DIR, &
-          "", kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
+          "", kdotp_wfs_tag(idir), have_restart_rho = .false.)
       endif
 
       kdotp_vars%ok = kdotp_vars%ok .and. sternheimer_has_converged(sh)         
