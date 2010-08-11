@@ -134,6 +134,11 @@ contains
     call write_info(1)
 
     use_kdotp = simul_box_is_periodic(gr%sb) .and. .not. em_vars%force_no_kdotp
+    if(use_kdotp .and. pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
+      message(1) = "Magnetic perturbation in periodic system not implemented."
+      call write_fatal(1)
+    endif
+
     ! read kdotp wavefunctions if necessary
     if (use_kdotp) then
       message(1) = "Reading kdotp wavefunctions since system is periodic."
@@ -788,7 +793,7 @@ contains
 
     call out_wavefunctions()
 
-    if(gr%sb%periodic_dim .eq. 3) then
+    if(gr%sb%periodic_dim .eq. gr%sb%dim) then
       call out_dielectric_constant()
       endif
 
@@ -806,7 +811,7 @@ contains
       integer, intent(in) :: out_file
 
       character(len=80) :: header_string
-      integer :: i, k
+      integer :: ii, idir, kdir
 
       call push_sub('em_resp.em_resp_output.cross_section_header')
 
@@ -815,16 +820,16 @@ contains
       write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma]", 20)
       write(out_file, '(a20)', advance = 'no') str_center("Anisotropy[sigma]", 20)
 
-      do i = 1, 3
-        do k = 1, 3
-          write(header_string,'(a6,i1,a1,i1,a1)') 'sigma(',i,',',k,')'
+      do idir = 1, gr%sb%dim
+        do kdir = 1, gr%sb%dim
+          write(header_string,'(a6,i1,a1,i1,a1)') 'sigma(', idir, ',', kdir, ')'
           write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
         end do
       end do
 
       write(out_file, *)
       write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 20)
-      do i = 1, 11
+      do ii = 1, 2 + gr%sb%dim**2
         write(out_file, '(a20)', advance = 'no')  str_center('['//trim(units_abbrev(units_out%length**2)) // ']', 20)
       end do
       write(out_file,*)
@@ -836,7 +841,7 @@ contains
     ! ---------------------------------------------------------
     subroutine out_polarizability()
       FLOAT :: cross(MAX_DIM, MAX_DIM), crossp(MAX_DIM, MAX_DIM)
-      FLOAT :: average, anisotropy
+      FLOAT :: cross_sum, crossp_sum, anisotropy
       integer :: idir, idir2
       
       call push_sub('em_resp.em_resp_output.out_polarizability')
@@ -853,12 +858,11 @@ contains
   
       ! CROSS SECTION (THE IMAGINARY PART OF POLARIZABILITY)
       if(states_are_complex(st)) then 
-        cross(1:3, 1:3) = aimag(em_vars%alpha(1:3, 1:3, ifactor)) * &
-          em_vars%freq_factor(ifactor) * em_vars%omega(iomega) * &
-          (M_FOUR * M_PI / P_c)
+        cross(1:gr%sb%dim, 1:gr%sb%dim) = aimag(em_vars%alpha(1:gr%sb%dim, 1:gr%sb%dim, ifactor)) * &
+          em_vars%freq_factor(ifactor) * em_vars%omega(iomega) * (M_FOUR * M_PI / P_c)
 
-        do idir = 1, gr%mesh%sb%dim
-          do idir2 = 1, gr%mesh%sb%dim
+        do idir = 1, gr%sb%dim
+          do idir2 = 1, gr%sb%dim
             cross(idir, idir2) = units_from_atomic(units_out%length**2, cross(idir, idir2))
           enddo
         enddo
@@ -866,16 +870,26 @@ contains
         iunit = io_open(trim(dirname)//'/cross_section', action='write')
         if (.not. em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
   
-        average = M_THIRD * (cross(1, 1) + cross(2, 2) + cross(3, 3))
-        crossp(1:3, 1:3) = matmul(cross(1:3, 1:3), cross(1:3, 1:3))
-        anisotropy = &
-          M_THIRD*(M_THREE*(crossp(1, 1) + crossp(2, 2) + crossp(3, 3)) - (cross(1, 1) + cross(2, 2) + cross(3, 3))**2)
+        crossp(1:gr%sb%dim, 1:gr%sb%dim) = matmul(cross(1:gr%sb%dim, 1:gr%sb%dim), cross(1:gr%sb%dim, 1:gr%sb%dim))
+
+        cross_sum = M_ZERO
+        crossp_sum = M_ZERO
+        do idir = 1, gr%sb%dim
+          cross_sum = cross_sum + cross(idir, idir)
+          crossp_sum = crossp_sum + crossp(idir, idir)
+        enddo
+
+        anisotropy = crossp_sum - M_THIRD * cross_sum**2
             
         call cross_section_header(iunit)
         write(iunit,'(3e20.8)', advance = 'no') &
           units_from_atomic(units_out%energy, em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), &
-          average, sqrt(max(anisotropy, M_ZERO))
-        write(iunit,'(9e20.8)', advance = 'no') cross(1:3, 1:3)
+          cross_sum * M_THIRD, sqrt(max(anisotropy, M_ZERO))
+        do idir = 1, gr%sb%dim
+          do idir2 = 1, gr%sb%dim
+            write(iunit,'(e20.8)', advance = 'no') cross(idir, idir2)
+          enddo
+        enddo
         write(iunit,'(a)', advance = 'yes')
   
         call io_close(iunit)
@@ -896,17 +910,17 @@ contains
       iunit = io_open(trim(dirname)//'/epsilon', action='write')
       if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
   
-      epsilon(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim) = &
-        4 * M_PI * em_vars%alpha(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim, ifactor) / gr%mesh%sb%rcell_volume
-      do idir = 1, gr%mesh%sb%dim
+      epsilon(1:gr%sb%dim, 1:gr%sb%dim) = &
+        4 * M_PI * em_vars%alpha(1:gr%sb%dim, 1:gr%sb%dim, ifactor) / gr%sb%rcell_volume
+      do idir = 1, gr%sb%dim
         epsilon(idir, idir) = epsilon(idir, idir) + M_ONE
       enddo
 
       write(iunit, '(a)') '# Real part of dielectric constant'
-      call io_output_tensor(iunit, real(epsilon(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim)), gr%mesh%sb%dim, unit_one)
+      call io_output_tensor(iunit, real(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
       write(iunit, '(a)')
       write(iunit, '(a)') '# Imaginary part of dielectric constant'
-      call io_output_tensor(iunit, aimag(epsilon(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim)), gr%mesh%sb%dim, unit_one)
+      call io_output_tensor(iunit, aimag(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
   
       call io_close(iunit)
       call pop_sub('em_resp.em_resp_output.out_dielectric_constant')
@@ -923,31 +937,31 @@ contains
       if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
 
       write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm a.u.]'
-      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), gr%mesh%sb%dim, unit_ppm)
+      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), gr%sb%dim, unit_ppm)
       write(iunit, '(1x)')
 
       write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm a.u.]'
-      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), gr%mesh%sb%dim, unit_ppm)
+      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), gr%sb%dim, unit_ppm)
       write(iunit, '(1x)')
 
       write(iunit, '(2a)') '# Total susceptibility tensor [ppm a.u.]'
       call io_output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor) + em_vars%chi_dia(:,:, ifactor)), &
-        gr%mesh%sb%dim, unit_ppm)
+        gr%sb%dim, unit_ppm)
       write(iunit, '(1x)')
 
       write(iunit, '(a)') hyphens
 
       write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
-      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), gr%mesh%sb%dim, unit_susc_ppm_cgs)
+      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), gr%sb%dim, unit_susc_ppm_cgs)
       write(iunit, '(1x)')
 
       write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
-      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), gr%mesh%sb%dim, unit_susc_ppm_cgs)
+      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), gr%sb%dim, unit_susc_ppm_cgs)
       write(iunit, '(1x)')
 
       write(iunit, '(2a)') '# Total susceptibility tensor [ppm cgs / mol]'
       call io_output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor) + em_vars%chi_dia(:,:, ifactor)), &
-           gr%mesh%sb%dim, unit_susc_ppm_cgs)
+           gr%sb%dim, unit_susc_ppm_cgs)
       write(iunit, '(1x)')
 
       call io_close(iunit)      
