@@ -1112,7 +1112,7 @@ contains
   subroutine out_hyperpolarizability(sb, beta, freq_factor, converged, dirname)
     type(simul_box_t),  intent(in) :: sb
     CMPLX,              intent(in) :: beta(:, :, :)
-    FLOAT,              intent(in) :: freq_factor(3)
+    FLOAT,              intent(in) :: freq_factor(:)
     logical,            intent(in) :: converged
     character(len=*),   intent(in) :: dirname
 
