@@ -205,22 +205,24 @@ subroutine X(sternheimer_solve)(                           &
     
     dl_rhonew(1:mesh%np, 1:st%d%nspin, 1) = M_ZERO
     
-    !write restart info
-    !save all frequencies as positive
-    if(R_REAL(omega) >= M_ZERO) then
-      sigma_alt = 1
-    else
-      sigma_alt = 2
+    if(this%add_fxc .or. this%add_hartree) then
+      !write restart info
+      !save all frequencies as positive
+      if(R_REAL(omega) >= M_ZERO) then
+        sigma_alt = 1
+      else
+        sigma_alt = 2
+      endif
+      call X(restart_write_lr_rho)(lr(sigma_alt), sys%gr, st%d%nspin, &
+        restart_dir, rho_tag)
     endif
-    call X(restart_write_lr_rho)(lr(sigma_alt), sys%gr, st%d%nspin, &
-      restart_dir, rho_tag)
 
     do sigma = 1, nsigma 
       !save all frequencies as positive
       sigma_alt = sigma
       if(R_REAL(omega) < M_ZERO) sigma_alt = swap_sigma(sigma)
 
-      write(dirname,'(a,a,i1)') trim(restart_dir)//trim(wfs_tag), '_', sigma_alt
+      write(dirname,'(a)') trim(restart_dir)//trim(wfs_tag_sigma(wfs_tag, sigma_alt))
       call restart_write(trim(tmpdir)//dirname, st, sys%gr, err, iter=iter, lr=lr(sigma))
     end do
     

@@ -145,7 +145,7 @@ contains
 
         ! load wavefunctions
         str_tmp = kdotp_wfs_tag(idir)
-        write(dirname_restart,'(3a)') KDOTP_DIR, trim(str_tmp), '_1'
+        write(dirname_restart,'(2a)') KDOTP_DIR, trim(wfs_tag_sigma(str_tmp, 1))
         ! 1 is the sigma index which is used in em_resp
         call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, sys%geo, &
           ierr, lr=kdotp_lr(idir, 1))
@@ -288,7 +288,7 @@ contains
                     sigma_alt = swap_sigma(sigma)
 
                   str_tmp = em_wfs_tag(idir, ifactor)
-                  write(dirname_restart,'(3a, i1)') EM_RESP_DIR, trim(str_tmp), '_', sigma
+                  write(dirname_restart,'(2a)') EM_RESP_DIR, trim(wfs_tag_sigma(str_tmp, sigma))
                   call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, sys%geo, &
                     ierr, lr=em_vars%lr(idir, sigma_alt, ifactor))
 

@@ -77,7 +77,8 @@ module sternheimer_m
        sternheimer_have_rhs,      &
        sternheimer_unset_rhs,     &
        sternheimer_has_converged, &
-       swap_sigma
+       swap_sigma,                &
+       wfs_tag_sigma
 
   type sternheimer_t
      private
@@ -338,6 +339,31 @@ contains
     endif
 
   end function swap_sigma
+
+! ---------------------------------------------------------
+  character(len=100) function wfs_tag_sigma(base_name, isigma) result(str)
+    character(len=*), intent(in) :: base_name
+    integer,          intent(in) :: isigma
+
+    character :: sigma_char
+
+    call push_sub('sternheimer.wfs_tag_sigma')
+
+    select case(isigma)
+    case(1)
+      sigma_char = '+'
+    case(2)
+      sigma_char = '-'
+    case default 
+      write(message(1),'(a,i2)') "Illegal integer isigma passed to wfs_tag_sigma: ", isigma
+      call write_fatal(1)
+    end select
+
+    write(str, '(2a)') trim(base_name), sigma_char
+
+    call pop_sub('sternheimer.wfs_tag_sigma')
+
+  end function wfs_tag_sigma
   
 #include "complex.F90"
 #include "sternheimer_inc.F90"

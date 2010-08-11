@@ -27,15 +27,16 @@ module em_resp_calc_m
   use grid_m
   use global_m
   use hamiltonian_m
-  use parser_m
+  use io_function_m
   use linear_response_m
   use magnetic_m
   use mesh_m
   use mesh_function_m
   use messages_m
   use mpi_m
-  use poisson_m
+  use parser_m
   use pert_m
+  use poisson_m
   use profiling_m
   use states_m
   use states_block_m
@@ -194,11 +195,11 @@ contains
 
 ! ---------------------------------------------------------
   character(len=100) function em_wfs_tag(idir, ifactor) result(str)
-    integer, intent(in) :: idir, ifactor 
+    integer, intent(in) :: idir, ifactor
 
     call push_sub('em_resp_calc.em_wfs_tag')
 
-    write(str, '(a,i1,a,i1)') "wfs_", idir, "_", ifactor
+    write(str, '(3a,i1)') "wfs_", index2axis(idir), "_f", ifactor
 
     call pop_sub('em_resp_calc.em_wfs_tag')
 

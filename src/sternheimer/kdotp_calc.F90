@@ -22,6 +22,7 @@
 module kdotp_calc_m
   use global_m
   use hamiltonian_m
+  use io_function_m
   use linear_response_m
   use mesh_m
   use mesh_function_m
@@ -42,23 +43,9 @@ module kdotp_calc_m
     zcalc_eff_mass_inv,            &
     zcalc_band_velocity,           &
     zcalc_dipole_periodic,         &
-    kdotp_wfs_tag,                 &
-    kdotp_rho_tag
+    kdotp_wfs_tag
 
 contains
-
-! ---------------------------------------------------------
-  character(len=100) function kdotp_rho_tag(dir) result(str)
-    integer, intent(in) :: dir
-
-    call push_sub('kdotp_calc.kdotp_rho_tag')
-
-    write(str, '(a,i1)') 'rho_', dir
-
-    call pop_sub('kdotp_calc.kdotp_rho_tag')
-
-  end function kdotp_rho_tag
-  
 
 ! ---------------------------------------------------------
   character(len=100) function kdotp_wfs_tag(dir) result(str)
@@ -66,7 +53,7 @@ contains
 
     call push_sub('kdotp_calc.kdotp_wfs_tag')
 
-    write(str, '(a,i1)') "wfs_", dir
+    write(str, '(2a)') "wfs_", index2axis(dir)
 
     call pop_sub('kdotp_calc.kdotp_wfs_tag')
 

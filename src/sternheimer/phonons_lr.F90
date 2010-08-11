@@ -28,6 +28,7 @@ module phonons_lr_m
   use h_sys_output_m
   use hamiltonian_m
   use io_m
+  use io_function_m
   use lalg_basic_m
   use linear_response_m
   use parser_m
@@ -234,6 +235,7 @@ contains
 
     end subroutine build_ionic_dyn_matrix
 
+    ! ---------------------------------------------------------
     subroutine calc_infrared
       FLOAT :: lir(1:MAX_DIM+1)
 
@@ -262,6 +264,7 @@ contains
       call pop_sub('phonons_lr.phonons_lr_run.calc_infrared')
     end subroutine calc_infrared
 
+    ! ---------------------------------------------------------
     subroutine vib_modes_wavefunctions
       ! now calculate the wavefunction associated with each normal mode
       type(lr_t) :: lrtmp
@@ -310,6 +313,7 @@ contains
   end subroutine phonons_lr_run
 
 
+  ! ---------------------------------------------------------
   character(len=100) function phn_rho_tag(iatom, dir) result(str)
     integer, intent(in) :: iatom, dir
     
@@ -321,17 +325,21 @@ contains
 
   end function phn_rho_tag
   
+
+  ! ---------------------------------------------------------
   character(len=100) function phn_wfs_tag(iatom, dir) result(str)
     integer, intent(in) :: iatom, dir
 
     call push_sub('phonons_lr.phn_wfs_tag')
 
-    write(str, '(a,i4.4,a,i1)') "phn_wfs_", iatom, "_", dir
+    write(str, '(a,i4.4,a,a)') "phn_wfs_", iatom, "_", index2axis(dir)
 
     call pop_sub('phonons_lr.phn_wfs_tag')
     
   end function phn_wfs_tag
 
+
+  ! ---------------------------------------------------------
   character(len=100) function phn_nm_wfs_tag(inm) result(str)
     integer, intent(in) :: inm
 

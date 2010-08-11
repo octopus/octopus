@@ -167,8 +167,7 @@ contains
       ! load wavefunctions
       if(.not. fromScratch) then
         str_tmp = kdotp_wfs_tag(idir)
-        write(dirname,'(3a)') KDOTP_DIR, trim(str_tmp), '_1'
-        ! 1 is the sigma index which is used in em_resp
+        write(dirname,'(2a)') KDOTP_DIR, trim(wfs_tag_sigma(str_tmp, 1))
         call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
           ierr, lr=kdotp_vars%lr(idir, 1))
           
@@ -194,11 +193,11 @@ contains
       if(states_are_real(sys%st)) then
         call dsternheimer_solve(sh, sys, hm, kdotp_vars%lr(idir,:), 1, &
           M_ZERO, kdotp_vars%perturbation, KDOTP_DIR, &
-          kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
+          "", kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
       else
         call zsternheimer_solve(sh, sys, hm, kdotp_vars%lr(idir,:), 1, &
           M_zI * kdotp_vars%eta, kdotp_vars%perturbation, KDOTP_DIR, &
-          kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
+          "", kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
       endif
 
       kdotp_vars%ok = kdotp_vars%ok .and. sternheimer_has_converged(sh)         
