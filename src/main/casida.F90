@@ -109,7 +109,7 @@ contains
     call push_sub('casida.casida_run')
 
     if (simul_box_is_periodic(sys%gr%sb)) then
-      message(1) = "Casida formulation does not apply to periodic systems"
+      message(1) = "Casida formulation does not apply to periodic systems."
       call write_fatal(1)
     end if
 

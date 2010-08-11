@@ -808,7 +808,7 @@ contains
       character(len=80) :: header_string
       integer :: i, k
 
-      call push_sub('em_resp.out_polarizability.cross_section_header')
+      call push_sub('em_resp.em_resp_output.cross_section_header')
 
       !this header is the same as spectrum.F90
       write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
@@ -829,7 +829,7 @@ contains
       end do
       write(out_file,*)
 
-      call pop_sub('em_resp.out_polarizability.cross_section_header')
+      call pop_sub('em_resp.em_resp_output.cross_section_header')
     end subroutine cross_section_header
 
 
@@ -839,11 +839,11 @@ contains
       FLOAT :: average, anisotropy
       integer :: idir, idir2
       
-      call push_sub('em_resp.out_polarizability')
+      call push_sub('em_resp.em_resp_output.out_polarizability')
   
       iunit = io_open(trim(dirname)//'/alpha', action='write')
   
-      if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
+      if (.not. em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
   
       write(iunit, '(3a)') '# Polarizability tensor [', trim(units_abbrev(units_out%polarizability)), ']'
       call io_output_tensor(iunit, TOFLOAT(em_vars%alpha(:, :, ifactor)), &
@@ -881,7 +881,7 @@ contains
         call io_close(iunit)
       end if
       
-      call pop_sub('em_resp.out_polarizability')
+      call pop_sub('em_resp.em_resp_output.out_polarizability')
     end subroutine out_polarizability
 
 
@@ -891,7 +891,7 @@ contains
       CMPLX epsilon(MAX_DIM, MAX_DIM) 
       integer idir
 
-      call push_sub('em_resp.out_dielectric_constant')
+      call push_sub('em_resp.em_resp_output.out_dielectric_constant')
   
       iunit = io_open(trim(dirname)//'/epsilon', action='write')
       if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
@@ -909,7 +909,7 @@ contains
       call io_output_tensor(iunit, aimag(epsilon(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim)), gr%mesh%sb%dim, unit_one)
   
       call io_close(iunit)
-      call pop_sub('em_resp.out_dielectric_constant')
+      call pop_sub('em_resp.em_resp_output.out_dielectric_constant')
     end subroutine out_dielectric_constant
 
 

@@ -115,14 +115,16 @@ module h_sys_output_m
 
 contains
 
-  subroutine h_sys_output_init(sb, outp)
+  subroutine h_sys_output_init(sb, nst, outp)
     type(simul_box_t),    intent(in)  :: sb
+    integer,              intent(in)  :: nst
     type(h_sys_output_t), intent(out) :: outp
 
     type(block_t) :: blk
     FLOAT :: norm
+    character(len=80) :: nst_string, default
 
-    call push_sub('output_h_sys.h_sys_output_init')
+    call push_sub('h_sys_output.h_sys_output_init')
 
     !%Variable Output
     !%Type flag
@@ -223,12 +225,12 @@ contains
     !%End
     call parse_integer(datasets_check('Output'), 0, outp%what)
 
-    if(iand(outp%what, output_elf_fs).ne.0) then
+    if(iand(outp%what, output_elf_fs) .ne. 0) then
       call messages_devel_version("ELF in Fourier space")
     endif
 
     ! cannot calculate the ELF in 1D
-    if(iand(outp%what, output_elf).ne.0 .or. iand(outp%what, output_elf_basins).ne.0 .or. iand(outp%what, output_elf_fs).ne.0) then
+    if(iand(outp%what, output_elf) .ne. 0 .or. iand(outp%what, output_elf_basins) .ne. 0 .or. iand(outp%what, output_elf_fs) .ne. 0) then
        if(sb%dim .ne. 2 .and. sb%dim .ne. 3) then
          outp%what = iand(outp%what, not(output_elf + output_elf_basins + output_elf_fs))
          write(message(1), '(a)') 'Cannot calculate ELF except in 2D and 3D.'
@@ -240,21 +242,21 @@ contains
       call input_error('Output')
     end if
 
-    if(iand(outp%what, output_modelmb).ne.0 .or. iand(outp%what, output_density_matrix).ne.0) then
+    if(iand(outp%what, output_modelmb) .ne. 0 .or. iand(outp%what, output_density_matrix) .ne. 0) then
       call messages_devel_version("Model many-body and density matrix")
     endif
 
-    if(iand(outp%what, output_modelmb).ne.0) then
+    if(iand(outp%what, output_modelmb) .ne. 0) then
       write(message(1),'(a)') 'Model many-body quantities will be output, according to the presence of'
       write(message(2),'(a)') '  wfs, density, or density_matrix in Output.'
       call write_info(2)
     end if
 
-    if(iand(outp%what, output_density_matrix).ne.0) then
+    if(iand(outp%what, output_density_matrix) .ne. 0) then
       write(message(1),'(a)') 'Info: The density matrix will be calculated, traced'
       write(message(2),'(a)') 'over the second dimension, diagonalized, and output.'
       call write_info(2)
-      if(iand(outp%what, output_modelmb).eq.0) then
+      if(iand(outp%what, output_modelmb) .eq. 0) then
         write(message(1),'(a)') 'Note that density matrix only works for model MB calculations for the moment.'
         call write_info(1)
       end if
@@ -265,17 +267,21 @@ contains
       !   dimensions. The current 1D 1-particle case is simple.
     end if
 
-    if(iand(outp%what, output_wfs).ne.0  .or.  iand(outp%what, output_wfs_sqmod).ne.0 ) then
+    if(iand(outp%what, output_wfs) .ne. 0  .or.  iand(outp%what, output_wfs_sqmod) .ne. 0 ) then
+
       !%Variable OutputWfsNumber
       !%Type string
-      !%Default "1-1024"
+      !%Default all states
       !%Section Output
       !%Description
       !% Which wavefunctions to print, in list form: <i>i.e.</i>, "1-5" to print the first
       !% five states, "2,3" to print the second and the third state, etc.
       !% If more states are specified than available, extra ones will be ignored.
       !%End
-      call parse_string(datasets_check('OutputWfsNumber'), "1-1024", outp%wfs_list)
+
+      write(nst_string,'(i6)') nst
+      write(default,'(a,a)') "1-", trim(adjustl(nst_string))
+      call parse_string(datasets_check('OutputWfsNumber'), default, outp%wfs_list)
     end if
 
     if(parse_block(datasets_check('CurrentThroughPlane'), blk) == 0) then
@@ -390,7 +396,7 @@ contains
       end select
     end if
 
-    if(iand(outp%what, output_matrix_elements).ne.0) then
+    if(iand(outp%what, output_matrix_elements) .ne. 0) then
       call output_me_init(outp%me, sb)
     end if
 
@@ -413,15 +419,15 @@ contains
     !% If this variable is set to yes, during a ground-state run,
     !% <tt>Octopus</tt> output will be written after every self-consistent
     !% iteration to a directory called <tt>scf.nnnn/</tt> (with
-    !% <tt>nnnn</tt> the iteration number). The default is no.
+    !% <tt>nnnn</tt> the iteration number).
     !%End
 
     call parse_logical(datasets_check('OutputDuringSCF'), .false., outp%duringscf)
 
-    if(outp%what.ne.0.and.outp%what.ne.output_matrix_elements) &
+    if(outp%what .ne. 0 .and. outp%what .ne. output_matrix_elements) &
          call io_function_read_how(sb, outp%how)
 
-    call pop_sub('output_h_sys.h_sys_output_init')
+    call pop_sub('h_sys_output.h_sys_output_init')
   end subroutine h_sys_output_init
 
 
@@ -434,7 +440,7 @@ contains
     type(h_sys_output_t), intent(in)    :: outp
     character(len=*),     intent(in)    :: dir
 
-    call push_sub('output_h_sys.h_sys_output_all')
+    call push_sub('h_sys_output.h_sys_output_all')
     
     call h_sys_output_states(st, gr, geo, dir, outp)
     call h_sys_output_hamiltonian(hm, gr%mesh, dir, outp, geo)
@@ -456,7 +462,7 @@ contains
       call write_xsf_geometry_file(dir, "forces", geo, gr%sb, write_forces = .true.)
     endif
 
-    if(iand(outp%what, output_matrix_elements).ne.0) then
+    if(iand(outp%what, output_matrix_elements) .ne. 0) then
       call output_me(outp%me, dir, st, gr, geo, hm)
     end if
 
@@ -466,9 +472,11 @@ contains
     end if
 #endif
     
-    call pop_sub('output_h_sys.h_sys_output_all')
+    call pop_sub('h_sys_output.h_sys_output_all')
   end subroutine h_sys_output_all
 
+
+  ! ---------------------------------------------------------
   subroutine h_sys_output_localization_funct(st, hm, gr, dir, outp, geo)
     type(states_t),         intent(inout) :: st
     type(hamiltonian_t),    intent(in)    :: hm
@@ -482,7 +490,7 @@ contains
     integer :: is, ierr, imax
     type(mpi_grp_t) :: mpi_grp
 
-    call push_sub('output_h_sys.h_sys_output_localization_funct')
+    call push_sub('h_sys_output.h_sys_output_localization_funct')
     
     mpi_grp = gr%mesh%mpi_grp
     if(st%parallel_in_states) mpi_grp = st%mpi_grp
@@ -495,19 +503,19 @@ contains
     SAFE_ALLOCATE(f_loc(1:gr%mesh%np, 1:imax))
 
     ! First the ELF in real space
-    if(iand(outp%what, output_elf).ne.0 .or. iand(outp%what, output_elf_basins).ne.0) then
-      ASSERT(gr%mesh%sb%dim.ne.1)
+    if(iand(outp%what, output_elf) .ne. 0 .or. iand(outp%what, output_elf_basins) .ne. 0) then
+      ASSERT(gr%mesh%sb%dim .ne. 1)
 
       call elf_calc(st, gr, f_loc)
       
       ! output ELF in real space
-      if(iand(outp%what, output_elf).ne.0) then
+      if(iand(outp%what, output_elf) .ne. 0) then
         write(fname, '(a)') 'elf_rs'
         call doutput_function(outp%how, dir, trim(fname), gr%mesh, &
           f_loc(:,imax), unit_one, ierr, is_tmp = .false., geo = geo)
         ! this quantity is dimensionless
 
-        if(st%d%ispin.ne.UNPOLARIZED) then
+        if(st%d%ispin .ne. UNPOLARIZED) then
           do is = 1, 2
             write(fname, '(a,i1)') 'elf_rs-sp', is
             call doutput_function(outp%how, dir, trim(fname), gr%mesh, &
@@ -517,12 +525,12 @@ contains
         end if
       end if
 
-      if(iand(outp%what, output_elf_basins).ne.0) &
+      if(iand(outp%what, output_elf_basins) .ne. 0) &
         call out_basins(f_loc(:,1), "elf_rs_basins")
     end if
 
     ! Second, ELF in Fourier space.
-    if(iand(outp%what, output_elf_fs).ne.0) then
+    if(iand(outp%what, output_elf_fs) .ne. 0) then
       call elf_calc_fs(st, gr, f_loc)
       do is = 1, st%d%nspin
         write(fname, '(a,i1)') 'elf_fs-sp', is
@@ -533,7 +541,7 @@ contains
     end if
 
     ! Now Bader analysis
-    if(iand(outp%what, output_bader).ne.0) then
+    if(iand(outp%what, output_bader) .ne. 0) then
       do is = 1, st%d%nspin
         call dderivatives_lapl(gr%der, st%rho(:,is), f_loc(:,is))
         write(fname, '(a,i1)') 'bader-sp', is
@@ -547,7 +555,7 @@ contains
     end if
 
     ! Now the pressure
-    if(iand(outp%what, output_el_pressure).ne.0) then
+    if(iand(outp%what, output_el_pressure) .ne. 0) then
       call h_sys_calc_electronic_pressure(st, hm, gr, f_loc(:,1))
       call doutput_function(outp%how, dir, "el_pressure", gr%mesh, &
         f_loc(:,1), unit_one, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)
@@ -556,7 +564,8 @@ contains
 
     SAFE_DEALLOCATE_A(f_loc)
 
-    call pop_sub('output_h_sys.h_sys_output_localization_funct')
+    call pop_sub('h_sys_output.h_sys_output_localization_funct')
+
   contains
     ! ---------------------------------------------------------
     subroutine out_basins(ff, filename)
@@ -567,7 +576,7 @@ contains
       type(basins_t)     :: basins
       integer            :: iunit
 
-      call push_sub('output_h_sys.h_sys_output_localization_funct.out_basins')
+      call push_sub('h_sys_output.h_sys_output_localization_funct.out_basins')
 
       call basins_init(basins, gr%mesh)
       call basins_analyze(basins, gr%mesh, st%d%nspin, ff(:), st%rho, CNST(0.01))
@@ -583,12 +592,13 @@ contains
 
       call basins_end(basins)
 
-      call pop_sub('output_h_sys.h_sys_output_localization_funct.out_basins')
+      call pop_sub('h_sys_output.h_sys_output_localization_funct.out_basins')
     end subroutine out_basins
 
   end subroutine h_sys_output_localization_funct
 
   
+  ! ---------------------------------------------------------
   subroutine h_sys_calc_electronic_pressure(st, hm, gr, pressure)
     type(states_t),         intent(inout) :: st
     type(hamiltonian_t),    intent(in)    :: hm
@@ -599,7 +609,7 @@ contains
     FLOAT   :: p_tf, dens
     integer :: is, ii
 
-    call push_sub('output_h_sys.h_sys_calc_electronic_pressure')
+    call push_sub('h_sys_output.h_sys_calc_electronic_pressure')
 
     SAFE_ALLOCATE( rho(1:gr%mesh%np_part, 1:st%d%nspin))
     SAFE_ALLOCATE(lrho(1:gr%mesh%np))
@@ -631,7 +641,7 @@ contains
       pressure(ii) = M_HALF*(M_ONE + pressure(ii)/sqrt(M_ONE + pressure(ii)**2))
     end do
 
-    call pop_sub('output_h_sys.h_sys_calc_electronic_pressure')
+    call pop_sub('h_sys_output.h_sys_calc_electronic_pressure')
   end subroutine h_sys_calc_electronic_pressure
 
 

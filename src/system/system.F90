@@ -93,7 +93,7 @@ contains
     call kpoints_distribute(sys%st%d, sys%mc)
     call grid_init_stage_2(sys%gr, sys%mc, sys%geo)
     call states_densities_init(sys%st, sys%gr, sys%geo, sys%mc)
-    call h_sys_output_init(sys%gr%sb, sys%outp)
+    call h_sys_output_init(sys%gr%sb, sys%st%nst, sys%outp)
     call elf_init()
 
     call poisson_init(psolver, sys%gr%der, sys%geo)
