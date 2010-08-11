@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id: em_resp_inc.F90 2663 2007-01-25 09:04:29Z lorenzen $
+!! $Id: sternheimer_inc.F90 2663 2007-01-25 09:04:29Z lorenzen $
 
 !--------------------------------------------------------------
 ! This routine calculates the first-order variations of the wavefunctions 

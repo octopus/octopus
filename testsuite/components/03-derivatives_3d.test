@@ -8,8 +8,8 @@ Enabled    : Yes
 
 Precision : 3.0e-3
 Input: 03-derivatives_3d.01.inp
-match ; Real laplacian     ; GREP(out, 'Real functions', 31, 1) ; 1.1962559177E-03
-match ; Complex laplacian  ; GREP(out, 'Complex functions', 31, 1) ; 1.2044354237E-03
+match ; Real Laplacian     ; GREP(out, 'Real functions', 31, 1) ; 1.1962559177E-03
+match ; Complex Laplacian  ; GREP(out, 'Complex functions', 31, 1) ; 1.2044354237E-03
 Precision : 3.0e-4
 match ; Real gradient      ; GREP(out, 'Real functions', 31, 2) ; 1.6181665936E-04
 match ; Complex gradient   ; GREP(out, 'Complex functions', 31, 2) ; 1.6297563661E-04
