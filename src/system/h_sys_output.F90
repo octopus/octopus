@@ -230,7 +230,8 @@ contains
     endif
 
     ! cannot calculate the ELF in 1D
-    if(iand(outp%what, output_elf) .ne. 0 .or. iand(outp%what, output_elf_basins) .ne. 0 .or. iand(outp%what, output_elf_fs) .ne. 0) then
+    if(iand(outp%what, output_elf) .ne. 0 .or. iand(outp%what, output_elf_basins) .ne. 0 &
+       .or. iand(outp%what, output_elf_fs) .ne. 0) then
        if(sb%dim .ne. 2 .and. sb%dim .ne. 3) then
          outp%what = iand(outp%what, not(output_elf + output_elf_basins + output_elf_fs))
          write(message(1), '(a)') 'Cannot calculate ELF except in 2D and 3D.'
