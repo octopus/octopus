@@ -70,7 +70,7 @@ module kdotp_m
                                                 ! (ik, ist, idir1, idir2)
     FLOAT, pointer :: velocity(:,:,:) ! group velocity vector (ik, ist, idir)
 
-    type(lr_t), pointer :: lr(:,:) ! linear response for (gr%mesh%sb%dim,1)
+    type(lr_t), pointer :: lr(:,:) ! linear response for (sys%gr%sb%periodic_dim,1)
                                    ! second index is dummy; should only be 1
                                    ! for compatibility with em_resp routines
 
@@ -89,12 +89,11 @@ contains
     type(hamiltonian_t),    intent(inout) :: hm
     logical,                intent(inout) :: fromScratch
 
-    type(grid_t),   pointer :: gr
     type(kdotp_t)           :: kdotp_vars
     type(sternheimer_t)     :: sh
     logical                 :: calc_eff_mass, complex_response
 
-    integer              :: idir, ierr
+    integer              :: idir, ierr, pdim
     character(len=100)   :: dirname, str_tmp
 
     call push_sub('kdotp.kdotp_lr_run')
@@ -106,28 +105,28 @@ contains
       call write_warning(1)
     endif
 
-    gr => sys%gr
+    pdim = sys%gr%sb%periodic_dim
 
-    if(.not. simul_box_is_periodic(gr%sb)) then
+    if(.not. simul_box_is_periodic(sys%gr%sb)) then
        message(1) = "k.p perturbation cannot be used for a finite system."
        call write_fatal(1)
     endif
 
-    SAFE_ALLOCATE(kdotp_vars%eff_mass_inv(1:sys%st%d%nik, 1:sys%st%nst, 1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(kdotp_vars%velocity(1:sys%st%d%nik, 1:sys%st%nst, 1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(kdotp_vars%eff_mass_inv(1:sys%st%d%nik, 1:sys%st%nst, 1:pdim, 1:pdim))
+    SAFE_ALLOCATE(kdotp_vars%velocity(1:sys%st%d%nik, 1:sys%st%nst, 1:pdim))
     kdotp_vars%eff_mass_inv(:,:,:,:) = 0 
     kdotp_vars%velocity(:,:,:) = 0 
 
     call pert_init(kdotp_vars%perturbation, PERTURBATION_KDOTP, sys%gr, sys%geo)
 
-    SAFE_ALLOCATE(kdotp_vars%lr(1:gr%mesh%sb%dim, 1:1))
+    SAFE_ALLOCATE(kdotp_vars%lr(1:pdim, 1:1))
 
     call parse_input()
 
     complex_response = (kdotp_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
     call restart_look_and_read(sys%st, sys%gr, sys%geo, is_complex = complex_response)
 
-    kdotp_vars%lr(1:gr%mesh%sb%dim, 1:1)%nst = sys%st%nst
+    kdotp_vars%lr(1:pdim, 1:1)%nst = sys%st%nst
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
@@ -153,14 +152,14 @@ contains
     if(mpi_grp_is_root(mpi_world)) then
       call io_mkdir(trim(tmpdir)//KDOTP_DIR, is_tmp=.true.) ! restart
       call io_mkdir(KDOTP_DIR) ! data output
-      call kdotp_write_band_velocity(sys%st, sys%gr%sb%periodic_dim, kdotp_vars%velocity(:,:,:))
+      call kdotp_write_band_velocity(sys%st, pdim, kdotp_vars%velocity(:,:,:))
     endif
 
     call sternheimer_init(sh, sys, hm, "KdotP_", set_ham_var = 0, &
       set_occ_response = (kdotp_vars%occ_solution_method == 0), set_last_occ_response = (kdotp_vars%occ_solution_method == 0))
     ! ham_var_set = 0 results in HamiltonianVariation = V_ext_only
 
-    do idir = 1, gr%mesh%sb%dim
+    do idir = 1, pdim
       call lr_init(kdotp_vars%lr(idir, 1))
       call lr_allocate(kdotp_vars%lr(idir, 1), sys%st, sys%gr%mesh)
 
@@ -184,7 +183,7 @@ contains
     kdotp_vars%ok = .true.
 
     ! solve the Sternheimer equation
-    do idir = 1, gr%mesh%sb%dim
+    do idir = 1, pdim
       write(message(1), '(3a)') 'Info: Calculating response for the ', index2axis(idir), &
                                 '-direction.' 
       call write_info(1)
@@ -221,7 +220,7 @@ contains
     endif
 
     ! clean up some things
-    do idir = 1, gr%mesh%sb%dim
+    do idir = 1, pdim
       call lr_dealloc(kdotp_vars%lr(idir, 1))
     end do
 
@@ -397,7 +396,7 @@ contains
         tmp = int2str(ist)
         write(iunit,'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
           units_from_atomic(units_out%energy, st%eigenval(ist, ik)), ' ', units_abbrev(units_out%energy)
-        call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), gr%mesh%sb%dim, unit_one)
+        call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), gr%sb%periodic_dim, unit_one)
       enddo
       
       write(iunit,'(a)')
@@ -407,8 +406,8 @@ contains
         tmp = int2str(ist)
         write(iunit,'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
           units_from_atomic(units_out%energy, st%eigenval(ist, ik)), ' ', units_abbrev(units_out%energy)
-        determinant = lalg_inverter(gr%sb%dim, kdotp_vars%eff_mass_inv(ik, ist, :, :), .true.)
-        call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), gr%mesh%sb%dim, unit_one)
+        determinant = lalg_inverter(gr%sb%periodic_dim, kdotp_vars%eff_mass_inv(ik, ist, :, :), .true.)
+        call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), gr%sb%periodic_dim, unit_one)
       enddo
 
       call io_close(iunit)

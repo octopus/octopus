@@ -30,10 +30,9 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
 
 ! m^-1[ij] = <psi0|H2ij|psi0> + 2*Re<psi0|H'i|psi'j>
 ! for each state, spin, and k-point
-! This routine is not set up for spinors.
 ! The off-diagonal elements are not correct in a degenerate subspace
 
-  integer ik, ist, ist2, idir1, idir2
+  integer ik, ist, ist2, idir1, idir2, pdim
   R_TYPE term
   R_TYPE, allocatable   :: pertpsi(:,:,:)     ! H`i|psi0>
   R_TYPE, allocatable   :: pertpsi2(:,:)      ! H2i|psi0>
@@ -47,13 +46,14 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
   call push_sub('kdotp_calc_inc.Xcalc_eff_mass_inv')
 
   mesh => sys%gr%mesh
+  pdim = sys%gr%sb%periodic_dim
 
-  SAFE_ALLOCATE(pertpsi(1:mesh%np, 1:hm%d%dim, 1:sys%gr%sb%dim))
+  SAFE_ALLOCATE(pertpsi(1:mesh%np, 1:hm%d%dim, 1:pdim))
   SAFE_ALLOCATE(pertpsi2(1:mesh%np, 1:hm%d%dim))
   SAFE_ALLOCATE(proj_dl_psi(1:mesh%np, 1:hm%d%dim))
   SAFE_ALLOCATE(orth_mask(1:sys%st%nst))
 #ifdef HAVE_MPI
-  SAFE_ALLOCATE(eff_mass_inv_temp(1:sys%st%d%nik, 1:sys%st%nst, 1:sys%gr%mesh%sb%dim, 1:sys%gr%mesh%sb%dim))
+  SAFE_ALLOCATE(eff_mass_inv_temp(1:sys%st%d%nik, 1:sys%st%nst, 1:pdim, 1:pdim))
 #endif
 
   eff_mass_inv(:,:,:,:) = M_ZERO
@@ -63,14 +63,14 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
     do ist = sys%st%st_start, sys%st%st_end
 
       ! start by computing all the wavefunctions acted on by perturbation
-      do idir1 = 1, sys%gr%sb%dim
+      do idir1 = 1, pdim
         call pert_setup_dir(perturbation, idir1)
         call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, &
           sys%st%X(psi)(:, :, ist, ik), pertpsi(:, :, idir1))
       enddo
 
-      do idir1 = 1, sys%gr%sb%dim
-        do idir2 = 1, sys%gr%sb%dim
+      do idir1 = 1, pdim
+        do idir2 = 1, pdim
 
           if (idir2 < idir1) then
             eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir2, idir1)
@@ -128,12 +128,12 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
 
 #ifdef HAVE_MPI
   if(sys%st%parallel_in_states) then
-    call MPI_Allreduce(eff_mass_inv, eff_mass_inv_temp, sys%st%d%nik * sys%st%nst * sys%gr%mesh%sb%dim**2, &
+    call MPI_Allreduce(eff_mass_inv, eff_mass_inv_temp, sys%st%d%nik * sys%st%nst * pdim**2, &
       MPI_FLOAT, MPI_SUM, sys%st%mpi_grp%comm, mpi_err)
     eff_mass_inv(:,:,:,:) = eff_mass_inv_temp(:,:,:,:)
   endif
   if(sys%st%d%kpt%parallel) then
-    call MPI_Allreduce(eff_mass_inv, eff_mass_inv_temp, sys%st%d%nik * sys%st%nst * sys%gr%mesh%sb%dim**2, &
+    call MPI_Allreduce(eff_mass_inv, eff_mass_inv_temp, sys%st%d%nik * sys%st%nst * pdim**2, &
       MPI_FLOAT, MPI_SUM, sys%st%d%kpt%mpi_grp%comm, mpi_err)
     eff_mass_inv(:,:,:,:) = eff_mass_inv_temp(:,:,:,:)
   endif

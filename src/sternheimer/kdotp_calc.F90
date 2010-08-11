@@ -78,7 +78,7 @@ subroutine zcalc_band_velocity(sys, hm, pert, velocity)
 
   SAFE_ALLOCATE(pertpsi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
 #ifdef HAVE_MPI
-  SAFE_ALLOCATE(vel_temp(1:sys%st%d%nik, 1:sys%st%nst, 1:sys%gr%mesh%sb%dim))
+  SAFE_ALLOCATE(vel_temp(1:sys%st%d%nik, 1:sys%st%nst, 1:sys%gr%sb%periodic_dim))
 #endif
 
   velocity(:,:,:) = M_ZERO
@@ -96,12 +96,12 @@ subroutine zcalc_band_velocity(sys, hm, pert, velocity)
 
 #ifdef HAVE_MPI
   if(sys%st%parallel_in_states) then
-    call MPI_Allreduce(velocity, vel_temp, sys%st%d%nik * sys%st%nst * sys%gr%mesh%sb%dim, &
+    call MPI_Allreduce(velocity, vel_temp, sys%st%d%nik * sys%st%nst * sys%gr%sb%periodic_dim, &
       MPI_FLOAT, MPI_SUM, sys%st%mpi_grp%comm, mpi_err)
     velocity(:,:,:) = vel_temp(:,:,:)
   endif
   if(sys%st%d%kpt%parallel) then
-    call MPI_Allreduce(velocity, vel_temp, sys%st%d%nik * sys%st%nst * sys%gr%mesh%sb%dim, &
+    call MPI_Allreduce(velocity, vel_temp, sys%st%d%nik * sys%st%nst * sys%gr%sb%periodic_dim, &
       MPI_FLOAT, MPI_SUM, sys%st%d%kpt%mpi_grp%comm, mpi_err)
     velocity(:,:,:) = vel_temp(:,:,:)
   endif
@@ -129,7 +129,7 @@ subroutine zcalc_dipole_periodic(sys, lr, dipole)
 
   call push_sub('kdotp_calc.zcalc_dipole_periodic')
 
-  do idir = 1, sys%gr%sb%dim
+  do idir = 1, sys%gr%sb%periodic_dim
     moment = M_ZERO
 
     do ik = 1, sys%st%d%nik
