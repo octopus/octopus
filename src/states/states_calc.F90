@@ -30,12 +30,10 @@ module states_calc_m
   use grid_m
   use hardware_m
   use io_m
-  use io_function_m
   use kpoints_m
   use lalg_adv_m
   use lalg_basic_m
   use loct_m
-  use parser_m
   use math_m
   use messages_m
   use mesh_m
@@ -44,6 +42,7 @@ module states_calc_m
   use mpi_m
   use mpi_lib_m
   use multicomm_m
+  use parser_m
   use physics_op_m
   use profiling_m
   use simul_box_m

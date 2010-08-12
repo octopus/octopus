@@ -30,7 +30,6 @@ module em_resp_m
   use hamiltonian_m
   use h_sys_output_m
   use io_m
-  use io_function_m
   use kdotp_m
   use kdotp_calc_m
   use lalg_basic_m
@@ -56,6 +55,7 @@ module em_resp_m
   use system_m
   use unit_m
   use unit_system_m
+  use utils_m
   use v_ks_m
   
   implicit none
@@ -851,7 +851,7 @@ contains
       if (.not. em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
   
       write(iunit, '(3a)') '# Polarizability tensor [', trim(units_abbrev(units_out%polarizability)), ']'
-      call io_output_tensor(iunit, TOFLOAT(em_vars%alpha(:, :, ifactor)), &
+      call output_tensor(iunit, TOFLOAT(em_vars%alpha(:, :, ifactor)), &
         gr%mesh%sb%dim, units_out%polarizability)
   
       call io_close(iunit)
@@ -917,10 +917,10 @@ contains
       enddo
 
       write(iunit, '(a)') '# Real part of dielectric constant'
-      call io_output_tensor(iunit, real(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
+      call output_tensor(iunit, real(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
       write(iunit, '(a)')
       write(iunit, '(a)') '# Imaginary part of dielectric constant'
-      call io_output_tensor(iunit, aimag(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
+      call output_tensor(iunit, aimag(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
   
       call io_close(iunit)
       call pop_sub('em_resp.em_resp_output.out_dielectric_constant')
@@ -937,30 +937,30 @@ contains
       if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
 
       write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm a.u.]'
-      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), gr%sb%dim, unit_ppm)
+      call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), gr%sb%dim, unit_ppm)
       write(iunit, '(1x)')
 
       write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm a.u.]'
-      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), gr%sb%dim, unit_ppm)
+      call output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), gr%sb%dim, unit_ppm)
       write(iunit, '(1x)')
 
       write(iunit, '(2a)') '# Total susceptibility tensor [ppm a.u.]'
-      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor) + em_vars%chi_dia(:,:, ifactor)), &
+      call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor) + em_vars%chi_dia(:,:, ifactor)), &
         gr%sb%dim, unit_ppm)
       write(iunit, '(1x)')
 
       write(iunit, '(a)') hyphens
 
       write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
-      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), gr%sb%dim, unit_susc_ppm_cgs)
+      call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), gr%sb%dim, unit_susc_ppm_cgs)
       write(iunit, '(1x)')
 
       write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
-      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), gr%sb%dim, unit_susc_ppm_cgs)
+      call output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), gr%sb%dim, unit_susc_ppm_cgs)
       write(iunit, '(1x)')
 
       write(iunit, '(2a)') '# Total susceptibility tensor [ppm cgs / mol]'
-      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor) + em_vars%chi_dia(:,:, ifactor)), &
+      call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor) + em_vars%chi_dia(:,:, ifactor)), &
            gr%sb%dim, unit_susc_ppm_cgs)
       write(iunit, '(1x)')
 

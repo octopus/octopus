@@ -30,7 +30,6 @@ module ob_lippmann_schwinger_m
   use hamiltonian_m
   use hamiltonian_base_m
   use io_m
-  use io_function_m
   use lalg_basic_m
   use loct_m
   use math_m

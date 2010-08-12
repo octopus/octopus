@@ -24,13 +24,13 @@ module born_charges_m
   use geometry_m
   use global_m
   use io_m
-  use io_function_m
-  use parser_m
   use messages_m
+  use parser_m
   use profiling_m
   use species_m
   use states_m
   use unit_system_m
+  use utils_m
 
   implicit none
 
@@ -149,10 +149,10 @@ module born_charges_m
         '   Ionic charge: ', species_zval(geo%atom(iatom)%spec)
 
       write(iunit,'(a)') 'Real:'
-      call io_output_tensor(iunit, real(this%charge(:, :, iatom)), dim, unit_one)
+      call output_tensor(iunit, real(this%charge(:, :, iatom)), dim, unit_one)
 
       write(iunit,'(a)') 'Imaginary:'
-      call io_output_tensor(iunit, aimag(this%charge(:, :, iatom)), dim, unit_one)
+      call output_tensor(iunit, aimag(this%charge(:, :, iatom)), dim, unit_one)
       write(iunit,'(a)')
     enddo
 
@@ -162,19 +162,19 @@ module born_charges_m
         '   Ionic charge: ', species_zval(geo%atom(iatom)%spec)
 
       write(iunit,'(a)') 'Magnitude:'
-      call io_output_tensor(iunit, TOFLOAT(abs(this%charge(:, :, iatom))), dim, unit_one)
+      call output_tensor(iunit, TOFLOAT(abs(this%charge(:, :, iatom))), dim, unit_one)
 
       write(iunit,'(a)') 'Phase:'
       phase(1:dim, 1:dim) = atan2(aimag(this%charge(1:dim, 1:dim, iatom)), real(this%charge(1:dim, 1:dim, iatom)))
-      call io_output_tensor(iunit, phase(:, :), dim, unit_one, write_average = .false.)
+      call output_tensor(iunit, phase(:, :), dim, unit_one, write_average = .false.)
       write(iunit,'(a)')
     enddo
 
     write(iunit,'(a)') '# Discrepancy of Born effective charges from acoustic sum rule before correction' 
     write(iunit,'(a)') 'Real:'
-    call io_output_tensor(iunit, real(this%delta(:, :)), dim, unit_one)
+    call output_tensor(iunit, real(this%delta(:, :)), dim, unit_one)
     write(iunit,'(a)') 'Imaginary:'
-    call io_output_tensor(iunit, aimag(this%delta(:, :)), dim, unit_one)
+    call output_tensor(iunit, aimag(this%delta(:, :)), dim, unit_one)
 
     call io_close(iunit)
     call pop_sub('Born_charges.out_Born_charges')

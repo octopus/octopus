@@ -27,8 +27,8 @@ module xc_ks_inversion_m
   use global_m 
   use grid_m 
   use hamiltonian_m 
-  use io_function_m 
   use io_m 
+  use io_function_m
   use lalg_adv_m 
   use mesh_function_m 
   use mesh_m 
@@ -38,8 +38,8 @@ module xc_ks_inversion_m
   use parser_m 
   use poisson_m 
   use profiling_m 
-  use states_dim_m 
   use states_m 
+  use states_dim_m 
   use unit_m 
   use unit_system_m 
   use varinfo_m 

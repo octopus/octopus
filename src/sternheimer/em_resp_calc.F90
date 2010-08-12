@@ -27,7 +27,6 @@ module em_resp_calc_m
   use grid_m
   use global_m
   use hamiltonian_m
-  use io_function_m
   use linear_response_m
   use magnetic_m
   use mesh_m
@@ -43,6 +42,7 @@ module em_resp_calc_m
   use states_dim_m
   use sternheimer_m
   use system_m
+  use utils_m
   use xc_m
 
   implicit none

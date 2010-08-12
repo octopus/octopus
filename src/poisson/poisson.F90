@@ -28,13 +28,13 @@ module poisson_m
   use io_m
   use io_function_m
   use loct_math_m
-  use parser_m
   use math_m
   use mesh_m
   use mesh_function_m
   use messages_m
   use mpi_m
   use par_vec_m
+  use parser_m
   use poisson_cg_m
   use poisson_corrections_m
   use poisson_isf_m

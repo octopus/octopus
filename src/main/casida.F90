@@ -30,13 +30,13 @@ module casida_m
   use io_function_m
   use lalg_adv_m
   use loct_m
-  use parser_m
   use math_m
   use mesh_m
   use mesh_function_m
   use messages_m
   use mpi_m
   use multicomm_m
+  use parser_m
   use poisson_m
   use profiling_m
   use restart_m

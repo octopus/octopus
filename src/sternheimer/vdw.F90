@@ -29,7 +29,6 @@ module vdw_m
   use h_sys_output_m
   use hamiltonian_m
   use io_m
-  use io_function_m
   use lalg_basic_m
   use linear_response_m
   use loct_math_m
@@ -50,6 +49,7 @@ module vdw_m
   use system_m
   use unit_m
   use unit_system_m
+  use utils_m
 
   implicit none
 

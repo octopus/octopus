@@ -29,12 +29,11 @@ module phonons_fd_m
   use h_sys_output_m
   use hamiltonian_m
   use io_m
-  use io_function_m
   use lalg_adv_m
-  use parser_m
   use mesh_m
   use messages_m
   use multicomm_m
+  use parser_m
   use profiling_m
   use restart_m
   use scf_m
@@ -42,6 +41,7 @@ module phonons_fd_m
   use system_m
   use unit_m
   use unit_system_m
+  use utils_m 
   use v_ks_m
   use vibrations_m
 

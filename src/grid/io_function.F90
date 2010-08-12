@@ -28,7 +28,6 @@ module io_function_m
   use io_m
   use io_binary_m
   use io_csv_m
-  use parser_m
   use mesh_m
   use mesh_function_m
   use messages_m
@@ -38,11 +37,13 @@ module io_function_m
   use netcdf
 #endif
   use par_vec_m
+  use parser_m
   use profiling_m
   use simul_box_m
   use species_m
   use unit_m
   use unit_system_m
+  use utils_m
   use varinfo_m
 
   implicit none
@@ -58,10 +59,7 @@ module io_function_m
     doutput_function,             &
     zoutput_function,             &
     dio_function_out_text,        &
-    zio_function_out_text,        &
-    io_output_tensor,             &
-    io_output_dipole,             &
-    index2axis
+    zio_function_out_text
 
   integer, parameter, public ::   &
     output_axis_x     =     1,    &
@@ -373,83 +371,6 @@ contains
     call pop_sub('io_function.transpose3')
   end subroutine transpose3
 
-
-  ! ---------------------------------------------------------
-  subroutine io_output_tensor(iunit, tensor, ndim, unit, write_average)
-    integer,           intent(in) :: iunit
-    FLOAT,             intent(in) :: tensor(:,:)
-    integer,           intent(in) :: ndim
-    type(unit_t),      intent(in) :: unit
-    logical, optional, intent(in) :: write_average
-    
-    FLOAT :: trace
-    integer :: jj, kk
-    logical :: write_average_
-
-    call push_sub('io_function.io_output_tensor')
-
-    write_average_ = .true.
-    if(present(write_average)) write_average_ = write_average
-
-    trace = M_z0
-    do jj = 1, ndim
-      write(iunit, '(3f20.6)') (units_from_atomic(unit, tensor(jj, kk)), kk=1,ndim)
-      trace = trace + tensor(jj, jj)
-    end do
-
-    trace = units_from_atomic(unit, trace/TOFLOAT(ndim))
-
-    if(write_average_) write(iunit, '(a, f20.6)')  'Isotropic average', trace
-
-    call pop_sub('io_function.io_output_tensor')
-  end subroutine io_output_tensor
-
-
-  ! ---------------------------------------------------------
-  subroutine io_output_dipole(iunit, dipole, ndim) 
-    integer, intent(in) :: iunit
-    FLOAT,   intent(in) :: dipole(:)
-    integer, intent(in) :: ndim
-    
-    integer :: idir
-
-    call push_sub('io_function.io_output_dipole')
-
-    write(iunit, '(a,a20,a17)') 'Dipole:', '[' // trim(units_abbrev(units_out%length)) // ']', &
-          '[' // trim(units_abbrev(unit_debye)) // ']'
-    do idir = 1, ndim
-      write(iunit, '(6x,3a,es14.5,3x,2es14.5)') '<', index2axis(idir), '> = ', &
-        units_from_atomic(units_out%length, dipole(idir)), units_from_atomic(unit_debye, dipole(idir))
-    end do
-
-    call pop_sub('io_function.io_output_dipole')
-  end subroutine io_output_dipole
-
-
-  ! ---------------------------------------------------------
-  character function index2axis(idir) result(ch)
-    integer, intent(in) :: idir
-    
-    call push_sub('io_function.index2axis')
-
-    select case(idir)
-      case(1)
-        ch = 'x'
-      case(2)
-        ch = 'y'
-      case(3)
-        ch = 'z'
-      case(4)
-        ch = 'w'
-      case default
-        write(ch,'(i1)') idir
-    end select
-
-    call pop_sub('io_function.index2axis')
-  end function index2axis
-
-
-  ! ---------------------------------------------------------
 #include "undef.F90"
 #include "real.F90"
 #include "io_function_inc.F90"

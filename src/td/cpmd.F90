@@ -26,16 +26,15 @@ module cpmd_m
   use grid_m
   use hamiltonian_m
   use io_m
-  use io_function_m
   use lalg_basic_m
   use loct_m
   use loct_math_m
-  use parser_m
   use math_m
   use mesh_m
   use mesh_function_m
   use messages_m
   use mpi_m
+  use parser_m
   use profiling_m
   use restart_m
   use scf_m

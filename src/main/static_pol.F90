@@ -34,11 +34,11 @@ module static_pol_m
   use io_function_m
   use lcao_m
   use loct_m
-  use parser_m
-  use mpi_m
   use mesh_m
   use mesh_function_m
   use messages_m
+  use mpi_m
+  use parser_m
   use profiling_m
   use restart_m
   use scf_m
@@ -48,6 +48,7 @@ module static_pol_m
   use system_m
   use unit_m
   use unit_system_m
+  use utils_m
 
   implicit none
 
@@ -205,7 +206,7 @@ contains
     if(mpi_grp_is_root(mpi_world)) then
       call geometry_dipole(sys%geo, ionic_dipole)
       print_dipole(1:gr%mesh%sb%dim) = center_dipole(1:gr%mesh%sb%dim) + ionic_dipole(1:gr%mesh%sb%dim)
-      call io_output_dipole(stdout, print_dipole, gr%mesh%sb%dim)
+      call output_dipole(stdout, print_dipole, gr%mesh%sb%dim)
     endif
 
     do ii = i_start, gr%mesh%sb%dim
@@ -261,7 +262,7 @@ contains
 
         if(mpi_grp_is_root(mpi_world)) then
           print_dipole(1:gr%mesh%sb%dim) = dipole(ii, 1:gr%mesh%sb%dim, isign) + ionic_dipole(1:gr%mesh%sb%dim)
-          call io_output_dipole(stdout, print_dipole, gr%mesh%sb%dim)
+          call output_dipole(stdout, print_dipole, gr%mesh%sb%dim)
         endif
 
         call output_cycle_()
@@ -338,7 +339,7 @@ contains
 
       if(mpi_grp_is_root(mpi_world)) then
         print_dipole(1:gr%mesh%sb%dim) = diag_dipole(1:gr%mesh%sb%dim) + ionic_dipole(1:gr%mesh%sb%dim)
-        call io_output_dipole(stdout, print_dipole, gr%mesh%sb%dim)
+        call output_dipole(stdout, print_dipole, gr%mesh%sb%dim)
       endif
   
       ! Writes the dipole to file
@@ -663,7 +664,7 @@ contains
         beta(1, 3, 2) = beta(1, 2, 3)
         beta(2, 1, 3) = beta(1, 2, 3)
 
-        call io_output_tensor(iunit, alpha, gr%mesh%sb%dim, units_out%polarizability)
+        call output_tensor(iunit, alpha, gr%mesh%sb%dim, units_out%polarizability)
         call io_close(iunit)
         
         freq_factor(1:3) = M_ZERO ! for compatibility with em_resp version

@@ -28,7 +28,6 @@ module phonons_lr_m
   use h_sys_output_m
   use hamiltonian_m
   use io_m
-  use io_function_m
   use lalg_basic_m
   use linear_response_m
   use parser_m
@@ -48,6 +47,7 @@ module phonons_lr_m
   use system_m
   use unit_m
   use unit_system_m
+  use utils_m
   use vibrations_m
 
   implicit none

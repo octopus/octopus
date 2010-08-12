@@ -28,15 +28,14 @@ module v_ks_m
   use grid_m
   use hamiltonian_m
   use index_m
-  use io_function_m
   use lalg_basic_m
-  use parser_m
   use magnetic_m
   use mesh_function_m
   use messages_m
   use mpi_m
-  use multigrid_m
   use multicomm_m
+  use multigrid_m
+  use parser_m
   use poisson_m
   use poisson_sete_m
   use profiling_m

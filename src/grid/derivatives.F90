@@ -24,7 +24,6 @@ module derivatives_m
   use boundaries_m
   use datasets_m
   use global_m
-  use io_function_m
   use lalg_adv_m
   use lalg_basic_m
   use parser_m
@@ -43,6 +42,7 @@ module derivatives_m
   use stencil_starplus_m
   use stencil_variational_m
   use transfer_table_m
+  use utils_m
   use varinfo_m
 
   implicit none

@@ -25,12 +25,10 @@ module modelmb_density_matrix_m
   use global_m
   use grid_m
   use hypercube_m
-  use io_function_m
   use io_m
   use index_m
   use lalg_adv_m
   use loct_m
-  use parser_m
   use mesh_m
   use mesh_function_m
   use messages_m
@@ -39,6 +37,7 @@ module modelmb_density_matrix_m
   use mpi_m
   use mpi_lib_m
   use par_vec_m
+  use parser_m
   use profiling_m
   use states_m
 

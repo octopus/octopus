@@ -27,7 +27,6 @@ module kdotp_m
   use h_sys_output_m
   use hamiltonian_m
   use io_m
-  use io_function_m
   use kdotp_calc_m
   use kpoints_m
   use lalg_adv_m
@@ -53,6 +52,7 @@ module kdotp_m
   use system_m
   use unit_m
   use unit_system_m
+  use utils_m
   use v_ks_m
   
   implicit none
@@ -396,7 +396,7 @@ contains
         tmp = int2str(ist)
         write(iunit,'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
           units_from_atomic(units_out%energy, st%eigenval(ist, ik)), ' ', units_abbrev(units_out%energy)
-        call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), gr%sb%periodic_dim, unit_one)
+        call output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), gr%sb%periodic_dim, unit_one)
       enddo
       
       write(iunit,'(a)')
@@ -407,7 +407,7 @@ contains
         write(iunit,'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
           units_from_atomic(units_out%energy, st%eigenval(ist, ik)), ' ', units_abbrev(units_out%energy)
         determinant = lalg_inverter(gr%sb%periodic_dim, kdotp_vars%eff_mass_inv(ik, ist, :, :), .true.)
-        call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), gr%sb%periodic_dim, unit_one)
+        call output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), gr%sb%periodic_dim, unit_one)
       enddo
 
       call io_close(iunit)

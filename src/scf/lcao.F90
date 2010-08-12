@@ -20,7 +20,6 @@
 #include "global.h"
 
 module lcao_m
-  use mpi_m ! if not before parser_m, ifort 11.072 can't compile with MPI2
   use batch_m
   use datasets_m
   use distributed_m
@@ -32,11 +31,11 @@ module lcao_m
   use lalg_adv_m
   use lalg_basic_m
   use loct_m
-  use parser_m
   use mesh_m
   use mesh_function_m
   use messages_m
-  use mpi_m
+  use mpi_m ! if not before parser_m, ifort 11.072 can't compile with MPI2
+  use parser_m
   use profiling_m
   use simul_box_m
   use solids_m

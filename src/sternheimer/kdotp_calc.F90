@@ -22,7 +22,6 @@
 module kdotp_calc_m
   use global_m
   use hamiltonian_m
-  use io_function_m
   use linear_response_m
   use mesh_m
   use mesh_function_m
@@ -34,6 +33,7 @@ module kdotp_calc_m
   use states_calc_m
   use sternheimer_m
   use system_m
+  use utils_m
 
   implicit none
 

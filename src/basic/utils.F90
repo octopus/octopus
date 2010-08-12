@@ -19,36 +19,44 @@
 
 #include "global.h"
 
-! This module is intended to contain simple general purpose utility functions
+! This module is intended to contain simple general-purpose utility functions
 ! and procedures.
 
 module utils_m
   use global_m
   use messages_m
+  use unit_m
+  use unit_system_m
 
   implicit none
 
   private
-  public ::                        &
-       get_divisors
+  public ::              &
+    get_divisors,        &
+    index2axis,          &
+    output_tensor,       &
+    output_dipole
+
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine get_divisors(n, n_divisors, divisors)
-    integer, intent(in)    :: n
+  subroutine get_divisors(nn, n_divisors, divisors)
+    integer, intent(in)    :: nn
     integer, intent(inout) :: n_divisors
     integer, intent(out)   :: divisors(:)
 
-    integer :: i, max_d
+    integer :: ii, max_d
+
+    call push_sub('utils.get_divisors')
 
     ASSERT(n_divisors > 1)
     max_d = n_divisors
 
     n_divisors = 1
     divisors(n_divisors) = 1
-    do i = 2, n/2
-      if(mod(n, i)==0) then
+    do ii = 2, nn / 2
+      if(mod(nn, ii)==0) then
         n_divisors = n_divisors + 1
 
         if(n_divisors > max_d - 1) then
@@ -56,12 +64,89 @@ contains
           call write_fatal(1)
         end if
 
-        divisors(n_divisors) = i        
+        divisors(n_divisors) = ii
       end if
     end do
     n_divisors = n_divisors + 1
-    divisors(n_divisors) = n
+    divisors(n_divisors) = nn
+
+    call pop_sub('utils.get_divisors')
   end subroutine get_divisors
+
+
+  ! ---------------------------------------------------------
+  character function index2axis(idir) result(ch)
+    integer, intent(in) :: idir
+    
+    call push_sub('utils.index2axis')
+
+    select case(idir)
+      case(1)
+        ch = 'x'
+      case(2)
+        ch = 'y'
+      case(3)
+        ch = 'z'
+      case(4)
+        ch = 'w'
+      case default
+        write(ch,'(i1)') idir
+    end select
+
+    call pop_sub('utils.index2axis')
+  end function index2axis
+
+
+  ! ---------------------------------------------------------
+  subroutine output_tensor(iunit, tensor, ndim, unit, write_average)
+    integer,           intent(in) :: iunit
+    FLOAT,             intent(in) :: tensor(:,:)
+    integer,           intent(in) :: ndim
+    type(unit_t),      intent(in) :: unit
+    logical, optional, intent(in) :: write_average
+    
+    FLOAT :: trace
+    integer :: jj, kk
+    logical :: write_average_
+
+    call push_sub('utils.output_tensor')
+
+    write_average_ = .true.
+    if(present(write_average)) write_average_ = write_average
+
+    trace = M_z0
+    do jj = 1, ndim
+      write(iunit, '(3f20.6)') (units_from_atomic(unit, tensor(jj, kk)), kk=1,ndim)
+      trace = trace + tensor(jj, jj)
+    end do
+
+    trace = units_from_atomic(unit, trace/TOFLOAT(ndim))
+
+    if(write_average_) write(iunit, '(a, f20.6)')  'Isotropic average', trace
+
+    call pop_sub('utils.output_tensor')
+  end subroutine output_tensor
+
+
+  ! ---------------------------------------------------------
+  subroutine output_dipole(iunit, dipole, ndim) 
+    integer, intent(in) :: iunit
+    FLOAT,   intent(in) :: dipole(:)
+    integer, intent(in) :: ndim
+    
+    integer :: idir
+
+    call push_sub('utils.output_dipole')
+
+    write(iunit, '(a,a20,a17)') 'Dipole:', '[' // trim(units_abbrev(units_out%length)) // ']', &
+          '[' // trim(units_abbrev(unit_debye)) // ']'
+    do idir = 1, ndim
+      write(iunit, '(6x,3a,es14.5,3x,2es14.5)') '<', index2axis(idir), '> = ', &
+        units_from_atomic(units_out%length, dipole(idir)), units_from_atomic(unit_debye, dipole(idir))
+    end do
+
+    call pop_sub('utils.output_dipole')
+  end subroutine output_dipole
 
 end module utils_m
 

@@ -31,11 +31,9 @@ module scf_m
   use h_sys_output_m
   use hamiltonian_m
   use io_m
-  use io_function_m
   use kpoints_m
   use lcao_m
   use loct_m
-  use parser_m
   use magnetic_m
   use mesh_m
   use mesh_batch_m
@@ -46,6 +44,7 @@ module scf_m
   use mpi_lib_m
   use multigrid_m
   use ob_lippmann_schwinger_m
+  use parser_m
   use preconditioners_m
   use profiling_m
   use restart_m
@@ -58,6 +57,7 @@ module scf_m
   use states_dim_m
   use unit_m
   use unit_system_m
+  use utils_m
   use v_ks_m
   use varinfo_m
   use XC_F90(lib_m)
@@ -793,7 +793,7 @@ contains
       end do
 
       if(mpi_grp_is_root(mpi_world)) then
-        call io_output_dipole(iunit, -n_dip, gr%mesh%sb%dim)
+        call output_dipole(iunit, -n_dip, gr%mesh%sb%dim)
         
         if (simul_box_is_periodic(gr%sb)) then
            write(iunit, '(a)') "Defined only up to quantum of polarization (e * lattice vector)."
