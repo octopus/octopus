@@ -29,12 +29,12 @@ module mesh_partition_m
   use io_m
   use io_binary_m
   use loct_m
-  use parser_m
   use math_m
   use mesh_m
   use messages_m
   use mpi_m
   use multicomm_m
+  use parser_m
   use partition_m
   use partitioner_m
   use profiling_m

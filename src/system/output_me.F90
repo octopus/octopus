@@ -32,9 +32,9 @@ module output_me_m
   use messages_m
   use kpoints_m
   use loct_math_m
-  use parser_m
   use mpi_m
   use mpi_lib_m
+  use parser_m
   use poisson_m
   use profiling_m
   use projector_m

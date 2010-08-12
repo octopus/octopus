@@ -27,7 +27,6 @@ module nl_operator_m
   use global_m
   use io_m
   use loct_m
-  use parser_m
   use math_m
   use index_m
   use mesh_m
@@ -36,6 +35,7 @@ module nl_operator_m
   use mpi_m
   use opencl_m
   use par_vec_m
+  use parser_m
   use profiling_m
   use simul_box_m
   use stencil_m

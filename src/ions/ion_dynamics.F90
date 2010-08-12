@@ -22,15 +22,15 @@
 module ion_dynamics_m
   use c_pointer_m
   use datasets_m
+  use geometry_m
   use global_m
   use io_m
+  use loct_m
   use loct_math_m
-  use parser_m
   use math_m
   use messages_m
   use mpi_m
-  use geometry_m
-  use loct_m
+  use parser_m
   use simul_box_m
   use species_m
   use profiling_m

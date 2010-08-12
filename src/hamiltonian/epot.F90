@@ -35,13 +35,13 @@ module epot_m
   use linear_response_m
   use loct_math_m
   use logrid_m
-  use parser_m
   use mesh_m
   use mesh_function_m
   use messages_m
   use mpi_m
   use mpi_debug_m
   use multigrid_m
+  use parser_m
   use poisson_m
   use poisson_cutoff_m
   use poisson_sete_m

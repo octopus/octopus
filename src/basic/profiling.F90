@@ -57,12 +57,12 @@ module profiling_m
   use global_m
   use io_m
   use loct_m
+  use messages_m
+  use mpi_m
   use parser_m
 #ifdef HAVE_PAPI
   use papi_m
 #endif
-  use messages_m
-  use mpi_m
   use string_m
   use varinfo_m
 

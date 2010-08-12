@@ -25,14 +25,13 @@ module xc_oep_m
   use grid_m
   use hamiltonian_m
   use lalg_adv_m
-  use parser_m
-  use XC_F90(lib_m)
   use linear_response_m
   use linear_solver_m
   use mesh_function_m
   use mesh_m
   use messages_m
   use mpi_m
+  use parser_m
   use poisson_m
   use profiling_m
   use states_m
@@ -40,7 +39,7 @@ module xc_oep_m
   use scf_tol_m
   use varinfo_m
   use xc_m
-
+  use XC_F90(lib_m)
 
   implicit none
 

@@ -33,13 +33,13 @@ module kdotp_m
   use lalg_basic_m
   use linear_response_m
   use linear_solver_m
-  use parser_m
   use math_m
   use mesh_m
   use mesh_function_m
   use messages_m
   use mix_m
   use mpi_m
+  use parser_m
   use pert_m
   use profiling_m
   use restart_m

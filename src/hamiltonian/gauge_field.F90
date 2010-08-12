@@ -27,13 +27,13 @@ module gauge_field_m
   use grid_m
   use io_m
   use lalg_basic_m
-  use parser_m
   use logrid_m
   use mesh_m
   use mesh_function_m
   use messages_m
   use mpi_m
   use mpi_debug_m
+  use parser_m
   use profiling_m
   use projector_m
   use ps_m

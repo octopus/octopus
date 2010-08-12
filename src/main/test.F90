@@ -27,10 +27,10 @@ program oct_test
   use global_m
   use io_m
   use loct_m
-  use parser_m
   use messages_m
   use mpi_m
   use multicomm_m
+  use parser_m
   use poisson_m
   use profiling_m
   use string_m

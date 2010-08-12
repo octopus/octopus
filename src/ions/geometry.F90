@@ -26,10 +26,10 @@ module geometry_m
   use global_m
   use io_m
   use loct_math_m
-  use parser_m
   use messages_m
   use multicomm_m
   use mpi_m
+  use parser_m
   use profiling_m
   use species_m
   use string_m

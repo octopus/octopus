@@ -27,17 +27,17 @@
 module tdf_m
   use c_pointer_m
   use datasets_m
+  use fft_m
   use global_m
   use io_m
-  use messages_m
-  use parser_m
   use loct_math_m
+  use messages_m
+  use mpi_m
+  use parser_m
+  use profiling_m
   use splines_m
   use unit_m
   use unit_system_m
-  use fft_m
-  use mpi_m
-  use profiling_m
 
   implicit none
 

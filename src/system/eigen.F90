@@ -33,7 +33,6 @@ module eigensolver_m
   use lalg_adv_m
   use lalg_basic_m
   use loct_m
-  use parser_m
   use math_m
   use mesh_m
   use mesh_function_m
@@ -41,6 +40,7 @@ module eigensolver_m
   use mpi_m
   use mpi_debug_m
   use mpi_lib_m
+  use parser_m
   use preconditioners_m
   use profiling_m
   use states_m

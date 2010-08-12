@@ -36,7 +36,6 @@ module states_m
   use lalg_basic_m
   use loct_m
   use mpi_m ! if not before parser_m, ifort 11.072 can't compile with MPI2
-  use parser_m
   use math_m
   use mesh_m
   use mesh_function_m
@@ -48,6 +47,7 @@ module states_m
   use multigrid_m
   use ob_green_m
   use ob_interface_m
+  use parser_m
   use profiling_m
   use simul_box_m
   use smear_m

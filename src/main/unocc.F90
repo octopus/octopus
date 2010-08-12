@@ -33,11 +33,11 @@ module unocc_m
   use io_m
   use lcao_m
   use loct_m
-  use parser_m
   use mesh_m
   use mesh_function_m
   use messages_m
   use mpi_m
+  use parser_m
   use poisson_m
   use profiling_m
   use projector_m

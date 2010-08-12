@@ -26,14 +26,14 @@ module simul_box_m
   use geometry_m
   use global_m
   use io_m
+  use kpoints_m
   use lalg_basic_m
   use loct_m
   use lookup_m
-  use parser_m
-  use kpoints_m
   use math_m
   use messages_m
   use mpi_m
+  use parser_m
   use profiling_m
   use species_m
   use string_m

@@ -26,7 +26,6 @@ module derivatives_m
   use global_m
   use lalg_adv_m
   use lalg_basic_m
-  use parser_m
   use math_m
   use mesh_m
   use mesh_function_m
@@ -35,6 +34,7 @@ module derivatives_m
   use nl_operator_m
   use opencl_m
   use par_vec_m
+  use parser_m
   use profiling_m
   use simul_box_m
   use stencil_cube_m

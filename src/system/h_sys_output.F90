@@ -37,7 +37,6 @@ module h_sys_output_m
   use linear_response_m
   use loct_m
   use loct_math_m
-  use parser_m
   use magnetic_m
   use mesh_m
   use mesh_function_m
@@ -47,6 +46,7 @@ module h_sys_output_m
   use modelmb_exchange_syms_m
   use mpi_m
   use output_me_m
+  use parser_m
   use profiling_m
   use simul_box_m
   use solids_m

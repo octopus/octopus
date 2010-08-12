@@ -25,10 +25,10 @@ module species_m
   use io_m
   use loct_m
   use loct_math_m
-  use parser_m
   use math_m
   use messages_m
   use mpi_m
+  use parser_m
   use profiling_m
   use ps_m
   use splines_m

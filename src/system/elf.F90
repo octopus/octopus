@@ -27,10 +27,10 @@ module elf_m
   use global_m
   use grid_m
   use io_m
-  use parser_m
   use mesh_m
   use messages_m
   use mpi_m
+  use parser_m
   use profiling_m
   use states_m
   use states_dim_m

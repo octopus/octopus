@@ -37,7 +37,6 @@ module hamiltonian_m
   use kpoints_m
   use lalg_basic_m
   use lasers_m
-  use parser_m
   use mesh_m
   use mesh_function_m
   use messages_m
@@ -46,6 +45,7 @@ module hamiltonian_m
   use ob_interface_m
   use ob_lead_m
   use opencl_m
+  use parser_m
   use poisson_m
   use profiling_m
   use projector_m
