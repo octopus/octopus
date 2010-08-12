@@ -49,15 +49,15 @@
     use global_m
     use io_m
     use loct_m
+#if defined(HAVE_OPENMP)
+    use omp_lib
+#endif
     use parser_m
     use messages_m
     use mpi_m
     use profiling_m
     use utils_m
     use varinfo_m
-#if defined(HAVE_OPENMP)
-    use omp_lib
-#endif
 
   implicit none
 

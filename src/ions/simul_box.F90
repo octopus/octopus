@@ -154,11 +154,11 @@ contains
 
   !--------------------------------------------------------------
   subroutine simul_box_init(sb, geo, transport_mode, lead_sb, lead_info)
-    type(simul_box_t), intent(inout) :: sb
-    type(geometry_t),  intent(inout) :: geo
-    logical, optional, intent(in)    :: transport_mode
-    type(simul_box_t), optional, intent(inout)      :: lead_sb(:)
-    type(simul_box_ob_info_t), optional, intent(in) :: lead_info(:)
+    type(simul_box_t),                   intent(inout) :: sb
+    type(geometry_t),                    intent(inout) :: geo
+    logical,                   optional, intent(in)    :: transport_mode
+    type(simul_box_t),         optional, intent(inout) :: lead_sb(:)
+    type(simul_box_ob_info_t), optional, intent(in)    :: lead_info(:)
 
     ! some local stuff
     FLOAT :: def_h, def_rsize

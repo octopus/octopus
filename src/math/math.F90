@@ -23,13 +23,13 @@
 ! and procedures.
 
 module math_m
+  use blas_m
   use global_m
+  use lalg_adv_m
   use lalg_basic_m
+  use loct_m
   use loct_math_m
   use messages_m
-  use loct_m
-  use blas_m
-  use lalg_adv_m
   use profiling_m
 
   implicit none
@@ -53,7 +53,6 @@ module math_m
     sort,                       &
     factorial,                  &
     hermite,                    &
-    math_divisors,              &
     set_app_threshold,          &
     operator(.app.),            &
     math_xor,                   &
@@ -315,6 +314,7 @@ contains
     end if
 
   end subroutine ylmr
+
 
   ! ---------------------------------------------------------
   ! This is a Numerical Recipes-based subroutine
@@ -710,38 +710,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine math_divisors(n, n_divisors, divisors)
-    integer, intent(in)    :: n
-    integer, intent(inout) :: n_divisors
-    integer, intent(out)   :: divisors(:)
-
-    integer :: i, max_d
-
-    call push_sub('math.divisors')
-
-    ASSERT(n_divisors > 1)
-    max_d = n_divisors
-
-    n_divisors = 1
-    divisors(n_divisors) = 1
-    do i = 2, n/2
-      if(mod(n, i)==0) then
-        n_divisors = n_divisors + 1
-
-        if(n_divisors > max_d - 1) then
-          message(1) = "Internal error in get_divisors. Please increase n_divisors"
-          call write_fatal(1)
-        end if
-
-        divisors(n_divisors) = i        
-      end if
-    end do
-    n_divisors = n_divisors + 1
-    divisors(n_divisors) = n
-
-    call pop_sub('math.divisors')
-  end subroutine math_divisors
-
   subroutine set_app_threshold(thr)
     FLOAT, intent(in) :: thr
 
@@ -751,13 +719,15 @@ contains
     call pop_sub('math.set_app_threshold')
   end subroutine set_app_threshold
 
+
+  ! ---------------------------------------------------------
   FLOAT pure function ddelta(i, j)
     integer, intent(in) :: i
     integer, intent(in) :: j
 
     ! no push_sub in pure function
 
-    if ( i == j) then 
+    if(i == j) then 
       ddelta = M_ONE
     else 
       ddelta = M_ZERO
@@ -765,6 +735,8 @@ contains
 
   end function ddelta
 
+
+  ! ---------------------------------------------------------
   logical function math_xor(a, b)
     logical, intent(in) :: a
     logical, intent(in) :: b
@@ -829,6 +801,7 @@ contains
 
     call pop_sub('math.member')
   end function member
+
 
   ! ---------------------------------------------------------
   subroutine interpolation_coefficients(nn, xa, xx, cc)
@@ -1072,8 +1045,9 @@ contains
 
     call pop_sub('math.hypersphere_grad_matrix')
   end subroutine  hypersphere_grad_matrix
-  ! ---------------------------------------------------------
 
+
+  ! ---------------------------------------------------------
   integer pure function pad(size, blk)
     integer, intent(in) :: size
     integer, intent(in) :: blk

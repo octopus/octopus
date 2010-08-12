@@ -611,7 +611,8 @@ contains
 
   
   ! Returns true if a file with name 'filename' exists
-  ! and issues a reminder
+  ! and issues a reminder.
+  ! ---------------------------------------------------------
   logical function io_file_exists(filename, msg) result(file_exists)
     character(len=*), intent(in)  :: filename, msg
 
@@ -628,13 +629,14 @@ contains
   end function io_file_exists
 
 
+  ! ---------------------------------------------------------
   subroutine iopar_read(grp, iunit, line, ierr)
     type(mpi_grp_t),  intent(in)  :: grp
     integer,          intent(in)  :: iunit
     character(len=*), intent(out) :: line
     integer,          intent(out) :: ierr
 
-    call push_sub('out.iopar_read')
+    call push_sub('io.iopar_read')
 
     if(mpi_grp_is_root(grp)) then
       read(iunit, '(a)', iostat=ierr) line
@@ -647,7 +649,7 @@ contains
     end if
 #endif
 
-    call pop_sub('out.iopar_read')
+    call pop_sub('io.iopar_read')
   end subroutine iopar_read
 
 
@@ -656,13 +658,13 @@ contains
     type(mpi_grp_t), intent(in)  :: grp
     integer,         intent(in)  :: iunit
 
-    call push_sub('out.iopar_backspace')
+    call push_sub('io.iopar_backspace')
 
     if(mpi_grp_is_root(grp)) then
       backspace(iunit)
     end if
 
-    call pop_sub('out.iopar_backspace')
+    call pop_sub('io.iopar_backspace')
 
   end subroutine iopar_backspace
 
