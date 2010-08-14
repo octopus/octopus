@@ -24,12 +24,13 @@ module kpoints_m
   use geometry_m
   use global_m
   use loct_m
-  use parser_m
   use messages_m
+  use parser_m
   use profiling_m
   use symmetries_m
   use unit_m
   use unit_system_m
+  use utils_m
   
   implicit none
   
@@ -52,6 +53,7 @@ module kpoints_m
     FLOAT, pointer :: red_point(:, :)
     FLOAT, pointer :: weight(:)
     integer        :: npoints
+    integer        :: dim
   end type kpoints_grid_t
 
   type kpoints_t
@@ -75,45 +77,55 @@ module kpoints_m
 
 contains
 
-  subroutine kpoints_grid_init(this, npoints)
+  subroutine kpoints_grid_init(dim, this, npoints)
+    integer,              intent(in)  :: dim
     type(kpoints_grid_t), intent(out) :: this
-    integer,             intent(in)  :: npoints
+    integer,              intent(in)  :: npoints
 
+    call push_sub('kpoints.kpoints_grid_init')
+
+    this%dim = dim
     this%npoints = npoints
-    SAFE_ALLOCATE(this%red_point(1:MAX_DIM, npoints))
-    SAFE_ALLOCATE(this%point(1:MAX_DIM, npoints))
+    SAFE_ALLOCATE(this%red_point(1:dim, 1:npoints))
+    SAFE_ALLOCATE(this%point(1:dim, 1:npoints))
     SAFE_ALLOCATE(this%weight(npoints))
+
+    call pop_sub('kpoints.kpoints_grid_init')
   end subroutine kpoints_grid_init
 
-  ! ---------------------------------------------------------
 
+  ! ---------------------------------------------------------
   subroutine kpoints_grid_end(this)
     type(kpoints_grid_t), intent(out) :: this
+
+    call push_sub('kpoints.kpoints_grid_end')
 
     SAFE_DEALLOCATE_P(this%red_point)
     SAFE_DEALLOCATE_P(this%point)
     SAFE_DEALLOCATE_P(this%weight)
+
+    call pop_sub('kpoints.kpoints_grid_end')
   end subroutine kpoints_grid_end
 
-  ! ---------------------------------------------------------
 
+  ! ---------------------------------------------------------
   subroutine kpoints_grid_copy(bb, aa)
     type(kpoints_grid_t), intent(in)  :: bb
     type(kpoints_grid_t), intent(out) :: aa
 
     call push_sub('kpoints.kpoints_grid_copy')
     
-    call kpoints_grid_init(aa, bb%npoints)
+    call kpoints_grid_init(bb%dim, aa, bb%npoints)
     
     aa%weight = bb%weight
     aa%point  = bb%point
-    aa%red_point  = bb%red_point
+    aa%red_point = bb%red_point
 
     call pop_sub('kpoints.kpoints_grid_copy')
   end subroutine kpoints_grid_copy
 
-  ! ---------------------------------------------------------
 
+  ! ---------------------------------------------------------
   subroutine kpoints_init(this, symm, dim, rlattice, klattice, geo, only_gamma)
     type(kpoints_t),    intent(out) :: this
     type(symmetries_t), intent(in)  :: symm
@@ -122,7 +134,8 @@ contains
     type(geometry_t),   intent(in)  :: geo
     logical,            intent(in)  :: only_gamma
 
-    integer :: ik
+    integer :: ik, idir
+    character(len=100) :: str_tmp
 
     call push_sub('kpoints.kpoints_init')
 
@@ -167,25 +180,44 @@ contains
     write(message(1),'(a)') ' '
     write(message(2),'(1x,i3,a)') this%reduced%npoints, ' k-points generated from parameters :'
     write(message(3),'(1x,a)') '---------------------------------------------------'
-    write(message(4),'(4x,a,3i5,6x,a,3f6.2)') 'n =', this%nik_axis(1:3), 's = ', this%shifts(1:3)
-    write(message(5),'(a)') ' '
-    write(message(6),'(a)') ' index |    weight    |              coordinates              |'
+
+    write(message(4),'(4x,a)') 'n ='    
+    do idir = 1, dim
+      write(str_tmp,'(i5)') this%nik_axis(idir)
+      message(4) = trim(message(4)) // trim(str_tmp)
+    enddo
+    write(str_tmp,'(6x,a)') 's ='
+    message(4) = trim(message(4)) // trim(str_tmp)
+    do idir = 1, dim
+      write(str_tmp,'(f6.2)') this%shifts(idir)
+      message(4) = trim(message(4)) // trim(str_tmp)
+    enddo
+
+    write(message(5),'(a)')
+    write(message(6),'(a)') ' index |    weight    |             coordinates              |'
     call write_info(6)
 
     do ik = 1, this%reduced%npoints
-      write(message(1), &
-        '(i6,a,f12.6,a,3f12.6, a)') ik, " | ", this%reduced%weight(ik), " | ", this%reduced%red_point(1:3, ik), "  |"
+      write(str_tmp,'(i6,a,f12.6,a)') ik, " | ", this%reduced%weight(ik), " |"
+      message(1) =  str_tmp
+      do idir = 1, dim
+        write(str_tmp,'(f12.6)') this%reduced%red_point(idir, ik)
+        message(1) = trim(message(1)) // trim(str_tmp)
+      enddo
+      write(str_tmp,'(a)') "  |"
+      message(1) = trim(message(1)) // trim(str_tmp)
       call write_info(1)
     end do
 
-    write(message(1),'(a)') ''
+    write(message(1),'(a)')
     call write_info(1)
 
     call pop_sub('kpoints.kpoints_init')
 
   contains
+
     ! ---------------------------------------------------------
-    subroutine read_mp(gamma_only)
+    subroutine read_MP(gamma_only)
       logical, intent(in) :: gamma_only
 
       logical       :: gamma_only_
@@ -222,18 +254,19 @@ contains
       !%End
 
       gamma_only_ = gamma_only
-      if(.not.gamma_only_) gamma_only_ = (parse_block(datasets_check('KPointsGrid'), blk) .ne. 0)
+      if(.not. gamma_only_) &
+        gamma_only_ = (parse_block(datasets_check('KPointsGrid'), blk) .ne. 0)
 
-      this%nik_axis(:) = 1
-      this%shifts(:)   = M_ZERO
+      this%nik_axis(1:dim) = 1
+      this%shifts(1:dim)   = M_ZERO
 
-      if(.not.gamma_only_) then
+      if(.not. gamma_only_) then
         do ii = 1, dim
           call parse_block_integer(blk, 0, ii - 1, this%nik_axis(ii))
         end do
 
-        if (any(this%nik_axis < 1)) then
-          message(1) = 'Input: KPointsGrid is not valid'
+        if (any(this%nik_axis(1:dim) < 1)) then
+          message(1) = 'Input: KPointsGrid is not valid.'
           call write_fatal(1)
         end if
 
@@ -246,29 +279,30 @@ contains
         call parse_block_end(blk)
       end if
 
-      call kpoints_grid_init(this%full, product(this%nik_axis))
+      call kpoints_grid_init(dim, this%full, product(this%nik_axis(1:dim)))
 
-      call kpoints_grid_generate(dim, this%nik_axis, this%shifts, this%full%npoints, this%full%red_point)
+      call kpoints_grid_generate(dim, this%nik_axis(1:dim), this%shifts(1:dim), this%full%red_point)
 
-      this%full%weight = M_ONE/real(this%full%npoints, REAL_PRECISION)
+      this%full%weight = M_ONE / this%full%npoints
 
       call kpoints_grid_copy(this%full, this%reduced)
 
       if(this%use_symmetries) then
         call kpoints_grid_reduce(symm, this%use_time_reversal, &
-          this%reduced%npoints, this%reduced%red_point, this%reduced%weight)
+          this%reduced%npoints, dim, this%reduced%red_point, this%reduced%weight)
       end if
 
       do ik = 1, this%full%npoints
-        call kpoints_to_absolute(klattice, this%full%red_point(:, ik), this%full%point(:, ik))
+        call kpoints_to_absolute(klattice, this%full%red_point(:, ik), this%full%point(:, ik), dim)
       end do
 
       do ik = 1, this%reduced%npoints
-        call kpoints_to_absolute(klattice, this%reduced%red_point(:, ik), this%reduced%point(:, ik))
+        call kpoints_to_absolute(klattice, this%reduced%red_point(:, ik), this%reduced%point(:, ik), dim)
       end do
 
       call pop_sub('kpoints.kpoints_init.read_MP')
-    end subroutine read_mp
+    end subroutine read_MP
+
 
     ! ---------------------------------------------------------
     logical function read_user_kpoints()
@@ -288,7 +322,7 @@ contains
       !% vector. You only need to specify the components for the
       !% periodic directions. Note that the <i>k</i>-points should be given in
       !% Cartesian coordinates (not in reduced coordinates), <i>i.e.</i>
-      !% what Octopus writes in a line in the ground-state standard output as
+      !% what <tt>Octopus</tt> writes in a line in the ground-state standard output as
       !% <tt>#k =   1, k = (    0.154000,    0.154000,    0.154000)</tt>.
       !%
       !% For example, if you want to include only the Gamma point, you can
@@ -320,7 +354,7 @@ contains
       end if
       read_user_kpoints = .true.
 
-      call kpoints_grid_init(this%full, parse_block_n(blk))
+      call kpoints_grid_init(dim, this%full, parse_block_n(blk))
 
       this%full%red_point = M_ZERO
       this%full%point = M_ZERO
@@ -333,7 +367,7 @@ contains
             call parse_block_float(blk, ik - 1, idir, this%full%red_point(idir, ik))
           end do
           ! generate also the absolute coordinates
-          call kpoints_to_absolute(klattice, this%full%red_point(:, ik), this%full%point(:, ik))
+          call kpoints_to_absolute(klattice, this%full%red_point(:, ik), this%full%point(:, ik), dim)
         end do
       else
         do ik = 1, this%full%npoints
@@ -342,7 +376,7 @@ contains
             call parse_block_float(blk, ik - 1, idir, this%full%point(idir, ik), unit_one/units_inp%length)
           end do
           ! generate also the reduced coordinates
-          call kpoints_to_reduced(rlattice, this%full%point(:, ik), this%full%red_point(:, ik))
+          call kpoints_to_reduced(rlattice, this%full%point(:, ik), this%full%red_point(:, ik), dim)
         end do
       end if
       call parse_block_end(blk)
@@ -364,45 +398,53 @@ contains
   subroutine kpoints_end(this)
     type(kpoints_t), intent(inout) :: this
 
+    call push_sub('kpoints.kpoints_end')
+
     call kpoints_grid_end(this%full)
     call kpoints_grid_end(this%reduced)
 
+    call pop_sub('kpoints.kpoints_end')
   end subroutine kpoints_end
 
 
   ! ---------------------------------------------------------
-  subroutine kpoints_to_absolute(klattice, kin, kout)
-    FLOAT, intent(in)  :: klattice(:,:), kin(:)
-    FLOAT, intent(out) :: kout(:)
+  subroutine kpoints_to_absolute(klattice, kin, kout, dim)
+    FLOAT,   intent(in)  :: klattice(:,:)
+    FLOAT,   intent(in)  :: kin(:)
+    FLOAT,   intent(out) :: kout(:)
+    integer, intent(in)  :: dim
 
     integer :: ii
     
-    ! short
+    call push_sub('kpoints.kpoints_to_absolute')
 
-    kout(:) = M_ZERO
-    do ii = 1, MAX_DIM
-      kout(:) = kout(:) + kin(ii)*klattice(:, ii)
+    kout(1:dim) = M_ZERO
+    do ii = 1, dim
+      kout(1:dim) = kout(1:dim) + kin(ii) * klattice(1:dim, ii)
     end do
 
+    call pop_sub('kpoints.kpoints_to_absolute')
   end subroutine kpoints_to_absolute
 
 
   ! ---------------------------------------------------------
-  subroutine kpoints_to_reduced(rlattice, kin, kout)
-    FLOAT, intent(in)  :: rlattice(:,:)
-    FLOAT, intent(in)  :: kin(:)
-    FLOAT, intent(out) :: kout(:)
+  subroutine kpoints_to_reduced(rlattice, kin, kout, dim)
+    FLOAT,   intent(in)  :: rlattice(:,:)
+    FLOAT,   intent(in)  :: kin(:)
+    FLOAT,   intent(out) :: kout(:)
+    integer, intent(in)  :: dim
 
     integer :: ii
 
-    ! short
+    call push_sub('kpoints.kpoints_to_reduced')
 
-    kout(:) = M_ZERO
-    do ii = 1, MAX_DIM
-      kout(:) = kout(:) + kin(ii)*rlattice(ii, :)
+    kout(1:dim) = M_ZERO
+    do ii = 1, dim
+      kout(1:dim) = kout(1:dim) + kin(ii) * rlattice(ii, 1:dim)
     end do
-    kout(:) = kout(:) / (M_TWO*M_PI)
+    kout(1:dim) = kout(1:dim) / (M_TWO * M_PI)
 
+    call pop_sub('kpoints.kpoints_to_reduced')
   end subroutine kpoints_to_reduced
 
 
@@ -421,14 +463,14 @@ contains
     kout%use_symmetries = kin%use_symmetries
     kout%use_time_reversal = kin%use_time_reversal
 
-    kout%nik_axis = kin%nik_axis
-    kout%shifts = kin%shifts
+    kout%nik_axis(1:kin%full%dim) = kin%nik_axis(1:kin%full%dim)
+    kout%shifts  (1:kin%full%dim) = kin%shifts  (1:kin%full%dim)
 
     call pop_sub('kpoints.kpoints_copy')
   end subroutine kpoints_copy
 
-  ! ----------------------------------------------------------
 
+  ! ----------------------------------------------------------
   integer pure function kpoints_number(this) result(number)
     type(kpoints_t), intent(in) :: this
 
@@ -436,14 +478,14 @@ contains
     
   end function kpoints_number
 
-  ! ----------------------------------------------------------
 
+  ! ----------------------------------------------------------
   pure function kpoints_get_point(this, ik) result(point)
     type(kpoints_t), intent(in) :: this
     integer,         intent(in) :: ik
-    FLOAT                       :: point(1:MAX_DIM)
+    FLOAT                       :: point(1:this%full%dim)
 
-    point(1:MAX_DIM) = this%reduced%point(1:MAX_DIM, ik)
+    point(1:this%full%dim) = this%reduced%point(1:this%full%dim, ik)
 
   end function kpoints_get_point
 
@@ -457,64 +499,62 @@ contains
 
   end function kpoints_get_weight
 
+
   ! ----------------------------------------------------------
-  ! Generates the k-points grid
+  ! Generates the k-points grid.
   ! Sets up a uniform array of k-points. Use a modification of the normal Monkhorst-Pack scheme, 
   ! which is equivalent to the normal MP scheme in the case of even number of kpoints (i.e. naxis (i) even)  
-  ! used with a shift of (1/2, 1/2, 1/2)
-  ! For the original MP scheme, see (PRB 13, 518 (1976))
-  ! and (PRB 16, 1748 (1977))
-  ! naxis(i) are the number of points in the three
-  ! directions dermined by the lattice vectors.
+  ! used with a shift of (1/2, 1/2, 1/2).
+  ! For the original MP scheme, see (PRB 13, 518 (1976)) and (PRB 16, 1748 (1977))
+  ! naxis(i) are the number of points in the three directions determined by the lattice vectors.
   ! shift(i) and sz shift the grid of integration points from the origin.
-
-  subroutine kpoints_grid_generate(dim, naxis, shift, nkpoints, kpoints)  
+  subroutine kpoints_grid_generate(dim, naxis, shift, kpoints)  
     integer,           intent(in)  :: dim
-    integer,           intent(in)  :: naxis(1:MAX_DIM)
-    FLOAT,             intent(in)  :: shift(1:MAX_DIM)
-    integer,           intent(out) :: nkpoints
+    integer,           intent(in)  :: naxis(:)
+    FLOAT,             intent(in)  :: shift(:)
     FLOAT,             intent(out) :: kpoints(:, :)
   
     FLOAT :: dx(1:MAX_DIM)
-    integer :: ii, jj, kk, idir, ix(1:MAX_DIM)
+    integer :: ii, jj, divisor, ik, idir, ix(1:MAX_DIM)
 
     call push_sub('kpoints.kpoints_grid_generate')
     
-    dx(1:MAX_DIM) = M_ONE/real(2*naxis(1:MAX_DIM), REAL_PRECISION)
+    dx(1:dim) = M_ONE / (M_TWO * naxis(1:dim))
 
-    kpoints = M_ZERO
-    nkpoints = 0
-    ix=1
-    do ii = 1, naxis(1)
-       do jj = 1, naxis(2)
-          do kk = 1, naxis(3)
-             ix(1:3) = (/ii, jj, kk/)
-             nkpoints = nkpoints + 1
-             do idir = 1, dim
-                if ( (mod(naxis(idir),2) .ne. 0 ) ) then    
-                   kpoints(idir, nkpoints) = &
-                        & (real(2*ix(idir) - naxis(idir) - 1, REAL_PRECISION) + 2*shift(idir))*dx(idir)
-                else 
-                   kpoints(idir, nkpoints) = &
-                        & (real(2*ix(idir) - naxis(idir) , REAL_PRECISION) + 2*shift(idir))*dx(idir)
-                end if
-		! bring back point to first Brillouin zone
-                kpoints(idir, nkpoints) = mod(kpoints(idir, nkpoints) + M_HALF, M_ONE) - M_HALF
-             end do
-          end do
-       end do
+    do ii = 0, product(naxis(1:dim)) - 1
+
+      ik = ii + 1
+      jj = ii
+      divisor = product(naxis(1:dim))
+
+      do idir = 1, dim
+        divisor = divisor / naxis(idir)
+        ix(idir) = jj / divisor + 1
+        jj = mod(jj, divisor)
+
+        if(mod(naxis(idir), 2) .ne. 0) then    
+          kpoints(idir, ik) = (M_TWO*ix(idir) - M_ONE*naxis(idir) - M_ONE + M_TWO*shift(idir))*dx(idir)
+        else 
+          kpoints(idir, ik) = (M_TWO*ix(idir) - M_ONE*naxis(idir) + M_TWO*shift(idir))*dx(idir)
+        end if
+  
+        !bring back point to first Brillouin zone
+        kpoints(idir, ik) = mod(kpoints(idir, ik) + M_HALF, M_ONE) - M_HALF
+      enddo
+
     end do
     
     call pop_sub('kpoints.kpoints_grid_generate')
 
   end subroutine kpoints_grid_generate
+
   
   ! --------------------------------------------------------------------------------------------
-
-  subroutine kpoints_grid_reduce(symm, time_reversal, nkpoints, kpoints, weights)
+  subroutine kpoints_grid_reduce(symm, time_reversal, nkpoints, dim, kpoints, weights)
     type(symmetries_t), intent(in)    :: symm
     logical,            intent(in)    :: time_reversal
     integer,            intent(inout) :: nkpoints
+    integer,            intent(in)    :: dim
     FLOAT,              intent(inout) :: kpoints(:, :)
     FLOAT,              intent(out)   :: weights(:)
 
@@ -523,7 +563,7 @@ contains
     
     FLOAT :: dw
     integer ik, iop, ik2
-    FLOAT :: tran(3), tran_inv(3)
+    FLOAT :: tran(MAX_DIM), tran_inv(MAX_DIM)
     integer, allocatable :: kmap(:)
 
     call push_sub('kpoints.kpoints_grid_reduce')
@@ -534,11 +574,11 @@ contains
     ! map reducible to irreducible k-points
 
     SAFE_ALLOCATE(kmap(1:nkpoints))
-    SAFE_ALLOCATE(reduced(1:3, 1:nkpoints))
+    SAFE_ALLOCATE(reduced(1:dim, 1:nkpoints))
 
     forall(ik = 1:nkpoints) kmap(ik) = ik
     
-    dw = M_ONE/real(nkpoints, REAL_PRECISION)
+    dw = M_ONE / nkpoints
 
     nreduced = 0
 
@@ -549,7 +589,7 @@ contains
       ! mareduced with negative kmap
       
       nreduced = nreduced + 1
-      reduced(1:3, nreduced) = kpoints(1:3, ik)
+      reduced(1:dim, nreduced) = kpoints(1:dim, ik)
       
       kmap(ik) = -nreduced
       
@@ -560,22 +600,22 @@ contains
       ! operate with the symmetry operations
       
       do iop = 1, symmetries_number(symm)
-        call symmetries_apply_kpoint(symm, iop, reduced(:, nreduced), tran)
-        tran_inv(1:3) = -tran(1:3)
+        call symmetries_apply_kpoint(symm, iop, reduced(1:dim, nreduced), tran)
+        tran_inv(1:dim) = -tran(1:dim)
            
         ! remove (mark) k-points related to irreducible reduced by symmetry
         do ik2 = ik + 1, nkpoints
           if (kmap(ik2) /= ik2) cycle
           
           ! both the transformed rk ...
-          if (all( abs(tran(1:3) - kpoints(1:3, ik2)) <= CNST(1.0e-5))) then
+          if (all( abs(tran(1:dim) - kpoints(1:dim, ik2)) <= CNST(1.0e-5))) then
             weights(nreduced) = weights(nreduced) + dw
             kmap(ik2) = nreduced
             cycle
           end if
 
           ! and its inverse
-          if (time_reversal .and. all(abs(tran_inv(1:3) - kpoints(1:3, ik2)) <= CNST(1.0e-5)) ) then
+          if (time_reversal .and. all(abs(tran_inv(1:dim) - kpoints(1:dim, ik2)) <= CNST(1.0e-5)) ) then
             weights(nreduced) = weights(nreduced) + dw
             kmap(ik2) = nreduced
           end if
@@ -586,39 +626,55 @@ contains
     
     nkpoints = nreduced
     do ik = 1, nreduced
-      kpoints(1:3, ik) = reduced(1:3, ik)
+      kpoints(1:dim, ik) = reduced(1:dim, ik)
     end do
 
     call pop_sub('kpoints.kpoints_grid_reduce')
   end subroutine kpoints_grid_reduce
 
-  ! ---------------------------------------------------------
 
+  ! ---------------------------------------------------------
   subroutine kpoints_write_info(this, iunit)
     type(kpoints_t),    intent(in) :: this
     integer,            intent(in) :: iunit
     
     integer :: ik, idir
+    character(len=100) :: str_tmp
     
     call push_sub('kpoints.kpoints_write_info')
     
     if(this%method == KPOINTS_MONKH_PACK) then
-      write(message(1),'(a,9(i3,1x))') 'Number of k-points in each direction = ', this%nik_axis(1:3)
+      write(message(1),'(a)') 'Number of k-points in each direction = '
+      do idir = 1, this%full%dim
+        write(str_tmp,'(i3,1x)') this%nik_axis(idir)
+        message(1) = trim(message(1)) // trim(str_tmp)
+      enddo
       call write_info(1, iunit)
     else
       ! a Monkhorst-Pack grid was not used
-      write(message(1),'(a,9(i3,1x))') 'Number of k-points = ', kpoints_number(this)
+      write(message(1),'(a,i3)') 'Number of k-points = ', kpoints_number(this)
       call write_info(1, iunit)
     endif
     
-    write(message(1), '(3x,a,7x,a,9x,a,9x,a,8x,a)') 'ik', 'K_x', 'K_y', 'K_z', 'Weight'
-    message(2) = '   --------------------------------------------------'
-    call write_info(2, iunit, verbose_limit=80)
+    write(message(1), '(6x,a)') 'ik'
+    do idir = 1, this%full%dim
+      write(str_tmp, '(9x,2a)') 'k_', index2axis(idir)
+      message(1) = trim(message(1)) // trim(str_tmp)
+    enddo
+    write(str_tmp, '(6x,a)') 'Weight'
+    message(1) = trim(message(1)) // trim(str_tmp)
+    message(2) = '---------------------------------------------------------'
+    call write_info(2, iunit, verbose_limit = .true.)
     
     do ik = 1, kpoints_number(this)
-      write(message(1),'(i4,1x,4f12.4)') ik, &
-        (units_from_atomic(unit_one/units_out%length, this%reduced%red_point(idir, ik)), idir=1, 3), kpoints_get_weight(this, ik)
-      call write_info(1, iunit, verbose_limit=80)
+      write(message(1),'(i8,1x)') ik
+      do idir = 1, this%full%dim
+        write(str_tmp,'(f12.4)') units_from_atomic(unit_one/units_out%length, this%reduced%red_point(idir, ik))
+        message(1) = trim(message(1)) // trim(str_tmp)
+      enddo
+      write(str_tmp,'(f12.4)') kpoints_get_weight(this, ik)
+      message(1) = trim(message(1)) // trim(str_tmp)
+      call write_info(1, iunit, verbose_limit = .true.)
     end do
     
     call pop_sub('kpoints.kpoints_write_info')

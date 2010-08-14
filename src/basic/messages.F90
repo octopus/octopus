@@ -226,7 +226,7 @@ contains
   subroutine write_info(no_lines, iunit, verbose_limit, stress)
     integer,           intent(in) :: no_lines
     integer, optional, intent(in) :: iunit
-    integer, optional, intent(in) :: verbose_limit
+    logical, optional, intent(in) :: verbose_limit
     logical, optional, intent(in) :: stress
 
     integer :: il, iu
@@ -249,10 +249,7 @@ contains
     end if
 
     do il = 1, no_lines
-      if(.not. present(verbose_limit)) then
-        write(msg, '(a)') trim(message(il))
-        call flush_msg(iu, msg)
-      else if(in_debug_mode) then
+      if(.not. present(verbose_limit) .or. in_debug_mode) then
         write(msg, '(a)') trim(message(il))
         call flush_msg(iu, msg)
       end if
