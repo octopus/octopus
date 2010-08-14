@@ -359,7 +359,7 @@ contains
       call write_fatal(1)
     end select
 
-    write(str, '(2a)') trim(base_name), sigma_char
+    str = trim(base_name) // sigma_char
 
     call pop_sub('sternheimer.wfs_tag_sigma')
 
