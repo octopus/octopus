@@ -193,7 +193,7 @@ contains
       message(4) = trim(message(4)) // trim(str_tmp)
     enddo
 
-    write(message(5),'(a)')
+    write(message(5),'(a)') ' '
     write(message(6),'(a)') ' index |    weight    |             coordinates              |'
     call write_info(6)
 
@@ -209,7 +209,7 @@ contains
       call write_info(1)
     end do
 
-    write(message(1),'(a)')
+    write(message(1),'(a)') ' '
     call write_info(1)
 
     call pop_sub('kpoints.kpoints_init')
