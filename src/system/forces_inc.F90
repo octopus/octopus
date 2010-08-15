@@ -98,7 +98,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
         if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(gr%sb%kpoints, ikpoint)) then
 
           kpoint = M_ZERO
-          kpoint = kpoints_get_point(gr%sb%kpoints, ikpoint)
+          kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, ikpoint)
 
           do ip = 1, np_part
             phase = exp(-M_zI*sum(kpoint(1:gr%sb%dim)*gr%mesh%x(ip, 1:gr%sb%dim)))

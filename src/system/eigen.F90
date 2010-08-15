@@ -299,7 +299,7 @@ contains
     logical,    optional, intent(in)    :: verbose
 
     logical :: verbose_
-    integer :: maxiter, ik, ns
+    integer :: maxiter, ik, ns, idir
     FLOAT :: tol, kpoint(1:MAX_DIM)
 #ifdef HAVE_MPI
     logical :: conv_reduced
@@ -307,6 +307,7 @@ contains
     FLOAT, allocatable :: ldiff(:), leigenval(:)
 #endif
     type(profile_t), save :: prof
+    character(len=100) :: str_tmp
 
     call profiling_in(prof, "EIGEN_SOLVER")
     call push_sub('eigen.eigensolver_run')
@@ -339,17 +340,23 @@ contains
         if(st%d%nik > ns) then
 
           kpoint = M_ZERO
-          kpoint = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+          kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
 
-          write(message(1), '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
-               units_from_atomic(unit_one / units_out%length, kpoint(1)), ',', &
-               units_from_atomic(unit_one / units_out%length, kpoint(2)), ',', &
-               units_from_atomic(unit_one / units_out%length, kpoint(3)), ')'
+          write(message(1), '(a,i4,a)') '#k =',ik,', k = ('
+          do idir = 1, gr%sb%dim
+            write(str_tmp, '(f12.6)') units_from_atomic(unit_one / units_out%length, kpoint(idir))
+            if(idir == gr%sb%dim) then
+              str_tmp = trim(str_tmp) // ',' 
+            else
+              str_tmp = trim(str_tmp) // ')' 
+            endif
+            message(1) = trim(message(1)) // trim(str_tmp)
+          enddo   
           call write_info(1)
         end if
       end if
       
-      if(eigens%subspace_diag.and.eigens%converged(ik) == 0) then
+      if(eigens%subspace_diag .and. eigens%converged(ik) == 0) then
         if (states_are_real(st)) then
           call dsubspace_diag(gr%der, st, hm, ik, st%eigenval(:, ik), st%dpsi(:, :, :, ik), eigens%diff(:, ik))
         else

@@ -386,7 +386,7 @@ contains
 
       write(iunit,'(a, i10)')    '# spin    index = ', ispin
       write(iunit,'(a, i10)')    '# k-point index = ', ik2
-      write(iunit,'(a, 3f12.8)') '# k-point coordinates = ', kpoints_get_point(gr%sb%kpoints, ik2)
+      write(iunit,'(a, 99f12.8)') '# k-point coordinates = ', kpoints_get_point(gr%sb%kpoints, ik2)
       if (.not. kdotp_vars%ok) write(iunit, '(a)') "# WARNING: not converged"      
       
       write(iunit,'(a)')

@@ -228,7 +228,7 @@ contains
 
     do ik = 1, st%d%nik, ns
       kpoint = M_ZERO
-      kpoint = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+      kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
 
       if(st%d%nik > ns) then
         write(message(1), '(a,i4,3(a,f12.6),a)') '#k =', ik, ', k = (',  &
@@ -251,9 +251,9 @@ contains
             o = st%occ(j, ik+is)
           end if
           
-          if(is.eq.0) cspin = 'up'
-          if(is.eq.1) cspin = 'dn'
-          if(st%d%ispin.eq.UNPOLARIZED.or.st%d%ispin.eq.SPINORS) cspin = '--'
+          if(is .eq. 0) cspin = 'up'
+          if(is .eq. 1) cspin = 'dn'
+          if(st%d%ispin .eq. UNPOLARIZED .or. st%d%ispin .eq. SPINORS) cspin = '--'
           
           write(message(1), '(i4,3x,a2,1x,3f12.6,3x,f12.6)')        &
                j, trim(cspin), momentum(1:min(gr%sb%dim, 3), j, ik), o
@@ -329,7 +329,7 @@ contains
       if(st%d%nik > ns) then
 
         kpoint = M_ZERO
-        kpoint = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+        kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
         
         write(message(1), '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
              units_from_atomic(unit_one/units_out%length, kpoint(1)), ',', &
