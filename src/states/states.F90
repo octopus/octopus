@@ -53,9 +53,10 @@ module states_m
   use smear_m
   use states_dim_m
   use symmetrizer_m
+  use types_m
   use unit_m
   use unit_system_m
-  use types_m
+  use utils_m
   use varinfo_m
 
   implicit none
@@ -532,7 +533,7 @@ contains
   contains
 
     subroutine read_ob_eigenval_and_occ()
-      integer            :: occs, jk(1:st%ob_nst), ist, ik, idim, err
+      integer            :: occs, jk(1:st%ob_nst), ist, ik, idim, idir, err
       FLOAT              :: flt, eigenval, occ, kweights
       character          :: char
       character(len=256) :: restart_dir, line, chars
@@ -542,7 +543,7 @@ contains
       restart_dir = trim(gr%ob_grid%lead(LEFT)%info%restart_dir)//'/'//GS_DIR
 
       occs = io_open(trim(restart_dir)//'/occs', action='read', is_tmp=.true., grp=mpi_world)
-      if(occs.lt.0) then
+      if(occs .lt. 0) then
         message(1) = 'Could not read '//trim(restart_dir)//'/occs.'
         call write_fatal(1)
       end if
@@ -557,15 +558,16 @@ contains
         call iopar_read(mpi_world, occs, line, err)
 
         read(line, '(a)') char
-        if(char.eq.'%') exit
+        if(char .eq. '%') exit
         call iopar_backspace(mpi_world, occs)
 
         ! Extract eigenvalue.
         call iopar_read(mpi_world, occs, line, err)
-        read(line, *) occ, char, eigenval, char, flt, char, flt, char, flt, char, &
-          kweights, char, chars, char, ik, char, ist, char, idim
+        !# occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
+        read(line, *) occ, char, eigenval, char, ((flt, char), idir = 1, gr%sb%dim), kweights, char, chars, char, ik, char, ist, char, idim
+
         if(occ > M_EPSILON) then
-          if(st%d%ispin.eq.SPIN_POLARIZED) then
+          if(st%d%ispin .eq. SPIN_POLARIZED) then
               message(1) = 'Spin-Transport not implemented!'
               call write_fatal(1)
             if(is_spin_up(ik)) then
@@ -1672,7 +1674,7 @@ contains
     type(simul_box_t), intent(in) :: sb
     FLOAT, optional,   intent(in) :: error(nst, st%d%nik)
 
-    integer ik, ist, ns, is
+    integer ik, ist, ns, is, idir
     FLOAT :: occ, kpoint(1:MAX_DIM)
     character(len=80) tmp_str(MAX_DIM), cspin
 
@@ -1714,9 +1716,15 @@ contains
 
     do ik = 1, st%d%nik, ns
       if(st%d%nik > ns) then
-        kpoint = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
-        kpoint = units_from_atomic(unit_one/units_out%length, kpoint)
-        write(message(1), '(a,i4,3(a,f12.6),a)') '#k =', ik, ', k = (',  kpoint(1), ',', kpoint(2), ',', kpoint(3), ')'
+        kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+        kpoint(1:sb%dim) = units_from_atomic(unit_one/units_out%length, kpoint(1:sb%dim))
+        write(message(1), '(a,i4,a)') '#k =', ik, ', k = ('
+        do idir = 1, sb%dim
+          write(tmp_str(1), '(f12.6)') kpoint(idir)
+          message(1) = trim(message(1))//trim(tmp_str(1))
+          if(idir < sb%dim) message(1) = trim(message(1))//','
+        enddo
+        message(1) = trim(message(1))//')'
         call write_info(1, iunit)
       end if
 
@@ -1810,7 +1818,7 @@ contains
     SAFE_ALLOCATE(iunit(0:ns-1))
 
     ! define the scaling factor to output k_i/G_i, instead of k_i
-    do idir = 1, MAX_DIM
+    do idir = 1, sb%dim
       factor(idir) = M_ONE
       if (sb%klattice(idir, idir) /= M_ZERO) factor(idir) = sb%klattice(idir, idir)
     end do
@@ -1823,24 +1831,36 @@ contains
           write(filename, '(a)') 'bands-gp.dat'
         end if
         iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
+
         ! write header
-        write(iunit(is), '(a, i6)') '# kx ky kz (unscaled), kx ky kz (scaled), bands:', nst
+        write(iunit(is),'(a)',advance='no') '# '
+        do idir = 1, sb%dim
+          write(iunit(is),'(3a)',advance='no') 'k', index2axis(idir), ' '
+        enddo
+        write(iunit(is),'(a)',advance='no') '(unscaled), '
+        do idir = 1, sb%dim
+          write(iunit(is),'(3a)',advance='no') 'k', index2axis(idir), ' '
+        enddo
+        write(iunit(is),'(a, i6)') '(scaled), bands:', nst
       end do
 
       ! output bands in gnuplot format
       do ist = 1, nst
         do ik = 1, st%d%nik, ns
           do is = 0, ns - 1
-            kpoint = M_ZERO
-            kpoint = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik + is))
-            write(iunit(is), '(1x,6f14.8,3x,f14.8)')            &
-              kpoint(1:sb%dim),                                 & ! unscaled
-              kpoint(1:sb%dim)/factor(1:sb%dim),                & ! scaled
-              units_from_atomic(units_out%energy, st%eigenval(ist, ik + is))
+            kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik + is))
+            write(iunit(is),'(1x)',advance='no')
+            do idir = 1, sb%dim
+              write(iunit(is),'(f14.8)',advance='no') kpoint(idir)
+            enddo
+            do idir = 1, sb%dim
+              write(iunit(is),'(f14.8)',advance='no') kpoint(idir) / factor(idir)
+            enddo
+            write(iunit(is),'(3x,f14.8)') units_from_atomic(units_out%energy, st%eigenval(ist, ik + is))
           end do
         end do
         do is = 0, ns-1
-          write(iunit(is), '(a)') ''
+          write(iunit(is), '(a)')
         end do
       end do
       do is = 0, ns-1
@@ -1850,26 +1870,42 @@ contains
 
     if (grace_mode) then
       do is = 0, ns-1
-        if (ns.gt.1) then
+        if (ns .gt. 1) then
           write(filename, '(a,i1.1,a)') 'bands-grace-', is+1,'.dat'
         else
           write(filename, '(a)') 'bands-grace.dat'
         end if
         iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
+
         ! write header
-        write(iunit(is), '(a, i6)') '# kx ky kz (unscaled), kx ky kz (scaled), bands:', nst
+        write(iunit(is),'(a)',advance='no') '# '
+        do idir = 1, sb%dim
+          write(iunit(is),'(3a)',advance='no') 'k', index2axis(idir), ' '
+        enddo
+        write(iunit(is),'(a)',advance='no') '(unscaled), '
+        do idir = 1, sb%dim
+          write(iunit(is),'(3a)',advance='no') 'k', index2axis(idir), ' '
+        enddo
+        write(iunit(is),'(a, i6)') '(scaled), bands:', nst
       end do
 
       ! output bands in xmgrace format, i.e.:
       ! k_x, k_y, k_z, e_1, e_2, ..., e_n
       do ik = 1, st%d%nik, ns
         do is = 0, ns-1
-          kpoint = M_ZERO
-          kpoint = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik + is))
-          write(iunit(is), '(1x,6f14.8,3x,16384f14.8)')         &
-            kpoint(1:MAX_DIM),                                  & ! unscaled
-            kpoint(1:MAX_DIM)/factor(1:MAX_DIM),                & ! scaled
-            (units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), ist = 1, nst)
+          kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik + is))
+          write(iunit(is),'(1x)',advance='no')
+          do idir = 1, sb%dim
+            write(iunit(is),'(f14.8)',advance='no') kpoint(idir)
+          enddo
+          do idir = 1, sb%dim
+            write(iunit(is),'(f14.8)',advance='no') kpoint(idir) / factor(idir)
+          enddo
+          write(iunit(is),'(3x)',advance='no')
+          do ist = 1, nst
+            write(iunit(is),'(f14.8)',advance='no') units_from_atomic(units_out%energy, st%eigenval(ist, ik + is))
+          enddo
+          write(iunit(is),'(a)')
         end do
       end do
       do is = 0, ns-1
@@ -2237,6 +2273,7 @@ return
     integer :: iunit, idir
     FLOAT :: maxdos
     FLOAT :: factor(MAX_DIM)
+    character(len=100) :: str_tmp
 
     call push_sub('states.states_write_fermi_energy')
 
@@ -2245,7 +2282,7 @@ return
     iunit = io_open(trim(dir)//'/'//'bands-efermi.dat', action='write')    
 
     ! define the scaling factor to output k_i/G_i, instead of k_i
-    do idir = 1, MAX_DIM
+    do idir = 1, sb%dim
       factor(idir) = M_ONE
       if (sb%klattice(idir, idir) /= M_ZERO) factor(idir) = sb%klattice(idir, idir)
     end do
@@ -2254,28 +2291,29 @@ return
     ! with bands.dat
     write(message(1), '(a)') '# Fermi energy in a format compatible with bands-gp.dat'
 
-    write(message(2), '(7f12.6)')          &
-      minval(sb%kpoints%reduced%point(1,:)),           &
-      minval(sb%kpoints%reduced%point(2,:)),           &
-      minval(sb%kpoints%reduced%point(3,:)),           &
-      minval(sb%kpoints%reduced%point(1,:)/factor(1)), &
-      minval(sb%kpoints%reduced%point(2,:)/factor(2)), &
-      minval(sb%kpoints%reduced%point(3,:)/factor(3)), &
-      units_from_atomic(units_out%energy, st%smear%e_fermi)
-
-    ! Gamma point
-    write(message(3), '(7f12.6)')          &
-      (M_ZERO, idir = 1, 6),               &
-      units_from_atomic(units_out%energy, st%smear%e_fermi)
-
-    write(message(4), '(7f12.6)')          &
-      maxval(sb%kpoints%reduced%point(1,:)),           &
-      maxval(sb%kpoints%reduced%point(2,:)),           &
-      maxval(sb%kpoints%reduced%point(3,:)),           &
-      maxval(sb%kpoints%reduced%point(1,:)/factor(1)), &
-      maxval(sb%kpoints%reduced%point(2,:)/factor(2)), &
-      maxval(sb%kpoints%reduced%point(3,:)/factor(3)), &
-      units_from_atomic(units_out%energy, st%smear%e_fermi)
+    message(2)=""
+    message(3)=""
+    message(4)=""
+    do idir = 1, sb%dim
+      write(str_tmp, '(f12.6)') minval(sb%kpoints%reduced%point(idir, 1:sb%kpoints%reduced%npoints))
+      message(2) = trim(message(2)) // trim(str_tmp)
+      write(str_tmp, '(f12.6)') M_ZERO     ! Gamma point
+      message(3) = trim(message(3)) // trim(str_tmp)
+      write(str_tmp, '(f12.6)') maxval(sb%kpoints%reduced%point(idir, 1:sb%kpoints%reduced%npoints))
+      message(4) = trim(message(4)) // trim(str_tmp)
+    enddo
+    do idir = 1, sb%dim
+      write(str_tmp, '(f12.6)') minval(sb%kpoints%reduced%point(idir, 1:sb%kpoints%reduced%npoints) / factor(idir))
+      message(2) = trim(message(2)) // trim(str_tmp)
+      write(str_tmp, '(f12.6)') M_ZERO     ! Gamma point
+      message(3) = trim(message(3)) // trim(str_tmp)
+      write(str_tmp, '(f12.6)') maxval(sb%kpoints%reduced%point(idir, 1:sb%kpoints%reduced%npoints) / factor(idir))
+      message(4) = trim(message(4)) // trim(str_tmp)
+    enddo
+    write(str_tmp, '(f12.6)') units_from_atomic(units_out%energy, st%smear%e_fermi)
+    message(2) = trim(message(2)) // trim(str_tmp)
+    message(3) = trim(message(3)) // trim(str_tmp)
+    message(4) = trim(message(4)) // trim(str_tmp)
 
     call write_info(4, iunit)
     call io_close(iunit)
@@ -2489,8 +2527,7 @@ return
       do ik_tmp = st%d%kpt%start, st%d%kpt%end, sp
         ik = ik_tmp + is - 1
 
-        kpoint = M_ZERO
-        kpoint = kpoints_get_point(der%mesh%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+        kpoint(1:der%mesh%sb%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
 
         do ist = st%st_start, st%st_end
 
@@ -3022,7 +3059,7 @@ return
               end if
               ! This is nonsense, but at least all indices are present.
             case(SPINORS)
-              if(ispin.eq.1) then
+              if(ispin .eq. 1) then
                 spin = 'up'
               else
                 spin = 'dn'
@@ -3094,7 +3131,7 @@ return
 
     do ik = st%d%kpt%start, st%d%kpt%end
 
-      kpoint = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+      kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
 
       do ist = st%st_start, st%st_end
         do il = 1, NLEADS
@@ -3188,3 +3225,4 @@ end module states_m
 !! mode: f90
 !! coding: utf-8
 !! End:
+

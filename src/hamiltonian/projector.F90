@@ -34,18 +34,17 @@ module projector_m
   use mesh_function_m
   use mesh_m
   use messages_m
-  use profiling_m
-  use ps_m
-  use simul_box_m
-  use states_m
-  use submesh_m
   use mpi_m
   use mpi_debug_m
   use multicomm_m
+  use profiling_m
+  use ps_m
   use rkb_projector_m
   use simul_box_m
   use species_m
+  use states_m
   use states_dim_m
+  use submesh_m
   use varinfo_m
 
   implicit none
@@ -225,7 +224,7 @@ contains
       ASSERT(ikpoint <= kpoints_number(sb%kpoints))
       
       kpoint = M_ZERO
-      kpoint = kpoints_get_point(sb%kpoints, ikpoint)
+      kpoint(1:ndim) = kpoints_get_point(sb%kpoints, ikpoint)
         
       do is = 1, ns
         ! this is only the correction to the global phase, that can

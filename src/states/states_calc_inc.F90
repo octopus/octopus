@@ -510,7 +510,7 @@ subroutine X(states_calc_momentum)(gr, st, momentum)
       ! have to add the momentum vector in the case of periodic systems, 
       ! since st%X(psi) contains only u_k
       kpoint = M_ZERO
-      kpoint = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+      kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
       do idir = 1, gr%sb%periodic_dim
         momentum(idir, ist, ik) = momentum(idir, ist, ik) + kpoint(idir)
       end do

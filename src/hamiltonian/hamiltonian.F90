@@ -436,9 +436,9 @@ contains
 
       kpoint = M_ZERO
       do ik = hm%d%kpt%start, hm%d%kpt%end
-        kpoint = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+        kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
         forall (ip = 1:gr%mesh%np_part)
-          hm%phase(ip, ik) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim) * kpoint(1:gr%mesh%sb%dim)))
+          hm%phase(ip, ik) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
         end forall
       end do
 
@@ -1005,7 +1005,7 @@ contains
 
         kpoint = M_ZERO
         do ik = this%d%kpt%start, this%d%kpt%end
-          kpoint = kpoints_get_point(mesh%sb%kpoints, states_dim_get_kpoint_index(this%d, ik))
+          kpoint(1:mesh%sb%dim) = kpoints_get_point(mesh%sb%kpoints, states_dim_get_kpoint_index(this%d, ik))
           
           forall (ip = 1:mesh%np_part)
             this%phase(ip, ik) = exp(-M_zI*sum(mesh%x(ip, 1:mesh%sb%dim)*(kpoint(1:mesh%sb%dim) &

@@ -228,8 +228,8 @@ contains
     !if this next argument is present, the lr wfs are stored instead of the gs wfs
     type(lr_t), optional, intent(in)  :: lr 
 
-    integer :: iunit, iunit2, iunit_mesh, iunit_states, err, ik, ist, idim, itot
-    character(len=80) :: filename, mformat
+    integer :: iunit, iunit2, iunit_mesh, iunit_states, err, ik, idir, ist, idim, itot
+    character(len=80) :: filename
     logical :: wfns_are_associated, lr_wfns_are_associated
     FLOAT   :: kpoint(1:MAX_DIM)
 
@@ -253,7 +253,6 @@ contains
       ASSERT(lr_wfns_are_associated)
     endif
 
-    mformat = '(e20.14,a,e20.14,a,4(e21.14,a),i10.10,3(a,i8))'
     ierr = 0
 
     call block_signals()
@@ -282,7 +281,7 @@ contains
       ! write the lxyz array
       if(gr%mesh%sb%box_shape /= HYPERCUBE) then
         ASSERT(associated(gr%mesh%idx%lxyz))
-        call io_binary_write(trim(dir)//'/lxyz.obf', gr%mesh%np_part_global*gr%mesh%sb%dim, gr%mesh%idx%lxyz, ierr)
+        call io_binary_write(trim(dir)//'/lxyz.obf', gr%mesh%np_part_global*gr%sb%dim, gr%mesh%idx%lxyz, ierr)
       end if
 
       iunit_states = io_open(trim(dir)//'/states', action='write', is_tmp=.true.)
@@ -293,17 +292,19 @@ contains
     itot = 1
     do ik = 1, st%d%nik
       kpoint = M_ZERO
-      kpoint = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+      kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
 
       do ist = 1, st%nst
         do idim = 1, st%d%dim
           write(filename,'(i10.10)') itot
 
           if(mpi_grp_is_root(mpi_world)) then
-            write(unit=iunit,  fmt=*) ik, ' | ', ist, ' | ', idim, ' | "', trim(filename), '"'
-            write(unit=iunit2, fmt=mformat) st%occ(ist,ik), ' | ', st%eigenval(ist, ik), ' | ',   &
-                 kpoint(1), ' | ', kpoint(2), ' | ', kpoint(3) , ' | ', &
-                 st%d%kweights(ik), ' | ', itot, ' | ', ik, ' | ', ist, ' | ', idim
+            write(iunit, '(i8,a,i8,a,i8,3a)') ik, ' | ', ist, ' | ', idim, ' | "', trim(filename), '"'
+            write(iunit2, '(e20.14,a,e20.14,a)', advance='no') st%occ(ist,ik), ' | ', st%eigenval(ist, ik), ' | '
+            do idir = 1, gr%sb%dim
+              write(iunit2, '(e21.14,a)', advance='no') kpoint(idir), ' | '
+            enddo
+            write(iunit2, '(e21.14,a,i10.10,3(a,i8))') st%d%kweights(ik), ' | ', itot, ' | ', ik, ' | ', ist, ' | ', idim
           end if
 
           if(st%st_start <= ist .and. ist <= st%st_end) then
@@ -407,7 +408,7 @@ contains
     type(lr_t), optional, intent(inout) :: lr 
     logical,    optional, intent(in)    :: exact ! if .true. we need all the wavefunctions and on the exact grid
 
-    integer              :: iunit, iunit2, err, ik, ist, idim, int, read_np, read_np_part, read_ierr, ip, xx(1:MAX_DIM)
+    integer              :: iunit, iunit2, err, ik, ist, idir, idim, int, read_np, read_np_part, read_ierr, ip, xx(1:MAX_DIM)
     character(len=12)    :: filename
     character(len=1)     :: char
     logical, allocatable :: filled(:, :, :)
@@ -435,7 +436,7 @@ contains
 
     ! If one restarts a GS calculation changing the %Occupations block, one
     ! cannot read the occupations, otherwise these overwrite the ones from
-    ! the input file. The same is true when reading a linear response restart.
+    ! the input file. The same is true when reading a linear-response restart.
     read_occ_ = .true.
     if(present(read_occ)) read_occ_ = .false.
     
@@ -549,9 +550,9 @@ contains
       end if
 
       call iopar_read(gr%mesh%mpi_grp, iunit2, line, err)
-      if(.not.present(lr)) then ! do not read eigenvalues when reading linear response
-        read(line, *) my_occ, char, st%eigenval(ist, ik), char, flt, char, flt,&
-          char, flt, char, st%d%kweights(ik)
+      if(.not. present(lr)) then ! do not read eigenvalues when reading linear response
+        ! # occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
+        read(line, *) my_occ, char, st%eigenval(ist, ik), char, ((flt, char), idir = 1, gr%sb%dim), st%d%kweights(ik)
         if(read_occ_) st%occ(ist, ik) = my_occ
       end if
 
@@ -707,16 +708,15 @@ contains
     type(grid_t), target, intent(in)    :: gr
     
     integer                    :: icell, ik, ist, idim, jk(st%nst), err, wfns, occs, il
-    integer                    :: np, ip, lead_nr(2, MAX_DIM)
+    integer                    :: np, ip, idir, lead_nr(2, MAX_DIM)
     character(len=256)         :: line, fname, filename, restart_dir, chars
     character                  :: char
-    FLOAT                      :: occ, eval, k_x, k_y, k_z, w_k, w_sum
+    FLOAT                      :: occ, eval, kpoint(1:MAX_DIM), w_k, w_sum
     type(simul_box_t), pointer :: sb
     type(mesh_t), pointer      :: m_lead, m_center
     CMPLX                      :: phase
     CMPLX, allocatable         :: tmp(:, :)
     type(mpi_grp_t)            :: mpi_grp
-    FLOAT                      :: kpoint(1:MAX_DIM)
 
     call push_sub('restart.read_free_states')
 
@@ -760,7 +760,7 @@ contains
       ! they are written correctly, i.e. of same length.
       call iopar_read(mpi_grp, wfns, line, err)
       read(line, '(a)') char
-      if(char.eq.'%') then
+      if(char .eq. '%') then
         exit
       end if
 
@@ -770,8 +770,9 @@ contains
       read(line, *) ik, char, ist, char, idim, char, fname
 
       call iopar_read(mpi_grp, occs, line, err)
-      read(line, *) occ, char, eval, char, k_x, char, k_y, char, k_z, char, w_k, char, &
-        chars, char, ik, char, ist, char, idim
+      !# occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
+      read(line, *) occ, char, eval, char, ((kpoint(idir), char), idir = 1, gr%sb%dim), w_k, char, chars, char, ik, char, ist, char, idim
+
       ! FIXME for more than 1 state
       if(occ > M_EPSILON) then
         ! count the occupied k-points (with idim == 1)
@@ -803,11 +804,8 @@ contains
       ! from the one calculated by octopus, since the box size
       ! changed. I dont know what is correct. XA
 
-      kpoint = M_ZERO
-      kpoint(1:3) = (/k_x, k_y, k_z/)
-
       do ip = 1, gr%mesh%np
-        phase = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim)*kpoint(1:gr%mesh%sb%dim)))
+        phase = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim)*kpoint(1:gr%sb%dim)))
         st%zphi(ip, idim, ist, jk(ist)) = phase * st%zphi(ip, idim, ist, jk(ist))
       end do
 
@@ -840,7 +838,7 @@ contains
     call io_close(occs)
     SAFE_DEALLOCATE_A(tmp)
 
-    message(1) = "Info: Sucessfully initialized free states from '"//trim(restart_dir)//"'"
+    message(1) = "Info: Successfully initialized free states from '"//trim(restart_dir)//"'"
     write(message(2),'(a,i3,a)') 'Info:', sum(jk(:)), ' occupied states read by program.'
     call write_info(2)
 

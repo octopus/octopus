@@ -52,6 +52,7 @@ module states_calc_m
   use states_dim_m
   use unit_m
   use unit_system_m
+  use utils_m
   use varinfo_m
 
   implicit none
@@ -140,11 +141,11 @@ contains
     type(simul_box_t), intent(in) :: sb
     type(states_t),    intent(in) :: st
 
-    integer :: is, js, inst, inik, iunit
+    integer :: idir, is, js, inst, inik, iunit
     integer, allocatable :: eindex(:,:), sindex(:)
     integer, allocatable :: degeneracy_matrix(:, :)
     FLOAT,   allocatable :: eigenval_sorted(:)
-    FLOAT :: degen_thres, evis, evjs
+    FLOAT :: degen_thres, evis, evjs, kpoint(1:MAX_DIM)
 
     call push_sub('states_calc.states_degeneracy_matrix')
 
@@ -211,12 +212,25 @@ contains
       ! write matrix to "restart/gs" directory
       iunit = io_open(trim(tmpdir)//GS_DIR//'degeneracy_matrix', action='write', is_tmp = .true.)
 
-      write(iunit, '(a)') '# index  kx ky kz  eigenvalue  degeneracy matrix'
+      write(iunit, '(a)', advance='no') '# index  '
+      do idir = 1, sb%dim
+        write(iunit, '(2a)', advance='no') 'k', index2axis(idir)
+      enddo
+      write(iunit, '(a)') ' eigenvalue  degeneracy matrix'
 
       do is = 1, st%nst*st%d%nik
         write(iunit, '(i6,4e24.16,32767i3)') is, &
           kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, eindex(2, sindex(is)))), &
           eigenval_sorted(is), (degeneracy_matrix(is, js), js = 1, st%nst*st%d%nik)
+        write(iunit, '(i6)', advance='no') is
+        kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, eindex(2, sindex(is))))
+        do idir = 1, sb%dim
+          write(iunit, '(e24.16)', advance='no') kpoint(idir)
+        enddo
+        write(iunit, '(e24.16)', advance='no') eigenval_sorted(is)
+        do js = 1, st%nst * st%d%nik
+          write(iunit, '(i3)') degeneracy_matrix(is, js)
+        enddo
       end do
 
       call io_close(iunit)
