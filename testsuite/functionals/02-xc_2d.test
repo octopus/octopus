@@ -14,7 +14,7 @@ match ; Hartree eigenvalue 1 dn                  ; GREP(static/info, '  1   dn',
 match ; Hartree eigenvalue 2 dn                  ; GREP(static/info, '  2   dn', 13) ; 1.221884
 
 # This tests the Hartree-Fock implementation. It reproduces one number
-# given in: [B. Reusch et al., Phys. Rev. B 63, 113313]. I have chose
+# given in: [B. Reusch et al., Phys. Rev. B 63, 113313]. I have chosen
 # a 2D calculation because of the great computational load produced by
 # Hartree-Fock calculation.
 #
@@ -25,11 +25,11 @@ match ; Hartree eigenvalue 2 dn                  ; GREP(static/info, '  2   dn',
 # "omega", and since omega in this case is 0.25 effective atomic
 # units, 1.0419 e.a.u. corresponds to 4.168, as given in the table.
 
-# Results for 8 electrons quantum dots, provided in the paper, can
+# Results for 8-electron quantum dots, provided in the paper, can
 # also be approximately reproduced. I do not put a test because it
 # would be too slow. In fact, the results provided by octopus are
 # lower in energy and closer to the Quantum Monte Carlo numbers, which
-# could be do to the use of an underconverged basis set in the paper.
+# could be due to the use of an underconverged basis set in the paper.
 
 Input: 02-xc_2d.01-hf.inp
 match ; Hartree-Fock energy                      ; GREP(static/info, 'Total       =', 20)   ;  1.04191861
