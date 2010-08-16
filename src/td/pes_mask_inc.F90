@@ -32,7 +32,7 @@ subroutine PES_mask_init(mask, mesh, sb, st)
   call write_info(1)
 
   ! allocate FFTs in case they are not allocated yet
-  call fft_init(mesh%idx%ll, fft_complex, mask%fft, optimize = .not.simul_box_is_periodic(sb))
+  call fft_init(mesh%idx%ll, sb%dim, fft_complex, mask%fft, optimize = .not.simul_box_is_periodic(sb))
 
   ll(1:MAX_DIM) = mesh%idx%ll(1:MAX_DIM)
 

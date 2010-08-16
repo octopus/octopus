@@ -553,7 +553,7 @@ module tdf_m
     end if
 
     n(1:3) = (/ f%niter, 1, 1 /)
-    call fft_init(n, fft_real, f%fft_handler, optimize = .false.)
+    call fft_init(n, 3, fft_real, f%fft_handler, optimize = .false.)
 
     if(present(rep)) then
       select case(rep)
@@ -893,7 +893,7 @@ module tdf_m
     f%mode = TDF_NUMERICAL
 
     n(1:3) = (/ f%niter, 1, 1 /)
-    call fft_init(n, fft_real, f%fft_handler, optimize = .false.)
+    call fft_init(n, 3, fft_real, f%fft_handler, optimize = .false.)
 
     call pop_sub('tdfunction.tdf_sineseries_to_numerical')
   end subroutine tdf_sineseries_to_numerical

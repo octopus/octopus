@@ -774,10 +774,11 @@ contains
       read(line, *) occ, char, eval, char, (kpoint(idir), char, idir = 1, gr%sb%dim), &
         w_k, char, chars, char, ik, char, ist, char, idim
 
+
       ! FIXME for more than 1 state
       if(occ > M_EPSILON) then
         ! count the occupied k-points (with idim == 1)
-        if(idim.eq.1) jk(ist) = jk(ist) + 1
+        if(idim .eq. 1) jk(ist) = jk(ist) + 1
 
         st%d%kweights(jk(ist)) = w_k
         st%occ(ist, jk(ist)) = occ

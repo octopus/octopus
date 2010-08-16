@@ -808,11 +808,10 @@ contains
     end if
 
     if(sb%box_shape == PARALLELEPIPED) then
-      write(message(1),'(3a, a, f8.3, a, f8.3, a, f8.3, a)')     &
+      write(message(1),'(3a, 99(a, f8.3), a)')     &
         '  Lengths [', trim(units_abbrev(units_out%length)), '] = ',    &
-        '(', units_from_atomic(units_out%length, sb%lsize(1)), ',',           &
-        units_from_atomic(units_out%length, sb%lsize(2)), ',',                &
-        units_from_atomic(units_out%length, sb%lsize(3)), ')'
+        '(', ((units_from_atomic(units_out%length, sb%lsize(idir)), ','), idir = 1, sb%dim - 1),  &
+        units_from_atomic(units_out%length, sb%lsize(sb%dim)), ')'
       call write_info(1, iunit)
     end if
 
@@ -983,16 +982,13 @@ contains
       case(BOX_USDEF)
         ! is it inside the user-given boundaries?
         do ip = 1, npoints
-          in_box(ip) =  &
-            (xx(1, ip) >= -sb%lsize(1) - DELTA .and. xx(1, ip) <= sb%lsize(1) + DELTA) .and. &
-            (xx(2, ip) >= -sb%lsize(2) - DELTA .and. xx(2, ip) <= sb%lsize(2) + DELTA) .and. &
-            (xx(3, ip) >= -sb%lsize(3) - DELTA .and. xx(3, ip) <= sb%lsize(3) + DELTA)
+          in_box(ip) =  all(xx(1:sb%dim, ip) >= -sb%lsize(1:sb%dim) - DELTA) .and. all(xx(1:sb%dim, ip) <= sb%lsize(1:sb%dim) + DELTA)
 
           ! and inside the simulation box?
           do idir = 1, sb%dim
             xx(idir, ip) = units_from_atomic(units_inp%length, xx(idir, ip))
           enddo
-          rr = sqrt(sum(xx(:, ip)**2))
+          rr = sqrt(sum(xx(1:sb%dim, ip)**2))
           call parse_expression(re, im, sb%dim, xx(:, ip), rr, M_ZERO, sb%user_def)
           in_box(ip) = in_box(ip) .and. (re .ne. M_ZERO)
         end do

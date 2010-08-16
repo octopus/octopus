@@ -59,10 +59,10 @@ subroutine X(cf_fft_init)(cf, sb)
 
   SAFE_ALLOCATE(cf%fft)
 #ifdef R_TREAL
-  call fft_init(cf%n, fft_real, cf%fft, optimize = .not.simul_box_is_periodic(sb))
+  call fft_init(cf%n, sb%dim, fft_real, cf%fft, optimize = .not.simul_box_is_periodic(sb))
   cf%nx = cf%n(1)/2 + 1
 #else
-  call fft_init(cf%n, fft_complex, cf%fft, optimize = .not.simul_box_is_periodic(sb))
+  call fft_init(cf%n, sb%dim, fft_complex, cf%fft, optimize = .not.simul_box_is_periodic(sb))
   cf%nx = cf%n(1)
 #endif
 
@@ -70,7 +70,7 @@ subroutine X(cf_fft_init)(cf, sb)
 end subroutine X(cf_fft_init)
 
 ! ---------------------------------------------------------
-! The next routines convert the function between real space and fourier space
+! The next routines convert the function between real space and Fourier space
 ! Note that the dimensions of the function in FS are different depending on whether
 ! f is real or complex, because the FFT representation is different (FFTW scheme).
 subroutine X(cf_RS2FS)(cf)

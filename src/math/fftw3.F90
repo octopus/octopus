@@ -188,8 +188,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine fft_init(n, is_real, fft, optimize)
-    integer,           intent(inout) :: n(3)
+  subroutine fft_init(nn, dim, is_real, fft, optimize)
+    integer,           intent(inout) :: nn(MAX_DIM)
+    integer,           intent(in)    :: dim
     integer,           intent(in)    :: is_real
     type(fft_t),       intent(out)   :: fft
     logical, optional, intent(in)    :: optimize
@@ -197,20 +198,26 @@ contains
     FLOAT, allocatable :: rin(:, :, :)
     CMPLX, allocatable :: cin(:, :, :), cout(:, :, :)
 
-    integer :: i, j, dim
+    integer :: ii, jj, fft_dim, idir
     logical :: optimize_
+    character(len=100) :: str_tmp
 
     call push_sub('fftw3.fft_init')
 
     ! First, figure out the dimensionality of the FFT.
-    dim = 0
-    do i = 1, 3
-      if(n(i) <= 1) exit
-      dim = dim + 1
+    fft_dim = 0
+    do ii = 1, dim
+      if(nn(ii) <= 1) exit
+      fft_dim = fft_dim + 1
     end do
 
-    if(dim.eq.0) then
+    if(fft_dim .eq. 0) then
       message(1) = "Internal error in fft_init: apparently, a 1x1x1 FFT is required."
+      call write_fatal(1)
+    end if
+
+    if(fft_dim .gt. 3) then
+      message(1) = "FFT for dimension greater than 3 not implemented."
       call write_fatal(1)
     end if
 
@@ -221,83 +228,91 @@ contains
     ! OLD: I leave it here because maybe I revert to this method later
     ! optimize dimensions in non-periodic directions
     !    do i = sb%periodic_dim + 1, sb%dim
-    !      if(n(i) /= 1 .and. fft_optimize) &
-    !           call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
+    !      if(nn(i) /= 1 .and. fft_optimize) &
+    !           call loct_fft_optimize(nn(i), 7, 1) ! always ask for an odd number
     !    end do
     ! NEW
     ! optimize dimensions only for finite sys
     optimize_ = optimize_ .and. fft_optimize
     if(optimize_) then
-      do i = 1, dim
-        call loct_fft_optimize(n(i), 7, 1)
+      do ii = 1, fft_dim
+        call loct_fft_optimize(nn(ii), 7, 1)
       end do
     end if
 
     ! find out if fft has already been allocated
-    j = 0
-    do i = FFT_MAX, 1, -1
-      if(fft_refs(i) /= FFT_NULL) then
-        if(n(1) == fft_array(i)%n(1).and.n(2) == fft_array(i)%n(2).and.n(3) == fft_array(i)%n(3).and. &
-          is_real == fft_array(i)%is_real) then
-          fft = fft_array(i)             ! return a copy
-          fft_refs(i) = fft_refs(i) + 1  ! increment the ref count
+    jj = 0
+    do ii = FFT_MAX, 1, -1
+      if(fft_refs(ii) /= FFT_NULL) then
+        if(all(nn(1:dim) == fft_array(ii)%n(1:dim)) .and. is_real == fft_array(ii)%is_real) then
+          fft = fft_array(ii)              ! return a copy
+          fft_refs(ii) = fft_refs(ii) + 1  ! increment the ref count
           call pop_sub('fftw3.fft_init')
           return
         end if
       else
-        j = i
+        jj = ii
       end if
     end do
 
-    if(j == 0) then
-      message(1) = "Not enough slots for FFTs"
-      message(2) = "Please increase FFT_MAX in fft.F90 and recompile"
+    if(jj == 0) then
+      message(1) = "Not enough slots for FFTs."
+      message(2) = "Please increase FFT_MAX in fft.F90 and recompile."
       call write_fatal(2)
     end if
 
-    ! j now contains an empty slot
-    fft_refs(j)          = 1
-    fft_array(j)%slot    = j
-    fft_array(j)%n       = n
-    fft_array(j)%is_real = is_real
+    ! jj now contains an empty slot
+    fft_refs(jj)          = 1
+    fft_array(jj)%slot    = jj
+    fft_array(jj)%n       = nn
+    fft_array(jj)%is_real = is_real
     if(is_real == fft_real) then
-      SAFE_ALLOCATE(rin(1:n(1), 1:n(2), 1:n(3)))
-      SAFE_ALLOCATE(cout(1:n(1)/2+1, 1:n(2), 1:n(3)))
+      SAFE_ALLOCATE(rin(1:nn(1), 1:nn(2), 1:nn(3)))
+      SAFE_ALLOCATE(cout(1:nn(1)/2+1, 1:nn(2), 1:nn(3)))
 
-      select case(dim)
+      select case(fft_dim)
       case(3)
-        call DFFTW(plan_dft_r2c_3d) (fft_array(j)%planf, n(1), n(2), n(3), rin, cout, fft_prepare_plan+fftw_unaligned)
-        call DFFTW(plan_dft_c2r_3d) (fft_array(j)%planb, n(1), n(2), n(3), cout, rin, fft_prepare_plan+fftw_unaligned)
+        call DFFTW(plan_dft_r2c_3d) (fft_array(jj)%planf, nn(1), nn(2), nn(3), rin, cout, fft_prepare_plan+fftw_unaligned)
+        call DFFTW(plan_dft_c2r_3d) (fft_array(jj)%planb, nn(1), nn(2), nn(3), cout, rin, fft_prepare_plan+fftw_unaligned)
       case(2)
-        call DFFTW(plan_dft_r2c_2d) (fft_array(j)%planf, n(1), n(2), rin, cout, fft_prepare_plan+fftw_unaligned)
-        call DFFTW(plan_dft_c2r_2d) (fft_array(j)%planb, n(1), n(2), cout, rin, fft_prepare_plan+fftw_unaligned)
+        call DFFTW(plan_dft_r2c_2d) (fft_array(jj)%planf, nn(1), nn(2), rin, cout, fft_prepare_plan+fftw_unaligned)
+        call DFFTW(plan_dft_c2r_2d) (fft_array(jj)%planb, nn(1), nn(2), cout, rin, fft_prepare_plan+fftw_unaligned)
       case(1)
-        call DFFTW(plan_dft_r2c_1d) (fft_array(j)%planf, n(1), rin, cout, fft_prepare_plan+fftw_unaligned)
-        call DFFTW(plan_dft_c2r_1d) (fft_array(j)%planb, n(1), cout, rin, fft_prepare_plan+fftw_unaligned)
+        call DFFTW(plan_dft_r2c_1d) (fft_array(jj)%planf, nn(1), rin, cout, fft_prepare_plan+fftw_unaligned)
+        call DFFTW(plan_dft_c2r_1d) (fft_array(jj)%planb, nn(1), cout, rin, fft_prepare_plan+fftw_unaligned)
       end select
       SAFE_DEALLOCATE_A(rin)
       SAFE_DEALLOCATE_A(cout)
     else
-      SAFE_ALLOCATE( cin(1:n(1), 1:n(2), 1:n(3)))
-      SAFE_ALLOCATE(cout(1:n(1), 1:n(2), 1:n(3)))
-      select case(dim)
+      SAFE_ALLOCATE( cin(1:nn(1), 1:nn(2), 1:nn(3)))
+      SAFE_ALLOCATE(cout(1:nn(1), 1:nn(2), 1:nn(3)))
+      select case(fft_dim)
       case(3)
-        call DFFTW(plan_dft_3d) (fft_array(j)%planf, n(1), n(2), n(3), cin, cout, fftw_forward,  fft_prepare_plan)
-        call DFFTW(plan_dft_3d) (fft_array(j)%planb, n(1), n(2), n(3), cin, cout, fftw_backward, fft_prepare_plan)
+        call DFFTW(plan_dft_3d) (fft_array(jj)%planf, nn(1), nn(2), nn(3), cin, cout, fftw_forward,  fft_prepare_plan)
+        call DFFTW(plan_dft_3d) (fft_array(jj)%planb, nn(1), nn(2), nn(3), cin, cout, fftw_backward, fft_prepare_plan)
       case(2)
-        call DFFTW(plan_dft_2d) (fft_array(j)%planf, n(1), n(2), cin, cout, fftw_forward,  fft_prepare_plan)
-        call DFFTW(plan_dft_2d) (fft_array(j)%planb, n(1), n(2), cin, cout, fftw_backward, fft_prepare_plan)
+        call DFFTW(plan_dft_2d) (fft_array(jj)%planf, nn(1), nn(2), cin, cout, fftw_forward,  fft_prepare_plan)
+        call DFFTW(plan_dft_2d) (fft_array(jj)%planb, nn(1), nn(2), cin, cout, fftw_backward, fft_prepare_plan)
       case(1)
-        call DFFTW(plan_dft_1d) (fft_array(j)%planf, n(1), cin, cout, fftw_forward,  fft_prepare_plan)
-        call DFFTW(plan_dft_1d) (fft_array(j)%planb, n(1), cin, cout, fftw_backward, fft_prepare_plan)
+        call DFFTW(plan_dft_1d) (fft_array(jj)%planf, nn(1), cin, cout, fftw_forward,  fft_prepare_plan)
+        call DFFTW(plan_dft_1d) (fft_array(jj)%planb, nn(1), cin, cout, fftw_backward, fft_prepare_plan)
       end select
       SAFE_DEALLOCATE_A(cin)
       SAFE_DEALLOCATE_A(cout)
     end if
-    fft = fft_array(j)
+    fft = fft_array(jj)
 
-    write(message(1), '(a,i7,a,i7,a,i7,a,i2)') "Info: FFT allocated with size (", &
-      n(1), ",", n(2), ",", n(3), ") in slot ", j
+    write(message(1), '(a)') "Info: FFT allocated with size ("
+    do idir = 1, dim
+      write(str_tmp, '(i7,a)') nn(idir)
+      if(idir == dim) then
+        message(1) = trim(message(1)) // trim(str_tmp) // ") in slot "
+      else
+        message(1) = trim(message(1)) // trim(str_tmp) // ","
+      endif
+    enddo
+    write(str_tmp, '(i2)') jj
+        message(1) = trim(message(1)) // trim(str_tmp)
     call write_info(1)
 
     call pop_sub('fftw3.fft_init')
