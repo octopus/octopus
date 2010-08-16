@@ -771,7 +771,8 @@ contains
 
       call iopar_read(mpi_grp, occs, line, err)
       !# occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
-      read(line, *) occ, char, eval, char, (kpoint(idir), char, idir = 1, gr%sb%dim), w_k, char, chars, char, ik, char, ist, char, idim
+      read(line, *) occ, char, eval, char, (kpoint(idir), char, idir = 1, gr%sb%dim), &
+        w_k, char, chars, char, ik, char, ist, char, idim
 
       ! FIXME for more than 1 state
       if(occ > M_EPSILON) then
@@ -971,9 +972,9 @@ contains
             do ik = 1, st%d%nik
 
               ! does the block entry match and is this node responsible?
-              if(.not.(id.eq.idim .and. is.eq.inst .and. ik.eq.inik    &
-                .and. st%st_start.le.is .and. st%st_end.ge.is          &
-                .and. st%d%kpt%start.le.ik .and. st%d%kpt%end.ge.ik) ) cycle
+              if(.not.(id .eq. idim .and. is .eq. inst .and. ik .eq. inik    &
+                .and. st%st_start .le. is .and. st%st_end .ge. is          &
+                .and. st%d%kpt%start .le. ik .and. st%d%kpt%end .ge. ik) ) cycle
 
               select case(state_from)
 
