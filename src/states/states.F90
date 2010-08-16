@@ -563,8 +563,9 @@ contains
 
         ! Extract eigenvalue.
         call iopar_read(mpi_world, occs, line, err)
-        !# occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
-        read(line, *) occ, char, eigenval, char, ((flt, char), idir = 1, gr%sb%dim), kweights, char, chars, char, ik, char, ist, char, idim
+        ! occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
+        read(line, *) occ, char, eigenval, char, ((flt, char), idir = 1, gr%sb%dim), kweights, &
+           char, chars, char, ik, char, ist, char, idim
 
         if(occ > M_EPSILON) then
           if(st%d%ispin .eq. SPIN_POLARIZED) then
