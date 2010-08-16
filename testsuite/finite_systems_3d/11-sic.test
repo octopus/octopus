@@ -6,7 +6,7 @@ Programs   : octopus
 TestGroups : long-run
 Enabled    : Yes
 
-# This tests performs the calculation of an Argon atom making
+# This test performs the calculation of an argon atom making
 # use of the local-density approximation (LDA) plus the self-interaction 
 # correction (SIC), treating this latter term with the Krieger-Li-Iafrate
 # approximation (KLI) to the optimized effective potential method (OEP).

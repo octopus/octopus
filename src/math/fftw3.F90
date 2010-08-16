@@ -29,15 +29,15 @@
 #endif
 
 module fft_m
-  use global_m
-  use messages_m
-  use varinfo_m
-  use datasets_m
-  use loct_math_m
-  use parser_m
-  use lalg_basic_m
   use c_pointer_m
+  use datasets_m
+  use global_m
+  use lalg_basic_m
+  use loct_math_m
+  use messages_m
+  use parser_m
   use profiling_m
+  use varinfo_m
 
   implicit none
 
@@ -99,25 +99,25 @@ module fft_m
     fftw_no_simd             = 131072
 
   type fft_t
-    integer   :: slot                ! in which slot do we have this fft
+    integer     :: slot       ! in which slot do we have this fft
 
-    integer   :: n(3)          ! size of the fft
-    integer   :: is_real             ! is the fft real or complex
-    type(c_ptr) :: planf ! the plan for forward transforms
-    type(c_ptr) :: planb ! the plan for backward transforms
+    integer     :: n(MAX_DIM) ! size of the fft
+    integer     :: is_real    ! is the fft real or complex
+    type(c_ptr) :: planf      ! the plan for forward transforms
+    type(c_ptr) :: planb      ! the plan for backward transforms
   end type fft_t
 
-  integer :: fft_refs(FFT_MAX)
+  integer     :: fft_refs(FFT_MAX)
   type(fft_t) :: fft_array(FFT_MAX)
-  logical :: fft_optimize
-  integer :: fft_prepare_plan
+  logical     :: fft_optimize
+  integer     :: fft_prepare_plan
 
 contains
 
   ! ---------------------------------------------------------
   ! initialize the table
   subroutine fft_all_init()
-    integer :: i
+    integer :: ii
 
     call push_sub('fftw3.fft_all_init')
 
@@ -134,13 +134,13 @@ contains
     !% the split-operator, or Suzuki-Trotter propagators, this option should be turned off.
     !%End
     call parse_logical(datasets_check('FFTOptimize'), .true., fft_optimize)
-    do i = 1, FFT_MAX
-      fft_refs(i) = FFT_NULL
+    do ii = 1, FFT_MAX
+      fft_refs(ii) = FFT_NULL
     end do
 
     !%Variable FFTPreparePlan
     !%Type integer
-    !%Default 0
+    !%Default fftw_measure
     !%Section Mesh::FFTs
     !%Description
     !% The FFTs are performed in octopus with the help of the FFTW package (http://www.fftw.org).
@@ -161,7 +161,7 @@ contains
     !% assumptions.
     !%End
     call parse_integer(datasets_check('FFTPreparePlan'), fftw_measure, fft_prepare_plan)
-    if(.not.varinfo_valid_option('FFTPreparePlan', fft_prepare_plan)) call input_error('FFTPreparePlan')
+    if(.not. varinfo_valid_option('FFTPreparePlan', fft_prepare_plan)) call input_error('FFTPreparePlan')
 
     call pop_sub('fftw3.fft_all_init')
   end subroutine fft_all_init
@@ -170,15 +170,15 @@ contains
   ! ---------------------------------------------------------
   ! delete all plans
   subroutine fft_all_end()
-    integer :: i
+    integer :: ii
 
     call push_sub('fftw3.fft_all_end')
 
-    do i = 1, FFT_MAX
-      if(fft_refs(i) /= FFT_NULL) then
-        call DFFTW(destroy_plan) (fft_array(i)%planf)
-        call DFFTW(destroy_plan) (fft_array(i)%planb)
-        fft_refs(i) = FFT_NULL
+    do ii = 1, FFT_MAX
+      if(fft_refs(ii) /= FFT_NULL) then
+        call DFFTW(destroy_plan) (fft_array(ii)%planf)
+        call DFFTW(destroy_plan) (fft_array(ii)%planb)
+        fft_refs(ii) = FFT_NULL
       end if
     end do
 
@@ -257,7 +257,7 @@ contains
 
     if(jj == 0) then
       message(1) = "Not enough slots for FFTs."
-      message(2) = "Please increase FFT_MAX in fft.F90 and recompile."
+      message(2) = "Please increase FFT_MAX in fftw3.F90 and recompile."
       call write_fatal(2)
     end if
 
@@ -340,22 +340,22 @@ contains
   subroutine fft_end(fft)
     type(fft_t), intent(inout) :: fft
 
-    integer :: i
+    integer :: ii
 
     call push_sub('fftw3.fft_end')
 
-    i = fft%slot
-    if(fft_refs(i) == FFT_NULL) then
-      message(1) = "Trying to deallocate FFT that has not been allocated"
+    ii = fft%slot
+    if(fft_refs(ii) == FFT_NULL) then
+      message(1) = "Trying to deallocate FFT that has not been allocated."
       call write_warning(1)
     else
-      if(fft_refs(i) > 1) then
-        fft_refs(i) = fft_refs(i) - 1
+      if(fft_refs(ii) > 1) then
+        fft_refs(ii) = fft_refs(ii) - 1
       else
-        fft_refs(i) = FFT_NULL
-        call DFFTW(destroy_plan) (fft_array(i)%planf)
-        call DFFTW(destroy_plan) (fft_array(i)%planb)
-        write(message(1), '(a,i4,a,i4,a,i4,a,i2)') "Info: FFT deallocated from slot ", i
+        fft_refs(ii) = FFT_NULL
+        call DFFTW(destroy_plan) (fft_array(ii)%planf)
+        call DFFTW(destroy_plan) (fft_array(ii)%planb)
+        write(message(1), '(a,i4)') "Info: FFT deallocated from slot ", ii
         call write_info(1)
       end if
     end if
@@ -365,26 +365,26 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine fft_getdim_real(fft, d)
-    type(fft_t), intent(in) :: fft
-    integer,    intent(out) :: d(3)
+  subroutine fft_getdim_real(fft, dd)
+    type(fft_t), intent(in)  :: fft
+    integer,     intent(out) :: dd(MAX_DIM)
 
     call push_sub('fftw3.fft_getdim_real')
-    d = fft%n
+    dd = fft%n
 
     call pop_sub('fftw3.fft_getdim_real')
   end subroutine fft_getdim_real
 
 
   ! ---------------------------------------------------------
-  subroutine fft_getdim_complex(fft, d)
-    type(fft_t), intent(in) :: fft
-    integer,    intent(out) :: d(3)
+  subroutine fft_getdim_complex(fft, dd)
+    type(fft_t), intent(in)  :: fft
+    integer,     intent(out) :: dd(MAX_DIM)
 
     call push_sub('fftw3.fft_getdim_complex')
 
-    d = fft%n
-    if(fft%is_real == fft_real)  d(1) = d(1)/2 + 1
+    dd = fft%n
+    if(fft%is_real == fft_real)  dd(1) = dd(1)/2 + 1
 
     call pop_sub('fftw3.fft_getdim_complex')
   end subroutine fft_getdim_complex
@@ -393,14 +393,14 @@ contains
   ! ---------------------------------------------------------
   ! these routines simply call fftw
   ! first the real to complex versions
-  subroutine dfft_forward(fft, r, c)
+  subroutine dfft_forward(fft, rr, cc)
     type(fft_t), intent(in)  :: fft
-    FLOAT,       intent(in)  :: r(:,:,:)
-    CMPLX,       intent(out) :: c(:,:,:)
+    FLOAT,       intent(in)  :: rr(:,:,:)
+    CMPLX,       intent(out) :: cc(:,:,:)
 
     call push_sub('fftw3.dfft_forward')
 
-    call DFFTW(execute_dft_r2c) (fft%planf, r, c)
+    call DFFTW(execute_dft_r2c) (fft%planf, rr, cc)
 
     call pop_sub('fftw3.dfft_forward')
 
@@ -410,14 +410,14 @@ contains
   ! ---------------------------------------------------------
   ! these routines simply call fftw
   ! first the real to complex versions
-  subroutine dfft_forward1(fft, r, c)
+  subroutine dfft_forward1(fft, rr, cc)
     type(fft_t), intent(in)  :: fft
-    FLOAT,       intent(in)  :: r(:)
-    CMPLX,       intent(out) :: c(:)
+    FLOAT,       intent(in)  :: rr(:)
+    CMPLX,       intent(out) :: cc(:)
 
     call push_sub('fftw3.dfft_forward1')
 
-    call DFFTW(execute_dft_r2c) (fft%planf, r, c)
+    call DFFTW(execute_dft_r2c) (fft%planf, rr, cc)
 
     call pop_sub('fftw3.dfft_forward1')
 
@@ -425,18 +425,18 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine dfft_backward(fft, c, r)
+  subroutine dfft_backward(fft, cc, rr)
     type(fft_t), intent(in) :: fft
-    CMPLX, intent(in)  :: c(fft%n(1), fft%n(2), fft%n(3))
-    FLOAT, intent(out) :: r(fft%n(1), fft%n(2), fft%n(3))
+    CMPLX, intent(in)  :: cc(fft%n(1), fft%n(2), fft%n(3))
+    FLOAT, intent(out) :: rr(fft%n(1), fft%n(2), fft%n(3))
 
     call push_sub('fftw3.dfft_backward')
     
-    call DFFTW(execute_dft_c2r) (fft%planb, c, r)
+    call DFFTW(execute_dft_c2r) (fft%planb, cc, rr)
 
     ! multiply by 1/(N1*N2*N2)
     call lalg_scal(fft%n(1), fft%n(2), fft%n(3), &
-      M_ONE/real(fft%n(1)*fft%n(2)*fft%n(3), REAL_PRECISION), r)
+      M_ONE / (fft%n(1)*fft%n(2)*fft%n(3)), rr)
 
     call pop_sub('fftw3.dfft_backward')
 
@@ -444,18 +444,18 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine dfft_backward1(fft, c, r)
+  subroutine dfft_backward1(fft, cc, rr)
     type(fft_t), intent(in) :: fft
-    CMPLX, intent(in)  :: c(fft%n(1))
-    FLOAT, intent(out) :: r(fft%n(1))
+    CMPLX, intent(in)  :: cc(fft%n(1))
+    FLOAT, intent(out) :: rr(fft%n(1))
 
     call push_sub('fftw3.dfft_backward1')
     
-    call DFFTW(execute_dft_c2r) (fft%planb, c, r)
+    call DFFTW(execute_dft_c2r) (fft%planb, cc, rr)
 
     ! multiply by 1/(N1*N2*N2)
     call lalg_scal(fft%n(1), &
-      M_ONE/real(fft%n(1), REAL_PRECISION), r)
+      M_ONE / fft%n(1), rr)
 
     call pop_sub('fftw3.dfft_backward1')
 
@@ -465,9 +465,9 @@ contains
   ! ---------------------------------------------------------
   ! first the complex versions
   subroutine zfft_forward(fft, in, out)
-    type(fft_t), intent(in) :: fft
-    CMPLX, intent(in)  :: in(:,:,:)
-    CMPLX, intent(out) :: out(:,:,:)
+    type(fft_t), intent(in)  :: fft
+    CMPLX,       intent(in)  :: in(:,:,:)
+    CMPLX,       intent(out) :: out(:,:,:)
 
     call push_sub('fftw3.zfft_forward')
     
@@ -480,9 +480,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine zfft_backward(fft, in, out)
-    type(fft_t), intent(in) :: fft
-    CMPLX, intent(in)  ::  in(fft%n(1), fft%n(2), fft%n(3))
-    CMPLX, intent(out) :: out(fft%n(1), fft%n(2), fft%n(3))
+    type(fft_t), intent(in)  :: fft
+    CMPLX,       intent(in)  :: in (fft%n(1), fft%n(2), fft%n(3))
+    CMPLX,       intent(out) :: out(fft%n(1), fft%n(2), fft%n(3))
 
     call push_sub('fftw3.zfft_backward')
 
@@ -490,7 +490,7 @@ contains
 
     ! multiply by 1/(N1*N2*N2)
     call lalg_scal(fft%n(1), fft%n(2), fft%n(3), &
-      M_z1/real(fft%n(1)*fft%n(2)*fft%n(3), REAL_PRECISION), out)
+      M_z1 / (fft%n(1)*fft%n(2)*fft%n(3)), out)
 
     call pop_sub('fftw3.zfft_backward')
 
@@ -499,24 +499,24 @@ contains
 
   ! ---------------------------------------------------------
   ! convert between array index and G vector
-  function pad_feq(i, n, mode)
-    integer, intent(in) :: i,n
+  function pad_feq(ii, nn, mode)
+    integer, intent(in) :: ii,nn
     logical, intent(in) :: mode
     integer :: pad_feq
 
     ! no push_sub: called too frequently
 
     if(mode) then      ! index to frequency number
-      if( i <= n/2 + 1 ) then
-        pad_feq = i - 1
+      if( ii <= nn/2 + 1 ) then
+        pad_feq = ii - 1
       else
-        pad_feq = i - n - 1
+        pad_feq = ii - nn - 1
       end if
     else
-      if( i >= 0 ) then
-        pad_feq = i + 1
+      if( ii >= 0 ) then
+        pad_feq = ii + 1
       else
-        pad_feq = i + n + 1
+        pad_feq = ii + nn + 1
       end if
     end if
 
