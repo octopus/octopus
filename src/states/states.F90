@@ -1799,7 +1799,8 @@ contains
     !%Default no
     !%Section Output
     !%Description
-    !% The band file will be written in Gnuplot-friendly format.
+    !% The band file will be written in Gnuplot-friendly format to <tt>bands-gp.dat</tt>
+    !% (or <tt>band-gp-is.dat</tt> if spin-polarized).
     !%End
     call parse_logical(datasets_check('OutputBandsGnuplotMode'), .true., gnuplot_mode)
 
@@ -1808,7 +1809,8 @@ contains
     !%Default no
     !%Section Output
     !%Description
-    !% The band file will be written in Grace-friendly format.
+    !% The band file will be written in Grace-friendly format to <tt>bands-grace.dat</tt>
+    !% (or <tt>bands-grace-is.dat</tt> if spin-polarized).
     !%End
     call parse_logical(datasets_check('OutputBandsGraceMode'), .false., grace_mode)
 

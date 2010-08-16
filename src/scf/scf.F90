@@ -410,12 +410,12 @@ contains
 
     ! allocate and compute forces only if they are used as convergence criteria
     if (scf%conv_abs_force > M_ZERO) then
-      SAFE_ALLOCATE(  forcein(1:geo%natoms, 1:gr%mesh%sb%dim))
-      SAFE_ALLOCATE( forceout(1:geo%natoms, 1:gr%mesh%sb%dim))
-      SAFE_ALLOCATE(forcediff(1:gr%mesh%sb%dim))
+      SAFE_ALLOCATE(  forcein(1:geo%natoms, 1:gr%sb%dim))
+      SAFE_ALLOCATE( forceout(1:geo%natoms, 1:gr%sb%dim))
+      SAFE_ALLOCATE(forcediff(1:gr%sb%dim))
       call forces_calculate(gr, geo, hm%ep, st)
       do iatom = 1, geo%natoms
-        forcein(iatom,1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim)
+        forcein(iatom, 1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim)
       end do
     endif
 
@@ -484,8 +484,8 @@ contains
         call forces_calculate(gr, geo, hm%ep, st)
         scf%abs_force = M_ZERO
         do iatom = 1, geo%natoms
-          forceout(iatom,1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim)
-          forcediff(1:gr%mesh%sb%dim) = abs( forceout(iatom,1:gr%mesh%sb%dim) - forcein(iatom,1:gr%mesh%sb%dim) )
+          forceout(iatom,1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim)
+          forcediff(1:gr%sb%dim) = abs( forceout(iatom,1:gr%sb%dim) - forcein(iatom,1:gr%sb%dim) )
           forcetmp = maxval( forcediff )
           if ( forcetmp > scf%abs_force ) then
             scf%abs_force = forcetmp
@@ -569,7 +569,7 @@ contains
       end if
       evsum_in = evsum_out
       if (scf%conv_abs_force > M_ZERO) then
-        forcein(1:geo%natoms, 1:gr%mesh%sb%dim) = forceout(1:geo%natoms, 1:gr%mesh%sb%dim)
+        forcein(1:geo%natoms, 1:gr%sb%dim) = forceout(1:geo%natoms, 1:gr%sb%dim)
       end if
 
       if(forced_finish) then
@@ -825,10 +825,10 @@ contains
 
         if(scf%calc_force) then
           write(iunit,'(3a)') 'Forces on the ions [', trim(units_abbrev(units_out%force)), "]"
-          write(iunit,'(a,10x,14x,a,14x,a,14x,a)') ' Ion','x','y','z'
+          write(iunit,'(a,10x,99(14x,a))') ' Ion', (index2axis(idir), idir = 1, gr%sb%dim)
           do iatom = 1, geo%natoms
             write(iunit,'(i4,a10,10f15.6)') iatom, trim(species_label(geo%atom(iatom)%spec)), &
-              (units_from_atomic(units_out%force, geo%atom(iatom)%f(idir)), idir=1, gr%mesh%sb%dim)
+              (units_from_atomic(units_out%force, geo%atom(iatom)%f(idir)), idir=1, gr%sb%dim)
           end do
         end if
 
