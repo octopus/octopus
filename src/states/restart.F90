@@ -552,7 +552,7 @@ contains
       call iopar_read(gr%mesh%mpi_grp, iunit2, line, err)
       if(.not. present(lr)) then ! do not read eigenvalues when reading linear response
         ! # occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
-        read(line, *) my_occ, char, st%eigenval(ist, ik), char, ((flt, char), idir = 1, gr%sb%dim), st%d%kweights(ik)
+        read(line, *) my_occ, char, st%eigenval(ist, ik), char, (flt, char, idir = 1, gr%sb%dim), st%d%kweights(ik)
         if(read_occ_) st%occ(ist, ik) = my_occ
       end if
 
@@ -771,7 +771,7 @@ contains
 
       call iopar_read(mpi_grp, occs, line, err)
       !# occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
-      read(line, *) occ, char, eval, char, ((kpoint(idir), char), idir = 1, gr%sb%dim), w_k, char, chars, char, ik, char, ist, char, idim
+      read(line, *) occ, char, eval, char, (kpoint(idir), char, idir = 1, gr%sb%dim), w_k, char, chars, char, ik, char, ist, char, idim
 
       ! FIXME for more than 1 state
       if(occ > M_EPSILON) then
