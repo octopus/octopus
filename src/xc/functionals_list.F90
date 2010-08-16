@@ -52,6 +52,10 @@
 !% Teter 93 parametrization
 !%Option lda_x_1d               21
 !% Exchange in 1D
+!%Option lda_c_ml1               22000
+!% Modified LSD (version 1) of Proynov and Salahub
+!%Option lda_c_ml2               23000
+!% Modified LSD (version 2) of Proynov and Salahub
 !%Option gga_x_pbe               101
 !% Perdew, Burke & Ernzerhof exchange
 !%Option gga_x_pbe_r               102
@@ -134,6 +138,10 @@
 !% PBE reparametrization for vdW
 !%Option gga_x_optpbe_vdw               141
 !% PBE reparametrization for vdW
+!%Option gga_x_rge2               142
+!% Regularized PBE
+!%Option gga_c_rge2               143000
+!% Regularized PBE
 !%Option gga_xc_lb               160
 !% van Leeuwen & Baerends
 !%Option gga_xc_hcth_93               161
@@ -244,6 +252,10 @@
 !% Tran & Blaha correction to Becke & Johnson
 !%Option mgga_x_rpp09               209
 !% Rasanen, Pittalis, and Proetto correction to Becke & Johnson
+!%Option mgga_x_2d_prhg07               210
+!% Pittalis, Rasanen, Helbig, Gross Exchange Functional
+!%Option mgga_x_2d_prhg07_prp10               211
+!% PRP10 correction to PRGH07
 !%Option mgga_c_tpss               231000
 !% Perdew, Tao, Staroverov & Scuseria correlation
 !%Option mgga_c_vsxc               232000
@@ -252,8 +264,6 @@
 !% Orestes, Marcasso & Capelle
 !%Option lca_lch               302
 !% Lee, Colwell & Handy
-!%Option ks_inversion             801
-!% Inversion of KS potential
 !%Option oep_x                    901
 !% OEP: Exact exchange
 !%Option none                       0
