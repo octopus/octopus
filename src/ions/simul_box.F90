@@ -779,7 +779,7 @@ contains
     call push_sub('simul_box.simul_box_write_info')
 
     write(message(1),'(a)') 'Simulation Box:'
-    if(sb%box_shape.eq.BOX_USDEF) then
+    if(sb%box_shape .eq. BOX_USDEF) then
       write(message(2), '(a)') '  Type = user-defined'
     else
       write(message(2), '(a,a,1x)') '  Type = ', bs(sb%box_shape)
@@ -982,7 +982,8 @@ contains
       case(BOX_USDEF)
         ! is it inside the user-given boundaries?
         do ip = 1, npoints
-          in_box(ip) =  all(xx(1:sb%dim, ip) >= -sb%lsize(1:sb%dim) - DELTA) .and. all(xx(1:sb%dim, ip) <= sb%lsize(1:sb%dim) + DELTA)
+          in_box(ip) =  all(xx(1:sb%dim, ip) >= -sb%lsize(1:sb%dim) - DELTA) &
+            .and. all(xx(1:sb%dim, ip) <= sb%lsize(1:sb%dim) + DELTA)
 
           ! and inside the simulation box?
           do idir = 1, sb%dim
