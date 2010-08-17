@@ -15,7 +15,7 @@ Radius = 50.0
 %
 
 %Coordinates
-"Li1D" | 0 | 0 | 0
+"Li1D" | 0
 %
 
 SpinComponents = spin_polarized

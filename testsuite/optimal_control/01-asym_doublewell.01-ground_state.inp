@@ -31,7 +31,7 @@ TheoryLevel = independent_particles
 TheoryLevel = independent_particles
 
 %Coordinates
-"AWD1D" | 0 | 0 | 0
+"AWD1D" | 0
 %
 
 EigenSolverInitTolerance = 1.0e-6

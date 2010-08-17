@@ -2,11 +2,11 @@
 # $Id$
 
 Test       : Asymmetric Double Well
-Programs   : octopus; octopus_single
+Programs   : octopus; octopus_single; octopus_mpi
 TestGroups : short-run, oct
 Enabled    : Yes
 
-# The test ensures the optimal control algorithm ZBR98. It calculates the optimal laser field that transfers the ground-state to the first excited state. 
+# The test verifies the optimal-control algorithm ZBR98. It calculates the optimal laser field that transfers the ground-state to the first excited state. 
 # 
 # We do the following intermediate steps:
 # First, the two lowest eigenstates of the asymmetric double well,
