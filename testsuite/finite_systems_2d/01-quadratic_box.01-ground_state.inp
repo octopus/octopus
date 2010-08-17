@@ -15,7 +15,7 @@ Dimensions = 2
 %
 
 %Coordinates
-"qd" | 0 | 0 | 0 
+"qd" | 0 | 0
 %
 
 BoxShape = parallelepiped
@@ -23,10 +23,10 @@ npoints = 101
 delta = pi/(npoints + 1)
 l = pi - 2*delta
 %Lsize
-l/2 | l/2 | 0
+l/2 | l/2
 %
 %Spacing
-delta | delta | delta
+delta | delta
 %
 
 DerivativesOrder = 1

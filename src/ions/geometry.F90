@@ -120,7 +120,7 @@ contains
   subroutine geometry_init_xyz(geo)
     type(geometry_t), intent(inout) :: geo
 
-    integer :: i
+    integer :: ia
     type(xyz_file_info) :: xyz
 
     call push_sub('geometry.geometry_init_xyz')
@@ -191,14 +191,14 @@ contains
     geo%natoms = xyz%n
     nullify(geo%atom)
     SAFE_ALLOCATE(geo%atom(1:geo%natoms))
-    do i = 1, geo%natoms
-      geo%atom(i)%label = xyz%atom(i)%label
-      geo%atom(i)%x     = xyz%atom(i)%x
-      geo%atom(i)%f     = M_ZERO
-      if(iand(xyz%flags, XYZ_FLAGS_MOVE).ne.0) then
-        geo%atom(i)%move = xyz%atom(i)%move
+    do ia = 1, geo%natoms
+      geo%atom(ia)%label = xyz%atom(ia)%label
+      geo%atom(ia)%x     = xyz%atom(ia)%x
+      geo%atom(ia)%f     = M_ZERO
+      if(iand(xyz%flags, XYZ_FLAGS_MOVE) .ne. 0) then
+        geo%atom(ia)%move = xyz%atom(ia)%move
       else
-        geo%atom(i)%move = .true.
+        geo%atom(ia)%move = .true.
       end if
     end do
     call xyz_file_end(xyz)
@@ -208,8 +208,8 @@ contains
     nullify(geo%catom)
     geo%ncatoms = 0
     call xyz_file_read('Classical', xyz)
-    if(xyz%file_type.ne.XYZ_FILE_ERR) then ! found classical atoms
-      if(.not.iand(xyz%flags, XYZ_FLAGS_CHARGE).ne.0) then
+    if(xyz%file_type .ne. XYZ_FILE_ERR) then ! found classical atoms
+      if(.not. iand(xyz%flags, XYZ_FLAGS_CHARGE) .ne. 0) then
         message(1) = "Need to know charge for the classical atoms."
         message(2) = "Please use a .pdb"
         call write_fatal(2)
@@ -219,12 +219,12 @@ contains
       call write_info(1)
 
       SAFE_ALLOCATE(geo%catom(1:geo%ncatoms))
-      do i = 1, geo%ncatoms
-        geo%catom(i)%label  = xyz%atom(i)%label
-        geo%catom(i)%x      = xyz%atom(i)%x
-        geo%catom(i)%v      = M_ZERO
-        geo%catom(i)%f      = M_ZERO
-        geo%catom(i)%charge = xyz%atom(i)%charge
+      do ia = 1, geo%ncatoms
+        geo%catom(ia)%label  = xyz%atom(ia)%label
+        geo%catom(ia)%x      = xyz%atom(ia)%x
+        geo%catom(ia)%v      = M_ZERO
+        geo%catom(ia)%f      = M_ZERO
+        geo%catom(ia)%charge = xyz%atom(ia)%charge
       end do
       call xyz_file_end(xyz)
     end if
@@ -234,8 +234,7 @@ contains
       write(message(1), '(a)') "Some of the atoms seem to sit too close to each other."
       write(message(2), '(a)') "Please review your input files and the output geometry."
       ! then write out the geometry, whether asked for or not in Output variable
-      ! FIXME: this may seg-fault if gr%sb%dim < 3 = MAX_DIM
-      call atom_write_xyz(STATIC_DIR, "geometry", geo, MAX_DIM)
+      call atom_write_xyz(STATIC_DIR, "geometry", geo, calc_dim)
       call write_fatal(2)
     end if
 
@@ -431,15 +430,15 @@ contains
   ! ---------------------------------------------------------
   subroutine geometry_dipole(geo, dipole)
     type(geometry_t), intent(in)  :: geo
-    FLOAT,            intent(out) :: dipole(MAX_DIM)
+    FLOAT,            intent(out) :: dipole(calc_dim)
 
-    integer :: i
+    integer :: ia
 
     call push_sub('geometry.geometry_dipole')
 
-    dipole = M_ZERO
-    do i = 1, geo%natoms
-      dipole(1:MAX_DIM) = dipole(1:MAX_DIM) + species_zval(geo%atom(i)%spec)*geo%atom(i)%x(1:MAX_DIM)
+    dipole(1:calc_dim) = M_ZERO
+    do ia = 1, geo%natoms
+      dipole(1:calc_dim) = dipole(1:calc_dim) + species_zval(geo%atom(ia)%spec)*geo%atom(ia)%x(1:calc_dim)
     end do
     dipole = P_PROTON_CHARGE*dipole
 
@@ -474,19 +473,20 @@ contains
   ! ---------------------------------------------------------
   subroutine cm_pos(geo, pos)
     type(geometry_t), intent(in)  :: geo
-    FLOAT,            intent(out) :: pos(MAX_DIM)
+    FLOAT,            intent(out) :: pos(calc_dim)
 
-    FLOAT :: m
-    integer :: i
+    FLOAT :: mass
+    integer :: ia
 
     call push_sub('geometry.cm_pos')
 
-    pos = M_ZERO; m = M_ZERO
-    do i = 1, geo%natoms
-      pos = pos + species_weight(geo%atom(i)%spec) * geo%atom(i)%x
-      m = m + species_weight(geo%atom(i)%spec)
+    pos = M_ZERO
+    mass = M_ZERO
+    do ia = 1, geo%natoms
+      pos = pos + species_weight(geo%atom(ia)%spec) * geo%atom(ia)%x
+      mass = mass + species_weight(geo%atom(ia)%spec)
     end do
-    pos = pos/m
+    pos = pos/mass
 
     call pop_sub('geometry.cm_pos')
   end subroutine cm_pos
@@ -495,19 +495,20 @@ contains
   ! ---------------------------------------------------------
   subroutine cm_vel(geo, vel)
     type(geometry_t), intent(in)  :: geo
-    FLOAT,            intent(out) :: vel(MAX_DIM)
+    FLOAT,            intent(out) :: vel(calc_dim)
 
-    FLOAT :: m
-    integer :: i
+    FLOAT :: mass
+    integer :: iatom
 
     call push_sub('geometry.cm_vel')
 
-    vel = M_ZERO; m = M_ZERO
-    do i = 1, geo%natoms
-      vel = vel + species_weight(geo%atom(i)%spec) * geo%atom(i)%v
-      m = m + species_weight(geo%atom(i)%spec)
+    vel = M_ZERO
+    mass = M_ZERO
+    do iatom = 1, geo%natoms
+      vel = vel + species_weight(geo%atom(iatom)%spec) * geo%atom(iatom)%v
+      mass = mass + species_weight(geo%atom(iatom)%spec)
     end do
-    vel = vel/m
+    vel = vel / mass
 
     call pop_sub('geometry.cm_vel')
   end subroutine cm_vel
@@ -542,7 +543,7 @@ contains
       write(iunit, '(1x,a,a)') 'units: ', trim(units_abbrev(units_out%length))
     endif
     do iatom = 1, geo%natoms
-      write(iunit, '(6x,a,2x,9f12.6)') geo%atom(iatom)%label, &
+      write(iunit, '(6x,a,2x,99f12.6)') geo%atom(iatom)%label, &
         (units_from_atomic(units_out%length, geo%atom(iatom)%x(idir)), idir = 1, sbdim)
     end do
     call io_close(iunit)
@@ -552,9 +553,9 @@ contains
       write(iunit, '(i4)') geo%ncatoms
       write(iunit, '(1x)')
       do iatom = 1, geo%ncatoms
-        write(iunit, '(6x,a1,2x,3f12.6,a,f12.6)') geo%catom(iatom)%label(1:1), &
-          (units_from_atomic(units_out%length, geo%catom(iatom)%x(idir)), idir = 1, sbdim), &
-          " # ", geo%catom(iatom)%charge
+        write(iunit, '(6x,a1,2x,99f12.6)',advance='no') geo%catom(iatom)%label(1:1), &
+          (units_from_atomic(units_out%length, geo%catom(iatom)%x(idir)), idir = 1, sbdim)
+        write(iunit, '(a,f12.6)') " # ", geo%catom(iatom)%charge
       end do
       call io_close(iunit)
     end if

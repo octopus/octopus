@@ -38,14 +38,14 @@ TDEvolutionMethod = crank_nicholson_src_mem
 # The lead.
 lead_PeriodicDimensions = 1
 %lead_Coordinates
- "flat" | 0 | 0 | 0
+ "flat" | 0 | 0
 %
 %lead_Lsize
- DerivativesOrder*Spacing | 4 | 0
+ DerivativesOrder*Spacing | 4
 %
 %KPointsGrid 
-  2 | 1 | 1
-1/2 | 1/2 | 1/2
+  2 | 1
+1/2 | 1/2
 %
 KPointsUseSymmetries = false
 
@@ -62,10 +62,10 @@ lead_OutputHow = binary
  td_pot_formula   | "0.0"   | "0.0"
 %
 %flat_Coordinates
- "flat" | 0 | 0 | 0
+ "flat" | 0 | 0
 %
 %flat_Lsize
- 4 | 4 | 0
+ 4 | 4
 %
 
 # TD settings.

@@ -106,13 +106,13 @@ contains
     character(len=*),    intent(in)    :: what
     type(xyz_file_info), intent(inout) :: gf
 
-    integer :: i, j, iunit, jdim
+    integer :: ia, ncol, iunit, jdir
     type(block_t) :: blk
     character(len=80) :: str
 
     call push_sub('xyz_file.xyz_file_read')
 
-    if(parse_isdef(datasets_check('PDB'//trim(what))).ne.0) then
+    if(parse_isdef(datasets_check('PDB'//trim(what))) .ne. 0) then
       gf%file_type = XYZ_FILE_PDB
       gf%flags = ior(gf%flags, XYZ_FLAGS_RESIDUE)
       gf%flags = ior(gf%flags, XYZ_FLAGS_CHARGE)
@@ -123,7 +123,7 @@ contains
       call xyz_file_read_PDB(what, iunit, gf)
       call io_close(iunit)
 
-    else if(parse_isdef(datasets_check('XYZ'//trim(what))).ne.0) then ! read a xyz file
+    else if(parse_isdef(datasets_check('XYZ'//trim(what))) .ne. 0) then ! read a xyz file
       gf%file_type = XYZ_FILE_XYZ
       call parse_string(datasets_check('XYZ'//trim(what)), 'coords.xyz', str)
 
@@ -133,9 +133,8 @@ contains
 
       SAFE_ALLOCATE(gf%atom(1:gf%n))
 
-      ! FIXME: this will only work if MAX_DIM = number of columns in file!
-      do i = 1, gf%n
-        read(iunit,*) gf%atom(i)%label, gf%atom(i)%x(:)
+      do ia = 1, gf%n
+        read(iunit,*) gf%atom(ia)%label, gf%atom(ia)%x(1:calc_dim)
       end do
 
       call io_close(iunit)
@@ -148,23 +147,20 @@ contains
 
       SAFE_ALLOCATE(gf%atom(1:gf%n))
 
-      ! FIXME : this needs to be generalized to MAX_DIM dimensions
-      do i = 1, gf%n
-        j = parse_block_cols(blk, i-1)
-        !if((j.lt.gr%sb%dim+1).or.(j.gt.gr%sb%dim+2)) then
-        if((j.lt.4).or.(j.gt.5)) then
-          write(message(1), '(3a,i2)') 'Error in block ', what, ' line #', i
+      do ia = 1, gf%n
+        ncol = parse_block_cols(blk, ia - 1)
+        if((ncol .lt. calc_dim + 1) .or. (ncol .gt. calc_dim + 2)) then
+          write(message(1), '(3a,i2)') 'Error in block ', what, ' line #', ia
           call write_fatal(1)
         end if
-        call parse_block_string (blk, i-1, 0, gf%atom(i)%label)
-        do jdim = 1, 3 ! gr%sb%dim
-          call parse_block_float  (blk, i-1, jdim, gf%atom(i)%x(jdim))
+        call parse_block_string (blk, ia - 1, 0, gf%atom(ia)%label)
+        do jdir = 1, calc_dim
+          call parse_block_float  (blk, ia - 1, jdir, gf%atom(ia)%x(jdir))
         end do
-        if(j == 5) then ! == gr%sb%dim+2
-          !call parse_block_logical(blk, i-1, gr%sb%dim+1, gf%atom(i)%move)
-          call parse_block_logical(blk, i-1, 4, gf%atom(i)%move)
+        if(ncol == calc_dim + 2) then
+          call parse_block_logical(blk, ia - 1, calc_dim + 1, gf%atom(ia)%move)
         else
-          gf%atom(i)%move = .true.
+          gf%atom(ia)%move = .true.
         end if
       end do
       call parse_block_end(blk)
@@ -172,11 +168,11 @@ contains
     end if
 
     ! adjust units
-    do i = 1, gf%n
-      do j = 4, MAX_DIM
-        gf%atom(i)%x(j) = M_ZERO
+    do ia = 1, gf%n
+      do jdir = calc_dim + 1, MAX_DIM
+        gf%atom(ia)%x(jdir) = M_ZERO
       end do
-      gf%atom(i)%x = units_to_atomic(units_inp%length, gf%atom(i)%x)
+      gf%atom(ia)%x = units_to_atomic(units_inp%length, gf%atom(ia)%x)
     end do
 
     call pop_sub('xyz_file.xyz_file_read')

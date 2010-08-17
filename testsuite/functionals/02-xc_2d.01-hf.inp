@@ -10,7 +10,7 @@ omega = 1/lambda^2
 %
 
 %Coordinates
-"qd" | 0 | 0 | 0 
+"qd" | 0 | 0
 %
 
 ExtraStates = 1

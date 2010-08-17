@@ -42,25 +42,25 @@ add_ucells = 10
 
 lead_PeriodicDimensions = 1
 %lead_Coordinates
- "flat" | 0 | 0 | 0
+ "flat" | 0
 %
 
 %lead_Lsize
- 50*DerivativesOrder*Spacing | 0 | 0
+ 50*DerivativesOrder*Spacing 
 %
 
 %KPointsGrid
-  4 | 1 | 1
-1/2 | 1/2 | 1/2
+  4 
+1/2 
 %
 KPointsUseSymmetries = false
 
 %well_Coordinates
- "well" | 0 | 0 | 0
+ "well" | 0
 %
 
 %well_Lsize
- 20 | 0 | 0
+ 20 
 %
 
 #PoissonSolver = fft

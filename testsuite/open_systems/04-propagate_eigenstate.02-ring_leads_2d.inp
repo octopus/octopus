@@ -31,7 +31,7 @@ Ly = 3
 
 lead_Lx = Spacing
 %lead_Lsize
- DerivativesOrder*lead_Lx | Ly | 0
+ DerivativesOrder*lead_Lx | Ly
 %
 
 DD = 0.9 # Radius of the ring.
@@ -56,23 +56,23 @@ add_ucells = 0
 
 lead_PeriodicDimensions = 1
 %lead_coordinates
- "channel" | 0 | 0 | 0
+ "channel" | 0 | 0
 %
 
 %KPointsGrid 
-  4 | 1 | 1
-1/2 | 1/2 | 1/2
+  4 | 1 
+1/2 | 1/2 
 %
 KPointsUseSymmetries = false
 
 %ring_lead_Lsize
- Lx | Ly | 0
+ Lx | Ly 
 %
 
 %ring_lead_Coordinates
- "lchan" | -DD | 0 | 0
- "ring"  |  0 | 0 | 0
- "rchan" |  DD | 0 | 0
+ "lchan" | -DD | 0
+ "ring"  |  0 | 0 
+ "rchan" |  DD | 0
 %
 
 ring_lead_EigenSolverMaxIter = 10000

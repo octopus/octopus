@@ -119,7 +119,6 @@ module simul_box_m
     FLOAT :: xsize          ! the length of the cylinder in the x-direction
     FLOAT :: lsize(MAX_DIM) ! half of the length of the parallelepiped in each direction.
 
-    FLOAT                 :: cell_length(1:3)
     type(lookup_t)        :: atom_lookup
 
     type(c_ptr)         :: image    ! for the box defined through an image
@@ -176,7 +175,7 @@ contains
     call sb_lookup_init()
     call read_box_offset()                 ! Parameters defining the offset of the origin.
     if(present(transport_mode)) then
-      ASSERT(present(lead_sb).and.present(lead_info))
+      ASSERT(present(lead_sb) .and. present(lead_info))
       call ob_simul_box_init(sb, transport_mode, lead_sb, lead_info, geo)
     end if
     call simul_box_build_lattice(sb)       ! Build lattice vectors.
@@ -227,8 +226,8 @@ contains
       !%Default 0
       !%Section System
       !%Description
-      !% Define how many directions are to be considered periodic. Of course, it has to be a number
-      !% from zero to three, and it cannot be larger than <tt>Dimensions</tt>.
+      !% Define how many directions are to be considered periodic. It has to be a number
+      !% between zero and <tt>Dimensions</tt>.
       !%Option 0
       !% No direction is periodic (molecule).
       !%Option 1
@@ -239,7 +238,7 @@ contains
       !% The <i>x</i>, <i>y</i>, and <i>z</i> directions are periodic (bulk).
       !%End
       call parse_integer(datasets_check('PeriodicDimensions'), 0, sb%periodic_dim)
-      if ((sb%periodic_dim < 0) .or. (sb%periodic_dim > 3) .or. (sb%periodic_dim > sb%dim)) &
+      if ((sb%periodic_dim < 0) .or. (sb%periodic_dim > MAX_DIM) .or. (sb%periodic_dim > sb%dim)) &
         call input_error('PeriodicDimensions')
 
       !%Variable MultiResolutionArea
@@ -251,7 +250,7 @@ contains
       !% point of the region, and the following ones set
       !% the radii where resolution changes (measured from the
       !% central point).
-      !% NOTE: up to now, only one area can be set up
+      !% NOTE: currently, only one area can be set up.
       !%End
 
       if(parse_block(datasets_check('MultiResolutionArea'), blk) == 0) then
@@ -599,7 +598,7 @@ contains
     call push_sub('simul_box.simul_box_build_lattice')
     
     if(present(rlattice_primitive)) then
-      sb%rlattice_primitive(1:MAX_DIM,1:MAX_DIM) = rlattice_primitive(1:MAX_DIM,1:MAX_DIM)
+      sb%rlattice_primitive(1:sb%dim, 1:sb%dim) = rlattice_primitive(1:sb%dim, 1:sb%dim)
     else
       !%Variable LatticeVectors
       !%Type block
@@ -617,7 +616,7 @@ contains
       !%End
       
       sb%rlattice_primitive = M_ZERO
-      forall(idim = 1:MAX_DIM) sb%rlattice_primitive(idim, idim) = M_ONE
+      forall(idim = 1:sb%dim) sb%rlattice_primitive(idim, idim) = M_ONE
       
       if (parse_block(datasets_check('LatticeVectors'), blk) == 0) then 
         do idim = 1, sb%dim
@@ -646,9 +645,12 @@ contains
       sb%rcell_volume = abs(sb%rlattice(1, 1)*sb%rlattice(2, 2) - sb%rlattice(1, 2)*sb%rlattice(2, 1))
     case(1)
       sb%rcell_volume = abs(sb%rlattice(2, 1) - sb%rlattice(1, 1))
+    case default
+      message(1) = "Cannot calculate real-space cell volume for dim > 3."
+      call write_fatal(1)
     end select
 
-    call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, sb%volume_element)
+    call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, sb%volume_element, sb%dim)
 
     sb%klattice = M_ZERO
     forall(idim = 1:sb%dim, jdim = 1:sb%dim)
@@ -714,28 +716,47 @@ contains
 
 
   !--------------------------------------------------------------
-  subroutine reciprocal_lattice(rv, kv, volume)
-    FLOAT, intent(in)    :: rv(MAX_DIM, MAX_DIM)
-    FLOAT, intent(out)   :: kv(MAX_DIM, MAX_DIM)
-    FLOAT, intent(out)   :: volume
+  subroutine reciprocal_lattice(rv, kv, volume, dim)
+    FLOAT,   intent(in)  :: rv(1:MAX_DIM, 1:MAX_DIM)
+    FLOAT,   intent(out) :: kv(1:MAX_DIM, 1:MAX_DIM)
+    FLOAT,   intent(out) :: volume
+    integer, intent(in)  :: dim
 
-    FLOAT :: tmp(1:MAX_DIM)
+    FLOAT :: cross(1:3), rv3(1:3, 1:3)
 
     call push_sub('simul_box.reciprocal_lattice')
     
-    kv = M_ZERO
+    kv(1:MAX_DIM, 1:MAX_DIM) = M_ZERO
 
-    tmp(1:3) = dcross_product(rv(1:3, 2), rv(1:3, 3)) 
-    volume = dot_product(rv(1:3, 1), tmp(1:3))
+    select case(dim)
+    case(3)
+      cross(1:3) = dcross_product(rv(1:3, 2), rv(1:3, 3)) 
+      volume = dot_product(rv(1:3, 1), cross(1:3))
+
+      kv(1:3, 1) = dcross_product(rv(:, 2), rv(:, 3))/volume
+      kv(1:3, 2) = dcross_product(rv(:, 3), rv(:, 1))/volume
+      kv(1:3, 3) = dcross_product(rv(:, 1), rv(:, 2))/volume    
+    case(2)
+      rv3(1:3, 1:3) = M_ZERO
+      rv3(1:2, 1:2) = rv(1:2, 1:2)
+      rv3(3, 3) = M_ONE
+      cross(1:3) = dcross_product(rv3(1:3, 1), rv3(1:3, 2)) 
+      volume = dot_product(rv3(1:3, 3), cross(1:3))
+
+      kv(1:3, 1) = dcross_product(rv3(:, 2), rv3(:, 3))/volume
+      kv(1:3, 2) = dcross_product(rv3(:, 3), rv3(:, 1))/volume
+    case(1)
+      volume = rv(1, 1)
+      kv(1, 1) = M_ONE / rv(1, 1)
+    case default ! dim > 3
+      message(1) = "Reciprocal lattice is not correct for dim > 3."
+      call write_fatal(1)
+    end select
 
     if ( volume < M_ZERO ) then 
       message(1) = "Your lattice vectors form a left-handed system."
       call write_fatal(1)
     end if
-
-    kv(1:3, 1) = dcross_product(rv(:, 2), rv(:, 3))/volume
-    kv(1:3, 2) = dcross_product(rv(:, 3), rv(:, 1))/volume
-    kv(1:3, 3) = dcross_product(rv(:, 1), rv(:, 2))/volume    
 
     call pop_sub('simul_box.reciprocal_lattice')
   end subroutine reciprocal_lattice
@@ -945,7 +966,7 @@ contains
 
               iatom = list(ilist, ip)
 
-              dist2 = sum((xx(1:MAX_DIM, ip) - geo%atom(iatom)%x(1:MAX_DIM))**2)
+              dist2 = sum((xx(1:sb%dim, ip) - geo%atom(iatom)%x(1:sb%dim))**2)
 
               if(dist2 < species_def_rsize(geo%atom(iatom)%spec)**2) then
                 in_box(ip) = .true.
@@ -1021,7 +1042,7 @@ contains
     type(simul_box_t), intent(in) :: sb
     integer,           intent(in) :: iunit
 
-    integer :: i
+    integer :: idir
 
     call push_sub('simul_box.simul_box_dump')
 
@@ -1033,33 +1054,33 @@ contains
     select case(sb%box_shape)
     case(SPHERE, MINIMUM)
       write(iunit, '(a20,e22.14)')  'rsize=              ', sb%rsize
-      write(iunit, '(a20,9e22.14)') 'lsize=              ', sb%lsize(1:MAX_DIM)
+      write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
     case(CYLINDER)
       write(iunit, '(a20,e22.14)')  'rsize=              ', sb%rsize
       write(iunit, '(a20,e22.14)')  'xlength=            ', sb%xsize
-      write(iunit, '(a20,9e22.14)') 'lsize=              ', sb%lsize(1:MAX_DIM)
+      write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
     case(PARALLELEPIPED)
-      write(iunit, '(a20,9e22.14)') 'lsize=              ', sb%lsize(1:MAX_DIM)
+      write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
     case(BOX_USDEF)
-      write(iunit, '(a20,9e22.14)') 'lsize=              ', sb%lsize(1:MAX_DIM)
+      write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
       write(iunit, '(a20,a1024)')   'user_def=           ', sb%user_def
     end select
     write(iunit, '(a20,e22.14)')    'fft_alpha=          ', sb%fft_alpha
-    write(iunit, '(a20,9e22.14)')   'box_offset=         ', sb%box_offset(1:MAX_DIM)
+    write(iunit, '(a20,99e22.14)')   'box_offset=         ', sb%box_offset(1:sb%dim)
     write(iunit, '(a20,l7)')        'mr_flag=            ', sb%mr_flag
     if(sb%mr_flag) then
       write(iunit, '(a20,i4)')        'num_areas=         ',sb%hr_area%num_areas
       write(iunit, '(a20,i4)')        'num_radii=         ',sb%hr_area%num_radii
-      do i = 1, sb%hr_area%num_radii
-        write(iunit, '(a10,i2.2,a9,e22.14)') 'mr_radius_', i, '=        ',sb%hr_area%radius(i)
+      do idir = 1, sb%hr_area%num_radii
+        write(iunit, '(a10,i2.2,a9,e22.14)') 'mr_radius_', idir, '=        ',sb%hr_area%radius(idir)
       end do
-      do i = 1, MAX_DIM
-        write(iunit, '(a7,i1,a13,e22.14)')   'center(', i, ')=           ',sb%hr_area%center(i)
+      do idir = 1, sb%dim
+        write(iunit, '(a7,i1,a13,e22.14)')   'center(', idir, ')=           ',sb%hr_area%center(idir)
       end do
     end if
-    do i = 1, MAX_DIM
-      write(iunit, '(a9,i1,a11,9e22.14)')    'rlattice(', i, ')=         ', &
-        sb%rlattice_primitive(1:MAX_DIM, i)
+    do idir = 1, sb%dim
+      write(iunit, '(a9,i1,a11,99e22.14)')    'rlattice(', idir, ')=         ', &
+        sb%rlattice_primitive(1:sb%dim, idir)
     end do
 
     call pop_sub('simul_box.simul_box_dump')
@@ -1080,7 +1101,7 @@ contains
     ! Find (and throw away) the dump tag.
     do
       call iopar_read(mpi_world, iunit, line, ierr)
-      if(trim(line).eq.dump_tag) exit
+      if(trim(line) .eq. dump_tag) exit
     end do
 
     call iopar_read(mpi_world, iunit, line, ierr)
@@ -1097,27 +1118,27 @@ contains
       call iopar_read(mpi_world, iunit, line, ierr)
       read(line, *) str, sb%rsize
       call iopar_read(mpi_world, iunit, line, ierr)
-      read(line, *) str, sb%lsize(1:MAX_DIM)       
+      read(line, *) str, sb%lsize(1:sb%dim)       
     case(CYLINDER)
       call iopar_read(mpi_world, iunit, line, ierr)
       read(line, *) str, sb%rsize
       call iopar_read(mpi_world, iunit, line, ierr)
       read(line, *) str, sb%xsize
       call iopar_read(mpi_world, iunit, line, ierr)
-      read(line, *) str, sb%lsize(1:MAX_DIM)
+      read(line, *) str, sb%lsize(1:sb%dim)
     case(PARALLELEPIPED)
       call iopar_read(mpi_world, iunit, line, ierr)
-      read(line, *) str, sb%lsize(1:MAX_DIM)
+      read(line, *) str, sb%lsize(1:sb%dim)
     case(BOX_USDEF)
       call iopar_read(mpi_world, iunit, line, ierr)
-      read(line, *) str, sb%lsize(1:MAX_DIM)
+      read(line, *) str, sb%lsize(1:sb%dim)
       call iopar_read(mpi_world, iunit, line, ierr)
       read(line, *) str, sb%user_def
     end select
     call iopar_read(mpi_world, iunit, line, ierr)
     read(line, *) str, sb%fft_alpha
     call iopar_read(mpi_world, iunit, line, ierr)
-    read(line, *) str, sb%box_offset(1:MAX_DIM)
+    read(line, *) str, sb%box_offset(1:sb%dim)
     call iopar_read(mpi_world, iunit, line, ierr)
     read(line,*) str, sb%mr_flag
     if(sb%mr_flag) then
@@ -1130,14 +1151,14 @@ contains
         call iopar_read(mpi_world, iunit, line, ierr)
         read(line,*) str, sb%hr_area%radius(il)
       end do
-      do idim=1, MAX_DIM
+      do idim = 1, sb%dim
         call iopar_read(mpi_world, iunit, line, ierr)
         read(line, *) str, sb%hr_area%center(idim)
       end do
     end if
-    do idim=1, MAX_DIM
+    do idim = 1, sb%dim
       call iopar_read(mpi_world, iunit, line, ierr)
-      read(line, *) str, rlattice_primitive(1:MAX_DIM, idim)
+      read(line, *) str, rlattice_primitive(1:sb%dim, idim)
     end do
 
     call simul_box_build_lattice(sb, rlattice_primitive)
@@ -1173,7 +1194,7 @@ contains
     sbout%mr_flag                 = sbin%mr_flag
     sbout%hr_area%num_areas       = sbin%hr_area%num_areas
     sbout%hr_area%num_radii       = sbin%hr_area%num_radii
-    sbout%hr_area%center(1:MAX_DIM)=sbin%hr_area%center(1:MAX_DIM)
+    sbout%hr_area%center(1:sbin%dim)=sbin%hr_area%center(1:sbin%dim)
     
     call kpoints_copy(sbin%kpoints, sbout%kpoints)
 
@@ -1268,9 +1289,9 @@ contains
         call write_fatal(1)
       end if
 
-      if(any(sb%lsize(2:3) .ne. lead_sb(il)%lsize(2:3))) then
-        message(1) = 'The size in y-, z-directions of the ' // LEAD_NAME(il) // ' lead'
-        message(2) = 'does not fit the size of the y-, z-directions of the central system.'
+      if(any(sb%lsize(2:sb%dim) .ne. lead_sb(il)%lsize(2:sb%dim))) then
+        message(1) = 'The size in non-transport-directions of the ' // LEAD_NAME(il) // ' lead'
+        message(2) = 'does not fit the size of the non-transport-directions of the central system.'
         call write_fatal(2)
       end if
 
@@ -1375,7 +1396,7 @@ contains
     end do
 
     ! Initialize the species of the "extended" central system.
-    if(geo%nspecies.gt.0) then
+    if(geo%nspecies .gt. 0) then
       SAFE_DEALLOCATE_P(geo%species)
     end if
     call geometry_init_species(geo, print_info=.false.)

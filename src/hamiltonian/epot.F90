@@ -183,7 +183,8 @@ contains
       !%Option point_charges 1
       !%  Classical charges are treated as point charges.
       !%Option gaussian_smeared 2
-      !%  Classical charges are treated as Gaussian distributions. Smearing widths are hard-coded by species. (Development version only)
+      !%  Classical charges are treated as Gaussian distributions. 
+      !%  Smearing widths are hard-coded by species. (Development version only)
       !%End
       call parse_integer(datasets_check('ClassicalPotential'), 0, ep%classical_pot)
       if(ep%classical_pot .eq. CLASSICAL_GAUSSIAN) then
@@ -219,11 +220,11 @@ contains
     !%End
     nullify(ep%E_field, ep%v_static)
     if(parse_block(datasets_check('StaticElectricField'), blk)==0) then
-      SAFE_ALLOCATE(ep%E_field(1:gr%mesh%sb%dim))
-      do idir = 1, gr%mesh%sb%dim
+      SAFE_ALLOCATE(ep%E_field(1:gr%sb%dim))
+      do idir = 1, gr%sb%dim
         call parse_block_float(blk, 0, idir - 1, ep%E_field(idir), units_inp%energy / units_inp%length)
 
-        if(idir <= gr%mesh%sb%periodic_dim .and. abs(ep%E_field(idir)) > M_EPSILON) then
+        if(idir <= gr%sb%periodic_dim .and. abs(ep%E_field(idir)) > M_EPSILON) then
           message(1) = "You should not apply StaticElectricField in a periodic direction."
           call write_warning(1)
         endif
@@ -236,7 +237,6 @@ contains
         ep%v_static(ip) = -sum(gr%mesh%x(ip,:) * ep%E_field(:))
       end do
     end if
-
 
 
     !%Variable StaticMagneticField
@@ -286,28 +286,32 @@ contains
         if(ep%B_field(1)**2 + ep%B_field(2)**2 > M_ZERO) call input_error('StaticMagneticField')
       end select
       call parse_block_end(blk)
+      if(calc_dim > 3) then
+        message(1) = "Magnetic field not implemented for dim > 3."
+        call write_fatal(1)
+      endif
 
       ! Compute the vector potential
-      SAFE_ALLOCATE(ep%A_static(1:gr%mesh%np, 1:gr%mesh%sb%dim))
-      SAFE_ALLOCATE(grx(1:gr%mesh%sb%dim))
+      SAFE_ALLOCATE(ep%A_static(1:gr%mesh%np, 1:gr%sb%dim))
+      SAFE_ALLOCATE(grx(1:gr%sb%dim))
 
-      select case(gr%mesh%sb%dim)
+      select case(gr%sb%dim)
       case(2)
         select case(gauge_2d)
         case(0) ! linear_xy
           do ip = 1, gr%mesh%np
-            grx(1:gr%mesh%sb%dim) = gr%mesh%x(ip, 1:gr%mesh%sb%dim)
+            grx(1:gr%sb%dim) = gr%mesh%x(ip, 1:gr%sb%dim)
             ep%A_static(ip, :) = M_HALF/P_C*(/grx(2), -grx(1)/) * ep%B_field(3)
           end do
         case(1) ! linear y
           do ip = 1, gr%mesh%np
-            grx(1:gr%mesh%sb%dim) = gr%mesh%x(ip, 1:gr%mesh%sb%dim)
+            grx(1:gr%sb%dim) = gr%mesh%x(ip, 1:gr%sb%dim)
             ep%A_static(ip, :) = M_ONE/P_C*(/grx(2), M_ZERO/) * ep%B_field(3)
           end do
         end select
       case(3)
         do ip = 1, gr%mesh%np
-          grx(1:gr%mesh%sb%dim) = gr%mesh%x(ip, 1:gr%mesh%sb%dim)
+          grx(1:gr%sb%dim) = gr%mesh%x(ip, 1:gr%sb%dim)
           ep%A_static(ip, :) = M_HALF/P_C*(/grx(2) * ep%B_field(3) - grx(3) * ep%B_field(2), &
                                grx(3) * ep%B_field(1) - grx(1) * ep%B_field(3), &
                                grx(1) * ep%B_field(2) - grx(2) * ep%B_field(1)/)

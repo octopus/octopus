@@ -20,7 +20,7 @@ OEP_Level = oep_kli
 %
 
 %Coordinates
-  "Neon1D" | 0 | 0 | 0
+  "Neon1D" | 0
 %
 
 TDMaximumIter = 10

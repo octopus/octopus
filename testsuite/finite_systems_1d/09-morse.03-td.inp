@@ -50,7 +50,7 @@ ParticleMass = K
 %
 
 %Coordinates
-"morse" | -r0 | 0 | 0 
+"morse" | -r0
 %
 
 BoxShape = sphere

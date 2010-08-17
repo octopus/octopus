@@ -72,7 +72,7 @@ contains
       call write_fatal(2)
     end if
     ! Simulation box must not be periodic in transport direction.
-    if(sb%periodic_dim.eq.1) then
+    if(sb%periodic_dim .eq. 1) then
       message(1) = 'When using open boundaries, you cannot use periodic boundary'
       message(2) = 'conditions in the x-direction.'
       call write_fatal(2)
@@ -120,9 +120,9 @@ contains
         call write_fatal(1)
       end if
 
-      if(any(sb%lsize(2:3) .ne. lead_sb(il)%lsize(2:3))) then
-        message(1) = 'The size in y-, z-directions of the ' // LEAD_NAME(il) // ' lead'
-        message(2) = 'does not fit the size of the y-, z-directions of the central system.'
+      if(any(sb%lsize(2:sb%dim) .ne. lead_sb(il)%lsize(2:sb%dim))) then
+        message(1) = 'The size in non-transport-directions of the ' // LEAD_NAME(il) // ' lead'
+        message(2) = 'does not fit the size of the non-transport-directions of the central system.'
         call write_fatal(2)
       end if
 

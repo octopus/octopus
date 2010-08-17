@@ -18,21 +18,21 @@ TheoryLevel = independent_particles
 %
 
 %Coordinates
- "Zero" | 0 | 0 | 0 
+ "Zero" | 0
 %
 
 BoxShape = parallelepiped
 
 %Lsize
- 10.0 | 10.0 | 10.0
+ 10.0
 %
 
 %Spacing
- 0.5 | 0.5 | 0.5
+ 0.5
 %
 
 %BoxOffset
- 0.0 | 0.0 | 0.0
+ 0.0
 %
 
 %KPoints
