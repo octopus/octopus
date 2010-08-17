@@ -44,6 +44,7 @@ module output_me_m
   use states_dim_m
   use unit_m
   use unit_system_m
+  use utils_m
   use varinfo_m
 
   implicit none
@@ -103,9 +104,9 @@ contains
       call input_error('OutputMatrixElements')
     end if
 
-    if(sb%dim.ne.2 .and. sb%dim.ne.3) this%what = iand(this%what, not(output_me_ang_momentum))
+    if(sb%dim .ne. 2 .and. sb%dim .ne. 3) this%what = iand(this%what, not(output_me_ang_momentum))
 
-    if(iand(this%what, output_me_ks_multipoles).ne.0) then
+    if(iand(this%what, output_me_ks_multipoles) .ne. 0) then
       !%Variable OutputMEMultipoles
       !%Type integer
       !%Default 1
@@ -117,7 +118,7 @@ contains
       !% respectively the (1,-1), (1,0) and (1,1) multipole matrix elements
       !% between Kohn-Sham states.
       !%End
-      call parse_integer(datasets_check('OutputMatrixElementsL'), 1, this%ks_multipoles)
+      call parse_integer(datasets_check('OutputMEMultipoles'), 1, this%ks_multipoles)
     end if
 
     call pop_sub('output_me.output_me_init')
@@ -199,9 +200,9 @@ contains
     type(states_t),   intent(inout) :: st
     type(grid_t),     intent(inout) :: gr
 
-    integer            :: ik, j, is, ns, iunit
-    character(len=80)  :: cspin
-    FLOAT              :: o, kpoint(1:MAX_DIM)
+    integer            :: ik, ist, is, ns, iunit, idir
+    character(len=80)  :: cspin, str_tmp
+    FLOAT              :: occ, kpoint(1:MAX_DIM)
     FLOAT, allocatable :: momentum(:,:,:)
 
     call push_sub('output_me.output_me_out_momentum')   
@@ -231,32 +232,48 @@ contains
       kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
 
       if(st%d%nik > ns) then
-        write(message(1), '(a,i4,3(a,f12.6),a)') '#k =', ik, ', k = (',  &
-             units_from_atomic(unit_one/units_out%length, kpoint(1)), ',', &
-             units_from_atomic(unit_one/units_out%length, kpoint(2)), ',', &
-             units_from_atomic(unit_one/units_out%length, kpoint(3)), ')'
+        write(message(1), '(a,i4, a)') '#k =', ik, ', k = ('
+        do idir = 1, gr%sb%dim
+          write(str_tmp, '(f12.6, a)') units_from_atomic(unit_one/units_out%length, kpoint(idir)), ','
+          message(1) = trim(message(1)) // trim(str_tmp)
+          if(idir == gr%sb%dim) then
+            message(1) = trim(message(1)) // ")"
+          else
+            message(1) = trim(message(1)) // ","
+          endif
+        enddo
         call write_info(1, iunit)
       end if
 
-      write(message(1), '(a4,1x,a5,3a12,4x,a12,1x)')       &
-           '#st',' Spin','       <px>', '        <py>', '        <pz>', 'Occupation '
+      write(message(1), '(a4,1x,a5)') '#st',' Spin'
+      do idir = 1, gr%sb%dim
+        write(str_tmp, '(a,i1,a)') '        <p', index2axis(idir), '>'
+        message(1) = trim(message(1)) // trim(str_tmp)
+      enddo
+      write(str_tmp, '(4x,a12,1x)') 'Occupation '
+      message(1) = trim(message(1)) // trim(str_tmp)
       call write_info(1, iunit)
       
-      do j = 1, st%nst
+      do ist = 1, st%nst
         do is = 0, ns-1
           
-          if(j > st%nst) then
-            o = M_ZERO
+          if(ist > st%nst) then
+            occ = M_ZERO
           else
-            o = st%occ(j, ik+is)
+            occ = st%occ(ist, ik+is)
           end if
           
           if(is .eq. 0) cspin = 'up'
           if(is .eq. 1) cspin = 'dn'
           if(st%d%ispin .eq. UNPOLARIZED .or. st%d%ispin .eq. SPINORS) cspin = '--'
           
-          write(message(1), '(i4,3x,a2,1x,3f12.6,3x,f12.6)')        &
-               j, trim(cspin), momentum(1:min(gr%sb%dim, 3), j, ik), o
+          write(message(1), '(i4,3x,a2,1x)') ist, trim(cspin)
+          do idir = 1, gr%sb%dim
+            write(str_tmp, '(f12.6)') momentum(idir, ist, ik)
+            message(1) = trim(message(1)) // trim(str_tmp)
+          enddo
+          write(str_tmp, '(3x,f12.6)') occ
+          message(1) = trim(message(1)) // trim(str_tmp)
           call write_info(1, iunit)
           
         end do
@@ -280,9 +297,9 @@ contains
     type(states_t),   intent(inout) :: st
     type(grid_t),     intent(inout) :: gr
 
-    integer            :: iunit, ik, ist, is, ns, j
+    integer            :: iunit, ik, ist, is, ns, idir
     character(len=80)  :: tmp_str(MAX_DIM), cspin
-    FLOAT              :: angular(3), lsquare, o, kpoint(1:MAX_DIM)
+    FLOAT              :: angular(3), lsquare, occ, kpoint(1:MAX_DIM)
     FLOAT, allocatable :: ang(:, :, :), ang2(:, :)
 #if defined(HAVE_MPI)
     integer            :: tmp
@@ -308,7 +325,7 @@ contains
       end if
     end if
 
-    SAFE_ALLOCATE(ang (1:st%nst, 1:st%d%nik, 1:MAX_DIM))
+    SAFE_ALLOCATE(ang (1:st%nst, 1:st%d%nik, 1:3))
     SAFE_ALLOCATE(ang2(1:st%nst, 1:st%d%nik))
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
@@ -331,10 +348,16 @@ contains
         kpoint = M_ZERO
         kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
         
-        write(message(1), '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
-             units_from_atomic(unit_one/units_out%length, kpoint(1)), ',', &
-             units_from_atomic(unit_one/units_out%length, kpoint(2)), ',', &
-             units_from_atomic(unit_one/units_out%length, kpoint(3)), ')'
+        write(message(1), '(a,i4, a)') '#k =', ik, ', k = ('
+        do idir = 1, gr%sb%dim
+          write(tmp_str(1), '(f12.6, a)') units_from_atomic(unit_one/units_out%length, kpoint(idir)), ','
+          message(1) = trim(message(1)) // trim(tmp_str(1))
+          if(idir == gr%sb%dim) then
+            message(1) = trim(message(1)) // ")"
+          else
+            message(1) = trim(message(1)) // ","
+          endif
+        enddo
         call write_info(1, iunit)
       end if
       
@@ -348,10 +371,10 @@ contains
         ASSERT(.not. st%parallel_in_states)
         
         SAFE_ALLOCATE(lang(1:st%lnst, 1:kn))
-        do j = 1, 3
-          lang(1:st%lnst, 1:kn) = ang(st%st_start:st%st_end, kstart:kend, j)
+        do idir = 1, 3
+          lang(1:st%lnst, 1:kn) = ang(st%st_start:st%st_end, kstart:kend, ist)
           call MPI_Allgatherv(lang, st%nst*kn, MPI_FLOAT, &
-               ang(:, :, j), st%d%kpt%num(:)*st%nst, (st%d%kpt%range(1, :) - 1)*st%nst, MPI_FLOAT, &
+               ang(:, :, ist), st%d%kpt%num(:)*st%nst, (st%d%kpt%range(1, :) - 1)*st%nst, MPI_FLOAT, &
                st%d%kpt%mpi_grp%comm, mpi_err)
         end do
         lang(1:st%lnst, 1:kn) = ang2(st%st_start:st%st_end, kstart:kend)
@@ -363,9 +386,9 @@ contains
       
       if(st%parallel_in_states) then
         SAFE_ALLOCATE(lang(1:st%lnst, 1:1))
-        do j = 1, 3
-          lang(1:st%lnst, 1) = ang(st%st_start:st%st_end, ik, j)
-          call lmpi_gen_allgatherv(st%lnst, lang(:, 1), tmp, ang(:, ik, j), st%mpi_grp)
+        do idir = 1, 3
+          lang(1:st%lnst, 1) = ang(st%st_start:st%st_end, ik, ist)
+          call lmpi_gen_allgatherv(st%lnst, lang(:, 1), tmp, ang(:, ik, ist), st%mpi_grp)
         end do
         lang(1:st%lnst, 1) = ang2(st%st_start:st%st_end, ik)
         call lmpi_gen_allgatherv(st%lnst, lang(:, 1), tmp, ang2(:, ik), st%mpi_grp)
@@ -377,22 +400,22 @@ contains
       call write_info(1, iunit)
 
       if(mpi_grp_is_root(mpi_world)) then
-        do j = 1, st%nst
+        do ist = 1, st%nst
           do is = 0, ns-1
 
-            if(j > st%nst) then
-              o = M_ZERO
+            if(ist > st%nst) then
+              occ = M_ZERO
             else
-              o = st%occ(j, ik+is)
+              occ = st%occ(ist, ik+is)
             end if
             
-            if(is.eq.0) cspin = 'up'
-            if(is.eq.1) cspin = 'dn'
-            if(st%d%ispin.eq.UNPOLARIZED.or.st%d%ispin.eq.SPINORS) cspin = '--'
+            if(is .eq. 0) cspin = 'up'
+            if(is .eq. 1) cspin = 'dn'
+            if(st%d%ispin .eq. UNPOLARIZED .or. st%d%ispin .eq. SPINORS) cspin = '--'
 
-            write(tmp_str(1), '(i4,3x,a2)') j, trim(cspin)
+            write(tmp_str(1), '(i4,3x,a2)') ist, trim(cspin)
             write(tmp_str(2), '(1x,4f12.6,3x,f12.6)') &
-                 ang(j, ik+is, 1:3), ang2(j, ik+is), o
+                 ang(ist, ik+is, 1:3), ang2(ist, ik+is), occ
             message(1) = trim(tmp_str(1))//trim(tmp_str(2))
             call write_info(1, iunit)
           end do

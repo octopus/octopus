@@ -111,7 +111,7 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
     end do
   end do
 
-  SAFE_ALLOCATE(gpsi(1:gr%mesh%np_part, 1:MAX_DIM))
+  SAFE_ALLOCATE(gpsi(1:gr%mesh%np_part, 1:gr%sb%dim))
   SAFE_ALLOCATE(cpsi(1:gr%mesh%np_part, 1:1))
 
   iunit = io_open(trim(dir)//'/output_me_gauge', action='write')
@@ -138,7 +138,7 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
                 X(mf_integrate)(gr%mesh, R_CONJ(st%X(psi)(1:np, 1, ist, 1)) * cpsi(1:np, 1))
          end do
 
-         me = (st%eigenval(jst,1) - st%eigenval(ist,1)) * exp_r
+         me = (st%eigenval(jst, 1) - st%eigenval(ist, 1)) * exp_r
          
          write(iunit, *) ist, jst, idir, me, me - (exp_g + corr)
 
