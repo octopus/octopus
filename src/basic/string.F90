@@ -131,11 +131,11 @@ contains
 
     s_out = ""
     do i = 1, pad
-      s_out(i:i) = " ";
+      s_out(i:i) = " "
     end do
     s_out(pad + 1:pad + li) = s_in(1:li)
     do i = pad + li + 1, l
-      s_out(i:i) = " ";
+      s_out(i:i) = " "
     end do
 
   end function str_center
