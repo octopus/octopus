@@ -781,6 +781,8 @@ contains
     write(dirname, '(a, a)') EM_RESP_DIR//'freq_', trim(str_tmp)
     call io_mkdir(trim(dirname))
 
+    call write_eta()
+
     if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
       call out_polarizability()
       if(em_vars%calc_Born) call out_Born_charges(em_vars%Born_charges(ifactor), geo, gr%mesh%sb%dim, dirname)
@@ -804,6 +806,22 @@ contains
     call pop_sub('em_resp.em_resp_output')
 
   contains
+
+
+    subroutine write_eta()
+
+      call push_sub('em_resp.em_resp_output.write_eta')
+
+      iunit = io_open(trim(dirname)//'/eta', action='write')
+
+      write(iunit, '(3a)') 'Imaginary part of frequency [', trim(units_abbrev(units_out%energy)), ']'
+      write(iunit, '(f20.6)') units_from_atomic(units_out%energy, em_vars%eta)
+
+      call io_close(iunit)
+
+      call pop_sub('em_resp.em_resp_output.write_eta')
+    end subroutine write_eta
+
 
     ! ---------------------------------------------------------
     ! Note: this should be in spectrum.F90
