@@ -90,7 +90,7 @@ typedef union {
   double d[2];
 } multi;
 
-/* A very basic endian conversion routine, this can be improved a lot,
+/* A very basic endian conversion routine. This can be improved a lot,
    but it is not necessary, as restart files are converted at most
    once per run */
 

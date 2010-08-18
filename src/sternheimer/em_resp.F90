@@ -495,6 +495,7 @@ contains
 
         str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(1)*em_vars%omega(iomega)))
         write(dirname_output, '(a, a)') EM_RESP_DIR//'freq_', trim(str_tmp)
+        call io_mkdir(trim(dirname_output))
         call out_hyperpolarizability(gr%sb, em_vars%beta, em_vars%freq_factor(1:3), em_vars%ok(1), dirname_output)
       end if
 
