@@ -11,7 +11,7 @@ omega = 0.25
 ExtraStates = 2
 
 %Coordinates
-"qd" | 0 | 0 | 0 
+"qd" | 0 | 0
 %
 
 BoxShape = sphere

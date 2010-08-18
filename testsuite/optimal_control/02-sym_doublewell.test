@@ -15,7 +15,7 @@ Enabled    : Yes
 # Ground state and unoccupied states
 Input: 02-sym_doublewell.01-ground_state.inp
 Input: 02-sym_doublewell.02-unocc.inp
-match ; 2th state    ; GREP(static/eigenvalues, '2   --', 12) ; -0.525874
+match ; 2nd state    ; GREP(static/eigenvalues, '2   --', 12) ; -0.525874
 
 # Then, run the optimization.
 Input: 02-sym_doublewell.03-oct.inp

@@ -24,7 +24,7 @@ TheoryLevel = independent_particles
 TheoryLevel = independent_particles
 
 %Coordinates
-"AWD1D" | 0 | 0 | 0
+"AWD1D" | 0
 %
 
 # ------------------
@@ -78,4 +78,3 @@ electric_field | 1 | 0 | 0 | freq1 | "envelope_function"
 %TDFunctions
 "envelope_function" | tdf_cw | ampl
 %
-

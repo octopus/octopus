@@ -9,7 +9,7 @@ omega = 0.25
 %
 
 %Coordinates
-"qd" | 0 | 0 | 0 
+"qd" | 0 | 0
 %
 
 BoxShape = sphere
@@ -74,4 +74,3 @@ OCTControlFunctionOmegaMax = 8.0
 OCTControlFunctionRepresentation = control_fourier_series
 
 OCTDoubleCheck = no
-

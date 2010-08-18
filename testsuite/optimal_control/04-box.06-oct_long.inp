@@ -74,7 +74,7 @@ TheoryLevel = independent_particles
 %
 
 %Coordinates
-"Box1D" | 0 | 0 | 0
+"Box1D" | 0
 %
 
 EigenSolverInitTolerance = 1.0e-6

@@ -25,7 +25,7 @@ Radius =  8.0
 %
 
 %Coordinates
-"doublewell" | 0 | 0 | 0
+"doublewell" | 0
 %
 
 TheoryLevel = independent_particles
