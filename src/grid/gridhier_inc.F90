@@ -22,46 +22,46 @@ subroutine X(gridhier_init)(this, base_der, np_part_size)
   type(derivatives_t),  target, intent(in)  :: base_der
   logical,                      intent(in)  :: np_part_size
   
-  integer :: cl, l, np
+  integer :: cl, ll, np
   type(derivatives_t), pointer :: der
 
-  call push_sub('poisson_multigrid.gridhier_init')
+  call push_sub('poisson_multigrid.Xgridhier_init')
   
   cl = multigrid_number_of_levels(base_der)
 
   SAFE_ALLOCATE(this%level(0:cl))
   
   der => base_der
-  do l = 0, cl
+  do ll = 0, cl
     if(np_part_size) then
       np = der%mesh%np_part
     else
       np = der%mesh%np
     end if
 
-    SAFE_ALLOCATE(this%level(l)%p(1:np))
-    this%level(l)%p(1:np) = M_ZERO
+    SAFE_ALLOCATE(this%level(ll)%p(1:np))
+    this%level(ll)%p(1:np) = M_ZERO
     
     der => der%coarser
   end do
   
-  call pop_sub('poisson_multigrid.gridhier_init')
+  call pop_sub('poisson_multigrid.Xgridhier_init')
 end subroutine X(gridhier_init)
 
 ! ---------------------------------------------------------
 subroutine X(gridhier_end)(this)
   type(X(gridhier_t)),  intent(inout) :: this
 
-  integer :: l
-  call push_sub('poisson_multigrid.gridhier_end')
+  integer :: ll
+  call push_sub('poisson_multigrid.Xgridhier_end')
   
-  do l = 0, ubound(this%level, dim = 1)
-    SAFE_DEALLOCATE_P(this%level(l)%p)
+  do ll = 0, ubound(this%level, dim = 1)
+    SAFE_DEALLOCATE_P(this%level(ll)%p)
   end do
 
   SAFE_DEALLOCATE_P(this%level)
   
-  call pop_sub('poisson_multigrid.gridhier_end')
+  call pop_sub('poisson_multigrid.Xgridhier_end')
 end subroutine X(gridhier_end)
 
 !! Local Variables:

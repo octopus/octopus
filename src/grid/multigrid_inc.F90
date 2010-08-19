@@ -103,7 +103,7 @@
 
     integer :: method
 
-    call push_sub('multigrid.multigrid_fine2coarse')
+    call push_sub('multigrid.Xmultigrid_fine2coarse')
 
     if(present(method_p)) then
       method=method_p
@@ -121,7 +121,7 @@
       call write_fatal(1)
     end select
 
-    call pop_sub('multigrid.multigrid_fine2coarse')
+    call pop_sub('multigrid.Xmultigrid_fine2coarse')
   end subroutine X(multigrid_fine2coarse)
 
 
@@ -131,17 +131,17 @@
     R_TYPE,                 intent(in)  :: f_fine(:)
     R_TYPE,                 intent(out) :: f_coarse(:)
 
-    integer :: i
+    integer :: ii
 
-    call push_sub('multigrid.multigrid_injection')
+    call push_sub('multigrid.Xmultigrid_injection')
     call profiling_in(injection_prof, "MG_INJECTION")
 
-    do i = 1, tt%n_coarse
-      f_coarse(i) = f_fine(tt%to_coarse(i))
+    do ii = 1, tt%n_coarse
+      f_coarse(ii) = f_fine(tt%to_coarse(ii))
     end do
 
     call profiling_out(injection_prof)
-    call pop_sub('multigrid.multigrid_injection')
+    call pop_sub('multigrid.Xmultigrid_injection')
   end subroutine X(multigrid_injection)
 
   ! ---------------------------------------------------------
@@ -154,16 +154,16 @@
 
     FLOAT :: weight(-1:1,-1:1,-1:1)
 
-    integer :: n, fn, di, dj, dk, d, fi(MAX_DIM)
+    integer :: nn, fn, di, dj, dk, dd, fi(MAX_DIM)
 
-    call push_sub('multigrid.multigrid_restriction')
+    call push_sub('multigrid.Xmultigrid_restriction')
     call profiling_in(restrict_prof, "MG_RESTRICTION")
 
     do di = -1, 1
       do dj = -1, 1
         do dk = -1, 1
-          d = abs(di) + abs(dj) + abs(dk)
-          weight(di, dj, dk) = CNST(0.5)**d
+          dd = abs(di) + abs(dj) + abs(dk)
+          weight(di, dj, dk) = CNST(0.5)**dd
         end do
       end do
     end do
@@ -174,8 +174,8 @@
     if(fine_der%mesh%parallel_in_domains) call X(vec_ghost_update)(fine_der%mesh%vp, f_fine)
 #endif
 
-    do n = 1, tt%n_coarse
-      fn = tt%to_coarse(n)
+    do nn = 1, tt%n_coarse
+      fn = tt%to_coarse(nn)
 #ifdef HAVE_MPI
       ! translate to a global index
       if(fine_der%mesh%parallel_in_domains) then
@@ -184,7 +184,7 @@
 #endif
       fi(:) = fine_der%mesh%idx%Lxyz(fn, :)
 
-      f_coarse(n) = M_ZERO
+      f_coarse(nn) = M_ZERO
 
       do di = -1, 1
         do dj = -1, 1
@@ -196,9 +196,9 @@
             if(fine_der%mesh%parallel_in_domains) fn = vec_global2local(fine_der%mesh%vp, fn, fine_der%mesh%vp%partno)
 #endif
             if(fine_der%mesh%use_curvilinear) then
-              f_coarse(n) = f_coarse(n) + weight(di, dj, dk)*f_fine(fn)*fine_der%mesh%vol_pp(fn)
+              f_coarse(nn) = f_coarse(nn) + weight(di, dj, dk)*f_fine(fn)*fine_der%mesh%vol_pp(fn)
             else
-              f_coarse(n) = f_coarse(n) + weight(di, dj, dk)*f_fine(fn)*fine_der%mesh%vol_pp(1)
+              f_coarse(nn) = f_coarse(nn) + weight(di, dj, dk)*f_fine(fn)*fine_der%mesh%vol_pp(1)
             end if
 
           end do
@@ -206,15 +206,15 @@
       end do
 
       if(fine_der%mesh%use_curvilinear) then
-        f_coarse(n) = f_coarse(n)/coarse_mesh%vol_pp(n)
+        f_coarse(nn) = f_coarse(nn)/coarse_mesh%vol_pp(nn)
       else
-        f_coarse(n) = f_coarse(n)/coarse_mesh%vol_pp(1)
+        f_coarse(nn) = f_coarse(nn)/coarse_mesh%vol_pp(1)
       end if
     end do
 
     call profiling_count_operations(tt%n_coarse*(27*3 + 1))
     call profiling_out(restrict_prof)
-    call pop_sub('multigrid.multigrid_restriction')
+    call pop_sub('multigrid.Xmultigrid_restriction')
   end subroutine X(multigrid_restriction)
 
 
