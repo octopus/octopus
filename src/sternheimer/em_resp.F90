@@ -283,6 +283,7 @@ contains
               '-direction and frequency ', trim(str_tmp), '.'
             call write_info(1)
 
+            exact_freq = .false.
             if(.not. fromscratch) then 
 
               ! try to load wavefunctions, if first frequency; otherwise will already be initialized
@@ -316,7 +317,6 @@ contains
               end if
                 
               !search for the density of the closest frequency, including negative
-              exact_freq = .false.
               closest_omega = em_vars%freq_factor(ifactor) * em_vars%omega(iomega)
               call oct_search_file_lr(closest_omega, idir, ierr, trim(tmpdir)//EM_RESP_DIR)
               sigma_alt = 1
@@ -408,7 +408,7 @@ contains
 
             em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)
 
-          end if
+          end if ! have_to_calculate
 
         end do ! idir
 
