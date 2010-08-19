@@ -126,9 +126,9 @@ contains
     !%Option lobpcg 8
     !% Locally optimal block-preconditioned conjugate-gradient algorithm
     !% (only available if <tt>DevelVersion = yes</tt>),
-    !% see: A. Knyazev. Toward the Optimal Preconditioned Eigensolver: Locally
-    !% Optimal Block Preconditioned Conjugate Gradient Method. <i>SIAM
-    !% Journal on Scientific Computing </i>, 23(2):517-541, 2001.
+    !% see: A. Knyazev, "Toward the Optimal Preconditioned Eigensolver: Locally
+    !% Optimal Block Preconditioned Conjugate Gradient Method," <i>SIAM
+    !% Journal on Scientific Computing</i>, 23(2):517-541, 2001.
     !%Option rmmdiis 10
     !% Residual minimization scheme, direct inversion in the iterative
     !% subspace eigensolver, based on the implementation of Kresse and
@@ -137,7 +137,7 @@ contains
     !% faster than the other options for large systems; however it
     !% might suffer stability problems. To improve its performance a
     !% large number of <tt>ExtraStates</tt> are required (around 10-20% of the
-    !% number of occupied states). Only available if <tt>DevelVersion = yes</tt>.
+    !% number of occupied states).
     !%Option multigrid 7
     !% Multigrid eigensolver (experimental).
     !%End
@@ -172,7 +172,7 @@ contains
     !%Description
     !% Allows you to turn off subspace diagonalization during the diagonalization of
     !% the Hamiltonian. Subspace diagonalization sometimes creates problems when restarting
-    !% unoccupied states calculations with a larger number of unoccupied states.
+    !% unoccupied-states calculations with a larger number of unoccupied states.
     !%End
     call parse_logical(datasets_check('EigensolverSubspaceDiag'), .true., eigens%subspace_diag)
 

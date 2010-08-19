@@ -51,7 +51,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   R_TYPE, allocatable :: mmc(:, :, :, :)
 #endif
 
-  call push_sub('eigen_rmmdiis_inc.eigensolver_rmmdiis')
+  call push_sub('eigen_rmmdiis_inc.Xeigensolver_rmmdiis')
 
   SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim, 1:niter, 1:blocksize))
   SAFE_ALLOCATE(res(1:gr%mesh%np_part, 1:st%d%dim, 1:niter, 1:blocksize))
@@ -330,7 +330,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   SAFE_DEALLOCATE_A(failed)
   SAFE_DEALLOCATE_A(fr)
 
-  call pop_sub('eigen_rmmdiis_inc.eigensolver_rmmdiis')
+  call pop_sub('eigen_rmmdiis_inc.Xeigensolver_rmmdiis')
 
 end subroutine X(eigensolver_rmmdiis)
 
@@ -362,7 +362,7 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
 
   type(batch_t) :: psib, resb, kresb
 
-  call push_sub('eigen_rmmdiis.Xeigensolver_rmmdiis_start')
+  call push_sub('eigen_rmmdiis_inc.Xeigensolver_rmmdiis_start')
 
   SAFE_ALLOCATE(me1(1:2, 1:blocksize))
   SAFE_ALLOCATE(me2(1:4, 1:blocksize))
@@ -475,7 +475,7 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
   SAFE_DEALLOCATE_A(res)
   SAFE_DEALLOCATE_A(kres)
 
-  call pop_sub('eigen_rmmdiis.Xeigensolver_rmmdiis_start')
+  call pop_sub('eigen_rmmdiis_inc.Xeigensolver_rmmdiis_start')
 
 end subroutine X(eigensolver_rmmdiis_start)
 
