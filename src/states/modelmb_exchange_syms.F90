@@ -109,6 +109,10 @@ contains
 
     normalizer = product(gr%mesh%spacing(1:gr%mesh%sb%dim)) !1/units_out%length**gr%mesh%sb%dim
 
+    ! this is in case _none_ of the particles is symetrized,
+    !   then the whole itype loop is skipped
+    norm = M_ONE
+
     ! FIXME: could one of these arrays be avoided?
     SAFE_ALLOCATE(antisymwf(1:gr%mesh%np_part_global))
     SAFE_ALLOCATE(antisymwf_swap(1:gr%mesh%np_part_global))

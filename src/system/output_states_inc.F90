@@ -249,8 +249,7 @@
 
     iyoung = 1
     do mm = 1, st%nst
-      ! NOTE!!!! do not make this into some preprocessed X() stuff until I am dead and
-      ! buried. Thanks - mjv
+      ! FIXME make this into some preprocessed X() stuff, along with dens and dens_mat
       if(states_are_real(st)) then
         wf = cmplx(st%dpsi(1:gr%mesh%np_part_global, 1, mm, 1),M_ZERO)
       else

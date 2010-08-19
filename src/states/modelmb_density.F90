@@ -127,6 +127,7 @@ contains
     type(modelmb_1part_t) :: mb_1part
     FLOAT, allocatable :: dipole_moment(:)
 
+! FIXME: this should be separated into calculating and writing the density
     call push_sub('states.modelmb_density_write')
 
 
