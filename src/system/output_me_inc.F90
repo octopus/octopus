@@ -35,7 +35,7 @@ subroutine X(output_me_ks_multipoles)(fname, st, gr, ll, mm, ik)
   FLOAT :: rr, xx(MAX_DIM), ylm
   R_TYPE :: multip_element
   
-  call push_sub('output_me_inc.output_me_ks_multipoles')
+  call push_sub('output_me_inc.Xoutput_me_ks_multipoles')
   
   iunit = io_open(file = fname, action = 'write')
 
@@ -78,7 +78,7 @@ subroutine X(output_me_ks_multipoles)(fname, st, gr, ll, mm, ik)
   SAFE_DEALLOCATE_A(multipole)
   call io_close(iunit)
 
-  call pop_sub('output_me_inc.output_me_ks_multipoles')
+  call pop_sub('output_me_inc.Xoutput_me_ks_multipoles')
 end subroutine X(output_me_ks_multipoles)
 
 

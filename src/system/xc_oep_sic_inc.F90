@@ -27,12 +27,12 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
   type(xc_oep_t), intent(inout) :: oep
   FLOAT,          intent(inout) :: ex, ec
 
-  integer  :: i
+  integer  :: ist
   FLOAT :: ex2, ec2, ex_, ec_, edummy
   FLOAT, allocatable :: vxc(:, :), rho(:,:)
 
   call profiling_in(C_PROFILING_XC_SIC)
-  call push_sub('xc_OEP_SIC.oep_sic')
+  call push_sub('xc_OEP_SIC.Xoep_sic')
 
   SAFE_ALLOCATE(rho(1:gr%mesh%np, 1:2))
   SAFE_ALLOCATE(Vxc(1:gr%mesh%np, 1:2))
@@ -41,10 +41,10 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
   ! loop over states
   ex_ = M_ZERO
   ec_ = M_ZERO
-  do i = st%st_start, st%st_end
-    if(st%occ(i, is) .gt. small) then ! we only need the occupied states
+  do ist = st%st_start, st%st_end
+    if(st%occ(ist, is) .gt. small) then ! we only need the occupied states
       ! get orbital density
-      rho(1:gr%mesh%np, 1) = oep%socc*st%occ(i, is)*R_ABS(st%X(psi)(1:gr%mesh%np, 1, i, is))**2
+      rho(1:gr%mesh%np, 1) = oep%socc*st%occ(ist, is)*R_ABS(st%X(psi)(1:gr%mesh%np, 1, ist, is))**2
 
       ! initialize before calling get_vxc
       vxc = M_ZERO
@@ -58,26 +58,28 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
       ex_ = ex_ - oep%sfact*ex2
       ec_ = ec_ - oep%sfact*ec2
 
-      oep%X(lxc)(1:gr%mesh%np, i) = oep%X(lxc)(1:gr%mesh%np, i) - &
-        vxc(1:gr%mesh%np, 1)*R_CONJ(st%X(psi) (1:gr%mesh%np, 1, i, is))
+      oep%X(lxc)(1:gr%mesh%np, ist) = oep%X(lxc)(1:gr%mesh%np, ist) - &
+        vxc(1:gr%mesh%np, 1)*R_CONJ(st%X(psi) (1:gr%mesh%np, 1, ist, is))
 
-      ! calculate the Hartree contribution using poissons equation
+      ! calculate the Hartree contribution using Poisson equation
       vxc(1:gr%mesh%np, 1) = M_ZERO
       call dpoisson_solve(psolver, vxc(:, 1), rho(:, 1), all_nodes=.false.)
 
       ! The exchange energy.
-      ex_ = ex_ - M_HALF*oep%sfact*oep%socc*st%occ(i, is)* &
-        dmf_dotp(gr%mesh, vxc(1:gr%mesh%np, 1), R_ABS(st%X(psi)(1:gr%mesh%np, 1, i, is))**2)
+      ex_ = ex_ - M_HALF*oep%sfact*oep%socc*st%occ(ist, is)* &
+        dmf_dotp(gr%mesh, vxc(1:gr%mesh%np, 1), R_ABS(st%X(psi)(1:gr%mesh%np, 1, ist, is))**2)
 
-      oep%X(lxc)(1:gr%mesh%np, i) = oep%X(lxc)(1:gr%mesh%np, i) - &
-        vxc(1:gr%mesh%np, 1)*R_CONJ(st%X(psi) (1:gr%mesh%np, 1, i, is))
+      oep%X(lxc)(1:gr%mesh%np, ist) = oep%X(lxc)(1:gr%mesh%np, ist) - &
+        vxc(1:gr%mesh%np, 1)*R_CONJ(st%X(psi) (1:gr%mesh%np, 1, ist, is))
     end if
   end do
 
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then
-    call MPI_Allreduce(ec_, edummy, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err); ec_ = edummy
-    call MPI_Allreduce(ex_, edummy, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err); ex_ = edummy
+    call MPI_Allreduce(ec_, edummy, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    ec_ = edummy
+    call MPI_Allreduce(ex_, edummy, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    ex_ = edummy
   end if
 #endif
 
@@ -86,7 +88,8 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
 
   SAFE_DEALLOCATE_A(rho)
   SAFE_DEALLOCATE_A(Vxc)
-  call pop_sub('xc_OEP_SIC.oep_sic')
+
+  call pop_sub('xc_OEP_SIC.Xoep_sic')
   call profiling_out(C_PROFILING_XC_SIC)
 end subroutine X(oep_sic)
 
