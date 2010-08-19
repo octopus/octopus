@@ -22,7 +22,7 @@
 subroutine X(ode_solver_init)(os)
   type(ode_solver_t), intent(out) :: os
 
-  call push_sub('ode_solver_inc.ode_solver_init')
+  call push_sub('ode_solver_inc.Xode_solver_init')
 
   !%Variable ODESolver
   !%Type integer
@@ -31,16 +31,16 @@ subroutine X(ode_solver_init)(os)
   !%Description
   !% Specifies what kind of ODE solver will be used.
   !%Option ode_rk4 1
-  !% Standard Runge-Kutta 4th order
+  !% Standard Runge-Kutta, 4th order.
   !%Option ode_fb78 2
-  !% Fehlberg solver
+  !% Fehlberg solver.
   !%Option ode_vr89 3
-  !% Verner solver
+  !% Verner solver.
   !%Option ode_pd89 4
-  !% Prince-Dormand solver
+  !% Prince-Dormand solver.
   !%End
   call parse_integer(datasets_check('ODESolver'),       ODE_RK4, os%solver_type)
-  if( os%solver_type.lt.ODE_MINVAL.or.os%solver_type.gt.ODE_MAXVAL ) then
+  if( os%solver_type .lt. ODE_MINVAL .or. os%solver_type .gt. ODE_MAXVAL ) then
     call input_error(datasets_check('ODESolver'))
   end if
 
@@ -56,7 +56,7 @@ subroutine X(ode_solver_init)(os)
 
   call X(ode_solver_create)(os)
 
-  call pop_sub('ode_solver_inc.ode_solver_init')
+  call pop_sub('ode_solver_inc.Xode_solver_init')
 end subroutine X(ode_solver_init)
 
 
@@ -69,19 +69,19 @@ subroutine X(ode_solver_create)(os)
   select case(os%solver_type)
   case(ODE_RK4)
     os%vsize = 4
-    message(1) = 'Info: ode_solver: Using Runge-Kutta 4th order.'
+    message(1) = 'Info: ode_solver: Using Runge-Kutta, 4th order.'
     call write_info(1)
   case(ODE_FB78)
     os%vsize = 13
-    message(1) = 'Info: ode_solver: Using Fehlberg 7th/8th order.'
+    message(1) = 'Info: ode_solver: Using Fehlberg, 7th/8th order.'
     call write_info(1)
   case(ODE_VR89)
     os%vsize = 16
-    message(1) = 'Info: ode_solver: Using Verner 8th/9th order.'
+    message(1) = 'Info: ode_solver: Using Verner, 8th/9th order.'
     call write_info(1)
   case(ODE_PD89)
     os%vsize = 13
-    message(1) = 'Info: ode_solver: Using Prince-Dormand 8th/9th order.'
+    message(1) = 'Info: ode_solver: Using Prince-Dormand, 8th/9th order.'
     call write_info(1)
   end select
 
@@ -96,11 +96,11 @@ end subroutine X(ode_solver_create)
 
 ! ---------------------------------------------------------
 subroutine X(ode_solver_run)(os, func, startval, solutionp, solutionvec)
-  type(ode_solver_t),      intent(inout) :: os
-  R_TYPE,                     intent(in)    :: startval(:)
+  type(ode_solver_t), intent(inout) :: os
+  R_TYPE,             intent(in)    :: startval(:)
   ! values of the solution only at the endpoint of the interval
-  R_TYPE,                     intent(out)   :: solutionp(:)
-  R_TYPE, optional,           intent(out)   :: solutionvec(:,:) ! full solution for all t
+  R_TYPE,             intent(out)   :: solutionp(:)
+  R_TYPE, optional,   intent(out)   :: solutionvec(:,:) ! full solution for all t
 
   interface
     subroutine func(size, t, z, res)
@@ -111,7 +111,6 @@ subroutine X(ode_solver_run)(os, func, startval, solutionp, solutionvec)
 
     end subroutine func
   end interface
-
 
   call push_sub('ode_solver_inc.Xode_solver_run')
 
@@ -142,7 +141,6 @@ subroutine X(ode_solver_run)(os, func, startval, solutionp, solutionvec)
     call X(ode_step)(os, func, startval, solutionp)
   end if
 
-
   call pop_sub('ode_solver_inc.Xode_solver_run')
 end subroutine X(ode_solver_run)
 
@@ -169,7 +167,7 @@ subroutine X(ode_step)(os, func, startval, solutionp, solutionvec)
   R_TYPE, allocatable :: yn(:), kv(:,:), y0(:)
   FLOAT   :: tn, dh
   integer, parameter :: order = 4
-  integer :: i, j, k
+  integer :: ii, jj, kk
 
   call push_sub('ode_solver_inc.Xode_step')
 
@@ -182,23 +180,23 @@ subroutine X(ode_step)(os, func, startval, solutionp, solutionvec)
   yn = startval
 
   ! actual ODE stepping
-  do i = 1, os%nsteps
+  do ii = 1, os%nsteps
     if (os%full_solution) then
-      solutionvec(i, :) = yn
+      solutionvec(ii, :) = yn
     end if
 
     ! calculate auxilary vectors
-    do j = 1, os%vsize
+    do jj = 1, os%vsize
       y0 = yn
-      do k = 1, j-1
-        y0 = y0 + dh*os%a(j,k)*kv(:,k)
+      do kk = 1, jj-1
+        y0 = y0 + dh*os%a(jj, kk)*kv(:, kk)
       end do
-      call func(os%nsize, tn + os%c(j)*dh, y0, kv(:,j))
+      call func(os%nsize, tn + os%c(jj)*dh, y0, kv(:, jj))
     end do
     ! step forward
     tn = tn + dh
-    do j = 1, os%vsize
-      yn = yn + dh*os%b(j)*kv(:,j)
+    do jj = 1, os%vsize
+      yn = yn + dh*os%b(jj)*kv(:, jj)
     end do
 
   end do
