@@ -358,12 +358,12 @@ contains
   subroutine spline_init_0(spl)
     type(spline_t), intent(out) :: spl
 
-    call push_sub('splines.spline_init_0')
+    PUSH_SUB(spline_init_0)
 
     call set_null(spl%spl)
     call set_null(spl%acc)
 
-    call pop_sub('splines.spline_init_0')
+    POP_SUB(spline_init_0)
   end subroutine spline_init_0
 
 
@@ -373,13 +373,13 @@ contains
 
     integer :: i
 
-    call push_sub('splines.spline_init_1')
+    PUSH_SUB(spline_init_1)
 
     do i = 1, size(spl)
       call spline_init_0(spl(i))
     end do
 
-    call pop_sub('splines.spline_init_1')
+    POP_SUB(spline_init_1)
   end subroutine spline_init_1
 
 
@@ -389,7 +389,7 @@ contains
 
     integer :: i, j
 
-    call push_sub('splines.spline_init_2')
+    PUSH_SUB(spline_init_2)
 
     do i = 1, size(spl, 1)
       do j = 1, size(spl, 2)
@@ -397,7 +397,7 @@ contains
       end do
     end do
 
-    call pop_sub('splines.spline_init_2')
+    POP_SUB(spline_init_2)
   end subroutine spline_init_2
 
 
@@ -405,7 +405,7 @@ contains
   subroutine spline_end_0(spl)
     type(spline_t), intent(inout) :: spl
 
-    call push_sub('splines.spline_end_0')
+    PUSH_SUB(spline_end_0)
 
     if(c_associated(spl%spl) .and. c_associated(spl%acc)) then
       call oct_spline_end(spl%spl, spl%acc)
@@ -413,7 +413,7 @@ contains
     call set_null(spl%spl)
     call set_null(spl%acc)
 
-    call pop_sub('splines.spline_end_0')
+    POP_SUB(spline_end_0)
   end subroutine spline_end_0
 
 
@@ -423,13 +423,13 @@ contains
 
     integer :: i
 
-    call push_sub('splines.spline_end_1')
+    PUSH_SUB(spline_end_1)
 
     do i = 1, size(spl)
       call spline_end_0(spl(i))
     end do
 
-    call pop_sub('splines.spline_end_1')
+    POP_SUB(spline_end_1)
   end subroutine spline_end_1
 
 
@@ -439,7 +439,7 @@ contains
 
     integer :: i, j
 
-    call push_sub('splines.spline_end_2')
+    PUSH_SUB(spline_end_2)
 
     do i = 1, size(spl, 1)
       do j = 1, size(spl, 2)
@@ -447,7 +447,7 @@ contains
       end do
     end do
 
-    call pop_sub('splines.spline_end_2')
+    POP_SUB(spline_end_2)
   end subroutine spline_end_2
 
 
@@ -459,7 +459,7 @@ contains
     integer :: npoints
     real(8), allocatable :: x(:), y(:)
 
-    call push_sub('splines.spline_copy')
+    PUSH_SUB(spline_copy)
 
     npoints = oct_spline_npoints(splin%spl)
 
@@ -474,7 +474,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
 
-    call pop_sub('splines.spline_copy')
+    POP_SUB(spline_copy)
   end subroutine spline_copy
 
 
@@ -484,13 +484,13 @@ contains
     real(8), intent(in) :: ffit(nrc), rofi(nrc)
     type(spline_t), intent(out) :: spl
 
-    call push_sub('splines.spline_fit8')
+    PUSH_SUB(spline_fit8)
 
     spl%x_limit(1) = rofi(1)
     spl%x_limit(2) = rofi(nrc)
     call oct_spline_fit(nrc, rofi(1), ffit(1), spl%spl, spl%acc)
 
-    call pop_sub('splines.spline_fit8')
+    POP_SUB(spline_fit8)
   end subroutine spline_fit8
 
 
@@ -502,7 +502,7 @@ contains
 
     real(8), allocatable :: rofi8(:), ffit8(:)
 
-    call push_sub('splines.spline_fit4')
+    PUSH_SUB(spline_fit4)
 
     SAFE_ALLOCATE(rofi8(1:nrc))
     SAFE_ALLOCATE(ffit8(1:nrc))
@@ -515,7 +515,7 @@ contains
     SAFE_DEALLOCATE_A(rofi8)
     SAFE_DEALLOCATE_A(ffit8)
 
-    call pop_sub('splines.spline_fit4')
+    POP_SUB(spline_fit4)
   end subroutine spline_fit4
 
 
@@ -565,7 +565,7 @@ contains
 
     real(8), allocatable :: x(:), y(:), y2(:)
 
-    call push_sub('splines.spline_sum')
+    PUSH_SUB(spline_sum)
 
     npoints = oct_spline_npoints(spl1%spl)
 
@@ -587,7 +587,7 @@ contains
     SAFE_DEALLOCATE_A(y)
     SAFE_DEALLOCATE_A(y2)
 
-    call pop_sub('splines.spline_sum')
+    POP_SUB(spline_sum)
   end subroutine spline_sum
 
 
@@ -599,7 +599,7 @@ contains
     integer :: npoints, i
     real(8), allocatable :: x(:), y(:)
 
-    call push_sub('splines.spline_times')
+    PUSH_SUB(spline_times)
 
     npoints = oct_spline_npoints(spl%spl)
     SAFE_ALLOCATE(x(1:npoints))
@@ -616,7 +616,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
 
-    call pop_sub('splines.spline_times')
+    POP_SUB(spline_times)
   end subroutine spline_times
 
 
@@ -626,7 +626,7 @@ contains
     integer :: npoints
     real(8), allocatable :: x(:)
 
-    call push_sub('splines.spline_integral_full')
+    PUSH_SUB(spline_integral_full)
 
     npoints = oct_spline_npoints(spl%spl)
     SAFE_ALLOCATE(x(1:npoints))
@@ -634,7 +634,7 @@ contains
     res = oct_spline_eval_integ(spl%spl, x(1), x(npoints), spl%acc)
     SAFE_DEALLOCATE_A(x)
 
-    call pop_sub('splines.spline_integral_full')
+    POP_SUB(spline_integral_full)
   end function spline_integral_full
 
 
@@ -655,7 +655,7 @@ contains
     integer :: npoints, i
     real(8), allocatable :: x(:), y(:)
 
-    call push_sub('splines.spline_dotp')
+    PUSH_SUB(spline_dotp)
 
     npoints = oct_spline_npoints(spl1%spl)
     SAFE_ALLOCATE(x(1:npoints))
@@ -673,7 +673,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
 
-    call pop_sub('splines.spline_dotp')
+    POP_SUB(spline_dotp)
   end function spline_dotp
 
 
@@ -689,7 +689,7 @@ contains
     integer :: npoints, i, j
     real(8), allocatable :: x(:), y(:), y2(:), xw(:), yw(:)
 
-    call push_sub('splines.spline_3dft')
+    PUSH_SUB(spline_3dft)
 
     npoints = oct_spline_npoints(spl%spl)
     SAFE_ALLOCATE( x(1:npoints))
@@ -746,7 +746,7 @@ contains
     SAFE_DEALLOCATE_A(xw)
     SAFE_DEALLOCATE_A(yw)
 
-    call pop_sub('splines.spline_3dft')
+    POP_SUB(spline_3dft)
   end subroutine spline_3dft
 
 
@@ -763,7 +763,7 @@ contains
     integer :: npoints, i, j
     real(8), allocatable :: x(:), y(:), y2(:), xw(:), yw(:)
 
-    call push_sub('splines.spline_besselft')
+    PUSH_SUB(spline_besselft)
 
     npoints = oct_spline_npoints(spl%spl)
     SAFE_ALLOCATE( x(1:npoints))
@@ -812,7 +812,7 @@ contains
     SAFE_DEALLOCATE_A(xw)
     SAFE_DEALLOCATE_A(yw)
 
-    call pop_sub('splines.spline_besselft')
+    POP_SUB(spline_besselft)
   end subroutine spline_besselft
 
 
@@ -824,7 +824,7 @@ contains
     integer :: npoints, i
     real(8), allocatable :: x(:), y(:)
 
-    call push_sub('splines.spline_cut')
+    PUSH_SUB(spline_cut)
 
     npoints = oct_spline_npoints(spl%spl)
     SAFE_ALLOCATE(x(1:npoints))
@@ -844,7 +844,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
 
-    call pop_sub('splines.spline_cut')
+    POP_SUB(spline_cut)
   end subroutine spline_cut
 
 
@@ -857,7 +857,7 @@ contains
     real(8), allocatable :: x(:), y(:)
     real(8) :: aa
 
-    call push_sub('splines.spline_div')
+    PUSH_SUB(spline_div)
 
     npoints = oct_spline_npoints(spla%spl)
 
@@ -879,7 +879,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
 
-    call pop_sub('splines.spline_div')
+    POP_SUB(spline_div)
   end subroutine spline_div
 
 
@@ -892,7 +892,7 @@ contains
     real(8), allocatable :: x(:), y(:)
     real(8) :: aa
 
-    call push_sub('splines.spline_mult')
+    PUSH_SUB(spline_mult)
 
     npoints = oct_spline_npoints(spla%spl)
 
@@ -917,7 +917,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
 
-    call pop_sub('splines.spline_mult')
+    POP_SUB(spline_mult)
   end subroutine spline_mult
 
 
@@ -929,7 +929,7 @@ contains
     integer :: npoints, i
     real(8), allocatable :: x(:), y(:)
 
-    call push_sub('splines.spline_der')
+    PUSH_SUB(spline_der)
 
     ! Use the grid of dspl if it is present, otherwise use the same one of spl.
     if(.not. c_associated(dspl%spl)) then ! use the grid of spl
@@ -951,7 +951,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
 
-    call pop_sub('splines.spline_der')
+    POP_SUB(spline_der)
   end subroutine spline_der
 
 
@@ -963,7 +963,7 @@ contains
     integer :: npoints, i
     real(8), allocatable :: x(:), y(:)
 
-    call push_sub('splines.spline_der2')
+    PUSH_SUB(spline_der2)
 
     ! Use the grid of dspl if it is present, otherwise use the same one of spl.
     if(.not. c_associated(dspl%spl)) then ! use the grid of spl
@@ -985,7 +985,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
 
-    call pop_sub('splines.spline_der2')
+    POP_SUB(spline_der2)
   end subroutine spline_der2
 
 
@@ -997,7 +997,7 @@ contains
     integer :: np, i
     real(8), allocatable :: x(:), y(:)
 
-    call push_sub('splines.spline_print_0')
+    PUSH_SUB(spline_print_0)
 
     np = oct_spline_npoints(spl%spl)
     SAFE_ALLOCATE(x(1:np))
@@ -1012,7 +1012,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
 
-    call pop_sub('splines.spline_print_0')
+    POP_SUB(spline_print_0)
   end subroutine spline_print_0
 
 
@@ -1025,11 +1025,11 @@ contains
     integer :: np, i, n, j
     real(8), allocatable :: x(:), y(:)
 
-    call push_sub('splines.spline_print_1')
+    PUSH_SUB(spline_print_1)
 
     n = size(spl)
     if(n<=0) then
-      call pop_sub('splines.spline_print_1')
+      POP_SUB(spline_print_1)
       return
     endif
 
@@ -1047,7 +1047,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
 
-    call pop_sub('splines.spline_print_1')
+    POP_SUB(spline_print_1)
   end subroutine spline_print_1
 
 
@@ -1060,11 +1060,11 @@ contains
     integer :: np, i, n1, n2, j, k
     real(8), allocatable :: x(:), y(:)
 
-    call push_sub('splines.spline_print_2')
+    PUSH_SUB(spline_print_2)
 
     n1 = size(spl, 1); n2 = size(spl, 2)
     if(n1*n2<=0) then
-      call pop_sub('splines.spline_print_2')
+      POP_SUB(spline_print_2)
       return
     endif
 
@@ -1084,7 +1084,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
 
-    call pop_sub('splines.spline_print_2')
+    POP_SUB(spline_print_2)
   end subroutine spline_print_2
 
  

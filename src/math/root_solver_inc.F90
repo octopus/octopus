@@ -34,7 +34,7 @@ subroutine X(root_solver_run)(rs, func, root, success, startval, interval_, coef
 
 !!$  FLOAT :: interval(2) 
 
-  call push_sub('root_solver_inc.Xroot_solver_run')
+  PUSH_SUB(X(root_solver_run))
 
   ! Initializations
   root = M_ZERO
@@ -114,7 +114,7 @@ subroutine X(root_solver_run)(rs, func, root, success, startval, interval_, coef
     call write_fatal(2)
   end select
 
-  call pop_sub('root_solver_inc.Xroot_solver_run')
+  POP_SUB(X(root_solver_run))
 end subroutine X(root_solver_run)
 
 
@@ -122,19 +122,19 @@ end subroutine X(root_solver_run)
 subroutine X(root_solver_create)()
 !!$  type(root_solver_t), intent(in) :: rs
 
-  call push_sub('root_solver_inc.Xroot_solver_create')
+  PUSH_SUB(X(root_solver_create))
   ! do allocation stuff
 
-  call pop_sub('root_solver_inc.Xroot_solver_create')
+  POP_SUB(X(root_solver_create))
 end subroutine X(root_solver_create)
 
 
 ! ---------------------------------------------------------
 subroutine X(root_solver_end)()
-  call push_sub('root_solver_inc.Xroot_solver_end')
+  PUSH_SUB(X(root_solver_end))
   ! do deallocation stuff
 
-  call pop_sub('root_solver_inc.Xroot_solver_end')
+  POP_SUB(X(root_solver_end))
 end subroutine X(root_solver_end)
 
 
@@ -149,7 +149,7 @@ subroutine X(root_laguerre)(rs, root, startval, coeff)
   R_TYPE  :: z, zold, s1, s2, denom1, denom2, lroot
   integer :: order, j, k
 
-  call push_sub('root_solver_inc.Xroot_laguerre')
+  PUSH_SUB(X(root_laguerre))
 
   order = rs%poly_order
 
@@ -205,7 +205,7 @@ subroutine X(root_laguerre)(rs, root, startval, coeff)
   SAFE_DEALLOCATE_A(c)
   SAFE_DEALLOCATE_A(d)
 
-  call pop_sub('root_solver_inc.Xroot_laguerre')
+  POP_SUB(X(root_laguerre))
 end subroutine X(root_laguerre)
 
 !! Local Variables:

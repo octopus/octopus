@@ -32,7 +32,7 @@ subroutine X(mixing)(smix, iter, vin, vout, vnew, dotp)
     end function dotp
   end interface
   
-  call push_sub('mix_inc.Xmixing')
+  PUSH_SUB(X(mixing))
   
   ASSERT(iter >= 1)
   
@@ -48,7 +48,7 @@ subroutine X(mixing)(smix, iter, vin, vout, vnew, dotp)
     
   end select
   
-  call pop_sub('mix_inc.Xmixing')
+  POP_SUB(X(mixing))
 end subroutine X(mixing)
 
 
@@ -59,11 +59,11 @@ subroutine X(mixing_linear)(alpha, d1, d2, d3, vin, vout, vnew)
   R_TYPE,       intent(in) :: vin(:, :, :), vout(:, :, :)
   R_TYPE,       intent(out):: vnew(:, :, :)
 
-  call push_sub('mix_inc.Xmixing_linear')
+  PUSH_SUB(X(mixing_linear))
   
   vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3)*(M_ONE - alpha) + alpha*vout(1:d1, 1:d2, 1:d3)
   
-  call pop_sub('mix_inc.Xmixing_linear')
+  POP_SUB(X(mixing_linear))
 end subroutine X(mixing_linear)
 
 
@@ -84,7 +84,7 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter, dotp)
   R_TYPE :: gamma
   R_TYPE, allocatable :: f(:, :, :)
 
-  call push_sub('mix_inc.Xmixing_broyden')
+  PUSH_SUB(X(mixing_broyden))
 
   d1 = smix%d1
   d2 = smix%d2
@@ -133,7 +133,7 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter, dotp)
   
   SAFE_DEALLOCATE_A(f)
   
-  call pop_sub('mix_inc.Xmixing_broyden')
+  POP_SUB(X(mixing_broyden))
 end subroutine X(mixing_broyden)
 
 
@@ -156,12 +156,12 @@ subroutine X(broyden_extrapolation)(alpha, d1, d2, d3, vin, vnew, iter_used, f, 
   R_TYPE    :: gamma, x
   R_TYPE, allocatable :: beta(:, :), work(:), w(:)
 
-  call push_sub('mix_inc.Xbroyden_extrapolation')
+  PUSH_SUB(X(broyden_extrapolation))
   
   if (iter_used == 0) then
     ! linear mixing...
     vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3) + alpha*f(1:d1, 1:d2, 1:d3)
-    call pop_sub('mix_inc.Xbroyden_extrapolation')
+    POP_SUB(X(broyden_extrapolation))
     return
   end if
   
@@ -215,7 +215,7 @@ subroutine X(broyden_extrapolation)(alpha, d1, d2, d3, vin, vnew, iter_used, f, 
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(w)
   
-  call pop_sub('mix_inc.Xbroyden_extrapolation')
+  POP_SUB(X(broyden_extrapolation))
 end subroutine X(broyden_extrapolation)
 
 
@@ -238,7 +238,7 @@ subroutine X(mixing_grpulay)(smix, vin, vout, vnew, iter, dotp)
   integer :: ipos, iter_used
   R_TYPE, allocatable :: f(:, :, :)
     
-  call push_sub('mix_inc.Xmixing_grpulay')
+  PUSH_SUB(X(mixing_grpulay))
 
   d1 = smix%d1
   d2 = smix%d2
@@ -286,7 +286,7 @@ subroutine X(mixing_grpulay)(smix, vin, vout, vnew, iter, dotp)
   
   SAFE_DEALLOCATE_A(f)
   
-  call pop_sub('mix_inc.Xmixing_grpulay')
+  POP_SUB(X(mixing_grpulay))
 end subroutine X(mixing_grpulay)
 
 
@@ -307,7 +307,7 @@ subroutine X(pulay_extrapolation)(d1, d2, d3, vin, vout, vnew, iter_used, f, df,
   R_TYPE :: alpha
   R_TYPE, allocatable :: a(:, :)
   
-  call push_sub('mix_inc.Xpulay_extrapolation')
+  PUSH_SUB(X(pulay_extrapolation))
   
   SAFE_ALLOCATE(a(1:iter_used, 1:iter_used))
   
@@ -333,7 +333,7 @@ subroutine X(pulay_extrapolation)(d1, d2, d3, vin, vout, vnew, iter_used, f, df,
   if (all(abs(a) < 1.0E-8)) then
       ! residuals are too small. Do not mix.
     vnew = vout
-    call pop_sub('mix_inc.Xpulay_extrapolation')
+    POP_SUB(X(pulay_extrapolation))
     return
   end if
   
@@ -355,7 +355,7 @@ subroutine X(pulay_extrapolation)(d1, d2, d3, vin, vout, vnew, iter_used, f, df,
   
   SAFE_DEALLOCATE_A(a)
   
-  call pop_sub('mix_inc.Xpulay_extrapolation')
+  POP_SUB(X(pulay_extrapolation))
 end subroutine X(pulay_extrapolation)
 
 

@@ -81,7 +81,7 @@ contains
     FLOAT, optional,     intent(in)  :: rel_tolerance, abs_tolerance, ws_radius
     logical, optional,   intent(in)  :: have_polynomial
 
-    call push_sub('root_solver.root_solver_init')
+    PUSH_SUB(root_solver_init)
 
     ! Fill in the defaults
     rs%dim             = dimensionality
@@ -99,7 +99,7 @@ contains
     if(present(have_polynomial)) rs%have_polynomial = have_polynomial
     if(present(ws_radius))       rs%ws_radius       = ws_radius
 
-    call pop_sub('root_solver.root_solver_init')
+    POP_SUB(root_solver_init)
   end subroutine root_solver_init
 
 
@@ -107,7 +107,7 @@ contains
   subroutine root_solver_read(rs)
     type(root_solver_t), intent(out) :: rs
 
-    call push_sub('root_solver_inc.root_solver_read')
+    PUSH_SUB(root_solver_read)
 
     !%Variable RootSolver
     !%Type integer
@@ -179,17 +179,17 @@ contains
     !%End
     call parse_float  (datasets_check('RootSolverWSRadius'),       CNST( 1.0), rs%ws_radius)
 
-    call pop_sub('root_solver_inc.root_solver_read')
+    POP_SUB(root_solver_read)
   end subroutine root_solver_read
 
   ! ---------------------------------------------------------
   subroutine droot_bisection
-    call push_sub('root_solver.droot_bisection')
+    PUSH_SUB(droot_bisection)
 
     message(1) = 'Not implemented yet.'
     call write_fatal(1)
 
-    call pop_sub('root_solver.droot_bisection')
+    POP_SUB(droot_bisection)
   end subroutine droot_bisection
 
 
@@ -205,12 +205,12 @@ contains
 !!$     end subroutine func
 !!$  end interface
 !!$
-!!$  call push_sub('root_solver.droot_brent')
+!!$  PUSH_SUB(droot_brent)
 !!$
 !!$  message(1) = 'Error: Not implemented yet.'
 !!$  call write_fatal(1)
 !!$
-!!$  call pop_sub('root_solver.droot_brent')
+!!$  POP_SUB(droot_brent)
 !!$end subroutine droot_brent
 
 
@@ -226,7 +226,7 @@ contains
     FLOAT   :: theta
     integer :: order, j
 
-    call push_sub('root_solver.zroot_watterstrom')
+    PUSH_SUB(zroot_watterstrom)
 
     order  = rs%poly_order
     gorder = order
@@ -290,7 +290,7 @@ contains
     SAFE_DEALLOCATE_A(gcoeff)
     SAFE_DEALLOCATE_A(base_roots)
 
-    call pop_sub('root_solver.zroot_watterstrom')
+    POP_SUB(zroot_watterstrom)
 
   end subroutine zroot_watterstrom
 
@@ -305,7 +305,7 @@ contains
     CMPLX, allocatable   :: numerator(:), denominator(:)
     integer :: j
 
-    call push_sub('root_solver.func_ws')
+    PUSH_SUB(func_ws)
 
     SAFE_ALLOCATE(  numerator(1:size))
     SAFE_ALLOCATE(denominator(1:size))
@@ -325,7 +325,7 @@ contains
     SAFE_DEALLOCATE_A(numerator)
     SAFE_DEALLOCATE_A(denominator)
 
-    call pop_sub('root_solver.func_ws')
+    POP_SUB(func_ws)
 
   end subroutine func_ws
 
@@ -348,7 +348,7 @@ contains
     FLOAT   :: err
     FLOAT, allocatable :: f(:), jf(:, :), delta(:, :), rhs(:, :)
 
-    call push_sub('root_solver.droot_newton')
+    PUSH_SUB(droot_newton)
 
     SAFE_ALLOCATE(    f(1:rs%dim))
     SAFE_ALLOCATE(   jf(1:rs%dim, 1:rs%dim))
@@ -378,7 +378,7 @@ contains
     SAFE_DEALLOCATE_A(jf)
     SAFE_DEALLOCATE_A(delta)
     SAFE_DEALLOCATE_A(rhs)
-    call pop_sub('root_solver.droot_newton')
+    POP_SUB(droot_newton)
   end subroutine droot_newton
 
 

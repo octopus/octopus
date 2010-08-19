@@ -137,7 +137,7 @@ contains
     
     integer :: ii
 
-    call push_sub('lalg_adv.zlalg_exp')
+    PUSH_SUB(zlalg_exp)
 
     SAFE_ALLOCATE(evectors(1:nn, 1:nn))
 
@@ -181,7 +181,7 @@ contains
       SAFE_DEALLOCATE_A(zevalues)
     end if
 
-    call pop_sub('lalg_adv.zlalg_exp')
+    POP_SUB(zlalg_exp)
   end subroutine zlalg_exp
 
 
@@ -214,7 +214,7 @@ contains
     
     integer :: ii
 
-    call push_sub('lalg_adv.zlalg_phi')
+    PUSH_SUB(zlalg_phi)
 
     SAFE_ALLOCATE(evectors(1:nn, 1:nn))
 
@@ -258,7 +258,7 @@ contains
       SAFE_DEALLOCATE_A(zevalues)
     end if
 
-    call pop_sub('lalg_adv.zlalg_phi')
+    POP_SUB(zlalg_phi)
   end subroutine zlalg_phi
 
 #ifdef HAVE_LAPACK

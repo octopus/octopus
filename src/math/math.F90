@@ -181,11 +181,11 @@ contains
   logical function divides(a, b)
     integer, intent(in) :: a, b
 
-    call push_sub('math.divides')
+    PUSH_SUB(divides)
 
     divides = mod(b, a).eq.0
 
-    call pop_sub('math.divides')
+    POP_SUB(divides)
   end function divides
 
 
@@ -195,12 +195,12 @@ contains
 
     FLOAT :: ratio
 
-    call push_sub('math.is_integer_multiple')
+    PUSH_SUB(is_integer_multiple)
 
     ratio = a/b
     is_integer_multiple = ratio.app.TOFLOAT(nint(ratio))
 
-    call pop_sub('math.is_integer_multiple')
+    POP_SUB(is_integer_multiple)
   end function is_integer_multiple
 
 
@@ -211,7 +211,7 @@ contains
 
     FLOAT :: h
 
-    call push_sub('math.hermite')
+    PUSH_SUB(hermite)
 
     if(n<=0) then
       h = M_ONE
@@ -221,7 +221,7 @@ contains
       h = M_TWO*x*hermite(n-1,x) - M_TWO*(n-1)*hermite(n-2,x)
     end if
 
-    call pop_sub('math.hermite')
+    POP_SUB(hermite)
   end function hermite
 
 
@@ -249,12 +249,12 @@ contains
 
     integer, parameter :: im=6075, ia=106, ic=1283
 
-    call push_sub('math.quickrnd')
+    PUSH_SUB(quickrnd)
 
     iseed = mod(iseed*ia + ic, im)
     rnd = real(iseed, REAL_PRECISION)/real(im, REAL_PRECISION)
 
-    call pop_sub('math.quickrnd')
+    POP_SUB(quickrnd)
   end subroutine quickrnd
 
 
@@ -514,7 +514,7 @@ contains
     FLOAT :: c1, c2, c3, c4, c5, xi
     FLOAT, allocatable :: x(:)
 
-    call push_sub('math.weights')
+    PUSH_SUB(weights)
 
     SAFE_ALLOCATE(x(0:M))
 
@@ -577,7 +577,7 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(x)
-    call pop_sub('math.weights')
+    POP_SUB(weights)
   end subroutine weights
 
 
@@ -585,10 +585,10 @@ contains
   FLOAT function ddot_product(a, b) result(r)
     FLOAT, intent(in) :: a(:), b(:)
 
-    call push_sub('math.ddot_product')
+    PUSH_SUB(ddot_product)
     r = dot_product(a, b)
 
-    call pop_sub('math.ddot_product')
+    POP_SUB(ddot_product)
   end function ddot_product
 
 
@@ -596,10 +596,10 @@ contains
   CMPLX function zdot_product(a, b) result(r)
     CMPLX, intent(in) :: a(:), b(:)
 
-    call push_sub('math.zdot_product')
+    PUSH_SUB(zdot_product)
     r = sum(conjg(a(:))*b(:))
 
-    call pop_sub('math.zdot_product')
+    POP_SUB(zdot_product)
   end function zdot_product
 
 
@@ -611,7 +611,7 @@ contains
     integer :: i,j,inc,n, indi, indj
     FLOAT   :: v
 
-    call push_sub('math.shellsort')
+    PUSH_SUB(shellsort)
 
     n = size(a)
 
@@ -652,7 +652,7 @@ contains
       if (inc <= 1) exit
     end do
 
-    call pop_sub('math.shellsort')
+    POP_SUB(shellsort)
   end subroutine shellsort
 
 
@@ -665,7 +665,7 @@ contains
     integer :: i,j,inc,n, indi, indj
     integer :: v
 
-    call push_sub('math.ishellsort')
+    PUSH_SUB(ishellsort)
 
     n = size(a)
 
@@ -705,7 +705,7 @@ contains
       if (inc <= 1) exit
     end do
 
-    call pop_sub('math.ishellsort')
+    POP_SUB(ishellsort)
   end subroutine ishellsort
 
 
@@ -713,10 +713,10 @@ contains
   subroutine set_app_threshold(thr)
     FLOAT, intent(in) :: thr
 
-    call push_sub('math.set_app_threshold')
+    PUSH_SUB(set_app_threshold)
     APP_THRESHOLD = thr
 
-    call pop_sub('math.set_app_threshold')
+    POP_SUB(set_app_threshold)
   end subroutine set_app_threshold
 
 
@@ -741,12 +741,12 @@ contains
     logical, intent(in) :: a
     logical, intent(in) :: b
 
-    call push_sub('math.math_xor')
+    PUSH_SUB(math_xor)
 
     math_xor = ( a .or. b )
     if ( a .and. b ) math_xor = .false.
 
-    call pop_sub('math.math_xor')
+    POP_SUB(math_xor)
   end function math_xor
 
 
@@ -761,7 +761,7 @@ contains
 
     integer :: i
 
-    call push_sub('math.make_idx_set')
+    PUSH_SUB(make_idx_set)
 
     if(present(in)) then
       length = ubound(in, 1)
@@ -775,7 +775,7 @@ contains
       end do
     end if
 
-    call pop_sub('math.make_idx_set')
+    POP_SUB(make_idx_set)
   end subroutine make_idx_set
 
 
@@ -788,7 +788,7 @@ contains
 
     integer :: i
 
-    call push_sub('math.member')
+    PUSH_SUB(member)
 
     member = .false.
 
@@ -799,7 +799,7 @@ contains
       end if
     end do
 
-    call pop_sub('math.member')
+    POP_SUB(member)
   end function member
 
 
@@ -812,7 +812,7 @@ contains
 
     integer :: ii, kk
 
-    call push_sub('math.interpolation_coefficients')
+    PUSH_SUB(interpolation_coefficients)
 
     do ii = 1, nn
       cc(ii) = M_ONE
@@ -822,7 +822,7 @@ contains
       end do
     end do
 
-    call pop_sub('math.interpolation_coefficients')
+    POP_SUB(interpolation_coefficients)
   end subroutine interpolation_coefficients
 
 
@@ -831,11 +831,11 @@ contains
   logical function even(n)
     integer, intent(in) :: n
 
-    call push_sub('math.even')
+    PUSH_SUB(even)
 
     even = mod(n, 2).eq.0
 
-    call pop_sub('math.even')
+    POP_SUB(even)
   end function even
 
 
@@ -844,11 +844,11 @@ contains
   logical function odd(n)
     integer, intent(in) :: n
 
-    call push_sub('math.odd')
+    PUSH_SUB(odd)
 
     odd = .not.even(n)
 
-    call pop_sub('math.odd')
+    POP_SUB(odd)
   end function odd
 
   ! ---------------------------------------------------------
@@ -862,7 +862,7 @@ contains
     integer :: n, k, j
     FLOAT :: sumx2
 
-    call push_sub('math.cartesian2hyperspherical')
+    PUSH_SUB(cartesian2hyperspherical)
 
     n = size(x)
     ASSERT(n>1)
@@ -877,7 +877,7 @@ contains
       u(k) = atan2(sqrt(sumx2), x(k))
     end do
 
-    call pop_sub('math.cartesian2hyperspherical')
+    POP_SUB(cartesian2hyperspherical)
   end subroutine cartesian2hyperspherical
   ! ---------------------------------------------------------
 
@@ -892,7 +892,7 @@ contains
 
     integer :: n, j, k
 
-    call push_sub('math.hyperspherical2cartesian')
+    PUSH_SUB(hyperspherical2cartesian)
 
     n = size(x)
     ASSERT(n>1)
@@ -923,7 +923,7 @@ contains
       x(n) = x(n) * sin(u(n-1))
     end if
 
-    call pop_sub('math.hyperspherical2cartesian')
+    POP_SUB(hyperspherical2cartesian)
   end subroutine hyperspherical2cartesian
   ! ---------------------------------------------------------
 
@@ -937,7 +937,7 @@ contains
     integer :: n, j, k
     FLOAT, allocatable :: alpha(:, :), eigenvectors(:, :), eigenvalues(:)
 
-    call push_sub('math.hypersphere_cut')
+    PUSH_SUB(hypersphere_cut)
 
     n = size(x) + 1
 
@@ -960,7 +960,7 @@ contains
     SAFE_DEALLOCATE_A(alpha)
     SAFE_DEALLOCATE_A(eigenvectors)
     SAFE_DEALLOCATE_A(eigenvalues)
-    call pop_sub('math.hypersphere_cut')
+    POP_SUB(hypersphere_cut)
   end subroutine hypersphere_cut
   ! ---------------------------------------------------------
 
@@ -975,7 +975,7 @@ contains
     FLOAT, allocatable :: alpha(:, :), eigenvectors(:, :), eigenvalues(:)
     FLOAT :: det
 
-    call push_sub('math.hypersphere_cut_back')
+    PUSH_SUB(hypersphere_cut_back)
 
     n = size(x) + 1
 
@@ -999,7 +999,7 @@ contains
     SAFE_DEALLOCATE_A(alpha)
     SAFE_DEALLOCATE_A(eigenvectors)
     SAFE_DEALLOCATE_A(eigenvalues)
-    call pop_sub('math.hypersphere_cut_back')
+    POP_SUB(hypersphere_cut_back)
   end subroutine hypersphere_cut_back
   ! ---------------------------------------------------------
 
@@ -1016,7 +1016,7 @@ contains
     
     integer :: n, l, m
     
-    call push_sub('math.hypersphere_grad_matrix')
+    PUSH_SUB(hypersphere_grad_matrix)
 
     n = size(x)+1  ! the dimension of the matrix is (n-1)x(n)
 
@@ -1043,7 +1043,7 @@ contains
        grad_matrix(m,n) = r*cos(x(m))*grad_matrix(m,n)*product(sin(x(1:m-1)))*product(sin(x(m+1:n-1)))
     end do
 
-    call pop_sub('math.hypersphere_grad_matrix')
+    POP_SUB(hypersphere_grad_matrix)
   end subroutine  hypersphere_grad_matrix
 
 

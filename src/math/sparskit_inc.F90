@@ -24,7 +24,7 @@ subroutine X(sparskit_solver_init)(n, sk)
 
   integer :: workspace_size, m
 
-  call push_sub('sparskit_inc.Xsparskit_solver_init')
+  PUSH_SUB(X(sparskit_solver_init))
 
   !%Variable SPARSKITSolver
   !%Type integer
@@ -215,7 +215,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   sk_work = M_ZERO
   sk_y    = M_ZERO
 
-  call pop_sub('sparskit_inc.Xsparskit_solver_init')
+  POP_SUB(X(sparskit_solver_init))
 end subroutine X(sparskit_solver_init)
 
 
@@ -252,7 +252,7 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
 
   integer :: iter
 
-  call push_sub('sparskit_inc.Xsparskit_solver_run')
+  PUSH_SUB(X(sparskit_solver_run))
 
   ! initialize counter
   sk%used_iter = 0
@@ -409,20 +409,20 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
   end do
 #endif
 
-  call pop_sub('sparskit_inc.Xsparskit_solver_run')
+  POP_SUB(X(sparskit_solver_run))
 
 end subroutine X(sparskit_solver_run)
 
 
 ! ---------------------------------------------------------
 subroutine X(sparskit_solver_end)()
-  call push_sub('sparskit_inc.Xsparskit_solver_end')
+  PUSH_SUB(X(sparskit_solver_end))
 
   SAFE_DEALLOCATE_A(sk_b)
   SAFE_DEALLOCATE_A(sk_y)
   SAFE_DEALLOCATE_A(sk_work)
 
-  call pop_sub('sparskit_inc.Xsparskit_solver_end')
+  POP_SUB(X(sparskit_solver_end))
 end subroutine X(sparskit_solver_end)
 
 !! Local Variables:

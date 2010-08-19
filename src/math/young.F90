@@ -54,7 +54,7 @@ module young_m
     ! local vars
     integer :: ipart
 
-    call push_sub('math.young_init')
+    PUSH_SUB(young_init)
 
     if (ndown > nup) then
       write (message(1),'(a)') 'Error: we only make 2-row Young diagrams with nup >= ndown'
@@ -85,7 +85,7 @@ module young_m
     this%iyoung = 1
     call young_fill (this, nup+ndown)
 
-    call pop_sub('math.young_init')
+    POP_SUB(young_init)
   end subroutine young_init
 
 
@@ -96,10 +96,10 @@ module young_m
 
     ! local vars
     integer :: idown, iup
-    call push_sub('math.young_fill')
+    PUSH_SUB(young_fill)
 
     if (this%iyoung > this%nyoung) then
-    call pop_sub('math.young_fill')
+    POP_SUB(young_fill)
       return
     end if
 
@@ -123,7 +123,7 @@ module young_m
     end do
 
     if (this%iyoung > this%nyoung) then
-    call pop_sub('math.young_fill')
+    POP_SUB(young_fill)
       return
     end if
 
@@ -164,7 +164,7 @@ module young_m
     end do
 
     if (this%iyoung > this%nyoung) then
-    call pop_sub('math.young_fill')
+    POP_SUB(young_fill)
       return
     end if
     
@@ -177,7 +177,7 @@ module young_m
 !      call write_fatal(1)
 !    end if
 
-    call pop_sub('math.young_fill')
+    POP_SUB(young_fill)
   end subroutine
 
 
@@ -188,7 +188,7 @@ module young_m
 
     integer :: iup, idown
 
-    call push_sub('young.young_reset_1val')
+    PUSH_SUB(young_reset_1val)
 
     ! remove last entry in new diagram
     do iup = 1, this%nup
@@ -198,7 +198,7 @@ module young_m
       if(this%young_down(idown,this%iyoung) == nn+1) this%young_down(idown,this%iyoung) = -999
     end do
 
-    call pop_sub('young.young_reset_1val')
+    POP_SUB(young_reset_1val)
   end subroutine young_reset_1val
 
 
@@ -209,14 +209,14 @@ module young_m
 
     integer :: iyoung
 
-    call push_sub('math.young_write')
+    PUSH_SUB(young_write)
     
     write (iunit, '(a,I4,a,I4,a)') ' Young diagrams for ', this%nup, ' spins up, and ', this%ndown, ' down '
     do iyoung = 1, this%nyoung
       call young_write_one (iunit, this, iyoung)
     end do
     
-    call pop_sub('math.young_write')
+    POP_SUB(young_write)
   end subroutine young_write
 
 
@@ -227,13 +227,13 @@ module young_m
 
     integer, intent(in) :: iyoung
 
-    call push_sub('math.young_write_one')
+    PUSH_SUB(young_write_one)
     
     write (iunit,'(a,I7)') ' Young diagram ', iyoung
     write (iunit,'(10I7)') this%young_up(:, iyoung)
     write (iunit,'(10I7)') this%young_down(:, iyoung)
     
-    call pop_sub('math.young_write_one')
+    POP_SUB(young_write_one)
   end subroutine young_write_one
 
 
@@ -244,7 +244,7 @@ module young_m
     integer :: nup, ndown
     type(young_t) :: this
 
-    call push_sub('math.young_write_allspins')
+    PUSH_SUB(young_write_allspins)
 
     call young_nullify (this)
     do ndown = 0, floor(nparticles * 0.5)
@@ -253,7 +253,7 @@ module young_m
       call young_write (iunit, this)
       call young_end (this)
     end do
-    call pop_sub('math.young_write_allspins')
+    POP_SUB(young_write_allspins)
 
   end subroutine young_write_allspins 
 
@@ -262,12 +262,12 @@ module young_m
   subroutine young_nullify (this)
     type(young_t), intent(inout) :: this
 
-    call push_sub('math.young_nullify')
+    PUSH_SUB(young_nullify)
 
     nullify(this%young_up)
     nullify(this%young_down)
 
-    call pop_sub('math.young_nullify')
+    POP_SUB(young_nullify)
   end subroutine young_nullify
 
 
@@ -275,7 +275,7 @@ module young_m
   subroutine young_copy (young_in, young_out)
     type(young_t), intent(inout) :: young_in, young_out
 
-    call push_sub('math.young_copy')
+    PUSH_SUB(young_copy)
 
     young_out%nup = young_in%nup
     young_out%ndown = young_in%ndown
@@ -284,7 +284,7 @@ module young_m
     call loct_pointer_copy(young_out%young_up,young_in%young_up)
     call loct_pointer_copy(young_out%young_down,young_in%young_down)
 
-    call pop_sub('math.young_copy')
+    POP_SUB(young_copy)
   end subroutine young_copy
 
 
@@ -292,12 +292,12 @@ module young_m
   subroutine young_end (this)
     type(young_t), intent(inout) :: this
 
-    call push_sub('math.young_end')
+    PUSH_SUB(young_end)
 
     SAFE_DEALLOCATE_P (this%young_up)
     SAFE_DEALLOCATE_P (this%young_down)
 
-    call pop_sub('math.young_end')
+    POP_SUB(young_end)
   end subroutine young_end
 
 end module young_m

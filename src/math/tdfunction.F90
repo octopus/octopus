@@ -137,7 +137,7 @@ module tdf_m
     character(len=100) :: row_name, filename, function_expression
     FLOAT :: a0, tau0, t0, tau1
 
-    call push_sub('tdfunction.tdf_read')
+    PUSH_SUB(tdf_read)
 
     !%Variable TDFunctions
     !%Type block
@@ -228,7 +228,7 @@ module tdf_m
     ierr = -3
     if(parse_block(datasets_check('TDFunctions'), blk) .ne. 0) then
       ierr = -1
-      call pop_sub('tdfunction.tdf_read')
+      POP_SUB(tdf_read)
       return
     end if
 
@@ -263,7 +263,7 @@ module tdf_m
           case default
             ierr = -2
             call parse_block_end(blk)
-            call pop_sub('tdfunction.tdf_read')
+            POP_SUB(tdf_read)
             return
         end select
 
@@ -292,7 +292,7 @@ module tdf_m
     end do row_loop
 
     call parse_block_end(blk)
-    call pop_sub('tdfunction.tdf_read')
+    POP_SUB(tdf_read)
   end subroutine tdf_read
   !------------------------------------------------------------
 
@@ -332,7 +332,7 @@ module tdf_m
   subroutine tdf_init(f)
     type(tdf_t), intent(inout) :: f
 
-    call push_sub('tdfunction.tdf_init')
+    PUSH_SUB(tdf_init)
 
     f%mode = TDF_EMPTY
     f%niter = 0
@@ -341,7 +341,7 @@ module tdf_m
     nullify(f%valww)
     nullify(f%coeffs)
 
-    call pop_sub('tdfunction.tdf_init')
+    POP_SUB(tdf_init)
   end subroutine tdf_init
   !------------------------------------------------------------
 
@@ -350,10 +350,10 @@ module tdf_m
   logical function tdf_is_empty(f)
     type(tdf_t), intent(in) :: f
 
-    call push_sub('tdfunction.tdf_is_empty')
+    PUSH_SUB(tdf_is_empty)
     tdf_is_empty = (f%mode == TDF_EMPTY)
 
-    call pop_sub('tdfunction.tdf_is_empty')
+    POP_SUB(tdf_is_empty)
   end function tdf_is_empty
   !------------------------------------------------------------
 
@@ -363,7 +363,7 @@ module tdf_m
     type(tdf_t), intent(inout) :: f
     FLOAT, intent(in) :: a0, omega0
 
-    call push_sub('tdfunction.tdf_init_cw')
+    PUSH_SUB(tdf_init_cw)
 
     f%mode = TDF_CW
     f%a0 = a0
@@ -372,7 +372,7 @@ module tdf_m
     nullify(f%valww)
     nullify(f%coeffs)
 
-    call pop_sub('tdfunction.tdf_init_cw')
+    POP_SUB(tdf_init_cw)
   end subroutine tdf_init_cw
   !------------------------------------------------------------
 
@@ -382,7 +382,7 @@ module tdf_m
     type(tdf_t), intent(inout) :: f
     FLOAT, intent(in) :: a0, omega0, t0, tau0
 
-    call push_sub('tdfunction.tdf_init_gaussian')
+    PUSH_SUB(tdf_init_gaussian)
 
     f%mode = TDF_GAUSSIAN
     f%a0 = a0
@@ -393,7 +393,7 @@ module tdf_m
     nullify(f%valww)
     nullify(f%coeffs)
 
-    call pop_sub('tdfunction.tdf_init_gaussian')
+    POP_SUB(tdf_init_gaussian)
   end subroutine tdf_init_gaussian
   !------------------------------------------------------------
 
@@ -403,7 +403,7 @@ module tdf_m
     type(tdf_t), intent(inout) :: f
     FLOAT, intent(in) :: a0, omega0, t0, tau0
 
-    call push_sub('tdfunction.tdf_init_cosinoidal')
+    PUSH_SUB(tdf_init_cosinoidal)
 
     f%mode = TDF_COSINOIDAL
     f%a0 = a0
@@ -414,7 +414,7 @@ module tdf_m
     nullify(f%valww)
     nullify(f%coeffs)
 
-    call pop_sub('tdfunction.tdf_init_cosinoidal')
+    POP_SUB(tdf_init_cosinoidal)
   end subroutine tdf_init_cosinoidal
   !------------------------------------------------------------
 
@@ -424,7 +424,7 @@ module tdf_m
     type(tdf_t), intent(inout) :: f
     FLOAT, intent(in) :: a0, omega0, t0, tau0, tau1
 
-    call push_sub('tdfunction.tdf_init_trapezoidal')
+    PUSH_SUB(tdf_init_trapezoidal)
 
     f%mode = TDF_TRAPEZOIDAL
     f%a0 = a0
@@ -436,7 +436,7 @@ module tdf_m
     nullify(f%valww)
     nullify(f%coeffs)
 
-    call pop_sub('tdfunction.tdf_init_trapezoidal')
+    POP_SUB(tdf_init_trapezoidal)
   end subroutine tdf_init_trapezoidal
   !------------------------------------------------------------
 
@@ -446,7 +446,7 @@ module tdf_m
     type(tdf_t), intent(inout)   :: f
     character(len=*), intent(in) :: expression
 
-    call push_sub('tdfunction.tdf_init_fromexpr')
+    PUSH_SUB(tdf_init_fromexpr)
 
     f%mode = TDF_FROM_EXPR
     f%expression = trim(expression)
@@ -454,7 +454,7 @@ module tdf_m
     nullify(f%valww)
     nullify(f%coeffs)
     
-    call pop_sub('tdfunction.tdf_init_fromexpr')
+    POP_SUB(tdf_init_fromexpr)
   end subroutine tdf_init_fromexpr
   !------------------------------------------------------------
 
@@ -469,7 +469,7 @@ module tdf_m
     FLOAT :: dummy
     FLOAT, allocatable :: t(:), am(:)
 
-    call push_sub('tdfunction.tdf_init_fromfile')
+    PUSH_SUB(tdf_init_fromfile)
 
     f%mode = TDF_FROM_FILE
     ierr = 0
@@ -506,7 +506,7 @@ module tdf_m
     nullify(f%coeffs)
     SAFE_DEALLOCATE_A(t)
     SAFE_DEALLOCATE_A(am)
-    call pop_sub('tdfunction.tdf_init_fromfile')
+    POP_SUB(tdf_init_fromfile)
   end subroutine tdf_init_fromfile
   !------------------------------------------------------------
 
@@ -523,7 +523,7 @@ module tdf_m
     integer :: n(3)
     FLOAT :: bigt
 
-    call push_sub('tdfunction.tdf_init_numerical')
+    PUSH_SUB(tdf_init_numerical)
 
     f%mode = TDF_NUMERICAL
     f%niter = niter
@@ -575,7 +575,7 @@ module tdf_m
       end select
     end if
 
-    call pop_sub('tdfunction.tdf_init_numerical')
+    POP_SUB(tdf_init_numerical)
   end subroutine tdf_init_numerical
   !------------------------------------------------------------
 
@@ -587,7 +587,7 @@ module tdf_m
     integer :: i
     FLOAT   :: df
 
-    call push_sub('tdfunction.tdf_fourier_grid')
+    PUSH_SUB(tdf_fourier_grid)
 
     wgrid = M_ZERO
     select case(f%mode)
@@ -605,7 +605,7 @@ module tdf_m
       stop 'Error'
     end select
 
-    call pop_sub('tdfunction.tdf_fourier_grid')
+    POP_SUB(tdf_fourier_grid)
   end subroutine tdf_fourier_grid
   !------------------------------------------------------------
 
@@ -615,7 +615,7 @@ module tdf_m
     type(tdf_t), intent(inout) :: f
     integer :: j
     CMPLX, allocatable :: tmp(:)
-    call push_sub('tdfunction.tdf_numerical_to_fourier')
+    PUSH_SUB(tdf_numerical_to_fourier)
 
     SAFE_ALLOCATE(tmp(1:f%niter/2+1))
     call dfft_forward1(f%fft_handler, f%val(1:f%niter), tmp)
@@ -632,7 +632,7 @@ module tdf_m
 
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_P(f%val)
-    call pop_sub('tdfunction.tdf_numerical_to_fourier')
+    POP_SUB(tdf_numerical_to_fourier)
   end subroutine tdf_numerical_to_fourier
   !------------------------------------------------------------
 
@@ -643,7 +643,7 @@ module tdf_m
     integer :: j
     CMPLX, allocatable :: tmp(:)
 
-    call push_sub('tdfunction.tdf_fourier_to_numerical')
+    PUSH_SUB(tdf_fourier_to_numerical)
 
     SAFE_ALLOCATE(tmp(1:f%niter/2+1))
     tmp = M_z0
@@ -660,7 +660,7 @@ module tdf_m
 
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_P(f%valww)
-    call pop_sub('tdfunction.tdf_fourier_to_numerical')
+    POP_SUB(tdf_fourier_to_numerical)
   end subroutine tdf_fourier_to_numerical
   !------------------------------------------------------------
 
@@ -669,7 +669,7 @@ module tdf_m
   subroutine tdf_numerical_to_zerofourier(f)
     type(tdf_t), intent(inout) :: f
     FLOAT :: s
-    call push_sub('tdfunction.tdf_numerical_to_zerofourier')
+    PUSH_SUB(tdf_numerical_to_zerofourier)
 
     call tdf_numerical_to_fourier(f)
     f%valww(1) = M_ZERO
@@ -677,7 +677,7 @@ module tdf_m
     f%valww(2:f%nfreqs) = f%valww(2:f%nfreqs) - s/f%nfreqs
     f%mode = TDF_ZERO_FOURIER
 
-    call pop_sub('tdfunction.tdf_numerical_to_zerofourier')
+    POP_SUB(tdf_numerical_to_zerofourier)
   end subroutine tdf_numerical_to_zerofourier
   !------------------------------------------------------------
 
@@ -685,12 +685,12 @@ module tdf_m
   !------------------------------------------------------------
   subroutine tdf_zerofourier_to_numerical(f)
     type(tdf_t), intent(inout) :: f
-    call push_sub('tdfunction.tdf_zerofourier_to_numerical')
+    PUSH_SUB(tdf_zerofourier_to_numerical)
 
     ASSERT(f%valww(1).eq.M_ZERO)
     call tdf_fourier_to_numerical(f)
 
-    call pop_sub('tdfunction.tdf_zerofourier_to_numerical')
+    POP_SUB(tdf_zerofourier_to_numerical)
   end subroutine tdf_zerofourier_to_numerical
   !------------------------------------------------------------
 
@@ -751,7 +751,7 @@ module tdf_m
     FLOAT :: fdotf_, nrm
     FLOAT, allocatable :: e(:)
 
-    call push_sub('tdfunction.tdf_set_random')
+    PUSH_SUB(tdf_set_random)
 
     select case(f%mode)
     case(TDF_FOURIER_SERIES)
@@ -795,7 +795,7 @@ module tdf_m
 
     call tdf_set_numerical(f, e)
     SAFE_DEALLOCATE_A(e)
-    call pop_sub('tdfunction.tdf_set_random')
+    POP_SUB(tdf_set_random)
   end subroutine tdf_set_random
   !------------------------------------------------------------ 
 
@@ -812,7 +812,7 @@ module tdf_m
     FLOAT, allocatable :: val(:)
 
     if(f%mode .eq. TDF_NUMERICAL) return
-    call push_sub('tdfunction.tdf_to_numerical')
+    PUSH_SUB(tdf_to_numerical)
 
     SAFE_ALLOCATE(val(1:niter+1))
 
@@ -826,7 +826,7 @@ module tdf_m
     call tdf_set_numerical(f, val)
 
     SAFE_DEALLOCATE_A(val)
-    call pop_sub('tdfunction.tdf_to_numerical')
+    POP_SUB(tdf_to_numerical)
   end subroutine tdf_to_numerical
   !------------------------------------------------------------
 
@@ -838,7 +838,7 @@ module tdf_m
     integer :: j, k
     FLOAT :: bigt, t, omega
 
-    call push_sub('tdfunction.tdf_numerical_to_sineseries')
+    PUSH_SUB(tdf_numerical_to_sineseries)
 
     ASSERT(f%mode .eq. TDF_NUMERICAL)
 
@@ -859,7 +859,7 @@ module tdf_m
 
     call fft_end(f%fft_handler)
 
-    call pop_sub('tdfunction.tdf_numerical_to_sineseries')
+    POP_SUB(tdf_numerical_to_sineseries)
   end subroutine tdf_numerical_to_sineseries
   !------------------------------------------------------------
 
@@ -871,7 +871,7 @@ module tdf_m
     FLOAT :: bigt, t, omega
     integer :: j, k, n(3)
 
-    call push_sub('tdfunction.tdf_sineseries_to_numerical')
+    PUSH_SUB(tdf_sineseries_to_numerical)
 
     ASSERT(f%mode .eq. TDF_SINE_SERIES)
 
@@ -895,7 +895,7 @@ module tdf_m
     n(1:3) = (/ f%niter, 1, 1 /)
     call fft_init(n, 3, fft_real, f%fft_handler, optimize = .false.)
 
-    call pop_sub('tdfunction.tdf_sineseries_to_numerical')
+    POP_SUB(tdf_sineseries_to_numerical)
   end subroutine tdf_sineseries_to_numerical
   !------------------------------------------------------------
 
@@ -998,7 +998,7 @@ module tdf_m
   subroutine tdf_end(f)
     type(tdf_t), intent(inout) :: f
 
-    call push_sub('tdfunction.tdf_end')
+    PUSH_SUB(tdf_end)
 
     select case(f%mode)
     case(TDF_FROM_FILE)
@@ -1014,7 +1014,7 @@ module tdf_m
     end select
     f%mode = TDF_EMPTY
 
-    call pop_sub('tdfunction.tdf_end')
+    POP_SUB(tdf_end)
   end subroutine tdf_end
   !------------------------------------------------------------
 
@@ -1024,7 +1024,7 @@ module tdf_m
     type(tdf_t), intent(inout) :: fout
     type(tdf_t), intent(in)  :: fin
 
-    call push_sub('tdfunction.tdf_copy')
+    PUSH_SUB(tdf_copy)
 
     ASSERT( (fin%mode >= TDF_EMPTY)  .and. (fin%mode <= TDF_ZERO_FOURIER) )
     ASSERT( (fout%mode >= TDF_EMPTY)  .and. (fout%mode <= TDF_ZERO_FOURIER) )
@@ -1068,7 +1068,7 @@ module tdf_m
     end if
     fout%mode   = fin%mode
 
-    call pop_sub('tdfunction.tdf_copy')
+    POP_SUB(tdf_copy)
   end subroutine tdf_copy
   !------------------------------------------------------------
 
@@ -1078,7 +1078,7 @@ module tdf_m
     FLOAT, intent(in) :: alpha
     type(tdf_t), intent(inout) :: f
 
-    call push_sub('tdfunction.tdf_scalar_multiply')
+    PUSH_SUB(tdf_scalar_multiply)
 
     select case(f%mode)
     case(TDF_CW, TDF_GAUSSIAN, TDF_COSINOIDAL, TDF_TRAPEZOIDAL)
@@ -1093,7 +1093,7 @@ module tdf_m
       call spline_times(alpha, f%amplitude)
     end select
 
-    call pop_sub('tdfunction.tdf_scalar_multiply')
+    POP_SUB(tdf_scalar_multiply)
   end subroutine tdf_scalar_multiply
   !------------------------------------------------------------
 
@@ -1106,7 +1106,7 @@ module tdf_m
     integer :: j
     FLOAT :: t
 
-    call push_sub('tdfunction.tdf_cosine_multiply')
+    PUSH_SUB(tdf_cosine_multiply)
 
     ! For the moment, we will just assume that f and g are of the same type.
     ASSERT(f%mode .eq. TDF_NUMERICAL)
@@ -1116,7 +1116,7 @@ module tdf_m
       f%val(j) = f%val(j) * cos(omega*t)
     end do
 
-    call pop_sub('tdfunction.tdf_cosine_multiply')
+    POP_SUB(tdf_cosine_multiply)
   end subroutine tdf_cosine_multiply
   !------------------------------------------------------------
 
@@ -1126,7 +1126,7 @@ module tdf_m
     type(tdf_t), intent(in) :: f
     integer, intent(in) :: iunit
 
-    call push_sub('tdfunction.tdf_write')
+    PUSH_SUB(tdf_write)
 
     select case(f%mode)
     case(TDF_CW)
@@ -1168,7 +1168,7 @@ module tdf_m
         ' [', trim(units_abbrev(units_out%energy)), ']'
     end if
 
-    call pop_sub('tdfunction.tdf_write')
+    POP_SUB(tdf_write)
   end subroutine tdf_write
   !------------------------------------------------------------
 
@@ -1184,7 +1184,7 @@ module tdf_m
     integer :: i
     FLOAT :: t
 
-    call push_sub('tdfunction.tdf_dot_product')
+    PUSH_SUB(tdf_dot_product)
 
     fg = M_z0
 
@@ -1219,7 +1219,7 @@ module tdf_m
 
     end select
 
-    call pop_sub('tdfunction.tdf_dot_product')
+    POP_SUB(tdf_dot_product)
   end function tdf_dot_product
   !------------------------------------------------------------
 
@@ -1235,7 +1235,7 @@ module tdf_m
     integer :: i
     type(tdf_t) :: fminusg
 
-    call push_sub('tdfunction.tdf_diff')
+    PUSH_SUB(tdf_diff)
 
     ! For the moment, we will just assume that f and g are of the same type.
     ASSERT(f%mode .eq. g%mode)
@@ -1263,7 +1263,7 @@ module tdf_m
     fg = tdf_dot_product(fminusg, fminusg)
 
     call tdf_end(fminusg)
-    call pop_sub('tdfunction.tdf_diff')
+    POP_SUB(tdf_diff)
   end function tdf_diff
   !------------------------------------------------------------
 

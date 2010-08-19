@@ -59,7 +59,7 @@ contains
     integer,             intent(in)  :: rot(:, :)
     FLOAT, optional,     intent(in)  :: trans(:)
 
-    call push_sub('symm_op.symm_op_init')
+    PUSH_SUB(symm_op_init)
 
     this%rotation(1:3, 1:3) = rot(1:3, 1:3)
 
@@ -69,7 +69,7 @@ contains
       this%translation(1:3) = M_ZERO
     end if
 
-    call pop_sub('symm_op.symm_op_init')
+    POP_SUB(symm_op_init)
   end subroutine symm_op_init
   
   ! -------------------------------------------------------------------------------
@@ -78,12 +78,12 @@ contains
     type(symm_op_t),     intent(in) :: inp
     type(symm_op_t),     intent(out) :: outp
 
-    call push_sub('symm_op.symm_op_copy')
+    PUSH_SUB(symm_op_copy)
 
     outp%rotation(1:3, 1:3) =  inp%rotation(1:3, 1:3)
     outp%translation(1:3) =  inp%translation(1:3)
 
-    call pop_sub('symm_op.symm_op_copy')
+    POP_SUB(symm_op_copy)
   end subroutine symm_op_copy
   
   ! -------------------------------------------------------------------------------
@@ -91,11 +91,11 @@ contains
   subroutine symm_op_end(this)
     type(symm_op_t),  intent(inout) :: this
 
-    call push_sub('symm_op.symm_op_end')
+    PUSH_SUB(symm_op_end)
 
     !nothing to do for the moment
 
-    call pop_sub('symm_op.symm_op_end')
+    POP_SUB(symm_op_end)
   end subroutine symm_op_end
   
   ! -------------------------------------------------------------------------------

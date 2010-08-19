@@ -22,7 +22,7 @@
 subroutine X(ode_solver_init)(os)
   type(ode_solver_t), intent(out) :: os
 
-  call push_sub('ode_solver_inc.Xode_solver_init')
+  PUSH_SUB(X(ode_solver_init))
 
   !%Variable ODESolver
   !%Type integer
@@ -56,7 +56,7 @@ subroutine X(ode_solver_init)(os)
 
   call X(ode_solver_create)(os)
 
-  call pop_sub('ode_solver_inc.Xode_solver_init')
+  POP_SUB(X(ode_solver_init))
 end subroutine X(ode_solver_init)
 
 
@@ -64,7 +64,7 @@ end subroutine X(ode_solver_init)
 subroutine X(ode_solver_create)(os)
   type(ode_solver_t), intent(inout) :: os
 
-  call push_sub('ode_solver_inc.Xode_solver_create')
+  PUSH_SUB(X(ode_solver_create))
 
   select case(os%solver_type)
   case(ODE_RK4)
@@ -90,7 +90,7 @@ subroutine X(ode_solver_create)(os)
   SAFE_ALLOCATE(os%c(1:os%vsize))
   SAFE_ALLOCATE(os%e(1:os%vsize))
 
-  call pop_sub('ode_solver_inc.Xode_solver_create')
+  POP_SUB(X(ode_solver_create))
 end subroutine X(ode_solver_create)
 
 
@@ -112,7 +112,7 @@ subroutine X(ode_solver_run)(os, func, startval, solutionp, solutionvec)
     end subroutine func
   end interface
 
-  call push_sub('ode_solver_inc.Xode_solver_run')
+  PUSH_SUB(X(ode_solver_run))
 
   ! initialize array
   solutionp = M_ZERO
@@ -141,7 +141,7 @@ subroutine X(ode_solver_run)(os, func, startval, solutionp, solutionvec)
     call X(ode_step)(os, func, startval, solutionp)
   end if
 
-  call pop_sub('ode_solver_inc.Xode_solver_run')
+  POP_SUB(X(ode_solver_run))
 end subroutine X(ode_solver_run)
 
 
@@ -169,7 +169,7 @@ subroutine X(ode_step)(os, func, startval, solutionp, solutionvec)
   integer, parameter :: order = 4
   integer :: ii, jj, kk
 
-  call push_sub('ode_solver_inc.Xode_step')
+  PUSH_SUB(X(ode_step))
 
   SAFE_ALLOCATE(kv(1:os%nsize, 1:os%vsize))
   SAFE_ALLOCATE(yn(1:os%nsize))
@@ -207,7 +207,7 @@ subroutine X(ode_step)(os, func, startval, solutionp, solutionvec)
   SAFE_DEALLOCATE_A(yn)
   SAFE_DEALLOCATE_A(y0)
 
-  call pop_sub('ode_solver_inc.Xode_step')
+  POP_SUB(X(ode_step))
 end subroutine X(ode_step)
 
 
@@ -215,7 +215,7 @@ end subroutine X(ode_step)
 subroutine X(ode_solver_end)(os)
   type(ode_solver_t), intent(inout) :: os
 
-  call push_sub('ode_solver_inc.Xode_solver_end')
+  PUSH_SUB(X(ode_solver_end))
 
   ! cleanup
   SAFE_DEALLOCATE_P(os%a)
@@ -223,7 +223,7 @@ subroutine X(ode_solver_end)(os)
   SAFE_DEALLOCATE_P(os%c)
   SAFE_DEALLOCATE_P(os%e)
 
-  call pop_sub('ode_solver_inc.Xode_solver_end')
+  POP_SUB(X(ode_solver_end))
 end subroutine X(ode_solver_end)
 
 

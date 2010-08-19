@@ -117,7 +117,7 @@ contains
     type(spline_t) :: mask, splw
     FLOAT :: local_mask_x(mask_n), rcut, beta
 
-    call push_sub('filters.spline_filter_mask')
+    PUSH_SUB(spline_filter_mask)
 
     rcut = gamma*rmax
 
@@ -143,7 +143,7 @@ contains
     ! remove the mask function
     call spline_mult(spl, mask)
 
-    call pop_sub('filters.spline_filter_mask')
+    POP_SUB(spline_filter_mask)
 
   end subroutine spline_filter_mask
 

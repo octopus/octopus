@@ -83,7 +83,7 @@ contains
     integer :: def, func_type_
     character(len=32) :: prefix
 
-    call push_sub('mix.mix_init')
+    PUSH_SUB(mix_init)
 
     def = MIX_BROYDEN
     if(present(def_)) def = def_
@@ -189,7 +189,7 @@ contains
 
     call mix_clear(smix, func_type_)
 
-    call pop_sub('mix.mix_init')
+    POP_SUB(mix_init)
   end subroutine mix_init
 
 
@@ -200,7 +200,7 @@ contains
 
     integer :: func_type_
 
-    call push_sub('mix.mix_clear')
+    PUSH_SUB(mix_clear)
 
     if(present(func_type)) then 
       func_type_ = func_type
@@ -239,7 +239,7 @@ contains
 
     smix%last_ipos = 0
 
-    call pop_sub('mix.mix_clear')
+    POP_SUB(mix_clear)
   end subroutine mix_clear
 
 
@@ -247,7 +247,7 @@ contains
   subroutine mix_end(smix)
     type(mix_t), intent(inout) :: smix
 
-    call push_sub('mix.mix_end')
+    PUSH_SUB(mix_end)
 
     ! Arrays got allocated for all mixing schemes, except linear mixing
     if (smix%type_of_mixing .ne. MIX_LINEAR) then
@@ -262,7 +262,7 @@ contains
       SAFE_DEALLOCATE_P(smix%zf_old)
     end if
 
-    call pop_sub('mix.mix_end')
+    POP_SUB(mix_end)
   end subroutine mix_end
 
 
@@ -271,7 +271,7 @@ contains
     type(mix_t), intent(inout) :: smix
     FLOAT, intent(in):: newmixing
 
-    call push_sub('mix.mix_set_mixing')
+    PUSH_SUB(mix_set_mixing)
     
     if(smix%type_of_mixing == MIX_LINEAR) then
       smix%alpha = newmixing
@@ -280,7 +280,7 @@ contains
     !  call write_fatal(1)
     endif
     
-    call pop_sub('mix.mix_set_mixing')
+    POP_SUB(mix_set_mixing)
   end subroutine mix_set_mixing
 
 #include "undef.F90"

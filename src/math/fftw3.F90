@@ -119,7 +119,7 @@ contains
   subroutine fft_all_init()
     integer :: ii
 
-    call push_sub('fftw3.fft_all_init')
+    PUSH_SUB(fft_all_init)
 
     !%Variable FFTOptimize
     !%Type logical
@@ -163,7 +163,7 @@ contains
     call parse_integer(datasets_check('FFTPreparePlan'), fftw_measure, fft_prepare_plan)
     if(.not. varinfo_valid_option('FFTPreparePlan', fft_prepare_plan)) call input_error('FFTPreparePlan')
 
-    call pop_sub('fftw3.fft_all_init')
+    POP_SUB(fft_all_init)
   end subroutine fft_all_init
 
 
@@ -172,7 +172,7 @@ contains
   subroutine fft_all_end()
     integer :: ii
 
-    call push_sub('fftw3.fft_all_end')
+    PUSH_SUB(fft_all_end)
 
     do ii = 1, FFT_MAX
       if(fft_refs(ii) /= FFT_NULL) then
@@ -183,7 +183,7 @@ contains
     end do
 
     call DFFTW(cleanup)
-    call pop_sub('fftw3.fft_all_end')
+    POP_SUB(fft_all_end)
   end subroutine fft_all_end
 
 
@@ -202,7 +202,7 @@ contains
     logical :: optimize_
     character(len=100) :: str_tmp
 
-    call push_sub('fftw3.fft_init')
+    PUSH_SUB(fft_init)
 
     ! First, figure out the dimensionality of the FFT.
     fft_dim = 0
@@ -247,7 +247,7 @@ contains
         if(all(nn(1:dim) == fft_array(ii)%n(1:dim)) .and. is_real == fft_array(ii)%is_real) then
           fft = fft_array(ii)              ! return a copy
           fft_refs(ii) = fft_refs(ii) + 1  ! increment the ref count
-          call pop_sub('fftw3.fft_init')
+          POP_SUB(fft_init)
           return
         end if
       else
@@ -315,7 +315,7 @@ contains
         message(1) = trim(message(1)) // trim(str_tmp)
     call write_info(1)
 
-    call pop_sub('fftw3.fft_init')
+    POP_SUB(fft_init)
   end subroutine fft_init
 
 
@@ -324,7 +324,7 @@ contains
     type(fft_t), intent( in) :: fft_i
     type(fft_t), intent(out) :: fft_o
 
-    call push_sub('fftw3.fft_copy')
+    PUSH_SUB(fft_copy)
 
     ASSERT(fft_i%slot>=1.and.fft_i%slot<=FFT_MAX)
     ASSERT(fft_refs(fft_i%slot) > 0)
@@ -332,7 +332,7 @@ contains
     fft_o = fft_i
     fft_refs(fft_i%slot) = fft_refs(fft_i%slot) + 1
 
-    call pop_sub('fftw3.fft_copy')
+    POP_SUB(fft_copy)
   end subroutine fft_copy
 
 
@@ -342,7 +342,7 @@ contains
 
     integer :: ii
 
-    call push_sub('fftw3.fft_end')
+    PUSH_SUB(fft_end)
 
     ii = fft%slot
     if(fft_refs(ii) == FFT_NULL) then
@@ -360,7 +360,7 @@ contains
       end if
     end if
 
-    call pop_sub('fftw3.fft_end')
+    POP_SUB(fft_end)
   end subroutine fft_end
 
 
@@ -369,10 +369,10 @@ contains
     type(fft_t), intent(in)  :: fft
     integer,     intent(out) :: dd(MAX_DIM)
 
-    call push_sub('fftw3.fft_getdim_real')
+    PUSH_SUB(fft_getdim_real)
     dd = fft%n
 
-    call pop_sub('fftw3.fft_getdim_real')
+    POP_SUB(fft_getdim_real)
   end subroutine fft_getdim_real
 
 
@@ -381,12 +381,12 @@ contains
     type(fft_t), intent(in)  :: fft
     integer,     intent(out) :: dd(MAX_DIM)
 
-    call push_sub('fftw3.fft_getdim_complex')
+    PUSH_SUB(fft_getdim_complex)
 
     dd = fft%n
     if(fft%is_real == fft_real)  dd(1) = dd(1)/2 + 1
 
-    call pop_sub('fftw3.fft_getdim_complex')
+    POP_SUB(fft_getdim_complex)
   end subroutine fft_getdim_complex
 
 
@@ -398,11 +398,11 @@ contains
     FLOAT,       intent(in)  :: rr(:,:,:)
     CMPLX,       intent(out) :: cc(:,:,:)
 
-    call push_sub('fftw3.dfft_forward')
+    PUSH_SUB(dfft_forward)
 
     call DFFTW(execute_dft_r2c) (fft%planf, rr, cc)
 
-    call pop_sub('fftw3.dfft_forward')
+    POP_SUB(dfft_forward)
 
   end subroutine dfft_forward
 
@@ -415,11 +415,11 @@ contains
     FLOAT,       intent(in)  :: rr(:)
     CMPLX,       intent(out) :: cc(:)
 
-    call push_sub('fftw3.dfft_forward1')
+    PUSH_SUB(dfft_forward1)
 
     call DFFTW(execute_dft_r2c) (fft%planf, rr, cc)
 
-    call pop_sub('fftw3.dfft_forward1')
+    POP_SUB(dfft_forward1)
 
   end subroutine dfft_forward1
 
@@ -430,7 +430,7 @@ contains
     CMPLX, intent(in)  :: cc(fft%n(1), fft%n(2), fft%n(3))
     FLOAT, intent(out) :: rr(fft%n(1), fft%n(2), fft%n(3))
 
-    call push_sub('fftw3.dfft_backward')
+    PUSH_SUB(dfft_backward)
     
     call DFFTW(execute_dft_c2r) (fft%planb, cc, rr)
 
@@ -438,7 +438,7 @@ contains
     call lalg_scal(fft%n(1), fft%n(2), fft%n(3), &
       M_ONE / (fft%n(1)*fft%n(2)*fft%n(3)), rr)
 
-    call pop_sub('fftw3.dfft_backward')
+    POP_SUB(dfft_backward)
 
   end subroutine dfft_backward
 
@@ -449,7 +449,7 @@ contains
     CMPLX, intent(in)  :: cc(fft%n(1))
     FLOAT, intent(out) :: rr(fft%n(1))
 
-    call push_sub('fftw3.dfft_backward1')
+    PUSH_SUB(dfft_backward1)
     
     call DFFTW(execute_dft_c2r) (fft%planb, cc, rr)
 
@@ -457,7 +457,7 @@ contains
     call lalg_scal(fft%n(1), &
       M_ONE / fft%n(1), rr)
 
-    call pop_sub('fftw3.dfft_backward1')
+    POP_SUB(dfft_backward1)
 
   end subroutine dfft_backward1
 
@@ -469,11 +469,11 @@ contains
     CMPLX,       intent(in)  :: in(:,:,:)
     CMPLX,       intent(out) :: out(:,:,:)
 
-    call push_sub('fftw3.zfft_forward')
+    PUSH_SUB(zfft_forward)
     
     call DFFTW(execute_dft) (fft%planf, in, out)
     
-    call pop_sub('fftw3.zfft_forward')
+    POP_SUB(zfft_forward)
     
   end subroutine zfft_forward
 
@@ -484,7 +484,7 @@ contains
     CMPLX,       intent(in)  :: in (fft%n(1), fft%n(2), fft%n(3))
     CMPLX,       intent(out) :: out(fft%n(1), fft%n(2), fft%n(3))
 
-    call push_sub('fftw3.zfft_backward')
+    PUSH_SUB(zfft_backward)
 
     call DFFTW(execute_dft) (fft%planb, in, out)
 
@@ -492,7 +492,7 @@ contains
     call lalg_scal(fft%n(1), fft%n(2), fft%n(3), &
       M_z1 / (fft%n(1)*fft%n(2)*fft%n(3)), out)
 
-    call pop_sub('fftw3.zfft_backward')
+    POP_SUB(zfft_backward)
 
   end subroutine zfft_backward
 

@@ -40,7 +40,7 @@ module permutations_m
 
     integer :: i1, order, oldperm, iperm, newpos
 
-    call push_sub('math.permutations_init')
+    PUSH_SUB(permutations_init)
 
     this%nn = nn
     this%npermutations = factorial(nn)
@@ -68,13 +68,13 @@ module permutations_m
       end do
     end do
 
-    call pop_sub('math.permutations_init')
+    POP_SUB(permutations_init)
   end subroutine permutations_init
 
   subroutine permutations_write (this)
     type(permutations_t), intent(inout) :: this
     integer :: iperm
-    call push_sub('math.permutations_write')
+    PUSH_SUB(permutations_write)
     
     do iperm = 1, this%npermutations
       write (message(1), '(a,I7,a,I7,a,10I7)') 'permutation ', iperm, &
@@ -82,21 +82,21 @@ module permutations_m
       call write_info(1)
     end do
     
-    call pop_sub('math.permutations_write')
+    POP_SUB(permutations_write)
   end subroutine permutations_write
 
   subroutine permutations_nullify (this)
     type(permutations_t), intent(inout) :: this
-    call push_sub('math.permutations_nullify')
+    PUSH_SUB(permutations_nullify)
     nullify(this%allpermutations)
     nullify(this%permsign)
-    call pop_sub('math.permutations_nullify')
+    POP_SUB(permutations_nullify)
   end subroutine permutations_nullify
 
   subroutine permutations_copy (perm_in, perm_out)
     type(permutations_t), intent(inout) :: perm_in, perm_out
 
-    call push_sub('math.permutations_copy')
+    PUSH_SUB(permutations_copy)
 
     perm_out%nn = perm_in%nn
     perm_out%npermutations = perm_in%npermutations
@@ -104,16 +104,16 @@ module permutations_m
 
     call loct_pointer_copy(perm_out%allpermutations,perm_in%allpermutations)
     call loct_pointer_copy(perm_out%permsign,perm_in%permsign)
-    call pop_sub('math.permutations_copy')
+    POP_SUB(permutations_copy)
   end subroutine permutations_copy
 
   subroutine permutations_end (this)
     type(permutations_t), intent(inout) :: this
 
-    call push_sub('math.permutations_end')
+    PUSH_SUB(permutations_end)
     SAFE_DEALLOCATE_P (this%allpermutations)
     SAFE_DEALLOCATE_P (this%permsign)
-    call pop_sub('math.permutations_end')
+    POP_SUB(permutations_end)
   end subroutine permutations_end
 
 end module permutations_m

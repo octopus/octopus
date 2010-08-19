@@ -88,22 +88,22 @@ contains
     CMPLX, intent(in) :: x(:)
     CMPLX, intent(in) :: y(:)
 
-    call push_sub('solvers.zdotu_qmr')
+    PUSH_SUB(zdotu_qmr)
 
     zdotu_qmr = lalg_dotu(np_p, x, y)
 
-    call pop_sub('solvers.zdotu_qmr')
+    POP_SUB(zdotu_qmr)
   end function zdotu_qmr
 
   FLOAT function ddotu_qmr(x, y)
     FLOAT, intent(in) :: x(:)
     FLOAT, intent(in) :: y(:)
 
-    call push_sub('solvers.ddotu_qmr')
+    PUSH_SUB(ddotu_qmr)
 
     ddotu_qmr = lalg_dot(np_p, x, y)
 
-    call pop_sub('solvers.ddotu_qmr')
+    POP_SUB(ddotu_qmr)
   end function ddotu_qmr
 
 

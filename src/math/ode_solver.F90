@@ -67,7 +67,7 @@ contains
   subroutine ode_rk4_coeff(os)
     type(ode_solver_t), intent(inout)  :: os
 
-    call push_sub('ode_solver.ode_rk4_coeff')
+    PUSH_SUB(ode_rk4_coeff)
 
     os%b = (/ CNST(1.0) / CNST(6.0), &
       CNST(  1.0) / CNST(3.0),       &
@@ -87,7 +87,7 @@ contains
 
     os%a(4,1:3) = (/ CNST(0.0),  CNST(0.0),  CNST(1.0) /)
 
-    call pop_sub('ode_solver.ode_rk4_coeff')
+    POP_SUB(ode_rk4_coeff)
   end subroutine ode_rk4_coeff
 
 
@@ -96,7 +96,7 @@ contains
   subroutine ode_fb78_coeff(os)
     type(ode_solver_t), intent(inout)  :: os
 
-    call push_sub('ode_solver.ode_fb78_coeff')
+    PUSH_SUB(ode_fb78_coeff)
 
     os%b = (/ CNST(41.0) / CNST( 840.0), &
       CNST(   0.0),                      &
@@ -233,7 +233,7 @@ contains
       CNST(   0.0),                                  &
       CNST(   1.0) /)
 
-    call pop_sub('ode_solver.ode_fb78_coeff')
+    POP_SUB(ode_fb78_coeff)
   end subroutine ode_fb78_coeff
 
 
@@ -245,7 +245,7 @@ contains
 
     FLOAT :: SQRT6
 
-    call push_sub('ode_solver.ode_vr89_coeff')
+    PUSH_SUB(ode_vr89_coeff)
 
 
     SQRT6 = sqrt(M_SIX)
@@ -442,7 +442,7 @@ contains
       ( CNST(      0.0) ),                                              &
       ( CNST(   1260.0) / CNST(   233.0) ) /)
 
-    call pop_sub('ode_solver.ode_vr89_coeff')
+    POP_SUB(ode_vr89_coeff)
   end subroutine ode_vr89_coeff
 
 
@@ -452,7 +452,7 @@ contains
   subroutine ode_pd89_coeff(os)
     type(ode_solver_t), intent(inout)  :: os
 
-    call push_sub('ode_solver.ode_pd89_coeff')
+    PUSH_SUB(ode_pd89_coeff)
 
 
     os%b = (/ CNST( 14005451.0) / CNST( 335480064.0), &
@@ -591,7 +591,7 @@ contains
       CNST(   248638103.0) / CNST( 1413531060.0),               &
       CNST(           0.0) /)
 
-    call pop_sub('ode_solver.ode_pd89_coeff')
+    POP_SUB(ode_pd89_coeff)
   end subroutine ode_pd89_coeff
 
 
