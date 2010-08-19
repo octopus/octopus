@@ -22,7 +22,7 @@
 subroutine poisson1d_init(this)
   type(poisson_t), intent(inout) :: this
 
-  call push_sub('solver_1D.poisson1d_init')
+  PUSH_SUB(poisson1d_init)
 
   call parse_float(datasets_check('Poisson1DSoftCoulombParam'), &
     M_ONE, this%poisson_soft_coulomb_param)
@@ -34,7 +34,7 @@ subroutine poisson1d_init(this)
     call poisson_fft_build_1d_1d(this%der%mesh, this%poisson_soft_coulomb_param)
   end select
 
-  call pop_sub('solver_1D.poisson1d_init')
+  POP_SUB(poisson1d_init)
 end subroutine poisson1d_init
 
 !-----------------------------------------------------------------
@@ -53,7 +53,7 @@ subroutine poisson1D_solve(this, pot, rho)
 
   ASSERT(this%method == -1)
 
-  call push_sub('poisson1D.poisson1D_solve')
+  PUSH_SUB(poisson1D_solve)
 
 #ifdef HAVE_MPI
   if(this%der%mesh%parallel_in_domains) then
@@ -90,7 +90,7 @@ subroutine poisson1D_solve(this, pot, rho)
   end if
 #endif
 
-  call pop_sub('poisson1D.poisson1D_solve')
+  POP_SUB(poisson1D_solve)
 end subroutine poisson1D_solve
 !-----------------------------------------------------------------
 

@@ -76,7 +76,7 @@ contains
     type(output_me_t), intent(out) :: this
     type(simul_box_t), intent(in)  :: sb
 
-    call push_sub('output_me.output_me_init')
+    PUSH_SUB(output_me_init)
 
     !%Variable OutputMatrixElements
     !%Type flag
@@ -121,7 +121,7 @@ contains
       call parse_integer(datasets_check('OutputMEMultipoles'), 1, this%ks_multipoles)
     end if
 
-    call pop_sub('output_me.output_me_init')
+    POP_SUB(output_me_init)
   end subroutine output_me_init
 
 
@@ -137,7 +137,7 @@ contains
     integer :: id, ll, mm, ik
     character(len=256) :: fname
     
-    call push_sub('output_me.output_me')
+    PUSH_SUB(output_me)
 
     if(iand(this%what, output_me_momentum).ne.0) then
       write(fname,'(2a)') trim(dir), '/ks_me_momentum'
@@ -190,7 +190,7 @@ contains
       end if
     end if
 
-    call pop_sub('output_me.output_me')
+    POP_SUB(output_me)
   end subroutine output_me
 
 
@@ -205,7 +205,7 @@ contains
     FLOAT              :: occ, kpoint(1:MAX_DIM)
     FLOAT, allocatable :: momentum(:,:,:)
 
-    call push_sub('output_me.output_me_out_momentum')   
+    PUSH_SUB(output_me_out_momentum)
 
     SAFE_ALLOCATE(momentum(1:gr%sb%dim, 1:st%nst, 1:st%d%nik))
 
@@ -287,7 +287,7 @@ contains
     SAFE_DEALLOCATE_A(momentum)
     call io_close(iunit)
 
-    call pop_sub('output_me.output_me_out_momentum')   
+    POP_SUB(output_me_out_momentum)
   end subroutine output_me_out_momentum
 
 
@@ -307,7 +307,7 @@ contains
     integer            :: kstart, kend, kn
 #endif
 
-    call push_sub('output_me.output_me_out_ang_momentum')
+    PUSH_SUB(output_me_out_ang_momentum)
 
     ns = 1
     if(st%d%nspin == 2) ns = 2
@@ -435,7 +435,7 @@ contains
     SAFE_DEALLOCATE_A(ang)
     SAFE_DEALLOCATE_A(ang2)
     
-    call pop_sub('output_me.output_me_out_ang_momentum')
+    POP_SUB(output_me_out_ang_momentum)
   end subroutine output_me_out_ang_momentum
 
 

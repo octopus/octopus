@@ -68,7 +68,7 @@ contains
   subroutine system_init(sys)
     type(system_t), intent(out) :: sys
 
-    call push_sub('system.system_init')
+    PUSH_SUB(system_init)
 
     SAFE_ALLOCATE(sys%gr)
     SAFE_ALLOCATE(sys%st)
@@ -104,7 +104,7 @@ contains
     !print the mesh information if it is required
     call print_r()
 
-    call pop_sub('system.system_init')
+    POP_SUB(system_init)
 
   contains
 
@@ -112,7 +112,7 @@ contains
     subroutine parallel_init()
       integer :: index_dim, index_range(4)
 
-      call push_sub('system.system_init.parallel_init')
+      PUSH_SUB(system_init.parallel_init)
 
       ! for the moment we need communicators for domains plus three
       ! index-dimensions: states, k-points, and others
@@ -129,14 +129,14 @@ contains
       call multicomm_init(sys%mc, calc_mode_parallel_mask(), calc_mode_default_parallel_mask(), mpi_world%size, index_dim, &
          index_range, (/ 5000, 1, 1, 1 /))
 
-      call pop_sub('system.system_init.parallel_init')
+      POP_SUB(system_init.parallel_init)
     end subroutine parallel_init
 
     subroutine print_r()
       integer :: i, ierr
       character(len=80) :: fname
 
-      call push_sub('system.system_init.print_r')      
+      PUSH_SUB(system_init.print_r)
       
       if(iand(sys%outp%what, output_r).ne.0) then
         
@@ -147,7 +147,7 @@ contains
         end do
       end if
 
-      call pop_sub('system.system_init.print_r')      
+      POP_SUB(system_init.print_r)
     end subroutine print_r
     
   end subroutine system_init
@@ -157,7 +157,7 @@ contains
   subroutine system_end(sys)
     type(system_t), intent(inout) :: sys
 
-    call push_sub('system.system_end')
+    PUSH_SUB(system_end)
 
 #if defined(HAVE_MPI)
     call multicomm_end(sys%mc)
@@ -181,7 +181,7 @@ contains
     
     SAFE_DEALLOCATE_P(sys%gr)
 
-    call pop_sub('system.system_end')
+    POP_SUB(system_end)
   end subroutine system_end
 
 
@@ -190,7 +190,7 @@ contains
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: hm
 
-    call push_sub('system.system_h_setup')
+    PUSH_SUB(system_h_setup)
 
     call states_fermi(sys%st, sys%gr%mesh)
     call states_calc_dens(sys%st, sys%gr)
@@ -199,7 +199,7 @@ contains
     call states_fermi(sys%st, sys%gr%mesh)                             ! occupations
     call total_energy(hm, sys%gr, sys%st, -1)
 
-    call pop_sub('system.system_h_setup')
+    POP_SUB(system_h_setup)
   end subroutine system_h_setup
 
 end module system_m

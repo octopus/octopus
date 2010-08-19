@@ -70,7 +70,7 @@ contains
     integer :: ncols, ipart
     type(block_t) :: blk
 
-    call push_sub('states.modelmb_density_matrix_init')
+    PUSH_SUB(modelmb_density_matrix_init)
 
     !%Variable DensityMatricestoCalc
     !%Type block
@@ -126,7 +126,7 @@ contains
 
     denmat%dirname = trim(dir)
 
-    call pop_sub('states.modelmb_density_matrix_init')
+    POP_SUB(modelmb_density_matrix_init)
 
   end subroutine modelmb_density_matrix_init
 
@@ -153,7 +153,7 @@ contains
     type(modelmb_1part_t) :: mb_1part
     FLOAT, allocatable :: dipole_moment(:)
 
-    call push_sub('states.modelmb_density_matrix_write')
+    PUSH_SUB(modelmb_density_matrix_write)
 
 
     ! The algorithm should consider how many dimensions the wavefunction has (ndims),
@@ -302,7 +302,7 @@ contains
     SAFE_DEALLOCATE_A(npoints)
     SAFE_DEALLOCATE_A(dipole_moment)
 
-    call pop_sub('states.modelmb_density_matrix_write')
+    POP_SUB(modelmb_density_matrix_write)
   end subroutine modelmb_density_matrix_write
   ! ---------------------------------------------------------
 
@@ -310,22 +310,22 @@ contains
   subroutine modelmb_density_matrix_nullify(this)
     type(modelmb_denmat_t), intent(out) :: this
 
-    call push_sub('states.modelmb_density_matrix_nullify')
+    PUSH_SUB(modelmb_density_matrix_nullify)
     nullify(this%labels)
     nullify(this%particle_kept)
     nullify(this%nnatorb_prt)
-    call pop_sub('states.modelmb_density_matrix_nullify')
+    POP_SUB(modelmb_density_matrix_nullify)
   end subroutine modelmb_density_matrix_nullify
 
   ! ---------------------------------------------------------
   subroutine modelmb_density_matrix_end(this)
     type(modelmb_denmat_t), intent(inout) :: this
 
-    call push_sub('states.modelmb_density_matrix_end')
+    PUSH_SUB(modelmb_density_matrix_end)
     SAFE_DEALLOCATE_P(this%labels)
     SAFE_DEALLOCATE_P(this%particle_kept)
     SAFE_DEALLOCATE_P(this%nnatorb_prt)
-    call pop_sub('states.modelmb_density_matrix_end')
+    POP_SUB(modelmb_density_matrix_end)
   end subroutine modelmb_density_matrix_end
 
 

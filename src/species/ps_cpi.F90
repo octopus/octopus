@@ -57,7 +57,7 @@ contains
     integer :: iunit
     logical :: found
 
-    call push_sub('ps_cpi.ps_cpi_init')
+    PUSH_SUB(ps_cpi_init)
 
     ! allocate data
     SAFE_ALLOCATE(ps_cpi%cpi_file)
@@ -89,7 +89,7 @@ contains
 
     call ps_cpi_file_to_grid(ps_cpi%cpi_file, ps_cpi%ps_grid)
 
-    call pop_sub('ps_cpi.ps_cpi_init')
+    POP_SUB(ps_cpi_init)
   end subroutine ps_cpi_init
 
   
@@ -136,7 +136,7 @@ contains
     type(ps_cpi_t), intent(inout) :: ps_cpi
     integer,        intent(in)    :: lloc
 
-    call push_sub('ps_cpi.ps_cpi_process')
+    PUSH_SUB(ps_cpi_process)
 
     ! check norm of rphi
     call ps_in_grid_check_rphi(ps_cpi%ps_grid)
@@ -153,7 +153,7 @@ contains
     ! Calculate KB-projectors
     call ps_in_grid_kb_projectors(ps_cpi%ps_grid)
 
-    call pop_sub('ps_cpi.ps_cpi_process')
+    POP_SUB(ps_cpi_process)
   end subroutine ps_cpi_process
 
 end module ps_cpi_m

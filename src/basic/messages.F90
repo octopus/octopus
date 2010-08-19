@@ -678,7 +678,7 @@ contains
     integer, intent(inout) :: sec2
     integer, intent(inout) :: usec2
 
-    call push_sub('messages.time_sum')
+    PUSH_SUB(time_sum)
 
     sec2  = sec1 + sec2
     usec2 = usec1 + usec2
@@ -689,7 +689,7 @@ contains
       usec2 = usec2 - 1000000
     end if
 
-    call pop_sub('messages.time_sum')
+    POP_SUB(time_sum)
   end subroutine time_sum
 
 
@@ -849,7 +849,7 @@ contains
     FLOAT,            intent(in) :: def
     character(len=*), intent(in) :: text
 
-    call push_sub('messages.messages_check_def')
+    PUSH_SUB(messages_check_def)
 
     if(var > def) then
       write(message(1), '(3a)') "The value for '", text, "' does not match the recommended value."
@@ -857,7 +857,7 @@ contains
       call write_warning(2)
     end if
 
-    call pop_sub('messages.messages_check_def')
+    POP_SUB(messages_check_def)
   end subroutine messages_check_def
 
 
@@ -865,12 +865,12 @@ contains
   subroutine messages_not_implemented(feature)
     character(len=*), intent(in) :: feature
 
-    call push_sub('messages.messages_not_implemented')
+    PUSH_SUB(messages_not_implemented)
 
     message(1) = trim(feature)//" not implemented."
     call write_fatal(1, only_root_writes = .true.)
 
-    call pop_sub('messages.messages_not_implemented')
+    POP_SUB(messages_not_implemented)
   end subroutine messages_not_implemented
 
   ! ------------------------------------------------------------

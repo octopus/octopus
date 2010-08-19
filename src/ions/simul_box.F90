@@ -164,7 +164,7 @@ contains
     integer :: idir
     logical :: only_gamma_kpoint
 
-    call push_sub('simul_box.simul_box_init')
+    PUSH_SUB(simul_box_init)
 
     sb%transport_dim = 0
     
@@ -187,7 +187,7 @@ contains
     only_gamma_kpoint = sb%periodic_dim == 0 .and. .not. present(transport_mode)
     call kpoints_init(sb%kpoints, sb%symm, sb%dim, sb%rlattice, sb%klattice, geo, only_gamma_kpoint)
 
-    call pop_sub('simul_box.simul_box_init')
+    POP_SUB(simul_box_init)
 
   contains
 
@@ -198,7 +198,7 @@ contains
       type(block_t)        :: blk
       FLOAT,   allocatable :: pos(:)
 
-      call push_sub('simul_box.simul_box_init.read_misc')
+      PUSH_SUB(simul_box_init.read_misc)
 
       !%Variable DoubleFFTParameter
       !%Type float
@@ -315,7 +315,7 @@ contains
         sb%mr_flag = .false.
       end if
 
-      call pop_sub('simul_box.simul_box_init.read_misc')
+      POP_SUB(simul_box_init.read_misc)
     end subroutine read_misc
 
 
@@ -328,7 +328,7 @@ contains
       character(len=200) :: filename
 #endif      
 
-      call push_sub('simul_box.simul_box_init.read_box')
+      PUSH_SUB(simul_box_init.read_box)
       ! Read box shape.
       ! need to find out calc_mode already here since some of the variables here (e.g.
       ! periodic dimensions) can be different for the subsystems
@@ -533,7 +533,7 @@ contains
         end do
       end select
 
-      call pop_sub('simul_box.simul_box_init.read_box')
+      POP_SUB(simul_box_init.read_box)
     end subroutine read_box
 
     !--------------------------------------------------------------
@@ -541,7 +541,7 @@ contains
       integer :: idir
       type(block_t) :: blk
 
-      call push_sub('simul_box.simul_box_init.read_box_offset')
+      PUSH_SUB(simul_box_init.read_box_offset)
       !%Variable BoxOffset
       !%Type float
       !%Default 0.0
@@ -562,7 +562,7 @@ contains
         sb%box_offset(1:sb%dim) = sb%box_offset(1)
       end if
 
-      call pop_sub('simul_box.simul_box_init.read_box_offset')
+      POP_SUB(simul_box_init.read_box_offset)
     end subroutine read_box_offset
 
     ! ------------------------------------------------------------
@@ -595,7 +595,7 @@ contains
     FLOAT :: norm, cross(1:3)
     integer :: idim, jdim
 
-    call push_sub('simul_box.simul_box_build_lattice')
+    PUSH_SUB(simul_box_build_lattice)
     
     if(present(rlattice_primitive)) then
       sb%rlattice_primitive(1:sb%dim, 1:sb%dim) = rlattice_primitive(1:sb%dim, 1:sb%dim)
@@ -657,7 +657,7 @@ contains
       sb%klattice(jdim, idim) = sb%klattice_primitive(jdim, idim)*M_TWO*M_PI/(M_TWO*sb%lsize(idim))
     end forall
 
-    call pop_sub('simul_box.simul_box_build_lattice')
+    POP_SUB(simul_box_build_lattice)
   end subroutine simul_box_build_lattice
 
   
@@ -673,7 +673,7 @@ contains
     integer :: iatom, pd, idir
     FLOAT :: xx(1:MAX_DIM)
 
-    call push_sub('simul_box.simul_box_atoms_in_box')
+    PUSH_SUB(simul_box_atoms_in_box)
 
     pd = sb%periodic_dim
 
@@ -711,7 +711,7 @@ contains
 
     end do
 
-    call pop_sub('simul_box.simul_box_atoms_in_box')
+    POP_SUB(simul_box_atoms_in_box)
   end subroutine simul_box_atoms_in_box
 
 
@@ -724,7 +724,7 @@ contains
 
     FLOAT :: cross(1:3), rv3(1:3, 1:3)
 
-    call push_sub('simul_box.reciprocal_lattice')
+    PUSH_SUB(reciprocal_lattice)
     
     kv(1:MAX_DIM, 1:MAX_DIM) = M_ZERO
 
@@ -758,7 +758,7 @@ contains
       call write_fatal(1)
     end if
 
-    call pop_sub('simul_box.reciprocal_lattice')
+    POP_SUB(reciprocal_lattice)
   end subroutine reciprocal_lattice
 
 
@@ -766,7 +766,7 @@ contains
   subroutine simul_box_end(sb)
     type(simul_box_t), intent(inout) :: sb    
 
-    call push_sub('simul_box.simul_box_end')
+    PUSH_SUB(simul_box_end)
 
     call symmetries_end(sb%symm)
 
@@ -777,7 +777,7 @@ contains
     SAFE_DEALLOCATE_P(sb%hr_area%interp%ww)
     SAFE_DEALLOCATE_P(sb%hr_area%interp%posi)
 
-    call pop_sub('simul_box.simul_box_end')
+    POP_SUB(simul_box_end)
   end subroutine simul_box_end
 
 
@@ -797,7 +797,7 @@ contains
 
     integer :: idir, idir2, ispec
 
-    call push_sub('simul_box.simul_box_write_info')
+    PUSH_SUB(simul_box_write_info)
 
     write(message(1),'(a)') 'Simulation Box:'
     if(sb%box_shape .eq. BOX_USDEF) then
@@ -863,7 +863,7 @@ contains
       call write_info(1+sb%dim, iunit)
     end if
 
-    call pop_sub('simul_box.simul_box_write_info')
+    POP_SUB(simul_box_write_info)
   end subroutine simul_box_write_info
 
 
@@ -1044,7 +1044,7 @@ contains
 
     integer :: idir
 
-    call push_sub('simul_box.simul_box_dump')
+    PUSH_SUB(simul_box_dump)
 
     write(iunit, '(a)')             dump_tag
     write(iunit, '(a20,i4)')        'box_shape=          ', sb%box_shape
@@ -1083,7 +1083,7 @@ contains
         sb%rlattice_primitive(1:sb%dim, idir)
     end do
 
-    call pop_sub('simul_box.simul_box_dump')
+    POP_SUB(simul_box_dump)
   end subroutine simul_box_dump
 
   ! --------------------------------------------------------------
@@ -1096,7 +1096,7 @@ contains
     integer            :: idim, il, ierr
     FLOAT              :: rlattice_primitive(1:MAX_DIM, 1:MAX_DIM)
 
-    call push_sub('simul_box.simul_box_init_from_file')
+    PUSH_SUB(simul_box_init_from_file)
 
     ! Find (and throw away) the dump tag.
     do
@@ -1165,7 +1165,7 @@ contains
 
     call iopar_read(mpi_world, iunit, line, ierr)
 
-    call pop_sub('simul_box.simul_box_init_from_file')
+    POP_SUB(simul_box_init_from_file)
   end subroutine simul_box_init_from_file
 
   ! --------------------------------------------------------------
@@ -1173,7 +1173,7 @@ contains
     type(simul_box_t), intent(out) :: sbout
     type(simul_box_t), intent(in)  :: sbin
 
-    call push_sub('simul_box.simul_box_copy')
+    PUSH_SUB(simul_box_copy)
 
     sbout%box_shape               = sbin%box_shape
     sbout%box_offset              = sbin%box_offset
@@ -1207,7 +1207,7 @@ contains
 
     if(simul_box_is_periodic(sbin)) call symmetries_copy(sbin%symm, sbout%symm)
 
-    call pop_sub('simul_box.simul_box_copy')
+    POP_SUB(simul_box_copy)
   end subroutine simul_box_copy
 
   !--------------------------------------------------------------
@@ -1221,7 +1221,7 @@ contains
     ! some local stuff
     integer :: il
 
-    call push_sub('ob_simul_box.ob_simul_box_init')
+    PUSH_SUB(ob_simul_box_init)
 
     ! Open boundaries are only possible for rectangular simulation boxes.
     if(sb%box_shape.ne.PARALLELEPIPED) then
@@ -1255,7 +1255,7 @@ contains
     ! Add the atoms of the lead unit cells that are included in the simulation box to geo.
     call ob_simul_box_add_lead_atoms(sb, lead_sb, lead_info(:)%ucells, lead_info(:)%dataset, geo)
 
-    call pop_sub('ob_simul_box.ob_simul_box_init')
+    POP_SUB(ob_simul_box_init)
 
   end subroutine ob_simul_box_init
 
@@ -1269,7 +1269,7 @@ contains
 
     integer :: iunit, il
 
-    call push_sub('ob_simul_box.ob_read_lead_unit_cells')
+    PUSH_SUB(ob_read_lead_unit_cells)
 
     do il = 1, NLEADS
       iunit = io_open(trim(dir(il))//'/'//GS_DIR//'mesh', action = 'read', is_tmp = .true., grp = mpi_world)
@@ -1314,7 +1314,7 @@ contains
       end if
     end do
 
-    call pop_sub('ob_simul_box.ob_read_lead_unit_cells')
+    POP_SUB(ob_read_lead_unit_cells)
   end subroutine ob_read_lead_unit_cells
 
   !--------------------------------------------------------------
@@ -1332,7 +1332,7 @@ contains
     character(len=32) :: label_bak
     integer           :: il, icell, iatom, jatom, icatom, dir
 
-    call push_sub('ob_simul_box.ob_simul_box_add_lead_atoms')
+    PUSH_SUB(ob_simul_box_add_lead_atoms)
 
     SAFE_ALLOCATE(lead_geo(1:NLEADS))
     do il = 1, NLEADS
@@ -1408,7 +1408,7 @@ contains
     call geometry_end(central_geo)
     SAFE_DEALLOCATE_A(lead_geo)
 
-    call pop_sub('ob_simul_box.ob_simul_box_add_lead_atoms')
+    POP_SUB(ob_simul_box_add_lead_atoms)
   end subroutine ob_simul_box_add_lead_atoms
 
 end module simul_box_m

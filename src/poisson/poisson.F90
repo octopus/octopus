@@ -97,7 +97,7 @@ contains
 
     if(this%method.ne.-99) return ! already initialized
 
-    call push_sub('poisson.poisson_init')
+    PUSH_SUB(poisson_init)
 
     this%der => der
 
@@ -125,7 +125,7 @@ contains
 
     call messages_print_stress(stdout)
 
-    call pop_sub('poisson.poisson_init')
+    POP_SUB(poisson_init)
   contains
 
     !%Variable PoissonSolver
@@ -167,7 +167,7 @@ contains
     subroutine init_1D()
       integer :: default_solver
 
-      call push_sub('poisson.poisson_init.init_1D')
+      PUSH_SUB(poisson_init.init_1D)
 
       if(der%mesh%sb%periodic_dim==0) then
         default_solver = POISSON_FFT_SPH
@@ -193,14 +193,14 @@ contains
       call messages_print_var_option(stdout, "PoissonSolver", this%method)
       call poisson1d_init(this)
 
-      call pop_sub('poisson.poisson_init.init_1D')
+      POP_SUB(poisson_init.init_1D)
     end subroutine init_1D
 
 
     !-----------------------------------------------------------------
     subroutine init_2D()
       integer :: default_solver
-      call push_sub('poisson.poisson_init.init_2D')
+      PUSH_SUB(poisson_init.init_2D)
 
       if (der%mesh%sb%periodic_dim > 0) then 
         default_solver = der%mesh%sb%periodic_dim
@@ -229,7 +229,7 @@ contains
       call messages_print_var_option(stdout, "PoissonSolver", this%method)
       call poisson2D_init(this)
 
-      call pop_sub('poisson.poisson_init.init_2D')
+      POP_SUB(poisson_init.init_2D)
     end subroutine init_2D
 
 
@@ -237,7 +237,7 @@ contains
     subroutine init_3D()
       integer :: default_solver 
 
-      call push_sub('poisson.poisson_init.init_3D')
+      PUSH_SUB(poisson_init.init_3D)
 
 #ifndef SINGLE_PRECISION
       default_solver = POISSON_ISF
@@ -284,7 +284,7 @@ contains
       call messages_print_var_option(stdout, "PoissonSolver", this%method)
       call poisson3D_init(this, geo)
 
-      call pop_sub('poisson.poisson_init.init_3D')
+      POP_SUB(poisson_init.init_3D)
     end subroutine init_3D
 
   end subroutine poisson_init
@@ -294,7 +294,7 @@ contains
   subroutine poisson_end(this)
     type(poisson_t), intent(inout) :: this
 
-    call push_sub('poisson.poisson_end')
+    PUSH_SUB(poisson_end)
 
     select case(this%method)
 
@@ -318,7 +318,7 @@ contains
     end select
     this%method = -99
 
-    call pop_sub('poisson.poisson_end')
+    POP_SUB(poisson_end)
   end subroutine poisson_end
 
   !-----------------------------------------------------------------
@@ -335,7 +335,7 @@ contains
 
     der => this%der
 
-    call push_sub('poisson.zpoisson_solve')
+    PUSH_SUB(zpoisson_solve)
 
     if(present(all_nodes)) then
       all_nodes_value = all_nodes
@@ -361,7 +361,7 @@ contains
     SAFE_DEALLOCATE_A(aux1)
     SAFE_DEALLOCATE_A(aux2)
 
-    call pop_sub('poisson.zpoisson_solve')
+    POP_SUB(zpoisson_solve)
   end subroutine zpoisson_solve
 
   !-----------------------------------------------------------------
@@ -393,7 +393,7 @@ contains
     integer :: conversion(3)
     
     call profiling_in(prof, 'POISSON_SOLVE')
-    call push_sub('poisson.dpoisson_solve')
+    PUSH_SUB(dpoisson_solve)
 
     der => this%der
 
@@ -512,7 +512,7 @@ contains
 
     end select
 
-    call pop_sub('poisson.dpoisson_solve')
+    POP_SUB(dpoisson_solve)
     call profiling_out(prof)
   end subroutine dpoisson_solve
 
@@ -529,12 +529,12 @@ contains
     FLOAT :: alpha, beta, rr, delta, norm, rnd, ralpha, range
     integer :: ip, idir, ierr, iunit, nn, n_gaussians
 
-    call push_sub('poisson.poisson_test')
+    PUSH_SUB(poisson_test)
 
     if(calc_dim == 1) then
       write(message(1),'(a)') 'The Hartree integrator test is not implemented for the one-dimensional case.'
       call write_warning(1)
-      call pop_sub('poisson.poisson_test')
+      POP_SUB(poisson_test)
       return
     endif
 
@@ -625,7 +625,7 @@ contains
     SAFE_DEALLOCATE_A(vh)
     SAFE_DEALLOCATE_A(vh_exact)
     SAFE_DEALLOCATE_A(xx)
-    call pop_sub('poisson.poisson_test')
+    POP_SUB(poisson_test)
   end subroutine poisson_test
 
   ! -----------------------------------------------------------------

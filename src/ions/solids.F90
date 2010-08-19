@@ -61,7 +61,7 @@ contains
     integer :: pd
     integer :: icell1, icell2, icell3, jj, num
 
-    call push_sub('solids.periodic_copy_init')
+    PUSH_SUB(periodic_copy_init)
 
     this%range = range
     this%pos = pos
@@ -70,7 +70,7 @@ contains
     if(.not. simul_box_is_periodic(sb)) then
       this%nbmin = 0
       this%nbmax = 0
-      call pop_sub('solids.periodic_copy_init')
+      POP_SUB(periodic_copy_init)
       return
     end if
 
@@ -99,7 +99,7 @@ contains
       end do
     end do
 
-    call pop_sub('solids.periodic_copy_init')
+    POP_SUB(periodic_copy_init)
   end subroutine periodic_copy_init
 
   ! ----------------------------------------------------------------
@@ -107,14 +107,14 @@ contains
   subroutine periodic_copy_end(this)
     type(periodic_copy_t), intent(inout) :: this
 
-    call push_sub('solids.periodic_copy_end')
+    PUSH_SUB(periodic_copy_end)
 
     SAFE_DEALLOCATE_P(this%icell)
 
     this%nbmin = 0
     this%nbmax = 0
 
-    call pop_sub('solids.periodic_copy_end')
+    POP_SUB(periodic_copy_end)
   end subroutine periodic_copy_end
 
   ! ----------------------------------------------------------------
@@ -137,13 +137,13 @@ contains
     
     integer :: pd
 
-    call push_sub('solids.periodic_copy_position')
+    PUSH_SUB(periodic_copy_position)
 
     pd = sb%periodic_dim
 
     if(.not. simul_box_is_periodic(sb)) then
       pcopy = this%pos
-      call pop_sub('solids.periodic_copy_position')
+      POP_SUB(periodic_copy_position)
       return
     end if
 
@@ -151,7 +151,7 @@ contains
     pcopy(1:pd) = matmul(sb%rlattice_primitive(1:pd, 1:pd), pcopy(1:pd))
     pcopy(pd + 1:MAX_DIM) = this%pos(pd+1:MAX_DIM)
 
-    call pop_sub('solids.periodic_copy_position')
+    POP_SUB(periodic_copy_position)
   end function periodic_copy_position
 
   ! ----------------------------------------------------------------
@@ -166,7 +166,7 @@ contains
     FLOAT :: radius, pos(1:MAX_DIM)
     integer :: total_atoms, iatom, icopy, iunit
 
-    call push_sub('solids.periodic_write_crystal')
+    PUSH_SUB(periodic_write_crystal)
     
     radius = maxval(sb%lsize)*(M_ONE + M_EPSILON)
 
@@ -196,7 +196,7 @@ contains
 
     call io_close(iunit)
     
-    call pop_sub('solids.periodic_write_crystal')
+    POP_SUB(periodic_write_crystal)
   end subroutine periodic_write_crystal
 
 end module solids_m

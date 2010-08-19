@@ -66,11 +66,11 @@ contains
   subroutine kb_projector_null(kb_p)
     type(kb_projector_t), intent(out) :: kb_p
 
-    call push_sub('kb_projector.kb_projector_null')
+    PUSH_SUB(kb_projector_null)
 
     nullify(kb_p%p)
 
-    call pop_sub('kb_projector.kb_projector_null')
+    POP_SUB(kb_projector_null)
   end subroutine kb_projector_null
 
   ! ---------------------------------------------------------
@@ -84,7 +84,7 @@ contains
     integer :: n_c, ic
     type(ps_t), pointer :: ps
 
-    call push_sub('kb_projector.kb_projector_init')
+    PUSH_SUB(kb_projector_init)
 
     ps => species_ps(a%spec)
 
@@ -113,18 +113,18 @@ contains
     end if
 
     nullify(ps)
-    call pop_sub('kb_projector.kb_projector_init')
+    POP_SUB(kb_projector_init)
   end subroutine kb_projector_init
 
   ! ---------------------------------------------------------
   subroutine kb_projector_end(kb_p)
     type(kb_projector_t), intent(inout) :: kb_p
 
-    call push_sub('kb_projector.kb_projector_end')
+    PUSH_SUB(kb_projector_end)
 
     SAFE_DEALLOCATE_P(kb_p%p)
 
-    call pop_sub('kb_projector.kb_projector_end')
+    POP_SUB(kb_projector_end)
   end subroutine kb_projector_end
 
 #include "undef.F90"

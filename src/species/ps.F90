@@ -139,7 +139,7 @@ contains
     type(ps_upf_t) :: ps_upf !< In case UPF format is used
     type(hgh_t)    :: psp    !< In case Hartwigsen-Goedecker-Hutter ps are used.
 
-    call push_sub('ps.ps_init')
+    PUSH_SUB(ps_init)
 
     ! Sets the flavour, label, and number of spin channels.
     ps%flavour = flavour
@@ -297,7 +297,7 @@ contains
 
     ps%is_separated = .false.
 
-    call pop_sub('ps.ps_init')
+    POP_SUB(ps_init)
 
   end subroutine ps_init
 
@@ -308,7 +308,7 @@ contains
     FLOAT :: r
     integer :: ii
     
-    call push_sub('ps.ps_separate')
+    PUSH_SUB(ps_separate)
 
     !separate the local potential into (soft) long-ranged and (hard) short-ranged parts
     
@@ -364,7 +364,7 @@ contains
     
     ps%is_separated = .true.
 
-    call pop_sub('ps.ps_separate')
+    POP_SUB(ps_separate)
   end subroutine ps_separate
   
   ! ---------------------------------------------------------
@@ -372,7 +372,7 @@ contains
     type(ps_t), intent(inout) :: ps
     integer :: l, j
 
-    call push_sub('ps.ps_getradius')
+    PUSH_SUB(ps_getradius)
 
     ps%rc_max = CNST(0.0)
 
@@ -382,7 +382,7 @@ contains
       end do
     end do
     
-    call pop_sub('ps.ps_getradius')
+    POP_SUB(ps_getradius)
   end subroutine ps_getradius
 
 
@@ -391,7 +391,7 @@ contains
     type(ps_t), intent(inout) :: ps
     integer :: l, j
 
-    call push_sub('ps.ps_derivatives')
+    PUSH_SUB(ps_derivatives)
 
     do l = 0, ps%l_max
       do j = 1, ps%kbc
@@ -400,7 +400,7 @@ contains
     end do
 
 
-    call pop_sub('ps.ps_derivatives')
+    POP_SUB(ps_derivatives)
   end subroutine ps_derivatives
 
 
@@ -413,7 +413,7 @@ contains
 
     FLOAT :: alpha, beta_fs, rmax, rcut, gamma, beta_rs
 
-    call push_sub('ps.ps_filter')
+    PUSH_SUB(ps_filter)
 
     select case(filter)
     case(PS_FILTER_NONE)
@@ -457,7 +457,7 @@ contains
 
     end select
 
-    call pop_sub('ps.ps_filter')
+    POP_SUB(ps_filter)
   end subroutine ps_filter
 
 
@@ -473,7 +473,7 @@ contains
     integer  :: iunit
     integer  :: j, k, l
 
-    call push_sub('ps.ps_debug')
+    PUSH_SUB(ps_debug)
 
     ! A text file with some basic data.
     iunit = io_open(trim(dir)//'/pseudo-info', action='write')
@@ -547,7 +547,7 @@ contains
       call io_close(iunit)
     end if
 
-    call pop_sub('ps.ps_debug')
+    POP_SUB(ps_debug)
   end subroutine ps_debug
 
 
@@ -557,7 +557,7 @@ contains
 
     if(.not. associated(ps%kb)) return
 
-    call push_sub('ps.ps_end')
+    PUSH_SUB(ps_end)
 
     if(ps%is_separated) then
       call spline_end(ps%vlr)
@@ -584,7 +584,7 @@ contains
     SAFE_DEALLOCATE_P(ps%h)
     SAFE_DEALLOCATE_P(ps%k)
 
-    call pop_sub('ps.ps_end')
+    POP_SUB(ps_end)
   end subroutine ps_end
 
 
@@ -596,7 +596,7 @@ contains
     integer :: l, ll
     FLOAT :: x
 
-    call push_sub('ps.hgh_load')
+    PUSH_SUB(hgh_load)
 
     ! Fixes some components of ps, read in psf
     ps%z_val = psp%z_val
@@ -622,7 +622,7 @@ contains
     ! now we fit the splines
     call get_splines()
 
-    call pop_sub('ps.hgh_load')
+    POP_SUB(hgh_load)
 
   contains
     ! ---------------------------------------------------------
@@ -630,7 +630,7 @@ contains
       integer :: l, is, nrc, j
       FLOAT, allocatable :: hato(:)
 
-      call push_sub('ps.hgh_load.get_splines')
+      PUSH_SUB(hgh_load.get_splines)
 
       SAFE_ALLOCATE(hato(1:psp%g%nrval))
 
@@ -661,7 +661,7 @@ contains
       
       SAFE_DEALLOCATE_A(hato)
 
-      call pop_sub('ps.hgh_load.get_splines')
+      POP_SUB(hgh_load.get_splines)
     end subroutine get_splines
   end subroutine hgh_load
 
@@ -671,7 +671,7 @@ contains
     type(ps_t),         intent(inout) :: ps
     type(ps_in_grid_t), intent(in)  :: ps_grid
 
-    call push_sub('ps.ps_grid_load')
+    PUSH_SUB(ps_grid_load)
 
     ! Fixes some components of ps, read in ps_grid
     ps%z_val = ps_grid%zval
@@ -691,7 +691,7 @@ contains
     ! Passes from Rydbergs to Hartrees.
     ps%h(0:ps%l_max,:,:)    = ps%h(0:ps%l_max,:,:)    / M_TWO
 
-    call pop_sub('ps.ps_grid_load')
+    POP_SUB(ps_grid_load)
 
   contains
 
@@ -701,7 +701,7 @@ contains
       FLOAT, allocatable :: hato(:)
       integer :: is, l, ir, nrc
 
-      call push_sub('ps.ps_grid_load.get_splines')
+      PUSH_SUB(ps_grid_load.get_splines)
 
       SAFE_ALLOCATE(hato(1:g%nrval))
 
@@ -751,7 +751,7 @@ contains
       end if
 
       SAFE_DEALLOCATE_A(hato)
-      call pop_sub('ps.ps_grid_load.get_splines')
+      POP_SUB(ps_grid_load.get_splines)
     end subroutine get_splines
   end subroutine ps_grid_load
 
@@ -765,7 +765,7 @@ contains
     FLOAT :: x
     FLOAT, allocatable :: hato(:)
 
-    call push_sub('ps.ps_upf_load')
+    PUSH_SUB(ps_upf_load)
 
     ! Fixes some components of ps, read in ps_upf
     ps%z_val = ps_upf%z_val
@@ -855,7 +855,7 @@ contains
 
     SAFE_DEALLOCATE_A(hato)
 
-    call pop_sub('ps.ps_upf_load')
+    POP_SUB(ps_upf_load)
   end subroutine ps_upf_load
 
 

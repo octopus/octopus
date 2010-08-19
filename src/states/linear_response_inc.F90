@@ -33,7 +33,7 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik)
   FLOAT :: xx, theta, theta_ij, theta_ji, alpha_j, delta_e, dsmear
   FLOAT, allocatable :: theta_Fi(:), beta_ij(:)
 
-  call push_sub('linear_response_inc.Xlr_orth_vector')
+  PUSH_SUB(X(lr_orth_vector))
 
   dsmear = max(CNST(1e-14), st%smear%dsmear)
 
@@ -97,7 +97,7 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik)
 
   SAFE_DEALLOCATE_A(beta_ij)
 
-  call pop_sub('linear_response_inc.Xlr_orth_vector')
+  POP_SUB(X(lr_orth_vector))
 
 end subroutine X(lr_orth_vector)
 
@@ -113,7 +113,7 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
   CMPLX   :: cc
   R_TYPE  :: dd
 
-  call push_sub('linear_response_inc.Xlr_build_dl_rho')
+  PUSH_SUB(X(lr_build_dl_rho))
 
   if(st%d%ispin == SPINORS) then
     message(1) = "Not yet implemented - please fix me"
@@ -152,7 +152,7 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
     end do
   end do
 
-  call pop_sub('linear_response_inc.Xlr_build_dl_rho')
+  POP_SUB(X(lr_build_dl_rho))
 end subroutine X(lr_build_dl_rho)
 
 
@@ -166,7 +166,7 @@ subroutine X(lr_orth_response)(mesh, st, lr)
   type(lr_t),     intent(inout) :: lr
   
   integer :: ist, ik
-  call push_sub('linear_response_inc.Xlr_orth_response')
+  PUSH_SUB(X(lr_orth_response))
   
   do ik = 1, st%d%nik
     do ist = 1, st%nst
@@ -174,7 +174,7 @@ subroutine X(lr_orth_response)(mesh, st, lr)
     end do
   end do
   
-  call pop_sub('linear_response_inc.Xlr_orth_response')
+  POP_SUB(X(lr_orth_response))
 end subroutine X(lr_orth_response)
 
 
@@ -188,7 +188,7 @@ subroutine X(lr_swap_sigma)(st, mesh, plus, minus)
   integer :: ik, idim, ist
   R_TYPE, allocatable :: tmp(:)
 
-  call push_sub('linear_response_inc.Xlr_swap_sigma')
+  PUSH_SUB(X(lr_swap_sigma))
 
   SAFE_ALLOCATE(tmp(1:mesh%np))
 
@@ -209,7 +209,7 @@ subroutine X(lr_swap_sigma)(st, mesh, plus, minus)
   end do
 
   SAFE_DEALLOCATE_A(tmp)
-  call pop_sub('linear_response_inc.Xlr_swap_sigma')
+  POP_SUB(X(lr_swap_sigma))
 
 end subroutine X(lr_swap_sigma)
 

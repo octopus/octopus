@@ -52,7 +52,7 @@ subroutine X(sternheimer_solve)(                           &
   integer :: total_iter, idim, ip, ispin
   character(len=100) :: dirname
 
-  call push_sub('sternheimer_inc.Xsternheimer_solve')
+  PUSH_SUB(X(sternheimer_solve))
   call profiling_in(prof, "STERNHEIMER")
 
   ASSERT(nsigma == 1 .or. nsigma == 2)
@@ -324,7 +324,7 @@ subroutine X(sternheimer_solve)(                           &
   SAFE_DEALLOCATE_A(orth_mask)
 
   call profiling_out(prof)
-  call pop_sub('sternheimer_inc.Xsternheimer_solve')
+  POP_SUB(X(sternheimer_solve))
 
 end subroutine X(sternheimer_solve)
 
@@ -341,7 +341,7 @@ subroutine X(sternheimer_calc_hvar)(this, sys, hm, lr, nsigma, hvar)
   R_TYPE, allocatable :: tmp(:), hartree(:)
   integer :: np, ip, ik, ik2
 
-  call push_sub('sternheimer_inc.Xsternheimer_calc_hvar')
+  PUSH_SUB(X(sternheimer_calc_hvar))
   call profiling_in(prof_hvar, "STERNHEIMER_HVAR")
 
   np = sys%gr%mesh%np
@@ -386,7 +386,7 @@ subroutine X(sternheimer_calc_hvar)(this, sys, hm, lr, nsigma, hvar)
   end if
 
   call profiling_out(prof_hvar)
-  call pop_sub('sternheimer_inc.Xsternheimer_calc_hvar')
+  POP_SUB(X(sternheimer_calc_hvar))
 end subroutine X(sternheimer_calc_hvar)
 
 
@@ -395,10 +395,10 @@ subroutine X(sternheimer_set_rhs)(this, rhs)
   type(sternheimer_t), intent(inout) :: this
   R_TYPE, target,      intent(in)    :: rhs(:, :, :, :)
 
-  call push_sub('sternheimer_inc.Xsternheimer_set_rhs')
+  PUSH_SUB(X(sternheimer_set_rhs))
   this%X(rhs) => rhs
 
-  call pop_sub('sternheimer_inc.Xsternheimer_set_rhs')
+  POP_SUB(X(sternheimer_set_rhs))
 end subroutine X(sternheimer_set_rhs)
 
 
@@ -418,14 +418,14 @@ subroutine X(sternheimer_solve_order2)( &
   character(len=*),       intent(in)    :: wfs_tag
   logical,      optional, intent(in)    :: have_restart_rho
 
-  call push_sub('sternheimer_inc.Xsternheimer_solve_order2')
+  PUSH_SUB(X(sternheimer_solve_order2))
 
   ! construct inhomogeneous RHS term from first-order solution
   ! call X(sternheimer_solve) for sum frequency
   ! call X(sternheimer_solve) for difference frequency
   ! unless of course they are identical (one or both freqs the same)
 
-  call pop_sub('sternheimer_inc.Xsternheimer_solve_order2')
+  POP_SUB(X(sternheimer_solve_order2))
 end subroutine X(sternheimer_solve_order2)
 
 !! Local Variables:

@@ -77,7 +77,7 @@ contains
     integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, iunit, ierr
     FLOAT, allocatable   :: infrared(:,:)
 
-    call push_sub('phonons_lr.phonons_lr_run')
+    PUSH_SUB(phonons_lr_run)
 
     !some shorcuts
 
@@ -175,7 +175,7 @@ contains
     call sternheimer_end(sh)
     call states_deallocate_wfns(st)
 
-    call pop_sub('phonons_lr.phonons_lr_run')
+    POP_SUB(phonons_lr_run)
 
   contains
 
@@ -184,7 +184,7 @@ contains
       FLOAT :: ac, xi(1:MAX_DIM), xj(1:MAX_DIM), xk(1:MAX_DIM), r2
       integer :: katom
 
-      call push_sub('phonons_lr.phonons_lr_run.build_ionic_dyn_matrix')
+      PUSH_SUB(phonons_lr_run.build_ionic_dyn_matrix)
 
       do iatom = 1, natoms
         do idir = 1, gr%mesh%sb%dim
@@ -231,7 +231,7 @@ contains
           end do
         end do
       end do
-      call pop_sub('phonons_lr.phonons_lr_run.build_ionic_dyn_matrix')
+      POP_SUB(phonons_lr_run.build_ionic_dyn_matrix)
 
     end subroutine build_ionic_dyn_matrix
 
@@ -239,7 +239,7 @@ contains
     subroutine calc_infrared
       FLOAT :: lir(1:MAX_DIM+1)
 
-      call push_sub('phonons_lr.phonons_lr_run.calc_infrared')
+      PUSH_SUB(phonons_lr_run.calc_infrared)
       !calculate infrared intensities
 
       iunit = io_open(VIB_MODES_DIR//'infrared', action='write')
@@ -261,7 +261,7 @@ contains
       end do
 
       call io_close(iunit)
-      call pop_sub('phonons_lr.phonons_lr_run.calc_infrared')
+      POP_SUB(phonons_lr_run.calc_infrared)
     end subroutine calc_infrared
 
     ! ---------------------------------------------------------
@@ -270,7 +270,7 @@ contains
       type(lr_t) :: lrtmp
       integer :: ik, ist, idim, inm
 
-      call push_sub('phonons_lr.phonons_lr_run.vib_modes_wavefunctions')
+      PUSH_SUB(phonons_lr_run.vib_modes_wavefunctions)
 
       call lr_init(lrtmp)
       call lr_allocate(lrtmp, st, gr%mesh)
@@ -307,7 +307,7 @@ contains
       end do
 
       call lr_dealloc(lrtmp)
-      call pop_sub('phonons_lr.phonons_lr_run.vib_modes_wavefunctions')
+      POP_SUB(phonons_lr_run.vib_modes_wavefunctions)
     end subroutine vib_modes_wavefunctions
 
   end subroutine phonons_lr_run
@@ -317,11 +317,11 @@ contains
   character(len=100) function phn_rho_tag(iatom, dir) result(str)
     integer, intent(in) :: iatom, dir
     
-    call push_sub('phonons_lr.phn_rho_tag')
+    PUSH_SUB(phn_rho_tag)
     
     write(str, '(a,i4.4,a,i1)') 'phn_rho_', iatom, '_',  dir
 
-    call pop_sub('phonons_lr.phn_rho_tag')
+    POP_SUB(phn_rho_tag)
 
   end function phn_rho_tag
   
@@ -330,11 +330,11 @@ contains
   character(len=100) function phn_wfs_tag(iatom, dir) result(str)
     integer, intent(in) :: iatom, dir
 
-    call push_sub('phonons_lr.phn_wfs_tag')
+    PUSH_SUB(phn_wfs_tag)
 
     write(str, '(a,i4.4,a,a)') "phn_wfs_", iatom, "_", index2axis(dir)
 
-    call pop_sub('phonons_lr.phn_wfs_tag')
+    POP_SUB(phn_wfs_tag)
     
   end function phn_wfs_tag
 
@@ -343,11 +343,11 @@ contains
   character(len=100) function phn_nm_wfs_tag(inm) result(str)
     integer, intent(in) :: inm
 
-    call push_sub('phonons_lr.phn_wfs_tag')
+    PUSH_SUB(phn_wfs_tag)
 
     write(str, '(a,i5.5)') "phn_nm_wfs_", inm
 
-    call pop_sub('phonons_lr.phn_wfs_tag')
+    POP_SUB(phn_wfs_tag)
     
   end function phn_nm_wfs_tag
 

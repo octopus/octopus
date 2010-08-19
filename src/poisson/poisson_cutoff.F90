@@ -142,7 +142,7 @@ contains
 
     integer :: nr = CNST(1000)
 
-    call push_sub('poisson_cutoff.poisson_cutoff_inf_cylinder')
+    PUSH_SUB(poisson_cutoff_inf_cylinder)
 
     if ( x == M_ZERO ) then
       ! Simpson rule for the G_x = 0 contribution -log(r)
@@ -161,7 +161,7 @@ contains
         - x*rmax*loct_bessel_j0(p*rmax)*loct_bessel_k1(x*rmax)
     end if
 
-    call pop_sub('poisson_cutoff.poisson_cutoff_inf_cylinder')
+    POP_SUB(poisson_cutoff_inf_cylinder)
   end function poisson_cutoff_3D_1D
 
 
@@ -169,7 +169,7 @@ contains
   FLOAT function poisson_cutoff_3D_2D(p, z, r) result(cutoff)
     FLOAT, intent(in) ::  p, z, r
 
-    call push_sub('poisson_cutoff.poisson_cutoff_inf_cylinder')
+    PUSH_SUB(poisson_cutoff_inf_cylinder)
 
     if ( p == M_ZERO ) then
       cutoff = M_ONE - cos(z*r) - z*r*sin(z*r)
@@ -177,7 +177,7 @@ contains
       cutoff = M_ONE + exp(-p*r)*(z*sin(z*r)/p-cos(z*r))
     end if
 
-    call pop_sub('poisson_cutoff.poisson_cutoff_inf_cylinder')
+    POP_SUB(poisson_cutoff_inf_cylinder)
   end function poisson_cutoff_3D_2D
   ! ---------------------------------------------------------
 

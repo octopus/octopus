@@ -85,7 +85,7 @@ contains
     FLOAT, allocatable :: ldiff(:), leigenval(:)
 #endif
     
-    call push_sub('ob_lippmann_schwinger.lippmann_schwinger')
+    PUSH_SUB(lippmann_schwinger)
 
     SAFE_ALLOCATE(rhs(1:gr%mesh%np_part, 1:st%d%dim))
     do il = 1, NLEADS
@@ -177,7 +177,7 @@ contains
       SAFE_DEALLOCATE_P(lead(il)%self_energy)
     end do
 
-    call pop_sub('ob_lippmann_schwinger.lippmann_schwinger')
+    POP_SUB(lippmann_schwinger)
   end subroutine lippmann_schwinger
 
 
@@ -192,7 +192,7 @@ contains
     logical :: transposed_
     CMPLX, allocatable :: tmp(:, :)
 
-    call push_sub('ob_lippmann_schwinger.calc_rhs')
+    PUSH_SUB(calc_rhs)
 
     SAFE_ALLOCATE(tmp(1:gr_p%mesh%np_part, 1:st_p%d%dim))
 
@@ -235,7 +235,7 @@ contains
     end do
     
     SAFE_DEALLOCATE_A(tmp)
-    call pop_sub('ob_lippmann_schwinger.calc_rhs')
+    POP_SUB(calc_rhs)
   end subroutine calc_rhs
 
 
@@ -248,7 +248,7 @@ contains
     integer :: np_part, np, idim
     CMPLX   :: dot
 
-!    call push_sub('ob_lippmann_schwinger.dotu')
+!    PUSH_SUB(dotu)
 
     np_part = gr_p%mesh%np_part
     np      = gr_p%mesh%np
@@ -259,7 +259,7 @@ contains
     end do
     dotu = dot
 
-!    call pop_sub('ob_lippmann_schwinger.dotu')
+!    POP_SUB(dotu)
 
   contains
 
@@ -280,7 +280,7 @@ contains
     integer :: np_part, np, idim
     FLOAT   :: nrm
 
-!    call push_sub('ob_lippmann_schwinger.nrm2')
+!    PUSH_SUB(nrm2)
 
     np_part = gr_p%mesh%np_part
     np      = gr_p%mesh%np
@@ -291,7 +291,7 @@ contains
     end do
     nrm2 = nrm
 
-!    call pop_sub('ob_lippmann_schwinger.nrm2')
+!    POP_SUB(nrm2)
 
   contains
 
@@ -321,7 +321,7 @@ contains
     CMPLX, allocatable :: tmp_y(:, :)
     integer            :: np_part, idim, il, dim
 
-!    call push_sub('ob_lippmann_schwinger.lhs')
+!    PUSH_SUB(lhs)
 
     np_part = gr_p%mesh%np_part
     dim     = st_p%d%dim
@@ -352,7 +352,7 @@ contains
 
     SAFE_DEALLOCATE_A(tmp_x)
     SAFE_DEALLOCATE_A(tmp_y)
-!    call pop_sub('ob_lippmann_schwinger.lhs')
+!    POP_SUB(lhs)
 
   contains
 
@@ -381,7 +381,7 @@ contains
     CMPLX, allocatable :: tmp_y(:, :)
     integer            :: np_part, idim, il, dim
 
-!    call push_sub('ob_lippmann_schwinger.lhs_t')
+!    PUSH_SUB(lhs_t)
 
     np_part = gr_p%mesh%np_part
     dim     = st_p%d%dim
@@ -414,7 +414,7 @@ contains
 
     SAFE_DEALLOCATE_A(tmp_x)
     SAFE_DEALLOCATE_A(tmp_y)
-!    call pop_sub('ob_lippmann_schwinger.lhs_t')
+!    POP_SUB(lhs_t)
 
   contains
 
@@ -440,12 +440,12 @@ contains
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
 
-!    call push_sub('ob_lippmann_schwinger.lhs_symmetrized')
+!    PUSH_SUB(lhs_symmetrized)
 
     call lhs(x, y)
     call lhs_t(y)
 
-!    call pop_sub('ob_lippmann_schwinger.lhs_symmetrized')
+!    POP_SUB(lhs_symmetrized)
   end subroutine lhs_symmetrized
 
 
@@ -457,11 +457,11 @@ contains
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
 
-!    call push_sub('ob_lippmann_schwinger.precond')
+!    PUSH_SUB(precond)
 
     y(:) = x(:)
 
-!    call pop_sub('ob_lippmann_schwinger.precond')
+!    POP_SUB(precond)
   end subroutine precond
 end module ob_lippmann_schwinger_m
 

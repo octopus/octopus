@@ -30,7 +30,7 @@ R_TYPE function X(mf_integrate) (mesh, ff) result(dd)
 #endif
 
   call profiling_in(C_PROFILING_MF_INTEGRATE, 'MF_INTEGRATE')
-  call push_sub('mesh_function_inc.Xmf_integrate')
+  PUSH_SUB(X(mf_integrate))
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
 
@@ -55,7 +55,7 @@ R_TYPE function X(mf_integrate) (mesh, ff) result(dd)
   end if
 #endif
   
-  call pop_sub('mesh_function_inc.Xmf_integrate')
+  POP_SUB(X(mf_integrate))
   call profiling_out(C_PROFILING_MF_INTEGRATE)
 
 end function X(mf_integrate)
@@ -72,10 +72,10 @@ end function X(mf_integrate)
 R_TYPE function X(mf_dotp_aux)(f1, f2) result(dotp)
   R_TYPE,            intent(in) :: f1(:), f2(:)
 
-  call push_sub('mesh_function_inc.Xmf_dotp_aux')
+  PUSH_SUB(X(mf_dotp_aux))
   dotp = X(mf_dotp)(mesh_aux, f1, f2)
 
-  call pop_sub('mesh_function_inc.Xmf_dotp_aux')
+  POP_SUB(X(mf_dotp_aux))
 end function X(mf_dotp_aux)
 
 ! ---------------------------------------------------------
@@ -97,7 +97,7 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
   integer             :: ip
 
   call profiling_in(C_PROFILING_MF_DOTP, "MF_DOTP")
-  call push_sub('mesh_function_inc.Xmf_dotp_1')
+  PUSH_SUB(X(mf_dotp_1))
 
   ASSERT(ubound(f1, dim = 1) == mesh%np .or. ubound(f1, dim = 1) == mesh%np_part)
   ASSERT(ubound(f2, dim = 1) == mesh%np .or. ubound(f2, dim = 1) == mesh%np_part)
@@ -157,7 +157,7 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
     dotp = dotp_tmp
   end if
 
-  call pop_sub('mesh_function_inc.Xmf_dotp_1')
+  POP_SUB(X(mf_dotp_1))
   call profiling_out(C_PROFILING_MF_DOTP)
 
 end function X(mf_dotp_1)
@@ -180,7 +180,7 @@ R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu) result(dotp)
   R_TYPE :: dotp_tmp
 #endif
 
-  call push_sub('mesh_function_inc.Xmf_dotp_2')
+  PUSH_SUB(X(mf_dotp_2))
 
   dotu_ = .false.
   if(present(dotu)) then
@@ -206,7 +206,7 @@ R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu) result(dotp)
   end if
 #endif
 
-  call pop_sub('mesh_function_inc.Xmf_dotp_2')
+  POP_SUB(X(mf_dotp_2))
 
 end function X(mf_dotp_2)
 
@@ -222,7 +222,7 @@ FLOAT function X(mf_nrm2_1)(mesh, ff, reduce) result(nrm2)
   R_TYPE, allocatable :: ll(:)
 
   call profiling_in(C_PROFILING_MF_NRM2, "MF_NRM2")
-  call push_sub('mesh_function_inc.Xmf_nrm2_1')
+  PUSH_SUB(X(mf_nrm2_1))
 
   if(mesh%use_curvilinear) then
     SAFE_ALLOCATE(ll(1:mesh%np))
@@ -254,7 +254,7 @@ FLOAT function X(mf_nrm2_1)(mesh, ff, reduce) result(nrm2)
     nrm2 = nrm2_tmp
   end if
 
-  call pop_sub('mesh_function_inc.Xmf_nrm2_1')
+  POP_SUB(X(mf_nrm2_1))
   call profiling_out(C_PROFILING_MF_NRM2)
 
 end function X(mf_nrm2_1)
@@ -268,7 +268,7 @@ FLOAT function X(mf_nrm2_2)(mesh, dim, ff, reduce) result(nrm2)
 
   integer :: idim
 
-  call push_sub('mesh_function_inc.Xmf_nrm2_2')
+  PUSH_SUB(X(mf_nrm2_2))
 
   nrm2 = M_ZERO
 
@@ -280,7 +280,7 @@ FLOAT function X(mf_nrm2_2)(mesh, dim, ff, reduce) result(nrm2)
     end if
   end do
 
-  call pop_sub('mesh_function_inc.Xmf_nrm2_2')
+  POP_SUB(X(mf_nrm2_2))
 
 end function X(mf_nrm2_2)
 
@@ -294,7 +294,7 @@ R_TYPE function X(mf_moment) (mesh, ff, idir, order) result(rr)
 
   R_TYPE, allocatable :: fxn(:)
 
-  call push_sub('mesh_function_inc.Xmf_moment')
+  PUSH_SUB(X(mf_moment))
 
   SAFE_ALLOCATE(fxn(1:mesh%np))
 
@@ -302,7 +302,7 @@ R_TYPE function X(mf_moment) (mesh, ff, idir, order) result(rr)
   rr = X(mf_integrate)(mesh, fxn)
 
   SAFE_DEALLOCATE_A(fxn)
-  call pop_sub('mesh_function_inc.Xmf_moment')
+  POP_SUB(X(mf_moment))
 
 end function X(mf_moment)
 
@@ -319,7 +319,7 @@ subroutine X(mf_random)(mesh, ff, seed)
   integer :: idim, ip
   FLOAT :: aa(MAX_DIM), rnd, rr
 
-  call push_sub('mesh_function_inc.Xmf_random')
+  PUSH_SUB(X(mf_random))
 
   if(present(seed)) then
     iseed = iseed + seed
@@ -345,7 +345,7 @@ subroutine X(mf_random)(mesh, ff, seed)
   rr = X(mf_nrm2)(mesh, ff)
   call lalg_scal(mesh%np, M_ONE/rr, ff)
 
-  call pop_sub('mesh_function_inc.Xmf_random')
+  POP_SUB(X(mf_random))
 
 end subroutine X(mf_random)
 
@@ -373,7 +373,7 @@ subroutine X(mf_partial_integrate)(mesh, jj, f_in, f_out)
   R_TYPE,       intent(out) :: f_out(:)
 
   integer :: ip, np_out, mm
-  call push_sub('mesh_function_inc.Xmf_partial_integrate')
+  PUSH_SUB(X(mf_partial_integrate))
 
   ASSERT(.not.(mesh%parallel_in_domains))
   ASSERT(.not.(mesh%use_curvilinear))
@@ -388,7 +388,7 @@ subroutine X(mf_partial_integrate)(mesh, jj, f_in, f_out)
 
   f_out(1:np_out) = f_out(1:np_out) * mesh%vol_pp(1)/mesh%spacing(jj)
 
-  call pop_sub('mesh_function_inc.Xmf_partial_integrate')
+  POP_SUB(X(mf_partial_integrate))
 end subroutine X(mf_partial_integrate)
 
 
@@ -403,7 +403,7 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, f_in, f_out
   R_TYPE, allocatable :: f_global(:)
   integer :: ip, jj, kk
 
-  call push_sub('mesh_function_inc.Xmf_interpolate')
+  PUSH_SUB(X(mf_interpolate))
 
   if(full_interpolation) then
     call X(mf_interpolate_points) (mesh_in%sb%dim, mesh_in%np_global, mesh_in%x, f_in, &
@@ -440,7 +440,7 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, f_in, f_out
 
   end if
 
-  call pop_sub('mesh_function_inc.Xmf_interpolate')
+  POP_SUB(X(mf_interpolate))
 end subroutine X(mf_interpolate)
 
 
@@ -465,7 +465,7 @@ subroutine X(mf_interpolate_points) (ndim, npoints_in, x_in, f_in, npoints_out, 
   type(spline_t) :: interp1d
 #endif
 
-  call push_sub('mesh_function_inc.Xmf_interpolate_points')
+  PUSH_SUB(X(mf_interpolate_points))
 
 #ifdef SINGLE_PRECISION
   SAFE_ALLOCATE(rx_in(1:npoints_in, 1:ndim))
@@ -513,7 +513,7 @@ subroutine X(mf_interpolate_points) (ndim, npoints_in, x_in, f_in, npoints_out, 
   SAFE_DEALLOCATE_P(rx_in)
 #endif
 
-  call pop_sub('mesh_function_inc.Xmf_interpolate_points')
+  POP_SUB(X(mf_interpolate_points))
 end subroutine X(mf_interpolate_points)
 
 
@@ -533,7 +533,7 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
   type(qshep_t) :: interp
   real(8), allocatable :: xglobal(:, :)
 
-  call push_sub('mesh_function_inc.Xmf_interpolate_on_plane')
+  PUSH_SUB(X(mf_interpolate_on_plane))
 
   SAFE_ALLOCATE(xglobal(1:mesh%np_part_global, 1:MAX_DIM))
   do ip = 1, mesh%np_part_global
@@ -562,7 +562,7 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
 
   SAFE_DEALLOCATE_A(xglobal)
   SAFE_DEALLOCATE_A(f_global)
-  call pop_sub('mesh_function_inc.Xmf_interpolate_on_plane')
+  POP_SUB(X(mf_interpolate_on_plane))
 end subroutine X(mf_interpolate_on_plane)
 
 
@@ -582,7 +582,7 @@ subroutine X(mf_interpolate_on_line)(mesh, line, ff, f_in_line)
   type(qshep_t) :: interp
   real(8), allocatable :: xglobal(:, :)
 
-  call push_sub('mesh_function_inc.Xmf_interpolate_on_line')
+  PUSH_SUB(X(mf_interpolate_on_line))
 
   SAFE_ALLOCATE(xglobal(1:mesh%np_part_global, 1:MAX_DIM))
   do ip = 1, mesh%np_part_global
@@ -607,7 +607,7 @@ subroutine X(mf_interpolate_on_line)(mesh, line, ff, f_in_line)
   SAFE_DEALLOCATE_A(f_global)
   SAFE_DEALLOCATE_A(xglobal)
 
-  call pop_sub('mesh_function_inc.Xmf_interpolate_on_line')
+  POP_SUB(X(mf_interpolate_on_line))
 end subroutine X(mf_interpolate_on_line)
 
 
@@ -621,7 +621,7 @@ R_TYPE function X(mf_surface_integral_scalar) (mesh, ff, plane) result(dd)
 
   R_TYPE, allocatable :: f_in_plane(:, :)
 
-  call push_sub('mesh_function_inc.Xmf_surface_integral_scalar')
+  PUSH_SUB(X(mf_surface_integral_scalar))
 
   if(mesh%sb%dim .ne. 3) then
     message(1) = 'INTERNAL ERROR at Xmf_surface_integral: wrong dimensionality.'
@@ -635,7 +635,7 @@ R_TYPE function X(mf_surface_integral_scalar) (mesh, ff, plane) result(dd)
   dd = sum(f_in_plane(:, :) * plane%spacing**2)
 
   SAFE_DEALLOCATE_A(f_in_plane)
-  call pop_sub('mesh_function_inc.Xmf_surface_integral_scalar')
+  POP_SUB(X(mf_surface_integral_scalar))
 end function X(mf_surface_integral_scalar)
 
 
@@ -650,7 +650,7 @@ R_TYPE function X(mf_surface_integral_vector) (mesh, ff, plane) result(dd)
   R_TYPE, allocatable :: fn(:)
   integer :: ip
 
-  call push_sub('mesh_function_inc.Xmf_surface_integral_vector')
+  PUSH_SUB(X(mf_surface_integral_vector))
 
   SAFE_ALLOCATE(fn(1:mesh%np))
   do ip = 1, mesh%np
@@ -660,7 +660,7 @@ R_TYPE function X(mf_surface_integral_vector) (mesh, ff, plane) result(dd)
   dd =  X(mf_surface_integral_scalar)(mesh, fn, plane)
 
   SAFE_DEALLOCATE_A(fn)
-  call pop_sub('mesh_function_inc.Xmf_surface_integral_vector')
+  POP_SUB(X(mf_surface_integral_vector))
 end function X(mf_surface_integral_vector)
 
 
@@ -674,7 +674,7 @@ R_TYPE function X(mf_line_integral_scalar) (mesh, ff, line) result(dd)
 
   R_TYPE, allocatable :: f_in_line(:)
 
-  call push_sub('mesh_function_inc.Xmf_line_integral_scalar')
+  PUSH_SUB(X(mf_line_integral_scalar))
 
   if(mesh%sb%dim .ne. 2) then
     message(1) = 'INTERNAL ERROR at Xmf_surface_integral: wrong dimensionality.'
@@ -688,7 +688,7 @@ R_TYPE function X(mf_line_integral_scalar) (mesh, ff, line) result(dd)
   dd = sum(f_in_line(:) * line%spacing)
 
   SAFE_DEALLOCATE_A(f_in_line)
-  call pop_sub('mesh_function_inc.Xmf_line_integral_scalar')
+  POP_SUB(X(mf_line_integral_scalar))
 end function X(mf_line_integral_scalar)
 
 
@@ -703,7 +703,7 @@ R_TYPE function X(mf_line_integral_vector) (mesh, ff, line) result(dd)
   R_TYPE, allocatable :: fn(:)
   integer :: ip
 
-  call push_sub('mesh_function_inc.Xmf_line_integral_vector')
+  PUSH_SUB(X(mf_line_integral_vector))
 
   SAFE_ALLOCATE(fn(1:mesh%np))
   do ip = 1, mesh%np
@@ -713,7 +713,7 @@ R_TYPE function X(mf_line_integral_vector) (mesh, ff, line) result(dd)
   dd =  X(mf_line_integral_scalar)(mesh, fn, line)
 
   SAFE_DEALLOCATE_A(fn)
-  call pop_sub('mesh_function_inc.Xmf_line_integral_vector')
+  POP_SUB(X(mf_line_integral_vector))
 end function X(mf_line_integral_vector)
 
 
@@ -730,7 +730,7 @@ subroutine X(mf_put_radial_spline)(mesh, spl, center, ff, add)
   FLOAT :: rr
   logical :: add_
 
-  call push_sub('mesh_function_inc.Xmf_put_radial_spline')
+  PUSH_SUB(X(mf_put_radial_spline))
 
   add_ = .false.
 
@@ -754,7 +754,7 @@ subroutine X(mf_put_radial_spline)(mesh, spl, center, ff, add)
 
   end if
 
-  call pop_sub('mesh_function_inc.Xmf_put_radial_spline')
+  POP_SUB(X(mf_put_radial_spline))
 end subroutine X(mf_put_radial_spline)
 
 
@@ -779,7 +779,7 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole)
   FLOAT   :: xx(MAX_DIM), rr, ylm
   R_TYPE, allocatable :: ff2(:)
 
-  call push_sub('mesh_function_inc.Xmf_multipoles')
+  PUSH_SUB(X(mf_multipoles))
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
 
@@ -811,7 +811,7 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole)
   end if
 
   SAFE_DEALLOCATE_A(ff2)
-  call pop_sub('mesh_function_inc.Xmf_multipoles')
+  POP_SUB(X(mf_multipoles))
 end subroutine X(mf_multipoles)
 
 !! Local Variables:

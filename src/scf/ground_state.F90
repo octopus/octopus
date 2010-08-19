@@ -60,7 +60,7 @@ contains
     type(scf_t)  :: scfv
     integer      :: ierr
 
-    call push_sub('ground_state.ground_state_run')
+    PUSH_SUB(ground_state_run)
 
     call states_distribute_nodes(sys%st, sys%mc)
     call states_allocate_wfns(sys%st, sys%gr%mesh)
@@ -115,7 +115,7 @@ contains
     call states_deallocate_wfns(sys%st)
     call states_deallocate_free_states(sys%st, sys%gr)
 
-    call pop_sub('ground_state.ground_state_run')
+    POP_SUB(ground_state_run)
   end subroutine ground_state_run
 
 end module ground_state_m

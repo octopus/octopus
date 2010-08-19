@@ -48,11 +48,11 @@ contains
     integer, intent(in) :: dim
     integer, intent(in) :: order
 
-    call push_sub('stencil_star.stencil_star_size_lapl')
+    PUSH_SUB(stencil_star_size_lapl)
 
     stencil_star_size_lapl = 2*dim*order + 1
 
-    call pop_sub('stencil_star.stencil_star_size_lapl')
+    POP_SUB(stencil_star_size_lapl)
   end function stencil_star_size_lapl
 
 
@@ -63,11 +63,11 @@ contains
     integer, intent(in) :: dir
     integer, intent(in) :: order
 
-    call push_sub('stencil_star.stencil_star_extent')
+    PUSH_SUB(stencil_star_extent)
 
     stencil_star_extent = order
 
-    call pop_sub('stencil_star.stencil_star_extent')
+    POP_SUB(stencil_star_extent)
   end function stencil_star_extent
   
 
@@ -80,7 +80,7 @@ contains
     integer :: ii, jj, nn
     logical :: got_center
 
-    call push_sub('stencil_star.stencil_star_get_lapl')
+    PUSH_SUB(stencil_star_get_lapl)
 
     call stencil_allocate(this, stencil_star_size_lapl(dim, order))
 
@@ -105,7 +105,7 @@ contains
 
     call stencil_init_center(this)
 
-    call pop_sub('stencil_star.stencil_star_get_lapl')
+    POP_SUB(stencil_star_get_lapl)
   end subroutine stencil_star_get_lapl
 
 
@@ -117,7 +117,7 @@ contains
 
     integer :: i, j, n
 
-    call push_sub('stencil_star.stencil_star_polynomials_lapl')
+    PUSH_SUB(stencil_star_polynomials_lapl)
 
     n = 1
     pol(:,:) = 0
@@ -128,7 +128,7 @@ contains
       end do
     end do
 
-    call pop_sub('stencil_star.stencil_star_polynomials_lapl')
+    POP_SUB(stencil_star_polynomials_lapl)
   end subroutine stencil_star_polynomials_lapl
 
 
@@ -142,7 +142,7 @@ contains
     integer :: k, i, j, morder
     FLOAT, allocatable :: cc(:,:,:)
 
-    call push_sub('stencil_star.stencil_star_coeff_lapl')
+    PUSH_SUB(stencil_star_coeff_lapl)
 
     ASSERT(order >= 1)
 
@@ -166,7 +166,7 @@ contains
 
     SAFE_DEALLOCATE_A(cc)
 
-    call pop_sub('stencil_star.stencil_star_coeff_lapl')
+    POP_SUB(stencil_star_coeff_lapl)
   end subroutine stencil_star_coeff_lapl
 
 
@@ -176,11 +176,11 @@ contains
   integer function stencil_star_size_grad(order)
     integer, intent(in) :: order
 
-    call push_sub('stencil_star.stencil_star_size_grad')
+    PUSH_SUB(stencil_star_size_grad)
 
     stencil_star_size_grad = 2*order + 1
 
-    call pop_sub('stencil_star.stencil_star_size_grad')
+    POP_SUB(stencil_star_size_grad)
   end function stencil_star_size_grad
 
 
@@ -192,7 +192,7 @@ contains
 
     integer :: i, n
 
-    call push_sub('stencil_star.stencil_star_get_grad')
+    PUSH_SUB(stencil_star_get_grad)
 
     call stencil_allocate(this, stencil_star_size_grad(order))
 
@@ -204,7 +204,7 @@ contains
 
     call stencil_init_center(this)
 
-    call pop_sub('stencil_star.stencil_star_get_grad')
+    POP_SUB(stencil_star_get_grad)
   end subroutine stencil_star_get_grad
 
 
@@ -216,14 +216,14 @@ contains
 
     integer :: j
 
-    call push_sub('stencil_star.stencil_star_polynomials_grad')
+    PUSH_SUB(stencil_star_polynomials_grad)
 
     pol(:,:) = 0
     do j = 0, 2*order
       pol(dir, j+1) = j
     end do
 
-    call pop_sub('stencil_star.stencil_star_polynomials_grad')
+    POP_SUB(stencil_star_polynomials_grad)
   end subroutine stencil_star_polynomials_grad
 
 
@@ -236,7 +236,7 @@ contains
     integer :: j, k, morder
     FLOAT, allocatable :: cc(:,:,:)
 
-    call push_sub('stencil_star.stencil_star_coeff_grad')
+    PUSH_SUB(stencil_star_coeff_grad)
 
     ASSERT(order >= 1)
 
@@ -259,7 +259,7 @@ contains
 
     SAFE_DEALLOCATE_A(cc)
 
-    call pop_sub('stencil_star.stencil_star_coeff_grad')
+    POP_SUB(stencil_star_coeff_grad)
   end subroutine stencil_star_coeff_grad
 
 end module stencil_star_m

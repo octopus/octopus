@@ -32,7 +32,7 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
   FLOAT, allocatable :: vxc(:, :), rho(:,:)
 
   call profiling_in(C_PROFILING_XC_SIC)
-  call push_sub('xc_OEP_SIC.Xoep_sic')
+  PUSH_SUB(X(oep_sic))
 
   SAFE_ALLOCATE(rho(1:gr%mesh%np, 1:2))
   SAFE_ALLOCATE(Vxc(1:gr%mesh%np, 1:2))
@@ -89,7 +89,7 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
   SAFE_DEALLOCATE_A(rho)
   SAFE_DEALLOCATE_A(Vxc)
 
-  call pop_sub('xc_OEP_SIC.Xoep_sic')
+  POP_SUB(X(oep_sic))
   call profiling_out(C_PROFILING_XC_SIC)
 end subroutine X(oep_sic)
 

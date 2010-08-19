@@ -91,7 +91,7 @@ contains
 #endif
     type(periodic_copy_t) :: pp
 
-    call push_sub('species_pot.atom_density')
+    PUSH_SUB(atom_density)
 
     ASSERT(spin_channels == 1 .or. spin_channels == 2)
 
@@ -202,7 +202,7 @@ contains
 
     end select
 
-    call pop_sub('species_pot.atom_density')
+    POP_SUB(atom_density)
   end subroutine atom_density
   ! ---------------------------------------------------------
 
@@ -223,7 +223,7 @@ contains
     FLOAT :: rr, rnd, phi, theta, mag(MAX_DIM), lmag, n1, n2
     FLOAT, allocatable :: atom_rho(:,:)
 
-    call push_sub('species_pot.guess_density')
+    PUSH_SUB(guess_density)
 
     if (spin_channels == 1) then
       gmd_opt = INITRHO_PARAMAGNETIC
@@ -443,7 +443,7 @@ contains
     call write_info(1)
 
     SAFE_DEALLOCATE_A(atom_rho)
-    call pop_sub('species_pot.guess_density')
+    POP_SUB(guess_density)
   end subroutine guess_density
   ! ---------------------------------------------------------
 
@@ -470,7 +470,7 @@ contains
     real(8) :: local_min(2), global_min(2)
 #endif
 
-    call push_sub('species_pot.species_get_density')
+    PUSH_SUB(species_get_density)
 
     select case(species_type(spec))
 
@@ -604,7 +604,7 @@ contains
 
     end select
 
-    call pop_sub('species_pot.species_get_density')
+    POP_SUB(species_get_density)
   end subroutine species_get_density
 
   subroutine func(xin, ff, jacobian)
@@ -614,7 +614,7 @@ contains
     FLOAT, allocatable :: xrho(:)
     integer :: idir, jdir, dim
 
-    call push_sub('species_pot.func')
+    PUSH_SUB(func)
 
     dim = mesh_p%sb%dim
 
@@ -641,7 +641,7 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(xrho)
-    call pop_sub('species_pot.func')
+    POP_SUB(func)
   end subroutine func
 
 
@@ -652,7 +652,7 @@ contains
     integer :: ip, jp, idir, dim
     FLOAT   :: r, chi(MAX_DIM)
 
-    call push_sub('species_pot.getrho')
+    PUSH_SUB(getrho)
 
     dim = mesh_p%sb%dim
     rho_p = M_ZERO
@@ -679,7 +679,7 @@ contains
       end do
     end do
 
-    call pop_sub('species_pot.getrho')
+    POP_SUB(getrho)
   end subroutine getrho 
 
   ! ---------------------------------------------------------
@@ -697,7 +697,7 @@ contains
 
     type(profile_t), save :: prof
 
-    call push_sub('species_pot.species_get_local')
+    PUSH_SUB(species_get_local)
     call profiling_in(prof, "SPECIES_GET_LOCAL")
 
     time_ = M_ZERO
@@ -763,7 +763,7 @@ contains
       end select
 
       call profiling_out(prof)
-    call pop_sub('species_pot.species_get_local')
+    POP_SUB(species_get_local)
   end subroutine species_get_local
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -795,7 +795,7 @@ contains
     FLOAT, allocatable :: xf(:, :), ylm(:)
     type(ps_t), pointer :: ps
 
-    call push_sub('species_pot.species_get_orbital')
+    PUSH_SUB(species_get_orbital)
 
     call species_iwf_ilm(spec, j, is, i, l, m)
 
@@ -842,7 +842,7 @@ contains
       end do
     end if
 
-    call pop_sub('species_pot.species_get_orbital')
+    POP_SUB(species_get_orbital)
   end subroutine species_get_orbital
 
   subroutine species_get_orbital_submesh(spec, submesh, j, dim, is, pos, phi, derivative)
@@ -864,7 +864,7 @@ contains
     
     if(submesh%ns == 0) return
 
-    call push_sub('species_pot.species_get_orbital_submesh')
+    PUSH_SUB(species_get_orbital_submesh)
 
     derivative_ = .false.
     if(present(derivative)) derivative_ = derivative
@@ -936,7 +936,7 @@ contains
       
     end if
 
-    call pop_sub('species_pot.species_get_orbital_submesh')
+    POP_SUB(species_get_orbital_submesh)
   end subroutine species_get_orbital_submesh
 
 end module species_pot_m

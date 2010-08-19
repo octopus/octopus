@@ -86,11 +86,11 @@ contains
     type(grid_t),       intent(inout) :: gr
     type(states_dim_t), intent(in)    :: d
 
-    call push_sub('xc_oep.xc_oep_init')
+    PUSH_SUB(xc_oep_init)
 
     if(iand(family, XC_FAMILY_OEP).eq.0) then
       oep%level = XC_OEP_NONE
-    call pop_sub('xc_oep.xc_oep_init')
+    POP_SUB(xc_oep_init)
       return
     end if
 
@@ -151,7 +151,7 @@ contains
       !oep%lr%conv_abs_dens = oep%lr%conv_abs_dens / (oep%mixing)
     end if
 
-    call pop_sub('xc_oep.xc_oep_init')
+    POP_SUB(xc_oep_init)
   end subroutine xc_oep_init
 
 
@@ -159,7 +159,7 @@ contains
   subroutine xc_oep_end(oep)
     type(xc_oep_t), intent(inout) :: oep
 
-    call push_sub('xc_oep.xc_oep_end')
+    PUSH_SUB(xc_oep_end)
 
     if(oep%level.ne.XC_OEP_NONE) then
       SAFE_DEALLOCATE_P(oep%vxc); nullify(oep%vxc)
@@ -170,7 +170,7 @@ contains
       end if
     end if
 
-    call pop_sub('xc_oep.xc_oep_end')
+    POP_SUB(xc_oep_end)
   end subroutine xc_oep_end
 
 
@@ -181,10 +181,10 @@ contains
 
     if(oep%level.eq.XC_OEP_NONE) return
 
-    call push_sub('xc_oep.xc_oep_write_info')
+    PUSH_SUB(xc_oep_write_info)
     call messages_print_var_option(iunit, 'OEP_level', oep%level)
 
-    call pop_sub('xc_oep.xc_oep_write_info')
+    POP_SUB(xc_oep_write_info)
   end subroutine xc_oep_write_info
 
 
@@ -195,7 +195,7 @@ contains
     type(xc_oep_t), intent(inout) :: oep
     integer,        intent(in)    :: nspin
 
-    call push_sub('xc_oep.xc_oep_SpinFactor')
+    PUSH_SUB(xc_oep_SpinFactor)
 
     select case(nspin)
     case(1) ! we need to correct or the spin occupancies
@@ -208,7 +208,7 @@ contains
       ASSERT(.false.)
     end select
 
-    call pop_sub('xc_oep.xc_oep_SpinFactor')
+    POP_SUB(xc_oep_SpinFactor)
   end subroutine xc_oep_SpinFactor
 
 
@@ -222,7 +222,7 @@ contains
     FLOAT :: max_eigen
     FLOAT, allocatable :: eigenval(:), occ(:)
 
-    call push_sub('xc_oep.xc_oep_AnalyzeEigen')
+    PUSH_SUB(xc_oep_AnalyzeEigen)
 
     SAFE_ALLOCATE(eigenval(1:st%nst))
     SAFE_ALLOCATE     (occ(1:st%nst))
@@ -271,7 +271,7 @@ contains
 
     SAFE_DEALLOCATE_A(eigenval)
     SAFE_DEALLOCATE_A(occ)
-    call pop_sub('xc_oep.xc_oep_AnalyzeEigen')
+    POP_SUB(xc_oep_AnalyzeEigen)
   end subroutine xc_oep_AnalyzeEigen
 
 

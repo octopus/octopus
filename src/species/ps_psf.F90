@@ -60,7 +60,7 @@ contains
     integer :: iunit
     logical :: found
 
-    call push_sub('ps_psf.ps_psf_init')
+    PUSH_SUB(ps_psf_init)
 
     ! Sets the spin components
     pstm%ispin = ispin
@@ -104,7 +104,7 @@ contains
 
     call file_to_grid(pstm%psf_file, pstm%ps_grid)
 
-    call pop_sub('ps_psf.ps_psf_init')
+    POP_SUB(ps_psf_init)
   end subroutine ps_psf_init
 
   
@@ -112,12 +112,12 @@ contains
   subroutine ps_psf_end(ps_psf)
     type(ps_psf_t), intent(inout) :: ps_psf
 
-    call push_sub('ps_psf.ps_psf_end')
+    PUSH_SUB(ps_psf_end)
 
     call ps_in_grid_end(ps_psf%ps_grid)
     call ps_psf_file_end(ps_psf%psf_file)
 
-    call pop_sub('ps_psf.ps_psf_end')
+    POP_SUB(ps_psf_end)
   end subroutine ps_psf_end
 
 
@@ -132,7 +132,7 @@ contains
     integer :: i, l
     FLOAT   :: x
 
-    call push_sub('ps_psf.build_valconf')
+    PUSH_SUB(build_valconf)
 
     call valconf_null(conf)
     conf%symbol = psf_file%namatm
@@ -175,7 +175,7 @@ contains
       end if
     end do
 
-    call pop_sub('ps_psf.build_valconf')
+    POP_SUB(build_valconf)
   end subroutine build_valconf 
 
   !----------------------------------------------------------------
@@ -183,7 +183,7 @@ contains
     type(ps_psf_file_t), intent(in)  :: psf_file
     type(ps_in_grid_t),  intent(out) :: ps_grid
     integer :: nrval
-    call push_sub('ps_psf.file_to_grid')
+    PUSH_SUB(file_to_grid)
 
     ! Initializes the pseudo in the logaritmic grid.
     call ps_in_grid_init(ps_grid,                      &
@@ -202,7 +202,7 @@ contains
     ps_grid%core_corrections = .true.
     if(trim(psf_file%icore) == 'nc') ps_grid%core_corrections = .false.
 
-    call pop_sub('ps_psf.file_to_grid')
+    POP_SUB(file_to_grid)
   end subroutine file_to_grid
 
 
@@ -211,7 +211,7 @@ contains
     type(ps_psf_t), intent(inout) :: ps_psf
     integer,       intent(in)    :: lmax, lloc
 
-    call push_sub('ps_psf.psf_process')
+    PUSH_SUB(psf_process)
 
     ! get the pseudoatomic eigenfunctions
     SAFE_ALLOCATE(ps_psf%eigen(1:ps_psf%psf_file%npotd, 1:3))
@@ -237,7 +237,7 @@ contains
     call ps_in_grid_kb_projectors(ps_psf%ps_grid)
 
     SAFE_DEALLOCATE_P(ps_psf%eigen)
-    call pop_sub('ps_psf.psf_process')
+    POP_SUB(psf_process)
   end subroutine ps_psf_process
 
 
@@ -260,7 +260,7 @@ contains
     REAL_DOUBLE :: e, z, dr, rmax
     REAL_DOUBLE, allocatable :: s(:), hato(:), gg(:), y(:)
 
-    call push_sub('ps_psf.solve_schroedinger')
+    PUSH_SUB(solve_schroedinger)
 
     ! Let us be a bit informative.
     message(1) = '      Calculating atomic pseudo-eigenfunctions for species ' // psf_file%namatm // '....'
@@ -411,7 +411,7 @@ contains
     SAFE_DEALLOCATE_A(rho)
     SAFE_DEALLOCATE_A(prev)
 
-    call pop_sub('ps_psf.solve_schroedinger')
+    POP_SUB(solve_schroedinger)
   end subroutine solve_schroedinger
 
 
@@ -431,7 +431,7 @@ contains
     REAL_DOUBLE :: z, e, dr, rmax
     REAL_DOUBLE, allocatable :: hato(:), s(:), gg(:), y(:)
 
-    call push_sub('ps_psf.ghost_analysis')
+    PUSH_SUB(ghost_analysis)
 
     SAFE_ALLOCATE(ve    (1:g%nrval))
     SAFE_ALLOCATE(s     (1:g%nrval))
@@ -501,7 +501,7 @@ contains
     SAFE_DEALLOCATE_A(s)
     SAFE_DEALLOCATE_A(ve)
 
-    call pop_sub('ps_psf.ghost_analysis')
+    POP_SUB(ghost_analysis)
   end subroutine ghost_analysis
 
 end module ps_psf_m

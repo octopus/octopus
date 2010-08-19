@@ -51,11 +51,11 @@ contains
   character(len=100) function kdotp_wfs_tag(dir) result(str)
     integer, intent(in) :: dir 
 
-    call push_sub('kdotp_calc.kdotp_wfs_tag')
+    PUSH_SUB(kdotp_wfs_tag)
 
     write(str, '(2a)') "wfs_", index2axis(dir)
 
-    call pop_sub('kdotp_calc.kdotp_wfs_tag')
+    POP_SUB(kdotp_wfs_tag)
 
   end function kdotp_wfs_tag
 
@@ -74,7 +74,7 @@ subroutine zcalc_band_velocity(sys, hm, pert, velocity)
   FLOAT, allocatable :: vel_temp(:,:,:)
 #endif
 
-  call push_sub('kdotp_calc_inc.zkdotp_calc_band_velocity')
+  PUSH_SUB(zkdotp_calc_band_velocity)
 
   SAFE_ALLOCATE(pertpsi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
 #ifdef HAVE_MPI
@@ -108,7 +108,7 @@ subroutine zcalc_band_velocity(sys, hm, pert, velocity)
   SAFE_DEALLOCATE_A(vel_temp)
 #endif
 
-  call pop_sub('kdotp_calc_inc.zkdotp_calc_band_velocity')
+  POP_SUB(zkdotp_calc_band_velocity)
 end subroutine zcalc_band_velocity
 
 ! ---------------------------------------------------------
@@ -127,7 +127,7 @@ subroutine zcalc_dipole_periodic(sys, lr, dipole)
   ! mu_i = sum(m occ, k) <u_mk(0)|(-id/dk_i|u_mk(0)>)
   !      = Im sum(m occ, k) <u_mk(0)|(d/dk_i|u_mk(0)>)
 
-  call push_sub('kdotp_calc.zcalc_dipole_periodic')
+  PUSH_SUB(zcalc_dipole_periodic)
 
   do idir = 1, sys%gr%sb%periodic_dim
     moment = M_ZERO
@@ -148,7 +148,7 @@ subroutine zcalc_dipole_periodic(sys, lr, dipole)
     dipole(idir) = -moment
   enddo
 
-  call pop_sub('kdotp_calc.zcalc_dipole_periodic')
+  POP_SUB(zcalc_dipole_periodic)
 
 end subroutine zcalc_dipole_periodic
 

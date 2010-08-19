@@ -149,6 +149,9 @@
 
 #define INCR(x, y) x = (x) + (y)
 
+#define PUSH_SUB(routine) call push_sub(__FILE__//"."//TOSTRING(routine))
+#define POP_SUB(routine) call pop_sub(__FILE__//"."//TOSTRING(routine))
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

@@ -114,13 +114,13 @@ contains
   subroutine projector_null(p)
     type(projector_t), intent(out) :: p
 
-    call push_sub('projector.projector_null')
+    PUSH_SUB(projector_null)
 
     p%type = M_NONE
     nullify(p%phase)
     call submesh_null(p%sphere)
 
-    call pop_sub('projector.projector_null')
+    POP_SUB(projector_null)
 
   end subroutine projector_null
   !---------------------------------------------------------
@@ -149,7 +149,7 @@ contains
 
     type(ps_t), pointer :: ps
     
-    call push_sub('projector.projector_init')
+    PUSH_SUB(projector_init)
 
     ps => species_ps(atm%spec)
 
@@ -159,7 +159,7 @@ contains
 
     if(p%lmax == 0) then
       p%type = M_NONE
-      call pop_sub('projector.projector_init')
+      POP_SUB(projector_init)
       return
     end if
 
@@ -194,7 +194,7 @@ contains
       p%nprojections = 24
     end select
 
-    call pop_sub('projector.projector_init')
+    POP_SUB(projector_init)
   end subroutine projector_init
 
   subroutine projector_init_phases(this, sb, std, vec_pot, vec_pot_var)
@@ -208,7 +208,7 @@ contains
     FLOAT   :: kr, kpoint(1:MAX_DIM)
     integer :: ndim
 
-    call push_sub('projector.projector_init_phases')
+    PUSH_SUB(projector_init_phases)
 
     ns = this%sphere%ns
     ndim = sb%dim
@@ -246,7 +246,7 @@ contains
 
     end do
 
-    call pop_sub('projector.projector_init_phases')
+    POP_SUB(projector_init_phases)
 
   end subroutine projector_init_phases
 
@@ -259,7 +259,7 @@ contains
 
     integer :: ll, mm
 
-    call push_sub('projector.projector_build')
+    PUSH_SUB(projector_build)
 
     select case (p%type)
 
@@ -301,7 +301,7 @@ contains
 
     end select
 
-    call pop_sub('projector.projector_build')
+    POP_SUB(projector_build)
   end subroutine projector_build
 
   !---------------------------------------------------------
@@ -310,7 +310,7 @@ contains
 
     integer :: ll, mm
 
-    call push_sub('projector.projector_end')
+    PUSH_SUB(projector_end)
 
     call submesh_end(p%sphere)
 
@@ -352,7 +352,7 @@ contains
 
     SAFE_DEALLOCATE_P(p%phase)
 
-    call pop_sub('projector.projector_end')
+    POP_SUB(projector_end)
   end subroutine projector_end
 
 #include "undef.F90"

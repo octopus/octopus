@@ -34,7 +34,7 @@ subroutine X(derivatives_batch_set_bc)(der, ffb)
 
   integer :: pp, bndry_start, bndry_end
 
-  call push_sub('derivatives_inc.Xderivatives_batch_set_bc')
+  PUSH_SUB(X(derivatives_batch_set_bc))
   call profiling_in(set_bc_prof, 'SET_BC')
   
   pp = der%mesh%vp%partno
@@ -56,7 +56,7 @@ subroutine X(derivatives_batch_set_bc)(der, ffb)
   
 
   call profiling_out(set_bc_prof)
-  call pop_sub('derivatives_inc.Xderivatives_batch_set_bc')
+  POP_SUB(X(derivatives_batch_set_bc))
 
 contains
 
@@ -67,7 +67,7 @@ contains
     integer :: localsize, globalsize
 #endif
 
-    call push_sub('derivatives_inc.Xderivatives_batch_set_bc.zero_boundaries')
+    PUSH_SUB(X(derivatives_batch_set_bc).zero_boundaries)
 
     select case(batch_status(ffb))
 #ifdef HAVE_OPENCL
@@ -100,7 +100,7 @@ contains
 
     call batch_pack_was_modified(ffb)
 
-    call pop_sub('derivatives_inc.Xderivatives_batch_set_bc.zero_boundaries')
+    POP_SUB(X(derivatives_batch_set_bc).zero_boundaries)
   end subroutine zero_boundaries
 
 
@@ -111,7 +111,7 @@ contains
     FLOAT :: weight
     R_TYPE, pointer :: ff(:)
 
-    call push_sub('derivatives_inc.Xderivatives_batch_set_bc.multiresolution')
+    PUSH_SUB(X(derivatives_batch_set_bc).multiresolution)
 
     do ist = 1, ffb%nst_linear
       ff => ffb%states_linear(ist)%X(psi)
@@ -148,7 +148,7 @@ contains
       end do ! ip
     end do ! ist
 
-    call pop_sub('derivatives_inc.Xderivatives_batch_set_bc.multiresolution')
+    POP_SUB(X(derivatives_batch_set_bc).multiresolution)
   end subroutine multiresolution
 
 
@@ -162,7 +162,7 @@ contains
     integer, allocatable :: req(:), statuses(:, :)
 #endif
 
-    call push_sub('derivatives_inc.Xderivatives_batch_set_bc.periodic')
+    PUSH_SUB(X(derivatives_batch_set_bc).periodic)
 
 #ifdef HAVE_MPI
     if(der%mesh%parallel_in_domains) then
@@ -223,7 +223,7 @@ contains
     end if
 #endif
 
-    call pop_sub('derivatives_inc.Xderivatives_batch_set_bc.periodic')
+    POP_SUB(X(derivatives_batch_set_bc).periodic)
   end subroutine periodic
 
 end subroutine X(derivatives_batch_set_bc)
@@ -236,7 +236,7 @@ subroutine X(derivatives_set_bc)(der, ff)
 
   type(batch_t) :: batch_ff
 
-  call push_sub('derivatives_inc.Xderivatives_set_bc')
+  PUSH_SUB(X(derivatives_set_bc))
 
   call batch_init     (batch_ff, 1)
   call batch_add_state(batch_ff, ff)
@@ -246,7 +246,7 @@ subroutine X(derivatives_set_bc)(der, ff)
   call X(derivatives_batch_set_bc)(der, batch_ff)
 
   call batch_end(batch_ff)
-  call pop_sub('derivatives_inc.Xderivatives_set_bc')
+  POP_SUB(X(derivatives_set_bc))
 end subroutine X(derivatives_set_bc)
 
 
@@ -264,7 +264,7 @@ subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, s
 
   logical :: set_bc_
 
-  call push_sub('derivatives_inc.Xderivatives_batch_start')
+  PUSH_SUB(X(derivatives_batch_start))
 
   handle%ghost_update = .true.
   if(present(ghost_update)) handle%ghost_update = ghost_update
@@ -293,7 +293,7 @@ subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, s
   end if
 #endif
 
-  call pop_sub('derivatives_inc.Xderivatives_batch_start')
+  POP_SUB(X(derivatives_batch_start))
 end subroutine X(derivatives_batch_start)
 
 
@@ -301,7 +301,7 @@ end subroutine X(derivatives_batch_start)
 subroutine X(derivatives_batch_finish)(handle)
   type(derivatives_handle_batch_t), intent(inout) :: handle
 
-  call push_sub('derivatives_inc.Xderivatives_batch_finish')
+  PUSH_SUB(X(derivatives_batch_finish))
 
 #ifdef HAVE_MPI
   if(derivatives_overlap(handle%der) .and. handle%der%mesh%parallel_in_domains .and. handle%ghost_update) then
@@ -335,7 +335,7 @@ subroutine X(derivatives_batch_finish)(handle)
   end if
 #endif
 
-  call pop_sub('derivatives_inc.Xderivatives_batch_finish')
+  POP_SUB(X(derivatives_batch_finish))
 end subroutine X(derivatives_batch_finish)
 
 
@@ -350,12 +350,12 @@ subroutine X(derivatives_batch_perform)(op, der, ff, opff, ghost_update, set_bc)
 
   type(derivatives_handle_batch_t) :: handle
 
-  call push_sub('derivatives_inc.Xderivatives_batch_perform')
+  PUSH_SUB(X(derivatives_batch_perform))
 
   call X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, set_bc)
   call X(derivatives_batch_finish)(handle)
 
-  call pop_sub('derivatives_inc.Xderivatives_batch_perform')
+  POP_SUB(X(derivatives_batch_perform))
 
 end subroutine X(derivatives_batch_perform)
 
@@ -372,7 +372,7 @@ subroutine X(derivatives_perform)(op, der, ff, op_ff, ghost_update, set_bc)
 
   type(batch_t) :: batch_ff, batch_op_ff
 
-  call push_sub('derivatives_inc.Xderivatives_perform')
+  PUSH_SUB(X(derivatives_perform))
 
   call batch_init     (batch_ff, 1)
   call batch_add_state(batch_ff, ff)
@@ -388,7 +388,7 @@ subroutine X(derivatives_perform)(op, der, ff, op_ff, ghost_update, set_bc)
   call batch_end(batch_ff)
   call batch_end(batch_op_ff)
         
-  call pop_sub('derivatives_inc.Xderivatives_perform')
+  POP_SUB(X(derivatives_perform))
 
 end subroutine X(derivatives_perform)
 
@@ -401,11 +401,11 @@ subroutine X(derivatives_lapl)(der, ff, op_ff, ghost_update, set_bc)
   logical, optional,         intent(in)    :: ghost_update
   logical, optional,         intent(in)    :: set_bc
 
-  call push_sub('derivatives_inc.Xderivatives_lapl')
+  PUSH_SUB(X(derivatives_lapl))
 
   call X(derivatives_perform)(der%lapl, der, ff, op_ff, ghost_update, set_bc)
         
-  call pop_sub('derivatives_inc.Xderivatives_lapl')
+  POP_SUB(X(derivatives_lapl))
 end subroutine X(derivatives_lapl)
 
 
@@ -420,7 +420,7 @@ subroutine X(derivatives_grad)(der, ff, op_ff, ghost_update, set_bc)
   integer :: idir
   logical :: set_bc_, ghost_update_
   
-  call push_sub('derivatives_inc.Xderivatives_grad')
+  PUSH_SUB(X(derivatives_grad))
   call profiling_in(gradient_prof, "GRADIENT")
 
   ASSERT(ubound(op_ff, DIM=2) >= der%dim)
@@ -439,7 +439,7 @@ subroutine X(derivatives_grad)(der, ff, op_ff, ghost_update, set_bc)
   end do
 
   call profiling_out(gradient_prof)
-  call pop_sub('derivatives_inc.Xderivatives_grad')
+  POP_SUB(X(derivatives_grad))
 end subroutine X(derivatives_grad)
 
 
@@ -454,7 +454,7 @@ subroutine X(derivatives_div)(der, ff, op_ff, ghost_update, set_bc)
   R_TYPE, allocatable :: tmp(:)
   integer             :: idir, ii
 
-  call push_sub('derivatives_inc.Xderivatives_div')
+  PUSH_SUB(X(derivatives_div))
   call profiling_in(divergence_prof, "DIVERGENCE")
 
   ASSERT(ubound(ff, DIM=2) >= der%dim)
@@ -472,7 +472,7 @@ subroutine X(derivatives_div)(der, ff, op_ff, ghost_update, set_bc)
   SAFE_DEALLOCATE_A(tmp)
 
   call profiling_out(divergence_prof)
-  call pop_sub('derivatives_inc.Xderivatives_div')
+  POP_SUB(X(derivatives_div))
 end subroutine X(derivatives_div)
 
 
@@ -490,7 +490,7 @@ subroutine X(derivatives_curl)(der, ff, op_ff, ghost_update, set_bc)
   R_TYPE, allocatable :: tmp(:)
   integer             :: ii, np
 
-  call push_sub('derivatives_inc.Xderivatives_curl')
+  PUSH_SUB(X(derivatives_curl))
   call profiling_in(curl_prof, "CURL")
 
   ASSERT(der%dim==2 .or. der%dim==3)
@@ -528,7 +528,7 @@ subroutine X(derivatives_curl)(der, ff, op_ff, ghost_update, set_bc)
 
   SAFE_DEALLOCATE_A(tmp)
   call profiling_out(curl_prof)
-  call pop_sub('derivatives_inc.Xderivatives_curl')
+  POP_SUB(X(derivatives_curl))
 end subroutine X(derivatives_curl)
 
 

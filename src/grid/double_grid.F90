@@ -77,7 +77,7 @@ contains
     type(double_grid_t), intent(out) :: this
     type(simul_box_t),   intent(in)  :: sb
 
-    call push_sub('double_grid.double_grid_init')
+    PUSH_SUB(double_grid_init)
 
     this%spacing_divisor = 3
     this%nn = (this%spacing_divisor - 1)/2
@@ -120,7 +120,7 @@ contains
 
     call calc_coefficients
 
-    call pop_sub('double_grid.double_grid_init')
+    POP_SUB(double_grid_init)
 
     contains
 
@@ -128,7 +128,7 @@ contains
         FLOAT, allocatable :: points(:)
         integer :: ii
 
-        call push_sub('double_grid.double_grid_init.calc_coefficients')
+        PUSH_SUB(double_grid_init.calc_coefficients)
 
         SAFE_ALLOCATE(points(this%interpolation_min:this%interpolation_max))
         
@@ -139,7 +139,7 @@ contains
         call interpolation_coefficients(this%npoints, points, M_ZERO, this%co)
 
         SAFE_DEALLOCATE_A(points)
-        call pop_sub('double_grid.double_grid_init.calc_coefficients')
+        POP_SUB(double_grid_init.calc_coefficients)
         
       end subroutine calc_coefficients
 
@@ -148,9 +148,9 @@ contains
   subroutine double_grid_end(this)
     type(double_grid_t), intent(inout) :: this
  
-    call push_sub('double_grid.double_grid_end')
+    PUSH_SUB(double_grid_end)
     SAFE_DEALLOCATE_P(this%co)
-    call pop_sub('double_grid.double_grid_end')
+    POP_SUB(double_grid_end)
 
   end subroutine double_grid_end
   
@@ -158,13 +158,13 @@ contains
     type(double_grid_t), intent(in) :: this
     type(mesh_t),        intent(in) :: mesh
 
-    call push_sub('double_grid.double_grid_get_hmax')
+    PUSH_SUB(double_grid_get_hmax)
 
     hmax = maxval(mesh%spacing(1:MAX_DIM))
       
     if(this%use_double_grid)  hmax = hmax / this%spacing_divisor    
 
-    call pop_sub('double_grid.double_grid_get_hmax')
+    POP_SUB(double_grid_get_hmax)
   end function double_grid_get_hmax
 
   FLOAT function double_grid_get_rmax(this, spec, mesh) result(rmax)
@@ -174,7 +174,7 @@ contains
 
     type(ps_t), pointer :: ps
     
-    call push_sub('double_grid.double_grid_get_rmax')
+    PUSH_SUB(double_grid_get_rmax)
 
     ps => species_ps(spec)
     rmax = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold)
@@ -183,18 +183,18 @@ contains
     end if
     nullify(ps)
 
-    call pop_sub('double_grid.double_grid_get_rmax')
+    POP_SUB(double_grid_get_rmax)
   end function double_grid_get_rmax
 
   integer function double_grid_enlarge(this)
     type(double_grid_t),     intent(in) :: this
     
-    call push_sub('double_grid.double_grid_enlarge')
+    PUSH_SUB(double_grid_enlarge)
 
     double_grid_enlarge = 0 
     if(this%use_double_grid) double_grid_enlarge = this%interpolation_max * this%nn
 
-    call pop_sub('double_grid.double_grid_enlarge')
+    POP_SUB(double_grid_enlarge)
   end function double_grid_enlarge
 
 

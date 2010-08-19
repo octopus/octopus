@@ -41,7 +41,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   R_TYPE   :: sb(3), rb(3)
 #endif
 
-  call push_sub('eigen_cg_inc.Xeigensolver_cg2')
+  PUSH_SUB(X(eigensolver_cg2))
 
   verbose_ = .false.; if(present(verbose)) verbose_ = verbose
   if(verbose_) then
@@ -261,7 +261,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 
   if(verbose_) call messages_print_stress(stdout)
 
-  call pop_sub('eigen_cg_inc.Xeigensolver_cg2')
+  POP_SUB(X(eigensolver_cg2))
 end subroutine X(eigensolver_cg2)
 
 ! ---------------------------------------------------------
@@ -285,7 +285,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
   R_TYPE :: dot
   logical, allocatable :: orthogonal(:)
 
-  call push_sub('eigen_cg_inc.Xeigensolver_cg2_new')
+  PUSH_SUB(X(eigensolver_cg2_new))
 
   verbose_ = .false.; if(present(verbose)) verbose_ = verbose
 
@@ -467,7 +467,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
   SAFE_DEALLOCATE_A(orthogonal)
   if(verbose_) call messages_print_stress(stdout)
 
-  call pop_sub('eigen_cg_inc.Xeigensolver_cg2_new')
+  POP_SUB(X(eigensolver_cg2_new))
 end subroutine X(eigensolver_cg2_new)
 
 !! Local Variables:

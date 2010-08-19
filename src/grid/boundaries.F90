@@ -98,7 +98,7 @@ contains
     integer :: bsize, status(MPI_STATUS_SIZE)
 #endif
 
-    call push_sub('boundaries.boundaries_init')
+    PUSH_SUB(boundaries_init)
 
     this%mesh => mesh
 
@@ -317,7 +317,7 @@ contains
 
     end if
 
-    call pop_sub('boundaries.boundaries_init')
+    POP_SUB(boundaries_init)
   end subroutine boundaries_init
 
   ! ---------------------------------------------------------
@@ -327,7 +327,7 @@ contains
     
     integer :: ipart
 
-    call push_sub('boundaries.boundaries_end')
+    PUSH_SUB(boundaries_end)
 
     if(simul_box_is_periodic(this%mesh%sb)) then
 #ifdef HAVE_MPI
@@ -360,7 +360,7 @@ contains
       SAFE_DEALLOCATE_P(this%per_map)
     end if
 
-    call pop_sub('boundaries.boundaries_end')
+    POP_SUB(boundaries_end)
   end subroutine boundaries_end
 
 #if defined(HAVE_MPI)

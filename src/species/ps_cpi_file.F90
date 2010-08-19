@@ -62,7 +62,7 @@ contains
     integer  :: i, l, ios, idummy
     FLOAT    :: a, b, c, d
 
-    call push_sub('ps_cpi_file.read_file_data')
+    PUSH_SUB(read_file_data)
 
     read(unit, *) psf%zval, psf%no_l_channels
     ! skip 10 lines
@@ -135,7 +135,7 @@ contains
 
     ! WARNING: This should go away
     psf%vps(:,:) = psf%vps(:,:)*M_TWO ! convert to Rydbergs
-    call pop_sub('ps_cpi_file.read_file_data')
+    POP_SUB(read_file_data)
   end subroutine ps_cpi_file_read
 
 

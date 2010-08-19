@@ -117,7 +117,7 @@ contains
   subroutine propagator_copy(tro, tri)
     type(propagator_t), intent(inout) :: tro
     type(propagator_t), intent(in)    :: tri
-    call push_sub('tr_rti.tr_rti_copy')
+    PUSH_SUB(tr_rti_copy)
 
     tro%method = tri%method
 
@@ -133,7 +133,7 @@ contains
     call exponential_copy(tro%te, tri%te)
     tro%scf_propagation_steps = tri%scf_propagation_steps
 
-    call pop_sub('tr_rti.tr_rti_copy')
+    POP_SUB(tr_rti_copy)
   end subroutine propagator_copy
   ! ---------------------------------------------------------
 
@@ -152,7 +152,7 @@ contains
 
     integer :: default_propagator
 
-    call push_sub('propagator.propagator_init')
+    PUSH_SUB(propagator_init)
 
     !%Variable TDEvolutionMethod
     !%Type integer
@@ -317,7 +317,7 @@ contains
     ! (unless we are doing a QOCT run)
     tr%scf_propagation_steps = 3
 
-    call pop_sub('propagator.propagator_init')
+    POP_SUB(propagator_init)
   end subroutine propagator_init
   ! ---------------------------------------------------------
 
@@ -342,7 +342,7 @@ contains
   subroutine propagator_end(tr)
     type(propagator_t), intent(inout) :: tr
 
-    call push_sub('propagator.propagator_end')
+    PUSH_SUB(propagator_end)
 
     ! sanity check
     ASSERT(associated(tr%v_old)) 
@@ -364,7 +364,7 @@ contains
     
     call exponential_end(tr%te)       ! clean propagator method
 
-    call pop_sub('propagator.propagator_end')
+    POP_SUB(propagator_end)
   end subroutine propagator_end
   ! ---------------------------------------------------------
 
@@ -374,13 +374,13 @@ contains
     type(hamiltonian_t),  intent(in)    :: hm
     type(propagator_t),   intent(inout) :: tr
 
-    call push_sub('propagator.propagator_run_zero_iter')
+    PUSH_SUB(propagator_run_zero_iter)
 
     tr%v_old(:, :, 2) = hm%vhxc(:, :)
     tr%v_old(:, :, 3) = hm%vhxc(:, :)
     tr%v_old(:, :, 1) = hm%vhxc(:, :)
 
-    call pop_sub('propagator.propagator_run_zero_iter')
+    POP_SUB(propagator_run_zero_iter)
   end subroutine propagator_run_zero_iter
 
 
@@ -411,7 +411,7 @@ contains
     type(profile_t), save :: prof
 
     call profiling_in(prof, "TD_PROPAGATOR")
-    call push_sub('propagator.propagator_dt')
+    PUSH_SUB(propagator_dt)
 
     if(present(ions)) then
       ASSERT(present(geo))
@@ -529,7 +529,7 @@ contains
     
     SAFE_DEALLOCATE_A(vold)
     
-    call pop_sub('propagator.propagator_dt')
+    POP_SUB(propagator_dt)
     call profiling_out(prof)
 
   contains
@@ -542,7 +542,7 @@ contains
       integer :: ik, ist, ist2, idim, ste, sts
       type(batch_t) :: zpsib
 
-      call push_sub('propagator.propagator_dt.td_etrs')
+      PUSH_SUB(propagator_dt.td_etrs)
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
 
@@ -640,7 +640,7 @@ contains
         SAFE_DEALLOCATE_A(vhxc_t2)
       end if
 
-      call pop_sub('propagator.propagator_dt.td_etrs')
+      POP_SUB(propagator_dt.td_etrs)
     end subroutine td_etrs
 
 
@@ -651,7 +651,7 @@ contains
       type(batch_t) :: zpsib
       CMPLX :: phase
 
-      call push_sub('propagator.propagator_dt.td_aetrs')
+      PUSH_SUB(propagator_dt.td_aetrs)
 
       if(tr%method == PROP_CAETRS) then
         call lalg_copy(gr%mesh%np, st%d%nspin, vold, hm%vhxc)
@@ -708,7 +708,7 @@ contains
         end do
       end do
       
-      call pop_sub('propagator.propagator_dt.td_aetrs')
+      POP_SUB(propagator_dt.td_aetrs)
     end subroutine td_aetrs
 
 
@@ -719,7 +719,7 @@ contains
       type(ion_state_t) :: ions_state
       FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM)
 
-      call push_sub('propagator.propagator_dt.exponential_midpoint')
+      PUSH_SUB(propagator_dt.exponential_midpoint)
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
         call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time - dt/M_TWO, hm%vhxc(:, :))
@@ -754,7 +754,7 @@ contains
         call hamiltonian_update(hm, gr%mesh)
       end if
 
-      call pop_sub('propagator.propagator_dt.exponential_midpoint')
+      POP_SUB(propagator_dt.exponential_midpoint)
     end subroutine exponential_midpoint
 
 
@@ -766,7 +766,7 @@ contains
       CMPLX, allocatable :: zpsi_rhs_pred(:,:,:,:), zpsi_rhs_corr(:,:,:,:)
       integer :: ik, ist, idim, np_part
 
-      call push_sub('propagator.propagator_dt.td_crank_nicholson_sparskit')
+      PUSH_SUB(propagator_dt.td_crank_nicholson_sparskit)
 
       np_part = gr%mesh%np_part
       SAFE_ALLOCATE(zpsi_rhs_corr(1:np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
@@ -853,7 +853,7 @@ contains
       end if
       SAFE_DEALLOCATE_A(zpsi_rhs_corr)
 
-      call pop_sub('propagator.propagator_dt.td_crank_nicholson_sparskit')
+      POP_SUB(propagator_dt.td_crank_nicholson_sparskit)
 #endif
     end subroutine td_crank_nicholson_sparskit
     ! ---------------------------------------------------------
@@ -868,7 +868,7 @@ contains
       FLOAT :: cgtol = CNST(1.0e-8)
       logical :: converged
 
-      call push_sub('propagator.propagator_dt.td_crank_nicholson')
+      PUSH_SUB(propagator_dt.td_crank_nicholson)
 
       np_part = gr%mesh%np_part
       np = gr%mesh%np
@@ -930,7 +930,7 @@ contains
       SAFE_DEALLOCATE_A(zpsi_rhs)
       SAFE_DEALLOCATE_A(zpsi)
       SAFE_DEALLOCATE_A(rhs)
-      call pop_sub('propagator.propagator_dt.td_crank_nicholson')
+      POP_SUB(propagator_dt.td_crank_nicholson)
     end subroutine td_crank_nicholson
     ! ---------------------------------------------------------
 
@@ -943,7 +943,7 @@ contains
       FLOAT :: atime(2)
       FLOAT, allocatable :: vaux(:, :, :), pot(:)
 
-      call push_sub('propagator.propagator_dt.td_magnus')
+      PUSH_SUB(propagator_dt.td_magnus)
 
       SAFE_ALLOCATE(vaux(1:gr%mesh%np, 1:st%d%nspin, 1:2))
 
@@ -990,14 +990,14 @@ contains
       end do
 
       SAFE_DEALLOCATE_A(vaux)
-      call pop_sub('propagator.propagator_dt.td_magnus')
+      POP_SUB(propagator_dt.td_magnus)
     end subroutine td_magnus
 
 
     ! ---------------------------------------------------------
     ! Crank-Nicholson scheme with source and memory term.
     subroutine td_crank_nicholson_src_mem()
-      call push_sub('propagator.propagator_dt.td_crank_nicholson_src_mem')
+      PUSH_SUB(propagator_dt.td_crank_nicholson_src_mem)
       
       select case(tr%ob%mem_type)
       case(SAVE_CPU_TIME)
@@ -1006,7 +1006,7 @@ contains
         call cn_src_mem_sp_dt(tr%ob, st, ks, hm, gr, max_iter, dt, time, nt)
       end select
 
-      call pop_sub('propagator.propagator_dt.td_crank_nicholson_src_mem')
+      POP_SUB(propagator_dt.td_crank_nicholson_src_mem)
     end subroutine td_crank_nicholson_src_mem
 
   end subroutine propagator_dt
@@ -1021,7 +1021,7 @@ contains
     integer :: idim
     CMPLX, allocatable :: zpsi(:, :)
 
-    call push_sub('propagator.propagator_qmr_op')
+    PUSH_SUB(propagator_qmr_op)
 
     SAFE_ALLOCATE(zpsi(1:grid_p%mesh%np_part, 1:dim_op))
     zpsi = M_z0
@@ -1036,7 +1036,7 @@ contains
     end forall
 
     SAFE_DEALLOCATE_A(zpsi)
-    call pop_sub('propagator.propagator_qmr_op')
+    POP_SUB(propagator_qmr_op)
   end subroutine propagator_qmr_op
   ! ---------------------------------------------------------
 
@@ -1046,10 +1046,10 @@ contains
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
 
-    call push_sub('propagator.propagator_qmr_prec')
+    PUSH_SUB(propagator_qmr_prec)
     y = x
 
-    call pop_sub('propagator.propagator_qmr_prec')
+    POP_SUB(propagator_qmr_prec)
   end subroutine propagator_qmr_prec
   ! ---------------------------------------------------------
 
@@ -1062,7 +1062,7 @@ contains
     FLOAT, intent(out) :: yre(:)
     FLOAT, intent(out) :: yim(:)
 
-    call push_sub('propagator.td_zop')
+    PUSH_SUB(td_zop)
 #ifdef HAVE_SPARSKIT    
     zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op) = &
       xre(1:grid_p%mesh%np) + M_zI * xim(1:grid_p%mesh%np)
@@ -1073,7 +1073,7 @@ contains
     yre(1:grid_p%mesh%np) =  real(zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op))
     yim(1:grid_p%mesh%np) = aimag(zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op))
 #endif    
-    call pop_sub('propagator.td_zop')
+    POP_SUB(td_zop)
   end subroutine td_zop
   ! ---------------------------------------------------------
 
@@ -1086,7 +1086,7 @@ contains
     FLOAT, intent(out) :: yre(:)
     FLOAT, intent(out) :: yim(:)
     
-    call push_sub('propagator.td_zopt')
+    PUSH_SUB(td_zopt)
 #ifdef HAVE_SPARSKIT        
     ! To act with the transpose of H on the wfn we apply H to the conjugate of psi
     ! and conjugate the resulting hpsi (note that H is not a purely real operator
@@ -1100,7 +1100,7 @@ contains
     yre(1:grid_p%mesh%np) =    real(zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op))
     yim(1:grid_p%mesh%np) = - aimag(zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op))
 #endif        
-    call pop_sub('propagator.td_zopt')
+    POP_SUB(td_zopt)
   end subroutine td_zopt
   ! ---------------------------------------------------------
 

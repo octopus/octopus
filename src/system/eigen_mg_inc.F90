@@ -31,7 +31,7 @@ subroutine X(eigensolver_mg) (der, st, hm, tol, niter, converged, ik, diff)
   integer  :: ist, ist2, iter
   R_TYPE, allocatable :: cc(:, :), aa(:)
 
-  call push_sub('eigen_cg.Xeigensolver_mg')
+  PUSH_SUB(X(eigensolver_mg))
 
   SAFE_ALLOCATE(cc(1:st%nst, 1:st%nst))
   SAFE_ALLOCATE(aa(1:st%nst))
@@ -71,7 +71,7 @@ subroutine X(eigensolver_mg) (der, st, hm, tol, niter, converged, ik, diff)
 
   niter = iter*10
 
-  call pop_sub('eigen_cg.Xeigensolver_mg')
+  POP_SUB(X(eigensolver_mg))
 end subroutine X(eigensolver_mg)
 
 ! -------------------------------------------------------------------------
@@ -93,7 +93,7 @@ subroutine X(coordinate_relaxation)(der, hm, nst, steps, ik, psi, aa, cc)
   
   R_TYPE, allocatable :: sigma(:), beta(:), hdiag(:, :)
 
-  call push_sub('eigen_cg.Xcoordinate_relaxation')
+  PUSH_SUB(X(coordinate_relaxation))
 
   SAFE_ALLOCATE(sigma(1:nst))
   SAFE_ALLOCATE(beta(1:nst))
@@ -155,7 +155,7 @@ subroutine X(coordinate_relaxation)(der, hm, nst, steps, ik, psi, aa, cc)
     
   end do
   
-  call pop_sub('eigen_cg.Xcoordinate_relaxation')
+  POP_SUB(X(coordinate_relaxation))
 end subroutine X(coordinate_relaxation)
 
 !! Local Variables:

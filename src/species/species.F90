@@ -178,7 +178,7 @@ contains
     integer :: ib, ispec, row, n_spec_block, n_spec_def, iunit, read_data
     type(block_t) :: blk
 
-    call push_sub('species.species_read')
+    PUSH_SUB(species_read)
 
     spec%has_density = .false. ! there is no density associated
     spec%nlcc      = .false.   ! without non-local core corrections
@@ -353,7 +353,7 @@ contains
       call write_fatal(1)
     end if
 
-    call pop_sub('species.species_read')
+    POP_SUB(species_read)
   end subroutine species_read
   ! ---------------------------------------------------------
 
@@ -368,7 +368,7 @@ contains
     integer :: i
     FLOAT   :: pot_re, pot_im, xx(MAX_DIM), rr
 
-    call push_sub('species.species_init')
+    PUSH_SUB(species_init)
 
     print_info_ = .true.
     if(present(print_info)) then
@@ -458,7 +458,7 @@ contains
     SAFE_ALLOCATE(spec%iwf_i(1:spec%niwfs, 1:ispin))
     call species_iwf_fix_qn(spec, ispin)
 
-    call pop_sub('species.species_init')
+    POP_SUB(species_init)
   end subroutine species_init
   ! ---------------------------------------------------------
 
@@ -476,7 +476,7 @@ contains
     character(len=256) :: dirname
     FLOAT :: local_radius
 
-    call push_sub('species.species_pot_init')
+    PUSH_SUB(species_pot_init)
     
     if(species_is_ps(this)) then
       call ps_separate(this%ps)
@@ -512,7 +512,7 @@ contains
       end if
     end if
 
-    call pop_sub('species.species_pot_init')
+    POP_SUB(species_pot_init)
   end subroutine species_pot_init
   ! ---------------------------------------------------------
 
@@ -683,7 +683,7 @@ contains
   logical function species_is_ps(spec)
     type(species_t), intent(in) :: spec
     
-    call push_sub('species.species_is_ps')
+    PUSH_SUB(species_is_ps)
 
     species_is_ps = &
          ( spec%type == SPEC_PS_PSF) .or. &
@@ -692,7 +692,7 @@ contains
          ( spec%type == SPEC_PS_FHI) .or. &
          ( spec%type == SPEC_PS_UPF)
     
-    call pop_sub('species.species_is_ps')
+    POP_SUB(species_is_ps)
   end function species_is_ps
 
   ! ---------------------------------------------------------
@@ -711,7 +711,7 @@ contains
   logical function species_is_local(spec)
     type(species_t), intent(in) :: spec
 
-    call push_sub('species.species_is_local')
+    PUSH_SUB(species_is_local)
 
     species_is_local = .true.
       
@@ -719,7 +719,7 @@ contains
       if ( spec%ps%l_max /= 0 ) species_is_local = .false. 
     end if
 
-    call pop_sub('species.species_is_local')
+    POP_SUB(species_is_local)
   end function species_is_local
   ! ---------------------------------------------------------
 
@@ -818,7 +818,7 @@ contains
     integer :: i, l, m
     FLOAT, parameter :: threshold = CNST(0.001)
 
-    call push_sub('species.species_get_iwf_radius')
+    PUSH_SUB(species_get_iwf_radius)
 
     i = spec%iwf_i(j, is)
     l = spec%iwf_l(j, is)
@@ -830,7 +830,7 @@ contains
       radius = sqrt(-M_TWO*log(threshold)/spec%omega)
     end if
 
-    call pop_sub('species.species_get_iwf_radius')
+    POP_SUB(species_get_iwf_radius)
 
   end function species_get_iwf_radius
   ! ---------------------------------------------------------
@@ -843,7 +843,7 @@ contains
 
     integer :: i
 
-    call push_sub('species.species_end')
+    PUSH_SUB(species_end)
 
     do i = 1, ns
       if (species_is_ps(spec(i))) then 
@@ -857,7 +857,7 @@ contains
       SAFE_DEALLOCATE_P(spec(i)%iwf_i)
     end do
 
-    call pop_sub('species.species_end')
+    POP_SUB(species_end)
   end subroutine species_end
   ! ---------------------------------------------------------
 
@@ -882,7 +882,7 @@ contains
       return
     end if
 
-    call push_sub('species.species_debug')
+    PUSH_SUB(species_debug)
 
     dirname = trim(dir)//'/'//trim(spec%label)
 
@@ -916,7 +916,7 @@ contains
     end if
 
     call io_close(iunit)
-    call pop_sub('species.species_debug')
+    POP_SUB(species_debug)
   end subroutine species_debug
   ! ---------------------------------------------------------
 
@@ -932,7 +932,7 @@ contains
     integer :: lloc, lmax
     integer :: type
 
-    call push_sub('species.read_from_default_file')
+    PUSH_SUB(read_from_default_file)
 
     backspace(iunit)
 
@@ -953,7 +953,7 @@ contains
 
     read_data = 8
 
-    call pop_sub('species.read_from_default_file')
+    POP_SUB(read_from_default_file)
   end subroutine read_from_default_file
   ! ---------------------------------------------------------
 
@@ -967,7 +967,7 @@ contains
 
     integer :: nn
 
-    call push_sub('species.read_from_block')
+    PUSH_SUB(read_from_block)
 
     read_data = 0
 
@@ -1053,7 +1053,7 @@ contains
       call input_error('Species')
     end select
 
-    call pop_sub('species.read_from_block')
+    POP_SUB(read_from_block)
   end subroutine read_from_block
   ! ---------------------------------------------------------
 
@@ -1065,7 +1065,7 @@ contains
 
     integer :: is, n, i, l, m, n1, n2, n3
 
-    call push_sub('species.species_iwf_fix_qn')
+    PUSH_SUB(species_iwf_fix_qn)
 
     if(species_is_ps(spec)) then
       do is = 1, ispin
@@ -1162,7 +1162,7 @@ contains
       end select
     end if
 
-    call pop_sub('species.species_iwf_fix_qn')
+    POP_SUB(species_iwf_fix_qn)
   end subroutine species_iwf_fix_qn
   ! ---------------------------------------------------------
 

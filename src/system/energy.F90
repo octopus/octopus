@@ -71,7 +71,7 @@ contains
 
     logical :: full_
 
-    call push_sub('energy.total_energy')
+    PUSH_SUB(total_energy)
 
     full_ = .false.
     if(present(full)) full_ = full
@@ -151,7 +151,7 @@ contains
       end if
     end if
 
-    call pop_sub('energy.total_energy')
+    POP_SUB(total_energy)
   end subroutine total_energy
 
 #include "undef.F90"

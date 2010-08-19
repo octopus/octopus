@@ -32,7 +32,7 @@ subroutine X(vec_ghost_update)(vp, v_local)
   
   call profiling_in(prof_update, "GHOST_UPDATE")
 
-  call push_sub('par_vec_inc.Xvec_ghost_update')
+  PUSH_SUB(X(vec_ghost_update))
 
   nsend = subarray_size(vp%sendpoints)
   SAFE_ALLOCATE(ghost_send(1:nsend))
@@ -46,7 +46,7 @@ subroutine X(vec_ghost_update)(vp, v_local)
 
   SAFE_DEALLOCATE_A(ghost_send)
 
-  call pop_sub('par_vec_inc.Xvec_ghost_update')
+  POP_SUB(X(vec_ghost_update))
 
   call profiling_out(prof_update)
 end subroutine X(vec_ghost_update)
@@ -61,7 +61,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   integer :: ipart, pos, ii, tag
 
   call profiling_in(prof_start, "GHOST_UPDATE_START")
-  call push_sub('par_vec_inc.Xghost_update_batch_start')
+  PUSH_SUB(X(ghost_update_batch_start))
 
   ASSERT(v_local%nst_linear > 0)
 
@@ -133,7 +133,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
     end do
   end select
   
-  call pop_sub('par_vec_inc.Xghost_update_batch_start')
+  POP_SUB(X(ghost_update_batch_start))
   call profiling_out(prof_start)
 
 end subroutine X(ghost_update_batch_start)
@@ -146,7 +146,7 @@ subroutine X(ghost_update_batch_finish)(handle)
   integer, allocatable :: status(:, :)
 
   call profiling_in(prof_wait, "GHOST_UPDATE_WAIT")
-  call push_sub('par_vec_inc.Xghost_update_batch_finish')
+  PUSH_SUB(X(ghost_update_batch_finish))
   
   ASSERT(handle%nnb > 0)
 
@@ -160,7 +160,7 @@ subroutine X(ghost_update_batch_finish)(handle)
   call batch_end(handle%ghost_send)
 
   call profiling_out(prof_wait)
-  call pop_sub('par_vec_inc.Xghost_update_batch_finish')
+  POP_SUB(X(ghost_update_batch_finish))
 end subroutine X(ghost_update_batch_finish)
 
 !! Local Variables:

@@ -27,12 +27,12 @@ subroutine X(restart_write_function)(dir, filename, gr, ff, ierr, size)
   integer,          intent(in)  :: size
   R_TYPE,           intent(in)  :: ff(size)
 
-  call push_sub('restart_inc.Xrestart_write_function')
+  PUSH_SUB(X(restart_write_function))
 
   call X(output_function)(restart_format, trim(dir), trim(filename), gr%mesh, ff(:), unit_one, ierr, is_tmp=.true.)
   ! all restart files are in atomic units
 
-  call pop_sub('restart_inc.Xrestart_write_function')
+  POP_SUB(X(restart_write_function))
 end subroutine X(restart_write_function)
 
 
@@ -45,12 +45,12 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
   integer,          intent(out)   :: ierr
   integer, optional, intent(in)   :: map(:)
 
-  call push_sub('restart_inc.Xrestart_read_function')
+  PUSH_SUB(X(restart_read_function))
 
   ! try binary
   call X(input_function) (trim(dir)//'/'//trim(filename)//'.obf', mesh, ff(1:mesh%np), ierr, is_tmp=.true., map = map)
 
-  call pop_sub('restart_inc.Xrestart_read_function')
+  POP_SUB(X(restart_read_function))
 end subroutine X(restart_read_function)
 
 
@@ -65,7 +65,7 @@ subroutine X(restart_write_lr_rho)(lr, gr, nspin, restart_dir, rho_tag)
   character(len=100) :: fname
   integer :: is, ierr
 
-  call push_sub('restart_inc.Xrestart_write_lr_rho')
+  PUSH_SUB(X(restart_write_lr_rho))
 
   call block_signals()
   do is = 1, nspin
@@ -75,7 +75,7 @@ subroutine X(restart_write_lr_rho)(lr, gr, nspin, restart_dir, rho_tag)
   end do
   call unblock_signals()
 
-  call pop_sub('restart_inc.Xrestart_write_lr_rho')
+  POP_SUB(X(restart_write_lr_rho))
 end subroutine X(restart_write_lr_rho)
 
 
@@ -91,7 +91,7 @@ subroutine X(restart_read_lr_rho)(lr, gr, nspin, restart_subdir, rho_tag, ierr)
   character(len=80) :: fname
   integer :: is, s_ierr
 
-  call push_sub('restart_inc.Xrestart_read_lr_rho')
+  PUSH_SUB(X(restart_read_lr_rho))
 
   ierr = 0
   do is = 1, nspin
@@ -113,7 +113,7 @@ subroutine X(restart_read_lr_rho)(lr, gr, nspin, restart_subdir, rho_tag, ierr)
 
   end if
 
-  call pop_sub('restart_inc.Xrestart_read_lr_rho')
+  POP_SUB(X(restart_read_lr_rho))
 end subroutine X(restart_read_lr_rho)
 
 

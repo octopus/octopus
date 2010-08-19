@@ -180,7 +180,7 @@ contains
     CMPLX   :: pol(MAX_DIM)
     type(block_t) :: blk
 
-    call push_sub('controlfunction.controlfunction_mod_init')
+    PUSH_SUB(controlfunction_mod_init)
 
     if(.not. associated(cf_common)) then
       SAFE_ALLOCATE(cf_common)
@@ -543,7 +543,7 @@ contains
     end if
 
     call messages_print_stress(stdout)
-    call pop_sub('controlfunction.controlfunction_mod_init')
+    POP_SUB(controlfunction_mod_init)
   end subroutine controlfunction_mod_init
   ! ---------------------------------------------------------
 
@@ -560,7 +560,7 @@ contains
 
     integer :: ipar
 
-    call push_sub('controlfunction.controlfunction_init')
+    PUSH_SUB(controlfunction_init)
 
     cp%w0                  = cf_common%w0
     cp%no_controlfunctions = cf_common%no_controlfunctions
@@ -657,7 +657,7 @@ contains
     ! Construct the transformation matrix, if needed.
     call controlfunction_trans_matrix(cp)
 
-    call pop_sub('controlfunction.controlfunction_init')
+    POP_SUB(controlfunction_init)
   end subroutine controlfunction_init
   ! ---------------------------------------------------------
 
@@ -672,7 +672,7 @@ contains
 
     integer :: ipar
 
-    call push_sub('controlfunction.controlfunction_set')
+    PUSH_SUB(controlfunction_set)
 
     select case(cf_common%mode)
     case(controlfunction_mode_epsilon, controlfunction_mode_f)
@@ -685,7 +685,7 @@ contains
       call laser_get_phi(ep%lasers(1), cp%f(1))
     end select
 
-    call pop_sub('controlfunction.controlfunction_set')
+    POP_SUB(controlfunction_set)
   end subroutine controlfunction_set
   ! ---------------------------------------------------------
 
@@ -705,7 +705,7 @@ contains
     FLOAT   :: dt
     integer :: ntiter
 
-    call push_sub('controlfunction.controlfunction_prepare_initial')
+    PUSH_SUB(controlfunction_prepare_initial)
 
     call controlfunction_apply_envelope(par)
 
@@ -740,7 +740,7 @@ contains
     ! Move to the "native" representation, if necessary.
     call controlfunction_set_rep(par)
 
-    call pop_sub('controlfunction.controlfunction_prepare_initial')
+    POP_SUB(controlfunction_prepare_initial)
   end subroutine controlfunction_prepare_initial
   ! ---------------------------------------------------------
 
@@ -754,7 +754,7 @@ contains
   subroutine controlfunction_set_rep(par)
     type(controlfunction_t), intent(inout) :: par
 
-    call push_sub('controlfunction.controlfunction_set_rep')
+    PUSH_SUB(controlfunction_set_rep)
 
     if(par%current_representation .ne. cf_common%representation) then
       if(cf_common%representation .eq. ctr_real_time) then
@@ -764,7 +764,7 @@ contains
       end if
     end if
 
-    call pop_sub('controlfunction.controlfunction_set_rep')
+    POP_SUB(controlfunction_set_rep)
   end subroutine controlfunction_set_rep
   ! ---------------------------------------------------------
 
@@ -775,7 +775,7 @@ contains
 
     integer :: ipar
 
-    call push_sub('controlfunction.controlfunction_to_basis')
+    PUSH_SUB(controlfunction_to_basis)
 
     if(par%current_representation.eq.ctr_real_time) then
       select case(cf_common%representation)
@@ -812,7 +812,7 @@ contains
       end select
     end if
 
-    call pop_sub('controlfunction.controlfunction_to_basis')
+    POP_SUB(controlfunction_to_basis)
   end subroutine controlfunction_to_basis
   ! ---------------------------------------------------------
 
@@ -823,11 +823,11 @@ contains
 
     integer :: ipar
 
-    call push_sub('controlfunction.controlfunction_to_realtime')
+    PUSH_SUB(controlfunction_to_realtime)
 
     select case(par%current_representation)
     case(ctr_real_time)
-      call pop_sub('controlfunction.controlfunction_to_realtime')
+      POP_SUB(controlfunction_to_realtime)
       return
     case(ctr_sine_fourier_series_h)
       call controlfunction_theta_to_basis(par)
@@ -857,7 +857,7 @@ contains
     end select
 
     par%current_representation = ctr_real_time
-    call pop_sub('controlfunction.controlfunction_to_realtime')
+    POP_SUB(controlfunction_to_realtime)
   end subroutine controlfunction_to_realtime
   ! ---------------------------------------------------------
 
@@ -868,7 +868,7 @@ contains
 
     integer :: ipar
 
-    call push_sub('controlfunction.controlfunction_diff')
+    PUSH_SUB(controlfunction_diff)
 
     ASSERT(pp%current_representation .eq. qq%current_representation)
 
@@ -877,7 +877,7 @@ contains
       res = res + tdf_diff(pp%f(ipar), qq%f(ipar))
     end do
 
-    call pop_sub('controlfunction.controlfunction_diff')
+    POP_SUB(controlfunction_diff)
   end function controlfunction_diff
   ! ---------------------------------------------------------
 
@@ -887,10 +887,10 @@ contains
     FLOAT, intent(in) :: xx(:)
     FLOAT, intent(in) :: yy(:)
 
-    call push_sub('controlfunction.controlfunction_dotp')
+    PUSH_SUB(controlfunction_dotp)
     res = sum(xx(:) * yy(:))
 
-    call pop_sub('controlfunction.controlfunction_dotp')
+    POP_SUB(controlfunction_dotp)
   end function controlfunction_dotp
   ! ---------------------------------------------------------
 
@@ -898,18 +898,18 @@ contains
   ! ---------------------------------------------------------
   subroutine controlfunction_mixing_init(par)
     type(controlfunction_t), intent(in) :: par
-    call push_sub('controlfunction.controlfunction_mixing_init')
+    PUSH_SUB(controlfunction_mixing_init)
     call mix_init(controlfunction_mix, par%dim, par%no_controlfunctions, 1)
-    call pop_sub('controlfunction.controlfunction_init')
+    POP_SUB(controlfunction_init)
   end subroutine controlfunction_mixing_init
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
   subroutine controlfunction_mixing_end
-    call push_sub('controlfunction.controlfunction_mixing_end')
+    PUSH_SUB(controlfunction_mixing_end)
     call mix_end(controlfunction_mix)
-    call pop_sub('controlfunction.controlfunction_mixing_end')
+    POP_SUB(controlfunction_mixing_end)
   end subroutine controlfunction_mixing_end
   ! ---------------------------------------------------------
 
@@ -922,7 +922,7 @@ contains
 
     integer :: ipar, idir, dim
     FLOAT, allocatable :: e_in(:, :, :), e_out(:, :, :), e_new(:, :, :)
-    call push_sub('controlfunction.controlfunction_mixing')
+    PUSH_SUB(controlfunction_mixing)
 
     dim = par_in%dim
     SAFE_ALLOCATE(e_in (1:dim, 1:par_in%no_controlfunctions, 1:1))
@@ -945,7 +945,7 @@ contains
     SAFE_DEALLOCATE_A(e_in)
     SAFE_DEALLOCATE_A(e_out)
     SAFE_DEALLOCATE_A(e_new)
-    call pop_sub('controlfunction.controlfunction_mixing')
+    POP_SUB(controlfunction_mixing)
   end subroutine controlfunction_mixing
   ! ---------------------------------------------------------
 
@@ -955,7 +955,7 @@ contains
     type(controlfunction_t), intent(inout) :: cp
     integer :: ipar, iter
 
-    call push_sub('controlfunction.controlfunction_apply_envelope')
+    PUSH_SUB(controlfunction_apply_envelope)
 
     ! Do not apply the envelope if the control functions are represented as a sine-Fourier series.
     if(cf_common%representation .eq. ctr_real_time) then
@@ -966,7 +966,7 @@ contains
       end do
     end if
 
-    call pop_sub('controlfunction.controlfunction_apply_envelope')
+    POP_SUB(controlfunction_apply_envelope)
   end subroutine controlfunction_apply_envelope
   ! ---------------------------------------------------------
 
@@ -978,7 +978,7 @@ contains
 
     integer :: ipar
     type(controlfunction_t) :: par
-    call push_sub('controlfunction.controlfunction_to_h')
+    PUSH_SUB(controlfunction_to_h)
 
     call controlfunction_copy(par, cp)
     call controlfunction_to_realtime(par)
@@ -993,7 +993,7 @@ contains
     end select
 
     call controlfunction_end(par)
-    call pop_sub('controlfunction.controlfunction_to_h')
+    POP_SUB(controlfunction_to_h)
   end subroutine controlfunction_to_h
   ! ---------------------------------------------------------
 
@@ -1006,13 +1006,13 @@ contains
 
     integer :: ipar
 
-    call push_sub('controlfunction.controlfunction_to_h_val')
+    PUSH_SUB(controlfunction_to_h_val)
 
     do ipar = 1, cp%no_controlfunctions
       call laser_set_f_value(ep%lasers(ipar), val, tdf(cp%f(ipar), val) )
     end do
 
-    call pop_sub('controlfunction.controlfunction_to_h_val')
+    POP_SUB(controlfunction_to_h_val)
   end subroutine controlfunction_to_h_val
   ! ---------------------------------------------------------
 
@@ -1022,7 +1022,7 @@ contains
     type(controlfunction_t), intent(inout) :: cp
     integer :: ipar
 
-    call push_sub('controlfunction.controlfunction_end')
+    PUSH_SUB(controlfunction_end)
 
     do ipar = 1, cp%no_controlfunctions
       call tdf_end(cp%f(ipar))
@@ -1033,7 +1033,7 @@ contains
     SAFE_DEALLOCATE_P(cp%utransfi)
     SAFE_DEALLOCATE_P(cp%theta)
 
-    call pop_sub('controlfunction.controlfunction_end')
+    POP_SUB(controlfunction_end)
   end subroutine controlfunction_end
   ! ---------------------------------------------------------
 
@@ -1052,7 +1052,7 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
-    call push_sub('controlfunction.controlfunction_write')
+    PUSH_SUB(controlfunction_write)
 
     call io_mkdir(trim(filename))
 
@@ -1196,7 +1196,7 @@ contains
     end if
 
     call controlfunction_end(par)
-    call pop_sub('controlfunction.controlfunction_write')
+    POP_SUB(controlfunction_write)
   end subroutine controlfunction_write
   ! ---------------------------------------------------------
 
@@ -1211,7 +1211,7 @@ contains
     integer :: iter, ipar
     FLOAT :: time, fi, phi
     type(tdf_t) :: ff
-    call push_sub('controlfunction.controlfunction_fluence')
+    PUSH_SUB(controlfunction_fluence)
 
     call controlfunction_copy(par_, par)
     call controlfunction_to_realtime(par_)
@@ -1245,7 +1245,7 @@ contains
     end select
 
     call controlfunction_end(par_)
-    call pop_sub('controlfunction.controlfunction_fluence')
+    POP_SUB(controlfunction_fluence)
   end function controlfunction_fluence
   ! ---------------------------------------------------------
 
@@ -1261,7 +1261,7 @@ contains
     FLOAT   :: time, integral, fi, phi, tdp
     type(tdf_t) :: ff
 
-    call push_sub('controlfunction.controlfunction_j2')
+    PUSH_SUB(controlfunction_j2)
 
     ASSERT(par%current_representation .eq. cf_common%representation)
 
@@ -1316,7 +1316,7 @@ contains
     j2 = - par_%alpha(1) * (integral - cf_common%targetfluence)
 
     call controlfunction_end(par_)
-    call pop_sub('controlfunction.controlfunction_j2')
+    POP_SUB(controlfunction_j2)
   end function controlfunction_j2
   ! ---------------------------------------------------------
 
@@ -1327,14 +1327,14 @@ contains
     FLOAT   :: old_fluence
     integer :: ipar
 
-    call push_sub('controlfunction.controlfunction_set_fluence')
+    PUSH_SUB(controlfunction_set_fluence)
 
     old_fluence = controlfunction_fluence(par) 
     do ipar = 1, par%no_controlfunctions
       call tdf_scalar_multiply( sqrt(cf_common%targetfluence / old_fluence), par%f(ipar) )
     end do
 
-    call pop_sub('controlfunction.controlfunction_set_fluence')
+    POP_SUB(controlfunction_set_fluence)
   end subroutine controlfunction_set_fluence
   ! ---------------------------------------------------------
 
@@ -1345,11 +1345,11 @@ contains
 
     FLOAT, intent(in) :: alpha
 
-    call push_sub('controlfunction.controlfunction_set_alpha')
+    PUSH_SUB(controlfunction_set_alpha)
 
     par%alpha(:) = alpha
 
-    call pop_sub('controlfunction.controlfunction_set_alpha')
+    POP_SUB(controlfunction_set_alpha)
   end subroutine controlfunction_set_alpha
   ! ---------------------------------------------------------
 
@@ -1361,7 +1361,7 @@ contains
 
     integer :: ipar
 
-    call push_sub('controlfunction.controlfunction_copy')
+    PUSH_SUB(controlfunction_copy)
 
     cp_out%no_controlfunctions = cp_in%no_controlfunctions
     cp_out%dim = cp_in%dim
@@ -1382,7 +1382,7 @@ contains
     call loct_pointer_copy(cp_out%utransfi, cp_in%utransfi)
     call loct_pointer_copy(cp_out%theta, cp_in%theta)
 
-    call pop_sub('controlfunction.controlfunction_copy')
+    POP_SUB(controlfunction_copy)
   end subroutine controlfunction_copy
   ! ---------------------------------------------------------
 
@@ -1393,7 +1393,7 @@ contains
 
      integer :: ipar
 
-     call push_sub('controlfunction.controlfunction_randomize')
+     PUSH_SUB(controlfunction_randomize)
 
      ASSERT(cf_common%representation .ne. ctr_real_time)
 
@@ -1408,7 +1408,7 @@ contains
        call tdf_set_random(par%f(1))
      end select
 
-     call pop_sub('controlfunction.controlfunction_randomize')
+     POP_SUB(controlfunction_randomize)
   end subroutine controlfunction_randomize
   ! ---------------------------------------------------------
 
@@ -1428,7 +1428,7 @@ contains
     FLOAT :: value
     integer :: ipar
     
-    call push_sub('controlfunction.controlfunction_update')
+    PUSH_SUB(controlfunction_update)
 
     select case(dir)
       case('f')
@@ -1450,7 +1450,7 @@ contains
         end do
     end select
 
-    call pop_sub('controlfunction.controlfunction_update')
+    POP_SUB(controlfunction_update)
   end subroutine controlfunction_update
   ! ---------------------------------------------------------
 
@@ -1486,7 +1486,7 @@ contains
     FLOAT,                   intent(out) :: upper_bounds(:)
     integer :: dog
 
-    call push_sub('controlfunction.controlfunction_bounds')
+    PUSH_SUB(controlfunction_bounds)
 
     upper_bounds = M_PI
     dog = controlfunction_dof(par)
@@ -1497,7 +1497,7 @@ contains
       lower_bounds(dog)       = -M_PI
     end select
 
-    call pop_sub('controlfunction.controlfunction_bounds')
+    POP_SUB(controlfunction_bounds)
   end subroutine controlfunction_bounds
   ! ---------------------------------------------------------
 
@@ -1525,13 +1525,13 @@ contains
 
     integer :: ipar
 
-    call push_sub('controlfunction.controlfunction_filter')
+    PUSH_SUB(controlfunction_filter)
 
     do ipar = 1, par%no_controlfunctions
       call filter_apply(par%f(ipar), filter)
     end do
 
-    call pop_sub('controlfunction.controlfunction_filter')
+    POP_SUB(controlfunction_filter)
   end subroutine controlfunction_filter
   ! ---------------------------------------------------------
 
@@ -1540,7 +1540,7 @@ contains
   subroutine controlfunction_mod_close()
     integer :: ipar
 
-    call push_sub('controlfunction.controlfunction_mod_close')
+    PUSH_SUB(controlfunction_mod_close)
 
     SAFE_DEALLOCATE_P(cf_common%alpha)
     nullify(cf_common%alpha)
@@ -1553,7 +1553,7 @@ contains
     nullify(cf_common%td_penalty)
     SAFE_DEALLOCATE_P(cf_common)
 
-    call pop_sub('controlfunction.controlfunction_mod_close')
+    POP_SUB(controlfunction_mod_close)
   end subroutine controlfunction_mod_close
   ! ---------------------------------------------------------
 
@@ -1571,7 +1571,7 @@ contains
     FLOAT :: rr
     FLOAT, allocatable :: theta(:), grad_matrix(:,:), eigenvectors(:,:), eigenvalues(:), aa(:)
     
-    call push_sub('controlfunction.controlfunction_gradient')
+    PUSH_SUB(controlfunction_gradient)
 
     dim = par%dim
 
@@ -1643,7 +1643,7 @@ contains
     end select
 
     SAFE_DEALLOCATE_A(theta)
-    call pop_sub('controlfunction.controlfunction_gradient')
+    POP_SUB(controlfunction_gradient)
   end subroutine controlfunction_gradient
   ! ---------------------------------------------------------
 

@@ -76,7 +76,7 @@ contains
     logical,       intent(in)  :: fixed_occ
     logical,       intent(in)  :: integral_occs
 
-    call push_sub('smear.smear_init')
+    PUSH_SUB(smear_init)
 
     !%Variable SmearingFunction
     !%Type integer
@@ -141,7 +141,7 @@ contains
       call parse_integer(datasets_check('SmearingMPOrder'), 1, this%MP_n)
     end if
 
-    call pop_sub('smear.smear_init')
+    POP_SUB(smear_init)
   end subroutine smear_init
 
 
@@ -150,7 +150,7 @@ contains
     type(smear_t), intent(out) :: to
     type(smear_t), intent(in)  :: from
 
-    call push_sub('smear.smear_copy')
+    PUSH_SUB(smear_copy)
 
     to%method       = from%method
     to%dsmear       = from%dsmear
@@ -159,7 +159,7 @@ contains
     to%ef_occ       = from%ef_occ
     to%MP_n         = from%MP_n
 
-    call pop_sub('smear.smear_copy')
+    POP_SUB(smear_copy)
   end subroutine smear_copy
 
 
@@ -179,7 +179,7 @@ contains
     FLOAT,   allocatable :: eigenval_list(:)
     integer, allocatable :: k_list(:), reorder(:)
 
-    call push_sub('smear.smear_find_fermi_energy')
+    PUSH_SUB(smear_find_fermi_energy)
 
     ! Initializations
     emin = minval(eigenvalues)
@@ -277,7 +277,7 @@ contains
 
     end if
 
-    call pop_sub('smear.smear_find_fermi_energy')
+    POP_SUB(smear_find_fermi_energy)
   end subroutine smear_find_fermi_energy
 
 
@@ -291,7 +291,7 @@ contains
     integer :: ik, ist
     FLOAT   :: dsmear, xx
 
-    call push_sub('smear.smear_fill_occupations')
+    PUSH_SUB(smear_fill_occupations)
 
     if(this%method == SMEAR_FIXED_OCC) then
       ! do nothing
@@ -319,7 +319,7 @@ contains
       end do
     end if
 
-    call pop_sub('smear.smear_fill_occupations')
+    POP_SUB(smear_fill_occupations)
   end subroutine smear_fill_occupations
 
 
@@ -335,7 +335,7 @@ contains
     integer :: ist, ik
     FLOAT :: dsmear, xx, term, ff
 
-    call push_sub('smear.smear_calc_entropy')
+    PUSH_SUB(smear_calc_entropy)
 
     entropy = M_ZERO
 
@@ -367,7 +367,7 @@ contains
       end do
     endif
 
-    call pop_sub('smear.smear_calc_entropy')
+    POP_SUB(smear_calc_entropy)
   end function smear_calc_entropy
 
 
@@ -380,7 +380,7 @@ contains
     FLOAT :: xp, arg, hd, hp, aa
     integer :: ii, ni
 
-    call push_sub('smear.smear_delta_function')
+    PUSH_SUB(smear_delta_function)
 
     deltaf = M_ZERO
     select case(this%method)
@@ -427,7 +427,7 @@ contains
 
     end select
     
-    call pop_sub('smear.smear_delta_function')
+    POP_SUB(smear_delta_function)
   end function smear_delta_function
 
 
@@ -440,7 +440,7 @@ contains
     FLOAT :: xp, arg, hd, hp, aa
     integer :: ii, ni
 
-    call push_sub('smear.smear_step_function')
+    PUSH_SUB(smear_step_function)
 
     stepf = M_ZERO
     select case(this%method)
@@ -499,7 +499,7 @@ contains
 
     end select
 
-    call pop_sub('smear.smear_step_function')
+    POP_SUB(smear_step_function)
   end function smear_step_function
 
 
@@ -513,7 +513,7 @@ contains
     FLOAT :: xp, arg, hd, hp, hpm1, aa
     integer :: ii, ni
 
-    call push_sub('smear.smear_entropy_function')
+    PUSH_SUB(smear_entropy_function)
 
     entropyf = M_ZERO
     select case(this%method)
@@ -561,17 +561,17 @@ contains
 
     end select
 
-    call pop_sub('smear.smear_entropy_function')
+    POP_SUB(smear_entropy_function)
   end function smear_entropy_function
 
   logical function smear_is_semiconducting(this) result(answer)
     type(smear_t), intent(in) :: this
 
-    call push_sub('smear.smear_is_semiconducting')
+    PUSH_SUB(smear_is_semiconducting)
 
     answer = this%method .eq. SMEAR_SEMICONDUCTOR
 
-    call pop_sub('smear.smear_is_semiconducting')
+    POP_SUB(smear_is_semiconducting)
   end function smear_is_semiconducting
 
 end module smear_m

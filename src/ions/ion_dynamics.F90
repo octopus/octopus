@@ -104,7 +104,7 @@ contains
     type(c_ptr) :: random_gen_pointer
     type(xyz_file_info) :: xyz
 
-    call push_sub('ion_dynamics.ion_dynamics_init')
+    PUSH_SUB(ion_dynamics_init)
 
     !%Variable MoveIons
     !%Type integer
@@ -275,16 +275,16 @@ contains
 
     end if
 
-    call pop_sub('ion_dynamics.ion_dynamics_init')
+    POP_SUB(ion_dynamics_init)
   end subroutine ion_dynamics_init
 
   subroutine ion_dynamics_end(this)
     type(ion_dynamics_t), intent(inout) :: this
 
-    call push_sub('ion_dynamics.ion_dynamics_end')
+    PUSH_SUB(ion_dynamics_end)
     SAFE_DEALLOCATE_P(this%oldforce)
 
-    call pop_sub('ion_dynamics.ion_dynamics_end')
+    POP_SUB(ion_dynamics_end)
   end subroutine ion_dynamics_end
 
   subroutine ion_dynamics_propagate(this, sb, geo, time, dt)
@@ -298,7 +298,7 @@ contains
 
     if(.not. ion_dynamics_ions_move(this)) return
 
-    call push_sub('ion_dynamics.ion_dynamics_propagate')
+    PUSH_SUB(ion_dynamics_propagate)
 
     this%dt = dt
 
@@ -338,7 +338,7 @@ contains
 
     end select
     
-    call pop_sub('ion_dynamics.ion_dynamics_propagate')
+    POP_SUB(ion_dynamics_propagate)
   end subroutine ion_dynamics_propagate
   
   subroutine chain(this, geo)
@@ -348,7 +348,7 @@ contains
     FLOAT :: g1, g2, ss, uk, dt
     integer :: iatom
 
-    call push_sub('ion_dynamics.chain')
+    PUSH_SUB(chain)
 
     dt = this%dt
 
@@ -380,7 +380,7 @@ contains
     g2 = (this%nh1%mass*this%nh1%vel**2 - this%temp)/this%nh2%mass
     this%nh2%vel = this%nh2%vel + g2*dt/CNST(4.0)
     
-    call pop_sub('ion_dynamics.chain')
+    POP_SUB(chain)
   end subroutine chain
   
   subroutine ion_dynamics_propagate_vel(this, geo)
@@ -391,7 +391,7 @@ contains
 
     if(.not. ion_dynamics_ions_move(this)) return
 
-    call push_sub('ion_dynamics.ion_dynamics_propagate_vel')
+    PUSH_SUB(ion_dynamics_propagate_vel)
 
     select case(this%method)
     case(VELOCITY_VERLET)
@@ -416,7 +416,7 @@ contains
 
     end select
 
-    call pop_sub('ion_dynamics.ion_dynamics_propagate_vel')
+    POP_SUB(ion_dynamics_propagate_vel)
   end subroutine ion_dynamics_propagate_vel
 
   subroutine ion_dynamics_save_state(this, geo, state)
@@ -428,7 +428,7 @@ contains
 
     if(.not. ion_dynamics_ions_move(this) .or. this%method /= VELOCITY_VERLET) return
 
-    call push_sub('ion_dynamics.ion_dynamics_save_state')
+    PUSH_SUB(ion_dynamics_save_state)
 
     SAFE_ALLOCATE(state%pos(1:MAX_DIM, 1:geo%natoms))
     SAFE_ALLOCATE(state%vel(1:MAX_DIM, 1:geo%natoms))
@@ -438,7 +438,7 @@ contains
       state%vel(1:MAX_DIM, iatom) = geo%atom(iatom)%v(1:MAX_DIM)
     end do
 
-    call pop_sub('ion_dynamics.ion_dynamics_save_state')
+    POP_SUB(ion_dynamics_save_state)
   end subroutine ion_dynamics_save_state
 
   subroutine ion_dynamics_restore_state(this, geo, state)
@@ -450,7 +450,7 @@ contains
 
     if(.not. ion_dynamics_ions_move(this)) return
 
-    call push_sub('ion_dynamics.ion_dynamics_restore_state')
+    PUSH_SUB(ion_dynamics_restore_state)
 
     do iatom = 1, geo%natoms
       geo%atom(iatom)%x(1:MAX_DIM) = state%pos(1:MAX_DIM, iatom)
@@ -460,7 +460,7 @@ contains
     SAFE_DEALLOCATE_P(state%pos)
     SAFE_DEALLOCATE_P(state%vel)
     
-    call pop_sub('ion_dynamics.ion_dynamics_restore_state')
+    POP_SUB(ion_dynamics_restore_state)
   end subroutine ion_dynamics_restore_state
 
   logical pure function ion_dynamics_ions_move(this) result(ions_move)

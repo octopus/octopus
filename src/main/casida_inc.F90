@@ -29,7 +29,7 @@ function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
   R_TYPE, allocatable :: ff(:)
   integer :: ip, ia, sigma, idim
 
-  call push_sub('casida_inc.Xks_matrix_elements')
+  PUSH_SUB(X(ks_matrix_elements))
 
   SAFE_ALLOCATE(ff(1:mesh%np))
   do ia = 1, cas%n_pairs
@@ -44,7 +44,7 @@ function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
   end do
 
   SAFE_DEALLOCATE_A(ff)
-  call pop_sub('casida_inc.Xks_matrix_elements')
+  POP_SUB(X(ks_matrix_elements))
 end function X(ks_matrix_elements)
 
 ! ---------------------------------------------------------
@@ -55,7 +55,7 @@ R_TYPE function X(transition_matrix_element) (cas, ia, xx) result(zz)
 
   integer :: jb
 
-  call push_sub('casida_inc.Xtransition_matrix_element')
+  PUSH_SUB(X(transition_matrix_element))
 
   zz = R_TOTYPE(M_ZERO)
   if(cas%w(ia) > M_ZERO) then
@@ -65,7 +65,7 @@ R_TYPE function X(transition_matrix_element) (cas, ia, xx) result(zz)
     zz = (M_ONE/sqrt(cas%w(ia))) * zz
   end if
 
-  call pop_sub('casida_inc.Xtransition_matrix_element')
+  POP_SUB(X(transition_matrix_element))
 end function X(transition_matrix_element)
 
 ! ---------------------------------------------------------
@@ -79,7 +79,7 @@ subroutine X(transition_density) (cas, st, mesh, ia, n0I)
   integer :: ip, jb, idim
   R_TYPE, allocatable :: xx(:)
 
-  call push_sub('casida_inc.Xtransition_density')
+  PUSH_SUB(X(transition_density))
 
   SAFE_ALLOCATE(xx(1:cas%n_pairs))
 
@@ -94,7 +94,7 @@ subroutine X(transition_density) (cas, st, mesh, ia, n0I)
   end do
 
   SAFE_DEALLOCATE_A(xx)
-  call pop_sub('casida_inc.Xtransition_density')
+  POP_SUB(X(transition_density))
 end subroutine X(transition_density)
 
 ! ---------------------------------------------------------
@@ -109,7 +109,7 @@ subroutine X(get_transition_densities) (cas, sys, trandens)
   R_TYPE, allocatable :: n0I(:)
   type(unit_t) :: fn_unit
 
-  call push_sub('casida_inc.Xget_transition_densities')
+  PUSH_SUB(X(get_transition_densities))
 
   SAFE_ALLOCATE(n0I(1:sys%gr%mesh%np))
   n0I = M_ZERO
@@ -127,7 +127,7 @@ subroutine X(get_transition_densities) (cas, sys, trandens)
   end do
 
   SAFE_DEALLOCATE_A(n0I)
-  call pop_sub('casida_inc.Xget_transition_densities')
+  POP_SUB(X(get_transition_densities))
 end subroutine X(get_transition_densities)
 
 !! Local Variables:

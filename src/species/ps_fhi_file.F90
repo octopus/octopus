@@ -61,7 +61,7 @@ contains
 
     character(len=3) :: line
 
-    call push_sub('ps_fhi_file.read_file_data')
+    PUSH_SUB(read_file_data)
 
     read(unit, *) psf%title
     read(unit, *) psf%znucl, psf%zion, psf%pspdat
@@ -88,7 +88,7 @@ contains
     read(unit, '(a3)') line
     read(unit, '(a3)') line
     
-    call pop_sub('ps_fhi_file.read_file_data')
+    POP_SUB(read_file_data)
   end subroutine ps_fhi_file_read
 
 end module ps_fhi_file_m

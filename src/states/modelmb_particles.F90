@@ -99,7 +99,7 @@ contains
 subroutine modelmb_particles_nullify(this)
   type(modelmb_particle_t), intent(inout) :: this
 
-  call push_sub('modelmb_particles.modelmb_particles_nullify')
+  PUSH_SUB(modelmb_particles_nullify)
 
   nullify(this%labels_particles)
   nullify(this%particletype)
@@ -112,7 +112,7 @@ subroutine modelmb_particles_nullify(this)
   nullify(this%labels_densities)
   nullify(this%particle_kept_densities)
 
-  call pop_sub('modelmb_particles.modelmb_particles_nullify')
+  POP_SUB(modelmb_particles_nullify)
 end subroutine modelmb_particles_nullify
 
 
@@ -126,7 +126,7 @@ subroutine modelmb_particles_init (this,gr)
   integer :: ipart, ncols, nline, itmp, jtmp, npar, ntype
   type(block_t) :: blk
 
-  call push_sub('modelmb_particles.modelmb_particles_init')
+  PUSH_SUB(modelmb_particles_init)
 
   ! read in scalar dimensions
 
@@ -314,7 +314,7 @@ subroutine modelmb_particles_init (this,gr)
     nullify(this%particle_kept_densities)
   end if
 
-  call pop_sub('modelmb_particles.modelmb_particles_init')
+  POP_SUB(modelmb_particles_init)
 
 end subroutine modelmb_particles_init
 
@@ -322,7 +322,7 @@ end subroutine modelmb_particles_init
 subroutine modelmb_particles_end (this)
   type(modelmb_particle_t),intent(inout) :: this
 
-  call push_sub('modelmb_particles.modelmb_particles_end')
+  PUSH_SUB(modelmb_particles_end)
 
   SAFE_DEALLOCATE_P(this%labels_particles)
   SAFE_DEALLOCATE_P(this%particletype)
@@ -336,7 +336,7 @@ subroutine modelmb_particles_end (this)
   SAFE_DEALLOCATE_P(this%labels_densities)
   SAFE_DEALLOCATE_P(this%particle_kept_densities)
 
-  call pop_sub('modelmb_particles.modelmb_particles_end')
+  POP_SUB(modelmb_particles_end)
 
 end subroutine modelmb_particles_end
 
@@ -344,7 +344,7 @@ subroutine modelmb_particles_copy(modelmb_out, modelmb_in)
   type(modelmb_particle_t), intent(in)  :: modelmb_in
   type(modelmb_particle_t), intent(out) :: modelmb_out
 
-  call push_sub('modelmb_particles.modelmb_particles_copy')
+  PUSH_SUB(modelmb_particles_copy)
 
   modelmb_out%ndim = modelmb_in%ndim
   modelmb_out%ntype_of_particle = modelmb_in%ntype_of_particle
@@ -364,7 +364,7 @@ subroutine modelmb_particles_copy(modelmb_out, modelmb_in)
   call loct_pointer_copy(modelmb_out%labels_densities,modelmb_in%labels_densities)
   call loct_pointer_copy(modelmb_out%particle_kept_densities,modelmb_in%particle_kept_densities)
 
-  call pop_sub('modelmb_particles.modelmb_particles_copy')
+  POP_SUB(modelmb_particles_copy)
 
 end subroutine modelmb_particles_copy
 
@@ -377,7 +377,7 @@ subroutine modelmb_copy_masses (this,masses)
 
   integer :: dimcounter,ipart
 
-  call push_sub('modelmb_particles.modelmb_copy_masses')
+  PUSH_SUB(modelmb_copy_masses)
 
   ! copy masses to gr%der%masses
   dimcounter = 0
@@ -388,7 +388,7 @@ subroutine modelmb_copy_masses (this,masses)
     dimcounter = dimcounter+this%ndim
   end do
 
-  call pop_sub('modelmb_particles.modelmb_copy_masses')
+  POP_SUB(modelmb_copy_masses)
 
 end subroutine modelmb_copy_masses
 

@@ -77,7 +77,7 @@ contains
   subroutine unit_system_init()
     integer :: cc, cinp, cout
 
-    call push_sub('unit_system.unit_system_init')
+    PUSH_SUB(unit_system_init)
 
     !%Variable Units
     !%Type integer
@@ -169,7 +169,7 @@ contains
     call unit_system_get(units_inp, cinp)
     call unit_system_get(units_out, cout)
 
-    call pop_sub('unit_system.unit_system_init')
+    POP_SUB(unit_system_init)
 
   end subroutine unit_system_init
 
@@ -178,7 +178,7 @@ contains
     type(unit_system_t), intent(out) :: uu
     integer,             intent(in)  :: cc
 
-    call push_sub('unit_system.unit_system_get')
+    PUSH_SUB(unit_system_get)
 
     select case(cc)
     case (UNITS_ATOMIC)
@@ -189,7 +189,7 @@ contains
       call input_error('Units')
     end select
 
-    call pop_sub('unit_system.unit_system_get')
+    POP_SUB(unit_system_get)
   end subroutine unit_system_get
 
 
@@ -201,7 +201,7 @@ contains
   subroutine unit_system_init_atomic(uu)
     type(unit_system_t), intent(out) :: uu
 
-    call push_sub('unit_system.unit_system_init_atomic')
+    PUSH_SUB(unit_system_init_atomic)
 
     uu%length%abbrev = "b"
     uu%length%name   = "Bohr"
@@ -242,7 +242,7 @@ contains
     uu%hyperpolarizability%name    = "Bohr^5"
     uu%hyperpolarizability%factor  = M_ONE
 
-    call pop_sub('unit_system.unit_system_init_atomic')
+    POP_SUB(unit_system_init_atomic)
   end subroutine unit_system_init_atomic
 
 
@@ -250,7 +250,7 @@ contains
   subroutine unit_system_init_eV_Ang(uu)
     type(unit_system_t), intent(out) :: uu
 
-    call push_sub('unit_system.unit_system_init_eV_Ang')
+    PUSH_SUB(unit_system_init_eV_Ang)
 
     uu%length%abbrev = "A"
     uu%length%name   = "Angstrom"
@@ -283,7 +283,7 @@ contains
     uu%polarizability      = uu%length**3
     uu%hyperpolarizability = uu%length**5
 
-    call pop_sub('unit_system.unit_system_init_eV_Ang')
+    POP_SUB(unit_system_init_eV_Ang)
   end subroutine unit_system_init_eV_Ang
 
 
@@ -302,12 +302,12 @@ contains
     integer            :: iunit, ios
     character(len=256) :: line
 
-    call push_sub('unit_system.unit_system_from_file')
+    PUSH_SUB(unit_system_from_file)
 
     iunit = io_open(file = trim(fname), action = 'read', status = 'old', die = .false.)
     if(iunit < 0) then
       ierr = -2
-      call pop_sub('unit_system.unit_system_from_file')
+      POP_SUB(unit_system_from_file)
       return
     end if
 
@@ -317,18 +317,18 @@ contains
       if(ios.ne.0) exit
       if(index(line,'[A]').ne.0  .or.  index(line,'eV').ne.0) then
         call unit_system_get(uu, UNITS_EVA)
-        call pop_sub('unit_system.unit_system_from_file')
+        POP_SUB(unit_system_from_file)
         return
       elseif(index(line,'[b]').ne.0) then
         call unit_system_get(uu, UNITS_ATOMIC)
-        call pop_sub('unit_system.unit_system_from_file')
+        POP_SUB(unit_system_from_file)
         return
       end if
     end do
 
     ierr = -1
 
-    call pop_sub('unit_system.unit_system_from_file')
+    POP_SUB(unit_system_from_file)
   end subroutine unit_system_from_file
 
 end module unit_system_m

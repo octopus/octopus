@@ -33,14 +33,14 @@ subroutine xc_get_vxc_and_axc(der, xcs, st, rho, current_density, ispin, vxc, ax
   FLOAT, allocatable :: vorticity(:,:,:), ff(:,:,:), dedd(:,:), dedv(:,:,:), tmp(:,:)
   FLOAT, allocatable :: l_dens(:), l_vorticity(:,:), l_dedd(:), l_dedv(:,:)
 
-  call push_sub('axc_inc.xc_get_vxc_and_axc')
+  PUSH_SUB(xc_get_vxc_and_axc)
 
   !XC energy and potential in the absence of external magnetic fields
   call xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc=vxc)
 
   !do we have a current-dependent XC?
   if(iand(xcs%family, XC_FAMILY_LCA) == 0) then
-    call pop_sub('axc_inc.xc_get_vxc_and_axc')
+    POP_SUB(xc_get_vxc_and_axc)
     return
   end if
 
@@ -109,7 +109,7 @@ subroutine xc_get_vxc_and_axc(der, xcs, st, rho, current_density, ispin, vxc, ax
   SAFE_DEALLOCATE_A(dedd)
   SAFE_DEALLOCATE_A(dedv)
 
-  call pop_sub('axc_inc.xc_get_vxc_and_axc')
+  POP_SUB(xc_get_vxc_and_axc)
 end subroutine xc_get_vxc_and_axc
 
 !! Local Variables:

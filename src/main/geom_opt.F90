@@ -85,7 +85,7 @@ contains
     REAL_DOUBLE, allocatable :: coords(:)
     REAL_DOUBLE :: energy
 
-    call push_sub('geom_opt.geom_opt_run')
+    PUSH_SUB(geom_opt_run)
 
     call init_()
     
@@ -138,13 +138,13 @@ contains
     SAFE_DEALLOCATE_A(coords)
     call scf_end(g_opt%scfv)
     call end_()
-    call pop_sub('geom_opt.geom_opt_run')
+    POP_SUB(geom_opt_run)
 
   contains
 
     ! ---------------------------------------------------------
     subroutine init_()
-      call push_sub('geom_opt.geom_opt_run.init_')
+      PUSH_SUB(geom_opt_run.init_)
 
       call states_allocate_wfns(sys%st, sys%gr%mesh)
 
@@ -265,13 +265,13 @@ contains
 
       call loct_rm("./work-geom.xyz")
 
-      call pop_sub('geom_opt.geom_opt_run.init_')
+      POP_SUB(geom_opt_run.init_)
     end subroutine init_
 
 
     ! ---------------------------------------------------------
     subroutine end_()
-      call push_sub('geom_opt.geom_opt_run.end_')
+      PUSH_SUB(geom_opt_run.end_)
 
       call states_deallocate_wfns(sys%st)
 
@@ -281,7 +281,7 @@ contains
       nullify(g_opt%hm)
       nullify(g_opt%syst)
 
-      call pop_sub('geom_opt.geom_opt_run.end_')
+      POP_SUB(geom_opt_run.end_)
     end subroutine end_
 
   end subroutine geom_opt_run
@@ -297,7 +297,7 @@ contains
     
     integer :: iatom, idir
 
-    call push_sub("geom_opt.calc_point")
+    PUSH_SUB(calc_point)
 
     forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim)
       g_opt%geo%atom(iatom + 1)%x(idir) = coords(g_opt%dim * iatom + idir)
@@ -330,7 +330,7 @@ contains
       objective = g_opt%hm%etot
     end if
 
-    call pop_sub("geom_opt.calc_point")
+    POP_SUB(calc_point)
   end subroutine calc_point
 
 
@@ -344,7 +344,7 @@ contains
     integer :: getgrad
     REAL_DOUBLE , allocatable :: df(:)
     
-    call push_sub('geom_opt.calc_point_ng')
+    PUSH_SUB(calc_point_ng)
     
     getgrad = 0
     SAFE_ALLOCATE(df(1:size))
@@ -353,7 +353,7 @@ contains
     call calc_point(size, coords, objective, getgrad, df)
     SAFE_DEALLOCATE_A(df)
 
-    call pop_sub('geom_opt.calc_point_ng')
+    POP_SUB(calc_point_ng)
   end subroutine calc_point_ng
 
 
@@ -367,7 +367,7 @@ contains
     integer :: iatom, idir
     character(len=256) :: c_geom_iter, title
 
-    call push_sub("geom_opt.write_iter_info")
+    PUSH_SUB(write_iter_info)
     
     write(c_geom_iter, '(a,i4.4)') "go.", geom_iter
     write(title, '(f16.10)') units_from_atomic(units_out%energy, energy)
@@ -392,7 +392,7 @@ contains
     message(11) = ""
     call write_info(11)
 
-    call pop_sub("geom_opt.write_iter_info")
+    POP_SUB(write_iter_info)
   end subroutine write_iter_info
 
   ! ---------------------------------------------------------
@@ -403,10 +403,10 @@ contains
     REAL_DOUBLE, intent(in) :: energy, maxdx
     REAL_DOUBLE, intent(in) :: coords(size)
 
-    call push_sub('geom_opt.write_iter_info_ng')
+    PUSH_SUB(write_iter_info_ng)
     call write_iter_info(geom_iter, size, energy, maxdx, real(-M_ONE, 8), coords)
 
-    call pop_sub('geom_opt.write_iter_info_ng')
+    POP_SUB(write_iter_info_ng)
   end subroutine write_iter_info_ng
 
 end module geom_opt_m

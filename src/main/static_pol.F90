@@ -80,7 +80,7 @@ contains
     character(len=80) :: fname, dir_name
     character :: sign_char
 
-    call push_sub('static_pol.static_pol_run')
+    PUSH_SUB(static_pol_run)
 
     call init_()
 
@@ -369,13 +369,13 @@ contains
     SAFE_DEALLOCATE_A(tmp_rho)
     SAFE_DEALLOCATE_A(dipole)
     call end_()
-    call pop_sub('static_pol.static_pol_run')
+    POP_SUB(static_pol_run)
 
   contains
 
     ! ---------------------------------------------------------
     subroutine init_()
-      call push_sub('static_pol.static_pol_run.init_')
+      PUSH_SUB(static_pol_run.init_)
 
       ! shortcuts
       gr => sys%gr
@@ -454,23 +454,23 @@ contains
         verbosity = VERB_COMPACT
       endif
 
-      call pop_sub('static_pol.static_pol_run.init_')
+      POP_SUB(static_pol_run.init_)
     end subroutine init_
 
     ! ---------------------------------------------------------
     subroutine end_()
 
-      call push_sub('static_pol.end_')
+      PUSH_SUB(end_)
 
       call states_deallocate_wfns(sys%st)
 
-      call pop_sub('static_pol.end_')
+      POP_SUB(end_)
     end subroutine end_
   
 
     !-------------------------------------------------------------
     subroutine output_init_()
-      call push_sub('static_pol.output_init_')
+      PUSH_SUB(output_init_)
 
       !allocate memory for what we want to output
       if(iand(sys%outp%what, output_density) .ne. 0 .or. &
@@ -486,7 +486,7 @@ contains
         SAFE_ALLOCATE(lr_elfd(1:gr%mesh%np, 1:st%d%nspin))
       end if
       
-      call pop_sub('static_pol.output_init_')
+      POP_SUB(output_init_)
     end subroutine output_init_
 
 
@@ -495,7 +495,7 @@ contains
       integer iatom
       type(unit_t) fn_unit
       
-      call push_sub('static_pol.output_cycle_')
+      PUSH_SUB(output_cycle_)
 
       ! BORN CHARGES
       if(calc_Born) then
@@ -597,7 +597,7 @@ contains
 
       end if
 
-      call pop_sub('static_pol.output_cycle_')
+      POP_SUB(output_cycle_)
     end subroutine output_cycle_
 
 
@@ -609,7 +609,7 @@ contains
       type(unit_t) fn_unit
       FLOAT :: freq_factor(3)
 
-      call push_sub('static_pol.output_end_')
+      PUSH_SUB(output_end_)
 
       call io_mkdir(EM_RESP_FD_DIR)
 
@@ -686,7 +686,7 @@ contains
         SAFE_DEALLOCATE_A(elfd)
       end if
 
-      call pop_sub('static_pol.output_end_')
+      POP_SUB(output_end_)
     end subroutine output_end_
 
   end subroutine static_pol_run

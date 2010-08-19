@@ -99,7 +99,7 @@ contains
     type(states_dim_t), intent(out) :: dout
     type(states_dim_t), intent(in)  :: din
 
-    call push_sub('states_dim.states_dim_copy')
+    PUSH_SUB(states_dim_copy)
 
     dout%dim            = din%dim
     dout%nik            = din%nik
@@ -114,7 +114,7 @@ contains
 
     call distributed_copy(din%kpt, dout%kpt)
 
-    call pop_sub('states_dim.states_dim_copy')
+    POP_SUB(states_dim_copy)
   end subroutine states_dim_copy
 
 
@@ -122,13 +122,13 @@ contains
   subroutine states_dim_end(dim)
     type(states_dim_t), intent(inout) :: dim
 
-    call push_sub('states_dim.states_dim_end')
+    PUSH_SUB(states_dim_end)
 
     call distributed_end(dim%kpt)
 
     SAFE_DEALLOCATE_P(dim%kweights)
 
-    call pop_sub('states_dim.states_dim_end')
+    POP_SUB(states_dim_end)
   end subroutine states_dim_end
 
 
@@ -137,11 +137,11 @@ contains
   logical function is_spin_up(ik)
     integer, intent(in) :: ik
 
-    call push_sub('states_dim.is_spin_up')
+    PUSH_SUB(is_spin_up)
 
     is_spin_up = even(ik)
 
-    call pop_sub('states_dim.is_spin_up')
+    POP_SUB(is_spin_up)
   end function is_spin_up
 
 
@@ -150,11 +150,11 @@ contains
   logical function is_spin_down(ik)
     integer, intent(in) :: ik
 
-    call push_sub('states_dim.is_spin_down')
+    PUSH_SUB(is_spin_down)
 
     is_spin_down = odd(ik)
 
-    call pop_sub('states_dim.is_spin_down')
+    POP_SUB(is_spin_down)
   end function is_spin_down
 
 
@@ -191,10 +191,10 @@ contains
     type(states_dim_t), intent(inout) :: this
     type(multicomm_t),  intent(in)    :: mc
 
-    call push_sub('states_dim.kpoints_distribute')
+    PUSH_SUB(kpoints_distribute)
     call distributed_init(this%kpt, this%nik, mc, P_STRATEGY_KPOINTS, "k-points")
 
-    call pop_sub('states_dim.kpoints_distribute')
+    POP_SUB(kpoints_distribute)
   end subroutine kpoints_distribute
   
   ! ---------------------------------------------------------
@@ -205,7 +205,7 @@ contains
 
     integer :: ik, iq
 
-    call push_sub('states_dim.states_choose_kpoints')
+    PUSH_SUB(states_choose_kpoints)
 
     dd%nik = kpoints_number(sb%kpoints)
 
@@ -219,13 +219,13 @@ contains
     end do
 
     call print_kpoints_debug
-    call pop_sub('states_dim.states_choose_kpoints')
+    POP_SUB(states_choose_kpoints)
 
   contains
     subroutine print_kpoints_debug
       integer :: iunit
 
-      call push_sub('states_dim.states_choose_kpoints.print_kpoints_debug')
+      PUSH_SUB(states_choose_kpoints.print_kpoints_debug)
 
       if(in_debug_mode) then
 
@@ -235,7 +235,7 @@ contains
 
       end if
 
-      call pop_sub('states_dim.states_choose_kpoints.print_kpoints_debug')
+      POP_SUB(states_choose_kpoints.print_kpoints_debug)
     end subroutine print_kpoints_debug
 
   end subroutine states_choose_kpoints

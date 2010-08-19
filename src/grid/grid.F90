@@ -81,7 +81,7 @@ contains
     type(grid_t),      intent(inout) :: gr
     type(geometry_t),  intent(inout) :: geo
 
-    call push_sub('grid.grid_init_stage_0')
+    PUSH_SUB(grid_init_stage_0)
 
     call ob_grid_init(gr%ob_grid, geo)
     if(gr%ob_grid%open_boundaries) then
@@ -91,7 +91,7 @@ contains
       call simul_box_init(gr%sb, geo)
     end if
 
-    call pop_sub('grid.grid_init_stage_0')
+    POP_SUB(grid_init_stage_0)
   end subroutine grid_init_stage_0
 
 
@@ -107,7 +107,7 @@ contains
     FLOAT :: def_h, def_rsize
     FLOAT :: spacing(1:MAX_DIM)
 
-    call push_sub('grid.grid_init_stage_1')
+    PUSH_SUB(grid_init_stage_1)
 
     !%Variable UseFineMesh
     !%Type logical
@@ -211,7 +211,7 @@ contains
 
     call mesh_init_stage_2(gr%mesh, gr%sb, geo, gr%cv, gr%stencil)
 
-    call pop_sub('grid.grid_init_stage_1')
+    POP_SUB(grid_init_stage_1)
 
   end subroutine grid_init_stage_1
 
@@ -225,7 +225,7 @@ contains
     integer :: il
     type(mpi_grp_t) :: grp
 
-    call push_sub('grid.grid_init_stage_2')
+    PUSH_SUB(grid_init_stage_2)
 
     if(multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)) then
       call mpi_grp_init(grp, mc%group_comm(P_STRATEGY_DOMAINS))
@@ -283,7 +283,7 @@ contains
     call grid_write_info(gr, geo, stdout)
     if(gr%ob_grid%open_boundaries) call ob_grid_write_info(gr%ob_grid, stdout)
 
-    call pop_sub('grid.grid_init_stage_2')
+    POP_SUB(grid_init_stage_2)
   end subroutine grid_init_stage_2
 
 
@@ -293,7 +293,7 @@ contains
 
     integer :: il
 
-    call push_sub('grid.grid_end')
+    PUSH_SUB(grid_end)
 
     call ob_grid_end(gr%ob_grid)
 
@@ -329,7 +329,7 @@ contains
 
     call stencil_end(gr%stencil)
 
-    call pop_sub('grid.grid_end')
+    POP_SUB(grid_end)
   end subroutine grid_end
 
 
@@ -341,11 +341,11 @@ contains
 
     integer :: il
 
-    call push_sub('grid.grid_write_info')
+    PUSH_SUB(grid_write_info)
 
     if(.not.mpi_grp_is_root(mpi_world)) then
       if(in_debug_mode) call write_debug_newlines(6)
-      call pop_sub('grid.grid_write_info')
+      POP_SUB(grid_write_info)
       return
     end if
 
@@ -373,7 +373,7 @@ contains
     end if
     call messages_print_stress(iunit)
 
-    call pop_sub('grid.grid_write_info')
+    POP_SUB(grid_write_info)
   end subroutine grid_write_info
 
 
@@ -382,12 +382,12 @@ contains
     type(grid_t), intent(inout) :: gr
     type(geometry_t), intent(in) :: geo
 
-    call push_sub('grid.grid_create_multigrid')
+    PUSH_SUB(grid_create_multigrid)
 
     SAFE_ALLOCATE(gr%mgrid)
     call multigrid_init(gr%mgrid, geo, gr%cv, gr%mesh, gr%der, gr%stencil)
 
-    call pop_sub('grid.grid_create_multigrid')
+    POP_SUB(grid_create_multigrid)
   end subroutine grid_create_multigrid
 
 
@@ -399,7 +399,7 @@ contains
 
     FLOAT :: avg
 
-    call push_sub('grid.grid_create_largergrid')
+    PUSH_SUB(grid_create_largergrid)
 
     call simul_box_copy(grout%sb, grin%sb)
 
@@ -441,7 +441,7 @@ contains
     ! multigrids are not initialized by default
     nullify(grout%mgrid)
 
-    call pop_sub('grid.grid_create_largergrid')
+    POP_SUB(grid_create_largergrid)
   end subroutine grid_create_largergrid
 
 end module grid_m

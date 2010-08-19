@@ -86,10 +86,10 @@ contains
   FLOAT function laser_carrier_frequency(laser) result(w0)
     type(laser_t), intent(in) :: laser
 
-    call push_sub('lasers.laser_carrier_frequency')
+    PUSH_SUB(laser_carrier_frequency)
     w0 = laser%omega
 
-    call pop_sub('lasers.laser_carrier_frequency')
+    POP_SUB(laser_carrier_frequency)
   end function laser_carrier_frequency
   ! ---------------------------------------------------------
 
@@ -110,10 +110,10 @@ contains
     type(laser_t), intent(in) :: laser
     CMPLX :: pol(MAX_DIM)
 
-    call push_sub('lasers.laser_polarization')
+    PUSH_SUB(laser_polarization)
     pol(1:MAX_DIM) = laser%pol(1:MAX_DIM)
 
-    call pop_sub('lasers.laser_polarization')
+    POP_SUB(laser_polarization)
   end function laser_polarization
   ! ---------------------------------------------------------
 
@@ -123,10 +123,10 @@ contains
     type(laser_t), intent(in)    :: laser
     type(tdf_t),   intent(inout) :: ff
 
-    call push_sub('lasers.laser_get_f')
+    PUSH_SUB(laser_get_f)
     call tdf_copy(ff, laser%f)
 
-    call pop_sub('lasers.laser_get_f')
+    POP_SUB(laser_get_f)
   end subroutine laser_get_f
   ! ---------------------------------------------------------
 
@@ -136,12 +136,12 @@ contains
     type(laser_t), intent(inout) :: laser
     type(tdf_t),   intent(inout) :: ff
 
-    call push_sub('lasers.laser_set_f')
+    PUSH_SUB(laser_set_f)
 
     call tdf_end(laser%f)
     call tdf_copy(laser%f, ff)
 
-    call pop_sub('lasers.laser_set_f')
+    POP_SUB(laser_set_f)
   end subroutine laser_set_f
   ! ---------------------------------------------------------
 
@@ -151,10 +151,10 @@ contains
     type(laser_t), intent(in)    :: laser
     type(tdf_t),   intent(inout) :: phi
 
-    call push_sub('lasers.laser_get_phi')
+    PUSH_SUB(laser_get_phi)
     call tdf_copy(phi, laser%phi)
 
-    call pop_sub('lasers.laser_get_phi')
+    POP_SUB(laser_get_phi)
   end subroutine laser_get_phi
   ! ---------------------------------------------------------
 
@@ -164,12 +164,12 @@ contains
     type(laser_t), intent(inout) :: laser
     type(tdf_t),   intent(inout) :: phi
 
-    call push_sub('lasers.laser_set_phi')
+    PUSH_SUB(laser_set_phi)
 
     call tdf_end(laser%phi)
     call tdf_copy(laser%phi, phi)
 
-    call pop_sub('lasers.laser_set_phi')
+    POP_SUB(laser_set_phi)
   end subroutine laser_set_phi
   ! ---------------------------------------------------------
 
@@ -180,10 +180,10 @@ contains
     integer,       intent(in)    :: ii
     FLOAT,         intent(in)    :: xx
 
-    call push_sub('lasers.laser_set_f_value')
+    PUSH_SUB(laser_set_f_value)
     call tdf_set_numerical(laser%f, ii, xx)
 
-    call pop_sub('lasers.laser_set_f_value')
+    POP_SUB(laser_set_f_value)
   end subroutine laser_set_f_value
   ! ---------------------------------------------------------
 
@@ -204,7 +204,7 @@ contains
     integer :: iter
     FLOAT   :: tt, fj, phi
 
-    call push_sub('lasers.lasers_to_numerical_all')
+    PUSH_SUB(lasers_to_numerical_all)
 
     call tdf_to_numerical(laser%f, max_iter, dt, omegamax)
     do iter = 1, max_iter + 1
@@ -217,7 +217,7 @@ contains
     call tdf_init_cw(laser%phi, M_ZERO, M_ZERO)
     laser%omega = M_ZERO
 
-    call pop_sub('lasers.lasers_to_numerical_all')
+    POP_SUB(lasers_to_numerical_all)
   end subroutine laser_to_numerical_all
   ! ---------------------------------------------------------
 
@@ -231,12 +231,12 @@ contains
     FLOAT,         intent(in)     :: dt
     integer,       intent(in)     :: max_iter
     FLOAT,         intent(in)     :: omegamax
-    call push_sub('lasers.lasers_to_numerical')
+    PUSH_SUB(lasers_to_numerical)
 
     call tdf_to_numerical(laser%f, max_iter, dt, omegamax)
     call tdf_to_numerical(laser%phi, max_iter, dt, omegamax)
 
-    call pop_sub('lasers.lasers_to_numerical')
+    POP_SUB(lasers_to_numerical)
   end subroutine laser_to_numerical
   ! ---------------------------------------------------------
 
@@ -254,7 +254,7 @@ contains
     FLOAT :: omega0, rr, pot_re, pot_im
     FLOAT, allocatable :: xx(:)
 
-    call push_sub('lasers.laser_init')
+    PUSH_SUB(laser_init)
 
     call messages_obsolete_variable("TDLasers", "TDExternalFields")
     !%Variable TDExternalFields
@@ -432,7 +432,7 @@ contains
       call parse_block_end(blk)
     end if
 
-    call pop_sub('lasers.laser_init')
+    POP_SUB(laser_init)
 
   end subroutine laser_init
   ! ---------------------------------------------------------
@@ -445,7 +445,7 @@ contains
 
     integer :: il
 
-    call push_sub('laser.laser_end')
+    PUSH_SUB(laser_end)
 
     if(no_l > 0) then
       do il = 1, no_l
@@ -461,7 +461,7 @@ contains
       SAFE_DEALLOCATE_P(lasers); nullify(lasers)
     end if
 
-    call pop_sub('laser.laser_end')
+    POP_SUB(laser_end)
   end subroutine laser_end
   ! ---------------------------------------------------------
 
@@ -479,7 +479,7 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
-    call push_sub('lasers.laser_write_info')
+    PUSH_SUB(laser_write_info)
 
     no_l = size(lasers)
     
@@ -550,7 +550,7 @@ contains
 
     end do
 
-    call pop_sub('lasers.laser_write_info')
+    POP_SUB(laser_write_info)
   end subroutine laser_write_info
   ! ---------------------------------------------------------
 
@@ -566,7 +566,7 @@ contains
     integer :: ip
     FLOAT :: field(MAX_DIM)
 
-    call push_sub('lasers.laser_potential')
+    PUSH_SUB(laser_potential)
 
     if(present(time)) then
       amp = tdf(laser%f, time) * exp(M_zI * ( laser%omega*time + tdf(laser%phi, time) ) )
@@ -584,7 +584,7 @@ contains
       end do
     end select
 
-    call pop_sub('lasers.laser_potential')
+    POP_SUB(laser_potential)
   end subroutine laser_potential
   ! ---------------------------------------------------------
 
@@ -599,7 +599,7 @@ contains
     FLOAT   :: amp 
     integer :: ip, idir
 
-    call push_sub('lasers.laser_vector_potential')
+    PUSH_SUB(laser_vector_potential)
 
     if(present(time)) then
       amp = real(tdf(laser%f, time)*exp(M_zI*(laser%omega*time + tdf(laser%phi, time))))
@@ -608,7 +608,7 @@ contains
       forall(idir = 1:mesh%sb%dim, ip = 1:mesh%np) aa(ip, idir) = aa(ip, idir) + laser%a(ip, idir)
     end if
 
-    call pop_sub('lasers.laser_vector_potential')
+    POP_SUB(laser_vector_potential)
   end subroutine laser_vector_potential
   ! ---------------------------------------------------------
 
@@ -622,10 +622,10 @@ contains
 
     CMPLX :: amp
 
-    call push_sub('lasers.laser_field')
+    PUSH_SUB(laser_field)
 
     if(laser%field .eq. E_FIELD_SCALAR_POTENTIAL) then
-      call pop_sub('lasers.laser_field')
+      POP_SUB(laser_field)
       return
     endif
     if(present(time)) then
@@ -635,7 +635,7 @@ contains
     end if
     field(1:sb%dim) = field(1:sb%dim) + real(amp*laser%pol(1:sb%dim))
 
-    call pop_sub('lasers.laser_field')
+    POP_SUB(laser_field)
   end subroutine laser_field
 
 #include "undef.F90"

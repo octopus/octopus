@@ -136,7 +136,7 @@ contains
     FLOAT, allocatable :: grx(:)
     integer :: filter
 
-    call push_sub('epot.epot_init')
+    PUSH_SUB(epot_init)
 
     !%Variable FilterPotentials
     !%Type integer
@@ -403,7 +403,7 @@ contains
       rho_nuc(1:gr%mesh%np)=M_ZERO
     end if
 
-    call pop_sub('epot.epot_init')
+    POP_SUB(epot_init)
   end subroutine epot_init
 
 
@@ -414,7 +414,7 @@ contains
 
     integer :: iproj
 
-    call push_sub('epot.epot_end')
+    PUSH_SUB(epot_end)
 
     SAFE_DEALLOCATE_P(ep%local_potential)
     SAFE_DEALLOCATE_P(ep%fii)
@@ -453,7 +453,7 @@ contains
       SAFE_DEALLOCATE_A(rho_nuc)
     end if
 
-    call pop_sub('epot.epot_end')
+    POP_SUB(epot_end)
 
   end subroutine epot_end
 
@@ -479,7 +479,7 @@ contains
 #endif
 
     call profiling_in(epot_generate_prof, "EPOT_GENERATE")
-    call push_sub('epot.epot_generate')
+    PUSH_SUB(epot_generate)
 
     sb   => gr%sb
     mesh => gr%mesh
@@ -531,7 +531,7 @@ contains
     if (associated(ep%e_field)) ep%vpsl(1:mesh%np) = ep%vpsl(1:mesh%np) + ep%v_static(1:mesh%np)
 
 
-    call pop_sub('epot.epot_generate')
+    POP_SUB(epot_generate)
     call profiling_out(epot_generate_prof)
   end subroutine epot_generate
 
@@ -554,7 +554,7 @@ contains
     type(submesh_t)  :: sphere
     type(profile_t), save :: prof
 
-    call push_sub('epot.epot_local_potential')
+    PUSH_SUB(epot_local_potential)
     call profiling_in(prof, "EPOT_LOCAL")
 
     if(ep%local_potential_precalculated) then
@@ -631,7 +631,7 @@ contains
     end if
 
     call profiling_out(prof)
-    call pop_sub('epot.epot_local_potential')
+    POP_SUB(epot_local_potential)
   end subroutine epot_local_potential
 
 
@@ -644,7 +644,7 @@ contains
     integer ip, ia
     FLOAT :: rr, rc
 
-    call push_sub('epot.epot_generate_classical')
+    PUSH_SUB(epot_generate_classical)
 
     ep%Vclassical = M_ZERO
     do ia = 1, geo%ncatoms
@@ -671,7 +671,7 @@ contains
       end do
     end do
 
-    call pop_sub('epot.epot_generate_classical')
+    POP_SUB(epot_generate_classical)
   end subroutine epot_generate_classical
 
 
@@ -692,7 +692,7 @@ contains
     CMPLX, allocatable :: matrix(:, :), tmp(:)
     CMPLX :: det, phase
 
-    call push_sub('epot.epot_dipole_periodic')
+    PUSH_SUB(epot_dipole_periodic)
 
     if(.not. smear_is_semiconducting(st%smear)) then
       message(1) = "Warning: single-point Berry's phase dipole calculation not correct without integer occupations."
@@ -742,7 +742,7 @@ contains
     dipole = -(2 * gr%sb%lsize(dir) / (2 * M_Pi)) * aimag(log(det)) * st%smear%el_per_state
 
     SAFE_DEALLOCATE_A(matrix)
-    call pop_sub('epot.epot_dipole_periodic')
+    POP_SUB(epot_dipole_periodic)
   end function epot_dipole_periodic
 
 
@@ -756,7 +756,7 @@ contains
     integer :: iatom
     FLOAT, allocatable :: tmp(:)
 
-    call push_sub('epot.epot_precalc_local_potential')
+    PUSH_SUB(epot_precalc_local_potential)
 
     if(.not. associated(ep%local_potential)) then
       SAFE_ALLOCATE(ep%local_potential(1:gr%mesh%np, 1:geo%natoms))
@@ -774,7 +774,7 @@ contains
 
     ep%local_potential_precalculated = .true.
 
-    call pop_sub('epot.epot_precalc_local_potential')
+    POP_SUB(epot_precalc_local_potential)
   end subroutine epot_precalc_local_potential
 
 
@@ -794,7 +794,7 @@ contains
     type(profile_t), save :: ion_ion_prof
 
     call profiling_in(ion_ion_prof, "ION_ION_INTERACTION")
-    call push_sub('epot.ion_interaction_calculate')
+    PUSH_SUB(ion_interaction_calculate)
 
     ! see
     ! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:Ion-Ion_interaction
@@ -844,7 +844,7 @@ contains
     end if
 
     call profiling_out(ion_ion_prof)
-    call pop_sub('epot.ion_interaction_calculate')
+    POP_SUB(ion_interaction_calculate)
   end subroutine ion_interaction_calculate
 
 
@@ -865,7 +865,7 @@ contains
     CMPLX   :: sumatoms
     FLOAT, parameter :: alpha = CNST(1.1313708)
 
-    call push_sub('epot.ion_interaction_periodic')
+    PUSH_SUB(ion_interaction_periodic)
 
     ! see
     ! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:Ion-Ion_interaction
@@ -957,7 +957,7 @@ contains
     !
     ! energy = energy - M_PI*charge**2/(M_TWO*alpha**2*sb%rcell_volume)
     
-    call pop_sub('epot.ion_interaction_periodic')
+    POP_SUB(ion_interaction_periodic)
   end subroutine ion_interaction_periodic
 
 
@@ -974,7 +974,7 @@ contains
     FLOAT                                :: time1
     FLOAT :: rr, dd, zi, zj
 
-    call push_sub('epot.ion_interaction_sete')
+    PUSH_SUB(ion_interaction_sete)
 
     write(68,*) "ep%eii values top", ep%eii
 
@@ -1019,7 +1019,7 @@ contains
       calc_gate_energy=0
     enddo 
 
-    call pop_sub('epot.ion_interaction_sete')
+    POP_SUB(ion_interaction_sete)
    end subroutine ion_interaction_sete
       
 end module epot_m

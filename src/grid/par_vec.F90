@@ -205,7 +205,7 @@ contains
     integer                     :: tmp
     logical                     :: found
 
-    call push_sub('par_vec.vec_init')
+    PUSH_SUB(vec_init)
 
     ! Shortcuts.
     call MPI_Comm_Size(comm, npart, mpi_err)
@@ -412,7 +412,7 @@ contains
       call iihash_end(ghost_flag(inode))
     end do
 
-    call pop_sub('par_vec.vec_init')
+    POP_SUB(vec_init)
 
   contains
     
@@ -420,7 +420,7 @@ contains
       integer, allocatable :: displacements(:)
       integer :: ii, jj, kk, ipart, total
 
-      call push_sub('par_vec.vec_init.init_send_points')
+      PUSH_SUB(vec_init.init_send_points)
 
       SAFE_ALLOCATE(vp%sendpos(1:vp%npart))
 
@@ -469,7 +469,7 @@ contains
       
       vp%rcounts(1:vp%npart) = vp%np_ghost_neigh(vp%partno, 1:vp%npart)
 
-      call pop_sub('par_vec.vec_init.init_send_points')
+      POP_SUB(vec_init.init_send_points)
     end subroutine init_send_points
 
   end subroutine vec_init
@@ -482,7 +482,7 @@ contains
 
     integer :: ipart
 
-    call push_sub('par_vec.vec_end')
+    PUSH_SUB(vec_end)
 
     call subarray_end(vp%sendpoints)
 
@@ -510,7 +510,7 @@ contains
       SAFE_DEALLOCATE_P(vp%global)
     end if
 
-    call pop_sub('par_vec.vec_end')
+    POP_SUB(vec_end)
 
   end subroutine vec_end
 
@@ -527,7 +527,7 @@ contains
     logical :: found
 
 ! no push_sub because called too frequently
-!    call push_sub('par_vec.vec_global2local')
+!    PUSH_SUB(vec_global2local)
 
     vec_global2local = 0
     if(associated(vp%global)) then

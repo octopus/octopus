@@ -104,14 +104,14 @@ contains
     type(geometry_t),  intent(inout) :: geo
     logical, optional, intent(in)    :: print_info
 
-    call push_sub('geometry.geometry_init')
+    PUSH_SUB(geometry_init)
 
     ! initialize geometry
     call geometry_init_xyz(geo)
     call geometry_init_species(geo, print_info=print_info)
     call distributed_nullify(geo%atoms, geo%natoms)
 
-    call pop_sub('geometry.geometry_init')
+    POP_SUB(geometry_init)
   end subroutine geometry_init
 
 
@@ -123,7 +123,7 @@ contains
     integer :: ia
     type(xyz_file_info) :: xyz
 
-    call push_sub('geometry.geometry_init_xyz')
+    PUSH_SUB(geometry_init_xyz)
 
     ! load positions of the atoms
     call xyz_file_init(xyz)
@@ -238,7 +238,7 @@ contains
       call write_fatal(2)
     end if
 
-    call pop_sub('geometry.geometry_init_xyz')
+    POP_SUB(geometry_init_xyz)
   end subroutine geometry_init_xyz
 
 
@@ -250,7 +250,7 @@ contains
     logical :: print_info_
     integer :: i, j, k, ispin
 
-    call push_sub('geometry.geometry_init_species')
+    PUSH_SUB(geometry_init_species)
 
     print_info_ = .true.
     if(present(print_info)) then
@@ -316,7 +316,7 @@ contains
       geo%nlpp = (geo%nlpp .or. species_is_ps(geo%species(i)))
     end do
 
-    call pop_sub('geometry.geometry_init_species')
+    POP_SUB(geometry_init_species)
   end subroutine geometry_init_species
 
 
@@ -325,11 +325,11 @@ contains
     type(geometry_t),            intent(inout) :: geo
     type(multicomm_t),           intent(in)    :: mc
 
-    call push_sub('geometry.geometry_partition')
+    PUSH_SUB(geometry_partition)
 
     call distributed_init(geo%atoms, geo%natoms, mc, P_STRATEGY_STATES, "atoms")
 
-    call pop_sub('geometry.geometry_partition')
+    POP_SUB(geometry_partition)
   end subroutine geometry_partition
 
 
@@ -344,7 +344,7 @@ contains
     character(len=3)  :: res
     integer :: na, nca
 
-    call push_sub('geometry.loadPDB')
+    PUSH_SUB(loadPDB)
 
     ! First count number of atoms
     rewind(iunit)
@@ -389,7 +389,7 @@ contains
     end do
 991 continue
 
-    call pop_sub('geometry.loadPDB')
+    POP_SUB(loadPDB)
   end subroutine loadPDB
 
 
@@ -397,7 +397,7 @@ contains
   subroutine geometry_end(geo)
     type(geometry_t), intent(inout) :: geo
 
-    call push_sub('geometry.geometry_end')
+    PUSH_SUB(geometry_end)
 
     call distributed_end(geo%atoms)
 
@@ -410,7 +410,7 @@ contains
     call species_end(geo%nspecies, geo%species)
     SAFE_DEALLOCATE_P(geo%species)
 
-    call pop_sub('geometry.geometry_end')
+    POP_SUB(geometry_end)
   end subroutine geometry_end
 
   ! ---------------------------------------------------------
@@ -419,12 +419,12 @@ contains
     type(geometry_t), intent(in) :: geo
     FLOAT :: r
 
-    call push_sub('geometry.geometry_atoms_are_too_close')
+    PUSH_SUB(geometry_atoms_are_too_close)
 
     call geometry_min_distance(geo, r)
     l = (r < CNST(1.0e-5) .and. geo%natoms > 1)
 
-    call pop_sub('geometry.geometry_atoms_are_too_close')
+    POP_SUB(geometry_atoms_are_too_close)
   end function geometry_atoms_are_too_close
 
   ! ---------------------------------------------------------
@@ -434,7 +434,7 @@ contains
 
     integer :: ia
 
-    call push_sub('geometry.geometry_dipole')
+    PUSH_SUB(geometry_dipole)
 
     dipole(1:calc_dim) = M_ZERO
     do ia = 1, geo%natoms
@@ -442,7 +442,7 @@ contains
     end do
     dipole = P_PROTON_CHARGE*dipole
 
-    call pop_sub('geometry.geometry_dipole')
+    POP_SUB(geometry_dipole)
   end subroutine geometry_dipole
 
 
@@ -454,7 +454,7 @@ contains
     integer :: i, j
     FLOAT :: r
 
-    call push_sub('geometry.geometry_min_distance')
+    PUSH_SUB(geometry_min_distance)
 
     rmin = huge(rmin)
     do i = 1, geo%natoms
@@ -466,7 +466,7 @@ contains
       end do
     end do
 
-    call pop_sub('geometry.geometry_min_distance')
+    POP_SUB(geometry_min_distance)
   end subroutine geometry_min_distance
 
 
@@ -478,7 +478,7 @@ contains
     FLOAT :: mass
     integer :: ia
 
-    call push_sub('geometry.cm_pos')
+    PUSH_SUB(cm_pos)
 
     pos = M_ZERO
     mass = M_ZERO
@@ -488,7 +488,7 @@ contains
     end do
     pos = pos/mass
 
-    call pop_sub('geometry.cm_pos')
+    POP_SUB(cm_pos)
   end subroutine cm_pos
 
 
@@ -500,7 +500,7 @@ contains
     FLOAT :: mass
     integer :: iatom
 
-    call push_sub('geometry.cm_vel')
+    PUSH_SUB(cm_vel)
 
     vel = M_ZERO
     mass = M_ZERO
@@ -510,7 +510,7 @@ contains
     end do
     vel = vel / mass
 
-    call pop_sub('geometry.cm_vel')
+    POP_SUB(cm_vel)
   end subroutine cm_vel
 
 
@@ -527,7 +527,7 @@ contains
 
     if( .not. mpi_grp_is_root(mpi_world)) return
 
-    call push_sub('geometry.atom_write_xyz')
+    PUSH_SUB(atom_write_xyz)
 
     call io_mkdir(dir)
     position = 'asis'
@@ -560,7 +560,7 @@ contains
       call io_close(iunit)
     end if
 
-    call pop_sub('geometry.atom_write_xyz')
+    POP_SUB(atom_write_xyz)
   end subroutine atom_write_xyz
 
 
@@ -571,14 +571,14 @@ contains
 
     integer :: iatom
 
-    call push_sub('geometry.geometry_val_charge')
+    PUSH_SUB(geometry_val_charge)
 
     val_charge = M_ZERO
     do iatom = 1, geo%natoms
       val_charge = val_charge - species_zval(geo%atom(iatom)%spec)
     end do
 
-    call pop_sub('geometry.geometry_val_charge')
+    POP_SUB(geometry_val_charge)
   end subroutine geometry_val_charge
 
 
@@ -589,7 +589,7 @@ contains
 
     integer :: ispec
 
-    call push_sub('geometry.geometry_grid_defaults')
+    PUSH_SUB(geometry_grid_defaults)
 
     def_h     =  huge(def_h)
     def_rsize = -huge(def_rsize)
@@ -598,7 +598,7 @@ contains
       def_rsize = max(def_rsize, species_def_rsize(geo%species(ispec)))
     end do
 
-    call pop_sub('geometry.geometry_grid_defaults')
+    POP_SUB(geometry_grid_defaults)
   end subroutine geometry_grid_defaults
 
 
@@ -607,7 +607,7 @@ contains
     type(atom_t), intent(out) :: aout
     type(atom_t), intent(in)  :: ain
 
-    call push_sub('geometry.atom_copy')
+    PUSH_SUB(atom_copy)
 
     aout%label = ain%label
     aout%spec  => ain%spec
@@ -616,7 +616,7 @@ contains
     aout%f     = ain%f
     aout%move  = ain%move
 
-    call pop_sub('geometry.atom_copy')
+    POP_SUB(atom_copy)
   end subroutine atom_copy
 
 
@@ -625,7 +625,7 @@ contains
     type(geometry_t), intent(out) :: geo_out
     type(geometry_t), intent(in)  :: geo_in
 
-    call push_sub('geometry.geometry_copy')
+    PUSH_SUB(geometry_copy)
 
     geo_out%natoms = geo_in%natoms
     SAFE_ALLOCATE(geo_out%atom(1:geo_out%natoms))
@@ -648,7 +648,7 @@ contains
 
     call distributed_copy(geo_in%atoms, geo_out%atoms)
 
-    call pop_sub('geometry.geometry_copy')
+    POP_SUB(geometry_copy)
   end subroutine geometry_copy
 
 

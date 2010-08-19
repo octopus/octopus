@@ -46,12 +46,12 @@ contains
 
     integer, parameter :: type = TYPE_FLOAT
 
-    call push_sub('io_csv_f.sread_csv')
+    PUSH_SUB(sread_csv)
 
     ierr = 0
     call read_csv(np, ff(1), type, ierr, trim(fname))
 
-    call pop_sub('io_csv_f.sread_csv')
+    POP_SUB(sread_csv)
   end subroutine sread_csv
 
   subroutine dread_csv(fname, np, ff, ierr)
@@ -62,12 +62,12 @@ contains
 
     integer, parameter :: type = TYPE_DOUBLE
 
-    call push_sub('io_csv_f.dread_csv')
+    PUSH_SUB(dread_csv)
 
     ierr = 0
     call read_csv(np, ff(1), type, ierr, trim(fname))
 
-    call pop_sub('io_csv_f.dread_csv')
+    POP_SUB(dread_csv)
   end subroutine dread_csv
   
   subroutine cread_csv(fname, np, ff, ierr)
@@ -76,12 +76,12 @@ contains
     complex(4),          intent(out)  :: ff(:)
     integer,             intent(out)  :: ierr
     
-    call push_sub('io_csv_f.cread_csv')
+    PUSH_SUB(cread_csv)
 
     ierr = 1
     ff(:) = M_ZERO
 
-    call pop_sub('io_csv_f.cread_csv')
+    POP_SUB(cread_csv)
   end subroutine cread_csv
   
 ! some ugly stub functions just to satisfy the linker
@@ -92,12 +92,12 @@ contains
     complex(8),          intent(out)  :: ff(:)
     integer,             intent(out)  :: ierr
     
-    call push_sub('io_csv_f.zread_csv')
+    PUSH_SUB(zread_csv)
 
     ierr = 1
     ff(:) = M_ZERO
 
-    call pop_sub('io_csv_f.zread_csv')
+    POP_SUB(zread_csv)
   end subroutine zread_csv
   
   subroutine iread_csv(fname, np, ff, ierr)
@@ -106,12 +106,12 @@ contains
     integer(4),          intent(out)  :: ff(:)
     integer,             intent(out)  :: ierr
     
-    call push_sub('io_csv_f.iread_csv')
+    PUSH_SUB(iread_csv)
 
     ierr = 1
     ff(:) = M_ZERO
 
-    call pop_sub('io_csv_f.iread_csv')
+    POP_SUB(iread_csv)
   end subroutine iread_csv
   
   subroutine lread_csv(fname, np, ff, ierr)
@@ -120,12 +120,12 @@ contains
     integer(8),          intent(out)  :: ff(:)
     integer,             intent(out)  :: ierr
 
-    call push_sub('io_csv_f.lread_csv')
+    PUSH_SUB(lread_csv)
 
     ierr = 1
     ff(:) = M_ZERO
 
-    call pop_sub('io_csv_f.lread_csv')
+    POP_SUB(lread_csv)
   end subroutine lread_csv
 
 ! some ugly stub functions end
@@ -137,13 +137,13 @@ contains
 
     integer :: type
     
-    call push_sub('io_csv_f.io_csv_get_info')
+    PUSH_SUB(io_csv_get_info)
 
     type = 0
     ierr = 0
     call get_info_csv(dims, ierr, trim(fname))
 
-    call pop_sub('io_csv_f.io_csv_get_info')
+    POP_SUB(io_csv_get_info)
   end subroutine io_csv_get_info
 
 end module io_csv_m

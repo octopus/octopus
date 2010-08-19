@@ -79,7 +79,7 @@ contains
 
     integer :: isp
 
-    call push_sub('xc.xc_write_info')
+    PUSH_SUB(xc_write_info)
 
     if (xcs%cdft .and. iand(xcs%family, XC_FAMILY_LCA) /= 0) then
       write(message(1), '(a)') "Current-dependent exchange-correlation:"
@@ -104,7 +104,7 @@ contains
       call write_info(2, iunit)
     end if
 
-    call pop_sub('xc.xc_write_info')
+    POP_SUB(xc_write_info)
   end subroutine xc_write_info
 
 
@@ -120,7 +120,7 @@ contains
     integer :: isp, x_id, c_id, xk_id, ck_id
     logical :: ll
 
-    call push_sub('xc.xc_init')
+    PUSH_SUB(xc_init)
 
     xcs%cdft   = cdft  ! make a copy of flag indicating the use of current-dft_m
 
@@ -208,14 +208,14 @@ contains
 
     end if
 
-    call pop_sub('xc.xc_init')
+    POP_SUB(xc_init)
     
   contains 
     
     subroutine parse()
       integer :: val, default
 
-      call push_sub('xc.xc_init.parse')
+      PUSH_SUB(xc_init.parse)
 
       ! the first 3 digits of the number indicate the X functional and
       ! the next 3 the C functional.
@@ -258,7 +258,7 @@ contains
         xk_id = val - ck_id*1000  
       end if
 
-      call pop_sub('xc.xc_init.parse')
+      POP_SUB(xc_init.parse)
     end subroutine parse
 
   end subroutine xc_init
@@ -270,7 +270,7 @@ contains
 
     integer :: isp
 
-    call push_sub('xc.xc_end')
+    PUSH_SUB(xc_end)
 
     if (xcs%cdft) then
       call xc_functl_end(xcs%j_functl)
@@ -283,7 +283,7 @@ contains
     end do
     xcs%family = 0
 
-    call pop_sub('xc.xc_end')
+    POP_SUB(xc_end)
   end subroutine xc_end
 
 

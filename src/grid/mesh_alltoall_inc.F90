@@ -28,7 +28,7 @@ subroutine X(mesh_alltoall_batch_start)(this, send, recv_offset, recv)
   integer :: offset
   integer :: ipart, pos, ii, tag
 
-  call push_sub('mesh_alltoall_inc.Xmesh_alltoall_batch_start')
+  PUSH_SUB(X(mesh_alltoall_batch_start))
 
   ASSERT(send%nst_linear > 0)
   ASSERT(batch_status(send) == batch_status(recv))
@@ -109,7 +109,7 @@ subroutine X(mesh_alltoall_batch_start)(this, send, recv_offset, recv)
     end do
   end select
 
-  call pop_sub('mesh_alltoall_inc.Xmesh_alltoall_batch_start')
+  POP_SUB(X(mesh_alltoall_batch_start))
 end subroutine X(mesh_alltoall_batch_start)
 
 ! -------------------------------------------------------------------
@@ -119,7 +119,7 @@ subroutine X(mesh_alltoall_batch_finish)(this)
 
   integer, allocatable :: status(:, :)
 
-  call push_sub('mesh_alltoall_inc.Xmesh_alltoall_batch_finish')
+  PUSH_SUB(X(mesh_alltoall_batch_finish))
   
   ASSERT(this%in_progress)
   ASSERT(this%nrequests > 0)
@@ -134,7 +134,7 @@ subroutine X(mesh_alltoall_batch_finish)(this)
   call X(batch_delete)(this%send_buffer)
   call batch_end(this%send_buffer)
 
-  call pop_sub('mesh_alltoall_inc.Xmesh_alltoall_batch_finish')
+  POP_SUB(X(mesh_alltoall_batch_finish))
 end subroutine X(mesh_alltoall_batch_finish)
 
 

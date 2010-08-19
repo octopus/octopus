@@ -33,7 +33,7 @@ subroutine X(cpmd_propagate)(this, gr, hm, st, iter, dt)
   R_TYPE, pointer     :: oldpsi(:, :, :)
   R_TYPE :: one 
 
-  call push_sub('cpmd_inc.Xcpmd_propagate')
+  PUSH_SUB(X(cpmd_propagate))
 
   one = R_TOTYPE(M_ONE)
 
@@ -139,7 +139,7 @@ subroutine X(cpmd_propagate)(this, gr, hm, st, iter, dt)
   SAFE_DEALLOCATE_A(xx)
 
   call profiling_out(cpmd_prop)
-  call pop_sub('cpmd_inc.Xcpmd_propagate')
+  POP_SUB(X(cpmd_propagate))
 
 contains
 
@@ -149,7 +149,7 @@ contains
     FLOAT,  allocatable :: ii(:, :)
     R_TYPE, allocatable :: aa(:, :), bb(:, :), xxi(:, :)
 
-    call push_sub('cpmd_inc.Xcpmd_propagate.calc_xx')
+    PUSH_SUB(X(cpmd_propagate).calc_xx)
 
     SAFE_ALLOCATE( aa(1:st%nst, 1:st%nst))
     SAFE_ALLOCATE( bb(1:st%nst, 1:st%nst))
@@ -181,7 +181,7 @@ contains
     SAFE_DEALLOCATE_A(ii)
     SAFE_DEALLOCATE_A(xxi)
 
-    call pop_sub('cpmd_inc.Xcpmd_propagate.calc_xx')
+    POP_SUB(X(cpmd_propagate).calc_xx)
   end subroutine calc_xx
 
 end subroutine X(cpmd_propagate)
@@ -202,7 +202,7 @@ subroutine X(cpmd_propagate_vel)(this, gr, hm, st, dt)
 
   if ( this%method == VERLET ) return
 
-  call push_sub('cpmd_inc.Xcpmd_propagate_vel')
+  PUSH_SUB(X(cpmd_propagate_vel))
   call profiling_in(cpmd_prop, "CP_PROPAGATION")
 
   np = gr%mesh%np
@@ -247,14 +247,14 @@ subroutine X(cpmd_propagate_vel)(this, gr, hm, st, dt)
   SAFE_DEALLOCATE_A(yy)
 
   call profiling_out(cpmd_prop)
-  call pop_sub('cpmd_inc.Xcpmd_propagate_vel')
+  POP_SUB(X(cpmd_propagate_vel))
 
 contains
 
   subroutine calc_yy
     R_TYPE, allocatable :: cc(:, :)
 
-    call push_sub('cpmd_inc.Xcpmd_propagate_vel.calc_yy')
+    PUSH_SUB(X(cpmd_propagate_vel).calc_yy)
 
     SAFE_ALLOCATE(cc(1:st%nst, 1:st%nst))
 
@@ -264,7 +264,7 @@ contains
     yy = -M_HALF*(cc + transpose(cc))
 
     SAFE_DEALLOCATE_A(cc)
-    call pop_sub('cpmd_inc.Xcpmd_propagate_vel.calc_yy')
+    POP_SUB(X(cpmd_propagate_vel).calc_yy)
   end subroutine calc_yy
 
 end subroutine X(cpmd_propagate_vel)

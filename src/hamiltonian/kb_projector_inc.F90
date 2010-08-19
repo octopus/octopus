@@ -37,7 +37,7 @@ subroutine X(kb_project)(mesh, sm, kb_p, dim, psi, ppsi)
   R_TYPE :: uvpsi_tmp(1:2)
 #endif
 
-  call push_sub('kb_projector_inc.Xkb_project')
+  PUSH_SUB(X(kb_project))
 
   call X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
 
@@ -50,7 +50,7 @@ subroutine X(kb_project)(mesh, sm, kb_p, dim, psi, ppsi)
 
   call X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, ppsi)
 
-  call pop_sub('kb_projector_inc.Xkb_project')
+  POP_SUB(X(kb_project))
 
 end subroutine X(kb_project)
 
@@ -67,7 +67,7 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
   integer :: ic, idim, ns, is
 
 #ifndef HAVE_OPENMP
-  call push_sub('kb_projector_inc.Xkb_project_bra')
+  PUSH_SUB(X(kb_project_bra))
 #endif
 
   ns = kb_p%n_s
@@ -102,7 +102,7 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
   end if
 
 #ifndef HAVE_OPENMP
-  call pop_sub('kb_projector_inc.Xkb_project_bra')
+  POP_SUB(X(kb_project_bra))
 #endif
 end subroutine X(kb_project_bra)
 
@@ -118,7 +118,7 @@ subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi)
 
   integer :: ic, idim, ns, is
 #ifndef HAVE_OPENMP
-  call push_sub('kb_projector_inc.Xkb_project_ket')
+  PUSH_SUB(X(kb_project_ket))
 #endif
 
   ns = kb_p%n_s
@@ -135,7 +135,7 @@ subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi)
 
   call profiling_count_operations(ns*dim*kb_p%n_c*2*R_ADD)
 #ifndef HAVE_OPENMP
-  call pop_sub('kb_projector_inc.Xkb_project_ket')
+  POP_SUB(X(kb_project_ket))
 #endif
 end subroutine X(kb_project_ket)
 

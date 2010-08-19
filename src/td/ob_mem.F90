@@ -80,7 +80,7 @@ contains
 
     integer :: il, np, saved_iter, ii, ij
 
-    call push_sub('ob_mem.ob_mem_init')
+    PUSH_SUB(ob_mem_init)
 
       do il=1, NLEADS
         ASSERT(intf(il)%np_intf .eq. intf(il)%np_uc)
@@ -220,7 +220,7 @@ contains
 
     end do
 
-    call pop_sub('ob_mem.ob_mem_init')
+    POP_SUB(ob_mem_init)
   end subroutine ob_mem_init
 
 
@@ -240,7 +240,7 @@ contains
     FLOAT              :: norm, old_norm, d2
     CMPLX              :: hh
 
-    call push_sub('ob_mem.approx_coeff0')
+    PUSH_SUB(approx_coeff0)
 
     np = intf%np_intf
     d2 = delta**2
@@ -296,7 +296,7 @@ contains
       SAFE_DEALLOCATE_A(q0)
     end if
 
-    call pop_sub('ob_mem.approx_coeff0')
+    POP_SUB(approx_coeff0)
   end subroutine approx_coeff0
 
 
@@ -318,7 +318,7 @@ contains
     CMPLX, allocatable :: q0(:, :)
     FLOAT              :: norm, old_norm, d2
 
-    call push_sub('ob_mem.approx_sp_coeff0')
+    PUSH_SUB(approx_sp_coeff0)
 
     np = intf%np_intf
     d2 = delta**2
@@ -368,7 +368,7 @@ contains
 
     SAFE_DEALLOCATE_A(q0)
 
-    call pop_sub('ob_mem.approx_sp_coeff0')
+    POP_SUB(approx_sp_coeff0)
   end subroutine approx_sp_coeff0
 
 
@@ -396,7 +396,7 @@ contains
     CMPLX, allocatable :: tmp(:, :), tmp2(:, :), m0(:, :), m_l(:, :), m_r(:, :)
     FLOAT              :: norm, old_norm
 
-    call push_sub('ob_mem.calculate_coeffs_ni')
+    PUSH_SUB(calculate_coeffs_ni)
 
     np = intf%np_intf
 
@@ -491,7 +491,7 @@ contains
     SAFE_DEALLOCATE_A(m_l)
     SAFE_DEALLOCATE_A(m_r)
 
-    call pop_sub('ob_mem.calculate_coeffs_ni')
+    POP_SUB(calculate_coeffs_ni)
   end subroutine calculate_coeffs_ni
 
 
@@ -522,7 +522,7 @@ contains
     CMPLX, allocatable :: sp_tmp(:)
     FLOAT              :: old_norm, norm, sp2
 
-    call push_sub('ob_mem.calculate_sp_coeffs')
+    PUSH_SUB(calculate_sp_coeffs)
     ASSERT(intf%np_intf.eq.intf%np_uc)
 
     np  = intf%np_intf
@@ -618,7 +618,7 @@ contains
     SAFE_DEALLOCATE_A(prefactor_minus)
     SAFE_DEALLOCATE_A(sp_tmp)
 
-    call pop_sub('ob_mem.calculate_sp_coeffs')
+    POP_SUB(calculate_sp_coeffs)
   end subroutine calculate_sp_coeffs
 
 
@@ -640,7 +640,7 @@ contains
 
     integer :: ntime, ip, iunit, np
 
-    call push_sub('ob_mem.write_coeffs')
+    PUSH_SUB(write_coeffs)
 
     call io_mkdir(dir, is_tmp=.true.)
     iunit = io_open(trim(dir)//trim(lead_name(intf%il)), &
@@ -649,7 +649,7 @@ contains
       message(1) = 'Cannot write memory coefficients to file.'
       call write_warning(1)
       call io_close(iunit)
-      call pop_sub('ob_mem.write_coeffs')
+      POP_SUB(write_coeffs)
       return
     end if
 
@@ -684,7 +684,7 @@ contains
 
     call io_close(iunit)
 
-    call pop_sub('ob_mem.write_coeffs')
+    POP_SUB(write_coeffs)
   end subroutine write_coeffs
 
 
@@ -710,7 +710,7 @@ contains
     FLOAT, allocatable :: s_vks(:)
     logical :: s_reducible
 
-    call push_sub('ob_mem.read_coeffs')
+    PUSH_SUB(read_coeffs)
 
     s_iter = 0
     np = intf%np_intf
@@ -720,7 +720,7 @@ contains
     iunit = io_open(trim(dir)//trim(lead_name(il)), action='read', &
       status='old', die=.false., is_tmp=.true., form='unformatted')
     if(iunit .lt. 0) then ! no file found
-      call pop_sub('ob_mem.read_coeffs')
+      POP_SUB(read_coeffs)
       return
     end if
 
@@ -772,7 +772,7 @@ contains
 
     SAFE_DEALLOCATE_A(s_vks)
 
-    call pop_sub('ob_mem.read_coeffs')
+    POP_SUB(read_coeffs)
   end subroutine read_coeffs
 
 
@@ -789,7 +789,7 @@ contains
 
     integer :: il
 
-    call push_sub('ob_mem.mbytes_memory_term')
+    PUSH_SUB(mbytes_memory_term)
 
     mbytes_memory_term = M_ZERO
     do il = 1, NLEADS
@@ -803,7 +803,7 @@ contains
       end select
     end do
 
-    call pop_sub('ob_mem.mbytes_memory_term')
+    POP_SUB(mbytes_memory_term)
   end function mbytes_memory_term
 
 
@@ -823,7 +823,7 @@ contains
     integer            :: id, ip
     CMPLX, allocatable :: tmp(:, :), tmp2(:, :)
 
-    call push_sub('ob_mem.make_sparse_matrix')
+    PUSH_SUB(make_sparse_matrix)
 
     ASSERT(dim .eq. 2)
 
@@ -852,7 +852,7 @@ contains
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_A(tmp2)
 
-    call pop_sub('ob_mem.make_sparse_matrix')
+    POP_SUB(make_sparse_matrix)
   end subroutine make_sparse_matrix
 
 
@@ -871,7 +871,7 @@ contains
     integer :: ii,ij,ik, ijo
     CMPLX   :: tmp
 
-    call push_sub('ob_mem.mul_sp')
+    PUSH_SUB(mul_sp)
 
     do ij = 1, np
       do ii = 1, np
@@ -884,7 +884,7 @@ contains
       end do
     end do
 
-    call pop_sub('ob_mem.mul_sp')
+    POP_SUB(mul_sp)
   end subroutine mul_sp
 
 
@@ -903,7 +903,7 @@ contains
     CMPLX, allocatable :: tmp(:, :)
     integer            :: id, ip
 
-    call push_sub('ob_mem.make_full_matrix')
+    PUSH_SUB(make_full_matrix)
 
     SAFE_ALLOCATE(tmp(1:np, 1:np))
 
@@ -927,7 +927,7 @@ contains
     call matrix_symmetric_average(mm, np)
 
     SAFE_DEALLOCATE_A(tmp)
-    call pop_sub('ob_mem.make_full_matrix')
+    POP_SUB(make_full_matrix)
   end subroutine make_full_matrix
 
 
@@ -938,7 +938,7 @@ contains
       
     integer :: il
 
-    call push_sub('ob_mem.ob_mem_end')
+    PUSH_SUB(ob_mem_end)
 
     do il=1, NLEADS
       SAFE_DEALLOCATE_P(ob%lead(il)%q)
@@ -947,7 +947,7 @@ contains
       SAFE_DEALLOCATE_P(ob%lead(il)%q_s)
     end do
 
-    call pop_sub('ob_mem.ob_mem_end')
+    POP_SUB(ob_mem_end)
   end subroutine ob_mem_end
 end module ob_mem_m
 

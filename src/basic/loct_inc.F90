@@ -91,4 +91,3 @@ subroutine SUBNAME(loct_pointer_copy_4)(o, i)
   end if
 
 end subroutine SUBNAME(loct_pointer_copy_4)
-

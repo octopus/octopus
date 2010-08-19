@@ -65,7 +65,7 @@ module opt_control_initst_m
     FLOAT             :: xx(MAX_DIM), rr, psi_re, psi_im
     CMPLX, allocatable :: rotation_matrix(:, :)
 
-    call push_sub('initst.initial_state_init')
+    PUSH_SUB(initial_state_init)
 
     call states_copy(initial_state, sys%st)
     call states_deallocate_wfns(initial_state)
@@ -240,7 +240,7 @@ module opt_control_initst_m
       call v_ks_calc(sys%ks, sys%gr, hm, initial_state, calc_eigenval = .true.)
     end if
     
-    call pop_sub('initst.initial_state_init')
+    POP_SUB(initial_state_init)
   end subroutine initial_state_init
 
 end module opt_control_initst_m
@@ -249,4 +249,3 @@ end module opt_control_initst_m
 !! mode: f90
 !! coding: utf-8
 !! End:
-

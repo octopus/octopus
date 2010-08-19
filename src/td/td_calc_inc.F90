@@ -44,7 +44,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, t)
   FLOAT   :: y(MAX_DIM)
 #endif
 
-  call push_sub('td_calc_inc.td_calc_tacc')
+  PUSH_SUB(td_calc_tacc)
 
   ! The term i<[V_l,p]> + i<[V_nl,p]> may be considered as equal but opposite to the
   ! force exerted by the electrons on the ions. COMMENT: This has to be thought about.
@@ -64,7 +64,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, t)
   end do
 
   if(.not. hm%ep%non_local) then
-  call pop_sub('td_calc_inc.td_calc_tacc')
+  POP_SUB(td_calc_tacc)
     return
   end if
 
@@ -126,7 +126,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, t)
 #endif
   acc = acc + x
 
-  call pop_sub('td_calc_inc.td_calc_tacc')
+  POP_SUB(td_calc_tacc)
 end subroutine td_calc_tacc
 
 !! Local Variables:

@@ -33,7 +33,7 @@ subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
   FLOAT   :: nrm2
 
   call profiling_in(prof, "GRAM_SCHMIDT_FULL")
-  call push_sub('states_calc_inc.Xstates_orthogonalization_full')
+  PUSH_SUB(X(states_orthogonalization_full))
 
   if(.not. st%parallel_in_states) then
     call X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
@@ -90,7 +90,7 @@ subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
   SAFE_DEALLOCATE_A(ss)
   SAFE_DEALLOCATE_A(qq)
 
-  call pop_sub('states_calc_inc.Xstates_orthogonalization_full')
+  POP_SUB(X(states_orthogonalization_full))
   call profiling_out(prof)
 end subroutine X(states_orthogonalization_full)
 
@@ -109,7 +109,7 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
   logical :: bof
   integer :: idim, nref, wsize, info
 
-  call push_sub('states_calc_inc.Xstates_orthogonalization_block')
+  PUSH_SUB(X(states_orthogonalization_block))
 
   select case(st%d%orth_method)
   case(ORTH_GS)
@@ -178,7 +178,7 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
   case(ORTH_MGS)
     call mgs()
   end select
-  call pop_sub('states_calc_inc.Xstates_orthogonalization_block')
+  POP_SUB(X(states_orthogonalization_block))
   contains
     subroutine mgs()
       integer :: ist, jst, idim
@@ -276,7 +276,7 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
 #endif
 
   call profiling_in(prof, "GRAM_SCHMIDT")
-  call push_sub('states_calc_inc.Xstates_orthogonalization')
+  PUSH_SUB(X(states_orthogonalization))
 
   ! This routine uses blocking to optimize cache usage. One block of
   ! |phi> is loaded in cache L1 and then then we calculate the dot
@@ -400,7 +400,7 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
 
   SAFE_DEALLOCATE_A(ss)
 
-  call pop_sub('states_calc_inc.Xstates_orthogonalization')
+  POP_SUB(X(states_orthogonalization))
   call profiling_out(prof)
 end subroutine X(states_orthogonalization)
 
@@ -414,13 +414,13 @@ subroutine X(states_normalize_orbital)(mesh, dim, psi)
   FLOAT   :: norm
   integer :: idim, ip
 
-  call push_sub('states_calc_inc.Xstates_normalize_orbital')
+  PUSH_SUB(X(states_normalize_orbital))
 
   norm = X(mf_nrm2) (mesh, dim, psi)
 
   forall (idim = 1:dim, ip = 1:mesh%np) psi(ip, idim) = psi(ip, idim)/norm
   
-  call pop_sub('states_calc_inc.Xstates_normalize_orbital')
+  POP_SUB(X(states_normalize_orbital))
 end subroutine X(states_normalize_orbital)
 
 
@@ -435,7 +435,7 @@ FLOAT function X(states_residue)(mesh, dim, hf, ee, ff) result(rr)
   type(profile_t), save :: prof
   integer :: ip, idim
 
-  call push_sub('states_calc_inc.Xstates_residue')
+  PUSH_SUB(X(states_residue))
 
   call profiling_in(prof, "RESIDUE")
 
@@ -450,7 +450,7 @@ FLOAT function X(states_residue)(mesh, dim, hf, ee, ff) result(rr)
 
   call profiling_out(prof)
 
-  call pop_sub('states_calc_inc.Xstates_residue')
+  POP_SUB(X(states_residue))
 
 end function X(states_residue)
 
@@ -479,7 +479,7 @@ subroutine X(states_calc_momentum)(gr, st, momentum)
   integer             :: kstart, kend, kn, ndim
 #endif
 
-  call push_sub('states_calc_inc.Xstates_calc_momentum')
+  PUSH_SUB(X(states_calc_momentum))
 
   SAFE_ALLOCATE(grad(1:gr%mesh%np, 1:st%d%dim, 1:gr%mesh%sb%dim))
 
@@ -554,7 +554,7 @@ subroutine X(states_calc_momentum)(gr, st, momentum)
   end do
   SAFE_DEALLOCATE_A(grad)
 
-  call pop_sub('states_calc_inc.Xstates_calc_momentum')
+  POP_SUB(X(states_calc_momentum))
 end subroutine X(states_calc_momentum)
 
 
@@ -573,7 +573,7 @@ subroutine X(states_angular_momentum)(gr, phi, ll, l2)
   integer :: idim, dim
   R_TYPE, allocatable :: lpsi(:, :)
 
-  call push_sub('states_calc_inc.Xstates_angular_momemtum')
+  PUSH_SUB(X(states_angular_momemtum))
 
   ASSERT(gr%mesh%sb%dim.ne.1)
 
@@ -610,7 +610,7 @@ subroutine X(states_angular_momentum)(gr, phi, ll, l2)
   end do
 
   SAFE_DEALLOCATE_A(lpsi)
-  call pop_sub('states_calc_inc.Xstates_angular_momemtum')
+  POP_SUB(X(states_angular_momemtum))
 end subroutine X(states_angular_momentum)
 
 
@@ -628,7 +628,7 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
   integer :: request
 #endif
 
-  call push_sub('states_calc_inc.Xstates_matrix')
+  PUSH_SUB(X(states_matrix))
 
   n1 = st1%nst
   n2 = st2%nst
@@ -691,7 +691,7 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
 
   end do
 
-  call pop_sub('states_calc_inc.Xstates_matrix')
+  POP_SUB(X(states_matrix))
 end subroutine X(states_matrix)
 
 !! Local Variables:

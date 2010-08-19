@@ -48,7 +48,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
   type(xc_functl_t), pointer :: functl(:)
   type(symmetrizer_t) :: symmetrizer
 
-  call push_sub('vxc_inc.xc_get_vxc')
+  PUSH_SUB(xc_get_vxc)
   call profiling_in(prof, "XC_LOCAL")
 
   if(ispin == UNPOLARIZED) then
@@ -298,7 +298,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
 
 999 continue
 
-  call pop_sub('vxc_inc.xc_get_vxc')
+  POP_SUB(xc_get_vxc)
   call profiling_out(prof)
 
 contains
@@ -311,7 +311,7 @@ contains
     integer :: ii
     FLOAT   :: d(2), dtot, dpol
 
-    call push_sub('vxc_inc.xc_get_vxc.lda_init')
+    PUSH_SUB(xc_get_vxc.lda_init)
 
     ! allocate some general arrays
     SAFE_ALLOCATE(l_dens(1:spin_channels, 1:n_block))
@@ -349,14 +349,14 @@ contains
       end select
     end do
 
-    call pop_sub('vxc_inc.xc_get_vxc.lda_init')
+    POP_SUB(xc_get_vxc.lda_init)
   end subroutine lda_init
 
 
   ! ---------------------------------------------------------
   ! deallocate variables allocated in lda_init
   subroutine lda_end()
-    call push_sub('vxc_inc.xc_get_vxc.lda_end')
+    PUSH_SUB(xc_get_vxc.lda_end)
 
     SAFE_DEALLOCATE_A(l_dens)
     SAFE_DEALLOCATE_A(l_zk)
@@ -369,7 +369,7 @@ contains
       SAFE_DEALLOCATE_A(dedd)
     end if
 
-    call pop_sub('vxc_inc.xc_get_vxc.lda_end')
+    POP_SUB(xc_get_vxc.lda_end)
   end subroutine lda_end
 
 
@@ -379,7 +379,7 @@ contains
     integer :: ip
     FLOAT :: d(2), dpol, vpol
 
-    call push_sub('vxc_inc.xc_get_vxc.lda_process')
+    PUSH_SUB(xc_get_vxc.lda_process)
 
     if(ispin == SPINORS) then
       ! rotate back (do not need the rotation matrix for this).
@@ -402,7 +402,7 @@ contains
       call lalg_axpy(der%mesh%np, M_ONE, dedd(:, 1), vxc(:, 1))
     end if
 
-    call pop_sub('vxc_inc.xc_get_vxc.lda_process')
+    POP_SUB(xc_get_vxc.lda_process)
   end subroutine lda_process
 
 
@@ -413,7 +413,7 @@ contains
   subroutine gga_init()
     integer :: ii
 
-    call push_sub('vxc_inc.xc_get_vxc.gga_init')
+    PUSH_SUB(xc_get_vxc.gga_init)
 
     ii = 1
     if(ispin /= UNPOLARIZED) ii = 3
@@ -436,14 +436,14 @@ contains
       end if
     end do
 
-    call pop_sub('vxc_inc.xc_get_vxc.gga_init')
+    POP_SUB(xc_get_vxc.gga_init)
   end subroutine gga_init
 
 
   ! ---------------------------------------------------------
   ! cleans up memory allocated in gga_init
   subroutine gga_end()
-    call push_sub('vxc_inc.xc_get_vxc.gga_end')
+    PUSH_SUB(xc_get_vxc.gga_end)
 
     SAFE_DEALLOCATE_A(l_sigma)
     SAFE_DEALLOCATE_A(gdens)
@@ -452,7 +452,7 @@ contains
       SAFE_DEALLOCATE_A(dedgd)
     end if
 
-    call pop_sub('vxc_inc.xc_get_vxc.gga_end')
+    POP_SUB(xc_get_vxc.gga_end)
   end subroutine gga_end
 
 
@@ -462,7 +462,7 @@ contains
     integer :: ip, is
     FLOAT, allocatable :: gf(:,:)
 
-    call push_sub('vxc_inc.xc_get_vxc.gga_process')
+    PUSH_SUB(xc_get_vxc.gga_process)
 
     ! subtract the divergence of the functional derivative of Exc with respect to
     ! the gradient of the density.
@@ -488,7 +488,7 @@ contains
       SAFE_DEALLOCATE_A(gf)
     end if
 
-    call pop_sub('vxc_inc.xc_get_vxc.gga_process')
+    POP_SUB(xc_get_vxc.gga_process)
   end subroutine gga_process
 
 
@@ -497,7 +497,7 @@ contains
   !   *) allocate the kinetic-energy density, dedtau, and local variants
 
   subroutine mgga_init()
-    call push_sub('vxc_inc.xc_get_vxc.mgga_init')
+    PUSH_SUB(xc_get_vxc.mgga_init)
 
     ! allocate variables
     SAFE_ALLOCATE( tau(1:der%mesh%np, 1:spin_channels))
@@ -515,7 +515,7 @@ contains
       SAFE_ALLOCATE(l_dedldens(1:spin_channels, 1:n_block))
     end if
 
-    call pop_sub('vxc_inc.xc_get_vxc.mgga_init')
+    POP_SUB(xc_get_vxc.mgga_init)
   end subroutine mgga_init
 
 
@@ -527,7 +527,7 @@ contains
     integer :: ii
     integer, SAVE :: ncall = 0 
 
-    call push_sub('vxc_inc.xc_get_vxc.calc_tb09_c')
+    PUSH_SUB(xc_get_vxc.calc_tb09_c)
 
     SAFE_ALLOCATE(gnon(1:der%mesh%np))
 
@@ -558,14 +558,14 @@ contains
 
     SAFE_DEALLOCATE_A(gnon)
 
-    call pop_sub('vxc_inc.xc_get_vxc.calc_tb09_c')
+    POP_SUB(xc_get_vxc.calc_tb09_c)
   end subroutine calc_tb09_c
 
 
   ! ---------------------------------------------------------
   ! clean up memory allocates in mgga_init
   subroutine mgga_end()
-    call push_sub('vxc_inc.xc_get_vxc.mgga_end')
+    PUSH_SUB(xc_get_vxc.mgga_end)
 
     SAFE_DEALLOCATE_A(tau)
     SAFE_DEALLOCATE_A(current)
@@ -581,7 +581,7 @@ contains
       SAFE_DEALLOCATE_A(l_dedldens)
     end if
 
-    call pop_sub('vxc_inc.xc_get_vxc.mgga_end')
+    POP_SUB(xc_get_vxc.mgga_end)
   end subroutine mgga_end
 
 
@@ -591,7 +591,7 @@ contains
     integer :: is
     FLOAT, allocatable :: lf(:,:)
 
-    call push_sub('vxc_inc.xc_get_vxc.mgga_process')
+    PUSH_SUB(xc_get_vxc.mgga_process)
 
     ! add the Laplacian of the functional derivative of Exc with respect to
     ! the gradient of the density.
@@ -603,7 +603,7 @@ contains
     end do
     SAFE_DEALLOCATE_A(lf)
 
-    call pop_sub('vxc_inc.xc_get_vxc.mgga_process')
+    POP_SUB(xc_get_vxc.mgga_process)
   end subroutine mgga_process
 
 end subroutine xc_get_vxc

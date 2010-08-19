@@ -72,7 +72,7 @@ contains
     type(geometry_t),    intent(in)  :: geo
     FLOAT,               intent(in)  :: spacing(:)
 
-    call push_sub('curvilinear.curvilinear_init')
+    PUSH_SUB(curvilinear_init)
 
     !%Variable CurvMethod
     !%Type integer
@@ -115,7 +115,7 @@ contains
       call curv_modine_init(cv%modine, sb, geo, spacing)
     end select
 
-    call pop_sub('curvilinear.curvilinear_init')
+    POP_SUB(curvilinear_init)
   end subroutine curvilinear_init
 
 
@@ -123,7 +123,7 @@ contains
   subroutine curvilinear_end(cv)
     type(curvilinear_t), intent(inout) :: cv
 
-    call push_sub('curvilinear.curvilinear_end')
+    PUSH_SUB(curvilinear_end)
 
     select case(cv%method)
     case(CURV_METHOD_GYGI)
@@ -133,7 +133,7 @@ contains
       call curv_modine_end(cv%modine)
     end select
 
-    call pop_sub('curvilinear.curvilinear_end')
+    POP_SUB(curvilinear_end)
   end subroutine curvilinear_end
   
 
@@ -168,7 +168,7 @@ contains
     FLOAT,               intent(in)  :: x(MAX_DIM)
     FLOAT,               intent(out) :: chi(MAX_DIM)
 
-    call push_sub('curvilinear.curvilinear_x2chi')
+    PUSH_SUB(curvilinear_x2chi)
     
     chi = M_ZERO
 
@@ -182,7 +182,7 @@ contains
       call write_fatal(1)
     end select
 
-    call pop_sub('curvilinear.curvilinear_x2chi')
+    POP_SUB(curvilinear_x2chi)
   end subroutine curvilinear_x2chi
 
 
@@ -197,7 +197,7 @@ contains
     FLOAT, allocatable :: Jac(:,:)
     integer :: i
 
-    call push_sub('curvilinear.curvilinear_det_Jac')
+    PUSH_SUB(curvilinear_det_Jac)
 
     if(cv%method.ne.CURV_METHOD_UNIFORM) then
       SAFE_ALLOCATE(Jac(1:sb%dim, 1:sb%dim))
@@ -224,7 +224,7 @@ contains
       SAFE_DEALLOCATE_A(Jac)
     end if
 
-    call pop_sub('curvilinear.curvilinear_det_Jac')
+    POP_SUB(curvilinear_det_Jac)
   end function curvilinear_det_Jac
 
   ! ---------------------------------------------------------
@@ -232,7 +232,7 @@ contains
     type(curvilinear_t), intent(in) :: cv
     integer,            intent(in) :: unit
 
-    call push_sub('curvilinear.curvilinear_write_info')
+    PUSH_SUB(curvilinear_write_info)
 
     select case(cv%method)
     case(CURV_METHOD_GYGI)
@@ -257,7 +257,7 @@ contains
 
     end select
 
-    call pop_sub('curvilinear.curvilinear_write_info')
+    POP_SUB(curvilinear_write_info)
   end subroutine curvilinear_write_info
 
   ! ---------------------------------------------------------

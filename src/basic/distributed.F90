@@ -61,7 +61,7 @@ contains
     type(distributed_t), intent(out) :: this
     integer,             intent(in)  :: total
 
-    call push_sub('distributed.distributed_nullify')
+    PUSH_SUB(distributed_nullify)
 
     this%start           = 1
     this%end             = total
@@ -71,7 +71,7 @@ contains
     nullify(this%node, this%range, this%num)
     call mpi_grp_init(this%mpi_grp, -1)
 
-    call pop_sub('distributed.distributed_nullify')
+    POP_SUB(distributed_nullify)
   end subroutine distributed_nullify
   
   subroutine distributed_init(this, total, mc, strategy, tag)
@@ -85,7 +85,7 @@ contains
     integer :: kk, size, rank
 #endif
 
-    call push_sub('distributed.distributed_init')
+    PUSH_SUB(distributed_init)
     
     this%nglobal = total
 
@@ -141,7 +141,7 @@ contains
     end if
 #endif
     
-    call pop_sub('distributed.distributed_init')
+    POP_SUB(distributed_init)
   end subroutine distributed_init
 
   subroutine distributed_copy(in, out)
@@ -150,7 +150,7 @@ contains
 
     integer :: size
 
-    call push_sub('distributed.distributed_copy')
+    PUSH_SUB(distributed_copy)
 
     out%start    = in%start
     out%end      = in%end
@@ -179,19 +179,19 @@ contains
       out%num(0:size - 1) = in%num(0:size - 1)
     end if
 
-    call pop_sub('distributed.distributed_copy')
+    POP_SUB(distributed_copy)
   end subroutine distributed_copy
 
   subroutine distributed_end(this)
     type(distributed_t), intent(inout) :: this
     
-    call push_sub('distributed.distributed_end')
+    PUSH_SUB(distributed_end)
 
     SAFE_DEALLOCATE_P(this%node)
     SAFE_DEALLOCATE_P(this%range)
     SAFE_DEALLOCATE_P(this%num)
 
-    call pop_sub('distributed.distributed_end')
+    POP_SUB(distributed_end)
   end subroutine distributed_end
 
 end module distributed_m

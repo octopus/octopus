@@ -36,7 +36,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_un
   R_TYPE, allocatable :: tmp(:)
   character :: sigma
 
-  call push_sub('output_linear_response.Xh_sys_output_lr')
+  PUSH_SUB(X(h_sys_output_lr))
 
   if(isigma == 1) then
     sigma = '+'
@@ -168,7 +168,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_un
     SAFE_DEALLOCATE_A(dtmp)
   end if
 
-  call pop_sub('output_linear_response.Xh_sys_output_lr')
+  POP_SUB(X(h_sys_output_lr))
 contains
 
   ! ---------------------------------------------------------
@@ -178,7 +178,7 @@ contains
     
     integer :: is, ierr
 
-    call push_sub('output_linear_response.Xh_sys_output_lr.lr_elf')
+    PUSH_SUB(X(h_sys_output_lr).lr_elf)
 
     ! these quantities are dimensionless, before the perturbation
     do is = 1, st%d%nspin
@@ -201,7 +201,7 @@ contains
         unit_one / pert_unit, ierr, geo = geo)
     end do
 
-    call pop_sub('output_linear_response.Xh_sys_output_lr.lr_elf')
+    POP_SUB(X(h_sys_output_lr).lr_elf)
 
   end subroutine lr_elf
 

@@ -193,7 +193,7 @@ contains
   subroutine profiling_init()
     integer :: ii
 
-    call push_sub('profiling.profiling_init')
+    PUSH_SUB(profiling_init)
 
     !%Variable ProfilingMode
     !%Default no
@@ -225,7 +225,7 @@ contains
 
     in_profiling_mode = (prof_vars%mode > 0)
     if(.not.in_profiling_mode) then
-    call pop_sub('profiling.profiling_init')
+    POP_SUB(profiling_init)
       return
     end if
 
@@ -277,12 +277,12 @@ contains
 
     call profiling_in(C_PROFILING_COMPLETE_DATASET)
 
-    call pop_sub('profiling.profiling_init')
+    POP_SUB(profiling_init)
 
   contains
     ! ---------------------------------------------------------
     subroutine init_profiles
-      call push_sub('profiling.profiling_init.init_profiles')
+      PUSH_SUB(profiling_init.init_profiles)
 
       call profile_init(C_PROFILING_COMPLETE_DATASET, 'COMPLETE_DATASET')
       call profile_init(C_PROFILING_XC_OEP,           'XC_OEP')
@@ -303,14 +303,14 @@ contains
       call profile_init(C_PROFILING_LOBPCG_COPY,      'LOBPCG_COPY')
       call profile_init(C_PROFILING_LOBPCG_LOOP,      'LOBPCG_LOOP')
 
-      call pop_sub('profiling.profiling_init.init_profiles')
+      POP_SUB(profiling_init.init_profiles)
     end subroutine init_profiles
 
     ! ---------------------------------------------------------
     subroutine get_output_dir()
       character(len=6) :: dirnum
 
-      call push_sub('profiling.profiling_init.get_output_dir')
+      PUSH_SUB(profiling_init.get_output_dir)
 
       dirnum  = 'ser '
       prof_vars%file_number = '0000'
@@ -324,7 +324,7 @@ contains
 
       if(mpi_grp_is_root(mpi_world)) call io_mkdir(trim(prof_vars%output_dir))
 
-      call pop_sub('profiling.profiling_init.get_output_dir')
+      POP_SUB(profiling_init.get_output_dir)
     end subroutine get_output_dir
 
   end subroutine profiling_init
@@ -336,7 +336,7 @@ contains
     real(8), parameter :: megabyte = 1048576.0_8
 
     if(.not. in_profiling_mode) return
-    call push_sub('profiling.profiling_end')
+    PUSH_SUB(profiling_end)
 
     call profiling_out(C_PROFILING_COMPLETE_DATASET)
     call profiling_output()
@@ -377,7 +377,7 @@ contains
       call io_close(prof_vars%mem_iunit)
     end if
 
-    call pop_sub('profiling.profiling_end')
+    POP_SUB(profiling_end)
   end subroutine profiling_end
 
 
@@ -413,10 +413,10 @@ contains
   subroutine profile_end(this)
     type(profile_t), intent(inout) :: this
 
-    call push_sub('profiling.profile_end')
+    PUSH_SUB(profile_end)
     this%initialized = .false.
 
-    call pop_sub('profiling.profile_end')
+    POP_SUB(profile_end)
   end subroutine profile_end
 
 
@@ -424,10 +424,10 @@ contains
   logical function profile_is_initialized(this)
     type(profile_t), intent(in)   :: this
 
-    call push_sub('profiling.profile_is_initialized')
+    PUSH_SUB(profile_is_initialized)
     profile_is_initialized = this%initialized
 
-    call pop_sub('profiling.profile_is_initialized')
+    POP_SUB(profile_is_initialized)
   end function profile_is_initialized
 
 
@@ -706,7 +706,7 @@ contains
 
     if(.not.in_profiling_mode) return
 
-    call push_sub('profiling.profiling_output')
+    PUSH_SUB(profiling_output)
 
 #ifdef HAVE_MPI
     call MPI_Barrier(mpi_world%comm, mpi_err)
@@ -716,7 +716,7 @@ contains
     if(iunit.lt.0) then
       message(1) = 'Could not write profiling results.'
       call write_warning(1)
-      call pop_sub('profiling.profiling_output')
+      POP_SUB(profiling_output)
       return
     end if
 
@@ -756,7 +756,7 @@ contains
 
     call io_close(iunit)
 
-    call pop_sub('profiling.profiling_output')
+    POP_SUB(profiling_output)
   end subroutine profiling_output
 
 
@@ -769,7 +769,7 @@ contains
 
     integer            :: ii, jj, nn
     
-    call push_sub('profiling.profiling_make_position_str')
+    PUSH_SUB(profiling_make_position_str)
 
     jj = len(var)
     if(var(jj:jj) == ')') then
@@ -789,7 +789,7 @@ contains
     write(str, '(4a,i5,a)') var(1:jj), "(", trim(file), ":", line, ")"
     call compact(str)
 
-    call pop_sub('profiling.profiling_make_position_str')
+    POP_SUB(profiling_make_position_str)
   end subroutine profiling_make_position_str
 
 
@@ -804,7 +804,7 @@ contains
     character(len=256) :: str
     integer(8) :: mem
     
-    call push_sub('profiling.profiling_memory_log')
+    PUSH_SUB(profiling_memory_log)
 
     call profiling_make_position_str(var, file, line, str)
 
@@ -814,7 +814,7 @@ contains
     write(prof_vars%mem_iunit, '(f16.6,1x,a,3i16,1x,a)') loct_clock() - prof_vars%start_time, &
          trim(type), size, prof_vars%total_memory, mem, trim(str)
 
-    call pop_sub('profiling.profiling_memory_log')
+    POP_SUB(profiling_memory_log)
   end subroutine profiling_memory_log
 
 
@@ -829,7 +829,7 @@ contains
     integer(8) :: size
     character(len=256) :: str
 
-    call push_sub('profiling.profiling_memory_allocate')
+    PUSH_SUB(profiling_memory_allocate)
 
     size = size_ ! make a copy that we can change
 
@@ -886,7 +886,7 @@ contains
       end if
     end do
     
-    call pop_sub('profiling.profiling_memory_allocate')
+    POP_SUB(profiling_memory_allocate)
   end subroutine profiling_memory_allocate
 
 
@@ -897,7 +897,7 @@ contains
     integer,          intent(in) :: line
     integer(8),       intent(in) :: size
     
-    call push_sub('profiling.profiling_memory_deallocate')
+    PUSH_SUB(profiling_memory_deallocate)
 
     prof_vars%dealloc_count  = prof_vars%dealloc_count + 1
     prof_vars%total_memory   = prof_vars%total_memory - size
@@ -906,7 +906,7 @@ contains
       call profiling_memory_log('D ', var, file, line, -size)
     end if
 
-    call pop_sub('profiling.profiling_memory_deallocate')
+    POP_SUB(profiling_memory_deallocate)
   end subroutine profiling_memory_deallocate
  
 

@@ -93,7 +93,7 @@ contains
     FLOAT                          :: j1
     type(oct_prop_t)               :: prop_chi, prop_psi
 
-    call push_sub('opt_control.opt_control_run')
+    PUSH_SUB(opt_control_run)
 
     ! Creates a directory where the optimal control stuff will be written. The name of the directory
     ! is stored in the preprocessor macro OCT_DIR, which should be defined in src/include/global.h
@@ -211,14 +211,14 @@ contains
     call target_end(target, oct)
     call controlfunction_mod_close()
    
-    call pop_sub('opt_control.opt_control_run')
+    POP_SUB(opt_control_run)
 
   contains
 
 
     ! ---------------------------------------------------------
     subroutine scheme_straight_iteration
-      call push_sub('opt_control.opt_control_run.scheme_straight_iteration')
+      PUSH_SUB(opt_control_run.scheme_straight_iteration)
 
       call controlfunction_set_rep(par)
       call controlfunction_copy(par_new, par)
@@ -237,7 +237,7 @@ contains
 
       call controlfunction_end(par_new)
       call controlfunction_end(par_prev)
-      call pop_sub('opt_control.opt_control_run.scheme_straight_iteration')
+      POP_SUB(opt_control_run.scheme_straight_iteration)
     end subroutine scheme_straight_iteration
     ! ---------------------------------------------------------
 
@@ -245,7 +245,7 @@ contains
     ! ---------------------------------------------------------
     subroutine scheme_mt03
       type(states_t) :: psi
-      call push_sub('opt_control.opt_control_run.scheme_mt03')
+      PUSH_SUB(opt_control_run.scheme_mt03)
 
       call states_copy(psi, initial_st)
       call oct_prop_init(prop_chi, "chi")
@@ -271,7 +271,7 @@ contains
       call oct_prop_end(prop_psi)
       call controlfunction_end(par_new)
       call controlfunction_end(par_prev)
-      call pop_sub('opt_control.opt_control_run.scheme_mt03')
+      POP_SUB(opt_control_run.scheme_mt03)
     end subroutine scheme_mt03
     ! ---------------------------------------------------------
 
@@ -279,7 +279,7 @@ contains
     ! ---------------------------------------------------------
     subroutine scheme_wg05
       type(states_t) :: psi
-      call push_sub('opt_control.opt_control_run.scheme_wg05')
+      PUSH_SUB(opt_control_run.scheme_wg05)
 
       call states_copy(psi, initial_st)
       call oct_prop_init(prop_chi, "chi")
@@ -307,7 +307,7 @@ contains
       call oct_prop_end(prop_psi)
       call controlfunction_end(par_new)
       call controlfunction_end(par_prev)
-      call pop_sub('opt_control.opt_control_run.scheme_wg05')
+      POP_SUB(opt_control_run.scheme_wg05)
     end subroutine scheme_wg05
     ! ---------------------------------------------------------
 
@@ -315,7 +315,7 @@ contains
     ! ---------------------------------------------------------
     subroutine scheme_zbr98
       type(states_t) :: psi
-      call push_sub('opt_control.opt_control_run.scheme_zbr98')
+      PUSH_SUB(opt_control_run.scheme_zbr98)
 
       call states_copy(psi, initial_st)
       call oct_prop_init(prop_chi, "chi")
@@ -331,7 +331,7 @@ contains
         call states_end(psi)
         call oct_prop_end(prop_chi)
         call oct_prop_end(prop_psi)
-        call pop_sub('opt_control.opt_control_run.scheme_zbr98')
+        POP_SUB(opt_control_run.scheme_zbr98)
         return        
       end if
 
@@ -354,7 +354,7 @@ contains
       call oct_prop_end(prop_psi)
       call controlfunction_end(par_new)
       call controlfunction_end(par_prev)
-      call pop_sub('opt_control.opt_control_run.scheme_zbr98')
+      POP_SUB(opt_control_run.scheme_zbr98)
     end subroutine scheme_zbr98
     ! ---------------------------------------------------------
 
@@ -367,7 +367,7 @@ contains
       REAL_DOUBLE, allocatable :: x(:)
       FLOAT   :: f
       type(states_t) :: psi
-      call push_sub('opt_control.opt_control_run.scheme_cg')
+      PUSH_SUB(opt_control_run.scheme_cg)
 
       call controlfunction_set_rep(par)
 
@@ -379,7 +379,7 @@ contains
       call states_end(psi)
       if(oct_iterator_maxiter(iterator).eq.0) then
         ! Nothing to do.
-        call pop_sub('opt_control.opt_control_run.scheme_cg')
+        POP_SUB(opt_control_run.scheme_cg)
         return
       end if
 
@@ -416,7 +416,7 @@ contains
 
       SAFE_DEALLOCATE_A(x)
       SAFE_DEALLOCATE_A(theta)
-      call pop_sub('opt_control.opt_control_run.scheme_cg')
+      POP_SUB(opt_control_run.scheme_cg)
     end subroutine scheme_cg
     ! ---------------------------------------------------------
 
@@ -431,7 +431,7 @@ contains
       integer :: dim
       type(states_t) :: psi
 
-      call push_sub('opt_control.opt_control_run.scheme_direct')
+      PUSH_SUB(opt_control_run.scheme_direct)
 
       call controlfunction_set_rep(par)
       dim = controlfunction_dof(par)
@@ -444,7 +444,7 @@ contains
       call states_end(psi)
       if(oct_iterator_maxiter(iterator).eq.0) then
         ! Nothing to do.
-        call pop_sub('opt_control.opt_control_run.scheme_cg')
+        POP_SUB(opt_control_run.scheme_cg)
         return
       end if
 
@@ -485,7 +485,7 @@ contains
 
       SAFE_DEALLOCATE_A(x)
       SAFE_DEALLOCATE_A(theta)
-      call pop_sub('opt_control.opt_control_run.scheme_direct')
+      POP_SUB(opt_control_run.scheme_direct)
     end subroutine scheme_direct
     ! ---------------------------------------------------------
 
@@ -500,7 +500,7 @@ contains
       FLOAT, allocatable :: theta(:)
       FLOAT :: f
       type(states_t) :: psi
-      call push_sub('opt_control.opt_control_run.scheme_newuoa')
+      PUSH_SUB(opt_control_run.scheme_newuoa)
 
       call controlfunction_set_rep(par)
 
@@ -512,7 +512,7 @@ contains
       call states_end(psi)
       if(oct_iterator_maxiter(iterator).eq.0) then
         ! Nothing to do.
-        call pop_sub('opt_control.opt_control_run.scheme_cg')
+        POP_SUB(opt_control_run.scheme_cg)
         return
       end if
 
@@ -551,7 +551,7 @@ contains
       SAFE_DEALLOCATE_A(xl)
       SAFE_DEALLOCATE_A(xu)
       SAFE_DEALLOCATE_A(w)
-      call pop_sub('opt_control.opt_control_run.scheme_newuoa')
+      POP_SUB(opt_control_run.scheme_newuoa)
 #endif
     end subroutine scheme_newuoa
     ! ---------------------------------------------------------
@@ -572,7 +572,7 @@ contains
     type(states_t) :: chi
     type(controlfunction_t) :: par_chi
 
-    call push_sub('opt_control.f_zbr98')
+    PUSH_SUB(f_zbr98)
 
     call controlfunction_copy(par_chi, par)
 
@@ -591,7 +591,7 @@ contains
 
     call states_end(chi)
     call controlfunction_end(par_chi)
-    call pop_sub('opt_control.f_zbr98')
+    POP_SUB(f_zbr98)
   end subroutine f_zbr98
 
 
@@ -609,14 +609,14 @@ contains
     type(states_t) :: chi
     type(controlfunction_t) :: parp
 
-    call push_sub('opt_control.f_wg05')
+    PUSH_SUB(f_wg05)
 
     if( oct_iterator_current(iterator) .eq. 0) then
       call states_end(psi)
       call states_copy(psi, initial_st)
       call propagate_forward(sys, hm, td, par, target, psi, prop_psi)
       j1 = j1_functional(target, sys%gr, psi)
-      call pop_sub('opt_control.f_wg05')
+      POP_SUB(f_wg05)
       return
     end if
 
@@ -647,7 +647,7 @@ contains
 
     call states_end(chi)
     call controlfunction_end(parp)
-    call pop_sub('opt_control.f_wg05')
+    POP_SUB(f_wg05)
   end subroutine f_wg05
   ! ---------------------------------------------------------
 
@@ -665,7 +665,7 @@ contains
     type(controlfunction_t) :: par_chi
     type(oct_prop_t)        :: prop_chi, prop_psi;
 
-    call push_sub('opt_control.f_striter')
+    PUSH_SUB(f_striter)
 
     call oct_prop_init(prop_chi, "chi")
     call oct_prop_init(prop_psi, "psi")
@@ -701,7 +701,7 @@ contains
     call controlfunction_end(par_chi)
     call oct_prop_end(prop_chi)
     call oct_prop_end(prop_psi)
-    call pop_sub('opt_control.f_striter')
+    POP_SUB(f_striter)
   end subroutine f_striter
   ! ---------------------------------------------------------
 
@@ -719,14 +719,14 @@ contains
     type(states_t) :: chi
     type(controlfunction_t) :: par_chi
 
-    call push_sub('opt_control.f_iter')
+    PUSH_SUB(f_iter)
 
     if( oct_iterator_current(iterator) .eq. 0) then
       call states_end(psi)
       call states_copy(psi, initial_st)
       call propagate_forward(sys, hm, td, par, target, psi, prop_psi)
       j1 = j1_functional(target, sys%gr, psi)
-      call pop_sub('opt_control.f_iter')
+      POP_SUB(f_iter)
       return
     end if
 
@@ -751,7 +751,7 @@ contains
 
     call states_end(chi)
     call controlfunction_end(par_chi)
-    call pop_sub('opt_control.f_iter')
+    POP_SUB(f_iter)
   end subroutine f_iter
   ! ---------------------------------------------------------
 
@@ -777,7 +777,7 @@ contains
     FLOAT, allocatable :: theta(:), xdx(:), dfn(:), dff(:)
     type(states_t) :: psi
 
-    call push_sub("opt_control.opt_control_cg_calc")
+    PUSH_SUB(opt_control_cg_calc)
 
     SAFE_ALLOCATE(theta(1:n))
     if(getgrad .eq. 1) then
@@ -853,7 +853,7 @@ contains
     end if
 
     SAFE_DEALLOCATE_A(theta)
-    call pop_sub("opt_control.opt_control_cg_calc")
+    POP_SUB(opt_control_cg_calc)
   end subroutine opt_control_cg_calc
   ! ---------------------------------------------------------
 
@@ -866,7 +866,7 @@ contains
 
     FLOAT :: fluence, j1, j2, j
 
-    call push_sub("opt_control.opt_control_cg_write_info")
+    PUSH_SUB(opt_control_cg_write_info)
 
     j = - val
     fluence = controlfunction_fluence(par_)
@@ -886,7 +886,7 @@ contains
 
     call iteration_manager_main(iterator, j, j1, j2, real(maxdx, REAL_PRECISION))
 
-    call pop_sub("opt_control.opt_control_cg_write_info")
+    POP_SUB(opt_control_cg_write_info)
   end subroutine opt_control_cg_write_info
   ! ---------------------------------------------------------
 
@@ -902,7 +902,7 @@ contains
     type(states_t) :: psi
     type(controlfunction_t) :: par_new
 
-    call push_sub("opt_control.opt_control_direct_calc")
+    PUSH_SUB(opt_control_direct_calc)
 
     SAFE_ALLOCATE(theta(1:n))
     theta = x
@@ -928,7 +928,7 @@ contains
     end if
 
     SAFE_DEALLOCATE_A(theta)
-    call pop_sub("opt_control.opt_control_direct_calc")
+    POP_SUB(opt_control_direct_calc)
   end subroutine opt_control_direct_calc
   ! ---------------------------------------------------------
 
@@ -942,7 +942,7 @@ contains
     FLOAT :: fluence, j1, j2, j
     FLOAT, allocatable :: theta(:)
 
-    call push_sub("opt_control.opt_control_direct_write_info")
+    PUSH_SUB(opt_control_direct_write_info)
 
     SAFE_ALLOCATE(theta(1:n))
     theta = x
@@ -968,7 +968,7 @@ contains
 
     call iteration_manager_main(iterator, j, j1, j2, real(maxdx, REAL_PRECISION))
 
-    call pop_sub("opt_control.opt_control_direct_write_info")
+    POP_SUB(opt_control_direct_write_info)
   end subroutine opt_control_direct_write_info
   ! ---------------------------------------------------------
 

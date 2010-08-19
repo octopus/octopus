@@ -39,7 +39,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
   FLOAT, parameter :: dmin = CNST(1e-10)
   FLOAT :: ik_weight
 
-  call push_sub('em_resp_calc_inc.Xlr_calc_elf')
+  PUSH_SUB(X(lr_calc_elf))
 
   ASSERT(.false.)
 
@@ -245,7 +245,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
   SAFE_DEALLOCATE_A(elf)
   SAFE_DEALLOCATE_A(de)
 
-  call pop_sub('em_resp_calc_inc.Xlr_calc_elf')
+  POP_SUB(X(lr_calc_elf))
 
 end subroutine X(lr_calc_elf)
 
@@ -269,7 +269,7 @@ subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, n
 
   mesh => sys%gr%mesh
 
-  call push_sub('em_resp_calc_inc.Xcalc_polarizability_periodic')
+  PUSH_SUB(X(calc_polarizability_periodic))
 
   ndir_ = mesh%sb%dim
   if(present(ndir)) ndir_ = ndir
@@ -318,7 +318,7 @@ subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, n
   endif
 #endif
 
-  call pop_sub('em_resp_calc_inc.Xcalc_polarizability_periodic')
+  POP_SUB(X(calc_polarizability_periodic))
 
 end subroutine X(calc_polarizability_periodic)
 
@@ -335,7 +335,7 @@ subroutine X(calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, zpol
 
   integer :: dir1, dir2, ndir_
 
-  call push_sub('em_resp_calc_inc.Xcalc_polarizability_finite')
+  PUSH_SUB(X(calc_polarizability_finite))
 
   ndir_ = sys%gr%mesh%sb%dim
   if(present(ndir)) ndir_ = ndir
@@ -359,7 +359,7 @@ subroutine X(calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, zpol
     end do
   end do
 
-  call pop_sub('em_resp_calc_inc.Xcalc_polarizability_finite')
+  POP_SUB(X(calc_polarizability_finite))
 
 end subroutine X(calc_polarizability_finite)
 
@@ -376,7 +376,7 @@ subroutine X(lr_calc_susceptibility)(sys, hm, lr, nsigma, perturbation, chi_para
   integer :: dir1, dir2
   R_TYPE  :: trace
 
-  call push_sub('em_resp_calc_inc.Xlr_calc_susceptibility')
+  PUSH_SUB(X(lr_calc_susceptibility))
 
   chi_para = M_ZERO
   chi_dia  = M_ZERO
@@ -414,7 +414,7 @@ subroutine X(lr_calc_susceptibility)(sys, hm, lr, nsigma, perturbation, chi_para
   chi_para(:,:) = -chi_para(:,:)
 #endif
 
-  call pop_sub('em_resp_calc_inc.Xlr_calc_susceptibility')
+  POP_SUB(X(lr_calc_susceptibility))
 
 end subroutine X(lr_calc_susceptibility)
 
@@ -453,7 +453,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   R_TYPE, allocatable :: hpol_density(:)
   logical :: occ_response_
 
-  call push_sub('em_resp_calc_inc.Xlr_calc_beta')
+  PUSH_SUB(X(lr_calc_beta))
 
   call profiling_in(beta_prof, "CALC_BETA")
 
@@ -591,7 +591,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   SAFE_DEALLOCATE_A(me11)
   SAFE_DEALLOCATE_A(hvar)
 
-  call pop_sub('em_resp_calc_inc.Xlr_calc_beta')
+  POP_SUB(X(lr_calc_beta))
 
   call profiling_out(beta_prof)
 
@@ -601,7 +601,7 @@ contains
     integer, intent(in)  :: ii
     integer, intent(out) :: pp(1:3)
 
-    call push_sub('em_resp_calc_inc.Xlr_calc_beta.get_permutation')
+    PUSH_SUB(X(lr_calc_beta).get_permutation)
 
     ASSERT( ii >= 1 .and. ii <= 6)
 
@@ -616,11 +616,11 @@ contains
 
     end select
 
-    call pop_sub('em_resp_calc_inc.Xlr_calc_beta.get_permutation')
+    POP_SUB(X(lr_calc_beta).get_permutation)
   end subroutine get_permutation
 
   subroutine get_matrix_elements()
-    call push_sub('em_resp_calc_inc.Xlr_calc_beta.get_matrix_elements')
+    PUSH_SUB(X(lr_calc_beta).get_matrix_elements)
 
     do ik = st%d%kpt%start, st%d%kpt%end
       ispin = states_dim_get_spin_index(sys%st%d, ik)
@@ -681,7 +681,7 @@ contains
       end do
     end do
 
-    call pop_sub('em_resp_calc_inc.Xlr_calc_beta.get_matrix_elements')
+    POP_SUB(X(lr_calc_beta).get_matrix_elements)
   end subroutine get_matrix_elements
 
 end subroutine X(lr_calc_beta)
@@ -705,7 +705,7 @@ subroutine X(lr_calc_2np1) (sh, hm, st, geo, gr, lr1, lr2, lr3, pert1, pert2, pe
   R_TYPE :: term
   R_TYPE, allocatable :: tmp(:, :), me23(:, :)
 
-  call push_sub('em_resp_calc_inc.Xlr_calc_2np1')
+  PUSH_SUB(X(lr_calc_2np1))
 
   SAFE_ALLOCATE(tmp(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(me23(1:st%nst, 1:st%nst))
@@ -739,7 +739,7 @@ subroutine X(lr_calc_2np1) (sh, hm, st, geo, gr, lr1, lr2, lr3, pert1, pert2, pe
   SAFE_DEALLOCATE_A(tmp)
   SAFE_DEALLOCATE_A(me23)
 
-  call pop_sub('em_resp_calc_inc.Xlr_calc_2np1')
+  POP_SUB(X(lr_calc_2np1))
 end subroutine X(lr_calc_2np1)
 
 !! Local Variables:

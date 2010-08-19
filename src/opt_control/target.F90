@@ -118,10 +118,10 @@ module opt_control_target_m
     type(target_t), intent(in)    :: target
     type(states_t), intent(inout) :: st
 
-    call push_sub('target.target_get_state')
+    PUSH_SUB(target_get_state)
     call states_copy(st, target%st)
 
-    call pop_sub('target.target_get_state')
+    POP_SUB(target_get_state)
   end subroutine target_get_state
   ! ----------------------------------------------------------------------
 
@@ -147,7 +147,7 @@ module opt_control_target_m
     type(states_t)      :: tmp_st
     character(len=1024) :: expression
 
-    call push_sub('target.target_init')
+    PUSH_SUB(target_init)
 
     !%Variable OCTTargetOperator
     !%Type integer
@@ -621,7 +621,7 @@ module opt_control_target_m
       call write_fatal(1)
     end select
 
-    call pop_sub('target.target_init')
+    POP_SUB(target_init)
   end subroutine target_init
   ! ----------------------------------------------------------------------
 
@@ -631,7 +631,7 @@ module opt_control_target_m
     type(target_t), intent(inout) :: target
     type(oct_t), intent(in)       :: oct
 
-    call push_sub('target.target_end')
+    PUSH_SUB(target_end)
 
     call states_end(target%st)
     if(target%type .eq. oct_tg_local .or. &
@@ -656,7 +656,7 @@ module opt_control_target_m
        end if
     end if
     
-    call pop_sub('target.target_end')
+    POP_SUB(target_end)
   end subroutine target_end
   ! ----------------------------------------------------------------------
 
@@ -670,7 +670,7 @@ module opt_control_target_m
     type(h_sys_output_t),   intent(in)  :: outp
 
     integer :: ierr
-    call push_sub('target.target_output')
+    PUSH_SUB(target_output)
     
     call loct_mkdir(trim(dir))
 
@@ -692,7 +692,7 @@ module opt_control_target_m
       call h_sys_output_states(target%st, gr, geo, trim(dir), outp)
     end select
 
-    call pop_sub('target.target_output')
+    POP_SUB(target_output)
   end subroutine target_output
   ! ----------------------------------------------------------------------
 
@@ -715,7 +715,7 @@ module opt_control_target_m
     if(target_type(target)  .eq. oct_tg_velocity) return
     if(target_mode(target)  .ne. oct_targetmode_td) return
 
-    call push_sub('target.target_tdcalc')
+    PUSH_SUB(target_tdcalc)
 
     target%td_fitness(time) = M_ZERO
 
@@ -752,7 +752,7 @@ module opt_control_target_m
       stop 'Error at target.target_tdcalc.'
     end select
 
-    call pop_sub('target.target_tdcalc')
+    POP_SUB(target_tdcalc)
   end subroutine target_tdcalc
   ! ----------------------------------------------------------------------
 
@@ -770,7 +770,7 @@ module opt_control_target_m
  
     integer :: ik, ist, idim, ip
     
-    call push_sub('target.target_inh')
+    PUSH_SUB(target_inh)
 
     select case(target%type)
     case(oct_tg_td_local)
@@ -787,7 +787,7 @@ module opt_control_target_m
       
     end select
 
-    call pop_sub('target.target_inh')
+    POP_SUB(target_inh)
   end subroutine target_inh
   !----------------------------------------------------------
 
@@ -801,7 +801,7 @@ module opt_control_target_m
     integer :: ip
     FLOAT :: xx(MAX_DIM), rr, re, im
 
-    call push_sub('target.target_build_tdlocal')
+    PUSH_SUB(target_build_tdlocal)
 
     do ip = 1, gr%mesh%np
       call mesh_r(gr%mesh, ip, rr, coords = xx)
@@ -809,7 +809,7 @@ module opt_control_target_m
       target%rho(ip) = re
     end do
 
-    call pop_sub('target.target_build_tdlocal')
+    POP_SUB(target_build_tdlocal)
   end subroutine target_build_tdlocal
   !----------------------------------------------------------
 
@@ -834,7 +834,7 @@ module opt_control_target_m
     FLOAT :: f_re, dummy(3)
     character(len=4096) :: inp_string
 
-    call push_sub('target.j1_functional')
+    PUSH_SUB(j1_functional)
 
     j1 = M_ZERO
     select case(target%type)
@@ -928,7 +928,7 @@ module opt_control_target_m
 
     end select
 
-    call pop_sub('target.j1_functional')
+    POP_SUB(j1_functional)
   end function j1_functional
   ! ---------------------------------------------------------
 
@@ -949,7 +949,7 @@ module opt_control_target_m
     character(len=1024) :: temp_string
     FLOAT :: df_dv, dummy(3)
 
-    call push_sub('target.calc_chi')
+    PUSH_SUB(calc_chi)
 
     no_electrons = -nint(psi_in%val_charge)
 
@@ -1141,7 +1141,7 @@ module opt_control_target_m
 
     end select
 
-    call pop_sub('target.calc_chi')
+    POP_SUB(calc_chi)
   end subroutine calc_chi
 
 
@@ -1189,7 +1189,7 @@ module opt_control_target_m
     integer              :: i,m,n_atom,coord,string_length
     CHARACTER (LEN=100)  :: v_string
 
-    call push_sub('target.parse_velocity_target')
+    PUSH_SUB(parse_velocity_target)
     
     string_length = len(inp_string)
     do i=1, string_length 
@@ -1214,7 +1214,7 @@ module opt_control_target_m
        end if
     end do
     
-    call pop_sub('target.parse_velocity_target')
+    POP_SUB(parse_velocity_target)
   end subroutine parse_velocity_target
   ! ----------------------------------------------------------------------
 

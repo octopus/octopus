@@ -68,7 +68,7 @@ contains
     FLOAT, parameter   :: pi2 = M_PI**2
     FLOAT, allocatable :: fp(:)
 
-    call push_sub('stencil_variational.stencil_variational_coeff_lapl')
+    PUSH_SUB(stencil_variational_coeff_lapl)
 
     alpha_ = M_ONE
     if(present(alpha)) alpha_ = alpha
@@ -128,7 +128,7 @@ contains
 
     SAFE_DEALLOCATE_A(fp)
 
-    call pop_sub('stencil_variational.stencil_variational_coeff_lapl')
+    POP_SUB(stencil_variational_coeff_lapl)
   end subroutine stencil_variational_coeff_lapl
 
 
@@ -139,11 +139,11 @@ contains
     integer, intent(in) :: dir
     integer, intent(in) :: order
 
-    call push_sub('stencil_variational.stencil_variational_extent')
+    PUSH_SUB(stencil_variational_extent)
 
     stencil_variational_extent = order
 
-    call pop_sub('stencil_variational.stencil_variational_extent')
+    POP_SUB(stencil_variational_extent)
   end function stencil_variational_extent
 end module stencil_variational_m
 

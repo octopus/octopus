@@ -103,7 +103,7 @@ contains
 
     integer :: default_iter, default_es
 
-    call push_sub('eigen.eigensolver_init')
+    PUSH_SUB(eigensolver_init)
 
     !%Variable Eigensolver
     !%Type integer
@@ -264,7 +264,7 @@ contains
     eigens%converged(1:st%d%nik) = 0
     eigens%matvec    = 0
 
-    call pop_sub('eigen.eigensolver_init')
+    POP_SUB(eigensolver_init)
 
   end subroutine eigensolver_init
 
@@ -273,7 +273,7 @@ contains
   subroutine eigensolver_end(eigens)
     type(eigensolver_t), intent(inout) :: eigens
 
-    call push_sub('eigen.eigensolver_end')
+    PUSH_SUB(eigensolver_end)
 
     select case(eigens%es_type)
     case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS)
@@ -284,7 +284,7 @@ contains
     SAFE_DEALLOCATE_P(eigens%diff)
     nullify(eigens%diff)
 
-    call pop_sub('eigen.eigensolver_end')
+    POP_SUB(eigensolver_end)
   end subroutine eigensolver_end
 
 
@@ -310,7 +310,7 @@ contains
     character(len=100) :: str_tmp
 
     call profiling_in(prof, "EIGEN_SOLVER")
-    call push_sub('eigen.eigensolver_run')
+    PUSH_SUB(eigensolver_run)
 
     verbose_ = eigens%verbose; if(present(verbose)) verbose_ = verbose
 
@@ -465,14 +465,14 @@ contains
     end if
 #endif
 
-    call pop_sub('eigen.eigensolver_run')
+    POP_SUB(eigensolver_run)
     call profiling_out(prof)
   end subroutine eigensolver_run
 
   logical function eigensolver_parallel_in_states(this) result(par_stat)
     type(eigensolver_t), intent(in) :: this
     
-    call push_sub('eigen.eigensolver_parallel_in_states')
+    PUSH_SUB(eigensolver_parallel_in_states)
 
     par_stat = .false.
 
@@ -481,13 +481,13 @@ contains
       par_stat = .true.
     end select
     
-    call pop_sub('eigen.eigensolver_parallel_in_states')
+    POP_SUB(eigensolver_parallel_in_states)
   end function eigensolver_parallel_in_states
     
   logical function eigensolver_has_progress_bar(this) result(has)
     type(eigensolver_t), intent(in) :: this
 
-    call push_sub('eigen.eigensolver_has_progress_bar')
+    PUSH_SUB(eigensolver_has_progress_bar)
 
     has = .false.
 
@@ -496,7 +496,7 @@ contains
       has = .true.
     end select
 
-    call pop_sub('eigen.eigensolver_has_progress_bar')
+    POP_SUB(eigensolver_has_progress_bar)
   end function eigensolver_has_progress_bar
   
 #include "undef.F90"

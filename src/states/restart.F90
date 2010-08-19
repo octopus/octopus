@@ -86,7 +86,7 @@ contains
   function clean_stop()
     logical clean_stop, file_exists
 
-    call push_sub('restart.clean_stop')
+    PUSH_SUB(clean_stop)
 
     clean_stop = .false.
     inquire(file='stop', exist=file_exists)
@@ -100,7 +100,7 @@ contains
       if(mpi_grp_is_root(mpi_world)) call loct_rm('stop')
     end if
 
-    call pop_sub('restart.clean_stop')
+    POP_SUB(clean_stop)
   end function clean_stop
 
 
@@ -109,7 +109,7 @@ contains
   subroutine restart_init
 
 
-    call push_sub('restart.restart_init')
+    PUSH_SUB(restart_init)
 
     call messages_obsolete_variable('RestartFileFormat', 'RestartWrite')
 
@@ -148,7 +148,7 @@ contains
       restart_dir = trim(restart_dir)//'/'
     end if
 
-    call pop_sub('restart.restart_init')
+    POP_SUB(restart_init)
   end subroutine restart_init
 
 
@@ -165,7 +165,7 @@ contains
     character(len=80) dir
     logical :: exact_
 
-    call push_sub('restart.restart_look_and_read')
+    PUSH_SUB(restart_look_and_read)
 
     exact_ = .true.
     if(present(exact)) exact_ = exact
@@ -214,7 +214,7 @@ contains
     ! load wavefunctions
     call restart_read(trim(dir)//GS_DIR, st, gr, geo, ierr, exact = exact_)
 
-    call pop_sub('restart.restart_look_and_read')
+    POP_SUB(restart_look_and_read)
   end subroutine restart_look_and_read
 
 
@@ -233,11 +233,11 @@ contains
     logical :: wfns_are_associated, lr_wfns_are_associated
     FLOAT   :: kpoint(1:MAX_DIM)
 
-    call push_sub('restart.restart_write')
+    PUSH_SUB(restart_write)
 
     if(.not. restart_write_files) then
       ierr = 0
-    call pop_sub('restart.restart_write')
+    POP_SUB(restart_write)
       return
     end if
 
@@ -352,7 +352,7 @@ contains
     call unblock_signals()
 
     call profiling_out(prof_write)
-    call pop_sub('restart.restart_write')
+    POP_SUB(restart_write)
   end subroutine restart_write
 
 
@@ -364,7 +364,7 @@ contains
 
     integer              :: ik, ist, idim, il, ip
 
-    call push_sub('restart.restart_get_ob_intf')
+    PUSH_SUB(restart_get_ob_intf)
 
     write(message(1), '(a,i5)') 'Info: Reading ground-state interface wavefunctions.'
     call write_info(1)
@@ -387,7 +387,7 @@ contains
       end do
     end do
 
-    call pop_sub('restart.restart_get_ob_intf')
+    POP_SUB(restart_get_ob_intf)
   end subroutine restart_get_ob_intf
 
 
@@ -420,7 +420,7 @@ contains
     logical              :: read_occ_, gs_allocated, lr_allocated, grid_changed, grid_reordered
     logical              :: exact_
 
-    call push_sub('restart.restart_read')
+    PUSH_SUB(restart_read)
 
     call profiling_in(prof_read, "RESTART_READ")
 
@@ -520,7 +520,7 @@ contains
       call write_info(1)
       call messages_print_stress(stdout)
       call profiling_out(prof_read)
-      call pop_sub('restart.restart_read')
+      POP_SUB(restart_read)
       return
     end if
 
@@ -650,13 +650,13 @@ contains
     call io_close(iunit2, grp = gr%mesh%mpi_grp)
 
     call profiling_out(prof_read)
-    call pop_sub('restart.restart_read')
+    POP_SUB(restart_read)
 
   contains
 
     ! ---------------------------------------------------------
     subroutine fill() ! Put random function in orbitals that could not be read.
-      call push_sub('restart.restart_read.fill')
+      PUSH_SUB(restart_read.fill)
 
       do ik = st%d%kpt%start, st%d%kpt%end
 
@@ -670,13 +670,13 @@ contains
         end do
       end do
 
-      call pop_sub('restart.restart_read.fill')
+      POP_SUB(restart_read.fill)
     end subroutine fill
 
 
     ! ---------------------------------------------------------
     logical function index_is_wrong() ! .true. if the index (idim, ist, ik) is not present in st structure...
-      call push_sub('restart.restart_read.index_is_wrong')
+      PUSH_SUB(restart_read.index_is_wrong)
 
       if(idim > st%d%dim .or. idim < 1 .or.   &
         ist   > st%nst   .or. ist  < 1 .or.   &
@@ -686,7 +686,7 @@ contains
         index_is_wrong = .false.
       end if
 
-      call pop_sub('restart.restart_read.index_is_wrong')
+      POP_SUB(restart_read.index_is_wrong)
     end function index_is_wrong
 
     subroutine restart_fail()
@@ -718,7 +718,7 @@ contains
     CMPLX, allocatable         :: tmp(:, :)
     type(mpi_grp_t)            :: mpi_grp
 
-    call push_sub('restart.read_free_states')
+    PUSH_SUB(read_free_states)
 
     sb       => gr%sb
     m_lead   => gr%ob_grid%lead(LEFT)%mesh
@@ -844,14 +844,14 @@ contains
     write(message(2),'(a,i3,a)') 'Info:', sum(jk(:)), ' occupied states read by program.'
     call write_info(2)
 
-    call pop_sub('restart.read_free_states')
+    POP_SUB(read_free_states)
 
   contains
 
     subroutine lead_dens_accum()
       integer :: il
 
-      call push_sub('restart.read_free_states.lead_dens_accum')
+      PUSH_SUB(read_free_states.lead_dens_accum)
       !FIXME no spinors yet
       do il = 1, NLEADS
         do ip = 1, np
@@ -872,7 +872,7 @@ contains
         end select
       end do
 
-      call pop_sub('restart.read_free_states.lead_dens_accum')
+      POP_SUB(read_free_states.lead_dens_accum)
     end subroutine lead_dens_accum
   end subroutine read_free_states
 
@@ -895,7 +895,7 @@ contains
       normalize_yes       = 1, &
       normalize_no        = 0
 
-    call push_sub('restart.restart_read_user_def_orbitals')
+    PUSH_SUB(restart_read_user_def_orbitals)
 
     !%Variable UserDefinedStates
     !%Type block
@@ -1057,7 +1057,7 @@ contains
       call write_fatal(1)
     end if
 
-    call pop_sub('restart.restart_read_user_def_orbitals')
+    POP_SUB(restart_read_user_def_orbitals)
   end subroutine restart_read_user_def_orbitals
 
 #include "undef.F90"

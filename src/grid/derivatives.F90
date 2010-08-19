@@ -156,7 +156,7 @@ contains
 
     integer :: i
 
-    call push_sub('derivatives.derivatives_init')
+    PUSH_SUB(derivatives_init)
 
     ! copy this value to my structure
     der%dim = sb%dim
@@ -264,7 +264,7 @@ contains
     nullify(der%to_coarser)
     nullify(der%to_finer)
 
-    call pop_sub('derivatives.derivatives_init')
+    POP_SUB(derivatives_init)
   end subroutine derivatives_init
 
 
@@ -274,7 +274,7 @@ contains
 
     integer :: idim
 
-    call push_sub('derivatives.derivatives_end')
+    PUSH_SUB(derivatives_end)
 
     ASSERT(associated(der%op))
 
@@ -292,7 +292,7 @@ contains
 
     call boundaries_end(der%boundaries)
 
-    call pop_sub('derivatives.derivatives_end')
+    POP_SUB(derivatives_end)
   end subroutine derivatives_end
 
 
@@ -303,7 +303,7 @@ contains
     type(derivatives_t), intent(in) :: der
     integer,             intent(in) :: dir
 
-    call push_sub('derivatives.stencil_extent')
+    PUSH_SUB(stencil_extent)
 
     select case(der%stencil_type)
       case(DER_STAR)
@@ -316,7 +316,7 @@ contains
         extent = stencil_cube_extent(dir, der%order)
       end select
       
-    call pop_sub('derivatives.stencil_extent')
+    POP_SUB(stencil_extent)
   end function derivatives_stencil_extent
 
 
@@ -324,7 +324,7 @@ contains
   subroutine derivatives_get_stencil_lapl(der)
     type(derivatives_t), intent(inout) :: der
 
-    call push_sub('derivatives.derivatives_get_stencil_lapl')
+    PUSH_SUB(derivatives_get_stencil_lapl)
 
     ASSERT(associated(der%lapl))
 
@@ -341,7 +341,7 @@ contains
       call stencil_starplus_get_lapl(der%lapl%stencil, der%dim, der%order)
     end select
 
-    call pop_sub('derivatives.derivatives_get_stencil_lapl')
+    POP_SUB(derivatives_get_stencil_lapl)
 
   end subroutine derivatives_get_stencil_lapl
 
@@ -352,14 +352,14 @@ contains
     type(derivatives_t), intent(in)  :: der
     FLOAT,               intent(out) :: lapl(:)  ! lapl(mesh%np)
 
-    call push_sub('derivatives.derivatives_lapl_diag')
+    PUSH_SUB(derivatives_lapl_diag)
 
     ASSERT(ubound(lapl, DIM=1) >= der%mesh%np)
 
     ! the Laplacian is a real operator
     call dnl_operator_operate_diag(der%lapl, lapl)
 
-    call pop_sub('derivatives.derivatives_lapl_diag')
+    POP_SUB(derivatives_lapl_diag)
 
   end subroutine derivatives_lapl_diag
 
@@ -371,7 +371,7 @@ contains
     integer  :: ii
     character :: dir_label
 
-    call push_sub('derivatives.derivatives_get_stencil_grad')
+    PUSH_SUB(derivatives_get_stencil_grad)
 
     ASSERT(associated(der%grad))
 
@@ -393,7 +393,7 @@ contains
       end select
     end do
 
-    call pop_sub('derivatives.derivatives_get_stencil_grad')
+    POP_SUB(derivatives_get_stencil_grad)
 
   end subroutine derivatives_get_stencil_grad
 
@@ -410,7 +410,7 @@ contains
 
     type(nl_operator_t) :: auxop
 
-    call push_sub('derivatives.derivatives_build')
+    PUSH_SUB(derivatives_build)
 
     call boundaries_init(der%boundaries, mesh)
 
@@ -508,7 +508,7 @@ contains
       call nl_operator_end(auxop)
     end if
 
-    call pop_sub('derivatives.derivatives_build')
+    POP_SUB(derivatives_build)
 
   contains
 
@@ -519,7 +519,7 @@ contains
       integer :: i, j, k
       logical :: this_one
 
-      call push_sub('derivatives.derivatives_build.get_rhs_lapl')
+      PUSH_SUB(derivatives_build.get_rhs_lapl)
 
       ! find right-hand side for operator
       rhs(:) = M_ZERO
@@ -534,7 +534,7 @@ contains
         end do
       end do
 
-      call pop_sub('derivatives.derivatives_build.get_rhs_lapl')
+      POP_SUB(derivatives_build.get_rhs_lapl)
     end subroutine get_rhs_lapl
 
     ! ---------------------------------------------------------
@@ -545,7 +545,7 @@ contains
       integer :: j, k
       logical :: this_one
 
-      call push_sub('derivatives.derivatives_build.get_rhs_grad')
+      PUSH_SUB(derivatives_build.get_rhs_grad)
 
       ! find right-hand side for operator
       rhs(:) = M_ZERO
@@ -558,7 +558,7 @@ contains
         if(this_one) rhs(j) = M_ONE
       end do
 
-      call pop_sub('derivatives.derivatives_build.get_rhs_grad')
+      POP_SUB(derivatives_build.get_rhs_grad)
     end subroutine get_rhs_grad
 
   end subroutine derivatives_build
@@ -578,7 +578,7 @@ contains
     FLOAT   :: x(MAX_DIM)
     FLOAT, allocatable :: mat(:,:), sol(:,:), powers(:,:)
 
-    call push_sub('derivatives.derivatives_make_discretization')
+    PUSH_SUB(derivatives_make_discretization)
 
     SAFE_ALLOCATE(mat(1:op(1)%stencil%size, 1:op(1)%stencil%size))
     SAFE_ALLOCATE(sol(1:op(1)%stencil%size, 1:n))
@@ -637,7 +637,7 @@ contains
     SAFE_DEALLOCATE_A(sol)
     SAFE_DEALLOCATE_A(powers)
 
-    call pop_sub('derivatives.derivatives_make_discretization')
+    POP_SUB(derivatives_make_discretization)
   end subroutine derivatives_make_discretization
 
 #ifdef HAVE_MPI    
@@ -645,11 +645,11 @@ contains
   logical function derivatives_overlap(this) result(overlap)
     type(derivatives_t), intent(in) :: this
 
-    call push_sub('derivatives.derivatives_overlap')
+    PUSH_SUB(derivatives_overlap)
 
     overlap = this%comm_method /= BLOCKING  
 
-    call pop_sub('derivatives.derivatives_overlap')
+    POP_SUB(derivatives_overlap)
   end function derivatives_overlap
 #endif
   

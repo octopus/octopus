@@ -36,7 +36,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   R_TYPE,  pointer ::  pfi(:), pfo(:)
   FLOAT,   pointer :: wre(:), wim(:)
 
-  call push_sub('nl_operator_inc.Xnl_operator_operate_batch')
+  PUSH_SUB(X(nl_operator_operate_batch))
 
   ASSERT(fi%nst_linear == fo%nst_linear)
 
@@ -141,7 +141,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   end if
 
   if(profile_) call profiling_out(operate_batch_prof)
-  call pop_sub('nl_operator_inc.Xnl_operator_operate_batch')
+  POP_SUB(X(nl_operator_operate_batch))
 
 contains
 
@@ -329,7 +329,7 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
 
   type(batch_t) :: batch_fi, batch_fo
 
-  call push_sub('nl_operator_inc.Xnl_operator_operate')
+  PUSH_SUB(X(nl_operator_operate))
 
   call batch_init     (batch_fi, 1)
   call batch_add_state(batch_fi, fi)
@@ -342,7 +342,7 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
   call batch_end(batch_fi)
   call batch_end(batch_fo)
 
-  call pop_sub('nl_operator_inc.Xnl_operator_operate')
+  POP_SUB(X(nl_operator_operate))
 end subroutine X(nl_operator_operate)
 
 
@@ -351,7 +351,7 @@ subroutine X(nl_operator_operate_diag)(op, fo)
   type(nl_operator_t), intent(in)    :: op
   R_TYPE,              intent(out)   :: fo(:)
 
-  call push_sub('nl_operator_inc.Xnl_operator_operate_diag')
+  PUSH_SUB(X(nl_operator_operate_diag))
   
   if(op%cmplx_op) then
 #ifdef R_TCOMPLEX
@@ -369,7 +369,7 @@ subroutine X(nl_operator_operate_diag)(op, fo)
     end if
   end if
   
-  call pop_sub('nl_operator_inc.Xnl_operator_operate_diag')
+  POP_SUB(X(nl_operator_operate_diag))
   
 end subroutine X(nl_operator_operate_diag)
 

@@ -59,7 +59,7 @@ module born_charges_m
 
     integer idir
 
-    call push_sub('Born_charges.Born_charges_init')
+    PUSH_SUB(Born_charges_init)
 
     nullify(this%charge)
     SAFE_ALLOCATE(this%charge(1:dim, 1:dim, 1:geo%natoms))
@@ -82,18 +82,18 @@ module born_charges_m
 
     call parse_logical(datasets_check('BornChargeSumRuleCorrection'), .true., this%correct)
 
-    call pop_sub('Born_charges.Born_charges_init')
+    POP_SUB(Born_charges_init)
   end subroutine Born_charges_init
 
   ! ---------------------------------------------------------
   subroutine Born_charges_end(this)
     type(Born_charges_t), intent(out) :: this
 
-    call push_sub('Born_charges.Born_charges_end')
+    PUSH_SUB(Born_charges_end)
 
     SAFE_DEALLOCATE_P(this%charge)
 
-    call pop_sub('Born_charges.Born_charges_end')
+    POP_SUB(Born_charges_end)
   end subroutine Born_charges_end
 
   ! ---------------------------------------------------------
@@ -107,7 +107,7 @@ module born_charges_m
     CMPLX :: Born_sum(MAX_DIM, MAX_DIM)        ! the sum of Born charges from the calculation 
     integer :: iatom
 
-    call push_sub('Born_charges.correct_Born_charges')
+    PUSH_SUB(correct_Born_charges)
 
     Born_sum(1:dim, 1:dim) = M_ZERO 
 
@@ -124,7 +124,7 @@ module born_charges_m
       enddo
     endif
 
-    call pop_sub('Born_charges.correct_Born_charges')
+    POP_SUB(correct_Born_charges)
   end subroutine correct_Born_charges
 
   ! ---------------------------------------------------------
@@ -137,7 +137,7 @@ module born_charges_m
     integer iatom, iunit
     FLOAT :: phase(1:MAX_DIM, 1:MAX_DIM)
 
-    call push_sub('Born_charges.out_Born_charges')
+    PUSH_SUB(out_Born_charges)
 
     call correct_Born_charges(this, geo, dim)
 
@@ -177,7 +177,7 @@ module born_charges_m
     call output_tensor(iunit, aimag(this%delta(:, :)), dim, unit_one)
 
     call io_close(iunit)
-    call pop_sub('Born_charges.out_Born_charges')
+    POP_SUB(out_Born_charges)
   end subroutine out_Born_charges
 
 end module Born_charges_m

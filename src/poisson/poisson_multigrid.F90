@@ -77,7 +77,7 @@ contains
     integer,           intent(in)    :: ml
     FLOAT,             intent(in)    :: thr
 
-    call push_sub('poisson_multigrid.poisson_multigrid_init')
+    PUSH_SUB(poisson_multigrid_init)
 
     call poisson_corrections_init(this%corrector, ml, mesh)
 
@@ -168,7 +168,7 @@ contains
       call parse_float(datasets_check('PoissonSolverMGRelaxationFactor'), M_ONE, this%relax_factor)
     end if
 
-    call pop_sub('poisson_multigrid.poisson_multigrid_init')
+    POP_SUB(poisson_multigrid_init)
   end subroutine poisson_multigrid_init
 
 
@@ -176,11 +176,11 @@ contains
   subroutine poisson_multigrid_end(this)
     type(mg_solver_t), intent(inout) :: this
 
-    call push_sub('poisson_multigrid.poisson_multigrid_end')
+    PUSH_SUB(poisson_multigrid_end)
 
     call poisson_corrections_end(this%corrector)
 
-    call pop_sub('poisson_multigrid.poisson_multigrid_end')
+    POP_SUB(poisson_multigrid_end)
   end subroutine poisson_multigrid_end
 
 
@@ -202,7 +202,7 @@ contains
 
     type(derivatives_t), pointer :: der
 
-    call push_sub('poisson_multigrid.poisson_multigrid_solver');
+    PUSH_SUB(poisson_multigrid_solver)
 
     ! correction for treating boundaries
     SAFE_ALLOCATE(vh_correction(1:base_der%mesh%np))
@@ -272,7 +272,7 @@ contains
     call gridhier_end(err)
     call gridhier_end(phi_ini)
 
-    call pop_sub('poisson_multigrid.poisson_multigrid_solver');
+    POP_SUB(poisson_multigrid_solver)
 
   contains
 
@@ -285,7 +285,7 @@ contains
 
       integer :: ip
 
-      call push_sub('poisson_multigrid.residue')
+      PUSH_SUB(residue)
 
       call dderivatives_lapl(der, phi, tmp)
 
@@ -293,7 +293,7 @@ contains
 
       res = dmf_nrm2(der%mesh, tmp)
 
-      call pop_sub('poisson_multigrid.residue')
+      POP_SUB(residue)
     end function residue
 
     ! ---------------------------------------------------------
@@ -304,7 +304,7 @@ contains
       type(derivatives_t), pointer :: der
       integer :: level, ip
 
-      call push_sub('poisson_multigrid.vcycle_fas')
+      PUSH_SUB(vcycle_fas)
 
       der => base_der
       do level = fl, cl
@@ -343,7 +343,7 @@ contains
 
       end do
 
-      call pop_sub('poisson_multigrid.vcycle_fas')
+      POP_SUB(vcycle_fas)
     end subroutine vcycle_cs
 
   end subroutine poisson_multigrid_solver
@@ -363,7 +363,7 @@ contains
     FLOAT, allocatable :: lpot(:), ldiag(:)
     type(profile_t), save :: prof
 
-    call push_sub('poisson_multigrid.multigrid_relax')
+    PUSH_SUB(multigrid_relax)
     call profiling_in(prof, "MG_GAUSS_SEIDEL")
 
     select case(this%relaxation_method)
@@ -413,7 +413,7 @@ contains
     end select
 
     call profiling_out(prof)
-    call pop_sub('poisson_multigrid.multigrid_relax')
+    POP_SUB(multigrid_relax)
 
   end subroutine multigrid_relax
 

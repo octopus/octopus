@@ -67,7 +67,7 @@ contains
     integer  :: ndown, nup, i, l
     character(len=70) :: aux_s
 
-    call push_sub('psf_psf_file.ps_psf_file_read')
+    PUSH_SUB(ps_psf_file_read)
 
     ! formats used in this routine
 8000 format(1x,i2)
@@ -181,7 +181,7 @@ contains
     psf%rho_val(1) = linear_extrapolate(psf%rofi(1), psf%rofi(2), psf%rofi(3), &
       psf%rho_val(2), psf%rho_val(3))
 
-    call pop_sub('psf_psf_file.ps_psf_file_read')
+    POP_SUB(ps_psf_file_read)
   end subroutine ps_psf_file_read
 
 

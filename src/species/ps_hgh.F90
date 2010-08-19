@@ -86,7 +86,7 @@ contains
     logical :: found
     character(len=256) :: filename2
 
-    call push_sub('ps_hgh.hgh_init')
+    PUSH_SUB(hgh_init)
 
     filename2 =  filename // '.hgh'
     inquire(file=filename2, exist=found)
@@ -134,7 +134,7 @@ contains
     SAFE_ALLOCATE(psp%eigen(1:psp%conf%p))
     psp%rphi = M_ZERO; psp%eigen = M_ZERO
 
-    call pop_sub('ps_hgh.hgh_init')
+    POP_SUB(hgh_init)
   end subroutine hgh_init
 
 
@@ -142,7 +142,7 @@ contains
   subroutine hgh_end(psp)
     type(hgh_t), intent(inout) :: psp
 
-    call push_sub('ps_hgh.hgh_end')
+    PUSH_SUB(hgh_end)
 
     if(psp%l_max >= 0) then
       SAFE_DEALLOCATE_P(psp%kbr)
@@ -153,7 +153,7 @@ contains
     SAFE_DEALLOCATE_P(psp%eigen)
     call logrid_end(psp%g)
 
-    call pop_sub('ps_hgh.hgh_end')
+    POP_SUB(hgh_end)
   end subroutine hgh_end
 
 
@@ -164,7 +164,7 @@ contains
     integer :: l, i, ierr
     FLOAT, pointer :: ptr(:)
 
-    call push_sub('ps_hgh.hgh_process')
+    PUSH_SUB(hgh_process)
 
 
     ! Fixes the local potential
@@ -195,7 +195,7 @@ contains
     ! Define the KB-projector cut-off radii
     call get_cutoff_radii(psp)
 
-    call pop_sub('ps_hgh.hgh_process')
+    POP_SUB(hgh_process)
   end subroutine hgh_process
 
 
@@ -209,7 +209,7 @@ contains
     integer :: i, iostat, j, k
     character(len=VALCONF_STRING_LENGTH) :: line
 
-    call push_sub('ps_hgh.load_params')
+    PUSH_SUB(load_params)
 
     ! Set initially everything to zero.
     params%c(1:4) = M_ZERO; params%rlocal = M_ZERO;
@@ -229,14 +229,14 @@ contains
     if(j<1) read(line, *, iostat=iostat) params%atom_name, params%z_val, params%rlocal
     if( iostat.ne.0 ) then
       load_params = 1
-      call pop_sub('ps_hgh.load_params')
+      POP_SUB(load_params)
       return
     end if
 
     read(unit,'(a)', iostat = iostat) line
     if(iostat .ne. 0) then
       load_params = 0
-      call pop_sub('ps_hgh.load_params')
+      POP_SUB(load_params)
       return
     end if
     iostat = 1; j = 4
@@ -246,7 +246,7 @@ contains
     end do
     if(j < 0) then
       load_params = 2
-      call pop_sub('ps_hgh.load_params')
+      POP_SUB(load_params)
       return
     end if
 
@@ -301,7 +301,7 @@ contains
     end do
 
     load_params = 0
-    call pop_sub('ps_hgh.load_params')
+    POP_SUB(load_params)
   end function load_params
 
 
@@ -313,7 +313,7 @@ contains
     FLOAT :: dincv, tmp
     FLOAT, parameter :: threshold = CNST(1.0e-4)
 
-    call push_sub('ps_hgh.get_cutoff_radii')
+    PUSH_SUB(get_cutoff_radii)
 
     do l = 0, psp%l_max
       tmp = M_ZERO
@@ -327,7 +327,7 @@ contains
       end do
     end do
 
-    call pop_sub('ps_hgh.get_cutoff_radii')
+    POP_SUB(get_cutoff_radii)
   end subroutine get_cutoff_radii
 
 
@@ -340,13 +340,13 @@ contains
 
     FLOAT :: r1, r2, r4, r6
 
-    call push_sub('ps_hgh.vlocalr_scalar')
+    PUSH_SUB(vlocalr_scalar)
 
     r1 = r/p%rlocal; r2 = r1**2; r4 = r2**2; r6 = r4*r2
 
     if(r < CNST(1.0e-7)) then
       vlocalr_scalar = - (M_TWO * p%z_val)/(sqrt(M_TWO*M_Pi)*p%rlocal) + p%c(1)
-      call pop_sub('ps_hgh.vlocalr_scalar')
+      POP_SUB(vlocalr_scalar)
       return
     end if
 
@@ -354,7 +354,7 @@ contains
       + exp( -M_HALF*r2 ) *    &
       ( p%c(1) + p%c(2)*r2 + p%c(3)*r4 + p%c(4)*r6 )
 
-    call pop_sub('ps_hgh.vlocalr_scalar')
+    POP_SUB(vlocalr_scalar)
   end function vlocalr_scalar
 
 
@@ -366,14 +366,14 @@ contains
 
     integer :: i
 
-    call push_sub('ps_hgh.vlocalr_vector')
+    PUSH_SUB(vlocalr_vector)
 
     SAFE_ALLOCATE(vlocalr_vector(1:size(r)))
     do i = 1, size(r)
       vlocalr_vector(i) = vlocalr_scalar(r(i), p)
     end do
 
-    call pop_sub('ps_hgh.vlocalr_vector')
+    POP_SUB(vlocalr_vector)
   end function vlocalr_vector
 
 
@@ -385,7 +385,7 @@ contains
 
     FLOAT :: g1, g2, g4, g6
 
-    call push_sub('ps_hgh.vlocalg')
+    PUSH_SUB(vlocalg)
 
     g1 = g*p%rlocal; g2 = g1*g1; g4 = g2*g2; g6 = g4*g2
 
@@ -394,7 +394,7 @@ contains
       ( p%c(1) + p%c(2)*(M_THREE - g2) + p%c(3)*(CNST(15.0) - M_TEN*g2 + g4) + &
       p%c(4)*(CNST(105.0) -CNST(105.0)*g2 + CNST(21.0)*g4 - g6) )
 
-    call pop_sub('ps_hgh.vlocalg')
+    POP_SUB(vlocalg)
   end function vlocalg
 
 
@@ -407,7 +407,7 @@ contains
 
     FLOAT :: x, y, rr
 
-    call push_sub('ps_hgh.projectorr_scalar')
+    PUSH_SUB(projectorr_scalar)
 
     x = l + real(4*i-1, REAL_PRECISION)/M_TWO
     y = loct_gamma(x); x = sqrt(y)
@@ -420,7 +420,7 @@ contains
     projectorr_scalar = sqrt(M_TWO) * rr * exp(-r**2/(M_TWO*p%rc(l)**2)) / &
       (  p%rc(l)**(l + real(4*i-1, REAL_PRECISION)/M_TWO) * x )
 
-    call pop_sub('ps_hgh.projectorr_scalar')
+    POP_SUB(projectorr_scalar)
   end function projectorr_scalar
 
 
@@ -433,14 +433,14 @@ contains
 
     integer :: j
 
-    call push_sub('ps_hgh.projectorr_vector')
+    PUSH_SUB(projectorr_vector)
 
     SAFE_ALLOCATE(projectorr_vector(1:size(r)))
     do j=1, size(r)
       projectorr_vector(j) = projectorr_scalar(r(j), p, i, l)
     end do
 
-    call pop_sub('ps_hgh.projectorr_vector')
+    POP_SUB(projectorr_vector)
   end function projectorr_vector
 
 
@@ -454,7 +454,7 @@ contains
     !FLOAT, external :: gamma
     FLOAT :: pif, ex
 
-    call push_sub('ps_hgh.projectorg')
+    PUSH_SUB(projectorg)
 
     pif = M_Pi**(M_FIVE/M_FOUR)
 
@@ -503,7 +503,7 @@ contains
       ! This should be checked. Probably will not be needed in an near future...
     end select
 
-    call pop_sub('ps_hgh.projectorg')
+    POP_SUB(projectorg)
   end function projectorg
 
 
@@ -519,7 +519,7 @@ contains
     REAL_DOUBLE :: e, z, dr, rmax
     REAL_DOUBLE, allocatable :: s(:), hato(:), g(:), y(:)
 
-    call push_sub('ps_hgh.solve_schroedinger')
+    PUSH_SUB(solve_schroedinger)
 
     ierr = 0
 
@@ -625,7 +625,7 @@ contains
     SAFE_DEALLOCATE_A(rho)
     SAFE_DEALLOCATE_A(ve)
 
-    call pop_sub('ps_hgh.solve_schroedinger')
+    POP_SUB(solve_schroedinger)
   end subroutine solve_schroedinger
 
 
@@ -637,7 +637,7 @@ contains
     integer :: hgh_unit, loc_unit, dat_unit, kbp_unit, wav_unit, i, l, k
     character(len=256) :: dirname
 
-    call push_sub('ps_hgh.hgh_debug')
+    PUSH_SUB(hgh_debug)
 
     ! Open files.
     dirname = trim(dir)//'/hgh.'//trim(psp%atom_name)
@@ -684,7 +684,7 @@ contains
     call io_close(hgh_unit); call io_close(loc_unit); call io_close(wav_unit)
     call io_close(dat_unit); call io_close(kbp_unit)
 
-    call pop_sub('ps_hgh.hgh_debug')
+    POP_SUB(hgh_debug)
   end subroutine hgh_debug
 
 end module ps_hgh_m

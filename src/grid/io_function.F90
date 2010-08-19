@@ -98,7 +98,7 @@ contains
     type(simul_box_t), intent(in)  :: sb
     integer,           intent(out) :: how
 
-    call push_sub('io_function.io_function_read_how')
+    PUSH_SUB(io_function_read_how)
 
     how = 0
 
@@ -194,7 +194,7 @@ contains
     how = iand(how, not(output_etsf))
 #endif
 
-    call pop_sub('io_function.io_function_read_how')
+    POP_SUB(io_function_read_how)
   end subroutine io_function_read_how
 
   ! -------------------------------------------------------------------
@@ -205,7 +205,7 @@ contains
   integer function io_function_fill_how(where) result(how)
     character(len=*), intent(in) :: where
 
-    call push_sub('io_function.io_function_fill_how')
+    PUSH_SUB(io_function_fill_how)
 
     how = 0
     if(index(where, "AxisX")     .ne. 0) how = ior(how, output_axis_x)
@@ -224,7 +224,7 @@ contains
 #endif
     if(index(where, "Cube")      .ne. 0) how = ior(how, output_cube)
 
-    call pop_sub('io_function.io_function_fill_how')
+    POP_SUB(io_function_fill_how)
   end function io_function_fill_how
 
   ! ---------------------------------------------------------
@@ -242,7 +242,7 @@ contains
 
     if( .not. mpi_grp_is_root(mpi_world)) return
 
-    call push_sub('io_function.write_xsf_geometry_file')
+    PUSH_SUB(write_xsf_geometry_file)
 
     call io_mkdir(dir)
     position = 'asis'
@@ -266,7 +266,7 @@ contains
 
     call io_close(iunit)
 
-    call pop_sub('io_function.write_xsf_geometry_file')
+    POP_SUB(write_xsf_geometry_file)
   end subroutine write_xsf_geometry_file
 
   ! ---------------------------------------------------------
@@ -282,7 +282,7 @@ contains
     integer idir, idir2, iatom
     logical write_forces_
 
-    call push_sub('io_function.write_xsf_geometry')
+    PUSH_SUB(write_xsf_geometry)
 
     if(present(write_forces)) then
       write_forces_ = write_forces
@@ -323,7 +323,7 @@ contains
       write(iunit, '()')
     enddo
 
-    call pop_sub('io_function.write_xsf_geometry')
+    POP_SUB(write_xsf_geometry)
   end subroutine write_xsf_geometry
 
 
@@ -335,10 +335,10 @@ contains
     character(len=*), intent(in)    :: filename
     integer,          intent(inout) :: ierr
 
-    call push_sub('io_function.ncdf_error')
+    PUSH_SUB(ncdf_error)
 
     if(status .eq. NF90_NOERR) then
-    call pop_sub('io_function.ncdf_error')
+    POP_SUB(ncdf_error)
       return
     endif
 
@@ -348,7 +348,7 @@ contains
     call write_warning(3)
     ierr = 5
 
-    call pop_sub('io_function.ncdf_error')
+    POP_SUB(ncdf_error)
   end subroutine ncdf_error
 #endif
 
@@ -358,7 +358,7 @@ contains
     FLOAT, intent(out) :: out(:, :, :)
     integer :: ix, iy, iz
 
-    call push_sub('io_function.transpose3')
+    PUSH_SUB(transpose3)
 
     do ix = lbound(in, 1), ubound(in, 1)
       do iy = lbound(in, 2), ubound(in, 2)
@@ -368,7 +368,7 @@ contains
       end do
     end do
 
-    call pop_sub('io_function.transpose3')
+    POP_SUB(transpose3)
   end subroutine transpose3
 
 #include "undef.F90"

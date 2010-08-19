@@ -24,7 +24,7 @@
     integer :: j, n, dof
     FLOAT, allocatable :: ep(:), e(:), y(:), a(:), x(:)
 
-    call push_sub('controlfunction_trans_inc.controlfunction_basis_to_theta')
+    PUSH_SUB(controlfunction_basis_to_theta)
 
     ASSERT(par%current_representation .ne. ctr_real_time)
 
@@ -84,7 +84,7 @@
       
     end select
 
-    call pop_sub('controlfunction_trans_inc.controlfunction_basis_to_theta')
+    POP_SUB(controlfunction_basis_to_theta)
   end subroutine controlfunction_basis_to_theta
   ! ---------------------------------------------------------
 
@@ -96,7 +96,7 @@
     FLOAT, allocatable :: y(:), a(:), e(:), ep(:), x(:)
     integer :: n, dof, j
 
-    call push_sub('controlfunction_trans_inc.controlfunction_theta_to_basis')
+    PUSH_SUB(controlfunction_theta_to_basis)
 
     ASSERT(par%current_representation .ne. ctr_real_time)
 
@@ -167,7 +167,7 @@
 
     end select
 
-    call pop_sub('controlfunction_trans_inc.controlfunction_theta_to_basis')
+    POP_SUB(controlfunction_theta_to_basis)
   end subroutine controlfunction_theta_to_basis
   ! ---------------------------------------------------------
 
@@ -177,10 +177,10 @@
     type(controlfunction_t), intent(in) :: par
     FLOAT, intent(inout) :: theta(:)
 
-    call push_sub('controlfunction_trans_inc.controlfunction_get_theta')
+    PUSH_SUB(controlfunction_get_theta)
     theta = par%theta
 
-    call pop_sub('controlfunction_trans_inc.controlfunction_get_theta')
+    POP_SUB(controlfunction_get_theta)
   end subroutine controlfunction_get_theta
   ! ---------------------------------------------------------
 
@@ -190,10 +190,10 @@
     type(controlfunction_t), intent(inout) :: par
     FLOAT, intent(in) :: theta(:)
 
-    call push_sub('controlfunction_trans_inc.controlfunction_set_theta')
+    PUSH_SUB(controlfunction_set_theta)
     par%theta = theta
 
-    call pop_sub('controlfunction_trans_inc.controlfunction_set_theta')
+    POP_SUB(controlfunction_set_theta)
   end subroutine controlfunction_set_theta
   ! ---------------------------------------------------------
 
@@ -209,7 +209,7 @@
 
     if(cf_common%representation .eq. ctr_real_time) return
 
-    call push_sub('controlfunction.controlfunction_trans_matrix')
+    PUSH_SUB(controlfunction_trans_matrix)
 
     SAFE_ALLOCATE(par%utransf (1:par%dim, 1:par%dim))
     SAFE_ALLOCATE(par%utransfi(1:par%dim, 1:par%dim))
@@ -327,7 +327,7 @@
 
     end if
 
-    call pop_sub('controlfunction.controlfunction_trans_matrix')
+    POP_SUB(controlfunction_trans_matrix)
   end subroutine controlfunction_trans_matrix
   ! ---------------------------------------------------------
 

@@ -126,7 +126,7 @@ contains
   subroutine spectrum_init(spectrum)
     type(spec_t), intent(inout) :: spectrum
 
-    call push_sub('spectrum.spectrum_init')
+    PUSH_SUB(spectrum_init)
 
     !%Variable PropagationSpectrumDampMode
     !%Type integer
@@ -217,7 +217,7 @@ contains
     !%End
     call parse_float(datasets_check('PropagationSpectrumDampFactor'), CNST(0.15), spectrum%damp_factor, units_inp%time**(-1))
 
-    call pop_sub('spectrum.spectrum_init')
+    POP_SUB(spectrum_init)
   end subroutine spectrum_init
 
 
@@ -230,7 +230,7 @@ contains
     integer :: im
     character(len=120) :: aux
 
-    call push_sub('spectrum.kick_write')
+    PUSH_SUB(kick_write)
 
     if(present(iunit)) then
       write(iunit, '(a15,i1)')      '# kick mode    ', kick%delta_strength_mode
@@ -288,7 +288,7 @@ contains
       end if
     end if
 
-    call pop_sub('spectrum.kick_write')
+    POP_SUB(kick_write)
   end subroutine kick_write
 
 
@@ -300,7 +300,7 @@ contains
     integer :: im
     character(len=100) :: line
 
-    call push_sub('spectrum.kick_read')
+    PUSH_SUB(kick_read)
 
     read(iunit, '(15x,i2)')     kick%delta_strength_mode
     read(iunit, '(15x,f18.12)') kick%delta_strength
@@ -327,7 +327,7 @@ contains
       read(iunit, '(15x,3f18.12)') kick%wprime(1:3)
     end if
 
-    call pop_sub('spectrum.kick_read')
+    POP_SUB(kick_read)
   end subroutine kick_read
 
 
@@ -340,7 +340,7 @@ contains
     type(block_t) :: blk
     integer :: n_rows, irow, idir
 
-    call push_sub('spectrum.kick_init')
+    PUSH_SUB(kick_init)
 
     !%Variable TDDeltaStrength
     !%Type float
@@ -370,7 +370,7 @@ contains
       nullify(kick%l)
       nullify(kick%m)
       nullify(kick%weight)
-      call pop_sub('spectrum.kick_init')
+      POP_SUB(kick_init)
       return
     end if
 
@@ -598,7 +598,7 @@ contains
 
     kick%qlength = sqrt(sum(kick%qvector(:)**2))
 
-    call pop_sub('spectrum.kick_init')
+    POP_SUB(kick_init)
   end subroutine kick_init
 
 
@@ -615,7 +615,7 @@ contains
     FLOAT :: dw, dump, average, anisotropy
     type(kick_t) :: kick
 
-    call push_sub('spectrum.spectrum_cross_section_tensor')
+    PUSH_SUB(spectrum_cross_section_tensor)
 
     n_files = size(in_file)
     equiv_axes = 3 - n_files + 1
@@ -806,7 +806,7 @@ contains
     SAFE_DEALLOCATE_A(sigmaw)
     SAFE_DEALLOCATE_A(pp)
     SAFE_DEALLOCATE_A(ip)
-    call pop_sub('spectrum.spectrum_cross_section_tensor')
+    POP_SUB(spectrum_cross_section_tensor)
   end subroutine spectrum_cross_section_tensor
 
 
@@ -823,7 +823,7 @@ contains
     FLOAT, allocatable :: dipole(:, :, :), sigma(:, :, :), damp(:), sf(:, :)
     type(unit_system_t) :: file_units
 
-    call push_sub('spectrum.spectrum_cross_section')
+    PUSH_SUB(spectrum_cross_section)
 
     ! This function gives us back the unit connected to the "multipoles" file, the header information,
     ! the number of time steps, and the time step.
@@ -972,7 +972,7 @@ contains
 
     SAFE_DEALLOCATE_A(dipole)
     SAFE_DEALLOCATE_A(sigma)
-    call pop_sub('spectrum.spectrum_cross_section')
+    POP_SUB(spectrum_cross_section)
   end subroutine spectrum_cross_section
 
 
@@ -991,7 +991,7 @@ contains
     FLOAT, allocatable :: angular(:, :)
     type(unit_system_t) :: file_units
 
-    call push_sub('spectrum.spectrum_rotatory_strength')
+    PUSH_SUB(spectrum_rotatory_strength)
 
     call spectrum_mult_info(in_file, nspin, kick, time_steps, dt, file_units)
     call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
@@ -1078,7 +1078,7 @@ contains
         units_from_atomic(units_out%length**4, real(sp(ie)) * P_C / (M_THREE * max(ie, 1) * spectrum%energy_step))
     end do
 
-    call pop_sub('spectrum.spectrum_rotatory_strength')
+    POP_SUB(spectrum_rotatory_strength)
   end subroutine spectrum_rotatory_strength
   ! ---------------------------------------------------------
 
@@ -1089,7 +1089,7 @@ contains
     integer, intent(in) :: is, ie, niter
     CMPLX,   intent(in) :: acc(:)
 
-    call push_sub('spectrum.spectrum_hsfunction_init')
+    PUSH_SUB(spectrum_hsfunction_init)
 
     is_ = is
     ie_ = ie
@@ -1097,16 +1097,16 @@ contains
     SAFE_ALLOCATE(func_(0:niter))
     func_ = acc
 
-    call pop_sub('spectrum.spectrum_hsfunction_init')
+    POP_SUB(spectrum_hsfunction_init)
   end subroutine spectrum_hsfunction_init
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
   subroutine spectrum_hsfunction_end
-    call push_sub('spectrum.spectrum_hsfunction_end')
+    PUSH_SUB(spectrum_hsfunction_end)
     SAFE_DEALLOCATE_A(func_)
-    call pop_sub('spectrum.spectrum_hsfunction_end')
+    POP_SUB(spectrum_hsfunction_end)
   end subroutine spectrum_hsfunction_end
   ! ---------------------------------------------------------
 
@@ -1119,7 +1119,7 @@ contains
     integer :: nfreqs, ierr, ifreq
     FLOAT :: xx, hsval, minhsval, dw, ww, hsa, hsb
 
-    call push_sub('spectrum.spectrum_hsfunction_min')
+    PUSH_SUB(spectrum_hsfunction_min)
 
     ! xx should be an initial guess for the minimum. So we do a quick search
     ! that we refine later calling 1dminimize.
@@ -1141,13 +1141,13 @@ contains
     if( hsa == minhsval ) then
       omega_min = aa
       func_min = hsval
-      call pop_sub('spectrum.spectrum_hsfunction_min')
+      POP_SUB(spectrum_hsfunction_min)
       return
     end if
     if( hsb == minhsval ) then
       omega_min = bb
       func_min = hsval
-      call pop_sub('spectrum.spectrum_hsfunction_min')
+      POP_SUB(spectrum_hsfunction_min)
       return
     end if
 
@@ -1166,7 +1166,7 @@ contains
     omega_min = xx
     func_min  = hsval
 
-    call pop_sub('spectrum.spectrum_hsfunction_min')
+    POP_SUB(spectrum_hsfunction_min)
   end subroutine spectrum_hsfunction_min
   ! ---------------------------------------------------------
 
@@ -1179,7 +1179,7 @@ contains
     CMPLX   :: cc, ez1, ez, zz
     integer :: jj
 
-    call push_sub('spectrum.hsfunction')
+    PUSH_SUB(hsfunction)
 
     cc = M_z0
     zz = M_zI * omega * time_step_
@@ -1193,7 +1193,7 @@ contains
     end do
     power = -abs(cc)**2 * time_step_**2
 
-    call pop_sub('spectrum.hsfunction')
+    POP_SUB(hsfunction)
   end subroutine hsfunction
   ! ---------------------------------------------------------
 
@@ -1212,7 +1212,7 @@ contains
     CMPLX, allocatable :: dipole(:), ddipole(:)
     type(unit_system_t) :: file_units
 
-    call push_sub('spectrum.spectrum_hs_from_mult')
+    PUSH_SUB(spectrum_hs_from_mult)
 
     call io_assign(iunit)
     iunit = io_open('multipoles', action='read', status='old', die=.false.)
@@ -1266,7 +1266,7 @@ contains
     SAFE_DEALLOCATE_A(dipole)
     SAFE_DEALLOCATE_A(ddipole)
 
-    call pop_sub('spectrum.spectrum_hs_from_mult')
+    POP_SUB(spectrum_hs_from_mult)
   end subroutine spectrum_hs_from_mult
   ! ---------------------------------------------------------
 
@@ -1282,7 +1282,7 @@ contains
     FLOAT :: dt, aa(MAX_DIM)
     CMPLX, allocatable :: acc(:)
 
-    call push_sub('spectrum.spectrum_hs_from_acc')
+    PUSH_SUB(spectrum_hs_from_acc)
 
     call spectrum_acc_info(iunit, time_steps, dt)
     call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
@@ -1320,7 +1320,7 @@ contains
     call spectrum_hsfunction_end()
 
     SAFE_DEALLOCATE_A(acc)
-    call pop_sub('spectrum.spectrum_hs_from_acc')
+    POP_SUB(spectrum_hs_from_acc)
   end subroutine spectrum_hs_from_acc
   ! ---------------------------------------------------------
 
@@ -1336,7 +1336,7 @@ contains
     FLOAT   :: omega, hsval, xx
     FLOAT, allocatable :: sp(:)
 
-    call push_sub('spectrum.spectrum_hs')
+    PUSH_SUB(spectrum_hs)
 
     if(present(w0)) then
 
@@ -1389,7 +1389,7 @@ contains
 
     end if
 
-    call pop_sub('spectrum.spectrum_hs')
+    POP_SUB(spectrum_hs)
   end subroutine spectrum_hs
   ! ---------------------------------------------------------
 
@@ -1407,7 +1407,7 @@ contains
     integer :: ii
     character(len=100) :: line
 
-    call push_sub('spectrum.spectrum_mult_info')
+    PUSH_SUB(spectrum_mult_info)
 
     rewind(iunit)
     read(iunit,*)
@@ -1432,7 +1432,7 @@ contains
     call count_time_steps(iunit, time_steps, dt)
     dt = units_to_atomic(file_units%time, dt) ! units_out is OK
 
-    call pop_sub('spectrum.spectrum_mult_info')
+    POP_SUB(spectrum_mult_info)
   end subroutine spectrum_mult_info
   ! ---------------------------------------------------------
 
@@ -1446,7 +1446,7 @@ contains
     FLOAT :: t1, t2, dummy
     integer :: trash
 
-    call push_sub('spectrum.count_time_steps')
+    PUSH_SUB(count_time_steps)
 
     ! count number of time_steps
     time_steps = 0
@@ -1465,7 +1465,7 @@ contains
       call write_fatal(1)
     end if
 
-    call pop_sub('spectrum.count_time_steps')
+    POP_SUB(count_time_steps)
   end subroutine count_time_steps
   ! ---------------------------------------------------------
 
@@ -1480,7 +1480,7 @@ contains
 
     FLOAT :: dummy, e1, e2
 
-    call push_sub('spectrum.spectrum_cross_section_info')
+    PUSH_SUB(spectrum_cross_section_info)
 
     ! read in number of spin components
     read(iunit, '(15x,i2)') nspin
@@ -1504,7 +1504,7 @@ contains
       call write_fatal(1)
     end if
 
-    call pop_sub('spectrum.spectrum_cross_section_info')
+    POP_SUB(spectrum_cross_section_info)
   end subroutine spectrum_cross_section_info
 
 
@@ -1516,7 +1516,7 @@ contains
     integer :: trash
     FLOAT :: t1, t2, dummy
 
-    call push_sub('spectrum.spectrum_acc_info')
+    PUSH_SUB(spectrum_acc_info)
 
     ! open files
     iunit = io_open('acceleration', action='read', status='old', die=.false.)
@@ -1545,7 +1545,7 @@ contains
     end if
 
     rewind(iunit)
-    call pop_sub('spectrum.spectrum_acc_info')
+    POP_SUB(spectrum_acc_info)
   end subroutine spectrum_acc_info
 
 
@@ -1558,7 +1558,7 @@ contains
 
     FLOAT :: ts, te, dummy
 
-    call push_sub('spectrum.spectrum_fix_time_limits')
+    PUSH_SUB(spectrum_fix_time_limits)
 
     ts = M_ZERO
     te = time_steps * dt
@@ -1577,7 +1577,7 @@ contains
     iend = int(end_time / dt)
     ntiter = iend - istart + 1
 
-    call pop_sub('spectrum.spectrum_fix_time_limits')
+    POP_SUB(spectrum_fix_time_limits)
   end subroutine spectrum_fix_time_limits
 
 end module spectrum_m

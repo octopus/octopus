@@ -40,7 +40,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, hm, geo, sb, psi, spin_chan
   type(profile_t), save :: prof
 
   call profiling_in(prof, "ATOMIC_ORBITAL")
-  call push_sub('lcao_inc.Xlcao_atomic_orbital')
+  PUSH_SUB(X(lcao_atomic_orbital))
 
   ASSERT(iorb >= 1)
   ASSERT(iorb <= this%maxorbs)
@@ -84,7 +84,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, hm, geo, sb, psi, spin_chan
 
   SAFE_DEALLOCATE_A(ao)
 
-  call pop_sub('lcao_inc.Xlcao_atomic_orbital')
+  POP_SUB(X(lcao_atomic_orbital))
   call profiling_out(prof)
 
 end subroutine X(lcao_atomic_orbital)
@@ -111,7 +111,7 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
   FLOAT, allocatable :: tmp(:, :)
 #endif
 
-  call push_sub('lcao_inc.Xlcao_wf')
+  PUSH_SUB(X(lcao_wf))
   
   write(message(1),'(a,i6,a)') 'Info: Performing initial LCAO calculation with ', &
        this%norbs,' orbitals.'
@@ -230,7 +230,7 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
   SAFE_DEALLOCATE_A(lcaopsi)
   SAFE_DEALLOCATE_A(lcaopsi2)
 
-  call pop_sub('lcao_inc.Xlcao_wf')
+  POP_SUB(X(lcao_wf))
 
 contains 
 
@@ -240,7 +240,7 @@ contains
     integer :: iorb, ispin, ist, ik, size
     R_TYPE, allocatable :: ao(:, :)
 
-    call push_sub('lcao_inc.Xlcao_wf.init_orbitals')
+    PUSH_SUB(X(lcao_wf).init_orbitals)
 
     ! We calculate the atomic orbitals first. To save memory we put
     ! all the orbitals we can in the part of st%Xpsi that we are going
@@ -298,7 +298,7 @@ contains
       SAFE_DEALLOCATE_A(ao)
     end if
 
-    call pop_sub('lcao_inc.Xlcao_wf.init_orbitals')
+    POP_SUB(X(lcao_wf).init_orbitals)
 
   end subroutine init_orbitals
 
@@ -312,7 +312,7 @@ contains
 
     integer :: idim
 
-    call push_sub('lcao_inc.Xlcao_wf.get_ao')
+    PUSH_SUB(X(lcao_wf).get_ao)
 
     if(ck(iorb, ispin) == 0) then
       ao(1:gr%mesh%np, 1:st%d%dim) = buff(1:gr%mesh%np, 1:st%d%dim, iorb, ispin)
@@ -326,7 +326,7 @@ contains
       end if
     end if
 
-    call pop_sub('lcao_inc.Xlcao_wf.get_ao')
+    POP_SUB(X(lcao_wf).get_ao)
 
   end subroutine get_ao
 
@@ -361,7 +361,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 #endif
   integer :: mult
 
-  call push_sub('lcao_inc.Xlcao_wf2')
+  PUSH_SUB(X(lcao_wf2))
 
   if(this%derivative) then
     mult = 2
@@ -622,7 +622,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   SAFE_DEALLOCATE_A(sphere)
   SAFE_DEALLOCATE_A(radius)
 
-  call pop_sub('lcao_inc.Xlcao_wf2')
+  POP_SUB(X(lcao_wf2))
 end subroutine X(lcao_wf2)
 
 !! Local Variables:

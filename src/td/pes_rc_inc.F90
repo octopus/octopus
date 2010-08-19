@@ -28,7 +28,7 @@ subroutine PES_rc_init(pesrc, mesh, st, save_iter)
   integer  :: ip
   FLOAT :: xx(MAX_DIM)
 
-  call push_sub('pes_rc_inc.PES_rc_init')
+  PUSH_SUB(PES_rc_init)
 
   message(1) = 'Info: Calculating PES using rc technique.'
   call write_info(1)
@@ -66,7 +66,7 @@ subroutine PES_rc_init(pesrc, mesh, st, save_iter)
   call parse_block_end(blk)
 
   SAFE_ALLOCATE(pesrc%wf(1:pesrc%npoints, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik, 1:save_iter))
-  call pop_sub('pes_rc_inc.PES_rc_init')
+  POP_SUB(PES_rc_init)
 end subroutine PES_rc_init
 
 
@@ -74,7 +74,7 @@ end subroutine PES_rc_init
 subroutine PES_rc_end(pesrc)
   type(PES_rc_t), intent(inout) :: pesrc
 
-  call push_sub('pes_rc_inc.PES_rc_end')
+  PUSH_SUB(PES_rc_end)
 
   if(associated(pesrc%filenames)) then
     SAFE_DEALLOCATE_P(pesrc%filenames)
@@ -82,7 +82,7 @@ subroutine PES_rc_end(pesrc)
     SAFE_DEALLOCATE_P(pesrc%wf)
   end if
 
-  call pop_sub('pes_rc_inc.PES_rc_end')
+  POP_SUB(PES_rc_end)
 end subroutine PES_rc_end
 
 
@@ -94,7 +94,7 @@ subroutine PES_rc_calc(pesrc, st, ii)
 
   integer :: ip, ik, ist, idim
 
-  call push_sub('pes_rc_inc.PES_rc_calc')
+  PUSH_SUB(PES_rc_calc)
 
   do ip = 1, pesrc%npoints
     do ik = st%d%kpt%start, st%d%kpt%end
@@ -107,7 +107,7 @@ subroutine PES_rc_calc(pesrc, st, ii)
     end do
   end do
 
-  call pop_sub('pes_rc_inc.PES_rc_calc')
+  POP_SUB(PES_rc_calc)
 end subroutine PES_rc_calc
 
 
@@ -121,7 +121,7 @@ subroutine PES_rc_output(pesrc, st, iter, save_iter, dt)
   integer :: ip, iunit, ii, jj, ik, ist, idim
   CMPLX :: vfu
 
-  call push_sub('pes_rc_inc.PES_rc_output')
+  PUSH_SUB(PES_rc_output)
 
   if(iter == 1) then
     do ip = 1, pesrc%npoints
@@ -163,7 +163,7 @@ subroutine PES_rc_output(pesrc, st, iter, save_iter, dt)
     call io_close(iunit)
   end do
 
-  call pop_sub('pes_rc_inc.PES_rc_output')
+  POP_SUB(PES_rc_output)
 end subroutine PES_rc_output
 
 !! Local Variables:

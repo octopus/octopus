@@ -79,7 +79,7 @@ contains
     integer :: i1, j1, i2, j2, index1, index2
     FLOAT :: xx(MAX_DIM), chi2(MAX_DIM), rr, dd, dd2
 
-    call push_sub('curv_modine.getf2')
+    PUSH_SUB(getf2)
 
     ! first we fill in cv%csi with the values we have
     index1 = 1
@@ -125,7 +125,7 @@ contains
       end do
     end do
 
-    call pop_sub('curv_modine.getf2')
+    POP_SUB(getf2)
   end subroutine getf2
 
   ! ---------------------------------------------------------
@@ -135,7 +135,7 @@ contains
     type(geometry_t),            intent(in)   :: geo
     FLOAT,                       intent(in)   :: spacing(:)
 
-    call push_sub('curv_modine.curv_modine_init')
+    PUSH_SUB(curv_modine_init)
 
     call parse_float(datasets_check('CurvModineXBar'), M_ONE/M_THREE, cv%xbar)
     call parse_float(datasets_check('CurvModineJBar'), M_HALF, cv%Jbar)
@@ -170,14 +170,14 @@ contains
 
     cv%natoms = geo%natoms
 
-    call pop_sub('curv_modine.curv_modine_init')
+    POP_SUB(curv_modine_init)
 
   contains
 
     subroutine find_atom_points()
       integer :: iatom, jj
 
-      call push_sub('curv_modine.curv_modine_init.find_atom_points')
+      PUSH_SUB(curv_modine_init.find_atom_points)
 
       ! Initialize csi
       SAFE_ALLOCATE(cv%csi(1:sb%dim, 1:geo%natoms))
@@ -199,7 +199,7 @@ contains
         cv%chi_atoms(:, iatom) = nint(cv%chi_atoms(:, iatom) / spacing(:)) * spacing(:)
       end do
 
-      call pop_sub('curv_modine.curv_modine_init.find_atom_points')
+      POP_SUB(curv_modine_init.find_atom_points)
     end subroutine find_atom_points
 
     subroutine optimize()
@@ -208,7 +208,7 @@ contains
       integer :: iatom, idim, index
       FLOAT, allocatable :: my_csi(:), start_csi(:)
 
-      call push_sub('curv_modine.curv_modine_init.optimize')
+      PUSH_SUB(curv_modine_init.optimize)
 
       call root_solver_init(rs, sb%dim, &
         solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
@@ -250,7 +250,7 @@ contains
 
       nullify(sb_p); nullify(cv_p)
 
-      call pop_sub('curv_modine.curv_modine_init.optimize')
+      POP_SUB(curv_modine_init.optimize)
     end subroutine optimize
 
   end subroutine curv_modine_init
@@ -260,13 +260,13 @@ contains
   subroutine curv_modine_end(cv)
     type(curv_modine_t), intent(inout) :: cv
 
-    call push_sub('curv_modine.curv_modine_end')
+    PUSH_SUB(curv_modine_end)
 
     SAFE_DEALLOCATE_P(cv%Jlocal)
     SAFE_DEALLOCATE_P(cv%Jrange)
     SAFE_DEALLOCATE_P(cv%chi_atoms)
 
-    call pop_sub('curv_modine.curv_modine_end')
+    POP_SUB(curv_modine_end)
 
   end subroutine curv_modine_end
 
@@ -283,7 +283,7 @@ contains
     logical :: neg
     integer :: i
 
-    call push_sub('curv_modine.curv_modine_chi2chi2')
+    PUSH_SUB(curv_modine_chi2chi2)
 
     chibar(1:sb%dim) = cv%xbar*cv%L(1:sb%dim)
 
@@ -310,7 +310,7 @@ contains
       ! CHECK if Jacobian does not have to be negated!
     end do
 
-    call pop_sub('curv_modine.curv_modine_chi2chi2')
+    POP_SUB(curv_modine_chi2chi2)
   end subroutine curv_modine_chi2chi2
 
   ! ---------------------------------------------------------
@@ -323,7 +323,7 @@ contains
     FLOAT :: chi2(MAX_DIM), rr, dd
     integer :: iatom
 
-    call push_sub('curv_modine.curv_modine_chi2x')
+    PUSH_SUB(curv_modine_chi2x)
 
     call curv_modine_chi2chi2(sb, cv, chi_, chi2)
 
@@ -335,7 +335,7 @@ contains
       xx(:) = xx(:) - cv%Jlocal(iatom)*(chi2(:) - cv%csi(:, iatom)) * dd
     end do
 
-    call pop_sub('curv_modine.curv_modine_chi2x')
+    POP_SUB(curv_modine_chi2x)
   end subroutine curv_modine_chi2x
 
 
@@ -350,7 +350,7 @@ contains
     FLOAT :: chi2(MAX_DIM), rr, dd, J2(MAX_DIM)
     integer :: iatom, idim, idim2
 
-    call push_sub('curv_modine.curv_modine_jacobian_inv')
+    PUSH_SUB(curv_modine_jacobian_inv)
 
     call curv_modine_chi2chi2(sb, cv, chi_, chi2, J2)
 
@@ -381,7 +381,7 @@ contains
       Jac(idim, :) = Jac(idim, :) * J2(:)
     end do
 
-    call pop_sub('curv_modine.curv_modine_jacobian_inv')
+    POP_SUB(curv_modine_jacobian_inv)
   end subroutine curv_modine_jacobian_inv
 
 
@@ -390,12 +390,12 @@ contains
     FLOAT, intent(in)  :: yy(:)
     FLOAT, intent(out) :: ff(:), jf(:, :)
 
-    call push_sub('curv_modine.getf')
+    PUSH_SUB(getf)
 
     call curv_modine_jacobian_inv(sb_p, cv_p, yy, ff, jf)
     ff(:) = ff(:) - x_p(:)
 
-    call pop_sub('curv_modine.getf')
+    POP_SUB(getf)
   end subroutine getf 
 
 
@@ -409,7 +409,7 @@ contains
     logical :: conv
     type(root_solver_t) :: rs
 
-    call push_sub('curv_modine.curv_modine_x2chi')
+    PUSH_SUB(curv_modine_x2chi)
 
     call root_solver_init(rs, sb%dim,  &
       solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
@@ -431,7 +431,7 @@ contains
       call write_fatal(3)
     end if
 
-    call pop_sub('curv_modine.curv_modine_x2chi')
+    POP_SUB(curv_modine_x2chi)
   end subroutine curv_modine_x2chi
 
 end module curv_modine_m

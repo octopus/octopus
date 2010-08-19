@@ -134,7 +134,7 @@ module opencl_m
       logical  :: disable
       integer  :: ierr, idevice
 
-      call push_sub('opencl.opencl_init')
+      PUSH_SUB(opencl_init)
       
       !%Variable DisableOpenCL
       !%Type logical
@@ -159,7 +159,7 @@ module opencl_m
       call parse_integer(datasets_check('OpenCLDevice'), 0, idevice)
 
       if(disable) then
-        call pop_sub('opencl.opencl_init')
+        POP_SUB(opencl_init)
         return
       end if
 
@@ -201,7 +201,7 @@ module opencl_m
       call opencl_create_kernel(kernel_copy, prog, "copy")
       call opencl_release_program(prog)
 
-      call pop_sub('opencl.opencl_init')
+      POP_SUB(opencl_init)
     end subroutine opencl_init
 
     ! ------------------------------------------
@@ -209,7 +209,7 @@ module opencl_m
     subroutine opencl_end()
       integer :: ierr
       
-      call push_sub('opencl.opencl_end')
+      PUSH_SUB(opencl_end)
 
       if(opencl_is_enabled()) then
         call opencl_release_kernel(kernel_vpsi)
@@ -224,7 +224,7 @@ module opencl_m
         call flReleaseContext(opencl%context)
       end if
 
-      call pop_sub('opencl.opencl_end')
+      POP_SUB(opencl_end)
     end subroutine opencl_end
 
     ! ------------------------------------------
@@ -238,7 +238,7 @@ module opencl_m
       integer(SIZEOF_SIZE_T) :: fsize
       integer :: ierr
 
-      call push_sub('opencl.opencl_create_buffer_4')
+      PUSH_SUB(opencl_create_buffer_4)
 
       this%type = type
       this%size = size      
@@ -247,7 +247,7 @@ module opencl_m
       call f90_cl_create_buffer(this%mem, opencl%context, flags, fsize, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "create_buffer")
 
-      call pop_sub('opencl.opencl_create_buffer_4')
+      POP_SUB(opencl_create_buffer_4)
     end subroutine opencl_create_buffer_4
 
     ! ------------------------------------------
@@ -261,7 +261,7 @@ module opencl_m
       integer(SIZEOF_SIZE_T) :: fsize
       integer :: ierr
 
-      call push_sub('opencl.opencl_create_buffer_8')
+      PUSH_SUB(opencl_create_buffer_8)
 
       this%type = type
       this%size = size
@@ -271,7 +271,7 @@ module opencl_m
       call f90_cl_create_buffer(this%mem, opencl%context, flags, fsize, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "create_buffer")
 
-      call pop_sub('opencl.opencl_create_buffer_8')
+      POP_SUB(opencl_create_buffer_8)
     end subroutine opencl_create_buffer_8
 
     ! ------------------------------------------
@@ -340,12 +340,12 @@ module opencl_m
       
       integer :: ierr
 
-      call push_sub('opencl.opencl_set_kernel_arg_buffer')
+      PUSH_SUB(opencl_set_kernel_arg_buffer)
 
       call f90_cl_set_kernel_arg_buf(kernel, narg, buffer%mem, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_buf")
 
-      call pop_sub('opencl.opencl_set_kernel_arg_buffer')
+      POP_SUB(opencl_set_kernel_arg_buffer)
 
     end subroutine opencl_set_kernel_arg_buffer
 
@@ -359,12 +359,12 @@ module opencl_m
 
       integer :: ierr
 
-      call push_sub('opencl.opencl_set_kernel_arg_local')
+      PUSH_SUB(opencl_set_kernel_arg_local)
 
       call f90_cl_set_kernel_arg_local(kernel, narg, size*types_get_size(type), ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_buf")
 
-      call pop_sub('opencl.opencl_set_kernel_arg_local')
+      POP_SUB(opencl_set_kernel_arg_local)
 
     end subroutine opencl_set_kernel_arg_local
 
@@ -379,7 +379,7 @@ module opencl_m
       integer(SIZEOF_SIZE_T) :: gsizes(1:3)
       integer(SIZEOF_SIZE_T) :: lsizes(1:3)
 
-      call push_sub('opencl.opencl_kernel_run')
+      PUSH_SUB(opencl_kernel_run)
       call profiling_in(prof_kernel_run, "CL_KERNEL_RUN")
 
       dim = ubound(globalsizes, dim = 1)
@@ -395,7 +395,7 @@ module opencl_m
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
 
       call profiling_out(prof_kernel_run)
-      call pop_sub('opencl.opencl_kernel_run')
+      POP_SUB(opencl_kernel_run)
     end subroutine opencl_kernel_run
 
     ! -----------------------------------------------

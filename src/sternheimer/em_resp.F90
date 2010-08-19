@@ -116,7 +116,7 @@ contains
 
     FLOAT :: closest_omega, last_omega
 
-    call push_sub('em_resp.em_resp_run')
+    PUSH_SUB(em_resp_run)
 
     gr => sys%gr
     ndim = sys%gr%sb%dim
@@ -521,7 +521,7 @@ contains
     enddo
     call states_deallocate_wfns(sys%st)
 
-    call pop_sub('em_resp.em_resp_run')
+    POP_SUB(em_resp_run)
 
   contains
 
@@ -531,7 +531,7 @@ contains
       integer   :: nrow, irow, nfreqs_in_row, ifreq, istep, perturb_type
       FLOAT     :: omega_ini, omega_fin, domega
 
-      call push_sub('em_resp.em_resp_run.parse_input')
+      PUSH_SUB(em_resp_run.parse_input)
 
       call messages_obsolete_variable('PolFreqs               ', 'EMFreqs             ')
       call messages_obsolete_variable('PolHyper               ', 'EMHyperpol          ')
@@ -719,7 +719,7 @@ contains
 
       call parse_logical(datasets_check('EMWavefunctionsFromScratch'), .false., em_vars%wfns_from_scratch)
 
-      call pop_sub('em_resp.em_resp_run.parse_input')
+      POP_SUB(em_resp_run.parse_input)
 
     end subroutine parse_input
 
@@ -727,7 +727,7 @@ contains
     ! ---------------------------------------------------------
     subroutine info()
 
-      call push_sub('em_resp.em_resp_run.info')
+      PUSH_SUB(em_resp_run.info)
 
       call pert_info(em_vars%perturbation, stdout)
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
@@ -755,7 +755,7 @@ contains
 
       call messages_print_stress(stdout)
 
-      call pop_sub('em_resp.em_resp_run.info')
+      POP_SUB(em_resp_run.info)
 
     end subroutine info
 
@@ -776,7 +776,7 @@ contains
     integer :: iunit
     character(len=80) :: dirname, str_tmp
 
-    call push_sub('em_resp.em_resp_output')
+    PUSH_SUB(em_resp_output)
 
     str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(ifactor)*em_vars%omega(iomega)))
     write(dirname, '(a, a)') EM_RESP_DIR//'freq_', trim(str_tmp)
@@ -804,14 +804,14 @@ contains
       call out_circular_dichroism()
     endif
 
-    call pop_sub('em_resp.em_resp_output')
+    POP_SUB(em_resp_output)
 
   contains
 
 
     subroutine write_eta()
 
-      call push_sub('em_resp.em_resp_output.write_eta')
+      PUSH_SUB(em_resp_output.write_eta)
 
       iunit = io_open(trim(dirname)//'/eta', action='write')
 
@@ -820,7 +820,7 @@ contains
 
       call io_close(iunit)
 
-      call pop_sub('em_resp.em_resp_output.write_eta')
+      POP_SUB(em_resp_output.write_eta)
     end subroutine write_eta
 
 
@@ -832,7 +832,7 @@ contains
       character(len=80) :: header_string
       integer :: ii, idir, kdir
 
-      call push_sub('em_resp.em_resp_output.cross_section_header')
+      PUSH_SUB(em_resp_output.cross_section_header)
 
       !this header is the same as spectrum.F90
       write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
@@ -853,7 +853,7 @@ contains
       end do
       write(out_file,*)
 
-      call pop_sub('em_resp.em_resp_output.cross_section_header')
+      POP_SUB(em_resp_output.cross_section_header)
     end subroutine cross_section_header
 
 
@@ -863,7 +863,7 @@ contains
       FLOAT :: cross_sum, crossp_sum, anisotropy
       integer :: idir, idir2
       
-      call push_sub('em_resp.em_resp_output.out_polarizability')
+      PUSH_SUB(em_resp_output.out_polarizability)
   
       iunit = io_open(trim(dirname)//'/alpha', action='write')
   
@@ -914,7 +914,7 @@ contains
         call io_close(iunit)
       end if
       
-      call pop_sub('em_resp.em_resp_output.out_polarizability')
+      POP_SUB(em_resp_output.out_polarizability)
     end subroutine out_polarizability
 
 
@@ -924,7 +924,7 @@ contains
       CMPLX epsilon(MAX_DIM, MAX_DIM) 
       integer idir
 
-      call push_sub('em_resp.em_resp_output.out_dielectric_constant')
+      PUSH_SUB(em_resp_output.out_dielectric_constant)
   
       iunit = io_open(trim(dirname)//'/epsilon', action='write')
       if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
@@ -942,14 +942,14 @@ contains
       call output_tensor(iunit, aimag(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
   
       call io_close(iunit)
-      call pop_sub('em_resp.em_resp_output.out_dielectric_constant')
+      POP_SUB(em_resp_output.out_dielectric_constant)
     end subroutine out_dielectric_constant
 
 
     ! ---------------------------------------------------------
     subroutine out_susceptibility()
 
-      call push_sub('em_resp.em_resp_output.out_susceptibility')
+      PUSH_SUB(em_resp_output.out_susceptibility)
 
       iunit = io_open(trim(dirname)//'/susceptibility', action='write')
 
@@ -984,7 +984,7 @@ contains
       write(iunit, '(1x)')
 
       call io_close(iunit)      
-      call pop_sub('em_resp.em_resp_output.out_susceptibility')
+      POP_SUB(em_resp_output.out_susceptibility)
     end subroutine out_susceptibility
 
     ! ---------------------------------------------------------
@@ -993,7 +993,7 @@ contains
       integer :: ist, ivar, ik, idir, sigma
       character(len=80) :: fname
 
-      call push_sub('em_resp.em_resp_output.out_projections')
+      PUSH_SUB(em_resp_output.out_projections)
 
       do ik = st%d%kpt%start, st%d%kpt%end
         do idir = 1, gr%mesh%sb%dim
@@ -1045,7 +1045,7 @@ contains
         end do ! dir
       end do !ik
 
-      call pop_sub('em_resp.em_resp_output.out_projections')
+      POP_SUB(em_resp_output.out_projections)
 
     end subroutine out_projections
 
@@ -1054,7 +1054,7 @@ contains
     subroutine out_wavefunctions()
       integer :: idir, isigma
 
-      call push_sub('em_resp.em_resp_output.out_wavefunctions')
+      PUSH_SUB(em_resp_output.out_wavefunctions)
 
       do idir = 1, gr%mesh%sb%dim
         if(states_are_complex(st)) then 
@@ -1080,7 +1080,7 @@ contains
         end if
       end do
 
-      call pop_sub('em_resp.em_resp_output.out_wavefunctions')
+      POP_SUB(em_resp_output.out_wavefunctions)
 
     end subroutine out_wavefunctions
     
@@ -1094,7 +1094,7 @@ contains
       FLOAT :: ff
       CMPLX :: dic
 
-      call push_sub('em_resp.em_resp_output.out_circular_dichroism')
+      PUSH_SUB(em_resp_output.out_circular_dichroism)
 
       if(states_are_complex(st) .and. em_vars%nsigma == 2) then       
 
@@ -1132,7 +1132,7 @@ contains
         call io_close(iunit)
       end if
       
-      call pop_sub('em_resp.em_resp_output.out_circular_dichroism')
+      POP_SUB(em_resp_output.out_circular_dichroism)
 
     end subroutine out_circular_dichroism
     
@@ -1153,7 +1153,7 @@ contains
     CMPLX :: HRS_VV, HRS_HV
     integer :: ii, jj, kk, iunit, ifactor
 
-    call push_sub('em_resp.out_hyperpolarizability')
+    PUSH_SUB(out_hyperpolarizability)
 
     ! Output first hyperpolarizability (beta)
     iunit = io_open(trim(dirname)//'/beta', action='write')
@@ -1229,7 +1229,7 @@ contains
     endif
 
     call io_close(iunit)
-    call pop_sub('em_resp.out_hyperpolarizability')
+    POP_SUB(out_hyperpolarizability)
 
     contains
 
@@ -1247,7 +1247,7 @@ contains
         CMPLX :: HRS_B1, HRS_B2, HRS_C1, HRS_C2, HRS_C3, HRS_D1, HRS_D2, HRS_D3, HRS_E1, HRS_E2
         integer :: ii, jj
         
-        call push_sub('em_resp.out_hyperpolarizability.calc_beta_HRS')
+        PUSH_SUB(out_hyperpolarizability.calc_beta_HRS)
         
         ! first calculate VV (vertical-vertical) polarization, FFF in Decius et al.
         HRS_A = M_ZERO
@@ -1326,7 +1326,7 @@ contains
                + (M_ONE   / CNST(35.0))  * HRS_E1 &
                - (M_ONE   / CNST(105.0)) * HRS_E2
   
-        call pop_sub('em_resp.out_hyperpolarizability.calc_beta_HRS')
+        POP_SUB(out_hyperpolarizability.calc_beta_HRS)
     end subroutine calc_beta_HRS
 
   end subroutine out_hyperpolarizability

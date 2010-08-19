@@ -38,7 +38,7 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   end if
 
   call profiling_in(prof_vlpsi, "VLPSI")
-  call push_sub('hamiltonian_base_inc.Xhamiltonian_base_local')
+  PUSH_SUB(X(hamiltonian_base_local))
 
   if(batch_is_packed(psib) .or. batch_is_packed(vpsib)) then
     ASSERT(batch_is_packed(psib))
@@ -158,7 +158,7 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   end select
 
   call profiling_out(prof_vlpsi)
-  call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_local')
+  POP_SUB(X(hamiltonian_base_local))
 
 end subroutine X(hamiltonian_base_local)
 
@@ -182,7 +182,7 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
   if(.not. hamiltonian_base_has_magnetic(this)) return
 
   call profiling_in(prof_magnetic, "MAGNETIC")
-  call push_sub('hamiltonian_base_inc.Xhamiltonian_base_magnetic')
+  PUSH_SUB(X(hamiltonian_base_magnetic))
 
   SAFE_ALLOCATE(grad(1:der%mesh%np, 1:MAX_DIM, 1:std%dim))
 
@@ -229,7 +229,7 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
   
   SAFE_DEALLOCATE_A(grad)
   
-  call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_magnetic')
+  POP_SUB(X(hamiltonian_base_magnetic))
   call profiling_out(prof_magnetic)
 end subroutine X(hamiltonian_base_magnetic)
 
@@ -254,7 +254,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   if(.not. this%apply_projector_matrices) return
 
   call profiling_in(prof_vnlpsi, "VNLPSI_MAT")
-  call push_sub('hamiltonian_base_inc.Xhamiltonian_base_nlocal_start')
+  PUSH_SUB(X(hamiltonian_base_nlocal_start))
 
   nst = psib%nst_linear
 #ifdef R_TCOMPLEX
@@ -301,7 +301,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
     call profiling_out(cl_prof)
 
-    call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_nlocal_start')
+    POP_SUB(X(hamiltonian_base_nlocal_start))
     call profiling_out(prof_vnlpsi)
     return
   end if
@@ -358,7 +358,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
     INCR(iprojection, nprojs)
   end do
 
-  call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_nlocal_start')
+  POP_SUB(X(hamiltonian_base_nlocal_start))
   call profiling_out(prof_vnlpsi)
 end subroutine X(hamiltonian_base_nlocal_start)
 
@@ -384,7 +384,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
   if(.not. this%apply_projector_matrices) return
 
   call profiling_in(prof_vnlpsi, "VNLPSI_MAT")
-  call push_sub('hamiltonian_base_inc.Xhamiltonian_base_nlocal_finish')
+  PUSH_SUB(X(hamiltonian_base_nlocal_finish))
 
   nst = vpsib%nst_linear
 #ifdef R_TCOMPLEX
@@ -399,7 +399,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
     call finish_opencl()
     call opencl_release_buffer(projection%buff_projection)
 
-    call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_nlocal_finish')
+    POP_SUB(X(hamiltonian_base_nlocal_finish))
     call profiling_out(prof_vnlpsi)
     return
   end if
@@ -468,7 +468,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
   
   SAFE_DEALLOCATE_P(projection%X(projection))
   
-  call pop_sub('hamiltonian_base_inc.Xhamiltonian_base_nlocal_finish')
+  POP_SUB(X(hamiltonian_base_nlocal_finish))
   call profiling_out(prof_vnlpsi)
 
 contains

@@ -96,7 +96,7 @@ contains
     integer              :: idir, ierr, pdim
     character(len=100)   :: dirname, str_tmp
 
-    call push_sub('kdotp.kdotp_lr_run')
+    PUSH_SUB(kdotp_lr_run)
 
     call messages_devel_version("k.p perturbation and calculation of effective masses")
 
@@ -232,7 +232,7 @@ contains
     SAFE_DEALLOCATE_P(kdotp_vars%eff_mass_inv)
     SAFE_DEALLOCATE_P(kdotp_vars%velocity)
 
-    call pop_sub('kdotp.kdotp_lr_run')
+    POP_SUB(kdotp_lr_run)
 
   contains
 
@@ -240,7 +240,7 @@ contains
 
     subroutine parse_input()
 
-      call push_sub('kdotp.kdotp_lr_run.parse_input')
+      PUSH_SUB(kdotp_lr_run.parse_input)
 
       !%Variable KdotP_OccupiedSolutionMethod
       !%Type integer
@@ -290,14 +290,14 @@ contains
       call parse_logical(datasets_check('KdotP_CalculateEffectiveMasses'), &
         .true., calc_eff_mass)
 
-      call pop_sub('kdotp.kdotp_lr_run.parse_input')
+      POP_SUB(kdotp_lr_run.parse_input)
 
    end subroutine parse_input
 
     ! ---------------------------------------------------------
     subroutine info()
 
-      call push_sub('kdotp.kdotp_lr_run.info')
+      PUSH_SUB(kdotp_lr_run.info)
 
       call pert_info(kdotp_vars%perturbation, stdout)
 
@@ -314,7 +314,7 @@ contains
 
       call messages_print_stress(stdout)
       
-      call pop_sub('kdotp.kdotp_lr_run.info')
+      POP_SUB(kdotp_lr_run.info)
 
     end subroutine info
 
@@ -329,7 +329,7 @@ contains
     character(len=80) :: filename, tmp
     integer :: iunit, ik, ist, ik2, ispin, idir
 
-    call push_sub('kdotp.kdotp_write_band_velocity')
+    PUSH_SUB(kdotp_write_band_velocity)
 
     write(filename, '(a)') KDOTP_DIR//'velocity'
     iunit = io_open(trim(filename), action='write')
@@ -361,7 +361,7 @@ contains
     enddo
 
     call io_close(iunit)
-    call pop_sub('kdotp.kdotp_write_band_velocity')
+    POP_SUB(kdotp_write_band_velocity)
   end subroutine kdotp_write_band_velocity
 
   ! ---------------------------------------------------------
@@ -374,7 +374,7 @@ contains
     integer :: iunit, ik, ist, ik2, ispin
     FLOAT :: determinant
 
-    call push_sub('kdotp.kdotp_write_eff_mass')
+    PUSH_SUB(kdotp_write_eff_mass)
 
     do ik = 1, st%d%nik
       ispin = states_dim_get_spin_index(st%d, ik)
@@ -413,7 +413,7 @@ contains
       call io_close(iunit)
     enddo
 
-    call pop_sub('kdotp.kdotp_write_eff_mass')
+    POP_SUB(kdotp_write_eff_mass)
   end subroutine kdotp_write_eff_mass
 
   ! ---------------------------------------------------------
@@ -424,7 +424,7 @@ contains
     character(len=80) :: tmp
     integer :: ik, ist, ist2, ik2, ispin
 
-    call push_sub('kdotp.kdotp_write_degeneracies')
+    PUSH_SUB(kdotp_write_degeneracies)
 
     call messages_print_stress(stdout, 'Degenerate subspaces')
 
@@ -465,19 +465,19 @@ contains
     message(1) = "Velocities and effective masses are not correct within degenerate subspaces."
     call write_warning(1)
 
-    call pop_sub('kdotp.kdotp_write_degeneracies')
+    POP_SUB(kdotp_write_degeneracies)
   end subroutine kdotp_write_degeneracies
 
   ! ---------------------------------------------------------
   character(len=12) function int2str(ii) result(str)
     integer, intent(in) :: ii
     
-    call push_sub('kdotp.int2str')
+    PUSH_SUB(int2str)
 
     write(str, '(i11)') ii
     str = trim(adjustl(str))
 
-    call pop_sub('kdotp.int2str')
+    POP_SUB(int2str)
   end function int2str
             
 end module kdotp_m

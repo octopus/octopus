@@ -37,7 +37,7 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, omega, tol, occ_respo
   logical :: occ_response_
   R_TYPE, allocatable :: z(:, :)
 
-  call push_sub('linear_solver_inc.Xsolve_HXeY')
+  PUSH_SUB(X(solve_HXeY))
   call profiling_in(prof, "LINEAR_SOLVER")
 
   occ_response_ = .true.
@@ -99,7 +99,7 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, omega, tol, occ_respo
   end select
 
   call profiling_out(prof)
-  call pop_sub('linear_solver_inc.Xsolve_HXeY')
+  POP_SUB(X(solve_HXeY))
 
 end subroutine X(solve_HXeY)
 
@@ -150,7 +150,7 @@ subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, omega, tol)
   integer :: iter, idim
   logical :: conv_last, conv
 
-  call push_sub('linear_solver_inc.Xls_solver_cg')
+  PUSH_SUB(X(ls_solver_cg))
 
   SAFE_ALLOCATE( r(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE( p(1:gr%mesh%np_part, 1:st%d%dim))
@@ -203,7 +203,7 @@ subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, omega, tol)
   SAFE_DEALLOCATE_A(p)
   SAFE_DEALLOCATE_A(Hp)
 
-  call pop_sub('linear_solver_inc.Xls_solver_cg')
+  POP_SUB(X(ls_solver_cg))
 end subroutine X(ls_solver_cg)
 
 ! ---------------------------------------------------------
@@ -229,7 +229,7 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, tol, occ
   integer :: iter, idim, ip
   FLOAT :: gamma
   
-  call push_sub('linear_solver_inc.Xls_solver_bicgstab')
+  PUSH_SUB(X(ls_solver_bicgstab))
 
   SAFE_ALLOCATE( r(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE( p(1:gr%mesh%np_part, 1:st%d%dim))
@@ -338,7 +338,7 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, tol, occ
   SAFE_DEALLOCATE_P(phat)
   SAFE_DEALLOCATE_P(shat)
 
-  call pop_sub('linear_solver_inc.Xls_solver_bicgstab')
+  POP_SUB(X(ls_solver_bicgstab))
 end subroutine X(ls_solver_bicgstab)
 
 
@@ -358,7 +358,7 @@ subroutine X(ls_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, omega, tol)
   R_TYPE, allocatable :: diag(:,:), hx(:,:), res(:,:)
   integer :: iter
 
-  call push_sub('linear_solver_inc.Xls_solver_multigrid')
+  PUSH_SUB(X(ls_solver_multigrid))
 
   SAFE_ALLOCATE(diag(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(  hx(1:gr%mesh%np, 1:st%d%dim))
@@ -394,7 +394,7 @@ subroutine X(ls_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, omega, tol)
     call write_warning(1)
   endif
 
-  call pop_sub('linear_solver_inc.Xls_solver_multigrid')
+  POP_SUB(X(ls_solver_multigrid))
 
 contains 
 
@@ -439,7 +439,7 @@ subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, hx)
   integer :: idim, jst
   FLOAT   :: alpha_j, proj
 
-  call push_sub('linear_solver_inc.Xls_solver_operator')
+  PUSH_SUB(X(ls_solver_operator))
 
   call X(hamiltonian_apply)(hm, gr%der, x, Hx, ist, ik)
 
@@ -449,7 +449,7 @@ subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, hx)
   end do
 
   if(st%smear%method == SMEAR_SEMICONDUCTOR .or. st%smear%integral_occs) then
-    call pop_sub('linear_solver_inc.Xls_solver_operator')
+    POP_SUB(X(ls_solver_operator))
     return
   end if
 
@@ -466,7 +466,7 @@ subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, hx)
 
   end do
 
-  call pop_sub('linear_solver_inc.Xls_solver_operator')
+  POP_SUB(X(ls_solver_operator))
 
 end subroutine X(ls_solver_operator)
 
@@ -549,7 +549,7 @@ subroutine X(ls_preconditioner) (x, hx)
   R_TYPE, allocatable :: tmpx(:, :)
   R_TYPE, allocatable :: tmpy(:, :)
 
-  call push_sub('linear_solver_inc.Xls_preconditioner')
+  PUSH_SUB(X(ls_preconditioner))
 
   SAFE_ALLOCATE(tmpx(1:args%gr%mesh%np_part, 1:1))
   SAFE_ALLOCATE(tmpy(1:args%gr%mesh%np_part, 1:1))
@@ -560,7 +560,7 @@ subroutine X(ls_preconditioner) (x, hx)
 
   SAFE_DEALLOCATE_A(tmpx)
   SAFE_DEALLOCATE_A(tmpy)
-  call pop_sub('linear_solver_inc.Xls_preconditioner')
+  POP_SUB(X(ls_preconditioner))
 
 end subroutine X(ls_preconditioner)
 
@@ -580,7 +580,7 @@ subroutine X(ls_solver_sos) (ls, hm, gr, st, ist, ik, x, y, omega)
   R_TYPE  :: aa
   R_TYPE, allocatable  :: rr(:, :)
 
-  call push_sub('linear_solver_inc.Xls_solver_sos')
+  PUSH_SUB(X(ls_solver_sos))
 
   x(1:gr%mesh%np, 1:st%d%dim) = M_ZERO
   
@@ -607,7 +607,7 @@ subroutine X(ls_solver_sos) (ls, hm, gr, st, ist, ik, x, y, omega)
   ls%iter = 1
 
   SAFE_DEALLOCATE_A(rr)
-  call pop_sub('linear_solver_inc.Xls_solver_sos')
+  POP_SUB(X(ls_solver_sos))
 
 end subroutine X(ls_solver_sos)
 

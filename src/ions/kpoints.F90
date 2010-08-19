@@ -82,7 +82,7 @@ contains
     type(kpoints_grid_t), intent(out) :: this
     integer,              intent(in)  :: npoints
 
-    call push_sub('kpoints.kpoints_grid_init')
+    PUSH_SUB(kpoints_grid_init)
 
     this%dim = dim
     this%npoints = npoints
@@ -90,7 +90,7 @@ contains
     SAFE_ALLOCATE(this%point(1:dim, 1:npoints))
     SAFE_ALLOCATE(this%weight(npoints))
 
-    call pop_sub('kpoints.kpoints_grid_init')
+    POP_SUB(kpoints_grid_init)
   end subroutine kpoints_grid_init
 
 
@@ -98,13 +98,13 @@ contains
   subroutine kpoints_grid_end(this)
     type(kpoints_grid_t), intent(out) :: this
 
-    call push_sub('kpoints.kpoints_grid_end')
+    PUSH_SUB(kpoints_grid_end)
 
     SAFE_DEALLOCATE_P(this%red_point)
     SAFE_DEALLOCATE_P(this%point)
     SAFE_DEALLOCATE_P(this%weight)
 
-    call pop_sub('kpoints.kpoints_grid_end')
+    POP_SUB(kpoints_grid_end)
   end subroutine kpoints_grid_end
 
 
@@ -113,7 +113,7 @@ contains
     type(kpoints_grid_t), intent(in)  :: bb
     type(kpoints_grid_t), intent(out) :: aa
 
-    call push_sub('kpoints.kpoints_grid_copy')
+    PUSH_SUB(kpoints_grid_copy)
     
     call kpoints_grid_init(bb%dim, aa, bb%npoints)
     
@@ -121,7 +121,7 @@ contains
     aa%point  = bb%point
     aa%red_point = bb%red_point
 
-    call pop_sub('kpoints.kpoints_grid_copy')
+    POP_SUB(kpoints_grid_copy)
   end subroutine kpoints_grid_copy
 
 
@@ -137,7 +137,7 @@ contains
     integer :: ik, idir
     character(len=100) :: str_tmp
 
-    call push_sub('kpoints.kpoints_init')
+    PUSH_SUB(kpoints_init)
 
     !%Variable KPointsUseSymmetries
     !%Type logical
@@ -212,7 +212,7 @@ contains
     write(message(1),'(a)') ' '
     call write_info(1)
 
-    call pop_sub('kpoints.kpoints_init')
+    POP_SUB(kpoints_init)
 
   contains
 
@@ -224,7 +224,7 @@ contains
       integer       :: ii
       type(block_t) :: blk
 
-      call push_sub('kpoints.kpoints_init.read_MP')
+      PUSH_SUB(kpoints_init.read_MP)
 
       call messages_obsolete_variable('KPointsMonkhorstPack', 'KPointsGrid')
 
@@ -300,7 +300,7 @@ contains
         call kpoints_to_absolute(klattice, this%reduced%red_point(:, ik), this%reduced%point(:, ik), dim)
       end do
 
-      call pop_sub('kpoints.kpoints_init.read_MP')
+      POP_SUB(kpoints_init.read_MP)
     end subroutine read_MP
 
 
@@ -310,7 +310,7 @@ contains
       logical :: reduced
       integer :: ik, idir
 
-      call push_sub('kpoints.kpoints_init.read_user_kpoints')
+      PUSH_SUB(kpoints_init.read_user_kpoints)
 
       !%Variable KPoints
       !%Type block
@@ -348,7 +348,7 @@ contains
           reduced = .true.
         else
           read_user_kpoints = .false.
-          call pop_sub('kpoints.kpoints_init.read_user_kpoints')
+          POP_SUB(kpoints_init.read_user_kpoints)
           return
         end if
       end if
@@ -388,7 +388,7 @@ contains
       write(message(1), '(a,i4,a)') 'Input: ', this%full%npoints, ' k-points were read from the input file'
       call write_info(1)
 
-      call pop_sub('kpoints.kpoints_init.read_user_kpoints')
+      POP_SUB(kpoints_init.read_user_kpoints)
     end function read_user_kpoints
 
   end subroutine kpoints_init
@@ -398,12 +398,12 @@ contains
   subroutine kpoints_end(this)
     type(kpoints_t), intent(inout) :: this
 
-    call push_sub('kpoints.kpoints_end')
+    PUSH_SUB(kpoints_end)
 
     call kpoints_grid_end(this%full)
     call kpoints_grid_end(this%reduced)
 
-    call pop_sub('kpoints.kpoints_end')
+    POP_SUB(kpoints_end)
   end subroutine kpoints_end
 
 
@@ -416,14 +416,14 @@ contains
 
     integer :: ii
     
-    call push_sub('kpoints.kpoints_to_absolute')
+    PUSH_SUB(kpoints_to_absolute)
 
     kout(1:dim) = M_ZERO
     do ii = 1, dim
       kout(1:dim) = kout(1:dim) + kin(ii) * klattice(1:dim, ii)
     end do
 
-    call pop_sub('kpoints.kpoints_to_absolute')
+    POP_SUB(kpoints_to_absolute)
   end subroutine kpoints_to_absolute
 
 
@@ -436,7 +436,7 @@ contains
 
     integer :: ii
 
-    call push_sub('kpoints.kpoints_to_reduced')
+    PUSH_SUB(kpoints_to_reduced)
 
     kout(1:dim) = M_ZERO
     do ii = 1, dim
@@ -444,7 +444,7 @@ contains
     end do
     kout(1:dim) = kout(1:dim) / (M_TWO * M_PI)
 
-    call pop_sub('kpoints.kpoints_to_reduced')
+    POP_SUB(kpoints_to_reduced)
   end subroutine kpoints_to_reduced
 
 
@@ -453,7 +453,7 @@ contains
     type(kpoints_t), intent(in)  :: kin
     type(kpoints_t), intent(out) :: kout
 
-    call push_sub('kpoints.kpoints_copy')
+    PUSH_SUB(kpoints_copy)
 
     kout%method = kin%method
 
@@ -466,7 +466,7 @@ contains
     kout%nik_axis(1:kin%full%dim) = kin%nik_axis(1:kin%full%dim)
     kout%shifts  (1:kin%full%dim) = kin%shifts  (1:kin%full%dim)
 
-    call pop_sub('kpoints.kpoints_copy')
+    POP_SUB(kpoints_copy)
   end subroutine kpoints_copy
 
 
@@ -517,7 +517,7 @@ contains
     FLOAT :: dx(1:MAX_DIM)
     integer :: ii, jj, divisor, ik, idir, ix(1:MAX_DIM)
 
-    call push_sub('kpoints.kpoints_grid_generate')
+    PUSH_SUB(kpoints_grid_generate)
     
     dx(1:dim) = M_ONE / (M_TWO * naxis(1:dim))
 
@@ -544,7 +544,7 @@ contains
 
     end do
     
-    call pop_sub('kpoints.kpoints_grid_generate')
+    POP_SUB(kpoints_grid_generate)
 
   end subroutine kpoints_grid_generate
 
@@ -566,7 +566,7 @@ contains
     FLOAT :: tran(MAX_DIM), tran_inv(MAX_DIM)
     integer, allocatable :: kmap(:)
 
-    call push_sub('kpoints.kpoints_grid_reduce')
+    PUSH_SUB(kpoints_grid_reduce)
 
     ! reduce to irreducible zone
 
@@ -629,7 +629,7 @@ contains
       kpoints(1:dim, ik) = reduced(1:dim, ik)
     end do
 
-    call pop_sub('kpoints.kpoints_grid_reduce')
+    POP_SUB(kpoints_grid_reduce)
   end subroutine kpoints_grid_reduce
 
 
@@ -641,7 +641,7 @@ contains
     integer :: ik, idir
     character(len=100) :: str_tmp
     
-    call push_sub('kpoints.kpoints_write_info')
+    PUSH_SUB(kpoints_write_info)
     
     if(this%method == KPOINTS_MONKH_PACK) then
       write(message(1),'(a)') 'Number of k-points in each direction = '
@@ -677,7 +677,7 @@ contains
       call write_info(1, iunit, verbose_limit = .true.)
     end do
     
-    call pop_sub('kpoints.kpoints_write_info')
+    POP_SUB(kpoints_write_info)
   end subroutine kpoints_write_info
   
 

@@ -74,7 +74,7 @@ contains
     integer ix, iy, iz, npoints
     x = M_ZERO
 
-    call push_sub('cube_function.cf_surface_average')
+    PUSH_SUB(cf_surface_average)
 
     do iy = 2, cf%n(2) - 1
       do iz = 2, cf%n(3) - 1
@@ -119,7 +119,7 @@ contains
               2*(cf%n(3)-2)**2 + 4*(cf%n(3)-2) + 8
     x = x/npoints
 
-    call pop_sub('cube_function.cf_surface_average')
+    POP_SUB(cf_surface_average)
   end function cf_surface_average
 
   ! ---------------------------------------------------------
@@ -134,7 +134,7 @@ contains
     CMPLX   :: k(3)
     integer :: n(3), ix, iy, iz, ixx, iyy, izz
 
-    call push_sub('cube_function.cf_phase_factor')
+    PUSH_SUB(cf_phase_factor)
 
     ASSERT(all(cf_i%n == cf_o%n))
     ASSERT(associated(cf_i%FS).and.associated(cf_o%FS))
@@ -156,7 +156,7 @@ contains
       end do
     end do
 
-    call pop_sub('cube_function.cf_phase_factor')
+    POP_SUB(cf_phase_factor)
   end subroutine cf_phase_factor
 
 

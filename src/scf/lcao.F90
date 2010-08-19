@@ -90,7 +90,7 @@ contains
 
     integer :: ia, n, ii, jj, maxj, idim
 
-    call push_sub('lcao.lcao_init')
+    PUSH_SUB(lcao_init)
 
     ! nullify everything so we can check for associated pointers when deallocating
     nullify(this%atom)
@@ -147,7 +147,7 @@ contains
         write(message(1),'(a)') 'Cannot do LCAO initial calculation because there are not enough atomic orbitals.'
         write(message(2),'(a,i6,a,i6,a)') 'Required: ', st%nst, '. Available: ', this%maxorbs, '.'
         call write_warning(2)
-        call pop_sub('lcao.lcao_init')
+        POP_SUB(lcao_init)
         return
       end if
 
@@ -238,7 +238,7 @@ contains
 
     end if
 
-    call pop_sub('lcao.lcao_init')
+    POP_SUB(lcao_init)
   end subroutine lcao_init
 
 
@@ -253,7 +253,7 @@ contains
     integer :: s1, s2, k1, k2, is, ik, ip, idim
     logical :: lcao_done
 
-    call push_sub('lcao.lcao_run')
+    PUSH_SUB(lcao_run)
 
     if (.not. present(st_start)) then
       call guess_density(sys%gr%fine%mesh, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
@@ -272,7 +272,7 @@ contains
       call v_ks_calc(sys%ks, sys%gr, hm, sys%st, calc_eigenval=.true.)
 
       if(st_start .gt. sys%st%nst) then ! nothing to be done in LCAO
-        call pop_sub('lcao.lcao_run')
+        POP_SUB(lcao_run)
         return
       endif
     endif
@@ -365,21 +365,21 @@ contains
 
     end if
 
-    call pop_sub('lcao.lcao_run')
+    POP_SUB(lcao_run)
   end subroutine lcao_run
 
   ! ---------------------------------------------------------
   subroutine lcao_end(this)
     type(lcao_t), intent(inout) :: this
 
-    call push_sub('lcao.lcao_end')
+    PUSH_SUB(lcao_end)
 
     SAFE_DEALLOCATE_P(this%atom)
     SAFE_DEALLOCATE_P(this%level)
     SAFE_DEALLOCATE_P(this%ddim)
 
     this%initialized = .false.
-    call pop_sub('lcao.lcao_end')
+    POP_SUB(lcao_end)
   end subroutine lcao_end
 
 
@@ -398,7 +398,7 @@ contains
     ASSERT(this%initialized)
 
     call profiling_in(prof, "LCAO")
-    call push_sub('lcao.lcao_wf')
+    PUSH_SUB(lcao_wf)
 
     start_ = 1
     if(present(start)) start_ = start
@@ -416,7 +416,7 @@ contains
         call zlcao_wf(this, st, gr, geo, hm, start_)
       end if
     end if
-    call pop_sub('lcao.lcao_wf')
+    POP_SUB(lcao_wf)
     call profiling_out(prof)
   end subroutine lcao_wf
 
@@ -425,10 +425,10 @@ contains
   logical function lcao_is_available(this) result(available)
     type(lcao_t), intent(in) :: this
 
-    call push_sub('lcao.lcao_is_available')
+    PUSH_SUB(lcao_is_available)
     available = this%initialized
 
-    call pop_sub('lcao.lcao_is_available')
+    POP_SUB(lcao_is_available)
   end function lcao_is_available
 
 
@@ -436,10 +436,10 @@ contains
   integer function lcao_num_orbitals(this) result(norbs)
     type(lcao_t), intent(in) :: this
 
-    call push_sub('lcao.lcao_num_orbitals')
+    PUSH_SUB(lcao_num_orbitals)
     norbs = this%norbs
 
-    call pop_sub('lcao.lcao_num_orbitals')
+    POP_SUB(lcao_num_orbitals)
   end function lcao_num_orbitals
 
 #include "undef.F90"

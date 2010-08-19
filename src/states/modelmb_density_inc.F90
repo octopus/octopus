@@ -37,7 +37,7 @@ subroutine X(modelmb_density_calculate)(ikeeppart, mb_1part, nparticles_dens, &
   FLOAT :: volume_element
   R_TYPE, allocatable :: psi_global(:)
 
-  call push_sub('modelmb_density_inc.Xmodelmb_density_calculate')
+  PUSH_SUB(X(modelmb_density_calculate))
 
   ! In case of running parallel in domains, we need to operate psi_global, which 
   ! contains the full wavefunction after "gathering" all the domains.
@@ -83,7 +83,7 @@ subroutine X(modelmb_density_calculate)(ikeeppart, mb_1part, nparticles_dens, &
   SAFE_DEALLOCATE_A(ixp)
   SAFE_DEALLOCATE_A(ix_1part)
 
-  call pop_sub('modelmb_density_inc.Xmodelmb_density_calculate')
+  POP_SUB(X(modelmb_density_calculate))
 
 end subroutine X(modelmb_density_calculate)
 
@@ -101,7 +101,7 @@ subroutine X(modelmb_2partdensity_calculate)(ikeeppart1, ikeeppart2, mb_1part, &
   FLOAT :: volume_element
   R_TYPE, allocatable :: psi_global(:)
 
-  call push_sub('modelmb_density_inc.Xmodelmb_2partdensity_calculate')
+  PUSH_SUB(X(modelmb_2partdensity_calculate))
 
   ! In case of running parallel in domains, we need to operate psi_global, which 
   ! contains the full wavefunction after "gathering" all the domains.
@@ -154,7 +154,7 @@ subroutine X(modelmb_2partdensity_calculate)(ikeeppart1, ikeeppart2, mb_1part, &
   SAFE_DEALLOCATE_A(ixp)
   SAFE_DEALLOCATE_A(ix_1part)
   SAFE_DEALLOCATE_A(ixp_1part)
-  call pop_sub('modelmb_density_inc.Xmodelmb_2partdensity_calculate')
+  POP_SUB(X(modelmb_2partdensity_calculate))
 
 end subroutine X(modelmb_2partdensity_calculate)
 

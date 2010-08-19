@@ -26,7 +26,7 @@ subroutine poisson3D_init(this, geo)
   integer :: nx, ny, nz
   FLOAT   :: xl, yl, zl
 
-  call push_sub('poisson3D.poisson3D_init')
+  PUSH_SUB(poisson3D_init)
 
   ASSERT(this%method >= POISSON_FFT_SPH .and. this%method <= POISSON_SETE)
 
@@ -145,7 +145,7 @@ subroutine poisson3D_init(this, geo)
      
   end select
 
-  call pop_sub('poisson3D.poisson3D_init')
+  POP_SUB(poisson3D_init)
 end subroutine poisson3D_init
 
 

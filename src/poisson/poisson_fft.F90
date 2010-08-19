@@ -79,7 +79,7 @@ contains
     FLOAT :: gg(MAX_DIM)
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
-    call push_sub('poisson_fft.poisson_fft_build_3d_3d')
+    PUSH_SUB(poisson_fft_build_3d_3d)
     
     ! double the box (or not) to perform the fourier transforms
     call mesh_double_box(mesh%sb, mesh, db)                 ! get dimensions of the double box
@@ -127,7 +127,7 @@ contains
     call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
-    call pop_sub('poisson_fft.poisson_fft_build_3d_3d')
+    POP_SUB(poisson_fft_build_3d_3d)
   end subroutine poisson_fft_build_3d_3d
   !-----------------------------------------------------------------
 
@@ -142,7 +142,7 @@ contains
     FLOAT :: DELTA_R = CNST(1.0e-12)
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
-    call push_sub('poisson_fft.poisson_fft_build_3d_2d')
+    PUSH_SUB(poisson_fft_build_3d_2d)
     
     ! double the box to perform the fourier transforms
     call mesh_double_box(mesh%sb, mesh, db)                 ! get dimensions of the double box
@@ -211,7 +211,7 @@ contains
     call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
-    call pop_sub('poisson_fft.poisson_fft_build_3d_2d')
+    POP_SUB(poisson_fft_build_3d_2d)
   end subroutine poisson_fft_build_3d_2d
   !-----------------------------------------------------------------
 
@@ -228,7 +228,7 @@ contains
     FLOAT :: DELTA_R = CNST(1.0e-12)
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
-    call push_sub('poisson_fft.poisson_fft_build_3d_1d')
+    PUSH_SUB(poisson_fft_build_3d_1d)
     
     call mesh_double_box(mesh%sb, mesh, db)
 
@@ -340,7 +340,7 @@ contains
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
-    call pop_sub('poisson_fft.poisson_fft_build_3d_1d')
+    POP_SUB(poisson_fft_build_3d_1d)
   end subroutine poisson_fft_build_3d_1d
   !-----------------------------------------------------------------
 
@@ -356,7 +356,7 @@ contains
     FLOAT :: DELTA_R = CNST(1.0e-12)
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
-    call push_sub('poisson_fft.poisson_fft_build_3d_0d')
+    PUSH_SUB(poisson_fft_build_3d_0d)
     
     select case(poisson_solver)
     case(POISSON_FFT_SPH)
@@ -439,7 +439,7 @@ contains
     call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
-    call pop_sub('poisson_fft.poisson_fft_build_3d_0d')
+    POP_SUB(poisson_fft_build_3d_0d)
   end subroutine poisson_fft_build_3d_0d
   !-----------------------------------------------------------------
 
@@ -455,7 +455,7 @@ contains
     FLOAT, allocatable :: x(:), y(:)
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
-    call push_sub('poisson_fft.poisson_fft_build_2d_0d')
+    PUSH_SUB(poisson_fft_build_2d_0d)
 
     ! double the box to perform the fourier transforms
     call mesh_double_box(mesh%sb, mesh, db)                 ! get dimensions of the double box
@@ -519,7 +519,7 @@ contains
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
     call spline_end(besselintf)
-    call pop_sub('poisson_fft.poisson_fft_build_2d_0d')
+    POP_SUB(poisson_fft_build_2d_0d)
   end subroutine poisson_fft_build_2d_0d
   !-----------------------------------------------------------------
     
@@ -532,7 +532,7 @@ contains
     FLOAT :: temp(MAX_DIM), vec, r_c, gx, gy
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
-    call push_sub('poisson_fft.poisson_fft_build_2d_1d')
+    PUSH_SUB(poisson_fft_build_2d_1d)
 
     ! double the box to perform the fourier transforms
     call mesh_double_box(mesh%sb, mesh, db)                 ! get dimensions of the double box
@@ -574,7 +574,7 @@ contains
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
 
-    call pop_sub('poisson_fft.poisson_fft_build_2d_1d')
+    POP_SUB(poisson_fft_build_2d_1d)
   end subroutine poisson_fft_build_2d_1d
   !-----------------------------------------------------------------
 
@@ -587,7 +587,7 @@ contains
     FLOAT :: temp(MAX_DIM), vec
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
-    call push_sub('poisson_fft.poisson_fft_build_2d_2d')
+    PUSH_SUB(poisson_fft_build_2d_2d)
 
     db(:) = mesh%idx%ll(:)
     ! allocate cube function where we will perform the ffts
@@ -614,7 +614,7 @@ contains
     call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
-    call pop_sub('poisson_fft.poisson_fft_build_2d_2d')
+    POP_SUB(poisson_fft_build_2d_2d)
   end subroutine poisson_fft_build_2d_2d
   !-----------------------------------------------------------------
 
@@ -628,7 +628,7 @@ contains
     FLOAT              :: g
     FLOAT, allocatable :: fft_coulb_fs(:, :, :)
 
-    call push_sub('poisson_fft.poisson_fft_build_1d_1d')
+    PUSH_SUB(poisson_fft_build_1d_1d)
 
     box = mesh%idx%ll
     call dcf_new(box, fft_cf)
@@ -647,7 +647,7 @@ contains
     call dfourier_space_op_init(coulb, fft_cf, fft_coulb_fs)
     SAFE_DEALLOCATE_A(fft_coulb_fs)
     
-    call pop_sub('poisson_fft.poisson_fft_build_1d_1d')
+    POP_SUB(poisson_fft_build_1d_1d)
   end subroutine poisson_fft_build_1d_1d
   !-----------------------------------------------------------------
 
@@ -661,7 +661,7 @@ contains
     FLOAT              :: temp(MAX_DIM), g, r_c
     FLOAT, allocatable :: fft_coulb_fs(:, :, :)
 
-    call push_sub('poisson_fft.poisson_fft_build_1d_0d')
+    PUSH_SUB(poisson_fft_build_1d_0d)
 
     call mesh_double_box(mesh%sb, mesh, box)
     
@@ -685,19 +685,19 @@ contains
     call dfourier_space_op_init(coulb, fft_cf, fft_coulb_fs)
     SAFE_DEALLOCATE_A(fft_coulb_fs)
     
-    call pop_sub('poisson_fft.poisson_fft_build_1d_0d')
+    POP_SUB(poisson_fft_build_1d_0d)
   end subroutine poisson_fft_build_1d_0d
   !-----------------------------------------------------------------
 
 
   !-----------------------------------------------------------------
   subroutine poisson_fft_end()
-    call push_sub('poisson_fft.poisson_fft.end')
+    PUSH_SUB(poisson_fft.end)
 
     call dcf_free(fft_cf)
     call dfourier_space_op_end(coulb)
 
-    call pop_sub('poisson_fft.poisson_fft.end')
+    POP_SUB(poisson_fft.end)
   end subroutine poisson_fft_end
 
   !-----------------------------------------------------------------
@@ -712,7 +712,7 @@ contains
 
     FLOAT :: average
 
-    call push_sub('poisson.poisson_fft')
+    PUSH_SUB(poisson_fft)
 
     average=M_ZERO !this avoids a non-initialized warning
     
@@ -766,7 +766,7 @@ contains
       SAFE_DEALLOCATE_A(pot_global)
     end if
 
-    call pop_sub('poisson.poisson_fft')
+    POP_SUB(poisson_fft)
   end subroutine poisson_fft
 
 end module poisson_fft_m

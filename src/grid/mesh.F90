@@ -151,7 +151,7 @@ contains
     
     integer :: idir
     
-    call push_sub('mesh.mesh_double_box')
+    PUSH_SUB(mesh_double_box)
 
     db = 1
     
@@ -163,7 +163,7 @@ contains
       db(idir) = nint(sb%fft_alpha * (mesh%idx%ll(idir) - 1)) + 1
     end do
     
-    call pop_sub('mesh.mesh_double_box')
+    POP_SUB(mesh_double_box)
   end subroutine mesh_double_box
   
   
@@ -176,7 +176,7 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return
     
-    call push_sub('mesh.mesh_write_info')
+    PUSH_SUB(mesh_write_info)
     
     write(message(1),'(3a)') '  Spacing [', trim(units_abbrev(units_out%length)), '] = ('
     do ii = 1, mesh%sb%dim
@@ -194,7 +194,7 @@ contains
       units_from_atomic(units_out%energy, M_PI**2 / (M_TWO * maxval(mesh%spacing)**2))
     call write_info(4, unit)
     
-    call pop_sub('mesh.mesh_write_info')
+    POP_SUB(mesh_write_info)
   end subroutine mesh_write_info
   
   
@@ -249,7 +249,7 @@ contains
     integer :: iatom, jatom, idir
     FLOAT   :: xx(MAX_DIM), rr, dd, radius
     
-    call push_sub('mesh.mesh_inborder')
+    PUSH_SUB(mesh_inborder)
 
     is_on_border = .false.
     dist = M_ZERO
@@ -322,7 +322,7 @@ contains
     ! This may happen if the point is on more than one border at the same time.
     if(dist > width) dist = width
 
-    call pop_sub('mesh.mesh_inborder')
+    POP_SUB(mesh_inborder)
   end function mesh_inborder
   
   
@@ -345,7 +345,7 @@ contains
     FLOAT :: min_loc_in(2), min_loc_out(2)
 #endif
     
-    call push_sub('mesh.mesh_nearest_point')
+    PUSH_SUB(mesh_nearest_point)
     
     !find the point of the grid that is closer to the atom
     dmin = M_ZERO
@@ -371,7 +371,7 @@ contains
 #endif
     
     ind = imin
-    call pop_sub('mesh.mesh_nearest_point')
+    POP_SUB(mesh_nearest_point)
   end function mesh_nearest_point
   
   
@@ -383,7 +383,7 @@ contains
     
     integer :: ixyz(MAX_DIM), id
     
-    call push_sub('mesh.translate_point')
+    PUSH_SUB(translate_point)
     
     ASSERT(index >= 1 .and. index <= mesh%np)
     
@@ -402,7 +402,7 @@ contains
       tindex = -1
     end if
     
-    call pop_sub('mesh.translate_point')
+    POP_SUB(translate_point)
   end function translate_point
   
   
@@ -414,10 +414,10 @@ contains
   FLOAT function mesh_gcutoff(mesh) result(gmax)
     type(mesh_t), intent(in) :: mesh
 
-    call push_sub('mesh.mesh_gcutoff')
+    PUSH_SUB(mesh_gcutoff)
     gmax = M_PI / (maxval(mesh%spacing))
 
-    call pop_sub('mesh.mesh_gcutoff')
+    POP_SUB(mesh_gcutoff)
   end function mesh_gcutoff
   
   
@@ -426,7 +426,7 @@ contains
     type(mesh_t), intent(in) :: mesh
     integer,      intent(in) :: iunit
     
-    call push_sub('mesh.mesh_dump')
+    PUSH_SUB(mesh_dump)
     
     write(iunit, '(a)')         dump_tag
     write(iunit, '(a20,7i8)')   'nr(1, :)=           ', mesh%idx%nr(1, 1:mesh%sb%dim)
@@ -438,7 +438,7 @@ contains
     write(iunit, '(a20,1i10)')  'np_global=          ', mesh%np_global
     write(iunit, '(a20,1i10)')  'np_part_global=     ', mesh%np_part_global
     
-    call pop_sub('mesh.mesh_dump')
+    POP_SUB(mesh_dump)
   end subroutine mesh_dump
   
   
@@ -451,7 +451,7 @@ contains
     character(len=20)  :: str
     character(len=100) :: line
 
-    call push_sub('mesh.mesh_init_from_file')
+    PUSH_SUB(mesh_init_from_file)
 
     ! Find (and throw away) the dump tag.
     do
@@ -477,7 +477,7 @@ contains
     nullify(mesh%idx%lxyz, mesh%idx%lxyz_inv, mesh%x, mesh%vol_pp, mesh%resolution)
     mesh%parallel_in_domains = .false.
 
-    call pop_sub('mesh.mesh_init_from_file')
+    POP_SUB(mesh_init_from_file)
   end subroutine mesh_init_from_file
 
 
@@ -488,7 +488,7 @@ contains
 
     integer :: iunit
 
-    call push_sub('mesh.mesh_write_fingerprint')
+    PUSH_SUB(mesh_write_fingerprint)
 
     if(mesh%sb%box_shape /= HYPERCUBE) then
 
@@ -501,7 +501,7 @@ contains
 
     end if
 
-    call pop_sub('mesh.mesh_write_fingerprint')
+    POP_SUB(mesh_write_fingerprint)
   end subroutine mesh_write_fingerprint
 
   ! -----------------------------------------------------------------------
@@ -520,7 +520,7 @@ contains
     integer :: iunit, algorithm
     integer(8) :: checksum
 
-    call push_sub('mesh.mesh_read_fingerprint')
+    PUSH_SUB(mesh_read_fingerprint)
 
     iunit = io_open(trim(filename), action='read', status='old', die=.false., is_tmp = .true.)
 
@@ -548,7 +548,7 @@ contains
 
     endif
 
-    call pop_sub('mesh.mesh_read_fingerprint')
+    POP_SUB(mesh_read_fingerprint)
 
   end subroutine mesh_read_fingerprint
 
@@ -560,7 +560,7 @@ contains
 
     integer :: ip, idir, ix(MAX_DIM), ierr
 
-    call push_sub('mesh.mesh_lxyz_init_from_file')
+    PUSH_SUB(mesh_lxyz_init_from_file)
 
     ASSERT(mesh%sb%dim > 0 .and. mesh%sb%dim <= MAX_DIM)
 
@@ -580,7 +580,7 @@ contains
       mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3)) = ip
     end do
 
-    call pop_sub('mesh.mesh_lxyz_init_from_file')
+    POP_SUB(mesh_lxyz_init_from_file)
   end subroutine mesh_lxyz_init_from_file
 
 
@@ -598,7 +598,7 @@ contains
 
     integer :: ix, iy, iz, ii
 
-    call push_sub('mesh.mesh_subset_indices')
+    PUSH_SUB(mesh_subset_indices)
 
     ! In debug mode, check for valid indices in from, to first.
     if(in_debug_mode) then
@@ -627,7 +627,7 @@ contains
       end do
     end do
 
-    call pop_sub('mesh.mesh_subset_indices')
+    POP_SUB(mesh_subset_indices)
   end subroutine mesh_subset_indices
 
 
@@ -641,7 +641,7 @@ contains
     integer :: idir
     logical :: valid
 
-    call push_sub('mesh.index_valid')
+    PUSH_SUB(index_valid)
 
     valid = .true.
     do idir = 1, mesh%sb%dim
@@ -652,7 +652,7 @@ contains
 
     index_valid = valid
 
-    call pop_sub('mesh.index_valid')
+    POP_SUB(index_valid)
   end function index_valid
 
 
@@ -666,7 +666,7 @@ contains
     integer :: ipart
 #endif
 
-    call push_sub('mesh.mesh_end')
+    PUSH_SUB(mesh_end)
 
     if (present(is_lead)) then
       is_lead_ = is_lead
@@ -690,7 +690,7 @@ contains
 #endif
     end if
 
-    call pop_sub('mesh.mesh_end')
+    POP_SUB(mesh_end)
   end subroutine mesh_end
 
   
@@ -763,7 +763,7 @@ contains
     logical :: force_
 
 ! no push_sub because function is called too frequently
-!    call push_sub('mesh.mesh_x_global')
+!    PUSH_SUB(mesh_x_global)
 
     force_ = .false.
     if (present(force)) force_ = force

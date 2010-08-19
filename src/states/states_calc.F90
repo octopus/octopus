@@ -97,7 +97,7 @@ contains
 
     integer :: ik
 
-    call push_sub('states_calc.states_rotate')
+    PUSH_SUB(states_rotate)
 
     if(states_are_real(st)) then
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -111,7 +111,7 @@ contains
       end do
     end if
 
-    call pop_sub('states_calc.states_rotate')
+    POP_SUB(states_rotate)
   end subroutine states_rotate
 
 
@@ -122,7 +122,7 @@ contains
 
     integer :: ik
 
-    call push_sub('states_calc.states_orthogonalize')
+    PUSH_SUB(states_orthogonalize)
 
     do ik = st%d%kpt%start, st%d%kpt%end
       if (states_are_real(st)) then
@@ -132,7 +132,7 @@ contains
       end if
     end do
 
-    call pop_sub('states_calc.states_orthogonalize')
+    POP_SUB(states_orthogonalize)
   end subroutine states_orthogonalize
 
 
@@ -147,7 +147,7 @@ contains
     FLOAT,   allocatable :: eigenval_sorted(:)
     FLOAT :: degen_thres, evis, evjs, kpoint(1:MAX_DIM)
 
-    call push_sub('states_calc.states_degeneracy_matrix')
+    PUSH_SUB(states_degeneracy_matrix)
 
     SAFE_ALLOCATE(eigenval_sorted(1:st%nst*st%d%nik))
     SAFE_ALLOCATE(         sindex(1:st%nst*st%d%nik))
@@ -252,7 +252,7 @@ contains
     SAFE_DEALLOCATE_A(eindex)
     SAFE_DEALLOCATE_A(degeneracy_matrix)
 
-    call pop_sub('states_calc.states_degeneracy_matrix')
+    POP_SUB(states_degeneracy_matrix)
   end subroutine states_degeneracy_matrix
 
 #include "undef.F90"

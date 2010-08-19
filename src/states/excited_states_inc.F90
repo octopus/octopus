@@ -33,7 +33,7 @@ R_TYPE function X(states_mpdotp_x)(mesh, excited_state, st, mat) result(dotp)
   integer :: jj
   R_TYPE, allocatable :: mat_local(:, :, :)
 
-  call push_sub('excited_states_inc.Xstates_mpdotp_x')
+  PUSH_SUB(X(states_mpdotp_x))
 
   dotp = M_ZERO
 
@@ -54,7 +54,7 @@ R_TYPE function X(states_mpdotp_x)(mesh, excited_state, st, mat) result(dotp)
   end do
 
   SAFE_DEALLOCATE_A(mat_local)
-  call pop_sub('excited_states_inc.Xstates_mpdotp_x')
+  POP_SUB(X(states_mpdotp_x))
 end function X(states_mpdotp_x)
 
 
@@ -75,7 +75,7 @@ subroutine X(states_matrix_swap)(mat, pair)
   integer :: ii, aa, ik
   R_TYPE, allocatable :: row(:)
 
-  call push_sub('excited_states_inc.Xstates_matrix_swap')
+  PUSH_SUB(X(states_matrix_swap))
 
   ii = pair%i
   aa = pair%a
@@ -89,7 +89,7 @@ subroutine X(states_matrix_swap)(mat, pair)
   mat(aa, :, ik) = row(:)
 
   SAFE_DEALLOCATE_A(row)
-  call pop_sub('excited_states_inc.Xstates_matrix_swap')
+  POP_SUB(X(states_matrix_swap))
 end subroutine X(states_matrix_swap)
 
 
@@ -117,7 +117,7 @@ R_TYPE function X(states_mpmatrixelement_g)(mesh, st1, st2, opst2) result(st1ops
   R_TYPE, allocatable :: bb(:, :), cc(:, :)
   R_TYPE :: zz, det
 
-  call push_sub('excited_states_inc.Xstates_mpmatrixelement_g')
+  PUSH_SUB(X(states_mpmatrixelement_g))
 
   ! This should go away whenever the subroutine is ready.
   st1opst2 = R_TOTYPE(M_ONE)
@@ -263,7 +263,7 @@ R_TYPE function X(states_mpmatrixelement_g)(mesh, st1, st2, opst2) result(st1ops
   SAFE_DEALLOCATE_A(half_filled1)
   SAFE_DEALLOCATE_A(half_filled2)
 
-  call pop_sub('excited_states_inc.Xstates_mpmatrixelement_g')
+  POP_SUB(X(states_mpmatrixelement_g))
 end function X(states_mpmatrixelement_g)
 
 
@@ -281,7 +281,7 @@ R_TYPE function X(states_mpdotp_g)(mesh, st1, st2, mat) result(dotp)
                           half_filled1(:), half_filled2(:)
   R_TYPE, allocatable :: aa(:, :, :), bb(:, :)
 
-  call push_sub('excited_states_inc.Xstates_mpdotp_g')
+  PUSH_SUB(X(states_mpdotp_g))
 
   ispin = st1%d%ispin
   ASSERT(ispin .eq. st2%d%ispin)
@@ -383,7 +383,7 @@ R_TYPE function X(states_mpdotp_g)(mesh, st1, st2, mat) result(dotp)
   SAFE_DEALLOCATE_A(partially_filled2)
   SAFE_DEALLOCATE_A(half_filled1)
   SAFE_DEALLOCATE_A(half_filled2)
-  call pop_sub('excited_states_inc.Xstates_mpdotp_g')
+  POP_SUB(X(states_mpdotp_g))
 end function X(states_mpdotp_g)
 
 

@@ -63,7 +63,7 @@ contains
     type(interface_t), intent(in)    :: intf(:)
 
     integer :: il, np
-    call push_sub('ob_src.ob_src_init')
+    PUSH_SUB(ob_src_init)
 
     ! FIXME: spinor index is ignored here.
     do il=1, NLEADS
@@ -72,7 +72,7 @@ contains
       ob%lead(il)%src_prev = M_z0
     end do
 
-    call pop_sub('ob_src.ob_src_init')
+    POP_SUB(ob_src_init)
   end subroutine ob_src_init
 
 
@@ -96,7 +96,7 @@ contains
     
     CMPLX   :: tmp, alpha
 
-    call push_sub('ob_src.calc_source_wf')
+    PUSH_SUB(calc_source_wf)
     if(m.eq.0) then
       ! initial src is V*psi0(outer) (precalculated in gs mode)
       tmp = -M_zI*dt*f0*u(0)
@@ -113,7 +113,7 @@ contains
       end if
     end if
 
-    call pop_sub('ob_src.calc_source_wf')
+    POP_SUB(calc_source_wf)
   end subroutine calc_source_wf
 
 
@@ -142,14 +142,14 @@ contains
     
     CMPLX,   allocatable :: tmem(:, :)
 
-    call push_sub('ob_src.calc_source_wf_sp')
+    PUSH_SUB(calc_source_wf_sp)
 
     SAFE_ALLOCATE(tmem(1:np, 1:np))
     call make_full_matrix(np, order, dim, sp_mem, mem_s, tmem, mapping)
     call calc_source_wf(maxiter, m, np, il, offdiag, tmem, dt, psi0, u, f0, factor, lambda, src)
     SAFE_DEALLOCATE_A(tmem)
 
-    call pop_sub('ob_src.calc_source_wf_sp')
+    POP_SUB(calc_source_wf_sp)
   end subroutine calc_source_wf_sp
 
 
@@ -160,13 +160,13 @@ contains
 
     integer :: il
 
-    call push_sub('ob_src.ob_src_end')
+    PUSH_SUB(ob_src_end)
 
     do il=1, NLEADS
       SAFE_DEALLOCATE_P(ob%lead(il)%src_prev)
     end do
 
-    call pop_sub('ob_src.ob_src_end')
+    POP_SUB(ob_src_end)
   end subroutine ob_src_end
 end module ob_src_m
 

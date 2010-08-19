@@ -135,7 +135,7 @@ contains
     type(mesh_t),             intent(in)    :: mesh
     integer,                  intent(in)    :: nspin
 
-    call push_sub('hamiltonian_base.hamiltonian_base_init')
+    PUSH_SUB(hamiltonian_base_init)
 
     this%nspin = nspin
 
@@ -147,14 +147,14 @@ contains
     this%apply_projector_matrices = .false.
     this%nprojector_matrices = 0
 
-    call pop_sub('hamiltonian_base.hamiltonian_base_init')
+    POP_SUB(hamiltonian_base_init)
   end subroutine hamiltonian_base_init
 
   ! ---------------------------------------------------------
   subroutine hamiltonian_base_end(this)
     type(hamiltonian_base_t), intent(inout) :: this
 
-    call push_sub('hamiltonian_base.hamiltonian_base_end')
+    PUSH_SUB(hamiltonian_base_end)
 
     SAFE_DEALLOCATE_P(this%potential)
     SAFE_DEALLOCATE_P(this%vector_potential)
@@ -162,7 +162,7 @@ contains
     SAFE_DEALLOCATE_P(this%uniform_magnetic_field)
     call hamiltonian_base_destroy_proj(this)
 
-    call pop_sub('hamiltonian_base.hamiltonian_base_end')
+    POP_SUB(hamiltonian_base_end)
   end subroutine hamiltonian_base_end
 
   ! ---------------------------------------------------------- 
@@ -173,14 +173,14 @@ contains
   subroutine hamiltonian_base_clear(this)
     type(hamiltonian_base_t), intent(inout) :: this
 
-    call push_sub('hamiltonian_base.hamiltonian_clear')
+    PUSH_SUB(hamiltonian_clear)
 
     if(associated(this%potential))                this%potential = M_ZERO
     if(associated(this%uniform_vector_potential)) this%uniform_vector_potential = M_ZERO
     if(associated(this%vector_potential))         this%vector_potential = M_ZERO
     if(associated(this%uniform_magnetic_field))   this%uniform_magnetic_field = M_ZERO
 
-    call pop_sub('hamiltonian_base.hamiltonian_clear')
+    POP_SUB(hamiltonian_clear)
   end subroutine hamiltonian_base_clear
 
 
@@ -191,7 +191,7 @@ contains
     type(mesh_t),             intent(in)    :: mesh
     integer,                  intent(in)    :: field
 
-    call push_sub('hamiltonian_base.hamiltonian_base_allocate')
+    PUSH_SUB(hamiltonian_base_allocate)
 
     if(iand(FIELD_POTENTIAL, field) /= 0) then 
       if(.not. associated(this%potential)) then
@@ -226,7 +226,7 @@ contains
       end if
     end if
 
-    call pop_sub('hamiltonian_base.hamiltonian_base_allocate')
+    POP_SUB(hamiltonian_base_allocate)
   end subroutine hamiltonian_base_allocate
 
   ! ---------------------------------------------------------- 
@@ -242,7 +242,7 @@ contains
     integer :: ispin
     integer :: offset
 
-    call push_sub('hamiltonian_base.hamiltonian_check')
+    PUSH_SUB(hamiltonian_check)
 
     if(associated(this%uniform_vector_potential) .and. associated(this%vector_potential)) then
       call unify_vector_potentials()
@@ -260,7 +260,7 @@ contains
     end if
 #endif
 
-    call pop_sub('hamiltonian_base.hamiltonian_check')
+    POP_SUB(hamiltonian_check)
 
   contains
 
@@ -322,7 +322,7 @@ contains
     type(projector_matrix_t), pointer :: pmat
     type(kb_projector_t),     pointer :: kb_p
 
-    call push_sub('hamiltonian_base.hamiltonian_base_build_proj')
+    PUSH_SUB(hamiltonian_base_build_proj)
 
     ! deallocate previous projectors
     call hamiltonian_base_destroy_proj(this)
@@ -346,7 +346,7 @@ contains
     if(simul_box_is_periodic(mesh%sb)) this%apply_projector_matrices = .false.
 
     if(.not. this%apply_projector_matrices) then
-      call pop_sub('hamiltonian_base.hamiltonian_base_build_proj')
+      POP_SUB(hamiltonian_base_build_proj)
       return
     end if
     
@@ -401,7 +401,7 @@ contains
     if(opencl_is_enabled()) call build_opencl()
 #endif
 
-    call pop_sub('hamiltonian_base.hamiltonian_base_build_proj')
+    POP_SUB(hamiltonian_base_build_proj)
   contains
 
     subroutine build_opencl()

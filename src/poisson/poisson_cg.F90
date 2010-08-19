@@ -51,10 +51,10 @@ contains
     integer,      intent(in) :: ml, itr
     FLOAT,        intent(in) :: thr
 
-    call push_sub('poisson_cg.poisson_cg_init')
+    PUSH_SUB(poisson_cg_init)
     threshold = thr
     maxiter = itr
-    call pop_sub('poisson_cg.poisson_cg_init')
+    POP_SUB(poisson_cg_init)
   end subroutine poisson_cg_init
 
 
@@ -75,7 +75,7 @@ contains
     FLOAT :: res
     FLOAT, allocatable :: wk(:), lwk(:), zk(:), pk(:)
 
-    call push_sub('poisson_cg.poisson_cg1')
+    PUSH_SUB(poisson_cg1)
 
     SAFE_ALLOCATE( wk(1:der%mesh%np_part))
     SAFE_ALLOCATE(lwk(1:der%mesh%np_part))
@@ -108,7 +108,7 @@ contains
 
     SAFE_DEALLOCATE_A(zk)
     SAFE_DEALLOCATE_A(pk)
-    call pop_sub('poisson_cg.poisson_cg1')
+    POP_SUB(poisson_cg1)
   end subroutine poisson_cg1
 
 
@@ -122,7 +122,7 @@ contains
     FLOAT, allocatable :: potc(:), rhs(:)
     FLOAT :: res
 
-    call push_sub('poisson_cg.poisson_cg2')
+    PUSH_SUB(poisson_cg2)
 
     iter = maxiter
     der_pointer  => der
@@ -150,7 +150,7 @@ contains
     SAFE_DEALLOCATE_A(rhs)
     SAFE_DEALLOCATE_A(potc)
 
-    call pop_sub('poisson_cg.poisson_cg2')
+    POP_SUB(poisson_cg2)
   end subroutine poisson_cg2
 
 end module poisson_cg_m

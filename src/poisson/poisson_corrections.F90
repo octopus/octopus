@@ -69,7 +69,7 @@ contains
     FLOAT :: alpha, gamma, ylm, gylm(1:MAX_DIM), rr, xx(MAX_DIM)
     integer :: ip, ll, add_lm, lldfac, jj, mm
 
-    call push_sub('poisson_corrections.poisson_corrections_init')
+    PUSH_SUB(poisson_corrections_init)
 
     this%maxl = ml
 
@@ -113,7 +113,7 @@ contains
       end do
     end do
 
-    call pop_sub('poisson_corrections.poisson_corrections_init')
+    POP_SUB(poisson_corrections_init)
 
   contains
 
@@ -134,13 +134,13 @@ contains
   subroutine poisson_corrections_end(this)
     type(poisson_corr_t), intent(inout) :: this
 
-    call push_sub('poisson_corrections.poisson_corrections_end')
+    PUSH_SUB(poisson_corrections_end)
 
     SAFE_DEALLOCATE_P(this%phi)
     SAFE_DEALLOCATE_P(this%aux)
     SAFE_DEALLOCATE_P(this%gaussian)
 
-    call pop_sub('poisson_corrections.poisson_corrections_end')
+    POP_SUB(poisson_corrections_end)
   end subroutine poisson_corrections_end
 
 
@@ -158,7 +158,7 @@ contains
     FLOAT, allocatable :: betal(:)
     type(profile_t), save :: prof
 
-    call push_sub('poisson_corrections.correct_rho')
+    PUSH_SUB(correct_rho)
     call profiling_in(prof, "POISSON_CORRECT")
 
     SAFE_ALLOCATE(mult(1:(this%maxl+1)**2))
@@ -196,7 +196,7 @@ contains
     SAFE_DEALLOCATE_A(betal)
 
     call profiling_out(prof)
-    call pop_sub('poisson_corrections.correct_rho')
+    POP_SUB(correct_rho)
   end subroutine correct_rho
 
 
@@ -210,7 +210,7 @@ contains
 
     integer :: add_lm, ll, mm
 
-    call push_sub('poisson_corrections.get_multipoles')
+    PUSH_SUB(get_multipoles)
 
     mult(:) = M_ZERO
     add_lm = 1
@@ -221,7 +221,7 @@ contains
       end do
     end do
 
-    call pop_sub('poisson_corrections.get_multipoles')
+    POP_SUB(get_multipoles)
   end subroutine get_multipoles
 
   ! ---------------------------------------------------------
@@ -229,9 +229,9 @@ contains
     FLOAT, intent(inout) :: xx(:)
     FLOAT, intent(out)   :: yy(:)
 
-    call push_sub('poisson_corrections.internal_laplacian_op')
+    PUSH_SUB(internal_laplacian_op)
     call dderivatives_lapl(der_pointer, xx, yy)
-    call pop_sub('poisson_corrections.internal_laplacian_op')
+    POP_SUB(internal_laplacian_op)
 
   end subroutine internal_laplacian_op
 
@@ -241,10 +241,10 @@ contains
     FLOAT, intent(inout) :: xx(:)
     FLOAT, intent(in)    :: yy(:)
 
-    call push_sub('poisson_corrections.internal_dotp')
+    PUSH_SUB(internal_dotp)
 
     res = dmf_dotp(mesh_pointer, xx, yy)
-    call pop_sub('poisson_corrections.internal_dotp')
+    POP_SUB(internal_dotp)
   end function internal_dotp
 
 

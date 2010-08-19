@@ -100,7 +100,7 @@ contains
 
     integer, allocatable :: bltmp(:), ostmp(:)
 
-    call push_sub('subarray.subarray_init')
+    PUSH_SUB(subarray_init)
 
     this%npoints = total
     
@@ -118,18 +118,18 @@ contains
     SAFE_DEALLOCATE_A(bltmp)
     SAFE_DEALLOCATE_A(ostmp)
 
-    call pop_sub('subarray.subarray_init')
+    POP_SUB(subarray_init)
   end subroutine subarray_init
 
   subroutine subarray_end(this)
     type(subarray_t), intent(inout) :: this
     
-    call push_sub('subarray.subarray_end')
+    PUSH_SUB(subarray_end)
 
     SAFE_DEALLOCATE_P(this%offsets)
     SAFE_DEALLOCATE_P(this%blength)
 
-    call pop_sub('subarray.subarray_end')
+    POP_SUB(subarray_end)
   end subroutine subarray_end
 
   integer pure function subarray_size(this) result(size)

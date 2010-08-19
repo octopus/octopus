@@ -35,7 +35,7 @@ subroutine X(output_me_ks_multipoles)(fname, st, gr, ll, mm, ik)
   FLOAT :: rr, xx(MAX_DIM), ylm
   R_TYPE :: multip_element
   
-  call push_sub('output_me_inc.Xoutput_me_ks_multipoles')
+  PUSH_SUB(X(output_me_ks_multipoles))
   
   iunit = io_open(file = fname, action = 'write')
 
@@ -78,7 +78,7 @@ subroutine X(output_me_ks_multipoles)(fname, st, gr, ll, mm, ik)
   SAFE_DEALLOCATE_A(multipole)
   call io_close(iunit)
 
-  call pop_sub('output_me_inc.Xoutput_me_ks_multipoles')
+  POP_SUB(X(output_me_ks_multipoles))
 end subroutine X(output_me_ks_multipoles)
 
 
@@ -94,7 +94,7 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
   R_TYPE :: me, exp_r, exp_g, corr
   R_TYPE, allocatable :: gpsi(:,:), cpsi(:,:)
 
-  call push_sub('output_me_inc.Xone_body')
+  PUSH_SUB(X(one_body))
 
   np = gr%mesh%np
 
@@ -150,7 +150,7 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
   SAFE_DEALLOCATE_A(gpsi)
 
   call io_close(iunit)
-  call pop_sub('output_me_inc.Xone_body')
+  POP_SUB(X(one_body))
 end subroutine X(one_body)
 
 
@@ -164,7 +164,7 @@ subroutine X(two_body) (dir, gr, st)
   R_TYPE :: me
   R_TYPE, allocatable :: nn(:), vv(:)
 
-  call push_sub('output_me_inc.Xtwo_body')
+  PUSH_SUB(X(two_body))
 
   iunit = io_open(trim(dir)//'/output_me_two_body', action='write')
 
@@ -194,7 +194,7 @@ subroutine X(two_body) (dir, gr, st)
   end do
 
   call io_close(iunit)
-  call pop_sub('output_me_inc.Xtwo_body')
+  POP_SUB(X(two_body))
 end subroutine X(two_body)
 
 !! Local Variables:

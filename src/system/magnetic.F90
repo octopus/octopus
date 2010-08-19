@@ -51,7 +51,7 @@ contains
     FLOAT,          intent(in)  :: rho(:,:) ! (np, st%d%nspin)
     FLOAT,          intent(out) :: md(:,:)  ! (np, 3)
 
-    call push_sub('states.magnetic_density')
+    PUSH_SUB(magnetic_density)
 
     select case (st%d%ispin)
     case (UNPOLARIZED)
@@ -67,7 +67,7 @@ contains
       md(1:mesh%np, 3) = rho(1:mesh%np, 1) - rho(1:mesh%np, 2)
     end select
 
-    call pop_sub('states.magnetic_density')
+    POP_SUB(magnetic_density)
   end subroutine magnetic_density
 
 
@@ -80,7 +80,7 @@ contains
 
     FLOAT, allocatable :: md(:,:)
 
-    call push_sub('states.states_magnetic_moment')
+    PUSH_SUB(states_magnetic_moment)
 
     SAFE_ALLOCATE(md(1:mesh%np, 1:MAX_DIM))
     call magnetic_density(mesh, st, rho, md)
@@ -91,7 +91,7 @@ contains
 
     SAFE_DEALLOCATE_A(md)
 
-    call pop_sub('states.states_magnetic_moment')
+    POP_SUB(states_magnetic_moment)
   end subroutine magnetic_moment
 
 
@@ -108,7 +108,7 @@ contains
     FLOAT :: ri
     FLOAT, allocatable :: md(:, :), aux(:, :)
 
-    call push_sub('magnetic.magnetic_local_moments')
+    PUSH_SUB(magnetic_local_moments)
 
     SAFE_ALLOCATE(md (1:mesh%np, 1:MAX_DIM))
     SAFE_ALLOCATE(aux(1:mesh%np, 1:MAX_DIM))
@@ -129,7 +129,7 @@ contains
     SAFE_DEALLOCATE_A(md)
     SAFE_DEALLOCATE_A(aux)
 
-    call pop_sub('magnetic.magnetic_local_moments')
+    POP_SUB(magnetic_local_moments)
   end subroutine magnetic_local_moments
 
 
@@ -139,7 +139,7 @@ contains
     type(states_t),       intent(inout) :: st
     FLOAT,                intent(out)   :: jj(:,:,:)
 
-    call push_sub('magnetic.calc_physical_current')
+    PUSH_SUB(calc_physical_current)
 
     ! Paramagnetic contribution to the physical current
     call states_calc_quantities(der, st, paramagnetic_current = jj)
@@ -147,7 +147,7 @@ contains
     ! \todo
     ! Diamagnetic contribution to the physical current
 
-    call pop_sub('magnetic.calc_physical_current')
+    POP_SUB(calc_physical_current)
   end subroutine calc_physical_current
 
 
@@ -166,14 +166,14 @@ contains
     integer :: idir
     FLOAT, allocatable :: jj(:, :, :)
 
-    call push_sub('magnetic.magnetic_induced')
+    PUSH_SUB(magnetic_induced)
 
     ! If the states are real, we should never have reached here, but
     ! just in case we return zero.
     if(states_are_real(st)) then
       a_ind = M_ZERO
       b_ind = M_ZERO
-      call pop_sub('magnetic.magnetic_induced')
+      POP_SUB(magnetic_induced)
       return
     end if
 
@@ -192,7 +192,7 @@ contains
     call dderivatives_curl(der, a_ind, b_ind)
 
     SAFE_DEALLOCATE_A(jj)
-    call pop_sub('magnetic.magnetic_induced')
+    POP_SUB(magnetic_induced)
   end subroutine magnetic_induced
 
 

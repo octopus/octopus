@@ -65,7 +65,7 @@ contains
     integer :: nnm, inm
 
     !CONSTRUCT
-    call push_sub('raman.raman_run')
+    PUSH_SUB(raman_run)
 
     call messages_devel_version("Raman response")
 
@@ -118,7 +118,7 @@ contains
 
     call states_deallocate_wfns(sys%st)
 
-    call pop_sub('raman.raman_run')
+    POP_SUB(raman_run)
   end subroutine raman_run
 
 end module raman_m

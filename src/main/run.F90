@@ -74,7 +74,7 @@ contains
   subroutine run()
     logical :: fromScratch
 
-    call push_sub('run.run')
+    PUSH_SUB(run)
 
     !%Variable FromScratch
     !%Type logical
@@ -133,7 +133,7 @@ contains
       call pulpo_print()
     end select
 
-    call pop_sub('run.run')
+    POP_SUB(run)
     
   end subroutine run
   
@@ -141,7 +141,7 @@ contains
   ! ---------------------------------------------------------
   integer function get_resp_method()
 
-    call push_sub('run.get_resp_method')
+    PUSH_SUB(get_resp_method)
     
     !%Variable ResponseMethod
     !%Type integer
@@ -171,13 +171,13 @@ contains
       call input_error('ResponseMethod')
     end if
 
-    call pop_sub('run.get_resp_method')
+    POP_SUB(get_resp_method)
   end function get_resp_method
   
   ! ---------------------------------------------------------
   subroutine run_init()
 
-    call push_sub('run.run_init')
+    PUSH_SUB(run_init)
 
     call messages_print_stress(stdout, "Calculation Mode")
     call messages_print_var_option(stdout, "CalculationMode", calc_mode())
@@ -198,14 +198,14 @@ contains
       call restart_init()
     end if
 
-    call pop_sub('run.run_init')
+    POP_SUB(run_init)
   end subroutine run_init
 
 
   ! ---------------------------------------------------------
   subroutine run_end()
     
-    call push_sub('run.run_end')
+    PUSH_SUB(run_end)
 
     if(.not. calc_mode_is(CM_PULPO_A_FEIRA)) then
       call hamiltonian_end(hm, sys%gr, sys%geo)
@@ -217,7 +217,7 @@ contains
     call mpi_debug_statistics()
 #endif
 
-    call pop_sub('run.run_end')
+    POP_SUB(run_end)
   end subroutine run_end
 
 end module run_m

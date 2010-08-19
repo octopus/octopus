@@ -70,7 +70,7 @@ contains
     integer :: ncols, ipart
     type(block_t) :: blk
 
-    call push_sub('states.modelmb_density_init')
+    PUSH_SUB(modelmb_density_init)
 
     ! the description for this variable is in modelmb_particles.F90
     if(parse_block(datasets_check('DensitiestoCalc'), blk) /= 0) then
@@ -104,7 +104,7 @@ contains
 
     den%dirname = trim(dir)
 
-    call pop_sub('states.modelmb_density_init')
+    POP_SUB(modelmb_density_init)
 
   end subroutine modelmb_density_init
 
@@ -128,7 +128,7 @@ contains
     FLOAT, allocatable :: dipole_moment(:)
 
 ! FIXME: this should be separated into calculating and writing the density
-    call push_sub('states.modelmb_density_write')
+    PUSH_SUB(modelmb_density_write)
 
 
     ! The algorithm should consider how many dimensions the wavefunction has (ndims),
@@ -211,7 +211,7 @@ contains
     SAFE_DEALLOCATE_A(npoints)
     SAFE_DEALLOCATE_A(dipole_moment)
 
-    call pop_sub('states.modelmb_density_write')
+    POP_SUB(modelmb_density_write)
   end subroutine modelmb_density_write
   ! ---------------------------------------------------------
 
@@ -219,22 +219,22 @@ contains
   subroutine modelmb_density_nullify(this)
     type(modelmb_density_t), intent(out) :: this
 
-    call push_sub('states.modelmb_density_nullify')
+    PUSH_SUB(modelmb_density_nullify)
     nullify(this%labels)
     nullify(this%particle_kept)
 
-    call pop_sub('states.modelmb_density_nullify')
+    POP_SUB(modelmb_density_nullify)
   end subroutine modelmb_density_nullify
 
   ! ---------------------------------------------------------
   subroutine modelmb_density_end(this)
     type(modelmb_density_t), intent(inout) :: this
 
-    call push_sub('states.modelmb_density_end')
+    PUSH_SUB(modelmb_density_end)
     SAFE_DEALLOCATE_P(this%labels)
     SAFE_DEALLOCATE_P(this%particle_kept)
 
-    call pop_sub('states.modelmb_density_end')
+    POP_SUB(modelmb_density_end)
   end subroutine modelmb_density_end
 
 #include "undef.F90"

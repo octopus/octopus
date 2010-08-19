@@ -34,7 +34,7 @@ subroutine X(subspace_diag)(der, st, hm, ik, eigenval, psi, diff)
   type(profile_t),     save    :: diagon_prof
   type(batch_t) :: psib, hpsib, whole_psib
 
-  call push_sub('subspace_inc.Xsubspace_diag')
+  PUSH_SUB(X(subspace_diag))
   call profiling_in(diagon_prof, "SUBSPACE_DIAG")
 
 #ifdef HAVE_MPI
@@ -121,7 +121,7 @@ subroutine X(subspace_diag)(der, st, hm, ik, eigenval, psi, diff)
 #endif
 
   call profiling_out(diagon_prof)
-  call pop_sub('subspace_inc.Xsubspace_diag')
+  POP_SUB(X(subspace_diag))
 
 end subroutine X(subspace_diag)
 
@@ -148,7 +148,7 @@ subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
   FLOAT               :: ldiff(st%lnst)
 #endif
 
-  call push_sub('subspace_inc.Xsubspace_diag_par_states')
+  PUSH_SUB(X(subspace_diag_par_states))
 
   SAFE_ALLOCATE(h_subspace(1:st%nst, 1:st%nst))
   SAFE_ALLOCATE(ff(1:der%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
@@ -194,7 +194,7 @@ subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
   SAFE_DEALLOCATE_A(ff)
   SAFE_DEALLOCATE_A(h_subspace)
   
-  call pop_sub('subspace_inc.Xsubspace_diag_par_states')
+  POP_SUB(X(subspace_diag_par_states))
   
 end subroutine X(subspace_diag_par_states) 
 #endif

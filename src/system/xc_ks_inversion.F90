@@ -92,11 +92,11 @@ contains
     type(geometry_t),        intent(inout) :: geo
     type(multicomm_t),       intent(in)    :: mc  
 
-    call push_sub('xc_ks_inversion.xc_ks_inversion_init')
+    PUSH_SUB(xc_ks_inversion_init)
 
     if(iand(family, XC_FAMILY_KS_INVERSION).eq.0) then
       ks_inv%level = XC_KS_INVERSION_NONE
-      call pop_sub('xc_ks_inversion.xc_ks_inversion_init')
+      POP_SUB(xc_ks_inversion_init)
       return
     end if
 
@@ -157,7 +157,7 @@ contains
       call eigensolver_init(ks_inv%eigensolver, gr, ks_inv%aux_st)
     end if
 
-    call pop_sub('xc_ks_inversion.xc_ks_inversion_init')
+    POP_SUB(xc_ks_inversion_init)
   end subroutine xc_ks_inversion_init
 
 
@@ -167,7 +167,7 @@ contains
     type(grid_t),            intent(inout) :: gr
     type(geometry_t),        intent(inout) :: geo
 
-    call push_sub('xc_ks_inversion.xc_ks_inversion_end')
+    PUSH_SUB(xc_ks_inversion_end)
 
     if(ks_inv%level.ne.XC_KS_INVERSION_NONE) then
       ! cleanup
@@ -176,7 +176,7 @@ contains
       call states_end(ks_inv%aux_st)
     end if
 
-    call pop_sub('xc_ks_inversion.xc_ks_inversion_end')
+    POP_SUB(xc_ks_inversion_end)
   end subroutine xc_ks_inversion_end
 
 
@@ -187,10 +187,10 @@ contains
 
     if(ks_inversion%level.eq.XC_KS_INVERSION_NONE) return
 
-    call push_sub('xc_ks_inversion.xc_ks_inversion_write_info')
+    PUSH_SUB(xc_ks_inversion_write_info)
     call messages_print_var_option(iunit, 'KS_Inversion_Level', ks_inversion%level)
 
-    call pop_sub('xc_ks_inversion.xc_ks_inversion_write_info')
+    POP_SUB(xc_ks_inversion_write_info)
   end subroutine xc_ks_inversion_write_info
 
 
@@ -209,7 +209,7 @@ contains
     FLOAT   :: spacing(1:MAX_DIM), stabilizer
     FLOAT, allocatable :: sqrtrho(:,:), laplace(:,:), vks(:,:)
 
-    call push_sub('xc_ks_inversion.invertks_2part')
+    PUSH_SUB(invertks_2part)
     
     call parse_float(datasets_check('InvertKSStabilizer'), M_HALF, stabilizer)
     
@@ -258,7 +258,7 @@ contains
     SAFE_DEALLOCATE_A(laplace)
     SAFE_DEALLOCATE_A(vks)
 
-    call pop_sub('xc_ks_inversion.invertks_2part')
+    POP_SUB(invertks_2part)
   end subroutine invertks_2part
 
 
@@ -278,7 +278,7 @@ contains
 
     character(len=256) :: fname
 
-    call push_sub('xc_ks_inversion.invertks_iter')
+    PUSH_SUB(invertks_iter)
 
     np = gr%mesh%np
 
@@ -366,7 +366,7 @@ contains
 
     SAFE_DEALLOCATE_A(vhxc)
 
-    call pop_sub('xc_ks_inversion.invertks_iter')
+    POP_SUB(invertks_iter)
 
   end subroutine invertks_iter
 
@@ -392,7 +392,7 @@ contains
     type(mix_t) :: smix
     character(len=256) :: fname
 
-    call push_sub('xc_ks_inversion.invertvxc_iter')
+    PUSH_SUB(invertvxc_iter)
     
     !%Variable InvertKSConvAbsDens
     !%Type float
@@ -544,7 +544,7 @@ contains
     SAFE_DEALLOCATE_A(vxc_mix)
     SAFE_DEALLOCATE_A(rho)
     
-    call pop_sub('xc_ks_inversion.invertvxc_iter')
+    POP_SUB(invertvxc_iter)
 
   end subroutine invertvxc_iter
 
@@ -564,7 +564,7 @@ contains
     FLOAT :: eigenvals(1:np), inverseki(1:np,1:np)
     FLOAT, allocatable :: matrixmul(:,:), kired(:,:)
     
-    call push_sub('xc_ks_inversion.precond_kiks')
+    PUSH_SUB(precond_kiks)
 
     numerator = M_ZERO
     vhxc_out = M_ZERO
@@ -638,7 +638,7 @@ contains
     !call flush(200)
 #endif
 
-    call pop_sub('xc_ks_inversion.precond_kiks')
+    POP_SUB(precond_kiks)
   
   end subroutine precond_kiks
 
@@ -658,7 +658,7 @@ contains
 
     if(ks_inversion%level == XC_KS_INVERSION_NONE) return
 
-    call push_sub('xc_ks_inversion_inc.Xxc_ks_inversion_calc')
+    PUSH_SUB(X(xc_ks_inversion_calc))
 
     call states_calc_dens(st, gr)
     
@@ -703,7 +703,7 @@ contains
       hm%vhxc(:,ii) = hm%vhartree(:) + hm%vxc(:,ii)
     enddo
 
-    call pop_sub('xc_ks_inversion_inc.Xxc_ks_inversion_calc')
+    POP_SUB(X(xc_ks_inversion_calc))
 
   end subroutine xc_ks_inversion_calc
 

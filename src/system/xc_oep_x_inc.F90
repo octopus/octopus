@@ -55,7 +55,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
 
   ! Note: we assume that st%occ is known in all nodes
   call profiling_in(C_PROFILING_XC_EXX)
-  call push_sub('xc_oep_x_inc.Xoep_x')
+  PUSH_SUB(X(oep_x))
 
   SAFE_ALLOCATE(F_ij(1:gr%mesh%np))
   SAFE_ALLOCATE(rho_ij(1:gr%mesh%np))
@@ -234,7 +234,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
   SAFE_DEALLOCATE_P(send_buffer)
 
   call profiling_out(C_PROFILING_XC_EXX)
-  call pop_sub('xc_oep_x_inc.Xoep_x')
+  POP_SUB(X(oep_x))
 end subroutine X(oep_x)
 
 !! Local Variables:

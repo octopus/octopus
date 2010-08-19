@@ -37,7 +37,7 @@ subroutine xc_get_fxc(xcs, mesh, rho, ispin, fxc)
 
   if(xcs%kernel_family == XC_FAMILY_NONE) return ! nothing to do
 
-  call push_sub('fxc_inc.xc_get_fxc')
+  PUSH_SUB(xc_get_fxc)
 
   if(ispin == UNPOLARIZED) then
     functl => xcs%kernel(:, 1)
@@ -78,7 +78,7 @@ subroutine xc_get_fxc(xcs, mesh, rho, ispin, fxc)
   ! clean up allocated memory
   call  lda_end()
   
-  call pop_sub('fxc_inc.xc_get_fxc')
+  POP_SUB(xc_get_fxc)
 
 
 contains
@@ -91,7 +91,7 @@ contains
     integer :: is
     FLOAT   :: d(spin_channels)
 
-    call push_sub('fxc_inc.xc_get_fxc.lda_init')
+    PUSH_SUB(xc_get_fxc.lda_init)
 
     is = 1
     if(ispin == SPIN_POLARIZED) is = 3
@@ -119,28 +119,28 @@ contains
       end select
     end do
 
-    call pop_sub('fxc_inc.xc_get_fxc.lda_init')
+    POP_SUB(xc_get_fxc.lda_init)
   end subroutine lda_init
 
 
   ! ---------------------------------------------------------
   ! SAFE_DEALLOCATE_Ps variables allocated in lda_init
   subroutine lda_end()
-    call push_sub('fxc_inc.xc_get_fxc.lda_end')
+    PUSH_SUB(xc_get_fxc.lda_end)
 
     SAFE_DEALLOCATE_A(dens)
     SAFE_DEALLOCATE_A(dedd)
     SAFE_DEALLOCATE_A(l_dens)
     SAFE_DEALLOCATE_A(l_dedd)
 
-    call pop_sub('fxc_inc.xc_get_fxc.lda_end')
+    POP_SUB(xc_get_fxc.lda_end)
   end subroutine lda_end
 
 
   ! ---------------------------------------------------------
   ! calculates the LDA part of vxc, taking into account non-collinear spin
   subroutine lda_process()
-    call push_sub('fxc_inc.xc_get_fxc.lda_process')
+    PUSH_SUB(xc_get_fxc.lda_process)
 
     select case(ispin)
     case(UNPOLARIZED)
@@ -155,7 +155,7 @@ contains
       call write_fatal(1)
     end select
 
-    call pop_sub('fxc_inc.xc_get_fxc.lda_process')
+    POP_SUB(xc_get_fxc.lda_process)
   end subroutine lda_process
 
 end subroutine xc_get_fxc

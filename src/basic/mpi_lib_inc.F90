@@ -33,7 +33,7 @@ subroutine X(lmpi_gen_allgatherv)(incount, in, outcount, out, mpi_grp)
   integer              :: mpi_err, inode
   integer, allocatable :: rdispls(:), recvbuf(:), recvcnts(:)
 
-  call push_sub('mpi_lib_inc.Xlmpi_gen_allgatherv')
+  PUSH_SUB(X(lmpi_gen_allgatherv))
 
   SAFE_ALLOCATE( rdispls(1:mpi_grp%size))
   SAFE_ALLOCATE( recvbuf(1:mpi_grp%size))
@@ -65,7 +65,7 @@ subroutine X(lmpi_gen_allgatherv)(incount, in, outcount, out, mpi_grp)
   SAFE_DEALLOCATE_A(recvbuf)
   SAFE_DEALLOCATE_A(recvcnts)
 
-  call pop_sub('mpi_lib_inc.Xlmpi_gen_allgatherv')
+  POP_SUB(X(lmpi_gen_allgatherv))
 end subroutine X(lmpi_gen_allgatherv)
 
 

@@ -31,7 +31,7 @@ subroutine X(vlaser_operator_quadratic) (laser, der, std, psi, hpsi)
   FLOAT :: a_field(1:MAX_DIM), a_field_prime(1:MAX_DIM), bb(1:MAX_DIM), b_prime(1:MAX_DIM)
   FLOAT, allocatable :: aa(:, :), a_prime(:, :)
 
-  call push_sub('lasers_inc.Xvlaser_operator_quadratic')
+  PUSH_SUB(X(vlaser_operator_quadratic))
 
   a_field = M_ZERO
 
@@ -76,7 +76,7 @@ subroutine X(vlaser_operator_quadratic) (laser, der, std, psi, hpsi)
     end do
   end if
 
-  call pop_sub('lasers_inc.Xvlaser_operator_quadratic')
+  POP_SUB(X(vlaser_operator_quadratic))
 end subroutine X(vlaser_operator_quadratic)
 
 ! ---------------------------------------------------------
@@ -98,7 +98,7 @@ subroutine X(vlaser_operator_linear) (laser, der, std, psi, hpsi, ik, gyromagnet
 
   FLOAT, allocatable :: vv(:), pot(:), aa(:, :), a_prime(:, :)
 
-  call push_sub('lasers_inc.Xvlaser_operator_linear')
+  PUSH_SUB(X(vlaser_operator_linear))
 
   a_field = M_ZERO
 
@@ -241,7 +241,7 @@ subroutine X(vlaser_operator_linear) (laser, der, std, psi, hpsi, ik, gyromagnet
     SAFE_DEALLOCATE_A(grad)
   end if
 
-  call pop_sub('lasers_inc.Xvlaser_operator_linear')
+  POP_SUB(X(vlaser_operator_linear))
 end subroutine X(vlaser_operator_linear)
 
 !! Local Variables:

@@ -32,7 +32,7 @@
     FLOAT, allocatable :: dtmp(:), elf(:,:)
     FLOAT, allocatable :: current(:, :, :)
 
-    call push_sub('output_states_inc.h_sys_output_states')
+    PUSH_SUB(h_sys_output_states)
 
     if(iand(outp%what, output_density) .ne. 0) then
       fn_unit = units_out%length**(-gr%mesh%sb%dim)
@@ -188,7 +188,7 @@
       call h_sys_output_modelmb (trim(dir), gr, st, geo, outp)
     end if
 
-    call pop_sub('output_states_inc.h_sys_output_states')
+    POP_SUB(h_sys_output_states)
 
   end subroutine h_sys_output_states
 
@@ -214,7 +214,7 @@
     type(modelmb_denmat_t) :: denmat
     type(modelmb_density_t) :: den
 
-    call push_sub('output_states_inc.h_sys_output_modelmb')
+    PUSH_SUB(h_sys_output_modelmb)
 
     impose_exch_symmetry = .true.
 
@@ -298,7 +298,7 @@
       call modelmb_density_end (den)
     end if
  
-    call pop_sub('output_states_inc.h_sys_output_modelmb')
+    POP_SUB(h_sys_output_modelmb)
 
   end subroutine h_sys_output_modelmb
 
@@ -315,10 +315,10 @@
     FLOAT   :: flow, dmin
     FLOAT, allocatable :: j(:, :, :)
 
-    call push_sub('output_states_inc.h_sys_output_current_flow')
+    PUSH_SUB(h_sys_output_current_flow)
 
     if(iand(outp%what, output_j_flow) == 0) then
-      call pop_sub('output_states_inc.h_sys_output_current_flow')
+      POP_SUB(h_sys_output_current_flow)
       return
     end if
 
@@ -382,7 +382,7 @@
       call io_close(iunit)
     end if
 
-    call pop_sub('output_states_inc.h_sys_output_current_flow')
+    POP_SUB(h_sys_output_current_flow)
   end subroutine h_sys_output_current_flow
 
 !! Local Variables:

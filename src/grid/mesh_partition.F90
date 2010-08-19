@@ -105,7 +105,7 @@ contains
     integer :: default
 
     call profiling_in(prof, "MESH_PARTITION")
-    call push_sub('mesh_partition.mesh_partition')
+    PUSH_SUB(mesh_partition)
 
     if(mesh%np_global == 0) then
       message(1) = 'The mesh is empty and cannot be partitioned.'
@@ -361,7 +361,7 @@ contains
     ASSERT(all(part(1:mesh%np_global) <= npart))
 
     call stencil_end(stencil)
-    call pop_sub('mesh_partition.mesh_partition')
+    POP_SUB(mesh_partition)
     call profiling_out(prof)
 
   end subroutine mesh_partition
@@ -380,7 +380,7 @@ contains
     logical, allocatable :: winner(:)
     integer :: ip, maxvotes
 
-    call push_sub('mesh_partition.mesh_partition_boundaries')
+    PUSH_SUB(mesh_partition_boundaries)
 
     npart = mesh%mpi_grp%size
 
@@ -417,7 +417,7 @@ contains
     SAFE_DEALLOCATE_A(bps)
     SAFE_DEALLOCATE_A(winner)
 
-    call pop_sub('mesh_partition.mesh_partition_boundaries')
+    POP_SUB(mesh_partition_boundaries)
   end subroutine mesh_partition_boundaries
 
   ! ----------------------------------------------------
@@ -429,7 +429,7 @@ contains
     character(len=6) :: numstring
     integer          :: ierr
 
-    call push_sub('mesh_partition.mesh_partition_write')
+    PUSH_SUB(mesh_partition_write)
 
     ! here we assume that all nodes have the same partition
     if(mpi_grp_is_root(mpi_world)) then
@@ -442,7 +442,7 @@ contains
       call io_binary_write('restart/partition/partition_'//trim(numstring)//'.obf', mesh%np_part_global, part, ierr)
     end if
 
-    call pop_sub('mesh_partition.mesh_partition_write')
+    POP_SUB(mesh_partition_write)
   end subroutine mesh_partition_write
 
   ! ----------------------------------------------------
@@ -455,7 +455,7 @@ contains
     character(len=6) :: numstring
     integer :: read_np_part
 
-    call push_sub('mesh_partition.mesh_partition_read')
+    PUSH_SUB(mesh_partition_read)
 
     if(mpi_grp_is_root(mesh%mpi_grp)) then
 
@@ -483,7 +483,7 @@ contains
     if (ierr == 0) call MPI_Bcast(part(1), mesh%np_part_global, MPI_INTEGER, 0, mesh%mpi_grp%comm, mpi_err)
 #endif
 
-    call pop_sub('mesh_partition.mesh_partition_read')
+    POP_SUB(mesh_partition_read)
 
   end subroutine mesh_partition_read
 
@@ -498,7 +498,7 @@ contains
     integer              :: iunit          ! For debug output to files.
     character(len=3)     :: filenum
 
-    call push_sub('mesh_partition.mesh_partition_write_debug')
+    PUSH_SUB(mesh_partition_write_debug)
 
     if(in_debug_mode .and. mpi_grp_is_root(mpi_world)) then
 
@@ -540,7 +540,7 @@ contains
     call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
 #endif
 
-    call pop_sub('mesh_partition.mesh_partition_write_debug')
+    POP_SUB(mesh_partition_write_debug)
 
   end subroutine mesh_partition_write_debug
 

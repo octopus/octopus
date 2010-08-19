@@ -34,7 +34,7 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
   FLOAT, allocatable :: eig(:)
   type(exponential_t) :: te
 
-  call push_sub('eigen_evolution.Xeigensolver_evolution')
+  PUSH_SUB(X(eigensolver_evolution))
 
   maxiter = niter
   matvec = 0
@@ -104,7 +104,7 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
   SAFE_DEALLOCATE_A(eig)
   SAFE_DEALLOCATE_A(phi)
 
-  call pop_sub('eigen_evolution.Xeigensolver_evolution')
+  POP_SUB(X(eigensolver_evolution))
 contains
 
   ! ---------------------------------------------------------
@@ -113,7 +113,7 @@ contains
     integer,        intent(out)   :: order
     CMPLX,          pointer       :: zpsi(:, :)
 
-    call push_sub('eigen_evolution.Xeigensolver_evolution.exponentiate')
+    PUSH_SUB(X(eigensolver_evolution).exponentiate)
 
 #if defined(R_TREAL)
     SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:st%d%dim))
@@ -129,7 +129,7 @@ contains
     nullify(zpsi)
 #endif
 
-    call pop_sub('eigen_evolution.Xeigensolver_evolution.exponentiate')
+    POP_SUB(X(eigensolver_evolution).exponentiate)
   end subroutine exponentiate
 
 end subroutine X(eigensolver_evolution)

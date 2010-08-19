@@ -72,7 +72,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge, ob_grid)
   FLOAT   :: x(MAX_DIM), chi(MAX_DIM)
   logical :: out
 
-  call push_sub('mesh_init.mesh_init_stage_1')
+  PUSH_SUB(mesh_init_stage_1)
   call profiling_in(mesh_init_prof, "MESH_INIT")
 
   mesh%sb => sb     ! keep an internal pointer
@@ -138,7 +138,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge, ob_grid)
   mesh%idx%ll(:) = mesh%idx%nr(2, :) - mesh%idx%nr(1, :) + 1
 
   call profiling_out(mesh_init_prof)
-  call pop_sub('mesh_init.mesh_init_stage_1')
+  POP_SUB(mesh_init_stage_1)
 
 contains
 
@@ -149,7 +149,7 @@ contains
     type(mesh_t), pointer :: mm
     integer :: nr(1:2, 1:MAX_DIM)
 
-    call push_sub('mesh_init.mesh_init_stage_1.mesh_read_lead')
+    PUSH_SUB(mesh_init_stage_1.mesh_read_lead)
 
     do il = 1, NLEADS
       mm => ob_grid%lead(il)%mesh
@@ -166,7 +166,7 @@ contains
       call mesh_lxyz_init_from_file(mm, trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR//'lxyz')
     end do
 
-    call pop_sub('mesh_init.mesh_init_stage_1.mesh_read_lead')
+    POP_SUB(mesh_init_stage_1.mesh_read_lead)
   end subroutine mesh_read_lead
 end subroutine mesh_init_stage_1
 
@@ -188,7 +188,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   FLOAT,   allocatable :: xx(:, :)
   real(8), parameter :: DELTA = CNST(1e-12)
 
-  call push_sub('mesh_init.mesh_init_stage_2')
+  PUSH_SUB(mesh_init_stage_2)
   call profiling_in(mesh_init_prof)
 
   ! enlarge mesh for boundary points
@@ -442,7 +442,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
 999 continue
 
   call profiling_out(mesh_init_prof)
-  call pop_sub('mesh_init.mesh_init_stage_2')
+  POP_SUB(mesh_init_stage_2)
 end subroutine mesh_init_stage_2
 
 
@@ -460,7 +460,7 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
 
   integer :: ip
 
-  call push_sub('mesh_init.mesh_init_stage_3')
+  PUSH_SUB(mesh_init_stage_3)
   call profiling_in(mesh_init_prof)
 
   ! check if we are running in parallel in domains
@@ -501,7 +501,7 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
   call mesh_get_vol_pp(mesh%sb)
 
   call profiling_out(mesh_init_prof)
-  call pop_sub('mesh_init.mesh_init_stage_3')
+  POP_SUB(mesh_init_stage_3)
 
 contains
 
@@ -512,7 +512,7 @@ contains
     type(block_t) :: blk
     FLOAT :: chi(1:MAX_DIM)
 
-    call push_sub('mesh_init.mesh_init_stage_3.create_x_Lxyz')
+    PUSH_SUB(mesh_init_stage_3.create_x_Lxyz)
 
     SAFE_ALLOCATE(mesh%idx%Lxyz(1:mesh%np_part_global, 1:MAX_DIM))
 
@@ -603,7 +603,7 @@ contains
     ASSERT(iin == mesh%np_global)
     ASSERT(ien == mesh%np_part_global)
     
-    call pop_sub('mesh_init.mesh_init_stage_3.create_x_Lxyz')
+    POP_SUB(mesh_init_stage_3.create_x_Lxyz)
   end subroutine create_x_Lxyz
 
 
@@ -621,7 +621,7 @@ contains
 
     logical :: from_scratch
 
-    call push_sub('mesh_init.mesh_init_stage_3.do_partition')
+    PUSH_SUB(mesh_init_stage_3.do_partition)
 
     mesh%mpi_grp = mpi_grp
 
@@ -774,7 +774,7 @@ contains
     end do
 #endif
 
-    call pop_sub('mesh_init.mesh_init_stage_3.do_partition')
+    POP_SUB(mesh_init_stage_3.do_partition)
   end subroutine do_partition
 
 
@@ -796,7 +796,7 @@ contains
     integer :: k
 #endif
 
-    call push_sub('mesh_init.mesh_init_stage_3.mesh_get_vol_pp')
+    PUSH_SUB(mesh_init_stage_3.mesh_get_vol_pp)
 
     np = 1
     if(mesh%use_curvilinear) np = mesh%np_part
@@ -953,7 +953,7 @@ contains
       end if
     end if
 
-    call pop_sub('mesh_init.mesh_init_stage_3.mesh_get_vol_pp')
+    POP_SUB(mesh_init_stage_3.mesh_get_vol_pp)
 
   end subroutine mesh_get_vol_pp
 

@@ -107,7 +107,7 @@ contains
 	   					!! 1 = domain_nodes
 	   					!! +2 number specified. A new communicator will be created for that
 
-    call push_sub('poisson_isf.poisson_isf_init')
+    PUSH_SUB(poisson_isf_init)
 
 #ifdef HAVE_MPI
     init_world_ = .true.
@@ -210,7 +210,7 @@ contains
     end do
 #endif
 
-    call pop_sub('poisson_isf.poisson_isf_init')
+    POP_SUB(poisson_isf_init)
   end subroutine poisson_isf_init
 
   ! ---------------------------------------------------------
@@ -232,7 +232,7 @@ contains
     !integer :: count1,count2,count_rate,count_max
     !integer :: sec1,sec2,usec1,usec2,sec1_t,sec2_t,usec1_t,usec2_t
 
-    call push_sub('poisson_isf.poisson_isf_solve')
+    PUSH_SUB(poisson_isf_solve)
     !call loct_gettimeofday(sec1_t,usec1_t)
 
     call dcf_alloc_RS(rho_cf)
@@ -327,7 +327,7 @@ contains
     !call loct_gettimeofday(sec2_t,usec2_t)
     !call time_diff(sec1_t,usec1_t,sec2_t,usec2_t)
     !write(78,*) 'PoissonTime: iteration POISSON TIME',sec2_t,'us',usec2_t
-    call pop_sub('poisson_isf.poisson_isf_solve')
+    POP_SUB(poisson_isf_solve)
   end subroutine poisson_isf_solve
 
   ! ---------------------------------------------------------
@@ -336,7 +336,7 @@ contains
     integer :: i_cnf
 #endif
 
-    call push_sub('poisson_isf.poisson_isf_end')
+    PUSH_SUB(poisson_isf_end)
 
 #if defined(HAVE_MPI)
     do i_cnf = 1, n_cnf
@@ -348,7 +348,7 @@ contains
 
     call dcf_free(rho_cf)
 
-    call pop_sub('poisson_isf.poisson_isf_end')
+    POP_SUB(poisson_isf_end)
   end subroutine poisson_isf_end
 
 end module poisson_isf_m

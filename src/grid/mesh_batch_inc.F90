@@ -36,7 +36,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   type(profile_t), save :: prof, profgemm, profcomm
   logical :: use_blas, reduce_
 
-  call push_sub('mesh_batch_inc.Xmesh_batch_dotp_matrix')
+  PUSH_SUB(X(mesh_batch_dotp_matrix))
   call profiling_in(prof, "DOTP_BATCH")
 
 #ifdef HAVE_MPI
@@ -126,7 +126,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   SAFE_DEALLOCATE_A(dd)
 
   call profiling_out(prof)
-  call pop_sub('mesh_batch_inc.Xmesh_batch_dotp_matrix')
+  POP_SUB(X(mesh_batch_dotp_matrix))
 end subroutine X(mesh_batch_dotp_matrix)
 
 !-----------------------------------------------------------------
@@ -145,7 +145,7 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   type(profile_t), save :: prof, profgemm, profcomm
   logical :: use_blas, reduce_
 
-  call push_sub('mesh_batch_inc.Xmesh_batch_dotp_self')
+  PUSH_SUB(X(mesh_batch_dotp_self))
   call profiling_in(prof, "BATCH_DOTP_SELF")
 
   ! some limitations of the current implementation
@@ -237,7 +237,7 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
 #endif
 
   call profiling_out(prof)
-  call pop_sub('mesh_batch_inc.Xmesh_batch_dotp_self')
+  POP_SUB(X(mesh_batch_dotp_self))
 end subroutine X(mesh_batch_dotp_self)
 
 !-----------------------------------------------------------------
@@ -331,7 +331,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce)
 #endif
   type(profile_t), save :: prof, profcomm
 
-  call push_sub('mesh_batch_inc.Xmesh_batch_dotp_vector')
+  PUSH_SUB(X(mesh_batch_dotp_vector))
   call profiling_in(prof, "DOTPV_BATCH")
 
 #ifdef HAVE_MPI
@@ -358,7 +358,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce)
 #endif
 
   call profiling_out(prof)
-  call pop_sub('mesh_batch_inc.Xmesh_batch_dotp_vector')
+  POP_SUB(X(mesh_batch_dotp_vector))
 end subroutine X(mesh_batch_dotp_vector)
 
 !! Local Variables:

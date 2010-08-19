@@ -84,7 +84,7 @@ contains
 
     CMPLX, allocatable :: gpsi(:,:), gdl_psi(:,:), gdl_psi_m(:,:)
 
-    call push_sub('em_resp_calc.lr_calc_current')
+    PUSH_SUB(lr_calc_current)
 
     if(.not. associated(lr%dl_j)) then
       SAFE_ALLOCATE(lr%dl_j(1:gr%mesh%np, 1:MAX_DIM, 1:st%d%nspin))
@@ -147,7 +147,7 @@ contains
       SAFE_DEALLOCATE_A(gdl_psi_m)
     end if
 
-    call pop_sub('em_resp_calc.lr_calc_current')
+    POP_SUB(lr_calc_current)
 
   end subroutine lr_calc_current
 
@@ -156,7 +156,7 @@ contains
   character(len=12) function freq2str(freq) result(str)
     FLOAT, intent(in) :: freq
 
-    call push_sub('em_resp_calc.freq2str')
+    PUSH_SUB(freq2str)
 
     ! some compilers (xlf) do not put a leading zero when the number
     ! is smaller than 1. We have to check and correct that behavior.
@@ -169,7 +169,7 @@ contains
     end if
     str = trim(adjustl(str))
 
-    call pop_sub('em_resp_calc.freq2str')
+    POP_SUB(freq2str)
 
   end function freq2str
 
@@ -183,12 +183,12 @@ contains
 
     !this function has to be consistent with oct_search_file_lr in liboct/oct_f.c
 
-    call push_sub('em_resp_calc.em_rho_tag')
+    PUSH_SUB(em_rho_tag)
 
     str_tmp = freq2str(freq)
     write(str, '(3a,i1)') 'rho_', trim(str_tmp), '_', dir
 
-    call pop_sub('em_resp_calc.em_rho_tag')
+    POP_SUB(em_rho_tag)
 
   end function em_rho_tag
   
@@ -197,11 +197,11 @@ contains
   character(len=100) function em_wfs_tag(idir, ifactor) result(str)
     integer, intent(in) :: idir, ifactor
 
-    call push_sub('em_resp_calc.em_wfs_tag')
+    PUSH_SUB(em_wfs_tag)
 
     write(str, '(3a,i1)') "wfs_", index2axis(idir), "_f", ifactor
 
-    call pop_sub('em_resp_calc.em_wfs_tag')
+    POP_SUB(em_wfs_tag)
 
   end function em_wfs_tag
   

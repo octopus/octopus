@@ -31,7 +31,7 @@ subroutine xc_get_kxc(xcs, mesh, rho, ispin, kxc)
   integer :: i, ixc, spin_channels
   type(xc_functl_t), pointer :: functl(:)
 
-  call push_sub('kxc_inc.xc_get_kxc')
+  PUSH_SUB(xc_get_kxc)
 
   if(ispin == UNPOLARIZED) then
     functl => xcs%kernel(:, 1)
@@ -46,7 +46,7 @@ subroutine xc_get_kxc(xcs, mesh, rho, ispin, kxc)
   end if
 
   if(xcs%kernel_family == XC_FAMILY_NONE) then
-    call pop_sub('kxc_inc.xc_get_kxc')
+    POP_SUB(xc_get_kxc)
     return
   endif
 
@@ -84,7 +84,7 @@ subroutine xc_get_kxc(xcs, mesh, rho, ispin, kxc)
   ! clean up allocated memory
   call lda_end()
 
-  call pop_sub('kxc_inc.xc_get_kxc')
+  POP_SUB(xc_get_kxc)
 
 contains
 
@@ -96,7 +96,7 @@ contains
     integer :: i
     FLOAT   :: d(spin_channels)
 
-    call push_sub('kxc_inc.xc_get_kxc.lda_init')
+    PUSH_SUB(xc_get_kxc.lda_init)
 
     ! allocate some general arrays
     SAFE_ALLOCATE(  dens(1:mesh%np, 1:spin_channels))
@@ -121,21 +121,21 @@ contains
       end select
     end do
 
-    call pop_sub('kxc_inc.xc_get_kxc.lda_init')
+    POP_SUB(xc_get_kxc.lda_init)
   end subroutine lda_init
 
 
   ! ---------------------------------------------------------
   ! SAFE_DEALLOCATE_Ps variables allocated in lda_init
   subroutine lda_end()
-    call push_sub('kxc_inc.xc_get_kxc.lda_end')
+    PUSH_SUB(xc_get_kxc.lda_end)
 
     SAFE_DEALLOCATE_A(dens)
     SAFE_DEALLOCATE_A(dedd)
     SAFE_DEALLOCATE_A(l_dens)
     SAFE_DEALLOCATE_A(l_dedd)
 
-    call pop_sub('kxc_inc.xc_get_kxc.lda_end')
+    POP_SUB(xc_get_kxc.lda_end)
   end subroutine lda_end
 
 
@@ -144,7 +144,7 @@ contains
   subroutine lda_process()
     integer :: i
 
-    call push_sub('kxc_inc.xc_get_kxc.lda_process')
+    PUSH_SUB(xc_get_kxc.lda_process)
 
     forall(i = 1:mesh%np) kxc(i,1,1,1) = kxc(i,1,1,1) + dedd(i,1)
 
@@ -160,7 +160,7 @@ contains
       end forall
     end if
 
-    call pop_sub('kxc_inc.xc_get_kxc.lda_process')
+    POP_SUB(xc_get_kxc.lda_process)
   end subroutine lda_process
 
 end subroutine xc_get_kxc

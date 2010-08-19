@@ -36,7 +36,7 @@ subroutine X(preconditioner_apply)(pre, gr, hm, ik, a, b, omega)
 #endif
 
   call profiling_in(preconditioner_prof, "PRECONDITIONER")
-  call push_sub('preconditioners_inc.Xpreconditioner_apply')
+  PUSH_SUB(X(preconditioner_apply))
 
   omega_ = M_ZERO
   if(present(omega)) omega_ = omega
@@ -85,7 +85,7 @@ subroutine X(preconditioner_apply)(pre, gr, hm, ik, a, b, omega)
 
   end select
 
-  call pop_sub('preconditioners_inc.Xpreconditioner_apply')
+  POP_SUB(X(preconditioner_apply))
   call profiling_out(preconditioner_prof)
 contains
 
@@ -95,7 +95,7 @@ contains
 
     FLOAT, allocatable :: diag(:)
 
-    call push_sub('preconditioners_inc.Xpreconditioner_apply.apply_D_inverse')
+    PUSH_SUB(X(preconditioner_apply).apply_D_inverse)
 
     SAFE_ALLOCATE(diag(1:gr%mesh%np))
 
@@ -106,7 +106,7 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(diag)
-    call pop_sub('preconditioners_inc.Xpreconditioner_apply.apply_D_inverse')
+    POP_SUB(X(preconditioner_apply).apply_D_inverse)
   end subroutine apply_D_inverse
 
   ! -----------------------------------------------------
@@ -121,7 +121,7 @@ contains
     type(mesh_t), pointer :: mesh0, mesh1, mesh2
     integer :: idim, ip
 
-    call push_sub('preconditioners_inc.Xpreconditioner_apply.multigrid')
+    PUSH_SUB(X(preconditioner_apply).multigrid)
     
     mesh0 => gr%mgrid%level(0)%mesh
     mesh1 => gr%mgrid%level(1)%mesh
@@ -213,7 +213,7 @@ contains
 
     end do
 
-    call pop_sub('preconditioners_inc.Xpreconditioner_apply.multigrid')
+    POP_SUB(X(preconditioner_apply).multigrid)
   end subroutine multigrid
 
 
@@ -230,7 +230,7 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, ik, aa, bb, omega)
 
   integer :: ii
 
-  call push_sub('preconditioners_inc.Xpreconditioner_apply_batch')
+  PUSH_SUB(X(preconditioner_apply_batch))
 
   if(pre%which == PRE_FILTER .and. .not. associated(hm%phase)) then
     call X(derivatives_batch_perform)(pre%op, gr%der, aa, bb)
@@ -240,7 +240,7 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, ik, aa, bb, omega)
     end do
   end if
 
-  call pop_sub('preconditioners_inc.Xpreconditioner_apply_batch')
+  POP_SUB(X(preconditioner_apply_batch))
 end subroutine X(preconditioner_apply_batch)
 !! Local Variables:
 !! mode: f90

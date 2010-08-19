@@ -110,7 +110,7 @@ contains
     integer, allocatable :: jxyz_inv(:)
     integer :: nmax(1:MAX_DIM), nmin(1:MAX_DIM)
 
-    call push_sub('submesh.submesh_init_sphere')
+    PUSH_SUB(submesh_init_sphere)
     call profiling_in(submesh_init_prof, "SUBMESH_INIT")
 
     this%np_part = mesh%np_part
@@ -252,13 +252,13 @@ contains
     this%has_points = (this%ns > 0)
 
     call profiling_out(submesh_init_prof)
-    call pop_sub('submesh.submesh_init_sphere')
+    POP_SUB(submesh_init_sphere)
   end subroutine submesh_init_sphere
 
   subroutine submesh_end(this)
     type(submesh_t),   intent(inout)  :: this
     
-    call push_sub('submesh.submesh_end')
+    PUSH_SUB(submesh_end)
 
     if( this%ns /= -1 ) then
       nullify(this%mesh)
@@ -267,7 +267,7 @@ contains
       SAFE_DEALLOCATE_P(this%x)
     end if
 
-    call pop_sub('submesh.submesh_end')
+    POP_SUB(submesh_end)
 
   end subroutine submesh_end
 
@@ -275,7 +275,7 @@ contains
     type(submesh_t), target,  intent(in)   :: sm_in
     type(submesh_t),          intent(out)  :: sm_out
 
-    call push_sub('submesh.submesh_copy')
+    PUSH_SUB(submesh_copy)
     
     ASSERT(sm_out%ns == -1)
 
@@ -294,7 +294,7 @@ contains
     sm_out%jxyz(1:sm_out%ns_part) = sm_in%jxyz(1:sm_in%ns_part)
     sm_out%x(1:sm_out%ns_part, 0:MAX_DIM) = sm_in%x(1:sm_in%ns_part, 0:MAX_DIM)
 
-    call pop_sub('submesh.submesh_copy')
+    POP_SUB(submesh_copy)
 
   end subroutine submesh_copy
 
@@ -304,12 +304,12 @@ contains
 
     integer :: is
 
-    call push_sub('submesh.submesh_get_inv')
+    PUSH_SUB(submesh_get_inv)
     
     jxyz_inv(1:this%np_part) = 0
     forall (is = 1:this%ns) jxyz_inv(this%jxyz(is)) = is
 
-    call pop_sub('submesh.submesh_get_inv')
+    POP_SUB(submesh_get_inv)
   end subroutine submesh_get_inv
 
   ! --------------------------------------------------------------

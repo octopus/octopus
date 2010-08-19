@@ -205,7 +205,7 @@ contains
     integer :: ncols
     type(block_t) :: blk
 
-    call push_sub('hamiltonian.hamiltonian_init')
+    PUSH_SUB(hamiltonian_init)
 
     states_dim => st%d
 
@@ -421,7 +421,7 @@ contains
     !%End
     call parse_logical(datasets_check('StatesPack'), .true., hm%apply_packed)
 
-    call pop_sub('hamiltonian.hamiltonian_init')
+    POP_SUB(hamiltonian_init)
 
   contains
 
@@ -430,7 +430,7 @@ contains
       integer :: ip, ik
       FLOAT   :: kpoint(1:MAX_DIM)
 
-      call push_sub('hamiltonian.hamiltonian_init.init_phase')
+      PUSH_SUB(hamiltonian_init.init_phase)
       
       SAFE_ALLOCATE(hm%phase(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
 
@@ -442,7 +442,7 @@ contains
         end forall
       end do
 
-      call pop_sub('hamiltonian.hamiltonian_init.init_phase')
+      POP_SUB(hamiltonian_init.init_phase)
     end subroutine init_phase
 
 
@@ -451,7 +451,7 @@ contains
       FLOAT :: dd
       integer :: ip
 
-      call push_sub('hamiltonian.hamiltonian_init.init_abs_boundaries')
+      PUSH_SUB(hamiltonian_init.init_abs_boundaries)
 
       !%Variable ABWidth
       !%Type float
@@ -484,7 +484,7 @@ contains
         end if
       end do
 
-      call pop_sub('hamiltonian.hamiltonian_init.init_abs_boundaries')
+      POP_SUB(hamiltonian_init.init_abs_boundaries)
     end subroutine init_abs_boundaries
 
 
@@ -499,7 +499,7 @@ contains
       type(mesh_t), pointer :: mesh
       logical               :: t_inv
 
-      call push_sub('hamiltonian.hamiltonian_init.init_lead_h')
+      PUSH_SUB(hamiltonian_init.init_lead_h)
 
       ! Read potential of the leads. We try vks-x (for DFT without
       ! pseudopotentials) and v0 (for non-interacting electrons) in
@@ -701,7 +701,7 @@ contains
         end if
       end do
 
-      call pop_sub('hamiltonian.hamiltonian_init.init_lead_h')
+      POP_SUB(hamiltonian_init.init_lead_h)
     end subroutine init_lead_h
   end subroutine hamiltonian_init
 
@@ -713,7 +713,7 @@ contains
 
     integer :: il
 
-    call push_sub('hamiltonian.hamiltonian_end')
+    PUSH_SUB(hamiltonian_end)
 
     call hamiltonian_base_end(hm%hm_base)
 
@@ -742,7 +742,7 @@ contains
     call states_dim_end(hm%d)
     call states_end(hm%st)
 
-    call pop_sub('hamiltonian.hamiltonian_end')
+    POP_SUB(hamiltonian_end)
   end subroutine hamiltonian_end
 
 
@@ -751,10 +751,10 @@ contains
   logical function hamiltonian_hermitian(hm)
     type(hamiltonian_t), intent(in) :: hm
 
-    call push_sub('hamiltonian.hamiltonian_hermitian')
+    PUSH_SUB(hamiltonian_hermitian)
     hamiltonian_hermitian = .not.((hm%ab .eq. IMAGINARY_ABSORBING) .or. hamiltonian_oct_exchange(hm))
 
-    call pop_sub('hamiltonian.hamiltonian_hermitian')
+    POP_SUB(hamiltonian_hermitian)
   end function hamiltonian_hermitian
 
 
@@ -763,12 +763,12 @@ contains
     type(hamiltonian_t), intent(inout) :: hm
     FLOAT,               intent(in)    :: delta, emin
 
-    call push_sub('hamiltonian.hamiltonian_span')
+    PUSH_SUB(hamiltonian_span)
 
     hm%spectral_middle_point = ((M_PI**2 / (2 * delta**2)) + emin) / M_TWO
     hm%spectral_half_span    = ((M_PI**2 / (2 * delta**2)) - emin) / M_TWO
 
-    call pop_sub('hamiltonian.hamiltonian_span')
+    POP_SUB(hamiltonian_span)
   end subroutine hamiltonian_span
 
 
@@ -785,13 +785,13 @@ contains
     type(hamiltonian_t), intent(inout) :: hm
     type(states_t), target, intent(in) :: st
 
-    call push_sub('hamiltonian.hamiltonian_set_inh')
+    PUSH_SUB(hamiltonian_set_inh)
 
     if(hm%inh_term) call states_end(hm%inh_st)
     call states_copy(hm%inh_st, st)
     hm%inh_term = .true.
 
-    call pop_sub('hamiltonian.hamiltonian_set_inh')
+    POP_SUB(hamiltonian_set_inh)
   end subroutine hamiltonian_set_inh
 
 
@@ -799,14 +799,14 @@ contains
   subroutine hamiltonian_remove_inh(hm)
     type(hamiltonian_t), intent(inout) :: hm
 
-    call push_sub('hamiltonian.hamiltonian_remove_inh')
+    PUSH_SUB(hamiltonian_remove_inh)
 
     if(hm%inh_term) then
       call states_end(hm%inh_st)
       hm%inh_term = .false.
     end if
 
-    call pop_sub('hamiltonian.hamiltonian_remove_inh')
+    POP_SUB(hamiltonian_remove_inh)
   end subroutine hamiltonian_remove_inh
 
 
@@ -814,10 +814,10 @@ contains
   logical function hamiltonian_oct_exchange(hm) result(oct_exchange)
     type(hamiltonian_t), intent(in) :: hm
 
-    call push_sub('hamiltonian.hamiltonian_oct_exchange')
+    PUSH_SUB(hamiltonian_oct_exchange)
     oct_exchange = hm%oct_exchange
 
-    call pop_sub('hamiltonian.hamiltonian_oct_exchange')
+    POP_SUB(hamiltonian_oct_exchange)
   end function hamiltonian_oct_exchange
 
 
@@ -830,7 +830,7 @@ contains
 
     integer :: np, nspin
 
-    call push_sub('hamiltonian.hamiltonian_set_oct_exchange')
+    PUSH_SUB(hamiltonian_set_oct_exchange)
 
     ! In this release, no non-local part for the QOCT Hamiltonian.
     nullify(hm%oct_st)
@@ -844,7 +844,7 @@ contains
     hm%oct_fxc = M_ZERO
     call xc_get_fxc(xc, gr%mesh, st%rho, st%d%ispin, hm%oct_fxc)
 
-    call pop_sub('hamiltonian.hamiltonian_set_oct_exchange')
+    POP_SUB(hamiltonian_set_oct_exchange)
   end subroutine hamiltonian_set_oct_exchange
 
 
@@ -852,13 +852,13 @@ contains
   subroutine hamiltonian_remove_oct_exchange(hm)
     type(hamiltonian_t), intent(inout) :: hm
 
-    call push_sub('hamiltonian.hamiltonian_remove_oct_exchange')
+    PUSH_SUB(hamiltonian_remove_oct_exchange)
 
     nullify(hm%oct_st)
     hm%oct_exchange = .false.
     SAFE_DEALLOCATE_P(hm%oct_fxc)
 
-    call pop_sub('hamiltonian.hamiltonian_remove_oct_exchange')
+    POP_SUB(hamiltonian_remove_oct_exchange)
   end subroutine hamiltonian_remove_oct_exchange
 
 
@@ -866,7 +866,7 @@ contains
   subroutine hamiltonian_adjoint(hm)
     type(hamiltonian_t), intent(inout) :: hm
 
-    call push_sub('hamiltonian.hamiltonian_adjoint')
+    PUSH_SUB(hamiltonian_adjoint)
 
     if(.not.hm%adjoint) then
       hm%adjoint = .true.
@@ -875,7 +875,7 @@ contains
       end if
     endif
 
-    call pop_sub('hamiltonian.hamiltonian_adjoint')
+    POP_SUB(hamiltonian_adjoint)
   end subroutine hamiltonian_adjoint
 
 
@@ -883,7 +883,7 @@ contains
   subroutine hamiltonian_not_adjoint(hm)
     type(hamiltonian_t), intent(inout) :: hm
 
-    call push_sub('hamiltonian.hamiltonian_not_adjoint')
+    PUSH_SUB(hamiltonian_not_adjoint)
 
     if(hm%adjoint) then
       hm%adjoint = .false.
@@ -892,7 +892,7 @@ contains
       end if
     endif
 
-    call pop_sub('hamiltonian.hamiltonian_not_adjoint')
+    POP_SUB(hamiltonian_not_adjoint)
   end subroutine hamiltonian_not_adjoint
 
 
@@ -907,7 +907,7 @@ contains
     FLOAT :: aa(1:MAX_DIM)
     FLOAT, allocatable :: vp(: , :)
 
-    call push_sub('hamiltonian.hamiltonian_update')
+    PUSH_SUB(hamiltonian_update)
     call profiling_in(prof, "HAMILTONIAN_UPDATE")
 
     if(present(time)) this%current_time = time
@@ -990,13 +990,13 @@ contains
     call build_phase()
 
     call profiling_out(prof)
-    call pop_sub('hamiltonian.hamiltonian_update')
+    POP_SUB(hamiltonian_update)
   contains
 
     subroutine build_phase()
       integer :: ik
       FLOAT   :: kpoint(1:MAX_DIM)
-      call push_sub('hamiltonian.hamiltonian_update.build_phase')
+      PUSH_SUB(hamiltonian_update.build_phase)
 
       if(associated(this%hm_base%uniform_vector_potential)) then 
         if(.not. associated(this%phase)) then
@@ -1014,7 +1014,7 @@ contains
         end do
       end if
 
-      call pop_sub('hamiltonian.hamiltonian_update.build_phase')
+      POP_SUB(hamiltonian_update.build_phase)
     end subroutine build_phase
 
   end subroutine hamiltonian_update
@@ -1028,7 +1028,7 @@ contains
     type(states_t),        intent(inout) :: st
     FLOAT,       optional, intent(in)    :: time
 
-    call push_sub('hamiltonian.hamiltonian_epot_generate')
+    PUSH_SUB(hamiltonian_epot_generate)
 
     if(present(time)) then
       call epot_generate(this%ep, gr, geo, st, time)
@@ -1038,7 +1038,7 @@ contains
     call hamiltonian_base_build_proj(this%hm_base, gr%mesh, this%ep, geo)
     call hamiltonian_update(this, gr%mesh, time)
 
-    call pop_sub('hamiltonian.hamiltonian_epot_generate')
+    POP_SUB(hamiltonian_epot_generate)
   end subroutine hamiltonian_epot_generate
 
   ! -----------------------------------------------------------------

@@ -46,7 +46,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
   if(oep%level == XC_OEP_NONE) return
 
   call profiling_in(C_PROFILING_XC_OEP)
-  call push_sub('xc_OEP_inc.Xxc_oep_calc')
+  PUSH_SUB(X(xc_oep_calc))
 
   ! initialize oep structure
   SAFE_ALLOCATE(oep%eigen_type (1:st%nst))
@@ -115,7 +115,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
   SAFE_DEALLOCATE_P(oep%X(lxc))
   SAFE_DEALLOCATE_P(oep%uxc_bar)
 
-  call pop_sub('xc_OEP_inc.Xxc_oep_calc')
+  POP_SUB(X(xc_oep_calc))
   call profiling_out(C_PROFILING_XC_OEP)
 end subroutine X(xc_OEP_calc)
 
@@ -135,7 +135,7 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   R_TYPE, allocatable :: b(:,:)
 
   call profiling_in(C_PROFILING_XC_OEP_FULL)
-  call push_sub('xc_OEP_inc.Xxc_oep_solve')
+  PUSH_SUB(X(xc_oep_solve))
 
   SAFE_ALLOCATE(      b(1:gr%mesh%np, 1:1))
   SAFE_ALLOCATE(      s(1:gr%mesh%np))
@@ -195,7 +195,7 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   SAFE_DEALLOCATE_A(s)
   SAFE_DEALLOCATE_A(vxc_old)
 
-  call pop_sub('xc_OEP_inc.Xxc_oep_solve')
+  POP_SUB(X(xc_oep_solve))
   call profiling_out(C_PROFILING_XC_OEP_FULL)
 end subroutine X(xc_oep_solve)
 

@@ -43,7 +43,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
   FLOAT, allocatable :: eff_mass_inv_temp(:,:,:,:)
 #endif
 
-  call push_sub('kdotp_calc_inc.Xcalc_eff_mass_inv')
+  PUSH_SUB(X(calc_eff_mass_inv))
 
   mesh => sys%gr%mesh
   pdim = sys%gr%sb%periodic_dim
@@ -145,7 +145,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
   SAFE_DEALLOCATE_A(proj_dl_psi)
   SAFE_DEALLOCATE_A(orth_mask)
 
-  call pop_sub('kdotp_calc_inc.Xcalc_eff_mass_inv')
+  POP_SUB(X(calc_eff_mass_inv))
 
 end subroutine X(calc_eff_mass_inv)
   

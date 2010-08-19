@@ -114,7 +114,7 @@ contains
     FLOAT :: rmin
     integer :: mixdefault
 
-    call push_sub('scf.scf_init')
+    PUSH_SUB(scf_init)
 
     !%Variable MaximumIter
     !%Type integer
@@ -311,7 +311,7 @@ contains
       units_from_atomic(units_inp%length, rmin * M_HALF), scf%lmm_r)
     scf%lmm_r = units_to_atomic(units_inp%length, scf%lmm_r)
 
-    call pop_sub('scf.scf_init')
+    POP_SUB(scf_init)
   end subroutine scf_init
 
 
@@ -319,12 +319,12 @@ contains
   subroutine scf_end(scf)
     type(scf_t), intent(inout) :: scf
 
-    call push_sub('scf.scf_end')
+    PUSH_SUB(scf_end)
 
     call eigensolver_end(scf%eigens)
     if(scf%mix_field /= MIXNONE) call mix_end(scf%smix)
 
-    call pop_sub('scf.scf_end')
+    POP_SUB(scf_end)
   end subroutine scf_end
 
 
@@ -332,11 +332,11 @@ contains
   subroutine scf_mix_clear(scf)
     type(scf_t), intent(inout) :: scf
 
-    call push_sub('scf.scf_mix_clear')
+    PUSH_SUB(scf_mix_clear)
 
     call mix_clear(scf%smix)
 
-    call pop_sub('scf.scf_mix_clear')
+    POP_SUB(scf_mix_clear)
   end subroutine scf_mix_clear
 
 
@@ -365,7 +365,7 @@ contains
     logical :: finish, forced_finish, gs_run_
     integer :: verbosity_
 
-    call push_sub('scf.scf_run')
+    PUSH_SUB(scf_run)
 
     gs_run_ = .true.
     if(present(gs_run)) gs_run_ = gs_run
@@ -620,7 +620,7 @@ contains
       call states_write_fermi_energy(STATIC_DIR, st, gr%mesh, gr%sb)
     end if
 
-    call pop_sub('scf.scf_run')
+    POP_SUB(scf_run)
 
   contains
 
@@ -633,7 +633,7 @@ contains
       FLOAT :: mem_tmp
 #endif
 
-      call push_sub('scf.scf_run.scf_write_iter')
+      PUSH_SUB(scf_run.scf_write_iter)
 
       if ( verbosity_ == VERB_FULL ) then
 
@@ -708,7 +708,7 @@ contains
         call write_info(1)
       end if
 
-      call pop_sub('scf.scf_run.scf_write_iter')
+      POP_SUB(scf_run.scf_write_iter)
     end subroutine scf_write_iter
 
 
@@ -719,7 +719,7 @@ contains
       FLOAT :: e_dip(4, st%d%nspin), n_dip(MAX_DIM)
       integer :: iunit, ispin, idir, iatom, nquantumpol
 
-      call push_sub('scf.scf_run.scf_write_static')
+      PUSH_SUB(scf_run.scf_write_static)
 
       if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
         call io_mkdir(dir)
@@ -835,7 +835,7 @@ contains
         call io_close(iunit)
       end if
 
-      call pop_sub('scf.scf_run.scf_write_static')
+      POP_SUB(scf_run.scf_write_static)
     end subroutine scf_write_static
 
 
@@ -849,7 +849,7 @@ contains
       FLOAT :: mm(MAX_DIM)
       FLOAT, allocatable :: lmm(:,:)
 
-      call push_sub('scf.scf_run.write_magnetic_moments')
+      PUSH_SUB(scf_run.write_magnetic_moments)
 
       call magnetic_moment(mesh, st, st%rho, mm)
       SAFE_ALLOCATE(lmm(1:MAX_DIM, 1:geo%natoms))
@@ -882,7 +882,7 @@ contains
       
       SAFE_DEALLOCATE_A(lmm)
 
-      call pop_sub('scf.scf_run.write_magnetic_moments')
+      POP_SUB(scf_run.write_magnetic_moments)
     end subroutine write_magnetic_moments
 
   end subroutine scf_run

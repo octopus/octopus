@@ -29,10 +29,10 @@
 
     type(controlfunction_t), pointer :: par
 
-    call push_sub('finalcheck_inc.oct_finalcheck')
+    PUSH_SUB(oct_finalcheck)
 
     if(.not.oct%oct_double_check) then
-      call pop_sub('finalcheck_inc.oct_finalcheck')
+      POP_SUB(oct_finalcheck)
       return
     end if
 
@@ -60,7 +60,7 @@
 
     nullify(par)
     call states_end(psi)
-    call pop_sub('finalcheck_inc.oct_finalcheck')
+    POP_SUB(oct_finalcheck)
   end subroutine oct_finalcheck
 
 !! Local Variables:

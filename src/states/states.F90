@@ -198,7 +198,7 @@ contains
 
     integer :: il
 
-    call push_sub('states.states_null')
+    PUSH_SUB(states_null)
 
     nullify(st%dpsi, st%zpsi, st%zphi, st%rho, st%current, st%rho_core, st%frozen_rho, st%eigenval)
     do il=1, NLEADS
@@ -214,7 +214,7 @@ contains
 
     call modelmb_particles_nullify(st%modelmbparticles)
 
-    call pop_sub('states.states_null')
+    POP_SUB(states_null)
   end subroutine states_null
 
 
@@ -229,7 +229,7 @@ contains
     integer, allocatable :: ob_k(:), ob_st(:), ob_d(:)
     character(len=256)   :: restart_dir
 
-    call push_sub('states.states_init')
+    PUSH_SUB(states_init)
 
     call states_null(st)
 
@@ -528,7 +528,7 @@ contains
 
     if(st%symmetrize_density) call messages_devel_version("Symmetrization of the density")
 
-    call pop_sub('states.states_init')
+    POP_SUB(states_init)
 
   contains
 
@@ -538,7 +538,7 @@ contains
       character          :: char
       character(len=256) :: restart_dir, line, chars
 
-      call push_sub('states.states_init.read_ob_eigenval_and_occ')
+      PUSH_SUB(states_init.read_ob_eigenval_and_occ)
 
       restart_dir = trim(gr%ob_grid%lead(LEFT)%info%restart_dir)//'/'//GS_DIR
 
@@ -590,7 +590,7 @@ contains
 
       call io_close(occs)
 
-      call pop_sub('states.states_init.read_ob_eigenval_and_occ')
+      POP_SUB(states_init.read_ob_eigenval_and_occ)
     end subroutine read_ob_eigenval_and_occ
   end subroutine states_init
 
@@ -603,7 +603,7 @@ contains
 
     integer :: il
 
-    call push_sub('states.states_allocate_free_states')
+    PUSH_SUB(states_allocate_free_states)
 
     ! FIXME: spin-polarized free states ignored.
     if(gr%ob_grid%open_boundaries) then
@@ -616,7 +616,7 @@ contains
       nullify(st%zphi)
     end if
 
-    call pop_sub('states.states_allocate_free_states')
+    POP_SUB(states_allocate_free_states)
   end subroutine states_allocate_free_states
 
 
@@ -628,7 +628,7 @@ contains
 
     integer :: il
 
-    call push_sub('states.states_deallocate_free_states')
+    PUSH_SUB(states_deallocate_free_states)
 
     if(gr%ob_grid%open_boundaries) then
       SAFE_DEALLOCATE_P(st%zphi)
@@ -637,7 +637,7 @@ contains
       end do
     end if
 
-    call pop_sub('states.states_deallocate_free_states')
+    POP_SUB(states_deallocate_free_states)
   end subroutine states_deallocate_free_states
 
 
@@ -658,7 +658,7 @@ contains
     FLOAT :: rr, charge
     logical :: integral_occs
 
-    call push_sub('states.states_read_initial_occs')
+    PUSH_SUB(states_read_initial_occs)
     !%Variable Occupations
     !%Type block
     !%Section States
@@ -793,7 +793,7 @@ contains
       call write_fatal(2)
     end if
 
-    call pop_sub('states.states_read_initial_occs')
+    POP_SUB(states_read_initial_occs)
   end subroutine states_read_initial_occs
 
 
@@ -809,11 +809,11 @@ contains
     integer :: i, j
     type(block_t) :: blk
 
-    call push_sub('states.states_read_initial_spins')
+    PUSH_SUB(states_read_initial_spins)
 
     st%fixed_spins = .false.
     if(st%d%ispin .ne. SPINORS) then
-      call pop_sub('states.states_read_initial_spins')
+      POP_SUB(states_read_initial_spins)
       return
     end if
 
@@ -874,7 +874,7 @@ contains
       end do
     end if spin_fix
 
-    call pop_sub('states.states_read_initial_spins')
+    POP_SUB(states_read_initial_spins)
   end subroutine states_read_initial_spins
 
 
@@ -889,7 +889,7 @@ contains
     integer :: ip, ik, ist, idim, st1, st2, k1, k2, size, il
     logical :: force
 
-    call push_sub('states.states_allocate_wfns')
+    PUSH_SUB(states_allocate_wfns)
 
     if(associated(st%dpsi).or.associated(st%zpsi)) then
       message(1) = "Trying to allocate wavefunctions that are already allocated."
@@ -948,7 +948,7 @@ contains
 
     call states_init_block(st)
 
-    call pop_sub('states.states_allocate_wfns')
+    POP_SUB(states_allocate_wfns)
   end subroutine states_allocate_wfns
   
   ! -----------------------------------------------------
@@ -1040,7 +1040,7 @@ contains
 
     integer :: il, ib, iq
 
-    call push_sub('states.states_deallocate_wfns')
+    PUSH_SUB(states_deallocate_wfns)
 
     if (states_are_real(st)) then
       SAFE_DEALLOCATE_P(st%dpsi)
@@ -1064,7 +1064,7 @@ contains
       end do
     end if
 
-    call pop_sub('states.states_deallocate_wfns')
+    POP_SUB(states_deallocate_wfns)
   end subroutine states_deallocate_wfns
 
 
@@ -1075,7 +1075,7 @@ contains
     type(geometry_t),  intent(in)    :: geo
     type(multicomm_t), intent(in)    :: mc
 
-    call push_sub('states.states_densities_init')
+    PUSH_SUB(states_densities_init)
 
     ! allocate arrays for charge and current densities
     SAFE_ALLOCATE(st%rho(1:gr%fine%mesh%np_part, 1:st%d%nspin))
@@ -1093,7 +1093,7 @@ contains
     ! This has to be here as it requires mc%nthreads that is not available in states_init
     call states_exec_init()
 
-    call pop_sub('states.states_densities_init')
+    POP_SUB(states_densities_init)
     
   contains
 
@@ -1147,7 +1147,7 @@ contains
     type(states_t), intent(inout) :: stout
     type(states_t), intent(in)    :: stin
 
-    call push_sub('states.states_copy')
+    PUSH_SUB(states_copy)
 
     call states_null(stout)
 
@@ -1193,7 +1193,7 @@ contains
       call states_init_block(stout)
     end if
 
-    call pop_sub('states.states_copy')
+    POP_SUB(states_copy)
   end subroutine states_copy
 
 
@@ -1203,7 +1203,7 @@ contains
 
     integer :: il
 
-    call push_sub('states.states_end')
+    PUSH_SUB(states_end)
     
     SAFE_DEALLOCATE_P(st%dpsi)
     SAFE_DEALLOCATE_P(st%zpsi)
@@ -1242,7 +1242,7 @@ contains
 
     call modelmb_particles_end(st%modelmbparticles)
 
-    call pop_sub('states.states_end')
+    POP_SUB(states_end)
   end subroutine states_end
 
 
@@ -1258,7 +1258,7 @@ contains
     
     type(batch_t) :: psib
 
-    call push_sub('states.states_dens_accumulate')
+    PUSH_SUB(states_dens_accumulate)
 
     if(states_are_real(st)) then
       call batch_init(psib, st%d%dim, ist, ist, st%dpsi(:, :, ist:ist, ik))
@@ -1270,7 +1270,7 @@ contains
 
     call batch_end(psib)
 
-    call pop_sub('states.states_dens_accumulate')
+    POP_SUB(states_dens_accumulate)
   end subroutine states_dens_accumulate
 
   ! ---------------------------------------------------
@@ -1290,7 +1290,7 @@ contains
     FLOAT, allocatable :: frho(:)
     type(profile_t), save :: prof
 
-    call push_sub('states.states_dens_accumulate_batch')
+    PUSH_SUB(states_dens_accumulate_batch)
     call profiling_in(prof, "CALC_DENSITY")
 
     ASSERT(ubound(rho, dim = 1) == gr%fine%mesh%np .or. ubound(rho, dim = 1) == gr%fine%mesh%np_part)
@@ -1362,7 +1362,7 @@ contains
     
     call profiling_out(prof)
 
-    call pop_sub('states.states_dens_accumulate_batch')
+    POP_SUB(states_dens_accumulate_batch)
   end subroutine states_dens_accumulate_batch
 
   ! ---------------------------------------------------
@@ -1382,7 +1382,7 @@ contains
 
     np = gr%fine%mesh%np
 
-    call push_sub('states.states_dens_reduce')
+    PUSH_SUB(states_dens_reduce)
 
 #ifdef HAVE_MPI
     ! reduce over states
@@ -1427,7 +1427,7 @@ contains
       SAFE_DEALLOCATE_A(symmrho)
     end if
 
-    call pop_sub('states.states_dens_reduce')
+    POP_SUB(states_dens_reduce)
   end subroutine states_dens_reduce
 
 
@@ -1445,7 +1445,7 @@ contains
     FLOAT, pointer :: dens(:, :)
     type(batch_t)  :: psib
 
-    call push_sub('states.states_calc_dens')
+    PUSH_SUB(states_calc_dens)
 
     if(present(rho)) then
       dens => rho
@@ -1472,7 +1472,7 @@ contains
     call states_dens_reduce(st, gr, dens)
 
     nullify(dens)
-    call pop_sub('states.states_calc_dens')
+    POP_SUB(states_calc_dens)
   end subroutine states_calc_dens
 
   ! ---------------------------------------------------------
@@ -1485,7 +1485,7 @@ contains
     integer :: ist, ik, id, ist_start, ist_end, jst, seed
     CMPLX   :: alpha, beta
 
-    call push_sub('states.states_generate_random')
+    PUSH_SUB(states_generate_random)
 
     ist_start = st%st_start
     if(present(ist_start_)) ist_start = max(ist_start, ist_start_)
@@ -1564,7 +1564,7 @@ contains
 
     end select
 
-    call pop_sub('states.states_generate_random')
+    POP_SUB(states_generate_random)
   end subroutine states_generate_random
 
   ! ---------------------------------------------------------
@@ -1581,7 +1581,7 @@ contains
     FLOAT, allocatable :: lspin(:, :) ! To exchange spin.
 #endif
 
-    call push_sub('states.states_fermi')
+    PUSH_SUB(states_fermi)
 
     call smear_find_fermi_energy(st%smear, st%eigenval, st%occ, st%qtot, &
       st%d%nik, st%nst, st%d%kweights)
@@ -1623,7 +1623,7 @@ contains
       end do
     end if
 
-    call pop_sub('states.states_fermi')
+    POP_SUB(states_fermi)
   end subroutine states_fermi
 
 
@@ -1639,7 +1639,7 @@ contains
     FLOAT :: tot_temp
 #endif
 
-    call push_sub('states.states_eigenvalues_sum')
+    PUSH_SUB(states_eigenvalues_sum)
 
     tot = M_ZERO
     do ik = st%d%kpt%start, st%d%kpt%end
@@ -1664,7 +1664,7 @@ contains
     end if
 #endif
 
-    call pop_sub('states.states_eigenvalues_sum')
+    POP_SUB(states_eigenvalues_sum)
   end function states_eigenvalues_sum
 
 
@@ -1679,7 +1679,7 @@ contains
     FLOAT :: occ, kpoint(1:MAX_DIM)
     character(len=80) tmp_str(MAX_DIM), cspin
 
-    call push_sub('states.states_write_eigenvalues')
+    PUSH_SUB(states_write_eigenvalues)
 
     ns = 1
     if(st%d%nspin == 2) ns = 2
@@ -1692,7 +1692,7 @@ contains
     end if
 
     if(.not. mpi_grp_is_root(mpi_world)) then
-      call pop_sub('states.states_write_eigenvalues')
+      POP_SUB(states_write_eigenvalues)
       return
     end if
 
@@ -1773,7 +1773,7 @@ contains
       end do
     end do
 
-    call pop_sub('states.states_write_eigenvalues')
+    POP_SUB(states_write_eigenvalues)
   end subroutine states_write_eigenvalues
 
 
@@ -1792,7 +1792,7 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
-    call push_sub('states.states_write_bands')
+    PUSH_SUB(states_write_bands)
 
     !%Variable OutputBandsGnuplotMode
     !%Type logical
@@ -1918,7 +1918,7 @@ contains
 
     SAFE_DEALLOCATE_A(iunit)
 
-    call pop_sub('states.states_write_bands')
+    POP_SUB(states_write_bands)
   end subroutine states_write_bands
 
   ! ---------------------------------------------------------
@@ -1940,7 +1940,7 @@ contains
     logical             :: use_qvector = .false.
     FLOAT, allocatable  :: qvector(:)
 
-    call push_sub('states.states_write_tpa')
+    PUSH_SUB(states_write_tpa)
 
     ! find the orbital with half-occupation
     tpa_initialst = -1
@@ -1960,7 +1960,7 @@ contains
         message(1) = 'No orbital with half-occupancy found. TPA output is not written.'
         call write_warning(1)
 
-    call pop_sub('states.states_write_tpa')
+    POP_SUB(states_write_tpa)
 return
 
       end if
@@ -2106,7 +2106,7 @@ return
       SAFE_DEALLOCATE_A(qvector)
     end if
   
-    call pop_sub('states.states_write_tpa')
+    POP_SUB(states_write_tpa)
  
   end subroutine states_write_tpa
 
@@ -2122,7 +2122,7 @@ return
     FLOAT, allocatable :: dos(:,:,:)
     character(len=64)  :: filename
 
-    call push_sub('states.states_write_dos')
+    PUSH_SUB(states_write_dos)
 
     evalmin = minval(st%eigenval)
     evalmax = maxval(st%eigenval)
@@ -2262,7 +2262,7 @@ return
     SAFE_DEALLOCATE_A(iunit)
     SAFE_DEALLOCATE_A(dos)
 
-    call pop_sub('states.states_write_dos')
+    POP_SUB(states_write_dos)
   end subroutine states_write_dos
 
 
@@ -2278,7 +2278,7 @@ return
     FLOAT :: factor(MAX_DIM)
     character(len=100) :: str_tmp
 
-    call push_sub('states.states_write_fermi_energy')
+    PUSH_SUB(states_write_fermi_energy)
 
     call states_fermi(st, mesh)
 
@@ -2336,7 +2336,7 @@ return
     call write_info(3, iunit)
     call io_close(iunit)
 
-    call pop_sub('states.states_write_fermi_energy')
+    POP_SUB(states_write_fermi_energy)
   end subroutine states_write_fermi_energy
   ! ---------------------------------------------------------
 
@@ -2364,7 +2364,7 @@ return
     integer :: sn, sn1, r, j, k
 #endif
 
-    call push_sub('states.states_distribute_nodes')
+    PUSH_SUB(states_distribute_nodes)
 
     ! Defaults.
     st%node(:)            = 0
@@ -2417,7 +2417,7 @@ return
    end if
 #endif
 
-    call pop_sub('states.states_distribute_nodes')
+    POP_SUB(states_distribute_nodes)
   end subroutine states_distribute_nodes
 
 
@@ -2452,13 +2452,13 @@ return
     type(states_t), intent(in) :: st
      integer,       intent(in) :: iunit
 
-     call push_sub('states.states_dump')
+     PUSH_SUB(states_dump)
      
      write(iunit, '(a20,1i10)')  'nst=                ', st%nst
      write(iunit, '(a20,1i10)')  'dim=                ', st%d%dim
      write(iunit, '(a20,1i10)')  'nik=                ', st%d%nik
 
-     call pop_sub('states.states_dump')
+     POP_SUB(states_dump)
   end subroutine states_dump
 
 
@@ -2489,7 +2489,7 @@ return
     integer :: mpi_err
 #endif
 
-    call push_sub('states.states_calc_quantities')
+    PUSH_SUB(states_calc_quantities)
 
     something_to_do = present(kinetic_energy_density) .or. present(paramagnetic_current) .or. &
       present(density_gradient) .or. present(density_laplacian)
@@ -2685,7 +2685,7 @@ return
     end if
 #endif
 
-    call pop_sub('states.states_calc_quantities')
+    POP_SUB(states_calc_quantities)
 
 #if defined(HAVE_MPI)
   contains 
@@ -2693,7 +2693,7 @@ return
     subroutine reduce_all(grp)
       type(mpi_grp_t), intent(in)  :: grp
 
-      call push_sub('states.states_calc_quantities.reduce_all')
+      PUSH_SUB(states_calc_quantities.reduce_all)
 
       SAFE_ALLOCATE(tmp_reduce(1:der%mesh%np))
 
@@ -2730,7 +2730,7 @@ return
       end do
       SAFE_DEALLOCATE_A(tmp_reduce)
 
-      call pop_sub('states.states_calc_quantities.reduce_all')
+      POP_SUB(states_calc_quantities.reduce_all)
     end subroutine reduce_all
 
 #endif            
@@ -2745,7 +2745,7 @@ return
 
     CMPLX :: z
 
-    call push_sub('states.state_spin')
+    PUSH_SUB(state_spin)
 
     z = zmf_dotp(m, f1(:, 1) , f1(:, 2))
 
@@ -2754,7 +2754,7 @@ return
     s(3) = zmf_dotp(m, f1(:, 1), f1(:, 1)) - zmf_dotp(m, f1(:, 2), f1(:, 2))
     s = s * M_HALF ! spin is half the sigma matrix.
 
-    call pop_sub('states.state_spin')
+    POP_SUB(state_spin)
   end function state_spin
 
 
@@ -2777,7 +2777,7 @@ return
     FLOAT :: occ, eigenval
     logical :: only_occupied_
 
-    call push_sub('states.states_look')
+    PUSH_SUB(states_look)
 
     only_occupied_ = .false.
     if(present(only_occupied)) only_occupied_ = only_occupied
@@ -2790,14 +2790,14 @@ return
     iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=mpi_grp)
     if(iunit < 0) then
       ierr = -1
-    call pop_sub('states.states_look')
+    POP_SUB(states_look)
 return
     end if
     iunit2 = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp=.true., grp=mpi_grp)
     if(iunit2 < 0) then
       call io_close(iunit, grp = mpi_grp)
       ierr = -1
-    call pop_sub('states.states_look')
+    POP_SUB(states_look)
 return
     end if
 
@@ -2843,7 +2843,7 @@ return
       SAFE_DEALLOCATE_A(counter_nst)
     end if
 
-    call pop_sub('states.states_look')
+    POP_SUB(states_look)
   end subroutine states_look
 
 
@@ -2852,11 +2852,11 @@ return
     type(states_t), intent(in) :: st
     integer,        intent(in) :: ist
 
-    call push_sub('states.state_is_local')
+    PUSH_SUB(state_is_local)
 
     state_is_local = ist.ge.st%st_start.and.ist.le.st%st_end
 
-    call pop_sub('states.state_is_local')
+    POP_SUB(state_is_local)
   end function state_is_local
 
 
@@ -2870,7 +2870,7 @@ return
     integer :: ist, ik
     type(states_t) :: staux
 
-    call push_sub('states.states_freeze_orbitals')
+    PUSH_SUB(states_freeze_orbitals)
 
     if(n >= st%nst) then
       write(message(1),'(a)') 'Attempting to freeze a number of orbitals which is larger or equal to'
@@ -2952,7 +2952,7 @@ return
     end do
 
     call states_end(staux)
-    call pop_sub('states.states_freeze_orbitals')
+    POP_SUB(states_freeze_orbitals)
   end subroutine states_freeze_orbitals
 
 
@@ -2967,7 +2967,7 @@ return
 
     integer :: is, ip
 
-    call push_sub('states.states_total_density')
+    PUSH_SUB(states_total_density)
 
     forall(is = 1:st%d%nspin, ip = 1:mesh%np)
       rho(ip, is) = st%rho(ip, is)
@@ -2986,7 +2986,7 @@ return
       end forall
     end if
 
-    call pop_sub('states.states_total_density')
+    POP_SUB(states_total_density)
   end subroutine states_total_density
 
 
@@ -2995,13 +2995,13 @@ return
     type(states_t), intent(in) :: st
     type(mesh_t),   intent(in) :: mesh
 
-    call push_sub('states.states_wfns_memory')
+    PUSH_SUB(states_wfns_memory)
     memory = 0.0_8
 
     ! orbitals
     memory = memory + REAL_PRECISION*dble(mesh%np_part_global)*st%d%dim*dble(st%nst)*st%d%kpt%nglobal
 
-    call pop_sub('states.states_wfns_memory')
+    POP_SUB(states_wfns_memory)
   end function states_wfns_memory
 
 
@@ -3020,7 +3020,7 @@ return
     integer  :: np, ik, ist, il, ispin, s1, s2, k1, k2
     integer  :: green_real, green_imag, irow
 
-    call push_sub('states.states_init_self_energy')
+    PUSH_SUB(states_init_self_energy)
 
     ! Calculate self-energy of the leads.
     ! FIXME: For spinors, this calculation is almost certainly wrong.
@@ -3099,7 +3099,7 @@ return
     end do
     call messages_print_stress(stdout)
 
-    call pop_sub('states.states_init_self_energy')
+    POP_SUB(states_init_self_energy)
   end subroutine states_init_self_energy
 
 
@@ -3116,7 +3116,7 @@ return
     character(len=256) :: fname
     FLOAT :: kpoint(1:MAX_DIM)
 
-    call push_sub('states.write_proj_lead_wf')
+    PUSH_SUB(write_proj_lead_wf)
 
     np = maxval(intf(1:NLEADS)%np_intf)
 
@@ -3157,7 +3157,7 @@ return
               message(1) = 'Cannot write term for source term to file.'
               call write_warning(1)
               call io_close(iunit)
-    call pop_sub('states.write_proj_lead_wf')
+    POP_SUB(write_proj_lead_wf)
 return
             end if
             ! Write parameters.
@@ -3175,7 +3175,7 @@ return
     SAFE_DEALLOCATE_A(hpsi)
     SAFE_DEALLOCATE_A(self_energy)
 
-    call pop_sub('states.write_proj_lead_wf')
+    POP_SUB(write_proj_lead_wf)
   end subroutine states_write_proj_lead_wf
 
   ! ---------------------------------------------------------
@@ -3188,7 +3188,7 @@ return
     integer :: ik, ist, idim, np, iunit
     character(len=256) :: fname
 
-    call push_sub('states.states_read_proj_lead_wf')
+    PUSH_SUB(states_read_proj_lead_wf)
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
@@ -3217,7 +3217,7 @@ return
       end do
     end do
 
-    call pop_sub('states.states_read_proj_lead_wf')
+    POP_SUB(states_read_proj_lead_wf)
   end subroutine states_read_proj_lead_wf
 
 
@@ -3228,4 +3228,3 @@ end module states_m
 !! mode: f90
 !! coding: utf-8
 !! End:
-

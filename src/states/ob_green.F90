@@ -54,7 +54,7 @@ contains
     CMPLX              :: c_energy
     CMPLX, allocatable :: green2(:, :)
 
-    call push_sub('ob_green.lead_self_energy')
+    PUSH_SUB(lead_self_energy)
 
     np = intf%np_intf
     np_uc = intf%np_uc
@@ -119,7 +119,7 @@ contains
       call lalg_trmm(np, np, 'L', 'T', 'R', M_z1, offdiag, self_energy)
     end if
 
-    call pop_sub('ob_green.lead_self_energy')
+    POP_SUB(lead_self_energy)
   end subroutine lead_self_energy
 
 
@@ -132,7 +132,7 @@ contains
     integer  :: j
     FLOAT    :: dos
 
-    call push_sub('ob_green.fix_green')
+    PUSH_SUB(fix_green)
 
     ! calculate DOS=-Tr(imag(green)) and check if negative
     dos = -aimag(green(1, 1))
@@ -153,7 +153,7 @@ contains
       end if
     end if
 
-    call pop_sub('ob_green.fix_green')
+    POP_SUB(fix_green)
   end subroutine fix_green
 
 
@@ -169,7 +169,7 @@ contains
     FLOAT              :: det
     integer            :: j, np, np_uc
 
-    call push_sub('ob_green.calc_residual_green')
+    PUSH_SUB(calc_residual_green)
 
     np = intf%np_intf
     np_uc = intf%np_uc
@@ -198,7 +198,7 @@ contains
     SAFE_DEALLOCATE_A(tmp1)
     SAFE_DEALLOCATE_A(tmp2)
 
-    call pop_sub('ob_green.calc_residual_green')
+    POP_SUB(calc_residual_green)
   end function calc_residual_green
 
 
@@ -222,7 +222,7 @@ contains
     integer            :: i, j
     FLOAT              :: det, old_norm, norm, res
 
-    call push_sub('ob_green.lead_green_sancho')
+    PUSH_SUB(lead_green_sancho)
 
     SAFE_ALLOCATE(   e(1:np, 1:np))
     SAFE_ALLOCATE(  es(1:np, 1:np))
@@ -296,7 +296,7 @@ contains
     SAFE_DEALLOCATE_A(tmp2)
     SAFE_DEALLOCATE_A(tmp3)
 
-    call pop_sub('ob_green.lead_green_sancho')
+    POP_SUB(lead_green_sancho)
   end subroutine lead_green_sancho
 
 
@@ -312,7 +312,7 @@ contains
     integer  :: ip, np, np2
     CMPLX, allocatable   :: x1(:,:), x2(:,:)
 
-    call push_sub('ob_green.create_moeb_trans_matrix')
+    PUSH_SUB(create_moeb_trans_matrix)
 
     np  = intf%np_intf
     np2 = 2*np
@@ -349,7 +349,7 @@ contains
     SAFE_DEALLOCATE_A(x1)
     SAFE_DEALLOCATE_A(x2)
 
-    call pop_sub('ob_green.create_moeb_trans_matrix')
+    POP_SUB(create_moeb_trans_matrix)
   end subroutine create_moeb_trans_matrix
 
   
@@ -364,7 +364,7 @@ contains
 
     integer :: ni, iblock, np
 
-    call push_sub('ob_green.extract_sub_matrices')
+    PUSH_SUB(extract_sub_matrices)
 
     np = intf%np_intf
     ! extract sub diagonals
@@ -390,7 +390,7 @@ contains
       v(1:np, 1:np, intf%nblocks) = offdiag(1:np, ni+1:ni+np)
     end if
 
-    call pop_sub('ob_green.extract_sub_matrices')
+    POP_SUB(extract_sub_matrices)
   end subroutine extract_sub_matrices
 
 
@@ -408,7 +408,7 @@ contains
     CMPLX, allocatable   :: x(:,:), x2(:,:), o2(:,:), o4(:,:), d(:), h(:, :, :), v(:, :, :)
     FLOAT                :: det
 
-    call push_sub('ob_green.lead_green_umerski')
+    PUSH_SUB(lead_green_umerski)
 
     ! check if intf%np_uc is a integer multiple of the intf%np_intf
     ASSERT(mod(intf%np_uc, intf%np_intf).eq.0)
@@ -466,7 +466,7 @@ contains
     SAFE_DEALLOCATE_A(h)
     SAFE_DEALLOCATE_A(v)
 
-    call pop_sub('ob_green.lead_green_umerski')
+    POP_SUB(lead_green_umerski)
   end subroutine lead_green_umerski
 
 end module ob_green_m

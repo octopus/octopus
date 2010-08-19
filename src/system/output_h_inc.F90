@@ -30,7 +30,7 @@
 
     FLOAT, allocatable :: v0(:,:)
     
-    call push_sub('output_h.h_sys_output_hamiltonian')
+    PUSH_SUB(h_sys_output_hamiltonian)
 
     if(iand(outp%what, output_potential).ne.0) then
       SAFE_ALLOCATE(v0(1:mesh%np, 1:hm%d%dim))
@@ -82,7 +82,7 @@
       end if
     end if
 
-    call pop_sub('output_h.h_sys_output_hamiltonian')
+    POP_SUB(h_sys_output_hamiltonian)
   end subroutine h_sys_output_hamiltonian
 
 !! Local Variables:

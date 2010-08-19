@@ -56,7 +56,7 @@ contains
     FLOAT   :: diffdensity
     FLOAT, allocatable :: target_rho(:,:), rho(:)
       
-    call push_sub('invert_ks.invert_ks_run')
+    PUSH_SUB(invert_ks_run)
 
     ! initialize KS inversion module
     call xc_ks_inversion_init(sys%ks%ks_inversion, sys%ks%xc_family, &
@@ -155,7 +155,7 @@ contains
 
     call xc_ks_inversion_end(sys%ks%ks_inversion, sys%gr, sys%geo)
 
-    call pop_sub('invert_ks.invert_ks_run')
+    POP_SUB(invert_ks_run)
     
   contains
 
@@ -166,7 +166,7 @@ contains
       FLOAT   :: l_xx(MAX_DIM), l_ff(4), rr
       FLOAT, allocatable :: xx(:,:), ff(:,:)
 
-      call push_sub('invert_ks.invert_ks_run.read_target_rho')
+      PUSH_SUB(invert_ks_run.read_target_rho)
 
       !%Variable InvertKSTargetDensity
       !%Type string
@@ -220,7 +220,7 @@ contains
       SAFE_DEALLOCATE_A(xx)
       SAFE_DEALLOCATE_A(ff)
 
-      call pop_sub('invert_ks.invert_ks_run.read_target_rho')
+      POP_SUB(invert_ks_run.read_target_rho)
     end subroutine read_target_rho
 
   end subroutine invert_ks_run

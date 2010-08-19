@@ -66,7 +66,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
   integer, parameter  :: winsiz = 5  ! window size, number of eigenvalues computed simultaneously
   integer, parameter  :: krylov = 15 ! The Krylov subspace size.
 
-  call push_sub('eigen_plan_inc.Xeigensolver_plan')
+  PUSH_SUB(X(eigensolver_plan))
 
   !  n          = mesh%np*st%d%dim
   dim        = st%d%dim
@@ -312,7 +312,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
   SAFE_DEALLOCATE_A(ham)
   SAFE_DEALLOCATE_A(hevec)
   SAFE_DEALLOCATE_A(aux)
-  call pop_sub('eigen_plan_inc.Xeigensolver_plan')
+  POP_SUB(X(eigensolver_plan))
 
 contains
 
@@ -324,12 +324,12 @@ contains
     R_TYPE,  intent(inout) :: res(:,:)
     FLOAT,   intent(out)   :: rr
 
-    call push_sub('eigen_plan_inc.Xeigensolver_plan.residual')
+    PUSH_SUB(X(eigensolver_plan).residual)
 
     res = hv - ee*vv
     rr = X(mf_nrm2)(gr%mesh, dim, res)
 
-    call pop_sub('eigen_plan_inc.Xeigensolver_plan.residual')
+    POP_SUB(X(eigensolver_plan).residual)
   end subroutine residual
 
 end subroutine X(eigensolver_plan)

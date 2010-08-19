@@ -85,7 +85,7 @@ contains
   subroutine zoltan_method_info(method)
     integer, intent(in) :: method
 
-    call push_sub('zoltan.zoltan_method_info')
+    PUSH_SUB(zoltan_method_info)
 
     message(1) = 'Info: Using Zoltan to partition the mesh.'
   
@@ -106,17 +106,17 @@ contains
     message(3) = ''
     call write_info(3)
 
-    call pop_sub('zoltan.zoltan_method_info')
+    POP_SUB(zoltan_method_info)
   end subroutine zoltan_method_info
 
   logical function zoltan_method_is_geometric(method) result(geometric)
     integer, intent(in) :: method
 
-    call push_sub('zoltan.zoltan_method_is_geometric')
+    PUSH_SUB(zoltan_method_is_geometric)
 
     geometric = method == RCB .or. method == RIB .or. method == HSFC .or. method == REFTREE
 
-    call pop_sub('zoltan.zoltan_method_is_geometric')
+    POP_SUB(zoltan_method_is_geometric)
   end function zoltan_method_is_geometric
 
 end module zoltan_m

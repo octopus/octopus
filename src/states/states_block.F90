@@ -109,7 +109,7 @@ contains
 
     integer :: size, node, ist, i
 
-    call push_sub('states.states_block_local_idx')
+    PUSH_SUB(states_block_local_idx)
 
     size = st%mpi_grp%size
     SAFE_ALLOCATE(cnt(0:size-1))
@@ -134,7 +134,7 @@ contains
       end if
     end do
 
-    call pop_sub('states.states_block_local_idx')
+    POP_SUB(states_block_local_idx)
   end subroutine states_block_local_idx
 
 

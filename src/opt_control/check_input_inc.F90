@@ -28,7 +28,7 @@
 
     integer :: no_electrons, n_filled, n_partially_filled, n_half_filled
 
-    call push_sub('check_input_inc.check_faulty_runmodes')
+    PUSH_SUB(check_faulty_runmodes)
 
     ! Only dipole approximation in length gauge.
     if(hm%gauge.ne.LENGTH) then
@@ -200,7 +200,7 @@
        end if
     end if
     
-    call pop_sub('check_input_inc.check_faulty_runmodes')
+    POP_SUB(check_faulty_runmodes)
   end subroutine check_faulty_runmodes
 
 

@@ -107,7 +107,7 @@ contains
     integer :: ist
     FLOAT, parameter :: M_THRESHOLD = CNST(1.0e-6)
 
-    call push_sub('excited_states.occupied_states')
+    PUSH_SUB(occupied_states)
 
     if(present(filled))           filled(:) = 0
     if(present(partially_filled)) partially_filled(:) = 0
@@ -148,7 +148,7 @@ contains
       end do
     end select
 
-    call pop_sub('excited_states.occupied_states')
+    POP_SUB(occupied_states)
   end subroutine occupied_states
 
 
@@ -189,7 +189,7 @@ contains
     FLOAT :: dump
     logical :: ok
 
-    call push_sub('excited_states.excited_states_init')
+    PUSH_SUB(excited_states_init)
 
     ! This is just to make the code more readable.
     nst   = ground_state%nst
@@ -365,7 +365,7 @@ contains
     SAFE_DEALLOCATE_A(filled)
     SAFE_DEALLOCATE_A(partially_filled)
     SAFE_DEALLOCATE_A(half_filled)
-    call pop_sub('excited_states.excited_states_init')
+    POP_SUB(excited_states_init)
   end subroutine excited_states_init
 
 
@@ -375,13 +375,13 @@ contains
   subroutine excited_states_kill(excited_state)
     type(excited_states_t), intent(inout) :: excited_state
 
-    call push_sub('excited_states.excited_states_kill')
+    PUSH_SUB(excited_states_kill)
 
     nullify(excited_state%st)
     SAFE_DEALLOCATE_P(excited_state%pair)
     SAFE_DEALLOCATE_P(excited_state%weight)
 
-    call pop_sub('excited_states.excited_states_kill')
+    POP_SUB(excited_states_kill)
   end subroutine excited_states_kill
 
 
@@ -392,7 +392,7 @@ contains
 
     integer :: iunit, ipair
 
-    call push_sub('excited_states.excited_states_output')
+    PUSH_SUB(excited_states_output)
 
     iunit = io_open(file = trim(dirname)//'/excitations', action = 'write', status = 'replace')
     do ipair = 1, excited_state%n_pairs
@@ -401,7 +401,7 @@ contains
     end do
 
     call io_close(iunit)
-    call pop_sub('excited_states.excited_states_output')
+    POP_SUB(excited_states_output)
   end subroutine excited_states_output
 
 

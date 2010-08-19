@@ -92,7 +92,7 @@ contains
     CMPLX, allocatable :: um(:)
     FLOAT, allocatable :: td_pot(:, :)
 
-    call push_sub('ob_propagator.ob_propagator_init')
+    PUSH_SUB(ob_propagator_init)
 
     taylor_1st%exp_method = EXP_TAYLOR
     taylor_1st%exp_order  = 1
@@ -235,7 +235,7 @@ contains
 
     nullify(lead_p, intf_p, dt_p, t_p, ist_p, ik_p, mem_type_p)
 
-    call pop_sub('ob_propagator.ob_propagator_init')
+    POP_SUB(ob_propagator_init)
   end subroutine ob_propagator_init
 
 
@@ -273,7 +273,7 @@ contains
     FLOAT              :: dres
     logical            :: conv
     
-    call push_sub('ob_propagator.cn_src_mem_dt')
+    PUSH_SUB(cn_src_mem_dt)
 
     np = maxval(gr%intf(1:NLEADS)%np_intf)
 
@@ -372,7 +372,7 @@ contains
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_A(tmp_wf)
     SAFE_DEALLOCATE_A(tmp_mem)
-    call pop_sub('ob_propagator.cn_src_mem_dt')
+    POP_SUB(cn_src_mem_dt)
   end subroutine cn_src_mem_dt
 
 
@@ -397,7 +397,7 @@ contains
     CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:)
     FLOAT              :: dres
     
-    call push_sub('ob_propagator.cn_src_mem_dt')
+    PUSH_SUB(cn_src_mem_dt)
 
     np = maxval(gr%intf(1:NLEADS)%np_intf)
 
@@ -493,7 +493,7 @@ contains
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_A(tmp_wf)
     SAFE_DEALLOCATE_A(tmp_mem)
-    call pop_sub('ob_propagator.cn_src_mem_dt')
+    POP_SUB(cn_src_mem_dt)
   end subroutine cn_src_mem_sp_dt
 
 
@@ -505,7 +505,7 @@ contains
     CMPLX, intent(out) :: y(:)
 
     CMPLX, allocatable :: tmp(:, :)
-    call push_sub('ob_propagator.h_eff_backward')
+    PUSH_SUB(h_eff_backward)
     
     SAFE_ALLOCATE(tmp(1:gr_p%mesh%np_part, 1:1))
     ! Propagate backward.
@@ -517,7 +517,7 @@ contains
     y(1:gr_p%mesh%np) = tmp(1:gr_p%mesh%np, 1)
 
     SAFE_DEALLOCATE_A(tmp)
-    call pop_sub('ob_propagator.h_eff_backward')
+    POP_SUB(h_eff_backward)
   end subroutine h_eff_backward
 
 
@@ -529,7 +529,7 @@ contains
     CMPLX, intent(out) :: y(:)
 
     CMPLX, allocatable :: tmp(:, :)
-    call push_sub('ob_propagator.h_eff_backward_sp')
+    PUSH_SUB(h_eff_backward_sp)
     
     SAFE_ALLOCATE(tmp(1:gr_p%mesh%np_part, 1:1))
     ! Propagate backward.
@@ -541,7 +541,7 @@ contains
     y(1:gr_p%mesh%np) = tmp(1:gr_p%mesh%np, 1)
 
     SAFE_DEALLOCATE_A(tmp)
-    call pop_sub('ob_propagator.h_eff_backward_sp')
+    POP_SUB(h_eff_backward_sp)
   end subroutine h_eff_backward_sp
 
 
@@ -555,7 +555,7 @@ contains
 
     integer :: ik, ist
     
-    call push_sub('ob_propagator.save_intf_wf')
+    PUSH_SUB(save_intf_wf)
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
@@ -563,7 +563,7 @@ contains
       end do
     end do
 
-    call pop_sub('ob_propagator.save_intf_wf')
+    POP_SUB(save_intf_wf)
   end subroutine save_intf_wf
 
 
@@ -584,7 +584,7 @@ contains
     CMPLX, allocatable :: intf_wf(:, :)
     logical            :: transposed_
 
-    call push_sub('ob_propagator.apply_h_eff')
+    PUSH_SUB(apply_h_eff)
 
     SAFE_ALLOCATE(intf_wf(1:maxval(gr%intf(1:NLEADS)%np_intf), 1:NLEADS))
 
@@ -618,7 +618,7 @@ contains
 
     SAFE_DEALLOCATE_A(intf_wf)
 
-    call pop_sub('ob_propagator.apply_h_eff')
+    POP_SUB(apply_h_eff)
   end subroutine apply_h_eff
 
 
@@ -639,7 +639,7 @@ contains
     CMPLX, allocatable :: intf_wf(:, :)
     logical            :: transposed_
 
-    call push_sub('ob_propagator.apply_h_eff_sp')
+    PUSH_SUB(apply_h_eff_sp)
 
     SAFE_ALLOCATE(intf_wf(1:intf(LEFT)%np_intf, 1:NLEADS))
 
@@ -672,7 +672,7 @@ contains
 
     SAFE_DEALLOCATE_A(intf_wf)
 
-    call pop_sub('ob_propagator.apply_h_eff_sp')
+    POP_SUB(apply_h_eff_sp)
   end subroutine apply_h_eff_sp
 
 
@@ -685,7 +685,7 @@ contains
 
     integer  :: ii, index
 
-    call push_sub('ob_propagator.apply_src')
+    PUSH_SUB(apply_src)
 
     ! Do not use use BLAS here.
     do ii=1, intf%np_intf
@@ -693,7 +693,7 @@ contains
       zpsi(index, 1) = zpsi(index, 1) + src_wf(ii)
     end do
 
-    call pop_sub('ob_propagator.apply_src')
+    POP_SUB(apply_src)
   end subroutine apply_src
 
 
@@ -711,7 +711,7 @@ contains
     CMPLX, allocatable :: mem_intf_wf(:)
     integer            :: ii, index
 
-    call push_sub('ob_propagator.apply_mem')
+    PUSH_SUB(apply_mem)
 
     SAFE_ALLOCATE(mem_intf_wf(1:intf%np_intf))
 
@@ -730,7 +730,7 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(mem_intf_wf)
-    call pop_sub('ob_propagator.apply_mem')
+    POP_SUB(apply_mem)
   end subroutine apply_mem
 
   ! ---------------------------------------------------------
@@ -750,7 +750,7 @@ contains
 
     CMPLX, allocatable :: tmem(:, :)
 
-    call push_sub('ob_propagator.apply_sp_mem')
+    PUSH_SUB(apply_sp_mem)
 
     SAFE_ALLOCATE(tmem(1:intf%np_intf, 1:intf%np_intf))
     ! \todo do not multiply matrices together, better multiply successively onto wavefunction
@@ -758,7 +758,7 @@ contains
     call apply_mem(tmem, intf, intf_wf, zpsi, factor, transposed)
     SAFE_DEALLOCATE_A(tmem)
 
-    call pop_sub('ob_propagator.apply_sp_mem')
+    POP_SUB(apply_sp_mem)
   end subroutine apply_sp_mem
 
 
@@ -770,7 +770,7 @@ contains
 !    integer            :: np
 !    CMPLX, allocatable :: diag(:, :)
 
-    call push_sub('ob_propagator.preconditioner')
+    PUSH_SUB(preconditioner)
 !    np = gr_p%mesh%np
 
     y(:) = x(:) ! no preconditioner
@@ -784,7 +784,7 @@ contains
 
 !    SA FE_DEALLOCATE_A(diag)
 
-    call pop_sub('ob_propagator.preconditioner')
+    POP_SUB(preconditioner)
   end subroutine precond_prop
 
 
@@ -800,7 +800,7 @@ contains
     character(len=64) :: terms, mem_type_name
     integer           :: il
 
-    call push_sub('ob_propagator.ob_propagator_write_info')
+    PUSH_SUB(ob_propagator_write_info)
 
     call messages_print_stress(stdout, 'Open Boundaries')
 
@@ -836,7 +836,7 @@ contains
 
     call messages_print_stress(stdout)
 
-    call pop_sub('ob_propagator.ob_propagator_write_info')
+    POP_SUB(ob_propagator_write_info)
   end subroutine ob_propagator_write_info
 
 
@@ -846,7 +846,7 @@ contains
 
     integer :: il
 
-    call push_sub('ob_propagator.ob_propagator_end')
+    PUSH_SUB(ob_propagator_end)
 
     call ob_mem_end(ob)
     call ob_src_end(ob)
@@ -857,7 +857,7 @@ contains
       SAFE_DEALLOCATE_P(ob%lead(il)%st_intface)
     end do
 
-    call pop_sub('ob_propagator.ob_propagator_end')
+    POP_SUB(ob_propagator_end)
   end subroutine ob_propagator_end
 
 

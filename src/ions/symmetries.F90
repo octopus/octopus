@@ -101,7 +101,7 @@ contains
     real(8), allocatable :: translation(:, :)
     type(symm_op_t) :: tmpop
 
-    call push_sub('symmetries.symmetries_init')
+    PUSH_SUB(symmetries_init)
 
     if (periodic_dim == 0) then
 
@@ -190,7 +190,7 @@ contains
 
     end if
 
-    call pop_sub('symmetries.symmetries_init')
+    POP_SUB(symmetries_init)
   end subroutine symmetries_init
 
   ! -------------------------------------------------------------------------------
@@ -201,7 +201,7 @@ contains
 
     integer :: iop
 
-    call push_sub('symmetries.symmetries_copy')
+    PUSH_SUB(symmetries_copy)
 
     outp%nops = inp%nops
     outp%breakdir = inp%breakdir
@@ -212,7 +212,7 @@ contains
       call symm_op_copy(inp%ops(iop), outp%ops(iop))
     end do
 
-    call pop_sub('symmetries.symmetries_copy')
+    POP_SUB(symmetries_copy)
   end subroutine symmetries_copy
 
   ! -------------------------------------------------------------------------------
@@ -222,14 +222,14 @@ contains
 
     integer :: iop
 
-    call push_sub('symmetries.symmetries_end')
+    PUSH_SUB(symmetries_end)
 
     do iop = 1, this%nops
       call symm_op_end(this%ops(iop))
     end do
 
     SAFE_DEALLOCATE_P(this%ops)
-    call pop_sub('symmetries.symmetries_end')
+    POP_SUB(symmetries_end)
   end subroutine symmetries_end
 
   ! -------------------------------------------------------------------------------
@@ -248,13 +248,13 @@ contains
     FLOAT,               intent(in)  :: aa(1:3)
     FLOAT,               intent(out) :: bb(1:3)
 
-    call push_sub('symmetries.symmetries_apply_kpoint')
+    PUSH_SUB(symmetries_apply_kpoint)
 
     ASSERT(0 < iop .and. iop <= this%nops)
 
     bb(1:3) = symm_op_apply_inv(this%ops(iop), aa(1:3))
 
-    call pop_sub('symmetries.symmetries_apply_kpoint')
+    POP_SUB(symmetries_apply_kpoint)
   end subroutine symmetries_apply_kpoint
 
 end module symmetries_m

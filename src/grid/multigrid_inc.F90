@@ -32,7 +32,7 @@
     integer :: ipc, ipf, ipfg, xf(1:3), xc(1:3), dd(1:3)
     FLOAT, allocatable :: factor(:), points(:)
 
-    call push_sub('multigrid.Xmultigrid_coarse2fine')
+    PUSH_SUB(X(multigrid_coarse2fine))
 
     call profiling_in(interp_prof, "MG_INTERPOLATION")
 
@@ -89,7 +89,7 @@
     end do
 
     call profiling_out(interp_prof)
-    call pop_sub('multigrid.Xmultigrid_coarse2fine')
+    POP_SUB(X(multigrid_coarse2fine))
   end subroutine X(multigrid_coarse2fine)
 
   ! ---------------------------------------------------------
@@ -103,7 +103,7 @@
 
     integer :: method
 
-    call push_sub('multigrid.Xmultigrid_fine2coarse')
+    PUSH_SUB(X(multigrid_fine2coarse))
 
     if(present(method_p)) then
       method=method_p
@@ -121,7 +121,7 @@
       call write_fatal(1)
     end select
 
-    call pop_sub('multigrid.Xmultigrid_fine2coarse')
+    POP_SUB(X(multigrid_fine2coarse))
   end subroutine X(multigrid_fine2coarse)
 
 
@@ -133,7 +133,7 @@
 
     integer :: ii
 
-    call push_sub('multigrid.Xmultigrid_injection')
+    PUSH_SUB(X(multigrid_injection))
     call profiling_in(injection_prof, "MG_INJECTION")
 
     do ii = 1, tt%n_coarse
@@ -141,7 +141,7 @@
     end do
 
     call profiling_out(injection_prof)
-    call pop_sub('multigrid.Xmultigrid_injection')
+    POP_SUB(X(multigrid_injection))
   end subroutine X(multigrid_injection)
 
   ! ---------------------------------------------------------
@@ -156,7 +156,7 @@
 
     integer :: nn, fn, di, dj, dk, dd, fi(MAX_DIM)
 
-    call push_sub('multigrid.Xmultigrid_restriction')
+    PUSH_SUB(X(multigrid_restriction))
     call profiling_in(restrict_prof, "MG_RESTRICTION")
 
     do di = -1, 1
@@ -214,7 +214,7 @@
 
     call profiling_count_operations(tt%n_coarse*(27*3 + 1))
     call profiling_out(restrict_prof)
-    call pop_sub('multigrid.Xmultigrid_restriction')
+    POP_SUB(X(multigrid_restriction))
   end subroutine X(multigrid_restriction)
 
 

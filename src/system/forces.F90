@@ -85,7 +85,7 @@ contains
     type(profile_t), save :: forces_prof
 
     call profiling_in(forces_prof, "FORCES")
-    call push_sub('epot.forces_calculate')
+    PUSH_SUB(forces_calculate)
 
     x(:) = M_ZERO
     time = M_ZERO
@@ -128,7 +128,7 @@ contains
       end do
     end if
     
-    call pop_sub('epot.forces_calculate')
+    POP_SUB(forces_calculate)
     call profiling_out(forces_prof)
 
   end subroutine forces_calculate

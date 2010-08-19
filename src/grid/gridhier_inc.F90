@@ -25,7 +25,7 @@ subroutine X(gridhier_init)(this, base_der, np_part_size)
   integer :: cl, ll, np
   type(derivatives_t), pointer :: der
 
-  call push_sub('poisson_multigrid.Xgridhier_init')
+  PUSH_SUB(X(gridhier_init))
   
   cl = multigrid_number_of_levels(base_der)
 
@@ -45,7 +45,7 @@ subroutine X(gridhier_init)(this, base_der, np_part_size)
     der => der%coarser
   end do
   
-  call pop_sub('poisson_multigrid.Xgridhier_init')
+  POP_SUB(X(gridhier_init))
 end subroutine X(gridhier_init)
 
 ! ---------------------------------------------------------
@@ -53,7 +53,7 @@ subroutine X(gridhier_end)(this)
   type(X(gridhier_t)),  intent(inout) :: this
 
   integer :: ll
-  call push_sub('poisson_multigrid.Xgridhier_end')
+  PUSH_SUB(X(gridhier_end))
   
   do ll = 0, ubound(this%level, dim = 1)
     SAFE_DEALLOCATE_P(this%level(ll)%p)
@@ -61,7 +61,7 @@ subroutine X(gridhier_end)(this)
 
   SAFE_DEALLOCATE_P(this%level)
   
-  call pop_sub('poisson_multigrid.Xgridhier_end')
+  POP_SUB(X(gridhier_end))
 end subroutine X(gridhier_end)
 
 !! Local Variables:

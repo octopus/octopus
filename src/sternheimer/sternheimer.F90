@@ -115,7 +115,7 @@ contains
     integer :: ham_var, default_solver
     logical :: default_preorthog
 
-    call push_sub('sternheimer.sternheimer_init')
+    PUSH_SUB(sternheimer_init)
 
     if(simul_box_is_periodic(sys%gr%mesh%sb)) call messages_devel_version("Sternheimer equation for periodic systems")
 
@@ -241,7 +241,7 @@ contains
 
     nullify(this%drhs)
     nullify(this%zrhs)
-    call pop_sub('sternheimer.sternheimer_init')
+    POP_SUB(sternheimer_init)
   end subroutine sternheimer_init
 
 
@@ -249,7 +249,7 @@ contains
   subroutine sternheimer_end(this)
     type(sternheimer_t), intent(inout) :: this
 
-    call push_sub('sternheimer.sternheimer_end')
+    PUSH_SUB(sternheimer_end)
 
     call linear_solver_end(this%solver)
     call scf_tol_end(this%scf_tol)
@@ -258,7 +258,7 @@ contains
       SAFE_DEALLOCATE_P(this%fxc)
     end if
 
-    call pop_sub('sternheimer.sternheimer_end')
+    POP_SUB(sternheimer_end)
   end subroutine sternheimer_end
 
 
@@ -271,7 +271,7 @@ contains
 
     FLOAT, allocatable :: rho(:, :)
 
-    call push_sub('sternheimer.sternheimer_build_fxc')
+    PUSH_SUB(sternheimer_build_fxc)
 
     SAFE_ALLOCATE(this%fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
     this%fxc = M_ZERO
@@ -289,7 +289,7 @@ contains
       call xc_oep_kernel_init(ks%oep)
     end if
 
-    call pop_sub('sternheimer.sternheimer_build_fxc')
+    POP_SUB(sternheimer_build_fxc)
 
   end subroutine sternheimer_build_fxc
 
@@ -347,7 +347,7 @@ contains
 
     character :: sigma_char
 
-    call push_sub('sternheimer.wfs_tag_sigma')
+    PUSH_SUB(wfs_tag_sigma)
 
     select case(isigma)
     case(1)
@@ -361,7 +361,7 @@ contains
 
     str = trim(base_name) // sigma_char
 
-    call pop_sub('sternheimer.wfs_tag_sigma')
+    POP_SUB(wfs_tag_sigma)
 
   end function wfs_tag_sigma
   

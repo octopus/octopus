@@ -60,7 +60,7 @@ contains
     type(vibrations_t) :: vib
     integer :: ierr
 
-    call push_sub('phonons_fd.phonons_run')
+    PUSH_SUB(phonons_run)
 
     call init_()
 
@@ -95,26 +95,26 @@ contains
     call vibrations_end(vib)
 
     call end_()
-    call pop_sub('phonons_fd.phonons_run')
+    POP_SUB(phonons_run)
 
   contains
 
     ! ---------------------------------------------------------
     subroutine init_()
 
-      call push_sub('phonons.phonons_run.init_')
+      PUSH_SUB(phonons_run.init_)
       call states_allocate_wfns(sys%st, sys%gr%mesh)
 
-      call pop_sub('phonons.phonons_run.init_')
+      POP_SUB(phonons_run.init_)
     end subroutine init_
 
     ! ---------------------------------------------------------
     subroutine end_()
 
-      call push_sub('phonons_fd.phonons_run.end_')
+      PUSH_SUB(phonons_run.end_)
       call states_deallocate_wfns(sys%st)
 
-      call pop_sub('phonons_fd.phonons_run.end_')
+      POP_SUB(phonons_run.end_)
     end subroutine end_
 
   end subroutine phonons_run
@@ -136,7 +136,7 @@ contains
     integer :: iatom, jatom, alpha, beta
     FLOAT, allocatable :: forces(:,:), forces0(:,:)
 
-    call push_sub('phonons_fd.get_dyn_matrix')
+    PUSH_SUB(get_dyn_matrix)
 
     mesh => gr%mesh
 
@@ -194,7 +194,7 @@ contains
     call vibrations_normalize_dyn_matrix(vib, geo)
     call vibrations_diag_dyn_matrix(vib)
 
-    call pop_sub('phonons_fd.get_dyn_matrix')
+    POP_SUB(get_dyn_matrix)
   end subroutine get_dyn_matrix
 
 end module phonons_fd_m

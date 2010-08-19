@@ -44,11 +44,11 @@ contains
     integer, intent(in) :: dim
     integer, intent(in) :: order
 
-    call push_sub('stencil_cube.stencil_cube_size_lapl')
+    PUSH_SUB(stencil_cube_size_lapl)
 
     stencil_cube_size_lapl = (2*order+1)**dim
 
-    call pop_sub('stencil_cube.stencil_cube_size_lapl')
+    POP_SUB(stencil_cube_size_lapl)
   end function stencil_cube_size_lapl
 
 
@@ -61,7 +61,7 @@ contains
 
     integer :: extent
 
-    call push_sub('stencil_cube.stencil_cube_extent')
+    PUSH_SUB(stencil_cube_extent)
 
     extent = 0
     if(dir.ge.1.or.dir.le.3) then
@@ -69,7 +69,7 @@ contains
     end if
     stencil_cube_extent = extent
 
-    call pop_sub('stencil_cube.stencil_cube_extent')
+    POP_SUB(stencil_cube_extent)
   end function stencil_cube_extent
 
 
@@ -81,7 +81,7 @@ contains
 
     integer :: i, j, k, n
 
-    call push_sub('stencil_cube.stencil_cube_get_lapl')
+    PUSH_SUB(stencil_cube_get_lapl)
 
     call stencil_allocate(this, stencil_cube_size_lapl(dim, order))
 
@@ -115,7 +115,7 @@ contains
 
     call stencil_init_center(this)
 
-    call pop_sub('stencil_cube.stencil_cube_get_lapl')
+    POP_SUB(stencil_cube_get_lapl)
   end subroutine stencil_cube_get_lapl
 
 
@@ -127,7 +127,7 @@ contains
 
     integer :: i, j, k, n
 
-    call push_sub('stencil_cube.stencil_cube_polynomials_lapl')
+    PUSH_SUB(stencil_cube_polynomials_lapl)
 
     n = 1
     select case(dim)
@@ -157,7 +157,7 @@ contains
       end do
     end select
 
-    call pop_sub('stencil_cube.stencil_cube_polynomials_lapl')
+    POP_SUB(stencil_cube_polynomials_lapl)
   end subroutine stencil_cube_polynomials_lapl
 
 

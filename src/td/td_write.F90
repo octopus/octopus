@@ -121,7 +121,7 @@ contains
     type(block_t) :: blk
     character(len=100) :: filename
 
-    call push_sub('td_write.td_write_init')
+    PUSH_SUB(td_write_init)
 
 
     !%Variable TDOutput
@@ -385,7 +385,7 @@ contains
         first, units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/gauge_field")))
     end if
 
-    call pop_sub('td_write.td_write_init')
+    POP_SUB(td_write_init)
   end subroutine td_write_init
 
 
@@ -393,7 +393,7 @@ contains
   subroutine td_write_end(writ)
     type(td_write_t), intent(inout) :: writ
     integer :: ist, iout
-    call push_sub('td_write.td_write_end')
+    PUSH_SUB(td_write_end)
 
     if(mpi_grp_is_root(mpi_world)) then
       do iout = 1, OUT_MAX
@@ -410,7 +410,7 @@ contains
 
     if(writ%out(OUT_POPULATIONS)%write .or. writ%out(OUT_PROJ)%write) call states_end(writ%gs_st)
 
-    call pop_sub('td_write.td_write_end')
+    POP_SUB(td_write_end)
   end subroutine td_write_end
 
 
@@ -427,7 +427,7 @@ contains
 
     type(profile_t), save :: prof
 
-    call push_sub('td_write.td_write_iter')
+    PUSH_SUB(td_write_iter)
     call profiling_in(prof, "TD_WRITE_ITER")
 
     if(writ%out(OUT_MULTIPOLES)%write) &
@@ -471,7 +471,7 @@ contains
       call td_write_gauge_field(writ%out(OUT_GAUGE_FIELD)%handle, hm, gr, iter)
 
     call profiling_out(prof)
-    call pop_sub('td_write.td_write_iter')
+    POP_SUB(td_write_iter)
   end subroutine td_write_iter
 
 
@@ -489,7 +489,7 @@ contains
     integer :: iout
     type(profile_t), save :: prof
 
-    call push_sub('td.td_write_data')
+    PUSH_SUB(td_write_data)
     call profiling_in(prof, "TD_WRITE_DATA")
 
     if(mpi_grp_is_root(mpi_world)) then
@@ -505,7 +505,7 @@ contains
     call h_sys_output_all(outp, gr, geo, st, hm, filename)
 
     call profiling_out(prof)
-    call pop_sub('td.td_write_data')
+    POP_SUB(td_write_data)
   end subroutine td_write_data
 
 
@@ -519,7 +519,7 @@ contains
     character(len=130) :: aux
     FLOAT :: spin(3)
 
-    call push_sub('td_write.td_write_spin')
+    PUSH_SUB(td_write_spin)
 
     ! The expectation value of the spin operator is half the total magnetic moment
     ! This has to be calculated by all nodes
@@ -557,7 +557,7 @@ contains
 
     end if
 
-    call pop_sub('td_write.td_write_spin')
+    POP_SUB(td_write_spin)
   end subroutine td_write_spin
 
 
@@ -574,7 +574,7 @@ contains
     character(len=50) :: aux
     FLOAT, allocatable :: lmm(:,:)
 
-    call push_sub('td_write.td_write_local_magnetic_moments')
+    PUSH_SUB(td_write_local_magnetic_moments)
 
     !get the atoms` magnetization. This has to be calculated by all nodes
     SAFE_ALLOCATE(lmm(1:3, 1:geo%natoms))
@@ -615,7 +615,7 @@ contains
       SAFE_DEALLOCATE_A(lmm)
     end if
 
-    call pop_sub('td_write.td_write_local_magnetic_moments')
+    POP_SUB(td_write_local_magnetic_moments)
   end subroutine td_write_local_magnetic_moments
 
 
@@ -634,7 +634,7 @@ contains
     FLOAT :: angular(MAX_DIM)
     type(pert_t)        :: angular_momentum
 
-    call push_sub('td_write.td_write_angular')
+    PUSH_SUB(td_write_angular)
 
     call pert_init(angular_momentum, PERTURBATION_MAGNETIC, gr, geo)
 
@@ -684,7 +684,7 @@ contains
 
     end if
 
-    call pop_sub('td_write.td_write_angular')
+    POP_SUB(td_write_angular)
   end subroutine td_write_angular
 
 
@@ -702,7 +702,7 @@ contains
     character(len=120) :: aux
     FLOAT, allocatable :: nuclear_dipole(:), multipole(:,:)
 
-    call push_sub('td_write.td_write_multipole')
+    PUSH_SUB(td_write_multipole)
 
     if(mpi_grp_is_root(mpi_world).and.iter == 0) then
       call td_write_print_header_init(out_multip)
@@ -788,7 +788,7 @@ contains
 
     SAFE_DEALLOCATE_A(nuclear_dipole)
     SAFE_DEALLOCATE_A(multipole)
-    call pop_sub('td_write.td_write_multipole')
+    POP_SUB(td_write_multipole)
   end subroutine td_write_multipole
 
   ! ---------------------------------------------------------
@@ -808,7 +808,7 @@ contains
     FLOAT, allocatable :: integrand_bessel(:)
     CMPLX, allocatable :: integrand(:)
 
-    call push_sub('td_write.td_write_ftchd')
+    PUSH_SUB(td_write_ftchd)
 
     if(mpi_grp_is_root(mpi_world).and.iter == 0) then
       call td_write_print_header_init(out_ftchd)
@@ -887,7 +887,7 @@ contains
       call write_iter_nl(out_ftchd)
     end if
 
-    call pop_sub('td_write.td_write_ftchd')
+    POP_SUB(td_write_ftchd)
   end subroutine td_write_ftchd
 
   ! ---------------------------------------------------------
@@ -903,7 +903,7 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
-    call push_sub('td_write.td_write_coordinates')
+    PUSH_SUB(td_write_coordinates)
 
     if(iter == 0) then
       call td_write_print_header_init(out_coords)
@@ -959,7 +959,7 @@ contains
     end do
     call write_iter_nl(out_coords)
 
-    call pop_sub('td_write.td_write_coordinates')
+    POP_SUB(td_write_coordinates)
   end subroutine td_write_coordinates
 
 
@@ -971,7 +971,7 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
-    call push_sub('td_write.td_write_temperature')
+    PUSH_SUB(td_write_temperature)
 
     if(iter == 0) then
       call td_write_print_header_init(out_temperature)
@@ -996,7 +996,7 @@ contains
 
     call write_iter_nl(out_temperature)
 
-    call pop_sub('td_write.td_write_temperature')
+    POP_SUB(td_write_temperature)
   end subroutine td_write_temperature
 
 
@@ -1018,7 +1018,7 @@ contains
     CMPLX, allocatable :: dotprodmatrix(:, :, :)
 
 
-    call push_sub('td_write.td_write_populations')
+    PUSH_SUB(td_write_populations)
 
     SAFE_ALLOCATE(dotprodmatrix(1:gs_st%nst, 1:st%nst, 1:st%d%nik))
     call zstates_matrix(mesh, gs_st, st, dotprodmatrix)
@@ -1072,7 +1072,7 @@ contains
       SAFE_DEALLOCATE_A(excited_state_p)
     end if
     SAFE_DEALLOCATE_A(dotprodmatrix)
-    call pop_sub('td_write.td_write_populations')
+    POP_SUB(td_write_populations)
   end subroutine td_write_populations
 
 
@@ -1093,7 +1093,7 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
-    call push_sub('td_write.td_write_acc')
+    PUSH_SUB(td_write_acc)
 
     if(iter == 0) then
       call td_write_print_header_init(out_acc)
@@ -1123,7 +1123,7 @@ contains
     call write_iter_double(out_acc, acc, gr%mesh%sb%dim)
     call write_iter_nl(out_acc)
 
-    call pop_sub('td_write.td_write_acc')
+    POP_SUB(td_write_acc)
   end subroutine td_write_acc
 
 
@@ -1141,7 +1141,7 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
-    call push_sub('td_write.td_write_laser')
+    PUSH_SUB(td_write_laser)
 
     if(iter == 0) then
       call td_write_print_header_init(out_laser)
@@ -1215,7 +1215,7 @@ contains
 
     call write_iter_nl(out_laser)
 
-    call pop_sub('td_write.td_write_laser')
+    POP_SUB(td_write_laser)
   end subroutine td_write_laser
 
 
@@ -1230,7 +1230,7 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
-    call push_sub('td_write.td_write_energy')
+    PUSH_SUB(td_write_energy)
 
     if(iter == 0) then
       call td_write_print_header_init(out_energy)
@@ -1270,7 +1270,7 @@ contains
     call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%ec), 1)
     call write_iter_nl(out_energy)
 
-    call pop_sub('td_write.td_write_energy')
+    POP_SUB(td_write_energy)
   end subroutine td_write_energy
 
   ! ---------------------------------------------------------
@@ -1286,7 +1286,7 @@ contains
     
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
-    call push_sub('td_write.td_write_gauge_field')
+    PUSH_SUB(td_write_gauge_field)
     
     if(iter == 0) then
       call td_write_print_header_init(out_gauge)
@@ -1342,7 +1342,7 @@ contains
     call write_iter_double(out_gauge, temp, gr%mesh%sb%dim)
 
     call write_iter_nl(out_gauge)
-    call pop_sub('td_write.td_write_gauge_field')
+    POP_SUB(td_write_gauge_field)
     
   end subroutine td_write_gauge_field
 
@@ -1360,7 +1360,7 @@ contains
     character(len=80) :: aux
     integer :: ik, ist, uist, idir
 
-    call push_sub('td_write.td_write_proj')
+    PUSH_SUB(td_write_proj)
 
     if(iter == 0) then
       if(mpi_grp_is_root(mpi_world)) then
@@ -1456,7 +1456,7 @@ contains
     end if
 
     SAFE_DEALLOCATE_A(projections)
-    call pop_sub('td_write.td_write_proj')
+    POP_SUB(td_write_proj)
 
   contains
     ! ---------------------------------------------------------
@@ -1466,7 +1466,7 @@ contains
     subroutine calc_projections()
       integer :: uist, ist, ik
 
-      call push_sub('td_write.td_write_proj.calc_projections')
+      PUSH_SUB(td_write_proj.calc_projections)
 
       do ik = 1, st%d%nik
         do ist = max(gs_st%st_start, st%st_start), st%st_end
@@ -1479,7 +1479,7 @@ contains
       
       call distribute_projections()
 
-      call pop_sub('td_write.td_write_proj.calc_projections')
+      POP_SUB(td_write_proj.calc_projections)
     end subroutine calc_projections
 
 
@@ -1491,7 +1491,7 @@ contains
       FLOAT   :: n_dip(MAX_DIM)
       CMPLX, allocatable :: xpsi(:,:)
 
-      call push_sub('td_write.td_write_proj.dipole_matrix_elements')
+      PUSH_SUB(td_write_proj.dipole_matrix_elements)
 
       call geometry_dipole(geo, n_dip)
 
@@ -1516,7 +1516,7 @@ contains
 
       call distribute_projections()
 
-      call pop_sub('td_write.td_write_proj.dipole_matrix_elements')
+      POP_SUB(td_write_proj.dipole_matrix_elements)
     end subroutine dipole_matrix_elements
 
     subroutine distribute_projections
@@ -1525,7 +1525,7 @@ contains
 
       if(.not.st%parallel_in_states) return
 
-      call push_sub('td_write.td_write_proj.distribute_projections')
+      PUSH_SUB(td_write_proj.distribute_projections)
 
       do ik = 1, st%d%nik
         do ist = gs_st%st_start, st%nst
@@ -1536,7 +1536,7 @@ contains
         end do
       end do
 
-      call pop_sub('td_write.td_write_proj.distribute_projections')
+      POP_SUB(td_write_proj.distribute_projections)
 #endif
     end subroutine distribute_projections
 
@@ -1547,7 +1547,7 @@ contains
   subroutine td_write_print_header_init(out)
     type(c_ptr), intent(in) :: out
 
-    call push_sub('td_write.td_write_print_header_init')
+    PUSH_SUB(td_write_print_header_init)
 
     call write_iter_clear(out)
     call write_iter_string(out,'################################################################################')
@@ -1555,7 +1555,7 @@ contains
     call write_iter_string(out,'# HEADER')
     call write_iter_nl(out)
 
-    call pop_sub('td_write.td_write_print_header_init')
+    POP_SUB(td_write_print_header_init)
   end subroutine td_write_print_header_init
 
 
@@ -1563,12 +1563,12 @@ contains
   subroutine td_write_print_header_end(out)
     type(c_ptr), intent(in) :: out
 
-    call push_sub('td_write.td_write_print_header_end')
+    PUSH_SUB(td_write_print_header_end)
 
     call write_iter_string(out,'################################################################################')
     call write_iter_nl(out)
 
-    call pop_sub('td_write.td_write_print_header_end')
+    POP_SUB(td_write_print_header_end)
   end subroutine td_write_print_header_end
 
 

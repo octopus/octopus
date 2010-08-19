@@ -63,7 +63,7 @@ contains
     FLOAT :: rpb, ea
     integer  :: ir
 
-    call push_sub('logrid.logrid_init')
+    PUSH_SUB(logrid_init)
 
     ASSERT(flavor==LOGRID_PSF.or.flavor==LOGRID_CPI)
 
@@ -106,7 +106,7 @@ contains
       grid%r2ofi(ir) = grid%rofi(ir)**2
     end do
 
-    call pop_sub('logrid.logrid_init')
+    POP_SUB(logrid_init)
   end subroutine logrid_init
 
 
@@ -114,14 +114,14 @@ contains
   subroutine logrid_end(grid)
     type(logrid_t), intent(inout) :: grid
 
-    call push_sub('logrid.logrid_end')
+    PUSH_SUB(logrid_end)
 
     SAFE_DEALLOCATE_P(grid%rofi)
     SAFE_DEALLOCATE_P(grid%r2ofi)
     SAFE_DEALLOCATE_P(grid%drdi)
     SAFE_DEALLOCATE_P(grid%s)
 
-    call pop_sub('logrid.logrid_end')
+    POP_SUB(logrid_end)
   end subroutine logrid_end
 
 
@@ -130,7 +130,7 @@ contains
     type(logrid_t), intent(in)  :: grid_in
     type(logrid_t), intent(out) :: grid_out
 
-    call push_sub('logrid.logrid_copy')
+    PUSH_SUB(logrid_copy)
 
     grid_out%flavor = grid_in%flavor
     grid_out%a      = grid_in%a
@@ -147,7 +147,7 @@ contains
     grid_out%drdi(:)  = grid_in%drdi(:)
     grid_out%s(:)     = grid_in%s(:)
 
-    call pop_sub('logrid.logrid_copy')
+    POP_SUB(logrid_copy)
   end subroutine logrid_copy
 
 
@@ -158,7 +158,7 @@ contains
 
     integer :: ir
 
-    call push_sub('logrid.logrid_index')
+    PUSH_SUB(logrid_index)
 
     ii = 0
     do ir = 1, grid%nrval-1
@@ -174,7 +174,7 @@ contains
 
     end do
 
-    call pop_sub('logrid.logrid_index')
+    POP_SUB(logrid_index)
   end function logrid_index
 
 
@@ -186,7 +186,7 @@ contains
 
     integer :: ii
 
-    call push_sub('logrid.derivative_in_log_grid')
+    PUSH_SUB(derivative_in_log_grid)
 
     dfdr(1) = (ff(2) - ff(1))/(grid%rofi(2) - grid%rofi(1))
     do ii = 2, grid%nrval-1
@@ -194,7 +194,7 @@ contains
     end do
     dfdr(grid%nrval) = (ff(grid%nrval) - ff(grid%nrval-1))/(grid%rofi(grid%nrval) - grid%rofi(grid%nrval-1))
 
-    call pop_sub('logrid.derivative_in_log_grid')
+    POP_SUB(derivative_in_log_grid)
   end subroutine derivative_in_log_grid
 
 end module logrid_m

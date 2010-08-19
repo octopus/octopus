@@ -60,7 +60,7 @@ contains
     FLOAT, allocatable :: rho(:,:)
     FLOAT :: E_tot, E_t, E_ext, E_Hartree, E_x, E_c
 
-    call push_sub('one_shot.one_shot_run')
+    PUSH_SUB(one_shot_run)
 
     ! load wavefunctions
     call states_allocate_wfns(sys%st, sys%gr%mesh)
@@ -130,7 +130,7 @@ contains
 
     call states_deallocate_wfns(sys%st)
 
-    call pop_sub('one_shot.one_shot_run')
+    POP_SUB(one_shot_run)
   end subroutine one_shot_run
 
 end module one_shot_m

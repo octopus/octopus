@@ -125,7 +125,7 @@ contains
     FLOAT :: norm
     character(len=80) :: nst_string, default
 
-    call push_sub('h_sys_output.h_sys_output_init')
+    PUSH_SUB(h_sys_output_init)
 
     !%Variable Output
     !%Type flag
@@ -429,7 +429,7 @@ contains
     if(outp%what .ne. 0 .and. outp%what .ne. output_matrix_elements) &
          call io_function_read_how(sb, outp%how)
 
-    call pop_sub('h_sys_output.h_sys_output_init')
+    POP_SUB(h_sys_output_init)
   end subroutine h_sys_output_init
 
 
@@ -442,7 +442,7 @@ contains
     type(h_sys_output_t), intent(in)    :: outp
     character(len=*),     intent(in)    :: dir
 
-    call push_sub('h_sys_output.h_sys_output_all')
+    PUSH_SUB(h_sys_output_all)
     
     call h_sys_output_states(st, gr, geo, dir, outp)
     call h_sys_output_hamiltonian(hm, gr%mesh, dir, outp, geo)
@@ -474,7 +474,7 @@ contains
     end if
 #endif
     
-    call pop_sub('h_sys_output.h_sys_output_all')
+    POP_SUB(h_sys_output_all)
   end subroutine h_sys_output_all
 
 
@@ -492,7 +492,7 @@ contains
     integer :: is, ierr, imax
     type(mpi_grp_t) :: mpi_grp
 
-    call push_sub('h_sys_output.h_sys_output_localization_funct')
+    PUSH_SUB(h_sys_output_localization_funct)
     
     mpi_grp = gr%mesh%mpi_grp
     if(st%parallel_in_states) mpi_grp = st%mpi_grp
@@ -566,7 +566,7 @@ contains
 
     SAFE_DEALLOCATE_A(f_loc)
 
-    call pop_sub('h_sys_output.h_sys_output_localization_funct')
+    POP_SUB(h_sys_output_localization_funct)
 
   contains
     ! ---------------------------------------------------------
@@ -578,7 +578,7 @@ contains
       type(basins_t)     :: basins
       integer            :: iunit
 
-      call push_sub('h_sys_output.h_sys_output_localization_funct.out_basins')
+      PUSH_SUB(h_sys_output_localization_funct.out_basins)
 
       call basins_init(basins, gr%mesh)
       call basins_analyze(basins, gr%mesh, st%d%nspin, ff(:), st%rho, CNST(0.01))
@@ -594,7 +594,7 @@ contains
 
       call basins_end(basins)
 
-      call pop_sub('h_sys_output.h_sys_output_localization_funct.out_basins')
+      POP_SUB(h_sys_output_localization_funct.out_basins)
     end subroutine out_basins
 
   end subroutine h_sys_output_localization_funct
@@ -611,7 +611,7 @@ contains
     FLOAT   :: p_tf, dens
     integer :: is, ii
 
-    call push_sub('h_sys_output.h_sys_calc_electronic_pressure')
+    PUSH_SUB(h_sys_calc_electronic_pressure)
 
     SAFE_ALLOCATE( rho(1:gr%mesh%np_part, 1:st%d%nspin))
     SAFE_ALLOCATE(lrho(1:gr%mesh%np))
@@ -643,7 +643,7 @@ contains
       pressure(ii) = M_HALF*(M_ONE + pressure(ii)/sqrt(M_ONE + pressure(ii)**2))
     end do
 
-    call pop_sub('h_sys_output.h_sys_calc_electronic_pressure')
+    POP_SUB(h_sys_calc_electronic_pressure)
   end subroutine h_sys_calc_electronic_pressure
 
 

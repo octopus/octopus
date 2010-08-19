@@ -152,7 +152,7 @@ contains
     type(c_ptr) :: prog
 #endif
 
-    call push_sub('nl_operator.nl_operator_global_init')
+    PUSH_SUB(nl_operator_global_init)
 
     !%Variable OperateDouble
     !%Type integer
@@ -224,7 +224,7 @@ contains
     end if
 #endif
 
-    call pop_sub('nl_operator.nl_operator_global_init')
+    POP_SUB(nl_operator_global_init)
   end subroutine nl_operator_global_init
 
 
@@ -232,13 +232,13 @@ contains
   character(len=8) function op_function_name(id) result(str)
     integer, intent(in) :: id
 
-    call push_sub('nl_operator.op_function_name')
+    PUSH_SUB(op_function_name)
     
     str = 'unknown'
     if(id == OP_FORTRAN) str = 'Fortran'
     if(id == OP_VEC)     str = 'Vector'
     
-    call pop_sub('nl_operator.op_function_name')
+    POP_SUB(op_function_name)
   end function op_function_name
 
 
@@ -247,7 +247,7 @@ contains
     type(nl_operator_t), intent(out) :: op
     character(len=*),    intent(in)  :: label
 
-    call push_sub('nl_operator.nl_operator_init')
+    PUSH_SUB(nl_operator_init)
 
     nullify(op%mesh, op%i, op%w_re, op%w_im, op%ri, op%rimap, op%rimap_inv)
     nullify(op%inner%imin, op%inner%imax, op%inner%ri)
@@ -256,7 +256,7 @@ contains
 
     op%label = label
 
-    call pop_sub('nl_operator.nl_operator_init')
+    POP_SUB(nl_operator_init)
   end subroutine nl_operator_init
 
 
@@ -265,7 +265,7 @@ contains
     type(nl_operator_t), intent(out) :: opo
     type(nl_operator_t), intent(in)  :: opi
 
-    call push_sub('nl_operator.nl_operator_copy')
+    PUSH_SUB(nl_operator_copy)
 
     call nl_operator_init(opo, opi%label)
 
@@ -301,7 +301,7 @@ contains
       call loct_pointer_copy(opo%outer%ri,   opi%outer%ri)
     end if
 
-    call pop_sub('nl_operator.nl_operator_copy')
+    POP_SUB(nl_operator_copy)
   end subroutine nl_operator_copy
 
 
@@ -320,7 +320,7 @@ contains
 #endif
     logical :: change, force_change
 
-    call push_sub('nl_operator.nl_operator_build')
+    PUSH_SUB(nl_operator_build)
 
 #ifdef HAVE_MPI
     if(mesh%parallel_in_domains .and. .not. const_w) then
@@ -554,7 +554,7 @@ contains
     end if
 #endif
 
-    call pop_sub('nl_operator.nl_operator_build')
+    POP_SUB(nl_operator_build)
 
   end subroutine nl_operator_build
 
@@ -573,7 +573,7 @@ contains
 
     integer :: ip, jp, kp, lp, index
 
-    call push_sub('nl_operator.nl_operator_transpose')
+    PUSH_SUB(nl_operator_transpose)
 
     call nl_operator_copy(opt, op)
 
@@ -600,7 +600,7 @@ contains
       end do
     end do
 
-    call pop_sub('nl_operator.nl_operator_transpose')
+    POP_SUB(nl_operator_transpose)
   end subroutine nl_operator_transpose
 
   ! ---------------------------------------------------------
@@ -615,7 +615,7 @@ contains
 
     type(nl_operator_t), pointer :: opg, opgt
 
-    call push_sub('nl_operator.nl_operator_skewadjoint')
+    PUSH_SUB(nl_operator_skewadjoint)
 
     call nl_operator_copy(opt, op)
 
@@ -676,7 +676,7 @@ contains
     end if
 #endif
 
-    call pop_sub('nl_operator.nl_operator_skewadjoint')
+    POP_SUB(nl_operator_skewadjoint)
   end subroutine nl_operator_skewadjoint
 
 
@@ -691,7 +691,7 @@ contains
 
     type(nl_operator_t), pointer :: opg, opgt
 
-    call push_sub('nl_operator.nl_operator_selfadjoint')
+    PUSH_SUB(nl_operator_selfadjoint)
 
     call nl_operator_copy(opt, op)
 
@@ -754,7 +754,7 @@ contains
     end if
 #endif
 
-    call pop_sub('nl_operator.nl_operator_selfadjoint')
+    POP_SUB(nl_operator_selfadjoint)
   end subroutine nl_operator_selfadjoint
 
 
@@ -769,7 +769,7 @@ contains
 
     integer :: ip
 
-    call push_sub('nl_operator.nl_operator_gather')
+    PUSH_SUB(nl_operator_gather)
 
     ASSERT(associated(op%i))
 
@@ -801,7 +801,7 @@ contains
       end do
     end if
 
-    call pop_sub('nl_operator.nl_operator_gather')
+    POP_SUB(nl_operator_gather)
 
   end subroutine nl_operator_gather
 
@@ -815,7 +815,7 @@ contains
 
     integer :: ip
 
-    call push_sub('nl_operator.nl_operator_scatter')
+    PUSH_SUB(nl_operator_scatter)
 
     call nl_operator_init(op, op%label)
     call nl_operator_build(opg%mesh, op, opg%mesh%np, opg%const_w, opg%cmplx_op)
@@ -827,7 +827,7 @@ contains
       end if
     end do
 
-    call pop_sub('nl_operator.nl_operator_scatter')
+    POP_SUB(nl_operator_scatter)
 
   end subroutine nl_operator_scatter
 
@@ -842,7 +842,7 @@ contains
 
     integer :: ip
 
-    call push_sub('nl_operator.nl_operator_allgather')
+    PUSH_SUB(nl_operator_allgather)
 
     ! Copy elements of op to opg that
     ! are independent from the partitions, i.e. everything
@@ -866,7 +866,7 @@ contains
       end do
     end if
 
-    call pop_sub('nl_operator.nl_operator_allgather')
+    POP_SUB(nl_operator_allgather)
 
   end subroutine nl_operator_allgather
 
@@ -885,7 +885,7 @@ contains
     type(nl_operator_t), intent(in)  :: op
     type(nl_operator_t), intent(out) :: opg
 
-    call push_sub('nl_operator.nl_operator_common_copy')
+    PUSH_SUB(nl_operator_common_copy)
 
     call nl_operator_init(opg, op%label)
 
@@ -915,7 +915,7 @@ contains
       end if
     end if
 
-    call pop_sub('nl_operator.nl_operator_common_copy')
+    POP_SUB(nl_operator_common_copy)
 
   end subroutine nl_operator_common_copy
 
@@ -929,7 +929,7 @@ contains
     integer :: ip, jp
     integer :: il, ig
 
-    call push_sub('nl_operator.nl_operator_translate_indices')
+    PUSH_SUB(nl_operator_translate_indices)
 
     ASSERT(associated(opg%i))
 
@@ -958,7 +958,7 @@ contains
       end do
     end do
 
-    call pop_sub('nl_operator.nl_operator_translate_indices')
+    POP_SUB(nl_operator_translate_indices)
 
   end subroutine nl_operator_translate_indices
 
@@ -981,7 +981,7 @@ contains
 
     type(nl_operator_t), pointer :: opg
 
-    call push_sub('nl_operator.nl_operator_op_to_matrix')
+    PUSH_SUB(nl_operator_op_to_matrix)
 
 #if defined(HAVE_MPI)
     if(op%mesh%parallel_in_domains) then
@@ -1014,7 +1014,7 @@ contains
     end if
     if(in_debug_mode) call write_debug_newlines(2)
 
-    call pop_sub('nl_operator.nl_operator_op_to_matrix')
+    POP_SUB(nl_operator_op_to_matrix)
 
   end subroutine nl_operator_op_to_matrix_cmplx
 
@@ -1032,7 +1032,7 @@ contains
 
     type(nl_operator_t), pointer :: opg
 
-    call push_sub('nl_operator.nl_operator_op_to_matrix')
+    PUSH_SUB(nl_operator_op_to_matrix)
 
     if(op%mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
@@ -1065,7 +1065,7 @@ contains
     end if
     if(in_debug_mode) call write_debug_newlines(2)
 
-    call pop_sub('nl_operator.nl_operator_op_to_matrix')
+    POP_SUB(nl_operator_op_to_matrix)
 
   end subroutine nl_operator_op_to_matrix
 
@@ -1079,7 +1079,7 @@ contains
 
     integer :: ip, jp, index
 
-    call push_sub('nl_operator.nl_operator_matrix_to_op')
+    PUSH_SUB(nl_operator_matrix_to_op)
 
     ASSERT(associated(op_ref%i))
 
@@ -1093,7 +1093,7 @@ contains
       end do
     end do
 
-    call pop_sub('nl_operator.nl_operator_matrix_to_op')
+    POP_SUB(nl_operator_matrix_to_op)
   end subroutine nl_operator_matrix_to_op
 
 
@@ -1112,7 +1112,7 @@ contains
     integer            :: unit
     FLOAT, allocatable :: aa(:, :)
 
-    call push_sub('nl_operator.nl_operator_write')
+    PUSH_SUB(nl_operator_write)
 
 
     if(mpi_grp_is_root(op%mesh%mpi_grp)) then
@@ -1139,7 +1139,7 @@ contains
       SAFE_DEALLOCATE_A(aa)
     end if
 
-    call pop_sub('nl_operator.nl_operator_write')
+    POP_SUB(nl_operator_write)
 
   end subroutine nl_operator_write
 
@@ -1153,7 +1153,7 @@ contains
     integer :: ip, jp
     FLOAT, allocatable :: aa(:, :)
 
-    call push_sub('nl_operator.nl_operatorT_write')
+    PUSH_SUB(nl_operatorT_write)
 
 
     if(mpi_grp_is_root(op%mesh%mpi_grp)) then
@@ -1174,7 +1174,7 @@ contains
       SAFE_DEALLOCATE_A(aa)
     end if
 
-    call pop_sub('nl_operator.nl_operatorT_write')
+    POP_SUB(nl_operatorT_write)
 
   end subroutine nl_operatorT_write
 
@@ -1183,7 +1183,7 @@ contains
   subroutine nl_operator_end(op)
     type(nl_operator_t), intent(inout) :: op
 
-    call push_sub('nl_operator.nl_operator_end')
+    PUSH_SUB(nl_operator_end)
 
 #ifdef HAVE_OPENCL
     if(opencl_is_enabled() .and. op%const_w) then
@@ -1218,7 +1218,7 @@ contains
 
     call stencil_end(op%stencil)
 
-    call pop_sub('nl_operator.nl_operator_end')
+    POP_SUB(nl_operator_end)
   end subroutine nl_operator_end
 
 

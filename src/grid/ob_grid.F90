@@ -78,7 +78,7 @@ contains
 
     integer :: il, ol, tmode
 
-    call push_sub('ob_grid.ob_grid_init')
+    PUSH_SUB(ob_grid_init)
 
     ob_grid%open_boundaries = .false.
 
@@ -292,20 +292,20 @@ contains
       nullify(ob_grid%lead)
     end if
 
-    call pop_sub('ob_grid.ob_grid_init')
+    POP_SUB(ob_grid_init)
   end subroutine ob_grid_init
 
   ! ---------------------------------------------------------
   subroutine ob_grid_end(ob_grid)
     type(ob_grid_t), intent(inout) :: ob_grid
 
-    call push_sub('ob_grid.ob_grid_end')
+    PUSH_SUB(ob_grid_end)
 
     if(associated(ob_grid%lead)) then
       SAFE_DEALLOCATE_P(ob_grid%lead)
     end if
 
-    call pop_sub('ob_grid.ob_grid_end')
+    POP_SUB(ob_grid_end)
   end subroutine ob_grid_end
 
   !--------------------------------------------------------------
@@ -313,7 +313,7 @@ contains
     type(ob_grid_t), intent(inout) :: ob_grid
     integer,           intent(in)  :: iunit
 
-    call push_sub('ob_grid.ob_grid_write_info')
+    PUSH_SUB(ob_grid_write_info)
 
     if(ob_grid%open_boundaries) then
       write(message(1), '(a)')       'Open boundaries in x-direction:'
@@ -328,7 +328,7 @@ contains
       call write_info(5, iunit)
     end if
 
-    call pop_sub('ob_grid.ob_grid_write_info')
+    POP_SUB(ob_grid_write_info)
   end subroutine ob_grid_write_info
 
 
@@ -337,7 +337,7 @@ contains
     type(ob_grid_t), intent(inout) :: ob_grid
     integer,           intent(in)  :: iunit
 
-    call push_sub('ob_grid.ob_grid_dump')
+    PUSH_SUB(ob_grid_dump)
 
     if(ob_grid%open_boundaries) then
       write(iunit, '(a20,2i4)') 'add_unit_cells=     ', ob_grid%lead(1:2)%info%ucells ! FIXME for NLEADS>2
@@ -345,7 +345,7 @@ contains
       write(iunit, '(a20,a32)') 'lead_restart_dir(R)=', ob_grid%lead(RIGHT)%info%restart_dir
     end if
 
-    call pop_sub('ob_grid.ob_grid_dump')
+    POP_SUB(ob_grid_dump)
   end subroutine ob_grid_dump
 
 

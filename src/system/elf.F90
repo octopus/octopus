@@ -47,7 +47,7 @@ module elf_m
 contains
 
   subroutine elf_init
-    call push_sub('elf.elf_init')
+    PUSH_SUB(elf_init)
 
     !%Variable ELFWithCurrentTerm
     !%Type logical
@@ -61,7 +61,7 @@ contains
     !%End
     call parse_logical(datasets_check('ELFWithCurrentTerm'), .true., with_current_term)
 
-    call pop_sub('elf.elf_init')
+    POP_SUB(elf_init)
   end subroutine elf_init
 
   ! ---------------------------------------------------------
@@ -82,7 +82,7 @@ contains
     FLOAT, allocatable :: kappa(:,:)
     FLOAT, parameter :: dmin = CNST(1e-10)
 
-    call push_sub('elf.elf_calc')
+    PUSH_SUB(elf_calc)
 
     ASSERT(gr%sb%dim == 2 .or. gr%sb%dim == 3)
 
@@ -179,7 +179,7 @@ contains
     SAFE_DEALLOCATE_A(rho)
     SAFE_DEALLOCATE_A(kappa)
 
-    call pop_sub('elf.elf_calc')
+    POP_SUB(elf_calc)
   end subroutine elf_calc
 
 
@@ -200,7 +200,7 @@ contains
     type(zcf_t) :: zcf_tmp
     FLOAT, parameter :: dmin = CNST(1e-10)
 
-    call push_sub('elf.elf_calc_fs')
+    PUSH_SUB(elf_calc_fs)
     
     ! single or double occupancy
     if(st%d%nspin == 1) then
@@ -299,7 +299,7 @@ contains
       call zcf_free(zcf_tmp)
     end if
 
-    call pop_sub('elf.elf_calc_fs')
+    POP_SUB(elf_calc_fs)
 
   contains
 
@@ -310,7 +310,7 @@ contains
       CMPLX,         intent(out)   :: fout(:)
       type(dcf_t),   intent(inout) :: cc
     
-      call push_sub('elf.elf_calc_fs.dmf2mf_RS2FS')
+      PUSH_SUB(elf_calc_fs.dmf2mf_RS2FS)
 
       call dcf_alloc_RS(cc)
       call dcf_alloc_FS(cc)
@@ -320,7 +320,7 @@ contains
       call dcf_free_RS(cc)
       call dcf_free_FS(cc)
 
-      call pop_sub('elf.elf_calc_fs.dmf2mf_RS2FS')
+      POP_SUB(elf_calc_fs.dmf2mf_RS2FS)
     end subroutine dmf2mf_RS2FS
 
     ! ---------------------------------------------------------
@@ -330,7 +330,7 @@ contains
       CMPLX,         intent(out)   :: fout(:)
       type(zcf_t),   intent(inout) :: cc
     
-      call push_sub('elf.elf_calc_fs.zmf2mf_RS2FS')
+      PUSH_SUB(elf_calc_fs.zmf2mf_RS2FS)
 
       call zcf_alloc_RS(cc)
       call zcf_alloc_FS(cc)
@@ -340,7 +340,7 @@ contains
       call zcf_free_RS(cc)
       call zcf_free_FS(cc)
 
-      call pop_sub('elf.elf_calc_fs.zmf2mf_RS2FS')
+      POP_SUB(elf_calc_fs.zmf2mf_RS2FS)
     end subroutine zmf2mf_RS2FS
 
   end subroutine elf_calc_fs

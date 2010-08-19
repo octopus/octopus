@@ -58,7 +58,7 @@ contains
     integer :: iunit
     logical :: found
 
-    call push_sub('ps_fhi.ps_fhi_init')
+    PUSH_SUB(ps_fhi_init)
 
     SAFE_ALLOCATE(ps_fhi%fhi_file)
     SAFE_ALLOCATE(ps_fhi%cpi_file)
@@ -88,7 +88,7 @@ contains
 
     call ps_cpi_file_to_grid(ps_fhi%cpi_file, ps_fhi%ps_grid)
 
-    call pop_sub('ps_fhi.ps_fhi_init')
+    POP_SUB(ps_fhi_init)
   end subroutine ps_fhi_init
 
   
@@ -108,7 +108,7 @@ contains
     type(ps_fhi_t), intent(inout) :: ps_fhi
     integer,        intent(in)    :: lmax, lloc
 
-    call push_sub('ps_fhi.ps_fhi_process')
+    PUSH_SUB(ps_fhi_process)
 
     if(lmax.ne.ps_fhi%fhi_file%lmax) then
       message(1) = "Inconsistency in pseudopotential :"
@@ -138,7 +138,7 @@ contains
     ! Calculate KB-projectors
     call ps_in_grid_kb_projectors(ps_fhi%ps_grid)
 
-    call pop_sub('ps_fhi.ps_fhi_process')
+    POP_SUB(ps_fhi_process)
   end subroutine ps_fhi_process
 
 end module ps_fhi_m

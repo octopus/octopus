@@ -76,7 +76,7 @@ contains
     FLOAT, allocatable :: gaus_leg_points(:), gaus_leg_weights(:)
     FLOAT, parameter :: omega0 = CNST(0.3)
 
-    call push_sub('vdw.vdw_run')
+    PUSH_SUB(vdw_run)
 
     call input()
     call init_()
@@ -129,14 +129,14 @@ contains
     call sternheimer_end(sh)
     call end_();
 
-    call pop_sub('vdw.vdw_run')
+    POP_SUB(vdw_run)
   contains
 
     ! --------------------------------------------------------------------
     subroutine input()
       integer :: equiv_axes
 
-      call push_sub('vdw.vdw_run.input')
+      PUSH_SUB(vdw_run.input)
 
       !%Variable vdW_npoints
       !%Type integer
@@ -156,7 +156,7 @@ contains
       case default; ndir = min(3, sys%gr%mesh%sb%dim)
       end select
 
-      call pop_sub('vdw.vdw_run.input')
+      POP_SUB(vdw_run.input)
     end subroutine input
 
 
@@ -167,7 +167,7 @@ contains
       character(len=80) :: dirname
       FLOAT :: iomega, domega, pol
 
-      call push_sub('vdw.vdw_run.init_')
+      PUSH_SUB(vdw_run.init_)
 
       ! make some space for static polarizability
       gaus_leg_n = gaus_leg_n + 1
@@ -237,14 +237,14 @@ contains
         call io_mkdir(VDW_DIR)               ! output data
       endif
 
-      call pop_sub('vdw.vdw_run.init_')
+      POP_SUB(vdw_run.init_)
     end subroutine init_
 
     ! --------------------------------------------------------------------
     subroutine end_()
       integer :: dir
 
-      call push_sub('vdw.vdw_run.end_')
+      PUSH_SUB(vdw_run.end_)
 
       SAFE_DEALLOCATE_A(gaus_leg_points)
       SAFE_DEALLOCATE_A(gaus_leg_weights)
@@ -253,7 +253,7 @@ contains
         call lr_dealloc(lr(dir, 1))
       end do
 
-      call pop_sub('vdw.vdw_run.end_')
+      POP_SUB(vdw_run.end_)
     end subroutine end_
 
 
@@ -264,7 +264,7 @@ contains
       CMPLX        :: alpha(1:MAX_DIM, 1:MAX_DIM)
       type(pert_t) :: perturbation
 
-      call push_sub('vdw.vdw_run.get_pol')
+      PUSH_SUB(vdw_run.get_pol)
 
       call pert_init(perturbation, PERTURBATION_ELECTRIC, sys%gr, sys%geo)
       do dir = 1, ndir
@@ -290,7 +290,7 @@ contains
       get_pol = get_pol / real(sys%gr%mesh%sb%dim)
 
       call pert_end(perturbation)
-      call pop_sub('vdw.vdw_run.get_pol')
+      POP_SUB(vdw_run.get_pol)
     end function get_pol
 
   end subroutine vdw_run

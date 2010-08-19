@@ -21,7 +21,7 @@
 subroutine poisson2D_init(this)
   type(poisson_t), intent(inout) :: this
 
-  call push_sub('poisson2D.poisson2D_init')
+  PUSH_SUB(poisson2D_init)
 
   select case(this%method)
   case(POISSON_FFT_SPH)
@@ -32,7 +32,7 @@ subroutine poisson2D_init(this)
     call poisson_fft_build_2d_2d(this%der%mesh)
   end select
 
-  call pop_sub('poisson2D.poisson2D_init')
+  POP_SUB(poisson2D_init)
 
 end subroutine poisson2D_init
 
@@ -52,7 +52,7 @@ subroutine poisson2D_solve(this, pot, rho)
 
   ASSERT(this%method == -2)
 
-  call push_sub('poisson2D.poisson2D_solve')
+  PUSH_SUB(poisson2D_solve)
 #ifdef HAVE_MPI
   if(this%der%mesh%parallel_in_domains) then
     SAFE_ALLOCATE(pvec(1:this%der%mesh%np))
@@ -95,7 +95,7 @@ subroutine poisson2D_solve(this, pot, rho)
   end if
 #endif
 
-  call pop_sub('poisson2D.poisson2D_solve')
+  POP_SUB(poisson2D_solve)
 end subroutine poisson2D_solve
 
 !! Local Variables:

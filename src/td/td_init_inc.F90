@@ -25,7 +25,7 @@ subroutine td_init(td, sys, hm)
 
   integer :: dummy
 
-  call push_sub('td_init.td_init')
+  PUSH_SUB(td_init)
 
   call ion_dynamics_init(td%ions, sys%geo)
 
@@ -174,7 +174,7 @@ subroutine td_init(td, sys, hm)
 
   call parse_integer(datasets_check('TDEnergyUpdateIter'), 10, td%energy_update_iter)
 
-  call pop_sub('td_init.td_init')
+  POP_SUB(td_init)
 end subroutine td_init
 
 
@@ -182,14 +182,14 @@ end subroutine td_init
 subroutine td_end(td)
   type(td_t), intent(inout) :: td
 
-  call push_sub('td_init.td_end')
+  PUSH_SUB(td_end)
 
   call PES_end(td%PESv)
   call propagator_end(td%tr)  ! clean the evolution method
 
   if(td%dynamics == BO) call scf_end(td%scf)
   
-  call pop_sub('td_init.td_end')
+  POP_SUB(td_end)
 end subroutine td_end
 
 !! Local Variables:

@@ -41,13 +41,13 @@ contains
     integer, intent(in) :: dim
     integer, intent(in) :: order
 
-    call push_sub('stencil_starplus.stencil_starplus_size_lapl')
+    PUSH_SUB(stencil_starplus_size_lapl)
 
     n = 2*dim*order + 1
     if(dim == 2) n = n + 12
     if(dim == 3) n = n + 44
 
-    call pop_sub('stencil_starplus.stencil_starplus_size_lapl')
+    POP_SUB(stencil_starplus_size_lapl)
   end function stencil_starplus_size_lapl
 
 
@@ -60,7 +60,7 @@ contains
 
     integer :: extent
 
-    call push_sub('stencil_starplus.stencil_starplus_extent')
+    PUSH_SUB(stencil_starplus_extent)
 
     extent = 0
     if(dir.ge.1.or.dir.le.3) then
@@ -72,7 +72,7 @@ contains
     end if
     stencil_starplus_extent = extent
 
-    call pop_sub('stencil_starplus.stencil_starplus_extent')
+    POP_SUB(stencil_starplus_extent)
   end function stencil_starplus_extent
 
 
@@ -81,13 +81,13 @@ contains
     integer, intent(in) :: dim
     integer, intent(in) :: order
 
-    call push_sub('stencil_starplus.stencil_starplus_size_grad')
+    PUSH_SUB(stencil_starplus_size_grad)
 
     n = 2*order + 1
     if(dim == 2) n = n + 2
     if(dim == 3) n = n + 4
 
-    call pop_sub('stencil_starplus.stencil_starplus_size_grad')
+    POP_SUB(stencil_starplus_size_grad)
   end function stencil_starplus_size_grad
 
 
@@ -99,7 +99,7 @@ contains
 
     integer :: i, j, n
 
-    call push_sub('stencil_starplus.stencil_starplus_get_lapl')
+    PUSH_SUB(stencil_starplus_get_lapl)
 
     call stencil_allocate(this, stencil_starplus_size_lapl(dim, order))
 
@@ -196,7 +196,7 @@ contains
 
     call stencil_init_center(this)
 
-    call pop_sub('stencil_starplus.stencil_starplus_get_lapl')
+    POP_SUB(stencil_starplus_get_lapl)
   end subroutine stencil_starplus_get_lapl
 
 
@@ -209,7 +209,7 @@ contains
 
     integer :: i, n, j
 
-    call push_sub('stencil_starplus.stencil_star_get_grad')
+    PUSH_SUB(stencil_star_get_grad)
 
     call stencil_allocate(this, stencil_starplus_size_grad(dim, order))
 
@@ -228,7 +228,7 @@ contains
 
     call stencil_init_center(this)
 
-    call pop_sub('stencil_starplus.stencil_star_get_grad')
+    POP_SUB(stencil_star_get_grad)
   end subroutine stencil_starplus_get_grad
 
 
@@ -240,7 +240,7 @@ contains
 
     integer :: i, j, n
 
-    call push_sub('stencil_starplus.stencil_starplus_pol_lapl')
+    PUSH_SUB(stencil_starplus_pol_lapl)
 
     n = 1
     select case(dim)
@@ -334,7 +334,7 @@ contains
 
     end select
 
-    call pop_sub('stencil_starplus.stencil_starplus_pol_lapl')
+    POP_SUB(stencil_starplus_pol_lapl)
   end subroutine stencil_starplus_pol_lapl
 
 
@@ -347,7 +347,7 @@ contains
 
     integer :: j, n
 
-    call push_sub('stencil_starplus.stencil_starplus_pol_grad')
+    PUSH_SUB(stencil_starplus_pol_grad)
 
     pol(:,:) = 0
     do j = 0, 2*order
@@ -385,7 +385,7 @@ contains
       end select
     end select
 
-    call pop_sub('stencil_starplus.stencil_starplus_pol_grad')
+    POP_SUB(stencil_starplus_pol_grad)
   end subroutine stencil_starplus_pol_grad
 
 end module stencil_starplus_m

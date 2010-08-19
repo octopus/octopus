@@ -34,7 +34,7 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time, open_boundaries)
   type(batch_t) :: psib, hpsib
   type(profile_t), save :: prof
 
-  call push_sub('energy_inc.Xcalculate_eigenvalues')
+  PUSH_SUB(X(calculate_eigenvalues))
   call profiling_in(prof, "EIGENVALUE_CALC")
 
   if(in_debug_mode) then
@@ -86,7 +86,7 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time, open_boundaries)
   end if
 
   call profiling_out(prof)
-  call pop_sub('energy_inc.Xcalculate_eigenvalues')
+  POP_SUB(X(calculate_eigenvalues))
 end subroutine X(calculate_eigenvalues)
 
 ! ---------------------------------------------------------
@@ -99,7 +99,7 @@ FLOAT function X(electronic_kinetic_energy)(hm, gr, st) result(t0)
   R_TYPE, allocatable :: tpsi(:, :), psi(:, :)
   FLOAT, allocatable  :: t(:, :)
 
-  call push_sub('energy_inc.Xelectronic_kinetic_energy')
+  PUSH_SUB(X(electronic_kinetic_energy))
 
   SAFE_ALLOCATE(tpsi(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(t(st%st_start:st%st_end, 1:st%d%nik))
@@ -119,7 +119,7 @@ FLOAT function X(electronic_kinetic_energy)(hm, gr, st) result(t0)
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(tpsi)
   SAFE_DEALLOCATE_A(t)
-  call pop_sub('energy_inc.Xelectronic_kinetic_energy')
+  POP_SUB(X(electronic_kinetic_energy))
 end function X(electronic_kinetic_energy)
 
 ! ---------------------------------------------------------
@@ -132,7 +132,7 @@ FLOAT function X(electronic_external_energy)(hm, gr, st) result(v)
   R_TYPE, allocatable :: vpsi(:, :)
   FLOAT, allocatable :: t(:, :)
 
-  call push_sub('energy_inc.Xelectronic_external_energy')
+  PUSH_SUB(X(electronic_external_energy))
 
   SAFE_ALLOCATE(vpsi(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(t(st%st_start:st%st_end, 1:st%d%nik))
@@ -150,7 +150,7 @@ FLOAT function X(electronic_external_energy)(hm, gr, st) result(v)
 
   SAFE_DEALLOCATE_A(vpsi)
   SAFE_DEALLOCATE_A(t)
-  call pop_sub('energy_inc.Xelectronic_external_energy')
+  POP_SUB(X(electronic_external_energy))
 end function X(electronic_external_energy)
 
 !! Local Variables:

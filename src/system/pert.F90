@@ -113,7 +113,7 @@ contains
     type(grid_t),      intent(inout) :: gr
     type(geometry_t),  intent(in)    :: geo
 
-    call push_sub('pert.pert_init')
+    PUSH_SUB(pert_init)
     
     this%pert_type = pert_type
 
@@ -164,21 +164,21 @@ contains
         .true., this%use_nonlocalpps)
     endif
 
-    call pop_sub('pert.pert_init')
+    POP_SUB(pert_init)
   end subroutine pert_init
 
   ! --------------------------------------------------------------------
   subroutine pert_end(this)
     type(pert_t), intent(inout) :: this
 
-    call push_sub('pert.pert_end')
+    PUSH_SUB(pert_end)
 
     if(this%pert_type == PERTURBATION_IONIC) then
       SAFE_DEALLOCATE_P(this%ionic%mix1)
       SAFE_DEALLOCATE_P(this%ionic%mix2)
     end if
 
-    call pop_sub('pert.pert_end')
+    POP_SUB(pert_end)
   end subroutine pert_end
 
   ! --------------------------------------------------------------------
@@ -186,7 +186,7 @@ contains
     type(pert_t), intent(in) :: this
     integer,      intent(in) :: unit
 
-    call push_sub('pert.pert_info')
+    PUSH_SUB(pert_info)
 
     call messages_print_var_option(unit, 'RespPerturbationType', this%pert_type)
     
@@ -197,7 +197,7 @@ contains
       endif
     endif
    
-    call pop_sub('pert.pert_info')
+    POP_SUB(pert_info)
   end subroutine pert_info
 
   ! --------------------------------------------------------------------
@@ -206,21 +206,21 @@ contains
     integer,           intent(in)    :: dir
     integer, optional, intent(in)    :: dir2
 
-    call push_sub('pert.pert_setup_dir')
+    PUSH_SUB(pert_setup_dir)
 
     this%dir = dir
     if(present(dir2)) this%dir2 = dir2
 
     if(this%pert_type == PERTURBATION_IONIC) call pert_setup_ionic_pure(this)
 
-    call pop_sub('pert.pert_setup_dir')
+    POP_SUB(pert_setup_dir)
   end subroutine pert_setup_dir
 
   ! --------------------------------------------------------------------
   subroutine pert_setup_ionic_pure(this)
     type(pert_t), intent(inout) :: this
 
-    call push_sub('pert.pert_setup_ionic_pure')
+    PUSH_SUB(pert_setup_ionic_pure)
 
     this%ionic%pure_dir = .true.
 
@@ -230,7 +230,7 @@ contains
     if(this%dir  > 0 .and. this%atom1 > 0) this%ionic%mix1(this%atom1, this%dir ) = M_ONE
     if(this%dir2 > 0 .and. this%atom2 > 0) this%ionic%mix2(this%atom2, this%dir2) = M_ONE
 
-    call pop_sub('pert.pert_setup_ionic_pure')
+    POP_SUB(pert_setup_ionic_pure)
   end subroutine pert_setup_ionic_pure
 
   ! --------------------------------------------------------------------
@@ -239,14 +239,14 @@ contains
     integer,           intent(in)    :: iatom
     integer, optional, intent(in)    :: iatom2
 
-    call push_sub('pert.pert_setup_atom')
+    PUSH_SUB(pert_setup_atom)
 
     this%atom1 = iatom
     if(present(iatom2)) this%atom2 = iatom2
 
     if(this%pert_type == PERTURBATION_IONIC) call pert_setup_ionic_pure(this)
 
-    call pop_sub('pert.pert_setup_atom')
+    POP_SUB(pert_setup_atom)
   end subroutine pert_setup_atom
 
   ! --------------------------------------------------------------------
@@ -261,7 +261,7 @@ contains
     
     logical :: have_dir_2
 
-    call push_sub('pert.pert_setup_mixed_dir')
+    PUSH_SUB(pert_setup_mixed_dir)
 
     this%ionic%pure_dir = .false.
     
@@ -275,7 +275,7 @@ contains
       ASSERT( .not. present(jatom) .and. .not. present(jdir) .and. .not. present(jatom) )
     end if
 
-    call pop_sub('pert.pert_setup_mixed_dir')
+    POP_SUB(pert_setup_mixed_dir)
   end subroutine pert_setup_mixed_dir
     
   integer pure function pert_type(this)

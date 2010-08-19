@@ -85,7 +85,7 @@ contains
   subroutine lr_init(lr)
     type(lr_t), intent(out) :: lr
 
-    call push_sub('linear_response.lr_init')
+    PUSH_SUB(lr_init)
 
     nullify(lr%ddl_rho, lr%ddl_psi)
     nullify(lr%zdl_rho, lr%zdl_psi)
@@ -93,7 +93,7 @@ contains
 
     lr%is_allocated = .false.
 
-    call pop_sub('linear_response.lr_init')
+    POP_SUB(lr_init)
 
   end subroutine lr_init
 
@@ -104,7 +104,7 @@ contains
     type(states_t), intent(in)    :: st
     type(mesh_t),   intent(in)    :: mesh
 
-    call push_sub('linear_response.lr_allocate')
+    PUSH_SUB(lr_allocate)
 
     if (states_are_complex(st)) then
       SAFE_ALLOCATE(lr%zdl_psi(1:mesh%np_part, 1:st%d%dim, 1:st%nst, 1:st%d%nik))
@@ -122,7 +122,7 @@ contains
 
     lr%is_allocated = .true.
     
-    call pop_sub('linear_response.lr_allocate')
+    POP_SUB(lr_allocate)
 
   end subroutine lr_allocate
 
@@ -131,7 +131,7 @@ contains
   subroutine lr_dealloc(lr)
     type(lr_t), intent(inout) :: lr
 
-    call push_sub('linear_response.lr_dealloc')
+    PUSH_SUB(lr_dealloc)
 
     SAFE_DEALLOCATE_P(lr%ddl_psi)
     SAFE_DEALLOCATE_P(lr%zdl_psi)
@@ -145,7 +145,7 @@ contains
     SAFE_DEALLOCATE_P(lr%zdl_de)
     SAFE_DEALLOCATE_P(lr%zdl_elf)
 
-    call pop_sub('linear_response.lr_dealloc')
+    POP_SUB(lr_dealloc)
 
   end subroutine lr_dealloc
 
@@ -159,7 +159,7 @@ contains
 
     integer :: ik, idim, ist
 
-    call push_sub('linear_response.lr_copy')
+    PUSH_SUB(lr_copy)
 
     do ik = 1, st%d%nspin
       if(states_are_complex(st)) then
@@ -181,7 +181,7 @@ contains
       end do
     end do
 
-    call pop_sub('linear_response.lr_copy')
+    POP_SUB(lr_copy)
 
   end subroutine lr_copy
 
@@ -190,10 +190,10 @@ contains
   logical function lr_is_allocated(this) 
     type(lr_t), intent(in) :: this
 
-    call push_sub('linear_response.lr_is_allocated')
+    PUSH_SUB(lr_is_allocated)
     lr_is_allocated = this%is_allocated
 
-    call pop_sub('linear_response.lr_is_allocated')
+    POP_SUB(lr_is_allocated)
   end function lr_is_allocated
 
 
@@ -205,7 +205,7 @@ contains
 
     FLOAT :: dsmear
 
-    call push_sub('linear_response.lr_alpha_j')
+    PUSH_SUB(lr_alpha_j)
 
     if(st%smear%method == SMEAR_FIXED_OCC) then
       lr_alpha_j = st%occ(jst, ik) / st%smear%el_per_state
@@ -214,7 +214,7 @@ contains
       lr_alpha_j = max(st%smear%e_fermi + M_THREE*dsmear - st%eigenval(jst, ik), M_ZERO)
     endif
 
-    call pop_sub('linear_response.lr_alpha_j')
+    POP_SUB(lr_alpha_j)
   end function lr_alpha_j
 
 #include "undef.F90"

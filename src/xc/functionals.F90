@@ -66,14 +66,14 @@ contains
     type(xc_functl_t), intent(out) :: functl
     integer,           intent(in)  :: spin_channels
 
-    call push_sub('functionals.xc_functl_init')
+    PUSH_SUB(xc_functl_init)
 
     functl%family = 0
     functl%type   = 0
     functl%id     = 0
     functl%spin_channels = spin_channels
 
-    call pop_sub('functionals.xc_functl_init')
+    POP_SUB(xc_functl_init)
   end subroutine xc_functl_init
 
 
@@ -83,13 +83,13 @@ contains
     logical,           intent(in)  :: cdft
     integer,           intent(in)  :: spin_channels
 
-    call push_sub('functionals.xc_j_functl_init')
+    PUSH_SUB(xc_j_functl_init)
 
     ! initialize structure
     call xc_functl_init(functl, spin_channels)
 
     if (.not.cdft) then
-    call pop_sub('functionals.xc_j_functl_init')
+    POP_SUB(xc_j_functl_init)
       return
     end if
 
@@ -123,7 +123,7 @@ contains
       call write_fatal(2)
     end select
 
-    call pop_sub('functionals.xc_j_functl_init')
+    POP_SUB(xc_j_functl_init)
   end subroutine xc_j_functl_init
 
 
@@ -139,7 +139,7 @@ contains
     FLOAT   :: alpha
     logical :: ok
 
-    call push_sub('functionals.xc_functl_init_functl')
+    PUSH_SUB(xc_functl_init_functl)
 
     ! initialize structure
     call xc_functl_init(functl, spin_channels)
@@ -256,7 +256,7 @@ contains
       
     end select
     
-    call pop_sub('functionals.xc_functl_init_functl')
+    POP_SUB(xc_functl_init_functl)
   end subroutine xc_functl_init_functl
   
 
@@ -264,14 +264,14 @@ contains
   subroutine xc_functl_end(functl)
     type(xc_functl_t), intent(inout) :: functl
 
-    call push_sub('functionals.xc_functl_end')
+    PUSH_SUB(xc_functl_end)
 
     if(functl%family.ne.XC_FAMILY_NONE .and. functl%family.ne.XC_FAMILY_OEP .and.  &
          functl%family.ne.XC_FAMILY_KS_INVERSION ) then
       call XC_F90(func_end)(functl%conf)
     end if
 
-    call pop_sub('functionals.xc_functl_end')
+    POP_SUB(xc_functl_end)
   end subroutine xc_functl_end
 
 
@@ -284,7 +284,7 @@ contains
     type(XC_F90(pointer_t)) :: str
     integer :: ii
 
-    call push_sub('functionals.xc_functl_write_info')
+    PUSH_SUB(xc_functl_write_info)
 
     if(functl%family == XC_FAMILY_OEP) then
       ! this is handled separately
@@ -335,7 +335,7 @@ contains
       end do
     end if
 
-    call pop_sub('functionals.xc_functl_write_info')
+    POP_SUB(xc_functl_write_info)
   end subroutine xc_functl_write_info
 
 end module xc_functl_m

@@ -94,7 +94,7 @@ contains
     logical :: found
     logical, allocatable :: found_l(:)
 
-    call push_sub('ps_upf.ps_upf_init')
+    PUSH_SUB(ps_upf_init)
 
     ! Find out the file and read it.
     filename2 = trim(filename) // '.UPF'
@@ -157,14 +157,14 @@ contains
     ! check norm of rphi
     call ps_upf_check_rphi(ps_upf)
 
-    call pop_sub('ps_upf.ps_upf_init')
+    POP_SUB(ps_upf_init)
   end subroutine ps_upf_init
 
   ! ---------------------------------------------------------
   subroutine ps_upf_end(ps_upf)
     type(ps_upf_t), intent(inout) :: ps_upf
 
-    call push_sub('ps_upf.ps_upf_end')
+    PUSH_SUB(ps_upf_end)
 
     SAFE_DEALLOCATE_P(ps_upf%kb_radius)
 
@@ -183,7 +183,7 @@ contains
     SAFE_DEALLOCATE_P(ps_upf%rho)
     SAFE_DEALLOCATE_P(ps_upf%proj_j)
 
-    call pop_sub('ps_upf.ps_upf_end')
+    POP_SUB(ps_upf_end)
   end subroutine ps_upf_end
 
   ! ---------------------------------------------------------
@@ -195,7 +195,7 @@ contains
     character (len=2) :: nl
     character (len=80) :: dummy
 
-    call push_sub('ps_upf.ps_upf_file_read')
+    PUSH_SUB(ps_upf_file_read)
 
     ps_upf%kb_nc = 1
 
@@ -328,7 +328,7 @@ contains
       nullify(ps_upf%proj_j)
     end if
 
-    call pop_sub('ps_upf.ps_upf_file_read')
+    POP_SUB(ps_upf_file_read)
   end subroutine ps_upf_file_read
 
   subroutine init_tag(unit, string, go_back)
@@ -339,7 +339,7 @@ contains
     integer :: iostat
     character(len=80) :: string2
 
-    call push_sub('ps_upf.init_tag')
+    PUSH_SUB(init_tag)
 
     if (go_back) rewind(unit)
     do
@@ -354,7 +354,7 @@ contains
       if (string_matches("<"//string//">", string2) ) exit
     end do
     
-    call pop_sub('ps_upf.init_tag')
+    POP_SUB(init_tag)
   end subroutine init_tag
 
   logical function tag_isdef(unit, string)
@@ -364,7 +364,7 @@ contains
     integer :: iostat
     character(len=80) :: string2
     
-    call push_sub('ps_upf.tag_isdef')
+    PUSH_SUB(tag_isdef)
 
     rewind(unit)
     do
@@ -382,7 +382,7 @@ contains
       end if
     end do
 
-    call pop_sub('ps_upf.tag_isdef')
+    POP_SUB(tag_isdef)
   end function tag_isdef
 
   subroutine check_end_tag(unit, string)
@@ -392,7 +392,7 @@ contains
     integer :: iostat
     character(len=80) :: string2
       
-    call push_sub('ps_upf.check_end_tag')
+    PUSH_SUB(check_end_tag)
 
     read(unit, '(a)', iostat = iostat) string2
     if ((.not. string_matches("</"//string//">", string2)) .or. iostat /= 0) then
@@ -400,7 +400,7 @@ contains
       call write_fatal(1)
     end if
 
-    call pop_sub('ps_upf.check_end_tag')
+    POP_SUB(check_end_tag)
   end subroutine check_end_tag
 
   logical function string_matches(string1, string2)
@@ -429,7 +429,7 @@ contains
     FLOAT            :: dincv
     FLOAT, parameter :: threshold = CNST(1.0e-6)
 
-    call push_sub('ps_upf.ps_upf_cutoff_radii')
+    PUSH_SUB(ps_upf_cutoff_radii)
 
     ! local part ....
     do ir = ps_upf%np-1, 2, -1
@@ -452,7 +452,7 @@ contains
       ps_upf%kb_radius(i) = ps_upf%r(ir + 1)
     end do
     
-    call pop_sub('ps_upf.ps_upf_cutoff_radii')
+    POP_SUB(ps_upf_cutoff_radii)
   end subroutine ps_upf_cutoff_radii
 
 
@@ -464,7 +464,7 @@ contains
     integer :: i
     FLOAT   :: nrm
 
-    call push_sub('ps_upf.ps_upf_check_rphi')
+    PUSH_SUB(ps_upf_check_rphi)
 
     !  checking normalization of the wavefunctions
     do i = 1, ps_upf%n_wfs
@@ -477,7 +477,7 @@ contains
       end if
     end do
 
-    call pop_sub('ps_upf.ps_upf_check_rphi')
+    POP_SUB(ps_upf_check_rphi)
   end subroutine ps_upf_check_rphi
 
 end module ps_upf_m

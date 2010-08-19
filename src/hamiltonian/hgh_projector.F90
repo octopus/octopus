@@ -66,14 +66,14 @@ contains
   subroutine hgh_projector_null(hgh_p)
     type(hgh_projector_t), intent(out) :: hgh_p
 
-    call push_sub('hgh_projector.hgh_projector_null')
+    PUSH_SUB(hgh_projector_null)
 
     nullify(hgh_p%p)
     nullify(hgh_p%lp)
     hgh_p%h = M_ZERO
     hgh_p%k = M_ZERO
 
-    call pop_sub('hgh_projector.hgh_projector_null')
+    POP_SUB(hgh_projector_null)
   end subroutine hgh_projector_null
 
   ! ---------------------------------------------------------
@@ -89,7 +89,7 @@ contains
     FLOAT :: v, dv(MAX_DIM), x(MAX_DIM)
     type(ps_t), pointer :: ps
 
-    call push_sub('hgh_projector.hgh_projector_init')
+    PUSH_SUB(hgh_projector_init)
 
     hgh_p%n_s = sm%ns
     SAFE_ALLOCATE(hgh_p%p (1:hgh_p%n_s, 1:3))
@@ -112,19 +112,19 @@ contains
     hgh_p%k(:, :) = ps%k(l, :, :)*so_strength
     nullify(ps)
 
-    call pop_sub('hgh_projector.hgh_projector_init')
+    POP_SUB(hgh_projector_init)
   end subroutine hgh_projector_init
 
   ! ---------------------------------------------------------
   subroutine hgh_projector_end(hgh_p)
     type(hgh_projector_t), intent(inout) :: hgh_p
 
-    call push_sub('hgh_projector.hgh_projector_end')
+    PUSH_SUB(hgh_projector_end)
 
     SAFE_DEALLOCATE_P(hgh_p%p)
     SAFE_DEALLOCATE_P(hgh_p%lp)
 
-    call pop_sub('hgh_projector.hgh_projector_end')
+    POP_SUB(hgh_projector_end)
   end subroutine hgh_projector_end
 
 #include "undef.F90"

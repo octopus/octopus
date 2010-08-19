@@ -44,7 +44,7 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
 #endif
 
   ! inclusion from double_grid.F90 results in local and non-local versions
-  call push_sub('double_grid_apply.double_grid_apply')
+  PUSH_SUB(double_grid_apply)
 
   ps => species_ps(spec)
   xx = M_ZERO !must be initialized so xx(dim + 1:MAX_DIM) = 0.0
@@ -124,7 +124,7 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
 
   nullify(ps)
 
-  call pop_sub('double_grid_apply.double_grid_apply')
+  POP_SUB(double_grid_apply)
 end subroutine double_grid_apply
 
 !! Local Variables:

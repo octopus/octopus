@@ -34,7 +34,7 @@ subroutine X(physics_op_L)(der, ff, lf, ghost_update, set_bc)
   R_TYPE :: factor
   integer :: ip
 
-  call push_sub('physics_op_inc.Xphysics_op_L')
+  PUSH_SUB(X(physics_op_L))
 
   ASSERT(der%mesh%sb%dim .ne. 1)
 
@@ -69,7 +69,7 @@ subroutine X(physics_op_L)(der, ff, lf, ghost_update, set_bc)
   end select
 
   SAFE_DEALLOCATE_A(gf)
-  call pop_sub('physics_op_inc.Xphysics_op_L')
+  POP_SUB(X(physics_op_L))
 end subroutine X(physics_op_L)
 
 
@@ -87,7 +87,7 @@ subroutine X(physics_op_L2)(der, ff, l2f, ghost_update, set_bc)
   R_TYPE, allocatable :: gf(:, :), ggf(:, :, :)
   integer :: idir
 
-  call push_sub('physics_op_inc.Xphysics_op_L2')
+  PUSH_SUB(X(physics_op_L2))
 
   ASSERT(der%mesh%sb%dim == 2 .or. der%mesh%sb%dim == 3)
 
@@ -127,7 +127,7 @@ subroutine X(physics_op_L2)(der, ff, l2f, ghost_update, set_bc)
 
   SAFE_DEALLOCATE_A(gf)
   SAFE_DEALLOCATE_A(ggf)
-  call pop_sub('physics_op_inc.Xphysics_op_L2')
+  POP_SUB(X(physics_op_L2))
 end subroutine X(physics_op_L2)
 
 

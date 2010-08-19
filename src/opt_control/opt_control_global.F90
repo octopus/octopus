@@ -78,7 +78,7 @@ module opt_control_global_m
   !! parameters module is initialized.
   subroutine oct_read_inp(oct)
     type(oct_t), intent(inout) :: oct
-    call push_sub('opt_control_global.oct_read_inp')  
+    PUSH_SUB(oct_read_inp)
 
     call messages_print_stress(stdout, "OCT run mode")
 
@@ -312,7 +312,7 @@ module opt_control_global_m
     call messages_print_var_value(stdout, "OCTRandomInitialGuess", oct%random_initial_guess)
 
     call messages_print_stress(stdout)
-    call pop_sub('opt_control_global.oct_read_inp')  
+    POP_SUB(oct_read_inp)
   end subroutine oct_read_inp
   ! ---------------------------------------------------------
 

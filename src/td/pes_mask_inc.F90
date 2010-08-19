@@ -26,7 +26,7 @@ subroutine PES_mask_init(mask, mesh, sb, st)
 
   integer :: ll(MAX_DIM)
 
-  call push_sub('pes_mask_inc.PES_mask_init')
+  PUSH_SUB(PES_mask_init)
 
   message(1) = 'Info: Calculating PES using mask technique.'
   call write_info(1)
@@ -43,7 +43,7 @@ subroutine PES_mask_init(mask, mesh, sb, st)
   mask%k = M_z0
   mask%r = M_ZERO
 
-  call pop_sub('pes_mask_inc.PES_mask_init')
+  POP_SUB(PES_mask_init)
 end subroutine PES_mask_init
 
 
@@ -51,7 +51,7 @@ end subroutine PES_mask_init
 subroutine PES_mask_end(mask)
   type(PES_mask_t), intent(inout) :: mask
 
-  call push_sub('pes_mask_inc.PES_mask_end')
+  PUSH_SUB(PES_mask_end)
 
   if(associated(mask%k)) then
     call fft_end(mask%fft)
@@ -59,7 +59,7 @@ subroutine PES_mask_end(mask)
     SAFE_DEALLOCATE_P(mask%r)
   end if
 
-  call pop_sub('pes_mask_inc.PES_mask_end')
+  POP_SUB(PES_mask_end)
 end subroutine PES_mask_end
 
 
@@ -75,7 +75,7 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn)
   CMPLX, allocatable :: wf1(:,:,:), wf2(:,:,:)
   FLOAT :: temp(MAX_DIM), vec
 
-  call push_sub('pes_mask_inc.PES_mask_calc')
+  PUSH_SUB(PES_mask_calc)
 
   ! propagate wavefunction in momentum space
   temp(:) = M_TWO * M_PI / (mesh%idx%ll(:) * mesh%spacing(:))
@@ -121,7 +121,7 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn)
 
   SAFE_DEALLOCATE_A(wf1)
   SAFE_DEALLOCATE_A(wf2)
-  call pop_sub('pes_mask_inc.PES_mask_calc')
+  POP_SUB(PES_mask_calc)
 end subroutine PES_mask_calc
 
 
@@ -141,7 +141,7 @@ subroutine PES_mask_output(mask, mesh, st, file)
   integer,  parameter :: nn = 600, ar_n = 90
   FLOAT, parameter :: step = CNST(0.005)
 
-  call push_sub('pes_mask_inc.PES_mask_output')
+  PUSH_SUB(PES_mask_output)
 
   SAFE_ALLOCATE( spis(1:nn,   st%st_start:st%st_end, 1:st%d%nik))
   SAFE_ALLOCATE(arpes(1:ar_n, st%st_start:st%st_end, 1:st%d%nik))
@@ -305,7 +305,7 @@ subroutine PES_mask_output(mask, mesh, st, file)
   SAFE_DEALLOCATE_A(npoints)
   SAFE_DEALLOCATE_A(ar_npoints)
 
-  call pop_sub('pes_mask_inc.PES_mask_output')
+  POP_SUB(PES_mask_output)
 end subroutine PES_mask_output
 
 !! Local Variables:

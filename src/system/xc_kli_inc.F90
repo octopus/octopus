@@ -30,7 +30,7 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
   R_TYPE :: occ
 
   call profiling_in(C_PROFILING_XC_KLI)
-  call push_sub('xc_kli_inc.Xxc_KLI_solve')
+  PUSH_SUB(X(xc_KLI_solve))
 
   ! some intermediate quantities
   ! vxc contains the Slater part!
@@ -74,7 +74,7 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
     SAFE_DEALLOCATE_A(rho_sigma)
     SAFE_DEALLOCATE_A(sqphi)
     call profiling_out(C_PROFILING_XC_KLI)
-    call pop_sub('xc_kli_inc.Xxc_KLI_solve')
+    POP_SUB(X(xc_KLI_solve))
     return
   end if
 
@@ -163,7 +163,7 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
   SAFE_DEALLOCATE_A(v_bar_S)
   SAFE_DEALLOCATE_A(rho_sigma)
   SAFE_DEALLOCATE_A(sqphi)
-  call pop_sub('xc_kli_inc.Xxc_KLI_solve')
+  POP_SUB(X(xc_KLI_solve))
   call profiling_out(C_PROFILING_XC_KLI)
 end subroutine X(xc_KLI_solve)
 

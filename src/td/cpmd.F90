@@ -85,7 +85,7 @@ contains
     type(grid_t),        intent(inout) :: gr
     type(states_t),      intent(inout) :: st
     
-    call push_sub('cpmd.cpmd_init')
+    PUSH_SUB(cpmd_init)
 
     !%Variable CPElectronicMass
     !%Type float
@@ -123,7 +123,7 @@ contains
       SAFE_ALLOCATE(this%zpsi2(1:gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
     end if
 
-    call pop_sub('cpmd.cpmd_init')
+    POP_SUB(cpmd_init)
 
   end subroutine cpmd_init
   
@@ -132,12 +132,12 @@ contains
   subroutine cpmd_end(this)
     type(cpmd_t), intent(inout) :: this
 
-    call push_sub('cpmd.cpmd_end')
+    PUSH_SUB(cpmd_end)
 
     SAFE_DEALLOCATE_P(this%dpsi2)
     SAFE_DEALLOCATE_P(this%zpsi2)
 
-    call pop_sub('cpmd.cpmd_end')
+    POP_SUB(cpmd_end)
 
   end subroutine cpmd_end
 
@@ -160,7 +160,7 @@ contains
     integer :: ik, ist, idim, ii, err
     character(len=80) :: filename
 
-    call push_sub('cpmd.cpmd_restart_write')
+    PUSH_SUB(cpmd_restart_write)
 
     if(mpi_grp_is_root(mpi_world)) then
       call io_mkdir(trim(tmpdir)//'td/cpmd', is_tmp=.true.)
@@ -182,7 +182,7 @@ contains
       end do
     end do
 
-    call pop_sub('cpmd.cpmd_restart_write')
+    POP_SUB(cpmd_restart_write)
 
   end subroutine cpmd_restart_write
 
@@ -197,7 +197,7 @@ contains
     integer :: ik, ist, idim, ii
     character(len=80) :: filename
 
-    call push_sub('cpmd.cpmd_restart_read')
+    PUSH_SUB(cpmd_restart_read)
 
     ierr = 0
 
@@ -214,14 +214,14 @@ contains
             call zrestart_read_function(trim(tmpdir)//'td/cpmd', filename, gr%mesh, this%zpsi2(:, idim, ist, ik), ierr)
           end if
           if(ierr /= 0) then
-            call pop_sub('cpmd.cpmd_restart_read')
+            POP_SUB(cpmd_restart_read)
             return
           end if
         end do
       end do
     end do
 
-    call pop_sub('cpmd.cpmd_restart_read')
+    POP_SUB(cpmd_restart_read)
 
   end subroutine cpmd_restart_read
 

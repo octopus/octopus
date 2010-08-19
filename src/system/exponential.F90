@@ -216,7 +216,7 @@ contains
     logical :: apply_magnus
     type(profile_t), save :: exp_prof
 
-    call push_sub('exponential.exponential_td')
+    PUSH_SUB(exponential_td)
     call profiling_in(exp_prof, "EXPONENTIAL")
 
     ! The only method that is currently taking care of the presence of an inhomogeneous
@@ -259,7 +259,7 @@ contains
     end select
 
     call profiling_out(exp_prof)
-    call pop_sub('exponential.exponential_td')
+    POP_SUB(exponential_td)
   contains
 
     ! ---------------------------------------------------------
@@ -283,7 +283,7 @@ contains
       integer :: i, idim
       logical :: zfact_is_real
 
-      call push_sub('exponential.taylor_series')
+      PUSH_SUB(taylor_series)
 
       SAFE_ALLOCATE(zpsi1 (1:der%mesh%np_part, 1:hm%d%dim))
       SAFE_ALLOCATE(hzpsi1(1:der%mesh%np,      1:hm%d%dim))
@@ -322,7 +322,7 @@ contains
       SAFE_DEALLOCATE_A(hzpsi1)
 
       if(present(order)) order = te%exp_order
-      call pop_sub('exponential.taylor_series')
+      POP_SUB(taylor_series)
     end subroutine taylor_series
     ! ---------------------------------------------------------
 
@@ -347,7 +347,7 @@ contains
       CMPLX :: zfact
       CMPLX, allocatable :: zpsi1(:,:,:)
 
-      call push_sub('exponential.cheby')
+      PUSH_SUB(cheby)
 
       SAFE_ALLOCATE(zpsi1(1:der%mesh%np_part, 1:hm%d%dim, 0:2))
       zpsi1 = M_z0
@@ -376,7 +376,7 @@ contains
       SAFE_DEALLOCATE_A(zpsi1)
 
       if(present(order)) order = te%exp_order
-      call pop_sub('exponential.cheby')
+      POP_SUB(cheby)
     end subroutine cheby
     ! ---------------------------------------------------------
 
@@ -387,7 +387,7 @@ contains
       FLOAT :: beta, res, tol !, nrm
       CMPLX :: pp
 
-      call push_sub('exponential.lanczos')
+      PUSH_SUB(lanczos)
 
 
       SAFE_ALLOCATE(     v(1:der%mesh%np, 1:hm%d%dim, 1:te%exp_order+1))
@@ -518,7 +518,7 @@ contains
       SAFE_DEALLOCATE_A(expo)
       SAFE_DEALLOCATE_A(tmp)
       SAFE_DEALLOCATE_A(psi)
-      call pop_sub('exponential.lanczos')
+      POP_SUB(lanczos)
     end subroutine lanczos
     ! ---------------------------------------------------------
 
@@ -562,7 +562,7 @@ contains
       type(batch_t) :: psi1b, hpsi1b
       type(profile_t), save :: prof
 
-      call push_sub('exponential.taylor_series_batch')
+      PUSH_SUB(taylor_series_batch)
       call profiling_in(prof, "EXP_TAYLOR_BATCH")
 
       SAFE_ALLOCATE(psi1 (1:der%mesh%np_part, 1:hm%d%dim, 1:psib%nst))
@@ -621,7 +621,7 @@ contains
       SAFE_DEALLOCATE_A(hpsi1)
       
       call profiling_out(prof)
-      call pop_sub('exponential.taylor_series_batch')
+      POP_SUB(taylor_series_batch)
     end subroutine taylor_series_batch
     
   end subroutine exponential_apply_batch
@@ -663,7 +663,7 @@ contains
 
     type(states_t) :: psi1, hpsi1
 
-    call push_sub('exponential.exponential_apply_all')
+    PUSH_SUB(exponential_apply_all)
 
     ASSERT(te%exp_method .eq. EXP_TAYLOR)
 
@@ -732,7 +732,7 @@ contains
 
     if(present(order)) order = te%exp_order*psi%d%nik*psi%nst ! This should be the correct number
 
-    call pop_sub('exponential.exponential_apply_all')
+    POP_SUB(exponential_apply_all)
   end subroutine exponential_apply_all
 
 end module exponential_m

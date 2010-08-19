@@ -145,7 +145,7 @@ contains
   subroutine batch_end(this)
     type(batch_t), intent(inout) :: this
 
-    call push_sub('batch.batch_end')
+    PUSH_SUB(batch_end)
 
     ASSERT(.not. batch_is_packed(this))
 
@@ -155,7 +155,7 @@ contains
     SAFE_DEALLOCATE_P(this%states)
     SAFE_DEALLOCATE_P(this%states_linear)
 
-    call pop_sub('batch.batch_end')
+    POP_SUB(batch_end)
   end subroutine batch_end
 
   !--------------------------------------------------------------
@@ -166,7 +166,7 @@ contains
     
     integer :: ist
 
-    call push_sub('batch.batch_init_empty')
+    PUSH_SUB(batch_init_empty)
     
     this%nst = nst
     this%dim = dim
@@ -192,7 +192,7 @@ contains
     nullify(this%pack%dpsi)
     nullify(this%pack%zpsi)
 
-    call pop_sub('batch.batch_init_empty')
+    POP_SUB(batch_init_empty)
     
   end subroutine batch_init_empty
 
@@ -205,7 +205,7 @@ contains
     
     integer :: ist
 
-    call push_sub('batch.batch_init_empty_linear')
+    PUSH_SUB(batch_init_empty_linear)
     
     this%nst = 0
     this%dim = 0
@@ -226,7 +226,7 @@ contains
     nullify(this%pack%dpsi)
     nullify(this%pack%zpsi)
 
-    call pop_sub('batch.batch_init_empty_linear')
+    POP_SUB(batch_init_empty_linear)
     
   end subroutine batch_init_empty_linear
 
@@ -237,7 +237,7 @@ contains
 
     integer :: ist
     
-    call push_sub('batch.batch_is_ok')
+    PUSH_SUB(batch_is_ok)
     
     ok = (this%nst_linear >= 1)
     if(ok) then
@@ -247,7 +247,7 @@ contains
       end do
     end if
 
-    call pop_sub('batch.batch_is_ok')
+    POP_SUB(batch_is_ok)
   end function batch_is_ok
 
   !--------------------------------------------------------------
@@ -258,7 +258,7 @@ contains
 
     integer :: ii
 
-    call push_sub('batch.batch_copy')
+    PUSH_SUB(batch_copy)
 
     call batch_init_empty(bout, bin%dim, bin%nst)
     bout%current = bin%current
@@ -286,7 +286,7 @@ contains
     end if
 #endif    
 
-    call pop_sub('batch.batch_copy')
+    POP_SUB(batch_copy)
 
   end subroutine batch_copy
 
@@ -350,7 +350,7 @@ contains
     logical :: copy_
     type(profile_t), save :: prof
 
-    call push_sub('batch.batch_pack')
+    PUSH_SUB(batch_pack)
 
     ASSERT(batch_is_ok(this))
 
@@ -400,7 +400,7 @@ contains
 
     INCR(this%in_buffer_count, 1)
 
-    call pop_sub('batch.batch_pack')
+    POP_SUB(batch_pack)
 
   contains
 
@@ -453,7 +453,7 @@ contains
     logical :: copy_
     type(profile_t), save :: prof
 
-    call push_sub('batch.batch_unpack')
+    PUSH_SUB(batch_unpack)
 
     if(batch_is_packed(this)) then
       INCR(this%in_buffer_count, -1)
@@ -488,7 +488,7 @@ contains
       end if
     end if
 
-    call pop_sub('batch.batch_unpack')
+    POP_SUB(batch_unpack)
     
   contains
 
@@ -531,7 +531,7 @@ contains
     type(c_ptr) :: kernel
     type(profile_t), save :: prof_pack
 
-    call push_sub('batch.batch_write_to_opencl_buffer')
+    PUSH_SUB(batch_write_to_opencl_buffer)
 
     ASSERT(batch_is_ok(this))
 
@@ -594,7 +594,7 @@ contains
 
     end if
 
-    call pop_sub('batch.batch_write_to_opencl_buffer')
+    POP_SUB(batch_write_to_opencl_buffer)
   end subroutine batch_write_to_opencl_buffer
 
   ! ------------------------------------------------------------------
@@ -607,7 +607,7 @@ contains
     type(c_ptr) :: kernel
     type(profile_t), save :: prof_unpack
 
-    call push_sub('batch.batch_read_from_opencl_buffer')
+    PUSH_SUB(batch_read_from_opencl_buffer)
 
     ASSERT(batch_is_ok(this))
 
@@ -666,7 +666,7 @@ contains
       call opencl_release_buffer(tmp)
     end if
 
-    call pop_sub('batch.batch_read_from_opencl_buffer')
+    POP_SUB(batch_read_from_opencl_buffer)
   end subroutine batch_read_from_opencl_buffer
 
 #endif
@@ -681,7 +681,7 @@ contains
     integer :: bsize
 #endif
 
-    call push_sub('batch.batch_set_zero')
+    PUSH_SUB(batch_set_zero)
 
     call batch_pack_was_modified(this)
 
@@ -710,7 +710,7 @@ contains
 
     end if
 
-    call pop_sub('batch.batch_set_zero')
+    POP_SUB(batch_set_zero)
   end subroutine batch_set_zero
 
 ! --------------------------------------------------------------
@@ -726,7 +726,7 @@ subroutine batch_copy_data(np, xx, yy)
   integer :: localsize
 #endif
 
-  call push_sub('batch.batch_copy_data')
+  PUSH_SUB(batch_copy_data)
   call profiling_in(prof, "BATCH_COPY_DATA")
 
   ASSERT(batch_type(yy) == batch_type(xx))
@@ -769,7 +769,7 @@ subroutine batch_copy_data(np, xx, yy)
   call batch_pack_was_modified(yy)
 
   call profiling_out(prof)
-  call pop_sub('batch.batch_copy_data')
+  POP_SUB(batch_copy_data)
 end subroutine batch_copy_data
 
 #include "real.F90"

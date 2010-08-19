@@ -63,7 +63,7 @@ contains
     FLOAT :: def_h, def_rsize
     integer :: idir, il
 
-    call push_sub('ob_simul_box.ob_simul_box_init')
+    PUSH_SUB(ob_simul_box_init)
 
     ! Open boundaries are only possible for rectangular simulation boxes.
     if(sb%box_shape.ne.PARALLELEPIPED) then
@@ -86,7 +86,7 @@ contains
     end do
     call simul_box_add_lead_atoms(sb, geo) ! Add the atoms of the lead unit cells that are
                                            ! included in the simulation box to geo.
-    call pop_sub('ob_simul_box.ob_simul_box_init')
+    POP_SUB(ob_simul_box_init)
 
   end subroutine ob_simul_box_init
 
@@ -100,7 +100,7 @@ contains
 
     integer :: iunit, il
 
-    call push_sub('ob_simul_box.ob_read_lead_unit_cells')
+    PUSH_SUB(ob_read_lead_unit_cells)
 
     do il = 1, NLEADS
       iunit = io_open(trim(dir(il))//'/'//GS_DIR//'mesh', action = 'read', is_tmp = .true., grp = mpi_world)
@@ -145,7 +145,7 @@ contains
       end if
     end do
 
-    call pop_sub('ob_simul_box.ob_read_lead_unit_cells')
+    POP_SUB(ob_read_lead_unit_cells)
   end subroutine ob_read_lead_unit_cells
 
   !--------------------------------------------------------------
@@ -161,7 +161,7 @@ contains
     character(len=32) :: label_bak
     integer           :: il, icell, iatom, jatom, icatom, dir
 
-    call push_sub('ob_simul_box.ob_simul_box_add_lead_atoms')
+    PUSH_SUB(ob_simul_box_add_lead_atoms)
 
     SAFE_ALLOCATE(lead_geo(1:NLEADS))
     do il = 1, NLEADS
@@ -241,7 +241,7 @@ contains
     call geometry_end(central_geo)
     SAFE_DEALLOCATE_A(lead_geo)
 
-    call pop_sub('ob_simul_box.ob_simul_box_add_lead_atoms')
+    POP_SUB(ob_simul_box_add_lead_atoms)
   end subroutine ob_simul_box_add_lead_atoms
 
 

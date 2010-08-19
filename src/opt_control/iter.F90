@@ -73,7 +73,7 @@ contains
     type(oct_iterator_t), intent(inout)        :: iterator
     type(controlfunction_t), intent(in) :: par
 
-    call push_sub('iter.oct_iterator_init')
+    PUSH_SUB(oct_iterator_init)
 
     !%Variable OCTEps
     !%Type float
@@ -137,7 +137,7 @@ contains
        iterator%velocities_iunit = io_open(OCT_DIR//'velocities', action='write')
     end if
 
-    call pop_sub('iter.oct_iterator_init')
+    POP_SUB(oct_iterator_init)
   end subroutine oct_iterator_init
   ! ---------------------------------------------------------
 
@@ -146,7 +146,7 @@ contains
   subroutine oct_iterator_end(iterator)
     type(oct_iterator_t), intent(inout) :: iterator
 
-    call push_sub('iter.oct_iterator_end')
+    PUSH_SUB(oct_iterator_end)
 
     call controlfunction_write(OCT_DIR//'laser.bestJ1', iterator%best_par)
 
@@ -159,7 +159,7 @@ contains
        call io_close(iterator%velocities_iunit)
     end if
 
-    call pop_sub('iter.oct_iterator_end')
+    POP_SUB(oct_iterator_end)
   end subroutine oct_iterator_end
   ! ---------------------------------------------------------
 
@@ -174,7 +174,7 @@ contains
     FLOAT :: fluence, jfunctional, j2, delta
     logical :: bestj1
 
-    call push_sub('iter.iteration_manager')
+    PUSH_SUB(iteration_manager)
     
     stoploop = .false.
 
@@ -229,7 +229,7 @@ contains
 
     iterator%ctr_iter = iterator%ctr_iter + 1
 
-    call pop_sub('iter.iteration_manager')
+    POP_SUB(iteration_manager)
   end function iteration_manager
   ! ---------------------------------------------------------
 
@@ -243,7 +243,7 @@ contains
     FLOAT, optional, intent(in) :: dx
 
     FLOAT :: j1, j2, fluence, delta
-    call push_sub('iter.iteration_manager_direct')
+    PUSH_SUB(iteration_manager_direct)
 
     fluence = controlfunction_fluence(par)
     j2 = controlfunction_j2(par)
@@ -293,7 +293,7 @@ contains
 
     iterator%ctr_iter = iterator%ctr_iter + 1
 
-    call pop_sub('iter.iteration_manager_direct')
+    POP_SUB(iteration_manager_direct)
   end subroutine iteration_manager_direct
   ! ---------------------------------------------------------
 
@@ -304,7 +304,7 @@ contains
 
     FLOAT, intent(in) :: j, j1, j2, delta
 
-    call push_sub('iter.iteration_manager_main')
+    PUSH_SUB(iteration_manager_main)
 
     iterator%ctr_iter_main = iterator%ctr_iter_main + 1
     write(iterator%convergence_iunit, '("### MAIN ITERATION")') 
@@ -312,7 +312,7 @@ contains
       '##', iterator%ctr_iter_main, j, j1, j2, delta
     write(iterator%convergence_iunit, '("###")')
 
-    call pop_sub('iter.iteration_manager_main')
+    POP_SUB(iteration_manager_main)
   end subroutine iteration_manager_main
   ! ---------------------------------------------------------
 
@@ -324,12 +324,12 @@ contains
 
     character(len=80)  :: filename
 
-    call push_sub('iter.iterator_write')
+    PUSH_SUB(iterator_write)
 
     write(filename,'(a,i3.3)') OCT_DIR//'laser.', iterator%ctr_iter
     call controlfunction_write(filename, par)
 
-    call pop_sub('iter.iterator_write')
+    POP_SUB(iterator_write)
   end subroutine iterator_write
   ! ---------------------------------------------------------
 
@@ -339,10 +339,10 @@ contains
     type(oct_iterator_t), intent(inout) :: iterator
     type(controlfunction_t), pointer    :: par
 
-    call push_sub('iter.oct_iterator_bestpar')
+    PUSH_SUB(oct_iterator_bestpar)
     par => iterator%best_par
 
-    call pop_sub('iter.oct_iterator_bestpar')
+    POP_SUB(oct_iterator_bestpar)
   end subroutine oct_iterator_bestpar
   ! ---------------------------------------------------------
 

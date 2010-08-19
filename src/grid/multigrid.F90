@@ -88,7 +88,7 @@ contains
 
     integer :: i, n_levels, np
 
-    call push_sub('multigrid.multigrid_init')
+    PUSH_SUB(multigrid_init)
 
     !%Variable MultigridLevels
     !%Type integer
@@ -169,7 +169,7 @@ contains
       mgrid%ep_part(i) = mgrid%tp      
     end do
 
-    call pop_sub('multigrid.multigrid_init')
+    POP_SUB(multigrid_init)
   end subroutine multigrid_init
 
   ! ---------------------------------------------------------
@@ -184,7 +184,7 @@ contains
 #endif
     integer :: x(MAX_DIM), mod2(MAX_DIM)
 
-    call push_sub('multigrid.multigrid_get_transfer_tables')
+    PUSH_SUB(multigrid_get_transfer_tables)
 
     tt%n_coarse = coarse%np
     SAFE_ALLOCATE(tt%to_coarse(1:tt%n_coarse))
@@ -322,7 +322,7 @@ contains
     end if
 #endif
 
-    call pop_sub('multigrid.multigrid_get_transfer_tables')
+    POP_SUB(multigrid_get_transfer_tables)
   end subroutine multigrid_get_transfer_tables
 
   !/*---------------------------------------------------------------------------------
@@ -336,7 +336,7 @@ contains
     type(mesh_t),       intent(inout) :: mesh_out
     type(stencil_t),    intent(in)    :: stencil
 
-    call push_sub('multigrid.multigrid_mesh_half')
+    PUSH_SUB(multigrid_mesh_half)
 
     mesh_out%sb              => mesh_in%sb
     mesh_out%idx%sb          => mesh_in%idx%sb
@@ -351,7 +351,7 @@ contains
     
     call mesh_init_stage_2(mesh_out, mesh_out%sb, geo, cv, stencil)
 
-    call pop_sub('multigrid.multigrid_mesh_half')
+    POP_SUB(multigrid_mesh_half)
   end subroutine multigrid_mesh_half
 
   subroutine multigrid_mesh_double(geo, cv, mesh_in, mesh_out, stencil)    
@@ -361,7 +361,7 @@ contains
     type(mesh_t),       intent(inout) :: mesh_out
     type(stencil_t),    intent(in)    :: stencil
 
-    call push_sub('multigrid.multigrid_mesh_double')
+    PUSH_SUB(multigrid_mesh_double)
 
     mesh_out%sb             => mesh_in%sb
     mesh_out%idx%sb         => mesh_in%idx%sb
@@ -376,7 +376,7 @@ contains
     
     call mesh_init_stage_2(mesh_out, mesh_out%sb, geo, cv, stencil)
 
-    call pop_sub('multigrid.multigrid_mesh_double')
+    POP_SUB(multigrid_mesh_double)
   end subroutine multigrid_mesh_double
 
   ! ---------------------------------------------------------
@@ -386,7 +386,7 @@ contains
     integer :: i
     type(multigrid_level_t), pointer :: level
 
-    call push_sub('multigrid.multigrid_end')
+    PUSH_SUB(multigrid_end)
 
     SAFE_DEALLOCATE_P(mgrid%sp)
     SAFE_DEALLOCATE_P(mgrid%ep)
@@ -412,7 +412,7 @@ contains
 
     SAFE_DEALLOCATE_P(mgrid%level)
 
-    call pop_sub('multigrid.multigrid_end')
+    POP_SUB(multigrid_end)
   end subroutine multigrid_end
 
   integer function multigrid_number_of_levels(base_der) result(number)

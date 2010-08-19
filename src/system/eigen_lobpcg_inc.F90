@@ -49,7 +49,7 @@
     FLOAT, allocatable :: ldiff(:)
 #endif
 
-    call push_sub('eigen_lobpcg_inc.Xeigensolver_lobpcg')
+    PUSH_SUB(X(eigensolver_lobpcg))
 
     verbose_ = .false.
     if(present(verbose)) then
@@ -113,7 +113,7 @@
 
     if(verbose_) call messages_print_stress(stdout)
 
-    call pop_sub('eigen_lobpcg_inc.Xeigensolver_lobpcg')
+    POP_SUB(X(eigensolver_lobpcg))
   end subroutine X(eigensolver_lobpcg)
 
 
@@ -189,7 +189,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   type(batch_t) :: psib, hpsib
   logical :: there_are_constraints
   
-  call push_sub('eigen_lobpcg_inc.Xlobpcg')
+  PUSH_SUB(X(lobpcg))
 
   if(constr_end >= constr_start) then
     there_are_constraints = .true.
@@ -595,7 +595,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     SAFE_DEALLOCATE_P(lnuc)
   end if
 
-  call pop_sub('eigen_lobpcg_inc.Xlobpcg')
+  POP_SUB(X(lobpcg))
 
 contains
 
@@ -605,7 +605,7 @@ contains
   subroutine X(lobpcg_info)(block_iter)
     integer, intent(in) :: block_iter
 
-    call push_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_info')
+    PUSH_SUB(X(lobpcg).X(lobpcg_info))
 
     if(verbose_) then
       write(message(1), '(a,i3,a,i5,a,i5)') '  Converged vectors of block ', ib, &
@@ -613,7 +613,7 @@ contains
       call write_info(1)
     end if
     
-    call pop_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_info')
+    POP_SUB(X(lobpcg).X(lobpcg_info))
   end subroutine X(lobpcg_info)
 
 
@@ -623,7 +623,7 @@ contains
     integer :: ist, iev
     integer :: idim, ip
 
-    call push_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_res')
+    PUSH_SUB(X(lobpcg).X(lobpcg_res))
 
     do ist = st_start, st_end
       iev = iihash_lookup(all_ev_inv, ist, found)
@@ -634,7 +634,7 @@ contains
       end forall
     end do
 
-    call pop_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_res')
+    POP_SUB(X(lobpcg).X(lobpcg_res))
   end subroutine X(lobpcg_res)
 
 
@@ -644,7 +644,7 @@ contains
     integer           :: i, ist, j, new_nuc
     integer           :: new_uc(nuc)
 
-    call push_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_unconv_ev')
+    PUSH_SUB(X(lobpcg).X(lobpcg_unconv_ev))
 
     j       = 1
     new_nuc = 0
@@ -666,7 +666,7 @@ contains
       call lmpi_gen_allgatherv(lnuc, luc, nuc, uc, st%mpi_grp)
     end if
 #endif
-    call pop_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_unconv_ev')
+    POP_SUB(X(lobpcg).X(lobpcg_unconv_ev))
   end subroutine X(lobpcg_unconv_ev)
 
 
@@ -675,12 +675,12 @@ contains
   subroutine X(lobpcg_conv_mask)(mask)
     logical, intent(out) :: mask(:)
 
-    call push_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_conv_mask')
+    PUSH_SUB(X(lobpcg).X(lobpcg_conv_mask))
 
     mask     = .true.
     mask(UC) = .false.
 
-    call pop_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_conv_mask')
+    POP_SUB(X(lobpcg).X(lobpcg_conv_mask))
   end subroutine X(lobpcg_conv_mask)
 
 
@@ -695,7 +695,7 @@ contains
     integer             :: i
     R_TYPE, allocatable :: vv(:, :)
 
-    call push_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_orth')
+    PUSH_SUB(X(lobpcg).X(lobpcg_orth))
 
     chol_failure = .false.
     SAFE_ALLOCATE(vv(1:nuc, 1:nuc))
@@ -704,7 +704,7 @@ contains
     call lalg_cholesky(nuc, vv, bof=chol_failure)
     call profiling_out(C_PROFILING_LOBPCG_CHOL)
     if(chol_failure) then ! Failure in Cholesky decomposition.
-      call pop_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_orth')
+      POP_SUB(X(lobpcg).X(lobpcg_orth))
       return
     end if
     call profiling_in(C_PROFILING_LOBPCG_INV)
@@ -721,7 +721,7 @@ contains
     end do
     SAFE_DEALLOCATE_A(vv)
 
-    call pop_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_orth')
+    POP_SUB(X(lobpcg).X(lobpcg_orth))
   end subroutine X(lobpcg_orth)
 
 
@@ -738,7 +738,7 @@ contains
     type(profile_t), save :: prof
 
     call profiling_in(prof, "LOBPCG_CONSTRAINTS")
-    call push_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_apply_constraints')
+    PUSH_SUB(X(lobpcg).X(lobpcg_apply_constraints))
 
     SAFE_ALLOCATE(tmp1(1:nconstr, 1:nconstr))
     SAFE_ALLOCATE(tmp2(1:nconstr, 1:nidx))
@@ -756,7 +756,7 @@ contains
     SAFE_DEALLOCATE_A(tmp1)
     SAFE_DEALLOCATE_A(tmp2)
     SAFE_DEALLOCATE_A(tmp3)
-    call pop_sub('eigen_lobpcg_inc.Xlobpcg.Xlobpcg_apply_constraints')
+    POP_SUB(X(lobpcg).X(lobpcg_apply_constraints))
     call profiling_out(prof)
 
   end subroutine X(lobpcg_apply_constraints)
@@ -771,12 +771,12 @@ contains
     integer,           intent(in)  :: xpsi2(:)
     logical, optional, intent(in)  :: symm
 
-    call push_sub('eigen_lobpcg_inc.Xlobpcg.Xblockt_mul')
+    PUSH_SUB(X(lobpcg).X(blockt_mul))
 
     call states_blockt_mul(gr%mesh, st, st_start, st_end, st_start, st_end, &
       psi1, psi2, res, xpsi1=xpsi1, xpsi2=xpsi2, symm=symm)
 
-    call pop_sub('eigen_lobpcg_inc.Xlobpcg.Xblockt_mul')
+    POP_SUB(X(lobpcg).X(blockt_mul))
   end subroutine X(blockt_mul)
 
 
@@ -790,12 +790,12 @@ contains
     integer, intent(in)    :: xpsi(:)
     integer, intent(in)    :: xres(:)
 
-    call push_sub('eigen_lobpcg_inc.Xlobpcg.Xblock_matr_mul_add')
+    PUSH_SUB(X(lobpcg).X(block_matr_mul_add))
 
     call states_block_matr_mul_add(gr%mesh, st, alpha, st_start, st_end, st_start, st_end, &
       psi, matr, beta, res, xpsi=xpsi, xres=xres)
 
-    call pop_sub('eigen_lobpcg_inc.Xlobpcg.Xblock_matr_mul_add')
+    POP_SUB(X(lobpcg).X(block_matr_mul_add))
   end subroutine X(block_matr_mul_add)
 
 
@@ -807,12 +807,12 @@ contains
     integer, intent(in)  :: xpsi(:)
     integer, intent(in)  :: xres(:)
 
-    call push_sub('eigen_lobpcg_inc.Xlobpcg.Xblock_matr_mul')
+    PUSH_SUB(X(lobpcg).X(block_matr_mul))
 
     call states_block_matr_mul(gr%mesh, st, st_start, st_end, st_start, st_end, &
       psi, matr, res, xpsi=xpsi, xres=xres)
 
-    call pop_sub('eigen_lobpcg_inc.Xlobpcg.Xblock_matr_mul')
+    POP_SUB(X(lobpcg).X(block_matr_mul))
   end subroutine X(block_matr_mul)
 end subroutine X(lobpcg)
 

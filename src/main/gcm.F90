@@ -72,7 +72,7 @@ module gcm_m
     FLOAT :: uh, kij, gamma, ex
     integer :: ierr, i, ndeterminants, j, k, n
 
-    call push_sub('gcm.gcm_run')
+    PUSH_SUB(gcm_run)
 
     call messages_devel_version('Generator coordinates method')
 
@@ -246,7 +246,7 @@ module gcm_m
     SAFE_DEALLOCATE_A(smatrix)
     SAFE_DEALLOCATE_A(hmatrix)
     SAFE_DEALLOCATE_A(slatdetnames)
-    call pop_sub('gcm.gcm_run')
+    POP_SUB(gcm_run)
   end subroutine gcm_run
   ! ---------------------------------------------------------
 
@@ -261,7 +261,7 @@ module gcm_m
     FLOAT, allocatable :: rho(:), vh(:)
     FLOAT, allocatable :: mat(:, :, :, :)
 
-    call push_sub('gcm.mpdotp_twobody')
+    PUSH_SUB(mpdotp_twobody)
 
     nst = st1%nst
 
@@ -315,7 +315,7 @@ module gcm_m
       SAFE_DEALLOCATE_A(vh)
     end select
 
-    call pop_sub('gcm.mpdotp_twobody')
+    POP_SUB(mpdotp_twobody)
   end function mpdotp_twobody
   ! ---------------------------------------------------------
 
@@ -327,4 +327,3 @@ end module gcm_m
 !! mode: f90
 !! coding: utf-8
 !! End:
-

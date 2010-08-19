@@ -53,7 +53,7 @@ contains
     type(symmetrizer_t),         intent(out) :: this
     type(mesh_t),        target, intent(in)  :: mesh
 
-    call push_sub('symmetrizer.symmetrizer_init')
+    PUSH_SUB(symmetrizer_init)
     
     this%mesh => mesh
 
@@ -62,7 +62,7 @@ contains
       call write_fatal(1, only_root_writes = .true.)
     end if
 
-    call pop_sub('symmetrizer.symmetrizer_init')
+    POP_SUB(symmetrizer_init)
   end subroutine symmetrizer_init
 
   ! ---------------------------------------------------------
@@ -70,10 +70,10 @@ contains
   subroutine symmetrizer_end(this)
     type(symmetrizer_t), intent(inout) :: this
 
-    call push_sub('symmetrizer.symmetrizer_end')
+    PUSH_SUB(symmetrizer_end)
     nullify(this%mesh)
 
-    call pop_sub('symmetrizer.symmetrizer_end')
+    POP_SUB(symmetrizer_end)
   end subroutine symmetrizer_end
 
   ! ---------------------------------------------------------

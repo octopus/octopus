@@ -106,7 +106,7 @@ contains
     integer :: idir, ik, nk, n_filled, n_partially_filled, n_half_filled
     character(len=80) :: trandens, nst_string, default
 
-    call push_sub('casida.casida_run')
+    PUSH_SUB(casida_run)
 
     if (simul_box_is_periodic(sys%gr%sb)) then
       message(1) = "Casida formulation does not apply to periodic systems."
@@ -272,7 +272,7 @@ contains
 
     call casida_type_end(cas)
 
-    call pop_sub('casida.casida_run')
+    POP_SUB(casida_run)
   end subroutine casida_run
 
   ! ---------------------------------------------------------
@@ -285,7 +285,7 @@ contains
 
     integer :: ist, ast, jpair, ik
 
-    call push_sub('casida.casida_type_init')
+    PUSH_SUB(casida_type_init)
 
     ! count pairs
     cas%n_pairs = 0
@@ -347,7 +347,7 @@ contains
       call mpi_grp_init(cas%mpi_grp, -1)
     end if
 
-    call pop_sub('casida.casida_type_init')
+    POP_SUB(casida_type_init)
   end subroutine casida_type_init
 
 
@@ -355,7 +355,7 @@ contains
   subroutine casida_type_end(cas)
     type(casida_t), intent(inout) :: cas
 
-    call push_sub('casida.casida_type_end')
+    PUSH_SUB(casida_type_end)
 
     ASSERT(associated(cas%pair))
     SAFE_DEALLOCATE_P(cas%pair)
@@ -373,7 +373,7 @@ contains
     SAFE_DEALLOCATE_P(cas%n_occ)
     SAFE_DEALLOCATE_P(cas%n_unocc)
 
-    call pop_sub('casida.casida_type_end')
+    POP_SUB(casida_type_end)
   end subroutine casida_type_end
 
 
@@ -392,7 +392,7 @@ contains
     FLOAT, allocatable :: rho(:, :), fxc(:,:,:), pot(:)
     integer :: qi_old, qa_old, mu_old
 
-    call push_sub('casida.casida_work')
+    PUSH_SUB(casida_work)
 
     ! sanity checks
     ASSERT(cas%type >= CASIDA_EPS_DIFF .and. cas%type <= CASIDA_CASIDA)
@@ -450,7 +450,7 @@ contains
     end if
     SAFE_DEALLOCATE_A(saved_K)
 
-    call pop_sub('casida.casida_work')
+    POP_SUB(casida_work)
   contains
 
     ! ---------------------------------------------------------
@@ -459,7 +459,7 @@ contains
       FLOAT   :: ff
       FLOAT, allocatable :: deltav(:), xx(:)
 
-      call push_sub('casida.casida_work.solve_petersilka')
+      PUSH_SUB(casida_work.solve_petersilka)
 
       ! initialize progress bar
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, cas%n_pairs)
@@ -518,7 +518,7 @@ contains
 
       ! close restart file
       call io_close(iunit)
-      call pop_sub('casida.casida_work.solve_petersilka')
+      POP_SUB(casida_work.solve_petersilka)
     end subroutine solve_petersilka
 
 
@@ -543,7 +543,7 @@ contains
       FLOAT, allocatable :: mpi_mat(:,:)
 #endif
 
-      call push_sub('casida.casida_work.solve_casida')
+      PUSH_SUB(casida_work.solve_casida)
 
       max = (cas%n_pairs*(1 + cas%n_pairs)/2)/cas%mpi_grp%size
       counter = 0
@@ -755,7 +755,7 @@ contains
       end if
 #endif
 
-      call pop_sub('casida.casida_work.solve_casida')
+      POP_SUB(casida_work.solve_casida)
     end subroutine solve_casida
 
 
@@ -768,7 +768,7 @@ contains
       integer :: pi, qi, sigma, pa, qa, mu
       FLOAT, allocatable :: rho_i(:), rho_j(:)
 
-      call push_sub('casida.casida_work.K_term')
+      PUSH_SUB(casida_work.K_term)
 
       pi = pp%i
       pa = pp%a
@@ -807,7 +807,7 @@ contains
       SAFE_DEALLOCATE_A(rho_i)
       SAFE_DEALLOCATE_A(rho_j)
 
-      call pop_sub('casida.casida_work.K_term')
+      POP_SUB(casida_work.K_term)
     end function K_term
 
     ! ---------------------------------------------------------
@@ -816,12 +816,12 @@ contains
       integer :: ia, jb
       FLOAT   :: val
 
-      call push_sub('casida.casida_work.load_saved')
+      PUSH_SUB(casida_work.load_saved)
 
       iunit = io_open(trim(tmpdir)//'casida-restart', action='read', &
         status='old', die=.false., is_tmp=.true.)
       if( iunit <= 0) then
-        call pop_sub('casida.casida_work.load_saved')
+        POP_SUB(casida_work.load_saved)
         return
       end if
 
@@ -837,7 +837,7 @@ contains
       end do
 
       if(iunit > 0) call io_close(iunit)
-      call pop_sub('casida.casida_work.load_saved')
+      POP_SUB(casida_work.load_saved)
     end subroutine load_saved
 
   end subroutine casida_work
@@ -853,7 +853,7 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
-    call push_sub('casida.qcasida_write')
+    PUSH_SUB(qcasida_write)
 
     dim = size(cas%tm, 2)
 
@@ -888,7 +888,7 @@ contains
     SAFE_DEALLOCATE_A(w)
     SAFE_DEALLOCATE_A(ind)
 
-    call pop_sub('casida.qcasida_write')
+    POP_SUB(qcasida_write)
 
   end subroutine qcasida_write
 
@@ -906,7 +906,7 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
-    call push_sub('casida.casida_write')
+    PUSH_SUB(casida_write)
 
     dim = size(cas%tm, 2)
 
@@ -946,7 +946,7 @@ contains
     ! output eigenvectors in Casida approach
 
     if(cas%type .ne. CASIDA_CASIDA) then
-      call pop_sub('casida.casida_write')
+      POP_SUB(casida_write)
       return
     end if
 
@@ -978,7 +978,7 @@ contains
 
     SAFE_DEALLOCATE_A(w)
     SAFE_DEALLOCATE_A(ind)
-    call pop_sub('casida.casida_write')
+    POP_SUB(casida_write)
   end subroutine casida_write
 
 

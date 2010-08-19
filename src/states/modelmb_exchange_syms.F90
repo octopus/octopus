@@ -86,7 +86,7 @@ contains
 
     logical :: debug_antisym
 
-    call push_sub('states.modelmb_sym_states')
+    PUSH_SUB(modelmb_sym_states)
 
     symmetries_satisfied = .false.
 
@@ -302,7 +302,7 @@ contains
     SAFE_DEALLOCATE_A(ix)
     SAFE_DEALLOCATE_A(ixp)
 
-    call pop_sub('states.modelmb_sym_states')
+    POP_SUB(modelmb_sym_states)
   end subroutine modelmb_sym_state
   ! ---------------------------------------------------------
 

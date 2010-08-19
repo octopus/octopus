@@ -42,7 +42,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   type(projection_t) :: projection
 
   call profiling_in(prof_hamiltonian, "HAMILTONIAN")
-  call push_sub('hamiltonian_inc.Xhamiltonian_apply_batch')
+  PUSH_SUB(X(hamiltonian_apply_batch))
 
   if(present(time)) then
     ASSERT(abs(time - hm%current_time) < CNST(1e-10))
@@ -203,7 +203,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
     call batch_unpack(hpsib)
   end if
 
-  call pop_sub('hamiltonian_inc.Xhamiltonian_apply_batch')
+  POP_SUB(X(hamiltonian_apply_batch))
   call profiling_out(prof_hamiltonian)
 
 contains
@@ -229,7 +229,7 @@ subroutine X(get_grad)(hm, der, psi, grad)
 
   integer :: idim
 
-  call push_sub('hamiltonian_inc.Xget_grad')
+  PUSH_SUB(X(get_grad))
 
   if( .not. associated(grad)) then
     SAFE_ALLOCATE(grad(1:der%mesh%np, 1:MAX_DIM, 1:hm%d%dim))
@@ -239,7 +239,7 @@ subroutine X(get_grad)(hm, der, psi, grad)
     end do
   end if
   
-  call pop_sub('hamiltonian_inc.Xget_grad')
+  POP_SUB(X(get_grad))
 end subroutine X(get_grad)       
 
 ! ---------------------------------------------------------
@@ -255,7 +255,7 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, terms)
 
   type(batch_t) :: psib, hpsib
 
-  call push_sub('hamiltonian_inc.Xhamiltonian_apply')
+  PUSH_SUB(X(hamiltonian_apply))
 
   call batch_init(psib, hm%d%dim, 1)
   call batch_add_state(psib, ist, psi)
@@ -267,7 +267,7 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, terms)
   call batch_end(psib)
   call batch_end(hpsib)
 
-  call pop_sub('hamiltonian_inc.Xhamiltonian_apply')
+  POP_SUB(X(hamiltonian_apply))
 end subroutine X(hamiltonian_apply)
 ! ---------------------------------------------------------
 
@@ -283,7 +283,7 @@ subroutine X(hamiltonian_apply_all) (hm, der, psi, hpsi, time)
   integer :: ik
   type(batch_t) :: psib, hpsib
 
-  call push_sub('hamiltonian_inc.Xhamiltonian_apply_all')
+  PUSH_SUB(X(hamiltonian_apply_all))
 
   do ik = psi%d%kpt%start, psi%d%kpt%end
     call batch_init(psib, hm%d%dim, psi%st_start, psi%st_end, psi%X(psi)(:, :, :, ik))
@@ -295,7 +295,7 @@ subroutine X(hamiltonian_apply_all) (hm, der, psi, hpsi, time)
   
   if(hamiltonian_oct_exchange(hm)) call X(oct_exchange_operator_all)(hm, der, psi, hpsi)
 
-  call pop_sub('hamiltonian_inc.Xhamiltonian_apply_all')
+  POP_SUB(X(hamiltonian_apply_all))
 end subroutine X(hamiltonian_apply_all)
 ! ---------------------------------------------------------
 
@@ -314,7 +314,7 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik)
 
   FLOAT :: ff
 
-  call push_sub('hamiltonian_inc.Xexchange_operator')
+  PUSH_SUB(X(exchange_operator))
 
   SAFE_ALLOCATE(rho(1:der%mesh%np))
   SAFE_ALLOCATE(pot(1:der%mesh%np))
@@ -349,7 +349,7 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik)
 
   SAFE_DEALLOCATE_A(rho)
   SAFE_DEALLOCATE_A(pot)
-  call pop_sub('hamiltonian_inc.Xexchange_operator')
+  POP_SUB(X(exchange_operator))
 end subroutine X(exchange_operator)
 ! ---------------------------------------------------------
 
@@ -365,7 +365,7 @@ subroutine X(oct_exchange_operator_all) (hm, der, psi, hpsi)
   FLOAT, allocatable :: rho(:), pot(:)
   integer :: jst, ip
 
-  call push_sub('hamiltonian_inc.Xoct_exchange_operator_all')
+  PUSH_SUB(X(oct_exchange_operator_all))
 
   SAFE_ALLOCATE(rho(1:der%mesh%np))
   SAFE_ALLOCATE(pot(1:der%mesh%np))
@@ -399,7 +399,7 @@ subroutine X(oct_exchange_operator_all) (hm, der, psi, hpsi)
 
   SAFE_DEALLOCATE_A(rho)
   SAFE_DEALLOCATE_A(pot)
-  call pop_sub('hamiltonian_inc.Xoct_exchange_operator_all')
+  POP_SUB(X(oct_exchange_operator_all))
 end subroutine X(oct_exchange_operator_all)
 ! ---------------------------------------------------------
 
@@ -415,7 +415,7 @@ subroutine X(oct_exchange_operator) (hm, der, psi, hpsi, ik)
   FLOAT, allocatable :: rho(:), pot(:)
   integer :: jst, ip
 
-  call push_sub('hamiltonian_inc.Xoct_exchange_operator')
+  PUSH_SUB(X(oct_exchange_operator))
 
   SAFE_ALLOCATE(rho(1:der%mesh%np))
   SAFE_ALLOCATE(pot(1:der%mesh%np))
@@ -454,7 +454,7 @@ subroutine X(oct_exchange_operator) (hm, der, psi, hpsi, ik)
 
   SAFE_DEALLOCATE_A(rho)
   SAFE_DEALLOCATE_A(pot)
-  call pop_sub('hamiltonian_inc.Xoct_exchange_operator')
+  POP_SUB(X(oct_exchange_operator))
 end subroutine X(oct_exchange_operator)
 
 ! ---------------------------------------------------------
@@ -472,7 +472,7 @@ subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
 
   ! We will assume, for the moment, no spinors.
 
-  call push_sub('hamiltonian_inc.Xmagnus')
+  PUSH_SUB(X(magnus))
 
   SAFE_ALLOCATE( auxpsi(1:der%mesh%np_part, 1:hm%d%dim))
   SAFE_ALLOCATE(aux2psi(1:der%mesh%np,      1:hm%d%dim))
@@ -508,7 +508,7 @@ subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
 
   SAFE_DEALLOCATE_A(auxpsi)
   SAFE_DEALLOCATE_A(aux2psi)
-  call pop_sub('hamiltonian_inc.Xmagnus')
+  POP_SUB(X(magnus))
 end subroutine X(magnus)
 
 ! ---------------------------------------------------------
@@ -520,7 +520,7 @@ subroutine X(vborders) (der, hm, psi, hpsi)
 
   integer :: idim
 
-  call push_sub('hamiltonian_inc.Xvborders')
+  PUSH_SUB(X(vborders))
 
   if(hm%ab .eq. IMAGINARY_ABSORBING) then
     do idim = 1, hm%d%dim
@@ -529,7 +529,7 @@ subroutine X(vborders) (der, hm, psi, hpsi)
     end do
   end if
 
-  call pop_sub('hamiltonian_inc.Xvborders')
+  POP_SUB(X(vborders))
 end subroutine X(vborders)
 
 
@@ -545,7 +545,7 @@ subroutine X(h_mgga_terms) (hm, der, psi, hpsi, ik, grad)
   integer :: ispace, idim, ispin
   R_TYPE, allocatable :: cgrad(:,:), diverg(:)
 
-  call push_sub('hamiltonian_inc.Xh_mgga_terms')
+  PUSH_SUB(X(h_mgga_terms))
 
   call X(get_grad)(hm, der, psi, grad)
   ispin = states_dim_get_spin_index(hm%d, ik)
@@ -567,7 +567,7 @@ subroutine X(h_mgga_terms) (hm, der, psi, hpsi, ik, grad)
   SAFE_DEALLOCATE_A(cgrad)
   SAFE_DEALLOCATE_A(diverg)
 
-  call pop_sub('hamiltonian_inc.Xh_mgga_terms')
+  POP_SUB(X(h_mgga_terms))
 end subroutine X(h_mgga_terms)
 
 
@@ -579,7 +579,7 @@ subroutine X(vmask) (gr, hm, st)
 
   integer :: ik, ist, idim
 
-  call push_sub('hamiltonian_inc.Xvmask')
+  PUSH_SUB(X(vmask))
 
   if(hm%ab == MASK_ABSORBING) then
     do ik = st%d%kpt%start, st%d%kpt%end
@@ -591,7 +591,7 @@ subroutine X(vmask) (gr, hm, st)
     end do
   end if
 
-  call pop_sub('hamiltonian_inc.Xvmask')
+  POP_SUB(X(vmask))
 end subroutine X(vmask)
 
 ! ---------------------------------------------------------
@@ -605,7 +605,7 @@ subroutine X(hamiltonian_diagonal) (hm, der, diag, ik)
 
   FLOAT, allocatable  :: ldiag(:)
 
-  call push_sub('hamiltonian_inc.Xhamiltonian_diagonal')
+  PUSH_SUB(X(hamiltonian_diagonal))
   
   SAFE_ALLOCATE(ldiag(1:der%mesh%np))
 
@@ -631,7 +631,7 @@ subroutine X(hamiltonian_diagonal) (hm, der, diag, ik)
     
   end select
     
-  call pop_sub('hamiltonian_inc.Xhamiltonian_diagonal')
+  POP_SUB(X(hamiltonian_diagonal))
 end subroutine X(hamiltonian_diagonal)
 
 !! Local Variables:

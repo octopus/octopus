@@ -87,7 +87,7 @@ contains
 
     integer :: from(MAX_DIM), to(MAX_DIM), ll(MAX_DIM), dir, tdir
 
-    call push_sub('ob_interface.interface_init')
+    PUSH_SUB(interface_init)
 
     ASSERT(associated(der%mesh))
 
@@ -159,7 +159,7 @@ contains
     intf%index_range(1) = intf%index(1)
     intf%index_range(2) = intf%index(intf%np_uc)
 
-    call pop_sub('ob_interface.interface_init')
+    POP_SUB(interface_init)
   end subroutine interface_init
 
 
@@ -172,7 +172,7 @@ contains
 
     integer :: ii
 
-    call push_sub('ob_interface.member_of_interface')
+    PUSH_SUB(member_of_interface)
 
     ! first test if index is between min and max
     member_of_interface =              &
@@ -194,7 +194,7 @@ contains
       end do
     end if
 
-    call pop_sub('ob_interface.member_of_interface')
+    POP_SUB(member_of_interface)
   end function member_of_interface
 
 
@@ -206,11 +206,11 @@ contains
     CMPLX,             intent(in)  :: zpsi(:)
     CMPLX,             intent(out) :: intf_wf(:)
 
-    call push_sub('ob_interface.get_intf_wf')
+    PUSH_SUB(get_intf_wf)
 
     intf_wf(1:intf%np_uc) = zpsi(intf%index(1:intf%np_uc))
 
-    call pop_sub('ob_interface.get_intf_wf')
+    POP_SUB(get_intf_wf)
   end subroutine get_intf_wf
 
 
@@ -222,11 +222,11 @@ contains
     CMPLX,             intent(in)     :: intf_wf(:)
     CMPLX,             intent(inout)  :: zpsi(:)
 
-    call push_sub('ob_interface.put_intf_wf')
+    PUSH_SUB(put_intf_wf)
 
     zpsi(intf%index(1:intf%np_uc)) = intf_wf(1:intf%np_uc)
 
-    call pop_sub('ob_interface.put_intf_wf')
+    POP_SUB(put_intf_wf)
   end subroutine put_intf_wf
 
 
@@ -242,7 +242,7 @@ contains
     
     CMPLX, allocatable :: intf_wf(:), op_intf_wf(:)
 
-    call push_sub('ob_interface.interface_apply_op')
+    PUSH_SUB(interface_apply_op)
 
     SAFE_ALLOCATE(intf_wf(1:intf%np_uc))
     SAFE_ALLOCATE(op_intf_wf(1:intf%np_uc))
@@ -255,7 +255,7 @@ contains
     SAFE_DEALLOCATE_A(intf_wf)
     SAFE_DEALLOCATE_A(op_intf_wf)
 
-    call pop_sub('ob_interface.interface_apply_op')
+    POP_SUB(interface_apply_op)
   end subroutine interface_apply_op
 
 
@@ -265,13 +265,13 @@ contains
     type(interface_t), intent(in) :: intf
     integer,           intent(in) :: iunit
 
-    call push_sub('ob_interface.interface_write_info')
+    PUSH_SUB(interface_write_info)
 
     write(message(1), '(a,i6)') 'Number of points in '//LEAD_NAME(intf%il)// &
       ' interface: ', intf%np_uc
     call write_info(1, iunit)
 
-    call pop_sub('ob_interface.interface_write_info')
+    POP_SUB(interface_write_info)
   end subroutine interface_write_info
 
 
@@ -280,11 +280,11 @@ contains
   subroutine interface_end(intf)
     type(interface_t), intent(inout) :: intf
 
-    call push_sub('ob_interface.intface_end')
+    PUSH_SUB(intface_end)
 
     SAFE_DEALLOCATE_P(intf%index)
 
-    call pop_sub('ob_interface.intface_end')
+    POP_SUB(intface_end)
   end subroutine interface_end
 
 end module ob_interface_m

@@ -49,7 +49,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
   type(profile_t), save :: prof
 #endif
 
-  call push_sub('forces_inc.Xforces_from_potential')
+  PUSH_SUB(X(forces_from_potential))
 
   ASSERT(present(lr) .eqv. present(lr_dir))
   ASSERT(present(lr) .eqv. present(lr2))
@@ -311,7 +311,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
   endif
 
   SAFE_DEALLOCATE_A(force)
-  call pop_sub('forces_inc.Xforces_from_potential')
+  POP_SUB(X(forces_from_potential))
   
 end subroutine X(forces_from_potential)
 

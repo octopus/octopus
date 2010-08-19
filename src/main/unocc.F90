@@ -70,7 +70,7 @@ contains
     logical :: converged
     integer :: max_iter, nst_calculated
 
-    call push_sub('unocc.unocc_run')
+    PUSH_SUB(unocc_run)
 
     !%Variable UnoccMaximumIter
     !%Type integer
@@ -157,7 +157,7 @@ contains
     call h_sys_output_states(sys%st, sys%gr, sys%geo, STATIC_DIR, sys%outp)
 
     call end_()
-    call pop_sub('unocc.unocc_run')
+    POP_SUB(unocc_run)
 
   contains
 
@@ -168,7 +168,7 @@ contains
 
       integer :: nus
 
-      call push_sub('unocc.unocc_run.init_')
+      PUSH_SUB(unocc_run.init_)
 
       !%Variable NumberUnoccStates
       !%Type integer
@@ -207,18 +207,18 @@ contains
       eigens%final_tol_iter = 2
       eigens%converged(1:st%d%nik) = st%nst - nus
 
-      call pop_sub('unocc.unocc_run.init_')
+      POP_SUB(unocc_run.init_)
     end subroutine init_
 
 
     ! ---------------------------------------------------------
     subroutine end_()
-      call push_sub('unocc.unocc_run.end_')
+      PUSH_SUB(unocc_run.end_)
 
       call states_deallocate_wfns(sys%st)
       call eigensolver_end(eigens)
 
-      call pop_sub('unocc.unocc_run.end_')
+      POP_SUB(unocc_run.end_)
     end subroutine end_
 
   end subroutine unocc_run

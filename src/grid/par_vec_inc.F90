@@ -37,12 +37,12 @@ subroutine X(vec_scatter)(vp, root, v, v_local)
   integer, allocatable :: displs(:) !< Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  !< Send buffer.
 
-  call push_sub('par_vec_inc.Xvec_scatter')
+  PUSH_SUB(X(vec_scatter))
 
   ! Skip the MPI call if domain parallelization is not used.
   if(vp%npart.lt.2) then
     v_local(1:vp%np) = v(1:vp%np)
-    call pop_sub('par_vec_inc.Xvec_scatter')
+    POP_SUB(X(vec_scatter))
     return
   end if
 
@@ -76,7 +76,7 @@ subroutine X(vec_scatter)(vp, root, v, v_local)
   SAFE_DEALLOCATE_A(v_tmp)
   SAFE_DEALLOCATE_A(displs)
 
-  call pop_sub('par_vec_inc.Xvec_scatter')
+  POP_SUB(X(vec_scatter))
 
 end subroutine X(vec_scatter)
 
@@ -95,7 +95,7 @@ subroutine X(vec_scatter_bndry)(vp, root, v, v_local)
   integer, allocatable :: displs(:) !< Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  !< Send buffer.
 
-  call push_sub('par_vec_inc.Xvec_scatter_bndry')
+  PUSH_SUB(X(vec_scatter_bndry))
 
   SAFE_ALLOCATE(displs(1:vp%npart))
   displs = vp%xbndry-1
@@ -125,7 +125,7 @@ subroutine X(vec_scatter_bndry)(vp, root, v, v_local)
   SAFE_DEALLOCATE_A(v_tmp)
   SAFE_DEALLOCATE_A(displs)
 
-  call pop_sub('par_vec_inc.Xvec_scatter_bndry')
+  POP_SUB(X(vec_scatter_bndry))
 
 end subroutine X(vec_scatter_bndry)
 
@@ -138,12 +138,12 @@ subroutine X(vec_scatter_all)(vp, root, v, v_local)
   R_TYPE,     intent(in)  :: v(:)
   R_TYPE,     intent(out) :: v_local(:)
 
-  call push_sub('par_vec_inc.Xvec_scatter_all')
+  PUSH_SUB(X(vec_scatter_all))
 
   call X(vec_scatter)(vp, root, v, v_local)
   call X(vec_scatter_bndry)(vp, root, v, v_local)
 
-  call pop_sub('par_vec_inc.Xvec_scatter_all')
+  POP_SUB(X(vec_scatter_all))
 
 end subroutine X(vec_scatter_all)
 
@@ -162,12 +162,12 @@ subroutine X(vec_gather)(vp, root, v, v_local)
   integer, allocatable :: displs(:) !< Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  !< Receive buffer.
 
-  call push_sub('par_vec_inc.Xvec_gather')
+  PUSH_SUB(X(vec_gather))
 
   ! Skip the MPI call if domain parallelization is not used.
   if(vp%npart.lt.2) then
     v(1:vp%np) = v_local(1:vp%np)
-    call pop_sub('par_vec_inc.Xvec_gather')
+    POP_SUB(X(vec_gather))
     return
   end if
 
@@ -195,7 +195,7 @@ subroutine X(vec_gather)(vp, root, v, v_local)
   SAFE_DEALLOCATE_A(v_tmp)
   SAFE_DEALLOCATE_A(displs)
 
-  call pop_sub('par_vec_inc.Xvec_gather')
+  POP_SUB(X(vec_gather))
 
 end subroutine X(vec_gather)
 
@@ -212,7 +212,7 @@ subroutine X(vec_allgather)(vp, v, v_local)
   integer, allocatable :: displs(:) !< Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  !< Receive buffer.
 
-  call push_sub('par_vec_inc.Xvec_allgather')
+  PUSH_SUB(X(vec_allgather))
 
   ! Unfortunately, vp%xlocal ist not quite the required
   ! displacement vector.
@@ -235,7 +235,7 @@ subroutine X(vec_allgather)(vp, v, v_local)
   SAFE_DEALLOCATE_A(v_tmp)
   SAFE_DEALLOCATE_A(displs)
 
-  call pop_sub('par_vec_inc.Xvec_allgather')
+  POP_SUB(X(vec_allgather))
 
 end subroutine X(vec_allgather)
 

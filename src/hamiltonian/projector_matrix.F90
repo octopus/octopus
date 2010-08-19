@@ -60,7 +60,7 @@ contains
     integer,                  intent(in)  :: npoints
     integer,                  intent(in)  :: nprojs
 
-    call push_sub('projector_matrix.projector_matrix_allocate')
+    PUSH_SUB(projector_matrix_allocate)
 
     this%npoints = npoints
     this%nprojs = nprojs
@@ -69,7 +69,7 @@ contains
     SAFE_ALLOCATE(this%projectors(1:npoints, 1:nprojs))
     SAFE_ALLOCATE(this%scal(1:nprojs))
 
-    call pop_sub('projector_matrix.projector_matrix_allocate')
+    POP_SUB(projector_matrix_allocate)
   end subroutine projector_matrix_allocate
 
   ! -------------------------------------------------
@@ -77,13 +77,13 @@ contains
   subroutine projector_matrix_deallocate(this)
     type(projector_matrix_t), intent(out) :: this
 
-    call push_sub('projector_matrix.projector_matrix_deallocate')
+    PUSH_SUB(projector_matrix_deallocate)
 
     SAFE_DEALLOCATE_P(this%map)
     SAFE_DEALLOCATE_P(this%projectors)
     SAFE_DEALLOCATE_P(this%scal)
 
-    call pop_sub('projector_matrix.projector_matrix_deallocate')
+    POP_SUB(projector_matrix_deallocate)
   end subroutine projector_matrix_deallocate
 
   ! -------------------------------------------------
@@ -94,4 +94,3 @@ end module projector_matrix_m
 !! mode: f90
 !! coding: utf-8
 !! End:
-

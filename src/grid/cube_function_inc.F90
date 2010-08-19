@@ -23,7 +23,7 @@ subroutine X(cf_new)(n, cf)
   integer, intent(in) :: n(3)
   type(X(cf_t)), intent(out) :: cf
 
-  call push_sub('cf_inc.Xcf_new')
+  PUSH_SUB(X(cf_new))
 
   ASSERT(all(n>0))
 
@@ -32,7 +32,7 @@ subroutine X(cf_new)(n, cf)
   cf%n = n
 
   nullify(cf%fft)
-  call pop_sub('cf_inc.Xcf_new')
+  POP_SUB(X(cf_new))
 end subroutine X(cf_new)
 
 
@@ -41,7 +41,7 @@ subroutine X(cf_new_from)(cf, cf_i)
   type(X(cf_t)), intent(out) :: cf
   type(X(cf_t)), intent( in) :: cf_i
 
-  call push_sub('cf_inc.Xcf_new_from')
+  PUSH_SUB(X(cf_new_from))
   ASSERT(all(cf_i%n>0))
 
   nullify(cf%RS)
@@ -55,7 +55,7 @@ subroutine X(cf_new_from)(cf, cf_i)
   else
     nullify(cf%fft)
   end if
-  call pop_sub('cf_inc.Xcf_new_from')
+  POP_SUB(X(cf_new_from))
 end subroutine X(cf_new_from)
 
 
@@ -63,12 +63,12 @@ end subroutine X(cf_new_from)
 subroutine X(cf_alloc_RS)(cf)
   type(X(cf_t)), intent(inout) :: cf
 
-  call push_sub('cf_inc.Xcf_alloc_RS')
+  PUSH_SUB(X(cf_alloc_RS))
 
   ASSERT(.not.associated(cf%RS))
   SAFE_ALLOCATE(cf%RS(1:cf%n(1), 1:cf%n(2), 1:cf%n(3)))
 
-  call pop_sub('cf_inc.Xcf_alloc_RS')
+  POP_SUB(X(cf_alloc_RS))
 end subroutine X(cf_alloc_RS)
 
 
@@ -76,20 +76,20 @@ end subroutine X(cf_alloc_RS)
 subroutine X(cf_free_RS)(cf)
   type(X(cf_t)), intent(inout) :: cf
 
-  call push_sub('cf_inc.Xcf_free_RS')
+  PUSH_SUB(X(cf_free_RS))
 
   ASSERT(associated(cf%RS))
   SAFE_DEALLOCATE_P(cf%RS)
   nullify(cf%RS)
 
-  call pop_sub('cf_inc.Xcf_free_RS')
+  POP_SUB(X(cf_free_RS))
 end subroutine X(cf_free_RS)
 
 ! ---------------------------------------------------------
 subroutine X(cf_free)(cf)
   type(X(cf_t)), intent(inout) :: cf
 
-  call push_sub('cf_inc.Xcf_free')
+  PUSH_SUB(X(cf_free))
 
   if(associated(cf%RS)) then
     SAFE_DEALLOCATE_P(cf%RS)
@@ -107,7 +107,7 @@ subroutine X(cf_free)(cf)
     nullify(cf%fft)
   end if
 
-  call pop_sub('cf_inc.Xcf_free')
+  POP_SUB(X(cf_free))
 end subroutine X(cf_free)
 
 ! ---------------------------------------------------------
@@ -125,7 +125,7 @@ subroutine X(mesh_to_cube) (mesh, mf, cf)
 
   integer :: ip, ix, iy, iz, center(3)
 
-  call push_sub('cf_inc.Xmesh_to_cube')
+  PUSH_SUB(X(mesh_to_cube))
 
   ASSERT(associated(cf%RS))
 
@@ -141,7 +141,7 @@ subroutine X(mesh_to_cube) (mesh, mf, cf)
     cf%RS(ix, iy, iz) = mf(ip)
   end do
 
-  call pop_sub('cf_inc.Xmesh_to_cube')
+  POP_SUB(X(mesh_to_cube))
 end subroutine X(mesh_to_cube)
 
 ! ---------------------------------------------------------
@@ -152,7 +152,7 @@ subroutine X(cube_to_mesh) (mesh, cf, mf)
 
   integer :: ip, ix, iy, iz, center(3)
 
-  call push_sub('cf_inc.Xcube_to_mesh')
+  PUSH_SUB(X(cube_to_mesh))
 
   ASSERT(associated(cf%RS))
 
@@ -165,7 +165,7 @@ subroutine X(cube_to_mesh) (mesh, cf, mf)
     mf(ip) = cf%RS(ix, iy, iz)
   end do
 
-  call pop_sub('cf_inc.Xcube_to_mesh')
+  POP_SUB(X(cube_to_mesh))
 
 end subroutine X(cube_to_mesh)
 

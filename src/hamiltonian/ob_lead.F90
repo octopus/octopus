@@ -63,7 +63,7 @@ contains
     integer :: ip, kk, nn, k_stencil, intf_index
     FLOAT   :: w_re, w_im
 
-    call push_sub('ob_lead.lead_diag')
+    PUSH_SUB(lead_diag)
 
     diag = M_z0
 
@@ -108,7 +108,7 @@ contains
     ! Add potential. FIXME: add vector potential (A^2)
     forall(ip = 1:intf%np_uc) diag(ip, ip) = diag(ip, ip) + vks(ip)
 
-    call pop_sub('ob_lead.lead_diag')
+    POP_SUB(lead_diag)
   end subroutine lead_diag
 
 
@@ -125,7 +125,7 @@ contains
     integer :: jp, kk, k_stencil, nn, n_matr, dir, tdir, shift, intf_idx
     FLOAT   :: w_re, w_im
 
-    call push_sub('ob_lead.lead_offdiag')
+    PUSH_SUB(lead_offdiag)
 
     ! Coupling direction.
     dir = (-1)**(intf%il+1)
@@ -200,7 +200,7 @@ contains
       end do
     end do
 
-    call pop_sub('ob_lead.lead_offdiag')
+    POP_SUB(lead_offdiag)
   end subroutine lead_offdiag
 
 
@@ -213,7 +213,7 @@ contains
     integer, intent(in)    :: np, il
     CMPLX,   intent(out)   :: res(np, np)
 
-    call push_sub('ob_lead.apply_coupling')
+    PUSH_SUB(apply_coupling)
 
     res(1:np, 1:np) = matrix(1:np, 1:np)
     if(mod(il+1,2)+1.eq.1) then
@@ -224,7 +224,7 @@ contains
       call lalg_trmm(np, np, 'L', 'T', 'R', M_z1, offdiag, res)
     end if
 
-    call pop_sub('ob_lead.apply_coupling')
+    POP_SUB(apply_coupling)
   end subroutine apply_coupling
 
 
@@ -243,7 +243,7 @@ contains
     
     FLOAT :: zero(1)
 
-    call push_sub('ob_lead.lead_td_pot')
+    PUSH_SUB(lead_td_pot)
 
     zero(1) = M_ZERO
 
@@ -265,7 +265,7 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(pot_im)
-    call pop_sub('ob_lead.lead_td_pot')
+    POP_SUB(lead_td_pot)
   end subroutine lead_td_pot
 
   
@@ -276,14 +276,14 @@ contains
     integer,             intent(in)  :: np_part ! including ghost and boundary points
     integer,             intent(in)  :: nspin
 
-    call push_sub('ob_lead.lead_init_pot')
+    PUSH_SUB(lead_init_pot)
 
     lead%np  = np
     lead%np_part = np_part
     SAFE_ALLOCATE(lead%vks(1:np, 1:nspin))
     SAFE_ALLOCATE(lead%vhartree(1:np))
 
-    call pop_sub('ob_lead.lead_init_pot')
+    POP_SUB(lead_init_pot)
   end subroutine lead_init_pot
 
   ! init the kinetic part (diag and offdiag) of the lead
@@ -293,14 +293,14 @@ contains
     integer,             intent(in)  :: np_part ! including ghost and boundary points
     integer,             intent(in)  :: dim
 
-    call push_sub('ob_lead.lead_init_kin')
+    PUSH_SUB(lead_init_kin)
 
     lead%np  = np
     lead%np_part = np_part
     SAFE_ALLOCATE(lead%h_diag(1:np, 1:np, 1:dim))
     SAFE_ALLOCATE(lead%h_offdiag(1:np, 1:np))
 
-    call pop_sub('ob_lead.lead_init_kin')
+    POP_SUB(lead_init_kin)
   end subroutine lead_init_kin
 
 
@@ -308,14 +308,14 @@ contains
   subroutine lead_end(lead)
     type(lead_t),        intent(inout)  :: lead
 
-    call push_sub('ob_lead.lead_end')
+    PUSH_SUB(lead_end)
 
     SAFE_DEALLOCATE_P(lead%h_diag)
     SAFE_DEALLOCATE_P(lead%h_offdiag)
     SAFE_DEALLOCATE_P(lead%vks)
     SAFE_DEALLOCATE_P(lead%vhartree)
 
-    call pop_sub('ob_lead.lead_end')
+    POP_SUB(lead_end)
   end subroutine lead_end
 
 
@@ -328,7 +328,7 @@ contains
 
     integer :: np, ip
 
-    call push_sub('ob_lead.lead_copy')
+    PUSH_SUB(lead_copy)
 
     ASSERT(dst%np.le.src%np)
     np = dst%np
@@ -338,7 +338,7 @@ contains
     dst%vks(1:np, 1:nspin)        = src%vks(1:np, 1:nspin)
     dst%vhartree(1:np)            = src%vhartree(1:np)
 
-    call pop_sub('ob_lead.lead_copy')
+    POP_SUB(lead_copy)
   end subroutine lead_copy
 
 
@@ -355,7 +355,7 @@ contains
     type(lead_t) :: old_lead
     integer :: np, np_part
 
-    call push_sub('ob_lead.lead_resize')
+    PUSH_SUB(lead_resize)
 
     np = intf%np_uc
     np_part = np + lead%np_part - lead%np
@@ -379,7 +379,7 @@ contains
       call lead_end(old_lead)
     end if
 
-    call pop_sub('ob_lead.lead_resize')
+    POP_SUB(lead_resize)
   end subroutine lead_resize
 
 
@@ -390,13 +390,13 @@ contains
     FLOAT,               intent(in)  :: vks(:)
     type(interface_t),   intent(in)  :: intf
 
-    call push_sub('ob_lead.is_lead_transl_inv')
+    PUSH_SUB(is_lead_transl_inv)
 
     ! FIXME: For now every potential is translationally invariant in transport direction.
     ! This should be tested and also be generalized to periodic potentials.
     is_lead_transl_inv = .true.
 
-    call pop_sub('ob_lead.is_lead_transl_inv')
+    POP_SUB(is_lead_transl_inv)
   end function is_lead_transl_inv
 
 

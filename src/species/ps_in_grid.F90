@@ -75,7 +75,7 @@ contains
     FLOAT,              intent(in)  :: a, b
     integer,            intent(in)  :: no_l, so_no_l
 
-    call push_sub('ps_in_grid.ps_in_grid_init')
+    PUSH_SUB(ps_in_grid_init)
 
     ! initialize logaritmic grid
     call logrid_init(ps%g, flavor, a, b, nrval)
@@ -103,7 +103,7 @@ contains
       SAFE_ALLOCATE(ps%so_kb_radius(1:so_no_l))
     end if
 
-    call pop_sub('ps_in_grid.ps_in_grid_init')
+    POP_SUB(ps_in_grid_init)
   end subroutine ps_in_grid_init
 
 
@@ -111,7 +111,7 @@ contains
   subroutine ps_in_grid_end(ps)
     type(ps_in_grid_t), intent(inout) :: ps
 
-    call push_sub('ps_in_grid.ps_in_grid_end')
+    PUSH_SUB(ps_in_grid_end)
 
     SAFE_DEALLOCATE_P(ps%vps)
     SAFE_DEALLOCATE_P(ps%chcore)
@@ -133,7 +133,7 @@ contains
 
     call logrid_end(ps%g)
 
-    call pop_sub('ps_in_grid.ps_in_grid_end')
+    POP_SUB(ps_in_grid_end)
   end subroutine ps_in_grid_end
 
 
@@ -147,7 +147,7 @@ contains
     FLOAT :: a, b, qtot
     FLOAT, allocatable :: rho(:)
 
-    call push_sub('ps_in_grid.ps_in_grid_vlocal')
+    PUSH_SUB(ps_in_grid_vlocal)
 
     if(l_loc >= 0) then
       write(message(1), '(a,i2,a)') "Info: l = ", l_loc, " component used as local potential."
@@ -182,7 +182,7 @@ contains
       SAFE_DEALLOCATE_A(rho)
     end if
 
-    call pop_sub('ps_in_grid.ps_in_grid_vlocal')
+    POP_SUB(ps_in_grid_vlocal)
   end subroutine ps_in_grid_vlocal
 
 
@@ -194,7 +194,7 @@ contains
 
     integer :: l
 
-    call push_sub('ps_in_grid.ps_in_grid_kb_projectors')
+    PUSH_SUB(ps_in_grid_kb_projectors)
 
     do l = 1, ps%no_l_channels
       ps%KB(2:, l) = (ps%vps(2:, l) - ps%vlocal(2:)) * &
@@ -212,7 +212,7 @@ contains
         ps%so_KB(2, l), ps%so_KB(3, l))      
     end do
 
-    call pop_sub('ps_in_grid.ps_in_grid_kb_projectors')
+    POP_SUB(ps_in_grid_kb_projectors)
   end subroutine ps_in_grid_kb_projectors
 
 
@@ -229,7 +229,7 @@ contains
     integer :: ir, l
     FLOAT :: dnrm, avgv, vphi
 
-    call push_sub('ps_in_grid.ps_in_grid_kb_cosines')
+    PUSH_SUB(ps_in_grid_kb_cosines)
 
     do l = 1, ps%no_l_channels
       if(l-1 == lloc) then
@@ -261,7 +261,7 @@ contains
       ps%so_dknorm(l) = M_ONE/(sqrt(dnrm) + CNST(1.0e-20))
     end do
 
-    call pop_sub('ps_in_grid.ps_in_grid_kb_cosines')
+    POP_SUB(ps_in_grid_kb_cosines)
   end subroutine ps_in_grid_kb_cosines
 
 
@@ -274,7 +274,7 @@ contains
     FLOAT            :: dincv, phi
     FLOAT, parameter :: threshold = CNST(1.0e-6)
 
-    call push_sub('ps_in_grid.ps_in_grid_cutoff_radii')
+    PUSH_SUB(ps_in_grid_cutoff_radii)
 
     ! local part ....
     do ir = ps%g%nrval-1, 2, -1
@@ -314,7 +314,7 @@ contains
       ps%so_kb_radius(l) = ps%g%rofi(ir + 1)
     end do
     
-    call pop_sub('ps_in_grid.ps_in_grid_cutoff_radii')
+    POP_SUB(ps_in_grid_cutoff_radii)
   end subroutine ps_in_grid_cutoff_radii
 
 
@@ -326,7 +326,7 @@ contains
     integer :: l
     FLOAT   :: nrm
 
-    call push_sub('ps_in_grid.ps_in_grid_check_rphi')
+    PUSH_SUB(ps_in_grid_check_rphi)
 
     !  checking normalization of the wavefunctions
     do l = 1, ps%no_l_channels
@@ -339,7 +339,7 @@ contains
       end if
     end do
 
-    call pop_sub('ps_in_grid.ps_in_grid_check_rphi')
+    POP_SUB(ps_in_grid_check_rphi)
   end subroutine ps_in_grid_check_rphi
 
 

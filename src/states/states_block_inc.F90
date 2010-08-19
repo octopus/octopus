@@ -54,7 +54,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
 #endif
 
   call profiling_in(C_PROFILING_BLOCKT)
-  call push_sub('states_inc.Xstates_blockt_mul')
+  PUSH_SUB(X(states_blockt_mul))
 
   symm_ = .false.
   if(present(symm)) then
@@ -211,7 +211,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
   SAFE_DEALLOCATE_P(xpsi1_)
   SAFE_DEALLOCATE_P(xpsi2_)
 
-  call pop_sub('states_inc.Xstates_blockt_mul')
+  POP_SUB(X(states_blockt_mul))
   call profiling_out(C_PROFILING_BLOCKT)
 end subroutine X(states_blockt_mul)
 
@@ -228,7 +228,7 @@ subroutine X(states_gather)(mesh, st, in, out)
   integer              :: ii
   integer, allocatable :: sendcnts(:), sdispls(:), recvcnts(:), rdispls(:)
 
-  call push_sub('states_inc.Xstates_gather')
+  PUSH_SUB(X(states_gather))
 
   SAFE_ALLOCATE(sendcnts(1:st%mpi_grp%size))
   SAFE_ALLOCATE( sdispls(1:st%mpi_grp%size))
@@ -253,7 +253,7 @@ subroutine X(states_gather)(mesh, st, in, out)
   SAFE_DEALLOCATE_A(recvcnts)
   SAFE_DEALLOCATE_A(rdispls)
 
-  call pop_sub('states_inc.Xstates_gather')
+  POP_SUB(X(states_gather))
 end subroutine X(states_gather)
 #endif
 
@@ -275,7 +275,7 @@ subroutine X(states_block_matr_mul)(mesh, st, psi_start, psi_end, res_start, res
   R_TYPE,            intent(out) :: res(:, :, :)
   integer, optional, intent(in)  :: xpsi(:), xres(:)
 
-  call push_sub('states_inc.Xstates_block_matr_mul')
+  PUSH_SUB(X(states_block_matr_mul))
 
   if(present(xpsi).and.present(xres)) then
     call X(states_block_matr_mul_add)(mesh, st, R_TOTYPE(M_ONE), psi_start, psi_end, &
@@ -291,7 +291,7 @@ subroutine X(states_block_matr_mul)(mesh, st, psi_start, psi_end, res_start, res
       res_start, res_end, psi, matr, R_TOTYPE(M_ZERO), res)
   end if
 
-  call pop_sub('states_inc.Xstates_block_matr_mul')
+  POP_SUB(X(states_block_matr_mul))
 end subroutine X(states_block_matr_mul)
 
 
@@ -326,7 +326,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, psi_end, res
 #endif
 
   call profiling_in(C_PROFILING_BLOCK_MATR)
-  call push_sub('states_inc.Xstates_block_matr_add')
+  PUSH_SUB(X(states_block_matr_add))
 
   ! Calculate global index sets of state block psi and res.
   if(present(xpsi)) then
@@ -476,7 +476,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, psi_end, res
   SAFE_DEALLOCATE_P(xpsi_)
   SAFE_DEALLOCATE_P(xres_)
 
-  call pop_sub('states_inc.Xstates_block_matr_add')
+  POP_SUB(X(states_block_matr_add))
   call profiling_out(C_PROFILING_BLOCK_MATR)
 end subroutine X(states_block_matr_mul_add)
 
@@ -495,7 +495,7 @@ subroutine X(states_compactify)(dim, mesh, in_start, idx, in, out)
   type(profile_t), save :: prof
 
   call profiling_in(prof, "STATES_COMPACTIFY")
-  call push_sub('states_block_inc.Xstates_compactify')
+  PUSH_SUB(X(states_compactify))
 
   nn = ubound(idx, 1)
 
@@ -505,7 +505,7 @@ subroutine X(states_compactify)(dim, mesh, in_start, idx, in, out)
     end do
   end do
   
-  call pop_sub('states_block_inc.Xstates_compactify')
+  POP_SUB(X(states_compactify))
   call profiling_out(prof)
 end subroutine X(states_compactify)
 
@@ -526,7 +526,7 @@ subroutine X(states_uncompactify)(dim, mesh, out_start, idx, in, out)
   type(profile_t), save :: prof
 
   call profiling_in(prof, "STATES_UNCOMPACTIFY")
-  call push_sub('states_block_inc.Xstates_uncompactify')
+  PUSH_SUB(X(states_uncompactify))
 
   nn = ubound(idx, 1)
 
@@ -536,7 +536,7 @@ subroutine X(states_uncompactify)(dim, mesh, out_start, idx, in, out)
     end do
   end do
   
-  call pop_sub('states_block_inc.Xstates_uncompactify')
+  POP_SUB(X(states_uncompactify))
   call profiling_out(prof)
 end subroutine X(states_uncompactify)
 
@@ -552,14 +552,14 @@ end subroutine X(states_uncompactify)
 !   R_TYPE, target,       intent(in) :: psi(np, dim, st_start:st_end)
 !   type(states_block_t), intent(out) :: stb
 
-!   call push_sub('states_block_inc.Xstates_block_wrap')
+!   PUSH_SUB(X(states_block_wrap))
 
 !   stb%st_start =  st_start
 !   stb%st_end   =  st_end
 !   stb%nst      =  st_end-st_start+1
 !   stb%X(psi)   => psi
 
-!   call pop_sub('states_block_inc.Xstates_block_wrap')
+!   POP_SUB(X(states_block_wrap))
 ! end subroutine X(states_block_wrap)
 
 

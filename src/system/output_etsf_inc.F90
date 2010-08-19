@@ -44,7 +44,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
   type(etsf_kpoints), target :: kpoints
   type(dcf_t) :: cube
 
-  call push_sub("output_etsf_inc.h_sys_output_etsf")
+  PUSH_SUB(h_sys_output_etsf)
 
   if (iand(outp%what, output_geometry).ne.0) then
     !Create a cube
@@ -380,7 +380,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     dims%real_or_complex_wavefunctions = 1
   end if
 
-  call pop_sub("output_etsf_inc.h_sys_output_etsf")
+  POP_SUB(h_sys_output_etsf)
 end subroutine h_sys_output_etsf
 
 #endif

@@ -180,7 +180,7 @@ contains
 
     CMPLX, allocatable :: bra(:, :)
 #ifndef HAVE_OPENMP
-    call push_sub('rkb_projector.rkb_project_bra')
+    PUSH_SUB(rkb_project_bra)
 #endif
     uvpsi = M_ZERO
 
@@ -204,7 +204,7 @@ contains
 
     SAFE_DEALLOCATE_A(bra)
 #ifndef HAVE_OPENMP
-    call pop_sub('rkb_projector.rkb_project_bra')
+    POP_SUB(rkb_project_bra)
 #endif
   end subroutine rkb_project_bra
 
@@ -218,7 +218,7 @@ contains
     integer :: idim, jdim, n_s, is
     CMPLX :: aa
 #ifndef HAVE_OPENMP
-    call push_sub('rkb_projector.rkb_project_ket')
+    PUSH_SUB(rkb_project_ket)
 #endif
     n_s = rkb_p%n_s
 
@@ -233,7 +233,7 @@ contains
       end do
     end do
 #ifndef HAVE_OPENMP
-    call pop_sub('rkb_projector.rkb_project_ket')
+    POP_SUB(rkb_project_ket)
 #endif
   end subroutine rkb_project_ket
   

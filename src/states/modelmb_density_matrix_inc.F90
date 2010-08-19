@@ -36,7 +36,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
   FLOAT :: volume_element
   R_TYPE, allocatable :: psi_global(:)
 
-  call push_sub('modelmb_density_matrix_inc.Xmf_calculate_gamma')
+  PUSH_SUB(X(mf_calculate_gamma))
 
   ! In case of running parallel in domains, we need to operate psi_global, which 
   ! contains the full wavefunction after "gathering" all the domains.
@@ -97,7 +97,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
   SAFE_DEALLOCATE_A(ixp)
   SAFE_DEALLOCATE_A(ix_1part)
 
-  call pop_sub('modelmb_density_matrix_inc.Xmf_calculate_gamma')
+  POP_SUB(X(mf_calculate_gamma))
 end subroutine X(mf_calculate_gamma)
 
 !! Local Variables:

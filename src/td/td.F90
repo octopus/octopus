@@ -118,7 +118,7 @@ contains
     type(gauge_force_t)       :: gauge_force
     type(profile_t),     save :: prof
     
-    call push_sub('td.td_run')
+    PUSH_SUB(td_run)
 
     ! some shortcuts
     gr  => sys%gr
@@ -302,13 +302,13 @@ contains
     end if
 #endif
 
-    call pop_sub('td.td_run')
+    POP_SUB(td_run)
 
   contains
 
     ! ---------------------------------------------------------
     subroutine check_point
-      call push_sub('td.td_run.check_point')
+      PUSH_SUB(td_run.check_point)
 
       ! write info
       if(td%dynamics /= CP) then 
@@ -348,12 +348,12 @@ contains
         end if
       end if
 
-      call pop_sub('td.td_run.check_point')
+      POP_SUB(td_run.check_point)
     end subroutine check_point
 
    ! ---------------------------------------------------------
     subroutine end_()
-      call push_sub('td.td_run.end_')
+      PUSH_SUB(td_run.end_)
 
       ! free memory
       if(td%dynamics == CP) call cpmd_end(td%cp_propagator)
@@ -361,7 +361,7 @@ contains
       call ion_dynamics_end(td%ions)
       call td_end(td)
 
-      call pop_sub('td.td_run.end_')
+      POP_SUB(td_run.end_)
     end subroutine end_
 
     ! ---------------------------------------------------------
@@ -373,7 +373,7 @@ contains
       type(states_t) :: stin
       CMPLX, allocatable :: rotation_matrix(:, :)
 
-      call push_sub('td.td_run.init_wfs')
+      PUSH_SUB(td_run.init_wfs)
 
       if(.not.fromscratch) then
         call restart_read(trim(tmpdir)//'td', st, gr, geo, ierr, iter=td%iter)
@@ -539,13 +539,13 @@ contains
       call hamiltonian_span(hm, minval(gr%mesh%spacing(1:gr%mesh%sb%dim)), x)
       call total_energy(hm, gr, st, -1)
 
-      call pop_sub('td.td_run.init_wfs')
+      POP_SUB(td_run.init_wfs)
     end subroutine init_wfs
 
 
     ! ---------------------------------------------------------
     subroutine td_run_zero_iter()
-      call push_sub('td.td_run.td_run_zero_iter')
+      PUSH_SUB(td_run.td_run_zero_iter)
 
       call td_write_iter(write_handler, gr, st, hm, geo, td%kick, td%dt, 0)
 
@@ -554,7 +554,7 @@ contains
       call apply_delta_field(td%kick)
       call propagator_run_zero_iter(hm, td%tr)
 
-      call pop_sub('td.td_run.td_run_zero_iter')
+      POP_SUB(td_run.td_run_zero_iter)
     end subroutine td_run_zero_iter
 
 
@@ -570,7 +570,7 @@ contains
       FLOAT   :: xx(MAX_DIM)
       CMPLX, allocatable :: kick_function(:)
 
-      call push_sub('td.td_run.apply_delta_field')
+      PUSH_SUB(td_run.apply_delta_field)
 
       ! The wavefunctions at time delta t read
       ! psi(delta t) = psi(t) exp(i k x)
@@ -698,14 +698,14 @@ contains
         SAFE_DEALLOCATE_A(kick_function)
       end if delta_strength
 
-      call pop_sub('td.td_run.apply_delta_field')
+      POP_SUB(td_run.apply_delta_field)
     end subroutine apply_delta_field
 
 
     ! ---------------------------------------------------------
     subroutine td_read_coordinates() ! reads the pos and vel from coordinates file
       integer :: iatom, iter, iunit
-      call push_sub('td.td_run.td_read_coordinates')
+      PUSH_SUB(td_run.td_read_coordinates)
 
       call io_assign(iunit)
       open(unit = iunit, file = io_workpath('td.general/coordinates'), action='read', status='old')
@@ -714,7 +714,7 @@ contains
         message(1) = "Could not open file '"//trim(io_workpath('td.general/coordinates'))//"'."
         message(2) = "Starting simulation from initial geometry."
         call write_warning(2)
-        call pop_sub('td.td_run.td_read_coordinates')
+        POP_SUB(td_run.td_read_coordinates)
         return
       end if
 
@@ -738,7 +738,7 @@ contains
       end do
 
       call io_close(iunit)
-      call pop_sub('td.td_run.td_read_coordinates')
+      POP_SUB(td_run.td_read_coordinates)
     end subroutine td_read_coordinates
 
     ! ---------------------------------------------------------
@@ -747,7 +747,7 @@ contains
       integer :: iter, iunit
       FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM), dummy(1:MAX_DIM)
 
-      call push_sub('td.td_run.td_read_gauge_field')
+      PUSH_SUB(td_run.td_read_gauge_field)
 
       call io_assign(iunit)
       open(unit = iunit, file = io_workpath('td.general/gauge_field'), &
@@ -756,7 +756,7 @@ contains
         message(1) = "Could not open file '"//trim(io_workpath('td.general/gauge_field'))//"'."
         message(2) = "Starting simulation from initial values."
         call write_warning(2)
-        call pop_sub('td.td_run.td_read_gauge_field')
+        POP_SUB(td_run.td_read_gauge_field)
         return
       end if
 
@@ -781,7 +781,7 @@ contains
       call hamiltonian_update(hm, gr%mesh)
       
       call io_close(iunit)
-      call pop_sub('td.td_run.td_read_gauge_field')
+      POP_SUB(td_run.td_read_gauge_field)
     end subroutine td_read_gauge_field
 
     ! ---------------------------------------------------------
@@ -791,7 +791,7 @@ contains
       integer :: ii, is, ierr
       character(len=256) :: filename
 
-      call push_sub('td.td_run.td_save_restart')
+      PUSH_SUB(td_run.td_save_restart)
 
       ! first write resume file
       call restart_write(trim(tmpdir)//'td', st, gr, ierr, iter)
@@ -818,7 +818,7 @@ contains
 
       if(td%dynamics == CP) call cpmd_restart_write(td%cp_propagator, gr, st)
 
-      call pop_sub('td.td_run.td_save_restart')
+      POP_SUB(td_run.td_save_restart)
     end subroutine td_save_restart
 
   end subroutine td_run

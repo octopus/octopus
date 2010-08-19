@@ -68,17 +68,17 @@ contains
   subroutine valconf_null(c)
     type(valconf_t) :: c
 
-    call push_sub('atomic.valconf_null')
+    PUSH_SUB(valconf_null)
     c%z = 0; c%symbol = ""; c%type = 0; c%p = 0; c%n = 0; c%l = 0; c%occ = M_ZERO
 
-    call pop_sub('atomic.valconf_null')
+    POP_SUB(valconf_null)
   end subroutine valconf_null
 
   subroutine valconf_copy(cout, cin)
     type(valconf_t), intent(out) :: cout
     type(valconf_t), intent(in)  :: cin
 
-    call push_sub('atomic.valconf_copy')
+    PUSH_SUB(valconf_copy)
 
     cout%z      = cin%z
     cout%symbol = cin%symbol
@@ -88,7 +88,7 @@ contains
     cout%l      = cin%l
     cout%occ    = cin%occ
 
-    call pop_sub('atomic.valconf_copy')
+    POP_SUB(valconf_copy)
   end subroutine valconf_copy
 
   subroutine write_valconf(c, s)
@@ -97,12 +97,12 @@ contains
     character(len=VALCONF_STRING_LENGTH) :: s
     integer :: j
 
-    call push_sub('atomic.write_valconf')
+    PUSH_SUB(write_valconf)
 
     write(s,'(i2,1x,a2,i1,1x,i1,a1,6(i1,a1,f6.3,a1))') c%z, c%symbol, c%type, c%p, ':',&
          (c%n(j),spec_notation(c%l(j)),c%occ(j,1),',',j=1,c%p)
 
-    call pop_sub('atomic.write_valconf')
+    POP_SUB(write_valconf)
   end subroutine write_valconf
 
   subroutine read_valconf(s, c)
@@ -112,7 +112,7 @@ contains
     integer :: j
     character(len=1) :: lvalues(1:6)
 
-    call push_sub('atomic.read_valconf')
+    PUSH_SUB(read_valconf)
 
     read (s,'(i2,1x,a2,i1,1x,i1,1x,6(i1,a1,f6.3,1x))') c%z, c%symbol, c%type, c%p,&
          (c%n(j),lvalues(j),c%occ(j,1),j=1,c%p)
@@ -128,7 +128,7 @@ contains
        end select
     end do
 
-    call pop_sub('atomic.read_valconf')
+    POP_SUB(read_valconf)
   end subroutine read_valconf
 
 
@@ -146,7 +146,7 @@ contains
     FLOAT, allocatable :: xc(:, :), ve(:, :), rho(:, :)
     FLOAT :: r2, ex, ec, dx, dc
 
-    call push_sub('atomic.atomhxc')
+    PUSH_SUB(atomhxc)
 
     SAFE_ALLOCATE( ve(1:g%nrval, 1:nspin))
     SAFE_ALLOCATE( xc(1:g%nrval, 1:nspin))
@@ -195,7 +195,7 @@ contains
     SAFE_DEALLOCATE_A(xc)
     SAFE_DEALLOCATE_A(rho)
 
-    call pop_sub('atomic.atomhxc')
+    POP_SUB(atomhxc)
   end subroutine atomhxc
 
 
@@ -291,7 +291,7 @@ contains
   type(xc_f90_pointer_t) :: x_conf, c_conf
   type(xc_f90_pointer_t) :: x_info, c_info
 
-  call push_sub('atomic.atomxc')
+  PUSH_SUB(atomxc)
 
   ! sanity check
   ASSERT(NSPIN==1.or.NSPIN==2)
@@ -489,7 +489,7 @@ contains
   call xc_f90_func_end(x_conf)
   call xc_f90_func_end(c_conf)
 
-  call pop_sub('atomic.atomxc')
+  POP_SUB(atomxc)
 end subroutine atomxc
 
 
@@ -522,7 +522,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   FLOAT :: x,y,q,a2by4,ybyq,qbyy,qpartc,v0,qt,dz,t,beta,dv
   integer :: nrm1,nrm2,ir
 
-  call push_sub('atomic.vhrtre')
+  PUSH_SUB(vhrtre)
 
   NRM1 = NR - 1
   NRM2 = NR - 2
@@ -624,7 +624,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
     V(IR) = V(IR) + DV
   end do
 
-  call pop_sub('atomic.vhrtre')
+  POP_SUB(vhrtre)
   end subroutine vhrtre
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -664,7 +664,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   REAL_DOUBLE               :: e1, e2, del, de, et, t
   REAL_DOUBLE, parameter    :: tol = CNST(1.0e-5)
 
-  call push_sub('atomic.egofv')
+  PUSH_SUB(egofv)
 
   ncor=nprin-l-1
   n1=nnode
@@ -779,11 +779,11 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   g(i)=y(i)/(M_ONE-t/CNST(12.))
 7 continue
   call nrmlzg(g,s,n)
-  call pop_sub('atomic.egofv')
+  POP_SUB(egofv)
   return
 3 ierr = 1
 
-  call pop_sub('atomic.egofv')
+  POP_SUB(egofv)
   
   end subroutine egofv
 
@@ -814,7 +814,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   integer :: nmax,l,ncor,nnode,n,knk,nndin,i
   REAL_DOUBLE :: h(nmax), s(nmax), y(nmax), zdr, yn, ratio, t
 
-  call push_sub('atomic.yofe')
+  PUSH_SUB(yofe)
 
   zdr = z*a*b
   n=nmax
@@ -881,7 +881,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   do 6 i=knk,n
   y(i) = y(i)*ratio
 6 continue
-  call pop_sub('atomic.yofe')
+  POP_SUB(yofe)
 
   end subroutine yofe
 
@@ -915,7 +915,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   REAL_DOUBLE s(:), g(:), norm, srnrm
   integer :: n,nm1,nm2,i
 
-  call push_sub('atomic.nrmlzg')
+  PUSH_SUB(nrmlzg)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  determine the norm of g(i) using Simpson`s rule                            !
@@ -944,7 +944,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   g(i) = g(i)/srnrm
 5 continue
 
-  call pop_sub('atomic.nrmlzg')
+  POP_SUB(nrmlzg)
   end subroutine nrmlzg
 
 
@@ -955,7 +955,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   REAL_DOUBLE :: h(:), s(:), t2, t3, d2, c0, c1, c2
   integer :: l
 
-  call push_sub('atomic.bcorgn')
+  PUSH_SUB(bcorgn)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !   the quantity called d(i) in the program is actually the inverse           !
 !   of the diagonal of the tri-diagonal Numerov matrix                        !
@@ -988,7 +988,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   d2=(d2-c1)/(M_ONE-c2)
 3 y2=(-M_ONE)/d2
 
-  call pop_sub('atomic.bcorgn')
+  POP_SUB(bcorgn)
   end subroutine bcorgn
 
 
@@ -1005,7 +1005,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
    e,dr,rmax,yn,a,b,tnm1,tn,tnp1,beta,dg,c1,c2,c3,dn
   integer :: n
 
-  call push_sub('atomic.bcrmax')
+  PUSH_SUB(bcrmax)
 
 !     write(6,*) 'bcrmax:',dr
   tnm1=h(n-1)-e*s(n-1)
@@ -1022,7 +1022,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   c3=-((M_ONE-tnp1/M_SIX)/(M_ONE-tnp1/CNST(12.)))
   yn=-((M_ONE-c1/c3)/(dn-c2/c3))
 
-  call pop_sub('atomic.bcrmax')
+  POP_SUB(bcrmax)
 
   end subroutine bcrmax
 
@@ -1035,7 +1035,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   integer :: i,n,nnode,knk
   REAL_DOUBLE :: h(n),s(n),y(n),t
 
-  call push_sub('atomic.numin')
+  PUSH_SUB(numin)
 
   y(n)=yn
   t=h(n)-e*s(n)
@@ -1080,7 +1080,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   knk=i
 
-  call pop_sub('atomic.numin')
+  POP_SUB(numin)
   end subroutine numin
 
 
@@ -1091,7 +1091,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   integer :: ncor,nnode,knk,i,nm4
   REAL_DOUBLE :: h(knk),s(knk),y(knk),t,xl
 
-  call push_sub('atomic.numout')
+  PUSH_SUB(numout)
   
   y(1)=M_ZERO
   y(2)=y2
@@ -1133,7 +1133,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  the outward integration is now complete                                    !
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  call pop_sub('atomic.numout')
+  POP_SUB(numout)
   end subroutine numout
 
 end module atomic_m

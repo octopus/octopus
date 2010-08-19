@@ -55,12 +55,12 @@ contains
     type(basins_t), intent(out) :: this
     type(mesh_t),   intent(in)  :: mesh
     
-    call push_sub('basins.basins_init')
+    PUSH_SUB(basins_init)
 
     SAFE_ALLOCATE(this%map(1:mesh%np))
     this%map(1:mesh%np) = -1
 
-    call pop_sub('basins.basins_init')
+    POP_SUB(basins_init)
   end subroutine basins_init
 
 
@@ -68,7 +68,7 @@ contains
   subroutine basins_end(this)
     type(basins_t), intent(inout) :: this
 
-    call push_sub('basins.basins_end')
+    PUSH_SUB(basins_end)
 
     ASSERT(associated(this%map))
     SAFE_DEALLOCATE_P(this%map); nullify(this%map)
@@ -80,7 +80,7 @@ contains
       SAFE_DEALLOCATE_P(this%population);   nullify(this%population)
     end if
     
-    call pop_sub('basins.basins_end')
+    POP_SUB(basins_end)
   end subroutine basins_end
 
 
@@ -96,7 +96,7 @@ contains
     integer :: jj, xmax, ymax, zmax
     integer :: cur_color, dum
 
-    call push_sub('basins.basins_analyze')
+    PUSH_SUB(basins_analyze)
 
     ASSERT(associated(this%map))
 
@@ -117,7 +117,7 @@ contains
 
     call analyze()
 
-    call pop_sub('basins.basins_analyze')
+    POP_SUB(basins_analyze)
   contains
 
     !----------------------------------------------------------------
@@ -126,11 +126,11 @@ contains
 
       integer :: ii_max
 
-      call push_sub('basins.basins_analyze.steep_fill')
+      PUSH_SUB(basins_analyze.steep_fill)
 
       if(this%map(ii) >= 0) then
         color = this%map(ii)
-        call pop_sub('basins.basins_analyze.steep_fill')
+        POP_SUB(basins_analyze.steep_fill)
         return
       end if
       this%map(ii) = -2
@@ -148,7 +148,7 @@ contains
       end if
       this%map(ii) = color
 
-      call pop_sub('basins.basins_analyze.steep_fill')
+      POP_SUB(basins_analyze.steep_fill)
     end function steep_fill
 
 
@@ -161,7 +161,7 @@ contains
       integer :: xx, yy, zz, index
       integer :: point(MAX_DIM), point2(MAX_DIM)
 
-      call push_sub('basins.basins_analyze.get_max')
+      PUSH_SUB(basins_analyze.get_max)
 
       point = 0
       if(mesh%parallel_in_domains) then
@@ -197,7 +197,7 @@ contains
         end do
       end do     
 
-      call pop_sub('basins.basins_analyze.get_max')
+      POP_SUB(basins_analyze.get_max)
     end function get_max
 
 
@@ -206,7 +206,7 @@ contains
       integer :: ii, jj, ii_max
       FLOAT :: f_max
 
-      call push_sub('basins.basins_analyze.analyze')
+      PUSH_SUB(basins_analyze.analyze)
 
       this%number = maxval(this%map) + 1
       if(this%number <= 0) then
@@ -241,7 +241,7 @@ contains
         this%value(ii)    = f_max
       end do
 
-      call pop_sub('basins.basins_analyze.analyze')
+      POP_SUB(basins_analyze.analyze)
     end subroutine analyze
 
   end subroutine basins_analyze
@@ -255,7 +255,7 @@ contains
 
     integer :: ii
 
-    call push_sub('basins.basins_write')
+    PUSH_SUB(basins_write)
 
     write(iunit, '(a,i5)') 'Number of basins = ', this%number
     write(iunit, '(1x)')
@@ -271,7 +271,7 @@ contains
       write(iunit, '(a,f12.6)') '  population = ', this%population(ii)
     end do
 
-    call pop_sub('basins.basins_write')
+    POP_SUB(basins_write)
   end subroutine basins_write
 
 end module basins_m

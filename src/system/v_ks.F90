@@ -94,7 +94,7 @@ contains
     type(multicomm_t),   intent(in)    :: mc  
     FLOAT,               intent(in)    :: nel ! the total number of electrons
 
-    call push_sub('v_ks.v_ks_init')
+    PUSH_SUB(v_ks_init)
 
     !%Variable TheoryLevel
     !%Type integer
@@ -224,7 +224,7 @@ contains
       end if
      end if
 
-    call pop_sub('v_ks.v_ks_init')
+    POP_SUB(v_ks_init)
   end subroutine v_ks_init
   ! ---------------------------------------------------------
 
@@ -235,7 +235,7 @@ contains
     type(grid_t),     intent(inout) :: gr
     type(geometry_t), intent(inout) :: geo
 
-    call push_sub('v_ks.v_ks_end')
+    PUSH_SUB(v_ks_end)
 
     select case(ks%theory_level)
     case(KOHN_SHAM_DFT)
@@ -248,7 +248,7 @@ contains
       SAFE_DEALLOCATE_P(ks%hartree_solver)
     end if
 
-    call pop_sub('v_ks.v_ks_end')
+    POP_SUB(v_ks_end)
   end subroutine v_ks_end
   ! ---------------------------------------------------------
 
@@ -260,7 +260,7 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
-    call push_sub('v_ks.v_ks_write_info')
+    PUSH_SUB(v_ks_write_info)
 
     call messages_print_stress(iunit, "Theory Level")
     call messages_print_var_option(iunit, "TheoryLevel", ks%theory_level)
@@ -287,7 +287,7 @@ contains
 
     call messages_print_stress(iunit)
 
-    call pop_sub('v_ks.v_ks_write_info')
+    POP_SUB(v_ks_write_info)
   end subroutine v_ks_write_info
   ! ---------------------------------------------------------
 
@@ -309,7 +309,7 @@ contains
     ! The next line is a hack to be able to perform an IP/RPA calculation
     !logical, save :: RPA_first = .true.
 
-    call push_sub('v_ks.v_ks_calc')
+    PUSH_SUB(v_ks_calc)
     call profiling_in(prof, "KOHN_SHAM_CALC")
 
     if(in_debug_mode) then
@@ -331,7 +331,7 @@ contains
           call zcalculate_eigenvalues(hm, gr%der, st, open_boundaries = gr%ob_grid%open_boundaries)
         end if
       end if
-      call pop_sub('v_ks.v_ks_calc')
+      POP_SUB(v_ks_calc)
       return
     end if
 
@@ -404,7 +404,7 @@ contains
     end if
 
     call profiling_out(prof)
-    call pop_sub('v_ks.v_ks_calc')
+    POP_SUB(v_ks_calc)
 
   contains
 
@@ -416,7 +416,7 @@ contains
       FLOAT, allocatable :: vxcc(:), nxc(:)
       integer :: ispin, ierr, ip
 
-      call push_sub('v_ks.v_ks_calc.v_a_xc')
+      PUSH_SUB(v_ks_calc.v_a_xc)
       call profiling_in(prof, "XC")
 
       hm%ex = M_ZERO
@@ -524,7 +524,7 @@ contains
       end if
 
       call profiling_out(prof)
-      call pop_sub('v_ks.v_ks_calc.v_a_xc')
+      POP_SUB(v_ks_calc.v_a_xc)
     end subroutine v_a_xc
   end subroutine v_ks_calc
   ! ---------------------------------------------------------
@@ -543,7 +543,7 @@ contains
     FLOAT, pointer :: pot(:)
     integer :: is, ip
 
-    call push_sub('v_ks.v_ks_hartree')
+    PUSH_SUB(v_ks_hartree)
 
     ASSERT(associated(ks%hartree_solver))
 
@@ -597,7 +597,7 @@ contains
     endif
 
     SAFE_DEALLOCATE_A(rho)
-    call pop_sub('v_ks.v_ks_hartree')
+    POP_SUB(v_ks_hartree)
   end subroutine v_ks_hartree
   ! ---------------------------------------------------------
 
@@ -606,11 +606,11 @@ contains
   subroutine v_ks_freeze_hxc(ks)
     type(v_ks_t), intent(inout) :: ks
 
-    call push_sub('v_ks.v_ks_freeze_hxc')
+    PUSH_SUB(v_ks_freeze_hxc)
 
     ks%frozen_hxc = .true.
     
-    call pop_sub('v_ks.v_ks_freeze_hxc')
+    POP_SUB(v_ks_freeze_hxc)
   end subroutine v_ks_freeze_hxc
   ! ---------------------------------------------------------
 

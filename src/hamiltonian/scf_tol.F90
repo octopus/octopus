@@ -67,7 +67,7 @@ contains
     integer :: def_maximumiter_
     character(len=256) :: str
 
-    call push_sub('scf_tol.scf_tol_init')
+    PUSH_SUB(scf_tol_init)
     
     !%Variable LRMaximumIter
     !%Type integer
@@ -184,7 +184,7 @@ contains
       call parse_integer(datasets_check(str), 10, this%iter_window)
     end if
 
-    call pop_sub('scf_tol.scf_tol_init')
+    POP_SUB(scf_tol_init)
 
   end subroutine scf_tol_init
     
@@ -197,7 +197,7 @@ contains
 
     FLOAT :: logi, logf
 
-    call push_sub('scf_tol.scf_tol_step')
+    PUSH_SUB(scf_tol_step)
 
     if(iter == 0) this%current_tol = M_HUGE
 
@@ -231,7 +231,7 @@ contains
 
     this%current_tol = r
 
-    call pop_sub('scf_tol.scf_tol_step')
+    POP_SUB(scf_tol_step)
   end function scf_tol_step
 
 
@@ -239,10 +239,10 @@ contains
   subroutine scf_tol_stop(this)
     type(scf_tol_t),     intent(inout) :: this
 
-    call push_sub('scf_tol.scf_tol_stop')
+    PUSH_SUB(scf_tol_stop)
     this%current_tol = M_ZERO
 
-    call pop_sub('scf_tol.scf_tol_stop')
+    POP_SUB(scf_tol_stop)
   end subroutine scf_tol_stop
 
 
@@ -250,10 +250,10 @@ contains
   subroutine scf_tol_end(this)
     type(scf_tol_t),     intent(inout) :: this
 
-    call push_sub('scf_tol.scf_tol_end')
+    PUSH_SUB(scf_tol_end)
     this%current_tol = M_ZERO
 
-    call pop_sub('scf_tol.scf_tol_end')
+    POP_SUB(scf_tol_end)
   end subroutine scf_tol_end
 
 

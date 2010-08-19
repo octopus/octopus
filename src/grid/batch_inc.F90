@@ -27,7 +27,7 @@ subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
 
   integer :: ist
 
-  call push_sub('batch_inc.Xbatch_init_contiguous')
+  PUSH_SUB(X(batch_init_contiguous))
 
   ASSERT(st_end >= st_start)
 
@@ -41,7 +41,7 @@ subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
     call X(batch_add_state)(this, ist, psi(:, :, ist))
   end do
 
-  call pop_sub('batch_inc.Xbatch_init_contiguous')
+  POP_SUB(X(batch_init_contiguous))
 
 end subroutine X(batch_init_contiguous)
 
@@ -54,7 +54,7 @@ subroutine X(batch_add_state)(this, ist, psi)
 
   integer :: idim, ii
 
-  call push_sub('batch_inc.Xbatch_add_state')
+  PUSH_SUB(X(batch_add_state))
 
   ASSERT(this%current <= this%nst)
 
@@ -69,7 +69,7 @@ subroutine X(batch_add_state)(this, ist, psi)
 
   this%current = this%current  + 1
 
-  call pop_sub('batch_inc.Xbatch_add_state')
+  POP_SUB(X(batch_add_state))
 
 end subroutine X(batch_add_state)
 
@@ -79,13 +79,13 @@ subroutine X(batch_add_state_linear)(this, psi)
   type(batch_t),  intent(inout) :: this
   R_TYPE, target, intent(in)    :: psi(:)
 
-  call push_sub('batch_inc.Xbatch_add_state_linear')
+  PUSH_SUB(X(batch_add_state_linear))
 
   ASSERT(this%current <= this%nst_linear)
   this%states_linear(this%current)%X(psi) => psi
   this%current = this%current  + 1
 
-  call pop_sub('batch_inc.Xbatch_add_state_linear')
+  POP_SUB(X(batch_add_state_linear))
 
 end subroutine X(batch_add_state_linear)
 
@@ -99,7 +99,7 @@ subroutine X(batch_new)(this, st_start, st_end, np)
 
   integer :: ist
 
-  call push_sub('batch_inc.Xbatch_new')
+  PUSH_SUB(X(batch_new))
 
   SAFE_ALLOCATE(this%X(psicont)(1:np, 1:this%dim, 1:st_end - st_start + 1))
 
@@ -107,7 +107,7 @@ subroutine X(batch_new)(this, st_start, st_end, np)
     call X(batch_add_state)(this, ist,this%X(psicont)(:, :, ist - st_start + 1))
   end do
 
-  call pop_sub('batch_inc.Xbatch_new')
+  POP_SUB(X(batch_new))
 end subroutine X(batch_new)
 
 
@@ -115,11 +115,11 @@ end subroutine X(batch_new)
 subroutine X(batch_delete)(this)
   type(batch_t),  intent(inout) :: this
 
-  call push_sub('batch_inc.Xbatch_delete')
+  PUSH_SUB(X(batch_delete))
 
   SAFE_DEALLOCATE_P(this%X(psicont))
 
-  call pop_sub('batch_inc.Xbatch_delete')
+  POP_SUB(X(batch_delete))
 end subroutine X(batch_delete)
 
 
@@ -132,7 +132,7 @@ subroutine X(batch_set)(this, np, psi)
 
   integer :: ist, idim
 
-  call push_sub('batch_inc.Xbatch_set')
+  PUSH_SUB(X(batch_set))
 
   do ist = 1, this%nst
     do idim = 1, this%dim
@@ -140,7 +140,7 @@ subroutine X(batch_set)(this, np, psi)
     end do
   end do
 
-  call pop_sub('batch_inc.Xbatch_set')
+  POP_SUB(X(batch_set))
 end subroutine X(batch_set)
 
 ! --------------------------------------------------------------
@@ -156,7 +156,7 @@ subroutine X(batch_axpy)(np, aa, xx, yy)
   integer :: localsize
 #endif
 
-  call push_sub('batch_inc.Xbatch_axpy')
+  PUSH_SUB(X(batch_axpy))
   call profiling_in(axpy_prof, "BATCH_AXPY")
 
   ASSERT(batch_type(yy) == batch_type(xx))
@@ -221,7 +221,7 @@ subroutine X(batch_axpy)(np, aa, xx, yy)
   call batch_pack_was_modified(yy)
 
   call profiling_out(axpy_prof)
-  call pop_sub('batch_inc.Xbatch_axpy')
+  POP_SUB(X(batch_axpy))
 end subroutine X(batch_axpy)
 
 ! --------------------------------------------------------------

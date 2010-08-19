@@ -102,7 +102,7 @@ module opt_control_propagation_m
 
     ASSERT(.not. (zbr98 .and. gradients) )
 
-    call push_sub('propagation.propagation_mod_init')
+    PUSH_SUB(propagation_mod_init)
 
     niter_              = niter
     eta_                = eta
@@ -111,7 +111,7 @@ module opt_control_propagation_m
     zbr98_              = zbr98
     gradients_          = gradients
 
-    call pop_sub('propagation.propagation_mod_init')
+    POP_SUB(propagation_mod_init)
   end subroutine propagation_mod_init
   ! ---------------------------------------------------------
 
@@ -139,7 +139,7 @@ module opt_control_propagation_m
     logical :: vel_target_ = .false. , move_ions_ = .false.
     integer :: iatom
 
-    call push_sub('propagation.propagate_forward')
+    PUSH_SUB(propagate_forward)
 
     message(1) = "Info: Forward propagation."
     call write_info(1)
@@ -225,7 +225,7 @@ module opt_control_propagation_m
     end if
 
     if(write_iter_) call td_write_end(write_handler)
-    call pop_sub('propagation.propagate_forward')
+    POP_SUB(propagate_forward)
   end subroutine propagate_forward
   ! ---------------------------------------------------------
 
@@ -244,7 +244,7 @@ module opt_control_propagation_m
     integer :: i
     type(grid_t),  pointer :: gr
 
-    call push_sub('propagation.propagate_backward')
+    PUSH_SUB(propagate_backward)
     
     message(1) = "Info: Backward propagation."
     call write_info(1)
@@ -266,7 +266,7 @@ module opt_control_propagation_m
       call v_ks_calc(sys%ks, gr, hm, psi)
     end do
 
-    call pop_sub('propagation.propagate_backward')
+    POP_SUB(propagate_backward)
   end subroutine propagate_backward
   ! ---------------------------------------------------------
 
@@ -304,7 +304,7 @@ module opt_control_propagation_m
     type(propagator_t) :: tr_chi
     type(propagator_t) :: tr_psi2
 
-    call push_sub('propagation.fwd_step')
+    PUSH_SUB(fwd_step)
 
     message(1) = "Info: Forward propagation."
     call write_info(1)
@@ -369,7 +369,7 @@ module opt_control_propagation_m
     if(aux_fwd_propagation) call propagator_end(tr_psi2)
     call states_end(chi)
     call propagator_end(tr_chi)
-    call pop_sub('propagation.fwd_step')
+    POP_SUB(fwd_step)
   end subroutine fwd_step
   ! ---------------------------------------------------------
 
@@ -399,7 +399,7 @@ module opt_control_propagation_m
     type(propagator_t) :: tr_chi
     type(states_t) :: psi
 
-    call push_sub('propagation.bwd_step')
+    PUSH_SUB(bwd_step)
 
     message(1) = "Info: Backward propagation."
     call write_info(1)
@@ -443,7 +443,7 @@ module opt_control_propagation_m
 
     call states_end(psi)
     call propagator_end(tr_chi)
-    call pop_sub('propagation.bwd_step')
+    POP_SUB(bwd_step)
   end subroutine bwd_step
   ! ---------------------------------------------------------
 
@@ -476,7 +476,7 @@ module opt_control_propagation_m
     type(propagator_t) :: tr_chi
     type(states_t) :: psi
 
-    call push_sub('propagation.bwd_step_2')
+    PUSH_SUB(bwd_step_2)
 
     message(1) = "Info: Backward propagation."
     call write_info(1)
@@ -518,7 +518,7 @@ module opt_control_propagation_m
 
     call propagator_end(tr_chi)
 
-    call pop_sub('propagation.bwd_step_2')
+    POP_SUB(bwd_step_2)
   end subroutine bwd_step_2
   ! ----------------------------------------------------------
 
@@ -538,7 +538,7 @@ module opt_control_propagation_m
     type(states_t)                             :: inh
 
     integer :: j
-    call push_sub('propagation.update_hamiltonian_chi')
+    PUSH_SUB(update_hamiltonian_chi)
 
     if(target_mode(target) == oct_targetmode_td) then
       call states_copy(inh, st)
@@ -564,7 +564,7 @@ module opt_control_propagation_m
       call hamiltonian_update(hm, gr%mesh)
     end if
 
-    call pop_sub('propagation.update_hamiltonian_chi')
+    POP_SUB(update_hamiltonian_chi)
   end subroutine update_hamiltonian_chi
   ! ---------------------------------------------------------
 
@@ -583,7 +583,7 @@ module opt_control_propagation_m
     type(states_t), intent(inout)              :: st
 
     integer :: j
-    call push_sub('propagation.update_hamiltonian_psi')
+    PUSH_SUB(update_hamiltonian_psi)
 
     if(target_mode(target) == oct_targetmode_td) then
       call hamiltonian_remove_inh(hm)
@@ -606,7 +606,7 @@ module opt_control_propagation_m
       call hamiltonian_update(hm, gr%mesh)
     end if
 
-    call pop_sub('propagation.update_hamiltonian_psi')
+    POP_SUB(update_hamiltonian_psi)
   end subroutine update_hamiltonian_psi
   ! ---------------------------------------------------------
 
@@ -622,7 +622,7 @@ module opt_control_propagation_m
     type(states_t) :: oppsi
     integer :: no_parameters, j, ik, p
 
-    call push_sub('propagation.calculate_g')
+    PUSH_SUB(calculate_g)
 
     no_parameters = hm%ep%no_lasers
 
@@ -664,7 +664,7 @@ module opt_control_propagation_m
       end if
     end do
 
-    call pop_sub('propagation.calculate_g')
+    POP_SUB(calculate_g)
   end subroutine calculate_g
   ! ---------------------------------------------------------
 
@@ -698,7 +698,7 @@ module opt_control_propagation_m
     FLOAT, allocatable :: d(:)
     integer :: j, no_parameters
 
-    call push_sub('propagation.update_field')
+    PUSH_SUB(update_field)
 
     no_parameters = controlfunction_number(cp)
     
@@ -726,7 +726,7 @@ module opt_control_propagation_m
     SAFE_DEALLOCATE_A(d)
     SAFE_DEALLOCATE_A(dl)
     SAFE_DEALLOCATE_A(dq)
-    call pop_sub('propagation.update_field')
+    POP_SUB(update_field)
   end subroutine update_field
   ! ---------------------------------------------------------
 
@@ -738,7 +738,7 @@ module opt_control_propagation_m
 
     integer :: j
 
-    call push_sub('propagation.oct_prop_init')
+    PUSH_SUB(oct_prop_init)
 
     prop%dirname = OCT_DIR//trim(dirname)
     call io_mkdir(trim(prop%dirname))
@@ -752,7 +752,7 @@ module opt_control_propagation_m
     end do
     prop%iter(prop%number_checkpoints+2) = niter_
 
-    call pop_sub('propagation.oct_prop_init')
+    POP_SUB(oct_prop_init)
   end subroutine oct_prop_init
   ! ---------------------------------------------------------
 
@@ -761,12 +761,12 @@ module opt_control_propagation_m
   subroutine oct_prop_end(prop)
     type(oct_prop_t), intent(inout) :: prop
 
-    call push_sub('propagation.oct_prop_end')
+    PUSH_SUB(oct_prop_end)
 
     SAFE_DEALLOCATE_P(prop%iter)
     ! This routine should maybe delete the files?
 
-    call pop_sub('propagation.oct_prop_end')
+    POP_SUB(oct_prop_end)
   end subroutine oct_prop_end
   ! ---------------------------------------------------------
 
@@ -785,7 +785,7 @@ module opt_control_propagation_m
     CMPLX :: overlap, prev_overlap
     FLOAT, parameter :: WARNING_THRESHOLD = CNST(1.0e-2)
 
-    call push_sub('propagation.oct_prop_check')
+    PUSH_SUB(oct_prop_check)
 
     do j = 1, prop%number_checkpoints + 2
      if(prop%iter(j) .eq. iter) then
@@ -809,7 +809,7 @@ module opt_control_propagation_m
      end if
     end do
 
-    call pop_sub('propagation.oct_prop_check')
+    POP_SUB(oct_prop_check)
   end subroutine oct_prop_check
   ! ---------------------------------------------------------
 
@@ -825,7 +825,7 @@ module opt_control_propagation_m
     character(len=100) :: filename
     integer :: j, ierr
 
-    call push_sub('propagation.oct_prop_read_state')
+    PUSH_SUB(oct_prop_read_state)
 
     do j = 1, prop%number_checkpoints + 2
      if(prop%iter(j) .eq. iter) then
@@ -834,7 +834,7 @@ module opt_control_propagation_m
      end if
     end do
 
-    call pop_sub('propagation.oct_prop_read_state')
+    POP_SUB(oct_prop_read_state)
   end subroutine oct_prop_read_state
   ! ---------------------------------------------------------
 
@@ -849,7 +849,7 @@ module opt_control_propagation_m
     integer :: j, ierr
     character(len=100) :: filename
 
-    call push_sub('propagation.oct_prop_output')
+    PUSH_SUB(oct_prop_output)
 
     do j = 1, prop%number_checkpoints + 2
       if(prop%iter(j) .eq. iter) then
@@ -858,7 +858,7 @@ module opt_control_propagation_m
       end if
     end do
 
-    call pop_sub('propagation.oct_prop_output')
+    POP_SUB(oct_prop_output)
   end subroutine oct_prop_output
   ! ---------------------------------------------------------
 
@@ -869,4 +869,3 @@ end module opt_control_propagation_m
 !! mode: f90
 !! coding: utf-8
 !! End:
-

@@ -57,7 +57,7 @@ contains
 
     integer :: from_group, to_group, from_rank(1), to_rank(1)
 
-    call push_sub('mpi_lib.lmpi_translate_rank')
+    PUSH_SUB(lmpi_translate_rank)
 
     call MPI_Comm_group(from_comm, from_group, mpi_err)
     call MPI_Comm_group(to_comm, to_group, mpi_err)
@@ -67,7 +67,7 @@ contains
 
     lmpi_translate_rank = to_rank(1)
 
-    call pop_sub('mpi_lib.lmpi_translate_rank')
+    POP_SUB(lmpi_translate_rank)
   end function lmpi_translate_rank
 
 

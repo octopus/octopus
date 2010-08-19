@@ -26,7 +26,7 @@
     type(states_t),      intent(inout) :: st
     type(propagator_t),      intent(inout) :: tr
     FLOAT,                           intent(in)    :: t, dt
-    call push_sub('propagator.td_qoct_tddft_propagator')
+    PUSH_SUB(td_qoct_tddft_propagator)
     
     if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
       call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t-dt/M_TWO, hm%vhxc(:, :))
@@ -35,7 +35,7 @@
     call hamiltonian_update(hm, gr%mesh, time = t-dt/M_TWO)
     call exponential_apply_all(tr%te, gr%der, hm, st, dt, t - dt/M_TWO)
 
-    call pop_sub('propagator.td_qoct_tddft_propagator')
+    POP_SUB(td_qoct_tddft_propagator)
   end subroutine td_qoct_tddft_propagator
   ! ---------------------------------------------------------
 
@@ -57,7 +57,7 @@
     FLOAT :: cgtol = CNST(1.0e-8)
     logical :: converged
 
-    call push_sub('propagator.td_qoct_tddft_propagator_2')
+    PUSH_SUB(td_qoct_tddft_propagator_2)
 
     np_part = gr%mesh%np_part
     np = gr%mesh%np
@@ -121,7 +121,7 @@
     SAFE_DEALLOCATE_A(zpsi)
     SAFE_DEALLOCATE_A(rhs)
     call states_end(st_op)
-    call pop_sub('propagator.td_qoct_tddft_propagator_2')
+    POP_SUB(td_qoct_tddft_propagator_2)
   end subroutine td_qoct_tddft_propagator_2
   ! ---------------------------------------------------------
 
@@ -153,4 +153,3 @@
 !! mode: f90
 !! coding: utf-8
 !! End:
-

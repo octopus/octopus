@@ -67,7 +67,7 @@ contains
     type(block_t) :: blk
     integer :: no_c, i, no_f
 
-    call push_sub('filters.filter_init')
+    PUSH_SUB(filter_init)
 
     filter%no_filters = 0
     nullify(filter%domain)
@@ -113,7 +113,7 @@ contains
       no_f = parse_block_n(blk)
 
       if(no_f <= 0) then
-        call pop_sub('filters.filter_init')
+        POP_SUB(filter_init)
         return
       end if
 
@@ -135,7 +135,7 @@ contains
       call parse_block_end(blk)
     end if
 
-    call pop_sub('filters.filter_init')
+    POP_SUB(filter_init)
   end subroutine filter_init
   ! ---------------------------------------------------------
 
@@ -147,11 +147,11 @@ contains
 
     integer        :: no_f, i, j, nfreqs
 
-    call push_sub('filters.filter_apply')
+    PUSH_SUB(filter_apply)
 
     no_f = filter%no_filters
     if(no_f <= 0) then
-      call pop_sub('filters.filter_apply')
+      POP_SUB(filter_apply)
       return
     end if
     
@@ -180,7 +180,7 @@ contains
 
     end do
 
-    call pop_sub('filters.filter_apply')
+    POP_SUB(filter_apply)
   end subroutine filter_apply
   ! ---------------------------------------------------------
 
@@ -194,7 +194,7 @@ contains
     CMPLX, allocatable :: ff(:)
     FLOAT, allocatable :: grid(:)
 
-    call push_sub('filter.build_filter')
+    PUSH_SUB(build_filter)
 
     do i = 1, filter%no_filters
 
@@ -234,7 +234,7 @@ contains
 
     end do
     
-    call pop_sub('filter.build_filter')
+    POP_SUB(build_filter)
   end subroutine build_filter
   ! ---------------------------------------------------------
 
@@ -248,10 +248,10 @@ contains
     character(len=80) :: filename
     FLOAT, allocatable :: wgrid(:)
 
-    call push_sub('filters.filter_write')
+    PUSH_SUB(filter_write)
 
     if(filter%no_filters <= 0) then
-      call pop_sub('filters.filter_write')
+      POP_SUB(filter_write)
       return
     end if
 
@@ -269,7 +269,7 @@ contains
       call io_close(iunit)
     end do
 
-    call pop_sub('filters.filter_write')
+    POP_SUB(filter_write)
   end subroutine filter_write
   ! ---------------------------------------------------------
 
@@ -279,10 +279,10 @@ contains
     type(filter_t), intent(inout) :: filter
     integer :: i
 
-    call push_sub('filter.filter_end')
+    PUSH_SUB(filter_end)
 
     if(filter%no_filters <= 0) then
-      call pop_sub('filter.filter_end')
+      POP_SUB(filter_end)
       return
     end if
 
@@ -294,7 +294,7 @@ contains
     SAFE_DEALLOCATE_P(filter%expression)
     SAFE_DEALLOCATE_P(filter%domain)
 
-    call pop_sub('filter.filter_end')
+    POP_SUB(filter_end)
   end subroutine filter_end
   ! ---------------------------------------------------------
 
@@ -303,10 +303,10 @@ contains
   integer function filter_number(filter)
     type(filter_t), intent(in) :: filter
 
-    call push_sub('filters.filter_number')
+    PUSH_SUB(filter_number)
     filter_number = filter%no_filters
 
-    call pop_sub('filters.filter_number')
+    POP_SUB(filter_number)
   end function filter_number
   ! ---------------------------------------------------------
 

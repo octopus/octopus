@@ -48,7 +48,7 @@ contains
 
     integer :: ii, max_d
 
-    call push_sub('utils.get_divisors')
+    PUSH_SUB(get_divisors)
 
     ASSERT(n_divisors > 1)
     max_d = n_divisors
@@ -70,7 +70,7 @@ contains
     n_divisors = n_divisors + 1
     divisors(n_divisors) = nn
 
-    call pop_sub('utils.get_divisors')
+    POP_SUB(get_divisors)
   end subroutine get_divisors
 
 
@@ -78,7 +78,7 @@ contains
   character function index2axis(idir) result(ch)
     integer, intent(in) :: idir
     
-    call push_sub('utils.index2axis')
+    PUSH_SUB(index2axis)
 
     select case(idir)
       case(1)
@@ -93,7 +93,7 @@ contains
         write(ch,'(i1)') idir
     end select
 
-    call pop_sub('utils.index2axis')
+    POP_SUB(index2axis)
   end function index2axis
 
 
@@ -109,7 +109,7 @@ contains
     integer :: jj, kk
     logical :: write_average_
 
-    call push_sub('utils.output_tensor')
+    PUSH_SUB(output_tensor)
 
     write_average_ = .true.
     if(present(write_average)) write_average_ = write_average
@@ -124,7 +124,7 @@ contains
 
     if(write_average_) write(iunit, '(a, f20.6)')  'Isotropic average', trace
 
-    call pop_sub('utils.output_tensor')
+    POP_SUB(output_tensor)
   end subroutine output_tensor
 
 
@@ -136,7 +136,7 @@ contains
     
     integer :: idir
 
-    call push_sub('utils.output_dipole')
+    PUSH_SUB(output_dipole)
 
     write(iunit, '(a,a20,a17)') 'Dipole:', '[' // trim(units_abbrev(units_out%length)) // ']', &
           '[' // trim(units_abbrev(unit_debye)) // ']'
@@ -145,7 +145,7 @@ contains
         units_from_atomic(units_out%length, dipole(idir)), units_from_atomic(unit_debye, dipole(idir))
     end do
 
-    call pop_sub('utils.output_dipole')
+    POP_SUB(output_dipole)
   end subroutine output_dipole
 
 end module utils_m
