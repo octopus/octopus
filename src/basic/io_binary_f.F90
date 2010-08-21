@@ -21,6 +21,7 @@
 #include "io_binary.h"
 
 module io_binary_m
+  use global_m
   use messages_m
 
   implicit none 

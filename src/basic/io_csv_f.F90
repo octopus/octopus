@@ -21,7 +21,7 @@
 #include "io_csv.h"
 
 module io_csv_m
-
+  use global_m
   use messages_m
 
   implicit none 

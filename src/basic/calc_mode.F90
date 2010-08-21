@@ -20,6 +20,7 @@
 #include "global.h"
 
 module calc_mode_m
+  use global_m
   use messages_m
   use multicomm_m
 

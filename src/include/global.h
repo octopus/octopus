@@ -144,13 +144,14 @@
 #endif
 
 ! the TOSTRING macro converts a macro into a string
+! do not use the STRINGIFY macro
 #define STRINGIFY(x) #x
 #define TOSTRING(x)  STRINGIFY(x)
 
 #define INCR(x, y) x = (x) + (y)
 
-#define PUSH_SUB(routine) call push_sub(__FILE__//"."//TOSTRING(routine))
-#define POP_SUB(routine) call pop_sub(__FILE__//"."//TOSTRING(routine))
+#define PUSH_SUB(routine) if(in_debug_mode) call push_sub(__FILE__//"."//TOSTRING(routine))
+#define POP_SUB(routine)  if(in_debug_mode) call pop_sub(__FILE__//"."//TOSTRING(routine))
 
 !! Local Variables:
 !! mode: f90

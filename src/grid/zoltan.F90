@@ -20,6 +20,7 @@
 #include "global.h"
   
 module zoltan_m
+  use global_m
   use messages_m
   
   private

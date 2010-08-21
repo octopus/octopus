@@ -20,6 +20,7 @@
 #include "global.h"
 
 module stencil_starplus_m
+  use global_m
   use messages_m
   use profiling_m
   use stencil_m
