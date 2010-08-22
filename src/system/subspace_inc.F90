@@ -69,11 +69,7 @@ subroutine X(subspace_diag)(der, st, hm, ik, eigenval, psi, diff)
       
     end do
 
-    do ist = st%st_start, st%st_end
-      do jst = ist, st%st_end
-        h_subspace(jst, ist) = R_CONJ(h_subspace(ist, jst))
-      end do
-    end do
+    ! only half of h_subspace has the matrix, but this is what Lapack needs
 
     ! Diagonalize the Hamiltonian in the subspace.
     call lalg_eigensolve(st%nst, h_subspace, eigenval(:))
