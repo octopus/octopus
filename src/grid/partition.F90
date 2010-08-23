@@ -89,8 +89,7 @@ contains
     integer, allocatable :: jpcoords(:, :), jp(:)
     integer :: istencil, ipart, jpart
     type(profile_t), save :: prof
-    logical, allocatable :: is_a_neigh(:, :)
-    logical, allocatable :: gotit(:, :)
+    logical, allocatable :: is_a_neigh(:, :), gotit(:)
 
     call profiling_in(prof, "PARTITION_BUILD")
 
@@ -98,8 +97,7 @@ contains
 
     is_a_neigh = .false.
 
-    SAFE_ALLOCATE(gotit(1:mesh%np_part_global, 1:this%npart))
-    gotit = .false.
+    SAFE_ALLOCATE(gotit(1:mesh%np_part_global))
 
     SAFE_ALLOCATE(jpcoords(1:MAX_DIM, 1:stencil%size))
     SAFE_ALLOCATE(jp(1:stencil%size))
@@ -109,36 +107,39 @@ contains
     this%nlocal = 0
     this%nneigh = 0
 
-    do ip = 1, mesh%np_global
-      ipart = this%point_to_part(ip)
-      
-      INCR(this%nlocal(ipart), 1)
-      call index_to_coords(mesh%idx, mesh%sb%dim, ip, ipcoords)
+    do ipart = 1, this%npart
+      gotit = .false.
+      do ip = 1, mesh%np_global
+        if(ipart /= this%point_to_part(ip)) cycle
 
-      do istencil = 1, stencil%size
-        jpcoords(:, istencil) = ipcoords + stencil%points(:, istencil)
-      end do
-
-     call index_from_coords_vec(mesh%idx, mesh%sb%dim, stencil%size, jpcoords, jp)
-
-      do istencil = 1, stencil%size
-        if(.not. gotit(jp(istencil), ipart)) then
-          jpart = this%point_to_part(jp(istencil))
-          
-          if(jpart /= ipart) then
-            INCR(this%nghost(ipart), 1)
-            is_a_neigh(ipart, jpart) = .true.
-          else if(jp(istencil) > mesh%np_global) then
-            INCR(this%nbound(ipart), 1)
+        INCR(this%nlocal(ipart), 1)
+        call index_to_coords(mesh%idx, mesh%sb%dim, ip, ipcoords)
+        
+        do istencil = 1, stencil%size
+          jpcoords(:, istencil) = ipcoords + stencil%points(:, istencil)
+        end do
+        
+        call index_from_coords_vec(mesh%idx, mesh%sb%dim, stencil%size, jpcoords, jp)
+        
+        do istencil = 1, stencil%size
+          if(.not. gotit(jp(istencil))) then
+            jpart = this%point_to_part(jp(istencil))
+            
+            if(jpart /= ipart) then
+              INCR(this%nghost(ipart), 1)
+              is_a_neigh(ipart, jpart) = .true.
+            else if(jp(istencil) > mesh%np_global) then
+              INCR(this%nbound(ipart), 1)
+            end if
+            
+            gotit(jp(istencil)) = .true.
           end if
-
-          gotit(jp(istencil), ipart) = .true.
-        end if
-
+          
+        end do
+        
       end do
-
     end do
-    
+
     forall(ipart = 1:this%npart)
       this%nneigh(ipart) = count(is_a_neigh(ipart, 1:this%npart))
     end forall
