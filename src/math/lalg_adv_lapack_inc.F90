@@ -570,6 +570,7 @@ subroutine deigensolve(n, a, e, bof, err_code)
   FLOAT, allocatable :: work(:)
 
   PUSH_SUB(deigensolve)
+  call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
 
   bof_ = .true.
   if(present(bof)) then
@@ -599,6 +600,7 @@ subroutine deigensolve(n, a, e, bof, err_code)
     err_code = info
   end if
 
+  call profiling_out(eigensolver_prof)
   POP_SUB(deigensolve)
 end subroutine deigensolve
 
@@ -618,6 +620,7 @@ subroutine zeigensolve(n, a, e, bof, err_code)
   FLOAT, allocatable :: rwork(:)
 
   PUSH_SUB(zeigensolve)
+  call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
 
   bof_ = .true.
   if(present(bof)) then
@@ -649,6 +652,7 @@ subroutine zeigensolve(n, a, e, bof, err_code)
     err_code = info
   end if
 
+  call profiling_out(eigensolver_prof)
   POP_SUB(zeigensolve)
 end subroutine zeigensolve
 
