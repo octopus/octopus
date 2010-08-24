@@ -48,7 +48,7 @@ match ; Plane value 295  ; LINE(static/density.x\=0, 295, 47) ; 6.06672515372129
 
 
 #xcrysden
-match ; XCrySDen geometry; LINE(static/geometry.xsf, 2, 25) ; 0.00000
+match ; XCrySDen geometry; LINE(static/geometry.xsf, 2, 25) ; 2.645886
 match ; XCrySDen wf 1    ; LINE(static/wf-st0001.xsf, 2, 25) ; 2.645886
 match ; XCrySDen wf 2    ; LINE(static/wf-st0001.xsf, 8, 4)  ; 5.291772
 Precision : 0.000001
