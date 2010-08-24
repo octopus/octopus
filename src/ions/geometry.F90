@@ -53,6 +53,7 @@ module geometry_m
     geometry_end,          &
     geometry_dipole,       &
     geometry_min_distance, &
+    geometry_mass,         &
     cm_pos,                &
     cm_vel,                &
     atom_write_xyz,        &
@@ -458,7 +459,7 @@ contains
 
     rmin = huge(rmin)
     do i = 1, geo%natoms
-      do j = i+1, geo%natoms
+      do j = i + 1, geo%natoms
         r = sqrt(sum((geo%atom(i)%x-geo%atom(j)%x)**2))
         if(r < rmin) then
           rmin = r
@@ -581,6 +582,20 @@ contains
     POP_SUB(geometry_val_charge)
   end subroutine geometry_val_charge
 
+
+  ! ---------------------------------------------------------
+
+  FLOAT pure function geometry_mass(geo) result(mass)
+    type(geometry_t), intent(in) :: geo
+
+    integer :: iatom
+
+    mass = M_ZERO
+    do iatom = 1, geo%natoms
+      mass = mass + species_weight(geo%atom(iatom)%spec)
+    end do
+    
+  end function geometry_mass
 
   ! ---------------------------------------------------------
   subroutine geometry_grid_defaults(geo, def_h, def_rsize)
