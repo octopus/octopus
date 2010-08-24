@@ -28,12 +28,12 @@
 ! WARNING: This subroutine only works if ions are not
 !          allowed to move
 ! ---------------------------------------------------------
-subroutine td_calc_tacc(gr, geo, st, hm, acc, t)
+subroutine td_calc_tacc(gr, geo, st, hm, acc, time)
   type(grid_t),        intent(inout) :: gr
   type(geometry_t),    intent(inout) :: geo
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: hm
-  FLOAT,               intent(in)    :: t
+  FLOAT,               intent(in)    :: time
   FLOAT,               intent(out)   :: acc(MAX_DIM)
 
   FLOAT :: field(MAX_DIM), x(MAX_DIM)
@@ -58,13 +58,14 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, t)
 
   ! Adds the laser contribution : i<[V_laser, p]>
   ! WARNING: this ignores the possibility of non-electric td external fields.
+  field = M_ZERO
   do j = 1, hm%ep%no_lasers
-    call laser_field(hm%ep%lasers(j), gr%sb, field, t)
+    call laser_field(hm%ep%lasers(j), gr%sb, field, time)
     acc(1:gr%mesh%sb%dim) = acc(1:gr%mesh%sb%dim) - st%qtot*field(1:gr%mesh%sb%dim)
   end do
 
   if(.not. hm%ep%non_local) then
-  POP_SUB(td_calc_tacc)
+    POP_SUB(td_calc_tacc)
     return
   end if
 
@@ -76,7 +77,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, t)
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
 
-      call zhamiltonian_apply(hm, gr%der, st%zpsi(:, :, ist, ik), hzpsi(:,:), ist, ik, t)
+      call zhamiltonian_apply(hm, gr%der, st%zpsi(:, :, ist, ik), hzpsi(:,:), ist, ik, time)
 
       SAFE_ALLOCATE(xzpsi    (1:gr%mesh%np, 1:st%d%dim, 1:3))
       SAFE_ALLOCATE(vnl_xzpsi(1:gr%mesh%np, 1:st%d%dim))
@@ -88,7 +89,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, t)
       end do
 
       do j = 1, gr%mesh%sb%dim
-        call zhamiltonian_apply(hm, gr%der, xzpsi(:, :, j), vnl_xzpsi, ist, ik, t, terms = TERM_NON_LOCAL_POTENTIAL)
+        call zhamiltonian_apply(hm, gr%der, xzpsi(:, :, j), vnl_xzpsi, ist, ik, time, terms = TERM_NON_LOCAL_POTENTIAL)
 
         do idim = 1, st%d%dim
           x(j) = x(j) - 2*st%occ(ist, ik)*zmf_dotp(gr%mesh, hzpsi(1:gr%mesh%np, idim), vnl_xzpsi(:, idim) )
@@ -103,7 +104,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, t)
       end do
 
       do j = 1, gr%mesh%sb%dim
-        call zhamiltonian_apply(hm, gr%der, xzpsi(:, :, j), vnl_xzpsi, ist, ik, t, terms = TERM_NON_LOCAL_POTENTIAL)
+        call zhamiltonian_apply(hm, gr%der, xzpsi(:, :, j), vnl_xzpsi, ist, ik, time, terms = TERM_NON_LOCAL_POTENTIAL)
 
         do idim = 1, st%d%dim
           x(j) = x(j) + 2*st%occ(ist, ik)* &

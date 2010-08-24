@@ -1116,7 +1116,7 @@ contains
       call td_write_print_header_end(out_acc)
     end if
 
-    call td_calc_tacc(gr, geo, st, hm, acc, dt * idim)
+    call td_calc_tacc(gr, geo, st, hm, acc, dt*iter)
 
     call write_iter_start(out_acc)
     acc = units_from_atomic(units_out%acceleration, acc)
