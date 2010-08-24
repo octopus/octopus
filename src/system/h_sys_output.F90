@@ -442,6 +442,9 @@ contains
     type(h_sys_output_t), intent(in)    :: outp
     character(len=*),     intent(in)    :: dir
 
+    integer :: idir
+    FLOAT   :: offset(1:MAX_DIM)
+    
     PUSH_SUB(h_sys_output_all)
     
     call h_sys_output_states(st, gr, geo, dir, outp)
@@ -451,7 +454,18 @@ contains
 
     if(iand(outp%what, output_geometry) .ne. 0) then
       if(iand(outp%how, output_xcrysden) .ne. 0) then
-        call write_xsf_geometry_file(dir, "geometry", geo, gr%sb)
+        
+        offset = M_ZERO
+        ! The corner of the cell is always (0,0,0) to XCrySDen
+        ! so the offset is applied to the atomic coordinates.
+        ! Offset in periodic directions:
+        offset = -matmul(gr%mesh%sb%rlattice_primitive(1:3,1:3), gr%mesh%sb%lsize(1:3))
+        ! Offset in aperiodic directions:
+        do idir = gr%mesh%sb%periodic_dim + 1, 3
+          offset(idir) = -(gr%mesh%idx%ll(idir) - 1)/2*gr%mesh%spacing(idir)
+        end do
+
+        call write_xsf_geometry_file(dir, "geometry", geo, gr%sb, offset = offset)
       endif
       if(iand(outp%how, output_xyz) .ne. 0) then
         call atom_write_xyz(dir, "geometry", geo, gr%sb%dim)
