@@ -73,13 +73,14 @@ program centergeom
 contains
   
   subroutine generate_liquid()
-    FLOAT        :: density, cell_size(1:dim), center(1:dim), axis(1:MAX_DIM, 1:3)
-    FLOAT        :: ang1, ang2, molecule_min_dist, min_dist
-    integer      :: nmolecules
+    FLOAT        :: density, cell_size(1:dim), axis(1:MAX_DIM, 1:3)
+    FLOAT        :: ang1, ang2, molecule_min_dist, min_dist, scale, radius, dist
+    integer      :: nmolecules, dx, dy, dz
     type(unit_t) :: gr_per_cm3
     type(c_ptr)  :: random_gen_pointer
-    integer      :: iatom, jatom, imolecule, idir, iunit, iaxis
-    FLOAT, allocatable  :: coordinates(:, :)
+    integer      :: iatom, jatom, imolecule, jmolecule, idir, iunit, iaxis, iter, niter
+    FLOAT, allocatable  :: coordinates(:, :), center(:, :)
+    logical      :: too_close
 
     ! we read the density in sensible units
     gr_per_cm3%factor = CNST(10.541009)
@@ -105,7 +106,7 @@ contains
     call xyz_adjust_it(geo)
 
     !%Variable LiquidNumberOfMolecules
-    !%Type float
+    !%Type integer
     !%Section Utilities::oct-liquid
     !%Description
     !% This variable specifies the number of molecules the will be
@@ -117,6 +118,27 @@ contains
     write(message(1), '(a, i5, a)') 'Info: ', nmolecules, ' molecules will be included in the liquid.'
     call write_info(1)
 
+    !%Variable LiquidMoleculeScale
+    !%Type float
+    !%Section Utilities::oct-liquid
+    !%Description
+    !% This value specifies how much the original molecule will be
+    !% scaled in the liquid. The default is 1.0.
+    !%End
+    call parse_float('LiquidMoleculeScale', CNST(1.0), scale)
+
+    radius = M_ZERO
+    do iatom = 1, geo%natoms
+      do idir = 1, dim
+        geo%atom(iatom)%x(idir) = scale*geo%atom(iatom)%x(idir)
+        radius = max(radius, geo%atom(iatom)%x(idir))
+      end do
+    end do
+
+    molecule_min_dist = geometry_min_distance(geo)
+
+    radius = radius + CNST(0.5)*molecule_min_dist
+
     ! we assume a cubic cell
     cell_size = (geometry_mass(geo)*nmolecules/density)**(1.0/3.0)
 
@@ -126,20 +148,44 @@ contains
 
     ! Now comes the real part, the calculation of the coordinates.
 
-    SAFE_ALLOCATE(coordinates(1:dim, nmolecules*geo%natoms)) 
+    SAFE_ALLOCATE(coordinates(1:dim, nmolecules*geo%natoms))
+    SAFE_ALLOCATE(center(1:dim, nmolecules)) 
 
     call loct_ran_init(random_gen_pointer)
 
-    molecule_min_dist = geometry_min_distance(geo)
-
     axis = M_ZERO
-
+    niter = 10
     jatom = 1
     do imolecule = 1, nmolecules
 
       ! randonmly select a point where the molecule will be placed
-      do idir = 1, dim
-        center(idir) = loct_ran_flat(random_gen_pointer, -M_HALF*cell_size(idir), M_HALF*cell_size(idir))
+      do iter = 1, niter
+        do idir = 1, dim
+          center(idir, imolecule) = loct_ran_flat(random_gen_pointer, -M_HALF*cell_size(idir), M_HALF*cell_size(idir))
+        end do
+
+        ! we avoid points too close to the previous ones
+        too_close = .false.
+
+        do jmolecule = 1, imolecule - 1
+
+          do dx = -1, 1
+            do dy = -1, 1
+              do dz = -1, 1
+
+                dist = sum((center(:, imolecule) - center(:, jmolecule) + (/dx, dy, dz/)*cell_size(1:dim))**2)
+                if(dist <= M_FOUR*radius**2) then
+                  too_close = .true.
+                  exit
+                end if
+
+              end do
+            end do
+          end do
+
+        end do
+
+        if(.not. too_close) exit
       end do
 
       ! and some rotation axes
@@ -155,7 +201,7 @@ contains
 
       do iatom = 1, geo%natoms
         do idir = 1, dim
-          coordinates(idir, jatom) = center(idir) + geo%atom(iatom)%x(idir)
+          coordinates(idir, jatom) = center(idir, imolecule) + geo%atom(iatom)%x(idir)
 
           ! now force the atoms to be in the cell
           if(coordinates(idir, jatom) < -M_HALF*cell_size(idir)) &
@@ -176,7 +222,16 @@ contains
     do iatom = 1, geo%natoms*nmolecules
       do jatom = 1, geo%natoms*nmolecules
         if(iatom == jatom) cycle
-        min_dist = min(min_dist, sum(coordinates(1:dim, iatom) - coordinates(1:dim, jatom))**2)
+
+        do dx = -1, 1
+          do dy = -1, 1
+            do dz = -1, 1
+              dist = sum((coordinates(1:dim, iatom) - coordinates(1:dim, jatom) + (/dx, dy, dz/)*cell_size(1:dim))**2)
+              min_dist = min(min_dist, dist)
+            end do
+          end do
+        end do
+
       end do
     end do
 
@@ -185,6 +240,8 @@ contains
     write(message(1), '(a, f10.5, a)') 'Info: minimum distance between atoms in the liquid :', &
       units_from_atomic(units_out%length, min_dist), ' '//trim(units_abbrev(units_out%length))
     call write_info(1)
+
+    SAFE_DEALLOCATE_A(center)
 
     call loct_ran_end(random_gen_pointer)
 
@@ -205,8 +262,10 @@ contains
     end do
     call io_close(iunit)
 
-    write(message(1), '(a)') "Info: the atomic coordinates have written to a file called 'liquid.xyz'."
+    write(message(1), '(a)') "Info: the atomic coordinates have been written to 'liquid.xyz'."
     call write_info(1)   
+
+    SAFE_DEALLOCATE_A(coordinates)
 
   end subroutine generate_liquid
 end program centergeom
