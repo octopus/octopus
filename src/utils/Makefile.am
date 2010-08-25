@@ -24,7 +24,8 @@ include $(srcdir)/../common-rules.make
 EXTRA_PROGRAMS = oct-propagation_spectrum oct-rotatory_strength oct-harmonic-spectrum \
                  oct-casida_spectrum oct-vibrational oct-xyz-anim oct-center-geom oct-help \
                  oct-oscillator-strength \
-		 oct-dielectric-function
+		 oct-dielectric-function \
+		 oct-liquid
 
 bin_PROGRAMS = @UTILITY_PROGRAMS@
 
@@ -55,6 +56,9 @@ oct_vibrational_LDADD =  $(core_LIBS) $(external_LIBS)
 oct_center_geom_SOURCES = centergeom.F90
 oct_center_geom_LDADD = $(all_LIBS)
 
+oct_liquid_SOURCES = liquid.F90
+oct_liquid_LDADD = $(all_LIBS)
+
 oct_help_SOURCES = help.F90
 oct_help_LDADD =  $(core_LIBS)
 
@@ -70,3 +74,4 @@ phonon_spectrum.o : phonon_spectrum.F90
 centergeom.o : centergeom.F90 
 help.o : help.F90 
 dielectric_function.o : dielectric_function.F90
+liquid.o : liquid.F90
