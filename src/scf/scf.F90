@@ -303,7 +303,7 @@ contains
     !%End
     call parse_logical(datasets_check('SCFCalculateForces'), .not. geo%only_user_def, scf%calc_force)
 
-    call geometry_min_distance(geo, rmin)
+    rmin = geometry_min_distance(geo)
     if(geo%natoms == 1) rmin = CNST(100.0)
 
     ! This variable is documented in td/td_write.F90

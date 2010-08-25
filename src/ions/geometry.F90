@@ -416,14 +416,12 @@ contains
 
   ! ---------------------------------------------------------
   ! This function returns .true. if two atoms are too close.
-  logical function geometry_atoms_are_too_close(geo) result(l)
+  logical function geometry_atoms_are_too_close(geo) result(too_close)
     type(geometry_t), intent(in) :: geo
-    FLOAT :: r
 
     PUSH_SUB(geometry_atoms_are_too_close)
 
-    call geometry_min_distance(geo, r)
-    l = (r < CNST(1.0e-5) .and. geo%natoms > 1)
+    too_close = (geometry_min_distance(geo) < CNST(1.0e-5) .and. geo%natoms > 1)
 
     POP_SUB(geometry_atoms_are_too_close)
   end function geometry_atoms_are_too_close
@@ -448,9 +446,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine geometry_min_distance(geo, rmin)
+  FLOAT function geometry_min_distance(geo) result(rmin)
     type(geometry_t), intent(in)  :: geo
-    FLOAT,            intent(out) :: rmin
 
     integer :: i, j
     FLOAT :: r
@@ -468,8 +465,7 @@ contains
     end do
 
     POP_SUB(geometry_min_distance)
-  end subroutine geometry_min_distance
-
+  end function geometry_min_distance
 
   ! ---------------------------------------------------------
   subroutine cm_pos(geo, pos)

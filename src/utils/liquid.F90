@@ -74,7 +74,7 @@ contains
   
   subroutine generate_liquid()
     FLOAT        :: density, cell_size(1:dim), center(1:dim), axis(1:MAX_DIM, 1:3)
-    FLOAT        :: ang1, ang2
+    FLOAT        :: ang1, ang2, molecule_min_dist, min_dist
     integer      :: nmolecules
     type(unit_t) :: gr_per_cm3
     type(c_ptr)  :: random_gen_pointer
@@ -98,7 +98,7 @@ contains
 
     if(density <= M_ZERO) call input_error('LiquidDensity')
 
-    write(message(1), '(a, f10.3, a)') 'Info: Liquid density = ', &
+    write(message(1), '(a, f10.3, a)') 'Info: liquid density = ', &
       units_from_atomic(gr_per_cm3, density), ' '//units_abbrev(gr_per_cm3)
     call write_info(1)
 
@@ -124,19 +124,19 @@ contains
       units_from_atomic(units_out%length, cell_size(1)), ' '//units_abbrev(units_out%length)
     call write_info(1)    
 
-    ! Now comes the real part, the calculation of the coordinates. For
-    ! the moment this we don't avoid molecule colisions. We don't
-    ! rotate the molecules either.
+    ! Now comes the real part, the calculation of the coordinates.
 
     SAFE_ALLOCATE(coordinates(1:dim, nmolecules*geo%natoms)) 
 
     call loct_ran_init(random_gen_pointer)
 
+    molecule_min_dist = geometry_min_distance(geo)
+
     axis = M_ZERO
 
     jatom = 1
     do imolecule = 1, nmolecules
-      
+
       ! randonmly select a point where the molecule will be placed
       do idir = 1, dim
         center(idir) = loct_ran_flat(random_gen_pointer, -M_HALF*cell_size(idir), M_HALF*cell_size(idir))
@@ -169,7 +169,23 @@ contains
       end do
 
     end do
-    
+
+    !check the distance between atoms
+    min_dist = HUGE(min_dist)
+
+    do iatom = 1, geo%natoms*nmolecules
+      do jatom = 1, geo%natoms*nmolecules
+        if(iatom == jatom) cycle
+        min_dist = min(min_dist, sum(coordinates(1:dim, iatom) - coordinates(1:dim, jatom))**2)
+      end do
+    end do
+
+    min_dist = sqrt(min_dist)
+
+    write(message(1), '(a, f10.5, a)') 'Info: minimum distance between atoms in the liquid :', &
+      units_from_atomic(units_out%length, min_dist), ' '//trim(units_abbrev(units_out%length))
+    call write_info(1)
+
     call loct_ran_end(random_gen_pointer)
 
     ! now print the coordinates to a xyz file
@@ -177,7 +193,8 @@ contains
     iunit = io_open('liquid.xyz', action='write')
 
     write(iunit, '(i4)') nmolecules*geo%natoms
-    write(iunit, '(3a,3f20.5)') '# units: ', trim(units_abbrev(units_out%length)), '    cell size:',  cell_size(1:3)
+    write(iunit, '(3a,3f20.5)') '# units: ', trim(units_abbrev(units_out%length)), &
+      '    cell size:',  (units_from_atomic(units_out%length, cell_size(idir)), idir = 1, 3)
     jatom = 1
     do imolecule = 1, nmolecules
       do iatom = 1, geo%natoms
@@ -188,7 +205,7 @@ contains
     end do
     call io_close(iunit)
 
-    write(message(1), '(a)') 'Info: the atomic coordinates have written to a file called liquid.xyz'
+    write(message(1), '(a)') "Info: the atomic coordinates have written to a file called 'liquid.xyz'."
     call write_info(1)   
 
   end subroutine generate_liquid

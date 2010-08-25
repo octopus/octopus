@@ -221,7 +221,7 @@ contains
       call write_fatal(2)
     end if
 
-    call geometry_min_distance(geo, rmin)
+    rmin = geometry_min_distance(geo)
 
     !%Variable LocalMagneticMomentsSphereRadius
     !%Type float
