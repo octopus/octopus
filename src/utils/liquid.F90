@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-program centergeom
+program liquid
   use command_line_m
   use c_pointer_m
   use datasets_m
@@ -109,7 +109,7 @@ contains
     !%Type integer
     !%Section Utilities::oct-liquid
     !%Description
-    !% This variable specifies the number of molecules the will be
+    !% This variable specifies the number of molecules that will be
     !% included in the liquid.
     !%End
     call parse_integer('LiquidNumberOfMolecules', -1, nmolecules)
@@ -158,7 +158,7 @@ contains
     jatom = 1
     do imolecule = 1, nmolecules
 
-      ! randonmly select a point where the molecule will be placed
+      ! randomly select a point where the molecule will be placed
       do iter = 1, niter
         do idir = 1, dim
           center(idir, imolecule) = loct_ran_flat(random_gen_pointer, -M_HALF*cell_size(idir), M_HALF*cell_size(idir))
@@ -268,7 +268,7 @@ contains
     SAFE_DEALLOCATE_A(coordinates)
 
   end subroutine generate_liquid
-end program centergeom
+end program liquid
 
 !! Local Variables:
 !! mode: f90

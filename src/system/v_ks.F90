@@ -45,9 +45,9 @@ module v_ks_m
   use varinfo_m
   use xc_m
   use XC_F90(lib_m)
+  use xc_functl_m
   use xc_ks_inversion_m
   use xc_OEP_m
-  use xc_functl_m
 
   implicit none
 
@@ -86,10 +86,10 @@ contains
 
   
   ! ---------------------------------------------------------
-  subroutine v_ks_init(ks, gr, d, geo, mc, nel)
+  subroutine v_ks_init(ks, gr, dd, geo, mc, nel)
     type(v_ks_t),        intent(out)   :: ks
     type(grid_t),        intent(inout) :: gr
-    type(states_dim_t),  intent(in)    :: d
+    type(states_dim_t),  intent(in)    :: dd
     type(geometry_t),    intent(inout) :: geo
     type(multicomm_t),   intent(in)    :: mc  
     FLOAT,               intent(in)    :: nel ! the total number of electrons
@@ -136,17 +136,17 @@ contains
       call messages_devel_version("Hartree theory level")
     case(HARTREE_FOCK)
       ! initialize XC modules
-      call xc_init(ks%xc, gr%mesh%sb%dim, nel, d%spin_channels, d%cdft, hartree_fock=.true.)
+      call xc_init(ks%xc, gr%mesh%sb%dim, nel, dd%spin_channels, dd%cdft, hartree_fock=.true.)
       ks%xc_family = ks%xc%family
       ks%sic_type = sic_none
 
     case(KOHN_SHAM_DFT)
       ! initialize XC modules
-      call xc_init(ks%xc, gr%mesh%sb%dim, nel, d%spin_channels, d%cdft, hartree_fock=.false.)
+      call xc_init(ks%xc, gr%mesh%sb%dim, nel, dd%spin_channels, dd%cdft, hartree_fock=.false.)
       ks%xc_family = ks%xc%family
 
       ! check for SIC
-      if(iand(ks%xc_family, XC_FAMILY_LDA + XC_FAMILY_GGA).ne.0) then
+      if(iand(ks%xc_family, XC_FAMILY_LDA + XC_FAMILY_GGA) .ne. 0) then
 
         !%Variable SICCorrection
         !%Type integer
@@ -204,8 +204,8 @@ contains
         call parse_float(datasets_check('XCTailCorrectionTol'), CNST(1e-6), ks%tail_correction_tol)
       end if
 
-      call xc_oep_init(ks%oep, ks%xc_family, gr, d)
-      call xc_ks_inversion_init(ks%ks_inversion, ks%xc_family, gr, geo, d, mc)
+      call xc_oep_init(ks%oep, ks%xc_family, gr, dd)
+      call xc_ks_inversion_init(ks%ks_inversion, ks%xc_family, gr, geo, dd, mc)
     end select
 
     ks%frozen_hxc = .false.
@@ -277,10 +277,10 @@ contains
       write(iunit, '(1x)')
       call messages_print_var_option(iunit, 'SICCorrection', ks%sic_type)
 
-      if(iand(ks%xc_family, XC_FAMILY_OEP).ne.0) then
+      if(iand(ks%xc_family, XC_FAMILY_OEP) .ne. 0) then
         call xc_oep_write_info(ks%oep, iunit)
       end if
-      if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION).ne.0) then
+      if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) .ne. 0) then
         call xc_ks_inversion_write_info(ks%ks_inversion, iunit)
       end if
     end select
@@ -359,7 +359,7 @@ contains
         hm%vxc      = M_ZERO
         if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) hm%vtau = M_ZERO
         if(hm%d%cdft) hm%axc = M_ZERO
-        if(ks%theory_level.ne.HARTREE) call v_a_xc()
+        if(ks%theory_level .ne. HARTREE) call v_a_xc()
 
       !end if
 
@@ -379,7 +379,7 @@ contains
     
     call hamiltonian_update(hm, gr%mesh, time)
     
-    if(ks%theory_level==HARTREE.or.ks%theory_level==HARTREE_FOCK) then
+    if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK) then
       call states_end(hm%st)
       call states_copy(hm%st, st)
     end if
