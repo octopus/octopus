@@ -73,11 +73,12 @@ program centergeom
 contains
   
   subroutine generate_liquid()
-    FLOAT        :: density, cell_size(1:dim), center(1:dim)
+    FLOAT        :: density, cell_size(1:dim), center(1:dim), axis(1:MAX_DIM, 1:3)
+    FLOAT        :: ang1, ang2
     integer      :: nmolecules
     type(unit_t) :: gr_per_cm3
     type(c_ptr)  :: random_gen_pointer
-    integer      :: iatom, jatom, imolecule, idir, iunit
+    integer      :: iatom, jatom, imolecule, idir, iunit, iaxis
     FLOAT, allocatable  :: coordinates(:, :)
 
     ! we read the density in sensible units
@@ -131,15 +132,38 @@ contains
 
     call loct_ran_init(random_gen_pointer)
 
+    axis = M_ZERO
+
     jatom = 1
     do imolecule = 1, nmolecules
       
+      ! randonmly select a point where the molecule will be placed
       do idir = 1, dim
         center(idir) = loct_ran_flat(random_gen_pointer, -M_HALF*cell_size(idir), M_HALF*cell_size(idir))
       end do
+
+      ! and some rotation axes
+      do iaxis = 1, 3
+        ang1 = loct_ran_flat(random_gen_pointer, M_ZERO, M_PI)
+        ang2 = loct_ran_flat(random_gen_pointer, M_ZERO, CNST(2.0)*M_PI)
+        axis(1, iaxis) = sin(ang1)*cos(ang2)
+        axis(2, iaxis) = sin(ang1)*sin(ang2)
+        axis(3, iaxis) = cos(ang1)
+      end do
+
+      call geometry_rotate(geo, axis(:, 1), axis(:, 2), axis(:, 3))
+
       do iatom = 1, geo%natoms
         do idir = 1, dim
           coordinates(idir, jatom) = center(idir) + geo%atom(iatom)%x(idir)
+
+          ! now force the atoms to be in the cell
+          if(coordinates(idir, jatom) < -M_HALF*cell_size(idir)) &
+            coordinates(idir, jatom) = coordinates(idir, jatom) + cell_size(idir)
+
+          if(coordinates(idir, jatom) >= M_HALF*cell_size(idir)) &
+            coordinates(idir, jatom) = coordinates(idir, jatom) - cell_size(idir)
+
         end do
         INCR(jatom, 1)
       end do

@@ -32,7 +32,8 @@ module xyz_adjust_m
 
   private
   public :: &
-    xyz_adjust_it
+    xyz_adjust_it,  &
+    geometry_rotate
 
 contains
 
@@ -93,9 +94,9 @@ contains
 
     select case(axis_type)
     case(INERTIA, PSEUDO)
-      call find_center_of_mass(geo, center, (axis_type==PSEUDO))
+      call find_center_of_mass(geo, center, pseudo = (axis_type==PSEUDO))
       call translate(geo, -center)
-      call axis_inertia(geo, x1, x2, (axis_type==PSEUDO))
+      call axis_inertia(geo, x1, x2, pseudo = (axis_type==PSEUDO))
     case(LARGE)
       call find_center(geo, center)
       call translate(geo, -center)
@@ -118,7 +119,7 @@ contains
     x2 = x2/sqrt(sum(x2**2))
 
     ! rotate to main axis
-    call rotate(geo, x1, x2, to)
+    call geometry_rotate(geo, x1, x2, to)
 
     ! recenter
     call find_center(geo, center)
@@ -252,9 +253,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine rotate(geo, from, from2, to)
+  subroutine geometry_rotate(geo, from, from2, to)
     type(geometry_t), intent(inout) :: geo
-    FLOAT, intent(in) :: from(MAX_DIM), from2(MAX_DIM), to(MAX_DIM) ! assumed to be normalized
+    FLOAT,            intent(in)    :: from(MAX_DIM)   ! assumed to be normalized
+    FLOAT,            intent(in)    :: from2(MAX_DIM)  ! assumed to be normalized
+    FLOAT,            intent(in)    :: to(MAX_DIM)     ! assumed to be normalized
 
     integer :: iatom, idim
     FLOAT :: m1(MAX_DIM, MAX_DIM), m2(MAX_DIM, MAX_DIM)
@@ -320,7 +323,7 @@ contains
       geo%catom(iatom)%x = matmul(m1, f2)
     end do
 
-  end subroutine rotate
+  end subroutine geometry_rotate
 
 
   ! ---------------------------------------------------------
