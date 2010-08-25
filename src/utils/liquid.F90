@@ -97,7 +97,8 @@ contains
 
     if(density <= M_ZERO) call input_error('LiquidDensity')
 
-    write(message(1), '(a, f10.3, a)') 'Info: Liquid density = ', units_from_atomic(gr_per_cm3, density), ' '//units_abbrev(gr_per_cm3)
+    write(message(1), '(a, f10.3, a)') 'Info: Liquid density = ', &
+      units_from_atomic(gr_per_cm3, density), ' '//units_abbrev(gr_per_cm3)
     call write_info(1)
 
     call xyz_adjust_it(geo)
@@ -118,7 +119,8 @@ contains
     ! we assume a cubic cell
     cell_size = (geometry_mass(geo)*nmolecules/density)**(1.0/3.0)
 
-    write(message(1), '(a, f10.5, a)') 'Info: cubic cell size ', units_from_atomic(units_out%length, cell_size(1)), ' '//units_abbrev(units_out%length)
+    write(message(1), '(a, f10.5, a)') 'Info: cubic cell size ', &
+      units_from_atomic(units_out%length, cell_size(1)), ' '//units_abbrev(units_out%length)
     call write_info(1)    
 
     ! Now comes the real part, the calculation of the coordinates. For
