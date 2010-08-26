@@ -286,7 +286,7 @@ contains
     end do
     close(iunit)
 
-    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
+    if(flush_messages .and. mpi_grp_is_root(mpi_world)) then
       close(iunit_out)
     end if
 

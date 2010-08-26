@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : Curvilinear Coordinates
-Programs   : octopus
+Programs   : octopus, octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
