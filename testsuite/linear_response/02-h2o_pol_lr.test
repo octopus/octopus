@@ -54,8 +54,9 @@ match ; Born charge O YY w=0.1    ; LINE(em_resp/freq_-0.2000/Born_charges, 6, 2
 match ; Born charge O ZZ w=0.1    ; LINE(em_resp/freq_-0.2000/Born_charges, 7, 45) ; -1.699907
 
 Precision : 0.02
-match ; Hyperpolarizability w=0.0  ; GREP(em_resp/freq_0.0000/beta, 'beta // y', 10) ; -0.23080418E+02
-match ; Hyperpolarizability w=0.1  ; GREP(em_resp/freq_0.1000/beta, 'beta // y', 10) ;  0.86884588E+02
+match ; Hyperpolarizability w=0.0    ; GREP(em_resp/freq_0.0000/beta, 'beta // y', 10) ; -0.23080418E+02
+match ; Hyperpolarizability w=0.1 Re ; GREP(em_resp/freq_0.1000/beta, 'beta // y', 10) ;  0.86792097E+02
+match ; Hyperpolarizability w=0.1 Im ; GREP(em_resp/freq_0.1000/beta, 'beta // y', 32) ; -0.44353707E+00
 
 Input: 02-h2o_pol_lr.04_h2o_susc.inp
 Precision : 0.001
