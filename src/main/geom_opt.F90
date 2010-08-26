@@ -304,7 +304,7 @@ contains
     end forall
     call atom_write_xyz(".", "work-geom", g_opt%geo, g_opt%dim, append=.true.)
 
-    call epot_generate(g_opt%hm%ep, g_opt%syst%gr, g_opt%syst%geo, g_opt%syst%st)
+    call hamiltonian_epot_generate(g_opt%hm, g_opt%syst%gr, g_opt%geo, g_opt%st)
     call states_calc_dens(g_opt%st, g_opt%syst%gr)
     call v_ks_calc(g_opt%syst%ks, g_opt%syst%gr, g_opt%hm, g_opt%st, calc_eigenval=.true.)
     call total_energy(g_opt%hm, g_opt%syst%gr, g_opt%st, -1)
