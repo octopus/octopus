@@ -527,9 +527,11 @@ contains
 
     ! ---------------------------------------------------------
     subroutine parse_input()
+
       type(block_t) :: blk
-      integer   :: nrow, irow, nfreqs_in_row, ifreq, istep, perturb_type
-      FLOAT     :: omega_ini, omega_fin, domega
+      integer :: nrow, irow, nfreqs_in_row, ifreq, istep, perturb_type
+      FLOAT :: omega_ini, omega_fin, domega
+      logical :: freq_sort  
 
       PUSH_SUB(em_resp_run.parse_input)
 
@@ -597,7 +599,18 @@ contains
 
         call parse_block_end(blk)
 
-        call sort(em_vars%omega)
+        !%Variable EMFreqsSort
+        !%Type logical
+        !%Default true
+        !%Section Linear Response::Polarizabilities
+        !%Description
+        !% If true, the frequencies specified by the <tt>EMFreqs</tt> block are sorted, so that
+        !% they are calculated in increasing order. Can be set to false to use the order as stated,
+        !% in case this makes better use of available restart information.
+        !%End
+        call parse_logical(datasets_check('EMFreqsSort'), .true., freq_sort)
+
+        if(freq_sort) call sort(em_vars%omega)
 
       else
         !there is no frequency block, we calculate response for w = 0.0
@@ -613,7 +626,8 @@ contains
       !%Description
       !% The imaginary part of the frequency, effectively a Lorentzian broadening
       !% for peaks in the spectrum. It can help convergence of the SCF cycle for the
-      !% Sternheimer equation when on a resonance.
+      !% Sternheimer equation when on a resonance, and it can be used as a positive
+      !% infinitesimal to get the imaginary parts of response functions at poles.
       !%End
 
       call parse_float(datasets_check('EMEta'), M_ZERO, em_vars%eta, units_inp%energy)
