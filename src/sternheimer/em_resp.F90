@@ -334,8 +334,10 @@ contains
                 end if
 
                 if(ierr == 0 .and. &
-                  abs(abs(closest_omega) - abs(em_vars%freq_factor(ifactor) * em_vars%omega(iomega))) < M_EPSILON) &
+                  abs(abs(closest_omega) - abs(em_vars%freq_factor(ifactor) * em_vars%omega(iomega))) <= CNST(1e-4)) then
+                  ! the frequencies are written to four decimals in the restart directory, so we cannot expect higher precision
                   exact_freq = .true.
+                endif
               end if
 
               if(ierr == 0 .and. em_vars%nsigma == 2) then 
