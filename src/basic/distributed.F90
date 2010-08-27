@@ -125,8 +125,8 @@ contains
       call write_info(1)
 
       do kk = 1, size
-        write(message(1),'(a,i4,a,i6,a,i6)') 'Info: Node in group ', kk - 1, &
-             ' will manage '//trim(tag), this%range(1, kk - 1), " - ", this%range(2, kk - 1)
+        write(message(1),'(a,i4,a,i6,a,i6,a,i6)') 'Info: Node in group ', kk - 1, &
+             ' will manage ', this%num(kk - 1), ' '//trim(tag)//':', this%range(1, kk - 1), " - ", this%range(2, kk - 1)
         call write_info(1)
         if(rank .eq. kk - 1) then
           this%start  = this%range(1, kk - 1)
