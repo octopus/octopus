@@ -602,13 +602,13 @@ contains
             call mesh_r(gr%mesh, ip, rr, coords = xx)
             select case (kick%qkick_mode)
               case (QKICKMODE_COS)
-                kick_function(ip) = kick_function(ip) + cos(sum(kick%qvector(:) * xx(:)));
+                kick_function(ip) = kick_function(ip) + cos(sum(kick%qvector(:) * xx(:)))
               case (QKICKMODE_SIN)
-                kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:) * xx(:)));
+                kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:) * xx(:)))
               case (QKICKMODE_SIN+QKICKMODE_COS)
-                kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:) * xx(:)));
+                kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:) * xx(:)))
               case (QKICKMODE_EXP)
-                kick_function(ip) = kick_function(ip) + exp(M_zI * sum(kick%qvector(:) * xx(:)));
+                kick_function(ip) = kick_function(ip) + exp(M_zI * sum(kick%qvector(:) * xx(:)))
               case (QKICKMODE_BESSEL)
                 call grylmr(gr%mesh%x(ip, 1), gr%mesh%x(ip, 2), gr%mesh%x(ip, 3), kick%qbessel_l, kick%qbessel_m, ylm, gylm)
                 kick_function(ip) = kick_function(ip) + loct_sph_bessel(kick%qbessel_l, kick%qlength*sqrt(sum(xx(:)**2)))*ylm
