@@ -170,14 +170,14 @@ contains
   end subroutine mesh_read_lead
 end subroutine mesh_init_stage_1
 
-
 ! ---------------------------------------------------------
+
 subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
-  type(mesh_t),       intent(inout) :: mesh
-  type(simul_box_t),  intent(in)    :: sb
-  type(geometry_t),   intent(in)    :: geo
+  type(mesh_t),        intent(inout) :: mesh
+  type(simul_box_t),   intent(in)    :: sb
+  type(geometry_t),    intent(in)    :: geo
   type(curvilinear_t), intent(in)    :: cv
-  type(stencil_t),    intent(in)    :: stencil
+  type(stencil_t),     intent(in)    :: stencil
 
   integer :: i, j, k, il, ik, ix, iy, iz, is
   integer :: newi, newj, newk, ii, jj, kk, dx, dy, dz, i_lev
@@ -187,6 +187,13 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   logical, allocatable :: in_box(:)
   FLOAT,   allocatable :: xx(:, :)
   real(8), parameter :: DELTA = CNST(1e-12)
+  integer :: sz, ez
+  type(profile_t), save :: prof
+#if defined(HAVE_MPI) && defined(HAVE_MPI2)
+  type(profile_t), save :: prof_reduce
+  integer :: npoints
+  integer, allocatable :: start(:), end(:)
+#endif
 
   PUSH_SUB(mesh_init_stage_2)
   call profiling_in(mesh_init_prof)
@@ -227,8 +234,22 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
 
   chi = M_ZERO
 
+#if defined(HAVE_MPI) && defined(HAVE_MPI2)
+  SAFE_ALLOCATE(start(1:mpi_world%size))
+  SAFE_ALLOCATE(end(1:mpi_world%size))
+  call multicomm_divide_range(mesh%idx%nr(2,3) - mesh%idx%nr(1,3) + 1, mpi_world%size, start, end)
+
+  sz = start(mpi_world%rank + 1) - 1 + mesh%idx%nr(1, 3)
+  ez = end(mpi_world%rank + 1) - 1 + mesh%idx%nr(1, 3)
+#else
+  sz = mesh%idx%nr(1, 3)
+  ez = mesh%idx%nr(2, 3)
+#endif
+
+  call profiling_in(prof, "MESH_LABEL")
+
   ! We label the points inside the mesh
-  do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
+  do iz = sz, ez
     chi(3) = real(iz, REAL_PRECISION) * mesh%spacing(3) + sb%box_offset(3)
     
     do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
@@ -294,6 +315,21 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
       end do
     end do
   end do
+
+#if defined(HAVE_MPI) && defined(HAVE_MPI2)
+  call profiling_in(prof_reduce, "MESH_LABEL_REDUCE")
+
+  npoints = product(nr(2, 1:3) - nr(1, 1:3) + 1)
+  call MPI_Allreduce(MPI_IN_PLACE, mesh%idx%lxyz_inv(nr(1, 1), nr(1, 2), nr(1, 3)), npoints, &
+    MPI_INTEGER, MPI_BOR, mpi_world%comm, mpi_err)
+
+  call profiling_out(prof_reduce)
+
+  SAFE_DEALLOCATE_A(start)
+  SAFE_DEALLOCATE_A(end)
+#endif
+
+  call profiling_out(prof)
 
   SAFE_DEALLOCATE_A(xx)
   SAFE_DEALLOCATE_A(in_box)
