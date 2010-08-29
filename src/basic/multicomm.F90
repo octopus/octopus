@@ -870,20 +870,20 @@ contains
 
   !---------------------------------------------------
   !> Function to divide the range of numbers from 1 to nn
-  !! between size processors.
+  !! between tsize processors.
   !! THREADSAFE
   subroutine multicomm_divide_range(nn, tsize, start, final, lsize)
-    integer, intent(in)    :: nn
-    integer, intent(in)    :: tsize
-    integer, intent(out)   :: start(:)
-    integer, intent(out)   :: final(:)
-    integer, intent(out)   :: lsize(:)
+    integer,           intent(in)    :: nn
+    integer,           intent(in)    :: tsize
+    integer,           intent(out)   :: start(:)
+    integer,           intent(out)   :: final(:)
+    integer, optional, intent(out)   :: lsize(:)
 
     integer :: ii, jj, rank
 
     ! no push_sub, threadsafe
     
-    if(tsize <= nn ) then
+    if(tsize <= nn) then
       
       do rank = 0, tsize - 1
         jj = nn / tsize
@@ -899,15 +899,21 @@ contains
       end do
 
     else
-      start = 1
-      final = 0
-      start(1) = 1
-      final(1) = nn
+      do ii = 1, tsize
+        if(ii <= nn) then
+          start(ii) = ii
+          final(ii) = ii
+        else
+          start(ii) = 1
+          final(ii) = 0
+        end if
+      end do
     end if
 
-    lsize(1:tsize) = final(1:tsize) - start(1:tsize) + 1
-    
-    ASSERT(sum(lsize(1:tsize)) == nn)
+    if(present(lsize)) then
+      lsize(1:tsize) = final(1:tsize) - start(1:tsize) + 1
+      ASSERT(sum(lsize(1:tsize)) == nn)
+    end if
 
   end subroutine multicomm_divide_range
 

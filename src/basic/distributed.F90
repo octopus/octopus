@@ -119,7 +119,7 @@ contains
       SAFE_ALLOCATE(this%num(0:size - 1))
       SAFE_ALLOCATE(this%node(1:this%nglobal))
 
-      call multicomm_divide_range(this%nglobal, size, this%range(1, :), this%range(2, :), this%num)
+      call multicomm_divide_range(this%nglobal, size, this%range(1, :), this%range(2, :), lsize = this%num)
 
       message(1) = 'Info: Parallelization in ' // trim(tag)
       call write_info(1)
