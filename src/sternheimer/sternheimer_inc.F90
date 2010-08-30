@@ -60,11 +60,7 @@ subroutine X(sternheimer_solve)(                           &
   mesh => sys%gr%mesh
   st => sys%st
   
-#ifdef R_TREAL
-  call mix_init(this%mixer, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type = TYPE_FLOAT)
-#else
-  call mix_init(this%mixer, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type = TYPE_CMPLX)
-#endif
+  call mix_clear(this%mixer, func_type = R_TYPE_VAL)
 
   call mesh_init_mesh_aux(sys%gr%mesh)
   
@@ -312,8 +308,6 @@ subroutine X(sternheimer_solve)(                           &
     end if
     
   end do iter_loop
-
-  call mix_end(this%mixer)
 
   SAFE_DEALLOCATE_A(tmp)
   SAFE_DEALLOCATE_A(Y)

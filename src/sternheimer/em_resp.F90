@@ -187,10 +187,10 @@ contains
     call system_h_setup(sys, hm)
 
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
-      call sternheimer_init(sh, sys, hm, "EM", set_ham_var = 0, set_last_occ_response = em_vars%occ_response)
+      call sternheimer_init(sh, sys, hm, "EM", complex_response, set_ham_var = 0, set_last_occ_response = em_vars%occ_response)
       ! set HamiltonVariation to V_ext_only, in magnetic case
     else
-      call sternheimer_init(sh, sys, hm, "EM", set_last_occ_response = em_vars%occ_response)
+      call sternheimer_init(sh, sys, hm, "EM", complex_response, set_last_occ_response = em_vars%occ_response)
       ! otherwise, use default, which is hartree + fxc
     endif
 

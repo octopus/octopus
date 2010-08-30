@@ -80,7 +80,7 @@ contains
 
     call input()
     call init_()
-    call sternheimer_init(sh, sys, hm, "Pol")
+    call sternheimer_init(sh, sys, hm, "Pol", .true.)
 
     if(gauss_start == 1 .and. mpi_grp_is_root(mpi_world)) then
       iunit = io_open(VDW_DIR//'vdw_c6', action='write')
@@ -127,7 +127,7 @@ contains
     end if
 
     call sternheimer_end(sh)
-    call end_();
+    call end_()
 
     POP_SUB(vdw_run)
   contains

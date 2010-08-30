@@ -96,7 +96,7 @@ contains
     call write_info(1)
 
     call system_h_setup(sys, hm)
-    call sternheimer_init(sh, sys, hm, "VM")
+    call sternheimer_init(sh, sys, hm, "VM", .false.)
     call vibrations_init(vib, geo, gr%sb)
 
     call epot_precalc_local_potential(hm%ep, sys%gr, sys%geo, time = M_ZERO)

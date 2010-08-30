@@ -136,7 +136,7 @@ contains
     !%Description
     !% In the Broyden and GR-Pulay schemes, the new input density or potential is constructed
     !% from the values of the densities/potentials of a given number of previous iterations.
-    !% This number is set by this variable. Must be at least 1.
+    !% This number is set by this variable. Must be greater than 1.
     !%End
     if (smix%type_of_mixing == MIX_GRPULAY .or. smix%type_of_mixing == MIX_BROYDEN) then
       call parse_integer(datasets_check(trim(prefix)//'MixNumberSteps'), 3, smix%ns)

@@ -102,11 +102,13 @@ module sternheimer_m
 contains
   
   !-----------------------------------------------------------
-  subroutine sternheimer_init(this, sys, hm, prefix, set_ham_var, set_occ_response, set_last_occ_response, set_default_solver)
+  subroutine sternheimer_init(this, sys, hm, prefix, wfs_are_cplx, &
+    set_ham_var, set_occ_response, set_last_occ_response, set_default_solver)
     type(sternheimer_t), intent(out)   :: this
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: hm
     character(len=*),    intent(in)    :: prefix
+    logical,             intent(in)    :: wfs_are_cplx
     integer, optional,   intent(in)    :: set_ham_var
     logical, optional,   intent(in)    :: set_occ_response
     logical, optional,   intent(in)    :: set_last_occ_response
@@ -118,6 +120,12 @@ contains
     PUSH_SUB(sternheimer_init)
 
     if(simul_box_is_periodic(sys%gr%mesh%sb)) call messages_devel_version("Sternheimer equation for periodic systems")
+
+    if(wfs_are_cplx) then
+      call mix_init(this%mixer, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type = TYPE_CMPLX)
+    else
+      call mix_init(this%mixer, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type = TYPE_FLOAT)
+    endif
 
     !%Variable Preorthogonalization
     !%Type logical 
@@ -253,6 +261,7 @@ contains
 
     call linear_solver_end(this%solver)
     call scf_tol_end(this%scf_tol)
+    call mix_end(this%mixer)
 
     if (this%add_fxc) then
       SAFE_DEALLOCATE_P(this%fxc)
