@@ -90,6 +90,7 @@ module em_resp_m
     logical :: ok(1:3)                           ! whether calculation is converged
     logical :: force_no_kdotp                    ! whether to use kdotp run for periodic system
 
+    logical :: calc_rotatory                     ! whether to calculate rotatory response
     logical :: calc_Born                         ! whether to calculate Born effective charges
     type(Born_charges_t) :: Born_charges(3)      ! one set for each frequency factor
     logical :: occ_response                      ! whether to calculate full response in Sternheimer eqn.
@@ -708,6 +709,17 @@ contains
       call parse_logical(datasets_check('EMCalcBornCharges'), .false., em_vars%calc_Born)
       if (em_vars%calc_Born) call messages_devel_version("Calculation of Born effective charges")
 
+      !%Variable EMCalcRotatoryResponse
+      !%Type logical
+      !%Default false
+      !%Section Linear Response::Polarizabilities
+      !%Description
+      !% Calculate circular-dichroism spectrum from electric perturbation,
+      !% and write to file <tt>rotatory_strength</tt>.
+      !%End
+
+      call parse_logical(datasets_check('EMCalcRotatoryResponse'), .false., em_vars%calc_rotatory)
+
       !%Variable EMOccupiedResponse
       !%Type logical
       !%Default false
@@ -814,9 +826,9 @@ contains
 
     if(gr%sb%periodic_dim .eq. gr%sb%dim) then
       call out_dielectric_constant()
-      endif
+    endif
 
-    if(.not. simul_box_is_periodic(gr%sb) .or. em_vars%force_no_kdotp) then
+    if((.not. simul_box_is_periodic(gr%sb) .or. em_vars%force_no_kdotp) .and. em_vars%calc_rotatory) then
       call out_circular_dichroism()
     endif
 
