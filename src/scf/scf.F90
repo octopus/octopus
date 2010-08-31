@@ -832,9 +832,9 @@ contains
           end do
           write(iunit,'(1x,100a1)') ("-", ii = 1, 13 + gr%sb%dim * 15)
           write(iunit,'(a14, 10f15.6)') " Max abs force", &
-            (units_from_atomic(units_out%force, maxval(abs(geo%atom(1:iatom)%f(idir)))), idir=1, gr%sb%dim)
+            (units_from_atomic(units_out%force, maxval(abs(geo%atom(1:geo%natoms)%f(idir)))), idir=1, gr%sb%dim)
           write(iunit,'(a14, 10f15.6)') " Total force", &
-            (units_from_atomic(units_out%force, sum(geo%atom(1:iatom)%f(idir))), idir=1, gr%sb%dim)
+            (units_from_atomic(units_out%force, sum(geo%atom(1:geo%natoms)%f(idir))), idir=1, gr%sb%dim)
         end if
 
         call io_close(iunit)
