@@ -454,7 +454,7 @@ contains
   subroutine io_status(iunit)
     integer, intent(in) :: iunit
 
-    integer :: i, iostat
+    integer :: ii, iostat
     logical :: opened, named
     character(len=50) :: filename
     character(len=11) :: form
@@ -462,15 +462,15 @@ contains
     PUSH_SUB(io_status)
 
     write(iunit, '(a)') '******** io_status ********'
-    do i = 0, max_lun
-      inquire(i, opened=opened, named=named, name=filename, form=form, iostat=iostat)
+    do ii = 0, max_lun
+      inquire(ii, opened=opened, named=named, name=filename, form=form, iostat=iostat)
       if (iostat .eq. 0) then
         if (opened) then
-          if(.not.named) filename = 'No name available'
-          write(iunit, '(i4,5x,a,5x,a)') i, form, filename
+          if(.not. named) filename = 'No name available'
+          write(iunit, '(i4,5x,a,5x,a)') ii, form, filename
         end if
       else
-        write(iunit, '(i4,5x,a)') i, 'Iostat error'
+        write(iunit, '(i4,5x,a)') ii, 'Iostat error'
       end if
     end do
     write(iunit,'(a)') '********           ********'
