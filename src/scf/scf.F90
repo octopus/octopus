@@ -851,13 +851,13 @@ contains
       type(states_t), intent(in) :: st
 
       integer :: ia
-      FLOAT :: mm(MAX_DIM)
+      FLOAT :: mm(max(mesh%sb%dim, 3))
       FLOAT, allocatable :: lmm(:,:)
 
       PUSH_SUB(scf_run.write_magnetic_moments)
 
       call magnetic_moment(mesh, st, st%rho, mm)
-      SAFE_ALLOCATE(lmm(1:mesh%sb%dim, 1:geo%natoms))
+      SAFE_ALLOCATE(lmm(1:max(mesh%sb%dim, 3), 1:geo%natoms))
       call magnetic_local_moments(mesh, st, geo, st%rho, scf%lmm_r, lmm)
 
       if(mpi_grp_is_root(mpi_world)) then
