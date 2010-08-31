@@ -717,7 +717,7 @@ contains
       character(len=*), intent(in) :: dir, fname
 
       FLOAT :: e_dip(4, st%d%nspin), n_dip(MAX_DIM)
-      integer :: iunit, ispin, idir, iatom, nquantumpol
+      integer :: iunit, ispin, idir, iatom, nquantumpol, ii
 
       PUSH_SUB(scf_run.scf_write_static)
 
@@ -830,8 +830,11 @@ contains
             write(iunit,'(i4,a10,10f15.6)') iatom, trim(species_label(geo%atom(iatom)%spec)), &
               (units_from_atomic(units_out%force, geo%atom(iatom)%f(idir)), idir=1, gr%sb%dim)
           end do
-          write(iunit,'(a14, 10f15.6)') " Max abs force: ", &
+          write(iunit,'(1x,100a1)') ("-", ii = 1, 13 + gr%sb%dim * 15)
+          write(iunit,'(a14, 10f15.6)') " Max abs force", &
             (units_from_atomic(units_out%force, maxval(abs(geo%atom(1:iatom)%f(idir)))), idir=1, gr%sb%dim)
+          write(iunit,'(a14, 10f15.6)') " Total force", &
+            (units_from_atomic(units_out%force, sum(geo%atom(1:iatom)%f(idir))), idir=1, gr%sb%dim)
         end if
 
         call io_close(iunit)
@@ -854,7 +857,7 @@ contains
       PUSH_SUB(scf_run.write_magnetic_moments)
 
       call magnetic_moment(mesh, st, st%rho, mm)
-      SAFE_ALLOCATE(lmm(1:MAX_DIM, 1:geo%natoms))
+      SAFE_ALLOCATE(lmm(1:mesh%sb%dim, 1:geo%natoms))
       call magnetic_local_moments(mesh, st, geo, st%rho, scf%lmm_r, lmm)
 
       if(mpi_grp_is_root(mpi_world)) then
