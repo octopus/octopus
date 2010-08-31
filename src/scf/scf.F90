@@ -830,6 +830,8 @@ contains
             write(iunit,'(i4,a10,10f15.6)') iatom, trim(species_label(geo%atom(iatom)%spec)), &
               (units_from_atomic(units_out%force, geo%atom(iatom)%f(idir)), idir=1, gr%sb%dim)
           end do
+          write(iunit,'(a14, 10f15.6)') " Max abs force: ", &
+            (units_from_atomic(units_out%force, maxval(abs(geo%atom(1:iatom)%f(idir)))), idir=1, gr%sb%dim)
         end if
 
         call io_close(iunit)
