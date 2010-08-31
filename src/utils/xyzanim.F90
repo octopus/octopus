@@ -44,12 +44,15 @@ program xyzanim
   call getopt_init(ierr)
   if(ierr.eq.0) call getopt_xyz_anim
   call parser_init()
-  call datasets_init(1)
   call io_init()
+  call datasets_init(1)
   if(in_debug_mode) then
     call io_mkdir('debug')
   end if
   call unit_system_init()
+
+  call parse_integer(datasets_check('Dimensions'), 3, calc_dim)
+  if( calc_dim > MAX_DIM .or. calc_dim < 1) call input_error('Dimensions')
 
   ! Sets the filenames
   coords_file = 'td.general/coordinates'
