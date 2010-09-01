@@ -51,7 +51,8 @@ subroutine xc_get_vxc_and_axc(der, xcs, st, rho, current_density, ispin, vxc, ax
   SAFE_ALLOCATE(ff  (1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:spin_channels))
   SAFE_ALLOCATE(dedd(1:der%mesh%np, 1:spin_channels))
   SAFE_ALLOCATE(dedv(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:spin_channels))
-  dedd = M_ZERO; dedv = M_ZERO
+  dedd = M_ZERO
+  dedv = M_ZERO
 
   !Compute j/rho and the vorticity
   do is = 1, spin_channels
@@ -65,7 +66,9 @@ subroutine xc_get_vxc_and_axc(der, xcs, st, rho, current_density, ispin, vxc, ax
   SAFE_ALLOCATE(l_vorticity(1:der%mesh%sb%dim, 1:spin_channels))
   SAFE_ALLOCATE(l_dedd(1:spin_channels))
   SAFE_ALLOCATE(l_dedv(1:der%mesh%sb%dim, 1:spin_channels))
-  l_dedd = M_ZERO; l_dedv = M_ZERO
+  l_dedd = M_ZERO
+  l_dedv = M_ZERO
+
   space_loop: do ip = 1, der%mesh%np
     ! make a local copy with the correct memory order
     l_dens (:) = rho(ip, :)
