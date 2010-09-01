@@ -102,16 +102,16 @@ contains
     type(geometry_t), intent(in)  :: geo
     FLOAT,            intent(in)  :: rho(:,:)
     FLOAT,            intent(in)  :: rr
-    FLOAT,            intent(out) :: lmm(MAX_DIM, geo%natoms)
+    FLOAT,            intent(out) :: lmm(max(mesh%sb%dim, 3), geo%natoms)
 
-    integer :: ia, ip
+    integer :: ia, ip, idir
     FLOAT :: ri
     FLOAT, allocatable :: md(:, :), aux(:, :)
 
     PUSH_SUB(magnetic_local_moments)
 
-    SAFE_ALLOCATE(md (1:mesh%np, 1:MAX_DIM))
-    SAFE_ALLOCATE(aux(1:mesh%np, 1:MAX_DIM))
+    SAFE_ALLOCATE(md (1:mesh%np, 1:max(mesh%sb%dim, 3)))
+    SAFE_ALLOCATE(aux(1:mesh%np, 1:max(mesh%sb%dim, 3)))
 
     call magnetic_density(mesh, st, rho, md)
     lmm = M_ZERO
@@ -120,12 +120,15 @@ contains
       do ip = 1, mesh%np
         call mesh_r(mesh, ip, ri, origin = geo%atom(ia)%x)
         if (ri > rr) cycle
-        aux(ip, 1:MAX_DIM) = md(ip, 1:MAX_DIM)
+        aux(ip, 1:max(mesh%sb%dim, 3)) = md(ip, 1:max(mesh%sb%dim, 3))
       end do
-      lmm(1, ia) = dmf_integrate(mesh, aux(:, 1))
-      lmm(2, ia) = dmf_integrate(mesh, aux(:, 2))
-      lmm(3, ia) = dmf_integrate(mesh, aux(:, 3))
+
+      do idir = 1, max(mesh%sb%dim, 3)
+        lmm(idir, ia) = dmf_integrate(mesh, aux(1:mesh%np, idir))
+      enddo
+
     end do
+
     SAFE_DEALLOCATE_A(md)
     SAFE_DEALLOCATE_A(aux)
 
