@@ -130,9 +130,6 @@ module hamiltonian_m
 
     type(epot_t) :: ep         ! handles the external potential
 
-    ! gauge
-    integer :: gauge              ! in which gauge shall we work
-
     ! absorbing boundaries
     logical :: adjoint
     integer  :: ab                ! do we have absorbing boundaries?
@@ -299,21 +296,6 @@ contains
     else
       nullify(hm%a_ind, hm%b_ind)
     end if
-
-    !%Variable TDGauge
-    !%Type integer
-    !%Default length
-    !%Section Time-Dependent
-    !%Description
-    !% In which gauge to treat the laser field.
-    !%Option length 1
-    !% Length gauge.
-    !%Option velocity 2
-    !% Velocity gauge.
-    !%End
-    call parse_integer(datasets_check('TDGauge'), LENGTH, hm%gauge)
-    if(.not.varinfo_valid_option('TDGauge', hm%gauge)) call input_error('TDGauge')
-    call messages_print_var_option(stdout, "TDGauge", hm%gauge)
 
     !%Variable AbsorbingBoundaries
     !%Type integer

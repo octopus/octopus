@@ -30,12 +30,6 @@
 
     PUSH_SUB(check_faulty_runmodes)
 
-    ! Only dipole approximation in length gauge.
-    if(hm%gauge.ne.LENGTH) then
-      write(message(1),'(a)') "So far only length gauge is supported in optimal control runs."
-      call write_fatal(1)
-    end if
-
     ! No QOCT runs with periodic boundary conditions.
     if(simul_box_is_periodic(sys%gr%sb)) then
       write(message(1), '(a)') 'No QOCT runs with periodic boundary conditions. '

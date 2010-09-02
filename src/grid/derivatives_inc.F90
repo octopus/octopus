@@ -211,9 +211,10 @@ contains
     end do
     
 #ifdef HAVE_MPI
-    if(der%mesh%parallel_in_domains) then
+    if(der%mesh%parallel_in_domains .and. nreq > 0) then
       call profiling_in(set_bc_comm_prof)
       
+      ! if nreq = 0, 1:nreq generates an illegal array reference
       SAFE_ALLOCATE(statuses(1:MPI_STATUS_SIZE, 1:nreq))
       call MPI_Waitall(nreq, req(1), statuses(1, 1), mpi_err)
       SAFE_DEALLOCATE_A(statuses)
