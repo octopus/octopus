@@ -126,7 +126,7 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
     call lalg_cholesky(nst, ss, bof = bof)
 
     if(bof) then
-      message(1) = "Warning: Orthogonalization failed; probably your eigenvectors are not independent."
+      message(1) = "Orthogonalization failed; probably your eigenvectors are not independent."
       call write_warning(1)
     end if
 
@@ -178,8 +178,11 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
   case(ORTH_MGS)
     call mgs()
   end select
+
   POP_SUB(X(states_orthogonalization_block))
+
   contains
+
     subroutine mgs()
       integer :: ist, jst, idim
       R_TYPE, allocatable :: aa(:)
@@ -188,6 +191,8 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
       R_TYPE, allocatable :: aac(:)
       FLOAT,  allocatable :: bbc(:)
 #endif      
+
+      PUSH_SUB(X(states_orthogonalization_block).mgs)
 
       SAFE_ALLOCATE(bb(1:nst))
 
@@ -236,8 +241,9 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
       end do
 
       SAFE_DEALLOCATE_A(aa)
-
+      POP_SUB(X(states_orthogonalization_block).mgs)
     end subroutine mgs
+
 end subroutine X(states_orthogonalization_block)
 
 

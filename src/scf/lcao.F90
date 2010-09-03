@@ -358,6 +358,8 @@ contains
       else
         ! Randomly generate the initial wavefunctions.
         call states_generate_random(sys%st, sys%gr%mesh)
+        message(1) = "Orthogonalizing random wavefunctions."
+        call write_info(1)
         call states_orthogonalize(sys%st, sys%gr%mesh)
         call v_ks_calc(sys%ks, sys%gr, hm, sys%st, calc_eigenval=.true.) ! get potentials
         call states_fermi(sys%st, sys%gr%mesh)                           ! occupations

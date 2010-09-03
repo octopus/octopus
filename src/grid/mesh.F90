@@ -173,6 +173,7 @@ contains
     integer,      intent(in) :: unit
     
     integer :: ii
+    FLOAT :: cutoff
 
     if(.not.mpi_grp_is_root(mpi_world)) return
     
@@ -190,8 +191,9 @@ contains
     write(message(2),'(a, i10)') '  # inner mesh = ', mesh%np_global
     write(message(3),'(a, i10)') '  # total mesh = ', mesh%np_part_global
     
-    write(message(4),'(3a,f9.3,a)') '  Grid Cutoff [', trim(units_abbrev(units_out%energy)),'] = ', &
-      units_from_atomic(units_out%energy, M_PI**2 / (M_TWO * maxval(mesh%spacing)**2))
+    cutoff = mesh_gcutoff(mesh)**2 / M_TWO
+    write(message(4),'(3a,f9.3,a,f9.3)') '  Grid Cutoff [', trim(units_abbrev(units_out%energy)),'] = ', &
+      units_from_atomic(units_out%energy, cutoff), '    Grid Cutoff [Ry] = ', cutoff * 2
     call write_info(4, unit)
     
     POP_SUB(mesh_write_info)

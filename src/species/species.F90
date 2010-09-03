@@ -500,8 +500,8 @@ contains
       call write_info(3)
 
       if(max(local_radius, this%ps%rc_max) > CNST(6.0)) then
-        message(1) = "Warning: One of the radii of your pseudopotential's localized parts seems"
-        message(2) = "         unusually large; check that your pseudopotential is correct."
+        message(1) = "One of the radii of your pseudopotential's localized parts seems"
+        message(2) = "unusually large; check that your pseudopotential is correct."
         call write_warning(2)
       end if
 
