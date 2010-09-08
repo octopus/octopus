@@ -661,14 +661,14 @@ contains
   end subroutine simul_box_build_lattice
 
   
-  !--------------------------------------------------------------
+
+  !> This function checks that the atoms are inside the box. If not:
+  !! if the system is periodic, the atoms are moved inside the box.
+  !! if the system is finite, nothing happens.
   subroutine simul_box_atoms_in_box(sb, geo)
     type(simul_box_t), intent(in)    :: sb
     type(geometry_t),  intent(inout) :: geo
 
-    ! This function checks that the atoms are inside the box. If not:
-    ! if the system is periodic, the atoms are moved inside the box;
-    ! if the system is finite, a warning is written.
 
     integer :: iatom, pd, idir
     FLOAT :: xx(1:MAX_DIM)
@@ -678,7 +678,6 @@ contains
     pd = sb%periodic_dim
 
     do iatom = 1, geo%natoms
-
       if (simul_box_is_periodic(sb)) then
         !convert the position to the orthogonal space
         xx(1:pd) = matmul(geo%atom(iatom)%x(1:pd) - sb%box_offset(1:pd), sb%klattice_primitive(1:pd, 1:pd))
@@ -698,17 +697,6 @@ contains
         geo%atom(iatom)%x(1:pd) = matmul(sb%klattice_primitive(1:pd, 1:pd), xx(1:pd) + sb%box_offset(1:pd))
 
       end if
-
-      if ( .not. simul_box_in_box(sb, geo, geo%atom(iatom)%x) ) then
-        write(message(1), '(a,i5,a)') "Atom ", iatom, " is outside the box."
-        if (sb%periodic_dim == sb%dim) then
-          message(2) = "This is a bug."
-          call write_fatal(2)
-        else
-          call write_warning(1)
-        end if
-      end if
-
     end do
 
     POP_SUB(simul_box_atoms_in_box)

@@ -114,6 +114,8 @@ module epot_m
     
     real(4), pointer :: local_potential(:,:)
     logical          :: local_potential_precalculated
+
+    logical          :: ignore_external_ions
   end type epot_t
 
   integer, public, parameter :: &
@@ -383,6 +385,23 @@ contains
       ep%so_strength = M_ONE
     end if
 
+    !%Variable IgnoreExternalIons
+    !%Type logical
+    !%Default no
+    !%Section Hamiltonian
+    !%Description
+    !% If this variable is set to "yes", then the ions that are outside the simulation box do not feel any
+    !% external force (and therefore progress at constant velocity), and do not originate any force on other
+    !% ions, or any potential on the electronic system.
+    !%
+    !% This feature is only available for finite systems; if the system is periodic in any dimension, 
+    !% this variable cannot be set to "yes".
+    !%End
+    call parse_logical(datasets_check('IgnoreExternalIons'), .false., ep%ignore_external_ions)
+    if(ep%ignore_external_ions) then
+      if(gr%sb%periodic_dim > 0) call input_error('IgnoreExternalIons')
+    end if
+
     SAFE_ALLOCATE(ep%proj(1:geo%natoms))
     do ia = 1, geo%natoms
       call projector_null(ep%proj(ia))
@@ -491,6 +510,7 @@ contains
     ep%vpsl = M_ZERO
     if(st%nlcc) st%rho_core = M_ZERO
     do ia = geo%atoms%start, geo%atoms%end
+      if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
       if(st%nlcc) then
         call epot_local_potential(ep, gr%der, gr%dgrid, psolver, geo, ia, ep%vpsl, time_, st%rho_core)
       else
@@ -519,6 +539,7 @@ contains
     do ia = 1, geo%natoms
       atm => geo%atom(ia)
       if(.not. species_is_ps(atm%spec)) cycle
+      if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
       ep%non_local = .true.
       call projector_end(ep%proj(ia))
       call projector_init(ep%proj(ia), gr%mesh, atm, st%d%dim, ep%reltype)
@@ -818,6 +839,8 @@ contains
         spec => geo%atom(iatom)%spec
         zi = species_zval(geo%atom(iatom)%spec)
 
+        if(.not.simul_box_in_box(sb, geo, geo%atom(iatom)%x) .and. ep%ignore_external_ions) cycle
+
         if(species_type(spec) .eq. SPEC_JELLI) then
           energy = energy + (M_THREE / M_FIVE) * species_zval(spec)**2 / species_jradius(spec)
         end if
@@ -825,6 +848,7 @@ contains
         do jatom = 1, geo%natoms
 
           if(iatom == jatom) cycle
+          if(.not.simul_box_in_box(sb, geo, geo%atom(jatom)%x) .and. ep%ignore_external_ions) cycle
 
           zj = species_zval(geo%atom(jatom)%spec)
           rr = sqrt(sum((geo%atom(iatom)%x - geo%atom(jatom)%x)**2))

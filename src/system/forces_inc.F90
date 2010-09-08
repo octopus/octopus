@@ -245,6 +245,11 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
   SAFE_ALLOCATE(zvloc(1:np))
   
   do iatom = geo%atoms%start, geo%atoms%end
+
+    if(.not.simul_box_in_box(gr%mesh%sb, geo, geo%atom(iatom)%x) .and. ep%ignore_external_ions) then
+      force(1:gr%mesh%sb%dim, iatom) = M_ZERO
+      cycle
+    end if
     
     vloc(1:np) = M_ZERO
     
