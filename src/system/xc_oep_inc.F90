@@ -28,8 +28,6 @@
 
 ! ---------------------------------------------------------
 subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
-  use xc_functl_m
-
   type(xc_oep_t),      intent(inout) :: oep
   type(xc_t),          intent(in)    :: xcs
   logical,             intent(in)    :: apply_sic_pz
@@ -39,7 +37,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
   FLOAT,               intent(inout) :: ex, ec
   FLOAT, optional,     intent(inout) :: vxc(:,:) !vxc(gr%mesh%np, st%d%nspin)
 
-  FLOAT :: e
+  FLOAT :: eig
   integer :: is, ist, ixc
   logical, save :: first = .true.
 
@@ -60,13 +58,13 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
 
     ! get lxc
     functl_loop: do ixc = 1, 2
-      if(xcs%functl(ixc, 1)%family.ne.XC_FAMILY_OEP) cycle
+      if(xcs%functl(ixc, 1)%family .ne. XC_FAMILY_OEP) cycle
 
-      e = M_ZERO
+      eig = M_ZERO
       select case(xcs%functl(ixc,1)%id)
       case(XC_OEP_X)
-        call X(oep_x) (gr, st, is, oep, e, xcs%exx_coef)
-        ex = ex + e
+        call X(oep_x) (gr, st, is, oep, eig, xcs%exx_coef)
+        ex = ex + eig
       end select
     end do functl_loop
 
@@ -94,7 +92,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
 
     if(present(vxc)) then
       ! solve the KLI equation
-      if(oep%level.ne.XC_OEP_FULL.or.first) then
+      if(oep%level .ne. XC_OEP_FULL .or. first) then
         first = .false.
 
         oep%vxc = M_ZERO
@@ -130,15 +128,15 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   type(xc_oep_t),      intent(inout) :: oep
 
   integer :: iter, ist
-  FLOAT :: vxc_bar, f
-  FLOAT, allocatable :: s(:), vxc_old(:)
-  R_TYPE, allocatable :: b(:,:)
+  FLOAT :: vxc_bar, ff
+  FLOAT, allocatable :: ss(:), vxc_old(:)
+  R_TYPE, allocatable :: bb(:,:)
 
   call profiling_in(C_PROFILING_XC_OEP_FULL)
   PUSH_SUB(X(xc_oep_solve))
 
-  SAFE_ALLOCATE(      b(1:gr%mesh%np, 1:1))
-  SAFE_ALLOCATE(      s(1:gr%mesh%np))
+  SAFE_ALLOCATE(     bb(1:gr%mesh%np, 1:1))
+  SAFE_ALLOCATE(     ss(1:gr%mesh%np))
   SAFE_ALLOCATE(vxc_old(1:gr%mesh%np))
 
   vxc_old(1:gr%mesh%np) = vxc(1:gr%mesh%np)
@@ -154,26 +152,27 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
 
   do iter = 1, oep%scftol%max_iter
     ! iteration over all states
-    s = M_ZERO
+    ss = M_ZERO
     do ist = 1, st%nst
       ! evaluate right-hand side
       vxc_bar = dmf_dotp(gr%mesh, (R_ABS(st%X(psi)(1:gr%mesh%np, 1, ist, is)))**2, oep%vxc(1:gr%mesh%np))
-      b(1:gr%mesh%np, 1) =  -(oep%vxc(1:gr%mesh%np) - (vxc_bar - oep%uxc_bar(ist)))*R_CONJ(st%X(psi)(1:gr%mesh%np, 1, ist, is)) &
-        + oep%X(lxc)(1:gr%mesh%np, ist)
+      bb(1:gr%mesh%np, 1) = -(oep%vxc(1:gr%mesh%np) - (vxc_bar - oep%uxc_bar(ist))) * &
+        R_CONJ(st%X(psi)(1:gr%mesh%np, 1, ist, is)) + oep%X(lxc)(1:gr%mesh%np, ist)
 
-      call X(lr_orth_vector) (gr%mesh, st, b, ist, is)
+      call X(lr_orth_vector) (gr%mesh, st, bb, ist, is)
 
-      ! and we now solve the equation [h-eps_i] psi_i = b_i
-      call X(solve_HXeY) (oep%solver, hm, gr, st, ist, is, oep%lr%X(dl_psi)(:,:, ist, is), b, &
+      ! and we now solve the equation [h-eps_i] psi_i = bb_i
+      call X(solve_HXeY) (oep%solver, hm, gr, st, ist, is, oep%lr%X(dl_psi)(:,:, ist, is), bb, &
            R_TOTYPE(-st%eigenval(ist, is)), CNST(1e-6))
       
       call X(lr_orth_vector) (gr%mesh, st, oep%lr%X(dl_psi)(:,:, ist, is), ist, is)
 
-      ! calculate this funny function s
-      s(1:gr%mesh%np) = s(1:gr%mesh%np) + M_TWO*R_REAL(oep%lr%X(dl_psi)(1:gr%mesh%np, 1, ist, is)*st%X(psi)(1:gr%mesh%np, 1, ist, is))
+      ! calculate this funny function ss
+      ss(1:gr%mesh%np) = ss(1:gr%mesh%np) + &
+        M_TWO*R_REAL(oep%lr%X(dl_psi)(1:gr%mesh%np, 1, ist, is)*st%X(psi)(1:gr%mesh%np, 1, ist, is))
     end do
 
-    oep%vxc(1:gr%mesh%np) = oep%vxc(1:gr%mesh%np) + oep%mixing*s(1:gr%mesh%np)
+    oep%vxc(1:gr%mesh%np) = oep%vxc(1:gr%mesh%np) + oep%mixing*ss(1:gr%mesh%np)
 
     do ist = 1, st%nst
       if(oep%eigen_type(ist) == 2) then
@@ -182,17 +181,17 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
       end if
     end do
 
-    f = dmf_nrm2(gr%mesh, s)
-    if(f < oep%scftol%conv_abs_dens) exit
+    ff = dmf_nrm2(gr%mesh, ss)
+    if(ff < oep%scftol%conv_abs_dens) exit
   end do
 
-  write(message(1), '(a,i4,a,es14.6)') "Info: After ", iter, " iterations, the OEP converged to ", f
+  write(message(1), '(a,i4,a,es14.6)') "Info: After ", iter, " iterations, the OEP converged to ", ff
   message(2) = ''
   call write_info(2)
 
   vxc(1:gr%mesh%np) = vxc_old(1:gr%mesh%np)
-  SAFE_DEALLOCATE_A(b)
-  SAFE_DEALLOCATE_A(s)
+  SAFE_DEALLOCATE_A(bb)
+  SAFE_DEALLOCATE_A(ss)
   SAFE_DEALLOCATE_A(vxc_old)
 
   POP_SUB(X(xc_oep_solve))

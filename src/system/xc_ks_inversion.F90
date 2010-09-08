@@ -94,7 +94,7 @@ contains
 
     PUSH_SUB(xc_ks_inversion_init)
 
-    if(iand(family, XC_FAMILY_KS_INVERSION).eq.0) then
+    if(iand(family, XC_FAMILY_KS_INVERSION) .eq. 0) then
       ks_inv%level = XC_KS_INVERSION_NONE
       POP_SUB(xc_ks_inversion_init)
       return
@@ -169,7 +169,7 @@ contains
 
     PUSH_SUB(xc_ks_inversion_end)
 
-    if(ks_inv%level.ne.XC_KS_INVERSION_NONE) then
+    if(ks_inv%level .ne. XC_KS_INVERSION_NONE) then
       ! cleanup
       call eigensolver_end(ks_inv%eigensolver)
       !call hamiltonian_end(ks_inv%aux_hm, gr, geo)
@@ -645,8 +645,6 @@ contains
 
   ! ---------------------------------------------------------
   subroutine xc_ks_inversion_calc(ks_inversion, gr, hm, st, ex, ec, vxc)
-    use xc_functl_m
-
     type(xc_ks_inversion_t),  intent(inout) :: ks_inversion
     type(grid_t),             intent(inout) :: gr
     type(hamiltonian_t),      intent(inout) :: hm

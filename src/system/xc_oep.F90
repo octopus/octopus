@@ -40,6 +40,7 @@ module xc_oep_m
   use varinfo_m
   use xc_m
   use XC_F90(lib_m)
+  use xc_functl_m
 
   implicit none
 
@@ -96,7 +97,7 @@ contains
 
 #if defined(HAVE_MPI)
     if(oep%level == XC_OEP_FULL) then
-      message(1) = "Full OEP is not allowed with the code parallel in states..."
+      message(1) = "Full OEP is not allowed with the code parallel in states."
       call write_fatal(1)
     end if
 #endif
@@ -120,9 +121,9 @@ contains
     !% Full solution of OEP equation using the approach of S. Kuemmel (half-implemented).
     !%End
     call parse_integer(datasets_check('OEP_level'), XC_OEP_KLI, oep%level)
-    if(.not.varinfo_valid_option('OEP_level', oep%level)) call input_error('OEP_level')
+    if(.not. varinfo_valid_option('OEP_level', oep%level)) call input_error('OEP_level')
 
-    if(oep%level.ne.XC_OEP_NONE) then
+    if(oep%level .ne. XC_OEP_NONE) then
       if(oep%level == XC_OEP_FULL) then
         call messages_devel_version("Full OEP")
         call parse_float(datasets_check('OEP_mixing'), M_ONE, oep%mixing)
@@ -130,7 +131,7 @@ contains
 
       ! this routine is only prepared for finite systems, and ispin = 1, 2
       if(d%ispin > SPIN_POLARIZED .or. d%nik>d%ispin) then
-        message(1) = "OEP only works for finite systems and collinear spin!"
+        message(1) = "OEP only works for finite systems and collinear spin."
         call write_fatal(1)
       end if
     
@@ -162,7 +163,8 @@ contains
     PUSH_SUB(xc_oep_end)
 
     if(oep%level.ne.XC_OEP_NONE) then
-      SAFE_DEALLOCATE_P(oep%vxc); nullify(oep%vxc)
+      SAFE_DEALLOCATE_P(oep%vxc)
+      nullify(oep%vxc)
 
       if(oep%level == XC_OEP_FULL) then 
         call lr_dealloc(oep%lr)
@@ -226,7 +228,8 @@ contains
 
     SAFE_ALLOCATE(eigenval(1:st%nst))
     SAFE_ALLOCATE     (occ(1:st%nst))
-    eigenval = M_ZERO; occ = M_ZERO
+    eigenval = M_ZERO
+    occ = M_ZERO
 
     do ist = st%st_start, st%st_end
       eigenval(ist) = st%eigenval(ist, is)

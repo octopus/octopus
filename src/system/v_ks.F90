@@ -204,8 +204,12 @@ contains
         call parse_float(datasets_check('XCTailCorrectionTol'), CNST(1e-6), ks%tail_correction_tol)
       end if
 
-      call xc_oep_init(ks%oep, ks%xc_family, gr, dd)
-      call xc_ks_inversion_init(ks%ks_inversion, ks%xc_family, gr, geo, dd, mc)
+      if(iand(ks%xc_family, XC_FAMILY_OEP) .ne. 0) then
+        call xc_oep_init(ks%oep, ks%xc_family, gr, dd)
+      endif
+      if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) .ne. 0) then
+        call xc_ks_inversion_init(ks%ks_inversion, ks%xc_family, gr, geo, dd, mc)
+      endif
     end select
 
     ks%frozen_hxc = .false.
@@ -239,8 +243,12 @@ contains
 
     select case(ks%theory_level)
     case(KOHN_SHAM_DFT)
-      call xc_ks_inversion_end(ks%ks_inversion, gr, geo)
-      call xc_oep_end(ks%oep)
+      if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) .ne. 0) then
+        call xc_ks_inversion_end(ks%ks_inversion, gr, geo)
+      endif
+      if(iand(ks%xc_family, XC_FAMILY_OEP) .ne. 0) then
+        call xc_oep_end(ks%oep)
+      endif
       call xc_end(ks%xc)
     end select
 
@@ -258,7 +266,7 @@ contains
     type(v_ks_t), intent(in) :: ks
     integer,      intent(in) :: iunit
 
-    if(.not.mpi_grp_is_root(mpi_world)) return
+    if(.not. mpi_grp_is_root(mpi_world)) return
 
     PUSH_SUB(v_ks_write_info)
 
@@ -450,16 +458,20 @@ contains
 
       if(ks%theory_level == KOHN_SHAM_DFT) then
         ! The OEP family has to be handled specially
-        if (states_are_real(st)) then
-          call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
-            gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
-        else
-          call zxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
-            gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
-        end if
+        if(iand(ks%xc_family, XC_FAMILY_OEP) .ne. 0) then
+          if (states_are_real(st)) then
+            call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
+              gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
+          else
+            call zxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
+              gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
+          end if
+        endif
 
-        ! Also treat KS inversion separately (not part of libxc)
-        call xc_ks_inversion_calc(ks%ks_inversion, gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
+        if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) .ne. 0) then
+          ! Also treat KS inversion separately (not part of libxc)
+          call xc_ks_inversion_calc(ks%ks_inversion, gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
+        endif
       end if
 
       if(ks%tail_correction) then
