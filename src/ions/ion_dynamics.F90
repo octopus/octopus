@@ -321,7 +321,7 @@ contains
         
       end do
       
-      call simul_box_atoms_in_box(sb, geo)
+      call simul_box_atoms_in_box(sb, geo, .false.)
 
     case(NOSE_HOOVER)
 

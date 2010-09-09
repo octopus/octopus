@@ -179,7 +179,7 @@ contains
       call ob_simul_box_init(sb, transport_mode, lead_sb, lead_info, geo)
     end if
     call simul_box_build_lattice(sb)       ! Build lattice vectors.
-    call simul_box_atoms_in_box(sb, geo)   ! Put all the atoms inside the box.
+    call simul_box_atoms_in_box(sb, geo, .true.)   ! Put all the atoms inside the box.
 
     call symmetries_init(sb%symm, geo, sb%dim, sb%periodic_dim, sb%rlattice, sb%lsize)
 
@@ -665,12 +665,13 @@ contains
 
   !> This function checks that the atoms are inside the box. If not:
   !! if the system is periodic, the atoms are moved inside the box.
-  !! if the system is finite, nothing happens.
+  !! if the system is finite, nothing happens or a warning is written,
+  !! depending on the argument warn_if_not.
   ! ---------------------------------------------------------
-  subroutine simul_box_atoms_in_box(sb, geo)
+  subroutine simul_box_atoms_in_box(sb, geo, warn_if_not)
     type(simul_box_t), intent(in)    :: sb
     type(geometry_t),  intent(inout) :: geo
-
+    logical,           intent(in)    :: warn_if_not
 
     integer :: iatom, pd, idir
     FLOAT :: xx(1:MAX_DIM)
@@ -699,6 +700,17 @@ contains
         geo%atom(iatom)%x(1:pd) = matmul(sb%klattice_primitive(1:pd, 1:pd), xx(1:pd) + sb%box_offset(1:pd))
 
       end if
+
+      if( .not. simul_box_in_box(sb, geo, geo%atom(iatom)%x) ) then 
+        write(message(1), '(a,i5,a)') "Atom ", iatom, " is outside the box." 
+        if (sb%periodic_dim == sb%dim) then 
+          message(2) = "This is a bug." 
+          call write_fatal(2) 
+        else 
+          if(warn_if_not) call write_warning(1) 
+        end if
+      end if 
+
     end do
 
     POP_SUB(simul_box_atoms_in_box)
@@ -1338,7 +1350,7 @@ contains
       current_label = lead_dataset(il)
       call geometry_init(lead_geo(il), print_info=.false.)
       current_label = label_bak
-      call simul_box_atoms_in_box(lead_sb(il), lead_geo(il))
+      call simul_box_atoms_in_box(lead_sb(il), lead_geo(il), .true.)
     end do
 
     ! Merge the geometries of the lead and of the central region.

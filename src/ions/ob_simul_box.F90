@@ -171,7 +171,7 @@ contains
       current_label = sb%lead_dataset(il)
       call geometry_init(lead_geo(il), print_info=.false.)
       current_label = label_bak
-      call simul_box_atoms_in_box(sb%sb_lead_unit_cell(il), lead_geo(il))
+      call simul_box_atoms_in_box(sb%sb_lead_unit_cell(il), lead_geo(il), .true.)
     end do
 
     ! Merge the geometries of the lead and of the central region.
