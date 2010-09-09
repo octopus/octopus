@@ -191,6 +191,7 @@ contains
 
   contains
 
+
     !--------------------------------------------------------------
     subroutine read_misc()
 
@@ -536,6 +537,7 @@ contains
       POP_SUB(simul_box_init.read_box)
     end subroutine read_box
 
+
     !--------------------------------------------------------------
     subroutine read_box_offset()
       integer :: idir
@@ -565,8 +567,8 @@ contains
       POP_SUB(simul_box_init.read_box_offset)
     end subroutine read_box_offset
 
-    ! ------------------------------------------------------------
 
+    ! ------------------------------------------------------------
     subroutine sb_lookup_init()
       FLOAT, allocatable :: pos(:, :)
       integer :: iatom
@@ -585,8 +587,8 @@ contains
 
   end subroutine simul_box_init
 
-  !--------------------------------------------------------------
 
+  !--------------------------------------------------------------
   subroutine simul_box_build_lattice(sb, rlattice_primitive)
     type(simul_box_t), intent(inout) :: sb
     FLOAT,   optional, intent(in)    :: rlattice_primitive(:,:)
@@ -660,11 +662,11 @@ contains
     POP_SUB(simul_box_build_lattice)
   end subroutine simul_box_build_lattice
 
-  
 
   !> This function checks that the atoms are inside the box. If not:
   !! if the system is periodic, the atoms are moved inside the box.
   !! if the system is finite, nothing happens.
+  ! ---------------------------------------------------------
   subroutine simul_box_atoms_in_box(sb, geo)
     type(simul_box_t), intent(in)    :: sb
     type(geometry_t),  intent(inout) :: geo
@@ -1017,6 +1019,7 @@ contains
 
   end function simul_box_is_periodic
 
+
   !--------------------------------------------------------------
   logical pure function simul_box_has_zero_bc(sb)
     type(simul_box_t), intent(in) :: sb
@@ -1024,6 +1027,7 @@ contains
     simul_box_has_zero_bc = .not. simul_box_is_periodic(sb)
     
   end function simul_box_has_zero_bc
+
   
   !--------------------------------------------------------------
   subroutine simul_box_dump(sb, iunit)
@@ -1073,6 +1077,7 @@ contains
 
     POP_SUB(simul_box_dump)
   end subroutine simul_box_dump
+
 
   ! --------------------------------------------------------------
   subroutine simul_box_init_from_file(sb, iunit)
@@ -1156,6 +1161,7 @@ contains
     POP_SUB(simul_box_init_from_file)
   end subroutine simul_box_init_from_file
 
+
   ! --------------------------------------------------------------
   recursive subroutine simul_box_copy(sbout, sbin)
     type(simul_box_t), intent(out) :: sbout
@@ -1197,6 +1203,7 @@ contains
 
     POP_SUB(simul_box_copy)
   end subroutine simul_box_copy
+
 
   !--------------------------------------------------------------
   subroutine ob_simul_box_init(sb, transport_mode, lead_sb, lead_info, geo)
@@ -1304,6 +1311,7 @@ contains
 
     POP_SUB(ob_read_lead_unit_cells)
   end subroutine ob_read_lead_unit_cells
+
 
   !--------------------------------------------------------------
   ! Read the coordinates of the leads atoms and add them to the
