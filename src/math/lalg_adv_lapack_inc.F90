@@ -63,7 +63,7 @@ subroutine dcholesky(n, a, bof, err_code)
   call lapack_potrf('U', n, a(1, 1), n, info)
   if(info.ne.0) then
     if(bof_) then
-      write(message(1), '(a,i5)') 'In dcholesky, LAPACK Xpotrf returned error message ', info
+      write(message(1), '(3a,i5)') 'In dcholesky, LAPACK ', TOSTRING(DLAPACK(potrf)), ' returned error message ', info
       call write_fatal(1)
     else
       if(present(bof)) then
@@ -108,7 +108,7 @@ subroutine zcholesky(n, a, bof, err_code)
 
   if(info.ne.0) then
     if(bof_) then
-      write(message(1), '(a,i5)') 'In zcholesky, LAPACK Xpotrf returned error message ', info
+      write(message(1), '(3a,i5)') 'In zcholesky, LAPACK ', TOSTRING(ZLAPACK(potrf)), ' returned error message ', info
       call write_fatal(1)
     else
       if(present(bof)) then
@@ -176,7 +176,7 @@ subroutine dgeneigensolve(n, a, b, e, bof, err_code)
 
   if(info.ne.0) then
     if(bof_) then
-      write(message(1),'(a,i5)') 'In dgeneigensolve, LAPACK Xsygv returned error message ', info
+      write(message(1),'(3a,i5)') 'In dgeneigensolve, LAPACK ', TOSTRING(DLAPACK(sygv)), ' returned error message ', info
       call write_fatal(1)
     else
       if(present(bof)) then
@@ -247,7 +247,7 @@ subroutine zgeneigensolve(n, a, b, e, bof, err_code)
 
   if(info.ne.0) then
     if(bof_) then
-      write(message(1),'(a,i5)') 'In zgeneigensolve, LAPACK Xhegv returned error message ', info
+      write(message(1),'(3a,i5)') 'In zgeneigensolve, LAPACK ', TOSTRING(ZLAPACK(hegv)), ' returned error message ', info
       call write_fatal(1)
     else
       if(present(bof)) then
@@ -327,7 +327,7 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side)
   SAFE_DEALLOCATE_A(vl)
 
   if(info.ne.0) then
-    write(message(1),'(a,i5)') 'In zeigensolve_nonh, LAPACK zgeev returned error message ', info
+    write(message(1),'(3a,i5)') 'In zeigensolve_nonh, LAPACK ', TOSTRING(ZLAPACK(geev)), ' returned error message ', info
     call write_fatal(1)
   end if
   if(present(err_code)) then
@@ -396,7 +396,7 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
   SAFE_DEALLOCATE_A(vl)
 
   if(info.ne.0) then
-    write(message(1),'(a,i5)') 'In deigensolve_nonh, LAPACK dgeev returned error message ', info
+    write(message(1),'(3a,i5)') 'In deigensolve_nonh, LAPACK ', TOSTRING(DLAPACK(geev)), ' returned error message ', info
     call write_fatal(1)
   end if
   if(present(err_code)) then
@@ -461,7 +461,7 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
 
   if(info.ne.0) then
     if(bof_) then
-      write(message(1),'(a,i5)') 'In dlowest_geneigensolve, LAPACK Xsygvx returned error message ', info
+      write(message(1),'(3a,i5)') 'In dlowest_geneigensolve, LAPACK ', TOSTRING(DLAPACK(sygvx)), ' returned error message ', info
       call write_fatal(1)
     else
       if(present(bof)) then
@@ -536,7 +536,7 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
 
   if(info.ne.0) then
     if(bof_) then
-      write(message(1),'(a,i5)') 'In zlowest_geneigensolve, LAPACK Xhegvx returned error message ', info
+      write(message(1),'(3a,i5)') 'In zlowest_geneigensolve, LAPACK ', TOSTRING(ZLAPACK(hegvx)), ' returned error message ', info
       call write_fatal(1)
     else
       if(present(bof)) then
@@ -584,7 +584,7 @@ subroutine deigensolve(n, a, e, bof, err_code)
 
   if(info.ne.0) then
     if(bof_) then
-      write(message(1),'(a,i5)') 'In deigensolve, LAPACK Xsyev returned error message ', info
+      write(message(1),'(3a,i5)') 'In deigensolve, LAPACK ', TOSTRING(DLAPACK(syev)), ' returned error message ', info
       call write_fatal(1)
     else
       if(present(bof)) then
@@ -636,7 +636,7 @@ subroutine zeigensolve(n, a, e, bof, err_code)
 
   if(info.ne.0) then
     if(bof_) then
-      write(message(1),'(a,i5)') 'In zeigensolve, LAPACK Xheev returned error message ', info
+      write(message(1),'(3a,i5)') 'In zeigensolve, LAPACK ', TOSTRING(ZLAPACK(heev)), ' returned error message ', info
       call write_fatal(1)
     else
       if(present(bof)) then
@@ -700,8 +700,8 @@ subroutine dlowest_eigensolve(k, n, a, e, v)
   SAFE_DEALLOCATE_A(work)
 
   if(info.ne.0) then
-    write(message(1),'(a,i5)') &
-      'In dlowest_eigensolve, LAPACK Xsygvx returned error message ', info
+    write(message(1),'(3a,i5)') &
+      'In dlowest_eigensolve, LAPACK ', TOSTRING(DLAPACK(syevx)), ' returned error message ', info
     call write_fatal(1)
   end if
 
@@ -753,8 +753,8 @@ subroutine zlowest_eigensolve(k, n, a, e, v)
   SAFE_DEALLOCATE_A(work)
 
   if(info.ne.0) then
-    write(message(1),'(a,i5)') &
-      'In zlowest_eigensolve, LAPACK Xsygvx returned error message ', info
+    write(message(1),'(3a,i5)') &
+      'In zlowest_eigensolve, LAPACK ', TOSTRING(ZLAPACK(heevx)), ' returned error message ', info
     call write_fatal(1)
   end if
 
@@ -798,7 +798,7 @@ FLOAT function ddeterminant(n, a, invert) result(d)
 
   call DLAPACK(getrf)(n, n, a(1, 1), n, ipiv(1), info)
   if(info < 0) then
-    write(message(1), '(a, i3)') 'In ddeterminant, LAPACK dgetrf returned info = ', info
+    write(message(1), '(3a, i3)') 'In ddeterminant, LAPACK ', TOSTRING(DLAPACK(getrf)), ' returned info = ', info
     call write_fatal(1)
   end if
 
@@ -815,7 +815,7 @@ FLOAT function ddeterminant(n, a, invert) result(d)
   if(invert_) then
     call DLAPACK(getri)(n, a(1, 1), n, ipiv(1), work(1), n, info)
     if(info /= 0) then
-      write(message(1), '(a, i3)') 'In ddeterminant, LAPACK dgetri returned info = ', info
+      write(message(1), '(3a, i3)') 'In ddeterminant, LAPACK ', TOSTRING(DLAPACK(getri)), ' returned info = ', info
       call write_fatal(1)
     end if
   end if
@@ -862,7 +862,7 @@ CMPLX function zdeterminant(n, a, invert) result(d)
 
   call ZLAPACK(getrf)(n, n, a(1, 1), n, ipiv(1), info)
   if(info < 0) then
-    write(message(1), '(a, i3)') 'In zdeterminant, LAPACK dgetrf returned info = ', info
+    write(message(1), '(3a, i3)') 'In zdeterminant, LAPACK ', TOSTRING(ZLAPACK(getrf)), ' returned info = ', info
     call write_fatal(1)
   end if
 
@@ -879,7 +879,7 @@ CMPLX function zdeterminant(n, a, invert) result(d)
   if(invert_) then
     call ZLAPACK(getri)(n, a(1, 1), n, ipiv(1), work(1), n, info)
     if(info /= 0) then
-      write(message(1), '(a, i3)') 'In zdeterminant, LAPACK dgetri returned info = ', info
+      write(message(1), '(3a, i3)') 'In zdeterminant, LAPACK ', TOSTRING(ZLAPACK(getri)), ' returned info = ', info
       call write_fatal(1)
     end if
   end if
@@ -927,13 +927,13 @@ subroutine dsym_inverter(uplo, n, a)
 
   call DLAPACK(sytrf)(uplo, n, a, n, ipiv, work, n, info)
   if(info < 0) then
-    write(message(1), '(a, i3)') 'In dsym_inverter, LAPACK dsytrf returned info = ', info
+    write(message(1), '(3a, i3)') 'In dsym_inverter, LAPACK ', TOSTRING(DLAPACK(sytrf)), ' returned info = ', info
     call write_fatal(1)
   end if
 
   call DLAPACK(sytri)(uplo, n, a, n, ipiv, work, info)
   if(info /= 0) then
-    write(message(1), '(a, i3)') 'In dsym_inverter, LAPACK dsytri returned info = ', info
+    write(message(1), '(3a, i3)') 'In dsym_inverter, LAPACK ', TOSTRING(DLAPACK(sytri)), ' returned info = ', info
     call write_fatal(1)
   end if
 
@@ -979,13 +979,13 @@ subroutine zsym_inverter(uplo, n, a)
   SAFE_ALLOCATE(ipiv(1:n))
   call ZLAPACK(sytrf)(uplo, n, a, n, ipiv, work, n, info)
   if(info < 0) then
-    write(message(1), '(a, i3)') 'In zsym_inverter, LAPACK zsytrf returned info = ', info
+    write(message(1), '(3a, i3)') 'In zsym_inverter, LAPACK ', TOSTRING(ZLAPACK(sytrf)), ' returned info = ', info
     call write_fatal(1)
   end if
 
   call ZLAPACK(sytri)(uplo, n, a, n, ipiv, work, info)
   if(info /= 0) then
-    write(message(1), '(a, i3)') 'In zsym_inverter, LAPACK zsytri returned info = ', info
+    write(message(1), '(3a, i3)') 'In zsym_inverter, LAPACK ', TOSTRING(ZLAPACK(zsytri)), ' returned info = ', info
     call write_fatal(1)
   end if
 
@@ -1038,7 +1038,7 @@ subroutine dlinsyssolve(n, nhrs, a, b, x)
     rcond, ferr(1), berr(1), work(1), iwork(1), info)
 
   if(info /= 0) then
-    write(message(1), '(a, i3)') 'In dlinsyssolve, LAPACK (d|s)gesvx returned info = ', info
+    write(message(1), '(3a, i3)') 'In dlinsyssolve, LAPACK ', TOSTRING(DLAPACK(gesvx)), ' returned info = ', info
     if(info == n+1) then
       message(2) = '(reciprocal of the condition number is less than machine precision)'
       call write_warning(2)
@@ -1107,7 +1107,7 @@ subroutine zlinsyssolve(n, nhrs, a, b, x)
   call ZLAPACK(gesvx) ("N", "N", n, nhrs, a(1, 1), n, af(1, 1), n, ipiv(1), equed, r(1), c(1), b(1, 1), n, x(1, 1), n, &
     rcond, ferr(1), berr(1), work(1), rwork(1), info)
   if(info /= 0) then
-    write(message(1), '(a, i3)') 'In zlinsyssolve, LAPACK zgesvx returned info = ', info
+    write(message(1), '(3a, i3)') 'In zlinsyssolve, LAPACK ', TOSTRING(ZLAPACK(gesvx)), ' returned info = ', info
     call write_fatal(1)
   end if
 
@@ -1165,7 +1165,7 @@ subroutine zsingular_value_decomp(n, a, u, vt, sg_values)
     'A', 'A', m, n, a(1, 1), m, sg_values(1), u(1, 1), m, vt(1, 1), n, work(1), lwork, rwork(1), info )
 
   if(info /= 0) then
-    write(message(1), '(a, i3)') 'In zsingular_value_decomp, LAPACK zgesvd returned info = ', info
+    write(message(1), '(3a, i3)') 'In zsingular_value_decomp, LAPACK ', TOSTRING(LAPACK(gesvd)), ' returned info = ', info
     call write_fatal(1)
   end if
 
@@ -1249,8 +1249,8 @@ subroutine dinvert_upper_triangular(n, a)
   call DLAPACK(trtri)('U', 'N', n, a(1, 1), n, info)
 
   if(info.ne.0) then
-    write(message(1), '(a,i5)') &
-      'In dinvert_upper_triangular, LAPACK Xtrtri returned error message ', info
+    write(message(1), '(3a,i5)') &
+      'In dinvert_upper_triangular, LAPACK ', TOSTRING(DLAPACK(trtri)), ' returned error message ', info
     call write_fatal(1)
   end if
 
@@ -1283,8 +1283,8 @@ subroutine zinvert_upper_triangular(n, a)
   call ZLAPACK(trtri)('U', 'N', n, a(1, 1), n, info)
 
   if(info.ne.0) then
-    write(message(1), '(a,i5)') &
-      'In zinvert_upper_triangular, LAPACK Xtrtri returned error message ', info
+    write(message(1), '(3a,i5)') &
+      'In zinvert_upper_triangular, LAPACK ', TOSTRING(ZLAPACK(trtri)), ' returned error message ', info
     call write_fatal(1)
   end if
 
@@ -1316,8 +1316,8 @@ subroutine dinvert_lower_triangular(n, a)
   call DLAPACK(trtri)('L', 'N', n, a(1, 1), n, info)
 
   if(info.ne.0) then
-    write(message(1), '(a,i5)') &
-      'In dinvert_lower_triangular, LAPACK Xtrtri returned error message ', info
+    write(message(1), '(3a,i5)') &
+      'In dinvert_lower_triangular, LAPACK ', TOSTRING(DLAPACK(trtri)), ' returned error message ', info
     call write_fatal(1)
   end if
 
@@ -1349,8 +1349,8 @@ subroutine zinvert_lower_triangular(n, a)
   call ZLAPACK(trtri)('L', 'N', n, a(1, 1), n, info)
 
   if(info.ne.0) then
-    write(message(1), '(a,i5)') &
-      'In zinvert_lower_triangular, LAPACK Xtrtri returned error message ', info
+    write(message(1), '(3a,i5)') &
+      'In zinvert_lower_triangular, LAPACK ', TOSTRING(ZLAPACK(trtri)), ' returned error message ', info
     call write_fatal(1)
   end if
 
