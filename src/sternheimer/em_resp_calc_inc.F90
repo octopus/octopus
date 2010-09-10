@@ -250,7 +250,6 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 end subroutine X(lr_calc_elf)
 
 
-
 ! ---------------------------------------------------------
 subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, ndir)
   type(system_t),         intent(inout) :: sys
@@ -267,9 +266,9 @@ subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, n
   CMPLX :: zpol_temp(1:MAX_DIM, 1:MAX_DIM)
 #endif
 
-  mesh => sys%gr%mesh
-
   PUSH_SUB(X(calc_polarizability_periodic))
+
+  mesh => sys%gr%mesh
 
   ndir_ = mesh%sb%dim
   if(present(ndir)) ndir_ = ndir
