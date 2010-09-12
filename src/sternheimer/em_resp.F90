@@ -124,6 +124,12 @@ contains
 
     call parse_input()
 
+    if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC .and. &
+      any(abs(em_vars%omega(1:em_vars%nomega)) > M_EPSILON)) then
+      message(1) = "Dynamical magnetic response not implemented."
+      call write_fatal(1)
+    endif
+
     complex_response = (em_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
     call restart_look_and_read(sys%st, sys%gr, sys%geo, is_complex = complex_response)
 
