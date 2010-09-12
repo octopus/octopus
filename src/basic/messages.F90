@@ -635,7 +635,7 @@ contains
     integer, intent(inout) :: sec
     integer, intent(inout) :: usec
 
-    ! this is called by push/pop so there can not be a push/pop in this routine
+    ! this is called by push/pop so there cannot be a push/pop in this routine
 
     call time_diff(s_epoch_sec, s_epoch_usec, sec, usec)
   end subroutine epoch_time_diff
@@ -650,7 +650,7 @@ contains
     integer, intent(inout) :: sec2
     integer, intent(inout) :: usec2
 
-    ! this is called by push/pop so there can not be a push/pop in this routine
+    ! this is called by push/pop so there cannot be a push/pop in this routine
 
     ! Correct overflow.
     if(usec2 - usec1 .lt. 0) then
