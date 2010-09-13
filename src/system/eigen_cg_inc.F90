@@ -92,7 +92,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
     end if
 
     ! Calculate starting gradient: |hpsi> = H|psi>
-    call X(hamiltonian_apply)(hm, gr%der, st%X(psi)(:,:, p, ik) , h_psi, p, ik)
+    call X(hamiltonian_apply)(hm, gr%der, st%X(psi)(:,:, p, ik), h_psi, p, ik)
 
     ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
     st%eigenval(p, ik) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:,:, p, ik), h_psi))
@@ -264,6 +264,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   POP_SUB(X(eigensolver_cg2))
 end subroutine X(eigensolver_cg2)
 
+
 ! ---------------------------------------------------------
 !> The algorithm is essentially taken from Jiang et al. Phys. Rev. B 68, 165337 (2003).
 subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, verbose)
@@ -287,7 +288,8 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
 
   PUSH_SUB(X(eigensolver_cg2_new))
 
-  verbose_ = .false.; if(present(verbose)) verbose_ = verbose
+  verbose_ = .false.
+  if(present(verbose)) verbose_ = verbose
 
   if(verbose_) then
     call messages_print_stress(stdout, "CG Info")

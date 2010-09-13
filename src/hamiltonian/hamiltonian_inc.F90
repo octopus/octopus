@@ -54,7 +54,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
   kinetic_only_ = (ieor(terms_, TERM_KINETIC) == 0)
   
-  if(present(time).and.hm%d%cdft) then
+  if(present(time) .and. hm%d%cdft) then
     message(1) = "TDCDFT not yet implemented."
     call write_fatal(1)
   end if
@@ -219,8 +219,8 @@ contains
 
 end subroutine X(hamiltonian_apply_batch)
 
-! ---------------------------------------------------------
 
+! ---------------------------------------------------------
 subroutine X(get_grad)(hm, der, psi, grad)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
@@ -242,6 +242,7 @@ subroutine X(get_grad)(hm, der, psi, grad)
   POP_SUB(X(get_grad))
 end subroutine X(get_grad)       
 
+
 ! ---------------------------------------------------------
 subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, terms)
   type(hamiltonian_t), intent(in)    :: hm
@@ -262,14 +263,25 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, terms)
   call batch_init(hpsib, hm%d%dim, 1)
   call batch_add_state(hpsib, ist, hpsi)
 
-  call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time, terms = terms)
+  if(present(time)) then
+    if(present(terms)) then
+      call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time, terms = terms)
+    else
+      call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time)
+    endif
+  else
+    if(present(terms)) then
+      call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, terms = terms)
+    else
+      call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik)
+    endif
+  endif
 
   call batch_end(psib)
   call batch_end(hpsib)
 
   POP_SUB(X(hamiltonian_apply))
 end subroutine X(hamiltonian_apply)
-! ---------------------------------------------------------
 
 
 ! ---------------------------------------------------------
@@ -288,7 +300,11 @@ subroutine X(hamiltonian_apply_all) (hm, der, psi, hpsi, time)
   do ik = psi%d%kpt%start, psi%d%kpt%end
     call batch_init(psib, hm%d%dim, psi%st_start, psi%st_end, psi%X(psi)(:, :, :, ik))
     call batch_init(hpsib, hm%d%dim, hpsi%st_start, hpsi%st_end, hpsi%X(psi)(:, :, :, ik))
-    call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time)
+    if(present(time)) then
+      call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time)
+    else
+      call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik)
+    endif
     call batch_end(psib)
     call batch_end(hpsib)
   end do
@@ -297,7 +313,6 @@ subroutine X(hamiltonian_apply_all) (hm, der, psi, hpsi, time)
 
   POP_SUB(X(hamiltonian_apply_all))
 end subroutine X(hamiltonian_apply_all)
-! ---------------------------------------------------------
 
 
 ! ---------------------------------------------------------
@@ -351,7 +366,6 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik)
   SAFE_DEALLOCATE_A(pot)
   POP_SUB(X(exchange_operator))
 end subroutine X(exchange_operator)
-! ---------------------------------------------------------
 
 
 ! ---------------------------------------------------------
@@ -401,7 +415,6 @@ subroutine X(oct_exchange_operator_all) (hm, der, psi, hpsi)
   SAFE_DEALLOCATE_A(pot)
   POP_SUB(X(oct_exchange_operator_all))
 end subroutine X(oct_exchange_operator_all)
-! ---------------------------------------------------------
 
 
 ! ---------------------------------------------------------
@@ -457,8 +470,8 @@ subroutine X(oct_exchange_operator) (hm, der, psi, hpsi, ik)
   POP_SUB(X(oct_exchange_operator))
 end subroutine X(oct_exchange_operator)
 
-! ---------------------------------------------------------
 
+! ---------------------------------------------------------
 subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
@@ -510,6 +523,7 @@ subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
   SAFE_DEALLOCATE_A(aux2psi)
   POP_SUB(X(magnus))
 end subroutine X(magnus)
+
 
 ! ---------------------------------------------------------
 subroutine X(vborders) (der, hm, psi, hpsi)
@@ -593,6 +607,7 @@ subroutine X(vmask) (gr, hm, st)
 
   POP_SUB(X(vmask))
 end subroutine X(vmask)
+
 
 ! ---------------------------------------------------------
 subroutine X(hamiltonian_diagonal) (hm, der, diag, ik)
