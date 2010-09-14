@@ -33,6 +33,19 @@ __m128d a __attribute__((aligned(16)));
 AC_MSG_RESULT($acx_m128d)])
 
 ################################################################
+# Check whether the compiler accepts the __m256d type
+# ----------------------------------
+AC_DEFUN([ACX_M256D],
+[AC_MSG_CHECKING([whether the compiler accepts the __m256d type])
+AC_LINK_IFELSE( AC_LANG_PROGRAM( [
+#include <immintrin.h>
+], [
+__m256d a __attribute__((aligned(16)));
+ ]), 
+ [AC_DEFINE(HAVE_M256D, 1, [compiler supports the m256d type]) [acx_m256d=yes]], [acx_m256d=no])
+AC_MSG_RESULT($acx_m256d)])
+
+################################################################
 # Check whether the compiler accepts Blue Gene extensions
 # ----------------------------------
 AC_DEFUN([ACX_BLUE_GENE],
@@ -61,9 +74,14 @@ blue_gene=no
 case "${host}" in
 x86_64*)
 ACX_M128D
+ACX_M256D
 oct_arch=x86_64
-vector=$acx_m128d
-vector_type="(sse2)"
+vector=$acx_m256d
+vector_type="(avx)"
+if test x$vector = xno ; then
+ vector=$acx_m128d
+ vector_type="(sse2)"
+fi
 assembler=no
 AC_DEFINE(OCT_ARCH_X86_64, 1, [This an x86_64 system])
 ;;
