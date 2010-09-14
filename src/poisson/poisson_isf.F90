@@ -53,9 +53,6 @@ module poisson_isf_m
   integer, parameter :: domain = 3
   integer, parameter :: n_cnf = 3
 
-  ! Save the original MPI group
-  type(mpi_grp_t) :: mpi_world_orig
-
   type(dcf_t)                  :: rho_cf
   type(isf_cnf_t)              :: cnf(1:4)
   integer, parameter           :: order_scaling_function = 8 
@@ -96,11 +93,10 @@ contains
     integer :: n(3)
     integer :: i_cnf
     logical :: init_world_
-	integer :: default_nodes
-	type(mpi_grp_t) :: specific_grp
-	integer :: ierr, world_grp, poisson_grp, ii
-	integer :: ranks(1000)
-	!data ranks /0, 1/
+    integer :: default_nodes
+    integer :: ierr, world_grp, poisson_grp, ii
+    integer, allocatable :: ranks(:)
+    !data ranks /0, 1/
 #endif
 	integer :: nodes 	!< -1 = one node
 	  				 	!! 0 = all nodes
@@ -133,49 +129,52 @@ contains
     end if
 #if defined(HAVE_MPI)
 
+    ! Allocate to configurations. The initialisation, especially the kernel,
+    ! depends on the number of nodes used for the calculations. To avoid
+    ! recalculating the kernel on each call of poisson_isf_solve depending on
+    ! the all_nodes argument, both kernels are calculated.
+    cnf(domain)%mpi_grp = mesh%mpi_grp
+    
+    ! For the world configuration we build a new communicator
+
     default_nodes = 0 !All nodes
 
     !%Variable PoissonSolverNodes
     !%Type integer
     !%Section Hamiltonian::Poisson
-    !%Default all_nodes
+    !%Default 0
     !%Description
-    !% How many nodes to use to solve the Poisson equation. Special values:
-    !% -2 = only domain nodes. -1 = serial. 0 = all available MPI nodes.
-    !% Integers 1 or greater specify the actual number of nodes to use.
+    !% How many nodes to use to solve the Poisson equation. A value of
+    !% 0, the default, implies that all available nodes are used.
     !%End
     call parse_integer(datasets_check('PoissonSolverNodes'), default_nodes, nodes)
-    if (nodes >= 1) then    
-      do ii = 1,nodes
-        ranks(ii)=ii-1
-      end do
-      !create new communicator
-      !Extract the original group handle and create new comm.
-      call MPI_Comm_group(mpi_world%comm, world_grp, ierr)
-      call MPI_Group_incl(world_grp, nodes, ranks, poisson_grp, ierr)
-      call MPI_Comm_create(mpi_world%comm,poisson_grp,specific_grp%comm,ierr)
-      !Fill the new data structure, for all nodes
-      if (mpi_world%rank < nodes) then
-        call MPI_Comm_rank(specific_grp%comm,specific_grp%rank,ierr)
-        call MPI_Comm_size(specific_grp%comm,specific_grp%size,ierr)
-      else
-        specific_grp%comm = -1
-        specific_grp%rank = -1
-        specific_grp%size = -1
-      end if
-    end if
-    ! Allocate to configurations. The initialisation, especially the kernel,
-    ! depends on the number of nodes used for the calculations. To avoid
-    ! recalculating the kernel on each call of poisson_isf_solve depending on
-    ! the all_nodes argument, both kernels are calculated.
-    mpi_world_orig = mpi_world
-    if (nodes >= 1) then
-      cnf(world)%mpi_grp = specific_grp
-    else
-      cnf(world)%mpi_grp = mpi_world
-    end if
-    cnf(domain)%mpi_grp = mesh%mpi_grp
     
+    if(nodes <= 0 .or. nodes > mpi_world%size) nodes = mpi_world%size
+
+    SAFE_ALLOCATE(ranks(1:nodes))
+    
+    do ii = 1, nodes
+      ranks(ii) = ii - 1
+    end do
+    
+    !create a new communicator
+    !Extract the original group handle and create new comm.
+    call MPI_Comm_group(mpi_world%comm, world_grp, ierr)
+    call MPI_Group_incl(world_grp, nodes, ranks(1), poisson_grp, ierr)
+    call MPI_Comm_create(mpi_world%comm, poisson_grp, cnf(world)%mpi_grp%comm, ierr)
+    
+    SAFE_DEALLOCATE_A(ranks)
+    
+    !Fill the new data structure, for all nodes
+    if (cnf(world)%mpi_grp%comm /= MPI_COMM_NULL) then
+      call MPI_Comm_rank(cnf(world)%mpi_grp%comm, cnf(world)%mpi_grp%rank, ierr)
+      call MPI_Comm_size(cnf(world)%mpi_grp%comm, cnf(world)%mpi_grp%size, ierr)
+    else
+      cnf(world)%mpi_grp%comm = -1
+      cnf(world)%mpi_grp%rank = -1
+      cnf(world)%mpi_grp%size = -1
+    end if
+
     ! Build the kernel for all configurations. At the moment, this is
     ! solving the poisson equation with all nodes (i_cnf == world) and
     ! with the domain nodes only (i_cnf == domain).
@@ -342,6 +341,7 @@ contains
     do i_cnf = 1, n_cnf
       SAFE_DEALLOCATE_P(cnf(i_cnf)%kernel)
     end do
+    call MPI_Comm_free(cnf(world)%mpi_grp%comm, mpi_err)
 #else
     SAFE_DEALLOCATE_P(cnf(serial)%kernel)
 #endif
