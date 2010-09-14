@@ -26,7 +26,22 @@
 
 #ifdef HAVE_VEC
 
-#ifdef HAVE_M128D
+#ifdef HAVE_M256D
+#include <immintrin.h>
+#define VEC_SIZE 4
+#define VEC_TYPE __m256d
+#define VEC_LD(addr) _mm256_load_pd(addr)
+#define VEC_LDU(addr) _mm256_loadu_pd(addr)
+#define VEC_ST(addr, vec)  _mm256_store_pd(addr, vec)
+#define VEC_STU(addr, vec)  _mm256_storeu_pd(addr, vec)
+#define VEC_FMA(aa, bb, cc) _mm256_add_pd(cc, _mm256_mul_pd(aa, bb))
+#define VEC_SCAL(aa) _mm256_set1_pd(aa)
+#define VEC_ZERO _mm256_setzero_pd()
+
+#define DEPTH 16
+#endif
+
+#if !defined(HAVE_M256D) && defined(HAVE_M128D)
 #include <emmintrin.h>
 #define VEC_SIZE 2
 #define VEC_TYPE __m128d
