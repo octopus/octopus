@@ -154,7 +154,7 @@ contains
     type(simul_box_t),   intent(in)  :: sb
     logical,             intent(in)  :: use_curvilinear
 
-    integer :: i
+    integer :: idir
 
     PUSH_SUB(derivatives_init)
 
@@ -255,8 +255,8 @@ contains
 
     ! find out how many ghost points we need in each dimension
     der%n_ghost(:) = 0
-    do i = 1, der%dim
-      der%n_ghost(i) = maxval(abs(der%lapl%stencil%points(i,:)))
+    do idir = 1, der%dim
+      der%n_ghost(idir) = maxval(abs(der%lapl%stencil%points(idir, :)))
     end do
 
     nullify(der%coarser)

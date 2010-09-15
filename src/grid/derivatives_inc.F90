@@ -645,7 +645,7 @@ subroutine X(derivatives_test)(this)
     call batch_pack(opffb, copy = .false.)
   end if
 
-  call X(derivatives_batch_perform)(this%lapl, this, ffb, opffb, set_bc = .false.)
+  call X(derivatives_batch_perform)(this%lapl, this, ffb, opffb, ghost_update = .false., set_bc = .false.)
 
   if(packstates) then
     call batch_unpack(ffb, copy = .false.)
@@ -666,7 +666,7 @@ subroutine X(derivatives_test)(this)
   call X(batch_delete)(opffb)
   call batch_end(opffb)
 
-  call X(derivatives_grad)(this, ff, opff, set_bc = .false.)
+  call X(derivatives_grad)(this, ff, opff, ghost_update = .false., set_bc = .false.)
 
   forall(idir = 1:this%mesh%sb%dim, ip = 1:this%mesh%np) 
     opff(ip, idir) = opff(ip, idir) - (-M_TWO*aa*bb*this%mesh%x(ip, idir)*exp(-aa*sum(this%mesh%x(ip, :)**2)))

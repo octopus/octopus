@@ -67,14 +67,13 @@ program oct_test
   !%Option hartree_test 1
   !% Tests the various Hartree solvers.
   !%Option derivatives 2
-  !% Tests the implementation of the finite difference operators, used to calculate derivatives.
+  !% Tests the implementation of the finite-difference operators, used to calculate derivatives.
   !%End
   call parse_integer('WhichTest', HARTREE_TEST, which_test)
-  !if(.not.varinfo_valid_option('CalculationMode', calc_mode)) call input_error('CalculationMode')
   call datasets_init(which_test)
 
   call parse_integer(datasets_check('Dimensions'), 3, calc_dim)
-  if( calc_dim > 3 .or. calc_dim < 1) call input_error('Dimensions')
+  if(calc_dim > 3 .or. calc_dim < 1) call input_error('Dimensions')
 
   call io_init()
   call profiling_init()
@@ -101,6 +100,7 @@ program oct_test
 
   contains
 
+! ---------------------------------------------------------
   subroutine test_hartree
     type(system_t) :: sys
 
@@ -110,6 +110,8 @@ program oct_test
 
   end subroutine test_hartree
 
+
+! ---------------------------------------------------------
   subroutine test_derivatives()
     type(system_t) :: sys
 
@@ -124,10 +126,10 @@ program oct_test
 
     !%Variable TestDerivatives
     !%Type integer
-    !%Default hartree_test
+    !%Default all
     !%Section Utilities::oct-test
     !%Description
-    !% Decides what derivatives test should be performed, the default is all.
+    !% Decides what derivatives test should be performed.
     !%Option real 1
     !% Tests derivatives for real functions.
     !%Option complex 2
@@ -137,7 +139,7 @@ program oct_test
     !%End
     call parse_integer('TestDerivatives', TEST_ALL, test)
 
-    message(1) = 'Info: Testing the finite-differences derivatives'
+    message(1) = 'Info: Testing the finite-differences derivatives.'
     message(2) = ''
     call write_info(2)
 
