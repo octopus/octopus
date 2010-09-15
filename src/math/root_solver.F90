@@ -194,27 +194,6 @@ contains
 
 
   ! ---------------------------------------------------------
-!!$subroutine droot_brent(rs, func, root, interval)
-!!$  type(root_solver_t), intent(in)  :: rs
-!!$  FLOAT,                  intent(out) :: root
-!!$  FLOAT,  optional,       intent(in)  :: interval(2)     ! lower and upper boundary of search region
-!!$
-!!$  interface
-!!$     subroutine func(x,s)
-!!$       FLOAT :: x,s
-!!$     end subroutine func
-!!$  end interface
-!!$
-!!$  PUSH_SUB(droot_brent)
-!!$
-!!$  message(1) = 'Error: Not implemented yet.'
-!!$  call write_fatal(1)
-!!$
-!!$  POP_SUB(droot_brent)
-!!$end subroutine droot_brent
-
-
-  ! ---------------------------------------------------------
   ! Implementation of J. Comp. Phys., 8, (1971), p. 304-308
   subroutine zroot_watterstrom(rs, roots, coeff)
     type(root_solver_t), intent(in)  :: rs
