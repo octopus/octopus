@@ -150,8 +150,14 @@
 
 #define INCR(x, y) x = (x) + (y)
 
-#define PUSH_SUB(routine) if(in_debug_mode) call push_sub(__FILE__//"."//TOSTRING(routine))
-#define POP_SUB(routine)  if(in_debug_mode) call pop_sub(__FILE__//"."//TOSTRING(routine))
+#define PUSH_SUB(routine) \
+  if(in_debug_mode) then; _newline_ \
+    call push_sub(__FILE__//"."//TOSTRING(routine)); _newline_ \
+  endif
+#define POP_SUB(routine) \
+  if(in_debug_mode) then; _newline_ \
+    call pop_sub(__FILE__//"."//TOSTRING(routine)); _newline_ \
+  endif
 
 !! Local Variables:
 !! mode: f90
