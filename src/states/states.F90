@@ -98,6 +98,7 @@ module states_m
     states_freeze_orbitals,           &
     states_total_density,             &
     states_init_self_energy,          &
+    states_init_block,                &
     states_write_proj_lead_wf,        &
     states_read_proj_lead_wf
 
@@ -132,6 +133,7 @@ module states_m
     integer                  :: nblocks               !< The number of blocks
     integer, pointer         :: iblock(:, :)          !< A map, that for each state index, returns the index of block that contains it. 
     logical, pointer         :: block_is_local(:, :)  !< It is true if the block is in this node.
+    logical                  :: block_initialized     !< For keeping track of the blocks to avoid memory leaks
 
     logical             :: open_boundaries
     CMPLX, pointer      :: zphi(:, :, :, :)  !< Free states for open-boundary calculations.
@@ -206,11 +208,14 @@ contains
     end do
     nullify(st%ob_eigenval, st%ob_occ)
     nullify(st%occ, st%spin, st%node, st%user_def_states)
-    nullify(st%d%kweights)
+    nullify(st%d%kweights, st%ob_d%kweights)
     nullify(st%st_range, st%st_num)
+    nullify(st%psib, st%iblock, st%block_is_local)
 
     ! By default, calculations use real wavefunctions
     st%priv%wfs_type = TYPE_FLOAT
+
+    st%block_initialized = .false.
 
     call modelmb_particles_nullify(st%modelmbparticles)
 
@@ -1028,6 +1033,8 @@ contains
       end if
     end do
 
+    st%block_initialized = .true.
+
     SAFE_DEALLOCATE_A(bstart)
     SAFE_DEALLOCATE_A(bend)
   end subroutine states_init_block
@@ -1048,15 +1055,18 @@ contains
       SAFE_DEALLOCATE_P(st%zpsi)
     end if
 
-    do ib = 1, st%nblocks
-      do iq = st%d%kpt%start, st%d%kpt%end
-        if(st%block_is_local(ib, iq)) call batch_end(st%psib(ib, iq))
-      end do
-    end do
+    if (st%block_initialized) then
+       do ib = 1, st%nblocks
+          do iq = st%d%kpt%start, st%d%kpt%end
+             if(st%block_is_local(ib, iq)) call batch_end(st%psib(ib, iq))
+          end do
+       end do
 
-    SAFE_DEALLOCATE_P(st%psib)
-    SAFE_DEALLOCATE_P(st%block_is_local)
-    SAFE_DEALLOCATE_P(st%iblock)
+       SAFE_DEALLOCATE_P(st%psib)
+       SAFE_DEALLOCATE_P(st%block_is_local)
+       SAFE_DEALLOCATE_P(st%iblock)
+       st%block_initialized = .false.
+    end if
 
     if(st%open_boundaries .and. calc_mode_is(CM_TD)) then
       do il = 1, NLEADS
@@ -1205,8 +1215,8 @@ contains
 
     PUSH_SUB(states_end)
     
-    SAFE_DEALLOCATE_P(st%dpsi)
-    SAFE_DEALLOCATE_P(st%zpsi)
+    call states_deallocate_wfns(st)
+
     SAFE_DEALLOCATE_P(st%user_def_states)
 
     SAFE_DEALLOCATE_P(st%rho)
