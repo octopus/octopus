@@ -147,6 +147,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine select_op()
+
+    PUSH_SUB(X(nl_operator_operate_batch).select_op)
+
     select case(points_)
     case(OP_ALL)
       nri  =  op%nri
@@ -166,12 +169,16 @@ contains
     case default
       ASSERT(.false.)
     end select
+
+    POP_SUB(X(nl_operator_operate_batch).select_op)
   end subroutine select_op
 
 
   ! ---------------------------------------------------------
   subroutine operate_const_weights()
     integer :: nn, ll, ii, ist
+
+    PUSH_SUB(X(nl_operator_operate_batch).operate_const_weights)
 
     nn = op%stencil%size
 
@@ -208,6 +215,8 @@ contains
       end if
 
     end if
+
+    POP_SUB(X(nl_operator_operate_batch).operate_const_weights)
   end subroutine operate_const_weights
 
 
@@ -215,6 +224,8 @@ contains
   subroutine operate_non_const_weights()
     integer :: nn, ll, ii, ist
     FLOAT :: factor_
+
+    PUSH_SUB(X(nl_operator_operate_batch).operate_non_const_weights)
 
     ASSERT(.not. (batch_is_packed(fi) .or. batch_is_packed(fo)))
 
@@ -242,6 +253,7 @@ contains
       !$omp end parallel do
     end if
 
+    POP_SUB(X(nl_operator_operate_batch).operate_non_const_weights)
   end subroutine operate_non_const_weights
 
 #ifdef HAVE_OPENCL
@@ -252,6 +264,7 @@ contains
     type(opencl_mem_t) :: buff_weights
     type(profile_t), save :: prof
 
+    PUSH_SUB(X(nl_operator_operate_batch).operate_opencl)
     call profiling_in(prof, "CL_NL_OPERATOR")
 
     ASSERT(.not. op%mesh%parallel_in_domains)
@@ -311,6 +324,7 @@ contains
     call opencl_release_buffer(buff_weights)
 
     call profiling_out(prof)
+    POP_SUB(X(nl_operator_operate_batch).operate_opencl)
   end subroutine operate_opencl
 
 #endif
