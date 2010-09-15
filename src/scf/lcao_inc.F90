@@ -282,7 +282,7 @@ contains
     if(iorb <= this%norbs) then
 
       size = (this%norbs - iorb + 1) * st%d%spin_channels
-      write(message(1), '(a, i5, a)') "Info: Extra storage for ", size, " orbitals will be allocated."
+      write(message(1), '(a, i5, a)') "Info: Single-precision storage for ", size, " extra orbitals will be allocated."
       call write_info(1)
 
       SAFE_ALLOCATE(buff(1:gr%mesh%np, 1:st%d%dim, iorb:this%norbs, 1:st%d%spin_channels))

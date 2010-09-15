@@ -220,8 +220,8 @@ contains
     !% mixed at all, which would require wavefunction-mixing, not yet
     !% implemented. This may lead to instabilities in the SCF cycle,
     !% so starting from a converged LDA/GGA calculation is recommended
-    !% for hybrid functionals. The default depends on the TheoryLevel
-    !% and the exchange and correlation potential used.
+    !% for hybrid functionals. The default depends on the <tt>TheoryLevel</tt>
+    !% and the exchange-correlation potential used.
     !%Option none 0
     !% No mixing is done. This is the default for independent
     !% particles.

@@ -81,21 +81,23 @@ contains
     integer :: default
     integer :: maxp, is, ns, ip, ip2
     
+    PUSH_SUB(preconditioner_init)
+
     !%Variable Preconditioner
     !%Type integer
     !%Default filter
     !%Section SCF::Eigensolver
     !%Description
     !% Which preconditioner to use in order to solve the Kohn-Sham equations or
-    !% the linear-response equations. May apply prefix of linear-response (e.g.
-    !% "EM", "KdotP_") to differentiate from choice for ground state.
+    !% the linear-response equations. May apply prefix of linear-response (<i>e.g.</i>
+    !% <tt>EM</tt>, <tt>KdotP_</tt>) to differentiate from choice for ground state.
     !%Option no 0
     !% Do not apply preconditioner.
     !%Option pre_filter 1
     !% Filter preconditioner.
     !%Option pre_jacobi 2
-    !% Jacobi preconditioner. only the local part of the pseudopotential is used.
-    !% It does not help much, in my opinion
+    !% Jacobi preconditioner. Only the local part of the pseudopotential is used.
+    !% Not very helpful.
     !%Option pre_poisson 3
     !% Uses the full Laplacian as preconditioner. The inverse is calculated through
     !% the solution of the Poisson equation. This is, of course, very slow.
@@ -159,6 +161,7 @@ contains
       call lalg_scal(gr%mesh%np, -M_HALF, this%diag_lapl(:))
     end select
 
+    POP_SUB(preconditioner_init)
   end subroutine preconditioner_init
 
   
@@ -166,12 +169,18 @@ contains
   subroutine preconditioner_null(this)
     type(preconditioner_t), intent(inout) :: this
 
+    PUSH_SUB(preconditioner_null)
     this%which = PRE_NONE
+
+    POP_SUB(preconditioner_null)
   end subroutine preconditioner_null
+
 
   ! ---------------------------------------------------------
   subroutine preconditioner_end(this)
     type(preconditioner_t), intent(inout) :: this 
+
+    PUSH_SUB(preconditioner_end)
 
     select case(this%which)
     case(PRE_FILTER)
@@ -182,8 +191,11 @@ contains
     end select
 
     call preconditioner_null(this)
+    POP_SUB(preconditioner_end)
   end subroutine preconditioner_end
 
+
+  ! ---------------------------------------------------------
   logical pure function preconditioner_is_multigrid(this) result(req)
     type(preconditioner_t), intent(in) :: this
 
