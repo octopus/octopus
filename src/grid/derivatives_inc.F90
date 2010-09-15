@@ -353,20 +353,7 @@ subroutine X(derivatives_batch_perform)(op, der, ff, opff, ghost_update, set_bc)
 
   PUSH_SUB(X(derivatives_batch_perform))
 
-  if(present(ghost_update)) then
-    if(present(set_bc)) then
-      call X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, set_bc)
-    else
-      call X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update)
-    endif
-  else
-    if(present(set_bc)) then
-      call X(derivatives_batch_start)(op, der, ff, opff, handle, set_bc)
-    else
-      call X(derivatives_batch_start)(op, der, ff, opff, handle)
-    endif
-  endif
-
+  call X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, set_bc)
   call X(derivatives_batch_finish)(handle)
 
   POP_SUB(X(derivatives_batch_perform))
@@ -397,19 +384,7 @@ subroutine X(derivatives_perform)(op, der, ff, op_ff, ghost_update, set_bc)
   ASSERT(batch_is_ok(batch_ff))
   ASSERT(batch_is_ok(batch_op_ff))
 
-  if(present(ghost_update)) then
-    if(present(set_bc)) then
-      call X(derivatives_batch_perform) (op, der, batch_ff, batch_op_ff, ghost_update, set_bc)
-    else
-      call X(derivatives_batch_perform) (op, der, batch_ff, batch_op_ff, ghost_update)
-    endif
-  else
-    if(present(set_bc)) then
-      call X(derivatives_batch_perform) (op, der, batch_ff, batch_op_ff, set_bc)
-    else
-      call X(derivatives_batch_perform) (op, der, batch_ff, batch_op_ff)
-    endif
-  endif
+  call X(derivatives_batch_perform) (op, der, batch_ff, batch_op_ff, ghost_update, set_bc)
 
   call batch_end(batch_ff)
   call batch_end(batch_op_ff)
@@ -429,19 +404,7 @@ subroutine X(derivatives_lapl)(der, ff, op_ff, ghost_update, set_bc)
 
   PUSH_SUB(X(derivatives_lapl))
 
-  if(present(ghost_update)) then
-    if(present(set_bc)) then
-      call X(derivatives_perform)(der%lapl, der, ff, op_ff, ghost_update, set_bc)
-    else
-      call X(derivatives_perform)(der%lapl, der, ff, op_ff, ghost_update)
-    endif
-  else
-    if(present(set_bc)) then
-      call X(derivatives_perform)(der%lapl, der, ff, op_ff, set_bc)
-    else
-      call X(derivatives_perform)(der%lapl, der, ff, op_ff)
-    endif
-  endif
+  call X(derivatives_perform)(der%lapl, der, ff, op_ff, ghost_update, set_bc)
         
   POP_SUB(X(derivatives_lapl))
 end subroutine X(derivatives_lapl)
@@ -491,25 +454,18 @@ subroutine X(derivatives_div)(der, ff, op_ff, ghost_update, set_bc)
 
   R_TYPE, allocatable :: tmp(:)
   integer             :: idir, ii
-  logical :: set_bc_, ghost_update_
 
   PUSH_SUB(X(derivatives_div))
   call profiling_in(divergence_prof, "DIVERGENCE")
 
   ASSERT(ubound(ff, DIM=2) >= der%dim)
 
-  set_bc_ = .true.
-  if(present(set_bc)) set_bc_ = set_bc
-
-  ghost_update_ = .true.
-  if(present(ghost_update)) ghost_update_ = ghost_update
-
-  call X(derivatives_perform) (der%grad(1), der, ff(:, 1), op_ff, ghost_update_, set_bc_)
+  call X(derivatives_perform) (der%grad(1), der, ff(:, 1), op_ff, ghost_update, set_bc)
 
   SAFE_ALLOCATE(tmp(1:der%mesh%np))
 
   do idir = 2, der%dim
-    call X(derivatives_perform) (der%grad(idir), der, ff(:, idir), tmp, ghost_update_, set_bc_)
+    call X(derivatives_perform) (der%grad(idir), der, ff(:, idir), tmp, ghost_update, set_bc)
 
     forall(ii = 1:der%mesh%np) op_ff(ii) = op_ff(ii) + tmp(ii)
   end do
@@ -534,7 +490,6 @@ subroutine X(derivatives_curl)(der, ff, op_ff, ghost_update, set_bc)
   integer, parameter  :: curl_dim(3) = (/-1, 1, 3/)
   R_TYPE, allocatable :: tmp(:)
   integer             :: ii, np
-  logical :: set_bc_, ghost_update_
 
   PUSH_SUB(X(derivatives_curl))
   call profiling_in(curl_prof, "CURL")
@@ -543,12 +498,6 @@ subroutine X(derivatives_curl)(der, ff, op_ff, ghost_update, set_bc)
   ASSERT(ubound(ff,    DIM=2) >= der%dim)
   ASSERT(ubound(op_ff, DIM=2) >= curl_dim(der%dim))
 
-  set_bc_ = .true.
-  if(present(set_bc)) set_bc_ = set_bc
-
-  ghost_update_ = .true.
-  if(present(ghost_update)) ghost_update_ = ghost_update
-
   SAFE_ALLOCATE(tmp(1:der%mesh%np_part))
 
   op_ff(:,:) = R_TOTYPE(M_ZERO)
@@ -556,23 +505,23 @@ subroutine X(derivatives_curl)(der, ff, op_ff, ghost_update, set_bc)
 
   select case(der%dim)
   case(3)
-    call X(derivatives_perform) (der%grad(3), der, ff(:,1), tmp, ghost_update_, set_bc_)
+    call X(derivatives_perform) (der%grad(3), der, ff(:,1), tmp, ghost_update, set_bc)
     forall(ii = 1:np) op_ff(ii, 2) = op_ff(ii, 2) + tmp(ii)
     call X(derivatives_perform) (der%grad(2), der, ff(:,1), tmp, .false., .false.)
     forall(ii = 1:np) op_ff(ii, 3) = op_ff(ii, 3) - tmp(ii)
 
-    call X(derivatives_perform) (der%grad(3), der, ff(:,2), tmp, ghost_update_, set_bc_)
+    call X(derivatives_perform) (der%grad(3), der, ff(:,2), tmp, ghost_update, set_bc)
     forall(ii = 1:np) op_ff(ii, 1) = op_ff(ii, 1) - tmp(ii)
     call X(derivatives_perform) (der%grad(1), der, ff(:,2), tmp, .false., .false.)
     forall(ii = 1:np) op_ff(ii, 3) = op_ff(ii, 3) + tmp(ii)
 
-    call X(derivatives_perform) (der%grad(2), der, ff(:,3), tmp, ghost_update_, set_bc_)
+    call X(derivatives_perform) (der%grad(2), der, ff(:,3), tmp, ghost_update, set_bc)
     forall(ii = 1:np) op_ff(ii, 1) = op_ff(ii, 1) + tmp(ii)
     call X(derivatives_perform) (der%grad(1), der, ff(:,3), tmp, .false., .false.)
     forall(ii = 1:np) op_ff(ii, 2) = op_ff(ii, 2) - tmp(ii)
 
   case(2)
-    call X(derivatives_perform) (der%grad(2), der, ff(:,1), tmp, ghost_update_, set_bc_)
+    call X(derivatives_perform) (der%grad(2), der, ff(:,1), tmp, ghost_update, set_bc)
     forall(ii = 1:np) op_ff(ii, 1) = op_ff(ii, 1) - tmp(ii)
     call X(derivatives_perform) (der%grad(1), der, ff(:,2), tmp, .false., .false.)
     forall(ii = 1:np) op_ff(ii, 1) = op_ff(ii, 1) + tmp(ii)
@@ -645,7 +594,7 @@ subroutine X(derivatives_test)(this)
     call batch_pack(opffb, copy = .false.)
   end if
 
-  call X(derivatives_batch_perform)(this%lapl, this, ffb, opffb, ghost_update = .false., set_bc = .false.)
+  call X(derivatives_batch_perform)(this%lapl, this, ffb, opffb, set_bc = .false.)
 
   if(packstates) then
     call batch_unpack(ffb, copy = .false.)
@@ -666,7 +615,7 @@ subroutine X(derivatives_test)(this)
   call X(batch_delete)(opffb)
   call batch_end(opffb)
 
-  call X(derivatives_grad)(this, ff, opff, ghost_update = .false., set_bc = .false.)
+  call X(derivatives_grad)(this, ff, opff, set_bc = .false.)
 
   forall(idir = 1:this%mesh%sb%dim, ip = 1:this%mesh%np) 
     opff(ip, idir) = opff(ip, idir) - (-M_TWO*aa*bb*this%mesh%x(ip, idir)*exp(-aa*sum(this%mesh%x(ip, :)**2)))

@@ -120,8 +120,7 @@ contains
     SAFE_ALLOCATE(grad(1:gr%mesh%np, 1:gr%sb%dim, 1:hm%d%dim))
 
     do idim = 1, hm%d%dim
-      call X(derivatives_grad) (gr%der, f_in_copy(:, idim), grad(:, :, idim), &
-        ghost_update = .false., set_bc = .false.)
+      call X(derivatives_grad) (gr%der, f_in_copy(:, idim), grad(:, :, idim), set_bc = .false.)
       ! set_bc done already separately
     end do
 
