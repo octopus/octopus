@@ -527,7 +527,6 @@ contains
     logical :: found
 
 ! no push_sub because called too frequently
-!    PUSH_SUB(vec_global2local)
 
     vec_global2local = 0
     if(associated(vp%global)) then

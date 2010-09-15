@@ -765,7 +765,6 @@ contains
     logical :: force_
 
 ! no push_sub because function is called too frequently
-!    PUSH_SUB(mesh_x_global)
 
     force_ = .false.
     if (present(force)) force_ = force

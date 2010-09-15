@@ -98,7 +98,7 @@ contains
     if (present(extent_uc)) then
       ! if the lead potential has no dependence in transport direction
       ! then the size of unit cell extent will be reduced to interface extent
-      ! this happens within hamiltonian->init_lead_h which calls this  subroutine
+      ! this happens within hamiltonian->init_lead_h which calls this subroutine
       intf%extent_uc = extent_uc
     else
       intf%extent_uc = nint(2*lsize(tdir)/der%mesh%spacing(tdir))
