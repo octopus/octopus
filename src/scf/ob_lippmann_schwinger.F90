@@ -248,7 +248,7 @@ contains
     integer :: np_part, np, idim
     CMPLX   :: dot
 
-!    PUSH_SUB(dotu)
+! no push_sub, called too frequently
 
     np_part = gr_p%mesh%np_part
     np      = gr_p%mesh%np
@@ -259,13 +259,12 @@ contains
     end do
     dotu = dot
 
-!    POP_SUB(dotu)
-
   contains
 
     integer function l(idim)
       integer, intent(in) :: idim
 
+! no push_sub, called too frequently
       l = (idim-1)*np_part+1
     end function l
   end function dotu
@@ -280,7 +279,7 @@ contains
     integer :: np_part, np, idim
     FLOAT   :: nrm
 
-!    PUSH_SUB(nrm2)
+! no push_sub, called too frequently
 
     np_part = gr_p%mesh%np_part
     np      = gr_p%mesh%np
@@ -291,13 +290,12 @@ contains
     end do
     nrm2 = nrm
 
-!    POP_SUB(nrm2)
-
   contains
 
     integer function l(idim)
       integer, intent(in) :: idim
 
+! no push_sub, called too frequently
       l = (idim-1)*np_part+1
     end function l
 
@@ -321,7 +319,7 @@ contains
     CMPLX, allocatable :: tmp_y(:, :)
     integer            :: np_part, idim, il, dim
 
-!    PUSH_SUB(lhs)
+! no push_sub, called too frequently
 
     np_part = gr_p%mesh%np_part
     dim     = st_p%d%dim
@@ -352,19 +350,20 @@ contains
 
     SAFE_DEALLOCATE_A(tmp_x)
     SAFE_DEALLOCATE_A(tmp_y)
-!    POP_SUB(lhs)
 
   contains
 
     integer function l(idim)
       integer, intent(in) :: idim
 
+! no push_sub, called too frequently
       l = (idim-1)*np_part+1
     end function l
 
     integer function u(idim)
       integer, intent(in) :: idim
 
+! no push_sub, called too frequently
       u = l(idim)+np_part-1
     end function u
   end subroutine lhs
@@ -381,7 +380,7 @@ contains
     CMPLX, allocatable :: tmp_y(:, :)
     integer            :: np_part, idim, il, dim
 
-!    PUSH_SUB(lhs_t)
+! no push_sub, called too frequently
 
     np_part = gr_p%mesh%np_part
     dim     = st_p%d%dim
@@ -399,7 +398,7 @@ contains
       tmp_y(1:np_part, idim) = energy_p * tmp_x(1:np_part, idim) - tmp_y(1:np_part, idim)
     end do
     tmp_y = conjg(tmp_y)
-    tmp_x = conjg(tmp_x) ! restore for the non-hermitian part
+    tmp_x = conjg(tmp_x) ! restore for the non-Hermitian part
 
     do il = 1, NLEADS
       do idim = 1, dim
@@ -414,19 +413,20 @@ contains
 
     SAFE_DEALLOCATE_A(tmp_x)
     SAFE_DEALLOCATE_A(tmp_y)
-!    POP_SUB(lhs_t)
 
   contains
 
     integer function l(idim)
       integer, intent(in) :: idim
 
+! no push_sub, called too frequently
       l = (idim-1)*np_part+1
     end function l
 
     integer function u(idim)
       integer, intent(in) :: idim
 
+! no push_sub, called too frequently
       u = l(idim)+np_part-1
     end function u
   end subroutine lhs_t
@@ -440,12 +440,11 @@ contains
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
 
-!    PUSH_SUB(lhs_symmetrized)
+! no push_sub, called too frequently
 
     call lhs(x, y)
     call lhs_t(y)
 
-!    POP_SUB(lhs_symmetrized)
   end subroutine lhs_symmetrized
 
 
@@ -457,11 +456,10 @@ contains
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
 
-!    PUSH_SUB(precond)
+! no push_sub, called too frequently
 
     y(:) = x(:)
 
-!    POP_SUB(precond)
   end subroutine precond
 end module ob_lippmann_schwinger_m
 

@@ -540,29 +540,6 @@ subroutine X(states_uncompactify)(dim, mesh, out_start, idx, in, out)
   call profiling_out(prof)
 end subroutine X(states_uncompactify)
 
-
-! ! ---------------------------------------------------------
-! ! Wraps the states array psi(1:np, 1:dim, st_start:st_end) into
-! ! a states_block_t stb.
-! subroutine X(states_block_wrap)(st_start, st_end, np, dim, psi, stb)
-!   integer,              intent(in) :: st_start
-!   integer,              intent(in) :: st_end
-!   integer,              intent(in) :: np
-!   integer,              intent(in) :: dim
-!   R_TYPE, target,       intent(in) :: psi(np, dim, st_start:st_end)
-!   type(states_block_t), intent(out) :: stb
-
-!   PUSH_SUB(X(states_block_wrap))
-
-!   stb%st_start =  st_start
-!   stb%st_end   =  st_end
-!   stb%nst      =  st_end-st_start+1
-!   stb%X(psi)   => psi
-
-!   POP_SUB(X(states_block_wrap))
-! end subroutine X(states_block_wrap)
-
-
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

@@ -52,7 +52,8 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
   ! electric does not need it since (e^-ikr)r(e^ikr) = r
 
   if (apply_kpoint) then
-    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np_part) f_in_copy(ip, idim) = hm%phase(ip, ik) * f_in_copy(ip, idim)
+    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np_part) &
+      f_in_copy(ip, idim) = hm%phase(ip, ik) * f_in_copy(ip, idim)
   endif
 
   select case(this%pert_type)
@@ -74,7 +75,8 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
   end select
   
   if (apply_kpoint) then
-    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = conjg(hm%phase(ip, ik)) * f_out(ip, idim)
+    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) &
+      f_out(ip, idim) = conjg(hm%phase(ip, ik)) * f_out(ip, idim)
   endif
 
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
@@ -118,7 +120,8 @@ contains
     SAFE_ALLOCATE(grad(1:gr%mesh%np, 1:gr%sb%dim, 1:hm%d%dim))
 
     do idim = 1, hm%d%dim
-      call X(derivatives_grad) (gr%der, f_in_copy(:, idim), grad(:, :, idim), set_bc = .false.)
+      call X(derivatives_grad) (gr%der, f_in_copy(:, idim), grad(:, :, idim), &
+        ghost_update = .false., set_bc = .false.)
       ! set_bc done already separately
     end do
 
