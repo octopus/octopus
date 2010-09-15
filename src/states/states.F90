@@ -965,6 +965,8 @@ contains
     logical :: same_node
     integer, allocatable :: bstart(:), bend(:)
 
+    PUSH_SUB(states_init_block)
+
     SAFE_ALLOCATE(bstart(1:st%nst))
     SAFE_ALLOCATE(bend(1:st%nst))
     SAFE_ALLOCATE(st%iblock(1:st%nst, 1:st%d%nik))
@@ -1037,6 +1039,7 @@ contains
 
     SAFE_DEALLOCATE_A(bstart)
     SAFE_DEALLOCATE_A(bend)
+    POP_SUB(states_init_block)
   end subroutine states_init_block
 
 
@@ -1109,12 +1112,14 @@ contains
 
     subroutine states_exec_init()
 
+      PUSH_SUB(states_densities_init.states_exec_init)
+
       !%Variable StatesBlockSize
       !%Type integer
       !%Default max(4, 2*nthreads)
       !%Section Execution::Optimization
       !%Description
-      !% Some routines work over blocks of eigenfunctions, this
+      !% Some routines work over blocks of eigenfunctions, which
       !% generally improves performance at the expense of increased
       !% memory consumption. This variable selects the size of the
       !% blocks to be used.
@@ -1130,11 +1135,10 @@ contains
 
       !%Variable StatesOrthogonalization
       !%Type integer
-      !%Default gs
+      !%Default gram_schmidt
       !%Section Execution::Optimization
       !%Description
-      !% Select the full orthogonalization method used by some
-      !% eigensolvers. The default is gram_schmidt.
+      !% The full orthogonalization method used by some eigensolvers.
       !%Option gram_schmidt 1
       !% The standard Gram-Schmidt orthogonalization implemented using
       !% Blas level 3 routines.
@@ -1148,6 +1152,7 @@ contains
       call parse_integer(datasets_check('StatesOrthogonalization'), ORTH_GS, st%d%orth_method)
       if(st%d%orth_method == ORTH_QR) call messages_devel_version("QR Orthogonalization")
 
+      POP_SUB(states_densities_init.states_exec_init)
     end subroutine states_exec_init
   end subroutine states_densities_init
 
@@ -1390,9 +1395,9 @@ contains
     type(profile_t), save :: reduce_prof
 #endif
 
-    np = gr%fine%mesh%np
-
     PUSH_SUB(states_dens_reduce)
+
+    np = gr%fine%mesh%np
 
 #ifdef HAVE_MPI
     ! reduce over states
@@ -1800,7 +1805,7 @@ contains
     logical :: grace_mode, gnuplot_mode
     character(len=80) :: filename    
 
-    if(.not.mpi_grp_is_root(mpi_world)) return
+    if(.not. mpi_grp_is_root(mpi_world)) return
 
     PUSH_SUB(states_write_bands)
 
@@ -2435,8 +2440,10 @@ return
   subroutine states_set_complex(st)
     type(states_t),    intent(inout) :: st
 
+    PUSH_SUB(states_set_complex)
     st%priv%wfs_type = TYPE_CMPLX
 
+    POP_SUB(states_set_complex)
   end subroutine states_set_complex
 
   ! ---------------------------------------------------------
@@ -3126,7 +3133,7 @@ return
     character(len=256) :: fname
     FLOAT :: kpoint(1:MAX_DIM)
 
-    PUSH_SUB(write_proj_lead_wf)
+    PUSH_SUB(states_write_proj_lead_wf)
 
     np = maxval(intf(1:NLEADS)%np_intf)
 
@@ -3167,8 +3174,8 @@ return
               message(1) = 'Cannot write term for source term to file.'
               call write_warning(1)
               call io_close(iunit)
-    POP_SUB(write_proj_lead_wf)
-return
+              POP_SUB(states_write_proj_lead_wf)
+              return
             end if
             ! Write parameters.
             write(iunit) np
@@ -3185,7 +3192,7 @@ return
     SAFE_DEALLOCATE_A(hpsi)
     SAFE_DEALLOCATE_A(self_energy)
 
-    POP_SUB(write_proj_lead_wf)
+    POP_SUB(states_write_proj_lead_wf)
   end subroutine states_write_proj_lead_wf
 
   ! ---------------------------------------------------------
@@ -3229,7 +3236,6 @@ return
 
     POP_SUB(states_read_proj_lead_wf)
   end subroutine states_read_proj_lead_wf
-
 
 end module states_m
 
