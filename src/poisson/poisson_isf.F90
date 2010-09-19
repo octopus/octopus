@@ -170,7 +170,6 @@ contains
       call MPI_Comm_rank(cnf(world)%mpi_grp%comm, cnf(world)%mpi_grp%rank, ierr)
       call MPI_Comm_size(cnf(world)%mpi_grp%comm, cnf(world)%mpi_grp%size, ierr)
     else
-      cnf(world)%mpi_grp%comm = -1
       cnf(world)%mpi_grp%rank = -1
       cnf(world)%mpi_grp%size = -1
     end if
@@ -341,7 +340,7 @@ contains
     do i_cnf = 1, n_cnf
       SAFE_DEALLOCATE_P(cnf(i_cnf)%kernel)
     end do
-    call MPI_Comm_free(cnf(world)%mpi_grp%comm, mpi_err)
+    if(cnf(world)%mpi_grp%comm /= MPI_COMM_NULL) call MPI_Comm_free(cnf(world)%mpi_grp%comm, mpi_err)
 #else
     SAFE_DEALLOCATE_P(cnf(serial)%kernel)
 #endif
