@@ -131,7 +131,7 @@ contains
     nullify(this%oldforce)
     
     if(ion_dynamics_ions_move(this)) then 
-      SAFE_ALLOCATE(this%oldforce(1:calc_dim, 1:geo%natoms))
+      SAFE_ALLOCATE(this%oldforce(1:geo%space%dim, 1:geo%natoms))
     end if
 
     !now initialize velocities
@@ -163,7 +163,7 @@ contains
         end if
 #ifdef HAVE_MPI
         !and send them to the others
-        call MPI_Bcast(geo%atom(i)%v, calc_dim, MPI_FLOAT, 0, mpi_world%comm, mpi_err)
+        call MPI_Bcast(geo%atom(i)%v, geo%space%dim, MPI_FLOAT, 0, mpi_world%comm, mpi_err)
 #endif
       end do
 
@@ -228,7 +228,7 @@ contains
       !%End
 
       call xyz_file_init(xyz)
-      call xyz_file_read('Velocities', xyz)
+      call xyz_file_read('Velocities', xyz, geo%space)
       if(xyz%file_type.ne.XYZ_FILE_ERR) then
         if(geo%natoms.ne.xyz%n) then
           write(message(1), '(a,i4,a,i4)') 'I need exactly ', geo%natoms, ' velocities, but I found ', xyz%n
@@ -268,10 +268,10 @@ contains
       this%nh1%vel = M_ZERO
       this%nh2%vel = M_ZERO
 
-      SAFE_ALLOCATE(this%old_x(1:calc_dim, 1:geo%natoms))
+      SAFE_ALLOCATE(this%old_x(1:geo%space%dim, 1:geo%natoms))
 
       do iatom = 1, geo%natoms
-        this%old_x(1:calc_dim, iatom) = geo%atom(iatom)%x(1:calc_dim)
+        this%old_x(1:geo%space%dim, iatom) = geo%atom(iatom)%x(1:geo%space%dim)
       end do
 
     end if
@@ -313,11 +313,11 @@ contains
       do iatom = 1, geo%natoms
         if(.not. geo%atom(iatom)%move) cycle
         
-        geo%atom(iatom)%x(1:calc_dim) = geo%atom(iatom)%x(1:calc_dim) &
-             + dt*geo%atom(iatom)%v(1:calc_dim) + &
-             M_HALF*dt**2 / species_weight(geo%atom(iatom)%spec) * geo%atom(iatom)%f(1:calc_dim)
+        geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) &
+             + dt*geo%atom(iatom)%v(1:geo%space%dim) + &
+             M_HALF*dt**2 / species_weight(geo%atom(iatom)%spec) * geo%atom(iatom)%f(1:geo%space%dim)
         
-        this%oldforce(1:calc_dim, iatom) = geo%atom(iatom)%f(1:calc_dim)
+        this%oldforce(1:geo%space%dim, iatom) = geo%atom(iatom)%f(1:geo%space%dim)
         
       end do
       
@@ -338,7 +338,7 @@ contains
       call chain(this, geo)
 
       do iatom = 1, geo%natoms
-        geo%atom(iatom)%x(1:calc_dim) = geo%atom(iatom)%x(1:calc_dim) + M_HALF*dt*geo%atom(iatom)%v(1:calc_dim)
+        geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) + M_HALF*dt*geo%atom(iatom)%v(1:geo%space%dim)
       enddo
 
     end select
@@ -374,7 +374,7 @@ contains
     ss = exp(-this%nh1%vel*dt/CNST(2.0))
     
     do iatom = 1, geo%natoms
-      geo%atom(iatom)%v(1:calc_dim) = ss*geo%atom(iatom)%v(1:calc_dim)
+      geo%atom(iatom)%v(1:geo%space%dim) = ss*geo%atom(iatom)%v(1:geo%space%dim)
     enddo
     
     uk = uk*ss**2
@@ -408,17 +408,17 @@ contains
       do iatom = 1, geo%natoms
         if(.not. geo%atom(iatom)%move) cycle
         
-        geo%atom(iatom)%v(1:calc_dim) = geo%atom(iatom)%v(1:calc_dim) &
-             + this%dt/species_weight(geo%atom(iatom)%spec) * M_HALF * (this%oldforce(1:calc_dim, iatom) + &
-             geo%atom(iatom)%f(1:calc_dim))
+        geo%atom(iatom)%v(1:geo%space%dim) = geo%atom(iatom)%v(1:geo%space%dim) &
+             + this%dt/species_weight(geo%atom(iatom)%spec) * M_HALF * (this%oldforce(1:geo%space%dim, iatom) + &
+             geo%atom(iatom)%f(1:geo%space%dim))
         
       end do
       
     case(NOSE_HOOVER)
       do iatom = 1, geo%natoms
-        geo%atom(iatom)%v(1:calc_dim) = geo%atom(iatom)%v(1:calc_dim) + &
-          this%dt*geo%atom(iatom)%f(1:calc_dim) / species_weight(geo%atom(iatom)%spec)
-        geo%atom(iatom)%x(1:calc_dim) = geo%atom(iatom)%x(1:calc_dim) + M_HALF*this%dt*geo%atom(iatom)%v(1:calc_dim)
+        geo%atom(iatom)%v(1:geo%space%dim) = geo%atom(iatom)%v(1:geo%space%dim) + &
+          this%dt*geo%atom(iatom)%f(1:geo%space%dim) / species_weight(geo%atom(iatom)%spec)
+        geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) + M_HALF*this%dt*geo%atom(iatom)%v(1:geo%space%dim)
       enddo
 
       call chain(this, geo)
@@ -441,12 +441,12 @@ contains
 
     PUSH_SUB(ion_dynamics_save_state)
 
-    SAFE_ALLOCATE(state%pos(1:calc_dim, 1:geo%natoms))
-    SAFE_ALLOCATE(state%vel(1:calc_dim, 1:geo%natoms))
+    SAFE_ALLOCATE(state%pos(1:geo%space%dim, 1:geo%natoms))
+    SAFE_ALLOCATE(state%vel(1:geo%space%dim, 1:geo%natoms))
 
     do iatom = 1, geo%natoms
-      state%pos(1:calc_dim, iatom) = geo%atom(iatom)%x(1:calc_dim)
-      state%vel(1:calc_dim, iatom) = geo%atom(iatom)%v(1:calc_dim)
+      state%pos(1:geo%space%dim, iatom) = geo%atom(iatom)%x(1:geo%space%dim)
+      state%vel(1:geo%space%dim, iatom) = geo%atom(iatom)%v(1:geo%space%dim)
     end do
 
     POP_SUB(ion_dynamics_save_state)
@@ -466,8 +466,8 @@ contains
     PUSH_SUB(ion_dynamics_restore_state)
 
     do iatom = 1, geo%natoms
-      geo%atom(iatom)%x(1:calc_dim) = state%pos(1:calc_dim, iatom)
-      geo%atom(iatom)%v(1:calc_dim) = state%vel(1:calc_dim, iatom)
+      geo%atom(iatom)%x(1:geo%space%dim) = state%pos(1:geo%space%dim, iatom)
+      geo%atom(iatom)%v(1:geo%space%dim) = state%vel(1:geo%space%dim, iatom)
     end do
 
     SAFE_DEALLOCATE_P(state%pos)
@@ -495,7 +495,7 @@ contains
     kinetic_energy = M_ZERO
     do iatom = 1, geo%natoms
       kinetic_energy = kinetic_energy + &
-        M_HALF * species_weight(geo%atom(iatom)%spec) * sum(geo%atom(iatom)%v(1:calc_dim)**2)
+        M_HALF * species_weight(geo%atom(iatom)%spec) * sum(geo%atom(iatom)%v(1:geo%space%dim)**2)
     end do
 
   end function ion_dynamics_kinetic_energy

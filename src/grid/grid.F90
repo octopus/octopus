@@ -37,6 +37,7 @@ module grid_m
   use nl_operator_m
   use parser_m
   use profiling_m
+  use space_m
   use simul_box_m
   use stencil_m
   use stencil_cube_m
@@ -77,18 +78,19 @@ contains
   !>
   !! "Zero-th" stage of grid initialization. It initializes the open boundaries stuff
   !! (if necessary), and the simulation box.
-  subroutine grid_init_stage_0(gr, geo)
-    type(grid_t),      intent(inout) :: gr
-    type(geometry_t),  intent(inout) :: geo
+  subroutine grid_init_stage_0(gr, geo, space)
+    type(grid_t),          intent(inout) :: gr
+    type(geometry_t),      intent(inout) :: geo
+    type(space_t),         intent(in)    :: space
 
     PUSH_SUB(grid_init_stage_0)
 
     call ob_grid_init(gr%ob_grid, geo)
     if(gr%ob_grid%open_boundaries) then
-      call simul_box_init(gr%sb, geo, gr%ob_grid%transport_mode, &
+      call simul_box_init(gr%sb, geo, space, gr%ob_grid%transport_mode, &
         gr%ob_grid%lead(:)%sb, gr%ob_grid%lead(:)%info)
     else
-      call simul_box_init(gr%sb, geo)
+      call simul_box_init(gr%sb, geo, space)
     end if
 
     POP_SUB(grid_init_stage_0)

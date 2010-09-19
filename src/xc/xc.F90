@@ -144,7 +144,7 @@ contains
         call xc_functl_init_functl(xcs%kernel(2,isp), ck_id, ndim, nel, isp)
 
       end do
-
+ 
       xcs%family = ior(xcs%family, xcs%functl(1,1)%family)
       xcs%family = ior(xcs%family, xcs%functl(2,1)%family)
 
@@ -222,7 +222,7 @@ contains
 
       default = 0
       if(.not.hartree_fock) then
-        select case(calc_dim)
+        select case(ndim)
         case(3); default = XC_LDA_X    + XC_LDA_C_PZ_MOD *1000
         case(2); default = XC_LDA_X_2D + XC_LDA_C_2D_AMGB*1000
         case(1); default = XC_LDA_X_1D + XC_LDA_C_1D_CSC *1000

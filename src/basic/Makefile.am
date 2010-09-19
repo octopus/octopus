@@ -60,7 +60,8 @@ libbasic_a_SOURCES =     \
 	io_csv_f.F90     \
 	lookup.F90       \
 	types.F90        \
-	opencl.F90       
+	opencl.F90       \
+	space.F90
 
 if COMPILE_PAPI
 libbasic_a_SOURCES += papi.c papi_f.F90
@@ -126,3 +127,5 @@ ialist.o : ialist.F90 messages.o profiling.o
 iihash.o : iihash.F90 ialist.o global.o
 lookup.o : lookup.F90 global.o messages.o profiling.o
 utils.o : utils.F90 messages.o global.o unit.o unit_system.o
+
+space.o : space.F90 datasets.o parser.o messages.o

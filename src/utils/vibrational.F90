@@ -29,6 +29,7 @@ program vibrational
   use messages_m
   use parser_m
   use profiling_m
+  use space_m
   use unit_m
   use unit_system_m
   use varinfo_m
@@ -44,7 +45,8 @@ program vibrational
   FLOAT, allocatable :: vaf(:), time(:), dipole(:,:)
   CMPLX, allocatable :: ftvaf(:), ftdipole(:,:)
   type(geometry_t) :: geo 
-  
+  type(space_t)    :: space
+
   FLOAT :: ww, av, irtotal
   FLOAT :: dw, max_energy
   integer :: ifreq, idir
@@ -79,7 +81,8 @@ program vibrational
   select case(mode)
     case(SPEC_VIBRATIONAL) 
 
-      call geometry_init(geo)
+      call space_init(space)
+      call geometry_init(geo, space)
 
       ! Opens the coordinates files.
       iunit = io_open('td.general/coordinates', action='read')
@@ -197,9 +200,7 @@ program vibrational
       SAFE_DEALLOCATE_A(ftvaf)
  
       call geometry_end(geo)
-
-
-
+      call space_end(space)
 
     case(SPEC_INFRARED)
 

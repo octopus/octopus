@@ -37,6 +37,7 @@ module system_m
   use opencl_m
   use poisson_m
   use profiling_m
+  use space_m
   use simul_box_m
   use states_m
   use states_dim_m
@@ -54,6 +55,7 @@ module system_m
     system_h_setup
 
   type system_t
+    type(space_t)             :: space
     type(geometry_t)          :: geo
     type(grid_t),     pointer :: gr    ! the mesh
     type(states_t),   pointer :: st    ! the states
@@ -79,8 +81,10 @@ contains
 
     call messages_obsolete_variable('SystemName')
 
-    call geometry_init(sys%geo)
-    call grid_init_stage_0(sys%gr, sys%geo)
+    call space_init(sys%space)
+
+    call geometry_init(sys%geo, sys%space)
+    call grid_init_stage_0(sys%gr, sys%geo, sys%space)
     call states_init(sys%st, sys%gr, sys%geo)
     call grid_init_stage_1(sys%gr, sys%geo)
     ! if independent particles in N dimensions are being used, need to initialize them
@@ -174,6 +178,8 @@ contains
     call geometry_end(sys%geo)
     call simul_box_end(sys%gr%sb)
     call grid_end(sys%gr)
+
+    call space_end(sys%space)
 
 #ifdef HAVE_OPENCL
     call opencl_end()

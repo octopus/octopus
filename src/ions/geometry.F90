@@ -31,6 +31,7 @@ module geometry_m
   use mpi_m
   use parser_m
   use profiling_m
+  use space_m
   use species_m
   use string_m
   use unit_m
@@ -79,8 +80,9 @@ module geometry_m
   end type atom_classical_t
 
   type geometry_t
-    integer :: natoms
-    type(atom_t), pointer :: atom(:)
+    type(space_t), pointer :: space
+    integer                :: natoms
+    type(atom_t), pointer  :: atom(:)
 
     integer :: ncatoms              !< For QM+MM calculations
     type(atom_classical_t), pointer :: catom(:)
@@ -101,12 +103,15 @@ module geometry_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine geometry_init(geo, print_info)
-    type(geometry_t),  intent(inout) :: geo
-    logical, optional, intent(in)    :: print_info
+  subroutine geometry_init(geo, space, print_info)
+    type(geometry_t),           intent(inout) :: geo
+    type(space_t),    target,   intent(in)    :: space
+    logical,          optional, intent(in)    :: print_info
 
     PUSH_SUB(geometry_init)
 
+    geo%space => space
+    
     ! initialize geometry
     call geometry_init_xyz(geo)
     call geometry_init_species(geo, print_info=print_info)
@@ -186,7 +191,7 @@ contains
     !% is not possible when specifying the coordinates through a <tt>PDBCoordinates</tt> or
     !% <tt>XYZCoordinates</tt> file). It is always possible to fix <b>all</b> atoms using the <tt>MoveIons</tt> directive.
     !%End
-    call xyz_file_read('Coordinates', xyz)
+    call xyz_file_read('Coordinates', xyz, geo%space)
 
     ! copy information from xyz to geo
     geo%natoms = xyz%n
@@ -208,7 +213,7 @@ contains
     call xyz_file_init(xyz)
     nullify(geo%catom)
     geo%ncatoms = 0
-    call xyz_file_read('Classical', xyz)
+    call xyz_file_read('Classical', xyz, geo%space)
     if(xyz%file_type .ne. XYZ_FILE_ERR) then ! found classical atoms
       if(.not. iand(xyz%flags, XYZ_FLAGS_CHARGE) .ne. 0) then
         message(1) = "Need to know charge for the classical atoms."
@@ -235,7 +240,7 @@ contains
       write(message(1), '(a)') "Some of the atoms seem to sit too close to each other."
       write(message(2), '(a)') "Please review your input files and the output geometry."
       ! then write out the geometry, whether asked for or not in Output variable
-      call atom_write_xyz(STATIC_DIR, "geometry", geo, calc_dim)
+      call atom_write_xyz(STATIC_DIR, "geometry", geo, geo%space%dim)
       call write_fatal(2)
     end if
 
@@ -293,7 +298,7 @@ contains
       call messages_print_stress(stdout, "Species")
     end if
     do i = 1, geo%nspecies
-      call species_init(geo%species(i), ispin, print_info=print_info_)
+      call species_init(geo%species(i), ispin, geo%space, print_info=print_info_)
     end do
     if(print_info_) then
       call messages_print_stress(stdout)
@@ -429,15 +434,15 @@ contains
   ! ---------------------------------------------------------
   subroutine geometry_dipole(geo, dipole)
     type(geometry_t), intent(in)  :: geo
-    FLOAT,            intent(out) :: dipole(calc_dim)
+    FLOAT,            intent(out) :: dipole(:)
 
     integer :: ia
 
     PUSH_SUB(geometry_dipole)
 
-    dipole(1:calc_dim) = M_ZERO
+    dipole(1:geo%space%dim) = M_ZERO
     do ia = 1, geo%natoms
-      dipole(1:calc_dim) = dipole(1:calc_dim) + species_zval(geo%atom(ia)%spec)*geo%atom(ia)%x(1:calc_dim)
+      dipole(1:geo%space%dim) = dipole(1:geo%space%dim) + species_zval(geo%atom(ia)%spec)*geo%atom(ia)%x(1:geo%space%dim)
     end do
     dipole = P_PROTON_CHARGE*dipole
 
@@ -470,7 +475,7 @@ contains
   ! ---------------------------------------------------------
   subroutine cm_pos(geo, pos)
     type(geometry_t), intent(in)  :: geo
-    FLOAT,            intent(out) :: pos(calc_dim)
+    FLOAT,            intent(out) :: pos(:)
 
     FLOAT :: mass
     integer :: ia
@@ -492,7 +497,7 @@ contains
   ! ---------------------------------------------------------
   subroutine cm_vel(geo, vel)
     type(geometry_t), intent(in)  :: geo
-    FLOAT,            intent(out) :: vel(calc_dim)
+    FLOAT,            intent(out) :: vel(:)
 
     FLOAT :: mass
     integer :: iatom

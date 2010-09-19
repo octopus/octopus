@@ -27,6 +27,7 @@ program centergeom
   use io_m
   use messages_m
   use parser_m
+  use space_m
   use unit_m
   use unit_system_m
   use xyz_adjust_m
@@ -35,6 +36,7 @@ program centergeom
 
   integer :: ierr
   type(geometry_t) :: geo
+  type(space_t)    :: space
 
   call global_init()                       ! initialize
   call getopt_init(ierr)
@@ -51,12 +53,14 @@ program centergeom
   call io_init()
   call unit_system_init()
 
-  call geometry_init(geo)
+  call space_init(space)
+  call geometry_init(geo, space)
 
   call xyz_adjust_it(geo)
   call atom_write_xyz(".", "adjusted", geo, 3)
 
   call geometry_end(geo)                   ! clean up
+  call space_end(space)
 
   call io_end()
   call datasets_end()

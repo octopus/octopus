@@ -72,9 +72,6 @@ program oct_test
   call parse_integer('WhichTest', HARTREE_TEST, which_test)
   call datasets_init(which_test)
 
-  call parse_integer(datasets_check('Dimensions'), 3, calc_dim)
-  if(calc_dim > 3 .or. calc_dim < 1) call input_error('Dimensions')
-
   call io_init()
   call profiling_init()
 

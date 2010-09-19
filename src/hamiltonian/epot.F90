@@ -281,14 +281,14 @@ contains
       do idir = 1, 3
         call parse_block_float(blk, 0, idir - 1, ep%B_field(idir))
       end do
-      select case(calc_dim)
+      select case(gr%sb%dim)
       case(1)
         call input_error('StaticMagneticField')
       case(2)
         if(ep%B_field(1)**2 + ep%B_field(2)**2 > M_ZERO) call input_error('StaticMagneticField')
       end select
       call parse_block_end(blk)
-      if(calc_dim > 3) then
+      if(gr%sb%dim > 3) then
         message(1) = "Magnetic field not implemented for dim > 3."
         call write_fatal(1)
       endif

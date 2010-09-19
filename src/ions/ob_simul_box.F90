@@ -138,7 +138,7 @@ contains
   !      call write_fatal(1)
         call write_warning(1)
       end if
-      if(lead_sb(il)%dim .ne. calc_dim) then
+      if(lead_sb(il)%dim .ne. sb%dim) then
         message(1) = 'Simulation box of ' // LEAD_NAME(il) // ' has a different dimension than'
         message(2) = 'the central system.'
         call write_fatal(2)

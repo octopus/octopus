@@ -35,6 +35,7 @@ module simul_box_m
   use mpi_m
   use parser_m
   use profiling_m
+  use space_m
   use species_m
   use string_m
   use symmetries_m
@@ -152,9 +153,10 @@ module simul_box_m
 contains
 
   !--------------------------------------------------------------
-  subroutine simul_box_init(sb, geo, transport_mode, lead_sb, lead_info)
+  subroutine simul_box_init(sb, geo, space, transport_mode, lead_sb, lead_info)
     type(simul_box_t),                   intent(inout) :: sb
     type(geometry_t),                    intent(inout) :: geo
+    type(space_t),                       intent(in)    :: space
     logical,                   optional, intent(in)    :: transport_mode
     type(simul_box_t),         optional, intent(inout) :: lead_sb(:)
     type(simul_box_ob_info_t), optional, intent(in)    :: lead_info(:)
@@ -176,7 +178,7 @@ contains
     call read_box_offset()                 ! Parameters defining the offset of the origin.
     if(present(transport_mode)) then
       ASSERT(present(lead_sb) .and. present(lead_info))
-      call ob_simul_box_init(sb, transport_mode, lead_sb, lead_info, geo)
+      call ob_simul_box_init(sb, transport_mode, lead_sb, space, lead_info, geo)
     end if
     call simul_box_build_lattice(sb)       ! Build lattice vectors.
     call simul_box_atoms_in_box(sb, geo, .true.)   ! Put all the atoms inside the box.
@@ -220,7 +222,7 @@ contains
         call write_fatal(2)
       end if
 
-      sb%dim = calc_dim
+      sb%dim = space%dim
 
       !%Variable PeriodicDimensions
       !%Type integer
@@ -1218,10 +1220,11 @@ contains
 
 
   !--------------------------------------------------------------
-  subroutine ob_simul_box_init(sb, transport_mode, lead_sb, lead_info, geo)
+  subroutine ob_simul_box_init(sb, transport_mode, lead_sb, space, lead_info, geo)
     type(simul_box_t), intent(inout) :: sb
     logical,           intent(in)    :: transport_mode
     type(simul_box_t), intent(inout) :: lead_sb(:)
+    type(space_t),     intent(in)    :: space
     type(simul_box_ob_info_t), intent(in) :: lead_info(:)
     type(geometry_t),  intent(inout) :: geo
 
@@ -1260,7 +1263,7 @@ contains
       sb%lsize(TRANS_DIR) = sb%lsize(TRANS_DIR) + lead_info(il)%ucells*lead_sb(il)%lsize(TRANS_DIR)
     end do
     ! Add the atoms of the lead unit cells that are included in the simulation box to geo.
-    call ob_simul_box_add_lead_atoms(sb, lead_sb, lead_info(:)%ucells, lead_info(:)%dataset, geo)
+    call ob_simul_box_add_lead_atoms(sb, lead_sb, space, lead_info(:)%ucells, lead_info(:)%dataset, geo)
 
     POP_SUB(ob_simul_box_init)
 
@@ -1314,7 +1317,7 @@ contains
         message(2) = 'For now we assume the first unit cell to be the periodic representative.'
         call write_warning(2)
       end if
-      if(lead_sb(il)%dim .ne. calc_dim) then
+      if(lead_sb(il)%dim .ne. sb%dim) then
         message(1) = 'Simulation box of ' // LEAD_NAME(il) // ' has a different dimension than'
         message(2) = 'the central system.'
         call write_fatal(2)
@@ -1328,9 +1331,10 @@ contains
   !--------------------------------------------------------------
   ! Read the coordinates of the leads atoms and add them to the
   ! simulation box
-  subroutine ob_simul_box_add_lead_atoms(sb, lead_sb, ucells, lead_dataset, geo)
+  subroutine ob_simul_box_add_lead_atoms(sb, lead_sb, space, ucells, lead_dataset, geo)
     type(simul_box_t), intent(inout) :: sb
     type(simul_box_t), intent(inout) :: lead_sb(:)
+    type(space_t),     intent(in)    :: space
     integer,           intent(in)    :: ucells(:)
     character(len=32), intent(in)    :: lead_dataset(:)
     type(geometry_t),  intent(inout) :: geo
@@ -1348,7 +1352,7 @@ contains
       ! coordinates of another dataset, namely the lead dataset.
       label_bak     = current_label
       current_label = lead_dataset(il)
-      call geometry_init(lead_geo(il), print_info=.false.)
+      call geometry_init(lead_geo(il), space, print_info=.false.)
       current_label = label_bak
       call simul_box_atoms_in_box(lead_sb(il), lead_geo(il), .true.)
     end do

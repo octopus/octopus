@@ -816,7 +816,7 @@ contains
       ! debugging.
       if(in_debug_mode) then
         write(filename, '(a,i3.3,a,i4.4,a,i1.1)') 'phi-', jk(ist), '-', ist, '-', idim
-        select case(calc_dim)
+        select case(gr%sb%dim)
         case(1)
           call zoutput_function(output_axis_x, 'debug/open_boundaries', filename, &
             m_center, st%zphi(:, idim, ist, jk(ist)), sqrt(units_out%length**(-sb%dim)), err, is_tmp=.false.)

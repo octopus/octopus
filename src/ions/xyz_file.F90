@@ -26,6 +26,7 @@ module xyz_file_m
   use parser_m
   use messages_m
   use profiling_m
+  use space_m
   use string_m
   use unit_m
   use unit_system_m
@@ -102,9 +103,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xyz_file_read(what, gf)
+  subroutine xyz_file_read(what, gf, space)
     character(len=*),    intent(in)    :: what
     type(xyz_file_info), intent(inout) :: gf
+    type(space_t),       intent(in)    :: space
 
     integer :: ia, ncol, iunit, jdir
     type(block_t) :: blk
@@ -134,7 +136,7 @@ contains
       SAFE_ALLOCATE(gf%atom(1:gf%n))
 
       do ia = 1, gf%n
-        read(iunit,*) gf%atom(ia)%label, gf%atom(ia)%x(1:calc_dim)
+        read(iunit,*) gf%atom(ia)%label, gf%atom(ia)%x(1:space%dim)
       end do
 
       call io_close(iunit)
@@ -149,16 +151,16 @@ contains
 
       do ia = 1, gf%n
         ncol = parse_block_cols(blk, ia - 1)
-        if((ncol .lt. calc_dim + 1) .or. (ncol .gt. calc_dim + 2)) then
+        if((ncol .lt. space%dim + 1) .or. (ncol .gt. space%dim + 2)) then
           write(message(1), '(3a,i2)') 'Error in block ', what, ' line #', ia
           call write_fatal(1)
         end if
         call parse_block_string (blk, ia - 1, 0, gf%atom(ia)%label)
-        do jdir = 1, calc_dim
+        do jdir = 1, space%dim
           call parse_block_float  (blk, ia - 1, jdir, gf%atom(ia)%x(jdir))
         end do
-        if(ncol == calc_dim + 2) then
-          call parse_block_logical(blk, ia - 1, calc_dim + 1, gf%atom(ia)%move)
+        if(ncol == space%dim + 2) then
+          call parse_block_logical(blk, ia - 1, space%dim + 1, gf%atom(ia)%move)
         else
           gf%atom(ia)%move = .true.
         end if
@@ -169,7 +171,7 @@ contains
 
     ! adjust units
     do ia = 1, gf%n
-      do jdir = calc_dim + 1, MAX_DIM
+      do jdir = space%dim + 1, MAX_DIM
         gf%atom(ia)%x(jdir) = M_ZERO
       end do
       gf%atom(ia)%x = units_to_atomic(units_inp%length, gf%atom(ia)%x)

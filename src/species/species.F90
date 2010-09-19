@@ -31,6 +31,7 @@ module species_m
   use parser_m
   use profiling_m
   use ps_m
+  use space_m
   use splines_m
   use string_m
   use unit_m
@@ -359,9 +360,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine species_init(spec, ispin, print_info)
+  subroutine species_init(spec, ispin, space, print_info)
     type(species_t),   intent(inout) :: spec
     integer,           intent(in)    :: ispin
+    type(space_t),     intent(in)    :: space
     logical, optional, intent(in)    :: print_info
 
     logical :: print_info_
@@ -456,7 +458,7 @@ contains
     SAFE_ALLOCATE(spec%iwf_l(1:spec%niwfs, 1:ispin))
     SAFE_ALLOCATE(spec%iwf_m(1:spec%niwfs, 1:ispin))
     SAFE_ALLOCATE(spec%iwf_i(1:spec%niwfs, 1:ispin))
-    call species_iwf_fix_qn(spec, ispin)
+    call species_iwf_fix_qn(spec, ispin, space)
 
     POP_SUB(species_init)
   end subroutine species_init
@@ -1059,9 +1061,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine species_iwf_fix_qn(spec, ispin)
+  subroutine species_iwf_fix_qn(spec, ispin, space)
     type(species_t), intent(inout) :: spec
-    integer, intent(in) :: ispin
+    integer,         intent(in)    :: ispin
+    type(space_t),   intent(in)    :: space
 
     integer :: is, n, i, l, m, n1, n2, n3
 
@@ -1084,7 +1087,7 @@ contains
       end do
     else
 
-      select case(calc_dim)
+      select case(space%dim)
       case(1)
         do is = 1, ispin
           do i = 1, spec%niwfs

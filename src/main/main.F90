@@ -282,17 +282,6 @@ program octopus
       call write_info(2, stress = .true.)
     end if
 
-    !%Variable Dimensions
-    !%Type integer
-    !%Section System
-    !%Default 3
-    !%Description
-    !% <tt>Octopus</tt> can run in 1, 2 or 3 dimensions, depending on the value of this
-    !% variable. Note that not all input variables may be available in all cases.
-    !%End
-    call parse_integer(datasets_check('Dimensions'), 3, calc_dim)
-    if( calc_dim > MAX_DIM .or. calc_dim < 1) call input_error('Dimensions')
-
     ! now we really start
     call run_init()
     call run()

@@ -96,7 +96,7 @@ contains
         ob%lead(il)%q = M_z0
       end do
     case(SAVE_RAM_USAGE) ! FIXME: only 2D.
-      ASSERT(calc_dim .eq. 2)
+      ASSERT(op%mesh%sb%dim .eq. 2)
       ! sp_coeff has the size ny*nz*do**2, (np=ny*nz*do).
       do il = 1, NLEADS
         np = intf(il)%np_intf
@@ -150,7 +150,7 @@ contains
       np = intf(il)%np_intf
       ! Try to read the coefficients from file
       call read_coeffs(trim(restart_dir)//'open_boundaries/', saved_iter, ob, hm, intf(il), &
-                       calc_dim, max_iter, spacing, delta, op%stencil%size, order)
+                       op%mesh%sb%dim, max_iter, spacing, delta, op%stencil%size, order)
 
       if (saved_iter .lt. max_iter) then ! Calculate missing coefficients.
         if (saved_iter .gt. 0) then
@@ -174,7 +174,7 @@ contains
             call approx_coeff0(intf(il), delta, hm%lead(il)%h_diag(:, :, 1),   &
               hm%lead(il)%h_offdiag(:, :), ob%lead(il)%q(:, :, 0))
           case(SAVE_RAM_USAGE) ! FIXME: only 2D.
-            ASSERT(calc_dim .eq. 2)
+            ASSERT(op%mesh%sb%dim .eq. 2)
             call approx_sp_coeff0(intf(il), delta, hm%lead(il)%h_diag(:, :, 1), &
                  hm%lead(il)%h_offdiag(:, :), ob%lead(il)%q_sp(:, 0), &
                  ob%lead(il)%q_s(:,:,:), order, ob%lead(il)%sp2full_map)
@@ -187,12 +187,12 @@ contains
           call calculate_coeffs_ni(saved_iter+1, max_iter, delta, intf(il), hm%lead(il)%h_diag(:, :, 1), &
             hm%lead(il)%h_offdiag(:, :), ob%lead(il)%q(:, :, :))
         case(SAVE_RAM_USAGE) ! FIXME: only 2D.
-          ASSERT(calc_dim .eq. 2)
+          ASSERT(op%mesh%sb%dim .eq. 2)
           call apply_coupling(ob%lead(il)%q(:, :, 0), hm%lead(il)%h_offdiag(:, :),&
               ob%lead(il)%q(:, :, 0), np, il)
           call calculate_sp_coeffs(saved_iter+1, max_iter, delta, intf(il), hm%lead(il)%h_diag(:, :, 1), &
             hm%lead(il)%h_offdiag(:, :), ob%lead(il)%q_sp(:, :), ob%lead(il)%q_s(:, :, :), np*order,     &
-            order, calc_dim, ob%lead(il)%sp2full_map, spacing)
+            order, op%mesh%sb%dim, ob%lead(il)%sp2full_map, spacing)
         end select
 
         if(saved_iter .lt. max_iter) then
@@ -202,7 +202,7 @@ contains
           call write_info(2)
           if(mpi_grp_is_root(mpi_grp)) then
             call write_coeffs(trim(restart_dir)//'open_boundaries/', ob, hm, intf(il),     &
-              calc_dim, max_iter, spacing, delta, op%stencil%size, order)
+              op%mesh%sb%dim, max_iter, spacing, delta, op%stencil%size, order)
           end if
         end if
       else

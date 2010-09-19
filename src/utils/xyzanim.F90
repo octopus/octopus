@@ -51,9 +51,6 @@ program xyzanim
   end if
   call unit_system_init()
 
-  call parse_integer(datasets_check('Dimensions'), 3, calc_dim)
-  if( calc_dim > MAX_DIM .or. calc_dim < 1) call input_error('Dimensions')
-
   ! Sets the filenames
   coords_file = 'td.general/coordinates'
   xyzfile = 'td.general/movie.xyz'

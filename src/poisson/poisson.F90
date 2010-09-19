@@ -531,7 +531,7 @@ contains
 
     PUSH_SUB(poisson_test)
 
-    if(calc_dim == 1) then
+    if(mesh%sb%dim == 1) then
       write(message(1),'(a)') 'The Hartree integrator test is not implemented for the one-dimensional case.'
       call write_warning(1)
       POP_SUB(poisson_test)
@@ -549,7 +549,7 @@ contains
     rho = M_ZERO; vh = M_ZERO; vh_exact = M_ZERO
 
     alpha = CNST(4.0)*mesh%spacing(1)
-    beta = M_ONE / ( alpha**calc_dim * sqrt(M_PI)**calc_dim )
+    beta = M_ONE / ( alpha**mesh%sb%dim * sqrt(M_PI)**mesh%sb%dim )
 
     write(message(1), '(a)') 'Building the Gaussian distribution of charge...'
     call write_info(1)
@@ -582,7 +582,7 @@ contains
     do nn = 1, n_gaussians
       do ip = 1, mesh%np
         call mesh_r(mesh, ip, rr, origin = xx(:, nn))
-        select case(calc_dim)
+        select case(mesh%sb%dim)
         case(3)
           if(rr > r_small) then
             vh_exact(ip) = vh_exact(ip) + (-1)**nn * loct_erf(rr/alpha)/rr

@@ -30,6 +30,7 @@ program liquid
   use loct_math_m
   use parser_m
   use profiling_m
+  use space_m
   use unit_m
   use unit_system_m
   use xyz_adjust_m
@@ -38,10 +39,8 @@ program liquid
 
   integer :: ierr
   type(geometry_t) :: geo
+  type(space_t)    :: space
   integer, parameter :: dim = 3
-
-  ! this is a hack that must be fixed
-  calc_dim = 3
 
   call global_init()                       ! initialize
   call getopt_init(ierr)
@@ -59,7 +58,8 @@ program liquid
 
   call unit_system_init()
 
-  call geometry_init(geo)
+  call space_init(space)
+  call geometry_init(geo, space)
 
   call generate_liquid()
 
