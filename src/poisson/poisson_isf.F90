@@ -45,6 +45,7 @@ module poisson_isf_m
     real(8), pointer  :: kernel(:, :, :)
     integer           :: nfft1, nfft2, nfft3
     type(mpi_grp_t)   :: mpi_grp
+    logical           :: all_nodes
   end type isf_cnf_t
 
   ! Indices for the cnf array
@@ -98,10 +99,7 @@ contains
     integer, allocatable :: ranks(:)
     !data ranks /0, 1/
 #endif
-	integer :: nodes 	!< -1 = one node
-	  				 	!! 0 = all nodes
-	   					!! 1 = domain_nodes
-	   					!! +2 number specified. A new communicator will be created for that
+    integer :: nodes
 
     PUSH_SUB(poisson_isf_init)
 
@@ -116,13 +114,13 @@ contains
       ! The serial version is always needed (as used, e.g., in the casida runmode)
       call calculate_dimensions(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), &
         cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3)
-      
+
       n1 = cnf(serial)%nfft1/2 + 1
       n2 = cnf(serial)%nfft2/2 + 1
       n3 = cnf(serial)%nfft3/2 + 1
-      
+
       SAFE_ALLOCATE(cnf(serial)%kernel(1:n1, 1:n2, 1:n3))
-      
+
       call build_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),   &
         cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3, &
         real(mesh%spacing(1), 8), order_scaling_function, cnf(serial)%kernel)
@@ -134,7 +132,7 @@ contains
     ! recalculating the kernel on each call of poisson_isf_solve depending on
     ! the all_nodes argument, both kernels are calculated.
     cnf(domain)%mpi_grp = mesh%mpi_grp
-    
+
     ! For the world configuration we build a new communicator
 
     default_nodes = 0 !All nodes
@@ -148,23 +146,24 @@ contains
     !% 0, the default, implies that all available nodes are used.
     !%End
     call parse_integer(datasets_check('PoissonSolverNodes'), default_nodes, nodes)
-    
+
     if(nodes <= 0 .or. nodes > mpi_world%size) nodes = mpi_world%size
+    cnf(world)%all_nodes = (nodes == mpi_world%size)
 
     SAFE_ALLOCATE(ranks(1:nodes))
-    
+
     do ii = 1, nodes
       ranks(ii) = ii - 1
     end do
-    
+
     !create a new communicator
     !Extract the original group handle and create new comm.
     call MPI_Comm_group(mpi_world%comm, world_grp, ierr)
     call MPI_Group_incl(world_grp, nodes, ranks(1), poisson_grp, ierr)
     call MPI_Comm_create(mpi_world%comm, poisson_grp, cnf(world)%mpi_grp%comm, ierr)
-    
+
     SAFE_DEALLOCATE_A(ranks)
-    
+
     !Fill the new data structure, for all nodes
     if (cnf(world)%mpi_grp%comm /= MPI_COMM_NULL) then
       call MPI_Comm_rank(cnf(world)%mpi_grp%comm, cnf(world)%mpi_grp%rank, ierr)
@@ -203,7 +202,7 @@ contains
           cnf(i_cnf)%kernel)
       else
       	nullify(cnf(i_cnf)%kernel)
-      	cycle
+        cycle
       end if
     end do
 #endif
@@ -298,6 +297,11 @@ contains
           cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, cnf(i_cnf)%nfft3,  &
           real(mesh%spacing(1), 8), cnf(i_cnf)%kernel, rho_cf%RS,                      &
           cnf(i_cnf)%mpi_grp%rank, cnf(i_cnf)%mpi_grp%size, cnf(i_cnf)%mpi_grp%comm)
+      end if
+      ! we need to be sure that the root of every domain-partition has a copy of the potential
+      ! for the moment we broadcast to all nodes, but this is more than what we really need 
+      if(i_cnf == world .and. .not. cnf(world)%all_nodes) then
+        call MPI_Bcast(rho_cf%rs(1, 1, 1), rho_cf%n(1)*rho_cf%n(2)*rho_cf%n(3), MPI_FLOAT, 0, mpi_world%comm, mpi_err)
       end if
 #endif
     end if
