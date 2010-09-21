@@ -813,6 +813,7 @@ contains
     integer :: iatom, jatom
     FLOAT, parameter :: alpha = CNST(1.1313708)
     type(profile_t), save :: ion_ion_prof
+    logical,  allocatable :: in_box(:)
 
     call profiling_in(ion_ion_prof, "ION_ION_INTERACTION")
     PUSH_SUB(ion_interaction_calculate)
@@ -834,12 +835,22 @@ contains
       call ion_interaction_sete(gr, sb, geo, ep) 
       write(*,*) "energy, ep%eii", energy, ep%eii
     else
+
+      if(ep%ignore_external_ions) then
+        SAFE_ALLOCATE(in_box(1:geo%natoms))
+        do iatom = 1, geo%natoms
+          in_box(iatom) = simul_box_in_box(sb, geo, geo%atom(iatom)%x)
+        end do
+      end if
+
       ! only interaction inside the cell
       do iatom = 1, geo%natoms
         spec => geo%atom(iatom)%spec
         zi = species_zval(geo%atom(iatom)%spec)
 
-        if(.not.simul_box_in_box(sb, geo, geo%atom(iatom)%x) .and. ep%ignore_external_ions) cycle
+        if(ep%ignore_external_ions) then
+          if(.not. in_box(iatom)) cycle
+        end if
 
         if(species_type(spec) .eq. SPEC_JELLI) then
           energy = energy + (M_THREE / M_FIVE) * species_zval(spec)**2 / species_jradius(spec)
@@ -848,7 +859,10 @@ contains
         do jatom = 1, geo%natoms
 
           if(iatom == jatom) cycle
-          if(.not.simul_box_in_box(sb, geo, geo%atom(jatom)%x) .and. ep%ignore_external_ions) cycle
+
+          if(ep%ignore_external_ions) then
+            if(.not. in_box(iatom)) cycle
+          end if
 
           zj = species_zval(geo%atom(jatom)%spec)
           rr = sqrt(sum((geo%atom(iatom)%x - geo%atom(jatom)%x)**2))
@@ -866,6 +880,8 @@ contains
       end do !iatom
 
     end if
+
+    SAFE_DEALLOCATE_A(in_box)
 
     call profiling_out(ion_ion_prof)
     POP_SUB(ion_interaction_calculate)
