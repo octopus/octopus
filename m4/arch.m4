@@ -78,7 +78,13 @@ ACX_M256D
 oct_arch=x86_64
 vector=$acx_m256d
 vector_type="(avx)"
+ac_enable_avx=yes
+AC_ARG_ENABLE(avx, AS_HELP_STRING([--disable-avx], [Disable the use of AVX vectorial instructions (x86_64)]), 
+	[ac_enable_avx=${enableval}])
 if test x$vector = xno ; then
+ ac_enable_avx=no
+fi
+if test x$ac_enable_avx = xno ; then
  vector=$acx_m128d
  vector_type="(sse2)"
 fi
