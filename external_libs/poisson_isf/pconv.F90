@@ -288,6 +288,7 @@ include "mpif.h"
  jend=max(min(md2/nproc,m2-md2/nproc*iproc),0)
  iend=istart+jend
 
+ if(jend == 0) jend = 1
  allocate(lrhopot(m1, m3, jend))
  lrhopot(1:m1, 1:m3, 1:jend) = zf(1:m1, 1:m3, 1:jend)
 
