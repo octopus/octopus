@@ -76,7 +76,7 @@
 	  a4 = VEC_FMA(wj, LOAD(fi + indexj + 4*VEC_SIZE + k), a4);
 	  a5 = VEC_FMA(wj, LOAD(fi + indexj + 5*VEC_SIZE + k), a5);
 	  a6 = VEC_FMA(wj, LOAD(fi + indexj + 6*VEC_SIZE + k), a6);
-	  a7 = VEC_FMA(wj, LOAD(fi + indexj + 7*VEC_SIZE + k), a7);;
+	  a7 = VEC_FMA(wj, LOAD(fi + indexj + 7*VEC_SIZE + k), a7);
 	  a8 = VEC_FMA(wj, LOAD(fi + indexj + 8*VEC_SIZE + k), a8);
 	  a9 = VEC_FMA(wj, LOAD(fi + indexj + 9*VEC_SIZE + k), a9);
 	  aa = VEC_FMA(wj, LOAD(fi + indexj + 10*VEC_SIZE + k), aa);
@@ -92,7 +92,7 @@
 	  b4 = VEC_FMA(wj, LOAD(fi + indexj + 20*VEC_SIZE + k), b4);
 	  b5 = VEC_FMA(wj, LOAD(fi + indexj + 21*VEC_SIZE + k), b5);
 	  b6 = VEC_FMA(wj, LOAD(fi + indexj + 22*VEC_SIZE + k), b6);
-	  b7 = VEC_FMA(wj, LOAD(fi + indexj + 23*VEC_SIZE + k), b7);;
+	  b7 = VEC_FMA(wj, LOAD(fi + indexj + 23*VEC_SIZE + k), b7);
 	  b8 = VEC_FMA(wj, LOAD(fi + indexj + 24*VEC_SIZE + k), b8);
 	  b9 = VEC_FMA(wj, LOAD(fi + indexj + 25*VEC_SIZE + k), b9);
 	  ba = VEC_FMA(wj, LOAD(fi + indexj + 26*VEC_SIZE + k), ba);
@@ -163,7 +163,7 @@
 	  a4 = VEC_FMA(wj, LOAD(fi + indexj + 4*VEC_SIZE + k), a4);
 	  a5 = VEC_FMA(wj, LOAD(fi + indexj + 5*VEC_SIZE + k), a5);
 	  a6 = VEC_FMA(wj, LOAD(fi + indexj + 6*VEC_SIZE + k), a6);
-	  a7 = VEC_FMA(wj, LOAD(fi + indexj + 7*VEC_SIZE + k), a7);;
+	  a7 = VEC_FMA(wj, LOAD(fi + indexj + 7*VEC_SIZE + k), a7);
 	  a8 = VEC_FMA(wj, LOAD(fi + indexj + 8*VEC_SIZE + k), a8);
 	  a9 = VEC_FMA(wj, LOAD(fi + indexj + 9*VEC_SIZE + k), a9);
 	  aa = VEC_FMA(wj, LOAD(fi + indexj + 10*VEC_SIZE + k), aa);
@@ -213,7 +213,7 @@
 	  a4 = VEC_FMA(wj, LOAD(fi + indexj + 4*VEC_SIZE + k), a4);
 	  a5 = VEC_FMA(wj, LOAD(fi + indexj + 5*VEC_SIZE + k), a5);
 	  a6 = VEC_FMA(wj, LOAD(fi + indexj + 6*VEC_SIZE + k), a6);
-	  a7 = VEC_FMA(wj, LOAD(fi + indexj + 7*VEC_SIZE + k), a7);;
+	  a7 = VEC_FMA(wj, LOAD(fi + indexj + 7*VEC_SIZE + k), a7);
 	}
 	STORE(fo + (i<<ldf)              + k, a0);
 	STORE(fo + (i<<ldf) + 1*VEC_SIZE + k, a1);

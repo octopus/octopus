@@ -42,7 +42,23 @@ AC_LINK_IFELSE( AC_LANG_PROGRAM( [
 ], [
 __m256d a __attribute__((aligned(16)));
  ]), 
- [AC_DEFINE(HAVE_M256D, 1, [compiler supports the m256d type]) [acx_m256d=yes]], [acx_m256d=no])
+ [acx_m256d=yes], [acx_m256d=no])
+AC_MSG_RESULT($acx_m256d)])
+
+################################################################
+# Check whether the hardware accepts AVX instructions
+# ----------------------------------
+AC_DEFUN([ACX_AVX],
+[AC_MSG_CHECKING([whether AVX instructions can be used])
+acx_save_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -xAVX"
+AC_RUN_IFELSE( AC_LANG_PROGRAM( [
+#include <immintrin.h>
+], [
+__m256d a __attribute__((aligned(16)));
+ ]), 
+ [acx_m256d=yes], [acx_m256d=no], [cross compiling; assumed OK... $ac_c])
+CFLAGS="$acx_save_CFLAGS"
 AC_MSG_RESULT($acx_m256d)])
 
 ################################################################
@@ -75,6 +91,12 @@ case "${host}" in
 x86_64*)
 ACX_M128D
 ACX_M256D
+if test x$acx_m256d = xyes ; then
+ ACX_AVX
+fi
+if test x$acx_m256d = xyes ; then
+ AC_DEFINE(HAVE_M256D, 1, [compiler supports the m256d type])
+fi
 oct_arch=x86_64
 vector=$acx_m256d
 vector_type="(avx)"
