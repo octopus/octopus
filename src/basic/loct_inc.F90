@@ -91,3 +91,8 @@ subroutine SUBNAME(loct_pointer_copy_4)(o, i)
   end if
 
 end subroutine SUBNAME(loct_pointer_copy_4)
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

@@ -57,6 +57,7 @@ module distributed_m
   
 contains
 
+  ! ---------------------------------------------------------
   subroutine distributed_nullify(this, total)
     type(distributed_t), intent(out) :: this
     integer,             intent(in)  :: total
@@ -74,6 +75,8 @@ contains
     POP_SUB(distributed_nullify)
   end subroutine distributed_nullify
   
+
+  ! ---------------------------------------------------------
   subroutine distributed_init(this, total, mc, strategy, tag)
     type(distributed_t), intent(out) :: this
     integer,             intent(in)  :: total
@@ -144,6 +147,8 @@ contains
     POP_SUB(distributed_init)
   end subroutine distributed_init
 
+
+  ! ---------------------------------------------------------
   subroutine distributed_copy(in, out)
     type(distributed_t), intent(in)  :: in
     type(distributed_t), intent(out) :: out
@@ -182,6 +187,8 @@ contains
     POP_SUB(distributed_copy)
   end subroutine distributed_copy
 
+
+  ! ---------------------------------------------------------
   subroutine distributed_end(this)
     type(distributed_t), intent(inout) :: this
     
