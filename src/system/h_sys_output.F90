@@ -459,7 +459,7 @@ contains
         ! The corner of the cell is always (0,0,0) to XCrySDen
         ! so the offset is applied to the atomic coordinates.
         ! Offset in periodic directions:
-        offset = -matmul(gr%mesh%sb%rlattice_primitive(1:3,1:3), gr%mesh%sb%lsize(1:3))
+        offset(1:3) = -matmul(gr%mesh%sb%rlattice_primitive(1:3,1:3), gr%mesh%sb%lsize(1:3))
         ! Offset in aperiodic directions:
         do idir = gr%mesh%sb%periodic_dim + 1, 3
           offset(idir) = -(gr%mesh%idx%ll(idir) - 1)/2*gr%mesh%spacing(idir)

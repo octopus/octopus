@@ -189,7 +189,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fft_init(nn, dim, is_real, fft, optimize)
-    integer,           intent(inout) :: nn(MAX_DIM)
+    integer,           intent(inout) :: nn(1:3)
     integer,           intent(in)    :: dim
     integer,           intent(in)    :: is_real
     type(fft_t),       intent(out)   :: fft
@@ -264,7 +264,7 @@ contains
     ! jj now contains an empty slot
     fft_refs(jj)          = 1
     fft_array(jj)%slot    = jj
-    fft_array(jj)%n       = nn
+    fft_array(jj)%n(1:dim) = nn(1:dim)
     fft_array(jj)%is_real = is_real
     if(is_real == fft_real) then
       SAFE_ALLOCATE(rin(1:nn(1), 1:nn(2), 1:nn(3)))
