@@ -101,7 +101,7 @@ module fft_m
   type fft_t
     integer     :: slot       ! in which slot do we have this fft
 
-    integer     :: n(MAX_DIM) ! size of the fft
+    integer     :: n(3)       ! size of the fft
     integer     :: is_real    ! is the fft real or complex
     type(c_ptr) :: planf      ! the plan for forward transforms
     type(c_ptr) :: planb      ! the plan for backward transforms
@@ -264,7 +264,7 @@ contains
     ! jj now contains an empty slot
     fft_refs(jj)          = 1
     fft_array(jj)%slot    = jj
-    fft_array(jj)%n(1:dim) = nn(1:dim)
+    fft_array(jj)%n(1:3)  = nn(1:3)
     fft_array(jj)%is_real = is_real
     if(is_real == fft_real) then
       SAFE_ALLOCATE(rin(1:nn(1), 1:nn(2), 1:nn(3)))
@@ -367,7 +367,7 @@ contains
   ! ---------------------------------------------------------
   subroutine fft_getdim_real(fft, dd)
     type(fft_t), intent(in)  :: fft
-    integer,     intent(out) :: dd(MAX_DIM)
+    integer,     intent(out) :: dd(1:3)
 
     PUSH_SUB(fft_getdim_real)
     dd = fft%n
@@ -379,7 +379,7 @@ contains
   ! ---------------------------------------------------------
   subroutine fft_getdim_complex(fft, dd)
     type(fft_t), intent(in)  :: fft
-    integer,     intent(out) :: dd(MAX_DIM)
+    integer,     intent(out) :: dd(1:3)
 
     PUSH_SUB(fft_getdim_complex)
 
