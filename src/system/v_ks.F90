@@ -28,6 +28,7 @@ module v_ks_m
   use grid_m
   use hamiltonian_m
   use index_m
+  use io_function_m
   use lalg_basic_m
   use magnetic_m
   use mesh_function_m
@@ -313,6 +314,7 @@ contains
     integer :: ip, ispin
     type(profile_t), save :: prof
     logical :: calc_eigenval_
+    
 
     ! The next line is a hack to be able to perform an IP/RPA calculation
     !logical, save :: RPA_first = .true.
@@ -422,7 +424,9 @@ contains
       type(profile_t), save :: prof
       FLOAT, pointer :: vxc(:, :)
       FLOAT, allocatable :: vxcc(:), nxc(:)
-      integer :: ispin, ierr, ip
+      integer :: ispin, ierr, ip,itmp
+      character(len=10) :: vxc_name
+      character(len=10) :: nxc_name
 
       PUSH_SUB(v_ks_calc.v_a_xc)
       call profiling_in(prof, "XC")
@@ -480,24 +484,41 @@ contains
         SAFE_ALLOCATE(vxcc(1:gr%fine%mesh%np_part))
         
         do ispin = 1, st%d%nspin
-          
+                    
           vxcc(1:gr%fine%mesh%np) = hm%vxc(1:gr%fine%mesh%np, ispin)
           
           call dderivatives_lapl(gr%fine%der, vxcc, nxc)
           
           ! These output calls and the ones below are for debugging, XA and FB.
-          ! call doutput_function(output_axis_x, "./", "vxc", gr%fine%mesh, vxcc, unit_one, ierr)
-          ! call doutput_function(output_axis_x, "./", "nxc", gr%fine%mesh, nxc, unit_one, ierr)
           
-          do ip = 1, gr%fine%mesh%np
-            if(rho(ip, 1) < ks%tail_correction_tol) nxc(ip) = M_ZERO
-          end do
+          !first we set the names of the output files
 
+          !write (vxc_name,'(i10)') ispin
+          !itmp = verify(vxc_name," ")
+          !vxc_name =  "vxc"//trim(vxc_name(itmp:))
+          
+          
+          !write (nxc_name,'(i10)') ispin
+          !itmp = verify(nxc_name," ")
+          !nxc_name =  "nxc"//trim(nxc_name(itmp:))
+          
+          !print the XC potential before the correction
+          !call doutput_function(output_axis_x, "./static", nxc_name, gr%fine%mesh, nxc, unit_one, ierr)
+          !call doutput_function(output_axis_x, "./static", vxc_name, gr%fine%mesh, vxcc, unit_one, ierr)
+          
+          
+          !Performing the correction to the "XC density" 
+          do ip = 1, gr%fine%mesh%np
+            if(rho(ip, ispin) < ks%tail_correction_tol) nxc(ip) = M_ZERO
+          end do
+          
+          !From the XC density to the XC potential 
           call dpoisson_solve(ks%hartree_solver, vxcc, nxc)
           vxcc(1:gr%fine%mesh%np) = -vxcc(1:gr%fine%mesh%np)/(CNST(4.0)*M_PI)
-
-          ! call doutput_function(output_axis_x, "./", "nxc2", gr%fine%mesh, nxc, unit_one, ierr)
-          ! call doutput_function(output_axis_x, "./", "vxc2", gr%fine%mesh, vxcc, unit_one, ierr)
+          
+          !print the XC potential after the correction
+          !call doutput_function(output_axis_x, "./static", trim(nxc_name)//trim("cut") , gr%fine%mesh, nxc, unit_one, ierr)
+          !call doutput_function(output_axis_x, "./static", trim(vxc_name)//trim("cut") , gr%fine%mesh, vxcc, unit_one, ierr)
           
           hm%vxc(1:gr%fine%mesh%np, ispin) = vxcc(1:gr%fine%mesh%np)
 
