@@ -80,7 +80,6 @@ subroutine X(cf_free_RS)(cf)
 
   ASSERT(associated(cf%RS))
   SAFE_DEALLOCATE_P(cf%RS)
-  nullify(cf%RS)
 
   POP_SUB(X(cf_free_RS))
 end subroutine X(cf_free_RS)
@@ -91,20 +90,12 @@ subroutine X(cf_free)(cf)
 
   PUSH_SUB(X(cf_free))
 
-  if(associated(cf%RS)) then
-    SAFE_DEALLOCATE_P(cf%RS)
-    nullify(cf%RS)
-  end if
-
-  if(associated(cf%FS)) then
-    SAFE_DEALLOCATE_P(cf%FS)
-    nullify(cf%FS)
-  end if
+  SAFE_DEALLOCATE_P(cf%RS)
+  SAFE_DEALLOCATE_P(cf%FS)
 
   if(associated(cf%fft)) then
     call fft_end(cf%fft)
     SAFE_DEALLOCATE_P(cf%fft)
-    nullify(cf%fft)
   end if
 
   POP_SUB(X(cf_free))

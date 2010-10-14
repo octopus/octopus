@@ -275,7 +275,6 @@ contains
       
       ! and deallocate
       SAFE_DEALLOCATE_P(this%uniform_vector_potential)
-      nullify(this%uniform_vector_potential)
       
     end subroutine unify_vector_potentials
 

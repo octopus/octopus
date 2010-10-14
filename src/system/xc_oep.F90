@@ -164,7 +164,6 @@ contains
 
     if(oep%level.ne.XC_OEP_NONE) then
       SAFE_DEALLOCATE_P(oep%vxc)
-      nullify(oep%vxc)
 
       if(oep%level == XC_OEP_FULL) then 
         call lr_dealloc(oep%lr)

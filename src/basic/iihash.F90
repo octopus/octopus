@@ -90,7 +90,6 @@ contains
       call ialist_end(h%keyval(i))
     end do
     SAFE_DEALLOCATE_P(h%keyval)
-    nullify(h%keyval)
   end subroutine iihash_end
 
 

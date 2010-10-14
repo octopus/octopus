@@ -283,7 +283,7 @@ contains
     end do
 
     SAFE_DEALLOCATE_P(der%op)
-    nullify   (der%op, der%lapl, der%grad)
+    nullify(der%lapl, der%grad)
 
     nullify(der%coarser)
     nullify(der%finer)

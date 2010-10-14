@@ -248,7 +248,8 @@ contains
       SAFE_DEALLOCATE_A(my_csi)
       SAFE_DEALLOCATE_A(start_csi)
 
-      nullify(sb_p); nullify(cv_p)
+      nullify(sb_p)
+      nullify(cv_p)
 
       POP_SUB(curv_modine_init.optimize)
     end subroutine optimize
@@ -422,7 +423,8 @@ contains
     call droot_solver_run(rs, getf, chi, conv, startval = xx)
 
     SAFE_DEALLOCATE_A(x_p)
-    nullify(sb_p); nullify(cv_p)
+    nullify(sb_p)
+    nullify(cv_p)
 
     if(.not.conv) then
       message(1) = "During the construction of the adaptive grid, the Newton-Raphson"

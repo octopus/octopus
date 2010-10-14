@@ -560,17 +560,17 @@ module tdf_m
         case(TDF_SINE_SERIES)
           SAFE_ALLOCATE(f%coeffs(1:f%sine_nfreqs))
           f%coeffs = M_ZERO
-          SAFE_DEALLOCATE_P(f%val); nullify(f%val)
+          SAFE_DEALLOCATE_P(f%val)
           f%mode = TDF_SINE_SERIES
         case(TDF_FOURIER_SERIES)
           SAFE_ALLOCATE(f%valww(1:2*(f%nfreqs-1)+1))
           f%valww = M_ZERO
-          SAFE_DEALLOCATE_P(f%val); nullify(f%val)
+          SAFE_DEALLOCATE_P(f%val)
           f%mode = TDF_FOURIER_SERIES
         case(TDF_ZERO_FOURIER)
           SAFE_ALLOCATE(f%valww(1:2*(f%nfreqs-1)+1))
           f%valww = M_ZERO
-          SAFE_DEALLOCATE_P(f%val); nullify(f%val)
+          SAFE_DEALLOCATE_P(f%val)
           f%mode = TDF_ZERO_FOURIER
       end select
     end if
@@ -854,7 +854,7 @@ module tdf_m
       f%coeffs(j) = sqrt(M_TWO/bigt) * f%coeffs(j) * f%dt
     end do
 
-    SAFE_DEALLOCATE_P(f%val); nullify(f%val)
+    SAFE_DEALLOCATE_P(f%val)
     f%mode = TDF_SINE_SERIES
 
     call fft_end(f%fft_handler)
@@ -889,7 +889,7 @@ module tdf_m
       f%val(k) = f%val(k) * sqrt(M_TWO/bigt)
     end do
 
-    SAFE_DEALLOCATE_P(f%coeffs); nullify(f%coeffs)
+    SAFE_DEALLOCATE_P(f%coeffs)
     f%mode = TDF_NUMERICAL
 
     n(1:3) = (/ f%niter, 1, 1 /)
@@ -1004,13 +1004,13 @@ module tdf_m
     case(TDF_FROM_FILE)
       call spline_end(f%amplitude)
     case(TDF_NUMERICAL)
-      SAFE_DEALLOCATE_P(f%val); nullify(f%val)
+      SAFE_DEALLOCATE_P(f%val)
       call fft_end(f%fft_handler)
     case(TDF_FOURIER_SERIES)
-      SAFE_DEALLOCATE_P(f%valww); nullify(f%valww)
+      SAFE_DEALLOCATE_P(f%valww)
       call fft_end(f%fft_handler)
     case(TDF_SINE_SERIES)
-      SAFE_DEALLOCATE_P(f%coeffs); nullify(f%coeffs)
+      SAFE_DEALLOCATE_P(f%coeffs)
     end select
     f%mode = TDF_EMPTY
 

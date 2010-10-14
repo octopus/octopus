@@ -347,12 +347,11 @@ contains
     ! sanity check
     ASSERT(associated(tr%v_old)) 
     SAFE_DEALLOCATE_P(tr%v_old)         ! clean old KS potentials
-    nullify(tr%v_old)
 
     select case(tr%method)
     case(PROP_MAGNUS)
       ASSERT(associated(tr%vmagnus))
-      SAFE_DEALLOCATE_P(tr%vmagnus); nullify(tr%vmagnus)
+      SAFE_DEALLOCATE_P(tr%vmagnus)
     case(PROP_CRANK_NICHOLSON_SPARSKIT)
 #ifdef HAVE_SPARSKIT
       call zsparskit_solver_end()

@@ -282,7 +282,6 @@ contains
 
     SAFE_DEALLOCATE_P(eigens%converged)
     SAFE_DEALLOCATE_P(eigens%diff)
-    nullify(eigens%diff)
 
     POP_SUB(eigensolver_end)
   end subroutine eigensolver_end

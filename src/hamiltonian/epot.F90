@@ -438,17 +438,13 @@ contains
     SAFE_DEALLOCATE_P(ep%local_potential)
     SAFE_DEALLOCATE_P(ep%fii)
 
-    if(associated(ep%vpsl)) then
-      SAFE_DEALLOCATE_P(ep%vpsl)
-      nullify(ep%vpsl)
-    end if
+    SAFE_DEALLOCATE_P(ep%vpsl)
 
     if(ep%classical_pot > 0) then
       ep%classical_pot = 0
       ! sanity check
       ASSERT(associated(ep%Vclassical)) 
       SAFE_DEALLOCATE_P(ep%Vclassical)         ! and clean up
-      nullify(ep%Vclassical)
     end if
 
     ! the external laser

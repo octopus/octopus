@@ -638,15 +638,14 @@ module opt_control_target_m
        target%type .eq. oct_tg_density .or. &
        target%type .eq. oct_tg_td_local) then
       SAFE_DEALLOCATE_P(target%rho)
-      nullify(target%rho)
     end if
     if(target%type .eq. oct_tg_hhg) then
-      SAFE_DEALLOCATE_P(target%hhg_k); nullify(target%hhg_k)
-      SAFE_DEALLOCATE_P(target%hhg_alpha); nullify(target%hhg_alpha)
-      SAFE_DEALLOCATE_P(target%hhg_a); nullify(target%hhg_a)
+      SAFE_DEALLOCATE_P(target%hhg_k)
+      SAFE_DEALLOCATE_P(target%hhg_alpha)
+      SAFE_DEALLOCATE_P(target%hhg_a)
     end if
     if(target_mode(target).eq.oct_targetmode_td) then
-      SAFE_DEALLOCATE_P(target%td_fitness); nullify(target%td_fitness)
+      SAFE_DEALLOCATE_P(target%td_fitness)
     end if
     if(target_type(target).eq.oct_tg_velocity) then
        if(oct%algorithm .eq. oct_algorithm_cg) then

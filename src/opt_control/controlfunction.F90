@@ -1543,14 +1543,12 @@ contains
     PUSH_SUB(controlfunction_mod_close)
 
     SAFE_DEALLOCATE_P(cf_common%alpha)
-    nullify(cf_common%alpha)
 
     do ipar = 1, cf_common%no_controlfunctions
       call tdf_end(cf_common%td_penalty(ipar))
     end do
 
     SAFE_DEALLOCATE_P(cf_common%td_penalty)
-    nullify(cf_common%td_penalty)
     SAFE_DEALLOCATE_P(cf_common)
 
     POP_SUB(controlfunction_mod_close)

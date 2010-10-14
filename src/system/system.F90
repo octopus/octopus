@@ -172,7 +172,7 @@ contains
 
     if(associated(sys%st)) then
       call states_end(sys%st)
-      SAFE_DEALLOCATE_P(sys%st); nullify(sys%st)
+      SAFE_DEALLOCATE_P(sys%st)
     end if
 
     call geometry_end(sys%geo)

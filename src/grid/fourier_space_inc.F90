@@ -39,7 +39,6 @@ subroutine X(cf_free_FS)(cf)
 
   ASSERT(associated(cf%FS))
   SAFE_DEALLOCATE_P(cf%FS)
-  nullify(cf%FS)
 
   POP_SUB(X(cf_free_FS))
 end subroutine X(cf_free_FS)

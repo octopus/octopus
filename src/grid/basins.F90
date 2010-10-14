@@ -71,13 +71,13 @@ contains
     PUSH_SUB(basins_end)
 
     ASSERT(associated(this%map))
-    SAFE_DEALLOCATE_P(this%map); nullify(this%map)
+    SAFE_DEALLOCATE_P(this%map)
 
     if(associated(this%position)) then
-      SAFE_DEALLOCATE_P(this%position); nullify(this%position)
-      SAFE_DEALLOCATE_P(this%value);    nullify(this%value)
-      SAFE_DEALLOCATE_P(this%volume);   nullify(this%volume)
-      SAFE_DEALLOCATE_P(this%population);   nullify(this%population)
+      SAFE_DEALLOCATE_P(this%position)
+      SAFE_DEALLOCATE_P(this%value)
+      SAFE_DEALLOCATE_P(this%volume)
+      SAFE_DEALLOCATE_P(this%population)
     end if
     
     POP_SUB(basins_end)

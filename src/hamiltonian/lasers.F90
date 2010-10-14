@@ -453,12 +453,12 @@ contains
         call tdf_end(lasers(il)%phi)
         select case(lasers(il)%field)
         case(E_FIELD_SCALAR_POTENTIAL)
-          SAFE_DEALLOCATE_P(lasers(il)%v); nullify(lasers(il)%v)
+          SAFE_DEALLOCATE_P(lasers(il)%v)
         case(E_FIELD_MAGNETIC)
-          SAFE_DEALLOCATE_P(lasers(il)%a); nullify(lasers(il)%a)
+          SAFE_DEALLOCATE_P(lasers(il)%a)
         end select
       end do
-      SAFE_DEALLOCATE_P(lasers); nullify(lasers)
+      SAFE_DEALLOCATE_P(lasers)
     end if
 
     POP_SUB(laser_end)
