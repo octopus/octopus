@@ -50,12 +50,15 @@ contains
     integer,        intent(in)  :: nobjs
     FLOAT,          intent(in)  :: pos(:, :)
     
+    PUSH_SUB(lookup_init)
+
     this%nobjs = nobjs
     this%dim = dim
     SAFE_ALLOCATE(this%pos(1:this%dim, 1:this%nobjs))
     
     this%pos(1:this%dim, 1:this%nobjs) = pos(1:this%dim, 1:this%nobjs)
 
+    POP_SUB(lookup_init)
   end subroutine lookup_init
 
   ! -----------------------------------------
@@ -63,8 +66,10 @@ contains
   subroutine lookup_end(this)
     type(lookup_t), intent(inout) :: this
 
+    PUSH_SUB(lookup_end)
     SAFE_DEALLOCATE_P(this%pos)
 
+    POP_SUB(lookup_end)
   end subroutine lookup_end
 
   ! -----------------------------------------
@@ -73,10 +78,13 @@ contains
     type(lookup_t), intent(in) :: cin
     type(lookup_t), intent(out) :: cout
 
+    PUSH_SUB(lookup_copy)
+
     cout%nobjs = cin%nobjs
     cout%dim = cin%dim
     call loct_pointer_copy(cout%pos, cin%pos)
    
+    POP_SUB(lookup_copy)
   end subroutine lookup_copy
 
   ! ------------------------------------------
@@ -92,6 +100,8 @@ contains
     FLOAT :: r2
     integer :: ii, ipoint
 
+    PUSH_SUB(lookup_get_list)
+
     if(present(list)) SAFE_ALLOCATE(list(1:this%nobjs, 1:npoint))
 
     nlist(1:npoint) = 0    
@@ -106,6 +116,7 @@ contains
       end do
     end do
 
+    POP_SUB(lookup_get_list)
   end subroutine lookup_get_list
 
 end module lookup_m

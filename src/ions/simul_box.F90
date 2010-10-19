@@ -572,8 +572,11 @@ contains
 
     ! ------------------------------------------------------------
     subroutine sb_lookup_init()
+
       FLOAT, allocatable :: pos(:, :)
       integer :: iatom
+
+      PUSH_SUB(simul_box_init.sb_lookup_init)
 
       SAFE_ALLOCATE(pos(1:sb%dim, 1:geo%natoms))
      
@@ -584,7 +587,7 @@ contains
       call lookup_init(sb%atom_lookup, sb%dim, geo%natoms, pos)
       
       SAFE_DEALLOCATE_A(pos)
-
+      POP_SUB(simul_box_init.sb_lookup_init)
     end subroutine sb_lookup_init
 
   end subroutine simul_box_init
@@ -883,7 +886,6 @@ contains
 
     ! no push_sub because this function is called very frequently
 
-    xx = M_ZERO
     xx(1:sb%dim, 1) = yy(1:sb%dim)
 
     call simul_box_in_box_vec(sb, geo, 1, xx, in_box2)
@@ -913,9 +915,7 @@ contains
 #endif
 
     ! no push_sub because this function is called very frequently
-    SAFE_ALLOCATE(xx(1:MAX_DIM, 1:npoints))
-
-    if(MAX_DIM /= sb%dim) xx = M_ZERO
+    SAFE_ALLOCATE(xx(1:sb%dim, 1:npoints))
 
     forall(idir = 1:sb%dim, ip = 1:npoints)  xx(idir, ip) = point(idir, ip) - sb%box_offset(idir)
 
