@@ -525,7 +525,6 @@ contains
     FLOAT, allocatable :: gnon(:)
     FLOAT gn(MAX_DIM), n, tb09_c
     integer :: ii
-    integer, SAVE :: ncall = 0 
 
     PUSH_SUB(xc_get_vxc.calc_tb09_c)
 
@@ -548,7 +547,6 @@ contains
       end if
     end do
 
-    ncall = ncall +1 
     tb09_c =  -CNST(0.012) + CNST(1.023)*sqrt(dmf_integrate(der%mesh, gnon)/der%mesh%sb%rcell_volume)
 
     write(message(1), '(a,f8.6)') "Info: In the functional TB09 c = ", tb09_c

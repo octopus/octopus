@@ -7,11 +7,11 @@ TestGroups : short-run
 Enabled    : Yes
 
 Input: 01-xc_1d.01-wfs-lda.inp
-match ; LDA energy                               ; GREP(static/info, 'Total       =', 20)   ; -4.21266878
-match ; LDA eigenvalue 1 up                      ; GREP(static/info, '  1   up', 13) ;  -0.803406
-match ; LDA eigenvalue 2 up                      ; GREP(static/info, '  2   up', 13) ;  -0.043894
-match ; LDA eigenvalue 1 dn                      ; GREP(static/info, '  1   dn', 13) ;  -0.838009
-match ; LDA eigenvalue 2 dn                      ; GREP(static/info, '  2   dn', 13) ;  -0.256193
+match ; LDA energy                               ; GREP(static/info, 'Total       =', 20)   ; -4.17967691
+match ; LDA eigenvalue 1 up                      ; GREP(static/info, '  1   up', 13) ;  -0.775161
+match ; LDA eigenvalue 2 up                      ; GREP(static/info, '  2   up', 13) ;  -0.087430
+match ; LDA eigenvalue 1 dn                      ; GREP(static/info, '  1   dn', 13) ;  -0.797099
+match ; LDA eigenvalue 2 dn                      ; GREP(static/info, '  2   dn', 13) ;  -0.167274
 
 Input: 01-xc_1d.02-wfs-hf.inp
 match ; Hartree-Fock energy                      ; GREP(static/info, 'Total       =', 20)   ; -4.19644929
@@ -22,7 +22,7 @@ match ; Hartree-Fock eigenvalue 2 dn             ; GREP(static/info, '  2   dn',
 
 Input: 01-xc_1d.lda_csc.inp
 match ; LDA exchange                             ; GREP(out, 'Exchange    =', 20)   ; -1.01931500
-match ; LDA CSC correlation                      ; GREP(out, 'Correlation =', 20)   ; -0.06786067
+match ; LDA CSC correlation                      ; GREP(out, 'Correlation =', 20)   ; -0.03745068
 
 Input: 01-xc_1d.oep_kli.inp
 match ; OEP KLI                                  ; GREP(out, 'Exchange    =', 20)   ; -1.07717828
