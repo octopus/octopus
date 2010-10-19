@@ -103,7 +103,7 @@ module td_write_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine td_write_init(writ, gr, st, hm, geo, ions_move, with_gauge_field, iter, max_iter, dt)
+  subroutine td_write_init(writ, gr, st, hm, geo, ions_move, with_gauge_field, kick, iter, max_iter, dt)
     type(td_write_t),    intent(out)   :: writ
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(in)    :: st
@@ -111,6 +111,7 @@ contains
     type(geometry_t),    intent(in)    :: geo
     logical,             intent(in)    :: ions_move
     logical,             intent(in)    :: with_gauge_field
+    type(kick_t),        intent(in)    :: kick
     integer,             intent(in)    :: iter
     integer,             intent(in)    :: max_iter
     FLOAT,               intent(in)    :: dt
@@ -170,7 +171,8 @@ contains
     !%Option temperature 2048
     !% If set, the ionic temperature at each step is printed.
     !%Option ftchd       4096
-    !% Write Fourier transform of the electron density to the file <tt>ftchds</tt>.
+    !% Write Fourier transform of the electron density to the file <tt>ftchds.X</tt>,
+    !% where X depends on the kick (e.g. with sin-shaped perturbation X=qsin).
     !% This is needed for calculating the dynamic structure factor.
     !% In the case that the kick mode is qbessel, the written quantity is integral over
     !% density, multiplied by spherical Bessel function times real spherical harmonic.
@@ -330,9 +332,18 @@ contains
         call write_iter_init(writ%out(OUT_MULTIPOLES)%handle, &
         first, units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/multipoles")))
 
-      if(writ%out(OUT_FTCHD)%write) &
+      if(writ%out(OUT_FTCHD)%write) then
+        select case(kick%qkick_mode)
+          case (QKICKMODE_SIN)
+            write(filename, '(a)') 'td.general/ftchd.sin'
+          case (QKICKMODE_COS)
+            write(filename, '(a)') 'td.general/ftchd.cos'
+          case (QKICKMODE_BESSEL)
+            write(filename, '(a, SPI0.3, a, SPI0.3)') 'td.general/ftchd.l', kick%qbessel_l, '_m', kick%qbessel_m
+        end select
         call write_iter_init(writ%out(OUT_FTCHD)%handle, &
-        first, units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/ftchd")))
+        first, units_from_atomic(units_out%time, dt), trim(io_workpath(filename)))
+      end if  
 
       if(writ%out(OUT_ANGULAR)%write) &
         call write_iter_init(writ%out(OUT_ANGULAR)%handle, first, &
@@ -817,19 +828,31 @@ contains
       call write_iter_string(out_ftchd, aux)
       call write_iter_nl(out_ftchd)
 
-      write(aux, '(a15)')         '# qvector      '
-      do idir = 1, gr%mesh%sb%dim
-        write(aux2, '(f9.6)') kick%qvector(idir)
-        aux = aux // aux2
-      enddo
+      write(aux, '(a15,f18.12)')  '# kick strength', kick%delta_strength
       call write_iter_string(out_ftchd, aux)
       call write_iter_nl(out_ftchd)
 
-      call kick_write(kick, out = out_ftchd)
-
-      write(aux,'(a15,i2)') '# qkickmode    ', kick%qkick_mode
+      if(kick%qkick_mode.eq.QKICKMODE_BESSEL) then
+        write(aux, '(a15, f9.6)') '# qlength      ', kick%qlength
+      else ! sin or cos
+        write(aux, '(a15)')       '# qvector      '
+        do idir = 1, gr%mesh%sb%dim
+          write(aux2, '(f9.5)') kick%qvector(idir)
+          aux = trim(aux) // trim(aux2)
+        enddo
+      end if
       call write_iter_string(out_ftchd, aux)
       call write_iter_nl(out_ftchd)
+
+      write(aux,'(a15, i2)') '# qkickmode    ', kick%qkick_mode
+      call write_iter_string(out_ftchd, aux)
+      call write_iter_nl(out_ftchd)
+
+      if(kick%qkick_mode.eq.QKICKMODE_BESSEL) then
+        write(aux,'(a15, i0.3, 1x, i0.3)') '# ll, mm       ', kick%qbessel_l, kick%qbessel_m
+        call write_iter_string(out_ftchd, aux)
+        call write_iter_nl(out_ftchd)
+      end if
 
       call write_iter_header_start(out_ftchd)
       if(kick%qkick_mode.eq.QKICKMODE_BESSEL) then

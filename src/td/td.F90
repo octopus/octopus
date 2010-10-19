@@ -176,7 +176,7 @@ contains
     end if
 
     call td_write_init(write_handler, gr, st, hm, geo, &
-         ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), td%iter, td%max_iter, td%dt)
+         ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), td%kick, td%iter, td%max_iter, td%dt)
 
     if(td%iter == 0) call td_run_zero_iter()
 
@@ -582,15 +582,15 @@ contains
 
           select case (kick%qkick_mode)
             case (QKICKMODE_COS)
-              write(message(1), '(a,3F9.6,a)') 'Info: Using cos(q.r) field with q = (', kick%qvector(:), ')'
+              write(message(1), '(a,3F9.5,a)') 'Info: Using cos(q.r) field with q = (', kick%qvector(:), ')'
             case (QKICKMODE_SIN)
-              write(message(1), '(a,3F9.6,a)') 'Info: Using sin(q.r) field with q = (', kick%qvector(:), ')'
+              write(message(1), '(a,3F9.5,a)') 'Info: Using sin(q.r) field with q = (', kick%qvector(:), ')'
             case (QKICKMODE_SIN + QKICKMODE_COS)
-              write(message(1), '(a,3F9.6,a)') 'Info: Using sin(q.r)+cos(q.r) field with q = (', kick%qvector(:), ')'
+              write(message(1), '(a,3F9.5,a)') 'Info: Using sin(q.r)+cos(q.r) field with q = (', kick%qvector(:), ')'
             case (QKICKMODE_EXP)
-              write(message(1), '(a,3F9.6,a)') 'Info: Using exp(iq.r) field with q = (', kick%qvector(:), ')'
+              write(message(1), '(a,3F9.5,a)') 'Info: Using exp(iq.r) field with q = (', kick%qvector(:), ')'
             case (QKICKMODE_BESSEL)
-              write(message(1), '(a,I2,a,I2,a,F9.6)') 'Info: Using j_l(qr)*Y_lm(r) field with (l,m)= (', &
+              write(message(1), '(a,I2,a,I2,a,F9.5)') 'Info: Using j_l(qr)*Y_lm(r) field with (l,m)= (', &
                                                       kick%qbessel_l, ",", kick%qbessel_m,') and q = ', kick%qlength
             case default
               write(message(1), '(a,3F9.6,a)') 'Info: Unknown field type!'
