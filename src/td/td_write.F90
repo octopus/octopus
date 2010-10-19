@@ -340,9 +340,11 @@ contains
             write(filename, '(a)') 'td.general/ftchd.cos'
           case (QKICKMODE_BESSEL)
             write(filename, '(a, SPI0.3, a, SPI0.3)') 'td.general/ftchd.l', kick%qbessel_l, '_m', kick%qbessel_m
+          case default
+            write(filename, '(a)') 'td.general/error'
         end select
         call write_iter_init(writ%out(OUT_FTCHD)%handle, &
-        first, units_from_atomic(units_out%time, dt), trim(io_workpath(filename)))
+          first, units_from_atomic(units_out%time, dt), trim(io_workpath(filename)))
       end if  
 
       if(writ%out(OUT_ANGULAR)%write) &
