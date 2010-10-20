@@ -48,4 +48,4 @@ kdotp_calc.o : kdotp_calc.F90 kdotp_calc_inc.F90 sternheimer.o
 kdotp.o : kdotp.F90 kdotp_calc.o sternheimer.o
 vdw.o : vdw.F90 em_resp.o sternheimer.o em_resp_calc.o
 phonons_lr.o : phonons_lr.F90 sternheimer.o
-raman.o : raman.F90 phonons_lr.o sternheimer.o
+raman.o : raman.F90 phonons_lr.o sternheimer.o em_resp_calc.o
