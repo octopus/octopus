@@ -50,7 +50,11 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
 
   PUSH_SUB(xc_get_vxc)
   call profiling_in(prof, "XC_LOCAL")
-
+  
+  !Pointer-shortcut for xcs%functl
+  !It helps to remember that for xcs%functl(:,:)
+  ! (1,:) => exchange,    (2,:) => correlation
+  ! (:,1) => unpolarized, (:,2) => polarized
   if(ispin == UNPOLARIZED) then
     functl => xcs%functl(:, 1)
   else
@@ -71,9 +75,12 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
   gga  = iand(xcs%family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA).ne.0
   mgga = iand(xcs%family, XC_FAMILY_MGGA).ne.0
 
-  ! This is a bit ugly (why functl(1) and not functl(2)?), but for the moment it works.
+  !Read the spin channels
+  !Index 1 refers to "exchange mode" of type "xc_functl_t". For this purpose using 1 or 2 makes no difference. 
   spin_channels = functl(1)%spin_channels
-
+  
+  
+  
   call lda_init()
   if( gga) call  gga_init()
   if(mgga) call mgga_init()
