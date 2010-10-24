@@ -271,6 +271,7 @@ foreach my $octopus_exe (@executables){
 		$test_end   = [gettimeofday];
 	      } else {
 		print "No mpiexec found: Skipping parallel test \n";
+		if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
 		exit 255;
 	      }
 	    } else {
@@ -334,9 +335,11 @@ foreach my $octopus_exe (@executables){
       if ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
         if ( $enabled eq "No") {
           print stderr "Test disabled: skipping test\n\n";
+	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
 	  exit 255;
         } else {
 	  die "Unknown option 'Enabled = $enabled' in testsuite file.\n\n";
+	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
         }
       }
     }
