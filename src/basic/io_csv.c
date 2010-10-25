@@ -109,7 +109,7 @@ static inline void inf_error(const char * msg, int * ierr){
 #endif
 }
 void FC_FUNC_(read_csv,READ_CSV)
-     (int32_t * np, byte * f, int * output_type, int * ierr, STR_F_TYPE fname STR_ARG1)
+     (unsigned long * np, byte * f, int * output_type, int * ierr, STR_F_TYPE fname STR_ARG1)
 {
   char * filename;
   int i;
@@ -169,7 +169,7 @@ void FC_FUNC_(read_csv,READ_CSV)
 }
 
 void FC_FUNC_(get_info_csv,GET_INFO_CSV)
-     (int32_t * dims, int * ierr, STR_F_TYPE fname STR_ARG1)
+     (unsigned long * dims, int * ierr, STR_F_TYPE fname STR_ARG1)
 {
   char * filename;
   char * buf;
@@ -179,8 +179,8 @@ void FC_FUNC_(get_info_csv,GET_INFO_CSV)
   ssize_t moved;
   const char sep [] = "\n\t ,";
   
-  int32_t curr_dims [3] = {0, 0, 0};
-  int32_t prev_dims [2] = {0, 0};
+  unsigned long curr_dims [3] = {0, 0, 0};
+  unsigned long prev_dims [2] = {0, 0};
   
   TO_C_STR1(fname, filename);
   fd = fopen(filename, "r");
