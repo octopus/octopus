@@ -89,13 +89,15 @@ contains
 
   ! ------------------------------------------
 
+!pgi$g opt=0
+
   subroutine lookup_get_list(this, npoint, points, radius, nlist, list)
     type(lookup_t), intent(in)  :: this
     integer,        intent(in)  :: npoint
     FLOAT,          intent(in)  :: points(:, :)
     FLOAT,          intent(in)  :: radius
     integer,        intent(out) :: nlist(:)
-    integer, optional,  pointer :: list(:, :)
+    integer, optional, pointer  :: list(:, :)
 
     FLOAT :: r2
     integer :: ii, ipoint
