@@ -156,6 +156,7 @@ contains
         !%Description
         !% This variable controls which form of self-interaction correction to use. Note that
         !% this correction will be applied to the functional chosen by <tt>XCFunctional</tt>.
+        !% All except <tt>sic_none</tt> are development-version only.
         !%Option sic_none 1
         !% No self-interaction correction.
         !%Option sic_pz 2
@@ -165,6 +166,7 @@ contains
         !%End
         call parse_integer(datasets_check('SICCorrection'), sic_none, ks%sic_type)
         if(.not.varinfo_valid_option('SICCorrection', ks%sic_type)) call input_error('SICCorrection')
+        if(ks%sic_type .ne. sic_none) call messages_devel_version("self-interaction correction")
 
         ! Perdew-Zunger corrections
         if(ks%sic_type == sic_pz) ks%xc_family = ior(ks%xc_family, XC_FAMILY_OEP)
