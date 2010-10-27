@@ -89,8 +89,6 @@ contains
 
   ! ------------------------------------------
 
-!pgi$g opt=0
-
   subroutine lookup_get_list(this, npoint, points, radius, nlist, list)
     type(lookup_t), intent(in)  :: this
     integer,        intent(in)  :: npoint
@@ -113,6 +111,10 @@ contains
         r2 = sum((this%pos(1:this%dim, ii) - points(1:this%dim, ipoint))**2)
         if(r2 < radius**2) then
           nlist(ipoint) = nlist(ipoint) + 1
+!This is a PGI pragma to force the optimization level of this file to -O0.
+!-O2 or below is needed for 10.5. -O1 or below is needed for 10.8.   
+!The line after the pragma causes a segmentation fault otherwise.
+!pgi$g opt=0
           if(present(list)) list(nlist(ipoint), ipoint) = ii
         end if
       end do
