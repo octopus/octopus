@@ -459,7 +459,7 @@ echo
 echo";
   close(SCRIPT);
 
-  $success = (abs(($value)-($ref_value)) <= $precnum);
+  $success = ("$value" ne "") && (abs(($value)-($ref_value)) <= $precnum);
 
   if(!$success || $opt_v) {
     print_hline();
