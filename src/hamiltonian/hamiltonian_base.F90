@@ -300,7 +300,7 @@ contains
 #endif
 
       do iproj = 1, this%nprojector_matrices
-        call projector_matrix_deallocate(this%projector_matrices(1))
+        call projector_matrix_deallocate(this%projector_matrices(iproj))
       end do
       SAFE_DEALLOCATE_P(this%projector_matrices)
     end if
