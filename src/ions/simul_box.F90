@@ -653,8 +653,10 @@ contains
     case(1)
       sb%rcell_volume = abs(sb%rlattice(2, 1) - sb%rlattice(1, 1))
     case default
-      message(1) = "Cannot calculate real-space cell volume for dim > 3."
-      call write_fatal(1)
+      sb%rcell_volume = M_ONE
+      do idim = 1, sb%dim
+        sb%rcell_volume = sb%rcell_volume*abs(sb%rlattice(idim, idim))
+      end do
     end select
 
     call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, sb%volume_element, sb%dim)
@@ -757,7 +759,7 @@ contains
       kv(1, 1) = M_ONE / rv(1, 1)
     case default ! dim > 3
       message(1) = "Reciprocal lattice is not correct for dim > 3."
-      call write_fatal(1)
+      call write_warning(1)
     end select
 
     if ( volume < M_ZERO ) then 
