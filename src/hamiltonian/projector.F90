@@ -213,7 +213,7 @@ contains
     ns = this%sphere%ns
     ndim = sb%dim
 
-    if(.not. associated(this%phase)) then
+    if(.not. associated(this%phase) .and. ns > 0) then
       SAFE_ALLOCATE(this%phase(1:ns, std%kpt%start:std%kpt%end))
     end if
 
