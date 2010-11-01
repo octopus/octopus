@@ -52,8 +52,9 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
   ! electric does not need it since (e^-ikr)r(e^ikr) = r
 
   if (apply_kpoint) then
-    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np_part) &
+    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np_part)
       f_in_copy(ip, idim) = hm%phase(ip, ik) * f_in_copy(ip, idim)
+    end forall
   endif
 
   select case(this%pert_type)
@@ -75,8 +76,9 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
   end select
   
   if (apply_kpoint) then
-    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) &
+    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np)
       f_out(ip, idim) = conjg(hm%phase(ip, ik)) * f_out(ip, idim)
+    end forall
   endif
 
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
