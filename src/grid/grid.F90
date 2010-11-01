@@ -107,7 +107,7 @@ contains
     type(block_t) :: blk
     integer :: idir
     FLOAT :: def_h, def_rsize
-    FLOAT :: spacing(1:MAX_DIM)
+    FLOAT :: grid_spacing(1:MAX_DIM)
 
     PUSH_SUB(grid_init_stage_1)
 
@@ -130,12 +130,12 @@ contains
     call geometry_grid_defaults(geo, def_h, def_rsize)
 
     ! initialize to -1
-    spacing = -M_ONE
+    grid_spacing = -M_ONE
 
 #if defined(HAVE_GDLIB)
     if(gr%sb%box_shape == BOX_IMAGE) then 
-      ! spacing is determined from lsize and the size of the image
-      spacing(1:2) = M_TWO*gr%sb%lsize(1:2)/real(gr%sb%image_size(1:2), REAL_PRECISION)
+      ! grid_spacing is determined from lsize and the size of the image
+      grid_spacing(1:2) = M_TWO*gr%sb%lsize(1:2)/real(gr%sb%image_size(1:2), REAL_PRECISION)
     else
 #endif
 
@@ -158,21 +158,21 @@ contains
     if(parse_block(datasets_check('Spacing'), blk) == 0) then
       if(parse_block_cols(blk,0) < gr%sb%dim) call input_error('Spacing')
       do idir = 1, gr%sb%dim
-        call parse_block_float(blk, 0, idir - 1, spacing(idir), units_inp%length)
+        call parse_block_float(blk, 0, idir - 1, grid_spacing(idir), units_inp%length)
       end do
       call parse_block_end(blk)
     else
-      call parse_float(datasets_check('Spacing'), spacing(1), spacing(1), units_inp%length)
-      spacing(1:gr%sb%dim) = spacing(1)
+      call parse_float(datasets_check('Spacing'), -M_ONE, grid_spacing(1), units_inp%length)
+      grid_spacing(1:gr%sb%dim) = grid_spacing(1)
     end if
 
     do idir = 1, gr%sb%dim
-      if(spacing(idir) < M_ZERO) then
+      if(grid_spacing(idir) < M_ZERO) then
         if(def_h > M_ZERO .and. def_h < huge(def_h)) then
-          spacing(idir) = def_h
+          grid_spacing(idir) = def_h
           write(message(1), '(a,i1,3a,f6.3)') "Info: Using default spacing(", idir, &
             ") [", trim(units_abbrev(units_out%length)), "] = ",                        &
-            units_from_atomic(units_out%length, spacing(idir))
+            units_from_atomic(units_out%length, grid_spacing(idir))
           call write_info(1)
         else
           message(1) = 'Either:'
@@ -182,7 +182,7 @@ contains
           call write_fatal(4)
         end if
       end if
-      if(def_rsize > M_ZERO) call messages_check_def(spacing(idir), def_rsize, 'Spacing')
+      if(def_rsize > M_ZERO) call messages_check_def(grid_spacing(idir), def_rsize, 'Spacing')
     end do
 
 #if defined(HAVE_GDLIB)
@@ -190,7 +190,7 @@ contains
 #endif
 
     ! initialize curvilinear coordinates
-    call curvilinear_init(gr%cv, gr%sb, geo, spacing)
+    call curvilinear_init(gr%cv, gr%sb, geo, grid_spacing)
 
     ! initialize derivatives
     call derivatives_init(gr%der, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
@@ -203,7 +203,7 @@ contains
     enlarge = max(enlarge, gr%der%n_ghost)
 
     ! now we generate the mesh and the derivatives
-    call mesh_init_stage_1(gr%mesh, gr%sb, gr%cv, spacing, enlarge, gr%ob_grid)
+    call mesh_init_stage_1(gr%mesh, gr%sb, gr%cv, grid_spacing, enlarge, gr%ob_grid)
 
     ! the stencil used to generate the grid is a union of a cube (for
     ! multigrid) and the Laplacian.
