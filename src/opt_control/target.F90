@@ -422,7 +422,7 @@ module opt_control_target_m
       target%dt = td%dt
       SAFE_ALLOCATE(target%td_fitness(0:td%max_iter))
       target%td_fitness = M_ZERO
-
+      call target_build_tdlocal(target, gr, M_ZERO)
 
     case(oct_tg_hhg)
       !%Variable OCTOptimizeHarmonicSpectrum
@@ -721,6 +721,7 @@ module opt_control_target_m
     select case(target%type)
     case(oct_tg_td_local)
 
+      !!!! WARNING Here one should build the time-dependent target.
       select case(psi%d%ispin)
       case(UNPOLARIZED)
         ASSERT(psi%d%nik .eq. 1)
