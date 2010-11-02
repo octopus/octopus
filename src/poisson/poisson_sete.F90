@@ -121,7 +121,8 @@ contains
     FLOAT, allocatable :: vtv(:), q2(:), q2_lap(:)
     FLOAT :: xwidth, ywidth,  pconst
 
-    call push_sub('poisson_sete.poisson_sete_init')
+    PUSH_SUB(poisson_sete_init)
+
     pconst = CNST(4.0)*M_PI ! need 4 pi for Hartrees I think (??)
     bohrnm = BOHR*CNST(0.1) 
     angsnm = CNST(10.0)/BOHR
@@ -226,6 +227,7 @@ contains
     this%qs = q2 ! store Dirichlet BC info in this%QS
 
     SAFE_DEALLOCATE_A(q2)
+    POP_SUB(poisson_sete_init)
 
   contains
 
@@ -258,10 +260,9 @@ contains
       integer, allocatable :: iwork(:) 
       integer :: i1, j1, k1
       !
-    call push_sub('poisson_sete.poissonm')
-    SAFE_ALLOCATE(q2_lap(1:this%ntot))
 
-
+      PUSH_SUB(poisson_sete_init.poissonm)
+      SAFE_ALLOCATE(q2_lap(1:this%ntot))
 
       idebug=0
       if(idebug == 1)then
@@ -495,7 +496,8 @@ contains
       if(idebug == 1)then
         close(57)
       endif
-    call pop_sub('poisson_sete.poissonm')
+
+    POP_SUB(poisson_sete_init.poissonm)
     end subroutine poissonm
 
     !---------------------------------------------------------
@@ -516,7 +518,9 @@ contains
 
       ! This is a combination of cbsurfser and spaceser located on
       ! /home/stopa/surfER/build
-      call push_sub('poisson_sete.cbsurf')
+
+      PUSH_SUB(poisson_sete_init.cbsurf)
+
       allocate(this%ipio(0:THIS%NXTOT+1,0:THIS%NYTOT+1,0:THIS%NZTOT+1))
       allocate(this%vh_big(1:this%nxtot,1:this%nytot,1:this%nztot))
       this%vh_big(1:this%nxtot,1:this%nytot,1:this%nztot)= M_ZERO
@@ -583,7 +587,7 @@ contains
         end do
       end if
 
-    call pop_sub('poisson_sete.cbsurf')
+      POP_SUB(poisson_sete_init.cbsurf)
     end subroutine cbsurf
 
     !---------------------------------------------------------
@@ -627,7 +631,9 @@ contains
       !top and bottom z coordinates.
       !Depend on POISSON_SETE (this%zwidth) 
       !and Octopus (ZL)parameters.
-      call push_sub('poisson_sete.xyzgrid')
+
+      PUSH_SUB(poisson_sete_init.xyzgrid)
+
       dz_oct=(zl/TOFLOAT((nz-1))) 
       ztop = M_HALF*this%zwidth - zcen - ((nz-1)/2)*dz_oct -M_HALF*dz_oct
       zbot = M_HALF*this%zwidth + zcen - ((nz-1)/2)*dz_oct -M_HALF*dz_oct
@@ -866,8 +872,7 @@ contains
         end do
       end do
 
-    call pop_sub('poisson_sete.xyzgrid')
-    call pop_sub('poisson_sete.poisson_sete_init')
+      POP_SUB(poisson_sete_init.xyzgrid)
     end subroutine xyzgrid
 
   end subroutine poisson_sete_init
@@ -900,7 +905,8 @@ contains
     integer, allocatable :: iwork(:)
     FLOAT,   allocatable :: rhotest(:,:,:), rwork(:), q2(:)!, q2_lap(:)!, x2(:)
 
-    call push_sub('poisson_sete.poisson_sete_solve')
+    PUSH_SUB(poisson_sete_solve)
+
     PCONST=CNST(4.0)*M_PI ! need 4 pi for Hartrees I think (??)
     BOHRNM=BOHR/CNST(10.0)
     ANGSNM=CNST(10.0)/BOHR
@@ -1086,7 +1092,7 @@ contains
 
     !deallocate(THIS%VH_BIG);
 
-    call pop_sub('poisson_sete.poisson_sete_solve')
+    POP_SUB(poisson_sete_solve)
   end subroutine poisson_sete_solve
 
   !------------------------------------------------------------
@@ -1094,7 +1100,7 @@ contains
   subroutine poisson_sete_end(this)
     type(poisson_sete_t), intent(inout) :: this
 
-    call push_sub('poisson_sete.poisson_sete_end')
+    PUSH_SUB(poisson_sete_end)
 
     SAFE_DEALLOCATE_P(this%ipio)
     SAFE_DEALLOCATE_P(this%qs)
@@ -1131,7 +1137,8 @@ contains
     if (egate_just_field==0) then
 	    deallocate(this%nucp)
     endif
-    call pop_sub('poisson_sete.poisson_sete_end')
+
+    POP_SUB(poisson_sete_end)
   end subroutine poisson_sete_end
 
   !--------------------------------------------
@@ -1143,7 +1150,7 @@ type(poisson_sete_t), intent(inout) :: this
     FLOAT :: cs1, cs2, cs3,temporary
     FLOAT :: charge_top, charge_surf, charge_bot
 
-    call push_sub('poisson_sete.egate')
+    PUSH_SUB(egate)
 
     !
     !     to do energy calculations previously performed in setr
@@ -1239,6 +1246,8 @@ type(poisson_sete_t), intent(inout) :: this
 !    endif
     SAFE_DEALLOCATE_A(sig)
 
+    POP_SUB(egate)
+
   contains
 
     subroutine cap(this, sig)
@@ -1272,7 +1281,8 @@ type(poisson_sete_t), intent(inout) :: this
       !  at metal-semi border calculated discretely with 1/DXG (1/DYG,1/DZ)
       !  rather than properly averaged spacings.
 
-      call push_sub('poisson_sete.cap')
+      PUSH_SUB(egate.cap)
+
       SIG= M_ZERO
 
       DO I=1,THIS%NXTOT 
@@ -1314,8 +1324,7 @@ type(poisson_sete_t), intent(inout) :: this
         end do
       end do
 
-    call pop_sub('poisson_sete.cap')
-    call pop_sub('poisson_sete.egate')
+      POP_SUB(egate.cap)
     end subroutine cap
 
   end subroutine egate
@@ -1323,12 +1332,15 @@ type(poisson_sete_t), intent(inout) :: this
   FLOAT function poisson_sete_energy(this) result(energy)
     type(poisson_sete_t), intent(in)    :: this
 
+    PUSH_SUB(poisson_sete_energy)
 
     if (this%free==1) then
      energy = this%esurf
     else
      energy = 0.0
     endif
+
+    POP_SUB(poisson_sete_energy)
   end function poisson_sete_energy
 
 end module poisson_sete_m
