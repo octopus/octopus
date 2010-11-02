@@ -165,7 +165,7 @@ contains
         !% Amaldi correction term (NOT WORKING).
         !%End
         call parse_integer(datasets_check('SICCorrection'), sic_none, ks%sic_type)
-        if(.not.varinfo_valid_option('SICCorrection', ks%sic_type)) call input_error('SICCorrection')
+        if(.not. varinfo_valid_option('SICCorrection', ks%sic_type)) call input_error('SICCorrection')
         if(ks%sic_type .ne. sic_none) call messages_devel_version("self-interaction correction")
 
         ! Perdew-Zunger corrections
@@ -183,7 +183,7 @@ contains
       !% (Experimental) This variable enables a mechanism to correct
       !% the value of the XC functional in near-zero-density
       !% regions. This zone might have numerical noise or it might
-      !% even be set to zero by libxc.
+      !% even be set to zero by <tt>libxc</tt>.
       !% The correction is performed by calculating the "XC density", 
       !% a charge density that would generate an
       !% equivalent XC potential. This XC density is a localized
@@ -200,8 +200,8 @@ contains
         !%Default 1-e6
         !%Section Hamiltonian::XC
         !%Description
-        !% This variable sets the threshold to cut the XC density when
-        !% XCTailCorrection is enabled. The value is always assumed to
+        !% This variable sets the threshold at which to cut the XC density when
+        !% <tt>XCTailCorrection</tt> is enabled. The value is always assumed to
         !% be in atomic units.
         !%End
         call parse_float(datasets_check('XCTailCorrectionTol'), CNST(1e-6), ks%tail_correction_tol)
@@ -422,6 +422,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine v_a_xc()
+
       FLOAT, allocatable :: rho(:, :)
       type(profile_t), save :: prof
       FLOAT, pointer :: vxc(:, :)
@@ -443,7 +444,7 @@ contains
 
       ! Amaldi correction
       if(ks%sic_type == sic_amaldi) then
-        rho(1:gr%fine%mesh%np, :) = amaldi_factor*rho(1:gr%fine%mesh%np, :)
+        rho(1:gr%fine%mesh%np, 1:st%d%nspin) = amaldi_factor * rho(1:gr%fine%mesh%np, 1:st%d%nspin)
       end if
 
       if(gr%have_fine_mesh) then
@@ -612,7 +613,7 @@ contains
     call dpoisson_solve(ks%hartree_solver, pot, rho)
     
     ! Get the Hartree energy
-    hm%ehartree = M_HALF*dmf_dotp(gr%fine%mesh, rho, pot)
+    hm%ehartree = M_HALF * dmf_dotp(gr%fine%mesh, rho, pot)
 
     if(gr%have_fine_mesh) then
       ! we use injection to transfer to the fine grid, we cannot use
@@ -647,8 +648,6 @@ contains
     POP_SUB(v_ks_freeze_hxc)
   end subroutine v_ks_freeze_hxc
   ! ---------------------------------------------------------
-
-
 
 end module v_ks_m
 

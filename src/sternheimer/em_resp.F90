@@ -396,13 +396,13 @@ contains
             else
 
               if (states_are_complex(sys%st)) then
-                call zsternheimer_solve(sh, sys, hm, em_vars%lr(idir, :, ifactor), em_vars%nsigma, &
+                call zsternheimer_solve(sh, sys, hm, em_vars%lr(idir, 1:em_vars%nsigma, ifactor), em_vars%nsigma, &
                   em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
                   em_vars%perturbation, EM_RESP_DIR, &
                   em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir), &
                   em_wfs_tag(idir, ifactor), have_restart_rho=(ierr==0), have_exact_freq = exact_freq)
               else
-                call dsternheimer_solve(sh, sys, hm, em_vars%lr(idir, :, ifactor), em_vars%nsigma, &
+                call dsternheimer_solve(sh, sys, hm, em_vars%lr(idir, 1:em_vars%nsigma, ifactor), em_vars%nsigma, &
                   em_vars%freq_factor(ifactor)*em_vars%omega(iomega), &
                   em_vars%perturbation, EM_RESP_DIR, &
                   em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir), &
