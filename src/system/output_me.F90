@@ -87,7 +87,7 @@ contains
     !% The output files go into the <tt>static</tt> directory, except when
     !% running a time-dependent simulation, when the directory <tt>td.XXXXXXX</tt> is used.
     !% Example: "momentum + ks_multipoles"
-    !%Option multipoles 1
+    !%Option momentum 1
     !% TODO
     !%Option ang_momentum 2
     !% TODO
@@ -95,7 +95,7 @@ contains
     !% <math>&lt;i|T + V_{ext}|j&gt;</math>
     !%Option two_body 8
     !% <math>&lt;ij| 1/|r_1-r_2| |kl&gt;</math>
-    !%Option momentum 16
+    !%Option ks_multipoles 16
     !% TODO
     !%End
 
@@ -247,7 +247,7 @@ contains
 
       write(message(1), '(a4,1x,a5)') '#st',' Spin'
       do idir = 1, gr%sb%dim
-        write(str_tmp, '(a,i1,a)') '        <p', index2axis(idir), '>'
+        write(str_tmp, '(a,a1,a)') '        <p', index2axis(idir), '>'
         message(1) = trim(message(1)) // trim(str_tmp)
       enddo
       write(str_tmp, '(4x,a12,1x)') 'Occupation '
