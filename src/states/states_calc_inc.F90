@@ -291,54 +291,31 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
   ! |psi> from the L2 or memory.
   block_size = hardware%X(block_size)
 
-  write(100 + mpi_world%rank, *) 'after block_size'; call flush(100 + mpi_world%rank)
-
   SAFE_ALLOCATE(ss(1:nst))
 
   ss = M_ZERO
 
   if(.not. mesh%use_curvilinear) then
 
-    write(100 + mpi_world%rank, *) 'before loop'; call flush(100 + mpi_world%rank)
-
-    write(100 + mpi_world%rank, *) 'dim = ', dim; call flush(100 + mpi_world%rank)    
     do idim = 1, dim
-      write(100 + mpi_world%rank, *) 'idim = ', idim; call flush(100 + mpi_world%rank)
       do sp = 1, mesh%np, block_size
-        write(100 + mpi_world%rank, *) 'sp = ', sp; call flush(100 + mpi_world%rank)
         size = min(block_size, mesh%np - sp + 1)
         do ist = 1, nst
 
-          write(100 + mpi_world%rank, *) 'ist = ', ist; call flush(100 + mpi_world%rank)
-!          if(present(mask)) then
-!            if(mask(ist)) cycle
-!          end if
+          if(present(mask)) then
+            if(mask(ist)) cycle
+          end if
 
-          write(100 + mpi_world%rank, *) 'ss(ist) = ', ss(ist); call flush(100 + mpi_world%rank)          
-          write(100 + mpi_world%rank, *) 'size = ', size; call flush(100 + mpi_world%rank)
-          write(100 + mpi_world%rank, *) 'lbound(psi, 1) = ', lbound(psi, 1); call flush(100 + mpi_world%rank)
-          write(100 + mpi_world%rank, *) 'ubound(psi, 1) = ', ubound(psi, 1); call flush(100 + mpi_world%rank)
-          write(100 + mpi_world%rank, *) 'lbound(psi, 2) = ', lbound(psi, 2); call flush(100 + mpi_world%rank)
-          write(100 + mpi_world%rank, *) 'ubound(psi, 2) = ', ubound(psi, 2); call flush(100 + mpi_world%rank)
-          write(100 + mpi_world%rank, *) 'lbound(psi, 3) = ', lbound(psi, 3); call flush(100 + mpi_world%rank)
-          write(100 + mpi_world%rank, *) 'ubound(psi, 3) = ', ubound(psi, 3); call flush(100 + mpi_world%rank)
-          write(100 + mpi_world%rank, *) 'psi(sp, idim, ist) = ', psi(sp, idim, ist); call flush(100 + mpi_world%rank)
-          write(100 + mpi_world%rank, *) 'phi(sp, idim) = ', phi(sp, idim); call flush(100 + mpi_world%rank)
           ss(ist) = ss(ist) + blas_dot(size, psi(sp, idim, ist), 1, phi(sp, idim), 1)
-          write(100 + mpi_world%rank, *) 'after ss(ist)'; call flush(100 + mpi_world%rank)
         end do
       end do
     end do
-
-    write(100 + mpi_world%rank, *) 'after loop'; call flush(100 + mpi_world%rank)
 
     ss = ss * mesh%vol_pp(1)
 
     call profiling_count_operations((R_ADD + R_MUL) * mesh%np * dim * nst)
 
   else
-
-    write(100 + mpi_world%rank, *) 'not supposed to be here'; call flush(100 + mpi_world%rank)
 
     do idim = 1, dim
       do sp = 1, mesh%np, block_size
@@ -360,8 +337,6 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
 
   end if
 
-  write(100 + mpi_world%rank, *) 'before mpi'; call flush(100 + mpi_world%rank)
-
 #ifdef HAVE_MPI
   if(mesh%parallel_in_domains) then
     SAFE_ALLOCATE(ss_tmp(1:nst))
@@ -373,8 +348,6 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
   end if
 #endif
 
-  write(100 + mpi_world%rank, *) 'after mpi'; call flush(100 + mpi_world%rank)
-
   if(present(mask)) then
     do ist = 1, nst
       mask(ist) = (abs(ss(ist)) <= M_EPSILON)
@@ -383,8 +356,6 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
 
   if(present(beta_ij))  &
     ss(:) = ss(:) * beta_ij(:)
-
-  write(100 + mpi_world%rank, *) 'before loop2'; call flush(100 + mpi_world%rank)
 
   do idim = 1, dim
     do sp = 1, mesh%np, block_size
@@ -406,8 +377,6 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
       end do
     end do
   end do
-
-  write(100 + mpi_world%rank, *) 'after loop2'; call flush(100 + mpi_world%rank)
 
   call profiling_count_operations((R_ADD + R_MUL) * mesh%np * dim * nst)
 
@@ -434,8 +403,6 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
     ASSERT(normalize)
     norm = nrm2
   end if
-
-  write(100 + mpi_world%rank, *) 'after normalize'; call flush(100 + mpi_world%rank)
 
   SAFE_DEALLOCATE_A(ss)
 
