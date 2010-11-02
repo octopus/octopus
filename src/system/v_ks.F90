@@ -626,7 +626,6 @@ contains
     end if
 
     if (poisson_get_solver(ks%hartree_solver) == POISSON_SETE) then !SEC
-!      write(525,*) hm%ehartree+poisson_sete_energy(sete_solver),hm%ehartree,poisson_sete_energy(sete_solver)
       hm%ehartree=hm%ehartree + poisson_energy(ks%hartree_solver)
       write(89,*) hm%ehartree*CNST(2.0*13.60569193), poisson_energy(ks%hartree_solver)*CNST(2.0*13.60569193), hm%ep%eii*CNST(2.0*13.60569193)
     endif

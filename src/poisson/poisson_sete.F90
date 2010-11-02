@@ -38,8 +38,11 @@ module poisson_sete_m
 
   public ::              &
     rho_nuc,             &
+    v_es,                &
+    v_es3,               &
     count_atoms,         &
-    calc_gate_energy
+    calc_gate_energy,    &
+    es_energy
 
   type poisson_sete_t
     integer, pointer :: ipio(:,:,:)
@@ -91,8 +94,9 @@ module poisson_sete_m
   FLOAT, allocatable :: xg(:), yg(:), zg(:), dxg(:), dyg(:), dz(:), dxl(:), dyl(:),x2(:), x2_lap(:)
 
   ! these variables must be local for the moment
-  FLOAT, allocatable :: rho_nuc(:)
+  FLOAT, allocatable :: rho_nuc(:), v_lap(:), v_es3(:,:,:), v_es(:)
   integer :: count_atoms, calc_gate_energy
+  FLOAT :: es_energy
 
   FLOAT, parameter :: hartree = CNST(2.0*13.60569193), BOHR = CNST(0.52917720859) 
   
@@ -117,10 +121,11 @@ contains
     FLOAT, allocatable :: vtv(:), q2(:), q2_lap(:)
     FLOAT :: xwidth, ywidth,  pconst
 
+    call push_sub('poisson_sete.poisson_sete_init')
     pconst = CNST(4.0)*M_PI ! need 4 pi for Hartrees I think (??)
     bohrnm = BOHR*CNST(0.1) 
     angsnm = CNST(10.0)/BOHR
-    this%tol = 0.01 
+    this%tol = 0.0001
     this%noatoms = number_atoms
     count_atoms = 0
     calc_gate_energy = 0
@@ -149,6 +154,11 @@ contains
       zcen = zcen*angsnm
 
       read(57,*) ngates
+
+      write(68,*) "Allocating v_es3", nx, ny, nz
+      SAFE_ALLOCATE(v_es3(1:nx, 1:ny, 1:nz))
+      v_es3(1:nx, 1:ny, 1:nz)=M_ZERO
+      write(68,*) " Allocated"
 
       SAFE_ALLOCATE(vtv(1:ngates))
       SAFE_ALLOCATE(this%vt(1:ngates))
@@ -246,7 +256,9 @@ contains
       integer :: i, j, k, ia, iav, icol, idebug, iec, n, ii, m
       FLOAT,   allocatable :: q2_lap(:), rwork(:)
       integer, allocatable :: iwork(:) 
+      integer :: i1, j1, k1
       !
+    call push_sub('poisson_sete.poissonm')
     SAFE_ALLOCATE(q2_lap(1:this%ntot))
 
 
@@ -458,15 +470,23 @@ contains
     call dslucs(this%ntot,q2_lap,this%v_lap,this%nelt,this%iad,this%jad,this%aw, &
     isym,itol, this%tol,itmax,iter,itermin,err,ierr,iunit,rwork,lenw, &
       iwork,leniw)
-!    this%tol = 0.01 
-!	    do m=1,this%ntot
-!	    i=this%iy(m) 
-!	    j=this%jy(m)
-! 	    k=this%ky(m)
-!              if(i==22.and.j==22) then
-!		 write(225,*) k, zg(k), this%v_lap(m)*27.2
-!	      endif
-!	      enddo
+    do m=1, this%ntot
+	      i = this%iy(m)
+	      j = this%jy(m)
+	      k = this%ky(m)
+              IF((I.GT.NXL+THIS%NXBOT.AND.I.LE.NXL+THIS%NXBOT+NX).AND. &
+                (J.GT.NYL+THIS%NYBOT.AND.J.LE.NYL+THIS%NYBOT+NY).AND. &
+                (K.GT.THIS%NZBOT.AND.K.LE.THIS%NZBOT+NZ))THEN
+                   I1=I-(NXL+THIS%NXBOT)
+                   J1=J-(NYL+THIS%NYBOT)
+                   K1=K-(THIS%NZBOT)
+		   v_es3(i1, j1, k1) = this%v_lap(m)
+		   !if(i1==1.and.j1==1) then
+		   !write(225,*) k1, zg(k1), v_es3(i1,j1,k1)*27.2
+	           !endif
+      endif
+    enddo
+
 
     deallocate(rwork)
     deallocate(iwork)
@@ -475,6 +495,7 @@ contains
       if(idebug == 1)then
         close(57)
       endif
+    call pop_sub('poisson_sete.poissonm')
     end subroutine poissonm
 
     !---------------------------------------------------------
@@ -495,6 +516,7 @@ contains
 
       ! This is a combination of cbsurfser and spaceser located on
       ! /home/stopa/surfER/build
+      call push_sub('poisson_sete.cbsurf')
       allocate(this%ipio(0:THIS%NXTOT+1,0:THIS%NYTOT+1,0:THIS%NZTOT+1))
       allocate(this%vh_big(1:this%nxtot,1:this%nytot,1:this%nztot))
       this%vh_big(1:this%nxtot,1:this%nytot,1:this%nztot)= M_ZERO
@@ -539,8 +561,29 @@ contains
             this%ipio(:,THIS%NYTOT+1,K)=2
           end if
         end do
+      else if(idev == 0) then ! one plate only
+	write(*,*) "There are still some parameters that need to be"
+	write(*,*) "correctly accounted for."
+	write(*,*) "Exiting."
+	stop
+        this%dielectric=dielectric0
+        this%ipio(:,:,0)=1
+
+        this%vbound(:,:,0)=0.0
+        this%vbound_lap(:,:,0)=this%vt(1)
+
+        DO k=1,this%nztot
+          IF(k /= 0 )THEN !Redundant?
+            ! lateral BC`s
+            this%ipio(0,:,K)=2
+            this%ipio(THIS%NXTOT+1,:,K)=2
+            this%ipio(:,0,K)=2
+            this%ipio(:,THIS%NYTOT+1,K)=2
+          end if
+        end do
       end if
 
+    call pop_sub('poisson_sete.cbsurf')
     end subroutine cbsurf
 
     !---------------------------------------------------------
@@ -584,6 +627,7 @@ contains
       !top and bottom z coordinates.
       !Depend on POISSON_SETE (this%zwidth) 
       !and Octopus (ZL)parameters.
+      call push_sub('poisson_sete.xyzgrid')
       dz_oct=(zl/TOFLOAT((nz-1))) 
       ztop = M_HALF*this%zwidth - zcen - ((nz-1)/2)*dz_oct -M_HALF*dz_oct
       zbot = M_HALF*this%zwidth + zcen - ((nz-1)/2)*dz_oct -M_HALF*dz_oct
@@ -822,6 +866,8 @@ contains
         end do
       end do
 
+    call pop_sub('poisson_sete.xyzgrid')
+    call pop_sub('poisson_sete.poisson_sete_init')
     end subroutine xyzgrid
 
   end subroutine poisson_sete_init
@@ -854,6 +900,7 @@ contains
     integer, allocatable :: iwork(:)
     FLOAT,   allocatable :: rhotest(:,:,:), rwork(:), q2(:)!, q2_lap(:)!, x2(:)
 
+    call push_sub('poisson_sete.poisson_sete_solve')
     PCONST=CNST(4.0)*M_PI ! need 4 pi for Hartrees I think (??)
     BOHRNM=BOHR/CNST(10.0)
     ANGSNM=CNST(10.0)/BOHR
@@ -879,9 +926,9 @@ contains
       idum = count_atoms
       add_bias=0
       !To ensure that it does not add the laplacian solver to v0
-      if (calc_gate_energy==1) then
-	      add_bias=1
-      endif
+      !if (calc_gate_energy==1) then
+!	      add_bias=1
+!      endif
       SAFE_ALLOCATE(X2(1:THIS%NTOT))
       do i = 1, this%ntot
         call quickrnd(idum,x2(i))
@@ -897,7 +944,7 @@ contains
       calc_egate=1
       write(200,*) "Electronic"
       add_bias=1
-      this%tol=0.01
+      this%tol=0.0001
       SAFE_ALLOCATE(x2(1:this%ntot))
       x2(1:this%ntot) = M_ZERO
       idum = count_atoms + 1
@@ -1039,12 +1086,15 @@ contains
 
     !deallocate(THIS%VH_BIG);
 
+    call pop_sub('poisson_sete.poisson_sete_solve')
   end subroutine poisson_sete_solve
 
   !------------------------------------------------------------
 
   subroutine poisson_sete_end(this)
     type(poisson_sete_t), intent(inout) :: this
+
+    call push_sub('poisson_sete.poisson_sete_end')
 
     SAFE_DEALLOCATE_P(this%ipio)
     SAFE_DEALLOCATE_P(this%qs)
@@ -1081,17 +1131,19 @@ contains
     if (egate_just_field==0) then
 	    deallocate(this%nucp)
     endif
+    call pop_sub('poisson_sete.poisson_sete_end')
   end subroutine poisson_sete_end
 
   !--------------------------------------------
-
-  subroutine egate(this)
-    type(poisson_sete_t), intent(inout) :: this
+subroutine egate(this)
+type(poisson_sete_t), intent(inout) :: this
 
     integer :: i, j, k
     FLOAT, allocatable :: sig(:, :, :, :) 
     FLOAT :: cs1, cs2, cs3,temporary
     FLOAT :: charge_top, charge_surf, charge_bot
+
+    call push_sub('poisson_sete.egate')
 
     !
     !     to do energy calculations previously performed in setr
@@ -1133,7 +1185,7 @@ contains
     !this%vbound(:,:,this%nztot+1)=0.0!this%vt(2)
 
     
-    this%esurf = -M_HALF*this%esurf
+    this%esurf = M_HALF*this%esurf
     charge_surf = cs1 + cs2 + cs3
 
     !    WRITE(520,*)THIS%ESURF*hartree*M_HALF
@@ -1162,6 +1214,7 @@ contains
 !    else if ((this%counter == this%noatoms).and.(sig(this%nxtot/2,this%nytot/2,1,5)<0)) then
 !      temporary=this%esurf
 !      this%esurf=this%esurf+this%tot_nuc_charge_energy 
+
       write(523,*)this%tot_nuc_charge_energy*CNST(2.0*13.60569193), this%esurf
       if (this%po==1) then
        open(unit=524, file="V1.charge",action="write",status='replace')
@@ -1219,6 +1272,7 @@ contains
       !  at metal-semi border calculated discretely with 1/DXG (1/DYG,1/DZ)
       !  rather than properly averaged spacings.
 
+      call push_sub('poisson_sete.cap')
       SIG= M_ZERO
 
       DO I=1,THIS%NXTOT 
@@ -1247,15 +1301,11 @@ contains
               end if
               IF(this%ipio(I,J,K-1) == 1)THEN
                 BORDER=2*(THIS%VH_BIG(I,J,K)-this%vbound_lap(I,J,K-1))/DZ(K)
-		if (i==47.and.j==47) then
-		endif
                 SIG(I,J,K,5)=SIG(I,J,K,5)-BORDER*DXG(I)*DYG(J)* &
                   this%dielectric(I,J,K)
               end if
               IF(this%ipio(I,J,K+1) == 1)THEN
                 BORDER=2*(THIS%VH_BIG(I,J,K)-this%vbound_lap(I,J,K+1))/DZ(K)
-		if (i==47.and.j==47) then
-		endif
                 SIG(I,J,K,6)=SIG(I,J,K,6)-BORDER*DXG(I)*DYG(J)* &
                   this%dielectric(I,J,K)
               end if
@@ -1264,13 +1314,15 @@ contains
         end do
       end do
 
+    call pop_sub('poisson_sete.cap')
+    call pop_sub('poisson_sete.egate')
     end subroutine cap
-
 
   end subroutine egate
 
   FLOAT function poisson_sete_energy(this) result(energy)
     type(poisson_sete_t), intent(in)    :: this
+
 
     if (this%free==1) then
      energy = this%esurf

@@ -420,6 +420,8 @@ contains
     if (poisson_get_solver(psolver) == POISSON_SETE) then 
       SAFE_ALLOCATE(rho_nuc(1:gr%mesh%np))
       rho_nuc(1:gr%mesh%np)=M_ZERO
+      SAFE_ALLOCATE(v_es(1:gr%mesh%np))
+      v_es(1:gr%mesh%np)=M_ZERO
     end if
 
     POP_SUB(epot_init)
@@ -466,6 +468,8 @@ contains
 
     if (poisson_get_solver(psolver) == POISSON_SETE) then 
       SAFE_DEALLOCATE_A(rho_nuc)
+      SAFE_DEALLOCATE_A(v_es)
+      SAFE_DEALLOCATE_A(v_es3)
     end if
 
     POP_SUB(epot_end)
@@ -570,6 +574,8 @@ contains
     FLOAT, allocatable  :: rho(:), vl(:)
     type(submesh_t)  :: sphere
     type(profile_t), save :: prof
+    integer :: counter, conversion(3), nx_half, ny_half, nz_half,k!ROA
+    integer :: nx, ny, nz !ROA
 
     PUSH_SUB(epot_local_potential)
     call profiling_in(prof, "EPOT_LOCAL")
@@ -605,9 +611,27 @@ contains
         call dpoisson_solve(poisson_solver, vl, rho)
 
         if (poisson_get_solver(poisson_solver) == POISSON_SETE) then  !SEC
+	  write(68,*) "Calling rhonuc iatom", iatom
           rho_nuc(1:der%mesh%np) = rho_nuc(1:der%mesh%np) + rho(1:der%mesh%np)
+	  if (iatom==geo%natoms.and.calc_gate_energy==0) then
+		  write(68,*) "Entering the zone"
+      nx = der%mesh%idx%nr(2,1) - der%mesh%idx%nr(1,1) + 1 - 2*der%mesh%idx%enlarge(1)
+      ny = der%mesh%idx%nr(2,2) - der%mesh%idx%nr(1,2) + 1 - 2*der%mesh%idx%enlarge(2)
+      nz = der%mesh%idx%nr(2,3) - der%mesh%idx%nr(1,3) + 1 - 2*der%mesh%idx%enlarge(3)
+      nx_half = (der%mesh%idx%nr(2,1) - der%mesh%idx%nr(1,1) - 2*der%mesh%idx%enlarge(1))/2 + 1
+      ny_half = (der%mesh%idx%nr(2,2) - der%mesh%idx%nr(1,2) - 2*der%mesh%idx%enlarge(2))/2 + 1
+      nz_half = (der%mesh%idx%nr(2,3) - der%mesh%idx%nr(1,3) - 2*der%mesh%idx%enlarge(3))/2 + 1
+           do counter = 1, der%mesh%np
+              call  index_to_coords(der%mesh%idx,der%mesh%sb%dim,counter,conversion)
+	      conversion(1) = conversion(1) + nx_half
+	      conversion(2) = conversion(2) + ny_half
+	      conversion(3) = conversion(3) + nz_half
+	      v_es(counter)=v_es3(conversion(1),conversion(2),conversion(3))
+	   enddo
+           es_energy = dmf_dotp(der%mesh, rho_nuc, v_es)
+	   write(68,*) "Calculating ion energy due to bias:", es_energy*CNST(2.0*13.60569193)
+         end if
         end if
-
         SAFE_DEALLOCATE_A(rho)
       else
 
@@ -828,6 +852,7 @@ contains
       write(68,'(a)') "Calling SETE interaction"
       write(6,'(a)') "Calling SETE interaction"
       !ep%eii= M_ZERO
+      write(68,*) "energy, ep%eii before ion interaction sete" , energy, ep%eii
       call ion_interaction_sete(gr, sb, geo, ep) 
       write(*,*) "energy, ep%eii", energy, ep%eii
     else
@@ -1006,13 +1031,50 @@ contains
   
     integer                              :: iatom, jatom
     FLOAT, allocatable                   :: rho1(:), v2(:), rho2(:)
+    FLOAT, allocatable                   :: v3(:), rho3(:)
     FLOAT                                :: temp
     FLOAT                                :: time1
     FLOAT :: rr, dd, zi, zj
+    FLOAT :: sicn, chargeion, sqrtalphapi,sicn2
 
     PUSH_SUB(ion_interaction_sete)
 
     write(68,*) "ep%eii values top", ep%eii
+    ep%eii=es_energy*M_HALF
+    write(68,*) "ep%eii values top", ep%eii
+
+!    SAFE_ALLOCATE(rho2(1:gr%mesh%np))
+!    SAFE_ALLOCATE(rho3(1:gr%mesh%np))
+!    v2(1:gr%mesh%np)= M_ZERO
+!    v3(1:gr%mesh%np)= M_ZERO
+!    rho2(1:gr%mesh%np)= M_ZERO
+!    rho3(1:gr%mesh%np)= M_ZERO
+    sicn=M_ZERO
+    sicn2=M_ZERO
+    !This value represents sqrt(alpha/pi)
+    !On species/ps.F90, the value of sigma_erf = 0.625
+    !alpha=(1/2)*(1/erf)**2
+    !It is the same as alpha = CNST(1.1313708)/sqrt(M_PI)
+    sqrtalphapi=sqrt(M_HALF*(CNST(1.6)**2)/M_PI)
+!    do iatom=1,geo%natoms
+!      call epot_local_potential(ep, gr%der, gr%dgrid, psolver, geo, iatom, v2, time1)
+!      call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr%mesh, geo, rho2)
+!      v3(1:gr%mesh%np)=v3(1:gr%mesh%np)+v2(1:gr%mesh%np)
+!      rho3(1:gr%mesh%np)=rho3(1:gr%mesh%np)+rho2(1:gr%mesh%np)
+!      !Substract this from total energy
+!      write(68,*) "Getting self-interaction correction of", iatom
+!      chargeion=species_zval(geo%atom(iatom)%spec)
+!      sicn=sicn+sqrtalphapi*chargeion*chargeion
+!      write(68,*) "chargeion, value", chargeion,sqrtalphapi*chargeion*chargeion, sicn
+!    end do
+!    temp=dmf_dotp(gr%mesh, rho3, v3) 
+!    temp=M_HALF*temp
+!    write(68,*) "temp, sicn", temp, sicn
+!    ep%eii=ep%eii+temp-sicn
+!    SAFE_DEALLOCATE_A(rho2)
+!    SAFE_DEALLOCATE_A(v2)
+!    SAFE_DEALLOCATE_A(rho3)
+!    SAFE_DEALLOCATE_A(v3)
 
     do jatom = geo%natoms,2, -1
       SAFE_ALLOCATE(v2(1:gr%mesh%np))
@@ -1026,15 +1088,34 @@ contains
       do iatom = jatom-1,1,-1
         SAFE_ALLOCATE(rho1(1:gr%mesh%np))
         call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr%mesh, geo, rho1)
-        temp=M_HALF * dmf_dotp(gr%mesh, rho1, v2) 
+        temp=dmf_dotp(gr%mesh, rho1, v2) 
         ep%eii = ep%eii + temp 
         SAFE_DEALLOCATE_A(rho1)
         write(68,*) "ep%eii values", iatom, jatom, ep%eii, temp
       enddo
-
       SAFE_DEALLOCATE_A(rho2)
       SAFE_DEALLOCATE_A(v2)
     enddo
+
+    !Testing self-interaction approximation
+    temp=0.0
+    do iatom=1,geo%natoms
+      SAFE_ALLOCATE(v2(1:gr%mesh%np))
+      SAFE_ALLOCATE(rho2(1:gr%mesh%np))
+      v2(1:gr%mesh%np)= M_ZERO
+      rho2(1:gr%mesh%np)= M_ZERO
+      call epot_local_potential(ep, gr%der, gr%dgrid, psolver, geo, iatom, v2, time1)
+      call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr%mesh, geo, rho2)
+      temp=dmf_dotp(gr%mesh, rho2, v2) 
+      sicn2=sicn2+M_HALF*temp
+      chargeion=species_zval(geo%atom(iatom)%spec)
+      sicn=sicn+sqrtalphapi*chargeion*chargeion
+      write(68,*) "Getting sic of:", iatom,M_HALF*temp, sicn2, sqrtalphapi*chargeion*chargeion, sicn
+      SAFE_DEALLOCATE_A(v2)
+      SAFE_DEALLOCATE_A(rho2)
+     enddo
+     !Add off-diagonal, self-interaction and its correction'
+     ep%eii=ep%eii+sicn2-sicn
 
     write(68,*) "ep%eii values very bottom", ep%eii * CNST(2.0*13.60569193)
 
@@ -1052,7 +1133,7 @@ contains
         ep%fii(1:sb%dim, iatom) = M_ZERO         
       enddo
       write(68,*) "SETE Force:", iatom,ep%fii(1:sb%dim,iatom)
-      calc_gate_energy=0
+      !calc_gate_energy=0
     enddo 
 
     POP_SUB(ion_interaction_sete)

@@ -456,10 +456,8 @@ contains
 
        !Probably do not need to allocate so much: erased rhop2
        i1=size(rho); !allocate(rhop_temp(i1)); allocate(rhop(i1)); allocate(rho_nuc(i1));
-!       rhop=0.0;rhop_temp=0.0;rho_nuc=0.0
        i1=size(pot);
 
-! What this is doing is solving Poisson for rhop(e+p) and the given hartree pot.
 
       nx = der%mesh%idx%nr(2,1) - der%mesh%idx%nr(1,1) + 1 - 2*der%mesh%idx%enlarge(1)
       ny = der%mesh%idx%nr(2,2) - der%mesh%idx%nr(1,2) + 1 - 2*der%mesh%idx%enlarge(2)
@@ -472,7 +470,6 @@ contains
       SAFE_ALLOCATE(rh0(1:nx, 1:ny, 1:nz))
       SAFE_ALLOCATE(vh0(1:nx, 1:ny, 1:nz))
 
-      !Show Roberto tells us the size of the box. 
       ! The %size gives out half the size of a box. 
       xl = 2*der%mesh%sb%lsize(1) 
       yl = 2*der%mesh%sb%lsize(2) 
