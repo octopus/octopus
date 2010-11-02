@@ -1071,10 +1071,10 @@ contains
 !    temp=M_HALF*temp
 !    write(68,*) "temp, sicn", temp, sicn
 !    ep%eii=ep%eii+temp-sicn
-!    SAFE_DEALLOCATE_A(rho2)
-!    SAFE_DEALLOCATE_A(v2)
-!    SAFE_DEALLOCATE_A(rho3)
-!    SAFE_DEALLOCATE_A(v3)
+!    SAFE_DEALLOCATE _A(rho2)
+!    SAFE_DEALLOCATE _A(v2)
+!    SAFE_DEALLOCATE _A(rho3)
+!    SAFE_DEALLOCATE _A(v3)
 
     do jatom = geo%natoms,2, -1
       SAFE_ALLOCATE(v2(1:gr%mesh%np))
