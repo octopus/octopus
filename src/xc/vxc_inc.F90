@@ -19,26 +19,41 @@
 
 ! ---------------------------------------------------------
 subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vtau)
-  type(derivatives_t),  intent(inout) :: der
-  type(xc_t), target,   intent(in)    :: xcs
-  type(states_t),       intent(inout) :: st
-  FLOAT,                intent(in)    :: rho(:, :)
-  integer,              intent(in)    :: ispin
-  FLOAT,                intent(inout) :: ex, ec
-  FLOAT,                intent(in)    :: ioniz_pot, qtot
-  FLOAT, optional,      intent(inout) :: vxc(:,:)
-  FLOAT, optional,      intent(inout) :: vtau(:,:)
+  type(derivatives_t),  intent(inout) :: der             !< Discretization and the derivative operators and details
+  type(xc_t), target,   intent(in)    :: xcs             !< Details about the xc functional used
+  type(states_t),       intent(inout) :: st              !< State of the system (wavefunction,eigenvalues...)
+  FLOAT,                intent(in)    :: rho(:, :)       !< Electronic density 
+  integer,              intent(in)    :: ispin           !< Number of spin channels 
+  FLOAT,                intent(inout) :: ex, ec          !< Exchange and correlation energy 
+  FLOAT,                intent(in)    :: ioniz_pot, qtot 
+  FLOAT, optional,      intent(inout) :: vxc(:,:)        !< XC potential
+  FLOAT, optional,      intent(inout) :: vtau(:,:)       !< Two times kinetic energy density 
 
   integer :: n_block
 
-  FLOAT, allocatable :: l_zk(:)
-  FLOAT, allocatable :: l_dens(:,:), l_dedd(:,:)
-  FLOAT, allocatable :: l_sigma(:,:), l_vsigma(:,:)
-  FLOAT, allocatable :: l_tau(:,:), l_ldens(:,:), l_dedtau(:,:), l_dedldens(:,:)
-
-  FLOAT, allocatable :: dens(:,:), dedd(:,:), ex_per_vol(:), ec_per_vol(:)
-  FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:), current(:,:,:)
-  FLOAT, allocatable :: ldens(:,:), tau(:,:), dedldens(:,:), symmtmp(:, :)
+  FLOAT, allocatable :: l_zk(:)        !Local block of the energy functional (with the correct memory order for libxc)
+  FLOAT, allocatable :: l_dens(:,:)    !Local block for the density 
+  FLOAT, allocatable :: l_dedd(:,:)    !Local block of the xchange or correl. potential(with the correct memory order for libxc)
+  FLOAT, allocatable :: l_sigma(:,:)   
+  FLOAT, allocatable :: l_vsigma(:,:)  
+  FLOAT, allocatable :: l_tau(:,:)
+  FLOAT, allocatable :: l_ldens(:,:)
+  FLOAT, allocatable :: l_dedtau(:,:)
+  FLOAT, allocatable :: l_dedldens(:,:)
+  FLOAT, allocatable :: dens(:,:)      ! Density
+  FLOAT, allocatable :: dedd(:,:)      ! (Functional) Derivative of the xchange or correlation energy with
+                                       ! respect to the density (vector used to store the exchange or the correlation potential)
+  FLOAT, allocatable :: ex_per_vol(:)  ! Exchange energy per unit volume 
+  FLOAT, allocatable :: ec_per_vol(:)  ! Correlation energy per unit volume 
+  FLOAT, allocatable :: gdens(:,:,:)   ! Gradient of the density
+  FLOAT, allocatable :: dedgd(:,:,:)   ! (Functional) Derivative of the exchange or correlation energy with
+                                         !respect to the gradient of the density.
+  FLOAT, allocatable :: current(:,:,:) ! Paramagnetic or total current
+  FLOAT, allocatable :: ldens(:,:)     ! Laplacian of the density
+  FLOAT, allocatable :: tau(:,:)       ! Kinetic energy density
+  FLOAT, allocatable :: dedldens(:,:)  ! (Functional) Derivative of the exchange or correlation energy with
+                                          !respect to the laplacian of the density.
+  FLOAT, allocatable :: symmtmp(:, :)  ! Temporary vector for the symmetrizer
 
   integer :: ib, ib2, ip, isp, families, ixc, spin_channels
   FLOAT   :: rr
@@ -129,7 +144,10 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
   end if
 
   space_loop: do ip = 1, der%mesh%np, n_block
-    if(ip + n_block > der%mesh%np) n_block = der%mesh%np - ip + 1
+    
+    !Resize the dimension of the last block when the number of the mesh points
+      !it's not a perfect divider of the dimension of the blocks.
+    if(ip + n_block > der%mesh%np) n_block = der%mesh%np - ip + 1 
 
     ! make a local copy with the correct memory order for libxc
     ib2 = ip
@@ -143,7 +161,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
       do ib = 1, n_block
         l_sigma(1, ib) = sum(gdens(ib2, 1:der%mesh%sb%dim, 1)*gdens(ib2, 1:der%mesh%sb%dim, 1))
         if(ispin /= UNPOLARIZED) then
-          l_sigma(2, ib) = sum(gdens(ib2, 1:der%mesh%sb%dim, 1)*gdens(ib2, 1:der%mesh%sb%dim, 2))
+          ! memo: please check the following indexes
+          l_sigma(2, ib) = sum(gdens(ib2, 1:der%mesh%sb%dim, 1)*gdens(ib2, 1:der%mesh%sb%dim, 2)) 
           l_sigma(3, ib) = sum(gdens(ib2, 1:der%mesh%sb%dim, 2)*gdens(ib2, 1:der%mesh%sb%dim, 2))
         end if
         ib2 = ib2 + 1
@@ -293,7 +312,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
     call lda_process()
   end if
 
-  ! integrate eneries per unit volume
+  ! integrate energies per unit volume
   ex = dmf_integrate(der%mesh, ex_per_vol)
   ec = dmf_integrate(der%mesh, ec_per_vol)
 
@@ -599,7 +618,7 @@ contains
     PUSH_SUB(xc_get_vxc.mgga_process)
 
     ! add the Laplacian of the functional derivative of Exc with respect to
-    ! the gradient of the density.
+    ! the laplacian of the density.
 
     SAFE_ALLOCATE(lf(1:der%mesh%np, 1:1))
     do is = 1, spin_channels
