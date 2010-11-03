@@ -194,17 +194,19 @@ contains
       
       if(ks%tail_correction) then 
         call messages_devel_version("XC tail correction")
-        
+        write(message(1),'(a)') 'This correction shouldn''t be used with systems having nodal points of the electron density' 
+        call write_info(1)
+            
         !%Variable XCTailCorrectionTol
         !%Type float
-        !%Default 1-e6
+        !%Default 5-e12
         !%Section Hamiltonian::XC
         !%Description
         !% This variable sets the threshold at which to cut the XC density when
         !% <tt>XCTailCorrection</tt> is enabled. The value is always assumed to
         !% be in atomic units.
         !%End
-        call parse_float(datasets_check('XCTailCorrectionTol'), CNST(1e-6), ks%tail_correction_tol)
+        call parse_float(datasets_check('XCTailCorrectionTol'), CNST(5e-12), ks%tail_correction_tol)
       end if
 
       if(iand(ks%xc_family, XC_FAMILY_OEP) .ne. 0) then
@@ -312,7 +314,7 @@ contains
     logical,      optional, intent(in)    :: calc_eigenval
     FLOAT,        optional, intent(in)    :: time
     
-    FLOAT :: amaldi_factor
+    FLOAT :: amaldi_factor,distance
     integer :: ip, ispin
     type(profile_t), save :: prof
     logical :: calc_eigenval_
@@ -424,12 +426,13 @@ contains
     subroutine v_a_xc()
 
       FLOAT, allocatable :: rho(:, :)
+      FLOAT, allocatable :: totalrho(:)
       type(profile_t), save :: prof
       FLOAT, pointer :: vxc(:, :)
       FLOAT, allocatable :: vxcc(:), nxc(:)
-      integer :: ispin, ierr, ip,itmp
+      integer :: ispin, ierr, ip, itmp, idim
       character(len=10) :: vxc_name
-      character(len=10) :: nxc_name
+
 
       PUSH_SUB(v_ks_calc.v_a_xc)
       call profiling_in(prof, "XC")
@@ -440,6 +443,7 @@ contains
 
       ! get density taking into account non-linear core corrections, and the Amaldi SIC correction
       SAFE_ALLOCATE(rho(1:gr%fine%mesh%np, 1:st%d%nspin))
+      
       call states_total_density(st, gr%fine%mesh, rho)
 
       ! Amaldi correction
@@ -483,47 +487,55 @@ contains
 
       if(ks%tail_correction) then
 
-        SAFE_ALLOCATE(nxc(1:gr%fine%mesh%np))
         SAFE_ALLOCATE(vxcc(1:gr%fine%mesh%np_part))
+        SAFE_ALLOCATE(totalrho(1:gr%fine%mesh%np))
+        
+        totalrho(:) = M_ZERO
+        do ip = 1, gr%fine%mesh%np
+          do ispin= 1, st%d%nspin
+            totalrho(ip) = totalrho(ip) + rho(ip,ispin)
+          end do
+        end do
         
         do ispin = 1, st%d%nspin
                     
-          vxcc(1:gr%fine%mesh%np) = hm%vxc(1:gr%fine%mesh%np, ispin)
+          vxcc(1:gr%fine%mesh%np_part) = hm%vxc(1:gr%fine%mesh%np_part, ispin)
           
-          call dderivatives_lapl(gr%fine%der, vxcc, nxc)
+         
           
           ! These output calls and the ones below are for debugging, XA and FB.
           
           !first we set the names of the output files
 
-          !write (vxc_name,'(i10)') ispin
-          !itmp = verify(vxc_name," ")
-          !vxc_name =  "vxc"//trim(vxc_name(itmp:))
+          write (vxc_name,'(i10)') ispin
+          itmp = verify(vxc_name," ")
+          vxc_name =  "vxc"//trim(vxc_name(itmp:))
           
-          
-          !write (nxc_name,'(i10)') ispin
-          !itmp = verify(nxc_name," ")
-          !nxc_name =  "nxc"//trim(nxc_name(itmp:))
-          
+                              
           !print the XC potential before the correction
-          !call doutput_function(output_axis_x, "./static", nxc_name, gr%fine%mesh, nxc, unit_one, ierr)
-          !call doutput_function(output_axis_x, "./static", vxc_name, gr%fine%mesh, vxcc, unit_one, ierr)
           
-          
+          call doutput_function(output_axis_x, "./static", vxc_name, gr%fine%mesh, vxcc, unit_one, ierr)
+          call doutput_function(output_axis_y, "./static", vxc_name, gr%fine%mesh, vxcc, unit_one, ierr)
+          call doutput_function(output_axis_z, "./static", vxc_name, gr%fine%mesh, vxcc, unit_one, ierr)
+
           !Performing the correction to the "XC density" 
           do ip = 1, gr%fine%mesh%np
-            if(rho(ip, ispin) < ks%tail_correction_tol) nxc(ip) = M_ZERO
+            if( (rho(ip,ispin) .ne. M_ZERO) .and. (totalrho(ip) < ks%tail_correction_tol) ) then
+              distance = M_ZERO
+              do idim = 1,gr%mesh%sb%dim 
+                distance = distance + gr%fine%mesh%x(ip,idim)**2
+              end do
+              distance = sqrt(distance)
+              vxcc(ip) =  -1/distance
+            end if
           end do
           
-          !From the XC density to the XC potential 
-          call dpoisson_solve(ks%hartree_solver, vxcc, nxc)
-          vxcc(1:gr%fine%mesh%np) = -vxcc(1:gr%fine%mesh%np)/(CNST(4.0)*M_PI)
-          
+                    
           !print the XC potential after the correction
           !call doutput_function(output_axis_x, "./static", trim(nxc_name)//trim("cut") , gr%fine%mesh, nxc, unit_one, ierr)
           !call doutput_function(output_axis_x, "./static", trim(vxc_name)//trim("cut") , gr%fine%mesh, vxcc, unit_one, ierr)
           
-          hm%vxc(1:gr%fine%mesh%np, ispin) = vxcc(1:gr%fine%mesh%np)
+          hm%vxc(1:gr%fine%mesh%np_part, ispin) = vxcc(1:gr%fine%mesh%np_part)
 
         end do
 
@@ -533,7 +545,8 @@ contains
       end if
 
       SAFE_DEALLOCATE_A(rho)
-
+      SAFE_DEALLOCATE_A(totalrho)
+      
       ! Now we calculate Int[n vxc] = hm%epot
       select case(hm%d%ispin)
       case(UNPOLARIZED)
