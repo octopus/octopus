@@ -222,6 +222,8 @@ contains
           xadj(iv) = ne
           ! Check all possible neighbours.
           do jp = 1, stencil%size 
+            if(jp == stencil%center) cycle
+
             ! Store coordinates of possible neighbors, they
             ! are needed several times in the check below.
             jx(1:MAX_DIM) = ix(1:MAX_DIM) + stencil%points(1:MAX_DIM, jp)
