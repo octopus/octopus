@@ -208,7 +208,7 @@ contains
       SAFE_ALLOCATE(xadj(1:nv + 1))
 
       if(library == METIS .or. .not. zoltan_method_is_geometric(method)) then !calculate the graphs
-        SAFE_ALLOCATE(adjncy(1:stencil%size*nv))
+        SAFE_ALLOCATE(adjncy(1:(stencil%size - 1)*nv))
 
         ! Create graph with each point being
         ! represented by a vertex and edges between

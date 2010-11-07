@@ -122,6 +122,8 @@ contains
         call index_from_coords_vec(mesh%idx, mesh%sb%dim, stencil%size, jpcoords, jp)
         
         do istencil = 1, stencil%size
+          if(stencil%center == istencil) cycle
+
           if(.not. gotit(jp(istencil))) then
             jpart = this%point_to_part(jp(istencil))
             
