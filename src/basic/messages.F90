@@ -749,6 +749,8 @@ contains
   ! ---------------------------------------------------------
   subroutine pop_sub(sub_name)
     character(len=*), intent(in) :: sub_name
+    
+    character(len=80) :: sub_name_short
 
     integer iunit, sec, usec
 
@@ -764,11 +766,16 @@ contains
       call write_fatal(1)
     end if
 
-    if(sub_name .ne. sub_stack(no_sub_stack)) then
-      write (message(1),'(a,3x,a,3x,a)') 'Wrong sub name on pop_sub ', sub_name, sub_stack(no_sub_stack)
-      call write_fatal(1)
-    end if
+    ! the name might be truncated in sub_stack, so we copy to a string
+    ! of the same size
+    sub_name_short = sub_name
 
+    if(sub_name_short .ne. sub_stack(no_sub_stack)) then
+      write (message(1),'(a)') 'Wrong sub name on pop_sub :'
+      write (message(2),'(2a)') ' got      : ', sub_name_short
+      write (message(3),'(2a)') ' expected : ', sub_stack(no_sub_stack)
+      call write_fatal(3)
+    end if
 
     if(conf%debug_level .ge. 99) then
       call open_debug_trace(iunit)
