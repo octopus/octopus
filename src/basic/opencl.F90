@@ -165,7 +165,9 @@ module opencl_m
 
       call messages_print_stress(stdout, "OpenCL")
 
-      call f90_cl_env_init(idevice, opencl%context, opencl%device)
+      call f90_cl_init_context(opencl%context)
+      call f90_cl_init_device(idevice, opencl%context, opencl%device)
+
       call flCreateCommandQueue(opencl%command_queue, opencl%context, opencl%device, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "CreateCommandQueue")
       
