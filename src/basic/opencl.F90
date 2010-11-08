@@ -163,6 +163,8 @@ module opencl_m
         return
       end if
 
+      call messages_print_stress(stdout, "OpenCL")
+
       call f90_cl_env_init(idevice, opencl%context, opencl%device)
       call flCreateCommandQueue(opencl%command_queue, opencl%context, opencl%device, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "CreateCommandQueue")
@@ -200,6 +202,8 @@ module opencl_m
       call opencl_build_program(prog, trim(conf%share)//'/opencl/copy.cl')
       call opencl_create_kernel(kernel_copy, prog, "copy")
       call opencl_release_program(prog)
+
+      call messages_print_stress(stdout)
 
       POP_SUB(opencl_init)
     end subroutine opencl_init

@@ -71,24 +71,37 @@ void FC_FUNC_(f90_cl_env_init,F90_CL_ENV_INIT)(const int * idevice, cl_context *
 
   /* print some info about the device */  
   clGetDeviceInfo(*device, CL_DEVICE_VENDOR, sizeof(device_string), &device_string, NULL);
-  printf("OpenCL device         : %s", device_string);
+  printf("device vendor           : %s\n", device_string);
+
+  clGetDeviceInfo(*device, CL_DRIVER_VERSION, sizeof(device_string), &device_string, NULL);
+  printf("driver version          : %s\n", device_string);
 
   clGetDeviceInfo(*device, CL_DEVICE_NAME, sizeof(device_string), &device_string, NULL);
-  printf(" %s\n", device_string);
+  printf("device name             : %s\n", device_string);
 
   clGetDeviceInfo (*device, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &dim, NULL);
-  printf("Compute units         : %d\n", dim);
+  printf("compute units           : %d\n", dim);
+
+  clGetDeviceInfo (*device, CL_DEVICE_MAX_CLOCK_FREQUENCY, sizeof(cl_uint), &dim, NULL);
+  printf("maximum clock frequency : %d MHz\n", dim);
 
   clGetDeviceInfo (*device, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &mem, NULL);
   mem /= (1024*1024); /* convert to megabytes */
-  printf("Device memory         : %ld [Mb]\n", mem);
+  printf("device memory           : %ld Mb\n", mem);
+
+  clGetDeviceInfo (*device, CL_DEVICE_GLOBAL_MEM_CACHE_SIZE, sizeof(cl_ulong), &mem, NULL);
+  mem /= (1024*1024); /* convert to megabytes */
+  printf("device cache            : %ld Mb\n", mem);
 
   clGetDeviceInfo(*device, CL_DEVICE_EXTENSIONS, sizeof(device_string), &device_string, NULL);
-  printf("Extensions            : %s\n", device_string);
+  printf("cl_khr_fp64 extension   : ");
+  if(strcasestr(device_string, "cl_khr_fp64")) printf("yes\n");
+  else printf("no\n");
 
   clGetDeviceInfo(*device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(max_workgroup_size), &max_workgroup_size, NULL);
-  printf("Maximum workgroup size: %zd\n", max_workgroup_size);
+  printf("maximum workgroup size  : %zd\n", max_workgroup_size);
 
+  printf("\n");
 }
 
 /* clCreateCommandQueue */
