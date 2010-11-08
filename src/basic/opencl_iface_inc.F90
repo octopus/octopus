@@ -78,15 +78,24 @@
   interface
     ! ---------------------------------------------------
 
-    subroutine f90_cl_env_init(idevice, context, device)
+    subroutine f90_cl_init_context(context)
+      use c_pointer_m
+
+      implicit none
+      type(c_ptr),      intent(out) :: context
+    end subroutine f90_cl_init_context
+    
+    ! ---------------------------------------------------
+
+    subroutine f90_cl_init_device(idevice, context, device)
       use c_pointer_m
 
       implicit none
 
-      integer,          intent(in)  :: idevice
-      type(c_ptr),      intent(out) :: context
-      type(c_ptr),      intent(out) :: device
-    end subroutine f90_cl_env_init
+      integer,          intent(in)    :: idevice
+      type(c_ptr),      intent(inout) :: context
+      type(c_ptr),      intent(out)   :: device
+    end subroutine f90_cl_init_device
 
     ! ----------------------------------------------------
 

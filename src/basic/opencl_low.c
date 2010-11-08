@@ -27,17 +27,12 @@
 #include <string_f.h>
 #include <string.h>
 #include <assert.h>
+#include <string.h>
 
-void FC_FUNC_(f90_cl_env_init,F90_CL_ENV_INIT)(const int * idevice, cl_context * context, cl_device_id * device){
-  size_t ParamDataBytes;
-  char device_string[2048];
-  cl_uint dim;
-  cl_ulong mem;
+void FC_FUNC_(f90_cl_init_context,F90_CL_INIT_CONTEXT)(cl_context * context){
   cl_platform_id platform;
   cl_int status;
   cl_context_properties cps[3];
-  size_t max_workgroup_size;
-  cl_device_id * Devices;
 
   /* Just get the first platform */
   status = clGetPlatformIDs(1, &platform, NULL);
@@ -56,7 +51,16 @@ void FC_FUNC_(f90_cl_env_init,F90_CL_ENV_INIT)(const int * idevice, cl_context *
   if (status != CL_SUCCESS){
     printf("OpenCL initialization failed. Error code: %d\n", status);
     exit(1);
-  };
+  }
+}
+
+void FC_FUNC_(f90_cl_init_device,F90_CL_INIT_DEVICE)(const int * idevice, const cl_context * context, cl_device_id * device){
+  size_t ParamDataBytes;
+  char device_string[2048];
+  cl_uint dim;
+  cl_ulong mem;
+  size_t max_workgroup_size;
+  cl_device_id * Devices;
 
   clGetContextInfo(*context, CL_CONTEXT_DEVICES, 0 , NULL, &ParamDataBytes);
   Devices = (cl_device_id*) malloc(ParamDataBytes);
@@ -95,7 +99,7 @@ void FC_FUNC_(f90_cl_env_init,F90_CL_ENV_INIT)(const int * idevice, cl_context *
 
   clGetDeviceInfo(*device, CL_DEVICE_EXTENSIONS, sizeof(device_string), &device_string, NULL);
   printf("cl_khr_fp64 extension   : ");
-  if(strcasestr(device_string, "cl_khr_fp64")) printf("yes\n");
+  if(strstr(device_string, "cl_khr_fp64")) printf("yes\n");
   else printf("no\n");
 
   clGetDeviceInfo(*device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(max_workgroup_size), &max_workgroup_size, NULL);
