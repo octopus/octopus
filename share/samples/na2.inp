@@ -21,8 +21,6 @@ XCFunctional = lda_x + lda_c_pz
 MaximumIter = 200
 ConvAbsDens = 1e-6
 
-LCAOStart = yes
-
 EigenSolver = cg
 EigenSolverInitTolerance = 1e-2
 EigenSolverFinalTolerance = 1e-6
