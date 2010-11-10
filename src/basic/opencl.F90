@@ -87,6 +87,7 @@ module opencl_m
   type(c_ptr), public :: zpack
   type(c_ptr), public :: dunpack
   type(c_ptr), public :: zunpack
+  type(c_ptr), public :: kernel_subarray_gather
 
 #include "opencl_iface_inc.F90"
 
@@ -203,6 +204,10 @@ module opencl_m
 
       call opencl_build_program(prog, trim(conf%share)//'/opencl/copy.cl')
       call opencl_create_kernel(kernel_copy, prog, "copy")
+      call opencl_release_program(prog)
+
+      call opencl_build_program(prog, trim(conf%share)//'/opencl/subarray.cl')
+      call opencl_create_kernel(kernel_subarray_gather, prog, "subarray_gather")
       call opencl_release_program(prog)
 
       call messages_print_stress(stdout)

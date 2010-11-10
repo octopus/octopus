@@ -71,7 +71,17 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   ! first post the receptions
   select case(batch_status(v_local))
   case(BATCH_CL_PACKED)
-    ASSERT(.false.)
+    SAFE_ALLOCATE(handle%X(recv_buffer)(1:v_local%pack%size(1)*vp%np_ghost(vp%partno)))
+
+    do ipart = 1, vp%npart
+      if(vp%np_ghost_neigh(vp%partno, ipart) == 0) cycle
+      
+      handle%nnb = handle%nnb + 1
+      tag = 0
+      pos = 1 + vp%rdispls(ipart)*v_local%pack%size(1)
+      call MPI_Irecv(handle%X(recv_buffer)(pos), vp%rcounts(ipart)*v_local%pack%size(1), R_MPITYPE, ipart - 1, tag, &
+        vp%comm, handle%requests(handle%nnb), mpi_err)
+    end do
 
   case(BATCH_PACKED)
     !In this case, data from different vectors is contiguous. So we can use one message per partition.

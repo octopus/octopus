@@ -28,7 +28,8 @@ dist_opencl_DATA =              \
 	axpy.cl                 \
 	projector.cl            \
 	pack.cl                 \
-	copy.cl
+	copy.cl                 \
+	subarray.cl
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use
 # the `distcheck' target) the pseudopotential files have to be accessible

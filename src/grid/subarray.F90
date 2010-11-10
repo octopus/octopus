@@ -22,7 +22,10 @@
 module subarray_m
   use batch_m
   use global_m
+  use math_m
   use messages_m
+  use opencl_m
+  use types_m
   use profiling_m
 
 

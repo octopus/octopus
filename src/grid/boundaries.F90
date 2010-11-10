@@ -26,6 +26,7 @@ module boundaries_m
   use mesh_m
   use mpi_m
   use mpi_debug_m
+  use opencl_m
   use par_vec_m
   use profiling_m
   use simul_box_m
@@ -72,6 +73,11 @@ module boundaries_m
     type(batch_t)        :: ghost_send
     integer,     pointer :: requests(:)
     integer              :: nnb
+    ! these are needed for CL
+    FLOAT, pointer       :: drecv_buffer(:)
+    CMPLX, pointer       :: zrecv_buffer(:)
+    FLOAT, pointer       :: dsend_buffer(:)
+    CMPLX, pointer       :: zsend_buffer(:)
   end type pv_handle_batch_t
 
   type(profile_t), save :: prof_start
