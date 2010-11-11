@@ -540,11 +540,10 @@ contains
       atm => geo%atom(ia)
       if(.not. species_is_ps(atm%spec)) cycle
       if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
-      ep%non_local = .true.
       call projector_end(ep%proj(ia))
       call projector_init(ep%proj(ia), gr%mesh, atm, st%d%dim, ep%reltype)
       call projector_build(ep%proj(ia), gr, atm, ep%so_strength)
-
+      if(.not. projector_is(ep%proj(ia), M_NONE)) ep%non_local = .true.
     end do
 
     ! add static electric fields

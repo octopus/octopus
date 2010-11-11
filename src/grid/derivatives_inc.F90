@@ -302,12 +302,18 @@ end subroutine X(derivatives_batch_start)
 subroutine X(derivatives_batch_finish)(handle)
   type(derivatives_handle_batch_t), intent(inout) :: handle
 
+  logical :: done
+
   PUSH_SUB(X(derivatives_batch_finish))
+
+  done = .false.
 
 #ifdef HAVE_MPI
   if(derivatives_overlap(handle%der) .and. handle%der%mesh%parallel_in_domains .and. handle%ghost_update) then
 
     if(batch_status(handle%ff) /= BATCH_CL_PACKED) then
+      done = .true.
+
       if(handle%factor_present) then
         call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, &
           ghost_update=.false., points=OP_INNER, factor = handle%factor)
@@ -319,37 +325,27 @@ subroutine X(derivatives_batch_finish)(handle)
     call X(ghost_update_batch_finish)(handle%pv_h)
 
     if(batch_status(handle%ff) /= BATCH_CL_PACKED) then
-
       if(handle%factor_present) then
         call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, &
           ghost_update = .false., points = OP_OUTER, factor = handle%factor)
       else
         call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update = .false., points = OP_OUTER)
       end if
-      
-    else
-      
-      if(handle%factor_present) then
-        call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, &
-          ghost_update = handle%ghost_update, factor = handle%factor)
-      else
-        call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update = handle%ghost_update)
-      end if
 
+      ASSERT(done)
     end if
 
-  else
+  end if
 #endif
+
+  if(.not. done) then
     if(handle%factor_present) then
       call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, &
         ghost_update = handle%ghost_update, factor = handle%factor)
     else
       call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update = handle%ghost_update)
     end if
-    
-#ifdef HAVE_MPI
   end if
-#endif
 
   POP_SUB(X(derivatives_batch_finish))
 end subroutine X(derivatives_batch_finish)
