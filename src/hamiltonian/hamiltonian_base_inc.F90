@@ -299,6 +299,12 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
     call opencl_finish()
 
+    if(mesh%parallel_in_domains) then
+      SAFE_ALLOCATE(projection%X(projection)(1:psib%pack%size_real(1), 1:this%full_projection_size))
+      call opencl_read_buffer(projection%buff_projection, &
+        this%full_projection_size*psib%pack%size_real(1), projection%X(projection))
+    end if
+
     call profiling_out(cl_prof)
 
     POP_SUB(X(hamiltonian_base_nlocal_start))
@@ -373,7 +379,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
   type(batch_t),               intent(inout) :: vpsib
 
   integer :: ist, ip, iproj, imat, nreal, iprojection
-  integer :: npoints, nprojs, nst
+  integer :: npoints, nprojs, nst, d1
   R_TYPE, allocatable :: psi(:, :)
   type(projector_matrix_t), pointer :: pmat
 #ifdef HAVE_MPI
@@ -393,8 +399,28 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
   nreal = nst
 #endif
 
+  ! reduce the projections
+#ifdef HAVE_MPI
+  if(mesh%parallel_in_domains) then
+    call profiling_in(reduce_prof, "VNLPSI_MAT_REDUCE")
+    d1 = ubound(projection%X(projection), dim = 1)
+    SAFE_ALLOCATE(projection_red(1:d1, 1:this%full_projection_size))
+    projection_red = projection%X(projection)
+    call MPI_Allreduce(projection_red(1, 1), projection%X(projection)(1, 1), d1*this%full_projection_size, &
+      R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+    SAFE_DEALLOCATE_A(projection_red)
+    call profiling_out(reduce_prof)
+  end if
+#endif
+
 #ifdef HAVE_OPENCL
   if(batch_is_packed(vpsib) .and. opencl_is_enabled()) then
+
+    if(mesh%parallel_in_domains) then
+      call opencl_write_buffer(projection%buff_projection, &
+        this%full_projection_size*vpsib%pack%size_real(1), projection%X(projection))
+      SAFE_DEALLOCATE_P(projection%X(projection))
+    end if
 
     call finish_opencl()
     call opencl_release_buffer(projection%buff_projection)
@@ -402,19 +428,6 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
     POP_SUB(X(hamiltonian_base_nlocal_finish))
     call profiling_out(prof_vnlpsi)
     return
-  end if
-#endif
-
-  ! reduce the projections
-#ifdef HAVE_MPI
-  if(mesh%parallel_in_domains) then
-    call profiling_in(reduce_prof, "VNLPSI_MAT_REDUCE")
-    SAFE_ALLOCATE(projection_red(1:nst, 1:this%full_projection_size))
-    projection_red = projection%X(projection)
-    call MPI_Allreduce(projection_red(1, 1), projection%X(projection)(1, 1), nst*this%full_projection_size, &
-      R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-    SAFE_DEALLOCATE_A(projection_red)
-    call profiling_out(reduce_prof)
   end if
 #endif
 
