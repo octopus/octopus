@@ -266,9 +266,9 @@ contains
 
     PUSH_SUB(X(nl_operator_operate_batch).operate_opencl)
     call profiling_in(prof, "CL_NL_OPERATOR")
-
-    ASSERT(.not. op%mesh%parallel_in_domains)
     
+    ASSERT(points_ == OP_ALL)
+
     call opencl_create_buffer(buff_weights, CL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size)
     call opencl_write_buffer(buff_weights, op%stencil%size, wre)
 

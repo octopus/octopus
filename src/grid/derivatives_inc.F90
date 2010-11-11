@@ -307,20 +307,35 @@ subroutine X(derivatives_batch_finish)(handle)
 #ifdef HAVE_MPI
   if(derivatives_overlap(handle%der) .and. handle%der%mesh%parallel_in_domains .and. handle%ghost_update) then
 
-    if(handle%factor_present) then
-      call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, &
-        ghost_update=.false., points=OP_INNER, factor = handle%factor)
-    else
-      call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update=.false., points=OP_INNER)
+    if(batch_status(handle%ff) /= BATCH_CL_PACKED) then
+      if(handle%factor_present) then
+        call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, &
+          ghost_update=.false., points=OP_INNER, factor = handle%factor)
+      else
+        call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update=.false., points=OP_INNER)
+      end if
     end if
 
     call X(ghost_update_batch_finish)(handle%pv_h)
 
-    if(handle%factor_present) then
-      call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, &
-        ghost_update = .false., points = OP_OUTER, factor = handle%factor)
+    if(batch_status(handle%ff) /= BATCH_CL_PACKED) then
+
+      if(handle%factor_present) then
+        call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, &
+          ghost_update = .false., points = OP_OUTER, factor = handle%factor)
+      else
+        call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update = .false., points = OP_OUTER)
+      end if
+      
     else
-      call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update = .false., points = OP_OUTER)
+      
+      if(handle%factor_present) then
+        call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, &
+          ghost_update = handle%ghost_update, factor = handle%factor)
+      else
+        call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update = handle%ghost_update)
+      end if
+
     end if
 
   else

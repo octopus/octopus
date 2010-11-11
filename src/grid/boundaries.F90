@@ -78,6 +78,8 @@ module boundaries_m
     CMPLX, pointer       :: zrecv_buffer(:)
     FLOAT, pointer       :: dsend_buffer(:)
     CMPLX, pointer       :: zsend_buffer(:)
+    type(batch_t),   pointer :: v_local
+    type(pv_t),      pointer :: vp
   end type pv_handle_batch_t
 
   type(profile_t), save :: prof_start
