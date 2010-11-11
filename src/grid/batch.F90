@@ -99,8 +99,8 @@ module batch_m
     FLOAT,               pointer   :: dpsicont(:, :, :)
     CMPLX,               pointer   :: zpsicont(:, :, :)
     integer                        :: status
-    integer                        :: in_buffer_count ! whether there is a copy in the opencl buffer
-    logical                        :: dirty     ! if this is true, the buffer has different data
+    integer                        :: in_buffer_count !< whether there is a copy in the opencl buffer
+    logical                        :: dirty     !< if this is true, the buffer has different data
     type(batch_pack_t)             :: pack
   end type batch_t
 
@@ -291,7 +291,7 @@ contains
   end subroutine batch_copy
 
   ! ----------------------------------------------------
-  ! THREADSAFE
+  !> THREADSAFE
   integer pure function batch_type(this) result(btype)
     type(batch_t),      intent(in)    :: this
 
@@ -300,7 +300,7 @@ contains
   end function batch_type
 
   ! ----------------------------------------------------
-  ! THREADSAFE
+  !> THREADSAFE
   integer pure function batch_status(this) result(bstatus)
     type(batch_t),      intent(in)    :: this
 

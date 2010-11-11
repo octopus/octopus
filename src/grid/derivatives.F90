@@ -81,9 +81,9 @@ module derivatives_m
 
 
   integer, parameter ::     &
-    DER_BC_ZERO_F    = 0,   &  ! function is zero at the boundaries
-    DER_BC_ZERO_DF   = 1,   &  ! first derivative of the function is zero
-    DER_BC_PERIOD    = 2       ! boundary is periodic
+    DER_BC_ZERO_F    = 0,   &  !< function is zero at the boundaries
+    DER_BC_ZERO_DF   = 1,   &  !< first derivative of the function is zero
+    DER_BC_PERIOD    = 2       !< boundary is periodic
 
   integer, parameter ::     &
     DER_STAR         = 1,   &
@@ -97,26 +97,26 @@ module derivatives_m
 
   type derivatives_t
     type(boundaries_t)    :: boundaries
-    type(mesh_t), pointer :: mesh          ! pointer to the underlying mesh
-    integer               :: dim           ! dimensionality of the space (sb%dim)
-    integer               :: order         ! order of the discretization (value depends on stencil)
-    integer               :: stencil_type  ! type of discretization
+    type(mesh_t), pointer :: mesh          !< pointer to the underlying mesh
+    integer               :: dim           !< dimensionality of the space (sb%dim)
+    integer               :: order         !< order of the discretization (value depends on stencil)
+    integer               :: stencil_type  !< type of discretization
 
-    FLOAT                 :: masses(MAX_DIM)     ! we can have different weights (masses) per space direction
+    FLOAT                 :: masses(MAX_DIM)     !< we can have different weights (masses) per space direction
 
     logical               :: zero_bc
     logical               :: periodic_bc
 
-    ! If the so-called variational discretization is used, this controls a
-    ! possible filter on the Laplacian.
+    !> If the so-called variational discretization is used, this controls a
+    !! possible filter on the Laplacian.
     FLOAT :: lapl_cutoff   
 
-    type(nl_operator_t), pointer :: op(:)  ! op(1:conf%dim) => gradient
-    ! op(conf%dim+1) => Laplacian
-    type(nl_operator_t), pointer :: lapl   ! these are just shortcuts for op
+    type(nl_operator_t), pointer :: op(:)  !< op(1:conf%dim) => gradient
+    !! op(conf%dim+1) => Laplacian
+    type(nl_operator_t), pointer :: lapl   !< these are just shortcuts for op
     type(nl_operator_t), pointer :: grad(:)
 
-    integer                      :: n_ghost(MAX_DIM)   ! ghost points to add in each dimension
+    integer                      :: n_ghost(MAX_DIM)   !< ghost points to add in each dimension
 #if defined(HAVE_MPI)
     integer                      :: comm_method 
 #endif
@@ -297,8 +297,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Returns maximum extension of the stencil in spatial direction
-  ! dir = 1, 2, 3 for a given derivative der.
+  !> Returns maximum extension of the stencil in spatial direction
+  !! dir = 1, 2, 3 for a given derivative der.
   integer function derivatives_stencil_extent(der, dir) result(extent)
     type(derivatives_t), intent(in) :: der
     integer,             intent(in) :: dir
@@ -347,7 +347,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Returns the diagonal elements of the Laplacian, needed for preconditioning
+  !> Returns the diagonal elements of the Laplacian, needed for preconditioning
   subroutine derivatives_lapl_diag(der, lapl)
     type(derivatives_t), intent(in)  :: der
     FLOAT,               intent(out) :: lapl(:)  ! lapl(mesh%np)
