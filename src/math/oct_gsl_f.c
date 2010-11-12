@@ -37,6 +37,7 @@
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_spline.h>
 #include <gsl/gsl_chebyshev.h>
+#include <gsl/gsl_deriv.h>
 
 #include "string_f.h"
 
@@ -306,3 +307,46 @@ void FC_FUNC_(oct_chebyshev_coeffs, OCT_CHEBYSHEV_COEFFS)
   for(i=0; i<=12; i++){GSL_SET_IMAG(&coeffs[i], (*cs).c[i]);}    
 }
 */
+
+ /* Numerical Derivatives.
+    The following is an interface to the GSL support for numerical derivatives,
+    in particular the gsl_deriv_central function. It computes a four points
+    approximation to the derivative of a function, supplying an error estimation. */
+
+ /* This is a type used to communicate with Fortran; func_nd is the type of the
+    interface to a Fortran subroutine that calculates the value of the function.
+    The first argument is the function argument, whereas the second is the function
+    value. For convenience reasons, it is wrapped around the "param_nd_t" struct. */
+typedef void (*func_nd)(double*, double*);
+typedef struct{
+  func_nd func;
+} param_nd_t;
+
+ /* This is the function that is called by the GSL function gsl_deriv_central. It
+    receives as first argument the function argument, and as second argument
+    a pointer to a params data type (a GSL data type), which in this case should
+    be a pointer to a param_nd_t data type, where the address of the Fortran
+    subroutine is. */
+double function_oct_numerical_derivative (double x, void * params)
+{
+  double res;
+  param_nd_t * p;
+
+  p = (param_nd_t *) params;
+  p->func(&x, &res);
+  return res;
+}
+ /* This is the function that should be called by Fortran. The interface is defined
+    in loct_math.F90 file. */
+void FC_FUNC_(oct_numerical_derivative, OCT_NUMERICAL_DERIVATIVE)
+     (double *h, double *result, double *abserr, func_nd f)
+{
+  gsl_function  F;
+  param_nd_t p;
+
+  p.func = f;
+  F.function = &function_oct_numerical_derivative;
+  F.params = (void *) &p;
+  gsl_deriv_central (&F, 2.0, *h, result, abserr);
+  return;
+}

@@ -48,7 +48,9 @@ module loct_math_m
     loct_fft_optimize,       &
     loct_1dminimize,         &
     loct_minimize,           &
-    loct_minimize_direct
+    loct_minimize_direct,    &
+    loct_numerical_derivative
+
 
   integer, public, parameter ::     &
     MINMETHOD_STEEPEST_DESCENT = 1, &
@@ -57,6 +59,21 @@ module loct_math_m
     MINMETHOD_BFGS             = 4, &
     MINMETHOD_BFGS2            = 5, &
     MINMETHOD_NMSIMPLEX        = 6
+
+  ! ---------------------------------------------------------
+  ! Numerical derivative.
+  interface loct_numerical_derivative
+    subroutine oct_numerical_derivative(h, result, abserr, f)
+      real(8) :: h, result, abserr
+      interface
+        subroutine f(x, fx)
+          real(8), intent(in) :: x
+          real(8), intent(inout) :: fx
+        end subroutine f
+      end interface
+    end subroutine oct_numerical_derivative
+  end interface
+
 
   ! ---------------------------------------------------------
   ! Special functions
