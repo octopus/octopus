@@ -349,7 +349,7 @@ contains
     IN1 = MAX(  1, IR-NN ) - IR
     IN2 = MIN( NR, IR+NN ) - IR
 
-    ! Find weights of numerical derivation from Lagrange
+    ! Find weights of numerical derivative from Lagrange
     ! interpolation formula
     do IN = IN1,IN2
       if (IN .eq. 0) then
