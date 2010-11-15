@@ -618,6 +618,11 @@ module tdf_m
     PUSH_SUB(tdf_numerical_to_fourier)
 
     SAFE_ALLOCATE(tmp(1:f%niter/2+1))
+    ! Moving to Fourier space implies periodical funcitons. However, the function on entry
+    ! may not be periodical (f%val(f%niter +1) may not be equal to f%val(1)), so it is
+    ! better if we take the average of those two values.
+    f%val(1) = M_HALF*(f%val(1)+f%val(f%niter+1))
+    f%val(f%niter+1) = f%val(1)
     call dfft_forward1(f%fft_handler, f%val(1:f%niter), tmp)
     tmp = tmp * f%dt * sqrt(M_ONE/(f%final_time-f%init_time))
     f%mode = TDF_FOURIER_SERIES

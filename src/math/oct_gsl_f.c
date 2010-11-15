@@ -339,7 +339,7 @@ double function_oct_numerical_derivative (double x, void * params)
  /* This is the function that should be called by Fortran. The interface is defined
     in loct_math.F90 file. */
 void FC_FUNC_(oct_numerical_derivative, OCT_NUMERICAL_DERIVATIVE)
-     (double *h, double *result, double *abserr, func_nd f)
+     (double *x, double *h, double *result, double *abserr, func_nd f)
 {
   gsl_function  F;
   param_nd_t p;
@@ -347,6 +347,6 @@ void FC_FUNC_(oct_numerical_derivative, OCT_NUMERICAL_DERIVATIVE)
   p.func = f;
   F.function = &function_oct_numerical_derivative;
   F.params = (void *) &p;
-  gsl_deriv_central (&F, 2.0, *h, result, abserr);
+  gsl_deriv_central (&F, *x, *h, result, abserr);
   return;
 }

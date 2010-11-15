@@ -26,7 +26,7 @@ libopt_control_a_SOURCES = \
 	target.F90 propagation.F90 initst.F90 opt_control.F90
 
 noinst_HEADERS = \
-	controlfunction_trans_inc.F90 check_input_inc.F90 finalcheck_inc.F90 
+	controlfunction_trans_inc.F90 check_input_inc.F90 finalcheck_inc.F90 opt_control_c.F90
 
 include $(srcdir)/../common-rules.make
 

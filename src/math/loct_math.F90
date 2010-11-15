@@ -63,8 +63,8 @@ module loct_math_m
   ! ---------------------------------------------------------
   ! Numerical derivative.
   interface loct_numerical_derivative
-    subroutine oct_numerical_derivative(h, result, abserr, f)
-      real(8) :: h, result, abserr
+    subroutine oct_numerical_derivative(x, h, result, abserr, f)
+      real(8) :: x, h, result, abserr
       interface
         subroutine f(x, fx)
           real(8), intent(in) :: x

@@ -15,7 +15,7 @@ Enabled    : Yes
 # V(x) = 1/64*(x)^4-1/4*(x)^2+1/256*(x)^3
 #
 Input: 05-adw.01-ground_state.inp
-match ; Total energy ; GREP(ground_state_static/info, 'Total       =', 20) ; -0.62061580
+match ; Total energy ; GREP(ground_state_static/info, 'Total       =', 20) ; -0.62061585
 match ; 2th state    ; GREP(excited_states_static/eigenvalues, '2   --', 12) ; -0.463839
 
 # Now we run an OCT run identical (or almost, the numerical parameters
@@ -28,7 +28,7 @@ match ; 2th state    ; GREP(excited_states_static/eigenvalues, '2   --', 12) ; -
 # nicely the results given in Fig. 2.
 Input: 05-adw.02-filter_fixed.inp
 match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.00063351
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.57998924
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.57999349
 
 # Now use add a filter. This corresponds to the case presented in
 # Fig. 5 of the same paper. Once again, we stop at iteration #2; 
@@ -36,5 +36,5 @@ match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.579989
 # given in the paper (not exactly, due probably to small numerical 
 # differences).
 Input: 05-adw.03-filter_indirect.inp
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.16309986
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.41221940
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.16380529
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.42622001
