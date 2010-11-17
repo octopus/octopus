@@ -29,6 +29,7 @@ program xyzanim
   use io_m
   use unit_m
   use unit_system_m
+  use space_m
   use geometry_m
 
   implicit none
@@ -68,6 +69,10 @@ program xyzanim
     message(1) = 'Sampling rate (AnimationSampling) should be bigger than 0'
     call write_fatal(1)
   end if
+
+  nullify(geo%space)
+  allocate(geo%space)
+  call space_init(geo%space)
 
   ! Initializes the atom system
   call geometry_init_xyz(geo)
