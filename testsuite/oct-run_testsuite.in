@@ -300,6 +300,8 @@ else
 	  echo -e "\nEverything seems to be OK"
 	else
 	  echo -e "\nAll tests were skipped."
+	  # make sure a failure will be reported by the exit status
+	  failed_tests=100
 	fi
     fi
     echo
