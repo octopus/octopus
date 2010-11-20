@@ -84,12 +84,6 @@ contains
       end if
     end if
 
-    ! set barrier before the first communication takes place
-    ! this ensures proper debug timing of MPI calls
-#if defined(HAVE_MPI)
-    call MPI_Barrier(MPI_COMM_WORLD, mpi_err)
-#endif
-
     if(fromScratch) then
       call lcao_run(sys, hm)
     else

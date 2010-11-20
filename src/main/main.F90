@@ -271,7 +271,7 @@ program octopus
     call write_info(2)
 
 #if defined(HAVE_MPI)
-    call MPI_Barrier(MPI_COMM_WORLD, mpi_err)
+    call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
 
     call print_date("Calculation started on ")
@@ -289,7 +289,7 @@ program octopus
 
 #if defined(HAVE_MPI)
     ! wait for all processors to finish
-    call MPI_Barrier(MPI_COMM_WORLD, mpi_err)
+    call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
 
     ! run finished successfully

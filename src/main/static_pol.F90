@@ -174,12 +174,6 @@ contains
     hm%ep%vpsl(1:gr%mesh%np) = vpsl_save(1:gr%mesh%np)
     call hamiltonian_update(hm, gr%mesh)
 
-    ! set barrier before the first communication takes place
-    ! this ensures proper debug timing of MPI calls
-#if defined(HAVE_MPI)
-    call MPI_Barrier(MPI_COMM_WORLD, mpi_err)
-#endif
-
     write(message(1), '(a)')
     write(message(2), '(a)') 'Info: Calculating dipole moment for zero field.'
     call write_info(2)
