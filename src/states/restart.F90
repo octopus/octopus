@@ -326,7 +326,9 @@ contains
               if(err == 0) ierr = ierr + 1
             end if
           end if
-
+#if defined(HAVE_MPI)
+          call MPI_Barrier(mpi_world%comm, mpi_err) ! now we all wait
+#endif
           itot = itot + 1
         end do
       end do
@@ -344,6 +346,9 @@ contains
       call io_close(iunit2)
     end if
 
+#if defined(HAVE_MPI)
+    call MPI_Barrier(mpi_world%comm, mpi_err) ! Since some processors did more than others...
+#endif
     call unblock_signals()
 
     call profiling_out(prof_write)
