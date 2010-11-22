@@ -264,11 +264,6 @@ foreach my $octopus_exe (@executables){
 		    $specify_np = "-n $np";
 		}
 		$command_line = "cd $workdir; $mpiexec $specify_np $octopus_exe_suffix > out ";
-		print "Executing: " . $command_line . "\n";
-
-		$test_start = [gettimeofday];
-		$return_value = system("$command_line");
-		$test_end   = [gettimeofday];
 	      } else {
 		print "No mpiexec found: Skipping parallel test \n";
 		if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
@@ -276,17 +271,20 @@ foreach my $octopus_exe (@executables){
 	      }
 	    } else {
 	      $command_line = "cd $workdir; $octopus_exe_suffix > out ";
-	      print "Executing: " . $command_line . "\n";
-	      
-	      $test_start = [gettimeofday];
-	      $return_value = system("$command_line");
-	      $test_end   = [gettimeofday];
 	    }
+
+	    print "Executing: " . $command_line . "\n";
+
+	    $test_start = [gettimeofday];
+	    $return_value = system("$command_line");
+	    $test_end   = [gettimeofday];
+
 	    system("sed -n '/Running octopus/{N;N;N;N;N;N;p;}' $workdir/out > $workdir/build-stamp");
 	    if($return_value == 0) {
 	      print "Finished test run.";
 	    } else {
 	      print "\nTest run failed with exit code $return_value.";
+	      $failures++;
 	    }
 
 	    $elapsed = tv_interval($test_start, $test_end);
@@ -319,7 +317,7 @@ foreach my $octopus_exe (@executables){
       }
 
       if ( $_ =~ /^match/ && !$opt_n) {
-	if(run_match_new($_) && $return_value == 0){
+	if(run_match_new($_)){
 	  print "$name: \t [ $color_start{green}  OK  $color_end{green} ] \n";
 	  $test_succeeded = 1;
 	  if ($opt_v) { print_hline(); }
@@ -328,6 +326,9 @@ foreach my $octopus_exe (@executables){
 	  print_hline();
 	  $test_succeeded = 0;
 	  $failures++;
+	}
+	if($return_value != 0) {
+	  $test_succeeded = 0;
 	}
       }
 
@@ -384,7 +385,7 @@ sub find_executables(){
   }
   close(TESTSUITE);
 
-  # Die if not suitable executable was found.
+  # Die if no suitable executable was found.
   if( @executables == 0 ){
     print stderr "$color_start{blue} ***** $name ***** $color_end{blue} \n\n";
     print stderr "$color_start{red}No valid executable$color_end{red} found for $opt_f\n";
