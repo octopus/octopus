@@ -200,7 +200,7 @@ foreach my $octopus_exe (@executables){
   chmod 0755, $mscript;
 
   # testsuite
-  open(TESTSUITE, "<".$opt_f ) or die "cannot open testsuite file\n";
+  open(TESTSUITE, "<".$opt_f ) or die "cannot open testsuite file '$opt_f'.\n";
 
   while ($_ = <TESTSUITE>) {
 
