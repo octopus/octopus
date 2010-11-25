@@ -867,7 +867,10 @@ module opt_control_target_m
       end select
 
     case(oct_tg_td_local)
-      j1 = sum(target%td_fitness) * target%dt
+      maxiter = size(target%td_fitness) - 1
+      j1 = M_HALF * target%dt * target%td_fitness(0) + & 
+           M_HALF * target%dt * target%td_fitness(maxiter) + & 
+           target%dt * sum(target%td_fitness(1:maxiter-1))
 
     case(oct_tg_excited)
       j1 = abs(zstates_mpdotp(gr%mesh, target%est, psi))**2

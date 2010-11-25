@@ -175,6 +175,8 @@ module opt_control_propagation_m
        if(target_move_ions(target)) move_ions_ = .true.
     end if
 
+    call target_tdcalc(target, gr, psi, 0)
+
     if(present(prop)) call oct_prop_output(prop, 0, psi, gr)
     ii = 1
     do i = 1, td%max_iter
@@ -476,6 +478,8 @@ module opt_control_propagation_m
     type(propagator_t) :: tr_chi
     type(states_t) :: psi
 
+    type(states_t) :: psi_aux
+
     PUSH_SUB(bwd_step_2)
 
     message(1) = "Info: Backward propagation."
@@ -503,11 +507,28 @@ module opt_control_propagation_m
     do i = td%max_iter, 1, -1
       call oct_prop_check(prop_psi, psi, gr, sys%geo, i)
       call update_field(i, par_chi, gr, hm, psi, chi, par, dir = 'b')
-      call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, target, par, psi)
-      call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
-      call oct_prop_output(prop_chi, i-1, chi, gr)
-      call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, target, par, psi)
-      call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
+
+      if(target_mode(target) == oct_targetmode_td) then
+
+        call states_copy(psi_aux, psi)
+        call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, target, par, psi_aux)
+        call propagator_dt(sys%ks, hm, gr, psi_aux, td%tr, abs((i-1)*td%dt), td%dt*M_HALF, td%mu, td%max_iter, i)
+        call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, target, par, psi, st_aux = psi_aux)
+        call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
+        call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, target, par, psi)
+        call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
+        call oct_prop_output(prop_chi, i-1, chi, gr)
+
+      else
+
+        call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, target, par, psi)
+        call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
+        call oct_prop_output(prop_chi, i-1, chi, gr)
+        call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, target, par, psi)
+        call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
+
+      end if
+
     end do
     td%dt = -td%dt
     call update_field(0, par_chi, gr, hm, psi, chi, par, dir = 'b')
@@ -518,6 +539,9 @@ module opt_control_propagation_m
 
     call propagator_end(tr_chi)
 
+    if(target_mode(target) == oct_targetmode_td) call states_end(psi_aux)
+    call states_end(psi)
+
     POP_SUB(bwd_step_2)
   end subroutine bwd_step_2
   ! ----------------------------------------------------------
@@ -526,7 +550,7 @@ module opt_control_propagation_m
   ! ----------------------------------------------------------
   !
   ! ----------------------------------------------------------
-  subroutine update_hamiltonian_chi(iter, gr, ks, hm, td, target, par_chi, st)
+  subroutine update_hamiltonian_chi(iter, gr, ks, hm, td, target, par_chi, st, st_aux)
     integer, intent(in)                        :: iter
     type(grid_t), intent(inout)                :: gr
     type(v_ks_t), intent(inout)                :: ks
@@ -535,14 +559,20 @@ module opt_control_propagation_m
     type(target_t), intent(inout)              :: target
     type(controlfunction_t), intent(in)        :: par_chi
     type(states_t), intent(inout)              :: st
-    type(states_t)                             :: inh
+    type(states_t), optional, intent(inout)    :: st_aux
 
+    type(states_t)                             :: inh
     integer :: j
     PUSH_SUB(update_hamiltonian_chi)
 
     if(target_mode(target) == oct_targetmode_td) then
-      call states_copy(inh, st)
-      call target_inh(st, gr, target, td%dt*iter, inh)
+      if(present(st_aux)) then
+        call states_copy(inh, st_aux)
+        call target_inh(st_aux, gr, target, td%dt*iter, inh)
+      else
+        call states_copy(inh, st)
+        call target_inh(st, gr, target, td%dt*iter, inh)
+      end if
       call hamiltonian_set_inh(hm, inh)
       call states_end(inh)
     end if
