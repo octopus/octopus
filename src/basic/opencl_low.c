@@ -29,27 +29,22 @@
 #include <assert.h>
 #include <string.h>
 
-void FC_FUNC_(f90_cl_init_context,F90_CL_INIT_CONTEXT)(cl_context * context){
-  cl_platform_id platform;
+int FC_FUNC(flgetplatformids, FLGETPLATFORMIDS)(cl_platform_id * platform){
+  return clGetPlatformIDs(1, platform, NULL);
+}
+
+void FC_FUNC_(f90_cl_init_context,F90_CL_INIT_CONTEXT)(const cl_platform_id * platform, cl_context * context){
   cl_int status;
   cl_context_properties cps[3];
 
-  /* Just get the first platform */
-  status = clGetPlatformIDs(1, &platform, NULL);
-
-  if(status != CL_SUCCESS){
-    printf("OpenCL initialization failed. Error code: %d\n", status);
-    exit(1);
-  }
-  
   cps[0] = CL_CONTEXT_PLATFORM;
-  cps[1] = (cl_context_properties)platform;
+  cps[1] = (cl_context_properties) *platform;
   cps[2] = 0;
   
   *context = clCreateContextFromType(cps, CL_DEVICE_TYPE_ALL, NULL, NULL, &status);
 
   if (status != CL_SUCCESS){
-    printf("OpenCL initialization failed. Error code: %d\n", status);
+    fprintf(stderr, "\nError: clCreateContextFromType returned error code: %d\n", status);
     exit(1);
   }
 }

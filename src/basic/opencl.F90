@@ -56,6 +56,7 @@ module opencl_m
     opencl_create_kernel
 
   type opencl_t 
+    type(c_ptr) :: platform_id
     type(c_ptr) :: context
     type(c_ptr) :: command_queue
     type(c_ptr) :: device
@@ -166,7 +167,10 @@ module opencl_m
 
       call messages_print_stress(stdout, "OpenCL")
 
-      call f90_cl_init_context(opencl%context)
+      ierr = flGetPlatformIDs(opencl%platform_id)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "GetPlatformIDs")
+
+      call f90_cl_init_context(opencl%platform_id, opencl%context)
       call f90_cl_init_device(idevice, opencl%context, opencl%device)
 
       call flCreateCommandQueue(opencl%command_queue, opencl%context, opencl%device, ierr)

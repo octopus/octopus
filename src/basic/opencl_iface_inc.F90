@@ -76,13 +76,24 @@
 
   ! this function are defined in opencl_low.c
   interface
+
     ! ---------------------------------------------------
 
-    subroutine f90_cl_init_context(context)
+    integer function flGetPlatformIDs(platform_id)
       use c_pointer_m
 
       implicit none
-      type(c_ptr),      intent(out) :: context
+      type(c_ptr),      intent(out) :: platform_id
+    end function flGetPlatformIDs
+
+    ! ---------------------------------------------------
+
+    subroutine f90_cl_init_context(platform_id, context)
+      use c_pointer_m
+
+      implicit none
+      type(c_ptr),      intent(in)   :: platform_id
+      type(c_ptr),      intent(out)  :: context
     end subroutine f90_cl_init_context
     
     ! ---------------------------------------------------
