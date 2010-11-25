@@ -35,12 +35,12 @@ module io_binary_m
 
   interface io_binary_write
     module procedure swrite_binary, dwrite_binary, cwrite_binary, zwrite_binary, iwrite_binary, lwrite_binary
-    module procedure iwrite_binary2, lwrite_binary2
+    module procedure iwrite_binary2, lwrite_binary2, zwrite_3D_binary
   end interface
 
   interface io_binary_read
     module procedure sread_binary, dread_binary, cread_binary, zread_binary, iread_binary, lread_binary
-    module procedure iread_binary2, lread_binary2
+    module procedure iread_binary2, lread_binary2, zread_3D_binary
   end interface
 
 contains
@@ -108,6 +108,22 @@ contains
 
     POP_SUB(zwrite_binary)
   end subroutine zwrite_binary
+
+  subroutine zwrite_3D_binary(fname, np, ff, ierr)
+    character(len=*),    intent(in)  :: fname
+    integer,             intent(in)  :: np
+    complex(8),          intent(in)  :: ff(:,:,:)
+    integer,             intent(out) :: ierr
+
+    integer, parameter :: type = TYPE_DOUBLE_COMPLEX
+
+    PUSH_SUB(zwrite_3D_binary)
+
+    ierr = 0
+    call write_binary(np, ff(1,1,1), type, ierr, trim(fname))
+
+    POP_SUB(zwrite_3D_binary)
+  end subroutine zwrite_3D_binary
 
   subroutine iwrite_binary(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
@@ -235,9 +251,25 @@ contains
 
     ierr = 0
     call read_binary(np, ff(1), type, ierr, trim(fname))
-
+    
     POP_SUB(zread_binary)
   end subroutine zread_binary
+
+  subroutine zread_3D_binary(fname, np, ff, ierr)
+    character(len=*),    intent(in)  :: fname
+    integer,             intent(in)  :: np
+    complex(8),          intent(out) :: ff(:,:,:)
+    integer,             intent(out) :: ierr
+
+    integer, parameter :: type = TYPE_DOUBLE_COMPLEX
+
+    PUSH_SUB(zread_3D_binary)
+   
+    ierr = 0
+    call read_binary(np, ff(1,1,1), type, ierr, trim(fname))
+
+    POP_SUB(zread_3D_binary)
+  end subroutine zread_3D_binary
 
   subroutine iread_binary(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
