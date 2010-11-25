@@ -24,7 +24,9 @@ module PES_m
   use fft_m
   use global_m
   use io_m
+  use io_binary_m
   use mesh_m
+  use index_m
   use messages_m
   use parser_m
   use profiling_m
@@ -32,6 +34,11 @@ module PES_m
   use states_m
   use unit_m
   use unit_system_m
+  use mpi_m
+  use hamiltonian_m
+  use geometry_m
+  use lasers_m
+!  use em_field_m
 
   implicit none
 
@@ -39,14 +46,21 @@ module PES_m
     integer          :: npoints   ! how many points we store the wf
     integer, pointer :: points(:) ! which points to use
     character(len=30), pointer :: filenames(:) ! filenames
-    complex(r4), pointer :: wf(:,:,:,:,:)
+    complex(r8), pointer :: wf(:,:,:,:,:)
+!    COMPLEX, pointer :: wf(:,:,:,:,:)
+    integer, pointer ::rankmin(:)  !partion of the mesh containing the points
   end type PES_rc_t
 
   type PES_mask_t
     CMPLX, pointer :: k(:,:,:,:,:,:) ! masked wf in momentum space
     FLOAT, pointer :: r(:,:,:,:,:)   ! summed masked density in real space
-
+    
+    FLOAT, pointer :: vec_pot(:,:)   ! vector potential from the laser
     type(fft_t) :: fft
+    
+    FLOAT :: energyMax 
+    FLOAT :: energyStep 
+
   end type PES_mask_t
 
   type PES_t
@@ -55,19 +69,24 @@ module PES_m
 
     logical :: calc_mask
     type(PES_mask_t) :: mask
+    
   end type PES_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine PES_init(pes, mesh, sb, st, ab, save_iter)
-    type(pes_t),    intent(out)   :: pes
-    type(mesh_t),   intent(inout) :: mesh
-    type(simul_box_t), intent(in) :: sb
-    type(states_t),    intent(in) :: st
-    integer,           intent(in) :: ab, save_iter
+  subroutine PES_init(pes, mesh, sb, st, ab, save_iter,hm, max_iter,dt)
+    type(pes_t),         intent(out)     :: pes
+    type(mesh_t),        intent(inout)   :: mesh
+    type(simul_box_t),   intent(in)      :: sb
+    type(states_t),      intent(in)      :: st
+    integer,             intent(in)      :: ab, save_iter
+    type(hamiltonian_t), intent(in)      :: hm
+    integer,             intent(in)      :: max_iter
+    FLOAT,               intent(in)      :: dt
 
     PUSH_SUB(PES_init)
+
 
     !%Variable CalcPES_rc
     !%Type logical
@@ -98,8 +117,11 @@ contains
       !%End
       call parse_logical(datasets_check('CalcPES_Mask'), .false., pes%calc_mask)
       if(pes%calc_mask) then
-        call PES_mask_init(pes%mask, mesh, sb, st)
+        call PES_mask_init(pes%mask, mesh, sb, st,hm,max_iter,dt)
       end if
+    else
+        message(1) = 'Warning: CalcPES_mask works only with AbsorbingBoundaries=2.'
+        call write_info(1)
     end if
 
     POP_SUB(PES_init)
@@ -120,18 +142,22 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine PES_calc(pes, mesh, st, ii, dt, mask)
+  subroutine PES_calc(pes, mesh, st, ii, dt, mask,hm,geo,iter)
     type(PES_t),    intent(inout) :: pes
     type(mesh_t),   intent(in)    :: mesh
     type(states_t), intent(in)    :: st
     FLOAT,          intent(in)    :: dt
     FLOAT,          pointer       :: mask(:)
     integer,        intent(in)    :: ii
+    integer,        intent(in)    :: iter
+    type(hamiltonian_t), intent(in)    :: hm
+    type(geometry_t), intent(in)    :: geo
 
     PUSH_SUB(PES_calc)
 
-    if(pes%calc_rc)   call PES_rc_calc  (pes%rc, st, ii)
-    if(pes%calc_mask) call PES_mask_calc(pes%mask, mesh, st, dt, mask)
+    if(pes%calc_rc)   call PES_rc_calc  (pes%rc, st,mesh, ii)
+    if(pes%calc_mask) call PES_mask_calc(pes%mask, mesh, st, dt, mask&
+         ,hm,geo,iter)
 
     POP_SUB(PES_calc)
   end subroutine PES_calc
@@ -139,19 +165,76 @@ contains
 
   ! ---------------------------------------------------------
   subroutine PES_output(pes, mesh, st, iter, save_iter, dt)
-    type(PES_t),    intent(in) :: pes
+    type(PES_t),    intent(inout) :: pes
     type(mesh_t),   intent(in) :: mesh
     type(states_t), intent(in) :: st
     integer,        intent(in) :: iter, save_iter
     FLOAT,          intent(in) :: dt
 
     PUSH_SUB(PES_output)
+    
+    if(pes%calc_mask .AND. st%parallel_in_states) call PES_mask_collect(pes%mask, st,mesh)
 
-    if(pes%calc_rc)   call PES_rc_output   (pes%rc, st, iter, save_iter, dt)
-    if(pes%calc_mask) call PES_mask_output (pes%mask, mesh, st, "PES")
+    if(mpi_grp_is_root(mpi_world)) then
+
+      if(pes%calc_rc)   call PES_rc_output   (pes%rc, st, iter, save_iter, dt)
+      if(pes%calc_mask) call PES_mask_output (pes%mask, mesh, st, "td.general/PES")
+
+    endif
 
     POP_SUB(PES_output)
   end subroutine PES_output
+
+  ! ---------------------------------------------------------
+  subroutine PES_restart_write(pes, mesh, st)
+    type(PES_t),    intent(in) :: pes
+    type(mesh_t),   intent(in) :: mesh
+    type(states_t), intent(in) :: st
+
+    PUSH_SUB(PES_restart_write)
+
+    if(mpi_grp_is_root(mpi_world)) then
+
+      if(pes%calc_mask) call PES_mask_restart_write (pes%mask, mesh, st)
+
+    endif
+
+    POP_SUB(PES_restart_write)
+  end subroutine PES_restart_write
+
+  ! ---------------------------------------------------------
+  subroutine PES_restart_read(pes, mesh, st)
+    type(PES_t),    intent(inout) :: pes
+    type(mesh_t),   intent(in) :: mesh
+    type(states_t), intent(in) :: st
+
+    PUSH_SUB(PES_restart_read)
+
+      if(pes%calc_mask) call PES_mask_restart_read (pes%mask, mesh, st)
+
+
+    POP_SUB(PES_restart_read)
+  end subroutine PES_restart_read
+
+
+  ! ---------------------------------------------------------
+  subroutine PES_init_write(pes, mesh, st)
+    type(PES_t),    intent(in)  :: pes
+    type(mesh_t),   intent(in)  :: mesh
+    type(states_t), intent(in)  :: st
+
+
+    PUSH_SUB(PES_init_write)
+
+    if(mpi_grp_is_root(mpi_world)) then
+
+      if(pes%calc_rc)   call PES_rc_init_write (pes%rc, mesh, st)
+
+    endif
+
+    POP_SUB(PES_init_write)
+  end subroutine PES_init_write
+
 
 #include "pes_rc_inc.F90"
 #include "pes_mask_inc.F90"
