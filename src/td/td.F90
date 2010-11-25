@@ -192,7 +192,6 @@ contains
     call write_info(1)
     call messages_print_stress(stdout)
 
-#if !defined(DISABLE_PES)
     if(td%PESv%calc_rc .or. td%PESv%calc_mask) then
        if (fromScratch) then
           call PES_init_write(td%PESv,gr%mesh,st)
@@ -200,7 +199,6 @@ contains
           call PES_restart_read(td%PESv,gr%mesh,st)
        endif
     endif
-#endif
 
     ii = 1
     stopping = .false.
@@ -345,10 +343,9 @@ contains
         ii = 1
         call td_save_restart(iter)
         call td_write_data(write_handler, gr, st, hm, sys%outp, geo, iter)
-#if !defined(DISABLE_PES)
+	!Photoelectron output and restart dump
         call PES_output(td%PESv, gr%mesh, st, iter, sys%outp%iter, td%dt)
         call PES_restart_write(td%PESv, gr%mesh, st)
-#endif
         if( (ion_dynamics_ions_move(td%ions)) .and. td%recalculate_gs) then
           call messages_print_stress(stdout, 'Recalculating the ground state.')
           fromScratch = .false.
