@@ -29,8 +29,45 @@
 #include <assert.h>
 #include <string.h>
 
-int FC_FUNC(flgetplatformids, FLGETPLATFORMIDS)(cl_platform_id * platform){
-  return clGetPlatformIDs(1, platform, NULL);
+int FC_FUNC(flgetplatformids, FLGETPLATFORMIDS)(const int * iplatform, cl_platform_id * platform){
+  const cl_uint max_platform = 4;
+  cl_platform_id all_platforms[max_platform];
+  cl_int status;
+  cl_uint ret_platform;
+  cl_uint ip;
+  char platform_info[2048];
+
+  printf("Available platforms\n");
+
+  status = clGetPlatformIDs(max_platform, all_platforms, &ret_platform);
+
+  for(ip = 0; ip < ret_platform; ip++){
+    
+    //PLATFORM NAME
+    status = clGetPlatformInfo(all_platforms[ip], CL_PLATFORM_NAME, sizeof(platform_info), platform_info, NULL);
+    
+    if (status != CL_SUCCESS){
+      fprintf(stderr, "\nError: clCreateContextFromType returned error code: %d\n", status);
+      exit(1);
+    }
+    printf("%c %s", ((*iplatform == ip)?'*':' '), platform_info);
+
+    //PLATFORM VERSION
+    status = clGetPlatformInfo(all_platforms[ip], CL_PLATFORM_VERSION, sizeof(platform_info), platform_info, NULL);
+    
+    if (status != CL_SUCCESS){
+      fprintf(stderr, "\nError: clCreateContextFromType returned error code: %d\n", status);
+      exit(1);
+    }
+
+    printf(" %s\n", platform_info);
+  }
+
+  printf("\n");
+
+  *platform = all_platforms[*iplatform];
+
+  return status;
 }
 
 void FC_FUNC_(f90_cl_init_context,F90_CL_INIT_CONTEXT)(const cl_platform_id * platform, cl_context * context){

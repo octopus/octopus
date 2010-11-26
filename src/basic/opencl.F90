@@ -134,7 +134,7 @@ module opencl_m
     subroutine opencl_init()
       type(c_ptr) :: prog
       logical  :: disable
-      integer  :: ierr, idevice
+      integer  :: ierr, idevice, iplatform
 
       PUSH_SUB(opencl_init)
       
@@ -150,7 +150,17 @@ module opencl_m
       call parse_logical(datasets_check('DisableOpenCL'), .false., disable)
       opencl%enabled = .not. disable
 
-      !%Variable OpenCLDevice
+      !%Variable OpenCLPlatform
+      !%Type integer
+      !%Default 0
+      !%Section Execution::OpenCL
+      !%Description
+      !% This variable selects the OpenCL platform that Octopus will
+      !% use. Platform 0 is used by default.
+      !%End
+      call parse_integer(datasets_check('OpenCLPlatform'), 0, iplatform)
+
+     !%Variable OpenCLDevice
       !%Type integer
       !%Default 0
       !%Section Execution::OpenCL
@@ -167,7 +177,7 @@ module opencl_m
 
       call messages_print_stress(stdout, "OpenCL")
 
-      ierr = flGetPlatformIDs(opencl%platform_id)
+      ierr = flGetPlatformIDs(iplatform, opencl%platform_id)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "GetPlatformIDs")
 
       call f90_cl_init_context(opencl%platform_id, opencl%context)

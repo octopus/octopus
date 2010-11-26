@@ -79,10 +79,11 @@
 
     ! ---------------------------------------------------
 
-    integer function flGetPlatformIDs(platform_id)
+    integer function flGetPlatformIDs(iplatform, platform_id)
       use c_pointer_m
 
       implicit none
+      integer,          intent(in)  :: iplatform
       type(c_ptr),      intent(out) :: platform_id
     end function flGetPlatformIDs
 
