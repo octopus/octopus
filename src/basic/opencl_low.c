@@ -35,37 +35,63 @@ int FC_FUNC(flgetplatformids, FLGETPLATFORMIDS)(const int * iplatform, cl_platfo
   cl_int status;
   cl_uint ret_platform;
   cl_uint ip;
-  char platform_info[2048];
-
-  printf("Available platforms\n");
+  char info[2048];
+  const cl_uint max_devices = 8;
+  cl_device_id all_devices[max_devices];
+  cl_uint ret_devices;
+  cl_bool available;
 
   status = clGetPlatformIDs(max_platform, all_platforms, &ret_platform);
+
+  printf("Available OpenCL platforms: %d\n", ret_platform);
 
   for(ip = 0; ip < ret_platform; ip++){
     
     //PLATFORM NAME
-    status = clGetPlatformInfo(all_platforms[ip], CL_PLATFORM_NAME, sizeof(platform_info), platform_info, NULL);
+    status = clGetPlatformInfo(all_platforms[ip], CL_PLATFORM_NAME, sizeof(info), info, NULL);
     
     if (status != CL_SUCCESS){
-      fprintf(stderr, "\nError: clCreateContextFromType returned error code: %d\n", status);
+      fprintf(stderr, "\nError: clGetPlatformInfo returned error code: %d\n", status);
       exit(1);
     }
-    printf("%c %s", ((*iplatform == ip)?'*':' '), platform_info);
+    printf("%c Platform %d : %s", ((*iplatform == ip)?'*':' '), ip, info);
 
     //PLATFORM VERSION
-    status = clGetPlatformInfo(all_platforms[ip], CL_PLATFORM_VERSION, sizeof(platform_info), platform_info, NULL);
+    status = clGetPlatformInfo(all_platforms[ip], CL_PLATFORM_VERSION, sizeof(info), info, NULL);
     
     if (status != CL_SUCCESS){
-      fprintf(stderr, "\nError: clCreateContextFromType returned error code: %d\n", status);
+      fprintf(stderr, "\nError: clGetPlatformInfo returned error code: %d\n", status);
       exit(1);
     }
 
-    printf(" %s\n", platform_info);
+    printf(" %s\n", info);
   }
 
   printf("\n");
 
   *platform = all_platforms[*iplatform];
+
+  status = clGetDeviceIDs(*platform, CL_DEVICE_TYPE_ALL, max_devices, all_devices, &ret_devices);
+
+  if (status != CL_SUCCESS){
+    fprintf(stderr, "\nError: clGetDeviceIDs returned error code: %d\n", status);
+    exit(1);
+  }
+
+  printf("Available OpenCL devices: %d\n", ret_devices);
+  
+  for(ip = 0; ip < ret_devices; ip++){
+    status = clGetDeviceInfo(all_devices[ip], CL_DEVICE_NAME, sizeof(info), info, NULL);
+
+    if (status != CL_SUCCESS){
+      fprintf(stderr, "\nError: clGetDeviceInfo returned error code: %d\n", status);
+      exit(1);
+    }
+
+    printf("  Device %d : %s\n", ip, info);
+  }
+
+  printf("\n");
 
   return status;
 }
