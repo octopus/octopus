@@ -297,6 +297,8 @@ contains
 
     PUSH_SUB(grid_end)
 
+    call nl_operator_global_end()
+
     call ob_grid_end(gr%ob_grid)
 
     if(gr%have_fine_mesh) then

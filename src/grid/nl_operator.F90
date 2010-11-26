@@ -49,6 +49,7 @@ module nl_operator_m
     nl_operator_t,              &
     nl_operator_index_t,        &
     nl_operator_global_init,    &
+    nl_operator_global_end,     &
     nl_operator_init,           &
     nl_operator_copy,           &
     nl_operator_build,          &
@@ -140,7 +141,7 @@ module nl_operator_m
   type(profile_t), save :: operate_batch_prof
 
 #ifdef HAVE_OPENCL
-  type(c_ptr), public :: operate
+  type(c_ptr), public :: kernel_operate
 #endif
 
 contains
@@ -215,9 +216,9 @@ contains
       call opencl_build_program(prog, trim(conf%share)//'/opencl/operate.cl')
       select case(function_opencl)
       case(OP_MAP)
-        call opencl_create_kernel(operate, prog, "operate_map")
+        call opencl_create_kernel(kernel_operate, prog, "operate_map")
       case(OP_INVMAP)
-        call opencl_create_kernel(operate, prog, "operate")
+        call opencl_create_kernel(kernel_operate, prog, "operate")
       end select
       call opencl_release_program(prog)
     
@@ -227,8 +228,20 @@ contains
     POP_SUB(nl_operator_global_init)
   end subroutine nl_operator_global_init
 
+  ! ---------------------------------------------------------
+
+  subroutine nl_operator_global_end()
+    PUSH_SUB(nl_operator_global_end)
+
+#ifdef HAVE_OPENCL
+    call opencl_release_kernel(kernel_operate)
+#endif
+
+    POP_SUB(nl_operator_global_end)
+  end subroutine nl_operator_global_end
 
   ! ---------------------------------------------------------
+
   character(len=8) function op_function_name(id) result(str)
     integer, intent(in) :: id
 

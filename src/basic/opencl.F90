@@ -81,7 +81,6 @@ module opencl_m
   type(c_ptr), public :: kernel_daxpy
   type(c_ptr), public :: kernel_zaxpy
   type(c_ptr), public :: kernel_copy
-  type(c_ptr), public :: dprojector_gather
   type(c_ptr), public :: kernel_projector_bra
   type(c_ptr), public :: kernel_projector_ket
   type(c_ptr), public :: dpack
@@ -233,17 +232,24 @@ module opencl_m
 
     subroutine opencl_end()
       integer :: ierr
-      
+
       PUSH_SUB(opencl_end)
 
       if(opencl_is_enabled()) then
         call opencl_release_kernel(kernel_vpsi)
         call opencl_release_kernel(kernel_vpsi_spinors)
+        call opencl_release_kernel(set_zero)
+        call opencl_release_kernel(set_zero_part)
         call opencl_release_kernel(kernel_daxpy)
-        call opencl_release_kernel(kernel_copy)
         call opencl_release_kernel(kernel_zaxpy)
-        call opencl_release_kernel(kernel_projector_ket)
+        call opencl_release_kernel(kernel_copy)
         call opencl_release_kernel(kernel_projector_bra)
+        call opencl_release_kernel(kernel_projector_ket)
+        call opencl_release_kernel(dpack)
+        call opencl_release_kernel(zpack)
+        call opencl_release_kernel(dunpack)
+        call opencl_release_kernel(zunpack)
+        call opencl_release_kernel(kernel_subarray_gather)
         call flReleaseCommandQueue(opencl%command_queue, ierr)
         if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "ReleaseCommandQueue")
         call flReleaseContext(opencl%context)
