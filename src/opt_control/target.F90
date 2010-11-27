@@ -732,7 +732,7 @@ module opt_control_target_m
             opsi(ip, 1) = target%rho(ip) * psi%zpsi(ip, 1, ist, 1)
           end do
           target%td_fitness(time) = &
-            target%td_fitness(time) + zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, ist, 1), opsi(:, :))
+            target%td_fitness(time) + psi%occ(ist, 1) * zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, ist, 1), opsi(:, :))
         end do
         SAFE_DEALLOCATE_A(opsi)
       case(SPIN_POLARIZED); stop 'Error'
