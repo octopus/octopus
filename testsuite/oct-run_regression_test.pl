@@ -157,6 +157,7 @@ if($opt_s)  { $exec_suffix = $opt_s; }
 
 # MPI stuff
 $mpiexec = $ENV{MPIEXEC};
+$machinelist = $ENV{MACHINELIST};
 if ("$mpiexec" eq "") { $mpiexec = `which mpiexec 2> /dev/null`; }
 chomp($mpiexec);
 
@@ -263,7 +264,7 @@ foreach my $octopus_exe (@executables){
 		} else {
 		    $specify_np = "-n $np";
 		}
-		$command_line = "cd $workdir; $mpiexec $specify_np $octopus_exe_suffix > out ";
+		$command_line = "cd $workdir; $mpiexec $specify_np $machinelist $octopus_exe_suffix > out ";
 	      } else {
 		print "No mpiexec found: Skipping parallel test \n";
 		if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
