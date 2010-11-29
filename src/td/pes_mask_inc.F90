@@ -520,7 +520,7 @@ subroutine PES_mask_output(mask, mesh, st, file)
 if(in_debug_mode) then
 
   !Now the total PES density cut along the x_axis
-  !since this funciton is mainly for debug purposes I don't see a reason to expand this part any further 
+  !since this function is mainly for debug purposes I don`t see a reason to expand this part any further 
   write(fn, '(a,a)') trim(file), '_den.sum'
   iunit = io_open(fn, action='write')
   do ix = 1, mesh%idx%ll(1)

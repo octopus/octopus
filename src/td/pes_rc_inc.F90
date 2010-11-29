@@ -44,7 +44,7 @@ subroutine PES_rc_init(pesrc, mesh, st, save_iter)
   !%Type block
   !%Section Time-Dependent::PES
   !%Description
-  !% List of points where to calculate the photoelectron spectrum by Suraud's method.
+  !% List of points at which to calculate the photoelectron spectrum by Suraud method.
   !% The exact syntax is:
   !%
   !% <tt>%PES_rc_points
