@@ -35,7 +35,7 @@ module states_m
   use lalg_adv_m
   use lalg_basic_m
   use loct_m
-  use mpi_m ! if not before parser_m, ifort 11.072 can't compile with MPI2
+  use mpi_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
   use math_m
   use mesh_m
   use mesh_function_m
