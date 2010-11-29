@@ -125,10 +125,9 @@ contains
     !% caution.
     !%Option lobpcg 8
     !% Locally optimal block-preconditioned conjugate-gradient algorithm
-    !% (only available if <tt>DevelVersion = yes</tt>),
-    !% see: A. Knyazev, "Toward the Optimal Preconditioned Eigensolver: Locally
-    !% Optimal Block Preconditioned Conjugate Gradient Method," <i>SIAM
-    !% Journal on Scientific Computing</i>, 23(2):517-541, 2001.
+    !% (only available if <tt>DevelVersion = yes</tt>). Ref: A. Knyazev, 
+    !% "Toward the Optimal Preconditioned Eigensolver: Locally Optimal Block Preconditioned Conjugate Gradient Method,"
+    !% <i>SIAM Journal on Scientific Computing</i>, 23(2):517-541, 2001.
     !%Option rmmdiis 10
     !% Residual minimization scheme, direct inversion in the iterative
     !% subspace eigensolver, based on the implementation of Kresse and
