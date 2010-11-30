@@ -342,9 +342,7 @@ fi
 dnl now I run configure for the external libraries
 AC_CONFIG_SUBDIRS([external_libs/spglibs])
 
-if test x"$compile_zoltan" == x"yes"; then
-  AC_CONFIG_SUBDIRS([external_libs/zoltan])
-fi
+AC_CONFIG_SUBDIRS([external_libs/zoltan])
 
 # This is certainly wrong, but I don't know
 # how to do it right
