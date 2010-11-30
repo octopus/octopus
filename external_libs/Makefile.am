@@ -19,5 +19,9 @@
 ##
 ## $Id$
 
-SUBDIRS = metis-4.0 qshep poisson_isf newuoa spglib zoltan slatec
+SUBDIRS = metis-4.0 qshep poisson_isf newuoa spglib slatec
+
+if COMPILE_ZOLTAN
+SUBDIRS += zoltan
+endif
 
