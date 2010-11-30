@@ -7,409 +7,326 @@
 ##############################################################################
 # @HEADER
 
-# The following line helps the test harness recover from build errors.
 
-ALL_H = \
-	$(srcdir)/all/all_allo_const.h
+## #######################################################################
+## Options to automake (rarely used - don't worry about it)
+## #######################################################################
+AUTOMAKE_OPTIONS = foreign
 
-ALL = \
-	$(srcdir)/all/all_allo.c
+## #######################################################################
+## Aclocal command (rarely used - don't worry about it)
+## #######################################################################
+ACLOCAL_AMFLAGS = -I config
 
-COLORING_H = \
-	$(srcdir)/coloring/coloring_const.h \
-	$(srcdir)/coloring/coloring.h \
-	$(srcdir)/coloring/g2l_hash.h
+## #######################################################################
+## Additional files to be included in distribution for 'make dist'
+## #######################################################################
+ZOLTAN_TESTS = \
+    test/test_zoltan \
+    test/ctest_zoltan.pl \
+    test/ch_simple \
+    test/hg_simple 
 
-COLORING = \
-	$(srcdir)/coloring/coloring.c \
-	$(srcdir)/coloring/color_test.c \
-	$(srcdir)/coloring/g2l_hash.c
+ZOLTAN_DOCS = \
+    doc/Zoltan_html/Zoltan.html \
+    doc/Zoltan_html/Zoltan_FAQ.html \
+    doc/Zoltan_html/Zoltan_bugreport.html \
+    doc/Zoltan_html/Zoltan_cite.html \
+    doc/Zoltan_html/Zoltan_construction.html \
+    doc/Zoltan_html/Zoltan_phil.html \
+    doc/Zoltan_html/Zoltan_pubs.html \
+    doc/Zoltan_html/dev_html/brack3d.png \
+    doc/Zoltan_html/dev_html/dev.html \
+    doc/Zoltan_html/dev_html/dev_add.html \
+    doc/Zoltan_html/dev_html/dev_add_interface.html \
+    doc/Zoltan_html/dev_html/dev_add_lb.html \
+    doc/Zoltan_html/dev_html/dev_add_memory.html \
+    doc/Zoltan_html/dev_html/dev_add_params.html \
+    doc/Zoltan_html/dev_html/dev_add_remap.html \
+    doc/Zoltan_html/dev_html/dev_add_struct.html \
+    doc/Zoltan_html/dev_html/dev_cpp.html \
+    doc/Zoltan_html/dev_html/dev_degenerate.html \
+    doc/Zoltan_html/dev_html/dev_dist.html \
+    doc/Zoltan_html/dev_html/dev_dist_compile.html \
+    doc/Zoltan_html/dev_html/dev_dist_cvs.html \
+    doc/Zoltan_html/dev_html/dev_dist_dir.html \
+    doc/Zoltan_html/dev_html/dev_driver.html \
+    doc/Zoltan_html/dev_html/dev_fortran.html \
+    doc/Zoltan_html/dev_html/dev_hier.html \
+    doc/Zoltan_html/dev_html/dev_hsfc.html \
+    doc/Zoltan_html/dev_html/dev_intro.html \
+    doc/Zoltan_html/dev_html/dev_intro_coding.html \
+    doc/Zoltan_html/dev_html/dev_intro_philosophy.html \
+    doc/Zoltan_html/dev_html/dev_intro_sqe.html \
+    doc/Zoltan_html/dev_html/dev_lb.html \
+    doc/Zoltan_html/dev_html/dev_lb_interface.html \
+    doc/Zoltan_html/dev_html/dev_lb_structs.html \
+    doc/Zoltan_html/dev_html/dev_lb_types.html \
+    doc/Zoltan_html/dev_html/dev_mig.html \
+    doc/Zoltan_html/dev_html/dev_parmetis.html \
+    doc/Zoltan_html/dev_html/dev_phg.html \
+    doc/Zoltan_html/dev_html/dev_rcb.html \
+    doc/Zoltan_html/dev_html/dev_refs.html \
+    doc/Zoltan_html/dev_html/dev_reftree.html \
+    doc/Zoltan_html/dev_html/dev_rib.html \
+    doc/Zoltan_html/dev_html/dev_services.html \
+    doc/Zoltan_html/dev_html/dev_services_debug.html \
+    doc/Zoltan_html/dev_html/dev_services_hash.html \
+    doc/Zoltan_html/dev_html/dev_services_objlist.html \
+    doc/Zoltan_html/dev_html/dev_services_parallel.html \
+    doc/Zoltan_html/dev_html/dev_services_params.html \
+    doc/Zoltan_html/dev_html/dev_services_time.html \
+    doc/Zoltan_html/dev_html/dev_services_zoltantimer.html \
+    doc/Zoltan_html/dev_html/dev_test_script.html \
+    doc/Zoltan_html/dev_html/dev_view.html \
+    doc/Zoltan_html/dev_html/film2d.png \
+    doc/Zoltan_html/dev_html/hammondMesh.png \
+    doc/Zoltan_html/dev_html/hammondPoints.png \
+    doc/Zoltan_html/dev_html/zdrive.inp \
+    doc/Zoltan_html/ug_html/figures/arrow.gif \
+    doc/Zoltan_html/ug_html/figures/HGFigure.gif \
+    doc/Zoltan_html/ug_html/figures/hierexample.fig \
+    doc/Zoltan_html/ug_html/figures/hierexample.gif \
+    doc/Zoltan_html/ug_html/figures/Z.gif \
+    doc/Zoltan_html/ug_html/ug.html \
+    doc/Zoltan_html/ug_html/ug_alg.html \
+    doc/Zoltan_html/ug_html/ug_alg_block.html \
+    doc/Zoltan_html/ug_html/ug_alg_geom.html \
+    doc/Zoltan_html/ug_html/ug_alg_graph.html \
+    doc/Zoltan_html/ug_html/ug_alg_hier.html \
+    doc/Zoltan_html/ug_html/ug_alg_hsfc.html \
+    doc/Zoltan_html/ug_html/ug_alg_hypergraph.html \
+    doc/Zoltan_html/ug_html/ug_alg_jostle.html \
+    doc/Zoltan_html/ug_html/ug_alg_oct.html \
+    doc/Zoltan_html/ug_html/ug_alg_parkway.html \
+    doc/Zoltan_html/ug_html/ug_alg_parmetis.html \
+    doc/Zoltan_html/ug_html/ug_alg_patoh.html \
+    doc/Zoltan_html/ug_html/ug_alg_phg.html \
+    doc/Zoltan_html/ug_html/ug_alg_ptscotch.html \
+    doc/Zoltan_html/ug_html/ug_alg_random.html \
+    doc/Zoltan_html/ug_html/ug_alg_rcb.html \
+    doc/Zoltan_html/ug_html/ug_alg_reftree.html \
+    doc/Zoltan_html/ug_html/ug_alg_rib.html \
+    doc/Zoltan_html/ug_html/ug_alg_simple.html \
+    doc/Zoltan_html/ug_html/ug_backward.html \
+    doc/Zoltan_html/ug_html/ug_color.html \
+    doc/Zoltan_html/ug_html/ug_color_parallel.html \
+    doc/Zoltan_html/ug_html/ug_cpp.html \
+    doc/Zoltan_html/ug_html/ug_examples.html \
+    doc/Zoltan_html/ug_html/ug_examples_init.html \
+    doc/Zoltan_html/ug_html/ug_examples_lb.html \
+    doc/Zoltan_html/ug_html/ug_examples_mig.html \
+    doc/Zoltan_html/ug_html/ug_examples_query.html \
+    doc/Zoltan_html/ug_html/ug_fortran.html \
+    doc/Zoltan_html/ug_html/ug_graph_vs_hg.html \
+    doc/Zoltan_html/ug_html/ug_index.html \
+    doc/Zoltan_html/ug_html/ug_interface.html \
+    doc/Zoltan_html/ug_html/ug_interface_augment.html \
+    doc/Zoltan_html/ug_html/ug_interface_color.html \
+    doc/Zoltan_html/ug_html/ug_interface_init.html \
+    doc/Zoltan_html/ug_html/ug_interface_lb.html \
+    doc/Zoltan_html/ug_html/ug_interface_mig.html \
+    doc/Zoltan_html/ug_html/ug_interface_order.html \
+    doc/Zoltan_html/ug_html/ug_intro.html \
+    doc/Zoltan_html/ug_html/ug_order.html \
+    doc/Zoltan_html/ug_html/ug_order_parmetis.html \
+    doc/Zoltan_html/ug_html/ug_order_ptscotch.html \
+    doc/Zoltan_html/ug_html/ug_param.html \
+    doc/Zoltan_html/ug_html/ug_query.html \
+    doc/Zoltan_html/ug_html/ug_query_lb.html \
+    doc/Zoltan_html/ug_html/ug_query_mig.html \
+    doc/Zoltan_html/ug_html/ug_refs.html \
+    doc/Zoltan_html/ug_html/ug_release.html \
+    doc/Zoltan_html/ug_html/ug_usage.html \
+    doc/Zoltan_html/ug_html/ug_util.html \
+    doc/Zoltan_html/ug_html/ug_util_comm.html \
+    doc/Zoltan_html/ug_html/ug_util_dd.html \
+    doc/Zoltan_html/ug_html/ug_util_mem.html 
 
-HA_H = \
-	$(srcdir)/ha/ha_const.h \
-	$(srcdir)/ha/ha_drum.h
+ZOLTAN_SAMPLE = \
+       SampleConfigurationScripts/mac_osX_no_fortran \
+       SampleConfigurationScripts/linux_with_purify_zoltan_only \
+       SampleConfigurationScripts/mac_osX_zoltan_and_isorropia \
+       SampleConfigurationScripts/linux_zoltan_and_isorropia \
+       SampleConfigurationScripts/mac_osX_zoltan_only \
+       SampleConfigurationScripts/linux_zoltan_only \
+       SampleConfigurationScripts/mac_osX_zoltan_thru_trilinos 
 
-HA = \
-	$(srcdir)/ha/build_machine_desc.c \
-	$(srcdir)/ha/divide_machine.c \
-	$(srcdir)/ha/get_processor_name.c \
-	$(srcdir)/ha/ha_drum.c
+ZOLTAN_CMAKE = \
+       CMakeLists.txt \
+       src/CMakeLists.txt \
+       src/driver/CMakeLists.txt \
+       src/fdriver/CMakeLists.txt \
+       test/CMakeLists.txt \
+       test/ch_simple/CMakeLists.txt \
+       test/hg_simple/CMakeLists.txt \
+       cmake/Dependencies.cmake  \
+       cmake/Zoltan_config.h.in
 
-HIER_H = \
-	$(srcdir)/hier/hier.h
-
-HIER = \
-	$(srcdir)/hier/hier.c \
-	$(srcdir)/hier/hier_free_struct.c
-
-HSFC_H = \
-	$(srcdir)/hsfc/hsfc.h \
-	$(srcdir)/hsfc/hsfc_const.h \
-	$(srcdir)/hsfc/hsfc_hilbert_const.h
-
-HSFC = \
-	$(srcdir)/hsfc/hsfc_box_assign.c \
-	$(srcdir)/hsfc/hsfc.c \
-	$(srcdir)/hsfc/hsfc_hilbert.c \
-	$(srcdir)/hsfc/hsfc_point_assign.c
-
-INCLUDE_H = \
-	$(srcdir)/include/lbi_const.h \
-	$(srcdir)/include/zoltan_align.h \
-	$(srcdir)/include/zoltan_cpp.h \
-	$(srcdir)/include/zoltan.h \
-	$(srcdir)/include/zoltan_types.h \
-	$(srcdir)/include/zoltan_comm.h \
-	$(srcdir)/include/zoltan_comm_cpp.h \
-	$(srcdir)/include/zoltan_timer_cpp.h \
-	$(srcdir)/include/zoltan_timer.h \
-	$(srcdir)/include/zoltan_dd.h \
-	$(srcdir)/include/zoltan_dd_cpp.h \
-	$(srcdir)/include/zoltan_mem.h  
-
-LB_H = \
-	$(srcdir)/lb/lb_const.h \
-	$(srcdir)/lb/lb_init_const.h
-
-LB = \
-	$(srcdir)/lb/lb_balance.c \
-	$(srcdir)/lb/lb_box_assign.c \
-	$(srcdir)/lb/lb_copy.c \
-	$(srcdir)/lb/lb_eval.c \
-	$(srcdir)/lb/lb_free.c \
-	$(srcdir)/lb/lb_init.c \
-	$(srcdir)/lb/lb_invert.c \
-	$(srcdir)/lb/lb_migrate.c \
-	$(srcdir)/lb/lb_part2proc.c \
-	$(srcdir)/lb/lb_point_assign.c \
-	$(srcdir)/lb/lb_remap.c \
-	$(srcdir)/lb/lb_set_fn.c \
-	$(srcdir)/lb/lb_set_method.c \
-	$(srcdir)/lb/lb_set_part_sizes.c
-
-EXTRA_OCT_H = \
-	$(srcdir)/oct/costs_const.h \
-	$(srcdir)/oct/costs.h \
-	$(srcdir)/oct/dfs_const.h \
-	$(srcdir)/oct/dfs.h \
-	$(srcdir)/oct/migoct_const.h \
-	$(srcdir)/oct/migreg_const.h \
-	$(srcdir)/oct/migreg.h \
-	$(srcdir)/oct/migtags_const.h \
-	$(srcdir)/oct/msg_const.h \
-	$(srcdir)/oct/octant_const.h \
-	$(srcdir)/oct/octree_const.h \
-	$(srcdir)/oct/octupdate_const.h \
-	$(srcdir)/oct/octupdate.h \
-	$(srcdir)/oct/oct_util_const.h \
-	$(srcdir)/oct/rootlist_const.h \
-	$(srcdir)/oct/SFC.h
-
-EXTRA_OCT = \
-	$(srcdir)/oct/costs.c \
-	$(srcdir)/oct/dfs.c \
-	$(srcdir)/oct/migoct.c \
-	$(srcdir)/oct/migreg.c \
-	$(srcdir)/oct/migtags.c \
-	$(srcdir)/oct/msg.c \
-	$(srcdir)/oct/octant.c \
-	$(srcdir)/oct/oct_plot.c \
-	$(srcdir)/oct/octree.c \
-	$(srcdir)/oct/octupdate.c \
-	$(srcdir)/oct/oct_util.c \
-	$(srcdir)/oct/output.c \
-	$(srcdir)/oct/rootlist.c
-
-OCT_H = $(EXTRA_OCT_H)
-
-OCT = $(EXTRA_OCT)
-
-ORDER_H = \
-	$(srcdir)/order/order_const.h
-
-ORDER = \
-	$(srcdir)/order/order.c \
-	$(srcdir)/order/order_struct.c \
-	$(srcdir)/order/order_tools.c \
-	$(srcdir)/order/perm.c
-
-PAR_H = \
-	$(srcdir)/par/par_average_const.h \
-	$(srcdir)/par/par_bisect_const.h \
-	$(srcdir)/par/par_const.h \
-	$(srcdir)/par/par_median_const.h \
-	$(srcdir)/par/par_tflops_special_const.h
-
-PAR = \
-	$(srcdir)/par/par_average.c \
-	$(srcdir)/par/par_bisect.c \
-	$(srcdir)/par/par_median.c \
-	$(srcdir)/par/par_median_randomized.c \
-	$(srcdir)/par/par_stats.c \
-	$(srcdir)/par/par_sync.c \
-	$(srcdir)/par/par_tflops_special.c
-
-PARAMS_H = \
-	$(srcdir)/params/key_params.h \
-	$(srcdir)/params/params_const.h
-
-PARAMS = \
-	$(srcdir)/params/assign_param_vals.c \
-	$(srcdir)/params/bind_param.c \
-	$(srcdir)/params/check_param.c \
-	$(srcdir)/params/free_params.c \
-	$(srcdir)/params/key_params.c \
-	$(srcdir)/params/print_params.c \
-	$(srcdir)/params/set_param.c
-
-PARMETIS_H = \
-	$(srcdir)/parmetis/third_library.h \
-	$(srcdir)/parmetis/third_library_tools.h \
-	$(srcdir)/parmetis/third_library_const.h
-
-PARMETIS = \
-        $(srcdir)/parmetis/build_graph.c \
-        $(srcdir)/parmetis/postprocessing.c \
-        $(srcdir)/parmetis/preprocessing.c \
-        $(srcdir)/parmetis/scatter_graph.c \
-        $(srcdir)/parmetis/third_library.c \
-        $(srcdir)/parmetis/verify_graph.c
+EXTRA_DIST = config/generate-makeoptions.pl \
+       config/strip_dup_incl_paths.pl config/strip_dup_libs.pl \
+       config/replace-install-prefix.pl config/string-replace.pl \
+       config/token-replace.pl \
+       Disclaimer GNU_Lesser_GPL.txt Known_Problems VERSION \
+       $(ZOLTAN_DOCS) $(ZOLTAN_SAMPLE) $(ZOLTAN_TESTS)
 
 
-PHG_H = \
-	$(srcdir)/phg/phg_comm.h \
-	$(srcdir)/phg/phg_const.h \
-	$(srcdir)/phg/phg_distrib.h \
-	$(srcdir)/phg/phg.h \
-	$(srcdir)/phg/phg_hypergraph.h \
-	$(srcdir)/phg/phg_util.h
+## #######################################################################
+## Tools in the auxillary directory 
+## #######################################################################
+AUX_DIST = config/install-sh config/missing config/mkinstalldirs 
 
-PHG = \
-	$(srcdir)/phg/phg_build.c \
-	$(srcdir)/phg/phg_build_calls.c \
-	$(srcdir)/phg/phg.c \
-	$(srcdir)/phg/phg_coarse.c \
-	$(srcdir)/phg/phg_comm.c \
-	$(srcdir)/phg/phg_distrib.c \
-	$(srcdir)/phg/phg_gather.c \
-	$(srcdir)/phg/phg_hypergraph.c \
-	$(srcdir)/phg/phg_match.c \
-	$(srcdir)/phg/phg_order.c \
-	$(srcdir)/phg/phg_parkway.c \
-	$(srcdir)/phg/phg_patoh.c \
-	$(srcdir)/phg/phg_plot.c \
-	$(srcdir)/phg/phg_rdivide.c \
-	$(srcdir)/phg/phg_refinement.c \
-	$(srcdir)/phg/phg_scale.c \
-	$(srcdir)/phg/phg_serialpartition.c \
-	$(srcdir)/phg/phg_util.c \
-	$(srcdir)/phg/phg_Vcycle.c
+## #######################################################################
+## Files to be deleted by 'make maintainer-clean'
+## #######################################################################
+MAINTAINERCLEANFILES = Makefile.in aclocal.m4 autom4te.cache/* \
+	configure config.status config.log \
+	src/common/config-h.in src/common/stamp-h.in \
+	$(AUX_DIST) 
 
-RCB_H = \
-	$(srcdir)/rcb/create_proc_list_const.h \
-	$(srcdir)/rcb/rcb_const.h \
-	$(srcdir)/rcb/rcb.h \
-	$(srcdir)/rcb/rib_const.h \
-	$(srcdir)/rcb/rib.h \
-	$(srcdir)/rcb/shared.h
+#The following line helps the test harness recover from build errors.
 
-RCB = \
-	$(srcdir)/rcb/box_assign.c \
-	$(srcdir)/rcb/create_proc_list.c \
-	$(srcdir)/rcb/inertial1d.c \
-	$(srcdir)/rcb/inertial2d.c \
-	$(srcdir)/rcb/inertial3d.c \
-	$(srcdir)/rcb/point_assign.c \
-	$(srcdir)/rcb/rcb_box.c \
-	$(srcdir)/rcb/rcb.c \
-	$(srcdir)/rcb/rcb_util.c \
-	$(srcdir)/rcb/rib.c \
-	$(srcdir)/rcb/rib_util.c \
-	$(srcdir)/rcb/shared.c
+all-local:
+	@echo ""
+	@echo "Trilinos package zoltan built successfully."
+	@echo ""
 
-REFTREE_H = \
-	$(srcdir)/reftree/reftree_const.h \
-	$(srcdir)/reftree/reftree.h
+## #######################################################################
+## Subdirectories to be make'd recursively
+## #######################################################################
 
-REFTREE = \
-	$(srcdir)/reftree/reftree_build.c \
-	$(srcdir)/reftree/reftree_coarse_path.c \
-	$(srcdir)/reftree/reftree_hash.c \
-	$(srcdir)/reftree/reftree_part.c
+#We now build tests and examples through separate make targets, rather than
+#during "make".  We still need to conditionally include the test and example
+#in SUBDIRS, even though BUILD_TESTS and BUILD_EXAMPLES will never be
+#defined, so that the tests and examples are included in the distribution
+#tarball.
 
-SIMPLE = \
-	$(srcdir)/simple/block.c \
-	$(srcdir)/simple/random.c
-
-TIMER_H = \
-	$(srcdir)/timer/timer_const.h
-
-TIMER = \
-	$(srcdir)/timer/timer_params.c
-
-UTILITIES_H = \
-	$(srcdir)/Utilities/Communication/comm.h \
-	$(srcdir)/Utilities/DDirectory/DD.h \
-	$(srcdir)/Utilities/Timer/timer.h \
-	$(srcdir)/Utilities/shared/zoltan_util.h \
-	$(srcdir)/Utilities/shared/zoltan_id.h
-
-UTILITIES = \
-	$(srcdir)/Utilities/Communication/comm_exchange_sizes.c \
-	$(srcdir)/Utilities/Communication/comm_invert_map.c \
-	$(srcdir)/Utilities/Communication/comm_do.c \
-	$(srcdir)/Utilities/Communication/comm_do_reverse.c \
-	$(srcdir)/Utilities/Communication/comm_info.c \
-	$(srcdir)/Utilities/Communication/comm_create.c \
-	$(srcdir)/Utilities/Communication/comm_resize.c \
-	$(srcdir)/Utilities/Communication/comm_sort_ints.c \
-	$(srcdir)/Utilities/Communication/comm_destroy.c \
-	$(srcdir)/Utilities/Communication/comm_invert_plan.c \
-	$(srcdir)/Utilities/Timer/zoltan_timer.c \
-	$(srcdir)/Utilities/Timer/timer.c \
-	$(srcdir)/Utilities/DDirectory/DD_Find.c \
-	$(srcdir)/Utilities/DDirectory/DD_Destroy.c \
-	$(srcdir)/Utilities/DDirectory/DD_Set_Neighbor_Hash_Fn3.c \
-	$(srcdir)/Utilities/DDirectory/DD_Remove.c \
-	$(srcdir)/Utilities/DDirectory/DD_Create.c \
-	$(srcdir)/Utilities/DDirectory/DD_Update.c \
-	$(srcdir)/Utilities/DDirectory/DD_Stats.c \
-	$(srcdir)/Utilities/DDirectory/DD_Hash2.c \
-	$(srcdir)/Utilities/DDirectory/DD_Print.c \
-	$(srcdir)/Utilities/DDirectory/DD_Set_Neighbor_Hash_Fn2.c \
-	$(srcdir)/Utilities/DDirectory/DD_Set_Hash_Fn.c \
-	$(srcdir)/Utilities/DDirectory/DD_Set_Neighbor_Hash_Fn1.c \
-	$(srcdir)/Utilities/Memory/mem.c \
-	$(srcdir)/Utilities/shared/zoltan_align.c \
-	$(srcdir)/Utilities/shared/zoltan_id.c
-
-ZZ_H = \
-	$(srcdir)/zz/zz_const.h \
-	$(srcdir)/zz/zz_heap.h \
-	$(srcdir)/zz/zz_id_const.h \
-	$(srcdir)/zz/zz_rand.h \
-	$(srcdir)/zz/zz_sort.h \
-	$(srcdir)/zz/zz_util_const.h
-
-ZZ = \
-	$(srcdir)/zz/zz_coord.c \
-	$(srcdir)/zz/zz_gen_files.c \
-	$(srcdir)/zz/zz_hash.c \
-	$(srcdir)/zz/zz_heap.c \
-	$(srcdir)/zz/zz_init.c \
-	$(srcdir)/zz/zz_obj_list.c \
-	$(srcdir)/zz/zz_rand.c \
-	$(srcdir)/zz/zz_set_fn.c \
-	$(srcdir)/zz/zz_sort.c \
-	$(srcdir)/zz/zz_struct.c \
-	$(srcdir)/zz/zz_util.c
-
-# ------------------------------------------------------------------------
-# Zoltan library specifications
-# ------------------------------------------------------------------------
-ZOLTAN_LIB = libzoltan.a
-
-ZOLTAN_H = \
-	$(ALL_H) \
-	$(COLORING_H) \
-	$(HA_H) \
-	$(HIER_H) \
-	$(HSFC_H) \
-	$(INCLUDE_H) \
-	$(LB_H) \
-	$(OCT_H) \
-	$(ORDER_H) \
-	$(PAR_H) \
-	$(PARAMS_H) \
-	$(PARMETIS_H) \
-	$(PHG_H) \
-	$(RCB_H) \
-	$(REFTREE_H) \
-	$(TIMER_H) \
-	$(UTILITIES_H) \
-	$(ZZ_H)
-
-libzoltan_a_SOURCES = \
-	$(ALL) \
-	$(COLORING) \
-	$(HA) \
-	$(HIER) \
-	$(HSFC) \
-	$(LB) \
-	$(OCT) \
-	$(ORDER) \
-	$(PAR) \
-	$(PARAMS) \
-	$(PARMETIS) \
-	$(PHG) \
-	$(RCB) \
-	$(REFTREE) \
-	$(SIMPLE) \
-	$(TIMER) \
-	$(UTILITIES) \
-	$(ZZ)
-
-EXTRA_libzoltan_a_SOURCES = \
-	$(EXTRA_OCT_H) \
-	$(EXTRA_OCT)
-
-EXPORT_INCLUDES = \
-	-I$(srcdir)/Utilities/shared \
-	-I$(srcdir)/Utilities/Timer  \
-	-I$(srcdir)/zz               \
-	-I$(srcdir)/all              \
-	-I$(srcdir)/par              \
-	-I$(srcdir)/order            \
-	-I$(srcdir)/params           \
-	-I$(srcdir)/phg              \
-	-I$(srcdir)/rcb              \
-	-I$(srcdir)/timer            \
-	-I$(srcdir)/hsfc             \
-	-I$(srcdir)/coloring         \
-	-I$(srcdir)/hier             \
-	-I$(srcdir)/reftree          \
-	-I$(srcdir)/parmetis         \
-	-I$(srcdir)/ha               \
-	-I$(srcdir)/include          \
-	-I$(srcdir)/fort             \
-	-I$(srcdir)/lb
-
-
-AM_CPPFLAGS = $(EXPORT_INCLUDES)
-
-# ------------------------------------------------------------------------
-# List of all libraries to install in $(libexecdir)
-# ------------------------------------------------------------------------
-
-if COMPILE_ZOLTAN
-  noinst_LIBRARIES = $(ZOLTAN_LIB)
+#Add this later
+if SUB_TEST
+TEST_SUBDIR=
 endif
 
-# ------------------------------------------------------------------------
-# List of all headers to install in $(includedir)
-# ------------------------------------------------------------------------
+if SUB_EXAMPLE
+EXAMPLE_SUBDIR=example
+endif
 
-# Eventually we will try to install fewer headers
-noinst_HEADERS = $(INCLUDE_H) 
+if BUILD_TESTS
+tests: examples
+	@echo ""
+	@echo "Now building zoltan tests."
+	@echo ""
+	@echo "Zoltan tests use drivers and input files; no compilation necessary."
+	@echo ""
+	@echo "Finished building zoltan tests."
+	@echo ""
+else
+tests:
+	@echo "zoltan tests were disabled at configure time"
+endif
 
-ZOLTAN_POSTPROCESS = \
-    $(srcdir)/postprocessing/bin/toscotchperm.py \
-    $(srcdir)/postprocessing/ordering/README \
-    $(srcdir)/postprocessing/ordering/mm_input.c \
-    $(srcdir)/postprocessing/ordering/mm_input.h \
-    $(srcdir)/postprocessing/ordering/order_eval.c \
-    $(srcdir)/postprocessing/ordering/order_eval.h \
-    $(srcdir)/postprocessing/ordering/ordering.py \
-    $(srcdir)/postprocessing/ordering/toscotchperm.py \
-    $(srcdir)/postprocessing/ordering/zdrive.inp \
-    $(srcdir)/postprocessing/ordering/zdrive.inp.parmetis \
-    $(srcdir)/postprocessing/ordering/zdrive.inp.scotch
+if BUILD_EXAMPLES
+examples:
+	@echo ""
+	@echo "Now building zoltan examples."
+	@echo ""
+	cd $(top_builddir)/example && $(MAKE)
+	@echo ""
+	@echo "Finished building zoltan examples."
+	@echo ""
 
-EXTRA_DIST = $(ZOLTAN_H) \
-    $(srcdir)/Utilities/Communication/README \
-    $(srcdir)/Utilities/Memory/README \
-    $(srcdir)/Utilities/Timer/README \
-    $(srcdir)/Utilities/DDirectory/README \
-    $(srcdir)/Utilities/README \
-    $(NATIVE_ZOLTAN_BUILD) \
-    $(ZOLTAN_POSTPROCESS)
+install-examples:
+	cd $(top_builddir)/example && $(MAKE) install
+else
+examples:
+	@echo "zoltan examples were disabled at configure time"
+
+install-examples:
+	@echo "zoltan examples were disabled at configure time"
+endif
+
+clean-tests:
+	cd $(top_builddir)/test && $(MAKE) clean
+
+clean-examples:
+	cd $(top_builddir)/example && $(MAKE) clean
+
+everything:
+	$(MAKE) && $(MAKE) examples && $(MAKE) tests
+
+clean-everything:
+	$(MAKE) clean-examples && $(MAKE) clean-tests && $(MAKE) clean
+
+install-everything:
+	$(MAKE) install && $(MAKE) install-examples
+
+if HAVE_MPI
+SIMPI_SUBDIR=
+else
+SIMPI_SUBDIR=siMPI
+endif
+
+SUBDIRS = $(SIMPI_SUBDIR) src $(EXAMPLE_SUBDIR) $(TEST_SUBDIR)
+
+## #######################################################################
+## The below targets allow you to use the new
+## testharness to run the test suite as make targets
+## #######################################################################
+
+TRILINOS_HOME_DIR=@abs_top_srcdir@/../..
+TRILINOS_BUILD_DIR=@abs_top_builddir@/../..
+TRILINOS_MPI_MAX_PROC=4
+TRILINOS_TEST_CATEGORY=INSTALL
+
+runtests-serial :
+	$(PERL_EXE) $(TRILINOS_HOME_DIR)/commonTools/test/utilities/runtests \
+  --trilinos-dir=$(TRILINOS_HOME_DIR) \
+  --comm=serial \
+  --build-dir=$(TRILINOS_BUILD_DIR) \
+  --category=$(TRILINOS_TEST_CATEGORY) \
+  --output-dir=@abs_top_builddir@/test/runtests-results \
+  --verbosity=1 \
+  --packages=zoltan
+
+runtests-mpi :
+	$(PERL_EXE) $(TRILINOS_HOME_DIR)/commonTools/test/utilities/runtests \
+  --trilinos-dir=$(TRILINOS_HOME_DIR) \
+  --comm=mpi \
+  --mpi-go=$(TRILINOS_MPI_GO) \
+  --build-dir=$(TRILINOS_BUILD_DIR) \
+  --max-proc=$(TRILINOS_MPI_MAX_PROC) \
+  --category=$(TRILINOS_TEST_CATEGORY) \
+  --output-dir=@abs_top_builddir@/test/runtests-results \
+  --verbosity=1 \
+  --packages=zoltan
+
+## #######################################################################
+## Export makefile stuff
+## #######################################################################
+
+if USING_EXPORT_MAKEFILES
+
+install-exec-hook:	
+	mkdir -p $(DESTDIR)$(includedir)
+	cp $(top_builddir)/Makefile.export.zoltan $(DESTDIR)$(includedir)/.
+	$(PERL_EXE) $(top_srcdir)/config/replace-install-prefix.pl \
+		--exec-prefix=$(exec_prefix) \
+		--my-export-makefile=Makefile.export.zoltan \
+		--my-abs-top-srcdir=@abs_top_srcdir@ \
+		--my-abs-incl-dirs=@abs_top_builddir@/src:@abs_top_srcdir@/src \
+		--my-abs-lib-dirs=@abs_top_builddir@/src
+	$(PERL_EXE) $(top_srcdir)/config/generate-makeoptions.pl $(top_builddir)/src/Makefile ZOLTAN > $(DESTDIR)$(includedir)/Makefile.export.zoltan.macros
+
+uninstall-hook:
+	rm -f $(includedir)/Makefile.export.zoltan
+	rm -f $(includedir)/Makefile.export.zoltan.macros
+
+else 
+
+install-exec-hook:
+
+uninstall-hook:
+
+endif
+
+## #######################################################################
+

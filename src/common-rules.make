@@ -86,8 +86,8 @@ if COMPILE_METIS
 endif
 
 if COMPILE_ZOLTAN
-  external_LIBS += $(top_builddir)/external_libs/zoltan/libzoltan.a
-  AM_CPPFLAGS += -I$(top_srcdir)/external_libs/zoltan/include
+  external_LIBS += $(top_builddir)/external_libs/zoltan/src/libzoltan.a
+  AM_CPPFLAGS += -I$(top_srcdir)/external_libs/zoltan/src/include
 endif
 
 if COMPILE_NEWUOA

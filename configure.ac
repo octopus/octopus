@@ -322,8 +322,12 @@ if test x"$enable_mpi" != x"no"; then
   ACX_MPI2
 fi
 
-dnl now I run configure for the internal libraries
+dnl now I run configure for the external libraries
 AC_CONFIG_SUBDIRS([external_libs/spglibs])
+
+if test x"$enable_mpi" != x"no"; then
+  AC_CONFIG_SUBDIRS([external_libs/zoltan])
+fi
 
 # This is certainly wrong, but I don't know
 # how to do it right
@@ -341,7 +345,6 @@ AC_CONFIG_FILES([Makefile
   external_libs/spglib/src/Makefile
   external_libs/poisson_isf/Makefile
   external_libs/newuoa/Makefile
-  external_libs/zoltan/Makefile
   external_libs/slatec/Makefile
   liboct_parser/Makefile
   src/Makefile
