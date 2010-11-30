@@ -149,24 +149,7 @@ ACX_NEWUOA
 AM_CONDITIONAL(COMPILE_NEWUOA, test x${HAVE_NEWUOA} = x1)
 
 dnl If in parallel, enable Zoltan compilation
-if test x"$enable_mpi" != x"no"; then
-  acx_zoltan_save_LIBS="$LIBS"
-  LIBS=-ltrilinos_zoltan
-  AC_CHECK_HEADERS(trilinos/zoltan.h)
-  AC_CHECK_FUNCS(Zoltan_Initialize)
-  if test x$ac_cv_func_Zoltan_Initialize == xyes -a x$ac_cv_header_trilinos_zoltan_h == xyes ; then
-    AC_DEFINE(HAVE_EXTERNAL_ZOLTAN, 1, [Zoltan is a external library])
-    AC_MSG_NOTICE([Found a usable installation of Zoltan.])
-    LIBS="$acx_zoltan_save_LIBS $LIBS" 
-    compile_zoltan=no
-  else
-    AC_MSG_NOTICE([Could not find an installed version of Zoltan. It will be compiled.])
-    LIBS="$acx_zoltan_save_LIBS"
-    compile_zoltan=yes
-  fi
-fi
-
-AM_CONDITIONAL(COMPILE_ZOLTAN, test x"$compile_zoltan" == x"yes")
+AM_CONDITIONAL(COMPILE_ZOLTAN, test x"$enable_mpi" != x"no")
 
 dnl check for C MPI
 if test x"$enable_mpi" == x"yes"; then
@@ -339,10 +322,8 @@ if test x"$enable_mpi" != x"no"; then
   ACX_MPI2
 fi
 
-dnl now I run configure for the external libraries
+dnl now I run configure for the internal libraries
 AC_CONFIG_SUBDIRS([external_libs/spglibs])
-
-AC_CONFIG_SUBDIRS([external_libs/zoltan])
 
 # This is certainly wrong, but I don't know
 # how to do it right
@@ -360,6 +341,7 @@ AC_CONFIG_FILES([Makefile
   external_libs/spglib/src/Makefile
   external_libs/poisson_isf/Makefile
   external_libs/newuoa/Makefile
+  external_libs/zoltan/Makefile
   external_libs/slatec/Makefile
   liboct_parser/Makefile
   src/Makefile

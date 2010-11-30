@@ -19,9 +19,5 @@
 ##
 ## $Id$
 
-if COMPILE_ZOLTAN
-  ZOLTAN_DIR = zoltan
-endif
-
-SUBDIRS = metis-4.0 qshep poisson_isf newuoa spglib slatec $(ZOLTAN_DIR)
+SUBDIRS = metis-4.0 qshep poisson_isf newuoa spglib zoltan slatec
 
