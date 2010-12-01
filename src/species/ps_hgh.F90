@@ -128,11 +128,13 @@ contains
     if(psp%l_max >= 0) then
       SAFE_ALLOCATE(psp%kbr(0:psp%l_max))
       SAFE_ALLOCATE(psp%kb(1:psp%g%nrval, 0:psp%l_max, 1:3))
-      psp%kbr = M_ZERO; psp%kb = M_ZERO
+      psp%kbr = M_ZERO
+      psp%kb = M_ZERO
     end if
     SAFE_ALLOCATE(psp%rphi(1:psp%g%nrval, 1:psp%conf%p))
     SAFE_ALLOCATE(psp%eigen(1:psp%conf%p))
-    psp%rphi = M_ZERO; psp%eigen = M_ZERO
+    psp%rphi = M_ZERO
+    psp%eigen = M_ZERO
 
     POP_SUB(hgh_init)
   end subroutine hgh_init
@@ -212,15 +214,19 @@ contains
     PUSH_SUB(load_params)
 
     ! Set initially everything to zero.
-    params%c(1:4) = M_ZERO; params%rlocal = M_ZERO;
-    params%rc = M_ZERO; params%h = M_ZERO; params%k = M_ZERO
+    params%c(1:4) = M_ZERO
+    params%rlocal = M_ZERO
+    params%rc = M_ZERO
+    params%h = M_ZERO
+    params%k = M_ZERO
 
     ! get valence configuration
     read(unit,'(a)') line
     call read_valconf(line, params%conf)
 
     ! Reads the file in a hopefully smart way
-    iostat = 1; j = 5
+    iostat = 1
+    j = 5
     read(unit,'(a)') line
     do while((iostat .ne. 0) .and. (j > 0))
       j = j - 1
@@ -239,7 +245,8 @@ contains
       POP_SUB(load_params)
       return
     end if
-    iostat = 1; j = 4
+    iostat = 1
+    j = 4
     do while((iostat .ne. 0) .and. (j > 0))
       j = j - 1
       read(line, *, iostat=iostat) params%rc(0), (params%h(0, i, i), i = 1, j)
@@ -253,14 +260,16 @@ contains
     kloop: do k = 1, 3
       read(unit, '(a)', iostat = iostat) line
       if(iostat .ne. 0) exit kloop
-      iostat = 1; j = 4
+      iostat = 1
+      j = 4
       do while((iostat .ne. 0) .and. (j > 0))
         j = j - 1
         read(line, *, iostat = iostat) params%rc(k), (params%h(k, i, i), i = 1, j)
       end do
       if(params%rc(k) == M_ZERO) exit kloop
       read(unit, '(a)') line
-      iostat = 1; j = 4
+      iostat = 1
+      j = 4
       do while((iostat .ne. 0) .and. (j>0))
         j = j - 1
         read(line, *, iostat = iostat) (params%k(k, i, i), i = 1, 3)
@@ -342,7 +351,10 @@ contains
 
     PUSH_SUB(vlocalr_scalar)
 
-    r1 = r/p%rlocal; r2 = r1**2; r4 = r2**2; r6 = r4*r2
+    r1 = r/p%rlocal
+    r2 = r1**2
+    r4 = r2**2
+    r6 = r4*r2
 
     if(r < CNST(1.0e-7)) then
       vlocalr_scalar = - (M_TWO * p%z_val)/(sqrt(M_TWO*M_Pi)*p%rlocal) + p%c(1)
@@ -387,10 +399,13 @@ contains
 
     PUSH_SUB(vlocalg)
 
-    g1 = g*p%rlocal; g2 = g1*g1; g4 = g2*g2; g6 = g4*g2
+    g1 = g*p%rlocal
+    g2 = g1*g1
+    g4 = g2*g2
+    g6 = g4*g2
 
-    vlocalg = -(M_FOUR*M_Pi*p%z_val/g**2) * exp( -g2/M_TWO) +            &
-      sqrt(M_EIGHT*M_Pi**3) * p%rlocal**3 * exp( -g2/M_TWO) *    &
+    vlocalg = -(M_FOUR*M_Pi*p%z_val/g**2) * exp( -g2/M_TWO) + &
+      sqrt(M_EIGHT*M_Pi**3) * p%rlocal**3 * exp( -g2/M_TWO) * &
       ( p%c(1) + p%c(2)*(M_THREE - g2) + p%c(3)*(CNST(15.0) - M_TEN*g2 + g4) + &
       p%c(4)*(CNST(105.0) -CNST(105.0)*g2 + CNST(21.0)*g4 - g6) )
 
@@ -410,7 +425,8 @@ contains
     PUSH_SUB(projectorr_scalar)
 
     x = l + real(4*i-1, REAL_PRECISION)/M_TWO
-    y = loct_gamma(x); x = sqrt(y)
+    y = loct_gamma(x)
+    x = sqrt(y)
     if(l==0 .and. i==1) then
       rr = M_ONE
     else
@@ -531,7 +547,11 @@ contains
     SAFE_ALLOCATE(prev(1:psp%g%nrval, 1:1))
     SAFE_ALLOCATE( rho(1:psp%g%nrval, 1:1))
     SAFE_ALLOCATE(  ve(1:psp%g%nrval, 1:1))
-    hato = M_ZERO; g = M_ZERO;  y = M_ZERO; rho = M_ZERO; ve = M_ZERO
+    hato = M_ZERO
+    g = M_ZERO
+    y = M_ZERO
+    rho = M_ZERO
+    ve = M_ZERO
 
     ! These numerical parameters have to be fixed for egofv to work.
     s(2:psp%g%nrval) = psp%g%drdi(2:psp%g%nrval)*psp%g%drdi(2:psp%g%nrval)
@@ -576,14 +596,17 @@ contains
         end do
         nprin = l + 1
         if(iter == 1) then
-          e = -((psp%z_val/dble(nprin))**2); z = psp%z_val
+          e = -((psp%z_val/dble(nprin))**2)
+          z = psp%z_val
         else
-          e = psp%eigen(n); z = psp%z_val
+          e = psp%eigen(n)
+          z = psp%z_val
         end if
-        dr = -CNST(1.0e5); rmax = psp%g%rofi(psp%g%nrval)
+        dr = -CNST(1.0e5)
+        rmax = psp%g%rofi(psp%g%nrval)
         call egofv(hato, s, psp%g%nrval, e, g, y, l, z, &
           real(psp%g%a, 8), real(psp%g%b, 8), rmax, nprin, nnode, dr, ierr)
-        if(ierr.ne.0) goto 999
+        if(ierr .ne. 0) exit self_consistent
         psp%eigen(n) = e
 
         psp%rphi(2:psp%g%nrval, n) = g(2:psp%g%nrval) * sqrt(psp%g%drdi(2:psp%g%nrval))
@@ -599,24 +622,24 @@ contains
 
     end do self_consistent
 
-    !  checking normalization of the calculated wavefunctions
-    !do l = 0, psp%l_max_occ
-    do n = 1, psp%conf%p
-      e = sqrt(sum(psp%g%drdi(2:psp%g%nrval)*psp%rphi(2:psp%g%nrval, n)**2))
-      e = abs(e - M_ONE)
-      if (e > CNST(1.0e-5)) then
-        write(message(1), '(a,i2,a)') "Eigenstate for n = ", n , ' is not normalized'
-        write(message(2), '(a, f12.6,a)') '(abs(1-norm) = ', e, ')'
-        call write_warning(2)
-      end if
-    end do
+    if(ierr .eq. 0) then
+      !  checking normalization of the calculated wavefunctions
+      !do l = 0, psp%l_max_occ
+      do n = 1, psp%conf%p
+        e = sqrt(sum(psp%g%drdi(2:psp%g%nrval)*psp%rphi(2:psp%g%nrval, n)**2))
+        e = abs(e - M_ONE)
+        if (e > CNST(1.0e-5)) then
+          write(message(1), '(a,i2,a)') "Eigenstate for n = ", n , ' is not normalized'
+          write(message(2), '(a, f12.6,a)') '(abs(1-norm) = ', e, ')'
+          call write_warning(2)
+        end if
+      end do
 
-    ! Output in Ha and not in stupid Rydbergs.
-    psp%eigen = psp%eigen / M_TWO
+      ! Output in Ha and not in stupid Rydbergs.
+      psp%eigen = psp%eigen / M_TWO
+    endif
 
     ! Deallocations.
-    999 continue
-
     SAFE_DEALLOCATE_A(s)
     SAFE_DEALLOCATE_A(hato)
     SAFE_DEALLOCATE_A(g)
@@ -681,8 +704,11 @@ contains
     end do
 
     ! Closes files and exits
-    call io_close(hgh_unit); call io_close(loc_unit); call io_close(wav_unit)
-    call io_close(dat_unit); call io_close(kbp_unit)
+    call io_close(hgh_unit)
+    call io_close(loc_unit)
+    call io_close(wav_unit)
+    call io_close(dat_unit)
+    call io_close(kbp_unit)
 
     POP_SUB(hgh_debug)
   end subroutine hgh_debug
