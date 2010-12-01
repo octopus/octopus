@@ -2,7 +2,6 @@
 # 
 # $Id$
 
-# this is meant to be called from octopus/src/Makefile.am
 cd `dirname "$0"`/..
 if [ -x "$(which svn)" ] && svn info > /dev/null 2>&1 ; then
 	svn info | grep Revision | awk -F: '{print $2}' | tr -d [:space:]
