@@ -407,7 +407,7 @@ contains
     FLOAT,   allocatable :: rhs(:,:)
     integer :: i
     logical :: const_w_, cmplx_op_
-
+    character*32 :: name
     type(nl_operator_t) :: auxop
 
     PUSH_SUB(derivatives_build)
@@ -441,12 +441,14 @@ contains
         if(i <= der%dim) then  ! gradient
           call stencil_star_polynomials_grad(i, der%order, polynomials)
           call get_rhs_grad(i, rhs(:,1))
+          name = index2axis(i) // "-gradient"
         else                      ! Laplacian
           call stencil_star_polynomials_lapl(der%dim, der%order, polynomials)
           call get_rhs_lapl(rhs(:,1))
+          name = "Laplacian"
         end if
 
-        call derivatives_make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, 1, der%op(i:i))
+        call derivatives_make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, 1, der%op(i:i), name)
         SAFE_DEALLOCATE_A(polynomials)
         SAFE_DEALLOCATE_A(rhs)
       end do
@@ -461,7 +463,8 @@ contains
       end do
       call get_rhs_lapl(rhs(:, der%dim+1))
 
-      call derivatives_make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, der%dim+1, der%op(:))
+      name = "derivatives"
+      call derivatives_make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, der%dim+1, der%op(:), name)
 
       SAFE_DEALLOCATE_A(polynomials)
       SAFE_DEALLOCATE_A(rhs)
@@ -472,7 +475,8 @@ contains
         SAFE_ALLOCATE(rhs(1:der%op(i)%stencil%size, 1:1))
         call stencil_starplus_pol_grad(der%dim, i, der%order, polynomials)
         call get_rhs_grad(i, rhs(:, 1))
-        call derivatives_make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, 1, der%op(i:i))
+        name = index2axis(i) // "-gradient"
+        call derivatives_make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, 1, der%op(i:i), name)
         SAFE_DEALLOCATE_A(polynomials)
         SAFE_DEALLOCATE_A(rhs)
       end do
@@ -480,7 +484,8 @@ contains
       SAFE_ALLOCATE(rhs(1:der%op(i)%stencil%size, 1:1))
       call stencil_starplus_pol_lapl(der%dim, der%order, polynomials)
       call get_rhs_lapl(rhs(:, 1))
-      call derivatives_make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, 1, der%op(der%dim+1:der%dim+1))
+      name = "Laplacian"
+      call derivatives_make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, 1, der%op(der%dim+1:der%dim+1), name)
       SAFE_DEALLOCATE_A(polynomials)
       SAFE_DEALLOCATE_A(rhs)
 
@@ -565,7 +570,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine derivatives_make_discretization(dim, mesh, masses, pol, rhs, n, op)
+  subroutine derivatives_make_discretization(dim, mesh, masses, pol, rhs, n, op, name)
     integer,                intent(in)    :: dim
     type(mesh_t),           intent(in)    :: mesh
     FLOAT,                  intent(in)    :: masses(:)
@@ -573,6 +578,7 @@ contains
     integer,                intent(in)    :: n
     FLOAT,                  intent(inout) :: rhs(:,:)
     type(nl_operator_t),    intent(inout) :: op(:)
+    character*32,           intent(in)    :: name
 
     integer :: p, p_max, i, j, k, pow_max
     FLOAT   :: x(MAX_DIM)
@@ -583,7 +589,7 @@ contains
     SAFE_ALLOCATE(mat(1:op(1)%stencil%size, 1:op(1)%stencil%size))
     SAFE_ALLOCATE(sol(1:op(1)%stencil%size, 1:n))
 
-    message(1) = 'Info: Generating weights for finite-difference discretization.'
+    message(1) = 'Info: Generating weights for finite-difference discretization of ' // trim(name)
     call write_info(1)
 
     ! use to generate power lookup table
