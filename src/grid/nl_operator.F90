@@ -234,7 +234,9 @@ contains
     PUSH_SUB(nl_operator_global_end)
 
 #ifdef HAVE_OPENCL
-    call opencl_release_kernel(kernel_operate)
+    if(opencl_is_enabled()) then
+      call opencl_release_kernel(kernel_operate)
+    end if
 #endif
 
     POP_SUB(nl_operator_global_end)
