@@ -30,7 +30,6 @@ module kb_projector_m
   use profiling_m
   use ps_m
   use mpi_m
-  use mpi_debug_m
   use multicomm_m
   use simul_box_m
   use species_m

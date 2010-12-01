@@ -32,7 +32,6 @@ module hgh_projector_m
   use submesh_m
   use geometry_m
   use mpi_m
-  use mpi_debug_m
 
   implicit none
 

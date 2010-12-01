@@ -30,7 +30,6 @@ module partitioner_m
   use mesh_m
   use messages_m
   use mpi_m
-  use mpi_debug_m
   use loct_math_m
   use partition_m
   use parser_m

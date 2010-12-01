@@ -35,7 +35,6 @@ module projector_m
   use mesh_m
   use messages_m
   use mpi_m
-  use mpi_debug_m
   use multicomm_m
   use profiling_m
   use ps_m

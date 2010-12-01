@@ -28,7 +28,6 @@ module ground_state_m
   use lcao_m
   use mesh_m
   use messages_m
-  use mpi_debug_m
   use mpi_m
   use parser_m
   use restart_m
