@@ -111,7 +111,7 @@ contains
       ! We put, for the electron density, the same as the positive density that 
       ! creates the external potential.
 
-      call periodic_copy_init(pp, sb, spread(M_ZERO, dim=1, ncopies = MAX_DIM), &
+      call periodic_copy_init(pp, sb, spread(M_ZERO, dim=1, ncopies = sb%dim), &
         range = M_TWO * maxval(sb%lsize(1:sb%dim)))
 
       rho = M_ZERO
@@ -445,13 +445,12 @@ contains
     SAFE_DEALLOCATE_A(atom_rho)
     POP_SUB(guess_density)
   end subroutine guess_density
-  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
   subroutine species_get_density(spec, pos, mesh, geo, rho)
     type(species_t),            intent(in)  :: spec
-    FLOAT,                      intent(in)  :: pos(MAX_DIM)
+    FLOAT,                      intent(in)  :: pos(:)
     type(mesh_t),       target, intent(in)  :: mesh
     type(geometry_t),           intent(in)  :: geo
     FLOAT,                      intent(out) :: rho(:)
@@ -493,7 +492,7 @@ contains
 
         rho(ip) = M_ZERO
 
-        dist2 = sum((mesh%x(ip, 1:MAX_DIM) - pos(1:MAX_DIM))**2)
+        dist2 = sum((mesh%x(ip, 1:mesh%sb%dim) - pos(1:mesh%sb%dim))**2)
         if (dist2 < dist2_min) then
           ipos = ip
           dist2_min = dist2
@@ -585,7 +584,7 @@ contains
 
     case(SPEC_CHARGE_DENSITY)
 
-      call periodic_copy_init(pp, mesh%sb, spread(M_ZERO, dim=1, ncopies = MAX_DIM), &
+      call periodic_copy_init(pp, mesh%sb, spread(M_ZERO, dim=1, ncopies = mesh%sb%dim), &
         range = M_TWO * maxval(mesh%sb%lsize(1:mesh%sb%dim)))
 
       rho = M_ZERO
@@ -607,6 +606,8 @@ contains
     POP_SUB(species_get_density)
   end subroutine species_get_density
 
+
+  ! ---------------------------------------------------------
   subroutine func(xin, ff, jacobian)
     FLOAT, intent(in)  :: xin(:)
     FLOAT, intent(out) :: ff(:), jacobian(:,:)
@@ -681,6 +682,7 @@ contains
 
     POP_SUB(getrho)
   end subroutine getrho 
+
 
   ! ---------------------------------------------------------
   subroutine species_get_local(spec, mesh, x_atom, vl, time)
@@ -800,13 +802,13 @@ contains
     if(species_is_ps(spec)) then
 
       ps => species_ps(spec)
-      SAFE_ALLOCATE(xf(1:mesh%np, 1:MAX_DIM))
+      SAFE_ALLOCATE(xf(1:mesh%np, 1:mesh%sb%dim))
       SAFE_ALLOCATE(ylm(1:mesh%np))
 
       do ip = 1, mesh%np
-        x(1:MAX_DIM) = mesh%x(ip, 1:MAX_DIM) - pos(1:MAX_DIM)
-        phi(ip) = sum(x(1:MAX_DIM)**2)
-        xf(ip, 1:MAX_DIM) = x(1:MAX_DIM)
+        x(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim) - pos(1:mesh%sb%dim)
+        phi(ip) = sum(x(1:mesh%sb%dim)**2)
+        xf(ip, 1:mesh%sb%dim) = x(1:mesh%sb%dim)
       end do
 
       call spline_eval_vec(ps%ur_sq(i, is), mesh%np, phi)
@@ -823,8 +825,8 @@ contains
     else
 
       do ip = 1, mesh%np
-        x(1:MAX_DIM) = mesh%x(ip, 1:MAX_DIM) - pos(1:MAX_DIM)
-        r2 = sum(x(1:MAX_DIM)**2)
+        x(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim) - pos(1:mesh%sb%dim)
+        r2 = sum(x(1:mesh%sb%dim)**2)
         select case(dim)
         case(1)
           phi(ip) = exp(-species_omega(spec)*r2/M_TWO) * hermite(i - 1, x(1)*sqrt(species_omega(spec)))
@@ -843,6 +845,8 @@ contains
     POP_SUB(species_get_orbital)
   end subroutine species_get_orbital
 
+
+  ! ---------------------------------------------------------
   subroutine species_get_orbital_submesh(spec, submesh, j, dim, is, pos, phi, derivative)
     type(species_t),   intent(in)  :: spec
     type(submesh_t),   intent(in)  :: submesh
@@ -879,13 +883,13 @@ contains
         call spline_der(ps%ur(i, is), dur)
       end if
 
-      SAFE_ALLOCATE(xf(1:submesh%ns, 1:MAX_DIM))
+      SAFE_ALLOCATE(xf(1:submesh%ns, 1:submesh%mesh%sb%dim))
       SAFE_ALLOCATE(ylm(1:submesh%ns))
       do ip = 1, submesh%ns
-        x(1:MAX_DIM) = submesh%mesh%x(submesh%jxyz(ip), 1:MAX_DIM) - pos(1:MAX_DIM)
-        phi(ip) = sum(x(1:MAX_DIM)**2)
+        x(1:submesh%mesh%sb%dim) = submesh%mesh%x(submesh%jxyz(ip), 1:submesh%mesh%sb%dim) - pos(1:submesh%mesh%sb%dim)
+        phi(ip) = sum(x(1:submesh%mesh%sb%dim)**2)
         if(derivative_) phi(ip) = sqrt(phi(ip))
-        xf(ip, 1:MAX_DIM) = x(1:MAX_DIM)
+        xf(ip, 1:submesh%mesh%sb%dim) = x(1:submesh%mesh%sb%dim)
       end do
 
       if(.not. derivative_) then
@@ -915,19 +919,19 @@ contains
       select case(dim)
       case(1)
         do ip = 1, submesh%ns
-          x(1:MAX_DIM) = submesh%mesh%x(submesh%jxyz(ip), 1:MAX_DIM) - pos(1:MAX_DIM)
-          r2 = sum(x(1:MAX_DIM)**2)
+          x(1:submesh%mesh%sb%dim) = submesh%mesh%x(submesh%jxyz(ip), 1:submesh%mesh%sb%dim) - pos(1:submesh%mesh%sb%dim)
+          r2 = sum(x(1:submesh%mesh%sb%dim)**2)
           phi(ip) = exp(-ww*r2/M_TWO)*hermite(i - 1, x(1)*sqrtw)
         end do
       case(2)
         do ip = 1, submesh%ns
-          x(1:MAX_DIM) = submesh%mesh%x(submesh%jxyz(ip), 1:MAX_DIM) - pos(1:MAX_DIM)
-          r2 = sum(x(1:MAX_DIM)**2)
+          x(1:submesh%mesh%sb%dim) = submesh%mesh%x(submesh%jxyz(ip), 1:submesh%mesh%sb%dim) - pos(1:submesh%mesh%sb%dim)
+          r2 = sum(x(1:submesh%mesh%sb%dim)**2)
           phi(ip) = exp(-ww*r2/M_TWO)*hermite(i - 1, x(1)*sqrtw)*hermite(l - 1, x(2)*sqrtw)
         end do
       case(3)
         do ip = 1, submesh%ns
-          x(1:MAX_DIM) = submesh%mesh%x(submesh%jxyz(ip), 1:MAX_DIM) - pos(1:MAX_DIM)
+          x(1:submesh%mesh%sb%dim) = submesh%mesh%x(submesh%jxyz(ip), 1:submesh%mesh%sb%dim) - pos(1:submesh%mesh%sb%dim)
           phi(ip) = exp(-ww*r2/M_TWO)*hermite(i - 1, x(1)*sqrtw)*hermite(l - 1, x(2)*sqrtw)*hermite(m - 1, x(3)*sqrtw)
         end do
       end select

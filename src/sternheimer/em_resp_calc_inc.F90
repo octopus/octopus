@@ -309,11 +309,11 @@ subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, n
 #ifdef HAVE_MPI
   if(sys%st%parallel_in_states) then
     call MPI_Allreduce(zpol, zpol_temp, MAX_DIM**2, MPI_CMPLX, MPI_SUM, sys%st%mpi_grp%comm, mpi_err)
-    zpol(1:MAX_DIM, 1:MAX_DIM) = zpol_temp(1:MAX_DIM, 1:MAX_DIM)
+    zpol(1:mesh%sb%dim, 1:mesh%sb%dim) = zpol_temp(1:mesh%sb%dim, 1:mesh%sb%dim)
   endif
   if(sys%st%d%kpt%parallel) then
     call MPI_Allreduce(zpol, zpol_temp, MAX_DIM**2, MPI_CMPLX, MPI_SUM, sys%st%d%kpt%mpi_grp%comm, mpi_err)
-    zpol(1:MAX_DIM, 1:MAX_DIM) = zpol_temp(1:MAX_DIM, 1:MAX_DIM)
+    zpol(1:mesh%sb%dim, 1:mesh%sb%dim) = zpol_temp(1:mesh%sb%dim, 1:mesh%sb%dim)
   endif
 #endif
 
@@ -481,8 +481,8 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   SAFE_ALLOCATE(ppsi(1:np, 1:st%d%dim))
   SAFE_ALLOCATE(hvar(1:np, 1:st%d%nspin, 1:2, 1:st%d%dim, 1:ndir, 1:3))
   SAFE_ALLOCATE(hpol_density(1:np))
-  SAFE_ALLOCATE(me010(1:st%nst, 1:st%nst, 1:MAX_DIM, 1:3, st%d%kpt%start:st%d%kpt%end))
-  SAFE_ALLOCATE(me11(1:MAX_DIM, 1:MAX_DIM, 1:3, 1:3, 1:2, st%d%kpt%start:st%d%kpt%end))
+  SAFE_ALLOCATE(me010(1:st%nst, 1:st%nst, 1:mesh%sb%dim, 1:3, st%d%kpt%start:st%d%kpt%end))
+  SAFE_ALLOCATE(me11(1:mesh%sb%dim, 1:mesh%sb%dim, 1:3, 1:3, 1:2, st%d%kpt%start:st%d%kpt%end))
 
   do ifreq = 1, 3
     do idir = 1, ndir
