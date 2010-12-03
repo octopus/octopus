@@ -211,7 +211,9 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
     nullify(mesh%idx%Lxyz_inv)
     nullify(mesh%idx%Lxyz)
 
-    go to 999
+    call profiling_out(mesh_init_prof)
+    POP_SUB(mesh_init_stage_2)
+    return
   end if
 
   nr = mesh%idx%nr
@@ -472,10 +474,6 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
     end do
 
   end if
-
-
-
-999 continue
 
   call profiling_out(mesh_init_prof)
   POP_SUB(mesh_init_stage_2)

@@ -78,7 +78,11 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
 
   ! is there anything to do ?
   families = XC_FAMILY_LDA + XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA
-  if(iand(xcs%family, families) == 0) go to 999
+  if(iand(xcs%family, families) == 0) then
+    POP_SUB(xc_get_vxc)
+    call profiling_out(prof)
+    return
+  endif
 
   !if(iand(xcs%family, not(XC_FAMILY_LDA + XC_FAMILY_GGA)) == 0) then
     n_block = 1000
@@ -321,8 +325,6 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
   if( gga) call  gga_end()
   if(mgga) call mgga_end()
 
-
-999 continue
 
   POP_SUB(xc_get_vxc)
   call profiling_out(prof)

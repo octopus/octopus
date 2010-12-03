@@ -979,7 +979,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   if(l.gt.0) goto 1
   c0=zdr/M_SIX
   c0=c0/(M_ONE-CNST(0.75)*zdr)
-  go to 2
+  goto 2
 1 c0=M_ONE/CNST(12.)
   c0=(-c0)*M_EIGHT/M_THREE
 2 c1=c0*(CNST(12.)+CNST(13.)*t2)/(CNST(12.)-t2)
@@ -987,6 +987,21 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   c2=(-M_HALF)*c0*(CNST(24.)-t3)/(CNST(12.)-t3)
   d2=(d2-c1)/(M_ONE-c2)
 3 y2=(-M_ONE)/d2
+
+  if(l .lt. 2) then
+    if(l .le. 0) then
+      c0=zdr/M_SIX
+      c0=c0/(M_ONE-CNST(0.75)*zdr)
+    else
+      c0=M_ONE/CNST(12.)
+      c0=(-c0)*M_EIGHT/M_THREE
+    endif
+    c1=c0*(CNST(12.)+CNST(13.)*t2)/(CNST(12.)-t2)
+    t3=h(3)-e*s(3)
+    c2=(-M_HALF)*c0*(CNST(24.)-t3)/(CNST(12.)-t3)
+    d2=(d2-c1)/(M_ONE-c2)
+  endif
+  y2=(-M_ONE)/d2
 
   POP_SUB(bcorgn)
   end subroutine bcorgn
