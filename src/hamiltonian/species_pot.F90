@@ -686,7 +686,7 @@ contains
   subroutine species_get_local(spec, mesh, x_atom, vl, time)
     type(species_t), intent(in) :: spec
     type(mesh_t),    intent(in) :: mesh
-    FLOAT,           intent(in) :: x_atom(MAX_DIM)
+    FLOAT,           intent(in) :: x_atom(:)
     FLOAT,           intent(out):: vl(:)
     FLOAT, optional, intent(in) :: time
 
@@ -710,8 +710,8 @@ contains
         do ip = 1, mesh%np
           
           xx = M_ZERO
-          xx(1:mesh%sb%dim) = mesh%x(ip,1:mesh%sb%dim)-x_atom(1:mesh%sb%dim)
-          r = sqrt(sum(xx(:)**2))
+          xx(1:mesh%sb%dim) = mesh%x(ip,1:mesh%sb%dim) - x_atom(1:mesh%sb%dim)
+          r = sqrt(sum(xx(1:mesh%sb%dim)**2))
           
           ! Note that as the spec%user_def is in input units, we have to convert
           ! the units back and forth
@@ -738,8 +738,8 @@ contains
         
         do ip = 1, mesh%np
           
-          xx(:) = mesh%x(ip,:)-x_atom(:)
-          r = sqrt(sum(xx(:)**2))
+          xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim) - x_atom(1:mesh%sb%dim)
+          r = sqrt(sum(xx(1:mesh%sb%dim)**2))
           
           if(r <= species_jradius(spec)) then
             vl(ip) = (a1*(r*r - Rb2) - a2)
@@ -752,7 +752,7 @@ contains
       case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
         ps => species_ps(spec)
         do ip = 1, mesh%np
-          vl(ip) = sum((mesh%x(ip, 1:MAX_DIM) - x_atom(1:MAX_DIM))**2)
+          vl(ip) = sum((mesh%x(ip, 1:mesh%sb%dim) - x_atom(1:mesh%sb%dim))**2)
         end do
         call spline_eval_vec(ps%vlr_sq, mesh%np, vl)
         nullify(ps)
@@ -776,8 +776,6 @@ contains
   !! In order to put the orbital in the mesh, it is necessary to know where
   !! the species is, and this is given by the vector "pos".
   !!
-  !! \warning Most of this work should be done inside the species
-  !! module, and we should get rid of species_iwf_i, species_ifw_l, etc.
   !! \todo Most of this work should be done inside the species
   !! module, and we should get rid of species_iwf_i, species_ifw_l, etc.
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

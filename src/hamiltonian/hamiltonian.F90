@@ -89,7 +89,7 @@ module hamiltonian_m
     hamiltonian_not_adjoint,         &
     hamiltonian_hermitian,           &
     hamiltonian_epot_generate,       &
-    hamiltonian_update,    &
+    hamiltonian_update,              &
     hamiltonian_get_time,            &
     hamiltonian_apply_packed
 

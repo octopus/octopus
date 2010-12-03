@@ -43,7 +43,9 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 
   PUSH_SUB(X(eigensolver_cg2))
 
-  verbose_ = .false.; if(present(verbose)) verbose_ = verbose
+  verbose_ = .false.
+  if(present(verbose)) verbose_ = verbose
+
   if(verbose_) then
     call messages_print_stress(stdout, "CG Info")
     message(1) = "Diagonalization with the conjugate gradients algorithm."

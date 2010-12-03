@@ -309,7 +309,8 @@ contains
     call profiling_in(prof, "EIGEN_SOLVER")
     PUSH_SUB(eigensolver_run)
 
-    verbose_ = eigens%verbose; if(present(verbose)) verbose_ = verbose
+    verbose_ = eigens%verbose
+    if(present(verbose)) verbose_ = verbose
 
     if(iter < eigens%final_tol_iter) then
       tol = log(eigens%final_tol/eigens%init_tol)/(eigens%final_tol_iter - 1)*(iter - 1) + &
@@ -466,6 +467,8 @@ contains
     call profiling_out(prof)
   end subroutine eigensolver_run
 
+
+  ! ---------------------------------------------------------
   logical function eigensolver_parallel_in_states(this) result(par_stat)
     type(eigensolver_t), intent(in) :: this
     
@@ -481,6 +484,8 @@ contains
     POP_SUB(eigensolver_parallel_in_states)
   end function eigensolver_parallel_in_states
     
+
+  ! ---------------------------------------------------------
   logical function eigensolver_has_progress_bar(this) result(has)
     type(eigensolver_t), intent(in) :: this
 
