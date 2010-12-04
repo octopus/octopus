@@ -69,11 +69,19 @@ contains
     type(valconf_t) :: c
 
     PUSH_SUB(valconf_null)
-    c%z = 0; c%symbol = ""; c%type = 0; c%p = 0; c%n = 0; c%l = 0; c%occ = M_ZERO
+    c%z = 0
+    c%symbol = ""
+    c%type = 0
+    c%p = 0
+    c%n = 0
+    c%l = 0
+    c%occ = M_ZERO
 
     POP_SUB(valconf_null)
   end subroutine valconf_null
 
+
+  ! ---------------------------------------------------------
   subroutine valconf_copy(cout, cin)
     type(valconf_t), intent(out) :: cout
     type(valconf_t), intent(in)  :: cin
@@ -91,6 +99,8 @@ contains
     POP_SUB(valconf_copy)
   end subroutine valconf_copy
 
+
+  ! ---------------------------------------------------------
   subroutine write_valconf(c, s)
     type(valconf_t), intent(in) :: c
 
@@ -105,6 +115,8 @@ contains
     POP_SUB(write_valconf)
   end subroutine write_valconf
 
+
+  ! ---------------------------------------------------------
   subroutine read_valconf(s, c)
     character(len=VALCONF_STRING_LENGTH), intent(in) :: s
     type(valconf_t), intent(out) :: c
@@ -296,7 +308,7 @@ contains
   ! sanity check
   ASSERT(NSPIN==1.or.NSPIN==2)
 
-  ! Set GGA switch                                                              !
+  ! Set GGA switch
   IF ( FUNCTL.EQ.'LDA' .OR. FUNCTL.EQ.'lda' .OR.                              &
      FUNCTL.EQ.'LSD' .OR. FUNCTL.EQ.'lsd' ) THEN
     GGA = .FALSE.
@@ -535,8 +547,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  DENSITY.  THE TOTAL CHARGE QT IS USED TO FIX THE POTENTIAL AT R=R(NR)      !
 !  AND V0 (THE INTEGRAL OF THE ELECTRON DENSITY DIVIDED BY R) FIXES           !
 !  THE ELECTROSTATIC POTENTIAL AT THE ORIGIN                                  !
-!  Modified to be consistent with pseudopotential generation (use the         !_m
-!  trapeziodal rule for integration). A. Rubio. Jan. 2000                     !
+!  Modified to be consistent with pseudopotential generation (use the         !
+!  trapezoidal rule for integration). A. Rubio. Jan. 2000                     !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   V0 = M_ZERO
@@ -705,7 +717,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !                                                                             !
 !     leaving e set to its bisection value, and transfering to                !
 !     the call to yofe means that we are performing bisection,                !
-!     whereas setting e to et is use of the variational estimate.             !_m
+!     whereas setting e to et is use of the variational estimate.             !
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
