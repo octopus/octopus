@@ -906,8 +906,6 @@ contains
       st%priv%wfs_type = wfs_type
     end if
 
-    ASSERT(wfs_type == TYPE_FLOAT .or. wfs_type == TYPE_CMPLX)
-
     !%Variable ForceComplex
     !%Type logical
     !%Default no
