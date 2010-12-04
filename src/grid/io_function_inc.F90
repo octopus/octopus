@@ -567,7 +567,12 @@ subroutine X(output_function_global) (how, dir, fname, mesh, ff, unit, ierr, is_
   if(iand(how, output_plane_z)   .ne.0) call out_plane(3, 1, 2) ! z=0; x; y;
   if(iand(how, output_mesh_index).ne.0) call out_mesh_index()
   if(iand(how, output_dx)        .ne.0) call out_dx()
-  if(iand(how, output_xcrysden)  .ne.0) call out_xcrysden()
+  if(iand(how, output_xcrysden)  .ne.0) then
+    call out_xcrysden(.true.)
+#ifdef R_TCOMPLEX
+    call out_xcrysden(.false.)
+#endif
+  endif
   if(iand(how, output_cube)      .ne.0) call out_cube()
 
   if(iand(how, output_matlab).ne.0) then
@@ -832,6 +837,7 @@ contains
 
 
   ! ---------------------------------------------------------
+  ! Writes real and imaginary parts
   subroutine out_dx()
     integer :: ix, iy, iz, idir
     FLOAT   :: offset(MAX_DIM)
@@ -895,6 +901,7 @@ contains
 
   ! ---------------------------------------------------------
   ! see http://local.wasp.uwa.edu.au/~pbourke/dataformats/cube/
+  ! Writes only real part
   subroutine out_cube()
     integer :: ix, iy, iz, idir, idir2, iatom
     FLOAT   :: offset(MAX_DIM)
@@ -953,11 +960,15 @@ contains
   ! http://www.xcrysden.org/doc/XSF.html#__toc__11
   ! XCrySDen can only read 3D output, though it could be
   ! extended to plot a function on a 2D plane.
-  subroutine out_xcrysden()
+  ! Writes real part unless write_real = false and called in complex version
+  subroutine out_xcrysden(write_real)
+    logical, intent(in) :: write_real
+
     integer :: ix, iy, iz, idir2, ix2, iy2, iz2, my_n(3)
     FLOAT :: lattice_vectors(3,3)
     FLOAT :: offset(3)
     type(X(cf_t)) :: cube
+    character*80 :: fname_ext
 
     if(mesh%sb%dim .ne. 3) then
       write(message(1), '(a)') 'Cannot output function in XCrySDen format except in 3D.'
@@ -995,7 +1006,16 @@ contains
       enddo
     enddo
     
-    iunit = io_open(trim(dir)//'/'//trim(fname)//".xsf", action='write', is_tmp=is_tmp)
+#ifdef R_TCOMPLEX
+    if(write_real) then
+      fname_ext = trim(fname) // '.real'
+    else
+      fname_ext = trim(fname) // '.imag'
+    endif
+#else
+    fname_ext = trim(fname)
+#endif
+    iunit = io_open(trim(dir)//'/'//trim(fname_ext)//".xsf", action='write', is_tmp=is_tmp)
 
     ASSERT(present(geo))
     call write_xsf_geometry(iunit, geo, mesh%sb, offset)
@@ -1034,7 +1054,15 @@ contains
             iz2 = iz
           endif
 
-          write(iunit,'(2f25.15)') REAL(units_from_atomic(unit, cube%RS(ix2, iy2, iz2)))
+#ifdef R_TCOMPLEX
+          if(.not. write_real) then
+            write(iunit,'(2f25.15)') aimag(units_from_atomic(unit, cube%RS(ix2, iy2, iz2)))
+          else
+            write(iunit,'(2f25.15)') real(units_from_atomic(unit, cube%RS(ix2, iy2, iz2)))
+          endif
+#else
+          write(iunit,'(2f25.15)') units_from_atomic(unit, cube%RS(ix2, iy2, iz2))
+#endif
         end do
       end do
     end do
