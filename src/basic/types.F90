@@ -26,27 +26,60 @@ module types_m
   private
 
   public ::            &
-    types_get_size
+    type_t,            &
+    types_get_size,    &
+    operator(==),      &
+    operator(/=)
 
-  integer, public, parameter ::   &
-    TYPE_FLOAT            =   1,  &
-    TYPE_CMPLX            =   2,  &
-    TYPE_INTEGER          =   3
-  
+  type type_t
+    integer :: itype
+  end type type_t
+
+  type(type_t), public :: TYPE_FLOAT   = type_t(1)
+  type(type_t), public :: TYPE_CMPLX   = type_t(2)
+  type(type_t), public :: TYPE_INTEGER = type_t(3)
+
+  interface operator(==)
+    module procedure types_equal
+  end interface
+
+  interface operator(/=)
+    module procedure types_equal
+  end interface
+
 #ifdef SINGLE_PRECISION
   integer :: sizes(3) = (/4, 8, 4/)
 #else
   integer :: sizes(3) = (/8, 16, 4/)
 #endif
-
-  contains
-
-  integer function types_get_size(type) result(size)
-    integer, intent(in) :: type
+  
+contains
+  
+  integer pure function types_get_size(this) result(size)
+    type(type_t), intent(in) :: this
     
-    size = sizes(type)
+    size = sizes(this%itype)
   end function types_get_size
 
+  ! -----------------------------------------------------
+
+  logical pure function types_equal(ta, tb) result(equal)
+    type(type_t), intent(in) :: ta
+    type(type_t), intent(in) :: tb
+    
+    equal = ta%itype == tb%itype
+
+  end function types_equal
+  
+  ! -----------------------------------------------------
+
+  logical pure function types_not_equal(ta, tb) result(equal)
+    type(type_t), intent(in) :: ta
+    type(type_t), intent(in) :: tb
+    
+    equal = ta%itype /= tb%itype
+
+  end function types_not_equal
 end module types_m
 
 !! Local Variables:

@@ -292,7 +292,7 @@ contains
 
   ! ----------------------------------------------------
   !> THREADSAFE
-  integer pure function batch_type(this) result(btype)
+  type(type_t) pure function batch_type(this) result(btype)
     type(batch_t),      intent(in)    :: this
 
     if(associated(this%states_linear(1)%dpsi)) btype = TYPE_FLOAT

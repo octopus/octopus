@@ -115,7 +115,7 @@ module states_m
 
   type states_priv_t
     private
-    integer :: wfs_type              !< real (TYPE_FLOAT) or complex (TYPE_CMPLX) wavefunctions
+    type(type_t) :: wfs_type              !< real (TYPE_FLOAT) or complex (TYPE_CMPLX) wavefunctions
   end type states_priv_t
 
   type states_t
@@ -886,10 +886,10 @@ contains
   ! ---------------------------------------------------------
   ! Allocates the KS wavefunctions defined within a states_t structure.
   subroutine states_allocate_wfns(st, mesh, wfs_type, ob_mesh)
-    type(states_t),    intent(inout)   :: st
-    type(mesh_t),      intent(in)      :: mesh
-    integer, optional, intent(in)      :: wfs_type
-    type(mesh_t), optional, intent(in) :: ob_mesh(:)
+    type(states_t),         intent(inout)   :: st
+    type(mesh_t),           intent(in)      :: mesh
+    type(type_t), optional, intent(in)      :: wfs_type
+    type(mesh_t), optional, intent(in)      :: ob_mesh(:)
 
     integer :: ip, ik, ist, idim, st1, st2, k1, k2, size, il
     logical :: force
@@ -905,6 +905,8 @@ contains
       ASSERT(wfs_type == TYPE_FLOAT .or. wfs_type == TYPE_CMPLX)
       st%priv%wfs_type = wfs_type
     end if
+
+    ASSERT(wfs_type == TYPE_FLOAT .or. wfs_type == TYPE_CMPLX)
 
     !%Variable ForceComplex
     !%Type logical

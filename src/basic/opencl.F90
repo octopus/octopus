@@ -69,7 +69,7 @@ module opencl_m
     private
     type(c_ptr)            :: mem
     integer(SIZEOF_SIZE_T) :: size
-    integer                :: type
+    type(type_t)           :: type
   end type opencl_mem_t
 
   type(opencl_t) :: opencl
@@ -265,7 +265,7 @@ module opencl_m
     subroutine opencl_create_buffer_4(this, flags, type, size)
       type(opencl_mem_t), intent(inout) :: this
       integer,            intent(in)    :: flags
-      integer,            intent(in)    :: type
+      type(type_t),       intent(in)    :: type
       integer,            intent(in)    :: size
       
       integer(SIZEOF_SIZE_T) :: fsize
@@ -288,7 +288,7 @@ module opencl_m
     subroutine opencl_create_buffer_8(this, flags, type, size)
       type(opencl_mem_t),     intent(inout) :: this
       integer,                intent(in)    :: flags
-      integer,                intent(in)    :: type
+      type(type_t),           intent(in)    :: type
       integer(SIZEOF_SIZE_T), intent(in)    :: size
       
       integer(SIZEOF_SIZE_T) :: fsize
@@ -329,7 +329,7 @@ module opencl_m
 
     ! -----------------------------------------
 
-    integer pure function opencl_get_buffer_type(this) result(type)
+    type(type_t) pure function opencl_get_buffer_type(this) result(type)
       type(opencl_mem_t), intent(in) :: this
 
       type = this%type
@@ -387,7 +387,7 @@ module opencl_m
     subroutine opencl_set_kernel_arg_local(kernel, narg, type, size)
       type(c_ptr),        intent(inout) :: kernel
       integer,            intent(in)    :: narg
-      integer,            intent(in)    :: type
+      type(type_t),       intent(in)    :: type
       integer,            intent(in)    :: size
 
       integer :: ierr

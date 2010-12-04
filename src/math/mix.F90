@@ -77,10 +77,11 @@ contains
     type(mix_t),                intent(out) :: smix
     integer,                    intent(in)  :: d1, d2, d3
     integer,          optional, intent(in)  :: def_
-    integer,          optional, intent(in)  :: func_type
+    type(type_t),     optional, intent(in)  :: func_type
     character(len=*), optional, intent(in)  :: prefix_
 
-    integer :: def, func_type_
+    integer :: def
+    type(type_t) :: func_type_
     character(len=32) :: prefix
 
     PUSH_SUB(mix_init)
@@ -195,10 +196,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine mix_clear(smix, func_type)
-    type(mix_t),           intent(inout) :: smix
-    integer,     optional, intent(in)    :: func_type
-
-    integer :: func_type_
+    type(mix_t),             intent(inout) :: smix
+    type(type_t),  optional, intent(in)    :: func_type
+    
+    type(type_t) :: func_type_
 
     PUSH_SUB(mix_clear)
 
