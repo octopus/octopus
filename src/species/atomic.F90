@@ -890,11 +890,12 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   de=g*(x+xin+t*g)/gsg
   nnode=nnode+nndin
   if(de.lt.M_ZERO) nnode=nnode+1
-  do 6 i=knk,n
-  y(i) = y(i)*ratio
-6 continue
-  POP_SUB(yofe)
 
+  do i=knk,n
+    y(i) = y(i)*ratio
+  enddo
+
+  POP_SUB(yofe)
   end subroutine yofe
 
 
@@ -937,24 +938,24 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   if (mod(n,2).ne.1) write(6,*) ' nrmlzg: n should be odd. n =',n
   norm = M_ZERO
   nm1 = n - 1
-  do 2 i = 2,nm1,2
-  norm=norm + g(i)*s(i)*g(i)
-2 continue
+  do i = 2,nm1,2
+    norm=norm + g(i)*s(i)*g(i)
+  enddo
   norm = norm * M_TWO
   nm2  = n - 2
-  do 3 i = 3,nm2,2
-  norm=norm + g(i)*s(i)*g(i)
-3 continue
+  do i = 3,nm2,2
+    norm=norm + g(i)*s(i)*g(i)
+  enddo
   norm = norm * M_TWO
   nm2  = n - 2
-  do 4 i = 1,n,nm1
-  norm=norm + g(i)*s(i)*g(i)
-4 continue
+  do i = 1,n,nm1
+    norm=norm + g(i)*s(i)*g(i)
+  enddo
   norm = norm/M_THREE
   srnrm = sqrt(norm)
-  do 5 i=1,n
-  g(i) = g(i)/srnrm
-5 continue
+  do i=1,n
+    g(i) = g(i)/srnrm
+  enddo
 
   POP_SUB(nrmlzg)
   end subroutine nrmlzg
