@@ -157,6 +157,16 @@
 
     ! ----------------------------------------------------
 
+    integer function f90_cl_device_local_mem_size(device)
+      use c_pointer_m
+
+      implicit none
+
+      type(c_ptr), intent(inout) :: device
+    end function f90_cl_device_local_mem_size
+
+    ! ----------------------------------------------------
+
     subroutine f90_cl_build_program(prog, context, device, source_file)
       use c_pointer_m
 

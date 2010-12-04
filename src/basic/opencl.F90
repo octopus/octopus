@@ -61,6 +61,7 @@ module opencl_m
     type(c_ptr) :: command_queue
     type(c_ptr) :: device
     integer     :: max_workgroup_size
+    integer     :: local_memory_size
     logical     :: enabled
   end type opencl_t
 
@@ -186,7 +187,8 @@ module opencl_m
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "CreateCommandQueue")
       
       opencl%max_workgroup_size = f90_cl_max_workgroup_size(opencl%device)
-      
+      opencl%local_memory_size = f90_cl_device_local_mem_size(opencl%device)
+
       ! now initialize the kernels
       call opencl_build_program(prog, trim(conf%share)//'/opencl/vpsi.cl')
       call opencl_create_kernel(kernel_vpsi, prog, "vpsi")
@@ -389,10 +391,18 @@ module opencl_m
       integer,            intent(in)    :: size
 
       integer :: ierr
-
+      integer :: size_in_bytes
       PUSH_SUB(opencl_set_kernel_arg_local)
 
-      call f90_cl_set_kernel_arg_local(kernel, narg, size*types_get_size(type), ierr)
+      size_in_bytes = size*types_get_size(type)
+      
+      if(size_in_bytes > opencl%local_memory_size) then
+        write(message(1), '(a,f12.6,a)') "CL Error: requested local memory: ", dble(size_in_bytes)/1024.0, " Kb"
+        write(message(2), '(a,f12.6,a)') "          available local memory: ", dble(opencl%local_memory_size)/1024.0, " Kb"
+        call write_fatal(2)
+      end if
+
+      call f90_cl_set_kernel_arg_local(kernel, narg, size_in_bytes, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_buf")
 
       POP_SUB(opencl_set_kernel_arg_local)
