@@ -41,13 +41,15 @@ __kernel void projector_bra(const int nmat,
   const int map_offset    = offsets[4*imat + 1];
   const int scal_offset   = offsets[4*imat + 2];
 
+  const int nppj = npoints*ipj;
+
   if(ipj >= nprojs || imat >= nmat) return;
 
   double aa = 0.0;
   for(int ip = 0; ip < npoints; ip++){
-    aa += matrix[matrix_offset + ip + npoints*ipj]*psi[ldpsi*(map[map_offset + ip] - 1) + ist];
+    aa += matrix[matrix_offset + ip + nppj]*psi[((map[map_offset + ip] - 1)<<ldpsi) + ist];
   }
-  projection[ist + ldprojection*(scal_offset + ipj)] = scal[scal_offset + ipj]*aa;
+  projection[ist + ((scal_offset + ipj)<<ldprojection)] = scal[scal_offset + ipj]*aa;
 
 }
 
@@ -73,12 +75,12 @@ __kernel void projector_ket(const int imat,
 
   double aa = 0.0;
   for(int ipj = 0; ipj < nprojs; ipj++){
-    aa += matrix[matrix_offset + ip + npoints*ipj]*projection[ist + ldprojection*(scal_offset + ipj)];
+    aa += matrix[matrix_offset + ip + npoints*ipj]*projection[ist + ((scal_offset + ipj)<<ldprojection)];
   }
 
   // This update would have to be done in an atomic fashion if we wanted
   // to parallelize over imat.
-  psi[ldpsi*(map[map_offset + ip] - 1) + ist] += aa;
+  psi[((map[map_offset + ip] - 1)<<ldpsi) + ist] += aa;
 
 
 }

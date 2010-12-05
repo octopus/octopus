@@ -278,9 +278,9 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
     call opencl_set_kernel_arg(kernel_projector_bra, 4, this%buff_maps)
     call opencl_set_kernel_arg(kernel_projector_bra, 5, this%buff_scals)
     call opencl_set_kernel_arg(kernel_projector_bra, 6, psib%pack%buffer)
-    call opencl_set_kernel_arg(kernel_projector_bra, 7, psib%pack%size_real(1))
+    call opencl_set_kernel_arg(kernel_projector_bra, 7, log2(psib%pack%size_real(1)))
     call opencl_set_kernel_arg(kernel_projector_bra, 8, projection%buff_projection)
-    call opencl_set_kernel_arg(kernel_projector_bra, 9, psib%pack%size_real(1))
+    call opencl_set_kernel_arg(kernel_projector_bra, 9, log2(psib%pack%size_real(1)))
 
     padnprojs = pad_pow2(this%max_nprojs)
     wgsize = min(32, opencl_kernel_workgroup_size(kernel_projector_bra)/(psib%pack%size_real(1)*padnprojs))
@@ -505,9 +505,9 @@ contains
       call opencl_set_kernel_arg(kernel_projector_ket, 3, this%buff_matrices)
       call opencl_set_kernel_arg(kernel_projector_ket, 4, this%buff_maps)
       call opencl_set_kernel_arg(kernel_projector_ket, 5, projection%buff_projection)
-      call opencl_set_kernel_arg(kernel_projector_ket, 6, vpsib%pack%size_real(1))
+      call opencl_set_kernel_arg(kernel_projector_ket, 6, log2(vpsib%pack%size_real(1)))
       call opencl_set_kernel_arg(kernel_projector_ket, 7, vpsib%pack%buffer)
-      call opencl_set_kernel_arg(kernel_projector_ket, 8, vpsib%pack%size_real(1))
+      call opencl_set_kernel_arg(kernel_projector_ket, 8, log2(vpsib%pack%size_real(1)))
 
       wgsize = opencl_max_workgroup_size()/vpsib%pack%size_real(1)
 
