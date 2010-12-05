@@ -603,15 +603,14 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  BEGINNING OF THE NUMEROV ALGORITHM                                         !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-3 X  = X + A2BY4*Q - BETA
-  Y  = Y + X
-  IR = IR + 1
-  T  = SRDRDI(IR)/R(IR)
-  BETA = T*DRDI(IR)*RHO(IR)
-  Q = (Y-BETA/CNST(12.0))*QBYY
-  V(IR) = M_TWO*T*Q
-  IF(IR.LT.NR) GO TO 3
-
+  do IR = 2, NR
+    X  = X + A2BY4*Q - BETA
+    Y  = Y + X
+    T  = SRDRDI(IR)/R(IR)
+    BETA = T*DRDI(IR)*RHO(IR)
+    Q = (Y-BETA/CNST(12.0))*QBYY
+    V(IR) = M_TWO*T*Q
+  enddo
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  END OF THE NUMEROV ALGORITHM                                               !
@@ -627,7 +626,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   DV = M_TWO*DZ/R(NR)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!  THE LOOP FOLLOWING ADDS THE CONSTANT SOLUTION OF THE HOMOGENEOUSi          !
+!  THE LOOP FOLLOWING ADDS THE CONSTANT SOLUTION OF THE HOMOGENEOUS           !
 !  EQN TO THE PARTICULAR SOLUTION OF THE INHOMOGENEOUS EQN.                   !
 !  NOTE THAT V(1) IS CONSTRUCTED INDEPENDENTLY                                !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -664,8 +663,6 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  of bisections after a given eigenvalue has been isolated                   !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine egofv(h,s,n,e,g,y,l,z,a,b,rmax,nprin,nnode,dr,ierr)
-
-  implicit REAL_DOUBLE (a-h,o-z)
 
   REAL_DOUBLE :: a, b, e, z, rmax, dr
   integer :: i,n,l,nprin,nnode,ncor,n1,n2,niter,nt
@@ -722,11 +719,11 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-  if(et.le.e1 .or. et.ge.e2 .or.                                              &
-     nt.lt.nnode-1 .or. nt.gt.nnode) go to 2
-  e=et
-  if(abs(de).lt.tol) go to 6
-2 call yofe(e,de,dr,rmax,h,s,y,n,l,ncor,nt,z,a,b)
+  if(.not. (et.le.e1 .or. et.ge.e2 .or. nt.lt.nnode-1 .or. nt.gt.nnode)) then
+    e=et
+    if(abs(de).lt.tol) go to 6
+  endif
+  call yofe(e,de,dr,rmax,h,s,y,n,l,ncor,nt,z,a,b)
 !     write(6,101) l,dr,n1,nt,nnode,n2,e1,e,e2,de
 !101  format('  l     dr     n1  nt   n  n2       e1           e', &
 !           '          e2          de'/i3,d10.3,4i4,4f12.5)
@@ -821,7 +818,6 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !       a and b specify the radial mesh r(i)=(exp(a*(i-1))-1)*b               !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  implicit REAL_DOUBLE (a-h,o-z)
   REAL_DOUBLE :: e, de, dr, rmax, z, a, b, y2, g, gsg, x, gin, gsgin, xin
   integer :: nmax,l,ncor,nnode,n,knk,nndin,i
   REAL_DOUBLE :: h(nmax), s(nmax), y(nmax), zdr, yn, ratio, t
@@ -859,8 +855,9 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
 
   yn = M_ZERO
-  if(n.lt.nmax .or. abs(dr).gt.CNST(1.e3)) go to 7
-  call bcrmax(e,dr,rmax,h,s,n,yn,a,b)
+  if(.not. (n.lt.nmax .or. abs(dr).gt.CNST(1.e3))) then
+    call bcrmax(e,dr,rmax,h,s,n,yn,a,b)
+  endif
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -871,7 +868,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-7 call numin(e,h,s,y,n,nndin,yn,gin,gsgin,xin,knk)
+  call numin(e,h,s,y,n,nndin,yn,gin,gsgin,xin,knk)
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -924,7 +921,6 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !             (dr/di = a*b at the origin)                                     !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  implicit REAL_DOUBLE (a-h,o-z)
   REAL_DOUBLE s(:), g(:), norm, srnrm
   integer :: n,nm1,nm2,i
 
@@ -963,7 +959,6 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   subroutine bcorgn(e,h,s,l,zdr,y2)
 
-  implicit REAL_DOUBLE (a-h,o-z)
   REAL_DOUBLE :: e, zdr, y2
   REAL_DOUBLE :: h(:), s(:), t2, t3, d2, c0, c1, c2
   integer :: l
@@ -1028,7 +1023,6 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 ! 22.7.85                                                                     !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  implicit REAL_DOUBLE (a-h,o-z)
   REAL_DOUBLE  h(*),s(*),                                                          &
    e,dr,rmax,yn,a,b,tnm1,tn,tnp1,beta,dg,c1,c2,c3,dn
   integer :: n
@@ -1058,7 +1052,6 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   subroutine numin(e,h,s,y,n,nnode,yn,g,gsg,x,knk)
 
-  implicit REAL_DOUBLE (a-h,o-z)
   REAL_DOUBLE :: e, yn, g, gsg, x
   integer :: i,n,nnode,knk
   REAL_DOUBLE :: h(n),s(n),y(n),t
@@ -1114,7 +1107,6 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   subroutine numout(e,h,s,y,ncor,knk,nnode,y2,g,gsg,x)
 
-  implicit REAL_DOUBLE (a-h,o-z)
   REAL_DOUBLE :: e, y2, g, gsg, x
   integer :: ncor,nnode,knk,i,nm4
   REAL_DOUBLE :: h(knk),s(knk),y(knk),t,xl
