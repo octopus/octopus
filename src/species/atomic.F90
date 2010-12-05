@@ -783,10 +783,10 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 6 g(1) = M_ZERO
-  do 7 i=2,n
-  t=h(i)-e*s(i)
-  g(i)=y(i)/(M_ONE-t/CNST(12.))
-7 continue
+  do i = 2, n
+    t=h(i)-e*s(i)
+    g(i)=y(i)/(M_ONE-t/CNST(12.))
+  enddo
   call nrmlzg(g,s,n)
   POP_SUB(egofv)
   return
@@ -805,8 +805,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !   method.                                                                   !
 !                                                                             !
 !   the arguments are defined as follows:                                     !
-!       e is the old energy(overwritten) by the new energy                    !
-!      de is the e change predicted to elim the kink in psi                   !
+!       e is the old energy (overwritten) by the new energy                   !
+!       de is the e change predicted to elim the kink in psi                  !
 !       dr is the log deriv (the boundary condition)                          !
 !       gpp = (h-es)g (all diagonal in i (radius) )                           !
 !       y is the numerov independent variable y = g - gpp/12                  !
@@ -825,12 +825,15 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   PUSH_SUB(yofe)
 
   zdr = z*a*b
-  n=nmax
-8 if( h(n)-e*s(n) .lt. M_ONE ) go to 9
-  y(n)=M_ZERO
-  n=n-1
-  go to 8
-9 continue
+
+  do n = nmax, 1, -1
+    if( h(n)-e*s(n) .lt. M_ONE ) then
+      knk = n
+      exit
+    endif
+    y(n)=M_ZERO
+  enddo
+
   call bcorgn(e,h,s,l,zdr,y2)
 
 
