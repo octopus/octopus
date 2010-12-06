@@ -66,7 +66,7 @@ contains
   ! ---------------------------------------------------------
   ! Subroutines to write and read valence configurations.
   subroutine valconf_null(c)
-    type(valconf_t) :: c
+    type(valconf_t), intent(out) :: c
 
     PUSH_SUB(valconf_null)
     c%z = 0
@@ -103,8 +103,8 @@ contains
   ! ---------------------------------------------------------
   subroutine write_valconf(c, s)
     type(valconf_t), intent(in) :: c
+    character(len=VALCONF_STRING_LENGTH), intent(out) :: s
 
-    character(len=VALCONF_STRING_LENGTH) :: s
     integer :: j
 
     PUSH_SUB(write_valconf)
@@ -147,8 +147,8 @@ contains
   ! ---------------------------------------------------------
   subroutine atomhxc(functl, g, nspin, dens, v, extra)
     character(len=*),  intent(in)  :: functl
-    integer,           intent(in)  :: nspin
     type(logrid_t),    intent(in)  :: g
+    integer,           intent(in)  :: nspin
     FLOAT,             intent(in)  :: dens(g%nrval, nspin)
     FLOAT,             intent(out) :: v(g%nrval, nspin)
     FLOAT,             intent(in), optional :: extra(g%nrval)
@@ -163,11 +163,13 @@ contains
     SAFE_ALLOCATE( ve(1:g%nrval, 1:nspin))
     SAFE_ALLOCATE( xc(1:g%nrval, 1:nspin))
     SAFE_ALLOCATE(rho(1:g%nrval, 1:nspin))
-    ve = M_ZERO; xc = M_ZERO; rho = M_ZERO
+    ve = M_ZERO
+    xc = M_ZERO
+    rho = M_ZERO
 
     ! To calculate the Hartree term, we put all the density in one variable.
     do is = 1, nspin
-       rho(:, 1) = rho(:, 1) + dens(:, is)
+      rho(:, 1) = rho(:, 1) + dens(:, is)
     end do
     ve = M_ZERO
     do is = 1, nspin
@@ -177,30 +179,31 @@ contains
 
     select case(functl)
     case('LDA')
-      xcfunc = 'LDA'; xcauth = 'PZ'
+      xcfunc = 'LDA'
+      xcauth = 'PZ'
     case('GGA')
-      xcfunc = 'GGA'; xcauth = 'PBE'
+      xcfunc = 'GGA'
+      xcauth = 'PBE'
     case default
-      message(1) = 'Internal Error'
+      message(1) = 'Internal Error in atomhxc: unknown functl'
       call write_fatal(1)
     end select
 
     rho = dens
     do is = 1, nspin
-       if(present(extra)) rho(:, is) = rho(:, is) + extra(:)/nspin
-       rho(2:g%nrval, is) = rho(2:g%nrval, is)/(M_FOUR*M_PI*g%rofi(2:g%nrval)**2)
+      if(present(extra)) rho(:, is) = rho(:, is) + extra(:)/nspin
+      rho(2:g%nrval, is) = rho(2:g%nrval, is)/(M_FOUR*M_PI*g%rofi(2:g%nrval)**2)
     end do
     r2 = g%rofi(2)/(g%rofi(3)-g%rofi(2))
     rho(1, 1:nspin) = rho(2, 1:nspin) - (rho(3, 1:nspin)-rho(2, 1:nspin))*r2
 
     do is = 1, nspin
-       do ir = 1, g%nrval
-          if(rho(ir, is) < M_EPSILON) rho(ir, is) = M_ZERO
-       end do
+      do ir = 1, g%nrval
+        if(rho(ir, is) < M_EPSILON) rho(ir, is) = M_ZERO
+      end do
     end do
 
-    call atomxc(xcfunc, xcauth, g%nrval, g%nrval, g%rofi, &
-                nspin, rho, ex, ec, dx, dc, xc)
+    call atomxc(xcfunc, xcauth, g%nrval, g%nrval, g%rofi, nspin, rho, ex, ec, dx, dc, xc)
     v = ve + xc
 
     SAFE_DEALLOCATE_A(ve)
@@ -250,17 +253,17 @@ contains
 ! ********* ROUTINES CALLED *****************************************         !
 ! GGAXC, LDAXC                                                                !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine atomxc( FUNCTL, AUTHOR,                                          &
-                     NR, MAXR, RMESH, NSPIN, DENS,                            &
-                     EX, EC, DX, DC, V_XC )
+  subroutine atomxc( FUNCTL, AUTHOR, NR, MAXR, RMESH, NSPIN, DENS, EX, EC, DX, DC, V_XC )
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Argument types and dimensions                                               !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    character(len=*) :: FUNCTL, AUTHOR
-    integer :: MAXR, NR, NSPIN
-    FLOAT :: DENS(MAXR,NSPIN), RMESH(MAXR)
+    character(len=*), intent(in) :: FUNCTL, AUTHOR
+    integer, intent(in) :: NR, MAXR
+    FLOAT, intent(in) :: RMESH(MAXR)
+    integer, intent(in) :: NSPIN
+    FLOAT, intent(in) :: DENS(MAXR,NSPIN)
     FLOAT, intent(out) :: DC, DX, EC, EX, V_XC(MAXR,NSPIN)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
