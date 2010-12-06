@@ -1080,14 +1080,14 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-1 x=x+t*g
-  i=i-1
-  y(i)=y(i+1)+x
-  if( y(i)*y(i+1) .lt. M_ZERO) nnode=nnode+1
-  t=h(i)-e*s(i)
-  g=y(i)/(M_ONE-t/CNST(12.))
-  gsg=gsg+g*s(i)*g
-  if(i.gt.knk) go to 1
+  do i = n - 2, knk, -1
+    x=x+t*g
+    y(i)=y(i+1)+x
+    if( y(i)*y(i+1) .lt. M_ZERO) nnode=nnode+1
+    t=h(i)-e*s(i)
+    g=y(i)/(M_ONE-t/CNST(12.))
+    gsg=gsg+g*s(i)*g
+  enddo
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1100,8 +1100,6 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
-  knk=i
 
   POP_SUB(numin)
   end subroutine numin
