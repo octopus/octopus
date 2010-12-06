@@ -253,19 +253,15 @@ contains
   subroutine atomxc( FUNCTL, AUTHOR,                                          &
                      NR, MAXR, RMESH, NSPIN, DENS,                            &
                      EX, EC, DX, DC, V_XC )
-  use global_m
-  use messages_m
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Argument types and dimensions                                               !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  implicit none
-
-  character(len=*) :: FUNCTL, AUTHOR
-  integer :: MAXR, NR, NSPIN
-  FLOAT :: DENS(MAXR,NSPIN), RMESH(MAXR)
-  FLOAT, intent(out) :: DC, DX, EC, EX, V_XC(MAXR,NSPIN)
+    character(len=*) :: FUNCTL, AUTHOR
+    integer :: MAXR, NR, NSPIN
+    FLOAT :: DENS(MAXR,NSPIN), RMESH(MAXR)
+    FLOAT, intent(out) :: DC, DX, EC, EX, V_XC(MAXR,NSPIN)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Internal parameters                                                         !
@@ -273,7 +269,7 @@ contains
 !          points used is 2*NN+1                                              !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  integer, parameter :: NN = 5
+    integer, parameter :: NN = 5
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Fix energy unit:  EUNIT=1.0 => Hartrees,                                    !
@@ -281,230 +277,229 @@ contains
 !                   EUNIT=0.03674903 => eV                                    !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  FLOAT, parameter :: EUNIT = M_HALF
+    FLOAT, parameter :: EUNIT = M_HALF
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! DVMIN is added to differential of volume to avoid division by zero          !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  FLOAT, parameter :: DVMIN = CNST(1.0E-12)
+    FLOAT, parameter :: DVMIN = CNST(1.0E-12)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Local variables and arrays                                                  !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  logical :: GGA
-  integer :: IN, IN1, IN2, IR, IS, JN
-  REAL_DOUBLE :: AUX(MAXR), D(NSPIN),                               &
-     DGDM(-NN:NN), DGIDFJ(-NN:NN), DRDM, DVOL,                      &
-     F1, F2, GD(3,NSPIN), sigma(3), vxsigma(3), vcsigma(3),         &
-     EPSX, EPSC,                                                    &
-     DEXDD(NSPIN), DEXDGD(3,NSPIN), DECDD(NSPIN), DECDGD(3,NSPIN)
-  type(xc_f90_pointer_t) :: x_conf, c_conf
-  type(xc_f90_pointer_t) :: x_info, c_info
+    logical :: GGA
+    integer :: IN, IN1, IN2, IR, IS, JN
+    REAL_DOUBLE :: AUX(MAXR), D(NSPIN),                              &
+      DGDM(-NN:NN), DGIDFJ(-NN:NN), DRDM, DVOL,                      &
+      F1, F2, GD(3,NSPIN), sigma(3), vxsigma(3), vcsigma(3),         &
+      EPSX, EPSC,                                                    &
+      DEXDD(NSPIN), DEXDGD(3,NSPIN), DECDD(NSPIN), DECDGD(3,NSPIN)
+    type(xc_f90_pointer_t) :: x_conf, c_conf
+    type(xc_f90_pointer_t) :: x_info, c_info
 
-  PUSH_SUB(atomxc)
+    PUSH_SUB(atomxc)
 
-  ! sanity check
-  ASSERT(NSPIN==1.or.NSPIN==2)
+    ! sanity check
+    ASSERT(NSPIN==1.or.NSPIN==2)
 
-  ! Set GGA switch
-  IF ( FUNCTL.EQ.'LDA' .OR. FUNCTL.EQ.'lda' .OR.                              &
-     FUNCTL.EQ.'LSD' .OR. FUNCTL.EQ.'lsd' ) THEN
-    GGA = .FALSE.
-  ELSEIF ( FUNCTL.EQ.'GGA' .OR. FUNCTL.EQ.'gga') THEN
-    GGA = .TRUE.
-  ELSE
-    GGA = .FALSE.
-    write(message(1),'(a,a)') 'Error: atomxc: Unknown functional ', FUNCTL
-    call write_fatal(1)
-  ENDIF
-
-  ! initialize xc functional
-  if(GGA) then
-    call xc_f90_func_init(x_conf, x_info, XC_GGA_X_PBE, NSPIN)
-    call xc_f90_func_init(c_conf, c_info, XC_GGA_C_PBE, NSPIN)
-  else
-    call xc_f90_func_init(x_conf, x_info, XC_LDA_X, NSPIN)
-    if(AUTHOR.EQ.'CA' .OR. AUTHOR.EQ.'ca' .OR.                                &
-       AUTHOR.EQ.'PZ' .OR. AUTHOR.EQ.'pz') THEN
-      call xc_f90_func_init(c_conf, c_info, XC_LDA_C_PZ, NSPIN)
-    else IF ( AUTHOR.EQ.'PW92' .OR. AUTHOR.EQ.'pw92' ) THEN
-      call xc_f90_func_init(c_conf, c_info, XC_LDA_C_PW, NSPIN)
-    else
-      write(message(1),'(a,a)') 'Error: LDAXC: Unknown author ', AUTHOR
+    ! Set GGA switch
+    IF ( FUNCTL.EQ.'LDA' .OR. FUNCTL.EQ.'lda' .OR.                              &
+      FUNCTL.EQ.'LSD' .OR. FUNCTL.EQ.'lsd' ) THEN
+      GGA = .FALSE.
+    ELSEIF ( FUNCTL.EQ.'GGA' .OR. FUNCTL.EQ.'gga') THEN
+      GGA = .TRUE.
+    ELSE
+      GGA = .FALSE.
+      write(message(1),'(a,a)') 'Error: atomxc: Unknown functional ', FUNCTL
       call write_fatal(1)
+    ENDIF
+    
+    ! initialize xc functional
+    if(GGA) then
+      call xc_f90_func_init(x_conf, x_info, XC_GGA_X_PBE, NSPIN)
+      call xc_f90_func_init(c_conf, c_info, XC_GGA_C_PBE, NSPIN)
+    else
+      call xc_f90_func_init(x_conf, x_info, XC_LDA_X, NSPIN)
+      if(AUTHOR.EQ.'CA' .OR. AUTHOR.EQ.'ca' .OR.                                &
+        AUTHOR.EQ.'PZ' .OR. AUTHOR.EQ.'pz') THEN
+        call xc_f90_func_init(c_conf, c_info, XC_LDA_C_PZ, NSPIN)
+      else IF ( AUTHOR.EQ.'PW92' .OR. AUTHOR.EQ.'pw92' ) THEN
+        call xc_f90_func_init(c_conf, c_info, XC_LDA_C_PW, NSPIN)
+      else
+        write(message(1),'(a,a)') 'Error: LDAXC: Unknown author ', AUTHOR
+        call write_fatal(1)
+      end if
     end if
-  end if
-
+    
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Initialize output                                                           !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  EX = M_ZERO
-  EC = M_ZERO
-  DX = M_ZERO
-  DC = M_ZERO
-  do IS = 1,NSPIN
-    do IR = 1,NR
-      V_XC(IR,IS) = M_ZERO
+    EX = M_ZERO
+    EC = M_ZERO
+    DX = M_ZERO
+    DC = M_ZERO
+    do IS = 1,NSPIN
+      do IR = 1,NR
+        V_XC(IR,IS) = M_ZERO
+      end do
     end do
-  end do
-
+    
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Loop on mesh points                                                         !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  do IR = 1,NR
+    do IR = 1,NR
     
-    ! Find interval of neighbour points to calculate derivatives
-    IN1 = MAX(  1, IR-NN ) - IR
-    IN2 = MIN( NR, IR+NN ) - IR
-
-    ! Find weights of numerical derivative from Lagrange
-    ! interpolation formula
-    do IN = IN1,IN2
-      if (IN .eq. 0) then
-        DGDM(IN) = 0
-        do JN = IN1,IN2
-          if (JN.ne.0) DGDM(IN) = DGDM(IN) + M_ONE / (0 - JN)
-        end do
-      else
-        F1 = 1
-        F2 = 1
-        do JN = IN1,IN2
-          if (JN.ne.IN .and. JN.ne.0) F1 = F1 * (0  - JN)
-          if (JN.ne.IN)               F2 = F2 * (IN - JN)
-        end do
-        DGDM(IN) = F1 / F2
-      end if
-    end do
-
-    ! Find dr/dmesh
-    DRDM = 0
-    do IN = IN1,IN2
-      DRDM = DRDM + RMESH(IR+IN) * DGDM(IN)
-    end do
-
-    ! Find differential of volume. Use trapezoidal integration rule
-    DVOL = 4 * M_PI * RMESH(IR)**2 * DRDM
-
-    ! DVMIN is a small number added to avoid a division by zero
-    DVOL = DVOL + DVMIN
-    if (IR.eq.1 .or. IR.eq.NR) DVOL = DVOL / 2
-    if (GGA) AUX(IR) = DVOL
-
-    ! Find the weights for the derivative d(gradF(i))/d(F(j)), of
-    ! the gradient at point i with respect to the value at point j
-    if (GGA) then
+      ! Find interval of neighbour points to calculate derivatives
+      IN1 = MAX(  1, IR-NN ) - IR
+      IN2 = MIN( NR, IR+NN ) - IR
+      
+      ! Find weights of numerical derivative from Lagrange
+      ! interpolation formula
       do IN = IN1,IN2
-        DGIDFJ(IN) = DGDM(IN) / DRDM
+        if (IN .eq. 0) then
+          DGDM(IN) = 0
+          do JN = IN1,IN2
+            if (JN.ne.0) DGDM(IN) = DGDM(IN) + M_ONE / (0 - JN)
+          end do
+        else
+          F1 = 1
+          F2 = 1
+          do JN = IN1,IN2
+            if (JN.ne.IN .and. JN.ne.0) F1 = F1 * (0  - JN)
+            if (JN.ne.IN)               F2 = F2 * (IN - JN)
+          end do
+          DGDM(IN) = F1 / F2
+        end if
       end do
-    end if
-
-    ! Find density and gradient of density at this point
-    do IS = 1,NSPIN
-      D(IS) = DENS(IR,IS)
-    end do
-    if (GGA) then
-      do IS = 1,NSPIN
-        GD(:,IS) = M_ZERO
-        do IN = IN1,IN2
-          GD(3,IS) = GD(3,IS) + DGIDFJ(IN) * DENS(IR+IN,IS)
-        end do
+      
+      ! Find dr/dmesh
+      DRDM = 0
+      do IN = IN1,IN2
+        DRDM = DRDM + RMESH(IR+IN) * DGDM(IN)
       end do
-    else
-      GD = M_ZERO
-    end if
-
-    ! The xc_f90_gga routines need as input these combinations of 
-    ! the gradient of the densities.
-    sigma(1) = gd(3, 1)*gd(3, 1)
-    if(NSPIN > 1) then
-      sigma(2) = gd(3, 1) * gd(3, 2)
-      sigma(3) = gd(3, 2) * gd(3, 2)
-    end if
-
-    ! Find exchange and correlation energy densities and their
-    ! derivatives with respect to density and density gradient
-    if (GGA) then
-      call xc_f90_gga_exc_vxc(x_conf, 1, D(1), sigma(1), EPSX, DEXDD(1), vxsigma(1))
-      call xc_f90_gga_exc_vxc(c_conf, 1, D(1), sigma(1), EPSC, DECDD(1), vcsigma(1))
-    else
-      call xc_f90_lda_exc_vxc(x_conf, 1, D(1), EPSX, DEXDD(1))
-      call xc_f90_lda_exc_vxc(c_conf, 1, D(1), EPSC, DECDD(1))
-    end if
-
-    ! The derivatives of the exchange and correlation energies per particle with
-    ! respect to the density gradient have to be recovered from the derivatives
-    ! with respect to the sigma values defined above.
-    if(gga) then
-      dexdgd(:, 1) = M_TWO * vxsigma(1)*gd(:, 1)
-      decdgd(:, 1) = M_TWO * vcsigma(1)*gd(:, 1)
-      if(NSPIN .eq. 2) then
-        dexdgd(:, 1) = dexdgd(:, 1) + vxsigma(2)*gd(:, 2)
-        dexdgd(:, 2) = M_TWO * vxsigma(3)*gd(:, 2) + vxsigma(2)*gd(:, 1)
-        decdgd(:, 1) = decdgd(:, 1) + vcsigma(2)*gd(:, 2)
-        decdgd(:, 2) = M_TWO * vcsigma(3)*gd(:, 2) + vcsigma(2)*gd(:, 1)
-      end if
-    end if
-
-    ! Add contributions to exchange-correlation energy and its
-    ! derivatives with respect to density at all points
-    do is = 1, NSPIN
-      EX = EX + DVOL * D(IS) * EPSX
-      EC = EC + DVOL * D(IS) * EPSC
-      DX = DX + DVOL * D(IS) * (EPSX - DEXDD(IS))
-      DC = DC + DVOL * D(IS) * (EPSC - DECDD(IS))
+      
+      ! Find differential of volume. Use trapezoidal integration rule
+      DVOL = 4 * M_PI * RMESH(IR)**2 * DRDM
+      
+      ! DVMIN is a small number added to avoid a division by zero
+      DVOL = DVOL + DVMIN
+      if (IR.eq.1 .or. IR.eq.NR) DVOL = DVOL / 2
+      if (GGA) AUX(IR) = DVOL
+      
+      ! Find the weights for the derivative d(gradF(i))/d(F(j)), of
+      ! the gradient at point i with respect to the value at point j
       if (GGA) then
-        V_XC(IR,IS) = V_XC(IR,IS) + DVOL * ( DEXDD(IS) + DECDD(IS) )
         do IN = IN1,IN2
-          DX = DX - DVOL * DENS(IR+IN,IS) * DEXDGD(3,IS) * DGIDFJ(IN)
-          DC = DC - DVOL * DENS(IR+IN,IS) * DECDGD(3,IS) * DGIDFJ(IN)
-          V_XC(IR+IN,IS) = V_XC(IR+IN,IS) + DVOL *                         &
-            (DEXDGD(3,IS) + DECDGD(3,IS)) * DGIDFJ(IN)
+          DGIDFJ(IN) = DGDM(IN) / DRDM
+        end do
+      end if
+      
+      ! Find density and gradient of density at this point
+      do IS = 1,NSPIN
+        D(IS) = DENS(IR,IS)
+      end do
+      if (GGA) then
+        do IS = 1,NSPIN
+          GD(:,IS) = M_ZERO
+          do IN = IN1,IN2
+            GD(3,IS) = GD(3,IS) + DGIDFJ(IN) * DENS(IR+IN,IS)
+          end do
         end do
       else
-        V_XC(IR,IS) = DEXDD(IS) + DECDD(IS)
+        GD = M_ZERO
       end if
+      
+      ! The xc_f90_gga routines need as input these combinations of 
+      ! the gradient of the densities.
+      sigma(1) = gd(3, 1)*gd(3, 1)
+      if(NSPIN > 1) then
+        sigma(2) = gd(3, 1) * gd(3, 2)
+        sigma(3) = gd(3, 2) * gd(3, 2)
+      end if
+      
+      ! Find exchange and correlation energy densities and their
+      ! derivatives with respect to density and density gradient
+      if (GGA) then
+        call xc_f90_gga_exc_vxc(x_conf, 1, D(1), sigma(1), EPSX, DEXDD(1), vxsigma(1))
+        call xc_f90_gga_exc_vxc(c_conf, 1, D(1), sigma(1), EPSC, DECDD(1), vcsigma(1))
+      else
+        call xc_f90_lda_exc_vxc(x_conf, 1, D(1), EPSX, DEXDD(1))
+        call xc_f90_lda_exc_vxc(c_conf, 1, D(1), EPSC, DECDD(1))
+      end if
+      
+      ! The derivatives of the exchange and correlation energies per particle with
+      ! respect to the density gradient have to be recovered from the derivatives
+      ! with respect to the sigma values defined above.
+      if(gga) then
+        dexdgd(:, 1) = M_TWO * vxsigma(1)*gd(:, 1)
+        decdgd(:, 1) = M_TWO * vcsigma(1)*gd(:, 1)
+        if(NSPIN .eq. 2) then
+          dexdgd(:, 1) = dexdgd(:, 1) + vxsigma(2)*gd(:, 2)
+          dexdgd(:, 2) = M_TWO * vxsigma(3)*gd(:, 2) + vxsigma(2)*gd(:, 1)
+          decdgd(:, 1) = decdgd(:, 1) + vcsigma(2)*gd(:, 2)
+          decdgd(:, 2) = M_TWO * vcsigma(3)*gd(:, 2) + vcsigma(2)*gd(:, 1)
+        end if
+      end if
+      
+      ! Add contributions to exchange-correlation energy and its
+      ! derivatives with respect to density at all points
+      do is = 1, NSPIN
+        EX = EX + DVOL * D(IS) * EPSX
+        EC = EC + DVOL * D(IS) * EPSC
+        DX = DX + DVOL * D(IS) * (EPSX - DEXDD(IS))
+        DC = DC + DVOL * D(IS) * (EPSC - DECDD(IS))
+        if (GGA) then
+          V_XC(IR,IS) = V_XC(IR,IS) + DVOL * ( DEXDD(IS) + DECDD(IS) )
+          do IN = IN1,IN2
+            DX = DX - DVOL * DENS(IR+IN,IS) * DEXDGD(3,IS) * DGIDFJ(IN)
+            DC = DC - DVOL * DENS(IR+IN,IS) * DECDGD(3,IS) * DGIDFJ(IN)
+            V_XC(IR+IN,IS) = V_XC(IR+IN,IS) + DVOL *                         &
+              (DEXDGD(3,IS) + DECDGD(3,IS)) * DGIDFJ(IN)
+          end do
+        else
+          V_XC(IR,IS) = DEXDD(IS) + DECDD(IS)
+        end if
+      end do
+      
     end do
 
-  end do
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Divide by volume element to obtain the potential (per electron)             !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    
+    if(GGA) then
+      do IS = 1,NSPIN
+        do IR = 1,NR
+          DVOL = AUX(IR)
+          V_XC(IR,IS) = V_XC(IR,IS) / DVOL
+        end do
+      end do
+    end if
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! Divide by volume element to obtain the potential (per electron)             !
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Divide by energy unit                                                       !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  if(GGA) then
+    EX = EX / EUNIT
+    EC = EC / EUNIT
+    DX = DX / EUNIT
+    DC = DC / EUNIT
     do IS = 1,NSPIN
       do IR = 1,NR
-        DVOL = AUX(IR)
-        V_XC(IR,IS) = V_XC(IR,IS) / DVOL
+        V_XC(IR,IS) = V_XC(IR,IS) / EUNIT
       end do
     end do
-  end if
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! Divide by energy unit                                                       !
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-  EX = EX / EUNIT
-  EC = EC / EUNIT
-  DX = DX / EUNIT
-  DC = DC / EUNIT
-  do IS = 1,NSPIN
-    do IR = 1,NR
-      V_XC(IR,IS) = V_XC(IR,IS) / EUNIT
-    end do
-  end do
-
-  call xc_f90_func_end(x_conf)
-  call xc_f90_func_end(c_conf)
-
-  POP_SUB(atomxc)
-end subroutine atomxc
-
-
+    call xc_f90_func_end(x_conf)
+    call xc_f90_func_end(c_conf)
+    
+    POP_SUB(atomxc)
+  end subroutine atomxc
+  
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !   VHRTRE CONSTRUCTS THE ELECTROSTATIC POTENTIAL DUE TO A SUPPLIED           !
@@ -525,23 +520,23 @@ end subroutine atomxc
 !     SRDRDI.SQRT(DR/DI)                                                      !
 !      A......THE PARAMETER APPEARING IN R(I) = B*(EXP(A(I-1))-1)             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
-  FLOAT,   intent(in)  :: rho(:), r(:), drdi(:), srdrdi(:)
-  FLOAT,   intent(in)  :: a
-  FLOAT,   intent(out) :: v(:)
-  integer, intent(in)  :: nr
-
-  FLOAT :: x,y,q,a2by4,ybyq,qbyy,qpartc,v0,qt,dz,t,beta,dv
-  integer :: nrm1,nrm2,ir
-
-  PUSH_SUB(vhrtre)
-
-  NRM1 = NR - 1
-  NRM2 = NR - 2
-  A2BY4 = A*A/M_FOUR
-  YBYQ = M_ONE - A*A/CNST(48.0)
-  QBYY = M_ONE/YBYQ
-
+  subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
+    FLOAT,   intent(in)  :: rho(:), r(:), drdi(:), srdrdi(:)
+    FLOAT,   intent(in)  :: a
+    FLOAT,   intent(out) :: v(:)
+    integer, intent(in)  :: nr
+    
+    FLOAT :: x,y,q,a2by4,ybyq,qbyy,qpartc,v0,qt,dz,t,beta,dv
+    integer :: nrm1,nrm2,ir
+    
+    PUSH_SUB(vhrtre)
+    
+    NRM1 = NR - 1
+    NRM2 = NR - 2
+    A2BY4 = A*A/M_FOUR
+    YBYQ = M_ONE - A*A/CNST(48.0)
+    QBYY = M_ONE/YBYQ
+    
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  SIMPSON`S RULE IS USED TO PERFORM TWO INTEGRALS OVER THE ELECTRON          !
 !  DENSITY.  THE TOTAL CHARGE QT IS USED TO FIX THE POTENTIAL AT R=R(NR)      !
@@ -551,24 +546,24 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  trapezoidal rule for integration). A. Rubio. Jan. 2000                     !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  V0 = M_ZERO
-  QT = M_ZERO
-  do IR = 2, NRM1, 2
-    DZ = DRDI(IR)*RHO(IR)
-    QT = QT + DZ
-    V0 = V0 + DZ/R(IR)
-  end do
-
-  do IR=3, NRM2, 2
-    DZ = DRDI(IR)*RHO(IR)
-    QT = QT + DZ
-    V0 = V0 + DZ/R(IR)
-  end do
-  DZ = DRDI(NR)*RHO(NR)
-
-  QT = (QT + QT + DZ)*M_HALF
-  V0 = (V0 + V0 + DZ/R(NR))
-  V(1) = M_TWO*V0
+    V0 = M_ZERO
+    QT = M_ZERO
+    do IR = 2, NRM1, 2
+      DZ = DRDI(IR)*RHO(IR)
+      QT = QT + DZ
+      V0 = V0 + DZ/R(IR)
+    end do
+    
+    do IR=3, NRM2, 2
+      DZ = DRDI(IR)*RHO(IR)
+      QT = QT + DZ
+      V0 = V0 + DZ/R(IR)
+    end do
+    DZ = DRDI(NR)*RHO(NR)
+    
+    QT = (QT + QT + DZ)*M_HALF
+    V0 = (V0 + V0 + DZ/R(NR))
+    V(1) = M_TWO*V0
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  THE ELECTROSTATIC POTENTIAL AT R=0 IS SET EQUAL TO                         !
@@ -576,10 +571,10 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  BEGIN CONSTRUCTION OF THE POTENTIAL AT FINITE                              !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  IR   = 2
-  T    = SRDRDI(IR)/R(IR)
-  BETA = DRDI(IR)*T*RHO(IR)
-
+    IR   = 2
+    T    = SRDRDI(IR)/R(IR)
+    BETA = DRDI(IR)*T*RHO(IR)
+    
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  THE NEXT 4 STATEMENTS INDICATE THAT WE FIRST FIND THE PARTICULAR           !
 !  SOLUTION TO THE INHOMOGENEOUS EQN. FOR WHICH Q(2)=0, WE THEN               !
@@ -594,23 +589,23 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  REQUIRED TO START THE NUMEROV PROCEDURE.                                   !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  X = M_ZERO
-  Y = M_ZERO
-  Q = (Y - BETA/CNST(12.0))*QBYY
-  V(IR) = M_TWO*T*Q
+    X = M_ZERO
+    Y = M_ZERO
+    Q = (Y - BETA/CNST(12.0))*QBYY
+    V(IR) = M_TWO*T*Q
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  BEGINNING OF THE NUMEROV ALGORITHM                                         !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  do IR = 2, NR
-    X  = X + A2BY4*Q - BETA
-    Y  = Y + X
-    T  = SRDRDI(IR)/R(IR)
-    BETA = T*DRDI(IR)*RHO(IR)
-    Q = (Y-BETA/CNST(12.0))*QBYY
-    V(IR) = M_TWO*T*Q
-  enddo
+    do IR = 2, NR
+      X  = X + A2BY4*Q - BETA
+      Y  = Y + X
+      T  = SRDRDI(IR)/R(IR)
+      BETA = T*DRDI(IR)*RHO(IR)
+      Q = (Y-BETA/CNST(12.0))*QBYY
+      V(IR) = M_TWO*T*Q
+    enddo
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  END OF THE NUMEROV ALGORITHM                                               !
@@ -621,9 +616,9 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  VANISH AT THE ORIGIN.                                                      !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  QPARTC = R(NR)*V(NR)/M_TWO
-  DZ = QT - QPARTC
-  DV = M_TWO*DZ/R(NR)
+    QPARTC = R(NR)*V(NR)/M_TWO
+    DZ = QT - QPARTC
+    DV = M_TWO*DZ/R(NR)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  THE LOOP FOLLOWING ADDS THE CONSTANT SOLUTION OF THE HOMOGENEOUS           !
@@ -631,11 +626,11 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  NOTE THAT V(1) IS CONSTRUCTED INDEPENDENTLY                                !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  do IR = 2, NR
-    V(IR) = V(IR) + DV
-  end do
+    do IR = 2, NR
+      V(IR) = V(IR) + DV
+    end do
 
-  POP_SUB(vhrtre)
+    POP_SUB(vhrtre)
   end subroutine vhrtre
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -664,24 +659,23 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine egofv(h,s,n,e,g,y,l,z,a,b,rmax,nprin,nnode,dr,ierr)
 
-  REAL_DOUBLE :: a, b, e, z, rmax, dr
-  integer :: i,n,l,nprin,nnode,ncor,n1,n2,niter,nt
-  integer, intent(out) :: ierr
-
-
-  REAL_DOUBLE, dimension(n) :: h, s, g, y
-  REAL_DOUBLE               :: e1, e2, del, de, et, t
-  REAL_DOUBLE, parameter    :: tol = CNST(1.0e-5)
-
-  PUSH_SUB(egofv)
-
-  ncor=nprin-l-1
-  n1=nnode
-  n2=nnode-1
-  e1=e
-  e2=e
-  ierr = 0
-
+    REAL_DOUBLE :: a, b, e, z, rmax, dr
+    integer :: i,n,l,nprin,nnode,ncor,n1,n2,niter,nt
+    integer, intent(out) :: ierr
+    
+    REAL_DOUBLE, dimension(n) :: h, s, g, y
+    REAL_DOUBLE               :: e1, e2, del, de, et, t
+    REAL_DOUBLE, parameter    :: tol = CNST(1.0e-5)
+    
+    PUSH_SUB(egofv)
+    
+    ncor=nprin-l-1
+    n1=nnode
+    n2=nnode-1
+    e1=e
+    e2=e
+    ierr = 0
+    
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
 !  the labels 1 and 2 refer to the bisection process, defining the            !
@@ -692,19 +686,19 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  nt = 0
-  del = M_HALF
-  de  = M_ZERO
-  niter = 0
-1 niter = niter + 1
-  if(niter.gt.40) then
-    ierr = 1
-    POP_SUB(egofv)
-    return
-  endif
-  et = e + de
+    nt = 0
+    del = M_HALF
+    de  = M_ZERO
+    niter = 0
+1   niter = niter + 1
+    if(niter.gt.40) then
+      ierr = 1
+      POP_SUB(egofv)
+      return
+    endif
+    et = e + de
 ! the following line is the fundamental "bisection"
-  e = M_HALF*(e1+e2)
+    e = M_HALF*(e1+e2)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
@@ -723,14 +717,11 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-  if(.not. (et.le.e1 .or. et.ge.e2 .or. nt.lt.nnode-1 .or. nt.gt.nnode)) then
-    e=et
-    if(abs(de).lt.tol) go to 6
-  endif
-  call yofe(e,de,dr,rmax,h,s,y,n,l,ncor,nt,z,a,b)
-!     write(6,101) l,dr,n1,nt,nnode,n2,e1,e,e2,de
-!101  format('  l     dr     n1  nt   n  n2       e1           e', &
-!           '          e2          de'/i3,d10.3,4i4,4f12.5)
+    if(.not. (et.le.e1 .or. et.ge.e2 .or. nt.lt.nnode-1 .or. nt.gt.nnode)) then
+      e=et
+      if(abs(de).lt.tol) go to 6
+    endif
+    call yofe(e,de,dr,rmax,h,s,y,n,l,ncor,nt,z,a,b)
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -739,10 +730,10 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  if(nt.ge.nnode) go to 5
-!  too few nodes; set e1 and n1
-  e1=e
-  n1=nt
+    if(nt.ge.nnode) go to 5
+    !  too few nodes; set e1 and n1
+    e1=e
+    n1=nt
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
@@ -753,14 +744,14 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  if(n2.ge.nnode) go to 1
-  del=del*M_TWO
-  e2=e1+del
-  go to 1
-!  too many nodes; set e2 and n2
-5 e2=e
-  n2=nt
-
+    if(n2.ge.nnode) go to 1
+    del=del*M_TWO
+    e2=e1+del
+    go to 1
+    !  too many nodes; set e2 and n2
+5   e2=e
+    n2=nt
+    
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
@@ -771,11 +762,11 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  if(n1.lt.nnode) go to 1
-  del=del*M_TWO
-  e1=e2-del
-  go to 1
-
+    if(n1.lt.nnode) go to 1
+    del=del*M_TWO
+    e1=e2-del
+    go to 1
+    
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
@@ -786,14 +777,14 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-6 g(1) = M_ZERO
-  do i = 2, n
-    t=h(i)-e*s(i)
-    g(i)=y(i)/(M_ONE-t/CNST(12.))
-  enddo
-  call nrmlzg(g,s,n)
-
-  POP_SUB(egofv)
+6   g(1) = M_ZERO
+    do i = 2, n
+      t=h(i)-e*s(i)
+      g(i)=y(i)/(M_ONE-t/CNST(12.))
+    enddo
+    call nrmlzg(g,s,n)
+    
+    POP_SUB(egofv)
   end subroutine egofv
 
 
@@ -818,23 +809,23 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !       a and b specify the radial mesh r(i)=(exp(a*(i-1))-1)*b               !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  REAL_DOUBLE :: e, de, dr, rmax, z, a, b, y2, g, gsg, x, gin, gsgin, xin
-  integer :: nmax,l,ncor,nnode,n,knk,nndin,i
-  REAL_DOUBLE :: h(nmax), s(nmax), y(nmax), zdr, yn, ratio, t
-
-  PUSH_SUB(yofe)
-
-  zdr = z*a*b
-
-  do n = nmax, 1, -1
-    if( h(n)-e*s(n) .lt. M_ONE ) then
-      knk = n
-      exit
-    endif
-    y(n)=M_ZERO
-  enddo
-
-  call bcorgn(e,h,s,l,zdr,y2)
+    REAL_DOUBLE :: e, de, dr, rmax, z, a, b, y2, g, gsg, x, gin, gsgin, xin
+    integer :: nmax,l,ncor,nnode,n,knk,nndin,i
+    REAL_DOUBLE :: h(nmax), s(nmax), y(nmax), zdr, yn, ratio, t
+    
+    PUSH_SUB(yofe)
+    
+    zdr = z*a*b
+    
+    do n = nmax, 1, -1
+      if( h(n)-e*s(n) .lt. M_ONE ) then
+        knk = n
+        exit
+      endif
+      y(n)=M_ZERO
+    enddo
+    
+    call bcorgn(e,h,s,l,zdr,y2)
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -843,7 +834,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  satisfied by the radial wavefunction at the origin                         !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  call numout(e,h,s,y,ncor,knk,nnode,y2,g,gsg,x)
+    call numout(e,h,s,y,ncor,knk,nnode,y2,g,gsg,x)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
@@ -856,10 +847,10 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-  yn = M_ZERO
-  if(.not. (n.lt.nmax .or. abs(dr).gt.CNST(1.e3))) then
-    call bcrmax(e,dr,rmax,h,s,n,yn,a,b)
-  endif
+    yn = M_ZERO
+    if(.not. (n.lt.nmax .or. abs(dr).gt.CNST(1.e3))) then
+      call bcrmax(e,dr,rmax,h,s,n,yn,a,b)
+    endif
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -870,7 +861,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-  call numin(e,h,s,y,n,nndin,yn,gin,gsgin,xin,knk)
+    call numin(e,h,s,y,n,nndin,yn,gin,gsgin,xin,knk)
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -882,22 +873,20 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-  ratio = g/gin
-  xin=xin*ratio
-  gsg=gsg+gsgin*ratio*ratio
-  t=h(knk)-e*s(knk)
-  de=g*(x+xin+t*g)/gsg
-  nnode=nnode+nndin
-  if(de.lt.M_ZERO) nnode=nnode+1
+    ratio = g/gin
+    xin=xin*ratio
+    gsg=gsg+gsgin*ratio*ratio
+    t=h(knk)-e*s(knk)
+    de=g*(x+xin+t*g)/gsg
+    nnode=nnode+nndin
+    if(de.lt.M_ZERO) nnode=nnode+1
+    
+    do i=knk,n
+      y(i) = y(i)*ratio
+    enddo
 
-  do i=knk,n
-    y(i) = y(i)*ratio
-  enddo
-
-  POP_SUB(yofe)
+    POP_SUB(yofe)
   end subroutine yofe
-
-
 
 
   subroutine nrmlzg(g,s,n)
@@ -923,57 +912,57 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !             (dr/di = a*b at the origin)                                     !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  REAL_DOUBLE s(:), g(:), norm, srnrm
-  integer :: n,nm1,nm2,i
-
-  PUSH_SUB(nrmlzg)
+    REAL_DOUBLE s(:), g(:), norm, srnrm
+    integer :: n,nm1,nm2,i
+    
+    PUSH_SUB(nrmlzg)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  determine the norm of g(i) using Simpson`s rule                            !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-  if (mod(n,2).ne.1) write(6,*) ' nrmlzg: n should be odd. n =',n
-  norm = M_ZERO
-  nm1 = n - 1
-  do i = 2,nm1,2
-    norm=norm + g(i)*s(i)*g(i)
-  enddo
-  norm = norm * M_TWO
-  nm2  = n - 2
-  do i = 3,nm2,2
-    norm=norm + g(i)*s(i)*g(i)
-  enddo
-  norm = norm * M_TWO
-  nm2  = n - 2
-  do i = 1,n,nm1
-    norm=norm + g(i)*s(i)*g(i)
-  enddo
-  norm = norm/M_THREE
-  srnrm = sqrt(norm)
-  do i=1,n
-    g(i) = g(i)/srnrm
-  enddo
-
-  POP_SUB(nrmlzg)
+    if (mod(n,2).ne.1) write(6,*) ' nrmlzg: n should be odd. n =',n
+    norm = M_ZERO
+    nm1 = n - 1
+    do i = 2,nm1,2
+      norm=norm + g(i)*s(i)*g(i)
+    enddo
+    norm = norm * M_TWO
+    nm2  = n - 2
+    do i = 3,nm2,2
+      norm=norm + g(i)*s(i)*g(i)
+    enddo
+    norm = norm * M_TWO
+    nm2  = n - 2
+    do i = 1,n,nm1
+      norm=norm + g(i)*s(i)*g(i)
+    enddo
+    norm = norm/M_THREE
+    srnrm = sqrt(norm)
+    do i=1,n
+      g(i) = g(i)/srnrm
+    enddo
+    
+    POP_SUB(nrmlzg)
   end subroutine nrmlzg
 
 
   subroutine bcorgn(e,h,s,l,zdr,y2)
 
-  REAL_DOUBLE :: e, zdr, y2
-  REAL_DOUBLE :: h(:), s(:), t2, t3, d2, c0, c1, c2
-  integer :: l
-
-  PUSH_SUB(bcorgn)
+    REAL_DOUBLE :: e, zdr, y2
+    REAL_DOUBLE :: h(:), s(:), t2, t3, d2, c0, c1, c2
+    integer :: l
+    
+    PUSH_SUB(bcorgn)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !   the quantity called d(i) in the program is actually the inverse           !
 !   of the diagonal of the tri-diagonal Numerov matrix                        !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  t2=h(2)-e*s(2)
-  d2=-((CNST(24.)+M_TEN*t2)/(CNST(12.)-t2))
-
+    t2=h(2)-e*s(2)
+    d2=-((CNST(24.)+M_TEN*t2)/(CNST(12.)-t2))
+    
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  The following section deals with the fact that the independent             !
 !  variable "y" in the Numerov equation is not zero at the origin             !
@@ -985,37 +974,36 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  g and its first two derivatives vanish, making y zero.                     !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  if(l.ge.2) goto 3
-  if(l.gt.0) goto 1
-  c0=zdr/M_SIX
-  c0=c0/(M_ONE-CNST(0.75)*zdr)
-  goto 2
-1 c0=M_ONE/CNST(12.)
-  c0=(-c0)*M_EIGHT/M_THREE
-2 c1=c0*(CNST(12.)+CNST(13.)*t2)/(CNST(12.)-t2)
-  t3=h(3)-e*s(3)
-  c2=(-M_HALF)*c0*(CNST(24.)-t3)/(CNST(12.)-t3)
-  d2=(d2-c1)/(M_ONE-c2)
-3 y2=(-M_ONE)/d2
-
-  if(l .lt. 2) then
-    if(l .le. 0) then
-      c0=zdr/M_SIX
-      c0=c0/(M_ONE-CNST(0.75)*zdr)
-    else
-      c0=M_ONE/CNST(12.)
-      c0=(-c0)*M_EIGHT/M_THREE
-    endif
-    c1=c0*(CNST(12.)+CNST(13.)*t2)/(CNST(12.)-t2)
+    if(l.ge.2) goto 3
+    if(l.gt.0) goto 1
+    c0=zdr/M_SIX
+    c0=c0/(M_ONE-CNST(0.75)*zdr)
+    goto 2
+1   c0=M_ONE/CNST(12.)
+    c0=(-c0)*M_EIGHT/M_THREE
+2   c1=c0*(CNST(12.)+CNST(13.)*t2)/(CNST(12.)-t2)
     t3=h(3)-e*s(3)
     c2=(-M_HALF)*c0*(CNST(24.)-t3)/(CNST(12.)-t3)
     d2=(d2-c1)/(M_ONE-c2)
-  endif
-  y2=(-M_ONE)/d2
-
-  POP_SUB(bcorgn)
+3   y2=(-M_ONE)/d2
+    
+    if(l .lt. 2) then
+      if(l .le. 0) then
+        c0=zdr/M_SIX
+        c0=c0/(M_ONE-CNST(0.75)*zdr)
+      else
+        c0=M_ONE/CNST(12.)
+        c0=(-c0)*M_EIGHT/M_THREE
+      endif
+      c1=c0*(CNST(12.)+CNST(13.)*t2)/(CNST(12.)-t2)
+      t3=h(3)-e*s(3)
+      c2=(-M_HALF)*c0*(CNST(24.)-t3)/(CNST(12.)-t3)
+      d2=(d2-c1)/(M_ONE-c2)
+    endif
+    y2=(-M_ONE)/d2
+    
+    POP_SUB(bcorgn)
   end subroutine bcorgn
-
 
 
   subroutine bcrmax(e,dr,rmax,h,s,n,yn,a,b)
@@ -1025,53 +1013,49 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 ! 22.7.85                                                                     !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  REAL_DOUBLE  h(*),s(*),                                                          &
-   e,dr,rmax,yn,a,b,tnm1,tn,tnp1,beta,dg,c1,c2,c3,dn
-  integer :: n
-
-  PUSH_SUB(bcrmax)
-
-!     write(6,*) 'bcrmax:',dr
-  tnm1=h(n-1)-e*s(n-1)
-  tn  =h(n  )-e*s(n  )
-  tnp1=h(n+1)-e*s(n+1)
-  beta=M_ONE+b/rmax
-  dg=a*beta*(dr+M_ONE-M_HALF/beta)
-
-
-  c2=CNST(24.)*dg/(CNST(12.)-tn)
-  dn=-((CNST(24.)+CNST(10.)*tn)/(CNST(12.)-tn))
-
-  c1= (M_ONE-tnm1/M_SIX)/(M_ONE-tnm1/CNST(12.))
-  c3=-((M_ONE-tnp1/M_SIX)/(M_ONE-tnp1/CNST(12.)))
-  yn=-((M_ONE-c1/c3)/(dn-c2/c3))
-
-  POP_SUB(bcrmax)
-
+    REAL_DOUBLE  h(*),s(*),e,dr,rmax,yn,a,b,tnm1,tn,tnp1,beta,dg,c1,c2,c3,dn
+    integer :: n
+    
+    PUSH_SUB(bcrmax)
+    
+    tnm1=h(n-1)-e*s(n-1)
+    tn  =h(n  )-e*s(n  )
+    tnp1=h(n+1)-e*s(n+1)
+    beta=M_ONE+b/rmax
+    dg=a*beta*(dr+M_ONE-M_HALF/beta)
+    
+    c2=CNST(24.)*dg/(CNST(12.)-tn)
+    dn=-((CNST(24.)+CNST(10.)*tn)/(CNST(12.)-tn))
+    
+    c1= (M_ONE-tnm1/M_SIX)/(M_ONE-tnm1/CNST(12.))
+    c3=-((M_ONE-tnp1/M_SIX)/(M_ONE-tnp1/CNST(12.)))
+    yn=-((M_ONE-c1/c3)/(dn-c2/c3))
+    
+    POP_SUB(bcrmax)
+    
   end subroutine bcrmax
-
 
 
   subroutine numin(e,h,s,y,n,nnode,yn,g,gsg,x,knk)
 
-  REAL_DOUBLE :: e, yn, g, gsg, x
-  integer :: i,n,nnode,knk
-  REAL_DOUBLE :: h(n),s(n),y(n),t
-
-  PUSH_SUB(numin)
-
-  y(n)=yn
-  t=h(n)-e*s(n)
-  g=y(n)/(M_ONE-t/CNST(12.))
-  gsg=g*s(n)*g
-  i=n-1
-  y(i)=M_ONE
-  t=h(i)-e*s(i)
-  g=y(i)/(M_ONE-t/CNST(12.))
-  gsg=gsg+g*s(i)*g
-  x=y(i)-y(n)
-  nnode=0
-
+    REAL_DOUBLE :: e, yn, g, gsg, x
+    integer :: i,n,nnode,knk
+    REAL_DOUBLE :: h(n),s(n),y(n),t
+    
+    PUSH_SUB(numin)
+    
+    y(n)=yn
+    t=h(n)-e*s(n)
+    g=y(n)/(M_ONE-t/CNST(12.))
+    gsg=g*s(n)*g
+    i=n-1
+    y(i)=M_ONE
+    t=h(i)-e*s(i)
+    g=y(i)/(M_ONE-t/CNST(12.))
+    gsg=gsg+g*s(i)*g
+    x=y(i)-y(n)
+    nnode=0
+    
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
@@ -1080,14 +1064,14 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-  do i = n - 2, knk, -1
-    x=x+t*g
-    y(i)=y(i+1)+x
-    if( y(i)*y(i+1) .lt. M_ZERO) nnode=nnode+1
-    t=h(i)-e*s(i)
-    g=y(i)/(M_ONE-t/CNST(12.))
-    gsg=gsg+g*s(i)*g
-  enddo
+    do i = n - 2, knk, -1
+      x=x+t*g
+      y(i)=y(i+1)+x
+      if( y(i)*y(i+1) .lt. M_ZERO) nnode=nnode+1
+      t=h(i)-e*s(i)
+      g=y(i)/(M_ONE-t/CNST(12.))
+      gsg=gsg+g*s(i)*g
+    enddo
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1101,58 +1085,58 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-  POP_SUB(numin)
+    POP_SUB(numin)
   end subroutine numin
 
 
   subroutine numout(e,h,s,y,ncor,knk,nnode,y2,g,gsg,x)
 
-  REAL_DOUBLE :: e, y2, g, gsg, x
-  integer :: ncor,nnode,knk,i,nm4
-  REAL_DOUBLE :: h(knk),s(knk),y(knk),t,xl
-
-  PUSH_SUB(numout)
-  
-  y(1)=M_ZERO
-  y(2)=y2
-  t=h(2)-e*s(2)
-  g=y(2)/(M_ONE-t/CNST(12.))
-  gsg=g*s(2)*g
-  y(3)=M_ONE
-  t=h(3)-e*s(3)
-  g=y(3)/(M_ONE-t/CNST(12.))
-  gsg=gsg+g*s(3)*g
-  x=y(3)-y(2)
-  nnode=0
-
+    REAL_DOUBLE :: e, y2, g, gsg, x
+    integer :: ncor,nnode,knk,i,nm4
+    REAL_DOUBLE :: h(knk),s(knk),y(knk),t,xl
+    
+    PUSH_SUB(numout)
+    
+    y(1)=M_ZERO
+    y(2)=y2
+    t=h(2)-e*s(2)
+    g=y(2)/(M_ONE-t/CNST(12.))
+    gsg=g*s(2)*g
+    y(3)=M_ONE
+    t=h(3)-e*s(3)
+    g=y(3)/(M_ONE-t/CNST(12.))
+    gsg=gsg+g*s(3)*g
+    x=y(3)-y(2)
+    nnode=0
+    
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
 !  begin the outward integration by the Numerov method                        !
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  nm4=knk-4
-  knk = nm4
-  do i = 4, nm4
-  xl=x
-  x=x+t*g
-  y(i)=y(i-1)+x
-  if( y(i)*y(i-1) .lt. M_ZERO) nnode=nnode+1
-  t=h(i)-e*s(i)
-  g=y(i)/(M_ONE-t/CNST(12.))
-  gsg=gsg+g*s(i)*g
-  if(.not. (nnode.lt.ncor .or. xl*x.gt.M_ZERO)) then
-    knk = i
-    exit
-  endif
-  enddo
+    nm4=knk-4
+    knk = nm4
+    do i = 4, nm4
+      xl=x
+      x=x+t*g
+      y(i)=y(i-1)+x
+      if( y(i)*y(i-1) .lt. M_ZERO) nnode=nnode+1
+      t=h(i)-e*s(i)
+      g=y(i)/(M_ONE-t/CNST(12.))
+      gsg=gsg+g*s(i)*g
+      if(.not. (nnode.lt.ncor .or. xl*x.gt.M_ZERO)) then
+        knk = i
+        exit
+      endif
+    enddo
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
 !  the outward integration is now complete                                    !
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  POP_SUB(numout)
+    POP_SUB(numout)
   end subroutine numout
 
 end module atomic_m
