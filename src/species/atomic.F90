@@ -1123,7 +1123,6 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   g=y(3)/(M_ONE-t/CNST(12.))
   gsg=gsg+g*s(3)*g
   x=y(3)-y(2)
-  i=3
   nnode=0
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1133,20 +1132,20 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   nm4=knk-4
-1 xl=x
+  knk = nm4
+  do i = 4, nm4
+  xl=x
   x=x+t*g
-  i=i+1
   y(i)=y(i-1)+x
-!     write(6,300) i,y(i),x,t,h(i),s(i)
-!300  format(i5,5d14.5)
   if( y(i)*y(i-1) .lt. M_ZERO) nnode=nnode+1
   t=h(i)-e*s(i)
   g=y(i)/(M_ONE-t/CNST(12.))
   gsg=gsg+g*s(i)*g
-  if(i.eq.nm4) go to 2
-  if(nnode.lt.ncor) go to 1
-  if(xl*x.gt.M_ZERO) go to 1
-2 knk=i
+  if(.not. (nnode.lt.ncor .or. xl*x.gt.M_ZERO)) then
+    knk = i
+    exit
+  endif
+  enddo
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
