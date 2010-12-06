@@ -697,7 +697,11 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   de  = M_ZERO
   niter = 0
 1 niter = niter + 1
-  if(niter.gt.40) go to 3
+  if(niter.gt.40) then
+    ierr = 1
+    POP_SUB(egofv)
+    return
+  endif
   et = e + de
 ! the following line is the fundamental "bisection"
   e = M_HALF*(e1+e2)
@@ -788,12 +792,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
     g(i)=y(i)/(M_ONE-t/CNST(12.))
   enddo
   call nrmlzg(g,s,n)
-  POP_SUB(egofv)
-  return
-3 ierr = 1
 
   POP_SUB(egofv)
-  
   end subroutine egofv
 
 
@@ -843,7 +843,6 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  satisfied by the radial wavefunction at the origin                         !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  knk=n
   call numout(e,h,s,y,ncor,knk,nnode,y2,g,gsg,x)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
