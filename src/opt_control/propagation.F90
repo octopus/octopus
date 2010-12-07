@@ -172,7 +172,11 @@ module opt_control_propagation_m
           sys%geo%atom(iatom)%v(1:MAX_DIM) = M_ZERO
           x_initial(iatom,1:MAX_DIM) = sys%geo%atom(iatom)%x(1:MAX_DIM)
        end do
-       if(target_move_ions(target)) move_ions_ = .true.
+       if(target_move_ions(target)) then
+         move_ions_ = .true.
+       else
+         call epot_precalc_local_potential(hm%ep, sys%gr, sys%geo, time = M_ZERO)
+       end if
     end if
 
     call target_tdcalc(target, gr, psi, 0)
