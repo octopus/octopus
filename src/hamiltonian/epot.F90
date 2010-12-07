@@ -815,6 +815,7 @@ contains
 
     ep%local_potential_precalculated = .true.
 
+    SAFE_DEALLOCATE_A(tmp)
     POP_SUB(epot_precalc_local_potential)
   end subroutine epot_precalc_local_potential
 
