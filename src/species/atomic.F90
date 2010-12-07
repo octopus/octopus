@@ -683,7 +683,7 @@ contains
     n2=nnode-1
     e1=e
     e2=e
-    ierr = 0
+    ierr = 1
     
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
@@ -698,16 +698,12 @@ contains
     nt = 0
     del = M_HALF
     de  = M_ZERO
-    niter = 0
-1   niter = niter + 1
-    if(niter.gt.40) then
-      ierr = 1
-      POP_SUB(egofv)
-      return
-    endif
-    et = e + de
-! the following line is the fundamental "bisection"
-    e = M_HALF*(e1+e2)
+
+    do niter = 0, 40
+
+      et = e + de
+      ! the following line is the fundamental "bisection"
+      e = M_HALF*(e1+e2)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
@@ -726,11 +722,14 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-    if(.not. (et.le.e1 .or. et.ge.e2 .or. nt.lt.nnode-1 .or. nt.gt.nnode)) then
-      e=et
-      if(abs(de).lt.tol) go to 6
-    endif
-    call yofe(e,de,dr,rmax,h,s,y,n,l,ncor,nt,z,a,b)
+      if(.not. (et.le.e1 .or. et.ge.e2 .or. nt.lt.nnode-1 .or. nt.gt.nnode)) then
+        e=et
+        if(abs(de).lt.tol) then
+          ierr = 0
+          exit
+        endif
+      endif
+      call yofe(e,de,dr,rmax,h,s,y,n,l,ncor,nt,z,a,b)
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -739,10 +738,10 @@ contains
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    if(nt.ge.nnode) go to 5
-    !  too few nodes; set e1 and n1
-    e1=e
-    n1=nt
+      if(nt .lt. nnode) then
+        !  too few nodes; set e1 and n1
+        e1=e
+        n1=nt
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
@@ -753,13 +752,15 @@ contains
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    if(n2.ge.nnode) go to 1
-    del=del*M_TWO
-    e2=e1+del
-    go to 1
-    !  too many nodes; set e2 and n2
-5   e2=e
-    n2=nt
+        if(n2.ge.nnode) cycle
+        del=del*M_TWO
+        e2=e1+del
+        cycle
+      endif
+
+      !  too many nodes; set e2 and n2
+      e2=e
+      n2=nt
     
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -771,11 +772,11 @@ contains
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    if(n1.lt.nnode) go to 1
-    del=del*M_TWO
-    e1=e2-del
-    go to 1
-    
+      if(n1 .lt. nnode) cycle
+      del=del*M_TWO
+      e1=e2-del
+
+    enddo
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
@@ -786,12 +787,14 @@ contains
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-6   g(1) = M_ZERO
-    do i = 2, n
-      t=h(i)-e*s(i)
-      g(i)=y(i)/(M_ONE-t/CNST(12.))
-    enddo
-    call nrmlzg(g,s,n)
+    if(ierr .ne. 1) then
+      g(1) = M_ZERO
+      do i = 2, n
+        t=h(i)-e*s(i)
+        g(i)=y(i)/(M_ONE-t/CNST(12.))
+      enddo
+      call nrmlzg(g,s,n)
+    endif
     
     POP_SUB(egofv)
   end subroutine egofv
