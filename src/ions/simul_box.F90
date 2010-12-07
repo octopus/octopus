@@ -731,6 +731,7 @@ contains
     FLOAT,   intent(out) :: volume
     integer, intent(in)  :: dim
 
+    integer :: ii
     FLOAT :: cross(1:3), rv3(1:3, 1:3)
 
     PUSH_SUB(reciprocal_lattice)
@@ -760,6 +761,12 @@ contains
     case default ! dim > 3
       message(1) = "Reciprocal lattice is not correct for dim > 3."
       call write_warning(1)
+      volume = M_ONE
+      do ii = 1, dim
+        kv(ii, ii) = M_ONE
+        !  At least initialize the thing
+        volume = volume * sqrt(sum(rv(:, ii)**2))
+      end do
     end select
 
     if ( volume < M_ZERO ) then 
