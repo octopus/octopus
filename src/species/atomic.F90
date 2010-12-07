@@ -1036,15 +1036,17 @@ contains
   end subroutine bcorgn
 
 
-  subroutine bcrmax(e,dr,rmax,h,s,n,yn,a,b)
-
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! 22.7.85                                                                     !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine bcrmax(e, dr, rmax, h, s, n, yn, a, b)
+    REAL_DOUBLE, intent(in)  :: e, dr, rmax
+    REAL_DOUBLE, intent(in)  :: h(:), s(:)
+    integer,     intent(in)  :: n
+    REAL_DOUBLE, intent(out) :: yn
+    REAL_DOUBLE, intent(in)  :: a, b
 
-    REAL_DOUBLE  h(*),s(*),e,dr,rmax,yn,a,b,tnm1,tn,tnp1,beta,dg,c1,c2,c3,dn
-    integer :: n
+    REAL_DOUBLE :: tnm1, tn, tnp1, beta, dg, c1, c2, c3, dn
     
     PUSH_SUB(bcrmax)
     
@@ -1062,15 +1064,20 @@ contains
     yn=-((M_ONE-c1/c3)/(dn-c2/c3))
     
     POP_SUB(bcrmax)
-    
   end subroutine bcrmax
 
 
   subroutine numin(e,h,s,y,n,nnode,yn,g,gsg,x,knk)
+    REAL_DOUBLE, intent(in)  :: e, h(n), s(n)
+    REAL_DOUBLE, intent(out) :: y(n)
+    integer,     intent(in)  :: n
+    integer,     intent(out) :: nnode
+    REAL_DOUBLE, intent(in)  :: yn
+    REAL_DOUBLE, intent(out) :: g, gsg, x
+    integer,     intent(in)  :: knk
 
-    REAL_DOUBLE :: e, yn, g, gsg, x
-    integer :: i,n,nnode,knk
-    REAL_DOUBLE :: h(n),s(n),y(n),t
+    integer :: i
+    REAL_DOUBLE :: t
     
     PUSH_SUB(numin)
     
@@ -1106,7 +1113,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
-!  the last statement defines the kink radius as the point where              !
+!  The kink radius is defined as the point where                              !
 !  psi first turns downward.  this usually means at the outermost             !
 !  maximum                                                                    !
 !                                                                             !
@@ -1119,11 +1126,17 @@ contains
   end subroutine numin
 
 
-  subroutine numout(e,h,s,y,ncor,knk,nnode,y2,g,gsg,x)
+  subroutine numout(e, h, s, y, ncor, knk, nnode, y2, g, gsg, x)
+    REAL_DOUBLE, intent(in)    :: e, h(:), s(:)
+    REAL_DOUBLE, intent(out)   :: y(:)
+    integer,     intent(in)    :: ncor
+    integer,     intent(inout) :: knk
+    integer,     intent(out)   :: nnode
+    REAL_DOUBLE, intent(in)    :: y2
+    REAL_DOUBLE, intent(out)   :: g, gsg, x
 
-    REAL_DOUBLE :: e, y2, g, gsg, x
-    integer :: ncor,nnode,knk,i,nm4
-    REAL_DOUBLE :: h(knk),s(knk),y(knk),t,xl
+    integer :: i, nm4
+    REAL_DOUBLE :: t, xl
     
     PUSH_SUB(numout)
     
