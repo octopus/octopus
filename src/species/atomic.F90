@@ -524,10 +524,11 @@ contains
 !      A......THE PARAMETER APPEARING IN R(I) = B*(EXP(A(I-1))-1)             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
-    FLOAT,   intent(in)  :: rho(:), r(:), drdi(:), srdrdi(:)
-    FLOAT,   intent(in)  :: a
+    FLOAT,   intent(in)  :: rho(:)
     FLOAT,   intent(out) :: v(:)
+    FLOAT,   intent(in)  :: r(:), drdi(:), srdrdi(:)
     integer, intent(in)  :: nr
+    FLOAT,   intent(in)  :: a
     
     FLOAT :: x,y,q,a2by4,ybyq,qbyy,qpartc,v0,qt,dz,t,beta,dv
     integer :: nrm1,nrm2,ir
@@ -661,15 +662,15 @@ contains
 !  of bisections after a given eigenvalue has been isolated                   !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine egofv(h,s,n,e,g,y,l,z,a,b,rmax,nprin,nnode,dr,ierr)
-    REAL_DOUBLE, dimension(n), intent(in) :: h, s
-    integer, intent(in) :: n
-    REAL_DOUBLE, intent(inout) :: e
-    REAL_DOUBLE, dimension(n), intent(out) :: g, y
-    integer, intent(in) :: l
-    REAL_DOUBLE, intent(in) :: z, a, b, rmax
-    integer, intent(in) :: nprin, nnode
-    REAL_DOUBLE, intent(in) :: dr
-    integer, intent(out) :: ierr
+    REAL_DOUBLE, dimension(n), intent(in)    :: h, s
+    integer,                   intent(in)    :: n
+    REAL_DOUBLE,               intent(inout) :: e
+    REAL_DOUBLE, dimension(n), intent(out)   :: g, y
+    integer,                   intent(in)    :: l
+    REAL_DOUBLE,               intent(in)    :: z, a, b, rmax
+    integer,                   intent(in)    :: nprin, nnode
+    REAL_DOUBLE,               intent(in)    :: dr
+    integer,                   intent(out)   :: ierr
     
     integer :: i,ncor,n1,n2,niter,nt
     REAL_DOUBLE               :: e1, e2, del, de, et, t
@@ -818,14 +819,14 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     REAL_DOUBLE, intent(inout) :: e
-    REAL_DOUBLE, intent(out) :: de
-    REAL_DOUBLE, intent(in) :: dr, rmax
-    REAL_DOUBLE, intent(in) :: h(nmax), s(nmax)
-    REAL_DOUBLE, intent(out) :: y(nmax)
-    integer, intent(in) :: nmax, l
-    integer, intent(in) :: ncor
-    integer, intent(out) :: nnode
-    REAL_DOUBLE, intent(in) :: z, a, b
+    REAL_DOUBLE, intent(out)   :: de
+    REAL_DOUBLE, intent(in)    :: dr, rmax
+    REAL_DOUBLE, intent(in)    :: h(nmax), s(nmax)
+    REAL_DOUBLE, intent(out)   :: y(nmax)
+    integer,     intent(in)    :: nmax, l
+    integer,     intent(in)    :: ncor
+    integer,     intent(out)   :: nnode
+    REAL_DOUBLE, intent(in)    :: z, a, b
 
     REAL_DOUBLE :: y2, g, gsg, x, gin, gsgin, xin
     integer :: n,knk,nndin,i
@@ -930,8 +931,12 @@ contains
 !             (dr/di = a*b at the origin)                                     !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    REAL_DOUBLE s(:), g(:), norm, srnrm
-    integer :: n,nm1,nm2,i
+    REAL_DOUBLE, intent(inout) :: g(:)
+    REAL_DOUBLE, intent(in)    :: s(:)
+    integer,     intent(in)    :: n
+
+    integer :: nm1,nm2,i
+    REAL_DOUBLE :: norm, srnrm
     
     PUSH_SUB(nrmlzg)
 
@@ -940,7 +945,11 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-    if (mod(n,2).ne.1) write(6,*) ' nrmlzg: n should be odd. n =',n
+    if (mod(n,2).ne.1) then
+      write(message(1),'(a,i6)') ' nrmlzg: n should be odd. n =', n
+      call write_warning(1)
+    endif
+
     norm = M_ZERO
     nm1 = n - 1
     do i = 2,nm1,2
@@ -967,10 +976,13 @@ contains
 
 
   subroutine bcorgn(e,h,s,l,zdr,y2)
+    REAL_DOUBLE, intent(in) :: e
+    REAL_DOUBLE, intent(in) :: h(:), s(:)
+    integer,     intent(in) :: l
+    REAL_DOUBLE, intent(in) :: zdr
+    REAL_DOUBLE, intent(out) :: y2
 
-    REAL_DOUBLE :: e, zdr, y2
-    REAL_DOUBLE :: h(:), s(:), t2, t3, d2, c0, c1, c2
-    integer :: l
+    REAL_DOUBLE :: t2, t3, d2, c0, c1, c2
     
     PUSH_SUB(bcorgn)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
