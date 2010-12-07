@@ -54,6 +54,7 @@ module species_pot_m
   public ::                      &
     guess_density,               &
     species_get_density,         &
+    species_get_nlcc,            &
     species_get_orbital,         &
     species_get_orbital_submesh, &
     species_get_local
@@ -645,6 +646,35 @@ contains
     POP_SUB(func)
   end subroutine func
 
+  ! ---------------------------------------------------------
+  subroutine species_get_nlcc(spec, pos, mesh, geo, rho_core)
+    type(species_t),            intent(in)  :: spec
+    FLOAT,                      intent(in)  :: pos(MAX_DIM)
+    type(mesh_t),       target, intent(in)  :: mesh
+    type(geometry_t),           intent(in)  :: geo
+    FLOAT,                      intent(out) :: rho_core(:)
+
+    integer :: icell
+    type(periodic_copy_t) :: pp
+    type(ps_t), pointer :: ps
+
+    PUSH_SUB(species_get_density)
+
+    ! only for 3D pseudopotentials, please
+    if(species_is_ps(spec)) then
+      ps => species_ps(spec)
+      rho_core = M_ZERO
+      call periodic_copy_init(pp, mesh%sb, pos, range = spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold))
+      do icell = 1, periodic_copy_num(pp)
+        call dmf_put_radial_spline(mesh, ps%core, periodic_copy_position(pp, mesh%sb, icell), rho_core, add = .true.)
+      end do
+      call periodic_copy_end(pp)
+    else
+      rho_core = M_ZERO
+    end if
+
+    POP_SUB(species_get_density)
+  end subroutine species_get_nlcc
 
   ! ---------------------------------------------------------
   subroutine getrho(xin)

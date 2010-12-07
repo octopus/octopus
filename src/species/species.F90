@@ -70,7 +70,6 @@ module species_m
     species_is_full,           &
     species_is_local,          &
     species_real_nl_projector, &
-    species_get_nlcc,          &
     species_nl_projector,      &
     species_get_iwf_radius,    &
     species_end
@@ -791,24 +790,6 @@ contains
     uv = uvr0*ylm
 
   end subroutine species_nl_projector
-  ! ---------------------------------------------------------
-
-  ! ---------------------------------------------------------
-  FLOAT function species_get_nlcc(spec, x) result(l)
-    type(species_t), intent(in) :: spec
-    FLOAT, intent(in) :: x(MAX_DIM)
-    FLOAT :: r
-
-    ! no push_sub because this function is called very frequently
-    ! only for 3D pseudopotentials, please
-    if(species_is_ps(spec)) then
-      r = sqrt(sum(x(:)**2))
-      l = spline_eval(spec%ps%core, r)
-    else
-      l = M_ZERO
-    end if
-
-  end function species_get_nlcc
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------

@@ -664,11 +664,12 @@ contains
     if(present(rho_core) .and. &
       species_has_nlcc(geo%atom(iatom)%spec) .and. &
       species_is_ps(geo%atom(iatom)%spec)) then
-      do ip = 1, der%mesh%np
-        xx(1:der%mesh%sb%dim) = der%mesh%x(ip, 1:der%mesh%sb%dim) - geo%atom(iatom)%x(1:der%mesh%sb%dim)
-        rho_core(ip) = rho_core(ip) + species_get_nlcc(geo%atom(iatom)%spec, xx)
-      end do
+      SAFE_ALLOCATE(rho(1:der%mesh%np))
+      call species_get_nlcc(geo%atom(iatom)%spec, geo%atom(iatom)%x, der%mesh, geo, rho)
+      forall(ip = 1:der%mesh%np) rho_core(ip) = rho_core(ip) + rho(ip)
+      SAFE_DEALLOCATE_A(rho)
     end if
+
 
     call profiling_out(prof)
     POP_SUB(epot_local_potential)
