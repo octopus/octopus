@@ -648,11 +648,11 @@ contains
 !                                                                             !
 !  two fundamental techniques are used to locate the solution:                !
 !      1) node counting and bisection                                         !
-!      2) variational estimate based on a slope discontinuity in psi         !
+!      2) variational estimate based on a slope discontinuity in psi          !
 !  the arguments are defined as follows:                                      !
 !       h,s: g = (h-e*s)*g                                                    !
 !       nr: maximum allowed number of radial points                           !
-!       e: e(i) is the i-th energy found                                      !
+!       e: e is the energy found                                              !
 !       ne: number of energies found                                          !
 !       l: the angular momentum                                               !
 !       ncor: the number of lower-energy state                                !
@@ -661,12 +661,17 @@ contains
 !  of bisections after a given eigenvalue has been isolated                   !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine egofv(h,s,n,e,g,y,l,z,a,b,rmax,nprin,nnode,dr,ierr)
-
-    REAL_DOUBLE :: a, b, e, z, rmax, dr
-    integer :: i,n,l,nprin,nnode,ncor,n1,n2,niter,nt
+    REAL_DOUBLE, dimension(n), intent(in) :: h, s
+    integer, intent(in) :: n
+    REAL_DOUBLE, intent(inout) :: e
+    REAL_DOUBLE, dimension(n), intent(out) :: g, y
+    integer, intent(in) :: l
+    REAL_DOUBLE, intent(in) :: z, a, b, rmax
+    integer, intent(in) :: nprin, nnode
+    REAL_DOUBLE, intent(in) :: dr
     integer, intent(out) :: ierr
     
-    REAL_DOUBLE, dimension(n) :: h, s, g, y
+    integer :: i,ncor,n1,n2,niter,nt
     REAL_DOUBLE               :: e1, e2, del, de, et, t
     REAL_DOUBLE, parameter    :: tol = CNST(1.0e-5)
     
@@ -812,9 +817,19 @@ contains
 !       a and b specify the radial mesh r(i)=(exp(a*(i-1))-1)*b               !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    REAL_DOUBLE :: e, de, dr, rmax, z, a, b, y2, g, gsg, x, gin, gsgin, xin
-    integer :: nmax,l,ncor,nnode,n,knk,nndin,i
-    REAL_DOUBLE :: h(nmax), s(nmax), y(nmax), zdr, yn, ratio, t
+    REAL_DOUBLE, intent(inout) :: e
+    REAL_DOUBLE, intent(out) :: de
+    REAL_DOUBLE, intent(in) :: dr, rmax
+    REAL_DOUBLE, intent(in) :: h(nmax), s(nmax)
+    REAL_DOUBLE, intent(out) :: y(nmax)
+    integer, intent(in) :: nmax, l
+    integer, intent(in) :: ncor
+    integer, intent(out) :: nnode
+    REAL_DOUBLE, intent(in) :: z, a, b
+
+    REAL_DOUBLE :: y2, g, gsg, x, gin, gsgin, xin
+    integer :: n,knk,nndin,i
+    REAL_DOUBLE :: zdr, yn, ratio, t
     
     PUSH_SUB(yofe)
     
