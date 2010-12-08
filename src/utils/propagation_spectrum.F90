@@ -116,6 +116,8 @@ program propagation_spectrum
 
       type(kick_t) :: kick
       FLOAT :: dt
+
+      PUSH_SUB(read_files)
       
       in_file(1) = io_open(trim(fname), action='read', status='old', die=.false.)
       if(in_file(1) < 0) in_file(1) = io_open('td.general/'//trim(fname), action='read', status='old', die=.false.)
@@ -203,20 +205,25 @@ program propagation_spectrum
         
       end if
 
+      POP_SUB(read_files)
     end subroutine read_files
 
-    
+
+    !----------------------------------------------------------------------------   
     subroutine calculate(fname)
       character(len=*), intent(in) :: fname
 
       integer :: ii, jj
       character(len=150), allocatable :: filename(:)
 
+      PUSH_SUB(calculate)
+
       if(.not.calculate_tensor) then
 
         out_file(1) = io_open(trim(fname)//'_vector', action='write')
         call spectrum_cross_section(in_file(1), out_file(1), spectrum)
-        call io_close(in_file(1)); call io_close(out_file(1))
+        call io_close(in_file(1))
+        call io_close(out_file(1))
         
       else
         select case(eq_axes)
@@ -230,7 +237,8 @@ program propagation_spectrum
           write(filename(ii),'(2a,i1)') trim(fname), '_vector.',ii
           out_file(ii) = io_open(trim(filename(ii)), action='write')
           call spectrum_cross_section(in_file(ii), out_file(ii), spectrum)
-          call io_close(in_file(ii)); call io_close(out_file(ii))
+          call io_close(in_file(ii))
+          call io_close(out_file(ii))
           in_file(ii)  = io_open(trim(filename(ii)), action='read', status='old')
         end do
 
@@ -242,8 +250,12 @@ program propagation_spectrum
         call io_close(out_file(1))
         
       end if
+
+      POP_SUB(calculate)
     end subroutine calculate
 
+
+    !----------------------------------------------------------------------------   
     subroutine calculate_ftchd(fname_in, fname_out)
       character(len=*), intent(in) :: fname_in, fname_out
 
@@ -255,7 +267,8 @@ program propagation_spectrum
 
       out_file(1) = io_open(trim(fname_out), action='write')
       call spectrum_dyn_structure_factor(in_file(1), in_file(2), out_file(1), spectrum)
-      call io_close(in_file(1)); call io_close(out_file(1))
+      call io_close(in_file(1))
+      call io_close(out_file(1))
 
       POP_SUB(calculate_ftchd)
 

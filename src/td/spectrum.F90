@@ -138,12 +138,11 @@ contains
     !%Default AbsorptionSpectrum
     !%Section Utilities::oct-propagation_spectrum
     !%Description
-    !% Which spectrum to calculate, photoabsorption spectrum or the
-    !% dynamic structure factor (energy loss spectrum)
+    !% Type of spectrum to calculate.
     !%Option AbsorptionSpectrum 1
-    !% Photoabsorption spectrum
-    !%Option EnergylossSpectrum 2
-    !% Dynamic structure factor (also known as energy loss function or spectrum)
+    !% Photoabsorption spectrum.
+    !%Option EnergyLossSpectrum 2
+    !% Dynamic structure factor (also known as energy-loss function or spectrum).
     !%End
 
     call parse_integer  (datasets_check('PropagationSpectrumType'), SPECTRUM_ABSORPTION, spectrum%spectype)
@@ -1103,7 +1102,7 @@ contains
       do it = istart, iend
         jj = it - istart
 
-        xx = complex(cos(energy * jj * dt), sin(energy * jj * dt))
+        xx = exp(M_zI * energy * jj * dt)
         chi(ie) = chi(ie) + xx * damp(it) * ftchd(it)
 
       end do
