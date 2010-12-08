@@ -120,6 +120,9 @@ contains
     PUSH_SUB(sternheimer_init)
 
     if(simul_box_is_periodic(sys%gr%mesh%sb)) call messages_devel_version("Sternheimer equation for periodic systems")
+    if(sys%st%smear%method .eq. SMEAR_FIXED_OCC) then
+      call messages_devel_version("Sternheimer equation for arbitrary occupations")
+    endif
 
     if(wfs_are_cplx) then
       call mix_init(this%mixer, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type = TYPE_CMPLX)
