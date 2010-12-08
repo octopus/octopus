@@ -44,6 +44,7 @@ module spectrum_m
     spectrum_init,                 &
     spectrum_cross_section,        &
     spectrum_cross_section_tensor, &
+    spectrum_dynamic_structure_factor, &
     spectrum_rotatory_strength,    &
     spectrum_hs_from_mult,         &
     spectrum_hs_from_acc,          &
@@ -79,6 +80,9 @@ module spectrum_m
     QKICKMODE_SIN            = 3,  &
     QKICKMODE_BESSEL         = 4
 
+  integer, public, parameter ::    &
+    SPECTRUM_ABSORPTION      = 1,  &
+    SPECTRUM_ENERGYLOSS      = 2
 
   type spec_t
     FLOAT   :: start_time          ! start time for the transform
@@ -88,6 +92,7 @@ module spectrum_m
     integer :: damp                ! damping type (none, exp or pol)
     integer :: transform           ! sine, cosine, or exponential transform
     FLOAT   :: damp_factor         ! factor used in damping
+    integer :: spectype            ! damping type (none, exp or pol)
   end type spec_t
 
   type kick_t
@@ -127,6 +132,23 @@ contains
     type(spec_t), intent(inout) :: spectrum
 
     PUSH_SUB(spectrum_init)
+
+    !%Variable PropagationSpectrumType
+    !%Type integer
+    !%Default AbsorptionSpectrum
+    !%Section Utilities::oct-propagation_spectrum
+    !%Description
+    !% Which spectrum to calculate, photoabsorption spectrum or the
+    !% dynamic structure factor (energy loss spectrum)
+    !%Option AbsorptionSpectrum 1
+    !% Photoabsorption spectrum
+    !%Option EnergylossSpectrum 2
+    !% Dynamic structure factor (also known as energy loss function or spectrum)
+    !%End
+
+    call parse_integer  (datasets_check('PropagationSpectrumType'), SPECTRUM_ABSORPTION, spectrum%spectype)
+    if(.not.varinfo_valid_option('PropagationSpectrumType', spectrum%spectype)) call input_error('PropagationSpectrumType')
+
 
     !%Variable PropagationSpectrumDampMode
     !%Type integer
@@ -215,7 +237,8 @@ contains
     !% If <tt>PropagationSpectrumDampMode = exponential</tt>, the damping parameter of the exponential
     !% is fixed through this variable.
     !%End
-    call parse_float(datasets_check('PropagationSpectrumDampFactor'), CNST(0.15), spectrum%damp_factor, units_inp%time**(-1))
+    call parse_float(datasets_check('PropagationSpectrumDampFactor'), CNST(0.15), &
+      spectrum%damp_factor, units_inp%time**(-1))
 
     POP_SUB(spectrum_init)
   end subroutine spectrum_init
@@ -927,7 +950,8 @@ contains
     write(out_file, '(a)') '#%'
     write(out_file, '(a,i8)')    '# Number of time steps = ', time_steps
     write(out_file, '(a,i4)')    '# PropagationSpectrumDampMode   = ', spectrum%damp
-    write(out_file, '(a,f10.4)') '# PropagationSpectrumDampFactor = ', units_from_atomic(units_out%time**(-1), spectrum%damp_factor)
+    write(out_file, '(a,f10.4)') '# PropagationSpectrumDampFactor = ', units_from_atomic(units_out%time**(-1), &
+                                                                       spectrum%damp_factor)
     write(out_file, '(a,f10.4)') '# PropagationSpectrumStartTime  = ', units_from_atomic(units_out%time, spectrum%start_time)
     write(out_file, '(a,f10.4)') '# PropagationSpectrumEndTime    = ', units_from_atomic(units_out%time, spectrum%end_time)
     write(out_file, '(a,f10.4)') '# PropagationSpectrumMaxEnergy  = ', units_from_atomic(units_out%energy, spectrum%max_energy)
@@ -974,6 +998,158 @@ contains
     SAFE_DEALLOCATE_A(sigma)
     POP_SUB(spectrum_cross_section)
   end subroutine spectrum_cross_section
+
+  ! ---------------------------------------------------------
+  subroutine spectrum_dynamic_structure_factor(in_file_sin, in_file_cos, out_file, spectrum)
+    integer,      intent(in)    :: in_file_sin, in_file_cos
+    integer,      intent(in)    :: out_file
+    type(spec_t), intent(inout) :: spectrum
+
+    character(len=20) :: header_string
+    integer :: time_steps, time_steps_sin, time_steps_cos
+    integer :: istart, iend, ntiter, it, jj, ii, isp, no_e, ie, idir, trash
+    FLOAT   :: dt, dt_sin, dt_cos
+    FLOAT   :: dump, dummy1, dummy2, dummy3, dummy4, energy, fsum
+    type(kick_t) :: kick
+    CMPLX :: xx
+    CMPLX, allocatable :: ftchd(:), chi(:), damp(:)
+    type(unit_system_t) :: file_units
+    character(len=100) :: line
+
+    PUSH_SUB(spectrum_dynamic_structure_factor)
+
+    ! Read information from ftchds.sin file
+
+    rewind(in_file_sin)
+
+    ! skip two lines 
+    read(in_file_sin, *)
+    read(in_file_sin, *)
+    read(in_file_sin, '(15x,i2)')     kick%qkick_mode
+    read(in_file_sin, '(10x,3f9.5)')  kick%qvector
+    read(in_file_sin, '(15x,f18.12)') kick%delta_strength
+
+    ! skip two lines 
+    read(in_file_sin, *)
+    read(in_file_sin, '(a)') line
+    call io_skip_header(in_file_sin)
+    call io_skip_header(in_file_cos)
+
+    ! Figure out the units of the file
+    ii = index(line, 'eV')
+    if(ii.ne.0) then
+      call unit_system_get(file_units, UNITS_EVA)
+    else
+      call unit_system_get(file_units, UNITS_ATOMIC)
+    end if
+
+    ! get time_steps and dt, and make sure that dt is the same in the two files
+    call count_time_steps(in_file_sin, time_steps_sin, dt_sin)
+    call count_time_steps(in_file_cos, time_steps_cos, dt_cos)
+
+    if(dt_sin.ne.dt_cos) then
+      message(1) = "dt is different in ftchds.cos and ftchds.sin!"
+      call write_fatal(1)
+    end if
+
+    time_steps = min(time_steps_sin, time_steps_cos)
+    dt = units_to_atomic(file_units%time, dt_cos) ! units_out is OK
+
+    ! Find out the iteration numbers corresponding to the time limits.
+    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+
+    ! Read the f-transformed charge density.
+    call io_skip_header(in_file_sin)
+    call io_skip_header(in_file_cos)
+
+    SAFE_ALLOCATE(ftchd(0:time_steps))
+    do it = 0, time_steps
+      read(in_file_sin, *) trash, dump, dummy1, dummy2
+      read(in_file_cos, *) trash, dump, dummy3, dummy4
+      ftchd(it) = cmplx(dummy3-dummy2, dummy4+dummy1)
+    end do
+
+    ! Now subtract the initial value.
+    do it = time_steps, 0, -1
+      ftchd(it) = ftchd(it) - ftchd(0)
+    end do
+
+    ! Get the number of energy steps.
+    no_e = spectrum%max_energy / spectrum%energy_step
+
+    SAFE_ALLOCATE(chi(0:no_e))
+    chi = M_ZERO
+
+    ! Gets the damping function
+    SAFE_ALLOCATE(damp(istart:iend))
+    do it = istart, iend
+      jj = it - istart
+      select case(spectrum%damp)
+      case(SPECTRUM_DAMP_NONE)
+        damp(it) = M_ONE
+      case(SPECTRUM_DAMP_LORENTZIAN)
+        damp(it)= exp(-jj * dt * spectrum%damp_factor)
+      case(SPECTRUM_DAMP_POLYNOMIAL)
+        damp(it) = M_ONE - M_THREE * (real(jj) / ntiter)**2 &
+          + M_TWO * (real(jj) / ntiter)**3
+      case(SPECTRUM_DAMP_GAUSSIAN)
+        damp(it)= exp(-(jj * dt)**2 * spectrum%damp_factor**2)
+      end select
+    end do
+
+    ! Fourier transformation from time to frequency
+    do ie = 0, no_e
+      energy = ie * spectrum%energy_step
+      do it = istart, iend
+        jj = it - istart
+
+        xx = complex(cos(energy * jj * dt), sin(energy * jj * dt))
+        chi(ie) = chi(ie) + xx * damp(it) * ftchd(it)
+
+      end do
+      chi(ie) = chi(ie) * dt / kick%delta_strength / M_PI
+    end do
+
+    ! Test f-sum rule
+    fsum = M_ZERO
+    do ie = 0, no_e
+      energy = ie * spectrum%energy_step
+      fsum = fsum + energy * aimag(chi(ie))
+    end do
+    fsum = spectrum%energy_step * fsum * 2/sum(kick%qvector(:)**2)
+
+    write(out_file, '(a)') '#%'
+    write(out_file, '(a,i8)')    '# Number of time steps = ', time_steps
+    write(out_file, '(a,i4)')    '# PropagationSpectrumDampMode   = ', spectrum%damp
+    write(out_file, '(a,f10.4)') '# PropagationSpectrumDampFactor = ', units_from_atomic(units_out%time**(-1), &
+                                                                       spectrum%damp_factor)
+    write(out_file, '(a,f10.4)') '# PropagationSpectrumStartTime  = ', units_from_atomic(units_out%time, spectrum%start_time)
+    write(out_file, '(a,f10.4)') '# PropagationSpectrumEndTime    = ', units_from_atomic(units_out%time, spectrum%end_time)
+    write(out_file, '(a,f10.4)') '# PropagationSpectrumMaxEnergy  = ', units_from_atomic(units_out%energy, spectrum%max_energy)
+    write(out_file, '(a,f10.4)') '# PropagationSpectrumEnergyStep = ', units_from_atomic(units_out%energy, spectrum%energy_step)
+    write(out_file, '(a,3f9.5)') '# qvector    : ', kick%qvector
+    write(out_file, '(a,f10.4)') '# F-sum rule : ', fsum
+    write(out_file, '(a)') '#%'
+
+    write(out_file, '(a1,a20)', advance = 'no') '#', str_center("Energy", 20)
+    write(header_string,'(a3)') 'chi'
+    write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
+    write(out_file, '(1x)')
+    write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 20)
+    write(out_file, '(a20)', advance = 'no') str_center('[' // trim(units_abbrev(units_out%energy)) // '**(-1)]', 20)
+    write(out_file, '(1x)')
+
+    do ie = 0, no_e
+      write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, ie * spectrum%energy_step)
+      write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy**(-1), aimag(chi(ie)))
+      write(out_file, '(1x)')
+    end do
+
+    SAFE_DEALLOCATE_A(ftchd)
+    SAFE_DEALLOCATE_A(chi)
+    POP_SUB(spectrum_dynamic_structure_factor)
+
+  end subroutine spectrum_dynamic_structure_factor
 
 
   ! ---------------------------------------------------------

@@ -59,8 +59,18 @@ program propagation_spectrum
   call unit_system_init()
 
   call spectrum_init(spectrum)
-  call read_files('multipoles')
-  call calculate('cross_section')
+
+  select case (spectrum%spectype)
+    case (SPECTRUM_ABSORPTION)
+      call read_files('multipoles')
+      call calculate('cross_section')
+    case (SPECTRUM_ENERGYLOSS)
+      call calculate_ftchd('ftchd', 'dynamic_structure_factor')
+    case default
+      write(message(1), '(a)') 'No PropagationSpectrumType defined,'
+      write(message(2), '(a)') 'cannot calculate the spectrum.'
+      call write_warning(2)
+  end select
 
   call io_end()
   call datasets_end()
@@ -70,10 +80,13 @@ program propagation_spectrum
   contains
 
     !/*----------------------------------------------------------------------------
-    ! Here we start the search for the file(s) that we must process. In a future
-    ! version of octopus, I would like this to be controlled by a command-line
-    ! option. The routine sets the eq_axes and calculate_tensor variables, as well
-    ! as the in_file unit numbers.
+    ! Two spectra can be calculated with these routines: photoabsorption spectrum
+    ! or the dynamic struture factor. This is controlled by the input variable
+    ! PropagationSpectrumType. In the photoabsorption case the calculation
+    ! goes as follows: start the search for the file(s) that must be processed.
+    ! In a future version of octopus, this could be controlled by a
+    ! command-line option. The routine sets the eq_axes and calculate_tensor
+    ! variables, as well as the in_file unit numbers.
     !
     ! The options are:
     ! (i)  A file called "multipoles" is found. In this case, no other file is
@@ -93,6 +106,10 @@ program propagation_spectrum
     !             program ends if it is not found.
     !      (ii.3) No equivalent axes. Files "multipoles.2" and "multipoles.3" are
     !             searched for; the program ends if they are not found.
+    ! In the case of dynamic structure factor calculation the program looks for
+    ! ftchds.cos and ftchds.sin. In the future versions it should also look for
+    ! the files ftchds.lXX_mYY, which would be used to obtain the directionally
+    ! averaged dynamic structure factor.
     !---------------------------------------------------------------------------*/!
     subroutine read_files(fname)
       character(len=*), intent(in) :: fname
@@ -226,6 +243,27 @@ program propagation_spectrum
         
       end if
     end subroutine calculate
+
+    subroutine calculate_ftchd(fname_in, fname_out)
+      character(len=*), intent(in) :: fname_in, fname_out
+
+      integer :: ii, jj
+      character(len=150), allocatable :: filename(:)
+
+      PUSH_SUB(calculate_ftchd)
+
+      ! read files
+      in_file(1) = io_open(trim(fname_in) // '.sin', action='read', status='old', die=.false.)
+      in_file(2) = io_open(trim(fname_in) // '.cos', action='read', status='old', die=.false.)
+
+      out_file(1) = io_open(trim(fname_out), action='write')
+      call spectrum_dynamic_structure_factor(in_file(1), in_file(2), out_file(1), spectrum)
+      call io_close(in_file(1)); call io_close(out_file(1))
+
+      POP_SUB(calculate_ftchd)
+
+    end subroutine calculate_ftchd
+
 end program propagation_spectrum
 
 !! Local Variables:

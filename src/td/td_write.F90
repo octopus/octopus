@@ -341,7 +341,7 @@ contains
           case (QKICKMODE_BESSEL)
             write(filename, '(a, SPI0.3, a, SPI0.3)') 'td.general/ftchd.l', kick%qbessel_l, '_m', kick%qbessel_m
           case default
-            write(filename, '(a)') 'td.general/error'
+            write(filename, '(a)') 'td.general/ftchd'
         end select
         call write_iter_init(writ%out(OUT_FTCHD)%handle, &
           first, units_from_atomic(units_out%time, dt), trim(io_workpath(filename)))
@@ -826,13 +826,15 @@ contains
     if(mpi_grp_is_root(mpi_world).and.iter == 0) then
       call td_write_print_header_init(out_ftchd)
 
-      write(aux, '(a15,i2)')      '# nspin        ', st%d%nspin
+      write(aux,'(a15, i2)') '# qkickmode    ', kick%qkick_mode
       call write_iter_string(out_ftchd, aux)
       call write_iter_nl(out_ftchd)
 
-      write(aux, '(a15,f18.12)')  '# kick strength', kick%delta_strength
-      call write_iter_string(out_ftchd, aux)
-      call write_iter_nl(out_ftchd)
+      if(kick%qkick_mode.eq.QKICKMODE_BESSEL) then
+        write(aux,'(a15, i0.3, 1x, i0.3)') '# ll, mm       ', kick%qbessel_l, kick%qbessel_m
+        call write_iter_string(out_ftchd, aux)
+        call write_iter_nl(out_ftchd)
+      end if
 
       if(kick%qkick_mode.eq.QKICKMODE_BESSEL) then
         write(aux, '(a15, f9.6)') '# qlength      ', kick%qlength
@@ -846,15 +848,9 @@ contains
       call write_iter_string(out_ftchd, aux)
       call write_iter_nl(out_ftchd)
 
-      write(aux,'(a15, i2)') '# qkickmode    ', kick%qkick_mode
+      write(aux, '(a15,f18.12)')  '# kick strength', kick%delta_strength
       call write_iter_string(out_ftchd, aux)
       call write_iter_nl(out_ftchd)
-
-      if(kick%qkick_mode.eq.QKICKMODE_BESSEL) then
-        write(aux,'(a15, i0.3, 1x, i0.3)') '# ll, mm       ', kick%qbessel_l, kick%qbessel_m
-        call write_iter_string(out_ftchd, aux)
-        call write_iter_nl(out_ftchd)
-      end if
 
       call write_iter_header_start(out_ftchd)
       if(kick%qkick_mode.eq.QKICKMODE_BESSEL) then
