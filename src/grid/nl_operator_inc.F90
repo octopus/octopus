@@ -306,10 +306,9 @@ contains
       call opencl_set_kernel_arg(kernel_operate, 7, fo%pack%buffer)
       call opencl_set_kernel_arg(kernel_operate, 8, log2(fi%pack%size_real(1)))
       
-      bsize = max(128, fi%pack%size_real(1))
+      bsize = max(opencl_kernel_workgroup_size(kernel_operate), fi%pack%size_real(1))
       isize = bsize/(fi%pack%size_real(1))
-      pnri = pad(nri, bsize)
-
+      
       call opencl_set_kernel_arg(kernel_operate, 9, TYPE_INTEGER, isize*op%stencil%size)
 
       call opencl_kernel_run(kernel_operate, &
