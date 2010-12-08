@@ -44,7 +44,7 @@ module spectrum_m
     spectrum_init,                 &
     spectrum_cross_section,        &
     spectrum_cross_section_tensor, &
-    spectrum_dynamic_structure_factor, &
+    spectrum_dyn_structure_factor, &
     spectrum_rotatory_strength,    &
     spectrum_hs_from_mult,         &
     spectrum_hs_from_acc,          &
@@ -1000,7 +1000,7 @@ contains
   end subroutine spectrum_cross_section
 
   ! ---------------------------------------------------------
-  subroutine spectrum_dynamic_structure_factor(in_file_sin, in_file_cos, out_file, spectrum)
+  subroutine spectrum_dyn_structure_factor(in_file_sin, in_file_cos, out_file, spectrum)
     integer,      intent(in)    :: in_file_sin, in_file_cos
     integer,      intent(in)    :: out_file
     type(spec_t), intent(inout) :: spectrum
@@ -1016,7 +1016,7 @@ contains
     type(unit_system_t) :: file_units
     character(len=100) :: line
 
-    PUSH_SUB(spectrum_dynamic_structure_factor)
+    PUSH_SUB(spectrum_dyn_structure_factor)
 
     ! Read information from ftchds.sin file
 
@@ -1147,9 +1147,9 @@ contains
 
     SAFE_DEALLOCATE_A(ftchd)
     SAFE_DEALLOCATE_A(chi)
-    POP_SUB(spectrum_dynamic_structure_factor)
+    POP_SUB(spectrum_dyn_structure_factor)
 
-  end subroutine spectrum_dynamic_structure_factor
+  end subroutine spectrum_dyn_structure_factor
 
 
   ! ---------------------------------------------------------

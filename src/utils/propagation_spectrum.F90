@@ -247,9 +247,6 @@ program propagation_spectrum
     subroutine calculate_ftchd(fname_in, fname_out)
       character(len=*), intent(in) :: fname_in, fname_out
 
-      integer :: ii, jj
-      character(len=150), allocatable :: filename(:)
-
       PUSH_SUB(calculate_ftchd)
 
       ! read files
@@ -257,7 +254,7 @@ program propagation_spectrum
       in_file(2) = io_open(trim(fname_in) // '.cos', action='read', status='old', die=.false.)
 
       out_file(1) = io_open(trim(fname_out), action='write')
-      call spectrum_dynamic_structure_factor(in_file(1), in_file(2), out_file(1), spectrum)
+      call spectrum_dyn_structure_factor(in_file(1), in_file(2), out_file(1), spectrum)
       call io_close(in_file(1)); call io_close(out_file(1))
 
       POP_SUB(calculate_ftchd)
