@@ -79,8 +79,8 @@ module linear_solver_m
     type(states_t),        pointer :: st
     integer                        :: ist
     integer                        :: ik
-    FLOAT                          :: domega
-    CMPLX                          :: zomega
+    FLOAT                          :: dshift
+    CMPLX                          :: zshift
   end type linear_solver_args_t
 
   type(linear_solver_args_t) :: args
