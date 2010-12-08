@@ -19,14 +19,18 @@
  $Id: operate.cl 2146 2006-05-23 17:36:00Z xavier $
 */
 
+#ifdef EXT_KHR_FP64
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
+#elif EXT_AMD_FP64
+#pragma OPENCL EXTENSION cl_amd_fp64 : enable
+#endif
 
 __kernel void operate(const int nn,
 		       const int nri,
 		       __global const int * ri,
 		       __global const int * imin,
 		       __global const int * imax,
-		       __constant const double * weights,
+		       __constant double * weights,
 		       __global const double * fi, const int ldfi,
 		       __global double * fo, const int ldfo,
 		       __local int * indexl,
@@ -61,7 +65,7 @@ __kernel void operate_map(const int nn,
 			  const int np,
 			  __global const int * ri,
 			  __global const int * map,
-			  __constant const double * weights,
+			  __constant double * weights,
 			  __global const double * fi, const int ldfi,
 			  __global double * fo, const int ldfo,
 			  __local int * indexl){

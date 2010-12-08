@@ -164,6 +164,10 @@ void FC_FUNC_(f90_cl_init_device,F90_CL_INIT_DEVICE)(const int * idevice, const 
   if(strstr(device_string, "cl_khr_fp64")) printf("yes\n");
   else printf("no\n");
 
+  printf("cl_amd_fp64 extension   : ");
+  if(strstr(device_string, "cl_amd_fp64")) printf("yes\n");
+  else printf("no\n");
+
   clGetDeviceInfo(*device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(max_workgroup_size), &max_workgroup_size, NULL);
   printf("maximum workgroup size  : %zd\n", max_workgroup_size);
 
@@ -207,6 +211,10 @@ void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
   char* cSourceString;
   char * file_name;
   cl_int status;
+  char device_string[2048];
+  int ext_khr_fp64, ext_amd_fp64;
+  size_t len;
+  char buffer[4096];
 
   TO_C_STR1(file_name_f, file_name);
 
@@ -231,12 +239,27 @@ void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
     
   cSourceString[szSourceLength] = '\0';
 
+  clGetDeviceInfo(*device, CL_DEVICE_EXTENSIONS, sizeof(device_string), &device_string, NULL);
+  ext_khr_fp64 = strstr(device_string, "cl_khr_fp64");
+  ext_amd_fp64 = strstr(device_string, "cl_amd_fp64");
+
   *program = clCreateProgramWithSource(*context, 1, (const char**)&cSourceString, NULL, &status);
-  status = clBuildProgram(*program, 0, NULL, "-cl-mad-enable", NULL, NULL);
+
+  if(ext_khr_fp64){
+    status = clBuildProgram(*program, 0, NULL, "-DEXT_KHR_FP64 -cl-mad-enable", NULL, NULL);
+  } else if(ext_amd_fp64) {
+    status = clBuildProgram(*program, 0, NULL, "-DEXT_AMD_FP64", NULL, NULL);
+  } else {
+    fprintf(stderr, "Error: double precision not supported\n");
+    exit(1);
+  }
+
+  clGetProgramBuildInfo (*program, *device,
+			 CL_PROGRAM_BUILD_LOG, sizeof (buffer), buffer,
+			 &len);    
+  printf("%s", buffer);
   
   if(status != CL_SUCCESS){
-    size_t len;
-    char buffer[2048];
     clGetProgramBuildInfo (*program, *device,
 			   CL_PROGRAM_BUILD_LOG, sizeof (buffer), buffer,
 			   &len);    
