@@ -256,7 +256,7 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol, occ
     end do
   else
     ! project RHS onto the unoccupied states
-    call X(lr_orth_vector)(gr%mesh, st, r, ist, ik)
+    call X(lr_orth_vector)(gr%mesh, st, r, ist, ik, shift + st%eigenval(ist, ik))
   endif
           
   do idim = 1, st%d%dim
@@ -405,6 +405,8 @@ contains
     integer :: ii, ip, idim
     R_TYPE  :: rr
 
+    PUSH_SUB(X(ls_solver_multigrid).smoothing)
+
     do ii = 1, steps
 
       call X(ls_solver_operator)(hm, gr, st, ist, ik, shift, x, hx)
@@ -412,14 +414,15 @@ contains
       do idim = 1, st%d%dim
         do ip = 1, gr%mesh%np
           rr = hx(ip, idim) - y(ip, idim)
-          x(ip, idim) = x(ip, idim) - CNST(0.666666) * rr / diag(ip, idim)
+          x(ip, idim) = x(ip, idim) - M_TWOTHIRD * rr / diag(ip, idim)
         end do
       end do
 
     end do
 
-    call X(lr_orth_vector)(gr%mesh, st, x, ist, ik)
+    call X(lr_orth_vector)(gr%mesh, st, x, ist, ik, shift + st%eigenval(ist, ik))
 
+    POP_SUB(X(ls_solver_multigrid).smoothing)
   end subroutine smoothing
 
 end subroutine X(ls_solver_multigrid)

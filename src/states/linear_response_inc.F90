@@ -23,15 +23,18 @@
 ! For details on the metallic part, take a look at
 ! de Gironcoli, PRB 51, 6773 (1995).
 ! ---------------------------------------------------------
-subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik)
+subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik, omega)
   type(mesh_t),        intent(in)    :: mesh
   type(states_t),      intent(in)    :: st
   R_TYPE,              intent(inout) :: vec(:,:)
   integer,             intent(in)    :: ist, ik
+  R_TYPE,              intent(in)    :: omega
 
   integer :: jst
-  FLOAT :: xx, theta, theta_ij, theta_ji, alpha_j, delta_e, dsmear
-  FLOAT, allocatable :: theta_Fi(:), beta_ij(:)
+  FLOAT :: xx, theta, theta_ij, theta_ji, alpha_j, dsmear
+  R_TYPE :: delta_e
+  FLOAT, allocatable :: theta_Fi(:)
+  R_TYPE, allocatable :: beta_ij(:)
 
   PUSH_SUB(X(lr_orth_vector))
 
@@ -73,18 +76,17 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik)
         beta_ij(jst) = theta_Fi(ist)*Theta_ij + Theta_Fi(jst)*Theta_ji
           
         alpha_j = lr_alpha_j(st, jst, ik)
-        delta_e = st%eigenval(ist, ik) - st%eigenval(jst, ik)
+        delta_e = st%eigenval(ist, ik) - st%eigenval(jst, ik) - omega
         
         if(abs(delta_e) >= CNST(1e-5)) then
           beta_ij(jst) = beta_ij(jst) + alpha_j*Theta_ji*(Theta_Fi(ist) - Theta_Fi(jst))/delta_e
         else
           if(st%smear%method .ne. SMEAR_FIXED_OCC) then 
             xx = (st%smear%e_fermi - st%eigenval(ist, ik) + CNST(1e-14))/dsmear
-            beta_ij(jst) = beta_ij(jst) + alpha_j*Theta_ji*  &
-              (-smear_delta_function(st%smear,  xx)/dsmear)
+            beta_ij(jst) = beta_ij(jst) + alpha_j*Theta_ji*(smear_delta_function(st%smear, xx)/dsmear)
           endif
         end if
-      endif  
+      endif
 
     end do
 
@@ -160,17 +162,18 @@ end subroutine X(lr_build_dl_rho)
 ! Orthogonalizes response of \alpha KS orbital to all occupied
 ! \alpha KS orbitals.
 ! ---------------------------------------------------------
-subroutine X(lr_orth_response)(mesh, st, lr)
+subroutine X(lr_orth_response)(mesh, st, lr, omega)
   type(mesh_t),   intent(in)    :: mesh
   type(states_t), intent(in)    :: st
   type(lr_t),     intent(inout) :: lr
+  R_TYPE,         intent(in)    :: omega
   
   integer :: ist, ik
   PUSH_SUB(X(lr_orth_response))
   
   do ik = 1, st%d%nik
     do ist = 1, st%nst
-      call X(lr_orth_vector) (mesh, st, lr%X(dl_psi)(:,:, ist, ik), ist, ik)
+      call X(lr_orth_vector) (mesh, st, lr%X(dl_psi)(:,:, ist, ik), ist, ik, omega)
     end do
   end do
   

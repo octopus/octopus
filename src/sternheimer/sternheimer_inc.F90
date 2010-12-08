@@ -87,7 +87,7 @@ subroutine X(sternheimer_solve)(                           &
   ! preorthogonalization
   if (this%preorthogonalization) then 
     do sigma = 1, nsigma
-      call X(lr_orth_response)(mesh, st, lr(sigma))
+      call X(lr_orth_response)(mesh, st, lr(sigma), omega)
     enddo
   endif
 
@@ -156,7 +156,7 @@ subroutine X(sternheimer_solve)(                           &
             end do
           else
             ! project RHS onto the unoccupied states
-            call X(lr_orth_vector)(mesh, st, Y(1:mesh%np, 1:1, sigma), ist, ik)
+            call X(lr_orth_vector)(mesh, st, Y(1:mesh%np, 1:1, sigma), ist, ik, omega)
           endif
         
           if(sigma == 1) then 
@@ -178,7 +178,7 @@ subroutine X(sternheimer_solve)(                           &
                 call lalg_axpy(mesh%np, -proj, st%X(psi)(:, idim, ist, ik), lr(sigma)%X(dl_psi)(:, idim, ist, ik))
               end do
             else
-              call X(lr_orth_vector)(mesh, st, lr(sigma)%X(dl_psi)(1:mesh%np_part, 1:st%d%dim, ist, ik), ist, ik)
+              call X(lr_orth_vector)(mesh, st, lr(sigma)%X(dl_psi)(1:mesh%np_part, 1:st%d%dim, ist, ik), ist, ik, omega)
             endif
           end if
 
