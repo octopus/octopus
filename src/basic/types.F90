@@ -44,7 +44,7 @@ module types_m
   end interface
 
   interface operator(/=)
-    module procedure types_equal
+    module procedure types_not_equal
   end interface
 
 #ifdef SINGLE_PRECISION
