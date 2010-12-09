@@ -1,0 +1,20 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 08-velocities.test $
+
+Test       : QOCT, velocity target
+Programs   : octopus
+TestGroups : long-run, oct
+Enabled    : Yes
+
+# This is the test for the velocities target option. The target is defined to break a H2 molecule,
+# modelled in 1D, and with independent electrons to simplify things. The initial guess field
+# does not break the bond, whereas the final optimized laser pulse does (without any significant
+# ionization). The test runs only the first conjugate gradient iteration. After around 40 CG
+# iterations, the field, although not converged, is already good enough to break the field.
+
+Input: 08-velocities.01-ground_state.inp
+
+Input: 08-velocities.02-oct.inp
+
+Precision : 0.001
+match ; J1 1st iteration  ; GREP(opt-control/convergence, '##        1 ', 40) ; 461.65501466

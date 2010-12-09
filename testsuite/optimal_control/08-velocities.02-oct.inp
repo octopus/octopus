@@ -1,0 +1,127 @@
+# ------------------
+# Generalities
+# ------------------
+
+#CalculationMode = gs
+CalculationMode = opt_control
+#CalculationMode = td
+DebugLevel = 0
+Dimensions = 1
+fromScratch = yes
+
+# ------------------
+# Grid
+# ------------------
+
+BoxShape = sphere
+Spacing = 0.3
+Radius = 20.0
+
+# ------------------
+# System
+#
+# This is the model of a Hydrogen molecule in 1D. The soft
+# Coulomb parameter is chosen to provide the same equilibrium
+# bond length as the 3D molecule.
+# ------------------
+
+TheoryLevel = independent_particles
+
+a = 0.758
+%Species
+"atom1" | 1 | spec_user_defined | 1 | "-1/sqrt(a^2+(x)^2)"
+%
+
+%Coordinates
+"atom1" | -0.699770
+"atom1" |  0.699770
+%
+
+# ------------------
+# Ground State
+# ------------------
+
+SCFCalculateForces = yes
+
+EigenSolverInitTolerance = 1.0e-6
+EigenSolverFinalTolerance = 1.0e-6
+EigenSolverFinalToleranceIteration = 6
+EigenSolverMaxIter = 1000
+
+Mixing = 1.0
+TypeOfMixing = linear
+
+# ------------------
+# TD RUN Parameters
+# ------------------
+
+dt = 0.02
+TDTimeStep = dt
+TDEnergyUpdateIter = 1
+
+# For the OCT runs:
+stime  = 100.0
+TDMaximumIter = stime/dt
+TDEvolutionMethod = crank_nicholson
+
+# For the TD runs:
+totaltime = 500.0
+#TDEvolutionMethod = exp_mid
+#TDMaximumIter = totaltime/dt
+#TDExponentialMethod = taylor
+#TDExpOrder = 4
+#MoveIons = vel_verlet
+
+TDOutput = multipoles + laser + geometry
+
+AbsorbingBoundaries = sin2
+AbWidth = 4.0
+
+# --------------
+# OCT parameters
+# --------------
+
+OCTPenalty = 1.0
+OCTEps = 0.000001
+OCTMaxIter = 1
+OCTControlFunctionOmegaMax = 0.80
+OCTFixFluenceTo = -1
+OCTDoubleCheck = no
+
+OCTScheme = oct_algorithm_cg
+OCTControlRepresentation = control_function_parametrized
+OCTControlFunctionRepresentation = control_zero_fourier_series_h
+
+#OCTCheckGradient = 0.0001
+
+OCTInitialState = oct_is_groundstate
+OCTTargetOperator = oct_tg_velocity
+OCTMoveIons = false
+
+%OCTVelocityTarget 
+"((v[1,1]-v[2,1])*1836.15)^2"
+%
+
+%OCTVelocityDerivatives
+" 2*(v[1,1]-v[2,1])*1836.15^2" | "0" | "0"
+"-2*(v[1,1]-v[2,1])*1836.15^2" | "0" | "0"
+%
+
+#-----------------------------
+# Laser field = Initial guess
+#-----------------------------
+
+%TDExternalFields
+ electric_field | 1 | 0 | 0 | 0.0 | "envelope_function"
+%
+
+amplitude = 0.2
+
+%TDFunctions
+"envelope_function" | tdf_from_expr | "amplitude*(2/sqrt(stime))*sin((2*pi/stime)*1*t)*Step(stime-t)"
+%
+
+#%TDFunctions
+#"envelope_function" | tdf_from_file | "./opt-control/laser.238/cp"
+#%
+

@@ -54,7 +54,10 @@ dist_share_DATA = \
 	06-zbr98.02-oct.inp                    \
 	07-qoct+tddft.test                     \
 	07-qoct+tddft.01-ground_state.inp      \
-	07-qoct+tddft.02-oct.inp
+	07-qoct+tddft.02-oct.inp               \
+	08-velocities.test                     \
+	08-velocities.01-ground_state.inp      \
+	08-velocities.02-oct.inp
 
 
 CLEANFILES = *~ *.bak
