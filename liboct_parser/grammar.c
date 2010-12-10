@@ -1123,15 +1123,15 @@ yydestruct (yymsg, yytype, yyvaluep)
 /* Prevent warnings from -Wmissing-prototypes.  */
 #ifdef YYPARSE_PARAM
 #if defined __STDC__ || defined __cplusplus
-int yyparse (void *YYPARSE_PARAM);
+int oyyparse (void *YYPARSE_PARAM);
 #else
-int yyparse ();
+int oyyparse ();
 #endif
 #else /* ! YYPARSE_PARAM */
 #if defined __STDC__ || defined __cplusplus
-int yyparse (void);
+int oyyparse (void);
 #else
-int yyparse ();
+int oyyparse ();
 #endif
 #endif /* ! YYPARSE_PARAM */
 
@@ -1155,20 +1155,20 @@ int yynerrs;
 #if (defined __STDC__ || defined __C99__FUNC__ \
      || defined __cplusplus || defined _MSC_VER)
 int
-yyparse (void *YYPARSE_PARAM)
+oyyparse (void *YYPARSE_PARAM)
 #else
 int
-yyparse (YYPARSE_PARAM)
+oyyparse (YYPARSE_PARAM)
     void *YYPARSE_PARAM;
 #endif
 #else /* ! YYPARSE_PARAM */
 #if (defined __STDC__ || defined __C99__FUNC__ \
      || defined __cplusplus || defined _MSC_VER)
 int
-yyparse (void)
+oyyparse (void)
 #else
 int
-yyparse ()
+oyyparse ()
 
 #endif
 #endif

@@ -51,7 +51,7 @@ int parse_exp(char *exp, parse_result *r)
   par_string = exp;
   par_pos = 0;
 
-  o = yyparse();
+  o = oyyparse();
   if(o == 0){
     r->type = par_res.type;
     if(r->type == PR_CMPLX)
