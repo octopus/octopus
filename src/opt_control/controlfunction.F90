@@ -1586,7 +1586,8 @@ contains
        forall(jj = 1:(dim / 2) - 1)
          grad(jj) = grad(jj) + M_TWO * controlfunction_alpha(par, 1) * sum(xx(1:(dim / 2) - 1)) + M_TWO * theta(1)
        end forall
-    case(ctr_fourier_series_h)
+
+    case(ctr_fourier_series_h, ctr_sine_fourier_series_h)
        SAFE_ALLOCATE(theta(1:dim))   ! dim = dof + 1 for fourier-series-h
        SAFE_ALLOCATE(grad_matrix(1:dim - 1, 1:dim))
 
@@ -1597,9 +1598,8 @@ contains
        grad = -grad  ! the CG algorithm minimizes, so we need to give the negative gradient for maximization
        
        SAFE_DEALLOCATE_A(grad_matrix)
-       
+
     case(ctr_zero_fourier_series_h)
-       
        SAFE_ALLOCATE(theta(1:dim))   ! dim = dof + 2 for zero-fourier-series-h
        SAFE_ALLOCATE(grad_matrix(1:dim - 2, 1:dim - 1))
        SAFE_ALLOCATE(eigenvectors(1:dim - 1, 1:dim - 1))
