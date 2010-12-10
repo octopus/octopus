@@ -185,12 +185,12 @@
           write(message(3), '(a)') 'set "OCTMoveIons = false"'
           call write_fatal(3)
        end if
+       ! I do not know why the normalized sine Fourier series does not work.
        if((oct%algorithm .eq. oct_algorithm_cg) .and. &
-            (controlfunction_representation() .ne. ctr_zero_fourier_series_h)) then
-          write(message(1), '(a)') 'For the velocity optimization and the CG algorithm only'
-          write(message(2), '(a)') '"OCTParameterRepresentation = control_zero_fourier_series_h"'
-          write(message(3), '(a)') 'works at the moment.'
-          call write_fatal(3)
+            (controlfunction_representation() .eq. ctr_sine_fourier_series_h)) then
+          write(message(1), '(a)') 'For the velocity optimization and the CG algorithm you'
+          write(message(2), '(a)') 'cannot use "OCTParameterRepresentation = control_sine_fourier_series_h".'
+          call write_fatal(2)
        end if
     end if
     
