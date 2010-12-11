@@ -92,6 +92,7 @@ module hamiltonian_base_m
     integer                           :: full_projection_size
 #ifdef HAVE_OPENCL
     integer                           :: max_npoints
+    integer                           :: total_points
     integer                           :: max_nprojs
     type(opencl_mem_t)                :: potential_opencl
     type(opencl_mem_t)                :: buff_offsets
@@ -405,7 +406,7 @@ contains
 
     subroutine build_opencl()
 #ifdef HAVE_OPENCL
-      integer              :: matrix_size, map_size, scal_size
+      integer              :: matrix_size, scal_size
       integer, allocatable :: sizes(:, :)
       integer, allocatable :: offsets(:, :)
       integer, parameter   :: POINTS = 1, PROJS = 2
@@ -416,7 +417,7 @@ contains
 
       ! first we count
       matrix_size = 0
-      map_size = 0
+      this%total_points = 0
       scal_size = 0
       this%max_npoints = 0
       this%max_nprojs = 0
@@ -432,8 +433,8 @@ contains
         offsets(MATRIX, imat) = matrix_size
         INCR(matrix_size, pmat%npoints*pmat%nprojs)
         
-        offsets(MAP, imat) = map_size
-        INCR(map_size, pmat%npoints)
+        offsets(MAP, imat) = this%total_points
+        INCR(this%total_points, pmat%npoints)
 
         offsets(SCAL, imat) = scal_size
         INCR(scal_size, pmat%nprojs)
@@ -441,7 +442,7 @@ contains
         
       ! allocate
       call opencl_create_buffer(this%buff_matrices, CL_MEM_READ_ONLY, TYPE_FLOAT, matrix_size)
-      call opencl_create_buffer(this%buff_maps, CL_MEM_READ_ONLY, TYPE_INTEGER, map_size)
+      call opencl_create_buffer(this%buff_maps, CL_MEM_READ_ONLY, TYPE_INTEGER, this%total_points)
       call opencl_create_buffer(this%buff_scals, CL_MEM_READ_ONLY, TYPE_FLOAT, scal_size)
       
       ! now copy

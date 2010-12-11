@@ -384,8 +384,12 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
   type(projector_matrix_t), pointer :: pmat
 #ifdef HAVE_MPI
   R_TYPE, allocatable :: projection_red(:, :)
-#endif
   type(profile_t), save :: reduce_prof
+#endif
+#ifdef HAVE_OPENCL
+  type(opencl_mem_t) :: lpsi
+  integer :: padnprojs
+#endif
 
   if(.not. this%apply_projector_matrices) return
 
@@ -497,21 +501,40 @@ contains
 
     call profiling_in(cl_prof, "CL_PROJ_KET")
 
+    call opencl_create_buffer(lpsi, CL_MEM_READ_WRITE, TYPE_FLOAT, this%total_points*vpsib%pack%size_real(1))
+
+    call opencl_set_kernel_arg(kernel_projector_ket, 0, this%nprojector_matrices)
+    call opencl_set_kernel_arg(kernel_projector_ket, 1, this%buff_sizes)
+    call opencl_set_kernel_arg(kernel_projector_ket, 2, this%buff_offsets)
+    call opencl_set_kernel_arg(kernel_projector_ket, 3, this%buff_matrices)
+    call opencl_set_kernel_arg(kernel_projector_ket, 4, this%buff_maps)
+    call opencl_set_kernel_arg(kernel_projector_ket, 5, projection%buff_projection)
+    call opencl_set_kernel_arg(kernel_projector_ket, 6, log2(vpsib%pack%size_real(1)))
+    call opencl_set_kernel_arg(kernel_projector_ket, 7, lpsi)
+    call opencl_set_kernel_arg(kernel_projector_ket, 8, log2(vpsib%pack%size_real(1)))
+    
+    wgsize = opencl_max_workgroup_size()/vpsib%pack%size_real(1)    
+      
+    call opencl_kernel_run(kernel_projector_ket, &
+      (/vpsib%pack%size_real(1), pad(this%max_npoints, wgsize), pad(this%nprojector_matrices, wgsize)/), &
+      (/vpsib%pack%size_real(1), wgsize, 1/))
+
+    call opencl_finish()
+
     do imat = 1, this%nprojector_matrices
 
-      call opencl_set_kernel_arg(kernel_projector_ket, 0, imat - 1)
-      call opencl_set_kernel_arg(kernel_projector_ket, 1, this%buff_sizes)
-      call opencl_set_kernel_arg(kernel_projector_ket, 2, this%buff_offsets)
-      call opencl_set_kernel_arg(kernel_projector_ket, 3, this%buff_matrices)
-      call opencl_set_kernel_arg(kernel_projector_ket, 4, this%buff_maps)
-      call opencl_set_kernel_arg(kernel_projector_ket, 5, projection%buff_projection)
-      call opencl_set_kernel_arg(kernel_projector_ket, 6, log2(vpsib%pack%size_real(1)))
-      call opencl_set_kernel_arg(kernel_projector_ket, 7, vpsib%pack%buffer)
-      call opencl_set_kernel_arg(kernel_projector_ket, 8, log2(vpsib%pack%size_real(1)))
+      call opencl_set_kernel_arg(kernel_projector_ket_copy, 0, imat - 1)
+      call opencl_set_kernel_arg(kernel_projector_ket_copy, 1, this%buff_sizes)
+      call opencl_set_kernel_arg(kernel_projector_ket_copy, 2, this%buff_offsets)
+      call opencl_set_kernel_arg(kernel_projector_ket_copy, 3, this%buff_maps)
+      call opencl_set_kernel_arg(kernel_projector_ket_copy, 4, lpsi)
+      call opencl_set_kernel_arg(kernel_projector_ket_copy, 5, log2(vpsib%pack%size_real(1)))
+      call opencl_set_kernel_arg(kernel_projector_ket_copy, 6, vpsib%pack%buffer)
+      call opencl_set_kernel_arg(kernel_projector_ket_copy, 7, log2(vpsib%pack%size_real(1)))
 
       wgsize = opencl_max_workgroup_size()/vpsib%pack%size_real(1)
 
-      call opencl_kernel_run(kernel_projector_ket, &
+      call opencl_kernel_run(kernel_projector_ket_copy, &
         (/vpsib%pack%size_real(1), pad(this%max_npoints, wgsize)/), (/vpsib%pack%size_real(1), wgsize/))
 
       pmat => this%projector_matrices(imat)
@@ -525,6 +548,7 @@ contains
 
     end do
 
+    call opencl_release_buffer(lpsi)
     call profiling_out(cl_prof)
 
 #endif

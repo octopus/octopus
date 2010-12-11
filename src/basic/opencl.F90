@@ -53,7 +53,8 @@ module opencl_m
     opencl_build_program,         &
     opencl_release_program,       &
     opencl_release_kernel,        &
-    opencl_create_kernel
+    opencl_create_kernel,         &
+    f90_cl_device_local_mem_size
 
   type opencl_t 
     type(c_ptr) :: platform_id
@@ -72,7 +73,7 @@ module opencl_m
     type(type_t)           :: type
   end type opencl_mem_t
 
-  type(opencl_t) :: opencl
+  type(opencl_t), public :: opencl
 
   ! the kernels
   type(c_ptr), public :: kernel_vpsi
@@ -84,6 +85,7 @@ module opencl_m
   type(c_ptr), public :: kernel_copy
   type(c_ptr), public :: kernel_projector_bra
   type(c_ptr), public :: kernel_projector_ket
+  type(c_ptr), public :: kernel_projector_ket_copy
   type(c_ptr), public :: dpack
   type(c_ptr), public :: zpack
   type(c_ptr), public :: dunpack
@@ -206,8 +208,9 @@ module opencl_m
       call opencl_release_program(prog)
 
       call opencl_build_program(prog, trim(conf%share)//'/opencl/projector.cl')
-      call opencl_create_kernel(kernel_projector_ket, prog, "projector_ket")
       call opencl_create_kernel(kernel_projector_bra, prog, "projector_bra")
+      call opencl_create_kernel(kernel_projector_ket, prog, "projector_ket")
+      call opencl_create_kernel(kernel_projector_ket_copy, prog, "projector_ket_copy")
       call opencl_release_program(prog)
 
       call opencl_build_program(prog, trim(conf%share)//'/opencl/pack.cl')
@@ -247,6 +250,7 @@ module opencl_m
         call opencl_release_kernel(kernel_copy)
         call opencl_release_kernel(kernel_projector_bra)
         call opencl_release_kernel(kernel_projector_ket)
+        call opencl_release_kernel(kernel_projector_ket_copy)
         call opencl_release_kernel(dpack)
         call opencl_release_kernel(zpack)
         call opencl_release_kernel(dunpack)

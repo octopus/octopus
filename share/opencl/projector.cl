@@ -57,17 +57,18 @@ __kernel void projector_bra(const int nmat,
 
 }
 
-__kernel void projector_ket(const int imat,
+__kernel void projector_ket(const int nmat,
 			    const __global int * sizes,
 			    const __global int * offsets,
 			    __global const double * matrix,
 			    __global const int * map,
 			    __global const double * projection, const int ldprojection,
-			    __global double * psi, const int ldpsi
+			    __global double * lpsi, const int ldlpsi
 			    ){
   
   const int ist = get_global_id(0);
   const int ip = get_global_id(1);
+  const int imat = get_global_id(2);
 
   const int npoints = sizes[2*imat    ];
   const int nprojs  = sizes[2*imat + 1];
@@ -75,17 +76,34 @@ __kernel void projector_ket(const int imat,
   const int map_offset    = offsets[4*imat + 1];
   const int scal_offset   = offsets[4*imat + 2];
 
-  if(ip >= npoints) return;
+  if(ip >= npoints || imat >= nmat) return;
 
   double aa = 0.0;
   for(int ipj = 0; ipj < nprojs; ipj++){
     aa += matrix[matrix_offset + ip + npoints*ipj]*projection[ist + ((scal_offset + ipj)<<ldprojection)];
   }
 
+  lpsi[((map_offset + ip)<<ldlpsi) + ist] = aa;
+}
+
+__kernel void projector_ket_copy(const int imat,
+				 const __global int * sizes,
+				 const __global int * offsets,
+				 __global const int * map,
+				 __global double * lpsi, const int ldlpsi,
+				 __global double * psi, const int ldpsi
+				 ){
+  const int ist = get_global_id(0);
+  const int ip = get_global_id(1);
+
+  const int npoints = sizes[2*imat    ];
+  const int map_offset = offsets[4*imat + 1];
+
+  if(ip >= npoints) return;
+
   // This update would have to be done in an atomic fashion if we wanted
   // to parallelize over imat.
-  psi[((map[map_offset + ip] - 1)<<ldpsi) + ist] += aa;
-
+  psi[((map[map_offset + ip] - 1)<<ldpsi) + ist] += lpsi[((map_offset + ip)<<ldpsi) + ist];
 
 }
 
