@@ -260,7 +260,7 @@ contains
 
   ! ------------------------------------------
   subroutine operate_opencl()
-    integer :: pnri, bsize, isize, ist
+    integer :: pnri, bsize, isize, ist, local_mem_size
     type(opencl_mem_t) :: buff_weights
     type(profile_t), save :: prof
 
@@ -305,10 +305,17 @@ contains
       call opencl_set_kernel_arg(kernel_operate, 6, log2(fi%pack%size_real(1)))
       call opencl_set_kernel_arg(kernel_operate, 7, fo%pack%buffer)
       call opencl_set_kernel_arg(kernel_operate, 8, log2(fi%pack%size_real(1)))
+
       
-      bsize = max(opencl_kernel_workgroup_size(kernel_operate), fi%pack%size_real(1))
+      local_mem_size = f90_cl_device_local_mem_size(opencl%device)
+      isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
+      isize = isize - mod(isize, fi%pack%size_real(1))
+      bsize = fi%pack%size_real(1)*isize
+      bsize = min(opencl_kernel_workgroup_size(kernel_operate), bsize)
       isize = bsize/(fi%pack%size_real(1))
-      
+
+      ASSERT(isize*op%stencil%size*types_get_size(TYPE_INTEGER) <= local_mem_size)
+
       call opencl_set_kernel_arg(kernel_operate, 9, TYPE_INTEGER, isize*op%stencil%size)
 
       call opencl_kernel_run(kernel_operate, &
