@@ -147,6 +147,8 @@ module controlfunction_m
     FLOAT   :: w0       = M_ZERO
     FLOAT, pointer :: utransf(:, :)  => NULL()
     FLOAT, pointer :: utransfi(:, :) => NULL()
+    FLOAT, pointer :: hypersphere_transform(:, :) => NULL()
+    FLOAT, pointer :: ihypersphere_transform(:, :) => NULL()
 
     FLOAT, pointer :: theta(:) => NULL()
   end type controlfunction_t
@@ -1032,6 +1034,8 @@ contains
     SAFE_DEALLOCATE_P(cp%utransf)
     SAFE_DEALLOCATE_P(cp%utransfi)
     SAFE_DEALLOCATE_P(cp%theta)
+    SAFE_DEALLOCATE_P(cp%hypersphere_transform)
+    SAFE_DEALLOCATE_P(cp%ihypersphere_transform)
 
     POP_SUB(controlfunction_end)
   end subroutine controlfunction_end
@@ -1381,6 +1385,8 @@ contains
     call loct_pointer_copy(cp_out%utransf, cp_in%utransf)
     call loct_pointer_copy(cp_out%utransfi, cp_in%utransfi)
     call loct_pointer_copy(cp_out%theta, cp_in%theta)
+    call loct_pointer_copy(cp_out%hypersphere_transform, cp_in%hypersphere_transform)
+    call loct_pointer_copy(cp_out%ihypersphere_transform, cp_in%ihypersphere_transform)
 
     POP_SUB(controlfunction_copy)
   end subroutine controlfunction_copy
@@ -1610,25 +1616,14 @@ contains
        rr = sqrt(cf_common%targetfluence)
        call hypersphere_grad_matrix(grad_matrix, rr, xx)
        
-       ! create matrix S
-       aa = M_ZERO
-       aa(1:dim / 2 - 1) = M_ONE
-       forall(jj = 1:dim - 1)
-          forall(kk = 1:dim - 1) eigenvectors(jj, kk) = aa(jj) * aa(kk)
-          eigenvectors(jj, jj) = eigenvectors(jj, jj) + M_ONE
-       end forall
-
-       ! create unitary Matrix U
-       call lalg_eigensolve(dim - 1, eigenvectors, eigenvalues)
-       
        grad = M_ZERO
        do mm = 1, dim - 2
           do kk = 1, dim - 1
              do ss = 1, dim - 1
-                grad(mm) = grad(mm) + grad_matrix(mm, kk) * eigenvectors(ss, kk) * theta(ss + 1) / sqrt(eigenvalues(kk))
+                grad(mm) = grad(mm) + grad_matrix(mm, kk) * par%ihypersphere_transform(ss, kk) * theta(ss + 1)
              end do
              do tt = 1, dim / 2 - 1
-                grad(mm) = grad(mm) - grad_matrix(mm, kk) * eigenvectors(tt, kk) * theta(1) / sqrt(eigenvalues(kk))
+                grad(mm) = grad(mm) - grad_matrix(mm, kk) * par%ihypersphere_transform(tt, kk) * theta(1)
              end do
           end do
        end do

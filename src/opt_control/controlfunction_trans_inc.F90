@@ -40,14 +40,9 @@
       e = matmul(par%utransf, ep)
 
       if(cf_common%representation .eq. ctr_zero_fourier_series_h) then
-        SAFE_ALLOCATE(a(1:n-1))
         SAFE_ALLOCATE(y(1:n-1))
-        a = M_ZERO
-        a(1:n/2-1) = M_ONE
-
-        call hypersphere_cut(ep(2:n), a, y)
+        y = matmul(par%hypersphere_transform, ep(2:n))
         call cartesian2hyperspherical(y, x(1:n-2))
-        SAFE_DEALLOCATE_A(a)
         SAFE_DEALLOCATE_A(y)
        else
         call cartesian2hyperspherical(e, x(1:n-1))
@@ -113,17 +108,11 @@
 
       if(cf_common%representation .eq. ctr_zero_fourier_series_h) then
         call hyperspherical2cartesian(x, ep(2:n))
-        SAFE_ALLOCATE(a(1:n-1))
-        SAFE_ALLOCATE(y(1:n-1))
-        a = M_ZERO
-        a(1:n/2-1) = M_ONE
-        call hypersphere_cut_back(ep(2:n), a, e(2:n))
+        e(2:n) = matmul(par%ihypersphere_transform, ep(2:n))
         e(1) = -sum(e(2:n/2))
         e = sqrt(cf_common%targetfluence) * e
         ep = matmul(par%utransfi, e)
         call tdf_set_numerical(par%f(1), ep)
-        SAFE_DEALLOCATE_A(a)
-        SAFE_DEALLOCATE_A(y)
       else
         call hyperspherical2cartesian(x(1:n-1), e)
         e = sqrt(cf_common%targetfluence) * e
@@ -202,14 +191,43 @@
   subroutine controlfunction_trans_matrix(par)
     type(controlfunction_t), intent(inout) :: par
 
-    integer :: i, mm, nn
+    integer :: i, mm, nn, n, j, k
     FLOAT :: t, det
     type(tdf_t) :: fn, fm
-    FLOAT, allocatable :: eigenvec(:, :), eigenval(:)
+    FLOAT, allocatable :: eigenvec(:, :), eigenval(:), a(:), alpha(:, :)
 
     if(cf_common%representation .eq. ctr_real_time) return
 
     PUSH_SUB(controlfunction_trans_matrix)
+
+    if(cf_common%representation .eq. ctr_zero_fourier_series_h) then
+      n = par%dim
+      SAFE_ALLOCATE(par%hypersphere_transform (n-1, 1:n-1))
+      SAFE_ALLOCATE(par%ihypersphere_transform (n-1, 1:n-1))
+      SAFE_ALLOCATE(a(1:n-1))
+      SAFE_ALLOCATE(alpha(1:n-1, 1:n-1))
+      SAFE_ALLOCATE(eigenvec(1:n-1, 1:n-1))
+      SAFE_ALLOCATE(eigenval(1:n-1))
+      a = M_ZERO
+      a(1:n/2-1) = M_ONE
+      forall(j=1:n-1)
+        forall(k=1:n-1) alpha(j, k) = a(j)*a(k)
+        alpha(j, j) = alpha(j, j) + M_ONE
+      end forall
+      eigenvec = alpha
+      call lalg_eigensolve(n-1, eigenvec, eigenval)
+      call fix_vector_sign(eigenvec, n-1)
+      forall(j=1:n-1, k=1:n-1) eigenvec(j, k) = eigenvec(j, k)*sqrt(eigenval(k))
+      alpha = transpose(eigenvec)
+      par%hypersphere_transform = alpha
+      det = lalg_inverter(n-1, alpha)
+      par%ihypersphere_transform = alpha
+ 
+      SAFE_DEALLOCATE_A(a)
+      SAFE_DEALLOCATE_A(alpha)
+      SAFE_DEALLOCATE_A(eigenvec)
+      SAFE_DEALLOCATE_A(eigenval)
+    end if
 
     SAFE_ALLOCATE(par%utransf (1:par%dim, 1:par%dim))
     SAFE_ALLOCATE(par%utransfi(1:par%dim, 1:par%dim))

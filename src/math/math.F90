@@ -73,13 +73,12 @@ module math_m
     odd,                        &
     cartesian2hyperspherical,   &
     hyperspherical2cartesian,   &
-    hypersphere_cut,            &
-    hypersphere_cut_back,       &
+    fix_vector_sign,            &
     hypersphere_grad_matrix,    &
     pad,                        &
     pad_pow2,                   &
     log2
-  
+
   !------------------------------------------------------------------------------
   ! This is the common interface to a simple-minded polynomical interpolation
   ! procedure (simple use of the classical formula of Lagrange).
@@ -826,6 +825,27 @@ contains
   end subroutine interpolation_coefficients
 
 
+  subroutine fix_vector_sign(a, n)
+    FLOAT,   intent(inout) :: a(:, :)
+    integer, intent(in)    :: n
+
+    integer :: j, k
+
+    do k = 1, n
+      do j = 1, n
+        if( a(j, k)*a(j, k) > CNST(1.0e-20) ) then
+          if(a(j, k) < M_ZERO) then 
+            a(1:n, k) = - a(1:n, k)
+          end if
+          goto 30
+        end if
+      end do
+      30 continue
+    end do
+
+  end subroutine fix_vector_sign
+
+
   ! ---------------------------------------------------------
   ! Returns if n is even.
   logical function even(n)
@@ -925,82 +945,6 @@ contains
 
     POP_SUB(hyperspherical2cartesian)
   end subroutine hyperspherical2cartesian
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  subroutine  hypersphere_cut(x, a, y)
-    FLOAT, intent(in)  :: x(:)
-    FLOAT, intent(in)  :: a(:)
-    FLOAT, intent(out) :: y(:)
-
-    integer :: n, j, k
-    FLOAT, allocatable :: alpha(:, :), eigenvectors(:, :), eigenvalues(:)
-
-    PUSH_SUB(hypersphere_cut)
-
-    n = size(x) + 1
-
-    SAFE_ALLOCATE(alpha(1:n-1, 1:n-1))
-    SAFE_ALLOCATE(eigenvectors(1:n-1, 1:n-1))
-    SAFE_ALLOCATE(eigenvalues(1:n-1))
-
-    forall(j=1:n-1)
-      forall(k=1:n-1) alpha(j, k) = a(j)*a(k)
-      alpha(j, j) = alpha(j, j) + M_ONE
-    end forall
-    
-    eigenvectors = alpha
-    call lalg_eigensolve(n-1, eigenvectors, eigenvalues)
-    forall(j=1:n-1, k=1:n-1) eigenvectors(j, k) = eigenvectors(j, k)*sqrt(eigenvalues(k))
-
-    alpha = transpose(eigenvectors)
-    y = matmul(alpha, x(1:n-1))
-
-    SAFE_DEALLOCATE_A(alpha)
-    SAFE_DEALLOCATE_A(eigenvectors)
-    SAFE_DEALLOCATE_A(eigenvalues)
-    POP_SUB(hypersphere_cut)
-  end subroutine hypersphere_cut
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  subroutine  hypersphere_cut_back(y, a, x)
-    FLOAT, intent(in)  :: y(:)
-    FLOAT, intent(in)  :: a(:)
-    FLOAT, intent(out) :: x(:)
-
-    integer :: n, j, k
-    FLOAT, allocatable :: alpha(:, :), eigenvectors(:, :), eigenvalues(:)
-    FLOAT :: det
-
-    PUSH_SUB(hypersphere_cut_back)
-
-    n = size(x) + 1
-
-    SAFE_ALLOCATE(alpha(1:n-1, 1:n-1))
-    SAFE_ALLOCATE(eigenvectors(1:n-1, 1:n-1))
-    SAFE_ALLOCATE(eigenvalues(1:n-1))
-
-    forall(j=1:n-1)
-      forall(k=1:n-1) alpha(j, k) = a(j)*a(k)
-      alpha(j, j) = alpha(j, j) + M_ONE
-    end forall
-
-    eigenvectors = alpha
-    call lalg_eigensolve(n-1, eigenvectors, eigenvalues)
-    forall(j=1:n-1, k=1:n-1) eigenvectors(j, k) = eigenvectors(j, k)*sqrt(eigenvalues(k))
-
-    alpha = transpose(eigenvectors)
-    det = lalg_inverter(n-1, alpha)
-    x(1:n-1) = matmul(alpha, y)
-
-    SAFE_DEALLOCATE_A(alpha)
-    SAFE_DEALLOCATE_A(eigenvectors)
-    SAFE_DEALLOCATE_A(eigenvalues)
-    POP_SUB(hypersphere_cut_back)
-  end subroutine hypersphere_cut_back
   ! ---------------------------------------------------------
 
 
