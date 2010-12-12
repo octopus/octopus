@@ -194,7 +194,7 @@
     integer :: i, mm, nn, n, j, k
     FLOAT :: t, det
     type(tdf_t) :: fn, fm
-    FLOAT, allocatable :: eigenvec(:, :), eigenval(:), a(:), alpha(:, :)
+    FLOAT, allocatable :: neigenvec(:, :), eigenvec(:, :), eigenval(:), a(:), alpha(:, :)
 
     if(cf_common%representation .eq. ctr_real_time) return
 
@@ -204,28 +204,52 @@
       n = par%dim
       SAFE_ALLOCATE(par%hypersphere_transform (n-1, 1:n-1))
       SAFE_ALLOCATE(par%ihypersphere_transform (n-1, 1:n-1))
-      SAFE_ALLOCATE(a(1:n-1))
       SAFE_ALLOCATE(alpha(1:n-1, 1:n-1))
       SAFE_ALLOCATE(eigenvec(1:n-1, 1:n-1))
+      SAFE_ALLOCATE(neigenvec(1:n-1, 1:n-1))
       SAFE_ALLOCATE(eigenval(1:n-1))
-      a = M_ZERO
-      a(1:n/2-1) = M_ONE
-      forall(j=1:n-1)
-        forall(k=1:n-1) alpha(j, k) = a(j)*a(k)
-        alpha(j, j) = alpha(j, j) + M_ONE
+      ! k = 1
+      eigenvec = M_ZERO
+      eigenvec(1:n/2-1, 1) = M_ONE
+      eigenvec(n/2:n-1, 1) = M_ZERO
+      eigenval(1) = n/2
+      ! k = 2, ...., n/2-1
+      do k = 2, n/2-1
+        eigenval(k) = M_ONE
+        eigenvec(:, k) = M_ZERO
+        eigenvec(1, k) = -M_ONE
+        eigenvec(k, k) = M_ONE
+      end do
+      ! k = n/2, ..., n-1
+      do k = n/2, n-1
+        eigenval(k) = M_ONE
+        eigenvec(:, k) = M_ZERO
+        eigenvec(k, k) = M_ONE
+      end do
+
+      do k = 1, n-1
+        neigenvec(:, k) = eigenvec(:, k)
+        do j = 1, k-1
+          neigenvec(:, k) = neigenvec(:, k) - & 
+            (dot_product(eigenvec(:, k), neigenvec(:, j)) / dot_product(neigenvec(:, j), neigenvec(:, j))) * neigenvec(:, j)
+        end do
+      end do
+      do k = 1, n-1
+        neigenvec(:, k) = neigenvec(:, k)/sqrt(dot_product(neigenvec(:, k),neigenvec(:, k)))
+      end do
+      eigenvec = neigenvec
+
+      par%ihypersphere_transform = eigenvec
+      par%hypersphere_transform = transpose(eigenvec)
+
+      forall(j=1:n-1, k=1:n-1) 
+        par%ihypersphere_transform(j, k) = par%ihypersphere_transform(j, k) / sqrt(eigenval(k))
+        par%hypersphere_transform(j, k) = par%hypersphere_transform(j, k) * sqrt(eigenval(k))
       end forall
-      eigenvec = alpha
-      call lalg_eigensolve(n-1, eigenvec, eigenval)
-      call fix_vector_sign(eigenvec, n-1)
-      forall(j=1:n-1, k=1:n-1) eigenvec(j, k) = eigenvec(j, k)*sqrt(eigenval(k))
-      alpha = transpose(eigenvec)
-      par%hypersphere_transform = alpha
-      det = lalg_inverter(n-1, alpha)
-      par%ihypersphere_transform = alpha
- 
-      SAFE_DEALLOCATE_A(a)
+
       SAFE_DEALLOCATE_A(alpha)
       SAFE_DEALLOCATE_A(eigenvec)
+      SAFE_DEALLOCATE_A(neigenvec)
       SAFE_DEALLOCATE_A(eigenval)
     end if
 
