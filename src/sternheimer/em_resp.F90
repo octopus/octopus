@@ -193,7 +193,9 @@ contains
     call write_info(1)
     call system_h_setup(sys, hm)
 
-    if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
+    if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC &
+      .and. sys%st%d%nspin == 1 .and. states_are_real(sys%st)) then
+      ! first-order response is zero if there is time-reversal symmetry. F Mauri and SG Louie, PRL 76, 4246 (1996)
       call sternheimer_init(sh, sys, hm, "EM", complex_response, set_ham_var = 0, set_last_occ_response = em_vars%occ_response)
       ! set HamiltonVariation to V_ext_only, in magnetic case
     else
