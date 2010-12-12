@@ -825,11 +825,14 @@ contains
   end subroutine interpolation_coefficients
 
 
+  ! ---------------------------------------------------------
   subroutine fix_vector_sign(a, n)
     FLOAT,   intent(inout) :: a(:, :)
     integer, intent(in)    :: n
 
     integer :: j, k
+
+    PUSH_SUB(fix_vector_sign)
 
     do k = 1, n
       do j = 1, n
@@ -837,12 +840,12 @@ contains
           if(a(j, k) < M_ZERO) then 
             a(1:n, k) = - a(1:n, k)
           end if
-          goto 30
+          exit
         end if
       end do
-      30 continue
     end do
 
+    POP_SUB(fix_vector_sign)
   end subroutine fix_vector_sign
 
 
