@@ -86,25 +86,25 @@ __kernel void projector_ket(const int nmat,
   lpsi[((map_offset + ip)<<ldlpsi) + ist] = aa;
 }
 
-__kernel void projector_ket_copy(const int imat,
-				 const __global int * sizes,
-				 const __global int * offsets,
-				 __global const int * map,
-				 __global double * lpsi, const int ldlpsi,
+__kernel void projector_ket_copy(const int np,
+				 const __global int * pos,
+				 const __global int * invmap,
+				 const __global double * lpsi, const int ldlpsi,
 				 __global double * psi, const int ldpsi
 				 ){
   const int ist = get_global_id(0);
   const int ip = get_global_id(1);
 
-  const int npoints = sizes[2*imat    ];
-  const int map_offset = offsets[4*imat + 1];
+  if(ip >= np) return;
 
-  if(ip >= npoints) return;
+  double aa = 0.0;
 
-  // This update would have to be done in an atomic fashion if we wanted
-  // to parallelize over imat.
-  psi[((map[map_offset + ip] - 1)<<ldpsi) + ist] += lpsi[((map_offset + ip)<<ldpsi) + ist];
+  for(int ii = pos[ip]; ii < pos[ip + 1]; ii++){
+    aa += lpsi[(invmap[ii]<<ldpsi) + ist];
+  }
 
+  psi[(ip<<ldpsi) + ist] += aa;
+  
 }
 
 /*

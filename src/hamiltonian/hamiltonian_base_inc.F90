@@ -386,10 +386,6 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
   R_TYPE, allocatable :: projection_red(:, :)
   type(profile_t), save :: reduce_prof
 #endif
-#ifdef HAVE_OPENCL
-  type(opencl_mem_t) :: lpsi
-  integer :: padnprojs
-#endif
 
   if(.not. this%apply_projector_matrices) return
 
@@ -494,6 +490,7 @@ contains
 #ifdef HAVE_OPENCL
     integer :: wgsize, imat
     type(profile_t), save :: cl_prof
+    type(opencl_mem_t) :: lpsi
 
     ! In this case we run one kernel per projector, since all write to
     ! the wave-function. Otherwise we would need to do atomic
@@ -514,39 +511,36 @@ contains
     call opencl_set_kernel_arg(kernel_projector_ket, 8, log2(vpsib%pack%size_real(1)))
     
     wgsize = opencl_max_workgroup_size()/vpsib%pack%size_real(1)    
-      
+
     call opencl_kernel_run(kernel_projector_ket, &
       (/vpsib%pack%size_real(1), pad(this%max_npoints, wgsize), pad(this%nprojector_matrices, wgsize)/), &
       (/vpsib%pack%size_real(1), wgsize, 1/))
 
-    call opencl_finish()
-
     do imat = 1, this%nprojector_matrices
-
-      call opencl_set_kernel_arg(kernel_projector_ket_copy, 0, imat - 1)
-      call opencl_set_kernel_arg(kernel_projector_ket_copy, 1, this%buff_sizes)
-      call opencl_set_kernel_arg(kernel_projector_ket_copy, 2, this%buff_offsets)
-      call opencl_set_kernel_arg(kernel_projector_ket_copy, 3, this%buff_maps)
-      call opencl_set_kernel_arg(kernel_projector_ket_copy, 4, lpsi)
-      call opencl_set_kernel_arg(kernel_projector_ket_copy, 5, log2(vpsib%pack%size_real(1)))
-      call opencl_set_kernel_arg(kernel_projector_ket_copy, 6, vpsib%pack%buffer)
-      call opencl_set_kernel_arg(kernel_projector_ket_copy, 7, log2(vpsib%pack%size_real(1)))
-
-      wgsize = opencl_max_workgroup_size()/vpsib%pack%size_real(1)
-
-      call opencl_kernel_run(kernel_projector_ket_copy, &
-        (/vpsib%pack%size_real(1), pad(this%max_npoints, wgsize)/), (/vpsib%pack%size_real(1), wgsize/))
-
       pmat => this%projector_matrices(imat)
       npoints = pmat%npoints
       nprojs = pmat%nprojs
       call profiling_count_operations(nreal*nprojs*M_TWO*npoints)
       call profiling_count_operations(nst*npoints*R_ADD)
-
-      call batch_pack_was_modified(vpsib)
-      call opencl_finish()
-
     end do
+
+    call opencl_finish()
+
+    call opencl_set_kernel_arg(kernel_projector_ket_copy, 0, mesh%np)
+    call opencl_set_kernel_arg(kernel_projector_ket_copy, 1, this%buff_pos)
+    call opencl_set_kernel_arg(kernel_projector_ket_copy, 2, this%buff_invmap)
+    call opencl_set_kernel_arg(kernel_projector_ket_copy, 3, lpsi)
+    call opencl_set_kernel_arg(kernel_projector_ket_copy, 4, log2(vpsib%pack%size_real(1)))
+    call opencl_set_kernel_arg(kernel_projector_ket_copy, 5, vpsib%pack%buffer)
+    call opencl_set_kernel_arg(kernel_projector_ket_copy, 6, log2(vpsib%pack%size_real(1)))
+    
+    wgsize = opencl_max_workgroup_size()/vpsib%pack%size_real(1)
+    
+    call opencl_kernel_run(kernel_projector_ket_copy, &
+      (/vpsib%pack%size_real(1), pad(mesh%np, wgsize)/), (/vpsib%pack%size_real(1), wgsize/))
+    
+    call batch_pack_was_modified(vpsib)
+    call opencl_finish()
 
     call opencl_release_buffer(lpsi)
     call profiling_out(cl_prof)
