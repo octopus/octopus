@@ -214,7 +214,7 @@ void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
   char device_string[2048];
   int ext_khr_fp64, ext_amd_fp64;
   size_t len;
-  char buffer[4096];
+  char buffer[5000];
 
   TO_C_STR1(file_name_f, file_name);
 
@@ -256,14 +256,16 @@ void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
 
   clGetProgramBuildInfo (*program, *device,
 			 CL_PROGRAM_BUILD_LOG, sizeof (buffer), buffer,
-			 &len);    
-  printf("%s", buffer);
+			 &len);
+
+  /* Print the compilation log */
+  if(len > 0) printf("%s\n\n", buffer);
   
   if(status != CL_SUCCESS){
     clGetProgramBuildInfo (*program, *device,
 			   CL_PROGRAM_BUILD_LOG, sizeof (buffer), buffer,
 			   &len);    
-    fprintf(stderr, "Error: compilation of file %s failed.\nCompilation log:\n%s\n", file_name, buffer);
+    fprintf(stderr, "Error: compilation of file %s failed.\n", file_name);
     exit(1);
   }
 

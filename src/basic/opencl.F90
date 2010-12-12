@@ -37,6 +37,7 @@ module opencl_m
 
 #ifdef HAVE_OPENCL
   public ::                       &
+    opencl_t,                     &
     opencl_init,                  &
     opencl_end,                   &
     opencl_mem_t,                 &
