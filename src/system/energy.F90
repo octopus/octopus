@@ -162,12 +162,15 @@ contains
     FLOAT,   optional,   intent(in)    :: time
     logical, optional,   intent(in)    :: open_boundaries
     
+    PUSH_SUB(energy_calculate_eigenvalues)
+
     if(states_are_real(st)) then
       call dcalculate_eigenvalues(hm, der, st, time, open_boundaries)
     else
       call zcalculate_eigenvalues(hm, der, st, time, open_boundaries)
     end if
 
+    POP_SUB(energy_calculate_eigenvalues)
   end subroutine energy_calculate_eigenvalues
 
 #include "undef.F90"
