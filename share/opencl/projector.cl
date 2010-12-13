@@ -76,7 +76,7 @@ __kernel void projector_ket(const int nmat,
   const int map_offset    = offsets[4*imat + 1];
   const int scal_offset   = offsets[4*imat + 2];
 
-  if(ip >= npoints || imat >= nmat) return;
+  if(ip >= npoints) return;
 
   double aa = 0.0;
   for(int ipj = 0; ipj < nprojs; ipj++){

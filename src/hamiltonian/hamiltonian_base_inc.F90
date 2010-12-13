@@ -513,7 +513,7 @@ contains
     wgsize = opencl_max_workgroup_size()/vpsib%pack%size_real(1)    
 
     call opencl_kernel_run(kernel_projector_ket, &
-      (/vpsib%pack%size_real(1), pad(this%max_npoints, wgsize), pad(this%nprojector_matrices, wgsize)/), &
+      (/vpsib%pack%size_real(1), pad(this%max_npoints, wgsize), this%nprojector_matrices/), &
       (/vpsib%pack%size_real(1), wgsize, 1/))
 
     do imat = 1, this%nprojector_matrices
