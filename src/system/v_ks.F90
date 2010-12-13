@@ -338,13 +338,7 @@ contains
     ! maybe have to calculate the eigenvalues (and WARNING: MISSING
     ! hm%epot)
     if(ks%frozen_hxc) then
-      if(calc_eigenval_) then
-        if (states_are_real(st)) then
-          call dcalculate_eigenvalues(hm, gr%der, st)
-        else
-          call zcalculate_eigenvalues(hm, gr%der, st, open_boundaries = gr%ob_grid%open_boundaries)
-        end if
-      end if
+      if(calc_eigenval_) call energy_calculate_eigenvalues(hm, gr%der, st, open_boundaries = gr%ob_grid%open_boundaries)
       POP_SUB(v_ks_calc)
       return
     end if
@@ -409,13 +403,7 @@ contains
     ! now. Otherwise one could just calculate it at the end of the calculation.
     if(hm%self_induced_magnetic) call magnetic_induced(gr%der, st, hm%a_ind, hm%b_ind)
 
-    if(calc_eigenval_) then
-      if (states_are_real(st)) then
-        call dcalculate_eigenvalues(hm, gr%der, st)
-      else
-        call zcalculate_eigenvalues(hm, gr%der, st, open_boundaries = gr%ob_grid%open_boundaries)
-      end if
-    end if
+    if(calc_eigenval_) call energy_calculate_eigenvalues(hm, gr%der, st, open_boundaries = gr%ob_grid%open_boundaries)
 
     call profiling_out(prof)
     POP_SUB(v_ks_calc)

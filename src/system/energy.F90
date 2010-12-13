@@ -49,12 +49,11 @@ module energy_m
   private
   public ::                      &
     total_energy,                &
-    dcalculate_eigenvalues,      &
-    zcalculate_eigenvalues,      &
     delectronic_kinetic_energy,  &
     zelectronic_kinetic_energy,  &
     delectronic_external_energy, &
-    zelectronic_external_energy
+    zelectronic_external_energy, &
+    energy_calculate_eigenvalues
 
 contains
 
@@ -144,7 +143,7 @@ contains
       write(message(7), '(6x,a, f18.8)')'Entropy     = ', hm%entropy ! the dimensionless sigma of Kittel&Kroemer
       write(message(8), '(6x,a, f18.8)')'-TS         = ', -units_from_atomic(units_out%energy, hm%TS)
       call write_info(8, iunit)
-      if(full_) then  ! maybe it is full_ that is the problem
+      if(full_) then
         write(message(1), '(6x,a, f18.8)')'Kinetic     = ', units_from_atomic(units_out%energy, hm%t0)
         write(message(2), '(6x,a, f18.8)')'External    = ', units_from_atomic(units_out%energy, hm%eext)
         call write_info(2, iunit)
@@ -153,6 +152,23 @@ contains
 
     POP_SUB(total_energy)
   end subroutine total_energy
+
+  ! --------------------------------------------------------------------
+  
+  subroutine energy_calculate_eigenvalues(hm, der, st, time, open_boundaries)
+    type(hamiltonian_t), intent(inout) :: hm
+    type(derivatives_t), intent(inout) :: der
+    type(states_t),      intent(inout) :: st
+    FLOAT,   optional,   intent(in)    :: time
+    logical, optional,   intent(in)    :: open_boundaries
+    
+    if(states_are_real(st)) then
+      call dcalculate_eigenvalues(hm, der, st, time, open_boundaries)
+    else
+      call zcalculate_eigenvalues(hm, der, st, time, open_boundaries)
+    end if
+
+  end subroutine energy_calculate_eigenvalues
 
 #include "undef.F90"
 #include "real.F90"
