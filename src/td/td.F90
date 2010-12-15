@@ -22,6 +22,7 @@
 module td_m
   use cpmd_m
   use datasets_m
+  use density_m
   use energy_m
   use forces_m
   use gauge_field_m

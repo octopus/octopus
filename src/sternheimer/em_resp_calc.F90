@@ -21,6 +21,7 @@
 
 module em_resp_calc_m
   use datasets_m
+  use density_m
   use derivatives_m
   use elf_m
   use geometry_m

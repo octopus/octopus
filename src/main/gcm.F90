@@ -22,6 +22,7 @@
 module gcm_m
   use global_m
   use datasets_m
+  use density_m
   use energy_m
   use messages_m
   use parser_m

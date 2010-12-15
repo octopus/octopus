@@ -21,6 +21,7 @@
 
 module casida_m
   use datasets_m
+  use density_m
   use excited_states_m
   use gauss_legendre_m
   use global_m

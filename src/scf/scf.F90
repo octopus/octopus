@@ -21,6 +21,7 @@
 
 module scf_m
   use datasets_m
+  use density_m
   use eigensolver_m
   use energy_m
   use epot_m

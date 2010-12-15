@@ -21,6 +21,7 @@
 
 module elf_m
   use cube_function_m
+  use density_m
   use datasets_m
   use derivatives_m
   use fourier_space_m

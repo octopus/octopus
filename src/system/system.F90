@@ -21,6 +21,7 @@
 
 module system_m
   use calc_mode_m
+  use density_m
   use elf_m
   use energy_m
   use geometry_m

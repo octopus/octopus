@@ -20,7 +20,8 @@
 #include "global.h"
 
 module xc_ks_inversion_m
-  use datasets_m 
+  use datasets_m
+  use density_m
   use derivatives_m
   use eigensolver_m 
   use geometry_m 

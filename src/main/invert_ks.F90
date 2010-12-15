@@ -21,6 +21,7 @@
 
 module invert_ks_m
   use datasets_m 
+  use density_m
   use eigensolver_m 
   use global_m
   use hamiltonian_m 

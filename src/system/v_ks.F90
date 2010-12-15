@@ -21,6 +21,7 @@
 
 module v_ks_m
   use datasets_m
+  use density_m
   use derivatives_m
   use energy_m
   use geometry_m

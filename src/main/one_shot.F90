@@ -21,6 +21,7 @@
 
 module one_shot_m
   use datasets_m
+  use density_m
   use energy_m
   use epot_m
   use geometry_m

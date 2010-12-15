@@ -23,6 +23,7 @@ module propagator_m
   use batch_m
   use cube_function_m
   use datasets_m
+  use density_m
   use exponential_m
   use gauge_field_m
   use grid_m

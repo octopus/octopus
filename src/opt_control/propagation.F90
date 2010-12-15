@@ -22,6 +22,7 @@
 module opt_control_propagation_m
   use controlfunction_m
   use datasets_m
+  use density_m
   use energy_m
   use epot_m
   use excited_states_m

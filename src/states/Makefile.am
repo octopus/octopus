@@ -27,7 +27,9 @@ libstates_a_SOURCES = \
 	states_block.F90 states_dim.F90 states_calc.F90 \
 	excited_states.F90 linear_response.F90 restart.F90 \
 	modelmb_density_matrix.F90 modelmb_density.F90 modelmb_particles.F90 \
-	ob_green.F90 modelmb_exchange_syms.F90
+	ob_green.F90                 \
+	modelmb_exchange_syms.F90    \
+	density.F90
 
 noinst_HEADERS = \
 	physics_op_inc.F90 \
@@ -55,3 +57,4 @@ states_block.o : states_block.F90 states_block_inc.F90 states.o
 excited_states.o : excited_states.F90 excited_states_inc.F90 states.o states_calc.o
 linear_response.o : linear_response.F90 linear_response_inc.F90 states.o states_calc.o smear.o
 restart.o : restart.F90 restart_inc.F90 states.o linear_response.o states_calc.o
+density.o : states.o

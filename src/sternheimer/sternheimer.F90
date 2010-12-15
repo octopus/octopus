@@ -21,6 +21,7 @@
 
 module sternheimer_m
   use datasets_m
+  use density_m
   use global_m
   use grid_m
   use h_sys_output_m

@@ -21,6 +21,7 @@
 
 module opt_control_target_m
   use datasets_m
+  use density_m
   use derivatives_m
   use excited_states_m
   use geometry_m

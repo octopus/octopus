@@ -21,6 +21,7 @@
 
 module opt_control_initst_m
   use datasets_m
+  use density_m
   use geometry_m
   use global_m
   use grid_m

@@ -21,6 +21,7 @@
 
 module unocc_m
   use datasets_m
+  use density_m
   use derivatives_m
   use eigensolver_m
   use energy_m
