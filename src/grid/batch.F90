@@ -60,6 +60,7 @@ module batch_m
     batch_copy_data,                &
     batch_pack,                     &
     batch_unpack,                   &
+    batch_sync,                     &
     batch_status,                   &
     batch_type
 
@@ -451,31 +452,19 @@ contains
     logical, optional,  intent(in)    :: copy
 
     logical :: copy_
-    type(profile_t), save :: prof
 
     PUSH_SUB(batch_unpack)
 
     if(batch_is_packed(this)) then
-      INCR(this%in_buffer_count, -1)
 
-      if(this%in_buffer_count == 0) then
-        this%status = BATCH_NOT_PACKED
+      if(this%in_buffer_count == 1) then
         copy_ = .true.
         if(present(copy)) copy_ = copy
         
-        if(copy_ .and. this%dirty) then
-          call profiling_in(prof, "BATCH_UNPACK")
-
-          if(opencl_is_enabled()) then
-#ifdef HAVE_OPENCL
-            call batch_read_from_opencl_buffer(this)
-#endif
-          else
-            call unpack_copy()
-          end if
-
-          call profiling_out(prof)
-        end if
+        if(copy_) call batch_sync(this)
+        
+        ! now deallocate
+        this%status = BATCH_NOT_PACKED
         
         if(opencl_is_enabled()) then
 #ifdef HAVE_OPENCL
@@ -486,14 +475,43 @@ contains
           SAFE_DEALLOCATE_P(this%pack%zpsi)
         end if
       end if
+      
+      INCR(this%in_buffer_count, -1)
     end if
 
     POP_SUB(batch_unpack)
     
+  end subroutine batch_unpack
+
+  ! ----------------------------------------------------
+
+  subroutine batch_sync(this)
+    type(batch_t),      intent(inout) :: this
+    
+    type(profile_t), save :: prof
+
+    PUSH_SUB(batch_sync)
+
+    if(batch_is_packed(this) .and. this%dirty) then
+      call profiling_in(prof, "BATCH_UNPACK")
+      
+      if(opencl_is_enabled()) then
+#ifdef HAVE_OPENCL
+        call batch_read_from_opencl_buffer(this)
+#endif
+      else
+        call unpack_copy()
+      end if
+      
+      call profiling_out(prof)
+    end if
+
+    POP_SUB(batch_sync)
+    
   contains
 
     subroutine unpack_copy()
-      integer :: ist, ip, sp, ep
+      integer :: ist, ip
 
       if(batch_type(this) == TYPE_FLOAT) then
 
@@ -518,7 +536,7 @@ contains
       end if
     end subroutine unpack_copy
 
-  end subroutine batch_unpack
+  end subroutine batch_sync
 
   ! ----------------------------------------------------
 
