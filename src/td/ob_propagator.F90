@@ -43,6 +43,7 @@ module ob_propagator_m
   use simul_box_m
   use solvers_m
   use states_m
+  use states_io_m
   use v_ks_m
   use varinfo_m
 
