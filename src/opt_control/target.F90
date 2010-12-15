@@ -1195,7 +1195,7 @@ module opt_control_target_m
     PUSH_SUB(parse_velocity_target)
     
     string_length = len(inp_string)
-    do i=1, string_length 
+    do i=1, string_length - 1
        if(inp_string(i:i+1) == "v[") then
           m = 0
           if(inp_string(i+3:i+3) == ",") m = 1
@@ -1216,7 +1216,7 @@ module opt_control_target_m
           inp_string = inp_string(:i-1) // "(" // trim(v_string) // ")" // inp_string(i+5+m:)
        end if
     end do
-    
+
     POP_SUB(parse_velocity_target)
   end subroutine parse_velocity_target
   ! ----------------------------------------------------------------------
