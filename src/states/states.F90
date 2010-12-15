@@ -1296,7 +1296,7 @@ contains
     integer,        intent(in)    :: ik
     type(batch_t),  intent(inout) :: psib
     FLOAT, target,  intent(inout) :: rho(:,:)
-    
+
     integer :: ist, ist2, ip, ispin
     CMPLX   :: term, psi1, psi2
     FLOAT, pointer :: dpsi(:, :)
@@ -1312,69 +1312,97 @@ contains
 
     ispin = states_dim_get_spin_index(st%d, ik)
 
-    if(gr%have_fine_mesh) then
-      SAFE_ALLOCATE(crho(1:gr%mesh%np_part))
-      crho = M_ZERO
-    else
-      crho => rho(:, ispin)
-    end if
+    if(st%d%ispin /= SPINORS) then 
 
-    if(states_are_real(st)) then
-      do ist = 1, psib%nst
-        ist2 = psib%states(ist)%ist
-        dpsi => psib%states(ist)%dpsi
+      if(gr%have_fine_mesh) then
+        SAFE_ALLOCATE(crho(1:gr%mesh%np_part))
+        crho = M_ZERO
+      else
+        crho => rho(:, ispin)
+      end if
 
-        forall(ip = 1:gr%mesh%np)
-          crho(ip) = crho(ip) + st%d%kweights(ik) * st%occ(ist2, ik) * dpsi(ip, 1)**2
-        end forall
-      end do
-    else
-      do ist = 1, psib%nst
-        ist2 = psib%states(ist)%ist
-        zpsi => psib%states(ist)%zpsi
+      select case(batch_status(psib))
+      case(BATCH_NOT_PACKED, BATCH_CL_PACKED)
+        call batch_sync(psib)
+        if(states_are_real(st)) then
+          do ist = 1, psib%nst
+            ist2 = psib%states(ist)%ist
+            dpsi => psib%states(ist)%dpsi
 
-        forall(ip = 1:gr%mesh%np)
-          crho(ip) = crho(ip) + st%d%kweights(ik) * st%occ(ist2, ik) * &
-            (real(zpsi(ip, 1), REAL_PRECISION)**2 + aimag(zpsi(ip, 1))**2)
-        end forall
-      end do
-    end if
-    
-    if(gr%have_fine_mesh) then
-      SAFE_ALLOCATE(frho(1:gr%fine%mesh%np))
-      call dmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%fine%mesh, crho, frho, order = 2)
-      ! some debugging output that I will keep here for the moment, XA
-      !      call doutput_function(1, "./", "n_fine", gr%fine%mesh, frho, unit_one, ierr)
-      !      call doutput_function(1, "./", "n_coarse", gr%mesh, crho, unit_one, ierr)
-      forall(ip = 1:gr%fine%mesh%np) rho(ip, ispin) = rho(ip, ispin) + frho(ip)
-      SAFE_DEALLOCATE_P(crho)
-      SAFE_DEALLOCATE_A(frho)
-    end if
+            forall(ip = 1:gr%mesh%np)
+              crho(ip) = crho(ip) + st%d%kweights(ik) * st%occ(ist2, ik) * dpsi(ip, 1)**2
+            end forall
+          end do
+        else
+          do ist = 1, psib%nst
+            ist2 = psib%states(ist)%ist
+            zpsi => psib%states(ist)%zpsi
 
-    if(st%d%ispin == SPINORS) then ! in this case wavefunctions are always complex
+            forall(ip = 1:gr%mesh%np)
+              crho(ip) = crho(ip) + st%d%kweights(ik) * st%occ(ist2, ik) * &
+                (real(zpsi(ip, 1), REAL_PRECISION)**2 + aimag(zpsi(ip, 1))**2)
+            end forall
+          end do
+        end if
+      case(BATCH_PACKED)
+        if(states_are_real(st)) then
+          do ip = 1, gr%mesh%np
+            do ist = 1, psib%nst
+              ist2 = psib%states(ist)%ist
+              crho(ip) = crho(ip) + st%d%kweights(ik)*st%occ(ist2, ik)*psib%pack%dpsi(ist, ip)**2
+            end do
+          end do
+        else
+          do ip = 1, gr%mesh%np
+            do ist = 1, psib%nst
+              ist2 = psib%states(ist)%ist
+              crho(ip) = crho(ip) + st%d%kweights(ik)*st%occ(ist2, ik)* &
+                (real(psib%pack%zpsi(ist, ip), REAL_PRECISION)**2 + aimag(psib%pack%zpsi(ist, ip))**2)
+            end do
+          end do
+        end if
+      end select
 
+      if(gr%have_fine_mesh) then
+        SAFE_ALLOCATE(frho(1:gr%fine%mesh%np))
+        call dmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%fine%mesh, crho, frho, order = 2)
+        ! some debugging output that I will keep here for the moment, XA
+        !      call doutput_function(1, "./", "n_fine", gr%fine%mesh, frho, unit_one, ierr)
+        !      call doutput_function(1, "./", "n_coarse", gr%mesh, crho, unit_one, ierr)
+        forall(ip = 1:gr%fine%mesh%np) rho(ip, ispin) = rho(ip, ispin) + frho(ip)
+        SAFE_DEALLOCATE_P(crho)
+        SAFE_DEALLOCATE_A(frho)
+      end if
+
+    else !SPINORS
+
+      ! in this case wavefunctions are always complex
       ASSERT(.not. gr%have_fine_mesh)
+      call batch_sync(psib)
 
-     do ist = 1, psib%nst
+      do ist = 1, psib%nst
         ist2 = psib%states(ist)%ist
         zpsi => psib%states(ist)%zpsi
 
         do ip = 1, gr%fine%mesh%np
-          
+
           psi1 = zpsi(ip, 1)
           psi2 = zpsi(ip, 2)
-          
+
+          rho(ip, 1) = rho(ip, 1) + &
+            st%d%kweights(ik) * st%occ(ist2, ik) * (real(psi1, REAL_PRECISION)**2 + aimag(psi1)**2)
           rho(ip, 2) = rho(ip, 2) + &
             st%d%kweights(ik) * st%occ(ist2, ik) * (real(psi2, REAL_PRECISION)**2 + aimag(psi2)**2)
-        
+
           term = st%d%kweights(ik) * st%occ(ist2, ik) * psi1 * conjg(psi2)
           rho(ip, 3) = rho(ip, 3) + real(term, REAL_PRECISION)
           rho(ip, 4) = rho(ip, 4) + aimag(term)
 
         end do
       end do
+      
     end if
-    
+
     call profiling_out(prof)
 
     POP_SUB(states_dens_accumulate_batch)

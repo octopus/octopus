@@ -504,8 +504,9 @@ contains
       end if
       
       call profiling_out(prof)
+      this%dirty = .false.
     end if
-
+    
     POP_SUB(batch_sync)
     
   contains

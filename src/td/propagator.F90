@@ -704,9 +704,15 @@ contains
       do ik = st%d%kpt%start, st%d%kpt%end
         do sts = st%st_start, st%st_end, st%d%block_size
           ste = min(st%st_end, sts + st%d%block_size - 1)
+
           call batch_init(zpsib, hm%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
+          
+          if(hamiltonian_apply_packed(hm, gr%mesh)) call batch_pack(zpsib)
+
           call exponential_apply_batch(tr%te, gr%der, hm, zpsib, ik, dt/(M_TWO*mu), time)
           call states_dens_accumulate_batch(st, gr, ik, zpsib, st%rho)
+
+          if(hamiltonian_apply_packed(hm, gr%mesh)) call batch_unpack(zpsib)
           call batch_end(zpsib)
         end do
       end do
