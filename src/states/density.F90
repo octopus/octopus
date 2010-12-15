@@ -29,13 +29,12 @@ module density_m
   use io_m
   use kpoints_m
   use loct_m
-  use mpi_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
   use math_m
   use mesh_m
   use messages_m
   use multigrid_m
   use multicomm_m
-  use mpi_m
+  use mpi_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
   use mpi_lib_m
   use profiling_m
   use simul_box_m
