@@ -23,7 +23,7 @@ AC_DEFUN([ACX_GDLIB],
       # Sometimes GD installation strangely leaves this token @LIBICONV@ in --libs, which must be removed
       fi
     else
-      $acx_gdlib_ik = no
+      $acx_gdlib_ok="no"
     fi
   fi
 
@@ -38,7 +38,7 @@ AC_DEFUN([ACX_GDLIB],
     AC_MSG_RESULT([$acx_gdlib_ok])
 
     LIBS="$acx_save_LIBS"
-    if test $acx_gdlib_ok = no; then
+    if test x"$acx_gdlib_ok" = xno; then
       AC_MSG_WARN([GD library support has been disabled.
                    *** Some esoteric parts of octopus will not work.])
       CFLAGS="$acx_save_CFLAGS"
