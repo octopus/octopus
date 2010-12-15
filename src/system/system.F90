@@ -200,7 +200,7 @@ contains
     PUSH_SUB(system_h_setup)
 
     call states_fermi(sys%st, sys%gr%mesh)
-    call states_calc_dens(sys%st, sys%gr)
+    call density_calc(sys%st, sys%gr, sys%st%rho)
 
     call v_ks_calc(sys%ks, sys%gr, hm, sys%st, calc_eigenval = .true.) ! get potentials
     call states_fermi(sys%st, sys%gr%mesh)                             ! occupations

@@ -223,21 +223,21 @@ module opt_control_initst_m
       write(message(1),'(a,i4,a,i4,a)') 'Info: The lowest', freeze_orbitals, &
         ' orbitals have been frozen.', initial_state%nst, ' will be propagated.'
       call write_info(1)
-      call states_calc_dens(initial_state, sys%gr)
+      call density_calc(initial_state, sys%gr, initial_state%rho)
       call v_ks_calc(sys%ks, sys%gr, hm, initial_state, calc_eigenval = .true.)
     elseif(freeze_orbitals < 0) then
       ! This means SAE approximation. We calculate the Hxc first, then freeze all
       ! orbitals minus one.
       write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
       call write_info(1)
-      call states_calc_dens(initial_state, sys%gr)
+      call density_calc(initial_state, sys%gr, initial_state%rho)
       call v_ks_calc(sys%ks, sys%gr, hm, initial_state, calc_eigenval = .true.)
       call states_freeze_orbitals(initial_state, sys%gr, sys%mc, n = initial_state%nst - 1)
       call v_ks_freeze_hxc(sys%ks)
-      call states_calc_dens(initial_state, sys%gr)
+      call density_calc(initial_state, sys%gr, initial_state%rho)
     else
       ! Normal run.
-      call states_calc_dens(initial_state, sys%gr)
+      call density_calc(initial_state, sys%gr, initial_state%rho)
       call v_ks_calc(sys%ks, sys%gr, hm, initial_state, calc_eigenval = .true.)
     end if
     

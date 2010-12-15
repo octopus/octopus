@@ -253,7 +253,7 @@ contains
     
     call eigensolver_run(eigensolver, gr, st, aux_hm, 1, verbose = .false.)
 
-    call states_calc_dens(st, gr)   
+    call density_calc(st, gr, st%rho)
     
     SAFE_DEALLOCATE_A(sqrtrho)
     SAFE_DEALLOCATE_A(laplace)
@@ -319,7 +319,7 @@ contains
 
       call eigensolver_run(eigensolver, gr, st, aux_hm, 1, verbose = .false.)
 
-      call states_calc_dens(st, gr)      
+      call density_calc(st, gr, st%rho)      
  
       aa = 0.1
 
@@ -358,7 +358,7 @@ contains
 
     call hamiltonian_update(aux_hm, gr%mesh)
     call eigensolver_run(eigensolver, gr, st, aux_hm, 1, verbose = .false.)
-    call states_calc_dens(st, gr)
+    call density_calc(st, gr, st%rho)
     
     write(message(1),'(a,I8)') "Iterative KS inversion, iterations needed:", counter
     call write_info(1)
@@ -498,7 +498,7 @@ contains
     
       call eigensolver_run(eigensolver, gr, st, hm, 1, verbose = .false.)
     
-      call states_calc_dens(st, gr)
+      call density_calc(st, gr, st%rho)
       
       vxc_out(1:np, 1:nspin, 1) = &
         (st%rho(1:np,1:nspin) + stabilizer)/&
@@ -659,7 +659,7 @@ contains
 
     PUSH_SUB(X(xc_ks_inversion_calc))
 
-    call states_calc_dens(st, gr)
+    call density_calc(st, gr, st%rho)
     
     ks_inversion%aux_st%rho = st%rho
 

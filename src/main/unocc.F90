@@ -109,7 +109,7 @@ contains
       nst_calculated = ierr
     end if
 
-    call states_calc_dens(sys%st, sys%gr)
+    call density_calc(sys%st, sys%gr, sys%st%rho)
 
     call lcao_run(sys, hm, nst_calculated + 1)
     

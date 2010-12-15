@@ -287,7 +287,7 @@ module opt_control_target_m
           SAFE_DEALLOCATE_A(rotation_matrix)
           call states_end(tmp_st)
           call parse_block_end(blk)
-          call states_calc_dens(target%st, gr)
+          call density_calc(target%st, gr, target%st%rho)
         else
           message(1) = '"OCTTargetTransformStates" has to be specified as block.'
           call write_info(1)
@@ -352,7 +352,7 @@ module opt_control_target_m
             end do
             call states_rotate(gr%mesh, target%st, tmp_st, rotation_matrix)
             SAFE_DEALLOCATE_A(rotation_matrix)
-            call states_calc_dens(target%st, gr)
+            call density_calc(target%st, gr, target%st%rho)
             do ip = 1, gr%mesh%np
               target%rho(ip) = sum(target%st%rho(ip, 1:target%st%d%spin_channels))
             end do

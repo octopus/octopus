@@ -467,7 +467,7 @@ contains
       SAFE_ALLOCATE(vaux(1:gr%mesh%np, 1:st%d%nspin))
 
       ! First, compare the new potential to the extrapolated one.
-      call states_calc_dens(st, gr)
+      call density_calc(st, gr, st%rho)
       call v_ks_calc(ks, gr, hm, st, time = time - dt)
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
       d_max = M_ZERO
@@ -508,7 +508,7 @@ contains
             call td_qoct_tddft_propagator_2(hm, gr, st, tr, time, dt)
           end select
 
-          call states_calc_dens(st, gr)
+          call density_calc(st, gr, st%rho)
           call v_ks_calc(ks, gr, hm, st, time = time - dt)
           SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
           d_max = M_ZERO
@@ -542,6 +542,7 @@ contains
       CMPLX, allocatable :: zpsi1(:,:,:)
       integer :: ik, ist, ist2, idim, ste, sts
       type(batch_t) :: zpsib
+      type(density_calc_t) :: dens_calc
 
       PUSH_SUB(propagator_dt.td_etrs)
 
@@ -553,7 +554,7 @@ contains
 
         SAFE_ALLOCATE(zpsi1(1:gr%mesh%np_part, 1:st%d%dim, 1:st%d%block_size))
 
-        st%rho(1:gr%fine%mesh%np, 1:st%d%nspin) = M_ZERO
+        call density_calc_init(dens_calc, st, gr, st%rho)
 
         do ik = st%d%kpt%start, st%d%kpt%end
           do sts = st%st_start, st%st_end, st%d%block_size
@@ -571,7 +572,7 @@ contains
             !propagate the state dt with H(time - dt)
             call batch_init(zpsib, st%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
             call exponential_apply_batch(tr%te, gr%der, hm, zpsib, ik, dt/mu, time - dt)
-            call states_dens_accumulate_batch(st, gr, ik, zpsib, st%rho)
+            call density_calc_accumulate(dens_calc, ik, zpsib)
             call batch_end(zpsib)
 
             !restore the saved state
@@ -588,8 +589,7 @@ contains
 
         SAFE_DEALLOCATE_A(zpsi1)
         
-        ! finish the calculation of the density
-        call states_dens_reduce(st, gr, st%rho)
+        call density_calc_end(dens_calc)
 
         call v_ks_calc(ks, gr, hm, st)
 
@@ -651,6 +651,7 @@ contains
       integer :: ik, sts, ste, ispin, idim, ip, ist
       type(batch_t) :: zpsib
       CMPLX :: phase
+      type(density_calc_t) :: dens_calc
 
       PUSH_SUB(propagator_dt.td_aetrs)
 
@@ -699,7 +700,7 @@ contains
 
       call hamiltonian_update(hm, gr%mesh, time = time)
 
-      st%rho(1:gr%fine%mesh%np, 1:st%d%nspin) = M_ZERO
+      call density_calc_init(dens_calc, st, gr, st%rho)
 
       ! propagate the other half with H(t)
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -711,14 +712,14 @@ contains
           if(hamiltonian_apply_packed(hm, gr%mesh)) call batch_pack(zpsib)
 
           call exponential_apply_batch(tr%te, gr%der, hm, zpsib, ik, dt/(M_TWO*mu), time)
-          call states_dens_accumulate_batch(st, gr, ik, zpsib, st%rho)
+          call density_calc_accumulate(dens_calc, ik, zpsib)
 
           if(hamiltonian_apply_packed(hm, gr%mesh)) call batch_unpack(zpsib)
           call batch_end(zpsib)
         end do
       end do
 
-      call states_dens_reduce(st, gr, st%rho)
+      call density_calc_end(dens_calc)
 
       POP_SUB(propagator_dt.td_aetrs)
     end subroutine td_aetrs
@@ -827,7 +828,7 @@ contains
           end do
         end do
 
-        call states_calc_dens(st, gr)
+        call density_calc(st, gr, st%rho)
         call v_ks_calc(ks, gr, hm, st)
 
         vhxc_t2 = hm%vhxc

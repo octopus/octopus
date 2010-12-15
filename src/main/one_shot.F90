@@ -68,7 +68,7 @@ contains
     call restart_read(trim(tmpdir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr, exact = .true.)
 
     ! generate density
-    call states_calc_dens(sys%st, sys%gr)
+    call density_calc(sys%st, sys%gr, sys%st%rho)
 
     e_t = M_ZERO
     e_ext = M_ZERO

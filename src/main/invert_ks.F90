@@ -96,7 +96,7 @@ contains
     call hamiltonian_update(hm, sys%gr%mesh)
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
                          sys%ks%ks_inversion%aux_st, hm, 1, verbose = .false.)
-    call states_calc_dens(sys%ks%ks_inversion%aux_st, sys%gr)
+    call density_calc(sys%ks%ks_inversion%aux_st, sys%gr, sys%ks%ks_inversion%aux_st%rho)
     
     do ii = 1, nspin
       hm%vhxc(:,ii) = hm%vhartree(:)
@@ -130,7 +130,7 @@ contains
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
          sys%ks%ks_inversion%aux_st, hm, 1, verbose = .false.)
     
-    call states_calc_dens(sys%ks%ks_inversion%aux_st, sys%gr)
+    call density_calc(sys%ks%ks_inversion%aux_st, sys%gr, sys%ks%ks_inversion%aux_st%rho)
 
     diffdensity = M_ZERO
     do jj = 1, nspin

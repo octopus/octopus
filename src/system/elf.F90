@@ -95,7 +95,7 @@ contains
     SAFE_ALLOCATE(kappa(1:gr%mesh%np, 1:st%d%nspin))
     rho = M_ZERO
     kappa = M_ZERO
-    call states_calc_dens(st, gr, rho)
+    call density_calc(st, gr, rho)
 
     SAFE_ALLOCATE(grho(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
     SAFE_ALLOCATE(  jj(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))

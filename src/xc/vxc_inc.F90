@@ -150,7 +150,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc, vt
   space_loop: do ip = 1, der%mesh%np, n_block
     
     !Resize the dimension of the last block when the number of the mesh points
-      !it's not a perfect divider of the dimension of the blocks.
+      !it is not a perfect divider of the dimension of the blocks.
     if(ip + n_block > der%mesh%np) n_block = der%mesh%np - ip + 1 
 
     ! make a local copy with the correct memory order for libxc
