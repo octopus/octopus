@@ -65,7 +65,8 @@ module propagator_m
     propagator_qmr_prec,          &
     propagator_set_scf_prop,      &
     propagator_remove_scf_prop,   &
-    propagator_ions_are_propagated
+    propagator_ions_are_propagated, &
+    propagator_dens_is_propagated
 
   integer, public, parameter ::        &
     PROP_ETRS                    = 2,  &
@@ -697,16 +698,21 @@ contains
 
       call hamiltonian_update(hm, gr%mesh, time = time)
 
+      st%rho(1:gr%fine%mesh%np, 1:st%d%nspin) = M_ZERO
+
       ! propagate the other half with H(t)
       do ik = st%d%kpt%start, st%d%kpt%end
         do sts = st%st_start, st%st_end, st%d%block_size
           ste = min(st%st_end, sts + st%d%block_size - 1)
           call batch_init(zpsib, hm%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
           call exponential_apply_batch(tr%te, gr%der, hm, zpsib, ik, dt/(M_TWO*mu), time)
+          call states_dens_accumulate_batch(st, gr, ik, zpsib, st%rho)
           call batch_end(zpsib)
         end do
       end do
-      
+
+      call states_dens_reduce(st, gr, st%rho)
+
       POP_SUB(propagator_dt.td_aetrs)
     end subroutine td_aetrs
 
@@ -1109,13 +1115,28 @@ contains
     type(propagator_t), intent(in) :: tr
 
     select case(tr%method)
-    case(PROP_ETRS, PROP_AETRS)
+    case(PROP_ETRS, PROP_AETRS, PROP_CAETRS)
       propagated = .true.
     case default
       propagated = .false.
     end select
 
   end function propagator_ions_are_propagated
+
+  ! ---------------------------------------------------------
+
+  logical pure function propagator_dens_is_propagated(tr) result(propagated)
+    type(propagator_t), intent(in) :: tr
+
+    select case(tr%method)
+    case(PROP_AETRS, PROP_CAETRS)
+      propagated = .true.
+    case default
+      propagated = .false.
+    end select
+
+  end function propagator_dens_is_propagated
+
   ! ---------------------------------------------------------
 
 #include "propagator_qoct_inc.F90"

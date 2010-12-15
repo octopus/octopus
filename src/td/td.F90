@@ -238,7 +238,7 @@ contains
 !      if(hm%ab == MASK_ABSORBING) call zvmask(gr, hm, st)
 
       ! update density
-      call states_calc_dens(st, gr)
+      if(.not. propagator_dens_is_propagated(td%tr)) call states_calc_dens(st, gr)
 
       generate = .false.
 
