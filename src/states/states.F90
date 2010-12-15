@@ -86,7 +86,6 @@ module states_m
     states_write_bands,               &
     states_write_fermi_energy,        &
     states_spin_channel,              &
-    states_dens_accumulate,           &
     states_dens_accumulate_batch,     &
     states_dens_reduce,               &
     states_calc_dens,                 &
@@ -1259,34 +1258,6 @@ contains
 
     POP_SUB(states_end)
   end subroutine states_end
-
-
-  ! ---------------------------------------------------------
-  !> Calculates the new density out the wavefunctions and
-  !! occupations...
-  subroutine states_dens_accumulate(st, gr, ist, ik, rho)
-    type(states_t), intent(inout) :: st
-    type(grid_t),   intent(in)    :: gr
-    integer,        intent(in)    :: ist
-    integer,        intent(in)    :: ik
-    FLOAT,          intent(inout) :: rho(:,:)
-    
-    type(batch_t) :: psib
-
-    PUSH_SUB(states_dens_accumulate)
-
-    if(states_are_real(st)) then
-      call batch_init(psib, st%d%dim, ist, ist, st%dpsi(:, :, ist:ist, ik))
-    else
-      call batch_init(psib, st%d%dim, ist, ist, st%zpsi(:, :, ist:ist, ik))
-    end if
-
-    call states_dens_accumulate_batch(st, gr, ik, psib, rho)
-
-    call batch_end(psib)
-
-    POP_SUB(states_dens_accumulate)
-  end subroutine states_dens_accumulate
 
   ! ---------------------------------------------------
 
@@ -2915,6 +2886,7 @@ return
 
     integer :: ist, ik
     type(states_t) :: staux
+    type(batch_t)  :: psib
 
     PUSH_SUB(states_freeze_orbitals)
 
@@ -2924,18 +2896,28 @@ return
       call write_fatal(2)
     end if
 
+    ASSERT(.not. st%parallel_in_states)
+
     if(.not.associated(st%frozen_rho)) then
       SAFE_ALLOCATE(st%frozen_rho(1:gr%mesh%np, 1:st%d%dim))
-      st%frozen_rho = M_ZERO
     end if
 
     st%frozen_rho = M_ZERO
+
     do ik = st%d%kpt%start, st%d%kpt%end
-      do ist = st%st_start, st%st_end
-        if(ist > n) cycle
-        call states_dens_accumulate(st, gr, ist, ik, st%frozen_rho)
-      end do
+      if(n < st%st_start .or. n > st%st_end) cycle
+
+      if(states_are_real(st)) then
+        call batch_init(psib, st%d%dim, st%st_start, n, st%dpsi(:, :, ist:ist, ik))
+      else
+        call batch_init(psib, st%d%dim, st%st_start, n, st%zpsi(:, :, ist:ist, ik))
+      end if
+      
+      call states_dens_accumulate_batch(st, gr, ik, psib, st%frozen_rho)
+      
+      call batch_end(psib)
     end do
+
     call states_dens_reduce(st, gr, st%frozen_rho)
 
     call states_copy(staux, st)
