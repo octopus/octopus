@@ -93,12 +93,10 @@ contains
     integer,              intent(in)    :: ik
     type(batch_t),        intent(inout) :: psib
 
-    integer :: ist, ist2, ip, ispin
+    integer :: ist, ip, ispin
     CMPLX   :: term, psi1, psi2
-    FLOAT, pointer :: dpsi(:, :)
-    CMPLX, pointer :: zpsi(:, :)
     FLOAT, pointer :: crho(:)
-    FLOAT, allocatable :: frho(:)
+    FLOAT, allocatable :: frho(:), weight(:)
     type(profile_t), save :: prof
     logical :: correct_size
 
@@ -109,6 +107,9 @@ contains
       .or. ubound(this%density, dim = 1) == this%gr%fine%mesh%np_part
 
     ispin = states_dim_get_spin_index(this%st%d, ik)
+
+    SAFE_ALLOCATE(weight(1:psib%nst))
+    forall(ist = 1:psib%nst) weight(ist) = this%st%d%kweights(ik)*this%st%occ(psib%states(ist)%ist, ik)
 
     if(this%st%d%ispin /= SPINORS) then 
 
@@ -124,21 +125,15 @@ contains
         call batch_sync(psib)
         if(states_are_real(this%st)) then
           do ist = 1, psib%nst
-            ist2 = psib%states(ist)%ist
-            dpsi => psib%states(ist)%dpsi
-
             forall(ip = 1:this%gr%mesh%np)
-              crho(ip) = crho(ip) + this%st%d%kweights(ik) * this%st%occ(ist2, ik) * dpsi(ip, 1)**2
+              crho(ip) = crho(ip) + weight(ist)*psib%states(ist)%dpsi(ip, 1)**2
             end forall
           end do
         else
           do ist = 1, psib%nst
-            ist2 = psib%states(ist)%ist
-            zpsi => psib%states(ist)%zpsi
-
             forall(ip = 1:this%gr%mesh%np)
-              crho(ip) = crho(ip) + this%st%d%kweights(ik) * this%st%occ(ist2, ik) * &
-                (real(zpsi(ip, 1), REAL_PRECISION)**2 + aimag(zpsi(ip, 1))**2)
+              crho(ip) = crho(ip) + weight(ist)* &
+                (real(psib%states(ist)%zpsi(ip, 1), REAL_PRECISION)**2 + aimag(psib%states(ist)%zpsi(ip, 1))**2)
             end forall
           end do
         end if
@@ -146,15 +141,13 @@ contains
         if(states_are_real(this%st)) then
           do ip = 1, this%gr%mesh%np
             do ist = 1, psib%nst
-              ist2 = psib%states(ist)%ist
-              crho(ip) = crho(ip) + this%st%d%kweights(ik)*this%st%occ(ist2, ik)*psib%pack%dpsi(ist, ip)**2
+              crho(ip) = crho(ip) + weight(ist)*psib%pack%dpsi(ist, ip)**2
             end do
           end do
         else
           do ip = 1, this%gr%mesh%np
             do ist = 1, psib%nst
-              ist2 = psib%states(ist)%ist
-              crho(ip) = crho(ip) + this%st%d%kweights(ik)*this%st%occ(ist2, ik)* &
+              crho(ip) = crho(ip) + weight(ist)* &
                 (real(psib%pack%zpsi(ist, ip), REAL_PRECISION)**2 + aimag(psib%pack%zpsi(ist, ip))**2)
             end do
           end do
@@ -179,20 +172,15 @@ contains
       call batch_sync(psib)
 
       do ist = 1, psib%nst
-        ist2 = psib%states(ist)%ist
-        zpsi => psib%states(ist)%zpsi
-
         do ip = 1, this%gr%fine%mesh%np
 
-          psi1 = zpsi(ip, 1)
-          psi2 = zpsi(ip, 2)
+          psi1 = psib%states(ist)%zpsi(ip, 1)
+          psi2 = psib%states(ist)%zpsi(ip, 2)
 
-          this%density(ip, 1) = this%density(ip, 1) + &
-            this%st%d%kweights(ik) * this%st%occ(ist2, ik) * (real(psi1, REAL_PRECISION)**2 + aimag(psi1)**2)
-          this%density(ip, 2) = this%density(ip, 2) + &
-            this%st%d%kweights(ik) * this%st%occ(ist2, ik) * (real(psi2, REAL_PRECISION)**2 + aimag(psi2)**2)
+          this%density(ip, 1) = this%density(ip, 1) + weight(ist)*(real(psi1, REAL_PRECISION)**2 + aimag(psi1)**2)
+          this%density(ip, 2) = this%density(ip, 2) + weight(ist)*(real(psi2, REAL_PRECISION)**2 + aimag(psi2)**2)
 
-          term = this%st%d%kweights(ik) * this%st%occ(ist2, ik) * psi1 * conjg(psi2)
+          term = weight(ist)*psi1*conjg(psi2)
           this%density(ip, 3) = this%density(ip, 3) + real(term, REAL_PRECISION)
           this%density(ip, 4) = this%density(ip, 4) + aimag(term)
 
@@ -200,6 +188,8 @@ contains
       end do
       
     end if
+
+    SAFE_DEALLOCATE(weight)
 
     call profiling_out(prof)
 
