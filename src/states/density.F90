@@ -189,7 +189,7 @@ contains
       
     end if
 
-    SAFE_DEALLOCATE(weight)
+    SAFE_DEALLOCATE_A(weight)
 
     call profiling_out(prof)
 
