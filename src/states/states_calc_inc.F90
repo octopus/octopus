@@ -717,8 +717,7 @@ subroutine X(states_calc_orth_test)(st, mc, mesh)
   type(multicomm_t), intent(in)    :: mc
   type(mesh_t),      intent(in)    :: mesh
   
-  integer :: ist, jst
-  FLOAT :: dd
+  PUSH_SUB(X(states_calc_orth_test))
 
   call states_distribute_nodes(st, mc)
   call states_allocate_wfns(st, mesh, wfs_type = R_TYPE_VAL)
@@ -729,24 +728,90 @@ subroutine X(states_calc_orth_test)(st, mc, mesh)
   message(2) = ''
   call write_info(2)
 
-  call states_orthogonalize(st, mesh)
+  call X(states_orthogonalization_full)(st, st%nst, mesh, st%d%dim, st%X(psi)(:, :, :, 1))
 
-  message(1) = 'Residuals:'
-  call write_info(1)
-
-  do ist = 1, st%nst
-    do jst = ist, st%nst
-      dd = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist, 1), st%X(psi)(:, :, jst, 1))
-      if(ist == jst) dd = dd - CNST(1.0)
-      write (message(1), '(2i7, e16.6)') ist, jst, abs(dd)
-      call write_info(1)
-    end do
-  end do
-
-  message(1) = ''
-  call write_info(1)
-
+  call print_results()
+  
   call states_deallocate_wfns(st)
+
+  POP_SUB(X(states_calc_orth_test))
+
+contains
+  subroutine print_results()
+    integer :: ist, jst
+    FLOAT :: dd
+    R_TYPE, allocatable :: psi1(:, :), psi2(:, :)
+#ifdef HAVE_MPI
+    integer :: req(1:4), nreq
+#endif
+
+    PUSH_SUB(X(states_calc_orth_test).print_results)
+
+    SAFE_ALLOCATE(psi1(1:mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(psi2(1:mesh%np_part, 1:st%d%dim))
+
+    message(1) = 'Residuals:'
+    call write_info(1)
+    
+    do ist = 1, st%nst
+      do jst = ist, st%nst
+        if(.not. st%parallel_in_states) then
+          psi1(1:mesh%np, 1:st%d%dim) = st%X(psi)(1:mesh%np, 1:st%d%dim, ist, 1)
+          psi2(1:mesh%np, 1:st%d%dim) = st%X(psi)(1:mesh%np, 1:st%d%dim, jst, 1)
+        end if
+
+#ifdef HAVE_MPI
+        if(st%parallel_in_states) then
+
+          ! we bring the two vectors to node 0 and calculate the dot
+          ! product, this is very simple and very slow, we only do it for testing
+          
+          nreq = 0
+
+          ! post the receptions
+          if(st%mpi_grp%rank == 0) then
+            call MPI_Irecv(psi1(1, 1), mesh%np_part*st%d%dim, R_MPITYPE, st%node(ist), ist, &
+              st%mpi_grp%comm, req(nreq + 1), mpi_err)
+            call MPI_Irecv(psi2(1, 1), mesh%np_part*st%d%dim, R_MPITYPE, st%node(jst), jst, &
+              st%mpi_grp%comm, req(nreq + 2), mpi_err)
+            INCR(nreq, 2)
+          end if
+
+          ! if I have the wave function, I send it (note: a node could be sending to itself, this is by design)
+          if(st%node(ist)  == st%mpi_grp%rank) then
+            INCR(nreq, 1)
+            call MPI_Isend(st%X(psi)(1, 1, ist, 1), mesh%np_part*st%d%dim, R_MPITYPE, 0, ist, &
+              st%mpi_grp%comm, req(nreq), mpi_err)
+          end if
+          
+          if(st%node(jst) == st%mpi_grp%rank) then
+            INCR(nreq, 1)
+            call MPI_Isend(st%X(psi)(1, 1, jst, 1), mesh%np_part*st%d%dim, R_MPITYPE, 0, jst, &
+              st%mpi_grp%comm, req(nreq), mpi_err)
+          end if
+
+          if(nreq > 0) call MPI_Waitall(nreq, req(1), MPI_STATUSES_IGNORE, mpi_err)
+
+          if(st%mpi_grp%rank /= 0) cycle
+
+        end if
+#endif
+        dd = X(mf_dotp)(mesh, st%d%dim, psi1, psi2)
+        if(ist == jst) dd = dd - CNST(1.0)
+        write (message(1), '(2i7, e16.6)') ist, jst, abs(dd)
+        call write_info(1)
+
+      end do
+    end do
+    
+    message(1) = ''
+    call write_info(1)
+
+    SAFE_DEALLOCATE_A(psi1)
+    SAFE_DEALLOCATE_A(psi2)
+
+    POP_SUB(X(states_calc_orth_test).print_results)
+  end subroutine print_results
 end subroutine X(states_calc_orth_test)
 
 !! Local Variables:
