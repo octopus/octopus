@@ -53,6 +53,7 @@ module states_calc_m
   use unit_m
   use unit_system_m
   use utils_m
+  use types_m
   use varinfo_m
 
   implicit none
@@ -62,9 +63,9 @@ module states_calc_m
   public ::                         &
     states_orthogonalize,           &
     states_degeneracy_matrix,       &
-    states_rotate
-
-  public ::                         &
+    states_rotate,                  &
+    dstates_calc_orth_test,         &
+    zstates_calc_orth_test,         &
     dstates_orthogonalization,      &
     zstates_orthogonalization,      &
     dstates_orthogonalization_full, &

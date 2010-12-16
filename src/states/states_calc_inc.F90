@@ -700,6 +700,45 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
   POP_SUB(X(states_matrix))
 end subroutine X(states_matrix)
 
+! -----------------------------------------------------------
+
+subroutine X(states_calc_orth_test)(st, mc, mesh)
+  type(states_t),    intent(inout) :: st
+  type(multicomm_t), intent(in)    :: mc
+  type(mesh_t),      intent(in)    :: mesh
+  
+  integer :: ist, jst
+  FLOAT :: dd
+
+  call states_distribute_nodes(st, mc)
+  call states_allocate_wfns(st, mesh, wfs_type = R_TYPE_VAL)
+
+  call states_generate_random(st, mesh)
+
+  message(1) = 'Info: Orthogonalizing random wavefunctions.'
+  message(2) = ''
+  call write_info(2)
+
+  call states_orthogonalize(st, mesh)
+
+  message(1) = 'Residuals:'
+  call write_info(1)
+
+  do ist = 1, st%nst
+    do jst = ist, st%nst
+      dd = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist, 1), st%X(psi)(:, :, jst, 1))
+      if(ist == jst) dd = dd - CNST(1.0)
+      write (message(1), '(2i7, e16.6)') ist, jst, abs(dd)
+      call write_info(1)
+    end do
+  end do
+
+  message(1) = ''
+  call write_info(1)
+
+  call states_deallocate_wfns(st)
+end subroutine X(states_calc_orth_test)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

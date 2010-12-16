@@ -33,6 +33,7 @@ program oct_test
   use parser_m
   use poisson_m
   use profiling_m
+  use states_calc_m
   use string_m
   use system_m
   use unit_m
@@ -44,7 +45,8 @@ program oct_test
   integer :: which_test
   integer, parameter ::              &
     HARTREE_TEST       =   1,        &
-    DER_TEST           =   2
+    DER_TEST           =   2,        &
+    ORT_TEST           =   3
 
   call global_init()
   call parser_init()
@@ -68,6 +70,8 @@ program oct_test
   !% Tests the various Hartree solvers.
   !%Option derivatives 2
   !% Tests the implementation of the finite-difference operators, used to calculate derivatives.
+  !%Option orthogonalization 3
+  !% Tests the implementation of the orthogonalization routines.
   !%End
   call parse_integer('WhichTest', HARTREE_TEST, which_test)
   call datasets_init(which_test)
@@ -85,6 +89,7 @@ program oct_test
   select case(which_test)
   case(HARTREE_TEST); call test_hartree()
   case(DER_TEST); call test_derivatives()
+  case(ORT_TEST); call test_orthogonalization()
   end select
 
   call fft_all_end()
@@ -150,6 +155,54 @@ program oct_test
 
     call system_end(sys)
   end subroutine test_derivatives
+
+  ! ---------------------------------------------------------
+
+  subroutine test_orthogonalization()
+    type(system_t) :: sys
+
+    integer, parameter :: &
+      TEST_REAL    = 1,   &
+      TEST_COMPLEX = 2,   &
+      TEST_ALL     = 3
+
+    integer :: test
+
+    call system_init(sys)
+
+    !%Variable TestOrthogonalization
+    !%Type integer
+    !%Default all
+    !%Section Utilities::oct-test
+    !%Description
+    !% Decides what orthogonalization test should be performed.
+    !%Option real 1
+    !% Tests derivatives for real functions.
+    !%Option complex 2
+    !% Tests derivatives for complex functions.
+    !%Option all 3
+    !% Tests derivatives for both real and complex functions.
+    !%End
+    call parse_integer('TestOrthogonalization', TEST_ALL, test)
+
+    message(1) = 'Info: Testing orthogonalization.'
+    message(2) = ''
+    call write_info(2)
+
+    if(test == TEST_ALL .or. test == TEST_REAL) then
+      message(1) = 'Info: Real wave-functions.'
+      call write_info(1)
+      call dstates_calc_orth_test(sys%st, sys%mc, sys%gr%mesh)
+    end if
+
+    if(test == TEST_ALL .or. test == TEST_COMPLEX) then
+      message(1) = 'Info: Complex wave-functions.'
+      call write_info(1)
+      call zstates_calc_orth_test(sys%st, sys%mc, sys%gr%mesh)
+    end if
+
+    call system_end(sys)
+  end subroutine test_orthogonalization
 
 end program oct_test
 
