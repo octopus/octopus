@@ -106,6 +106,8 @@ AC_ARG_ENABLE(single, AS_HELP_STRING([--enable-single], [octopus in single-preci
 AC_ARG_ENABLE(debug, AS_HELP_STRING([--disable-debug], [debug mode]), [DEBUG=${enableval}])
 AC_ARG_ENABLE(openmp, AS_HELP_STRING([--enable-openmp], [Multi-threaded parallel version using OpenMP]))
 AC_ARG_ENABLE(opencl, AS_HELP_STRING([--enable-opencl], [OpenCL support (experimental)]))
+AC_ARG_ENABLE(blacs, AS_HELP_STRING([--with-blacs], [Blacs support (experimental)]))
+AC_ARG_ENABLE(scalapack, AS_HELP_STRING([--with-scalapack], [ScaLAPACK support (experimental), add before --with-blacs]))
 
 if test -n "${enable_single}" -a x"${enable_single}" != x"no"; then
   SINGLE_PRECISION=1
@@ -341,6 +343,10 @@ if test x"$enable_mpi" != x"no"; then
   ACX_MPI_FC_MODULE
   ACX_MPI2
 fi
+
+dnl check for SCALAPACK/BLACS
+ACX_BLACS
+ACX_SCALAPACK
 
 dnl now I run configure for the internal libraries
 AC_CONFIG_SUBDIRS([external_libs/spglibs])
