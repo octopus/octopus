@@ -92,6 +92,8 @@ module opencl_m
   type(c_ptr), public :: dunpack
   type(c_ptr), public :: zunpack
   type(c_ptr), public :: kernel_subarray_gather
+  type(c_ptr), public :: kernel_density_real
+  type(c_ptr), public :: kernel_density_complex
 
 #include "opencl_iface_inc.F90"
 
@@ -229,6 +231,11 @@ module opencl_m
       call opencl_create_kernel(kernel_subarray_gather, prog, "subarray_gather")
       call opencl_release_program(prog)
 
+      call opencl_build_program(prog, trim(conf%share)//'/opencl/density.cl')
+      call opencl_create_kernel(kernel_density_real, prog, "density_real")
+      call opencl_create_kernel(kernel_density_complex, prog, "density_complex")
+      call opencl_release_program(prog)
+
       call messages_print_stress(stdout)
 
       POP_SUB(opencl_init)
@@ -257,7 +264,11 @@ module opencl_m
         call opencl_release_kernel(dunpack)
         call opencl_release_kernel(zunpack)
         call opencl_release_kernel(kernel_subarray_gather)
+        call opencl_release_kernel(kernel_density_real)
+        call opencl_release_kernel(kernel_density_complex)
+
         call flReleaseCommandQueue(opencl%command_queue, ierr)
+
         if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "ReleaseCommandQueue")
         call flReleaseContext(opencl%context)
       end if

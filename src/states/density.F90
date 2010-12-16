@@ -22,6 +22,7 @@
 module density_m
   use blas_m
   use batch_m
+  use c_pointer_m
   use datasets_m
   use derivatives_m
   use global_m
@@ -36,6 +37,7 @@ module density_m
   use multicomm_m
   use mpi_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
   use mpi_lib_m
+  use opencl_m
   use profiling_m
   use simul_box_m
   use smear_m
@@ -65,15 +67,21 @@ module density_m
     FLOAT,          pointer :: density(:, :)
     type(states_t), pointer :: st
     type(grid_t),   pointer :: gr
+#ifdef HAVE_OPENCL
+    type(opencl_mem_t)      :: buff_density
+    integer                 :: pnp
+    logical                 :: packed
+#endif
   end type density_calc_t
 
 contains
   
-  subroutine density_calc_init(this, st, gr, density)
+  subroutine density_calc_init(this, st, gr, density, packed)
     type(density_calc_t),           intent(out)   :: this
     type(states_t),       target,   intent(in)    :: st
     type(grid_t),         target,   intent(in)    :: gr
     FLOAT,                target,   intent(out)   :: density(:, :)
+    logical,              optional, intent(in)    :: packed
 
     PUSH_SUB(density_calc_init)
 
@@ -82,6 +90,21 @@ contains
     this%gr => gr
 
     this%density = M_ZERO
+
+#ifdef HAVE_OPENCL
+    this%packed = .false.
+    if(present(packed)) this%packed = packed .and. opencl_is_enabled()
+    
+    if(this%packed) then
+      this%pnp = opencl_padded_size(this%gr%mesh%np)
+      call opencl_create_buffer(this%buff_density, CL_MEM_READ_WRITE, TYPE_FLOAT, this%pnp*this%st%d%nspin)
+
+      ! set to zero
+      call opencl_set_kernel_arg(set_zero, 0, this%buff_density)
+      call opencl_kernel_run(set_zero, (/this%pnp*this%st%d%nspin/), (/opencl_max_workgroup_size()/))
+      call opencl_finish()
+    end if
+#endif
 
     POP_SUB(density_calc_init)
   end subroutine density_calc_init
@@ -99,7 +122,11 @@ contains
     FLOAT, allocatable :: frho(:), weight(:)
     type(profile_t), save :: prof
     logical :: correct_size
-
+#ifdef HAVE_OPENCL
+    integer            :: wgsize
+    type(opencl_mem_t) :: buff_weight
+    type(c_ptr)        :: kernel
+#endif
     PUSH_SUB(density_calc_accumulate)
     call profiling_in(prof, "CALC_DENSITY")
 
@@ -121,8 +148,7 @@ contains
       end if
 
       select case(batch_status(psib))
-      case(BATCH_NOT_PACKED, BATCH_CL_PACKED)
-        call batch_sync(psib)
+      case(BATCH_NOT_PACKED)
         if(states_are_real(this%st)) then
           do ist = 1, psib%nst
             forall(ip = 1:this%gr%mesh%np)
@@ -152,6 +178,34 @@ contains
             end do
           end do
         end if
+      case(BATCH_CL_PACKED)
+#ifdef HAVE_OPENCL
+        ASSERT(this%packed)
+
+        if(states_are_real(this%st)) then
+          kernel = kernel_density_real
+        else
+          kernel = kernel_density_complex
+        end if
+
+        call opencl_create_buffer(buff_weight, CL_MEM_READ_ONLY, TYPE_FLOAT, psib%nst)
+        call opencl_write_buffer(buff_weight, psib%nst, weight)
+
+        call opencl_set_kernel_arg(kernel, 0, psib%nst)
+        call opencl_set_kernel_arg(kernel, 1, this%pnp*(ispin - 1))
+        call opencl_set_kernel_arg(kernel, 2, buff_weight)
+        call opencl_set_kernel_arg(kernel, 3, psib%pack%buffer)
+        call opencl_set_kernel_arg(kernel, 4, log2(psib%pack%size(1)))
+        call opencl_set_kernel_arg(kernel, 5, this%buff_density)
+
+        wgsize = opencl_kernel_workgroup_size(kernel)
+        
+        call opencl_kernel_run(kernel, (/pad(this%gr%mesh%np, wgsize)/), (/wgsize/))
+
+        call opencl_finish()
+        
+        call opencl_release_buffer(buff_weight)
+#endif
       end select
 
       if(this%gr%have_fine_mesh) then
@@ -212,6 +266,17 @@ contains
     PUSH_SUB(density_calc_end)
 
     np = this%gr%fine%mesh%np
+
+#ifdef HAVE_OPENCL
+    if(this%packed) then
+      ! the density is in device memory
+      do ispin = 1, this%st%d%nspin
+        call opencl_read_buffer(this%buff_density, np, this%density(:, ispin), offset = (ispin - 1)*this%pnp)
+        call opencl_release_buffer(this%buff_density)
+        this%packed = .false.
+      end do
+    end if
+#endif
 
 #ifdef HAVE_MPI
     ! reduce over states

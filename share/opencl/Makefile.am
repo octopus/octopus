@@ -29,7 +29,8 @@ dist_opencl_DATA =              \
 	projector.cl            \
 	pack.cl                 \
 	copy.cl                 \
-	subarray.cl
+	subarray.cl             \
+	density.cl
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use
 # the `distcheck' target) the pseudopotential files have to be accessible
