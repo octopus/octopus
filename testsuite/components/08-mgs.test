@@ -1,0 +1,24 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 07-gram_schmidt.test 2423 2006-09-24 21:25:52Z acastro $
+
+Test       : Modified Gram-Schmidt orthogonalization
+Programs   : oct-test; oct-test_mpi
+TestGroups : short-run
+Enabled    : Yes
+
+Precision : 1.0e-14
+Input: 08-mgs.01-real.inp
+match ; Overlap 1 1 ; GREP(out, '      1      1', 15) ;  0.222045E-15
+match ; Overlap 1 2 ; GREP(out, '      1      2', 15) ;  0.767563E-16
+match ; Overlap 1 9 ; GREP(out, '      1      9', 15) ;  0.600960E-15
+match ; Overlap 6 6 ; GREP(out, '      6      6', 15) ;  0.222045E-15
+match ; Overlap 7 8 ; GREP(out, '      7      8', 15) ;  0.681882E-15
+match ; Overlap 9 9 ; GREP(out, '      9      9', 15) ;  0.222045E-15
+
+Input: 08-mgs.02-complex.inp
+match ; Overlap 1 1 ; GREP(out, '      1      1', 15) ;  0.222045E-15
+match ; Overlap 1 2 ; GREP(out, '      1      2', 15) ;  0.193433E-15
+match ; Overlap 1 9 ; GREP(out, '      1      9', 15) ;  0.879240E-16
+match ; Overlap 6 6 ; GREP(out, '      6      6', 15) ;  0.888178E-15
+match ; Overlap 7 8 ; GREP(out, '      7      8', 15) ;  0.112430E-13
+match ; Overlap 9 9 ; GREP(out, '      9      9', 15) ;  0.277556E-14

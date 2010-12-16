@@ -185,6 +185,7 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
 
     subroutine mgs()
       integer :: ist, jst, idim
+      FLOAT   :: cc
       R_TYPE, allocatable :: aa(:)
       FLOAT,  allocatable :: bb(:)
 #ifdef HAVE_MPI
@@ -196,6 +197,7 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
 
       SAFE_ALLOCATE(bb(1:nst))
 
+      ! normalize the initial vectors
       do ist = 1, nst
         bb(ist) = X(mf_dotp)(mesh, dim, psi(:, :, ist), psi(:, :, ist), reduce = .false.)
       end do
@@ -220,6 +222,7 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
       SAFE_ALLOCATE(aa(1:nst))
 
       do ist = 1, nst
+        ! calculate the projections
         do jst = 1, ist - 1
           aa(jst) = X(mf_dotp)(mesh, dim, psi(:, :, jst), psi(:, :, ist), reduce = .false.)
         end do
@@ -233,10 +236,17 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
         end if
 #endif
 
+        ! substract the projections
         do jst = 1, ist - 1
           do idim = 1, dim
             call lalg_axpy(mesh%np, -aa(jst), psi(:, idim, jst), psi(:, idim, ist))
           end do
+        end do
+
+        ! renormalize
+        cc = X(mf_dotp)(mesh, dim, psi(:, :, ist), psi(:, :, ist))
+        do idim = 1, dim
+          call lalg_scal(mesh%np, M_ONE/sqrt(cc), psi(:, idim, ist))
         end do
       end do
 
