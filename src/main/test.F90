@@ -106,10 +106,13 @@ program oct_test
   subroutine test_hartree
     type(system_t) :: sys
 
+    PUSH_SUB(test_hartree)
+
     call system_init(sys)
     call poisson_test(sys%gr%mesh)
     call system_end(sys)
 
+    POP_SUB(test_hartree)
   end subroutine test_hartree
 
 
@@ -123,6 +126,8 @@ program oct_test
       TEST_ALL     = 3
 
     integer :: test
+
+    PUSH_SUB(test_derivatives)
 
     call system_init(sys)
 
@@ -154,6 +159,8 @@ program oct_test
     end if
 
     call system_end(sys)
+
+    POP_SUB(test_derivatives)
   end subroutine test_derivatives
 
   ! ---------------------------------------------------------
@@ -168,6 +175,8 @@ program oct_test
 
     integer :: test
 
+    PUSH_SUB(test_orthogonalization)
+
     call system_init(sys)
 
     !%Variable TestOrthogonalization
@@ -177,11 +186,11 @@ program oct_test
     !%Description
     !% Decides what orthogonalization test should be performed.
     !%Option real 1
-    !% Tests derivatives for real functions.
+    !% Tests orthogonalization for real functions.
     !%Option complex 2
-    !% Tests derivatives for complex functions.
+    !% Tests orthogonalization for complex functions.
     !%Option all 3
-    !% Tests derivatives for both real and complex functions.
+    !% Tests orthogonalization for both real and complex functions.
     !%End
     call parse_integer('TestOrthogonalization', TEST_ALL, test)
 
@@ -202,6 +211,8 @@ program oct_test
     end if
 
     call system_end(sys)
+
+    POP_SUB(test_orthogonalization)
   end subroutine test_orthogonalization
 
 end program oct_test
