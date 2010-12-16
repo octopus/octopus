@@ -34,6 +34,9 @@ dist_share_DATA =                                  \
 	06-hartree_3d.02-multigrid.inp             \
 	06-hartree_3d.03-fft.inp                   \
 	06-hartree_3d.04-fft_corrected.inp         \
-	06-hartree_3d.05-cg_corrected.inp
+	06-hartree_3d.05-cg_corrected.inp          \
+	07-gram_schmidt.test                       \
+	07-gram_schmidt.01-real.inp                \
+        07-gram_schmidt.02-complex.inp
 
 CLEANFILES = *~ *.bak
