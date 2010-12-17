@@ -731,7 +731,7 @@ contains
 
     integer ik, ist, ist2, idim, ip
     CMPLX, allocatable :: matrix(:, :), tmp(:)
-    CMPLX :: det, phase
+    CMPLX :: det
 
     PUSH_SUB(epot_dipole_periodic)
 
@@ -745,8 +745,6 @@ contains
 
     ! \todo add in sum over k-points in orthogonal directions here
 
-    phase = exp(-M_zI * (M_PI / gr%sb%lsize(dir)))
-
     do ik = st%d%kpt%start, st%d%kpt%end ! determinants for different spins multiply since matrix is block-diagonal
       do ist = 1, st%nst
         do ist2 = 1, st%nst
@@ -759,6 +757,7 @@ contains
                 forall(ip = 1:gr%mesh%np)
                   tmp(ip) = conjg(st%zpsi(ip, idim, ist, ik)) * &
                     exp(-M_zI * (M_PI / gr%sb%lsize(dir)) * gr%mesh%x(ip, dir)) * st%zpsi(ip, idim, ist2, ik)
+                  ! factor of two removed from exp since actual lattice vector is 2 * lsize
                 end forall
               else
                 forall(ip = 1:gr%mesh%np)
@@ -768,8 +767,6 @@ contains
               end if
 
               matrix(ist, ist2) = matrix(ist, ist2) + zmf_integrate(gr%mesh, tmp)
-
-              ! factor of two removed from exp since actual lattice vector is 2 * lsize
             end do
           else
             ! enforce Hermiticity of matrix
@@ -783,6 +780,8 @@ contains
     dipole = -(2 * gr%sb%lsize(dir) / (2 * M_Pi)) * aimag(log(det)) * st%smear%el_per_state
 
     SAFE_DEALLOCATE_A(matrix)
+    SAFE_DEALLOCATE_A(tmp)
+
     POP_SUB(epot_dipole_periodic)
   end function epot_dipole_periodic
 
