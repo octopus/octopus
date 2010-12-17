@@ -389,8 +389,8 @@ contains
       call parse_float(datasets_check('EMStaticElectricField'), &
          CNST(0.01), e_field, units_inp%force)
       if (e_field <= M_ZERO) then
-        write(message(1), '(a,e14.6,a)') "Input: '", e_field, "' is not a valid EMElectricStaticField."
-        message(2) = '(0 < EMStaticElectricField)'
+        write(message(1), '(a,e14.6,a)') "Input: '", e_field, "' is not a valid EMStaticElectricField."
+        message(2) = '(Must have EMStaticElectricField > 0)'
         call write_fatal(2)
       end if
 

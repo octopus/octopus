@@ -264,8 +264,8 @@ end subroutine X(states_orthogonalization_block)
 !  - on input, if mask(p) = .true., the p-orbital is not used.
 !  - on output, mask(p) = .true. if p was already orthogonal (to within 1e-12).
 ! If Theta_Fi and beta_ij are present, it performs the generalized orthogonalization
-!   (Theta_Fi - sum_j beta_ij |j><j|Phi>
-! This is used in response for metals
+!   (Theta_Fi - sum_j beta_ij |j><j|) |Phi> as in De Gironcoli PRB 51, 6774 (1995).
+! This is used in response for metals.
 subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
   normalize, mask, overlap, norm, Theta_fi, beta_ij)
   type(mesh_t),      intent(in)    :: mesh
