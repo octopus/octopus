@@ -409,7 +409,7 @@ contains
     ep%natoms = geo%natoms
     ep%non_local = .false.
 
-    SAFE_ALLOCATE(ep%fii(1:MAX_DIM, 1:geo%natoms))
+    SAFE_ALLOCATE(ep%fii(1:gr%sb%dim, 1:geo%natoms))
 
     call gauge_field_nullify(ep%gfield)
 
@@ -418,9 +418,9 @@ contains
     
     if (poisson_get_solver(psolver) == POISSON_SETE) then 
       SAFE_ALLOCATE(rho_nuc(1:gr%mesh%np))
-      rho_nuc(1:gr%mesh%np)=M_ZERO
+      rho_nuc(1:gr%mesh%np) = M_ZERO
       SAFE_ALLOCATE(v_es(1:gr%mesh%np))
-      v_es(1:gr%mesh%np)=M_ZERO
+      v_es(1:gr%mesh%np) = M_ZERO
     end if
 
     POP_SUB(epot_init)
@@ -826,7 +826,7 @@ contains
     type(epot_t),              intent(inout) :: ep
     type(grid_t), target,      intent(in)    :: gr
     FLOAT,                     intent(out)   :: energy
-    FLOAT,                     intent(out)   :: force(:, :)
+    FLOAT,                     intent(out)   :: force(:, :) ! sb%dim, geo%natoms
 
     type(species_t), pointer :: spec
     FLOAT :: rr, dd, zi, zj
@@ -843,7 +843,7 @@ contains
     ! for details about this routine.
 
     energy = M_ZERO
-    force = M_ZERO
+    force(1:sb%dim, 1:geo%natoms) = M_ZERO
 
     if(simul_box_is_periodic(sb)) then
       call ion_interaction_periodic(geo, sb, energy, force)
@@ -914,7 +914,7 @@ contains
     type(geometry_t),  target, intent(in)    :: geo
     type(simul_box_t),         intent(in)    :: sb
     FLOAT,                     intent(out)   :: energy
-    FLOAT,                     intent(out)   :: force(:, :)
+    FLOAT,                     intent(out)   :: force(:, :) ! sb%dim, geo%natoms
 
     type(species_t), pointer :: spec
     FLOAT :: rr, xi(1:MAX_DIM), zi, zj
@@ -933,7 +933,7 @@ contains
     ! for details about this routine.
 
     energy = M_ZERO
-    force = M_ZERO
+    force(1:sb%dim, 1:geo%natoms) = M_ZERO
 
     ! if the system is periodic we have to add the energy of the
     ! interaction with the copies
