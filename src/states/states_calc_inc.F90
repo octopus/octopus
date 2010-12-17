@@ -158,7 +158,7 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
 
     ! calculate the QR decomposition
     SAFE_ALLOCATE(work(1:wsize))
-    call dgeqrf(mesh%np, nst, psi(1, 1, 1), mesh%np_part, tau(1), work(1), mesh%np*20, info)
+    call dgeqrf(mesh%np, nst, psi(1, 1, 1), mesh%np_part, tau(1), work(1), wsize, info)
     SAFE_DEALLOCATE_A(work)
 
     ! get the optimal size of the work array
