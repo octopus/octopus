@@ -450,13 +450,13 @@ contains
     call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), tr%v_old(:, :, 1:3), time, tr%v_old(:, :, 0))
 
     select case(tr%method)
-    case(PROP_ETRS);                    call td_etrs
-    case(PROP_AETRS, PROP_CAETRS);      call td_aetrs
-    case(PROP_EXPONENTIAL_MIDPOINT);    call exponential_midpoint
-    case(PROP_CRANK_NICHOLSON);         call td_crank_nicholson
-    case(PROP_CRANK_NICHOLSON_SPARSKIT);call td_crank_nicholson_sparskit
-    case(PROP_MAGNUS);                  call td_magnus
-    case(PROP_CRANK_NICHOLSON_SRC_MEM); call td_crank_nicholson_src_mem
+    case(PROP_ETRS);                     call td_etrs
+    case(PROP_AETRS, PROP_CAETRS);       call td_aetrs
+    case(PROP_EXPONENTIAL_MIDPOINT);     call exponential_midpoint
+    case(PROP_CRANK_NICHOLSON);          call td_crank_nicholson
+    case(PROP_CRANK_NICHOLSON_SPARSKIT); call td_crank_nicholson_sparskit
+    case(PROP_MAGNUS);                   call td_magnus
+    case(PROP_CRANK_NICHOLSON_SRC_MEM);  call td_crank_nicholson_src_mem
     case(PROP_QOCT_TDDFT_PROPAGATOR)
       call td_qoct_tddft_propagator(hm, gr, st, tr, time, dt)
     case(PROP_QOCT_TDDFT_PROPAGATOR_2)
@@ -495,13 +495,13 @@ contains
           tr%v_old(:, :, 0) = hm%vhxc(:, :)
           vaux(:, :) = hm%vhxc(:, :)
           select case(tr%method)
-          case(PROP_ETRS);                    call td_etrs
-          case(PROP_AETRS, PROP_CAETRS);      call td_aetrs
-          case(PROP_EXPONENTIAL_MIDPOINT);    call exponential_midpoint
-          case(PROP_CRANK_NICHOLSON);         call td_crank_nicholson
-          case(PROP_CRANK_NICHOLSON_SPARSKIT);call td_crank_nicholson_sparskit
-          case(PROP_MAGNUS);                  call td_magnus
-          case(PROP_CRANK_NICHOLSON_SRC_MEM); call td_crank_nicholson_src_mem
+          case(PROP_ETRS);                     call td_etrs
+          case(PROP_AETRS, PROP_CAETRS);       call td_aetrs
+          case(PROP_EXPONENTIAL_MIDPOINT);     call exponential_midpoint
+          case(PROP_CRANK_NICHOLSON);          call td_crank_nicholson
+          case(PROP_CRANK_NICHOLSON_SPARSKIT); call td_crank_nicholson_sparskit
+          case(PROP_MAGNUS);                   call td_magnus
+          case(PROP_CRANK_NICHOLSON_SRC_MEM);  call td_crank_nicholson_src_mem
           case(PROP_QOCT_TDDFT_PROPAGATOR)
             call td_qoct_tddft_propagator(hm, gr, st, tr, time, dt)
           case(PROP_QOCT_TDDFT_PROPAGATOR_2)
@@ -595,7 +595,7 @@ contains
 
         call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
         call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
-        call hamiltonian_update(hm, gr%mesh, time = time - dt)
+        call hamiltonian_update(hm, st, gr%mesh, time = time - dt)
       end if
 
       ! propagate dt/2 with H(time - dt)
@@ -624,7 +624,7 @@ contains
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
         call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
       end if
-      call hamiltonian_update(hm, gr%mesh, time = time)
+      call hamiltonian_update(hm, st, gr%mesh, time = time)
 
       do ik = st%d%kpt%start, st%d%kpt%end
         do sts = st%st_start, st%st_end, st%d%block_size
@@ -657,7 +657,7 @@ contains
 
       if(tr%method == PROP_CAETRS) then
         call lalg_copy(gr%mesh%np, st%d%nspin, vold, hm%vhxc)
-        call hamiltonian_update(hm, gr%mesh, time = time - dt)
+        call hamiltonian_update(hm, st, gr%mesh, time = time - dt)
       end if
 
       ! propagate half of the time step with H(time - dt)
@@ -698,7 +698,7 @@ contains
         call gauge_field_propagate(hm%ep%gfield, gauge_force, dt)
       end if
 
-      call hamiltonian_update(hm, gr%mesh, time = time)
+      call hamiltonian_update(hm, st, gr%mesh, time = time)
 
       call density_calc_init(dens_calc, st, gr, st%rho, packed = hamiltonian_apply_packed(hm, gr%mesh))
 
@@ -751,7 +751,7 @@ contains
         call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt)
       end if
 
-      call hamiltonian_update(hm, gr%mesh, time = time - M_HALF*dt)
+      call hamiltonian_update(hm, st, gr%mesh, time = time - M_HALF*dt)
 
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
@@ -764,7 +764,7 @@ contains
       if(gauge_field_is_applied(hm%ep%gfield)) then
         call gauge_field_set_vec_pot(hm%ep%gfield, vecpot)
         call gauge_field_set_vec_pot_vel(hm%ep%gfield, vecpot_vel)
-        call hamiltonian_update(hm, gr%mesh)
+        call hamiltonian_update(hm, st, gr%mesh)
       end if
 
       POP_SUB(propagator_dt.exponential_midpoint)
@@ -821,7 +821,9 @@ contains
         do idim = 1, st%d%dim
           do ik = st%d%kpt%start, st%d%kpt%end
             do ist = st%st_start, st%st_end
-              idim_op = idim; ist_op = ist; ik_op = ik
+              idim_op = idim
+              ist_op = ist
+              ik_op = ik
               call zsparskit_solver_run(tdsk, td_zop, td_zopt, &
                 st%zpsi(1:gr%mesh%np, idim, ist, ik), zpsi_rhs_pred(1:gr%mesh%np, idim, ist, ik))
             end do
@@ -834,7 +836,7 @@ contains
         vhxc_t2 = hm%vhxc
         ! compute potential at n+1/2 as average
         hm%vhxc = (vhxc_t1 + vhxc_t2)/M_TWO
-        call hamiltonian_update(hm, gr%mesh)
+        call hamiltonian_update(hm, st, gr%mesh)
       end if
 
       ! get rhs of CN linear system (rhs2 = (1-i\delta t H_{n+1/2})\psi^n)
@@ -852,7 +854,9 @@ contains
       do idim = 1, st%d%dim
         do ik = st%d%kpt%start, st%d%kpt%end
           do ist = st%st_start, st%st_end
-            idim_op = idim; ist_op = ist; ik_op = ik
+            idim_op = idim
+            ist_op = ist
+            ik_op = ik
             call zsparskit_solver_run(tdsk, td_zop, td_zopt, &
               st%zpsi(1:gr%mesh%np, idim, ist, ik), zpsi_rhs_corr(1:gr%mesh%np, idim, ist, ik))
           end do
@@ -905,7 +909,7 @@ contains
       SAFE_ALLOCATE(rhs(1:np*st%d%dim))
         
       call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time - dt/M_TWO, hm%vhxc(:, :))
-      call hamiltonian_update(hm, gr%mesh, time = time - dt/M_TWO)
+      call hamiltonian_update(hm, st, gr%mesh, time = time - dt/M_TWO)
 
       ! solve (1+i\delta t/2 H_n)\psi^{predictor}_{n+1} = (1-i\delta t/2 H_n)\psi^n
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -921,7 +925,9 @@ contains
             rhs((idim-1)*np+1:idim*np) = zpsi_rhs(1:np, idim)
           end forall
 
-          ist_op = ist; ik_op = ik; iter = 2000
+          ist_op = ist
+          ik_op = ik
+          iter = 2000
           call zqmr_sym(np*st%d%dim, zpsi, rhs, &
             propagator_qmr_op, propagator_qmr_prec, iter, dres, cgtol, &
             showprogress = .false., converged = converged)
@@ -966,7 +972,7 @@ contains
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
         do j = 1, 2
           call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), atime(j) - dt, hm%vhxc(:, :))
-          call hamiltonian_update(hm, gr%mesh)
+          call hamiltonian_update(hm, st, gr%mesh)
         end do
       else
         vaux = M_ZERO

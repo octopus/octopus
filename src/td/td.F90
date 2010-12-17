@@ -736,7 +736,7 @@ contains
 
       call io_skip_header(iunit)
       do iter = 0, td%iter - 1
-        read(iunit, *) ! skip previous iterations... sorry, but no seek in Fortran
+        read(iunit, *) ! skip previous iterations... sorry, but no portable seek in Fortran
       end do
       read(iunit, '(28x)', advance='no') ! skip the time index.
 
@@ -794,7 +794,7 @@ contains
 
       call gauge_field_set_vec_pot(hm%ep%gfield, vecpot)
       call gauge_field_set_vec_pot_vel(hm%ep%gfield, vecpot_vel)
-      call hamiltonian_update(hm, gr%mesh)
+      call hamiltonian_update(hm, st, gr%mesh)
       
       call io_close(iunit)
       POP_SUB(td_run.td_read_gauge_field)

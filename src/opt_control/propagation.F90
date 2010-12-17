@@ -349,14 +349,14 @@ module opt_control_propagation_m
     do i = 1, td%max_iter
       call update_field(i, par, gr, hm, psi, chi, par_chi, dir = 'f')
       call update_hamiltonian_chi(i, gr, sys%ks, hm, td, target, par_chi, psi2)
-      call hamiltonian_update(hm, gr%mesh, time = (i - 1)*td%dt)
+      call hamiltonian_update(hm, sys%st, gr%mesh, time = (i - 1)*td%dt)
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, i*td%dt, td%dt, td%mu, td%max_iter, i)
       if(aux_fwd_propagation) then
         call update_hamiltonian_psi(i, gr, sys%ks, hm, td, target, par_prev, psi2)
         call propagator_dt(sys%ks, hm, gr, psi2, tr_psi2, i*td%dt, td%dt, td%mu, td%max_iter, i)
       end if
       call update_hamiltonian_psi(i, gr, sys%ks, hm, td, target, par, psi)
-      call hamiltonian_update(hm, gr%mesh, time = (i - 1)*td%dt)
+      call hamiltonian_update(hm, sys%st, gr%mesh, time = (i - 1)*td%dt)
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, i*td%dt, td%dt, td%mu, td%max_iter, i)
       call target_tdcalc(target, gr, psi, i) 
       call oct_prop_output(prop_psi, i, psi, gr)
@@ -424,7 +424,7 @@ module opt_control_propagation_m
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, gr, hm, psi)
-    call hamiltonian_update(hm, gr%mesh)
+    call hamiltonian_update(hm, sys%st, gr%mesh)
     call propagator_run_zero_iter(hm, td%tr)
     call propagator_run_zero_iter(hm, tr_chi)
 
@@ -434,11 +434,11 @@ module opt_control_propagation_m
       call oct_prop_check(prop_psi, psi, gr, sys%geo, i)
       call update_field(i, par_chi, gr, hm, psi, chi, par, dir = 'b')
       call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, target, par_chi, psi)
-      call hamiltonian_update(hm, gr%mesh, abs(i*td%dt))
+      call hamiltonian_update(hm, sys%st, gr%mesh, abs(i*td%dt))
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
       call oct_prop_output(prop_chi, i-1, chi, gr)
       call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, target, par, psi)
-      call hamiltonian_update(hm, gr%mesh, abs(i*td%dt))
+      call hamiltonian_update(hm, sys%st, gr%mesh, abs(i*td%dt))
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
     end do
     td%dt = -td%dt
@@ -446,7 +446,7 @@ module opt_control_propagation_m
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, gr, hm, psi)
-    call hamiltonian_update(hm, gr%mesh)
+    call hamiltonian_update(hm, sys%st, gr%mesh)
 
     call states_end(psi)
     call propagator_end(tr_chi)
@@ -502,7 +502,7 @@ module opt_control_propagation_m
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, gr, hm, psi)
-    call hamiltonian_update(hm, gr%mesh)
+    call hamiltonian_update(hm, sys%st, gr%mesh)
     call propagator_run_zero_iter(hm, td%tr)
     call propagator_run_zero_iter(hm, tr_chi)
 
@@ -540,7 +540,7 @@ module opt_control_propagation_m
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, gr, hm, psi)
-    call hamiltonian_update(hm, gr%mesh)
+    call hamiltonian_update(hm, sys%st, gr%mesh)
 
     call propagator_end(tr_chi)
 
@@ -568,6 +568,7 @@ module opt_control_propagation_m
 
     type(states_t)                             :: inh
     integer :: j
+
     PUSH_SUB(update_hamiltonian_chi)
 
     if(target_mode(target) == oct_targetmode_td) then
@@ -596,7 +597,7 @@ module opt_control_propagation_m
     if(hm%theory_level.ne.INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
       call density_calc(st, gr, st%rho)
       call v_ks_calc(ks, gr, hm, st)
-      call hamiltonian_update(hm, gr%mesh)
+      call hamiltonian_update(hm, st, gr%mesh)
     end if
 
     POP_SUB(update_hamiltonian_chi)
@@ -618,6 +619,7 @@ module opt_control_propagation_m
     type(states_t), intent(inout)              :: st
 
     integer :: j
+
     PUSH_SUB(update_hamiltonian_psi)
 
     if(target_mode(target) == oct_targetmode_td) then
@@ -638,7 +640,7 @@ module opt_control_propagation_m
     if(hm%theory_level.ne.INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
       call density_calc(st, gr, st%rho)
       call v_ks_calc(ks, gr, hm, st)
-      call hamiltonian_update(hm, gr%mesh)
+      call hamiltonian_update(hm, st, gr%mesh)
     end if
 
     POP_SUB(update_hamiltonian_psi)

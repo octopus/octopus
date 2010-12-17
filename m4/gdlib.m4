@@ -23,7 +23,7 @@ AC_DEFUN([ACX_GDLIB],
       # Sometimes GD installation strangely leaves this token @LIBICONV@ in --libs, which must be removed
       fi
     else
-      $acx_gdlib_ok="no"
+      acx_gdlib_ok="no"
     fi
   fi
 
