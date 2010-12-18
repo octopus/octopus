@@ -285,10 +285,10 @@ contains
     !% of the output files is <tt>Bind</tt>).
     !%End
     if(hm%self_induced_magnetic) then
-      select case(gr%mesh%sb%dim)
+      select case(gr%sb%dim)
       case(3)
-        SAFE_ALLOCATE(hm%a_ind(1:gr%mesh%np_part, 1:MAX_DIM))
-        SAFE_ALLOCATE(hm%b_ind(1:gr%mesh%np_part, 1:MAX_DIM))
+        SAFE_ALLOCATE(hm%a_ind(1:gr%mesh%np_part, 1:3))
+        SAFE_ALLOCATE(hm%b_ind(1:gr%mesh%np_part, 1:3))
       case(2)
         SAFE_ALLOCATE(hm%a_ind(1:gr%mesh%np_part, 1:2))
         SAFE_ALLOCATE(hm%b_ind(1:gr%mesh%np_part, 1:1))
@@ -357,10 +357,10 @@ contains
     !% in this case an electron and 2 protons.
     !%
     !%End
-    hm%mass_scaling = M_ONE
+    hm%mass_scaling(1:gr%sb%dim) = M_ONE
     if(parse_block(datasets_check('MassScaling'), blk) == 0) then
         ncols = parse_block_cols(blk, 0)
-        if(ncols > MAX_DIM) then
+        if(ncols > gr%sb%dim) then
           call input_error("MassScaling")
         end if
         iline = 1 ! just deal with 1 line - should be generalized
@@ -416,7 +416,7 @@ contains
       
       SAFE_ALLOCATE(hm%phase(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
 
-      kpoint = M_ZERO
+      kpoint(1:gr%sb%dim) = M_ZERO
       do ik = hm%d%kpt%start, hm%d%kpt%end
         kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
         forall (ip = 1:gr%mesh%np_part)
@@ -920,8 +920,8 @@ contains
         case(E_FIELD_MAGNETIC)
           call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL + FIELD_UNIFORM_MAGNETIC_FIELD)
           ! get the vector potential
-          SAFE_ALLOCATE(vp(1:mesh%np, 1:MAX_DIM))
-          vp = M_ZERO
+          SAFE_ALLOCATE(vp(1:mesh%np, 1:mesh%sb%dim))
+          vp(1:mesh%np, 1:mesh%sb%dim) = M_ZERO
           call laser_vector_potential(this%ep%lasers(ilaser), mesh, vp, time)
           forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) 
             this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) - vp(ip, idir)/P_C
@@ -986,7 +986,7 @@ contains
           SAFE_ALLOCATE(this%phase(1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
         end if
 
-        kpoint = M_ZERO
+        kpoint(1:mesh%sb%dim) = M_ZERO
         do ik = this%d%kpt%start, this%d%kpt%end
           kpoint(1:mesh%sb%dim) = kpoints_get_point(mesh%sb%kpoints, states_dim_get_kpoint_index(this%d, ik))
           
