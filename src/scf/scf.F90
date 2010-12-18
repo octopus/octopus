@@ -777,7 +777,7 @@ contains
       do idir = 1, 3
         ! in periodic directions use single-point Berry`s phase calculation
         if(idir .le. gr%sb%periodic_dim) then
-          n_dip(idir) = n_dip(idir) + epot_dipole_periodic(st, gr, idir)
+          n_dip(idir) = n_dip(idir) + epot_dipole_periodic(st, gr%mesh, idir)
           
           ! use quantum of polarization to reduce to smallest possible magnitude
           nquantumpol = FLOOR(n_dip(idir)/(2 * gr%sb%lsize(idir)))

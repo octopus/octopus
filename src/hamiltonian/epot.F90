@@ -71,7 +71,8 @@ module epot_m
     epot_generate,                 &
     epot_local_potential,          &
     epot_precalc_local_potential,  &
-    epot_dipole_periodic
+    epot_dipole_periodic,          &
+    epot_berry_phase_det
 
   integer, public, parameter :: &
     CLASSICAL_NONE     = 0, & ! no classical charges
@@ -232,12 +233,14 @@ contains
       end do
       call parse_block_end(blk)
 
-      ! Compute the scalar potential
-      SAFE_ALLOCATE(ep%v_static(1:gr%mesh%np))
-      do ip = 1, gr%mesh%np
-        ep%v_static(ip) = -sum(gr%mesh%x(ip,:) * ep%E_field(:))
-      end do
-    end if
+      if(gr%sb%periodic_dim < gr%sb%dim) then
+        ! Compute the scalar potential
+        SAFE_ALLOCATE(ep%v_static(1:gr%mesh%np))
+        forall(ip = 1:gr%mesh%np)
+          ep%v_static(ip) = -sum(gr%mesh%x(ip, gr%sb%periodic_dim + 1:gr%sb%dim) * ep%E_field(gr%sb%periodic_dim + 1:gr%sb%dim))
+        end forall
+      endif
+    endif
 
 
     !%Variable StaticMagneticField
@@ -547,7 +550,7 @@ contains
 
     ! add static electric fields
     if (ep%classical_pot > 0)   ep%vpsl(1:mesh%np) = ep%vpsl(1:mesh%np) + ep%Vclassical(1:mesh%np)
-    if (associated(ep%e_field)) ep%vpsl(1:mesh%np) = ep%vpsl(1:mesh%np) + ep%v_static(1:mesh%np)
+    if (associated(ep%e_field) .and. sb%periodic_dim < sb%dim) ep%vpsl(1:mesh%np) = ep%vpsl(1:mesh%np) + ep%v_static(1:mesh%np)
 
 
     POP_SUB(epot_generate)
@@ -724,13 +727,12 @@ contains
   ! E Yaschenko, L Fu, L Resca, R Resta, Phys. Rev. B 58, 1222-1229 (1998)
   ! Single-point Berry`s phase method for dipole should not be used when there is more than one k-point.
   ! in this case, finite differences should be used to construct derivatives with respect to k
-  FLOAT function epot_dipole_periodic(st, gr, dir) result(dipole)
+  FLOAT function epot_dipole_periodic(st, mesh, dir) result(dipole)
     type(states_t), intent(in) :: st
-    type(grid_t),   intent(in) :: gr
+    type(mesh_t),   intent(in) :: mesh
     integer,        intent(in) :: dir
 
-    integer ik, ist, ist2, idim, ip
-    CMPLX, allocatable :: matrix(:, :), tmp(:)
+    integer :: ik
     CMPLX :: det
 
     PUSH_SUB(epot_dipole_periodic)
@@ -740,50 +742,76 @@ contains
       call write_warning(1)
     endif
 
+    dipole = M_ZERO
+    do ik = st%d%kpt%start, st%d%kpt%end ! determinants for different spins and k-points multiply since matrix is block-diagonal
+      det  = epot_berry_phase_det(st, mesh, dir, ik)
+      dipole = dipole + aimag(log(det))
+    enddo
+
+    dipole = -(mesh%sb%lsize(dir) / M_PI) * dipole
+
+    POP_SUB(epot_dipole_periodic)
+  end function epot_dipole_periodic
+
+
+  ! ---------------------------------------------------------
+  ! Uses the single-point Berry`s phase method to calculate dipole moment in a periodic system
+  ! This is only accurate in the limit of a large supercell.
+  ! It is implemented only for an orthogonal unit cell.
+  ! mu = - eL/2*pi Im ln <Psi|exp(-i(2*pi/L)x)|Psi>
+  ! E Yaschenko, L Fu, L Resca, R Resta, Phys. Rev. B 58, 1222-1229 (1998)
+  ! Single-point Berry`s phase method for dipole should not be used when there is more than one k-point.
+  ! in this case, finite differences should be used to construct derivatives with respect to k
+  CMPLX function epot_berry_phase_det(st, mesh, dir, ik) result(det)
+    type(states_t), intent(in) :: st
+    type(mesh_t),   intent(in) :: mesh
+    integer,        intent(in) :: dir
+    integer,        intent(in) :: ik
+
+    integer ist, ist2, idim, ip
+    CMPLX, allocatable :: matrix(:, :), tmp(:)
+
+    PUSH_SUB(epot_berry_phase_det)
+
     SAFE_ALLOCATE(matrix(1:st%nst, 1:st%nst))
-    SAFE_ALLOCATE(tmp(1:gr%mesh%np))
+    SAFE_ALLOCATE(tmp(1:mesh%np))
 
-    ! \todo add in sum over k-points in orthogonal directions here
-
-    do ik = st%d%kpt%start, st%d%kpt%end ! determinants for different spins multiply since matrix is block-diagonal
-      do ist = 1, st%nst
-        do ist2 = 1, st%nst
-
-          if (ist .le. ist2) then
-            matrix(ist, ist2) = M_Z0
-            do idim = 1, st%d%dim ! spinor components
-
-              if(states_are_complex(st)) then
-                forall(ip = 1:gr%mesh%np)
-                  tmp(ip) = conjg(st%zpsi(ip, idim, ist, ik)) * &
-                    exp(-M_zI * (M_PI / gr%sb%lsize(dir)) * gr%mesh%x(ip, dir)) * st%zpsi(ip, idim, ist2, ik)
-                  ! factor of two removed from exp since actual lattice vector is 2 * lsize
-                end forall
-              else
-                forall(ip = 1:gr%mesh%np)
-                  tmp(ip) = st%dpsi(ip, idim, ist, ik) * &
-                    exp(-M_zI * (M_PI / gr%sb%lsize(dir)) * gr%mesh%x(ip, dir)) * st%dpsi(ip, idim, ist2, ik)
-                end forall
-              end if
-
-              matrix(ist, ist2) = matrix(ist, ist2) + zmf_integrate(gr%mesh, tmp)
-            end do
-          else
-            ! enforce Hermiticity of matrix
-            matrix(ist, ist2) = conjg(matrix(ist2, ist))
-          end if
-        enddo !ist2
-      enddo !ist
-    enddo !ik
+    do ist = 1, st%nst
+      do ist2 = 1, st%nst
+        
+        if (ist .le. ist2) then
+          matrix(ist, ist2) = M_Z0
+          do idim = 1, st%d%dim ! spinor components
+            
+            if(states_are_complex(st)) then
+              forall(ip = 1:mesh%np)
+                tmp(ip) = conjg(st%zpsi(ip, idim, ist, ik)) * &
+                  exp(-M_zI * (M_PI / mesh%sb%lsize(dir)) * mesh%x(ip, dir)) * st%zpsi(ip, idim, ist2, ik)
+                ! factor of two removed from exp since actual lattice vector is 2 * lsize
+              end forall
+            else
+              forall(ip = 1:mesh%np)
+                tmp(ip) = st%dpsi(ip, idim, ist, ik) * &
+                  exp(-M_zI * (M_PI / mesh%sb%lsize(dir)) * mesh%x(ip, dir)) * st%dpsi(ip, idim, ist2, ik)
+              end forall
+            end if
+            
+            matrix(ist, ist2) = matrix(ist, ist2) + zmf_integrate(mesh, tmp)
+          end do
+        else
+          ! enforce Hermiticity of matrix
+          matrix(ist, ist2) = conjg(matrix(ist2, ist))
+        end if
+      enddo !ist2
+    enddo !ist
       
-    det = lalg_determinant(st%nst, matrix(1:st%nst, 1:st%nst), invert = .false.)
-    dipole = -(2 * gr%sb%lsize(dir) / (2 * M_Pi)) * aimag(log(det)) * st%smear%el_per_state
+    det = lalg_determinant(st%nst, matrix(1:st%nst, 1:st%nst), invert = .false.) * st%smear%el_per_state
 
     SAFE_DEALLOCATE_A(matrix)
     SAFE_DEALLOCATE_A(tmp)
 
-    POP_SUB(epot_dipole_periodic)
-  end function epot_dipole_periodic
+    POP_SUB(epot_berry_phase_det)
+  end function epot_berry_phase_det
 
 
   ! ---------------------------------------------------------

@@ -908,6 +908,23 @@ contains
       end if
     end do
 
+    ! Hamiltonian for electric enthalpy of uniform field in single-point Berry phase
+    ! P Umari et al., Phys Rev Lett 95, 207602 (2005) eqs (3), (7)
+    ! E * (e L / 2 pi) Im e^(i 2 pi r / L) / z  
+    if(associated(this%ep%E_field)) then
+      do idir = 1, mesh%sb%periodic_dim
+        if(abs(this%ep%E_field(idir)) > M_EPSILON) then
+          do ip = 1, mesh%np
+            do ispin = 1, this%d%nspin
+              this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
+                this%ep%E_field(idir) * (mesh%sb%lsize(idir) / M_PI) * &
+                aimag(exp(M_PI * M_zI * mesh%x(idir, ip) / mesh%sb%lsize(idir)) / epot_berry_phase_det(st, mesh, idir, ispin))
+            enddo
+          enddo
+        endif
+      enddo
+    endif
+
     ! the lasers
     if (present(time)) then
 
@@ -974,11 +991,13 @@ contains
 
     call profiling_out(prof)
     POP_SUB(hamiltonian_update)
+
   contains
 
     subroutine build_phase()
       integer :: ik
       FLOAT   :: kpoint(1:MAX_DIM)
+
       PUSH_SUB(hamiltonian_update.build_phase)
 
       if(associated(this%hm_base%uniform_vector_potential)) then 
