@@ -888,7 +888,7 @@ contains
     integer :: ispin, ip, idir, iatom, ilaser
     type(profile_t), save :: prof
     FLOAT :: aa(1:MAX_DIM)
-    FLOAT, allocatable :: vp(: , :)
+    FLOAT, allocatable :: vp(:,:), berry_pot(:,:)
 
     PUSH_SUB(hamiltonian_update)
     call profiling_in(prof, "HAMILTONIAN_UPDATE")
@@ -908,21 +908,13 @@ contains
       end if
     end do
 
-    ! Hamiltonian for electric enthalpy of uniform field in single-point Berry phase
-    ! P Umari et al., Phys Rev Lett 95, 207602 (2005) eqs (3), (7)
-    ! E * (e L / 2 pi) Im e^(i 2 pi r / L) / z  
-    if(associated(this%ep%E_field)) then
-      do idir = 1, mesh%sb%periodic_dim
-        if(abs(this%ep%E_field(idir)) > M_EPSILON) then
-          do ip = 1, mesh%np
-            do ispin = 1, this%d%nspin
-              this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
-                this%ep%E_field(idir) * (mesh%sb%lsize(idir) / M_PI) * &
-                aimag(exp(M_PI * M_zI * mesh%x(idir, ip) / mesh%sb%lsize(idir)) / epot_berry_phase_det(st, mesh, idir, ispin))
-            enddo
-          enddo
-        endif
-      enddo
+    ! local potential for electric enthalpy of uniform field from single-point Berry phase
+    if(associated(this%ep%E_field) .and. simul_box_is_periodic(mesh%sb)) then
+      SAFE_ALLOCATE(berry_pot(1:mesh%np, 1:this%d%nspin))
+      call epot_berry_phase_potential(st, mesh, this%ep%E_field(:), berry_pot)
+      this%hm_base%potential(1:mesh%np, 1:this%d%nspin) = &
+        this%hm_base%potential(1:mesh%np, 1:this%d%nspin) + berry_pot(1:mesh%np, 1:this%d%nspin)
+      SAFE_DEALLOCATE_A(berry_pot)
     endif
 
     ! the lasers

@@ -72,7 +72,8 @@ module epot_m
     epot_local_potential,          &
     epot_precalc_local_potential,  &
     epot_dipole_periodic,          &
-    epot_berry_phase_det
+    epot_berry_phase_det,          &
+    epot_berry_phase_potential
 
   integer, public, parameter :: &
     CLASSICAL_NONE     = 0, & ! no classical charges
@@ -813,13 +814,45 @@ contains
     POP_SUB(epot_berry_phase_det)
   end function epot_berry_phase_det
 
+ 
+  ! ---------------------------------------------------------
+  ! local potential for electric enthalpy of uniform field in single-point Berry phase
+  ! P Umari et al., Phys Rev Lett 95, 207602 (2005) eqs (3), (7)
+  ! E * (e L / 2 pi) Im e^(i 2 pi r / L) / z  
+  subroutine epot_berry_phase_potential(st, mesh, E_field, pot)
+    type(states_t), intent(in)  :: st
+    type(mesh_t),   intent(in)  :: mesh
+    FLOAT,          intent(in)  :: E_field(:) ! mesh%sb%dim
+    FLOAT,          intent(out) :: pot(:,:)   ! mesh%np, st%d%nspin
+
+    integer :: ispin, ip, idir
+    CMPLX :: factor
+
+    PUSH_SUB(epot_berry_phase_potential)
+    
+    pot(1:mesh%np, 1:st%d%nspin) = M_ZERO
+
+    do ispin = 1, st%d%nspin
+      do idir = 1, mesh%sb%periodic_dim
+        if(abs(E_field(idir)) > M_EPSILON) then
+          ! calculate the ip-independent part first
+          factor = E_field(idir) * (mesh%sb%lsize(idir) / M_PI) * epot_berry_phase_det(st, mesh, idir, ispin)
+          pot(1:mesh%np, ispin) = pot(1:mesh%np, ispin) + &
+            aimag(factor * exp(M_PI * M_zI * mesh%x(idir, 1:mesh%np) / mesh%sb%lsize(idir)))
+        endif
+      enddo
+    enddo
+
+    POP_SUB(epot_berry_phase_potential)
+  end subroutine epot_berry_phase_potential
+
 
   ! ---------------------------------------------------------
   subroutine epot_precalc_local_potential(ep, gr, geo, time)
-    type(epot_t),             intent(inout) :: ep
-    type(grid_t),             intent(in)    :: gr
-    type(geometry_t),         intent(in)    :: geo
-    FLOAT,                    intent(in)    :: time
+    type(epot_t),     intent(inout) :: ep
+    type(grid_t),     intent(in)    :: gr
+    type(geometry_t), intent(in)    :: geo
+    FLOAT,            intent(in)    :: time
 
     integer :: iatom
     FLOAT, allocatable :: tmp(:)
