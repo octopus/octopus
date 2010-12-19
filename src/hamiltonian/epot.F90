@@ -806,7 +806,7 @@ contains
       enddo !ist2
     enddo !ist
       
-    det = lalg_determinant(st%nst, matrix(1:st%nst, 1:st%nst), invert = .false.) * st%smear%el_per_state
+    det = lalg_determinant(st%nst, matrix(1:st%nst, 1:st%nst), invert = .false.) ** st%smear%el_per_state
 
     SAFE_DEALLOCATE_A(matrix)
     SAFE_DEALLOCATE_A(tmp)
