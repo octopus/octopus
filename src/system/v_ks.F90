@@ -24,6 +24,7 @@ module v_ks_m
   use density_m
   use derivatives_m
   use energy_m
+  use epot_m
   use geometry_m
   use global_m
   use grid_m
@@ -41,6 +42,7 @@ module v_ks_m
   use poisson_m
   use poisson_sete_m
   use profiling_m
+  use simul_box_m
   use states_m
   use states_dim_m
   use unit_system_m
@@ -195,7 +197,7 @@ contains
       
       if(ks%tail_correction) then 
         call messages_devel_version("XC tail correction")
-        write(message(1),'(a)') 'This correction shouldn''t be used with systems having nodal points of the electron density' 
+        write(message(1),'(a)') 'This correction shouldn''t be used with systems having nodal points of the electron density.'
         call write_info(1)
             
         !%Variable XCTailCorrectionTol
@@ -336,15 +338,14 @@ contains
     if(present(calc_eigenval)) calc_eigenval_ = calc_eigenval
 
     ! If the Hxc term is frozen, there is nothing to do, except we 
-    ! maybe have to calculate the eigenvalues (and WARNING: MISSING
-    ! hm%epot)
+    ! maybe have to calculate the eigenvalues (and WARNING: MISSING hm%epot)
     if(ks%frozen_hxc) then
       if(calc_eigenval_) call energy_calculate_eigenvalues(hm, gr%der, st, open_boundaries = gr%ob_grid%open_boundaries)
       POP_SUB(v_ks_calc)
       return
     end if
 
-    hm%epot     = M_ZERO
+    hm%epot = M_ZERO
 
     ! check whether we should introduce the Amaldi SIC correction
     amaldi_factor = M_ONE
@@ -385,14 +386,18 @@ contains
       end if
 
     end if
-    
+
+    if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%mesh%sb)) then
+      call epot_berry_phase_potential(st, gr%mesh, hm%ep%E_field, hm%vberry)
+    endif
+
     call hamiltonian_update(hm, st, gr%mesh, time)
     
     if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK) then
       call states_end(hm%st)
       call states_copy(hm%st, st)
     end if
-    if(ks%theory_level==HARTREE_FOCK) then
+    if(ks%theory_level == HARTREE_FOCK) then
       hm%exx_coef = ks%xc%exx_coef
     else if (ks%theory_level==HARTREE) then
       hm%exx_coef = M_ONE

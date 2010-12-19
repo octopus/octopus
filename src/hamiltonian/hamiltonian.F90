@@ -104,6 +104,7 @@ module hamiltonian_m
     FLOAT, pointer :: vhxc(:,:)   ! XC potential + Hartree potential
     FLOAT, pointer :: axc(:,:,:)  ! XC vector potential divided by c
     FLOAT, pointer :: vtau(:,:)   ! Derivative of e_XC w.r.t. tau
+    FLOAT, pointer :: vberry(:,:) ! Berry phase potential from external E_field
 
     FLOAT :: exx_coef ! how much of EXX to mix
 
@@ -256,6 +257,10 @@ contains
 
     !Initialize external potential
     call epot_init(hm%ep, gr, geo, hm%d%ispin)
+
+    if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb)) then
+      SAFE_ALLOCATE(hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
+    endif
 
     !Static magnetic field requires complex wavefunctions
     if (associated(hm%ep%B_field) .or. gauge_field_is_applied(hm%ep%gfield)) call states_set_complex(st)
@@ -704,6 +709,9 @@ contains
     SAFE_DEALLOCATE_P(hm%vhxc)
     SAFE_DEALLOCATE_P(hm%vxc)
     SAFE_DEALLOCATE_P(hm%axc)
+    if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb)) then
+      SAFE_DEALLOCATE_P(hm%vberry)
+    endif
     SAFE_DEALLOCATE_P(hm%a_ind)
     SAFE_DEALLOCATE_P(hm%b_ind)
     
@@ -888,7 +896,7 @@ contains
     integer :: ispin, ip, idir, iatom, ilaser
     type(profile_t), save :: prof
     FLOAT :: aa(1:MAX_DIM)
-    FLOAT, allocatable :: vp(:,:), berry_pot(:,:)
+    FLOAT, allocatable :: vp(:,:)
 
     PUSH_SUB(hamiltonian_update)
     call profiling_in(prof, "HAMILTONIAN_UPDATE")
@@ -908,13 +916,8 @@ contains
       end if
     end do
 
-    ! local potential for electric enthalpy of uniform field from single-point Berry phase
     if(associated(this%ep%E_field) .and. simul_box_is_periodic(mesh%sb)) then
-      SAFE_ALLOCATE(berry_pot(1:mesh%np, 1:this%d%nspin))
-      call epot_berry_phase_potential(st, mesh, this%ep%E_field(:), berry_pot)
-      this%hm_base%potential(1:mesh%np, 1:this%d%nspin) = &
-        this%hm_base%potential(1:mesh%np, 1:this%d%nspin) + berry_pot(1:mesh%np, 1:this%d%nspin)
-      SAFE_DEALLOCATE_A(berry_pot)
+      this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + this%vberry(ip, ispin)
     endif
 
     ! the lasers
