@@ -882,7 +882,7 @@ contains
       CMPLX, allocatable :: zpsi_rhs(:,:), zpsi(:), rhs(:)
       integer :: ik, ist, idim, isize, np_part, np, iter
       FLOAT :: dres
-      FLOAT :: cgtol = CNST(1.0e-8)
+      FLOAT :: cgtol = CNST(1.0e-12)
       logical :: converged
 
       PUSH_SUB(propagator_dt.td_crank_nicholson)

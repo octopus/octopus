@@ -202,12 +202,17 @@ module opt_control_propagation_m
       if(vel_target_) then
          call forces_calculate(gr, sys%geo, hm%ep, psi, i*td%dt)
          do iatom=1, sys%geo%natoms
-            sys%geo%atom(iatom)%v(1:MAX_DIM) = sys%geo%atom(iatom)%v(1:MAX_DIM) + &
-                 sys%geo%atom(iatom)%f(1:MAX_DIM)*td%dt/species_weight(sys%geo%atom(iatom)%spec)
-            if(move_ions_) then
-               sys%geo%atom(iatom)%x(1:MAX_DIM) = sys%geo%atom(iatom)%x(1:MAX_DIM) + &
-                    sys%geo%atom(iatom)%v(1:MAX_DIM)*td%dt
-            end if
+           if(i.ne.td%max_iter) then
+             sys%geo%atom(iatom)%v(1:MAX_DIM) = sys%geo%atom(iatom)%v(1:MAX_DIM) + &
+               sys%geo%atom(iatom)%f(1:MAX_DIM)*td%dt/species_weight(sys%geo%atom(iatom)%spec)
+           else
+             sys%geo%atom(iatom)%v(1:MAX_DIM) = sys%geo%atom(iatom)%v(1:MAX_DIM) + &
+               M_HALF * sys%geo%atom(iatom)%f(1:MAX_DIM)*td%dt/species_weight(sys%geo%atom(iatom)%spec)
+           end if
+           if(move_ions_) then
+             sys%geo%atom(iatom)%x(1:MAX_DIM) = sys%geo%atom(iatom)%x(1:MAX_DIM) + &
+               sys%geo%atom(iatom)%v(1:MAX_DIM)*td%dt
+           end if
          end do
          call hamiltonian_epot_generate(hm, gr, sys%geo, psi, i*td%dt)
       end if

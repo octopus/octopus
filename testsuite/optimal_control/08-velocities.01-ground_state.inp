@@ -43,10 +43,12 @@ a = 0.758
 
 SCFCalculateForces = yes
 
-EigenSolverInitTolerance = 1.0e-6
-EigenSolverFinalTolerance = 1.0e-6
+EigenSolver = cg_new
+EigenSolverInitTolerance = 1.0e-12
+EigenSolverFinalTolerance = 1.0e-12
 EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 1000
+ConvRelDens = 1.0e-12
 
 Mixing = 1.0
 TypeOfMixing = linear
@@ -55,7 +57,7 @@ TypeOfMixing = linear
 # TD RUN Parameters
 # ------------------
 
-dt = 0.02
+dt = 0.01
 TDTimeStep = dt
 TDEnergyUpdateIter = 1
 
@@ -118,7 +120,7 @@ OCTMoveIons = false
 amplitude = 0.2
 
 %TDFunctions
-"envelope_function" | tdf_from_expr | "amplitude*(2/sqrt(stime))*sin((2*pi/stime)*1*t)*Step(stime-t)"
+"envelope_function" | tdf_from_expr | "amplitude*(2/sqrt(stime))*sin((2*pi/stime)*2*t)*Step(stime-t)"
 %
 
 #%TDFunctions
