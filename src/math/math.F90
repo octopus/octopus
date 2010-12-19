@@ -73,7 +73,6 @@ module math_m
     odd,                        &
     cartesian2hyperspherical,   &
     hyperspherical2cartesian,   &
-    fix_vector_sign,            &
     hypersphere_grad_matrix,    &
     pad,                        &
     pad_pow2,                   &
@@ -826,30 +825,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine fix_vector_sign(a, n)
-    FLOAT,   intent(inout) :: a(:, :)
-    integer, intent(in)    :: n
-
-    integer :: j, k
-
-    PUSH_SUB(fix_vector_sign)
-
-    do k = 1, n
-      do j = 1, n
-        if( a(j, k)*a(j, k) > CNST(1.0e-20) ) then
-          if(a(j, k) < M_ZERO) then 
-            a(1:n, k) = - a(1:n, k)
-          end if
-          exit
-        end if
-      end do
-    end do
-
-    POP_SUB(fix_vector_sign)
-  end subroutine fix_vector_sign
-
-
-  ! ---------------------------------------------------------
   ! Returns if n is even.
   logical function even(n)
     integer, intent(in) :: n
@@ -884,6 +859,7 @@ contains
 
     integer :: n, k, j
     FLOAT :: sumx2
+    FLOAT, allocatable :: xx(:)
 
     PUSH_SUB(cartesian2hyperspherical)
 
@@ -891,13 +867,23 @@ contains
     ASSERT(n>1)
     ASSERT(size(u).eq.n-1)
 
-    u(n-1) = atan2(x(n), x(n-1))
+    ! These lines make the code less machine-dependent.
+    SAFE_ALLOCATE(xx(n))
+    do j = 1, n
+      if(abs(x(j))<CNST(1.0e-8)) then
+        xx(j) = M_ZERO
+      else
+        xx(j) = x(j)
+      end if
+    end do
+
+    u(n-1) = atan2(x(n), xx(n-1))
     do k = n-2, 1, -1
       sumx2 = M_ZERO
       do j = n, k+1, -1
-        sumx2 = sumx2 + x(j)**2
+        sumx2 = sumx2 + xx(j)**2
       end do
-      u(k) = atan2(sqrt(sumx2), x(k))
+      u(k) = atan2(sqrt(sumx2), xx(k))
     end do
 
     POP_SUB(cartesian2hyperspherical)
