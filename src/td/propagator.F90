@@ -595,7 +595,7 @@ contains
 
         call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
         call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
-        call hamiltonian_update(hm, st, gr%mesh, time = time - dt)
+        call hamiltonian_update(hm, gr%mesh, time = time - dt)
       end if
 
       ! propagate dt/2 with H(time - dt)
@@ -624,7 +624,7 @@ contains
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
         call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
       end if
-      call hamiltonian_update(hm, st, gr%mesh, time = time)
+      call hamiltonian_update(hm, gr%mesh, time = time)
 
       do ik = st%d%kpt%start, st%d%kpt%end
         do sts = st%st_start, st%st_end, st%d%block_size
@@ -657,7 +657,7 @@ contains
 
       if(tr%method == PROP_CAETRS) then
         call lalg_copy(gr%mesh%np, st%d%nspin, vold, hm%vhxc)
-        call hamiltonian_update(hm, st, gr%mesh, time = time - dt)
+        call hamiltonian_update(hm, gr%mesh, time = time - dt)
       end if
 
       ! propagate half of the time step with H(time - dt)
@@ -698,7 +698,7 @@ contains
         call gauge_field_propagate(hm%ep%gfield, gauge_force, dt)
       end if
 
-      call hamiltonian_update(hm, st, gr%mesh, time = time)
+      call hamiltonian_update(hm, gr%mesh, time = time)
 
       call density_calc_init(dens_calc, st, gr, st%rho, packed = hamiltonian_apply_packed(hm, gr%mesh))
 
@@ -751,7 +751,7 @@ contains
         call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt)
       end if
 
-      call hamiltonian_update(hm, st, gr%mesh, time = time - M_HALF*dt)
+      call hamiltonian_update(hm, gr%mesh, time = time - M_HALF*dt)
 
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
@@ -764,7 +764,7 @@ contains
       if(gauge_field_is_applied(hm%ep%gfield)) then
         call gauge_field_set_vec_pot(hm%ep%gfield, vecpot)
         call gauge_field_set_vec_pot_vel(hm%ep%gfield, vecpot_vel)
-        call hamiltonian_update(hm, st, gr%mesh)
+        call hamiltonian_update(hm, gr%mesh)
       end if
 
       POP_SUB(propagator_dt.exponential_midpoint)
@@ -836,7 +836,7 @@ contains
         vhxc_t2 = hm%vhxc
         ! compute potential at n+1/2 as average
         hm%vhxc = (vhxc_t1 + vhxc_t2)/M_TWO
-        call hamiltonian_update(hm, st, gr%mesh)
+        call hamiltonian_update(hm, gr%mesh)
       end if
 
       ! get rhs of CN linear system (rhs2 = (1-i\delta t H_{n+1/2})\psi^n)
@@ -909,7 +909,7 @@ contains
       SAFE_ALLOCATE(rhs(1:np*st%d%dim))
         
       call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time - dt/M_TWO, hm%vhxc(:, :))
-      call hamiltonian_update(hm, st, gr%mesh, time = time - dt/M_TWO)
+      call hamiltonian_update(hm, gr%mesh, time = time - dt/M_TWO)
 
       ! solve (1+i\delta t/2 H_n)\psi^{predictor}_{n+1} = (1-i\delta t/2 H_n)\psi^n
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -972,7 +972,7 @@ contains
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
         do j = 1, 2
           call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), atime(j) - dt, hm%vhxc(:, :))
-          call hamiltonian_update(hm, st, gr%mesh)
+          call hamiltonian_update(hm, gr%mesh)
         end do
       else
         vaux = M_ZERO

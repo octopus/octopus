@@ -887,9 +887,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_update(this, st, mesh, time)
+  subroutine hamiltonian_update(this, mesh, time)
     type(hamiltonian_t), intent(inout) :: this
-    type(states_t),      intent(in)    :: st
     type(mesh_t),        intent(in)    :: mesh
     FLOAT, optional,     intent(in)    :: time
 
@@ -1034,7 +1033,7 @@ contains
       call epot_generate(this%ep, gr, geo, st)
     end if
     call hamiltonian_base_build_proj(this%hm_base, gr%mesh, this%ep, geo)
-    call hamiltonian_update(this, st, gr%mesh, time)
+    call hamiltonian_update(this, gr%mesh, time)
 
     POP_SUB(hamiltonian_epot_generate)
   end subroutine hamiltonian_epot_generate
