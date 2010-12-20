@@ -309,18 +309,19 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine v_ks_calc(ks, gr, hm, st, calc_eigenval, time)
+  subroutine v_ks_calc(ks, gr, hm, st, calc_eigenval, time, calc_berry)
     type(v_ks_t),           intent(inout) :: ks
     type(grid_t),           intent(inout) :: gr
     type(hamiltonian_t),    intent(inout) :: hm
     type(states_t),         intent(inout) :: st
     logical,      optional, intent(in)    :: calc_eigenval
     FLOAT,        optional, intent(in)    :: time
+    logical,      optional, intent(in)    :: calc_berry ! use this before wfns initialized
     
     FLOAT :: amaldi_factor,distance
     integer :: ip, ispin
     type(profile_t), save :: prof
-    logical :: calc_eigenval_
+    logical :: calc_eigenval_, calc_berry_
     
 
     ! The next line is a hack to be able to perform an IP/RPA calculation
@@ -336,6 +337,9 @@ contains
 
     calc_eigenval_ = .false.
     if(present(calc_eigenval)) calc_eigenval_ = calc_eigenval
+
+    calc_berry_ = .true.
+    if(present(calc_berry)) calc_berry_ = calc_berry
 
     ! If the Hxc term is frozen, there is nothing to do, except we 
     ! maybe have to calculate the eigenvalues (and WARNING: MISSING hm%epot)
@@ -388,7 +392,12 @@ contains
     end if
 
     if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%mesh%sb)) then
-      call epot_berry_phase_potential(st, gr%mesh, hm%ep%E_field, hm%vberry)
+      if(calc_berry_) then
+        call epot_berry_phase_potential(st, gr%mesh, hm%ep%E_field, hm%vberry)
+      else
+        ! before wfns are initialized, cannot calculate this term
+        hm%vberry(1:gr%mesh%np, 1:hm%d%nspin) = M_ZERO
+      endif
     endif
 
     call hamiltonian_update(hm, gr%mesh, time)

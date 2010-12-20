@@ -834,7 +834,7 @@ contains
     FLOAT,          intent(out) :: pot(:,:)   ! mesh%np, st%d%nspin
 
     integer :: ispin, ip, idir
-    CMPLX :: factor
+    CMPLX :: factor, det
 
     PUSH_SUB(epot_berry_phase_potential)
     
@@ -844,7 +844,15 @@ contains
       do idir = 1, mesh%sb%periodic_dim
         if(abs(E_field(idir)) > M_EPSILON) then
           ! calculate the ip-independent part first
-          factor = E_field(idir) * (mesh%sb%lsize(idir) / M_PI) * epot_berry_phase_det(st, mesh, idir, ispin)
+          det = epot_berry_phase_det(st, mesh, idir, ispin)
+          if(abs(det) .gt. M_EPSILON) then
+            factor = E_field(idir) * (mesh%sb%lsize(idir) / M_PI) / det
+          else
+            ! If det = 0, mu = -infinity, so this condition should never be reached
+            ! if things are working properly.
+            write(message(1),*) "Divide by zero: Berry phase determinant = ", det
+            call write_fatal(1)
+          endif
           pot(1:mesh%np, ispin) = pot(1:mesh%np, ispin) + &
             aimag(factor * exp(M_PI * M_zI * mesh%x(1:mesh%np, idir) / mesh%sb%lsize(idir)))
         endif

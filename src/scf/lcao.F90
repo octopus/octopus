@@ -266,7 +266,7 @@ contains
       call write_info(1)
 
       ! get the effective potential (we don`t need the eigenvalues yet)
-      call v_ks_calc(sys%ks, sys%gr, hm, sys%st, calc_eigenval=.false.)
+      call v_ks_calc(sys%ks, sys%gr, hm, sys%st, calc_eigenval=.false., calc_berry=.false.)
       ! eigenvalues have nevertheless to be initialized to something
       sys%st%eigenval = M_ZERO
     else
