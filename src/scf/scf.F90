@@ -20,11 +20,11 @@
 #include "global.h"
 
 module scf_m
+  use berry_m
   use datasets_m
   use density_m
   use eigensolver_m
   use energy_m
-  use epot_m
   use forces_m
   use geometry_m
   use global_m

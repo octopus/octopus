@@ -35,7 +35,8 @@ libhamiltonian_a_SOURCES =         \
 	gauge_field.F90            \
 	ob_lead.F90                \
         born_charges.F90           \
-	projector_matrix.F90
+	projector_matrix.F90       \
+	berry.F90
 
 noinst_HEADERS =                      \
 	lasers_inc.F90                \
@@ -64,3 +65,4 @@ scf_tol.o : scf_tol.F90
 hamiltonian_base.o : hamiltonian_base.F90 hamiltonian_base_inc.F90 projector.o epot.o projector_matrix.o
 born_charges.o : born_charges.F90
 projector_matrix.o : projector_matrix.F90
+berry.o : berry.F90
