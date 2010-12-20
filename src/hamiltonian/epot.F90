@@ -128,11 +128,12 @@ module epot_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine epot_init(ep, gr, geo, ispin)
+  subroutine epot_init(ep, gr, geo, ispin, nik)
     type(epot_t),     intent(out)   :: ep
     type(grid_t),     intent(in)    :: gr
     type(geometry_t), intent(inout) :: geo
     integer,          intent(in)    :: ispin
+    integer,          intent(in)    :: nik
 
     integer :: ispec, ip, idir, ia, gauge_2d
     type(block_t) :: blk
@@ -219,7 +220,8 @@ contains
     !% by setting the block <tt>StaticElectricField</tt>.
     !% The three possible components of the block (which should only have one
     !% line) are the three components of the electric field vector.
-    !% WARNING: This should not be used in a periodic direction.
+    !% It can be applied in a periodic direction of a large supercell via
+    !% the single-point Berry phase.
     !%End
     nullify(ep%E_field, ep%v_static)
     if(parse_block(datasets_check('StaticElectricField'), blk)==0) then
@@ -228,8 +230,13 @@ contains
         call parse_block_float(blk, 0, idir - 1, ep%E_field(idir), units_inp%energy / units_inp%length)
 
         if(idir <= gr%sb%periodic_dim .and. abs(ep%E_field(idir)) > M_EPSILON) then
-          message(1) = "You should not apply StaticElectricField in a periodic direction."
-          call write_warning(1)
+          message(1) = "Applying StaticElectricField in a periodic direction is only accurate for large supercells."
+          if(nik == 1) then
+            call write_warning(1)
+          else
+            message(2) = "Single-point Berry phase is not appropriate when k-point sampling is needed."
+            call write_warning(2)
+          endif
         endif
       end do
       call parse_block_end(blk)
@@ -238,7 +245,7 @@ contains
         ! Compute the scalar potential
         SAFE_ALLOCATE(ep%v_static(1:gr%mesh%np))
         forall(ip = 1:gr%mesh%np)
-          ep%v_static(ip) = -sum(gr%mesh%x(ip, gr%sb%periodic_dim + 1:gr%sb%dim) * ep%E_field(gr%sb%periodic_dim + 1:gr%sb%dim))
+          ep%v_static(ip) = sum(gr%mesh%x(ip, gr%sb%periodic_dim + 1:gr%sb%dim) * ep%E_field(gr%sb%periodic_dim + 1:gr%sb%dim))
         end forall
       endif
     endif

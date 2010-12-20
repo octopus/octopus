@@ -256,7 +256,7 @@ contains
     end if
 
     !Initialize external potential
-    call epot_init(hm%ep, gr, geo, hm%d%ispin)
+    call epot_init(hm%ep, gr, geo, hm%d%ispin, hm%d%nik)
 
     if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb)) then
       SAFE_ALLOCATE(hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
