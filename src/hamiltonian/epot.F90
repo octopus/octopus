@@ -838,7 +838,7 @@ contains
           ! calculate the ip-independent part first
           factor = E_field(idir) * (mesh%sb%lsize(idir) / M_PI) * epot_berry_phase_det(st, mesh, idir, ispin)
           pot(1:mesh%np, ispin) = pot(1:mesh%np, ispin) + &
-            aimag(factor * exp(M_PI * M_zI * mesh%x(idir, 1:mesh%np) / mesh%sb%lsize(idir)))
+            aimag(factor * exp(M_PI * M_zI * mesh%x(1:mesh%np, idir) / mesh%sb%lsize(idir)))
         endif
       enddo
     enddo
