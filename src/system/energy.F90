@@ -59,7 +59,7 @@ contains
 
   ! ---------------------------------------------------------
   ! This subroutine calculates the total energy of the system. Basically, it
-  ! adds up the KS eigenvalues, and then it subtracts the whatever double
+  ! adds up the KS eigenvalues, and then it subtracts whatever double
   ! counts exist (see TDDFT theory for details).
   subroutine total_energy(hm, gr, st, iunit, full)
     type(hamiltonian_t), intent(inout) :: hm
@@ -75,9 +75,10 @@ contains
     full_ = .false.
     if(present(full)) full_ = full
 
+    hm%eeigen = states_eigenvalues_sum(st)
+
     select case(hm%theory_level)
     case(INDEPENDENT_PARTICLES)
-      hm%eeigen = states_eigenvalues_sum(st)
       hm%etot   = hm%ep%eii + hm%eeigen
 
     case(HARTREE)
@@ -88,8 +89,7 @@ contains
         hm%t0     = zelectronic_kinetic_energy(hm, gr, st)
         hm%eext   = zelectronic_external_energy(hm, gr, st)
       end if
-      hm%eeigen = states_eigenvalues_sum(st)
-      hm%etot = hm%ep%eii + M_HALF*(hm%eeigen + hm%t0 + hm%eext)
+      hm%etot = hm%ep%eii + M_HALF * (hm%eeigen + hm%t0 + hm%eext)
 
     case(HARTREE_FOCK)
       if(states_are_real(st)) then
@@ -99,8 +99,7 @@ contains
         hm%t0     = zelectronic_kinetic_energy(hm, gr, st)
         hm%eext   = zelectronic_external_energy(hm, gr, st)
       end if
-      hm%eeigen = states_eigenvalues_sum(st)
-      hm%etot = hm%ep%eii + M_HALF*(hm%eeigen + hm%t0 + hm%eext - hm%epot) + hm%ec
+      hm%etot = hm%ep%eii + M_HALF * (hm%eeigen + hm%t0 + hm%eext - hm%epot) + hm%ec
 
     case(KOHN_SHAM_DFT)
       if(full_) then
@@ -112,7 +111,6 @@ contains
           hm%eext   = zelectronic_external_energy(hm, gr, st)
         end if
       end if
-      hm%eeigen = states_eigenvalues_sum(st)
       hm%etot   = hm%ep%eii + hm%eeigen - hm%ehartree + hm%ex + hm%ec - hm%epot
 
     end select
