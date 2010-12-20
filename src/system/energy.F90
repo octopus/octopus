@@ -38,6 +38,7 @@ module energy_m
   use mesh_function_m
   use messages_m
   use profiling_m
+  use simul_box_m
   use smear_m
   use states_m
   use unit_m
@@ -111,7 +112,7 @@ contains
           hm%eext   = zelectronic_external_energy(hm, gr, st)
         end if
       end if
-      hm%etot   = hm%ep%eii + hm%eeigen - hm%ehartree + hm%ex + hm%ec - hm%epot
+      hm%etot = hm%ep%eii + hm%eeigen - hm%ehartree + hm%ex + hm%ec - hm%epot
 
     end select
     
@@ -125,6 +126,14 @@ contains
     if(gauge_field_is_applied(hm%ep%gfield)) then
       hm%etot = hm%etot + gauge_field_get_energy(hm%ep%gfield, gr%sb)
     end if
+
+    if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb)) then
+      hm%eberry = epot_berry_energy_correction(st, gr%mesh, &
+        hm%ep%E_field(1:gr%sb%periodic_dim), hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
+      hm%etot = hm%etot + hm%eberry
+    else
+      hm%eberry = M_ZERO
+    endif
 
     if (iunit > 0) then
       write(message(1), '(6x,a, f18.8)')'Total       = ', units_from_atomic(units_out%energy, hm%etot)
@@ -146,6 +155,10 @@ contains
         write(message(2), '(6x,a, f18.8)')'External    = ', units_from_atomic(units_out%energy, hm%eext)
         call write_info(2, iunit)
       end if
+      if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb)) then
+        write(message(1), '(6x,a, f18.8)')'Berry       = ', units_from_atomic(units_out%energy, hm%eberry)
+        call write_info(1, iunit)
+      endif  
     end if
 
     POP_SUB(total_energy)

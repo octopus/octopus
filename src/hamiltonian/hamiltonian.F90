@@ -124,7 +124,8 @@ module hamiltonian_m
              t0,      &  ! Kinetic energy of the non-interacting (KS) system of electrons
              eext,    &  ! External     V = <Phi|V|Phi> = Int[n v] (if no non-local pseudos exist)
              entropy, &  ! Entropy
-             TS          ! TS
+             TS,      &  ! TS
+             eberry      ! Berry energy correction = -mu.E - <Vberry>
 
     integer :: theory_level    ! copied from sys%ks
     integer :: xc_family       ! copied from sys%ks

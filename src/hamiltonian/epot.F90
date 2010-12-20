@@ -73,7 +73,8 @@ module epot_m
     epot_precalc_local_potential,  &
     epot_dipole_periodic,          &
     epot_berry_phase_det,          &
-    epot_berry_phase_potential
+    epot_berry_phase_potential,    &
+    epot_berry_energy_correction
 
   integer, public, parameter :: &
     CLASSICAL_NONE     = 0, & ! no classical charges
@@ -853,6 +854,39 @@ contains
     POP_SUB(epot_berry_phase_potential)
   end subroutine epot_berry_phase_potential
 
+
+  ! ---------------------------------------------------------
+  FLOAT function epot_berry_energy_correction(st, mesh, E_field, vberry) result(delta)
+    type(states_t), intent(in) :: st
+    type(mesh_t),   intent(in) :: mesh
+    FLOAT,          intent(in) :: E_field(:)  ! mesh%sb%periodic_dim
+    FLOAT,          intent(in) :: vberry(:,:) ! mesh%np, st%d%nspin
+
+    integer :: ispin, ist, ip, idir, idim
+    FLOAT, allocatable :: vpsi(:,:)
+
+    PUSH_SUB(epot_berry_energy_correction)
+
+    SAFE_ALLOCATE(vpsi(1:mesh%np, 1:st%d%dim))
+
+    ! first we calculate expectation value of Berry potential, to subtract off
+    delta = M_ZERO
+    do ispin = 1, st%d%nspin
+      do ist = 1, st%nst
+        forall(ip = 1:mesh%np, idim = 1:st%d%dim) vpsi(ip, idim) = st%dpsi(ip, idim, ist, ispin) * vberry(ip, ispin)
+        delta = delta + dmf_dotp(mesh, st%d%dim, st%dpsi(1:mesh%np, 1:st%d%dim, ist, ispin), vpsi(1:mesh%np, 1:st%d%dim))
+      enddo
+    enddo
+    delta = -delta * st%smear%el_per_state
+
+    ! the real energy contribution is -mu.E
+    do idir = 1, mesh%sb%periodic_dim
+      delta = delta - epot_dipole_periodic(st, mesh, idir) * E_field(idir)
+    enddo
+
+    SAFE_DEALLOCATE_A(vpsi)
+    POP_SUB(epot_berry_energy_correction)
+  end function epot_berry_energy_correction
 
   ! ---------------------------------------------------------
   subroutine epot_precalc_local_potential(ep, gr, geo, time)
