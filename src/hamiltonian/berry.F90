@@ -35,11 +35,11 @@ module berry_m
   implicit none
 
   private
-  public ::                        &
-    epot_dipole_periodic,          &
-    epot_berry_phase_det,          &
-    epot_berry_phase_potential,    &
-    epot_berry_energy_correction
+  public ::                 &
+    berry_dipole,           &
+    berry_phase_det,        &
+    berry_potential,        &
+    berry_energy_correction
 
 contains
 
@@ -51,7 +51,7 @@ contains
   ! E Yaschenko, L Fu, L Resca, R Resta, Phys. Rev. B 58, 1222-1229 (1998)
   ! Single-point Berry`s phase method for dipole should not be used when there is more than one k-point.
   ! in this case, finite differences should be used to construct derivatives with respect to k
-  FLOAT function epot_dipole_periodic(st, mesh, dir) result(dipole)
+  FLOAT function berry_dipole(st, mesh, dir) result(dipole)
     type(states_t), intent(in) :: st
     type(mesh_t),   intent(in) :: mesh
     integer,        intent(in) :: dir
@@ -59,7 +59,7 @@ contains
     integer :: ik
     CMPLX :: det
 
-    PUSH_SUB(epot_dipole_periodic)
+    PUSH_SUB(berry_dipole)
 
     if(.not. smear_is_semiconducting(st%smear)) then
       message(1) = "Warning: single-point Berry's phase dipole calculation not correct without integer occupations."
@@ -68,14 +68,14 @@ contains
 
     dipole = M_ZERO
     do ik = st%d%kpt%start, st%d%kpt%end ! determinants for different spins and k-points multiply since matrix is block-diagonal
-      det  = epot_berry_phase_det(st, mesh, dir, ik)
+      det  = berry_phase_det(st, mesh, dir, ik)
       dipole = dipole + aimag(log(det))
     enddo
 
     dipole = -(mesh%sb%lsize(dir) / M_PI) * dipole
 
-    POP_SUB(epot_dipole_periodic)
-  end function epot_dipole_periodic
+    POP_SUB(berry_dipole)
+  end function berry_dipole
 
 
   ! ---------------------------------------------------------
@@ -86,7 +86,7 @@ contains
   ! E Yaschenko, L Fu, L Resca, R Resta, Phys. Rev. B 58, 1222-1229 (1998)
   ! Single-point Berry`s phase method for dipole should not be used when there is more than one k-point.
   ! in this case, finite differences should be used to construct derivatives with respect to k
-  CMPLX function epot_berry_phase_det(st, mesh, dir, ik) result(det)
+  CMPLX function berry_phase_det(st, mesh, dir, ik) result(det)
     type(states_t), intent(in) :: st
     type(mesh_t),   intent(in) :: mesh
     integer,        intent(in) :: dir
@@ -95,7 +95,7 @@ contains
     integer ist, ist2, idim, ip
     CMPLX, allocatable :: matrix(:, :), tmp(:)
 
-    PUSH_SUB(epot_berry_phase_det)
+    PUSH_SUB(berry_phase_det)
 
     SAFE_ALLOCATE(matrix(1:st%nst, 1:st%nst))
     SAFE_ALLOCATE(tmp(1:mesh%np))
@@ -134,15 +134,15 @@ contains
     SAFE_DEALLOCATE_A(matrix)
     SAFE_DEALLOCATE_A(tmp)
 
-    POP_SUB(epot_berry_phase_det)
-  end function epot_berry_phase_det
+    POP_SUB(berry_phase_det)
+  end function berry_phase_det
 
  
   ! ---------------------------------------------------------
   ! local potential for electric enthalpy of uniform field in single-point Berry phase
   ! P Umari et al., Phys Rev Lett 95, 207602 (2005) eqs (3), (7)
   ! E * (e L / 2 pi) Im e^(i 2 pi r / L) / z  
-  subroutine epot_berry_phase_potential(st, mesh, E_field, pot)
+  subroutine berry_potential(st, mesh, E_field, pot)
     type(states_t), intent(in)  :: st
     type(mesh_t),   intent(in)  :: mesh
     FLOAT,          intent(in)  :: E_field(:) ! mesh%sb%dim
@@ -151,7 +151,7 @@ contains
     integer :: ispin, ip, idir
     CMPLX :: factor, det
 
-    PUSH_SUB(epot_berry_phase_potential)
+    PUSH_SUB(berry_potential)
     
     pot(1:mesh%np, 1:st%d%nspin) = M_ZERO
 
@@ -159,7 +159,7 @@ contains
       do idir = 1, mesh%sb%periodic_dim
         if(abs(E_field(idir)) > M_EPSILON) then
           ! calculate the ip-independent part first
-          det = epot_berry_phase_det(st, mesh, idir, ispin)
+          det = berry_phase_det(st, mesh, idir, ispin)
           if(abs(det) .gt. M_EPSILON) then
             factor = E_field(idir) * (mesh%sb%lsize(idir) / M_PI) / det
           else
@@ -174,12 +174,12 @@ contains
       enddo
     enddo
 
-    POP_SUB(epot_berry_phase_potential)
-  end subroutine epot_berry_phase_potential
+    POP_SUB(berry_potential)
+  end subroutine berry_potential
 
 
   ! ---------------------------------------------------------
-  FLOAT function epot_berry_energy_correction(st, mesh, E_field, vberry) result(delta)
+  FLOAT function berry_energy_correction(st, mesh, E_field, vberry) result(delta)
     type(states_t), intent(in) :: st
     type(mesh_t),   intent(in) :: mesh
     FLOAT,          intent(in) :: E_field(:)  ! mesh%sb%periodic_dim
@@ -188,7 +188,7 @@ contains
     integer :: ispin, ist, ip, idir, idim
     FLOAT, allocatable :: vpsi(:,:)
 
-    PUSH_SUB(epot_berry_energy_correction)
+    PUSH_SUB(berry_energy_correction)
 
     SAFE_ALLOCATE(vpsi(1:mesh%np, 1:st%d%dim))
 
@@ -204,12 +204,12 @@ contains
 
     ! the real energy contribution is -mu.E
     do idir = 1, mesh%sb%periodic_dim
-      delta = delta - epot_dipole_periodic(st, mesh, idir) * E_field(idir)
+      delta = delta - berry_dipole(st, mesh, idir) * E_field(idir)
     enddo
 
     SAFE_DEALLOCATE_A(vpsi)
-    POP_SUB(epot_berry_energy_correction)
-  end function epot_berry_energy_correction
+    POP_SUB(berry_energy_correction)
+  end function berry_energy_correction
 
 end module berry_m
 

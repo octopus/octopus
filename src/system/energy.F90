@@ -128,7 +128,7 @@ contains
     end if
 
     if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb)) then
-      hm%eberry = epot_berry_energy_correction(st, gr%mesh, &
+      hm%eberry = berry_energy_correction(st, gr%mesh, &
         hm%ep%E_field(1:gr%sb%periodic_dim), hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
       hm%etot = hm%etot + hm%eberry
     else
