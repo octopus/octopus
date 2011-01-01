@@ -6,7 +6,7 @@ Programs   : oct-test; oct-test_mpi
 TestGroups : short-run
 Enabled    : Yes
 
-Precision : 1.0e-14
+Precision : 1.0e-13
 Input: 08-mgs.01-real.inp
 match ; Overlap 1 1 ; GREP(out, '      1      1', 15) ;  0.222045E-15
 match ; Overlap 1 2 ; GREP(out, '      1      2', 15) ;  0.767563E-16
