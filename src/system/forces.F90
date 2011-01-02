@@ -92,7 +92,7 @@ contains
 
     ! the ion-ion term is already calculated
     do i = 1, geo%natoms
-      geo%atom(i)%f(1:MAX_DIM) = ep%fii(1:MAX_DIM, i)
+      geo%atom(i)%f(1:gr%sb%dim) = ep%fii(1:gr%sb%dim, i)
     end do
     
     if (states_are_real(st) ) then 
