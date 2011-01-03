@@ -152,7 +152,7 @@ contains
     integer,           intent(inout) :: index_range(:)
     integer,           intent(in)    :: min_range(:)
 
-    integer :: ii
+    integer :: ii, num_slaves, slave_level
     type(block_t) :: blk
 
     PUSH_SUB(multicomm_init)
@@ -227,6 +227,19 @@ contains
         call assign_nodes()
       end if
 
+      !%Variable ParallelizationNumberSlaves
+      !%Type integer
+      !%Section Execution::Parallelization
+      !%Description
+      !% Slaves are nodes used for task parallelization. The number of
+      !% such nodes is given by this variable multiplied by the number
+      !% of domains used in domain parallelization. The default is 0.
+      !%End
+      call parse_integer(datasets_check('ParallelizationNumberSlaves'), 0, num_slaves)
+      
+      ! the slaves must be defined at a certain parallelization level, for the moment this is state parallelization.
+      slave_level = P_STRATEGY_STATES
+
       ! clear parallel strategies that were available but will not be used
       do ii = 1, mc%n_index
         if(mc%group_sizes(ii) == 1) mc%par_strategy = ibclr(mc%par_strategy, ii - 1)
@@ -234,7 +247,6 @@ contains
 
       ! reset
       call sanity_check()
-      call cart_topology_create()
       call group_comm_create()
     end if
 
@@ -428,6 +440,19 @@ contains
 
       PUSH_SUB(multicomm_init.sanity_check)
 
+      if(num_slaves > 0) then
+
+        if(mc%group_sizes(slave_level) < num_slaves + 1) then
+          message(1) = 'Too many nodes assigned to task parallelization.'
+          call write_fatal(1)
+        end if
+
+        write(message(1),'(a,i6)') 'Info: Number of slaves nodes              :', &
+          num_slaves*product(mc%group_sizes(1:slave_level - 1))
+        call write_info(1)
+
+      end if
+
       ! print out some info
       ii = 0
       do kk = 1, mc%n_index
@@ -479,45 +504,6 @@ contains
       POP_SUB(multicomm_init.sanity_check)
     end subroutine sanity_check
 
-
-    ! ---------------------------------------------------------
-    subroutine cart_topology_create()
-#if defined(HAVE_MPI)
-      integer :: new_comm
-      logical :: reorder, periodic_mask(MAX_INDEX)
-#endif
-
-      PUSH_SUB(multicomm_init.cart_topology_create)
-
-#if defined(HAVE_MPI)
-      if(.not. mc%use_topology) then
-
-        periodic_mask = .false.
-        reorder = .true.
-
-        ! The domain and states dimensions have to be periodic (2D torus)
-        ! in order to circulate matrix blocks.
-        if(multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)) then
-          periodic_mask(P_STRATEGY_DOMAINS) = .true.
-        end if
-        if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
-          periodic_mask(P_STRATEGY_STATES) = .true.
-        end if
-        ! We allow reordering of ranks, as we intent to replace the
-        ! world afterwards.
-        ! FIXME: make sure this works! World root may be someone else
-        ! afterwards!
-        call MPI_Cart_create(base_grp%comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, new_comm, mpi_err)
-
-        ! Re-initialize the world.
-        call mpi_grp_init(base_grp, new_comm)
-      end if
-#endif
-
-      POP_SUB(multicomm_init.cart_topology_create)
-    end subroutine cart_topology_create
-
-
     ! ---------------------------------------------------------
     subroutine group_comm_create()
 #if defined(HAVE_MPI)
@@ -525,6 +511,8 @@ contains
       integer :: world_group, sub_group, dummy_comm
       integer :: ii
       integer :: i_strategy
+      integer :: new_comm
+      logical :: reorder, periodic_mask(MAX_INDEX)
 #endif
 
       PUSH_SUB(multicomm_init.group_comm_create)
@@ -535,6 +523,27 @@ contains
 #if defined(HAVE_MPI)
         if(.not. mc%use_topology) then
 
+          ! create the topology
+          periodic_mask = .false.
+          reorder = .true.
+          
+          ! The domain and states dimensions have to be periodic (2D torus)
+          ! in order to circulate matrix blocks.
+          if(multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)) then
+            periodic_mask(P_STRATEGY_DOMAINS) = .true.
+          end if
+          if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
+            periodic_mask(P_STRATEGY_STATES) = .true.
+          end if
+          ! We allow reordering of ranks, as we intent to replace the
+          ! world afterwards.
+          ! FIXME: make sure this works! World root may be someone else
+          ! afterwards!
+          call MPI_Cart_create(base_grp%comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, new_comm, mpi_err)
+          
+          ! Re-initialize the world.
+          call mpi_grp_init(base_grp, new_comm)
+        
           ! The "lines" of the Cartesian grid.
           do i_strategy = 1, mc%n_index
             if(multicomm_strategy_is_parallel(mc, i_strategy)) then
