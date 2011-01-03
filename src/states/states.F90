@@ -1370,7 +1370,7 @@ return
 
     case(SPINORS)
 
-      ASSERT(st%priv%wfs_type == TYPE_CMPLX)
+      ASSERT(states_are_complex(st))
 
       if(st%fixed_spins) then
         
@@ -1452,14 +1452,11 @@ return
     end if
 
     if(st%d%ispin == SPINORS) then
+      ASSERT(states_are_complex(st))
+
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
-          if (st%priv%wfs_type == TYPE_FLOAT) then
-            write(message(1),'(a)') 'Internal error in states_fermi.'
-            call write_fatal(1)
-          else
-            st%spin(1:3, ist, ik) = state_spin(mesh, st%zpsi(:, :, ist, ik))
-          end if
+          st%spin(1:3, ist, ik) = state_spin(mesh, st%zpsi(:, :, ist, ik))
         end do
 #if defined(HAVE_MPI)
         if(st%parallel_in_states) then
@@ -1902,21 +1899,21 @@ return
 
 
   ! ---------------------------------------------------------
-  function state_spin(m, f1) result(s)
-    FLOAT, dimension(3) :: s
-    type(mesh_t), intent(in) :: m
-    CMPLX,  intent(in) :: f1(:, :)
+  function state_spin(mesh, f1) result(spin)
+    type(mesh_t), intent(in) :: mesh
+    CMPLX,        intent(in) :: f1(:, :)
+    CMPLX                    :: spin(1:3)
 
     CMPLX :: z
 
     PUSH_SUB(state_spin)
 
-    z = zmf_dotp(m, f1(:, 1) , f1(:, 2))
+    z = zmf_dotp(mesh, f1(:, 1) , f1(:, 2))
 
-    s(1) = M_TWO * z
-    s(2) = M_TWO * aimag(z)
-    s(3) = zmf_dotp(m, f1(:, 1), f1(:, 1)) - zmf_dotp(m, f1(:, 2), f1(:, 2))
-    s = s * M_HALF ! spin is half the sigma matrix.
+    spin(1) = M_TWO*z
+    spin(2) = M_TWO*aimag(z)
+    spin(3) = zmf_dotp(mesh, f1(:, 1), f1(:, 1)) - zmf_dotp(mesh, f1(:, 2), f1(:, 2))
+    spin = M_HALF*spin ! spin is half the sigma matrix.
 
     POP_SUB(state_spin)
   end function state_spin

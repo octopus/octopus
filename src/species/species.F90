@@ -730,16 +730,17 @@ contains
   !! derivative, built using real spherical harmonics
   subroutine species_real_nl_projector(spec, x, l, lm, i, uV, duV)
     type(species_t),   intent(in)  :: spec
-    FLOAT,             intent(in)  :: x(1:MAX_DIM)
+    FLOAT,             intent(in)  :: x(:)
     integer,           intent(in)  :: l, lm, i
-    FLOAT,             intent(out) :: uV, duV(1:MAX_DIM)
+    FLOAT,             intent(out) :: uV
+    FLOAT,             intent(out) :: duV(:)
 
-    FLOAT :: r, uVr0, duvr0, ylm, gylm(MAX_DIM)
+    FLOAT :: r, uVr0, duvr0, ylm, gylm(1:3)
     FLOAT, parameter :: ylmconst = CNST(0.488602511902920) !  = sqrt(3/(4*pi))
 
     ! no push_sub because this function is called very frequently
 
-    r = sqrt(sum(x(1:MAX_DIM)**2))
+    r = sqrt(sum(x(1:3)**2))
 
     uVr0  = spline_eval(spec%ps%kb(l, i), r)
     duVr0 = spline_eval(spec%ps%dkb(l, i), r)
@@ -749,16 +750,16 @@ contains
     call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
     uv = uvr0*ylm
     if(r >= r_small) then
-      duv(:) = duvr0 * ylm * x(:)/r + uvr0 * gylm(:)
+      duv(1:3) = duvr0*ylm*x(1:3)/r + uvr0*gylm(1:3)
     else
       if(l == 1) then
         duv = M_ZERO
         if(lm == -1) then
-          duv(2) = -ylmconst * duvr0
+          duv(2) = -ylmconst*duvr0
         else if(lm == 0) then
-          duv(3) =  ylmconst * duvr0
+          duv(3) =  ylmconst*duvr0
         else if(lm == 1) then
-          duv(1) = -ylmconst * duvr0
+          duv(1) = -ylmconst*duvr0
         end if
       else
         duv = M_ZERO
