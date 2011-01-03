@@ -121,7 +121,7 @@ opencl.o : opencl.F90 opencl_inc.F90 opencl_iface_inc.F90 global.o c_pointer.o t
 mpi_debug.o : mpi_debug.F90 mpi_debug_inc.F90 mpi.o messages.o loct.o global.o 
 mpi_lib.o : mpi_lib.F90 mpi_lib_inc.F90 mpi_debug.o mpi.o messages.o global.o profiling.o
 topology.o : topology.F90 utils.o mpi.o messages.o parser.o io.o global.o datasets.o profiling.o
-multicomm.o : multicomm.F90 topology.o varinfo.o utils.o mpi.o messages.o parser.o io.o global.o datasets.o profiling.o
+multicomm.o : multicomm.F90 varinfo.o utils.o mpi.o messages.o parser.o io.o global.o datasets.o profiling.o
 distributed.o: distributed.F90 multicomm.o profiling.o
 calc_mode.o : calc_mode.F90 multicomm.o messages.o
 

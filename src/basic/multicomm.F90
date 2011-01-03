@@ -56,7 +56,6 @@
 #endif
     use parser_m
     use profiling_m
-    use topology_m
     use utils_m
     use varinfo_m
 
@@ -113,8 +112,6 @@
     integer          :: dom_st_comm    !< States-domain plane communicator.
 
     integer          :: nthreads
-    logical          :: use_topology
-    type(topology_t) :: topo
   end type multicomm_t
 
   !> An all-pairs communication schedule for a given group.
@@ -174,37 +171,6 @@ contains
     if(mc%par_strategy.ne.P_STRATEGY_SERIAL) then
       SAFE_ALLOCATE(mc%group_sizes(1:mc%n_index))
       mc%group_sizes(:) = 1
-
-      !%Variable ParallelizationUseTopology
-      !%Type block
-      !%Section Execution::Parallelization
-      !%Description
-      !%
-      !% When set to yes, <tt>Octopus</tt> will try to determine the topology
-      !% of the network and, based on this, assign the nodes to the
-      !% different possible parallelization strategies and distribute
-      !% the processes to reduce the communication overhead. Currently
-      !% <tt>Octopus</tt> is only capable of detecting if processes are on the
-      !% same machine or connected by a network. By default it is not
-      !% enabled.
-      !%
-      !% This feature is experimental, so use it with care.
-      !%
-      !% Warning: currently is not possible to use this variable for
-      !% states parallelization for ground-state calculations or
-      !% Car-Parrinello molecular dynamics.
-      !%
-      !%End
-  
-      call parse_logical(datasets_check('ParallelizationUseTopology'), .false., mc%use_topology)
-
-      mc%use_topology = mc%use_topology .and. multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)
-      mc%use_topology = mc%use_topology .and. multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)
-      
-      if(mc%use_topology) then
-        call topology_init(mc%topo, base_grp)
-        mc%use_topology = mc%use_topology .and. topology_groups_are_equal(mc%topo)
-      end if
 
       !%Variable ParallelizationGroupRanks
       !%Type block
@@ -379,14 +345,6 @@ contains
 
       PUSH_SUB(multicomm_init.assign_nodes)
 
-      if(mc%use_topology) then
-        mc%group_sizes = 1
-        mc%group_sizes(P_STRATEGY_DOMAINS) = mc%topo%maxgsize
-        mc%group_sizes(P_STRATEGY_STATES)  = mc%topo%ng
-        POP_SUB(multicomm_init.assign_nodes)
-        return
-      end if
-
       SAFE_ALLOCATE(n_group_max(1:mc%n_index))
 
       nn = mc%n_node
@@ -508,8 +466,6 @@ contains
     subroutine group_comm_create()
 #if defined(HAVE_MPI)
       logical :: dim_mask(MAX_INDEX)
-      integer :: world_group, sub_group, dummy_comm
-      integer :: ii
       integer :: i_strategy
       integer :: new_comm
       logical :: reorder, periodic_mask(MAX_INDEX)
@@ -521,85 +477,49 @@ contains
       SAFE_ALLOCATE(mc%who_am_i(1:mc%n_index))
 
 #if defined(HAVE_MPI)
-        if(.not. mc%use_topology) then
+      ! create the topology
+      periodic_mask = .false.
+      reorder = .true.
 
-          ! create the topology
-          periodic_mask = .false.
-          reorder = .true.
-          
-          ! The domain and states dimensions have to be periodic (2D torus)
-          ! in order to circulate matrix blocks.
-          if(multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)) then
-            periodic_mask(P_STRATEGY_DOMAINS) = .true.
-          end if
-          if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
-            periodic_mask(P_STRATEGY_STATES) = .true.
-          end if
-          ! We allow reordering of ranks, as we intent to replace the
-          ! world afterwards.
-          ! FIXME: make sure this works! World root may be someone else
-          ! afterwards!
-          call MPI_Cart_create(base_grp%comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, new_comm, mpi_err)
-          
-          ! Re-initialize the world.
-          call mpi_grp_init(base_grp, new_comm)
-        
-          ! The "lines" of the Cartesian grid.
-          do i_strategy = 1, mc%n_index
-            if(multicomm_strategy_is_parallel(mc, i_strategy)) then
-              dim_mask             = .false.
-              dim_mask(i_strategy) = .true.
-              call MPI_Cart_sub(base_grp%comm, dim_mask, mc%group_comm(i_strategy), mpi_err)
-              call MPI_Comm_rank(mc%group_comm(i_strategy), mc%who_am_i(i_strategy), mpi_err)
-            else
-              mc%group_comm(i_strategy) = MPI_COMM_NULL
-              mc%who_am_i(i_strategy)   = 0
-            end if
-          end do
+      ! The domain and states dimensions have to be periodic (2D torus)
+      ! in order to circulate matrix blocks.
+      if(multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)) then
+        periodic_mask(P_STRATEGY_DOMAINS) = .true.
+      end if
+      if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
+        periodic_mask(P_STRATEGY_STATES) = .true.
+      end if
+      ! We allow reordering of ranks, as we intent to replace the
+      ! world afterwards.
+      ! FIXME: make sure this works! World root may be someone else
+      ! afterwards!
+      call MPI_Cart_create(base_grp%comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, new_comm, mpi_err)
 
-          ! The domain-state "planes" of the grid (the ones with periodic dimensions).
-          dim_mask                     = .false.
-          dim_mask(P_STRATEGY_DOMAINS) = .true.
-          dim_mask(P_STRATEGY_STATES)  = .true.
-          call MPI_Cart_sub(base_grp%comm, dim_mask, mc%dom_st_comm, mpi_err)
-          
+      ! Re-initialize the world.
+      call mpi_grp_init(base_grp, new_comm)
+
+      ! The "lines" of the Cartesian grid.
+      do i_strategy = 1, mc%n_index
+        if(multicomm_strategy_is_parallel(mc, i_strategy)) then
+          dim_mask             = .false.
+          dim_mask(i_strategy) = .true.
+          call MPI_Cart_sub(base_grp%comm, dim_mask, mc%group_comm(i_strategy), mpi_err)
+          call MPI_Comm_rank(mc%group_comm(i_strategy), mc%who_am_i(i_strategy), mpi_err)
         else
-
-          call MPI_Comm_group(base_grp%comm, world_group, mpi_err)
-
-          ! domains
-          do ii = 1, mc%topo%ng
-            call MPI_Group_incl(world_group, mc%topo%gsize(1), mc%topo%groups(1:mc%topo%gsize(1), ii), sub_group, mpi_err)
-            call MPI_Comm_create(base_grp%comm, sub_group, dummy_comm, mpi_err)
-
-            if(dummy_comm /= MPI_COMM_NULL) then
-              mc%group_comm(P_STRATEGY_DOMAINS) = dummy_comm
-              call MPI_Comm_rank(mc%group_comm(P_STRATEGY_DOMAINS), mc%who_am_i(P_STRATEGY_DOMAINS), mpi_err)
-            end if
-          end do
-
-          ! states
-          do ii = 1, mc%topo%gsize(1)
-            call MPI_Group_incl(world_group, mc%topo%ng, mc%topo%groups(ii, 1:mc%topo%ng), sub_group, mpi_err)
-            call MPI_Comm_create(base_grp%comm, sub_group, dummy_comm, mpi_err)
-
-            if(dummy_comm /= MPI_COMM_NULL) then
-              mc%group_comm(P_STRATEGY_STATES) = dummy_comm
-              call MPI_Comm_rank(mc%group_comm(P_STRATEGY_STATES), mc%who_am_i(P_STRATEGY_STATES), mpi_err)
-            end if
-          end do
-
-          mc%group_comm(P_STRATEGY_KPOINTS) = MPI_COMM_NULL
-          mc%who_am_i(P_STRATEGY_KPOINTS)   = 0
-          mc%group_comm(P_STRATEGY_OTHER)   = MPI_COMM_NULL
-          mc%who_am_i(P_STRATEGY_OTHER)     = 0
-
-          call MPI_Comm_dup(base_grp%comm, mc%dom_st_comm, mpi_err)
-
+          mc%group_comm(i_strategy) = MPI_COMM_NULL
+          mc%who_am_i(i_strategy)   = 0
         end if
+      end do
+
+      ! The domain-state "planes" of the grid (the ones with periodic dimensions).
+      dim_mask                     = .false.
+      dim_mask(P_STRATEGY_DOMAINS) = .true.
+      dim_mask(P_STRATEGY_STATES)  = .true.
+      call MPI_Cart_sub(base_grp%comm, dim_mask, mc%dom_st_comm, mpi_err)
+
 #else
-        mc%group_comm = -1
-        mc%who_am_i   = 0
+      mc%group_comm = -1
+      mc%who_am_i   = 0
 #endif
 
       POP_SUB(multicomm_init.group_comm_create)
