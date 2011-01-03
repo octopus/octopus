@@ -131,8 +131,8 @@ contains
       index_range(4) = 100000                 ! Some large number
 
       ! create index and domain communicators
-      call multicomm_init(sys%mc, calc_mode_parallel_mask(), calc_mode_default_parallel_mask(), mpi_world%size, index_dim, &
-         index_range, (/ 5000, 1, 1, 1 /))
+      call multicomm_init(sys%mc, mpi_world, calc_mode_parallel_mask(), calc_mode_default_parallel_mask(), &
+        mpi_world%size, index_dim, index_range, (/ 5000, 1, 1, 1 /))
 
       POP_SUB(system_init.parallel_init)
     end subroutine parallel_init

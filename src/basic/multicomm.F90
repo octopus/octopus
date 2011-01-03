@@ -152,11 +152,12 @@ contains
 
   ! ---------------------------------------------------------
   !> create index and domain communicators
-  subroutine multicomm_init(mc, parallel_mask, default_mask, n_node, n_index, index_range, min_range)
-    type(multicomm_t), intent(out)  :: mc
-    integer,           intent(in)   :: parallel_mask, default_mask, n_node, n_index
-    integer,           intent(inout):: index_range(:)
-    integer,           intent(in)   :: min_range(:)
+  subroutine multicomm_init(mc, base_grp, parallel_mask, default_mask, n_node, n_index, index_range, min_range)
+    type(multicomm_t), intent(out)   :: mc
+    type(mpi_grp_t),   intent(inout) :: base_grp
+    integer,           intent(in)    :: parallel_mask, default_mask, n_node, n_index
+    integer,           intent(inout) :: index_range(:)
+    integer,           intent(in)    :: min_range(:)
 
     integer :: ii
     type(block_t) :: blk
@@ -208,7 +209,7 @@ contains
       mc%use_topology = mc%use_topology .and. multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)
       
       if(mc%use_topology) then
-        call topology_init(mc%topo)
+        call topology_init(mc%topo, base_grp)
         mc%use_topology = mc%use_topology .and. topology_groups_are_equal(mc%topo)
       end if
 
@@ -280,7 +281,7 @@ contains
 
       ! default is set in calc_mode_default_parallel_mask()
 
-      if(mpi_world%size > 1) then
+      if(base_grp%size > 1) then
 
         par_mask = parallel_mask
 
@@ -357,7 +358,7 @@ contains
             message = "Error: The 'fill' value can be used only once in ParallelizationGroupRanks."
             call write_fatal(1, only_root_writes = .true.)
           end if
-          mc%group_sizes(ii) = -mpi_world%size / product(mc%group_sizes)
+          mc%group_sizes(ii) = -base_grp%size / product(mc%group_sizes)
           fill_used = .true.
         end if
       end do
@@ -445,9 +446,9 @@ contains
       call write_info(ii)
 
       ! do we have the correct number of processors
-      if(product(mc%group_sizes(1:mc%n_index)) .ne. mpi_world%size) then
+      if(product(mc%group_sizes(1:mc%n_index)) .ne. base_grp%size) then
         write(message(1),'(a,i4,a,i4,a)') "Inconsistent number of processors (", &
-          product(mc%group_sizes(1:mc%n_index)), ".ne.", mpi_world%size, ")"
+          product(mc%group_sizes(1:mc%n_index)), ".ne.", base_grp%size, ")"
         message(2) = "You probably have a problem in the block 'ParallelizationGroupRanks'"
         call write_fatal(2, only_root_writes = .true.)
       end if
@@ -513,10 +514,10 @@ contains
         ! world afterwards.
         ! FIXME: make sure this works! World root may be someone else
         ! afterwards!
-        call MPI_Cart_create(mpi_world%comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, new_comm, mpi_err)
+        call MPI_Cart_create(base_grp%comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, new_comm, mpi_err)
 
         ! Re-initialize the world.
-        call mpi_grp_init(mpi_world, new_comm)
+        call mpi_grp_init(base_grp, new_comm)
       end if
 #endif
 
@@ -546,7 +547,7 @@ contains
             if(multicomm_strategy_is_parallel(mc, i_strategy)) then
               dim_mask             = .false.
               dim_mask(i_strategy) = .true.
-              call MPI_Cart_sub(mpi_world%comm, dim_mask, mc%group_comm(i_strategy), mpi_err)
+              call MPI_Cart_sub(base_grp%comm, dim_mask, mc%group_comm(i_strategy), mpi_err)
               call MPI_Comm_rank(mc%group_comm(i_strategy), mc%who_am_i(i_strategy), mpi_err)
             else
               mc%group_comm(i_strategy) = MPI_COMM_NULL
@@ -558,16 +559,16 @@ contains
           dim_mask                     = .false.
           dim_mask(P_STRATEGY_DOMAINS) = .true.
           dim_mask(P_STRATEGY_STATES)  = .true.
-          call MPI_Cart_sub(mpi_world%comm, dim_mask, mc%dom_st_comm, mpi_err)
+          call MPI_Cart_sub(base_grp%comm, dim_mask, mc%dom_st_comm, mpi_err)
           
         else
 
-          call MPI_Comm_group(mpi_world%comm, world_group, mpi_err)
+          call MPI_Comm_group(base_grp%comm, world_group, mpi_err)
 
           ! domains
           do ii = 1, mc%topo%ng
             call MPI_Group_incl(world_group, mc%topo%gsize(1), mc%topo%groups(1:mc%topo%gsize(1), ii), sub_group, mpi_err)
-            call MPI_Comm_create(mpi_world%comm, sub_group, dummy_comm, mpi_err)
+            call MPI_Comm_create(base_grp%comm, sub_group, dummy_comm, mpi_err)
 
             if(dummy_comm /= MPI_COMM_NULL) then
               mc%group_comm(P_STRATEGY_DOMAINS) = dummy_comm
@@ -578,7 +579,7 @@ contains
           ! states
           do ii = 1, mc%topo%gsize(1)
             call MPI_Group_incl(world_group, mc%topo%ng, mc%topo%groups(ii, 1:mc%topo%ng), sub_group, mpi_err)
-            call MPI_Comm_create(mpi_world%comm, sub_group, dummy_comm, mpi_err)
+            call MPI_Comm_create(base_grp%comm, sub_group, dummy_comm, mpi_err)
 
             if(dummy_comm /= MPI_COMM_NULL) then
               mc%group_comm(P_STRATEGY_STATES) = dummy_comm
@@ -591,7 +592,7 @@ contains
           mc%group_comm(P_STRATEGY_OTHER)   = MPI_COMM_NULL
           mc%who_am_i(P_STRATEGY_OTHER)     = 0
 
-          call MPI_Comm_dup(mpi_world%comm, mc%dom_st_comm, mpi_err)
+          call MPI_Comm_dup(base_grp%comm, mc%dom_st_comm, mpi_err)
 
         end if
 #else
@@ -753,8 +754,9 @@ contains
     !! we got, currently only checks processes that are running in the
     !! same node
     
-    subroutine topology_init(this)
-      type(topology_t), intent(out) :: this
+    subroutine topology_init(this, base_grp)
+      type(topology_t), intent(out)   :: this
+      type(mpi_grp_t),  intent(inout) :: base_grp
 
 #ifdef HAVE_MPI
       character(len=25) :: my_name, its_name
@@ -762,7 +764,7 @@ contains
 
       PUSH_SUB(topology_init)
 
-      wsize = mpi_world%size
+      wsize = base_grp%size
 
       !get the system name
       call loct_sysname(my_name)
@@ -771,20 +773,20 @@ contains
 
       do ir = 1, wsize
 
-        if(ir - 1 == mpi_world%rank) then
+        if(ir - 1 == base_grp%rank) then
 
-          call MPI_Bcast(my_name, 256, MPI_CHARACTER, ir - 1, mpi_world%comm, mpi_err)
+          call MPI_Bcast(my_name, 256, MPI_CHARACTER, ir - 1, base_grp%comm, mpi_err)
 
-          this%distance(ir, mpi_world%rank + 1) = 0
+          this%distance(ir, base_grp%rank + 1) = 0
 
         else
 
-          call MPI_Bcast(its_name, 256, MPI_CHARACTER, ir - 1, mpi_world%comm, mpi_err)
+          call MPI_Bcast(its_name, 256, MPI_CHARACTER, ir - 1, base_grp%comm, mpi_err)
 
           if(my_name == its_name) then
-            this%distance(ir, mpi_world%rank + 1) = 1
+            this%distance(ir, base_grp%rank + 1) = 1
           else
-            this%distance(ir, mpi_world%rank + 1) = 2
+            this%distance(ir, base_grp%rank + 1) = 2
           end if
 
         end if
@@ -792,7 +794,7 @@ contains
       end do
 
       do ir = 1, wsize
-        call MPI_Bcast(this%distance(1, ir), wsize, MPI_INTEGER, ir - 1, mpi_world%comm, mpi_err)
+        call MPI_Bcast(this%distance(1, ir), wsize, MPI_INTEGER, ir - 1, base_grp%comm, mpi_err)
       end do
       
       !classify processors in groups
@@ -831,7 +833,7 @@ contains
         end do
       end do
 
-      ASSERT(sum(this%gsize(1:this%ng)) == mpi_world%size)
+      ASSERT(sum(this%gsize(1:this%ng)) == base_grp%size)
 
       this%maxgsize = maxval(this%gsize(1:this%ng))
 
