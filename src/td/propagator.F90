@@ -468,7 +468,7 @@ contains
 
       ! First, compare the new potential to the extrapolated one.
       call density_calc(st, gr, st%rho)
-      call v_ks_calc(ks, gr, hm, st, time = time - dt)
+      call v_ks_calc(ks, hm, st, time = time - dt)
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
       d_max = M_ZERO
       do is = 1, st%d%nspin
@@ -509,7 +509,7 @@ contains
           end select
 
           call density_calc(st, gr, st%rho)
-          call v_ks_calc(ks, gr, hm, st, time = time - dt)
+          call v_ks_calc(ks, hm, st, time = time - dt)
           SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
           d_max = M_ZERO
           do is = 1, st%d%nspin
@@ -591,7 +591,7 @@ contains
         
         call density_calc_end(dens_calc)
 
-        call v_ks_calc(ks, gr, hm, st)
+        call v_ks_calc(ks, hm, st)
 
         call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
         call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
@@ -831,7 +831,7 @@ contains
         end do
 
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, gr, hm, st)
+        call v_ks_calc(ks, hm, st)
 
         vhxc_t2 = hm%vhxc
         ! compute potential at n+1/2 as average

@@ -162,7 +162,7 @@ module opt_control_propagation_m
 
     ! setup the Hamiltonian
     call density_calc(psi, gr, psi%rho)
-    call v_ks_calc(sys%ks, gr, hm, psi, time = M_ZERO)
+    call v_ks_calc(sys%ks, hm, psi, time = M_ZERO)
     call propagator_run_zero_iter(hm, td%tr)
 
     if(target_type(target) .eq. oct_tg_velocity) then
@@ -192,7 +192,7 @@ module opt_control_propagation_m
 
       ! update
       call density_calc(psi, gr, psi%rho)
-      call v_ks_calc(sys%ks, gr, hm, psi, time = i*td%dt)
+      call v_ks_calc(sys%ks, hm, psi, time = i*td%dt)
       call total_energy(hm, sys%gr, psi, -1)
 
       ! if td_target
@@ -267,7 +267,7 @@ module opt_control_propagation_m
 
     ! setup the Hamiltonian
     call density_calc(psi, gr, psi%rho)
-    call v_ks_calc(sys%ks, gr, hm, psi)
+    call v_ks_calc(sys%ks, hm, psi)
     call propagator_run_zero_iter(hm, td%tr)
 
     call oct_prop_output(prop, td%max_iter, psi, gr)
@@ -275,7 +275,7 @@ module opt_control_propagation_m
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, (i-1)*td%dt, -td%dt, td%mu, td%max_iter, i)
       call oct_prop_output(prop, i-1, psi, gr)
       call density_calc(psi, gr, psi%rho)
-      call v_ks_calc(sys%ks, gr, hm, psi)
+      call v_ks_calc(sys%ks, hm, psi)
     end do
 
     POP_SUB(propagate_backward)
@@ -339,7 +339,7 @@ module opt_control_propagation_m
     
     ! setup forward propagation
     call density_calc(psi, gr, psi%rho)
-    call v_ks_calc(sys%ks, gr, hm, psi)
+    call v_ks_calc(sys%ks, hm, psi)
     call propagator_run_zero_iter(hm, td%tr)
     call propagator_run_zero_iter(hm, tr_chi)
     if(aux_fwd_propagation) then
@@ -370,7 +370,7 @@ module opt_control_propagation_m
     call update_field(td%max_iter+1, par, gr, hm, psi, chi, par_chi, dir = 'f')
 
     call density_calc(psi, gr, psi%rho)
-    call v_ks_calc(sys%ks, gr, hm, psi)
+    call v_ks_calc(sys%ks, hm, psi)
 
     if( target_mode(target) == oct_targetmode_td .or. &
         (hm%theory_level.ne.INDEPENDENT_PARTICLES .and. (.not.sys%ks%frozen_hxc) ) ) then
@@ -428,7 +428,7 @@ module opt_control_propagation_m
     call oct_prop_read_state(prop_psi, psi, gr, sys%geo, td%max_iter)
 
     call density_calc(psi, gr, psi%rho)
-    call v_ks_calc(sys%ks, gr, hm, psi)
+    call v_ks_calc(sys%ks, hm, psi)
     call hamiltonian_update(hm, gr%mesh)
     call propagator_run_zero_iter(hm, td%tr)
     call propagator_run_zero_iter(hm, tr_chi)
@@ -450,7 +450,7 @@ module opt_control_propagation_m
     call update_field(0, par_chi, gr, hm, psi, chi, par, dir = 'b')
 
     call density_calc(psi, gr, psi%rho)
-    call v_ks_calc(sys%ks, gr, hm, psi)
+    call v_ks_calc(sys%ks, hm, psi)
     call hamiltonian_update(hm, gr%mesh)
 
     call states_end(psi)
@@ -506,7 +506,7 @@ module opt_control_propagation_m
     call oct_prop_read_state(prop_psi, psi, gr, sys%geo, td%max_iter)
 
     call density_calc(psi, gr, psi%rho)
-    call v_ks_calc(sys%ks, gr, hm, psi)
+    call v_ks_calc(sys%ks, hm, psi)
     call hamiltonian_update(hm, gr%mesh)
     call propagator_run_zero_iter(hm, td%tr)
     call propagator_run_zero_iter(hm, tr_chi)
@@ -544,7 +544,7 @@ module opt_control_propagation_m
     call update_field(0, par_chi, gr, hm, psi, chi, par, dir = 'b')
 
     call density_calc(psi, gr, psi%rho)
-    call v_ks_calc(sys%ks, gr, hm, psi)
+    call v_ks_calc(sys%ks, hm, psi)
     call hamiltonian_update(hm, gr%mesh)
 
     call propagator_end(tr_chi)
@@ -601,7 +601,7 @@ module opt_control_propagation_m
     end do
     if(hm%theory_level.ne.INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
       call density_calc(st, gr, st%rho)
-      call v_ks_calc(ks, gr, hm, st)
+      call v_ks_calc(ks, hm, st)
       call hamiltonian_update(hm, gr%mesh)
     end if
 
@@ -644,7 +644,7 @@ module opt_control_propagation_m
     end do
     if(hm%theory_level.ne.INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
       call density_calc(st, gr, st%rho)
-      call v_ks_calc(ks, gr, hm, st)
+      call v_ks_calc(ks, hm, st)
       call hamiltonian_update(hm, gr%mesh)
     end if
 
