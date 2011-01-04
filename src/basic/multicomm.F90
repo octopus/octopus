@@ -75,7 +75,8 @@
     multicomm_all_pairs_t,           &
     multicomm_init, multicomm_end,   &
     multicomm_all_pairs_copy,        &
-    multicomm_strategy_is_parallel
+    multicomm_strategy_is_parallel,  &
+    multicomm_is_slave
 
 
   ! possible parallelization strategies
@@ -86,6 +87,10 @@
     P_STRATEGY_KPOINTS = 3,          & ! parallelization in k-points
     P_STRATEGY_OTHER   = 4             ! something else like e-h pairs
 
+  integer, public, parameter ::      &
+    P_MASTER           = 1,          &
+    P_SLAVE            = 2
+  
   integer,           parameter :: n_par_types = 4
   character(len=11), parameter :: par_types(0:n_par_types) = &
     (/                               &
@@ -112,6 +117,7 @@
     integer          :: dom_st_comm    !< States-domain plane communicator.
 
     integer          :: nthreads
+    integer          :: node_type
   end type multicomm_t
 
   !> An all-pairs communication schedule for a given group.
@@ -394,7 +400,7 @@ contains
     !> check if a balanced distribution of nodes will be used
     subroutine sanity_check()
       FLOAT :: frac
-      integer :: ii, kk, n_max
+      integer :: ii, kk, n_max, num
 
       PUSH_SUB(multicomm_init.sanity_check)
 
@@ -413,11 +419,13 @@ contains
 
       ! print out some info
       ii = 0
-      do kk = 1, mc%n_index
+      do kk = mc%n_index, 1, -1
         if(.not. multicomm_strategy_is_parallel(mc, kk)) cycle
         ii = ii + 1
+        num = mc%group_sizes(kk)
+        if(kk == slave_level) INCR(num, -num_slaves)
         write(message(ii),'(3a,i6,a,i8,a)') 'Info: Number of nodes in ', &
-          par_types(kk), ' group:', mc%group_sizes(kk), ' (', index_range(kk), ')'
+          par_types(kk), ' group:', num, ' (', index_range(kk), ')'
       end do
       call write_info(ii)
 
@@ -467,16 +475,23 @@ contains
 #if defined(HAVE_MPI)
       logical :: dim_mask(MAX_INDEX)
       integer :: i_strategy
-      integer :: new_comm
+      integer :: new_comm, new_comm2
       logical :: reorder, periodic_mask(MAX_INDEX)
+      integer :: coords(MAX_INDEX)
 #endif
 
       PUSH_SUB(multicomm_init.group_comm_create)
+
+      mc%node_type = P_MASTER
 
       SAFE_ALLOCATE(mc%group_comm(1:mc%n_index))
       SAFE_ALLOCATE(mc%who_am_i(1:mc%n_index))
 
 #if defined(HAVE_MPI)
+      ! Multilevel parallelization is organized in an hypercube. We
+      ! use an MPI cartesian topology to generate the communicators
+      ! that correspond to each level.
+
       ! create the topology
       periodic_mask = .false.
       reorder = .true.
@@ -495,8 +510,29 @@ contains
       ! afterwards!
       call MPI_Cart_create(base_grp%comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, new_comm, mpi_err)
 
-      ! Re-initialize the world.
+      ! Re-initialize the base communicator
       call mpi_grp_init(base_grp, new_comm)
+
+      ! get the coordinates of the current processor
+      call MPI_Cart_coords(base_grp%comm, base_grp%rank, mc%n_index, coords, mpi_err)
+
+      ! find out what type of node this is
+      if(coords(slave_level) >= mc%group_sizes(slave_level) - num_slaves) then
+        mc%node_type = P_SLAVE
+      end if
+
+      if(mc%node_type == P_MASTER) then
+        INCR(mc%group_sizes(slave_level), -num_slaves)
+      else
+        mc%group_sizes(slave_level) = num_slaves
+      end if
+      
+      call MPI_Comm_split(base_grp%comm, mc%node_type, base_grp%rank, new_comm, mpi_err)
+
+      reorder = .false.
+      call MPI_Cart_create(new_comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, new_comm2, mpi_err)
+
+      call mpi_grp_init(base_grp, new_comm2)
 
       ! The "lines" of the Cartesian grid.
       do i_strategy = 1, mc%n_index
@@ -740,6 +776,14 @@ contains
 
   end subroutine multicomm_divide_range_omp
 #endif
+
+  ! ---------------------------------------------------------
+
+  logical function multicomm_is_slave(this) result(slave)
+    type(multicomm_t), intent(in) :: this
+    
+    slave = this%node_type == P_SLAVE
+  end function multicomm_is_slave
 
 end module multicomm_m
 

@@ -74,6 +74,9 @@ contains
   subroutine run()
     logical :: fromScratch
 
+    ! slave nodes do not call the calculation routine
+    if(multicomm_is_slave(sys%mc)) return
+
     PUSH_SUB(run)
 
     !%Variable FromScratch
