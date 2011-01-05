@@ -114,7 +114,7 @@ contains
     type(states_t),   pointer :: st
     type(geometry_t), pointer :: geo
     logical                   :: stopping, update_energy
-    integer                   :: iter, ii, ierr, iatom, mpi_err
+    integer                   :: iter, ii, ierr, iatom, mpi_err, scsteps
     real(8)                   :: etime
     logical                   :: generate
     type(gauge_force_t)       :: gauge_force
@@ -186,13 +186,7 @@ contains
     td%iter = td%iter + 1
 
     call messages_print_stress(stdout, "Time-Dependent Simulation")
-    if(td%dynamics /= CP) then 
-      write(message(1), '(a7,1x,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'Elapsed Time '
-    else
-      write(message(1), '(a7,1x,a14,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'CP Energy ', 'Elapsed Time '
-    end if
-    call write_info(1)
-    call messages_print_stress(stdout)
+    call print_header()
 
     if(td%PESv%calc_rc .or. td%PESv%calc_mask) then
        if (fromScratch) then
@@ -218,9 +212,10 @@ contains
       case(EHRENFEST)
         if(ion_dynamics_ions_move(td%ions)) then
           call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%mu, td%max_iter, iter, gauge_force, &
-            ions = td%ions, geo = sys%geo)
+            ions = td%ions, geo = sys%geo, scsteps = scsteps)
         else
-          call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%mu, td%max_iter, iter, gauge_force)
+          call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%mu, td%max_iter, iter, gauge_force, &
+            scsteps = scsteps)
         end if
       case(BO)
         ! move the hamiltonian to time t
@@ -319,16 +314,28 @@ contains
 
   contains
 
+    subroutine print_header
+
+      if(td%dynamics /= CP) then 
+        write(message(1), '(a7,1x,a14,a14,a10,a17)') 'Iter ', 'Time ', 'Energy ', 'SC Steps', 'Elapsed Time '
+      else
+        write(message(1), '(a7,1x,a14,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'CP Energy ', 'Elapsed Time '
+      end if
+      call write_info(1)
+      call messages_print_stress(stdout)
+
+    end subroutine print_header
+
     ! ---------------------------------------------------------
     subroutine check_point
       PUSH_SUB(td_run.check_point)
 
       ! write info
       if(td%dynamics /= CP) then 
-        write(message(1), '(i7,1x,2f14.6,f14.3, i10)') iter, &
+        write(message(1), '(i7,1x,2f14.6,i10,f14.3)') iter, &
              units_from_atomic(units_out%time, iter*td%dt), &
              units_from_atomic(units_out%energy, hm%etot + geo%kinetic_energy), &
-             loct_clock() - etime
+             scsteps, loct_clock() - etime
       else
         write(message(1), '(i7,1x,3f14.6,f14.3, i10)') iter, &
              units_from_atomic(units_out%time, iter*td%dt), &
@@ -354,13 +361,7 @@ contains
           call ground_state_run(sys, hm, fromScratch)
           call restart_read(trim(restart_dir)//'td', st, gr, geo, ierr, iter=iter)
           call messages_print_stress(stdout, "Time-dependent simulation proceeds")
-          if(td%dynamics /= CP) then 
-            write(message(1), '(a7,1x,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'Elapsed Time '
-          else
-            write(message(1), '(a7,1x,a14,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'CP Energy ', 'Elapsed Time '
-          end if
-          call write_info(1)
-          call messages_print_stress(stdout)
+          call print_header()
         end if
       end if
 

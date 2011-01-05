@@ -403,7 +403,7 @@ contains
   ! Propagates st from time - dt to t.
   ! If dt<0, it propagates *backwards* from t+|dt| to t
   ! ---------------------------------------------------------
-  subroutine propagator_dt(ks, hm, gr, st, tr, time, dt, mu, max_iter, nt, gauge_force, ions, geo)
+  subroutine propagator_dt(ks, hm, gr, st, tr, time, dt, mu, max_iter, nt, gauge_force, ions, geo, scsteps)
     type(v_ks_t),                    intent(inout) :: ks
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
@@ -417,6 +417,7 @@ contains
     type(gauge_force_t),  optional,  intent(inout) :: gauge_force
     type(ion_dynamics_t), optional,  intent(inout) :: ions
     type(geometry_t),     optional,  intent(inout) :: geo
+    integer,              optional,  intent(out)   :: scsteps
 
     integer :: is, iter, ik, ist, idim
     FLOAT   :: d, d_max
@@ -477,6 +478,8 @@ contains
       call td_qoct_tddft_propagator_2(hm, gr, st, tr, time, dt)
     end select
 
+    if(present(scsteps)) scsteps = 1
+
     if(self_consistent) then
       SAFE_ALLOCATE(vaux(1:gr%mesh%np, 1:st%d%nspin))
 
@@ -497,6 +500,7 @@ contains
         ! We do a maximum of 10 iterations. If it still not converged, probably the propagation
         ! will not be good anyways.
         do iter = 1, 10
+          if(present(scsteps)) INCR(scsteps, 1)
 
           do ik = st%d%kpt%start, st%d%kpt%end
             do ist = st%st_start, st%st_end
@@ -505,7 +509,7 @@ contains
               end do
             end do
           end do
-
+          
           tr%v_old(:, :, 0) = hm%vhxc(:, :)
           vaux(:, :) = hm%vhxc(:, :)
           select case(tr%method)
@@ -535,7 +539,7 @@ contains
 
           if(d_max < scf_threshold) exit
         end do
-
+        
       end if
 
       SAFE_DEALLOCATE_A(zpsi1)
