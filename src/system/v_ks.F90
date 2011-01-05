@@ -75,11 +75,11 @@ module v_ks_m
   type v_ks_calc_t
     logical                       :: calculating
     type(hamiltonian_t),  pointer :: hm
-    type(states_t),       pointer :: st
-    logical                       :: calc_eigenval
     logical                       :: time_present
     FLOAT                         :: time
     logical                       :: calc_berry
+    FLOAT,                pointer :: rho(:, :)
+    FLOAT,                pointer :: total_rho(:)
   end type v_ks_calc_t
 
   type v_ks_t
@@ -334,19 +334,31 @@ contains
     FLOAT,        optional, intent(in)    :: time
     logical,      optional, intent(in)    :: calc_berry ! use this before wfns initialized
     
-    call v_ks_calc_start(ks, hm, st, calc_eigenval, time, calc_berry)
+    call v_ks_calc_start(ks, hm, st, time, calc_berry)
     call v_ks_calc_finish(ks)
+
+    if(present(calc_eigenval)) then
+      if(calc_eigenval) call energy_calculate_eigenvalues(hm, ks%gr%der, st, &
+        open_boundaries = ks%gr%ob_grid%open_boundaries)
+    end if
 
   end subroutine v_ks_calc
 
-  ! ---------------------------------------------------------
-  subroutine v_ks_calc_start(ks, hm, st, calc_eigenval, time, calc_berry)
-    type(v_ks_t),           intent(inout) :: ks
-    type(hamiltonian_t),    intent(inout) :: hm
-    type(states_t),         intent(inout) :: st
-    logical,      optional, intent(in)    :: calc_eigenval
-    FLOAT,        optional, intent(in)    :: time
-    logical,      optional, intent(in)    :: calc_berry ! use this before wfns initialized
+  ! --------------------------------------------------------- 
+
+  !> This routine starts the calculation of the Kohn-Sham
+  !! potential. v_ks_calc_finish must be called to finish the
+  !! calculation. The argument hm CANNOT be used until
+  !! v_ks_calc_finish has been called. The st argument, on the other
+  !! hand, is released inmediately and CAN be modified before
+  !! finishing the calculation.
+
+  subroutine v_ks_calc_start(ks, hm, st, time, calc_berry) 
+    type(v_ks_t),                      intent(inout) :: ks 
+    type(hamiltonian_t),     target,   intent(inout) :: hm 
+    type(states_t),                    intent(inout) :: st
+    FLOAT,                   optional, intent(in)    :: time 
+    logical,                 optional, intent(in)    :: calc_berry !use this before wfns initialized
     
     FLOAT :: amaldi_factor, distance
     integer :: ip, ispin
@@ -366,18 +378,16 @@ contains
       call write_info(1)
     end if
 
-    ks%calc%calc_eigenval = .false.
-    if(present(calc_eigenval)) ks%calc%calc_eigenval = calc_eigenval
-
     ks%calc%calc_berry = .true.
     if(present(calc_berry)) ks%calc%calc_berry = calc_berry
 
-    ! If the Hxc term is frozen, there is nothing to do, except we 
-    ! maybe have to calculate the eigenvalues (and WARNING: MISSING hm%epot)
+    ks%calc%time_present = present(time)
+    if(present(time)) ks%calc%time = time
+
+    ks%calc%hm => hm
+
+    ! If the Hxc term is frozen, there is nothing to do (WARNING: MISSING hm%epot)
     if(ks%frozen_hxc) then
-      if(ks%calc%calc_eigenval) then
-        call energy_calculate_eigenvalues(hm, ks%gr%der, st, open_boundaries = ks%gr%ob_grid%open_boundaries)
-      end if
       POP_SUB(v_ks_calc_start)
       return
     end if
@@ -386,8 +396,7 @@ contains
 
     ! check whether we should introduce the Amaldi SIC correction
     amaldi_factor = M_ONE
-    if(ks%sic_type == sic_amaldi) amaldi_factor = (st%qtot-1)/st%qtot
-
+    if(ks%sic_type == sic_amaldi) amaldi_factor = (st%qtot - M_ONE)/st%qtot
 
     if(ks%theory_level == INDEPENDENT_PARTICLES .or. amaldi_factor == M_ZERO) then
       hm%vhxc     = M_ZERO
@@ -433,8 +442,6 @@ contains
       endif
     endif
 
-    call hamiltonian_update(hm, ks%gr%mesh, time)
-    
     if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK) then
       call states_end(hm%st)
       call states_copy(hm%st, st)
@@ -450,8 +457,6 @@ contains
     ! sense if it is going to be used in the Hamiltonian, which does not happen
     ! now. Otherwise one could just calculate it at the end of the calculation.
     if(hm%self_induced_magnetic) call magnetic_induced(ks%gr%der, st, hm%a_ind, hm%b_ind)
-
-    if(ks%calc%calc_eigenval) call energy_calculate_eigenvalues(hm, ks%gr%der, st, open_boundaries = ks%gr%ob_grid%open_boundaries)
 
     call profiling_out(prof)
     POP_SUB(v_ks_calc_start)
@@ -619,8 +624,19 @@ contains
 
     PUSH_SUB(v_ks_calc_finish)
 
+    if(ks%frozen_hxc) then
+      POP_SUB(v_ks_calc_finish)
+      return
+    end if
+
     ASSERT(ks%calc%calculating)
     ks%calc%calculating = .false.
+
+    if(ks%calc%time_present) then
+      call hamiltonian_update(ks%calc%hm, ks%gr%mesh, ks%calc%time)
+    else
+      call hamiltonian_update(ks%calc%hm, ks%gr%mesh)
+    end if
 
     POP_SUB(v_ks_calc_finish)
   end subroutine v_ks_calc_finish
