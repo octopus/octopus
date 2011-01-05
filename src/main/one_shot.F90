@@ -70,6 +70,9 @@ contains
     ! generate density
     call density_calc(sys%st, sys%gr, sys%st%rho)
 
+    ! calculate the KS potential
+    call v_ks_calc(sys%ks, hm, sys%st, calc_eigenval = .true.)
+
     e_t = M_ZERO
     e_ext = M_ZERO
     e_hartree = M_ZERO
@@ -89,10 +92,11 @@ contains
       end if
 
       ! Get the Hartree energy
-      call v_ks_hartree(sys%ks, sys%st, hm)
       E_Hartree = hm%ehartree
 
       ! Get exchange-correlation energies
+      ! (this is probably already calculated, but for the moment I will leave it here, XA)
+      
       SAFE_ALLOCATE(rho(1:sys%gr%fine%mesh%np, 1:sys%st%d%nspin))
       call states_total_density(sys%st, sys%gr%fine%mesh, rho)
       call xc_get_vxc(sys%gr%fine%der, sys%ks%xc, sys%st, rho, sys%st%d%ispin, E_x, E_c, M_ZERO, sys%st%qtot)

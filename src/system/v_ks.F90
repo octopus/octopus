@@ -64,7 +64,6 @@ module v_ks_m
     v_ks_calc,          &
     v_ks_calc_start,    &
     v_ks_calc_finish,   &
-    v_ks_hartree,       &
     v_ks_freeze_hxc
 
   integer, parameter, public :: &
@@ -80,6 +79,7 @@ module v_ks_m
     logical                       :: calc_berry
     FLOAT,                pointer :: rho(:, :)
     FLOAT,                pointer :: total_rho(:)
+    FLOAT                         :: amaldi_factor
   end type v_ks_calc_t
 
   type v_ks_t
@@ -347,7 +347,7 @@ contains
   ! --------------------------------------------------------- 
 
   !> This routine starts the calculation of the Kohn-Sham
-  !! potential. v_ks_calc_finish must be called to finish the
+  !! potential. The routine v_ks_calc_finish must be called to finish the
   !! calculation. The argument hm CANNOT be used until
   !! v_ks_calc_finish has been called. The st argument, on the other
   !! hand, is released inmediately and CAN be modified before
