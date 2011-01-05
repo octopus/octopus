@@ -44,13 +44,13 @@ match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; 8.2732814929
 Processors : 4
 Input      : 02-aetrs.04-kick.inp
 match ; Energy [step  1] ; LINE(td.general/energy, -21, 30) ; -1.058576638440e+01
-match ; Energy [step  5] ; LINE(td.general/energy, -16, 30) ; -1.043083054862e+01
-match ; Energy [step 10] ; LINE(td.general/energy, -11, 30) ; -1.043081230069e+01
-match ; Energy [step 15] ; LINE(td.general/energy,  -6, 30) ; -1.043080217628e+01
-match ; Energy [step 20] ; LINE(td.general/energy,  -1, 30) ; -1.043079875401e+01
+match ; Energy [step  5] ; LINE(td.general/energy, -16, 30) ; -1.043105116923e+01
+match ; Energy [step 10] ; LINE(td.general/energy, -11, 30) ; -1.043103300598e+01
+match ; Energy [step 15] ; LINE(td.general/energy,  -6, 30) ; -1.043102299208e+01
+match ; Energy [step 20] ; LINE(td.general/energy,  -1, 30) ; -1.043101966461e+01
 
-match ; Dipole [step  1] ; LINE(td.general/multipoles, -21, 50) ; -3.968472735486e-13
-match ; Dipole [step  5] ; LINE(td.general/multipoles, -16, 50) ; -7.284562123320e-01
-match ; Dipole [step 10] ; LINE(td.general/multipoles, -11, 50) ; -1.337387978674e+00
-match ; Dipole [step 15] ; LINE(td.general/multipoles,  -6, 50) ; -1.831249400498e+00
-match ; Dipole [step 20] ; LINE(td.general/multipoles,  -1, 50) ; -2.212040451994e+00
+match ; Dipole [step  1] ; LINE(td.general/multipoles, -21, 50) ; -3.359587071429e-14
+match ; Dipole [step  5] ; LINE(td.general/multipoles, -16, 50) ; -7.281278842913e-01
+match ; Dipole [step 10] ; LINE(td.general/multipoles, -11, 50) ; -1.336559460269e+00
+match ; Dipole [step 15] ; LINE(td.general/multipoles,  -6, 50) ; -1.830007514614e+00
+match ; Dipole [step 20] ; LINE(td.general/multipoles,  -1, 50) ; -2.210494173511e+00
