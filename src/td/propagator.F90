@@ -91,13 +91,7 @@ module propagator_m
     FLOAT, pointer      :: vmagnus(:, :, :) => null() 
                                             ! Auxiliary function to store the Magnus potentials.
     type(ob_terms_t)    :: ob               ! For open boundaries: leads, memory
-    integer             :: scf_propagation_steps ! Since the KS propagator is non-linear, each 
-                                                 ! propagating step should be performed self-consistently.
-                                                 ! In practice, for most purposes this is not 
-                                                 ! necessary, except perhaps in the first iterations. 
-                                                 ! This variable holds the number of initial steps for
-                                                 ! which the propagation is done self-consistently.
-                                                 ! The default is 3.
+    integer             :: scf_propagation_steps 
     logical             :: first
   end type propagator_t
 
@@ -315,9 +309,29 @@ contains
     tr%v_old(:, :, :) = M_ZERO
     call exponential_init(tr%te, gr%der) ! initialize propagator
 
-    ! By default, the propagation is only self-consistent in the first iterations
-    ! (unless we are doing a QOCT run)
-    tr%scf_propagation_steps = 3
+    !%Variable TDSelfConsistentSteps
+    !%Type integer
+    !%Default 3
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% Since the KS propagator is non-linear, each
+    !% propagating step should be performed self-consistently.
+    !% In practice, for most purposes this is not 
+    !% necessary, except perhaps in the first iterations. 
+    !% This variable holds the number of initial steps for
+    !% which the propagation is done self-consistently.
+    !%
+    !% The special value <tt>all_steps</tt> forces self-consistency to
+    !% be imposed on all steps. A value of 0 means that
+    !% self-consistency will not be imposed.
+    !% The default is 3 steps.
+    !%Option all_steps -1
+    !% Self-consistency is imposed for all time-steps.
+    !%End
+
+    call parse_integer(datasets_check('TDSelfConsistentSteps'), 3, tr%scf_propagation_steps)
+    if(tr%scf_propagation_steps == -1) tr%scf_propagation_steps = HUGE(tr%scf_propagation_steps)
+    if(tr%scf_propagation_steps < 0) call input_error('TDSelfConsistentSteps')
 
     POP_SUB(propagator_init)
   end subroutine propagator_init
@@ -424,7 +438,7 @@ contains
 
     self_consistent = .false.
     if(hm%theory_level .ne. INDEPENDENT_PARTICLES .and. tr%method /= PROP_CAETRS) then
-      if(time < tr%scf_propagation_steps*abs(dt) ) then
+      if(time <= tr%scf_propagation_steps*abs(dt) + M_EPSILON) then
         self_consistent = .true.
         SAFE_ALLOCATE(zpsi1(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
