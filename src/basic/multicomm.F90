@@ -115,6 +115,7 @@
     integer, pointer :: who_am_i(:)    !< Rank in the "line"-communicators.
     integer, pointer :: group_comm(:)  !< "Line"-communicators I belong to.
     integer          :: dom_st_comm    !< States-domain plane communicator.
+    integer          :: st_kpt_comm    !< States-domain plane communicator.
 
     integer          :: nthreads
     integer          :: node_type
@@ -552,6 +553,12 @@ contains
       dim_mask(P_STRATEGY_DOMAINS) = .true.
       dim_mask(P_STRATEGY_STATES)  = .true.
       call MPI_Cart_sub(base_grp%comm, dim_mask, mc%dom_st_comm, mpi_err)
+
+      ! The state-kpoints "planes" of the grid
+      dim_mask                     = .false.
+      dim_mask(P_STRATEGY_STATES)  = .true.
+      dim_mask(P_STRATEGY_KPOINTS) = .true.
+      call MPI_Cart_sub(base_grp%comm, dim_mask, mc%st_kpt_comm, mpi_err)
 
 #else
       mc%group_comm = -1

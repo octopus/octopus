@@ -157,6 +157,7 @@ module states_m
     logical                     :: parallel_in_states !< Am I parallel in states?
     type(mpi_grp_t)             :: mpi_grp            !< The MPI group related to the parallelization in states.
     type(mpi_grp_t)             :: dom_st             !< The MPI group related to the domain-states "plane".
+    type(mpi_grp_t)             :: st_kpt             !< The MPI group related to the states-kpoints "plane".
     integer                     :: lnst               !< Number of states on local node.
     integer                     :: st_start, st_end   !< Range of states processed by local node.
     integer, pointer            :: node(:)            !< To which node belongs each state.
@@ -1553,6 +1554,7 @@ return
       st%parallel_in_states = .true.
       call mpi_grp_init(st%mpi_grp, mc%group_comm(P_STRATEGY_STATES))
       call mpi_grp_init(st%dom_st, mc%dom_st_comm)
+      call mpi_grp_init(st%st_kpt, mc%st_kpt_comm)
       call multicomm_create_all_pairs(st%mpi_grp, st%ap)
 
      if(st%nst < st%mpi_grp%size) then
