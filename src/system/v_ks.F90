@@ -80,6 +80,7 @@ module v_ks_m
     logical                       :: total_density_alloc
     FLOAT,                pointer :: total_density(:)
     FLOAT                         :: amaldi_factor
+    type(energy_t),       pointer :: energy
   end type v_ks_calc_t
 
   type v_ks_t
@@ -362,7 +363,8 @@ contains
     
     FLOAT :: distance
     type(profile_t), save :: prof
-    
+    type(energy_t), pointer :: energy
+
     ! The next line is a hack to be able to perform an IP/RPA calculation
     !logical, save :: RPA_first = .true.
 
@@ -383,13 +385,16 @@ contains
     ks%calc%time_present = present(time)
     if(present(time)) ks%calc%time = time
 
-    ! If the Hxc term is frozen, there is nothing to do (WARNING: MISSING hm%energy%intnvxc)
+    ! If the Hxc term is frozen, there is nothing to do (WARNING: MISSING ks%calc%energy%intnvxc)
     if(ks%frozen_hxc) then
       POP_SUB(v_ks_calc_start)
       return
     end if
 
-    hm%energy%intnvxc = M_ZERO
+    SAFE_ALLOCATE(ks%calc%energy)
+    energy => ks%calc%energy
+
+    energy%intnvxc = M_ZERO
 
     ! check whether we should introduce the Amaldi SIC correction
     ks%calc%amaldi_factor = M_ONE
@@ -482,9 +487,9 @@ contains
       PUSH_SUB(v_ks_calc_start.v_a_xc)
       call profiling_in(prof, "XC")
 
-      hm%energy%exchange = M_ZERO
-      hm%energy%correlation = M_ZERO
-      hm%energy%xc_j = M_ZERO
+      energy%exchange = M_ZERO
+      energy%correlation = M_ZERO
+      energy%xc_j = M_ZERO
 
       if(ks%gr%have_fine_mesh) then
         SAFE_ALLOCATE(vxc(1:ks%gr%fine%mesh%np_part, 1:st%d%nspin))
@@ -496,9 +501,9 @@ contains
       ! Get the *local* XC term
       if(hm%d%cdft) then
         call xc_get_vxc_and_axc(ks%gr%fine%der, ks%xc, st, ks%calc%density, st%current, st%d%ispin, hm%vxc, hm%axc, &
-             hm%energy%exchange, hm%energy%correlation, hm%energy%xc_j, -minval(st%eigenval(st%nst, :)), st%qtot)
+             energy%exchange, energy%correlation, energy%xc_j, -minval(st%eigenval(st%nst, :)), st%qtot)
       else
-        call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%calc%density, st%d%ispin, hm%energy%exchange, hm%energy%correlation, &
+        call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%calc%density, st%d%ispin, energy%exchange, energy%correlation, &
              -minval(st%eigenval(st%nst, :)), st%qtot, vxc, vtau=hm%vtau)
       end if
 
@@ -507,30 +512,30 @@ contains
         if(iand(ks%xc_family, XC_FAMILY_OEP) .ne. 0) then
           if (states_are_real(st)) then
             call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
-              ks%gr, hm, st, hm%energy%exchange, hm%energy%correlation, vxc=hm%vxc)
+              ks%gr, hm, st, energy%exchange, energy%correlation, vxc=hm%vxc)
           else
             call zxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
-              ks%gr, hm, st, hm%energy%exchange, hm%energy%correlation, vxc=hm%vxc)
+              ks%gr, hm, st, energy%exchange, energy%correlation, vxc=hm%vxc)
           end if
         endif
 
         if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) .ne. 0) then
           ! Also treat KS inversion separately (not part of libxc)
-          call xc_ks_inversion_calc(ks%ks_inversion, ks%gr, hm, st, hm%energy%exchange, hm%energy%correlation, vxc=hm%vxc)
+          call xc_ks_inversion_calc(ks%ks_inversion, ks%gr, hm, st, energy%exchange, energy%correlation, vxc=hm%vxc)
         endif
       end if
 
       if(ks%tail_correction) call tail_correction(vxc)
       
-      ! Now we calculate Int[n vxc] = hm%energy%intnvxc
+      ! Now we calculate Int[n vxc] = energy%intnvxc
       select case(hm%d%ispin)
       case(UNPOLARIZED)
-        hm%energy%intnvxc = hm%energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), vxc(:, 1))
+        energy%intnvxc = energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), vxc(:, 1))
       case(SPIN_POLARIZED)
-        hm%energy%intnvxc = hm%energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), vxc(:, 1)) &
+        energy%intnvxc = energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), vxc(:, 1)) &
              + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 2), vxc(:, 2))
       case(SPINORS)
-        hm%energy%intnvxc = hm%energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), vxc(:, 1)) &
+        energy%intnvxc = energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), vxc(:, 1)) &
              + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 2), vxc(:, 2)) &
              + M_TWO*dmf_dotp(ks%gr%fine%mesh, st%rho(:, 3), vxc(:, 3)) &
              + M_TWO*dmf_dotp(ks%gr%fine%mesh, st%rho(:, 4), vxc(:, 4))
@@ -627,6 +632,10 @@ contains
 
     ASSERT(ks%calc%calculating)
     ks%calc%calculating = .false.
+
+    !change the pointer to the energy object
+    SAFE_DEALLOCATE_P(hm%energy)
+    hm%energy => ks%calc%energy
 
     if(ks%theory_level == INDEPENDENT_PARTICLES .or. ks%calc%amaldi_factor == M_ZERO) then
 

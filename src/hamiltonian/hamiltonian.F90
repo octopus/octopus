@@ -93,6 +93,9 @@ module hamiltonian_m
     hamiltonian_get_time,            &
     hamiltonian_apply_packed
 
+  public ::                          &
+    energy_t
+  
   type energy_t
     ! Energies
     FLOAT :: total       !< Total energy E = Eii + Sum[Eigenvalues] - U + Ex + Ec - Int[n v_xc]
@@ -114,7 +117,7 @@ module hamiltonian_m
     ! in order to be able to operate on the states.
     type(states_dim_t)       :: d
     type(hamiltonian_base_t) :: hm_base
-    type(energy_t)           :: energy
+    type(energy_t), pointer  :: energy
     FLOAT, pointer :: vhartree(:) ! Hartree potential
     FLOAT, pointer :: vxc(:,:)    ! XC potential
     FLOAT, pointer :: vhxc(:,:)   ! XC potential + Hartree potential
@@ -218,6 +221,8 @@ contains
     call hamiltonian_base_init(hm%hm_base, gr%mesh, hm%d%nspin)
     ASSERT(associated(gr%der%lapl))
     hm%hm_base%kinetic => gr%der%lapl
+
+    SAFE_ALLOCATE(hm%energy)
 
     ! initialize variables
     hm%energy%intnvxc = M_ZERO
@@ -730,6 +735,8 @@ contains
 
     call states_dim_end(hm%d)
     call states_end(hm%st)
+
+    SAFE_DEALLOCATE_P(hm%energy)
 
     POP_SUB(hamiltonian_end)
   end subroutine hamiltonian_end
