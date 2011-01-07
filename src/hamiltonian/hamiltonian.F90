@@ -291,14 +291,10 @@ contains
     !% of the output files is <tt>Bind</tt>).
     !%End
     if(hm%self_induced_magnetic) then
-      select case(gr%sb%dim)
-      case(3)
-        SAFE_ALLOCATE(hm%a_ind(1:gr%mesh%np_part, 1:3))
-        SAFE_ALLOCATE(hm%b_ind(1:gr%mesh%np_part, 1:3))
-      case(2)
-        SAFE_ALLOCATE(hm%a_ind(1:gr%mesh%np_part, 1:2))
-        SAFE_ALLOCATE(hm%b_ind(1:gr%mesh%np_part, 1:1))
-      end select
+      SAFE_ALLOCATE(hm%a_ind(1:gr%mesh%np_part, 1:gr%sb%dim))
+      SAFE_ALLOCATE(hm%b_ind(1:gr%mesh%np_part, 1:gr%sb%dim))
+
+      !(for dim = we could save some memory, but it is better to keep it simple)
     else
       nullify(hm%a_ind, hm%b_ind)
     end if

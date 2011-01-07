@@ -67,9 +67,9 @@ module v_ks_m
     v_ks_freeze_hxc
 
   integer, parameter, public :: &
-    sic_none   = 1,     &  ! no self-interaction correction
-    sic_pz     = 2,     &  ! Perdew-Zunger SIC (OEP way)
-    sic_amaldi = 3         ! Amaldi correction term
+    SIC_NONE   = 1,     &  ! no self-interaction correction
+    SIC_PZ     = 2,     &  ! Perdew-Zunger SIC (OEP way)
+    SIC_AMALDI = 3         ! Amaldi correction term
 
   type v_ks_calc_t
     logical                       :: calculating
@@ -77,8 +77,9 @@ module v_ks_m
     logical                       :: time_present
     FLOAT                         :: time
     logical                       :: calc_berry
-    FLOAT,                pointer :: rho(:, :)
-    FLOAT,                pointer :: total_rho(:)
+    FLOAT,                pointer :: density(:, :)
+    logical                       :: total_density_alloc
+    FLOAT,                pointer :: total_density(:)
     FLOAT                         :: amaldi_factor
   end type v_ks_calc_t
 
@@ -149,14 +150,14 @@ contains
 
     select case(ks%theory_level)
     case(INDEPENDENT_PARTICLES)
-      ks%sic_type = sic_none
+      ks%sic_type = SIC_NONE
     case(HARTREE)
       call messages_devel_version("Hartree theory level")
     case(HARTREE_FOCK)
       ! initialize XC modules
       call xc_init(ks%xc, gr%mesh%sb%dim, nel, dd%spin_channels, dd%cdft, hartree_fock=.true.)
       ks%xc_family = ks%xc%family
-      ks%sic_type = sic_none
+      ks%sic_type = SIC_NONE
 
     case(KOHN_SHAM_DFT)
       ! initialize XC modules
@@ -173,23 +174,23 @@ contains
         !%Description
         !% This variable controls which form of self-interaction correction to use. Note that
         !% this correction will be applied to the functional chosen by <tt>XCFunctional</tt>.
-        !% All except <tt>sic_none</tt> are development-version only.
+        !% All except <tt>sic_none</tt> are experimental only.
         !%Option sic_none 1
         !% No self-interaction correction.
         !%Option sic_pz 2
         !% Perdew-Zunger SIC, handled by the OEP technique.
         !%Option sic_amaldi 3
-        !% Amaldi correction term (NOT WORKING).
+        !% Amaldi correction term.
         !%End
         call parse_integer(datasets_check('SICCorrection'), sic_none, ks%sic_type)
         if(.not. varinfo_valid_option('SICCorrection', ks%sic_type)) call input_error('SICCorrection')
-        if(ks%sic_type .ne. sic_none) call messages_devel_version("self-interaction correction")
+        if(ks%sic_type .ne. SIC_NONE) call messages_devel_version("self-interaction correction")
 
         ! Perdew-Zunger corrections
-        if(ks%sic_type == sic_pz) ks%xc_family = ior(ks%xc_family, XC_FAMILY_OEP)
+        if(ks%sic_type == SIC_PZ) ks%xc_family = ior(ks%xc_family, XC_FAMILY_OEP)
       
       else
-        ks%sic_type = sic_none
+        ks%sic_type = SIC_NONE
       end if
 
       !%Variable XCTailCorrection
@@ -360,8 +361,7 @@ contains
     FLOAT,                   optional, intent(in)    :: time 
     logical,                 optional, intent(in)    :: calc_berry !use this before wfns initialized
     
-    FLOAT :: amaldi_factor, distance
-    integer :: ip, ispin
+    FLOAT :: distance
     type(profile_t), save :: prof
     
     ! The next line is a hack to be able to perform an IP/RPA calculation
@@ -395,42 +395,26 @@ contains
     hm%epot = M_ZERO
 
     ! check whether we should introduce the Amaldi SIC correction
-    amaldi_factor = M_ONE
-    if(ks%sic_type == sic_amaldi) amaldi_factor = (st%qtot - M_ONE)/st%qtot
+    ks%calc%amaldi_factor = M_ONE
+    if(ks%sic_type == SIC_AMALDI) ks%calc%amaldi_factor = (st%qtot - M_ONE)/st%qtot
 
-    if(ks%theory_level == INDEPENDENT_PARTICLES .or. amaldi_factor == M_ZERO) then
-      hm%vhxc     = M_ZERO
-      hm%epot     = M_ZERO
-      hm%ehartree = M_ZERO
-      hm%ex       = M_ZERO
-      hm%ec       = M_ZERO
-    else
+    if(ks%theory_level /= INDEPENDENT_PARTICLES .and. ks%calc%amaldi_factor /= M_ZERO) then
+
+      call calculate_density()
+
       ! The next 2 lines are a hack to be able to perform an IP/RPA calculation
       !if(RPA_first) then
       !  RPA_first = .false.
 
-        hm%ehartree = M_ZERO
-        call v_ks_hartree(ks, st, hm, amaldi_factor)
-
-        hm%vxc      = M_ZERO
-        if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) hm%vtau = M_ZERO
-        if(hm%d%cdft) hm%axc = M_ZERO
-        if(ks%theory_level .ne. HARTREE) call v_a_xc()
-
+!      hm%ehartree = M_ZERO
+!      call v_ks_hartree(ks, hm)
+      
+      hm%vxc      = M_ZERO
+      if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) hm%vtau = M_ZERO
+      if(hm%d%cdft) hm%axc = M_ZERO
+      if(ks%theory_level .ne. HARTREE) call v_a_xc()
+      
       !end if
-
-      ! Build Hartree + XC potential
-
-       forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vxc(ip, 1) + hm%vhartree(ip)
-
-      if(hm%d%ispin > UNPOLARIZED) then
-        forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 2) = hm%vxc(ip, 2) + hm%vhartree(ip)
-      end if
-
-      if(hm%d%ispin == SPINORS) then
-        forall(ispin = 3:4, ip = 1:ks%gr%mesh%np) hm%vhxc(ip, ispin) = hm%vxc(ip, ispin)
-      end if
-
     end if
 
     if(associated(hm%ep%E_field) .and. simul_box_is_periodic(ks%gr%mesh%sb)) then
@@ -446,6 +430,7 @@ contains
       call states_end(hm%st)
       call states_copy(hm%st, st)
     end if
+
     if(ks%theory_level == HARTREE_FOCK) then
       hm%exx_coef = ks%xc%exx_coef
     else if (ks%theory_level==HARTREE) then
@@ -462,18 +447,49 @@ contains
     POP_SUB(v_ks_calc_start)
 
   contains
+    
+    subroutine calculate_density()
+      integer :: ip
+
+      ! get density taking into account non-linear core corrections
+      SAFE_ALLOCATE(ks%calc%density(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
+      call states_total_density(st, ks%gr%fine%mesh, ks%calc%density)
+
+      ! Amaldi correction
+      if(ks%sic_type == SIC_AMALDI) then
+        ks%calc%density(1:ks%gr%fine%mesh%np, 1:st%d%nspin) = &
+          ks%calc%amaldi_factor*ks%calc%density(1:ks%gr%fine%mesh%np, 1:st%d%nspin)
+      end if
+
+      if(associated(st%rho_core) .or. hm%d%spin_channels > 1) then
+        ks%calc%total_density_alloc = .true.
+
+        SAFE_ALLOCATE(ks%calc%total_density(1:ks%gr%fine%mesh%np))
+
+        forall(ip = 1:ks%gr%fine%mesh%np)
+          ks%calc%total_density(ip) = sum(ks%calc%density(ip, 1:hm%d%spin_channels))
+        end forall
+
+        ! remove non-local core corrections
+        if(associated(st%rho_core)) then
+          forall(ip = 1:ks%gr%fine%mesh%np)
+            ks%calc%total_density(ip) = ks%calc%total_density(ip) - st%rho_core(ip)*ks%calc%amaldi_factor
+          end forall
+        end if
+      else
+        ks%calc%total_density_alloc = .false.
+        ks%calc%total_density => ks%calc%density(:, 1)
+      end if
+
+    end subroutine calculate_density
 
     ! ---------------------------------------------------------
     subroutine v_a_xc()
 
-      FLOAT, allocatable :: rho(:, :)
-      FLOAT, allocatable :: totalrho(:)
       type(profile_t), save :: prof
       FLOAT, pointer :: vxc(:, :)
-      FLOAT, allocatable :: vxcc(:), nxc(:)
-      integer :: ispin, ierr, ip, itmp, idim
-      character(len=10) :: vxc_name
-
+      integer :: ispin
+      !      integer :: ierr 
 
       PUSH_SUB(v_ks_calc_start.v_a_xc)
       call profiling_in(prof, "XC")
@@ -481,16 +497,6 @@ contains
       hm%ex = M_ZERO
       hm%ec = M_ZERO
       hm%exc_j = M_ZERO
-
-      ! get density taking into account non-linear core corrections, and the Amaldi SIC correction
-      SAFE_ALLOCATE(rho(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
-      
-      call states_total_density(st, ks%gr%fine%mesh, rho)
-
-      ! Amaldi correction
-      if(ks%sic_type == sic_amaldi) then
-        rho(1:ks%gr%fine%mesh%np, 1:st%d%nspin) = amaldi_factor * rho(1:ks%gr%fine%mesh%np, 1:st%d%nspin)
-      end if
 
       if(ks%gr%have_fine_mesh) then
         SAFE_ALLOCATE(vxc(1:ks%gr%fine%mesh%np_part, 1:st%d%nspin))
@@ -501,10 +507,10 @@ contains
 
       ! Get the *local* XC term
       if(hm%d%cdft) then
-        call xc_get_vxc_and_axc(ks%gr%fine%der, ks%xc, st, rho, st%current, st%d%ispin, hm%vxc, hm%axc, &
+        call xc_get_vxc_and_axc(ks%gr%fine%der, ks%xc, st, ks%calc%density, st%current, st%d%ispin, hm%vxc, hm%axc, &
              hm%ex, hm%ec, hm%exc_j, -minval(st%eigenval(st%nst, :)), st%qtot)
       else
-        call xc_get_vxc(ks%gr%fine%der, ks%xc, st, rho, st%d%ispin, hm%ex, hm%ec, &
+        call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%calc%density, st%d%ispin, hm%ex, hm%ec, &
              -minval(st%eigenval(st%nst, :)), st%qtot, vxc, vtau=hm%vtau)
       end if
 
@@ -512,10 +518,10 @@ contains
         ! The OEP family has to be handled specially
         if(iand(ks%xc_family, XC_FAMILY_OEP) .ne. 0) then
           if (states_are_real(st)) then
-            call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
+            call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
               ks%gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
           else
-            call zxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
+            call zxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
               ks%gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
           end if
         endif
@@ -526,67 +532,7 @@ contains
         endif
       end if
 
-      if(ks%tail_correction) then
-
-        SAFE_ALLOCATE(vxcc(1:ks%gr%fine%mesh%np_part))
-        SAFE_ALLOCATE(totalrho(1:ks%gr%fine%mesh%np))
-        
-        totalrho(:) = M_ZERO
-        do ip = 1, ks%gr%fine%mesh%np
-          do ispin= 1, st%d%nspin
-            totalrho(ip) = totalrho(ip) + rho(ip,ispin)
-          end do
-        end do
-        
-        do ispin = 1, st%d%nspin
-                    
-          vxcc(1:ks%gr%fine%mesh%np_part) = hm%vxc(1:ks%gr%fine%mesh%np_part, ispin)
-          
-         
-          
-          ! These output calls and the ones below are for debugging, XA and FB.
-          
-          !first we set the names of the output files
-
-          write (vxc_name,'(i10)') ispin
-          itmp = verify(vxc_name," ")
-          vxc_name =  "vxc"//trim(vxc_name(itmp:))
-          
-                              
-          !print the XC potential before the correction
-          
-          call doutput_function(output_axis_x, "./static", vxc_name, ks%gr%fine%mesh, vxcc, unit_one, ierr)
-          call doutput_function(output_axis_y, "./static", vxc_name, ks%gr%fine%mesh, vxcc, unit_one, ierr)
-          call doutput_function(output_axis_z, "./static", vxc_name, ks%gr%fine%mesh, vxcc, unit_one, ierr)
-
-          !Performing the correction to the "XC density" 
-          do ip = 1, ks%gr%fine%mesh%np
-            if( (rho(ip,ispin) .ne. M_ZERO) .and. (totalrho(ip) < ks%tail_correction_tol) ) then
-              distance = M_ZERO
-              do idim = 1,ks%gr%mesh%sb%dim 
-                distance = distance + ks%gr%fine%mesh%x(ip,idim)**2
-              end do
-              distance = sqrt(distance)
-              vxcc(ip) =  -1/distance
-            end if
-          end do
-          
-                    
-          !print the XC potential after the correction
-          !call doutput_function(output_axis_x, "./static", trim(nxc_name)//trim("cut") , ks%gr%fine%mesh, nxc, unit_one, ierr)
-          !call doutput_function(output_axis_x, "./static", trim(vxc_name)//trim("cut") , ks%gr%fine%mesh, vxcc, unit_one, ierr)
-          
-          hm%vxc(1:ks%gr%fine%mesh%np_part, ispin) = vxcc(1:ks%gr%fine%mesh%np_part)
-
-        end do
-
-        SAFE_DEALLOCATE_A(nxc)
-        SAFE_DEALLOCATE_A(vxcc)
-
-      end if
-
-      SAFE_DEALLOCATE_A(rho)
-      SAFE_DEALLOCATE_A(totalrho)
+      if(ks%tail_correction) call tail_correction(vxc)
       
       ! Now we calculate Int[n vxc] = hm%epot
       select case(hm%d%ispin)
@@ -616,13 +562,77 @@ contains
       call profiling_out(prof)
       POP_SUB(v_ks_calc_start.v_a_xc)
     end subroutine v_a_xc
+
+    !---------------------------------------------
+
+    subroutine tail_correction(vxc)
+      FLOAT, intent(inout) :: vxc(:, :)
+
+      integer :: ispin, ip, idim
+      FLOAT, allocatable :: vxcc(:), nxc(:)
+      !      integer :: ierr, itmp
+      !      character(len=10) :: vxc_name
+
+      SAFE_ALLOCATE(vxcc(1:ks%gr%fine%mesh%np_part))
+
+      do ispin = 1, st%d%nspin
+
+        vxcc(1:ks%gr%fine%mesh%np_part) = vxc(1:ks%gr%fine%mesh%np_part, ispin)
+
+
+        ! These output calls and the ones below are for debugging, XA and FB.
+
+        !first we set the names of the output files
+
+        !        write (vxc_name,'(i10)') ispin
+        !        itmp = verify(vxc_name," ")
+        !        vxc_name =  "vxc"//trim(vxc_name(itmp:))
+
+
+        !print the XC potential before the correction
+
+        !call doutput_function(output_axis_x, "./static", vxc_name, ks%gr%fine%mesh, vxcc, unit_one, ierr)
+        !call doutput_function(output_axis_y, "./static", vxc_name, ks%gr%fine%mesh, vxcc, unit_one, ierr)
+        !call doutput_function(output_axis_z, "./static", vxc_name, ks%gr%fine%mesh, vxcc, unit_one, ierr)
+
+        !Performing the correction to the "XC density" 
+        do ip = 1, ks%gr%fine%mesh%np
+          if( (ks%calc%density(ip, ispin) .ne. M_ZERO) .and. (ks%calc%total_density(ip) < ks%tail_correction_tol) ) then
+            distance = M_ZERO
+            do idim = 1,ks%gr%mesh%sb%dim 
+              distance = distance + ks%gr%fine%mesh%x(ip,idim)**2
+            end do
+            distance = sqrt(distance)
+            vxcc(ip) =  -1/distance
+          end if
+        end do
+
+
+        !print the XC potential after the correction
+        !call doutput_function(output_axis_x, "./static", trim(nxc_name)//trim("cut") , ks%gr%fine%mesh, nxc, unit_one, ierr)
+        !call doutput_function(output_axis_x, "./static", trim(vxc_name)//trim("cut") , ks%gr%fine%mesh, vxcc, unit_one, ierr)
+
+        vxc(1:ks%gr%fine%mesh%np_part, ispin) = vxcc(1:ks%gr%fine%mesh%np_part)
+
+      end do
+
+      SAFE_DEALLOCATE_A(nxc)
+      SAFE_DEALLOCATE_A(vxcc)
+
+    end subroutine tail_correction
+
   end subroutine v_ks_calc_start
   ! ---------------------------------------------------------
 
   subroutine v_ks_calc_finish(ks)
     type(v_ks_t),        intent(inout) :: ks
 
+    type(hamiltonian_t), pointer :: hm
+    integer :: ip, ispin
+
     PUSH_SUB(v_ks_calc_finish)
+
+    hm => ks%calc%hm
 
     if(ks%frozen_hxc) then
       POP_SUB(v_ks_calc_finish)
@@ -632,10 +642,44 @@ contains
     ASSERT(ks%calc%calculating)
     ks%calc%calculating = .false.
 
+    if(ks%theory_level == INDEPENDENT_PARTICLES .or. ks%calc%amaldi_factor == M_ZERO) then
+
+      hm%vhxc     = M_ZERO
+      hm%epot     = M_ZERO
+      hm%ehartree = M_ZERO
+      hm%ex       = M_ZERO
+      hm%ec       = M_ZERO
+
+    else
+
+      hm%ehartree = M_ZERO
+      call v_ks_hartree(ks, hm)
+
+      ! Build Hartree + XC potential
+      forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vxc(ip, 1) + hm%vhartree(ip)
+      
+      if(hm%d%ispin > UNPOLARIZED) then
+        forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 2) = hm%vxc(ip, 2) + hm%vhartree(ip)
+      end if
+      
+      ! FIXME: this next lines do nothing. Perhaps there is something missing?
+      if(hm%d%ispin == SPINORS) then
+        forall(ispin = 3:4, ip = 1:ks%gr%mesh%np) hm%vhxc(ip, ispin) = hm%vxc(ip, ispin)
+      end if
+
+    end if
+
     if(ks%calc%time_present) then
       call hamiltonian_update(ks%calc%hm, ks%gr%mesh, ks%calc%time)
     else
       call hamiltonian_update(ks%calc%hm, ks%gr%mesh)
+    end if
+
+    nullify(ks%calc%hm)
+
+    SAFE_DEALLOCATE_P(ks%calc%density)
+    if(ks%calc%total_density_alloc) then
+      SAFE_DEALLOCATE_P(ks%calc%total_density)
     end if
 
     POP_SUB(v_ks_calc_finish)
@@ -643,38 +687,15 @@ contains
 
   ! ---------------------------------------------------------
   ! Hartree contribution to the XC potential
-  subroutine v_ks_hartree(ks, st, hm, amaldi_factor)
+  subroutine v_ks_hartree(ks, hm)
     type(v_ks_t),        intent(inout) :: ks
     type(hamiltonian_t), intent(inout) :: hm
-    type(states_t),      intent(in)    :: st
-    FLOAT, optional,     intent(in)    :: amaldi_factor
 
-    FLOAT, allocatable :: rho(:)
     FLOAT, pointer :: pot(:)
-    integer :: is, ip
 
     PUSH_SUB(v_ks_hartree)
 
     ASSERT(associated(ks%hartree_solver))
-
-    SAFE_ALLOCATE(rho(1:ks%gr%fine%mesh%np))
-
-    ! calculate the total density
-    call lalg_copy(ks%gr%fine%mesh%np, st%rho(:, 1), rho)
-
-    do is = 2, hm%d%spin_channels
-      forall(ip = 1:ks%gr%fine%mesh%np) rho(ip) = rho(ip) + st%rho(ip, is)
-    end do
-
-    ! Add, if it exists, the frozen density from the inner orbitals.
-    if(associated(st%frozen_rho)) then
-      do is = 1, hm%d%spin_channels
-        forall(ip = 1:ks%gr%fine%mesh%np) rho(ip) = rho(ip) + st%frozen_rho(ip, is)
-      end do
-    end if
-
-    ! Amaldi correction
-    if(present(amaldi_factor)) rho = amaldi_factor*rho
 
     if(.not. ks%gr%have_fine_mesh) then
       pot => hm%vhartree
@@ -684,10 +705,10 @@ contains
     end if
 
     ! solve the Poisson equation
-    call dpoisson_solve(ks%hartree_solver, pot, rho)
+    call dpoisson_solve(ks%hartree_solver, pot, ks%calc%total_density)
     
     ! Get the Hartree energy
-    hm%ehartree = M_HALF * dmf_dotp(ks%gr%fine%mesh, rho, pot)
+    hm%ehartree = M_HALF*dmf_dotp(ks%gr%fine%mesh, ks%calc%total_density, pot)
 
     if(ks%gr%have_fine_mesh) then
       ! we use injection to transfer to the fine grid, we cannot use
@@ -702,11 +723,10 @@ contains
 
     if (poisson_get_solver(ks%hartree_solver) == POISSON_SETE) then !SEC
       hm%ehartree=hm%ehartree + poisson_energy(ks%hartree_solver)
-      write(89,*) hm%ehartree*CNST(2.0*13.60569193), poisson_energy(ks%hartree_solver)*CNST(2.0*13.60569193), &
-        hm%ep%eii*CNST(2.0*13.60569193)
+      write(89,*) hm%ehartree*CNST(2.0)*CNST(13.60569193), poisson_energy(ks%hartree_solver)*CNST(2.0)*CNST(13.60569193), &
+        hm%ep%eii*CNST(2.0)*CNST(13.60569193)
     endif
 
-    SAFE_DEALLOCATE_A(rho)
     POP_SUB(v_ks_hartree)
   end subroutine v_ks_hartree
   ! ---------------------------------------------------------
