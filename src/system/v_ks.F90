@@ -81,6 +81,7 @@ module v_ks_m
     FLOAT,                pointer :: total_density(:)
     FLOAT                         :: amaldi_factor
     type(energy_t),       pointer :: energy
+    type(states_t),       pointer :: hf_st
   end type v_ks_calc_t
 
   type v_ks_t
@@ -420,14 +421,9 @@ contains
     endif
 
     if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK) then
-      call states_end(hm%st)
-      call states_copy(hm%st, st)
-    end if
-
-    if(ks%theory_level == HARTREE_FOCK) then
-      hm%exx_coef = ks%xc%exx_coef
-    else if (ks%theory_level==HARTREE) then
-      hm%exx_coef = M_ONE
+      SAFE_ALLOCATE(ks%calc%hf_st)
+      call states_null(ks%calc%hf_st)
+      call states_copy(ks%calc%hf_st, st)
     end if
 
     ! Calculate the vector potential induced by the electronic current.
@@ -660,6 +656,21 @@ contains
       ! FIXME: this next lines do nothing. Perhaps there is something missing?
       if(hm%d%ispin == SPINORS) then
         forall(ispin = 3:4, ip = 1:ks%gr%mesh%np) hm%vhxc(ip, ispin) = hm%vxc(ip, ispin)
+      end if
+
+      if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK) then
+
+        ! swap the states object
+        call states_end(hm%hf_st)
+        SAFE_DEALLOCATE_P(hm%hf_st)
+        hm%hf_st => ks%calc%hf_st
+
+        select  case(ks%theory_level)
+        case(HARTREE_FOCK)
+          hm%exx_coef = ks%xc%exx_coef
+        case(HARTREE)
+          hm%exx_coef = M_ONE
+        end select
       end if
 
     end if

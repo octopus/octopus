@@ -157,7 +157,7 @@ module hamiltonian_m
     FLOAT :: mass_scaling(MAX_DIM)
 
     ! For the Hartree-Fock Hamiltonian, the Fock operator depends on the states.
-    type(states_t) :: st
+    type(states_t), pointer :: hf_st
     
     ! There may be an "inhomogeneous", "source", or "forcing" term (useful for the OCT formalism)
     logical :: inh_term
@@ -379,7 +379,8 @@ contains
         call parse_block_end(blk)
     end if
 
-    call states_null(hm%st)
+    SAFE_ALLOCATE(hm%hf_st)
+    call states_null(hm%hf_st)
 
     hm%inh_term = .false.
     call hamiltonian_remove_oct_exchange(hm)
@@ -734,7 +735,8 @@ contains
     end if
 
     call states_dim_end(hm%d)
-    call states_end(hm%st)
+    call states_end(hm%hf_st)
+    SAFE_DEALLOCATE_P(hm%hf_st)
 
     SAFE_DEALLOCATE_P(hm%energy)
 

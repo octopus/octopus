@@ -52,6 +52,7 @@ module states_dim_m
 
   public ::                           &
     states_dim_t,                     &
+    states_dim_null,                  &
     states_dim_copy,                  &
     states_dim_end,                   &
     is_spin_down,                     &
@@ -93,6 +94,19 @@ module states_dim_m
   end type states_dim_t
 
 contains
+
+  ! ---------------------------------------------------------
+  subroutine states_dim_null(this)
+    type(states_dim_t), intent(inout) :: this
+
+    PUSH_SUB(states_dim_null)
+
+    nullify(this%kweights)
+    call distributed_nullify(this%kpt)
+
+    POP_SUB(states_dim_null)
+  end subroutine states_dim_null
+
 
   ! ---------------------------------------------------------
   subroutine states_dim_copy(dout, din)

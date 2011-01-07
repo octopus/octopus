@@ -188,15 +188,18 @@ contains
     end do
     nullify(st%ob_eigenval, st%ob_occ)
     nullify(st%occ, st%spin, st%node, st%user_def_states)
-    nullify(st%d%kweights, st%ob_d%kweights)
     nullify(st%st_range, st%st_num)
     nullify(st%psib, st%iblock, st%block_is_local)
+    nullify(st%ap%schedule)
+
+    st%parallel_in_states = .false.
 
     ! By default, calculations use real wavefunctions
     st%priv%wfs_type = TYPE_FLOAT
 
     st%block_initialized = .false.
-
+    call states_dim_null(st%d)
+    call states_dim_null(st%ob_d)
     call modelmb_particles_nullify(st%modelmbparticles)
 
     POP_SUB(states_null)
@@ -1309,18 +1312,14 @@ return
     end if
 
     SAFE_DEALLOCATE_P(st%zphi)
-
     call states_dim_end(st%d)
-    if(st%open_boundaries) then
-      call states_dim_end(st%ob_d)
-      SAFE_DEALLOCATE_P(st%ob_eigenval)
-      SAFE_DEALLOCATE_P(st%ob_occ)
-      do il = 1, NLEADS
-        SAFE_DEALLOCATE_P(st%ob_lead(il)%self_energy)
-      end do
-    end if
 
-    SAFE_DEALLOCATE_P(st%user_def_states)
+    call states_dim_end(st%ob_d)
+    SAFE_DEALLOCATE_P(st%ob_eigenval)
+    SAFE_DEALLOCATE_P(st%ob_occ)
+    do il = 1, NLEADS
+      SAFE_DEALLOCATE_P(st%ob_lead(il)%self_energy)
+    end do
 
     call modelmb_particles_end(st%modelmbparticles)
 

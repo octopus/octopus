@@ -60,14 +60,18 @@ contains
   ! ---------------------------------------------------------
   subroutine distributed_nullify(this, total)
     type(distributed_t), intent(out) :: this
-    integer,             intent(in)  :: total
+    integer, optional,   intent(in)  :: total
 
     PUSH_SUB(distributed_nullify)
 
     this%start           = 1
-    this%end             = total
-    this%nlocal          = total
-    this%nglobal         = total
+
+    if(present(total)) then
+      this%end             = total
+      this%nlocal          = total
+      this%nglobal         = total
+    end if
+
     this%parallel        = .false.
     nullify(this%node, this%range, this%num)
     call mpi_grp_init(this%mpi_grp, -1)

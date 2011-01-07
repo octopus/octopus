@@ -334,8 +334,8 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik)
   SAFE_ALLOCATE(rho(1:der%mesh%np))
   SAFE_ALLOCATE(pot(1:der%mesh%np))
 
-  do jst = 1, hm%st%nst
-    if(hm%st%occ(jst, ik) <= M_ZERO) cycle
+  do jst = 1, hm%hf_st%nst
+    if(hm%hf_st%occ(jst, ik) <= M_ZERO) cycle
 
     ! in Hartree we just remove the self-interaction
     if(hm%theory_level == HARTREE .and. jst .ne. ist) cycle
@@ -343,20 +343,20 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik)
     pot = M_ZERO
     rho = M_ZERO
 
-    do idim = 1, hm%st%d%dim
+    do idim = 1, hm%hf_st%d%dim
       forall(ip = 1:der%mesh%np)
-        rho(ip) = rho(ip) + R_CONJ(hm%st%X(psi)(ip, idim, jst, ik))*psi(ip, idim)
+        rho(ip) = rho(ip) + R_CONJ(hm%hf_st%X(psi)(ip, idim, jst, ik))*psi(ip, idim)
       end forall
     end do
     
     call X(poisson_solve)(psolver, pot, rho)
 
-    ff = hm%st%occ(jst, ik)
+    ff = hm%hf_st%occ(jst, ik)
     if(hm%d%ispin == UNPOLARIZED) ff = M_HALF*ff
 
-    do idim = 1, hm%st%d%dim
+    do idim = 1, hm%hf_st%d%dim
       forall(ip = 1:der%mesh%np)
-        hpsi(ip, idim) = hpsi(ip, idim) - hm%exx_coef*ff*hm%st%X(psi)(ip, idim, jst, ik)*pot(ip)
+        hpsi(ip, idim) = hpsi(ip, idim) - hm%exx_coef*ff*hm%hf_st%X(psi)(ip, idim, jst, ik)*pot(ip)
       end forall
     end do
 
