@@ -1280,15 +1280,15 @@ contains
     end if
 
     call write_iter_start(out_energy)
-    call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%etot+ke), 1)
+    call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%energy%total+ke), 1)
     call write_iter_double(out_energy, units_from_atomic(units_out%energy, ke), 1)
     call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%ep%eii), 1)
-    call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%etot-hm%ep%eii), 1)
-    call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%eeigen), 1)
-    call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%ehartree), 1)
-    call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%epot), 1)
-    call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%ex), 1)
-    call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%ec), 1)
+    call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%energy%total-hm%ep%eii), 1)
+    call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%energy%eigenvalues), 1)
+    call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%energy%hartree), 1)
+    call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%energy%intnvxc), 1)
+    call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%energy%exchange), 1)
+    call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%energy%correlation), 1)
     call write_iter_nl(out_energy)
 
     POP_SUB(td_write_energy)

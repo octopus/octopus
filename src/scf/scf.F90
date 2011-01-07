@@ -643,7 +643,7 @@ contains
         write(str, '(a,i5)') 'SCF CYCLE ITER #' ,iter
         call messages_print_stress(stdout, trim(str))
 
-        write(message(1),'(a,es15.8,2(a,es9.2))') ' etot = ', units_from_atomic(units_out%energy, hm%etot), &
+        write(message(1),'(a,es15.8,2(a,es9.2))') ' etot = ', units_from_atomic(units_out%energy, hm%energy%total), &
              ' abs_ev   = ', units_from_atomic(units_out%energy, scf%abs_ev), ' rel_ev   = ', scf%rel_ev
         write(message(2),'(23x,2(a,es9.2))') &
              ' abs_dens = ', scf%abs_dens, ' rel_dens = ', scf%rel_dens
@@ -697,14 +697,14 @@ contains
         if (scf%conv_abs_force > M_ZERO) then
         write(message(1),'(a,i4,a,es15.8, 2(a,es9.2), a, f7.1, a)') &
              'iter ', iter, &
-             ' : etot ', units_from_atomic(units_out%energy, hm%etot), &
+             ' : etot ', units_from_atomic(units_out%energy, hm%energy%total), &
              ' : abs_dens', scf%abs_dens, &
              ' : force ', units_from_atomic(units_out%force, scf%abs_force), &
              ' : etime ', etime, 's'
         else
         write(message(1),'(a,i4,a,es15.8, a,es9.2, a, f7.1, a)') &
              'iter ', iter, &
-             ' : etot ', units_from_atomic(units_out%energy, hm%etot), &
+             ' : etot ', units_from_atomic(units_out%energy, hm%energy%total), &
              ' : abs_dens', scf%abs_dens, &
              ' : etime ', etime, 's'
         end if

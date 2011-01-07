@@ -92,7 +92,7 @@ contains
       end if
 
       ! Get the Hartree energy
-      E_Hartree = hm%ehartree
+      E_Hartree = hm%energy%hartree
 
       ! Get exchange-correlation energies
       ! (this is probably already calculated, but for the moment I will leave it here, XA)

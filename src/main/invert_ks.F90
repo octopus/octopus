@@ -75,10 +75,10 @@ contains
        
     call read_target_rho()
 
-    hm%epot     = M_ZERO
-    hm%ehartree = M_ZERO
-    hm%ex       = M_ZERO
-    hm%ec       = M_ZERO
+    hm%energy%intnvxc     = M_ZERO
+    hm%energy%hartree = M_ZERO
+    hm%energy%exchange       = M_ZERO
+    hm%energy%correlation       = M_ZERO
     hm%vxc      = M_ZERO
 
     ! calculate total density

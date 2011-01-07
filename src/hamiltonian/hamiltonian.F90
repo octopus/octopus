@@ -93,12 +93,28 @@ module hamiltonian_m
     hamiltonian_get_time,            &
     hamiltonian_apply_packed
 
+  type energy_t
+    ! Energies
+    FLOAT :: total       !< Total energy E = Eii + Sum[Eigenvalues] - U + Ex + Ec - Int[n v_xc]
+    FLOAT :: eigenvalues !< Sum[Eigenvalues]
+    FLOAT :: exchange 
+    FLOAT :: correlation
+    FLOAT :: xc_j
+    FLOAT :: intnvxc     !< Int[n vxc]   
+    FLOAT :: hartree     !< Hartree      U = (1/2)*Int [n v_Hartree]
+    FLOAT :: kinetic     !< Kinetic energy of the non-interacting (KS) system of electrons
+    FLOAT :: extern      !< External     V = <Phi|V|Phi> = Int[n v] (if no non-local pseudos exist)
+    FLOAT :: entropy
+    FLOAT :: ts          !< TS
+    FLOAT :: berry       !< Berry energy correction = -mu.E - <Vberry>
+  end type energy_t
+
   type hamiltonian_t
     ! The Hamiltonian must know what are the "dimensions" of the spaces,
     ! in order to be able to operate on the states.
-    type(states_dim_t) :: d
+    type(states_dim_t)       :: d
     type(hamiltonian_base_t) :: hm_base
-
+    type(energy_t)           :: energy
     FLOAT, pointer :: vhartree(:) ! Hartree potential
     FLOAT, pointer :: vxc(:,:)    ! XC potential
     FLOAT, pointer :: vhxc(:,:)   ! XC potential + Hartree potential
@@ -112,20 +128,6 @@ module hamiltonian_m
     logical :: self_induced_magnetic
     FLOAT, pointer :: a_ind(:, :)
     FLOAT, pointer :: b_ind(:, :)
-
-    ! Energies
-    FLOAT :: etot,    &  ! Total energy E = Eii + Sum[Eigenvalues] - U + Ex + Ec - Int[n v_xc]
-             eeigen,  &  ! Sum[Eigenvalues]
-             ex,      &  ! Exchange     Ex
-             ec,      &  ! Correlation  Ec
-             exc_j,   &  ! 
-             epot,    &  ! Int[n vxc]   
-             ehartree,&  ! Hartree      U = (1/2)*Int [n v_Hartree]
-             t0,      &  ! Kinetic energy of the non-interacting (KS) system of electrons
-             eext,    &  ! External     V = <Phi|V|Phi> = Int[n v] (if no non-local pseudos exist)
-             entropy, &  ! Entropy
-             TS,      &  ! TS
-             eberry      ! Berry energy correction = -mu.E - <Vberry>
 
     integer :: theory_level    ! copied from sys%ks
     integer :: xc_family       ! copied from sys%ks
@@ -218,13 +220,13 @@ contains
     hm%hm_base%kinetic => gr%der%lapl
 
     ! initialize variables
-    hm%epot = M_ZERO
-    hm%ex = M_ZERO
-    hm%ec = M_ZERO
-    hm%etot = M_ZERO
+    hm%energy%intnvxc = M_ZERO
+    hm%energy%exchange = M_ZERO
+    hm%energy%correlation = M_ZERO
+    hm%energy%total = M_ZERO
 
     nullify(hm%oct_fxc)
-    hm%t0 = M_ZERO
+    hm%energy%kinetic = M_ZERO
 
     ! allocate potentials and density of the cores
     ! In the case of spinors, vxc_11 = hm%vxc(:, 1), vxc_22 = hm%vxc(:, 2), Re(vxc_12) = hm%vxc(:. 3);

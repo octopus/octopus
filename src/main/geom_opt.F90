@@ -328,7 +328,7 @@ contains
       end do
       objective = sqrt(objective)
     else
-      objective = g_opt%hm%etot
+      objective = g_opt%hm%energy%total
     end if
 
     POP_SUB(calc_point)

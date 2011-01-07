@@ -663,10 +663,10 @@ contains
     
     ks_inversion%aux_st%rho = st%rho
 
-    ks_inversion%aux_hm%epot     = M_ZERO
-    ks_inversion%aux_hm%ehartree = M_ZERO
-    ks_inversion%aux_hm%ex       = M_ZERO
-    ks_inversion%aux_hm%ec       = M_ZERO
+    ks_inversion%aux_hm%energy%intnvxc     = M_ZERO
+    ks_inversion%aux_hm%energy%hartree     = M_ZERO
+    ks_inversion%aux_hm%energy%exchange    = M_ZERO
+    ks_inversion%aux_hm%energy%correlation = M_ZERO
     
     ks_inversion%aux_hm%vhartree = hm%vhartree
 

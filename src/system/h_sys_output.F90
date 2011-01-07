@@ -653,7 +653,7 @@ contains
         dens**(M_FIVE/M_THREE)
 
       ! add XC pressure
-      pressure(ii) = pressure(ii) + (dens*hm%vxc(ii,1) - hm%ex - hm%ec)
+      pressure(ii) = pressure(ii) + (dens*hm%vxc(ii,1) - hm%energy%exchange - hm%energy%correlation)
 
       pressure(ii) = pressure(ii)/p_tf
       pressure(ii) = M_HALF*(M_ONE + pressure(ii)/sqrt(M_ONE + pressure(ii)**2))

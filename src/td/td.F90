@@ -334,14 +334,14 @@ contains
       if(td%dynamics /= CP) then 
         write(message(1), '(i7,1x,2f14.6,i10,f14.3)') iter, &
              units_from_atomic(units_out%time, iter*td%dt), &
-             units_from_atomic(units_out%energy, hm%etot + geo%kinetic_energy), &
+             units_from_atomic(units_out%energy, hm%energy%total + geo%kinetic_energy), &
              scsteps, loct_clock() - etime
       else
         write(message(1), '(i7,1x,3f14.6,f14.3, i10)') iter, &
              units_from_atomic(units_out%time, iter*td%dt), &
-             units_from_atomic(units_out%energy, hm%etot + geo%kinetic_energy), &
+             units_from_atomic(units_out%energy, hm%energy%total + geo%kinetic_energy), &
              units_from_atomic(units_out%energy, &
-                hm%etot + geo%kinetic_energy + cpmd_electronic_energy(td%cp_propagator)), &
+                hm%energy%total + geo%kinetic_energy + cpmd_electronic_energy(td%cp_propagator)), &
              loct_clock() - etime
       end if
       call write_info(1)

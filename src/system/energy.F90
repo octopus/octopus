@@ -76,87 +76,89 @@ contains
     full_ = .false.
     if(present(full)) full_ = full
 
-    hm%eeigen = states_eigenvalues_sum(st)
+    hm%energy%eigenvalues = states_eigenvalues_sum(st)
 
     select case(hm%theory_level)
     case(INDEPENDENT_PARTICLES)
-      hm%etot   = hm%ep%eii + hm%eeigen
+      hm%energy%total   = hm%ep%eii + hm%energy%eigenvalues
 
     case(HARTREE)
       if(states_are_real(st)) then
-        hm%t0     = delectronic_kinetic_energy(hm, gr, st)
-        hm%eext   = delectronic_external_energy(hm, gr, st)
+        hm%energy%kinetic     = delectronic_kinetic_energy(hm, gr, st)
+        hm%energy%extern   = delectronic_external_energy(hm, gr, st)
       else
-        hm%t0     = zelectronic_kinetic_energy(hm, gr, st)
-        hm%eext   = zelectronic_external_energy(hm, gr, st)
+        hm%energy%kinetic     = zelectronic_kinetic_energy(hm, gr, st)
+        hm%energy%extern   = zelectronic_external_energy(hm, gr, st)
       end if
-      hm%etot = hm%ep%eii + M_HALF * (hm%eeigen + hm%t0 + hm%eext)
+      hm%energy%total = hm%ep%eii + M_HALF * (hm%energy%eigenvalues + hm%energy%kinetic + hm%energy%extern)
 
     case(HARTREE_FOCK)
       if(states_are_real(st)) then
-        hm%t0     = delectronic_kinetic_energy(hm, gr, st)
-        hm%eext   = delectronic_external_energy(hm, gr, st)
+        hm%energy%kinetic     = delectronic_kinetic_energy(hm, gr, st)
+        hm%energy%extern   = delectronic_external_energy(hm, gr, st)
       else
-        hm%t0     = zelectronic_kinetic_energy(hm, gr, st)
-        hm%eext   = zelectronic_external_energy(hm, gr, st)
+        hm%energy%kinetic     = zelectronic_kinetic_energy(hm, gr, st)
+        hm%energy%extern   = zelectronic_external_energy(hm, gr, st)
       end if
-      hm%etot = hm%ep%eii + M_HALF * (hm%eeigen + hm%t0 + hm%eext - hm%epot) + hm%ec
+      hm%energy%total = hm%ep%eii + &
+        M_HALF*(hm%energy%eigenvalues + hm%energy%kinetic + hm%energy%extern - hm%energy%intnvxc) + hm%energy%correlation
 
     case(KOHN_SHAM_DFT)
       if(full_) then
         if(states_are_real(st)) then
-          hm%t0     = delectronic_kinetic_energy(hm, gr, st)
-          hm%eext   = delectronic_external_energy(hm, gr, st)
+          hm%energy%kinetic     = delectronic_kinetic_energy(hm, gr, st)
+          hm%energy%extern   = delectronic_external_energy(hm, gr, st)
         else
-          hm%t0     = zelectronic_kinetic_energy(hm, gr, st)
-          hm%eext   = zelectronic_external_energy(hm, gr, st)
+          hm%energy%kinetic     = zelectronic_kinetic_energy(hm, gr, st)
+          hm%energy%extern   = zelectronic_external_energy(hm, gr, st)
         end if
       end if
-      hm%etot = hm%ep%eii + hm%eeigen - hm%ehartree + hm%ex + hm%ec - hm%epot
+      hm%energy%total = hm%ep%eii + hm%energy%eigenvalues &
+        - hm%energy%hartree + hm%energy%exchange + hm%energy%correlation - hm%energy%intnvxc
 
     end select
     
-    hm%entropy = smear_calc_entropy(st%smear, st%eigenval, st%d%nik, st%nst, st%d%kweights, st%occ)
+    hm%energy%entropy = smear_calc_entropy(st%smear, st%eigenval, st%d%nik, st%nst, st%d%kweights, st%occ)
     if(st%smear%method == SMEAR_FIXED_OCC) then ! no temperature available
-      hm%TS = M_ZERO
+      hm%energy%TS = M_ZERO
     else
-      hm%TS = st%smear%dsmear * hm%entropy
+      hm%energy%TS = st%smear%dsmear * hm%energy%entropy
     endif
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
-      hm%etot = hm%etot + gauge_field_get_energy(hm%ep%gfield, gr%sb)
+      hm%energy%total = hm%energy%total + gauge_field_get_energy(hm%ep%gfield, gr%sb)
     end if
 
     if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb)) then
-      hm%eberry = berry_energy_correction(st, gr%mesh, &
+      hm%energy%berry = berry_energy_correction(st, gr%mesh, &
         hm%ep%E_field(1:gr%sb%periodic_dim), hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
-      hm%etot = hm%etot + hm%eberry
+      hm%energy%total = hm%energy%total + hm%energy%berry
     else
-      hm%eberry = M_ZERO
+      hm%energy%berry = M_ZERO
     endif
 
     if (iunit > 0) then
-      write(message(1), '(6x,a, f18.8)')'Total       = ', units_from_atomic(units_out%energy, hm%etot)
-      write(message(2), '(6x,a, f18.8)')'Free        = ', units_from_atomic(units_out%energy, hm%etot - hm%TS)
+      write(message(1), '(6x,a, f18.8)')'Total       = ', units_from_atomic(units_out%energy, hm%energy%total)
+      write(message(2), '(6x,a, f18.8)')'Free        = ', units_from_atomic(units_out%energy, hm%energy%total - hm%energy%TS)
       write(message(3), '(6x,a)') '-----------'
       call write_info(3, iunit)
 
       write(message(1), '(6x,a, f18.8)')'Ion-ion     = ', units_from_atomic(units_out%energy, hm%ep%eii)
-      write(message(2), '(6x,a, f18.8)')'Eigenvalues = ', units_from_atomic(units_out%energy, hm%eeigen)
-      write(message(3), '(6x,a, f18.8)')'Hartree     = ', units_from_atomic(units_out%energy, hm%ehartree)
-      write(message(4), '(6x,a, f18.8)')'Int[n*v_xc] = ', units_from_atomic(units_out%energy, hm%epot)
-      write(message(5), '(6x,a, f18.8)')'Exchange    = ', units_from_atomic(units_out%energy, hm%ex)
-      write(message(6), '(6x,a, f18.8)')'Correlation = ', units_from_atomic(units_out%energy, hm%ec)
-      write(message(7), '(6x,a, f18.8)')'Entropy     = ', hm%entropy ! the dimensionless sigma of Kittel&Kroemer
-      write(message(8), '(6x,a, f18.8)')'-TS         = ', -units_from_atomic(units_out%energy, hm%TS)
+      write(message(2), '(6x,a, f18.8)')'Eigenvalues = ', units_from_atomic(units_out%energy, hm%energy%eigenvalues)
+      write(message(3), '(6x,a, f18.8)')'Hartree     = ', units_from_atomic(units_out%energy, hm%energy%hartree)
+      write(message(4), '(6x,a, f18.8)')'Int[n*v_xc] = ', units_from_atomic(units_out%energy, hm%energy%intnvxc)
+      write(message(5), '(6x,a, f18.8)')'Exchange    = ', units_from_atomic(units_out%energy, hm%energy%exchange)
+      write(message(6), '(6x,a, f18.8)')'Correlation = ', units_from_atomic(units_out%energy, hm%energy%correlation)
+      write(message(7), '(6x,a, f18.8)')'Entropy     = ', hm%energy%entropy ! the dimensionless sigma of Kittel&Kroemer
+      write(message(8), '(6x,a, f18.8)')'-TS         = ', -units_from_atomic(units_out%energy, hm%energy%TS)
       call write_info(8, iunit)
       if(full_) then
-        write(message(1), '(6x,a, f18.8)')'Kinetic     = ', units_from_atomic(units_out%energy, hm%t0)
-        write(message(2), '(6x,a, f18.8)')'External    = ', units_from_atomic(units_out%energy, hm%eext)
+        write(message(1), '(6x,a, f18.8)')'Kinetic     = ', units_from_atomic(units_out%energy, hm%energy%kinetic)
+        write(message(2), '(6x,a, f18.8)')'External    = ', units_from_atomic(units_out%energy, hm%energy%extern)
         call write_info(2, iunit)
       end if
       if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb)) then
-        write(message(1), '(6x,a, f18.8)')'Berry       = ', units_from_atomic(units_out%energy, hm%eberry)
+        write(message(1), '(6x,a, f18.8)')'Berry       = ', units_from_atomic(units_out%energy, hm%energy%berry)
         call write_info(1, iunit)
       endif  
     end if
