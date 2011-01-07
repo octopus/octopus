@@ -32,7 +32,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
   type(xc_t),          intent(in)    :: xcs
   logical,             intent(in)    :: apply_sic_pz
   type(grid_t),        intent(inout) :: gr
-  type(hamiltonian_t), intent(inout) :: hm
+  type(hamiltonian_t), intent(in)    :: hm
   type(states_t),      intent(inout) :: st
   FLOAT,               intent(inout) :: ex, ec
   FLOAT, optional,     intent(inout) :: vxc(:,:) !vxc(gr%mesh%np, st%d%nspin)
@@ -121,7 +121,7 @@ end subroutine X(xc_OEP_calc)
 ! ---------------------------------------------------------
 subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   type(grid_t),        intent(inout) :: gr
-  type(hamiltonian_t), intent(inout) :: hm
+  type(hamiltonian_t), intent(in)    :: hm
   type(states_t),      intent(in)    :: st
   integer,             intent(in)    :: is
   FLOAT,               intent(inout) :: vxc(:) ! vxc(gr%mesh%np)

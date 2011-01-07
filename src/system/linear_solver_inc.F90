@@ -24,7 +24,7 @@
 ! ---------------------------------------------------------
 subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, tol, occ_response)
   type(linear_solver_t), target, intent(inout) :: this
-  type(hamiltonian_t),   target, intent(inout) :: hm
+  type(hamiltonian_t),   target, intent(in)    :: hm
   type(grid_t),          target, intent(inout) :: gr
   type(states_t),        target, intent(in)    :: st
   integer,                       intent(in)    :: ist
@@ -136,7 +136,7 @@ end function X(ls_dotp_qmr)
 !Conjugate gradients
 subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, shift, tol)
   type(linear_solver_t), intent(inout) :: ls
-  type(hamiltonian_t),   intent(inout) :: hm
+  type(hamiltonian_t),   intent(in)    :: hm
   type(grid_t),          intent(inout) :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
@@ -212,7 +212,7 @@ end subroutine X(ls_solver_cg)
 !see http://math.nist.gov/iml++/bicgstab.h.txt
 subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol, occ_response)
   type(linear_solver_t), intent(inout) :: ls
-  type(hamiltonian_t),   intent(inout) :: hm
+  type(hamiltonian_t),   intent(in)    :: hm
   type(grid_t),          intent(inout) :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
@@ -346,7 +346,7 @@ end subroutine X(ls_solver_bicgstab)
 ! ---------------------------------------------------------
 subroutine X(ls_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, shift, tol)
   type(linear_solver_t), intent(inout) :: ls
-  type(hamiltonian_t),   intent(inout) :: hm
+  type(hamiltonian_t),   intent(in)    :: hm
   type(grid_t),          intent(inout) :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
@@ -431,7 +431,7 @@ end subroutine X(ls_solver_multigrid)
 ! ---------------------------------------------------------
 ! This routine applies the operator hx = [H (+ Q) + shift] x
 subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, shift, x, hx)
-  type(hamiltonian_t),   intent(inout) :: hm
+  type(hamiltonian_t),   intent(in)    :: hm
   type(grid_t),          intent(inout) :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
@@ -571,7 +571,7 @@ end subroutine X(ls_preconditioner)
 ! ---------------------------------------------------------
 subroutine X(ls_solver_sos) (ls, hm, gr, st, ist, ik, x, y, shift)
   type(linear_solver_t),          intent(inout) :: ls
-  type(hamiltonian_t),            intent(inout) :: hm
+  type(hamiltonian_t),            intent(in)    :: hm
   type(grid_t),                   intent(inout) :: gr
   type(states_t),                 intent(in)    :: st
   integer,                        intent(in)    :: ist
