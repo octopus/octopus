@@ -94,7 +94,8 @@ module hamiltonian_m
     hamiltonian_apply_packed
 
   public ::                          &
-    energy_t
+    energy_t,                        &
+    energy_copy
   
   type energy_t
     ! Energies
@@ -229,9 +230,9 @@ contains
     hm%energy%exchange = M_ZERO
     hm%energy%correlation = M_ZERO
     hm%energy%total = M_ZERO
+    hm%energy%kinetic = M_ZERO
 
     nullify(hm%oct_fxc)
-    hm%energy%kinetic = M_ZERO
 
     ! allocate potentials and density of the cores
     ! In the case of spinors, vxc_11 = hm%vxc(:, 1), vxc_22 = hm%vxc(:, 2), Re(vxc_12) = hm%vxc(:. 3);
@@ -1070,6 +1071,26 @@ contains
     if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
 
   end function hamiltonian_apply_packed
+
+  ! -----------------------------------------------
+
+  subroutine energy_copy(ein, eout)
+    type(energy_t), intent(in) :: ein
+    type(energy_t), intent(out) :: eout
+
+    eout%total = ein%total
+    eout%eigenvalues = ein%eigenvalues
+    eout%exchange = ein%exchange
+    eout%correlation = ein%correlation
+    eout%xc_j = ein%xc_j
+    eout%intnvxc = ein%intnvxc
+    eout%hartree = ein%hartree
+    eout%kinetic = ein%kinetic
+    eout%extern = ein%extern
+    eout%entropy = ein%entropy
+    eout%ts = ein%ts
+    eout%berry = ein%berry
+  end subroutine energy_copy
 
 #include "undef.F90"
 #include "real.F90"

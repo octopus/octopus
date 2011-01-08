@@ -395,6 +395,8 @@ contains
     SAFE_ALLOCATE(ks%calc%energy)
     energy => ks%calc%energy
 
+    call energy_copy(hm%energy, ks%calc%energy)
+
     energy%intnvxc = M_ZERO
 
     ! check whether we should introduce the Amaldi SIC correction
