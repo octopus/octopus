@@ -59,7 +59,7 @@ contains
 
     integer :: ierr
     FLOAT, allocatable :: rho(:,:)
-    FLOAT :: E_tot, E_t, E_ext, E_Hartree, E_x, E_c
+    FLOAT :: e_tot, e_t, e_ext
 
     PUSH_SUB(one_shot_run)
 
@@ -75,41 +75,19 @@ contains
 
     e_t = M_ZERO
     e_ext = M_ZERO
-    e_hartree = M_ZERO
-    e_x = M_ZERO
-    e_c = M_ZERO
 
     ! Probably this is particular to DFT
     select case(sys%ks%theory_level)
     case(KOHN_SHAM_DFT)
       ! kinetic energy + local potential + Hartree + xc
       if(states_are_real(sys%st)) then
-        E_t     = delectronic_kinetic_energy(hm, sys%gr, sys%st)
-        E_ext   = delectronic_external_energy(hm, sys%gr, sys%st)
+        e_t     = delectronic_kinetic_energy(hm, sys%gr, sys%st)
+        e_ext   = delectronic_external_energy(hm, sys%gr, sys%st)
       else
-        E_t     = zelectronic_kinetic_energy(hm, sys%gr, sys%st)
-        E_ext   = zelectronic_external_energy(hm, sys%gr, sys%st)
+        e_t     = zelectronic_kinetic_energy(hm, sys%gr, sys%st)
+        e_ext   = zelectronic_external_energy(hm, sys%gr, sys%st)
       end if
 
-      ! Get the Hartree energy
-      E_Hartree = hm%energy%hartree
-
-      ! Get exchange-correlation energies
-      ! (this is probably already calculated, but for the moment I will leave it here, XA)
-      
-      SAFE_ALLOCATE(rho(1:sys%gr%fine%mesh%np, 1:sys%st%d%nspin))
-      call states_total_density(sys%st, sys%gr%fine%mesh, rho)
-      call xc_get_vxc(sys%gr%fine%der, sys%ks%xc, sys%st, rho, sys%st%d%ispin, E_x, E_c, M_ZERO, sys%st%qtot)
-      SAFE_DEALLOCATE_A(rho)
-
-      ! The OEP family has to be handled specially
-      if (states_are_real(sys%st)) then
-        call dxc_oep_calc(sys%ks%oep, sys%ks%xc, (sys%ks%sic_type==sic_pz),  &
-          sys%gr, hm, sys%st, E_x, E_c)
-      else
-        call zxc_oep_calc(sys%ks%oep, sys%ks%xc, (sys%ks%sic_type==sic_pz),  &
-          sys%gr, hm, sys%st, E_x, E_c)
-      end if
     case(INDEPENDENT_PARTICLES)
       ! there is nothing to do
     case default
@@ -118,16 +96,16 @@ contains
       call write_fatal(2)
     end select
 
-    E_tot = E_t + E_ext + E_Hartree + E_x + E_c + hm%ep%eii
+    e_tot = e_t + e_ext + hm%energy%hartree + hm%energy%exchange + hm%energy%correlation + hm%ep%eii
 
     call messages_print_stress(stdout, "Energy")
-    write(message(1), '(6x,a, f18.8)') 'Total       = ', units_to_atomic(units_out%energy, E_tot)
+    write(message(1), '(6x,a, f18.8)') 'Total       = ', units_to_atomic(units_out%energy, e_tot)
     write(message(2), '(6x,a, f18.8)') 'Ion-ion     = ', units_to_atomic(units_out%energy, hm%ep%eii)
-    write(message(3), '(6x,a, f18.8)') 'Kinetic     = ', units_to_atomic(units_out%energy, E_t)
-    write(message(4), '(6x,a, f18.8)') 'External    = ', units_to_atomic(units_out%energy, E_ext)
-    write(message(5), '(6x,a, f18.8)') 'Hartree     = ', units_to_atomic(units_out%energy, E_Hartree)
-    write(message(6), '(6x,a, f18.8)') 'Exchange    = ', units_to_atomic(units_out%energy, E_x)
-    write(message(7), '(6x,a, f18.8)') 'Correlation = ', units_to_atomic(units_out%energy, E_c)
+    write(message(3), '(6x,a, f18.8)') 'Kinetic     = ', units_to_atomic(units_out%energy, e_t)
+    write(message(4), '(6x,a, f18.8)') 'External    = ', units_to_atomic(units_out%energy, e_ext)
+    write(message(5), '(6x,a, f18.8)') 'Hartree     = ', units_to_atomic(units_out%energy, hm%energy%hartree)
+    write(message(6), '(6x,a, f18.8)') 'Exchange    = ', units_to_atomic(units_out%energy, hm%energy%exchange)
+    write(message(7), '(6x,a, f18.8)') 'Correlation = ', units_to_atomic(units_out%energy, hm%energy%correlation)
     call write_info(7, stdout)
     call messages_print_stress(stdout)
 
