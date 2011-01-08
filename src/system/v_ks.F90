@@ -82,6 +82,7 @@ module v_ks_m
     FLOAT                         :: amaldi_factor
     type(energy_t),       pointer :: energy
     type(states_t),       pointer :: hf_st
+    FLOAT,                pointer :: vxc(:, :)
   end type v_ks_calc_t
 
   type v_ks_t
@@ -407,7 +408,6 @@ contains
 
       call calculate_density()
 
-      hm%vxc      = M_ZERO
       if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) hm%vtau = M_ZERO
       if(hm%d%cdft) hm%axc = M_ZERO
       if(ks%theory_level .ne. HARTREE) call v_a_xc()
@@ -478,7 +478,6 @@ contains
     subroutine v_a_xc()
 
       type(profile_t), save :: prof
-      FLOAT, pointer :: vxc(:, :)
       integer :: ispin
       !      integer :: ierr 
 
@@ -489,20 +488,17 @@ contains
       energy%correlation = M_ZERO
       energy%xc_j = M_ZERO
 
-      if(ks%gr%have_fine_mesh) then
-        SAFE_ALLOCATE(vxc(1:ks%gr%fine%mesh%np_part, 1:st%d%nspin))
-        vxc = M_ZERO
-      else
-        vxc => hm%vxc
-      end if
+      SAFE_ALLOCATE(ks%calc%vxc(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
+
+      ks%calc%vxc = M_ZERO
 
       ! Get the *local* XC term
       if(hm%d%cdft) then
-        call xc_get_vxc_and_axc(ks%gr%fine%der, ks%xc, st, ks%calc%density, st%current, st%d%ispin, hm%vxc, hm%axc, &
+        call xc_get_vxc_and_axc(ks%gr%fine%der, ks%xc, st, ks%calc%density, st%current, st%d%ispin, ks%calc%vxc, hm%axc, &
              energy%exchange, energy%correlation, energy%xc_j, -minval(st%eigenval(st%nst, :)), st%qtot)
       else
         call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%calc%density, st%d%ispin, energy%exchange, energy%correlation, &
-             -minval(st%eigenval(st%nst, :)), st%qtot, vxc, vtau=hm%vtau)
+             -minval(st%eigenval(st%nst, :)), st%qtot, ks%calc%vxc, vtau = hm%vtau)
       end if
 
       if(ks%theory_level == KOHN_SHAM_DFT) then
@@ -510,45 +506,35 @@ contains
         if(iand(ks%xc_family, XC_FAMILY_OEP) .ne. 0) then
           if (states_are_real(st)) then
             call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
-              ks%gr, hm, st, energy%exchange, energy%correlation, vxc=hm%vxc)
+              ks%gr, hm, st, energy%exchange, energy%correlation, vxc = ks%calc%vxc)
           else
             call zxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
-              ks%gr, hm, st, energy%exchange, energy%correlation, vxc=hm%vxc)
+              ks%gr, hm, st, energy%exchange, energy%correlation, vxc = ks%calc%vxc)
           end if
         endif
 
         if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) .ne. 0) then
           ! Also treat KS inversion separately (not part of libxc)
-          call xc_ks_inversion_calc(ks%ks_inversion, ks%gr, hm, st, energy%exchange, energy%correlation, vxc=hm%vxc)
+          call xc_ks_inversion_calc(ks%ks_inversion, ks%gr, hm, st, energy%exchange, energy%correlation, vxc = ks%calc%vxc)
         endif
       end if
 
-      if(ks%tail_correction) call tail_correction(vxc)
+      if(ks%tail_correction) call tail_correction(ks%calc%vxc)
       
       ! Now we calculate Int[n vxc] = energy%intnvxc
       select case(hm%d%ispin)
       case(UNPOLARIZED)
-        energy%intnvxc = energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), vxc(:, 1))
+        energy%intnvxc = energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), ks%calc%vxc(:, 1))
       case(SPIN_POLARIZED)
-        energy%intnvxc = energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), vxc(:, 1)) &
-             + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 2), vxc(:, 2))
+        energy%intnvxc = energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), ks%calc%vxc(:, 1)) &
+             + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 2), ks%calc%vxc(:, 2))
       case(SPINORS)
-        energy%intnvxc = energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), vxc(:, 1)) &
-             + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 2), vxc(:, 2)) &
-             + M_TWO*dmf_dotp(ks%gr%fine%mesh, st%rho(:, 3), vxc(:, 3)) &
-             + M_TWO*dmf_dotp(ks%gr%fine%mesh, st%rho(:, 4), vxc(:, 4))
+        energy%intnvxc = energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), ks%calc%vxc(:, 1)) &
+             + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 2), ks%calc%vxc(:, 2)) &
+             + M_TWO*dmf_dotp(ks%gr%fine%mesh, st%rho(:, 3), ks%calc%vxc(:, 3)) &
+             + M_TWO*dmf_dotp(ks%gr%fine%mesh, st%rho(:, 4), ks%calc%vxc(:, 4))
 
       end select
-
-      if(ks%gr%have_fine_mesh) then
-        do ispin = 1, st%d%nspin
-          call dmultigrid_fine2coarse(ks%gr%fine%tt, ks%gr%fine%der, ks%gr%mesh, vxc(:, ispin), hm%vxc(:, ispin), INJECTION)
-          ! some debugging output that I will keep here for the moment, XA
-          !          call doutput_function(1, "./", "vxc_fine", ks%gr%fine%mesh, vxc(:, ispin), unit_one, ierr)
-          !          call doutput_function(1, "./", "vxc_coarse", ks%gr%mesh, hm%vxc(:, ispin), unit_one, ierr)
-        end do
-        SAFE_DEALLOCATE_P(vxc)
-      end if
 
       call profiling_out(prof)
       POP_SUB(v_ks_calc_start.v_a_xc)
@@ -648,6 +634,24 @@ contains
       hm%energy%hartree = M_ZERO
       call v_ks_hartree(ks, hm)
 
+      if(ks%theory_level /= HARTREE) then
+        if(ks%gr%have_fine_mesh) then
+          do ispin = 1, hm%d%nspin
+            call dmultigrid_fine2coarse(ks%gr%fine%tt, ks%gr%fine%der, ks%gr%mesh, &
+              ks%calc%vxc(:, ispin), hm%vxc(:, ispin), INJECTION)
+            ! some debugging output that I will keep here for the moment, XA
+            !          call doutput_function(1, "./", "vxc_fine", ks%gr%fine%mesh, vxc(:, ispin), unit_one, ierr)
+            !          call doutput_function(1, "./", "vxc_coarse", ks%gr%mesh, hm%vxc(:, ispin), unit_one, ierr)
+          end do
+        else
+          do ispin = 1, hm%d%nspin
+            call lalg_copy(ks%gr%fine%mesh%np, ks%calc%vxc(:, ispin), hm%vxc(:, ispin))
+          end do
+        end if
+      else
+        hm%vxc = M_ZERO
+      end if
+
       ! Build Hartree + XC potential
       forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vxc(ip, 1) + hm%vhartree(ip)
       
@@ -674,7 +678,7 @@ contains
           hm%exx_coef = M_ONE
         end select
       end if
-
+      
     end if
 
     if(ks%calc%time_present) then
@@ -682,6 +686,8 @@ contains
     else
       call hamiltonian_update(hm, ks%gr%mesh)
     end if
+
+    SAFE_DEALLOCATE_P(ks%calc%vxc)
 
     SAFE_DEALLOCATE_P(ks%calc%density)
     if(ks%calc%total_density_alloc) then
