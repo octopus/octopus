@@ -83,6 +83,8 @@ module v_ks_m
     type(energy_t),       pointer :: energy
     type(states_t),       pointer :: hf_st
     FLOAT,                pointer :: vxc(:, :)
+    FLOAT,                pointer :: vtau(:, :)
+    FLOAT,                pointer :: axc(:, :, :)
   end type v_ks_calc_t
 
   type v_ks_t
@@ -367,9 +369,6 @@ contains
     type(profile_t), save :: prof
     type(energy_t), pointer :: energy
 
-    ! The next line is a hack to be able to perform an IP/RPA calculation
-    !logical, save :: RPA_first = .true.
-
     PUSH_SUB(v_ks_calc_start)
     call profiling_in(prof, "KOHN_SHAM_CALC")
 
@@ -408,8 +407,6 @@ contains
 
       call calculate_density()
 
-      if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) hm%vtau = M_ZERO
-      if(hm%d%cdft) hm%axc = M_ZERO
       if(ks%theory_level .ne. HARTREE) call v_a_xc()
     end if
 
@@ -478,8 +475,6 @@ contains
     subroutine v_a_xc()
 
       type(profile_t), save :: prof
-      integer :: ispin
-      !      integer :: ierr 
 
       PUSH_SUB(v_ks_calc_start.v_a_xc)
       call profiling_in(prof, "XC")
@@ -489,16 +484,23 @@ contains
       energy%xc_j = M_ZERO
 
       SAFE_ALLOCATE(ks%calc%vxc(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
-
       ks%calc%vxc = M_ZERO
+
+      if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) then
+        SAFE_ALLOCATE(ks%calc%vtau(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
+        ks%calc%vtau = M_ZERO
+      end if
 
       ! Get the *local* XC term
       if(hm%d%cdft) then
-        call xc_get_vxc_and_axc(ks%gr%fine%der, ks%xc, st, ks%calc%density, st%current, st%d%ispin, ks%calc%vxc, hm%axc, &
+        SAFE_ALLOCATE(ks%calc%axc(1:ks%gr%mesh%np, 1:ks%gr%sb%dim, 1:hm%d%nspin))
+
+        ks%calc%axc = M_ZERO
+        call xc_get_vxc_and_axc(ks%gr%fine%der, ks%xc, st, ks%calc%density, st%current, st%d%ispin, ks%calc%vxc, ks%calc%axc, &
              energy%exchange, energy%correlation, energy%xc_j, -minval(st%eigenval(st%nst, :)), st%qtot)
       else
         call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%calc%density, st%d%ispin, energy%exchange, energy%correlation, &
-             -minval(st%eigenval(st%nst, :)), st%qtot, ks%calc%vxc, vtau = hm%vtau)
+             -minval(st%eigenval(st%nst, :)), st%qtot, ks%calc%vxc, vtau = ks%calc%vtau)
       end if
 
       if(ks%theory_level == KOHN_SHAM_DFT) then
@@ -648,6 +650,19 @@ contains
             call lalg_copy(ks%gr%fine%mesh%np, ks%calc%vxc(:, ispin), hm%vxc(:, ispin))
           end do
         end if
+
+        if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) then
+          do ispin = 1, hm%d%nspin
+            call lalg_copy(ks%gr%fine%mesh%np, ks%calc%vtau(:, ispin), hm%vtau(:, ispin))
+          end do
+          SAFE_DEALLOCATE_P(ks%calc%vtau)
+        end if
+
+      if(hm%d%cdft) then
+        hm%axc(1:ks%gr%mesh%np, 1:ks%gr%sb%dim, 1:hm%d%nspin) = ks%calc%axc(1:ks%gr%mesh%np, 1:ks%gr%sb%dim, 1:hm%d%nspin)
+        SAFE_DEALLOCATE_P(ks%calc%axc)
+      end if
+
       else
         hm%vxc = M_ZERO
       end if
