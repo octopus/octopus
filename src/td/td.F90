@@ -114,12 +114,13 @@ contains
     type(states_t),   pointer :: st
     type(geometry_t), pointer :: geo
     logical                   :: stopping, update_energy
-    integer                   :: iter, ii, ierr, iatom, mpi_err, scsteps
+    integer                   :: iter, ii, ierr, iatom, mpi_err, scsteps, ispin
     real(8)                   :: etime
     logical                   :: generate
     type(gauge_force_t)       :: gauge_force
     type(profile_t),     save :: prof
-    
+    FLOAT, allocatable :: vold(:, :)
+
     PUSH_SUB(td_run)
 
     ! some shortcuts
@@ -231,9 +232,6 @@ contains
         end if
       end select
 
-      ! mask function?
-!      if(hm%ab == MASK_ABSORBING) call zvmask(gr, hm, st)
-
       ! update density
       if(.not. propagator_dens_is_propagated(td%tr)) call density_calc(st, gr, st%rho)
 
@@ -254,29 +252,48 @@ contains
 
       update_energy = (mod(iter, td%energy_update_iter) == 0) .or. iter == td%max_iter
 
-      ! update Hamiltonian and eigenvalues (fermi is *not* called)
-      call v_ks_calc(sys%ks, hm, st, calc_eigenval = update_energy, time = iter*td%dt)
+      if(update_energy .or. propagator_requires_vks(td%tr)) then
+        
+        ! save the vhxc potential for later
+        if(.not. propagator_requires_vks(td%tr)) then
+          SAFE_ALLOCATE(vold(1:gr%mesh%np, 1:st%d%nspin))
+          do ispin = 1, st%d%nspin
+            call lalg_copy(gr%mesh%np, hm%vhxc(:, ispin), vold(:, ispin))
+          end do
+        end if
 
-      ! Get the energies.
-      if(update_energy) call total_energy(hm, sys%gr, st, iunit = -1)
+        ! update Hamiltonian and eigenvalues (fermi is *not* called)
+        call v_ks_calc(sys%ks, hm, st, calc_eigenval = update_energy, time = iter*td%dt)
+        
+        ! Get the energies.
+        if(update_energy) call total_energy(hm, sys%gr, st, iunit = -1)
+        
+        if (td%dynamics == CP) then
+          if(states_are_real(st)) then
+            call dcpmd_propagate_vel(td%cp_propagator, sys%gr, hm, st, td%dt)
+          else
+            call zcpmd_propagate_vel(td%cp_propagator, sys%gr, hm, st, td%dt)
+          end if
+        end if
 
-      if (td%dynamics == CP) then
-        if(states_are_real(st)) then
-          call dcpmd_propagate_vel(td%cp_propagator, sys%gr, hm, st, td%dt)
-        else
-          call zcpmd_propagate_vel(td%cp_propagator, sys%gr, hm, st, td%dt)
+        ! restore the vhxc
+        if(.not. propagator_requires_vks(td%tr)) then
+          do ispin = 1, st%d%nspin
+            call lalg_copy(gr%mesh%np, vold(:, ispin), hm%vhxc(:, ispin))
+          end do
+          SAFE_DEALLOCATE_A(vold)
         end if
       end if
-      
+
       ! Recalculate forces, update velocities...
       if(ion_dynamics_ions_move(td%ions)) then
         if(td%dynamics /= BO) call forces_calculate(gr, sys%geo, hm%ep, st, iter*td%dt)
-
+        
         call ion_dynamics_propagate_vel(td%ions, sys%geo)
-
+        
         geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
       end if
-
+      
       if(gauge_field_is_applied(hm%ep%gfield)) then
         if(td%dynamics /= BO) call gauge_field_get_force(hm%ep%gfield, gr, geo, hm%ep%proj, hm%phase, st, gauge_force)
         call gauge_field_propagate_vel(hm%ep%gfield, gauge_force, td%dt)

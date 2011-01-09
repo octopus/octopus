@@ -67,7 +67,8 @@ module propagator_m
     propagator_set_scf_prop,      &
     propagator_remove_scf_prop,   &
     propagator_ions_are_propagated, &
-    propagator_dens_is_propagated
+    propagator_dens_is_propagated,  &
+    propagator_requires_vks
 
   integer, public, parameter ::        &
     PROP_ETRS                    = 2,  &
@@ -454,15 +455,15 @@ contains
       end if
     end if
 
-    if(tr%method == PROP_CAETRS) then
+    if(.not. propagator_requires_vks(tr)) then
       SAFE_ALLOCATE(vold(1:gr%mesh%np, 1:st%d%nspin))
       call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 1), vold)
+    else
+      call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 2), tr%v_old(:, :, 3))
+      call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 1), tr%v_old(:, :, 2))
+      call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc(:, :),     tr%v_old(:, :, 1))
+      call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), tr%v_old(:, :, 1:3), time, tr%v_old(:, :, 0))
     end if
-
-    call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 2), tr%v_old(:, :, 3))
-    call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 1), tr%v_old(:, :, 2))
-    call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc(:, :),     tr%v_old(:, :, 1))
-    call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), tr%v_old(:, :, 1:3), time, tr%v_old(:, :, 0))
 
     select case(tr%method)
     case(PROP_ETRS);                     call td_etrs
@@ -676,6 +677,7 @@ contains
       if(tr%method == PROP_CAETRS) then
         call lalg_copy(gr%mesh%np, st%d%nspin, vold, hm%vhxc)
         call hamiltonian_update(hm, gr%mesh, time = time - dt)
+        call v_ks_calc_start(ks, hm, st, time = time - dt)
       end if
 
       ! propagate half of the time step with H(time - dt)
@@ -690,11 +692,16 @@ contains
       end do
 
       if(tr%method == PROP_CAETRS) then
+        call v_ks_calc_finish(ks, hm)
+        call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 2), tr%v_old(:, :, 3))
+        call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 1), tr%v_old(:, :, 2))
+        call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc(:, :),     tr%v_old(:, :, 1))
+        call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), tr%v_old(:, :, 1:3), time, tr%v_old(:, :, 0))
 
         do ik = st%d%kpt%start, st%d%kpt%end
           ispin = states_dim_get_spin_index(st%d, ik)
           do ip = 1, gr%mesh%np
-            phase = exp(-M_ZI*dt/(M_TWO*mu)*(tr%v_old(ip, ispin, 1) - hm%vhxc(ip, ispin)))
+            phase = exp(-M_ZI*dt/(M_TWO*mu)*(hm%vhxc(ip, ispin) - vold(ip, ispin)))
             forall(idim = 1:st%d%dim, ist = st%st_start:st%st_end)
               st%zpsi(ip, idim, ist, ik) = st%zpsi(ip, idim, ist, ik)*phase
             end forall
@@ -1168,6 +1175,20 @@ contains
     end select
 
   end function propagator_dens_is_propagated
+
+  ! ---------------------------------------------------------
+
+  logical pure function propagator_requires_vks(tr) result(requires)
+    type(propagator_t), intent(in) :: tr
+    
+    select case(tr%method)
+    case(PROP_CAETRS)
+      requires = .false.
+    case default
+      requires = .true.
+    end select
+    
+  end function propagator_requires_vks
 
   ! ---------------------------------------------------------
 
