@@ -75,7 +75,6 @@ module v_ks_m
     logical                       :: calculating
     logical                       :: time_present
     FLOAT                         :: time
-    logical                       :: calc_berry
     FLOAT,                pointer :: density(:, :)
     logical                       :: total_density_alloc
     FLOAT,                pointer :: total_density(:)
@@ -85,6 +84,9 @@ module v_ks_m
     FLOAT,                pointer :: vxc(:, :)
     FLOAT,                pointer :: vtau(:, :)
     FLOAT,                pointer :: axc(:, :, :)
+    FLOAT,                pointer :: vberry(:, :)
+    FLOAT,                pointer :: a_ind(:, :)
+    FLOAT,                pointer :: b_ind(:, :)
   end type v_ks_calc_t
 
   type v_ks_t
@@ -352,22 +354,21 @@ contains
   ! --------------------------------------------------------- 
 
   !> This routine starts the calculation of the Kohn-Sham
-  !! potential. The routine v_ks_calc_finish must be called to finish the
-  !! calculation. The argument hm CANNOT be used until
-  !! v_ks_calc_finish has been called. The st argument, on the other
-  !! hand, is released inmediately and CAN be modified before
-  !! finishing the calculation.
+  !! potential. The routine v_ks_calc_finish must be called to finish
+  !! the calculation. The argument hm is not modified. The argument st
+  !! can be modified after the function have been used.
 
   subroutine v_ks_calc_start(ks, hm, st, time, calc_berry) 
     type(v_ks_t),                      intent(inout) :: ks 
-    type(hamiltonian_t),     target,   intent(inout) :: hm 
+    type(hamiltonian_t),     target,   intent(in)    :: hm !< This MUST be intent(in), changes to hm are done in v_ks_calc_finish.
     type(states_t),                    intent(inout) :: st
     FLOAT,                   optional, intent(in)    :: time 
-    logical,                 optional, intent(in)    :: calc_berry !use this before wfns initialized
+    logical,                 optional, intent(in)    :: calc_berry !< Use this before wfns initialized.
     
     FLOAT :: distance
     type(profile_t), save :: prof
     type(energy_t), pointer :: energy
+    logical :: calc_berry_
 
     PUSH_SUB(v_ks_calc_start)
     call profiling_in(prof, "KOHN_SHAM_CALC")
@@ -380,8 +381,8 @@ contains
       call write_info(1)
     end if
 
-    ks%calc%calc_berry = .true.
-    if(present(calc_berry)) ks%calc%calc_berry = calc_berry
+    calc_berry_ = .true.
+    if(present(calc_berry)) calc_berry_ = calc_berry
 
     ks%calc%time_present = present(time)
     if(present(time)) ks%calc%time = time
@@ -410,12 +411,13 @@ contains
       if(ks%theory_level .ne. HARTREE) call v_a_xc()
     end if
 
-    if(associated(hm%ep%E_field) .and. simul_box_is_periodic(ks%gr%mesh%sb)) then
-      if(ks%calc%calc_berry) then
-        call berry_potential(st, ks%gr%mesh, hm%ep%E_field, hm%vberry)
+    if(associated(hm%ep%e_field) .and. simul_box_is_periodic(ks%gr%mesh%sb)) then
+      SAFE_ALLOCATE(ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin))
+      if(calc_berry_) then
+        call berry_potential(st, ks%gr%mesh, hm%ep%E_field, ks%calc%vberry)
       else
         ! before wfns are initialized, cannot calculate this term
-        hm%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin) = M_ZERO
+        ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin) = M_ZERO
       endif
     endif
 
@@ -429,7 +431,11 @@ contains
     ! WARNING: calculating the self-induced magnetic field here only makes
     ! sense if it is going to be used in the Hamiltonian, which does not happen
     ! now. Otherwise one could just calculate it at the end of the calculation.
-    if(hm%self_induced_magnetic) call magnetic_induced(ks%gr%der, st, hm%a_ind, hm%b_ind)
+    if(hm%self_induced_magnetic) then
+      SAFE_ALLOCATE(ks%calc%a_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
+      SAFE_ALLOCATE(ks%calc%b_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
+      call magnetic_induced(ks%gr%der, st, ks%calc%a_ind, ks%calc%b_ind)
+    end if
 
     call profiling_out(prof)
     POP_SUB(v_ks_calc_start)
@@ -694,6 +700,19 @@ contains
         end select
       end if
       
+    end if
+
+    if(associated(hm%ep%e_field) .and. simul_box_is_periodic(ks%gr%mesh%sb)) then
+      hm%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin) = ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin)
+      SAFE_DEALLOCATE_P(ks%calc%vberry)
+    endif
+
+    if(hm%self_induced_magnetic) then
+      hm%a_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim) = ks%calc%a_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim)
+      hm%b_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim) = ks%calc%b_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim)
+
+      SAFE_DEALLOCATE_P(ks%calc%a_ind)
+      SAFE_DEALLOCATE_P(ks%calc%b_ind)
     end if
 
     if(ks%calc%time_present) then
