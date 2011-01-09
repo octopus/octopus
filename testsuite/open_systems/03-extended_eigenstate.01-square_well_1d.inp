@@ -8,7 +8,7 @@
 ParallelizationStrategy = par_kpoints
 MeshBlockSizeXY = 1
 MeshBlockSizeZ = 1
-DevelVersion = yes
+ExperimentalFeatures = yes
 
 %CalculationMode
  gs      | gs

@@ -106,7 +106,7 @@ contains
     call write_fatal(1)
 #endif
 
-    call messages_devel_version("Kohn-Sham inversion")
+    call messages_experimental("Kohn-Sham inversion")
     
     !%Variable InvertKSmethod
     !%Type integer

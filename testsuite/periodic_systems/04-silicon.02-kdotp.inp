@@ -1,7 +1,7 @@
 FromScratch=yes
 
 CalculationMode = kdotp
-DevelVersion = yes
+ExperimentalFeatures = yes
 
 PeriodicDimensions = 3
 

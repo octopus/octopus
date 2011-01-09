@@ -1,6 +1,6 @@
 CalculationMode = gs
 
-DevelVersion = yes
+ExperimentalFeatures = yes
 
 FromScratch = yes
 

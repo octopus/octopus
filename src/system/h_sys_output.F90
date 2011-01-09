@@ -229,7 +229,7 @@ contains
     call parse_integer(datasets_check('Output'), 0, outp%what)
 
     if(iand(outp%what, output_elf_fs) .ne. 0) then
-      call messages_devel_version("ELF in Fourier space")
+      call messages_experimental("ELF in Fourier space")
     endif
 
     ! cannot calculate the ELF in 1D
@@ -247,7 +247,7 @@ contains
     end if
 
     if(iand(outp%what, output_modelmb) .ne. 0 .or. iand(outp%what, output_density_matrix) .ne. 0) then
-      call messages_devel_version("Model many-body and density matrix")
+      call messages_experimental("Model many-body and density matrix")
     endif
 
     if(iand(outp%what, output_modelmb) .ne. 0) then

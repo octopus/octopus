@@ -33,7 +33,7 @@ FromScratch = yes
 
 XCFunctional = mgga_x_tb09 + lda_c_pz
 CurrentInTau = no
-DevelVersion = yes
+ExperimentalFeatures = yes
 
 ConvRelEv = 1e-8
 

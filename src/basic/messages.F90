@@ -54,7 +54,7 @@ module messages_m
     messages_print_var_option,  &
     messages_print_var_value,   &
     messages_obsolete_variable, &
-    messages_devel_version,     &
+    messages_experimental,     &
     messages_check_def,         &
     messages_not_implemented
 
@@ -823,7 +823,7 @@ contains
         write(message(2), '(a)') ' '
         write(message(3), '(a)') 'Equivalent functionality can be obtained with the '//trim(rep)
         write(message(4), '(a)') 'variable. Check the documentation for details.'
-        write(message(5), '(a)') '(You can use the `oct-help show '//trim(rep)//'` command).'
+        write(message(5), '(a)') '(You can use the `oct-help -s '//trim(rep)//'` command).'
         call write_fatal(5, only_root_writes = .true.)
       else
         call write_fatal(1, only_root_writes = .true.)
@@ -834,12 +834,12 @@ contains
   end subroutine messages_obsolete_variable
 
   ! ---------------------------------------------------------
-  subroutine messages_devel_version(name)
+  subroutine messages_experimental(name)
     character(len=*), intent(in) :: name
     
     if(.not. conf%devel_version) then
       write(message(1), '(a)') 'Error: '//trim(name)//' is under development.'
-      write(message(2), '(a)') 'To use it (at your own risk) set variable DevelVersion to yes.'
+      write(message(2), '(a)') 'To use it (at your own risk) set the variable ExperimentalFeatures to yes.'
       call write_fatal(2, only_root_writes = .true.)
     else
       write(message(1), '(a)') trim(name)//' is under development.'
@@ -847,7 +847,7 @@ contains
       call write_warning(2)
     end if
 
-  end subroutine messages_devel_version
+  end subroutine messages_experimental
   
 
   !--------------------------------------------------------------

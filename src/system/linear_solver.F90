@@ -199,8 +199,8 @@ contains
     
     call messages_print_stress(stdout)
 
-    if(this%solver == LS_MULTIGRID) call messages_devel_version("Multigrid linear solver")
-    if(this%solver == LS_QMR_DOTP)  call messages_devel_version("QMR solver (symmetric with conjugated dot product)")
+    if(this%solver == LS_MULTIGRID) call messages_experimental("Multigrid linear solver")
+    if(this%solver == LS_QMR_DOTP)  call messages_experimental("QMR solver (symmetric with conjugated dot product)")
 
     POP_SUB(linear_solver_init)
 

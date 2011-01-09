@@ -13,7 +13,7 @@ gs              | unocc
 1               | 2
 %
 
-DevelVersion = yes
+ExperimentalFeatures = yes
 
 excited_states_RestartDir = "ground_state_restart"
 

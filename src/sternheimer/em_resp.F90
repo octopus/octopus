@@ -715,7 +715,7 @@ contains
       !%End
 
       call parse_logical(datasets_check('EMCalcBornCharges'), .false., em_vars%calc_Born)
-      if (em_vars%calc_Born) call messages_devel_version("Calculation of Born effective charges")
+      if (em_vars%calc_Born) call messages_experimental("Calculation of Born effective charges")
 
       !%Variable EMCalcRotatoryResponse
       !%Type logical

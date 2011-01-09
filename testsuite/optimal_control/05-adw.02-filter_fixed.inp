@@ -3,7 +3,7 @@
 
 CalculationMode = opt_control
 
-DevelVersion = yes
+ExperimentalFeatures = yes
 
 RestartDir = "excited_states_restart"
 

@@ -7,7 +7,7 @@ fromScratch = yes
 
 CalculationMode = gs
 
-DevelVersion = yes
+ExperimentalFeatures = yes
 
 # ------------------
 # Grid

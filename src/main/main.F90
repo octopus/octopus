@@ -45,15 +45,18 @@ program octopus
   if(ierr .eq. 0) call getopt_octopus
   call parser_init()
 
-  !%Variable DevelVersion
+  call messages_obsolete_variable('DevelVersion', 'ExperimentalFeatures')
+
+  !%Variable ExperimentalFeatures
   !%Type logical
   !%Default no
   !%Section Execution::Debug
   !%Description
   !% If true, allows the use of certain parts of the code that are
-  !% still under development. This should not be used for production runs.
+  !% still under development and are not suitable for production
+  !% runs. This should not be used unless you know what you are doing.
   !%End
-  call parse_logical('DevelVersion', .false., conf%devel_version)
+  call parse_logical('ExperimentalFeatures', .false., conf%devel_version)
 
   !%Variable DebugLevel
   !%Type integer

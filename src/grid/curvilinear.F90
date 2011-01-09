@@ -104,7 +104,7 @@ contains
     call messages_print_var_option(stdout, "CurvMethod", cv%method)
 
     ! FIXME: The other two methods are apparently not working
-    if(cv%method > CURV_METHOD_GYGI) call messages_devel_version('Selected curvilinear coordinates method')
+    if(cv%method > CURV_METHOD_GYGI) call messages_experimental('Selected curvilinear coordinates method')
 
     select case(cv%method)
     case(CURV_METHOD_GYGI)

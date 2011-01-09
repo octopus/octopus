@@ -188,7 +188,7 @@ contains
       !%End
       call parse_integer(datasets_check('ClassicalPotential'), 0, ep%classical_pot)
       if(ep%classical_pot .eq. CLASSICAL_GAUSSIAN) then
-        call messages_devel_version("Gaussian smeared classical charges")
+        call messages_experimental("Gaussian smeared classical charges")
         ! This method probably works but definitely needs to be made user-friendly:
         ! i.e. telling the user what widths are used and letting them be set somehow.
       endif

@@ -1,5 +1,5 @@
 CalculationMode = kdotp
-DevelVersion = yes
+ExperimentalFeatures = yes
 fromScratch = yes
 
 %Coordinates

@@ -75,7 +75,7 @@ module gcm_m
 
     PUSH_SUB(gcm_run)
 
-    call messages_devel_version('Generator coordinates method')
+    call messages_experimental('Generator coordinates method')
 
     !%Variable GCMSlaterDeterminants
     !%Type block

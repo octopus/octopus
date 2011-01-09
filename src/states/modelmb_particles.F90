@@ -225,7 +225,7 @@ subroutine modelmb_particles_init (this,gr)
 
   if(parse_block(datasets_check('DescribeParticlesModelmb'), blk) == 0) then
 
-    call messages_devel_version("Model many-body")
+    call messages_experimental("Model many-body")
 
     ncols = parse_block_cols(blk, 0)
     if(ncols /= 5 ) then

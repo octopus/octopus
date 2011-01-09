@@ -339,7 +339,7 @@ contains
 
 #ifdef HAVE_MPI
     if(mesh%parallel_in_domains .and. .not. const_w) then
-      call messages_devel_version('Domain parallelization with curvilinear coordinates')
+      call messages_experimental('Domain parallelization with curvilinear coordinates')
     end if
 #endif
 

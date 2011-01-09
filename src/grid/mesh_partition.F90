@@ -132,7 +132,7 @@ contains
 #endif
     call parse_integer(datasets_check('MeshPartitionPackage'), default, library)
 
-    if(library == GA) call messages_devel_version('Genetic algorithm mesh partition')
+    if(library == GA) call messages_experimental('Genetic algorithm mesh partition')
 
 #ifndef HAVE_METIS
     if(library == METIS) then

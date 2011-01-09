@@ -2,7 +2,7 @@
 # $Id$
 
 CalculationMode = em_resp
-DevelVersion = yes
+ExperimentalFeatures = yes
 EMCalcBornCharges = yes
 
 %Coordinates

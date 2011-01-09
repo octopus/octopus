@@ -396,7 +396,7 @@ contains
 
       ! variable defined in em_resp
       call parse_logical(datasets_check('EMCalcBornCharges'), .false., calc_Born)
-      if (calc_Born) call messages_devel_version("Calculation of Born effective charges")
+      if (calc_Born) call messages_experimental("Calculation of Born effective charges")
 
       !%Variable EMStartDensityIsZeroField
       !%Type logical

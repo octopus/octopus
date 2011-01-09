@@ -1008,7 +1008,7 @@ contains
 
       if(spec%type == SPEC_PS_UPF) then 
         read_data = 4
-        call messages_devel_version("UPF pseudopotentials support")
+        call messages_experimental("UPF pseudopotentials support")
       end if
 
       if(nn > 4) then

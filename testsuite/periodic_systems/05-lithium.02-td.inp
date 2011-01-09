@@ -34,7 +34,7 @@ TDEvolutionMethod = aetrs
 TDTimeStep = 0.02
 TDMaximumIter = 20
 
-DevelVersion = yes
+ExperimentalFeatures = yes
 
 ParallelizationStrategy = par_kpoints
 

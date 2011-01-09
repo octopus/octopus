@@ -32,6 +32,6 @@ TDEvolutionMethod = aetrs
 TDTimeStep = 0.02
 TDMaximumIter = 30
 
-DevelVersion = yes
+ExperimentalFeatures = yes
 
 TDEnergyUpdateIter = 5

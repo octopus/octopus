@@ -424,7 +424,7 @@ contains
     !%End
     call parse_logical(datasets_check('CurrentDFT'), .false., st%d%cdft)
     if (st%d%cdft) then
-      call messages_devel_version('Current DFT')
+      call messages_experimental('Current DFT')
 
       ! Use of CDFT requires complex wavefunctions
       st%priv%wfs_type = TYPE_CMPLX
@@ -514,7 +514,7 @@ contains
     !%End
     call parse_logical(datasets_check('SymmetrizeDensity'), .false., st%symmetrize_density)
 
-    if(st%symmetrize_density) call messages_devel_version("Symmetrization of the density")
+    if(st%symmetrize_density) call messages_experimental("Symmetrization of the density")
 
     POP_SUB(states_init)
 
@@ -1220,7 +1220,7 @@ return
       !%End
 
       call parse_integer(datasets_check('StatesOrthogonalization'), ORTH_GS, st%d%orth_method)
-      if(st%d%orth_method == ORTH_QR) call messages_devel_version("QR Orthogonalization")
+      if(st%d%orth_method == ORTH_QR) call messages_experimental("QR Orthogonalization")
 
       POP_SUB(states_densities_init.states_exec_init)
     end subroutine states_exec_init

@@ -24,4 +24,4 @@ XCFunctional = oep_x
 
 OEP_Level = oep_full
 
-DevelVersion = yes
+ExperimentalFeatures = yes

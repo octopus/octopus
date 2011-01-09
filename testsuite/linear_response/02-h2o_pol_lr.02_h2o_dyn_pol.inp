@@ -3,7 +3,7 @@
 
 CalculationMode = em_resp
 fromScratch = yes
-DevelVersion = yes
+ExperimentalFeatures = yes
 EMCalcBornCharges = yes
 
 %Coordinates

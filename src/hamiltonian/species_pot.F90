@@ -531,7 +531,7 @@ contains
 
       ! periodic copies are not considered in this routine
       if(simul_box_is_periodic(mesh%sb)) then
-        call messages_devel_version("spec_full_gaussian for periodic systems")
+        call messages_experimental("spec_full_gaussian for periodic systems")
       end if
 
       ! --------------------------------------------------------------

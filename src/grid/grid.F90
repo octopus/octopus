@@ -125,7 +125,7 @@ contains
       gr%have_fine_mesh = .false.
     end if
 
-    if(gr%have_fine_mesh) call messages_devel_version("UseFineMesh")
+    if(gr%have_fine_mesh) call messages_experimental("UseFineMesh")
 
     call geometry_grid_defaults(geo, def_h, def_rsize)
 

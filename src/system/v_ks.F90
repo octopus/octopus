@@ -158,7 +158,7 @@ contains
     case(INDEPENDENT_PARTICLES)
       ks%sic_type = SIC_NONE
     case(HARTREE)
-      call messages_devel_version("Hartree theory level")
+      call messages_experimental("Hartree theory level")
     case(HARTREE_FOCK)
       ! initialize XC modules
       call xc_init(ks%xc, gr%mesh%sb%dim, nel, dd%spin_channels, dd%cdft, hartree_fock=.true.)
@@ -190,7 +190,7 @@ contains
         !%End
         call parse_integer(datasets_check('SICCorrection'), sic_none, ks%sic_type)
         if(.not. varinfo_valid_option('SICCorrection', ks%sic_type)) call input_error('SICCorrection')
-        if(ks%sic_type .ne. SIC_NONE) call messages_devel_version("self-interaction correction")
+        if(ks%sic_type .ne. SIC_NONE) call messages_experimental("self-interaction correction")
 
         ! Perdew-Zunger corrections
         if(ks%sic_type == SIC_PZ) ks%xc_family = ior(ks%xc_family, XC_FAMILY_OEP)
@@ -217,7 +217,7 @@ contains
       call parse_logical(datasets_check('XCTailCorrection'), .false., ks%tail_correction)
       
       if(ks%tail_correction) then 
-        call messages_devel_version("XC tail correction")
+        call messages_experimental("XC tail correction")
         write(message(1),'(a)') 'This correction shouldn''t be used with systems having nodal points of the electron density.'
         call write_info(1)
             

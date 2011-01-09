@@ -98,7 +98,7 @@ contains
 
     PUSH_SUB(kdotp_lr_run)
 
-    call messages_devel_version("k.p perturbation and calculation of effective masses")
+    call messages_experimental("k.p perturbation and calculation of effective masses")
 
     if(hm%theory_level == HARTREE_FOCK) then
       message(1) = "Commutator of Fock operator not yet implemented."

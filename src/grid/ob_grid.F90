@@ -160,7 +160,7 @@ contains
     !%End
     if(parse_block(datasets_check('OpenBoundaries'), blk).eq.0) then
 
-      call messages_devel_version("Open boundaries")
+      call messages_experimental("Open boundaries")
       ob_grid%open_boundaries = .true.
       NLEADS = 2
       ! first of all get the number of leads

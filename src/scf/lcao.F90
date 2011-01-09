@@ -114,7 +114,7 @@ contains
       message(1) = "Info: Using LCAO alternative implementation."
       call write_info(1)
 
-      call messages_devel_version('LCAO alternative implementation')
+      call messages_experimental('LCAO alternative implementation')
 
       !%Variable LCAOExtraOrbitals
       !%Type logical
@@ -128,7 +128,7 @@ contains
       !%End
       call parse_logical(datasets_check('LCAOExtraOrbitals'), .false., this%derivative)
 
-      if(this%derivative) call messages_devel_version('LCAO extra orbitals')
+      if(this%derivative) call messages_experimental('LCAO extra orbitals')
     end if
 
     if(.not. this%alternative) then

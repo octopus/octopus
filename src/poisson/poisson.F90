@@ -278,7 +278,7 @@ contains
       end if
 
       if (this%method == POISSON_SETE) then
-        call messages_devel_version('SETE poisson solver')
+        call messages_experimental('SETE poisson solver')
       end if
 
       call messages_print_var_option(stdout, "PoissonSolver", this%method)

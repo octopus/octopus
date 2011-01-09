@@ -2,7 +2,7 @@ NDimModelMB = 1
 NParticleModelMB = 2
 NTypeParticleModelMB = 1
 
-DevelVersion = yes
+ExperimentalFeatures = yes
 
 CalculationMode = gs
 TheoryLevel = independent_particles

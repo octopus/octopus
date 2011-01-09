@@ -9,7 +9,7 @@
 
 CalculationMode = gs
 
-DevelVersion = yes
+ExperimentalFeatures = yes
 
 Dimensions = 1
 fromScratch = yes

@@ -4,7 +4,7 @@ Units = eV_Angstrom
 ResponseMethod = finite_differences
 EMStaticElectricField = 0.01
 
-DevelVersion = yes
+ExperimentalFeatures = yes
 EMCalcBornCharges = yes
 BornChargeSumRuleCorrection = no
 

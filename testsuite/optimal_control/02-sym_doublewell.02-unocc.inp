@@ -9,7 +9,7 @@
 
 CalculationMode = unocc
 
-DevelVersion = yes
+ExperimentalFeatures = yes
 
 NumberUnoccStates = 1
 

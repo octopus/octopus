@@ -123,21 +123,22 @@ contains
     !% Propagation in imaginary time. WARNING: Sometimes it misbehaves. Use with 
     !% caution.
     !%Option lobpcg 8
-    !% Locally optimal block-preconditioned conjugate-gradient algorithm
-    !% (only available if <tt>DevelVersion = yes</tt>). Ref: A. Knyazev, 
-    !% "Toward the Optimal Preconditioned Eigensolver: Locally Optimal Block Preconditioned Conjugate Gradient Method,"
-    !% <i>SIAM Journal on Scientific Computing</i>, 23(2):517-541, 2001.
-    !%Option rmmdiis 10
-    !% Residual minimization scheme, direct inversion in the iterative
-    !% subspace eigensolver, based on the implementation of Kresse and
-    !% Furthmüller [<i>Phys. Rev. B</i> <b>54</b>, 11169 (1996)]. This eigensolver
-    !% requires almost no orthogonalization so it can be considerably
-    !% faster than the other options for large systems; however it
-    !% might suffer stability problems. To improve its performance a
-    !% large number of <tt>ExtraStates</tt> are required (around 10-20% of the
-    !% number of occupied states).
+    !% (Experimental) Locally optimal block-preconditioned
+    !% conjugate-gradient algorithm. Ref: A. Knyazev, "Toward the
+    !% Optimal Preconditioned Eigensolver: Locally Optimal Block
+    !% Preconditioned Conjugate Gradient Method," <i>SIAM Journal on
+    !% Scientific Computing</i>, 23(2):517-541, 2001.  
+    !%Option rmmdiis 10 
+    !% Residual minimization scheme, direct inversion in the
+    !% iterative subspace eigensolver, based on the implementation of
+    !% Kresse and Furthmüller [<i>Phys. Rev. B</i> <b>54</b>, 11169
+    !% (1996)]. This eigensolver requires almost no orthogonalization
+    !% so it can be considerably faster than the other options for
+    !% large systems; however it might suffer stability problems. To
+    !% improve its performance a large number of <tt>ExtraStates</tt>
+    !% are required (around 10-20% of the number of occupied states).
     !%Option multigrid 7
-    !% Multigrid eigensolver (experimental).
+    !% (Experimental) Multigrid eigensolver.
     !%End
 
     if(st%parallel_in_states) then
@@ -196,7 +197,7 @@ contains
     case(RS_LOBPCG)
     case(RS_RMMDIIS)
       default_iter = 3
-      if(gr%mesh%use_curvilinear) call messages_devel_version("RMMDIIS eigensolver for curvilinear coordinates")
+      if(gr%mesh%use_curvilinear) call messages_experimental("RMMDIIS eigensolver for curvilinear coordinates")
     case default
       call input_error('Eigensolver')
     end select

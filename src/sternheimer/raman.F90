@@ -67,7 +67,7 @@ contains
     !CONSTRUCT
     PUSH_SUB(raman_run)
 
-    call messages_devel_version("Raman response")
+    call messages_experimental("Raman response")
 
     call restart_look_and_read(sys%st, sys%gr, sys%geo)
 

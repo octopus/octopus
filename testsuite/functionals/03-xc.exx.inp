@@ -16,7 +16,7 @@ Spacing = 0.5
 XCFunctional = oep_x
 OEP_level = oep_full
 
-DevelVersion = yes
+ExperimentalFeatures = yes
 
 %Occupations
 0.8

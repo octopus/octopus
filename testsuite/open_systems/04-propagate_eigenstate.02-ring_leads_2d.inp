@@ -5,7 +5,7 @@
 # Calculate eigenstates of 2D ring potential attached to upside-down Gaussian
 # shaped lead channels, propagate with bias switched on.
 
-DevelVersion = yes
+ExperimentalFeatures = yes
 
 ParallelizationStrategy = par_kpoints
 Eigensolver = plan

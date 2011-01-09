@@ -258,7 +258,7 @@ contains
 
       if(parse_block(datasets_check('MultiResolutionArea'), blk) == 0) then
         
-        call messages_devel_version('Multi-resolution')
+        call messages_experimental('Multi-resolution')
 
         ! number of areas
         sb%hr_area%num_areas = parse_block_n(blk)

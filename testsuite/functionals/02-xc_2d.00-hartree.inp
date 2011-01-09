@@ -39,4 +39,4 @@ EigenSolverMaxIter = 25
 TypeOfMixing = linear
 Mixing = 1.0
 
-DevelVersion = yes
+ExperimentalFeatures = yes
