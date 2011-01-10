@@ -564,13 +564,12 @@ contains
 
       if(num_slaves > 0) call create_slave_intercommunicators()
 
+      call mpi_grp_init(base_grp, new_comm2)
 #else
       mc%group_comm = -1
       mc%who_am_i   = 0
 #endif
-
-      call mpi_grp_init(base_grp, new_comm2)
-      
+     
       POP_SUB(multicomm_init.group_comm_create)
     end subroutine group_comm_create
 
