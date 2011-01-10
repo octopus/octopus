@@ -301,7 +301,8 @@ contains
       call profiling_in(reduce_prof, "DENSITY_REDUCE")
       SAFE_ALLOCATE(reduce_rho(1:np))
       do ispin = 1, this%st%d%nspin
-        call MPI_Allreduce(this%density(1, ispin), reduce_rho(1), np, MPI_FLOAT, MPI_SUM, this%st%d%kpt%mpi_grp%comm, mpi_err)
+        call MPI_Allreduce(this%density(1, ispin), reduce_rho(1), np, &
+             MPI_FLOAT, MPI_SUM, this%st%d%kpt%mpi_grp%comm, mpi_err)
         call blas_copy(np, reduce_rho(1), 1, this%density(1, ispin), 1)
       end do
       SAFE_DEALLOCATE_A(reduce_rho)
