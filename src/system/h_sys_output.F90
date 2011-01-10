@@ -174,8 +174,8 @@ contains
     !% Outputs basins of attraction of the ELF. The output file is called
     !% <tt>elf_rs_basins.info</tt>. Only in 2D and 3D.
     !%Option ELF_FS 256
-    !% Outputs electron localization function in Fourier space. The output file is called
-    !% <tt>elf_FS-</tt>. Only in development version. Only in 2D and 3D.
+    !% Outputs electron localization function in Fourier space (experimental). The output file is called
+    !% <tt>elf_FS-</tt>. Only in 2D and 3D.
     !%Option Bader 512
     !% Outputs Laplacian of the density which shows lone pairs, bonded charge concentrations
     !% and regions subject to electrophilic or nucleophilic attack.

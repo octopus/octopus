@@ -132,10 +132,9 @@ contains
     !% This mode is mainly used for testing purposes, as the code is usually 
     !% much faster with <tt>independent_particles</tt>.
     !%Option hartree 1
-    !% Calculation within the Hartree method. Note that, contrary to popular
+    !% Calculation within the Hartree method (experimental). Note that, contrary to popular
     !% belief, the Hartree potential is self-interaction-free. Therefore, this run 
     !% mode will not yield the same result as <tt>dft</tt> without exchange-correlation.
-    !% Development version only.
     !%Option hartree_fock 3
     !% This is the traditional Hartree-Fock scheme. Like the Hartree scheme, it is fully
     !% self-interaction-free. This mode is extremely slow. It is often more convenient

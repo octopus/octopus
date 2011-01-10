@@ -118,7 +118,7 @@ program octopus
   !%Option unocc 02
   !% Calculation of unoccupied/virtual KS states.
   !%Option td 03
-  !% Time-dependent calculation. For periodic systems, currently available only in development version.
+  !% Time-dependent calculation (experimental for periodic systems).
   !%Option go 05
   !% Optimization of the geometry.
   !%Option opt_control 07
@@ -126,33 +126,30 @@ program octopus
   !%Option em_resp 08
   !% Calculation of the electromagnetic response: electric
   !% polarizabilities and hyperpolarizabilities and magnetic
-  !% susceptibilities.
-  !% For periodic systems, currently available only in development version.
+  !% susceptibilities (experimental for periodic systems).
   !%Option casida 09
   !% Excitations via Casida linear-response TDDFT; for finite systems only.
   !%Option td_transport 10
-  !% Time-dependent quantum transport. Currently available only in development version.
+  !% Time-dependent quantum transport (experimental).
   !%Option vdw 11
   !% Calculate van der Waals coefficients.
   !%Option vib_modes 12
   !% Calculation of the vibrational modes.
   !%Option raman 13
-  !% Calculation of Raman response properties.
-  !% Currently available only in development version.
+  !% Calculation of Raman response properties (experimental).
   !%Option one_shot 14
   !% Use the self-consistent wavefunctions in the <tt>restart</tt> directory to
   !% evaluate the total energy using a different XC functional.
   !% This is effectively a first-order perturbative calculation of the total energy, 
   !% the perturbation being the difference between the two XC potentials used.
   !%Option kdotp 15
-  !% Calculation of effective masses by <i>k.p</i> perturbation theory.
-  !% Currently available only in development version.
+  !% Calculation of effective masses by <i>k.p</i> perturbation theory (experimental).
   !%Option gcm 16
-  !% Generator-Coordinates calculation. Currently available only in development version.
+  !% Generator-Coordinates calculation (experimental).
   !%Option memory 17
   !% Estimate the amount of memory <tt>Octopus</tt> will need to run.
   !%Option invert_ks 18
-  !% Run mode used to invert the Kohn-Sham equations. Currently available only in development version.
+  !% Invert the Kohn-Sham equations (experimental).
   !%Option recipe 99
   !% Prints out a tasty recipe.
   !%

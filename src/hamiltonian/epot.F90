@@ -184,7 +184,7 @@ contains
       !%  Classical charges are treated as point charges.
       !%Option gaussian_smeared 2
       !%  Classical charges are treated as Gaussian distributions. 
-      !%  Smearing widths are hard-coded by species. (Development version only)
+      !%  Smearing widths are hard-coded by species (experimental).
       !%End
       call parse_integer(datasets_check('ClassicalPotential'), 0, ep%classical_pot)
       if(ep%classical_pot .eq. CLASSICAL_GAUSSIAN) then

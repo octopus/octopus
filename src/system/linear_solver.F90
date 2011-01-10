@@ -114,7 +114,7 @@ contains
     !% Conjugate gradients. Fast but unreliable. Hermitian matrices only
     !% (no eta in Sternheimer).
     !%Option multigrid 7
-    !% Multigrid solver, currently only Gauss-Jacobi (development version only).
+    !% Multigrid solver, currently only Gauss-Jacobi (experimental).
     !% Slow, but fairly reliable. General matrices.
     !%Option qmr_symmetric 81
     !% Quasi-minimal residual solver, for (complex) symmetric matrices. [Real symmetric
@@ -125,8 +125,8 @@ contains
     !% A x = y. Reliable but very slow. General matrices.
     !%Option qmr_dotp 83
     !% Quasi-minimal residual solver, for Hermitian matrices, using the
-    !% symmetric algorithm with conjugated dot product. Slightly slower than <tt>bicgstab</tt>
-    !% but more reliable. Can always be used in Sternheimer. (Development version only).
+    !% symmetric algorithm with conjugated dot product (experimental). Slightly slower than <tt>bicgstab</tt>
+    !% but more reliable. Can always be used in Sternheimer.
     !%Option qmr_general 84
     !% Quasi-minimal residual solver, for general matrices, using the
     !% most general form of the algorithm. Slow and unreliable.

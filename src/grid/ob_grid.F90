@@ -86,6 +86,7 @@ contains
     !%Type block
     !%Section Mesh
     !%Description
+    !% This feature is experimental.
     !% In transport mode it enables open boundaries in the <i>x</i>-direction
     !% and defines the character of the leads attached to the left and right
     !% of the finite central system.
@@ -111,8 +112,6 @@ contains
     !% If only one column is given, the value specified is used for both leads.
     !%
     !% All entries except <tt>lead_dataset</tt> are optional.
-    !%
-    !% Currently available only in development version.
     !%
     !%Option lead_dataset 1
     !% Gives the name of the dataset used for the periodic calculation of the

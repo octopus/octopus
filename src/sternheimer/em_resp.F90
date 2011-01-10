@@ -710,8 +710,7 @@ contains
       !%Default false
       !%Section Linear Response::Polarizabilities
       !%Description
-      !% Calculate linear-response Born effective charges from electric perturbation.
-      !% Currently only available in development version.
+      !% Calculate linear-response Born effective charges from electric perturbation (experimental).
       !%End
 
       call parse_logical(datasets_check('EMCalcBornCharges'), .false., em_vars%calc_Born)
