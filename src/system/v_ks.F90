@@ -445,6 +445,8 @@ contains
     subroutine calculate_density()
       integer :: ip
 
+      PUSH_SUB(v_ks_calc_start.calculate_density)
+
       ! get density taking into account non-linear core corrections
       SAFE_ALLOCATE(ks%calc%density(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
       call states_total_density(st, ks%gr%fine%mesh, ks%calc%density)
@@ -475,6 +477,7 @@ contains
         ks%calc%total_density => ks%calc%density(:, 1)
       end if
 
+      POP_SUB(v_ks_calc_start.calculate_density)
     end subroutine calculate_density
 
     ! ---------------------------------------------------------
@@ -558,6 +561,8 @@ contains
       !      integer :: ierr, itmp
       !      character(len=10) :: vxc_name
 
+      PUSH_SUB(v_ks_calc_start.tail_correction)
+
       SAFE_ALLOCATE(vxcc(1:ks%gr%fine%mesh%np_part))
 
       do ispin = 1, st%d%nspin
@@ -604,6 +609,7 @@ contains
       SAFE_DEALLOCATE_A(nxc)
       SAFE_DEALLOCATE_A(vxcc)
 
+      POP_SUB(v_ks_calc_start.tail_correction)
     end subroutine tail_correction
 
   end subroutine v_ks_calc_start

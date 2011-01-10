@@ -1075,8 +1075,10 @@ contains
   ! -----------------------------------------------
 
   subroutine energy_copy(ein, eout)
-    type(energy_t), intent(in) :: ein
+    type(energy_t), intent(in)  :: ein
     type(energy_t), intent(out) :: eout
+
+    PUSH_SUB(energy_copy)
 
     eout%total = ein%total
     eout%eigenvalues = ein%eigenvalues
@@ -1090,6 +1092,8 @@ contains
     eout%entropy = ein%entropy
     eout%ts = ein%ts
     eout%berry = ein%berry
+
+    POP_SUB(energy_copy)
   end subroutine energy_copy
 
 #include "undef.F90"

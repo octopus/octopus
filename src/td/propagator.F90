@@ -326,7 +326,7 @@ contains
     !% The special value <tt>all_steps</tt> forces self-consistency to
     !% be imposed on all propagation steps. A value of 0 means that
     !% self-consistency will not be imposed.  The default is 3, which
-    !% means that self-consitency is only enforced during the first three
+    !% means that self-consistency is only enforced during the first three
     !% steps.
     !%Option all_steps -1
     !% Self-consistency is imposed for all propagation steps.
