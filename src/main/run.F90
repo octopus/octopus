@@ -40,6 +40,7 @@ module run_m
   use opt_control_m
   use phonons_fd_m
   use phonons_lr_m
+  use poisson_m
   use kdotp_m
   use gcm_m
   use pulpo_m
@@ -74,10 +75,16 @@ contains
   subroutine run()
     logical :: fromScratch
 
-    ! slave nodes do not call the calculation routine
-    if(multicomm_is_slave(sys%mc)) return
-
     PUSH_SUB(run)
+
+    call poisson_async_init(sys%ks%hartree_solver, sys%mc)
+
+    ! slave nodes do not call the calculation routine
+    if(multicomm_is_slave(sys%mc))then
+      !for the moment we only have one type of slave
+      call poisson_slave_work(sys%ks%hartree_solver)
+      return
+    end if
 
     !%Variable FromScratch
     !%Type logical
@@ -135,6 +142,8 @@ contains
     case(CM_PULPO_A_FEIRA)
       call pulpo_print()
     end select
+
+    call poisson_async_end(sys%ks%hartree_solver, sys%mc)
 
     POP_SUB(run)
     

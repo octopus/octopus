@@ -33,6 +33,7 @@ module poisson_m
   use mesh_function_m
   use messages_m
   use mpi_m
+  use multicomm_m
   use par_vec_m
   use parser_m
   use poisson_cg_m
@@ -62,8 +63,11 @@ module poisson_m
     poisson_end,                 &
     poisson_test,                &
     poisson_is_multigrid,        &
-    poisson_energy
-
+    poisson_energy,              &
+    poisson_slave_work,          &
+    poisson_async_init,          &
+    poisson_async_end
+  
   integer, public, parameter ::         &
     POISSON_DIRECT_SUM_1D = -1,         &
     POISSON_DIRECT_SUM_2D = -2,         &
@@ -83,9 +87,16 @@ module poisson_m
     logical :: all_nodes_default
     type(poisson_corr_t) :: corrector
     type(poisson_sete_t) :: sete_solver
+#ifdef HAVE_MPI2
+    integer              :: nslaves
+    integer              :: intercomm
+#endif
   end type poisson_t
 
   type(poisson_t), target, save, public :: psolver
+
+  integer, parameter ::             &
+    CMD_FINISH = 1
 
 contains
 
@@ -666,13 +677,80 @@ contains
   !-----------------------------------------------------------------
   
   FLOAT function poisson_energy(this) result(energy)
-    type(poisson_t), intent(in) :: this
+    type(poisson_t),   intent(in) :: this
 
     energy = M_ZERO
     if(this%method == POISSON_SETE) energy = poisson_sete_energy(this%sete_solver)
 
   end function poisson_energy
 
+  !-----------------------------------------------------------------
+
+  subroutine poisson_async_init(this, mc)
+    type(poisson_t), intent(inout) :: this
+    type(multicomm_t), intent(in)  :: mc
+      
+    PUSH_SUB(poisson_async_init)
+
+    if(multicomm_have_slaves(mc)) then
+      
+      this%intercomm = mc%slave_intercomm
+      call MPI_Comm_remote_size(this%intercomm, this%nslaves, mpi_err)
+
+    end if
+   
+    POP_SUB(poisson_async_init)
+
+  end subroutine poisson_async_init
+
+  !-----------------------------------------------------------------
+  
+  subroutine poisson_async_end(this, mc)
+    type(poisson_t), intent(inout) :: this
+    type(multicomm_t), intent(in)  :: mc
+    
+    integer :: islave
+
+    PUSH_SUB(poisson_async_end)
+
+    if(multicomm_have_slaves(mc)) then
+      if(.not. multicomm_is_slave(mc)) then
+        do islave = 1, this%nslaves
+          ! send the finish signal
+          call MPI_Send(M_ONE, 1, MPI_FLOAT, islave - 1, CMD_FINISH, this%intercomm, mpi_err) 
+        end do
+      end if
+    end if
+
+    POP_SUB(poisson_async_end)
+
+  end subroutine poisson_async_end
+
+  !-----------------------------------------------------------------
+
+  subroutine poisson_slave_work(this)
+    type(poisson_t), intent(inout) :: this
+    
+    FLOAT, allocatable :: rho(:)
+    logical :: done
+    integer :: status(MPI_STATUS_SIZE)
+
+    PUSH_SUB(poisson_slave_work)
+
+    SAFE_ALLOCATE(rho(1:this%der%mesh%np))
+    done = .false.
+    
+#ifdef HAVE_MPI2
+    do while(.not. done)
+
+      call MPI_Recv(rho(1), this%der%mesh%np, MPI_FLOAT, MPI_ANY_SOURCE, MPI_ANY_TAG, this%intercomm, status(1), mpi_err)
+      if(status(MPI_TAG) == CMD_FINISH) done = .true.
+
+    end do
+#endif
+
+    POP_SUB(poisson_slave_work)
+  end subroutine poisson_slave_work
 
 #include "solver_1d_inc.F90"
 #include "solver_2d_inc.F90"

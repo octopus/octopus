@@ -76,8 +76,8 @@
     multicomm_init, multicomm_end,   &
     multicomm_all_pairs_copy,        &
     multicomm_strategy_is_parallel,  &
-    multicomm_is_slave
-
+    multicomm_is_slave,              &
+    multicomm_have_slaves
 
   ! possible parallelization strategies
   integer, public, parameter ::      &
@@ -119,6 +119,7 @@
 
     integer          :: nthreads
     integer          :: node_type
+    logical          :: have_slaves     !< are slaves available?
 #ifdef HAVE_MPI2
     integer          :: slave_intercomm !< the intercomm to communicate with slaves
 #endif
@@ -215,6 +216,15 @@ contains
       
       ! the slaves must be defined at a certain parallelization level, for the moment this is state parallelization.
       slave_level = P_STRATEGY_STATES
+      
+      mc%have_slaves = (num_slaves > 0)
+
+#ifndef HAVE_MPI2
+      if(mc%have_slaves) then
+        message(1) = 'Task parallelization requires MPI 2.'
+        call write_fatal(1)
+      end if
+#endif
 
       ! clear parallel strategies that were available but will not be used
       do ii = 1, mc%n_index
@@ -822,11 +832,19 @@ contains
 
   ! ---------------------------------------------------------
 
-  logical function multicomm_is_slave(this) result(slave)
+  logical pure function multicomm_is_slave(this) result(slave)
     type(multicomm_t), intent(in) :: this
     
     slave = this%node_type == P_SLAVE
   end function multicomm_is_slave
+
+  ! ---------------------------------------------------------
+
+  logical pure function multicomm_have_slaves(this) result(have_slaves)
+    type(multicomm_t), intent(in) :: this
+
+    have_slaves = this%have_slaves
+  end function multicomm_have_slaves
 
 end module multicomm_m
 
