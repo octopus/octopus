@@ -404,7 +404,8 @@ contains
     !> check if a balanced distribution of nodes will be used
     subroutine sanity_check()
       FLOAT :: frac
-      integer :: ii, kk, n_max, num
+      integer :: ii, kk, n_max
+      integer :: real_group_sizes(1:MAX_INDEX)
 
       PUSH_SUB(multicomm_init.sanity_check)
 
@@ -424,30 +425,30 @@ contains
       ! print out some info
       ii = 0
       do kk = mc%n_index, 1, -1
+        real_group_sizes(kk) = mc%group_sizes(kk)
         if(.not. multicomm_strategy_is_parallel(mc, kk)) cycle
         ii = ii + 1
-        num = mc%group_sizes(kk)
-        if(kk == slave_level) INCR(num, -num_slaves)
+        if(kk == slave_level) INCR(real_group_sizes(kk), -num_slaves)
         write(message(ii),'(3a,i6,a,i8,a)') 'Info: Number of nodes in ', &
-          par_types(kk), ' group:', num, ' (', index_range(kk), ')'
+          par_types(kk), ' group:', real_group_sizes(kk), ' (', index_range(kk), ')'
       end do
       call write_info(ii)
 
       ! do we have the correct number of processors
       if(product(mc%group_sizes(1:mc%n_index)) .ne. base_grp%size) then
         write(message(1),'(a,i4,a,i4,a)') "Inconsistent number of processors (", &
-          product(mc%group_sizes(1:mc%n_index)), ".ne.", base_grp%size, ")"
+          product(real_group_sizes(1:mc%n_index)), ".ne.", base_grp%size, ")"
         message(2) = "You probably have a problem in the block 'ParallelizationGroupRanks'"
         call write_fatal(2, only_root_writes = .true.)
       end if
 
-      if(any(mc%group_sizes(1:mc%n_index) > index_range(1:mc%n_index))) then
+      if(any(real_group_sizes(1:mc%n_index) > index_range(1:mc%n_index))) then
         message(1) = "Could not distribute nodes in parallel job. Most likely you are trying to"
         message(2) = "use too many nodes for the job."
         call write_fatal(2, only_root_writes = .true.)
       end if
 
-      if(any(index_range(1:mc%n_index) / mc%group_sizes(1:mc%n_index) < min_range(1:mc%n_index))) then
+      if(any(index_range(1:mc%n_index) / real_group_sizes(1:mc%n_index) < min_range(1:mc%n_index))) then
         message(1) = "I have fewer elements in a parallel group than recommended."
         message(2) = "Maybe you should reduce the number of nodes."
         call write_warning(2)
@@ -456,13 +457,13 @@ contains
       ! calculate fraction of idle time
       frac = M_ONE
       do ii = 1, mc%n_index
-        n_max = ceiling(real(index_range(ii), REAL_PRECISION) / real(mc%group_sizes(ii), REAL_PRECISION))
-        kk = n_max * mc%group_sizes(ii)
-        frac = frac * (M_ONE - real(kk - index_range(ii), REAL_PRECISION) / real(kk, REAL_PRECISION))
+        n_max = ceiling(real(index_range(ii), REAL_PRECISION) / real(real_group_sizes(ii), REAL_PRECISION))
+        kk = n_max*real_group_sizes(ii)
+        frac = frac*(M_ONE - real(kk - index_range(ii), REAL_PRECISION) / real(kk, REAL_PRECISION))
       end do
 
       write(message(1), '(a,f5.2,a)') "Info: Octopus will waste at least ", &
-        (M_ONE - frac) * CNST(100.), "% of computer time."
+        (M_ONE - frac)*CNST(100.0), "% of computer time."
       if(frac < CNST(0.8)) then
         message(2) = "I decided this is too much. Change the number of processors and try again."
         message(3) = "Usually a number of processors which is a multiple of small primes is best."
