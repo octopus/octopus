@@ -119,6 +119,9 @@
 
     integer          :: nthreads
     integer          :: node_type
+#ifdef HAVE_MPI2
+    integer          :: slave_intercomm !< the intercomm to communicate with slaves
+#endif
   end type multicomm_t
 
   !> An all-pairs communication schedule for a given group.
@@ -533,14 +536,12 @@ contains
       reorder = .false.
       call MPI_Cart_create(new_comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, new_comm2, mpi_err)
 
-      call mpi_grp_init(base_grp, new_comm2)
-
       ! The "lines" of the Cartesian grid.
       do i_strategy = 1, mc%n_index
         if(multicomm_strategy_is_parallel(mc, i_strategy)) then
           dim_mask             = .false.
           dim_mask(i_strategy) = .true.
-          call MPI_Cart_sub(base_grp%comm, dim_mask, mc%group_comm(i_strategy), mpi_err)
+          call MPI_Cart_sub(new_comm2, dim_mask, mc%group_comm(i_strategy), mpi_err)
           call MPI_Comm_rank(mc%group_comm(i_strategy), mc%who_am_i(i_strategy), mpi_err)
         else
           mc%group_comm(i_strategy) = MPI_COMM_NULL
@@ -552,21 +553,56 @@ contains
       dim_mask                     = .false.
       dim_mask(P_STRATEGY_DOMAINS) = .true.
       dim_mask(P_STRATEGY_STATES)  = .true.
-      call MPI_Cart_sub(base_grp%comm, dim_mask, mc%dom_st_comm, mpi_err)
+      call MPI_Cart_sub(new_comm2, dim_mask, mc%dom_st_comm, mpi_err)
 
       ! The state-kpoints "planes" of the grid
       dim_mask                     = .false.
       dim_mask(P_STRATEGY_STATES)  = .true.
       dim_mask(P_STRATEGY_KPOINTS) = .true.
-      call MPI_Cart_sub(base_grp%comm, dim_mask, mc%st_kpt_comm, mpi_err)
+      call MPI_Cart_sub(new_comm2, dim_mask, mc%st_kpt_comm, mpi_err)
+
+      if(num_slaves > 0) call create_slave_intercommunicators()
 
 #else
       mc%group_comm = -1
       mc%who_am_i   = 0
 #endif
 
+      call mpi_grp_init(base_grp, new_comm2)
+      
       POP_SUB(multicomm_init.group_comm_create)
     end subroutine group_comm_create
+
+    ! -----------------------------------------------------
+
+    subroutine create_slave_intercommunicators()
+      integer :: remote_leader
+      integer :: tag
+      integer :: coords(MAX_INDEX)
+
+      PUSH_SUB(multicomm_init.create_slave_intercommunicators)
+
+      ! create the intercommunicators to communicate with slaves
+#ifdef HAVE_MPI2
+      ! get the coordinates of the current processor
+      call MPI_Cart_coords(base_grp%comm, base_grp%rank, mc%n_index, coords, mpi_err)
+      
+      !now get the rank of the remote_leader
+      if(mc%node_type == P_SLAVE) then
+        coords(slave_level) = 0
+      else
+        coords(slave_level) = mc%group_sizes(slave_level)
+      end if
+      call MPI_Cart_rank(base_grp%comm, coords, remote_leader, mpi_err)
+
+      ! now create the intercommunicator
+      tag = coords(P_STRATEGY_DOMAINS)
+      call MPI_Intercomm_create(mc%group_comm(slave_level), 0, base_grp%comm, remote_leader, tag, mc%slave_intercomm, mpi_err)
+#endif
+
+      POP_SUB(multicomm_init.create_slave_intercommunicators)
+
+    end subroutine create_slave_intercommunicators
 
   end subroutine multicomm_init
   
