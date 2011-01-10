@@ -310,29 +310,31 @@ contains
     tr%v_old(:, :, :) = M_ZERO
     call exponential_init(tr%te, gr%der) ! initialize propagator
 
-    !%Variable TDSelfConsistentSteps
+    call messages_obsolete_variable('TDSelfConsistentSteps', 'TDStepsWithSelfConsistency')
+
+    !%Variable TDStepsWithSelfConsistency
     !%Type integer
     !%Default 3
     !%Section Time-Dependent::Propagation
     !%Description
-    !% Since the KS propagator is non-linear, each
-    !% propagating step should be performed self-consistently.
-    !% In practice, for most purposes this is not 
-    !% necessary, except perhaps in the first iterations. 
-    !% This variable holds the number of initial steps for
-    !% which the propagation is done self-consistently.
+    !% Since the KS propagator is non-linear, each propagation step
+    !% should be performed self-consistently.  In practice, for most
+    !% purposes this is not necessary, except perhaps in the first
+    !% iterations. This variable holds the number of propagation steps
+    !% for which the propagation is done self-consistently. 
     !%
     !% The special value <tt>all_steps</tt> forces self-consistency to
-    !% be imposed on all steps. A value of 0 means that
-    !% self-consistency will not be imposed.
-    !% The default is 3 steps.
+    !% be imposed on all propagation steps. A value of 0 means that
+    !% self-consistency will not be imposed.  The default is 3, which
+    !% means that self-consitency is only enforced during the first three
+    !% steps.
     !%Option all_steps -1
-    !% Self-consistency is imposed for all time-steps.
+    !% Self-consistency is imposed for all propagation steps.
     !%End
 
-    call parse_integer(datasets_check('TDSelfConsistentSteps'), 3, tr%scf_propagation_steps)
+    call parse_integer(datasets_check('TDStepsWithSelfConsistency'), 3, tr%scf_propagation_steps)
     if(tr%scf_propagation_steps == -1) tr%scf_propagation_steps = HUGE(tr%scf_propagation_steps)
-    if(tr%scf_propagation_steps < 0) call input_error('TDSelfConsistentSteps')
+    if(tr%scf_propagation_steps < 0) call input_error('TDStepsWithSelfConsistency')
 
     POP_SUB(propagator_init)
   end subroutine propagator_init
