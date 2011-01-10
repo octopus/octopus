@@ -651,7 +651,7 @@ contains
     type(hamiltonian_t),      intent(in)    :: hm
     type(states_t),           intent(inout) :: st
     FLOAT,                    intent(inout) :: ex, ec
-    FLOAT, optional,          intent(inout) :: vxc(:,:) ! vxc(gr%mesh%np, st%d%nspin)
+    FLOAT,                    intent(inout) :: vxc(:,:) ! vxc(gr%mesh%np, st%d%nspin)
 
     integer :: ii
 
@@ -696,11 +696,7 @@ contains
       ks_inversion%aux_hm%vxc(:,ii)  = ks_inversion%aux_hm%vhxc(:,ii) - ks_inversion%aux_hm%vhartree(:)
     enddo
 
-    hm%vxc = ks_inversion%aux_hm%vxc
-    
-    do ii = 1, st%d%nspin
-      hm%vhxc(:,ii) = hm%vhartree(:) + hm%vxc(:,ii)
-    enddo
+    vxc(1:gr%mesh%np, 1:hm%d%nspin) = ks_inversion%aux_hm%vxc(1:gr%mesh%np, 1:hm%d%nspin)
 
     POP_SUB(X(xc_ks_inversion_calc))
 
