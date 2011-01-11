@@ -255,9 +255,17 @@ contains
     ierr = 0
 
     call block_signals()
+
     if(mpi_grp_is_root(mpi_world)) then
       call io_mkdir(dir, is_tmp=.true.)
+    end if
 
+#ifdef HAVE_MPI
+    !we need a barrier to wait for the directory to be created
+    call MPI_Barrier(mpi_world%comm, mpi_err)
+#endif
+
+    if(mpi_grp_is_root(mpi_world)) then
       iunit = io_open(trim(dir)//'/wfns', action='write', is_tmp=.true.)
       write(iunit,'(a)') '#     #k-point            #st            #dim    filename'
       write(iunit,'(a)') '%Wavefunctions'
@@ -285,7 +293,7 @@ contains
 
       iunit_states = io_open(trim(dir)//'/states', action='write', is_tmp=.true.)
       call states_dump(st, iunit_states)
-      call io_close(iunit_states)      
+      call io_close(iunit_states)
     end if
 
     itot = 1
