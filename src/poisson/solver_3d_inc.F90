@@ -18,9 +18,10 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine poisson3D_init(this, geo)
+subroutine poisson3D_init(this, geo, all_nodes_comm)
   type(poisson_t),  intent(inout) :: this
   type(geometry_t), intent(in)    :: geo
+  integer,          intent(in)    :: all_nodes_comm
 
   integer :: maxl, iter
   integer :: nx, ny, nz
@@ -112,7 +113,7 @@ subroutine poisson3D_init(this, geo)
      call poisson_multigrid_init(this%mg, this%der%mesh, maxl, threshold)
      
   case(POISSON_ISF)
-    call poisson_isf_init(this%der%mesh, init_world = this%all_nodes_default)
+    call poisson_isf_init(this%der%mesh, all_nodes_comm, init_world = this%all_nodes_default)
 
   case(POISSON_FFT_SPH)
     call poisson_fft_build_3d_0d(this%der%mesh, this%method)

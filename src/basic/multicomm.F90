@@ -122,13 +122,10 @@
     logical          :: have_slaves     !< are slaves available?
     
     integer          :: full_comm        !< The base communicator.
-    integer          :: full_comm_rank   !< The base communicator.
+    integer          :: full_comm_rank   !< The rank in the base communicator.
     integer          :: master_comm      !< The communicator without slaves.
-    integer          :: master_comm_rank !< The communicator without slaves.
-
-#ifdef HAVE_MPI2
-    integer          :: slave_intercomm !< the intercomm to communicate with slaves
-#endif
+    integer          :: master_comm_rank !< The rank in the communicator without slaves.
+    integer          :: slave_intercomm  !< the intercomm to communicate with slaves
   end type multicomm_t
 
   !> An all-pairs communication schedule for a given group.

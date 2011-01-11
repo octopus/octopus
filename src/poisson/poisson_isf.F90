@@ -48,6 +48,8 @@ module poisson_isf_m
     logical           :: all_nodes
   end type isf_cnf_t
 
+  integer             :: isf_all_nodes_comm
+
   ! Indices for the cnf array
   integer, parameter :: serial = 1
   integer, parameter :: world = 2
@@ -84,8 +86,9 @@ module poisson_isf_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine poisson_isf_init(mesh, init_world)
+  subroutine poisson_isf_init(mesh, all_nodes_comm, init_world)
     type(mesh_t),      intent(in) :: mesh
+    integer,           intent(in) :: all_nodes_comm
     logical, optional, intent(in) :: init_world 
 
     integer :: n1, n2, n3
@@ -98,6 +101,7 @@ contains
     integer :: ierr, world_grp, poisson_grp, ii
     integer, allocatable :: ranks(:)
     !data ranks /0, 1/
+    integer :: world_size
 #endif
     integer :: nodes
 
@@ -147,7 +151,11 @@ contains
     !%End
     call parse_integer(datasets_check('PoissonSolverNodes'), default_nodes, nodes)
 
-    if(nodes <= 0 .or. nodes > mpi_world%size) nodes = mpi_world%size
+    isf_all_nodes_comm = all_nodes_comm
+
+    call MPI_Comm_size(all_nodes_comm, world_size, mpi_err)
+
+    if(nodes <= 0 .or. nodes > world_size) nodes = mpi_world%size
     cnf(world)%all_nodes = (nodes == mpi_world%size)
 
     SAFE_ALLOCATE(ranks(1:nodes))
@@ -158,7 +166,7 @@ contains
 
     !create a new communicator
     !Extract the original group handle and create new comm.
-    call MPI_Comm_group(mpi_world%comm, world_grp, ierr)
+    call MPI_Comm_group(all_nodes_comm, world_grp, ierr)
     call MPI_Group_incl(world_grp, nodes, ranks(1), poisson_grp, ierr)
     call MPI_Comm_create(mpi_world%comm, poisson_grp, cnf(world)%mpi_grp%comm, ierr)
 
@@ -301,7 +309,7 @@ contains
       ! we need to be sure that the root of every domain-partition has a copy of the potential
       ! for the moment we broadcast to all nodes, but this is more than what we really need 
       if(i_cnf == world .and. .not. cnf(world)%all_nodes) then
-        call MPI_Bcast(rho_cf%rs(1, 1, 1), rho_cf%n(1)*rho_cf%n(2)*rho_cf%n(3), MPI_FLOAT, 0, mpi_world%comm, mpi_err)
+        call MPI_Bcast(rho_cf%rs(1, 1, 1), rho_cf%n(1)*rho_cf%n(2)*rho_cf%n(3), MPI_FLOAT, 0, isf_all_nodes_comm, mpi_err)
       end if
 #endif
     end if

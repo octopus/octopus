@@ -101,7 +101,7 @@ contains
     call h_sys_output_init(sys%gr%sb, sys%st%nst, sys%outp)
     call elf_init()
 
-    call poisson_init(psolver, sys%gr%der, sys%geo)
+    call poisson_init(psolver, sys%gr%der, sys%geo, sys%mc%master_comm)
     if(poisson_is_multigrid(psolver)) call grid_create_multigrid(sys%gr, sys%geo)
 
     call v_ks_init(sys%ks, sys%gr, sys%st%d, sys%geo, sys%mc, sys%st%qtot)

@@ -101,10 +101,11 @@ module poisson_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(this, der, geo)
+  subroutine poisson_init(this, der, geo, all_nodes_comm)
     type(poisson_t),             intent(out)   :: this
     type(derivatives_t), target, intent(inout) :: der
     type(geometry_t),            intent(in)    :: geo
+    integer,                     intent(in)    :: all_nodes_comm
 
     if(this%method.ne.-99) return ! already initialized
 
@@ -293,7 +294,7 @@ contains
       end if
 
       call messages_print_var_option(stdout, "PoissonSolver", this%method)
-      call poisson3D_init(this, geo)
+      call poisson3D_init(this, geo, all_nodes_comm)
 
       POP_SUB(poisson_init.init_3D)
     end subroutine init_3D
