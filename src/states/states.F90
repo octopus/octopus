@@ -1508,13 +1508,8 @@ return
     end do
 
 #ifdef HAVE_MPI
-    if(st%parallel_in_states) then
-      call MPI_Allreduce(tot, tot_temp, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-      tot = tot_temp
-    end if
-
-    if(st%d%kpt%parallel) then
-      call MPI_Allreduce(tot, tot_temp, 1, MPI_FLOAT, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
+    if(st%parallel_in_states .or. st%d%kpt%parallel) then
+      call MPI_Allreduce(tot, tot_temp, 1, MPI_FLOAT, MPI_SUM, st%st_kpt%comm, mpi_err)
       tot = tot_temp
     end if
 #endif

@@ -279,8 +279,8 @@ contains
 #endif
 
 #ifdef HAVE_MPI
-    ! reduce over states
-    if(this%st%parallel_in_states) then
+    ! reduce over states and k-points
+    if(this%st%parallel_in_states .or. this%st%d%kpt%parallel) then
       call profiling_in(reduce_prof, "DENSITY_REDUCE")
 #ifndef HAVE_MPI2
       SAFE_ALLOCATE(reduce_rho(1:np))
@@ -290,20 +290,7 @@ contains
         call blas_copy(np, this%density(1, ispin), 1, reduce_rho(1), 1)
 #endif
         call MPI_Allreduce(MPI_IN_PLACE_OR(reduce_rho(1)), &
-          this%density(1, ispin), np, MPI_FLOAT, MPI_SUM, this%st%mpi_grp%comm, mpi_err)
-      end do
-      SAFE_DEALLOCATE_A(reduce_rho)
-      call profiling_out(reduce_prof)
-    end if
-
-    ! reduce over k-points
-    if(this%st%d%kpt%parallel) then
-      call profiling_in(reduce_prof, "DENSITY_REDUCE")
-      SAFE_ALLOCATE(reduce_rho(1:np))
-      do ispin = 1, this%st%d%nspin
-        call MPI_Allreduce(this%density(1, ispin), reduce_rho(1), np, &
-             MPI_FLOAT, MPI_SUM, this%st%d%kpt%mpi_grp%comm, mpi_err)
-        call blas_copy(np, reduce_rho(1), 1, this%density(1, ispin), 1)
+          this%density(1, ispin), np, MPI_FLOAT, MPI_SUM, this%st%st_kpt%comm, mpi_err)
       end do
       SAFE_DEALLOCATE_A(reduce_rho)
       call profiling_out(reduce_prof)
