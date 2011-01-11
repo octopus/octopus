@@ -691,9 +691,12 @@ contains
   FLOAT function poisson_energy(this) result(energy)
     type(poisson_t),   intent(in) :: this
 
+    PUSH_SUB(poisson_energy)
+
     energy = M_ZERO
     if(this%method == POISSON_SETE) energy = poisson_sete_energy(this%sete_solver)
 
+    POP_SUB(poisson_energy)
   end function poisson_energy
 
   !-----------------------------------------------------------------
@@ -805,7 +808,7 @@ contains
     integer :: islave
     type(profile_t), save :: prof
 
-    PUSH_SUB(poisson_solver_start)
+    PUSH_SUB(dpoisson_solve_start)
     call profiling_in(prof, "POISSON_START")
 
     ! we assume all nodes have a copy of the density
@@ -814,7 +817,7 @@ contains
     end do
     
     call profiling_out(prof)
-    POP_SUB(poisson_solver_start)
+    POP_SUB(dpoisson_solve_start)
 #endif
     
   end subroutine dpoisson_solve_start
@@ -828,13 +831,13 @@ contains
 #ifdef HAVE_MPI2
     type(profile_t), save :: prof
 
-    PUSH_SUB(poisson_solver_finish)
+    PUSH_SUB(dpoisson_solve_finish)
     call profiling_in(prof, "POISSON_FINISH")
 
     call MPI_Bcast(pot(1), this%der%mesh%np, MPI_FLOAT, 0, this%intercomm, mpi_err)
 
     call profiling_out(prof)
-    POP_SUB(poisson_solver_finish)
+    POP_SUB(dpoisson_solve_finish)
 #endif
   end subroutine dpoisson_solve_finish
 
