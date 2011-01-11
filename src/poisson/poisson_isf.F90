@@ -40,6 +40,12 @@ module poisson_isf_m
     poisson_isf_solve,    & 
     poisson_isf_end
 
+  ! Indices for the cnf array
+  integer, parameter :: SERIAL = 1
+  integer, parameter :: WORLD = 2
+  integer, parameter :: DOMAIN = 3
+  integer, parameter :: N_CNF = 3
+
   ! Datatype to store kernel values to solve Poisson equation
   ! on different communicators (configurations).
   type isf_cnf_t
@@ -52,14 +58,8 @@ module poisson_isf_m
   type poisson_isf_t
     integer                      :: all_nodes_comm
     type(dcf_t)                  :: rho_cf
-    type(isf_cnf_t)              :: cnf(1:4)
+    type(isf_cnf_t)              :: cnf(1:N_CNF)
   end type poisson_isf_t
-
-  ! Indices for the cnf array
-  integer, parameter :: serial = 1
-  integer, parameter :: world = 2
-  integer, parameter :: domain = 3
-  integer, parameter :: n_cnf = 3
 
   integer, parameter           :: order_scaling_function = 8 
 
@@ -96,10 +96,10 @@ contains
     logical, optional,   intent(in)    :: init_world 
 
     integer :: n1, n2, n3
+    integer :: i_cnf
 #if defined(HAVE_MPI)
     integer :: m1, m2, m3, md1, md2, md3
     integer :: n(3)
-    integer :: i_cnf
     logical :: init_world_
     integer :: default_nodes
     integer :: ierr, world_grp, poisson_grp, ii
@@ -118,20 +118,26 @@ contains
 
     call dcf_new(mesh%idx%ll, this%rho_cf)
 
+    ! we need to nullify the pointer so they can be deallocated safely
+    ! afterwards
+    do i_cnf = 1, N_CNF
+      nullify(this%cnf(i_cnf)%kernel)
+    end do
+
     if(.not. mesh%parallel_in_domains) then
       ! The serial version is always needed (as used, e.g., in the casida runmode)
       call calculate_dimensions(this%rho_cf%n(1), this%rho_cf%n(2), this%rho_cf%n(3), &
-        this%cnf(serial)%nfft1, this%cnf(serial)%nfft2, this%cnf(serial)%nfft3)
+        this%cnf(SERIAL)%nfft1, this%cnf(SERIAL)%nfft2, this%cnf(SERIAL)%nfft3)
 
-      n1 = this%cnf(serial)%nfft1/2 + 1
-      n2 = this%cnf(serial)%nfft2/2 + 1
-      n3 = this%cnf(serial)%nfft3/2 + 1
+      n1 = this%cnf(SERIAL)%nfft1/2 + 1
+      n2 = this%cnf(SERIAL)%nfft2/2 + 1
+      n3 = this%cnf(SERIAL)%nfft3/2 + 1
 
-      SAFE_ALLOCATE(this%cnf(serial)%kernel(1:n1, 1:n2, 1:n3))
+      SAFE_ALLOCATE(this%cnf(SERIAL)%kernel(1:n1, 1:n2, 1:n3))
 
       call build_kernel(this%rho_cf%n(1), this%rho_cf%n(2), this%rho_cf%n(3),   &
-        this%cnf(serial)%nfft1, this%cnf(serial)%nfft2, this%cnf(serial)%nfft3, &
-        real(mesh%spacing(1), 8), order_scaling_function, this%cnf(serial)%kernel)
+        this%cnf(SERIAL)%nfft1, this%cnf(SERIAL)%nfft2, this%cnf(SERIAL)%nfft3, &
+        real(mesh%spacing(1), 8), order_scaling_function, this%cnf(SERIAL)%kernel)
     end if
 #if defined(HAVE_MPI)
 
@@ -139,7 +145,7 @@ contains
     ! depends on the number of nodes used for the calculations. To avoid
     ! recalculating the kernel on each call of poisson_isf_solve depending on
     ! the all_nodes argument, both kernels are calculated.
-    this%cnf(domain)%mpi_grp = mesh%mpi_grp
+    this%cnf(DOMAIN)%mpi_grp = mesh%mpi_grp
 
     ! For the world configuration we build a new communicator
 
@@ -160,7 +166,7 @@ contains
     call MPI_Comm_size(all_nodes_comm, world_size, mpi_err)
 
     if(nodes <= 0 .or. nodes > world_size) nodes = mpi_world%size
-    this%cnf(world)%all_nodes = (nodes == mpi_world%size)
+    this%cnf(WORLD)%all_nodes = (nodes == mpi_world%size)
 
     SAFE_ALLOCATE(ranks(1:nodes))
 
@@ -172,30 +178,30 @@ contains
     !Extract the original group handle and create new comm.
     call MPI_Comm_group(all_nodes_comm, world_grp, ierr)
     call MPI_Group_incl(world_grp, nodes, ranks(1), poisson_grp, ierr)
-    call MPI_Comm_create(mpi_world%comm, poisson_grp, this%cnf(world)%mpi_grp%comm, ierr)
+    call MPI_Comm_create(mpi_world%comm, poisson_grp, this%cnf(WORLD)%mpi_grp%comm, ierr)
 
     SAFE_DEALLOCATE_A(ranks)
 
     !Fill the new data structure, for all nodes
-    if (this%cnf(world)%mpi_grp%comm /= MPI_COMM_NULL) then
-      call MPI_Comm_rank(this%cnf(world)%mpi_grp%comm, this%cnf(world)%mpi_grp%rank, ierr)
-      call MPI_Comm_size(this%cnf(world)%mpi_grp%comm, this%cnf(world)%mpi_grp%size, ierr)
+    if (this%cnf(WORLD)%mpi_grp%comm /= MPI_COMM_NULL) then
+      call MPI_Comm_rank(this%cnf(WORLD)%mpi_grp%comm, this%cnf(WORLD)%mpi_grp%rank, ierr)
+      call MPI_Comm_size(this%cnf(WORLD)%mpi_grp%comm, this%cnf(WORLD)%mpi_grp%size, ierr)
     else
-      this%cnf(world)%mpi_grp%rank = -1
-      this%cnf(world)%mpi_grp%size = -1
+      this%cnf(WORLD)%mpi_grp%rank = -1
+      this%cnf(WORLD)%mpi_grp%size = -1
     end if
 
     ! Build the kernel for all configurations. At the moment, this is
-    ! solving the poisson equation with all nodes (i_cnf == world) and
-    ! with the domain nodes only (i_cnf == domain).
-    do i_cnf = 2, n_cnf
-      if( (i_cnf == world .and. .not. init_world_) &                  ! world is disabled
-        .or. (i_cnf == domain .and. .not. mesh%parallel_in_domains) & ! not parallel in domains
+    ! solving the poisson equation with all nodes (i_cnf == WORLD) and
+    ! with the domain nodes only (i_cnf == DOMAIN).
+    do i_cnf = 2, N_CNF
+      if( (i_cnf == WORLD .and. .not. init_world_) &                  ! world is disabled
+        .or. (i_cnf == DOMAIN .and. .not. mesh%parallel_in_domains) & ! not parallel in domains
         ) then
         nullify(this%cnf(i_cnf)%kernel)
         cycle
       end if
-      if (this%cnf(i_cnf)%mpi_grp%rank /= -1 .or. i_cnf /= world ) then
+      if (this%cnf(i_cnf)%mpi_grp%rank /= -1 .or. i_cnf /= WORLD ) then
         call par_calculate_dimensions(this%rho_cf%n(1), this%rho_cf%n(2), this%rho_cf%n(3), &
           m1, m2, m3, n1, n2, n3, md1, md2, md3, this%cnf(i_cnf)%nfft1, this%cnf(i_cnf)%nfft2, &
           this%cnf(i_cnf)%nfft3, this%cnf(i_cnf)%mpi_grp%size)
@@ -271,21 +277,21 @@ contains
     end if
 
     ! Choose configuration.
-    i_cnf = serial
+    i_cnf = SERIAL
 
 #if defined(HAVE_MPI)
     if(all_nodes) then
-      i_cnf = world
+      i_cnf = WORLD
     else if(mesh%parallel_in_domains) then
-      i_cnf = domain
+      i_cnf = DOMAIN
     end if
 #endif
 
 #if !defined(HAVE_MPI)
-    ASSERT(i_cnf == serial)
+    ASSERT(i_cnf == SERIAL)
 #endif
 
-    if(i_cnf == serial) then
+    if(i_cnf == SERIAL) then
 
 #ifdef SINGLE_PRECISION
       SAFE_ALLOCATE(rhop(1:this%rho_cf%n(1), 1:this%rho_cf%n(2), 1:this%rho_cf%n(3)))
@@ -295,8 +301,8 @@ contains
 #endif
 
       call psolver_kernel(this%rho_cf%n(1), this%rho_cf%n(2), this%rho_cf%n(3),    &
-        this%cnf(serial)%nfft1, this%cnf(serial)%nfft2, this%cnf(serial)%nfft3, &
-        real(mesh%spacing(1), 8), this%cnf(serial)%kernel, rhop)
+        this%cnf(SERIAL)%nfft1, this%cnf(SERIAL)%nfft2, this%cnf(SERIAL)%nfft3, &
+        real(mesh%spacing(1), 8), this%cnf(SERIAL)%kernel, rhop)
 
 #ifdef SINGLE_PRECISION
       this%rho_cf%RS = rhop
@@ -305,7 +311,7 @@ contains
 
 #if defined(HAVE_MPI)
     else
-      if (this%cnf(i_cnf)%mpi_grp%size /= -1 .or. i_cnf /= world) then
+      if (this%cnf(i_cnf)%mpi_grp%size /= -1 .or. i_cnf /= WORLD) then
         call par_psolver_kernel(this%rho_cf%n(1), this%rho_cf%n(2), this%rho_cf%n(3), &
           this%cnf(i_cnf)%nfft1, this%cnf(i_cnf)%nfft2, this%cnf(i_cnf)%nfft3,  &
           real(mesh%spacing(1), 8), this%cnf(i_cnf)%kernel, this%rho_cf%RS,                      &
@@ -313,7 +319,7 @@ contains
       end if
       ! we need to be sure that the root of every domain-partition has a copy of the potential
       ! for the moment we broadcast to all nodes, but this is more than what we really need 
-      if(i_cnf == world .and. .not. this%cnf(world)%all_nodes) then
+      if(i_cnf == WORLD .and. .not. this%cnf(WORLD)%all_nodes) then
         call MPI_Bcast(this%rho_cf%rs(1, 1, 1), this%rho_cf%n(1)*this%rho_cf%n(2)*this%rho_cf%n(3), &
           MPI_FLOAT, 0, this%all_nodes_comm, mpi_err)
       end if
@@ -357,14 +363,14 @@ contains
     PUSH_SUB(poisson_isf_end)
 
 #if defined(HAVE_MPI)
-    do i_cnf = 1, n_cnf
+    do i_cnf = 1, N_CNF
       SAFE_DEALLOCATE_P(this%cnf(i_cnf)%kernel)
     end do
-    if(this%cnf(world)%mpi_grp%comm /= MPI_COMM_NULL) then
-      call MPI_Comm_free(this%cnf(world)%mpi_grp%comm, mpi_err)
+    if(this%cnf(WORLD)%mpi_grp%comm /= MPI_COMM_NULL) then
+      call MPI_Comm_free(this%cnf(WORLD)%mpi_grp%comm, mpi_err)
     end if
 #else
-    SAFE_DEALLOCATE_P(this%cnf(serial)%kernel)
+    SAFE_DEALLOCATE_P(this%cnf(SERIAL)%kernel)
 #endif
 
     call dcf_free(this%rho_cf)
