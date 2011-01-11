@@ -73,6 +73,7 @@ module v_ks_m
     SIC_AMALDI = 3         ! Amaldi correction term
 
   type v_ks_calc_t
+    private
     logical                       :: calculating
     logical                       :: time_present
     FLOAT                         :: time
@@ -408,6 +409,10 @@ contains
 
       call calculate_density()
 
+      if(poisson_is_async(ks%hartree_solver)) then
+        call dpoisson_solve_start(ks%hartree_solver, ks%calc%total_density)
+      end if
+
       if(ks%theory_level .ne. HARTREE) call v_a_xc()
     end if
 
@@ -738,7 +743,7 @@ contains
   end subroutine v_ks_calc_finish
 
   ! ---------------------------------------------------------
-  ! Hartree contribution to the XC potential
+  ! Hartree contribution to the KS potential
   subroutine v_ks_hartree(ks, hm)
     type(v_ks_t),        intent(inout) :: ks
     type(hamiltonian_t), intent(inout) :: hm
@@ -756,9 +761,13 @@ contains
       pot = M_ZERO
     end if
 
-    ! solve the Poisson equation
-    call dpoisson_solve(ks%hartree_solver, pot, ks%calc%total_density)
-    
+    if(.not. poisson_is_async(ks%hartree_solver)) then
+      ! solve the Poisson equation
+      call dpoisson_solve(ks%hartree_solver, pot, ks%calc%total_density)
+    else
+      call dpoisson_solve_finish(ks%hartree_solver, pot)
+    end if
+
     ! Get the Hartree energy
     hm%energy%hartree = M_HALF*dmf_dotp(ks%gr%fine%mesh, ks%calc%total_density, pot)
 

@@ -166,7 +166,7 @@ contains
 
     call MPI_Comm_size(all_nodes_comm, world_size, mpi_err)
 
-    if(nodes <= 0 .or. nodes > world_size) nodes = mpi_world%size
+    if(nodes <= 0 .or. nodes > world_size) nodes = world_size
     this%cnf(WORLD)%all_nodes = (nodes == mpi_world%size)
 
     SAFE_ALLOCATE(ranks(1:nodes))

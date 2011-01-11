@@ -66,7 +66,12 @@ module poisson_m
     poisson_energy,              &
     poisson_slave_work,          &
     poisson_async_init,          &
-    poisson_async_end
+    poisson_async_end,           &
+    dpoisson_solve_start,        &
+    dpoisson_solve_finish,       &
+    poisson_is_async
+
+
   
   integer, public, parameter ::         &
     POISSON_DIRECT_SUM_1D = -1,         &
@@ -88,16 +93,20 @@ module poisson_m
     type(poisson_corr_t) :: corrector
     type(poisson_sete_t) :: sete_solver
     type(poisson_isf_t)  :: isf_solver
-#ifdef HAVE_MPI2
     integer              :: nslaves
+#ifdef HAVE_MPI2
     integer              :: intercomm
+    integer              :: local_comm
+    integer              :: local_comm_rank
+    logical              :: root
 #endif
   end type poisson_t
 
   type(poisson_t), target, save, public :: psolver
 
   integer, parameter ::             &
-    CMD_FINISH = 1
+    CMD_FINISH = 1,                 &
+    CMD_POISSON_SOLVE = 2
 
 contains
 
@@ -115,6 +124,8 @@ contains
     this%der => der
 
     call messages_print_stress(stdout, "Hartree")
+
+    this%nslaves = 0
 
 #ifdef HAVE_MPI
     !%Variable ParallelizationPoissonAllNodes
@@ -696,6 +707,10 @@ contains
 
 #ifdef HAVE_MPI2
     if(multicomm_have_slaves(mc)) then
+
+      this%local_comm = mc%group_comm(P_STRATEGY_STATES)
+      call MPI_Comm_rank(this%local_comm, this%local_comm_rank, mpi_err)
+      this%root = (this%local_comm_rank == 0)
       
       this%intercomm = mc%slave_intercomm
       call MPI_Comm_remote_size(this%intercomm, this%nslaves, mpi_err)
@@ -719,12 +734,14 @@ contains
 
 #ifdef HAVE_MPI2
     if(multicomm_have_slaves(mc)) then
-      if(.not. multicomm_is_slave(mc)) then
+
+      if(.not. multicomm_is_slave(mc) .and. this%root) then
         do islave = 1, this%nslaves
           ! send the finish signal
           call MPI_Send(M_ONE, 1, MPI_FLOAT, islave - 1, CMD_FINISH, this%intercomm, mpi_err) 
         end do
       end if
+
     end if
 #endif
 
@@ -738,25 +755,86 @@ contains
     type(poisson_t), intent(inout) :: this
 
 #ifdef HAVE_MPI2    
-    FLOAT, allocatable :: rho(:)
+    FLOAT, allocatable :: rho(:), pot(:)
     logical :: done
     integer :: status(MPI_STATUS_SIZE)
-
+    type(profile_t), save :: prof
+    
     PUSH_SUB(poisson_slave_work)
 
     SAFE_ALLOCATE(rho(1:this%der%mesh%np))
+    SAFE_ALLOCATE(pot(1:this%der%mesh%np))
     done = .false.
     
     do while(.not. done)
+      call profiling_in(prof, "SLAVE_WORK")
 
       call MPI_Recv(rho(1), this%der%mesh%np, MPI_FLOAT, MPI_ANY_SOURCE, MPI_ANY_TAG, this%intercomm, status(1), mpi_err)
-      if(status(MPI_TAG) == CMD_FINISH) done = .true.
 
+      ! The tag of the message tells us what we have to do.
+      select case(status(MPI_TAG))
+
+      case(CMD_FINISH) 
+        done = .true.
+
+      case(CMD_POISSON_SOLVE)
+        call dpoisson_solve(this, pot, rho)
+
+        !FIXME: this assumes only one slave node per domain is doing
+        !the poisson solution. The other slave nodes should pass
+        !MPI_PROC_NULL in the fourth argument.
+        call MPI_Bcast(pot(1), this%der%mesh%np, MPI_FLOAT, MPI_ROOT, this%intercomm, mpi_err)
+
+      end select
+
+      call profiling_out(prof)
     end do
 
     POP_SUB(poisson_slave_work)
 #endif
   end subroutine poisson_slave_work
+
+  !------------------------------------------------------------------
+
+  subroutine dpoisson_solve_start(this, rho)
+    type(poisson_t),      intent(inout) :: this
+    FLOAT, target,        intent(in)    :: rho(:)
+    
+#ifdef HAVE_MPI2  
+    PUSH_SUB(poisson_solve_start)
+
+    if(this%root) then
+      call MPI_Send(rho(1), this%der%mesh%np, MPI_FLOAT, 0, CMD_POISSON_SOLVE, this%intercomm, mpi_err)
+    end if
+ 
+    POP_SUB(poisson_solve_start)
+#endif
+    
+  end subroutine dpoisson_solve_start
+  
+  !----------------------------------------------------------------
+
+  subroutine dpoisson_solve_finish(this, pot)
+    type(poisson_t),  intent(inout) :: this
+    FLOAT,            intent(inout) :: pot(:)
+
+#ifdef HAVE_MPI2
+    PUSH_SUB(poisson_solve_start)
+    
+    call MPI_Bcast(pot(1), this%der%mesh%np, MPI_FLOAT, 0, this%intercomm, mpi_err)
+
+    POP_SUB(poisson_solver_finish)
+#endif
+  end subroutine dpoisson_solve_finish
+
+  !----------------------------------------------------------------
+
+  logical pure function poisson_is_async(this) result(async)
+    type(poisson_t),  intent(in) :: this
+    
+    async = (this%nslaves > 0)
+
+  end function poisson_is_async
 
 #include "solver_1d_inc.F90"
 #include "solver_2d_inc.F90"
