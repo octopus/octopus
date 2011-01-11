@@ -111,14 +111,15 @@
 
     integer          :: par_strategy   !< What kind of parallelization strategy should we use?
 
-    integer, pointer :: group_sizes(:) !< Number of processors in each group.
-    integer, pointer :: who_am_i(:)    !< Rank in the "line"-communicators.
-    integer, pointer :: group_comm(:)  !< "Line"-communicators I belong to.
-    integer          :: dom_st_comm    !< States-domain plane communicator.
-    integer          :: st_kpt_comm    !< States-domain plane communicator.
+    integer, pointer :: group_sizes(:)  !< Number of processors in each group.
+    integer, pointer :: who_am_i(:)     !< Rank in the "line"-communicators.
+    integer, pointer :: group_comm(:)   !< "Line"-communicators I belong to.
+    integer          :: dom_st_comm     !< States-domain plane communicator.
+    integer          :: st_kpt_comm     !< Kpoints-states plane communicator.
+    integer          :: dom_st_kpt_comm !< Kpoints-states-domain cube communicator.
 
-    integer          :: nthreads
-    integer          :: node_type
+    integer          :: nthreads        !< Number of OMP threads
+    integer          :: node_type       !< Is this node a P_MASTER or a P_SLAVE?
     logical          :: have_slaves     !< are slaves available?
     
     integer          :: full_comm        !< The base communicator.
@@ -516,12 +517,9 @@ contains
 
       ! The domain and states dimensions have to be periodic (2D torus)
       ! in order to circulate matrix blocks.
-      if(multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)) then
-        periodic_mask(P_STRATEGY_DOMAINS) = .true.
-      end if
-      if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
-        periodic_mask(P_STRATEGY_STATES) = .true.
-      end if
+      periodic_mask(P_STRATEGY_DOMAINS) = multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)
+      periodic_mask(P_STRATEGY_STATES) = multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)
+
       ! We allow reordering of ranks.
       call MPI_Cart_create(base_grp%comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, mc%full_comm, mpi_err)
 
@@ -575,6 +573,13 @@ contains
       dim_mask(P_STRATEGY_KPOINTS) = .true.
       call MPI_Cart_sub(mc%master_comm, dim_mask, mc%st_kpt_comm, mpi_err)
 
+      ! The domains-states-kpoints "cubes" of the grid
+      dim_mask                     = .false.
+      dim_mask(P_STRATEGY_DOMAINS) = .true.
+      dim_mask(P_STRATEGY_STATES)  = .true.
+      dim_mask(P_STRATEGY_KPOINTS) = .true.
+      call MPI_Cart_sub(mc%master_comm, dim_mask, mc%dom_st_kpt_comm, mpi_err)
+
       if(num_slaves > 0) call create_slave_intercommunicators()
 
 #else
@@ -606,7 +611,7 @@ contains
       else
         coords(slave_level) = mc%group_sizes(slave_level)
       end if
-      call MPI_Cart_rank(base_grp%comm, coords, remote_leader, mpi_err)
+      call MPI_Cart_rank(mc%full_comm, coords, remote_leader, mpi_err)
 
       ! now create the intercommunicator
       tag = coords(P_STRATEGY_DOMAINS)
@@ -638,6 +643,7 @@ contains
       end do
       call MPI_Comm_free(mc%dom_st_comm, mpi_err)
       call MPI_Comm_free(mc%st_kpt_comm, mpi_err)
+      call MPI_Comm_free(mc%dom_st_kpt_comm, mpi_err)
       call MPI_Comm_free(mc%full_comm, mpi_err)
       call MPI_Comm_free(mc%master_comm, mpi_err)
 

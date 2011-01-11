@@ -262,7 +262,7 @@ contains
 
 #ifdef HAVE_MPI
     !we need a barrier to wait for the directory to be created
-    call MPI_Barrier(mpi_world%comm, mpi_err)
+    call MPI_Barrier(st%dom_st_kpt%comm, mpi_err)
 #endif
 
     if(mpi_grp_is_root(mpi_world)) then
