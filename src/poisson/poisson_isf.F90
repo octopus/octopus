@@ -36,6 +36,7 @@ module poisson_isf_m
   
   public ::               &
     poisson_isf_t,        &
+    isf_cnf_t,    &
     poisson_isf_init,     &
     poisson_isf_solve,    & 
     poisson_isf_end
