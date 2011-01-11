@@ -692,12 +692,14 @@ contains
       
     PUSH_SUB(poisson_async_init)
 
+#ifdef HAVE_MPI2
     if(multicomm_have_slaves(mc)) then
       
       this%intercomm = mc%slave_intercomm
       call MPI_Comm_remote_size(this%intercomm, this%nslaves, mpi_err)
 
     end if
+#endif
    
     POP_SUB(poisson_async_init)
 
@@ -713,6 +715,7 @@ contains
 
     PUSH_SUB(poisson_async_end)
 
+#ifdef HAVE_MPI2
     if(multicomm_have_slaves(mc)) then
       if(.not. multicomm_is_slave(mc)) then
         do islave = 1, this%nslaves
@@ -721,6 +724,7 @@ contains
         end do
       end if
     end if
+#endif
 
     POP_SUB(poisson_async_end)
 
@@ -730,7 +734,8 @@ contains
 
   subroutine poisson_slave_work(this)
     type(poisson_t), intent(inout) :: this
-    
+
+#ifdef HAVE_MPI2    
     FLOAT, allocatable :: rho(:)
     logical :: done
     integer :: status(MPI_STATUS_SIZE)
@@ -740,16 +745,15 @@ contains
     SAFE_ALLOCATE(rho(1:this%der%mesh%np))
     done = .false.
     
-#ifdef HAVE_MPI2
     do while(.not. done)
 
       call MPI_Recv(rho(1), this%der%mesh%np, MPI_FLOAT, MPI_ANY_SOURCE, MPI_ANY_TAG, this%intercomm, status(1), mpi_err)
       if(status(MPI_TAG) == CMD_FINISH) done = .true.
 
     end do
-#endif
 
     POP_SUB(poisson_slave_work)
+#endif
   end subroutine poisson_slave_work
 
 #include "solver_1d_inc.F90"

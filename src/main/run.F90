@@ -77,6 +77,7 @@ contains
 
     PUSH_SUB(run)
 
+#ifdef HAVE_MPI2
     call poisson_async_init(sys%ks%hartree_solver, sys%mc)
 
     ! slave nodes do not call the calculation routine
@@ -85,6 +86,7 @@ contains
       call poisson_slave_work(sys%ks%hartree_solver)
       return
     end if
+#endif
 
     !%Variable FromScratch
     !%Type logical
@@ -143,7 +145,9 @@ contains
       call pulpo_print()
     end select
 
+#ifdef HAVE_MPI2
     call poisson_async_end(sys%ks%hartree_solver, sys%mc)
+#endif
 
     POP_SUB(run)
     
