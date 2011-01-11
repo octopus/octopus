@@ -96,8 +96,7 @@ module poisson_m
     integer              :: nslaves
 #ifdef HAVE_MPI2
     integer              :: intercomm
-    integer              :: local_comm
-    integer              :: local_comm_rank
+    type(mpi_grp_t)      :: local_grp
     logical              :: root
 #endif
   end type poisson_t
@@ -708,9 +707,9 @@ contains
 #ifdef HAVE_MPI2
     if(multicomm_have_slaves(mc)) then
 
-      this%local_comm = mc%group_comm(P_STRATEGY_STATES)
-      call MPI_Comm_rank(this%local_comm, this%local_comm_rank, mpi_err)
-      this%root = (this%local_comm_rank == 0)
+      call mpi_grp_init(this%local_grp, mc%group_comm(P_STRATEGY_STATES))
+
+      this%root = (this%local_grp%rank == 0)
       
       this%intercomm = mc%slave_intercomm
       call MPI_Comm_remote_size(this%intercomm, this%nslaves, mpi_err)
@@ -735,12 +734,10 @@ contains
 #ifdef HAVE_MPI2
     if(multicomm_have_slaves(mc)) then
 
-      if(.not. multicomm_is_slave(mc) .and. this%root) then
-        do islave = 1, this%nslaves
-          ! send the finish signal
-          call MPI_Send(M_ONE, 1, MPI_FLOAT, islave - 1, CMD_FINISH, this%intercomm, mpi_err) 
-        end do
-      end if
+      ! send the finish signal
+      do islave = this%local_grp%rank, this%nslaves - 1, this%local_grp%size
+        call MPI_Send(M_ONE, 1, MPI_FLOAT, islave, CMD_FINISH, this%intercomm, mpi_err) 
+      end do
 
     end if
 #endif
@@ -758,18 +755,21 @@ contains
     FLOAT, allocatable :: rho(:), pot(:)
     logical :: done
     integer :: status(MPI_STATUS_SIZE)
-    type(profile_t), save :: prof
-    
+    type(profile_t), save :: prof, bcast_prof, wait_prof
+    integer :: bcast_root
+
     PUSH_SUB(poisson_slave_work)
+    call profiling_in(prof, "SLAVE_WORK")
 
     SAFE_ALLOCATE(rho(1:this%der%mesh%np))
     SAFE_ALLOCATE(pot(1:this%der%mesh%np))
     done = .false.
-    
+   
     do while(.not. done)
-      call profiling_in(prof, "SLAVE_WORK")
 
+      call profiling_in(wait_prof, "SLAVE_WAIT")
       call MPI_Recv(rho(1), this%der%mesh%np, MPI_FLOAT, MPI_ANY_SOURCE, MPI_ANY_TAG, this%intercomm, status(1), mpi_err)
+      call profiling_out(wait_prof)
 
       ! The tag of the message tells us what we have to do.
       select case(status(MPI_TAG))
@@ -780,16 +780,17 @@ contains
       case(CMD_POISSON_SOLVE)
         call dpoisson_solve(this, pot, rho)
 
-        !FIXME: this assumes only one slave node per domain is doing
-        !the poisson solution. The other slave nodes should pass
-        !MPI_PROC_NULL in the fourth argument.
-        call MPI_Bcast(pot(1), this%der%mesh%np, MPI_FLOAT, MPI_ROOT, this%intercomm, mpi_err)
+        call profiling_in(bcast_prof, "SLAVE_BROADCAST")
+        bcast_root = MPI_PROC_NULL
+        if(this%root) bcast_root = MPI_ROOT
+        call MPI_Bcast(pot(1), this%der%mesh%np, MPI_FLOAT, bcast_root, this%intercomm, mpi_err)
+        call profiling_out(bcast_prof)
 
       end select
 
-      call profiling_out(prof)
     end do
 
+    call profiling_out(prof)
     POP_SUB(poisson_slave_work)
 #endif
   end subroutine poisson_slave_work
@@ -799,15 +800,21 @@ contains
   subroutine dpoisson_solve_start(this, rho)
     type(poisson_t),      intent(inout) :: this
     FLOAT, target,        intent(in)    :: rho(:)
-    
-#ifdef HAVE_MPI2  
-    PUSH_SUB(poisson_solve_start)
 
-    if(this%root) then
-      call MPI_Send(rho(1), this%der%mesh%np, MPI_FLOAT, 0, CMD_POISSON_SOLVE, this%intercomm, mpi_err)
-    end if
- 
-    POP_SUB(poisson_solve_start)
+#ifdef HAVE_MPI2    
+    integer :: islave
+    type(profile_t), save :: prof
+
+    PUSH_SUB(poisson_solver_start)
+    call profiling_in(prof, "POISSON_START")
+
+    ! we assume all nodes have a copy of the density
+    do islave = this%local_grp%rank, this%nslaves - 1, this%local_grp%size !all nodes are used for communication
+      call MPI_Send(rho(1), this%der%mesh%np, MPI_FLOAT, islave, CMD_POISSON_SOLVE, this%intercomm, mpi_err)
+    end do
+    
+    call profiling_out(prof)
+    POP_SUB(poisson_solver_start)
 #endif
     
   end subroutine dpoisson_solve_start
@@ -819,10 +826,14 @@ contains
     FLOAT,            intent(inout) :: pot(:)
 
 #ifdef HAVE_MPI2
-    PUSH_SUB(poisson_solve_start)
-    
+    type(profile_t), save :: prof
+
+    PUSH_SUB(poisson_solver_finish)
+    call profiling_in(prof, "POISSON_FINISH")
+
     call MPI_Bcast(pot(1), this%der%mesh%np, MPI_FLOAT, 0, this%intercomm, mpi_err)
 
+    call profiling_out(prof)
     POP_SUB(poisson_solver_finish)
 #endif
   end subroutine dpoisson_solve_finish
