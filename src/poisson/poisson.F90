@@ -87,6 +87,7 @@ module poisson_m
     logical :: all_nodes_default
     type(poisson_corr_t) :: corrector
     type(poisson_sete_t) :: sete_solver
+    type(poisson_isf_t)  :: isf_solver
 #ifdef HAVE_MPI2
     integer              :: nslaves
     integer              :: intercomm
@@ -323,7 +324,7 @@ contains
     case(POISSON_MULTIGRID)
       call poisson_multigrid_end(this%mg)
     case(POISSON_ISF)
-      call poisson_isf_end()
+      call poisson_isf_end(this%isf_solver)
     case(POISSON_SETE)
       call poisson_sete_end(this%sete_solver)
 
@@ -462,7 +463,7 @@ contains
       SAFE_DEALLOCATE_A(vh_correction)
 
     case(POISSON_ISF)
-      call poisson_isf_solve(der%mesh, pot, rho, all_nodes_value)
+      call poisson_isf_solve(this%isf_solver, der%mesh, pot, rho, all_nodes_value)
 
     case(POISSON_SETE)
 

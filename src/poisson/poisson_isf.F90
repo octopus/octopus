@@ -35,9 +35,10 @@ module poisson_isf_m
   private
   
   public ::               &
-       poisson_isf_init,  &
-       poisson_isf_solve, & 
-       poisson_isf_end
+    poisson_isf_t,        &
+    poisson_isf_init,     &
+    poisson_isf_solve,    & 
+    poisson_isf_end
 
   ! Datatype to store kernel values to solve Poisson equation
   ! on different communicators (configurations).
@@ -48,7 +49,11 @@ module poisson_isf_m
     logical           :: all_nodes
   end type isf_cnf_t
 
-  integer             :: isf_all_nodes_comm
+  type poisson_isf_t
+    integer                      :: all_nodes_comm
+    type(dcf_t)                  :: rho_cf
+    type(isf_cnf_t)              :: cnf(1:4)
+  end type poisson_isf_t
 
   ! Indices for the cnf array
   integer, parameter :: serial = 1
@@ -56,8 +61,6 @@ module poisson_isf_m
   integer, parameter :: domain = 3
   integer, parameter :: n_cnf = 3
 
-  type(dcf_t)                  :: rho_cf
-  type(isf_cnf_t)              :: cnf(1:4)
   integer, parameter           :: order_scaling_function = 8 
 
   ! Interface to the Poisson solver calls
@@ -86,10 +89,11 @@ module poisson_isf_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine poisson_isf_init(mesh, all_nodes_comm, init_world)
-    type(mesh_t),      intent(in) :: mesh
-    integer,           intent(in) :: all_nodes_comm
-    logical, optional, intent(in) :: init_world 
+  subroutine poisson_isf_init(this, mesh, all_nodes_comm, init_world)
+    type(poisson_isf_t), intent(out)   :: this
+    type(mesh_t),        intent(in)    :: mesh
+    integer,             intent(in)    :: all_nodes_comm
+    logical, optional,   intent(in)    :: init_world 
 
     integer :: n1, n2, n3
 #if defined(HAVE_MPI)
@@ -112,22 +116,22 @@ contains
     if(present(init_world)) init_world_ = init_world
 #endif
 
-    call dcf_new(mesh%idx%ll, rho_cf)
+    call dcf_new(mesh%idx%ll, this%rho_cf)
 
     if(.not. mesh%parallel_in_domains) then
       ! The serial version is always needed (as used, e.g., in the casida runmode)
-      call calculate_dimensions(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), &
-        cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3)
+      call calculate_dimensions(this%rho_cf%n(1), this%rho_cf%n(2), this%rho_cf%n(3), &
+        this%cnf(serial)%nfft1, this%cnf(serial)%nfft2, this%cnf(serial)%nfft3)
 
-      n1 = cnf(serial)%nfft1/2 + 1
-      n2 = cnf(serial)%nfft2/2 + 1
-      n3 = cnf(serial)%nfft3/2 + 1
+      n1 = this%cnf(serial)%nfft1/2 + 1
+      n2 = this%cnf(serial)%nfft2/2 + 1
+      n3 = this%cnf(serial)%nfft3/2 + 1
 
-      SAFE_ALLOCATE(cnf(serial)%kernel(1:n1, 1:n2, 1:n3))
+      SAFE_ALLOCATE(this%cnf(serial)%kernel(1:n1, 1:n2, 1:n3))
 
-      call build_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),   &
-        cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3, &
-        real(mesh%spacing(1), 8), order_scaling_function, cnf(serial)%kernel)
+      call build_kernel(this%rho_cf%n(1), this%rho_cf%n(2), this%rho_cf%n(3),   &
+        this%cnf(serial)%nfft1, this%cnf(serial)%nfft2, this%cnf(serial)%nfft3, &
+        real(mesh%spacing(1), 8), order_scaling_function, this%cnf(serial)%kernel)
     end if
 #if defined(HAVE_MPI)
 
@@ -135,7 +139,7 @@ contains
     ! depends on the number of nodes used for the calculations. To avoid
     ! recalculating the kernel on each call of poisson_isf_solve depending on
     ! the all_nodes argument, both kernels are calculated.
-    cnf(domain)%mpi_grp = mesh%mpi_grp
+    this%cnf(domain)%mpi_grp = mesh%mpi_grp
 
     ! For the world configuration we build a new communicator
 
@@ -151,12 +155,12 @@ contains
     !%End
     call parse_integer(datasets_check('PoissonSolverNodes'), default_nodes, nodes)
 
-    isf_all_nodes_comm = all_nodes_comm
+    this%all_nodes_comm = all_nodes_comm
 
     call MPI_Comm_size(all_nodes_comm, world_size, mpi_err)
 
     if(nodes <= 0 .or. nodes > world_size) nodes = mpi_world%size
-    cnf(world)%all_nodes = (nodes == mpi_world%size)
+    this%cnf(world)%all_nodes = (nodes == mpi_world%size)
 
     SAFE_ALLOCATE(ranks(1:nodes))
 
@@ -168,17 +172,17 @@ contains
     !Extract the original group handle and create new comm.
     call MPI_Comm_group(all_nodes_comm, world_grp, ierr)
     call MPI_Group_incl(world_grp, nodes, ranks(1), poisson_grp, ierr)
-    call MPI_Comm_create(mpi_world%comm, poisson_grp, cnf(world)%mpi_grp%comm, ierr)
+    call MPI_Comm_create(mpi_world%comm, poisson_grp, this%cnf(world)%mpi_grp%comm, ierr)
 
     SAFE_DEALLOCATE_A(ranks)
 
     !Fill the new data structure, for all nodes
-    if (cnf(world)%mpi_grp%comm /= MPI_COMM_NULL) then
-      call MPI_Comm_rank(cnf(world)%mpi_grp%comm, cnf(world)%mpi_grp%rank, ierr)
-      call MPI_Comm_size(cnf(world)%mpi_grp%comm, cnf(world)%mpi_grp%size, ierr)
+    if (this%cnf(world)%mpi_grp%comm /= MPI_COMM_NULL) then
+      call MPI_Comm_rank(this%cnf(world)%mpi_grp%comm, this%cnf(world)%mpi_grp%rank, ierr)
+      call MPI_Comm_size(this%cnf(world)%mpi_grp%comm, this%cnf(world)%mpi_grp%size, ierr)
     else
-      cnf(world)%mpi_grp%rank = -1
-      cnf(world)%mpi_grp%size = -1
+      this%cnf(world)%mpi_grp%rank = -1
+      this%cnf(world)%mpi_grp%size = -1
     end if
 
     ! Build the kernel for all configurations. At the moment, this is
@@ -188,28 +192,28 @@ contains
       if( (i_cnf == world .and. .not. init_world_) &                  ! world is disabled
         .or. (i_cnf == domain .and. .not. mesh%parallel_in_domains) & ! not parallel in domains
         ) then
-        nullify(cnf(i_cnf)%kernel)
+        nullify(this%cnf(i_cnf)%kernel)
         cycle
       end if
-      if (cnf(i_cnf)%mpi_grp%rank /= -1 .or. i_cnf /= world ) then
-        call par_calculate_dimensions(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),         &
-          m1, m2, m3, n1, n2, n3, md1, md2, md3, cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, &
-          cnf(i_cnf)%nfft3, cnf(i_cnf)%mpi_grp%size)
+      if (this%cnf(i_cnf)%mpi_grp%rank /= -1 .or. i_cnf /= world ) then
+        call par_calculate_dimensions(this%rho_cf%n(1), this%rho_cf%n(2), this%rho_cf%n(3), &
+          m1, m2, m3, n1, n2, n3, md1, md2, md3, this%cnf(i_cnf)%nfft1, this%cnf(i_cnf)%nfft2, &
+          this%cnf(i_cnf)%nfft3, this%cnf(i_cnf)%mpi_grp%size)
 
         ! Shortcuts to avoid to "line too long" errors.
-        n(1) = cnf(i_cnf)%nfft1
-        n(2) = cnf(i_cnf)%nfft2
-        n(3) = cnf(i_cnf)%nfft3
+        n(1) = this%cnf(i_cnf)%nfft1
+        n(2) = this%cnf(i_cnf)%nfft2
+        n(3) = this%cnf(i_cnf)%nfft3
 
-        SAFE_ALLOCATE(cnf(i_cnf)%kernel(1:n(1), 1:n(2), 1:n(3)/cnf(i_cnf)%mpi_grp%size))
+        SAFE_ALLOCATE(this%cnf(i_cnf)%kernel(1:n(1), 1:n(2), 1:n(3)/this%cnf(i_cnf)%mpi_grp%size))
 
-        call par_build_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), n1, n2, n3,     &
-          cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, cnf(i_cnf)%nfft3,                      &
+        call par_build_kernel(this%rho_cf%n(1), this%rho_cf%n(2), this%rho_cf%n(3), n1, n2, n3,     &
+          this%cnf(i_cnf)%nfft1, this%cnf(i_cnf)%nfft2, this%cnf(i_cnf)%nfft3,                      &
           mesh%spacing(1), order_scaling_function,                                            &
-          cnf(i_cnf)%mpi_grp%rank, cnf(i_cnf)%mpi_grp%size, cnf(i_cnf)%mpi_grp%comm, &
-          cnf(i_cnf)%kernel)
+          this%cnf(i_cnf)%mpi_grp%rank, this%cnf(i_cnf)%mpi_grp%size, this%cnf(i_cnf)%mpi_grp%comm, &
+          this%cnf(i_cnf)%kernel)
       else
-      	nullify(cnf(i_cnf)%kernel)
+      	nullify(this%cnf(i_cnf)%kernel)
         cycle
       end if
     end do
@@ -219,11 +223,12 @@ contains
   end subroutine poisson_isf_init
 
   ! ---------------------------------------------------------
-  subroutine poisson_isf_solve(mesh, pot, rho, all_nodes)
-    type(mesh_t), intent(in)  :: mesh
-    FLOAT,        intent(out) :: pot(:)
-    FLOAT,        intent(in)  :: rho(:)
-    logical,      intent(in)  :: all_nodes
+  subroutine poisson_isf_solve(this, mesh, pot, rho, all_nodes)
+    type(poisson_isf_t), intent(inout) :: this
+    type(mesh_t),        intent(in)    :: mesh
+    FLOAT,               intent(out)   :: pot(:)
+    FLOAT,               intent(in)    :: rho(:)
+    logical,             intent(in)    :: all_nodes
 
     integer :: i_cnf
 #if defined(HAVE_MPI)
@@ -240,7 +245,7 @@ contains
     PUSH_SUB(poisson_isf_solve)
     !call loct_gettimeofday(sec1_t,usec1_t)
 
-    call dcf_alloc_RS(rho_cf)
+    call dcf_alloc_RS(this%rho_cf)
 
     if(mesh%parallel_in_domains) then
     
@@ -259,10 +264,10 @@ contains
      
       !write(78,*) 'PSolver: 1st DVEC_ALLGATHER TIME',sec2,'us',usec2
      
-      call dmesh_to_cube(mesh, rho_global, rho_cf)
+      call dmesh_to_cube(mesh, rho_global, this%rho_cf)
 #endif
     else
-      call dmesh_to_cube(mesh, rho, rho_cf)
+      call dmesh_to_cube(mesh, rho, this%rho_cf)
     end if
 
     ! Choose configuration.
@@ -283,40 +288,41 @@ contains
     if(i_cnf == serial) then
 
 #ifdef SINGLE_PRECISION
-      SAFE_ALLOCATE(rhop(1:rho_cf%n(1), 1:rho_cf%n(2), 1:rho_cf%n(3)))
-      rhop = rho_cf%RS
+      SAFE_ALLOCATE(rhop(1:this%rho_cf%n(1), 1:this%rho_cf%n(2), 1:this%rho_cf%n(3)))
+      rhop = this%rho_cf%RS
 #else
-      rhop => rho_cf%RS
+      rhop => this%rho_cf%RS
 #endif
 
-      call psolver_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),    &
-        cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3, &
-        real(mesh%spacing(1), 8), cnf(serial)%kernel, rhop)
+      call psolver_kernel(this%rho_cf%n(1), this%rho_cf%n(2), this%rho_cf%n(3),    &
+        this%cnf(serial)%nfft1, this%cnf(serial)%nfft2, this%cnf(serial)%nfft3, &
+        real(mesh%spacing(1), 8), this%cnf(serial)%kernel, rhop)
 
 #ifdef SINGLE_PRECISION
-      rho_cf%RS = rhop
+      this%rho_cf%RS = rhop
       SAFE_DEALLOCATE_P(rhop)
 #endif
 
 #if defined(HAVE_MPI)
     else
-      if (cnf(i_cnf)%mpi_grp%size /= -1 .or. i_cnf /= world) then
-        call par_psolver_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), &
-          cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, cnf(i_cnf)%nfft3,  &
-          real(mesh%spacing(1), 8), cnf(i_cnf)%kernel, rho_cf%RS,                      &
-          cnf(i_cnf)%mpi_grp%rank, cnf(i_cnf)%mpi_grp%size, cnf(i_cnf)%mpi_grp%comm)
+      if (this%cnf(i_cnf)%mpi_grp%size /= -1 .or. i_cnf /= world) then
+        call par_psolver_kernel(this%rho_cf%n(1), this%rho_cf%n(2), this%rho_cf%n(3), &
+          this%cnf(i_cnf)%nfft1, this%cnf(i_cnf)%nfft2, this%cnf(i_cnf)%nfft3,  &
+          real(mesh%spacing(1), 8), this%cnf(i_cnf)%kernel, this%rho_cf%RS,                      &
+          this%cnf(i_cnf)%mpi_grp%rank, this%cnf(i_cnf)%mpi_grp%size, this%cnf(i_cnf)%mpi_grp%comm)
       end if
       ! we need to be sure that the root of every domain-partition has a copy of the potential
       ! for the moment we broadcast to all nodes, but this is more than what we really need 
-      if(i_cnf == world .and. .not. cnf(world)%all_nodes) then
-        call MPI_Bcast(rho_cf%rs(1, 1, 1), rho_cf%n(1)*rho_cf%n(2)*rho_cf%n(3), MPI_FLOAT, 0, isf_all_nodes_comm, mpi_err)
+      if(i_cnf == world .and. .not. this%cnf(world)%all_nodes) then
+        call MPI_Bcast(this%rho_cf%rs(1, 1, 1), this%rho_cf%n(1)*this%rho_cf%n(2)*this%rho_cf%n(3), &
+          MPI_FLOAT, 0, this%all_nodes_comm, mpi_err)
       end if
 #endif
     end if
 
     if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
-       call dcube_to_mesh(mesh, rho_cf, pot_global)
+       call dcube_to_mesh(mesh, this%rho_cf, pot_global)
 
        !call loct_gettimeofday(sec1,usec1)
        call dvec_scatter(mesh%vp, mesh%vp%root, pot_global, pot)
@@ -329,10 +335,10 @@ contains
        SAFE_DEALLOCATE_A(pot_global)
 #endif
     else
-       call dcube_to_mesh(mesh, rho_cf, pot)
+       call dcube_to_mesh(mesh, this%rho_cf, pot)
     end if
     
-    call dcf_free_RS(rho_cf)
+    call dcf_free_RS(this%rho_cf)
     
     !call loct_gettimeofday(sec2_t,usec2_t)
     !call time_diff(sec1_t,usec1_t,sec2_t,usec2_t)
@@ -341,7 +347,9 @@ contains
   end subroutine poisson_isf_solve
 
   ! ---------------------------------------------------------
-  subroutine poisson_isf_end()
+  subroutine poisson_isf_end(this)
+    type(poisson_isf_t), intent(inout) :: this
+
 #if defined(HAVE_MPI)
     integer :: i_cnf
 #endif
@@ -350,14 +358,16 @@ contains
 
 #if defined(HAVE_MPI)
     do i_cnf = 1, n_cnf
-      SAFE_DEALLOCATE_P(cnf(i_cnf)%kernel)
+      SAFE_DEALLOCATE_P(this%cnf(i_cnf)%kernel)
     end do
-    if(cnf(world)%mpi_grp%comm /= MPI_COMM_NULL) call MPI_Comm_free(cnf(world)%mpi_grp%comm, mpi_err)
+    if(this%cnf(world)%mpi_grp%comm /= MPI_COMM_NULL) then
+      call MPI_Comm_free(this%cnf(world)%mpi_grp%comm, mpi_err)
+    end if
 #else
-    SAFE_DEALLOCATE_P(cnf(serial)%kernel)
+    SAFE_DEALLOCATE_P(this%cnf(serial)%kernel)
 #endif
 
-    call dcf_free(rho_cf)
+    call dcf_free(this%rho_cf)
 
     POP_SUB(poisson_isf_end)
   end subroutine poisson_isf_end
