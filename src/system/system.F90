@@ -96,6 +96,7 @@ contains
 
     call geometry_partition(sys%geo, sys%mc)
     call kpoints_distribute(sys%st%d, sys%mc)
+    call states_distribute_nodes(sys%st, sys%mc)
     call grid_init_stage_2(sys%gr, sys%mc, sys%geo)
     call states_densities_init(sys%st, sys%gr, sys%geo, sys%mc)
     call h_sys_output_init(sys%gr%sb, sys%st%nst, sys%outp)

@@ -62,7 +62,6 @@ contains
 
     PUSH_SUB(ground_state_run)
 
-    call states_distribute_nodes(sys%st, sys%mc)
     call states_allocate_wfns(sys%st, sys%gr%mesh)
 
     ! Read free states for ground-state open-boundary calculation.
