@@ -62,6 +62,7 @@ module v_ks_m
     v_ks_end,           &
     v_ks_write_info,    &
     v_ks_calc,          &
+    v_ks_calc_t,        &
     v_ks_calc_start,    &
     v_ks_calc_finish,   &
     v_ks_freeze_hxc
