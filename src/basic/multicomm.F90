@@ -120,6 +120,12 @@
     integer          :: nthreads
     integer          :: node_type
     logical          :: have_slaves     !< are slaves available?
+    
+    integer          :: full_comm        !< The base communicator.
+    integer          :: full_comm_rank   !< The base communicator.
+    integer          :: master_comm      !< The communicator without slaves.
+    integer          :: master_comm_rank !< The communicator without slaves.
+
 #ifdef HAVE_MPI2
     integer          :: slave_intercomm !< the intercomm to communicate with slaves
 #endif
@@ -490,9 +496,9 @@ contains
 #if defined(HAVE_MPI)
       logical :: dim_mask(MAX_INDEX)
       integer :: i_strategy
-      integer :: new_comm, new_comm2
       logical :: reorder, periodic_mask(MAX_INDEX)
       integer :: coords(MAX_INDEX)
+      integer :: new_comm
 #endif
 
       PUSH_SUB(multicomm_init.group_comm_create)
@@ -519,17 +525,13 @@ contains
       if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
         periodic_mask(P_STRATEGY_STATES) = .true.
       end if
-      ! We allow reordering of ranks, as we intent to replace the
-      ! world afterwards.
-      ! FIXME: make sure this works! World root may be someone else
-      ! afterwards!
-      call MPI_Cart_create(base_grp%comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, new_comm, mpi_err)
+      ! We allow reordering of ranks.
+      call MPI_Cart_create(base_grp%comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, mc%full_comm, mpi_err)
 
-      ! Re-initialize the base communicator
-      call mpi_grp_init(base_grp, new_comm)
+      call MPI_Comm_rank(mc%full_comm, mc%full_comm_rank, mpi_err)
 
       ! get the coordinates of the current processor
-      call MPI_Cart_coords(base_grp%comm, base_grp%rank, mc%n_index, coords, mpi_err)
+      call MPI_Cart_coords(mc%full_comm, mc%full_comm_rank, mc%n_index, coords, mpi_err)
 
       ! find out what type of node this is
       if(coords(slave_level) >= mc%group_sizes(slave_level) - num_slaves) then
@@ -542,17 +544,21 @@ contains
         mc%group_sizes(slave_level) = num_slaves
       end if
       
-      call MPI_Comm_split(base_grp%comm, mc%node_type, base_grp%rank, new_comm, mpi_err)
+      call MPI_Comm_split(mc%full_comm, mc%node_type, mc%full_comm_rank, new_comm, mpi_err)
 
       reorder = .false.
-      call MPI_Cart_create(new_comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, new_comm2, mpi_err)
+      call MPI_Cart_create(new_comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, mc%master_comm, mpi_err)
+
+      call MPI_Comm_free(new_comm, mpi_err)
+      
+      call MPI_Comm_rank(mc%master_comm, mc%master_comm_rank, mpi_err)
 
       ! The "lines" of the Cartesian grid.
       do i_strategy = 1, mc%n_index
         if(multicomm_strategy_is_parallel(mc, i_strategy)) then
           dim_mask             = .false.
           dim_mask(i_strategy) = .true.
-          call MPI_Cart_sub(new_comm2, dim_mask, mc%group_comm(i_strategy), mpi_err)
+          call MPI_Cart_sub(mc%master_comm, dim_mask, mc%group_comm(i_strategy), mpi_err)
           call MPI_Comm_rank(mc%group_comm(i_strategy), mc%who_am_i(i_strategy), mpi_err)
         else
           mc%group_comm(i_strategy) = MPI_COMM_NULL
@@ -564,17 +570,16 @@ contains
       dim_mask                     = .false.
       dim_mask(P_STRATEGY_DOMAINS) = .true.
       dim_mask(P_STRATEGY_STATES)  = .true.
-      call MPI_Cart_sub(new_comm2, dim_mask, mc%dom_st_comm, mpi_err)
+      call MPI_Cart_sub(mc%master_comm, dim_mask, mc%dom_st_comm, mpi_err)
 
       ! The state-kpoints "planes" of the grid
       dim_mask                     = .false.
       dim_mask(P_STRATEGY_STATES)  = .true.
       dim_mask(P_STRATEGY_KPOINTS) = .true.
-      call MPI_Cart_sub(new_comm2, dim_mask, mc%st_kpt_comm, mpi_err)
+      call MPI_Cart_sub(mc%master_comm, dim_mask, mc%st_kpt_comm, mpi_err)
 
       if(num_slaves > 0) call create_slave_intercommunicators()
 
-      call mpi_grp_init(base_grp, new_comm2)
 #else
       mc%group_comm = -1
       mc%who_am_i   = 0
@@ -586,6 +591,7 @@ contains
     ! -----------------------------------------------------
 
     subroutine create_slave_intercommunicators()
+#ifdef HAVE_MPI2
       integer :: remote_leader
       integer :: tag
       integer :: coords(MAX_INDEX)
@@ -593,9 +599,9 @@ contains
       PUSH_SUB(multicomm_init.create_slave_intercommunicators)
 
       ! create the intercommunicators to communicate with slaves
-#ifdef HAVE_MPI2
+
       ! get the coordinates of the current processor
-      call MPI_Cart_coords(base_grp%comm, base_grp%rank, mc%n_index, coords, mpi_err)
+      call MPI_Cart_coords(mc%full_comm, mc%full_comm_rank, mc%n_index, coords, mpi_err)
       
       !now get the rank of the remote_leader
       if(mc%node_type == P_SLAVE) then
@@ -608,10 +614,9 @@ contains
       ! now create the intercommunicator
       tag = coords(P_STRATEGY_DOMAINS)
       call MPI_Intercomm_create(mc%group_comm(slave_level), 0, base_grp%comm, remote_leader, tag, mc%slave_intercomm, mpi_err)
-#endif
 
       POP_SUB(multicomm_init.create_slave_intercommunicators)
-
+#endif
     end subroutine create_slave_intercommunicators
 
   end subroutine multicomm_init
@@ -635,6 +640,14 @@ contains
         call MPI_Comm_free(mc%group_comm(ii), mpi_err)
       end do
       call MPI_Comm_free(mc%dom_st_comm, mpi_err)
+      call MPI_Comm_free(mc%st_kpt_comm, mpi_err)
+      call MPI_Comm_free(mc%full_comm, mpi_err)
+      call MPI_Comm_free(mc%master_comm, mpi_err)
+
+#ifdef HAVE_MPI2
+      if(multicomm_have_slaves(mc)) call MPI_Comm_free(mc%slave_intercomm, mpi_err)
+#endif
+
 #endif
       ! Deallocate the rest of the arrays.
       SAFE_DEALLOCATE_P(mc%group_sizes)
