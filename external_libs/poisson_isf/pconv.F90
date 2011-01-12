@@ -41,12 +41,12 @@
 !!
 !! SOURCE
 !!
-subroutine par_calculate_dimensions(n01,n02,n03,m1,m2,m3,n1,n2,n3, &
-  md1,md2,md3,nd1,nd2,nd3,nproc)
+subroutine par_calculate_dimensions(n01,n02,n03,m1,m2,m3,n1,n2,n3, md1,md2,md3,nd1,nd2,nd3,nproc)
   implicit none
 
  integer, intent(in) :: n01,n02,n03,nproc
  integer, intent(out) :: m1,m2,m3,n1,n2,n3,md1,md2,md3,nd1,nd2,nd3
+
  integer :: l1,l2,l3
 
  !dimensions of the density in the real space, inverted for convenience
@@ -153,24 +153,20 @@ end subroutine par_calculate_dimensions
 !!
 !! SOURCE
 !!
-subroutine par_psolver_kernel(n01,n02,n03,nd1,nd2,nd3, &
-    hgrid,kernelLOC,rhopot,iproc,nproc,comm)
+subroutine par_psolver_kernel(n01, n02, n03, nd1, nd2, nd3, hgrid, kernelLOC, rhopot, iproc, nproc, comm)
   implicit none
 
- !Arguments
  integer, intent(in)  :: n01,n02,n03,iproc,nproc
  integer, intent(inout) :: nd1,nd2,nd3
  real(kind=8), intent(in) :: hgrid
  real(kind=8), intent(in), dimension(nd1,nd2,nd3/nproc) :: kernelLOC
  real(kind=8), intent(inout), dimension(n01,n02,n03) :: rhopot
  integer, intent(in) :: comm
- !Local variables
+
  integer :: m1,m2,m3,n1,n2,n3,md1,md2,md3
 
- call par_calculate_dimensions(n01,n02,n03,m1,m2,m3,n1,n2,n3,md1,md2,md3,nd1,nd2,nd3,nproc)
-
- call  pconvxc_off(m1,m2,m3,n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,iproc,nproc,&
-      rhopot,kernelLOC,hgrid,comm)
+ call par_calculate_dimensions(n01, n02, n03, m1, m2, m3, n1, n2, n3, md1, md2, md3, nd1, nd2, nd3, nproc)
+ call pconvxc_off(m1, m2, m3, n1, n2, n3, nd1, nd2, nd3, md1, md2, md3, iproc, nproc, rhopot, kernelLOC, hgrid, comm)
 
 end subroutine par_psolver_kernel
 !!***
@@ -212,8 +208,7 @@ end subroutine par_psolver_kernel
 !!
 !! SOURCE
 !!
-subroutine pconvxc_off(m1,m2,m3,n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,iproc,nproc,&
-    rhopot,kernelloc,hgrid,comm)
+subroutine pconvxc_off(m1, m2, m3, n1, n2, n3, nd1, nd2, nd3, md1, md2, md3, iproc, nproc, rhopot, kernelloc, hgrid, comm)
 #if defined(MPI_MOD)
   use mpi
 #endif
@@ -258,21 +253,6 @@ include "mpif.h"
  !this routine builds the values for each process of the potential (zf), multiplying by the factor
  call convolxc_off(n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,nproc,iproc,kernelloc,zf&
       ,scal,hgrid,comm)
-
-!evaluating the total ehartree
-!  if (nproc.gt.1) then
-!       call cpu_time(t0)
-!       call system_clock(count1,count_rate,count_max)
-!     call MPI_ALLREDUCE(ehartreeLOC,ehartree,1,MPI_double_precision,  &
-!          MPI_SUM,comm,ierr)
-!       call cpu_time(t1)
-!       call system_clock(count2,count_rate,count_max)
-!       tel=dble(count2-count1)/dble(count_rate)
-! !       write(78,*) 'PSolver: ALLREDUCE TIME',iproc,t1-t0,tel
-! !       write(78,*) '----------------------------------------------'
-!  else
-!     ehartree=ehartreeLOC
-!  end if
 
  !building the array of the data to be sent from each process
  !and the array of the displacement
