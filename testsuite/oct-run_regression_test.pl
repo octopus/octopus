@@ -281,15 +281,21 @@ foreach my $octopus_exe (@executables){
 	    $test_end   = [gettimeofday];
 
 	    system("sed -n '/Running octopus/{N;N;N;N;N;N;p;}' $workdir/out > $workdir/build-stamp");
-	    if($return_value == 0) {
-	      print "Finished test run.";
-	    } else {
-	      print "\nTest run failed with exit code $return_value.";
-	      $failures++;
-	    }
 
 	    $elapsed = tv_interval($test_start, $test_end);
 	    printf("\tElapsed time: %8.1f s\n\n", $elapsed);
+
+	    if($return_value == 0) {
+	      print "Finished test run.\n\n";
+	      printf "%-40s%s", " Execution", ": \t [ $color_start{green}  OK  $color_end{green} ] \n";
+	      
+	    } else {
+	      print "\n\nTest run failed with exit code $return_value.\n\n";
+	      printf "%-40s%s", " Execution", ": \t [ $color_start{red} FAIL $color_end{red} ] \n\n";
+	      $failures++;
+	      $test_succeeded = 0;
+	    }
+
 	  } else {
 	    if(!$opt_i) { print "cd $workdir; $octopus_exe_suffix > out \n"; }
 	  }
@@ -317,19 +323,16 @@ foreach my $octopus_exe (@executables){
 	set_precision($1, $octopus_exe) ;
       }
 
-      if ( $_ =~ /^match/ && !$opt_n) {
+      if ( $_ =~ /^match/ && !$opt_n && $return_value == 0) {
 	if(run_match_new($_)){
-	  print "$name: \t [ $color_start{green}  OK  $color_end{green} ] \n";
+	  printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \n";
 	  $test_succeeded = 1;
 	  if ($opt_v) { print_hline(); }
 	} else {
-	  print "$name: \t [ $color_start{red} FAIL $color_end{red} ] \n";
+	  printf "%-40s%s", "$name", ":\t [ $color_start{red} FAIL $color_end{red} ] \n";
 	  print_hline();
 	  $test_succeeded = 0;
 	  $failures++;
-	}
-	if($return_value != 0) {
-	  $test_succeeded = 0;
 	}
       }
 
