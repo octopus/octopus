@@ -164,7 +164,7 @@ contains
     call MPI_Finalize(mpi_err)
 #endif
 
-    stop
+    call loct_exit_failure()
   end subroutine write_fatal
 
 
@@ -430,7 +430,8 @@ contains
 #ifdef HAVE_MPI
     call MPI_Finalize(mpi_err)
 #endif
-    stop
+
+    call loct_exit_failure()
   end subroutine input_error
   ! ---------------------------------------------------------
 
