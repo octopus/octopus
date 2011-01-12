@@ -640,6 +640,19 @@ contains
     SAFE_DEALLOCATE_P(hm%energy)
     hm%energy => ks%calc%energy
 
+    if(associated(hm%ep%e_field) .and. simul_box_is_periodic(ks%gr%mesh%sb)) then
+      hm%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin) = ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin)
+      SAFE_DEALLOCATE_P(ks%calc%vberry)
+    endif
+
+    if(hm%self_induced_magnetic) then
+      hm%a_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim) = ks%calc%a_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim)
+      hm%b_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim) = ks%calc%b_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim)
+
+      SAFE_DEALLOCATE_P(ks%calc%a_ind)
+      SAFE_DEALLOCATE_P(ks%calc%b_ind)
+    end if
+
     if(ks%theory_level == INDEPENDENT_PARTICLES .or. ks%calc%amaldi_factor == M_ZERO) then
 
       hm%vhxc = M_ZERO
@@ -650,9 +663,6 @@ contains
 
     else
 
-      hm%energy%hartree = M_ZERO
-      call v_ks_hartree(ks, hm)
-
       if(ks%theory_level /= HARTREE) then
         if(ks%gr%have_fine_mesh) then
           do ispin = 1, hm%d%nspin
@@ -662,10 +672,11 @@ contains
             !          call doutput_function(1, "./", "vxc_fine", ks%gr%fine%mesh, vxc(:, ispin), unit_one, ierr)
             !          call doutput_function(1, "./", "vxc_coarse", ks%gr%mesh, hm%vxc(:, ispin), unit_one, ierr)
           end do
+          SAFE_DEALLOCATE_P(ks%calc%vxc)
         else
-          do ispin = 1, hm%d%nspin
-            call lalg_copy(ks%gr%fine%mesh%np, ks%calc%vxc(:, ispin), hm%vxc(:, ispin))
-          end do
+          ! just change the pointer to avoid the copy
+          SAFE_DEALLOCATE_P(hm%vxc)
+          hm%vxc => ks%calc%vxc
         end if
 
         if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) then
@@ -675,14 +686,17 @@ contains
           SAFE_DEALLOCATE_P(ks%calc%vtau)
         end if
 
-      if(hm%d%cdft) then
-        hm%axc(1:ks%gr%mesh%np, 1:ks%gr%sb%dim, 1:hm%d%nspin) = ks%calc%axc(1:ks%gr%mesh%np, 1:ks%gr%sb%dim, 1:hm%d%nspin)
-        SAFE_DEALLOCATE_P(ks%calc%axc)
-      end if
+        if(hm%d%cdft) then
+          hm%axc(1:ks%gr%mesh%np, 1:ks%gr%sb%dim, 1:hm%d%nspin) = ks%calc%axc(1:ks%gr%mesh%np, 1:ks%gr%sb%dim, 1:hm%d%nspin)
+          SAFE_DEALLOCATE_P(ks%calc%axc)
+        end if
 
       else
         hm%vxc = M_ZERO
       end if
+
+      hm%energy%hartree = M_ZERO
+      call v_ks_hartree(ks, hm)
 
       ! Build Hartree + XC potential
       forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vxc(ip, 1) + hm%vhartree(ip)
@@ -691,7 +705,6 @@ contains
         forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 2) = hm%vxc(ip, 2) + hm%vhartree(ip)
       end if
       
-      ! FIXME: this next lines do nothing. Perhaps there is something missing?
       if(hm%d%ispin == SPINORS) then
         forall(ispin = 3:4, ip = 1:ks%gr%mesh%np) hm%vhxc(ip, ispin) = hm%vxc(ip, ispin)
       end if
@@ -713,26 +726,11 @@ contains
       
     end if
 
-    if(associated(hm%ep%e_field) .and. simul_box_is_periodic(ks%gr%mesh%sb)) then
-      hm%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin) = ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin)
-      SAFE_DEALLOCATE_P(ks%calc%vberry)
-    endif
-
-    if(hm%self_induced_magnetic) then
-      hm%a_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim) = ks%calc%a_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim)
-      hm%b_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim) = ks%calc%b_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim)
-
-      SAFE_DEALLOCATE_P(ks%calc%a_ind)
-      SAFE_DEALLOCATE_P(ks%calc%b_ind)
-    end if
-
     if(ks%calc%time_present) then
       call hamiltonian_update(hm, ks%gr%mesh, ks%calc%time)
     else
       call hamiltonian_update(hm, ks%gr%mesh)
     end if
-
-    SAFE_DEALLOCATE_P(ks%calc%vxc)
 
     SAFE_DEALLOCATE_P(ks%calc%density)
     if(ks%calc%total_density_alloc) then
@@ -742,8 +740,12 @@ contains
     POP_SUB(v_ks_calc_finish)
   end subroutine v_ks_calc_finish
 
-  ! ---------------------------------------------------------
-  ! Hartree contribution to the KS potential
+  ! --------------------------------------------------------- 
+  !
+  ! Hartree contribution to the KS potential. This function is
+  ! designed to be used by v_ks_calc_finish and it cannot be called
+  ! directly.
+  !
   subroutine v_ks_hartree(ks, hm)
     type(v_ks_t),        intent(inout) :: ks
     type(hamiltonian_t), intent(inout) :: hm
@@ -765,6 +767,7 @@ contains
       ! solve the Poisson equation
       call dpoisson_solve(ks%hartree_solver, pot, ks%calc%total_density)
     else
+      ! The calculation was started by v_ks_calc_start.
       call dpoisson_solve_finish(ks%hartree_solver, pot)
     end if
 
