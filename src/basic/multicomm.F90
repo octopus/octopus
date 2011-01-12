@@ -220,15 +220,15 @@ contains
       
       ! the slaves must be defined at a certain parallelization level, for the moment this is state parallelization.
       slave_level = P_STRATEGY_STATES
-      
       mc%have_slaves = (num_slaves > 0)
 
-#ifndef HAVE_MPI2
       if(mc%have_slaves) then
+#ifndef HAVE_MPI2
         message(1) = 'Task parallelization requires MPI 2.'
         call write_fatal(1)
-      end if
 #endif
+        call messages_experimental('Task parallelization')
+      end if
 
       ! clear parallel strategies that were available but will not be used
       do ii = 1, mc%n_index

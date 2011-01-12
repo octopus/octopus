@@ -41,6 +41,8 @@ dist_share_DATA =                      \
 	05-cpmd.03-vel_verlet.inp      \
 	06-caetrs.01-gs.inp            \
 	06-caetrs.02-kick.inp          \
+	06-caetrs.03-kick-tp1.inp      \
+	06-caetrs.04-kick-tp2.inp      \
 	06-caetrs.test                 \
 	08-laser.test                  \
 	08-laser.01-ground_state.inp   \
