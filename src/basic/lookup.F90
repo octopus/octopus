@@ -114,7 +114,7 @@ contains
 !This is a PGI pragma to force the optimization level of this file to -O0.
 !-O2 or below is needed for 10.5. -O1 or below is needed for 10.8.   
 !The line after the pragma causes a segmentation fault otherwise.
-!pgi$g opt=0
+!pgi$r opt=0
           if(present(list)) list(nlist(ipoint), ipoint) = ii
         end if
       end do
