@@ -214,7 +214,7 @@ contains
     type(geometry_t),  intent(in)    :: geo
 
     FLOAT :: excess_charge
-    integer :: nempty, ierr, il
+    integer :: nempty, ierr, il, ntot
     integer, allocatable :: ob_k(:), ob_st(:), ob_d(:)
     character(len=256)   :: restart_dir
 
@@ -262,6 +262,28 @@ contains
     call parse_float(datasets_check('ExcessCharge'), M_ZERO, excess_charge)
 
 
+    !%Variable TotalStates
+    !%Type integer
+    !%Default 0
+    !%Section States
+    !%Description
+    !% This variable sets the total number of states that Octopus will
+    !% use. This is normally not necessary since by default Octopus
+    !% sets the number of states to the minimum necessary to hold the
+    !% electrons present in the system. (This default behavior is
+    !% obtained by setting <tt>TotalStates</tt>  to 0).
+    !%
+    !% If you want to add some unoccupied states, probably it is more convenient to use the variable 
+    !% <tt>ExtraStates</tt>.
+    !%
+    !% Note that this number is unrelated to <tt>CalculationMode == unocc</tt>.
+    !%End
+    call parse_integer(datasets_check('TotalStates'), 0, ntot)
+    if (ntot < 0) then
+      write(message(1), '(a,i5,a)') "Input: '", ntot, "' is not a valid value for TotalStates."
+      call write_fatal(1)
+    end if
+
     !%Variable ExtraStates
     !%Type integer
     !%Default 0
@@ -292,6 +314,11 @@ contains
     end if
 
     st%extrastates = (nempty > 0)
+
+    if(ntot > 0 .and. nempty > 0) then
+      message(1) = 'Error: You cannot set TotalStates and ExtraStates at the same time.'
+      call write_fatal(1)
+    end if
 
     ! For non-periodic systems this should just return the Gamma point
     call states_choose_kpoints(st%d, gr%sb, geo)
@@ -377,24 +404,34 @@ contains
       st%d%dim = 1
       st%nst = int(st%qtot/2)
       if(st%nst*2 < st%qtot) st%nst = st%nst + 1
-      st%nst = st%nst + nempty + st%ob_ncs
       st%d%nspin = 1
       st%d%spin_channels = 1
     case(SPIN_POLARIZED)
       st%d%dim = 1
       st%nst = int(st%qtot/2)
       if(st%nst*2 < st%qtot) st%nst = st%nst + 1
-      st%nst = st%nst + nempty + st%ob_ncs
       st%d%nspin = 2
       st%d%spin_channels = 2
     case(SPINORS)
       st%d%dim = 2
       st%nst = int(st%qtot)
       if(st%nst < st%qtot) st%nst = st%nst + 1
-      st%nst = st%nst + nempty + st%ob_ncs
       st%d%nspin = 4
       st%d%spin_channels = 2
     end select
+
+    if(ntot > 0) then
+      if(ntot < st%nst) then
+        message(1) = 'Error: TotalStates is smaller than the number of states required by the system.'
+        call write_fatal(1)
+      end if
+
+      st%extrastates = (ntot > st%nst)
+      st%nst = ntot
+    end if
+
+    st%nst = st%nst + nempty + st%ob_ncs
+
 
     ! FIXME: For now, open-boundary calculations are only possible for
     ! continuum states, i.e. for those states treated by the Lippmann-
