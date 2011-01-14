@@ -89,6 +89,7 @@ module v_ks_m
     FLOAT,                pointer :: vberry(:, :)
     FLOAT,                pointer :: a_ind(:, :)
     FLOAT,                pointer :: b_ind(:, :)
+    logical                       :: calc_energy
   end type v_ks_calc_t
 
   type v_ks_t
@@ -334,15 +335,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine v_ks_calc(ks, hm, st, calc_eigenval, time, calc_berry)
+  subroutine v_ks_calc(ks, hm, st, calc_eigenval, time, calc_berry, calc_energy)
     type(v_ks_t),           intent(inout) :: ks
     type(hamiltonian_t),    intent(inout) :: hm
     type(states_t),         intent(inout) :: st
     logical,      optional, intent(in)    :: calc_eigenval
     FLOAT,        optional, intent(in)    :: time
     logical,      optional, intent(in)    :: calc_berry ! use this before wfns initialized
+    logical,      optional, intent(in)    :: calc_energy
     
-    call v_ks_calc_start(ks, hm, st, time, calc_berry)
+    call v_ks_calc_start(ks, hm, st, time, calc_berry, calc_energy)
     call v_ks_calc_finish(ks, hm)
 
     if(present(calc_eigenval)) then
@@ -359,13 +361,14 @@ contains
   !! the calculation. The argument hm is not modified. The argument st
   !! can be modified after the function have been used.
 
-  subroutine v_ks_calc_start(ks, hm, st, time, calc_berry) 
+  subroutine v_ks_calc_start(ks, hm, st, time, calc_berry, calc_energy) 
     type(v_ks_t),                      intent(inout) :: ks 
     type(hamiltonian_t),     target,   intent(in)    :: hm !< This MUST be intent(in), changes to hm are done in v_ks_calc_finish.
     type(states_t),                    intent(inout) :: st
     FLOAT,                   optional, intent(in)    :: time 
     logical,                 optional, intent(in)    :: calc_berry !< Use this before wfns initialized.
-    
+    logical,                 optional, intent(in)    :: calc_energy
+
     FLOAT :: distance
     type(profile_t), save :: prof
     type(energy_t), pointer :: energy
@@ -388,6 +391,9 @@ contains
     ks%calc%time_present = present(time)
     if(present(time)) ks%calc%time = time
 
+    ks%calc%calc_energy = .true.
+    if(present(calc_energy)) ks%calc%calc_energy = calc_energy
+
     ! If the Hxc term is frozen, there is nothing to do (WARNING: MISSING ks%calc%energy%intnvxc)
     if(ks%frozen_hxc) then
       POP_SUB(v_ks_calc_start)
@@ -396,9 +402,9 @@ contains
 
     SAFE_ALLOCATE(ks%calc%energy)
     energy => ks%calc%energy
-
+    
     call energy_copy(hm%energy, ks%calc%energy)
-
+    
     energy%intnvxc = M_ZERO
 
     ! check whether we should introduce the Amaldi SIC correction
@@ -512,9 +518,12 @@ contains
         ks%calc%axc = M_ZERO
         call xc_get_vxc_and_axc(ks%gr%fine%der, ks%xc, st, ks%calc%density, st%current, st%d%ispin, ks%calc%vxc, ks%calc%axc, &
              energy%exchange, energy%correlation, energy%xc_j, -minval(st%eigenval(st%nst, :)), st%qtot)
+      else if(ks%calc%calc_energy) then
+        call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, &
+          ex = energy%exchange, ec = energy%correlation, vxc = ks%calc%vxc, vtau = ks%calc%vtau)
       else
-        call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%calc%density, st%d%ispin, energy%exchange, energy%correlation, &
-             -minval(st%eigenval(st%nst, :)), st%qtot, ks%calc%vxc, vtau = ks%calc%vtau)
+        call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, &
+          vxc = ks%calc%vxc, vtau = ks%calc%vtau)
       end if
 
       if(ks%theory_level == KOHN_SHAM_DFT) then
@@ -536,21 +545,22 @@ contains
       end if
 
       if(ks%tail_correction) call tail_correction(ks%calc%vxc)
-      
-      ! Now we calculate Int[n vxc] = energy%intnvxc
-      select case(hm%d%ispin)
-      case(UNPOLARIZED)
-        energy%intnvxc = energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), ks%calc%vxc(:, 1))
-      case(SPIN_POLARIZED)
-        energy%intnvxc = energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), ks%calc%vxc(:, 1)) &
-             + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 2), ks%calc%vxc(:, 2))
-      case(SPINORS)
-        energy%intnvxc = energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), ks%calc%vxc(:, 1)) &
-             + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 2), ks%calc%vxc(:, 2)) &
-             + M_TWO*dmf_dotp(ks%gr%fine%mesh, st%rho(:, 3), ks%calc%vxc(:, 3)) &
-             + M_TWO*dmf_dotp(ks%gr%fine%mesh, st%rho(:, 4), ks%calc%vxc(:, 4))
 
-      end select
+      if(ks%calc%calc_energy) then
+        ! Now we calculate Int[n vxc] = energy%intnvxc
+        select case(hm%d%ispin)
+        case(UNPOLARIZED)
+          energy%intnvxc = energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), ks%calc%vxc(:, 1))
+        case(SPIN_POLARIZED)
+          energy%intnvxc = energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), ks%calc%vxc(:, 1)) &
+            + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 2), ks%calc%vxc(:, 2))
+        case(SPINORS)
+          energy%intnvxc = energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), ks%calc%vxc(:, 1)) &
+            + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 2), ks%calc%vxc(:, 2)) &
+            + M_TWO*dmf_dotp(ks%gr%fine%mesh, st%rho(:, 3), ks%calc%vxc(:, 3)) &
+            + M_TWO*dmf_dotp(ks%gr%fine%mesh, st%rho(:, 4), ks%calc%vxc(:, 4))
+        end select
+      end if
 
       call profiling_out(prof)
       POP_SUB(v_ks_calc_start.v_a_xc)
@@ -771,8 +781,10 @@ contains
       call dpoisson_solve_finish(ks%hartree_solver, pot)
     end if
 
-    ! Get the Hartree energy
-    hm%energy%hartree = M_HALF*dmf_dotp(ks%gr%fine%mesh, ks%calc%total_density, pot)
+    if(ks%calc%calc_energy) then
+      ! Get the Hartree energy
+      hm%energy%hartree = M_HALF*dmf_dotp(ks%gr%fine%mesh, ks%calc%total_density, pot)
+    end if
 
     if(ks%gr%have_fine_mesh) then
       ! we use injection to transfer to the fine grid, we cannot use
@@ -785,8 +797,8 @@ contains
       SAFE_DEALLOCATE_P(pot)
     end if
 
-    if (poisson_get_solver(ks%hartree_solver) == POISSON_SETE) then !SEC
-      hm%energy%hartree=hm%energy%hartree + poisson_energy(ks%hartree_solver)
+    if (ks%calc%calc_energy .and. poisson_get_solver(ks%hartree_solver) == POISSON_SETE) then !SEC
+      hm%energy%hartree = hm%energy%hartree + poisson_energy(ks%hartree_solver)
       write(89,*) hm%energy%hartree*CNST(2.0)*CNST(13.60569193), poisson_energy(ks%hartree_solver)*CNST(2.0)*CNST(13.60569193), &
         hm%ep%eii*CNST(2.0)*CNST(13.60569193)
     endif

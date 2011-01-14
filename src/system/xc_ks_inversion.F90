@@ -457,8 +457,7 @@ contains
            ".", "vhartree", gr%mesh, hm%vhartree(:), units_out%energy, ierr)
     
     ! initialize the KS potential
-    call xc_get_vxc(gr%der, xc, st, target_rho, st%d%ispin, E_x, E_c, &
-      M_ZERO, st%qtot, hm%vxc)
+    call xc_get_vxc(gr%der, xc, st, target_rho, st%d%ispin, M_ZERO, st%qtot, ex = E_x, ec = E_c, vxc = hm%vxc)
     
     call doutput_function(io_function_fill_how("AxisX"), &
            ".", "vxcinit", gr%mesh, hm%vxc(:,1), units_out%energy, ierr)

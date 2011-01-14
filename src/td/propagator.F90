@@ -679,7 +679,7 @@ contains
       if(tr%method == PROP_CAETRS) then
         call lalg_copy(gr%mesh%np, st%d%nspin, vold, hm%vhxc)
         call hamiltonian_update(hm, gr%mesh, time = time - dt)
-        call v_ks_calc_start(ks, hm, st, time = time - dt)
+        call v_ks_calc_start(ks, hm, st, time = time - dt, calc_energy = .false.)
       end if
 
       ! propagate half of the time step with H(time - dt)

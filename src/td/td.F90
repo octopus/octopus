@@ -248,7 +248,7 @@ contains
       
       if(generate) call hamiltonian_epot_generate(hm, gr, sys%geo, st, time = iter*td%dt)
 
-      update_energy = (mod(iter, td%energy_update_iter) == 0) .or. iter == td%max_iter
+      update_energy = (td%dynamics == BO) .or. (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter)
 
       if(update_energy .or. propagator_requires_vks(td%tr)) then
         
@@ -261,7 +261,7 @@ contains
         end if
 
         ! update Hamiltonian and eigenvalues (fermi is *not* called)
-        call v_ks_calc(sys%ks, hm, st, calc_eigenval = update_energy, time = iter*td%dt)
+        call v_ks_calc(sys%ks, hm, st, calc_eigenval = update_energy, time = iter*td%dt, calc_energy = update_energy)
         
         ! Get the energies.
         if(update_energy) call total_energy(hm, sys%gr, st, iunit = -1)

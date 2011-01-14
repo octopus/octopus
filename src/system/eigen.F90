@@ -124,9 +124,9 @@ contains
     !% caution.
     !%Option lobpcg 8
     !% (Experimental) Locally optimal block-preconditioned
-    !% conjugate-gradient algorithm. Ref: A. Knyazev, "Toward the
+    !% conjugate-gradient algorithm. Ref: A. Knyazev, Toward the
     !% Optimal Preconditioned Eigensolver: Locally Optimal Block
-    !% Preconditioned Conjugate Gradient Method," <i>SIAM Journal on
+    !% Preconditioned Conjugate Gradient Method, <i>SIAM Journal on
     !% Scientific Computing</i>, 23(2):517-541, 2001.  
     !%Option rmmdiis 10 
     !% Residual minimization scheme, direct inversion in the

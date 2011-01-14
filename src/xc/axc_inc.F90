@@ -36,7 +36,8 @@ subroutine xc_get_vxc_and_axc(der, xcs, st, rho, current_density, ispin, vxc, ax
   PUSH_SUB(xc_get_vxc_and_axc)
 
   !XC energy and potential in the absence of external magnetic fields
-  call xc_get_vxc(der, xcs, st, rho, ispin, ex, ec, ioniz_pot, qtot, vxc=vxc)
+  call xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, &
+    ex = ex,  ec = ec, vxc=vxc)
 
   !do we have a current-dependent XC?
   if(iand(xcs%family, XC_FAMILY_LCA) == 0) then
