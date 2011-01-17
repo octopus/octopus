@@ -58,11 +58,11 @@ module system_m
   type system_t
     type(space_t)             :: space
     type(geometry_t)          :: geo
-    type(grid_t),     pointer :: gr    ! the mesh
-    type(states_t),   pointer :: st    ! the states
-    type(v_ks_t)              :: ks    ! the Kohn-Sham potentials
-    type(h_sys_output_t)      :: outp  ! the output
-    type(multicomm_t)         :: mc    ! index and domain communicators
+    type(grid_t),     pointer :: gr    !< the mesh
+    type(states_t),   pointer :: st    !< the states
+    type(v_ks_t)              :: ks    !< the Kohn-Sham potentials
+    type(h_sys_output_t)      :: outp  !< the output
+    type(multicomm_t)         :: mc    !< index and domain communicators
   end type system_t
 
 contains

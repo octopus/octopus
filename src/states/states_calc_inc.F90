@@ -19,8 +19,8 @@
 
 
 ! ---------------------------------------------------------
-! Orthonormalizes nst orbitals in mesh (honours state
-! parallelization).
+!> Orthonormalizes nst orbitals in mesh (honours state
+!! parallelization).
 subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
   type(states_t),    intent(in)    :: st
   integer,           intent(in)    :: nst, dim
@@ -32,6 +32,7 @@ subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
   integer :: idim, ist, jst, kst
   FLOAT   :: nrm2
 
+  external :: pgeqrf
   call profiling_in(prof, "GRAM_SCHMIDT_FULL")
   PUSH_SUB(X(states_orthogonalization_full))
 
@@ -102,16 +103,17 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
   type(mesh_t),      intent(in)    :: mesh
   integer,           intent(in)    :: dim
   R_TYPE, target,    intent(inout) :: psi(:, :, :)
-
+  R_TYPE, allocatable :: psi_tmp(:,:)
   R_TYPE, allocatable :: ss(:, :), work(:), tau(:)
   FLOAT :: tmp
   type(batch_t) :: psib
   logical :: bof
-  integer :: idim, nref, wsize, info
+  integer :: idim, nref, wsize, info, ip, temp, N
 
   PUSH_SUB(X(states_orthogonalization_block))
-
-  select case(st%d%orth_method)
+  temp = st%d%orth_method
+ ! temp = 3
+  select case(temp)
   case(ORTH_GS)
 
     SAFE_ALLOCATE(ss(1:nst, 1:nst))
@@ -151,6 +153,37 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
     SAFE_ALLOCATE(tau(1:nref))
 
     tau = M_ZERO
+    
+#ifdef HAVE_SCALAPACK 
+    SAFE_ALLOCATE(psi_tmp(1:dim,1:mesh%np))
+
+    !scalapack needs two dimension matrices to work
+    forall (idim=1:dim,ip=1:mesh%np) psi_tmp(ip,idim)=psi(ip,1,idim)
+    
+    ! Set up process grid that is as close to square as possible
+    blacs%nprow = INT(SQRT(REAL(blacs%nprocs)))
+    blacs%npcol = blacs%nprocs / blacs%nprow
+    ! Define process grid, I don't know if it is needed or we can pass MPI communicator(s) [Joseba]
+    call BLACS_GET(-1, 0, blacs%context)
+    call BLACS_GRIDINIT(blacs%context,'Row-major', blacs%nprow, blacs%npcol)
+    call BLACS_GRIDINFO(blacs%context, blacs%nprow, blacs%npcol, &
+         blacs%myrow,blacs%mycol)
+
+    write(message(1),'(a,I3,a,i3,a,i3)') 'No. of proc. = ',blacs%nprocs, ' No. of col. = ',&
+      blacs%npcol, ' No. of row. = ',blacs%nprow
+    call write_info(1)
+    ! DISTRIBUTE THE MATRIX ON THE PROCESS GRID
+    ! Initialize the descriptor array for the main matrices (ScaLAPACK)
+    CALL DESCINIT(blacs%descriptor,mesh%np,mesh%np,32,32,0,0,blacs%context,mesh%np_part,blacs%info) 
+   
+    N = mesh%np
+    call pdgeqrf(dim, N/2, psi_tmp(1,1),1,1,blacs%descriptor, tau(1), tmp, -1, blacs%info)
+
+    if ( blacs%info /= 0) then
+       write(message(1),'(a,I6)') 'ScaLAPACK execution failed. Failed code: ',blacs%info
+       call write_warning(1)
+     end if
+#endif 
 
     ! get the optimal size of the work array
     call dgeqrf(mesh%np, nst, psi(1, 1, 1), mesh%np_part, tau(1), tmp, -1, info)
@@ -158,7 +191,7 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
 
     ! calculate the QR decomposition
     SAFE_ALLOCATE(work(1:wsize))
-    call dgeqrf(mesh%np, nst, psi(1, 1, 1), mesh%np_part, tau(1), work(1), wsize, info)
+    call dgeqrf(mesh%np, nst, psi(1, 1, 1), mesh%np_part, tau(1), work(1), mesh%np*wsize, info)
     SAFE_DEALLOCATE_A(work)
 
     ! get the optimal size of the work array
@@ -258,23 +291,23 @@ end subroutine X(states_orthogonalization_block)
 
 
 ! ---------------------------------------------------------
-! Orthonormalizes phi to the nst orbitals psi.
-! It also permits doing only the orthogonalization (no normalization).
-! And one can pass an extra optional argument, mask, which:
-!  - on input, if mask(p) = .true., the p-orbital is not used.
-!  - on output, mask(p) = .true. if p was already orthogonal (to within 1e-12).
-! If Theta_Fi and beta_ij are present, it performs the generalized orthogonalization
-!   (Theta_Fi - sum_j beta_ij |j><j|) |Phi> as in De Gironcoli PRB 51, 6774 (1995).
-! This is used in response for metals.
+!> Orthonormalizes phi to the nst orbitals psi.
+!! It also permits doing only the orthogonalization (no normalization).
+!! And one can pass an extra optional argument, mask, which:
+!!  - on input, if mask(p) = .true., the p-orbital is not used.
+!!  - on output, mask(p) = .true. if p was already orthogonal (to within 1e-12).
+!! If Theta_Fi and beta_ij are present, it performs the generalized orthogonalization
+!!   (Theta_Fi - sum_j beta_ij |j><j|Phi> as in De Gironcoli PRB 51, 6774 (1995).
+!! This is used in response for metals
 subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
   normalize, mask, overlap, norm, Theta_fi, beta_ij)
   type(mesh_t),      intent(in)    :: mesh
   integer,           intent(in)    :: nst
   integer,           intent(in)    :: dim
-  R_TYPE,            intent(in)    :: psi(:,:,:)   ! psi(mesh%np_part, dim, nst)
-  R_TYPE,            intent(inout) :: phi(:,:)     ! phi(mesh%np_part, dim)
+  R_TYPE,            intent(in)    :: psi(:,:,:)   !< psi(mesh%np_part, dim, nst)
+  R_TYPE,            intent(inout) :: phi(:,:)     !< phi(mesh%np_part, dim)
   logical, optional, intent(in)    :: normalize
-  logical, optional, intent(inout) :: mask(:)      ! mask(nst)
+  logical, optional, intent(inout) :: mask(:)      !< mask(nst)
   R_TYPE,  optional, intent(out)   :: overlap(:) 
   R_TYPE,  optional, intent(out)   :: norm
   FLOAT,   optional, intent(in)    :: Theta_Fi
@@ -472,12 +505,12 @@ end function X(states_residue)
 
 
 ! ---------------------------------------------------------
-! The routine calculates the expectation value of the momentum 
-! operator
-! <p> = < phi*(ist, k) | -i \nabla | phi(ist, ik) >
-!
-! Note, the blas routines cdotc, zdotc take care of complex 
-! conjugation *. Therefore we pass phi directly.
+!> The routine calculates the expectation value of the momentum 
+!! operator
+!! <p> = < phi*(ist, k) | -i \nabla | phi(ist, ik) >
+!!
+!! Note, the blas routines cdotc, zdotc take care of complex 
+!! conjugation *. Therefore we pass phi directly.
 ! ---------------------------------------------------------
 subroutine X(states_calc_momentum)(gr, st, momentum)
   type(grid_t),   intent(inout) :: gr
@@ -575,10 +608,10 @@ end subroutine X(states_calc_momentum)
 
 
 ! ---------------------------------------------------------
-! It calculates the expectation value of the angular
-! momentum of the state phi. If l2 is passed, it also
-! calculates the expectation value of the square of the
-! angular momentum of the state phi.
+!> It calculates the expectation value of the angular
+!! momentum of the state phi. If l2 is passed, it also
+!! calculates the expectation value of the square of the
+!! angular momentum of the state phi.
 ! ---------------------------------------------------------
 subroutine X(states_angular_momentum)(gr, phi, ll, l2)
   type(grid_t), intent(inout)  :: gr

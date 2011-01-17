@@ -36,13 +36,26 @@ include "mpif.h"
 
   ! This is defined even when running serial
   type mpi_grp_t
-    integer :: comm ! copy of the mpi communicator
-    integer :: size ! size of comm (defined also in serial mode)
-    integer :: rank ! rank of comm (defined also in serial mode)
+    integer :: comm !< copy of the mpi communicator
+    integer :: size !< size of comm (defined also in serial mode)
+    integer :: rank !< rank of comm (defined also in serial mode)
   end type mpi_grp_t
+  
+  integer, parameter :: DLEN = 9
+  type blacs_grp_t
+    integer :: context !< blacs context
+    integer :: nprocs !< number of processors
+    integer :: nprow !< number of processors per row
+    integer :: npcol !< number of processors per column
+    integer :: iam !< process indetificator
+    integer :: myrow !< the row of the processor in the processor grid 
+    integer :: mycol !< the column of the processor in the processor grid
+    integer :: descriptor (DLEN)
+    integer :: info !< blacs functions output information
+  end type blacs_grp_t
 
   type(mpi_grp_t), public :: mpi_world
-
+  type (blacs_grp_t), public :: blacs
 contains
   ! ---------------------------------------------------------
   subroutine mpi_mod_init()
@@ -63,6 +76,21 @@ contains
 #else
     call mpi_grp_init(mpi_world, -1)
 #endif
+
+#ifdef HAVE_SCALAPACK
+
+    ! Initialize Blacs to be able to use ScaLAPACK 
+    ! Determine my process number and the number of processes in machine
+    call BLACS_PINFO( blacs%iam, blacs%nprocs)
+    ! If machine needs additional set up, do it now
+    if( blacs%nprocs < 1 ) then
+    !  if( blacs%iam == 0 )&
+     !   blacs%nprocs = blacs%nprow*blacs%npcol 
+      call BLACS_SETUP(blacs%iam,mpi_world%size)
+    end if  
+    
+    write(*,'(a,i2)') '!!!!!!!!!!BLACS initialized!!!!!!!',mpi_world%size
+#endif
   end subroutine mpi_mod_init
 
 
@@ -70,10 +98,18 @@ contains
   subroutine mpi_mod_end()
 #if defined(HAVE_MPI)
     integer :: mpi_err
-
+#ifdef HAVE_SCALAPACK 
+    ! I think BLACS context is also released whem MPI_Finalize is called
+    integer,parameter :: continue = 1
+    ! Free the BLACS context
+    !call BLACS_GRIDEXIT(blacs%context)
+    ! Exit the BLACS
+    !call BLACS_EXIT(continue)
+#endif
     ! end MPI
     call MPI_Finalize(mpi_err)
-#endif  
+#endif 
+ 
   end subroutine mpi_mod_end
 
 

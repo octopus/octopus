@@ -19,10 +19,10 @@
 
 
 ! ---------------------------------------------------------
-! Every node has incount (may vary from node to node) items (in
-! array in) to send to everybody else in the group. The total
-! number of items in the out array is given by outcount. out has
-! to be big enough to contain all possible incoming items.
+!> Every node has incount (may vary from node to node) items (in
+!! array in) to send to everybody else in the group. The total
+!! number of items in the out array is given by outcount. out has
+!! to be big enough to contain all possible incoming items.
 subroutine X(lmpi_gen_allgatherv)(incount, in, outcount, out, mpi_grp)
   integer,         intent(in)  :: incount
   R_TYPE,          intent(in)  :: in(:)
