@@ -111,9 +111,7 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
   integer :: idim, nref, wsize, info, ip, temp, N
 
   PUSH_SUB(X(states_orthogonalization_block))
-  temp = st%d%orth_method
- ! temp = 3
-  select case(temp)
+  select case(st%d%orth_method)
   case(ORTH_GS)
 
     SAFE_ALLOCATE(ss(1:nst, 1:nst))

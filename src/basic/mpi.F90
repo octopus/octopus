@@ -81,7 +81,7 @@ contains
 
     ! Initialize Blacs to be able to use ScaLAPACK 
     ! Determine my process number and the number of processes in machine
-    call BLACS_PINFO( blacs%iam, blacs%nprocs)
+    call BLACS_PINFO(blacs%iam, blacs%nprocs)
     ! If machine needs additional set up, do it now
     if( blacs%nprocs < 1 ) then
     !  if( blacs%iam == 0 )&
@@ -89,7 +89,6 @@ contains
       call BLACS_SETUP(blacs%iam,mpi_world%size)
     end if  
     
-    write(*,'(a,i2)') '!!!!!!!!!!BLACS initialized!!!!!!!',mpi_world%size
 #endif
   end subroutine mpi_mod_init
 
@@ -101,10 +100,6 @@ contains
 #ifdef HAVE_SCALAPACK 
     ! I think BLACS context is also released whem MPI_Finalize is called
     integer,parameter :: continue = 1
-    ! Free the BLACS context
-    !call BLACS_GRIDEXIT(blacs%context)
-    ! Exit the BLACS
-    !call BLACS_EXIT(continue)
 #endif
     ! end MPI
     call MPI_Finalize(mpi_err)
