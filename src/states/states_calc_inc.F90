@@ -144,67 +144,74 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
 
     ASSERT(states_are_real(st))
     ASSERT(.not. mesh%use_curvilinear)
-    ASSERT(.not. mesh%parallel_in_domains)
 
     nref = min(nst, mesh%np)
 
     SAFE_ALLOCATE(tau(1:nref))
 
     tau = M_ZERO
-    
+
+    if(mesh%parallel_in_domains) then
 #ifdef HAVE_SCALAPACK 
-    SAFE_ALLOCATE(psi_tmp(1:dim,1:mesh%np))
 
-    !scalapack needs two dimension matrices to work
-    forall (idim=1:dim,ip=1:mesh%np) psi_tmp(ip,idim)=psi(ip,1,idim)
-    
-    ! Set up process grid that is as close to square as possible
-    blacs%nprow = INT(SQRT(REAL(blacs%nprocs)))
-    blacs%npcol = blacs%nprocs / blacs%nprow
-    ! Define process grid, I don't know if it is needed or we can pass MPI communicator(s) [Joseba]
-    call BLACS_GET(-1, 0, blacs%context)
-    call BLACS_GRIDINIT(blacs%context,'Row-major', blacs%nprow, blacs%npcol)
-    call BLACS_GRIDINFO(blacs%context, blacs%nprow, blacs%npcol, &
-         blacs%myrow,blacs%mycol)
+      SAFE_ALLOCATE(psi_tmp(1:dim,1:mesh%np))
 
-    write(message(1),'(a,I3,a,i3,a,i3)') 'No. of proc. = ',blacs%nprocs, ' No. of col. = ',&
-      blacs%npcol, ' No. of row. = ',blacs%nprow
-    call write_info(1)
-    ! DISTRIBUTE THE MATRIX ON THE PROCESS GRID
-    ! Initialize the descriptor array for the main matrices (ScaLAPACK)
-    CALL DESCINIT(blacs%descriptor,mesh%np,mesh%np,32,32,0,0,blacs%context,mesh%np_part,blacs%info) 
-   
-    N = mesh%np
-    call pdgeqrf(dim, N/2, psi_tmp(1,1),1,1,blacs%descriptor, tau(1), tmp, -1, blacs%info)
+      !scalapack needs two dimension matrices to work
+      forall (idim=1:dim,ip=1:mesh%np) psi_tmp(ip,idim)=psi(ip,1,idim)
 
-    if ( blacs%info /= 0) then
-       write(message(1),'(a,I6)') 'ScaLAPACK execution failed. Failed code: ',blacs%info
-       call write_warning(1)
-     end if
+      ! Set up process grid that is as close to square as possible
+      blacs%nprow = INT(SQRT(REAL(blacs%nprocs)))
+      blacs%npcol = blacs%nprocs / blacs%nprow
+      ! Define process grid, I don't know if it is needed or we can pass MPI communicator(s) [Joseba]
+      call BLACS_GET(-1, 0, blacs%context)
+      call BLACS_GRIDINIT(blacs%context,'Row-major', blacs%nprow, blacs%npcol)
+      call BLACS_GRIDINFO(blacs%context, blacs%nprow, blacs%npcol, &
+        blacs%myrow,blacs%mycol)
+
+      write(message(1),'(a,I3,a,i3,a,i3)') 'No. of proc. = ',blacs%nprocs, ' No. of col. = ',&
+        blacs%npcol, ' No. of row. = ',blacs%nprow
+      call write_info(1)
+      ! DISTRIBUTE THE MATRIX ON THE PROCESS GRID
+      ! Initialize the descriptor array for the main matrices (ScaLAPACK)
+      CALL DESCINIT(blacs%descriptor,mesh%np,mesh%np,32,32,0,0,blacs%context,mesh%np_part,blacs%info) 
+
+      N = mesh%np
+      call pdgeqrf(dim, N/2, psi_tmp(1,1),1,1,blacs%descriptor, tau(1), tmp, -1, blacs%info)
+
+      if ( blacs%info /= 0) then
+        write(message(1),'(a,I6)') 'ScaLAPACK execution failed. Failed code: ',blacs%info
+        call write_warning(1)
+      end if
+#else
+      message(1) = 'The QR orthogonalization in parallel requires Scalapack.'
+      call write_fatal(1)
 #endif 
+    else
 
-    ! get the optimal size of the work array
-    call dgeqrf(mesh%np, nst, psi(1, 1, 1), mesh%np_part, tau(1), tmp, -1, info)
-    wsize = nint(tmp)
+      ! get the optimal size of the work array
+      call dgeqrf(mesh%np, nst, psi(1, 1, 1), mesh%np_part, tau(1), tmp, -1, info)
+      wsize = nint(tmp)
 
-    ! calculate the QR decomposition
-    SAFE_ALLOCATE(work(1:wsize))
-    call dgeqrf(mesh%np, nst, psi(1, 1, 1), mesh%np_part, tau(1), work(1), mesh%np*wsize, info)
-    SAFE_DEALLOCATE_A(work)
+      ! calculate the QR decomposition
+      SAFE_ALLOCATE(work(1:wsize))
+      call dgeqrf(mesh%np, nst, psi(1, 1, 1), mesh%np_part, tau(1), work(1), mesh%np*wsize, info)
+      SAFE_DEALLOCATE_A(work)
 
-    ! get the optimal size of the work array
-    call dorgqr(mesh%np, nst, nref, psi(1, 1, 1), mesh%np_part, tau(1), tmp, -1, info)
-    wsize = nint(tmp)
+      ! get the optimal size of the work array
+      call dorgqr(mesh%np, nst, nref, psi(1, 1, 1), mesh%np_part, tau(1), tmp, -1, info)
+      wsize = nint(tmp)
 
-    ! now calculate Q
-    SAFE_ALLOCATE(work(1:wsize))
-    call dorgqr(mesh%np, nst, nref, psi(1, 1, 1), mesh%np_part, tau(1), work(1), wsize, info)
-    SAFE_DEALLOCATE_A(work)
+      ! now calculate Q
+      SAFE_ALLOCATE(work(1:wsize))
+      call dorgqr(mesh%np, nst, nref, psi(1, 1, 1), mesh%np_part, tau(1), work(1), wsize, info)
+      SAFE_DEALLOCATE_A(work)
 
-    SAFE_DEALLOCATE_A(tau)
-    
-    ! we need to scale by the volume element to get the proper normalization
-    psi = psi/sqrt(mesh%vol_pp(1))
+      SAFE_DEALLOCATE_A(tau)
+
+      ! we need to scale by the volume element to get the proper normalization
+      psi = psi/sqrt(mesh%vol_pp(1))
+
+    end if
 
   case(ORTH_MGS)
     call mgs()
@@ -212,78 +219,78 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
 
   POP_SUB(X(states_orthogonalization_block))
 
-  contains
+contains
 
-    subroutine mgs()
-      integer :: ist, jst, idim
-      FLOAT   :: cc
-      R_TYPE, allocatable :: aa(:)
-      FLOAT,  allocatable :: bb(:)
+  subroutine mgs()
+    integer :: ist, jst, idim
+    FLOAT   :: cc
+    R_TYPE, allocatable :: aa(:)
+    FLOAT,  allocatable :: bb(:)
 #ifdef HAVE_MPI
-      R_TYPE, allocatable :: aac(:)
-      FLOAT,  allocatable :: bbc(:)
+    R_TYPE, allocatable :: aac(:)
+    FLOAT,  allocatable :: bbc(:)
 #endif      
 
-      PUSH_SUB(X(states_orthogonalization_block).mgs)
+    PUSH_SUB(X(states_orthogonalization_block).mgs)
 
-      SAFE_ALLOCATE(bb(1:nst))
+    SAFE_ALLOCATE(bb(1:nst))
 
-      ! normalize the initial vectors
-      do ist = 1, nst
-        bb(ist) = X(mf_dotp)(mesh, dim, psi(:, :, ist), psi(:, :, ist), reduce = .false.)
+    ! normalize the initial vectors
+    do ist = 1, nst
+      bb(ist) = X(mf_dotp)(mesh, dim, psi(:, :, ist), psi(:, :, ist), reduce = .false.)
+    end do
+
+#ifdef HAVE_MPI
+    if(mesh%parallel_in_domains) then
+      SAFE_ALLOCATE(bbc(1:nst))
+      call MPI_Allreduce(bb(1), bbc(1), nst, MPI_FLOAT, MPI_SUM, mesh%mpi_grp%comm, mpi_err) 
+      bb = bbc
+      SAFE_DEALLOCATE_A(bbc)
+    end if
+#endif
+
+    do ist = 1, nst      
+      do idim = 1, dim
+        call lalg_scal(mesh%np, M_ONE/sqrt(bb(ist)), psi(:, idim, ist))
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(bb)
+
+    SAFE_ALLOCATE(aa(1:nst))
+
+    do ist = 1, nst
+      ! calculate the projections
+      do jst = 1, ist - 1
+        aa(jst) = X(mf_dotp)(mesh, dim, psi(:, :, jst), psi(:, :, ist), reduce = .false.)
       end do
 
 #ifdef HAVE_MPI
       if(mesh%parallel_in_domains) then
-        SAFE_ALLOCATE(bbc(1:nst))
-        call MPI_Allreduce(bb(1), bbc(1), nst, MPI_FLOAT, MPI_SUM, mesh%mpi_grp%comm, mpi_err) 
-        bb = bbc
-        SAFE_DEALLOCATE_A(bbc)
+        SAFE_ALLOCATE(aac(1:nst))
+        call MPI_Allreduce(aa(1), aac(1), ist - 1, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
+        aa = aac
+        SAFE_DEALLOCATE_A(aac)
       end if
 #endif
 
-      do ist = 1, nst      
+      ! substract the projections
+      do jst = 1, ist - 1
         do idim = 1, dim
-          call lalg_scal(mesh%np, M_ONE/sqrt(bb(ist)), psi(:, idim, ist))
+          call lalg_axpy(mesh%np, -aa(jst), psi(:, idim, jst), psi(:, idim, ist))
         end do
       end do
 
-      SAFE_DEALLOCATE_A(bb)
-
-      SAFE_ALLOCATE(aa(1:nst))
-
-      do ist = 1, nst
-        ! calculate the projections
-        do jst = 1, ist - 1
-          aa(jst) = X(mf_dotp)(mesh, dim, psi(:, :, jst), psi(:, :, ist), reduce = .false.)
-        end do
-
-#ifdef HAVE_MPI
-        if(mesh%parallel_in_domains) then
-          SAFE_ALLOCATE(aac(1:nst))
-          call MPI_Allreduce(aa(1), aac(1), ist - 1, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
-          aa = aac
-          SAFE_DEALLOCATE_A(aac)
-        end if
-#endif
-
-        ! substract the projections
-        do jst = 1, ist - 1
-          do idim = 1, dim
-            call lalg_axpy(mesh%np, -aa(jst), psi(:, idim, jst), psi(:, idim, ist))
-          end do
-        end do
-
-        ! renormalize
-        cc = X(mf_dotp)(mesh, dim, psi(:, :, ist), psi(:, :, ist))
-        do idim = 1, dim
-          call lalg_scal(mesh%np, M_ONE/sqrt(cc), psi(:, idim, ist))
-        end do
+      ! renormalize
+      cc = X(mf_dotp)(mesh, dim, psi(:, :, ist), psi(:, :, ist))
+      do idim = 1, dim
+        call lalg_scal(mesh%np, M_ONE/sqrt(cc), psi(:, idim, ist))
       end do
+    end do
 
-      SAFE_DEALLOCATE_A(aa)
-      POP_SUB(X(states_orthogonalization_block).mgs)
-    end subroutine mgs
+    SAFE_DEALLOCATE_A(aa)
+    POP_SUB(X(states_orthogonalization_block).mgs)
+  end subroutine mgs
 
 end subroutine X(states_orthogonalization_block)
 
