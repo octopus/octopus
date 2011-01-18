@@ -32,7 +32,10 @@ subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
   integer :: idim, ist, jst, kst
   FLOAT   :: nrm2
 
+#ifdef HAVE_SCALAPACK 
   external :: pgeqrf
+#endif
+
   call profiling_in(prof, "GRAM_SCHMIDT_FULL")
   PUSH_SUB(X(states_orthogonalization_full))
 
