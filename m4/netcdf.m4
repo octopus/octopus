@@ -31,7 +31,7 @@ integer :: status
 status=nf90_close(ncid)
 ]), [acx_netcdf_ok=yes; FCFLAGS_NETCDF="$netcdf_fcflags"; LIBS_NETCDF="$netcdf_libs"], [])
   else
-    for netcdf_fcflags in "" -I/usr/include/netcdf-3; do
+    for netcdf_fcflags in "" -I/usr/include; do
       for netcdf_libsL in ""; do
         for netcdf_libsl in "" -lnetcdf "-lnetcdff -lnetcdf"; do
 	  if test "$netcdf_libsL" -a "$netcdf_libsl"; then
