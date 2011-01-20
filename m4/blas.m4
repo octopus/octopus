@@ -106,7 +106,7 @@ if test $acx_blas_ok = no; then
 fi
 
 dnl Other libraries
-for blas in goto mkl cxml dxml scs complib.sgimath blas; do
+for blas in acml goto mkl cxml dxml scs complib.sgimath blas; do
   if test $acx_blas_ok = no; then
     unset ac_cv_lib_$blas_$sgemm
     AC_CHECK_LIB($blas, $sgemm, [acx_blas_ok=yes; LIBS_BLAS="$LIBS_BLAS -l$blas"], [], [])
