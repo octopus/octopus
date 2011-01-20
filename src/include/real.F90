@@ -33,6 +33,7 @@
 #define R_AIMAG(x)  (M_ZERO)
 
 #define X(x)        d ## x
+#define pX(x)       pd ## x
 
 #define R_SIZEOF    8
 #define R_ADD       1

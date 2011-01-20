@@ -179,6 +179,34 @@ module lapack_m
     end subroutine zheev
   end interface
 
+  interface
+    SUBROUTINE DGEQRF( M, N, A, LDA, TAU, WORK, LWORK, INFO )
+      INTEGER            INFO, LDA, LWORK, M, N
+      DOUBLE PRECISION   A( LDA, * ), TAU( * ), WORK( * )
+    end SUBROUTINE DGEQRF
+  end interface
+
+  interface
+    SUBROUTINE ZGEQRF( M, N, A, LDA, TAU, WORK, LWORK, INFO )
+      INTEGER            INFO, LDA, LWORK, M, N
+      COMPLEX*16         A( LDA, * ), TAU( * ), WORK( * )
+    end SUBROUTINE ZGEQRF
+  end interface
+
+  interface
+    SUBROUTINE DORGQR( M, N, K, A, LDA, TAU, WORK, LWORK, INFO )
+      INTEGER            INFO, K, LDA, LWORK, M, N
+      DOUBLE PRECISION   A( LDA, * ), TAU( * ), WORK( * )
+    end SUBROUTINE DORGQR
+  end interface
+
+  interface
+    SUBROUTINE ZUNGQR( M, N, K, A, LDA, TAU, WORK, LWORK, INFO )
+      INTEGER            INFO, K, LDA, LWORK, M, N
+      COMPLEX*16         A( LDA, * ), TAU( * ), WORK( * )
+    end SUBROUTINE ZUNGQR
+  end interface
+
 end module lapack_m
 
 

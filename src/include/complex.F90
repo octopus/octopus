@@ -37,6 +37,7 @@
 #define R_MUL       6
 
 #define X(x)        z ## x
+#define pX(x)        pz ## x
 
 #if defined(DISABLE_DEBUG)
 #define TS(x)       x

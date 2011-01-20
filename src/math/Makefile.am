@@ -32,6 +32,7 @@ libmath_a_SOURCES =                      \
 	lalg_basic.F90                   \
 	lalg_adv.F90                     \
 	lapack.F90                       \
+	scalapack_blacs.F90              \
 	loct_math.F90                    \
 	math.F90                         \
 	mix.F90                          \
@@ -74,6 +75,7 @@ gauss_legendre.o : gauss_legendre.F90
 lalg_basic.o : lalg_basic.F90 lalg_basic_blas.F90 blas.o 
 lalg_adv.o : lalg_adv.F90  lalg_adv_lapack_inc.F90 lapack.o
 lapack.o : lapack.F90
+scalapack_blacs.o : scalapack_blacs.F90
 loct_math.o : loct_math.F90
 math.o : math.F90 math_inc.F90 lalg_basic.o lalg_adv.o loct_math.o
 mix.o : mix.F90 mix_inc.F90 lalg_basic.o lalg_adv.o

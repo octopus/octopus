@@ -23,6 +23,7 @@ module mpi_m
 #if defined(MPI_MOD)
   use mpi
 #endif
+  use scalapack_blacs_m
 
   implicit none
 
