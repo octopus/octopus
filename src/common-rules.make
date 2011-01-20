@@ -70,6 +70,7 @@ octopus_LIBS = \
 
 core_LIBS = \
 	$(octopus_LIBS)                               \
+	@LIBS_SCALAPACK@ @LIBS_BLACS@                 \
 	@LIBS_LAPACK@ @LIBS_BLAS@                     \
 	$(top_builddir)/liboct_parser/liboct_parser.a \
 	@GSL_LIBS@ @GD_LIBS@ @LIBS_LIBXC@ @FCEXTRALIBS@ 

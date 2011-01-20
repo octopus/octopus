@@ -27,7 +27,7 @@ fi
 
 dnl Backup LIBS 
 acx_scalapack_save_LIBS="$LIBS"
-LIBS="$LIBS_SCALAPACK $LIBS_LAPACK $LIBS_BLAS $LIBS $FLIBS"
+LIBS="$LIBS_SCALAPACK $LIBS_BLACS $LIBS_LAPACK $LIBS_BLAS $LIBS $FLIBS"
 
 dnl First, check LIBS_SCALAPACK environment variable
 if test $acx_scalapack_ok = no; then
@@ -54,7 +54,6 @@ LIBS="$acx_scalapack_save_LIBS"
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_scalapack_ok" = xyes; then
   AC_DEFINE(HAVE_SCALAPACK,1,[Defined if you have SCALAPACK library.])
-  LIBS="$LIBS $FLIBS $LIBS_SCALAPACK"
   $1
 else
   echo "ScaLAPACK is not found"
