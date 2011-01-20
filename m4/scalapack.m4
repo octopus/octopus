@@ -27,7 +27,7 @@ fi
 
 dnl Backup LIBS 
 acx_scalapack_save_LIBS="$LIBS"
-LIBS="$LIBS_SCALAPACK $LIBS_LAPACK $LIBS $FLIBS"
+LIBS="$LIBS_SCALAPACK $LIBS_LAPACK $LIBS_BLAS $LIBS $FLIBS"
 
 dnl First, check LIBS_SCALAPACK environment variable
 if test $acx_scalapack_ok = no; then
