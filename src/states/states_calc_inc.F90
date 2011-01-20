@@ -104,7 +104,7 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
   R_TYPE, target,    intent(inout) :: psi(:, :, :)
   R_TYPE, allocatable :: psi_tmp(:,:)
   R_TYPE, allocatable :: ss(:, :), work(:), tau(:)
-  R_TYPE :: tmp(1)
+  R_TYPE :: tmp
   type(batch_t) :: psib
   logical :: bof
   integer :: idim, nref, wsize, info, ip, temp, N
@@ -175,9 +175,9 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
 
       N = mesh%np
       call pX(geqrf)(dim, N/2, psi_tmp(1,1), 1, 1, blacs%descriptor, tau(1), tmp, -1, blacs%info)
-      wsize = nint(R_REAL(tmp(1)))
+      wsize = nint(R_REAL(tmp))
       SAFE_ALLOCATE(work(1:wsize))
-      call pX(geqrf)(dim, N/2, psi_tmp(1,1), 1, 1, blacs%descriptor, tau(1), work, wsize, blacs%info)
+      call pX(geqrf)(dim, N/2, psi_tmp(1,1), 1, 1, blacs%descriptor, tau(1), work(1), wsize, blacs%info)
       SAFE_DEALLOCATE_A(work)
 
       if ( blacs%info /= 0) then
@@ -191,8 +191,8 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
     else
 
       ! get the optimal size of the work array
-      call X(geqrf)(mesh%np, nst, psi(1, 1, 1), mesh%np_part, tau(1), tmp(1), -1, info)
-      wsize = nint(R_REAL(tmp(1)))
+      call X(geqrf)(mesh%np, nst, psi(1, 1, 1), mesh%np_part, tau(1), tmp, -1, info)
+      wsize = nint(R_REAL(tmp))
 
       ! calculate the QR decomposition
       SAFE_ALLOCATE(work(1:wsize))
@@ -205,8 +205,8 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
 #else
       call dorgqr &
 #endif
-        (mesh%np, nst, nref, psi(1, 1, 1), mesh%np_part, tau(1), tmp(1), -1, info)
-      wsize = nint(R_REAL(tmp(1)))
+        (mesh%np, nst, nref, psi(1, 1, 1), mesh%np_part, tau(1), tmp, -1, info)
+      wsize = nint(R_REAL(tmp))
 
       ! now calculate Q
       SAFE_ALLOCATE(work(1:wsize))
