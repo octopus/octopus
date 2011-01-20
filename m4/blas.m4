@@ -48,6 +48,12 @@ if test $acx_blas_ok = no; then
   AC_CHECK_FUNC($sgemm, [acx_blas_ok=yes])
 fi
 
+dnl generic BLAS, in default location such as /usr/lib, as given by Ubuntu libblas-dev package
+if test $acx_blas_ok = no; then
+   AC_CHECK_LIB(blas, $sgemm, [acx_blas_ok=yes; LIBS_BLAS="-lblas"], 
+   [], [])
+fi
+
 dnl BLAS in ATLAS library? (http://math-atlas.sourceforge.net/)
 if test $acx_blas_ok = no; then
   AC_CHECK_LIB(atlas, ATL_xerbla,
