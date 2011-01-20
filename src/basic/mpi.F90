@@ -48,7 +48,7 @@ include "mpif.h"
     integer :: nprocs !< number of processors
     integer :: nprow !< number of processors per row
     integer :: npcol !< number of processors per column
-    integer :: iam !< process indetificator
+    integer :: iam !< process indentifier
     integer :: myrow !< the row of the processor in the processor grid 
     integer :: mycol !< the column of the processor in the processor grid
     integer :: descriptor (DLEN)
