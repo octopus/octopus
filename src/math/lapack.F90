@@ -180,31 +180,31 @@ module lapack_m
   end interface
 
   interface
-    SUBROUTINE DGEQRF( M, N, A, LDA, TAU, WORK, LWORK, INFO )
-      INTEGER            INFO, LDA, LWORK, M, N
-      DOUBLE PRECISION   A( LDA, * ), TAU( * ), WORK( * )
-    end SUBROUTINE DGEQRF
+    subroutine dgeqrf( m, n, a, lda, tau, work, lwork, info )
+      integer            info, lda, lwork, m, n
+      double precision   a, tau, work
+    end subroutine dgeqrf
   end interface
 
   interface
-    SUBROUTINE ZGEQRF( M, N, A, LDA, TAU, WORK, LWORK, INFO )
-      INTEGER            INFO, LDA, LWORK, M, N
-      COMPLEX*16         A( LDA, * ), TAU( * ), WORK( * )
-    end SUBROUTINE ZGEQRF
+    subroutine zgeqrf( m, n, a, lda, tau, work, lwork, info )
+      integer            info, lda, lwork, m, n
+      complex*16         a, tau, work
+    end subroutine zgeqrf
   end interface
 
   interface
-    SUBROUTINE DORGQR( M, N, K, A, LDA, TAU, WORK, LWORK, INFO )
-      INTEGER            INFO, K, LDA, LWORK, M, N
-      DOUBLE PRECISION   A( LDA, * ), TAU( * ), WORK( * )
-    end SUBROUTINE DORGQR
+    subroutine dorgqr( m, n, k, a, lda, tau, work, lwork, info )
+      integer            info, k, lda, lwork, m, n
+      double precision   a, tau, work
+    end subroutine dorgqr
   end interface
 
   interface
-    SUBROUTINE ZUNGQR( M, N, K, A, LDA, TAU, WORK, LWORK, INFO )
-      INTEGER            INFO, K, LDA, LWORK, M, N
-      COMPLEX*16         A( LDA, * ), TAU( * ), WORK( * )
-    end SUBROUTINE ZUNGQR
+    subroutine zungqr( m, n, k, a, lda, tau, work, lwork, info )
+      integer            info, k, lda, lwork, m, n
+      complex*16         a, tau, work
+    end subroutine zungqr
   end interface
 
 end module lapack_m

@@ -51,7 +51,7 @@ module scalapack_blacs_m
     SUBROUTINE PDGEQRF( M, N, A, IA, JA, DESCA, TAU, WORK, LWORK, INFO )
       INTEGER            IA, INFO, JA, LWORK, M, N
       INTEGER            DESCA( * )
-      DOUBLE PRECISION   A( * ), TAU( * ), WORK( * )
+      DOUBLE PRECISION   A, TAU, WORK
     end SUBROUTINE PDGEQRF
   end interface
 
@@ -59,23 +59,23 @@ module scalapack_blacs_m
     SUBROUTINE PZGEQRF( M, N, A, IA, JA, DESCA, TAU, WORK, LWORK, INFO )
       INTEGER            IA, INFO, JA, LWORK, M, N
       INTEGER            DESCA( * )
-      COMPLEX*16         A( * ), TAU( * ), WORK( * )
+      COMPLEX*16         A, TAU, WORK
     end SUBROUTINE PZGEQRF
   end interface
 
   interface
     SUBROUTINE PDGESV( N, NRHS, A, IA, JA, DESCA, IPIV, B, IB, JB, DESCB, INFO )
       INTEGER            IA, IB, INFO, JA, JB, N, NRHS
-      INTEGER            DESCA( * ), DESCB( * ), IPIV( * )
-      DOUBLE PRECISION   A( * ), B( * )
+      INTEGER            DESCA( * ), DESCB( * ), IPIV
+      DOUBLE PRECISION   A, B
     end SUBROUTINE PDGESV
   end interface
 
   interface
     SUBROUTINE PZGESV( N, NRHS, A, IA, JA, DESCA, IPIV, B, IB, JB, DESCB, INFO )
       INTEGER            IA, IB, INFO, JA, JB, N, NRHS
-      INTEGER            DESCA( * ), DESCB( * ), IPIV( * )
-      COMPLEX*16         A( * ), B( * )
+      INTEGER            DESCA( * ), DESCB( * ), IPIV
+      COMPLEX*16         A, B
     end SUBROUTINE PZGESV
   end interface
 
@@ -86,8 +86,8 @@ module scalapack_blacs_m
       CHARACTER          JOBZ, RANGE, UPLO
       INTEGER            IA, IL, INFO, IU, IZ, JA, JZ, LIWORK, LWORK, M, N, NZ
       DOUBLE PRECISION   ABSTOL, ORFAC, VL, VU
-      INTEGER            DESCA( * ), DESCZ( * ), ICLUSTR( * ), IFAIL( * ), IWORK( * )
-      DOUBLE PRECISION   A( * ), GAP( * ), W( * ), WORK( * ), Z( * )
+      INTEGER            DESCA( * ), DESCZ( * ), ICLUSTR, IFAIL, IWORK
+      DOUBLE PRECISION   A, GAP, W, WORK, Z
     end SUBROUTINE PDSYEVX
   end interface
 

@@ -141,7 +141,6 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
 
   case(ORTH_QR)
 
-    ASSERT(states_are_real(st))
     ASSERT(.not. mesh%use_curvilinear)
 
     nref = min(nst, mesh%np)
@@ -192,12 +191,12 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
     else
 
       ! get the optimal size of the work array
-      call X(geqrf)(mesh%np, nst, psi(:, :, :), mesh%np_part, tau(1), tmp, -1, info)
+      call X(geqrf)(mesh%np, nst, psi(1, 1, 1), mesh%np_part, tau(1), tmp(1), -1, info)
       wsize = nint(R_REAL(tmp(1)))
 
       ! calculate the QR decomposition
       SAFE_ALLOCATE(work(1:wsize))
-      call X(geqrf)(mesh%np, nst, psi(:, :, :), mesh%np_part, tau(1), work(1), wsize, info)
+      call X(geqrf)(mesh%np, nst, psi(1, 1, 1), mesh%np_part, tau(1), work(1), wsize, info)
       SAFE_DEALLOCATE_A(work)
 
       ! get the optimal size of the work array
@@ -206,7 +205,7 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
 #else
       call dorgqr &
 #endif
-        (mesh%np, nst, nref, psi(:, :, :), mesh%np_part, tau(1), tmp, -1, info)
+        (mesh%np, nst, nref, psi(1, 1, 1), mesh%np_part, tau(1), tmp(1), -1, info)
       wsize = nint(R_REAL(tmp(1)))
 
       ! now calculate Q
@@ -216,7 +215,7 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
 #else
       call dorgqr &
 #endif
-        (mesh%np, nst, nref, psi(:, :, :), mesh%np_part, tau(1), work(1), wsize, info)
+        (mesh%np, nst, nref, psi(1, 1, 1), mesh%np_part, tau(1), work(1), wsize, info)
       SAFE_DEALLOCATE_A(work)
 
       SAFE_DEALLOCATE_A(tau)
