@@ -20,6 +20,7 @@
 #include "global.h"
 
 module ground_state_m
+  use calc_mode_m
   use datasets_m
   use energy_m
   use global_m
@@ -29,6 +30,7 @@ module ground_state_m
   use mesh_m
   use messages_m
   use mpi_m
+  use multicomm_m
   use parser_m
   use restart_m
   use scf_m
@@ -46,10 +48,17 @@ module ground_state_m
 
   private
   public ::                 &
+    ground_state_run_init,  &
     ground_state_run
 
 
 contains
+
+  subroutine ground_state_run_init()
+
+    call calc_mode_set_parallelization(P_STRATEGY_STATES, default = .false.)
+
+  end subroutine ground_state_run_init
 
   ! ---------------------------------------------------------
   subroutine ground_state_run(sys, hm, fromScratch)

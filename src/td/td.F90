@@ -20,6 +20,7 @@
 #include "global.h"
 
 module td_m
+  use calc_mode_m
   use cpmd_m
   use datasets_m
   use density_m
@@ -43,6 +44,7 @@ module td_m
   use mesh_m
   use messages_m
   use mpi_m
+  use multicomm_m
   use parser_m
   use PES_m
   use profiling_m
@@ -70,6 +72,7 @@ module td_m
   public ::               &
     td_t,                 &
     td_run,               &
+    td_run_init,          &
     td_init,              &
     td_end
 
@@ -80,7 +83,7 @@ module td_m
        CP        = 3
   
   type td_t 
-    type(propagator_t)       :: tr             ! contains the details of the time-evolution
+    type(propagator_t)   :: tr             ! contains the details of the time-evolution
     type(scf_t)          :: scf
     type(ion_dynamics_t) :: ions
     type(cpmd_t)         :: cp_propagator
@@ -102,6 +105,12 @@ module td_m
 
 contains
 
+  subroutine td_run_init()
+    
+    call calc_mode_set_parallelization(P_STRATEGY_STATES, default = .true.)
+
+  end subroutine td_run_init
+
   ! ---------------------------------------------------------
   subroutine td_run(sys, hm, fromScratch)
     type(system_t), target, intent(inout) :: sys
@@ -114,7 +123,7 @@ contains
     type(states_t),   pointer :: st
     type(geometry_t), pointer :: geo
     logical                   :: stopping, update_energy
-    integer                   :: iter, ii, ierr, iatom, mpi_err, scsteps, ispin
+    integer                   :: iter, ii, ierr, mpi_err, scsteps, ispin
     real(8)                   :: etime
     logical                   :: generate
     type(gauge_force_t)       :: gauge_force

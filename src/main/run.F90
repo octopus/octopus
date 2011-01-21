@@ -66,6 +66,8 @@ module run_m
   type(system_t)      :: sys
   type(hamiltonian_t) :: hm
 
+  integer :: calc_mode_id
+
   integer, parameter :: LR = 1, FD = 2
 
 
@@ -100,7 +102,7 @@ contains
 
     call parse_logical(datasets_check('fromScratch'), .false., fromScratch)
 
-    select case(calc_mode())
+    select case(calc_mode_id)
     case(CM_GS)
       call ground_state_run(sys, hm, fromScratch)
     case(CM_UNOCC)
@@ -191,22 +193,27 @@ contains
   end function get_resp_method
   
   ! ---------------------------------------------------------
-  subroutine run_init()
+  subroutine run_init(cm)
+    integer :: cm
 
     PUSH_SUB(run_init)
 
+    calc_mode_id = cm
+
     call messages_print_stress(stdout, "Calculation Mode")
-    call messages_print_var_option(stdout, "CalculationMode", calc_mode())
+    call messages_print_var_option(stdout, "CalculationMode", calc_mode_id)
     call messages_print_stress(stdout)
 
-    if(.not. calc_mode_is(CM_PULPO_A_FEIRA)) then
+    call calc_mode_init()
+
+    if(calc_mode_id /= CM_PULPO_A_FEIRA) then
       ! initialize FFTs
       call fft_all_init()
 
       call unit_system_init()
       call system_init(sys)
       call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
-      if(.not. calc_mode_is(CM_MEMORY)) then
+      if(calc_mode_id /= CM_MEMORY) then
         message(1) = "Info: Generating external potential"
         call write_info(1)
         call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
@@ -215,6 +222,22 @@ contains
     end if
 
     POP_SUB(run_init)
+
+  contains
+
+    subroutine calc_mode_init()
+
+      select case(calc_mode_id)
+      case(CM_GS)
+        call ground_state_run_init()
+      case(CM_TD)
+        call td_run_init()
+      case(CM_CASIDA)
+        call casida_run_init()
+      end select
+
+    end subroutine calc_mode_init
+
   end subroutine run_init
 
 
@@ -223,7 +246,7 @@ contains
     
     PUSH_SUB(run_end)
 
-    if(.not. calc_mode_is(CM_PULPO_A_FEIRA)) then
+    if(calc_mode_id /= CM_PULPO_A_FEIRA) then
       call hamiltonian_end(hm, sys%gr, sys%geo)
       call system_end(sys)
       call fft_all_end()

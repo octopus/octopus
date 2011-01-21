@@ -20,6 +20,7 @@
 #include "global.h"
 
 program oct_test
+  use calc_mode_m
   use command_line_m
   use datasets_m
   use derivatives_m
@@ -49,6 +50,7 @@ program oct_test
     ORT_TEST           =   3
 
   call global_init()
+  call calc_mode_init()
   call parser_init()
 
   conf%devel_version = .true.
@@ -98,6 +100,7 @@ program oct_test
   call io_end()
   call datasets_end()
   call parser_end()
+  call calc_mode_end()
   call global_end()
 
   contains
@@ -176,6 +179,8 @@ program oct_test
     integer :: test
 
     PUSH_SUB(test_orthogonalization)
+
+    call calc_mode_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
     call system_init(sys)
 

@@ -20,6 +20,7 @@
 #include "global.h"
 
 module casida_m
+  use calc_mode_m
   use datasets_m
   use density_m
   use excited_states_m
@@ -52,7 +53,9 @@ module casida_m
   implicit none
 
   private
-  public :: casida_run
+  public ::                &
+    casida_run,            &
+    casida_run_init
 
   integer, parameter ::    &
     CASIDA_EPS_DIFF   = 1, &
@@ -88,6 +91,12 @@ module casida_m
   end type casida_t
 
 contains
+
+  subroutine casida_run_init()
+    
+    call calc_mode_set_parallelization(P_STRATEGY_OTHER, default = .true.)
+
+  end subroutine casida_run_init
 
   ! ---------------------------------------------------------
   !> References for Casida:

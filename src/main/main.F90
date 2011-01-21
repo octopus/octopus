@@ -170,15 +170,13 @@ program octopus
     call datasets_init(inp_calc_mode)
   end if
 
-  call calc_mode_set(inp_calc_mode)
-
   ! loop over all datasets
   datasets: do ns = 1, no_datasets
 
     ! set system label
     current_dataset = dataset_run_order(ns)
     current_label = trim(dataset_label(current_dataset))
-    call calc_mode_set(dataset_runmode(current_dataset))
+    call calc_mode_init(dataset_runmode(current_dataset))
 
     ! datasets have to be available before calling the _init() functions below
     call io_init_datasets()
@@ -283,10 +281,10 @@ program octopus
     end if
 
     ! now we really start
-    call run_init()
+    call run_init(dataset_runmode(current_dataset))
     call run()
     call run_end()
-
+    
 #if defined(HAVE_MPI)
     ! wait for all processors to finish
     call MPI_Barrier(mpi_world%comm, mpi_err)
@@ -298,6 +296,8 @@ program octopus
 
     call profiling_end()
 
+    call calc_mode_end()
+    
     call print_date("Calculation ended on ")
 
   end do datasets
