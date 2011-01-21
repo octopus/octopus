@@ -22,6 +22,7 @@
 module states_calc_m
   use batch_m
   use blas_m
+  use blacs_m
   use calc_mode_m
   use datasets_m
   use derivatives_m
@@ -46,7 +47,7 @@ module states_calc_m
   use parser_m
   use physics_op_m
   use profiling_m
-  use scalapack_blacs_m
+  use scalapack_m
   use simul_box_m
   use smear_m
   use states_m

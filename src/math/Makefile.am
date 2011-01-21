@@ -46,7 +46,8 @@ libmath_a_SOURCES =                      \
 	symm_op.F90                      \
 	tdfunction.F90                   \
 	ylm.c                            \
-	young.F90
+	young.F90                        \
+	scalapack.F90
 
 noinst_HEADERS =                         \
 	lalg_basic_blas.F90              \
@@ -88,3 +89,4 @@ symm_op.o : symm_op.F90 symm_op_inc.F90
 tdfunction.o : tdfunction.F90 splines.o fftw3.o
 ylm.o : ylm.c
 young.o : young.F90 math.o
+scalapack.o : scalapack.F90

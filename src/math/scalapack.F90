@@ -25,7 +25,7 @@
 ! and from http://www.netlib.org/blacs/BLACS/QRef.html (entered manually...)
 ! -----------------------------------------------------------------------
 
-module scalapack_blacs_m
+module scalapack_m
   implicit none
 
   interface
@@ -103,46 +103,7 @@ module scalapack_blacs_m
     end SUBROUTINE PDSYEVX
   end interface
 
-  interface
-    subroutine blacs_get(icontxt, what, val)
-      integer, intent(in)  :: icontxt
-      integer, intent(in)  :: what
-      integer, intent(out) :: val
-    end subroutine blacs_get
-  end interface
-
-  interface
-    subroutine blacs_gridinit(icontxt, order, nprow, npcol)
-      integer,   intent(in)  :: icontxt
-      character, intent(in)  :: order
-      integer,   intent(in)  :: nprow
-      integer,   intent(in)  :: npcol
-    end subroutine blacs_gridinit
-  end interface
-
-  interface
-    subroutine blacs_gridexit(icontxt)
-      integer, intent(in)  :: icontxt
-    end subroutine blacs_gridexit
-  end interface
-
-  interface
-    subroutine blacs_exit(icontxt)
-      integer, intent(in)  :: icontxt
-    end subroutine blacs_exit
-  end interface
-
-  interface
-    subroutine blacs_gridinfo(icontxt, nprow, npcol, myprow, mypcol)
-      integer, intent(in)  :: icontxt
-      integer, intent(out) :: nprow
-      integer, intent(out) :: npcol
-      integer, intent(out) :: myprow
-      integer, intent(out) :: mypcol
-    end subroutine blacs_gridinfo
-  end interface
-
-end module scalapack_blacs_m
+end module scalapack_m
 
 !! Local Variables:
 !! mode: f90
