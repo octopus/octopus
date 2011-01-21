@@ -47,22 +47,34 @@ module scalapack_blacs_m
     end SUBROUTINE DESCINIT
   end interface
 
-  interface
+  interface scalapack_geqrf
     SUBROUTINE PDGEQRF( M, N, A, IA, JA, DESCA, TAU, WORK, LWORK, INFO )
       INTEGER            IA, INFO, JA, LWORK, M, N
       INTEGER            DESCA( * )
       DOUBLE PRECISION   A, TAU, WORK
     end SUBROUTINE PDGEQRF
-  end interface
-
-  interface
+    
     SUBROUTINE PZGEQRF( M, N, A, IA, JA, DESCA, TAU, WORK, LWORK, INFO )
       INTEGER            IA, INFO, JA, LWORK, M, N
       INTEGER            DESCA( * )
       COMPLEX*16         A, TAU, WORK
     end SUBROUTINE PZGEQRF
-  end interface
+  end interface scalapack_geqrf
 
+  interface scalapack_orgqr
+    SUBROUTINE PDORGQR( M, N, K, A, IA, JA, DESCA, TAU, WORK, LWORK, INFO ) 
+      INTEGER            IA, INFO, JA, K, LWORK, M, N
+      INTEGER            DESCA( * )
+      DOUBLE PRECISION   A, TAU, WORK
+    end SUBROUTINE PDORGQR
+    
+    SUBROUTINE PZUNGQR( M, N, K, A, IA, JA, DESCA, TAU, WORK, LWORK, INFO )
+      INTEGER            IA, INFO, JA, K, LWORK, M, N
+      INTEGER            DESCA( * )
+      COMPLEX*16         A, TAU, WORK
+    end SUBROUTINE PZUNGQR
+  end interface scalapack_orgqr
+  
   interface
     SUBROUTINE PDGESV( N, NRHS, A, IA, JA, DESCA, IPIV, B, IB, JB, DESCB, INFO )
       INTEGER            IA, IB, INFO, JA, JB, N, NRHS

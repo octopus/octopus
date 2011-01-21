@@ -179,33 +179,29 @@ module lapack_m
     end subroutine zheev
   end interface
 
-  interface
+  interface lapack_geqrf
     subroutine dgeqrf( m, n, a, lda, tau, work, lwork, info )
       integer            info, lda, lwork, m, n
       double precision   a, tau, work
     end subroutine dgeqrf
-  end interface
-
-  interface
+    
     subroutine zgeqrf( m, n, a, lda, tau, work, lwork, info )
       integer            info, lda, lwork, m, n
       complex*16         a, tau, work
     end subroutine zgeqrf
-  end interface
-
-  interface
+  end interface lapack_geqrf
+  
+  interface lapack_orgqr 
     subroutine dorgqr( m, n, k, a, lda, tau, work, lwork, info )
       integer            info, k, lda, lwork, m, n
       double precision   a, tau, work
     end subroutine dorgqr
-  end interface
-
-  interface
+    
     subroutine zungqr( m, n, k, a, lda, tau, work, lwork, info )
       integer            info, k, lda, lwork, m, n
       complex*16         a, tau, work
     end subroutine zungqr
-  end interface
+  end interface lapack_orgqr
 
 end module lapack_m
 

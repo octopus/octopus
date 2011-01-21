@@ -102,12 +102,15 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
   type(mesh_t),      intent(in)    :: mesh
   integer,           intent(in)    :: dim
   R_TYPE, target,    intent(inout) :: psi(:, :, :)
-  R_TYPE, allocatable :: psi_tmp(:,:)
+
   R_TYPE, allocatable :: ss(:, :), work(:), tau(:)
   R_TYPE :: tmp
   type(batch_t) :: psib
   logical :: bof
-  integer :: idim, nref, wsize, info, ip, temp, N
+  integer :: idim, nref, wsize, info, ip, temp
+#ifdef HAVE_SCALAPACK
+  integer :: blockrow, blockcol, total_np
+#endif
 
   PUSH_SUB(X(states_orthogonalization_block))
   select case(st%d%orth_method)
@@ -143,41 +146,58 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
 
     ASSERT(.not. mesh%use_curvilinear)
 
-    nref = min(nst, mesh%np)
-
-    SAFE_ALLOCATE(tau(1:nref))
-
-    tau = M_ZERO
-
     if(mesh%parallel_in_domains) then
 #ifdef HAVE_SCALAPACK 
 
-      SAFE_ALLOCATE(psi_tmp(1:dim,1:mesh%np))
-
-      !scalapack needs two-dimensional matrices to work
-      forall (idim=1:dim,ip=1:mesh%np) psi_tmp(ip,idim)=psi(ip,1,idim)
-
       ! Set up process grid that is as close to square as possible
-      blacs%nprow = INT(SQRT(REAL(blacs%nprocs)))
-      blacs%npcol = blacs%nprocs / blacs%nprow
+      blacs%nprow = mesh%mpi_grp%size
+      blacs%npcol = 1
       ! Define process grid, I don`t know if it is needed or we can pass MPI communicator(s) [Joseba]
-      call BLACS_GET(-1, 0, blacs%context)
-      call BLACS_GRIDINIT(blacs%context,'Row-major', blacs%nprow, blacs%npcol)
-      call BLACS_GRIDINFO(blacs%context, blacs%nprow, blacs%npcol, &
-        blacs%myrow,blacs%mycol)
+      call blacs_get(-1, 0, blacs%context)
+      call blacs_gridinit(blacs%context,'Row-major', blacs%nprow, blacs%npcol) !
+      call blacs_gridinfo(blacs%context, blacs%nprow, blacs%npcol, & !
+        blacs%myrow, blacs%mycol)
 
-      write(message(1),'(a,I3,a,i3,a,i3)') 'No. of proc. = ',blacs%nprocs, ' No. of col. = ',&
-        blacs%npcol, ' No. of row. = ',blacs%nprow
-      call write_info(1)
+      ! We need to select the block size of the decomposition. This is
+      ! tricky, since not all processors have the same number of
+      ! points.
+      !
+      ! What we do for now is to the maximum of the number of points
+      ! and we set to zero the remaining points. This introduces an
+      ! error (I think) since this extra degrees of freedom could be
+      ! used by the orthogonalization process.
+
+      blockrow = maxval(mesh%vp%np_local) 
+      blockcol = nst
+      total_np = blockrow*blacs%nprow
+
+      ASSERT(mesh%np_part >= blockrow)
+      psi(mesh%np + 1:blockrow, 1:dim, 1:nst) = M_ZERO
+
       ! DISTRIBUTE THE MATRIX ON THE PROCESS GRID
       ! Initialize the descriptor array for the main matrices (ScaLAPACK)
-      CALL DESCINIT(blacs%descriptor,mesh%np,mesh%np,32,32,0,0,blacs%context,mesh%np_part,blacs%info) 
+      call descinit(blacs%descriptor, total_np, nst, blockrow, blockcol, 0, 0, blacs%context, mesh%np_part, blacs%info) 
 
-      N = mesh%np
-      call pX(geqrf)(dim, N/2, psi_tmp(1,1), 1, 1, blacs%descriptor, tau(1), tmp, -1, blacs%info)
+      write(message(1),'(a,I3,a,i3,a,i3)') 'No. of proc. = ', blacs%nprocs, ' No. of col. = ',&
+        blacs%npcol, ' No. of row. = ', blacs%nprow
+      call write_info(1)
+
+      nref = min(nst, total_np)
+      SAFE_ALLOCATE(tau(1:nref))
+      tau = M_ZERO
+
+      ! calculate the QR decomposition
+      call scalapack_geqrf(total_np, nst, psi(1, 1, 1), 1, 1, blacs%descriptor, tau(1), tmp, -1, blacs%info)
       wsize = nint(R_REAL(tmp))
       SAFE_ALLOCATE(work(1:wsize))
-      call pX(geqrf)(dim, N/2, psi_tmp(1,1), 1, 1, blacs%descriptor, tau(1), work(1), wsize, blacs%info)
+      call scalapack_geqrf(total_np, nst, psi(1, 1, 1), 1, 1, blacs%descriptor, tau(1), work(1), wsize, blacs%info)
+      SAFE_DEALLOCATE_A(work)
+
+      ! now calculate Q
+      call scalapack_orgqr(total_np, nst, nref, psi(1, 1, 1), 1, 1, blacs%descriptor, tau(1), tmp, -1, blacs%info)
+      wsize = nint(R_REAL(tmp))
+      SAFE_ALLOCATE(work(1:wsize))
+      call scalapack_orgqr(total_np, nst, nref, psi(1, 1, 1), 1, 1, blacs%descriptor, tau(1), work(1), wsize, blacs%info)
       SAFE_DEALLOCATE_A(work)
 
       if ( blacs%info /= 0) then
@@ -190,40 +210,33 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
 #endif 
     else
 
+      nref = min(nst, mesh%np)
+      SAFE_ALLOCATE(tau(1:nref))
+      tau = M_ZERO
+
       ! get the optimal size of the work array
-      call X(geqrf)(mesh%np, nst, psi(1, 1, 1), mesh%np_part, tau(1), tmp, -1, info)
+      call lapack_geqrf(mesh%np, nst, psi(1, 1, 1), mesh%np_part, tau(1), tmp, -1, info)
       wsize = nint(R_REAL(tmp))
 
       ! calculate the QR decomposition
       SAFE_ALLOCATE(work(1:wsize))
-      call X(geqrf)(mesh%np, nst, psi(1, 1, 1), mesh%np_part, tau(1), work(1), wsize, info)
+      call lapack_geqrf(mesh%np, nst, psi(1, 1, 1), mesh%np_part, tau(1), work(1), wsize, info)
       SAFE_DEALLOCATE_A(work)
 
       ! get the optimal size of the work array
-#ifdef R_TCOMPLEX
-      call zungqr &
-#else
-      call dorgqr &
-#endif
-        (mesh%np, nst, nref, psi(1, 1, 1), mesh%np_part, tau(1), tmp, -1, info)
+      call lapack_orgqr(mesh%np, nst, nref, psi(1, 1, 1), mesh%np_part, tau(1), tmp, -1, info)
       wsize = nint(R_REAL(tmp))
 
       ! now calculate Q
       SAFE_ALLOCATE(work(1:wsize))
-#ifdef R_TCOMPLEX
-      call zungqr &
-#else
-      call dorgqr &
-#endif
-        (mesh%np, nst, nref, psi(1, 1, 1), mesh%np_part, tau(1), work(1), wsize, info)
+      call lapack_orgqr(mesh%np, nst, nref, psi(1, 1, 1), mesh%np_part, tau(1), work(1), wsize, info)
       SAFE_DEALLOCATE_A(work)
-
-      SAFE_DEALLOCATE_A(tau)
-
-      ! we need to scale by the volume element to get the proper normalization
-      psi = psi/sqrt(mesh%vol_pp(1))
-
     end if
+
+    SAFE_DEALLOCATE_A(tau)
+
+    ! we need to scale by the volume element to get the proper normalization
+    psi = psi/sqrt(mesh%vol_pp(1))
 
   case(ORTH_MGS)
     call mgs()
