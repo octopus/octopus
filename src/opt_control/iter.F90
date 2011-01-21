@@ -326,7 +326,7 @@ contains
 
     PUSH_SUB(iterator_write)
 
-    write(filename,'(a,i3.3)') OCT_DIR//'laser.', iterator%ctr_iter
+    write(filename,'(a,i4.4)') OCT_DIR//'laser.', iterator%ctr_iter
     call controlfunction_write(filename, par)
 
     POP_SUB(iterator_write)

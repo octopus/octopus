@@ -116,10 +116,10 @@ module opt_control_global_m
     !% Optimal Control Theory can be performed with <tt>Octopus</tt> with a variety of different
     !% algorithms. Not all of them can be used with any choice of target or control function
     !% representation. For example, some algorithms cannot be used if 
-    !% <tt>OCTControlRepresentation = control_function_real_time</tt> (<tt>oct_algorithm_direct</tt> and 
-    !% <tt>oct_algorithm_newuoa</tt>), and others cannot be used if 
-    !% <tt>OCTControlRepresentation = control_function_parametrized</tt>
-    !% (all others, except <tt>oct_algorithm_straight_iteration</tt>).
+    !% <tt>OCTControlRepresentation = control_function_real_time</tt>    
+    !% (<tt>OCTScheme</tt> .gt. <tt>oct_algorithm_straight_iteration</tt>), and others cannot be used 
+    !% if <tt>OCTControlRepresentation = control_function_parametrized</tt>
+    !% (<tt>OCTScheme</tt> .lt. <tt>oct_algorithm_straight_iteration</tt>).
     !%Option oct_algorithm_zbr98 1 
     !% Backward-Forward-Backward scheme described in <i>JCP</i> <b>108</b>, 1953 (1998).
     !% Only possible if target operator is a projection operator.
