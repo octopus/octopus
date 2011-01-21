@@ -5,10 +5,10 @@ AC_DEFUN([ACX_BLACS], [
 dnl AC_REQUIRE([ACX_BLAS])
 acx_blacs_ok=no
 
-dnl We cannot use BLACS if BLAS is not found
-dnl if test "x$acx_blas_ok" != xyes; then
-dnl  acx_blacs_ok=noblas
-dnl fi
+dnl We cannot use BLACS if MPI is not found
+if test "x$acx_mpi_ok" != xyes; then
+  acx_blacs_ok=nompi
+fi
 
 dnl Get fortran linker name of BLACS function to check for.
 dnl if not compiling with fortran, convert the names
