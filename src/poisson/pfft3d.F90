@@ -848,15 +848,9 @@ end subroutine unfill_downcorn
 !! SOURCE
 !!
 subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
-#if defined(MPI_MOD)
-  use mpi
-#endif
+  use mpi_m
 
   implicit none
-
-#if defined(MPI_H)
-include "mpif.h"
-#endif
 
   !Arguments
   integer, intent(in) :: n1,n2,n3,nd1,nd2,nd3,nproc,iproc

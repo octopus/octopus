@@ -224,13 +224,7 @@ contains
 #endif
     real(8), pointer :: rhop(:,:,:)
     
-    !variables to meassure the global comunications time
-    real :: t0,t1,tel
-    !integer :: count1,count2,count_rate,count_max
-    !integer :: sec1,sec2,usec1,usec2,sec1_t,sec2_t,usec1_t,usec2_t
-
     PUSH_SUB(poisson_isf_solve)
-    !call loct_gettimeofday(sec1_t,usec1_t)
 
     call dcf_alloc_RS(this%rho_cf)
 
@@ -244,13 +238,8 @@ contains
       ! uses another data distribution algorithm than for the mesh functions
       ! for which every node requires the full data.
 
-      !call loct_gettimeofday(sec1,usec1)
       call dvec_allgather(mesh%vp, rho_global, rho)
-      !call loct_gettimeofday(sec2,usec2)
-      !call time_diff(sec1,usec1,sec2,usec2)
-     
-      !write(78,*) 'PSolver: 1st DVEC_ALLGATHER TIME',sec2,'us',usec2
-     
+
       call dmesh_to_cube(mesh, rho_global, this%rho_cf)
 #endif
     else
@@ -311,12 +300,7 @@ contains
 #if defined(HAVE_MPI)
        call dcube_to_mesh(mesh, this%rho_cf, pot_global)
 
-       !call loct_gettimeofday(sec1,usec1)
        call dvec_scatter(mesh%vp, mesh%vp%root, pot_global, pot)
-       !call loct_gettimeofday(sec2,usec2)
-       !call time_diff(sec1,usec1,sec2,usec2)
-       
-       !write(78,*) 'PSolver: 1st DVEC_SCATTER TIME',sec2,'us',usec2
 
        SAFE_DEALLOCATE_A(rho_global)
        SAFE_DEALLOCATE_A(pot_global)
@@ -326,10 +310,7 @@ contains
     end if
     
     call dcf_free_RS(this%rho_cf)
-    
-    !call loct_gettimeofday(sec2_t,usec2_t)
-    !call time_diff(sec1_t,usec1_t,sec2_t,usec2_t)
-    !write(78,*) 'PoissonTime: iteration POISSON TIME',sec2_t,'us',usec2_t
+
     POP_SUB(poisson_isf_solve)
   end subroutine poisson_isf_solve
 
@@ -359,6 +340,7 @@ contains
     POP_SUB(poisson_isf_end)
   end subroutine poisson_isf_end
 
+  ! --------------------------------------------------------------
 
   !!****h* BigDFT/psolver_kernel
   !! NAME
@@ -418,23 +400,20 @@ contains
     real(8), allocatable :: zarray(:,:,:)
     real(8) :: factor
     integer :: n1, n2, n3, nd1, nd2, nd3, n1h, nd1h
-    integer :: inzee, i_sign, i_allocated
+    integer :: inzee, i_sign
 
     !Dimension of the FFT
-    call calculate_dimensions(n01,n02,n03,n1,n2,n3)
+    call calculate_dimensions(n01, n02, n03, n1, n2, n3)
+
     !Half size of nd1
     n1h=n1/2
     nd1 = n1 + modulo(n1+1,2)
     nd2 = n2 + modulo(n2+1,2)
     nd3 = n3 + modulo(n3+1,2)
     nd1h=(nd1+1)/2
-    !Allocations
-    i_allocated=0
-    allocate(zarray(2,nd1h*nd2*nd3,2),stat=i_allocated)
-    if (i_allocated /= 0) then
-      print *,"PSolver_Kernel:Problem of memory allocation"
-      stop
-    end if
+
+    SAFE_ALLOCATE(zarray(1:2, 1:nd1h*nd2*nd3, 1:2))
+
     !Set zarray
     call zarray_in(n01,n02,n03,nd1h,nd2,nd3,rhopot,zarray)
 
@@ -457,13 +436,10 @@ contains
     factor = hgrid**3/(n1*n2*n3)
 
     ! Calling this routine gives only the Hartree potential
-    call zarray_out(n01,n02,n03,nd1h,nd2,nd3,&
-      rhopot,zarray(1,1,inzee),factor)
+    call zarray_out(n01, n02, n03, nd1h, nd2, nd3, rhopot, zarray(1, 1, inzee), factor)
 
-
-    !De-allocations
-    deallocate(zarray)
-  end subroutine PSolver_Kernel
+    SAFE_DEALLOCATE_A(zarray)
+  end subroutine psolver_kernel
   !!***
 
   !!****h* BigDFT/kernel_application
@@ -493,33 +469,25 @@ contains
   !! SOURCE
   !!
   subroutine kernel_application(n1,n2,n3,nd1h,nd2,nd3,nfft1,nfft2,nfft3,zarray,karray,inzee)
-    integer, intent(in)  :: n1,n2,n3,nd1h,nd2,nd3,nfft1,nfft2,nfft3,inzee
-    real(8), intent(in), dimension(nfft1/2+1,nfft2/2+1,nfft3/2+1) :: karray
-    real(8), intent(inout), dimension(2,nd1h,nd2,nd3,2) :: zarray
+    integer, intent(in)    :: n1,n2,n3,nd1h,nd2,nd3,nfft1,nfft2,nfft3,inzee
+    real(8), intent(in)    :: karray(1:nfft1/2 + 1, 1:nfft2/2 + 1, 1:nfft3/2 + 1)
+    real(8), intent(inout) :: zarray(1:2, 1:nd1h, 1:nd2, 1:nd3, 1:2)
 
     real(8), dimension(:), allocatable :: cos_array,sin_array
     real(8) :: a,b,c,d,pi2,g1,cp,sp
     real(8) :: rfe,ife,rfo,ifo,rk,ik,rk2,ik2,re,ro,ie,io,rhk,ihk
-    integer :: i1,i2,i3,j1,j2,j3,i_allocated,i_stat,ouzee,n1h,n2h,n3h
+    integer :: i1,i2,i3,j1,j2,j3, ouzee,n1h,n2h,n3h
     integer :: si1,si2,si3
 
-    !Body
-    n1h=n1/2
-    n2h=n2/2
-    n3h=n3/2
-    !Allocations
-    i_allocated=0
-    allocate(cos_array(n1h+1),stat=i_stat)
-    i_allocated=i_allocated+i_stat
-    allocate(sin_array(n1h+1),stat=i_stat)
-    i_allocated=i_allocated+i_stat
-    if (i_allocated /= 0) then
-      print *,"kernel_application:Problem of memory allocation"
-      stop
-    end if
+    n1h = n1/2
+    n2h = n2/2
+    n3h = n3/2
+
+    SAFE_ALLOCATE(cos_array(1:n1h + 1))
+    SAFE_ALLOCATE(sin_array(1:n1h + 1))
 
     pi2=8.d0*datan(1.d0)
-    pi2=pi2/real(n1,kind=8)
+    pi2=pi2/real(n1,8)
     do i1=1,n1h+1
       cos_array(i1)=dcos(pi2*(i1-1))
       sin_array(i1)=-dsin(pi2*(i1-1))
@@ -951,8 +919,8 @@ contains
     end do
 
     !De-allocations
-    deallocate(cos_array)
-    deallocate(sin_array)
+    SAFE_DEALLOCATE_A(cos_array)
+    SAFE_DEALLOCATE_A(sin_array)
 
   end subroutine kernel_application
 
@@ -1039,6 +1007,7 @@ contains
     real(8), dimension(2,nd1,nd2,nd3) :: zarray
 
     integer :: i1,i2,i3,n01h,nd1hm,nd3hm,nd2hm
+
     !Half the size of n01
     n01h=n01/2
     nd1hm=(nd1-1)/2
@@ -1048,8 +1017,8 @@ contains
     do i3=1,nd3
       do i2=1,nd2
         do i1=1,nd1
-          zarray(1,i1,i2,i3) = 0.d0
-          zarray(2,i1,i2,i3) = 0.d0
+          zarray(1,i1,i2,i3) = 0.0_8
+          zarray(2,i1,i2,i3) = 0.0_8
         end do
       end do
     end do
@@ -1114,7 +1083,7 @@ contains
   !! SYNOPSIS
   !!    Build the kernel (karrayout) of a gaussian function 
   !!    for interpolating scaling functions
-  !!    $$ K(j) = \int \int \phi(x) g(x'-x) \delta(x'- j) dx dx' $$
+  !!    $$ K(j) = \int \int \phi(x) g(x`-x) \delta(x`- j) dx dx` $$
   !!
   !!    n01,n02,n03     Mesh dimensions of the density
   !!    n1k,n2k,n3k     Dimensions of the kernel
@@ -1131,36 +1100,35 @@ contains
   !! MODIFICATION HISTORY
   !!    13/09/2005 Use hgrid instead of acell
   !!    09/12/2005 Real kernel, stocked only half components
-  !!    13/12/2005 Add routines to simplify the port into Stefan's code
+  !!    13/12/2005 Add routines to simplify the port into Stefan`s code
   !!
   !! SOURCE
   !!
   subroutine build_kernel(n01,n02,n03,nfft1,nfft2,nfft3,hgrid,itype_scf,karrayout)
     integer, intent(in) :: n01,n02,n03,nfft1,nfft2,nfft3,itype_scf
-    real(kind=8), intent(in) :: hgrid
-    real(kind=8), dimension(nfft1/2+1,nfft2/2+1,nfft3/2+1), intent(out) :: karrayout
+    real(8), intent(in) :: hgrid
+    real(8), dimension(nfft1/2+1,nfft2/2+1,nfft3/2+1), intent(out) :: karrayout
 
-    !Local variables 
     !Do not touch !!!!
-    integer, parameter :: n_gauss = 89
+    integer, parameter :: N_GAUSS = 89
     !Better if higher (1024 points are enough 10^{-14}: 2*itype_scf*n_points)
     integer, parameter :: n_points = 2**6
 
     !Better p_gauss for calculation
     !(the support of the exponential should be inside [-n_range/2,n_range/2])
-    real(kind=8), parameter :: p0_ref = 1.d0
-    real(kind=8), dimension(n_gauss) :: p_gauss,w_gauss
+    real(8), parameter :: p0_ref = 1.d0
+    real(8), dimension(N_GAUSS) :: p_gauss,w_gauss
 
-    real(kind=8), dimension(:), allocatable :: kernel_scf,kern_1_scf
-    real(kind=8), dimension(:), allocatable :: x_scf ,y_scf
-    real(kind=8), dimension(:,:,:), allocatable :: karrayhalf
+    real(8), allocatable :: kernel_scf(:), kern_1_scf(:)
+    real(8), allocatable :: x_scf(:), y_scf(:)
+    real(8), allocatable :: karrayhalf(:, :, :)
 
-    real(kind=8) :: ur_gauss,dr_gauss,acc_gauss,pgauss,kern,a_range
-    real(kind=8) :: factor,factor2,dx,absci,p0gauss,p0_cell
-    real(kind=8) :: a1,a2,a3
+    real(8) :: ur_gauss,dr_gauss,acc_gauss,pgauss,kern,a_range
+    real(8) :: factor,factor2,dx,absci,p0gauss,p0_cell
+    real(8) :: a1,a2,a3
     integer :: nd1,nd2,nd3,n1k,n2k,n3k,n_scf
     integer :: i_gauss,n_range,n_cell
-    integer :: i,n_iter,i1,i2,i3,i_kern,i_stat,i_allocated
+    integer :: i,n_iter,i1,i2,i3,i_kern
     integer :: i01,i02,i03,inkee,n1h,n2h,n3h,nd1h
 
     !Number of integration points : 2*itype_scf*n_points
@@ -1176,38 +1144,25 @@ contains
     nd1h=(nd1+1)/2
 
     !Allocations
-    i_allocated = 0
-    allocate(x_scf(0:n_scf),stat=i_stat)
-    i_allocated = i_allocated + i_stat
-    allocate(y_scf(0:n_scf),stat=i_stat)
-    i_allocated = i_allocated + i_stat
-    if (i_allocated /= 0) then
-      print *,"Build_Kernel: Problem of memory allocation"
-      stop
-    end if
+    SAFE_ALLOCATE(x_scf(0:n_scf))
+    SAFE_ALLOCATE(y_scf(0:n_scf))
 
     !Build the scaling function
     call scaling_function(itype_scf,n_scf,n_range,x_scf,y_scf)
     !Step grid for the integration
-    dx = real(n_range,kind=8)/real(n_scf,kind=8)
-    !Extend the range (no more calculations because fill in by 0.d0)
+    dx = real(n_range,8)/real(n_scf,8)
+    !Extend the range (no more calculations because fill in by 0.0_8)
     n_cell = max(n01,n02,n03)
     n_range = max(n_cell,n_range)
 
     !Allocations
-    allocate(kernel_scf(-n_range:n_range),stat=i_stat)
-    i_allocated = i_allocated + i_stat
-    allocate(kern_1_scf(-n_range:n_range),stat=i_stat)
-    i_allocated = i_allocated + i_stat
-    if (i_allocated /= 0) then
-      print *,"Build_Kernel: Problem of memory allocation"
-      stop
-    end if
+    SAFE_ALLOCATE(kernel_scf(-n_range:n_range))
+    SAFE_ALLOCATE(kern_1_scf(-n_range:n_range))
 
     !Lengthes of the box (use FFT dimension)
-    a1 = hgrid * real(n01,kind=8)
-    a2 = hgrid * real(n02,kind=8)
-    a3 = hgrid * real(n03,kind=8)
+    a1 = hgrid * real(n01,8)
+    a2 = hgrid * real(n02,8)
+    a3 = hgrid * real(n03,8)
 
     x_scf(:) = hgrid * x_scf(:)
     y_scf(:) = 1.d0/hgrid * y_scf(:)
@@ -1216,7 +1171,7 @@ contains
     p0_cell = p0_ref/(hgrid*hgrid)
 
     !Initialisation of the gaussian (Beylkin)
-    call gequad(n_gauss,p_gauss,w_gauss,ur_gauss,dr_gauss,acc_gauss)
+    call gequad(N_GAUSS,p_gauss,w_gauss,ur_gauss,dr_gauss,acc_gauss)
     !In order to have a range from a_range=sqrt(a1*a1+a2*a2+a3*a3) 
     !(biggest length in the cube)
     !We divide the p_gauss by a_range**2 and a_gauss by a_range
@@ -1224,16 +1179,17 @@ contains
     factor = 1.d0/a_range
     !factor2 = factor*factor
     factor2 = 1.d0/(a1*a1+a2*a2+a3*a3)
-    do i_gauss=1,n_gauss
+    do i_gauss=1,N_GAUSS
       p_gauss(i_gauss) = factor2*p_gauss(i_gauss)
     end do
-    do i_gauss=1,n_gauss
+    do i_gauss=1,N_GAUSS
       w_gauss(i_gauss) = factor*w_gauss(i_gauss)
     end do
 
-    karrayout(:,:,:) = 0.d0
+    karrayout(:,:,:) = 0.0_8
+
     !Use in this order (better for accuracy).
-    loop_gauss: do i_gauss=n_gauss,1,-1
+    loop_gauss: do i_gauss=N_GAUSS,1,-1
       !Gaussian
       pgauss = p_gauss(i_gauss)
 
@@ -1248,11 +1204,11 @@ contains
 
       !Stupid integration
       !Do the integration with the exponential centered in i_kern
-      kernel_scf(:) = 0.d0
+      kernel_scf(:) = 0.0_8
       do i_kern=0,n_range
-        kern = 0.d0
+        kern = 0.0_8
         do i=0,n_scf
-          absci = x_scf(i) - real(i_kern,kind=8)*hgrid
+          absci = x_scf(i) - real(i_kern,8)*hgrid
           absci = absci*absci
           kern = kern + y_scf(i)*exp(-p0gauss*absci)*dx
         end do
@@ -1281,18 +1237,15 @@ contains
       end do
 
     end do loop_gauss
-    !De-allocations
-    deallocate(kernel_scf)
-    deallocate(kern_1_scf)
-    deallocate(x_scf)
-    deallocate(y_scf)
+
+    SAFE_DEALLOCATE_A(kernel_scf)
+    SAFE_DEALLOCATE_A(kern_1_scf)
+    SAFE_DEALLOCATE_A(x_scf)
+    SAFE_DEALLOCATE_A(y_scf)
 
     !Set karray
-    allocate(karrayhalf(2,nd1h*nd2*nd3,2),stat=i_stat)
-    if (i_stat /= 0) then
-      print *,"Build_Kernel: Problem of memory allocation (karrayhalf)"
-      stop
-    end if
+    SAFE_ALLOCATE(karrayhalf(1:2, 1:nd1h*nd2*nd3, 1:2))
+
     !Set karray : use mirror symmetries
     inkee=1
     call karrayhalf_in(n01,n02,n03,n1k,n2k,n3k,nfft1,nfft2,nfft3,nd1,nd2,nd3,&
@@ -1301,8 +1254,8 @@ contains
     !Reconstruct the real kernel
     call kernel_recon(n1k,n2k,n3k,nfft1,nfft2,nfft3,nd1,nd2,nd3,&
       karrayhalf(1,1,inkee),karrayout)
-    !De-allocations
-    deallocate(karrayhalf)
+
+    SAFE_DEALLOCATE_A(karrayhalf)
   end subroutine Build_Kernel
   !!***
 
@@ -1367,25 +1320,23 @@ contains
   !!
   subroutine karrayhalf_in(n01,n02,n03,n1k,n2k,n3k,nfft1,nfft2,nfft3,nd1,nd2,nd3, kernel,karrayhalf)
     integer, intent(in) :: n01,n02,n03,n1k,n2k,n3k,nfft1,nfft2,nfft3,nd1,nd2,nd3
-    real(kind=8), dimension(n1k,n2k,n3k), intent(in) :: kernel
-    real(kind=8), dimension(2,(nd1+1)/2,nd2,nd3), intent(out) :: karrayhalf
+    real(8), dimension(n1k,n2k,n3k), intent(in) :: kernel
+    real(8), dimension(2,(nd1+1)/2,nd2,nd3), intent(out) :: karrayhalf
 
-    real(kind=8), dimension(:), allocatable :: karray
-    integer :: i1,i2,i3,i_stat,nd1h,n1h,n2h,n3h
+    real(8), dimension(:), allocatable :: karray
+    integer :: i1,i2,i3,nd1h,n1h,n2h,n3h
     !Body
     n1h=nfft1/2
     n2h=nfft2/2
     n3h=nfft3/2
-    allocate(karray(nfft1),stat=i_stat)
-    if (i_stat /= 0) then
-      print *,"Problem of memory allocation"
-      stop
-    end if
+
+    SAFE_ALLOCATE(karray(1:nfft1))
+
     nd1h=(nd1+1)/2
-    karrayhalf(:,:,:,:) = 0.d0
+    karrayhalf(:,:,:,:) = 0.0_8
     do i3=1,n03
       do i2=1,n02
-        karray(:) = 0.d0
+        karray(:) = 0.0_8
         do i1=1,n01
           karray(i1+n1h) = kernel(i1,i2,i3)
         end do
@@ -1411,8 +1362,8 @@ contains
         end do
       end do
     end do
-    !De-allocation
-    deallocate(karray)
+
+    SAFE_DEALLOCATE_A(karray)
   end subroutine karrayhalf_in
   !!***
 
@@ -1429,21 +1380,23 @@ contains
   !!
   subroutine kernel_recon(n1k,n2k,n3k,nfft1,nfft2,nfft3,nd1,nd2,nd3,zarray,karray)
     integer, intent(in) :: n1k,n2k,n3k,nfft1,nfft2,nfft3,nd1,nd2,nd3
-    real(kind=8), dimension(2,(nd1+1)/2*nd2*nd3), intent(in) :: zarray
-    real(kind=8), dimension(n1k,n2k,n3k), intent(out) :: karray
+    real(8), dimension(2,(nd1+1)/2*nd2*nd3), intent(in) :: zarray
+    real(8), dimension(n1k,n2k,n3k), intent(out) :: karray
 
-    real(kind=8), dimension(:), allocatable :: cos_array,sin_array
+    real(8), dimension(:), allocatable :: cos_array,sin_array
     integer :: i1,i2,i3,ind1,ind2,nd1h,n1h,n2h,n3h
-    real(kind=8) :: rfe,ife,rfo,ifo,cp,sp,rk,ik,a,b,c,d,pi2
+    real(8) :: rfe,ife,rfo,ifo,cp,sp,rk,ik,a,b,c,d,pi2
     !Body
     n1h=nfft1/2
     n2h=nfft2/2
     n3h=nfft3/2
     nd1h=(nd1+1)/2
     pi2=8.d0*datan(1.d0)
-    pi2=pi2/real(nfft1,kind=8)
-    allocate(cos_array(1:nd1h))
-    allocate(sin_array(1:nd1h))
+    pi2=pi2/real(nfft1,8)
+
+    SAFE_ALLOCATE(cos_array(1:nd1h))
+    SAFE_ALLOCATE(sin_array(1:nd1h))
+
     do i1=1,nd1h
       cos_array(i1)= dcos(pi2*(i1-1))
       sin_array(i1)=-dsin(pi2*(i1-1))
@@ -1477,9 +1430,9 @@ contains
         end do
       end do
     end do
-    !De-allocations
-    deallocate(cos_array)
-    deallocate(sin_array)
+
+    SAFE_DEALLOCATE_A(cos_array)
+    SAFE_DEALLOCATE_A(sin_array)
   end subroutine kernel_recon
   !!***
 
@@ -1633,9 +1586,9 @@ contains
   subroutine par_psolver_kernel(n01, n02, n03, nd1, nd2, nd3, hgrid, kernelLOC, rhopot, iproc, nproc, comm)
     integer, intent(in)  :: n01,n02,n03,iproc,nproc
     integer, intent(inout) :: nd1,nd2,nd3
-    real(kind=8), intent(in) :: hgrid
-    real(kind=8), intent(in), dimension(nd1,nd2,nd3/nproc) :: kernelLOC
-    real(kind=8), intent(inout), dimension(n01,n02,n03) :: rhopot
+    real(8), intent(in) :: hgrid
+    real(8), intent(in), dimension(nd1,nd2,nd3/nproc) :: kernelLOC
+    real(8), intent(inout), dimension(n01,n02,n03) :: rhopot
     integer, intent(in) :: comm
     
     integer :: m1,m2,m3,n1,n2,n3,md1,md2,md3
@@ -1685,47 +1638,38 @@ contains
   !!
   subroutine pconvxc_off(m1, m2, m3, n1, n2, n3, nd1, nd2, nd3, md1, md2, md3, iproc, nproc, rhopot, kernelloc, hgrid, comm)
     integer, intent(in) :: m1,m2,m3,n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,iproc,nproc
-    real(kind=8), dimension(nd1,nd2,nd3/nproc), intent(in) :: kernelloc
-    real(kind=8), dimension(m1,m3,m2), intent(inout) :: rhopot
-    real(kind=8), intent(in) :: hgrid
+    real(8), dimension(nd1,nd2,nd3/nproc), intent(in) :: kernelloc
+    real(8), dimension(m1,m3,m2), intent(inout) :: rhopot
+    real(8), intent(in) :: hgrid
     integer, intent(in) :: comm
 
 #if defined(HAVE_MPI)
     !Local variables
-    integer :: ierr,istart,iend,jend,jproc,i_allocated,i_stat
-    real(kind=8) :: scal
-    real(kind=8), dimension(:,:,:), allocatable :: zf, lrhopot(:, :, :)
+    integer :: istart,iend,jend,jproc
+    real(8) :: scal
+    real(8), dimension(:,:,:), allocatable :: zf, lrhopot(:, :, :)
     integer, dimension(:,:), allocatable :: gather_arr
-    integer count1,count2,count_rate,count_max
-    real(kind=8) t1,t0,tel
+    type(profile_t), save :: prof
 
     !factor to be used to keep unitarity
-    scal=hgrid**3/real(n1*n2*n3,kind=8)
+    scal=hgrid**3/real(n1*n2*n3,8)
 
-    i_allocated=0
-    allocate(zf(md1,md3,md2/nproc),stat=i_stat)
-    i_allocated=i_allocated+i_stat
-    allocate(gather_arr(0:nproc-1,2),stat=i_stat)
-    i_allocated=i_allocated+i_stat
-    if (i_allocated /= 0) then
-      print *,"pconvxc_off:Problem of memory allocation"
-      stop
-    end if
+    SAFE_ALLOCATE(zf(1:md1, 1:md3, 1:md2/nproc))
+    SAFE_ALLOCATE(gather_arr(0:nproc-1, 1:2))
 
     !Here we insert the process-related values of the density, starting from the total density
-    call enterdensity(rhopot(1,1,1),m1,m2,m3,md1,md2,md3,iproc,nproc,zf(1,1,1))
+    call enterdensity(rhopot(1,1,1), m1, m2, m3, md1, md2, md3, iproc, nproc, zf(1,1,1))
 
     !this routine builds the values for each process of the potential (zf), multiplying by the factor
-    call convolxc_off(n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,nproc,iproc,kernelloc,zf&
-      ,scal,hgrid,comm)
+    call convolxc_off(n1, n2, n3, nd1, nd2, nd3, md1, md2, md3, nproc, iproc, kernelloc, zf, scal, hgrid, comm)
 
     !building the array of the data to be sent from each process
     !and the array of the displacement
-    do jproc=0,nproc-1
-      istart=min(jproc*(md2/nproc),m2-1)
-      jend=max(min(md2/nproc,m2-md2/nproc*jproc),0)
-      gather_arr(jproc,1)=m1*m3*jend
-      gather_arr(jproc,2)=istart*m1*m3
+    do jproc = 0, nproc - 1
+      istart = min(jproc*(md2/nproc),m2-1)
+      jend = max(min(md2/nproc, m2 - md2/nproc*jproc), 0)
+      gather_arr(jproc, 1) = m1*m3*jend
+      gather_arr(jproc, 2) = istart*m1*m3
     end do
 
     !assign the distributed density to the rhopot array
@@ -1734,21 +1678,19 @@ contains
     iend=istart+jend
 
     if(jend == 0) jend = 1
-    allocate(lrhopot(m1, m3, jend))
+
+    SAFE_ALLOCATE(lrhopot(1:m1, 1:m3, 1:jend))
+
     lrhopot(1:m1, 1:m3, 1:jend) = zf(1:m1, 1:m3, 1:jend)
 
-    !gather all the results in the same rhopot array
-    !       call cpu_time(t0)
-    !       call system_clock(count1,count_rate,count_max)
-    call MPI_Allgatherv(lrhopot(:,1,1),gather_arr(iproc,1),MPI_DOUBLE_PRECISION,rhopot(:, 1, 1),gather_arr(:,1),&
-      gather_arr(:,2),MPI_DOUBLE_PRECISION,comm,ierr)
-    !       call cpu_time(t1)
-    !       call system_clock(count2,count_rate,count_max)
-    !       tel=dble(count2-count1)/dble(count_rate)
-    !       write(78,*) 'PSolver: ALLGATHERV TIME',iproc,t1-t0,tel
-    !       write(78,*) '----------------------------------------------'
+    call profiling_in(prof, "ISF_GATHER")
+    call MPI_Allgatherv(lrhopot(1, 1, 1), gather_arr(iproc, 1), MPI_DOUBLE_PRECISION, rhopot(1, 1, 1), gather_arr(0, 1),&
+      gather_arr(0, 2), MPI_DOUBLE_PRECISION, comm, mpi_err)
+    call profiling_out(prof)
 
-    deallocate(zf,lrhopot,gather_arr)
+    SAFE_DEALLOCATE_A(zf)
+    SAFE_DEALLOCATE_A(lrhopot)
+    SAFE_DEALLOCATE_A(gather_arr)
 
 #endif
   end subroutine pconvxc_off
@@ -1788,18 +1730,18 @@ contains
             zf(j1,j3,jp2)=rhopot(j1,j3,j2)
           end do
           do j1=m1,md1-1
-            zf(j1,j3,jp2)=0.d0
+            zf(j1,j3,jp2)=0.0_8
           end do
         end do
         do j3=m3,md3-1
           do j1=0,md1-1
-            zf(j1,j3,jp2)=0.d0
+            zf(j1,j3,jp2)=0.0_8
           end do
         end do
       else
         do j3=0,md3-1
           do j1=0,md1-1
-            zf(j1,j3,jp2)=0.d0
+            zf(j1,j3,jp2)=0.0_8
           end do
         end do
       end if
@@ -1840,33 +1782,32 @@ contains
   !!
   subroutine par_build_kernel(n01,n02,n03,nfft1,nfft2,nfft3,n1k,n2k,n3k,hgrid,itype_scf, &
     iproc,nproc,comm,karrayoutLOC)
-    integer, intent(in) :: n01,n02,n03,nfft1,nfft2,nfft3,n1k,n2k,n3k,itype_scf,iproc,nproc
-    real(kind=8), intent(in) :: hgrid
-    real(kind=8), dimension(n1k,n2k,n3k/nproc), intent(out) :: karrayoutLOC
-    integer, intent(in) :: comm
-
-    !Local variables
+    integer, intent(in)    :: n01,n02,n03,nfft1,nfft2,nfft3,n1k,n2k,n3k,itype_scf,iproc,nproc
+    real(8), intent(in)    :: hgrid
+    real(8), intent(out)   :: karrayoutLOC(1:n1k, 1:n2k, 1:n3k/nproc)
+    integer, intent(in)    :: comm
+ 
     !Do not touch !!!!
-    integer, parameter :: n_gauss = 89
+    integer, parameter :: N_GAUSS = 89
     !Better if higher (1024 points are enough 10^{-14}: 2*itype_scf*n_points)
-    integer, parameter :: n_points = 2**6
+    integer, parameter :: N_POINTS = 2**6
 
     !Better p_gauss for calculation
     !(the support of the exponential should be inside [-n_range/2,n_range/2])
-    real(kind=8), parameter :: p0_ref = 1.d0
-    real(kind=8), dimension(n_gauss) :: p_gauss,w_gauss
+    real(8), parameter :: p0_ref = 1.d0
+    real(8) :: p_gauss(N_GAUSS), w_gauss(N_GAUSS)
 
-    real(kind=8), dimension(:), allocatable :: kernel_scf,kern_1_scf
-    real(kind=8), dimension(:), allocatable :: x_scf ,y_scf
-    real(kind=8), dimension(:,:,:,:), allocatable :: karrayfour
-    real(kind=8), dimension(:,:,:), allocatable :: karray
+    real(8), dimension(:), allocatable :: kernel_scf,kern_1_scf
+    real(8), dimension(:), allocatable :: x_scf ,y_scf
+    real(8), dimension(:,:,:,:), allocatable :: karrayfour
+    real(8), dimension(:,:,:), allocatable :: karray
 
-    real(kind=8) :: ur_gauss,dr_gauss,acc_gauss,pgauss,kern,a_range
-    real(kind=8) :: factor,factor2,dx,absci,p0gauss,p0_cell
-    real(kind=8) :: a1,a2,a3
+    real(8) :: ur_gauss,dr_gauss,acc_gauss,pgauss,kern,a_range
+    real(8) :: factor,factor2,dx,absci,p0gauss,p0_cell
+    real(8) :: a1,a2,a3
     integer :: n_scf,nker1,nker2,nker3
     integer :: i_gauss,n_range,n_cell,istart,iend,istart1,istart2,iend1,iend2
-    integer :: i,n_iter,i1,i2,i3,i_kern,i_stat,i_allocated
+    integer :: i,n_iter,i1,i2,i3,i_kern
     integer :: i01,i02,i03,n1h,n2h,n3h
 
     !Number of integration points : 2*itype_scf*n_points
@@ -1925,44 +1866,30 @@ contains
 !!!!!START KERNEL CONSTRUCTION
     !  if(iproc .eq. 0) then
     !     write(unit=*,fmt="(1x,a,i0,a)") &
-    !          "Build the kernel in parallel using a sum of ",n_gauss," gaussians"
+    !          "Build the kernel in parallel using a sum of ",N_GAUSS," gaussians"
     !     write(unit=*,fmt="(1x,a,i0,a)") &
     !          "Use interpolating scaling functions of ",itype_scf," order"
     !  end if
 
-    !Allocations
-    i_allocated = 0
-    allocate(x_scf(0:n_scf),stat=i_stat)
-    i_allocated = i_allocated + i_stat
-    allocate(y_scf(0:n_scf),stat=i_stat)
-    i_allocated = i_allocated + i_stat
-    if (i_allocated /= 0) then
-      print *,"Build_Kernel: Problem of memory allocation"
-      stop
-    end if
+    SAFE_ALLOCATE(x_scf(0:n_scf))
+    SAFE_ALLOCATE(y_scf(0:n_scf))
 
     !Build the scaling function
-    call scaling_function(itype_scf,n_scf,n_range,x_scf,y_scf)
+    call scaling_function(itype_scf, n_scf, n_range, x_scf, y_scf)
     !Step grid for the integration
-    dx = real(n_range,kind=8)/real(n_scf,kind=8)
-    !Extend the range (no more calculations because fill in by 0.d0)
+    dx = real(n_range,8)/real(n_scf,8)
+    !Extend the range (no more calculations because fill in by 0.0_8)
     n_cell = max(n01,n02,n03)
     n_range = max(n_cell,n_range)
 
     !Allocations
-    allocate(kernel_scf(-n_range:n_range),stat=i_stat)
-    i_allocated = i_allocated + i_stat
-    allocate(kern_1_scf(-n_range:n_range),stat=i_stat)
-    i_allocated = i_allocated + i_stat
-    if (i_allocated /= 0) then
-      print *,"Build_Kernel: Problem of memory allocation"
-      stop
-    end if
+    SAFE_ALLOCATE(kernel_scf(-n_range:n_range))
+    SAFE_ALLOCATE(kern_1_scf(-n_range:n_range))
 
     !Lengthes of the box (use FFT dimension)
-    a1 = hgrid * real(n01,kind=8)
-    a2 = hgrid * real(n02,kind=8)
-    a3 = hgrid * real(n03,kind=8)
+    a1 = hgrid * real(n01,8)
+    a2 = hgrid * real(n02,8)
+    a3 = hgrid * real(n03,8)
 
     x_scf(:) = hgrid * x_scf(:)
     y_scf(:) = 1.d0/hgrid * y_scf(:)
@@ -1971,7 +1898,7 @@ contains
     p0_cell = p0_ref/(hgrid*hgrid)
 
     !Initialization of the gaussian (Beylkin)
-    call gequad(n_gauss,p_gauss,w_gauss,ur_gauss,dr_gauss,acc_gauss)
+    call gequad(N_GAUSS,p_gauss,w_gauss,ur_gauss,dr_gauss,acc_gauss)
     !In order to have a range from a_range=sqrt(a1*a1+a2*a2+a3*a3)
     !(biggest length in the cube)
     !We divide the p_gauss by a_range**2 and a_gauss by a_range
@@ -1979,16 +1906,16 @@ contains
     factor = 1.d0/a_range
     !factor2 = factor*factor
     factor2 = 1.d0/(a1*a1+a2*a2+a3*a3)
-    do i_gauss=1,n_gauss
+    do i_gauss=1,N_GAUSS
       p_gauss(i_gauss) = factor2*p_gauss(i_gauss)
     end do
-    do i_gauss=1,n_gauss
+    do i_gauss=1,N_GAUSS
       w_gauss(i_gauss) = factor*w_gauss(i_gauss)
     end do
 
-    karray(:,:,:) = 0.d0
+    karray(:,:,:) = 0.0_8
     !Use in this order (better for accuracy).
-    loop_gauss: do i_gauss=n_gauss,1,-1
+    loop_gauss: do i_gauss = N_GAUSS, 1, -1
       !Gaussian
       pgauss = p_gauss(i_gauss)
 
@@ -2003,11 +1930,11 @@ contains
 
       !Stupid integration
       !Do the integration with the exponential centered in i_kern
-      kernel_scf(:) = 0.d0
+      kernel_scf(:) = 0.0_8
       do i_kern=0,n_range
-        kern = 0.d0
+        kern = 0.0_8
         do i=0,n_scf
-          absci = x_scf(i) - real(i_kern,kind=8)*hgrid
+          absci = x_scf(i) - real(i_kern,8)*hgrid
           absci = absci*absci
           kern = kern + y_scf(i)*exp(-p0gauss*absci)*dx
         end do
@@ -2067,20 +1994,14 @@ contains
 
 
     !De-allocations
-    deallocate(kernel_scf)
-    deallocate(kern_1_scf)
-    deallocate(x_scf)
-    deallocate(y_scf)
+    SAFE_DEALLOCATE_A(kernel_scf)
+    SAFE_DEALLOCATE_A(kern_1_scf)
+    SAFE_DEALLOCATE_A(x_scf)
+    SAFE_DEALLOCATE_A(y_scf)
 
 !!!!END KERNEL CONSTRUCTION
 
-
-
-    allocate(karrayfour(2,nker1,nker2,nker3/nproc),stat=i_stat)
-    if (i_stat /= 0) then
-      print *,"Build_Kernel: Problem of memory allocation (kernel FFT)"
-      stop
-    end if
+    SAFE_ALLOCATE(karrayfour(1:2, 1:nker1, 1:nker2, 1:nker3/nproc))
 
     ! if(iproc .eq. 0) print *,"Do a 3D PHalFFT for the kernel"
 
@@ -2096,8 +2017,9 @@ contains
     end do
 
     !De-allocations
-    deallocate(karray,karrayfour)
-
+    SAFE_DEALLOCATE_A(karray)
+    SAFE_DEALLOCATE_A(karrayfour)
+    
   end subroutine par_build_kernel
   !!***
 
