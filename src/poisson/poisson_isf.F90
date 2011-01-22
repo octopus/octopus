@@ -32,6 +32,7 @@ module poisson_isf_m
   use parser_m
   use profiling_m
   use scaling_function_m
+  use sgfft_m
 
   implicit none
   

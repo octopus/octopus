@@ -47,7 +47,8 @@ libmath_a_SOURCES =                      \
 	tdfunction.F90                   \
 	ylm.c                            \
 	young.F90                        \
-	scalapack.F90
+	scalapack.F90                    \
+	sgfft.F90
 
 noinst_HEADERS =                         \
 	lalg_basic_blas.F90              \
