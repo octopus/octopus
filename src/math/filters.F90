@@ -97,11 +97,17 @@ contains
   subroutine spline_filter_mask_init()
     integer :: iunit, i
 
+    PUSH_SUB(spline_filter_mask_init)
+
     iunit = io_open(trim(conf%share)//"/filter_mask.data", action='read', status='old', die=.true.)
+
     do i = 1, mask_n
       read(iunit, *) mask_x(i), mask_y(i)
     end do
+    
+    call io_close(iunit)
 
+    POP_SUB(spline_filter_mask_init)
   end subroutine spline_filter_mask_init
 
 
