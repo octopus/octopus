@@ -27,7 +27,6 @@ libpoisson_a_SOURCES = \
 	poisson_sete.F90     \
 	fft3d.F90            \
 	scaling_function.F90 \
-	smooth.F90           \
 	pfft3d.F90
 
 
@@ -35,15 +34,6 @@ noinst_HEADERS = \
 	solver_1d_inc.F90 \
 	solver_2d_inc.F90 \
 	solver_3d_inc.F90 \
-        lazy_100_inc.F90  \
-	lazy_14_inc.F90   \
-	lazy_16_inc.F90   \
-        lazy_20_inc.F90   \
-        lazy_24_inc.F90   \
-	lazy_30_inc.F90   \
-        lazy_40_inc.F90   \
-	lazy_50_inc.F90   \
-	lazy_60_inc.F90   \
 	lazy_8_inc.F90
 
 include $(srcdir)/../common-rules.make
@@ -60,5 +50,5 @@ poisson_corrections.o : poisson_corrections.F90
 poisson_cg.o : poisson_cg.F90 poisson_corrections.o 
 poisson_multigrid.o : poisson_multigrid.F90 poisson_corrections.o 
 poisson.o : poisson.F90 solver_3d_inc.F90 solver_2d_inc.F90 solver_1d_inc.F90 poisson_multigrid.o poisson_fft.o poisson_isf.o poisson_cg.o poisson_corrections.o poisson_sete.o
-scaling_function.o : scaling_function.F90 lazy_100_inc.F90 lazy_14_inc.F90 lazy_16_inc.F90 lazy_20_inc.F90 lazy_24_inc.F90 lazy_30_inc.F90 lazy_40_inc.F90 lazy_50_inc.F90 lazy_60_inc.F90  lazy_8_inc.F90
+scaling_function.o : scaling_function.F90 lazy_8_inc.F90
 poisson_isf.o : poisson_isf.F90 scaling_function.o
