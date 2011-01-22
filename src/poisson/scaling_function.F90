@@ -787,66 +787,6 @@ subroutine back_trans_16(nd,nt,x,y)
 end subroutine back_trans_16
 !!***
 
-
-!!****h* BigDFT/ftest_16
-!! NAME
-!!   ftest_16
-!!
-!! FUNCTION
-!!   Tests the 4 orthogonality relations of the filters
-!!
-!! SOURCE
-!!
-subroutine ftest_16
-  implicit none
-  !Arguments
-  !Local variables
-  character(len=*), parameter :: fmt22 = "(a,i3,i4,4(e17.10))"
-  real(kind=8) :: t1,t2,t3,t4,eps
-  integer :: i,j,l
-
-#include "lazy_16_inc.F90"
-  
-  ! do i=-m,m
-  ! write(6,*) i,ch(i),cg(i)
-  ! end do
-  
-  do i=-m,m
-     do j=-m,m
-        t1=0.d0
-        t2=0.d0
-        t3=0.d0
-        t4=0.d0
-        do l=-3*m,3*m
-           if ( l-2*i.ge.-m .and. l-2*i.le.m  .and. &
-                l-2*j.ge.-m .and. l-2*j.le.m ) then
-              t1=t1+ch(l-2*i)*cht(l-2*j)
-              t2=t2+cg(l-2*i)*cgt(l-2*j)
-              t3=t3+ch(l-2*i)*cgt(l-2*j)
-              t4=t4+cht(l-2*i)*cg(l-2*j)
-           end if
-        end do
-        eps=1.d-10
-        if (i.eq.j) then
-           if (abs(t1-1.d0).gt.eps .or. abs(t2-1.d0).gt.eps .or. &
-             & abs(t3).gt.eps  .or. abs(t4).gt.eps ) then 
-              write(6,fmt22) 'Orthogonality ERROR', i,j,t1,t2,t3,t4
-           end if
-        else
-           if (abs(t1).gt.eps .or. abs(t2).gt.eps .or. &
-             & abs(t3).gt.eps  .or. abs(t4).gt.eps ) then
-              write(6,fmt22) 'Orthogonality ERROR', i,j,t1,t2,t3,t4
-           end if
-        end if
-     end do
-  end do
-  
-  write(6,*) 'FILTER TEST PASSED'
-  
-end subroutine ftest_16
-!!***
-
-
 !!****h* BigDFT/scf_recursion_16
 !! NAME
 !!   scf_recursion_16
@@ -1001,66 +941,6 @@ subroutine back_trans_20(nd,nt,x,y)
         
 end subroutine back_trans_20
 !!***
-
-
-!!****h* BigDFT/ftest_20
-!! NAME
-!!   ftest_20
-!!
-!! FUNCTION
-!!   Tests the 4 orthogonality relations of the filters
-!!
-!! SOURCE
-!!
-subroutine ftest_20
-  implicit none
-  !Arguments
-  !Local variables
-  character(len=*), parameter :: fmt22 = "(a,i3,i4,4(e17.10))"
-  real(kind=8) :: t1,t2,t3,t4,eps
-  integer :: i,j,l
-
-#include "lazy_20_inc.F90"
-  
-  ! do i=-m,m
-  ! write(6,*) i,ch(i),cg(i)
-  ! end do
-  
-  do i=-m,m
-     do j=-m,m
-        t1=0.d0
-        t2=0.d0
-        t3=0.d0
-        t4=0.d0
-        do l=-3*m,3*m
-           if ( l-2*i.ge.-m .and. l-2*i.le.m  .and. &
-                l-2*j.ge.-m .and. l-2*j.le.m ) then
-              t1=t1+ch(l-2*i)*cht(l-2*j)
-              t2=t2+cg(l-2*i)*cgt(l-2*j)
-              t3=t3+ch(l-2*i)*cgt(l-2*j)
-              t4=t4+cht(l-2*i)*cg(l-2*j)
-           end if
-        end do
-        eps=1.d-10
-        if (i.eq.j) then
-           if (abs(t1-1.d0).gt.eps .or. abs(t2-1.d0).gt.eps .or. &
-             & abs(t3).gt.eps  .or. abs(t4).gt.eps ) then 
-              write(6,fmt22) 'Orthogonality ERROR', i,j,t1,t2,t3,t4
-           end if
-        else
-           if (abs(t1).gt.eps .or. abs(t2).gt.eps .or. &
-             & abs(t3).gt.eps  .or. abs(t4).gt.eps ) then
-              write(6,fmt22) 'Orthogonality ERROR', i,j,t1,t2,t3,t4
-           end if
-        end if
-     end do
-  end do
-  
-  write(6,*) 'FILTER TEST PASSED'
-  
-end subroutine ftest_20
-!!***
-
 
 !!****h* BigDFT/scf_recursion_20
 !! NAME
@@ -1217,66 +1097,6 @@ subroutine back_trans_24(nd,nt,x,y)
 end subroutine back_trans_24
 !!***
 
-
-!!****h* BigDFT/ftest_24
-!! NAME
-!!   ftest_24
-!!
-!! FUNCTION
-!!   Tests the 4 orthogonality relations of the filters
-!!
-!! SOURCE
-!!
-subroutine ftest_24
-  implicit none
-  !Arguments
-  !Local variables
-  character(len=*), parameter :: fmt22 = "(a,i3,i4,4(e17.10))"
-  real(kind=8) :: t1,t2,t3,t4,eps
-  integer :: i,j,l
-
-#include "lazy_24_inc.F90"
-  
-  ! do i=-m,m
-  ! write(6,*) i,ch(i),cg(i)
-  ! end do
-  
-  do i=-m,m
-     do j=-m,m
-        t1=0.d0
-        t2=0.d0
-        t3=0.d0
-        t4=0.d0
-        do l=-3*m,3*m
-           if ( l-2*i.ge.-m .and. l-2*i.le.m  .and. &
-                l-2*j.ge.-m .and. l-2*j.le.m ) then
-              t1=t1+ch(l-2*i)*cht(l-2*j)
-              t2=t2+cg(l-2*i)*cgt(l-2*j)
-              t3=t3+ch(l-2*i)*cgt(l-2*j)
-              t4=t4+cht(l-2*i)*cg(l-2*j)
-           end if
-        end do
-        eps=1.d-10
-        if (i.eq.j) then
-           if (abs(t1-1.d0).gt.eps .or. abs(t2-1.d0).gt.eps .or. &
-             & abs(t3).gt.eps  .or. abs(t4).gt.eps ) then 
-              write(6,fmt22) 'Orthogonality ERROR', i,j,t1,t2,t3,t4
-           end if
-        else
-           if (abs(t1).gt.eps .or. abs(t2).gt.eps .or. &
-             & abs(t3).gt.eps  .or. abs(t4).gt.eps ) then
-              write(6,fmt22) 'Orthogonality ERROR', i,j,t1,t2,t3,t4
-           end if
-        end if
-     end do
-  end do
-  
-  write(6,*) 'FILTER TEST PASSED'
-  
-end subroutine ftest_24
-!!***
-
-
 !!****h* BigDFT/scf_recursion_24
 !! NAME
 !!   scf_recursion_24
@@ -1431,66 +1251,6 @@ subroutine back_trans_30(nd,nt,x,y)
         
 end subroutine back_trans_30
 !!***
-
-
-!!****h* BigDFT/ftest_30
-!! NAME
-!!   ftest_30
-!!
-!! FUNCTION
-!!   Tests the 4 orthogonality relations of the filters
-!!
-!! SOURCE
-!!
-subroutine ftest_30
-  implicit none
-  !Arguments
-  !Local variables
-  character(len=*), parameter :: fmt22 = "(a,i3,i4,4(e17.10))"
-  real(kind=8) :: t1,t2,t3,t4,eps
-  integer :: i,j,l
-
-#include "lazy_30_inc.F90"
-  
-  ! do i=-m,m
-  ! write(6,*) i,ch(i),cg(i)
-  ! end do
-  
-  do i=-m,m
-     do j=-m,m
-        t1=0.d0
-        t2=0.d0
-        t3=0.d0
-        t4=0.d0
-        do l=-3*m,3*m
-           if ( l-2*i.ge.-m .and. l-2*i.le.m  .and. &
-                l-2*j.ge.-m .and. l-2*j.le.m ) then
-              t1=t1+ch(l-2*i)*cht(l-2*j)
-              t2=t2+cg(l-2*i)*cgt(l-2*j)
-              t3=t3+ch(l-2*i)*cgt(l-2*j)
-              t4=t4+cht(l-2*i)*cg(l-2*j)
-           end if
-        end do
-        eps=1.d-10
-        if (i.eq.j) then
-           if (abs(t1-1.d0).gt.eps .or. abs(t2-1.d0).gt.eps .or. &
-             & abs(t3).gt.eps  .or. abs(t4).gt.eps ) then 
-              write(6,fmt22) 'Orthogonality ERROR', i,j,t1,t2,t3,t4
-           end if
-        else
-           if (abs(t1).gt.eps .or. abs(t2).gt.eps .or. &
-             & abs(t3).gt.eps  .or. abs(t4).gt.eps ) then
-              write(6,fmt22) 'Orthogonality ERROR', i,j,t1,t2,t3,t4
-           end if
-        end if
-     end do
-  end do
-  
-  write(6,*) 'FILTER TEST PASSED'
-  
-end subroutine ftest_30
-!!***
-
 
 !!****h* BigDFT/scf_recursion_30
 !! NAME
@@ -1647,66 +1407,6 @@ subroutine back_trans_40(nd,nt,x,y)
 end subroutine back_trans_40
 !!***
 
-
-!!****h* BigDFT/ftest_40
-!! NAME
-!!   ftest_40
-!!
-!! FUNCTION
-!!   Tests the 4 orthogonality relations of the filters
-!!
-!! SOURCE
-!!
-subroutine ftest_40
-  implicit none
-  !Arguments
-  !Local variables
-  character(len=*), parameter :: fmt22 = "(a,i3,i4,4(e17.10))"
-  real(kind=8) :: t1,t2,t3,t4,eps
-  integer :: i,j,l
-
-#include "lazy_40_inc.F90"
-  
-  ! do i=-m,m
-  ! write(6,*) i,ch(i),cg(i)
-  ! end do
-  
-  do i=-m,m
-     do j=-m,m
-        t1=0.d0
-        t2=0.d0
-        t3=0.d0
-        t4=0.d0
-        do l=-3*m,3*m
-           if ( l-2*i.ge.-m .and. l-2*i.le.m  .and. &
-                l-2*j.ge.-m .and. l-2*j.le.m ) then
-              t1=t1+ch(l-2*i)*cht(l-2*j)
-              t2=t2+cg(l-2*i)*cgt(l-2*j)
-              t3=t3+ch(l-2*i)*cgt(l-2*j)
-              t4=t4+cht(l-2*i)*cg(l-2*j)
-           end if
-        end do
-        eps=1.d-10
-        if (i.eq.j) then
-           if (abs(t1-1.d0).gt.eps .or. abs(t2-1.d0).gt.eps .or. &
-             & abs(t3).gt.eps  .or. abs(t4).gt.eps ) then 
-              write(6,fmt22) 'Orthogonality ERROR', i,j,t1,t2,t3,t4
-           end if
-        else
-           if (abs(t1).gt.eps .or. abs(t2).gt.eps .or. &
-             & abs(t3).gt.eps  .or. abs(t4).gt.eps ) then
-              write(6,fmt22) 'Orthogonality ERROR', i,j,t1,t2,t3,t4
-           end if
-        end if
-     end do
-  end do
-  
-  write(6,*) 'FILTER TEST PASSED'
-  
-end subroutine ftest_40
-!!***
-
-
 !!****h* BigDFT/scf_recursion_40
 !! NAME
 !!   scf_recursion_40
@@ -1861,66 +1561,6 @@ subroutine back_trans_50(nd,nt,x,y)
         
 end subroutine back_trans_50
 !!***
-
-
-!!****h* BigDFT/ftest_50
-!! NAME
-!!   ftest_50
-!!
-!! FUNCTION
-!!   Tests the 4 orthogonality relations of the filters
-!!
-!! SOURCE
-!!
-subroutine ftest_50
-  implicit none
-  !Arguments
-  !Local variables
-  character(len=*), parameter :: fmt22 = "(a,i3,i4,4(e17.10))"
-  real(kind=8) :: t1,t2,t3,t4,eps
-  integer :: i,j,l
-
-#include "lazy_50_inc.F90"
-  
-  ! do i=-m,m
-  ! write(6,*) i,ch(i),cg(i)
-  ! end do
-  
-  do i=-m,m
-     do j=-m,m
-        t1=0.d0
-        t2=0.d0
-        t3=0.d0
-        t4=0.d0
-        do l=-3*m,3*m
-           if ( l-2*i.ge.-m .and. l-2*i.le.m  .and. &
-                l-2*j.ge.-m .and. l-2*j.le.m ) then
-              t1=t1+ch(l-2*i)*cht(l-2*j)
-              t2=t2+cg(l-2*i)*cgt(l-2*j)
-              t3=t3+ch(l-2*i)*cgt(l-2*j)
-              t4=t4+cht(l-2*i)*cg(l-2*j)
-           end if
-        end do
-        eps=1.d-10
-        if (i.eq.j) then
-           if (abs(t1-1.d0).gt.eps .or. abs(t2-1.d0).gt.eps .or. &
-             & abs(t3).gt.eps  .or. abs(t4).gt.eps ) then 
-              write(6,fmt22) 'Orthogonality ERROR', i,j,t1,t2,t3,t4
-           end if
-        else
-           if (abs(t1).gt.eps .or. abs(t2).gt.eps .or. &
-             & abs(t3).gt.eps  .or. abs(t4).gt.eps ) then
-              write(6,fmt22) 'Orthogonality ERROR', i,j,t1,t2,t3,t4
-           end if
-        end if
-     end do
-  end do
-  
-  write(6,*) 'FILTER TEST PASSED'
-  
-end subroutine ftest_50
-!!***
-
 
 !!****h* BigDFT/scf_recursion_50
 !! NAME
@@ -2077,66 +1717,6 @@ subroutine back_trans_60(nd,nt,x,y)
 end subroutine back_trans_60
 !!***
 
-
-!!****h* BigDFT/ftest_60
-!! NAME
-!!   ftest_60
-!!
-!! FUNCTION
-!!   Tests the 4 orthogonality relations of the filters
-!!
-!! SOURCE
-!!
-subroutine ftest_60
-  implicit none
-  !Arguments
-  !Local variables
-  character(len=*), parameter :: fmt22 = "(a,i3,i4,4(e17.10))"
-  real(kind=8) :: t1,t2,t3,t4,eps
-  integer :: i,j,l
-
-#include "lazy_60_inc.F90"
-  
-  ! do i=-m,m
-  ! write(6,*) i,ch(i),cg(i)
-  ! end do
-  
-  do i=-m,m
-     do j=-m,m
-        t1=0.d0
-        t2=0.d0
-        t3=0.d0
-        t4=0.d0
-        do l=-3*m,3*m
-           if ( l-2*i.ge.-m .and. l-2*i.le.m  .and. &
-                l-2*j.ge.-m .and. l-2*j.le.m ) then
-              t1=t1+ch(l-2*i)*cht(l-2*j)
-              t2=t2+cg(l-2*i)*cgt(l-2*j)
-              t3=t3+ch(l-2*i)*cgt(l-2*j)
-              t4=t4+cht(l-2*i)*cg(l-2*j)
-           end if
-        end do
-        eps=1.d-10
-        if (i.eq.j) then
-           if (abs(t1-1.d0).gt.eps .or. abs(t2-1.d0).gt.eps .or. &
-             & abs(t3).gt.eps  .or. abs(t4).gt.eps ) then 
-              write(6,fmt22) 'Orthogonality ERROR', i,j,t1,t2,t3,t4
-           end if
-        else
-           if (abs(t1).gt.eps .or. abs(t2).gt.eps .or. &
-             & abs(t3).gt.eps  .or. abs(t4).gt.eps ) then
-              write(6,fmt22) 'Orthogonality ERROR', i,j,t1,t2,t3,t4
-           end if
-        end if
-     end do
-  end do
-  
-  write(6,*) 'FILTER TEST PASSED'
-  
-end subroutine ftest_60
-!!***
-
-
 !!****h* BigDFT/scf_recursion_60
 !! NAME
 !!   scf_recursion_60
@@ -2291,66 +1871,6 @@ subroutine back_trans_100(nd,nt,x,y)
         
 end subroutine back_trans_100
 !!***
-
-
-!!****h* BigDFT/ftest_100
-!! NAME
-!!   ftest_100
-!!
-!! FUNCTION
-!!   Tests the 4 orthogonality relations of the filters
-!!
-!! SOURCE
-!!
-subroutine ftest_100
-  implicit none
-  !Arguments
-  !Local variables
-  character(len=*), parameter :: fmt22 = "(a,i3,i4,4(e17.10))"
-  real(kind=8) :: t1,t2,t3,t4,eps
-  integer :: i,j,l
-
-#include "lazy_100_inc.F90"
-  
-  ! do i=-m,m
-  ! write(6,*) i,ch(i),cg(i)
-  ! end do
-  
-  do i=-m,m
-     do j=-m,m
-        t1=0.d0
-        t2=0.d0
-        t3=0.d0
-        t4=0.d0
-        do l=-3*m,3*m
-           if ( l-2*i.ge.-m .and. l-2*i.le.m  .and. &
-                l-2*j.ge.-m .and. l-2*j.le.m ) then
-              t1=t1+ch(l-2*i)*cht(l-2*j)
-              t2=t2+cg(l-2*i)*cgt(l-2*j)
-              t3=t3+ch(l-2*i)*cgt(l-2*j)
-              t4=t4+cht(l-2*i)*cg(l-2*j)
-           end if
-        end do
-        eps=1.d-10
-        if (i.eq.j) then
-           if (abs(t1-1.d0).gt.eps .or. abs(t2-1.d0).gt.eps .or. &
-             & abs(t3).gt.eps  .or. abs(t4).gt.eps ) then 
-              write(6,fmt22) 'Orthogonality ERROR', i,j,t1,t2,t3,t4
-           end if
-        else
-           if (abs(t1).gt.eps .or. abs(t2).gt.eps .or. &
-             & abs(t3).gt.eps  .or. abs(t4).gt.eps ) then
-              write(6,fmt22) 'Orthogonality ERROR', i,j,t1,t2,t3,t4
-           end if
-        end if
-     end do
-  end do
-  
-  write(6,*) 'FILTER TEST PASSED'
-  
-end subroutine ftest_100
-!!***
-
 
 !!****h* BigDFT/scf_recursion_100
 !! NAME

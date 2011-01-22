@@ -25,9 +25,7 @@ libpoisson_a_SOURCES = \
 	poisson_cutoffs.c poisson_cutoff.F90 poisson_isf.F90 poisson_fft.F90 \
 	poisson_corrections.F90 poisson_cg.F90 poisson_multigrid.F90 poisson.F90\
 	poisson_sete.F90     \
-	Build_Kernel.F90     \
 	fft3d.F90            \
-	PSolver_Kernel.F90   \
 	scaling_function.F90 \
 	smooth.F90           \
         gequad.F90           \

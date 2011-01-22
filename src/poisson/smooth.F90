@@ -8,39 +8,7 @@
 !!
 !! SOURCE
 !!
-!        implicit real*8 (a-h,o-z)
-!	parameter(n1=22,n2=25,n3=19)
-!        dimension  x(-4:n1+3,-4:n2+3,-4:n3+3)
-!        dimension y(-1:2*n1-1,-1:2*n2-1,-1:2*n3-1)
-!
-!        do i3=-4,n3+3
-!        do i2=-4,n2+3
-!        do i1=-4,n1+3
-!        x(i1,i2,i3)=0.d0
-!        enddo  ; enddo ; enddo
-!
-!	do i3=0,n3-1
-!	do i2=0,n2-1
-!	do i1=0,n1-1
-!        x(i1,i2,i3)=sin(1.d0*i1+1.5d0*i2+1.9d0+i3)
-!!        x(i1,i2,i3)=sin(.1d0*i1)
-!        enddo  ; enddo ; enddo
-!	
-!	call extrapolate(n1,n2,n3,x,y)
-!	call restrict(n1,n2,n3,y,x)
-!
-!        tt=0.d0
-!	do i3=0,n3-1
-!	do i2=0,n2-1
-!	do i1=0,n1-1
-!        t=(x(i1,i2,i3)-sin(1.d0*i1+1.5d0*i2+1.9d0+i3))**2
-!!        t=(x(i1,i2,i3)-sin(.1d0*i1))**2
-!        if (t.gt.1.d-10) write(*,'(3(i3),2(x,e12.5))') i1,i2,i3,x(i1,i2,i3),sin(.1d0*i1)
-!        tt=tt+t
-!        enddo  ; enddo ; enddo
-!        write(*,*) 'error',tt
-!
-!	end
+
 subroutine restrict(n01,n02,n03,n1,n2,n3,x,y)
   implicit none
   !integer, parameter :: order=8,omin=order/2,omax=order-1-omin
