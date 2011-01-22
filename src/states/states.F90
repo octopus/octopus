@@ -1691,7 +1691,6 @@ return
     logical :: something_to_do
 #if defined(HAVE_MPI)
     FLOAT, allocatable :: tmp_reduce(:)
-    integer :: mpi_err
 #endif
 
     PUSH_SUB(states_calc_quantities)

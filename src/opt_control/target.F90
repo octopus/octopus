@@ -204,7 +204,7 @@ module opt_control_target_m
     !%Option oct_tg_current 11
     !% The target is exclusively a target in terms of the current. 
     !% If combined with target that involves the density, set variable <tt>OCTTargetOperator</tt>= <tt>OCTTargetDensity</tt> 
-    !% and set explicitely <tt>OCTCurrentFunctional</tt>. Only this combination is enabled. All other targets force
+    !% and set explicitly <tt>OCTCurrentFunctional</tt>. Only this combination is enabled. All other targets force
     !% <tt>OCTCurrentFunctional</tt>=0.
     !%End
     call parse_integer(datasets_check('OCTTargetOperator'), oct_tg_gstransformation, target%type)
@@ -669,7 +669,7 @@ module opt_control_target_m
       !%Variable OCTCurrentFunctional
       !%Type integer
       !%Section Calculation Modes::Optimal Control
-      !%Default 0
+      !%Default oct_no_curr
       !%Description
       !% The variable <tt>OCTCurrentFunctional</tt> describes which kind of current target functional is
       !% to be used.
@@ -850,8 +850,12 @@ module opt_control_target_m
             target%td_fitness(time) + psi%occ(ist, 1) * zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, ist, 1), opsi(:, :))
         end do
         SAFE_DEALLOCATE_A(opsi)
-      case(SPIN_POLARIZED); stop 'Error'
-      case(SPINORS);        stop 'Error'
+      case(SPIN_POLARIZED)
+        message(1) = 'Error in target.target_tdcalc: spin_polarized.'
+        call write_fatal(1)
+      case(SPINORS)
+        message(1) = 'Error in target.target_tdcalc: spinors.'
+        call write_fatal(1)
       end select
 
     case(oct_tg_hhg)
@@ -864,7 +868,8 @@ module opt_control_target_m
       SAFE_DEALLOCATE_A(multipole)
 
     case default
-      stop 'Error at target.target_tdcalc.'
+      message(1) = 'Error in target.target_tdcalc: default.'
+      call write_fatal(1)
     end select
 
     POP_SUB(target_tdcalc)
@@ -977,8 +982,12 @@ module opt_control_target_m
           j1 = j1 + psi%occ(ist, 1) * zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, ist, 1), opsi(:, :))
         end do
         SAFE_DEALLOCATE_A(opsi)
-      case(SPIN_POLARIZED); stop 'Error'
-      case(SPINORS);        stop 'Error'
+      case(SPIN_POLARIZED)
+        message(1) = 'Error in target.j1_functional: spin_polarized.'
+        call write_fatal(1)
+      case(SPINORS)
+        message(1) = 'Error in target.j1_functional: spinors.'
+        call write_fatal(1)
       end select
 
     case(oct_tg_td_local)
@@ -1042,8 +1051,12 @@ module opt_control_target_m
           ! calculate functional out of this select case(target%type) block,
           ! so it can be combined with other target%type.
           j1 = M_ZERO
-      case(SPIN_POLARIZED); stop 'Error'
-      case(SPINORS);        stop 'Error'
+      case(SPIN_POLARIZED)
+        message(1) = 'Error in target.j1_functional: spin_polarized.'
+        call write_fatal(1)
+      case(SPINORS)
+        message(1) = 'Error in target.j1_functional: spinors.'
+        call write_fatal(1)
       end select
 
     case default
@@ -1090,8 +1103,12 @@ module opt_control_target_m
          ! accumulating functional values
          j1 = j1 + target%curr_weight * currfunc_tmp
          SAFE_DEALLOCATE_A(semilocal_function)
-       case(SPIN_POLARIZED); stop 'Error'
-       case(SPINORS);        stop 'Error'  
+       case(SPIN_POLARIZED)
+         message(1) = 'Error in target.j1_functional: spin_polarized.'
+         call write_fatal(1)
+       case(SPINORS)
+        message(1) = 'Error in target.j1_functional: spinors.'
+        call write_fatal(1)
       end select 
     end if 
 
@@ -1149,8 +1166,12 @@ module opt_control_target_m
           end do
         end if
 
-      case(SPIN_POLARIZED); stop 'Error'
-      case(SPINORS);        stop 'Error'
+      case(SPIN_POLARIZED)
+         message(1) = 'Error in target.calc_chi: spin_polarized.'
+         call write_fatal(1)
+      case(SPINORS)
+         message(1) = 'Error in target.calc_chi: spinors.'
+         call write_fatal(1)
       end select
 
     case(oct_tg_local)
@@ -1163,8 +1184,12 @@ module opt_control_target_m
             chi_out%zpsi(ip, 1, ist, 1) = target%rho(ip) * psi_in%zpsi(ip, 1, ist, 1)
           end do
         end do
-      case(SPIN_POLARIZED); stop 'Error'
-      case(SPINORS);        stop 'Error'
+      case(SPIN_POLARIZED)
+         message(1) = 'Error in target.calc_chi: spin_polarized.'
+         call write_fatal(1)
+      case(SPINORS)
+         message(1) = 'Error in target.calc_chi: spinors.'
+         call write_fatal(1)
       end select
 
     case(oct_tg_td_local)
@@ -1209,8 +1234,8 @@ module opt_control_target_m
 
       select case(psi_in%d%ispin)
       case(UNPOLARIZED)
-        write(message(1), '(a)') 'Internal error in target.calc_chi.'
-        call write_fatal(2)
+        write(message(1), '(a)') 'Internal error in target.calc_chi: unpolarized.'
+        call write_fatal(1)
 
       case(SPIN_POLARIZED)
         ASSERT(chi_out%d%nik .eq. 2)
@@ -1304,8 +1329,12 @@ module opt_control_target_m
         ! the chi_out%zpsi is calculated outside this select block by
         ! an accumulating sum in order to combine it with other targets.
         chi_out%zpsi = M_ZERO
-      case(SPIN_POLARIZED); stop 'Error'
-      case(SPINORS);        stop 'Error'
+      case(SPIN_POLARIZED)
+         message(1) = 'Error in target.calc_chi: spin_polarized.'
+         call write_fatal(1)
+      case(SPINORS)
+         message(1) = 'Error in target.calc_chi: spinors.'
+         call write_fatal(1)
       end select
   
     case default
@@ -1358,8 +1387,12 @@ module opt_control_target_m
             end do
           end select
                  
-        case(SPIN_POLARIZED); stop 'Error'
-        case(SPINORS);        stop 'Error'
+        case(SPIN_POLARIZED)
+         message(1) = 'Error in target.calc_chi: spin_polarized.'
+         call write_fatal(1)
+        case(SPINORS)
+         message(1) = 'Error in target.calc_chi: spinors.'
+         call write_fatal(1)
       end select
     end if 
 
