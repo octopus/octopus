@@ -22,7 +22,6 @@
 module energy_m
   use batch_m
   use berry_m
-  use calc_mode_m
   use datasets_m
   use derivatives_m
   use gauge_field_m
@@ -168,19 +167,18 @@ contains
 
   ! --------------------------------------------------------------------
   
-  subroutine energy_calculate_eigenvalues(hm, der, st, time, open_boundaries)
+  subroutine energy_calculate_eigenvalues(hm, der, st, time)
     type(hamiltonian_t), intent(inout) :: hm
     type(derivatives_t), intent(inout) :: der
     type(states_t),      intent(inout) :: st
     FLOAT,   optional,   intent(in)    :: time
-    logical, optional,   intent(in)    :: open_boundaries
     
     PUSH_SUB(energy_calculate_eigenvalues)
 
     if(states_are_real(st)) then
-      call dcalculate_eigenvalues(hm, der, st, time, open_boundaries)
+      call dcalculate_eigenvalues(hm, der, st, time)
     else
-      call zcalculate_eigenvalues(hm, der, st, time, open_boundaries)
+      call zcalculate_eigenvalues(hm, der, st, time)
     end if
 
     POP_SUB(energy_calculate_eigenvalues)

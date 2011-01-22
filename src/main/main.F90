@@ -176,7 +176,7 @@ program octopus
     ! set system label
     current_dataset = dataset_run_order(ns)
     current_label = trim(dataset_label(current_dataset))
-    call calc_mode_init(dataset_runmode(current_dataset))
+    call calc_mode_init()
 
     ! datasets have to be available before calling the _init() functions below
     call io_init_datasets()

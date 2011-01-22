@@ -348,8 +348,16 @@ contains
     call v_ks_calc_finish(ks, hm)
 
     if(present(calc_eigenval)) then
-      if(calc_eigenval) call energy_calculate_eigenvalues(hm, ks%gr%der, st, &
-        open_boundaries = ks%gr%ob_grid%open_boundaries)
+      if(calc_eigenval) then
+
+        if(ks%gr%ob_grid%open_boundaries .and. .not. present(time)) then
+          ! We know the eigenvalues.
+          st%eigenval(1:st%nst, 1:st%d%nik) = st%ob_eigenval(1:st%nst, 1:st%d%nik)
+        else
+          call energy_calculate_eigenvalues(hm, ks%gr%der, st)
+        end if
+
+      end if
     end if
 
   end subroutine v_ks_calc

@@ -70,6 +70,24 @@ module run_m
 
   integer, parameter :: LR = 1, FD = 2
 
+  integer, public, parameter ::   &
+    CM_NONE               =   0,  &
+    CM_GS                 =   1,  &
+    CM_UNOCC              =   2,  &
+    CM_TD                 =   3,  &
+    CM_GEOM_OPT           =   5,  &
+    CM_OPT_CONTROL        =   7,  &
+    CM_LR_POL             =   8,  &
+    CM_CASIDA             =   9,  &
+    CM_VDW                =  11,  &
+    CM_PHONONS_LR         =  12,  &
+    CM_RAMAN              =  13,  &
+    CM_ONE_SHOT           =  14,  &
+    CM_KDOTP              =  15,  &
+    CM_GCM                =  16,  &
+    CM_MEMORY             =  17,  &
+    CM_INVERTKDS          =  18,  &
+    CM_PULPO_A_FEIRA      =  99
 
 contains
 

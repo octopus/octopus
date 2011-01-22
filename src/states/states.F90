@@ -22,7 +22,6 @@
 module states_m
   use batch_m
   use blas_m
-  use calc_mode_m
   use datasets_m
   use derivatives_m
   use distributed_m
@@ -1052,7 +1051,9 @@ return
       end forall
     end if
 
-    if(present(ob_mesh).and.calc_mode_is(CM_TD).and.st%open_boundaries) then
+    if(present(ob_mesh)) then
+      ASSERT(st%open_boundaries)
+
       do il = 1, NLEADS
         SAFE_ALLOCATE(st%ob_lead(il)%intf_psi(1:ob_mesh(il)%np, 1:st%d%dim, st1:st2, k1:k2))
         st%ob_lead(il)%intf_psi = M_z0
@@ -1179,7 +1180,7 @@ return
        st%block_initialized = .false.
     end if
 
-    if(st%open_boundaries .and. calc_mode_is(CM_TD)) then
+    if(st%open_boundaries) then
       do il = 1, NLEADS
         SAFE_DEALLOCATE_P(st%ob_lead(il)%intf_psi)
       end do

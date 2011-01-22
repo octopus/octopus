@@ -28,52 +28,23 @@ module calc_mode_m
        calc_mode_t,                    &
        calc_mode_init,                 &
        calc_mode_set_parallelization,  &
-       calc_mode_is,                   &
        calc_mode_parallel_mask,        &
        calc_mode_default_parallel_mask
 
   type calc_mode_t
-    integer :: mode
     integer :: par_mask
     integer :: def_par_mask
   end type calc_mode_t
 
   type(calc_mode_t) :: this
 
-  integer, public, parameter ::   &
-    CM_NONE               =   0,  &
-    CM_GS                 =   1,  &
-    CM_UNOCC              =   2,  &
-    CM_TD                 =   3,  &
-    CM_GEOM_OPT           =   5,  &
-    CM_OPT_CONTROL        =   7,  &
-    CM_LR_POL             =   8,  &
-    CM_CASIDA             =   9,  &
-    CM_VDW                =  11,  &
-    CM_PHONONS_LR         =  12,  &
-    CM_RAMAN              =  13,  &
-    CM_ONE_SHOT           =  14,  &
-    CM_KDOTP              =  15,  &
-    CM_GCM                =  16,  &
-    CM_MEMORY             =  17,  &
-    CM_INVERTKDS          =  18,  &
-    CM_PULPO_A_FEIRA      =  99
-
   contains
 
     ! ----------------------------------------------------------
 
-    subroutine calc_mode_init(mode)
-      integer, optional, intent(in) :: mode
-
+    subroutine calc_mode_init()
       ! no push_sub because this routine is called before everything
       ! is fully initialized for the debugging stack
-
-      if(present(mode)) then
-        this%mode = mode
-      else
-        this%mode = CM_NONE
-      end if
 
       this%par_mask = 0
       this%par_mask = ibset(this%par_mask, P_STRATEGY_DOMAINS - 1)
@@ -100,20 +71,6 @@ module calc_mode_m
       if(default) this%def_par_mask = ibset(this%def_par_mask, par - 1)
 
     end subroutine calc_mode_set_parallelization
-
-    ! ----------------------------------------------------- 
-    !
-    ! This function is deprecated. Do not use it. The behaviour of
-    ! the code should not depend on the calculation mode.
-    logical function calc_mode_is(mode)
-      integer, intent(in) :: mode
-      
-      PUSH_SUB(calc_mode_is)
-
-      calc_mode_is = (this%mode == mode)
-
-      POP_SUB(calc_mode_is)
-    end function calc_mode_is
 
     ! -----------------------------------------------------
     integer function calc_mode_parallel_mask() result(par_mask)

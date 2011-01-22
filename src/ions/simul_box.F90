@@ -21,7 +21,6 @@
 
 module simul_box_m
   use c_pointer_m
-  use calc_mode_m
   use datasets_m
   use geometry_m
   use global_m

@@ -20,17 +20,15 @@
 
 ! ---------------------------------------------------------
 ! calculates the eigenvalues of the real orbitals
-subroutine X(calculate_eigenvalues)(hm, der, st, time, open_boundaries)
+subroutine X(calculate_eigenvalues)(hm, der, st, time)
   type(hamiltonian_t), intent(inout) :: hm
   type(derivatives_t), intent(inout) :: der
   type(states_t),      intent(inout) :: st
   FLOAT,   optional,   intent(in)    :: time
-  logical, optional,   intent(in)    :: open_boundaries
 
   R_TYPE, allocatable :: hpsi(:, :, :)
   R_TYPE, allocatable :: eigen(:)
   integer :: ik, minst, maxst
-  logical :: open_boundaries_
   type(batch_t) :: psib, hpsib
   type(profile_t), save :: prof
 
@@ -42,48 +40,39 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time, open_boundaries)
     call write_info(1)
   end if
 
-  open_boundaries_ = .false.
-  if(present(open_boundaries)) open_boundaries_ = open_boundaries
+  ! FIXME: for TD open boundaries this is wrong. But the GS case like above
+  ! is also wrong.
+  ! The correct way to calculate the eigenvalue here is:
+  !      / Psi_L | H_LL H_LC 0    | Psi_L \
+  ! e = <  Psi_C | H_CL H_CC H_CR | Psi_C  >
+  !      \ Psi_R | 0    H_RC H_RR | Psi_R /
+  ! But I am not sure how to calculate this right now.
 
-  if(open_boundaries_ .and. calc_mode_is(CM_GS)) then
-    ! For open boundaries we know the eigenvalues.
-    st%eigenval = st%ob_eigenval
-  else
-    ! FIXME: for TD open boundaries this is wrong. But the GS case like above
-    ! is also wrong.
-    ! The correct way to calculate the eigenvalue here is:
-    !      / Psi_L | H_LL H_LC 0    | Psi_L \
-    ! e = <  Psi_C | H_CL H_CC H_CR | Psi_C  >
-    !      \ Psi_R | 0    H_RC H_RR | Psi_R /
-    ! But I am not sure how to calculate this right now.
-    
-    SAFE_ALLOCATE(eigen(st%st_start:st%st_end))
-    SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:st%d%dim, 1:st%d%block_size))
+  SAFE_ALLOCATE(eigen(st%st_start:st%st_end))
+  SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:st%d%dim, 1:st%d%block_size))
 
-    do ik = st%d%kpt%start, st%d%kpt%end
+  do ik = st%d%kpt%start, st%d%kpt%end
 
-      do minst = st%st_start, st%st_end, st%d%block_size
-        maxst = min(st%st_end, minst + st%d%block_size - 1)
+    do minst = st%st_start, st%st_end, st%d%block_size
+      maxst = min(st%st_end, minst + st%d%block_size - 1)
 
-        call batch_init(psib, st%d%dim, minst, maxst, st%X(psi)(:, :, minst:, ik))
-        call batch_init(hpsib, st%d%dim, minst, maxst, hpsi)
+      call batch_init(psib, st%d%dim, minst, maxst, st%X(psi)(:, :, minst:, ik))
+      call batch_init(hpsib, st%d%dim, minst, maxst, hpsi)
 
-        call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time)
-        call X(mesh_batch_dotp_vector)(der%mesh, psib, hpsib, eigen(minst:maxst))
+      call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time)
+      call X(mesh_batch_dotp_vector)(der%mesh, psib, hpsib, eigen(minst:maxst))
 
-        call batch_end(psib)
-        call batch_end(hpsib)
-        
-      end do
-
-      st%eigenval(st%st_start:st%st_end, ik) = eigen(st%st_start:st%st_end)
+      call batch_end(psib)
+      call batch_end(hpsib)
 
     end do
 
-    SAFE_DEALLOCATE_A(hpsi)
-    SAFE_DEALLOCATE_A(eigen)
+    st%eigenval(st%st_start:st%st_end, ik) = eigen(st%st_start:st%st_end)
 
-  end if
+  end do
+
+  SAFE_DEALLOCATE_A(hpsi)
+  SAFE_DEALLOCATE_A(eigen)
 
   call profiling_out(prof)
   POP_SUB(X(calculate_eigenvalues))
