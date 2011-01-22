@@ -1,6 +1,6 @@
 ! FFT PART RELATED TO THE CONVOLUTION--------------------------------------------
 
-#include "config_F90.h"
+#include "global.h"
 
 integer function ncache_optimal()
   ncache_optimal = 8*1024

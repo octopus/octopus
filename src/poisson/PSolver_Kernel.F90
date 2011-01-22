@@ -742,7 +742,15 @@ subroutine zarray_out(n01, n02, n03, nd1, nd2, nd3, rhopot, zarray, factor)
 
   integer, intent(in)    :: n01,n02,n03,nd1,nd2,nd3
   real(8), intent(out)   :: rhopot(n01,n02,n03)
-  real(8), intent(in)    :: zarray(2*nd1,nd2,nd3)  !Convert zarray(2,nd1,nd2,nd3) -> zarray(2*nd1,nd2,nd3) to use i1=1,n01 instead of i1=1,n1h + special case for modulo(n01,2)
+  real(8), intent(in)    :: zarray(2*nd1,nd2,nd3)  ! Convert
+                                                   ! zarray(2,nd1,nd2,nd3)
+                                                   ! ->
+                                                   ! zarray(2*nd1,nd2,nd3)
+                                                   ! to use i1=1,n01
+                                                   ! instead of
+                                                   ! i1=1,n1h +
+                                                   ! special case for
+                                                   ! modulo(n01,2)
   real(8), intent(in)    :: factor
 
   integer :: i1,i2,i3

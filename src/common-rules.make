@@ -77,7 +77,6 @@ core_LIBS = \
 
 external_LIBS = \
 	$(top_builddir)/external_libs/qshep/libqshep.a     \
-	$(top_builddir)/external_libs/poisson_isf/libpoisson_isf.a \
 	$(top_builddir)/external_libs/spglib/src/libspglib.a \
 	$(top_builddir)/external_libs/slatec/libslatec.a
 

@@ -365,7 +365,6 @@ AC_CONFIG_FILES([Makefile
   external_libs/qshep/Makefile
   external_libs/spglib/Makefile
   external_libs/spglib/src/Makefile
-  external_libs/poisson_isf/Makefile
   external_libs/newuoa/Makefile
   external_libs/zoltan/Makefile
   external_libs/slatec/Makefile

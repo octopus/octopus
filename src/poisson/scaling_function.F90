@@ -271,7 +271,7 @@ subroutine for_trans_8(nd,nt,x,y)
   !Local variables
   integer :: i,j,ind
 
-  include 'lazy_8.inc'
+#include "lazy_8_inc.F90"
 
   do i=0,nt/2-1
      y(     i)=0.d0
@@ -325,7 +325,7 @@ subroutine back_trans_8(nd,nt,x,y)
   !Local variables
   integer :: i,j,ind
 
-  include 'lazy_8.inc'
+#include "lazy_8_inc.F90"
   
   do i=0,nt/2-1
      y(2*i+0)=0.d0
@@ -374,7 +374,7 @@ subroutine ftest_8
   integer :: i,j,l
   real(kind=8) :: t1,t2,t3,t4,eps
 
-  include 'lazy_8.inc'
+#include "lazy_8_inc.F90"
   
   ! do i=-m,m
   ! write(6,*) i,ch(i),cg(i)
@@ -436,7 +436,7 @@ subroutine scf_recursion_8(n_iter,n_range,kernel_scf,kern_1_scf)
   real(kind=8) :: kern,kern_tot
   integer :: i_iter,i,j,ind
 
-  include "lazy_8.inc"
+#include "lazy_8_inc.F90"
 
   !Start the iteration to go from p0gauss to pgauss
   loop_iter_scf: do i_iter=1,n_iter
@@ -488,7 +488,7 @@ subroutine for_trans_14(nd,nt,x,y)
   !Local variables
   integer :: i,j,ind
 
-  include 'lazy_14.inc'
+#include "lazy_14_inc.F90"
 
   do i=0,nt/2-1
      y(     i)=0.d0
@@ -541,7 +541,7 @@ subroutine back_trans_14(nd,nt,x,y)
   !Local variables
   integer :: i,j,ind
 
-  include 'lazy_14.inc'
+#include "lazy_14_inc.F90"
   
   do i=0,nt/2-1
      y(2*i+0)=0.d0
@@ -590,7 +590,7 @@ subroutine ftest_14
   real(kind=8) :: t1,t2,t3,t4,eps
   integer :: i,j,l
 
-  include 'lazy_14.inc'
+#include "lazy_14_inc.F90"
   
   ! do i=-m,m
   ! write(6,*) i,ch(i),cg(i)
@@ -652,7 +652,7 @@ subroutine scf_recursion_14(n_iter,n_range,kernel_scf,kern_1_scf)
   real(kind=8) :: kern,kern_tot
   integer :: i_iter,i,j,ind
 
-  include "lazy_14.inc"
+#include "lazy_14_inc.F90"
 
   !Start the iteration to go from p0gauss to pgauss
   loop_iter_scf: do i_iter=1,n_iter
@@ -704,7 +704,7 @@ subroutine for_trans_16(nd,nt,x,y)
   !Local variables
   integer :: i,j,ind
 
-  include 'lazy_16.inc'
+#include "lazy_16_inc.F90"
 
   do i=0,nt/2-1
      y(     i)=0.d0
@@ -757,7 +757,7 @@ subroutine back_trans_16(nd,nt,x,y)
   !Local variables
   integer :: i,j,ind
 
-  include 'lazy_16.inc'
+#include "lazy_16_inc.F90"
   
   do i=0,nt/2-1
      y(2*i+0)=0.d0
@@ -805,7 +805,7 @@ subroutine ftest_16
   real(kind=8) :: t1,t2,t3,t4,eps
   integer :: i,j,l
 
-  include 'lazy_16.inc'
+#include "lazy_16_inc.F90"
   
   ! do i=-m,m
   ! write(6,*) i,ch(i),cg(i)
@@ -867,7 +867,7 @@ subroutine scf_recursion_16(n_iter,n_range,kernel_scf,kern_1_scf)
   real(kind=8) :: kern,kern_tot
   integer :: i_iter,i,j,ind
 
-  include "lazy_16.inc"
+#include "lazy_16_inc.F90"
 
   !Start the iteration to go from p0gauss to pgauss
   loop_iter_scf: do i_iter=1,n_iter
@@ -919,7 +919,7 @@ subroutine for_trans_20(nd,nt,x,y)
   !Local variables
   integer :: i,j,ind
 
-  include 'lazy_20.inc'
+#include "lazy_20_inc.F90"
 
   do i=0,nt/2-1
      y(     i)=0.d0
@@ -972,7 +972,7 @@ subroutine back_trans_20(nd,nt,x,y)
   !Local variables
   integer :: i,j,ind
 
-  include 'lazy_20.inc'
+#include "lazy_20_inc.F90"
   
   do i=0,nt/2-1
      y(2*i+0)=0.d0
@@ -1020,7 +1020,7 @@ subroutine ftest_20
   real(kind=8) :: t1,t2,t3,t4,eps
   integer :: i,j,l
 
-  include 'lazy_20.inc'
+#include "lazy_20_inc.F90"
   
   ! do i=-m,m
   ! write(6,*) i,ch(i),cg(i)
@@ -1082,7 +1082,7 @@ subroutine scf_recursion_20(n_iter,n_range,kernel_scf,kern_1_scf)
   real(kind=8) :: kern,kern_tot
   integer :: i_iter,i,j,ind
 
-  include "lazy_20.inc"
+#include "lazy_20_inc.F90"
 
   !Start the iteration to go from p0gauss to pgauss
   loop_iter_scf: do i_iter=1,n_iter
@@ -1134,7 +1134,7 @@ subroutine for_trans_24(nd,nt,x,y)
   !Local variables
   integer :: i,j,ind
 
-  include 'lazy_24.inc'
+#include "lazy_24_inc.F90"
 
   do i=0,nt/2-1
      y(     i)=0.d0
@@ -1187,7 +1187,7 @@ subroutine back_trans_24(nd,nt,x,y)
   !Local variables
   integer :: i,j,ind
 
-  include 'lazy_24.inc'
+#include "lazy_24_inc.F90"
   
   do i=0,nt/2-1
      y(2*i+0)=0.d0
@@ -1235,7 +1235,7 @@ subroutine ftest_24
   real(kind=8) :: t1,t2,t3,t4,eps
   integer :: i,j,l
 
-  include 'lazy_24.inc'
+#include "lazy_24_inc.F90"
   
   ! do i=-m,m
   ! write(6,*) i,ch(i),cg(i)
@@ -1297,7 +1297,7 @@ subroutine scf_recursion_24(n_iter,n_range,kernel_scf,kern_1_scf)
   real(kind=8) :: kern,kern_tot
   integer :: i_iter,i,j,ind
 
-  include "lazy_24.inc"
+#include "lazy_24_inc.F90"
 
   !Start the iteration to go from p0gauss to pgauss
   loop_iter_scf: do i_iter=1,n_iter
@@ -1349,7 +1349,7 @@ subroutine for_trans_30(nd,nt,x,y)
   !Local variables
   integer :: i,j,ind
 
-  include 'lazy_30.inc'
+#include "lazy_30_inc.F90"
 
   do i=0,nt/2-1
      y(     i)=0.d0
@@ -1402,7 +1402,7 @@ subroutine back_trans_30(nd,nt,x,y)
   !Local variables
   integer :: i,j,ind
 
-  include 'lazy_30.inc'
+#include "lazy_30_inc.F90"
   
   do i=0,nt/2-1
      y(2*i+0)=0.d0
@@ -1450,7 +1450,7 @@ subroutine ftest_30
   real(kind=8) :: t1,t2,t3,t4,eps
   integer :: i,j,l
 
-  include 'lazy_30.inc'
+#include "lazy_30_inc.F90"
   
   ! do i=-m,m
   ! write(6,*) i,ch(i),cg(i)
@@ -1512,7 +1512,7 @@ subroutine scf_recursion_30(n_iter,n_range,kernel_scf,kern_1_scf)
   real(kind=8) :: kern,kern_tot
   integer :: i_iter,i,j,ind
 
-  include "lazy_30.inc"
+#include "lazy_30_inc.F90"
 
   !Start the iteration to go from p0gauss to pgauss
   loop_iter_scf: do i_iter=1,n_iter
@@ -1564,7 +1564,7 @@ subroutine for_trans_40(nd,nt,x,y)
   !Local variables
   integer :: i,j,ind
 
-  include 'lazy_40.inc'
+#include "lazy_40_inc.F90"
 
   do i=0,nt/2-1
      y(     i)=0.d0
@@ -1617,7 +1617,7 @@ subroutine back_trans_40(nd,nt,x,y)
   !Local variables
   integer :: i,j,ind
 
-  include 'lazy_40.inc'
+#include "lazy_40_inc.F90"
   
   do i=0,nt/2-1
      y(2*i+0)=0.d0
@@ -1665,7 +1665,7 @@ subroutine ftest_40
   real(kind=8) :: t1,t2,t3,t4,eps
   integer :: i,j,l
 
-  include 'lazy_40.inc'
+#include "lazy_40_inc.F90"
   
   ! do i=-m,m
   ! write(6,*) i,ch(i),cg(i)
@@ -1727,7 +1727,7 @@ subroutine scf_recursion_40(n_iter,n_range,kernel_scf,kern_1_scf)
   real(kind=8) :: kern,kern_tot
   integer :: i_iter,i,j,ind
 
-  include "lazy_40.inc"
+#include "lazy_40_inc.F90"
 
   !Start the iteration to go from p0gauss to pgauss
   loop_iter_scf: do i_iter=1,n_iter
@@ -1779,7 +1779,7 @@ subroutine for_trans_50(nd,nt,x,y)
   !Local variables
   integer :: i,j,ind
 
-  include 'lazy_50.inc'
+#include "lazy_50_inc.F90"
 
   do i=0,nt/2-1
      y(     i)=0.d0
@@ -1832,7 +1832,7 @@ subroutine back_trans_50(nd,nt,x,y)
   !Local variables
   integer :: i,j,ind
 
-  include 'lazy_50.inc'
+#include "lazy_50_inc.F90"
   
   do i=0,nt/2-1
      y(2*i+0)=0.d0
@@ -1880,7 +1880,7 @@ subroutine ftest_50
   real(kind=8) :: t1,t2,t3,t4,eps
   integer :: i,j,l
 
-  include 'lazy_50.inc'
+#include "lazy_50_inc.F90"
   
   ! do i=-m,m
   ! write(6,*) i,ch(i),cg(i)
@@ -1942,7 +1942,7 @@ subroutine scf_recursion_50(n_iter,n_range,kernel_scf,kern_1_scf)
   real(kind=8) :: kern,kern_tot
   integer :: i_iter,i,j,ind
 
-  include "lazy_50.inc"
+#include "lazy_50_inc.F90"
 
   !Start the iteration to go from p0gauss to pgauss
   loop_iter_scf: do i_iter=1,n_iter
@@ -1994,7 +1994,7 @@ subroutine for_trans_60(nd,nt,x,y)
   !Local variables
   integer :: i,j,ind
 
-  include 'lazy_60.inc'
+#include "lazy_60_inc.F90"
 
   do i=0,nt/2-1
      y(     i)=0.d0
@@ -2047,7 +2047,7 @@ subroutine back_trans_60(nd,nt,x,y)
   !Local variables
   integer :: i,j,ind
 
-  include 'lazy_60.inc'
+#include "lazy_60_inc.F90"
   
   do i=0,nt/2-1
      y(2*i+0)=0.d0
@@ -2095,7 +2095,7 @@ subroutine ftest_60
   real(kind=8) :: t1,t2,t3,t4,eps
   integer :: i,j,l
 
-  include 'lazy_60.inc'
+#include "lazy_60_inc.F90"
   
   ! do i=-m,m
   ! write(6,*) i,ch(i),cg(i)
@@ -2157,7 +2157,7 @@ subroutine scf_recursion_60(n_iter,n_range,kernel_scf,kern_1_scf)
   real(kind=8) :: kern,kern_tot
   integer :: i_iter,i,j,ind
 
-  include "lazy_60.inc"
+#include "lazy_60_inc.F90"
 
   !Start the iteration to go from p0gauss to pgauss
   loop_iter_scf: do i_iter=1,n_iter
@@ -2209,7 +2209,7 @@ subroutine for_trans_100(nd,nt,x,y)
   !Local variables
   integer :: i,j,ind
 
-  include 'lazy_100.inc'
+#include "lazy_100_inc.F90"
 
   do i=0,nt/2-1
      y(     i)=0.d0
@@ -2262,7 +2262,7 @@ subroutine back_trans_100(nd,nt,x,y)
   !Local variables
   integer :: i,j,ind
 
-  include 'lazy_100.inc'
+#include "lazy_100_inc.F90"
   
   do i=0,nt/2-1
      y(2*i+0)=0.d0
@@ -2310,7 +2310,7 @@ subroutine ftest_100
   real(kind=8) :: t1,t2,t3,t4,eps
   integer :: i,j,l
 
-  include 'lazy_100.inc'
+#include "lazy_100_inc.F90"
   
   ! do i=-m,m
   ! write(6,*) i,ch(i),cg(i)
@@ -2372,7 +2372,7 @@ subroutine scf_recursion_100(n_iter,n_range,kernel_scf,kern_1_scf)
   real(kind=8) :: kern,kern_tot
   integer :: i_iter,i,j,ind
 
-  include "lazy_100.inc"
+#include "lazy_100_inc.F90"
 
   !Start the iteration to go from p0gauss to pgauss
   loop_iter_scf: do i_iter=1,n_iter
