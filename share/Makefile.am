@@ -22,7 +22,7 @@
 SUBDIRS = PP recipes util samples opencl
 
 dta1dir = $(pkgdatadir)
-dist_dta1_DATA = logo filter_mask.data
+dist_dta1_DATA = logo filter_mask.data gequad.data
 
 dta2dir = $(pkgdatadir)
 dist_dta2_DATA = variables varinfo

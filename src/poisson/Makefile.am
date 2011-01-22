@@ -28,7 +28,6 @@ libpoisson_a_SOURCES = \
 	fft3d.F90            \
 	scaling_function.F90 \
 	smooth.F90           \
-        gequad.F90           \
 	pfft3d.F90
 
 

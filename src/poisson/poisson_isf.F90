@@ -24,6 +24,7 @@ module poisson_isf_m
   use cube_function_m
   use datasets_m
   use global_m
+  use io_m
   use messages_m
   use mesh_m
   use mpi_m
@@ -2099,6 +2100,32 @@ contains
 
   end subroutine par_build_kernel
   !!***
+
+  ! -------------------------------------------------------------------------
+
+  subroutine gequad(n_gauss, p_gauss, w_gauss, ur_gauss, dr_gauss, acc_gauss)
+    integer, intent(in)    :: n_gauss
+    real(8), intent(out)   :: p_gauss(:)
+    real(8), intent(out)   :: w_gauss(:)
+    real(8), intent(out)   :: ur_gauss
+    real(8), intent(out)   :: dr_gauss
+    real(8), intent(out)   :: acc_gauss
+
+    integer :: iunit, i, idx
+
+    ur_gauss = 1.0_8
+    dr_gauss = 1.0e-08_8
+    acc_gauss = 1.0e-08_8
+    
+    iunit = io_open(trim(conf%share)//'/gequad.data', action = 'read', status = 'old', die = .true.)
+
+    do i = 1, n_gauss
+      read(iunit, *) idx, p_gauss(i), w_gauss(i)
+    end do
+    
+    call io_close(iunit)
+
+  end subroutine gequad
 
 end module poisson_isf_m
 
