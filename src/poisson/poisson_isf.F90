@@ -238,7 +238,6 @@ contains
       ! At this point, dvec_allgather is required because the ISF solver
       ! uses another data distribution algorithm than for the mesh functions
       ! for which every node requires the full data.
-
       call dvec_allgather(mesh%vp, rho_global, rho)
 
       call dmesh_to_cube(mesh, rho_global, this%rho_cf)

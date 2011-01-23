@@ -115,8 +115,9 @@ subroutine X(mesh_to_cube) (mesh, mf, cf)
   type(X(cf_t)), intent(inout) :: cf
 
   integer :: ip, ix, iy, iz, center(3)
-
+  
   PUSH_SUB(X(mesh_to_cube))
+  call profiling_in(prof_m2c, "MESH_TO_CUBE")
 
   ASSERT(associated(cf%RS))
 
@@ -132,6 +133,7 @@ subroutine X(mesh_to_cube) (mesh, mf, cf)
     cf%RS(ix, iy, iz) = mf(ip)
   end do
 
+  call profiling_out(prof_m2c)
   POP_SUB(X(mesh_to_cube))
 end subroutine X(mesh_to_cube)
 
@@ -144,6 +146,7 @@ subroutine X(cube_to_mesh) (mesh, cf, mf)
   integer :: ip, ix, iy, iz, center(3)
 
   PUSH_SUB(X(cube_to_mesh))
+  call profiling_in(prof_c2m, "CUBE_TO_MESH")
 
   ASSERT(associated(cf%RS))
 
@@ -156,6 +159,7 @@ subroutine X(cube_to_mesh) (mesh, cf, mf)
     mf(ip) = cf%RS(ix, iy, iz)
   end do
 
+  call profiling_out(prof_c2m)
   POP_SUB(X(cube_to_mesh))
 
 end subroutine X(cube_to_mesh)

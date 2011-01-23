@@ -4,10 +4,13 @@
 ! purposes.
 
 module sgfft_m
+  use global_m
+  use messages_m
   use mpi_m
 #ifdef HAVE_OMP
   use omp
 #endif
+  use profiling_m
 
   implicit none
   
@@ -165,6 +168,9 @@ contains
     integer :: ncache, nfft, mm, i, ic
     integer :: npr, iam, inzet, m, lot, nn, lotomp, j, jompa, jompb
     integer :: n, ma, mb, jj, inzeep
+    type(profile_t), save :: prof
+
+    call profiling_in(prof, "SGFFT")
 
     if (max(n1,n2,n3).gt.8192) stop 'fft:8192 limit reached'
 
@@ -417,8 +423,9 @@ contains
       if (iam.eq.0) inzee=inzet
       !$omp end parallel  
 
-
     endif
+    
+    call profiling_out(prof)
 
   end subroutine fft
 
@@ -3534,445 +3541,460 @@ contains
   end function ncache_optimal
   
 !!!HERE POT MUST BE THE KERNEL (BEWARE THE HALF DIMENSION)
-
-!!****h* BigDFT/convolxc_off
-!! NAME
-!!   convolxc_off
-!!
-!! FUNCTION
-!!     (Based on suitable modifications of S.Goedecker routines)
-!!     Applies the local FFT space Kernel to the density in Real space.
-!!     Does NOT calculate the LDA exchange-correlation terms
-!!
-!! SYNOPSIS
-!!     zf:          Density (input/output)
-!!                  ZF(i1,i3,i2)
-!!                  i1=1,md1 , i2=1,md2/nproc , i3=1,md3 
-!!     pot:         Kernel, only the distributed part (REAL)
-!!                  POT(i1,i2,i3)
-!!                  i1=1,nd1 , i2=1,nd2 , i3=1,nd3/nproc 
-!!     nproc:       number of processors used as returned by MPI_COMM_SIZE
-!!     iproc:       [0:nproc-1] number of processor as returned by MPI_COMM_RANK
-!!     n1,n2,n3:    logical dimension of the transform. As transform lengths 
-!!	            most products of the prime factors 2,3,5 are allowed.
-!!                  The detailed table with allowed transform lengths can 
-!!                  be found in subroutine CTRIG
-!!     md1,md2,md3: Dimension of ZF
-!!     nd1,nd2,nd3: Dimension of POT
-!!     scal:        factor of renormalization of the FFT in order to acheve unitarity 
-!!                  and the correct dimension
-!!     hgrid:       grid spacing, used for integrating eharthree
-!!     comm:        MPI communicator to use
-!!
-!! RESTRICTIONS on USAGE
-!!     Copyright (C) Stefan Goedecker, Cornell University, Ithaca, USA, 1994
-!!     Copyright (C) Stefan Goedecker, MPI Stuttgart, Germany, 1999
-!!     Copyright (C) 2002 Stefan Goedecker, CEA Grenoble
-!!     This file is distributed under the terms of the
-!!      GNU General Public License, see http://www.gnu.org/copyleft/gpl.txt .
-!!
-!! AUTHORS
-!!    S. Goedecker, L. Genovese
-!!
-!! CREATION DATE
-!!     February 2006
-!!
-!! SOURCE
-!!
-subroutine convolxc_off(n1,n2,n3,nd1,nd2,nd3,md1,md2,md3, &
-  nproc,iproc,pot,zf,scal,hgrid,comm)
-  integer, intent(in) :: n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,nproc,iproc
-  real(8), intent(in) :: scal,hgrid
-  real(8), dimension(nd1,nd2,nd3/nproc), intent(in) :: pot
-  real(8), dimension(md1,md3,md2/nproc), intent(inout) :: zf
-  integer, intent(in) :: comm
-
+  
+  !!****h* BigDFT/convolxc_off
+  !! NAME
+  !!   convolxc_off
+  !!
+  !! FUNCTION
+  !!     (Based on suitable modifications of S.Goedecker routines)
+  !!     Applies the local FFT space Kernel to the density in Real space.
+  !!     Does NOT calculate the LDA exchange-correlation terms
+  !!
+  !! SYNOPSIS
+  !!     zf:          Density (input/output)
+  !!                  ZF(i1,i3,i2)
+  !!                  i1=1,md1 , i2=1,md2/nproc , i3=1,md3 
+  !!     pot:         Kernel, only the distributed part (REAL)
+  !!                  POT(i1,i2,i3)
+  !!                  i1=1,nd1 , i2=1,nd2 , i3=1,nd3/nproc 
+  !!     nproc:       number of processors used as returned by MPI_COMM_SIZE
+  !!     iproc:       [0:nproc-1] number of processor as returned by MPI_COMM_RANK
+  !!     n1,n2,n3:    logical dimension of the transform. As transform lengths 
+  !!	              most products of the prime factors 2,3,5 are allowed.
+  !!                  The detailed table with allowed transform lengths can 
+  !!                  be found in subroutine CTRIG
+  !!     md1,md2,md3: Dimension of ZF
+  !!     nd1,nd2,nd3: Dimension of POT
+  !!     scal:        factor of renormalization of the FFT in order to acheve unitarity 
+  !!                  and the correct dimension
+  !!     hgrid:       grid spacing, used for integrating eharthree
+  !!     comm:        MPI communicator to use
+  !!
+  !! RESTRICTIONS on USAGE
+  !!     Copyright (C) Stefan Goedecker, Cornell University, Ithaca, USA, 1994
+  !!     Copyright (C) Stefan Goedecker, MPI Stuttgart, Germany, 1999
+  !!     Copyright (C) 2002 Stefan Goedecker, CEA Grenoble
+  !!     This file is distributed under the terms of the
+  !!      GNU General Public License, see http://www.gnu.org/copyleft/gpl.txt .
+  !!
+  !! AUTHORS
+  !!    S. Goedecker, L. Genovese
+  !!
+  !! CREATION DATE
+  !!     February 2006
+  !!
+  !! SOURCE
+  !!
+  subroutine convolxc_off(n1,n2,n3,nd1,nd2,nd3,md1,md2,md3, &
+    nproc,iproc,pot,zf,scal,hgrid,comm)
+    integer, intent(in) :: n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,nproc,iproc
+    real(8), intent(in) :: scal,hgrid
+    real(8), dimension(nd1,nd2,nd3/nproc), intent(in) :: pot
+    real(8), dimension(md1,md3,md2/nproc), intent(inout) :: zf
+    integer, intent(in) :: comm
+    
 #if defined(HAVE_MPI)
-  !Local variables
-  integer :: ncache,lzt,lot,ma,mb,nfft,ic1,ic2,ic3,Jp2stb,J2stb,Jp2stf,J2stf
-  integer :: j2,j3,i1,i3,i,j,inzee,ierr
-  real(8) :: twopion !!! ,ehartreetmp
-  !work arrays for transpositions
-  real(8), dimension(:,:,:), allocatable :: zt
-  !work arrays for MPI
-  real(8), dimension(:,:,:,:,:), allocatable :: zmpi1
-  real(8), dimension(:,:,:,:), allocatable :: zmpi2
-  !cache work array
-  real(8), dimension(:,:,:), allocatable :: zw
-  !FFT work arrays
-  real(8), dimension(:,:), allocatable :: btrig1,btrig2,btrig3, &
-       ftrig1,ftrig2,ftrig3,cosinarr
-  integer, dimension(:), allocatable :: after1,now1,before1, & 
-       after2,now2,before2,after3,now3,before3
+    integer :: ncache,lzt,lot,ma,mb,nfft,ic1,ic2,ic3,Jp2stb,J2stb,Jp2stf,J2stf
+    integer :: j2,j3,i1,i3,i,j,inzee,ierr
+    real(8) :: twopion
+    !work arrays for transpositions
+    real(8), allocatable :: zt(:,:,:)
+    !work arrays for MPI
+    real(8), allocatable :: zmpi1(:,:,:,:,:)
+    real(8), allocatable :: zmpi2(:,:,:,:)
+    !cache work array
+    real(8), allocatable :: zw(:,:,:)
+    !FFT work arrays
+    real(8), allocatable :: cosinarr(:,:)
+    real(8) :: btrig1(2,8192)
+    real(8) :: ftrig1(2,8192)
+    integer :: after1(7)
+    integer :: now1(7)
+    integer :: before1(7)
+    real(8) :: btrig2(2,8192)
+    real(8) :: ftrig2(2,8192)
+    integer :: after2(7)
+    integer :: now2(7)
+    integer :: before2(7)
+    real(8) :: btrig3(2,8192)
+    real(8) :: ftrig3(2,8192)
+    integer :: after3(7)
+    integer :: now3(7)
+    integer :: before3(7)
+    type(profile_t), save :: prof, prof_comm
 
-  !Body
-  ! check input
-  if (mod(n1,2).ne.0) stop 'Parallel convolution:ERROR:n1'
-  if (mod(n2,2).ne.0) stop 'Parallel convolution:ERROR:n2'
-  if (mod(n3,2).ne.0) stop 'Parallel convolution:ERROR:n3'
-  if (nd1.lt.n1/2+1) stop 'Parallel convolution:ERROR:nd1'
-  if (nd2.lt.n2/2+1) stop 'Parallel convolution:ERROR:nd2'
-  if (nd3.lt.n3/2+1) stop 'Parallel convolution:ERROR:nd3'
-  if (md1.lt.n1/2) stop 'Parallel convolution:ERROR:md1'
-  if (md2.lt.n2/2) stop 'Parallel convolution:ERROR:md2'
-  if (md3.lt.n3/2) stop 'Parallel convolution:ERROR:md3'
-  if (mod(nd3,nproc).ne.0) stop 'Parallel convolution:ERROR:nd3'
-  if (mod(md2,nproc).ne.0) stop 'Parallel convolution:ERROR:md2'
-  
-  !defining work arrays dimensions
-  ncache=ncache_optimal()
-  if (ncache <= max(n1,n2,n3/2)*4) ncache=max(n1,n2,n3/2)*4
+    call profiling_in(prof, "SG_PCONV")
 
-  ! if (timing_flag == 1 .and. iproc ==0) print *,'parallel ncache=',ncache
+    ! check input
+    if (mod(n1,2).ne.0) stop 'Parallel convolution:ERROR:n1'
+    if (mod(n2,2).ne.0) stop 'Parallel convolution:ERROR:n2'
+    if (mod(n3,2).ne.0) stop 'Parallel convolution:ERROR:n3'
+    if (nd1.lt.n1/2+1) stop 'Parallel convolution:ERROR:nd1'
+    if (nd2.lt.n2/2+1) stop 'Parallel convolution:ERROR:nd2'
+    if (nd3.lt.n3/2+1) stop 'Parallel convolution:ERROR:nd3'
+    if (md1.lt.n1/2) stop 'Parallel convolution:ERROR:md1'
+    if (md2.lt.n2/2) stop 'Parallel convolution:ERROR:md2'
+    if (md3.lt.n3/2) stop 'Parallel convolution:ERROR:md3'
+    if (mod(nd3,nproc).ne.0) stop 'Parallel convolution:ERROR:nd3'
+    if (mod(md2,nproc).ne.0) stop 'Parallel convolution:ERROR:md2'
 
-  lzt=n2/2
-  if (mod(n2/2,2).eq.0) lzt=lzt+1
-  if (mod(n2/2,4).eq.0) lzt=lzt+1
-  
-  !Allocations
-  allocate(btrig1(2,8192),ftrig1(2,8192),after1(7),now1(7),before1(7), &
-       btrig2(2,8192),ftrig2(2,8192),after2(7),now2(7),before2(7), &
-       btrig3(2,8192),ftrig3(2,8192),after3(7),now3(7),before3(7), &
-       zw(2,ncache/4,2),zt(2,lzt,n1),zmpi2(2,n1,md2/nproc,nd3),cosinarr(2,n3/2))
-  if (nproc.gt.1) allocate(zmpi1(2,n1,md2/nproc,nd3/nproc,nproc))
+    !defining work arrays dimensions
+    ncache = ncache_optimal()
+    if (ncache <= max(n1,n2,n3/2)*4) ncache=max(n1,n2,n3/2)*4
 
-  !calculating the FFT work arrays (beware on the HalFFT in n3 dimension)
-  call ctrig(n3/2,btrig3,after3,before3,now3,1,ic3)
-  call ctrig(n1,btrig1,after1,before1,now1,1,ic1)
-  call ctrig(n2,btrig2,after2,before2,now2,1,ic2)
-  do  j=1,n1
-     ftrig1(1,j)= btrig1(1,j)
-     ftrig1(2,j)=-btrig1(2,j)
-  enddo
-  do  j=1,n2
-     ftrig2(1,j)= btrig2(1,j)
-     ftrig2(2,j)=-btrig2(2,j)
-  enddo
-  do  j=1,n3
-     ftrig3(1,j)= btrig3(1,j)
-     ftrig3(2,j)=-btrig3(2,j)
-  enddo
+    ! if (timing_flag == 1 .and. iproc ==0) print *,'parallel ncache=',ncache
 
-  !Calculating array of phases for HalFFT decoding
-  twopion=8.d0*datan(1.0_8)/real(n3,8)
-  do i3=1,n3/2
-     cosinarr(1,i3)=dcos(twopion*(i3-1))
-     cosinarr(2,i3)=-dsin(twopion*(i3-1))
-  end do
+    lzt = n2/2
+    if (mod(n2/2,2).eq.0) lzt=lzt+1
+    if (mod(n2/2,4).eq.0) lzt=lzt+1
 
-  !initializing integral
-  !!! ehartree=0.0_8
+    SAFE_ALLOCATE(zw(1:2, 1:ncache/4, 1:2))
+    SAFE_ALLOCATE(zt(1:2, 1:lzt, 1:n1))
+    SAFE_ALLOCATE(zmpi2(1:2, 1:n1, 1:md2/nproc, 1:nd3))
+    SAFE_ALLOCATE(cosinarr(1:2, 1:n3/2))
 
-  ! transform along z axis
-  lot=ncache/(2*n3)
-  if (lot.lt.1) then  
-     write(6,*) & 
-          'convolxc_off:ncache has to be enlarged to be able to hold at' // &  
-          'least one 1-d FFT of this size even though this will' // & 
-          'reduce the performance for shorter transform lengths'
-     stop
-  endif
-  
-  do j2=1,md2/nproc
-     !this condition ensures that we manage only the interesting part for the FFT
-     if (iproc*(md2/nproc)+j2.le.n2/2) then
+    if (nproc.gt.1) then
+      SAFE_ALLOCATE(zmpi1(1:2, 1:n1, 1:md2/nproc, 1:nd3/nproc, 1:nproc))
+    end if
+
+    !calculating the FFT work arrays (beware on the HalFFT in n3 dimension)
+    call ctrig(n3/2,btrig3,after3,before3,now3,1,ic3)
+    call ctrig(n1,btrig1,after1,before1,now1,1,ic1)
+    call ctrig(n2,btrig2,after2,before2,now2,1,ic2)
+    do  j=1,n1
+      ftrig1(1,j)= btrig1(1,j)
+      ftrig1(2,j)=-btrig1(2,j)
+    enddo
+    do  j=1,n2
+      ftrig2(1,j)= btrig2(1,j)
+      ftrig2(2,j)=-btrig2(2,j)
+    enddo
+    do  j=1,n3
+      ftrig3(1,j)= btrig3(1,j)
+      ftrig3(2,j)=-btrig3(2,j)
+    enddo
+
+    !Calculating array of phases for HalFFT decoding
+    twopion=8.d0*datan(1.0_8)/real(n3,8)
+    do i3=1,n3/2
+      cosinarr(1,i3)=dcos(twopion*(i3-1))
+      cosinarr(2,i3)=-dsin(twopion*(i3-1))
+    end do
+
+    !initializing integral
+!!! ehartree=0.0_8
+
+    ! transform along z axis
+    lot=ncache/(2*n3)
+    if (lot.lt.1) then  
+      write(6,*) & 
+        'convolxc_off:ncache has to be enlarged to be able to hold at' // &  
+        'least one 1-d FFT of this size even though this will' // & 
+        'reduce the performance for shorter transform lengths'
+      stop
+    endif
+
+    do j2=1,md2/nproc
+      !this condition ensures that we manage only the interesting part for the FFT
+      if (iproc*(md2/nproc)+j2.le.n2/2) then
         do i1=1,(n1/2),lot
-           ma=i1
-           mb=min(i1+(lot-1),(n1/2))
-           nfft=mb-ma+1
+          ma=i1
+          mb=min(i1+(lot-1),(n1/2))
+          nfft=mb-ma+1
 
-           !inserting real data into complex array of half lenght
-           call halfill_upcorn(md1,md3,lot,nfft,n3,zf(i1,1,j2),zw(1,1,1))
+          !inserting real data into complex array of half lenght
+          call halfill_upcorn(md1,md3,lot,nfft,n3,zf(i1,1,j2),zw(1,1,1))
 
-           !performing FFT
-           !input: I1,I3,J2,(Jp2)
-           inzee=1
-           do i=1,ic3
-              call fftstp(lot,nfft,n3/2,lot,n3/2,zw(1,1,inzee),zw(1,1,3-inzee), &
-                   btrig3,after3(i),now3(i),before3(i),1)
-              inzee=3-inzee
-           enddo
-           !output: I1,i3,J2,(Jp2)
+          !performing FFT
+          !input: I1,I3,J2,(Jp2)
+          inzee=1
+          do i=1,ic3
+            call fftstp(lot,nfft,n3/2,lot,n3/2,zw(1,1,inzee),zw(1,1,3-inzee), &
+              btrig3,after3(i),now3(i),before3(i),1)
+            inzee=3-inzee
+          enddo
+          !output: I1,i3,J2,(Jp2)
 
-           !unpacking FFT in order to restore correct result, 
-           !while exchanging components
-           !input: I1,i3,J2,(Jp2)
-           call scramble_unpack(i1,j2,lot,nfft,n1/2,n3,md2,nproc,nd3,zw(1,1,inzee),zmpi2,cosinarr)
-           !output: I1,J2,i3,(Jp2)
+          !unpacking FFT in order to restore correct result, 
+          !while exchanging components
+          !input: I1,i3,J2,(Jp2)
+          call scramble_unpack(i1,j2,lot,nfft,n1/2,n3,md2,nproc,nd3,zw(1,1,inzee),zmpi2,cosinarr)
+          !output: I1,J2,i3,(Jp2)
         end do
-     endif
-  end do
+      endif
+    end do
 
-  !Interprocessor data transposition
-  !input: I1,J2,j3,jp3,(Jp2)
-  if (nproc.gt.1) then
-     !communication scheduling
-     call MPI_Alltoall(zmpi2(:, 1, 1, 1),n1*(md2/nproc)*(nd3/nproc), &
-          MPI_DOUBLE_PRECISION, &
-          zmpi1(:, 1, 1, 1, 1),n1*(md2/nproc)*(nd3/nproc), &
-          MPI_DOUBLE_PRECISION,comm,ierr)
-  endif
-  !output: I1,J2,j3,Jp2,(jp3)
+    !Interprocessor data transposition
+    !input: I1,J2,j3,jp3,(Jp2)
+    if (nproc.gt.1) then
+      call profiling_in(prof_comm, "SG_ALLTOALL")
+      !communication scheduling
+      call MPI_Alltoall(zmpi2(1, 1, 1, 1), n1*(md2/nproc)*(nd3/nproc), &
+        MPI_DOUBLE_PRECISION, &
+        zmpi1(1, 1, 1, 1, 1), n1*(md2/nproc)*(nd3/nproc), &
+        MPI_DOUBLE_PRECISION, comm, ierr)
+      call profiling_out(prof_comm)
+    end if
+    !output: I1,J2,j3,Jp2,(jp3)
 
-  !now each process perform complete convolution of its planes
-  do j3=1,nd3/nproc
-     !this condition ensures that we manage only the interesting part for the FFT
-     if (iproc*(nd3/nproc)+j3.le.n3/2+1) then
+    !now each process perform complete convolution of its planes
+    do j3=1,nd3/nproc
+      !this condition ensures that we manage only the interesting part for the FFT
+      if (iproc*(nd3/nproc)+j3.le.n3/2+1) then
 	Jp2stb=1
 	J2stb=1
 	Jp2stf=1
 	J2stf=1
-        
-        ! transform along x axis
+
+ ! transform along x axis
         lot=ncache/(4*n1)
         if (lot.lt.1) then  
-           write(6,*) & 
-                'convolxc_off:ncache has to be enlarged to be able to hold at' // &  
-                'least one 1-d FFT of this size even though this will' // & 
-                'reduce the performance for shorter transform lengths'
-           stop
+          write(6,*) & 
+            'convolxc_off:ncache has to be enlarged to be able to hold at' // &  
+            'least one 1-d FFT of this size even though this will' // & 
+            'reduce the performance for shorter transform lengths'
+          stop
         endif
-        
+
         do j=1,n2/2,lot
-           ma=j
-           mb=min(j+(lot-1),n2/2)
-           nfft=mb-ma+1
+          ma=j
+          mb=min(j+(lot-1),n2/2)
+          nfft=mb-ma+1
 
-           !reverse index ordering, leaving the planes to be transformed at the end
-           !input: I1,J2,j3,Jp2,(jp3)
-           if (nproc.eq.1) then
-              call mpiswitch_upcorn(j3,nfft,Jp2stb,J2stb,lot,n1,md2,nd3,nproc,zmpi2,zw(1,1,1))
-           else
-              call mpiswitch_upcorn(j3,nfft,Jp2stb,J2stb,lot,n1,md2,nd3,nproc,zmpi1,zw(1,1,1))
-           endif
-           !output: J2,Jp2,I1,j3,(jp3)
-           
-           !performing FFT
-           !input: I2,I1,j3,(jp3)
-           inzee=1
-           do i=1,ic1-1
-              call fftstp(lot,nfft,n1,lot,n1,zw(1,1,inzee),zw(1,1,3-inzee), &
-                   btrig1,after1(i),now1(i),before1(i),1)
-              inzee=3-inzee
-           enddo
+          !reverse index ordering, leaving the planes to be transformed at the end
+          !input: I1,J2,j3,Jp2,(jp3)
+          if (nproc.eq.1) then
+            call mpiswitch_upcorn(j3,nfft,Jp2stb,J2stb,lot,n1,md2,nd3,nproc,zmpi2,zw(1,1,1))
+          else
+            call mpiswitch_upcorn(j3,nfft,Jp2stb,J2stb,lot,n1,md2,nd3,nproc,zmpi1,zw(1,1,1))
+          endif
+          !output: J2,Jp2,I1,j3,(jp3)
 
-           !storing the last step into zt array
-           i=ic1
-           call fftstp(lot,nfft,n1,lzt,n1,zw(1,1,inzee),zt(1,j,1), & 
-                btrig1,after1(i),now1(i),before1(i),1)           
-           !output: I2,i1,j3,(jp3)
+          !performing FFT
+          !input: I2,I1,j3,(jp3)
+          inzee=1
+          do i=1,ic1-1
+            call fftstp(lot,nfft,n1,lot,n1,zw(1,1,inzee),zw(1,1,3-inzee), &
+              btrig1,after1(i),now1(i),before1(i),1)
+            inzee=3-inzee
+          enddo
+
+          !storing the last step into zt array
+          i=ic1
+          call fftstp(lot,nfft,n1,lzt,n1,zw(1,1,inzee),zt(1,j,1), & 
+            btrig1,after1(i),now1(i),before1(i),1)           
+          !output: I2,i1,j3,(jp3)
         end do
 
         !transform along y axis
         lot=ncache/(4*n2)
         if (lot.lt.1) then  
-           write(6,*) & 
-                'convolxc_off:ncache has to be enlarged to be able to hold at' // &  
-                'least one 1-d FFT of this size even though this will' // & 
-                'reduce the performance for shorter transform lengths'
-           stop
+          write(6,*) & 
+            'convolxc_off:ncache has to be enlarged to be able to hold at' // &  
+            'least one 1-d FFT of this size even though this will' // & 
+            'reduce the performance for shorter transform lengths'
+          stop
         endif
 
         do j=1,n1,lot
-           ma=j
-           mb=min(j+(lot-1),n1)
-           nfft=mb-ma+1
+          ma=j
+          mb=min(j+(lot-1),n1)
+          nfft=mb-ma+1
 
-           !reverse ordering 
-           !input: I2,i1,j3,(jp3)
-           call switch_upcorn(nfft,n2,lot,n1,lzt,zt(1,1,j),zw(1,1,1))
-           !output: i1,I2,j3,(jp3)
-           
-           !performing FFT
-           !input: i1,I2,j3,(jp3)
-           inzee=1
-           do i=1,ic2
-              call fftstp(lot,nfft,n2,lot,n2,zw(1,1,inzee),zw(1,1,3-inzee), &
-                   btrig2,after2(i),now2(i),before2(i),1)
-              inzee=3-inzee
-           enddo
-           !output: i1,i2,j3,(jp3)
-           
-           !Multiply with kernel in fourier space
-           call multkernel(nd1,nd2,n1,n2,lot,nfft,j,pot(1,1,j3),zw(1,1,inzee))
-           
-           !TRANSFORM BACK IN REAL SPACE
-           
-           !transform along y axis
-           !input: i1,i2,j3,(jp3)
-           do i=1,ic2
-              call fftstp(lot,nfft,n2,lot,n2,zw(1,1,inzee),zw(1,1,3-inzee), &
-                   ftrig2,after2(i),now2(i),before2(i),-1)
-              inzee=3-inzee
-           enddo
+          !reverse ordering 
+          !input: I2,i1,j3,(jp3)
+          call switch_upcorn(nfft,n2,lot,n1,lzt,zt(1,1,j),zw(1,1,1))
+          !output: i1,I2,j3,(jp3)
 
-           !reverse ordering
-           !input: i1,I2,j3,(jp3)
-           call unswitch_downcorn(nfft,n2,lot,n1,lzt,zw(1,1,inzee),zt(1,1,j))
-           !output: I2,i1,j3,(jp3)
+          !performing FFT
+          !input: i1,I2,j3,(jp3)
+          inzee=1
+          do i=1,ic2
+            call fftstp(lot,nfft,n2,lot,n2,zw(1,1,inzee),zw(1,1,3-inzee), &
+              btrig2,after2(i),now2(i),before2(i),1)
+            inzee=3-inzee
+          enddo
+          !output: i1,i2,j3,(jp3)
+
+          !Multiply with kernel in fourier space
+          call multkernel(nd1,nd2,n1,n2,lot,nfft,j,pot(1,1,j3),zw(1,1,inzee))
+
+          !TRANSFORM BACK IN REAL SPACE
+
+          !transform along y axis
+          !input: i1,i2,j3,(jp3)
+          do i=1,ic2
+            call fftstp(lot,nfft,n2,lot,n2,zw(1,1,inzee),zw(1,1,3-inzee), &
+              ftrig2,after2(i),now2(i),before2(i),-1)
+            inzee=3-inzee
+          enddo
+
+          !reverse ordering
+          !input: i1,I2,j3,(jp3)
+          call unswitch_downcorn(nfft,n2,lot,n1,lzt,zw(1,1,inzee),zt(1,1,j))
+          !output: I2,i1,j3,(jp3)
         end do
-        
+
         !transform along x axis
         !input: I2,i1,j3,(jp3)
         lot=ncache/(4*n1)
         do j=1,n2/2,lot
-           ma=j
-           mb=min(j+(lot-1),n2/2)
-           nfft=mb-ma+1
+          ma=j
+          mb=min(j+(lot-1),n2/2)
+          nfft=mb-ma+1
 
-           !performing FFT
-           i=1
-           call fftstp(lzt,nfft,n1,lot,n1,zt(1,j,1),zw(1,1,1), &
-                ftrig1,after1(i),now1(i),before1(i),-1)
-           
-           inzee=1
-           do i=2,ic1
-              call fftstp(lot,nfft,n1,lot,n1,zw(1,1,inzee),zw(1,1,3-inzee), &
-                   ftrig1,after1(i),now1(i),before1(i),-1)
-              inzee=3-inzee
-           enddo
-           !output: I2,I1,j3,(jp3)
+          !performing FFT
+          i=1
+          call fftstp(lzt,nfft,n1,lot,n1,zt(1,j,1),zw(1,1,1), &
+            ftrig1,after1(i),now1(i),before1(i),-1)
 
-           !reverse ordering
-           !input: J2,Jp2,I1,j3,(jp3)
-           if (nproc.eq.1) then
-              call unmpiswitch_downcorn(j3,nfft,Jp2stf,J2stf,lot,n1,md2,nd3,nproc,zw(1,1,inzee),zmpi2)
-           else
-              call unmpiswitch_downcorn(j3,nfft,Jp2stf,J2stf,lot,n1,md2,nd3,nproc,zw(1,1,inzee),zmpi1)
-           endif
-           ! output: I1,J2,j3,Jp2,(jp3)
+          inzee=1
+          do i=2,ic1
+            call fftstp(lot,nfft,n1,lot,n1,zw(1,1,inzee),zw(1,1,3-inzee), &
+              ftrig1,after1(i),now1(i),before1(i),-1)
+            inzee=3-inzee
+          enddo
+          !output: I2,I1,j3,(jp3)
+
+          !reverse ordering
+          !input: J2,Jp2,I1,j3,(jp3)
+          if (nproc.eq.1) then
+            call unmpiswitch_downcorn(j3,nfft,Jp2stf,J2stf,lot,n1,md2,nd3,nproc,zw(1,1,inzee),zmpi2)
+          else
+            call unmpiswitch_downcorn(j3,nfft,Jp2stf,J2stf,lot,n1,md2,nd3,nproc,zw(1,1,inzee),zmpi1)
+          endif
+          ! output: I1,J2,j3,Jp2,(jp3)
         end do
-     endif
-  end do
-  
-  
-  !Interprocessor data transposition
-  !input: I1,J2,j3,Jp2,(jp3)
-  if (nproc.gt.1) then
-     !communication scheduling
-     call MPI_ALLTOALL(zmpi1(:, 1, 1, 1, 1),n1*(md2/nproc)*(nd3/nproc), &
-          MPI_DOUBLE_PRECISION, &
-          zmpi2(:, 1, 1, 1),n1*(md2/nproc)*(nd3/nproc), &
-          MPI_DOUBLE_PRECISION,comm,ierr)
-     !output: I1,J2,j3,jp3,(Jp2)
-  endif
+      endif
+    end do
 
-  !transform along z axis
-  !input: I1,J2,i3,(Jp2)
-  lot=ncache/(2*n3)
-  do j2=1,md2/nproc
-     !this condition ensures that we manage only the interesting part for the FFT
-     if (iproc*(md2/nproc)+j2.le.n2/2) then
+
+    !Interprocessor data transposition
+    !input: I1,J2,j3,Jp2,(jp3)
+    if (nproc.gt.1) then
+      call profiling_in(prof_comm, "SG_ALLTOALL")
+      !communication scheduling
+      call MPI_ALLTOALL(zmpi1(1, 1, 1, 1, 1), n1*(md2/nproc)*(nd3/nproc), &
+        MPI_DOUBLE_PRECISION, &
+        zmpi2(1, 1, 1, 1), n1*(md2/nproc)*(nd3/nproc), &
+        MPI_DOUBLE_PRECISION, comm, ierr)
+      !output: I1,J2,j3,jp3,(Jp2)
+      call profiling_out(prof_comm)
+    endif
+
+    !transform along z axis
+    !input: I1,J2,i3,(Jp2)
+    lot=ncache/(2*n3)
+    do j2=1,md2/nproc
+      !this condition ensures that we manage only the interesting part for the FFT
+      if (iproc*(md2/nproc)+j2.le.n2/2) then
         do i1=1,(n1/2),lot
-           ma=i1
-           mb=min(i1+(lot-1),(n1/2))
-           nfft=mb-ma+1
+          ma=i1
+          mb=min(i1+(lot-1),(n1/2))
+          nfft=mb-ma+1
 
-           !reverse ordering and repack the FFT data in order to be backward HalFFT transformed
-           !input: I1,J2,i3,(Jp2)
-           call unscramble_pack(i1,j2,lot,nfft,n1/2,n3,md2,nproc,nd3,zmpi2,zw(1,1,1),cosinarr)
-           !output: I1,i3,J2,(Jp2)
+          !reverse ordering and repack the FFT data in order to be backward HalFFT transformed
+          !input: I1,J2,i3,(Jp2)
+          call unscramble_pack(i1,j2,lot,nfft,n1/2,n3,md2,nproc,nd3,zmpi2,zw(1,1,1),cosinarr)
+          !output: I1,i3,J2,(Jp2)
 
-           !performing FFT
-           !input: I1,i3,J2,(Jp2)           
-           inzee=1
-           do i=1,ic3
-              call fftstp(lot,nfft,n3/2,lot,n3/2,zw(1,1,inzee),zw(1,1,3-inzee), &
-                   ftrig3,after3(i),now3(i),before3(i),-1)
-              inzee=3-inzee
-           enddo
-           !output: I1,I3,J2,(Jp2)
+          !performing FFT
+          !input: I1,i3,J2,(Jp2)           
+          inzee=1
+          do i=1,ic3
+            call fftstp(lot,nfft,n3/2,lot,n3/2,zw(1,1,inzee),zw(1,1,3-inzee), &
+              ftrig3,after3(i),now3(i),before3(i),-1)
+            inzee=3-inzee
+          enddo
+          !output: I1,I3,J2,(Jp2)
 
-           !calculates the Hartree energy locally and rebuild the output array
-           call unfill_downcorn(md1,md3,lot,nfft,n3,zw(1,1,inzee),zf(i1,1,j2)&
-                ,scal) !!! ,ehartreetmp)
+          !calculates the Hartree energy locally and rebuild the output array
+          call unfill_downcorn(md1, md3, lot, nfft, n3, zw(1,1,inzee), zf(i1,1,j2), scal)
 
-           !integrate local pieces together
-           !!! ehartree=ehartree+0.5d0*ehartreetmp*hgrid**3
         end do
-     endif
-  end do
-  
-  !De-allocations  
-  deallocate(btrig1,ftrig1,after1,now1,before1, &
-       btrig2,ftrig2,after2,now2,before2, &
-       btrig3,ftrig3,after3,now3,before3, &
-       zmpi2,zw,zt,cosinarr)
-  if (nproc.gt.1) deallocate(zmpi1)
+      endif
+    end do
 
-#endif  
-end subroutine convolxc_off
+    SAFE_DEALLOCATE_A(zmpi2)
+    SAFE_DEALLOCATE_A(zw)
+    SAFE_DEALLOCATE_A(zt)
+    SAFE_DEALLOCATE_A(cosinarr)
+    SAFE_DEALLOCATE_A(zmpi1)
+
+    call profiling_out(prof)
+
+#endif
+  end subroutine convolxc_off
 
 
-!!****h* BigDFT/multkernel
-!! NAME
-!!   multkernel
-!!
-!! FUNCTION
-!!     (Based on suitable modifications of S.Goedecker routines)
-!!     Multiply with the kernel taking into account its symmetry
-!!     Conceived to be used into convolution loops
-!!
-!! SYNOPSIS
-!!     pot:      Kernel, symmetric and real, half the length
-!!     zw:       Work array (input/output)
-!!     n1,n2:    logical dimension of the FFT transform, reference for zw
-!!     nd1,nd2:  Dimensions of POT
-!!     jS, nfft: starting point of the plane and number of remaining lines
-!!
-!! RESTRICTIONS on USAGE
-!!     Copyright (C) Stefan Goedecker, Cornell University, Ithaca, USA, 1994
-!!     Copyright (C) Stefan Goedecker, MPI Stuttgart, Germany, 1999
-!!     Copyright (C) 2002 Stefan Goedecker, CEA Grenoble
-!!     This file is distributed under the terms of the
-!!      GNU General Public License, see http://www.gnu.org/copyleft/gpl.txt .
-!!
-!! AUTHORS
-!!    S. Goedecker, L. Genovese
-!!
-!! CREATION DATE
-!!     February 2006
-!!
-!! SOURCE
-!!
-subroutine multkernel(nd1,nd2,n1,n2,lot,nfft,jS,pot,zw)
-  integer, intent(in) :: nd1,nd2,n1,n2,lot,nfft,jS
-  real(8), dimension(nd1,nd2), intent(in) :: pot
-  real(8), dimension(2,lot,n2), intent(inout) :: zw
+  !!****h* BigDFT/multkernel
+  !! NAME
+  !!   multkernel
+  !!
+  !! FUNCTION
+  !!     (Based on suitable modifications of S.Goedecker routines)
+  !!     Multiply with the kernel taking into account its symmetry
+  !!     Conceived to be used into convolution loops
+  !!
+  !! SYNOPSIS
+  !!     pot:      Kernel, symmetric and real, half the length
+  !!     zw:       Work array (input/output)
+  !!     n1,n2:    logical dimension of the FFT transform, reference for zw
+  !!     nd1,nd2:  Dimensions of POT
+  !!     jS, nfft: starting point of the plane and number of remaining lines
+  !!
+  !! RESTRICTIONS on USAGE
+  !!     Copyright (C) Stefan Goedecker, Cornell University, Ithaca, USA, 1994
+  !!     Copyright (C) Stefan Goedecker, MPI Stuttgart, Germany, 1999
+  !!     Copyright (C) 2002 Stefan Goedecker, CEA Grenoble
+  !!     This file is distributed under the terms of the
+  !!      GNU General Public License, see http://www.gnu.org/copyleft/gpl.txt .
+  !!
+  !! AUTHORS
+  !!    S. Goedecker, L. Genovese
+  !!
+  !! CREATION DATE
+  !!     February 2006
+  !!
+  !! SOURCE
+  !!
+  subroutine multkernel(nd1,nd2,n1,n2,lot,nfft,jS,pot,zw)
+    integer, intent(in) :: nd1,nd2,n1,n2,lot,nfft,jS
+    real(8), dimension(nd1,nd2), intent(in) :: pot
+    real(8), dimension(2,lot,n2), intent(inout) :: zw
 
-  !Local variables
-  integer :: j,j1,i2,j2
+    !Local variables
+    integer :: j,j1,i2,j2
 
-  !Body
-  
-  !case i2=1
-  do j=1,nfft
-     j1=n1/2+1-abs(n1/2+2-jS-j)!this stands for j1=min(jS-1+j,n1+3-jS-j)
-     zw(1,j,1)=zw(1,j,1)*pot(j1,1)
-     zw(2,j,1)=zw(2,j,1)*pot(j1,1)
-  end do
+    !case i2=1
+    do j=1,nfft
+      j1=n1/2+1-abs(n1/2+2-jS-j)!this stands for j1=min(jS-1+j,n1+3-jS-j)
+      zw(1,j,1)=zw(1,j,1)*pot(j1,1)
+      zw(2,j,1)=zw(2,j,1)*pot(j1,1)
+    end do
 
-  !generic case
-  do i2=2,n2/2
-     do j=1,nfft
+    !generic case
+    do i2=2,n2/2
+      do j=1,nfft
         j1=n1/2+1-abs(n1/2+2-jS-j)
         j2=n2+2-i2
         zw(1,j,i2)=zw(1,j,i2)*pot(j1,i2)
         zw(2,j,i2)=zw(2,j,i2)*pot(j1,i2)
         zw(1,j,j2)=zw(1,j,j2)*pot(j1,i2)
         zw(2,j,j2)=zw(2,j,j2)*pot(j1,i2)
-     end do
-  end do
-  
-  !case i2=n2/2+1
-  do j=1,nfft
-     j1=n1/2+1-abs(n1/2+2-jS-j)
-     j2=n2/2+1
-     zw(1,j,j2)=zw(1,j,j2)*pot(j1,j2)
-     zw(2,j,j2)=zw(2,j,j2)*pot(j1,j2)
-  end do
-  
-end subroutine multkernel
+      end do
+    end do
+
+    !case i2=n2/2+1
+    do j=1,nfft
+      j1=n1/2+1-abs(n1/2+2-jS-j)
+      j2=n2/2+1
+      zw(1,j,j2)=zw(1,j,j2)*pot(j1,j2)
+      zw(2,j,j2)=zw(2,j,j2)*pot(j1,j2)
+    end do
+
+  end subroutine multkernel
 
 
   subroutine switch_upcorn(nfft,n2,lot,n1,lzt,zt,zw)
@@ -4181,8 +4203,6 @@ end subroutine multkernel
     integer :: i3,i,indA,indB
     real(8) ::  a,b,c,d,cp,sp,re,ie,ro,io,rh,ih
 
-    !Body
-
     do i3=1,n3/2
       indA=i3
       indB=n3/2+2-i3
@@ -4206,8 +4226,7 @@ end subroutine multkernel
 
   end subroutine unscramble_pack
 
-
-
+  ! --------------------------------------------------------------------
 
   subroutine unswitch_downcorn(nfft,n2,lot,n1,lzt,zw,zt)
     integer :: lot, n2, lzt, n1, j, nfft, i
@@ -4252,62 +4271,62 @@ end subroutine multkernel
   end subroutine unmpiswitch_downcorn
 
 
-!!****h* BigDFT/unfill_downcorn
-!! NAME
-!!   unfill_downcorn
-!!
-!! FUNCTION
-!!     (Based on suitable modifications of S.Goedecker routines)
-!!     Restore data into output array, calculating in the meanwhile
-!!     Hartree energy of the potential 
-!!
-!! SYNOPSIS
-!!     zf:          Original distributed density as well as
-!!                  Distributed solution of the poisson equation (inout)
-!!     zw:          FFT work array
-!!     n3:          (twice the) dimension of the last FFTtransform.
-!!     md1,md3:     Dimensions of the undistributed part of the real grid
-!!     nfft:        number of planes
-!!     scal:        Needed to achieve unitarity and correct dimensions
-!!
-!! WARNING
-!!     Assuming that high frequencies are in the corners 
-!!     and that n3 is multiple of 4   
-!!
-!! RESTRICTIONS on USAGE
-!!     Copyright (C) Stefan Goedecker, Cornell University, Ithaca, USA, 1994
-!!     Copyright (C) Stefan Goedecker, MPI Stuttgart, Germany, 1999
-!!     Copyright (C) 2002 Stefan Goedecker, CEA Grenoble
-!!     This file is distributed under the terms of the
-!!     GNU General Public License, see http://www.gnu.org/copyleft/gpl.txt .
-!!
-!! AUTHORS
-!!    S. Goedecker, L. Genovese
-!!
-!! CREATION DATE
-!!     February 2006
-!!
-!! SOURCE
-!!
-subroutine unfill_downcorn(md1,md3,lot,nfft,n3,zw,zf, scal)
-  integer, intent(in) :: md1,md3,lot,nfft,n3
-  real(8), dimension(2,lot,n3/2), intent(in) :: zw
-  real(8), dimension(md1,md3),intent(inout) :: zf
-  real(8), intent(in) :: scal
+  !!****h* BigDFT/unfill_downcorn
+  !! NAME
+  !!   unfill_downcorn
+  !!
+  !! FUNCTION
+  !!     (Based on suitable modifications of S.Goedecker routines)
+  !!     Restore data into output array, calculating in the meanwhile
+  !!     Hartree energy of the potential 
+  !!
+  !! SYNOPSIS
+  !!     zf:          Original distributed density as well as
+  !!                  Distributed solution of the poisson equation (inout)
+  !!     zw:          FFT work array
+  !!     n3:          (twice the) dimension of the last FFTtransform.
+  !!     md1,md3:     Dimensions of the undistributed part of the real grid
+  !!     nfft:        number of planes
+  !!     scal:        Needed to achieve unitarity and correct dimensions
+  !!
+  !! WARNING
+  !!     Assuming that high frequencies are in the corners 
+  !!     and that n3 is multiple of 4   
+  !!
+  !! RESTRICTIONS on USAGE
+  !!     Copyright (C) Stefan Goedecker, Cornell University, Ithaca, USA, 1994
+  !!     Copyright (C) Stefan Goedecker, MPI Stuttgart, Germany, 1999
+  !!     Copyright (C) 2002 Stefan Goedecker, CEA Grenoble
+  !!     This file is distributed under the terms of the
+  !!     GNU General Public License, see http://www.gnu.org/copyleft/gpl.txt .
+  !!
+  !! AUTHORS
+  !!    S. Goedecker, L. Genovese
+  !!
+  !! CREATION DATE
+  !!     February 2006
+  !!
+  !! SOURCE
+  !!
+  subroutine unfill_downcorn(md1,md3,lot,nfft,n3,zw,zf, scal)
+    integer, intent(in) :: md1,md3,lot,nfft,n3
+    real(8), dimension(2,lot,n3/2), intent(in) :: zw
+    real(8), dimension(md1,md3),intent(inout) :: zf
+    real(8), intent(in) :: scal
 
-  integer :: i3,i1
-  real(8) :: pot1
+    integer :: i3,i1
+    real(8) :: pot1
 
-  do i3=1,n3/4
-    do i1=1,nfft
-      pot1 = scal*zw(1,i1,i3)
-      zf(i1,2*i3-1)= pot1 
-      pot1 = scal*zw(2,i1,i3)
-      zf(i1,2*i3)= pot1 
+    do i3=1,n3/4
+      do i1=1,nfft
+        pot1 = scal*zw(1,i1,i3)
+        zf(i1, 2*i3 - 1) = pot1 
+        pot1 = scal*zw(2, i1, i3)
+        zf(i1, 2*i3) = pot1 
+      end do
     end do
-  end do
-  
-end subroutine unfill_downcorn
+
+  end subroutine unfill_downcorn
 
 ! FFT PART RELATED TO THE KERNEL -----------------------------------------------------------------
 !!****h* BigDFT/kernelfft

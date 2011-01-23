@@ -38,6 +38,7 @@ subroutine X(vec_scatter)(vp, root, v, v_local)
   R_TYPE,  allocatable :: v_tmp(:)  !< Send buffer.
 
   PUSH_SUB(X(vec_scatter))
+  call profiling_in(prof_scatter, "VEC_SCATTER")
 
   ! Skip the MPI call if domain parallelization is not used.
   if(vp%npart.lt.2) then
@@ -76,6 +77,7 @@ subroutine X(vec_scatter)(vp, root, v, v_local)
   SAFE_DEALLOCATE_A(v_tmp)
   SAFE_DEALLOCATE_A(displs)
 
+  call profiling_out(prof_scatter)
   POP_SUB(X(vec_scatter))
 
 end subroutine X(vec_scatter)
@@ -213,7 +215,8 @@ subroutine X(vec_allgather)(vp, v, v_local)
   R_TYPE,  allocatable :: v_tmp(:)  !< Receive buffer.
 
   PUSH_SUB(X(vec_allgather))
-
+  call profiling_in(prof_allgather, "VEC_ALLGATHER")
+  
   ! Unfortunately, vp%xlocal ist not quite the required
   ! displacement vector.
   SAFE_ALLOCATE(displs(1:vp%npart))
@@ -235,6 +238,7 @@ subroutine X(vec_allgather)(vp, v, v_local)
   SAFE_DEALLOCATE_A(v_tmp)
   SAFE_DEALLOCATE_A(displs)
 
+  call profiling_out(prof_allgather)
   POP_SUB(X(vec_allgather))
 
 end subroutine X(vec_allgather)

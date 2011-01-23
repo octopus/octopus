@@ -62,7 +62,7 @@ module cube_function_m
     type(fft_t), pointer :: fft
   end type zcf_t
 
-
+  type(profile_t), save :: prof_m2c, prof_c2m
 contains
 
   ! ---------------------------------------------------------
