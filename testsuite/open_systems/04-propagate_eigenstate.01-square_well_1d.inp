@@ -6,8 +6,11 @@
 # potential barrier in 1D and propagate it.
 
 ParallelizationStrategy = par_kpoints
-MeshBlockSizeXY = 1
-MeshBlockSizeZ = 1
+
+%MeshBlockSize
+ 1 | 1 | 1
+%
+
 ExperimentalFeatures = yes
 
 %CalculationMode

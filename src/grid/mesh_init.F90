@@ -545,65 +545,62 @@ contains
   ! ---------------------------------------------------------
   subroutine create_x_Lxyz()
     integer :: il, iin, ien, ix, iy, iz
-    integer :: ixb, iyb, izb, bsize, bsizez
+    integer :: ixb, iyb, izb, bsize(1:3)
     type(block_t) :: blk
+    integer :: idir, nn
     FLOAT :: chi(1:MAX_DIM)
 
     PUSH_SUB(mesh_init_stage_3.create_x_Lxyz)
 
     SAFE_ALLOCATE(mesh%idx%Lxyz(1:mesh%np_part_global, 1:MAX_DIM))
 
-    !%Variable MeshBlockSizeXY
-    !%Type integer
-    !%Default 20
-    !%Section Execution::Optimization
-    !%Description
-    !% To improve memory-access locality when calculating derivatives,
-    !% <tt>Octopus</tt> arranges mesh points in blocks. This variable controls
-    !% the size of this blocks in the <i>x</i>- and <i>y</i>-directions. The default
-    !% is 20. (This variable only affects the performance of <tt>Octopus</tt>
-    !% and not the results.)
-    !%End
-    call parse_integer(datasets_check('MeshBlockSizeXY'), 20, bsize)
+    call messages_obsolete_variable('MeshBlockSizeXY', 'MeshBlockSize')
+    call messages_obsolete_variable('MeshBlockSizeZ', 'MeshBlockSize')
 
-    !%Variable MeshBlockSizeZ
-    !%Type integer
-    !%Default 100
+    !%Variable MeshBlockSize
+    !%Type block
     !%Section Execution::Optimization
     !%Description
     !% To improve memory-access locality when calculating derivatives,
-    !% <tt>Octopus</tt> arranges mesh points in blocks. This variable controls
-    !% the size of this blocks in the <i>z</i>-direction. The default is
-    !% 100. (This variable only affects the performance of <tt>Octopus</tt> and
-    !% not the results.)
+    !% <tt>Octopus</tt> arranges mesh points in blocks. This variable
+    !% controls the size of this blocks in the different
+    !% directions. The default is | 20 | 20 | 100 |. (This variable only
+    !% affects the performance of <tt>Octopus</tt> and not the
+    !% results.) 
     !%End
-    call parse_integer(datasets_check('MeshBlockSizeZ'), 100, bsizez)
+    bsize(1:2) = 20
+    bsize(3) = 100
+
+    if(parse_block('MeshBlockSize', blk) == 0) then
+      nn = parse_block_cols(blk, 0)
+      do idir = 1, nn
+        call parse_block_integer(blk, 0, idir - 1, bsize(idir))
+      end do
+    end if
 
     ! When using open boundaries we need to have a mesh block-size of 1
     if (parse_block(datasets_check('OpenBoundaries'), blk).eq.0) then
-      if (bsize.gt.1 .or. bsizez.gt.1) then
+      if (any(bsize > 1)) then
         message(1) = 'When in transport mode, the block-ordering'
         message(2) = 'of the mesh points cannot be chosen freely.'
-        message(3) = 'Both variables, MeshBlockSizeXY and MeshBlockSizeZ'
-        message(4) = 'have to be initialized with the value 1.'
-        message(5) = 'Also, when restarting from datasets, these need to be'
-        message(6) = 'calculated with the same block-size of 1.'
-        call write_fatal(6)
+        message(3) = 'All the values of MeshBlockSize have to be'
+        message(4) = 'initialized with the value 1.'
+        call write_fatal(4)
       end if
     end if
-
+    
     ! first we fill the points in the inner mesh
     iin = 0
     ien = mesh%np_global
-    do ixb = mesh%idx%nr(1,1), mesh%idx%nr(2,1), bsize
-      do iyb = mesh%idx%nr(1,2), mesh%idx%nr(2,2), bsize
-        do izb = mesh%idx%nr(1,3), mesh%idx%nr(2,3), bsizez
+    do ixb = mesh%idx%nr(1,1), mesh%idx%nr(2,1), bsize(1)
+      do iyb = mesh%idx%nr(1,2), mesh%idx%nr(2,2), bsize(2)
+        do izb = mesh%idx%nr(1,3), mesh%idx%nr(2,3), bsize(3)
 
-          do ix = ixb, min(ixb + bsize - 1, mesh%idx%nr(2,1))
+          do ix = ixb, min(ixb + bsize(1) - 1, mesh%idx%nr(2,1))
             chi(1) = real(ix, REAL_PRECISION) * mesh%spacing(1) + mesh%sb%box_offset(1)
-            do iy = iyb, min(iyb + bsize - 1, mesh%idx%nr(2,2))
+            do iy = iyb, min(iyb + bsize(2) - 1, mesh%idx%nr(2,2))
               chi(2) = real(iy, REAL_PRECISION) * mesh%spacing(2) + mesh%sb%box_offset(2)
-              do iz = izb, min(izb + bsizez - 1, mesh%idx%nr(2,3))
+              do iz = izb, min(izb + bsize(3) - 1, mesh%idx%nr(2,3))
                 chi(3) = real(iz, REAL_PRECISION) * mesh%spacing(3) + mesh%sb%box_offset(3)
                 
                 if(btest(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)) then

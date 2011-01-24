@@ -11,8 +11,9 @@ ParallelizationStrategy = par_kpoints
 Eigensolver = plan
 EigensolverFinalTolerance = 1e-9
 
-MeshBlockSizeXY = 1
-MeshBlockSizeZ = 1
+%MeshBlockSize
+ 1 | 1 | 1
+%
 
 %CalculationMode
  gs      | gs           | td

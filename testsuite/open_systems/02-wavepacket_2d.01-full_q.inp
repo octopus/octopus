@@ -8,8 +8,11 @@
 # The Q matrices are fully calculated.
 
 ParallelizationStrategy = par_kpoints
-MeshBlockSizeXY = 1
-MeshBlockSizeZ = 1
+
+%MeshBlockSize
+ 1 | 1 | 1
+%
+
 ExperimentalFeatures = yes
 
 %CalculationMode

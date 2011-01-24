@@ -7,8 +7,11 @@
 # The kinetic energy is calculated by a nine-point formula.
 
 ParallelizationStrategy = par_kpoints
-MeshBlockSizeXY = 1
-MeshBlockSizeZ = 1
+
+%MeshBlockSize
+ 1 | 1 | 1
+%
+
 ExperimentalFeatures = yes
 
 ci = {0, 1}
