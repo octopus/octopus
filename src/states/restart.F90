@@ -709,8 +709,8 @@ contains
     type(states_t),       intent(inout) :: st
     type(grid_t), target, intent(in)    :: gr
     
-    integer                    :: icell, ik, ist, idim, jk(st%nst), err, wfns, occs, il
-    integer                    :: np, ip, idir, lead_nr(2, MAX_DIM)
+    integer                    :: ik, ist, idim, jk(st%nst), err, wfns, occs, il
+    integer                    :: np, ip, ip_lead, idir, lead_nr(2, MAX_DIM), ix, iy, iz, ixlead(1:3)
     character(len=256)         :: line, fname, filename, restart_dir, chars
     character                  :: char
     FLOAT                      :: occ, eval, kpoint(1:MAX_DIM), w_k, w_sum
@@ -719,6 +719,7 @@ contains
     CMPLX                      :: phase
     CMPLX, allocatable         :: tmp(:, :)
     type(mpi_grp_t)            :: mpi_grp
+    integer                    :: start(1:3), end(1:3), start_lead(1:3), end_lead(1:3)
 
     PUSH_SUB(read_free_states)
 
@@ -794,14 +795,40 @@ contains
 
       call lead_dens_accum()
 
+      ! Copy the wave-function from the lead to the central
+      ! region, using periodicity.
+      start(1:3) = gr%mesh%idx%nr(1, 1:3) + gr%mesh%idx%enlarge(1:3)
+      end(1:3) = gr%mesh%idx%nr(2, 1:3) - gr%mesh%idx%enlarge(1:3)
 
-      ! This loop replicates the lead wavefunction into the central region.
-      ! It only works in this compact form because the transport-direction (x) is
-      ! the index running slowest.
-      ! FIXME: rewrite to get it working with MeshBlockSizexy > 1
-      ! loop the numbers of unit cells that fit in central region
-      do icell = 1, nint(gr%sb%lsize(TRANS_DIR)/gr%ob_grid%lead(LEFT)%sb%lsize(TRANS_DIR))
-        st%zphi((icell - 1) * np + 1:icell * np, idim, ist, jk(ist)) = tmp(1:np, idim)
+      start_lead(1:3) = gr%ob_grid%lead(LEFT)%mesh%idx%nr(1, 1:3) + gr%ob_grid%lead(LEFT)%mesh%idx%enlarge(1:3)
+      end_lead(1:3) = gr%ob_grid%lead(LEFT)%mesh%idx%nr(2, 1:3) - gr%ob_grid%lead(LEFT)%mesh%idx%enlarge(1:3)
+
+      ixlead(1) = start_lead(1)
+      do ix = start(1), end(1)
+
+        ixlead(2) = start_lead(2)
+        do iy = start(2), end(2)
+          
+          ixlead(3) = start_lead(3)
+          do iz = start(3), end(3)
+
+            ip = gr%mesh%idx%lxyz_inv(ix, iy, iz)
+            ip_lead = gr%ob_grid%lead(LEFT)%mesh%idx%lxyz_inv(ixlead(1), ixlead(2), ixlead(3))
+
+            if(ip > 0 .and. ip <= gr%mesh%np .and. ip_lead > 0 .and. ip_lead <= gr%ob_grid%lead(LEFT)%mesh%np) then
+              st%zphi(ip, idim, ist, jk(ist)) = tmp(ip_lead, idim)
+            end if
+
+            INCR(ixlead(3), 1)
+            if(TRANS_DIR == 3 .and. ixlead(3) > end_lead(3)) ixlead(3) = start_lead(3)
+          end do
+
+          INCR(ixlead(2), 1)
+          if(TRANS_DIR == 2 .and. ixlead(2) > end_lead(2)) ixlead(2) = start_lead(2)
+        end do
+
+        INCR(ixlead(1), 1)
+        if(TRANS_DIR == 1 .and. ixlead(1) > end_lead(1)) ixlead(1) = start_lead(1)
       end do
 
       ! Apply phase. Here the kpoint read from the file is different
