@@ -30,6 +30,7 @@ module mesh_init_m
   use loct_m
   use math_m
   use mesh_m
+  use mesh_cube_map_m
   use mesh_partition_m
   use messages_m
   use mpi_m
@@ -533,6 +534,8 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
   end if
 
   call mesh_get_vol_pp(mesh%sb)
+
+  call mesh_cube_map_init(mesh%cube_map, mesh%idx, mesh%np_global)
 
   call profiling_out(mesh_init_prof)
   POP_SUB(mesh_init_stage_3)

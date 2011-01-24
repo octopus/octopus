@@ -115,7 +115,8 @@ subroutine X(mesh_to_cube) (mesh, mf, cf)
   type(X(cf_t)), intent(inout) :: cf
 
   integer :: ip, ix, iy, iz, center(3)
-  
+  integer :: im, ii, nn
+
   PUSH_SUB(X(mesh_to_cube))
   call profiling_in(prof_m2c, "MESH_TO_CUBE")
 
@@ -125,13 +126,17 @@ subroutine X(mesh_to_cube) (mesh, mf, cf)
 
   cf%RS = M_ZERO
 
-  do ip = 1, mesh%np_global
+  do im = 1, mesh%cube_map%nmap
+    ip = mesh%cube_map%map(POINT, im)
+    nn = mesh%cube_map%map(COUNT, im)
+
     ix = mesh%idx%Lxyz(ip, 1) + center(1)
     iy = mesh%idx%Lxyz(ip, 2) + center(2)
     iz = mesh%idx%Lxyz(ip, 3) + center(3)
-
-    cf%RS(ix, iy, iz) = mf(ip)
+    forall(ii = 0:nn - 1) cf%RS(ix, iy, iz + ii) = mf(ip + ii)
   end do
+  
+  call profiling_count_transfers(mesh%np_global, mf(1))
 
   call profiling_out(prof_m2c)
   POP_SUB(X(mesh_to_cube))
@@ -144,22 +149,29 @@ subroutine X(cube_to_mesh) (mesh, cf, mf)
   R_TYPE,        intent(out) :: mf(:)  ! mf(mesh%np_global)
 
   integer :: ip, ix, iy, iz, center(3)
+  integer :: im, ii, nn
 
   PUSH_SUB(X(cube_to_mesh))
+
   call profiling_in(prof_c2m, "CUBE_TO_MESH")
 
   ASSERT(associated(cf%RS))
 
-  center(1:3) =  cf%n(1:3)/2 + 1
+  center(1:3) = cf%n(1:3)/2 + 1
 
-  do ip = 1, mesh%np_global
+  do im = 1, mesh%cube_map%nmap
+    ip = mesh%cube_map%map(POINT, im)
+    nn = mesh%cube_map%map(COUNT, im)
     ix = mesh%idx%Lxyz(ip, 1) + center(1)
     iy = mesh%idx%Lxyz(ip, 2) + center(2)
     iz = mesh%idx%Lxyz(ip, 3) + center(3)
-    mf(ip) = cf%RS(ix, iy, iz)
+    forall(ii = 0:nn - 1) mf(ip + ii) = cf%RS(ix, iy, iz + ii)
   end do
+  
+  call profiling_count_transfers(mesh%np_global, mf(1))
 
   call profiling_out(prof_c2m)
+
   POP_SUB(X(cube_to_mesh))
 
 end subroutine X(cube_to_mesh)

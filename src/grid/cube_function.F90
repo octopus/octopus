@@ -22,6 +22,7 @@
 module cube_function_m
   use global_m
   use mesh_m
+  use mesh_cube_map_m
   use messages_m
   use fft_m
   use profiling_m
