@@ -41,7 +41,7 @@ module mesh_cube_map_m
     integer, pointer :: map(:, :)
   end type mesh_cube_map_t
 
-  integer, public, parameter :: POINT = 1, COUNT = 2
+  integer, public, parameter :: MCM_POINT = 1, MCM_COUNT = 2
 
 contains
 
@@ -68,11 +68,11 @@ contains
           if(any(i1(1:2) /= i2(1:2)) .or. i1(3) /= i2(3) + 1) then
             INCR(this%nmap, 1)
             if(step == 2) then
-              this%map(POINT, this%nmap) = ip
-              this%map(COUNT, this%nmap) = 1
+              this%map(MCM_POINT, this%nmap) = ip
+              this%map(MCM_COUNT, this%nmap) = 1
             end if
           else
-            if(step == 2) INCR(this%map(COUNT, this%nmap), 1)
+            if(step == 2) INCR(this%map(MCM_COUNT, this%nmap), 1)
           end if
           i2 = i1
         end do

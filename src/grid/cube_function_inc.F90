@@ -127,8 +127,8 @@ subroutine X(mesh_to_cube) (mesh, mf, cf)
   cf%RS = M_ZERO
 
   do im = 1, mesh%cube_map%nmap
-    ip = mesh%cube_map%map(POINT, im)
-    nn = mesh%cube_map%map(COUNT, im)
+    ip = mesh%cube_map%map(MCM_POINT, im)
+    nn = mesh%cube_map%map(MCM_COUNT, im)
 
     ix = mesh%idx%Lxyz(ip, 1) + center(1)
     iy = mesh%idx%Lxyz(ip, 2) + center(2)
@@ -160,8 +160,8 @@ subroutine X(cube_to_mesh) (mesh, cf, mf)
   center(1:3) = cf%n(1:3)/2 + 1
 
   do im = 1, mesh%cube_map%nmap
-    ip = mesh%cube_map%map(POINT, im)
-    nn = mesh%cube_map%map(COUNT, im)
+    ip = mesh%cube_map%map(MCM_POINT, im)
+    nn = mesh%cube_map%map(MCM_COUNT, im)
     ix = mesh%idx%Lxyz(ip, 1) + center(1)
     iy = mesh%idx%Lxyz(ip, 2) + center(2)
     iz = mesh%idx%Lxyz(ip, 3) + center(3)

@@ -111,6 +111,8 @@ program oct_test
 
     PUSH_SUB(test_hartree)
 
+    call calc_mode_set_parallelization(P_STRATEGY_STATES, default = .false.)
+
     call system_init(sys)
     call poisson_test(sys%gr%mesh)
     call system_end(sys)
