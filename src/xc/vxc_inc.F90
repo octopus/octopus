@@ -26,8 +26,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, vxc, vt
   integer,              intent(in)    :: ispin           !< Number of spin channels 
   FLOAT,                intent(in)    :: ioniz_pot
   FLOAT,                intent(in)    :: qtot 
-  FLOAT, optional,      intent(out)   :: ex              !< Exchange energy.
-  FLOAT, optional,      intent(out)   :: ec              !< Correlation energy.
+  FLOAT, optional,      intent(inout) :: ex              !< Exchange energy.
+  FLOAT, optional,      intent(inout) :: ec              !< Correlation energy.
   FLOAT, optional,      intent(inout) :: vxc(:,:)        !< XC potential
   FLOAT, optional,      intent(inout) :: vtau(:,:)       !< Two times kinetic energy density 
 
@@ -316,8 +316,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, vxc, vt
 
   if(calc_energy) then
     ! integrate energies per unit volume
-    ex = dmf_integrate(der%mesh, ex_per_vol)
-    ec = dmf_integrate(der%mesh, ec_per_vol)
+    ex = ex + dmf_integrate(der%mesh, ex_per_vol)
+    ec = ec + dmf_integrate(der%mesh, ec_per_vol)
   end if
 
   ! clean up allocated memory
