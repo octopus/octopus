@@ -779,12 +779,13 @@ contains
   !> Function to divide the range of numbers from 1 to nn
   !! between tsize processors.
   !! THREADSAFE
-  subroutine multicomm_divide_range(nn, tsize, start, final, lsize)
+  subroutine multicomm_divide_range(nn, tsize, start, final, lsize, scalapack_compat)
     integer,           intent(in)    :: nn
     integer,           intent(in)    :: tsize
     integer,           intent(out)   :: start(:)
     integer,           intent(out)   :: final(:)
     integer, optional, intent(out)   :: lsize(:)
+    logical, optional, intent(in)    :: scalapack_compat
 
     integer :: ii, jj, rank
 

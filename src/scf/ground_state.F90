@@ -57,6 +57,7 @@ contains
   subroutine ground_state_run_init()
 
     call calc_mode_set_parallelization(P_STRATEGY_STATES, default = .false.)
+    call calc_mode_set_scalapack_compat()
 
   end subroutine ground_state_run_init
 

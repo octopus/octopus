@@ -24,16 +24,19 @@ module calc_mode_m
   use messages_m
   use multicomm_m
 
-  public ::                            &
-       calc_mode_t,                    &
-       calc_mode_init,                 &
-       calc_mode_set_parallelization,  &
-       calc_mode_parallel_mask,        &
-       calc_mode_default_parallel_mask
+  public ::                             &
+       calc_mode_t,                     &
+       calc_mode_init,                  &
+       calc_mode_set_parallelization,   &
+       calc_mode_parallel_mask,         &
+       calc_mode_default_parallel_mask, &
+       calc_mode_set_scalapack_compat,  &
+       calc_mode_scalapack_compat
 
   type calc_mode_t
     integer :: par_mask
     integer :: def_par_mask
+    logical :: scalapack_compat
   end type calc_mode_t
 
   type(calc_mode_t) :: this
@@ -53,6 +56,7 @@ module calc_mode_m
       this%def_par_mask = 0
       this%def_par_mask = ibset(this%def_par_mask, P_STRATEGY_DOMAINS - 1)
 
+      this%scalapack_compat = .false.
     end subroutine calc_mode_init
 
     ! -----------------------------------------------------
@@ -73,6 +77,23 @@ module calc_mode_m
     end subroutine calc_mode_set_parallelization
 
     ! -----------------------------------------------------
+    
+    !> Defines that the current run mode requires division of states
+    !! and domains to be compatible with scalapack.
+    subroutine calc_mode_set_scalapack_compat()
+      this%scalapack_compat = .true.
+    end subroutine calc_mode_set_scalapack_compat
+
+    ! ----------------------------------------------------- 
+    
+    !> Whether the current run mode requires divisions compatible with
+    !! scalapack.
+    logical pure function calc_mode_scalapack_compat() result(compat)
+      compat = this%scalapack_compat
+    end function calc_mode_scalapack_compat
+    
+    ! -----------------------------------------------------
+
     integer function calc_mode_parallel_mask() result(par_mask)
       PUSH_SUB(calc_mode_parallel_mask)
 

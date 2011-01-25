@@ -20,6 +20,7 @@
 #include "global.h"
 
 module states_m
+  use calc_mode_m
   use batch_m
   use blas_m
   use datasets_m
@@ -1608,7 +1609,8 @@ return
      SAFE_ALLOCATE(st%st_range(1:2, 0:st%mpi_grp%size-1))
      SAFE_ALLOCATE(st%st_num(0:st%mpi_grp%size-1))
 
-     call multicomm_divide_range(st%nst, st%mpi_grp%size, st%st_range(1, :), st%st_range(2, :), lsize = st%st_num)
+     call multicomm_divide_range(st%nst, st%mpi_grp%size, st%st_range(1, :), st%st_range(2, :), &
+       lsize = st%st_num, scalapack_compat = calc_mode_scalapack_compat())
 
      do k = 0, st%mpi_grp%size - 1
        write(message(1),'(a,i4,a,i5,a,i6,a,i6)') &
