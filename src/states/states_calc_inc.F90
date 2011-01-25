@@ -110,6 +110,7 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
   integer :: idim, nref, wsize, info, ip, temp
 #ifdef HAVE_SCALAPACK
   integer :: blockrow, blockcol, total_np
+  type(blacs_grp_t) :: bgrp
 #endif
 
   PUSH_SUB(X(states_orthogonalization_block))
@@ -148,16 +149,9 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
 
     if(mesh%parallel_in_domains) then
 #ifdef HAVE_SCALAPACK 
-
-      ! Set up process grid that is as close to square as possible
-      blacs%nprow = mesh%mpi_grp%size
-      blacs%npcol = 1
-      ! Define process grid, I don`t know if it is needed or we can pass MPI communicator(s) [Joseba]
-      call blacs_get(-1, 0, blacs%context)
-      call blacs_gridinit(blacs%context,'Row-major', blacs%nprow, blacs%npcol) !
-      call blacs_gridinfo(blacs%context, blacs%nprow, blacs%npcol, & !
-        blacs%myrow, blacs%mycol)
-
+      
+      call blacs_context_from_mpi(bgrp, st%dom_st)
+      
       ! We need to select the block size of the decomposition. This is
       ! tricky, since not all processors have the same number of
       ! points.
@@ -169,17 +163,17 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
 
       blockrow = maxval(mesh%vp%np_local) 
       blockcol = nst
-      total_np = blockrow*blacs%nprow
+      total_np = blockrow*bgrp%nprow
 
       ASSERT(mesh%np_part >= blockrow)
       psi(mesh%np + 1:blockrow, 1:dim, 1:nst) = M_ZERO
 
       ! DISTRIBUTE THE MATRIX ON THE PROCESS GRID
       ! Initialize the descriptor array for the main matrices (ScaLAPACK)
-      call descinit(blacs%descriptor, total_np, nst, blockrow, blockcol, 0, 0, blacs%context, mesh%np_part, blacs%info) 
+      call descinit(bgrp%descriptor, total_np, nst, blockrow, blockcol, 0, 0, bgrp%context, mesh%np_part, bgrp%info)
 
-      write(message(1),'(a,I3,a,i3,a,i3)') 'No. of proc. = ', blacs%nprocs, ' No. of col. = ',&
-        blacs%npcol, ' No. of row. = ', blacs%nprow
+      write(message(1),'(a,I3,a,i3,a,i3)') 'No. of proc. = ', bgrp%nprocs, ' No. of col. = ',&
+        bgrp%npcol, ' No. of row. = ', bgrp%nprow
       call write_info(1)
 
       nref = min(nst, total_np)
@@ -187,21 +181,21 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
       tau = M_ZERO
 
       ! calculate the QR decomposition
-      call scalapack_geqrf(total_np, nst, psi(1, 1, 1), 1, 1, blacs%descriptor, tau(1), tmp, -1, blacs%info)
+      call scalapack_geqrf(total_np, nst, psi(1, 1, 1), 1, 1, bgrp%descriptor, tau(1), tmp, -1, bgrp%info)
       wsize = nint(R_REAL(tmp))
       SAFE_ALLOCATE(work(1:wsize))
-      call scalapack_geqrf(total_np, nst, psi(1, 1, 1), 1, 1, blacs%descriptor, tau(1), work(1), wsize, blacs%info)
+      call scalapack_geqrf(total_np, nst, psi(1, 1, 1), 1, 1, bgrp%descriptor, tau(1), work(1), wsize, bgrp%info)
       SAFE_DEALLOCATE_A(work)
 
       ! now calculate Q
-      call scalapack_orgqr(total_np, nst, nref, psi(1, 1, 1), 1, 1, blacs%descriptor, tau(1), tmp, -1, blacs%info)
+      call scalapack_orgqr(total_np, nst, nref, psi(1, 1, 1), 1, 1, bgrp%descriptor, tau(1), tmp, -1, bgrp%info)
       wsize = nint(R_REAL(tmp))
       SAFE_ALLOCATE(work(1:wsize))
-      call scalapack_orgqr(total_np, nst, nref, psi(1, 1, 1), 1, 1, blacs%descriptor, tau(1), work(1), wsize, blacs%info)
+      call scalapack_orgqr(total_np, nst, nref, psi(1, 1, 1), 1, 1, bgrp%descriptor, tau(1), work(1), wsize, bgrp%info)
       SAFE_DEALLOCATE_A(work)
 
-      if ( blacs%info /= 0) then
-        write(message(1),'(a,I6)') 'ScaLAPACK execution failed. Failed code: ',blacs%info
+      if(bgrp%info /= 0) then
+        write(message(1),'(a,I6)') 'ScaLAPACK execution failed. Failed code: ', bgrp%info
         call write_warning(1)
       end if
 #else

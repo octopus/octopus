@@ -46,6 +46,16 @@ module blacs_m
   end interface
 
   interface
+    subroutine blacs_gridmap(icontxt, usermap, ldumap, nprow, npcol)
+      integer,   intent(in)  :: icontxt
+      integer,   intent(in)  :: usermap
+      integer,   intent(in)  :: ldumap
+      integer,   intent(in)  :: nprow
+      integer,   intent(in)  :: npcol
+    end subroutine blacs_gridmap
+  end interface
+
+  interface
     subroutine blacs_gridexit(icontxt)
       integer, intent(in)  :: icontxt
     end subroutine blacs_gridexit
