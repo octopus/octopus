@@ -141,11 +141,11 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
 
   vxc_old(1:gr%mesh%np) = vxc(1:gr%mesh%np)
 
-  if(.not. lr_is_allocated(oep%lr)) call lr_allocate(oep%lr, st, gr%mesh) 
-
-  do ist = 1, st%nst
-    call X(lr_orth_vector) (gr%mesh, st, oep%lr%X(dl_psi)(:,:, ist, is), ist, is, R_TOTYPE(M_ZERO))
-  end do
+  if(.not. lr_is_allocated(oep%lr)) then
+    call lr_allocate(oep%lr, st, gr%mesh)
+    ! initialize to something non-zero
+    oep%lr%X(dl_psi)(:,:, :, :) = M_ONE
+  end if
 
   ! fix xc potential (needed for Hpsi)
   vxc(1:gr%mesh%np) = vxc_old(1:gr%mesh%np) + oep%vxc(1:gr%mesh%np)
@@ -157,11 +157,10 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
       ! evaluate right-hand side
       vxc_bar = dmf_dotp(gr%mesh, (R_ABS(st%X(psi)(1:gr%mesh%np, 1, ist, is)))**2, oep%vxc(1:gr%mesh%np))
       bb(1:gr%mesh%np, 1) = -(oep%vxc(1:gr%mesh%np) - (vxc_bar - oep%uxc_bar(ist))) * &
-        R_CONJ(st%X(psi)(1:gr%mesh%np, 1, ist, is)) + oep%X(lxc)(1:gr%mesh%np, ist)
+        R_CONJ(st%X(psi)(1:gr%mesh%np, 1, ist, is)) + oep%X(lxc)(1:gr%mesh%np, ist) 
 
       call X(lr_orth_vector) (gr%mesh, st, bb, ist, is, R_TOTYPE(M_ZERO))
 
-      ! and we now solve the equation [h-eps_i] psi_i = bb_i
       call X(solve_HXeY) (oep%solver, hm, gr, st, ist, is, oep%lr%X(dl_psi)(:,:, ist, is), bb, &
            R_TOTYPE(-st%eigenval(ist, is)), CNST(1e-6))
       
