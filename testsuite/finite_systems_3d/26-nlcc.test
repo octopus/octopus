@@ -1,0 +1,25 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 23-go-na2.test $
+
+Test       : Non-linear core corrections
+Programs   : octopus_mpi; octopus
+TestGroups : short-run
+Enabled    : Yes
+
+Input      : 26-nlcc.01-Fatom.inp
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -26.97584803
+match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ; -4.20331421
+match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ; 21.24593966
+match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ; -6.94955566
+match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ; -0.57417836
+match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ; 18.50619540
+match ; External energy    ; GREP(static/info, 'External    =', 20) ;-59.20424397
+match ; Eigenvalue 1 up    ; GREP(static/info, ' 1   up', 13) ;      -1.097592
+match ; Eigenvalue 1 dn    ; GREP(static/info, ' 1   dn', 13) ;      -1.038910
+match ; Eigenvalue 2 up    ; GREP(static/info, ' 2   up', 13) ;      -0.435956
+match ; Eigenvalue 2 dn    ; GREP(static/info, ' 2   dn', 13) ;      -0.379473
+match ; Eigenvalue 3 up    ; GREP(static/info, ' 3   up', 13) ;      -0.435956
+match ; Eigenvalue 3 dn    ; GREP(static/info, ' 3   dn', 13) ;      -0.379473
+match ; Eigenvalue 4 up    ; GREP(static/info, ' 4   up', 13) ;      -0.435956
+match ; Eigenvalue 4 dn    ; GREP(static/info, ' 4   dn', 13) ;      -0.379473
+match ; Force              ; GREP(static/info, 'Forces on the ions', 20, 2) ; -0.000000

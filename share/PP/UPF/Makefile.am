@@ -22,7 +22,8 @@
 upfdir = $(pkgdatadir)/PP/UPF
 
 dist_upf_DATA = \
-        Xe.UPF
+        Xe.UPF \
+	F.UPF
 
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use

@@ -1,0 +1,21 @@
+CalculationMode = gs
+fromScratch = yes
+ExperimentalFeatures = yes
+
+%Species
+  "F"  | 18.998 | spec_ps_upf | 9
+%                                                                                          
+
+%Coordinates
+"F" | 0 | 0 | 0
+%
+
+spacing = 0.22
+radius = 5.0
+
+SpinComponents = polarized
+
+%Occupations
+  1  |  1  |  1
+ 2/3 | 2/3 | 2/3
+%

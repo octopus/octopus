@@ -86,6 +86,8 @@ dist_share_DATA = \
 	24-o2-spin.test                              \
 	24-o2-spin.01-gs.inp \
 	25-multiresolution.01-Hatom.inp \
-	25-multiresolution.test
+	25-multiresolution.test \
+	26-nlcc.01-Fatom.inp \
+	26-nlcc.test
 
 CLEANFILES = *~ *.bak
