@@ -105,8 +105,7 @@ contains
 
   ! ---------------------------------------------------------
   ! read restart format information
-  subroutine restart_init
-
+  subroutine restart_init()
 
     PUSH_SUB(restart_init)
 
@@ -404,13 +403,13 @@ contains
     type(grid_t),         intent(in)    :: gr
     type(geometry_t),     intent(in)    :: geo
     integer,              intent(out)   :: ierr
-    logical,    optional, intent(in)    :: read_occ ! should I read the occupations
+    logical,    optional, intent(in)    :: read_occ !< should I read the occupations
     integer,    optional, intent(inout) :: iter
-    !if this next argument is present, the lr wfs are read instead of the gs wfs
-    type(lr_t), optional, intent(inout) :: lr 
-    logical,    optional, intent(in)    :: exact ! if .true. we need all the wavefunctions and on the exact grid
+    type(lr_t), optional, intent(inout) :: lr       !< if present, the lr wfs are read instead of the gs wfs
+    logical,    optional, intent(in)    :: exact    !< if .true. we need all the wavefunctions and on the same grid
 
-    integer              :: iunit, iunit2, err, ik, ist, idir, idim, int, read_np, read_np_part, read_ierr, ip, xx(1:MAX_DIM)
+    integer              :: wfns_file, occ_file, err, ik, ist, idir, idim, int 
+    integer              :: read_np, read_np_part, read_ierr, ip, xx(1:MAX_DIM)
     character(len=12)    :: filename
     character(len=1)     :: char
     logical, allocatable :: filled(:, :, :)
@@ -421,6 +420,8 @@ contains
     FLOAT                :: my_occ, flt
     logical              :: read_occ_, gs_allocated, lr_allocated, grid_changed, grid_reordered
     logical              :: exact_
+    FLOAT, pointer       :: dpsi(:, :, :, :)
+    CMPLX, pointer       :: zpsi(:, :, :, :)
 
     PUSH_SUB(restart_read)
 
@@ -441,7 +442,7 @@ contains
     ! the input file. The same is true when reading a linear-response restart.
     read_occ_ = .true.
     if(present(read_occ)) read_occ_ = .false.
-    
+
     ! sanity check
     gs_allocated = (associated(st%dpsi) .and. states_are_real(st)) .or. &
       (associated(st%zpsi) .and. states_are_complex(st))
@@ -456,12 +457,12 @@ contains
     ierr = 0
 
     ! open files to read
-    iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp = .true., grp = gr%mesh%mpi_grp)
-    if(iunit < 0) ierr = -1
+    wfns_file  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp = .true., grp = gr%mesh%mpi_grp)
+    if(wfns_file < 0) ierr = -1
 
-    iunit2 = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = gr%mesh%mpi_grp)
-    if(iunit2 < 0) ierr = -1
-    
+    occ_file = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = gr%mesh%mpi_grp)
+    if(occ_file < 0) ierr = -1
+
     ! now read the mesh information
     call mesh_read_fingerprint(gr%mesh, trim(dir)//'/grid', read_np_part, read_np)
 
@@ -472,7 +473,7 @@ contains
     if (read_np > 0 .and. gr%mesh%sb%box_shape /= HYPERCUBE) then
 
       grid_changed = .true.
-      
+
       ! perhaps only the order of the points changed, this can only
       ! happen if the number of points is the same and no points maps
       ! to zero (this is checked below)
@@ -497,7 +498,7 @@ contains
           if(map(ip) > gr%mesh%np_global) map(ip) = 0
         end if
       end do
-      
+
       SAFE_DEALLOCATE_A(read_lxyz)
 
       if(grid_reordered) then
@@ -515,8 +516,8 @@ contains
     end if
 
     if(ierr .ne. 0) then
-      if(iunit > 0) call io_close(iunit, grp = gr%mesh%mpi_grp)
-      if(iunit2 > 0) call io_close(iunit2, grp = gr%mesh%mpi_grp)
+      if(wfns_file > 0) call io_close(wfns_file, grp = gr%mesh%mpi_grp)
+      if(occ_file > 0) call io_close(occ_file, grp = gr%mesh%mpi_grp)
       if(exact_) call restart_fail()
       write(message(1),'(a)') 'Could not load restart information.'
       call write_info(1)
@@ -526,32 +527,48 @@ contains
       return
     end if
 
+    if (states_are_real(st)) then
+      nullify(zpsi)
+      if(.not. present(lr)) then
+        dpsi => st%dpsi
+      else
+        dpsi => lr%ddl_psi
+      end if
+    else
+      nullify(dpsi)
+      if(.not. present(lr)) then
+        zpsi => st%zpsi
+      else
+        zpsi => lr%zdl_psi
+      end if
+    end if
+
     ! now we really start
     SAFE_ALLOCATE(filled(1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
     filled = .false.
 
     ! Skip two lines.
-    call iopar_read(gr%mesh%mpi_grp, iunit,  line, err)
-    call iopar_read(gr%mesh%mpi_grp, iunit,  line, err)
+    call iopar_read(gr%mesh%mpi_grp, wfns_file,  line, err)
+    call iopar_read(gr%mesh%mpi_grp, wfns_file,  line, err)
 
-    call iopar_read(gr%mesh%mpi_grp, iunit2, line, err)
-    call iopar_read(gr%mesh%mpi_grp, iunit2, line, err)
+    call iopar_read(gr%mesh%mpi_grp, occ_file, line, err)
+    call iopar_read(gr%mesh%mpi_grp, occ_file, line, err)
 
     do
-      call iopar_read(gr%mesh%mpi_grp, iunit, line, int)
+      call iopar_read(gr%mesh%mpi_grp, wfns_file, line, int)
       read(line, '(a)') char
       if(int .ne. 0 .or. char == '%') exit
 
-      call iopar_backspace(gr%mesh%mpi_grp, iunit)
+      call iopar_backspace(gr%mesh%mpi_grp, wfns_file)
 
-      call iopar_read(gr%mesh%mpi_grp, iunit, line, err)
+      call iopar_read(gr%mesh%mpi_grp, wfns_file, line, err)
       read(line, *) ik, char, ist, char, idim, char, filename
       if(index_is_wrong()) then
-        call iopar_read(gr%mesh%mpi_grp, iunit2, line, err)
+        call iopar_read(gr%mesh%mpi_grp, occ_file, line, err)
         cycle
       end if
 
-      call iopar_read(gr%mesh%mpi_grp, iunit2, line, err)
+      call iopar_read(gr%mesh%mpi_grp, occ_file, line, err)
       if(.not. present(lr)) then ! do not read eigenvalues when reading linear response
         ! # occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
         read(line, *) my_occ, char, st%eigenval(ist, ik), char, (flt, char, idir = 1, gr%sb%dim), st%d%kweights(ik)
@@ -561,35 +578,20 @@ contains
       if(ist >= st%st_start .and. ist <= st%st_end .and. &
         st%d%kpt%start <= ik .and. st%d%kpt%end >= ik) then
 
-        if( .not. present(lr) ) then 
-          if (states_are_real(st)) then
-            if (.not. grid_changed) then
-              call drestart_read_function(dir, filename, gr%mesh, st%dpsi(:, idim, ist, ik), err)
-            else
-              call drestart_read_function(dir, filename, gr%mesh, st%dpsi(:, idim, ist, ik), err, map)
-            end if
+        if (states_are_real(st)) then
+          if (.not. grid_changed) then
+            call drestart_read_function(dir, filename, gr%mesh, dpsi(:, idim, ist, ik), err)
           else
-            if (.not. grid_changed) then
-              call zrestart_read_function(dir, filename, gr%mesh, st%zpsi(:, idim, ist, ik), err)
-            else
-              call zrestart_read_function(dir, filename, gr%mesh, st%zpsi(:, idim, ist, ik), err, map)
-            end if
+            call drestart_read_function(dir, filename, gr%mesh, dpsi(:, idim, ist, ik), err, map)
           end if
         else
-          if (states_are_real(st)) then
-            if (.not. grid_changed) then
-              call drestart_read_function(dir, filename, gr%mesh, lr%ddl_psi(:, idim, ist, ik), err)
-            else
-              call drestart_read_function(dir, filename, gr%mesh, lr%ddl_psi(:, idim, ist, ik), err, map)
-            end if
+          if (.not. grid_changed) then
+            call zrestart_read_function(dir, filename, gr%mesh, zpsi(:, idim, ist, ik), err)
           else
-            if (.not. grid_changed) then
-              call zrestart_read_function(dir, filename, gr%mesh, lr%zdl_psi(:, idim, ist, ik), err)
-            else
-              call zrestart_read_function(dir, filename, gr%mesh, lr%zdl_psi(:, idim, ist, ik), err, map)
-            end if
+            call zrestart_read_function(dir, filename, gr%mesh, zpsi(:, idim, ist, ik), err, map)
           end if
         end if
+
         if(err <= 0) then
           filled(idim, ist, ik) = .true.
           ierr = ierr + 1
@@ -599,22 +601,19 @@ contains
     end do
 
     if(present(iter)) then
-      call iopar_read(gr%mesh%mpi_grp, iunit, line, err)
+      call iopar_read(gr%mesh%mpi_grp, wfns_file, line, err)
       read(line, *) filename, filename, iter
     end if
 
 #if defined(HAVE_MPI)
-    if(st%parallel_in_states) then
-      call MPI_Allreduce(ierr, err, 1, MPI_INTEGER, MPI_SUM, st%mpi_grp%comm, mpi_err)
-      ierr = err
-    end if
-    if(st%d%kpt%parallel) then
-      call MPI_Allreduce(ierr, err, 1, MPI_INTEGER, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
+    if(st%parallel_in_states .or. st%d%kpt%parallel) then
+      call MPI_Allreduce(ierr, err, 1, MPI_INTEGER, MPI_SUM, st%st_kpt%comm, mpi_err)
       ierr = err
     end if
 #endif
 
-    call fill()
+    call fill_random()
+
     if(ierr == 0) then
       ierr = -1 ! no files read
       if(.not. present(lr)) then 
@@ -626,30 +625,27 @@ contains
       write(message(1),'(a)') 'No files could be read. No restart information can be used.'
       call write_info(1)
       call messages_print_stress(stdout)
+    else if(ierr == st%nst * st%d%nik * st%d%dim) then
+      ierr = 0
     else
-      ! Everything o.k.
-      if(ierr == st%nst * st%d%nik * st%d%dim) then
-        ierr = 0
+      if(.not. present(lr)) then 
+        write(str, '(a,i5)') 'Loading restart information.'
       else
-        if(.not. present(lr)) then 
-          write(str, '(a,i5)') 'Loading restart information.'
-        else
-          write(str, '(a,i5)') 'Loading restart information for linear response.'
-        end if
-        call messages_print_stress(stdout, trim(str))
-        write(message(1),'(a,i4,a,i4,a)') 'Only ', ierr,' files out of ', &
-          st%nst * st%d%nik * st%d%dim, ' could be read.'
-        call write_info(1)
-        call messages_print_stress(stdout)
+        write(str, '(a,i5)') 'Loading restart information for linear response.'
+      end if
+      call messages_print_stress(stdout, trim(str))
+      write(message(1),'(a,i4,a,i4,a)') 'Only ', ierr,' files out of ', &
+        st%nst * st%d%nik * st%d%dim, ' could be read.'
+      call write_info(1)
+      call messages_print_stress(stdout)
 
-        if(ierr .ne. 0 .and. exact_) call restart_fail()
-      endif
+      if(ierr .ne. 0 .and. exact_) call restart_fail()
     end if
 
     SAFE_DEALLOCATE_A(filled)
     SAFE_DEALLOCATE_A(map)
-    call io_close(iunit, grp = gr%mesh%mpi_grp)
-    call io_close(iunit2, grp = gr%mesh%mpi_grp)
+    call io_close(wfns_file, grp = gr%mesh%mpi_grp)
+    call io_close(occ_file, grp = gr%mesh%mpi_grp)
 
     call profiling_out(prof_read)
     POP_SUB(restart_read)
@@ -657,8 +653,8 @@ contains
   contains
 
     ! ---------------------------------------------------------
-    subroutine fill() ! Put random function in orbitals that could not be read.
-      PUSH_SUB(restart_read.fill)
+    subroutine fill_random() ! Put random function in orbitals that could not be read.
+      PUSH_SUB(restart_read.fill_random)
 
       do ik = st%d%kpt%start, st%d%kpt%end
 
@@ -672,11 +668,11 @@ contains
         end do
       end do
 
-      POP_SUB(restart_read.fill)
-    end subroutine fill
-
+      POP_SUB(restart_read.fill_random)
+    end subroutine fill_random
 
     ! ---------------------------------------------------------
+
     logical function index_is_wrong() ! .true. if the index (idim, ist, ik) is not present in st structure...
       PUSH_SUB(restart_read.index_is_wrong)
 
@@ -690,6 +686,8 @@ contains
 
       POP_SUB(restart_read.index_is_wrong)
     end function index_is_wrong
+
+    ! ---------------------------------------------------------
 
     subroutine restart_fail()
       message(1) = "Could not read KS orbitals from '"//trim(dir)
