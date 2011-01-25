@@ -45,3 +45,8 @@ do i=-m,m-1
    cgt(i+1)=ch(-i)*(-1)**(i+1)
 enddo
 !!***
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
