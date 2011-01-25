@@ -3,7 +3,7 @@
 
 Test       : Modified Gram-Schmidt orthogonalization
 Programs   : oct-test; oct-test_mpi
-TestGroups : short-run
+TestGroups : long-run
 Enabled    : Yes
 
 Precision : 1.0e-13

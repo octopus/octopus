@@ -3,10 +3,10 @@
 
 Test       : QR orthogonalization
 Programs   : oct-test
-TestGroups : short-run
+TestGroups : long-run
 Enabled    : Yes
 
-Precision : 1.0e-14
+Precision : 5.0e-14
 Input: 09-qr.01-real.inp
 match ; Overlap 1 1 ; GREP(out, '      1      1', 15) ;  0.222045E-15
 match ; Overlap 1 2 ; GREP(out, '      1      2', 15) ;  0.120490E-15
