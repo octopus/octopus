@@ -41,9 +41,10 @@ include "mpif.h"
     integer :: size !< size of comm (defined also in serial mode)
     integer :: rank !< rank of comm (defined also in serial mode)
   end type mpi_grp_t
-  
-  integer, parameter :: DLEN = 9
-  type blacs_grp_t
+ 
+  integer, parameter :: BLACS_DLEN = 9
+
+  type blacs_proc_grid_t
     integer :: context !< blacs context
     integer :: nprocs !< number of processors
     integer :: nprow !< number of processors per row
@@ -51,12 +52,10 @@ include "mpif.h"
     integer :: iam !< process indentifier
     integer :: myrow !< the row of the processor in the processor grid 
     integer :: mycol !< the column of the processor in the processor grid
-    integer :: descriptor (DLEN)
-    integer :: info !< blacs functions output information
-  end type blacs_grp_t
+  end type blacs_proc_grid_t
 
   type(mpi_grp_t), public :: mpi_world
-  type (blacs_grp_t), public :: blacs
+  type (blacs_proc_grid_t), public :: blacs
 contains
   ! ---------------------------------------------------------
   subroutine mpi_mod_init()
@@ -156,9 +155,9 @@ contains
 
   !> Initializes a blacs context from an MPI communicator with
   !> topological information.
-  subroutine blacs_context_from_mpi(this, mpi_grp)
-    type(blacs_grp_t), intent(out) :: this
-    type(mpi_grp_t),   intent(in)  :: mpi_grp
+  subroutine blacs_proc_grid_from_mpi(this, mpi_grp)
+    type(blacs_proc_grid_t), intent(out) :: this
+    type(mpi_grp_t),         intent(in)  :: mpi_grp
 
     integer, parameter :: maxdims = 2
     integer :: dims(1:2), topo, coords(1:2), ix, iy
@@ -203,7 +202,7 @@ contains
 
     deallocate(usermap)
 
-  end subroutine blacs_context_from_mpi
+  end subroutine blacs_proc_grid_from_mpi
 
 end module mpi_m
 
