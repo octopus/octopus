@@ -153,6 +153,7 @@ contains
   
   ! ---------------------------------------------------------
 
+#ifdef HAVE_SCALAPACK
   !> Initializes a blacs context from an MPI communicator with
   !> topological information.
   subroutine blacs_proc_grid_from_mpi(this, mpi_grp)
@@ -203,6 +204,7 @@ contains
     deallocate(usermap)
 
   end subroutine blacs_proc_grid_from_mpi
+#endif
 
 end module mpi_m
 
