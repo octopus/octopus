@@ -119,6 +119,9 @@ contains
 
     FLOAT, pointer :: points_ref(:), weights_ref(:)
 
+    nullify(points_ref)
+    nullify(weights_ref)
+
     ASSERT(n>=2.and.n<=12)
     select case(n)
     case(2);  points_ref  => GL_points_2;  weights_ref => GL_weights_2

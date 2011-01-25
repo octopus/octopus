@@ -145,17 +145,14 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
 
   end if
 
-  if(mesh%parallel_in_domains.and.reduce_) then
+  dotp = dotp_tmp
 #if defined(HAVE_MPI)
+  if(mesh%parallel_in_domains.and.reduce_) then
     call profiling_in(C_PROFILING_MF_REDUCE, "MF_REDUCE")
     call MPI_Allreduce(dotp_tmp, dotp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
     call profiling_out(C_PROFILING_MF_REDUCE)
-#else
-    ASSERT(.false.)
-#endif
-  else
-    dotp = dotp_tmp
   end if
+#endif
 
   POP_SUB(X(mf_dotp_1))
   call profiling_out(C_PROFILING_MF_DOTP)

@@ -21,6 +21,7 @@
 #include <global.h>
 
 module scaling_function_m
+  use blas_m
   use global_m
   use messages_m
 
@@ -45,11 +46,10 @@ contains
   !!
   subroutine scaling_function(itype,nd,nrange,a,x)
     integer, intent(in) :: itype
-
     integer, intent(in) :: nd
     integer, intent(out) :: nrange
     real(kind=8), dimension(0:nd), intent(out) :: a,x
-    !Local variables
+
     real(kind=8), dimension(:), allocatable :: y
     integer :: i,nt,ni
 
@@ -83,7 +83,7 @@ contains
       case(8)
         call back_trans_8(nd,nt,x,y)
       end select
-      call dcopy(nt,y,1,x,1)
+      call blas_copy(nt, y(0), 1, x(0) ,1)
       if (nt.eq.nd) then
         exit loop1
       end if

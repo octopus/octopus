@@ -42,6 +42,7 @@ module loct_m
     loct_printRecipe,        &
     loct_strerror,           &
     get_memory_usage,        &
+    loct_exit_failure,       &
     loct_pointer_copy
 
 #if defined(HAVE_GDLIB)
@@ -169,6 +170,11 @@ module loct_m
       character(len=*), intent(in)  :: dir
       character(len=*), intent(out) :: filename
     end subroutine oct_printRecipe
+  end interface
+
+  interface 
+    subroutine loct_exit_failure()
+    end subroutine loct_exit_failure
   end interface
 
   ! ---------------------------------------------------------

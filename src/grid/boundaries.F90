@@ -332,8 +332,10 @@ contains
   
   subroutine boundaries_end(this)
     type(boundaries_t),  intent(out)   :: this
-    
+
+#ifdef HAVE_MPI
     integer :: ipart
+#endif
 
     PUSH_SUB(boundaries_end)
 

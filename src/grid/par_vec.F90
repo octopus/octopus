@@ -162,10 +162,10 @@ module par_vec_m
     integer, pointer        :: ghost(:)             !< Global indices of all local
   end type pv_t
 
+#if defined(HAVE_MPI)
+
   type(profile_t), save :: prof_scatter
   type(profile_t), save :: prof_allgather
-
-#if defined(HAVE_MPI)
 
 contains
 

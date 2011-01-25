@@ -59,7 +59,7 @@ contains
     FLOAT,                 intent(in)  :: range
 
     integer :: pd
-    integer :: icell1, icell2, icell3, jj, num
+    integer :: icell1, icell2, icell3, jj
 
     PUSH_SUB(periodic_copy_init)
 

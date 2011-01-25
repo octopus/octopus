@@ -231,7 +231,7 @@ contains
         default_solver = POISSON_FFT_SPH
       end if
 
-      call parse_integer(datasets_check('PoissonSolver'), der%mesh%sb%periodic_dim, this%method)
+      call parse_integer(datasets_check('PoissonSolver'), default_solver, this%method)
       if( (this%method .ne. POISSON_FFT_SPH)         .and. &
           (this%method .ne. POISSON_DIRECT_SUM_2D)   .and. &
           (this%method .ne. 1)                       .and. &
@@ -403,10 +403,10 @@ contains
     integer :: ny_half, ny
     integer :: nz_half, nz
 
-    FLOAT :: xl, yl, zl, dx, dy, dz, sum0
+    FLOAT :: xl, yl, zl
 
     FLOAT, allocatable :: vh0(:,:,:), rh0(:,:,:)
-    integer :: icase = 1, icalc = 1, i1
+    integer :: icase = 1, icalc = 1
 
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
 
@@ -477,11 +477,6 @@ contains
 
     case(POISSON_SETE)
 
-       !Probably do not need to allocate so much: erased rhop2
-       i1=size(rho); !allocate(rhop_temp(i1)); allocate(rhop(i1)); allocate(rho_nuc(i1));
-       i1=size(pot);
-
-
       nx = der%mesh%idx%nr(2,1) - der%mesh%idx%nr(1,1) + 1 - 2*der%mesh%idx%enlarge(1)
       ny = der%mesh%idx%nr(2,2) - der%mesh%idx%nr(1,2) + 1 - 2*der%mesh%idx%enlarge(2)
       nz = der%mesh%idx%nr(2,3) - der%mesh%idx%nr(1,3) + 1 - 2*der%mesh%idx%enlarge(3)
@@ -497,12 +492,6 @@ contains
       xl = 2*der%mesh%sb%lsize(1) 
       yl = 2*der%mesh%sb%lsize(2) 
       zl = 2*der%mesh%sb%lsize(3)
-
-      dx = der%mesh%spacing(1)
-      dy = der%mesh%spacing(2)
-      dz = der%mesh%spacing(3)
-
-      sum0 = M_ZERO
 
       do counter = 1, der%mesh%np
         call  index_to_coords(der%mesh%idx,der%mesh%sb%dim,counter,conversion)
@@ -729,8 +718,10 @@ contains
   subroutine poisson_async_end(this, mc)
     type(poisson_t), intent(inout) :: this
     type(multicomm_t), intent(in)  :: mc
-    
+
+#ifdef HAVE_MPI2    
     integer :: islave
+#endif
 
     PUSH_SUB(poisson_async_end)
 
@@ -802,7 +793,7 @@ contains
 
   subroutine dpoisson_solve_start(this, rho)
     type(poisson_t),      intent(inout) :: this
-    FLOAT, target,        intent(in)    :: rho(:)
+    FLOAT,                intent(in)    :: rho(:)
 
 #ifdef HAVE_MPI2    
     integer :: islave

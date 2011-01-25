@@ -88,8 +88,9 @@ contains
     integer, allocatable :: ranks(:)
     !data ranks /0, 1/
     integer :: world_size
-#endif
     integer :: nodes
+#endif
+
 
     PUSH_SUB(poisson_isf_init)
 

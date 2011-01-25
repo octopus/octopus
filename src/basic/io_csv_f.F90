@@ -28,7 +28,7 @@ module io_csv_m
 
   private
 
-  public ::             &
+  public ::          &
     io_csv_read,     &
     io_csv_get_info
 
@@ -135,11 +135,8 @@ contains
     integer(8),          intent(inout) :: dims(:)
     integer,             intent(out)   :: ierr
 
-    integer :: type
-    
     PUSH_SUB(io_csv_get_info)
 
-    type = 0
     ierr = 0
     call get_info_csv(dims, ierr, trim(fname))
 

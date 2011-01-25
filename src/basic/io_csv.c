@@ -16,7 +16,7 @@
   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
   02111-1307, USA.
 
-  $Id: recipes.c 2146 2006-05-23 17:36:00Z xavier $
+  $Id: io_csv.c 2146 2006-05-23 17:36:00Z xavier $
 */
 
 /* 
@@ -114,7 +114,6 @@ void FC_FUNC_(read_csv,READ_CSV)
   char * filename;
   int i;
   FILE * fd;
-  ssize_t moved;
   char * buf;
   char * c;
   const char sep [] = "\t\n ,";
@@ -134,11 +133,9 @@ void FC_FUNC_(read_csv,READ_CSV)
   
   if ( (*output_type) == TYPE_FLOAT ) {
     i = 0;
-    float d;
-    while(fgets(buf,buf_size*sizeof(char),fd) != NULL)
-    {
+    while(fgets(buf,buf_size*sizeof(char),fd) != NULL){
+      float d;
       c = strtok(buf, sep);
-      double d;
       while (c != NULL) {
         assert(i/8 < *np);
         d = strtof(c, (char **) NULL);
@@ -149,8 +146,8 @@ void FC_FUNC_(read_csv,READ_CSV)
     }
   }
   else if ( (*output_type) == TYPE_DOUBLE ) {
-    i = 0;
     double d;
+    i = 0;
     while(fgets(buf,buf_size*sizeof(char),fd) != NULL)
     {
       c = strtok(buf, sep);
@@ -176,7 +173,6 @@ void FC_FUNC_(get_info_csv,GET_INFO_CSV)
   char * c;
   FILE * fd;
   int buf_size = 65536;
-  ssize_t moved;
   const char sep [] = "\n\t ,";
   
   unsigned long curr_dims [3] = {0, 0, 0};
