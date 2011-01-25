@@ -183,6 +183,7 @@ program oct_test
     PUSH_SUB(test_orthogonalization)
 
     call calc_mode_set_parallelization(P_STRATEGY_STATES, default = .false.)
+    call calc_mode_set_scalapack_compat()
 
     call system_init(sys)
 

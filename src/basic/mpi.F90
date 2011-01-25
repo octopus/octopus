@@ -55,7 +55,7 @@ include "mpif.h"
   end type blacs_proc_grid_t
 
   type(mpi_grp_t), public :: mpi_world
-  type (blacs_proc_grid_t), public :: blacs
+
 contains
   ! ---------------------------------------------------------
   subroutine mpi_mod_init()
@@ -64,7 +64,9 @@ contains
 #ifdef HAVE_OPENMP
     integer :: provided
 #endif
-
+#ifdef HAVE_SCALAPACK
+    integer :: iam, nprocs
+#endif
     ! initialize MPI
 #if defined(HAVE_OPENMP) && defined(HAVE_MPI2)
     call MPI_INIT_THREAD(MPI_THREAD_FUNNELED, provided, mpi_err)
@@ -81,14 +83,13 @@ contains
 
     ! Initialize Blacs to be able to use ScaLAPACK 
     ! Determine my process number and the number of processes in machine
-    call BLACS_PINFO(blacs%iam, blacs%nprocs)
+    call blacs_pinfo(iam, nprocs)
+
     ! If machine needs additional set up, do it now
-    if( blacs%nprocs < 1 ) then
-    !  if( blacs%iam == 0 )&
-     !   blacs%nprocs = blacs%nprow*blacs%npcol 
-      call BLACS_SETUP(blacs%iam,mpi_world%size)
-    end if  
-    
+    if( nprocs < 1 ) then
+      call blacs_setup(iam, mpi_world%size)
+    end if
+
 #endif
   end subroutine mpi_mod_init
 
@@ -97,10 +98,7 @@ contains
   subroutine mpi_mod_end()
 #if defined(HAVE_MPI)
     integer :: mpi_err
-#ifdef HAVE_SCALAPACK 
-    ! I think BLACS context is also released whem MPI_Finalize is called
-    integer,parameter :: continue = 1
-#endif
+
     ! end MPI
     call MPI_Finalize(mpi_err)
 #endif 
