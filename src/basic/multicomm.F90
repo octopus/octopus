@@ -81,11 +81,11 @@
 
   ! possible parallelization strategies
   integer, public, parameter ::      &
-    P_STRATEGY_SERIAL  = 0,          & ! single domain, all states, k-points on a single processor
-    P_STRATEGY_DOMAINS = 1,          & ! parallelization in domains
-    P_STRATEGY_STATES  = 2,          & ! parallelization in states
-    P_STRATEGY_KPOINTS = 3,          & ! parallelization in k-points
-    P_STRATEGY_OTHER   = 4             ! something else like e-h pairs
+    P_STRATEGY_SERIAL  = 0,          & !< single domain, all states, k-points on a single processor
+    P_STRATEGY_DOMAINS = 1,          & !< parallelization in domains
+    P_STRATEGY_STATES  = 2,          & !< parallelization in states
+    P_STRATEGY_KPOINTS = 3,          & !< parallelization in k-points
+    P_STRATEGY_OTHER   = 4             !< something else like e-h pairs
 
   integer, public, parameter ::      &
     P_MASTER           = 1,          &
@@ -295,9 +295,11 @@ contains
           do ii = 1, n_par_types
             if(iand(par_mask, 2**(ii - 1)) .ne. 0) then
               jj = jj + 1
-              write(message(jj), '(2a)') "  - ", par_types(ii)
+              write(message(jj), '(2a)') "  -> ", par_types(ii)
             end if
           end do
+          jj=jj+1
+          write(message(jj),'(a,i6)') "mc%par_strategy is : ",mc%par_strategy
           call write_fatal(jj, only_root_writes = .true.)
         end if
       else
@@ -780,49 +782,79 @@ contains
   !! between tsize processors.
   !! THREADSAFE
   subroutine multicomm_divide_range(nn, tsize, start, final, lsize, scalapack_compat)
-    integer,           intent(in)    :: nn
-    integer,           intent(in)    :: tsize
+    integer,           intent(in)    :: nn !< number of points to divide
+    integer,           intent(in)    :: tsize !< number of processors
     integer,           intent(out)   :: start(:)
     integer,           intent(out)   :: final(:)
-    integer, optional, intent(out)   :: lsize(:)
+    integer, optional, intent(out)   :: lsize(:) !< number of objects in each partition
     logical, optional, intent(in)    :: scalapack_compat
 
     integer :: ii, jj, rank
 
     ! no push_sub, threadsafe
-    
-    if(tsize <= nn) then
-      
-      do rank = 0, tsize - 1
+
+    if(present(scalapack_compat)) then
+      write(*,*)"scalapack_mode selected"
+      ! the number of processors is less than the number of points
+      if(tsize <= nn) then
         jj = nn / tsize
-        ii = nn - jj*tsize
-        if(ii > 0 .and. rank < ii) then
-          jj = jj + 1
+        if (mod(nn,tsize) /= 0) jj = jj + 1
+        do rank = 0, tsize - 1
+          
           start(rank + 1) = rank*jj + 1
-          final(rank + 1) = start(rank + 1) + jj - 1
-        else
-          final(rank + 1) = nn - (tsize - rank - 1)*jj
-          start(rank + 1) = final(rank + 1) - jj + 1
-        end if
-      end do
-
+          ! the last divide is less than the others
+          if ((rank*jj)+jj > nn) then
+            final(rank + 1) = nn
+          else
+            final(rank + 1) = start(rank + 1) + jj - 1
+          end if
+          
+        end do
+      else
+        do ii = 1, tsize
+          if(ii <= nn) then
+            start(ii) = ii
+            final(ii) = ii
+          else
+            start(ii) = 1
+            final(ii) = 0
+          end if
+        end do
+      end if
+      
     else
-      do ii = 1, tsize
-        if(ii <= nn) then
-          start(ii) = ii
-          final(ii) = ii
-        else
-          start(ii) = 1
-          final(ii) = 0
-        end if
-      end do
-    end if
+      if(tsize <= nn) then
 
-    if(present(lsize)) then
-      lsize(1:tsize) = final(1:tsize) - start(1:tsize) + 1
-      ASSERT(sum(lsize(1:tsize)) == nn)
-    end if
+        do rank = 0, tsize - 1
+          jj = nn / tsize
+          ii = nn - jj*tsize
+          if(ii > 0 .and. rank < ii) then
+            jj = jj + 1
+            start(rank + 1) = rank*jj + 1
+            final(rank + 1) = start(rank + 1) + jj - 1
+          else
+            final(rank + 1) = nn - (tsize - rank - 1)*jj
+            start(rank + 1) = final(rank + 1) - jj + 1
+          end if
+        end do
 
+      else
+        do ii = 1, tsize
+          if(ii <= nn) then
+            start(ii) = ii
+            final(ii) = ii
+          else
+            start(ii) = 1
+            final(ii) = 0
+          end if
+        end do
+      end if
+
+      if(present(lsize)) then
+        lsize(1:tsize) = final(1:tsize) - start(1:tsize) + 1
+        ASSERT(sum(lsize(1:tsize)) == nn)
+      end if
+    end if
   end subroutine multicomm_divide_range
 
 
