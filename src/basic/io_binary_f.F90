@@ -45,6 +45,20 @@ module io_binary_m
 
 contains
 
+  integer function optional_def(opt_var, default) result(val)
+    integer, optional, intent(in) :: opt_var
+    integer,           intent(in) :: default
+    
+    if(present(opt_var)) then
+      val = opt_var
+    else
+      val = default
+    end if
+    
+  end function optional_def
+
+  ! ------------------------------------------------------
+
   subroutine swrite_binary(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
@@ -60,6 +74,8 @@ contains
 
     POP_SUB(swrite_binary)
   end subroutine swrite_binary
+
+  !------------------------------------------------------
 
   subroutine dwrite_binary(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
@@ -77,6 +93,8 @@ contains
     POP_SUB(dwrite_binary)
   end subroutine dwrite_binary
 
+  !------------------------------------------------------
+
   subroutine cwrite_binary(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
@@ -92,6 +110,8 @@ contains
 
     POP_SUB(cwrite_binary)
   end subroutine cwrite_binary
+
+  !------------------------------------------------------
 
   subroutine zwrite_binary(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
@@ -109,6 +129,8 @@ contains
     POP_SUB(zwrite_binary)
   end subroutine zwrite_binary
 
+  !------------------------------------------------------
+
   subroutine zwrite_3D_binary(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
@@ -125,6 +147,8 @@ contains
     POP_SUB(zwrite_3D_binary)
   end subroutine zwrite_3D_binary
 
+  !------------------------------------------------------
+  
   subroutine iwrite_binary(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
@@ -140,6 +164,8 @@ contains
 
     POP_SUB(iwrite_binary)
   end subroutine iwrite_binary
+
+  !------------------------------------------------------
 
   subroutine lwrite_binary(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
@@ -157,6 +183,8 @@ contains
     POP_SUB(lwrite_binary)
   end subroutine lwrite_binary
 
+  !------------------------------------------------------
+
   subroutine iwrite_binary2(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
@@ -172,6 +200,8 @@ contains
 
     POP_SUB(iwrite_binary2)
   end subroutine iwrite_binary2
+
+  !------------------------------------------------------
 
   subroutine lwrite_binary2(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
@@ -191,69 +221,81 @@ contains
 
   !------------------------------------------------------
 
-  subroutine sread_binary(fname, np, ff, ierr)
+  subroutine sread_binary(fname, np, ff, ierr, offset)
     character(len=*),    intent(in)   :: fname
     integer,             intent(in)   :: np
     real(4),             intent(out)  :: ff(:)
     integer,             intent(out)  :: ierr
+    integer, optional,   intent(in)   :: offset
 
     integer, parameter :: type = TYPE_FLOAT
 
     PUSH_SUB(sread_binary)
 
     ierr = 0
-    call read_binary(np, ff(1), type, ierr, trim(fname))
+    call read_binary(np, optional_def(offset, 0), ff(1), type, ierr, trim(fname))
 
     POP_SUB(sread_binary)
   end subroutine sread_binary
 
-  subroutine dread_binary(fname, np, ff, ierr)
+  !------------------------------------------------------
+ 
+  subroutine dread_binary(fname, np, ff, ierr, offset)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
     real(8),             intent(out) :: ff(:)
     integer,             intent(out) :: ierr
+    integer, optional,   intent(in)  :: offset
 
     integer, parameter :: type = TYPE_DOUBLE
 
     PUSH_SUB(dread_binary)
 
     ierr = 0
-    call read_binary(np, ff(1), type, ierr, trim(fname))
+    call read_binary(np, optional_def(offset, 0), ff(1), type, ierr, trim(fname))
 
     POP_SUB(dread_binary)
   end subroutine dread_binary
 
-  subroutine cread_binary(fname, np, ff, ierr)
+  !------------------------------------------------------
+
+  subroutine cread_binary(fname, np, ff, ierr, offset)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
     complex(4),          intent(out) :: ff(:)
     integer,             intent(out) :: ierr
+    integer, optional,   intent(in)  :: offset
 
     integer, parameter :: type = TYPE_FLOAT_COMPLEX
 
     PUSH_SUB(cread_binary)
 
     ierr = 0
-    call read_binary(np, ff(1), type, ierr, trim(fname))
+    call read_binary(np, optional_def(offset, 0), ff(1), type, ierr, trim(fname))
 
     POP_SUB(cread_binary)
   end subroutine cread_binary
 
-  subroutine zread_binary(fname, np, ff, ierr)
+  !------------------------------------------------------
+
+  subroutine zread_binary(fname, np, ff, ierr, offset)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
     complex(8),          intent(out) :: ff(:)
     integer,             intent(out) :: ierr
+    integer, optional,   intent(in)  :: offset
 
     integer, parameter :: type = TYPE_DOUBLE_COMPLEX
 
     PUSH_SUB(zread_binary)
 
     ierr = 0
-    call read_binary(np, ff(1), type, ierr, trim(fname))
+    call read_binary(np, optional_def(offset, 0), ff(1), type, ierr, trim(fname))
     
     POP_SUB(zread_binary)
   end subroutine zread_binary
+
+  !------------------------------------------------------
 
   subroutine zread_3D_binary(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
@@ -266,42 +308,50 @@ contains
     PUSH_SUB(zread_3D_binary)
    
     ierr = 0
-    call read_binary(np, ff(1,1,1), type, ierr, trim(fname))
+    call read_binary(np, 0, ff(1,1,1), type, ierr, trim(fname))
 
     POP_SUB(zread_3D_binary)
   end subroutine zread_3D_binary
 
-  subroutine iread_binary(fname, np, ff, ierr)
+  !------------------------------------------------------
+ 
+  subroutine iread_binary(fname, np, ff, ierr, offset)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
     integer(4),          intent(out) :: ff(:)
     integer,             intent(out) :: ierr
+    integer, optional,   intent(in)  :: offset
 
     integer, parameter :: type = TYPE_INT_32
 
     PUSH_SUB(iread_binary)
 
     ierr = 0
-    call read_binary(np, ff(1), type, ierr, trim(fname))
+    call read_binary(np, optional_def(offset, 0), ff(1), type, ierr, trim(fname))
 
     POP_SUB(iread_binary)
   end subroutine iread_binary
 
-  subroutine lread_binary(fname, np, ff, ierr)
+  !------------------------------------------------------
+
+  subroutine lread_binary(fname, np, ff, ierr, offset)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
     integer(8),          intent(out) :: ff(:)
     integer,             intent(out) :: ierr
+    integer, optional,   intent(in)  :: offset
 
     integer, parameter :: type = TYPE_INT_64
 
     PUSH_SUB(lread_binary)
 
     ierr = 0
-    call read_binary(np, ff(1), type, ierr, trim(fname))
+    call read_binary(np, optional_def(offset, 0), ff(1), type, ierr, trim(fname))
 
     POP_SUB(lread_binary)
   end subroutine lread_binary
+
+  !------------------------------------------------------
 
   subroutine iread_binary2(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
@@ -314,10 +364,12 @@ contains
     PUSH_SUB(iread_binary2)
 
     ierr = 0
-    call read_binary(np, ff(1, 1), type, ierr, trim(fname))
+    call read_binary(np, 0, ff(1, 1), type, ierr, trim(fname))
 
     POP_SUB(iread_binary2)
   end subroutine iread_binary2
+
+  !------------------------------------------------------
 
   subroutine lread_binary2(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
@@ -330,10 +382,12 @@ contains
     PUSH_SUB(lread_binary2)
 
     ierr = 0
-    call read_binary(np, ff(1, 1), type, ierr, trim(fname))
+    call read_binary(np, 0, ff(1, 1), type, ierr, trim(fname))
 
     POP_SUB(lread_binary2)
   end subroutine lread_binary2
+
+  !------------------------------------------------------
 
   subroutine io_binary_get_info(fname, np, ierr)
     character(len=*),    intent(in)    :: fname
