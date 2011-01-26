@@ -23,7 +23,8 @@
 !! parallelization).
 subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
   type(states_t),    intent(in)    :: st
-  integer,           intent(in)    :: nst, dim
+  integer,           intent(in)    :: nst !< Number of states
+  integer,           intent(in)    :: dim !< Dimension of ...?
   type(mesh_t),      intent(in)    :: mesh
   R_TYPE, target,    intent(inout) :: psi(:, :, st%st_start:)
 
@@ -34,18 +35,16 @@ subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
 
   call profiling_in(prof, "GRAM_SCHMIDT_FULL")
   PUSH_SUB(X(states_orthogonalization_full))
-
-  if(.not. st%parallel_in_states) then
+  if(.not. (st%parallel_in_states .and. st%d%orth_method /= ORTH_QR)) then
     call X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
   else
-
     SAFE_ALLOCATE(qq(1:st%nst, 1:st%nst))
     SAFE_ALLOCATE(ss(1:nst, 1:nst))
     ss = M_ZERO
 
     call states_blockt_mul(mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
       psi, psi, ss, symm = .true.)
-  
+
     qq = M_ZERO
     do ist = 1, st%nst
 
@@ -89,7 +88,7 @@ subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
 
   SAFE_DEALLOCATE_A(ss)
   SAFE_DEALLOCATE_A(qq)
-
+  
   POP_SUB(X(states_orthogonalization_full))
   call profiling_out(prof)
 end subroutine X(states_orthogonalization_full)
@@ -98,7 +97,7 @@ end subroutine X(states_orthogonalization_full)
 ! ---------------------------------------------------------
 subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
   type(states_t),    intent(in)    :: st
-  integer,           intent(in)    :: nst
+  integer,           intent(in)    :: nst !< number of states
   type(mesh_t),      intent(in)    :: mesh
   integer,           intent(in)    :: dim
   R_TYPE, target,    intent(inout) :: psi(:, :, :)
@@ -113,7 +112,8 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
   type(blacs_proc_grid_t) :: proc_grid
 #endif
 
-  PUSH_SUB(X(states_orthogonalization_block))
+  PUSH_SUB(X(states_orthogonalization_block))    
+
   select case(st%d%orth_method)
   case(ORTH_GS)
 
@@ -147,7 +147,7 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
 
     ASSERT(.not. mesh%use_curvilinear)
 
-    if(mesh%parallel_in_domains) then
+    if(mesh%parallel_in_domains .or. st%parallel_in_states) then
 #ifdef HAVE_SCALAPACK 
       
       call blacs_proc_grid_from_mpi(proc_grid, st%dom_st)
@@ -159,10 +159,14 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
       ! What we do for now is to the maximum of the number of points
       ! and we set to zero the remaining points. This introduces an
       ! error (I think) since this extra degrees of freedom could be
-      ! used by the orthogonalization process.
+      ! used by the orthogonalization process.  
 
-      blockrow = maxval(mesh%vp%np_local) 
-      blockcol = nst
+      if (mesh%parallel_in_domains) then
+        blockrow = maxval(mesh%vp%np_local) 
+      else 
+        blockrow = 1
+      end if
+      blockcol = nst / st%mpi_grp%size
       total_np = blockrow*proc_grid%nprow
 
       ASSERT(mesh%np_part >= blockrow)
@@ -171,10 +175,6 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
       ! DISTRIBUTE THE MATRIX ON THE PROCESS GRID
       ! Initialize the descriptor array for the main matrices (ScaLAPACK)
       call descinit(psi_desc, total_np, nst, blockrow, blockcol, 0, 0, proc_grid%context, mesh%np_part, blacs_info)
-
-      write(message(1),'(a,I3,a,i3,a,i3)') 'No. of proc. = ', proc_grid%nprocs, ' No. of col. = ',&
-        proc_grid%npcol, ' No. of row. = ', proc_grid%nprow
-      call write_info(1)
 
       nref = min(nst, total_np)
       SAFE_ALLOCATE(tau(1:nref))
