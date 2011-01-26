@@ -587,6 +587,8 @@ contains
         if(num_slaves > 0) call create_slave_intercommunicators()
       else
         ! we initialize these communicators so we can use them even in serial
+        mc%group_comm = base_grp%comm
+        mc%who_am_i   = 0
         mc%master_comm = base_grp%comm
         mc%dom_st_comm = base_grp%comm
         mc%st_kpt_comm = base_grp%comm
@@ -664,11 +666,12 @@ contains
 #endif
       ! Deallocate the rest of the arrays.
       SAFE_DEALLOCATE_P(mc%group_sizes)
-      SAFE_DEALLOCATE_P(mc%group_comm)
-      SAFE_DEALLOCATE_P(mc%who_am_i)
     end if
 
-      POP_SUB(multicomm_end)
+    SAFE_DEALLOCATE_P(mc%group_comm)
+    SAFE_DEALLOCATE_P(mc%who_am_i)
+    
+    POP_SUB(multicomm_end)
   end subroutine multicomm_end
 
 
