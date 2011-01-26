@@ -41,14 +41,76 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
   character(len=*), intent(in)    :: dir
   character(len=*), intent(in)    :: filename
   type(mesh_t),     intent(in)    :: mesh
-  R_TYPE,           intent(inout) :: ff(1:mesh%np)
+  R_TYPE, target,   intent(inout) :: ff(1:mesh%np)
   integer,          intent(out)   :: ierr
   integer, optional, intent(in)   :: map(:)
 
+  integer :: ip, np, il, ipart, offset
+  integer, allocatable :: list(:)
+  R_TYPE, pointer :: read_ff(:)
+
   PUSH_SUB(X(restart_read_function))
 
-  ! try binary
-  call X(input_function) (trim(dir)//'/'//trim(filename)//'.obf', mesh, ff(1:mesh%np), ierr, is_tmp=.true., map = map)
+#ifdef HAVE_MPI
+  if(present(map) .and. mesh%parallel_in_domains) then 
+    ! for the moment we do not do this directly
+    call X(input_function) (trim(dir)//'/'//trim(filename)//'.obf', mesh, ff(1:mesh%np), ierr, is_tmp=.true., map = map)
+
+    POP_SUB(X(restart_read_function))
+    return
+  end if
+#endif
+
+  if(present(map)) then
+    call io_binary_get_info(trim(dir)//'/'//trim(filename)//'.obf', np, ierr)
+    SAFE_ALLOCATE(read_ff(1:np))
+    offset = 0
+  else
+    np = mesh%np
+    read_ff => ff
+    offset = 0
+  end if
+
+#ifdef HAVE_MPI
+  !in the parallel case, each node reads a part of the file
+  if(mesh%parallel_in_domains) then
+    SAFE_ALLOCATE(read_ff(1:np))
+    offset = mesh%vp%xlocal(mesh%vp%partno) - 1
+  end if
+#endif
+
+  call io_binary_read(trim(dir)//'/'//trim(filename)//'.obf', np, read_ff, ierr, offset = offset)
+  call profiling_count_transfers(np, read_ff(1))
+
+#ifdef HAVE_MPI
+  if(mesh%parallel_in_domains) then
+    ! no we need to move around the points that we read
+    ! this is probably not the most efficient way of doing it
+    do ipart = 1, mesh%vp%npart
+      SAFE_ALLOCATE(list(1:mesh%vp%np_local(ipart)))
+
+      do il = 1, mesh%vp%np_local(ipart)
+        ! this is the global index of the point we read
+        list(il) = il + mesh%vp%xlocal(ipart) - 1
+      end do
+
+      call X(vec_selective_scatter)(mesh%vp, mesh%vp%np_local(ipart), list, ipart - 1, read_ff, ff)      
+      
+      SAFE_DEALLOCATE_A(list)
+    end do
+
+    SAFE_DEALLOCATE_P(read_ff)
+  end if
+#endif
+
+  if(present(map)) then
+    ff(1:mesh%np_global) = M_ZERO
+    do ip = 1, min(np, ubound(map, dim = 1))
+      if(map(ip) > 0) ff(map(ip)) = read_ff(ip)
+    end do
+    
+    SAFE_DEALLOCATE_P(read_ff)
+  end if
 
   POP_SUB(X(restart_read_function))
 end subroutine X(restart_read_function)

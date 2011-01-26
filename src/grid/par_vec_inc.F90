@@ -248,16 +248,13 @@ end subroutine X(vec_allgather)
 !> This function collects points from the array src in nodes and puts
 !! them in the arrat dst in the node with MPI rank root, the points to
 !! collect are given by a list of global indexes (of size nn).
-!!
-!! dst does not need to be allocated in the other nodes.
-!!
 subroutine X(vec_selective_gather)(this, nn, list, root, src, dst)
-  type(pv_t),       intent(in)    :: this
-  integer,          intent(in)    :: nn
-  integer,          intent(in)    :: list(:)
-  integer,          intent(in)    :: root
-  R_TYPE,           intent(in)    :: src(:)
-  R_TYPE,           intent(out)   :: dst(:)
+  type(pv_t),       intent(in)    :: this    !< The par_vec_t object.
+  integer,          intent(in)    :: nn      !< The number of points in the list, must be the same on all nodes.
+  integer,          intent(in)    :: list(:) !< The list of global points that will be collected, must be the same on all nodes.
+  integer,          intent(in)    :: root    !< The node that will receive the data, in MPI convention.
+  R_TYPE,           intent(in)    :: src(:)  !< The points, defined in all nodes.
+  R_TYPE,           intent(out)   :: dst(:)  !< The destination array, only defined on the root node.
   
   integer, allocatable :: recv_count(:), copy_count(:)
   R_TYPE, allocatable  :: send_buffer(:), recv_buffer(:, :)
@@ -328,6 +325,8 @@ subroutine X(vec_selective_gather)(this, nn, list, root, src, dst)
   tag = tag + 1
 
 end subroutine X(vec_selective_gather)
+
+! --------------------------------------------------------------------
 
 subroutine X(vec_selective_scatter)(this, nn, list, root, src, dst)
   type(pv_t),       intent(in)    :: this

@@ -40,6 +40,7 @@ module restart_m
   use mpi_m
   use ob_green_m
   use parser_m
+  use par_vec_m
   use profiling_m
   use simul_box_m
   use states_m
