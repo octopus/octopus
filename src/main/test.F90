@@ -26,6 +26,7 @@ program oct_test
   use derivatives_m
   use fft_m
   use global_m
+  use hamiltonian_m
   use io_m
   use loct_m
   use messages_m
@@ -36,6 +37,7 @@ program oct_test
   use profiling_m
   use states_calc_m
   use string_m
+  use subspace_m
   use system_m
   use unit_m
   use unit_system_m
@@ -43,11 +45,20 @@ program oct_test
 
   implicit none
 
-  integer :: which_test
+
+  integer :: test_type
+  integer :: test_mode
+
   integer, parameter ::              &
     HARTREE_TEST       =   1,        &
     DER_TEST           =   2,        &
-    ORT_TEST           =   3
+    ORT_TEST           =   3,        &
+    SUBSPACE_TEST      =   4
+
+  integer, parameter :: &
+    TEST_REAL    = 1,   &
+    TEST_COMPLEX = 2,   &
+    TEST_ALL     = 3
 
   call global_init()
   call calc_mode_init()
@@ -62,7 +73,9 @@ program oct_test
     in_debug_mode = .false.
   end if
 
-  !%Variable WhichTest
+  call messages_obsolete_variable('WhichTest', 'TestMode')
+
+  !%Variable TestMode
   !%Type integer
   !%Default hartree_test
   !%Section Utilities::oct-test
@@ -74,24 +87,45 @@ program oct_test
   !% Tests the implementation of the finite-difference operators, used to calculate derivatives.
   !%Option orthogonalization 3
   !% Tests the implementation of the orthogonalization routines.
+  !%Option subspace_diag 4
+  !% Tests the implementation of the subspace diagonalization routine.
   !%End
-  call parse_integer('WhichTest', HARTREE_TEST, which_test)
-  call datasets_init(which_test)
+  call parse_integer('TestMode', HARTREE_TEST, test_mode)
+  call datasets_init(test_mode)
+
+  call messages_obsolete_variable('TestDerivatives', 'TestType')
+  call messages_obsolete_variable('TestOrthogonalization', 'TestType')
+  
+  !%Variable TestType
+  !%Type integer
+  !%Default all
+  !%Section Utilities::oct-test
+  !%Description
+  !% Decides what on what type of values the test should be performed.
+  !%Option real 1
+  !% Tests derivatives for real functions.
+  !%Option complex 2
+  !% Tests derivatives for complex functions.
+  !%Option all 3
+  !% Tests derivatives for both real and complex functions.
+  !%End
+  call parse_integer('TestType', TEST_ALL, test_type)
 
   call io_init()
   call profiling_init()
 
-  call messages_print_stress(stdout, "Which Test")
-  call messages_print_var_option(stdout, "WhichTest", which_test)
+  call messages_print_stress(stdout, "Test mode")
+  call messages_print_var_option(stdout, "TestMode", test_mode)
   call messages_print_stress(stdout)
 
   call fft_all_init()
   call unit_system_init()
 
-  select case(which_test)
+  select case(test_mode)
   case(HARTREE_TEST); call test_hartree()
   case(DER_TEST); call test_derivatives()
   case(ORT_TEST); call test_orthogonalization()
+  case(SUBSPACE_TEST); call test_subspace_diag()
   end select
 
   call fft_all_end()
@@ -125,41 +159,19 @@ program oct_test
   subroutine test_derivatives()
     type(system_t) :: sys
 
-    integer, parameter :: &
-      TEST_REAL    = 1,   &
-      TEST_COMPLEX = 2,   &
-      TEST_ALL     = 3
-
-    integer :: test
-
     PUSH_SUB(test_derivatives)
 
     call system_init(sys)
-
-    !%Variable TestDerivatives
-    !%Type integer
-    !%Default all
-    !%Section Utilities::oct-test
-    !%Description
-    !% Decides what derivatives test should be performed.
-    !%Option real 1
-    !% Tests derivatives for real functions.
-    !%Option complex 2
-    !% Tests derivatives for complex functions.
-    !%Option all 3
-    !% Tests derivatives for both real and complex functions.
-    !%End
-    call parse_integer('TestDerivatives', TEST_ALL, test)
 
     message(1) = 'Info: Testing the finite-differences derivatives.'
     message(2) = ''
     call write_info(2)
 
-    if(test == TEST_ALL .or. test == TEST_REAL) then
+    if(test_type == TEST_ALL .or. test_type == TEST_REAL) then
       call dderivatives_test(sys%gr%der)
     end if
 
-    if(test == TEST_ALL .or. test == TEST_COMPLEX) then
+    if(test_type == TEST_ALL .or. test_type == TEST_COMPLEX) then
       call zderivatives_test(sys%gr%der)
     end if
 
@@ -173,13 +185,6 @@ program oct_test
   subroutine test_orthogonalization()
     type(system_t) :: sys
 
-    integer, parameter :: &
-      TEST_REAL    = 1,   &
-      TEST_COMPLEX = 2,   &
-      TEST_ALL     = 3
-
-    integer :: test
-
     PUSH_SUB(test_orthogonalization)
 
     call calc_mode_set_parallelization(P_STRATEGY_STATES, default = .false.)
@@ -187,32 +192,17 @@ program oct_test
 
     call system_init(sys)
 
-    !%Variable TestOrthogonalization
-    !%Type integer
-    !%Default all
-    !%Section Utilities::oct-test
-    !%Description
-    !% Decides what orthogonalization test should be performed.
-    !%Option real 1
-    !% Tests orthogonalization for real functions.
-    !%Option complex 2
-    !% Tests orthogonalization for complex functions.
-    !%Option all 3
-    !% Tests orthogonalization for both real and complex functions.
-    !%End
-    call parse_integer('TestOrthogonalization', TEST_ALL, test)
-
     message(1) = 'Info: Testing orthogonalization.'
     message(2) = ''
     call write_info(2)
 
-    if(test == TEST_ALL .or. test == TEST_REAL) then
+    if(test_type == TEST_ALL .or. test_type == TEST_REAL) then
       message(1) = 'Info: Real wave-functions.'
       call write_info(1)
       call dstates_calc_orth_test(sys%st, sys%mc, sys%gr%mesh)
     end if
 
-    if(test == TEST_ALL .or. test == TEST_COMPLEX) then
+    if(test_type == TEST_ALL .or. test_type == TEST_COMPLEX) then
       message(1) = 'Info: Complex wave-functions.'
       call write_info(1)
       call zstates_calc_orth_test(sys%st, sys%mc, sys%gr%mesh)
@@ -222,6 +212,44 @@ program oct_test
 
     POP_SUB(test_orthogonalization)
   end subroutine test_orthogonalization
+
+  ! ---------------------------------------------------------
+
+  subroutine test_subspace_diag()
+    type(system_t) :: sys
+    type(hamiltonian_t) :: hm
+
+    PUSH_SUB(test_subspace_diag)
+
+    call calc_mode_set_parallelization(P_STRATEGY_STATES, default = .false.)
+    call calc_mode_set_scalapack_compat()
+
+    call system_init(sys)
+
+    call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
+    call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
+
+    message(1) = 'Info: Testing subspace diagonalization.'
+    message(2) = ''
+    call write_info(2)
+
+    if(test_type == TEST_ALL .or. test_type == TEST_REAL) then
+      message(1) = 'Info: Real wave-functions.'
+      call write_info(1)
+      call zsubspace_test(sys%st, hm, sys%gr)
+    end if
+
+    if(test_type == TEST_ALL .or. test_type == TEST_COMPLEX) then
+      message(1) = 'Info: Complex wave-functions.'
+      call write_info(1)
+      call zsubspace_test(sys%st, hm, sys%gr)
+    end if
+
+    call hamiltonian_end(hm, sys%gr, sys%geo)
+    call system_end(sys)
+
+    POP_SUB(test_subspace_diag)
+  end subroutine test_subspace_diag
 
 end program oct_test
 

@@ -1,4 +1,4 @@
-WhichTest = orthogonalization
+TestMode = orthogonalization
 
 %Coordinates
 "Na" | 0.0 | 0.0 |  0.0
@@ -12,5 +12,5 @@ ExtraStates = 8
 
 StatesOrthogonalization = gram_schmidt
 
-TestOrthogonalization = real
+TestType = real
 

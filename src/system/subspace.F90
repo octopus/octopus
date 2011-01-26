@@ -24,6 +24,7 @@ module subspace_m
   use datasets_m
   use derivatives_m
   use global_m
+  use grid_m
   use hamiltonian_m
   use lalg_adv_m
   use lalg_basic_m
@@ -40,6 +41,7 @@ module subspace_m
   use states_m
   use states_block_m
   use states_calc_m
+  use types_m
   use varinfo_m
 
   implicit none
@@ -47,7 +49,9 @@ module subspace_m
   private
   public ::             &
     dsubspace_diag,     &
-    zsubspace_diag
+    zsubspace_diag,     &
+    dsubspace_test,     &
+    zsubspace_test
 
 contains
 

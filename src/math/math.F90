@@ -243,7 +243,7 @@ contains
   ! a simple congruent random number generator
   subroutine quickrnd(iseed, rnd)
     integer, intent(inout) :: iseed
-    FLOAT, intent(inout) :: rnd
+    FLOAT,   intent(inout) :: rnd
 
     integer, parameter :: im=6075, ia=106, ic=1283
 
