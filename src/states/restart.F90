@@ -264,7 +264,7 @@ contains
     call MPI_Barrier(st%dom_st_kpt%comm, mpi_err)
 #endif
 
-    if(mpi_grp_is_root(mpi_world)) then
+    if(mpi_grp_is_root(st%dom_st_kpt)) then
       iunit = io_open(trim(dir)//'/wfns', action='write', is_tmp=.true.)
       write(iunit,'(a)') '#     #k-point            #st            #dim    filename'
       write(iunit,'(a)') '%Wavefunctions'
@@ -304,7 +304,7 @@ contains
         do idim = 1, st%d%dim
           write(filename,'(i10.10)') itot
 
-          if(mpi_grp_is_root(mpi_world)) then
+          if(mpi_grp_is_root(st%dom_st_kpt)) then
             write(iunit, '(i8,a,i8,a,i8,3a)') ik, ' | ', ist, ' | ', idim, ' | "', trim(filename), '"'
             write(iunit2, '(e20.14,a,e20.14,a)', advance='no') st%occ(ist,ik), ' | ', st%eigenval(ist, ik), ' | '
             do idir = 1, gr%sb%dim
@@ -341,7 +341,7 @@ contains
     ! do NOT use st%lnst here as it is not (st%st_end - st%st_start + 1)
     if(ierr == st%d%kpt%nlocal * (st%st_end - st%st_start + 1) * st%d%dim) ierr = 0 ! All OK
 
-    if(mpi_grp_is_root(mpi_world)) then
+    if(mpi_grp_is_root(st%dom_st_kpt)) then
       write(iunit,'(a)') '%'
       if(present(iter)) write(iunit,'(a,i7)') 'Iter = ', iter
       write(iunit2, '(a)') '%'
@@ -457,10 +457,10 @@ contains
     ierr = 0
 
     ! open files to read
-    wfns_file  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp = .true., grp = gr%mesh%mpi_grp)
+    wfns_file  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp = .true., grp = st%dom_st_kpt)
     if(wfns_file < 0) ierr = -1
 
-    occ_file = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = gr%mesh%mpi_grp)
+    occ_file = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = st%dom_st_kpt)
     if(occ_file < 0) ierr = -1
 
     ! now read the mesh information
@@ -516,8 +516,8 @@ contains
     end if
 
     if(ierr .ne. 0) then
-      if(wfns_file > 0) call io_close(wfns_file, grp = gr%mesh%mpi_grp)
-      if(occ_file > 0) call io_close(occ_file, grp = gr%mesh%mpi_grp)
+      if(wfns_file > 0) call io_close(wfns_file, grp = st%dom_st_kpt)
+      if(occ_file > 0) call io_close(occ_file, grp = st%dom_st_kpt)
       if(exact_) call restart_fail()
       write(message(1),'(a)') 'Could not load restart information.'
       call write_info(1)
@@ -548,27 +548,27 @@ contains
     filled = .false.
 
     ! Skip two lines.
-    call iopar_read(gr%mesh%mpi_grp, wfns_file,  line, err)
-    call iopar_read(gr%mesh%mpi_grp, wfns_file,  line, err)
+    call iopar_read(st%dom_st_kpt, wfns_file,  line, err)
+    call iopar_read(st%dom_st_kpt, wfns_file,  line, err)
 
-    call iopar_read(gr%mesh%mpi_grp, occ_file, line, err)
-    call iopar_read(gr%mesh%mpi_grp, occ_file, line, err)
+    call iopar_read(st%dom_st_kpt, occ_file, line, err)
+    call iopar_read(st%dom_st_kpt, occ_file, line, err)
 
     do
-      call iopar_read(gr%mesh%mpi_grp, wfns_file, line, int)
+      call iopar_read(st%dom_st_kpt, wfns_file, line, int)
       read(line, '(a)') char
       if(int .ne. 0 .or. char == '%') exit
 
-      call iopar_backspace(gr%mesh%mpi_grp, wfns_file)
+      call iopar_backspace(st%dom_st_kpt, wfns_file)
 
-      call iopar_read(gr%mesh%mpi_grp, wfns_file, line, err)
+      call iopar_read(st%dom_st_kpt, wfns_file, line, err)
       read(line, *) ik, char, ist, char, idim, char, filename
       if(index_is_wrong()) then
-        call iopar_read(gr%mesh%mpi_grp, occ_file, line, err)
+        call iopar_read(st%dom_st_kpt, occ_file, line, err)
         cycle
       end if
 
-      call iopar_read(gr%mesh%mpi_grp, occ_file, line, err)
+      call iopar_read(st%dom_st_kpt, occ_file, line, err)
       if(.not. present(lr)) then ! do not read eigenvalues when reading linear response
         ! # occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
         read(line, *) my_occ, char, st%eigenval(ist, ik), char, (flt, char, idir = 1, gr%sb%dim), st%d%kweights(ik)
@@ -601,7 +601,7 @@ contains
     end do
 
     if(present(iter)) then
-      call iopar_read(gr%mesh%mpi_grp, wfns_file, line, err)
+      call iopar_read(st%dom_st_kpt, wfns_file, line, err)
       read(line, *) filename, filename, iter
     end if
 
@@ -644,8 +644,8 @@ contains
 
     SAFE_DEALLOCATE_A(filled)
     SAFE_DEALLOCATE_A(map)
-    call io_close(wfns_file, grp = gr%mesh%mpi_grp)
-    call io_close(occ_file, grp = gr%mesh%mpi_grp)
+    call io_close(wfns_file, grp = st%dom_st_kpt)
+    call io_close(occ_file, grp = st%dom_st_kpt)
 
     call profiling_out(prof_read)
     POP_SUB(restart_read)
@@ -727,7 +727,7 @@ contains
     lead_nr(1, :) = m_lead%idx%nr(1, :) + m_lead%idx%enlarge
     lead_nr(1, :) = m_lead%idx%nr(2, :) - m_lead%idx%enlarge
 
-    mpi_grp = mpi_world
+    mpi_grp = st%dom_st_kpt
 
     np = m_lead%np
     SAFE_ALLOCATE(tmp(1:np, 1:st%d%dim))
