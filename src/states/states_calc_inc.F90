@@ -106,7 +106,7 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
   R_TYPE :: tmp
   type(batch_t) :: psib
   logical :: bof
-  integer :: idim, nref, wsize, info, ip, temp
+  integer :: idim, nref, wsize, info, ip
 #ifdef HAVE_SCALAPACK
   integer :: blockrow, blockcol, total_np, psi_desc(BLACS_DLEN), blacs_info
   type(blacs_proc_grid_t) :: proc_grid
@@ -156,21 +156,28 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
       ! tricky, since not all processors have the same number of
       ! points.
       !
-      ! What we do for now is to the maximum of the number of points
-      ! and we set to zero the remaining points. This introduces an
-      ! error (I think) since this extra degrees of freedom could be
-      ! used by the orthogonalization process.  
+      ! What we do for now is to use the maximum of the number of
+      ! points and we set to zero the remaining points. This
+      ! introduces an error (I think) since this extra degrees of
+      ! freedom could be used by the orthogonalization process.
 
       if (mesh%parallel_in_domains) then
         blockrow = maxval(mesh%vp%np_local) 
       else 
-        blockrow = 1
+        blockrow = mesh%np
       end if
-      blockcol = nst / st%mpi_grp%size
-      total_np = blockrow*proc_grid%nprow
 
       ASSERT(mesh%np_part >= blockrow)
-      psi(mesh%np + 1:blockrow, 1:dim, 1:nst) = M_ZERO
+
+      total_np = blockrow*proc_grid%nprow
+
+      if (st%parallel_in_states) then
+        blockcol = maxval(st%st_num)
+      else
+        blockcol = st%nst
+      end if
+
+      psi(mesh%np + 1:blockrow, 1:dim, 1:st%lnst) = M_ZERO
  
       ! DISTRIBUTE THE MATRIX ON THE PROCESS GRID
       ! Initialize the descriptor array for the main matrices (ScaLAPACK)
