@@ -798,11 +798,14 @@ contains
     logical, optional, intent(in)    :: scalapack_compat
 
     integer :: ii, jj, rank
+    logical :: scalapack_compat_
+    
+    scalapack_compat_ = .false.
+    if(present(scalapack_compat)) scalapack_compat_ = scalapack_compat
 
     ! no push_sub, threadsafe
+    if(scalapack_compat_) then
 
-    if(present(scalapack_compat)) then
-      write(*,*)"scalapack_mode selected"
       ! the number of processors is less than the number of points
       if(tsize <= nn) then
         jj = nn / tsize
@@ -831,6 +834,7 @@ contains
       end if
       
     else
+
       if(tsize <= nn) then
 
         do rank = 0, tsize - 1
@@ -857,12 +861,13 @@ contains
           end if
         end do
       end if
-
-      if(present(lsize)) then
-        lsize(1:tsize) = final(1:tsize) - start(1:tsize) + 1
-        ASSERT(sum(lsize(1:tsize)) == nn)
-      end if
     end if
+
+    if(present(lsize)) then
+      lsize(1:tsize) = final(1:tsize) - start(1:tsize) + 1
+      ASSERT(sum(lsize(1:tsize)) == nn)
+    end if
+
   end subroutine multicomm_divide_range
 
 
