@@ -853,7 +853,6 @@ contains
         end if
 #endif
         dd = X(mf_dotp)(mesh, st%d%dim, psi1, psi2)
-        if(ist == jst) dd = dd - CNST(1.0)
         write (message(1), '(2i7, e16.6)') ist, jst, abs(dd)
         call write_info(1)
 
