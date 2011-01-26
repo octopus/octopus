@@ -1318,11 +1318,9 @@ return
       call states_init_block(stout)
     end if
 
-#ifdef HAVE_MPI
     stout%dom_st_kpt = stin%dom_st_kpt
     stout%st_kpt = stin%st_kpt
     stout%st_kpt = stin%st_kpt
-#endif
 
     POP_SUB(states_copy)
   end subroutine states_copy
@@ -1587,17 +1585,15 @@ return
     st%st_end             = st%nst
     st%lnst               = st%nst
     st%parallel_in_states = .false.
-    call mpi_grp_init(st%mpi_grp, -1)
-
-#if defined(HAVE_MPI)
+    call mpi_grp_init(st%mpi_grp, mc%group_comm(P_STRATEGY_STATES))
     call mpi_grp_init(st%dom_st_kpt, mc%dom_st_kpt_comm)
     call mpi_grp_init(st%dom_st, mc%dom_st_comm)
     call mpi_grp_init(st%st_kpt, mc%st_kpt_comm)
 
+#if defined(HAVE_MPI)
     if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
       st%parallel_in_states = .true.
-      call mpi_grp_init(st%mpi_grp, mc%group_comm(P_STRATEGY_STATES))
-
+      
       call multicomm_create_all_pairs(st%mpi_grp, st%ap)
 
      if(st%nst < st%mpi_grp%size) then

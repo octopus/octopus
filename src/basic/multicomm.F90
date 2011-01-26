@@ -597,6 +597,10 @@ contains
 #else
       mc%group_comm = -1
       mc%who_am_i   = 0
+      mc%master_comm = -1
+      mc%dom_st_comm = -1
+      mc%st_kpt_comm = -1
+      mc%dom_st_kpt_comm = -1
 #endif
 
       POP_SUB(multicomm_init.group_comm_create)
