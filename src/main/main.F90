@@ -40,9 +40,10 @@ program octopus
   type(block_t) :: blk
   character(len=256) :: sys_name
 
-  call global_init()
   call getopt_init(ierr)
-  if(ierr .eq. 0) call getopt_octopus
+  if(ierr .eq. 0) call getopt_octopus()
+
+  call global_init()
   call parser_init()
 
   call messages_obsolete_variable('DevelVersion', 'ExperimentalFeatures')

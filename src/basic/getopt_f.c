@@ -48,6 +48,49 @@ void FC_FUNC_(set_clarg, SET_CLARG)(int *i, STR_F_TYPE arg STR_ARG1)
   argv[*i] = c;
 }
 
+void print_config(){
+#ifdef HAVE_OPENMP
+  printf("openmp");
+#endif
+#ifdef HAVE_MPI
+  printf("mpi ");
+#endif
+#ifdef HAVE_OPENCL
+  printf("opencl ");
+#endif
+#ifdef HAVE_M128D
+  printf("sse2 ");
+#endif
+#ifdef HAVE_BLUE_GENE
+  printf("bluegene ");
+#endif
+#ifdef HAVE_MPI2
+  printf("mpi2 ");
+#endif
+#ifdef HAVE_SCALAPACK
+  printf("scalapack ");
+#endif
+#ifdef HAVE_NETCDF
+  printf("netcdf ");
+#endif
+#ifdef HAVE_METIS
+  printf("metis ");
+#endif
+#ifdef HAVE_GDLIB
+  printf("gdlib ");
+#endif
+#ifdef HAVE_PAPI
+  printf("papi ");
+#endif
+#ifdef HAVE_SPARSKIT
+  printf("sparskit ");
+#endif
+#ifdef HAVE_ETSF_IO
+  printf("etsf_io ");
+#endif
+  printf("\n");
+}
+
 
 /* FUNCTIONS TO BE USED BY THE PROGRAM oct-oscillator-strength */
 void oscillator_strength_help(){
@@ -350,6 +393,7 @@ void octopus_help(){
   printf("Options:\n");
   printf("  -h, --help            Prints this help and exits.\n");
   printf("  -v, --version         Prints octopus version.\n");
+  printf("  -c, --config          Prints compilation configuration options.\n");
   exit(-1);
 }
 
@@ -362,6 +406,7 @@ void FC_FUNC_(getopt_octopus, GETOPT_OCTOPUS)
     {
       {"help", no_argument, 0, 'h'},
       {"version", no_argument, 0, 'v'},
+      {"config", no_argument, 0, 'c'},
       {0, 0, 0, 0}
     };
 #endif
@@ -369,9 +414,9 @@ void FC_FUNC_(getopt_octopus, GETOPT_OCTOPUS)
   while (1) {
     int option_index = 0;
 #if defined(HAVE_GETOPT_LONG)
-    c = getopt_long(argc, argv, "hv", long_options, &option_index);
+    c = getopt_long(argc, argv, "hvc", long_options, &option_index);
 #else
-    c = getopt(argc, argv, "hv");
+    c = getopt(argc, argv, "hvc");
 #endif
     if (c == -1) break;
     switch (c) {
@@ -381,6 +426,11 @@ void FC_FUNC_(getopt_octopus, GETOPT_OCTOPUS)
     case 'v':
       printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
       exit(0);
+      break;
+    case 'c':
+      print_config();
+      exit(0);
+      break;
     }
   }
   if (optind < argc) octopus_help();

@@ -45,9 +45,9 @@ program oct_test
 
   implicit none
 
-
   integer :: test_type
   integer :: test_mode
+  integer :: ierr
 
   integer, parameter ::              &
     HARTREE_TEST       =   1,        &
@@ -59,6 +59,9 @@ program oct_test
     TEST_REAL    = 1,   &
     TEST_COMPLEX = 2,   &
     TEST_ALL     = 3
+
+  call getopt_init(ierr)
+  if(ierr .eq. 0) call getopt_octopus()
 
   call global_init()
   call calc_mode_init()
