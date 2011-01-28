@@ -118,15 +118,16 @@ subroutine X(subspace_diag)(der, st, hm, ik, eigenval, psi, diff)
 end subroutine X(subspace_diag)
 
 #ifdef HAVE_MPI
+#ifndef HAVE_SCALAPACK
 ! --------------------------------------------------------- 
 ! This routine diagonalises the Hamiltonian in the subspace defined by
 ! the states; this version is aware of parallelization in states but
 ! consumes more memory.
 !
-! I leave this function here for the moment, but it is not
-! used. Eventually it will be removed. XA
+! I leave this function here for the moment. Eventually it will be
+! removed. XA
 !
-subroutine X(subspace_diag_par_states_old)(der, st, hm, ik, eigenval, psi, diff)
+subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
   type(derivatives_t), intent(in)    :: der
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(in)    :: hm
@@ -191,7 +192,9 @@ subroutine X(subspace_diag_par_states_old)(der, st, hm, ik, eigenval, psi, diff)
   
   POP_SUB(X(subspace_diag_par_states))
   
-end subroutine X(subspace_diag_par_states_old)
+end subroutine X(subspace_diag_par_states)
+
+#else
 
 ! --------------------------------------------------------- 
 ! This routine diagonalises the Hamiltonian in the subspace defined by
@@ -268,7 +271,7 @@ subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
 
   hpsi(1:der%mesh%np, 1:st%d%dim,  st%st_start:st%st_end) = psi(1:der%mesh%np, 1:st%d%dim, st%st_start:st%st_end)
 
-  call pblas_gemm('N', 'N', effnp, st%nst, st%nst, &
+  call pblas_gemm('n', 'n', effnp, st%nst, st%nst, &
     R_TOTYPE(M_ONE), hpsi(1, 1, st%st_start), 1, 1, psi_desc, &
     hs(1, 1), 1, 1, hs_desc, &
     R_TOTYPE(M_ZERO), psi(1, 1, st%st_start), 1, 1, psi_desc)
@@ -295,8 +298,8 @@ subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
   
 end subroutine X(subspace_diag_par_states)
 
-
-#endif
+#endif /* SCALAPACK */
+#endif /* MPI */
 
 ! ------------------------------------------------------
 
