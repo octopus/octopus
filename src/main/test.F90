@@ -236,7 +236,7 @@ program oct_test
     if(test_type == TEST_ALL .or. test_type == TEST_REAL) then
       message(1) = 'Info: Real wave-functions.'
       call write_info(1)
-      call zsubspace_test(sys%st, hm, sys%gr)
+      call dsubspace_test(sys%st, hm, sys%gr)
     end if
 
     if(test_type == TEST_ALL .or. test_type == TEST_COMPLEX) then

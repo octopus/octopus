@@ -21,6 +21,7 @@
 
 module subspace_m
   use batch_m
+  use blas_m
   use datasets_m
   use derivatives_m
   use global_m
@@ -36,8 +37,10 @@ module subspace_m
   use mpi_m
   use mpi_lib_m
   use parser_m
+  use pblas_m
   use preconditioners_m
   use profiling_m
+  use scalapack_m
   use states_m
   use states_block_m
   use states_calc_m

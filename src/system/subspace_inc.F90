@@ -39,11 +39,7 @@ subroutine X(subspace_diag)(der, st, hm, ik, eigenval, psi, diff)
 
 #ifdef HAVE_MPI
   if(st%parallel_in_states) then
-    if(present(diff)) then
-      call X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
-    else
-      call X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi)
-    end if
+    call X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
   else
 #endif
 
@@ -127,7 +123,10 @@ end subroutine X(subspace_diag)
 ! the states; this version is aware of parallelization in states but
 ! consumes more memory.
 !
-subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
+! I leave this function here for the moment, but it is not
+! used. Eventually it will be removed. XA
+!
+subroutine X(subspace_diag_par_states_old)(der, st, hm, ik, eigenval, psi, diff)
   type(derivatives_t), intent(in)    :: der
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(in)    :: hm
@@ -192,7 +191,110 @@ subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
   
   POP_SUB(X(subspace_diag_par_states))
   
+end subroutine X(subspace_diag_par_states_old)
+
+! --------------------------------------------------------- 
+! This routine diagonalises the Hamiltonian in the subspace defined by
+! the states; this version is aware of parallelization in states but
+! consumes more memory.
+!
+subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
+  type(derivatives_t), intent(in)    :: der
+  type(states_t),      intent(inout) :: st
+  type(hamiltonian_t), intent(in)    :: hm
+  integer,             intent(in)    :: ik
+  FLOAT,               intent(out)   :: eigenval(:)
+  R_TYPE,              intent(inout) :: psi(:, :, st%st_start:)
+  FLOAT, optional,     intent(out)   :: diff(:)
+ 
+  R_TYPE, allocatable  :: hs(:, :), hpsi(:, :, :)
+  integer              :: tmp, ist, effnp
+  FLOAT                :: ldiff(st%lnst)
+  integer :: blockrow, blockcol, total_np, psi_desc(BLACS_DLEN), hs_desc(BLACS_DLEN), blacs_info
+  type(blacs_proc_grid_t) :: proc_grid
+
+  PUSH_SUB(X(subspace_diag_par_states))
+
+  SAFE_ALLOCATE(hs(1:st%nst, 1:st%nst))
+  SAFE_ALLOCATE(hpsi(1:der%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
+
+  call blacs_proc_grid_from_mpi(proc_grid, st%dom_st)
+
+  effnp = der%mesh%np + (st%d%dim - 1)*der%mesh%np_part
+
+  if (der%mesh%parallel_in_domains) then
+    blockrow = maxval(der%mesh%vp%np_local) + &
+      (st%d%dim - 1)*maxval(der%mesh%vp%np_local + der%mesh%vp%np_bndry + der%mesh%vp%np_ghost)
+  else 
+    blockrow = effnp
+  end if
+
+  ASSERT(st%d%dim*der%mesh%np_part >= blockrow)
+  
+  total_np = blockrow*proc_grid%nprow
+  
+  if (st%parallel_in_states) then
+    blockcol = maxval(st%st_num)
+  else
+    blockcol = st%nst
+  end if
+
+  call descinit(psi_desc, total_np, st%nst, blockrow, blockcol, 0, 0, proc_grid%context, &
+    st%d%dim*der%mesh%np_part, blacs_info)
+  ! for the moment we store the results in the first node (blocksize = st%nst)
+  call descinit(hs_desc, st%nst, st%nst, st%nst, st%nst, 0, 0, proc_grid%context, st%nst, blacs_info)
+
+  ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
+  do ist = st%st_start, st%st_end
+    call X(hamiltonian_apply)(hm, der, psi(:, :, ist), hpsi(:, :, ist), ist, ik)
+  end do
+
+  ! We need to set to zero some extra parts of the array
+  if(st%d%dim == 1) then
+    psi(der%mesh%np + 1:blockrow, 1:st%d%dim, st%st_start:st%st_end) = M_ZERO
+    hpsi(der%mesh%np + 1:blockrow, 1:st%d%dim, st%st_start:st%st_end) = M_ZERO
+  else
+    psi(der%mesh%np + 1:der%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end) = M_ZERO
+    hpsi(der%mesh%np + 1:der%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end) = M_ZERO
+  end if
+
+  call pblas_gemm('c', 'n', st%nst, st%nst, effnp, &
+    R_TOTYPE(der%mesh%vol_pp(1)), psi(1, 1, st%st_start), 1, 1, psi_desc, &
+    hpsi(1, 1, st%st_start), 1, 1, psi_desc, &
+    R_TOTYPE(M_ZERO), hs(1, 1), 1, 1, hs_desc)
+
+  ! Diagonalize the Hamiltonian in the subspace.
+  if(mpi_grp_is_root(st%dom_st)) call lalg_eigensolve(st%nst, hs, eigenval(:))
+
+  hpsi(1:der%mesh%np, 1:st%d%dim,  st%st_start:st%st_end) = psi(1:der%mesh%np, 1:st%d%dim, st%st_start:st%st_end)
+
+  call pblas_gemm('N', 'N', effnp, st%nst, st%nst, &
+    R_TOTYPE(M_ONE), hpsi(1, 1, st%st_start), 1, 1, psi_desc, &
+    hs(1, 1), 1, 1, hs_desc, &
+    R_TOTYPE(M_ZERO), psi(1, 1, st%st_start), 1, 1, psi_desc)
+
+  ! Recalculate the residues if requested by the diff argument.
+  if(present(diff)) then 
+    do ist = st%st_start, st%st_end
+      call X(hamiltonian_apply)(hm, der, psi(:, :, ist) , hpsi(:, :, st%st_start), ist, ik)
+      diff(ist) = X(states_residue)(der%mesh, st%d%dim, hpsi(:, :, st%st_start), eigenval(ist), &
+           psi(:, :, ist))
+    end do
+
+    if(st%parallel_in_states) then
+      ldiff = diff(st%st_start:st%st_end)
+      call lmpi_gen_allgatherv(st%lnst, ldiff, tmp, diff(:), st%mpi_grp)
+    end if
+
+  end if
+
+  SAFE_DEALLOCATE_A(hpsi)
+  SAFE_DEALLOCATE_A(hs)
+
+  POP_SUB(X(subspace_diag_par_states))
+  
 end subroutine X(subspace_diag_par_states)
+
 
 #endif
 
@@ -208,6 +310,10 @@ subroutine X(subspace_test)(st, hm, gr)
   call states_allocate_wfns(st, gr%mesh, wfs_type = R_TYPE_VAL)
   call states_generate_random(st, gr%mesh)
 
+#ifdef R_TCOMPLEX
+  st%zpsi = (M_ONE + M_ZI)*st%zpsi
+#endif
+  
   hm%vxc = M_ZERO
   
   call hamiltonian_update(hm, gr%mesh)
