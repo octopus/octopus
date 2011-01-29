@@ -26,7 +26,10 @@
 ! -----------------------------------------------------------------------
 
 module blacs_m
+
   implicit none
+
+  integer, parameter :: BLACS_DLEN = 9
 
   interface
     subroutine blacs_get(icontxt, what, val)

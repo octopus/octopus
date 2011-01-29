@@ -22,6 +22,7 @@
 module subspace_m
   use batch_m
   use blas_m
+  use blacs_proc_grid_m
   use datasets_m
   use derivatives_m
   use global_m

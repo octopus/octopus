@@ -20,6 +20,7 @@
 #include "global.h"
 
 module states_m
+  use blacs_proc_grid_m
   use calc_mode_m
   use batch_m
   use blas_m
@@ -1323,6 +1324,10 @@ return
     stout%st_kpt_mpi_grp = stin%st_kpt_mpi_grp
     stout%st_kpt_mpi_grp = stin%st_kpt_mpi_grp
 
+#ifdef HAVE_SCALAPACK
+    call blacs_proc_grid_copy(stin%dom_st_proc_grid, stout%dom_st_proc_grid)
+#endif
+
     POP_SUB(states_copy)
   end subroutine states_copy
 
@@ -1335,6 +1340,10 @@ return
 
     PUSH_SUB(states_end)
     
+#ifdef HAVE_SCALAPACK
+    call blacs_proc_grid_end(st%dom_st_proc_grid)
+#endif
+
     call states_deallocate_wfns(st)
 
     SAFE_DEALLOCATE_P(st%user_def_states)
@@ -1592,7 +1601,7 @@ return
     call mpi_grp_init(st%st_kpt_mpi_grp, mc%st_kpt_comm)
 
 #ifdef HAVE_SCALAPACK
-    call blacs_proc_grid_from_mpi(st%dom_st_proc_grid, st%dom_st_mpi_grp)
+    call blacs_proc_grid_init(st%dom_st_proc_grid, st%dom_st_mpi_grp)
 #endif
 
 #if defined(HAVE_MPI)

@@ -42,18 +42,6 @@ include "mpif.h"
     integer :: rank !< rank of comm (defined also in serial mode)
   end type mpi_grp_t
  
-  integer, parameter :: BLACS_DLEN = 9
-
-  type blacs_proc_grid_t
-    integer :: context !< blacs context
-    integer :: nprocs !< number of processors
-    integer :: nprow !< number of processors per row
-    integer :: npcol !< number of processors per column
-    integer :: iam !< process indentifier
-    integer :: myrow !< the row of the processor in the processor grid 
-    integer :: mycol !< the column of the processor in the processor grid
-  end type blacs_proc_grid_t
-
   type(mpi_grp_t), public :: mpi_world
 
 contains
@@ -150,59 +138,6 @@ contains
   end function mpi_grp_is_root
   
   ! ---------------------------------------------------------
-
-#ifdef HAVE_SCALAPACK
-  !> Initializes a blacs context from an MPI communicator with
-  !> topological information.
-  subroutine blacs_proc_grid_from_mpi(this, mpi_grp)
-    type(blacs_proc_grid_t), intent(out) :: this
-    type(mpi_grp_t),         intent(in)  :: mpi_grp
-
-    integer, parameter :: maxdims = 2
-    integer :: dims(1:2), topo, coords(1:2), ix, iy
-    logical :: periods(1:2)
-    integer, allocatable :: usermap(:, :)
-    integer :: mpi_err
-    
-    call MPI_Topo_test(mpi_grp%comm, topo, mpi_err)
-
-    if(topo /= MPI_CART) then
-      ! We cannot use anything more elegant here.
-      stop "Not implemented."
-    end if
-
-    dims = 1
-    coords = 0
-    
-    call MPI_Cart_get(mpi_grp%comm, maxdims, dims(1), periods(1), coords(1), mpi_err)
-    
-    !cannot use SAFE ALLOCATE here
-    allocate(usermap(1:dims(1), 1:dims(2)))
-    
-    do ix = 1, dims(1)
-      do iy = 1, dims(2)
-        call MPI_Cart_rank(mpi_grp%comm, (/ix - 1, iy - 1/), usermap(ix, iy), mpi_err)
-      end do
-    end do
-    
-    ! get the default system context
-    call blacs_get(-1, what = 0, val = this%context)
-    
-    ! now get the context associated with the map
-    call blacs_gridmap(this%context, usermap(1, 1), dims(1), dims(1), dims(2))
-
-    ! and fill the rest of the structure
-    this%nprocs = mpi_grp%size
-    this%nprow = dims(1)
-    this%npcol = dims(2)
-    this%iam = mpi_grp%rank
-    this%myrow = coords(1) + 1
-    this%mycol = coords(2) + 1
-
-    deallocate(usermap)
-
-  end subroutine blacs_proc_grid_from_mpi
-#endif
 
 end module mpi_m
 

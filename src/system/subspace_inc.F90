@@ -214,14 +214,11 @@ subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
   integer              :: tmp, ist, effnp
   FLOAT                :: ldiff(st%lnst)
   integer :: blockrow, blockcol, total_np, psi_desc(BLACS_DLEN), hs_desc(BLACS_DLEN), blacs_info
-  type(blacs_proc_grid_t) :: proc_grid
 
   PUSH_SUB(X(subspace_diag_par_states))
 
   SAFE_ALLOCATE(hs(1:st%nst, 1:st%nst))
   SAFE_ALLOCATE(hpsi(1:der%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
-
-  call blacs_proc_grid_from_mpi(proc_grid, st%dom_st_mpi_grp)
 
   effnp = der%mesh%np + (st%d%dim - 1)*der%mesh%np_part
 
@@ -234,7 +231,7 @@ subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
 
   ASSERT(st%d%dim*der%mesh%np_part >= blockrow)
   
-  total_np = blockrow*proc_grid%nprow
+  total_np = blockrow*st%dom_st_proc_grid%nprow
   
   if (st%parallel_in_states) then
     blockcol = maxval(st%st_num)
@@ -242,10 +239,10 @@ subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
     blockcol = st%nst
   end if
 
-  call descinit(psi_desc, total_np, st%nst, blockrow, blockcol, 0, 0, proc_grid%context, &
+  call descinit(psi_desc, total_np, st%nst, blockrow, blockcol, 0, 0,  st%dom_st_proc_grid%context, &
     st%d%dim*der%mesh%np_part, blacs_info)
   ! for the moment we store the results in the first node (blocksize = st%nst)
-  call descinit(hs_desc, st%nst, st%nst, st%nst, st%nst, 0, 0, proc_grid%context, st%nst, blacs_info)
+  call descinit(hs_desc, st%nst, st%nst, st%nst, st%nst, 0, 0, st%dom_st_proc_grid%context, st%nst, blacs_info)
 
   ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
   do ist = st%st_start, st%st_end

@@ -63,7 +63,8 @@ libbasic_a_SOURCES =     \
 	types.F90        \
 	opencl.F90       \
 	space.F90        \
-	blacs.F90
+	blacs.F90        \
+	blacs_proc_grid.F90
 
 if COMPILE_PAPI
 libbasic_a_SOURCES += papi.c papi_f.F90
@@ -97,6 +98,7 @@ depend:
 	@makedepf90 $(libbasic_a_SOURCES)
 
 types.o : types.F90
+blacs.o : blacs.F90
 mpi.o : mpi.F90 blacs.o
 hardware.o : hardware.F90
 c_pointer.o : c_pointer.F90
@@ -123,9 +125,9 @@ mpi_debug.o : mpi_debug.F90 mpi_debug_inc.F90 mpi.o messages.o loct.o global.o
 mpi_lib.o : mpi_lib.F90 mpi_lib_inc.F90 mpi_debug.o mpi.o messages.o global.o profiling.o
 topology.o : topology.F90 utils.o mpi.o messages.o parser.o io.o global.o datasets.o profiling.o
 multicomm.o : multicomm.F90 varinfo.o utils.o mpi.o messages.o parser.o io.o global.o datasets.o profiling.o
-blacs.o : blacs.F90
 distributed.o: distributed.F90 multicomm.o profiling.o
 calc_mode.o : calc_mode.F90 multicomm.o messages.o
+blacs_proc_grid.o : blacs_proc_grid.F90 blacs.o mpi.o
 
 ialist.o : ialist.F90 messages.o profiling.o
 iihash.o : iihash.F90 ialist.o global.o

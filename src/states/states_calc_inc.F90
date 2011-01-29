@@ -109,7 +109,6 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
   integer :: idim, nref, wsize, info, ip
 #ifdef HAVE_SCALAPACK
   integer :: blockrow, blockcol, total_np, psi_desc(BLACS_DLEN), blacs_info
-  type(blacs_proc_grid_t) :: proc_grid
 #endif
 
   PUSH_SUB(X(states_orthogonalization_block))    
@@ -148,10 +147,8 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
     ASSERT(.not. mesh%use_curvilinear)
 
     if(mesh%parallel_in_domains .or. st%parallel_in_states) then
-#ifdef HAVE_SCALAPACK 
-      
-      call blacs_proc_grid_from_mpi(proc_grid, st%dom_st_mpi_grp)
-      
+#ifdef HAVE_SCALAPACK
+ 
       ! We need to select the block size of the decomposition. This is
       ! tricky, since not all processors have the same number of
       ! points.
@@ -168,8 +165,8 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
       end if
 
       ASSERT(mesh%np_part >= blockrow)
-
-      total_np = blockrow*proc_grid%nprow
+ 
+      total_np = blockrow*st%dom_st_proc_grid%nprow
 
       if (st%parallel_in_states) then
         blockcol = maxval(st%st_num)
@@ -181,7 +178,7 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
  
       ! DISTRIBUTE THE MATRIX ON THE PROCESS GRID
       ! Initialize the descriptor array for the main matrices (ScaLAPACK)
-      call descinit(psi_desc, total_np, nst, blockrow, blockcol, 0, 0, proc_grid%context, mesh%np_part, blacs_info)
+      call descinit(psi_desc, total_np, nst, blockrow, blockcol, 0, 0, st%dom_st_proc_grid%context, mesh%np_part, blacs_info)
 
       nref = min(nst, total_np)
       SAFE_ALLOCATE(tau(1:nref))
