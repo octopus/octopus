@@ -211,35 +211,18 @@ subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
   FLOAT, optional,     intent(out)   :: diff(:)
  
   R_TYPE, allocatable  :: hs(:, :), hpsi(:, :, :)
-  integer              :: tmp, ist, effnp
+  integer              :: tmp, ist
   FLOAT                :: ldiff(st%lnst)
-  integer :: blockrow, blockcol, total_np, psi_desc(BLACS_DLEN), hs_desc(BLACS_DLEN), blacs_info
+  integer :: psi_block(1:2), total_np, psi_desc(BLACS_DLEN), hs_desc(BLACS_DLEN), blacs_info
 
   PUSH_SUB(X(subspace_diag_par_states))
 
   SAFE_ALLOCATE(hs(1:st%nst, 1:st%nst))
   SAFE_ALLOCATE(hpsi(1:der%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
 
-  effnp = der%mesh%np + (st%d%dim - 1)*der%mesh%np_part
+  call states_blacs_blocksize(st, der%mesh, psi_block, total_np)
 
-  if (der%mesh%parallel_in_domains) then
-    blockrow = maxval(der%mesh%vp%np_local) + &
-      (st%d%dim - 1)*maxval(der%mesh%vp%np_local + der%mesh%vp%np_bndry + der%mesh%vp%np_ghost)
-  else 
-    blockrow = effnp
-  end if
-
-  ASSERT(st%d%dim*der%mesh%np_part >= blockrow)
-  
-  total_np = blockrow*st%dom_st_proc_grid%nprow
-  
-  if (st%parallel_in_states) then
-    blockcol = maxval(st%st_num)
-  else
-    blockcol = st%nst
-  end if
-
-  call descinit(psi_desc, total_np, st%nst, blockrow, blockcol, 0, 0,  st%dom_st_proc_grid%context, &
+  call descinit(psi_desc, total_np, st%nst, psi_block(1), psi_block(2), 0, 0,  st%dom_st_proc_grid%context, &
     st%d%dim*der%mesh%np_part, blacs_info)
   ! for the moment we store the results in the first node (blocksize = st%nst)
   call descinit(hs_desc, st%nst, st%nst, st%nst, st%nst, 0, 0, st%dom_st_proc_grid%context, st%nst, blacs_info)
@@ -251,14 +234,14 @@ subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
 
   ! We need to set to zero some extra parts of the array
   if(st%d%dim == 1) then
-    psi(der%mesh%np + 1:blockrow, 1:st%d%dim, st%st_start:st%st_end) = M_ZERO
-    hpsi(der%mesh%np + 1:blockrow, 1:st%d%dim, st%st_start:st%st_end) = M_ZERO
+    psi(der%mesh%np + 1:psi_block(1), 1:st%d%dim, st%st_start:st%st_end) = M_ZERO
+    hpsi(der%mesh%np + 1:psi_block(1), 1:st%d%dim, st%st_start:st%st_end) = M_ZERO
   else
     psi(der%mesh%np + 1:der%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end) = M_ZERO
     hpsi(der%mesh%np + 1:der%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end) = M_ZERO
   end if
-
-  call pblas_gemm('c', 'n', st%nst, st%nst, effnp, &
+  
+  call pblas_gemm('c', 'n', st%nst, st%nst, total_np, &
     R_TOTYPE(der%mesh%vol_pp(1)), psi(1, 1, st%st_start), 1, 1, psi_desc, &
     hpsi(1, 1, st%st_start), 1, 1, psi_desc, &
     R_TOTYPE(M_ZERO), hs(1, 1), 1, 1, hs_desc)
@@ -268,7 +251,7 @@ subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
 
   hpsi(1:der%mesh%np, 1:st%d%dim,  st%st_start:st%st_end) = psi(1:der%mesh%np, 1:st%d%dim, st%st_start:st%st_end)
 
-  call pblas_gemm('n', 'n', effnp, st%nst, st%nst, &
+  call pblas_gemm('n', 'n', total_np, st%nst, st%nst, &
     R_TOTYPE(M_ONE), hpsi(1, 1, st%st_start), 1, 1, psi_desc, &
     hs(1, 1), 1, 1, hs_desc, &
     R_TOTYPE(M_ZERO), psi(1, 1, st%st_start), 1, 1, psi_desc)
@@ -277,8 +260,7 @@ subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
   if(present(diff)) then 
     do ist = st%st_start, st%st_end
       call X(hamiltonian_apply)(hm, der, psi(:, :, ist) , hpsi(:, :, st%st_start), ist, ik)
-      diff(ist) = X(states_residue)(der%mesh, st%d%dim, hpsi(:, :, st%st_start), eigenval(ist), &
-           psi(:, :, ist))
+      diff(ist) = X(states_residue)(der%mesh, st%d%dim, hpsi(:, :, st%st_start), eigenval(ist), psi(:, :, ist))
     end do
 
     if(st%parallel_in_states) then

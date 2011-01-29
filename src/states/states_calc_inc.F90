@@ -107,15 +107,11 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
   type(batch_t) :: psib
   logical :: bof
   integer :: idim, nref, wsize, info, ip
-#ifdef HAVE_SCALAPACK
-  integer :: blockrow, blockcol, total_np, psi_desc(BLACS_DLEN), blacs_info
-#endif
 
   PUSH_SUB(X(states_orthogonalization_block))    
 
   select case(st%d%orth_method)
   case(ORTH_GS)
-
     SAFE_ALLOCATE(ss(1:nst, 1:nst))
     ss = M_ZERO
 
@@ -143,42 +139,40 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
     SAFE_DEALLOCATE_A(ss)
 
   case(ORTH_QR)
+    call qr()
 
+  case(ORTH_MGS)
+    call mgs()
+  end select
+
+  POP_SUB(X(states_orthogonalization_block))
+
+contains
+  
+  subroutine qr()
+    integer :: total_np
+#ifdef HAVE_SCALAPACK
+    integer :: psi_block(2), psi_desc(BLACS_DLEN), blacs_info
+#endif
+    
     ASSERT(.not. mesh%use_curvilinear)
 
     if(mesh%parallel_in_domains .or. st%parallel_in_states) then
 #ifdef HAVE_SCALAPACK
  
-      ! We need to select the block size of the decomposition. This is
-      ! tricky, since not all processors have the same number of
-      ! points.
-      !
-      ! What we do for now is to use the maximum of the number of
-      ! points and we set to zero the remaining points. This
-      ! introduces an error (I think) since this extra degrees of
-      ! freedom could be used by the orthogonalization process.
+      call states_blacs_blocksize(st, mesh, psi_block, total_np)
 
-      if (mesh%parallel_in_domains) then
-        blockrow = maxval(mesh%vp%np_local) 
-      else 
-        blockrow = mesh%np
-      end if
-
-      ASSERT(mesh%np_part >= blockrow)
- 
-      total_np = blockrow*st%dom_st_proc_grid%nprow
-
-      if (st%parallel_in_states) then
-        blockcol = maxval(st%st_num)
+      ! We need to set to zero some extra parts of the array
+      if(st%d%dim == 1) then
+        psi(mesh%np + 1:psi_block(1), 1:st%d%dim, 1:st%lnst) = M_ZERO
       else
-        blockcol = st%nst
+        psi(mesh%np + 1:mesh%np_part, 1:st%d%dim, 1:st%lnst) = M_ZERO
       end if
-
-      psi(mesh%np + 1:blockrow, 1:dim, 1:st%lnst) = M_ZERO
- 
+      
       ! DISTRIBUTE THE MATRIX ON THE PROCESS GRID
       ! Initialize the descriptor array for the main matrices (ScaLAPACK)
-      call descinit(psi_desc, total_np, nst, blockrow, blockcol, 0, 0, st%dom_st_proc_grid%context, mesh%np_part, blacs_info)
+      call descinit(psi_desc, total_np, nst, psi_block(1), psi_block(2), 0, 0, &
+        st%dom_st_proc_grid%context, mesh%np_part*st%d%dim, blacs_info)
 
       nref = min(nst, total_np)
       SAFE_ALLOCATE(tau(1:nref))
@@ -208,26 +202,29 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
 #endif 
     else
 
-      nref = min(nst, mesh%np)
+      total_np = mesh%np + mesh%np_part*(st%d%dim - 1)
+      psi(mesh%np + 1:mesh%np_part, 1:(st%d%dim - 1), 1:st%lnst) = M_ZERO
+
+      nref = min(nst, total_np)
       SAFE_ALLOCATE(tau(1:nref))
       tau = M_ZERO
-
+      
       ! get the optimal size of the work array
-      call lapack_geqrf(mesh%np, nst, psi(1, 1, 1), mesh%np_part, tau(1), tmp, -1, info)
+      call lapack_geqrf(total_np, nst, psi(1, 1, 1), mesh%np_part*st%d%dim, tau(1), tmp, -1, info)
       wsize = nint(R_REAL(tmp))
 
       ! calculate the QR decomposition
       SAFE_ALLOCATE(work(1:wsize))
-      call lapack_geqrf(mesh%np, nst, psi(1, 1, 1), mesh%np_part, tau(1), work(1), wsize, info)
+      call lapack_geqrf(total_np, nst, psi(1, 1, 1), mesh%np_part*st%d%dim, tau(1), work(1), wsize, info)
       SAFE_DEALLOCATE_A(work)
 
       ! get the optimal size of the work array
-      call lapack_orgqr(mesh%np, nst, nref, psi(1, 1, 1), mesh%np_part, tau(1), tmp, -1, info)
+      call lapack_orgqr(total_np, nst, nref, psi(1, 1, 1), mesh%np_part*st%d%dim, tau(1), tmp, -1, info)
       wsize = nint(R_REAL(tmp))
 
       ! now calculate Q
       SAFE_ALLOCATE(work(1:wsize))
-      call lapack_orgqr(mesh%np, nst, nref, psi(1, 1, 1), mesh%np_part, tau(1), work(1), wsize, info)
+      call lapack_orgqr(total_np, nst, nref, psi(1, 1, 1), mesh%np_part*st%d%dim, tau(1), work(1), wsize, info)
       SAFE_DEALLOCATE_A(work)
     end if
 
@@ -236,13 +233,7 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
     ! we need to scale by the volume element to get the proper normalization
     psi = psi/sqrt(mesh%vol_pp(1))
 
-  case(ORTH_MGS)
-    call mgs()
-  end select
-
-  POP_SUB(X(states_orthogonalization_block))
-
-contains
+  end subroutine qr
 
   subroutine mgs()
     integer :: ist, jst, idim

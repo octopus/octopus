@@ -85,7 +85,8 @@ module states_m
     states_init_block,                &
     states_are_complex,               &
     states_are_real,                  &
-    states_set_complex
+    states_set_complex,               &
+    states_blacs_blocksize
 
   type states_lead_t
     CMPLX, pointer     :: intf_psi(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
@@ -1258,7 +1259,8 @@ return
       !%Default gram_schmidt
       !%Section Execution::Optimization
       !%Description
-      !% The full orthogonalization method used by some eigensolvers.
+      !% The full orthogonalization method used by some
+      !% eigensolvers. The default is gram_schmidt.
       !%Option gram_schmidt 1
       !% The standard Gram-Schmidt orthogonalization implemented using
       !% Blas level 3 routines.
@@ -1267,6 +1269,7 @@ return
       !%Option qr 3
       !% (Experimental) Orthogonalization is performed based on a QR
       !% decomposition based on Lapack routines _getrf and _orgqr.
+      !% Compatible with states parallelization.
       !%End
 
       call parse_integer(datasets_check('StatesOrthogonalization'), ORTH_GS, st%d%orth_method)
@@ -2010,6 +2013,43 @@ return
 
     POP_SUB(states_wfns_memory)
   end function states_wfns_memory
+
+  ! ---------------------------------------------------------
+
+  subroutine states_blacs_blocksize(st, mesh, blocksize, total_np)
+    type(states_t),  intent(in)    :: st
+    type(mesh_t),    intent(in)    :: mesh
+    integer,         intent(out)   :: blocksize(2)
+    integer,         intent(out)   :: total_np
+
+#ifdef HAVE_SCALAPACK
+    ! We need to select the block size of the decomposition. This is
+    ! tricky, since not all processors have the same number of
+    ! points.
+    !
+    ! What we do for now is to use the maximum of the number of
+    ! points and we set to zero the remaining points.
+
+    if (mesh%parallel_in_domains) then
+      blocksize(1) = maxval(mesh%vp%np_local) + &
+        (st%d%dim - 1)*maxval(mesh%vp%np_local + mesh%vp%np_bndry + mesh%vp%np_ghost)
+    else 
+      blocksize(1) = mesh%np + (st%d%dim - 1)*mesh%np_part
+    end if
+
+    if (st%parallel_in_states) then
+      blocksize(2) = maxval(st%st_num)
+    else
+      blocksize(2) = st%nst
+    end if
+    
+    total_np = blocksize(1)*st%dom_st_proc_grid%nprow
+  
+
+    ASSERT(st%d%dim*mesh%np_part >= blocksize(1))
+#endif
+
+  end subroutine states_blacs_blocksize
 
 end module states_m
 

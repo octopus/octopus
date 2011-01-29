@@ -34,3 +34,7 @@ EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 25
 
 PoissonSolver = fft_corrected
+
+StatesOrthogonalization = qr
+
+ExperimentalFeatures = yes
