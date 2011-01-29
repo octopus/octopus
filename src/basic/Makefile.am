@@ -127,7 +127,7 @@ topology.o : topology.F90 utils.o mpi.o messages.o parser.o io.o global.o datase
 multicomm.o : multicomm.F90 varinfo.o utils.o mpi.o messages.o parser.o io.o global.o datasets.o profiling.o
 distributed.o: distributed.F90 multicomm.o profiling.o
 calc_mode.o : calc_mode.F90 multicomm.o messages.o
-blacs_proc_grid.o : blacs_proc_grid.F90 blacs.o mpi.o
+blacs_proc_grid.o : blacs_proc_grid.F90 blacs.o mpi.o profiling.o messages.o global.o
 
 ialist.o : ialist.F90 messages.o profiling.o
 iihash.o : iihash.F90 ialist.o global.o

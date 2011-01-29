@@ -20,8 +20,11 @@
 #include "global.h"
 
 module blacs_proc_grid_m
+  use global_m
   use blacs_m
   use mpi_m
+  use messages_m
+  use profiling_m
 
   implicit none
 
@@ -33,7 +36,6 @@ module blacs_proc_grid_m
     blacs_proc_grid_init,        &
     blacs_proc_grid_end,         &
     blacs_proc_grid_copy
-#endif
 
   type blacs_proc_grid_t
     integer :: context !< blacs context
@@ -47,7 +49,6 @@ module blacs_proc_grid_m
 
 contains
 
-#ifdef HAVE_SCALAPACK
   ! -----------------------------------------------------------------------
   !> Initializes a blacs context from an MPI communicator with
   !! topological information.
@@ -62,6 +63,8 @@ contains
     integer :: mpi_err
     integer :: comm
     logical :: reorder
+
+    PUSH_SUB(blacs_proc_grid_init)
 
     call MPI_Topo_test(mpi_grp%comm, topo, mpi_err)
 
@@ -80,19 +83,18 @@ contains
     coords = 0
     
     call MPI_Cart_get(comm, maxdims, dims(1), periods(1), coords(1), mpi_err)
-    
-    !cannot use SAFE ALLOCATE here
-    allocate(usermap(1:dims(1), 1:dims(2)))
+
+    SAFE_ALLOCATE(usermap(1:dims(1), 1:dims(2)))
     
     do ix = 1, dims(1)
       do iy = 1, dims(2)
         call MPI_Cart_rank(comm, (/ix - 1, iy - 1/), usermap(ix, iy), mpi_err)
       end do
     end do
-    
+
     ! get the default system context
     call blacs_get(-1, what = 0, val = this%context)
-    
+
     ! now get the context associated with the map
     call blacs_gridmap(this%context, usermap(1, 1), dims(1), dims(1), dims(2))
 
@@ -104,12 +106,13 @@ contains
     this%myrow = coords(1) + 1
     this%mycol = coords(2) + 1
 
-    deallocate(usermap)
+    SAFE_DEALLOCATE_A(usermap)
 
     if(topo /= MPI_CART) then
       call MPI_Comm_free(comm, mpi_err)
     end if
 
+    POP_SUB(blacs_proc_grid_init)
   end subroutine blacs_proc_grid_init
   
   ! ----------------------------------------------------
@@ -117,6 +120,9 @@ contains
   subroutine blacs_proc_grid_end(this)
     type(blacs_proc_grid_t), intent(inout) :: this
 
+    PUSH_SUB(blacs_proc_grid_end)
+
+    POP_SUB(blacs_proc_grid_end)
   end subroutine blacs_proc_grid_end
 
   ! ----------------------------------------------------
@@ -124,6 +130,8 @@ contains
   subroutine blacs_proc_grid_copy(cin, cout)
     type(blacs_proc_grid_t), intent(in)  :: cin
     type(blacs_proc_grid_t), intent(out) :: cout
+
+    PUSH_SUB(blacs_proc_grid_copy)
 
     cout%context = cin%context 
     cout%nprocs  = cin%nprocs
@@ -133,6 +141,7 @@ contains
     cout%myrow   = cin%myrow
     cout%mycol   = cin%mycol
 
+    POP_SUB(blacs_proc_grid_copy)
   end subroutine blacs_proc_grid_copy
 
   ! ----------------------------------------------------
