@@ -160,7 +160,9 @@ module states_m
     type(mpi_grp_t)             :: dom_st_mpi_grp     !< The MPI group related to the domain-states "plane".
     type(mpi_grp_t)             :: st_kpt_mpi_grp     !< The MPI group related to the states-kpoints "plane".
     type(mpi_grp_t)             :: dom_st_kpt_mpi_grp !< The MPI group related to the domains-states-kpoints "cube".
+#ifdef HAVE_SCALAPACK
     type(blacs_proc_grid_t)     :: dom_st_proc_grid   !< The BLACS process grid for the domains states plane
+#endif
     integer                     :: lnst               !< Number of states on local node.
     integer                     :: st_start, st_end   !< Range of states processed by local node.
     integer, pointer            :: node(:)            !< To which node belongs each state.

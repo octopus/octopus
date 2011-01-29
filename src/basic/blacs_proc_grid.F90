@@ -27,11 +27,13 @@ module blacs_proc_grid_m
 
   private
 
+#ifdef HAVE_SCALAPACK
   public ::                      &
     blacs_proc_grid_t,           &
     blacs_proc_grid_init,        &
     blacs_proc_grid_end,         &
     blacs_proc_grid_copy
+#endif
 
   type blacs_proc_grid_t
     integer :: context !< blacs context
