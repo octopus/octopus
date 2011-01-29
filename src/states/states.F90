@@ -1603,7 +1603,9 @@ return
     call mpi_grp_init(st%st_kpt_mpi_grp, mc%st_kpt_comm)
 
 #ifdef HAVE_SCALAPACK
-    call blacs_proc_grid_init(st%dom_st_proc_grid, st%dom_st_mpi_grp)
+    if(calc_mode_scalapack_compat()) then
+      call blacs_proc_grid_init(st%dom_st_proc_grid, st%dom_st_mpi_grp)
+    end if
 #endif
 
 #if defined(HAVE_MPI)
