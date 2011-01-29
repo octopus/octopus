@@ -150,7 +150,7 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
     if(mesh%parallel_in_domains .or. st%parallel_in_states) then
 #ifdef HAVE_SCALAPACK 
       
-      call blacs_proc_grid_from_mpi(proc_grid, st%dom_st)
+      call blacs_proc_grid_from_mpi(proc_grid, st%dom_st_mpi_grp)
       
       ! We need to select the block size of the decomposition. This is
       ! tricky, since not all processors have the same number of

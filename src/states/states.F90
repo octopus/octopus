@@ -156,9 +156,10 @@ module states_m
     !> This is stuff needed for the parallelization in states.
     logical                     :: parallel_in_states !< Am I parallel in states?
     type(mpi_grp_t)             :: mpi_grp            !< The MPI group related to the parallelization in states.
-    type(mpi_grp_t)             :: dom_st             !< The MPI group related to the domain-states "plane".
-    type(mpi_grp_t)             :: st_kpt             !< The MPI group related to the states-kpoints "plane".
-    type(mpi_grp_t)             :: dom_st_kpt         !< The MPI group related to the domains-states-kpoints "cube".
+    type(mpi_grp_t)             :: dom_st_mpi_grp     !< The MPI group related to the domain-states "plane".
+    type(mpi_grp_t)             :: st_kpt_mpi_grp     !< The MPI group related to the states-kpoints "plane".
+    type(mpi_grp_t)             :: dom_st_kpt_mpi_grp !< The MPI group related to the domains-states-kpoints "cube".
+    type(blacs_proc_grid_t)     :: dom_st_proc_grid   !< The BLACS process grid for the domains states plane
     integer                     :: lnst               !< Number of states on local node.
     integer                     :: st_start, st_end   !< Range of states processed by local node.
     integer, pointer            :: node(:)            !< To which node belongs each state.
@@ -1318,9 +1319,9 @@ return
       call states_init_block(stout)
     end if
 
-    stout%dom_st_kpt = stin%dom_st_kpt
-    stout%st_kpt = stin%st_kpt
-    stout%st_kpt = stin%st_kpt
+    stout%dom_st_kpt_mpi_grp = stin%dom_st_kpt_mpi_grp
+    stout%st_kpt_mpi_grp = stin%st_kpt_mpi_grp
+    stout%st_kpt_mpi_grp = stin%st_kpt_mpi_grp
 
     POP_SUB(states_copy)
   end subroutine states_copy
@@ -1546,7 +1547,7 @@ return
 
 #ifdef HAVE_MPI
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
-      call MPI_Allreduce(tot, tot_temp, 1, MPI_FLOAT, MPI_SUM, st%st_kpt%comm, mpi_err)
+      call MPI_Allreduce(tot, tot_temp, 1, MPI_FLOAT, MPI_SUM, st%st_kpt_mpi_grp%comm, mpi_err)
       tot = tot_temp
     end if
 #endif
@@ -1586,9 +1587,13 @@ return
     st%lnst               = st%nst
     st%parallel_in_states = .false.
     call mpi_grp_init(st%mpi_grp, mc%group_comm(P_STRATEGY_STATES))
-    call mpi_grp_init(st%dom_st_kpt, mc%dom_st_kpt_comm)
-    call mpi_grp_init(st%dom_st, mc%dom_st_comm)
-    call mpi_grp_init(st%st_kpt, mc%st_kpt_comm)
+    call mpi_grp_init(st%dom_st_kpt_mpi_grp, mc%dom_st_kpt_comm)
+    call mpi_grp_init(st%dom_st_mpi_grp, mc%dom_st_comm)
+    call mpi_grp_init(st%st_kpt_mpi_grp, mc%st_kpt_comm)
+
+#ifdef HAVE_SCALAPACK
+    call blacs_proc_grid_from_mpi(st%dom_st_proc_grid, st%dom_st_mpi_grp)
+#endif
 
 #if defined(HAVE_MPI)
     if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then

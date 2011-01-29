@@ -108,9 +108,9 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
     call X(states_compactify)(st%d%dim, mesh, psi2_start, xpsi2_node(1:xpsi2_count(rank), rank), psi2, sendbuf)
 
     ! Get neighbours.
-    call MPI_Cart_shift(st%dom_st%comm, P_STRATEGY_STATES-1, -1, src, dst, mpi_err)
-    right = lmpi_translate_rank(st%dom_st%comm, st%mpi_grp%comm, src)
-    left  = lmpi_translate_rank(st%dom_st%comm, st%mpi_grp%comm, dst)
+    call MPI_Cart_shift(st%dom_st_mpi_grp%comm, P_STRATEGY_STATES-1, -1, src, dst, mpi_err)
+    right = lmpi_translate_rank(st%dom_st_mpi_grp%comm, st%mpi_grp%comm, src)
+    left  = lmpi_translate_rank(st%dom_st_mpi_grp%comm, st%mpi_grp%comm, dst)
 
     do round = 0, size-1
       kk = mod(rank+round, size)   ! The column of the block currently being calculated.
@@ -168,7 +168,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
     SAFE_ALLOCATE(res_tmp(1:psi1_col, 1:psi2_col))
     res_tmp = res
 #endif
-    call MPI_Allreduce(MPI_IN_PLACE_OR(res_tmp), res, psi1_col*psi2_col, R_MPITYPE, MPI_SUM, st%dom_st%comm, mpi_err)
+    call MPI_Allreduce(MPI_IN_PLACE_OR(res_tmp), res, psi1_col*psi2_col, R_MPITYPE, MPI_SUM, st%dom_st_mpi_grp%comm, mpi_err)
     call profiling_out(C_PROFILING_BLOCKT_AR)
     SAFE_DEALLOCATE_A(res_tmp)
     SAFE_DEALLOCATE_P(xpsi1_count)
@@ -387,9 +387,9 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, psi_end, res
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
 
     ! Get neighbours.
-    call MPI_Cart_shift(st%dom_st%comm, P_STRATEGY_STATES-1, -1, src, dst, mpi_err)
-    right = lmpi_translate_rank(st%dom_st%comm, st%mpi_grp%comm, src)
-    left  = lmpi_translate_rank(st%dom_st%comm, st%mpi_grp%comm, dst)
+    call MPI_Cart_shift(st%dom_st_mpi_grp%comm, P_STRATEGY_STATES-1, -1, src, dst, mpi_err)
+    right = lmpi_translate_rank(st%dom_st_mpi_grp%comm, st%mpi_grp%comm, src)
+    left  = lmpi_translate_rank(st%dom_st_mpi_grp%comm, st%mpi_grp%comm, dst)
 
     ! Asynchronously left-rotate blocks of psi.
     do round = 0, size-1

@@ -290,7 +290,7 @@ contains
         call blas_copy(np, this%density(1, ispin), 1, reduce_rho(1), 1)
 #endif
         call MPI_Allreduce(MPI_IN_PLACE_OR(reduce_rho(1)), &
-          this%density(1, ispin), np, MPI_FLOAT, MPI_SUM, this%st%st_kpt%comm, mpi_err)
+          this%density(1, ispin), np, MPI_FLOAT, MPI_SUM, this%st%st_kpt_mpi_grp%comm, mpi_err)
       end do
       SAFE_DEALLOCATE_A(reduce_rho)
       call profiling_out(reduce_prof)

@@ -221,7 +221,7 @@ subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
   SAFE_ALLOCATE(hs(1:st%nst, 1:st%nst))
   SAFE_ALLOCATE(hpsi(1:der%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
 
-  call blacs_proc_grid_from_mpi(proc_grid, st%dom_st)
+  call blacs_proc_grid_from_mpi(proc_grid, st%dom_st_mpi_grp)
 
   effnp = der%mesh%np + (st%d%dim - 1)*der%mesh%np_part
 
@@ -267,7 +267,7 @@ subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
     R_TOTYPE(M_ZERO), hs(1, 1), 1, 1, hs_desc)
 
   ! Diagonalize the Hamiltonian in the subspace.
-  if(mpi_grp_is_root(st%dom_st)) call lalg_eigensolve(st%nst, hs, eigenval(:))
+  if(mpi_grp_is_root(st%dom_st_mpi_grp)) call lalg_eigensolve(st%nst, hs, eigenval(:))
 
   hpsi(1:der%mesh%np, 1:st%d%dim,  st%st_start:st%st_end) = psi(1:der%mesh%np, 1:st%d%dim, st%st_start:st%st_end)
 
