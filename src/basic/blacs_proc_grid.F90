@@ -33,21 +33,35 @@ module blacs_proc_grid_m
 #ifdef HAVE_SCALAPACK
   public ::                      &
     blacs_proc_grid_t,           &
+    blacs_proc_grid_nullify,     &
     blacs_proc_grid_init,        &
     blacs_proc_grid_end,         &
     blacs_proc_grid_copy
 
   type blacs_proc_grid_t
-    integer :: context !< blacs context
-    integer :: nprocs !< number of processors
-    integer :: nprow !< number of processors per row
-    integer :: npcol !< number of processors per column
-    integer :: iam !< process indentifier
-    integer :: myrow !< the row of the processor in the processor grid 
-    integer :: mycol !< the column of the processor in the processor grid
+    integer          :: context       !< The blacs context, -1 is object is null.
+    integer          :: nprocs        !< Number of processors.
+    integer          :: nprow         !< Number of processors per row.
+    integer          :: npcol         !< Number of processors per column.
+    integer          :: iam           !< Process indentifier.
+    integer          :: myrow         !< The row of the processor in the processor grid.
+    integer          :: mycol         !< The column of the processor in the processor grid.
+    integer, pointer :: usermap(:, :) !< The index of each processor in the grid.
   end type blacs_proc_grid_t
 
 contains
+
+  ! ----------------------------------------------------
+
+  subroutine blacs_proc_grid_nullify(this)
+    type(blacs_proc_grid_t), intent(inout) :: this
+
+    PUSH_SUB(blacs_proc_grid_nullify)
+
+    this%context = -1
+
+    POP_SUB(blacs_proc_grid_nullify)
+  end subroutine blacs_proc_grid_nullify
 
   ! -----------------------------------------------------------------------
   !> Initializes a blacs context from an MPI communicator with
@@ -62,7 +76,6 @@ contains
     integer, parameter :: maxdims = 2
     integer :: dims(1:2), topo, coords(1:2), ix, iy
     logical :: periods(1:2)
-    integer, allocatable :: usermap(:, :)
     integer :: mpi_err
     integer :: comm
     logical :: reorder
@@ -87,11 +100,11 @@ contains
     
     call MPI_Cart_get(comm, maxdims, dims(1), periods(1), coords(1), mpi_err)
 
-    SAFE_ALLOCATE(usermap(1:dims(1), 1:dims(2)))
+    SAFE_ALLOCATE(this%usermap(1:dims(1), 1:dims(2)))
     
     do ix = 1, dims(1)
       do iy = 1, dims(2)
-        call MPI_Cart_rank(comm, (/ix - 1, iy - 1/), usermap(ix, iy), mpi_err)
+        call MPI_Cart_rank(comm, (/ix - 1, iy - 1/), this%usermap(ix, iy), mpi_err)
       end do
     end do
 
@@ -99,7 +112,7 @@ contains
     call blacs_get(-1, what = 0, val = this%context)
 
     ! now get the context associated with the map
-    call blacs_gridmap(this%context, usermap(1, 1), dims(1), dims(1), dims(2))
+    call blacs_gridmap(this%context, this%usermap(1, 1), dims(1), dims(1), dims(2))
 
     ! and fill the rest of the structure
     this%nprocs = mpi_grp%size
@@ -108,8 +121,6 @@ contains
     this%iam = mpi_grp%rank
     this%myrow = coords(1) + 1
     this%mycol = coords(2) + 1
-
-    SAFE_DEALLOCATE_A(usermap)
 
     if(topo /= MPI_CART) then
       call MPI_Comm_free(comm, mpi_err)
@@ -124,6 +135,11 @@ contains
     type(blacs_proc_grid_t), intent(inout) :: this
 
     PUSH_SUB(blacs_proc_grid_end)
+
+    if(this%context /= -1) then
+      call blacs_gridexit(this%context)
+      SAFE_DEALLOCATE_P(this%usermap)
+    end if
 
     POP_SUB(blacs_proc_grid_end)
   end subroutine blacs_proc_grid_end
@@ -143,7 +159,14 @@ contains
     cout%iam     = cin%iam 
     cout%myrow   = cin%myrow
     cout%mycol   = cin%mycol
-
+    
+    if(cout%context /= -1) then
+      ! we have to create a new context
+      SAFE_ALLOCATE(cout%usermap(1:cout%nprow, 1:cout%npcol))
+      cout%usermap = cin%usermap
+      call blacs_gridmap(cout%context, cout%usermap(1, 1), cout%nprow, cout%nprow, cout%npcol)
+    end if
+    
     POP_SUB(blacs_proc_grid_copy)
   end subroutine blacs_proc_grid_copy
 

@@ -206,7 +206,9 @@ contains
     call states_dim_null(st%d)
     call states_dim_null(st%ob_d)
     call modelmb_particles_nullify(st%modelmbparticles)
-
+#ifdef HAVE_SCALAPACK
+    call blacs_proc_grid_nullify(st%dom_st_proc_grid)
+#endif
     POP_SUB(states_null)
   end subroutine states_null
 
@@ -557,6 +559,10 @@ contains
     call parse_logical(datasets_check('SymmetrizeDensity'), .false., st%symmetrize_density)
 
     if(st%symmetrize_density) call messages_experimental("Symmetrization of the density")
+
+#ifdef HAVE_SCALAPACK
+    call blacs_proc_grid_nullify(st%dom_st_proc_grid)
+#endif
 
     POP_SUB(states_init)
 
