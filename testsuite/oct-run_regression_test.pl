@@ -371,6 +371,10 @@ sub find_executables(){
       $name = $1;
     }
 
+    if ( $_ =~ /^Options\s*:\s*(.*)\s*$/) {
+      $options = $1;
+    }
+
     if ( $_ =~ /^Programs\s*:\s*(.*)\s*$/) {
       my $i = 0;
       foreach my $program (split(/;/, $1)) {
@@ -379,8 +383,18 @@ sub find_executables(){
 	foreach my $x (@octopus_execs) {
 	  $valid = $program cmp $x;
 	  if(!$valid) {
-	    $executables[$i] = "$exec_directory/$x";
-	    $i = $i+1;
+	    # check if the executable was compiled with the required options
+	    $has_options = 1;
+	    foreach my $y (split(/;/, $options)){
+	      $command_line = "$exec_directory/$x -c | grep -q $y";
+	      $rv = system($command_line);
+	      $has_options = $has_options && ($rv == 0)
+	    }
+
+	    if($has_options) {
+	      $executables[$i] = "$exec_directory/$x";
+	      $i = $i+1;
+	    }
 	  }
 	}
       }

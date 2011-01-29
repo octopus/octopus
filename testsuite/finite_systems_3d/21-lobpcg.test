@@ -2,7 +2,10 @@
 # $Id$
 
 Test       : LOBPCG
-Programs   : octopus; octopus_mpi
+Options    : scalapack
+Programs   : octopus_mpi
+Options    : 
+Programs   : octopus
 TestGroups : short-run
 Enabled    : Yes
 
