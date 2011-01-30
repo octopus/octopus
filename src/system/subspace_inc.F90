@@ -247,6 +247,9 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   ! Diagonalize the Hamiltonian in the subspace.
   if(mpi_grp_is_root(st%dom_st_mpi_grp)) call lalg_eigensolve(st%nst, hs, eigenval(:))
 
+  ! Broadcast the eigenvalues
+  call MPI_Bcast(eigenval(1), st%nst, R_MPITYPE, 0, st%dom_st_mpi_grp%comm, mpi_err)
+
   hpsi(1:der%mesh%np, 1:st%d%dim,  st%st_start:st%st_end) = psi(1:der%mesh%np, 1:st%d%dim, st%st_start:st%st_end)
 
   call pblas_gemm('n', 'n', total_np, st%nst, st%nst, &
