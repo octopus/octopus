@@ -36,7 +36,7 @@ module pblas_m
       integer          :: m, n, k, ia, ja, ib, jb, ic, jc
       real(8)          :: alpha, beta
       real(8)          :: a, b, c
-      integer          :: desca( * ), descb( * ), descc( * )
+      integer          :: desca, descb, descc
     end subroutine pdgemm
 
     subroutine pzgemm ( transa, transb, m, n, k, alpha, & 
@@ -47,7 +47,7 @@ module pblas_m
       integer          :: m, n, k, ia, ja, ib, jb, ic, jc
       complex(8)       :: alpha, beta
       complex(8)       :: a, b, c
-      integer          :: desca( * ), descb( * ), descc( * )
+      integer          :: desca, descb, descc
     end subroutine pzgemm
   end interface
 

@@ -228,10 +228,10 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   
   call states_blacs_blocksize(st, der%mesh, psi_block, total_np)
 
-  call descinit(psi_desc, total_np, st%nst, psi_block(1), psi_block(2), 0, 0,  st%dom_st_proc_grid%context, &
+  call descinit(psi_desc(1), total_np, st%nst, psi_block(1), psi_block(2), 0, 0,  st%dom_st_proc_grid%context, &
     st%d%dim*der%mesh%np_part, info)
   ! for the moment we store the results in the first node (blocksize = st%nst)
-  call descinit(hs_desc, st%nst, st%nst, st%nst, st%nst, 0, 0, st%dom_st_proc_grid%context, st%nst, info)
+  call descinit(hs_desc(1), st%nst, st%nst, st%nst, st%nst, 0, 0, st%dom_st_proc_grid%context, st%nst, info)
 
   ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
   do ist = st%st_start, st%st_end
@@ -248,9 +248,9 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   end if
   
   call pblas_gemm('c', 'n', st%nst, st%nst, total_np, &
-    R_TOTYPE(der%mesh%vol_pp(1)), psi(1, 1, st%st_start), 1, 1, psi_desc, &
-    hpsi(1, 1, st%st_start), 1, 1, psi_desc, &
-    R_TOTYPE(M_ZERO), hs(1, 1), 1, 1, hs_desc)
+    R_TOTYPE(der%mesh%vol_pp(1)), psi(1, 1, st%st_start), 1, 1, psi_desc(1), &
+    hpsi(1, 1, st%st_start), 1, 1, psi_desc(1), &
+    R_TOTYPE(M_ZERO), hs(1, 1), 1, 1, hs_desc(1))
 
   SAFE_ALLOCATE(evectors(1:st%nst, 1:st%nst))
 
@@ -301,9 +301,9 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   hpsi(1:der%mesh%np, 1:st%d%dim,  st%st_start:st%st_end) = psi(1:der%mesh%np, 1:st%d%dim, st%st_start:st%st_end)
 
   call pblas_gemm('n', 'n', total_np, st%nst, st%nst, &
-    R_TOTYPE(M_ONE), hpsi(1, 1, st%st_start), 1, 1, psi_desc, &
-    evectors(1, 1), 1, 1, hs_desc, &
-    R_TOTYPE(M_ZERO), psi(1, 1, st%st_start), 1, 1, psi_desc)
+    R_TOTYPE(M_ONE), hpsi(1, 1, st%st_start), 1, 1, psi_desc(1), &
+    evectors(1, 1), 1, 1, hs_desc(1), &
+    R_TOTYPE(M_ZERO), psi(1, 1, st%st_start), 1, 1, psi_desc(1))
 
   ! Recalculate the residues if requested by the diff argument.
   if(present(diff)) then 

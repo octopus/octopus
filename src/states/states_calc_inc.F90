@@ -157,7 +157,7 @@ contains
 
       ! DISTRIBUTE THE MATRIX ON THE PROCESS GRID
       ! Initialize the descriptor array for the main matrices (ScaLAPACK)
-      call descinit(psi_desc, total_np, nst, psi_block(1), psi_block(2), 0, 0, &
+      call descinit(psi_desc(1), total_np, nst, psi_block(1), psi_block(2), 0, 0, &
         st%dom_st_proc_grid%context, mesh%np_part*st%d%dim, blacs_info)
 
       nref = min(nst, total_np)
@@ -165,17 +165,17 @@ contains
       tau = M_ZERO
 
       ! calculate the QR decomposition
-      call scalapack_geqrf(total_np, nst, psi(1, 1, 1), 1, 1, psi_desc, tau(1), tmp, -1, blacs_info)
+      call scalapack_geqrf(total_np, nst, psi(1, 1, 1), 1, 1, psi_desc(1), tau(1), tmp, -1, blacs_info)
       wsize = nint(R_REAL(tmp))
       SAFE_ALLOCATE(work(1:wsize))
-      call scalapack_geqrf(total_np, nst, psi(1, 1, 1), 1, 1, psi_desc, tau(1), work(1), wsize, blacs_info)
+      call scalapack_geqrf(total_np, nst, psi(1, 1, 1), 1, 1, psi_desc(1), tau(1), work(1), wsize, blacs_info)
       SAFE_DEALLOCATE_A(work)
 
       ! now calculate Q
-      call scalapack_orgqr(total_np, nst, nref, psi(1, 1, 1), 1, 1, psi_desc, tau(1), tmp, -1, blacs_info)
+      call scalapack_orgqr(total_np, nst, nref, psi(1, 1, 1), 1, 1, psi_desc(1), tau(1), tmp, -1, blacs_info)
       wsize = nint(R_REAL(tmp))
       SAFE_ALLOCATE(work(1:wsize))
-      call scalapack_orgqr(total_np, nst, nref, psi(1, 1, 1), 1, 1, psi_desc, tau(1), work(1), wsize, blacs_info)
+      call scalapack_orgqr(total_np, nst, nref, psi(1, 1, 1), 1, 1, psi_desc(1), tau(1), work(1), wsize, blacs_info)
       SAFE_DEALLOCATE_A(work)
 
       if(blacs_info /= 0) then

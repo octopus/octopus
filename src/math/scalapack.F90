@@ -43,20 +43,20 @@ module scalapack_m
   interface
     SUBROUTINE DESCINIT( DESC, M, N, MB, NB, IRSRC, ICSRC, ICTXT, LLD, INFO )
       INTEGER            ICSRC, ICTXT, INFO, IRSRC, LLD, M, MB, N, NB
-      INTEGER            DESC( * )
+      INTEGER            DESC
     end SUBROUTINE DESCINIT
   end interface
 
   interface scalapack_geqrf
     SUBROUTINE PDGEQRF( M, N, A, IA, JA, DESCA, TAU, WORK, LWORK, INFO )
       INTEGER            IA, INFO, JA, LWORK, M, N
-      INTEGER            DESCA( * )
+      INTEGER            DESCA
       DOUBLE PRECISION   A, TAU, WORK
     end SUBROUTINE PDGEQRF
     
     SUBROUTINE PZGEQRF( M, N, A, IA, JA, DESCA, TAU, WORK, LWORK, INFO )
       INTEGER            IA, INFO, JA, LWORK, M, N
-      INTEGER            DESCA( * )
+      INTEGER            DESCA
       COMPLEX*16         A, TAU, WORK
     end SUBROUTINE PZGEQRF
   end interface scalapack_geqrf
@@ -64,13 +64,13 @@ module scalapack_m
   interface scalapack_orgqr
     SUBROUTINE PDORGQR( M, N, K, A, IA, JA, DESCA, TAU, WORK, LWORK, INFO ) 
       INTEGER            IA, INFO, JA, K, LWORK, M, N
-      INTEGER            DESCA( * )
+      INTEGER            DESCA
       DOUBLE PRECISION   A, TAU, WORK
     end SUBROUTINE PDORGQR
     
     SUBROUTINE PZUNGQR( M, N, K, A, IA, JA, DESCA, TAU, WORK, LWORK, INFO )
       INTEGER            IA, INFO, JA, K, LWORK, M, N
-      INTEGER            DESCA( * )
+      INTEGER            DESCA
       COMPLEX*16         A, TAU, WORK
     end SUBROUTINE PZUNGQR
   end interface scalapack_orgqr
@@ -78,7 +78,7 @@ module scalapack_m
   interface
     SUBROUTINE PDGESV( N, NRHS, A, IA, JA, DESCA, IPIV, B, IB, JB, DESCB, INFO )
       INTEGER            IA, IB, INFO, JA, JB, N, NRHS
-      INTEGER            DESCA( * ), DESCB( * ), IPIV
+      INTEGER            DESCA, DESCB, IPIV
       DOUBLE PRECISION   A, B
     end SUBROUTINE PDGESV
   end interface
@@ -86,7 +86,7 @@ module scalapack_m
   interface
     SUBROUTINE PZGESV( N, NRHS, A, IA, JA, DESCA, IPIV, B, IB, JB, DESCB, INFO )
       INTEGER            IA, IB, INFO, JA, JB, N, NRHS
-      INTEGER            DESCA( * ), DESCB( * ), IPIV
+      INTEGER            DESCA, DESCB, IPIV
       COMPLEX*16         A, B
     end SUBROUTINE PZGESV
   end interface
@@ -98,7 +98,7 @@ module scalapack_m
       CHARACTER          JOBZ, RANGE, UPLO
       INTEGER            IA, IL, INFO, IU, IZ, JA, JZ, LIWORK, LWORK, M, N, NZ
       DOUBLE PRECISION   ABSTOL, ORFAC, VL, VU
-      INTEGER            DESCA( * ), DESCZ( * ), ICLUSTR, IFAIL, IWORK
+      INTEGER            DESCA, DESCZ, ICLUSTR, IFAIL, IWORK
       DOUBLE PRECISION   A, GAP, W, WORK, Z
     end SUBROUTINE PDSYEVX
   end interface
