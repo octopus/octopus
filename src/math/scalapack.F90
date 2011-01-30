@@ -103,9 +103,47 @@ module scalapack_m
     end SUBROUTINE PDSYEVX
   end interface
 
+  interface
+    subroutine pdsyev(jobz, uplo, n, a, ia, ja, desca, w, z, iz, jz, descz, work, lwork, info)
+      character,        intent(in)    :: jobz
+      character,        intent(in)    :: uplo
+      real(8),          intent(inout) :: a
+      integer,          intent(in)    :: ia
+      integer,          intent(in)    :: ja
+      integer,          intent(in)    :: desca
+      real(8),          intent(out)   :: w
+      real(8),          intent(out)   :: z
+      integer,          intent(in)    :: iz
+      integer,          intent(in)    :: jz
+      integer,          intent(in)    :: descz
+      real(8),          intent(out)   :: work
+      integer,          intent(in)    :: lwork
+      integer,          intent(out)   :: info
+    end subroutine pdsyev
+
+    subroutine pzheev(jobz, uplo, n, a, ia, ja, desca, w, z, iz, jz, descz, work, lwork, rwork, lrwork, info)
+      character,        intent(in)    :: jobz
+      character,        intent(in)    :: uplo
+      complex(8),       intent(inout) :: a
+      integer,          intent(in)    :: ia
+      integer,          intent(in)    :: ja
+      integer,          intent(in)    :: desca
+      real(8),          intent(out)   :: w
+      complex(8),       intent(out)   :: z
+      integer,          intent(in)    :: iz
+      integer,          intent(in)    :: jz
+      integer,          intent(in)    :: descz
+      complex(8),       intent(out)   :: work
+      integer,          intent(in)    :: lwork
+      complex(8),       intent(out)   :: rwork
+      integer,          intent(in)    :: lrwork
+      integer,          intent(out)   :: info
+    end subroutine pzheev
+  end interface
+
 end module scalapack_m
 
-!! Local Variables:
+!! local Variables:
 !! mode: f90
 !! coding: utf-8
 !! End:

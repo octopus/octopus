@@ -210,11 +210,16 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   FLOAT, optional,     intent(out)   :: diff(:)
  
 #ifdef HAVE_SCALAPACK
-
-  R_TYPE, allocatable  :: hs(:, :), hpsi(:, :, :)
-  integer              :: tmp, ist
+  R_TYPE, allocatable  :: hs(:, :), hpsi(:, :, :), evectors(:, :), work(:)
+  R_TYPE               :: rttmp
+  integer              :: tmp, ist, lwork
   FLOAT                :: ldiff(st%lnst)
-  integer :: psi_block(1:2), total_np, psi_desc(BLACS_DLEN), hs_desc(BLACS_DLEN), blacs_info
+  integer :: psi_block(1:2), total_np, psi_desc(BLACS_DLEN), hs_desc(BLACS_DLEN), info
+#ifdef R_TCOMPLEX
+  integer :: lrwork
+  CMPLX, allocatable :: rwork(:)
+  CMPLX :: ftmp
+#endif
 
   PUSH_SUB(X(subspace_diag_scalapack))
 
@@ -224,9 +229,9 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   call states_blacs_blocksize(st, der%mesh, psi_block, total_np)
 
   call descinit(psi_desc, total_np, st%nst, psi_block(1), psi_block(2), 0, 0,  st%dom_st_proc_grid%context, &
-    st%d%dim*der%mesh%np_part, blacs_info)
+    st%d%dim*der%mesh%np_part, info)
   ! for the moment we store the results in the first node (blocksize = st%nst)
-  call descinit(hs_desc, st%nst, st%nst, st%nst, st%nst, 0, 0, st%dom_st_proc_grid%context, st%nst, blacs_info)
+  call descinit(hs_desc, st%nst, st%nst, st%nst, st%nst, 0, 0, st%dom_st_proc_grid%context, st%nst, info)
 
   ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
   do ist = st%st_start, st%st_end
@@ -247,17 +252,57 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
     hpsi(1, 1, st%st_start), 1, 1, psi_desc, &
     R_TOTYPE(M_ZERO), hs(1, 1), 1, 1, hs_desc)
 
-  ! Diagonalize the Hamiltonian in the subspace.
-  if(mpi_grp_is_root(st%dom_st_mpi_grp)) call lalg_eigensolve(st%nst, hs, eigenval(:))
+  SAFE_ALLOCATE(evectors(1:st%nst, 1:st%nst))
 
-  ! Broadcast the eigenvalues
-  call MPI_Bcast(eigenval(1), st%nst, R_MPITYPE, 0, st%dom_st_mpi_grp%comm, mpi_err)
+#ifdef R_TCOMPLEX
+
+  call pzheev(jobz = 'V', uplo = 'U', n = st%nst, a = hs(1, 1) , ia = 1, ja = 1, desca = hs_desc(1), &
+    w = eigenval(1), z = evectors(1, 1), iz = 1, jz = 1, descz = hs_desc(1), &
+    work = rttmp, lwork = -1, rwork = ftmp, lrwork = -1, info = info)
+
+  ASSERT(info == 0)
+
+  lwork = nint(abs(rttmp))
+  lrwork = nint(real(ftmp, 8))
+
+  SAFE_ALLOCATE(work(1:lwork))
+  SAFE_ALLOCATE(rwork(1:lrwork))
+
+  call pzheev(jobz = 'V', uplo = 'U', n = st%nst, a = hs(1, 1) , ia = 1, ja = 1, desca = hs_desc(1), &
+    w = eigenval(1), z = evectors(1, 1), iz = 1, jz = 1, descz = hs_desc(1), &
+    work = work(1), lwork = lwork, rwork = rwork(1), lrwork = lrwork, info = info)
+
+  ASSERT(info == 0)
+
+  SAFE_DEALLOCATE_A(work)
+  SAFE_DEALLOCATE_A(rwork)
+
+#else
+
+  call pdsyev(jobz = 'V', uplo = 'U', n = st%nst, a = hs(1, 1) , ia = 1, ja = 1, desca = hs_desc(1), &
+    w = eigenval(1), z = evectors(1, 1), iz = 1, jz = 1, descz = hs_desc(1), work = rttmp, lwork = -1, info = info)
+
+  ASSERT(info == 0)
+
+  lwork = nint(abs(rttmp))
+  SAFE_ALLOCATE(work(1:lwork))
+
+  call pdsyev(jobz = 'V', uplo = 'U', n = st%nst, a = hs(1, 1) , ia = 1, ja = 1, desca = hs_desc(1), &
+    w = eigenval(1), z = evectors(1, 1), iz = 1, jz = 1, descz = hs_desc(1), work = work(1), lwork = lwork, info = info)
+  
+  ASSERT(info == 0)
+
+  SAFE_DEALLOCATE_A(work)
+
+#endif
+
+  SAFE_DEALLOCATE_A(hs)
 
   hpsi(1:der%mesh%np, 1:st%d%dim,  st%st_start:st%st_end) = psi(1:der%mesh%np, 1:st%d%dim, st%st_start:st%st_end)
 
   call pblas_gemm('n', 'n', total_np, st%nst, st%nst, &
     R_TOTYPE(M_ONE), hpsi(1, 1, st%st_start), 1, 1, psi_desc, &
-    hs(1, 1), 1, 1, hs_desc, &
+    evectors(1, 1), 1, 1, hs_desc, &
     R_TOTYPE(M_ZERO), psi(1, 1, st%st_start), 1, 1, psi_desc)
 
   ! Recalculate the residues if requested by the diff argument.
