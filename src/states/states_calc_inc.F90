@@ -26,7 +26,7 @@ subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
   integer,           intent(in)    :: nst !< Number of states
   integer,           intent(in)    :: dim !< Dimension of ...?
   type(mesh_t),      intent(in)    :: mesh
-  R_TYPE, target,    intent(inout) :: psi(:, :, st%st_start:)
+  R_TYPE, target,    intent(inout) :: psi(:, :, :)
 
   R_TYPE, allocatable :: ss(:, :), qq(:, :), psi_tmp(:, :, :)
   type(profile_t), save :: prof
