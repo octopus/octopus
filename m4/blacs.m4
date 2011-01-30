@@ -61,7 +61,8 @@ if test x"$acx_blacs_ok" = xyes; then
   AC_DEFINE(HAVE_BLACS,1,[Defined if you have BLACS library.])
   $1
 else
-  echo "Blacs is not found"
+  AC_MSG_WARN([Could not find Blacs library (required for Scalapack). 
+               *** Will compile without Scalapack support])
   $2
 fi
 ])dnl ACX_BLACS
