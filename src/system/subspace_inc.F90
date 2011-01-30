@@ -19,7 +19,8 @@
 
 ! ---------------------------------------------------------
 ! This routine diagonalises the Hamiltonian in the subspace defined by the states.
-subroutine X(subspace_diag)(der, st, hm, ik, eigenval, psi, diff)
+subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, psi, diff)
+  type(subspace_t),    intent(in)    :: this
   type(derivatives_t), intent(in)    :: der
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(in)    :: hm
@@ -37,11 +38,12 @@ subroutine X(subspace_diag)(der, st, hm, ik, eigenval, psi, diff)
   PUSH_SUB(X(subspace_diag))
   call profiling_in(diagon_prof, "SUBSPACE_DIAG")
 
-#ifdef HAVE_MPI
-  if(st%parallel_in_states) then
-    call X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
-  else
-#endif
+  select case(this%method)
+  case(SD_OLD)
+    call X(subspace_diag_old)(der, st, hm, ik, eigenval, psi, diff)
+  case(SD_SCALAPACK)
+    call X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
+  case(SD_STANDARD)
 
     SAFE_ALLOCATE(h_subspace(1:st%nst, 1:st%nst))
     SAFE_ALLOCATE(f(1:der%mesh%np, 1:st%d%dim, 1:st%d%block_size))
@@ -108,17 +110,13 @@ subroutine X(subspace_diag)(der, st, hm, ik, eigenval, psi, diff)
     SAFE_DEALLOCATE_A(f)
     SAFE_DEALLOCATE_A(h_subspace)
 
-#ifdef HAVE_MPI
-  end if
-#endif
+  end select
 
   call profiling_out(diagon_prof)
   POP_SUB(X(subspace_diag))
 
 end subroutine X(subspace_diag)
 
-#ifdef HAVE_MPI
-#ifndef HAVE_SCALAPACK
 ! --------------------------------------------------------- 
 ! This routine diagonalises the Hamiltonian in the subspace defined by
 ! the states; this version is aware of parallelization in states but
@@ -127,7 +125,7 @@ end subroutine X(subspace_diag)
 ! I leave this function here for the moment. Eventually it will be
 ! removed. XA
 !
-subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
+subroutine X(subspace_diag_old)(der, st, hm, ik, eigenval, psi, diff)
   type(derivatives_t), intent(in)    :: der
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(in)    :: hm
@@ -144,7 +142,7 @@ subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
   FLOAT               :: ldiff(st%lnst)
 #endif
 
-  PUSH_SUB(X(subspace_diag_par_states))
+  PUSH_SUB(X(subspace_diag_old))
 
   SAFE_ALLOCATE(h_subspace(1:st%nst, 1:st%nst))
   SAFE_ALLOCATE(ff(1:der%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
@@ -190,18 +188,16 @@ subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
   SAFE_DEALLOCATE_A(ff)
   SAFE_DEALLOCATE_A(h_subspace)
   
-  POP_SUB(X(subspace_diag_par_states))
+  POP_SUB(X(subspace_diag_old))
   
-end subroutine X(subspace_diag_par_states)
-
-#else
+end subroutine X(subspace_diag_old)
 
 ! --------------------------------------------------------- 
 ! This routine diagonalises the Hamiltonian in the subspace defined by
 ! the states; this version is aware of parallelization in states but
 ! consumes more memory.
 !
-subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
+subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   type(derivatives_t), intent(in)    :: der
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(in)    :: hm
@@ -210,12 +206,14 @@ subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
   R_TYPE,              intent(inout) :: psi(:, :, st%st_start:)
   FLOAT, optional,     intent(out)   :: diff(:)
  
+#ifdef HAVE_SCALAPACK
+
   R_TYPE, allocatable  :: hs(:, :), hpsi(:, :, :)
   integer              :: tmp, ist
   FLOAT                :: ldiff(st%lnst)
   integer :: psi_block(1:2), total_np, psi_desc(BLACS_DLEN), hs_desc(BLACS_DLEN), blacs_info
 
-  PUSH_SUB(X(subspace_diag_par_states))
+  PUSH_SUB(X(subspace_diag_scalapack))
 
   SAFE_ALLOCATE(hs(1:st%nst, 1:st%nst))
   SAFE_ALLOCATE(hpsi(1:der%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
@@ -273,12 +271,10 @@ subroutine X(subspace_diag_par_states)(der, st, hm, ik, eigenval, psi, diff)
   SAFE_DEALLOCATE_A(hpsi)
   SAFE_DEALLOCATE_A(hs)
 
-  POP_SUB(X(subspace_diag_par_states))
-  
-end subroutine X(subspace_diag_par_states)
+  POP_SUB(X(subspace_diag_scalapack))
 
-#endif /* SCALAPACK */
-#endif /* MPI */
+#endif /* SCALAPACK */  
+end subroutine X(subspace_diag_scalapack)
 
 ! ------------------------------------------------------
 
@@ -287,10 +283,14 @@ subroutine X(subspace_test)(st, hm, gr)
   type(hamiltonian_t), intent(inout) :: hm
   type(grid_t),        intent(in)    :: gr
   
+  type(subspace_t) :: sdiag
+
   PUSH_SUB(X(subspace_test))
 
   call states_allocate_wfns(st, gr%mesh, wfs_type = R_TYPE_VAL)
   call states_generate_random(st, gr%mesh)
+
+  call subspace_init(sdiag, st)
 
 #ifdef R_TCOMPLEX
   st%zpsi = (M_ONE + M_ZI)*st%zpsi
@@ -305,9 +305,11 @@ subroutine X(subspace_test)(st, hm, gr)
   call write_info(2)
 
   call X(states_orthogonalization_full)(st, st%nst, gr%mesh, st%d%dim, st%X(psi)(:, :, :, 1))
-  call X(subspace_diag)(gr%der, st, hm, 1, st%eigenval(:, 1), st%X(psi)(:, :, :, 1))
+  call X(subspace_diag)(sdiag, gr%der, st, hm, 1, st%eigenval(:, 1), st%X(psi)(:, :, :, 1))
 
   call print_results()
+
+  call subspace_end(sdiag)
   call states_deallocate_wfns(st)
   
   POP_SUB(X(subspace_test))

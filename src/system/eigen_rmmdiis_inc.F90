@@ -336,11 +336,12 @@ end subroutine X(eigensolver_rmmdiis)
 
 
 ! ---------------------------------------------------------
-subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged, ik, blocksize)
+subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, sdiag, tol, niter, converged, ik, blocksize)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
   type(preconditioner_t), intent(in)    :: pre
+  type(subspace_t),       intent(in)    :: sdiag
   FLOAT,                  intent(in)    :: tol
   integer,                intent(inout) :: niter
   integer,                intent(inout) :: converged
@@ -373,7 +374,7 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
 
   do isweep = 1, sweeps
 
-    if(isweep > 1) call X(subspace_diag)(gr%der, st, hm, ik, st%eigenval(:, ik), st%X(psi)(:, :, :, ik))
+    if(isweep > 1) call X(subspace_diag)(sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), st%X(psi)(:, :, :, ik))
 
     do sst = st%st_start, st%st_end, blocksize
       est = min(sst + blocksize - 1, st%st_end)

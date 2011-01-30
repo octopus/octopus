@@ -80,6 +80,8 @@ module eigensolver_m
 
     ! Stores information about the preconditioning.
     type(preconditioner_t) :: pre
+
+    type(subspace_t) :: sdiag
   end type eigensolver_t
 
 
@@ -262,7 +264,9 @@ contains
     SAFE_ALLOCATE(eigens%converged(1:st%d%nik))
     eigens%converged(1:st%d%nik) = 0
     eigens%matvec    = 0
-
+    
+    call subspace_init(eigens%sdiag, st)
+        
     POP_SUB(eigensolver_init)
 
   end subroutine eigensolver_init
@@ -273,6 +277,8 @@ contains
     type(eigensolver_t), intent(inout) :: eigens
 
     PUSH_SUB(eigensolver_end)
+
+    call subspace_end(eigens%sdiag)
 
     select case(eigens%es_type)
     case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS)
@@ -357,9 +363,9 @@ contains
       
       if(eigens%subspace_diag .and. eigens%converged(ik) == 0) then
         if (states_are_real(st)) then
-          call dsubspace_diag(gr%der, st, hm, ik, st%eigenval(:, ik), st%dpsi(:, :, :, ik), eigens%diff(:, ik))
+          call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), st%dpsi(:, :, :, ik), eigens%diff(:, ik))
         else
-          call zsubspace_diag(gr%der, st, hm, ik, st%eigenval(:, ik), st%zpsi(:, :, :, ik), eigens%diff(:, ik))
+          call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), st%zpsi(:, :, :, ik), eigens%diff(:, ik))
         end if
       end if
 
@@ -380,10 +386,10 @@ contains
           call deigensolver_lobpcg(gr, st, hm, eigens%pre, tol, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size, verbose = verbose_)
         case(RS_MG)
-          call deigensolver_mg(gr%der, st, hm, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call deigensolver_mg(gr%der, st, hm, eigens%sdiag, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
           if(iter == 1) then
-            call deigensolver_rmmdiis_start(gr, st, hm, eigens%pre, tol, maxiter, &
+            call deigensolver_rmmdiis_start(gr, st, hm, eigens%pre, eigens%sdiag, tol, maxiter, &
                  eigens%converged(ik), ik, hm%d%block_size)
           else
             call deigensolver_rmmdiis(gr, st, hm, eigens%pre, tol, maxiter, &
@@ -392,7 +398,7 @@ contains
         end select
 
         if(eigens%subspace_diag.and.eigens%es_type /= RS_RMMDIIS) then
-          call dsubspace_diag(gr%der, st, hm, ik, st%eigenval(:, ik), st%dpsi(:, :, :, ik), eigens%diff(:, ik))
+          call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), st%dpsi(:, :, :, ik), eigens%diff(:, ik))
         end if
 
       else
@@ -413,10 +419,10 @@ contains
           call zeigensolver_lobpcg(gr, st, hm, eigens%pre, tol, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size, verbose = verbose_)
         case(RS_MG)
-          call zeigensolver_mg(gr%der, st, hm, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call zeigensolver_mg(gr%der, st, hm, eigens%sdiag, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
           if(iter == 1) then
-            call zeigensolver_rmmdiis_start(gr, st, hm, eigens%pre, tol, maxiter, &
+            call zeigensolver_rmmdiis_start(gr, st, hm, eigens%pre, eigens%sdiag, tol, maxiter, &
                  eigens%converged(ik), ik, hm%d%block_size)
           else
             call zeigensolver_rmmdiis(gr, st, hm, eigens%pre, tol, maxiter, &
@@ -425,7 +431,7 @@ contains
         end select
 
         if(eigens%subspace_diag.and.eigens%es_type /= RS_RMMDIIS) then
-          call zsubspace_diag(gr%der, st, hm, ik, st%eigenval(:, ik), st%zpsi(:, :, :, ik), eigens%diff(:, ik))
+          call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), st%zpsi(:, :, :, ik), eigens%diff(:, ik))
         end if
 
       end if

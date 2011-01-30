@@ -18,10 +18,11 @@
 !! $Id: eigen_mg_inc.F90 4195 2008-05-25 18:15:35Z xavier $
 
 ! ---------------------------------------------------------
-subroutine X(eigensolver_mg) (der, st, hm, tol, niter, converged, ik, diff)
+subroutine X(eigensolver_mg) (der, st, hm, sdiag, tol, niter, converged, ik, diff)
   type(derivatives_t),    intent(in)    :: der
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
+  type(subspace_t),       intent(in)    :: sdiag
   FLOAT,                  intent(in)    :: tol
   integer,                intent(inout) :: niter
   integer,                intent(inout) :: converged
@@ -40,7 +41,7 @@ subroutine X(eigensolver_mg) (der, st, hm, tol, niter, converged, ik, diff)
 
   do iter = 1, niter
 
-    call X(subspace_diag)(der, st, hm, ik, st%eigenval(:, ik), st%X(psi)(:, :, :, ik), diff)
+    call X(subspace_diag)(sdiag, der, st, hm, ik, st%eigenval(:, ik), st%X(psi)(:, :, :, ik), diff)
 
     do ist = 1, st%nst
       print*, iter, ist, st%eigenval(ist, ik), diff(ist)
@@ -67,7 +68,7 @@ subroutine X(eigensolver_mg) (der, st, hm, tol, niter, converged, ik, diff)
 
   end do
 
-  call X(subspace_diag)(der, st, hm, ik, st%eigenval(:, ik), st%X(psi)(:, :, :, ik), diff)
+  call X(subspace_diag)(sdiag, der, st, hm, ik, st%eigenval(:, ik), st%X(psi)(:, :, :, ik), diff)
 
   niter = iter*10
 

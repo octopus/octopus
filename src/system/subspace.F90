@@ -49,15 +49,65 @@ module subspace_m
   use varinfo_m
 
   implicit none
-
+  
   private
+
   public ::             &
+    subspace_t,         &
+    subspace_init,      &
+    subspace_end,       &
     dsubspace_diag,     &
     zsubspace_diag,     &
     dsubspace_test,     &
     zsubspace_test
 
+  integer, parameter ::        &
+    SD_STANDARD  = 1,          &
+    SD_OLD       = 2,          &
+    SD_SCALAPACK = 3
+  
+  type subspace_t
+    integer :: method
+  end type subspace_t
+
+
 contains
+
+  subroutine subspace_init(this, st)
+    type(subspace_t), intent(out) :: this
+    type(states_t),   intent(in)  :: st
+
+    integer :: default
+
+    !%Variable SubspaceDiagonalization
+    !%Type integer
+    !%Default standard
+    !%Section States
+    !%Description
+    !% Selects the method to perform subspace diagonalization. The
+    !% default is <tt>standard</tt>, unless states parallelization is used,
+    !% when the default is <tt>old</tt>.
+    !%Option standard 1
+    !% The standard routine.
+    !%Option old 2
+    !% Old routine, compatible with states parallelization.
+    !%Option scalapack 3
+    !% State-parallelized version using scalapack.
+    !%End
+
+    default = SD_STANDARD
+    if(st%parallel_in_states) default = SD_OLD
+    call parse_integer(datasets_check('SubspaceDiagonalization'), default, this%method)
+    if(.not.varinfo_valid_option('SubspaceDiagonalization', this%method)) call input_error('SubspaceDiagonalization')
+    
+  end subroutine subspace_init
+
+  ! ---------------------------------------------------------
+
+  subroutine subspace_end(this)
+    type(subspace_t), intent(inout) :: this
+    
+  end subroutine subspace_end
 
 #include "undef.F90"
 #include "real.F90"

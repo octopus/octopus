@@ -1655,6 +1655,9 @@ return
      call multicomm_divide_range(st%nst, st%mpi_grp%size, st%st_range(1, :), st%st_range(2, :), &
        lsize = st%st_num, scalapack_compat = calc_mode_scalapack_compat())
 
+     message(1) = "Info: Parallelization in states"
+     call write_info(1)
+
      do k = 0, st%mpi_grp%size - 1
        write(message(1),'(a,i4,a,i5,a,i6,a,i6)') &
             'Info: Nodes in states-group ', k, ' will manage ', st%st_num(k), ' states:', &
