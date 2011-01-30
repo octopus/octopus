@@ -210,6 +210,8 @@ contains
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_nullify(st%dom_st_proc_grid)
 #endif
+    st%d%orth_method = 0
+
     POP_SUB(states_null)
   end subroutine states_null
 
@@ -1232,6 +1234,7 @@ return
   contains
 
     subroutine states_exec_init()
+      integer :: default
 
       PUSH_SUB(states_densities_init.states_exec_init)
 
@@ -1260,7 +1263,8 @@ return
       !%Section Execution::Optimization
       !%Description
       !% The full orthogonalization method used by some
-      !% eigensolvers. The default is gram_schmidt.
+      !% eigensolvers. The default is gram_schmidt. When state
+      !% parallelization the default is old_gram_schmidt.
       !%Option gram_schmidt 1
       !% The standard Gram-Schmidt orthogonalization implemented using
       !% Blas level 3 routines.
@@ -1269,12 +1273,28 @@ return
       !%Option qr 3
       !% (Experimental) Orthogonalization is performed based on a QR
       !% decomposition based on Lapack routines _getrf and _orgqr.
-      !% Compatible with states parallelization.
+      !% Compatible with states parallelization. 
+      !%Option old_gram_schmidt 4
+      !% Old Gram-Schmidt implementation, compatible with states
+      !% parallelization.
       !%End
 
-      call parse_integer(datasets_check('StatesOrthogonalization'), ORTH_GS, st%d%orth_method)
+      if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
+        default = ORTH_OLDGS
+      else
+        default = ORTH_GS
+      end if
+      
+      call parse_integer(datasets_check('StatesOrthogonalization'), default, st%d%orth_method)
       if(st%d%orth_method == ORTH_QR) call messages_experimental("QR Orthogonalization")
 
+      if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES) &
+        .and. st%d%orth_method /= ORTH_QR .and. st%d%orth_method /= ORTH_OLDGS) then
+
+        message(1) = 'The selected orthogonalization method cannot work with state-parallelization.'
+        call write_fatal(1)
+      end if
+      
       POP_SUB(states_densities_init.states_exec_init)
     end subroutine states_exec_init
   end subroutine states_densities_init

@@ -32,12 +32,16 @@ subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
   type(profile_t), save :: prof
   integer :: idim, ist, jst, kst
   FLOAT   :: nrm2
+  logical :: bof
+  type(batch_t) :: psib
+
+  ASSERT(st%d%orth_method /= 0)
 
   call profiling_in(prof, "GRAM_SCHMIDT_FULL")
   PUSH_SUB(X(states_orthogonalization_full))
-  if(.not. (st%parallel_in_states .and. st%d%orth_method /= ORTH_QR)) then
-    call X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
-  else
+
+  select case(st%d%orth_method)
+  case(ORTH_OLDGS)
     SAFE_ALLOCATE(qq(1:st%nst, 1:st%nst))
     SAFE_ALLOCATE(ss(1:nst, 1:nst))
     ss = M_ZERO
@@ -72,9 +76,9 @@ subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
 
     end do
 
-    SAFE_ALLOCATE(psi_tmp(1:mesh%np_part, 1:dim, st%st_start:st%st_end))
+    SAFE_ALLOCATE(psi_tmp(1:mesh%np_part, 1:dim, 1:st%lnst))
 
-    do ist = st%st_start, st%st_end
+    do ist = 1, st%lnst
       do idim = 1, dim
         call lalg_copy(mesh%np, psi(:, idim, ist), psi_tmp(:, idim, ist))
       end do
@@ -83,35 +87,12 @@ subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
     call states_block_matr_mul(mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, psi_tmp, qq, psi)
 
     SAFE_DEALLOCATE_A(psi_tmp)
+    SAFE_DEALLOCATE_A(ss)
+    SAFE_DEALLOCATE_A(qq)
 
-  end if
-
-  SAFE_DEALLOCATE_A(ss)
-  SAFE_DEALLOCATE_A(qq)
-  
-  POP_SUB(X(states_orthogonalization_full))
-  call profiling_out(prof)
-end subroutine X(states_orthogonalization_full)
-
-
-! ---------------------------------------------------------
-subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
-  type(states_t),    intent(in)    :: st
-  integer,           intent(in)    :: nst !< number of states
-  type(mesh_t),      intent(in)    :: mesh
-  integer,           intent(in)    :: dim
-  R_TYPE, target,    intent(inout) :: psi(:, :, :)
-
-  R_TYPE, allocatable :: ss(:, :), work(:), tau(:)
-  R_TYPE :: tmp
-  type(batch_t) :: psib
-  logical :: bof
-  integer :: idim, nref, wsize, info, ip
-
-  PUSH_SUB(X(states_orthogonalization_block))    
-
-  select case(st%d%orth_method)
   case(ORTH_GS)
+    ASSERT(.not. st%parallel_in_states)
+
     SAFE_ALLOCATE(ss(1:nst, 1:nst))
     ss = M_ZERO
 
@@ -142,24 +123,29 @@ subroutine X(states_orthogonalization_block)(st, nst, mesh, dim, psi)
     call qr()
 
   case(ORTH_MGS)
+    ASSERT(.not. st%parallel_in_states)
+
     call mgs()
   end select
 
-  POP_SUB(X(states_orthogonalization_block))
+  call profiling_out(prof)
+  POP_SUB(X(states_orthogonalization_full))
 
 contains
-  
+
   subroutine qr()
-    integer :: total_np
+    integer :: total_np, nref, info, wsize
+    R_TYPE, allocatable :: tau(:), work(:)
+    R_TYPE :: tmp
 #ifdef HAVE_SCALAPACK
     integer :: psi_block(2), psi_desc(BLACS_DLEN), blacs_info
 #endif
-    
+
     ASSERT(.not. mesh%use_curvilinear)
 
     if(mesh%parallel_in_domains .or. st%parallel_in_states) then
 #ifdef HAVE_SCALAPACK
- 
+
       call states_blacs_blocksize(st, mesh, psi_block, total_np)
 
       ! We need to set to zero some extra parts of the array
@@ -168,7 +154,7 @@ contains
       else
         psi(mesh%np + 1:mesh%np_part, 1:st%d%dim, 1:st%lnst) = M_ZERO
       end if
-      
+
       ! DISTRIBUTE THE MATRIX ON THE PROCESS GRID
       ! Initialize the descriptor array for the main matrices (ScaLAPACK)
       call descinit(psi_desc, total_np, nst, psi_block(1), psi_block(2), 0, 0, &
@@ -208,7 +194,7 @@ contains
       nref = min(nst, total_np)
       SAFE_ALLOCATE(tau(1:nref))
       tau = M_ZERO
-      
+
       ! get the optimal size of the work array
       call lapack_geqrf(total_np, nst, psi(1, 1, 1), mesh%np_part*st%d%dim, tau(1), tmp, -1, info)
       wsize = nint(R_REAL(tmp))
@@ -234,6 +220,8 @@ contains
     psi = psi/sqrt(mesh%vol_pp(1))
 
   end subroutine qr
+
+  ! ----------------------------------------------------------------------------------
 
   subroutine mgs()
     integer :: ist, jst, idim
@@ -306,7 +294,7 @@ contains
     POP_SUB(X(states_orthogonalization_block).mgs)
   end subroutine mgs
 
-end subroutine X(states_orthogonalization_block)
+end subroutine X(states_orthogonalization_full)
 
 
 ! ---------------------------------------------------------
