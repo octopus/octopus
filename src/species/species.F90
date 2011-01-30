@@ -681,19 +681,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  logical function species_is_ps(spec)
+  logical pure function species_is_ps(spec)
     type(species_t), intent(in) :: spec
     
-    PUSH_SUB(species_is_ps)
-
     species_is_ps = &
          ( spec%type == SPEC_PS_PSF) .or. &
          ( spec%type == SPEC_PS_HGH) .or. &
          ( spec%type == SPEC_PS_CPI) .or. &
          ( spec%type == SPEC_PS_FHI) .or. &
          ( spec%type == SPEC_PS_UPF)
-    
-    POP_SUB(species_is_ps)
+ 
   end function species_is_ps
 
   ! ---------------------------------------------------------

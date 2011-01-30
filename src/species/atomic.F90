@@ -835,7 +835,7 @@ contains
     integer :: n,knk,nndin,i
     REAL_DOUBLE :: zdr, yn, ratio, t
     
-    PUSH_SUB(yofe)
+    ! No PUSH SUB, called too often.
     
     zdr = z*a*b
     
@@ -907,7 +907,6 @@ contains
       y(i) = y(i)*ratio
     enddo
 
-    POP_SUB(yofe)
   end subroutine yofe
 
 
@@ -987,7 +986,8 @@ contains
 
     REAL_DOUBLE :: t2, t3, d2, c0, c1, c2
     
-    PUSH_SUB(bcorgn)
+    ! no PUSH SUB, called too often
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !   the quantity called d(i) in the program is actually the inverse           !
 !   of the diagonal of the tri-diagonal Numerov matrix                        !
@@ -1038,7 +1038,6 @@ contains
     endif
     y2=(-M_ONE)/d2
     
-    POP_SUB(bcorgn)
   end subroutine bcorgn
 
 
@@ -1085,8 +1084,8 @@ contains
     integer :: i
     REAL_DOUBLE :: t
     
-    PUSH_SUB(numin)
-    
+    ! no PUSH SUB, called too often
+   
     y(n)=yn
     t=h(n)-e*s(n)
     g=y(n)/(M_ONE-t/CNST(12.))
@@ -1127,8 +1126,6 @@ contains
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
-    POP_SUB(numin)
   end subroutine numin
 
 
@@ -1144,7 +1141,7 @@ contains
     integer :: i, nm4
     REAL_DOUBLE :: t, xl
     
-    PUSH_SUB(numout)
+    ! no PUSH SUB, called too often
     
     y(1)=M_ZERO
     y(2)=y2
@@ -1185,7 +1182,6 @@ contains
 !  the outward integration is now complete                                    !
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    POP_SUB(numout)
   end subroutine numout
 
 end module atomic_m

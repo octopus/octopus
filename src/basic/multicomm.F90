@@ -680,14 +680,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  logical function multicomm_strategy_is_parallel(mc, level) result(rr)
+  logical pure function multicomm_strategy_is_parallel(mc, level) result(rr)
     type(multicomm_t), intent(in) :: mc
     integer,           intent(in) :: level
 
-    PUSH_SUB(multicomm_strategy_is_parallel)
     rr = iand(mc%par_strategy, 2**(level - 1)) .ne. 0
 
-    POP_SUB(multicomm_strategy_is_parallel)
   end function multicomm_strategy_is_parallel
 
 
@@ -733,10 +731,10 @@ contains
 
     ! ---------------------------------------------------------
     ! Those are from the paper cited above.
-    integer function get_partner(in, ir)
+    integer pure function get_partner(in, ir)
       integer, intent(in) :: in, ir
 
-      PUSH_SUB(create_all_pairs.get_partner)
+      ! No PUSH SUB, called to often.
 
       if(mod(grp_size, 2).eq.0) then
         get_partner = get_partner_even(grp_size, in - 1, ir - 1) + 1
@@ -744,16 +742,15 @@ contains
         get_partner = get_partner_odd(grp_size, in - 1, ir - 1) + 1
       end if
 
-      POP_SUB(create_all_pairs.get_partner)
-    end function get_partner
+     end function get_partner
 
     ! ---------------------------------------------------------
-    integer function get_partner_even(grp_size, ii, rr) result(pp)
+    integer pure function get_partner_even(grp_size, ii, rr) result(pp)
       integer, intent(in) :: grp_size, ii, rr
 
       integer :: mm
 
-      PUSH_SUB(create_all_pairs.get_partner_even)
+      ! No PUSH SUB, called to often.
 
       mm = grp_size / 2
 
@@ -767,16 +764,15 @@ contains
         pp = modulo(2 * rr - ii + 1, 2 * mm - 1) + 1
       end if
 
-      POP_SUB(create_all_pairs.get_partner_even)
     end function get_partner_even
 
     ! ---------------------------------------------------------
-      integer function get_partner_odd(grp_size, ii, rr) result(pp)
+      integer pure function get_partner_odd(grp_size, ii, rr) result(pp)
       integer, intent(in) :: grp_size, ii, rr
 
       integer :: mm
 
-      PUSH_SUB(create_all_pairs.get_partner_odd)
+      ! No PUSH SUB, called to often.
 
       mm = (grp_size + 1) / 2
 
@@ -786,7 +782,6 @@ contains
         pp = ii
       end if
 
-      POP_SUB(create_all_pairs.get_partner_odd)
     end function get_partner_odd
 
   end subroutine multicomm_create_all_pairs

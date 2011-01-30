@@ -358,12 +358,11 @@ contains
   subroutine spline_init_0(spl)
     type(spline_t), intent(out) :: spl
 
-    PUSH_SUB(spline_init_0)
+    ! No PUSH SUB, called to often
 
     call set_null(spl%spl)
     call set_null(spl%acc)
 
-    POP_SUB(spline_init_0)
   end subroutine spline_init_0
 
 
@@ -405,7 +404,7 @@ contains
   subroutine spline_end_0(spl)
     type(spline_t), intent(inout) :: spl
 
-    PUSH_SUB(spline_end_0)
+    ! No PUSH SUB, called too often.
 
     if(c_associated(spl%spl) .and. c_associated(spl%acc)) then
       call oct_spline_end(spl%spl, spl%acc)
@@ -413,7 +412,6 @@ contains
     call set_null(spl%spl)
     call set_null(spl%acc)
 
-    POP_SUB(spline_end_0)
   end subroutine spline_end_0
 
 
@@ -484,13 +482,12 @@ contains
     real(8), intent(in) :: ffit(nrc), rofi(nrc)
     type(spline_t), intent(out) :: spl
 
-    PUSH_SUB(spline_fit8)
+    !No PUSH SUB, called too often
 
     spl%x_limit(1) = rofi(1)
     spl%x_limit(2) = rofi(nrc)
     call oct_spline_fit(nrc, rofi(1), ffit(1), spl%spl, spl%acc)
 
-    POP_SUB(spline_fit8)
   end subroutine spline_fit8
 
 

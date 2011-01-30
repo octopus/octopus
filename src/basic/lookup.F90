@@ -100,7 +100,7 @@ contains
     FLOAT :: r2
     integer :: ii, ipoint
 
-    PUSH_SUB(lookup_get_list)
+    ! No PUSH SUB, called too often.
 
     if(present(list)) SAFE_ALLOCATE(list(1:this%nobjs, 1:npoint))
 
@@ -120,7 +120,6 @@ contains
       end do
     end do
 
-    POP_SUB(lookup_get_list)
   end subroutine lookup_get_list
 
 end module lookup_m
