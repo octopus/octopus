@@ -44,6 +44,7 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, psi, diff)
   case(SD_SCALAPACK)
     call X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   case(SD_STANDARD)
+    ASSERT(.not. st%parallel_in_states)
 
     SAFE_ALLOCATE(h_subspace(1:st%nst, 1:st%nst))
     SAFE_ALLOCATE(f(1:der%mesh%np, 1:st%d%dim, 1:st%d%block_size))
@@ -110,6 +111,8 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, psi, diff)
     SAFE_DEALLOCATE_A(f)
     SAFE_DEALLOCATE_A(h_subspace)
 
+  case default
+    ASSERT(.false.)
   end select
 
   call profiling_out(diagon_prof)
@@ -131,8 +134,8 @@ subroutine X(subspace_diag_old)(der, st, hm, ik, eigenval, psi, diff)
   type(hamiltonian_t), intent(in)    :: hm
   integer,             intent(in)    :: ik
   FLOAT,               intent(out)   :: eigenval(:)
-  R_TYPE,              intent(inout) :: psi(1:der%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end)
-  FLOAT, optional,     intent(out)   :: diff(1:st%nst)
+  R_TYPE,              intent(inout) :: psi(:, :, st%st_start:)
+  FLOAT, optional,     intent(out)   :: diff(:)
 
   R_TYPE, allocatable :: h_subspace(:,:), ff(:,:,:)
   integer             :: ist
@@ -146,7 +149,7 @@ subroutine X(subspace_diag_old)(der, st, hm, ik, eigenval, psi, diff)
 
   SAFE_ALLOCATE(h_subspace(1:st%nst, 1:st%nst))
   SAFE_ALLOCATE(ff(1:der%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
-
+  
   ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
   do ist = st%st_start, st%st_end
     call X(hamiltonian_apply)(hm, der, psi(:, :, ist), ff(:, :, ist), ist, ik)
@@ -184,7 +187,7 @@ subroutine X(subspace_diag_old)(der, st, hm, ik, eigenval, psi, diff)
     end if
 #endif
   end if
-  
+
   SAFE_DEALLOCATE_A(ff)
   SAFE_DEALLOCATE_A(h_subspace)
   
@@ -217,7 +220,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
 
   SAFE_ALLOCATE(hs(1:st%nst, 1:st%nst))
   SAFE_ALLOCATE(hpsi(1:der%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
-
+  
   call states_blacs_blocksize(st, der%mesh, psi_block, total_np)
 
   call descinit(psi_desc, total_np, st%nst, psi_block(1), psi_block(2), 0, 0,  st%dom_st_proc_grid%context, &
@@ -270,10 +273,10 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
     end if
 
   end if
-
+  
   SAFE_DEALLOCATE_A(hpsi)
   SAFE_DEALLOCATE_A(hs)
-
+  
   POP_SUB(X(subspace_diag_scalapack))
 
 #endif /* SCALAPACK */  
