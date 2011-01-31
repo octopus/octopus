@@ -107,6 +107,7 @@ module scalapack_m
     subroutine pdsyev(jobz, uplo, n, a, ia, ja, desca, w, z, iz, jz, descz, work, lwork, info)
       character,        intent(in)    :: jobz
       character,        intent(in)    :: uplo
+      integer,          intent(in)    :: n
       real(8),          intent(inout) :: a
       integer,          intent(in)    :: ia
       integer,          intent(in)    :: ja
@@ -124,6 +125,7 @@ module scalapack_m
     subroutine pzheev(jobz, uplo, n, a, ia, ja, desca, w, z, iz, jz, descz, work, lwork, rwork, lrwork, info)
       character,        intent(in)    :: jobz
       character,        intent(in)    :: uplo
+      integer,          intent(in)    :: n
       complex(8),       intent(inout) :: a
       integer,          intent(in)    :: ia
       integer,          intent(in)    :: ja
