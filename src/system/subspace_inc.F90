@@ -215,6 +215,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   integer              :: tmp, ist, lwork
   FLOAT                :: ldiff(st%lnst)
   integer :: psi_block(1:2), total_np, psi_desc(BLACS_DLEN), hs_desc(BLACS_DLEN), info
+  integer :: nbl, nrow, ncol
 #ifdef R_TCOMPLEX
   integer :: lrwork
   CMPLX, allocatable :: rwork(:)
@@ -223,15 +224,23 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
 
   PUSH_SUB(X(subspace_diag_scalapack))
 
-  SAFE_ALLOCATE(hs(1:st%nst, 1:st%nst))
   SAFE_ALLOCATE(hpsi(1:der%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
   
   call states_blacs_blocksize(st, der%mesh, psi_block, total_np)
 
   call descinit(psi_desc(1), total_np, st%nst, psi_block(1), psi_block(2), 0, 0,  st%dom_st_proc_grid%context, &
     st%d%dim*der%mesh%np_part, info)
-  ! for the moment we store the results in the first node (blocksize = st%nst)
-  call descinit(hs_desc(1), st%nst, st%nst, st%nst, st%nst, 0, 0, st%dom_st_proc_grid%context, st%nst, info)
+
+  ! we use a blocksize of 32
+  nbl = 32
+
+  ! calculate the size of the matrix in each node
+  nrow = numroc(st%nst, nbl, st%dom_st_proc_grid%myrow, 0, st%dom_st_proc_grid%nprow)
+  ncol = numroc(st%nst, nbl, st%dom_st_proc_grid%mycol, 0, st%dom_st_proc_grid%npcol)
+
+  SAFE_ALLOCATE(hs(1:nrow, 1:ncol))
+
+  call descinit(hs_desc(1), st%nst, st%nst, nbl, nbl, 0, 0, st%dom_st_proc_grid%context, nrow, info)
 
   ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
   do ist = st%st_start, st%st_end
@@ -252,7 +261,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
     hpsi(1, 1, st%st_start), 1, 1, psi_desc(1), &
     R_TOTYPE(M_ZERO), hs(1, 1), 1, 1, hs_desc(1))
 
-  SAFE_ALLOCATE(evectors(1:st%nst, 1:st%nst))
+  SAFE_ALLOCATE(evectors(1:nrow, 1:ncol))
 
 #ifdef R_TCOMPLEX
 
