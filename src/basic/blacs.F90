@@ -20,9 +20,9 @@
 #include "global.h"
 
 ! -----------------------------------------------------------------------
-! This module contains interfaces for ScaLAPACK and BLACS routines
-! Interfaces are from http://www.netlib.org/scalapack/tools, double, complex16
-! and from http://www.netlib.org/blacs/BLACS/QRef.html (entered manually...)
+!> This module contains interfaces for BLACS routines
+!! Interfaces are from http://www.netlib.org/scalapack/tools, double, complex16
+!! and from http://www.netlib.org/blacs/BLACS/QRef.html (entered manually...)
 ! -----------------------------------------------------------------------
 
 module blacs_m

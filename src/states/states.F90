@@ -168,11 +168,11 @@ module states_m
     integer                     :: st_start, st_end   !< Range of states processed by local node.
     integer, pointer            :: node(:)            !< To which node belongs each state.
     integer, pointer            :: st_range(:, :)     !< Node r manages states st_range(1, r) to
-                                                      !< st_range(2, r) for r = 0, ..., mpi_grp%size-1,
-                                                      !< i. e. st_start = st_range(1, r) and
-                                                      !< st_end = st_range(2, r) on node r.
+                                                      !! st_range(2, r) for r = 0, ..., mpi_grp%size-1,
+                                                      !! i. e. st_start = st_range(1, r) and
+                                                      !! st_end = st_range(2, r) on node r.
     integer, pointer            :: st_num(:)          !< Number of states on node r, i. e.
-                                                      !< st_num(r) = st_num(2, r)-st_num(1, r).
+                                                      !! st_num(r) = st_num(2, r)-st_num(1, r).
     type(multicomm_all_pairs_t) :: ap                 !< All-pairs schedule.
 
     logical                     :: symmetrize_density

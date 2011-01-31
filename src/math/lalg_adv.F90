@@ -24,6 +24,9 @@ module lalg_adv_m
   use lapack_m
   use messages_m
   use profiling_m
+  use blacs_proc_grid_m
+  use scalapack_m
+  use mpi_m
 
   implicit none
 

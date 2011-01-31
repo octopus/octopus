@@ -20,107 +20,94 @@
 #include "global.h"
 
 ! -----------------------------------------------------------------------
-! This module contains interfaces for ScaLAPACK and BLACS routines
-! Interfaces are from http://www.netlib.org/scalapack/tools, double, complex16
-! and from http://www.netlib.org/blacs/BLACS/QRef.html (entered manually...)
+!> This module contains interfaces for ScaLAPACK routines
+!! Interfaces are from http://www.netlib.org/scalapack/tools, double, complex16
+!! (entered manually...)
 ! -----------------------------------------------------------------------
 
 module scalapack_m
   implicit none
+#ifdef HAVE_SCALAPACK
 
   interface
-    INTEGER FUNCTION NUMROC( N, NB, IPROC, ISRCPROC, NPROCS )
+    integer function numroc(n, nb, iproc, isrcproc, nprocs)
       implicit none
 
-      INTEGER              IPROC, ISRCPROC, N, NB, NPROCS
-    end FUNCTION NUMROC
+      integer              iproc, isrcproc, n, nb, nprocs
+    end function numroc
   end interface
 
   interface
-    INTEGER FUNCTION ICEIL( INUM, IDENOM )
+    integer function iceil(inum, idenom)
       implicit none
 
-      INTEGER            IDENOM, INUM
-    end FUNCTION ICEIL
+      integer            idenom, inum
+    end function iceil
   end interface
 
   interface
-    SUBROUTINE DESCINIT( DESC, M, N, MB, NB, IRSRC, ICSRC, ICTXT, LLD, INFO )
+    subroutine descinit(desc, m, n, mb, nb, irsrc, icsrc, ictxt, lld, info)
       implicit none
 
-      INTEGER            ICSRC, ICTXT, INFO, IRSRC, LLD, M, MB, N, NB
-      INTEGER            DESC
-    end SUBROUTINE DESCINIT
+      integer            icsrc, ictxt, info, irsrc, lld, m, mb, n, nb
+      integer            desc
+    end subroutine descinit
   end interface
 
   interface scalapack_geqrf
-    SUBROUTINE PDGEQRF( M, N, A, IA, JA, DESCA, TAU, WORK, LWORK, INFO )
+    subroutine pdgeqrf(m, n, a, ia, ja, desca, tau, work, lwork, info)
       implicit none
 
-      INTEGER            IA, INFO, JA, LWORK, M, N
-      INTEGER            DESCA
-      DOUBLE PRECISION   A, TAU, WORK
-    end SUBROUTINE PDGEQRF
+      integer            ia, info, ja, lwork, m, n
+      integer            desca
+      double precision   a, tau, work
+    end subroutine pdgeqrf
     
-    SUBROUTINE PZGEQRF( M, N, A, IA, JA, DESCA, TAU, WORK, LWORK, INFO )
+    subroutine pzgeqrf(m, n, a, ia, ja, desca, tau, work, lwork, info)
       implicit none
       
-      INTEGER            IA, INFO, JA, LWORK, M, N
-      INTEGER            DESCA
-      COMPLEX*16         A, TAU, WORK
-    end SUBROUTINE PZGEQRF
+      integer            ia, info, ja, lwork, m, n
+      integer            desca
+      complex*16         a, tau, work
+    end subroutine pzgeqrf
   end interface scalapack_geqrf
 
   interface scalapack_orgqr
-    SUBROUTINE PDORGQR( M, N, K, A, IA, JA, DESCA, TAU, WORK, LWORK, INFO ) 
+    subroutine pdorgqr(m, n, k, a, ia, ja, desca, tau, work, lwork, info) 
       implicit none
 
-      INTEGER            IA, INFO, JA, K, LWORK, M, N
-      INTEGER            DESCA
-      DOUBLE PRECISION   A, TAU, WORK
-    end SUBROUTINE PDORGQR
+      integer            ia, info, ja, k, lwork, m, n
+      integer            desca
+      double precision   a, tau, work
+    end subroutine pdorgqr
     
-    SUBROUTINE PZUNGQR( M, N, K, A, IA, JA, DESCA, TAU, WORK, LWORK, INFO )
+    subroutine pzungqr(m, n, k, a, ia, ja, desca, tau, work, lwork, info)
       implicit none
       
-      INTEGER            IA, INFO, JA, K, LWORK, M, N
-      INTEGER            DESCA
-      COMPLEX*16         A, TAU, WORK
-    end SUBROUTINE PZUNGQR
+      integer            ia, info, ja, k, lwork, m, n
+      integer            desca
+      complex*16         a, tau, work
+    end subroutine pzungqr
   end interface scalapack_orgqr
   
   interface
-    SUBROUTINE PDGESV( N, NRHS, A, IA, JA, DESCA, IPIV, B, IB, JB, DESCB, INFO )
+    subroutine pdgesv(n, nrhs, a, ia, ja, desca, ipiv, b, ib, jb, descb, info)
       implicit none
 
-      INTEGER            IA, IB, INFO, JA, JB, N, NRHS
-      INTEGER            DESCA, DESCB, IPIV
-      DOUBLE PRECISION   A, B
-    end SUBROUTINE PDGESV
+      integer            ia, ib, info, ja, jb, n, nrhs
+      integer            desca, descb, ipiv
+      double precision   a, b
+    end subroutine pdgesv
   end interface
 
   interface
-    SUBROUTINE PZGESV( N, NRHS, A, IA, JA, DESCA, IPIV, B, IB, JB, DESCB, INFO )
+    subroutine pzgesv(n, nrhs, a, ia, ja, desca, ipiv, b, ib, jb, descb, info)
       implicit none
 
-      INTEGER            IA, IB, INFO, JA, JB, N, NRHS
-      INTEGER            DESCA, DESCB, IPIV
-      COMPLEX*16         A, B
-    end SUBROUTINE PZGESV
-  end interface
-
-  interface
-    SUBROUTINE PDSYEVX( JOBZ, RANGE, UPLO, N, A, IA, JA, DESCA, VL, &
-      VU, IL, IU, ABSTOL, M, NZ, W, ORFAC, Z, IZ, JZ, DESCZ, WORK, LWORK, IWORK, LIWORK, IFAIL, &
-      ICLUSTR, GAP, INFO )
-      implicit none
-      
-      CHARACTER          JOBZ, RANGE, UPLO
-      INTEGER            IA, IL, INFO, IU, IZ, JA, JZ, LIWORK, LWORK, M, N, NZ
-      DOUBLE PRECISION   ABSTOL, ORFAC, VL, VU
-      INTEGER            DESCA, DESCZ, ICLUSTR, IFAIL, IWORK
-      DOUBLE PRECISION   A, GAP, W, WORK, Z
-    end SUBROUTINE PDSYEVX
+      integer            ia, ib, info, ja, jb, n, nrhs
+      integer            desca, descb, ipiv
+      complex*16         a, b
+    end subroutine pzgesv
   end interface
 
   interface
@@ -167,6 +154,78 @@ module scalapack_m
     end subroutine pzheev
   end interface
 
+  interface scalapack_syev
+    subroutine pdsyevx( jobz, range, uplo, n, a, ia, ja, desca, vl, vu, il, iu, abstol, &
+         m, nz, w, orfac, z, iz, jz, descz, work, lwork, iwork, liwork, ifail, iclustr, gap, info )
+      
+      character(1), intent(in)    :: jobz     
+      character(1), intent(in)    :: range    
+      character(1), intent(in)    :: uplo     
+      integer,      intent(in)    :: n         
+      real(8),      intent(inout) :: a         
+      integer,      intent(in)    :: ia        
+      integer,      intent(in)    :: ja        
+      integer,      intent(in)    :: desca     
+      real(8),      intent(in)    :: vl        
+      real(8),      intent(in)    :: vu        
+      integer,      intent(in)    :: il        
+      integer,      intent(in)    :: iu        
+      real(8) ,     intent(in)    :: abstol    
+      integer,      intent(out)   :: m         
+      integer,      intent(out)   :: nz       
+      real(8),      intent(out)   :: w        
+      real(8),      intent(in)    :: orfac   
+      real(8),      intent(out)   :: z       
+      integer,      intent(in)    :: iz      
+      integer,      intent(in)    :: jz      
+      integer,      intent(in)    :: descz   
+      real(8),      intent(out)   :: work    
+      integer,      intent(in)    :: lwork   
+      integer,      intent(inout) :: iwork   
+      integer,      intent(in)    :: liwork  
+      integer,      intent(out)   :: ifail  
+      real(8),      intent(out)   :: iclustr
+      real(8),      intent(out)   :: gap    
+      integer,      intent(out)   :: info   
+
+    end subroutine pdsyevx
+
+    subroutine pzheevx( jobz, range, uplo, n, a, ia, ja, desca, vl, vu, il, iu, abstol, m, nz, w, orfac, z, iz, &
+         jz, descz, work, lwork, rwork, lrwork, iwork, liwork, ifail, iclustr, gap, info )
+      character(1), intent(in)    :: jobz 
+      character(1), intent(in)    :: range
+      character(1), intent(in)    :: uplo 
+      integer,      intent(in)    :: n    
+      complex(8),   intent(inout) :: a    
+      integer,      intent(in)    :: ia   
+      integer,      intent(in)    :: ja   
+      integer,      intent(in)    :: desca
+      real(8),      intent(in)    :: vl         
+      real(8),      intent(in)    :: vu         
+      integer,      intent(in)    :: il
+      integer,      intent(in)    :: iu
+      real(8),      intent(in)    :: abstol     
+      integer,      intent(out)   :: m 
+      integer,      intent(out)   :: nz
+      real(8),      intent(out)   :: w          
+      real(8),      intent(in)    :: orfac      
+      complex(8),   intent(out)   :: z 
+      integer,      intent(in)    :: iz         
+      integer,      intent(in)    :: jz         
+      integer,      intent(in)    :: descz      
+      complex(8),   intent(out)   :: work       
+      integer,      intent(in)    :: lwork      
+      real(8),      intent(out)   :: rwork      
+      integer,      intent(in)    :: lrwork    
+      integer,      intent(inout) :: iwork     
+      integer,      intent(in)    :: liwork    
+      integer,      intent(out)   :: ifail     
+      integer,      intent(out)   :: iclustr   
+      complex(8),   intent(out)   :: gap       
+      integer,      intent(out)   :: info      
+    end subroutine pzheevx
+  end interface scalapack_syev
+#endif
 end module scalapack_m
 
 !! local Variables:

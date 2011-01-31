@@ -20,7 +20,7 @@
 #include "global.h"
 
 ! -----------------------------------------------------------------------
-! This module contains interfaces for LAPACK routines
+!> This module contains interfaces for LAPACK routines
 ! -----------------------------------------------------------------------
 
 module lapack_m
@@ -64,16 +64,16 @@ module lapack_m
     subroutine ssygv(itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, info)
       character(1), intent(in)    :: jobz, uplo
       integer,      intent(in)    :: itype, n, lda, ldb, lwork
-      real(4),      intent(inout) :: a, b    ! a(lda,n), b(ldb,n)
-      real(4),      intent(out)   :: w, work ! w(n), work(lwork)
+      real(4),      intent(inout) :: a, b    !< a(lda,n), b(ldb,n)
+      real(4),      intent(out)   :: w, work !< w(n), work(lwork)
       integer,      intent(out)   :: info
     end subroutine ssygv
 
     subroutine dsygv(itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, info)
       character(1), intent(in)    :: jobz, uplo
       integer,      intent(in)    :: itype, n, lda, ldb, lwork
-      real(8),      intent(inout) :: a, b    ! a(lda,n), b(ldb,n)
-      real(8),      intent(out)   :: w, work ! w(n), work(lwork)
+      real(8),      intent(inout) :: a, b    !< a(lda,n), b(ldb,n)
+      real(8),      intent(out)   :: w, work !< w(n), work(lwork)
       integer,      intent(out)   :: info
     end subroutine dsygv
   end interface
@@ -82,18 +82,18 @@ module lapack_m
     subroutine chegv(itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, rwork, info)
       character(1), intent(in)    :: jobz, uplo
       integer,      intent(in)    :: n, itype, lda, ldb, lwork
-      complex(4),   intent(inout) :: a, b     ! a(lda,n), b(ldb,n)
-      real(4),      intent(out)   :: w, rwork ! w(n), rwork(max(1,3*n-2))
-      complex(4),   intent(out)   :: work     ! work(lwork)
+      complex(4),   intent(inout) :: a, b     !< a(lda,n), b(ldb,n)
+      real(4),      intent(out)   :: w, rwork !< w(n), rwork(max(1,3*n-2))
+      complex(4),   intent(out)   :: work     !< work(lwork)
       integer,      intent(out)   :: info
     end subroutine chegv
 
     subroutine zhegv(itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, rwork, info)
       character(1), intent(in)    :: jobz, uplo
       integer,      intent(in)    :: n, itype, lda, ldb, lwork
-      complex(8),   intent(inout) :: a, b     ! a(lda,n), b(ldb,n)
-      real(8),      intent(out)   :: w, rwork ! w(n), rwork(max(1,3*n-2))
-      complex(8),   intent(out)   :: work     ! work(lwork)
+      complex(8),   intent(inout) :: a, b     !< a(lda,n), b(ldb,n)
+      real(8),      intent(out)   :: w, rwork !< w(n), rwork(max(1,3*n-2))
+      complex(8),   intent(out)   :: work     !< work(lwork)
       integer,      intent(out)   :: info
     end subroutine zhegv
   end interface
@@ -102,40 +102,40 @@ module lapack_m
     subroutine sgeev(jobvl, jobvr, n, a, lda, w, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
       character(1), intent(in)    :: jobvl, jobvr
       integer,      intent(in)    :: n, lda, ldvl, ldvr, lwork
-      real(4),      intent(inout) :: a ! a(lda,n)
-      real(4),      intent(out)   :: w, vl, vr ! w(n), vl(ldvl,n), vl(ldvr,n)
-      real(4),      intent(out)   :: rwork ! rwork(max(1,2n))
-      real(4),      intent(out)   :: work  ! work(lwork)
+      real(4),      intent(inout) :: a !< a(lda,n)
+      real(4),      intent(out)   :: w, vl, vr !< w(n), vl(ldvl,n), vl(ldvr,n)
+      real(4),      intent(out)   :: rwork !< rwork(max(1,2n))
+      real(4),      intent(out)   :: work  !< work(lwork)
       integer,      intent(out)   :: info
     end subroutine sgeev
 
     subroutine dgeev(jobvl, jobvr, n, a, lda, w, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
       character(1), intent(in)    :: jobvl, jobvr
       integer,      intent(in)    :: n, lda, ldvl, ldvr, lwork
-      real(8),      intent(inout) :: a ! a(lda,n)
-      real(8),      intent(out)   :: w, vl, vr ! w(n), vl(ldvl,n), vl(ldvr,n)
-      real(8),      intent(out)   :: rwork ! rwork(max(1,2n))
-      real(8),      intent(out)   :: work  ! work(lwork)
+      real(8),      intent(inout) :: a !< a(lda,n)
+      real(8),      intent(out)   :: w, vl, vr !< w(n), vl(ldvl,n), vl(ldvr,n)
+      real(8),      intent(out)   :: rwork !< rwork(max(1,2n))
+      real(8),      intent(out)   :: work  !< work(lwork)
       integer,      intent(out)   :: info
     end subroutine dgeev
 
     subroutine cgeev(jobvl, jobvr, n, a, lda, w, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
       character(1), intent(in)    :: jobvl, jobvr
       integer,      intent(in)    :: n, lda, ldvl, ldvr, lwork
-      complex(4),   intent(inout) :: a ! a(lda,n)
-      complex(4),   intent(out)   :: w, vl, vr ! w(n), vl(ldvl,n), vl(ldvr,n)
-      real(4),      intent(out)   :: rwork ! rwork(max(1,2n))
-      complex(4),   intent(out)   :: work  ! work(lwork)
+      complex(4),   intent(inout) :: a !< a(lda,n)
+      complex(4),   intent(out)   :: w, vl, vr !< w(n), vl(ldvl,n), vl(ldvr,n)
+      real(4),      intent(out)   :: rwork !< rwork(max(1,2n))
+      complex(4),   intent(out)   :: work  !< work(lwork)
       integer,      intent(out)   :: info
     end subroutine cgeev
 
     subroutine zgeev(jobvl, jobvr, n, a, lda, w, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
       character(1), intent(in)    :: jobvl, jobvr
       integer,      intent(in)    :: n, lda, ldvl, ldvr, lwork
-      complex(8),        intent(inout) :: a ! a(lda,n)
-      complex(8),        intent(out)   :: w, vl, vr ! w(n), vl(ldvl,n), vl(ldvr,n)
-      real(8),        intent(out)   :: rwork ! rwork(max(1,2n))
-      complex(8),        intent(out)   :: work  ! work(lwork)
+      complex(8),        intent(inout) :: a !< a(lda,n)
+      complex(8),        intent(out)   :: w, vl, vr !< w(n), vl(ldvl,n), vl(ldvr,n)
+      real(8),        intent(out)   :: rwork !< rwork(max(1,2n))
+      complex(8),        intent(out)   :: work  !< work(lwork)
       integer,      intent(out)   :: info
     end subroutine zgeev
   end interface
@@ -145,16 +145,16 @@ module lapack_m
     subroutine ssyev(jobz, uplo, n, a, lda, w, work, lwork, info)
       character(1), intent(in)    :: jobz, uplo
       integer,      intent(in)    :: n, lda, lwork
-      real(4),      intent(inout) :: a       ! a(lda,n)
-      real(4),      intent(out)   :: w, work ! w(n), work(lwork)
+      real(4),      intent(inout) :: a       !< a(lda,n)
+      real(4),      intent(out)   :: w, work !< w(n), work(lwork)
       integer,      intent(out)   :: info
     end subroutine ssyev
 
     subroutine dsyev(jobz, uplo, n, a, lda, w, work, lwork, info)
       character(1), intent(in)    :: jobz, uplo
       integer,      intent(in)    :: n, lda, lwork
-      real(8),      intent(inout) :: a       ! a(lda,n)
-      real(8),      intent(out)   :: w, work ! w(n), work(lwork)
+      real(8),      intent(inout) :: a       !< a(lda,n)
+      real(8),      intent(out)   :: w, work !< w(n), work(lwork)
       integer,      intent(out)   :: info
     end subroutine dsyev
   end interface
@@ -163,18 +163,18 @@ module lapack_m
     subroutine cheev(jobz, uplo, n, a, lda, w, work, lwork, rwork, info)
       character(1), intent(in)    :: jobz, uplo
       integer,      intent(in)    :: n, lda, lwork
-      complex(4),   intent(inout) :: a        ! a(lda,n)
-      real(4),      intent(out)   :: w, rwork ! w(n), rwork(max(1,3*n-2))
-      complex(4),   intent(out)   :: work     ! work(lwork)
+      complex(4),   intent(inout) :: a        !< a(lda,n)
+      real(4),      intent(out)   :: w, rwork !< w(n), rwork(max(1,3*n-2))
+      complex(4),   intent(out)   :: work     !< work(lwork)
       integer,      intent(out)   :: info
     end subroutine cheev
 
     subroutine zheev(jobz, uplo, n, a, lda, w, work, lwork, rwork, info)
       character(1), intent(in)    :: jobz, uplo
       integer,      intent(in)    :: n, lda, lwork
-      complex(8),   intent(inout) :: a        ! a(lda,n)
-      real(8),      intent(out)   :: w, rwork ! w(n), rwork(max(1,3*n-2))
-      complex(8),   intent(out)   :: work     ! work(lwork)
+      complex(8),   intent(inout) :: a        !< a(lda,n)
+      real(8),      intent(out)   :: w, rwork !< w(n), rwork(max(1,3*n-2))
+      complex(8),   intent(out)   :: work     !< work(lwork)
       integer,      intent(out)   :: info
     end subroutine zheev
   end interface

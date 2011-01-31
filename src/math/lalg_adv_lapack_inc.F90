@@ -40,9 +40,9 @@ end function sfmin
 
   
 ! ---------------------------------------------------------
-! Compute the Cholesky decomposition of real symmetric positive definite
-! matrix a, dim(a) = n x n. On return a = u^T u with u upper triangular
-! matrix.
+!> Compute the Cholesky decomposition of real symmetric positive definite
+!! matrix a, dim(a) = n x n. On return a = u^T u with u upper triangular
+!! matrix.
 subroutine dcholesky(n, a, bof, err_code)
   integer,           intent(in)    :: n
   FLOAT,             intent(inout) :: a(:, :)
@@ -85,9 +85,9 @@ end subroutine dcholesky
 
 
 ! ---------------------------------------------------------
-! Compute the Cholesky decomposition of a complex Hermitian positive definite
-! matrix a, dim(a) = n x n. On return a = u^+ u with u upper triangular
-! matrix.
+!> Compute the Cholesky decomposition of a complex Hermitian positive definite
+!! matrix a, dim(a) = n x n. On return a = u^+ u with u upper triangular
+!! matrix.
 subroutine zcholesky(n, a, bof, err_code)
   integer,           intent(in)    :: n
   CMPLX,             intent(inout) :: a(:, :)
@@ -130,10 +130,10 @@ end subroutine zcholesky
 
 
 ! ---------------------------------------------------------
-! Computes all the eigenvalues and the eigenvectors of a real
-! generalized symmetric-definite eigenproblem, of the form  A*x=(lambda)*B*x
-! A*Bx=(lambda)*x, or B*A*x=(lambda)*x.
-! Here A and B are assumed to be symmetric and B is also positive definite.
+!> Computes all the eigenvalues and the eigenvectors of a real
+!! generalized symmetric-definite eigenproblem, of the form  A*x=(lambda)*B*x
+!! A*Bx=(lambda)*x, or B*A*x=(lambda)*x.
+!! Here A and B are assumed to be symmetric and B is also positive definite.
 subroutine dgeneigensolve(n, a, b, e, bof, err_code)
   integer,           intent(in)    :: n
   FLOAT,             intent(inout) :: a(n,n)
@@ -198,10 +198,10 @@ end subroutine dgeneigensolve
 
 
 ! ---------------------------------------------------------
-! Computes all the eigenvalues and the eigenvectors of a complex
-! generalized Hermitian-definite eigenproblem, of the form  A*x=(lambda)*B*x,
-! A*Bx=(lambda)*x, or B*A*x=(lambda)*x.
-! Here A and B are assumed to be Hermitian and B is also positive definite.
+!> Computes all the eigenvalues and the eigenvectors of a complex
+!! generalized Hermitian-definite eigenproblem, of the form  A*x=(lambda)*B*x,
+!! A*Bx=(lambda)*x, or B*A*x=(lambda)*x.
+!! Here A and B are assumed to be Hermitian and B is also positive definite.
 subroutine zgeneigensolve(n, a, b, e, bof, err_code)
   integer,           intent(in)    :: n
   CMPLX,             intent(inout) :: a(n,n)
@@ -269,8 +269,8 @@ end subroutine zgeneigensolve
 
 
 ! ---------------------------------------------------------
-! Computes all the eigenvalues and the right (left) eigenvectors of a complex
-! (non hermitian) eigenproblem, of the form  A*x=(lambda)*x
+!> Computes all the eigenvalues and the right (left) eigenvectors of a complex
+!! (non hermitian) eigenproblem, of the form  A*x=(lambda)*x
 subroutine zeigensolve_nonh(n, a, e, err_code, side)
   integer,           intent(in)      :: n
   CMPLX,             intent(inout)   :: a(n,n)
@@ -339,8 +339,8 @@ end subroutine zeigensolve_nonh
 
 
 ! ---------------------------------------------------------
-! Computes all the eigenvalues and the right (left) eigenvectors of a real
-! generalized (non hermitian) eigenproblem, of the form  A*x=(lambda)*x
+!> Computes all the eigenvalues and the right (left) eigenvectors of a real
+!! generalized (non hermitian) eigenproblem, of the form  A*x=(lambda)*x
 subroutine deigensolve_nonh(n, a, e, err_code, side)
   integer,           intent(in)      :: n
   FLOAT,             intent(inout)   :: a(n,n)
@@ -407,9 +407,9 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
 end subroutine deigensolve_nonh
 
 ! ---------------------------------------------------------
-! Computes the k lowest eigenvalues and the eigenvectors of a real
-! generalized symmetric-definite eigenproblem, of the form  A*x=(lambda)*B*x.
-! Here A and B are assumed to be symmetric and B is also positive definite.
+!> Computes the k lowest eigenvalues and the eigenvectors of a real
+!! generalized symmetric-definite eigenproblem, of the form  A*x=(lambda)*B*x.
+!! Here A and B are assumed to be symmetric and B is also positive definite.
 subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   integer,           intent(in)    :: k, n
   FLOAT,             intent(in)    :: a(n,n)
@@ -482,9 +482,9 @@ end subroutine dlowest_geneigensolve
 
 
 ! ---------------------------------------------------------
-! Computes the k lowest eigenvalues and the eigenvectors of a complex
-! generalized Hermitian-definite eigenproblem, of the form  A*x=(lambda)*B*x.
-! Here A and B are assumed to be Hermitian and B is also positive definite.
+!> Computes the k lowest eigenvalues and the eigenvectors of a complex
+!! generalized Hermitian-definite eigenproblem, of the form  A*x=(lambda)*B*x.
+!! Here A and B are assumed to be Hermitian and B is also positive definite.
 subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   integer,           intent(in)    :: k, n
   CMPLX,             intent(in)    :: a(n,n)
@@ -557,12 +557,12 @@ end subroutine zlowest_geneigensolve
 
 
 ! ---------------------------------------------------------
-! Computes all eigenvalues and eigenvectors of a real symmetric square matrix A.
+!> Computes all eigenvalues and eigenvectors of a real symmetric square matrix A.
 subroutine deigensolve(n, a, e, bof, err_code)
   integer, intent(in)              :: n
   FLOAT,   intent(inout)           :: a(n,n)
   FLOAT,   intent(out)             :: e(n)
-  logical, optional, intent(inout) :: bof      ! Bomb on failure.
+  logical, optional, intent(inout) :: bof      !< Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
   logical            :: bof_
@@ -604,9 +604,95 @@ subroutine deigensolve(n, a, e, bof, err_code)
   POP_SUB(deigensolve)
 end subroutine deigensolve
 
+#ifdef HAVE_SCALAPACK
+! ---------------------------------------------------------
+!> Computes all eigenvalues and eigenvectors of a real symmetric square matrix A.
+subroutine  deigensolve_scalapack(n, a, eigenvalues, bof, proc_grid, err_code)
+  integer, intent(in)                 :: n              !< Number of rows/columns
+  FLOAT,   intent(inout)              :: a(n,n)         !< Square matrix
+  FLOAT,   intent(out)                :: eigenvalues(n) !< Selected eigenvalues
+  logical, optional, intent(inout)    :: bof            !< Bomb on failure.
+  type(blacs_proc_grid_t), intent(in) :: proc_grid      !< BLACS processor grid
+  integer, optional, intent(out)      :: err_code
+
+  logical              :: bof_
+  integer              :: info, lwork, blockrow, blockcol, begining_row, begining_col, &
+       psi_desc(BLACS_DLEN), blacs_info, i_loc, j_loc, liwork, eigenvectors_failing, &
+       eigenvalues_size, eigenvectors_computed, nn,np0, mq0, neig
+  FLOAT, allocatable   :: work(:), orthonormal_eigenvectors(:,:), eigenvectors_cluster(:)
+  FLOAT                :: upper_bound, lower_bound, error, gap
+  FLOAT                :: a_loc(n,n)
+  integer, allocatable :: iwork(:)
+  
+  PUSH_SUB(deigensolve)
+  call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER_SCALAPACK")
+
+  bof_ = .true.
+  if(present(bof)) then
+    bof_ = bof
+  end if
+
+  blockrow = 32 ! arbitray. But usually the best size between 16 and 64
+  blockcol = 32 ! arbitray. But usually the best size between 16 and 64
+  begining_row = proc_grid%iam + 1 + blockrow
+  begining_col = proc_grid%iam + 1 + blockcol
+  neig =n ! because we ask for range='V'
+  nn = max(n, blockcol, 2)
+  np0 = numroc(nn, blockrow, 0, 0, proc_grid%nprow)
+  mq0 = numroc(max(neig, blockrow, 2),blockrow, 0, 0, proc_grid%npcol) 
+  lwork = 5*n + max(5 * nn, np0 * mq0 + 2 * blockrow * blockrow) + iceil(neig, proc_grid%nprow * proc_grid%npcol) * nn 
+  
+  lower_bound = M_ZERO
+  upper_bound = real(n)
+  error = real(0.001) ! it has to be tunned
+
+  SAFE_ALLOCATE(work(1:lwork))  
+  liwork = 6 * max(n,proc_grid%nprow * proc_grid%npcol + 1, 4)
+  SAFE_ALLOCATE(iwork(1:liwork))
+  SAFE_ALLOCATE(eigenvectors_cluster(1:2 * proc_grid%npcol * proc_grid%nprow))
+ 
+  ! DISTRIBUTE THE MATRIX ON THE PROCESS GRID
+  ! Initialize the descriptor array for the main matrices (ScaLAPACK)
+  call descinit(psi_desc(1), n, n * n, blockrow, blockcol, 0, 0, proc_grid%context, n / proc_grid%nprocs, blacs_info)
+  ! distribute to local matrices. 
+  call pcelset(a,begining_row,begining_col,psi_desc,a(1,1))
+
+  call scalapack_syev('V','A','U', n, a(1,1), begining_row,begining_col, psi_desc(1), lower_bound, upper_bound,    &
+       0, 0, error, eigenvalues_size, eigenvectors_computed, eigenvalues(1), M_ZERO, orthonormal_eigenvectors(1,1),&
+       begining_row, begining_col, psi_desc(1), work(1), lwork, iwork(1), liwork, eigenvectors_failing,            &
+       eigenvectors_cluster(1),gap,info)
+  
+  SAFE_DEALLOCATE_A(work)
+  SAFE_DEALLOCATE_A(iwork)
+  
+  if(info /= 0) then
+    if(bof_) then
+      write(message(1),'(3a,i5)') 'In deigensolve, ScaLAPACK ', TOSTRING(DLAPACK(syev)), ' returned error message ', info
+      call write_fatal(1)
+    else
+      if(present(bof)) then
+        bof = .true.
+      end if
+    end if
+  else
+    if(present(bof)) then
+      bof = .false.
+    end if
+  end if
+  if(present(err_code)) then
+    err_code = info
+  end if
+
+  ! save the result to the original matrix
+  a = orthonormal_eigenvectors
+
+  call profiling_out(eigensolver_prof)
+  POP_SUB(deigensolve)
+end subroutine deigensolve_scalapack
+#endif
 
 ! ---------------------------------------------------------
-! Computes all eigenvalues and eigenvectors of a complex Hermitian square matrix A.
+!> Computes all eigenvalues and eigenvectors of a complex Hermitian square matrix A.
 subroutine zeigensolve(n, a, e, bof, err_code)
   integer, intent(in)    :: n
   CMPLX,   intent(inout) :: a(n,n)
@@ -658,9 +744,9 @@ end subroutine zeigensolve
 
 
 ! ---------------------------------------------------------
-! Computes the k lowest eigenvalues and the eigenvectors of a real
-! standard symmetric-definite eigenproblem, of the form  A*x=(lambda)*x.
-! Here A is assumed to be symmetric.
+!> Computes the k lowest eigenvalues and the eigenvectors of a real
+!! standard symmetric-definite eigenproblem, of the form  A*x=(lambda)*x.
+!! Here A is assumed to be symmetric.
 subroutine dlowest_eigensolve(k, n, a, e, v)
   integer, intent(in)  :: k, n
   FLOAT,   intent(in)  :: a(n, n)
@@ -710,9 +796,9 @@ end subroutine dlowest_eigensolve
 
 
 ! ---------------------------------------------------------
-! Computes the k lowest eigenvalues and the eigenvectors of a complex
-! standard Hermitian-definite eigenproblem, of the form  A*x=(lambda)*x.
-! Here A is assumed to be Hermitian.
+!> Computes the k lowest eigenvalues and the eigenvectors of a complex
+!! standard Hermitian-definite eigenproblem, of the form  A*x=(lambda)*x.
+!! Here A is assumed to be Hermitian.
 subroutine zlowest_eigensolve(k, n, a, e, v)
   integer, intent(in)  :: k, n
   CMPLX,   intent(in)  :: a(n, n)
@@ -763,7 +849,7 @@ end subroutine zlowest_eigensolve
 
 
 ! ---------------------------------------------------------
-! Invert a real symmetric square matrix a
+!> Invert a real symmetric square matrix a
 FLOAT function ddeterminant(n, a, invert) result(d)
   integer, intent(in)           :: n
   FLOAT,   intent(inout)        :: a(n,n)
@@ -827,7 +913,7 @@ end function ddeterminant
 
 
 ! ---------------------------------------------------------
-! Invert a complex Hermitian square matrix a
+!> Invert a complex Hermitian square matrix a
 CMPLX function zdeterminant(n, a, invert) result(d)
   integer, intent(in)           :: n
   CMPLX,   intent(inout)        :: a(n,n)
@@ -890,7 +976,7 @@ CMPLX function zdeterminant(n, a, invert) result(d)
 end function zdeterminant
 
 ! ---------------------------------------------------------
-! Invert a real symmetric square matrix a
+!> Invert a real symmetric square matrix a
 subroutine dsym_inverter(uplo, n, a)
   character(1), intent(in)      :: uplo
   integer, intent(in)           :: n
@@ -943,7 +1029,7 @@ subroutine dsym_inverter(uplo, n, a)
 end subroutine dsym_inverter
 
 ! ---------------------------------------------------------
-! Invert a complex symmetric square matrix a
+!> Invert a complex symmetric square matrix a
 subroutine zsym_inverter(uplo, n, a)
   character(1), intent(in)      :: uplo
   integer, intent(in)           :: n
@@ -995,8 +1081,8 @@ subroutine zsym_inverter(uplo, n, a)
 end subroutine zsym_inverter
 
 ! ---------------------------------------------------------
-! compute the solution to a real system of linear equations A*X = B,
-!  where A is an N-by-N matrix and X and B are N-by-NRHS matrices.
+!> compute the solution to a real system of linear equations A*X = B,
+!!  where A is an N-by-N matrix and X and B are N-by-NRHS matrices.
 subroutine dlinsyssolve(n, nhrs, a, b, x)
   integer, intent(in)    :: n, nhrs
   FLOAT,   intent(inout) :: a(n, n), b(n, nhrs)
@@ -1060,8 +1146,8 @@ subroutine dlinsyssolve(n, nhrs, a, b, x)
 end subroutine dlinsyssolve
 
 ! ---------------------------------------------------------
-! compute the solution to a complex system of linear equations A*X = B,
-!  where A is an N-by-N matrix and X and B are N-by-NRHS matrices.
+!> compute the solution to a complex system of linear equations A*X = B,
+!!  where A is an N-by-N matrix and X and B are N-by-NRHS matrices.
 subroutine zlinsyssolve(n, nhrs, a, b, x)
   integer, intent(in)    :: n, nhrs
   CMPLX,   intent(inout) :: a(n, n), b(n, nhrs)
@@ -1125,7 +1211,7 @@ end subroutine zlinsyssolve
 
 
 ! ---------------------------------------------------------
-! computes the singular value decomposition of a complex NxN matrix a(:,:)
+!> computes the singular value decomposition of a complex NxN matrix a(:,:)
 subroutine zsingular_value_decomp(n, a, u, vt, sg_values)
   integer, intent(in)    :: n
   CMPLX,   intent(inout) :: a(n, n)  
@@ -1176,7 +1262,7 @@ end subroutine zsingular_value_decomp
 
 
 ! ---------------------------------------------------------
-! computes inverse of a complex NxN matrix a(:,:) using the SVD decomposition 
+!> computes inverse of a complex NxN matrix a(:,:) using the SVD decomposition 
 subroutine zsvd_inverse(n, a, threshold)
   integer, intent(in)           :: n
   CMPLX,   intent(inout)        :: a(n, n)    ! a will be replaced by its inverse
@@ -1225,8 +1311,8 @@ end subroutine zsvd_inverse
 
 
 ! ---------------------------------------------------------
-! Calculate the inverse of a real upper triangular matrix (in
-! unpacked storage).
+!> Calculate the inverse of a real upper triangular matrix (in
+!! unpacked storage).
 subroutine dinvert_upper_triangular(n, a)
   integer, intent(in)    :: n
   FLOAT,   intent(inout) :: a(n, n)
@@ -1259,8 +1345,8 @@ end subroutine dinvert_upper_triangular
 
 
 ! ---------------------------------------------------------
-! Calculate the inverse of a complex upper triangular matrix (in
-! unpacked storage).
+!> Calculate the inverse of a complex upper triangular matrix (in
+!! unpacked storage).
 subroutine zinvert_upper_triangular(n, a)
   integer, intent(in)    :: n
   CMPLX,   intent(inout) :: a(n, n)
@@ -1292,8 +1378,8 @@ subroutine zinvert_upper_triangular(n, a)
 end subroutine zinvert_upper_triangular
 
 ! ---------------------------------------------------------
-! Calculate the inverse of a real lower triangular matrix (in
-! unpacked storage).
+!> Calculate the inverse of a real lower triangular matrix (in
+!! unpacked storage).
 subroutine dinvert_lower_triangular(n, a)
   integer, intent(in)    :: n
   FLOAT,   intent(inout) :: a(n, n)
@@ -1325,8 +1411,8 @@ subroutine dinvert_lower_triangular(n, a)
 end subroutine dinvert_lower_triangular
 
 ! ---------------------------------------------------------
-! Calculate the inverse of a complex lower triangular matrix (in
-! unpacked storage).
+!> Calculate the inverse of a complex lower triangular matrix (in
+!! unpacked storage).
 subroutine zinvert_lower_triangular(n, a)
   integer, intent(in)    :: n
   CMPLX,   intent(inout) :: a(n, n)
