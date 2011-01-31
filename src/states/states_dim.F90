@@ -207,7 +207,7 @@ contains
     type(multicomm_t),  intent(in)    :: mc
 
     PUSH_SUB(kpoints_distribute)
-    call distributed_init(this%kpt, this%nik, mc, P_STRATEGY_KPOINTS, "k-points")
+    call distributed_init(this%kpt, this%nik, mc%group_comm(P_STRATEGY_KPOINTS), "k-points")
 
     POP_SUB(kpoints_distribute)
   end subroutine kpoints_distribute

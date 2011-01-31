@@ -515,7 +515,7 @@ contains
     ! Local.
     ep%vpsl = M_ZERO
     if(st%nlcc) st%rho_core = M_ZERO
-    do ia = geo%atoms%start, geo%atoms%end
+    do ia = geo%atoms_dist%start, geo%atoms_dist%end
       if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
       if(st%nlcc) then
         call epot_local_potential(ep, gr%der, gr%dgrid, psolver, geo, ia, ep%vpsl, time_, st%rho_core)
@@ -525,12 +525,12 @@ contains
     end do
 #ifdef HAVE_MPI
     call profiling_in(epot_reduce, "EPOT_REDUCE")
-    if(geo%atoms%parallel) then
+    if(geo%atoms_dist%parallel) then
       SAFE_ALLOCATE(vpsltmp(1:gr%mesh%np))
-      call MPI_Allreduce(ep%vpsl(1), vpsltmp(1), gr%mesh%np, MPI_FLOAT, MPI_SUM, geo%atoms%mpi_grp%comm, mpi_err)
+      call MPI_Allreduce(ep%vpsl(1), vpsltmp(1), gr%mesh%np, MPI_FLOAT, MPI_SUM, geo%atoms_dist%mpi_grp%comm, mpi_err)
       call lalg_copy(gr%mesh%np, vpsltmp, ep%vpsl)
       if(associated(st%rho_core)) then
-        call MPI_Allreduce(st%rho_core(1), vpsltmp(1), gr%mesh%np, MPI_FLOAT, MPI_SUM, geo%atoms%mpi_grp%comm, mpi_err)
+        call MPI_Allreduce(st%rho_core(1), vpsltmp(1), gr%mesh%np, MPI_FLOAT, MPI_SUM, geo%atoms_dist%mpi_grp%comm, mpi_err)
         call lalg_copy(gr%mesh%np, vpsltmp, st%rho_core)
       end if
       SAFE_DEALLOCATE_A(vpsltmp)

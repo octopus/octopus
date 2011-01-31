@@ -97,7 +97,7 @@ module geometry_m
     logical :: nlpp                 !< does any species have non-local pp?
     logical :: nlcc                 !< does any species have non-local core corrections?
 
-    type(distributed_t) :: atoms
+    type(distributed_t) :: atoms_dist
   end type geometry_t
 
 contains
@@ -115,7 +115,7 @@ contains
     ! initialize geometry
     call geometry_init_xyz(geo)
     call geometry_init_species(geo, print_info=print_info)
-    call distributed_nullify(geo%atoms, geo%natoms)
+    call distributed_nullify(geo%atoms_dist, geo%natoms)
 
     POP_SUB(geometry_init)
   end subroutine geometry_init
@@ -333,7 +333,7 @@ contains
 
     PUSH_SUB(geometry_partition)
 
-    call distributed_init(geo%atoms, geo%natoms, mc, P_STRATEGY_STATES, "atoms")
+    call distributed_init(geo%atoms_dist, geo%natoms, mc%group_comm(P_STRATEGY_STATES), "atoms")
 
     POP_SUB(geometry_partition)
   end subroutine geometry_partition
@@ -405,7 +405,7 @@ contains
 
     PUSH_SUB(geometry_end)
 
-    call distributed_end(geo%atoms)
+    call distributed_end(geo%atoms_dist)
 
     SAFE_DEALLOCATE_P(geo%atom)
 
@@ -662,7 +662,7 @@ contains
     geo_out%nlpp              = geo_in%nlpp
     geo_out%nlcc              = geo_in%nlcc
 
-    call distributed_copy(geo_in%atoms, geo_out%atoms)
+    call distributed_copy(geo_in%atoms_dist, geo_out%atoms_dist)
 
     POP_SUB(geometry_copy)
   end subroutine geometry_copy

@@ -81,15 +81,15 @@ contains
   
 
   ! ---------------------------------------------------------
-  subroutine distributed_init(this, total, mc, strategy, tag)
+  subroutine distributed_init(this, total, comm, tag, scalapack_compat)
     type(distributed_t), intent(out) :: this
     integer,             intent(in)  :: total
-    type(multicomm_t),   intent(in)  :: mc
-    integer,             intent(in)  :: strategy
+    integer,             intent(in)  :: comm
     character(len=*),    intent(in)  :: tag
+    logical, optional,   intent(in)  :: scalapack_compat
 
 #ifdef HAVE_MPI
-    integer :: kk, size, rank
+    integer :: kk
 #endif
 
     PUSH_SUB(distributed_init)
@@ -97,9 +97,9 @@ contains
     this%nglobal = total
 
 #ifdef HAVE_MPI
-    if(  (.not. multicomm_strategy_is_parallel(mc, strategy)) .or. &
-         (this%nglobal.eq.1) ) then
-#endif      
+    call mpi_grp_init(this%mpi_grp, comm)
+    if(this%mpi_grp%size == 1 .or. this%nglobal == 1) then
+#endif
       
       SAFE_ALLOCATE(this%node(1:total))
       ! Defaults.
@@ -117,25 +117,21 @@ contains
 
       this%parallel = .true.
 
-      call mpi_grp_init(this%mpi_grp, mc%group_comm(strategy))
-
-      size = mc%group_sizes(strategy)
-      rank = mc%who_am_i(strategy)
-
-      SAFE_ALLOCATE(this%range(1:2, 0:size - 1))
-      SAFE_ALLOCATE(this%num(0:size - 1))
+      SAFE_ALLOCATE(this%range(1:2, 0:this%mpi_grp%size - 1))
+      SAFE_ALLOCATE(this%num(0:this%mpi_grp%size - 1))
       SAFE_ALLOCATE(this%node(1:this%nglobal))
 
-      call multicomm_divide_range(this%nglobal, size, this%range(1, :), this%range(2, :), lsize = this%num)
+      call multicomm_divide_range(this%nglobal, this%mpi_grp%size, this%range(1, :), this%range(2, :), &
+        lsize = this%num, scalapack_compat = scalapack_compat)
 
       message(1) = 'Info: Parallelization in ' // trim(tag)
       call write_info(1)
 
-      do kk = 1, size
+      do kk = 1, this%mpi_grp%size
         write(message(1),'(a,i4,a,i6,a,i6,a,i6)') 'Info: Node in group ', kk - 1, &
              ' will manage ', this%num(kk - 1), ' '//trim(tag)//':', this%range(1, kk - 1), " - ", this%range(2, kk - 1)
         call write_info(1)
-        if(rank .eq. kk - 1) then
+        if(this%mpi_grp%rank .eq. kk - 1) then
           this%start  = this%range(1, kk - 1)
           this%end    = this%range(2, kk - 1)
           this%nlocal = this%num(kk - 1)

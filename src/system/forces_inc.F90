@@ -244,7 +244,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
   SAFE_ALLOCATE(vloc(1:np))
   SAFE_ALLOCATE(zvloc(1:np))
   
-  do iatom = geo%atoms%start, geo%atoms%end
+  do iatom = geo%atoms_dist%start, geo%atoms_dist%end
 
     if(.not.simul_box_in_box(gr%mesh%sb, geo, geo%atom(iatom)%x) .and. ep%ignore_external_ions) then
       force(1:gr%mesh%sb%dim, iatom) = M_ZERO
@@ -268,7 +268,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
   SAFE_DEALLOCATE_A(grad_rho)
 
 #ifdef HAVE_MPI
-  if(geo%atoms%parallel) then
+  if(geo%atoms_dist%parallel) then
 
     call profiling_in(prof, "FORCES_MPI")
 
@@ -276,19 +276,19 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
     ! collected by all nodes, MPI_Allgatherv does precisely this (if
     ! we get the arguments right).
 
-    SAFE_ALLOCATE(recv_count(1:geo%atoms%mpi_grp%size))
-    SAFE_ALLOCATE(recv_displ(1:geo%atoms%mpi_grp%size))
-    SAFE_ALLOCATE(force_local(1:gr%mesh%sb%dim, 1:geo%atoms%nlocal))
+    SAFE_ALLOCATE(recv_count(1:geo%atoms_dist%mpi_grp%size))
+    SAFE_ALLOCATE(recv_displ(1:geo%atoms_dist%mpi_grp%size))
+    SAFE_ALLOCATE(force_local(1:gr%mesh%sb%dim, 1:geo%atoms_dist%nlocal))
 
-    recv_count(1:geo%atoms%mpi_grp%size) = gr%mesh%sb%dim*geo%atoms%num(0:geo%atoms%mpi_grp%size - 1)
-    recv_displ(1:geo%atoms%mpi_grp%size) = gr%mesh%sb%dim*(geo%atoms%range(1, 0:geo%atoms%mpi_grp%size - 1) - 1)
+    recv_count(1:geo%atoms_dist%mpi_grp%size) = gr%mesh%sb%dim*geo%atoms_dist%num(0:geo%atoms_dist%mpi_grp%size - 1)
+    recv_displ(1:geo%atoms_dist%mpi_grp%size) = gr%mesh%sb%dim*(geo%atoms_dist%range(1, 0:geo%atoms_dist%mpi_grp%size - 1) - 1)
 
-    force_local(1:gr%mesh%sb%dim, 1:geo%atoms%nlocal) = force(1:gr%mesh%sb%dim, geo%atoms%start:geo%atoms%end)
+    force_local(1:gr%mesh%sb%dim, 1:geo%atoms_dist%nlocal) = force(1:gr%mesh%sb%dim, geo%atoms_dist%start:geo%atoms_dist%end)
 
     call MPI_Allgatherv(&
-         force_local(1, 1), gr%mesh%sb%dim*geo%atoms%nlocal, MPI_CMPLX, &
+         force_local(1, 1), gr%mesh%sb%dim*geo%atoms_dist%nlocal, MPI_CMPLX, &
          force(1, 1), recv_count(1), recv_displ(1), MPI_CMPLX, &
-         geo%atoms%mpi_grp%comm, mpi_err)
+         geo%atoms_dist%mpi_grp%comm, mpi_err)
 
     SAFE_DEALLOCATE_A(recv_count)
     SAFE_DEALLOCATE_A(recv_displ)

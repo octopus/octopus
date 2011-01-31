@@ -1384,9 +1384,14 @@ contains
     geo%only_user_def = central_geo%only_user_def .and. all(lead_geo(:)%only_user_def)
     geo%nlpp          = central_geo%nlpp .or. any(lead_geo(:)%nlpp)
     geo%nlcc          = central_geo%nlcc .or. any(lead_geo(:)%nlcc)
-    geo%atoms%start   = 1
-    geo%atoms%end     = geo%natoms
-    geo%atoms%nlocal  = geo%natoms
+
+    ! FIXME:
+    ! Please do not do these atrocities... even if the object has
+    ! public components it does not mean you can just initialize it by
+    ! hand. XA
+    geo%atoms_dist%start   = 1
+    geo%atoms_dist%end     = geo%natoms
+    geo%atoms_dist%nlocal  = geo%natoms
 
     ! 1. Put the atoms of the central region into geo.
     geo%atom(1:central_geo%natoms)   = central_geo%atom
