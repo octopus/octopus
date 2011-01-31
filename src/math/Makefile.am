@@ -54,6 +54,7 @@ libmath_a_SOURCES =                      \
 noinst_HEADERS =                         \
 	lalg_basic_blas.F90              \
 	lalg_adv_lapack_inc.F90          \
+	lalg_adv_scalapack_inc.F90       \
 	math_inc.F90                     \
 	mix_inc.F90                      \
 	ode_solver_inc.F90               \
