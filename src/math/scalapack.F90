@@ -184,7 +184,7 @@ module scalapack_m
       integer,      intent(inout) :: iwork   
       integer,      intent(in)    :: liwork  
       integer,      intent(out)   :: ifail  
-      real(8),      intent(out)   :: iclustr
+      integer,      intent(out)   :: iclustr
       real(8),      intent(out)   :: gap    
       integer,      intent(out)   :: info   
 
@@ -221,8 +221,8 @@ module scalapack_m
       integer,      intent(in)    :: liwork    
       integer,      intent(out)   :: ifail     
       integer,      intent(out)   :: iclustr   
-      complex(8),   intent(out)   :: gap       
-      integer,      intent(out)   :: info      
+      real(8),      intent(out)   :: gap      
+      integer,      intent(out)   :: info    
     end subroutine pzheevx
   end interface scalapack_syev
 #endif

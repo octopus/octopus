@@ -34,11 +34,16 @@ subroutine X(eigensolve_scalapack)(n, a, eigenvalues, bof, proc_grid, err_code)
   integer              :: info, lwork, blockrow, blockcol, begining_row, begining_col, &
        psi_desc(BLACS_DLEN), blacs_info, i_loc, j_loc, liwork, eigenvectors_failing, &
        eigenvalues_size, eigenvectors_computed, nn,np0, mq0, neig
-  R_TYPE, allocatable  :: work(:), orthonormal_eigenvectors(:,:), eigenvectors_cluster(:)
+  R_TYPE, allocatable  :: work(:), orthonormal_eigenvectors(:,:)
   FLOAT                :: upper_bound, lower_bound, error, gap
   R_TYPE               :: a_loc(n,n)
-  integer, allocatable :: iwork(:)
+  integer, allocatable :: iwork(:), eigenvectors_cluster(:)
   
+#ifdef R_TCOMPLEX
+  FLOAT, allocatable                  :: rwork(:)
+  integer                             :: lrwork
+#endif
+
   PUSH_SUB(deigensolve)
   call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER_SCALAPACK")
 
@@ -78,6 +83,39 @@ subroutine X(eigensolve_scalapack)(n, a, eigenvalues, bof, proc_grid, err_code)
        begining_row, begining_col, psi_desc(1), work(1), lwork, iwork(1), liwork, eigenvectors_failing,            &
        eigenvectors_cluster(1),gap,info)
 #else
+  lrwork = 4 * n + max(5*nn, np0 * mq0) + iceil(neig, proc_grid%nprow * proc_grid%npcol)*nn
+  SAFE_ALLOCATE(rwork(1:lrwork))
+  call scalapack_syev( jobz = 'V', &
+       range = 'A', &
+       uplo = 'U', &
+       n = n, &
+       a = a(1,1), &
+       ia = begining_row, &
+       ja = begining_col,&
+       desca = psi_desc(1), &
+       vl = lower_bound, &
+       vu = upper_bound,    &
+       il = 0, &
+       iu = 0, &
+       abstol = error, &
+       m = eigenvalues_size, &
+       nz = eigenvectors_computed, &
+       w = eigenvalues(1), &
+       orfac = M_ZERO, &
+       z = orthonormal_eigenvectors(1,1),&
+       iz = begining_row, &
+       jz = begining_col, &
+       descz = psi_desc(1), &
+       work = work(1), &
+       lwork = lwork, &
+       rwork = rwork(1), &
+       lrwork = lwork, &
+       iwork = iwork(1), &
+       liwork = liwork, &
+       ifail = eigenvectors_failing,  &
+       iclustr = eigenvectors_cluster(1), &
+       gap = gap, &
+       info = info)
   ASSERT(.false.)
 #endif
 
