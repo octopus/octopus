@@ -265,6 +265,8 @@ contains
       integer :: iatom, jatom, iorb, norbs, ibasis
       FLOAT   :: maxradius, dist2
 
+      PUSH_SUB(lcao_init.lcao2_init)
+
       if(this%derivative) then
         this%mult = 2
       else
@@ -345,6 +347,7 @@ contains
         this%have_atom = .true.
       end if
 
+      POP_SUB(lcao_init.lcao2_init)
     end subroutine lcao2_init
 
   end subroutine lcao_init

@@ -43,17 +43,19 @@ subroutine X(eigensolve_scalapack)(n, a, eigenvalues, bof, proc_grid, err_code)
   FLOAT, allocatable                  :: rwork(:)
   integer                             :: lrwork
 #endif
+#endif
 
-  PUSH_SUB(deigensolve)
+  PUSH_SUB(X(eigensolve_scalapack))
   call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER_SCALAPACK")
 
+#ifdef HAVE_SCALAPACK
   bof_ = .true.
   if(present(bof)) then
     bof_ = bof
   end if
 
-  blockrow = 32 ! arbitray. But usually the best size between 16 and 64
-  blockcol = 32 ! arbitray. But usually the best size between 16 and 64
+  blockrow = 32 ! arbitrary. But usually the best size between 16 and 64
+  blockcol = 32 ! arbitrary. But usually the best size between 16 and 64
   begining_row = proc_grid%iam + 1 + blockrow
   begining_col = proc_grid%iam + 1 + blockcol
   neig =n ! because we ask for range='V'
@@ -64,7 +66,7 @@ subroutine X(eigensolve_scalapack)(n, a, eigenvalues, bof, proc_grid, err_code)
   
   lower_bound = M_ZERO
   upper_bound = real(n)
-  error = real(0.001) ! it has to be tunned
+  error = real(0.001) ! it has to be tuned
 
   SAFE_ALLOCATE(work(1:lwork))  
   liwork = 6 * max(n,proc_grid%nprow * proc_grid%npcol + 1, 4)
@@ -124,7 +126,11 @@ subroutine X(eigensolve_scalapack)(n, a, eigenvalues, bof, proc_grid, err_code)
   
   if(info /= 0) then
     if(bof_) then
-      write(message(1),'(3a,i5)') 'In deigensolve, ScaLAPACK ', TOSTRING(DLAPACK(syev)), ' returned error message ', info
+#ifdef RT_REAL
+      write(message(1),'(3a,i5)') 'In ' // TOSTRING(X(scalapack_eigensolve)) // ' ScaLAPACK pdsyevx returned error message ', info
+#else
+      write(message(1),'(3a,i5)') 'In ' // TOSTRING(X(scalapack_eigensolve)) // ' ScaLAPACK pzheevx returned error message ', info
+#endif
       call write_fatal(1)
     else
       if(present(bof)) then
@@ -146,7 +152,7 @@ subroutine X(eigensolve_scalapack)(n, a, eigenvalues, bof, proc_grid, err_code)
 #endif
 
   call profiling_out(eigensolver_prof)
-  POP_SUB(eigensolve_scalapack)
+  POP_SUB(X(eigensolve_scalapack))
 end subroutine X(eigensolve_scalapack)
 
 

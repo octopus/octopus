@@ -22,7 +22,6 @@
 ! -----------------------------------------------------------------------
 !> This module contains interfaces for ScaLAPACK routines
 !! Interfaces are from http://www.netlib.org/scalapack/tools, double, complex16
-!! (entered manually...)
 ! -----------------------------------------------------------------------
 
 module scalapack_m
