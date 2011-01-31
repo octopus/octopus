@@ -78,6 +78,18 @@ module lcao_m
     integer, pointer  :: ddim(:)
     logical           :: alternative
     logical           :: derivative
+    
+    ! For the alternative LCAO
+    FLOAT,   pointer  :: radius(:)    !< The localization radius of each atom orbitals
+    FLOAT             :: lapdist      !< This is the extra distance that the Laplacian adds to the localization radius.
+    logical, pointer  :: have_atom(:) !< When parallel in atoms (states), not all nodes have orbitals for all atoms.
+    integer           :: mult         !< The number of basis per atomic function (with derivatives is 2, 1 otherwise).
+    integer           :: maxorb       !< The maximum value of the orbitals over all atoms.
+    integer           :: nbasis       !< The total number of basis functions.
+    ! The following functions map between a basis index and atom/orbital index
+    integer, pointer  :: basis_atom(:) !< The atom that corresponds to a certain basis index
+    integer, pointer  :: basis_orb(:)  !< The orbital that corresponds to a certain basis index
+    integer, pointer  :: atom_orb_basis(:, :) !< The basis index that coorrespond to a certain 
   end type lcao_t
 
 contains
@@ -236,10 +248,105 @@ contains
 
       ASSERT(this%norbs >= st%nst)
       ASSERT(this%norbs <= this%maxorbs)
-
+      
+      nullify(this%radius)
+      nullify(this%have_atom)
+      nullify(this%basis_atom)
+      nullify(this%basis_orb)
+      nullify(this%atom_orb_basis)
+    else
+      call lcao2_init()
     end if
 
     POP_SUB(lcao_init)
+
+  contains
+    subroutine lcao2_init()
+      integer :: iatom, jatom, iorb, norbs, ibasis
+      FLOAT   :: maxradius, dist2
+
+      if(this%derivative) then
+        this%mult = 2
+      else
+        this%mult = 1
+      end if
+
+      this%maxorb = 0
+      this%nbasis = 0
+      do iatom = 1, geo%natoms
+        this%maxorb = max(this%maxorb, species_niwfs(geo%atom(iatom)%spec))
+        this%nbasis = this%nbasis + species_niwfs(geo%atom(iatom)%spec)
+      end do
+
+      this%maxorb = this%maxorb*this%mult
+      this%nbasis = this%nbasis*this%mult
+
+      SAFE_ALLOCATE(this%basis_atom(1:this%nbasis))
+      SAFE_ALLOCATE(this%basis_orb(1:this%nbasis))
+      SAFE_ALLOCATE(this%atom_orb_basis(1:geo%natoms, 1:this%maxorb))
+
+      ! Initialize the mapping between indexes
+
+      ibasis = 0
+      do iatom = 1, geo%natoms
+        norbs = species_niwfs(geo%atom(iatom)%spec)
+
+        do iorb = 1, this%mult*norbs
+          ibasis = ibasis + 1
+          this%atom_orb_basis(iatom, iorb) = ibasis
+          this%basis_atom(ibasis) = iatom
+          this%basis_orb(ibasis) = iorb
+        end do
+      end do
+
+      ! this is determined by the stencil we are using and the spacing
+      this%lapdist = maxval(abs(gr%mesh%idx%enlarge)*gr%mesh%spacing)
+     
+      ! calculate the radius of each orbital
+      SAFE_ALLOCATE(this%radius(1:geo%natoms))
+      
+      do iatom = 1, geo%natoms
+        norbs = species_niwfs(geo%atom(iatom)%spec)
+        
+        maxradius = M_ZERO
+        do iorb = 1, norbs
+          maxradius = max(maxradius, species_get_iwf_radius(geo%atom(iatom)%spec, iorb, is = 1))
+        end do
+        
+        if(this%derivative) maxradius = maxradius + this%lapdist
+        
+        maxradius = min(maxradius, M_TWO*maxval(gr%mesh%sb%lsize(1:gr%mesh%sb%dim)))
+        
+        this%radius(iatom) = maxradius
+      end do
+
+
+      ! Now calculate which atoms will be allocated in this node
+      SAFE_ALLOCATE(this%have_atom(1:geo%natoms))
+      
+      if(geo%atoms%parallel) then
+#ifdef HAVE_MPI        
+        this%have_atom = .false.
+        
+        do iatom = geo%atoms%start, geo%atoms%end
+          ! We a certain number of atoms determined by the partition
+          this%have_atom(iatom) = .true.
+          
+          do jatom = 1, geo%natoms
+            dist2 = sum((geo%atom(iatom)%x(1:MAX_DIM) - geo%atom(jatom)%x(1:MAX_DIM))**2)
+
+            ! We have this atom if it is close enough to the ones given by the partition
+            this%have_atom(jatom)  = (dist2 < (this%radius(iatom) + this%radius(jatom) + this%lapdist)**2)
+          end do
+          
+        end do
+#endif        
+      else
+        this%have_atom = .true.
+      end if
+
+    end subroutine lcao2_init
+
   end subroutine lcao_init
 
 
@@ -377,6 +484,11 @@ contains
 
     PUSH_SUB(lcao_end)
 
+    SAFE_DEALLOCATE_P(this%basis_atom)
+    SAFE_DEALLOCATE_P(this%basis_orb)
+    SAFE_DEALLOCATE_P(this%atom_orb_basis)
+    SAFE_DEALLOCATE_P(this%radius)
+    SAFE_DEALLOCATE_P(this%have_atom)
     SAFE_DEALLOCATE_P(this%atom)
     SAFE_DEALLOCATE_P(this%level)
     SAFE_DEALLOCATE_P(this%ddim)
