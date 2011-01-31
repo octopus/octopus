@@ -231,12 +231,13 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   call descinit(psi_desc(1), total_np, st%nst, psi_block(1), psi_block(2), 0, 0,  st%dom_st_proc_grid%context, &
     st%d%dim*der%mesh%np_part, info)
 
-  ! we use a blocksize of 32
-  nbl = 32
+  ! select the blocksize, we use the division used for state
+  ! parallelization but with a maximum of 64
+  nbl = min(64, psi_block(2))
 
   ! calculate the size of the matrix in each node
-  nrow = numroc(st%nst, nbl, st%dom_st_proc_grid%myrow, 0, st%dom_st_proc_grid%nprow)
-  ncol = numroc(st%nst, nbl, st%dom_st_proc_grid%mycol, 0, st%dom_st_proc_grid%npcol)
+  nrow = max(1, numroc(st%nst, nbl, st%dom_st_proc_grid%myrow, 0, st%dom_st_proc_grid%nprow))
+  ncol = max(1, numroc(st%nst, nbl, st%dom_st_proc_grid%mycol, 0, st%dom_st_proc_grid%npcol))
 
   SAFE_ALLOCATE(hs(1:nrow, 1:ncol))
 
