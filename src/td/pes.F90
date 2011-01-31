@@ -103,25 +103,24 @@ contains
       call PES_rc_init(pes%rc, mesh, st, save_iter)
     end if
 
-    pes%calc_mask = .false.
-    ! have the mask, and we are working in the velocity gauge
-    if(ab == 2) then
-      !%Variable CalcPES_mask
-      !%Type logical
-      !%Default no
-      !%Section Time-Dependent::PES
-      !%Description
-      !% If <tt>true</tt>, calculate the photo-electron spectrum using the mask method
-      !% (M. Marques, D. Varsano, H. Appel, E.K.U. Gross and A. Rubio, to be submitted). 
-      !% For this to work, masking boundaries are necessary (<tt>AbsorbingBoundaries == 2</tt>).
-      !%End
-      call parse_logical(datasets_check('CalcPES_Mask'), .false., pes%calc_mask)
-      if(pes%calc_mask) then
-        call PES_mask_init(pes%mask, mesh, sb, st,hm,max_iter,dt)
-      end if
-    else
-        message(1) = 'Warning: CalcPES_mask works only with AbsorbingBoundaries=2.'
-        call write_info(1)
+    !%Variable CalcPES_mask
+    !%Type logical
+    !%Default no
+    !%Section Time-Dependent::PES
+    !%Description
+    !% If <tt>true</tt>, calculate the photo-electron spectrum using the mask method
+    !% (M. Marques, D. Varsano, H. Appel, E.K.U. Gross and A. Rubio, to be submitted). 
+    !% For this to work, masking boundaries are necessary (<tt>AbsorbingBoundaries == 2</tt>).
+    !%End
+    call parse_logical(datasets_check('CalcPES_Mask'), .false., pes%calc_mask)
+    if(pes%calc_mask) then
+      call PES_mask_init(pes%mask, mesh, sb, st,hm,max_iter,dt)
+    end if
+
+    if(pes%calc_mask .and. ab /= 2) then
+      message(1) = 'Warning: CalcPES_mask works only with AbsorbingBoundaries=2.'
+      call write_info(1)
+      call input_error('CalcPES_Mask')
     end if
 
     POP_SUB(PES_init)

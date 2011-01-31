@@ -78,9 +78,6 @@ subroutine PES_rc_init(pesrc, mesh, st, save_iter)
 
   SAFE_ALLOCATE(pesrc%wf(1:pesrc%npoints, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik, 1:save_iter))
 
-
-
-
   POP_SUB(PES_rc_init)
 end subroutine PES_rc_init
 
@@ -119,8 +116,6 @@ subroutine PES_rc_calc(pesrc, st,mesh, ii)
   PUSH_SUB(PES_rc_calc)
 
   contains_ip = .true.
-
-
 
   do ip = 1, pesrc%npoints
 
