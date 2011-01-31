@@ -31,7 +31,8 @@ module pblas_m
     subroutine pdgemm ( transa, transb, m, n, k, alpha, & 
       a, ia, ja, desca, b, ib, jb, descb, &
       beta, c, ic, jc, descc )
-      
+      implicit none
+
       character*1      :: transa, transb
       integer          :: m, n, k, ia, ja, ib, jb, ic, jc
       real(8)          :: alpha, beta
@@ -42,7 +43,8 @@ module pblas_m
     subroutine pzgemm ( transa, transb, m, n, k, alpha, & 
       a, ia, ja, desca, b, ib, jb, descb, &
       beta, c, ic, jc, descc )
-      
+      implicit none
+
       character*1      :: transa, transb
       integer          :: m, n, k, ia, ja, ib, jb, ic, jc
       complex(8)       :: alpha, beta

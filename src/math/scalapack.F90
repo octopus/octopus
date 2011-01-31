@@ -30,18 +30,24 @@ module scalapack_m
 
   interface
     INTEGER FUNCTION NUMROC( N, NB, IPROC, ISRCPROC, NPROCS )
+      implicit none
+
       INTEGER              IPROC, ISRCPROC, N, NB, NPROCS
     end FUNCTION NUMROC
   end interface
 
   interface
     INTEGER FUNCTION ICEIL( INUM, IDENOM )
+      implicit none
+
       INTEGER            IDENOM, INUM
     end FUNCTION ICEIL
   end interface
 
   interface
     SUBROUTINE DESCINIT( DESC, M, N, MB, NB, IRSRC, ICSRC, ICTXT, LLD, INFO )
+      implicit none
+
       INTEGER            ICSRC, ICTXT, INFO, IRSRC, LLD, M, MB, N, NB
       INTEGER            DESC
     end SUBROUTINE DESCINIT
@@ -49,12 +55,16 @@ module scalapack_m
 
   interface scalapack_geqrf
     SUBROUTINE PDGEQRF( M, N, A, IA, JA, DESCA, TAU, WORK, LWORK, INFO )
+      implicit none
+
       INTEGER            IA, INFO, JA, LWORK, M, N
       INTEGER            DESCA
       DOUBLE PRECISION   A, TAU, WORK
     end SUBROUTINE PDGEQRF
     
     SUBROUTINE PZGEQRF( M, N, A, IA, JA, DESCA, TAU, WORK, LWORK, INFO )
+      implicit none
+      
       INTEGER            IA, INFO, JA, LWORK, M, N
       INTEGER            DESCA
       COMPLEX*16         A, TAU, WORK
@@ -63,12 +73,16 @@ module scalapack_m
 
   interface scalapack_orgqr
     SUBROUTINE PDORGQR( M, N, K, A, IA, JA, DESCA, TAU, WORK, LWORK, INFO ) 
+      implicit none
+
       INTEGER            IA, INFO, JA, K, LWORK, M, N
       INTEGER            DESCA
       DOUBLE PRECISION   A, TAU, WORK
     end SUBROUTINE PDORGQR
     
     SUBROUTINE PZUNGQR( M, N, K, A, IA, JA, DESCA, TAU, WORK, LWORK, INFO )
+      implicit none
+      
       INTEGER            IA, INFO, JA, K, LWORK, M, N
       INTEGER            DESCA
       COMPLEX*16         A, TAU, WORK
@@ -77,6 +91,8 @@ module scalapack_m
   
   interface
     SUBROUTINE PDGESV( N, NRHS, A, IA, JA, DESCA, IPIV, B, IB, JB, DESCB, INFO )
+      implicit none
+
       INTEGER            IA, IB, INFO, JA, JB, N, NRHS
       INTEGER            DESCA, DESCB, IPIV
       DOUBLE PRECISION   A, B
@@ -85,6 +101,8 @@ module scalapack_m
 
   interface
     SUBROUTINE PZGESV( N, NRHS, A, IA, JA, DESCA, IPIV, B, IB, JB, DESCB, INFO )
+      implicit none
+
       INTEGER            IA, IB, INFO, JA, JB, N, NRHS
       INTEGER            DESCA, DESCB, IPIV
       COMPLEX*16         A, B
@@ -95,6 +113,8 @@ module scalapack_m
     SUBROUTINE PDSYEVX( JOBZ, RANGE, UPLO, N, A, IA, JA, DESCA, VL, &
       VU, IL, IU, ABSTOL, M, NZ, W, ORFAC, Z, IZ, JZ, DESCZ, WORK, LWORK, IWORK, LIWORK, IFAIL, &
       ICLUSTR, GAP, INFO )
+      implicit none
+      
       CHARACTER          JOBZ, RANGE, UPLO
       INTEGER            IA, IL, INFO, IU, IZ, JA, JZ, LIWORK, LWORK, M, N, NZ
       DOUBLE PRECISION   ABSTOL, ORFAC, VL, VU
@@ -105,6 +125,8 @@ module scalapack_m
 
   interface
     subroutine pdsyev(jobz, uplo, n, a, ia, ja, desca, w, z, iz, jz, descz, work, lwork, info)
+      implicit none
+      
       character,        intent(in)    :: jobz
       character,        intent(in)    :: uplo
       integer,          intent(in)    :: n
@@ -123,6 +145,8 @@ module scalapack_m
     end subroutine pdsyev
 
     subroutine pzheev(jobz, uplo, n, a, ia, ja, desca, w, z, iz, jz, descz, work, lwork, rwork, lrwork, info)
+      implicit none
+
       character,        intent(in)    :: jobz
       character,        intent(in)    :: uplo
       integer,          intent(in)    :: n
