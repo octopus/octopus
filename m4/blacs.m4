@@ -27,7 +27,7 @@ fi
 
 dnl Backup LIBS 
 acx_blacs_save_LIBS="$LIBS"
-LIBS="$LIBS_BLACS $LIBS $FLIBS"
+LIBS="$LIBS_BLACS $LIBS_LAPACK $LIBS_BLAS $LIBS $FLIBS"
 
 dnl First, check LIBS_BLACS environment variable
 if test $acx_blacs_ok = no; then
