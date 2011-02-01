@@ -300,12 +300,37 @@ program octopus
     call calc_mode_end()
     
     call print_date("Calculation ended on ")
-
+    call print_walltime()
   end do datasets
 
   call datasets_end()
   call parser_end()
   call global_end()
+
+contains
+
+  subroutine print_walltime()
+    integer :: days, hours, min, sec, usec
+
+    call loct_gettimeofday(sec, usec)
+    call epoch_time_diff(sec, usec)
+    
+    days  = sec / 86400
+    hours = (sec / 3600) - (days * 24)
+    min   = (sec / 60) - (days * 1440) - (hours * 60)
+    sec   = modulo(sec, 60)
+
+    message(2) = ''
+    if(days  > 0) write(message(2), '(i3,a)') days, ' days,'
+    if(hours > 0.or.message(2).ne.'') &
+      write(message(2), '(a,1x,i2.2,a)') trim(message(2)), hours, 'h'
+    if(min   > 0.or.message(1).ne.'') &
+      write(message(2), '(a,1x,i2.2,a)') trim(message(2)), min, 'm'
+    write(message(2), '(a,1x,i2.2,a,i3,a)') trim(message(2)), sec, '.', usec/1000, 's'
+    message(1) = str_center('Walltime: ' // trim(message(2)), 70)
+    call write_info(1)
+
+  end subroutine print_walltime
 
 end program octopus
 
