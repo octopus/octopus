@@ -203,6 +203,69 @@ module lapack_m
     end subroutine zungqr
   end interface lapack_orgqr
 
+  interface lapack_sygvx
+    subroutine dsygvx(itype, jobz, range, uplo, n, a, lda, b, ldb, vl, vu, il, iu, abstol, &
+      m, w, z, ldz, work, lwork, iwork, ifail, info)
+      implicit none
+
+      integer,             intent(in)    :: itype !> Specifies the problem: 1: A*x = l*B*x 2:  A*B*x = l*x 3: B*A*x = l*x
+      character(len=1),    intent(in)    :: jobz  !> N: Compute eigenvalues only; V: Compute eigenvalues and eigenvectors.
+      character(len=1),    intent(in)    :: range !> A: all eigenval V: all eigenval in (VL,VU] I: IL-th through IU-th eigenval
+      character(len=1),    intent(in)    :: uplo  !> U: Upper triangle of A and B stored L: Lower triangle of A and B stored
+      integer,             intent(in)    :: n     !> The order of the matrix pencil (A,B)
+      real(8),             intent(inout) :: a     !> a(:) On entry, the symmetric matrix A. On exit, destroyed
+      integer,             intent(in)    :: lda   !> The leading dimension of the array A
+      real(8),             intent(inout) :: b     !> b(:)
+      integer,             intent(in)    :: ldb
+      real(8),             intent(in)    :: vl
+      real(8),             intent(in)    :: vu
+      integer,             intent(in)    :: il
+      integer,             intent(in)    :: iu
+      real(8),             intent(in)    :: abstol
+      integer,             intent(out)   :: m
+      real(8),             intent(out)   :: w
+      real(8),             intent(out)   :: z
+      integer,             intent(in)    :: ldz
+      real(8),             intent(out)   :: work   ! work(:)
+      integer,             intent(in)    :: lwork
+      integer,             intent(out)   :: iwork  ! iwork(1:5*n)
+      integer,             intent(out)   :: ifail  ! ifail(1:n)
+      integer,             intent(out)   :: info
+    end subroutine dsygvx
+  end interface lapack_sygvx
+
+  interface lapack_hegv
+    subroutine zhegvx(itype, jobz, range, uplo, n, a, lda, b, ldb, vl, vu, il, iu, abstol, &
+      m, w, z, ldz, work, lwork, rwork, iwork, ifail, info)
+      implicit none
+
+      integer,             intent(in)    :: itype
+      character(len=1),    intent(in)    :: jobz
+      character(len=1),    intent(in)    :: range
+      character(len=1),    intent(in)    :: uplo
+      integer,             intent(in)    :: n
+      complex(8),          intent(inout) :: a
+      integer,             intent(in)    :: lda
+      complex(8),          intent(inout) :: b
+      integer,             intent(in)    :: ldb
+      real(8),             intent(in)    :: vl
+      real(8),             intent(in)    :: vu
+      integer,             intent(in)    :: il
+      integer,             intent(in)    :: iu
+      real(8),             intent(in)    :: abstol
+      integer,             intent(out)   :: m
+      real(8),             intent(out)   :: w
+      complex(8),          intent(out)   :: z
+      integer,             intent(in)    :: ldz
+      complex(8),          intent(out)   :: work
+      integer,             intent(in)    :: lwork
+      real(8),             intent(out)   :: rwork
+      integer,             intent(out)   :: iwork
+      integer,             intent(out)   :: ifail
+      integer,             intent(out)   :: info
+    end subroutine zhegvx
+  end interface lapack_hegv
+
 end module lapack_m
 
 

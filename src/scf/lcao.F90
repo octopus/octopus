@@ -30,6 +30,7 @@ module lcao_m
   use h_sys_output_m
   use lalg_adv_m
   use lalg_basic_m
+  use lapack_m
   use loct_m
   use mesh_m
   use mesh_function_m
@@ -38,6 +39,7 @@ module lcao_m
   use parser_m
   use profiling_m
   use simul_box_m
+  use scalapack_m
   use solids_m
   use species_m
   use species_pot_m
@@ -80,15 +82,16 @@ module lcao_m
     logical           :: derivative
     
     ! For the alternative LCAO
-    FLOAT,   pointer  :: radius(:)    !< The localization radius of each atom orbitals
-    FLOAT             :: lapdist      !< This is the extra distance that the Laplacian adds to the localization radius.
-    integer           :: mult         !< The number of basis per atomic function (with derivatives is 2, 1 otherwise).
-    integer           :: maxorb       !< The maximum value of the orbitals over all atoms.
-    integer           :: nbasis       !< The total number of basis functions.
+    FLOAT,   pointer    :: radius(:)    !< The localization radius of each atom orbitals
+    FLOAT               :: lapdist      !< This is the extra distance that the Laplacian adds to the localization radius.
+    integer             :: mult         !< The number of basis per atomic function (with derivatives is 2, 1 otherwise).
+    integer             :: maxorb       !< The maximum value of the orbitals over all atoms.
+    integer             :: nbasis       !< The total number of basis functions.
     ! The following functions map between a basis index and atom/orbital index
-    integer, pointer  :: basis_atom(:) !< The atom that corresponds to a certain basis index
-    integer, pointer  :: basis_orb(:)  !< The orbital that corresponds to a certain basis index
-    integer, pointer  :: atom_orb_basis(:, :) !< The basis index that coorrespond to a certain 
+    integer, pointer    :: basis_atom(:) !< The atom that corresponds to a certain basis index
+    integer, pointer    :: basis_orb(:)  !< The orbital that corresponds to a certain basis index
+    integer, pointer    :: atom_orb_basis(:, :) !< The basis index that coorrespond to a certain 
+    type(distributed_t) :: basis_dist    !< The distribution of basis sets between nodes.
   end type lcao_t
 
 contains
@@ -252,6 +255,7 @@ contains
       nullify(this%basis_atom)
       nullify(this%basis_orb)
       nullify(this%atom_orb_basis)
+      call distributed_nullify(this%basis_dist)
     else
       call lcao2_init()
     end if
@@ -319,6 +323,8 @@ contains
         
         this%radius(iatom) = maxradius
       end do
+
+      call distributed_init(this%basis_dist, this%nbasis, st%mpi_grp%comm, "orbitals", scalapack_compat = .true.)
 
       POP_SUB(lcao_init.lcao2_init)
     end subroutine lcao2_init
@@ -459,7 +465,7 @@ contains
     type(lcao_t), intent(inout) :: this
 
     PUSH_SUB(lcao_end)
-
+    
     SAFE_DEALLOCATE_P(this%basis_atom)
     SAFE_DEALLOCATE_P(this%basis_orb)
     SAFE_DEALLOCATE_P(this%atom_orb_basis)

@@ -343,20 +343,22 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   type(hamiltonian_t), intent(in)    :: hm
   integer,             intent(in)    :: start
 
-  integer :: iatom, jatom, ik, ist, idim, ip, ispin
-  integer :: ibasis, jbasis, iorb, jorb, norbs
-  R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :)
+  integer :: iatom, jatom, ik, ist, idim, ip, ispin, nev
+  integer :: ibasis, jbasis, iorb, jorb, norbs, dof
+  R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :), bb(:, :)
   R_TYPE, allocatable :: psii(:, :, :), hpsi(:, :, :)
-  FLOAT, allocatable :: ev(:)
   type(submesh_t), allocatable :: sphere(:)
   type(batch_t) :: hpsib, psib
   type(batch_t), allocatable :: orbitals(:)
+  FLOAT, allocatable :: eval(:)
+  R_TYPE, allocatable :: evec(:, :)
   FLOAT :: dist2
   type(profile_t), save :: prof_orbitals, prof_matrix, prof_wavefunction
 #ifdef HAVE_MPI
   R_TYPE, allocatable :: tmp(:, :)
   type(profile_t), save :: comm2prof
 #endif
+  
 
   PUSH_SUB(X(lcao_wf2))
 
@@ -378,7 +380,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
   SAFE_ALLOCATE(hamiltonian(1:this%nbasis, 1:this%nbasis))
   SAFE_ALLOCATE(overlap(1:this%nbasis, 1:this%nbasis))
-  SAFE_ALLOCATE(ev(1:this%nbasis))
+  SAFE_ALLOCATE(bb(1:this%maxorb, 1:this%maxorb))
   SAFE_ALLOCATE(psii(1:gr%mesh%np_part, 1:st%d%dim, this%maxorb))
   SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim, this%maxorb))
   SAFE_ALLOCATE(sphere(1:geo%natoms))
@@ -386,14 +388,19 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
   call profiling_in(prof_orbitals, "LCAO_ORBITALS")
 
+  dof = 0
   do iatom = 1, geo%natoms
     norbs = species_niwfs(geo%atom(iatom)%spec)
 
     ! initialize the radial grid
     call submesh_init_sphere(sphere(iatom), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, this%radius(iatom))
+    INCR(dof, sphere(iatom)%ns*this%mult*norbs)
     call batch_init(orbitals(iatom), 1, this%mult*norbs)
     call dbatch_new(orbitals(iatom), 1, this%mult*norbs, sphere(iatom)%ns)
   end do
+
+  write(message(1), '(a,i8,a,i7,a)')'Info: LCAO requires', dof, ' values (', dof*8/1024**2, ' Mb) for atomic orbitals.'
+  call write_info(1)
 
   do ispin = 1, st%d%spin_channels
 
@@ -404,7 +411,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       call write_info(3)
     end if
 
-    message(1) = 'Calculating atomic orbitals.'
+    message(1) = 'Generating atomic orbitals.'
     call write_info(1)
 
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, this%nbasis)
@@ -423,13 +430,15 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
         end if
       end do
 
+      INCR(ibasis, norbs*this%mult)
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, this%nbasis)
     end do
 
     if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
     call profiling_out(prof_orbitals)
-
+    
+    ! iterate over the kpoints for this spin
     do ik = st%d%kpt%start, st%d%kpt%end
       if(ispin /= states_dim_get_spin_index(st%d, ik)) cycle
 
@@ -471,11 +480,19 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
           ibasis = this%atom_orb_basis(iatom, 1)
           jbasis = this%atom_orb_basis(jatom, 1)
 
-          call X(submesh_batch_dotp_matrix)(sphere(jatom), hpsib, orbitals(jatom), hamiltonian(ibasis:, jbasis:), reduce= .false.)
+          call X(submesh_batch_dotp_matrix)(sphere(jatom), hpsib, orbitals(jatom), bb, reduce = .false.)
+
+          forall(iorb = 1:norbs, jorb = 1:norbs)
+            hamiltonian(ibasis - 1 + iorb, jbasis - 1 + jorb) = bb(iorb, jorb)
+          end forall
 
           if(dist2 > (this%radius(iatom) + this%radius(jatom))**2) cycle
 
-          call X(submesh_batch_dotp_matrix)(sphere(jatom), psib, orbitals(jatom), overlap(ibasis:, jbasis:), reduce= .false.)
+          call X(submesh_batch_dotp_matrix)(sphere(jatom), psib, orbitals(jatom), bb, reduce = .false.)
+
+          forall(iorb = 1:norbs, jorb = 1:norbs)
+            overlap(ibasis - 1 + iorb, jbasis - 1 + jorb) = bb(iorb, jorb)
+          end forall
 
           ! the other half of the matrix
           do iorb = 1, norbs
@@ -518,9 +535,15 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       message(1) = 'Diagonalizing Hamiltonian.'
       call write_info(1)
 
-      call lalg_geneigensolve(this%nbasis, hamiltonian, overlap, ev)
-
       call profiling_out(prof_matrix)
+
+      ! the number of eigenvectors we need
+      nev = min(this%nbasis, st%nst) 
+
+      SAFE_ALLOCATE(eval(1:this%nbasis))
+      SAFE_ALLOCATE(evec(1:this%nbasis, 1:nev))
+
+      call diagonalization()
 
       call profiling_in(prof_wavefunction, "LCAO_WAVEFUNCTIONS")
 
@@ -529,15 +552,16 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, this%nbasis)
 
+      ! set the eigenvalues
+      st%eigenval(1:nev, ik) = eval(1:nev)
+      st%eigenval(this%nbasis + 1:st%nst, ik) = HUGE(M_ONE)
 
       do ist = st%st_start, st%st_end
         if(ist <= this%nbasis) then
-          st%eigenval(ist, ik) = ev(ist)
           do idim = 1, st%d%dim
             forall(ip = 1:gr%mesh%np) st%X(psi)(ip, idim, ist, ik) = R_TOTYPE(M_ZERO)
           end do
         else
-          st%eigenval(ist, ik) = HUGE(M_ONE)
           !we do not have enough basis functions, so randomize the missing orbitals
           call X(mf_random)(gr%mesh, st%X(psi)(:, 1, ist, ik))
           st%X(psi)(1:gr%mesh%np, 2:st%d%dim, ist, ik) = R_TOTYPE(M_ZERO)
@@ -546,10 +570,10 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
       call batch_init(psib, st%d%dim, st%st_start,  min(st%st_end, this%nbasis), st%X(psi)(:, :, :, ik))
 
-      ibasis = 0
+      ibasis = 1
       do iatom = 1, geo%natoms
         norbs = this%mult*species_niwfs(geo%atom(iatom)%spec)
-        call X(submesh_batch_add_matrix)(sphere(iatom), hamiltonian(ibasis + 1:, st%st_start:), orbitals(iatom), psib)
+        call X(submesh_batch_add_matrix)(sphere(iatom), evec(ibasis:, st%st_start:), orbitals(iatom), psib)
         ibasis = ibasis + norbs
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, this%nbasis)
       end do
@@ -559,6 +583,10 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
       call profiling_out(prof_wavefunction)
     end do
+
+    SAFE_DEALLOCATE_A(eval)
+    SAFE_DEALLOCATE_A(evec)
+
   end do
 
   do iatom = 1, geo%natoms
@@ -571,10 +599,52 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   SAFE_DEALLOCATE_A(hpsi)  
   SAFE_DEALLOCATE_A(hamiltonian)
   SAFE_DEALLOCATE_A(overlap)
-  SAFE_DEALLOCATE_A(ev)
   SAFE_DEALLOCATE_A(sphere)
 
   POP_SUB(X(lcao_wf2))
+
+contains
+
+  subroutine diagonalization()
+    
+    integer :: neval_found
+    integer :: info, lwork
+    FLOAT   :: tmp
+    R_TYPE, allocatable :: work(:)
+    integer, allocatable :: iwork(:), ifail(:)
+
+    SAFE_ALLOCATE(iwork(1:5*this%nbasis))
+    SAFE_ALLOCATE(ifail(1:this%nbasis))
+
+#ifdef R_TREAL
+    call lapack_sygvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
+      n = this%nbasis, a = hamiltonian(1, 1), lda = this%nbasis, b = overlap(1, 1), ldb = this%nbasis, &
+      vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = CNST(1e-15), &
+      m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%nbasis, &
+      work = tmp, lwork = -1, iwork = iwork(1), ifail = ifail(1), info = info)
+
+    ASSERT(info == 0)
+
+    lwork = nint(tmp)
+    
+    SAFE_ALLOCATE(work(1:lwork))
+
+    call lapack_sygvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
+      n = this%nbasis, a = hamiltonian(1, 1), lda = this%nbasis, b = overlap(1, 1), ldb = this%nbasis, &
+      vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = CNST(1e-15), &
+      m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%nbasis, &
+      work = work(1), lwork = lwork, iwork = iwork(1), ifail = ifail(1), info = info)
+   
+    evec(this%nbasis, 1:nev) = hamiltonian(this%nbasis, 1:nev)
+#else
+    call lalg_geneigensolve(this%nbasis, hamiltonian, overlap, eval)
+    evec(this%nbasis, 1:nev) = hamiltonian(this%nbasis, 1:nev)
+#endif
+    SAFE_DEALLOCATE_A(iwork)
+    SAFE_DEALLOCATE_A(ifail)
+
+  end subroutine diagonalization
+
 end subroutine X(lcao_wf2)
 
 !! Local Variables:
