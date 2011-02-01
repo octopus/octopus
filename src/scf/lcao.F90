@@ -82,7 +82,6 @@ module lcao_m
     ! For the alternative LCAO
     FLOAT,   pointer  :: radius(:)    !< The localization radius of each atom orbitals
     FLOAT             :: lapdist      !< This is the extra distance that the Laplacian adds to the localization radius.
-    logical, pointer  :: have_atom(:) !< When parallel in atoms (states), not all nodes have orbitals for all atoms.
     integer           :: mult         !< The number of basis per atomic function (with derivatives is 2, 1 otherwise).
     integer           :: maxorb       !< The maximum value of the orbitals over all atoms.
     integer           :: nbasis       !< The total number of basis functions.
@@ -250,7 +249,6 @@ contains
       ASSERT(this%norbs <= this%maxorbs)
       
       nullify(this%radius)
-      nullify(this%have_atom)
       nullify(this%basis_atom)
       nullify(this%basis_orb)
       nullify(this%atom_orb_basis)
@@ -321,31 +319,6 @@ contains
         
         this%radius(iatom) = maxradius
       end do
-
-
-      ! Now calculate which atoms will be allocated in this node
-      SAFE_ALLOCATE(this%have_atom(1:geo%natoms))
-      
-      if(geo%atoms%parallel) then
-#ifdef HAVE_MPI        
-        this%have_atom = .false.
-        
-        do iatom = geo%atoms%start, geo%atoms%end
-          ! We a certain number of atoms determined by the partition
-          this%have_atom(iatom) = .true.
-          
-          do jatom = 1, geo%natoms
-            dist2 = sum((geo%atom(iatom)%x(1:MAX_DIM) - geo%atom(jatom)%x(1:MAX_DIM))**2)
-
-            ! We have this atom if it is close enough to the ones given by the partition
-            this%have_atom(jatom)  = (dist2 < (this%radius(iatom) + this%radius(jatom) + this%lapdist)**2)
-          end do
-          
-        end do
-#endif        
-      else
-        this%have_atom = .true.
-      end if
 
       POP_SUB(lcao_init.lcao2_init)
     end subroutine lcao2_init
@@ -491,7 +464,6 @@ contains
     SAFE_DEALLOCATE_P(this%basis_orb)
     SAFE_DEALLOCATE_P(this%atom_orb_basis)
     SAFE_DEALLOCATE_P(this%radius)
-    SAFE_DEALLOCATE_P(this%have_atom)
     SAFE_DEALLOCATE_P(this%atom)
     SAFE_DEALLOCATE_P(this%level)
     SAFE_DEALLOCATE_P(this%ddim)
