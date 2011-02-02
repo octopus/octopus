@@ -78,13 +78,12 @@ R_TYPE function X(dsubmesh_to_mesh_dotp)(this, dim, sphi, phi, reduce) result(do
 
   integer :: is, idim
   logical :: reduce_
+  R_TYPE  :: tmp
 
   PUSH_SUB(X(dsubmesh_to mesh_dotp))
 
-  reduce_ = .false.
+  reduce_ = .true.
   if(present(reduce)) reduce_ = reduce
-
-  ASSERT(.not. reduce_)
 
   dotp = R_TOTYPE(M_ZERO)
 
@@ -102,6 +101,13 @@ R_TYPE function X(dsubmesh_to_mesh_dotp)(this, dim, sphi, phi, reduce) result(do
     end do
     dotp = dotp*this%mesh%vol_pp(1)
   end if
+
+#if defined(HAVE_MPI)
+  if(reduce_ .and. this%mesh%parallel_in_domains) then
+    call MPI_Allreduce(dotp, tmp, 1, R_MPITYPE, MPI_SUM, this%mesh%vp%comm, mpi_err)
+    dotp = tmp
+  end if
+#endif
 
   POP_SUB(X(dsubmesh_to mesh_dotp))
 end function X(dsubmesh_to_mesh_dotp)
@@ -205,13 +211,12 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
   integer :: ist, jst, idim, jdim, is
   logical :: reduce_
   R_TYPE :: dotp
+  R_TYPE, allocatable :: tmp(:, :)
 
   PUSH_SUB(X(submesh_batch_dotp_matrix))
 
-  reduce_ = .false.
+  reduce_ = .true.
   if(present(reduce)) reduce_ = reduce
-
-  ASSERT(.not. reduce_)
 
   if(this%mesh%use_curvilinear) then
 
@@ -275,7 +280,16 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
     end do
     
   end if
-  
+
+#if defined(HAVE_MPI)
+  if(reduce_ .and. this%mesh%parallel_in_domains) then
+    SAFE_ALLOCATE(tmp(1:mm%nst, 1:ss%nst))
+    call MPI_Allreduce(dot(1, 1), tmp(1, 1), mm%nst*ss%nst, R_MPITYPE, MPI_SUM, this%mesh%vp%comm, mpi_err)
+    dot(1:mm%nst, 1:ss%nst) = tmp(1:mm%nst, 1:ss%nst)
+    SAFE_DEALLOCATE_A(tmp)
+  end if
+#endif
+
   POP_SUB(X(submesh_batch_dotp_matrix))
 end subroutine X(submesh_batch_dotp_matrix)
 
