@@ -27,9 +27,11 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
   integer :: nx, ny, nz
   FLOAT   :: xl, yl, zl
 
+  type(poisson_fmm_t) :: fmm_params
+  
   PUSH_SUB(poisson3D_init)
 
-  ASSERT(this%method >= POISSON_FFT_SPH .and. this%method <= POISSON_SETE)
+  ASSERT((this%method>=POISSON_FFT_SPH.and.this%method<=POISSON_SETE).or.this%method==-3.or.this%method==-4) !!!! IM 
 
   !%Variable PoissonSolverMaxMultipole
   !%Type integer
@@ -86,6 +88,11 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
   !!End
 
   select case(this%method)
+  case(POISSON_FMM)
+#ifdef HAVE_LIBFM
+    call poisson_fmm_init(this%fmm_params)
+#endif
+
   case(POISSON_CG)
      call parse_integer(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)
      write(message(1),'(a,i2)')'Info: Boundary conditions fixed up to L =',  maxl
@@ -113,7 +120,7 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
      call poisson_multigrid_init(this%mg, this%der%mesh, maxl, threshold)
      
   case(POISSON_ISF)
-    call poisson_isf_init(this%isf_solver, this%der%mesh, all_nodes_comm, init_world = this%all_nodes_default)
+     call poisson_isf_init(this%isf_solver, this%der%mesh, all_nodes_comm, init_world = this%all_nodes_default)
 
   case(POISSON_FFT_SPH)
     call poisson_fft_build_3d_0d(this%der%mesh, this%method)
@@ -149,6 +156,67 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
   POP_SUB(poisson3D_init)
 end subroutine poisson3D_init
 
+
+subroutine poisson3D_solve_direct(this, pot, rho)
+  type(poisson_t), intent(in)  :: this
+  FLOAT,           intent(out) :: pot(:)
+  FLOAT,           intent(in)  :: rho(:)
+
+  integer  :: ip, jp
+  FLOAT    :: xx(3), yy(3)
+#ifdef HAVE_MPI
+  FLOAT    :: tmp, xg(1:MAX_DIM)
+  FLOAT, allocatable :: pvec(:) 
+#endif
+
+  ASSERT(this%method == -3)
+
+  PUSH_SUB(poisson3D_solve_direct)
+#ifdef HAVE_MPI
+  if(this%der%mesh%parallel_in_domains) then
+    SAFE_ALLOCATE(pvec(1:this%der%mesh%np))
+
+    pot = M_ZERO
+    do ip = 1, this%der%mesh%np_global
+      xg = mesh_x_global(this%der%mesh, ip)
+      xx(1:3) = xg(1:3) 
+      do jp = 1, this%der%mesh%np
+        if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
+          pvec(jp) = rho(jp)*M_TWO*M_PI*(3.*this%der%mesh%spacing(1)*&
+            this%der%mesh%spacing(2)*this%der%mesh%spacing(3)/(M_PI*4.))**(2./3.)
+        else
+          yy(:) = this%der%mesh%x(jp,1:3)
+          pvec(jp) = rho(jp)/sqrt(sum((xx-yy)**2))
+        end if
+      end do
+      tmp = dmf_integrate(this%der%mesh, pvec)
+      if (this%der%mesh%vp%part(ip).eq.this%der%mesh%vp%partno) then
+        pot(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno)) = tmp
+      end if
+    end do
+
+    SAFE_DEALLOCATE_A(pvec)
+
+  else ! serial mode
+#endif
+    pot = M_ZERO
+    do ip = 1, this%der%mesh%np
+      xx(:) = this%der%mesh%x(ip,1:3)
+      do jp = 1, this%der%mesh%np
+        if(ip == jp) then
+          pot(ip) = pot(ip) + M_TWO*sqrt(M_PI)*rho(ip)/this%der%mesh%spacing(1)*this%der%mesh%vol_pp(jp)
+        else
+          yy(:) = this%der%mesh%x(jp,1:3)
+          pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx-yy)**2))*this%der%mesh%vol_pp(jp)
+        end if
+      end do
+    end do
+#ifdef HAVE_MPI
+  end if
+#endif
+
+  POP_SUB(poisson3D_solve_direct) 
+end subroutine poisson3D_solve_direct
 
 
 

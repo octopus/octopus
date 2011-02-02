@@ -90,8 +90,7 @@ module mesh_m
     ! equal to the global number of points.
     ! Otherwise, the next two are different on each node.
     integer  :: np               !< Local number of points in mesh
-    integer  :: np_part          !< Local points plus ghost points plus
-    ! boundary points.
+    integer  :: np_part          !< Local points plus ghost points plus boundary points.
     integer  :: np_global        !< Global number of points in mesh.
     integer  :: np_part_global   !< Global number of inner points and boundary points.
     

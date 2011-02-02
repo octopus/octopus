@@ -76,6 +76,8 @@ module poisson_m
   integer, public, parameter ::         &
     POISSON_DIRECT_SUM_1D = -1,         &
     POISSON_DIRECT_SUM_2D = -2,         &
+    POISSON_DIRECT_SUM_3D = -3,         &  
+    POISSON_FMM           = -4,         & 
     POISSON_CG            =  5,         &
     POISSON_CG_CORRECTED  =  6,         &
     POISSON_MULTIGRID     =  7,         &
@@ -83,6 +85,14 @@ module poisson_m
     POISSON_SETE          =  9
   ! the FFT solvers are defined in its own module
 
+  type poisson_fmm_t
+    FLOAT   :: delta_E_fmm
+    integer :: abs_rel_fmm
+    integer :: dipole_correction
+    integer :: periodic
+    integer :: periodic_length 
+  end type poisson_fmm_t
+  
   type poisson_t
     private
     type(derivatives_t), pointer :: der
@@ -98,6 +108,7 @@ module poisson_m
     integer              :: intercomm
     type(mpi_grp_t)      :: local_grp
     logical              :: root
+    type(poisson_fmm_t)  :: fmm_params
 #endif
   end type poisson_t
 
@@ -106,6 +117,8 @@ module poisson_m
   integer, parameter ::             &
     CMD_FINISH = 1,                 &
     CMD_POISSON_SOLVE = 2
+
+  type(profile_t), save :: poisson_prof
 
 contains
 
@@ -160,6 +173,10 @@ contains
     !% <br> 2D: <tt>fft</tt> if not periodic, <tt>fft_cyl</tt> if periodic in 1D, <tt>fft_nocut</tt> if periodic in 2D.
     !% <br> 3D: <tt>cg_corrected</tt> if curvilinear, <tt>isf</tt> if not periodic, <tt>fft_cyl</tt> if periodic in 1D,
     !% <tt>fft_pla</tt> if periodic in 2D, <tt>fft_nocut</tt> if periodic in 3D.
+    !%Option FMM -4     					
+    !% Fast multipole method.                                  
+    !%Option direct3D -3                                      
+    !% Direct evaluation of the Hartree potential (in 3D).   
     !%Option direct2D -2
     !% Direct evaluation of the Hartree potential (in 2D).
     !%Option direct1D -1
@@ -272,8 +289,9 @@ contains
       if (der%mesh%sb%periodic_dim > 0) default_solver = der%mesh%sb%periodic_dim
       
       call parse_integer(datasets_check('PoissonSolver'), default_solver, this%method)
-      if(this%method < POISSON_FFT_SPH .or. this%method > POISSON_SETE ) then
-        call input_error('PoissonSolver')
+      if(this%method < POISSON_FMM .or. this%method > POISSON_SETE .or. &
+        ( this%method > POISSON_DIRECT_SUM_3D .and. this%method < POISSON_FFT_SPH ) ) then  
+        call input_error('PoissonSolver')	    
       end if
 
       if(der%mesh%sb%periodic_dim > 0 .and. &
@@ -299,13 +317,26 @@ contains
         message(4) = 'solver are providing, in your case, the same results.'
         call write_warning(4)
       end if
-
+      
+      ! This should be done inside poisson3d_init, temporaly fix
+#ifdef HAVE_LIBFM
+      if (this%method == POISSON_FMM) then
+        call fmm_init()
+      end if
+#endif
       if (this%method == POISSON_SETE) then
         call messages_experimental('SETE poisson solver')
       end if
 
-      call messages_print_var_option(stdout, "PoissonSolver", this%method)
+      if (this%method == POISSON_FMM) then
+        call messages_experimental('FMM poisson solver')
+      end if
+
+      !      if (this%method == POISSON_DIRECT_SUM_3D) then
       call poisson3D_init(this, geo, all_nodes_comm)
+      !     end if
+      
+      call messages_print_var_option(stdout, "PoissonSolver", this%method)
 
       POP_SUB(poisson_init.init_3D)
     end subroutine init_3D
@@ -338,6 +369,11 @@ contains
     case(POISSON_SETE)
       call poisson_sete_end(this%sete_solver)
 
+    ! We should clean up and release
+    ! case(POISSON_DIRECT_SUM_3D)  
+    ! call poisson_direct_sum_end
+    case(POISSON_FMM)
+      call poisson_fmm_end()
     end select
     this%method = -99
 
@@ -348,8 +384,8 @@ contains
 
   subroutine zpoisson_solve(this, pot, rho, all_nodes)
     type(poisson_t),      intent(inout) :: this
-    CMPLX,                intent(inout) :: pot(:)  ! pot(mesh%np)
-    CMPLX,                intent(in)    :: rho(:)  ! rho(mesh%np)
+    CMPLX,                intent(inout) :: pot(:)  !< pot(mesh%np)
+    CMPLX,                intent(in)    :: rho(:)  !< rho(mesh%np)
     logical, optional,    intent(in)    :: all_nodes
 
     FLOAT, allocatable :: aux1(:), aux2(:)
@@ -393,15 +429,15 @@ contains
     type(poisson_t),      intent(inout) :: this
     FLOAT,                intent(inout) :: pot(:)
     FLOAT,                intent(in)    :: rho(:)
-    logical, optional,    intent(in)    :: all_nodes ! Is the Poisson solver allowed to utilise
-                                                     ! all nodes or only the domain nodes for
-                                                     ! its calculations? (Defaults to .true.)
-
+    logical, optional,    intent(in)    :: all_nodes !< Is the Poisson solver allowed to utilise
+                                                     !! all nodes or only the domain nodes for
+                                                     !! its calculations? (Defaults to .true.)
     type(derivatives_t), pointer :: der
     integer :: counter
     integer :: nx_half, nx
     integer :: ny_half, ny
     integer :: nz_half, nz
+    integer :: ii
 
     FLOAT :: xl, yl, zl
 
@@ -412,9 +448,8 @@ contains
 
     logical               :: all_nodes_value
     type(profile_t), save :: prof
-    
-    integer :: conversion(3)
-    
+    integer               :: conversion(3)
+
     call profiling_in(prof, 'POISSON_SOLVE')
     PUSH_SUB(dpoisson_solve)
 
@@ -431,7 +466,7 @@ contains
     end if
 
     ASSERT(this%method.ne.-99)
-
+      
     select case(this%method)
     case(POISSON_DIRECT_SUM_1D)
       call poisson1d_solve(this, pot, rho)
@@ -439,6 +474,12 @@ contains
     case(POISSON_DIRECT_SUM_2D)
       call poisson2d_solve(this, pot, rho)
 
+    case(POISSON_DIRECT_SUM_3D)
+      call poisson3D_solve_direct(this, pot, rho)
+
+    case(POISSON_FMM)
+      call poisson_fmm_solve(this, pot, rho)
+     
     case(POISSON_CG)
       call poisson_cg1(der, this%corrector, pot, rho)
 
@@ -451,7 +492,7 @@ contains
       pot(1:der%mesh%np) = pot(1:der%mesh%np) - vh_correction(1:der%mesh%np)
       call poisson_cg2(der, pot, rho_corrected)
       pot(1:der%mesh%np) = pot(1:der%mesh%np) + vh_correction(1:der%mesh%np)
-      
+     
       SAFE_DEALLOCATE_A(rho_corrected)
       SAFE_DEALLOCATE_A(vh_correction)
 
@@ -474,7 +515,7 @@ contains
 
     case(POISSON_ISF)
       call poisson_isf_solve(this%isf_solver, der%mesh, pot, rho, all_nodes_value)
-
+     
     case(POISSON_SETE)
 
       nx = der%mesh%idx%nr(2,1) - der%mesh%idx%nr(1,1) + 1 - 2*der%mesh%idx%enlarge(1)
@@ -678,7 +719,7 @@ contains
   !-----------------------------------------------------------------
   
   FLOAT function poisson_energy(this) result(energy)
-    type(poisson_t),   intent(in) :: this
+    type(poisson_t), intent(in) :: this
 
     PUSH_SUB(poisson_energy)
 
@@ -844,6 +885,7 @@ contains
 #include "solver_1d_inc.F90"
 #include "solver_2d_inc.F90"
 #include "solver_3d_inc.F90"
+#include "poisson_fmm.F90"   
 
 end module poisson_m
 
