@@ -722,7 +722,7 @@ contains
       ! FIXME: transpose if mem is not symmetric
     end if
 
-    call zsymv('U', intf%np_intf, factor, mem, intf%np_intf, intf_wf, 1, M_z0, mem_intf_wf, 1)
+    call lalg_symv(intf%np_intf, factor, mem, intf_wf, M_z0, mem_intf_wf)
 
     ! Do not use use BLAS here.
     do ii=1, intf%np_intf
@@ -771,7 +771,7 @@ contains
 !    integer            :: np
 !    CMPLX, allocatable :: diag(:, :)
 
-    PUSH_SUB(preconditioner)
+!    no push_sub, called too frequently
 !    np = gr_p%mesh%np
 
     y(:) = x(:) ! no preconditioner
@@ -785,7 +785,6 @@ contains
 
 !    SA FE_DEALLOCATE_A(diag)
 
-    POP_SUB(preconditioner)
   end subroutine precond_prop
 
 

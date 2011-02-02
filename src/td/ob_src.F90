@@ -101,7 +101,7 @@ contains
       ! initial src is V*psi0(outer) (precalculated in gs mode)
       tmp = -M_zI*dt*f0*u(0)
       !call lalg_gemv(np, np, tmp*M_zI*M_HALF*dt, mem, psi0, tmp, src)
-      call zsymv('U', np, tmp*M_zI*M_HALF*dt, mem, np, psi0, 1, tmp, src, 1)
+      call lalg_symv(np, tmp*M_zI*M_HALF*dt, mem, psi0, tmp, src)
     else
       tmp   = factor*u(m)*u(m-1)
       if(m.gt.maxiter) then
@@ -109,7 +109,7 @@ contains
       else
         alpha = M_HALF*dt**2*f0*lambda/u(m)
 !        call lalg_gemv(np, np, alpha, mem, psi0, tmp, src)
-        call zsymv('U', np, alpha, mem, np, psi0, 1, tmp, src, 1)
+        call lalg_symv(np, alpha, mem, psi0, tmp, src)
       end if
     end if
 
