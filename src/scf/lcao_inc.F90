@@ -346,7 +346,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   integer :: iatom, jatom, ik, ist, idim, ip, ispin, nev
   integer :: ibasis, jbasis, iorb, jorb, norbs, dof
   R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :), aa(:, :), bb(:, :)
-  R_TYPE, allocatable :: lhamiltonian(:, :, :), loverlap(:, :, :)
+  R_TYPE, allocatable :: lhamiltonian(:, :), loverlap(:, :)
 #ifdef HAVE_SCALAPACK
   integer :: prow, pcol, ilbasis, jlbasis
 #endif
@@ -355,7 +355,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   type(batch_t) :: hpsib, psib
   type(batch_t), allocatable :: orbitals(:)
   FLOAT, allocatable :: eval(:)
-  R_TYPE, allocatable :: evec(:, :)
+  R_TYPE, allocatable :: evec(:, :), levec(:, :)  
   FLOAT :: dist2
   type(profile_t), save :: prof_orbitals, prof_matrix, prof_wavefunction
 
@@ -382,8 +382,8 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
     SAFE_ALLOCATE(overlap(1:this%nbasis, 1:this%nbasis))
   else
 #ifdef HAVE_SCALAPACK
-    SAFE_ALLOCATE(lhamiltonian(1:this%lsize(1), 1:this%lsize(2), 1:this%nproc(1)))
-    SAFE_ALLOCATE(loverlap(1:this%lsize(1), 1:this%lsize(2), 1:this%nproc(1)))
+    SAFE_ALLOCATE(lhamiltonian(1:this%lsize(1), 1:this%lsize(2)))
+    SAFE_ALLOCATE(loverlap(1:this%lsize(1), 1:this%lsize(2)))
 #endif
   end if
   SAFE_ALLOCATE(aa(1:this%maxorb, 1:this%maxorb))
@@ -493,12 +493,12 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
           ibasis = this%atom_orb_basis(iatom, 1)
           jbasis = this%atom_orb_basis(jatom, 1)
 
-          call X(submesh_batch_dotp_matrix)(sphere(jatom), hpsib, orbitals(jatom), aa, reduce = this%parallel)
+          call X(submesh_batch_dotp_matrix)(sphere(jatom), hpsib, orbitals(jatom), aa)
 
           if(dist2 > (this%radius(iatom) + this%radius(jatom))**2) then 
             bb = M_ZERO
           else
-            call X(submesh_batch_dotp_matrix)(sphere(jatom), psib, orbitals(jatom), bb, reduce = this%parallel)
+            call X(submesh_batch_dotp_matrix)(sphere(jatom), psib, orbitals(jatom), bb)
           end if
 
           if(.not. this%parallel) then
@@ -515,9 +515,9 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
                 call lcao_local_index(this, ibasis - 1 + iorb,  jbasis - 1 + jorb, &
                   ilbasis, jlbasis, prow, pcol)
-                if(pcol == this%myroc(2)) then
-                  lhamiltonian(ilbasis, jlbasis, prow + 1) = aa(iorb, jorb)
-                  loverlap(ilbasis, jlbasis, prow + 1) = bb(iorb, jorb)
+                if(all((/prow, pcol/) == this%myroc)) then
+                  lhamiltonian(ilbasis, jlbasis) = aa(iorb, jorb)
+                  loverlap(ilbasis, jlbasis) = bb(iorb, jorb)
                 end if
               end do
             end do
@@ -534,8 +534,6 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
       if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
-      call reduce()
-
       message(1) = 'Diagonalizing Hamiltonian.'
       call write_info(1)
 
@@ -545,7 +543,13 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       nev = min(this%nbasis, st%nst) 
 
       SAFE_ALLOCATE(eval(1:this%nbasis))
-      SAFE_ALLOCATE(evec(1:this%nbasis, 1:this%nbasis))
+
+      if(this%parallel) then
+        SAFE_ALLOCATE(levec(1:this%lsize(1), 1:this%lsize(2)))
+        SAFE_ALLOCATE(evec(1:this%nbasis, st%st_start:st%st_end))
+      else 
+        SAFE_ALLOCATE(evec(1:this%nbasis, 1:this%nbasis))
+      end if
 
       call diagonalization()
 
@@ -616,9 +620,12 @@ contains
     R_TYPE,  allocatable :: work(:)
     integer, allocatable :: iwork(:), ifail(:)
 #ifdef HAVE_SCALAPACK
-    integer              :: nevec_found, liwork
+    integer              :: ilbasis, jlbasis, proc(1:2), dest(1:2)
+    integer              :: nevec_found, liwork, ii, node
     FLOAT,   allocatable :: gap(:)
     integer, allocatable :: iclustr(:)
+    integer, allocatable :: send_count(:), send_disp(:), recv_count(:), recv_disp(:), recv_pos(:, :, :)
+    R_TYPE,  allocatable :: send_buffer(:, :), recv_buffer(:, :)
 #endif
 
     SAFE_ALLOCATE(ifail(1:this%nbasis))
@@ -632,11 +639,11 @@ contains
       SAFE_ALLOCATE(gap(1:st%dom_st_proc_grid%nprocs))
 
       call scalapack_sygvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%nbasis, a = lhamiltonian(1, 1, this%myroc(1) + 1), ia = 1, ja = 1, desca = this%desc(1), &
-        b = loverlap(1, 1, this%myroc(1) + 1), ib = 1, jb = 1, descb = this%desc(1), &
+        n = this%nbasis, a = lhamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
+        b = loverlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = CNST(1e-15), &
         m = neval_found, nz = nevec_found, w = eval(1), orfac = -M_ONE, &
-        z = evec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
+        z = levec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
         work = tmp, lwork = -1, iwork = liwork, liwork = -1, &
         ifail = ifail(1), iclustr = iclustr(1), gap = gap(1), info = info)
 
@@ -648,20 +655,119 @@ contains
       SAFE_ALLOCATE(iwork(1:liwork))
 
       call scalapack_sygvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%nbasis, a = lhamiltonian(1, 1, this%myroc(1) + 1), ia = 1, ja = 1, desca = this%desc(1), &
-        b = loverlap(1, 1, this%myroc(1) + 1), ib = 1, jb = 1, descb = this%desc(1), &
+        n = this%nbasis, a = lhamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
+        b = loverlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = CNST(1e-15), &
         m = neval_found, nz = nevec_found, w = eval(1), orfac = -M_ONE, &
-        z = evec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
+        z = levec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
         work = work(1), lwork = lwork, iwork = iwork(1), liwork = liwork, &
         ifail = ifail(1), iclustr = iclustr(1), gap = gap(1), info = info)
 
       ASSERT(info == 0)
 
-      call MPI_Bcast(evec(1, 1), this%nbasis**2, R_MPITYPE, 0, st%dom_st_mpi_grp%comm, mpi_err)
+      ! Now we have to rearrange the data between processors. We have
+      ! the data in levec, distributed according to scalapack and we
+      ! need to copy it to evec, distributed by colums according to
+      ! state parallelization.
+
+      SAFE_ALLOCATE(send_count(1:st%dom_st_mpi_grp%size))
+      SAFE_ALLOCATE(recv_count(1:st%dom_st_mpi_grp%size))
+
+      ! First we count the number of points (to allocate the buffers)
+      send_count = 0
+      recv_count = 0
+      do ibasis = 1, this%nbasis
+        do jbasis = 1, st%nst
+          
+          call lcao_local_index(this, ibasis, jbasis, ilbasis, jlbasis, proc(1), proc(2))
+
+          if(all(proc == this%myroc)) then
+            ! we have to send the point
+
+            ! we only count points per column (we have to send the
+            ! same number to all points in a row)
+            INCR(send_count(st%node(jbasis) + 1), 1)
+          end if
+
+          if(st%node(jbasis) == this%myroc(2)) then
+            ! we have to receive
+            call MPI_Cart_rank(st%dom_st_mpi_grp%comm, proc(1), node, mpi_err)
+            INCR(recv_count(node + 1), 1)
+          end if
+          
+        end do
+      end do
+
+      SAFE_ALLOCATE(send_buffer(1:max(1, maxval(send_count)), 1:st%dom_st_mpi_grp%size))
+      SAFE_ALLOCATE(recv_pos(1:2, max(1, maxval(recv_count)), 1:st%dom_st_mpi_grp%size))
+
+      send_count = 0
+      recv_count = 0
+      do ibasis = 1, this%nbasis
+        do jbasis = 1, st%nst
+          
+          call lcao_local_index(this, ibasis, jbasis, ilbasis, jlbasis, proc(1), proc(2))
+
+          if(all(proc == this%myroc)) then
+            ! we have to send the point
+            dest(2) = st%node(jbasis) + 1
+            
+            do ii = 1, this%nproc(1)
+              dest(1) = ii
+
+              ! get the node id from coordinates
+              call MPI_Cart_rank(st%dom_st_mpi_grp%comm, dest(1), node, mpi_err)
+              INCR(node, 1)
+              INCR(send_count(node), 1)
+              send_buffer(send_count(node), node) = levec(ilbasis, jlbasis)
+            end do
+           
+          end if
+
+          if(st%node(jbasis) == this%myroc(2)) then
+            ! we have to receive
+            call MPI_Cart_rank(st%dom_st_mpi_grp%comm, proc(1), node, mpi_err)
+            INCR(node, 1)
+
+            INCR(recv_count(node), 1)
+            ! where do we put it once received?
+            recv_pos(1, recv_count(node), node) = ibasis
+            recv_pos(2, recv_count(node), node) = jbasis
+          end if
+          
+        end do
+      end do
+
+      SAFE_ALLOCATE(recv_buffer(1:max(1, maxval(recv_count)), 1:st%dom_st_mpi_grp%size))
+
+      SAFE_ALLOCATE(send_disp(1:st%dom_st_mpi_grp%size))
+      SAFE_ALLOCATE(recv_disp(1:st%dom_st_mpi_grp%size))
+
+      do node = 1, st%dom_st_mpi_grp%size
+        send_disp(node) = ubound(send_buffer, dim = 1)*(node - 1)
+        recv_disp(node) = ubound(recv_buffer, dim = 1)*(node - 1)
+      end do
+
+      call MPI_Alltoallv(send_buffer(1, 1), send_count(1), send_disp(1), R_MPITYPE, &
+        recv_buffer(1, 1), recv_count(1), recv_disp(1), R_MPITYPE, st%dom_st_mpi_grp%comm, mpi_err)
+
+      do node = 1, st%dom_st_mpi_grp%size
+        do ii = 1, recv_count(node)
+          evec(recv_pos(1, ii, node), recv_pos(2, ii, node)) = recv_buffer(ii, node)
+        end do
+      end do
 
       SAFE_DEALLOCATE_A(iclustr)
       SAFE_DEALLOCATE_A(gap)
+
+      SAFE_DEALLOCATE_A(send_disp)
+      SAFE_DEALLOCATE_A(send_count)      
+      SAFE_DEALLOCATE_A(send_buffer)
+      SAFE_DEALLOCATE_A(recv_pos)
+      SAFE_DEALLOCATE_A(recv_disp)
+      SAFE_DEALLOCATE_A(recv_count)      
+      SAFE_DEALLOCATE_A(recv_buffer)
+
 #endif
     else
 
@@ -696,30 +802,6 @@ contains
     SAFE_DEALLOCATE_A(ifail)
 
   end subroutine diagonalization
-
-  ! -----------------------------------------------
-
-  subroutine reduce()
-#ifdef HAVE_MPI
-    R_TYPE, allocatable :: tmp(:, :)
-    type(profile_t), save :: comm2prof
-
-    if(gr%mesh%parallel_in_domains .and. .not. this%parallel) then
-      call profiling_in(comm2prof, "LCAO_REDUCE")
-
-      SAFE_ALLOCATE(tmp(1:this%nbasis, 1:this%nbasis))
-      tmp = hamiltonian
-      call MPI_Allreduce(tmp(1, 1), hamiltonian(1, 1), this%nbasis**2, R_MPITYPE, MPI_SUM, &
-        gr%mesh%mpi_grp%comm, mpi_err)
-      tmp = overlap
-      call MPI_Allreduce(tmp(1, 1), overlap(1, 1), this%nbasis**2, R_MPITYPE, MPI_SUM, &
-        gr%mesh%mpi_grp%comm, mpi_err)
-      SAFE_DEALLOCATE_A(tmp)
-
-      call profiling_out(comm2prof)
-    end if
-#endif
-  end subroutine reduce
 
 end subroutine X(lcao_wf2)
 
