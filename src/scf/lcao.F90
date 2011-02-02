@@ -332,17 +332,19 @@ contains
 #ifndef HAVE_SCALAPACK
       this%parallel = .false.
 #else
-      this%parallel = st%parallel_in_states
+      this%parallel = st%parallel_in_states .and. .not. gr%mesh%parallel_in_domains
       
       nbl = this%nbasis
 
-      call descinit(this%desc(1), nbl, nbl, this%nbasis, this%nbasis, 0, 0, &
-        st%dom_st_proc_grid%context, this%nbasis, info)
-
       ! The size of the distributed matrix in each node
       this%lsize(1) = max(1, numroc(this%nbasis, nbl, st%dom_st_proc_grid%myrow, 0, st%dom_st_proc_grid%nprow))
-      this%lsize(2) = max(1, numroc(st%nst, nbl, st%dom_st_proc_grid%mycol, 0, st%dom_st_proc_grid%npcol))
+      this%lsize(2) = max(1, numroc(this%nbasis, nbl, st%dom_st_proc_grid%mycol, 0, st%dom_st_proc_grid%npcol))
+
+      call descinit(this%desc(1), nbl, nbl, this%nbasis, this%nbasis, 0, 0, &
+        st%dom_st_proc_grid%context, this%lsize(1), info)
       
+      ASSERT(info == 0)
+
       this%nproc(1) = st%dom_st_proc_grid%nprow
       this%nproc(2) = st%dom_st_proc_grid%npcol
       this%myroc(1) = st%dom_st_proc_grid%myrow
@@ -559,6 +561,26 @@ contains
 
     POP_SUB(lcao_num_orbitals)
   end function lcao_num_orbitals
+
+  ! ---------------------------------------------------------
+
+#ifdef HAVE_SCALAPACK
+  subroutine lcao_local_index(this, ig, jg, il, jl, prow, pcol)
+    type(lcao_t), intent(in)  :: this
+    integer,      intent(in)  :: ig
+    integer,      intent(in)  :: jg
+    integer,      intent(out) :: il
+    integer,      intent(out) :: jl
+    integer,      intent(out) :: prow
+    integer,      intent(out) :: pcol
+    
+    ! no PUSH_SUB
+
+    call infog2l(ig, jg, this%desc(1), this%nproc(1), this%nproc(2), this%myroc(1), this%myroc(2), &
+      il, jl, prow, pcol)
+
+  end subroutine lcao_local_index
+#endif
 
 #include "undef.F90"
 #include "real.F90"

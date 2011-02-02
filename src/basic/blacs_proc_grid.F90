@@ -119,8 +119,8 @@ contains
     this%nprow = dims(1)
     this%npcol = dims(2)
     this%iam = mpi_grp%rank
-    this%myrow = coords(1) + 1
-    this%mycol = coords(2) + 1
+    this%myrow = coords(1)
+    this%mycol = coords(2)
 
     if(topo /= MPI_CART) then
       call MPI_Comm_free(comm, mpi_err)

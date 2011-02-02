@@ -345,7 +345,11 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
   integer :: iatom, jatom, ik, ist, idim, ip, ispin, nev
   integer :: ibasis, jbasis, iorb, jorb, norbs, dof
-  R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :), bb(:, :)
+  R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :), aa(:, :), bb(:, :)
+  R_TYPE, allocatable :: lhamiltonian(:, :, :), loverlap(:, :, :)
+#ifdef HAVE_SCALAPACK
+  integer :: prow, pcol, ilbasis, jlbasis
+#endif
   R_TYPE, allocatable :: psii(:, :, :), hpsi(:, :, :)
   type(submesh_t), allocatable :: sphere(:)
   type(batch_t) :: hpsib, psib
@@ -354,11 +358,6 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   R_TYPE, allocatable :: evec(:, :)
   FLOAT :: dist2
   type(profile_t), save :: prof_orbitals, prof_matrix, prof_wavefunction
-#ifdef HAVE_MPI
-  R_TYPE, allocatable :: tmp(:, :)
-  type(profile_t), save :: comm2prof
-#endif
-  
 
   PUSH_SUB(X(lcao_wf2))
 
@@ -378,9 +377,17 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
     end if
   end if
 
-  SAFE_ALLOCATE(hamiltonian(1:this%nbasis, 1:this%nbasis))
-  SAFE_ALLOCATE(overlap(1:this%nbasis, 1:this%nbasis))
-  SAFE_ALLOCATE(bb(1:this%maxorb, 1:this%maxorb))
+  if(.not. this%parallel) then
+    SAFE_ALLOCATE(hamiltonian(1:this%nbasis, 1:this%nbasis))
+    SAFE_ALLOCATE(overlap(1:this%nbasis, 1:this%nbasis))
+  else
+#ifdef HAVE_SCALAPACK
+    SAFE_ALLOCATE(lhamiltonian(1:this%lsize(1), 1:this%lsize(2), 1:this%nproc(1)))
+    SAFE_ALLOCATE(loverlap(1:this%lsize(1), 1:this%lsize(2), 1:this%nproc(1)))
+#endif
+  end if
+  SAFE_ALLOCATE(aa(1:this%maxorb, 1:this%maxorb))
+  SAFE_ALLOCATE(bb(1:this%maxorb, 1:this%maxorb))  
   SAFE_ALLOCATE(psii(1:gr%mesh%np_part, 1:st%d%dim, this%maxorb))
   SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim, this%maxorb))
   SAFE_ALLOCATE(sphere(1:geo%natoms))
@@ -454,8 +461,13 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
       call profiling_in(prof_matrix, "LCAO_MATRIX")
 
-      hamiltonian = R_TOTYPE(M_ZERO)
-      overlap = R_TOTYPE(M_ZERO)
+      if(.not. this%parallel) then
+        hamiltonian = R_TOTYPE(M_ZERO)
+        overlap = R_TOTYPE(M_ZERO)
+      else
+        lhamiltonian = R_TOTYPE(M_ZERO)
+        loverlap = R_TOTYPE(M_ZERO)
+      end if
 
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, geo%natoms)
 
@@ -471,6 +483,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
         call X(hamiltonian_apply_batch)(hm, gr%der, psib, hpsib, ik)
 
         do jatom = 1, geo%natoms
+          ! we only calculate the upper triangle
           if(jatom < iatom) cycle
 
           dist2 = sum((geo%atom(iatom)%x(1:MAX_DIM) - geo%atom(jatom)%x(1:MAX_DIM))**2)
@@ -480,29 +493,33 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
           ibasis = this%atom_orb_basis(iatom, 1)
           jbasis = this%atom_orb_basis(jatom, 1)
 
-          call X(submesh_batch_dotp_matrix)(sphere(jatom), hpsib, orbitals(jatom), bb, reduce = .false.)
+          call X(submesh_batch_dotp_matrix)(sphere(jatom), hpsib, orbitals(jatom), aa, reduce = .false.)
 
-          forall(iorb = 1:norbs, jorb = 1:norbs)
-            hamiltonian(ibasis - 1 + iorb, jbasis - 1 + jorb) = bb(iorb, jorb)
-          end forall
+          if(dist2 > (this%radius(iatom) + this%radius(jatom))**2) then 
+            aa = M_ZERO
+          else
+            call X(submesh_batch_dotp_matrix)(sphere(jatom), psib, orbitals(jatom), bb, reduce = .false.)
+          end if
 
-          if(dist2 > (this%radius(iatom) + this%radius(jatom))**2) cycle
-
-          call X(submesh_batch_dotp_matrix)(sphere(jatom), psib, orbitals(jatom), bb, reduce = .false.)
-
-          forall(iorb = 1:norbs, jorb = 1:norbs)
-            overlap(ibasis - 1 + iorb, jbasis - 1 + jorb) = bb(iorb, jorb)
-          end forall
-
-          ! the other half of the matrix
-          do iorb = 1, norbs
-            ibasis = this%atom_orb_basis(iatom, iorb)
-            do jorb = 1, species_niwfs(geo%atom(jatom)%spec)
-              jbasis = this%atom_orb_basis(jatom, jorb)
-              hamiltonian(jbasis, ibasis) = R_CONJ(hamiltonian(ibasis, jbasis))
-              overlap(jbasis, ibasis) = R_CONJ(overlap(ibasis, jbasis))
+          if(.not. this%parallel) then
+            forall(iorb = 1:norbs, jorb = 1:norbs)
+              hamiltonian(ibasis - 1 + iorb, jbasis - 1 + jorb) = aa(iorb, jorb)
+              overlap(ibasis - 1 + iorb, jbasis - 1 + jorb) = bb(iorb, jorb)
+            end forall
+          else
+#ifdef HAVE_SCALAPACK
+            do iorb = 1, norbs
+              do jorb = 1, norbs
+                call lcao_local_index(this, ibasis - 1 + iorb,  jbasis - 1 + jorb, &
+                  ilbasis, jlbasis, prow, pcol)
+                if(pcol == this%myroc(2)) then
+                  lhamiltonian(ilbasis, jlbasis, prow + 1) = aa(iorb, jorb)
+                  loverlap(ilbasis, jlbasis, prow + 1) = bb(iorb, jorb)
+                end if
+              end do
             end do
-          end do
+#endif
+          end if
 
         end do
 
@@ -514,23 +531,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
       if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
-#ifdef HAVE_MPI
-
-      if(gr%mesh%parallel_in_domains) then
-        call profiling_in(comm2prof, "LCAO_REDUCE")
-#ifndef HAVE_MPI2
-        SAFE_ALLOCATE(tmp(1:this%nbasis, 1:this%nbasis))
-        tmp = hamiltonian
-#endif
-        call MPI_Allreduce(MPI_IN_PLACE_OR(tmp), hamiltonian, this%nbasis**2, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
-#ifndef HAVE_MPI2
-        tmp = overlap
-#endif
-        call MPI_Allreduce(MPI_IN_PLACE_OR(tmp), overlap, this%nbasis**2, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
-        SAFE_DEALLOCATE_A(tmp)
-        call profiling_out(comm2prof)
-      end if
-#endif
+      call reduce()
 
       message(1) = 'Diagonalizing Hamiltonian.'
       call write_info(1)
@@ -628,8 +629,8 @@ contains
       SAFE_ALLOCATE(gap(1:st%dom_st_proc_grid%nprocs))
 
       call scalapack_sygvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%nbasis, a = hamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
-        b = overlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
+        n = this%nbasis, a = lhamiltonian(1, 1, 1), ia = 1, ja = 1, desca = this%desc(1), &
+        b = loverlap(1, 1, 1), ib = 1, jb = 1, descb = this%desc(1), &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = CNST(1e-15), &
         m = neval_found, nz = nevec_found, w = eval(1), orfac = -M_ONE, &
         z = evec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
@@ -644,8 +645,8 @@ contains
       SAFE_ALLOCATE(iwork(1:liwork))
 
       call scalapack_sygvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%nbasis, a = hamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
-        b = overlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
+        n = this%nbasis, a = lhamiltonian(1, 1, 1), ia = 1, ja = 1, desca = this%desc(1), &
+        b = loverlap(1, 1, 1), ib = 1, jb = 1, descb = this%desc(1), &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = CNST(1e-15), &
         m = neval_found, nz = nevec_found, w = eval(1), orfac = -M_ONE, &
         z = evec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
@@ -692,6 +693,52 @@ contains
     SAFE_DEALLOCATE_A(ifail)
 
   end subroutine diagonalization
+
+  ! -----------------------------------------------
+
+  subroutine reduce()
+#ifdef HAVE_MPI
+#ifdef HAVE_SCALAPACK
+    R_TYPE, allocatable :: ltmp(:, :, :)
+#endif
+    R_TYPE, allocatable :: tmp(:, :)
+    type(profile_t), save :: comm2prof
+    integer :: size
+
+    if(gr%mesh%parallel_in_domains) then
+      call profiling_in(comm2prof, "LCAO_REDUCE")
+      if(.not. this%parallel) then
+        SAFE_ALLOCATE(tmp(1:this%nbasis, 1:this%nbasis))
+        tmp = hamiltonian
+        call MPI_Allreduce(tmp(1, 1), hamiltonian(1, 1), this%nbasis**2, R_MPITYPE, MPI_SUM, &
+          gr%mesh%mpi_grp%comm, mpi_err)
+        tmp = overlap
+        call MPI_Allreduce(tmp(1, 1), overlap(1, 1), this%nbasis**2, R_MPITYPE, MPI_SUM, &
+          gr%mesh%mpi_grp%comm, mpi_err)
+        SAFE_DEALLOCATE_A(tmp)
+      else
+
+#ifdef HAVE_SCALAPACK
+        SAFE_ALLOCATE(ltmp(1:this%lsize(1), 1:this%lsize(2), 1:this%nproc(1)))
+
+        ! This does not work yet. Size is not the same in all nodes...
+        size = this%lsize(1)*this%lsize(2)*this%nproc(1)
+
+        call MPI_Barrier(st%dom_st_mpi_grp%comm, mpi_err)
+
+        ltmp = lhamiltonian
+        call MPI_Allreduce(ltmp(1, 1, 1), lhamiltonian(1, 1, 1), size, R_MPITYPE, MPI_SUM, &
+          gr%mesh%mpi_grp%comm, mpi_err)
+        ltmp = loverlap
+        call MPI_Allreduce(ltmp(1, 1, 1), loverlap(1, 1, 1), size, R_MPITYPE, MPI_SUM, &
+          gr%mesh%mpi_grp%comm, mpi_err)
+        SAFE_DEALLOCATE_A(ltmp)
+#endif
+      end if
+      call profiling_out(comm2prof)
+    end if
+#endif
+  end subroutine reduce
 
 end subroutine X(lcao_wf2)
 
