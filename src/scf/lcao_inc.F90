@@ -493,12 +493,12 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
           ibasis = this%atom_orb_basis(iatom, 1)
           jbasis = this%atom_orb_basis(jatom, 1)
 
-          call X(submesh_batch_dotp_matrix)(sphere(jatom), hpsib, orbitals(jatom), aa, reduce = .false.)
+          call X(submesh_batch_dotp_matrix)(sphere(jatom), hpsib, orbitals(jatom), aa, reduce = this%parallel)
 
           if(dist2 > (this%radius(iatom) + this%radius(jatom))**2) then 
-            aa = M_ZERO
+            bb = M_ZERO
           else
-            call X(submesh_batch_dotp_matrix)(sphere(jatom), psib, orbitals(jatom), bb, reduce = .false.)
+            call X(submesh_batch_dotp_matrix)(sphere(jatom), psib, orbitals(jatom), bb, reduce = this%parallel)
           end if
 
           if(.not. this%parallel) then
@@ -515,7 +515,6 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
                 call lcao_local_index(this, ibasis - 1 + iorb,  jbasis - 1 + jorb, &
                   ilbasis, jlbasis, prow, pcol)
-
                 if(pcol == this%myroc(2)) then
                   lhamiltonian(ilbasis, jlbasis, prow + 1) = aa(iorb, jorb)
                   loverlap(ilbasis, jlbasis, prow + 1) = bb(iorb, jorb)
@@ -612,19 +611,19 @@ contains
 
   subroutine diagonalization()
     
-    integer :: neval_found
-    integer :: info, lwork
-    FLOAT   :: tmp
-    R_TYPE, allocatable :: work(:)
+    integer              :: neval_found, info, lwork
+    FLOAT                :: tmp
+    R_TYPE,  allocatable :: work(:)
     integer, allocatable :: iwork(:), ifail(:)
 #ifdef HAVE_SCALAPACK
-    integer :: nevec_found, liwork
-    FLOAT, allocatable :: gap(:)
+    integer              :: nevec_found, liwork
+    FLOAT,   allocatable :: gap(:)
     integer, allocatable :: iclustr(:)
 #endif
 
     SAFE_ALLOCATE(ifail(1:this%nbasis))
     
+
 #ifdef R_TREAL
 
     if(this%parallel) then
@@ -656,7 +655,7 @@ contains
         z = evec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
         work = work(1), lwork = lwork, iwork = iwork(1), liwork = liwork, &
         ifail = ifail(1), iclustr = iclustr(1), gap = gap(1), info = info)
-      print*, info
+
       ASSERT(info == 0)
 
       call MPI_Bcast(evec(1, 1), this%nbasis**2, R_MPITYPE, 0, st%dom_st_mpi_grp%comm, mpi_err)
@@ -702,42 +701,21 @@ contains
 
   subroutine reduce()
 #ifdef HAVE_MPI
-#ifdef HAVE_SCALAPACK
-    R_TYPE, allocatable :: ltmp(:, :, :)
-#endif
     R_TYPE, allocatable :: tmp(:, :)
     type(profile_t), save :: comm2prof
-    integer :: size
 
-    if(gr%mesh%parallel_in_domains) then
+    if(gr%mesh%parallel_in_domains .and. .not. this%parallel) then
       call profiling_in(comm2prof, "LCAO_REDUCE")
 
-      if(.not. this%parallel) then
-        SAFE_ALLOCATE(tmp(1:this%nbasis, 1:this%nbasis))
-        tmp = hamiltonian
-        call MPI_Allreduce(tmp(1, 1), hamiltonian(1, 1), this%nbasis**2, R_MPITYPE, MPI_SUM, &
-          gr%mesh%mpi_grp%comm, mpi_err)
-        tmp = overlap
-        call MPI_Allreduce(tmp(1, 1), overlap(1, 1), this%nbasis**2, R_MPITYPE, MPI_SUM, &
-          gr%mesh%mpi_grp%comm, mpi_err)
-        SAFE_DEALLOCATE_A(tmp)
-      else
-#ifdef HAVE_SCALAPACK
-        SAFE_ALLOCATE(ltmp(1:this%lsize(1), 1:this%lsize(2), 1:this%nproc(1)))
+      SAFE_ALLOCATE(tmp(1:this%nbasis, 1:this%nbasis))
+      tmp = hamiltonian
+      call MPI_Allreduce(tmp(1, 1), hamiltonian(1, 1), this%nbasis**2, R_MPITYPE, MPI_SUM, &
+        gr%mesh%mpi_grp%comm, mpi_err)
+      tmp = overlap
+      call MPI_Allreduce(tmp(1, 1), overlap(1, 1), this%nbasis**2, R_MPITYPE, MPI_SUM, &
+        gr%mesh%mpi_grp%comm, mpi_err)
+      SAFE_DEALLOCATE_A(tmp)
 
-        size = this%lsize(1)*this%lsize(2)*this%nproc(1)
-
-        call MPI_Barrier(st%dom_st_mpi_grp%comm, mpi_err)
-
-        ltmp = lhamiltonian
-        call MPI_Allreduce(ltmp(1, 1, 1), lhamiltonian(1, 1, 1), size, R_MPITYPE, MPI_SUM, &
-          gr%mesh%mpi_grp%comm, mpi_err)
-        ltmp = loverlap
-        call MPI_Allreduce(ltmp(1, 1, 1), loverlap(1, 1, 1), size, R_MPITYPE, MPI_SUM, &
-          gr%mesh%mpi_grp%comm, mpi_err)
-        SAFE_DEALLOCATE_A(ltmp)
-#endif
-      end if
       call profiling_out(comm2prof)
     end if
 #endif
