@@ -449,8 +449,8 @@ contains
     o4(1:np, 1:np) = x(np+1:np2, np+1:np2)
     ! 4. calculate green = o2*o4^(-1)
     det = lalg_inverter(np, o4, invert = .true.)
-    call zgemm('N', 'N', np, np, np, M_z1, o2, np, o4, np, M_z0, green, np)
-
+    call lalg_gemm(np, np, np, M_z1, o2, o4, M_z0, green)
+    
     if(in_debug_mode) then ! write some info
       message(1) = "surface Green's function: direct algorithm (Moebius transformation)"
       call write_info(1)
