@@ -483,6 +483,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
         call X(hamiltonian_apply_batch)(hm, gr%der, psib, hpsib, ik)
 
         do jatom = 1, geo%natoms
+          if(.not. this%calc_atom(jatom)) cycle
           ! we only calculate the upper triangle
           if(jatom < iatom) cycle
 

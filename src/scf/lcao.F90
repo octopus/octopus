@@ -96,6 +96,7 @@ module lcao_m
     integer             :: nproc(1:2)
     integer             :: myroc(1:2)
     integer             :: desc(1:BLACS_DLEN)
+    logical, pointer    :: calc_atom(:)
   end type lcao_t
 
 contains
@@ -260,6 +261,7 @@ contains
       nullify(this%basis_orb)
       nullify(this%atom_orb_basis)
       nullify(this%norb_atom)
+      nullify(this%calc_atom)
     else
       call lcao2_init()
     end if
@@ -268,8 +270,9 @@ contains
 
   contains
     subroutine lcao2_init()
-      integer :: iatom, jatom, iorb, norbs, ibasis, info, nbl
+      integer :: iatom, jatom, iorb, jorb, norbs, info, nbl
       FLOAT   :: maxradius
+      integer :: ibasis, jbasis, ilbasis, jlbasis, proc(1:2)
 
       PUSH_SUB(lcao_init.lcao2_init)
 
@@ -331,6 +334,9 @@ contains
         this%radius(iatom) = maxradius
       end do
 
+      SAFE_ALLOCATE(this%calc_atom(1:geo%natoms))
+      this%calc_atom = .true.
+
       ! initialize parallel data
 #ifndef HAVE_SCALAPACK
       this%parallel = .false.
@@ -354,8 +360,30 @@ contains
 
         ASSERT(info == 0)
 
+        this%calc_atom = .false.
+        do iatom = 1, geo%natoms
+          ibasis = this%atom_orb_basis(iatom, 1)
+
+          do jatom = 1, geo%natoms
+            jbasis = this%atom_orb_basis(jatom, 1)
+
+            do iorb = 1, this%norb_atom(iatom)
+              do jorb = 1, this%norb_atom(jatom)
+                call lcao_local_index(this,  ibasis - 1 + iorb,  jbasis - 1 + jorb, &
+                  ilbasis, jlbasis, proc(1), proc(2))
+
+                this%calc_atom(this%basis_atom(jbasis)) = &
+                  this%calc_atom(this%basis_atom(jbasis)) .or. proc(2) == this%myroc(2)
+
+              end do
+            end do
+
+          end do
+        end do
+
       end if
 #endif
+
       POP_SUB(lcao_init.lcao2_init)
     end subroutine lcao2_init
 
@@ -495,7 +523,8 @@ contains
     type(lcao_t), intent(inout) :: this
 
     PUSH_SUB(lcao_end)
-    
+
+    SAFE_DEALLOCATE_P(this%calc_atom)
     SAFE_DEALLOCATE_P(this%norb_atom)
     SAFE_DEALLOCATE_P(this%basis_atom)
     SAFE_DEALLOCATE_P(this%basis_orb)
