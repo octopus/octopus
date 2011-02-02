@@ -265,7 +265,7 @@ contains
   contains
     subroutine lcao2_init()
       integer :: iatom, jatom, iorb, norbs, ibasis
-      FLOAT   :: maxradius, dist2
+      FLOAT   :: maxradius
 
       PUSH_SUB(lcao_init.lcao2_init)
 
