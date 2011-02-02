@@ -813,17 +813,14 @@ contains
     if(scalapack_compat_) then
 #ifdef HAVE_SCALAPACK      
       nbl = nobjs/nprocs
-!      print*, nobjs, nprocs, nbl, mod(nobjs, nprocs)
       if (mod(nobjs, nprocs) /= 0) INCR(nbl, 1)
       
       start(1) = 1
       do rank = 1, nprocs
         size = numroc(nobjs, nbl, rank - 1, 0, nprocs)
         if(rank > 1) start(rank) = final(rank - 1) + 1
-        final(rank) = start(rank) + size -1
-!        print*, rank, size, start(rank), final(rank)
+        final(rank) = start(rank) + size - 1
       end do
-      call MPI_Barrier(MPI_COMM_WORLD, mpi_err)
 #endif
     else
       
@@ -857,7 +854,7 @@ contains
 
     if(present(lsize)) then
       lsize(1:nprocs) = final(1:nprocs) - start(1:nprocs) + 1
-!      ASSERT(sum(lsize(1:nprocs)) == nobjs)
+      ASSERT(sum(lsize(1:nprocs)) == nobjs)
     end if
 
   end subroutine multicomm_divide_range
