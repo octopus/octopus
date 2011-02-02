@@ -89,7 +89,8 @@ module lcao_m
     ! The following functions map between a basis index and atom/orbital index
     integer, pointer    :: basis_atom(:) !< The atom that corresponds to a certain basis index
     integer, pointer    :: basis_orb(:)  !< The orbital that corresponds to a certain basis index
-    integer, pointer    :: atom_orb_basis(:, :) !< The basis index that coorrespond to a certain 
+    integer, pointer    :: atom_orb_basis(:, :) !< The basis index that coorrespond to a certain
+    integer, pointer    :: norb_atom(:)  !< The number of orbitals per atom including mult.
     logical             :: parallel      !< Whether the LCAO is done in parallel
 #ifdef HAVE_SCALAPACK
     integer             :: desc(1:BLACS_DLEN)
@@ -260,6 +261,7 @@ contains
       nullify(this%basis_atom)
       nullify(this%basis_orb)
       nullify(this%atom_orb_basis)
+      nullify(this%norb_atom)
     else
       call lcao2_init()
     end if
@@ -279,9 +281,12 @@ contains
         this%mult = 1
       end if
 
+      SAFE_ALLOCATE(this%norb_atom(1:geo%natoms))
+
       this%maxorb = 0
       this%nbasis = 0
       do iatom = 1, geo%natoms
+        this%norb_atom(iatom) = this%mult*species_niwfs(geo%atom(iatom)%spec)
         this%maxorb = max(this%maxorb, species_niwfs(geo%atom(iatom)%spec))
         this%nbasis = this%nbasis + species_niwfs(geo%atom(iatom)%spec)
       end do
@@ -309,22 +314,22 @@ contains
 
       ! this is determined by the stencil we are using and the spacing
       this%lapdist = maxval(abs(gr%mesh%idx%enlarge)*gr%mesh%spacing)
-     
+
       ! calculate the radius of each orbital
       SAFE_ALLOCATE(this%radius(1:geo%natoms))
-      
+
       do iatom = 1, geo%natoms
         norbs = species_niwfs(geo%atom(iatom)%spec)
-        
+
         maxradius = M_ZERO
         do iorb = 1, norbs
           maxradius = max(maxradius, species_get_iwf_radius(geo%atom(iatom)%spec, iorb, is = 1))
         end do
-        
+
         if(this%derivative) maxradius = maxradius + this%lapdist
-        
+
         maxradius = min(maxradius, M_TWO*maxval(gr%mesh%sb%lsize(1:gr%mesh%sb%dim)))
-        
+
         this%radius(iatom) = maxradius
       end do
 
@@ -332,23 +337,31 @@ contains
 #ifndef HAVE_SCALAPACK
       this%parallel = .false.
 #else
-      this%parallel = st%parallel_in_states .and. .not. gr%mesh%parallel_in_domains
-      
-      nbl = this%nbasis
+      this%parallel = st%parallel_in_states .or. gr%mesh%parallel_in_domains
 
-      ! The size of the distributed matrix in each node
-      this%lsize(1) = max(1, numroc(this%nbasis, nbl, st%dom_st_proc_grid%myrow, 0, st%dom_st_proc_grid%nprow))
-      this%lsize(2) = max(1, numroc(this%nbasis, nbl, st%dom_st_proc_grid%mycol, 0, st%dom_st_proc_grid%npcol))
+      if(this%parallel) then      
+        nbl = this%nbasis
 
-      call descinit(this%desc(1), nbl, nbl, this%nbasis, this%nbasis, 0, 0, &
-        st%dom_st_proc_grid%context, this%lsize(1), info)
-      
-      ASSERT(info == 0)
+        ! The size of the distributed matrix in each node
+        this%lsize(1) = max(1, numroc(this%nbasis, nbl, st%dom_st_proc_grid%myrow, 0, st%dom_st_proc_grid%nprow))
+        this%lsize(2) = max(1, numroc(this%nbasis, nbl, st%dom_st_proc_grid%mycol, 0, st%dom_st_proc_grid%npcol))
 
-      this%nproc(1) = st%dom_st_proc_grid%nprow
-      this%nproc(2) = st%dom_st_proc_grid%npcol
-      this%myroc(1) = st%dom_st_proc_grid%myrow
-      this%myroc(2) = st%dom_st_proc_grid%mycol
+        if(gr%mesh%parallel_in_domains) then
+          this%nproc = this%lsize
+          call MPI_Allreduce(this%nproc(1), this%lsize(1), 2, MPI_INTEGER, MPI_MAX, gr%mesh%mpi_grp%comm, mpi_err)
+        end if
+
+        this%nproc(1) = st%dom_st_proc_grid%nprow
+        this%nproc(2) = st%dom_st_proc_grid%npcol
+        this%myroc(1) = st%dom_st_proc_grid%myrow
+        this%myroc(2) = st%dom_st_proc_grid%mycol
+
+        call descinit(this%desc(1), nbl, nbl, this%nbasis, this%nbasis, 0, 0, &
+          st%dom_st_proc_grid%context, this%lsize(1), info)
+
+        ASSERT(info == 0)
+
+      end if
 #endif
       POP_SUB(lcao_init.lcao2_init)
     end subroutine lcao2_init
@@ -490,6 +503,7 @@ contains
 
     PUSH_SUB(lcao_end)
     
+    SAFE_DEALLOCATE_P(this%norb_atom)
     SAFE_DEALLOCATE_P(this%basis_atom)
     SAFE_DEALLOCATE_P(this%basis_orb)
     SAFE_DEALLOCATE_P(this%atom_orb_basis)

@@ -472,7 +472,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, geo%natoms)
 
       do iatom = 1, geo%natoms
-        norbs = this%mult*species_niwfs(geo%atom(iatom)%spec)
+        norbs = this%norb_atom(iatom)
 
         psii = M_ZERO
 
@@ -502,16 +502,20 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
           end if
 
           if(.not. this%parallel) then
-            forall(iorb = 1:norbs, jorb = 1:norbs)
-              hamiltonian(ibasis - 1 + iorb, jbasis - 1 + jorb) = aa(iorb, jorb)
-              overlap(ibasis - 1 + iorb, jbasis - 1 + jorb) = bb(iorb, jorb)
-            end forall
+            do iorb = 1, norbs
+              do jorb = 1, this%norb_atom(jatom)
+                hamiltonian(ibasis - 1 + iorb, jbasis - 1 + jorb) = aa(iorb, jorb)
+                overlap(ibasis - 1 + iorb, jbasis - 1 + jorb) = bb(iorb, jorb)
+              end do
+            end do
           else
 #ifdef HAVE_SCALAPACK
             do iorb = 1, norbs
-              do jorb = 1, norbs
+              do jorb = 1, this%norb_atom(jatom)
+
                 call lcao_local_index(this, ibasis - 1 + iorb,  jbasis - 1 + jorb, &
                   ilbasis, jlbasis, prow, pcol)
+
                 if(pcol == this%myroc(2)) then
                   lhamiltonian(ilbasis, jlbasis, prow + 1) = aa(iorb, jorb)
                   loverlap(ilbasis, jlbasis, prow + 1) = bb(iorb, jorb)
@@ -521,7 +525,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 #endif
           end if
 
-        end do
+        end do ! jatom
 
         call batch_end(psib)
         call batch_end(hpsib)
@@ -573,7 +577,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
       ibasis = 1
       do iatom = 1, geo%natoms
-        norbs = this%mult*species_niwfs(geo%atom(iatom)%spec)
+        norbs = this%norb_atom(iatom)
         call X(submesh_batch_add_matrix)(sphere(iatom), evec(ibasis:, st%st_start:), orbitals(iatom), psib)
         ibasis = ibasis + norbs
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, this%nbasis)
@@ -629,8 +633,8 @@ contains
       SAFE_ALLOCATE(gap(1:st%dom_st_proc_grid%nprocs))
 
       call scalapack_sygvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%nbasis, a = lhamiltonian(1, 1, 1), ia = 1, ja = 1, desca = this%desc(1), &
-        b = loverlap(1, 1, 1), ib = 1, jb = 1, descb = this%desc(1), &
+        n = this%nbasis, a = lhamiltonian(1, 1, this%myroc(1) + 1), ia = 1, ja = 1, desca = this%desc(1), &
+        b = loverlap(1, 1, this%myroc(1) + 1), ib = 1, jb = 1, descb = this%desc(1), &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = CNST(1e-15), &
         m = neval_found, nz = nevec_found, w = eval(1), orfac = -M_ONE, &
         z = evec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
@@ -645,14 +649,14 @@ contains
       SAFE_ALLOCATE(iwork(1:liwork))
 
       call scalapack_sygvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%nbasis, a = lhamiltonian(1, 1, 1), ia = 1, ja = 1, desca = this%desc(1), &
-        b = loverlap(1, 1, 1), ib = 1, jb = 1, descb = this%desc(1), &
+        n = this%nbasis, a = lhamiltonian(1, 1, this%myroc(1) + 1), ia = 1, ja = 1, desca = this%desc(1), &
+        b = loverlap(1, 1, this%myroc(1) + 1), ib = 1, jb = 1, descb = this%desc(1), &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = CNST(1e-15), &
         m = neval_found, nz = nevec_found, w = eval(1), orfac = -M_ONE, &
         z = evec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
         work = work(1), lwork = lwork, iwork = iwork(1), liwork = liwork, &
         ifail = ifail(1), iclustr = iclustr(1), gap = gap(1), info = info)
-      
+      print*, info
       ASSERT(info == 0)
 
       call MPI_Bcast(evec(1, 1), this%nbasis**2, R_MPITYPE, 0, st%dom_st_mpi_grp%comm, mpi_err)
@@ -707,6 +711,7 @@ contains
 
     if(gr%mesh%parallel_in_domains) then
       call profiling_in(comm2prof, "LCAO_REDUCE")
+
       if(.not. this%parallel) then
         SAFE_ALLOCATE(tmp(1:this%nbasis, 1:this%nbasis))
         tmp = hamiltonian
@@ -717,11 +722,9 @@ contains
           gr%mesh%mpi_grp%comm, mpi_err)
         SAFE_DEALLOCATE_A(tmp)
       else
-
 #ifdef HAVE_SCALAPACK
         SAFE_ALLOCATE(ltmp(1:this%lsize(1), 1:this%lsize(2), 1:this%nproc(1)))
 
-        ! This does not work yet. Size is not the same in all nodes...
         size = this%lsize(1)*this%lsize(2)*this%nproc(1)
 
         call MPI_Barrier(st%dom_st_mpi_grp%comm, mpi_err)
