@@ -710,10 +710,10 @@ contains
 
           if(all(proc == this%myroc)) then
             ! we have to send the point
-            dest(2) = st%node(jbasis) + 1
+            dest(2) = st%node(jbasis)
             
             do ii = 1, this%nproc(1)
-              dest(1) = ii
+              dest(1) = ii - 1
 
               ! get the node id from coordinates
               call MPI_Cart_rank(st%dom_st_mpi_grp%comm, dest(1), node, mpi_err)

@@ -92,12 +92,10 @@ module lcao_m
     integer, pointer    :: atom_orb_basis(:, :) !< The basis index that coorrespond to a certain
     integer, pointer    :: norb_atom(:)  !< The number of orbitals per atom including mult.
     logical             :: parallel      !< Whether the LCAO is done in parallel
-#ifdef HAVE_SCALAPACK
-    integer             :: desc(1:BLACS_DLEN)
     integer             :: lsize(1:2)
     integer             :: nproc(1:2)
     integer             :: myroc(1:2)
-#endif
+    integer             :: desc(1:BLACS_DLEN)
   end type lcao_t
 
 contains
