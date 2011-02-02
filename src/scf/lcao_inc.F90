@@ -345,7 +345,6 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
   integer :: iatom, jatom, ik, ist, idim, ip, ispin, nev
   integer :: ibasis, jbasis, iorb, jorb, norbs, dof
-  integer :: bs_start, bs_end
   R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :), bb(:, :)
   R_TYPE, allocatable :: psii(:, :, :), hpsi(:, :, :)
   type(submesh_t), allocatable :: sphere(:)
@@ -378,9 +377,6 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       call write_warning(4)
     end if
   end if
-
-  bs_start = this%basis_dist%start
-  bs_end   = this%basis_dist%end
 
   SAFE_ALLOCATE(hamiltonian(1:this%nbasis, 1:this%nbasis))
   SAFE_ALLOCATE(overlap(1:this%nbasis, 1:this%nbasis))
@@ -617,7 +613,6 @@ contains
     R_TYPE, allocatable :: work(:)
     integer, allocatable :: iwork(:), ifail(:)
 #ifdef HAVE_SCALAPACK
-    integer :: desc_ho(1:BLACS_DLEN)
     integer :: nevec_found, liwork
     FLOAT, allocatable :: gap(:)
     integer, allocatable :: iclustr(:)
@@ -627,20 +622,17 @@ contains
     
 #ifdef R_TREAL
 
-    if(st%parallel_in_states) then
+    if(this%parallel) then
 #ifdef HAVE_SCALAPACK            
-      call descinit(desc_ho(1), this%nbasis, this%nbasis, this%nbasis, this%nbasis, 0, 0, &
-        st%dom_st_proc_grid%context, this%nbasis, info)
-
       SAFE_ALLOCATE(iclustr(1:2*st%dom_st_proc_grid%nprocs))
       SAFE_ALLOCATE(gap(1:st%dom_st_proc_grid%nprocs))
 
       call scalapack_sygvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%nbasis, a = hamiltonian(1, 1), ia = 1, ja = 1, desca = desc_ho(1), &
-        b = overlap(1, 1), ib = 1, jb = 1, descb = desc_ho(1), &
+        n = this%nbasis, a = hamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
+        b = overlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = CNST(1e-15), &
         m = neval_found, nz = nevec_found, w = eval(1), orfac = -M_ONE, &
-        z = evec(1, 1), iz = 1, jz = 1, descz = desc_ho(1), &
+        z = evec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
         work = tmp, lwork = -1, iwork = liwork, liwork = -1, &
         ifail = ifail(1), iclustr = iclustr(1), gap = gap(1), info = info)
 
@@ -652,11 +644,11 @@ contains
       SAFE_ALLOCATE(iwork(1:liwork))
 
       call scalapack_sygvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%nbasis, a = hamiltonian(1, 1), ia = 1, ja = 1, desca = desc_ho(1), &
-        b = overlap(1, 1), ib = 1, jb = 1, descb = desc_ho(1), &
+        n = this%nbasis, a = hamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
+        b = overlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = CNST(1e-15), &
         m = neval_found, nz = nevec_found, w = eval(1), orfac = -M_ONE, &
-        z = evec(1, 1), iz = 1, jz = 1, descz = desc_ho(1), &
+        z = evec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
         work = work(1), lwork = lwork, iwork = iwork(1), liwork = liwork, &
         ifail = ifail(1), iclustr = iclustr(1), gap = gap(1), info = info)
       

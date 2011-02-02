@@ -22,7 +22,6 @@
 module lcao_m
   use batch_m
   use datasets_m
-  use distributed_m
   use geometry_m
   use global_m
   use grid_m
@@ -91,7 +90,13 @@ module lcao_m
     integer, pointer    :: basis_atom(:) !< The atom that corresponds to a certain basis index
     integer, pointer    :: basis_orb(:)  !< The orbital that corresponds to a certain basis index
     integer, pointer    :: atom_orb_basis(:, :) !< The basis index that coorrespond to a certain 
-    type(distributed_t) :: basis_dist    !< The distribution of basis sets between nodes.
+    logical             :: parallel      !< Whether the LCAO is done in parallel
+#ifdef HAVE_SCALAPACK
+    integer             :: desc(1:BLACS_DLEN)
+    integer             :: lsize(1:2)
+    integer             :: nproc(1:2)
+    integer             :: myroc(1:2)
+#endif
   end type lcao_t
 
 contains
@@ -255,7 +260,6 @@ contains
       nullify(this%basis_atom)
       nullify(this%basis_orb)
       nullify(this%atom_orb_basis)
-      call distributed_nullify(this%basis_dist)
     else
       call lcao2_init()
     end if
@@ -264,7 +268,7 @@ contains
 
   contains
     subroutine lcao2_init()
-      integer :: iatom, jatom, iorb, norbs, ibasis
+      integer :: iatom, jatom, iorb, norbs, ibasis, info, nbl
       FLOAT   :: maxradius
 
       PUSH_SUB(lcao_init.lcao2_init)
@@ -324,8 +328,26 @@ contains
         this%radius(iatom) = maxradius
       end do
 
-      call distributed_init(this%basis_dist, this%nbasis, st%mpi_grp%comm, "orbitals", scalapack_compat = .true.)
+      ! initialize parallel data
+#ifndef HAVE_SCALAPACK
+      this%parallel = .false.
+#else
+      this%parallel = st%parallel_in_states
+      
+      nbl = this%nbasis
 
+      call descinit(this%desc(1), nbl, nbl, this%nbasis, this%nbasis, 0, 0, &
+        st%dom_st_proc_grid%context, this%nbasis, info)
+
+      ! The size of the distributed matrix in each node
+      this%lsize(1) = max(1, numroc(this%nbasis, nbl, st%dom_st_proc_grid%myrow, 0, st%dom_st_proc_grid%nprow))
+      this%lsize(2) = max(1, numroc(st%nst, nbl, st%dom_st_proc_grid%mycol, 0, st%dom_st_proc_grid%npcol))
+      
+      this%nproc(1) = st%dom_st_proc_grid%nprow
+      this%nproc(2) = st%dom_st_proc_grid%npcol
+      this%myroc(1) = st%dom_st_proc_grid%myrow
+      this%myroc(2) = st%dom_st_proc_grid%mycol
+#endif
       POP_SUB(lcao_init.lcao2_init)
     end subroutine lcao2_init
 
