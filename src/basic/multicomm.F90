@@ -788,73 +788,63 @@ contains
 #endif
 
   !---------------------------------------------------
-  !> Function to divide the range of numbers from 1 to nn
-  !! between tsize processors.
+  !> Function to divide the range of numbers from 1 to nobjs
+  !! between nprocs processors.
   !! THREADSAFE
-  subroutine multicomm_divide_range(nn, tsize, start, final, lsize, scalapack_compat)
-    integer,           intent(in)    :: nn !< number of points to divide
-    integer,           intent(in)    :: tsize !< number of processors
+  subroutine multicomm_divide_range(nobjs, nprocs, start, final, lsize, scalapack_compat)
+    integer,           intent(in)    :: nobjs !< number of points to divide
+    integer,           intent(in)    :: nprocs !< number of processors
     integer,           intent(out)   :: start(:)
     integer,           intent(out)   :: final(:)
     integer, optional, intent(out)   :: lsize(:) !< number of objects in each partition
     logical, optional, intent(in)    :: scalapack_compat
 
-    integer :: ii, jj, rank
+    integer :: ii, jj, rank, size
     logical :: scalapack_compat_
+#ifdef HAVE_SCALAPACK
+    integer :: nbl
+#endif
     
     scalapack_compat_ = .false.
+#ifdef HAVE_SCALAPACK
     if(present(scalapack_compat)) scalapack_compat_ = scalapack_compat
-
+#endif
     ! no push_sub, threadsafe
     if(scalapack_compat_) then
-
-      ! the number of processors is less than the number of points
-      if(tsize <= nn) then
-        jj = nn / tsize
-        if (mod(nn,tsize) /= 0) jj = jj + 1
-        do rank = 0, tsize - 1
-          
-          start(rank + 1) = rank*jj + 1
-          ! the last divide is less than the others
-          if ((rank*jj)+jj > nn) then
-            final(rank + 1) = nn
-          else
-            final(rank + 1) = start(rank + 1) + jj - 1
-          end if
-          
-        end do
-      else
-        do ii = 1, tsize
-          if(ii <= nn) then
-            start(ii) = ii
-            final(ii) = ii
-          else
-            start(ii) = 1
-            final(ii) = 0
-          end if
-        end do
-      end if
+#ifdef HAVE_SCALAPACK      
+      nbl = nobjs/nprocs
+!      print*, nobjs, nprocs, nbl, mod(nobjs, nprocs)
+      if (mod(nobjs, nprocs) /= 0) INCR(nbl, 1)
       
+      start(1) = 1
+      do rank = 1, nprocs
+        size = numroc(nobjs, nbl, rank - 1, 0, nprocs)
+        if(rank > 1) start(rank) = final(rank - 1) + 1
+        final(rank) = start(rank) + size -1
+!        print*, rank, size, start(rank), final(rank)
+      end do
+      call MPI_Barrier(MPI_COMM_WORLD, mpi_err)
+#endif
     else
+      
+      if(nprocs <= nobjs) then
 
-      if(tsize <= nn) then
-
-        do rank = 0, tsize - 1
-          jj = nn / tsize
-          ii = nn - jj*tsize
+        do rank = 0, nprocs - 1
+          jj = nobjs / nprocs
+          ii = nobjs - jj*nprocs
           if(ii > 0 .and. rank < ii) then
             jj = jj + 1
             start(rank + 1) = rank*jj + 1
             final(rank + 1) = start(rank + 1) + jj - 1
           else
-            final(rank + 1) = nn - (tsize - rank - 1)*jj
+            final(rank + 1) = nobjs - (nprocs - rank - 1)*jj
             start(rank + 1) = final(rank + 1) - jj + 1
           end if
         end do
 
       else
-        do ii = 1, tsize
-          if(ii <= nn) then
+        do ii = 1, nprocs
+          if(ii <= nobjs) then
             start(ii) = ii
             final(ii) = ii
           else
@@ -866,8 +856,8 @@ contains
     end if
 
     if(present(lsize)) then
-      lsize(1:tsize) = final(1:tsize) - start(1:tsize) + 1
-      ASSERT(sum(lsize(1:tsize)) == nn)
+      lsize(1:nprocs) = final(1:nprocs) - start(1:nprocs) + 1
+!      ASSERT(sum(lsize(1:nprocs)) == nobjs)
     end if
 
   end subroutine multicomm_divide_range
@@ -876,20 +866,20 @@ contains
 #ifdef HAVE_OPENMP
   ! ---------------------------------------------------------
   ! THREADSAFE
-  subroutine multicomm_divide_range_omp(nn, ini, nn_loc)
-    integer, intent(in)    :: nn
+  subroutine multicomm_divide_range_omp(nobjs, ini, nobjs_loc)
+    integer, intent(in)    :: nobjs
     integer, intent(out)   :: ini
-    integer, intent(out)   :: nn_loc
+    integer, intent(out)   :: nobjs_loc
     
     integer :: start(MAX_OMP_THREADS), end(MAX_OMP_THREADS), lsize(MAX_OMP_THREADS), rank
 
     ! no push_sub, threadsafe
     
-    call multicomm_divide_range(nn, omp_get_num_threads(), start, end, lsize)
+    call multicomm_divide_range(nobjs, omp_get_num_threads(), start, end, lsize)
 
     rank   = 1 + omp_get_thread_num()
     ini    = start(rank)
-    nn_loc = lsize(rank)
+    nobjs_loc = lsize(rank)
 
   end subroutine multicomm_divide_range_omp
 #endif

@@ -29,14 +29,6 @@ module scalapack_m
 #ifdef HAVE_SCALAPACK
 
   interface
-    integer function numroc(n, nb, iproc, isrcproc, nprocs)
-      implicit none
-
-      integer              iproc, isrcproc, n, nb, nprocs
-    end function numroc
-  end interface
-
-  interface
     integer function iceil(inum, idenom)
       implicit none
 

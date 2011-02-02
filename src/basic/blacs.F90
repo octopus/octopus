@@ -91,6 +91,15 @@ module blacs_m
     end subroutine blacs_gridinfo
   end interface
 
+
+  interface
+    integer function numroc(n, nb, iproc, isrcproc, nprocs)
+      implicit none
+
+      integer              iproc, isrcproc, n, nb, nprocs
+    end function numroc
+  end interface
+
 end module blacs_m
 
 !! Local Variables:
