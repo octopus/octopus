@@ -338,23 +338,18 @@ contains
       this%parallel = st%parallel_in_states .or. gr%mesh%parallel_in_domains
 
       if(this%parallel) then      
-        nbl = this%nbasis
+        nbl = min(16, this%nbasis)
 
         ! The size of the distributed matrix in each node
         this%lsize(1) = max(1, numroc(this%nbasis, nbl, st%dom_st_proc_grid%myrow, 0, st%dom_st_proc_grid%nprow))
         this%lsize(2) = max(1, numroc(this%nbasis, nbl, st%dom_st_proc_grid%mycol, 0, st%dom_st_proc_grid%npcol))
-
-        if(gr%mesh%parallel_in_domains) then
-          this%nproc = this%lsize
-          call MPI_Allreduce(this%nproc(1), this%lsize(1), 2, MPI_INTEGER, MPI_MAX, gr%mesh%mpi_grp%comm, mpi_err)
-        end if
 
         this%nproc(1) = st%dom_st_proc_grid%nprow
         this%nproc(2) = st%dom_st_proc_grid%npcol
         this%myroc(1) = st%dom_st_proc_grid%myrow
         this%myroc(2) = st%dom_st_proc_grid%mycol
 
-        call descinit(this%desc(1), nbl, nbl, this%nbasis, this%nbasis, 0, 0, &
+        call descinit(this%desc(1), this%nbasis, this%nbasis, nbl, nbl, 0, 0, &
           st%dom_st_proc_grid%context, this%lsize(1), info)
 
         ASSERT(info == 0)
