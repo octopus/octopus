@@ -410,6 +410,8 @@ module blas_m
   ! ----------------- syrk, herk ------------------
   interface blas_herk
     subroutine ssyrk(uplo, trans, n, k, alpha, a, lda, beta, c, ldc)
+      implicit none
+
       character(1), intent(in)    :: uplo, trans
       integer,      intent(in)    :: n, k, lda, ldc
       real(4),      intent(in)    :: alpha, beta, a
@@ -417,6 +419,8 @@ module blas_m
     end subroutine ssyrk
 
     subroutine dsyrk(uplo, trans, n, k, alpha, a, lda, beta, c, ldc)
+      implicit none
+
       character(1), intent(in)    :: uplo, trans
       integer,      intent(in)    :: n, k, lda, ldc
       real(8),      intent(in)    :: alpha, beta, a
@@ -424,6 +428,8 @@ module blas_m
     end subroutine dsyrk
 
     subroutine cherk(uplo, trans, n, k, alpha, a, lda, beta, c, ldc)
+      implicit none
+
       character(1), intent(in)    :: uplo, trans
       integer,      intent(in)    :: n, k, lda, ldc
       complex(4),   intent(in)    :: alpha, beta, a
@@ -431,6 +437,8 @@ module blas_m
     end subroutine cherk
 
     subroutine zherk(uplo, trans, n, k, alpha, a, lda, beta, c, ldc)
+      implicit none
+
       character(1), intent(in)    :: uplo, trans
       integer,      intent(in)    :: n, k, lda, ldc
       complex(8),   intent(in)    :: alpha, beta, a

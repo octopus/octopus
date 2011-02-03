@@ -226,6 +226,7 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
 #ifdef HAVE_MPI
   if(mesh%parallel_in_domains .and. reduce_) then
     call profiling_in(profcomm, "BATCH_SELF_REDUCE")
+    ASSERT(ubound(dot, dim = 1) == aa%nst)
 #ifndef HAVE_MPI2
     SAFE_ALLOCATE(dottmp(1:aa%nst, 1:aa%nst))
     forall(ist = 1:aa%nst, jst = 1:aa%nst) dottmp(ist, jst) = dot(ist, jst)

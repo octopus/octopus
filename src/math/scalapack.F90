@@ -259,7 +259,34 @@ module scalapack_m
       integer,             intent(out)   :: info
     end subroutine pdsygvx
   end interface scalapack_sygvx
+  
 
+  interface scalapack_potrf
+    subroutine pdpotrf(uplo, n, a, ia, ja, desca, info)
+      implicit none
+
+      character(1), intent(in)    :: uplo
+      integer,      intent(in)    :: n
+      real(8),      intent(inout) :: a
+      integer,      intent(in)    :: ia
+      integer,      intent(in)    :: ja
+      integer,      intent(in)    :: desca
+      integer,      intent(out)   :: info
+    end subroutine pdpotrf
+    
+    subroutine pzpotrf(uplo, n, a, ia, ja, desca, info)
+      implicit none
+
+      character(1), intent(in)    :: uplo
+      integer,      intent(in)    :: n
+      complex(8),   intent(inout) :: a
+      integer,      intent(in)    :: ia
+      integer,      intent(in)    :: ja
+      integer,      intent(in)    :: desca
+      integer,      intent(out)   :: info
+    end subroutine pzpotrf
+    
+  end interface scalapack_potrf
 
 #endif
 end module scalapack_m

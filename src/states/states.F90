@@ -1267,14 +1267,17 @@ return
       !% parallelization the default is old_gram_schmidt.
       !%Option gram_schmidt 1
       !% The standard Gram-Schmidt orthogonalization implemented using
-      !% Blas level 3 routines.
-      !%Option mgs 2
+      !% Blas/Lapack.
+      !%Option par_gram_schmidt 2
+      !% The standard Gram-Schmidt orthogonalization implemented using
+      !% Scalapack. Compatible with states parallelization.
+      !%Option mgs 3
       !% Modified Gram-Schmidt orthogonalization.
-      !%Option qr 3
+      !%Option qr 4
       !% (Experimental) Orthogonalization is performed based on a QR
       !% decomposition based on Lapack routines _getrf and _orgqr.
       !% Compatible with states parallelization. 
-      !%Option old_gram_schmidt 4
+      !%Option old_gram_schmidt 5
       !% Old Gram-Schmidt implementation, compatible with states
       !% parallelization.
       !%End
@@ -1288,11 +1291,13 @@ return
       call parse_integer(datasets_check('StatesOrthogonalization'), default, st%d%orth_method)
       if(st%d%orth_method == ORTH_QR) call messages_experimental("QR Orthogonalization")
 
-      if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES) &
-        .and. st%d%orth_method /= ORTH_QR .and. st%d%orth_method /= ORTH_OLDGS) then
-
-        message(1) = 'The selected orthogonalization method cannot work with state-parallelization.'
-        call write_fatal(1)
+      if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
+        select case(st%d%orth_method)
+        case(ORTH_QR, ORTH_OLDGS, ORTH_PAR_GS)
+        case default
+          message(1) = 'The selected orthogonalization method cannot work with state-parallelization.'
+          call write_fatal(1)
+        end select
       end if
       
       POP_SUB(states_densities_init.states_exec_init)

@@ -119,6 +119,9 @@ subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
 
     SAFE_DEALLOCATE_A(ss)
 
+  case(ORTH_PAR_GS)
+    call par_gs()
+
   case(ORTH_QR)
     call qr()
 
@@ -132,6 +135,56 @@ subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
   POP_SUB(X(states_orthogonalization_full))
 
 contains
+  
+  subroutine par_gs()
+    integer             :: info, nbl, nrow, ncol
+    integer             :: psi_block(1:2), total_np, psi_desc(BLACS_DLEN), ss_desc(BLACS_DLEN)
+
+    call states_blacs_blocksize(st, mesh, psi_block, total_np)
+
+    ! We need to set to zero some extra parts of the array
+    if(st%d%dim == 1) then
+      psi(mesh%np + 1:psi_block(1), 1:st%d%dim, 1:st%lnst) = M_ZERO
+    else
+      psi(mesh%np + 1:mesh%np_part, 1:st%d%dim, 1:st%lnst) = M_ZERO
+    end if
+
+    call descinit(psi_desc(1), total_np, st%nst, psi_block(1), psi_block(2), 0, 0, st%dom_st_proc_grid%context, &
+      st%d%dim*ubound(psi, dim = 1), info)
+
+    nbl = min(32, st%nst)
+    nrow = max(1, numroc(st%nst, nbl, st%dom_st_proc_grid%myrow, 0, st%dom_st_proc_grid%nprow))
+    ncol = max(1, numroc(st%nst, nbl, st%dom_st_proc_grid%mycol, 0, st%dom_st_proc_grid%npcol))
+
+    SAFE_ALLOCATE(ss(1:nrow, 1:ncol))
+
+    call descinit(ss_desc(1), st%nst, st%nst, nbl, nbl, 0, 0, st%dom_st_proc_grid%context, ubound(ss, dim = 1), info)
+
+    ss = M_ZERO
+
+    call pblas_herk(uplo = 'U', trans = 'C', n = st%nst, k = total_np, &
+      alpha = R_TOTYPE(mesh%vol_pp(1)), a = psi(1, 1, 1), ia = 1, ja = 1, desca = psi_desc(1), &
+      beta = R_TOTYPE(M_ZERO), c = ss(1, 1), ic = 1, jc = 1, descc = ss_desc(1))
+
+    ! calculate the Cholesky decomposition
+    call scalapack_potrf(uplo = 'U', n = st%nst, a = ss(1, 1), ia = 1, ja = 1, desca = ss_desc(1), info = info)
+
+    if(info /= 0) then
+      message(1) = "Orthogonalization failed; probably your eigenvectors are not independent."
+      call write_warning(1)
+    end if
+
+    call pblas_trsm(side = 'R', uplo = 'U', transa = 'N', diag = 'N', m = total_np, n = st%nst, &
+      alpha = R_TOTYPE(M_ONE), a = ss(1, 1), ia = 1, ja = 1, desca = ss_desc(1), &
+      b = psi(1, 1, 1), ib = 1, jb = 1, descb = psi_desc(1))
+
+    call profiling_count_operations(dble(mesh%np)*dble(nst)**2*(R_ADD + R_MUL))
+
+    SAFE_DEALLOCATE_A(ss)
+
+  end subroutine par_gs
+
+  ! -----------------------------------------------------------------------------------------------
 
   subroutine qr()
     integer :: total_np, nref, info, wsize

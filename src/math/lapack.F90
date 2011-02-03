@@ -28,6 +28,7 @@ module lapack_m
 
   interface lapack_potrf
     subroutine spotrf(uplo, n, a, lda, info)
+      implicit none
       character(1), intent(in)    :: uplo
       integer,      intent(in)    :: n
       real(4),      intent(inout) :: a
@@ -36,6 +37,7 @@ module lapack_m
     end subroutine spotrf
 
     subroutine dpotrf(uplo, n, a, lda, info)
+      implicit none
       character(1), intent(in)    :: uplo
       integer,      intent(in)    :: n
       real(8),      intent(inout) :: a
@@ -44,6 +46,7 @@ module lapack_m
     end subroutine dpotrf
 
     subroutine cpotrf(uplo, n, a, lda, info)
+      implicit none
       character(1), intent(in)    :: uplo
       integer,      intent(in)    :: n
       complex(4),   intent(inout) :: a
@@ -52,6 +55,7 @@ module lapack_m
     end subroutine cpotrf
 
     subroutine zpotrf(uplo, n, a, lda, info)
+      implicit none
       character(1), intent(in)    :: uplo
       integer,      intent(in)    :: n
       complex(8),   intent(inout) :: a

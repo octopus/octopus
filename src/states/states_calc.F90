@@ -46,6 +46,7 @@ module states_calc_m
   use mpi_lib_m
   use multicomm_m
   use parser_m
+  use pblas_m
   use physics_op_m
   use profiling_m
   use scalapack_m

@@ -25,8 +25,10 @@ module pblas_m
   private 
 
   public ::            &
-    pblas_gemm
-
+    pblas_gemm,        &
+    pblas_herk,        &
+    pblas_trsm
+  
   interface pblas_gemm
     subroutine pdgemm ( transa, transb, m, n, k, alpha, & 
       a, ia, ja, desca, b, ib, jb, descb, &
@@ -52,6 +54,93 @@ module pblas_m
       integer          :: desca, descb, descc
     end subroutine pzgemm
   end interface
+
+  interface pblas_herk
+
+    subroutine pdsyrk(uplo, trans, n, k, alpha, a, ia, ja, desca, beta, c, ic, jc, descc)
+      implicit none
+      
+      character(1), intent(in)    :: uplo
+      character(1), intent(in)    :: trans
+      integer,      intent(in)    :: n
+      integer,      intent(in)    :: k
+      real(8),      intent(in)    :: alpha
+      real(8),      intent(in)    :: a    
+      integer,      intent(in)    :: ia
+      integer,      intent(in)    :: ja
+      integer,      intent(in)    :: desca
+      real(8),      intent(in)    :: beta
+      real(8),      intent(inout) :: c
+      integer,      intent(in)    :: ic
+      integer,      intent(in)    :: jc
+      integer,      intent(in)    :: descc
+    end subroutine pdsyrk
+
+    subroutine pzherk(uplo, trans, n, k, alpha, a, ia, ja, desca, beta, c, ic, jc, descc)
+      implicit none
+
+      character(1), intent(in)    :: uplo
+      character(1), intent(in)    :: trans
+      integer,      intent(in)    :: n
+      integer,      intent(in)    :: k
+      complex(8),   intent(in)    :: alpha
+      complex(8),   intent(in)    :: a    
+      integer,      intent(in)    :: ia
+      integer,      intent(in)    :: ja
+      integer,      intent(in)    :: desca
+      complex(8),   intent(in)    :: beta
+      complex(8),   intent(inout) :: c
+      integer,      intent(in)    :: ic
+      integer,      intent(in)    :: jc
+      integer,      intent(in)    :: descc
+    end subroutine pzherk
+ 
+  end interface pblas_herk
+
+  interface pblas_trsm
+
+    subroutine pdtrsm(side, uplo, transa, diag, m, n, alpha, a, ia, ja, desca, b, ib, jb, descb)
+      implicit none
+
+      character(1), intent(in)    :: side
+      character(1), intent(in)    :: uplo
+      character(1), intent(in)    :: transa
+      character(1), intent(in)    :: diag
+      integer,      intent(in)    :: m
+      integer,      intent(in)    :: n
+      real(8),      intent(in)    :: alpha
+      real(8),      intent(in)    :: a
+      integer,      intent(in)    :: ia
+      integer,      intent(in)    :: ja
+      integer,      intent(in)    :: desca
+      real(8),      intent(inout) :: b
+      integer,      intent(in)    :: ib
+      integer,      intent(in)    :: jb
+      integer,      intent(in)    :: descb
+    end subroutine pdtrsm
+
+    subroutine pztrsm(side, uplo, transa, diag, m, n, alpha, a, ia, ja, desca, b, ib, jb, descb)
+      implicit none
+
+      character(1), intent(in)    :: side
+      character(1), intent(in)    :: uplo
+      character(1), intent(in)    :: transa
+      character(1), intent(in)    :: diag
+      integer,      intent(in)    :: m
+      integer,      intent(in)    :: n
+      complex(8),   intent(in)    :: alpha
+      complex(8),   intent(in)    :: a
+      integer,      intent(in)    :: ia
+      integer,      intent(in)    :: ja
+      integer,      intent(in)    :: desca
+      complex(8),   intent(inout) :: b
+      integer,      intent(in)    :: ib
+      integer,      intent(in)    :: jb
+      integer,      intent(in)    :: descb
+    end subroutine pztrsm
+
+  end interface pblas_trsm
+
 
 end module pblas_m
 
