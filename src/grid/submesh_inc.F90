@@ -211,7 +211,7 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
   integer :: ist, jst, idim, jdim, is
   logical :: reduce_
   R_TYPE :: dotp
-  R_TYPE, allocatable :: tmp(:, :)
+  R_TYPE, allocatable :: tmp1(:, :), tmp2(:, :)
 
   PUSH_SUB(X(submesh_batch_dotp_matrix))
 
@@ -283,10 +283,14 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
 
 #if defined(HAVE_MPI)
   if(reduce_ .and. this%mesh%parallel_in_domains) then
-    SAFE_ALLOCATE(tmp(1:mm%nst, 1:ss%nst))
-    call MPI_Allreduce(dot(1, 1), tmp(1, 1), mm%nst*ss%nst, R_MPITYPE, MPI_SUM, this%mesh%vp%comm, mpi_err)
-    dot(1:mm%nst, 1:ss%nst) = tmp(1:mm%nst, 1:ss%nst)
-    SAFE_DEALLOCATE_A(tmp)
+    ! we have to use two copies, since we do not know the size of dot
+    SAFE_ALLOCATE(tmp1(1:mm%nst, 1:ss%nst))
+    SAFE_ALLOCATE(tmp2(1:mm%nst, 1:ss%nst))
+    tmp1(1:mm%nst, 1:ss%nst) = dot(1:mm%nst, 1:ss%nst)
+    call MPI_Allreduce(tmp1(1, 1), tmp2(1, 1), mm%nst*ss%nst, R_MPITYPE, MPI_SUM, this%mesh%vp%comm, mpi_err)
+    dot(1:mm%nst, 1:ss%nst) = tmp2(1:mm%nst, 1:ss%nst)
+    SAFE_DEALLOCATE_A(tmp1)
+    SAFE_DEALLOCATE_A(tmp2)
   end if
 #endif
 
