@@ -482,9 +482,8 @@ contains
       write(message(1), '(a,f5.2,a)') "Info: Octopus will waste at least ", &
         (M_ONE - frac)*CNST(100.0), "% of computer time."
       if(frac < CNST(0.8)) then
-        message(2) = "I decided this is too much. Change the number of processors and try again."
-        message(3) = "Usually a number of processors which is a multiple of small primes is best."
-        call write_fatal(3, only_root_writes = .true.)
+        message(2) = "Usually a number of processors which is a multiple of small primes is best."
+        call write_warning(3)
       else
         call write_info(1)
       end if
