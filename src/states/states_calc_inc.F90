@@ -137,6 +137,7 @@ subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
 contains
   
   subroutine par_gs()
+#ifdef HAVE_SCALAPACK
     integer             :: info, nbl, nrow, ncol
     integer             :: psi_block(1:2), total_np, psi_desc(BLACS_DLEN), ss_desc(BLACS_DLEN)
 
@@ -181,7 +182,7 @@ contains
     call profiling_count_operations(dble(mesh%np)*dble(nst)**2*(R_ADD + R_MUL))
 
     SAFE_DEALLOCATE_A(ss)
-
+#endif
   end subroutine par_gs
 
   ! -----------------------------------------------------------------------------------------------
