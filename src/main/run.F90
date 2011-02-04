@@ -108,6 +108,10 @@ contains
     end if
 #endif
 
+    message(1) = "Info: Octopus initialization completed."
+    message(2) = "Info: Starting calculation mode."
+    call write_info(2)
+
     !%Variable FromScratch
     !%Type logical
     !%Default false
@@ -235,7 +239,9 @@ contains
         message(1) = "Info: Generating external potential"
         call write_info(1)
         call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
-      endif
+        message(1) = "      done."
+        call write_info(1)
+      end if
       call restart_init()
     end if
 

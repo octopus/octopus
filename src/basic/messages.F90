@@ -160,10 +160,6 @@ contains
     ! switch file indicator to state aborted
     call switch_status('aborted')
 
-#ifdef HAVE_MPI
-    call MPI_Finalize(mpi_err)
-#endif
-
     call loct_exit_failure()
   end subroutine write_fatal
 
@@ -383,8 +379,6 @@ contains
     character(len=*), intent(in) :: file
     integer,          intent(in) :: line
 
-    write(message(1), '(a,i14,3a,i5)') "Failed to allocate ", size, " words in file '", trim(file), "' line ", line
-    call write_fatal(1)
 
   end subroutine alloc_error
 
@@ -426,10 +420,6 @@ contains
 
     ! switch file indicator to state aborted
     call switch_status('aborted')
-
-#ifdef HAVE_MPI
-    call MPI_Finalize(mpi_err)
-#endif
 
     call loct_exit_failure()
   end subroutine input_error

@@ -1017,6 +1017,12 @@ return
 
     PUSH_SUB(states_allocate_wfns)
 
+    print*, "arr1",  st%dom_st_kpt_mpi_grp%rank
+    call MPI_Barrier(st%dom_st_kpt_mpi_grp%comm, mpi_err)
+    print*, "aooakaaadkdlkald"
+    call MPI_Barrier(st%dom_st_kpt_mpi_grp%comm, mpi_err)
+
+
     if(associated(st%dpsi).or.associated(st%zpsi)) then
       message(1) = "Trying to allocate wavefunctions that are already allocated."
       call write_fatal(1)
@@ -1050,6 +1056,11 @@ return
     k2 = st%d%kpt%end
     size = mesh%np_part
 
+    print*, "arr7",  st%dom_st_kpt_mpi_grp%rank
+    call MPI_Barrier(st%dom_st_kpt_mpi_grp%comm, mpi_err)
+    print*, "aooakaaadkdlkald"
+    call MPI_Barrier(st%dom_st_kpt_mpi_grp%comm, mpi_err)
+
     if (states_are_real(st)) then
       SAFE_ALLOCATE(st%dpsi(1:size, 1:st%d%dim, st1:st2, k1:k2))
 
@@ -1065,6 +1076,11 @@ return
       end forall
     end if
 
+    print*, "arr8",  st%dom_st_kpt_mpi_grp%rank
+    call MPI_Barrier(st%dom_st_kpt_mpi_grp%comm, mpi_err)
+    print*, "aooakaaadkdlkald"
+    call MPI_Barrier(st%dom_st_kpt_mpi_grp%comm, mpi_err)
+
     if(present(ob_mesh)) then
       ASSERT(st%open_boundaries)
 
@@ -1075,6 +1091,11 @@ return
     end if
 
     call states_init_block(st)
+
+    print*, "arr9",  st%dom_st_kpt_mpi_grp%rank
+    call MPI_Barrier(st%dom_st_kpt_mpi_grp%comm, mpi_err)
+    print*, "aooakaaadkdlkald"
+    call MPI_Barrier(st%dom_st_kpt_mpi_grp%comm, mpi_err)
 
     POP_SUB(states_allocate_wfns)
   end subroutine states_allocate_wfns

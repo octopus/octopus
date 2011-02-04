@@ -72,7 +72,16 @@ contains
 
     PUSH_SUB(ground_state_run)
 
+    message(1) = "Info: Allocating ground state wave-functions"
+    call write_info(1)
+
     call states_allocate_wfns(sys%st, sys%gr%mesh)
+#ifdef HAVE_MPI
+    ! sometimes a deadlock can occur here (if some nodes can allocate and other cannot)
+    call MPI_Barrier(sys%st%dom_st_kpt_mpi_grp%comm, mpi_err)
+#endif
+    message(1) = "      done."
+    call write_info(1)
 
     ! Read free states for ground-state open-boundary calculation.
     if(sys%gr%ob_grid%open_boundaries) then

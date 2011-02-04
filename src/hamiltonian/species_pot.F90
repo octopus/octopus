@@ -224,6 +224,8 @@ contains
     FLOAT :: rr, rnd, phi, theta, mag(MAX_DIM), lmag, n1, n2
     FLOAT, allocatable :: atom_rho(:,:)
 
+    print*, "aaaaaaaaaaaaaaaaaaa1"
+
     PUSH_SUB(guess_density)
 
     if (spin_channels == 1) then
@@ -263,7 +265,7 @@ contains
     case (INITRHO_PARAMAGNETIC)
       SAFE_ALLOCATE(atom_rho(1:mesh%np, 1:1))
       do ia = 1, geo%natoms
-        call atom_density(mesh, sb, geo%atom(ia), 1, atom_rho(1:mesh%np, 1:1))
+!        call atom_density(mesh, sb, geo%atom(ia), 1, atom_rho(1:mesh%np, 1:1))
         rho(1:mesh%np, 1:1) = rho(1:mesh%np, 1:1) + atom_rho(1:mesh%np, 1:1)
       end do
       if (spin_channels == 2) then
@@ -424,6 +426,8 @@ contains
 
     end select
 
+    print*, "aaaaaaaaaaaaaaaaaaa9"
+
     ! we now renormalize the density (necessary if we have a charged system)
     rr = M_ZERO
     do is = 1, spin_channels
@@ -442,6 +446,8 @@ contains
 
     write(message(1),'(a,f13.6)')'Info: Renormalized total charge = ', rr
     call write_info(1)
+
+    print*, "aaaaaaaaaaaaaaaaaaa10"
 
     SAFE_DEALLOCATE_A(atom_rho)
     POP_SUB(guess_density)
