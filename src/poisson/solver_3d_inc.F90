@@ -28,10 +28,14 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
   FLOAT   :: xl, yl, zl
 
   type(poisson_fmm_t) :: fmm_params
-  
+  logical :: valid_solver
+
   PUSH_SUB(poisson3D_init)
 
-  ASSERT((this%method>=POISSON_FFT_SPH.and.this%method<=POISSON_SETE).or.this%method==-3.or.this%method==-4) !!!! IM 
+  valid_solver = (this%method >= POISSON_FFT_SPH .and. this%method<=POISSON_SETE) &
+    .or. this%method == POISSON_DIRECT_SUM_3D .or. this%method == POISSON_FMM
+
+  ASSERT(valid_solver)
 
   !%Variable PoissonSolverMaxMultipole
   !%Type integer
@@ -169,7 +173,7 @@ subroutine poisson3D_solve_direct(this, pot, rho)
   FLOAT, allocatable :: pvec(:) 
 #endif
 
-  ASSERT(this%method == -3)
+  ASSERT(this%method == POISSON_DIRECT_SUM_3D)
 
   PUSH_SUB(poisson3D_solve_direct)
 #ifdef HAVE_MPI

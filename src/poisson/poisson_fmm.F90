@@ -136,7 +136,7 @@ subroutine poisson_fmm_solve(this, pot, rho)
   this%fmm_params%periodic = this%der%mesh%sb%periodic_dim
 
   if(this%fmm_params%periodic /= 0) then
-    if ((this%der%mesh%sb%box_shape == 4).and.((this%der%mesh%sb%lsize(1)==this%der%mesh%sb%lsize(2)).and.&
+    if ((this%der%mesh%sb%box_shape == PARALLELEPIPED).and.((this%der%mesh%sb%lsize(1)==this%der%mesh%sb%lsize(2)).and.&
          (this%der%mesh%sb%lsize(1)==this%der%mesh%sb%lsize(3)).and.(this%der%mesh%sb%lsize(2)==this%der%mesh%sb%lsize(3)))) then
       this%fmm_params%periodic_length = this%der%mesh%sb%lsize(1)
     else
