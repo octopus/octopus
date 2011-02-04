@@ -482,8 +482,8 @@ contains
 
   end subroutine epot_end
 
-
   ! ---------------------------------------------------------
+
   subroutine epot_generate(ep, gr, geo, st, time)
     type(epot_t),          intent(inout) :: ep
     type(grid_t), target,  intent(in)    :: gr
@@ -513,7 +513,13 @@ contains
     time_ = M_ZERO
     if (present(time)) time_ = time
 
-    have_density = any(local_potential_has_density(ep, psolver, geo%atom(1:geo%natoms)))
+    have_density = .false.
+    do ia = 1, geo%natoms
+      if(local_potential_has_density(ep, psolver, geo%atom(ia))) then
+        have_density = .true.
+        exit
+      end if
+    end do
 
     if(have_density) then
       SAFE_ALLOCATE(density(1:mesh%np))
@@ -600,7 +606,7 @@ contains
 
   ! ---------------------------------------------------------
 
-  logical elemental function local_potential_has_density(ep, poisson_solver, atom) result(has_density)
+  logical pure function local_potential_has_density(ep, poisson_solver, atom) result(has_density)
     type(epot_t),             intent(in)    :: ep
     type(poisson_t),          intent(in)    :: poisson_solver    
     type(atom_t),             intent(in)    :: atom
@@ -611,7 +617,6 @@ contains
 
   end function local_potential_has_density
   
-
   ! ---------------------------------------------------------
   subroutine epot_local_potential(ep, der, dgrid, poisson_solver, geo, iatom, vpsl, time, rho_core, density)
     type(epot_t),             intent(in)    :: ep
