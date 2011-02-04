@@ -223,8 +223,12 @@ contains
     type(block_t) :: blk
     FLOAT :: rr, rnd, phi, theta, mag(MAX_DIM), lmag, n1, n2
     FLOAT, allocatable :: atom_rho(:,:)
+    logical :: parallelized_in_atoms
+
 
     PUSH_SUB(guess_density)
+
+    parallelized_in_atoms = .false.
 
     if (spin_channels == 1) then
       gmd_opt = INITRHO_PARAMAGNETIC
@@ -262,10 +266,14 @@ contains
     select case (gmd_opt)
     case (INITRHO_PARAMAGNETIC)
       SAFE_ALLOCATE(atom_rho(1:mesh%np, 1:1))
-      do ia = 1, geo%natoms
-        call atom_density(mesh, sb, geo%atom(ia), 1, atom_rho(1:mesh%np, 1:1))
-        rho(1:mesh%np, 1:1) = rho(1:mesh%np, 1:1) + atom_rho(1:mesh%np, 1:1)
+
+      parallelized_in_atoms = .true.
+
+      do ia = geo%atoms_dist%start, geo%atoms_dist%end
+        call atom_density(mesh, sb, geo%atom(ia), 1, atom_rho)
+        rho(1:mesh%np, 1) = rho(1:mesh%np, 1) + atom_rho(1:mesh%np, 1)
       end do
+
       if (spin_channels == 2) then
         rho(1:mesh%np, 1) = M_HALF*rho(1:mesh%np, 1)
         rho(1:mesh%np, 2) = rho(1:mesh%np, 1)
@@ -273,9 +281,12 @@ contains
 
     case (INITRHO_FERROMAGNETIC)
       SAFE_ALLOCATE(atom_rho(1:mesh%np, 1:2))
+
+      parallelized_in_atoms = .true.
+
       atom_rho = M_ZERO
       rho = M_ZERO
-      do ia = 1, geo%natoms
+      do ia = geo%atoms_dist%start, geo%atoms_dist%end
         call atom_density(mesh, sb, geo%atom(ia), 2, atom_rho(1:mesh%np, 1:2))
         rho(1:mesh%np, 1:2) = rho(1:mesh%np, 1:2) + atom_rho(1:mesh%np, 1:2)
       end do
@@ -423,6 +434,16 @@ contains
       call parse_block_end(blk)
 
     end select
+
+
+#ifdef HAVE_MPI
+    if(geo%atoms_dist%parallel .and. parallelized_in_atoms) then
+      do is = 1, spin_channels
+        atom_rho(1:mesh%np, 1) = rho(1:mesh%np, is)
+        call MPI_Allreduce(atom_rho(1, 1), rho(1, is), mesh%np, MPI_FLOAT, MPI_SUM, geo%atoms_dist%mpi_grp%comm, mpi_err)
+      end do
+    end if
+#endif
 
     ! we now renormalize the density (necessary if we have a charged system)
     rr = M_ZERO
