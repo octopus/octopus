@@ -267,10 +267,10 @@ contains
 
       !%Variable LCAOKeepOrbitals
       !%Type logical
-      !%Default false
+      !%Default yes
       !%Section SCF::LCAO
       !%Description
-      !% If set to yes (the default) Octopus keeps atomic Orbitals in
+      !% If set to yes (the default) Octopus keeps atomic arbitals in
       !% memory during the LCAO procedure. If set to no, the orbitals
       !% are generated each time that they are needed, increasing
       !% computational time but saving memory.
@@ -662,6 +662,8 @@ contains
 
     integer :: iorb
 
+    PUSH_SUB(lcao_get_orbital)
+
     if(.not. batch_is_ok(orbitalb)) then
 
       call profiling_in(prof_orbitals, "LCAO_ORBITALS")
@@ -683,6 +685,8 @@ contains
       call profiling_out(prof_orbitals)
     end if
 
+    POP_SUB(lcao_get_orbital)
+
   end subroutine lcao_get_orbital
 
   ! ---------------------------------------------------------
@@ -695,9 +699,13 @@ contains
 
     integer :: iorb
 
+    PUSH_SUB(lcao_end_orbital)
+
     if(batch_is_ok(orbitalb)) then
       call dbatch_delete(orbitalb)
     end if
+
+    POP_SUB(lcao_end_orbital)
 
   end subroutine lcao_end_orbital
 
