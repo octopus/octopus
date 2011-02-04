@@ -1088,8 +1088,16 @@ module opt_control_target_m
            end do
 
          case(oct_max_curr_ring)
-           semilocal_function = M_ZERO
-
+         if(gr%sb%dim .ne. M_TWO) then
+            write(message(1), '(a)') 'This target only implemented for 2D.'
+         call write_fatal(1)
+         end if
+         do ip = 1, gr%mesh%np
+           ! func = j_y * x - j_x * y 
+           semilocal_function (ip) = psi%current(ip, 2, 1) * gr%mesh%spacing(1) * gr%mesh%x(ip,1) -  &
+                                     psi%current(ip, 1, 1) * gr%mesh%spacing(2) * gr%mesh%x(ip,2)
+         end do
+ 
          end select
          currfunc_tmp = dmf_integrate(gr%mesh, semilocal_function)
 
@@ -1352,45 +1360,52 @@ module opt_control_target_m
 
     ! boundary conditions of current functionals are combined with others.
     ! chi_out%zpsi is accumulated.
-    if (target%type .eq. oct_tg_current .or. &
-        target%curr_functional .ne. oct_no_curr) then
-        select case(psi_in%d%ispin)
-        case(UNPOLARIZED)
-          ASSERT(chi_out%d%nik .eq. 1)
-          select case(target%curr_functional)
+    if(target%type .eq. oct_tg_current .or. &
+      target%curr_functional .ne. oct_no_curr) then
+      select case(psi_in%d%ispin)
+      case(UNPOLARIZED)
+        ASSERT(chi_out%d%nik .eq. 1)
+        SAFE_ALLOCATE(grad_psi_in(1:gr%der%mesh%np_part, 1:gr%der%mesh%sb%dim, 1:psi_in%d%dim))
 
-          case(oct_min_curr)
-            SAFE_ALLOCATE(grad_psi_in(1:gr%der%mesh%np_part, 1:gr%der%mesh%sb%dim, 1:psi_in%d%dim))
-            SAFE_ALLOCATE(div_curr_psi_in(1:gr%der%mesh%np_part,1:psi_in%d%dim))
+        select case(target%curr_functional)
+        case(oct_min_curr)
+          SAFE_ALLOCATE(div_curr_psi_in(1:gr%der%mesh%np_part,1:psi_in%d%dim))
+          do idim = 1, psi_in%d%dim
+            call dderivatives_div(gr%der, psi_in%current(:,:,idim), div_curr_psi_in(1:gr%der%mesh%np,idim)) 
+          end do
+          do ist = psi_in%st_start, psi_in%st_end
             do idim = 1, psi_in%d%dim
-              call dderivatives_div(gr%der, psi_in%current(:,:,idim), div_curr_psi_in(1:gr%der%mesh%np,idim)) 
+              call zderivatives_grad(gr%der, psi_in%zpsi(:,idim, ist, 1), grad_psi_in(:,:,idim))
             end do
-            do ist = psi_in%st_start, psi_in%st_end
-              do idim = 1, psi_in%d%dim
-                call zderivatives_grad(gr%der, psi_in%zpsi(:,idim, ist, 1), grad_psi_in(:,:,idim))
-              end do
-              do ip = 1, gr%mesh%np 
-                chi_out%zpsi(ip, 1, ist, 1) = chi_out%zpsi(ip, 1, ist, 1) + &
-                             M_zI * target%curr_weight * &
-                            ( M_TWO * sum(psi_in%current(ip, 1:gr%sb%dim, 1) * grad_psi_in(ip, 1:gr%sb%dim, 1))+ &
-                             div_curr_psi_in(ip,1) * psi_in%zpsi(ip, 1, ist, 1) )
-              end do
+            do ip = 1, gr%mesh%np 
+              chi_out%zpsi(ip, 1, ist, 1) = chi_out%zpsi(ip, 1, ist, 1) + &
+                           M_zI * target%curr_weight * &
+                          ( M_TWO * sum(psi_in%current(ip, 1:gr%sb%dim, 1) * grad_psi_in(ip, 1:gr%sb%dim, 1))+ &
+                           div_curr_psi_in(ip,1) * psi_in%zpsi(ip, 1, ist, 1) )
             end do
-            SAFE_DEALLOCATE_A(grad_psi_in)
-            SAFE_DEALLOCATE_A(div_curr_psi_in)
+          end do
+          SAFE_DEALLOCATE_A(div_curr_psi_in)
 
-          case(oct_max_curr_ring)
-            do ist = psi_in%st_start, psi_in%st_end
-              do ip = 1, gr%mesh%np 
-                chi_out%zpsi(ip, 1, ist, 1) =  chi_out%zpsi(ip, 1, ist, 1) + M_ZERO
-              end do
+        case(oct_max_curr_ring)
+          do ist = psi_in%st_start, psi_in%st_end
+            do idim = 1, psi_in%d%dim
+              call zderivatives_grad(gr%der, psi_in%zpsi(:,idim, ist, 1), grad_psi_in(:,:,idim))
             end do
-          end select
-                 
-        case(SPIN_POLARIZED)
+            do ip = 1, gr%mesh%np 
+              chi_out%zpsi(ip, 1, ist, 1) =  chi_out%zpsi(ip, 1, ist, 1) + &
+                           M_zI * target%curr_weight * &
+                           ( grad_psi_in(ip, 1, 1) * gr%mesh%spacing(2) * gr%mesh%x(ip,2) - &
+                             grad_psi_in(ip, 2, 1) * gr%mesh%spacing(1) * gr%mesh%x(ip,1)   ) 
+            end do
+          end do
+       
+        end select
+        
+        SAFE_DEALLOCATE_A(grad_psi_in)       
+      case(SPIN_POLARIZED)
          message(1) = 'Error in target.calc_chi: spin_polarized.'
          call write_fatal(1)
-        case(SPINORS)
+      case(SPINORS)
          message(1) = 'Error in target.calc_chi: spinors.'
          call write_fatal(1)
       end select
