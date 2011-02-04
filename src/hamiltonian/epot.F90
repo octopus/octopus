@@ -492,14 +492,15 @@ contains
     FLOAT,       optional, intent(in)    :: time
 
     FLOAT   :: time_
-    integer :: ia
+    integer :: ia, ip
     type(atom_t),      pointer :: atm
     type(mesh_t),      pointer :: mesh
     type(simul_box_t), pointer :: sb
     type(profile_t), save :: epot_generate_prof
-
+    FLOAT,    allocatable :: density(:)
+    logical               :: have_density
+    FLOAT,    allocatable :: tmp(:)
 #ifdef HAVE_MPI
-    FLOAT,    allocatable :: vpsltmp(:)
     type(profile_t), save :: epot_reduce
 #endif
 
@@ -512,33 +513,67 @@ contains
     time_ = M_ZERO
     if (present(time)) time_ = time
 
-    ! Local.
+    have_density = any(local_potential_has_density(ep, psolver, geo%atom(1:geo%natoms)))
+
+    if(have_density) then
+      SAFE_ALLOCATE(density(1:mesh%np))
+      density = M_ZERO
+    end if
+
+    ! Local part
     ep%vpsl = M_ZERO
     if(st%nlcc) st%rho_core = M_ZERO
+
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
       if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
       if(st%nlcc) then
-        call epot_local_potential(ep, gr%der, gr%dgrid, psolver, geo, ia, ep%vpsl, time_, st%rho_core)
+        call epot_local_potential(ep, gr%der, gr%dgrid, psolver, geo, ia, ep%vpsl, time_, &
+          rho_core = st%rho_core, density = density)
       else
-        call epot_local_potential(ep, gr%der, gr%dgrid, psolver, geo, ia, ep%vpsl, time_)
+        call epot_local_potential(ep, gr%der, gr%dgrid, psolver, geo, ia, ep%vpsl, time_, density = density)
       end if
     end do
+
+
+    ! reduce over atoms if required
 #ifdef HAVE_MPI
     call profiling_in(epot_reduce, "EPOT_REDUCE")
     if(geo%atoms_dist%parallel) then
-      SAFE_ALLOCATE(vpsltmp(1:gr%mesh%np))
-      call MPI_Allreduce(ep%vpsl(1), vpsltmp(1), gr%mesh%np, MPI_FLOAT, MPI_SUM, &
-        geo%atoms_dist%mpi_grp%comm, mpi_err)
-      call lalg_copy(gr%mesh%np, vpsltmp, ep%vpsl)
+
+      SAFE_ALLOCATE(tmp(1:gr%mesh%np))
+      call MPI_Allreduce(ep%vpsl(1), tmp(1), gr%mesh%np, MPI_FLOAT, MPI_SUM, geo%atoms_dist%mpi_grp%comm, mpi_err)
+      call lalg_copy(gr%mesh%np, tmp, ep%vpsl)
+
       if(associated(st%rho_core)) then
-        call MPI_Allreduce(st%rho_core(1), vpsltmp(1), gr%mesh%np, MPI_FLOAT, MPI_SUM, &
-          geo%atoms_dist%mpi_grp%comm, mpi_err)
-        call lalg_copy(gr%mesh%np, vpsltmp, st%rho_core)
+        call MPI_Allreduce(st%rho_core(1), tmp(1), gr%mesh%np, MPI_FLOAT, MPI_SUM, geo%atoms_dist%mpi_grp%comm, mpi_err)
+        call lalg_copy(gr%mesh%np, tmp, st%rho_core)
       end if
-      SAFE_DEALLOCATE_A(vpsltmp)
+
+      if(have_density) then
+        call MPI_Allreduce(density(1), tmp(1), gr%mesh%np, MPI_FLOAT, MPI_SUM, geo%atoms_dist%mpi_grp%comm, mpi_err)
+        call lalg_copy(gr%mesh%np, tmp, density)
+      end if
+
+      SAFE_DEALLOCATE_A(tmp)
+
     end if
     call profiling_out(epot_reduce)
 #endif
+
+    if(have_density) then
+
+      ! now we solve the poisson equation with the density of all nodes
+      SAFE_ALLOCATE(tmp(1:gr%mesh%np_part))
+
+      if(poisson_solver_is_iterative(psolver)) tmp(1:mesh%np) = M_ZERO
+
+      call dpoisson_solve(psolver, tmp, density)
+
+      forall(ip = 1:mesh%np) ep%vpsl(ip) = ep%vpsl(ip) + tmp(ip)
+
+      SAFE_DEALLOCATE_A(tmp)
+      SAFE_DEALLOCATE_A(density)
+    end if
 
     ! we assume that we need to recalculate the ion-ion energy
     call ion_interaction_calculate(geo, sb, gr, ep, ep%eii, ep%fii)
@@ -563,9 +598,22 @@ contains
     call profiling_out(epot_generate_prof)
   end subroutine epot_generate
 
+  ! ---------------------------------------------------------
+
+  logical elemental function local_potential_has_density(ep, poisson_solver, atom) result(has_density)
+    type(epot_t),             intent(in)    :: ep
+    type(poisson_t),          intent(in)    :: poisson_solver    
+    type(atom_t),             intent(in)    :: atom
+    
+    
+    has_density = &
+      species_has_density(atom%spec) .or. (species_is_ps(atom%spec) .and. .not. poisson_solver_has_free_bc(poisson_solver))
+
+  end function local_potential_has_density
+  
 
   ! ---------------------------------------------------------
-  subroutine epot_local_potential(ep, der, dgrid, poisson_solver, geo, iatom, vpsl, time, rho_core)
+  subroutine epot_local_potential(ep, der, dgrid, poisson_solver, geo, iatom, vpsl, time, rho_core, density)
     type(epot_t),             intent(in)    :: ep
     type(derivatives_t),      intent(in)    :: der
     type(double_grid_t),      intent(in)    :: dgrid
@@ -575,10 +623,11 @@ contains
     FLOAT,                    intent(inout) :: vpsl(:)
     FLOAT,                    intent(in)    :: time
     FLOAT,          optional, pointer       :: rho_core(:)
+    FLOAT,          optional, intent(inout) :: density(:) !< If present, the ionic density will be added here.
 
     integer :: ip
     FLOAT :: xx(MAX_DIM), radius
-    FLOAT, allocatable  :: rho(:), vl(:)
+    FLOAT, allocatable :: vl(:), rho(:)
     type(submesh_t)  :: sphere
     type(profile_t), save :: prof
     integer :: counter, conversion(3), nx_half, ny_half, nz_half,k!ROA
@@ -593,29 +642,32 @@ contains
 
     else
 
-      SAFE_ALLOCATE(vl(1:der%mesh%np))
-
       !Local potential, we can get it by solving the Poisson equation
       !(for all-electron species or pseudopotentials in periodic
       !systems) or by applying it directly to the grid
 
-      if(species_has_density(geo%atom(iatom)%spec) .or. &
-        (species_is_ps(geo%atom(iatom)%spec) .and. .not. poisson_solver_has_free_bc(poisson_solver))) then
-
+      if(local_potential_has_density(ep, poisson_solver, geo%atom(iatom))) then
         SAFE_ALLOCATE(rho(1:der%mesh%np))
 
-        !this has to be optimized so the Poisson solution is made once
-        !for all species, perhaps even include it in the Hartree term
         call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, der%mesh, geo, rho)
 
-        if(poisson_solver_is_iterative(poisson_solver)) then
-          ! vl has to be initialized before entering routine
-          ! and our best guess for the potential is zero
-          vl(1:der%mesh%np) = M_ZERO
+        if(present(density)) then
+          forall(ip = 1:der%mesh%np) density(ip) = density(ip) + rho(ip)
+        else
+
+          SAFE_ALLOCATE(vl(1:der%mesh%np))
+          
+          if(poisson_solver_is_iterative(poisson_solver)) then
+            ! vl has to be initialized before entering routine
+            ! and our best guess for the potential is zero
+            vl(1:der%mesh%np) = M_ZERO
+          end if
+
+          call dpoisson_solve(poisson_solver, vl, rho, all_nodes = .false.)
+          
         end if
 
         count_atoms=iatom
-        call dpoisson_solve(poisson_solver, vl, rho)
 
         if (poisson_get_solver(poisson_solver) == POISSON_SETE) then  !SEC
           write(68,*) "Calling rhonuc iatom", iatom
@@ -643,13 +695,15 @@ contains
 
       else
 
-        !Local potential
+        SAFE_ALLOCATE(vl(1:der%mesh%np))
+
         call species_get_local(geo%atom(iatom)%spec, der%mesh, geo%atom(iatom)%x(1:der%mesh%sb%dim), vl, time)
       end if
 
-      forall(ip = 1:der%mesh%np) vpsl(ip) = vpsl(ip) + vl(ip)
-
-      SAFE_DEALLOCATE_A(vl)
+      if(allocated(vl)) then
+        forall(ip = 1:der%mesh%np) vpsl(ip) = vpsl(ip) + vl(ip)
+        SAFE_DEALLOCATE_A(vl)
+      end if
 
       !the localized part
       if(species_is_ps(geo%atom(iatom)%spec)) then
