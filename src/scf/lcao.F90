@@ -97,8 +97,9 @@ module lcao_m
     integer             :: myroc(1:2)
     integer             :: desc(1:BLACS_DLEN)
     logical, pointer    :: calc_atom(:)
+    FLOAT               :: diag_tol
   end type lcao_t
-
+  
 contains
 
   ! ---------------------------------------------------------
@@ -125,30 +126,10 @@ contains
     !%Section SCF
     !%Description
     !% If this variable is set, the LCAO procedure will use an
-    !% alternative (and experimental) implementation.
+    !% alternative (and experimental) implementation. It is faster for
+    !% large systems and parallel in states.
     !%End
     call parse_logical(datasets_check('LCAOAlternative'), .false., this%alternative)
-
-    if(this%alternative) then
-      message(1) = "Info: Using LCAO alternative implementation."
-      call write_info(1)
-
-      call messages_experimental('LCAO alternative implementation')
-
-      !%Variable LCAOExtraOrbitals
-      !%Type logical
-      !%Default false
-      !%Section SCF
-      !%Description
-      !% (experimental) If this variable is set to yes, the LCAO
-      !% procedure will add an extra set of numerical orbitals (by
-      !% using the derivative of the radial part) of the original
-      !% orbitals.
-      !%End
-      call parse_logical(datasets_check('LCAOExtraOrbitals'), .false., this%derivative)
-
-      if(this%derivative) call messages_experimental('LCAO extra orbitals')
-    end if
 
     if(.not. this%alternative) then
 
@@ -275,6 +256,34 @@ contains
       integer :: ibasis, jbasis, ilbasis, jlbasis, proc(1:2)
 
       PUSH_SUB(lcao_init.lcao2_init)
+
+      message(1) = "Info: Using LCAO alternative implementation."
+      call write_info(1)
+
+      call messages_experimental('LCAO alternative implementation')
+
+      !%Variable LCAOExtraOrbitals
+      !%Type logical
+      !%Default false
+      !%Section SCF
+      !%Description
+      !% (experimental) If this variable is set to yes, the LCAO
+      !% procedure will add an extra set of numerical orbitals (by
+      !% using the derivative of the radial part of the original
+      !% orbitals).
+      !%End
+      call parse_logical(datasets_check('LCAOExtraOrbitals'), .false., this%derivative)
+
+      if(this%derivative) call messages_experimental('LCAO extra orbitals')
+
+      !%Variable LCAODiagTol
+      !%Type float
+      !%Default 1e-10
+      !%Section SCF
+      !%Description
+      !% The tolerance for the diagonalization of the LCAO Hamiltonian. The default is 1e-10.
+      !%End
+      call parse_float(datasets_check('LCAODiagTol'), CNST(1e-10), this%diag_tol)
 
       if(this%derivative) then
         this%mult = 2

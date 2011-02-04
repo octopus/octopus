@@ -615,7 +615,6 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 contains
 
   subroutine diagonalization()
-    
     integer              :: neval_found, info, lwork
     FLOAT                :: tmp
     R_TYPE,  allocatable :: work(:)
@@ -627,10 +626,13 @@ contains
     integer, allocatable :: iclustr(:)
     integer, allocatable :: send_count(:), send_disp(:), recv_count(:), recv_disp(:), recv_pos(:, :, :)
     R_TYPE,  allocatable :: send_buffer(:, :), recv_buffer(:, :)
+    FLOAT                :: orfac
 #endif
+    type(profile_t), save :: prof
 
     SAFE_ALLOCATE(ifail(1:this%nbasis))
-    
+
+    call profiling_in(prof, "LCAO_DIAG")
 
 #ifdef R_TREAL
 
@@ -639,11 +641,15 @@ contains
       SAFE_ALLOCATE(iclustr(1:2*st%dom_st_proc_grid%nprocs))
       SAFE_ALLOCATE(gap(1:st%dom_st_proc_grid%nprocs))
 
+      ! This means that we do not want reorthogonalization of close
+      ! eigenvectors
+      orfac = M_ZERO
+
       call scalapack_sygvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
         n = this%nbasis, a = lhamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
         b = loverlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
-        vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = CNST(1e-15), &
-        m = neval_found, nz = nevec_found, w = eval(1), orfac = -M_ONE, &
+        vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
+        m = neval_found, nz = nevec_found, w = eval(1), orfac = orfac, &
         z = levec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
         work = tmp, lwork = -1, iwork = liwork, liwork = -1, &
         ifail = ifail(1), iclustr = iclustr(1), gap = gap(1), info = info)
@@ -658,13 +664,16 @@ contains
       call scalapack_sygvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
         n = this%nbasis, a = lhamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
         b = loverlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
-        vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = CNST(1e-15), &
-        m = neval_found, nz = nevec_found, w = eval(1), orfac = -M_ONE, &
+        vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
+        m = neval_found, nz = nevec_found, w = eval(1), orfac = orfac, &
         z = levec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
         work = work(1), lwork = lwork, iwork = iwork(1), liwork = liwork, &
         ifail = ifail(1), iclustr = iclustr(1), gap = gap(1), info = info)
 
-      ASSERT(info == 0)
+      if(info /= 0) then
+        write(message(1), '(a,i4,a)') 'LCAO parallel diagonalization failed. Scalapack returned info code ', info, '.'
+        call write_warning(1)
+      end if
 
       ! Now we have to rearrange the data between processors. We have
       ! the data in levec, distributed according to scalapack and we
@@ -776,7 +785,7 @@ contains
     
       call lapack_sygvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
         n = this%nbasis, a = hamiltonian(1, 1), lda = this%nbasis, b = overlap(1, 1), ldb = this%nbasis, &
-        vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = CNST(1e-15), &
+        vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
         m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%nbasis, &
         work = tmp, lwork = -1, iwork = iwork(1), ifail = ifail(1), info = info)
 
@@ -788,10 +797,15 @@ contains
       
       call lapack_sygvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
         n = this%nbasis, a = hamiltonian(1, 1), lda = this%nbasis, b = overlap(1, 1), ldb = this%nbasis, &
-        vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = CNST(1e-15), &
+        vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
         m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%nbasis, &
         work = work(1), lwork = lwork, iwork = iwork(1), ifail = ifail(1), info = info)
-      
+
+      if(info /= 0) then
+        write(message(1), '(a,i4,a)') 'LCAO diagonalization failed. Lapack returned info code ', info, '.'
+        call write_warning(1)
+      end if
+
     end if
     
 #else
@@ -801,6 +815,8 @@ contains
     SAFE_DEALLOCATE_A(iwork)
     SAFE_DEALLOCATE_A(work)
     SAFE_DEALLOCATE_A(ifail)
+
+    call profiling_out(prof)
 
   end subroutine diagonalization
 
