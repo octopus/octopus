@@ -122,7 +122,6 @@ subroutine poisson_fmm_solve(this, pot, rho)
   real(8), dimension(:),   allocatable :: q  
   real(8), dimension(:),   allocatable :: potLibFMM
   real(8), dimension(:,:), allocatable :: xyz  
-  real(8), dimension(:,:), allocatable :: grad  !< We don't use it, but we cannot remove grad by the moment
   real(8) :: deltaE 
   real(8) :: energyfmm   !< We don't use it, but we cannot remove energyfmm by the moment
   real(8) :: periodlength
@@ -133,7 +132,7 @@ subroutine poisson_fmm_solve(this, pot, rho)
   PUSH_SUB(poisson_fmm_solve)
 
   call profiling_in(poisson_prof, "POISSON_FMM")
-  
+
   this%fmm_params%periodic = this%der%mesh%sb%periodic_dim
 
   if(this%fmm_params%periodic /= 0) then
@@ -154,7 +153,6 @@ subroutine poisson_fmm_solve(this, pot, rho)
   SAFE_ALLOCATE(q(localcharges))
   SAFE_ALLOCATE(xyz(1:3,localcharges))
   SAFE_ALLOCATE(potLibFMM(localcharges)) 
-  SAFE_ALLOCATE(grad(1:3,localcharges))  
 
   totalcharges = this%der%mesh%np_global 
   
@@ -172,8 +170,8 @@ subroutine poisson_fmm_solve(this, pot, rho)
     end do
   end do
   
-  absrel = 2 
-  deltaE = 0.00001
+  absrel = this%fmm_params%abs_rel_fmm
+  deltaE = this%fmm_params%delta_E_fmm
   potLibFMM = M_ZERO 
   periodic = this%fmm_params%periodic
   periodicaxes = 1 
@@ -181,8 +179,8 @@ subroutine poisson_fmm_solve(this, pot, rho)
   dipolecorrection = this%fmm_params%dipole_correction
   
   call fmm(totalcharges,localcharges,q,xyz,absrel,deltaE,energyfmm,potLibFMM,&
-    grad,periodic,periodicaxes,periodlength,dipolecorrection)
-  
+    periodic,periodicaxes,periodlength,dipolecorrection)
+
   pot = potLibFMM
   potLibFMM=M_ZERO
   ! FMM just calculates contributions from other cells. for self-interaction cell integration, we include 
@@ -196,7 +194,6 @@ subroutine poisson_fmm_solve(this, pot, rho)
   SAFE_DEALLOCATE_A(q)
   SAFE_DEALLOCATE_A(xyz)
   SAFE_DEALLOCATE_A(potLibFMM)
-  SAFE_DEALLOCATE_A(grad)
 
   call profiling_out(poisson_prof)
   
