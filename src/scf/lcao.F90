@@ -81,6 +81,7 @@ module lcao_m
     logical           :: derivative
     
     ! For the alternative LCAO
+    logical             :: keep_orb     !< Whether we keep orbitals in memory.
     FLOAT,   pointer    :: radius(:)    !< The localization radius of each atom orbitals
     FLOAT               :: lapdist      !< This is the extra distance that the Laplacian adds to the localization radius.
     integer             :: mult         !< The number of basis per atomic function (with derivatives is 2, 1 otherwise).
@@ -100,6 +101,8 @@ module lcao_m
     FLOAT               :: diag_tol
   end type lcao_t
   
+  type(profile_t), save :: prof_orbitals
+
 contains
 
   ! ---------------------------------------------------------
@@ -123,7 +126,7 @@ contains
     !%Variable LCAOAlternative
     !%Type logical
     !%Default false
-    !%Section SCF
+    !%Section SCF::LCAO
     !%Description
     !% If this variable is set, the LCAO procedure will use an
     !% alternative (and experimental) implementation. It is faster for
@@ -204,7 +207,7 @@ contains
       !%Variable LCAODimension
       !%Type integer
       !%Default 0
-      !%Section SCF
+      !%Section SCF::LCAO
       !%Description
       !% Before starting the SCF cycle, an initial LCAO calculation can be performed
       !% in order to obtain reasonable initial guesses for spin-orbitals and densities.
@@ -262,10 +265,26 @@ contains
 
       call messages_experimental('LCAO alternative implementation')
 
+      !%Variable LCAOKeepOrbitals
+      !%Type logical
+      !%Default false
+      !%Section SCF::LCAO
+      !%Description
+      !% If set to yes (the default) Octopus keeps atomic Orbitals in
+      !% memory during the LCAO procedure. If set to no, the orbitals
+      !% are generated each time that they are needed, increasing
+      !% computational time but saving memory.
+      !%
+      !% When set to yes, Octopus prints the amount of memory per node
+      !% that is required to store the orbitals.
+      !%
+      !%End
+      call parse_logical(datasets_check('LCAOKeepOrbitals'), .true., this%keep_orb)
+
       !%Variable LCAOExtraOrbitals
       !%Type logical
       !%Default false
-      !%Section SCF
+      !%Section SCF::LCAO
       !%Description
       !% (experimental) If this variable is set to yes, the LCAO
       !% procedure will add an extra set of numerical orbitals (by
@@ -279,7 +298,7 @@ contains
       !%Variable LCAODiagTol
       !%Type float
       !%Default 1e-10
-      !%Section SCF
+      !%Section SCF::LCAO
       !%Description
       !% The tolerance for the diagonalization of the LCAO Hamiltonian. The default is 1e-10.
       !%End
@@ -626,6 +645,63 @@ contains
 
   end subroutine lcao_local_index
 #endif
+
+  ! --------------------------------------------------------- 
+  
+  !> This function generates the set of an atomic orbitals for an atom
+  !! and stores it in the batch orbitalb. It can be called when the
+  !! orbitals are already store. In that case it does not do anything.
+  subroutine lcao_get_orbital(orbitalb, sphere, st, geo, ispin, iatom, norbs)
+    type(batch_t),     intent(inout) :: orbitalb
+    type(submesh_t),   intent(in)    :: sphere
+    type(states_t),    intent(in)    :: st
+    type(geometry_t),  intent(in)    :: geo
+    integer,           intent(in)    :: ispin
+    integer,           intent(in)    :: iatom
+    integer,           intent(in)    :: norbs
+
+    integer :: iorb
+
+    if(.not. batch_is_ok(orbitalb)) then
+
+      call profiling_in(prof_orbitals, "LCAO_ORBITALS")
+
+      ! allocate memory
+      call dbatch_new(orbitalb, 1, norbs, sphere%ns)
+      
+      ! generate the orbitals
+      do iorb = 1, norbs
+        if(iorb > species_niwfs(geo%atom(iatom)%spec)) then
+          call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere, iorb - species_niwfs(geo%atom(iatom)%spec), &
+            st%d%dim, ispin, geo%atom(iatom)%x, orbitalb%states(iorb)%dpsi(:, 1), derivative = .true.)
+        else
+          call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere, iorb, &
+            st%d%dim, ispin, geo%atom(iatom)%x, orbitalb%states(iorb)%dpsi(:, 1))
+        end if
+      end do
+ 
+      call profiling_out(prof_orbitals)
+    end if
+
+  end subroutine lcao_get_orbital
+
+  ! ---------------------------------------------------------
+
+  !> This function deallocates a set of an atomic orbitals for an
+  !! atom. It can be called when the batch is empty, in that case it
+  !! does not do anything.
+  subroutine lcao_end_orbital(orbitalb)
+    type(batch_t),   intent(inout) :: orbitalb
+
+    integer :: iorb
+
+    if(batch_is_ok(orbitalb)) then
+      call dbatch_delete(orbitalb)
+    end if
+
+  end subroutine lcao_end_orbital
+
+  ! ---------------------------------------------------------
 
 #include "undef.F90"
 #include "real.F90"

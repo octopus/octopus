@@ -115,7 +115,19 @@ end subroutine X(batch_new)
 subroutine X(batch_delete)(this)
   type(batch_t),  intent(inout) :: this
 
+  integer :: ii
+
   PUSH_SUB(X(batch_delete))
+
+  do ii = 1, this%nst
+    nullify(this%states(ii)%X(psi))
+  end do
+
+  do ii = 1, this%nst_linear
+    nullify(this%states_linear(ii)%X(psi))
+  end do
+
+  this%current = 1
 
   SAFE_DEALLOCATE_P(this%X(psicont))
 
