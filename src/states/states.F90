@@ -1264,10 +1264,11 @@ return
       !%Description
       !% The full orthogonalization method used by some
       !% eigensolvers. The default is gram_schmidt. When state
-      !% parallelization the default is old_gram_schmidt.
+      !% parallelization the default is par_gram_schmidt.
       !%Option gram_schmidt 1
       !% The standard Gram-Schmidt orthogonalization implemented using
-      !% Blas/Lapack.
+      !% Blas/Lapack. Can be used with domain parallelization but not
+      !% state parallelization.
       !%Option par_gram_schmidt 2
       !% The standard Gram-Schmidt orthogonalization implemented using
       !% Scalapack. Compatible with states parallelization.
@@ -1283,23 +1284,56 @@ return
       !%End
 
       if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
+#ifdef HAVE_SCALAPACK
+        default = ORTH_PAR_GS
+#else        
         default = ORTH_OLDGS
+#endif
       else
         default = ORTH_GS
       end if
       
       call parse_integer(datasets_check('StatesOrthogonalization'), default, st%d%orth_method)
+
+      if(.not.varinfo_valid_option('StatesOrthogonalization', st%d%orth_method)) call input_error('StatesOrthogonalization')
+      call messages_print_var_option(stdout, 'StatesOrthogonalization', st%d%orth_method)
+
+
       if(st%d%orth_method == ORTH_QR) call messages_experimental("QR Orthogonalization")
 
+#ifdef HAVE_MPI
       if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
         select case(st%d%orth_method)
-        case(ORTH_QR, ORTH_OLDGS, ORTH_PAR_GS)
+        case(ORTH_OLDGS, ORTH_PAR_GS)
+        case(ORTH_QR)
+#ifndef HAVE_SCALAPACK
+          message(1) = 'The QR orthogonalizer requires scalapack to work with state-parallelization.'
+          call write_fatal(1)
+#endif
         case default
           message(1) = 'The selected orthogonalization method cannot work with state-parallelization.'
           call write_fatal(1)
         end select
       end if
-      
+#endif
+
+      ! some checks for ingenious users
+      if(st%d%orth_method == ORTH_PAR_GS) then
+#ifndef HAVE_MPI
+        message(1) = 'The parallel gram schmidt orthogonalizer can only be used in parallel.'
+        call write_fatal(1)
+#else
+#ifndef HAVE_SCALAPACK
+        message(1) = 'The parallel gram schmidt orthogonalizer requires scalapack.'
+        call write_fatal(1)
+#endif
+        if(st%dom_st_mpi_grp%size == 1) then
+          message(1) = 'The parallel gram schmidt orthogonalizer is designed to be used with domain or state parallelization.'
+          call write_warning(1)
+        end if
+#endif
+      end if
+
       POP_SUB(states_densities_init.states_exec_init)
     end subroutine states_exec_init
   end subroutine states_densities_init

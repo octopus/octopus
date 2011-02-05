@@ -38,7 +38,3 @@ EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 25
 
 ConvRelDens = 5.0e-3
-
-StatesOrthogonalization = qr
-
-ExperimentalFeatures = yes

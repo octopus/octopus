@@ -82,17 +82,19 @@ contains
     !%Variable SubspaceDiagonalization
     !%Type integer
     !%Default standard
-    !%Section States
+    !%Section SCF::Eigensolver
     !%Description
     !% Selects the method to perform subspace diagonalization. The
     !% default is <tt>standard</tt>, unless states parallelization is used,
-    !% when the default is <tt>old</tt>.
+    !% when the default is <tt>scalapack</tt>.
     !%Option standard 1
-    !% The standard routine.
+    !% The standard routine. Can be used with domain parallelization but not
+    !% state parallelization.
     !%Option old 2
     !% Old routine, compatible with states parallelization.
     !%Option scalapack 3
-    !% State-parallelized version using scalapack.
+    !% State-parallelized version using scalapack. (Requires that
+    !% Octopus was compiled with scalpack support.)
     !%End
 
     default = SD_STANDARD
