@@ -16,6 +16,8 @@ ConvRelDens = 1e-4
 
 ExtraStates = 20
 
+StatesBlocksize = 32
+
 %Coordinates
 'C'| 5.465626 | -3.656647 | -1.274761
 'C'| 4.158301 | -5.219964 | 0.564975
@@ -78,3 +80,10 @@ ExtraStates = 20
 'C'| -2.963792| -4.78832  | 3.625482
 'C'| -6.291688| -0.839777 | 2.141966
 %
+
+ParallelizationStrategy = par_states + par_domains
+
+%ParallelizationGroupRanks
+ 2 | 2
+%
+

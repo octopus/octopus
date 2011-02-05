@@ -212,10 +212,11 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
 #ifdef HAVE_SCALAPACK
   R_TYPE, allocatable  :: hs(:, :), hpsi(:, :, :), evectors(:, :), work(:)
   R_TYPE               :: rttmp
-  integer              :: tmp, ist, lwork
+  integer              :: tmp, ist, lwork, size
   FLOAT                :: ldiff(st%lnst)
   integer :: psi_block(1:2), total_np, psi_desc(BLACS_DLEN), hs_desc(BLACS_DLEN), info
   integer :: nbl, nrow, ncol
+  type(batch_t) :: psib, hpsib
 #ifdef R_TCOMPLEX
   integer :: lrwork
   CMPLX, allocatable :: rwork(:)
@@ -243,9 +244,17 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
 
   call descinit(hs_desc(1), st%nst, st%nst, nbl, nbl, 0, 0, st%dom_st_proc_grid%context, nrow, info)
 
-  ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
-  do ist = st%st_start, st%st_end
-    call X(hamiltonian_apply)(hm, der, psi(:, :, ist), hpsi(:, :, ist), ist, ik)
+  ! calculate |hpsi> = H |psi>
+  do ist = st%st_start, st%st_end, st%d%block_size
+    size = min(st%d%block_size, st%st_end - ist + 1)
+    
+    call batch_init(psib, hm%d%dim, ist, ist + size - 1, psi(:, :, ist:))
+    call batch_init(hpsib, hm%d%dim, ist, ist + size - 1, hpsi(: , :, ist:))
+    
+    call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik)
+    
+    call batch_end(psib)
+    call batch_end(hpsib)
   end do
 
   ! We need to set to zero some extra parts of the array
@@ -257,6 +266,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
     hpsi(der%mesh%np + 1:der%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end) = M_ZERO
   end if
   
+  ! get the matrix <psi|H|psi> = <psi|hpsi>
   call pblas_gemm('c', 'n', st%nst, st%nst, total_np, &
     R_TOTYPE(der%mesh%vol_pp(1)), psi(1, 1, st%st_start), 1, 1, psi_desc(1), &
     hpsi(1, 1, st%st_start), 1, 1, psi_desc(1), &
@@ -264,6 +274,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
 
   SAFE_ALLOCATE(evectors(1:nrow, 1:ncol))
 
+  ! now diagonalize
 #ifdef R_TCOMPLEX
 
   call pzheev(jobz = 'V', uplo = 'U', n = st%nst, a = hs(1, 1) , ia = 1, ja = 1, desca = hs_desc(1), &
