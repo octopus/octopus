@@ -137,18 +137,13 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
 
   integer :: ip, idim, ist, ik, ix, iy, iz, ix3(MAX_DIM), ixx(MAX_DIM)
   CMPLX, allocatable :: wf1(:,:,:), wf2(:,:,:)
-  FLOAT :: temp(MAX_DIM), vec,vec_pot(MAX_DIM),aa(1:mesh%np_part,1:mesh%sb%dim)
-  FLOAT :: dd
-  integer :: il
+  FLOAT :: temp(MAX_DIM), vec
 
-
-  FLOAT :: dmin
-  integer :: rankmin,ip_local,size
+  integer :: ip_local,size
 
 #if defined(HAVE_MPI)
-  integer status(MPI_STATUS_SIZE)
-  integer:: iproc,dataSize
- 
+  integer :: status(MPI_STATUS_SIZE)
+  integer :: iproc,dataSize
 #endif
 
   PUSH_SUB(PES_mask_calc)
@@ -209,7 +204,7 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
            else
               do iproc= 1, mesh%mpi_grp%size-1
                  call mpi_recv(wf2,size,&
-                      MPI_CMPLX,iproc,666, mesh%mpi_grp%comm ,status, mpi_err)
+                      MPI_CMPLX,iproc,666, mesh%mpi_grp%comm, status, mpi_err)
                 ! add contribute for other nodes
                  wf1 = wf1 +wf2 
               end do
@@ -271,8 +266,6 @@ subroutine PES_mask_collect(mask, st,mesh)
  PUSH_SUB(PES_mask_collect)
 
 #ifdef HAVE_MPI
-
-
 
   SAFE_ALLOCATE(wf(1:mesh%idx%ll(1), 1:mesh%idx%ll(2), 1:mesh%idx%ll(3)))
   SAFE_ALLOCATE(wfr(1:mesh%idx%ll(1), 1:mesh%idx%ll(2), 1:mesh%idx%ll(3)))

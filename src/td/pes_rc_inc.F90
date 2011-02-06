@@ -26,15 +26,12 @@ subroutine PES_rc_init(pesrc, mesh, st, save_iter)
   integer,        intent(in)  :: save_iter
 
   type(block_t) :: blk
-  integer  :: ip,ik,ist,idim,iunit
+  integer  :: ip
   FLOAT :: xx(MAX_DIM)
 
   FLOAT :: dmin                                                                                                   
   integer :: rankmin
   
-  type(unit_t) :: units
-
-
   PUSH_SUB(PES_rc_init)
 
   message(1) = 'Info: Calculating PES using rc technique.'
@@ -156,10 +153,6 @@ subroutine PES_rc_calc(pesrc, st,mesh, ii)
     end do
   end do
 
-
-
-
-
   POP_SUB(PES_rc_calc)
 end subroutine PES_rc_calc
 
@@ -177,8 +170,6 @@ subroutine PES_rc_output(pesrc, st, iter, save_iter, dt)
   CMPLX :: vfu
 
   PUSH_SUB(PES_rc_output)
-
-
 
   do ip = 1, pesrc%npoints
     iunit = io_open('td.general/'//pesrc%filenames(ip), action='write', position='append')
@@ -201,8 +192,6 @@ subroutine PES_rc_output(pesrc, st, iter, save_iter, dt)
     call io_close(iunit)
   end do
 
-
-
   POP_SUB(PES_rc_output)
 end subroutine PES_rc_output
 
@@ -212,7 +201,6 @@ subroutine PES_rc_init_write(pesrc, mesh, st)
   type(mesh_t),   intent(in)  :: mesh
   type(states_t), intent(in)  :: st
 
-  type(unit_t) :: units
   integer  :: ip,ik,ist,idim,iunit
 
   FLOAT :: xx(MAX_DIM)

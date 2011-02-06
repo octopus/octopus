@@ -148,7 +148,7 @@ contains
     FLOAT,          intent(in)  :: E_field(:) ! mesh%sb%dim
     FLOAT,          intent(out) :: pot(:,:)   ! mesh%np, st%d%nspin
 
-    integer :: ispin, ip, idir
+    integer :: ispin, idir
     CMPLX :: factor, det
 
     PUSH_SUB(berry_potential)

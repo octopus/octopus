@@ -782,7 +782,7 @@ contains
   ! ---------------------------------------------------------
   subroutine hamiltonian_set_inh(hm, st)
     type(hamiltonian_t), intent(inout) :: hm
-    type(states_t), target, intent(in) :: st
+    type(states_t),      intent(in)    :: st
 
     PUSH_SUB(hamiltonian_set_inh)
 
@@ -823,7 +823,7 @@ contains
   ! ---------------------------------------------------------
   subroutine hamiltonian_set_oct_exchange(hm, st, gr, xc)
     type(hamiltonian_t), intent(inout) :: hm
-    type(states_t),      target        :: st
+    type(states_t), target, intent(in) :: st
     type(grid_t),        intent(in)    :: gr
     type(xc_t),          intent(in)    :: xc
 
@@ -1029,7 +1029,7 @@ contains
   ! ---------------------------------------------------------
   subroutine hamiltonian_epot_generate(this, gr, geo, st, time)
     type(hamiltonian_t),   intent(inout) :: this
-    type(grid_t), target,  intent(inout) :: gr
+    type(grid_t),          intent(inout) :: gr
     type(geometry_t),      intent(inout) :: geo
     type(states_t),        intent(inout) :: st
     FLOAT,       optional, intent(in)    :: time

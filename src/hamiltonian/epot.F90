@@ -631,11 +631,11 @@ contains
     FLOAT,          optional, intent(inout) :: density(:) !< If present, the ionic density will be added here.
 
     integer :: ip
-    FLOAT :: xx(MAX_DIM), radius
+    FLOAT :: radius
     FLOAT, allocatable :: vl(:), rho(:)
     type(submesh_t)  :: sphere
     type(profile_t), save :: prof
-    integer :: counter, conversion(3), nx_half, ny_half, nz_half,k!ROA
+    integer :: counter, conversion(3), nx_half, ny_half, nz_half !ROA
     integer :: nx, ny, nz !ROA
 
     PUSH_SUB(epot_local_potential)
@@ -822,7 +822,7 @@ contains
     type(geometry_t),  target, intent(in)    :: geo
     type(simul_box_t),         intent(in)    :: sb
     type(epot_t),              intent(inout) :: ep
-    type(grid_t), target,      intent(in)    :: gr
+    type(grid_t),              intent(in)    :: gr
     FLOAT,                     intent(out)   :: energy
     FLOAT,                     intent(out)   :: force(:, :) ! sb%dim, geo%natoms
 
@@ -1022,10 +1022,10 @@ contains
 
   ! ------------------------------------------------------------
   subroutine ion_interaction_sete(gr, sb, geo, ep)
-    type(grid_t), target,  intent(in)    :: gr
-    type(simul_box_t),     intent(in)    :: sb
-    type(geometry_t),      intent(in)    :: geo
-    type(epot_t),          intent(inout) :: ep
+    type(grid_t),      intent(in)    :: gr
+    type(simul_box_t), intent(in)    :: sb
+    type(geometry_t),  intent(in)    :: geo
+    type(epot_t),      intent(inout) :: ep
   
     integer                              :: iatom, jatom
     FLOAT, allocatable                   :: rho1(:), v2(:), rho2(:)

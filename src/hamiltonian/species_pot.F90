@@ -669,11 +669,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine species_get_nlcc(spec, pos, mesh, geo, rho_core)
-    type(species_t),            intent(in)  :: spec
-    FLOAT,                      intent(in)  :: pos(MAX_DIM)
-    type(mesh_t),       target, intent(in)  :: mesh
-    type(geometry_t),           intent(in)  :: geo
-    FLOAT,                      intent(out) :: rho_core(:)
+    type(species_t),  intent(in)  :: spec
+    FLOAT,            intent(in)  :: pos(MAX_DIM)
+    type(mesh_t),     intent(in)  :: mesh
+    type(geometry_t), intent(in)  :: geo
+    FLOAT,            intent(out) :: rho_core(:)
 
     integer :: icell
     type(periodic_copy_t) :: pp

@@ -284,7 +284,7 @@ contains
     type(states_t),       intent(inout) :: st
     type(gauge_force_t),  intent(out)   :: force
 
-    integer :: ik, ist, idir, idim, iatom, ip
+    integer :: ik, ist, idir, idim, iatom
     CMPLX, allocatable :: gpsi(:, :, :), epsi(:, :)
     type(profile_t), save :: prof
 #ifdef HAVE_MPI

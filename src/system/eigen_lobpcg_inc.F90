@@ -36,13 +36,14 @@
     type(preconditioner_t), intent(in)    :: pre
     FLOAT,                  intent(in)    :: tol
     integer,                intent(inout) :: niter
+    integer,                intent(in)    :: ik
     integer,                intent(inout) :: converged
     FLOAT,                  intent(out)   :: diff(1:st%nst)
     integer,                intent(in)    :: block_size
     logical, optional,      intent(in)    :: verbose
 
     logical            :: verbose_
-    integer            :: ib, ik, psi_start, psi_end, constr_start, constr_end, bs
+    integer            :: ib, psi_start, psi_end, constr_start, constr_end, bs
     integer            :: n_matvec, conv, maxiter, iblock
 #ifdef HAVE_MPI
     integer            :: outcount
