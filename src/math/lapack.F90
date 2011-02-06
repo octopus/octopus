@@ -238,7 +238,7 @@ module lapack_m
     end subroutine dsygvx
   end interface lapack_sygvx
 
-  interface lapack_hegv
+  interface lapack_hegvx
     subroutine zhegvx(itype, jobz, range, uplo, n, a, lda, b, ldb, vl, vu, il, iu, abstol, &
       m, w, z, ldz, work, lwork, rwork, iwork, ifail, info)
       implicit none
@@ -263,12 +263,12 @@ module lapack_m
       integer,             intent(in)    :: ldz
       complex(8),          intent(out)   :: work
       integer,             intent(in)    :: lwork
-      real(8),             intent(out)   :: rwork
-      integer,             intent(out)   :: iwork
-      integer,             intent(out)   :: ifail
+      complex(8),          intent(out)   :: rwork ! rwork(1:7*n)
+      integer,             intent(out)   :: iwork ! iwork(1:5*n)
+      integer,             intent(out)   :: ifail ! ifail(1:n)
       integer,             intent(out)   :: info
     end subroutine zhegvx
-  end interface lapack_hegv
+  end interface lapack_hegvx
 
 end module lapack_m
 

@@ -260,6 +260,54 @@ module scalapack_m
     end subroutine pdsygvx
   end interface scalapack_sygvx
   
+  ! -------------------------------------------------------------
+ 
+  interface scalapack_hegvx
+    subroutine pzhegvx(ibtype, jobz, range, uplo, n, a, ia, ja,       &
+      desca, b, ib, jb, descb, vl, vu, il, iu, abstol, m, nz, w, orfac, z, iz, jz, descz,  &
+      work, lwork, rwork, lrwork, iwork, liwork, ifail, iclustr, gap, info)
+      implicit none
+
+      integer,             intent(in)    :: ibtype
+      character,           intent(in)    :: jobz
+      character,           intent(in)    :: range
+      character,           intent(in)    :: uplo
+      integer,             intent(in)    :: n
+      complex(8),          intent(inout) :: a
+      integer,             intent(in)    :: ia
+      integer,             intent(in)    :: ja
+      integer,             intent(in)    :: desca
+      complex(8),          intent(inout) :: b
+      integer,             intent(in)    :: ib
+      integer,             intent(in)    :: jb
+      integer,             intent(in)    :: descb
+      real(8),             intent(in)    :: vl
+      real(8),             intent(in)    :: vu
+      integer,             intent(in)    :: il
+      integer,             intent(in)    :: iu
+      real(8),             intent(in)    :: abstol
+      integer,             intent(out)   :: m
+      integer,             intent(out)   :: nz
+      real(8),             intent(in)    :: w
+      real(8),             intent(in)    :: orfac
+      complex(8),          intent(inout) :: z
+      integer,             intent(in)    :: iz
+      integer,             intent(in)    :: jz
+      integer,             intent(in)    :: descz
+      complex(8),          intent(out)   :: work
+      integer,             intent(in)    :: lwork
+      complex(8),          intent(out)   :: rwork
+      integer,             intent(in)    :: lrwork
+      integer,             intent(out)   :: iwork
+      integer,             intent(in)    :: liwork
+      integer,             intent(out)   :: ifail
+      integer,             intent(out)   :: iclustr
+      real(8),             intent(out)   :: gap
+      integer,             intent(out)   :: info
+    end subroutine pzhegvx
+  end interface scalapack_hegvx
+
+  ! -------------------------------------------------------------
 
   interface scalapack_potrf
     subroutine pdpotrf(uplo, n, a, ia, ja, desca, info)

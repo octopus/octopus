@@ -254,10 +254,12 @@ contains
 
   contains
     subroutine lcao2_init()
-      integer :: iatom, jatom, iorb, jorb, norbs, info, nbl
+      integer :: iatom, iorb, norbs
       FLOAT   :: maxradius
-      integer :: ibasis, jbasis, ilbasis, jlbasis, proc(1:2)
-
+      integer :: ibasis
+#ifdef HAVE_SCALAPACK
+      integer :: jatom, jorb, jbasis, ilbasis, jlbasis, proc(1:2), info, nbl
+#endif
       PUSH_SUB(lcao_init.lcao2_init)
 
       message(1) = "Info: Using LCAO alternative implementation."
@@ -696,8 +698,6 @@ contains
   !! does not do anything.
   subroutine lcao_end_orbital(orbitalb)
     type(batch_t),   intent(inout) :: orbitalb
-
-    integer :: iorb
 
     PUSH_SUB(lcao_end_orbital)
 

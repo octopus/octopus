@@ -361,6 +361,8 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
   PUSH_SUB(X(lcao_wf2))
 
+  ASSERT(start == 1)
+
   write(message(1), '(a,i6,a)') 'Info: Performing LCAO calculation with ', this%nbasis, ' orbitals.'
   write(message(2), '(a)') ' '
   call write_info(2)
@@ -611,9 +613,12 @@ contains
 
   subroutine diagonalization()
     integer              :: neval_found, info, lwork
-    FLOAT                :: tmp
+    R_TYPE               :: tmp
     R_TYPE,  allocatable :: work(:)
     integer, allocatable :: iwork(:), ifail(:)
+#ifdef R_TCOMPLEX
+    CMPLX,   allocatable :: rwork(:)
+#endif
 #ifdef HAVE_SCALAPACK
     integer              :: ilbasis, jlbasis, proc(1:2), dest(1:2)
     integer              :: nevec_found, liwork, ii, node
@@ -622,14 +627,16 @@ contains
     integer, allocatable :: send_count(:), send_disp(:), recv_count(:), recv_disp(:), recv_pos(:, :, :)
     R_TYPE,  allocatable :: send_buffer(:, :), recv_buffer(:, :)
     FLOAT                :: orfac
+#ifdef R_TCOMPLEX
+    CMPLX                :: rtmp
+    integer              :: lrwork
+#endif
 #endif
     type(profile_t), save :: prof
 
     SAFE_ALLOCATE(ifail(1:this%nbasis))
 
     call profiling_in(prof, "LCAO_DIAG")
-
-#ifdef R_TREAL
 
     if(this%parallel) then
 #ifdef HAVE_SCALAPACK            
@@ -640,6 +647,7 @@ contains
       ! eigenvectors
       orfac = M_ZERO
 
+#ifdef R_TREAL
       call scalapack_sygvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
         n = this%nbasis, a = lhamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
         b = loverlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
@@ -648,14 +656,25 @@ contains
         z = levec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
         work = tmp, lwork = -1, iwork = liwork, liwork = -1, &
         ifail = ifail(1), iclustr = iclustr(1), gap = gap(1), info = info)
+#else
+      call scalapack_hegvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
+        n = this%nbasis, a = lhamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
+        b = loverlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
+        vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
+        m = neval_found, nz = nevec_found, w = eval(1), orfac = orfac, &
+        z = levec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
+        work = tmp, lwork = -1, rwork = rtmp, lrwork = -1, iwork = liwork, liwork = -1, &
+        ifail = ifail(1), iclustr = iclustr(1), gap = gap(1), info = info)
+#endif
 
       ASSERT(info == 0)
 
-      lwork = nint(tmp)
+      lwork = nint(real(tmp, 8))
 
       SAFE_ALLOCATE(work(1:lwork))
       SAFE_ALLOCATE(iwork(1:liwork))
 
+#ifdef R_TREAL
       call scalapack_sygvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
         n = this%nbasis, a = lhamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
         b = loverlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
@@ -664,6 +683,19 @@ contains
         z = levec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
         work = work(1), lwork = lwork, iwork = iwork(1), liwork = liwork, &
         ifail = ifail(1), iclustr = iclustr(1), gap = gap(1), info = info)
+#else
+      lrwork = nint(real(rtmp, 8))
+      SAFE_ALLOCATE(rwork(1:lrwork))
+
+      call scalapack_hegvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
+        n = this%nbasis, a = lhamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
+        b = loverlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
+        vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
+        m = neval_found, nz = nevec_found, w = eval(1), orfac = orfac, &
+        z = levec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
+        work = work(1), lwork = lwork, rwork = rwork(1), lrwork = lrwork, iwork = iwork(1), liwork = liwork, &
+        ifail = ifail(1), iclustr = iclustr(1), gap = gap(1), info = info)
+#endif
 
       if(info /= 0) then
         write(message(1), '(a,i4,a)') 'LCAO parallel diagonalization failed. Scalapack returned info code ', info, '.'
@@ -773,40 +805,57 @@ contains
       SAFE_DEALLOCATE_A(recv_count)      
       SAFE_DEALLOCATE_A(recv_buffer)
 
-#endif
+#endif /* HAVE_SCALAPACK */
     else
 
       SAFE_ALLOCATE(iwork(1:5*this%nbasis))
-    
+
+#ifdef R_TREAL    
       call lapack_sygvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
         n = this%nbasis, a = hamiltonian(1, 1), lda = this%nbasis, b = overlap(1, 1), ldb = this%nbasis, &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
         m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%nbasis, &
         work = tmp, lwork = -1, iwork = iwork(1), ifail = ifail(1), info = info)
+#else
 
+      SAFE_ALLOCATE(rwork(1:7*this%nbasis))
+      
+      call lapack_hegvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
+        n = this%nbasis, a = hamiltonian(1, 1), lda = this%nbasis, b = overlap(1, 1), ldb = this%nbasis, &
+        vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
+        m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%nbasis, &
+        work = tmp, lwork = -1, rwork = rwork(1), iwork = iwork(1), ifail = ifail(1), info = info)
+
+#endif
       ASSERT(info == 0)
       
-      lwork = nint(tmp)
+      lwork = nint(real(tmp, 8))
       
       SAFE_ALLOCATE(work(1:lwork))
-      
+
+#ifdef R_TREAL
       call lapack_sygvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
         n = this%nbasis, a = hamiltonian(1, 1), lda = this%nbasis, b = overlap(1, 1), ldb = this%nbasis, &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
         m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%nbasis, &
         work = work(1), lwork = lwork, iwork = iwork(1), ifail = ifail(1), info = info)
-
-      if(info /= 0) then
-        write(message(1), '(a,i4,a)') 'LCAO diagonalization failed. Lapack returned info code ', info, '.'
-        call write_warning(1)
-      end if
+#else
+      call lapack_hegvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
+        n = this%nbasis, a = hamiltonian(1, 1), lda = this%nbasis, b = overlap(1, 1), ldb = this%nbasis, &
+        vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
+        m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%nbasis, &
+        work = work(1), lwork = lwork,  rwork = rwork(1), iwork = iwork(1), ifail = ifail(1), info = info)
+      
+      SAFE_DEALLOCATE_A(rwork)
+#endif
+    
+    if(info /= 0) then
+      write(message(1), '(a,i4,a)') 'LCAO diagonalization failed. Lapack returned info code ', info, '.'
+      call write_warning(1)
+    end if
 
     end if
-    
-#else
-    call lalg_geneigensolve(this%nbasis, hamiltonian, overlap, eval)
-    evec(this%nbasis, 1:nev) = hamiltonian(this%nbasis, 1:nev)
-#endif
+
     SAFE_DEALLOCATE_A(iwork)
     SAFE_DEALLOCATE_A(work)
     SAFE_DEALLOCATE_A(ifail)
