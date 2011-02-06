@@ -85,9 +85,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine kdotp_lr_run(sys, hm, fromScratch)
-    type(system_t), target, intent(inout) :: sys
-    type(hamiltonian_t),    intent(inout) :: hm
-    logical,                intent(inout) :: fromScratch
+    type(system_t),      intent(inout) :: sys
+    type(hamiltonian_t), intent(inout) :: hm
+    logical,             intent(inout) :: fromScratch
 
     type(kdotp_t)           :: kdotp_vars
     type(sternheimer_t)     :: sh

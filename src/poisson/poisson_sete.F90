@@ -91,10 +91,10 @@ module poisson_sete_m
 
   integer :: lenw, leniw, idev, isym = 0, itol = 2, itmax = 2001, itermin = 5, iter, ierr, iunit = 0 
   integer :: nxl, nyl, test=0, nuc_or_elec=0, add_bias=0, calc_egate=1, egate_just_field=0, nuc_egate=1
-  FLOAT, allocatable :: xg(:), yg(:), zg(:), dxg(:), dyg(:), dz(:), dxl(:), dyl(:),x2(:), x2_lap(:)
+  FLOAT, allocatable :: xg(:), yg(:), zg(:), dxg(:), dyg(:), dz(:), dxl(:), dyl(:),x2(:)
 
   ! these variables must be local for the moment
-  FLOAT, allocatable :: rho_nuc(:), v_lap(:), v_es3(:,:,:), v_es(:)
+  FLOAT, allocatable :: rho_nuc(:), v_es3(:,:,:), v_es(:)
   integer :: count_atoms, calc_gate_energy
   FLOAT :: es_energy
 
@@ -118,7 +118,7 @@ contains
     FLOAT :: bohrnm, angsnm
     integer :: i, j, ngates
     FLOAT :: zcen, xcen, ycen, dielectric0
-    FLOAT, allocatable :: vtv(:), q2(:), q2_lap(:)
+    FLOAT, allocatable :: vtv(:), q2(:)
     FLOAT :: xwidth, ywidth,  pconst
 
     PUSH_SUB(poisson_sete_init)
@@ -896,11 +896,9 @@ contains
     ! Input: XL, YL, ZL -> Size of the octopus box
 
     FLOAT        :: bohrnm, angsnm, err
-    integer      :: j1, k1, m, i, j, k, i1,idum, archt, kk
+    integer      :: j1, k1, m, i, j, k, i1,idum
     FLOAT :: VHMIN, VHMAX
     FLOAT :: pconst
-    FLOAT :: field
-    FLOAT :: m_half_zwidth
 
     integer, allocatable :: iwork(:)
     FLOAT,   allocatable :: rhotest(:,:,:), rwork(:), q2(:)!, q2_lap(:)!, x2(:)

@@ -50,6 +50,8 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
   POP_SUB(X(sm_integrate))
 end function X(sm_integrate)
 
+!------------------------------------------------------------
+
 subroutine X(dsubmesh_add_to_mesh)(this, sphi, phi, factor)
   type(submesh_t),  intent(in)    :: this
   FLOAT,            intent(in)    :: sphi(:)
@@ -69,6 +71,8 @@ subroutine X(dsubmesh_add_to_mesh)(this, sphi, phi, factor)
   POP_SUB(X(dsubmesh_add_to_mesh))
 end subroutine X(dsubmesh_add_to_mesh)
 
+!------------------------------------------------------------
+
 R_TYPE function X(dsubmesh_to_mesh_dotp)(this, dim, sphi, phi, reduce) result(dotp)
   type(submesh_t),   intent(in) :: this
   integer,           intent(in) :: dim
@@ -78,7 +82,9 @@ R_TYPE function X(dsubmesh_to_mesh_dotp)(this, dim, sphi, phi, reduce) result(do
 
   integer :: is, idim
   logical :: reduce_
+#ifdef HAVE_MPI
   R_TYPE  :: tmp
+#endif
 
   PUSH_SUB(X(dsubmesh_to mesh_dotp))
 
@@ -112,7 +118,7 @@ R_TYPE function X(dsubmesh_to_mesh_dotp)(this, dim, sphi, phi, reduce) result(do
   POP_SUB(X(dsubmesh_to mesh_dotp))
 end function X(dsubmesh_to_mesh_dotp)
 
-!------------------------------------------------------------ 
+!------------------------------------------------------------
 
 ! The following functions takes a batch of functions defined in
 ! submesh (ss) and adds all of them to each of the mesh functions in
@@ -211,7 +217,9 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
   integer :: ist, jst, idim, jdim, is
   logical :: reduce_
   R_TYPE :: dotp
+#if defined(HAVE_MPI)
   R_TYPE, allocatable :: tmp1(:, :), tmp2(:, :)
+#endif
 
   PUSH_SUB(X(submesh_batch_dotp_matrix))
 

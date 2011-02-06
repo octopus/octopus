@@ -37,7 +37,7 @@ subroutine X(sternheimer_solve)(                           &
   logical,      optional, intent(in)    :: have_restart_rho
   logical,      optional, intent(in)    :: have_exact_freq
 
-  FLOAT :: dpsimod, tol, tol_trash
+  FLOAT :: dpsimod, tol
   integer :: iter, sigma, sigma_alt, ik, ist, is, err
   R_TYPE, allocatable :: dl_rhoin(:, :, :), dl_rhonew(:, :, :), dl_rhotmp(:, :, :)
   R_TYPE, allocatable :: Y(:, :, :), hvar(:, :, :)
@@ -401,7 +401,7 @@ subroutine X(sternheimer_solve_order2)( &
      this, sys, hm, lr, nsigma, omega, perturbation,       &
      restart_dir, rho_tag, wfs_tag, have_restart_rho)
   type(sternheimer_t),    intent(inout) :: this
-  type(system_t), target, intent(inout) :: sys
+  type(system_t),         intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: hm
   type(lr_t),             intent(inout) :: lr(:) 
   integer,                intent(in)    :: nsigma 

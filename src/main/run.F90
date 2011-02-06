@@ -216,7 +216,7 @@ contains
   
   ! ---------------------------------------------------------
   subroutine run_init(cm)
-    integer :: cm
+    integer, intent(in) :: cm
 
     PUSH_SUB(run_init)
 

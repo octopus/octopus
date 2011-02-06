@@ -437,7 +437,6 @@ contains
     integer :: nx_half, nx
     integer :: ny_half, ny
     integer :: nz_half, nz
-    integer :: ii
 
     FLOAT :: xl, yl, zl
 

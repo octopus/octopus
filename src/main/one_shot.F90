@@ -58,7 +58,6 @@ contains
     type(hamiltonian_t),         intent(inout) :: hm
 
     integer :: ierr
-    FLOAT, allocatable :: rho(:,:)
     FLOAT :: e_tot, e_t, e_ext
 
     PUSH_SUB(one_shot_run)

@@ -1186,7 +1186,7 @@ contains
 
     CMPLX :: bpar(1:MAX_DIM), bper(1:MAX_DIM), bk(1:MAX_DIM)
     CMPLX :: HRS_VV, HRS_HV
-    integer :: ii, jj, kk, iunit, ifactor
+    integer :: ii, jj, kk, iunit
 
     PUSH_SUB(out_hyperpolarizability)
 
