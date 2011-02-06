@@ -256,10 +256,7 @@ contains
       iam = 0
       ! iam = omp_get_thread_num()
 
-      ! Critical section only necessary on Intel
-      !$omp critical
       allocate(zw(2,ncache/4,2),trig(2,1024),after(20),now(20),before(20))
-      !$omp end critical
 
       inzet=inzee
       ! TRANSFORM ALONG Z AXIS

@@ -21,6 +21,7 @@
 
 module propagator_m
   use batch_m
+  use blas_m
   use cube_function_m
   use datasets_m
   use density_m
@@ -586,7 +587,7 @@ contains
             do ist = sts, ste
               ist2 = ist - sts + 1
               do idim = 1, st%d%dim
-                call lalg_copy(gr%mesh%np, st%zpsi(:, idim, ist, ik), zpsi1(:, idim, ist2))
+                call blas_copy(gr%mesh%np, st%zpsi(1, idim, ist, ik), 1, zpsi1(1, idim, ist2), 1)
               end do
             end do
             

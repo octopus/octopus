@@ -60,7 +60,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   integer :: ipj, nreduce, ii, ns, idim, ll, mm, is, ist
   R_TYPE, allocatable :: reduce_buffer(:), lpsi(:, :)
   integer, allocatable :: ireduce(:, :, :, :)
-  type(profile_t), save :: prof_scatter, prof_gather, prof
+  type(profile_t), save :: prof
 #if defined(HAVE_MPI)
   type(profile_t), save :: reduce_prof
   R_TYPE, allocatable   :: reduce_buffer_dest(:)
@@ -114,19 +114,16 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
       ns = pj(ipj)%sphere%ns
       if(ns < 1) cycle
 
-      call profiling_in(prof_gather, "PROJECTOR_GATHER")
       ! copy psi to the small spherical grid
       do idim = 1, dim
         if(associated(pj(ipj)%phase)) then
           forall (is = 1:ns) 
             lpsi(is, idim) = psib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim)*pj(ipj)%phase(is, ik)
           end forall
-          call profiling_count_operations(ns*psib%nst*R_MUL)
         else
           forall (is = 1:ns) lpsi(is, idim) = psib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim)
         end if
       end do
-      call profiling_out(prof_gather)
 
       ! apply the projectors for each angular momentum component
       do ll = 0, pj(ipj)%lmax
@@ -211,7 +208,6 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
         end do ! mm
       end do ! ll
     
-      call profiling_in(prof_scatter, "PROJECTOR_SCATTER")
       !put the result back in the complete grid
       do idim = 1, dim
         if(associated(pj(ipj)%phase)) then
@@ -220,16 +216,13 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
               ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) + &
               lpsi(is, idim)*conjg(pj(ipj)%phase(is, ik))
           end forall
-          call profiling_count_operations(ns*psib%nst*(R_ADD + R_MUL))
         else
           forall (is = 1:ns) 
             ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) = &
               ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) + lpsi(is, idim)
           end forall
-          call profiling_count_operations(ns*psib%nst*R_ADD)
         end if
       end do
-      call profiling_out(prof_scatter)
 
     end do ! ipj
   end do ! ist

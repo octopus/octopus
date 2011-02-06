@@ -84,8 +84,6 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
       end do
     end do
 
-    call profiling_count_operations(ns*dim*kb_p%n_c*(3*R_ADD))
-
   else
 
     do idim = 1, dim
@@ -95,8 +93,6 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
         end do
       end do
     end do
-
-    call profiling_count_operations(ns*dim*kb_p%n_c*(2*R_ADD))
 
     uvpsi(1:kb_p%n_c, 1:dim) = uvpsi(1:kb_p%n_c, 1:dim)*mesh%vol_pp(1)
   end if
@@ -133,7 +129,6 @@ subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi)
     end do
   end do
 
-  call profiling_count_operations(ns*dim*kb_p%n_c*2*R_ADD)
 #ifndef HAVE_OPENMP
   POP_SUB(X(kb_project_ket))
 #endif

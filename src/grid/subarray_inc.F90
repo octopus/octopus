@@ -18,7 +18,7 @@
 !! $Id: subarray_inc.F90 3030 2007-06-25 16:45:05Z marques $
 
 ! ---------------------------------------------------
-! THREADSAFE
+
 subroutine X(subarray_gather)(this, array, subarray)
     type(subarray_t),    intent(in)  :: this
     R_TYPE,              intent(in)  :: array(:)

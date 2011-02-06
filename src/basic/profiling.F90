@@ -434,7 +434,6 @@ contains
   ! ---------------------------------------------------------
   !> Increment in counter and save entry time.
   !!
-  !! THREADSAFE
   subroutine profiling_in(this, label)
     type(profile_t), target, intent(inout) :: this
     character(*), optional,  intent(in)    :: label 
@@ -446,7 +445,6 @@ contains
 
     if(.not.in_profiling_mode) return
 
-    !$omp master
     if(.not. this%initialized) then 
       ASSERT(present(label))
       call profile_init(this, label)
@@ -476,7 +474,6 @@ contains
 
     prof_vars%current%p => this
     this%entry_time = now
-    !$omp end master
 
   end subroutine profiling_in
 
@@ -485,7 +482,6 @@ contains
   !> Increment out counter and sum up difference between entry
   !! and exit time.
   !!
-  !! THREADSAFE
   subroutine profiling_out(this)
     type(profile_t),   intent(inout) :: this
 
@@ -496,7 +492,6 @@ contains
     
     if(.not.in_profiling_mode) return
 
-    !$omp master
     ASSERT(this%active)
     this%active = .false.
 #if defined(HAVE_MPI)
@@ -531,105 +526,104 @@ contains
     else
       nullify(prof_vars%current%p)
     end if
-    !$omp end master
 
   end subroutine profiling_out
 
 
   ! ---------------------------------------------------------
-  !> THREADSAFE
+
   subroutine iprofiling_count_operations(ops)
     integer,         intent(in)    :: ops
 #ifndef HAVE_PAPI
     if(.not.in_profiling_mode) return
-    !$omp atomic
+
     prof_vars%current%p%op_count_current = prof_vars%current%p%op_count_current + dble(ops)
 #endif
   end subroutine iprofiling_count_operations
 
 
   ! ---------------------------------------------------------
-  !> THREADSAFE
+
   subroutine rprofiling_count_operations(ops)
     real(4),         intent(in)    :: ops
 
 #ifndef HAVE_PAPI
     if(.not.in_profiling_mode) return
-    !$omp atomic
+    
     prof_vars%current%p%op_count_current = prof_vars%current%p%op_count_current + dble(ops)
 #endif
   end subroutine rprofiling_count_operations
 
 
   ! ---------------------------------------------------------
-  !> THREADSAFE
+ 
   subroutine dprofiling_count_operations(ops)
     real(8),         intent(in)    :: ops
 
 #ifndef HAVE_PAPI
     if(.not.in_profiling_mode) return
-    !$omp atomic
+    
     prof_vars%current%p%op_count_current = prof_vars%current%p%op_count_current + ops
 #endif
   end subroutine dprofiling_count_operations
 
 
   ! ---------------------------------------------------------
-  !> THREADSAFE
+  
   subroutine profiling_count_tran_int(trf, type)
     integer,         intent(in)    :: trf
     integer,         intent(in)    :: type
 
     if(.not.in_profiling_mode) return
-    !$omp atomic
+    
     prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(4*trf)
   end subroutine profiling_count_tran_int
 
 
   ! ---------------------------------------------------------
-  !> THREADSAFE
+  
   subroutine profiling_count_tran_real_4(trf, type)
     integer,         intent(in)    :: trf
     real(4),         intent(in)    :: type
     
     if(.not.in_profiling_mode) return
-    !$omp atomic
+    
     prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(4*trf)
   end subroutine profiling_count_tran_real_4
 
 
   ! ---------------------------------------------------------
-  !> THREADSAFE
+  
   subroutine profiling_count_tran_real_8(trf, type)
     integer,         intent(in)    :: trf
     real(8),         intent(in)    :: type
     
     if(.not.in_profiling_mode) return
-    !$omp atomic
+    
     prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(8*trf)
   end subroutine profiling_count_tran_real_8
 
 
   ! ---------------------------------------------------------
-  !> THREADSAFE
+  
   subroutine profiling_count_tran_complex_4(trf, type)
     integer,         intent(in)    :: trf
     complex(4),      intent(in)    :: type
 
     if(.not.in_profiling_mode) return
-    !$omp atomic
+    
     prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(8*trf)
   end subroutine profiling_count_tran_complex_4
 
 
   ! ---------------------------------------------------------
-  !> THREADSAFE
+  
   subroutine profiling_count_tran_complex_8(trf, type)
     integer,         intent(in)    :: trf
     complex(8),      intent(in)    :: type
 
     if(.not.in_profiling_mode) return
-    !$omp atomic
+    
     prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(16*trf)
   end subroutine profiling_count_tran_complex_8
 
