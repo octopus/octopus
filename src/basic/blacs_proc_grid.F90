@@ -74,11 +74,12 @@ contains
     type(mpi_grp_t),         intent(in)  :: mpi_grp
 
     integer, parameter :: maxdims = 2
-    integer :: dims(1:2), topo, coords(1:2), ix, iy
+    integer :: dims(1:2), topo, coords(1:2), ix, iy, id
     logical :: periods(1:2)
     integer :: mpi_err
     integer :: comm
     logical :: reorder
+    integer, allocatable :: procmap(:)
 
     PUSH_SUB(blacs_proc_grid_init)
 
@@ -95,6 +96,16 @@ contains
       comm = mpi_grp%comm
     end if
 
+    call blacs_pinfo(this%iam, this%nprocs)
+
+    ! The process id from scalapack is not always the
+    ! same than MPI, so we need to construct a map.
+    SAFE_ALLOCATE(procmap(0:mpi_grp%size - 1))
+    call MPI_Allgather(this%iam, 1, MPI_INTEGER, procmap(0), 1, MPI_INTEGER, comm, mpi_err)
+
+    ASSERT(this%nprocs == mpi_grp%size)
+    ASSERT(this%iam == procmap(mpi_grp%rank))
+
     dims = 1
     coords = 0
     
@@ -104,7 +115,8 @@ contains
     
     do ix = 1, dims(1)
       do iy = 1, dims(2)
-        call MPI_Cart_rank(comm, (/ix - 1, iy - 1/), this%usermap(ix, iy), mpi_err)
+        call MPI_Cart_rank(comm, (/ix - 1, iy - 1/), id, mpi_err)
+        this%usermap(ix, iy) = procmap(id)
       end do
     end do
 
@@ -115,16 +127,19 @@ contains
     call blacs_gridmap(this%context, this%usermap(1, 1), dims(1), dims(1), dims(2))
 
     ! and fill the rest of the structure
-    this%nprocs = mpi_grp%size
-    this%nprow = dims(1)
-    this%npcol = dims(2)
-    this%iam = mpi_grp%rank
-    this%myrow = coords(1)
-    this%mycol = coords(2)
+    call blacs_gridinfo(this%context, this%nprow, this%npcol, this%myrow, this%mycol)
+
+    !check that Blacs and MPI are consistent
+    ASSERT(this%nprow == dims(1))
+    ASSERT(this%npcol == dims(2))
+    ASSERT(this%myrow == coords(1))
+    ASSERT(this%mycol == coords(2))
 
     if(topo /= MPI_CART) then
       call MPI_Comm_free(comm, mpi_err)
     end if
+
+    SAFE_DEALLOCATE_A(procmap)
 
     POP_SUB(blacs_proc_grid_init)
   end subroutine blacs_proc_grid_init
