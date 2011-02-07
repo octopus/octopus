@@ -423,6 +423,8 @@ contains
     logical              :: exact_
     FLOAT, pointer       :: dpsi(:, :, :, :)
     CMPLX, pointer       :: zpsi(:, :, :, :)
+    character(len=256), allocatable :: restart_file(:, :, :)
+    logical,            allocatable :: restart_file_present(:, :, :)
 
     PUSH_SUB(restart_read)
 
@@ -546,9 +548,9 @@ contains
       end if
     end if
 
-    ! now we really start
-    SAFE_ALLOCATE(filled(1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
-    filled = .false.
+    SAFE_ALLOCATE(restart_file(1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
+    SAFE_ALLOCATE(restart_file_present(1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
+    restart_file_present = .true.
 
     ! Skip two lines.
     call iopar_read(st%dom_st_kpt_mpi_grp, wfns_file,  line, err)
@@ -581,26 +583,44 @@ contains
       if(ist >= st%st_start .and. ist <= st%st_end .and. &
         st%d%kpt%start <= ik .and. st%d%kpt%end >= ik) then
 
-        if (states_are_real(st)) then
-          if (.not. grid_changed) then
-            call drestart_read_function(dir, filename, gr%mesh, dpsi(:, idim, ist, ik), err)
-          else
-            call drestart_read_function(dir, filename, gr%mesh, dpsi(:, idim, ist, ik), err, map)
-          end if
-        else
-          if (.not. grid_changed) then
-            call zrestart_read_function(dir, filename, gr%mesh, zpsi(:, idim, ist, ik), err)
-          else
-            call zrestart_read_function(dir, filename, gr%mesh, zpsi(:, idim, ist, ik), err, map)
-          end if
-        end if
-
-        if(err <= 0) then
-          filled(idim, ist, ik) = .true.
-          ierr = ierr + 1
-        end if
-
+        restart_file(idim, ist, ik) = trim(filename)
+        restart_file_present(idim, ist, ik) = .true.
       end if
+    end do
+
+    !now we really read, to avoid serialisation of reads in the
+    !parallel case (io_par works as a barrier)
+
+    SAFE_ALLOCATE(filled(1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
+    filled = .false.
+
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ist = st%st_start, st%st_end
+        do idim = 1, st%d%dim
+
+          if(.not. restart_file_present(idim, ist, ik)) cycle
+
+          if (states_are_real(st)) then
+            if (.not. grid_changed) then
+              call drestart_read_function(dir, restart_file(idim, ist, ik), gr%mesh, dpsi(:, idim, ist, ik), err)
+            else
+              call drestart_read_function(dir, restart_file(idim, ist, ik), gr%mesh, dpsi(:, idim, ist, ik), err, map)
+            end if
+          else
+            if (.not. grid_changed) then
+              call zrestart_read_function(dir, restart_file(idim, ist, ik), gr%mesh, zpsi(:, idim, ist, ik), err)
+            else
+              call zrestart_read_function(dir, restart_file(idim, ist, ik), gr%mesh, zpsi(:, idim, ist, ik), err, map)
+            end if
+          end if
+          
+          if(err <= 0) then
+            filled(idim, ist, ik) = .true.
+            ierr = ierr + 1
+          end if
+          
+        end do
+      end do
     end do
 
     if(present(iter)) then
