@@ -1654,7 +1654,7 @@ return
     type(multicomm_t), intent(in)    :: mc
 
 #ifdef HAVE_MPI
-    integer :: sn, sn1, r, j, k
+    integer :: inode, ist
 #endif
 
     PUSH_SUB(states_distribute_nodes)
@@ -1697,29 +1697,21 @@ return
      message(1) = "Info: Parallelization in states"
      call write_info(1)
 
-     do k = 0, st%mpi_grp%size - 1
+     do inode = 0, st%mpi_grp%size - 1
        write(message(1),'(a,i4,a,i5,a,i6,a,i6)') &
-            'Info: Nodes in states-group ', k, ' will manage ', st%st_num(k), ' states:', &
-            st%st_range(1, k), " - ", st%st_range(2, k)
+            'Info: Nodes in states-group ', inode, ' will manage ', st%st_num(inode), ' states:', &
+            st%st_range(1, inode), " - ", st%st_range(2, inode)
        call write_info(1)
-       if(st%mpi_grp%rank .eq. k) then
-         st%st_start = st%st_range(1, k)
-         st%st_end   = st%st_range(2, k)
-         st%lnst     = st%st_num(k)
-       endif
+
+       do ist = st%st_range(1, inode), st%st_range(2, inode)
+         st%node(ist) = inode
+       end do
      end do
 
-     sn  = st%nst/st%mpi_grp%size
-     sn1 = sn + 1
-     r  = mod(st%nst, st%mpi_grp%size)
-     do j = 1, r
-       st%node((j-1)*sn1+1:j*sn1) = j - 1
-     end do
-     k = sn1*r
-     call MPI_Barrier(st%mpi_grp%comm, mpi_err)
-     do j = 1, st%mpi_grp%size - r
-       st%node(k+(j-1)*sn+1:k+j*sn) = r + j - 1
-     end do
+     st%st_start = st%st_range(1, st%mpi_grp%rank)
+     st%st_end   = st%st_range(2, st%mpi_grp%rank)
+     st%lnst     = st%st_num(st%mpi_grp%rank)
+
    end if
 #endif
 
