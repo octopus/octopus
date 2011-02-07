@@ -41,16 +41,21 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
   character(len=*), intent(in)    :: dir
   character(len=*), intent(in)    :: filename
   type(mesh_t),     intent(in)    :: mesh
-  R_TYPE, target,   intent(inout) :: ff(1:mesh%np)
+  R_TYPE, target,   intent(inout) :: ff(:)
   integer,          intent(out)   :: ierr
   integer, optional, intent(in)   :: map(:)
 
-  integer :: ip, np, il, ipart, offset
+  integer :: ip, np, il, il2, ipart, offset
   integer, allocatable :: list(:)
   R_TYPE, pointer :: read_ff(:)
+  type(profile_t), save :: prof_io
+  type(batch_t) :: ffb
+#ifdef HAVE_MPI
+  type(profile_t), save :: prof_comm
+#endif
 
   PUSH_SUB(X(restart_read_function))
-
+  
 #ifdef HAVE_MPI
   if(present(map) .and. mesh%parallel_in_domains) then 
     ! for the moment we do not do this directly
@@ -74,32 +79,40 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
 #ifdef HAVE_MPI
   !in the parallel case, each node reads a part of the file
   if(mesh%parallel_in_domains) then
-    SAFE_ALLOCATE(read_ff(1:np))
     offset = mesh%vp%xlocal(mesh%vp%partno) - 1
   end if
 #endif
 
+  call profiling_in(prof_io, "RESTART_READ_IO")
+
   call io_binary_read(trim(dir)//'/'//trim(filename)//'.obf', np, read_ff, ierr, offset = offset)
   call profiling_count_transfers(np, read_ff(1))
 
+  call profiling_out(prof_io)
+
 #ifdef HAVE_MPI
   if(mesh%parallel_in_domains) then
-    ! no we need to move around the points that we read
-    ! this is probably not the most efficient way of doing it
+    call profiling_in(prof_comm, "RESTART_READ_COMM")
+    SAFE_ALLOCATE(list(1:mesh%np_global))
+    ! this is the global index of the points we read
+    il = 0
     do ipart = 1, mesh%vp%npart
-      SAFE_ALLOCATE(list(1:mesh%vp%np_local(ipart)))
-
-      do il = 1, mesh%vp%np_local(ipart)
-        ! this is the global index of the point we read
-        list(il) = il + mesh%vp%xlocal(ipart) - 1
+      do ip = 1, mesh%vp%np_local(ipart)
+        INCR(il, 1)
+        il2 = mesh%vp%local(ip + mesh%vp%xlocal(ipart) - 1)
+        list(il) = il2
       end do
-
-      call X(vec_selective_scatter)(mesh%vp, mesh%vp%np_local(ipart), list, ipart - 1, read_ff, ff)      
-      
-      SAFE_DEALLOCATE_A(list)
     end do
 
-    SAFE_DEALLOCATE_P(read_ff)
+    ff(1:mesh%np) = read_ff(1:mesh%np)
+
+    call batch_init(ffb, 1)
+    call batch_add_state(ffb, ff)
+    call X(mesh_batch_exchange_points)(mesh, ffb, backward_map = list)
+    call batch_end(ffb)
+    
+    SAFE_DEALLOCATE_A(list)
+    call profiling_out(prof_comm)
   end if
 #endif
 

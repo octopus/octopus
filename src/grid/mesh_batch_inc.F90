@@ -362,6 +362,184 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce)
   POP_SUB(X(mesh_batch_dotp_vector))
 end subroutine X(mesh_batch_dotp_vector)
 
+
+!> This functions exchanges points of a mesh according to a certain
+!! map. Two possible maps can be given. Only one map argument must be present.
+
+subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
+  type(mesh_t),      intent(in)    :: mesh            !< The mesh descriptor.
+  type(batch_t),     intent(inout) :: aa              !< A batch which contains the mesh functions whose points will be exchanged.
+  integer, optional, intent(in)    :: forward_map(:)  !< A map which gives the destination of the value each point.
+  integer, optional, intent(in)    :: backward_map(:) !< A map which gives the source of the value of each point.
+
+#ifdef HAVE_MPI
+  integer :: ip, ipg, npart, ipart, ist, pos, nstl
+  integer, allocatable :: send_count(:), recv_count(:), send_disp(:), recv_disp(:)
+  R_TYPE, allocatable  :: send_buffer(:, :), recv_buffer(:, :)
+#endif
+
+  PUSH_SUB(X(mesh_batch_exchange_points))
+
+  ASSERT(present(backward_map) .neqv. present(forward_map))
+  ASSERT(batch_type(aa) == R_TYPE_VAL)
+
+  if(.not. mesh%parallel_in_domains) then
+    message(1) = "Not implemented for the serial case. Really, only in parallel."
+    call write_fatal(1)
+  else
+
+#ifdef HAVE_MPI
+    npart = mesh%mpi_grp%size
+    nstl = aa%nst_linear
+
+    SAFE_ALLOCATE(send_count(1:npart))
+    SAFE_ALLOCATE(recv_count(1:npart))
+    SAFE_ALLOCATE(send_disp(1:npart))
+    SAFE_ALLOCATE(recv_disp(1:npart))
+    SAFE_ALLOCATE(send_buffer(1:nstl, mesh%np))
+
+    if(present(forward_map)) then
+
+      ASSERT(ubound(forward_map, dim = 1) == mesh%np_global)
+
+      send_count = 0
+      do ip = 1, mesh%np
+        !get the global point
+        ipg = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + ip - 1)
+        !the destination
+        ipart = mesh%vp%part(forward_map(ipg))
+        INCR(send_count(ipart), 1)
+      end do
+
+      ASSERT(sum(send_count) == mesh%np)
+
+      recv_count = 0
+      do ipg = 1, mesh%np_global
+        if(mesh%vp%part(forward_map(ipg)) == mesh%vp%partno) then
+          INCR(recv_count(mesh%vp%part(ipg)), 1)
+        end if
+      end do
+
+      ASSERT(sum(recv_count) == mesh%np)
+
+      send_disp(1) = 0
+      recv_disp(1) = 0
+      do ipart = 2, npart
+        send_disp(ipart) = send_disp(ipart - 1) + send_count(ipart - 1)
+        recv_disp(ipart) = recv_disp(ipart - 1) + recv_count(ipart - 1)
+      end do
+
+      ASSERT(send_disp(npart) + send_count(npart) == mesh%np)
+      ASSERT(recv_disp(npart) + recv_count(npart) == mesh%np)
+
+      !pack for sending
+      send_count = 0
+      do ip = 1, mesh%np
+        !get the global point
+        ipg = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + ip - 1)
+        !the destination
+        ipart = mesh%vp%part(forward_map(ipg))
+        INCR(send_count(ipart), 1)
+        pos = send_disp(ipart) + send_count(ipart)
+        forall(ist = 1:nstl) send_buffer(ist, pos) = aa%states_linear(ist)%X(psi)(ip)
+      end do
+
+      SAFE_ALLOCATE(recv_buffer(1:nstl, mesh%np))
+
+      call MPI_Alltoallv(send_buffer(1, 1), send_count*nstl, send_disp*nstl, R_MPITYPE, &
+        recv_buffer(1, 1), recv_count*nstl, recv_disp*nstl, R_MPITYPE, mesh%mpi_grp%comm, mpi_err)
+
+      SAFE_DEALLOCATE_A(send_buffer)
+
+      recv_count = 0
+      do ipg = 1, mesh%np_global
+        if(mesh%vp%part(forward_map(ipg)) == mesh%vp%partno) then
+          ip = vec_global2local(mesh%vp, forward_map(ipg), mesh%vp%partno)
+          ASSERT(ip /= 0)
+          ipart = mesh%vp%part(ipg)
+          INCR(recv_count(ipart), 1)
+          pos = recv_disp(ipart) + recv_count(ipart)
+          forall(ist = 1:nstl) aa%states_linear(ist)%X(psi)(ip) = recv_buffer(ist, pos)
+        end if
+      end do
+
+    else ! backward map
+
+      ASSERT(ubound(backward_map, dim = 1) == mesh%np_global)
+
+      recv_count = 0
+      do ip = 1, mesh%np
+        !get the global point
+        ipg = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + ip - 1)
+        !the source
+        ipart = mesh%vp%part(backward_map(ipg))
+        INCR(recv_count(ipart), 1)
+      end do
+
+      ASSERT(sum(recv_count) == mesh%np)
+
+      send_count = 0
+      do ipg = 1, mesh%np_global
+        if(mesh%vp%part(backward_map(ipg)) == mesh%vp%partno) then
+          INCR(send_count(mesh%vp%part(ipg)), 1)
+        end if
+      end do
+
+      ASSERT(sum(send_count) == mesh%np)
+
+      send_disp(1) = 0
+      recv_disp(1) = 0
+      do ipart = 2, npart
+        send_disp(ipart) = send_disp(ipart - 1) + send_count(ipart - 1)
+        recv_disp(ipart) = recv_disp(ipart - 1) + recv_count(ipart - 1)
+      end do
+
+      ASSERT(send_disp(npart) + send_count(npart) == mesh%np)
+      ASSERT(recv_disp(npart) + recv_count(npart) == mesh%np)
+
+      !pack for sending
+      send_count = 0
+      do ipg = 1, mesh%np_global
+        if(mesh%vp%part(backward_map(ipg)) == mesh%vp%partno) then
+          ip = vec_global2local(mesh%vp, backward_map(ipg), mesh%vp%partno)
+          ipart = mesh%vp%part(ipg)
+          INCR(send_count(ipart), 1)
+          pos = send_disp(ipart) + send_count(ipart)
+          forall(ist = 1:nstl) send_buffer(ist, pos) = aa%states_linear(ist)%X(psi)(ip) 
+        end if
+      end do
+
+      SAFE_ALLOCATE(recv_buffer(1:nstl, mesh%np))
+
+      call MPI_Alltoallv(send_buffer(1, 1), send_count*nstl, send_disp*nstl, R_MPITYPE, &
+        recv_buffer(1, 1), recv_count*nstl, recv_disp*nstl, R_MPITYPE, mesh%mpi_grp%comm, mpi_err)
+
+      SAFE_DEALLOCATE_A(send_buffer)
+
+      recv_count = 0
+      do ip = 1, mesh%np
+        !get the global point
+        ipg = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + ip - 1)
+        !the destination
+        ipart = mesh%vp%part(backward_map(ipg))
+        INCR(recv_count(ipart), 1)
+        pos = recv_disp(ipart) + recv_count(ipart)
+        forall(ist = 1:nstl) aa%states_linear(ist)%X(psi)(ip) = recv_buffer(ist, pos)
+      end do
+
+    end if
+
+    SAFE_DEALLOCATE_A(send_count)
+    SAFE_DEALLOCATE_A(recv_count)
+    SAFE_DEALLOCATE_A(send_disp)
+    SAFE_DEALLOCATE_A(recv_disp)
+#endif
+  end if
+
+  POP_SUB(X(mesh_batch_exchange_points))
+end subroutine X(mesh_batch_exchange_points)
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

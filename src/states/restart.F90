@@ -20,6 +20,7 @@
 #include "global.h"
 
 module restart_m
+  use batch_m
   use curvilinear_m
   use datasets_m
   use geometry_m
@@ -34,6 +35,7 @@ module restart_m
   use loct_m
   use math_m
   use mesh_m
+  use mesh_batch_m
   use mesh_function_m
   use mesh_init_m
   use messages_m

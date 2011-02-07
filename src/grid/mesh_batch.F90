@@ -32,7 +32,9 @@ module mesh_batch_m
   use mesh_function_m
   use messages_m
   use mpi_m
+  use par_vec_m
   use profiling_m
+  use types_m
 
   implicit none
 
@@ -45,7 +47,9 @@ module mesh_batch_m
     dmesh_batch_dotp_self,          &
     zmesh_batch_dotp_self,          &
     dmesh_batch_rotate,             &
-    zmesh_batch_rotate
+    zmesh_batch_rotate,             &
+    dmesh_batch_exchange_points,    &
+    zmesh_batch_exchange_points
 
 contains
 
