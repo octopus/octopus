@@ -36,7 +36,8 @@ module blacs_proc_grid_m
     blacs_proc_grid_nullify,     &
     blacs_proc_grid_init,        &
     blacs_proc_grid_end,         &
-    blacs_proc_grid_copy
+    blacs_proc_grid_copy,        &
+    blacs_proc_grid_null
 
   type blacs_proc_grid_t
     integer          :: context       !< The blacs context, -1 is object is null.
@@ -186,6 +187,13 @@ contains
   end subroutine blacs_proc_grid_copy
 
   ! ----------------------------------------------------
+
+  logical pure function blacs_proc_grid_null(this)
+    type(blacs_proc_grid_t), intent(in) :: this
+
+    blacs_proc_grid_null = this%context == -1
+  end function blacs_proc_grid_null
+  
 
 #endif
 

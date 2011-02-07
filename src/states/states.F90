@@ -1671,7 +1671,7 @@ return
     call mpi_grp_init(st%st_kpt_mpi_grp, mc%st_kpt_comm)
 
 #ifdef HAVE_SCALAPACK
-    if(calc_mode_scalapack_compat()) then
+    if(calc_mode_scalapack_compat() .and. .not. st%d%kpt%parallel) then
       call blacs_proc_grid_init(st%dom_st_proc_grid, st%dom_st_mpi_grp)
     end if
 #endif

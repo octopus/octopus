@@ -21,6 +21,7 @@
 
 module lcao_m
   use batch_m
+  use blacs_proc_grid_m
   use datasets_m
   use geometry_m
   use global_m
@@ -371,7 +372,8 @@ contains
 #ifndef HAVE_SCALAPACK
       this%parallel = .false.
 #else
-      this%parallel = st%parallel_in_states .or. gr%mesh%parallel_in_domains
+      this%parallel = (st%parallel_in_states .or. gr%mesh%parallel_in_domains) &
+        .and. .not. blacs_proc_grid_null(st%dom_st_proc_grid)
 
       if(this%parallel) then      
         nbl = min(16, this%nbasis)

@@ -125,6 +125,11 @@ contains
         message(1) = 'The scalapack subspace diagonalization is designed to be used with domain or state parallelization.'
         call write_warning(1)
       end if
+
+      if(st%d%kpt%parallel) then
+        message(1) = 'Currently the scalapack subspace diagonalization cannot work with subspace diagonalization.'
+        call write_warning(1)
+      end if
 #endif
     end if
 
