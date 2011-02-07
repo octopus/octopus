@@ -388,13 +388,8 @@ contains
         case(RS_MG)
           call deigensolver_mg(gr%der, st, hm, eigens%sdiag, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
-          if(iter == 1) then
-            call deigensolver_rmmdiis_start(gr, st, hm, eigens%pre, eigens%sdiag, tol, maxiter, &
-                 eigens%converged(ik), ik, hm%d%block_size)
-          else
-            call deigensolver_rmmdiis(gr, st, hm, eigens%pre, tol, maxiter, &
-                 eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
-          end if
+          call deigensolver_rmmdiis(gr, st, hm, eigens%pre, tol, iter, maxiter, &
+            eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
         end select
 
         if(eigens%subspace_diag.and.eigens%es_type /= RS_RMMDIIS) then
@@ -421,13 +416,8 @@ contains
         case(RS_MG)
           call zeigensolver_mg(gr%der, st, hm, eigens%sdiag, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
-          if(iter == 1) then
-            call zeigensolver_rmmdiis_start(gr, st, hm, eigens%pre, eigens%sdiag, tol, maxiter, &
-                 eigens%converged(ik), ik, hm%d%block_size)
-          else
-            call zeigensolver_rmmdiis(gr, st, hm, eigens%pre, tol, maxiter, &
-                 eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
-          end if
+          call zeigensolver_rmmdiis(gr, st, hm, eigens%pre, tol, iter, maxiter, &
+            eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
         end select
 
         if(eigens%subspace_diag.and.eigens%es_type /= RS_RMMDIIS) then

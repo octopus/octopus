@@ -19,12 +19,13 @@
 
 ! ---------------------------------------------------------
 ! See http://prola.aps.org/abstract/PRB/v54/i16/p11169_1
-subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, diff, blocksize)
+subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, scf_iter, niter, converged, ik, diff, blocksize)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
   type(preconditioner_t), intent(in)    :: pre
   FLOAT,                  intent(in)    :: tol
+  integer,                intent(in)    :: scf_iter
   integer,                intent(inout) :: niter
   integer,                intent(inout) :: converged
   integer,                intent(in)    :: ik
@@ -50,6 +51,14 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   R_TYPE, allocatable :: buff(:, :)
   R_TYPE, allocatable :: mmc(:, :, :, :)
 #endif
+
+  integer, parameter :: sd_sweeps = 5
+
+  if(scf_iter <= sd_sweeps) then
+    ! The first iterations are special. A steepest descent minimization.
+    call X(eigensolver_rmmdiis_start)(gr, st, hm, pre, tol, scf_iter, niter, converged, ik, blocksize)
+    return
+  end if
 
   PUSH_SUB(X(eigensolver_rmmdiis))
 
@@ -334,15 +343,14 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
 end subroutine X(eigensolver_rmmdiis)
 
-
 ! ---------------------------------------------------------
-subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, sdiag, tol, niter, converged, ik, blocksize)
+subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, scf_iter, niter, converged, ik, blocksize)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
   type(preconditioner_t), intent(in)    :: pre
-  type(subspace_t),       intent(in)    :: sdiag
   FLOAT,                  intent(in)    :: tol
+  integer,                intent(in)    :: scf_iter
   integer,                intent(inout) :: niter
   integer,                intent(inout) :: converged
   integer,                intent(in)    :: ik
@@ -351,9 +359,9 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, sdiag, tol, niter, con
   integer, parameter :: sweeps = 5
   integer, parameter :: sd_steps = 2
 
-  integer :: isweep, isd, ist, idim, sst, est, bsize, ib
+  integer :: isd, ist, idim, sst, est, bsize, ib
   R_TYPE  :: lambda, ca, cb, cc
-  
+
   R_TYPE, allocatable :: res(:, :, :)
   R_TYPE, allocatable :: kres(:, :, :)
   R_TYPE, allocatable :: me1(:, :), me2(:, :)
@@ -372,104 +380,99 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, sdiag, tol, niter, con
 
   niter = 0
 
-  do isweep = 1, sweeps
+  do sst = st%st_start, st%st_end, blocksize
+    est = min(sst + blocksize - 1, st%st_end)
+    bsize = est - sst + 1
 
-    if(isweep > 1) call X(subspace_diag)(sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), st%X(psi)(:, :, :, ik))
+    call batch_init(psib, st%d%dim, sst, est, st%X(psi)(:, :, sst:, ik))
 
-    do sst = st%st_start, st%st_end, blocksize
-      est = min(sst + blocksize - 1, st%st_end)
-      bsize = est - sst + 1
+    call batch_init(resb, st%d%dim, sst, est, res)
+    call batch_init(kresb, st%d%dim, sst, est, kres)
 
-      call batch_init(psib, st%d%dim, sst, est, st%X(psi)(:, :, sst:, ik))
+    do isd = 1, sd_steps
 
-      call batch_init(resb, st%d%dim, sst, est, res)
-      call batch_init(kresb, st%d%dim, sst, est, kres)
+      call X(hamiltonian_apply_batch)(hm, gr%der, psib, resb, ik)
 
-      do isd = 1, sd_steps
+      do ist = sst, est
+        ib = ist - sst + 1
 
-        call X(hamiltonian_apply_batch)(hm, gr%der, psib, resb, ik)
+        me1(1, ib) = X(mf_dotp)(gr%mesh, st%d%dim, psib%states(ib)%X(psi), res(:, :, ib), reduce = .false.)
+        me1(2, ib) = X(mf_dotp)(gr%mesh, st%d%dim, psib%states(ib)%X(psi), psib%states(ib)%X(psi), reduce = .false.)
 
-        do ist = sst, est
-          ib = ist - sst + 1
-
-          me1(1, ib) = X(mf_dotp)(gr%mesh, st%d%dim, psib%states(ib)%X(psi), res(:, :, ib), reduce = .false.)
-          me1(2, ib) = X(mf_dotp)(gr%mesh, st%d%dim, psib%states(ib)%X(psi), psib%states(ib)%X(psi), reduce = .false.)
-
-        end do
+      end do
 
 #ifdef HAVE_MPI
-        if(gr%mesh%parallel_in_domains) then
-          SAFE_ALLOCATE(metmp(1:2, 1:blocksize))
-          metmp = me1
-          call MPI_Allreduce(metmp(1, 1), me1(1, 1), 2 * blocksize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
-          SAFE_DEALLOCATE_A(metmp)
-        end if
+      if(gr%mesh%parallel_in_domains) then
+        SAFE_ALLOCATE(metmp(1:2, 1:blocksize))
+        metmp = me1
+        call MPI_Allreduce(metmp(1, 1), me1(1, 1), 2 * blocksize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
+        SAFE_DEALLOCATE_A(metmp)
+      end if
 #endif
 
-        do ist = sst, est
-          ib = ist - sst + 1
+      do ist = sst, est
+        ib = ist - sst + 1
 
-          st%eigenval(ist, ik) = me1(1, ib)/me1(2, ib)
+        st%eigenval(ist, ik) = me1(1, ib)/me1(2, ib)
 
-          do idim = 1, st%d%dim
-            call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), psib%states(ib)%X(psi)(:, idim), res(:, idim, ib))
-          end do
+        do idim = 1, st%d%dim
+          call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), psib%states(ib)%X(psi)(:, idim), res(:, idim, ib))
         end do
+      end do
 
-        call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb, kresb)
-        
-        call X(hamiltonian_apply_batch)(hm, gr%der, kresb, resb, ik)
+      call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb, kresb)
 
-        niter = niter + 2 * bsize
+      call X(hamiltonian_apply_batch)(hm, gr%der, kresb, resb, ik)
 
-        do ist = sst, est
-          ib = ist - sst + 1
+      niter = niter + 2 * bsize
 
-          me2(1, ib) = X(mf_dotp)(gr%mesh, st%d%dim, kres(:, :, ib), kres(:, :, ib), reduce = .false.)
-          me2(2, ib) = X(mf_dotp)(gr%mesh, st%d%dim, psib%states(ib)%X(psi),  kres(:, :, ib), reduce = .false.)
-          me2(3, ib) = X(mf_dotp)(gr%mesh, st%d%dim, kres(:, :, ib), res(:, :, ib), reduce = .false.)
-          me2(4, ib) = X(mf_dotp)(gr%mesh, st%d%dim, psib%states(ib)%X(psi),  res(:, :, ib), reduce = .false.)
+      do ist = sst, est
+        ib = ist - sst + 1
 
-        end do
+        me2(1, ib) = X(mf_dotp)(gr%mesh, st%d%dim, kres(:, :, ib), kres(:, :, ib), reduce = .false.)
+        me2(2, ib) = X(mf_dotp)(gr%mesh, st%d%dim, psib%states(ib)%X(psi),  kres(:, :, ib), reduce = .false.)
+        me2(3, ib) = X(mf_dotp)(gr%mesh, st%d%dim, kres(:, :, ib), res(:, :, ib), reduce = .false.)
+        me2(4, ib) = X(mf_dotp)(gr%mesh, st%d%dim, psib%states(ib)%X(psi),  res(:, :, ib), reduce = .false.)
+
+      end do
 
 #ifdef HAVE_MPI
-        if(gr%mesh%parallel_in_domains) then
-          SAFE_ALLOCATE(metmp(1:4, 1:blocksize))
-          metmp = me2
-          call MPI_Allreduce(metmp(1, 1), me2(1, 1), 4 * blocksize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
-          SAFE_DEALLOCATE_A(metmp)
-        end if
+      if(gr%mesh%parallel_in_domains) then
+        SAFE_ALLOCATE(metmp(1:4, 1:blocksize))
+        metmp = me2
+        call MPI_Allreduce(metmp(1, 1), me2(1, 1), 4 * blocksize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
+        SAFE_DEALLOCATE_A(metmp)
+      end if
 #endif
 
-        do ist = sst, est
-          ib = ist - sst + 1
+      do ist = sst, est
+        ib = ist - sst + 1
 
-          ca = me2(1, ib) * me2(4, ib) - me2(3, ib) * me2(2, ib)
-          cb = me1(2, ib) * me2(3, ib) - me1(1, ib) * me2(1, ib)
-          cc = me1(1, ib) * me2(2, ib) - me1(2, ib) * me2(4, ib)
+        ca = me2(1, ib) * me2(4, ib) - me2(3, ib) * me2(2, ib)
+        cb = me1(2, ib) * me2(3, ib) - me1(1, ib) * me2(1, ib)
+        cc = me1(1, ib) * me2(2, ib) - me1(2, ib) * me2(4, ib)
 
-          lambda = CNST(2.0) * cc / (cb + sqrt(cb**2 - CNST(4.0) * ca * cc))
+        lambda = CNST(2.0) * cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc))
 
-          do idim = 1, st%d%dim
-            call lalg_axpy(gr%mesh%np, lambda, kres(:, idim, ib), psib%states(ib)%X(psi)(:, idim))
-          end do
-
+        do idim = 1, st%d%dim
+          call lalg_axpy(gr%mesh%np, lambda, kres(:, idim, ib), psib%states(ib)%X(psi)(:, idim))
         end do
 
       end do
 
-      call batch_end(psib)
-      call batch_end(resb)
-      call batch_end(kresb)
-
     end do
 
+    call batch_end(psib)
+    call batch_end(resb)
+    call batch_end(kresb)
+
     if(mpi_grp_is_root(mpi_world)) then
-      call loct_progress_bar(st%nst * (ik - 1) +  (ist * (isweep - 1)) / sweeps, st%nst * st%d%nik)
+      call loct_progress_bar(st%nst * (ik - 1) +  est, st%nst * st%d%nik)
     end if
 
-    call X(states_orthogonalization_full)(st, st%nst, gr%mesh, st%d%dim, st%X(psi)(:, :, :, ik))
   end do
+
+  call X(states_orthogonalization_full)(st, st%nst, gr%mesh, st%d%dim, st%X(psi)(:, :, :, ik))
 
   SAFE_DEALLOCATE_A(me1)
   SAFE_DEALLOCATE_A(me2)
