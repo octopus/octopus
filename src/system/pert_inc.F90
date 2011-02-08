@@ -18,13 +18,13 @@
 !! $Id: pert_inc.F90 2548 2006-11-06 21:42:27Z xavier $
 
 ! --------------------------------------------------------------------------
-subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
+subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out)
 ! Returns f_out = H' f_in, where H' is perturbation Hamiltonian
 ! Note that e^ikr phase is applied to f_in, then is removed afterward
   type(pert_t),         intent(in)    :: this
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(in)    :: hm
+  type(hamiltonian_t),  intent(inout) :: hm
   integer,              intent(in)    :: ik
   R_TYPE,               intent(in)    :: f_in(:, :)
   R_TYPE,               intent(out)   :: f_out(:, :)
@@ -239,7 +239,7 @@ subroutine X(ionic_perturbation)(this, gr, geo, hm, ik, f_in, f_out, iatom, idir
   type(pert_t),         intent(in)    :: this
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(in)    :: hm
+  type(hamiltonian_t),  intent(inout) :: hm
   integer,              intent(in)    :: ik
   R_TYPE,               intent(in)    :: f_in(:)
   R_TYPE,               intent(out)   :: f_out(:)
@@ -256,7 +256,7 @@ subroutine X(ionic_perturbation)(this, gr, geo, hm, ik, f_in, f_out, iatom, idir
 
   SAFE_ALLOCATE(vloc(1:gr%mesh%np))
   vloc(1:gr%mesh%np) = M_ZERO
-  call epot_local_potential(hm%ep, gr%der, gr%dgrid, psolver, geo, iatom, vloc, CNST(0.0))
+  call epot_local_potential(hm%ep, gr%der, gr%dgrid, geo, iatom, vloc, CNST(0.0))
 
   SAFE_ALLOCATE(fin(1:gr%mesh%np_part, 1:1))
   call lalg_copy(gr%mesh%np_part, f_in, fin(:, 1))
@@ -287,7 +287,7 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
   type(pert_t),         intent(in)    :: this
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(in)    :: hm
+  type(hamiltonian_t),  intent(inout) :: hm
   integer,              intent(in)    :: ik
   R_TYPE,               intent(in)    :: f_in(:, :)
   R_TYPE,               intent(out)   :: f_out(:, :)
@@ -524,7 +524,7 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, hm, ik, f_in, f_out, ia
   type(pert_t),        intent(in)    :: this
   type(grid_t),        intent(inout) :: gr
   type(geometry_t),    intent(in)    :: geo
-  type(hamiltonian_t), intent(in)    :: hm
+  type(hamiltonian_t), intent(inout) :: hm
   integer,             intent(in)    :: ik
   R_TYPE,              intent(in)    :: f_in(:)
   R_TYPE,              intent(out)   :: f_out(:)
@@ -545,7 +545,7 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, hm, ik, f_in, f_out, ia
   SAFE_ALLOCATE(vloc(1:gr%mesh%np))
 
   forall(ip = 1:gr%mesh%np) vloc(ip) = M_ZERO
-  call epot_local_potential(hm%ep, gr%der, gr%dgrid, psolver, geo, iatom, vloc, CNST(0.0))
+  call epot_local_potential(hm%ep, gr%der, gr%dgrid, geo, iatom, vloc, CNST(0.0))
 
   call lalg_copy(gr%mesh%np_part, f_in, fin(:, 1))
    
@@ -585,7 +585,7 @@ subroutine X(ionic_pert_matrix_elements_2)(this, gr, geo, hm, ik, st, psi, vib, 
   type(pert_t),        intent(in)    :: this
   type(grid_t),        intent(inout) :: gr
   type(geometry_t),    intent(in)    :: geo
-  type(hamiltonian_t), intent(in)    :: hm
+  type(hamiltonian_t), intent(inout) :: hm
   integer,             intent(in)    :: ik
   type(states_t),      intent(in)    :: st
   R_TYPE,              intent(inout) :: psi(:, :, :)
@@ -619,7 +619,7 @@ subroutine X(ionic_pert_matrix_elements_2)(this, gr, geo, hm, ik, st, psi, vib, 
       idir  = vibrations_get_dir (vib, imat)
 
       forall(ip = 1:gr%mesh%np) vloc(ip) = M_ZERO
-      call epot_local_potential(hm%ep, gr%der, gr%dgrid, psolver, geo, iatom, vloc, CNST(0.0))
+      call epot_local_potential(hm%ep, gr%der, gr%dgrid, geo, iatom, vloc, CNST(0.0))
 
       do jdir = 1, gr%sb%dim
         jmat = vibrations_get_index(vib, iatom, jdir)
@@ -658,7 +658,7 @@ subroutine X(pert_expectation_density) (this, gr, geo, hm, st, psia, psib, densi
   type(pert_t),         intent(in)    :: this
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(in)    :: hm
+  type(hamiltonian_t),  intent(inout) :: hm
   type(states_t),       intent(in)    :: st
   R_TYPE,               pointer       :: psia(:, :, :, :)
   R_TYPE,               pointer       :: psib(:, :, :, :)
@@ -708,7 +708,7 @@ R_TYPE function X(pert_expectation_value) (this, gr, geo, hm, st, psia, psib, pe
   type(pert_t),         intent(in)    :: this
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(in)    :: hm
+  type(hamiltonian_t),  intent(inout) :: hm
   type(states_t),       intent(in)    :: st
   R_TYPE,               pointer       :: psia(:, :, :, :)
   R_TYPE,               pointer       :: psib(:, :, :, :)

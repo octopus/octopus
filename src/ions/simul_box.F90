@@ -57,7 +57,8 @@ module simul_box_m
     simul_box_in_box_vec,       &
     simul_box_dump,             &
     simul_box_atoms_in_box,     &
-    simul_box_copy
+    simul_box_copy,             &
+    simul_box_complex_boundaries
 
   integer, parameter, public :: &
     SPHERE         = 1,         &
@@ -144,7 +145,7 @@ module simul_box_m
 #ifdef HAVE_GDLIB
     integer :: image_size(1:2)
 #endif
-
+    logical :: complex_boundaries
   end type simul_box_t
 
   character(len=22), parameter :: dump_tag = '*** simul_box_dump ***'
@@ -242,6 +243,18 @@ contains
       call parse_integer(datasets_check('PeriodicDimensions'), 0, sb%periodic_dim)
       if ((sb%periodic_dim < 0) .or. (sb%periodic_dim > MAX_DIM) .or. (sb%periodic_dim > sb%dim)) &
         call input_error('PeriodicDimensions')
+
+      !%Variable ComplexBoundaries
+      !%Type logical
+      !%Default no
+      !%Section System
+      !%Description
+      !% (Experimental) If enabled the system will have complex
+      !% boundaries defined by an electrostatic potential. Must be
+      !% used with the SETE poisson solver.
+      !%End
+      call parse_logical(datasets_check('ComplexBoundaries'), .false., sb%complex_boundaries)
+      if(sb%complex_boundaries) call messages_experimental("Complex boundaries")
 
       !%Variable MultiResolutionArea
       !%Type block
@@ -1436,6 +1449,13 @@ contains
     POP_SUB(ob_simul_box_add_lead_atoms)
   end subroutine ob_simul_box_add_lead_atoms
 
+  ! -----------------------------------------------------
+
+  logical pure function simul_box_complex_boundaries(sb) result(cb)
+    type(simul_box_t),  intent(in) :: sb
+
+    cb = sb%complex_boundaries
+  end function simul_box_complex_boundaries
 end module simul_box_m
 
 

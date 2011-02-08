@@ -21,7 +21,7 @@
 subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
   occ_solution_method, degen_thres)
   type(system_t),         intent(inout) :: sys
-  type(hamiltonian_t),    intent(in)    :: hm
+  type(hamiltonian_t),    intent(inout) :: hm
   type(lr_t),             intent(in)    :: lr(:,:)
   type(pert_t),           intent(inout) :: perturbation
   FLOAT,                  intent(out)   :: eff_mass_inv(:,:,:,:)

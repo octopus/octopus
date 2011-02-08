@@ -20,13 +20,14 @@
 subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born_charges)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(inout) :: geo
-  type(epot_t),                   intent(in)    :: ep
+  type(epot_t),                   intent(inout) :: ep
   type(states_t),                 intent(inout) :: st
   FLOAT,                          intent(in)    :: time
   type(lr_t),           optional, intent(inout) :: lr
   type(lr_t),           optional, intent(inout) :: lr2
   integer,              optional, intent(in)    :: lr_dir
   type(Born_charges_t), optional, intent(out)   :: Born_charges
+
   ! provide these optional arguments to calculate Born effective charges rather than forces
   ! lr, lr2 should be the wfns from electric perturbation in the lr_dir direction
   ! lr is for +omega, lr2 is for -omega.
@@ -253,7 +254,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
     
     vloc(1:np) = M_ZERO
     
-    call epot_local_potential(ep, gr%der, gr%dgrid, psolver, geo, iatom, vloc, time)
+    call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, vloc, time)
 
     forall(ip = 1:np) zvloc(ip) = vloc(ip)
 

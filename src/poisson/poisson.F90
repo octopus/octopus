@@ -125,7 +125,7 @@ contains
   !-----------------------------------------------------------------
   subroutine poisson_init(this, der, geo, all_nodes_comm)
     type(poisson_t),             intent(out)   :: this
-    type(derivatives_t), target, intent(inout) :: der
+    type(derivatives_t), target, intent(in)    :: der
     type(geometry_t),            intent(in)    :: geo
     integer,                     intent(in)    :: all_nodes_comm
 
@@ -326,6 +326,12 @@ contains
 #endif
       if (this%method == POISSON_SETE) then
         call messages_experimental('SETE poisson solver')
+
+        if(.not. simul_box_complex_boundaries(der%mesh%sb)) then
+          message(1) = 'Complex boundaries must be enabled to use the SETE poisson solver.'
+          message(2) = 'Use ComplexBoundaries = yes in your input file.'
+          call write_fatal(2)
+        end if
       end if
 
       if (this%method == POISSON_FMM) then

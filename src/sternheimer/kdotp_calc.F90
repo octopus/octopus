@@ -64,7 +64,7 @@ contains
 ! This is identically zero for real wavefunctions.
 subroutine zcalc_band_velocity(sys, hm, pert, velocity)
   type(system_t),      intent(inout) :: sys
-  type(hamiltonian_t), intent(in)    :: hm
+  type(hamiltonian_t), intent(inout) :: hm
   type(pert_t),        intent(inout) :: pert
   FLOAT,               intent(out)   :: velocity(:,:,:)
 

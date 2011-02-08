@@ -74,7 +74,7 @@ contains
   subroutine forces_calculate(gr, geo, ep, st, t)
     type(grid_t),     intent(inout) :: gr
     type(geometry_t), intent(inout) :: geo
-    type(epot_t),     intent(in)    :: ep
+    type(epot_t),     intent(inout) :: ep
     type(states_t),   intent(inout) :: st
     FLOAT,     optional, intent(in) :: t
 
