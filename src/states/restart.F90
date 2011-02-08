@@ -384,6 +384,7 @@ contains
         do idim = 1, st%d%dim
           do il = 1, NLEADS
             forall(ip = 1:gr%intf(il)%np_uc)
+              ! FIXME: this will probably fail for MeshBlockSize > 1
               st%ob_lead(il)%intf_psi(ip, idim, ist, ik) = st%zpsi(gr%intf(il)%index(ip), idim, ist, ik)
             end forall
           end do
@@ -727,13 +728,12 @@ contains
   ! When doing an open-boundary calculation Octopus needs the
   ! unscattered states in order to solve the Lippmann-Schwinger
   ! equation to obtain extended eigenstates.
-  ! Since we only need the occupied states we just read them.
   subroutine read_free_states(st, gr)
     type(states_t),       intent(inout) :: st
     type(grid_t), target, intent(in)    :: gr
     
-    integer                    :: ik, ist, idim, jk(st%nst), err, wfns, occs, il
-    integer                    :: np, ip, ip_lead, idir, lead_nr(2, MAX_DIM), ix, iy, iz, ixlead(1:3)
+    integer                    :: ik, ist, idim, counter, err, wfns, occs, il
+    integer                    :: np, ip, ip_lead, idir, ix, iy, iz, ixlead(1:3)
     character(len=256)         :: line, fname, filename, restart_dir, chars
     character                  :: char
     FLOAT                      :: occ, eval, kpoint(1:MAX_DIM), w_k, w_sum
@@ -749,8 +749,6 @@ contains
     sb       => gr%sb
     m_lead   => gr%ob_grid%lead(LEFT)%mesh
     m_center => gr%mesh
-    lead_nr(1, :) = m_lead%idx%nr(1, :) + m_lead%idx%enlarge
-    lead_nr(1, :) = m_lead%idx%nr(2, :) - m_lead%idx%enlarge
 
     mpi_grp = st%dom_st_kpt_mpi_grp
 
@@ -776,7 +774,7 @@ contains
     call iopar_read(mpi_grp, occs, line, err)
     call iopar_read(mpi_grp, occs, line, err)
 
-    jk(:)  = 0 ! reset counter for k-points
+    counter  = 0 ! reset counter
     st%d%kweights(:) = M_ZERO
 
     forall(il = 1:NLEADS) st%ob_lead(il)%rho = M_ZERO
@@ -800,19 +798,11 @@ contains
       read(line, *) occ, char, eval, char, (kpoint(idir), char, idir = 1, gr%sb%dim), &
         w_k, char, chars, char, ik, char, ist, char, idim
 
-
-      ! FIXME for more than 1 state
-      if(occ > M_EPSILON) then
-        ! count the occupied k-points (with idim == 1)
-        if(idim .eq. 1) jk(ist) = jk(ist) + 1
-
-        st%d%kweights(jk(ist)) = w_k
-        st%occ(ist, jk(ist)) = occ
-        ! if not in the corresponding node cycle
-        if(jk(ist) < st%d%kpt%start .or. jk(ist) > st%d%kpt%end) cycle
-      else ! we do not consider empty states
-        cycle
-      end if
+      st%d%kweights(ik) = w_k
+      st%occ(ist, ik) = occ
+      counter = counter + 1
+      ! if not in the corresponding node cycle
+      if(ik < st%d%kpt%start .or. ik > st%d%kpt%end .or. ist < st%st_start .or. ist > st%st_end) cycle
 
       call zrestart_read_function(trim(restart_dir), fname, m_lead, tmp(:, idim), err)
 
@@ -839,7 +829,7 @@ contains
             ip_lead = gr%ob_grid%lead(LEFT)%mesh%idx%lxyz_inv(ixlead(1), ixlead(2), ixlead(3))
 
             if(ip > 0 .and. ip <= gr%mesh%np .and. ip_lead > 0 .and. ip_lead <= gr%ob_grid%lead(LEFT)%mesh%np) then
-              st%zphi(ip, idim, ist, jk(ist)) = tmp(ip_lead, idim)
+              st%zphi(ip, idim, ist, ik) = tmp(ip_lead, idim)
             end if
 
             INCR(ixlead(3), 1)
@@ -855,45 +845,39 @@ contains
       end do
 
       ! Apply phase. Here the kpoint read from the file is different
-      ! from the one calculated by octopus, since the box size
-      ! changed. I dont know what is correct. XA
+      ! from the one calculated by octopus, since the box size changed.
+      ! The read kpoints are use for describing the free states of the
+      ! open system, which are mapped 1 to 1 (periodic incoming to scattered)
+      ! with the Lippmann-Schwinger equation.
 
       do ip = 1, gr%mesh%np
         phase = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim)*kpoint(1:gr%sb%dim)))
-        st%zphi(ip, idim, ist, jk(ist)) = phase * st%zphi(ip, idim, ist, jk(ist))
+        st%zphi(ip, idim, ist, ik) = phase * st%zphi(ip, idim, ist, ik)
       end do
 
       ! For debugging: write phi in gnuplot format to files.
       ! Only the z=0 plane is written, so mainly useful for 1D and 2D
       ! debugging.
       if(in_debug_mode) then
-        write(filename, '(a,i3.3,a,i4.4,a,i1.1)') 'phi-', jk(ist), '-', ist, '-', idim
+        write(filename, '(a,i3.3,a,i4.4,a,i1.1)') 'phi-', ik, '-', ist, '-', idim
         select case(gr%sb%dim)
         case(1)
           call zoutput_function(output_axis_x, 'debug/open_boundaries', filename, &
-            m_center, st%zphi(:, idim, ist, jk(ist)), sqrt(units_out%length**(-sb%dim)), err, is_tmp=.false.)
+            m_center, st%zphi(:, idim, ist, ik), sqrt(units_out%length**(-sb%dim)), err, is_tmp=.false.)
         case(2, 3)
           call zoutput_function(output_plane_z, 'debug/open_boundaries', filename, &
-            m_center, st%zphi(:, idim, ist, jk(ist)), sqrt(units_out%length**(-sb%dim)), err, is_tmp=.false.)
+            m_center, st%zphi(:, idim, ist, ik), sqrt(units_out%length**(-sb%dim)), err, is_tmp=.false.)
         end select
       end if
 
     end do ! Loop over all free states.
-
-    ! renormalize weigths
-    w_sum = sum(st%d%kweights(:))
-    st%d%kweights(:) = st%d%kweights(:)/w_sum
-    st%qtot = M_ZERO
-    do ist = 1, st%nst
-      st%qtot = st%qtot + sum(st%occ(ist, 1:st%d%nik) * st%d%kweights(1:st%d%nik))
-    end do
 
     call io_close(wfns)
     call io_close(occs)
     SAFE_DEALLOCATE_A(tmp)
 
     message(1) = "Info: Successfully initialized free states from '"//trim(restart_dir)//"'"
-    write(message(2),'(a,i3,a)') 'Info:', sum(jk(:)), ' occupied states read by program.'
+    write(message(2),'(a,i3,a)') 'Info:', counter, ' wave functions read by program.'
     call write_info(2)
 
     POP_SUB(read_free_states)
@@ -909,7 +893,7 @@ contains
         do ip = 1, np
           st%ob_lead(il)%rho(ip, idim) = st%ob_lead(il)%rho(ip, idim) + w_k * occ * &
             (real(tmp(ip, idim), REAL_PRECISION)**2 + aimag(tmp(ip, idim))**2)
-        end do
+       end do
         select case(st%d%ispin)
         case(SPINORS)
           message(1) = "restart.lead_dens_accum() does not work with spinors yet!"

@@ -48,7 +48,7 @@ lead_PeriodicDimensions = 1
 %
 %KPointsGrid 
   2 | 1
-1/2 | 1/2
+-1/2 | 0
 %
 KPointsUseSymmetries = false
 

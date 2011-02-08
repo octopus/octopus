@@ -59,7 +59,7 @@ lead_Lx = Spacing
 
 %KPointsGrid 
   8 | 1 
-1/2 | 1/2 
+-1/2 | 0
 %
 KPointsUseSymmetries = false
 

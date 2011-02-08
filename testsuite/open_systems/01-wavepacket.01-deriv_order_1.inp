@@ -50,7 +50,7 @@ lead_PeriodicDimensions = 1
 
 %KPointsGrid 
   2 
-1/2 
+-1/2
 %
 KPointsUseSymmetries = false
 

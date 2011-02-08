@@ -121,8 +121,6 @@ module states_m
     FLOAT, pointer      :: ob_eigenval(:, :) !< Eigenvalues of free states.
     type(states_dim_t)  :: ob_d              !< Dims. of the unscattered systems.
     integer             :: ob_nst            !< nst of the unscattered systems.
-    integer             :: ob_ncs            !< No. of continuum states of open system.
-                                             !< ob_ncs = ob_nst*st%ob_d%nik / st%d%nik
     FLOAT, pointer      :: ob_occ(:, :)      !< occupations
     type(states_lead_t) :: ob_lead(2*MAX_DIM)
 
@@ -334,14 +332,16 @@ contains
 
     call geometry_val_charge(geo, st%val_charge)
     
-    if(gr%ob_grid%open_boundaries) excess_charge = -st%val_charge
+    if(gr%ob_grid%open_boundaries) then
+      ! renormalize charge of central region to match leads (open system, not finite)
+      st%val_charge = st%val_charge * (gr%ob_grid%lead(LEFT)%sb%lsize(TRANS_DIR) / gr%sb%lsize(TRANS_DIR))
+    end if
 
     st%qtot = -(st%val_charge + excess_charge)
 
     do il = 1, NLEADS
       nullify(st%ob_lead(il)%intf_psi)
     end do
-    st%open_boundaries = .false.
     ! When doing open-boundary calculations the number of free states is
     ! determined by the previous periodic calculation.
     st%open_boundaries = gr%ob_grid%open_boundaries
@@ -353,8 +353,6 @@ contains
         restart_dir = trim(trim(gr%ob_grid%lead(il)%info%restart_dir)//'/'// GS_DIR)
         ! first get nst and kpoints of all states
         call states_look(restart_dir, mpi_world, ob_k(il), ob_d(il), ob_st(il), ierr)
-          ! then count the occupied ones
-        call states_look(restart_dir, mpi_world, ob_k(il), ob_d(il), ob_st(il), ierr, .true.)
         if(ierr.ne.0) then
           message(1) = 'Could not read the number of states of the periodic calculation'
           message(2) = 'from '//restart_dir//'.'
@@ -385,11 +383,6 @@ contains
         message(2) = 'and SpinComponents of the current run do not match.'
         call write_fatal(2)
       end if
-      ! If the system is spin-polarized one half of the free states
-      ! goes to the spin-up k-index, the other half to the spin-down
-      ! k-index; we therefore divide by st%d%nik.
-      st%ob_ncs = st%ob_d%nik*st%ob_nst / st%d%nik
-      st%ob_ncs = 1
       SAFE_DEALLOCATE_P(st%d%kweights)
       SAFE_ALLOCATE(st%d%kweights(1:st%d%nik))
       st%d%kweights = M_ZERO
@@ -403,7 +396,6 @@ contains
       call read_ob_eigenval_and_occ()
     else
       st%ob_nst   = 0
-      st%ob_ncs   = 0
       st%ob_d%nik = 0
       st%ob_d%dim = 0
     end if
@@ -439,22 +431,23 @@ contains
       st%nst = ntot
     end if
 
-    st%nst = st%nst + nempty + st%ob_ncs
+    st%nst = st%nst + nempty
 
 
     ! FIXME: For now, open-boundary calculations are only possible for
     ! continuum states, i.e. for those states treated by the Lippmann-
     ! Schwinger approach during SCF.
+    ! Bound states should be done with extra states, without k-points.
     if(gr%ob_grid%open_boundaries) then
       if(st%nst.ne.st%ob_nst .or. st%d%nik.ne.st%ob_d%nik) then
         message(1) = 'Open-boundary calculations for possibly bound states'
         message(2) = 'are not possible yet. You have to match your number'
         message(3) = 'of states to the number of free states of your previous'
         message(4) = 'periodic run.'
-        write(message(5), '(a,i5,a)') 'Your finite system contributes ', st%nst-st%ob_nst, ' states,'
-        write(message(6), '(a,i5,a)') 'while your periodic calculation had ', st%ob_nst, ' states.'
-        write(message(7), '(a,i5,a)') 'Your finite system contributes ', st%d%nik-st%ob_d%nik, ' k-points,'
-        write(message(8), '(a,i5,a)') 'while your periodic calculation had ', st%ob_d%nik, ' k-points.'
+        write(message(5), '(a,i5,a)') 'Your central region contributes ', st%nst, ' states,'
+        write(message(6), '(a,i5,a)') 'while your lead calculation had ', st%ob_nst, ' states.'
+        write(message(7), '(a,i5,a)') 'Your central region contributes ', st%d%nik, ' k-points,'
+        write(message(8), '(a,i5,a)') 'while your lead calculation had ', st%ob_d%nik, ' k-points.'
         call write_fatal(8)
       end if
     end if
@@ -572,7 +565,7 @@ contains
   contains
 
     subroutine read_ob_eigenval_and_occ()
-      integer            :: occs, jk(1:st%ob_nst), ist, ik, idim, idir, err
+      integer            :: occs, ist, ik, idim, idir, err
       FLOAT              :: flt, eigenval, occ, kweights
       character          :: char
       character(len=256) :: restart_dir, line, chars
@@ -591,7 +584,6 @@ contains
       call iopar_read(mpi_world, occs, line, err)
       call iopar_read(mpi_world, occs, line, err)
 
-      jk(:) = 1
       do
         ! Check for end of file.
         call iopar_read(mpi_world, occs, line, err)
@@ -606,24 +598,21 @@ contains
         read(line, *) occ, char, eigenval, char, (flt, char, idir = 1, gr%sb%dim), kweights, &
            char, chars, char, ik, char, ist, char, idim
 
-        if(occ > M_EPSILON) then
-          if(st%d%ispin .eq. SPIN_POLARIZED) then
-              message(1) = 'Spin-Transport not implemented!'
-              call write_fatal(1)
-            if(is_spin_up(ik)) then
-              !FIXME
+        if(st%d%ispin .eq. SPIN_POLARIZED) then
+            message(1) = 'Spin-Transport not implemented!'
+            call write_fatal(1)
+          if(is_spin_up(ik)) then
+            !FIXME
 !              st%ob_eigenval(jst, SPIN_UP) = eigenval
 !              st%ob_occ(jst, SPIN_UP)      = occ
-            else
+          else
 !              st%ob_eigenval(jst, SPIN_DOWN) = eigenval
 !              st%ob_occ(jst, SPIN_DOWN)      = occ
-            end if
-          else
-            st%ob_eigenval(ist, jk(ist)) = eigenval
-            st%ob_occ(ist, jk(ist))      = occ
-            st%ob_d%kweights(jk(ist))    = kweights
           end if
-          jk(ist) = jk(ist) + 1
+        else
+          st%ob_eigenval(ist, ik) = eigenval
+          st%ob_occ(ist, ik)      = occ
+          st%ob_d%kweights(ik)    = kweights
         end if
       end do
 
@@ -637,30 +626,20 @@ contains
   !> Reads the state stored in directory "dir", and finds out
   !! the kpoints, dim, and nst contained in it.
   ! ---------------------------------------------------------
-  subroutine states_look(dir, mpi_grp, kpoints, dim, nst, ierr, only_occupied)
+  subroutine states_look(dir, mpi_grp, kpoints, dim, nst, ierr)
     character(len=*),  intent(in)    :: dir
     type(mpi_grp_t),   intent(in)    :: mpi_grp
     integer,           intent(out)   :: dim, ierr
     integer,           intent(inout) :: nst, kpoints
-    logical, optional, intent(in)    :: only_occupied
 
     character(len=256) :: line
     character(len=12)  :: filename
     character(len=1)   :: char
     integer :: iunit, iunit2, err, i, ist, idim, ik
-    integer, allocatable :: counter_kpoints(:), counter_nst(:)
     FLOAT :: occ, eigenval
-    logical :: only_occupied_
 
     PUSH_SUB(states_look)
 
-    only_occupied_ = .false.
-    if(present(only_occupied)) only_occupied_ = only_occupied
-    if(only_occupied_) then
-      ASSERT(nst>0 .and. kpoints>0)
-      SAFE_ALLOCATE(counter_kpoints(1:nst))
-      SAFE_ALLOCATE(counter_nst(1:kpoints))
-    end if
     ierr = 0
     iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=mpi_grp)
     if(iunit < 0) then
@@ -685,10 +664,6 @@ return
     kpoints = 1
     dim = 1
     nst = 1
-    if(only_occupied_) then
-      counter_kpoints(:) = 0
-      counter_nst(:) = 0
-    end if
 
     do
       call iopar_read(mpi_grp, iunit, line, i)
@@ -698,25 +673,12 @@ return
       if(idim == 2)    dim     = 2
       call iopar_read(mpi_grp, iunit2, line, err)
       read(line, *) occ, char, eigenval
-      if(only_occupied_) then
-        if(occ > M_EPSILON) then
-          counter_kpoints(ist) = counter_kpoints(ist) + 1
-          counter_nst(ik) = counter_nst(ik) + 1
-          kpoints = maxval(counter_kpoints(:))
-          nst = maxval(counter_nst(:))
-        end if
-      else
-        if(ik > kpoints) kpoints = ik
-        if(ist>nst)      nst     = ist
-      end if
+      if(ik > kpoints) kpoints = ik
+      if(ist>nst)      nst     = ist
     end do
 
     call io_close(iunit, grp = mpi_grp)
     call io_close(iunit2, grp = mpi_grp)
-    if(only_occupied_) then
-      SAFE_DEALLOCATE_A(counter_kpoints)
-      SAFE_DEALLOCATE_A(counter_nst)
-    end if
 
     POP_SUB(states_look)
   end subroutine states_look
