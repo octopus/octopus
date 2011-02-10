@@ -58,11 +58,7 @@ libgrid_a_SOURCES =       \
 	zoltan.F90              \
 	hypercube.F90           \
 	modelmb_1part.F90       \
-	cubic_mesh.F90          \
-	cubic_mesh_low.c        \
-	cubic_mesh_fft.c        \
 	transfer_table.F90      \
-	fourier_kernel.F90      \
 	mesh_batch.F90          \
 	subarray.F90            \
 	symmetrizer.F90         \
@@ -85,7 +81,6 @@ noinst_HEADERS =                  \
 	batch_inc.F90             \
 	multigrid_inc.F90         \
 	gridhier_inc.F90          \
-	cubic_mesh.h              \
 	mesh_batch_inc.F90        \
 	subarray_inc.F90          \
 	symmetrizer_inc.F90       \
@@ -131,12 +126,8 @@ zoltan.o : zoltan.F90
 batch.o : batch.F90 batch_inc.F90
 stencil.o : stencil.F90
 hypercube.o : hypercube.F90
-cubic_mesh.o : cubic_mesh.F90 mesh.o
-cubic_mesh_low.o : cubic_mesh_low.c cubic_mesh.h
-cubic_mesh_fft.o : cubic_mesh_fft.c cubic_mesh.h
 transfer_table.o : transfer_table.F90
 mesh_batch.o : mesh_batch.F90 mesh_batch_inc.F90 mesh.o mesh_function.o
-fourier_kernel.o : fourier_kernel.F90 cubic_mesh.o
 symmetrizer.o : symmetrizer.F90 symmetrizer_inc.F90 mesh.o
 partition.o : partition.F90 mesh.o
 partitioner.o : partitioner.F90 partition.o
