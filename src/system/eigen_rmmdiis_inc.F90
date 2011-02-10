@@ -19,13 +19,12 @@
 
 ! ---------------------------------------------------------
 ! See http://prola.aps.org/abstract/PRB/v54/i16/p11169_1
-subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, scf_iter, niter, converged, ik, diff, blocksize)
+subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, diff, blocksize)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
   type(preconditioner_t), intent(in)    :: pre
   FLOAT,                  intent(in)    :: tol
-  integer,                intent(in)    :: scf_iter
   integer,                intent(inout) :: niter
   integer,                intent(inout) :: converged
   integer,                intent(in)    :: ik
@@ -51,14 +50,6 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, scf_iter, niter, conver
   R_TYPE, allocatable :: buff(:, :)
   R_TYPE, allocatable :: mmc(:, :, :, :)
 #endif
-
-  integer, parameter :: sd_sweeps = 5
-
-  if(scf_iter <= sd_sweeps) then
-    ! The first iterations are special. A steepest descent minimization.
-    call X(eigensolver_rmmdiis_start)(gr, st, hm, pre, tol, scf_iter, niter, converged, ik, blocksize)
-    return
-  end if
 
   PUSH_SUB(X(eigensolver_rmmdiis))
 
@@ -344,13 +335,12 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, scf_iter, niter, conver
 end subroutine X(eigensolver_rmmdiis)
 
 ! ---------------------------------------------------------
-subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, scf_iter, niter, converged, ik, blocksize)
+subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, ik, blocksize)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
   type(preconditioner_t), intent(in)    :: pre
   FLOAT,                  intent(in)    :: tol
-  integer,                intent(in)    :: scf_iter
   integer,                intent(inout) :: niter
   integer,                intent(inout) :: converged
   integer,                intent(in)    :: ik
@@ -371,7 +361,7 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, scf_iter, niter, 
 
   type(batch_t) :: psib, resb, kresb
 
-  PUSH_SUB(X(eigensolver_rmmdiis_start))
+  PUSH_SUB(X(eigensolver_rmmdiis_min))
 
   SAFE_ALLOCATE(me1(1:2, 1:blocksize))
   SAFE_ALLOCATE(me2(1:4, 1:blocksize))
@@ -479,9 +469,9 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, scf_iter, niter, 
   SAFE_DEALLOCATE_A(res)
   SAFE_DEALLOCATE_A(kres)
 
-  POP_SUB(X(eigensolver_rmmdiis_start))
+  POP_SUB(X(eigensolver_rmmdiis_min))
 
-end subroutine X(eigensolver_rmmdiis_start)
+end subroutine X(eigensolver_rmmdiis_min)
 
 !! Local Variables:
 !! mode: f90

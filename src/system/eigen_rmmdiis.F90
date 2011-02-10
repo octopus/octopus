@@ -46,8 +46,10 @@ module eigen_rmmdiis_m
   private
   public ::                     &
     deigensolver_rmmdiis,       &
-    zeigensolver_rmmdiis
-  
+    zeigensolver_rmmdiis,       &
+    deigensolver_rmmdiis_min,   &
+    zeigensolver_rmmdiis_min
+
   contains
 
 #include "real.F90"

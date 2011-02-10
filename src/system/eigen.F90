@@ -82,6 +82,8 @@ module eigensolver_m
     type(preconditioner_t) :: pre
 
     type(subspace_t) :: sdiag
+
+    integer :: rmmdiis_minimization_iter
   end type eigensolver_t
 
 
@@ -199,6 +201,20 @@ contains
     case(RS_LOBPCG)
     case(RS_RMMDIIS)
       default_iter = 3
+
+      !%Variable EigensolverMinimizationIter
+      !%Type integer
+      !%Default 5
+      !%Section SCF::Eigensolver
+      !%Description
+      !% During the first iterations, the RMMDIIS eigensolver requires
+      !% some steepest descent minimizations to improve
+      !% convergence. This variable determines the number of those
+      !% minimzations. The default is 5.
+      !%End
+
+      call parse_integer(datasets_check('EigensolverMinimizationIter'), 5, eigens%rmmdiis_minimization_iter)
+
       if(gr%mesh%use_curvilinear) call messages_experimental("RMMDIIS eigensolver for curvilinear coordinates")
     case default
       call input_error('Eigensolver')
@@ -388,8 +404,13 @@ contains
         case(RS_MG)
           call deigensolver_mg(gr%der, st, hm, eigens%sdiag, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
-          call deigensolver_rmmdiis(gr, st, hm, eigens%pre, tol, iter, maxiter, &
-            eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
+          if(iter <= eigens%rmmdiis_minimization_iter) then
+            call deigensolver_rmmdiis_min(gr, st, hm, eigens%pre, tol, maxiter, &
+              eigens%converged(ik), ik, hm%d%block_size)
+          else
+            call deigensolver_rmmdiis(gr, st, hm, eigens%pre, tol, maxiter, &
+              eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
+          end if
         end select
 
         if(eigens%subspace_diag.and.eigens%es_type /= RS_RMMDIIS) then
@@ -416,8 +437,13 @@ contains
         case(RS_MG)
           call zeigensolver_mg(gr%der, st, hm, eigens%sdiag, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
-          call zeigensolver_rmmdiis(gr, st, hm, eigens%pre, tol, iter, maxiter, &
-            eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
+          if(iter <= eigens%rmmdiis_minimization_iter) then
+            call zeigensolver_rmmdiis_min(gr, st, hm, eigens%pre, tol, maxiter, &
+              eigens%converged(ik), ik, hm%d%block_size)
+          else
+            call zeigensolver_rmmdiis(gr, st, hm, eigens%pre, tol, maxiter, &
+              eigens%converged(ik), ik,  eigens%diff(:, ik), hm%d%block_size)
+          end if
         end select
 
         if(eigens%subspace_diag.and.eigens%es_type /= RS_RMMDIIS) then
