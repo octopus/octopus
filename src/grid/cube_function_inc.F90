@@ -17,47 +17,6 @@
 !!
 !! $Id$
 
-! ---------------------------------------------------------
-! The following routines handle creation/destruction of the cube
-subroutine X(cube_function_new)(n, cf)
-  integer, intent(in) :: n(3)
-  type(cube_function_t), intent(out) :: cf
-
-  PUSH_SUB(X(cube_function_new))
-
-  ASSERT(all(n>0))
-
-  nullify(cf%X(RS))
-  nullify(cf%FS)
-  cf%n = n
-
-  nullify(cf%fft)
-  POP_SUB(X(cube_function_new))
-end subroutine X(cube_function_new)
-
-
-! ---------------------------------------------------------
-subroutine X(cube_function_new_from)(cf, cf_i)
-  type(cube_function_t), intent(out) :: cf
-  type(cube_function_t), intent( in) :: cf_i
-
-  PUSH_SUB(X(cube_function_new_from))
-  ASSERT(all(cf_i%n>0))
-
-  nullify(cf%X(RS))
-  nullify(cf%FS)
-  cf%n = cf_i%n
-
-  if(associated(cf_i%fft)) then
-    SAFE_ALLOCATE(cf%fft)
-    call fft_copy(cf_i%fft, cf%fft)
-    cf%nx = cf_i%nx
-  else
-    nullify(cf%fft)
-  end if
-  POP_SUB(X(cube_function_new_from))
-end subroutine X(cube_function_new_from)
-
 
 ! ---------------------------------------------------------
 subroutine X(cube_function_alloc_RS)(cf)
@@ -83,23 +42,6 @@ subroutine X(cube_function_free_RS)(cf)
 
   POP_SUB(X(cube_function_free_RS))
 end subroutine X(cube_function_free_RS)
-
-! ---------------------------------------------------------
-subroutine X(cube_function_free)(cf)
-  type(cube_function_t), intent(inout) :: cf
-
-  PUSH_SUB(X(cube_function_free))
-
-  SAFE_DEALLOCATE_P(cf%X(RS))
-  SAFE_DEALLOCATE_P(cf%FS)
-
-  if(associated(cf%fft)) then
-    call fft_end(cf%fft)
-    SAFE_DEALLOCATE_P(cf%fft)
-  end if
-
-  POP_SUB(X(cube_function_free))
-end subroutine X(cube_function_free)
 
 ! ---------------------------------------------------------
 ! The next two subroutines convert a function between the normal

@@ -84,7 +84,7 @@ contains
     ! double the box (or not) to perform the fourier transforms
     call mesh_double_box(mesh%sb, mesh, db)                 ! get dimensions of the double box
     ! allocate cube function where we will perform the ffts
-    call dcube_function_new(db, fft_cf)
+    call cube_function_init(fft_cf, db)
     ! initialize the fft
     call dcube_function_fft_init(fft_cf, mesh%sb)
     ! dimensions may have been optimized
@@ -148,7 +148,7 @@ contains
     call mesh_double_box(mesh%sb, mesh, db)                 ! get dimensions of the double box
 
     ! allocate cube function where we will perform the ffts
-    call dcube_function_new(db, fft_cf)
+    call cube_function_init(fft_cf, db)
 
     ! initialize the fft
     call dcube_function_fft_init(fft_cf, mesh%sb)
@@ -233,7 +233,7 @@ contains
     call mesh_double_box(mesh%sb, mesh, db)
 
     ! allocate cube function where we will perform the ffts
-    call dcube_function_new(db, fft_cf)
+    call cube_function_init(fft_cf, db)
 
     ! initialize the fft
     call dcube_function_fft_init(fft_cf, mesh%sb)
@@ -367,7 +367,7 @@ contains
     end select
 
     ! allocate cube function where we will perform the ffts
-    call dcube_function_new(db, fft_cf)
+    call cube_function_init(fft_cf, db)
 
     ! initialize the fft
     call dcube_function_fft_init(fft_cf, mesh%sb)
@@ -462,7 +462,7 @@ contains
     db(1:2) = maxval(db)
 
     ! allocate cube function where we will perform the ffts
-    call dcube_function_new(db, fft_cf)      
+    call cube_function_init(fft_cf, db)      
     ! initialize fft
     call dcube_function_fft_init(fft_cf, mesh%sb)
     ! dimensions may have been optimized
@@ -538,7 +538,7 @@ contains
     call mesh_double_box(mesh%sb, mesh, db)                 ! get dimensions of the double box
 
     ! allocate cube function where we will perform the ffts
-    call dcube_function_new(db, fft_cf)      
+    call cube_function_init(fft_cf, db)      
     ! initialize fft
     call dcube_function_fft_init(fft_cf, mesh%sb)
     ! dimensions may have been optimized
@@ -591,7 +591,7 @@ contains
 
     db(:) = mesh%idx%ll(:)
     ! allocate cube function where we will perform the ffts
-    call dcube_function_new(db, fft_cf)      
+    call cube_function_init(fft_cf, db)      
     ! initialize fft
     call dcube_function_fft_init(fft_cf, mesh%sb)
     ! dimensions may have been optimized
@@ -631,7 +631,7 @@ contains
     PUSH_SUB(poisson_fft_build_1d_1d)
 
     box = mesh%idx%ll
-    call dcube_function_new(box, fft_cf)
+    call cube_function_init(fft_cf, box)
     call dcube_function_fft_init(fft_cf, mesh%sb)
     box(1:3) = fft_cf%n(1:3)
 
@@ -665,7 +665,7 @@ contains
 
     call mesh_double_box(mesh%sb, mesh, box)
     
-    call dcube_function_new(box, fft_cf)
+    call cube_function_init(fft_cf, box)
     call dcube_function_fft_init(fft_cf, mesh%sb)
     box(1:3) = fft_cf%n(1:3)
 
@@ -694,7 +694,7 @@ contains
   subroutine poisson_fft_end()
     PUSH_SUB(poisson_fft.end)
 
-    call dcube_function_free(fft_cf)
+    call cube_function_end(fft_cf)
     call dfourier_space_op_end(coulb)
 
     POP_SUB(poisson_fft.end)

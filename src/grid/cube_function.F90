@@ -24,40 +24,43 @@ module cube_function_m
   use mesh_m
   use mesh_cube_map_m
   use messages_m
+  use mpi_m
   use fft_m
   use profiling_m
   use simul_box_m
 
   implicit none
   private
-  public ::                     &
-    cube_function_t,            &
-    dcube_function_new,         &
-    zcube_function_new,         &
-    dcube_function_new_from,    &
-    zcube_function_new_from,    &
-    dcube_function_alloc_RS,    &
-    zcube_function_alloc_RS,    &
-    dcube_function_free_RS,     &
-    zcube_function_free_RS,     &
-    dcube_function_free,        & 
-    zcube_function_free,        &
-    cube_function_surface_average,         &
-    cube_function_phase_factor,            &
-    dmesh_to_cube,              &
-    zmesh_to_cube,              &
-    dcube_to_mesh,              &
+  public ::                        &
+    cube_function_t,               &
+    cube_function_init,            &
+    cube_function_init_from,       &
+    cube_function_end,             &
+    dcube_function_alloc_RS,       &
+    zcube_function_alloc_RS,       &
+    dcube_function_free_RS,        &
+    zcube_function_free_RS,        &
+    cube_function_surface_average, &
+    cube_function_phase_factor,    &
+    dmesh_to_cube,                 &
+    zmesh_to_cube,                 &
+    dcube_to_mesh,                 &
     zcube_to_mesh
 
   type cube_function_t
-    integer :: n(3)   ! the linear dimensions of the cube
-
+    integer :: n(1:3)        ! the linear dimensions of the cube
+    integer :: nalloc(1:3)
+    integer :: nglobal(1:3)
+    integer :: nprocs(1:3)
+    integer :: iprocs(1:3)
+    integer :: offset(1:3)
     FLOAT, pointer :: dRS(:, :, :)
     CMPLX, pointer :: zRS(:, :, :)
     CMPLX, pointer :: FS(:, :, :)
 
     integer :: nx     ! = n(1)/2 + 1, first dimension of the FS array
     type(fft_t), pointer :: fft
+    type(mpi_grp_t) :: mpi_grp
   end type cube_function_t
 
   type(profile_t), save :: prof_m2c, prof_c2m
@@ -156,7 +159,70 @@ contains
 
     POP_SUB(cube_function_phase_factor)
   end subroutine cube_function_phase_factor
+  
+  ! ---------------------------------------------------------
+  ! The following routines handle creation/destruction of the cube
+  subroutine cube_function_init(cf, n)
+    type(cube_function_t), intent(out) :: cf
+    integer,                intent(in) :: n(:)
+    
+    PUSH_SUB(cube_function_init)
+    
+    ASSERT(all(n>0))
+    
+    nullify(cf%zRS)
+    nullify(cf%dRS)
+    nullify(cf%FS)
+    cf%n = n
+    cf%offset = 0
+    
+    nullify(cf%fft)
+    POP_SUB(cube_function_init)
+  end subroutine cube_function_init
+  
+  ! ---------------------------------------------------------
 
+  subroutine cube_function_init_from(cf, cf_i)
+    type(cube_function_t), intent(out) :: cf
+    type(cube_function_t), intent( in) :: cf_i
+
+    PUSH_SUB(cube_function_init_from)
+    ASSERT(all(cf_i%n>0))
+
+    nullify(cf%dRS)
+    nullify(cf%zRS)
+    nullify(cf%FS)
+
+    cf%n = cf_i%n
+
+    if(associated(cf_i%fft)) then
+      SAFE_ALLOCATE(cf%fft)
+      call fft_copy(cf_i%fft, cf%fft)
+      cf%nx = cf_i%nx
+    else
+      nullify(cf%fft)
+    end if
+
+    POP_SUB(cube_function_init_from)
+  end subroutine cube_function_init_from
+
+  ! ---------------------------------------------------------
+  subroutine cube_function_end(cf)
+    type(cube_function_t), intent(inout) :: cf
+    
+    PUSH_SUB(cube_function_end)
+    
+    SAFE_DEALLOCATE_P(cf%dRS)
+    SAFE_DEALLOCATE_P(cf%zRS)
+    SAFE_DEALLOCATE_P(cf%FS)
+    
+    if(associated(cf%fft)) then
+      call fft_end(cf%fft)
+      SAFE_DEALLOCATE_P(cf%fft)
+    end if
+
+    POP_SUB(cube_function_end)
+  end subroutine cube_function_end
 
 #include "undef.F90"
 #include "real.F90"

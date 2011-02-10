@@ -99,7 +99,7 @@ contains
     if(present(init_world)) init_world_ = init_world
 #endif
 
-    call dcube_function_new(mesh%idx%ll, this%rho_cf)
+    call cube_function_init(this%rho_cf, mesh%idx%ll)
 
     ! we need to nullify the pointer so they can be deallocated safely
     ! afterwards
@@ -291,7 +291,7 @@ contains
       ! we need to be sure that the root of every domain-partition has a copy of the potential
       ! for the moment we broadcast to all nodes, but this is more than what we really need 
       if(i_cnf == WORLD .and. .not. this%cnf(WORLD)%all_nodes) then
-        call MPI_Bcast(this%rho_cf%rs(1, 1, 1), this%rho_cf%n(1)*this%rho_cf%n(2)*this%rho_cf%n(3), &
+        call MPI_Bcast(this%rho_cf%drs(1, 1, 1), this%rho_cf%n(1)*this%rho_cf%n(2)*this%rho_cf%n(3), &
           MPI_FLOAT, 0, this%all_nodes_comm, mpi_err)
       end if
 #endif
@@ -336,7 +336,7 @@ contains
     SAFE_DEALLOCATE_P(this%cnf(SERIAL)%kernel)
 #endif
 
-    call dcube_function_free(this%rho_cf)
+    call cube_function_end(this%rho_cf)
 
     POP_SUB(poisson_isf_end)
   end subroutine poisson_isf_end

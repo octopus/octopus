@@ -209,11 +209,12 @@ contains
       sp = M_ONE
     end if
  
+
+    call cube_function_init(cube_function_tmp, gr%mesh%idx%ll)
+
     if (states_are_real(st)) then
-      call dcube_function_new(gr%mesh%idx%ll, cube_function_tmp)
       call dcube_function_fft_init(cube_function_tmp, gr%sb)
     else
-      call zcube_function_new(gr%mesh%idx%ll, cube_function_tmp)
       call zcube_function_fft_init(cube_function_tmp, gr%sb)
     end if
 
@@ -293,11 +294,7 @@ contains
 
     end do do_is
 
-    if (states_are_real(st)) then
-      call dcube_function_free(cube_function_tmp)
-    else
-      call zcube_function_free(cube_function_tmp)
-    end if
+    call cube_function_end(cube_function_tmp)
 
     POP_SUB(elf_calc_fs)
 

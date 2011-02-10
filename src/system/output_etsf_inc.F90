@@ -48,7 +48,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
   if (iand(outp%what, output_geometry).ne.0) then
     !Create a cube
-    call dcube_function_new (gr%mesh%idx%ll, cube)
+    call cube_function_init(cube, gr%mesh%idx%ll)
     call dcube_function_alloc_RS(cube)    
 
     !Set the dimensions
@@ -130,7 +130,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     flags%geometry = etsf_geometry_none
 
     !Destroy the cube
-    call dcube_function_free(cube)
+    call cube_function_end(cube)
 
     !Reset the dimensions
     dims%number_of_atoms = 1
@@ -141,7 +141,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
   if (iand(outp%what, output_density).ne.0) then
     !Create a cube
-    call dcube_function_new (gr%mesh%idx%ll, cube)
+    call cube_function_init(cube, gr%mesh%idx%ll)
     call dcube_function_alloc_RS(cube)
 
     !Set the dimensions
@@ -216,7 +216,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     flags%geometry = etsf_geometry_none
 
     !Destroy the cube
-    call dcube_function_free(cube)
+    call cube_function_end(cube)
 
     !Reset the dimensions
     dims%number_of_components = 1
@@ -229,7 +229,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
   if (iand(outp%what, output_wfs).ne.0) then
     !Create a cube
-    call dcube_function_new (gr%mesh%idx%ll, cube)
+    call cube_function_init(cube, gr%mesh%idx%ll)
     call dcube_function_alloc_RS(cube)    
 
     !Set the dimensions
@@ -367,7 +367,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     flags%geometry = etsf_geometry_none
 
     !Destroy the cube
-    call dcube_function_free(cube)
+    call cube_function_end(cube)
 
     !Reset the dimensions
     dims%max_number_of_states = 1

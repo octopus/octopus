@@ -142,24 +142,24 @@ subroutine X(input_function_global)(filename, mesh, ff, ierr, is_tmp, map)
       ierr = 2
     else
 #if defined(R_TCOMPLEX)
-      call X(cube_function_new)(mesh%idx%ll, cube)
-      call dcube_function_new(mesh%idx%ll, re)
-      call dcube_function_new(mesh%idx%ll, im)
+      call cube_function_init(cube, mesh%idx%ll)
+      call cube_function_init(re, mesh%idx%ll)
+      call cube_function_init(im, mesh%idx%ll)
       call X(cube_function_alloc_RS)(cube)
       call dcube_function_alloc_RS(re)
       call dcube_function_alloc_RS(im)
       call read_netcdf()
       cube%zRS = re%dRS + M_zI*im%dRS
       call X(cube_to_mesh) (mesh, cube, ff)
-      call X(cube_function_free)(cube)
-      call dcube_function_free(re)
-      call dcube_function_free(im)
+      call cube_function_end(cube)
+      call cube_function_end(re)
+      call cube_function_end(im)
 #else
-      call X(cube_function_new)(mesh%idx%ll, cube)
+      call cube_function_init(cube, mesh%idx%ll)
       call X(cube_function_alloc_RS)(cube)
       call read_netcdf()
-      call X(cube_to_mesh) (mesh, cube, ff)
-      call X(cube_function_free)(cube)
+      call X(cube_to_mesh)(mesh, cube, ff)
+      call cube_function_end(cube)
 #endif
     end if
 #endif
@@ -192,7 +192,7 @@ subroutine X(input_function_global)(filename, mesh, ff, ierr, is_tmp, map)
       call write_fatal(1)
     end if 
   
-    call X(cube_function_new)(mesh%idx%ll, cube)
+    call cube_function_init(cube, mesh%idx%ll)
     call X(cube_function_alloc_RS)(cube)
     
     call io_csv_get_info(filename, dims, ierr)
@@ -283,7 +283,7 @@ subroutine X(input_function_global)(filename, mesh, ff, ierr, is_tmp, map)
     cube%X(RS) = reshape(ff, (/ cube%n(1), cube%n(2), cube%n(3) /))
     
     call X(cube_to_mesh) (mesh, cube, ff)
-    call X(cube_function_free)(cube)
+    call cube_function_end(cube)
     
     SAFE_DEALLOCATE_P(read_ff)
   case default
@@ -847,7 +847,7 @@ contains
     PUSH_SUB(X(output_function_global).out_dx)
 
     ! put values in a nice cube
-    call X(cube_function_new) (mesh%idx%ll, cube)
+    call cube_function_init(cube, mesh%idx%ll)
     call X(cube_function_alloc_RS) (cube)
     call X(mesh_to_cube) (mesh, ff, cube)
 
@@ -893,7 +893,7 @@ contains
     write(iunit, '(a)') 'end'
 
     call io_close(iunit)
-    call X(cube_function_free) (cube)
+    call cube_function_end(cube)
 
     POP_SUB(X(output_function_global).out_dx)
   end subroutine out_dx
@@ -912,7 +912,7 @@ contains
     ASSERT(present(geo))
 
     ! put values in a nice cube
-    call X(cube_function_new) (mesh%idx%ll, cube)
+    call cube_function_init(cube, mesh%idx%ll)
     call X(cube_function_alloc_RS) (cube)
     call X(mesh_to_cube) (mesh, ff, cube)
 
@@ -949,7 +949,7 @@ contains
     end do
 
     call io_close(iunit)
-    call X(cube_function_free) (cube)
+    call cube_function_end(cube)
 
     POP_SUB(X(output_function_global).out_cube)
   end subroutine out_cube
@@ -979,7 +979,7 @@ contains
     PUSH_SUB(X(output_function_global).out_xcrysden)
 
     ! put values in a nice cube
-    call X(cube_function_new) (mesh%idx%ll, cube)
+    call cube_function_init(cube, mesh%idx%ll)
     call X(cube_function_alloc_RS) (cube)
     call X(mesh_to_cube) (mesh, ff, cube)
 
@@ -1071,7 +1071,7 @@ contains
     write(iunit, '(a)') 'END_BLOCK_DATAGRID3D'
 
     call io_close(iunit)
-    call X(cube_function_free) (cube)
+    call cube_function_end(cube)
 
     POP_SUB(X(output_function_global).out_xcrysden)
   end subroutine out_xcrysden
@@ -1095,7 +1095,7 @@ contains
     ierr = 0
 
     ! put values in a nice cube
-    call X(cube_function_new) (mesh%idx%ll, cube)
+    call cube_function_init(cube, mesh%idx%ll)
     call X(cube_function_alloc_RS) (cube)
     call X(mesh_to_cube) (mesh, ff, cube)
 
@@ -1223,7 +1223,7 @@ contains
 
     ! close
     status = nf90_close(ncid)
-    call X(cube_function_free) (cube)
+    call cube_function_end(cube)
 
     POP_SUB(X(output_function_global).out_netcdf)
   end subroutine out_netcdf
