@@ -129,6 +129,7 @@ contains
 
   ! \todo I'm not going to implement then, for the moment. Joseba
   !-----------------------------------------------------------------
+#if 0
 !!$  subroutine poisson_pfft_build_3d_2d(mesh)
 !!$    type(mesh_t), intent(inout) :: mesh
 !!$
@@ -438,7 +439,7 @@ contains
 !!$    POP_SUB(poisson_pfft_build_3d_0d)
 !!$  end subroutine poisson_pfft_build_3d_0d
 !!$  !-----------------------------------------------------------------
-
+#endif
   !-----------------------------------------------------------------
   subroutine poisson_pfft_end()
     PUSH_SUB(poisson_pfft.end)
