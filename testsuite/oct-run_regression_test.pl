@@ -261,10 +261,12 @@ foreach my $octopus_exe (@executables){
 	      if( -x "$mpiexec_raw") {
 		if ("$mpiexec" =~ /ibrun/) {
 		    $specify_np = "";
+		    $my_nslots = "MY_NSLOTS=$np";
 		} else {
 		    $specify_np = "-n $np";
+		    $my_nslots = "";
 		}
-		$command_line = "cd $workdir; $mpiexec $specify_np $machinelist $octopus_exe_suffix > out ";
+		$command_line = "cd $workdir; $my_nslots $mpiexec $specify_np $machinelist $octopus_exe_suffix > out";
 	      } else {
 		print "No mpiexec found: Skipping parallel test \n";
 		if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }

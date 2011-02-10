@@ -86,7 +86,7 @@ function find_tests() {
 }
 
 function queue {
-	QUEUE="$QUEUE $1 "
+	OCT_QUEUE="$OCT_QUEUE $1 "
 	OUTLIST="$OUTLIST $2 "
 	NUM=$(($NUM+1))
 }
@@ -99,7 +99,7 @@ function inqueue {
 function checkqueue {
     inqueue
     test_name=`echo $OUTLIST | cut -f 1 -d " "`
-    wait `echo $QUEUE | cut -f 1 -d " "`
+    wait `echo $OCT_QUEUE | cut -f 1 -d " "`
     # Look for failed/passed/skipped testcases and add
     # to failure summary.
     failures=$?
@@ -117,10 +117,10 @@ function checkqueue {
     cat `basename $test_name .test`.log
     printf " ************************\n\n"
     if [ $NUM -eq 1 ] ; then
-	QUEUE=""
+	OCT_QUEUE=""
 	OUTLIST=""
     else
-	QUEUE=`echo $QUEUE | cut -f 2- -d " "`
+	OCT_QUEUE=`echo $OCT_QUEUE | cut -f 2- -d " "`
 	OUTLIST=`echo $OUTLIST |cut -f 2- -d " "`
     fi
     NUM=$(($NUM-1))
@@ -205,7 +205,7 @@ done
 }
 
 function trap_kill() {
- kill $QUEUE > /dev/null 2>&1
+ kill $OCT_QUEUE > /dev/null 2>&1
  echo "Killed"
  exit 1
 }
