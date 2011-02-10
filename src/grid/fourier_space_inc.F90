@@ -75,9 +75,9 @@ subroutine X(cube_function_pfft_init)(cf, sb)
   type(cube_function_t),     intent(inout) :: cf
   type(simul_box_t), intent(in)    :: sb
 
-#ifdef HAVE_PFFT
-  PUSH_SUB(X(pcube_function_fft_init))
+  PUSH_SUB(X(cube_function_pfft_init))
 
+#ifdef HAVE_PFFT
   ASSERT(.not.associated(cf%pfft))
   ASSERT(.not.associated(cf%X(RS)))
   ASSERT(.not.associated(cf%FS))
@@ -92,7 +92,7 @@ subroutine X(cube_function_pfft_init)(cf, sb)
 #endif
 
 #endif
-  POP_SUB(X(pcube_function_fft_init))
+  POP_SUB(X(cube_function_pfft_init))
 end subroutine X(cube_function_pfft_init)
 
 ! ---------------------------------------------------------
