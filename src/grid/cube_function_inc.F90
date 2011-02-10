@@ -44,16 +44,16 @@ subroutine X(cube_function_free_RS)(cf)
 end subroutine X(cube_function_free_RS)
 
 ! ---------------------------------------------------------
-! The next two subroutines convert a function between the normal
-! mesh and the cube.
-! Note that the function in the mesh should be defined
-! globally, not just in a partition (when running in
-! parallel in real-space domains).
+!> The next two subroutines convert a function between the normal
+!! mesh and the cube.
+!! Note that the function in the mesh should be defined
+!! globally, not just in a partition (when running in
+!! parallel in real-space domains).
 ! ---------------------------------------------------------
 
 subroutine X(mesh_to_cube) (mesh, mf, cf)
   type(mesh_t),  intent(in)    :: mesh
-  R_TYPE,        intent(in)    :: mf(:)  ! mf(mesh%np_global)
+  R_TYPE,        intent(in)    :: mf(:)  !< mf(mesh%np_global)
   type(cube_function_t), intent(inout) :: cf
 
   integer :: ip, ix, iy, iz, center(3)

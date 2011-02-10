@@ -25,6 +25,9 @@ module fourier_space_m
   use mesh_m
   use messages_m
   use fft_m
+#ifdef HAVE_PFFT
+  use pfft_m
+#endif
   use profiling_m
   use simul_box_m
 
@@ -39,6 +42,8 @@ module fourier_space_m
     zcube_function_free_fs,        &
     dcube_function_fft_init,       &
     zcube_function_fft_init,       &
+    dcube_function_pfft_init,      &
+    zcube_function_pfft_init,      &
     dcube_function_RS2FS,          &
     zcube_function_RS2FS,          &
     dcube_function_FS2RS,          &

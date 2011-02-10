@@ -26,6 +26,7 @@ module cube_function_m
   use messages_m
   use mpi_m
   use fft_m
+  use pfft_m
   use profiling_m
   use simul_box_m
 
@@ -48,19 +49,25 @@ module cube_function_m
     zcube_to_mesh
 
   type cube_function_t
-    integer :: n(1:3)        ! the linear dimensions of the cube
-    integer :: nalloc(1:3)
-    integer :: nglobal(1:3)
-    integer :: nprocs(1:3)
-    integer :: iprocs(1:3)
-    integer :: offset(1:3)
-    FLOAT, pointer :: dRS(:, :, :)
-    CMPLX, pointer :: zRS(:, :, :)
-    CMPLX, pointer :: FS(:, :, :)
+    integer :: n(1:3)               !< the linear dimensions of the cube
+    integer :: nalloc(1:3)          !< local memory 
+    integer :: nglobal(1:3)         !< global dimensions
+    integer :: nprocs(1:3)          !< number of processors
+    integer :: iprocs(1:3)          !< 
+    integer :: offset(1:3)          !< 
+    FLOAT, pointer :: dRS(:, :, :)  !< real space grid
+    CMPLX, pointer :: zRS(:, :, :)  !< real space grid, complex numbers
+    CMPLX, pointer :: FS(:, :, :)   !< fourier space grid
 
     integer :: nx     ! = n(1)/2 + 1, first dimension of the FS array
     type(fft_t), pointer :: fft
+
+!#ifdef HAVE_PFFT
+    type(pfft_t), pointer :: pfft
+!#endif
+
     type(mpi_grp_t) :: mpi_grp
+
   end type cube_function_t
 
   type(profile_t), save :: prof_m2c, prof_c2m

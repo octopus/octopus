@@ -69,6 +69,33 @@ subroutine X(cube_function_fft_init)(cf, sb)
 end subroutine X(cube_function_fft_init)
 
 ! ---------------------------------------------------------
+!> initializes the ffts. As the dimension of the fft may be adjusted, this
+!! routine has to be called before allocating anything
+subroutine X(cube_function_pfft_init)(cf, sb)
+  type(cube_function_t),     intent(inout) :: cf
+  type(simul_box_t), intent(in)    :: sb
+
+#ifdef HAVE_PFFT
+  PUSH_SUB(X(pcube_function_fft_init))
+
+  ASSERT(.not.associated(cf%pfft))
+  ASSERT(.not.associated(cf%X(RS)))
+  ASSERT(.not.associated(cf%FS))
+
+  SAFE_ALLOCATE(cf%fft)
+#ifdef R_TREAL
+  call pfft_init(cf%n, sb%dim, fft_real, cf%pfft, optimize = .not.simul_box_is_periodic(sb))
+  cf%nx = cf%n(1)/2 + 1
+#else
+  call pfft_init(cf%n, sb%dim, fft_complex, cf%pfft, .not.simul_box_is_periodic(sb))
+  cf%nx = cf%n(1)
+#endif
+
+#endif
+  POP_SUB(X(pcube_function_fft_init))
+end subroutine X(cube_function_pfft_init)
+
+! ---------------------------------------------------------
 ! The next routines convert the function between real space and Fourier space
 ! Note that the dimensions of the function in FS are different depending on whether
 ! f is real or complex, because the FFT representation is different (FFTW scheme).

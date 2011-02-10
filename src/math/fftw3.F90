@@ -99,12 +99,12 @@ module fft_m
     fftw_no_simd             = 131072
 
   type fft_t
-    integer     :: slot       ! in which slot do we have this fft
+    integer     :: slot       !< in which slot do we have this fft
 
-    integer     :: n(3)       ! size of the fft
-    integer     :: is_real    ! is the fft real or complex
-    type(c_ptr) :: planf      ! the plan for forward transforms
-    type(c_ptr) :: planb      ! the plan for backward transforms
+    integer     :: n(3)       !< size of the fft
+    integer     :: is_real    !< is the fft real or complex
+    type(c_ptr) :: planf      !< the plan for forward transforms
+    type(c_ptr) :: planb      !< the plan for backward transforms
   end type fft_t
 
   integer     :: fft_refs(FFT_MAX)
@@ -115,7 +115,7 @@ module fft_m
 contains
 
   ! ---------------------------------------------------------
-  ! initialize the table
+  !> initialize the table
   subroutine fft_all_init()
     integer :: ii
 
@@ -168,7 +168,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! delete all plans
+  !> delete all plans
   subroutine fft_all_end()
     integer :: ii
 
