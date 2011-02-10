@@ -42,14 +42,14 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
   type(etsf_geometry), target :: geometry
   type(etsf_electrons), target :: electrons
   type(etsf_kpoints), target :: kpoints
-  type(dcf_t) :: cube
+  type(cube_function_t) :: cube
 
   PUSH_SUB(h_sys_output_etsf)
 
   if (iand(outp%what, output_geometry).ne.0) then
     !Create a cube
-    call dcf_new (gr%mesh%idx%ll, cube)
-    call dcf_alloc_RS(cube)    
+    call dcube_function_new (gr%mesh%idx%ll, cube)
+    call dcube_function_alloc_RS(cube)    
 
     !Set the dimensions
     dims%number_of_atoms = geo%natoms
@@ -130,7 +130,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     flags%geometry = etsf_geometry_none
 
     !Destroy the cube
-    call dcf_free(cube)
+    call dcube_function_free(cube)
 
     !Reset the dimensions
     dims%number_of_atoms = 1
@@ -141,8 +141,8 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
   if (iand(outp%what, output_density).ne.0) then
     !Create a cube
-    call dcf_new (gr%mesh%idx%ll, cube)
-    call dcf_alloc_RS(cube)
+    call dcube_function_new (gr%mesh%idx%ll, cube)
+    call dcube_function_alloc_RS(cube)
 
     !Set the dimensions
     dims%number_of_components = st%d%nspin
@@ -177,7 +177,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     if (st%d%ispin /= SPINORS) then
       do i = 1, st%d%nspin
         call dmesh_to_cube(gr%mesh, st%rho(:,i), cube)
-        local_rho(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), i) = cube%RS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+        local_rho(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), i) = cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
       end do
     else
       SAFE_ALLOCATE(md(1:gr%mesh%np, 1:3))
@@ -187,10 +187,10 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
       call magnetic_density(gr%mesh, st, st%rho, md)
 
       call dmesh_to_cube(gr%mesh, d, cube)
-      local_rho(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), 1) = cube%RS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+      local_rho(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), 1) = cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
       do i = 1, 3
         call dmesh_to_cube(gr%mesh, md(:,i), cube)
-        local_rho(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), i+1) = cube%RS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+        local_rho(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), i+1) = cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
       end do
       SAFE_DEALLOCATE_A(d)
       SAFE_DEALLOCATE_A(md)
@@ -216,7 +216,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     flags%geometry = etsf_geometry_none
 
     !Destroy the cube
-    call dcf_free(cube)
+    call dcube_function_free(cube)
 
     !Reset the dimensions
     dims%number_of_components = 1
@@ -229,8 +229,8 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
   if (iand(outp%what, output_wfs).ne.0) then
     !Create a cube
-    call dcf_new (gr%mesh%idx%ll, cube)
-    call dcf_alloc_RS(cube)    
+    call dcube_function_new (gr%mesh%idx%ll, cube)
+    call dcube_function_alloc_RS(cube)    
 
     !Set the dimensions
     nspin = 1
@@ -310,17 +310,17 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
             if (states_are_real(st)) then
               call dmesh_to_cube(gr%mesh, st%dpsi(1:gr%mesh%np_part, idim, i, ik+is-1), cube)
               local_wfs(1, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, i, ik+(is-1)*nik) = &
-                   cube%RS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+                   cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
 
             elseif(states_are_complex(st)) then
               call dmesh_to_cube(gr%mesh, &
                    real(st%zpsi(1:gr%mesh%np_part, idim, i, ik+is-1), REAL_PRECISION), cube)
               local_wfs(1, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, i, ik+(is-1)*nik) = &
-                   cube%RS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+                   cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
 
               call dmesh_to_cube(gr%mesh, aimag(st%zpsi(1:gr%mesh%np_part, idim, i, ik+is-1)), cube)
               local_wfs(2, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, i, ik+(is-1)*nik) = &
-                   cube%RS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+                   cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
               
             end if
           end do
@@ -367,7 +367,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     flags%geometry = etsf_geometry_none
 
     !Destroy the cube
-    call dcf_free(cube)
+    call dcube_function_free(cube)
 
     !Reset the dimensions
     dims%max_number_of_states = 1

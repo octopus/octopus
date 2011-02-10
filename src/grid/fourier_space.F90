@@ -31,18 +31,18 @@ module fourier_space_m
   implicit none
   private
   public ::                     &
-    dcf_alloc_rs,               &
-    zcf_alloc_rs,               &
-    dcf_alloc_fs,               & 
-    zcf_alloc_fs,               &
-    dcf_free_fs,                &
-    zcf_free_fs,                &
-    dcf_fft_init,               &
-    zcf_fft_init,               &
-    dcf_RS2FS,                  &
-    zcf_RS2FS,                  &
-    dcf_FS2RS,                  &
-    zcf_FS2RS,                  &
+    dcube_function_alloc_rs,       &
+    zcube_function_alloc_rs,       &
+    dcube_function_alloc_fs,       & 
+    zcube_function_alloc_fs,       &
+    dcube_function_free_fs,        &
+    zcube_function_free_fs,        &
+    dcube_function_fft_init,       &
+    zcube_function_fft_init,       &
+    dcube_function_RS2FS,          &
+    zcube_function_RS2FS,          &
+    dcube_function_FS2RS,          &
+    zcube_function_FS2RS,          &
     fourier_space_op_t,         &
     dfourier_space_op_init,     &
     dfourier_space_op_end,      &

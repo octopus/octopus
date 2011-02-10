@@ -197,8 +197,7 @@ contains
     integer :: ip, is, ik, ist, idim, idir
     CMPLX, allocatable :: psi_fs(:), gpsi(:,:)
     FLOAT, allocatable :: rr(:), gradr(:,:), jj(:,:)
-    type(dcf_t) :: dcf_tmp
-    type(zcf_t) :: zcf_tmp
+    type(cube_function_t) :: cube_function_tmp
     FLOAT, parameter :: dmin = CNST(1e-10)
 
     PUSH_SUB(elf_calc_fs)
@@ -211,11 +210,11 @@ contains
     end if
  
     if (states_are_real(st)) then
-      call dcf_new(gr%mesh%idx%ll, dcf_tmp)
-      call dcf_fft_init(dcf_tmp, gr%sb)
+      call dcube_function_new(gr%mesh%idx%ll, cube_function_tmp)
+      call dcube_function_fft_init(cube_function_tmp, gr%sb)
     else
-      call zcf_new(gr%mesh%idx%ll, zcf_tmp)
-      call zcf_fft_init(zcf_tmp, gr%sb)
+      call zcube_function_new(gr%mesh%idx%ll, cube_function_tmp)
+      call zcube_function_fft_init(cube_function_tmp, gr%sb)
     end if
 
     do_is: do is = 1, st%d%nspin
@@ -233,18 +232,18 @@ contains
           do idim = 1, st%d%dim
             
             if (states_are_real(st)) then
-              call dmf2mf_RS2FS(gr%mesh, st%dpsi(:, idim, ist, ik), psi_fs(:), dcf_tmp)
+              call dmf2mf_RS2FS(gr%mesh, st%dpsi(:, idim, ist, ik), psi_fs(:), cube_function_tmp)
               call zderivatives_grad(gr%der, psi_fs(:), gpsi)
               do idir = 1, gr%mesh%sb%dim
                 gpsi(:,idir) = gpsi(:, idir)*gr%mesh%spacing(idir)**2 * &
-                     real(dcf_tmp%n(idir), REAL_PRECISION)/(M_TWO*M_PI)
+                     real(cube_function_tmp%n(idir), REAL_PRECISION)/(M_TWO*M_PI)
               end do
             else
-              call zmf2mf_RS2FS(gr%mesh, st%zpsi(:, idim, ist, ik), psi_fs(:), zcf_tmp)
+              call zmf2mf_RS2FS(gr%mesh, st%zpsi(:, idim, ist, ik), psi_fs(:), cube_function_tmp)
               call zderivatives_grad(gr%der, psi_fs(:), gpsi)
               do idir = 1, gr%mesh%sb%dim
                 gpsi(:, idir) = gpsi(:, idir)*gr%mesh%spacing(idir)**2 * &
-                     real(zcf_tmp%n(idir), REAL_PRECISION)/(M_TWO*M_PI)
+                     real(cube_function_tmp%n(idir), REAL_PRECISION)/(M_TWO*M_PI)
               end do
             end if
 
@@ -295,9 +294,9 @@ contains
     end do do_is
 
     if (states_are_real(st)) then
-      call dcf_free(dcf_tmp)
+      call dcube_function_free(cube_function_tmp)
     else
-      call zcf_free(zcf_tmp)
+      call zcube_function_free(cube_function_tmp)
     end if
 
     POP_SUB(elf_calc_fs)
@@ -309,17 +308,17 @@ contains
       type(mesh_t),  intent(in)    :: mesh
       FLOAT,         intent(in)    :: fin(:)
       CMPLX,         intent(out)   :: fout(:)
-      type(dcf_t),   intent(inout) :: cc
+      type(cube_function_t),   intent(inout) :: cc
     
       PUSH_SUB(elf_calc_fs.dmf2mf_RS2FS)
 
-      call dcf_alloc_RS(cc)
-      call dcf_alloc_FS(cc)
+      call dcube_function_alloc_RS(cc)
+      call dcube_function_alloc_FS(cc)
       call dmesh_to_cube(mesh, fin, cc)
-      call dcf_RS2FS(cc)
+      call dcube_function_RS2FS(cc)
       call dfourier_to_mesh(mesh, cc, fout)
-      call dcf_free_RS(cc)
-      call dcf_free_FS(cc)
+      call dcube_function_free_RS(cc)
+      call dcube_function_free_FS(cc)
 
       POP_SUB(elf_calc_fs.dmf2mf_RS2FS)
     end subroutine dmf2mf_RS2FS
@@ -329,17 +328,17 @@ contains
       type(mesh_t),  intent(in)    :: mesh
       CMPLX,         intent(in)    :: fin(:)
       CMPLX,         intent(out)   :: fout(:)
-      type(zcf_t),   intent(inout) :: cc
+      type(cube_function_t),   intent(inout) :: cc
     
       PUSH_SUB(elf_calc_fs.zmf2mf_RS2FS)
 
-      call zcf_alloc_RS(cc)
-      call zcf_alloc_FS(cc)
+      call zcube_function_alloc_RS(cc)
+      call zcube_function_alloc_FS(cc)
       call zmesh_to_cube(mesh, fin, cc)
-      call zcf_RS2FS(cc)
+      call zcube_function_RS2FS(cc)
       call zfourier_to_mesh(mesh, cc, fout)
-      call zcf_free_RS(cc)
-      call zcf_free_FS(cc)
+      call zcube_function_free_RS(cc)
+      call zcube_function_free_FS(cc)
 
       POP_SUB(elf_calc_fs.zmf2mf_RS2FS)
     end subroutine zmf2mf_RS2FS

@@ -62,7 +62,7 @@ module poisson_isf_m
 
   type poisson_isf_t
     integer                      :: all_nodes_comm
-    type(dcf_t)                  :: rho_cf
+    type(cube_function_t)                  :: rho_cf
     type(isf_cnf_t)              :: cnf(1:N_CNF)
   end type poisson_isf_t
 
@@ -99,7 +99,7 @@ contains
     if(present(init_world)) init_world_ = init_world
 #endif
 
-    call dcf_new(mesh%idx%ll, this%rho_cf)
+    call dcube_function_new(mesh%idx%ll, this%rho_cf)
 
     ! we need to nullify the pointer so they can be deallocated safely
     ! afterwards
@@ -228,7 +228,7 @@ contains
     
     PUSH_SUB(poisson_isf_solve)
 
-    call dcf_alloc_RS(this%rho_cf)
+    call dcube_function_alloc_RS(this%rho_cf)
 
     if(mesh%parallel_in_domains) then
     
@@ -266,9 +266,9 @@ contains
 
 #ifdef SINGLE_PRECISION
       SAFE_ALLOCATE(rhop(1:this%rho_cf%n(1), 1:this%rho_cf%n(2), 1:this%rho_cf%n(3)))
-      rhop = this%rho_cf%RS
+      rhop = this%rho_cf%dRS
 #else
-      rhop => this%rho_cf%RS
+      rhop => this%rho_cf%dRS
 #endif
 
       call psolver_kernel(this%rho_cf%n(1), this%rho_cf%n(2), this%rho_cf%n(3),    &
@@ -276,7 +276,7 @@ contains
         real(mesh%spacing(1), 8), this%cnf(SERIAL)%kernel, rhop)
 
 #ifdef SINGLE_PRECISION
-      this%rho_cf%RS = rhop
+      this%rho_cf%dRS = rhop
       SAFE_DEALLOCATE_P(rhop)
 #endif
 
@@ -285,7 +285,7 @@ contains
       if (this%cnf(i_cnf)%mpi_grp%size /= -1 .or. i_cnf /= WORLD) then
         call par_psolver_kernel(this%rho_cf%n(1), this%rho_cf%n(2), this%rho_cf%n(3), &
           this%cnf(i_cnf)%nfft1, this%cnf(i_cnf)%nfft2, this%cnf(i_cnf)%nfft3,  &
-          real(mesh%spacing(1), 8), this%cnf(i_cnf)%kernel, this%rho_cf%RS,                      &
+          real(mesh%spacing(1), 8), this%cnf(i_cnf)%kernel, this%rho_cf%dRS,                      &
           this%cnf(i_cnf)%mpi_grp%rank, this%cnf(i_cnf)%mpi_grp%size, this%cnf(i_cnf)%mpi_grp%comm)
       end if
       ! we need to be sure that the root of every domain-partition has a copy of the potential
@@ -310,7 +310,7 @@ contains
        call dcube_to_mesh(mesh, this%rho_cf, pot)
     end if
     
-    call dcf_free_RS(this%rho_cf)
+    call dcube_function_free_RS(this%rho_cf)
 
     POP_SUB(poisson_isf_solve)
   end subroutine poisson_isf_solve
@@ -336,7 +336,7 @@ contains
     SAFE_DEALLOCATE_P(this%cnf(SERIAL)%kernel)
 #endif
 
-    call dcf_free(this%rho_cf)
+    call dcube_function_free(this%rho_cf)
 
     POP_SUB(poisson_isf_end)
   end subroutine poisson_isf_end

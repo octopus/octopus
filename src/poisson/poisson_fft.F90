@@ -66,7 +66,7 @@ module poisson_fft_m
        POISSON_FFT_NOCUT     =  3,      &
        POISSON_FFT_CORRECTED =  4
 
-  type(dcf_t), public      :: fft_cf
+  type(cube_function_t), public      :: fft_cf
   type(fourier_space_op_t) :: coulb
 
 contains
@@ -84,9 +84,9 @@ contains
     ! double the box (or not) to perform the fourier transforms
     call mesh_double_box(mesh%sb, mesh, db)                 ! get dimensions of the double box
     ! allocate cube function where we will perform the ffts
-    call dcf_new(db, fft_cf)
+    call dcube_function_new(db, fft_cf)
     ! initialize the fft
-    call dcf_fft_init(fft_cf, mesh%sb)
+    call dcube_function_fft_init(fft_cf, mesh%sb)
     ! dimensions may have been optimized
     db(1:3) = fft_cf%n(1:3)
 
@@ -148,10 +148,10 @@ contains
     call mesh_double_box(mesh%sb, mesh, db)                 ! get dimensions of the double box
 
     ! allocate cube function where we will perform the ffts
-    call dcf_new(db, fft_cf)
+    call dcube_function_new(db, fft_cf)
 
     ! initialize the fft
-    call dcf_fft_init(fft_cf, mesh%sb)
+    call dcube_function_fft_init(fft_cf, mesh%sb)
 
     ! dimensions may have been optimized
     db(1:3) = fft_cf%n(1:3)
@@ -233,10 +233,10 @@ contains
     call mesh_double_box(mesh%sb, mesh, db)
 
     ! allocate cube function where we will perform the ffts
-    call dcf_new(db, fft_cf)
+    call dcube_function_new(db, fft_cf)
 
     ! initialize the fft
-    call dcf_fft_init(fft_cf, mesh%sb)
+    call dcube_function_fft_init(fft_cf, mesh%sb)
 
     ! dimensions may have been optimized
     db(1:3) = fft_cf%n(1:3)
@@ -367,10 +367,10 @@ contains
     end select
 
     ! allocate cube function where we will perform the ffts
-    call dcf_new(db, fft_cf)
+    call dcube_function_new(db, fft_cf)
 
     ! initialize the fft
-    call dcf_fft_init(fft_cf, mesh%sb)
+    call dcube_function_fft_init(fft_cf, mesh%sb)
 
     ! dimensions may have been optimized
     db(1:3) = fft_cf%n(1:3)
@@ -462,9 +462,9 @@ contains
     db(1:2) = maxval(db)
 
     ! allocate cube function where we will perform the ffts
-    call dcf_new(db, fft_cf)      
+    call dcube_function_new(db, fft_cf)      
     ! initialize fft
-    call dcf_fft_init(fft_cf, mesh%sb)
+    call dcube_function_fft_init(fft_cf, mesh%sb)
     ! dimensions may have been optimized
     db(1:3) = fft_cf%n(1:3)
 
@@ -538,9 +538,9 @@ contains
     call mesh_double_box(mesh%sb, mesh, db)                 ! get dimensions of the double box
 
     ! allocate cube function where we will perform the ffts
-    call dcf_new(db, fft_cf)      
+    call dcube_function_new(db, fft_cf)      
     ! initialize fft
-    call dcf_fft_init(fft_cf, mesh%sb)
+    call dcube_function_fft_init(fft_cf, mesh%sb)
     ! dimensions may have been optimized
     db(1:3) = fft_cf%n(1:3)
 
@@ -591,9 +591,9 @@ contains
 
     db(:) = mesh%idx%ll(:)
     ! allocate cube function where we will perform the ffts
-    call dcf_new(db, fft_cf)      
+    call dcube_function_new(db, fft_cf)      
     ! initialize fft
-    call dcf_fft_init(fft_cf, mesh%sb)
+    call dcube_function_fft_init(fft_cf, mesh%sb)
     ! dimensions may have been optimized
     db(1:3) = fft_cf%n(1:3)
 
@@ -631,8 +631,8 @@ contains
     PUSH_SUB(poisson_fft_build_1d_1d)
 
     box = mesh%idx%ll
-    call dcf_new(box, fft_cf)
-    call dcf_fft_init(fft_cf, mesh%sb)
+    call dcube_function_new(box, fft_cf)
+    call dcube_function_fft_init(fft_cf, mesh%sb)
     box(1:3) = fft_cf%n(1:3)
 
     SAFE_ALLOCATE(fft_coulb_fs(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
@@ -665,8 +665,8 @@ contains
 
     call mesh_double_box(mesh%sb, mesh, box)
     
-    call dcf_new(box, fft_cf)
-    call dcf_fft_init(fft_cf, mesh%sb)
+    call dcube_function_new(box, fft_cf)
+    call dcube_function_fft_init(fft_cf, mesh%sb)
     box(1:3) = fft_cf%n(1:3)
 
     r_c = box(1)*mesh%spacing(1)/M_TWO
@@ -694,7 +694,7 @@ contains
   subroutine poisson_fft_end()
     PUSH_SUB(poisson_fft.end)
 
-    call dcf_free(fft_cf)
+    call dcube_function_free(fft_cf)
     call dfourier_space_op_end(coulb)
 
     POP_SUB(poisson_fft.end)
@@ -721,7 +721,7 @@ contains
       SAFE_ALLOCATE(pot_global(1:mesh%np_global))
     end if
 
-    call dcf_alloc_RS(fft_cf)          ! allocate the cube in real space
+    call dcube_function_alloc_RS(fft_cf)          ! allocate the cube in real space
 
     ! put the density in the cube
     if(mesh%parallel_in_domains) then
@@ -738,7 +738,7 @@ contains
 
     !now the cube has the potential
     if(present(average_to_zero)) then
-      if(average_to_zero) average = cf_surface_average(fft_cf)
+      if(average_to_zero) average = cube_function_surface_average(fft_cf)
 #if defined HAVE_MPI
       ! Only root has the right average.
       if(mesh%parallel_in_domains) call MPI_Bcast(average, 1, MPI_FLOAT, 0, mesh%mpi_grp%comm, mpi_err)
@@ -759,7 +759,7 @@ contains
       if(average_to_zero) pot(1:mesh%np) = pot(1:mesh%np) - average
     end if
 
-    call dcf_free_RS(fft_cf)           ! memory is no longer needed
+    call dcube_function_free_RS(fft_cf)           ! memory is no longer needed
 
     if(mesh%parallel_in_domains) then
       SAFE_DEALLOCATE_A(rho_global)

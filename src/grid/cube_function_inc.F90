@@ -19,32 +19,32 @@
 
 ! ---------------------------------------------------------
 ! The following routines handle creation/destruction of the cube
-subroutine X(cf_new)(n, cf)
+subroutine X(cube_function_new)(n, cf)
   integer, intent(in) :: n(3)
-  type(X(cf_t)), intent(out) :: cf
+  type(cube_function_t), intent(out) :: cf
 
-  PUSH_SUB(X(cf_new))
+  PUSH_SUB(X(cube_function_new))
 
   ASSERT(all(n>0))
 
-  nullify(cf%RS)
+  nullify(cf%X(RS))
   nullify(cf%FS)
   cf%n = n
 
   nullify(cf%fft)
-  POP_SUB(X(cf_new))
-end subroutine X(cf_new)
+  POP_SUB(X(cube_function_new))
+end subroutine X(cube_function_new)
 
 
 ! ---------------------------------------------------------
-subroutine X(cf_new_from)(cf, cf_i)
-  type(X(cf_t)), intent(out) :: cf
-  type(X(cf_t)), intent( in) :: cf_i
+subroutine X(cube_function_new_from)(cf, cf_i)
+  type(cube_function_t), intent(out) :: cf
+  type(cube_function_t), intent( in) :: cf_i
 
-  PUSH_SUB(X(cf_new_from))
+  PUSH_SUB(X(cube_function_new_from))
   ASSERT(all(cf_i%n>0))
 
-  nullify(cf%RS)
+  nullify(cf%X(RS))
   nullify(cf%FS)
   cf%n = cf_i%n
 
@@ -55,42 +55,42 @@ subroutine X(cf_new_from)(cf, cf_i)
   else
     nullify(cf%fft)
   end if
-  POP_SUB(X(cf_new_from))
-end subroutine X(cf_new_from)
+  POP_SUB(X(cube_function_new_from))
+end subroutine X(cube_function_new_from)
 
 
 ! ---------------------------------------------------------
-subroutine X(cf_alloc_RS)(cf)
-  type(X(cf_t)), intent(inout) :: cf
+subroutine X(cube_function_alloc_RS)(cf)
+  type(cube_function_t), intent(inout) :: cf
 
-  PUSH_SUB(X(cf_alloc_RS))
+  PUSH_SUB(X(cube_function_alloc_RS))
 
-  ASSERT(.not.associated(cf%RS))
-  SAFE_ALLOCATE(cf%RS(1:cf%n(1), 1:cf%n(2), 1:cf%n(3)))
+  ASSERT(.not.associated(cf%X(RS)))
+  SAFE_ALLOCATE(cf%X(RS)(1:cf%n(1), 1:cf%n(2), 1:cf%n(3)))
 
-  POP_SUB(X(cf_alloc_RS))
-end subroutine X(cf_alloc_RS)
+  POP_SUB(X(cube_function_alloc_RS))
+end subroutine X(cube_function_alloc_RS)
 
-
-! ---------------------------------------------------------
-subroutine X(cf_free_RS)(cf)
-  type(X(cf_t)), intent(inout) :: cf
-
-  PUSH_SUB(X(cf_free_RS))
-
-  ASSERT(associated(cf%RS))
-  SAFE_DEALLOCATE_P(cf%RS)
-
-  POP_SUB(X(cf_free_RS))
-end subroutine X(cf_free_RS)
 
 ! ---------------------------------------------------------
-subroutine X(cf_free)(cf)
-  type(X(cf_t)), intent(inout) :: cf
+subroutine X(cube_function_free_RS)(cf)
+  type(cube_function_t), intent(inout) :: cf
 
-  PUSH_SUB(X(cf_free))
+  PUSH_SUB(X(cube_function_free_RS))
 
-  SAFE_DEALLOCATE_P(cf%RS)
+  ASSERT(associated(cf%X(RS)))
+  SAFE_DEALLOCATE_P(cf%X(RS))
+
+  POP_SUB(X(cube_function_free_RS))
+end subroutine X(cube_function_free_RS)
+
+! ---------------------------------------------------------
+subroutine X(cube_function_free)(cf)
+  type(cube_function_t), intent(inout) :: cf
+
+  PUSH_SUB(X(cube_function_free))
+
+  SAFE_DEALLOCATE_P(cf%X(RS))
   SAFE_DEALLOCATE_P(cf%FS)
 
   if(associated(cf%fft)) then
@@ -98,8 +98,8 @@ subroutine X(cf_free)(cf)
     SAFE_DEALLOCATE_P(cf%fft)
   end if
 
-  POP_SUB(X(cf_free))
-end subroutine X(cf_free)
+  POP_SUB(X(cube_function_free))
+end subroutine X(cube_function_free)
 
 ! ---------------------------------------------------------
 ! The next two subroutines convert a function between the normal
@@ -112,7 +112,7 @@ end subroutine X(cf_free)
 subroutine X(mesh_to_cube) (mesh, mf, cf)
   type(mesh_t),  intent(in)    :: mesh
   R_TYPE,        intent(in)    :: mf(:)  ! mf(mesh%np_global)
-  type(X(cf_t)), intent(inout) :: cf
+  type(cube_function_t), intent(inout) :: cf
 
   integer :: ip, ix, iy, iz, center(3)
   integer :: im, ii, nn
@@ -120,11 +120,11 @@ subroutine X(mesh_to_cube) (mesh, mf, cf)
   PUSH_SUB(X(mesh_to_cube))
   call profiling_in(prof_m2c, "MESH_TO_CUBE")
 
-  ASSERT(associated(cf%RS))
+  ASSERT(associated(cf%X(RS)))
 
   center(1:3) = cf%n(1:3)/2 + 1
 
-  cf%RS = M_ZERO
+  cf%X(RS) = M_ZERO
 
   do im = 1, mesh%cube_map%nmap
     ip = mesh%cube_map%map(MCM_POINT, im)
@@ -133,7 +133,7 @@ subroutine X(mesh_to_cube) (mesh, mf, cf)
     ix = mesh%idx%Lxyz(ip, 1) + center(1)
     iy = mesh%idx%Lxyz(ip, 2) + center(2)
     iz = mesh%idx%Lxyz(ip, 3) + center(3)
-    forall(ii = 0:nn - 1) cf%RS(ix, iy, iz + ii) = mf(ip + ii)
+    forall(ii = 0:nn - 1) cf%X(RS)(ix, iy, iz + ii) = mf(ip + ii)
   end do
   
   call profiling_count_transfers(mesh%np_global, mf(1))
@@ -145,7 +145,7 @@ end subroutine X(mesh_to_cube)
 ! ---------------------------------------------------------
 subroutine X(cube_to_mesh) (mesh, cf, mf)
   type(mesh_t),  intent(in)  :: mesh
-  type(X(cf_t)), intent(in)  :: cf
+  type(cube_function_t), intent(in)  :: cf
   R_TYPE,        intent(out) :: mf(:)  ! mf(mesh%np_global)
 
   integer :: ip, ix, iy, iz, center(3)
@@ -155,7 +155,7 @@ subroutine X(cube_to_mesh) (mesh, cf, mf)
 
   call profiling_in(prof_c2m, "CUBE_TO_MESH")
 
-  ASSERT(associated(cf%RS))
+  ASSERT(associated(cf%X(RS)))
 
   center(1:3) = cf%n(1:3)/2 + 1
 
@@ -165,7 +165,7 @@ subroutine X(cube_to_mesh) (mesh, cf, mf)
     ix = mesh%idx%Lxyz(ip, 1) + center(1)
     iy = mesh%idx%Lxyz(ip, 2) + center(2)
     iz = mesh%idx%Lxyz(ip, 3) + center(3)
-    forall(ii = 0:nn - 1) mf(ip + ii) = cf%RS(ix, iy, iz + ii)
+    forall(ii = 0:nn - 1) mf(ip + ii) = cf%X(RS)(ix, iy, iz + ii)
   end do
   
   call profiling_count_transfers(mesh%np_global, mf(1))

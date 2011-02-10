@@ -110,14 +110,14 @@ subroutine X(input_function_global)(filename, mesh, ff, ierr, is_tmp, map)
   integer(8) :: dims(3)
   FLOAT, allocatable :: x_in(:, :)
   FLOAT, allocatable :: x_out(:, :)
-  type(X(cf_t)) :: cube
+  type(cube_function_t) :: cube
   
 #if defined(HAVE_NETCDF)
   character(len=512) :: file
   integer :: ncid, status
   integer :: function_kind
 #if defined(R_TCOMPLEX)
-  type(dcf_t) :: re, im
+  type(cube_function_t) :: re, im
 #endif
 #endif
   R_TYPE, pointer :: read_ff(:)
@@ -142,24 +142,24 @@ subroutine X(input_function_global)(filename, mesh, ff, ierr, is_tmp, map)
       ierr = 2
     else
 #if defined(R_TCOMPLEX)
-      call X(cf_new)(mesh%idx%ll, cube)
-      call dcf_new(mesh%idx%ll, re)
-      call dcf_new(mesh%idx%ll, im)
-      call X(cf_alloc_RS)(cube)
-      call dcf_alloc_RS(re)
-      call dcf_alloc_RS(im)
+      call X(cube_function_new)(mesh%idx%ll, cube)
+      call dcube_function_new(mesh%idx%ll, re)
+      call dcube_function_new(mesh%idx%ll, im)
+      call X(cube_function_alloc_RS)(cube)
+      call dcube_function_alloc_RS(re)
+      call dcube_function_alloc_RS(im)
       call read_netcdf()
-      cube%RS = re%RS + M_zI*im%RS
+      cube%zRS = re%dRS + M_zI*im%dRS
       call X(cube_to_mesh) (mesh, cube, ff)
-      call X(cf_free)(cube)
-      call dcf_free(re)
-      call dcf_free(im)
+      call X(cube_function_free)(cube)
+      call dcube_function_free(re)
+      call dcube_function_free(im)
 #else
-      call X(cf_new)(mesh%idx%ll, cube)
-      call X(cf_alloc_RS)(cube)
+      call X(cube_function_new)(mesh%idx%ll, cube)
+      call X(cube_function_alloc_RS)(cube)
       call read_netcdf()
       call X(cube_to_mesh) (mesh, cube, ff)
-      call X(cf_free)(cube)
+      call X(cube_function_free)(cube)
 #endif
     end if
 #endif
@@ -192,8 +192,8 @@ subroutine X(input_function_global)(filename, mesh, ff, ierr, is_tmp, map)
       call write_fatal(1)
     end if 
   
-    call X(cf_new)(mesh%idx%ll, cube)
-    call X(cf_alloc_RS)(cube)
+    call X(cube_function_new)(mesh%idx%ll, cube)
+    call X(cube_function_alloc_RS)(cube)
     
     call io_csv_get_info(filename, dims, ierr)
     
@@ -280,10 +280,10 @@ subroutine X(input_function_global)(filename, mesh, ff, ierr, is_tmp, map)
       SAFE_DEALLOCATE_A(x_out)
     end if
     
-    cube%RS = reshape(ff, (/ cube%n(1), cube%n(2), cube%n(3) /))
+    cube%X(RS) = reshape(ff, (/ cube%n(1), cube%n(2), cube%n(3) /))
     
     call X(cube_to_mesh) (mesh, cube, ff)
-    call X(cf_free)(cube)
+    call X(cube_function_free)(cube)
     
     SAFE_DEALLOCATE_P(read_ff)
   case default
@@ -387,7 +387,7 @@ contains
       case(3)
         status = nf90_get_var (ncid, data_id, xx)
       end select
-      call transpose3(xx, re%RS)
+      call transpose3(xx, re%dRS)
       call ncdf_error('nf90_get_var', status, file, ierr)
     end if
     if(file_kind<0) then
@@ -400,11 +400,11 @@ contains
         case(3)
           status = nf90_get_var (ncid, data_im_id, xx)
         end select
-        call transpose3(xx, im%RS)
+        call transpose3(xx, im%dRS)
         call ncdf_error('nf90_get_var', status, file, ierr)
       end if
     else
-      im%RS = M_ZERO
+      im%dRS = M_ZERO
     end if
 #else
     if(status == NF90_NOERR) then
@@ -416,7 +416,7 @@ contains
       case(3)
         status = nf90_get_var (ncid, data_id, xx)
       end select
-      call transpose3(xx, cube%RS)
+      call transpose3(xx, cube%dRS)
       call ncdf_error('nf90_get_var', status, file, ierr)
     end if
 #endif
@@ -842,13 +842,13 @@ contains
     integer :: ix, iy, iz, idir
     FLOAT   :: offset(MAX_DIM)
     character(len=40) :: nitems
-    type(X(cf_t)) :: cube
+    type(cube_function_t) :: cube
 
     PUSH_SUB(X(output_function_global).out_dx)
 
     ! put values in a nice cube
-    call X(cf_new) (mesh%idx%ll, cube)
-    call X(cf_alloc_RS) (cube)
+    call X(cube_function_new) (mesh%idx%ll, cube)
+    call X(cube_function_alloc_RS) (cube)
     call X(mesh_to_cube) (mesh, ff, cube)
 
     ! the offset is different in periodic directions
@@ -882,7 +882,7 @@ contains
     do ix = 1, cube%n(1)
       do iy = 1, cube%n(2)
         do iz = 1, cube%n(3)
-          write(iunit,'(2f25.15)') units_from_atomic(unit, cube%RS(ix, iy, iz))
+          write(iunit,'(2f25.15)') units_from_atomic(unit, cube%X(RS)(ix, iy, iz))
         end do
       end do
     end do
@@ -893,7 +893,7 @@ contains
     write(iunit, '(a)') 'end'
 
     call io_close(iunit)
-    call X(cf_free) (cube)
+    call X(cube_function_free) (cube)
 
     POP_SUB(X(output_function_global).out_dx)
   end subroutine out_dx
@@ -905,15 +905,15 @@ contains
   subroutine out_cube()
     integer :: ix, iy, iz, idir, idir2, iatom
     FLOAT   :: offset(MAX_DIM)
-    type(X(cf_t)) :: cube
+    type(cube_function_t) :: cube
 
     PUSH_SUB(X(output_function_global).out_cube)
 
     ASSERT(present(geo))
 
     ! put values in a nice cube
-    call X(cf_new) (mesh%idx%ll, cube)
-    call X(cf_alloc_RS) (cube)
+    call X(cube_function_new) (mesh%idx%ll, cube)
+    call X(cube_function_alloc_RS) (cube)
     call X(mesh_to_cube) (mesh, ff, cube)
 
     ! the offset is different in periodic directions
@@ -941,7 +941,7 @@ contains
     do ix = 1, cube%n(1)
       do iy = 1, cube%n(2)
         do iz = 1, cube%n(3)
-          write(iunit,'(e14.6)', advance='no') units_from_atomic(unit, R_REAL(cube%RS(ix, iy, iz)))
+          write(iunit,'(e14.6)', advance='no') units_from_atomic(unit, R_REAL(cube%X(RS)(ix, iy, iz)))
           if(mod(iz-1, 6) == 5)  write(iunit, '(1x)')
         end do
         write(iunit, '(1x)')
@@ -949,7 +949,7 @@ contains
     end do
 
     call io_close(iunit)
-    call X(cf_free) (cube)
+    call X(cube_function_free) (cube)
 
     POP_SUB(X(output_function_global).out_cube)
   end subroutine out_cube
@@ -967,7 +967,7 @@ contains
     integer :: ix, iy, iz, idir2, ix2, iy2, iz2, my_n(3)
     FLOAT :: lattice_vectors(3,3)
     FLOAT :: offset(3)
-    type(X(cf_t)) :: cube
+    type(cube_function_t) :: cube
     character*80 :: fname_ext
 
     if(mesh%sb%dim .ne. 3) then
@@ -979,8 +979,8 @@ contains
     PUSH_SUB(X(output_function_global).out_xcrysden)
 
     ! put values in a nice cube
-    call X(cf_new) (mesh%idx%ll, cube)
-    call X(cf_alloc_RS) (cube)
+    call X(cube_function_new) (mesh%idx%ll, cube)
+    call X(cube_function_alloc_RS) (cube)
     call X(mesh_to_cube) (mesh, ff, cube)
 
     ! The corner of the cell is always (0,0,0) to XCrySDen
@@ -1056,12 +1056,12 @@ contains
 
 #ifdef R_TCOMPLEX
           if(.not. write_real) then
-            write(iunit,'(2f25.15)') aimag(units_from_atomic(unit, cube%RS(ix2, iy2, iz2)))
+            write(iunit,'(2f25.15)') aimag(units_from_atomic(unit, cube%X(RS)(ix2, iy2, iz2)))
           else
-            write(iunit,'(2f25.15)') real(units_from_atomic(unit, cube%RS(ix2, iy2, iz2)))
+            write(iunit,'(2f25.15)') real(units_from_atomic(unit, cube%X(RS)(ix2, iy2, iz2)))
           endif
 #else
-          write(iunit,'(2f25.15)') units_from_atomic(unit, cube%RS(ix2, iy2, iz2))
+          write(iunit,'(2f25.15)') units_from_atomic(unit, cube%X(RS)(ix2, iy2, iz2))
 #endif
         end do
       end do
@@ -1071,7 +1071,7 @@ contains
     write(iunit, '(a)') 'END_BLOCK_DATAGRID3D'
 
     call io_close(iunit)
-    call X(cf_free) (cube)
+    call X(cube_function_free) (cube)
 
     POP_SUB(X(output_function_global).out_xcrysden)
   end subroutine out_xcrysden
@@ -1084,7 +1084,7 @@ contains
     integer :: dim_data_id(3), dim_pos_id(2)
 
     real(r4) :: pos(2, 3)
-    type(X(cf_t)) :: cube
+    type(cube_function_t) :: cube
     FLOAT, allocatable :: xx(:, :, :)
 #if defined(R_TCOMPLEX)
     integer :: data_im_id
@@ -1095,8 +1095,8 @@ contains
     ierr = 0
 
     ! put values in a nice cube
-    call X(cf_new) (mesh%idx%ll, cube)
-    call X(cf_alloc_RS) (cube)
+    call X(cube_function_new) (mesh%idx%ll, cube)
+    call X(cube_function_alloc_RS) (cube)
     call X(mesh_to_cube) (mesh, ff, cube)
 
     filename = io_workpath(trim(dir)//'/'//trim(fname)//".ncdf", is_tmp=is_tmp)
@@ -1203,18 +1203,18 @@ contains
     SAFE_ALLOCATE(xx(1:cube%n(3), 1:cube%n(2), 1:cube%n(1)))
 #if defined(R_TCOMPLEX)
     if(status == NF90_NOERR) then
-      call transpose3(real(cube%RS, REAL_PRECISION), xx)
+      call transpose3(real(cube%X(RS), REAL_PRECISION), xx)
       call write_variable(ncid, data_id, status, xx)
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
     if(status == NF90_NOERR) then
-      call transpose3(aimag(cube%RS), xx)
+      call transpose3(aimag(cube%X(RS)), xx)
       call write_variable(ncid, data_im_id, status, xx)
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
 #else
     if(status == NF90_NOERR) then
-      call transpose3(cube%RS, xx)
+      call transpose3(cube%X(RS), xx)
       call write_variable(ncid, data_id, status, xx)
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
@@ -1223,7 +1223,7 @@ contains
 
     ! close
     status = nf90_close(ncid)
-    call X(cf_free) (cube)
+    call X(cube_function_free) (cube)
 
     POP_SUB(X(output_function_global).out_netcdf)
   end subroutine out_netcdf

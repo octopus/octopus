@@ -31,37 +31,34 @@ module cube_function_m
   implicit none
   private
   public ::                     &
-    dcf_t, zcf_t,               &
-    dcf_new, zcf_new,           &
-    dcf_new_from, zcf_new_from, &
-    dcf_alloc_RS, zcf_alloc_RS, &
-    dcf_free_RS, zcf_free_RS,   &
-    dcf_free, zcf_free,         &
-    cf_surface_average,         &
-    cf_phase_factor,            &
+    cube_function_t,            &
+    dcube_function_new,         &
+    zcube_function_new,         &
+    dcube_function_new_from,    &
+    zcube_function_new_from,    &
+    dcube_function_alloc_RS,    &
+    zcube_function_alloc_RS,    &
+    dcube_function_free_RS,     &
+    zcube_function_free_RS,     &
+    dcube_function_free,        & 
+    zcube_function_free,        &
+    cube_function_surface_average,         &
+    cube_function_phase_factor,            &
     dmesh_to_cube,              &
     zmesh_to_cube,              &
     dcube_to_mesh,              &
     zcube_to_mesh
 
-  type dcf_t
+  type cube_function_t
     integer :: n(3)   ! the linear dimensions of the cube
 
-    FLOAT, pointer :: RS(:,:,:)
-    CMPLX, pointer :: FS(:,:,:)
+    FLOAT, pointer :: dRS(:, :, :)
+    CMPLX, pointer :: zRS(:, :, :)
+    CMPLX, pointer :: FS(:, :, :)
+
     integer :: nx     ! = n(1)/2 + 1, first dimension of the FS array
     type(fft_t), pointer :: fft
-  end type dcf_t
-
-  type zcf_t
-    integer :: n(3)   ! the linear dimensions of the cube
-
-    CMPLX, pointer :: RS(:,:,:)
-    CMPLX, pointer :: FS(:,:,:)
-
-    integer :: nx     ! = n(1),  first dimension of the FS array
-    type(fft_t), pointer :: fft
-  end type zcf_t
+  end type cube_function_t
 
   type(profile_t), save :: prof_m2c, prof_c2m
 contains
@@ -69,73 +66,73 @@ contains
   ! ---------------------------------------------------------
   ! This function calculates the surface average of any function.
   ! \warning: Some more careful testing should be done on this.
-  FLOAT function cf_surface_average(cf) result(x)
-    type(dcf_t), intent(in)       :: cf
+  FLOAT function cube_function_surface_average(cf) result(x)
+    type(cube_function_t), intent(in)       :: cf
 
     integer ix, iy, iz, npoints
     x = M_ZERO
 
-    PUSH_SUB(cf_surface_average)
+    PUSH_SUB(cube_function_surface_average)
 
     do iy = 2, cf%n(2) - 1
       do iz = 2, cf%n(3) - 1
-        x = x + (cf%RS(1, iy, iz) + cf%RS(cf%n(1), iy, iz))
+        x = x + (cf%dRS(1, iy, iz) + cf%dRS(cf%n(1), iy, iz))
       end do
     end do
 
     do ix = 2, cf%n(1) - 1
       do iz = 2, cf%n(3) - 1
-        x = x + (cf%RS(ix, 1, iz) + cf%RS(ix, cf%n(2), iz))
+        x = x + (cf%dRS(ix, 1, iz) + cf%dRS(ix, cf%n(2), iz))
       end do
     end do
 
     do ix = 2, cf%n(1) - 1
       do iy = 2, cf%n(2) - 1
-        x = x + (cf%RS(ix, iy, 1) + cf%RS(ix, iy, cf%n(3)))
+        x = x + (cf%dRS(ix, iy, 1) + cf%dRS(ix, iy, cf%n(3)))
       end do
     end do
 
     do iz = 2, cf%n(3) - 1
-      x = x + cf%RS(1, 1, iz) + cf%RS(cf%n(1), 1, iz) + &
-        cf%RS(1, cf%n(2), iz) + cf%RS(cf%n(1), cf%n(2), 1)
+      x = x + cf%dRS(1, 1, iz) + cf%dRS(cf%n(1), 1, iz) + &
+        cf%dRS(1, cf%n(2), iz) + cf%dRS(cf%n(1), cf%n(2), 1)
     end do
 
     do iy = 2, cf%n(2) - 1
-      x = x + cf%RS(1, iy, 1) + cf%RS(cf%n(1), iy, 1) + &
-        cf%RS(1, iy, cf%n(3)) + cf%RS(cf%n(1), iy, cf%n(3))
+      x = x + cf%dRS(1, iy, 1) + cf%dRS(cf%n(1), iy, 1) + &
+        cf%dRS(1, iy, cf%n(3)) + cf%dRS(cf%n(1), iy, cf%n(3))
     end do
 
     do ix = 2, cf%n(1) - 1
-      x = x + cf%RS(ix, 1, 1) + cf%RS(ix, cf%n(2), 1) + &
-        cf%RS(ix, 1, cf%n(3)) + cf%RS(ix, cf%n(2), cf%n(3))
+      x = x + cf%dRS(ix, 1, 1) + cf%dRS(ix, cf%n(2), 1) + &
+        cf%dRS(ix, 1, cf%n(3)) + cf%dRS(ix, cf%n(2), cf%n(3))
     end do
 
-    x = x + cf%RS(1, 1, 1)             + cf%RS(cf%n(1), 1, 1) + &
-      cf%RS(1, cf%n(2), 1)       + cf%RS(cf%n(1), cf%n(2), 1) + &
-      cf%RS(1, 1, cf%n(3))       + cf%RS(cf%n(1), 1, cf%n(3)) + &
-      cf%RS(1, cf%n(2), cf%n(3)) + cf%RS(cf%n(1), cf%n(2), cf%n(3))
+    x = x + cf%dRS(1, 1, 1)             + cf%dRS(cf%n(1), 1, 1) + &
+      cf%dRS(1, cf%n(2), 1)       + cf%dRS(cf%n(1), cf%n(2), 1) + &
+      cf%dRS(1, 1, cf%n(3))       + cf%dRS(cf%n(1), 1, cf%n(3)) + &
+      cf%dRS(1, cf%n(2), cf%n(3)) + cf%dRS(cf%n(1), cf%n(2), cf%n(3))
 
     npoints = 2*(cf%n(1)-2)**2 + 4*(cf%n(1)-2) + &
               2*(cf%n(2)-2)**2 + 4*(cf%n(2)-2) + &
               2*(cf%n(3)-2)**2 + 4*(cf%n(3)-2) + 8
     x = x/npoints
 
-    POP_SUB(cf_surface_average)
-  end function cf_surface_average
+    POP_SUB(cube_function_surface_average)
+  end function cube_function_surface_average
 
   ! ---------------------------------------------------------
   ! this routine computes
-  ! cf_o = cf_o + exp(-k vec) cf_i
-  subroutine cf_phase_factor(mesh, vec, cf_i, cf_o)
-    type(mesh_t),      intent(in)    :: mesh
-    FLOAT,             intent(in)    :: vec(3)
-    type(dcf_t),       intent(in)    :: cf_i
-    type(dcf_t),       intent(inout) :: cf_o
+  ! cube_function_o = cf_o + exp(-k vec) cf_i
+  subroutine cube_function_phase_factor(mesh, vec, cf_i, cf_o)
+    type(mesh_t),       intent(in)    :: mesh
+    FLOAT,              intent(in)    :: vec(3)
+    type(cube_function_t), intent(in)    :: cf_i
+    type(cube_function_t), intent(inout) :: cf_o
 
     CMPLX   :: k(3)
     integer :: n(3), ix, iy, iz, ixx, iyy, izz
 
-    PUSH_SUB(cf_phase_factor)
+    PUSH_SUB(cube_function_phase_factor)
 
     ASSERT(all(cf_i%n == cf_o%n))
     ASSERT(associated(cf_i%FS).and.associated(cf_o%FS))
@@ -157,8 +154,8 @@ contains
       end do
     end do
 
-    POP_SUB(cf_phase_factor)
-  end subroutine cf_phase_factor
+    POP_SUB(cube_function_phase_factor)
+  end subroutine cube_function_phase_factor
 
 
 #include "undef.F90"

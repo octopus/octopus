@@ -17,43 +17,43 @@
 !!
 !! $Id$
 
-subroutine X(cf_alloc_FS)(cf)
-  type(X(cf_t)), intent(inout) :: cf
+subroutine X(cube_function_alloc_FS)(cf)
+  type(cube_function_t), intent(inout) :: cf
 
-  PUSH_SUB(X(cf_alloc_FS))
+  PUSH_SUB(X(cube_function_alloc_FS))
 
   ASSERT(.not.associated(cf%FS))
   ASSERT(associated(cf%fft))
 
   SAFE_ALLOCATE(cf%FS(1:cf%nx, 1:cf%n(2), 1:cf%n(3)))
 
-  POP_SUB(X(cf_alloc_FS))
-end subroutine X(cf_alloc_FS)
+  POP_SUB(X(cube_function_alloc_FS))
+end subroutine X(cube_function_alloc_FS)
 
 
 ! ---------------------------------------------------------
-subroutine X(cf_free_FS)(cf)
-  type(X(cf_t)), intent(inout) :: cf
+subroutine X(cube_function_free_FS)(cf)
+  type(cube_function_t), intent(inout) :: cf
 
-  PUSH_SUB(X(cf_free_FS))
+  PUSH_SUB(X(cube_function_free_FS))
 
   ASSERT(associated(cf%FS))
   SAFE_DEALLOCATE_P(cf%FS)
 
-  POP_SUB(X(cf_free_FS))
-end subroutine X(cf_free_FS)
+  POP_SUB(X(cube_function_free_FS))
+end subroutine X(cube_function_free_FS)
 
 ! ---------------------------------------------------------
 ! initializes the ffts. As the dimension of the fft may be adjusted, this
 ! routine has to be called before allocating anything
-subroutine X(cf_fft_init)(cf, sb)
-  type(X(cf_t)),     intent(inout) :: cf
+subroutine X(cube_function_fft_init)(cf, sb)
+  type(cube_function_t),     intent(inout) :: cf
   type(simul_box_t), intent(in)    :: sb
 
-  PUSH_SUB(X(cf_fft_init))
+  PUSH_SUB(X(cube_function_fft_init))
 
   ASSERT(.not.associated(cf%fft))
-  ASSERT(.not.associated(cf%RS))
+  ASSERT(.not.associated(cf%X(RS)))
   ASSERT(.not.associated(cf%FS))
 
   SAFE_ALLOCATE(cf%fft)
@@ -65,40 +65,40 @@ subroutine X(cf_fft_init)(cf, sb)
   cf%nx = cf%n(1)
 #endif
 
-  POP_SUB(X(cf_fft_init))
-end subroutine X(cf_fft_init)
+  POP_SUB(X(cube_function_fft_init))
+end subroutine X(cube_function_fft_init)
 
 ! ---------------------------------------------------------
 ! The next routines convert the function between real space and Fourier space
 ! Note that the dimensions of the function in FS are different depending on whether
 ! f is real or complex, because the FFT representation is different (FFTW scheme).
-subroutine X(cf_RS2FS)(cf)
-  type(X(cf_t)), intent(inout)  :: cf
+subroutine X(cube_function_RS2FS)(cf)
+  type(cube_function_t), intent(inout)  :: cf
 
-  ASSERT(associated(cf%RS))
-  if(.not.associated(cf%FS)) call X(cf_alloc_FS)(cf)
+  ASSERT(associated(cf%X(RS)))
+  if(.not.associated(cf%FS)) call X(cube_function_alloc_FS)(cf)
 
-  call X(fft_forward)(cf%fft, cf%RS, cf%FS)
+  call X(fft_forward)(cf%fft, cf%X(RS), cf%FS)
 
-end subroutine X(cf_RS2FS)
+end subroutine X(cube_function_RS2FS)
 
 
 ! ---------------------------------------------------------
-subroutine X(cf_FS2RS)(cf)
-  type(X(cf_t)), intent(inout)  :: cf
+subroutine X(cube_function_FS2RS)(cf)
+  type(cube_function_t), intent(inout)  :: cf
 
   ASSERT(associated(cf%FS))
-  if(.not.associated(cf%RS)) call X(cf_alloc_RS)(cf)
+  if(.not.associated(cf%X(RS))) call X(cube_function_alloc_RS)(cf)
 
-  call X(fft_backward)(cf%fft, cf%FS, cf%RS)
+  call X(fft_backward)(cf%fft, cf%FS, cf%X(RS))
 
-end subroutine X(cf_FS2RS)
+end subroutine X(cube_function_FS2RS)
 
 
 ! ---------------------------------------------------------
 subroutine X(fourier_space_op_init)(this, cube, op)
   type(fourier_space_op_t), intent(out) :: this
-  type(X(cf_t)),            intent(in)  :: cube
+  type(cube_function_t),            intent(in)  :: cube
   R_TYPE,                   intent(in)  :: op(:, :, :)
 
   integer :: ii, jj, kk
@@ -128,12 +128,12 @@ end subroutine X(fourier_space_op_end)
 ! ---------------------------------------------------------
 subroutine X(fourier_space_op_apply)(this, cube)
   type(fourier_space_op_t), intent(in)     :: this
-  type(X(cf_t)),            intent(inout)  :: cube
+  type(cube_function_t),            intent(inout)  :: cube
   
   integer :: ii, jj, kk
   
-  call X(cf_alloc_FS)(cube)
-  call X(cf_RS2FS)(cube)
+  call X(cube_function_alloc_FS)(cube)
+  call X(cube_function_RS2FS)(cube)
 
   do kk = 1, cube%n(3)
     do jj = 1, cube%n(2)
@@ -143,8 +143,8 @@ subroutine X(fourier_space_op_apply)(this, cube)
     end do
   end do
 
-  call X(cf_FS2RS)(cube)
-  call X(cf_free_FS)(cube)
+  call X(cube_function_FS2RS)(cube)
+  call X(cube_function_free_FS)(cube)
 
 end subroutine X(fourier_space_op_apply)
 
@@ -158,7 +158,7 @@ end subroutine X(fourier_space_op_apply)
 subroutine X(mesh_to_fourier) (mesh, mf, cf)
   type(mesh_t),  intent(in)    :: mesh
   CMPLX,         intent(in)    :: mf(:)   ! mf(mesh%np_global)
-  type(X(cf_t)), intent(inout) :: cf
+  type(cube_function_t), intent(inout) :: cf
 
   integer :: ip, ix, iy, iz
 
@@ -180,7 +180,7 @@ end subroutine X(mesh_to_fourier)
 ! ---------------------------------------------------------
 subroutine X(fourier_to_mesh) (mesh, cf, mf)
   type(mesh_t),  intent(in)  :: mesh
-  type(X(cf_t)), intent(in)  :: cf
+  type(cube_function_t), intent(in)  :: cf
   CMPLX,         intent(out) :: mf(:) ! mf(mesh%np_global)
 
   integer :: ip, ix, iy, iz
