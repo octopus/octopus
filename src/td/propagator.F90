@@ -674,6 +674,7 @@ contains
       type(batch_t) :: zpsib
       CMPLX :: phase
       type(density_calc_t) :: dens_calc
+      type(profile_t), save :: phase_prof
 
       PUSH_SUB(propagator_dt.td_aetrs)
 
@@ -700,17 +701,7 @@ contains
         call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 1), tr%v_old(:, :, 2))
         call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc(:, :),     tr%v_old(:, :, 1))
         call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), tr%v_old(:, :, 1:3), time, tr%v_old(:, :, 0))
-
-        do ik = st%d%kpt%start, st%d%kpt%end
-          ispin = states_dim_get_spin_index(st%d, ik)
-          do ip = 1, gr%mesh%np
-            phase = exp(-M_ZI*dt/(M_TWO*mu)*(hm%vhxc(ip, ispin) - vold(ip, ispin)))
-            forall(idim = 1:st%d%dim, ist = st%st_start:st%st_end)
-              st%zpsi(ip, idim, ist, ik) = st%zpsi(ip, idim, ist, ik)*phase
-            end forall
-          end do
-        end do
-
+        forall(ispin = 1:st%d%nspin, ip = 1:gr%mesh%np) vold(ip, ispin) = hm%vhxc(ip, ispin) - vold(ip, ispin)
       end if
 
       ! interpolate the Hamiltonian to time t
@@ -732,12 +723,39 @@ contains
 
       ! propagate the other half with H(t)
       do ik = st%d%kpt%start, st%d%kpt%end
+        ispin = states_dim_get_spin_index(st%d, ik)
+
         do sts = st%st_start, st%st_end, st%d%block_size
           ste = min(st%st_end, sts + st%d%block_size - 1)
 
+          if(tr%method == PROP_CAETRS .and. .not. hamiltonian_apply_packed(hm, gr%mesh)) then
+            call profiling_in(phase_prof, "CAETRS_PHASE")
+            do ip = 1, gr%mesh%np
+              phase = exp(-M_ZI*dt/(M_TWO*mu)*vold(ip, ispin))
+              forall(idim = 1:st%d%dim, ist = sts:ste)
+                st%zpsi(ip, idim, ist, ik) = st%zpsi(ip, idim, ist, ik)*phase
+              end forall
+            end do
+            call profiling_out(phase_prof)
+          end if
+
           call batch_init(zpsib, hm%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
           
-          if(hamiltonian_apply_packed(hm, gr%mesh)) call batch_pack(zpsib)
+          if(hamiltonian_apply_packed(hm, gr%mesh)) then
+            call batch_pack(zpsib)
+
+            if(tr%method == PROP_CAETRS) then
+              call profiling_in(phase_prof, "CAETRS_PHASE")
+              do ip = 1, gr%mesh%np
+                phase = exp(-M_ZI*dt/(M_TWO*mu)*vold(ip, ispin))
+                forall(ist = 1:zpsib%nst_linear)
+                  zpsib%pack%zpsi(ist, ip) = zpsib%pack%zpsi(ist, ip)*phase
+                end forall
+              end do
+              call profiling_out(phase_prof)
+            end if
+            
+          end if
 
           call exponential_apply_batch(tr%te, gr%der, hm, zpsib, ik, dt/(M_TWO*mu), time)
           call density_calc_accumulate(dens_calc, ik, zpsib)
