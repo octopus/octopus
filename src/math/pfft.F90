@@ -249,55 +249,55 @@ contains
 
     SAFE_ALLOCATE( cin(1:nn(1), 1:nn(2), 1:nn(3)))
     SAFE_ALLOCATE(cout(1:nn(1), 1:nn(2), 1:nn(3)))
-!!$
-!!$    ! Create two-dimensional process grid of
-!!$    process_column_size = aint(sqrt(real(mpi_world%size)))
-!!$    process_row_size    = aint(sqrt(real(mpi_world%size)))
-!!$  
-!!$    ! size np(1) x np(2), if possible
-!!$    call PDFFT(create_procmesh_2d) (ierror,mpi_world%comm,process_column_size,process_row_size,pfft%comm_cart_2d)
-!!$    if (ierror .ne. 0) then
-!!$      message(1) = "The number of rows and columns in PFFT processor grid is not equal to "
-!!$      message(2) = "the number of processor in the MPI communicator."
-!!$      message(3) = "Please check it."
-!!$      call write_fatal(3)
-!!$    end if
-!!$
-!!$    ! Get parameters of data distribution, gives memory amount for local array
-!!$    
-!!$    call PDFFT(local_size_3d) (alloc_local, nn, pfft%comm_cart_2d, PFFT_TRANSPOSED, &
-!!$      &     local_ni, local_i_start, local_no, local_o_start);
-!!$
-!!$    !     Allocate memory
-!!$    SAFE_ALLOCATE(data_in(alloc_local))
-!!$    SAFE_ALLOCATE(data_out(alloc_local))
-!!$
-!!$    ! Create the plan, with the processor grid 
-!!$    call PDFFT(plan_dft_3d) (pfft_array(jj)%planf, nn, data_in, data_out, pfft%comm_cart_2d, &
-!!$    & FFTW_FORWARD, PFFT_TRANSPOSED + PFFT_FORWARD, FFTW_MEASURE)
-!!$    call PDFFT(plan_dft_3d) (pfft_array(jj)%planb, nn, data_out, data_in, pfft%comm_cart_2d, &
-!!$      & FFTW_BACKWARD, PFFT_TRANSPOSED + PFFT_BACKWARD, FFTW_MEASURE) 
-!!$    SAFE_DEALLOCATE_A(data_in)
-!!$    SAFE_DEALLOCATE_A(data_out)
-!!$    
-!!$    pfft = pfft_array(jj)
-!!$
-!!$    write(message(1), '(a)') "Info: PFFT allocated with size ("
-!!$    do idir = 1, dim
-!!$      write(str_tmp, '(i7,a)') nn(idir)
-!!$      if(idir == dim) then
-!!$        message(1) = trim(message(1)) // trim(str_tmp) // ") in slot "
-!!$      else
-!!$        message(1) = trim(message(1)) // trim(str_tmp) // ","
-!!$      endif
-!!$    enddo
-!!$    write(str_tmp, '(i2)') jj
-!!$        message(1) = trim(message(1)) // trim(str_tmp)
-!!$    call write_info(1)
 
+    ! Create two-dimensional process grid of
+    process_column_size = aint(sqrt(real(mpi_world%size)))
+    process_row_size    = aint(sqrt(real(mpi_world%size)))
+  
+    ! size np(1) x np(2), if possible
+    call PDFFT(create_procmesh_2d) (ierror,mpi_world%comm,process_column_size,process_row_size,pfft%comm_cart_2d)
+    if (ierror .ne. 0) then
+      message(1) = "The number of rows and columns in PFFT processor grid is not equal to "
+      message(2) = "the number of processor in the MPI communicator."
+      message(3) = "Please check it."
+      call write_fatal(3)
+    end if
+
+    ! Get parameters of data distribution, gives memory amount for local array
+    
+    call PDFFT(local_size_3d) (alloc_local, nn, pfft%comm_cart_2d, PFFT_TRANSPOSED, &
+      &     local_ni, local_i_start, local_no, local_o_start);
+
+    !     Allocate memory
+    SAFE_ALLOCATE(data_in(alloc_local))
+    SAFE_ALLOCATE(data_out(alloc_local))
+
+    ! Create the plan, with the processor grid 
+    call PDFFT(plan_dft_3d) (pfft_array(jj)%planf, nn, data_in, data_out, pfft%comm_cart_2d, &
+         & FFTW_FORWARD, PFFT_TRANSPOSED + PFFT_FORWARD, FFTW_MEASURE)
+    call PDFFT(plan_dft_3d) (pfft_array(jj)%planb, nn, data_out, data_in, pfft%comm_cart_2d, &
+         & FFTW_BACKWARD, PFFT_TRANSPOSED + PFFT_BACKWARD, FFTW_MEASURE) 
+    SAFE_DEALLOCATE_A(data_in)
+    SAFE_DEALLOCATE_A(data_out)
+    
+    pfft = pfft_array(jj)
+    
+    write(message(1), '(a)') "Info: PFFT allocated with size ("
+    do idir = 1, dim
+      write(str_tmp, '(i7,a)') nn(idir)
+      if(idir == dim) then
+        message(1) = trim(message(1)) // trim(str_tmp) // ") in slot "
+      else
+        message(1) = trim(message(1)) // trim(str_tmp) // ","
+      endif
+    enddo
+    write(str_tmp, '(i2)') jj
+    message(1) = trim(message(1)) // trim(str_tmp)
+    call write_info(1)
+    
     POP_SUB(pfft_init)
 #endif
-
+        
   end subroutine pfft_init
 
   ! ---------------------------------------------------------
