@@ -137,7 +137,8 @@ subroutine poisson_fmm_solve(this, pot, rho)
 
   if(this%fmm_params%periodic /= 0) then
     if ((this%der%mesh%sb%box_shape == PARALLELEPIPED).and.((this%der%mesh%sb%lsize(1)==this%der%mesh%sb%lsize(2)).and.&
-         (this%der%mesh%sb%lsize(1)==this%der%mesh%sb%lsize(3)).and.(this%der%mesh%sb%lsize(2)==this%der%mesh%sb%lsize(3)))) then
+         (this%der%mesh%sb%lsize(1)==this%der%mesh%sb%lsize(3)).and.&
+         (this%der%mesh%sb%lsize(2)==this%der%mesh%sb%lsize(3)))) then
       this%fmm_params%periodic_length = this%der%mesh%sb%lsize(1)
     else
       message(1) = "At present, FMM solver for Hartree potential can only deal with cubic boxes. "
@@ -159,10 +160,16 @@ subroutine poisson_fmm_solve(this, pot, rho)
   !! Beware of this, this is only valid if case(curv_method_uniform); for other cases, vol_pp is to be used
   !! in this case, vol_pp has no meaning, their values are ridiculous
   !! urvilinear coordinates must be included
-  aux=this%der%mesh%spacing(1)*this%der%mesh%spacing(2)*this%der%mesh%spacing(3)
 
-  q = rho*aux
-  
+  if (this%der%mesh%use_curvilinear==.false.) then
+   aux=this%der%mesh%spacing(1)*this%der%mesh%spacing(2)*this%der%mesh%spacing(3)
+   q = rho*aux 
+  else
+   do ii = 1, this%der%mesh%np 
+    q(ii) = rho(ii)*this%der%mesh%vol_pp(ii)
+   end do
+  end if  
+
   ! invert the indexes
   do ii = 1, this%der%mesh%np
     do jj=1, MAX_DIM
@@ -173,6 +180,8 @@ subroutine poisson_fmm_solve(this, pot, rho)
   absrel = this%fmm_params%abs_rel_fmm
   deltaE = this%fmm_params%delta_E_fmm
   potLibFMM = M_ZERO 
+  this%fmm_params%periodic=this%der%mesh%sb%periodic_dim
+  this%fmm_params%periodic_length=2.0*this%der%mesh%sb%lsize(1)
   periodic = this%fmm_params%periodic
   periodicaxes = 1 
   periodlength = this%fmm_params%periodic_length
@@ -186,10 +195,28 @@ subroutine poisson_fmm_solve(this, pot, rho)
   ! FMM just calculates contributions from other cells. for self-interaction cell integration, we include 
   ! (as traditional in octopus) an approximate integration using a spherical cell whose volume is the volume of the actual cell
   ! Next line is only valid for 3D
-  aux = M_TWO*M_PI*(3.*this%der%mesh%spacing(1)*this%der%mesh%spacing(2)*this%der%mesh%spacing(3)/(M_PI*4.))**(2./3.)
-  do ii=1, this%der%mesh%np
+if (this%der%mesh%sb%dim==3) then
+  if ((this%der%mesh%use_curvilinear==.false.) .and. (this%der%mesh%spacing(1)==this%der%mesh%spacing(2)) .and. &
+               (this%der%mesh%spacing(2)==this%der%mesh%spacing(3)) .and. &
+               (this%der%mesh%spacing(1)==this%der%mesh%spacing(3))) then
+   aux = 2.380077363979553356918*(this%der%mesh%spacing(1)*this%der%mesh%spacing(2)) 
+   do ii=1, this%der%mesh%np
     pot(ii)=pot(ii)+aux*rho(ii)
+   end do
+  else
+  do ii=1, this%der%mesh%np 
+   aux = M_TWO*M_PI*(3.*this%der%mesh%vol_pp(ii)/(M_PI*4.))**(2./3.)
+   pot(ii)=pot(ii)+aux*rho(ii)
   end do
+ end if 
+end if
+
+if (this%der%mesh%sb%dim==2) then
+  aux = M_TWO*M_PI*this%der%mesh%spacing(1)
+   do ii=1, this%der%mesh%np
+    pot(ii)=pot(ii)+aux*rho(ii)
+   end do
+end if
 
   SAFE_DEALLOCATE_A(q)
   SAFE_DEALLOCATE_A(xyz)

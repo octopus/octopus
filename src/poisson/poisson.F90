@@ -90,7 +90,7 @@ module poisson_m
     integer :: abs_rel_fmm
     integer :: dipole_correction
     integer :: periodic
-    integer :: periodic_length 
+    FLOAT   :: periodic_length 
   end type poisson_fmm_t
   
   type poisson_t
@@ -294,10 +294,16 @@ contains
         call input_error('PoissonSolver')	    
       end if
 
+      if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FMM) then
+        write(message(1), '(a,i1,a)')'FMM is not ready to deal with periodic boundaries at present, '
+        write(message(2), '(a,i1,a)')'because it requires null net charge.'
+        call write_warning(3)
+      end if
+
       if(der%mesh%sb%periodic_dim > 0 .and. &
            this%method /= der%mesh%sb%periodic_dim .and. &
            this%method < POISSON_CG .and. &
-           this%method /= POISSON_FFT_CORRECTED .and. this%method /= POISSON_FFT_CYL) then
+           this%method /= POISSON_FFT_CORRECTED .and. this%method /= POISSON_FFT_CYL .and. this%method /= POISSON_FMM) then
         write(message(1), '(a,i1,a)')'The system is periodic in ', der%mesh%sb%periodic_dim ,' dimension(s),'
         write(message(2), '(a,i1,a)')'but Poisson solver is set for ',this%method,' dimensions.'
         message(3) =                 'You know what you are doing, right?'
@@ -579,8 +585,8 @@ contains
   !! This only makes sense for finite systems.
   subroutine poisson_test(mesh)
     type(mesh_t), intent(inout) :: mesh
-
-    FLOAT, allocatable :: rho(:), vh(:), vh_exact(:), rhop(:), xx(:, :)
+    FLOAT :: aux1, aux2
+    FLOAT, allocatable :: rho(:), vh(:), vh2(:), vh3(:), vh_exact(:), rhop(:), xx(:, :)
     FLOAT :: alpha, beta, rr, delta, norm, rnd, ralpha, range
     integer :: ip, idir, ierr, iunit, nn, n_gaussians
 
@@ -593,11 +599,13 @@ contains
       return
     endif
 
-    n_gaussians = 4
+    n_gaussians = 1 
 
     SAFE_ALLOCATE(     rho(1:mesh%np))
     SAFE_ALLOCATE(    rhop(1:mesh%np))
     SAFE_ALLOCATE(      vh(1:mesh%np))
+    SAFE_ALLOCATE(      vh2(1:mesh%np))
+    SAFE_ALLOCATE(      vh3(1:mesh%np))
     SAFE_ALLOCATE(vh_exact(1:mesh%np))
     SAFE_ALLOCATE(xx(1:mesh%sb%dim, 1:n_gaussians))
 
@@ -617,7 +625,7 @@ contains
       do while(abs(norm-M_ONE)> CNST(1.0e-4))
         do idir = 1, mesh%sb%dim
           call random_number(rnd)
-          xx(idir, nn) = range*rnd 
+          xx(idir, nn) = 0.000 
         end do
         rr = sqrt(sum(xx(:, nn)*xx(:,nn)))
         do ip = 1, mesh%np
@@ -680,6 +688,8 @@ contains
     SAFE_DEALLOCATE_A(vh)
     SAFE_DEALLOCATE_A(vh_exact)
     SAFE_DEALLOCATE_A(xx)
+    SAFE_DEALLOCATE_A(vh2)
+    SAFE_DEALLOCATE_A(vh3)
     POP_SUB(poisson_test)
   end subroutine poisson_test
 

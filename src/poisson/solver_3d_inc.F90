@@ -186,9 +186,15 @@ subroutine poisson3D_solve_direct(this, pot, rho)
       xx(1:3) = xg(1:3) 
       do jp = 1, this%der%mesh%np
         if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
-          pvec(jp) = rho(jp)*M_TWO*M_PI*(3.*this%der%mesh%spacing(1)*&
-            this%der%mesh%spacing(2)*this%der%mesh%spacing(3)/(M_PI*4.))**(2./3.)
-        else
+          if((this%der%mesh%use_curvilinear==.false.) .and. (this%der%mesh%spacing(1)==this%der%mesh%spacing(2)) .and. &
+               (this%der%mesh%spacing(2)==this%der%mesh%spacing(3)) .and.&
+               (this%der%mesh%spacing(1)==this%der%mesh%spacing(3))) then
+             pvec(jp) = rho(jp)*2.380077363979553356918/(this%der%mesh%spacing(1)) 
+          else
+             pvec(jp) = (1.0/(this%der%mesh%spacing(1)*this%der%mesh%spacing(2)*&
+                  this%der%mesh%spacing(3))**(1./3.))*rho(jp)*M_TWO*M_PI*(3./(M_PI*4.))**(2./3.) 
+          end if 
+       else
           yy(:) = this%der%mesh%x(jp,1:3)
           pvec(jp) = rho(jp)/sqrt(sum((xx-yy)**2))
         end if
