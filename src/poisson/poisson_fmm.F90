@@ -161,7 +161,7 @@ subroutine poisson_fmm_solve(this, pot, rho)
   !! in this case, vol_pp has no meaning, their values are ridiculous
   !! urvilinear coordinates must be included
 
-  if (this%der%mesh%use_curvilinear==.false.) then
+  if (this%der%mesh%use_curvilinear .eqv. .false.) then
    aux=this%der%mesh%spacing(1)*this%der%mesh%spacing(2)*this%der%mesh%spacing(3)
    q = rho*aux 
   else
@@ -196,7 +196,7 @@ subroutine poisson_fmm_solve(this, pot, rho)
   ! (as traditional in octopus) an approximate integration using a spherical cell whose volume is the volume of the actual cell
   ! Next line is only valid for 3D
 if (this%der%mesh%sb%dim==3) then
-  if ((this%der%mesh%use_curvilinear==.false.) .and. (this%der%mesh%spacing(1)==this%der%mesh%spacing(2)) .and. &
+  if ((this%der%mesh%use_curvilinear .eqv. .false.) .and. (this%der%mesh%spacing(1)==this%der%mesh%spacing(2)) .and. &
                (this%der%mesh%spacing(2)==this%der%mesh%spacing(3)) .and. &
                (this%der%mesh%spacing(1)==this%der%mesh%spacing(3))) then
    aux = 2.380077363979553356918*(this%der%mesh%spacing(1)*this%der%mesh%spacing(2)) 
