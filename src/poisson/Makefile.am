@@ -24,8 +24,7 @@ noinst_LIBRARIES = libpoisson.a
 libpoisson_a_SOURCES = \
 	poisson_cutoffs.c poisson_cutoff.F90 poisson_isf.F90 poisson_fft.F90 \
 	poisson_corrections.F90 poisson_cg.F90 poisson_multigrid.F90 poisson.F90\
-	poisson_sete.F90     \
-	scaling_function.F90
+	poisson_sete.F90 poisson_pfft.F90 scaling_function.F90
 
 noinst_HEADERS = \
 	solver_1d_inc.F90 \

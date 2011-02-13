@@ -80,7 +80,7 @@ contains
   !   When compared to the best vendor implementations on RISC architectures 
   !   it gives close to optimal performance (perhaps loosing 20 percent in speed)
   !   and it is significanly faster than many not so good vendor implementations 
-  !   as well as other portable FFT's. 
+  !   as well as other portable FFT`s. 
   !   On all vector machines tested so far (Cray, NEC, Fujitsu) is 
   !   was significantly faster than the vendor routines
   ! The theoretical background is described in :
@@ -110,7 +110,7 @@ contains
   !        INPUT:
   !            n1,n2,n3:physical dimension of the transform. It must be a 
   !                     product of the prime factors 2,3,5, but greater than 3. 
-  !                    If two ni's are equal it is recommended to place them 
+  !                    If two ni`s are equal it is recommended to place them 
   !                    behind each other.
   !            nd1,nd2,nd3:memory dimension of Z. ndi must always be greater or 
   !                        equal than ni. On a vector machine, it is recomended 
