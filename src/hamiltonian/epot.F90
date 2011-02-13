@@ -436,8 +436,8 @@ contains
 
     if(ep%have_density) then
       SAFE_ALLOCATE(ep%poisson_solver)
-      ep%poisson_solver => psolver
-     ! call poisson_init(ep%poisson_solver, gr%der, geo, gr%mesh%mpi_grp%comm)
+!      ep%poisson_solver => psolver
+      call poisson_init(ep%poisson_solver, gr%der, geo, gr%mesh%mpi_grp%comm)
            
 
       if (poisson_get_solver(ep%poisson_solver) == POISSON_SETE) then
