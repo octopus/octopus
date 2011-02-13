@@ -29,10 +29,10 @@ subroutine poisson_fmm_init(params_fmm)
   !%Default 0.0001 
   !%Section Hamiltonian::Poisson 
   !%Description
-  !% Parameter for absolute or relative convergence of FMM 
-  !% Sets energy error bound
-  !% Strong inhomogeneous systems may violate the error bound
-  !% For inhomogeneous systems we have a error controlled sequential version available
+  !% Parameter for absolute or relative convergence of FMM.
+  !% Sets energy error bound.
+  !% Strong inhomogeneous systems may violate the error bound.
+  !% For inhomogeneous systems we have an error-controlled sequential version available
   !% (from Ivo Kabadshow).
   !%End
   call parse_float(datasets_check('DeltaEFMM'), CNST(1e-4), params_fmm%delta_E_fmm)
@@ -42,8 +42,8 @@ subroutine poisson_fmm_init(params_fmm)
   !%Default 2
   !%Section Hamiltonian::Poisson 
   !%Description
-  !% Sets type of error bound
-  !% 0 = 10^-3 relative Error
+  !% Sets type of error bound.
+  !% 0 = 10^-3 relative error.
   !% 1 = absolute deltaE error. The error (deltaE) is a fraction of the unity of energy
   !% 2 = relative deltaE error. The error is the given ratio (deltaE) of the total energy
   !% > - Could you explain me what is the difference between considering relative

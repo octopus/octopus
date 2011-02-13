@@ -297,7 +297,7 @@ contains
       if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FMM) then
         write(message(1), '(a,i1,a)')'FMM is not ready to deal with periodic boundaries at present, '
         write(message(2), '(a,i1,a)')'because it requires null net charge.'
-        call write_warning(3)
+        call write_warning(2)
       end if
 
       if(der%mesh%sb%periodic_dim > 0 .and. &
