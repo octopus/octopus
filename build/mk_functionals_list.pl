@@ -74,7 +74,7 @@ while($_ = <IN>){
     $number  = $2;
     $comment = $3;
 
-    if($option =~ /^XC_[^_]+_C_/){
+    if($option =~ /^XC_\S+_C_/ || $option =~ /^XC_\S+_XC_/){
       $number *= 1000;
     }
 
