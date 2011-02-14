@@ -161,7 +161,7 @@ contains
     call switch_status('aborted')
 
 #ifdef HAVE_MPI
-    call MPI_Finalize(mpi_err)
+    call MPI_Abort(mpi_world%comm, mpi_err)
 #endif
 
     call loct_exit_failure()
@@ -428,7 +428,7 @@ contains
     call switch_status('aborted')
 
 #ifdef HAVE_MPI
-    call MPI_Finalize(mpi_err)
+    call MPI_Abort(mpi_world%comm, mpi_err)
 #endif
 
     call loct_exit_failure()
