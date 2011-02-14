@@ -63,7 +63,7 @@ module fourier_space_m
     FLOAT, pointer :: dop(:, :, :)
     CMPLX, pointer :: zop(:, :, :)
   end type fourier_space_op_t
-  
+
 contains
 
 #include "undef.F90"

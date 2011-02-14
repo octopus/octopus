@@ -105,7 +105,13 @@ subroutine X(cube_function_RS2FS)(cf)
   ASSERT(associated(cf%X(RS)))
   if(.not.associated(cf%FS)) call X(cube_function_alloc_FS)(cf)
 
-  call X(fft_forward)(cf%fft, cf%X(RS), cf%FS)
+  if (cf%fft_library == PFFT_LIB) then
+#ifdef HAVE_PFFT
+    call pfft_forward_3d(cf%pfft)
+#endif
+  else
+    call X(fft_forward)(cf%fft, cf%X(RS), cf%FS)
+  end if
 
 end subroutine X(cube_function_RS2FS)
 
@@ -116,8 +122,14 @@ subroutine X(cube_function_FS2RS)(cf)
 
   ASSERT(associated(cf%FS))
   if(.not.associated(cf%X(RS))) call X(cube_function_alloc_RS)(cf)
-
-  call X(fft_backward)(cf%fft, cf%FS, cf%X(RS))
+  
+  if (cf%fft_library == PFFT_LIB) then
+#ifdef HAVE_PFFT 
+    call pfft_backward_3d(cf%pfft)
+#endif
+  else
+    call X(fft_backward)(cf%fft, cf%FS, cf%X(RS))
+  end if
 
 end subroutine X(cube_function_FS2RS)
 

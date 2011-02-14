@@ -78,7 +78,7 @@ contains
     FLOAT :: temp(MAX_DIM), modg2
     FLOAT :: gg(MAX_DIM)
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
-
+    
     PUSH_SUB(poisson_fft_build_3d_3d)
     
     ! double the box (or not) to perform the fourier transforms
@@ -711,8 +711,31 @@ contains
     FLOAT, allocatable :: rho_global(:), pot_global(:)
 
     FLOAT :: average
-
+    integer :: default_fft_library, fft_library
+    
     PUSH_SUB(poisson_fft)
+    
+    default_fft_library = FFTW3_LIB
+    !%Variable FFTLibrary
+    !%Type logical
+    !%Section Hamiltonian::Poisson
+    !%Description
+    !% (experimental) You can select the FFT library to use
+    !% The default one is FFTW3 
+    !%Option fftw 0
+    !%  uses FFTW3 library
+    !%Option pfft 1
+    !% uses PFFT library. It has to be linked.
+    !%End
+    call parse_integer(datasets_check('FFTLibrary'), default_fft_library, fft_cf%fft_library)
+#ifndef HAVE_PFFT
+    if (fft_cf%fft_library == PFFT_LIB) then
+      write(message(1),'(a)')'You have selected the PFFT for FFT, but is not compiled'
+      call write_fatal(1)
+    end if
+#endif
+
+    write(*,*) "LIBRARY = ",fft_cf%fft_library
 
     average=M_ZERO !this avoids a non-initialized warning
     

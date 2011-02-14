@@ -20,12 +20,14 @@
 #include "global.h"
 
 module cube_function_m
+  use datasets_m
   use global_m
   use mesh_m
   use mesh_cube_map_m
   use messages_m
   use mpi_m
   use fft_m
+  use parser_m
   use pfft_m
   use profiling_m
   use simul_box_m
@@ -58,19 +60,22 @@ module cube_function_m
     FLOAT, pointer :: dRS(:, :, :)  !< real space grid
     CMPLX, pointer :: zRS(:, :, :)  !< real space grid, complex numbers
     CMPLX, pointer :: FS(:, :, :)   !< fourier space grid
-
+    integer :: fft_library          !< which FFT library has to be used. Options FFTW3=0, PFFT=1
     integer :: nx     ! = n(1)/2 + 1, first dimension of the FS array
     type(fft_t), pointer :: fft
 
-!#ifdef HAVE_PFFT
     type(pfft_t), pointer :: pfft
-!#endif
 
     type(mpi_grp_t) :: mpi_grp
 
   end type cube_function_t
 
   type(profile_t), save :: prof_m2c, prof_c2m
+  
+  integer, public, parameter :: &
+       FFTW3_LIB = 0, &
+       PFFT_LIB  = 1
+
 contains
 
   ! ---------------------------------------------------------
@@ -173,6 +178,8 @@ contains
     type(cube_function_t), intent(out) :: cf
     integer,               intent(in)  :: n(3)
     
+    integer :: default_fft_library
+    
     PUSH_SUB(cube_function_init)
 
     ASSERT(all(n(1:3) > 0))    
@@ -184,7 +191,29 @@ contains
     cf%offset = 0
     
     nullify(cf%fft)
-    POP_SUB(cube_function_init)
+    nullify(cf%pfft)
+    
+    default_fft_library = FFTW3_LIB
+    !%Variable FFTLibrary
+    !%Type logical
+    !%Section Hamiltonian::Poisson
+    !%Description
+    !% (experimental) You can select the FFT library to use
+    !% The default one is FFTW3 
+    !%Option fftw 0
+    !%  uses FFTW3 library
+    !%Option pfft 1
+    !% uses PFFT library. It has to be linked.
+    !%End
+    call parse_integer(datasets_check('FFTLibrary'), default_fft_library, cf%fft_library)
+#ifndef HAVE_PFFT
+    if (cf%fft_library == PFFT_LIB) then
+      write(message(1),'(a)')'You have selected the PFFT for FFT, but is not compiled'
+      call write_fatal(1)
+    end if
+#endif
+    
+    POP_SUB(cube_function_init) 
   end subroutine cube_function_init
   
   ! ---------------------------------------------------------

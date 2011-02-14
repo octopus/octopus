@@ -79,9 +79,9 @@ contains
     ! double the box (or not) to perform the fourier transforms
     call mesh_double_box(mesh%sb, mesh, db)                 ! get dimensions of the double box
     ! allocate cube function where we will perform the ffts
-    call dcube_function_new(db, fft_cf)
+    call cube_function_init(fft_cf, db)
     ! initialize the fft
-    !call zcf_fft_init(fft_cf, mesh%sb)
+    call dcube_function_fft_init(fft_cf, mesh%sb)
     ! dimensions may have been optimized
     db(1:3) = fft_cf%n(1:3)
 
