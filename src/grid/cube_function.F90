@@ -171,12 +171,12 @@ contains
   ! The following routines handle creation/destruction of the cube
   subroutine cube_function_init(cf, n)
     type(cube_function_t), intent(out) :: cf
-    integer,                intent(in) :: n(:)
+    integer,               intent(in)  :: n(3)
     
     PUSH_SUB(cube_function_init)
-    
-    ASSERT(all(n>0))
-    
+
+    ASSERT(all(n(1:3) > 0))    
+
     nullify(cf%zRS)
     nullify(cf%dRS)
     nullify(cf%FS)
@@ -191,7 +191,7 @@ contains
 
   subroutine cube_function_init_from(cf, cf_i)
     type(cube_function_t), intent(out) :: cf
-    type(cube_function_t), intent( in) :: cf_i
+    type(cube_function_t), intent(in)  :: cf_i
 
     PUSH_SUB(cube_function_init_from)
     ASSERT(all(cf_i%n>0))
