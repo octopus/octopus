@@ -11,27 +11,27 @@ match ; Initial energy    ; GREP(static/info, 'Total       =', 20) ; -35.1324271
 
 Input      : 09-angular_momentum.02-td_gipaw.inp
 match ; Energy [step   1] ; LINE(td.general/energy, -101, 30) ; -3.513229020379e+01
-match ; Energy [step  25] ; LINE(td.general/energy,  -76, 30) ; -3.499608430345e+01
-match ; Energy [step  50] ; LINE(td.general/energy,  -51, 30) ; -3.499863859552e+01
+match ; Energy [step  25] ; LINE(td.general/energy,  -76, 30) ; -3.499682086980e+01
+match ; Energy [step  50] ; LINE(td.general/energy,  -51, 30) ; -3.499897939723e+01
 match ; Energy [step  75] ; LINE(td.general/energy,  -26, 30) ; -3.500045883901e+01
 match ; Energy [step 100] ; LINE(td.general/energy,   -1, 30) ; -3.500181892598e+01
 
 match ; Lx [step   1]     ; LINE(td.general/angular, -101, 30) ;  0.000000000000e+00
 match ; Lx [step  25]     ; LINE(td.general/angular,  -76, 30) ;  4.800919946944e-03
-match ; Lx [step  50]     ; LINE(td.general/angular,  -51, 30) ;  5.194648097226e-03
-match ; Lx [step  75]     ; LINE(td.general/angular,  -26, 30) ; -2.241548488137e-02
-match ; Lx [step 100]     ; LINE(td.general/angular,   -1, 30) ;  5.543084013693e-03
+match ; Lx [step  50]     ; LINE(td.general/angular,  -51, 30) ;  6.836091853355e-03
+match ; Lx [step  75]     ; LINE(td.general/angular,  -26, 30) ; -2.229691916263e-02
+match ; Lx [step 100]     ; LINE(td.general/angular,   -1, 30) ;  4.905085128281e-03
 
 match ; Ly [step   1]     ; LINE(td.general/angular, -101, 50) ;  0.000000000000e+00
-match ; Ly [step  25]     ; LINE(td.general/angular,  -76, 50) ; -1.645974005131e-02
-match ; Ly [step  50]     ; LINE(td.general/angular,  -51, 50) ;  3.006881977894e-02
-match ; Ly [step  75]     ; LINE(td.general/angular,  -26, 50) ; -2.279719273693e-02
-match ; Ly [step 100]     ; LINE(td.general/angular,   -1, 50) ; -4.783640363734e-02
+match ; Ly [step  25]     ; LINE(td.general/angular,  -76, 50) ; -1.582141161182e-02
+match ; Ly [step  50]     ; LINE(td.general/angular,  -51, 50) ;  3.056427461884e-02
+match ; Ly [step  75]     ; LINE(td.general/angular,  -26, 50) ; -2.259727555686e-02
+match ; Ly [step 100]     ; LINE(td.general/angular,   -1, 50) ; -4.765306183454e-02
 
 match ; Lz [step   1]     ; LINE(td.general/angular, -101, 70) ;  0.000000000000e+00
-match ; Lz [step  25]     ; LINE(td.general/angular,  -76, 70) ;  6.933272551354e-02
-match ; Lz [step  50]     ; LINE(td.general/angular,  -51, 70) ; -8.223343481005e-02
-match ; Lz [step  75]     ; LINE(td.general/angular,  -26, 70) ; -5.147232455895e-02
+match ; Lz [step  25]     ; LINE(td.general/angular,  -76, 70) ;  6.966994191705e-02
+match ; Lz [step  50]     ; LINE(td.general/angular,  -51, 70) ; -8.285220259541e-02
+match ; Lz [step  75]     ; LINE(td.general/angular,  -26, 70) ; -5.132227395732e-02
 match ; Lz [step 100]     ; LINE(td.general/angular,   -1, 70) ; -2.601120844702e-02
 
 # This is commented since L2 is not calculated since revision [6492]
@@ -43,27 +43,27 @@ match ; Lz [step 100]     ; LINE(td.general/angular,   -1, 70) ; -2.601120844702
 
 Input      : 09-angular_momentum.03-td_icl.inp
 match ; Energy [step   1] ; LINE(td.general/energy, -101, 30) ; -3.513229020379e+01
-match ; Energy [step  25] ; LINE(td.general/energy,  -76, 30) ; -3.499608430345e+01 
-match ; Energy [step  50] ; LINE(td.general/energy,  -51, 30) ; -3.499863859552e+01
+match ; Energy [step  25] ; LINE(td.general/energy,  -76, 30) ; -3.499682086980e+01
+match ; Energy [step  50] ; LINE(td.general/energy,  -51, 30) ; -3.499897939723e+01
 match ; Energy [step  75] ; LINE(td.general/energy,  -26, 30) ; -3.500045883901e+01
 match ; Energy [step 100] ; LINE(td.general/energy,   -1, 30) ; -3.500181892598e+01
 
 match ; Lx [step   1]     ; LINE(td.general/angular, -101, 30) ;  0.000000000000e+00
 match ; Lx [step  25]     ; LINE(td.general/angular,  -76, 30) ;  4.800919946944e-03
-match ; Lx [step  50]     ; LINE(td.general/angular,  -51, 30) ;  5.194648097226e-03
-match ; Lx [step  75]     ; LINE(td.general/angular,  -26, 30) ; -2.241548488137e-02
-match ; Lx [step 100]     ; LINE(td.general/angular,   -1, 30) ;  5.543084013693e-03
+match ; Lx [step  50]     ; LINE(td.general/angular,  -51, 30) ;  6.836091853355e-03
+match ; Lx [step  75]     ; LINE(td.general/angular,  -26, 30) ; -2.229691916263e-02
+match ; Lx [step 100]     ; LINE(td.general/angular,   -1, 30) ;  4.905085128281e-03
 
 match ; Ly [step   1]     ; LINE(td.general/angular, -101, 50) ;  0.000000000000e+00
-match ; Ly [step  25]     ; LINE(td.general/angular,  -76, 50) ; -1.645974005131e-02
-match ; Ly [step  50]     ; LINE(td.general/angular,  -51, 50) ;  3.006881977894e-02
-match ; Ly [step  75]     ; LINE(td.general/angular,  -26, 50) ; -2.279719273693e-02
-match ; Ly [step 100]     ; LINE(td.general/angular,   -1, 50) ; -4.783640363734e-02
+match ; Ly [step  25]     ; LINE(td.general/angular,  -76, 50) ; -1.582141161182e-02
+match ; Ly [step  50]     ; LINE(td.general/angular,  -51, 50) ;  3.056427461884e-02
+match ; Ly [step  75]     ; LINE(td.general/angular,  -26, 50) ; -2.259727555686e-02
+match ; Ly [step 100]     ; LINE(td.general/angular,   -1, 50) ; -4.765306183454e-02
 
 match ; Lz [step   1]     ; LINE(td.general/angular, -101, 70) ;  0.000000000000e+00
-match ; Lz [step  25]     ; LINE(td.general/angular,  -76, 70) ;  6.933272551354e-02
-match ; Lz [step  50]     ; LINE(td.general/angular,  -51, 70) ; -8.223343481005e-02
-match ; Lz [step  75]     ; LINE(td.general/angular,  -26, 70) ; -5.147232455895e-02
+match ; Lz [step  25]     ; LINE(td.general/angular,  -76, 70) ;  6.966994191705e-02
+match ; Lz [step  50]     ; LINE(td.general/angular,  -51, 70) ; -8.285220259541e-02
+match ; Lz [step  75]     ; LINE(td.general/angular,  -26, 70) ; -5.132227395732e-02
 match ; Lz [step 100]     ; LINE(td.general/angular,   -1, 70) ; -2.601120844702e-02
 
 # This is commented since L2 is not calculated since revision [6492]
