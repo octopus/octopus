@@ -155,6 +155,8 @@ module profiling_m
 
     character(len=256)       :: output_dir
     character(len=6)         :: file_number
+
+    logical                  :: all_nodes
   end type profile_vars_t
 
   type(profile_vars_t), public :: prof_vars
@@ -228,6 +230,18 @@ contains
     POP_SUB(profiling_init)
       return
     end if
+
+    !%Variable ProfilingAllNodes
+    !%Default no
+    !%Type integer
+    !%Section Execution::Optimization
+    !%Description
+    !% This variable controls whether all nodes print the time
+    !% profiling output. If set to no, the default, only the root node
+    !% will write the profile. If set to yes all nodes will print it.
+    !%End
+
+    call parse_logical('ProfilingAllNodes', .false., prof_vars%all_nodes)
 
     call get_output_dir()
 
@@ -705,6 +719,11 @@ contains
 #ifdef HAVE_MPI
     call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
+
+    if(.not. prof_vars%all_nodes .and. .not. mpi_grp_is_root(mpi_world)) then
+      POP_SUB(profiling_output)
+      return
+    end if
 
     iunit = io_open(trim(prof_vars%output_dir)//'/time.'//prof_vars%file_number, action='write')
     if(iunit.lt.0) then
