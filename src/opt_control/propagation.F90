@@ -510,7 +510,6 @@ module opt_control_propagation_m
     call hamiltonian_update(hm, gr%mesh)
     call propagator_run_zero_iter(hm, td%tr)
     call propagator_run_zero_iter(hm, tr_chi)
-
     td%dt = -td%dt
     call oct_prop_output(prop_chi, td%max_iter, chi, gr)
     do i = td%max_iter, 1, -1
@@ -518,7 +517,6 @@ module opt_control_propagation_m
       call update_field(i, par_chi, gr, hm, psi, chi, par, dir = 'b')
 
       if(target_mode(target) == oct_targetmode_td) then
-
         call states_copy(psi_aux, psi)
         call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, target, par, psi_aux)
         call propagator_dt(sys%ks, hm, gr, psi_aux, td%tr, abs((i-1)*td%dt), td%dt*M_HALF, td%mu, td%max_iter, i)
@@ -850,7 +848,6 @@ module opt_control_propagation_m
        call states_end(stored_st)
      end if
     end do
-
     POP_SUB(oct_prop_check)
   end subroutine oct_prop_check
   ! ---------------------------------------------------------

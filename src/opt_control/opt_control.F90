@@ -46,14 +46,14 @@ module opt_control_m
   use opt_control_target_m
   use opt_control_initst_m
   use profiling_m
+  use propagator_m
   use restart_m
   use simul_box_m
   use states_m
   use states_dim_m
   use system_m
   use td_m
-  use propagator_m
-
+  
   implicit none
 
   private
@@ -148,7 +148,6 @@ contains
     ! Figure out the starting wavefunction(s), and the target.
     call initial_state_init(sys, hm, initial_st)
     call target_init(sys%gr, sys%geo, initial_st, td, controlfunction_w0(par), target, oct)
-
 
     ! Sanity checks.
     call check_faulty_runmodes(sys, hm, td%tr)

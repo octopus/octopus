@@ -1,0 +1,90 @@
+DebugLevel = 0
+Dimensions = 1
+fromScratch = yes
+
+CalculationMode = opt_control
+ExperimentalFeatures = yes
+
+
+# ------------------
+# Grid
+# ------------------
+BoxShape = sphere
+Spacing = 0.3
+Radius =  10.0
+
+
+# ------------------
+# System
+# ------------------
+%Species
+"ADW1D" | 1 | spec_user_defined | 1 | "1/64*(x)^4-1/4*(x)^2+1/256*(x)^3"
+%
+
+%Coordinates
+"ADW1D" | 0 
+%
+
+TheoryLevel = independent_particles
+
+
+# ------------------
+# TD RUN Parameters
+# ------------------
+
+stime  = 5.0
+dt = 0.01
+TDEvolutionMethod = crank_nicholson
+TDLanczosTol = 5.0e-5
+TDMaximumIter = stime/dt
+TDTimeStep = dt
+
+
+# --------------
+# OCT parameters: time-dependent minimal current 
+# --------------
+
+# starting time of current functional
+OCTStartIterCurrTg = (stime-1)/dt
+
+OCTPenalty = 1.0
+OCTMaxIter =1 
+
+OCTInitialState = oct_is_groundstate
+OCTTargetOperator = oct_tg_density
+OCTTargetDensity = "OCTTargetDensityFromState"
+%OCTTargetDensityFromState
+ 0 | 1 
+%
+
+OCTCurrentFunctional =  oct_min_curr_td
+OCTCurrentWeight = 5 
+
+OCTControlRepresentation = control_function_parametrized
+
+OCTDirectStep = 0.1
+OCTNumberCheckPoints = 10
+OCTScheme = oct_algorithm_cg
+#OCTCheckGradient = 0.0000001
+OCTControlFunctionOmegaMax = 20.0
+OCTControlFunctionRepresentation = control_fourier_series
+
+
+#----------------------------
+# Laser field = Initial guess
+#-----------------------------
+freq = 0.0
+%TDExternalFields
+electric_field | 1 | 0 | 0 | freq | "envelope_function"
+%
+
+%TDFunctions
+"envelope_function" | tdf_from_expr | "0.6*sqrt(2/stime)*sin((2*pi/stime)*1*t)"
+%
+
+
+#Output
+Output=  wfs + current
+OutputHow= axis_x
+
+

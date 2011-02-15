@@ -187,6 +187,18 @@
        end if
     end if
     
+    if(current_functional_type(target) .ne. oct_no_curr) then
+      select case(sys%st%d%ispin)
+      case(UNPOLARIZED)
+      case(SPIN_POLARIZED)
+        message(1) = 'Spin_polarized! Do not use OCT current functionals.'
+        call write_fatal(1)
+      case(SPINORS)
+        message(1) = 'Spinors! Do not use OCT current functionals.'
+        call write_fatal(1)
+      end select
+    end if
+      
     POP_SUB(check_faulty_runmodes)
   end subroutine check_faulty_runmodes
 
