@@ -900,7 +900,7 @@ contains
 #include "solver_1d_inc.F90"
 #include "solver_2d_inc.F90"
 #include "solver_3d_inc.F90"
-#include "poisson_fmm.F90"   
+#include "poisson_fmm_inc.F90"   
 
 end module poisson_m
 
