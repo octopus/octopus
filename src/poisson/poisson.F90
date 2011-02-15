@@ -90,7 +90,8 @@ module poisson_m
     integer :: abs_rel_fmm
     integer :: dipole_correction
     integer :: periodic
-    FLOAT   :: periodic_length 
+    FLOAT   :: periodic_length
+    type(mpi_grp_t) :: mpi_grp
   end type poisson_fmm_t
   
   type poisson_t

@@ -18,8 +18,9 @@
 !! $Id: poisson_fmm.F90 7XXX 2011-01-15 22:19:34Z pgarciarisueno and jalberdi$
 
 ! ---------------------------------------------------------
-subroutine poisson_fmm_init(params_fmm)
-  type(poisson_fmm_t), intent(out) :: params_fmm
+subroutine poisson_fmm_init(params_fmm, all_nodes_comm)
+  type(poisson_fmm_t), intent(out)   :: params_fmm
+  integer,             intent(inout) :: all_nodes_comm
 
 #ifdef HAVE_LIBFM
   PUSH_SUB(poisson_fmm_init)
@@ -86,6 +87,8 @@ subroutine poisson_fmm_init(params_fmm)
   ! 1 = 1D periodic system
   ! 2 = 2D periodic system
   ! 3 = 3D periodic system
+  
+  call mpi_grp_init(params_fmm%mpi_grp, all_nodes_comm)
 
   call fmm_init()
 
@@ -112,23 +115,23 @@ subroutine poisson_fmm_solve(this, pot, rho)
   FLOAT,               intent(in)    :: rho(:)
 
 #ifdef HAVE_LIBFM
-  integer(8) :: localcharges
+  integer(8) :: nlocalcharges
   integer(8) :: totalcharges
   integer(8) :: periodic
   integer(8) :: periodicaxes  !< is always 1
   integer(8) :: dipolecorrection
   integer(8) :: absrel
 
-  real(8), dimension(:),   allocatable :: q  
-  real(8), dimension(:),   allocatable :: potLibFMM
-  real(8), dimension(:,:), allocatable :: xyz  
+  real(8), allocatable :: q(:)  
+  real(8), allocatable :: potLibFMM(:)
+  real(8), allocatable :: xyz(:, :)
   real(8) :: deltaE 
   real(8) :: energyfmm   !< We don't use it, but we cannot remove energyfmm by the moment
   real(8) :: periodlength
   real(8) :: st, en
   real(8) :: aux
-  integer :: ii,jj,ierr
- 
+  integer :: ii, jj, ierr
+
   PUSH_SUB(poisson_fmm_solve)
 
   call profiling_in(poisson_prof, "POISSON_FMM")
@@ -137,8 +140,8 @@ subroutine poisson_fmm_solve(this, pot, rho)
 
   if(this%fmm_params%periodic /= 0) then
     if ((this%der%mesh%sb%box_shape == PARALLELEPIPED).and.((this%der%mesh%sb%lsize(1)==this%der%mesh%sb%lsize(2)).and.&
-         (this%der%mesh%sb%lsize(1)==this%der%mesh%sb%lsize(3)).and.&
-         (this%der%mesh%sb%lsize(2)==this%der%mesh%sb%lsize(3)))) then
+      (this%der%mesh%sb%lsize(1)==this%der%mesh%sb%lsize(3)).and.&
+      (this%der%mesh%sb%lsize(2)==this%der%mesh%sb%lsize(3)))) then
       this%fmm_params%periodic_length = this%der%mesh%sb%lsize(1)
     else
       message(1) = "At present, FMM solver for Hartree potential can only deal with cubic boxes. "
@@ -148,27 +151,29 @@ subroutine poisson_fmm_solve(this, pot, rho)
   endif
 
   ! set the number of all charges in our system
-  localcharges = this%der%mesh%np
-  
+  nlocalcharges = this%der%mesh%np
+
   ! allocate buffers.
-  SAFE_ALLOCATE(q(localcharges))
-  SAFE_ALLOCATE(xyz(1:3,localcharges))
-  SAFE_ALLOCATE(potLibFMM(localcharges)) 
+  SAFE_ALLOCATE(q(nlocalcharges))
+  SAFE_ALLOCATE(xyz(1:3,nlocalcharges))
+  SAFE_ALLOCATE(potLibFMM(nlocalcharges)) 
 
   totalcharges = this%der%mesh%np_global 
-  
+
   !! Beware of this, this is only valid if case(curv_method_uniform); for other cases, vol_pp is to be used
   !! in this case, vol_pp has no meaning, their values are ridiculous
   !! urvilinear coordinates must be included
 
-  if (this%der%mesh%use_curvilinear .eqv. .false.) then
-   aux=this%der%mesh%spacing(1)*this%der%mesh%spacing(2)*this%der%mesh%spacing(3)
-   q = rho*aux 
+  if (.not. this%der%mesh%use_curvilinear) then
+    aux=this%der%mesh%spacing(1)*this%der%mesh%spacing(2)*this%der%mesh%spacing(3)
+    do ii = 1, this%der%mesh%np
+      q(ii) = rho(ii)*aux
+    end do
   else
-   do ii = 1, this%der%mesh%np 
-    q(ii) = rho(ii)*this%der%mesh%vol_pp(ii)
-   end do
-  end if  
+    do ii = 1, this%der%mesh%np 
+      q(ii) = rho(ii)*this%der%mesh%vol_pp(ii)
+    end do
+  end if
 
   ! invert the indexes
   do ii = 1, this%der%mesh%np
@@ -176,7 +181,7 @@ subroutine poisson_fmm_solve(this, pot, rho)
       xyz(jj,ii) = this%der%mesh%x(ii,jj)
     end do
   end do
-  
+
   absrel = this%fmm_params%abs_rel_fmm
   deltaE = this%fmm_params%delta_E_fmm
   potLibFMM = M_ZERO 
@@ -186,44 +191,45 @@ subroutine poisson_fmm_solve(this, pot, rho)
   periodicaxes = 1 
   periodlength = this%fmm_params%periodic_length
   dipolecorrection = this%fmm_params%dipole_correction
-  
-  call fmm(totalcharges,localcharges,q,xyz,absrel,deltaE,energyfmm,potLibFMM,&
-    periodic,periodicaxes,periodlength,dipolecorrection)
+
+  call fmm(totalcharges, nlocalcharges, q, xyz, absrel, deltaE, energyfmm, potLibFMM, &
+    periodic, periodicaxes, periodlength, dipolecorrection)
 
   pot = potLibFMM
-  potLibFMM=M_ZERO
+  potLibFMM = M_ZERO
+
   ! FMM just calculates contributions from other cells. for self-interaction cell integration, we include 
   ! (as traditional in octopus) an approximate integration using a spherical cell whose volume is the volume of the actual cell
   ! Next line is only valid for 3D
-if (this%der%mesh%sb%dim==3) then
-  if ((this%der%mesh%use_curvilinear .eqv. .false.) .and. (this%der%mesh%spacing(1)==this%der%mesh%spacing(2)) .and. &
-               (this%der%mesh%spacing(2)==this%der%mesh%spacing(3)) .and. &
-               (this%der%mesh%spacing(1)==this%der%mesh%spacing(3))) then
-   aux = 2.380077363979553356918*(this%der%mesh%spacing(1)*this%der%mesh%spacing(2)) 
-   do ii=1, this%der%mesh%np
-    pot(ii)=pot(ii)+aux*rho(ii)
-   end do
-  else
-  do ii=1, this%der%mesh%np 
-   aux = M_TWO*M_PI*(3.*this%der%mesh%vol_pp(ii)/(M_PI*4.))**(2./3.)
-   pot(ii)=pot(ii)+aux*rho(ii)
-  end do
- end if 
-end if
+  if (this%der%mesh%sb%dim==3) then
+    if (.not. this%der%mesh%use_curvilinear .and. (this%der%mesh%spacing(1)==this%der%mesh%spacing(2)) .and. &
+      (this%der%mesh%spacing(2)==this%der%mesh%spacing(3)) .and. &
+      (this%der%mesh%spacing(1)==this%der%mesh%spacing(3))) then
+      aux = CNST(2.380077363979553356918)*(this%der%mesh%spacing(1)*this%der%mesh%spacing(2)) 
+      do ii = 1, this%der%mesh%np
+        pot(ii)=pot(ii)+aux*rho(ii)
+      end do
+    else
+      do ii = 1, this%der%mesh%np 
+        aux = M_TWO*M_PI*(3.*this%der%mesh%vol_pp(ii)/(M_PI*4.))**(2./3.)
+        pot(ii)=pot(ii)+aux*rho(ii)
+      end do
+    end if
+  end if
 
-if (this%der%mesh%sb%dim==2) then
-  aux = M_TWO*M_PI*this%der%mesh%spacing(1)
-   do ii=1, this%der%mesh%np
-    pot(ii)=pot(ii)+aux*rho(ii)
-   end do
-end if
+  if (this%der%mesh%sb%dim==2) then
+    aux = M_TWO*M_PI*this%der%mesh%spacing(1)
+    do ii = 1, this%der%mesh%np
+      pot(ii)=pot(ii)+aux*rho(ii)
+    end do
+  end if
 
   SAFE_DEALLOCATE_A(q)
   SAFE_DEALLOCATE_A(xyz)
   SAFE_DEALLOCATE_A(potLibFMM)
 
   call profiling_out(poisson_prof)
-  
+
   POP_SUB(poisson_fmm)
 #endif
 end subroutine poisson_fmm_solve
