@@ -94,7 +94,7 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
   select case(this%method)
   case(POISSON_FMM)
 #ifdef HAVE_LIBFM
-    call poisson_fmm_init(this%fmm_params)
+    call poisson_fmm_init(this%fmm_params, all_nodes_comm)
 #endif
 
   case(POISSON_CG)

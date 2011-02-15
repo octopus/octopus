@@ -20,7 +20,7 @@
 ! ---------------------------------------------------------
 subroutine poisson_fmm_init(params_fmm, all_nodes_comm)
   type(poisson_fmm_t), intent(out)   :: params_fmm
-  integer,             intent(inout) :: all_nodes_comm
+  integer,             intent(in)    :: all_nodes_comm
 
 #ifdef HAVE_LIBFM
   PUSH_SUB(poisson_fmm_init)
@@ -131,11 +131,18 @@ subroutine poisson_fmm_solve(this, pot, rho)
   real(8) :: st, en
   real(8) :: aux
   integer :: ii, jj, ierr
+  integer :: coords(1:2), sizes(1:2)
+  logical :: periods(1:2)
+  integer, allocatable :: dstart(:), dend(:)
 
   PUSH_SUB(poisson_fmm_solve)
 
   call profiling_in(poisson_prof, "POISSON_FMM")
+  call MPI_Cart_get (this%fmm_params%mpi_grp%comm, 2, sizes(1), periods(1), coords(1), mpi_err)
 
+  ASSERT(sizes(1) == this%der%mesh%mpi_grp%size)
+  ASSERT(coords(1) == this%der%mesh%mpi_grp%rank)
+  
   this%fmm_params%periodic = this%der%mesh%sb%periodic_dim
 
   if(this%fmm_params%periodic /= 0) then

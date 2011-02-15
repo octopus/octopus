@@ -98,7 +98,7 @@ endif
 # Since ETSF_IO depends on netCDF, it must be first in the list
 all_LIBS = $(core_LIBS) @LIBS_FFT@ @LIBS_SPARSKIT@ \
   @LIBS_ETSF_IO@ @LIBS_NETCDF@ $(external_LIBS) \
-  @LIBS_MPI@ @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_LIBXC@
+  @LIBS_LIBFM@ @LIBS_MPI@ @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_LIBXC@
 
 
 # ---------------------------------------------------------------
