@@ -115,8 +115,8 @@ module poisson_m
     integer              :: intercomm
     type(mpi_grp_t)      :: local_grp
     logical              :: root
-    type(poisson_fmm_t)  :: params_fmm
 #endif
+    type(poisson_fmm_t)  :: params_fmm
   end type poisson_t
 
   type(poisson_t), target, save, public :: psolver
