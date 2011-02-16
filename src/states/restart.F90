@@ -413,7 +413,7 @@ contains
     logical,    optional, intent(in)    :: exact    !< if .true. we need all the wavefunctions and on the same grid
 
     integer              :: wfns_file, occ_file, err, ik, ist, idir, idim, int 
-    integer              :: read_np, read_np_part, read_ierr, ip, xx(1:MAX_DIM)
+    integer              :: read_np, read_np_part, read_ierr, ip, xx(1:MAX_DIM), iread, nread
     character(len=12)    :: filename
     character(len=1)     :: char
     logical, allocatable :: filled(:, :, :)
@@ -597,6 +597,12 @@ contains
     SAFE_ALLOCATE(filled(1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
     filled = .false.
 
+    if(mpi_grp_is_root(mpi_world)) then
+      iread = 1
+      nread = st%lnst*st%d%kpt%nlocal*st%d%dim
+      call loct_progress_bar(-1, nread)
+    end if
+
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         do idim = 1, st%d%dim
@@ -622,9 +628,18 @@ contains
             ierr = ierr + 1
           end if
           
+          if(mpi_grp_is_root(mpi_world)) then
+            call loct_progress_bar(iread, nread)
+            INCR(iread, 1)
+          end if
+
         end do
       end do
     end do
+
+    if(mpi_grp_is_root(mpi_world)) then
+      write(stdout, '(1x)')
+    end if
 
     if(present(iter)) then
       call iopar_read(st%dom_st_kpt_mpi_grp, wfns_file, line, err)
