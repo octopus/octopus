@@ -18,11 +18,17 @@
 !! $Id: poisson_fmm.F90 7XXX 2011-01-15 22:19:34Z pgarciarisueno and jalberdi$
 
 ! ---------------------------------------------------------
-subroutine poisson_fmm_init(params_fmm, all_nodes_comm)
+subroutine poisson_fmm_init(params_fmm, mesh, all_nodes_comm)
   type(poisson_fmm_t), intent(out)   :: params_fmm
+  type(mesh_t),        intent(in)    :: mesh
   integer,             intent(in)    :: all_nodes_comm
 
 #ifdef HAVE_LIBFM
+  integer :: cdim
+  logical, allocatable :: remains(:)
+  integer, allocatable :: dend(:)
+  integer :: subcomm
+
   PUSH_SUB(poisson_fmm_init)
 
   !%Variable DeltaEFMM
@@ -88,7 +94,30 @@ subroutine poisson_fmm_init(params_fmm, all_nodes_comm)
   ! 2 = 2D periodic system
   ! 3 = 3D periodic system
   
-  call mpi_grp_init(params_fmm%mpi_grp, all_nodes_comm)
+  call mpi_grp_init(params_fmm%all_nodes_grp, all_nodes_comm)
+
+  call MPI_Cartdim_get(params_fmm%all_nodes_grp%comm, cdim, mpi_err)
+
+  SAFE_ALLOCATE(remains(1:cdim))
+
+  remains = .true.
+  remains(1) = .false.
+
+  call MPI_Cart_sub(params_fmm%all_nodes_grp%comm, remains(1), subcomm, mpi_err)
+
+  call mpi_grp_init(params_fmm%perp_grp, subcomm)
+
+  SAFE_ALLOCATE(params_fmm%disps(1:params_fmm%perp_grp%size))
+  SAFE_ALLOCATE(dend(1:params_fmm%perp_grp%size))
+  SAFE_ALLOCATE(params_fmm%dsize(1:params_fmm%perp_grp%size))
+
+  call multicomm_divide_range(mesh%np, params_fmm%perp_grp%size, params_fmm%disps, dend, params_fmm%dsize)
+
+  params_fmm%sp = params_fmm%disps(params_fmm%perp_grp%rank + 1)
+  params_fmm%ep = dend(params_fmm%perp_grp%rank + 1)
+  params_fmm%nlocalcharges = params_fmm%dsize(params_fmm%perp_grp%rank + 1)
+
+  params_fmm%disps = params_fmm%disps - 1
 
   call fmm_init()
 
@@ -97,8 +126,13 @@ subroutine poisson_fmm_init(params_fmm, all_nodes_comm)
 end subroutine poisson_fmm_init
 
 ! ---------------------------------------------------------
-subroutine poisson_fmm_end()
+subroutine poisson_fmm_end(params_fmm)
+  type(poisson_fmm_t), intent(inout) :: params_fmm
 #ifdef HAVE_LIBFM
+  
+  call MPI_Comm_free(params_fmm%perp_grp%comm, mpi_err)
+  SAFE_DEALLOCATE_P(params_fmm%disps)
+  SAFE_DEALLOCATE_P(params_fmm%dsize)
   call fmm_finalize()
 #endif
 end subroutine poisson_fmm_end
@@ -115,7 +149,6 @@ subroutine poisson_fmm_solve(this, pot, rho)
   FLOAT,               intent(in)    :: rho(:)
 
 #ifdef HAVE_LIBFM
-  integer(8) :: nlocalcharges
   integer(8) :: totalcharges
   integer(8) :: periodic
   integer(8) :: periodicaxes  !< is always 1
@@ -131,25 +164,20 @@ subroutine poisson_fmm_solve(this, pot, rho)
   real(8) :: st, en
   real(8) :: aux
   integer :: ii, jj, ierr
-  integer :: coords(1:2), sizes(1:2)
-  logical :: periods(1:2)
-  integer, allocatable :: dstart(:), dend(:)
+  integer :: sp, ep
 
   PUSH_SUB(poisson_fmm_solve)
 
-  call profiling_in(poisson_prof, "POISSON_FMM")
-  call MPI_Cart_get (this%fmm_params%mpi_grp%comm, 2, sizes(1), periods(1), coords(1), mpi_err)
-
-  ASSERT(sizes(1) == this%der%mesh%mpi_grp%size)
-  ASSERT(coords(1) == this%der%mesh%mpi_grp%rank)
+  sp = this%params_fmm%sp
+  ep = this%params_fmm%ep
   
-  this%fmm_params%periodic = this%der%mesh%sb%periodic_dim
+  this%params_fmm%periodic = this%der%mesh%sb%periodic_dim
 
-  if(this%fmm_params%periodic /= 0) then
+  if(this%params_fmm%periodic /= 0) then
     if ((this%der%mesh%sb%box_shape == PARALLELEPIPED).and.((this%der%mesh%sb%lsize(1)==this%der%mesh%sb%lsize(2)).and.&
       (this%der%mesh%sb%lsize(1)==this%der%mesh%sb%lsize(3)).and.&
       (this%der%mesh%sb%lsize(2)==this%der%mesh%sb%lsize(3)))) then
-      this%fmm_params%periodic_length = this%der%mesh%sb%lsize(1)
+      this%params_fmm%periodic_length = this%der%mesh%sb%lsize(1)
     else
       message(1) = "At present, FMM solver for Hartree potential can only deal with cubic boxes. "
       message(2) = " Please, change your Poisson solver or the size or dimensions of your box. "
@@ -157,53 +185,50 @@ subroutine poisson_fmm_solve(this, pot, rho)
     endif
   endif
 
-  ! set the number of all charges in our system
-  nlocalcharges = this%der%mesh%np
+  call profiling_in(poisson_prof, "POISSON_FMM")
+
 
   ! allocate buffers.
-  SAFE_ALLOCATE(q(nlocalcharges))
-  SAFE_ALLOCATE(xyz(1:3,nlocalcharges))
-  SAFE_ALLOCATE(potLibFMM(nlocalcharges)) 
+  SAFE_ALLOCATE(q(sp:ep))
+  SAFE_ALLOCATE(xyz(1:3, sp:ep))
+  SAFE_ALLOCATE(potLibFMM(sp:ep)) 
 
   totalcharges = this%der%mesh%np_global 
 
-  !! Beware of this, this is only valid if case(curv_method_uniform); for other cases, vol_pp is to be used
-  !! in this case, vol_pp has no meaning, their values are ridiculous
-  !! urvilinear coordinates must be included
-
   if (.not. this%der%mesh%use_curvilinear) then
-    aux=this%der%mesh%spacing(1)*this%der%mesh%spacing(2)*this%der%mesh%spacing(3)
-    do ii = 1, this%der%mesh%np
-      q(ii) = rho(ii)*aux
+    do ii = sp, ep
+      q(ii) = rho(ii)*this%der%mesh%vol_pp(1)
     end do
   else
-    do ii = 1, this%der%mesh%np 
+    do ii = sp, ep
       q(ii) = rho(ii)*this%der%mesh%vol_pp(ii)
     end do
   end if
 
   ! invert the indexes
-  do ii = 1, this%der%mesh%np
-    do jj=1, MAX_DIM
-      xyz(jj,ii) = this%der%mesh%x(ii,jj)
+  do ii = sp, ep
+    do jj = 1, MAX_DIM
+      xyz(jj, ii) = this%der%mesh%x(ii, jj)
     end do
   end do
 
-  absrel = this%fmm_params%abs_rel_fmm
-  deltaE = this%fmm_params%delta_E_fmm
+  absrel = this%params_fmm%abs_rel_fmm
+  deltaE = this%params_fmm%delta_E_fmm
   potLibFMM = M_ZERO 
-  this%fmm_params%periodic=this%der%mesh%sb%periodic_dim
-  this%fmm_params%periodic_length=2.0*this%der%mesh%sb%lsize(1)
-  periodic = this%fmm_params%periodic
+  this%params_fmm%periodic=this%der%mesh%sb%periodic_dim
+  this%params_fmm%periodic_length= CNST(2.0)*this%der%mesh%sb%lsize(1)
+  periodic = this%params_fmm%periodic
   periodicaxes = 1 
-  periodlength = this%fmm_params%periodic_length
-  dipolecorrection = this%fmm_params%dipole_correction
+  periodlength = this%params_fmm%periodic_length
+  dipolecorrection = this%params_fmm%dipole_correction
 
-  call fmm(totalcharges, nlocalcharges, q, xyz, absrel, deltaE, energyfmm, potLibFMM, &
-    periodic, periodicaxes, periodlength, dipolecorrection)
-
-  pot = potLibFMM
-  potLibFMM = M_ZERO
+  call fmm(totalcharges, this%params_fmm%nlocalcharges, q(sp), xyz(1, sp), absrel, deltaE, energyfmm, &
+    potLibFMM(sp), periodic, periodicaxes, periodlength, dipolecorrection)
+  
+  !now we need to allgather the results between "states"
+  call MPI_Allgatherv(potlibFMM(sp), this%params_fmm%nlocalcharges, MPI_FLOAT, &
+    pot(1), this%params_fmm%dsize(1), this%params_fmm%disps(1), MPI_FLOAT, &
+    this%params_fmm%perp_grp%comm, mpi_err)
 
   ! FMM just calculates contributions from other cells. for self-interaction cell integration, we include 
   ! (as traditional in octopus) an approximate integration using a spherical cell whose volume is the volume of the actual cell

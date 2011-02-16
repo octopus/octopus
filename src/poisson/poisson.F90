@@ -91,7 +91,13 @@ module poisson_m
     integer :: dipole_correction
     integer :: periodic
     FLOAT   :: periodic_length
-    type(mpi_grp_t) :: mpi_grp
+    type(mpi_grp_t) :: all_nodes_grp !< The communicator for all nodes.
+    type(mpi_grp_t) :: perp_grp      !< The communicator perpendicular to the mesh communicator.
+    integer(8) :: nlocalcharges
+    integer    :: sp
+    integer    :: ep
+    integer, pointer :: disps(:)
+    integer, pointer :: dsize(:)
   end type poisson_fmm_t
   
   type poisson_t
@@ -109,7 +115,7 @@ module poisson_m
     integer              :: intercomm
     type(mpi_grp_t)      :: local_grp
     logical              :: root
-    type(poisson_fmm_t)  :: fmm_params
+    type(poisson_fmm_t)  :: params_fmm
 #endif
   end type poisson_t
 
@@ -386,7 +392,7 @@ contains
     ! case(POISSON_DIRECT_SUM_3D)  
     ! call poisson_direct_sum_end
     case(POISSON_FMM)
-      call poisson_fmm_end()
+      call poisson_fmm_end(this%params_fmm)
     end select
     this%method = -99
 
