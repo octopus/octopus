@@ -653,6 +653,8 @@ contains
       call messages_print_stress(stdout)
     else if(ierr == st%nst * st%d%nik * st%d%dim) then
       ierr = 0
+      write(message(1), '(a)') 'Info: Restart loading done.'
+      call write_info(1)
     else
       if(.not. present(lr)) then 
         write(str, '(a,i5)') 'Loading restart information.'
