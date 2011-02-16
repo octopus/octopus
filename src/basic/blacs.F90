@@ -44,10 +44,10 @@ module blacs_m
     subroutine blacs_gridinit(icontxt, order, nprow, npcol)
       implicit none
 
-      integer,   intent(in)  :: icontxt
-      character, intent(in)  :: order
-      integer,   intent(in)  :: nprow
-      integer,   intent(in)  :: npcol
+      integer,   intent(inout) :: icontxt
+      character, intent(in)    :: order
+      integer,   intent(in)    :: nprow
+      integer,   intent(in)    :: npcol
     end subroutine blacs_gridinit
   end interface
 
@@ -55,11 +55,11 @@ module blacs_m
     subroutine blacs_gridmap(icontxt, usermap, ldumap, nprow, npcol)
       implicit none
 
-      integer,   intent(in)  :: icontxt
-      integer,   intent(in)  :: usermap
-      integer,   intent(in)  :: ldumap
-      integer,   intent(in)  :: nprow
-      integer,   intent(in)  :: npcol
+      integer, intent(inout) :: icontxt
+      integer, intent(in)    :: usermap
+      integer, intent(in)    :: ldumap
+      integer, intent(in)    :: nprow
+      integer, intent(in)    :: npcol
     end subroutine blacs_gridmap
   end interface
 

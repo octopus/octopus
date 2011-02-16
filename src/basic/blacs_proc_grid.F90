@@ -87,7 +87,7 @@ contains
     call MPI_Topo_test(mpi_grp%comm, topo, mpi_err)
 
     if(topo /= MPI_CART) then
-      ! We create a new communicator with cartesian topology
+      ! We create a new communicator with Cartesian topology
       dims(1) = mpi_grp%size
       dims(2) = 1
       periods = .false.
@@ -178,6 +178,7 @@ contains
     
     if(cout%context /= -1) then
       ! we have to create a new context
+      call blacs_get(-1, what = 0, val = cout%context)
       SAFE_ALLOCATE(cout%usermap(1:cout%nprow, 1:cout%npcol))
       cout%usermap = cin%usermap
       call blacs_gridmap(cout%context, cout%usermap(1, 1), cout%nprow, cout%nprow, cout%npcol)
