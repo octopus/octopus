@@ -23,11 +23,7 @@
 
 #ifdef HAVE_MPI
 
-#if defined(HAVE_EXTERNAL_ZOLTAN) && defined(HAVE_TRILINOS_ZOLTAN_H) 
-#include <trilinos/zoltan.h>
-#else
 #include <zoltan.h>
-#endif
 
 typedef struct {
   int np;
