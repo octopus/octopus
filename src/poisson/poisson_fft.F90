@@ -735,7 +735,7 @@ contains
     end if
 #endif
 
-    write(*,*) "LIBRARY = ",fft_cf%fft_library
+!    write(*,*) "LIBRARY = ",fft_cf%fft_library
 
     average=M_ZERO !this avoids a non-initialized warning
     

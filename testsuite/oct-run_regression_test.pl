@@ -455,7 +455,8 @@ sub run_match_new(){
 
   }elsif($func eq "GREP") { # function GREP(filename, 're', column <, offset>)
     my $off = 1*$par[3];
-    $pre_command = "grep -A$off -m 1 $par[1] $par[0] | awk '(NR==$off+1)'";
+    # -a means even if the file is considered binary due to a stray funny character, it will work
+    $pre_command = "grep -a -A$off -m 1 $par[1] $par[0] | awk '(NR==$off+1)'";
     $pre_command .= " | cut -b $par[2]- | perl -ne '/\\s*([0-9\\-+.eEdD]*)/; print \$1'";
 
   }else{ # error
