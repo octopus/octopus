@@ -154,7 +154,7 @@ contains
     unit_ppm%abbrev = 'ppm a.u.'
     unit_ppm%name   = 'parts per million atomic units'
 
-    unit_susc_ppm_cgs%factor = CNST(8.9238878e-2)*CNST(1e-6)
+    unit_susc_ppm_cgs%factor = CNST(1e-6)/CNST(8.9238878e-2)
     unit_susc_ppm_cgs%abbrev = 'ppm cgs/mol'
     unit_susc_ppm_cgs%name   = 'magnetic susceptibility parts per million atomic units'
 
