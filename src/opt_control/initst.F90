@@ -158,7 +158,7 @@ module opt_control_initst_m
       !%Description
       !% Example:
       !%
-      !% <tt>%UserDefinedStates
+      !% <tt>%OCTInitialUserdefined
       !% <br>&nbsp;&nbsp; 1 | 1 | 1 |  "exp(-r^2)*exp(-i*0.2*x)"
       !% <br>%</tt>
       !%  
@@ -205,7 +205,7 @@ module opt_control_initst_m
         end do
         call parse_block_end(blk)
       else
-        message(1) = '"UserDefinedStates" has to be specified as block.'
+        message(1) = '"OCTInitialUserdefined" has to be specified as block.'
         call write_fatal(1)
       end if
       

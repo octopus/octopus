@@ -75,13 +75,16 @@
     end if
 
     if(oct%algorithm .eq. oct_algorithm_zbr98) then
-      if( (target_type(target) .ne. oct_tg_groundstate) .and. &
-          (target_type(target) .ne. oct_tg_gstransformation) ) then
+      select case(target_type(target))
+      case(oct_tg_groundstate, oct_tg_gstransformation, &
+           oct_tg_userdefined)
+      case default
         write(message(1), '(a)') 'The scheme "OCTScheme = oct_algorithm_zbr98 can only be used if'
         write(message(2), '(a)') 'the target state is "OCTTargetOperator = oct_tg_gstransformation"'
-        write(message(3), '(a)') 'or "OCTTargetOperator = oct_tg_groundstate".'
-        call write_fatal(3)
-      end if
+        write(message(3), '(a)') 'or "OCTTargetOperator = oct_tg_groundstate"'
+        write(message(4), '(a)') 'or "OCTTargetOperator = oct_tg_userdefined".'
+        call write_fatal(4)
+      end select 
     end if
       
     ! Filters only with the WG05 scheme.
@@ -102,21 +105,24 @@
         call write_fatal(2)
       end if
     end if
-
-    if(target_type(target) .eq. oct_tg_td_local) then
+    
+    ! the inh term in the bwd evolution of chi is taken into
+    ! consideration only for certain propagators
+    if(target_mode(target) .eq. oct_targetmode_td) then
       select case(tr%method)
       case(PROP_CRANK_NICHOLSON)
-      case(PROP_EXPONENTIAL_MIDPOINT)
-        if(tr%te%exp_method .ne. EXP_LANCZOS) then
-          write(message(1), '(a)') 'If "OCTTargetMode = oct_tg_td_local", and you set'
-          write(message(2), '(a)') '"TDEvolutionMethod = exp_mid", then you must set'
-          write(message(3), '(a)') '"TDExponentialMethod = lanczos".'
-          call write_fatal(3)
-        end if
+     ! for the moment exp mid point with lanczos is broken. needs to be fixed.  
+     ! case(PROP_EXPONENTIAL_MIDPOINT)
+     !   if(tr%te%exp_method .ne. EXP_LANCZOS) then
+     !     WRITE(message(1), '(a)') 'If you use time-dependent target, and you set'
+     !     write(message(2), '(a)') '"TDEvolutionMethod = exp_mid", then you must set'
+     !     write(message(3), '(a)') '"TDExponentialMethod = lanczos".'
+     !     call write_fatal(3)
+     !   end if
       case default
-        write(message(1), '(a)') 'If OCTTargetMode = oct_tg_td_local, then you must set'
-        write(message(2), '(a)') '"TDEvolutionMethod = crank_nicholson", or'
-        write(message(3), '(a)') '"TDEvolutionMethod = exp_mid".'
+        write(message(1), '(a)') 'If you use time-dependent target, then you must set'
+        write(message(2), '(a)') '"TDEvolutionMethod = crank_nicholson"'
+     !   write(message(3), '(a)') '"TDEvolutionMethod = exp_mid".'
         call write_fatal(3)
       end select
     end if

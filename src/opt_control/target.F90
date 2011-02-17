@@ -150,7 +150,8 @@ module opt_control_target_m
     type(target_t),   intent(inout) :: target
     type(oct_t),      intent(in)    :: oct
 
-    integer             :: ierr, ip, ist, jst, jj, iatom
+    integer             :: ierr, ip, ist, jst, jj, iatom, ib, idim, inst, inik, &
+                           id, ik, no_states
     type(block_t)       :: blk
     FLOAT               :: xx(MAX_DIM), rr, psi_re, psi_im
     FLOAT, allocatable  :: vl(:), vl_grad(:,:)
@@ -184,7 +185,7 @@ module opt_control_target_m
     !% The target operator is a projection operator on a transformation of the ground-state 
     !% orbitals defined by the block <tt>OCTTargetTransformStates</tt>.
     !%Option oct_tg_userdefined 4
-    !% WARNING: not implemented; reserved for use in future releases.
+    !% Allows to define target state by using <tt>OCTTargetUserdefined</tt>.
     !%Option oct_tg_density 5
     !% The target operator is a given density, <i>i.e.</i> the final state should have a density
     !% as close as possible as the one given in the input file, either from the variable
@@ -319,8 +320,65 @@ module opt_control_target_m
       end if
 
     case(oct_tg_userdefined) 
-      message(1) =  'Error: Option oct_tg_userdefined is disabled in this version.'
-      call write_fatal(1)
+       message(1) =  'Info: Target is a user-defined state.'
+      call write_info(1)
+      
+      !%Variable OCTTargetUserdefined
+      !%Type block
+      !%Section Calculation Modes::Optimal Control
+      !%Description
+      !% Example:
+      !%
+      !% <tt>%OCTTargetUserdefined
+      !% <br>&nbsp;&nbsp; 1 | 1 | 1 |  "exp(-r^2)*exp(-i*0.2*x)"
+      !% <br>%</tt>
+      !%  
+      !%End
+      if(parse_block(datasets_check('OCTTargetUserdefined'), blk) == 0) then
+        
+        no_states = parse_block_n(blk)
+        do ib = 1, no_states
+          call parse_block_integer(blk, ib - 1, 0, idim)
+          call parse_block_integer(blk, ib - 1, 1, inst)
+          call parse_block_integer(blk, ib - 1, 2, inik)
+
+          ! read formula strings and convert to C strings
+          do id = 1, target%st%d%dim
+            do ist = 1, target%st%nst
+              do ik = 1, target%st%d%nik   
+                
+                ! does the block entry match and is this node responsible?
+                if(.not. (id .eq. idim .and. ist .eq. inst .and. ik .eq. inik    &
+                  .and. target%st%st_start .le. ist .and. target%st%st_end .ge. ist) ) cycle
+                
+                ! parse formula string
+                call parse_block_string(                            &
+                  blk, ib - 1, 3, target%st%user_def_states(id, ist, ik))
+                ! convert to C string
+                call conv_to_C_string(target%st%user_def_states(id, ist, ik))
+                
+                do ip = 1, gr%mesh%np
+                  xx = gr%mesh%x(ip, :)
+                  rr = sqrt(sum(xx(:)**2))
+                  
+                  ! parse user-defined expressions
+                  call parse_expression(psi_re, psi_im, &
+                    gr%sb%dim, xx, rr, M_ZERO, target%st%user_def_states(id, ist, ik))
+                  ! fill state
+                  target%st%zpsi(ip, id, ist, ik) = psi_re + M_zI * psi_im
+                end do
+                ! normalize orbital
+                call zstates_normalize_orbital(gr%mesh, target%st%d%dim, &
+                  target%st%zpsi(:,:, ist, ik))
+              end do
+            end do
+          enddo
+        end do
+        call parse_block_end(blk)
+      else
+        message(1) = '"OCTTargetUserdefined" has to be specified as block.'
+        call write_fatal(1)
+      end if
 
     case(oct_tg_density) 
 
