@@ -5,7 +5,7 @@ AC_ARG_WITH(external_zoltan, [AS_HELP_STRING([--with-external_zoltan=LIB], [exte
 case $with_external_zoltan in
   yes | "") ;;
   no ) compile_zoltan=yes ;;
-  -* | */* | *.a | *.so | *.so.* | *.o) LIBS_ZOLTAN="$with_external_zoltan"; CPPFLAGS_ZOLTAN=$LIBS_ZOLTAN;;
+  -* | */* | *.a | *.so | *.so.* | *.o) LIBS_ZOLTAN="$with_external_zoltan";;
   *) LIBS_ZOLTAN="-l$with_external_zoltan" ;;
 esac
 
@@ -15,14 +15,14 @@ if test x"$enable_mpi" != x"no" && test x"$compile_zoltan" == x"no"; then
   acx_zoltan_save_LIBS="$LIBS"
 
   if test x"$CPPFLAGS_ZOLTAN" != x; then
-    CPPFLAGS="$CPPFLAGS -I$CPPFLAGS_ZOLTAN"
+    CPPFLAGS="$CPPFLAGS $CPPFLAGS_ZOLTAN"
   fi
   AC_CHECK_HEADERS(zoltan.h,[compile_zoltan=no],[compile_zoltan=yes])
 
   # if failed, try with a common location for trilinos installation
   if test x"$compile_zoltan" == x"yes"; then
     CPPFLAGS_ZOLTAN=/usr/include/trilinos
-    CPPFLAGS="$acx_zoltan_save_CPPFLAGS -I$CPPFLAGS_ZOLTAN"
+    CPPFLAGS="$acx_zoltan_save_CPPFLAGS $CPPFLAGS_ZOLTAN"
     # remove cache so it actually checks again
     $as_unset AS_TR_SH([ac_cv_header_zoltan_h])
     AC_CHECK_HEADERS(zoltan.h,[compile_zoltan=no],[compile_zoltan=yes])
