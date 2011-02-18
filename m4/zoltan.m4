@@ -21,7 +21,7 @@ if test x"$enable_mpi" != x"no" && test x"$compile_zoltan" == x"no"; then
 
   # if failed, try with a common location for trilinos installation
   if test x"$compile_zoltan" == x"yes"; then
-    CPPFLAGS_ZOLTAN=/usr/include/trilinos
+    CPPFLAGS_ZOLTAN="-I/usr/include/trilinos"
     CPPFLAGS="$acx_zoltan_save_CPPFLAGS $CPPFLAGS_ZOLTAN"
     # remove cache so it actually checks again
     $as_unset AS_TR_SH([ac_cv_header_zoltan_h])
@@ -46,13 +46,13 @@ if test x"$enable_mpi" != x"no" && test x"$compile_zoltan" == x"no"; then
   if test x"$compile_zoltan" == x"no"; then
     AC_DEFINE(HAVE_EXTERNAL_ZOLTAN, 1, [Zoltan is a external library])
     AC_MSG_NOTICE([Found a usable installation of Zoltan.])
-    CPPFLAGS="$acx_zoltan_save_CPPFLAGS $CPPFLAGS"
-    LIBS="$acx_zoltan_save_LIBS $LIBS" 
+    AC_SUBST(CPPFLAGS_ZOLTAN)
+    AC_SUBST(LIBS_ZOLTAN)
   else
     AC_MSG_NOTICE([Could not find an installed version of Zoltan. It will be compiled.])
-    CPPFLAGS="$acx_zoltan_save_CPPFLAGS"
-    LIBS="$acx_zoltan_save_LIBS"
   fi
+  CPPFLAGS="$acx_zoltan_save_CPPFLAGS"
+  LIBS="$acx_zoltan_save_LIBS"
 fi
 
 ])dnl ACX_ZOLTAN

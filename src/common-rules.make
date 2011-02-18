@@ -73,7 +73,7 @@ core_LIBS = \
 	@LIBS_SCALAPACK@ @LIBS_BLACS@                 \
 	@LIBS_LAPACK@ @LIBS_BLAS@                     \
 	$(top_builddir)/liboct_parser/liboct_parser.a \
-	@GSL_LIBS@ @GD_LIBS@ @LIBS_LIBXC@ @FCEXTRALIBS@ 
+	@GSL_LIBS@ @GD_LIBS@ @LIBS_LIBXC@ @FCEXTRALIBS@
 
 external_LIBS = \
 	$(top_builddir)/external_libs/qshep/libqshep.a     \
@@ -98,7 +98,7 @@ endif
 # Since ETSF_IO depends on netCDF, it must be first in the list
 all_LIBS = $(core_LIBS) @LIBS_FFT@ @LIBS_SPARSKIT@ \
   @LIBS_ETSF_IO@ @LIBS_NETCDF@ $(external_LIBS) \
-  @LIBS_LIBFM@ @LIBS_MPI@ @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_LIBXC@
+  @LIBS_LIBFM@ @LIBS_MPI@ @LIBS_ZOLTAN@
 
 
 # ---------------------------------------------------------------
