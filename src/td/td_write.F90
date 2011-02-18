@@ -339,7 +339,7 @@ contains
           case (QKICKMODE_COS)
             write(filename, '(a)') 'td.general/ftchd.cos'
           case (QKICKMODE_BESSEL)
-            write(filename, '(a, SPI0.3, a, SPI0.3)') 'td.general/ftchd.l', kick%qbessel_l, '_m', kick%qbessel_m
+            write(filename, '(a, SP, I0.3, a, I0.3)') 'td.general/ftchd.l', kick%qbessel_l, '_m', kick%qbessel_m
           case default
             write(filename, '(a)') 'td.general/ftchd'
         end select

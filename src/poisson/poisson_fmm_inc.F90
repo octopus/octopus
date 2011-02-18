@@ -144,7 +144,7 @@ end subroutine poisson_fmm_end
 !> Both direct solvers and FMM calculate the Hartree potential via 
 !! direct additions, without solving the Poisson equation itself.
 !! Direct solvers in any dimension does not require any initialization.
-!! However, fmm requires initialization because, in contrast to Octopus'
+!! However, fmm requires initialization because, in contrast to Octopus`
 !! direct solvers, FMM reads some parameters from the inp file.
 subroutine poisson_fmm_solve(this, pot, rho)  
   type(poisson_t),     intent(inout) :: this
@@ -162,7 +162,7 @@ subroutine poisson_fmm_solve(this, pot, rho)
   real(8), allocatable :: potLibFMM(:)
   real(8), allocatable :: xyz(:, :)
   real(8) :: deltaE 
-  real(8) :: energyfmm   !< We don't use it, but we cannot remove energyfmm by the moment
+  real(8) :: energyfmm   !< We don`t use it, but we cannot remove energyfmm by the moment
   real(8) :: periodlength
   real(8) :: st, en
   real(8) :: aux
