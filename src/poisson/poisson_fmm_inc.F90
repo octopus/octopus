@@ -66,11 +66,11 @@ subroutine poisson_fmm_init(params_fmm, mesh, all_nodes_comm)
   !% energy=999.999 ... 1000.001
   !% If you do know the magnitude of your energy and set absrel to an
   !% absolute error the situation is different. Setting deltaE to 10^-2 means
-  !% you will an energy=999.99..1000.01 which corresponds to 10^⁻5 as
+  !% you will an energy=999.99..1000.01 which corresponds to 10^5 as
   !% relative error.
   !% Which one you choose is up to you. Since you want to calculate periodic
   !% systems, you may experience very precise results even if you set deltaE
-  !% very low. Is is a side effect from the periodicity (totalcharge=0), but
+  !% very low. It is a side effect from the periodicity (totalcharge=0), but
   !% should not bother you at all. You get this kind of extra precision for free.
   !%End
   call parse_integer(datasets_check('AbsRelFMM'), 2, params_fmm%abs_rel_fmm)
