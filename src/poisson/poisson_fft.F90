@@ -719,18 +719,18 @@ contains
     !%Variable FFTLibrary
     !%Type logical
     !%Section Hamiltonian::Poisson
+    !%Default fftw 
     !%Description
-    !% (experimental) You can select the FFT library to use
-    !% The default one is FFTW3 
+    !% (experimental) You can select the FFT library to use.
     !%Option fftw 0
-    !%  uses FFTW3 library
+    !% Uses FFTW3 library.
     !%Option pfft 1
-    !% uses PFFT library. It has to be linked.
+    !% Uses PFFT library, which has to be linked.
     !%End
     call parse_integer(datasets_check('FFTLibrary'), default_fft_library, fft_cf%fft_library)
 #ifndef HAVE_PFFT
     if (fft_cf%fft_library == PFFT_LIB) then
-      write(message(1),'(a)')'You have selected the PFFT for FFT, but is not compiled'
+      write(message(1),'(a)')'You have selected the PFFT for FFT, but it is not compiled.'
       call write_fatal(1)
     end if
 #endif

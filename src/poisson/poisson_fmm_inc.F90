@@ -80,11 +80,14 @@ subroutine poisson_fmm_init(params_fmm, mesh, all_nodes_comm)
   !%Default 0
   !%Section Hamiltonian::Poisson 
   !%Description
-  !% Extrinsic/Intrinsic potential
-  !%  0 = FMM decides, if correction should be applied
-  !%  1 = apply dipole correction  for this run
-  !% -1 = disables dipole correction for this run
-  !% if you want to compare to classical Ewald use 0 or 1
+  !% Extrinsic/Intrinsic potential.
+  !% If you want to compare to classical Ewald use 0 or 1.
+  !% Option 0
+  !%  FMM decides whether correction should be applied.
+  !% Option 1
+  !%  Apply dipole correction.
+  !% Option -1
+  !%  Disables dipole correction.
   !%End
   call parse_integer(datasets_check('DipoleCorrection'), 0, params_fmm%dipole_correction)
 
