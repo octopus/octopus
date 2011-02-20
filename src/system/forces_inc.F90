@@ -33,7 +33,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time)
   CMPLX :: phase
 #ifdef HAVE_MPI
   integer, allocatable :: recv_count(:), recv_displ(:)
-  CMPLX, allocatable  :: force_local(:, :), grad_rho_local(:, :)
+  FLOAT, allocatable  :: force_local(:, :), grad_rho_local(:, :)
   type(profile_t), save :: prof
 #endif
 
