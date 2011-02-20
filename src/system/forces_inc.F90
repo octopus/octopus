@@ -27,13 +27,9 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time)
   integer :: iatom, ist, iq, idim, idir, np, np_part, ip, ikpoint
   FLOAT :: ff, kpoint(1:MAX_DIM)
   R_TYPE, allocatable :: psi(:, :)
-  R_TYPE, allocatable :: dl_psi(:, :)
-  R_TYPE, allocatable :: dl_psi2(:, :)
   R_TYPE, allocatable :: grad_psi(:, :, :)
-  R_TYPE, allocatable :: grad_dl_psi(:, :, :)
-  R_TYPE, allocatable :: grad_dl_psi2(:, :, :)
   FLOAT,  allocatable :: vloc(:)
-  CMPLX,  allocatable :: grad_rho(:, :), force(:, :), zvloc(:)
+  FLOAT,  allocatable :: grad_rho(:, :), force(:, :)
   CMPLX :: phase
 #ifdef HAVE_MPI
   integer, allocatable :: recv_count(:), recv_displ(:)
@@ -159,13 +155,12 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time)
 #endif
 
   do iatom = 1, geo%natoms
-    geo%atom(iatom)%f(1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim) + real(force(1:gr%mesh%sb%dim, iatom))
+    geo%atom(iatom)%f(1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim) + force(1:gr%mesh%sb%dim, iatom)
   end do
 
   ! THE LOCAL PART (parallel in atoms)
 
   SAFE_ALLOCATE(vloc(1:np))
-  SAFE_ALLOCATE(zvloc(1:np))
 
   do iatom = geo%atoms_dist%start, geo%atoms_dist%end
 
@@ -178,16 +173,13 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time)
 
     call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, vloc, time)
 
-    forall(ip = 1:np) zvloc(ip) = vloc(ip)
-
     do idir = 1, gr%mesh%sb%dim
-      force(idir, iatom) = -zmf_dotp(gr%mesh, zvloc, grad_rho(:, idir))
+      force(idir, iatom) = -dmf_dotp(gr%mesh, vloc, grad_rho(:, idir))
     end do
 
   end do
 
   SAFE_DEALLOCATE_A(vloc)
-  SAFE_DEALLOCATE_A(zvloc)
   SAFE_DEALLOCATE_A(grad_rho)
 
 #ifdef HAVE_MPI
@@ -224,7 +216,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time)
 
   do iatom = 1, geo%natoms
     do idir = 1, gr%mesh%sb%dim
-      geo%atom(iatom)%f(idir) = geo%atom(iatom)%f(idir) + real(force(idir, iatom))
+      geo%atom(iatom)%f(idir) = geo%atom(iatom)%f(idir) + force(idir, iatom)
     end do
   end do
 
