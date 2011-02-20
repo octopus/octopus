@@ -42,9 +42,10 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time)
   np = gr%mesh%np
   np_part = gr%mesh%np_part
 
-  SAFE_ALLOCATE(grad_psi(1:np_part, 1:gr%mesh%sb%dim, 1:st%d%dim))
+  SAFE_ALLOCATE(grad_psi(1:np, 1:gr%mesh%sb%dim, 1:st%d%dim))
   SAFE_ALLOCATE(grad_rho(1:np, 1:gr%mesh%sb%dim))
   grad_rho(1:np, 1:gr%mesh%sb%dim) = M_ZERO
+
   SAFE_ALLOCATE(force(1:gr%mesh%sb%dim, 1:geo%natoms))
   force = M_ZERO
 
@@ -71,25 +72,18 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time)
           end do
         endif
 
-        ! calculate the gradients of the wavefunctions
-        ! and set boundary conditions in preparation for applying projectors
         call X(derivatives_grad)(gr%der, psi(:, idim), grad_psi(:, :, idim), set_bc = .false.)
-        do idir = 1, gr%mesh%sb%dim
-          call X(derivatives_set_bc)(gr%der, grad_psi(:, idir, idim))
-        enddo
 
         ff = st%d%kweights(iq) * st%occ(ist, iq) * M_TWO
         do idir = 1, gr%mesh%sb%dim
           do ip = 1, np
-            grad_rho(ip, idir) = grad_rho(ip, idir) + &
-              ff * R_CONJ(psi(ip, idim)) * grad_psi(ip, idir, idim)
+            grad_rho(ip, idir) = grad_rho(ip, idir) + ff*R_CONJ(psi(ip, idim))*grad_psi(ip, idir, idim)
           end do
         end do
 
       end do
 
       call profiling_count_operations(np*st%d%dim*gr%mesh%sb%dim*(2 + R_MUL))
-      ! probably this is not accurate anymore
 
       ! iterate over the projectors
       do iatom = 1, geo%natoms
@@ -116,13 +110,14 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time)
     !reduce the force
     SAFE_ALLOCATE(force_local(1:gr%mesh%sb%dim, 1:geo%natoms))
     force_local = force
-    call MPI_Allreduce(force_local, force, gr%mesh%sb%dim*geo%natoms, MPI_CMPLX, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    call MPI_Allreduce(force_local(1, 1), force(1, 1), gr%mesh%sb%dim*geo%natoms, MPI_FLOAT, &
+      MPI_SUM, st%mpi_grp%comm, mpi_err)
     SAFE_DEALLOCATE_A(force_local)
 
     !reduce the gradient of the density
     SAFE_ALLOCATE(grad_rho_local(1:np, 1:gr%mesh%sb%dim))
     call lalg_copy(np, gr%mesh%sb%dim, grad_rho, grad_rho_local)
-    call MPI_Allreduce(grad_rho_local(1, 1), grad_rho(1, 1), np*gr%mesh%sb%dim, MPI_CMPLX, &
+    call MPI_Allreduce(grad_rho_local(1, 1), grad_rho(1, 1), np*gr%mesh%sb%dim, MPI_FLOAT, & 
       MPI_SUM, st%mpi_grp%comm, mpi_err)
     SAFE_DEALLOCATE_A(grad_rho_local)
 
@@ -137,14 +132,14 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time)
     !reduce the force
     SAFE_ALLOCATE(force_local(1:gr%mesh%sb%dim, 1:geo%natoms))
     force_local = force
-    call MPI_Allreduce(force_local(1, 1), force(1, 1), gr%mesh%sb%dim*geo%natoms, MPI_CMPLX, &
+    call MPI_Allreduce(force_local(1, 1), force(1, 1), gr%mesh%sb%dim*geo%natoms, MPI_FLOAT, &
       MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
     SAFE_DEALLOCATE_A(force_local)
 
     !reduce the gradient of the density
     SAFE_ALLOCATE(grad_rho_local(1:np, 1:gr%mesh%sb%dim))
     call lalg_copy(np, gr%mesh%sb%dim, grad_rho, grad_rho_local)
-    call MPI_Allreduce(grad_rho_local(1, 1), grad_rho(1, 1), np*gr%mesh%sb%dim, MPI_CMPLX, &
+    call MPI_Allreduce(grad_rho_local(1, 1), grad_rho(1, 1), np*gr%mesh%sb%dim, MPI_FLOAT, &
       MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
     SAFE_DEALLOCATE_A(grad_rho_local)
 
@@ -201,8 +196,8 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time)
     force_local(1:gr%mesh%sb%dim, 1:geo%atoms_dist%nlocal) = force(1:gr%mesh%sb%dim, geo%atoms_dist%start:geo%atoms_dist%end)
 
     call MPI_Allgatherv(&
-      force_local(1, 1), gr%mesh%sb%dim*geo%atoms_dist%nlocal, MPI_CMPLX, &
-      force(1, 1), recv_count(1), recv_displ(1), MPI_CMPLX, &
+      force_local(1, 1), gr%mesh%sb%dim*geo%atoms_dist%nlocal, MPI_FLOAT, &
+      force(1, 1), recv_count(1), recv_displ(1), MPI_FLOAT, &
       geo%atoms_dist%mpi_grp%comm, mpi_err)
 
     SAFE_DEALLOCATE_A(recv_count)
@@ -273,10 +268,10 @@ subroutine X(forces_born_charges)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born_c
   np_part = gr%mesh%np_part
 
   if(present(lr)) then
-    SAFE_ALLOCATE( grad_dl_psi(1:np_part, 1:gr%mesh%sb%dim, 1:st%d%dim))
-    SAFE_ALLOCATE(grad_dl_psi2(1:np_part, 1:gr%mesh%sb%dim, 1:st%d%dim))
+    SAFE_ALLOCATE(grad_dl_psi(1:np, 1:gr%mesh%sb%dim, 1:st%d%dim))
+    SAFE_ALLOCATE(grad_dl_psi2(1:np, 1:gr%mesh%sb%dim, 1:st%d%dim))
   endif
-  SAFE_ALLOCATE(grad_psi(1:np_part, 1:gr%mesh%sb%dim, 1:st%d%dim))
+  SAFE_ALLOCATE(grad_psi(1:np, 1:gr%mesh%sb%dim, 1:st%d%dim))
   SAFE_ALLOCATE(grad_rho(1:np, 1:gr%mesh%sb%dim))
   grad_rho(1:np, 1:gr%mesh%sb%dim) = M_ZERO
   SAFE_ALLOCATE(force(1:gr%mesh%sb%dim, 1:geo%natoms))
@@ -320,21 +315,10 @@ subroutine X(forces_born_charges)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born_c
           end do
         endif
        
-        ! calculate the gradients of the wavefunctions
-        ! and set boundary conditions in preparation for applying projectors
         call X(derivatives_grad)(gr%der, psi(:, idim), grad_psi(:, :, idim), set_bc = .false.)
-        do idir = 1, gr%mesh%sb%dim
-          call X(derivatives_set_bc)(gr%der, grad_psi(:, idir, idim))
-        enddo
-
         if (present(lr)) then
           call X(derivatives_grad)(gr%der, dl_psi(:, idim), grad_dl_psi(:, :, idim), set_bc = .false.)
           call X(derivatives_grad)(gr%der, dl_psi2(:, idim), grad_dl_psi2(:, :, idim), set_bc = .false.)
-
-          do idir = 1, gr%mesh%sb%dim
-            call X(derivatives_set_bc)(gr%der, grad_dl_psi(:, idir, idim))
-            call X(derivatives_set_bc)(gr%der, grad_dl_psi2(:, idir, idim))
-          enddo
         endif
 
         !accumulate to calculate the gradient of the density
@@ -357,9 +341,6 @@ subroutine X(forces_born_charges)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born_c
           end do
         endif
       end do
-
-      call profiling_count_operations(np*st%d%dim*gr%mesh%sb%dim*(2 + R_MUL))
-      ! probably this is not accurate anymore
 
       ! iterate over the projectors
       do iatom = 1, geo%natoms
