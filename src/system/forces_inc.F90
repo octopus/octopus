@@ -103,50 +103,27 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time)
   SAFE_DEALLOCATE_A(grad_psi)
 
 #if defined(HAVE_MPI)
-  if(st%parallel_in_states) then
+  if(st%parallel_in_states .or. st%d%kpt%parallel) then
 
-    call profiling_in(prof, "FORCES_MPI")
+    call profiling_in(prof, "FORCES_COMM")
 
     !reduce the force
     SAFE_ALLOCATE(force_local(1:gr%mesh%sb%dim, 1:geo%natoms))
     force_local = force
     call MPI_Allreduce(force_local(1, 1), force(1, 1), gr%mesh%sb%dim*geo%natoms, MPI_FLOAT, &
-      MPI_SUM, st%mpi_grp%comm, mpi_err)
+      MPI_SUM, st%st_kpt_mpi_grp%comm, mpi_err)
     SAFE_DEALLOCATE_A(force_local)
 
     !reduce the gradient of the density
     SAFE_ALLOCATE(grad_rho_local(1:np, 1:gr%mesh%sb%dim))
     call lalg_copy(np, gr%mesh%sb%dim, grad_rho, grad_rho_local)
     call MPI_Allreduce(grad_rho_local(1, 1), grad_rho(1, 1), np*gr%mesh%sb%dim, MPI_FLOAT, & 
-      MPI_SUM, st%mpi_grp%comm, mpi_err)
+      MPI_SUM, st%st_kpt_mpi_grp%comm, mpi_err)
     SAFE_DEALLOCATE_A(grad_rho_local)
 
     call profiling_out(prof)
 
   end if
-
-  if(st%d%kpt%parallel) then
-
-    call profiling_in(prof, "FORCES_MPI")
-
-    !reduce the force
-    SAFE_ALLOCATE(force_local(1:gr%mesh%sb%dim, 1:geo%natoms))
-    force_local = force
-    call MPI_Allreduce(force_local(1, 1), force(1, 1), gr%mesh%sb%dim*geo%natoms, MPI_FLOAT, &
-      MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
-    SAFE_DEALLOCATE_A(force_local)
-
-    !reduce the gradient of the density
-    SAFE_ALLOCATE(grad_rho_local(1:np, 1:gr%mesh%sb%dim))
-    call lalg_copy(np, gr%mesh%sb%dim, grad_rho, grad_rho_local)
-    call MPI_Allreduce(grad_rho_local(1, 1), grad_rho(1, 1), np*gr%mesh%sb%dim, MPI_FLOAT, &
-      MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
-    SAFE_DEALLOCATE_A(grad_rho_local)
-
-    call profiling_out(prof)
-
-  end if
-
 #endif
 
   do iatom = 1, geo%natoms
@@ -180,7 +157,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time)
 #ifdef HAVE_MPI
   if(geo%atoms_dist%parallel) then
 
-    call profiling_in(prof, "FORCES_MPI")
+    call profiling_in(prof, "FORCES_COMM")
 
     ! each node has a piece of the force array, they have to be
     ! collected by all nodes, MPI_Allgatherv does precisely this (if
@@ -377,49 +354,27 @@ subroutine X(forces_born_charges)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born_c
   endif
 
 #if defined(HAVE_MPI)
-  if(st%parallel_in_states) then
+  if(st%parallel_in_states .or. st%d%kpt%parallel) then
 
-    call profiling_in(prof, "FORCES_MPI")
+    call profiling_in(prof, "FORCES_COMM")
 
     !reduce the force
     SAFE_ALLOCATE(force_local(1:gr%mesh%sb%dim, 1:geo%natoms))
     force_local = force
-    call MPI_Allreduce(force_local, force, gr%mesh%sb%dim*geo%natoms, MPI_CMPLX, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    call MPI_Allreduce(force_local, force, gr%mesh%sb%dim*geo%natoms, MPI_CMPLX, &
+      MPI_SUM, st%st_kpt_mpi_grp%comm, mpi_err)
     SAFE_DEALLOCATE_A(force_local)
 
     !reduce the gradient of the density
     SAFE_ALLOCATE(grad_rho_local(1:np, 1:gr%mesh%sb%dim))
     call lalg_copy(np, gr%mesh%sb%dim, grad_rho, grad_rho_local)
     call MPI_Allreduce(grad_rho_local(1, 1), grad_rho(1, 1), np*gr%mesh%sb%dim, MPI_CMPLX, &
-      MPI_SUM, st%mpi_grp%comm, mpi_err)
+      MPI_SUM, st%st_kpt_mpi_grp%comm, mpi_err)
     SAFE_DEALLOCATE_A(grad_rho_local)
 
     call profiling_out(prof)
 
   end if
-
-  if(st%d%kpt%parallel) then
-    
-    call profiling_in(prof, "FORCES_MPI")
-    
-    !reduce the force
-    SAFE_ALLOCATE(force_local(1:gr%mesh%sb%dim, 1:geo%natoms))
-    force_local = force
-    call MPI_Allreduce(force_local(1, 1), force(1, 1), gr%mesh%sb%dim*geo%natoms, MPI_CMPLX, &
-      MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
-    SAFE_DEALLOCATE_A(force_local)
-    
-    !reduce the gradient of the density
-    SAFE_ALLOCATE(grad_rho_local(1:np, 1:gr%mesh%sb%dim))
-    call lalg_copy(np, gr%mesh%sb%dim, grad_rho, grad_rho_local)
-    call MPI_Allreduce(grad_rho_local(1, 1), grad_rho(1, 1), np*gr%mesh%sb%dim, MPI_CMPLX, &
-      MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
-    SAFE_DEALLOCATE_A(grad_rho_local)
-
-    call profiling_out(prof)
-
-  end if
-
 #endif
   
   do iatom = 1, geo%natoms
@@ -461,7 +416,7 @@ subroutine X(forces_born_charges)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born_c
 #ifdef HAVE_MPI
   if(geo%atoms_dist%parallel) then
 
-    call profiling_in(prof, "FORCES_MPI")
+    call profiling_in(prof, "FORCES_COMM")
 
     ! each node has a piece of the force array, they have to be
     ! collected by all nodes, MPI_Allgatherv does precisely this (if
