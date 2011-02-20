@@ -174,7 +174,7 @@ contains
     if(em_vars%calc_hyperpol) em_vars%nfactor = 3
 
     ! in effect, nsigma = 1 only if hyperpol not being calculated, and the only frequency is zero
-    if(em_vars%calc_hyperpol .or. (em_vars%nomega > 1) .or. (abs(em_vars%omega(1)) >= M_EPSILON) ) then
+    if(em_vars%calc_hyperpol .or. any(abs(em_vars%omega(1:em_vars%nomega)) > M_EPSILON)) then
       em_vars%nsigma = 2
       ! positive and negative values of the frequency must be considered
     else
