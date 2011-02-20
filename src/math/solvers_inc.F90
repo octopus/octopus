@@ -505,7 +505,12 @@ end subroutine X(bi_conjugate_gradients)
 
         end if
 
-        res = nrm2(r)/norm_b
+        ! avoid divide by zero
+        if(abs(norm_b) < M_EPSILON) then
+          res = M_HUGE
+        else
+          res = nrm2(r)/norm_b
+        endif
 
         log_res = -log(res)
         if(log_res < 0) log_res = 0
@@ -609,9 +614,9 @@ end subroutine X(bi_conjugate_gradients)
     logical, optional, intent(in)    :: showprogress ! should there be a progress bar
     logical, optional, intent(out)   :: converged ! has the algorithm converged
 
-    R_TYPE, allocatable  :: r(:), v(:), w(:), z(:), q(:), p(:), deltax(:), tmp(:)
-    R_TYPE               :: eta, delta, epsilon, beta
-    FLOAT               :: rho, xsi, gamma, theta, threshold_, res, oldtheta, oldgamma, oldrho, nw
+    R_TYPE, allocatable :: r(:), v(:), w(:), z(:), q(:), p(:), deltax(:), tmp(:)
+    R_TYPE              :: eta, delta, epsilon, beta
+    FLOAT               :: rho, xsi, gamma, theta, threshold_, res, oldtheta, oldgamma, oldrho, nw, norm_b
     integer             :: max_iter, err
     logical             :: showprogress_
     FLOAT               :: log_res, log_thr
@@ -734,7 +739,14 @@ end subroutine X(bi_conjugate_gradients)
         call lalg_copy(np, b, r)
         call op(x, tmp)
         call lalg_axpy(np, -M_ONE, tmp, r)
-        res = nrm2(r)/nrm2(x)
+
+        norm_b = nrm2(x)
+        ! avoid divide by zero
+        if(norm_b < M_EPSILON) then
+          res = M_HUGE
+        else
+          res = nrm2(r)/norm_b
+        endif
 
         log_res = -log(res)
         if(log_res < 0) log_res = 0
