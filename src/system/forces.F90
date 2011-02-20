@@ -63,10 +63,12 @@ module forces_m
   implicit none
 
   private
-  public ::                        &
-    forces_calculate,                   &
-    dforces_from_potential,   &
-    zforces_from_potential
+  public ::                    &
+    forces_calculate,          &
+    dforces_from_potential,    &
+    zforces_from_potential,    &
+    dforces_born_charges,      &
+    zforces_born_charges
 
 contains
 

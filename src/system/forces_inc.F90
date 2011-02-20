@@ -17,7 +17,224 @@
 !!
 !! $Id$
 
-subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born_charges)
+subroutine X(forces_from_potential)(gr, geo, ep, st, time)
+  type(grid_t),                   intent(inout) :: gr
+  type(geometry_t),               intent(inout) :: geo
+  type(epot_t),                   intent(inout) :: ep
+  type(states_t),                 intent(inout) :: st
+  FLOAT,                          intent(in)    :: time
+
+  integer :: iatom, ist, iq, idim, idir, np, np_part, ip, ikpoint
+  FLOAT :: ff, kpoint(1:MAX_DIM)
+  R_TYPE, allocatable :: psi(:, :)
+  R_TYPE, allocatable :: dl_psi(:, :)
+  R_TYPE, allocatable :: dl_psi2(:, :)
+  R_TYPE, allocatable :: grad_psi(:, :, :)
+  R_TYPE, allocatable :: grad_dl_psi(:, :, :)
+  R_TYPE, allocatable :: grad_dl_psi2(:, :, :)
+  FLOAT,  allocatable :: vloc(:)
+  CMPLX,  allocatable :: grad_rho(:, :), force(:, :), zvloc(:)
+  CMPLX :: phase
+#ifdef HAVE_MPI
+  integer, allocatable :: recv_count(:), recv_displ(:)
+  CMPLX, allocatable  :: force_local(:, :), grad_rho_local(:, :)
+  type(profile_t), save :: prof
+#endif
+
+  PUSH_SUB(X(forces_from_potential))
+
+  np = gr%mesh%np
+  np_part = gr%mesh%np_part
+
+  SAFE_ALLOCATE(grad_psi(1:np_part, 1:gr%mesh%sb%dim, 1:st%d%dim))
+  SAFE_ALLOCATE(grad_rho(1:np, 1:gr%mesh%sb%dim))
+  grad_rho(1:np, 1:gr%mesh%sb%dim) = M_ZERO
+  SAFE_ALLOCATE(force(1:gr%mesh%sb%dim, 1:geo%natoms))
+  force = M_ZERO
+
+  ! even if there is no fine mesh, we need to make another copy
+  SAFE_ALLOCATE(psi(1:np_part, 1:st%d%dim))
+
+  !THE NON-LOCAL PART (parallel in states and k-points)
+  do iq = st%d%kpt%start, st%d%kpt%end
+    do ist = st%st_start, st%st_end
+      do idim = 1, st%d%dim
+
+        call lalg_copy(gr%mesh%np_part, st%X(psi)(:, idim, ist, iq), psi(:, idim))
+        call X(derivatives_set_bc)(gr%der, psi(:, idim))
+
+        ikpoint = states_dim_get_kpoint_index(st%d, iq)
+        if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(gr%sb%kpoints, ikpoint)) then
+
+          kpoint = M_ZERO
+          kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, ikpoint)
+
+          do ip = 1, np_part
+            phase = exp(-M_zI*sum(kpoint(1:gr%sb%dim)*gr%mesh%x(ip, 1:gr%sb%dim)))
+            psi(ip, idim) = phase*psi(ip, idim)
+          end do
+        endif
+
+        ! calculate the gradients of the wavefunctions
+        ! and set boundary conditions in preparation for applying projectors
+        call X(derivatives_grad)(gr%der, psi(:, idim), grad_psi(:, :, idim), set_bc = .false.)
+        do idir = 1, gr%mesh%sb%dim
+          call X(derivatives_set_bc)(gr%der, grad_psi(:, idir, idim))
+        enddo
+
+        ff = st%d%kweights(iq) * st%occ(ist, iq) * M_TWO
+        do idir = 1, gr%mesh%sb%dim
+          do ip = 1, np
+            grad_rho(ip, idir) = grad_rho(ip, idir) + &
+              ff * R_CONJ(psi(ip, idim)) * grad_psi(ip, idir, idim)
+          end do
+        end do
+
+      end do
+
+      call profiling_count_operations(np*st%d%dim*gr%mesh%sb%dim*(2 + R_MUL))
+      ! probably this is not accurate anymore
+
+      ! iterate over the projectors
+      do iatom = 1, geo%natoms
+        if(projector_is_null(ep%proj(iatom))) cycle
+        do idir = 1, gr%mesh%sb%dim
+
+          force(idir, iatom) = force(idir, iatom) - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
+            X(psia_project_psib)(ep%proj(iatom), st%d%dim, psi, grad_psi(:, idir, :), iq)
+
+        end do
+      end do
+
+    end do
+  end do
+
+  SAFE_DEALLOCATE_A(psi)
+  SAFE_DEALLOCATE_A(grad_psi)
+
+#if defined(HAVE_MPI)
+  if(st%parallel_in_states) then
+
+    call profiling_in(prof, "FORCES_MPI")
+
+    !reduce the force
+    SAFE_ALLOCATE(force_local(1:gr%mesh%sb%dim, 1:geo%natoms))
+    force_local = force
+    call MPI_Allreduce(force_local, force, gr%mesh%sb%dim*geo%natoms, MPI_CMPLX, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    SAFE_DEALLOCATE_A(force_local)
+
+    !reduce the gradient of the density
+    SAFE_ALLOCATE(grad_rho_local(1:np, 1:gr%mesh%sb%dim))
+    call lalg_copy(np, gr%mesh%sb%dim, grad_rho, grad_rho_local)
+    call MPI_Allreduce(grad_rho_local(1, 1), grad_rho(1, 1), np*gr%mesh%sb%dim, MPI_CMPLX, &
+      MPI_SUM, st%mpi_grp%comm, mpi_err)
+    SAFE_DEALLOCATE_A(grad_rho_local)
+
+    call profiling_out(prof)
+
+  end if
+
+  if(st%d%kpt%parallel) then
+
+    call profiling_in(prof, "FORCES_MPI")
+
+    !reduce the force
+    SAFE_ALLOCATE(force_local(1:gr%mesh%sb%dim, 1:geo%natoms))
+    force_local = force
+    call MPI_Allreduce(force_local(1, 1), force(1, 1), gr%mesh%sb%dim*geo%natoms, MPI_CMPLX, &
+      MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
+    SAFE_DEALLOCATE_A(force_local)
+
+    !reduce the gradient of the density
+    SAFE_ALLOCATE(grad_rho_local(1:np, 1:gr%mesh%sb%dim))
+    call lalg_copy(np, gr%mesh%sb%dim, grad_rho, grad_rho_local)
+    call MPI_Allreduce(grad_rho_local(1, 1), grad_rho(1, 1), np*gr%mesh%sb%dim, MPI_CMPLX, &
+      MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
+    SAFE_DEALLOCATE_A(grad_rho_local)
+
+    call profiling_out(prof)
+
+  end if
+
+#endif
+
+  do iatom = 1, geo%natoms
+    geo%atom(iatom)%f(1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim) + real(force(1:gr%mesh%sb%dim, iatom))
+  end do
+
+  ! THE LOCAL PART (parallel in atoms)
+
+  SAFE_ALLOCATE(vloc(1:np))
+  SAFE_ALLOCATE(zvloc(1:np))
+
+  do iatom = geo%atoms_dist%start, geo%atoms_dist%end
+
+    if(.not.simul_box_in_box(gr%mesh%sb, geo, geo%atom(iatom)%x) .and. ep%ignore_external_ions) then
+      force(1:gr%mesh%sb%dim, iatom) = M_ZERO
+      cycle
+    end if
+
+    vloc(1:np) = M_ZERO
+
+    call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, vloc, time)
+
+    forall(ip = 1:np) zvloc(ip) = vloc(ip)
+
+    do idir = 1, gr%mesh%sb%dim
+      force(idir, iatom) = -zmf_dotp(gr%mesh, zvloc, grad_rho(:, idir))
+    end do
+
+  end do
+
+  SAFE_DEALLOCATE_A(vloc)
+  SAFE_DEALLOCATE_A(zvloc)
+  SAFE_DEALLOCATE_A(grad_rho)
+
+#ifdef HAVE_MPI
+  if(geo%atoms_dist%parallel) then
+
+    call profiling_in(prof, "FORCES_MPI")
+
+    ! each node has a piece of the force array, they have to be
+    ! collected by all nodes, MPI_Allgatherv does precisely this (if
+    ! we get the arguments right).
+
+    SAFE_ALLOCATE(recv_count(1:geo%atoms_dist%mpi_grp%size))
+    SAFE_ALLOCATE(recv_displ(1:geo%atoms_dist%mpi_grp%size))
+    SAFE_ALLOCATE(force_local(1:gr%mesh%sb%dim, 1:geo%atoms_dist%nlocal))
+
+    recv_count(1:geo%atoms_dist%mpi_grp%size) = gr%mesh%sb%dim*geo%atoms_dist%num(0:geo%atoms_dist%mpi_grp%size - 1)
+    recv_displ(1:geo%atoms_dist%mpi_grp%size) = gr%mesh%sb%dim*(geo%atoms_dist%range(1, 0:geo%atoms_dist%mpi_grp%size - 1) - 1)
+
+    force_local(1:gr%mesh%sb%dim, 1:geo%atoms_dist%nlocal) = force(1:gr%mesh%sb%dim, geo%atoms_dist%start:geo%atoms_dist%end)
+
+    call MPI_Allgatherv(&
+      force_local(1, 1), gr%mesh%sb%dim*geo%atoms_dist%nlocal, MPI_CMPLX, &
+      force(1, 1), recv_count(1), recv_displ(1), MPI_CMPLX, &
+      geo%atoms_dist%mpi_grp%comm, mpi_err)
+
+    SAFE_DEALLOCATE_A(recv_count)
+    SAFE_DEALLOCATE_A(recv_displ)
+    SAFE_DEALLOCATE_A(force_local)
+
+    call profiling_out(prof)
+
+  end if
+#endif
+
+  do iatom = 1, geo%natoms
+    do idir = 1, gr%mesh%sb%dim
+      geo%atom(iatom)%f(idir) = geo%atom(iatom)%f(idir) + real(force(idir, iatom))
+    end do
+  end do
+
+  SAFE_DEALLOCATE_A(force)
+  POP_SUB(X(forces_from_potential))
+end subroutine X(forces_from_potential)
+
+! --------------------------------------------------------------------------------
+
+subroutine X(forces_born_charges)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born_charges)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(inout) :: geo
   type(epot_t),                   intent(inout) :: ep
@@ -50,7 +267,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
   type(profile_t), save :: prof
 #endif
 
-  PUSH_SUB(X(forces_from_potential))
+  PUSH_SUB(X(forces_born_charges))
 
   ASSERT(present(lr) .eqv. present(lr_dir))
   ASSERT(present(lr) .eqv. present(lr2))
@@ -317,9 +534,9 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born
   endif
 
   SAFE_DEALLOCATE_A(force)
-  POP_SUB(X(forces_from_potential))
+  POP_SUB(X(forces_born_charges))
   
-end subroutine X(forces_from_potential)
+end subroutine X(forces_born_charges)
 
 !! Local Variables:
 !! mode: f90
