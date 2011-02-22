@@ -281,7 +281,10 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
     w = eigenval(1), z = evectors(1, 1), iz = 1, jz = 1, descz = hs_desc(1), &
     work = rttmp, lwork = -1, rwork = ftmp, lrwork = -1, info = info)
 
-  ASSERT(info == 0)
+  if(info /= 0) then
+    write(message(1),'(a,i6)') "ScaLAPACK pzheev workspace query failure, error code = ", info
+    call write_fatal(1)
+  endif
 
   lwork = nint(abs(rttmp))
   lrwork = nint(real(ftmp, 8))
@@ -289,11 +292,15 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   SAFE_ALLOCATE(work(1:lwork))
   SAFE_ALLOCATE(rwork(1:lrwork))
 
+  ! parameter 4 is bad, they say
   call pzheev(jobz = 'V', uplo = 'U', n = st%nst, a = hs(1, 1) , ia = 1, ja = 1, desca = hs_desc(1), &
     w = eigenval(1), z = evectors(1, 1), iz = 1, jz = 1, descz = hs_desc(1), &
     work = work(1), lwork = lwork, rwork = rwork(1), lrwork = lrwork, info = info)
 
-  ASSERT(info == 0)
+  if(info /= 0) then
+    write(message(1),'(a,i6)') "ScaLAPACK pzheev call failure, error code = ", info
+    call write_fatal(1)
+  endif
 
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(rwork)
@@ -303,16 +310,22 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   call pdsyev(jobz = 'V', uplo = 'U', n = st%nst, a = hs(1, 1) , ia = 1, ja = 1, desca = hs_desc(1), &
     w = eigenval(1), z = evectors(1, 1), iz = 1, jz = 1, descz = hs_desc(1), work = rttmp, lwork = -1, info = info)
 
-  ASSERT(info == 0)
+  if(info /= 0) then
+    write(message(1),'(a,i6)') "ScaLAPACK pdsyev workspace query failure, error code = ", info
+    call write_fatal(1)
+  endif
 
   lwork = nint(abs(rttmp))
   SAFE_ALLOCATE(work(1:lwork))
 
   call pdsyev(jobz = 'V', uplo = 'U', n = st%nst, a = hs(1, 1) , ia = 1, ja = 1, desca = hs_desc(1), &
     w = eigenval(1), z = evectors(1, 1), iz = 1, jz = 1, descz = hs_desc(1), work = work(1), lwork = lwork, info = info)
-  
-  ASSERT(info == 0)
 
+  if(info /= 0) then
+    write(message(1),'(a,i6)') "ScaLAPACK pdsyev call failure, error code = ", info
+    call write_fatal(1)
+  endif
+  
   SAFE_DEALLOCATE_A(work)
 
 #endif
