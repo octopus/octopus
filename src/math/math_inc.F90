@@ -485,7 +485,7 @@ end function X(infinity_norm)
 ! ---------------------------------------------------------
 ! Takes the average of the matrix and its transpose.
 subroutine X(matrix_symmetric_average)(matrix, np)
-  R_TYPE,  intent(inout) :: matrix(np, np)
+  R_TYPE,  intent(inout) :: matrix(:, :)
   integer, intent(in)    :: np
 
   integer             :: j
@@ -510,7 +510,7 @@ end subroutine X(matrix_symmetric_average)
 ! ---------------------------------------------------------
 ! Copies the upper triangular matrix into the lower part
 subroutine X(matrix_symmetrize)(matrix, np)
-  R_TYPE,  intent(inout) :: matrix(np, np)
+  R_TYPE,  intent(inout) :: matrix(:, :)
   integer, intent(in)    :: np
 
   integer :: j
@@ -530,8 +530,8 @@ end subroutine X(matrix_symmetrize)
 ! with increasing absolute value
 subroutine X(matrix_sort)(np, matrix, eigenvals)
   integer, intent(in)    :: np
-  R_TYPE,  intent(inout) :: matrix(1:np, 1:np)
-  R_TYPE,  intent(inout) :: eigenvals(1:np)
+  R_TYPE,  intent(inout) :: matrix(:, :)
+  R_TYPE,  intent(inout) :: eigenvals(:)
 
   integer              :: i
   R_TYPE, allocatable  :: unsorted_matrix(:, :), unsorted_eigenvals(:)

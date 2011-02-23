@@ -27,9 +27,7 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   integer,             intent(in)    :: max_iter
   FLOAT,               intent(in)    :: dt
 
-
-
-  integer :: ll(MAX_DIM), il,it
+  integer :: ll(MAX_DIM), il, it
   FLOAT :: field(MAX_DIM)
 
   PUSH_SUB(PES_mask_init)
@@ -199,11 +197,11 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
 
            !send all the wavefunctions to root node
            if(mesh%mpi_grp%rank .gt. 0 ) then
-              call mpi_send(wf1,size,& 
+              call MPI_Send(wf1,size,& 
                    MPI_CMPLX,0,666, mesh%mpi_grp%comm, mpi_err)
            else
               do iproc= 1, mesh%mpi_grp%size-1
-                 call mpi_recv(wf2,size,&
+                 call MPI_Recv(wf2,size,&
                       MPI_CMPLX,iproc,666, mesh%mpi_grp%comm, status, mpi_err)
                 ! add contribute for other nodes
                  wf1 = wf1 +wf2 
@@ -236,8 +234,6 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
    end if
 #endif
 
-
-
   SAFE_DEALLOCATE_A(wf1)
   SAFE_DEALLOCATE_A(wf2)
 
@@ -253,14 +249,12 @@ subroutine PES_mask_collect(mask, st,mesh)
   type(states_t),   intent(in) :: st
   type(mesh_t),     intent(in)    :: mesh
 
-  CMPLX, allocatable :: wf(:,:,:)
-  FLOAT, allocatable :: wfr(:,:,:)
-  integer ::  idim, ist, ik
-
-
-  integer:: iproc,size
 #ifdef HAVE_MPI
-  integer status(MPI_STATUS_SIZE)
+  FLOAT, allocatable :: wfr(:,:,:)
+  CMPLX, allocatable :: wf(:,:,:)
+  integer :: iproc, size
+  integer :: idim, ist, ik
+  integer :: status(MPI_STATUS_SIZE)
 #endif
 
  PUSH_SUB(PES_mask_collect)
@@ -270,9 +264,7 @@ subroutine PES_mask_collect(mask, st,mesh)
   SAFE_ALLOCATE(wf(1:mesh%idx%ll(1), 1:mesh%idx%ll(2), 1:mesh%idx%ll(3)))
   SAFE_ALLOCATE(wfr(1:mesh%idx%ll(1), 1:mesh%idx%ll(2), 1:mesh%idx%ll(3)))
 
-  size = (mesh%idx%ll(1))*(mesh%idx%ll(2))*(mesh%idx%ll(3))
-
- 
+  size = product(mesh%idx%ll(1:3))
 
   do ik = 1, st%d%nik
      do ist = 1, st%nst
@@ -280,35 +272,30 @@ subroutine PES_mask_collect(mask, st,mesh)
 	if(in_debug_mode) then
 
           if(st%mpi_grp%rank .gt. 0 ) then
-             wfr= mask%r(:,:,:, ist, ik) 
-             call mpi_send(wfr,size,& 
-                  MPI_FLOAT,0, 2, st%mpi_grp%comm, mpi_err)
+            wfr = mask%r(:, :, :, ist, ik) 
+            call MPI_Send(wfr(1, 1, 1), size, MPI_FLOAT, 0, 2, st%mpi_grp%comm, mpi_err)
           else
-             do iproc= 1, st%mpi_grp%size-1 
-                call mpi_recv(wfr,size,&
-                     MPI_FLOAT,iproc, 2, st%mpi_grp%comm ,status, mpi_err)
-                mask%r(:,:,:, ist, ik) = mask%r(:,:,:, ist, ik) + wfr
-             end do
+            do iproc = 1, st%mpi_grp%size-1 
+              call MPI_Recv(wfr(1, 1, 1), size, MPI_FLOAT, iproc, 2, st%mpi_grp%comm, status, mpi_err)
+              mask%r(:,:,:, ist, ik) = mask%r(:,:,:, ist, ik) + wfr
+            end do
           end if
-
-        end if  
+          
+        end if
 
         do idim = 1, st%d%dim
 
            !send all the wavefunctions to root node
            if(st%mpi_grp%rank .gt. 0 ) then
-              wf= mask%k(:,:,:, idim, ist, ik) 
-              call mpi_send(wf,size,& 
-                   MPI_CMPLX,0, 1, st%mpi_grp%comm, mpi_err)
+              wf= mask%k(:, :, :, idim, ist, ik) 
+              call MPI_Send(wf(1, 1, 1), size, MPI_CMPLX, 0, 1, st%mpi_grp%comm, mpi_err)
            else
               !root node collects all the data
               do iproc= 1, st%mpi_grp%size-1 
-                 call mpi_recv(wf,size,&
-                      MPI_CMPLX,iproc, 1, st%mpi_grp%comm ,status, mpi_err)
+                 call MPI_Recv(wf(1, 1, 1), size, MPI_CMPLX,iproc, 1, st%mpi_grp%comm, status, mpi_err)
                  mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) + wf
               end do
            end if
-
 
         end do
      end do
@@ -553,17 +540,13 @@ subroutine PES_mask_restart_write(mask, mesh, st)
   type(states_t),   intent(in) :: st
 
   character(len=80) :: filename, dir ,path
-
-  integer :: itot, ik, ist, idim , np, ierr, i
+  integer :: itot, ik, ist, idim , np, ierr
   integer :: ll(MAX_DIM)
-
 
   PUSH_SUB(PES_mask_restart_write)
 
-
   ll(1:MAX_DIM) = mesh%idx%ll(1:MAX_DIM)
   np =ll(1)*ll(2)*ll(3); 
-
 
   dir=trim(tmpdir)//'td/'
 
@@ -602,9 +585,7 @@ subroutine PES_mask_restart_read(mask, mesh, st)
   integer :: itot, ik, ist, idim , np, ierr
   integer :: ll(MAX_DIM)
 
-
   PUSH_SUB(PES_mask_restart_read)
-
 
   ll(1:MAX_DIM) = mesh%idx%ll(1:MAX_DIM)
   np =ll(1)*ll(2)*ll(3); 
@@ -626,8 +607,6 @@ subroutine PES_mask_restart_read(mask, mesh, st)
       end do
     end do
   end do
-
-
 
   POP_SUB(PES_mask_restart_read)
 end subroutine PES_mask_restart_read

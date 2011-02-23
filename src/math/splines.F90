@@ -216,8 +216,8 @@ module splines_m
     spline_init,     & ! [1]
     spline_end,      & ! [2]
     spline_fit,      & ! [3]
-    spline_eval,          & ! [4]
-    spline_eval_vec,      & ! [4]
+    spline_eval,     & ! [4]
+    spline_eval_vec, & ! [4]
     spline_sum,      & ! [5]
     spline_times,    & ! [6]
     spline_integral, & ! [7]
@@ -284,71 +284,89 @@ module splines_m
   interface
     subroutine oct_spline_end(spl, acc)
       use c_pointer_m
+
       type(c_ptr), intent(inout) :: spl, acc
     end subroutine oct_spline_end
 
     subroutine oct_spline_fit(nrc, x, y, spl, acc)
       use c_pointer_m
-      integer, intent(in) :: nrc
-      real(8), intent(in) :: x, y
-      type(c_ptr), intent(inout) :: spl, acc
+
+      integer,     intent(in) :: nrc
+      real(8),     intent(in) :: x
+      real(8),     intent(in) :: y
+      type(c_ptr), intent(inout) :: spl
+      type(c_ptr), intent(inout) :: acc
     end subroutine oct_spline_fit
 
     real(8) pure function oct_spline_eval(x, spl, acc)
       use c_pointer_m
-      real(8), intent(in) :: x
-      type(c_ptr), intent(in) :: spl, acc
+
+      real(8),     intent(in) :: x
+      type(c_ptr), intent(in) :: spl
+      type(c_ptr), intent(in) :: acc      
     end function oct_spline_eval
 
     pure subroutine oct_spline_eval_array(nn, xf, spl, acc)
       use c_pointer_m
-      integer, intent(in)    :: nn
-      real(8), intent(inout) :: xf
+
+      integer,     intent(in)    :: nn
+      real(8),     intent(inout) :: xf
       type(c_ptr), intent(in) :: spl
       type(c_ptr), intent(in) :: acc  
     end subroutine oct_spline_eval_array
 
     pure subroutine oct_spline_eval_array4(nn, xf, spl, acc)
       use c_pointer_m
-      integer, intent(in)    :: nn
-      real(4), intent(inout) :: xf
-      type(c_ptr), intent(in) :: spl
-      type(c_ptr), intent(in) :: acc  
+
+      integer,     intent(in)    :: nn
+      real(4),     intent(inout) :: xf
+      type(c_ptr), intent(in)    :: spl
+      type(c_ptr), intent(in)    :: acc  
     end subroutine oct_spline_eval_array4
 
     real(8) pure function oct_spline_eval_der(x, spl, acc)
       use c_pointer_m
-      real(8), intent(in) :: x
-      type(c_ptr), intent(in) :: spl, acc
+
+      real(8),     intent(in) :: x
+      type(c_ptr), intent(in) :: spl
+      type(c_ptr), intent(in) :: acc
     end function oct_spline_eval_der
 
     real(8) pure function oct_spline_eval_der2(x, spl, acc)
       use c_pointer_m
-      real(8), intent(in) :: x
-      type(c_ptr), intent(in) :: spl, acc
+
+      real(8),     intent(in) :: x
+      type(c_ptr), intent(in) :: spl
+      type(c_ptr), intent(in) :: acc
     end function oct_spline_eval_der2
 
     integer pure function oct_spline_npoints(spl)
       use c_pointer_m
+
       type(c_ptr), intent(in) :: spl
     end function oct_spline_npoints
 
     pure subroutine oct_spline_x(spl, x)
       use c_pointer_m
-      type(c_ptr), intent(in) :: spl
-      real(8), intent(out) :: x
+
+      type(c_ptr), intent(in)  :: spl
+      real(8),     intent(out) :: x
     end subroutine oct_spline_x
 
     subroutine oct_spline_y(spl, y)
       use c_pointer_m
+
       type(c_ptr), intent(in) :: spl
-      real(8), intent(out) :: y
+      real(8),     intent(out) :: y
     end subroutine oct_spline_y
 
     real(8) pure function oct_spline_eval_integ(spl, a, b, acc)
       use c_pointer_m
-      type(c_ptr), intent(in) :: spl, acc
-      real(8),           intent(in) :: a, b
+
+      type(c_ptr), intent(in) :: spl
+      real(8),     intent(in) :: a
+      real(8),     intent(in) :: b
+      type(c_ptr), intent(in) :: acc
     end function oct_spline_eval_integ
   end interface
 
@@ -478,8 +496,9 @@ contains
 
   !------------------------------------------------------------
   subroutine spline_fit8(nrc, rofi, ffit, spl)
-    integer, intent(in) :: nrc
-    real(8), intent(in) :: ffit(nrc), rofi(nrc)
+    integer,        intent(in)  :: nrc
+    real(8),        intent(in)  :: rofi(:)
+    real(8),        intent(in)  :: ffit(:)
     type(spline_t), intent(out) :: spl
 
     !No PUSH SUB, called too often
@@ -493,9 +512,10 @@ contains
 
   !------------------------------------------------------------
   subroutine spline_fit4(nrc, rofi, ffit, spl)
-    integer, intent(in) :: nrc
-    real(4), intent(in) :: rofi(nrc), ffit(nrc)
-    type(spline_t), intent(out) :: spl
+    integer,        intent(in)    :: nrc
+    real(4),        intent(in)    :: rofi(:)
+    real(4),        intent(in)    :: ffit(:)
+    type(spline_t), intent(out)   :: spl
 
     real(8), allocatable :: rofi8(:), ffit8(:)
 
@@ -519,7 +539,7 @@ contains
   !------------------------------------------------------------
   real(8) pure function spline_eval8(spl, x)
     type(spline_t), intent(in) :: spl
-    real(8), intent(in) :: x
+    real(8),        intent(in) :: x
 
     spline_eval8 = oct_spline_eval(x, spl%spl, spl%acc)
   end function spline_eval8
@@ -528,7 +548,7 @@ contains
   !------------------------------------------------------------
   real(4) pure function spline_eval4(spl, x)
     type(spline_t), intent(in) :: spl
-    real(4), intent(in) :: x
+    real(4),        intent(in) :: x
 
     spline_eval4 = real(oct_spline_eval(real(x, kind=8), spl%spl, spl%acc), kind=4)
   end function spline_eval4
@@ -537,8 +557,8 @@ contains
   !------------------------------------------------------------
   pure subroutine spline_eval8_array(spl, nn, xf)
     type(spline_t), intent(in)    :: spl
-    integer,             intent(in)    :: nn
-    real(8),             intent(inout) :: xf(:)
+    integer,        intent(in)    :: nn
+    real(8),        intent(inout) :: xf(:)
 
     call oct_spline_eval_array(nn, xf(1), spl%spl, spl%acc)
   end subroutine spline_eval8_array
@@ -547,8 +567,8 @@ contains
   !------------------------------------------------------------
   pure subroutine spline_eval4_array(spl, nn, xf)
     type(spline_t), intent(in)    :: spl
-    integer,             intent(in)    :: nn
-    real(4),             intent(inout) :: xf(:)
+    integer,        intent(in)    :: nn
+    real(4),        intent(inout) :: xf(:)
 
     call oct_spline_eval_array4(nn, xf(1), spl%spl, spl%acc)
   end subroutine spline_eval4_array
@@ -556,7 +576,8 @@ contains
 
   !------------------------------------------------------------
   subroutine spline_sum(spl1, spl2, splsum)
-    type(spline_t), intent(in)  :: spl1, spl2
+    type(spline_t), intent(in)  :: spl1
+    type(spline_t), intent(in)  :: spl2
     type(spline_t), intent(out) :: splsum
     integer :: npoints, i
 
@@ -590,7 +611,7 @@ contains
 
   !------------------------------------------------------------
   subroutine spline_times(a, spl)
-    FLOAT,               intent(in)     :: a
+    FLOAT,          intent(in)     :: a
     type(spline_t), intent(inout)  :: spl
 
     integer :: npoints, i
@@ -620,6 +641,7 @@ contains
   !------------------------------------------------------------
   real(8) function spline_integral_full(spl) result(res)
     type(spline_t), intent(in) :: spl
+
     integer :: npoints
     real(8), allocatable :: x(:)
 
@@ -638,7 +660,8 @@ contains
   !------------------------------------------------------------
   real(8) pure function spline_integral_limits(spl, a, b) result(res)
     type(spline_t), intent(in) :: spl
-    real(8), intent(in) :: a, b
+    real(8),        intent(in) :: a
+    real(8),        intent(in) :: b
 
     res = oct_spline_eval_integ(spl%spl, a, b, spl%acc)
   end function spline_integral_limits
@@ -646,8 +669,9 @@ contains
 
   !------------------------------------------------------------
   real(8) function spline_dotp(spl1, spl2) result (res)
-    type(spline_t), intent(in) :: spl1, spl2
-
+    type(spline_t), intent(in) :: spl1
+    type(spline_t), intent(in) :: spl2
+    
     type(spline_t) :: aux
     integer :: npoints, i
     real(8), allocatable :: x(:), y(:)
@@ -676,8 +700,8 @@ contains
 
   !------------------------------------------------------------
   subroutine spline_3dft(spl, splw, gmax)
-    type(spline_t), intent(in)    :: spl
-    type(spline_t), intent(inout) :: splw
+    type(spline_t),      intent(in)    :: spl
+    type(spline_t),      intent(inout) :: splw
     FLOAT, optional,     intent(in)    :: gmax
 
     type(spline_t) :: aux
@@ -749,10 +773,10 @@ contains
 
   !------------------------------------------------------------
   subroutine spline_besselft(spl, splw, l, gmax)
-    type(spline_t), intent(in)    :: spl
-    type(spline_t), intent(inout) :: splw
-    integer, intent(in) :: l
-    FLOAT,   optional,   intent(in)    :: gmax
+    type(spline_t),    intent(in)    :: spl
+    type(spline_t),    intent(inout) :: splw
+    integer,           intent(in)    :: l
+    FLOAT,   optional, intent(in)    :: gmax
 
     type(spline_t) :: aux
     real(8) :: g, dg
@@ -816,7 +840,8 @@ contains
   !------------------------------------------------------------
   subroutine spline_cut(spl, cutoff, beta)
     type(spline_t), intent(inout) :: spl
-    FLOAT,          intent(in) :: cutoff, beta
+    FLOAT,          intent(in)    :: cutoff
+    FLOAT,          intent(in)    :: beta
 
     integer :: npoints, i
     real(8), allocatable :: x(:), y(:)
@@ -989,7 +1014,7 @@ contains
   !------------------------------------------------------------
   subroutine spline_print_0(spl, iunit)
     type(spline_t), intent(in) :: spl
-    integer, intent(in) :: iunit
+    integer,        intent(in) :: iunit
 
     integer :: np, i
     real(8), allocatable :: x(:), y(:)
@@ -1016,7 +1041,7 @@ contains
   !------------------------------------------------------------
   subroutine spline_print_1(spl, iunit)
     type(spline_t), intent(in) :: spl(:)
-    integer, intent(in) :: iunit
+    integer,        intent(in) :: iunit
 
     character(len=4)  :: fm
     integer :: np, i, n, j
@@ -1051,7 +1076,7 @@ contains
   !------------------------------------------------------------
   subroutine spline_print_2(spl, iunit)
     type(spline_t), intent(in) :: spl(:, :)
-    integer, intent(in) :: iunit
+    integer,        intent(in) :: iunit
 
     character(len=4)  :: fm
     integer :: np, i, n1, n2, j, k

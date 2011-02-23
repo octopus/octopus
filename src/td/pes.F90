@@ -47,7 +47,6 @@ module PES_m
     integer, pointer :: points(:) ! which points to use
     character(len=30), pointer :: filenames(:) ! filenames
     complex(r8), pointer :: wf(:,:,:,:,:)
-!    COMPLEX, pointer :: wf(:,:,:,:,:)
     integer, pointer ::rankmin(:)  !partion of the mesh containing the points
   end type PES_rc_t
 
