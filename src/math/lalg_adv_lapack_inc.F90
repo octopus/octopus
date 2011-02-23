@@ -60,7 +60,7 @@ subroutine dcholesky(n, a, bof, err_code)
     bof_ = bof
   end if
 
-  call lapack_potrf('U', n, a(1, 1), n, info)
+  call lapack_potrf('U', n, a(1, 1), LD(a), info)
   if(info.ne.0) then
     if(bof_) then
       write(message(1), '(3a,i5)') 'In dcholesky, LAPACK ', TOSTRING(DLAPACK(potrf)), ' returned error message ', info
@@ -104,7 +104,7 @@ subroutine zcholesky(n, a, bof, err_code)
     bof_ = bof
   end if
 
-  call lapack_potrf('U', n, a(1, 1), n, info)
+  call lapack_potrf('U', n, a(1, 1), LD(a), info)
 
   if(info.ne.0) then
     if(bof_) then
@@ -447,15 +447,15 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
 
   ! Work size query.
   SAFE_ALLOCATE(work(1))
-  call DLAPACK(sygvx)(1, 'V', 'I', 'U', n, a(1, 1), n, b(1, 1), n, M_ZERO, M_ZERO, &
-    1, k, abstol, m, e(1), v(1, 1), n, work(1), -1, iwork(1), ifail(1), info)
+  call DLAPACK(sygvx)(1, 'V', 'I', 'U', n, a(1, 1), LD(a), b(1, 1), LD(b), M_ZERO, M_ZERO, &
+    1, k, abstol, m, e(1), v(1, 1), LD(v), work(1), -1, iwork(1), ifail(1), info)
   lwork = int(work(1))
   SAFE_DEALLOCATE_A(work)
 
   SAFE_ALLOCATE(work(1:lwork))
 
-  call DLAPACK(sygvx)(1, 'V', 'I', 'U', n, a(1, 1), n, b(1, 1), n, M_ZERO, M_ZERO, &
-    1, k, abstol, m, e(1), v(1, 1), n, work(1), lwork, iwork(1), ifail(1), info)
+  call DLAPACK(sygvx)(1, 'V', 'I', 'U', n, a(1, 1), LD(a), b(1, 1), LD(b), M_ZERO, M_ZERO, &
+    1, k, abstol, m, e(1), v(1, 1), LD(v), work(1), lwork, iwork(1), ifail(1), info)
 
   SAFE_DEALLOCATE_A(work)
 
@@ -524,14 +524,14 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
 
   ! Work size query.
   SAFE_ALLOCATE(work(1))
-  call ZLAPACK(hegvx)(1, 'V', 'I', 'U', n, a(1, 1), n, b(1, 1), n, M_ZERO, M_ZERO, &
-    1, k, abstol, m, e(1), v(1, 1), n, work(1), -1, rwork(1), iwork(1), ifail(1), info)
+  call ZLAPACK(hegvx)(1, 'V', 'I', 'U', n, a(1, 1), LD(a), b(1, 1), LD(b), M_ZERO, M_ZERO, &
+    1, k, abstol, m, e(1), v(1, 1), LD(v), work(1), -1, rwork(1), iwork(1), ifail(1), info)
   lwork = int(real(work(1)))
   SAFE_DEALLOCATE_A(work)
 
   SAFE_ALLOCATE(work(1:lwork))
-  call ZLAPACK(hegvx)(1, 'V', 'I', 'U', n, a(1, 1), n, b(1, 1), n, M_ZERO, M_ZERO, &
-    1, k, abstol, m, e(1), v(1, 1), n, work(1), lwork, rwork(1), iwork(1), ifail(1), info)
+  call ZLAPACK(hegvx)(1, 'V', 'I', 'U', n, a(1, 1), LD(a), b(1, 1), LD(b), M_ZERO, M_ZERO, &
+    1, k, abstol, m, e(1), v(1, 1), LD(v), work(1), lwork, rwork(1), iwork(1), ifail(1), info)
   SAFE_DEALLOCATE_A(work)
 
   if(info.ne.0) then
@@ -579,7 +579,7 @@ subroutine deigensolve(n, a, e, bof, err_code)
 
   lwork = 6*n
   SAFE_ALLOCATE(work(1:lwork))
-  call lapack_syev('V', 'U', n, a(1, 1), n, e(1), work(1), lwork, info)
+  call lapack_syev('V', 'U', n, a(1, 1), LD(a), e(1), work(1), lwork, info)
   SAFE_DEALLOCATE_A(work)
 
   if(info.ne.0) then
@@ -629,7 +629,7 @@ subroutine zeigensolve(n, a, e, bof, err_code)
   lwork = 6*n
   SAFE_ALLOCATE(work(1:lwork))
   SAFE_ALLOCATE(rwork(1:max(1, 3*n-2)))
-  call lapack_heev('V','U', n, a(1, 1), n, e(1), work(1), lwork, rwork(1), info)
+  call lapack_heev('V','U', n, a(1, 1), LD(a), e(1), work(1), lwork, rwork(1), info)
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(rwork)
 
@@ -899,18 +899,18 @@ subroutine dsym_inverter(uplo, n, a)
     subroutine DLAPACK(sytrf) (uplo, n, a, lda, ipiv, work, lwork, info)
       character(1), intent(in)    :: uplo
       integer,      intent(in)    :: n, lda, lwork
-      FLOAT,        intent(inout) :: a(n,n)
-      integer,      intent(out)   :: ipiv(n)
-      FLOAT,        intent(inout) :: work(n)
+      FLOAT,        intent(inout) :: a
+      integer,      intent(out)   :: ipiv
+      FLOAT,        intent(inout) :: work
       integer,      intent(out)   :: info
     end subroutine DLAPACK(sytrf)
 
     subroutine DLAPACK(sytri) (uplo, n, a, lda, ipiv, work, info )
       character(1), intent(in)    :: uplo
       integer,      intent(in)    :: n, lda
-      FLOAT,        intent(inout) :: a(n,n)
-      integer,      intent(in)    :: ipiv(n)
-      FLOAT,        intent(inout) :: work(n)
+      FLOAT,        intent(inout) :: a
+      integer,      intent(in)    :: ipiv
+      FLOAT,        intent(inout) :: work
       integer,      intent(out)   :: info
     end subroutine DLAPACK(sytri)
   end interface
@@ -924,13 +924,13 @@ subroutine dsym_inverter(uplo, n, a)
   SAFE_ALLOCATE(work(1:n))
   SAFE_ALLOCATE(ipiv(1:n))
 
-  call DLAPACK(sytrf)(uplo, n, a, n, ipiv, work, n, info)
+  call DLAPACK(sytrf)(uplo, n, a(1, 1), LD(a), ipiv(1), work(1), n, info)
   if(info < 0) then
     write(message(1), '(3a, i3)') 'In dsym_inverter, LAPACK ', TOSTRING(DLAPACK(sytrf)), ' returned info = ', info
     call write_fatal(1)
   end if
 
-  call DLAPACK(sytri)(uplo, n, a, n, ipiv, work, info)
+  call DLAPACK(sytri)(uplo, n, a(1, 1), LD(a), ipiv(1), work(1), info)
   if(info /= 0) then
     write(message(1), '(3a, i3)') 'In dsym_inverter, LAPACK ', TOSTRING(DLAPACK(sytri)), ' returned info = ', info
     call write_fatal(1)
@@ -952,18 +952,18 @@ subroutine zsym_inverter(uplo, n, a)
     subroutine ZLAPACK(sytrf) (uplo, n, a, lda, ipiv, work, lwork, info)
       character(1), intent(in)    :: uplo
       integer,      intent(in)    :: n, lda, lwork
-      CMPLX,        intent(inout) :: a(n,n) 
-      integer,      intent(out)   :: ipiv(n)
-      CMPLX,        intent(inout) :: work(n)
+      CMPLX,        intent(inout) :: a 
+      integer,      intent(out)   :: ipiv
+      CMPLX,        intent(inout) :: work
       integer,      intent(out)   :: info
     end subroutine ZLAPACK(sytrf)
 
     subroutine ZLAPACK(sytri) (uplo, n, a, lda, ipiv, work, info )
       character(1), intent(in)    :: uplo
       integer,      intent(in)    :: n, lda
-      CMPLX,        intent(inout) :: a(n,n)
-      integer,      intent(in)    :: ipiv(n)
-      CMPLX,        intent(inout) :: work(n)
+      CMPLX,        intent(inout) :: a
+      integer,      intent(in)    :: ipiv
+      CMPLX,        intent(inout) :: work
       integer,      intent(out)   :: info
     end subroutine ZLAPACK(sytri)
   end interface
@@ -976,13 +976,13 @@ subroutine zsym_inverter(uplo, n, a)
 
   SAFE_ALLOCATE(work(1:n))
   SAFE_ALLOCATE(ipiv(1:n))
-  call ZLAPACK(sytrf)(uplo, n, a, n, ipiv, work, n, info)
+  call ZLAPACK(sytrf)(uplo, n, a(1, 1), LD(a), ipiv(1), work(1), n, info)
   if(info < 0) then
     write(message(1), '(3a, i3)') 'In zsym_inverter, LAPACK ', TOSTRING(ZLAPACK(sytrf)), ' returned info = ', info
     call write_fatal(1)
   end if
 
-  call ZLAPACK(sytri)(uplo, n, a, n, ipiv, work, info)
+  call ZLAPACK(sytri)(uplo, n, a(1, 1), LD(a), ipiv(1), work(1), info)
   if(info /= 0) then
     write(message(1), '(3a, i3)') 'In zsym_inverter, LAPACK ', TOSTRING(ZLAPACK(zsytri)), ' returned info = ', info
     call write_fatal(1)

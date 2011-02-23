@@ -159,6 +159,9 @@
     call pop_sub(__FILE__//"."//TOSTRING(routine)); _newline_ \
   endif
 
+! the leading dimension of the array
+#define LD(a) ubound(a,dim=1)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
