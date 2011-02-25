@@ -18,10 +18,10 @@ Input: 03-xc.lda_c_wigner.inp
 match ; lda_c_wigner                           ; GREP(out, 'Correlation =', 20) ; -0.04403771
 
 Input: 03-xc.lda_c_rpa.inp
-match ; lda_c_rpa                              ; GREP(out, 'Correlation =', 20) ; -0.04103201
+match ; lda_c_rpa                              ; GREP(out, 'Correlation =', 20) ; -0.04203203
 
 Input: 03-xc.lda_c_hl.inp
-match ; lda_c_hl                               ; GREP(out, 'Correlation =', 20) ;  -0.04827922
+match ; lda_c_hl                               ; GREP(out, 'Correlation =', 20) ; -0.04827922
 
 Input: 03-xc.lda_c_gl.inp
 match ; lda_c_gl                               ; GREP(out, 'Correlation =', 20) ; -0.04909824
