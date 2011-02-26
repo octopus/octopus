@@ -70,6 +70,8 @@ module forces_m
     dforces_born_charges,      &
     zforces_born_charges
 
+  type(profile_t), save :: prof_comm
+
 contains
 
   ! ---------------------------------------------------------
