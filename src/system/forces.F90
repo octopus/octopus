@@ -21,6 +21,7 @@
 
 module forces_m
   use born_charges_m
+  use comm_m
   use datasets_m
   use derivatives_m
   use epot_m

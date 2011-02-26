@@ -21,6 +21,7 @@
 
 module projector_m
   use batch_m
+  use comm_m
   use double_grid_m
   use geometry_m
   use global_m

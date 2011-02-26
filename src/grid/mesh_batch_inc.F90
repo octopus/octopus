@@ -111,12 +111,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 #ifdef HAVE_MPI
   if(mesh%parallel_in_domains .and. reduce_) then
     call profiling_in(profcomm, "DOTP_BATCH_REDUCE")
-#ifndef HAVE_MPI2
-    SAFE_ALLOCATE(ddtmp(1:aa%nst, 1:bb%nst))
-    forall(ist = 1:aa%nst, jst = 1:bb%nst) ddtmp(ist, jst) = dd(ist, jst)
-#endif
-    call MPI_Allreduce(MPI_IN_PLACE_OR(ddtmp), dd, aa%nst*bb%nst, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
-    SAFE_DEALLOCATE_A(ddtmp)
+    call comm_allreduce(mesh%mpi_grp%comm, dd, dim = (/aa%nst, bb%nst/))
     call profiling_out(profcomm)
   end if
 #endif
@@ -139,9 +134,6 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
 
   integer :: ist, jst, idim, sp, block_size, ep, ip, lda
   R_TYPE :: ss
-#ifdef HAVE_MPI
-  R_TYPE, allocatable :: dottmp(:, :)
-#endif
   type(profile_t), save :: prof, profgemm, profcomm
   logical :: use_blas, reduce_
 
@@ -152,10 +144,8 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   ASSERT(ubound(dot, dim = 1) == aa%nst .and. ubound(dot, dim = 2) == aa%nst)
   ASSERT(aa%states(1)%ist == 1)
 
-#ifdef HAVE_MPI
   reduce_ = .true.
   if(present(reduce)) reduce_ = reduce
-#endif
 
   use_blas = associated(aa%X(psicont)) .and. (.not. mesh%use_curvilinear)
 
@@ -223,19 +213,11 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
     forall(jst = 1:ist - 1) dot(jst, ist) = R_CONJ(dot(ist, jst))
   end forall
 
-#ifdef HAVE_MPI
   if(mesh%parallel_in_domains .and. reduce_) then
     call profiling_in(profcomm, "BATCH_SELF_REDUCE")
-    ASSERT(ubound(dot, dim = 1) == aa%nst)
-#ifndef HAVE_MPI2
-    SAFE_ALLOCATE(dottmp(1:aa%nst, 1:aa%nst))
-    forall(ist = 1:aa%nst, jst = 1:aa%nst) dottmp(ist, jst) = dot(ist, jst)
-#endif
-    call MPI_Allreduce(MPI_IN_PLACE_OR(dottmp), dot, aa%nst**2, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
-    SAFE_DEALLOCATE_A(dottmp)
+    call comm_allreduce(mesh%mpi_grp%comm, dot, dim = (/aa%nst, aa%nst/))
     call profiling_out(profcomm)
   end if
-#endif
 
   call profiling_out(prof)
   POP_SUB(X(mesh_batch_dotp_self))

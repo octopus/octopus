@@ -22,6 +22,7 @@
 module submesh_m
   use batch_m
   use blas_m
+  use comm_m
   use global_m
   use lalg_basic_m
   use messages_m

@@ -20,9 +20,9 @@
 #include "global.h"
 
 module mesh_batch_m
-  use comm_m
   use batch_m
   use blas_m
+  use comm_m
   use global_m
   use hardware_m
   use index_m

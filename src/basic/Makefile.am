@@ -82,6 +82,7 @@ noinst_HEADERS =               \
 	varia.h                \
 	io_binary.h            \
 	io_csv.h               \
+	comm_inc.F90           \
 	opencl_inc.F90         \
 	opencl_iface_inc.F90
 

@@ -22,6 +22,7 @@
 module mesh_function_m
   use batch_m
   use blas_m
+  use comm_m
   use cube_function_m
   use global_m
   use hardware_m
@@ -100,9 +101,7 @@ module mesh_function_m
   type(profile_t), save ::            &
        C_PROFILING_MF_INTEGRATE,      &
        C_PROFILING_MF_DOTP,           &
-#ifdef HAVE_MPI       
        C_PROFILING_MF_REDUCE,         &
-#endif
        C_PROFILING_MF_NRM2
 
 contains

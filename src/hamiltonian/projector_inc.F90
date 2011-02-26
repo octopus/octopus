@@ -61,10 +61,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   R_TYPE, allocatable :: reduce_buffer(:), lpsi(:, :)
   integer, allocatable :: ireduce(:, :, :, :)
   type(profile_t), save :: prof
-#if defined(HAVE_MPI)
   type(profile_t), save :: reduce_prof
-  R_TYPE, allocatable   :: reduce_buffer_dest(:)
-#endif
 
   PUSH_SUB(X(project_psi_batch))
   call profiling_in(prof, "VNLPSI")
@@ -155,19 +152,11 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   SAFE_DEALLOCATE_A(lpsi)
   !$omp end parallel
 
-#if defined(HAVE_MPI)
   if(mesh%parallel_in_domains) then
     call profiling_in(reduce_prof, "VNLPSI_REDUCE_BATCH")
-#ifndef HAVE_MPI2
-    SAFE_ALLOCATE(reduce_buffer_dest(1:nreduce))
-    call lalg_copy(nreduce, reduce_buffer, reduce_buffer_dest)
-#endif
-    call MPI_Allreduce(MPI_IN_PLACE_OR(reduce_buffer_dest(1)), reduce_buffer(1), nreduce, &
-      R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-    SAFE_DEALLOCATE_A(reduce_buffer_dest)
+    call comm_allreduce(mesh%mpi_grp%comm, reduce_buffer, dim = nreduce)
     call profiling_out(reduce_prof)
   end if
-#endif
 
   ! calculate |ppsi> += |p><p|psi>
   !$omp parallel private(ist, ipj, ns, lpsi, ll, mm, ii, idim, is)

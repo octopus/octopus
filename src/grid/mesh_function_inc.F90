@@ -25,9 +25,6 @@ R_TYPE function X(mf_integrate) (mesh, ff) result(dd)
   R_TYPE,       intent(in) :: ff(:)  ! ff(mesh%np)
 
   integer :: ip
-#ifdef HAVE_MPI
-  R_TYPE :: d_local
-#endif
 
   call profiling_in(C_PROFILING_MF_INTEGRATE, 'MF_INTEGRATE')
   PUSH_SUB(X(mf_integrate))
@@ -46,14 +43,11 @@ R_TYPE function X(mf_integrate) (mesh, ff) result(dd)
     dd = dd*mesh%vol_pp(1)
   end if
 
-#ifdef HAVE_MPI
   if(mesh%parallel_in_domains) then
     call profiling_in(C_PROFILING_MF_REDUCE, "MF_REDUCE")
-    d_local = dd
-    call MPI_Allreduce(d_local, dd, 1, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
+    call comm_allreduce(mesh%mpi_grp%comm, dd)
     call profiling_out(C_PROFILING_MF_REDUCE)
   end if
-#endif
   
   POP_SUB(X(mf_integrate))
   call profiling_out(C_PROFILING_MF_INTEGRATE)
@@ -89,7 +83,6 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
      ! no complex conjugation.  Default is false.
      ! has no effect if working with real version
 
-  R_TYPE              :: dotp_tmp
   logical             :: reduce_
 #ifdef R_TCOMPLEX
   logical             :: dotu_
@@ -115,18 +108,18 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
 #endif
 
   if(mesh%use_curvilinear) then
-    dotp_tmp = M_ZERO
+    dotp = M_ZERO
     ! preprocessor conditionals necessary since lalg_dotu only exists for complex input
 #ifdef R_TCOMPLEX
     if (.not. dotu_) then
 #endif
       do ip = 1, mesh%np
-        dotp_tmp = dotp_tmp + mesh%vol_pp(ip)*R_CONJ(f1(ip))*f2(ip)
+        dotp = dotp + mesh%vol_pp(ip)*R_CONJ(f1(ip))*f2(ip)
       end do
 #ifdef R_TCOMPLEX
     else
       do ip = 1, mesh%np
-        dotp_tmp = dotp_tmp + mesh%vol_pp(ip)*f1(ip)*f2(ip)
+        dotp = dotp + mesh%vol_pp(ip)*f1(ip)*f2(ip)
       end do
     endif
 #endif
@@ -135,24 +128,21 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
 #ifdef R_TCOMPLEX
     if (.not. dotu_) then
 #endif
-      dotp_tmp = lalg_dot(mesh%np, f1(:),  f2(:))*mesh%vol_pp(1)
+      dotp = lalg_dot(mesh%np, f1(:), f2(:))*mesh%vol_pp(1)
 #ifdef R_TCOMPLEX
     else
-      dotp_tmp = lalg_dotu(mesh%np, f1(:),  f2(:))*mesh%vol_pp(1)
+      dotp = lalg_dotu(mesh%np, f1(:), f2(:))*mesh%vol_pp(1)
     endif
 #endif
-    call profiling_count_operations(mesh%np * (R_ADD + R_MUL))
+    call profiling_count_operations(mesh%np*(R_ADD + R_MUL))
 
   end if
 
-  dotp = dotp_tmp
-#if defined(HAVE_MPI)
   if(mesh%parallel_in_domains.and.reduce_) then
     call profiling_in(C_PROFILING_MF_REDUCE, "MF_REDUCE")
-    call MPI_Allreduce(dotp_tmp, dotp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+    call comm_allreduce(mesh%vp%comm, dotp)
     call profiling_out(C_PROFILING_MF_REDUCE)
   end if
-#endif
 
   POP_SUB(X(mf_dotp_1))
   call profiling_out(C_PROFILING_MF_DOTP)
@@ -172,10 +162,7 @@ R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu) result(dotp)
 
   integer :: idim
   logical :: dotu_
-#ifdef HAVE_MPI
   logical :: reduce_
-  R_TYPE :: dotp_tmp
-#endif
 
   PUSH_SUB(X(mf_dotp_2))
 
@@ -189,7 +176,6 @@ R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu) result(dotp)
     dotp = dotp + X(mf_dotp_1)(mesh, f1(:, idim), f2(:, idim), reduce = .false., dotu = dotu_)
   end do
 
-#ifdef HAVE_MPI
   reduce_ = .true.
   if(present(reduce)) then
     reduce_ = reduce
@@ -197,11 +183,9 @@ R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu) result(dotp)
 
   if(mesh%parallel_in_domains.and.reduce_) then
     call profiling_in(C_PROFILING_MF_REDUCE, "MF_REDUCE")
-    dotp_tmp = dotp
-    call MPI_Allreduce(dotp_tmp, dotp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+    call comm_allreduce(mesh%vp%comm, dotp)
     call profiling_out(C_PROFILING_MF_REDUCE)
   end if
-#endif
 
   POP_SUB(X(mf_dotp_2))
 
@@ -210,11 +194,10 @@ end function X(mf_dotp_2)
 ! ---------------------------------------------------------
 ! this function returns the the norm of a vector
 FLOAT function X(mf_nrm2_1)(mesh, ff, reduce) result(nrm2)
-  type(mesh_t), intent(in) :: mesh
-  R_TYPE,       intent(in) :: ff(:)
+  type(mesh_t),      intent(in) :: mesh
+  R_TYPE,            intent(in) :: ff(:)
   logical, optional, intent(in) :: reduce
-
-  FLOAT               :: nrm2_tmp
+ 
   logical             :: reduce_
   R_TYPE, allocatable :: ll(:)
 
@@ -224,31 +207,23 @@ FLOAT function X(mf_nrm2_1)(mesh, ff, reduce) result(nrm2)
   if(mesh%use_curvilinear) then
     SAFE_ALLOCATE(ll(1:mesh%np))
     ll(1:mesh%np) = ff(1:mesh%np)*sqrt(mesh%vol_pp(1:mesh%np))
-    nrm2_tmp = lalg_nrm2(mesh%np, ll)
+    nrm2 = lalg_nrm2(mesh%np, ll)
     SAFE_DEALLOCATE_A(ll)
   else
-    nrm2_tmp = lalg_nrm2(mesh%np, ff)*sqrt(mesh%vol_pp(1))
+    nrm2 = lalg_nrm2(mesh%np, ff)*sqrt(mesh%vol_pp(1))
   end if
 
   reduce_ = .true.
-#if defined(HAVE_MPI)
   if(present(reduce)) then
     reduce_ = reduce
   endif
-#endif
 
   if(mesh%parallel_in_domains .and. reduce_) then
-#if defined(HAVE_MPI)
-    nrm2_tmp = nrm2_tmp**2
     call profiling_in(C_PROFILING_MF_REDUCE, "MF_REDUCE")
-    call MPI_Allreduce(nrm2_tmp, nrm2, 1, MPI_FLOAT, MPI_SUM, mesh%vp%comm, mpi_err)
-    call profiling_out(C_PROFILING_MF_REDUCE)
+    nrm2 = nrm2**2
+    call comm_allreduce(mesh%vp%comm, nrm2)
     nrm2 = sqrt(nrm2)
-#else
-    ASSERT(.false.)
-#endif
-  else
-    nrm2 = nrm2_tmp
+    call profiling_out(C_PROFILING_MF_REDUCE)
   end if
 
   POP_SUB(X(mf_nrm2_1))

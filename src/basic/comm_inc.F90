@@ -19,6 +19,21 @@
 
 ! -----------------------------------------------------------------------------
 
+subroutine X(comm_allreduce_0)(comm, aa)
+  integer,                          intent(in)    :: comm
+  R_TYPE,                           intent(inout) :: aa
+
+  R_TYPE :: aac
+
+#if defined(HAVE_MPI)
+  aac = aa
+  call MPI_Allreduce(aac, aa, 1, R_MPITYPE, MPI_SUM, comm, mpi_err)
+#endif
+
+end subroutine X(comm_allreduce_0)
+
+! -----------------------------------------------------------------------------
+
 subroutine X(comm_allreduce_1)(comm, aa, dim)
   integer,                          intent(in)    :: comm
   R_TYPE,                           intent(inout) :: aa(:)
@@ -48,6 +63,34 @@ subroutine X(comm_allreduce_1)(comm, aa, dim)
 #endif
 
 end subroutine X(comm_allreduce_1)
+
+! -----------------------------------------------------------------------------
+
+subroutine X(comm_allreduce_2)(comm, aa, dim)
+  integer,                          intent(in)    :: comm
+  R_TYPE,                           intent(inout) :: aa(:, :)
+  integer, optional,                intent(in)    :: dim(1:2)
+
+  integer :: dim_(1:2), ii
+#ifdef HAVE_MPI
+  R_TYPE, allocatable :: aac(:)
+#endif
+  
+  dim_ = ubound(aa)
+  if(present(dim)) dim_ = dim  
+
+  ASSERT(all(ubound(aa) >= dim_))
+
+#if defined(HAVE_MPI)
+  SAFE_ALLOCATE(aac(1:dim_(1)))
+  do ii = 1, dim_(2)
+    aac(1:dim_(1)) = aa(1:dim_(1), ii)
+    call MPI_Allreduce(aac(1), aa(1, ii), dim_(1), R_MPITYPE, MPI_SUM, comm, mpi_err)
+  end do
+  SAFE_DEALLOCATE_A(aac)
+#endif
+
+end subroutine X(comm_allreduce_2)
 
 ! -----------------------------------------------------------------------------
 

@@ -22,10 +22,6 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
   type(submesh_t),   intent(in) :: sm
   R_TYPE, optional,  intent(in) :: ff(:)
 
-#if defined(HAVE_MPI)
-  R_TYPE :: tmp
-#endif
-
   PUSH_SUB(X(sm_integrate))
 
   ASSERT(present(ff) .or. sm%ns .eq. 0)
@@ -40,12 +36,7 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
     res = M_ZERO
   endif
 
-#if defined(HAVE_MPI)
-  if(mesh%parallel_in_domains) then
-    call MPI_Allreduce(res, tmp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-    res = tmp
-  end if
-#endif
+  if(mesh%parallel_in_domains) call comm_allreduce(mesh%vp%comm, res)
 
   POP_SUB(X(sm_integrate))
 end function X(sm_integrate)
@@ -82,9 +73,6 @@ R_TYPE function X(dsubmesh_to_mesh_dotp)(this, dim, sphi, phi, reduce) result(do
 
   integer :: is, idim
   logical :: reduce_
-#ifdef HAVE_MPI
-  R_TYPE  :: tmp
-#endif
 
   PUSH_SUB(X(dsubmesh_to mesh_dotp))
 
@@ -108,12 +96,7 @@ R_TYPE function X(dsubmesh_to_mesh_dotp)(this, dim, sphi, phi, reduce) result(do
     dotp = dotp*this%mesh%vol_pp(1)
   end if
 
-#if defined(HAVE_MPI)
-  if(reduce_ .and. this%mesh%parallel_in_domains) then
-    call MPI_Allreduce(dotp, tmp, 1, R_MPITYPE, MPI_SUM, this%mesh%vp%comm, mpi_err)
-    dotp = tmp
-  end if
-#endif
+  if(reduce_ .and. this%mesh%parallel_in_domains) call comm_allreduce(this%mesh%vp%comm, dotp)
 
   POP_SUB(X(dsubmesh_to mesh_dotp))
 end function X(dsubmesh_to_mesh_dotp)
@@ -291,14 +274,7 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
 
 #if defined(HAVE_MPI)
   if(reduce_ .and. this%mesh%parallel_in_domains) then
-    ! we have to use two copies, since we do not know the size of dot
-    SAFE_ALLOCATE(tmp1(1:mm%nst, 1:ss%nst))
-    SAFE_ALLOCATE(tmp2(1:mm%nst, 1:ss%nst))
-    tmp1(1:mm%nst, 1:ss%nst) = dot(1:mm%nst, 1:ss%nst)
-    call MPI_Allreduce(tmp1(1, 1), tmp2(1, 1), mm%nst*ss%nst, R_MPITYPE, MPI_SUM, this%mesh%vp%comm, mpi_err)
-    dot(1:mm%nst, 1:ss%nst) = tmp2(1:mm%nst, 1:ss%nst)
-    SAFE_DEALLOCATE_A(tmp1)
-    SAFE_DEALLOCATE_A(tmp2)
+    call comm_allreduce(this%mesh%mpi_grp%comm, dot, dim = (/mm%nst, ss%nst/))
   end if
 #endif
 
