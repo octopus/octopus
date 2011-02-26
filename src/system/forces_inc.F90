@@ -21,7 +21,7 @@ subroutine X(forces_gather)(geo, force)
   type(geometry_t), intent(in)    :: geo
   R_TYPE,           intent(inout) :: force(:, :)
   
-  R_TYPE,  allocatable  :: force_local(:, :)
+  R_TYPE,  allocatable :: force_local(:, :)
   integer, allocatable :: recv_count(:), recv_displ(:)
 
   call profiling_in(prof_comm, "FORCES_COMM")
@@ -57,6 +57,50 @@ end subroutine X(forces_gather)
 
 !---------------------------------------------------------------------------
 
+subroutine X(forces_from_local_potential)(gr, geo, ep, st, time, gdensity, force)
+  type(grid_t),                   intent(inout) :: gr
+  type(geometry_t),               intent(inout) :: geo
+  type(epot_t),                   intent(inout) :: ep
+  type(states_t),                 intent(inout) :: st
+  FLOAT,                          intent(in)    :: time
+  R_TYPE,                         intent(in)    :: gdensity(:, :)
+  R_TYPE,                         intent(inout) :: force(:, :)
+
+  FLOAT,  allocatable :: vloc(:)
+  R_TYPE, pointer     :: zvloc(:)
+  integer             :: ip, idir, iatom
+ 
+  SAFE_ALLOCATE(vloc(1:gr%mesh%np))
+  SAFE_ALLOCATE(zvloc(1:gr%mesh%np))
+  
+  do iatom = geo%atoms_dist%start, geo%atoms_dist%end
+
+    if(.not.simul_box_in_box(gr%mesh%sb, geo, geo%atom(iatom)%x) .and. ep%ignore_external_ions) then
+      force(1:gr%mesh%sb%dim, iatom) = M_ZERO
+      cycle
+    end if
+    
+    vloc(1:gr%mesh%np) = M_ZERO
+    
+    call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, vloc, time)
+
+    forall(ip = 1:gr%mesh%np) zvloc(ip) = vloc(ip)
+
+    do idir = 1, gr%mesh%sb%dim
+      force(idir, iatom) = -X(mf_dotp)(gr%mesh, zvloc, gdensity(:, idir))
+    end do
+
+  end do
+
+  if(geo%atoms_dist%parallel) call X(forces_gather)(geo, force)
+
+  SAFE_DEALLOCATE_A(vloc)
+  SAFE_DEALLOCATE_P(zvloc)
+
+end subroutine X(forces_from_local_potential)
+
+!---------------------------------------------------------------------------
+
 subroutine X(forces_from_potential)(gr, geo, ep, st, time)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(inout) :: geo
@@ -68,7 +112,6 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time)
   FLOAT :: ff, kpoint(1:MAX_DIM)
   R_TYPE, allocatable :: psi(:, :)
   R_TYPE, allocatable :: grad_psi(:, :, :)
-  FLOAT,  allocatable :: vloc(:)
   FLOAT,  allocatable :: grad_rho(:, :), force(:, :)
   CMPLX :: phase
 #ifdef HAVE_MPI
@@ -167,31 +210,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time)
     geo%atom(iatom)%f(1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim) + force(1:gr%mesh%sb%dim, iatom)
   end do
 
-  ! THE LOCAL PART (parallel in atoms)
-
-  SAFE_ALLOCATE(vloc(1:np))
-
-  do iatom = geo%atoms_dist%start, geo%atoms_dist%end
-
-    if(.not.simul_box_in_box(gr%mesh%sb, geo, geo%atom(iatom)%x) .and. ep%ignore_external_ions) then
-      force(1:gr%mesh%sb%dim, iatom) = M_ZERO
-      cycle
-    end if
-
-    vloc(1:np) = M_ZERO
-
-    call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, vloc, time)
-
-    do idir = 1, gr%mesh%sb%dim
-      force(idir, iatom) = -dmf_dotp(gr%mesh, vloc, grad_rho(:, idir))
-    end do
-
-  end do
-
-  SAFE_DEALLOCATE_A(vloc)
-  SAFE_DEALLOCATE_A(grad_rho)
-
-  if(geo%atoms_dist%parallel) call dforces_gather(geo, force)
+  call dforces_from_local_potential(gr, geo, ep, st, time, grad_rho, force)
 
   do iatom = 1, geo%natoms
     do idir = 1, gr%mesh%sb%dim
@@ -229,8 +248,7 @@ subroutine X(forces_born_charges)(gr, geo, ep, st, time, lr, lr2, lr_dir, born_c
   R_TYPE, allocatable :: grad_psi(:, :, :)
   R_TYPE, allocatable :: grad_dl_psi(:, :, :)
   R_TYPE, allocatable :: grad_dl_psi2(:, :, :)
-  FLOAT,  allocatable :: vloc(:)
-  CMPLX,  allocatable :: grad_rho(:, :), force(:, :), zvloc(:)
+  CMPLX,  allocatable :: grad_rho(:, :), force(:, :)
   CMPLX :: phase
 #ifdef HAVE_MPI
   CMPLX, allocatable  :: force_local(:, :), grad_rho_local(:, :)
@@ -350,35 +368,9 @@ subroutine X(forces_born_charges)(gr, geo, ep, st, time, lr, lr2, lr_dir, born_c
     born_charges%charge(lr_dir, 1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom)
   end do
 
-  ! THE LOCAL PART (parallel in atoms)
+  call zforces_from_local_potential(gr, geo, ep, st, time, grad_rho, force)
 
-  SAFE_ALLOCATE(vloc(1:np))
-  SAFE_ALLOCATE(zvloc(1:np))
-  
-  do iatom = geo%atoms_dist%start, geo%atoms_dist%end
-
-    if(.not.simul_box_in_box(gr%mesh%sb, geo, geo%atom(iatom)%x) .and. ep%ignore_external_ions) then
-      force(1:gr%mesh%sb%dim, iatom) = M_ZERO
-      cycle
-    end if
-    
-    vloc(1:np) = M_ZERO
-    
-    call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, vloc, time)
-
-    forall(ip = 1:np) zvloc(ip) = vloc(ip)
-
-    do idir = 1, gr%mesh%sb%dim
-      force(idir, iatom) = -zmf_dotp(gr%mesh, zvloc, grad_rho(:, idir))
-    end do
-
-  end do
-
-  SAFE_DEALLOCATE_A(vloc)
-  SAFE_DEALLOCATE_A(zvloc)
   SAFE_DEALLOCATE_A(grad_rho)
-
-  if(geo%atoms_dist%parallel) call zforces_gather(geo, force)
 
   do iatom = 1, geo%natoms
     born_charges%charge(lr_dir, lr_dir, iatom) = born_charges%charge(lr_dir, lr_dir, iatom) + species_zval(geo%atom(iatom)%spec)
