@@ -20,6 +20,7 @@
 #include "global.h"
 
 module eigen_cg_m
+  use comm_m
   use global_m
   use grid_m
   use hamiltonian_m

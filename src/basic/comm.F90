@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2010 X. Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -15,54 +15,43 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id$
+!! $Id: comm.F90 3587 2007-11-22 16:43:00Z xavier $
 
 #include "global.h"
 
-module mesh_batch_m
-  use comm_m
-  use batch_m
-  use blas_m
+module comm_m
   use global_m
-  use hardware_m
-  use index_m
-  use lalg_basic_m
-  use loct_math_m
-  use math_m
-  use mesh_m
-  use mesh_function_m
   use messages_m
   use mpi_m
-  use par_vec_m
-  use profiling_m
   use types_m
+  use profiling_m
 
-  implicit none
+  implicit none 
 
   private
-  public ::                         &
-    dmesh_batch_dotp_matrix,        &
-    zmesh_batch_dotp_matrix,        &
-    dmesh_batch_dotp_vector,        &
-    zmesh_batch_dotp_vector,        &
-    dmesh_batch_dotp_self,          &
-    zmesh_batch_dotp_self,          &
-    dmesh_batch_rotate,             &
-    zmesh_batch_rotate,             &
-    dmesh_batch_exchange_points,    &
-    zmesh_batch_exchange_points
+
+  public ::                       &
+    comm_allreduce
+
+  interface comm_allreduce
+    module procedure dcomm_allreduce_1, zcomm_allreduce_1, icomm_allreduce_1
+  end interface
 
 contains
-
+  
 #include "undef.F90"
 #include "real.F90"
-#include "mesh_batch_inc.F90"
-
+#include "comm_inc.F90"
+  
 #include "undef.F90"
 #include "complex.F90"
-#include "mesh_batch_inc.F90"
+#include "comm_inc.F90"
 
-end module mesh_batch_m
+#include "undef.F90"
+#include "integer.F90"
+#include "comm_inc.F90"
+
+end module comm_m
 
 !! Local Variables:
 !! mode: f90

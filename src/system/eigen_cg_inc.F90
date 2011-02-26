@@ -37,9 +37,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   real(8)  :: cg0, e0, res
   integer  :: p, iter, maxter, idim, ip
   logical  :: verbose_
-#ifdef HAVE_MPI
-  R_TYPE   :: sb(3), rb(3)
-#endif
+  R_TYPE   :: sb(3)
 
   PUSH_SUB(X(eigensolver_cg2))
 
@@ -109,13 +107,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       es(1) = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:,:, p, ik), g, reduce = .false.)
       es(2) = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:,:, p, ik), ppsi, reduce = .false.)
 
-#ifdef HAVE_MPI
-      if(gr%mesh%parallel_in_domains) then
-        sb(1) = es(1)
-        sb(2) = es(2)
-        call MPI_Allreduce(sb, es, 2, R_MPITYPE, MPI_SUM, gr%mesh%vp%comm, mpi_err)
-      end if
-#endif  
+      if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%vp%comm, es, dim = 2)
 
       es(1) = es(1)/es(2)
 
@@ -137,15 +129,13 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 
       gg = X(mf_dotp) (gr%mesh, st%d%dim, g, g0, reduce = .false.)
 
-#ifdef HAVE_MPI
       if(gr%mesh%parallel_in_domains) then
         sb(1) = gg1
         sb(2) = gg
-        call MPI_Allreduce(sb, rb, 2, R_MPITYPE, MPI_SUM, gr%mesh%vp%comm, mpi_err)
-        gg1 = rb(1)
-        gg  = rb(2)
+        call comm_allreduce(gr%mesh%vp%comm, sb, dim = 2)
+        gg1 = sb(1)
+        gg  = sb(2)
       end if
-#endif
 
       if( abs(gg) < M_EPSILON ) then
         if(converged == p - 1) converged = p ! only consider the first converged eigenvectors
@@ -184,17 +174,15 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       b0 = X(mf_dotp) (gr%mesh, st%d%dim, cg(:,:), ppsi, reduce = .false.)
       cg0 = X(mf_nrm2) (gr%mesh, st%d%dim, cg(:,:), reduce = .false.)
 
-#ifdef HAVE_MPI
       if(gr%mesh%parallel_in_domains) then
         sb(1) = a0
         sb(2) = b0
         sb(3) = cg0**2
-        call MPI_Allreduce(sb, rb, 3, R_MPITYPE, MPI_SUM, gr%mesh%vp%comm, mpi_err)
-        a0 = rb(1)
-        b0 = rb(2)
-        cg0 = sqrt(rb(3))
+        call comm_allreduce(gr%mesh%vp%comm, sb, dim = 3)
+        a0 = sb(1)
+        b0 = sb(2)
+        cg0 = sqrt(sb(3))
       end if
-#endif
 
       a0 = M_TWO * a0 / cg0
       b0 = b0/cg0**2

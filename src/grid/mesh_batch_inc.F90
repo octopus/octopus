@@ -326,20 +326,15 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce)
   logical, optional, intent(in)    :: reduce
 
   integer :: ist
-#ifdef HAVE_MPI
-  R_TYPE, allocatable :: dottmp(:)
   logical :: reduce_
-#endif
   type(profile_t), save :: prof, profcomm
 
   PUSH_SUB(X(mesh_batch_dotp_vector))
   call profiling_in(prof, "DOTPV_BATCH")
 
-#ifdef HAVE_MPI
   reduce_ = .true.
   if(present(reduce)) reduce_ = reduce
-#endif
-
+  
   ASSERT(aa%nst == bb%nst)
   ASSERT(aa%dim == bb%dim)
 
@@ -347,16 +342,11 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce)
     dot(ist) = X(mf_dotp)(mesh, aa%dim, aa%states(ist)%X(psi), bb%states(ist)%X(psi), reduce = .false.)
   end do
   
-#ifdef HAVE_MPI
   if(mesh%parallel_in_domains .and. reduce_) then
     call profiling_in(profcomm, "DOTPV_BATCH_REDUCE")
-    SAFE_ALLOCATE(dottmp(1:aa%nst))
-    forall(ist = 1:aa%nst) dottmp(ist) = dot(ist)
-    call MPI_Allreduce(dottmp(1), dot(1), aa%nst, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
-    SAFE_DEALLOCATE_A(dottmp)
+    call comm_allreduce(mesh%mpi_grp%comm, dot, aa%nst)
     call profiling_out(profcomm)
   end if
-#endif
 
   call profiling_out(prof)
   POP_SUB(X(mesh_batch_dotp_vector))

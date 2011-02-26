@@ -64,7 +64,8 @@ libbasic_a_SOURCES =     \
 	opencl.F90       \
 	space.F90        \
 	blacs.F90        \
-	blacs_proc_grid.F90
+	blacs_proc_grid.F90  \
+	comm.F90
 
 if COMPILE_PAPI
 libbasic_a_SOURCES += papi.c papi_f.F90
@@ -128,6 +129,7 @@ multicomm.o : multicomm.F90 varinfo.o utils.o mpi.o messages.o parser.o io.o glo
 distributed.o: distributed.F90 multicomm.o profiling.o
 calc_mode.o : calc_mode.F90 multicomm.o messages.o
 blacs_proc_grid.o : blacs_proc_grid.F90 blacs.o mpi.o profiling.o messages.o global.o
+comm.o : comm.F90 comm_inc.F90 mpi.o messages.o global.o profiling.o
 
 ialist.o : ialist.F90 messages.o profiling.o
 iihash.o : iihash.F90 ialist.o global.o
