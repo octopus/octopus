@@ -21,6 +21,7 @@
 
 module lalg_basic_m
   use blas_m
+  use global_m
   use multicomm_m
   use profiling_m
 

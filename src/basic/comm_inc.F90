@@ -72,9 +72,7 @@ subroutine X(comm_allreduce_2)(comm, aa, dim)
   integer, optional,                intent(in)    :: dim(1:2)
 
   integer :: dim_(1:2), ii
-#ifdef HAVE_MPI
   R_TYPE, allocatable :: aac(:, :)
-#endif
   
   dim_ = ubound(aa)
   if(present(dim)) dim_ = dim  
