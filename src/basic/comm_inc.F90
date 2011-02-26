@@ -25,11 +25,14 @@ subroutine X(comm_allreduce_0)(comm, aa)
 
   R_TYPE :: aac
 
+  PUSH_SUB(X(comm_allreduce_0))
+
 #if defined(HAVE_MPI)
   aac = aa
   call MPI_Allreduce(aac, aa, 1, R_MPITYPE, MPI_SUM, comm, mpi_err)
 #endif
 
+  POP_SUB(X(comm_allreduce_0))
 end subroutine X(comm_allreduce_0)
 
 ! -----------------------------------------------------------------------------
@@ -43,6 +46,8 @@ subroutine X(comm_allreduce_1)(comm, aa, dim)
 #if defined(HAVE_MPI) && !defined(HAVE_MPI2)
   R_TYPE, allocatable :: aac(:)
 #endif
+
+  PUSH_SUB(X(comm_allreduce_1))
 
   dim1 = ubound(aa, dim = 1)
   if(present(dim)) dim1 = dim  
@@ -62,6 +67,7 @@ subroutine X(comm_allreduce_1)(comm, aa, dim)
 
 #endif
 
+  PUSH_SUB(X(comm_allreduce_1))
 end subroutine X(comm_allreduce_1)
 
 ! -----------------------------------------------------------------------------
@@ -74,6 +80,8 @@ subroutine X(comm_allreduce_2)(comm, aa, dim)
   integer :: dim_(1:2), ii
   R_TYPE, allocatable :: aac(:, :)
   
+  PUSH_SUB(X(comm_allreduce_2))
+
   dim_ = ubound(aa)
   if(present(dim)) dim_ = dim  
 
@@ -112,6 +120,7 @@ subroutine X(comm_allreduce_2)(comm, aa, dim)
 
   SAFE_DEALLOCATE_A(aac)
 
+  POP_SUB(X(comm_allreduce_2))
 end subroutine X(comm_allreduce_2)
 
 ! -----------------------------------------------------------------------------

@@ -24,6 +24,8 @@ subroutine X(forces_gather)(geo, force)
   R_TYPE,  allocatable :: force_local(:, :)
   integer, allocatable :: recv_count(:), recv_displ(:)
 
+  PUSH_SUB(X(forces_gather))
+
   call profiling_in(prof_comm, "FORCES_COMM")
     
   ! each node has a piece of the force array, they have to be
@@ -52,7 +54,7 @@ subroutine X(forces_gather)(geo, force)
   SAFE_DEALLOCATE_A(force_local)
 
   call profiling_out(prof_comm)
-
+  POP_SUB(X(forces_gather))
 end subroutine X(forces_gather)
 
 !---------------------------------------------------------------------------
@@ -70,6 +72,8 @@ subroutine X(forces_from_local_potential)(gr, geo, ep, st, time, gdensity, force
   R_TYPE, pointer     :: zvloc(:)
   integer             :: ip, idir, iatom
  
+  PUSH_SUB(X(forces_from_local_potential))
+
   SAFE_ALLOCATE(vloc(1:gr%mesh%np))
   SAFE_ALLOCATE(zvloc(1:gr%mesh%np))
   
@@ -97,6 +101,7 @@ subroutine X(forces_from_local_potential)(gr, geo, ep, st, time, gdensity, force
   SAFE_DEALLOCATE_A(vloc)
   SAFE_DEALLOCATE_P(zvloc)
 
+  POP_SUB(X(forces_from_local_potential))
 end subroutine X(forces_from_local_potential)
 
 !---------------------------------------------------------------------------
@@ -220,7 +225,6 @@ subroutine X(forces_born_charges)(gr, geo, ep, st, time, lr, lr2, lr_dir, born_c
   integer,                        intent(in)    :: lr_dir
   type(born_charges_t),           intent(out)   :: born_charges
 
-  ! provide these optional arguments to calculate Born effective charges rather than forces
   ! lr, lr2 should be the wfns from electric perturbation in the lr_dir direction
   ! lr is for +omega, lr2 is for -omega.
   ! for each atom, Z*(i,j) = dF(j)/dE(i)
