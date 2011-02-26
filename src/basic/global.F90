@@ -31,11 +31,12 @@ module global_m
 
   ! ---------------------------------------------------------
   ! Public types, variables and procedures.
-  public ::         &
-    conf_t,         &
-    global_init,    &
-    global_end,     &
-    assert_die
+  public ::          &
+    conf_t,          &
+    global_init,     &
+    global_end,      & 
+    assert_die,      &
+    optional_default
 
   type conf_t
     integer :: debug_level   !< How much debug should print
@@ -120,6 +121,10 @@ module global_m
   ! End of declaration of public objects.
   ! ---------------------------------------------------------
 
+  interface optional_default
+    module procedure doptional_default, zoptional_default, ioptional_default, loptional_default
+  end interface optional_default
+
 contains
 
   ! ---------------------------------------------------------
@@ -185,6 +190,46 @@ contains
     write(stderr, '(a,i5,3a,i5,3a)') 'Node ', mpi_world%rank, ': Assertion "', trim(s), '" failed in line ', l, ' in file "', f, '"'
     stop
   end subroutine assert_die
+
+  !----------------------------------------------------------
+
+  FLOAT pure function doptional_default(opt, def) result(val)
+    FLOAT, optional, intent(in) :: opt
+    FLOAT,           intent(in) :: def
+    
+    val = def
+    if(present(opt)) val = opt
+  end function doptional_default
+
+  !----------------------------------------------------------
+
+  CMPLX pure function zoptional_default(opt, def) result(val)
+    CMPLX, optional, intent(in) :: opt
+    CMPLX,           intent(in) :: def
+    
+    val = def
+    if(present(opt)) val = opt
+  end function zoptional_default
+
+  !----------------------------------------------------------
+
+  integer pure function ioptional_default(opt, def) result(val)
+    integer, optional, intent(in) :: opt
+    integer,           intent(in) :: def
+    
+    val = def
+    if(present(opt)) val = opt
+  end function ioptional_default
+  
+  !----------------------------------------------------------
+
+  logical pure function loptional_default(opt, def) result(val)
+    logical, optional, intent(in) :: opt
+    logical,           intent(in) :: def
+    
+    val = def
+    if(present(opt)) val = opt
+  end function loptional_default
 
 end module global_m
 

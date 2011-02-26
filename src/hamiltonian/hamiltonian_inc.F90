@@ -49,8 +49,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   end if
 
   ! all terms are enabled by default
-  terms_ = TERM_ALL
-  if(present(terms)) terms_ = terms
+  terms_ = optional_default(terms, TERM_ALL)
 
   kinetic_only_ = (ieor(terms_, TERM_KINETIC) == 0)
   

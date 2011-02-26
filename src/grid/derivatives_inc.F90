@@ -263,17 +263,15 @@ subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, s
   logical,                optional, intent(in)    :: set_bc
   FLOAT,                  optional, intent(in)    :: factor
 
-  logical :: set_bc_
-
   PUSH_SUB(X(derivatives_batch_start))
 
-  handle%ghost_update = .true.
-  if(present(ghost_update)) handle%ghost_update = ghost_update
+  handle%ghost_update = optional_default(ghost_update, .true.)
 
   handle%op   => op
   handle%der  => der
   handle%ff   => ff
   handle%opff => opff
+
   if(present(factor)) then
     handle%factor_present = .true.
     handle%factor = factor
@@ -283,9 +281,7 @@ subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, s
 
   ASSERT(handle%ff%nst_linear == handle%opff%nst_linear)
 
-  set_bc_ = .true.
-  if(present(set_bc)) set_bc_ = set_bc
-  if(set_bc_) call X(derivatives_batch_set_bc)(der, ff)
+  if(optional_default(set_bc, .true.)) call X(derivatives_batch_set_bc)(der, ff)
 
 #ifdef HAVE_MPI
 
@@ -437,11 +433,8 @@ subroutine X(derivatives_grad)(der, ff, op_ff, ghost_update, set_bc)
 
   ASSERT(ubound(op_ff, DIM=2) >= der%dim)
 
-  set_bc_ = .true.
-  if(present(set_bc)) set_bc_ = set_bc
-
-  ghost_update_ = .true.
-  if(present(ghost_update)) ghost_update_ = ghost_update
+  set_bc_ = optional_default(set_bc, .true.)
+  ghost_update_ = optional_default(ghost_update, .true.)
     
   do idir = 1, der%dim
     call X(derivatives_perform) (der%grad(idir), der, ff, op_ff(:, idir), ghost_update_, set_bc_)

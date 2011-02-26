@@ -83,7 +83,6 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
      ! no complex conjugation.  Default is false.
      ! has no effect if working with real version
 
-  logical             :: reduce_
 #ifdef R_TCOMPLEX
   logical             :: dotu_
 #endif
@@ -95,16 +94,8 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
   ASSERT(ubound(f1, dim = 1) == mesh%np .or. ubound(f1, dim = 1) == mesh%np_part)
   ASSERT(ubound(f2, dim = 1) == mesh%np .or. ubound(f2, dim = 1) == mesh%np_part)
 
-  reduce_ = .true.
-  if(present(reduce)) then
-    reduce_ = reduce
-  end if
-
 #ifdef R_TCOMPLEX
-  dotu_ = .false.
-  if(present(dotu)) then
-    dotu_ = dotu
-  end if
+  dotu_ = optional_default(dotu, .false.)
 #endif
 
   if(mesh%use_curvilinear) then
@@ -138,7 +129,7 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
 
   end if
 
-  if(mesh%parallel_in_domains.and.reduce_) then
+  if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(C_PROFILING_MF_REDUCE, "MF_REDUCE")
     call comm_allreduce(mesh%vp%comm, dotp)
     call profiling_out(C_PROFILING_MF_REDUCE)
@@ -161,27 +152,15 @@ R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu) result(dotp)
      ! no complex conjugation.  Default is false.
 
   integer :: idim
-  logical :: dotu_
-  logical :: reduce_
 
   PUSH_SUB(X(mf_dotp_2))
 
-  dotu_ = .false.
-  if(present(dotu)) then
-    dotu_ = dotu
-  end if
-
   dotp = R_TOTYPE(M_ZERO)
   do idim = 1, dim
-    dotp = dotp + X(mf_dotp_1)(mesh, f1(:, idim), f2(:, idim), reduce = .false., dotu = dotu_)
+    dotp = dotp + X(mf_dotp_1)(mesh, f1(:, idim), f2(:, idim), reduce = .false., dotu = dotu)
   end do
 
-  reduce_ = .true.
-  if(present(reduce)) then
-    reduce_ = reduce
-  endif
-
-  if(mesh%parallel_in_domains.and.reduce_) then
+  if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(C_PROFILING_MF_REDUCE, "MF_REDUCE")
     call comm_allreduce(mesh%vp%comm, dotp)
     call profiling_out(C_PROFILING_MF_REDUCE)
@@ -198,7 +177,6 @@ FLOAT function X(mf_nrm2_1)(mesh, ff, reduce) result(nrm2)
   R_TYPE,            intent(in) :: ff(:)
   logical, optional, intent(in) :: reduce
  
-  logical             :: reduce_
   R_TYPE, allocatable :: ll(:)
 
   call profiling_in(C_PROFILING_MF_NRM2, "MF_NRM2")
@@ -213,12 +191,7 @@ FLOAT function X(mf_nrm2_1)(mesh, ff, reduce) result(nrm2)
     nrm2 = lalg_nrm2(mesh%np, ff)*sqrt(mesh%vol_pp(1))
   end if
 
-  reduce_ = .true.
-  if(present(reduce)) then
-    reduce_ = reduce
-  endif
-
-  if(mesh%parallel_in_domains .and. reduce_) then
+  if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(C_PROFILING_MF_REDUCE, "MF_REDUCE")
     nrm2 = nrm2**2
     call comm_allreduce(mesh%vp%comm, nrm2)
@@ -245,11 +218,7 @@ FLOAT function X(mf_nrm2_2)(mesh, dim, ff, reduce) result(nrm2)
   nrm2 = M_ZERO
 
   do idim = 1, dim
-    if(present(reduce)) then
-      nrm2 = hypot(nrm2, X(mf_nrm2)(mesh, ff(:, idim), reduce = reduce))
-    else
-      nrm2 = hypot(nrm2, X(mf_nrm2)(mesh, ff(:, idim)))
-    end if
+    nrm2 = hypot(nrm2, X(mf_nrm2)(mesh, ff(:, idim), reduce = reduce))
   end do
 
   POP_SUB(X(mf_nrm2_2))

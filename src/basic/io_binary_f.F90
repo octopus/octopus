@@ -45,18 +45,6 @@ module io_binary_m
 
 contains
 
-  integer function optional_def(opt_var, default) result(val)
-    integer, optional, intent(in) :: opt_var
-    integer,           intent(in) :: default
-    
-    if(present(opt_var)) then
-      val = opt_var
-    else
-      val = default
-    end if
-    
-  end function optional_def
-
   ! ------------------------------------------------------
 
   subroutine swrite_binary(fname, np, ff, ierr)
@@ -233,7 +221,7 @@ contains
     PUSH_SUB(sread_binary)
 
     ierr = 0
-    call read_binary(np, optional_def(offset, 0), ff(1), type, ierr, trim(fname))
+    call read_binary(np, optional_default(offset, 0), ff(1), type, ierr, trim(fname))
 
     POP_SUB(sread_binary)
   end subroutine sread_binary
@@ -252,7 +240,7 @@ contains
     PUSH_SUB(dread_binary)
 
     ierr = 0
-    call read_binary(np, optional_def(offset, 0), ff(1), type, ierr, trim(fname))
+    call read_binary(np, optional_default(offset, 0), ff(1), type, ierr, trim(fname))
 
     POP_SUB(dread_binary)
   end subroutine dread_binary
@@ -271,7 +259,7 @@ contains
     PUSH_SUB(cread_binary)
 
     ierr = 0
-    call read_binary(np, optional_def(offset, 0), ff(1), type, ierr, trim(fname))
+    call read_binary(np, optional_default(offset, 0), ff(1), type, ierr, trim(fname))
 
     POP_SUB(cread_binary)
   end subroutine cread_binary
@@ -290,7 +278,7 @@ contains
     PUSH_SUB(zread_binary)
 
     ierr = 0
-    call read_binary(np, optional_def(offset, 0), ff(1), type, ierr, trim(fname))
+    call read_binary(np, optional_default(offset, 0), ff(1), type, ierr, trim(fname))
     
     POP_SUB(zread_binary)
   end subroutine zread_binary
@@ -327,7 +315,7 @@ contains
     PUSH_SUB(iread_binary)
 
     ierr = 0
-    call read_binary(np, optional_def(offset, 0), ff(1), type, ierr, trim(fname))
+    call read_binary(np, optional_default(offset, 0), ff(1), type, ierr, trim(fname))
 
     POP_SUB(iread_binary)
   end subroutine iread_binary
@@ -346,7 +334,7 @@ contains
     PUSH_SUB(lread_binary)
 
     ierr = 0
-    call read_binary(np, optional_def(offset, 0), ff(1), type, ierr, trim(fname))
+    call read_binary(np, optional_default(offset, 0), ff(1), type, ierr, trim(fname))
 
     POP_SUB(lread_binary)
   end subroutine lread_binary

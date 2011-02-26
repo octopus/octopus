@@ -164,17 +164,13 @@ contains
 
     integer :: kpoints, dim, nst, ierr
     character(len=80) dir
-    logical :: exact_
 
     PUSH_SUB(restart_look_and_read)
 
-    exact_ = .true.
-    if(present(exact)) exact_ = exact
-
     if(present(specify_dir)) then
-       dir = specify_dir
+      dir = specify_dir
     else
-       dir = restart_dir
+      dir = restart_dir
     endif
 
     !check how many wfs we have
@@ -213,7 +209,7 @@ contains
     st%occ      = M_ZERO
 
     ! load wavefunctions
-    call restart_read(trim(dir)//GS_DIR, st, gr, geo, ierr, exact = exact_)
+    call restart_read(trim(dir)//GS_DIR, st, gr, geo, ierr, exact)
 
     POP_SUB(restart_look_and_read)
   end subroutine restart_look_and_read
@@ -433,8 +429,7 @@ contains
 
     call profiling_in(prof_read, "RESTART_READ")
 
-    exact_ = .false.
-    if(present(exact)) exact_ = exact
+    exact_ = optional_default(exact, .false.)
 
     if(.not. present(lr)) then 
       write(message(1), '(a,i5)') 'Info: Loading restart information.'
@@ -446,8 +441,7 @@ contains
     ! If one restarts a GS calculation changing the %Occupations block, one
     ! cannot read the occupations, otherwise these overwrite the ones from
     ! the input file. The same is true when reading a linear-response restart.
-    read_occ_ = .true.
-    if(present(read_occ)) read_occ_ = .false.
+    read_occ_ = optional_default(read_occ, .true.)
 
     ! sanity check
     gs_allocated = (associated(st%dpsi) .and. states_are_real(st)) .or. &
@@ -753,7 +747,7 @@ contains
     integer                    :: np, ip, ip_lead, idir, ix, iy, iz, ixlead(1:3)
     character(len=256)         :: line, fname, filename, restart_dir, chars
     character                  :: char
-    FLOAT                      :: occ, eval, kpoint(1:MAX_DIM), w_k, w_sum
+    FLOAT                      :: occ, eval, kpoint(1:MAX_DIM), w_k
     type(simul_box_t), pointer :: sb
     type(mesh_t), pointer      :: m_lead, m_center
     CMPLX                      :: phase

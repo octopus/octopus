@@ -347,17 +347,15 @@ contains
     call v_ks_calc_start(ks, hm, st, time, calc_berry, calc_energy)
     call v_ks_calc_finish(ks, hm)
 
-    if(present(calc_eigenval)) then
-      if(calc_eigenval) then
+    if(optional_default(calc_eigenval, .false.)) then
 
-        if(ks%gr%ob_grid%open_boundaries .and. .not. present(time)) then
-          ! We know the eigenvalues.
-          st%eigenval(1:st%nst, 1:st%d%nik) = st%ob_eigenval(1:st%nst, 1:st%d%nik)
-        else
-          call energy_calculate_eigenvalues(hm, ks%gr%der, st)
-        end if
-
+      if(ks%gr%ob_grid%open_boundaries .and. .not. present(time)) then
+        ! We know the eigenvalues.
+        st%eigenval(1:st%nst, 1:st%d%nik) = st%ob_eigenval(1:st%nst, 1:st%d%nik)
+      else
+        call energy_calculate_eigenvalues(hm, ks%gr%der, st)
       end if
+      
     end if
 
   end subroutine v_ks_calc
@@ -380,7 +378,6 @@ contains
     FLOAT :: distance
     type(profile_t), save :: prof
     type(energy_t), pointer :: energy
-    logical :: calc_berry_
 
     PUSH_SUB(v_ks_calc_start)
     call profiling_in(prof, "KOHN_SHAM_CALC")
@@ -393,14 +390,9 @@ contains
       call write_info(1)
     end if
 
-    calc_berry_ = .true.
-    if(present(calc_berry)) calc_berry_ = calc_berry
-
     ks%calc%time_present = present(time)
     if(present(time)) ks%calc%time = time
-
-    ks%calc%calc_energy = .true.
-    if(present(calc_energy)) ks%calc%calc_energy = calc_energy
+    ks%calc%calc_energy = optional_default(calc_energy, .true.)
 
     ! If the Hxc term is frozen, there is nothing to do (WARNING: MISSING ks%calc%energy%intnvxc)
     if(ks%frozen_hxc) then
@@ -432,7 +424,7 @@ contains
 
     if(associated(hm%ep%e_field) .and. simul_box_is_periodic(ks%gr%mesh%sb)) then
       SAFE_ALLOCATE(ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin))
-      if(calc_berry_) then
+      if(optional_default(calc_berry, .true.)) then
         call berry_potential(st, ks%gr%mesh, hm%ep%E_field, ks%calc%vberry)
       else
         ! before wfns are initialized, cannot calculate this term
