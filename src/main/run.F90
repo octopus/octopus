@@ -44,7 +44,6 @@ module run_m
   use kdotp_m
   use gcm_m
   use pulpo_m
-  use raman_m
   use restart_m
   use static_pol_m
   use system_m
@@ -81,7 +80,6 @@ module run_m
     CM_CASIDA             =   9,  &
     CM_VDW                =  11,  &
     CM_PHONONS_LR         =  12,  &
-    CM_RAMAN              =  13,  &
     CM_ONE_SHOT           =  14,  &
     CM_KDOTP              =  15,  &
     CM_GCM                =  16,  &
@@ -153,8 +151,6 @@ contains
       call opt_control_run(sys, hm)
     case(CM_CASIDA)
       call casida_run(sys, hm, fromScratch)
-    case(CM_RAMAN)
-      call raman_run(sys, hm, fromscratch)
     case(CM_ONE_SHOT)
       call one_shot_run(sys, hm)
     case(CM_KDOTP)
