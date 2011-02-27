@@ -58,7 +58,8 @@ subroutine X(forces_gather)(geo, force)
 end subroutine X(forces_gather)
 
 !---------------------------------------------------------------------------
-
+! NOTE: this formulation relies on vanishing of surface terms from integration by parts
+! Any pseudopotential should certainly have V(r->inf) = 0, but user-defined species might not...
 subroutine X(forces_from_local_potential)(gr, geo, ep, st, time, gdensity, force)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(inout) :: geo
@@ -105,7 +106,8 @@ subroutine X(forces_from_local_potential)(gr, geo, ep, st, time, gdensity, force
 end subroutine X(forces_from_local_potential)
 
 !---------------------------------------------------------------------------
-
+! NOTE: this formulation relies on vanishing of surface terms from integration by parts
+! Any pseudopotential should certainly have V(r->inf) = 0, but user-defined species might not...
 subroutine X(forces_from_potential)(gr, geo, ep, st, time)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(inout) :: geo
@@ -162,7 +164,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time)
         ff = st%d%kweights(iq) * st%occ(ist, iq) * M_TWO
         do idir = 1, gr%mesh%sb%dim
           do ip = 1, np
-            grad_rho(ip, idir) = grad_rho(ip, idir) + ff*R_CONJ(psi(ip, idim))*grad_psi(ip, idir, idim)
+            grad_rho(ip, idir) = grad_rho(ip, idir) + ff*R_REAL(R_CONJ(psi(ip, idim))*grad_psi(ip, idir, idim))
           end do
         end do
 
@@ -176,7 +178,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time)
         do idir = 1, gr%mesh%sb%dim
 
           force(idir, iatom) = force(idir, iatom) - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
-            X(psia_project_psib)(ep%proj(iatom), st%d%dim, psi, grad_psi(:, idir, :), iq)
+            R_REAL(X(psia_project_psib)(ep%proj(iatom), st%d%dim, psi, grad_psi(:, idir, :), iq))
 
         end do
       end do
@@ -213,7 +215,8 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time)
 end subroutine X(forces_from_potential)
 
 ! --------------------------------------------------------------------------------
- 
+! NOTE: this formulation relies on vanishing of surface terms from integration by parts
+! Any pseudopotential should certainly have V(r->inf) = 0, but user-defined species might not...
 subroutine X(forces_born_charges)(gr, geo, ep, st, time, lr, lr2, lr_dir, born_charges)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(inout) :: geo
