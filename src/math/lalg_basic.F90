@@ -33,18 +33,13 @@ module lalg_basic_m
     lalg_scal,   &
     lalg_axpy,   &
     lalg_copy,   &
-    lalg_dot,    &
-    lalg_dotu,   &
     lalg_nrm2,   &
     lalg_symv,   &
     lalg_gemv,   &
     lalg_gemm,   &
     lalg_gemmt,  &
-    lalg_gemm2t, &
     lalg_trmm,   &
-    lalg_symm,   &
-    lalg_herk
-
+    lalg_symm
 
   interface lalg_swap
     module procedure swap_1_1
@@ -128,18 +123,6 @@ module lalg_basic_m
     module procedure copy_4_4
   end interface
 
-  interface lalg_dot
-    module procedure dot_1
-    module procedure dot_2
-    module procedure dot_3
-    module procedure dot_4
-  end interface
-
-  interface lalg_dotu
-    module procedure dotu_3
-    module procedure dotu_4
-  end interface
-
   interface lalg_nrm2
     module procedure nrm2_1
     module procedure nrm2_2
@@ -169,17 +152,6 @@ module lalg_basic_m
     module procedure gemmt_2_4
   end interface
 
-  interface lalg_gemm2t
-    module procedure gemm2t_1_1
-    module procedure gemm2t_1_2
-    module procedure gemm2t_1_3
-    module procedure gemm2t_1_4
-    module procedure gemm2t_2_1
-    module procedure gemm2t_2_2
-    module procedure gemm2t_2_3
-    module procedure gemm2t_2_4
-  end interface
-
   interface lalg_trmm
     module procedure trmm_1_1
     module procedure trmm_1_2
@@ -198,13 +170,6 @@ module lalg_basic_m
     module procedure symm_2_4
   end interface
   
-  interface lalg_herk
-    module procedure herk_1_1
-    module procedure herk_1_2
-    module procedure herk_1_3
-    module procedure herk_1_4
-  end interface
-
   interface lalg_symv
     module procedure symv_1_1
     module procedure symv_1_2

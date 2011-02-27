@@ -400,37 +400,6 @@ subroutine FNAME(copy_4)(n1, n2, n3, n4, dx, dy)
 end subroutine FNAME(copy_4)
 
 ! ------------------------------------------------------------------
-! Forms the dot product of two vectors
-! ------------------------------------------------------------------
-
-TYPE1 function FNAME(dot) (n, dx, dy) result(dot)
-  integer, intent(in) :: n
-  TYPE1,   intent(in) :: dx(:), dy(:)
-
-  dot = CNST(0.0)
-  if (n < 1) return
-
-  dot = blas_dot(n, dx(1), 1, dy(1), 1)
-
-end function FNAME(dot)
-
-! ------------------------------------------------------------------
-! Forms the dot product of two vectors x^T.y (without conjugate)
-! ------------------------------------------------------------------
-#if TYPE == 3 || TYPE == 4
-TYPE1 function FNAME(dotu) (n, dx, dy) result(dot)
-  integer, intent(in) :: n
-  TYPE1,   intent(in) :: dx(:), dy(:)
-
-  dot = CNST(0.0)
-  if (n < 1) return
-
-  dot = blas_dotu(n, dx(1), 1, dy(1), 1)
-
-end function FNAME(dotu)
-#endif
-
-! ------------------------------------------------------------------
 ! Returns the euclidean norm of a vector
 ! ------------------------------------------------------------------
 
@@ -558,29 +527,6 @@ subroutine FNAME(gemmt_2)(m, n, k, alpha, a, b, beta, c)
   call blas_gemm('C', 'N', m, n, k, alpha, a(1, 1, 1), k, b(1, 1), k, beta, c(1, 1, 1), m)
 end subroutine FNAME(gemmt_2)
 
-! The same as above but with (Hermitian) transposed of b.
-
-subroutine FNAME(gemm2t_1)(m, n, k, alpha, a, b, beta, c)
-  integer, intent(in)    :: m, n, k
-  TYPE1,   intent(in)    :: alpha, beta
-  TYPE1,   intent(in)    :: a(:,:)  ! a(m, k)
-  TYPE1,   intent(in)    :: b(:,:)  ! b(k, n)
-  TYPE1,   intent(inout) :: c(:,:)  ! c(m, n)
-
-  call blas_gemm('N', 'C', m, n, k, alpha, a(1, 1), k, b(1, 1), k, beta, c(1, 1), m)
-end subroutine FNAME(gemm2t_1)
-
-subroutine FNAME(gemm2t_2)(m, n, k, alpha, a, b, beta, c)
-  integer, intent(in)    :: m, n, k
-  TYPE1,   intent(in)    :: alpha, beta
-  TYPE1,   intent(in)    :: a(:, :, :)  ! a(m, k)
-  TYPE1,   intent(in)    :: b(:, :)     ! b(k, n)
-  TYPE1,   intent(inout) :: c(:, :, :)  ! c(m, n)
-
-  call blas_gemm('N', 'C', m, n, k, alpha, a(1, 1, 1), k, b(1, 1), k, beta, c(1, 1, 1), m)
-end subroutine FNAME(gemm2t_2)
-
-
 ! The following matrix multiplications all expect upper triangular matrices for a.
 ! For real matrices, a = a^T, for complex matrices a = a^H.
 
@@ -620,40 +566,6 @@ subroutine FNAME(symm_2)(m, n, side, alpha, a, b, beta, c)
   
   call blas_symm(side, 'U', m, n, alpha, a(1, 1, 1), lda, b(1, 1), m, beta, c(1, 1, 1), m)
 end subroutine FNAME(symm_2)
-
-
-! Expects upper triangular matrix for c.
-! trans = 'N' => C <- alpha*A*A^H + beta*C
-! trans = 'C' => C <- alpha*A^H*A + beta*C
-subroutine FNAME(herk_1)(n, k, trans, alpha, a, beta, c)
-  integer,      intent(in)    :: n, k
-  character(1), intent(in)    :: trans                ! 'N', 'C'
-  TYPE1,        intent(in)    :: alpha, a(:, :), beta
-  TYPE1,        intent(inout) :: c(:, :)              ! c(n, n)
-
-  integer :: lda, i, j
-
-  select case(trans)
-    case('N', 'n')
-      lda = max(1, n)
-    case('C', 'c', 'T', 't')
-      lda = max(1, k)
-  end select
-
-  call blas_herk('U', trans, n, k, alpha, a(1, 1), lda, beta, c(1, 1), n)
-
-  ! Fill lower triangular matrix.
-  do i = 2, n
-    do j = 1, i-1
-#if TYPE == 3 || TYPE == 4
-      c(i, j) = conjg(c(j, i))
-#else
-      c(i, j) = c(j, i)
-#endif
-    end do
-  end do
-end subroutine FNAME(herk_1)
-
 
 ! ------------------------------------------------------------------
 ! Matrix-matrix multiplication.

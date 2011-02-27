@@ -90,7 +90,10 @@ contains
 
     PUSH_SUB(zdotu_qmr)
 
-    zdotu_qmr = lalg_dotu(np_p, x, y)
+    ASSERT(ubound(x, dim = 1) >= np_p)
+    ASSERT(ubound(y, dim = 1) >= np_p)
+
+    zdotu_qmr = blas_dotu(np_p, x(1), 1, y(1), 1)
 
     POP_SUB(zdotu_qmr)
   end function zdotu_qmr
@@ -101,7 +104,10 @@ contains
 
     PUSH_SUB(ddotu_qmr)
 
-    ddotu_qmr = lalg_dot(np_p, x, y)
+    ASSERT(ubound(x, dim = 1) >= np_p)
+    ASSERT(ubound(y, dim = 1) >= np_p)
+
+    ddotu_qmr = blas_dot(np_p, x(1), 1, y(1), 1)
 
     POP_SUB(ddotu_qmr)
   end function ddotu_qmr

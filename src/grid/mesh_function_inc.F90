@@ -119,10 +119,10 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
 #ifdef R_TCOMPLEX
     if (.not. dotu_) then
 #endif
-      dotp = lalg_dot(mesh%np, f1(:), f2(:))*mesh%vol_pp(1)
+      dotp = blas_dot(mesh%np, f1(1), 1, f2(1), 1)*mesh%vol_pp(1)
 #ifdef R_TCOMPLEX
     else
-      dotp = lalg_dotu(mesh%np, f1(:), f2(:))*mesh%vol_pp(1)
+      dotp = blas_dotu(mesh%np, f1(1), 1, f2(1), 1)*mesh%vol_pp(1)
     endif
 #endif
     call profiling_count_operations(mesh%np*(R_ADD + R_MUL))
