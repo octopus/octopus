@@ -58,8 +58,6 @@ subroutine X(forces_gather)(geo, force)
 end subroutine X(forces_gather)
 
 !---------------------------------------------------------------------------
-! NOTE: this formulation relies on vanishing of surface terms from integration by parts
-! Any pseudopotential should certainly have V(r->inf) = 0, but user-defined species might not...
 subroutine X(forces_from_local_potential)(gr, geo, ep, st, time, gdensity, force)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(inout) :: geo
@@ -106,8 +104,10 @@ subroutine X(forces_from_local_potential)(gr, geo, ep, st, time, gdensity, force
 end subroutine X(forces_from_local_potential)
 
 !---------------------------------------------------------------------------
-! NOTE: this formulation relies on vanishing of surface terms from integration by parts
-! Any pseudopotential should certainly have V(r->inf) = 0, but user-defined species might not...
+! Ref: Kikuji Hirose, Tomoya Ono, Yoshitaka Fujimoto, and Shigeru Tsukamoto,
+! First-principles calculations in real-space formalism: Electronic configurations
+! and transport properties of nanostructures, Imperial College Press (2005)
+! Section 1.6, page 12
 subroutine X(forces_from_potential)(gr, geo, ep, st, time)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(inout) :: geo
@@ -215,8 +215,6 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time)
 end subroutine X(forces_from_potential)
 
 ! --------------------------------------------------------------------------------
-! NOTE: this formulation relies on vanishing of surface terms from integration by parts
-! Any pseudopotential should certainly have V(r->inf) = 0, but user-defined species might not...
 subroutine X(forces_born_charges)(gr, geo, ep, st, time, lr, lr2, lr_dir, born_charges)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(inout) :: geo
