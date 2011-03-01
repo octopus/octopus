@@ -1038,8 +1038,8 @@ contains
     ep%eii=es_energy*M_HALF
     write(68,*) "ep%eii values top", ep%eii
 
-!    SAFE_ALLOCATE(rho2(1:gr%mesh%np))
-!    SAFE_ALLOCATE(rho3(1:gr%mesh%np))
+!    SAFE _ALLOCATE(rho2(1:gr%mesh%np))
+!    SAFE _ALLOCATE(rho3(1:gr%mesh%np))
 !    v2(1:gr%mesh%np)= M_ZERO
 !    v3(1:gr%mesh%np)= M_ZERO
 !    rho2(1:gr%mesh%np)= M_ZERO

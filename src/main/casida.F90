@@ -21,6 +21,7 @@
 
 module casida_m
   use calc_mode_m
+  use comm_m
   use datasets_m
   use density_m
   use excited_states_m
@@ -549,10 +550,6 @@ contains
       FLOAT :: theta, phi, qlen
       FLOAT :: qvect(MAX_DIM)
 
-#ifdef HAVE_MPI
-      FLOAT, allocatable :: mpi_mat(:,:)
-#endif
-
       PUSH_SUB(casida_work.solve_casida)
 
       max = (cas%n_pairs*(1 + cas%n_pairs)/2)/cas%mpi_grp%size
@@ -578,15 +575,9 @@ contains
       end do
 
       ! sum all matrix elements
-#ifdef HAVE_MPI
       if(cas%parallel_in_eh_pairs) then
-        SAFE_ALLOCATE(mpi_mat(1:cas%n_pairs, 1:cas%n_pairs))
-        call MPI_Allreduce(cas%mat(1,1), mpi_mat(1,1), cas%n_pairs**2, &
-          MPI_FLOAT, MPI_SUM, cas%mpi_grp%comm, mpi_err)
-        cas%mat = mpi_mat
-        SAFE_DEALLOCATE_A(mpi_mat)
+        call comm_allreduce(cas%mpi_grp%comm, cas%mat, dim = (/cas%n_pairs, cas%n_pairs/))
       end if
-#endif
       !if(mpi_grp_is_root(cas%mpi_grp)) print *, "mat =", cas%mat
 
       ! all processors with the exception of the first are done

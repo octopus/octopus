@@ -24,6 +24,7 @@
 
 module states_block_m
   use batch_m
+  use comm_m
   use global_m
   use lalg_basic_m
   use math_m

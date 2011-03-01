@@ -22,6 +22,7 @@
 module states_m
   use blacs_proc_grid_m
   use calc_mode_m
+  use comm_m
   use batch_m
   use blas_m
   use datasets_m
@@ -1569,9 +1570,6 @@ return
     FLOAT                       :: tot
 
     integer :: ik
-#ifdef HAVE_MPI
-    FLOAT :: tot_temp
-#endif
 
     PUSH_SUB(states_eigenvalues_sum)
 
@@ -1586,12 +1584,7 @@ return
       end if
     end do
 
-#ifdef HAVE_MPI
-    if(st%parallel_in_states .or. st%d%kpt%parallel) then
-      call MPI_Allreduce(tot, tot_temp, 1, MPI_FLOAT, MPI_SUM, st%st_kpt_mpi_grp%comm, mpi_err)
-      tot = tot_temp
-    end if
-#endif
+    if(st%parallel_in_states .or. st%d%kpt%parallel) call comm_allreduce(st%st_kpt_mpi_grp%comm, tot)
 
     POP_SUB(states_eigenvalues_sum)
   end function states_eigenvalues_sum
@@ -1730,9 +1723,6 @@ return
     integer :: sp, is, ik, ik_tmp, ist, i_dim, st_dim, ii
     FLOAT   :: ww, kpoint(1:MAX_DIM)
     logical :: something_to_do
-#if defined(HAVE_MPI)
-    FLOAT, allocatable :: tmp_reduce(:)
-#endif
 
     PUSH_SUB(states_calc_quantities)
 
@@ -1909,9 +1899,7 @@ return
 
     SAFE_DEALLOCATE_A(wf_psi)
     SAFE_DEALLOCATE_A(gwf_psi)
-    if (present(density_laplacian)) then
-      SAFE_DEALLOCATE_A(lwf_psi)
-    end if
+    SAFE_DEALLOCATE_A(lwf_psi)
 
     if(.not. present(paramagnetic_current)) then
       SAFE_DEALLOCATE_P(jp)
@@ -1921,18 +1909,10 @@ return
       SAFE_DEALLOCATE_P(tau)
     end if
 
-#if defined(HAVE_MPI)
-    if(st%parallel_in_states) then
-      call reduce_all(st%mpi_grp)
-    end if
-    if(st%d%kpt%parallel) then
-      call reduce_all(st%d%kpt%mpi_grp)
-    end if
-#endif
+    if(st%parallel_in_states .or. st%d%kpt%parallel) call reduce_all(st%st_kpt_mpi_grp)
 
     POP_SUB(states_calc_quantities)
 
-#if defined(HAVE_MPI)
   contains 
 
     subroutine reduce_all(grp)
@@ -1940,45 +1920,23 @@ return
 
       PUSH_SUB(states_calc_quantities.reduce_all)
 
-      SAFE_ALLOCATE(tmp_reduce(1:der%mesh%np))
+      if(associated(tau)) call comm_allreduce(grp%comm, tau, dim = (/der%mesh%np, st%d%nspin/))
 
+      if(present(gi_kinetic_energy_density)) &
+        call comm_allreduce(grp%comm, gi_kinetic_energy_density, dim = (/der%mesh%np, st%d%nspin/))
+
+      if (present(density_laplacian)) call comm_allreduce(grp%comm, density_laplacian, dim = (/der%mesh%np, st%d%nspin/))
+      
       do is = 1, st%d%nspin
-        if(associated(tau)) then
-          call MPI_Allreduce(tau(1, is), tmp_reduce(1), der%mesh%np, MPI_FLOAT, MPI_SUM, grp%comm, mpi_err)
-          tau(1:der%mesh%np, is) = tmp_reduce(1:der%mesh%np)       
-        end if
+        if(associated(jp)) call comm_allreduce(grp%comm, jp(:, :, is), dim = (/der%mesh%np, der%mesh%sb%dim/))
 
-        if(present(gi_kinetic_energy_density)) then
-          call MPI_Allreduce(gi_kinetic_energy_density(1, is), tmp_reduce(1), der%mesh%np, &
-               MPI_FLOAT, MPI_SUM, grp%comm, mpi_err)
-          gi_kinetic_energy_density(1:der%mesh%np, is) = tmp_reduce(1:der%mesh%np)       
-        end if
-
-        if (present(density_laplacian)) then
-          call MPI_Allreduce(density_laplacian(1, is), tmp_reduce(1), der%mesh%np, MPI_FLOAT, MPI_SUM, grp%comm, mpi_err)
-          density_laplacian(1:der%mesh%np, is) = tmp_reduce(1:der%mesh%np)       
-        end if
-
-        do i_dim = 1, der%mesh%sb%dim
-          if(associated(jp)) then
-            call MPI_Allreduce(jp(1, i_dim, is), tmp_reduce(1), der%mesh%np, MPI_FLOAT, MPI_SUM, grp%comm, mpi_err)
-            jp(1:der%mesh%np, i_dim, is) = tmp_reduce(1:der%mesh%np)
-          end if
-
-          if(present(density_gradient)) then
-            call MPI_Allreduce(density_gradient(1, i_dim, is), tmp_reduce(1), der%mesh%np, &
-                 MPI_FLOAT, MPI_SUM, grp%comm, mpi_err)
-            density_gradient(1:der%mesh%np, i_dim, is) = tmp_reduce(1:der%mesh%np)
-          end if
-        end do
-
+        if(present(density_gradient)) &
+          call comm_allreduce(grp%comm, density_gradient(:, :, is), dim = (/der%mesh%np, der%mesh%sb%dim/))
       end do
-      SAFE_DEALLOCATE_A(tmp_reduce)
-
+      
       POP_SUB(states_calc_quantities.reduce_all)
     end subroutine reduce_all
 
-#endif            
   end subroutine states_calc_quantities
 
 
