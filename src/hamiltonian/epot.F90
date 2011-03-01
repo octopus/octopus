@@ -20,6 +20,7 @@
 #include "global.h"
 
 module epot_m
+  use comm_m
   use datasets_m
   use derivatives_m
   use double_grid_m
@@ -436,9 +437,7 @@ contains
 
     if(ep%have_density) then
       SAFE_ALLOCATE(ep%poisson_solver)
-!      ep%poisson_solver => psolver
       call poisson_init(ep%poisson_solver, gr%der, geo, gr%mesh%mpi_grp%comm)
-           
 
       if (poisson_get_solver(ep%poisson_solver) == POISSON_SETE) then
         SAFE_ALLOCATE(rho_nuc(1:gr%mesh%np))
@@ -526,9 +525,7 @@ contains
     type(profile_t), save :: epot_generate_prof
     FLOAT,    allocatable :: density(:)
     FLOAT,    allocatable :: tmp(:)
-#ifdef HAVE_MPI
     type(profile_t), save :: epot_reduce
-#endif
 
     call profiling_in(epot_generate_prof, "EPOT_GENERATE")
     PUSH_SUB(epot_generate)
@@ -558,34 +555,18 @@ contains
       end if
     end do
 
-
     ! reduce over atoms if required
-#ifdef HAVE_MPI
-    call profiling_in(epot_reduce, "EPOT_REDUCE")
     if(geo%atoms_dist%parallel) then
+      call profiling_in(epot_reduce, "EPOT_REDUCE")
 
-      SAFE_ALLOCATE(tmp(1:gr%mesh%np))
-      call MPI_Allreduce(ep%vpsl(1), tmp(1), gr%mesh%np, MPI_FLOAT, MPI_SUM, geo%atoms_dist%mpi_grp%comm, mpi_err)
-      call lalg_copy(gr%mesh%np, tmp, ep%vpsl)
+      call comm_allreduce(geo%atoms_dist%mpi_grp%comm, ep%vpsl, dim = gr%mesh%np)
+      if(associated(st%rho_core)) call comm_allreduce(geo%atoms_dist%mpi_grp%comm, st%rho_core, dim = gr%mesh%np)
+      if(ep%have_density) call comm_allreduce(geo%atoms_dist%mpi_grp%comm, density, dim = gr%mesh%np)
 
-      if(associated(st%rho_core)) then
-        call MPI_Allreduce(st%rho_core(1), tmp(1), gr%mesh%np, MPI_FLOAT, MPI_SUM, geo%atoms_dist%mpi_grp%comm, mpi_err)
-        call lalg_copy(gr%mesh%np, tmp, st%rho_core)
-      end if
-
-      if(ep%have_density) then
-        call MPI_Allreduce(density(1), tmp(1), gr%mesh%np, MPI_FLOAT, MPI_SUM, geo%atoms_dist%mpi_grp%comm, mpi_err)
-        call lalg_copy(gr%mesh%np, tmp, density)
-      end if
-
-      SAFE_DEALLOCATE_A(tmp)
-
+      call profiling_out(epot_reduce)
     end if
-    call profiling_out(epot_reduce)
-#endif
 
     if(ep%have_density) then
-
       ! now we solve the poisson equation with the density of all nodes
       SAFE_ALLOCATE(tmp(1:gr%mesh%np_part))
 
@@ -1046,7 +1027,6 @@ contains
   
     integer                              :: iatom, jatom
     FLOAT, allocatable                   :: rho1(:), v2(:), rho2(:)
-    FLOAT, allocatable                   :: v3(:), rho3(:)
     FLOAT                                :: temp
     FLOAT                                :: time1
     FLOAT :: rr, dd, zi, zj

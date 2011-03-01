@@ -23,6 +23,7 @@ module density_m
   use blas_m
   use batch_m
   use c_pointer_m
+  use comm_m
   use datasets_m
   use derivatives_m
   use global_m
@@ -56,7 +57,7 @@ module density_m
 
   public ::                           &
     density_calc_t,                   &
-    density_calc_init,               &
+    density_calc_init,                &
     density_calc_accumulate,          &
     density_calc_end,                 &
     density_calc,                     &
@@ -258,10 +259,7 @@ contains
     type(symmetrizer_t) :: symmetrizer
     FLOAT,  allocatable :: symmrho(:)
     integer :: ispin, np
-#ifdef HAVE_MPI
-    FLOAT,  allocatable :: reduce_rho(:)
     type(profile_t), save :: reduce_prof
-#endif
 
     PUSH_SUB(density_calc_end)
 
@@ -278,24 +276,12 @@ contains
     end if
 #endif
 
-#ifdef HAVE_MPI
     ! reduce over states and k-points
     if(this%st%parallel_in_states .or. this%st%d%kpt%parallel) then
       call profiling_in(reduce_prof, "DENSITY_REDUCE")
-#ifndef HAVE_MPI2
-      SAFE_ALLOCATE(reduce_rho(1:np))
-#endif
-      do ispin = 1, this%st%d%nspin
-#ifndef HAVE_MPI2
-        call blas_copy(np, this%density(1, ispin), 1, reduce_rho(1), 1)
-#endif
-        call MPI_Allreduce(MPI_IN_PLACE_OR(reduce_rho(1)), &
-          this%density(1, ispin), np, MPI_FLOAT, MPI_SUM, this%st%st_kpt_mpi_grp%comm, mpi_err)
-      end do
-      SAFE_DEALLOCATE_A(reduce_rho)
+      call comm_allreduce(this%st%st_kpt_mpi_grp%comm, this%density, dim = (/np, this%st%d%nspin/))
       call profiling_out(reduce_prof)
     end if
-#endif
 
     if(this%st%symmetrize_density) then
       SAFE_ALLOCATE(symmrho(1:np))

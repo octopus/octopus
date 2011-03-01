@@ -25,6 +25,7 @@ module states_calc_m
   use blacs_m
   use blacs_proc_grid_m
   use calc_mode_m
+  use comm_m
   use datasets_m
   use derivatives_m
   use geometry_m

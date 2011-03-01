@@ -282,10 +282,6 @@ contains
     FLOAT   :: cc
     R_TYPE, allocatable :: aa(:)
     FLOAT,  allocatable :: bb(:)
-#ifdef HAVE_MPI
-    R_TYPE, allocatable :: aac(:)
-    FLOAT,  allocatable :: bbc(:)
-#endif      
 
     PUSH_SUB(X(states_orthogonalization_block).mgs)
 
@@ -296,14 +292,7 @@ contains
       bb(ist) = X(mf_dotp)(mesh, dim, psi(:, :, ist), psi(:, :, ist), reduce = .false.)
     end do
 
-#ifdef HAVE_MPI
-    if(mesh%parallel_in_domains) then
-      SAFE_ALLOCATE(bbc(1:nst))
-      call MPI_Allreduce(bb(1), bbc(1), nst, MPI_FLOAT, MPI_SUM, mesh%mpi_grp%comm, mpi_err) 
-      bb = bbc
-      SAFE_DEALLOCATE_A(bbc)
-    end if
-#endif
+    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, bb, dim = nst)
 
     do ist = 1, nst      
       do idim = 1, dim
@@ -321,14 +310,7 @@ contains
         aa(jst) = X(mf_dotp)(mesh, dim, psi(:, :, jst), psi(:, :, ist), reduce = .false.)
       end do
 
-#ifdef HAVE_MPI
-      if(mesh%parallel_in_domains) then
-        SAFE_ALLOCATE(aac(1:nst))
-        call MPI_Allreduce(aa(1), aac(1), ist - 1, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
-        aa = aac
-        SAFE_DEALLOCATE_A(aac)
-      end if
-#endif
+      if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, aa, dim = ist - 1)
 
       ! substract the projections
       do jst = 1, ist - 1
@@ -380,10 +362,7 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
   R_TYPE, allocatable  :: ss(:)
   integer :: block_size, size, sp, ep
   type(profile_t), save :: prof
-#ifdef HAVE_MPI
-  R_TYPE, allocatable  :: ss_tmp(:)
   type(profile_t), save :: reduce_prof
-#endif
 
   call profiling_in(prof, "GRAM_SCHMIDT")
   PUSH_SUB(X(states_orthogonalization))
@@ -441,16 +420,11 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
 
   end if
 
-#ifdef HAVE_MPI
   if(mesh%parallel_in_domains) then
-    SAFE_ALLOCATE(ss_tmp(1:nst))
     call profiling_in(reduce_prof, "GRAM_SCHMIDT_REDUCE")
-    call MPI_Allreduce(ss(1), ss_tmp(1), nst, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+    call comm_allreduce(mesh%mpi_grp%comm, ss, dim = nst)
     call profiling_out(reduce_prof)
-    ss = ss_tmp
-    SAFE_DEALLOCATE_A(ss_tmp)
   end if
-#endif
 
   if(present(mask)) then
     do ist = 1, nst
