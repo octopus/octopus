@@ -43,13 +43,13 @@ fi
 dnl Generic BLACS library?
 for blacs in blacs blacs-openmpi; do
   if test x"$blacs" = xblacs-openmpi; then       
-    blacsCinit="blacsCinit-openmpi"
+    blacsinit="blacsF77init-openmpi"
   else
-    blacsCinit="blacsCinit"
+    blacsinit="blacsF77init"
   fi
   if test $acx_blacs_ok = no; then
-    AC_CHECK_LIB($blacs -l$blacsCinit, $blacs_pinfo,
-      [acx_blacs_ok=yes; LIBS_BLACS="$LIBS_BLACS -l$blacsCinit -l$blacs"], [], [$FLIBS])
+    AC_CHECK_LIB($blacs -l$blacsinit, $blacs_pinfo,
+      [acx_blacs_ok=yes; LIBS_BLACS="$LIBS_BLACS -l$blacs -l$blacsinit"], [], [$FLIBS])
   fi
 done
 
