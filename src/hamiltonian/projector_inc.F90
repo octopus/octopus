@@ -235,7 +235,7 @@ R_TYPE function X(projector_matrix_element)(pj, dim, ik, psia, psib) result(apb)
   integer,           intent(in)    :: dim
   integer,           intent(in)    :: ik
   R_TYPE,            intent(in)    :: psia(:, :)  ! psia(1:mesh%np, dim)
-  R_TYPE,            intent(inout) :: psib(:, :)  ! psib(1:mesh%np, dim)
+  R_TYPE,            intent(in)    :: psib(:, :)  ! psib(1:mesh%np, dim)
 
   integer ::  ns, idim, ll, mm, nc, is
   R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:)
@@ -268,86 +268,30 @@ R_TYPE function X(projector_matrix_element)(pj, dim, ik, psia, psib) result(apb)
     end if
   end do
 
-  if(pj%type == M_KB) then
+  call X(project_sphere)(mesh, pj, dim, lpsi, plpsi)
 
-    do idim = 1, dim
-      if(simul_box_is_periodic(mesh%sb)) then
-        do is = 1, ns
-          plpsi(is, idim) = psia(pj%sphere%jxyz(is), idim)*pj%phase(is, ik)
-        end do
-      else
-        do is = 1, ns
-          plpsi(is, idim) = psia(pj%sphere%jxyz(is), idim)
-        end do
-      end if
-    end do
-
-    SAFE_ALLOCATE(uvpsi(1:pj%nprojections, 1:2, 0:pj%lmax, -pj%lmax:pj%lmax))
-    uvpsi = R_TOTYPE(M_ZERO)
-
-    ASSERT(associated(pj%kb_p))
-
-    do ll = 0, pj%lmax
-      if (ll == pj%lloc) cycle
-      do mm = -ll, ll
-        call X(kb_project_bra)(mesh, pj%sphere, pj%kb_p(ll, mm), dim, lpsi, uvpsi(:, 1, ll, mm))
-        call X(kb_project_bra)(mesh, pj%sphere, pj%kb_p(ll, mm), dim, plpsi, uvpsi(:, 2, ll, mm))
+  apb = M_ZERO
+  do idim = 1, dim
+    if(simul_box_is_periodic(mesh%sb)) then
+      do is = 1, ns
+        plpsi(is, idim) = R_CONJ(psia(pj%sphere%jxyz(is), idim))*plpsi(is, idim)*conjg(pj%phase(is, ik))
       end do
-    end do
-
-#if defined(HAVE_MPI)
-    if(mesh%parallel_in_domains) then
-      SAFE_ALLOCATE(uvpsi_tmp(1:pj%nprojections, 1:2, 0:pj%lmax, -pj%lmax:pj%lmax))
-      uvpsi_tmp = R_TOTYPE(M_ZERO)
-      size = pj%nprojections*2*(pj%lmax + 1)*(2*pj%lmax + 1)
-      call MPI_Allreduce(uvpsi(1, 1, 0, -pj%lmax), uvpsi_tmp(1, 1, 0, -pj%lmax), size, &
-        R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-      uvpsi = uvpsi_tmp
-      SAFE_DEALLOCATE_A(uvpsi_tmp)
+    else
+      do is = 1, ns
+        plpsi(is, idim) = R_CONJ(psia(pj%sphere%jxyz(is), idim))*plpsi(is, idim)
+      end do
     end if
-#endif
 
-    apb = M_ZERO
-
-    do ll = 0, pj%lmax
-      if (ll == pj%lloc) cycle
-      do mm = -ll, ll
-        nc = pj%kb_p(ll, mm)%n_c
-        call X(kb_mul_energies)(pj%kb_p(ll, mm), dim, uvpsi(1:nc, 1, ll, mm))
-        apb = apb + sum(R_CONJ(uvpsi(1:nc, 2, ll, mm))*uvpsi(1:nc, 1, ll, mm))
-      end do
-    end do
-
-    SAFE_DEALLOCATE_A(uvpsi)
-
-   else
-
-    call X(project_sphere)(mesh, pj, dim, lpsi, plpsi)
-
-    apb = M_ZERO
-    do idim = 1, dim
-      if(simul_box_is_periodic(mesh%sb)) then
-        do is = 1, ns
-          plpsi(is, idim) = R_CONJ(psia(pj%sphere%jxyz(is), idim))*plpsi(is, idim)*conjg(pj%phase(is, ik))
-        end do
-      else
-        do is = 1, ns
-          plpsi(is, idim) = R_CONJ(psia(pj%sphere%jxyz(is), idim))*plpsi(is, idim)
-        end do
-      end if
-
-      if(ns > 0) then
-        apb = apb + X(sm_integrate)(mesh, pj%sphere, plpsi(1:ns, idim))
-      else
-        apb = apb + X(sm_integrate)(mesh, pj%sphere)
-      endif  
-    end do
-
-  end if
+    if(ns > 0) then
+      apb = apb + X(sm_integrate)(mesh, pj%sphere, plpsi(1:ns, idim))
+    else
+      apb = apb + X(sm_integrate)(mesh, pj%sphere)
+    endif
+  end do
 
   SAFE_DEALLOCATE_A(lpsi)
   SAFE_DEALLOCATE_A(plpsi)
-
+  
   POP_SUB(X(projector_matrix_element))
 end function X(projector_matrix_element)
 
