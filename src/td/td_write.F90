@@ -1112,11 +1112,9 @@ contains
     character(len=7) :: aux
     FLOAT :: acc(MAX_DIM)
 
-    if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
-
     PUSH_SUB(td_write_acc)
 
-    if(iter == 0) then
+    if(iter == 0 .and. mpi_grp_is_root(mpi_world)) then
       call td_write_print_header_init(out_acc)
 
       ! first line -> column names
@@ -1139,10 +1137,12 @@ contains
 
     call td_calc_tacc(gr, geo, st, hm, acc, dt*iter)
 
-    call write_iter_start(out_acc)
-    acc = units_from_atomic(units_out%acceleration, acc)
-    call write_iter_double(out_acc, acc, gr%mesh%sb%dim)
-    call write_iter_nl(out_acc)
+    if(mpi_grp_is_root(mpi_world)) then
+      call write_iter_start(out_acc)
+      acc = units_from_atomic(units_out%acceleration, acc)
+      call write_iter_double(out_acc, acc, gr%mesh%sb%dim)
+      call write_iter_nl(out_acc)
+    end if
 
     POP_SUB(td_write_acc)
   end subroutine td_write_acc
