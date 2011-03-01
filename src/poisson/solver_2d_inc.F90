@@ -80,17 +80,31 @@ subroutine poisson2D_solve(this, pot, rho)
   else ! serial mode
 #endif
     pot = M_ZERO
-    do ip = 1, this%der%mesh%np
-      xx(:) = this%der%mesh%x(ip,1:2)
-      do jp = 1, this%der%mesh%np
-        if(ip == jp) then
-          pot(ip) = pot(ip) + M_TWO*sqrt(M_PI)*rho(ip)/this%der%mesh%spacing(1)*this%der%mesh%vol_pp(jp)
-        else
-          yy(:) = this%der%mesh%x(jp,1:2)
-          pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx-yy)**2))*this%der%mesh%vol_pp(jp)
-        end if
+    if(this%der%mesh%use_curvilinear) then
+      do ip = 1, this%der%mesh%np
+        xx(:) = this%der%mesh%x(ip, 1:2)
+        do jp = 1, this%der%mesh%np
+          if(ip == jp) then
+            pot(ip) = pot(ip) + M_TWO*sqrt(M_PI)*rho(ip)/this%der%mesh%spacing(1)*this%der%mesh%vol_pp(jp)
+          else
+            yy(:) = this%der%mesh%x(jp, 1:2)
+            pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx-yy)**2))*this%der%mesh%vol_pp(jp)
+          end if
+        end do
       end do
-    end do
+    else
+      do ip = 1, this%der%mesh%np
+        xx(:) = this%der%mesh%x(ip, 1:2)
+        do jp = 1, this%der%mesh%np
+          if(ip == jp) then
+            pot(ip) = pot(ip) + M_TWO*sqrt(M_PI)*rho(ip)/this%der%mesh%spacing(1)
+          else
+            yy(:) = this%der%mesh%x(jp, 1:2)
+            pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx-yy)**2))*this%der%mesh%vol_pp(1)
+          end if
+        end do
+      end do
+    end if
 #ifdef HAVE_MPI
   end if
 #endif
