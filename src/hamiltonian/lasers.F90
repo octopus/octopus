@@ -622,7 +622,7 @@ contains
 
     CMPLX :: amp
 
-    PUSH_SUB(laser_field)
+    !no PUSH SUB, called too often
 
     if(laser%field .eq. E_FIELD_SCALAR_POTENTIAL) then
       POP_SUB(laser_field)
@@ -635,7 +635,6 @@ contains
     end if
     field(1:sb%dim) = field(1:sb%dim) + real(amp*laser%pol(1:sb%dim))
 
-    POP_SUB(laser_field)
   end subroutine laser_field
 
 #include "undef.F90"

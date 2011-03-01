@@ -1162,7 +1162,7 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
-    PUSH_SUB(td_write_laser)
+    ! no PUSH SUB, called to often
 
     if(iter == 0) then
       call td_write_print_header_init(out_laser)
@@ -1236,7 +1236,6 @@ contains
 
     call write_iter_nl(out_laser)
 
-    POP_SUB(td_write_laser)
   end subroutine td_write_laser
 
 

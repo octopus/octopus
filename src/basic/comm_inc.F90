@@ -25,14 +25,13 @@ subroutine X(comm_allreduce_0)(comm, aa)
 
   R_TYPE :: aac
 
-  PUSH_SUB(X(comm_allreduce_0))
-
+  !no PUSH SUB, called too often
+    
 #if defined(HAVE_MPI)
   aac = aa
   call MPI_Allreduce(aac, aa, 1, R_MPITYPE, MPI_SUM, comm, mpi_err)
 #endif
 
-  POP_SUB(X(comm_allreduce_0))
 end subroutine X(comm_allreduce_0)
 
 ! -----------------------------------------------------------------------------
@@ -67,7 +66,7 @@ subroutine X(comm_allreduce_1)(comm, aa, dim)
 
 #endif
 
-  PUSH_SUB(X(comm_allreduce_1))
+  POP_SUB(X(comm_allreduce_1))
 end subroutine X(comm_allreduce_1)
 
 ! -----------------------------------------------------------------------------

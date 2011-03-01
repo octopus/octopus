@@ -252,7 +252,7 @@ contains
     integer :: iatom, jatom, idir
     FLOAT   :: xx(MAX_DIM), rr, dd, radius
     
-    PUSH_SUB(mesh_inborder)
+    ! no PUSH SUB, called too often
 
     is_on_border = .false.
     dist = M_ZERO
@@ -325,7 +325,6 @@ contains
     ! This may happen if the point is on more than one border at the same time.
     if(dist > width) dist = width
 
-    POP_SUB(mesh_inborder)
   end function mesh_inborder
   
   
