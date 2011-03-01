@@ -178,7 +178,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time)
         do idir = 1, gr%mesh%sb%dim
 
           force(idir, iatom) = force(idir, iatom) - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
-            R_REAL(X(psia_project_psib)(ep%proj(iatom), st%d%dim, psi, grad_psi(:, idir, :), iq))
+            R_REAL(X(projector_matrix_element)(ep%proj(iatom), st%d%dim, iq, psi, grad_psi(:, idir, :)))
 
         end do
       end do
@@ -312,10 +312,10 @@ subroutine X(forces_born_charges)(gr, geo, ep, st, time, lr, lr2, lr_dir, born_c
         do idir = 1, gr%mesh%sb%dim
 
           force(idir, iatom) = force(idir, iatom) - st%d%kweights(iq) * st%occ(ist, iq) * &
-            (X(psia_project_psib)(ep%proj(iatom), st%d%dim, grad_psi(:, idir, :), dl_psi, iq) &
-            + X(psia_project_psib)(ep%proj(iatom), st%d%dim, psi, grad_dl_psi(:, idir, :), iq) &
-            + X(psia_project_psib)(ep%proj(iatom), st%d%dim, dl_psi2, grad_psi(:, idir, :), iq) &
-            + X(psia_project_psib)(ep%proj(iatom), st%d%dim, grad_dl_psi2(:, idir, :), psi, iq))
+            (X(projector_matrix_element)(ep%proj(iatom), st%d%dim, iq, grad_psi(:, idir, :), dl_psi) &
+            + X(projector_matrix_element)(ep%proj(iatom), st%d%dim, iq, psi, grad_dl_psi(:, idir, :)) &
+            + X(projector_matrix_element)(ep%proj(iatom), st%d%dim, iq, dl_psi2, grad_psi(:, idir, :)) &
+            + X(projector_matrix_element)(ep%proj(iatom), st%d%dim, iq, grad_dl_psi2(:, idir, :), psi))
           
         end do
       end do

@@ -26,7 +26,7 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
   integer,           intent(in)    :: npj
   integer,           intent(in)    :: dim
   R_TYPE,            intent(in)    :: psi(:, :)   ! psi(1:mesh%np, dim)
-  R_TYPE,            intent(inout) :: ppsi(:, :)  ! ppsi(1:mesh%np, dim)
+  R_TYPE,            intent(in)    :: ppsi(:, :)  ! ppsi(1:mesh%np, dim)
   integer,           intent(in)    :: ik
 
   type(batch_t) :: psib, ppsib
@@ -229,13 +229,13 @@ end subroutine X(project_psi_batch)
 
 
 !------------------------------------------------------------------------------
-! X(psia_project_psib) calculates <psia|projector|psib>
-R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
+! X(projector_matrix_element) calculates <psia|projector|psib>
+R_TYPE function X(projector_matrix_element)(pj, dim, ik, psia, psib) result(apb)
   type(projector_t), intent(in)    :: pj
   integer,           intent(in)    :: dim
+  integer,           intent(in)    :: ik
   R_TYPE,            intent(in)    :: psia(:, :)  ! psia(1:mesh%np, dim)
   R_TYPE,            intent(inout) :: psib(:, :)  ! psib(1:mesh%np, dim)
-  integer,           intent(in)    :: ik
 
   integer ::  ns, idim, ll, mm, nc, is
   R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:)
@@ -246,7 +246,7 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
 #endif
   type(mesh_t), pointer :: mesh
 
-  PUSH_SUB(X(psia_project_psib))
+  PUSH_SUB(X(projector_matrix_element))
 
   ns = pj%sphere%ns
 
@@ -348,8 +348,8 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
   SAFE_DEALLOCATE_A(lpsi)
   SAFE_DEALLOCATE_A(plpsi)
 
-  POP_SUB(X(psia_project_psib))
-end function X(psia_project_psib)
+  POP_SUB(X(projector_matrix_element))
+end function X(projector_matrix_element)
 
 !------------------------------------------------------------------------------
 subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi)

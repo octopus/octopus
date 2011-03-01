@@ -65,8 +65,8 @@ module projector_m
        zproject_psi_batch,        &
        dproject_sphere,           &
        zproject_sphere,           &
-       dpsia_project_psib,        &
-       zpsia_project_psib,        &
+       dprojector_matrix_element, &
+       zprojector_matrix_element, &
        dprojector_commute_r,      &
        zprojector_commute_r
 
