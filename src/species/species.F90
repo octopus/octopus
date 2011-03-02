@@ -475,7 +475,8 @@ contains
     integer,             intent(in)    :: filter
 
     character(len=256) :: dirname
-    FLOAT :: local_radius
+    integer            :: iorb
+    FLOAT :: local_radius, orbital_radius
 
     PUSH_SUB(species_pot_init)
     
@@ -493,14 +494,21 @@ contains
 
       local_radius = spline_cutoff_radius(this%ps%vl, this%ps%projectors_sphere_threshold)
 
+      orbital_radius = M_ZERO
+      do iorb = 1, species_niwfs(this)
+        orbital_radius = max(orbital_radius, species_get_iwf_radius(this, iorb, is = 1))
+      end do
+
       write(message(1), '(3a)') "Info: Pseudopotential for ", trim(this%label), ". Radii for localized parts:"
       write(message(2), '(a,f5.1, 3a)') "     local part     = ", &
         units_from_atomic(units_out%length, local_radius), " [", trim(units_abbrev(units_out%length)), "] "
       write(message(3), '(a,f5.1,3a)')  "     non-local part = ", &
         units_from_atomic(units_out%length, this%ps%rc_max), " [", trim(units_abbrev(units_out%length)), "] "
-      call write_info(3)
+      write(message(4), '(a,f5.1,3a)')  "     orbitals       = ", &
+        units_from_atomic(units_out%length, orbital_radius), " [", trim(units_abbrev(units_out%length)), "] "
+      call write_info(4)
 
-      if(max(local_radius, this%ps%rc_max) > CNST(6.0)) then
+      if(max(local_radius, this%ps%rc_max, orbital_radius) > CNST(6.0)) then
         message(1) = "One of the radii of your pseudopotential's localized parts seems"
         message(2) = "unusually large; check that your pseudopotential is correct."
         call write_warning(2)
