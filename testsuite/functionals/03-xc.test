@@ -66,10 +66,7 @@ Input: 03-xc.gga_x_pbe_r.inp
 match ; gga_x_pbe_r                            ; GREP(out, 'Exchange    =', 20)   ; -0.32398108
 
 Input: 03-xc.gga_x_b86.inp
-match ; gga_x_b86                              ; GREP(out, 'Exchange    =', 20)   ; -0.31855785
-
-Input: 03-xc.gga_x_b86_r.inp
-match ; gga_x_b86_r                            ; GREP(out, 'Exchange    =', 20)   ; -0.32202579
+match ; gga_x_b86                              ; GREP(out, 'Exchange    =', 20)   ; -0.32201027
 
 Input: 03-xc.gga_x_b86_mgc.inp
 match ; gga_x_b86_mgc                          ; GREP(out, 'Exchange    =', 20)   ; -0.32026479

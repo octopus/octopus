@@ -66,7 +66,6 @@ dist_share_DATA =                                  \
         03-xc.gga_x_am05.inp                       \
         03-xc.gga_x_b86.inp                        \
         03-xc.gga_x_b86_mgc.inp                    \
-        03-xc.gga_x_b86_r.inp                      \
         03-xc.gga_x_b88.inp                        \
         03-xc.gga_x_bayesian.inp                   \
         03-xc.gga_xc_b97_1.inp                     \

@@ -29,19 +29,20 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, vxc, vt
   FLOAT, optional,      intent(inout) :: ex              !< Exchange energy.
   FLOAT, optional,      intent(inout) :: ec              !< Correlation energy.
   FLOAT, optional,      intent(inout) :: vxc(:,:)        !< XC potential
-  FLOAT, optional,      intent(inout) :: vtau(:,:)       !< Two times kinetic energy density 
+  FLOAT, optional,      intent(inout) :: vtau(:,:)       !< Derivative wrt (two times kinetic energy density)
 
   integer :: n_block
 
-  FLOAT, allocatable :: l_zk(:)        !Local block of the energy functional (with the correct memory order for libxc)
-  FLOAT, allocatable :: l_dens(:,:)    !Local block for the density 
-  FLOAT, allocatable :: l_dedd(:,:)    !Local block of the xchange or correl. potential(with the correct memory order for libxc)
+  FLOAT, allocatable :: l_zk(:)        ! Local block of the energy functional (with the correct memory order for libxc)
+  FLOAT, allocatable :: l_dens(:,:)    ! Local block for the density 
+  FLOAT, allocatable :: l_dedd(:,:)    ! Local block of the xchange or correl. potential(with the correct memory order for libxc)
   FLOAT, allocatable :: l_sigma(:,:)   
   FLOAT, allocatable :: l_vsigma(:,:)  
   FLOAT, allocatable :: l_tau(:,:)
   FLOAT, allocatable :: l_ldens(:,:)
   FLOAT, allocatable :: l_dedtau(:,:)
   FLOAT, allocatable :: l_dedldens(:,:)
+
   FLOAT, allocatable :: dens(:,:)      ! Density
   FLOAT, allocatable :: dedd(:,:)      ! (Functional) Derivative of the xchange or correlation energy with
   ! respect to the density (vector used to store the exchange or the correlation potential)

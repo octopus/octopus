@@ -56,6 +56,8 @@
 !% Modified LSD (version 1) of Proynov and Salahub
 !%Option lda_c_ml2               23000
 !% Modified LSD (version 2) of Proynov and Salahub
+!%Option lda_c_gombas               24000
+!% Gombas parametrization
 !%Option lda_k_tf               50
 !% Thomas-Fermi kinetic energy functional
 !%Option gga_x_pbe               101
@@ -64,8 +66,6 @@
 !% Perdew, Burke & Ernzerhof exchange (revised)
 !%Option gga_x_b86               103
 !% Becke 86 Xalfa,beta,gamma
-!%Option gga_x_b86_r               104
-!% Becke 86 Xalfa,beta,gamma (reoptimized)
 !%Option gga_x_b86_mgc               105
 !% Becke 86 Xalfa,beta,gamma (with mod. grad. correction)
 !%Option gga_x_b88               106
@@ -150,6 +150,10 @@
 !% Keal and Tozer version 1
 !%Option gga_xc_kt2               146000
 !% Keal and Tozer version 2
+!%Option gga_c_wl               147000
+!% Lee, Yang & Parr
+!%Option gga_c_wi               148000
+!% Wilson & Ivanov
 !%Option gga_xc_lb               160000
 !% van Leeuwen & Baerends
 !%Option gga_xc_hcth_93               161000
