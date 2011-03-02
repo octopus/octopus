@@ -821,7 +821,7 @@ contains
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> Places, in the function phi (defined in each point of the mesh), the
-  !! j-th atomic orbital. The orbitals are obtained from the species data
+  !! iorb-th atomic orbital. The orbitals are obtained from the species data
   !! type, and are numbered from one to species_niwfs(spec). It may happen
   !! that there are different orbitals for each spin-polarization direction,
   !! and therefore the orbital is also characterized by the label "is".
@@ -832,23 +832,23 @@ contains
   !! \todo Most of this work should be done inside the species
   !! module, and we should get rid of species_iwf_i, species_ifw_l, etc.
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine species_get_orbital(spec, mesh, j, dim, is, pos, phi)
+  subroutine species_get_orbital(spec, mesh, iorb, ispin, pos, phi)
     type(species_t),   intent(in)     :: spec
     type(mesh_t),      intent(in)     :: mesh
-    integer,           intent(in)     :: j
-    integer,           intent(in)     :: dim
-    integer,           intent(in)     :: is
-    FLOAT,             intent(in)     :: pos(:)
-    FLOAT,             intent(out)    :: phi(:)
+    integer,           intent(in)     :: iorb
+    integer,           intent(in)     :: ispin   !< The spin index.
+    FLOAT,             intent(in)     :: pos(:)  !< The position of the atom.
+    FLOAT,             intent(out)    :: phi(:)  !< The function defined in the mesh where the orbitals is returned.
 
     integer :: i, l, m, ip
     FLOAT :: r2, x(1:MAX_DIM)
-    FLOAT, allocatable :: xf(:, :), ylm(:)
+    FLOAT, allocatable :: xf(:, :), ylm(:), sphi(:)
     type(ps_t), pointer :: ps
+    type(submesh_t) :: sphere
 
     PUSH_SUB(species_get_orbital)
 
-    call species_iwf_ilm(spec, j, is, i, l, m)
+    call species_iwf_ilm(spec, iorb, ispin, i, l, m)
 
     if(species_is_ps(spec)) then
 
@@ -862,7 +862,7 @@ contains
         xf(ip, 1:mesh%sb%dim) = x(1:mesh%sb%dim)
       end do
 
-      call spline_eval_vec(ps%ur_sq(i, is), mesh%np, phi)
+      call spline_eval_vec(ps%ur_sq(i, ispin), mesh%np, phi)
       call loct_ylm(mesh%np, xf(1, 1), xf(1, 2), xf(1, 3), l, m, ylm(1))
 
       do ip = 1, mesh%np
@@ -878,7 +878,7 @@ contains
       do ip = 1, mesh%np
         x(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim) - pos(1:mesh%sb%dim)
         r2 = sum(x(1:mesh%sb%dim)**2)
-        select case(dim)
+        select case(mesh%sb%dim)
         case(1)
           phi(ip) = exp(-species_omega(spec)*r2/M_TWO) * hermite(i - 1, x(1)*sqrt(species_omega(spec)))
         case(2)
@@ -898,15 +898,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine species_get_orbital_submesh(spec, submesh, j, dim, is, pos, phi, derivative)
-    type(species_t),   intent(in)  :: spec
-    type(submesh_t),   intent(in)  :: submesh
-    integer,           intent(in)  :: j
-    integer,           intent(in)  :: dim
-    integer,           intent(in)  :: is
-    FLOAT,             intent(in)  :: pos(:)
-    FLOAT,             intent(out) :: phi(:)
-    logical, optional, intent(in)  :: derivative
+  subroutine species_get_orbital_submesh(spec, submesh, iorb, ispin, pos, phi, derivative)
+    type(species_t),   intent(in)  :: spec       !< The species.
+    type(submesh_t),   intent(in)  :: submesh    !< The submesh descriptor where the orbital will be calculated.
+    integer,           intent(in)  :: iorb       !< The index of the orbital to return.
+    integer,           intent(in)  :: ispin      !< The spin index.
+    FLOAT,             intent(in)  :: pos(:)     !< The position of the atom.
+    FLOAT,             intent(out) :: phi(:)     !< The function defined in the mesh where the orbitals is returned.
+    logical, optional, intent(in)  :: derivative !< If present and .true. returns the derivative of the orbital.
 
     integer :: i, l, m, ip
     FLOAT :: r2, x(1:MAX_DIM), sqrtw, ww
@@ -919,19 +918,18 @@ contains
 
     PUSH_SUB(species_get_orbital_submesh)
 
-    derivative_ = .false.
-    if(present(derivative)) derivative_ = derivative
+    derivative_ = optional_default(derivative, .false.)
 
     ASSERT(ubound(phi, dim = 1) >= submesh%ns)
 
-    call species_iwf_ilm(spec, j, is, i, l, m)
+    call species_iwf_ilm(spec, iorb, ispin, i, l, m)
 
     if(species_is_ps(spec)) then
       ps => species_ps(spec)
       
       if(derivative_) then
         call spline_init(dur)
-        call spline_der(ps%ur(i, is), dur)
+        call spline_der(ps%ur(i, ispin), dur)
       end if
 
       SAFE_ALLOCATE(xf(1:submesh%ns, 1:submesh%mesh%sb%dim))
@@ -944,7 +942,7 @@ contains
       end do
 
       if(.not. derivative_) then
-        call spline_eval_vec(ps%ur_sq(i, is), submesh%ns, phi)
+        call spline_eval_vec(ps%ur_sq(i, ispin), submesh%ns, phi)
       else
         call spline_eval_vec(dur, submesh%ns, phi)
       end if
@@ -967,7 +965,7 @@ contains
       ww = species_omega(spec)
       sqrtw = sqrt(ww)
 
-      select case(dim)
+      select case(submesh%mesh%sb%dim)
       case(1)
         do ip = 1, submesh%ns
           x(1:submesh%mesh%sb%dim) = submesh%mesh%x(submesh%jxyz(ip), 1:submesh%mesh%sb%dim) - pos(1:submesh%mesh%sb%dim)

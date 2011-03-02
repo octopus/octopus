@@ -683,10 +683,10 @@ contains
       do iorb = 1, norbs
         if(iorb > species_niwfs(geo%atom(iatom)%spec)) then
           call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere, iorb - species_niwfs(geo%atom(iatom)%spec), &
-            st%d%dim, ispin, geo%atom(iatom)%x, orbitalb%states(iorb)%dpsi(:, 1), derivative = .true.)
+            ispin, geo%atom(iatom)%x, orbitalb%states(iorb)%dpsi(:, 1), derivative = .true.)
         else
           call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere, iorb, &
-            st%d%dim, ispin, geo%atom(iatom)%x, orbitalb%states(iorb)%dpsi(:, 1))
+            ispin, geo%atom(iatom)%x, orbitalb%states(iorb)%dpsi(:, 1))
         end if
       end do
  
