@@ -346,10 +346,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   integer :: iatom, jatom, ik, ist, idim, ip, ispin, nev
   integer :: ibasis, jbasis, iorb, jorb, norbs, dof
   R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :), aa(:, :), bb(:, :)
-  R_TYPE, allocatable :: lhamiltonian(:, :), loverlap(:, :)
-#ifdef HAVE_SCALAPACK
   integer :: prow, pcol, ilbasis, jlbasis
-#endif
   R_TYPE, allocatable :: psii(:, :, :), hpsi(:, :, :)
   type(submesh_t), allocatable :: sphere(:)
   type(batch_t) :: hpsib, psib
@@ -383,10 +380,8 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
     SAFE_ALLOCATE(hamiltonian(1:this%nbasis, 1:this%nbasis))
     SAFE_ALLOCATE(overlap(1:this%nbasis, 1:this%nbasis))
   else
-#ifdef HAVE_SCALAPACK
-    SAFE_ALLOCATE(lhamiltonian(1:this%lsize(1), 1:this%lsize(2)))
-    SAFE_ALLOCATE(loverlap(1:this%lsize(1), 1:this%lsize(2)))
-#endif
+    SAFE_ALLOCATE(hamiltonian(1:this%lsize(1), 1:this%lsize(2)))
+    SAFE_ALLOCATE(overlap(1:this%lsize(1), 1:this%lsize(2)))
   end if
   SAFE_ALLOCATE(aa(1:this%maxorb, 1:this%maxorb))
   SAFE_ALLOCATE(bb(1:this%maxorb, 1:this%maxorb))  
@@ -444,13 +439,8 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
       call profiling_in(prof_matrix, "LCAO_MATRIX")
 
-      if(.not. this%parallel) then
-        hamiltonian = R_TOTYPE(M_ZERO)
-        overlap = R_TOTYPE(M_ZERO)
-      else
-        lhamiltonian = R_TOTYPE(M_ZERO)
-        loverlap = R_TOTYPE(M_ZERO)
-      end if
+      hamiltonian = R_TOTYPE(M_ZERO)
+      overlap = R_TOTYPE(M_ZERO)
 
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, geo%natoms)
 
@@ -501,19 +491,17 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
               end do
             end do
           else
-#ifdef HAVE_SCALAPACK
             do iorb = 1, norbs
               do jorb = 1, this%norb_atom(jatom)
 
                 call lcao_local_index(this, ibasis - 1 + iorb,  jbasis - 1 + jorb, &
                   ilbasis, jlbasis, prow, pcol)
                 if(all((/prow, pcol/) == this%myroc)) then
-                  lhamiltonian(ilbasis, jlbasis) = aa(iorb, jorb)
-                  loverlap(ilbasis, jlbasis) = bb(iorb, jorb)
+                  hamiltonian(ilbasis, jlbasis) = aa(iorb, jorb)
+                  overlap(ilbasis, jlbasis) = bb(iorb, jorb)
                 end if
               end do
             end do
-#endif
           end if
 
         end do ! jatom
@@ -649,8 +637,8 @@ contains
 
 #ifdef R_TREAL
       call scalapack_sygvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%nbasis, a = lhamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
-        b = loverlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
+        n = this%nbasis, a = hamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
+        b = overlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
         m = neval_found, nz = nevec_found, w = eval(1), orfac = orfac, &
         z = levec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
@@ -658,8 +646,8 @@ contains
         ifail = ifail(1), iclustr = iclustr(1), gap = gap(1), info = info)
 #else
       call scalapack_hegvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%nbasis, a = lhamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
-        b = loverlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
+        n = this%nbasis, a = hamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
+        b = overlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
         m = neval_found, nz = nevec_found, w = eval(1), orfac = orfac, &
         z = levec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
@@ -667,7 +655,10 @@ contains
         ifail = ifail(1), iclustr = iclustr(1), gap = gap(1), info = info)
 #endif
 
-      ASSERT(info == 0)
+      if(info /= 0) then
+        write(message(1), '(a,i4,a)') 'LCAO parallel diagonalization failed. Scalapack returned info code ', info, '.'
+        call write_warning(1)
+      end if
 
       lwork = nint(real(tmp, 8))
 
@@ -676,8 +667,8 @@ contains
 
 #ifdef R_TREAL
       call scalapack_sygvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%nbasis, a = lhamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
-        b = loverlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
+        n = this%nbasis, a = hamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
+        b = overlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
         m = neval_found, nz = nevec_found, w = eval(1), orfac = orfac, &
         z = levec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
@@ -688,8 +679,8 @@ contains
       SAFE_ALLOCATE(rwork(1:lrwork))
 
       call scalapack_hegvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%nbasis, a = lhamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
-        b = loverlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
+        n = this%nbasis, a = hamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
+        b = overlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
         m = neval_found, nz = nevec_found, w = eval(1), orfac = orfac, &
         z = levec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
@@ -715,7 +706,7 @@ contains
       recv_count = 0
       do ibasis = 1, this%nbasis
         do jbasis = 1, st%nst
-          
+
           call lcao_local_index(this, ibasis, jbasis, ilbasis, jlbasis, proc(1), proc(2))
 
           if(all(proc == this%myroc)) then
@@ -731,7 +722,7 @@ contains
             call MPI_Cart_rank(st%dom_st_mpi_grp%comm, proc(1), node, mpi_err)
             INCR(recv_count(node + 1), 1)
           end if
-          
+
         end do
       end do
 
@@ -742,13 +733,13 @@ contains
       recv_count = 0
       do ibasis = 1, this%nbasis
         do jbasis = 1, st%nst
-          
+
           call lcao_local_index(this, ibasis, jbasis, ilbasis, jlbasis, proc(1), proc(2))
 
           if(all(proc == this%myroc)) then
             ! we have to send the point
             dest(2) = st%node(jbasis)
-            
+
             do ii = 1, this%nproc(1)
               dest(1) = ii - 1
 
@@ -758,7 +749,7 @@ contains
               INCR(send_count(node), 1)
               send_buffer(send_count(node), node) = levec(ilbasis, jlbasis)
             end do
-           
+
           end if
 
           if(st%node(jbasis) == this%myroc(2)) then
@@ -771,7 +762,7 @@ contains
             recv_pos(1, recv_count(node), node) = ibasis
             recv_pos(2, recv_count(node), node) = jbasis
           end if
-          
+
         end do
       end do
 
@@ -819,7 +810,7 @@ contains
 #else
 
       SAFE_ALLOCATE(rwork(1:7*this%nbasis))
-      
+
       call lapack_hegvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
         n = this%nbasis, a = hamiltonian(1, 1), lda = this%nbasis, b = overlap(1, 1), ldb = this%nbasis, &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
@@ -827,10 +818,13 @@ contains
         work = tmp, lwork = -1, rwork = rwork(1), iwork = iwork(1), ifail = ifail(1), info = info)
 
 #endif
-      ASSERT(info == 0)
-      
+      if(info /= 0) then
+        write(message(1), '(a,i4,a)') 'LCAO diagonalization failed. Lapack returned info code ', info, '.'
+        call write_warning(1)
+      end if
+
       lwork = nint(real(tmp, 8))
-      
+
       SAFE_ALLOCATE(work(1:lwork))
 
 #ifdef R_TREAL
@@ -845,14 +839,14 @@ contains
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
         m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%nbasis, &
         work = work(1), lwork = lwork,  rwork = rwork(1), iwork = iwork(1), ifail = ifail(1), info = info)
-      
+
       SAFE_DEALLOCATE_A(rwork)
 #endif
-    
-    if(info /= 0) then
-      write(message(1), '(a,i4,a)') 'LCAO diagonalization failed. Lapack returned info code ', info, '.'
-      call write_warning(1)
-    end if
+
+      if(info /= 0) then
+        write(message(1), '(a,i4,a)') 'LCAO diagonalization failed. Lapack returned info code ', info, '.'
+        call write_warning(1)
+      end if
 
     end if
 

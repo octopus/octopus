@@ -632,7 +632,6 @@ contains
 
   ! ---------------------------------------------------------
 
-#ifdef HAVE_SCALAPACK
   subroutine lcao_local_index(this, ig, jg, il, jl, prow, pcol)
     type(lcao_t), intent(in)  :: this
     integer,      intent(in)  :: ig
@@ -642,13 +641,18 @@ contains
     integer,      intent(out) :: prow
     integer,      intent(out) :: pcol
     
-    ! no PUSH_SUB
-
+    ! no PUSH_SUB, called too often
+#ifdef HAVE_SCALAPACK
     call infog2l(ig, jg, this%desc(1), this%nproc(1), this%nproc(2), this%myroc(1), this%myroc(2), &
       il, jl, prow, pcol)
+#else
+    il = ig
+    jl = jg
+    prow = 0
+    pcol = 0
+#endif
 
   end subroutine lcao_local_index
-#endif
 
   ! --------------------------------------------------------- 
   
