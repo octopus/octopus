@@ -18,7 +18,7 @@ acell = 10
 %
 spacing = 0.2
 
-ConvRelDens = 1e-6
+ConvRelDens = 2e-12
 EigensolverFinalTolerance = 1e-8
 
 b=0.5

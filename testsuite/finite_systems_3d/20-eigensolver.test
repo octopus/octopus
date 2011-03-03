@@ -10,7 +10,7 @@ Enabled    : Yes
 # SiH4.
 
 Input: 20-eigensolver.01-lobpcg.inp
-match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -14.539728
+match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -14.539582
 match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.142330
 match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ;  -8.142330
 match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.107420
@@ -44,7 +44,7 @@ match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.635633
 
 Processors : 4
 Input: 20-eigensolver.06-rmmdiis.inp
-match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -14.539661
+match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -14.539769
 match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.142283
 match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ;  -8.142283
 match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.107373

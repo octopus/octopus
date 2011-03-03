@@ -17,7 +17,7 @@ radius = 10.5
 spacing = 0.40
 
 
-ConvRelDens = 1e-4
+ConvRelDens = 1e-7
 
 EigenSolver = cg_new
 EigenSolverInitTolerance = 1e-2

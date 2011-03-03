@@ -24,7 +24,7 @@ DerivativesOrder = 4
 TheoryLevel = independent_particles
 
 UnoccMaximumIter = 2
-ConvAbsDens = 1e-5
+ConvAbsDens = 1e-10
 LCAOStart = lcao_none
 
 EigenSolver = plan

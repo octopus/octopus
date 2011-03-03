@@ -29,7 +29,7 @@ TheoryLevel = hartree
 
 SpinComponents = spin_polarized
 
-ConvRelDens = 5e-3
+ConvRelDens = 5e-5
 LCAOStart = lcao_none
 
 EigenSolver = cg

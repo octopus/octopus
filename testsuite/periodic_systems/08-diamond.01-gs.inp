@@ -30,3 +30,4 @@ Spacing = a/12
 %
 
 ExtraStates = 1
+ConvRelDens = 1e-6

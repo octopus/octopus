@@ -51,5 +51,5 @@ EigenSolverMaxIter = 25
 PoissonSolver = fft_corrected
 
 ExperimentalFeatures = yes
-
+ConvRelDens = 4e-6
 DoubleGrid=yes

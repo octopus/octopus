@@ -24,7 +24,7 @@ DerivativesOrder = 3
 
 LCAOStart = no
 
-ConvAbsDens = 1e-5
+ConvAbsDens = 1e-10
 
 EigenSolver = cg
 EigenSolverInitTolerance = 1e-2

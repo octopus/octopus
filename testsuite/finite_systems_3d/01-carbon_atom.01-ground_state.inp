@@ -45,3 +45,4 @@ EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 25
 
 PoissonSolver = fft_corrected
+ConvRelDens = 4e-6

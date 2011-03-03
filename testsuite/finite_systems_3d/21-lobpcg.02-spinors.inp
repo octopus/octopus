@@ -37,4 +37,4 @@ EigenSolverFinalTolerance = 1e-6
 EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 25
 
-ConvRelDens = 5.0e-3
+ConvRelDens = 1e-4

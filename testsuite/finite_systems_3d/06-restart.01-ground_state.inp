@@ -13,4 +13,4 @@ SpinComponents = spin_polarized
 0.0
 1.0
 %
-ConvAbsDens = 1e-03
+ConvAbsDens = 1e-6

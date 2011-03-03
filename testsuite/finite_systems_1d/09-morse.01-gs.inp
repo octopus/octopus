@@ -58,7 +58,7 @@ Spacing = 0.01
 TheoryLevel = independent_particles
 
 
-ConvAbsDens = 1e-6
+ConvAbsDens = 1e-12
 
 LCAOStart = no
 

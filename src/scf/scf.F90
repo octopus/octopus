@@ -143,7 +143,7 @@ contains
 
     !%Variable ConvRelDens
     !%Type float
-    !%Default 1e-3
+    !%Default 1e-5
     !%Section SCF::Convergence
     !%Description
     !% Relative convergence of the density: 
@@ -151,10 +151,9 @@ contains
     !% <math>\epsilon = {1\over N} ConvAbsDens</math>.
     !% 
     !% <i>N</i> is the total number of electrons in the problem.  A
-    !% zero value means do not use this criterion. By default this
-    !% value is set to 1e-3.
+    !% zero value means do not use this criterion.
     !%End
-    call parse_float(datasets_check('ConvRelDens'), CNST(1e-3), scf%conv_rel_dens)
+    call parse_float(datasets_check('ConvRelDens'), CNST(1e-5), scf%conv_rel_dens)
 
     !%Variable ConvAbsEv
     !%Type float
@@ -163,7 +162,7 @@ contains
     !%Description
     !% Absolute convergence of the sum of the eigenvalues:
     !%
-    !% <math> \epsilon = \vert \sum_{j=1}^{N_{occ}}  \epsilon_j^{out}- \sum_{j=1}^{N_{occ}}  \epsilon_j^{inp} \vert </math>
+    !% <math> \epsilon = \vert \sum_{j=1}^{N_{occ}} \epsilon_j^{out} - \sum_{j=1}^{N_{occ}} \epsilon_j^{inp} \vert </math>
     !%
     !% A zero value (the default) means do not use this criterion.
     !%End
@@ -506,7 +505,6 @@ contains
         end do
       end if
 
-      scf%abs_dens = sqrt(scf%abs_dens)
       scf%rel_dens = scf%abs_dens / st%qtot
       scf%abs_ev = abs(evsum_out - evsum_in)
       scf%rel_ev = scf%abs_ev / abs(evsum_out)

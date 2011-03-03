@@ -12,7 +12,7 @@ EigenSolver = rmmdiis
 
 LCAOAlternative = yes
 
-ConvRelDens = 1e-4
+ConvRelDens = 2e-6
 
 ExtraStates = 20
 

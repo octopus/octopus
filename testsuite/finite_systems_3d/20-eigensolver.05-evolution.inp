@@ -23,7 +23,7 @@ EigenSolverMaxiter = 25
 EigenSolverInitTolerance = 1e-2
 EigenSolverFinalTolerance = 1e-5
 
-ConvRelDens = 0.1
+ConvRelDens = 0.08
 
 ParallelizationStrategy = par_domains
 

@@ -11,7 +11,7 @@ Enabled    : Yes
 # ground state
 Processors : 4
 Input      : 22-time_propagation.01-gs.inp
-match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -37.92510069
+match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -37.92527580
 
 # time-propagation, parallel in domains
 Processors : 4

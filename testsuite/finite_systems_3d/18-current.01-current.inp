@@ -25,7 +25,7 @@ CurvGygiA = 0.80
 DerivativesStencil = stencil_starplus
 DerivativesOrder = 3
 
-ConvAbsDens = 1e-2
+ConvAbsDens = 1e-4
 
 TheoryLevel = independent_particles
 

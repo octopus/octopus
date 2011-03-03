@@ -17,4 +17,4 @@ ExtraStates = 3
   "Na" |  1.54 | 0 | 0
 %
 
-ConvRelDens=1e-4
+ConvRelDens=2e-8

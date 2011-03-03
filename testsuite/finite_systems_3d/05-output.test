@@ -27,7 +27,7 @@ match ; Axis pos 9       ; LINE(static/density.y\=0\,z\=0, 10, 2) ; -0.529177208
 match ; Axis pos 17      ; LINE(static/density.y\=0\,z\=0, 18, 2) ; 1.58753162577000
 
 Precision : 0.000000001
-match ; Axis value 1     ; LINE(static/density.y\=0\,z\=0, 2, 25) ; 2.91389739403624E-006
+match ; Axis value 1     ; LINE(static/density.y\=0\,z\=0, 2, 25) ; 2.91564834138072E-006
 Precision : 0.000001
 match ; Axis value 9     ; LINE(static/density.y\=0\,z\=0, 10, 25) ; 2.75939509225883E-001
 match ; Axis value 17    ; LINE(static/density.y\=0\,z\=0, 18, 25) ; 6.57093245587566E-003
@@ -42,9 +42,9 @@ match ; Plane pos 295 Y  ; LINE(static/density.x\=0, 295, 2)  ; 1.58753162577000
 match ; Plane pos 295 Z  ; LINE(static/density.x\=0, 295, 24) ; 2.64588604295000E-001
 
 Precision : 0.000000001
-match ; Plane value 10   ; LINE(static/density.x\=0, 10, 47) ; 2.23480652558410E-005
+match ; Plane value 10   ; LINE(static/density.x\=0, 10, 47) ; 2.23494456545324E-005
 match ; Plane value 30   ; LINE(static/density.x\=0, 30, 47) ; 1.89763461646455E-004
-match ; Plane value 295  ; LINE(static/density.x\=0, 295, 47) ; 6.06672515372129E-003
+match ; Plane value 295  ; LINE(static/density.x\=0, 295, 47) ; 6.06673423715878E-003
 
 
 #xcrysden

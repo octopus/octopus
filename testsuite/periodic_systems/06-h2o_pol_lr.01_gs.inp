@@ -8,7 +8,7 @@ fromScratch = yes
 %
 
 Spacing = 0.6
-ConvRelDens = 1.0e-4
+ConvRelDens = 8.0e-8
 BoxShape = parallelepiped
 Lsize = 10
 PeriodicDimensions = 3

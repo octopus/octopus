@@ -42,7 +42,7 @@ XCFunctional = oep_x
 OEP_Level = oep_full
 
 
-ConvRelDens = 1e-5
+ConvRelDens = 8e-10
 
 LCAOStart = lcao_none
 

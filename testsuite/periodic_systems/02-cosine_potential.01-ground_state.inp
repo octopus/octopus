@@ -8,7 +8,7 @@ FromScratch = yes
 Dimensions = 1
 PeriodicDimensions = 1
 
-ConvAbsDens = 1e-6
+ConvAbsDens = 1e-12
 
 OnlyUserDef = yes
 TheoryLevel = independent_particles

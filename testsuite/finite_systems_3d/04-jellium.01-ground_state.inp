@@ -31,7 +31,7 @@ Spacing = 0.5
 XCFunctional = lda_x + lda_c_gl
 
 
-ConvRelDens = 1e-3
+ConvRelDens = 8e-6
 
 LCAOStart = lcao_none
 
