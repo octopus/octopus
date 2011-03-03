@@ -42,11 +42,13 @@ module propagator_m
   use ob_mem_m
   use ob_propagator_m
   use ob_terms_m
+  use opencl_m
   use profiling_m
   use states_dim_m
   use solvers_m
   use sparskit_m
   use states_m
+  use types_m
   use v_ks_m
   use varinfo_m
 
@@ -674,8 +676,12 @@ contains
       type(batch_t) :: zpsib
       FLOAT :: vv
       CMPLX :: phase
-      type(density_calc_t) :: dens_calc
+      type(density_calc_t)  :: dens_calc
       type(profile_t), save :: phase_prof
+#ifdef HAVE_OPENCL
+      integer               :: pnp, iprange
+      type(opencl_mem_t)    :: phase_buff
+#endif
 
       PUSH_SUB(propagator_dt.td_aetrs)
 
@@ -705,6 +711,18 @@ contains
         forall(ispin = 1:st%d%nspin, ip = 1:gr%mesh%np) 
           vold(ip, ispin) =  dt/(M_TWO*mu)*(hm%vhxc(ip, ispin) - vold(ip, ispin))
         end forall
+
+#ifdef HAVE_OPENCL
+        ! copy vold to a cl buffer
+        if(opencl_is_enabled() .and. hamiltonian_apply_packed(hm, gr%mesh)) then
+          pnp = opencl_padded_size(gr%mesh%np)
+          call opencl_create_buffer(phase_buff, CL_MEM_READ_ONLY, TYPE_FLOAT, pnp*st%d%nspin)
+          ASSERT(ubound(vold, dim = 1) == gr%mesh%np)
+          do ispin = 1, st%d%nspin
+            call opencl_write_buffer(phase_buff, gr%mesh%np, vold(:, ispin), offset = (ispin - 1)*pnp)
+          end do
+        end if
+#endif        
       end if
 
       ! interpolate the Hamiltonian to time t
@@ -731,25 +749,22 @@ contains
         do sts = st%st_start, st%st_end, st%d%block_size
           ste = min(st%st_end, sts + st%d%block_size - 1)
 
-          if(tr%method == PROP_CAETRS .and. .not. hamiltonian_apply_packed(hm, gr%mesh)) then
-            call profiling_in(phase_prof, "CAETRS_PHASE")
-            do ip = 1, gr%mesh%np
-              vv = vold(ip, ispin)
-              phase = cmplx(cos(vv), -sin(vv), kind = REAL_PRECISION)
-              forall(idim = 1:st%d%dim, ist = sts:ste)
-                st%zpsi(ip, idim, ist, ik) = st%zpsi(ip, idim, ist, ik)*phase
-              end forall
-            end do
-            call profiling_out(phase_prof)
-          end if
-
           call batch_init(zpsib, hm%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
           
-          if(hamiltonian_apply_packed(hm, gr%mesh)) then
-            call batch_pack(zpsib)
-
-            if(tr%method == PROP_CAETRS) then
-              call profiling_in(phase_prof, "CAETRS_PHASE")
+          if(hamiltonian_apply_packed(hm, gr%mesh)) call batch_pack(zpsib)
+          
+          if(tr%method == PROP_CAETRS) then
+            call profiling_in(phase_prof, "CAETRS_PHASE")
+            select case(batch_status(zpsib))
+            case(BATCH_NOT_PACKED)
+              do ip = 1, gr%mesh%np
+                vv = vold(ip, ispin)
+                phase = cmplx(cos(vv), -sin(vv), kind = REAL_PRECISION)
+                forall(ist = 1:zpsib%nst_linear)
+                  zpsib%states_linear(ist)%zpsi(ip) = zpsib%states_linear(ist)%zpsi(ip)*phase
+                end forall
+              end do
+            case(BATCH_PACKED)
               do ip = 1, gr%mesh%np
                 vv = vold(ip, ispin)
                 phase = cmplx(cos(vv), -sin(vv), kind = REAL_PRECISION)
@@ -757,9 +772,19 @@ contains
                   zpsib%pack%zpsi(ist, ip) = zpsib%pack%zpsi(ist, ip)*phase
                 end forall
               end do
-              call profiling_out(phase_prof)
-            end if
-            
+            case(BATCH_CL_PACKED)
+#ifdef HAVE_OPENCL
+              call opencl_set_kernel_arg(kernel_phase, 0, pnp*(ispin - 1))
+              call opencl_set_kernel_arg(kernel_phase, 1, phase_buff)
+              call opencl_set_kernel_arg(kernel_phase, 2, zpsib%pack%buffer)
+              call opencl_set_kernel_arg(kernel_phase, 3, log2(zpsib%pack%size(1)))
+
+              iprange = opencl_max_workgroup_size()/zpsib%pack%size(1)
+
+              call opencl_kernel_run(kernel_phase, (/zpsib%pack%size(1), pnp/), (/zpsib%pack%size(1), iprange/))
+#endif
+            end select
+            call profiling_out(phase_prof)
           end if
 
           call exponential_apply_batch(tr%te, gr%der, hm, zpsib, ik, dt/(M_TWO*mu), time)
@@ -770,6 +795,12 @@ contains
         end do
       end do
 
+#ifdef HAVE_OPENCL
+      if(tr%method == PROP_CAETRS .and. opencl_is_enabled() .and. hamiltonian_apply_packed(hm, gr%mesh)) then
+        call opencl_release_buffer(phase_buff)
+      end if
+#endif
+      
       call density_calc_end(dens_calc)
 
       POP_SUB(propagator_dt.td_aetrs)
