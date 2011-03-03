@@ -225,16 +225,7 @@ contains
 
     rmin = geometry_min_distance(geo)
 
-    !%Variable LocalMagneticMomentsSphereRadius
-    !%Type float
-    !%Section Time-Dependent::TD Output
-    !%Description
-    !% The local magnetic moments are calculated by integrating the
-    !% magnetization density in spheres centered around each atom.
-    !% This variable controls the radius of the spheres.
-    !% The default is half the minimum distance between two atoms
-    !% in the input coordinates.
-    !%End
+    ! This variable is documented in scf/scf.F90
     call parse_float(datasets_check('LocalMagneticMomentsSphereRadius'), rmin*M_HALF, writ%lmm_r, units_inp%length)
 
     if( (writ%out(OUT_PROJ)%write)  .or.  (writ%out(OUT_POPULATIONS)%write) ) then

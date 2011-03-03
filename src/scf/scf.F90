@@ -308,9 +308,19 @@ contains
     rmin = geometry_min_distance(geo)
     if(geo%natoms == 1) rmin = CNST(100.0)
 
-    ! This variable is documented in td/td_write.F90
+    !%Variable LocalMagneticMomentsSphereRadius
+    !%Type float
+    !%Section Output
+    !%Description
+    !% The local magnetic moments are calculated by integrating the
+    !% magnetization density in spheres centered around each atom.
+    !% This variable controls the radius of the spheres.
+    !% The default is half the minimum distance between two atoms
+    !% in the input coordinates.
+    !%End
     call parse_float(datasets_check('LocalMagneticMomentsSphereRadius'), &
       units_from_atomic(units_inp%length, rmin * M_HALF), scf%lmm_r)
+    ! this variable is also used in td/td_write.F90
     scf%lmm_r = units_to_atomic(units_inp%length, scf%lmm_r)
 
     POP_SUB(scf_init)
