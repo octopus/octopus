@@ -514,7 +514,7 @@ contains
         call write_warning(2)
       end if
 
-      if(orbital_radius > CNST(10.0)) then
+      if(orbital_radius > CNST(20.0)) then
         message(1) = "The radius the atomic orbitals given by your pseudopotential seems"
         message(2) = "unusually large; check that your pseudopotential is correct."
         call write_warning(2)
