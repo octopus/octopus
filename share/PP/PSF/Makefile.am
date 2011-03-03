@@ -36,7 +36,6 @@ dist_psf_DATA = \
 	N.psf  \
 	O.psf  \
 	Se.psf \
-	Si.psf \
 	S.psf  \
 	Ti.psf \
 	Xe.psf

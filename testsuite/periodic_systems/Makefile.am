@@ -31,8 +31,6 @@ dist_share_DATA =                                \
 	03-sodium_chain.01-ground_state.inp      \
 	03-sodium_chain.02-ground_state_disp.inp \
 	03-sodium_chain.test                     \
-	04-silicon.test                          \
-	04-silicon.01-gs.inp                     \
 	05-lithium.test                          \
 	05-lithium.01-gs.inp                     \
 	05-lithium.02-td.inp                     \
@@ -43,6 +41,9 @@ dist_share_DATA =                                \
 	06-h2o_pol_lr.test                       \
 	07-tb09.test	                         \
 	07-tb09.01-gs_symm.inp                   \
-	07-tb09.02-gs_nosymm.inp
+	07-tb09.02-gs_nosymm.inp                 \
+	08-diamond.test                          \
+	08-diamond.01-gs.inp                     \
+	08-diamond.02-kdotp.inp
 
 CLEANFILES = *~ *.bak
