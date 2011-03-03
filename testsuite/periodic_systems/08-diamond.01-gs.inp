@@ -1,0 +1,32 @@
+FromScratch=yes
+
+CalculationMode = gs
+ 
+PeriodicDimensions = 3
+
+a = 6.75
+
+BoxShape = parallelepiped
+Lsize = a/2
+
+Spacing = a/12
+
+%Coordinates
+  "C" |   0.0       | 0.0       | 0.0 
+  "C" |   a/2       | a/2       | 0.0
+  "C" |   a/2       | 0.0       | a/2
+  "C" |   0.0       | a/2       | a/2 
+  "C" |   a/4       | a/4       | a/4 
+  "C" |   a/4 + a/2 | a/4 + a/2 | a/4
+  "C" |   a/4 + a/2 | a/4       | a/4 + a/2
+  "C" |   a/4       | a/4 + a/2 | a/4 + a/2 
+%
+
+%KPoints
+  0.125000  |  0.077000  |  0.077000  |  0.077000
+  0.375000  |  0.077000  |  0.077000  |  0.384999
+  0.375000  |  0.077000  |  0.384999  |  0.384999
+  0.125000  |  0.384999  |  0.384999  |  0.384999
+%
+
+ExtraStates = 1
