@@ -50,6 +50,8 @@ if test x"$enable_mpi" != x"no" && test x"$compile_zoltan" == x"no"; then
     AC_SUBST(LIBS_ZOLTAN)
   else
     AC_MSG_NOTICE([Could not find an installed version of Zoltan. It will be compiled.])
+    CPPFLAGS_ZOLTAN=""	
+    LIBS_ZOLTAN=""
   fi
   CPPFLAGS="$acx_zoltan_save_CPPFLAGS"
   LIBS="$acx_zoltan_save_LIBS"
