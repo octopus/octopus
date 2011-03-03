@@ -925,8 +925,9 @@ contains
     end do
 
     if(associated(this%ep%E_field) .and. simul_box_is_periodic(mesh%sb)) then
-      forall(ip = 1:mesh%np, ispin = 1:this%d%nspin) &
+      forall(ip = 1:mesh%np, ispin = 1:this%d%nspin)
         this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + this%vberry(ip, ispin)
+      end forall
     endif
 
     ! the lasers
