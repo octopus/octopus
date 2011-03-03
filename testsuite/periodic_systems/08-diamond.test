@@ -30,7 +30,7 @@ match ; k-point 3 (z) ; GREP(static/info, '#k =   3', 42) ; 0.384999
 match ; Eigenvalue  1 ; GREP(static/info, '#k =   3', 12,  1) ; -0.433119
 match ; Eigenvalue  8 ; GREP(static/info, '#k =   3', 12,  8) ; -0.082141
 match ; Eigenvalue 16 ; GREP(static/info, '#k =   3', 12, 16) ;  0.112800
-match ; Eigenvalue 17 ; GREP(static/info, '#k =   3', 12, 17) ;  0.478167
+match ; Eigenvalue 17 ; GREP(static/info, '#k =   3', 12, 17) ;  0.475451
 
 match ; k-point 4 (x) ; GREP(static/info, '#k =   4', 18) ; 0.384999
 match ; k-point 4 (y) ; GREP(static/info, '#k =   4', 30) ; 0.384999
@@ -44,6 +44,6 @@ match ; Eigenvalue 17 ; GREP(static/info, '#k =   4', 12, 17) ;  0.494525
 Input      : 08-diamond.02-kdotp.inp
 match ; vg(x) k1 st1  ; LINE(kdotp/velocity,     5, 20) ; 0.05831
 match ; vg(y) k2 st10 ; LINE(kdotp/velocity,    34, 32) ; 0.39477
-match ; vg(z) k3 st17 ; LINE(kdotp/velocity,    61, 45) ; 0.16053
+match ; vg(z) k3 st17 ; LINE(kdotp/velocity,    61, 45) ; 0.16027
 Precision : 0.0005
 match ; 1/m*  k1 st1  ; GREP(kdotp/kpoint_1_1, 'Isotropic average', 25, 0) ; 0.840115
