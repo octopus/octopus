@@ -508,8 +508,14 @@ contains
         units_from_atomic(units_out%length, orbital_radius), " [", trim(units_abbrev(units_out%length)), "] "
       call write_info(4)
 
-      if(max(local_radius, this%ps%rc_max, orbital_radius) > CNST(6.0)) then
+      if(max(local_radius, this%ps%rc_max) > CNST(6.0)) then
         message(1) = "One of the radii of your pseudopotential's localized parts seems"
+        message(2) = "unusually large; check that your pseudopotential is correct."
+        call write_warning(2)
+      end if
+
+      if(orbital_radius > CNST(10.0)) then
+        message(1) = "The radius the atomic orbitals given by your pseudopotential seems"
         message(2) = "unusually large; check that your pseudopotential is correct."
         call write_warning(2)
       end if
