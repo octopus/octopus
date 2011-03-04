@@ -33,7 +33,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   R_TYPE, allocatable :: psi_copy(:, :, :)
 
   type(profile_t), save :: phase_prof
-  logical :: kinetic_only_, apply_phase
+  logical :: kinetic_only_, apply_phase, pack
   integer :: ii, ist, idim, ip
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
   type(batch_t), pointer :: epsib
@@ -68,7 +68,11 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
   call X(derivatives_batch_set_bc)(der, psib)
 
-  if(hamiltonian_apply_packed(hm, der%mesh) .and. (opencl_is_enabled() .or. nst > 1)) then
+  pack = hamiltonian_apply_packed(hm, der%mesh) &
+    .and. (opencl_is_enabled() .or. nst > 1) &
+    .and. terms_ == TERM_ALL
+
+  if(pack) then
     call batch_pack(psib)
     call batch_pack(hpsib, copy = .false.)
   end if
@@ -197,7 +201,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
     SAFE_DEALLOCATE_P(epsib)
   end if
 
-  if(hamiltonian_apply_packed(hm, der%mesh) .and. (opencl_is_enabled() .or. nst > 1)) then
+  if(pack) then
     call batch_unpack(psib, copy = .false.)
     call batch_unpack(hpsib)
   end if
