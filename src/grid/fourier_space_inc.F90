@@ -76,12 +76,12 @@ subroutine X(cube_function_fft_init)(cf, sb)
     call pfft_init(cf%n, sb%dim, fft_complex, cf%pfft, .not.simul_box_is_periodic(sb))
     cf%nx = cf%n(1)
 #endif 
-  else 
-    message(1) = "You have selected to use PFFT library, "
-    message(2) = "but is not compiled"
+#else 
+    message(1) = "You have selected to use the PFFT library, "
+    message(2) = "but it has not been linked."
     call write_fatal(2)
-  end if
 #endif
+  end if
 
   POP_SUB(X(cube_function_fft_init))
 end subroutine X(cube_function_fft_init)
@@ -114,7 +114,7 @@ subroutine X(cube_function_pfft_init)(cf, sb)
 end subroutine X(cube_function_pfft_init)
 
 ! ---------------------------------------------------------
-! The next routines convert the function between real space and Fourier space
+! The following routines convert the function between real space and Fourier space
 ! Note that the dimensions of the function in FS are different depending on whether
 ! f is real or complex, because the FFT representation is different (FFTW scheme).
 subroutine X(cube_function_RS2FS)(cf)

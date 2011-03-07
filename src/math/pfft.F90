@@ -45,7 +45,6 @@ module pfft_m
 #ifdef HAVE_PFFT
   include "pfft.f"
   include "fftw3.f"
-#endif
 
   private ::        &
        decompose,   &
@@ -70,7 +69,7 @@ module pfft_m
     integer     :: slot         !< in which slot do we have this fft
     integer     :: n(3)         !< size of the fft
     integer     :: is_real      !< is the fft real or complex. PFFT only works with complex
-    integer(ptrdiff_t_kind)    :: comm_cart_2d !< 2 dimensional catersian processor grid
+    integer(ptrdiff_t_kind)    :: comm_cart_2d !< 2-dimensional Cartesian processor grid
     type(c_ptr) :: planf        !< the plan for forward transforms
     type(c_ptr) :: planb        !< the plan for backward transforms
   end type pfft_t
@@ -87,8 +86,7 @@ contains
   subroutine pfft_all_init()
     integer :: ii
 
-#ifdef HAVE_PFFT
-    PUSH_SUB(fft_all_init)
+    PUSH_SUB(pfft_all_init)
 
     !%Variable PFFTOptimize
     !%Type logical
@@ -132,9 +130,7 @@ contains
     call parse_integer(datasets_check('PFFTPreparePlan'), pfft_measure, pfft_prepare_plan)
     if(.not. varinfo_valid_option('PFFTPreparePlan', pfft_prepare_plan)) call input_error('PFFTPreparePlan')
 
-    POP_SUB(fft_all_init)
-#endif
-
+    POP_SUB(pfft_all_init)
   end subroutine pfft_all_init
 
   ! ---------------------------------------------------------
@@ -142,8 +138,7 @@ contains
   subroutine pfft_all_end()
     integer :: ii
 
-#ifdef HAVE_PFFT
-    PUSH_SUB(fft_all_end)
+    PUSH_SUB(pfft_all_end)
 
     do ii = 1, PFFT_MAX
       if(pfft_refs(ii) /= FFT_NULL) then
@@ -154,9 +149,7 @@ contains
     end do
 
     call PDFFT(cleanup)
-    POP_SUB(fft_all_end)
-#endif
-
+    POP_SUB(pfft_all_end)
   end subroutine pfft_all_end
 
   ! ---------------------------------------------------------
@@ -167,7 +160,6 @@ contains
     type(pfft_t),      intent(out)   :: pfft
     logical, optional, intent(in)    :: optimize
    
-#ifdef HAVE_PFFT 
     FLOAT, allocatable :: rin(:, :, :)
     CMPLX, allocatable :: cin(:, :, :), cout(:, :, :)
     
@@ -297,9 +289,7 @@ contains
     message(1) = trim(message(1)) // trim(str_tmp)
     call write_info(1)
     
-    POP_SUB(pfft_init)
-#endif
-        
+    POP_SUB(pfft_init)       
   end subroutine pfft_init
 
   ! ---------------------------------------------------------
@@ -308,20 +298,16 @@ contains
   subroutine pfft_forward_3d(pfft)
     type(pfft_t), intent(in)  :: pfft
 
-#ifdef HAVE_PFFT
     PUSH_SUB(pfft_forward_3d)
 
     call PDFFT(execute) (pfft%planf)
 
     POP_SUB(pfft_forward_3d)
-#endif
-
   end subroutine pfft_forward_3d 
 
   subroutine pfft_backward_3d(pfft)
     type(pfft_t), intent(in) :: pfft
     
-#ifdef HAVE_PFFT
     PUSH_SUB(dpfft_backward)
     
     call PDFFT(execute) (pfft%planb)
@@ -331,8 +317,6 @@ contains
     !  M_ONE / (fft%n(1)*fft%n(2)*fft%mn(3)), rr)
 
     POP_SUB(pfft_backward)
-#endif
-
   end subroutine pfft_backward_3d
   
   !> This function decomposes a given number of processors in a
@@ -344,6 +328,8 @@ contains
     integer, intent(out) :: dim2   !< Second out dimension
     integer :: np, i
     
+    PUSH_SUB(decompose)
+
     if(n_proc < 1) then
       message(1) = "Internal error in pfft_init: "
       message(2) = "Error creating the decomposition of the processor grid"  
@@ -387,12 +373,15 @@ contains
     write(message(4),'(a, i9)') " No. of rows    in the proc. grid = ",dim2
     call write_info(4)
 
+    POP_SUB(decompose)
   end subroutine decompose
 
   logical function prime(n) result(is_prime)
     integer, intent(in) :: n
     
     integer :: i, root
+
+    PUSH_SUB(prime)
 
     if (n < 1) then
       message(1) = "Internal error in pfft_init: "
@@ -411,8 +400,11 @@ contains
       end do
       is_prime = .true.
     end if
+
+    POP_SUB(prime)
   end function prime
 
+#endif
   
 end module pfft_m
 
