@@ -902,7 +902,7 @@ contains
     type(controlfunction_t), intent(in) :: par
     PUSH_SUB(controlfunction_mixing_init)
     call mix_init(controlfunction_mix, par%dim, par%no_controlfunctions, 1)
-    POP_SUB(controlfunction_init)
+    POP_SUB(controlfunction_mixing_init)
   end subroutine controlfunction_mixing_init
   ! ---------------------------------------------------------
 
