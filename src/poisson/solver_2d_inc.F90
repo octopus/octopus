@@ -97,7 +97,7 @@ subroutine poisson2D_solve(this, pot, rho)
         xx(:) = this%der%mesh%x(ip, 1:2)
         do jp = 1, this%der%mesh%np
           if(ip == jp) then
-            pot(ip) = pot(ip) + M_TWO*sqrt(M_PI)*rho(ip)/this%der%mesh%spacing(1)
+            pot(ip) = pot(ip) + M_TWO*sqrt(M_PI)*rho(ip)/this%der%mesh%spacing(1)*this%der%mesh%vol_pp(1)
           else
             yy(:) = this%der%mesh%x(jp, 1:2)
             pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx-yy)**2))*this%der%mesh%vol_pp(1)
