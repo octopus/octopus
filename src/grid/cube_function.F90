@@ -57,14 +57,15 @@ module cube_function_m
     integer :: nprocs(1:3)          !< number of processors
     integer :: iprocs(1:3)          !< 
     integer :: offset(1:3)          !< 
-    FLOAT, pointer :: dRS(:, :, :)  !< real space grid
-    CMPLX, pointer :: zRS(:, :, :)  !< real space grid, complex numbers
-    CMPLX, pointer :: FS(:, :, :)   !< fourier space grid
+    FLOAT, pointer :: dRS(:, :, :)  !< real-space grid
+    CMPLX, pointer :: zRS(:, :, :)  !< real-space grid, complex numbers
+    CMPLX, pointer :: FS(:, :, :)   !< Fourier-space grid
     integer :: fft_library          !< which FFT library has to be used. Options FFTW3=0, PFFT=1
     integer :: nx     ! = n(1)/2 + 1, first dimension of the FS array
     type(fft_t), pointer :: fft
-
+#ifdef HAVE_PFFT
     type(pfft_t), pointer :: pfft
+#endif
 
     type(mpi_grp_t) :: mpi_grp
 
@@ -191,7 +192,6 @@ contains
     cf%offset = 0
     
     nullify(cf%fft)
-    nullify(cf%pfft)
     
     default_fft_library = FFTW3_LIB
 
@@ -202,6 +202,8 @@ contains
       write(message(1),'(a)')'You have selected the PFFT for FFT, but it is not compiled.'
       call write_fatal(1)
     end if
+#else
+    nullify(cf%pfft)
 #endif
     
     POP_SUB(cube_function_init) 
