@@ -234,7 +234,7 @@ contains
       dd%kweights(iq) = kpoints_get_weight(sb%kpoints, ik)
     end do
 
-    call print_kpoints_debug
+    if(in_debug_mode) call print_kpoints_debug
     POP_SUB(states_choose_kpoints)
 
   contains
@@ -242,14 +242,11 @@ contains
       integer :: iunit
 
       PUSH_SUB(states_choose_kpoints.print_kpoints_debug)
-
-      if(in_debug_mode) then
-
-        iunit = io_open('debug/kpoints', action = 'write')
-        call kpoints_write_info(sb%kpoints, iunit)      
-        call io_close(iunit)
-
-      end if
+      
+      call io_mkdir('debug/')
+      iunit = io_open('debug/kpoints', action = 'write')
+      call kpoints_write_info(sb%kpoints, iunit)      
+      call io_close(iunit)
 
       POP_SUB(states_choose_kpoints.print_kpoints_debug)
     end subroutine print_kpoints_debug

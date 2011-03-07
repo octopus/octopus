@@ -625,7 +625,6 @@ contains
     !no PUSH SUB, called too often
 
     if(laser%field .eq. E_FIELD_SCALAR_POTENTIAL) then
-      POP_SUB(laser_field)
       return
     endif
     if(present(time)) then
