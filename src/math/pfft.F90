@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-#define FFT_MAX 10
+#define PFFT_MAX 10
 #define FFT_NULL -1
 
 #if defined(SINGLE_PRECISION)
@@ -47,7 +47,9 @@ module pfft_m
   include "fftw3.f"
 #endif
 
-  private
+  private ::        &
+       decompose,   &
+       prime
   public ::         &
     pfft_t,         &
     pfft_all_init,  &
@@ -68,13 +70,13 @@ module pfft_m
     integer     :: slot         !< in which slot do we have this fft
     integer     :: n(3)         !< size of the fft
     integer     :: is_real      !< is the fft real or complex. PFFT only works with complex
-    integer     :: comm_cart_2d !< 2 dimensional catersian processor grid
+    integer(ptrdiff_t_kind)    :: comm_cart_2d !< 2 dimensional catersian processor grid
     type(c_ptr) :: planf        !< the plan for forward transforms
     type(c_ptr) :: planb        !< the plan for backward transforms
   end type pfft_t
 
-  integer      :: pfft_refs(FFT_MAX)
-  type(pfft_t) :: pfft_array(FFT_MAX)
+  integer      :: pfft_refs(PFFT_MAX)
+  type(pfft_t) :: pfft_array(PFFT_MAX)
   logical      :: fft_optimize
   integer      :: pfft_prepare_plan
 
@@ -101,7 +103,7 @@ contains
     !% the split-operator, or Suzuki-Trotter propagators, this option should be turned off.
     !%End
     call parse_logical(datasets_check('PFFTOptimize'), .true., fft_optimize)
-    do ii = 1, FFT_MAX
+    do ii = 1, PFFT_MAX
       pfft_refs(ii) = FFT_NULL
     end do
  
@@ -143,7 +145,7 @@ contains
 #ifdef HAVE_PFFT
     PUSH_SUB(fft_all_end)
 
-    do ii = 1, FFT_MAX
+    do ii = 1, PFFT_MAX
       if(pfft_refs(ii) /= FFT_NULL) then
         call PDFFT(destroy_plan) (pfft_array(ii)%planf)
         call PDFFT(destroy_plan) (pfft_array(ii)%planb)
@@ -176,12 +178,12 @@ contains
     integer(ptrdiff_t_kind) :: alloc_local
     integer(ptrdiff_t_kind) :: local_ni(3), local_i_start(3)
     integer(ptrdiff_t_kind) :: local_no(3), local_o_start(3)
+    !    integer comm_cart_2d
     !integer(8) fftplan_forw, fftplan_back
     CMPLX, allocatable ::  data_in(:)
     CMPLX, allocatable ::  data_out(:)
     
     PUSH_SUB(pfft_init)
-    
     ! First, figure out the dimensionality of the FFT. PFFT works efficiently with 3D
     fft_dim = 0
     do ii = 1, dim
@@ -220,7 +222,7 @@ contains
 
     ! find out if fft has already been allocated
     jj = 0
-    do ii = FFT_MAX, 1, -1
+    do ii = PFFT_MAX, 1, -1
       if(pfft_refs(ii) /= FFT_NULL) then
         if(all(nn(1:dim) == pfft_array(ii)%n(1:dim)) .and. is_real == pfft_array(ii)%is_real) then
           pfft = pfft_array(ii)              ! return a copy
@@ -235,7 +237,7 @@ contains
 
     if(jj == 0) then
       message(1) = "Not enough slots for FFTs."
-      message(2) = "Please increase FFT_MAX in fftw3.F90 and recompile."
+      message(2) = "Please increase PFFT_MAX in pfft.F90 and recompile."
       call write_fatal(2)
     end if
 
@@ -251,11 +253,12 @@ contains
     SAFE_ALLOCATE(cout(1:nn(1), 1:nn(2), 1:nn(3)))
 
     ! Create two-dimensional process grid of
-    process_column_size = aint(sqrt(real(mpi_world%size)))
-    process_row_size    = aint(sqrt(real(mpi_world%size)))
+    call decompose(mpi_world%size, process_column_size, process_row_size)
   
-    ! size np(1) x np(2), if possible
-    call PDFFT(create_procmesh_2d) (ierror,mpi_world%comm,process_column_size,process_row_size,pfft%comm_cart_2d)
+    call dpfft_init()
+
+    call PDFFT(create_procmesh_2d) (ierror,MPI_COMM_WORLD,process_column_size,&
+         process_row_size,pfft%comm_cart_2d)
     if (ierror .ne. 0) then
       message(1) = "The number of rows and columns in PFFT processor grid is not equal to "
       message(2) = "the number of processor in the MPI communicator."
@@ -263,18 +266,17 @@ contains
       call write_fatal(3)
     end if
 
-    ! Get parameters of data distribution, gives memory amount for local array
-    
     call PDFFT(local_size_3d) (alloc_local, nn, pfft%comm_cart_2d, PFFT_TRANSPOSED, &
-      &     local_ni, local_i_start, local_no, local_o_start);
-
+         local_ni, local_i_start, local_no, local_o_start)
+    
     !     Allocate memory
     SAFE_ALLOCATE(data_in(alloc_local))
     SAFE_ALLOCATE(data_out(alloc_local))
 
     ! Create the plan, with the processor grid 
-    call PDFFT(plan_dft_3d) (pfft_array(jj)%planf, nn, data_in, data_out, pfft%comm_cart_2d, &
-         & FFTW_FORWARD, PFFT_TRANSPOSED + PFFT_FORWARD, FFTW_MEASURE)
+    call PDFFT(plan_dft_3d) (pfft_array(jj)%planf, nn, data_in, data_out, &
+         pfft%comm_cart_2d, &
+         FFTW_FORWARD, PFFT_TRANSPOSED + PFFT_FORWARD, FFTW_MEASURE)
     call PDFFT(plan_dft_3d) (pfft_array(jj)%planb, nn, data_out, data_in, pfft%comm_cart_2d, &
          & FFTW_BACKWARD, PFFT_TRANSPOSED + PFFT_BACKWARD, FFTW_MEASURE) 
     SAFE_DEALLOCATE_A(data_in)
@@ -332,6 +334,85 @@ contains
 #endif
 
   end subroutine pfft_backward_3d
+  
+  !> This function decomposes a given number of processors in a
+  !! two dimension processor grid.
+  !! @author Miquel Huix 
+  subroutine decompose(n_proc, dim1, dim2)
+    integer, intent(in)  :: n_proc !< Number of processors
+    integer, intent(out) :: dim1   !< First out dimension
+    integer, intent(out) :: dim2   !< Second out dimension
+    integer :: np, i
+    
+    if(n_proc < 1) then
+      message(1) = "Internal error in pfft_init: "
+      message(2) = "Error creating the decomposition of the processor grid"  
+      message(3) = "The number of processors could not be negative"
+      call write_fatal(3)
+    end if
+    
+    dim1 = 1
+    dim2 = 1
+    np = n_proc
+    i = n_proc-1
+    
+    if (prime(n_proc)) then
+      dim1 = n_proc
+    else
+      do
+        if (i <= 1) exit
+        if(mod(np,i) /= 0.or.(.not.prime(i))) then
+          i=i-1
+          cycle
+        end if
+        np=np/i
+        if (dim1 <= dim2) then
+          dim1 = dim1*i
+        else
+          dim2 = dim2*i
+        end if
+      end do
+    end if
+    
+    if (dim1 * dim2 /= n_proc) then
+      message(1) = "Internal error in pfft_init: "
+      message(2) = "Error creating the decomposition of the processor grid"  
+      message(3) = "The multiplication of the two dimensions have to be equal to the number of processors"
+      call write_fatal(3)
+    end if
+    
+    write(message(1),'(a)') "Info: PFFT processor grid"
+    write(message(2),'(a, i9)') " No. of processors                = ",n_proc
+    write(message(3),'(a, i9)') " No. of columns in the proc. grid = ",dim1
+    write(message(4),'(a, i9)') " No. of rows    in the proc. grid = ",dim2
+    call write_info(4)
+
+  end subroutine decompose
+
+  logical function prime(n) result(is_prime)
+    integer, intent(in) :: n
+    
+    integer :: i, root
+
+    if (n < 1) then
+      message(1) = "Internal error in pfft_init: "
+      message(2) = "Error calculating the negative prime number"
+      call write_fatal(2)
+    end if
+    if (n == 1) then
+      is_prime = .false.
+    else
+      root = sqrt(real(n))
+      do i = 2, root
+        if (mod(n,i) == 0) then
+          is_prime = .false.
+          return
+        end if
+      end do
+      is_prime = .true.
+    end if
+  end function prime
+
   
 end module pfft_m
 

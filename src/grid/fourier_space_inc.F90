@@ -44,8 +44,8 @@ subroutine X(cube_function_free_FS)(cf)
 end subroutine X(cube_function_free_FS)
 
 ! ---------------------------------------------------------
-! initializes the ffts. As the dimension of the fft may be adjusted, this
-! routine has to be called before allocating anything
+!> initializes the ffts. As the dimension of the fft may be adjusted, this
+!! routine has to be called before allocating anything
 subroutine X(cube_function_fft_init)(cf, sb)
   type(cube_function_t),     intent(inout) :: cf
   type(simul_box_t), intent(in)    :: sb
@@ -55,7 +55,6 @@ subroutine X(cube_function_fft_init)(cf, sb)
   ASSERT(.not.associated(cf%fft))
   ASSERT(.not.associated(cf%X(RS)))
   ASSERT(.not.associated(cf%FS))
-
   SAFE_ALLOCATE(cf%fft)
 #ifdef R_TREAL
   call fft_init(cf%n, sb%dim, fft_real, cf%fft, optimize = .not.simul_box_is_periodic(sb))
@@ -63,6 +62,25 @@ subroutine X(cube_function_fft_init)(cf, sb)
 #else
   call fft_init(cf%n, sb%dim, fft_complex, cf%fft, optimize = .not.simul_box_is_periodic(sb))
   cf%nx = cf%n(1)
+#endif
+  
+  if (cf%fft_library == PFFT_LIB) then
+#ifdef HAVE_PFFT
+    ASSERT(.not.associated(cf%pfft))
+    
+    SAFE_ALLOCATE(cf%pfft)
+#ifdef R_TREAL
+    call pfft_init(cf%n, sb%dim, fft_real, cf%pfft, optimize = .not.simul_box_is_periodic(sb))
+    cf%nx = cf%n(1)/2 + 1
+#else
+    call pfft_init(cf%n, sb%dim, fft_complex, cf%pfft, .not.simul_box_is_periodic(sb))
+    cf%nx = cf%n(1)
+#endif 
+  else 
+    message(1) = "You have selected to use PFFT library, "
+    message(2) = "but is not compiled"
+    call write_fatal(2)
+  end if
 #endif
 
   POP_SUB(X(cube_function_fft_init))
@@ -82,7 +100,7 @@ subroutine X(cube_function_pfft_init)(cf, sb)
   ASSERT(.not.associated(cf%X(RS)))
   ASSERT(.not.associated(cf%FS))
 
-  SAFE_ALLOCATE(cf%fft)
+  SAFE_ALLOCATE(cf%pfft)
 #ifdef R_TREAL
   call pfft_init(cf%n, sb%dim, fft_real, cf%pfft, optimize = .not.simul_box_is_periodic(sb))
   cf%nx = cf%n(1)/2 + 1

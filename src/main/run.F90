@@ -36,6 +36,7 @@ module run_m
   use mpi_debug_m
   use memory_m
   use multicomm_m
+  use pfft_m
   use one_shot_m
   use opt_control_m
   use phonons_fd_m
@@ -227,6 +228,9 @@ contains
     if(calc_mode_id /= CM_PULPO_A_FEIRA) then
       ! initialize FFTs
       call fft_all_init()
+#ifdef HAVE_PFFT
+      call pfft_all_init()
+#endif
 
       call unit_system_init()
       call system_init(sys)
