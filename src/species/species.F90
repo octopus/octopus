@@ -25,6 +25,7 @@ module species_m
   use io_m
   use loct_m
   use loct_math_m
+  use logrid_m
   use math_m
   use messages_m
   use mpi_m
@@ -1059,24 +1060,46 @@ contains
     type(space_t),   intent(in)    :: space
 
     integer :: is, n, i, l, m, n1, n2, n3
+    FLOAT   :: radius
+    logical, allocatable :: bound(:)
 
     PUSH_SUB(species_iwf_fix_qn)
 
     if(species_is_ps(spec)) then
+      
+      SAFE_ALLOCATE(bound(1:spec%ps%conf%p))
+
+      ! we check if the orbitals are bound by looking at the atomic radius
+      do i = 1, spec%ps%conf%p
+        radius = M_ZERO
+        do is = 1, ispin
+          radius = max(radius, spline_cutoff_radius(spec%ps%ur(i, is), threshold = CNST(0.001)))
+        end do
+        ! we consider as bound a state that localized to less than half the radius of the radial grid
+        bound(i) = radius < CNST(0.5)*logrid_radius(spec%ps%g)
+      end do
+      
       do is = 1, ispin
         n = 1
         do i = 1, spec%ps%conf%p
           if(n > spec%niwfs) exit          
           l = spec%ps%conf%l(i)
-
+           
+          if(.not. bound(i)) cycle
+          
           do m = -l, l
             spec%iwf_i(n, is) = i
             spec%iwf_l(n, is) = l
             spec%iwf_m(n, is) = m
             n = n + 1
           end do
+          
         end do
+        spec%niwfs = n - 1
       end do
+
+      SAFE_DEALLOCATE_A(bound)
+
     else
 
       select case(space%dim)

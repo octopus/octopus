@@ -32,24 +32,24 @@ Precision : default
 
 
 Input: 07-spin_orbit_coupling.02-rkb.inp
-match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -27.484172
-match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ; -26.531942
-match ; Eigenvalue  5 ; GREP(static/info, ' 5   --', 13) ; -17.372240
-match ; Eigenvalue  7 ; GREP(static/info, ' 7   --', 13) ; -15.896937
-match ; Eigenvalue  9 ; GREP(static/info, ' 9   --', 13) ; -14.827941
-match ; Eigenvalue 11 ; GREP(static/info, '11   --', 13) ; -14.797636
-match ; Eigenvalue 13 ; GREP(static/info, '13   --', 13) ; -13.978083
-match ; Eigenvalue 15 ; GREP(static/info, '15   --', 13) ; -13.706630
+match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -27.486551
+match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ; -26.534266
+match ; Eigenvalue  5 ; GREP(static/info, ' 5   --', 13) ; -17.374425
+match ; Eigenvalue  7 ; GREP(static/info, ' 7   --', 13) ; -15.899296
+match ; Eigenvalue  9 ; GREP(static/info, ' 9   --', 13) ; -14.830244
+match ; Eigenvalue 11 ; GREP(static/info, '11   --', 13) ; -14.799983
+match ; Eigenvalue 13 ; GREP(static/info, '13   --', 13) ; -13.980429
+match ; Eigenvalue 15 ; GREP(static/info, '15   --', 13) ; -13.708751
 
 Precision : 0.001
 match ; <Sz>        1 ; GREP(static/info, ' 1   --', 52) ;  0.5000
 match ; <Sz>        3 ; GREP(static/info, ' 3   --', 52) ;  0.5000
-match ; <Sz>        5 ; GREP(static/info, ' 5   --', 52) ;  0.4749
-match ; <Sz>        7 ; GREP(static/info, ' 7   --', 52) ;  0.1363
-match ; <Sz>        9 ; GREP(static/info, ' 9   --', 52) ; -0.0870
+match ; <Sz>        5 ; GREP(static/info, ' 5   --', 52) ;  0.4748
+match ; <Sz>        7 ; GREP(static/info, ' 7   --', 52) ;  0.1362
+match ; <Sz>        9 ; GREP(static/info, ' 9   --', 52) ; -0.0911
 match ; <Sz>       11 ; GREP(static/info, '11   --', 52) ;  0.1362
-match ; <Sz>       13 ; GREP(static/info, '13   --', 52) ; -0.1110
-match ; <Sz>       15 ; GREP(static/info, '15   --', 52) ;  0.4503
+match ; <Sz>       13 ; GREP(static/info, '13   --', 52) ; -0.1114
+match ; <Sz>       15 ; GREP(static/info, '15   --', 52) ;  0.4501
 
-match ; Force         ; GREP(static/info, 'Forces on the ions', 20, 2) ; 2.574651
+match ; Force         ; GREP(static/info, 'Forces on the ions', 20, 2) ; 2.588990
 Precision : default

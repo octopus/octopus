@@ -574,13 +574,13 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
       call batch_end(psib)
 
+      SAFE_DEALLOCATE_A(eval)
+      SAFE_DEALLOCATE_A(evec)
+      SAFE_DEALLOCATE_A(levec)
+
       if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
       call profiling_out(prof_wavefunction)
     end do
-
-    SAFE_DEALLOCATE_A(eval)
-    SAFE_DEALLOCATE_A(evec)
-
   end do
 
   do iatom = 1, geo%natoms

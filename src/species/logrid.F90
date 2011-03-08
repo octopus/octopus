@@ -33,6 +33,7 @@ module logrid_m
     logrid_end,     &
     logrid_copy,    &
     logrid_index,   &
+    logrid_radius,  &
     derivative_in_log_grid
 
   integer, parameter, public :: &
@@ -180,7 +181,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine derivative_in_log_grid(grid, ff, dfdr)
-    type(logrid_t), intent(in)   :: grid
+    type(logrid_t), intent(in)   :: grid    
     FLOAT,          intent(in)   :: ff(:)
     FLOAT,          intent(out)  :: dfdr(:)
 
@@ -196,6 +197,13 @@ contains
 
     POP_SUB(derivative_in_log_grid)
   end subroutine derivative_in_log_grid
+
+  ! ----------------------------------------------------------
+  FLOAT pure function logrid_radius(grid) result(radius)
+    type(logrid_t), intent(in)   :: grid
+
+    radius = grid%rofi(grid%nrval)
+  end function logrid_radius
 
 end module logrid_m
 

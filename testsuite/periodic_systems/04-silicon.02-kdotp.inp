@@ -5,22 +5,22 @@ ExperimentalFeatures = yes
 
 PeriodicDimensions = 3
 
-a = 6.75
+Spacing=0.7
+
+a = 10.2
 
 BoxShape = parallelepiped
 Lsize = a/2
 
-Spacing = a/12
-
 %Coordinates
-  "C" |   0.0       | 0.0       | 0.0 
-  "C" |   a/2       | a/2       | 0.0
-  "C" |   a/2       | 0.0       | a/2
-  "C" |   0.0       | a/2       | a/2 
-  "C" |   a/4       | a/4       | a/4 
-  "C" |   a/4 + a/2 | a/4 + a/2 | a/4
-  "C" |   a/4 + a/2 | a/4       | a/4 + a/2
-  "C" |   a/4       | a/4 + a/2 | a/4 + a/2 
+  "Si" |   0.0       | 0.0       | 0.0 
+  "Si" |   a/2       | a/2       | 0.0
+  "Si" |   a/2       | 0.0       | a/2
+  "Si" |   0.0       | a/2       | a/2 
+  "Si" |   a/4       | a/4       | a/4 
+  "Si" |   a/4 + a/2 | a/4 + a/2 | a/4
+  "Si" |   a/4 + a/2 | a/4       | a/4 + a/2
+  "Si" |   a/4       | a/4 + a/2 | a/4 + a/2 
 %
 
 %KPoints

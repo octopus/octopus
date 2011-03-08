@@ -62,6 +62,8 @@ contains
 
     PUSH_SUB(ps_psf_init)
 
+    nullify(pstm%eigen)
+
     ! Sets the spin components
     pstm%ispin = ispin
 
@@ -114,6 +116,7 @@ contains
 
     PUSH_SUB(ps_psf_end)
 
+    SAFE_DEALLOCATE_P(ps_psf%eigen)
     call ps_in_grid_end(ps_psf%ps_grid)
     call ps_psf_file_end(ps_psf%psf_file)
 
@@ -236,7 +239,6 @@ contains
     ! Calculate KB-projectors
     call ps_in_grid_kb_projectors(ps_psf%ps_grid)
 
-    SAFE_DEALLOCATE_P(ps_psf%eigen)
     POP_SUB(psf_process)
   end subroutine ps_psf_process
 
@@ -322,7 +324,7 @@ contains
 
       call egofv(hato, s, g%nrval, e, gg, y, l-1, z, &
         real(g%a, 8), real(g%b, 8), rmax, nprin, nnode, dr, ierr)
-      
+
       if(ierr.ne.0) then
         write(message(1),'(a)') 'The algorithm that calculates atomic wavefunctions could not'
         write(message(2),'(a)') 'do its job. The program will terminate, since the wavefunctions'
