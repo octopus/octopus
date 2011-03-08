@@ -24,6 +24,7 @@ module kpoints_m
   use geometry_m
   use global_m
   use loct_m
+  use math_m
   use messages_m
   use parser_m
   use profiling_m
@@ -381,7 +382,6 @@ contains
       end if
       call parse_block_end(blk)
 
-
       ! for the moment we do not apply symmetries to user kpoints
       call kpoints_grid_copy(this%full, this%reduced)
 
@@ -515,37 +515,51 @@ contains
     FLOAT,             intent(out) :: kpoints(:, :)
   
     FLOAT :: dx(1:MAX_DIM)
-    integer :: ii, jj, divisor, ik, idir, ix(1:MAX_DIM)
+    integer :: ii, jj, divisor, ik, idir, ix(1:MAX_DIM), npoints
+    FLOAT, allocatable :: nrm(:)
 
     PUSH_SUB(kpoints_grid_generate)
     
-    dx(1:dim) = M_ONE / (M_TWO * naxis(1:dim))
+    dx(1:dim) = M_ONE/(M_TWO*naxis(1:dim))
 
-    do ii = 0, product(naxis(1:dim)) - 1
+    npoints = product(naxis(1:dim))
 
-      ik = ii + 1
+    SAFE_ALLOCATE(nrm(1:npoints))
+    
+    do ii = 0, npoints - 1
+
+      ik = npoints - ii
       jj = ii
-      divisor = product(naxis(1:dim))
+      divisor = npoints
 
+      nrm(ik) = M_ZERO
       do idir = 1, dim
         divisor = divisor / naxis(idir)
         ix(idir) = jj / divisor + 1
         jj = mod(jj, divisor)
 
-        if(mod(naxis(idir), 2) .ne. 0) then    
-          kpoints(idir, ik) = (M_TWO*ix(idir) - M_ONE*naxis(idir) - M_ONE + M_TWO*shift(idir))*dx(idir)
-        else 
-          kpoints(idir, ik) = (M_TWO*ix(idir) - M_ONE*naxis(idir) + M_TWO*shift(idir))*dx(idir)
+        kpoints(idir, ik) = (M_TWO*ix(idir) - M_ONE*naxis(idir) + M_TWO*shift(idir))*dx(idir)
+
+        if(mod(naxis(idir), 2) /= 0) then    
+          kpoints(idir, ik) = kpoints(idir, ik) - dx(idir)
         end if
   
+        ! get the norm for sorting
+        nrm(ik) = nrm(ik) + (kpoints(idir, ik)/dx(idir))**2
+
+        ! tweak the norm a bit so the points have a specific order
+        if(kpoints(idir, ik) >  M_EPSILON) nrm(ik) = nrm(ik) - CNST(0.01)*(dim - idir + 1)
+        if(kpoints(idir, ik) < -M_EPSILON) nrm(ik) = nrm(ik) + CNST(0.01)*(dim - idir + 1)
+
         !bring back point to first Brillouin zone
         kpoints(idir, ik) = mod(kpoints(idir, ik) + M_HALF, M_ONE) - M_HALF
-      enddo
+      end do
 
     end do
-    
-    POP_SUB(kpoints_grid_generate)
 
+    call sort(nrm, kpoints)
+
+    POP_SUB(kpoints_grid_generate)
   end subroutine kpoints_grid_generate
 
   

@@ -8,43 +8,43 @@ Enabled    : Yes
 
 # ground state
 Input      : 07-tb09.01-gs_symm.inp
-match ; Eigenvalue [  k=1, n=1   ] ; GREP(static/info, '#k =   1', 12,  2) ; -0.340193
-match ; Eigenvalue [  k=1, n=8   ] ; GREP(static/info, '#k =   1', 12,  9) ;  0.022914
-match ; Eigenvalue [  k=1, n=16  ] ; GREP(static/info, '#k =   1', 12, 17) ;  0.505460
-match ; Eigenvalue [  k=1, n=17  ] ; GREP(static/info, '#k =   1', 12, 18) ;  0.505460
+match ; Eigenvalue [  k=1, n=1   ] ; GREP(static/info, '#k =   1', 12,  2) ; -0.237685
+match ; Eigenvalue [  k=1, n=8   ] ; GREP(static/info, '#k =   1', 12,  9) ; -0.033385
+match ; Eigenvalue [  k=1, n=16  ] ; GREP(static/info, '#k =   1', 12, 17) ;  0.431540
+match ; Eigenvalue [  k=1, n=17  ] ; GREP(static/info, '#k =   1', 12, 18) ;  0.431540
 
-match ; Eigenvalue [  k=2, n=1   ] ; GREP(static/info, '#k =   2', 12,  2) ; -0.370820
-match ; Eigenvalue [  k=2, n=8   ] ; GREP(static/info, '#k =   2', 12,  9) ; -0.060895
-match ; Eigenvalue [  k=2, n=16  ] ; GREP(static/info, '#k =   2', 12, 17) ;  0.486861
-match ; Eigenvalue [  k=2, n=17  ] ; GREP(static/info, '#k =   2', 12, 18) ;  0.507453
+match ; Eigenvalue [  k=2, n=1   ] ; GREP(static/info, '#k =   2', 12,  2) ; -0.404633
+match ; Eigenvalue [  k=2, n=8   ] ; GREP(static/info, '#k =   2', 12,  9) ; -0.082182
+match ; Eigenvalue [  k=2, n=16  ] ; GREP(static/info, '#k =   2', 12, 17) ;  0.407339
+match ; Eigenvalue [  k=2, n=17  ] ; GREP(static/info, '#k =   2', 12, 18) ;  0.419125
 
-match ; Eigenvalue [  k=3, n=1   ] ; GREP(static/info, '#k =   3', 12,  2) ; -0.404633
-match ; Eigenvalue [  k=3, n=8   ] ; GREP(static/info, '#k =   3', 12,  9) ; -0.082182
-match ; Eigenvalue [  k=3, n=16  ] ; GREP(static/info, '#k =   3', 12, 17) ;  0.407339
-match ; Eigenvalue [  k=3, n=17  ] ; GREP(static/info, '#k =   3', 12, 18) ;  0.419125
+match ; Eigenvalue [  k=3, n=1   ] ; GREP(static/info, '#k =   3', 12,  2) ; -0.370820
+match ; Eigenvalue [  k=3, n=8   ] ; GREP(static/info, '#k =   3', 12,  9) ; -0.060895
+match ; Eigenvalue [  k=3, n=16  ] ; GREP(static/info, '#k =   3', 12, 17) ;  0.486861
+match ; Eigenvalue [  k=3, n=17  ] ; GREP(static/info, '#k =   3', 12, 18) ;  0.507453
 
-match ; Eigenvalue [  k=4, n=1   ] ; GREP(static/info, '#k =   4', 12,  2) ; -0.237685
-match ; Eigenvalue [  k=4, n=8   ] ; GREP(static/info, '#k =   4', 12,  9) ; -0.033385
-match ; Eigenvalue [  k=4, n=16  ] ; GREP(static/info, '#k =   4', 12, 17) ;  0.431540
-match ; Eigenvalue [  k=4, n=17  ] ; GREP(static/info, '#k =   4', 12, 18) ;  0.431540
+match ; Eigenvalue [  k=4, n=1   ] ; GREP(static/info, '#k =   4', 12,  2) ; -0.340193
+match ; Eigenvalue [  k=4, n=8   ] ; GREP(static/info, '#k =   4', 12,  9) ;  0.022914
+match ; Eigenvalue [  k=4, n=16  ] ; GREP(static/info, '#k =   4', 12, 17) ;  0.505460
+match ; Eigenvalue [  k=4, n=17  ] ; GREP(static/info, '#k =   4', 12, 18) ;  0.505460
 
 Input      : 07-tb09.02-gs_nosymm.inp
-match ; Eigenvalue [  k=1, n=1   ] ; GREP(static/info, '#k =   1', 12,  2) ; -0.340193
-match ; Eigenvalue [  k=1, n=8   ] ; GREP(static/info, '#k =   1', 12,  9) ;  0.022914
-match ; Eigenvalue [  k=1, n=16  ] ; GREP(static/info, '#k =   1', 12, 17) ;  0.505460
-match ; Eigenvalue [  k=1, n=17  ] ; GREP(static/info, '#k =   1', 12, 18) ;  0.505460
+match ; Eigenvalue [  k=1, n=1   ] ; GREP(static/info, '#k =   1', 12,  2) ; -0.237685
+match ; Eigenvalue [  k=1, n=8   ] ; GREP(static/info, '#k =   1', 12,  9) ; -0.033385
+match ; Eigenvalue [  k=1, n=16  ] ; GREP(static/info, '#k =   1', 12, 17) ;  0.431540
+match ; Eigenvalue [  k=1, n=17  ] ; GREP(static/info, '#k =   1', 12, 18) ;  0.431540
 
-match ; Eigenvalue [  k=2, n=1   ] ; GREP(static/info, '#k =   2', 12,  2) ; -0.370820
-match ; Eigenvalue [  k=2, n=8   ] ; GREP(static/info, '#k =   2', 12,  9) ; -0.060895
-match ; Eigenvalue [  k=2, n=16  ] ; GREP(static/info, '#k =   2', 12, 17) ;  0.486861
-match ; Eigenvalue [  k=2, n=17  ] ; GREP(static/info, '#k =   2', 12, 18) ;  0.507453
+match ; Eigenvalue [  k=2, n=1   ] ; GREP(static/info, '#k =   2', 12,  2) ; -0.404633
+match ; Eigenvalue [  k=2, n=8   ] ; GREP(static/info, '#k =   2', 12,  9) ; -0.082182
+match ; Eigenvalue [  k=2, n=16  ] ; GREP(static/info, '#k =   2', 12, 17) ;  0.407339
+match ; Eigenvalue [  k=2, n=17  ] ; GREP(static/info, '#k =   2', 12, 18) ;  0.419125
 
-match ; Eigenvalue [  k=5, n=1   ] ; GREP(static/info, '#k =   5', 12,  2) ; -0.404633
-match ; Eigenvalue [  k=5, n=8   ] ; GREP(static/info, '#k =   5', 12,  9) ; -0.082182
-match ; Eigenvalue [  k=5, n=16  ] ; GREP(static/info, '#k =   5', 12, 17) ;  0.407339
-match ; Eigenvalue [  k=5, n=17  ] ; GREP(static/info, '#k =   5', 12, 18) ;  0.419125
+match ; Eigenvalue [  k=8, n=1   ] ; GREP(static/info, '#k =   8', 12,  2) ; -0.370820
+match ; Eigenvalue [  k=8, n=8   ] ; GREP(static/info, '#k =   8', 12,  9) ; -0.060895
+match ; Eigenvalue [  k=8, n=16  ] ; GREP(static/info, '#k =   8', 12, 17) ;  0.486861
+match ; Eigenvalue [  k=8, n=17  ] ; GREP(static/info, '#k =   8', 12, 18) ;  0.507453
 
-match ; Eigenvalue [  k=14, n=1  ] ; GREP(static/info, '#k =  14', 12,  2) ; -0.237685
-match ; Eigenvalue [  k=14, n=8  ] ; GREP(static/info, '#k =  14', 12,  9) ; -0.033386
-match ; Eigenvalue [  k=14, n=16 ] ; GREP(static/info, '#k =  14', 12, 17) ;  0.431540
-match ; Eigenvalue [  k=14, n=17 ] ; GREP(static/info, '#k =  14', 12, 18) ;  0.431540
+match ; Eigenvalue [  k=20,n=1   ] ; GREP(static/info, '#k =  20', 12,  2) ; -0.340193
+match ; Eigenvalue [  k=20,n=8   ] ; GREP(static/info, '#k =  20', 12,  9) ;  0.022914
+match ; Eigenvalue [  k=20,n=16  ] ; GREP(static/info, '#k =  20', 12, 17) ;  0.505460
+match ; Eigenvalue [  k=20,n=17  ] ; GREP(static/info, '#k =  20', 12, 18) ;  0.505460

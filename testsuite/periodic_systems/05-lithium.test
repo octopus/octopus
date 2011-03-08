@@ -12,15 +12,15 @@ Input      : 05-lithium.01-gs.inp
 
 match ; Eigenvalue      [ k = 1  ] ; GREP(static/info, '#k =   1', 12,  1) ; -0.118409
 match ; Eigenvalue      [ k = 2  ] ; GREP(static/info, '#k =   2', 12,  1) ; -0.118409
-match ; Eigenvalue      [ k = 3  ] ; GREP(static/info, '#k =   3', 12,  1) ; -0.075798
+match ; Eigenvalue      [ k = 3  ] ; GREP(static/info, '#k =   3', 12,  1) ; -0.118409
 match ; Eigenvalue      [ k = 5  ] ; GREP(static/info, '#k =   5', 12,  1) ; -0.118409
-match ; Eigenvalue      [ k = 17 ] ; GREP(static/info, '#k =  17', 12,  1) ; -0.118409
-match ; Eigenvalue      [ k = 23 ] ; GREP(static/info, '#k =  23', 12,  1) ; -0.075798
-match ; Eigenvalue      [ k = 32 ] ; GREP(static/info, '#k =  32', 12,  1) ; -0.035409
+match ; Eigenvalue      [ k = 17 ] ; GREP(static/info, '#k =  17', 12,  1) ; -0.075798
+match ; Eigenvalue      [ k = 23 ] ; GREP(static/info, '#k =  23', 12,  1) ; -0.035409
+match ; Eigenvalue      [ k = 32 ] ; GREP(static/info, '#k =  32', 12,  1) ; -0.075798
 match ; Eigenvalue      [ k = 41 ] ; GREP(static/info, '#k =  41', 12,  1) ; -0.035409
 match ; Eigenvalue      [ k = 55 ] ; GREP(static/info, '#k =  55', 12,  1) ; -0.035409
 match ; Eigenvalue      [ k = 58 ] ; GREP(static/info, '#k =  58', 12,  1) ; -0.035409
-match ; Eigenvalue      [ k = 60 ] ; GREP(static/info, '#k =  60', 12,  1) ;  0.007876
+match ; Eigenvalue      [ k = 60 ] ; GREP(static/info, '#k =  60', 12,  1) ; -0.035409
 match ; Eigenvalue      [ k = 64 ] ; GREP(static/info, '#k =  64', 12,  1) ;  0.007876
 
 Input      : 05-lithium.02-td.inp
