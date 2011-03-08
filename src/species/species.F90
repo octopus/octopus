@@ -932,8 +932,7 @@ contains
     backspace(iunit)
 
     read(iunit,*) label, weight, type, z, lmax, lloc, def_h, def_rsize
-    def_h     = def_h     * P_ANG  ! These units are always in Angstrom
-    def_rsize = def_rsize * P_ANG
+
     ASSERT(trim(label) == trim(spec%label))
 
     if(read_data == 0) then ! The Species was not supplied in the block.
