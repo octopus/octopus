@@ -146,14 +146,18 @@ subroutine td_calc_tvel(gr, geo, st, hm, vel, time)
 
   FLOAT, allocatable :: momentum(:,:,:)
   
-  allocate(momentum(1:gr%mesh%sb%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
   PUSH_SUB(td_calc_tvel)
+
+  SAFE_ALLOCATE(momentum(1:gr%mesh%sb%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
   call zstates_calc_momentum(gr, st, momentum)
+
   momentum(1:gr%mesh%sb%dim, st%st_start:st%st_end, 1) = & 
     sum(momentum(1:gr%mesh%sb%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), 3)
   momentum(1:gr%mesh%sb%dim, 1, 1) = & 
     sum(momentum(1:gr%mesh%sb%dim, st%st_start:st%st_end, 1), 2)
   vel = momentum(1:gr%mesh%sb%dim, 1, 1)
+
+  SAFE_DEALLOCATE_A(momentum)
   POP_SUB(td_calc_tvel)
 end subroutine td_calc_tvel
 

@@ -179,7 +179,7 @@ contains
     !% density, multiplied by spherical Bessel function times real spherical harmonic.
     !%Option velocity    8192
     !% When set, outputs the velocity, calculated from Ehrenfest theorem,
-    !% in the file <tt>td.general/acceleration</tt>. This file can then be
+    !% in the file <tt>td.general/velocity</tt>. This file can then be
     !% processed by the utility <tt>hs-from-vel</tt> in order to obtain the harmonic spectrum.
     !%End
 
