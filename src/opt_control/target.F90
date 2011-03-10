@@ -92,8 +92,9 @@ module opt_control_target_m
   integer, public, parameter ::       &
     oct_no_curr              = 0,     &
     oct_min_curr             = 1,     &
-    oct_max_curr_ring        = 2,     &
-    oct_min_curr_td          = 3
+    oct_max_curr             = 2,     &
+    oct_max_curr_ring        = 3,     &
+    oct_min_curr_td          = 4
 
   type target_t
     private
@@ -467,18 +468,18 @@ module opt_control_target_m
         call write_info(1)
 
         call parse_integer(datasets_check('OCTCurrentFunctional'), oct_no_curr, target%curr_functional)
-        if( target%curr_functional .gt. M_THREE .or. &
+        if( target%curr_functional .gt. M_FOUR .or. &
             target%curr_functional .lt. M_ZERO) then
         message(1) = 'This option is not available for a current functional.'
-        message(2) = 'Define 0 .le. "OCTCurrentFunctional" .le. 3.'
+        message(2) = 'Define 0 .le. "OCTCurrentFunctional" .le. 4.'
         call write_fatal(2)
         end if
         
         call parse_float(datasets_check('OCTCurrentWeight'), M_ZERO, target%curr_weight)
         select case(target%curr_functional)
-        case (oct_min_curr, oct_min_curr_td) 
+        case (oct_min_curr, oct_min_curr_td, oct_max_curr) 
           if( target%curr_weight .lt. M_ZERO) then
-            message(1) = 'For "OCTCurrentFunctional" = oct_min_curr(_td)'
+            message(1) = 'For "OCTCurrentFunctional" = oct_min_curr(_td) or oct_max_curr(_td)'
             message(2) = 'set "OCTCurrentWeight" .ge. 0.0'
             call write_fatal(2)
           end if
@@ -761,12 +762,16 @@ module opt_control_target_m
       !% Minimizes current in all space by maximizing J1[j]= -<tt>OCTCurrentWeight</tt>*\int|j(r)|^2 dr. 
       !% Useful in combination with target density in order to obtain stable final target density.
       !% <tt>OCTCurrentWeight</tt> .GE. 0.
-      !%Option oct_max_curr_ring 2
+      !%Option oct_max_curr 2
+      !% Maximizes current in all space by maximizing J1[j]= <tt>OCTCurrentWeight</tt>*\int|j(r)|^2 dr.
+      !% Useful, for example, in combination with a target density in order to obtain a high-velocity impact.
+      !% <tt>OCTCurrentWeight</tt> .GE. 0.
+      !%Option oct_max_curr_ring 3
       !% Maximizes the current of a quantum ring in one direction. The functional maximixes the z projection of the 
       !% outer product between the position \vec{r} and the current \vec{j}: 
       !% J1[j]=<tt>OCTCurrentWeight</tt>*\int (\vec{r} \times \vec{j}) \hat{z} dr. For <tt>OCTCurrentWeight</tt> .GT. 0. the
       !% current flows in counter clockwise direction, while for <tt>OCTCurrentWeight</tt> .LT. 0 the current is clockwise.
-      !%Option oct_min_curr_td 3
+      !%Option oct_min_curr_td 4
       !% Minimizes current in time interval [<tt>OCTStartTimeCurrTg</tt>, 
       !% total time = <tt>TDMaximumIter</tt> * <tt>TDTimeStep</tt>]. 
       !% Set <tt>TDEvolutionMethod </tt> = <tt>crank_nicholson</tt>  
@@ -810,7 +815,7 @@ module opt_control_target_m
       
       call parse_float(datasets_check('OCTCurrentWeight'), M_ZERO, target%curr_weight)
       select case(target%curr_functional)
-      case (oct_min_curr, oct_min_curr_td) 
+      case (oct_min_curr, oct_min_curr_td, oct_max_curr) 
         if( target%curr_weight .lt. M_ZERO) then
           message(1) = 'For "OCTCurrentFunctional" = oct_min_curr(_td)'
           message(2) = 'set "OCTCurrentWeight" .ge. 0.0'
@@ -1580,6 +1585,11 @@ module opt_control_target_m
       do ip = 1, gr%mesh%np
         semilocal_function(ip) = - ( sum(psi%current(ip, 1:gr%sb%dim, 1)**2) ) 
       end do
+      
+    case(oct_max_curr)
+      do ip = 1, gr%mesh%np
+        semilocal_function(ip) = sum(psi%current(ip, 1:gr%sb%dim, 1)**2)
+      end do
 
     case(oct_max_curr_ring)
       if(gr%sb%dim .ne. M_TWO) then
@@ -1631,7 +1641,7 @@ module opt_control_target_m
     case(oct_no_curr)
       chi(ip, 1, ist, 1) = M_ZERO
 
-    case(oct_min_curr, oct_min_curr_td)
+    case(oct_min_curr, oct_min_curr_td, oct_max_curr)
       SAFE_ALLOCATE(div_curr_psi_in(1:gr%der%mesh%np_part,1))
       call dderivatives_div(gr%der, psi_in%current(:,:,1), div_curr_psi_in(1:gr%der%mesh%np,1)) 
         

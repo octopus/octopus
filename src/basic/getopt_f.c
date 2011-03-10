@@ -254,6 +254,7 @@ void harmonic_spectrum_help(){
   printf("                  'acceleration' file. The options are:\n");
   printf("                     '1' : use the dipole, take second derivative numerically.\n");
   printf("                     '2' : use the acceleration file.\n");
+  printf("                     '3' : use the velocity file.\n");
   printf("                  The default is '1'\n");
   exit(-1);
 }

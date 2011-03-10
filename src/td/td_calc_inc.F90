@@ -130,6 +130,33 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, time)
   POP_SUB(td_calc_tacc)
 end subroutine td_calc_tacc
 
+! ---------------------------------------------------------
+! Electronic velocity (to calculate harmonic spectrum...)
+! It is calculated as:
+!
+! d<x>/dt = <p>
+! ---------------------------------------------------------
+subroutine td_calc_tvel(gr, geo, st, hm, vel, time)
+  type(grid_t),        intent(inout) :: gr
+  type(geometry_t),    intent(inout) :: geo
+  type(states_t),      intent(inout) :: st
+  type(hamiltonian_t), intent(inout) :: hm
+  FLOAT,               intent(in)    :: time
+  FLOAT,               intent(out)   :: vel(MAX_DIM)
+
+  FLOAT, allocatable :: momentum(:,:,:)
+  
+  allocate(momentum(1:gr%mesh%sb%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
+  PUSH_SUB(td_calc_tvel)
+  call zstates_calc_momentum(gr, st, momentum)
+  momentum(1:gr%mesh%sb%dim, st%st_start:st%st_end, 1) = & 
+    sum(momentum(1:gr%mesh%sb%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), 3)
+  momentum(1:gr%mesh%sb%dim, 1, 1) = & 
+    sum(momentum(1:gr%mesh%sb%dim, st%st_start:st%st_end, 1), 2)
+  vel = momentum(1:gr%mesh%sb%dim, 1, 1)
+  POP_SUB(td_calc_tvel)
+end subroutine td_calc_tvel
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

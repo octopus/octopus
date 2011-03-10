@@ -41,7 +41,8 @@ program harmonic_spectrum
 
   integer, parameter :: &
     HS_FROM_MULT = 1,   &
-    HS_FROM_ACC  = 2
+    HS_FROM_ACC  = 2,   &
+    HS_FROM_VEL  = 3
 
   call getopt_init(ierr)
   if(ierr.ne.0) then
@@ -82,7 +83,8 @@ program harmonic_spectrum
     call write_fatal(1)
   end if
   if( (mode.ne.HS_FROM_MULT) .and. &
-      (mode .ne.HS_FROM_ACC) ) then
+      (mode .ne.HS_FROM_ACC) .and. &
+      (mode .ne. HS_FROM_VEL) ) then
     message(1) = 'The harmonic-spectrum mode given in the command line is not valid.'
     call write_fatal(1)
   end if
@@ -99,6 +101,12 @@ program harmonic_spectrum
       call spectrum_hs_from_acc('hs-acc-maxima', spectrum, pol, w0)
     else
       call spectrum_hs_from_acc('hs-acc', spectrum, pol)
+    end if
+  case(HS_FROM_VEL)
+    if(get_maxima) then
+      call spectrum_hs_from_vel('hs-vel-maxima', spectrum, pol, w0)
+    else
+      call spectrum_hs_from_vel('hs-vel', spectrum, pol)
     end if
   end select
 

@@ -48,6 +48,7 @@ module spectrum_m
     spectrum_rotatory_strength,    &
     spectrum_hs_from_mult,         &
     spectrum_hs_from_acc,          &
+    spectrum_hs_from_vel,          &
     spectrum_hsfunction_init,      &
     spectrum_hsfunction_end,       &
     spectrum_hsfunction_min,       &
@@ -124,6 +125,7 @@ module spectrum_m
   FLOAT :: time_step_
   CMPLX, allocatable :: func_(:)
   integer :: is_, ie_
+  logical :: from_vel_
 
 contains
 
@@ -1259,10 +1261,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_hsfunction_init(dt, is, ie, niter, acc)
-    FLOAT,   intent(in) :: dt
-    integer, intent(in) :: is, ie, niter
-    CMPLX,   intent(in) :: acc(:)
+  subroutine spectrum_hsfunction_init(dt, is, ie, niter, acc, from_vel)
+    FLOAT,   intent(in)           :: dt
+    integer, intent(in)           :: is, ie, niter
+    CMPLX,   intent(in)           :: acc(:)
+    logical, optional, intent(in) :: from_vel
 
     PUSH_SUB(spectrum_hsfunction_init)
 
@@ -1271,6 +1274,12 @@ contains
     time_step_ = dt
     SAFE_ALLOCATE(func_(0:niter))
     func_ = acc
+    
+    if (present(from_vel)) then
+      from_vel_ = from_vel
+    else
+      from_vel_ = .false.
+    end if
 
     POP_SUB(spectrum_hsfunction_init)
   end subroutine spectrum_hsfunction_init
@@ -1348,8 +1357,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine hsfunction(omega, power)
-    FLOAT, intent(in)   :: omega
-    FLOAT, intent(out)  :: power
+    FLOAT, intent(in)             :: omega
+    FLOAT, intent(out)            :: power
 
     CMPLX   :: cc, ez1, ez, zz
     integer :: jj
@@ -1360,12 +1369,20 @@ contains
     zz = M_zI * omega * time_step_
     ez1 = exp((is_ - 1) * zz)
     ez  = exp(zz)
-    do jj = is_, ie_
-      ! This would be easier, but slower.
-      !cc = cc + exp(M_zI * omega * jj * time_step_)*func_(jj)
-      ez1 = ez1 * ez
-      cc = cc + ez1 * func_(jj)
-    end do
+    if (from_vel_) then
+      do jj = is_, ie_
+        ! This would be easier, but slower.
+        !cc = cc + exp(M_zI * omega * jj * time_step_)*func_(jj)
+        ez1 = ez1 * ez
+        cc = cc + ez1 * func_(jj) * omega
+      end do
+    else
+      do jj = is_, ie_
+        ez1 = ez1 * ez
+        cc = cc + ez1 * func_(jj)
+      end do
+    end if
+    
     power = -abs(cc)**2 * time_step_**2
 
     POP_SUB(hsfunction)
@@ -1498,6 +1515,63 @@ contains
     POP_SUB(spectrum_hs_from_acc)
   end subroutine spectrum_hs_from_acc
   ! ---------------------------------------------------------
+  
+  
+    ! ---------------------------------------------------------
+  subroutine spectrum_hs_from_vel(out_file, spectrum, pol, w0)
+    character(len=*), intent(in)    :: out_file
+    type(spec_t),     intent(inout) :: spectrum
+    character,        intent(in)    :: pol
+    FLOAT,  optional, intent(in)    :: w0
+
+    integer :: istep, jj, iunit, time_steps, istart, iend, ntiter, ierr
+    FLOAT :: dt, aa(MAX_DIM)
+    CMPLX, allocatable :: vel(:)
+    logical :: from_vel
+
+    PUSH_SUB(spectrum_hs_from_vel)
+
+    call spectrum_vel_info(iunit, time_steps, dt)
+    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+
+    ! load dipole from file
+    SAFE_ALLOCATE(vel(0:time_steps))
+    vel = M_ZERO
+    call io_skip_header(iunit)
+    do istep = 1, time_steps
+      aa = M_ZERO
+      read(iunit, '(28x,e20.12)', advance = 'no', iostat = ierr) aa(1)
+      ! What on earth is the point of this with jj??
+      jj = 2
+      do while( (ierr.eq.0) .and. (jj <= MAX_DIM) )
+        read(iunit, '(e20.12)', advance = 'no', iostat = ierr) aa(jj)
+      end do
+      select case(pol)
+      case('x')
+        vel(istep) = aa(1)
+      case('y')
+        vel(istep) = aa(2)
+      case('z')
+        vel(istep) = aa(3)
+      case('+')
+        vel(istep) = (aa(1) + M_zI * aa(2)) / sqrt(M_TWO)
+      case('-')
+        vel(istep) = (aa(1) - M_zI * aa(2)) / sqrt(M_TWO)
+      end select
+      vel(istep) = units_to_atomic(units_out%velocity, vel(istep))
+    end do
+    close(iunit)
+
+    from_vel = .true.
+    call spectrum_hsfunction_init(dt, istart, iend, time_steps, vel, from_vel)
+    call spectrum_hs(out_file, spectrum, pol, w0)
+    call spectrum_hsfunction_end()
+
+    SAFE_DEALLOCATE_A(vel)
+    POP_SUB(spectrum_hs_from_vel)
+  end subroutine spectrum_hs_from_vel
+  ! ---------------------------------------------------------
+
 
 
   ! ---------------------------------------------------------
@@ -1521,7 +1595,7 @@ contains
         str_center('['//trim(units_abbrev(units_out%energy)) // ']', 20), &
         str_center('[('//trim(units_abbrev(units_out%length))//'/' &
         //trim(units_abbrev(units_out%time**2)), 20)
-
+      
       ! output
       omega = w0
       do while(omega <= spectrum%max_energy)
@@ -1529,14 +1603,13 @@ contains
 
         write(iunit, '(1x,2e20.8)') units_from_atomic(units_out%energy, xx), &
           units_from_atomic((units_out%length / units_out%time)**2, -hsval)
-
+          
         ! 2 * w0 because we assume that there are only odd peaks.
         omega = omega + 2 * w0
       end do
       call io_close(iunit)
 
     else
-
       no_e = spectrum%max_energy / spectrum%energy_step
       SAFE_ALLOCATE(sp(0:no_e))
       sp = M_ZERO
@@ -1550,14 +1623,17 @@ contains
       if(trim(out_file) .ne. '-') then
         iunit = io_open(trim(out_file) // "." // trim(pol), action='write')
         write(iunit, '(a1,a20,a20)') '#', str_center("w", 20), str_center("H(w)", 20)
+        
         write(iunit, '(a1,a20,a20)') &
           '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 20), &
           str_center('[('//trim(units_abbrev(units_out%length))//'/' &
             //trim(units_abbrev(units_out%time**2)), 20)
+        
         do ie = 0, no_e
           write(iunit, '(2e15.6)') units_from_atomic(units_out%energy, ie * spectrum%energy_step), &
             units_from_atomic((units_out%length / units_out%time)**2, sp(ie))
         end do
+        
         call io_close(iunit)
       end if
       SAFE_DEALLOCATE_A(sp)
@@ -1722,6 +1798,47 @@ contains
     rewind(iunit)
     POP_SUB(spectrum_acc_info)
   end subroutine spectrum_acc_info
+  
+    ! ---------------------------------------------------------
+  subroutine spectrum_vel_info(iunit, time_steps, dt)
+    integer, intent(out) :: iunit, time_steps
+    FLOAT,   intent(out) :: dt
+
+    integer :: trash
+    FLOAT :: t1, t2, dummy
+
+    PUSH_SUB(spectrum_vel_info)
+
+    ! open files
+    iunit = io_open('velocity', action='read', status='old', die=.false.)
+    if(iunit < 0) then
+      iunit = io_open('td.general/velocity', action='read', status='old')
+    end if
+
+    ! read in dipole
+    call io_skip_header(iunit)
+
+    ! count number of time_steps
+    time_steps = 0
+    do
+      read(iunit, *, end=100) trash, dummy
+      time_steps = time_steps + 1
+      if(time_steps == 1) t1 = dummy
+      if(time_steps == 2) t2 = dummy
+    end do
+100 continue
+    dt = units_to_atomic(units_out%time, t2 - t1) ! units_out is OK
+    time_steps = time_steps - 1
+
+    if(time_steps < 3) then
+      message(1) = "Empty multipole file?"
+      call write_fatal(1)
+    end if
+
+    rewind(iunit)
+    POP_SUB(spectrum_vel_info)
+  end subroutine spectrum_vel_info
+
 
 
   ! ---------------------------------------------------------

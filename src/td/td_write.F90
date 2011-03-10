@@ -86,7 +86,8 @@ module td_write_m
     OUT_GAUGE_FIELD = 11, &
     OUT_TEMPERATURE = 12, &
     OUT_FTCHD       = 13, &
-    OUT_MAX         = 13
+    OUT_VEL         = 14, &
+    OUT_MAX         = 14
   
   type td_write_t
     private
@@ -176,6 +177,10 @@ contains
     !% This is needed for calculating the dynamic structure factor.
     !% In the case that the kick mode is qbessel, the written quantity is integral over
     !% density, multiplied by spherical Bessel function times real spherical harmonic.
+    !%Option velocity    8192
+    !% When set, outputs the velocity, calculated from Ehrenfest theorem,
+    !% in the file <tt>td.general/acceleration</tt>. This file can then be
+    !% processed by the utility <tt>hs-from-vel</tt> in order to obtain the harmonic spectrum.
     !%End
 
     ! by default print multipoles, ftchd, coordinates and energy
@@ -364,6 +369,10 @@ contains
       if(writ%out(OUT_ACC)%write) &
         call write_iter_init(writ%out(OUT_ACC)%handle, first, &
           units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/acceleration")))
+          
+      if(writ%out(OUT_VEL)%write) &
+        call write_iter_init(writ%out(OUT_VEL)%handle, first, &
+          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/velocity")))
 
       if(writ%out(OUT_LASER)%write) then
         call write_iter_init(writ%out(OUT_LASER)%handle, first, &
@@ -464,6 +473,9 @@ contains
 
     if(writ%out(OUT_ACC)%write) &
       call td_write_acc(writ%out(OUT_ACC)%handle, gr, geo, st, hm, dt, iter)
+      
+    if(writ%out(OUT_VEL)%write) &
+      call td_write_vel(writ%out(OUT_VEL)%handle, gr, geo, st, hm, dt, iter)
 
     ! td_write_laser no longer called here, because the whole laser is printed
     ! out at the beginning.
@@ -1137,6 +1149,55 @@ contains
 
     POP_SUB(td_write_acc)
   end subroutine td_write_acc
+  
+  ! ---------------------------------------------------------
+  subroutine td_write_vel(out_vel, gr, geo, st, hm, dt, iter)
+    type(c_ptr),         intent(in)    :: out_vel
+    type(grid_t),        intent(inout) :: gr
+    type(geometry_t),    intent(inout) :: geo
+    type(states_t),      intent(inout) :: st
+    type(hamiltonian_t), intent(inout) :: hm
+    FLOAT,               intent(in)    :: dt
+    integer,             intent(in)    :: iter
+
+    integer :: idim
+    character(len=7) :: aux
+    FLOAT :: vel(MAX_DIM)
+
+    if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
+
+    PUSH_SUB(td_write_vel)
+
+    if(iter == 0) then
+      call td_write_print_header_init(out_vel)
+
+      ! first line -> column names
+      call write_iter_header_start(out_vel)
+      do idim = 1, gr%mesh%sb%dim
+        write(aux, '(a4,i1,a1)') 'Vel(', idim, ')'
+        call write_iter_header(out_vel, aux)
+      end do
+      call write_iter_nl(out_vel)
+
+      ! second line: units
+      call write_iter_string(out_vel, '#[Iter n.]')
+      call write_iter_header(out_vel, '[' // trim(units_abbrev(units_out%time)) // ']')
+      do idim = 1, gr%mesh%sb%dim
+        call write_iter_header(out_vel, '[' // trim(units_abbrev(units_out%velocity)) // ']')
+      end do
+      call write_iter_nl(out_vel)
+      call td_write_print_header_end(out_vel)
+    end if
+
+    call td_calc_tvel(gr, geo, st, hm, vel, dt*iter)
+
+    call write_iter_start(out_vel)
+    vel = units_from_atomic(units_out%velocity, vel)
+    call write_iter_double(out_vel, vel, gr%mesh%sb%dim)
+    call write_iter_nl(out_vel)
+
+    POP_SUB(td_write_vel)
+  end subroutine td_write_vel
 
 
   ! ---------------------------------------------------------
