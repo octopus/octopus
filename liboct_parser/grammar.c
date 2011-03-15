@@ -63,6 +63,14 @@
 /* Using locations.  */
 #define YYLSP_NEEDED 0
 
+/* Substitute the variable and function names.  */
+#define yyparse         oct_parser_parse
+#define yylex           oct_parser_lex
+#define yyerror         oct_parser_error
+#define yylval          oct_parser_lval
+#define yychar          oct_parser_char
+#define yydebug         oct_parser_debug
+#define yynerrs         oct_parser_nerrs
 
 
 /* Copy the first part of user declarations.  */
@@ -73,7 +81,7 @@
 
 
 /* Line 189 of yacc.c  */
-#line 77 "grammar.c"
+#line 85 "grammar.c"
 
 /* Enabling traces.  */
 #ifndef YYDEBUG
@@ -113,19 +121,6 @@
      NEG = 268
    };
 #endif
-/* Tokens.  */
-#define NUM 258
-#define STR 259
-#define VAR 260
-#define FNCT 261
-#define EQUAL 262
-#define GE 263
-#define LE 264
-#define LOR 265
-#define LAND 266
-#define NOT 267
-#define NEG 268
-
 
 
 
@@ -143,7 +138,7 @@ typedef union YYSTYPE
 
 
 /* Line 214 of yacc.c  */
-#line 147 "grammar.c"
+#line 142 "grammar.c"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
@@ -155,7 +150,7 @@ typedef union YYSTYPE
 
 
 /* Line 264 of yacc.c  */
-#line 159 "grammar.c"
+#line 154 "grammar.c"
 
 #ifdef short
 # undef short
@@ -1123,15 +1118,15 @@ yydestruct (yymsg, yytype, yyvaluep)
 /* Prevent warnings from -Wmissing-prototypes.  */
 #ifdef YYPARSE_PARAM
 #if defined __STDC__ || defined __cplusplus
-int oyyparse (void *YYPARSE_PARAM);
+int yyparse (void *YYPARSE_PARAM);
 #else
-int oyyparse ();
+int yyparse ();
 #endif
 #else /* ! YYPARSE_PARAM */
 #if defined __STDC__ || defined __cplusplus
-int oyyparse (void);
+int yyparse (void);
 #else
-int oyyparse ();
+int yyparse ();
 #endif
 #endif /* ! YYPARSE_PARAM */
 
@@ -1155,20 +1150,20 @@ int yynerrs;
 #if (defined __STDC__ || defined __C99__FUNC__ \
      || defined __cplusplus || defined _MSC_VER)
 int
-oyyparse (void *YYPARSE_PARAM)
+yyparse (void *YYPARSE_PARAM)
 #else
 int
-oyyparse (YYPARSE_PARAM)
+yyparse (YYPARSE_PARAM)
     void *YYPARSE_PARAM;
 #endif
 #else /* ! YYPARSE_PARAM */
 #if (defined __STDC__ || defined __C99__FUNC__ \
      || defined __cplusplus || defined _MSC_VER)
 int
-oyyparse (void)
+yyparse (void)
 #else
 int
-oyyparse ()
+yyparse ()
 
 #endif
 #endif
@@ -1418,188 +1413,188 @@ yyreduce:
 
 /* Line 1455 of yacc.c  */
 #line 56 "grammar.y"
-    { par_res.value.c = (yyvsp[(1) - (2)].val); par_res.type = PR_CMPLX; YYACCEPT;}
+    { par_res.value.c = (yyvsp[(1) - (2)].val); par_res.type = PR_CMPLX; YYACCEPT;;}
     break;
 
   case 6:
 
 /* Line 1455 of yacc.c  */
 #line 57 "grammar.y"
-    { par_res.value.s = (yyvsp[(1) - (2)].str); par_res.type = PR_STR;   YYACCEPT;}
+    { par_res.value.s = (yyvsp[(1) - (2)].str); par_res.type = PR_STR;   YYACCEPT;;}
     break;
 
   case 7:
 
 /* Line 1455 of yacc.c  */
 #line 58 "grammar.y"
-    { yyerrok; YYABORT;}
+    { yyerrok; YYABORT;;}
     break;
 
   case 8:
 
 /* Line 1455 of yacc.c  */
 #line 61 "grammar.y"
-    { (yyval.val) = (yyvsp[(1) - (1)].val);                           }
+    { (yyval.val) = (yyvsp[(1) - (1)].val);                           ;}
     break;
 
   case 9:
 
 /* Line 1455 of yacc.c  */
 #line 62 "grammar.y"
-    { if(!(yyvsp[(1) - (1)].tptr)->def) sym_notdef((yyvsp[(1) - (1)].tptr)); (yyval.val) = (yyvsp[(1) - (1)].tptr)->value.c; }
+    { if(!(yyvsp[(1) - (1)].tptr)->def) sym_notdef((yyvsp[(1) - (1)].tptr)); (yyval.val) = (yyvsp[(1) - (1)].tptr)->value.c; ;}
     break;
 
   case 10:
 
 /* Line 1455 of yacc.c  */
 #line 63 "grammar.y"
-    { (yyval.val) = (yyvsp[(3) - (3)].val); (yyvsp[(1) - (3)].tptr)->value.c = (yyvsp[(3) - (3)].val); (yyvsp[(1) - (3)].tptr)->def = 1; (yyvsp[(1) - (3)].tptr)->type = S_CMPLX;}
+    { (yyval.val) = (yyvsp[(3) - (3)].val); (yyvsp[(1) - (3)].tptr)->value.c = (yyvsp[(3) - (3)].val); (yyvsp[(1) - (3)].tptr)->def = 1; (yyvsp[(1) - (3)].tptr)->type = S_CMPLX;;}
     break;
 
   case 11:
 
 /* Line 1455 of yacc.c  */
 #line 64 "grammar.y"
-    { if((yyvsp[(1) - (4)].tptr)->nargs != 1) sym_wrong_arg((yyvsp[(1) - (4)].tptr)); (yyval.val) = (*((yyvsp[(1) - (4)].tptr)->value.fnctptr))((yyvsp[(3) - (4)].val));   }
+    { if((yyvsp[(1) - (4)].tptr)->nargs != 1) sym_wrong_arg((yyvsp[(1) - (4)].tptr)); (yyval.val) = (*((yyvsp[(1) - (4)].tptr)->value.fnctptr))((yyvsp[(3) - (4)].val));   ;}
     break;
 
   case 12:
 
 /* Line 1455 of yacc.c  */
 #line 65 "grammar.y"
-    { if((yyvsp[(1) - (6)].tptr)->nargs != 2) sym_wrong_arg((yyvsp[(1) - (6)].tptr)); (yyval.val) = (*((yyvsp[(1) - (6)].tptr)->value.fnctptr))((yyvsp[(3) - (6)].val), (yyvsp[(5) - (6)].val)); }
+    { if((yyvsp[(1) - (6)].tptr)->nargs != 2) sym_wrong_arg((yyvsp[(1) - (6)].tptr)); (yyval.val) = (*((yyvsp[(1) - (6)].tptr)->value.fnctptr))((yyvsp[(3) - (6)].val), (yyvsp[(5) - (6)].val)); ;}
     break;
 
   case 13:
 
 /* Line 1455 of yacc.c  */
 #line 66 "grammar.y"
-    { (yyval.val) = gsl_complex_add((yyvsp[(1) - (3)].val), (yyvsp[(3) - (3)].val));      }
+    { (yyval.val) = gsl_complex_add((yyvsp[(1) - (3)].val), (yyvsp[(3) - (3)].val));      ;}
     break;
 
   case 14:
 
 /* Line 1455 of yacc.c  */
 #line 67 "grammar.y"
-    { (yyval.val) = gsl_complex_sub((yyvsp[(1) - (3)].val), (yyvsp[(3) - (3)].val));      }
+    { (yyval.val) = gsl_complex_sub((yyvsp[(1) - (3)].val), (yyvsp[(3) - (3)].val));      ;}
     break;
 
   case 15:
 
 /* Line 1455 of yacc.c  */
 #line 68 "grammar.y"
-    { (yyval.val) = gsl_complex_mul((yyvsp[(1) - (3)].val), (yyvsp[(3) - (3)].val));      }
+    { (yyval.val) = gsl_complex_mul((yyvsp[(1) - (3)].val), (yyvsp[(3) - (3)].val));      ;}
     break;
 
   case 16:
 
 /* Line 1455 of yacc.c  */
 #line 69 "grammar.y"
-    { (yyval.val) = gsl_complex_div((yyvsp[(1) - (3)].val), (yyvsp[(3) - (3)].val));      }
+    { (yyval.val) = gsl_complex_div((yyvsp[(1) - (3)].val), (yyvsp[(3) - (3)].val));      ;}
     break;
 
   case 17:
 
 /* Line 1455 of yacc.c  */
 #line 70 "grammar.y"
-    { (yyval.val) = gsl_complex_negative((yyvsp[(2) - (2)].val));     }
+    { (yyval.val) = gsl_complex_negative((yyvsp[(2) - (2)].val));     ;}
     break;
 
   case 18:
 
 /* Line 1455 of yacc.c  */
 #line 71 "grammar.y"
-    { (yyval.val) = gsl_complex_pow((yyvsp[(1) - (3)].val), (yyvsp[(3) - (3)].val));      }
+    { (yyval.val) = gsl_complex_pow((yyvsp[(1) - (3)].val), (yyvsp[(3) - (3)].val));      ;}
     break;
 
   case 19:
 
 /* Line 1455 of yacc.c  */
 #line 72 "grammar.y"
-    { GSL_SET_COMPLEX (&(yyval.val), GSL_REAL((yyvsp[(1) - (3)].val)) <  GSL_REAL((yyvsp[(3) - (3)].val)), 0); }
+    { GSL_SET_COMPLEX (&(yyval.val), GSL_REAL((yyvsp[(1) - (3)].val)) <  GSL_REAL((yyvsp[(3) - (3)].val)), 0); ;}
     break;
 
   case 20:
 
 /* Line 1455 of yacc.c  */
 #line 73 "grammar.y"
-    { GSL_SET_COMPLEX (&(yyval.val), GSL_REAL((yyvsp[(1) - (3)].val)) >  GSL_REAL((yyvsp[(3) - (3)].val)), 0); }
+    { GSL_SET_COMPLEX (&(yyval.val), GSL_REAL((yyvsp[(1) - (3)].val)) >  GSL_REAL((yyvsp[(3) - (3)].val)), 0); ;}
     break;
 
   case 21:
 
 /* Line 1455 of yacc.c  */
 #line 74 "grammar.y"
-    { GSL_SET_COMPLEX (&(yyval.val), GSL_REAL((yyvsp[(1) - (3)].val)) <= GSL_REAL((yyvsp[(3) - (3)].val)), 0); }
+    { GSL_SET_COMPLEX (&(yyval.val), GSL_REAL((yyvsp[(1) - (3)].val)) <= GSL_REAL((yyvsp[(3) - (3)].val)), 0); ;}
     break;
 
   case 22:
 
 /* Line 1455 of yacc.c  */
 #line 75 "grammar.y"
-    { GSL_SET_COMPLEX (&(yyval.val), GSL_REAL((yyvsp[(1) - (3)].val)) >= GSL_REAL((yyvsp[(3) - (3)].val)), 0); }
+    { GSL_SET_COMPLEX (&(yyval.val), GSL_REAL((yyvsp[(1) - (3)].val)) >= GSL_REAL((yyvsp[(3) - (3)].val)), 0); ;}
     break;
 
   case 23:
 
 /* Line 1455 of yacc.c  */
 #line 76 "grammar.y"
-    { GSL_SET_COMPLEX (&(yyval.val), (GSL_REAL((yyvsp[(1) - (3)].val)) == GSL_REAL((yyvsp[(3) - (3)].val))) && (GSL_IMAG((yyvsp[(1) - (3)].val)) == GSL_IMAG((yyvsp[(3) - (3)].val))), 0); }
+    { GSL_SET_COMPLEX (&(yyval.val), (GSL_REAL((yyvsp[(1) - (3)].val)) == GSL_REAL((yyvsp[(3) - (3)].val))) && (GSL_IMAG((yyvsp[(1) - (3)].val)) == GSL_IMAG((yyvsp[(3) - (3)].val))), 0); ;}
     break;
 
   case 24:
 
 /* Line 1455 of yacc.c  */
 #line 77 "grammar.y"
-    { GSL_SET_COMPLEX (&(yyval.val), GSL_REAL((yyvsp[(1) - (3)].val)) && GSL_REAL((yyvsp[(3) - (3)].val)), 0); }
+    { GSL_SET_COMPLEX (&(yyval.val), GSL_REAL((yyvsp[(1) - (3)].val)) && GSL_REAL((yyvsp[(3) - (3)].val)), 0); ;}
     break;
 
   case 25:
 
 /* Line 1455 of yacc.c  */
 #line 78 "grammar.y"
-    { GSL_SET_COMPLEX (&(yyval.val), GSL_REAL((yyvsp[(1) - (3)].val)) || GSL_REAL((yyvsp[(3) - (3)].val)), 0); }
+    { GSL_SET_COMPLEX (&(yyval.val), GSL_REAL((yyvsp[(1) - (3)].val)) || GSL_REAL((yyvsp[(3) - (3)].val)), 0); ;}
     break;
 
   case 26:
 
 /* Line 1455 of yacc.c  */
 #line 79 "grammar.y"
-    { GSL_SET_COMPLEX (&(yyval.val), !GSL_REAL((yyvsp[(2) - (2)].val)), 0); }
+    { GSL_SET_COMPLEX (&(yyval.val), !GSL_REAL((yyvsp[(2) - (2)].val)), 0); ;}
     break;
 
   case 27:
 
 /* Line 1455 of yacc.c  */
 #line 80 "grammar.y"
-    { GSL_SET_COMPLEX (&(yyval.val), GSL_REAL((yyvsp[(2) - (5)].val)), GSL_REAL((yyvsp[(4) - (5)].val))); }
+    { GSL_SET_COMPLEX (&(yyval.val), GSL_REAL((yyvsp[(2) - (5)].val)), GSL_REAL((yyvsp[(4) - (5)].val))); ;}
     break;
 
   case 28:
 
 /* Line 1455 of yacc.c  */
 #line 81 "grammar.y"
-    { (yyval.val) = (yyvsp[(2) - (3)].val);                           }
+    { (yyval.val) = (yyvsp[(2) - (3)].val);                           ;}
     break;
 
   case 29:
 
 /* Line 1455 of yacc.c  */
 #line 83 "grammar.y"
-    { (yyval.str) = (yyvsp[(1) - (1)].str); }
+    { (yyval.str) = (yyvsp[(1) - (1)].str); ;}
     break;
 
   case 30:
 
 /* Line 1455 of yacc.c  */
 #line 84 "grammar.y"
-    { (yyval.str) = (yyvsp[(3) - (3)].str); (yyvsp[(1) - (3)].tptr)->value.str = (yyvsp[(3) - (3)].str); (yyvsp[(1) - (3)].tptr)->def = 1; (yyvsp[(1) - (3)].tptr)->type = S_STR; }
+    { (yyval.str) = (yyvsp[(3) - (3)].str); (yyvsp[(1) - (3)].tptr)->value.str = (yyvsp[(3) - (3)].str); (yyvsp[(1) - (3)].tptr)->def = 1; (yyvsp[(1) - (3)].tptr)->type = S_STR; ;}
     break;
 
 
 
 /* Line 1455 of yacc.c  */
-#line 1603 "grammar.c"
+#line 1598 "grammar.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);

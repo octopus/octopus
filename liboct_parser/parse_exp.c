@@ -33,8 +33,8 @@ static char *par_string;
 static int par_pos;
 parse_result par_res;
 
-static int yylex();
-static int yyerror (char *s)  /* Called by yyparse on error */
+static int oct_parser_lex();
+static int oct_parser_error (char *s)  /* Called by oct_parser_parse on error */
 {
   /* Do nothing */
   /* printf("%s\n", s); */
@@ -51,7 +51,7 @@ int parse_exp(char *exp, parse_result *r)
   par_string = exp;
   par_pos = 0;
 
-  o = oyyparse();
+  o = oct_parser_parse();
   if(o == 0){
     r->type = par_res.type;
     if(r->type == PR_CMPLX)
@@ -73,7 +73,7 @@ int get_real(char *s, double *d)
   return n;
 }
 
-static int yylex (){
+static int oct_parser_lex (){
   int c;
   char *symbuf = 0;
   int length = 0;
