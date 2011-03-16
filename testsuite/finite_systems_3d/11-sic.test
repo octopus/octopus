@@ -2,10 +2,9 @@
 # $Id: oct-run_regression_test.pl,v 1.15 2006/03/13 09:56:40 acastro Exp      :
 
 Test       : LDA+SIC/OEP-KLI Functional
-Programs   : octopus
+Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes
-# This test fails randomly for unknown reasons.
 
 # This test performs the calculation of an argon atom making
 # use of the local-density approximation (LDA) plus the self-interaction 
