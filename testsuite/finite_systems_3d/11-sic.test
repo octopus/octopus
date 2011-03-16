@@ -4,7 +4,7 @@
 Test       : LDA+SIC/OEP-KLI Functional
 Programs   : octopus
 TestGroups : long-run
-Enabled    : No
+Enabled    : Yes
 # This test fails randomly for unknown reasons.
 
 # This test performs the calculation of an argon atom making
@@ -23,5 +23,6 @@ Enabled    : No
 
 Precision : 0.0005
 Input     : 11-sic.01-gs.inp
-match ; Ionization Potential ; GREP(static/info, '4   --', 13) ; -0.542717
+match ; Ionization Potential ; GREP(static/info, '4   --', 13) ; -0.542700
+
 

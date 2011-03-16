@@ -536,10 +536,8 @@ contains
     time_ = M_ZERO
     if (present(time)) time_ = time
 
-    if(ep%have_density) then
-      SAFE_ALLOCATE(density(1:mesh%np))
-      density = M_ZERO
-    end if
+    SAFE_ALLOCATE(density(1:mesh%np))
+    density = M_ZERO
 
     ! Local part
     ep%vpsl = M_ZERO
@@ -577,8 +575,8 @@ contains
       forall(ip = 1:mesh%np) ep%vpsl(ip) = ep%vpsl(ip) + tmp(ip)
 
       SAFE_DEALLOCATE_A(tmp)
-      SAFE_DEALLOCATE_A(density)
     end if
+    SAFE_DEALLOCATE_A(density)
 
     ! we assume that we need to recalculate the ion-ion energy
     call ion_interaction_calculate(geo, sb, gr, ep, ep%eii, ep%fii)
