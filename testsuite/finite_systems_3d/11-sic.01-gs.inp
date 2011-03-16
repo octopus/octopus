@@ -27,6 +27,6 @@ EigenSolverFinalTolerance = 1e-5
 EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 25
 
-ConvRelDens = 5.0e-3
+ConvRelDens = 2.0e-4
 
 PoissonSolver = fft_corrected
