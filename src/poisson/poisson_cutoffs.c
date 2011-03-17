@@ -14,7 +14,7 @@ This file contains the definition of functions used by Fortran module
 poisson_cutoff_m. There are four functions to be defined:
 
 c_poisson_cutoff_3d_1d_finite: For the cutoff of 3D/0D cases, in which however
-                               we want the region of the cutfof to be a cylinder.
+                               we want the region of the cutoff to be a cylinder.
 c_poisson_cutoff_2d_0d:
 
 c_poisson_cutoff_2d_1d:
