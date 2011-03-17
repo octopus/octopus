@@ -363,9 +363,11 @@ subroutine X(sternheimer_calc_hvar)(this, sys, hm, lr, nsigma, hvar)
     if (this%add_hartree) hvar(1:np, ispin, 1) = hvar(1:np, ispin, 1) + hartree(1:np)
     
     !* fxc
-    do ispin2 = 1, sys%st%d%nspin
-      hvar(1:np, ispin, 1) = hvar(1:np, ispin, 1) + this%fxc(1:np, ispin, ispin)*lr(1)%X(dl_rho)(1:np, ispin)
-    end do
+    if(this%add_fxc) then
+      do ispin2 = 1, sys%st%d%nspin
+        hvar(1:np, ispin, 1) = hvar(1:np, ispin, 1) + this%fxc(1:np, ispin, ispin2)*lr(1)%X(dl_rho)(1:np, ispin2)
+      end do
+    end if
   end do
   
   if (nsigma == 2) hvar(1:np, 1:sys%st%d%nspin, 2) = R_CONJ(hvar(1:np, 1:sys%st%d%nspin, 1))
