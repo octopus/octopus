@@ -111,7 +111,8 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
   type(lr_t),     intent(inout) :: lr(:)
   integer,        intent(in)    :: nsigma
 
-  integer :: ip, ist, ik, ik2, sp, isigma
+  integer :: ip, ist, ik, ispin, isigma
+  FLOAT   :: weight
   CMPLX   :: cc
   R_TYPE  :: dd
 
@@ -127,33 +128,36 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
     lr(isigma)%X(dl_rho)(:, :) = M_ZERO
   end do
 
-  sp = 1
-  if(st%d%ispin == SPIN_POLARIZED) sp = 2
-
   ! calculate density
-  do ik = 1, st%d%nik, sp
+  do ik = st%d%kpt%start, st%d%kpt%end
+    ispin = states_dim_get_spin_index(st%d, ik)
     do ist  = st%st_start, st%st_end
-      do ip = 1, mesh%np
-
-        do ik2 = ik, ik+sp-1 ! this loop takes care of the SPIN_POLARIZED case
-          dd = st%d%kweights(ik2) * st%smear%el_per_state
-
-          if(nsigma == 1) then  ! either omega purely real or purely imaginary
-            dd = dd * st%X(psi)(ip, 1, ist, ik2)*R_CONJ(lr(1)%X(dl_psi)(ip, 1, ist, ik2))
-            lr(1)%X(dl_rho)(ip, 1) = lr(1)%X(dl_rho)(ip, 1) + dd + R_CONJ(dd)
-          else
-            cc = dd * (                                                             &
-              R_CONJ(st%X(psi)(ip, 1, ist, ik2))*lr(1)%X(dl_psi)(ip, 1, ist, ik2) + &
-              st%X(psi)(ip, 1, ist, ik2)*R_CONJ(lr(2)%X(dl_psi)(ip, 1, ist, ik2)))
-            lr(1)%X(dl_rho)(ip, 1) = lr(1)%X(dl_rho)(ip, 1) + cc
-            lr(2)%X(dl_rho)(ip, 1) = lr(2)%X(dl_rho)(ip, 1) + R_CONJ(cc)
-          end if
+      weight = st%d%kweights(ik)*st%smear%el_per_state
+      
+      if(nsigma == 1) then  ! either omega purely real or purely imaginary
+        do ip = 1, mesh%np
+          dd = weight*st%X(psi)(ip, 1, ist, ik)*R_CONJ(lr(1)%X(dl_psi)(ip, 1, ist, ik))
+          lr(1)%X(dl_rho)(ip, ispin) = lr(1)%X(dl_rho)(ip, ispin) + dd + R_CONJ(dd)
         end do
+      else
+        do ip = 1, mesh%np
+          cc = weight*(R_CONJ(st%X(psi)(ip, 1, ist, ik))*lr(1)%X(dl_psi)(ip, 1, ist, ik) + &
+            st%X(psi)(ip, 1, ist, ik)*R_CONJ(lr(2)%X(dl_psi)(ip, 1, ist, ik)))
+          lr(1)%X(dl_rho)(ip, ispin) = lr(1)%X(dl_rho)(ip, ispin) + cc
+          lr(2)%X(dl_rho)(ip, ispin) = lr(2)%X(dl_rho)(ip, ispin) + R_CONJ(cc)
+        end do
+      end if
 
-      end do
     end do
   end do
 
+  ! reduce
+  if(st%parallel_in_states .or. st%d%kpt%parallel) then
+    do isigma = 1, nsigma
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, lr(isigma)%X(dl_rho), dim = (/mesh%np, st%d%nspin/))
+    end do
+  end if
+      
   POP_SUB(X(lr_build_dl_rho))
 end subroutine X(lr_build_dl_rho)
 
