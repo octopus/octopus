@@ -442,7 +442,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   type(mesh_t),   pointer :: mesh
 
   integer :: ifreq, jfreq, isigma, idim, ispin, np, ndir, idir, ist, ik
-  integer :: ii, jj, kk, iperm, op_sigma, ist2, ip
+  integer :: ii, jj, kk, iperm, op_sigma, ist2, ip, is1, is2, is3
   integer :: perm(1:3), u(1:3), w(1:3), ijk(1:3)
 
   R_TYPE, allocatable :: hvar(:, :, :, :, :, :)
@@ -467,20 +467,22 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   ASSERT(present(kdotp_lr) .eqv. present(kdotp_em_lr))
   ! either both are absent for finite, or both present for periodic
 
-  !calculate kxc, the derivative of fxc
-  SAFE_ALLOCATE(kxc(1:np, 1:st%d%nspin, 1:st%d%nspin, 1:st%d%nspin))
-  kxc = M_ZERO
-
-  SAFE_ALLOCATE(rho(1:np, 1:st%d%nspin))
-  call states_total_density(st, mesh, rho)
-
-  call xc_get_kxc(sys%ks%xc, mesh, rho, st%d%ispin, kxc)
-  SAFE_DEALLOCATE_A(rho)
+  if(sternheimer_add_fxc(sh)) then
+    !calculate kxc, the derivative of fxc
+    SAFE_ALLOCATE(kxc(1:np, 1:st%d%nspin, 1:st%d%nspin, 1:st%d%nspin))
+    kxc = M_ZERO
+    
+    SAFE_ALLOCATE(rho(1:np, 1:st%d%nspin))
+    call states_total_density(st, mesh, rho)
+    
+    call xc_get_kxc(sys%ks%xc, mesh, rho, st%d%ispin, kxc)
+    SAFE_DEALLOCATE_A(rho)
+    SAFE_ALLOCATE(hpol_density(1:np))
+  endif
 
   SAFE_ALLOCATE(tmp(1:np, 1:st%d%dim))
   SAFE_ALLOCATE(ppsi(1:np, 1:st%d%dim))
   SAFE_ALLOCATE(hvar(1:np, 1:st%d%nspin, 1:2, 1:st%d%dim, 1:ndir, 1:3))
-  SAFE_ALLOCATE(hpol_density(1:np))
   SAFE_ALLOCATE(me010(1:st%nst, 1:st%nst, 1:mesh%sb%dim, 1:3, st%d%kpt%start:st%d%kpt%end))
   SAFE_ALLOCATE(me11(1:mesh%sb%dim, 1:mesh%sb%dim, 1:3, 1:3, 1:2, st%d%kpt%start:st%d%kpt%end))
 
@@ -549,17 +551,24 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
             end do !ik
 
             if(sternheimer_add_fxc(sh)) then 
-              do ip = 1, np 
-                hpol_density(ip) = kxc(ip, 1, 1, 1) & 
-                  * sum(em_lr(u(1), isigma, w(1))%X(dl_rho)(ip, 1:st%d%nspin)) & 
-                  * sum(em_lr(u(2), isigma, w(2))%X(dl_rho)(ip, 1:st%d%nspin)) & 
-                  * sum(em_lr(u(3), isigma, w(3))%X(dl_rho)(ip, 1:st%d%nspin)) & 
-                  / CNST(6.0) 
+              
+              hpol_density(:) = M_ZERO
+              do ip = 1, np
+                do is1 = 1, st%d%nspin
+                  do is2 = 1, st%d%nspin
+                    do is3 = 1, st%d%nspin
+                      hpol_density(ip) = hpol_density(ip) + kxc(ip, is1, is2, is3) &
+                        * em_lr(u(1), isigma, w(1))%X(dl_rho)(ip, is1) & 
+                        * em_lr(u(2), isigma, w(2))%X(dl_rho)(ip, is2) & 
+                        * em_lr(u(3), isigma, w(3))%X(dl_rho)(ip, is3)
+                    enddo
+                  enddo
+                enddo
               end do
+
+              beta(ii, jj, kk) = beta(ii, jj, kk) - M_HALF * X(mf_integrate)(mesh, hpol_density / CNST(6.0))
+
             end if
-
-            beta(ii, jj, kk) = beta(ii, jj, kk) - M_HALF * X(mf_integrate)(mesh, hpol_density)
-
 
           end do ! iperm
 
@@ -583,7 +592,10 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
     end do
   end do
 
-  SAFE_DEALLOCATE_A(hpol_density)
+  if(sternheimer_add_fxc(sh)) then
+    SAFE_DEALLOCATE_A(hpol_density)
+    SAFE_DEALLOCATE_A(kxc)
+  endif
   SAFE_DEALLOCATE_A(tmp)
   SAFE_DEALLOCATE_A(hvar)
   SAFE_DEALLOCATE_A(me010)
