@@ -56,7 +56,6 @@ module sternheimer_m
   use v_ks_m
   use xc_m
   use XC_F90(lib_m)
-  use xc_OEP_kernel_m
 
   implicit none
 
@@ -95,7 +94,6 @@ module sternheimer_m
      logical               :: occ_response
      logical               :: last_occ_response
      logical               :: preorthogonalization
-     logical               :: oep_kernel
   end type sternheimer_t
   
   type(profile_t), save :: prof, prof_hvar
@@ -289,18 +287,10 @@ contains
     SAFE_ALLOCATE(this%fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
     this%fxc = M_ZERO
 
-    if( iand(ks%xc%kernel_family, XC_FAMILY_OEP) == 0 ) then 
-      this%oep_kernel = .false.
-
-      SAFE_ALLOCATE(rho(1:mesh%np, 1:st%d%nspin))
-      call states_total_density(st, mesh, rho)
-      call xc_get_fxc(ks%xc, mesh, rho, st%d%ispin, this%fxc)
-      SAFE_DEALLOCATE_A(rho)
-    else
-      this%oep_kernel = .true.
-
-      call xc_oep_kernel_init(ks%oep)
-    end if
+    SAFE_ALLOCATE(rho(1:mesh%np, 1:st%d%nspin))
+    call states_total_density(st, mesh, rho)
+    call xc_get_fxc(ks%xc, mesh, rho, st%d%ispin, this%fxc)
+    SAFE_DEALLOCATE_A(rho)
 
     POP_SUB(sternheimer_build_fxc)
 
