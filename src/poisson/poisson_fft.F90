@@ -110,7 +110,7 @@ contains
 
           modg2 = sum(gg(:)**2)
 
-          if(modg2 /= M_ZERO) then
+          if(abs(modg2) > M_EPSILON) then
             fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
           else
             fft_Coulb_FS(ix, iy, iz) = M_ZERO
@@ -192,7 +192,7 @@ contains
 
           modg2 = sum(gg(:)**2)
 
-          if(modg2 /= M_ZERO) then
+          if(abs(modg2) > M_EPSILON) then
             gz = abs(gg(3))
             gpar = hypot(gg(1), gg(2))
             fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_3D_2D(gpar,gz,r_c)/modg2
@@ -295,7 +295,7 @@ contains
 
           modg2 = sum(gg(:)**2)
 
-          if(modg2 /= M_ZERO) then
+          if(abs(modg2) > M_EPSILON) then
             gperp = hypot(gg(2), gg(3))
             if (mesh%sb%periodic_dim==1) then
               fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_3D_1D(abs(gx), gperp, r_c)/modg2
@@ -412,7 +412,7 @@ contains
           end do
           modg2 = sum(gg(:)**2)
 
-          if(modg2 /= M_ZERO) then
+          if(abs(modg2) > M_EPSILON) then
             select case(poisson_solver)
             case(POISSON_FFT_SPH)
               fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_3D_0D(sqrt(modg2),r_c)/modg2

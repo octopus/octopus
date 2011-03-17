@@ -144,7 +144,7 @@ contains
 
     PUSH_SUB(poisson_cutoff_3D_1D)
 
-    if ( x == M_ZERO ) then
+    if ( abs(x) < M_EPSILON ) then
       ! Simpson rule for the G_x = 0 contribution -log(r)
       dr = rmax/real(nr)
       sum = M_ZERO
@@ -171,7 +171,7 @@ contains
 
     PUSH_SUB(poisson_cutoff_3D_2D)
 
-    if ( p == M_ZERO ) then
+    if (abs(p) < M_EPSILON) then
       cutoff = M_ONE - cos(z*r) - z*r*sin(z*r)
     else
       cutoff = M_ONE + exp(-p*r)*(z*sin(z*r)/p-cos(z*r))
