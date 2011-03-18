@@ -19,8 +19,6 @@
 
 ! ---------------------------------------------------------
 
-#if defined(HAVE_ETSF_IO)
-
 subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
   type(states_t),         intent(in) :: st
   type(grid_t),           intent(in) :: gr
@@ -34,6 +32,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
   FLOAT, allocatable :: d(:), md(:,:)
   REAL_DOUBLE, allocatable, target :: local_rho(:,:,:,:), local_wfs(:,:,:,:,:,:,:), local_ev(:, :, :)
   REAL_DOUBLE, allocatable, target :: local_occ(:,:,:), local_red_coord_kpt(:,:), local_kpoint_weights(:)
+#ifdef HAVE_ETSF_IO
   type(etsf_io_low_error)  :: error_data
   type(etsf_dims) :: dims
   type(etsf_groups) :: groups
@@ -43,17 +42,25 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
   type(etsf_electrons), target :: electrons
   type(etsf_kpoints), target :: kpoints
   type(cube_function_t) :: cube
+#endif
 
   PUSH_SUB(h_sys_output_etsf)
 
-  if (iand(outp%what, output_geometry).ne.0) then
-    !Create a cube
-    call cube_function_init(cube, gr%mesh%idx%ll)
-    call dcube_function_alloc_RS(cube)    
+  !Create a cube
+  call cube_function_init(cube, gr%mesh%idx%ll)
+  call dcube_function_alloc_RS(cube)    
 
+#ifndef HAVE_ETSF
+  ASSERT(.false.)
+#endif
+
+#ifdef HAVE_ETSF_IO
+  if (iand(outp%what, output_geometry).ne.0) then
     !Set the dimensions
-    dims%number_of_atoms = geo%natoms
+    dims%number_of_atoms        = geo%natoms
     dims%number_of_atom_species = geo%nspecies
+
+    ! The symmetries
     dims%number_of_symmetry_operations = 1
 
     ! Get the offset
@@ -129,9 +136,6 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     nullify(groups%geometry)
     flags%geometry = etsf_geometry_none
 
-    !Destroy the cube
-    call cube_function_end(cube)
-
     !Reset the dimensions
     dims%number_of_atoms = 1
     dims%number_of_atom_species = 1
@@ -140,10 +144,6 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
 
   if (iand(outp%what, output_density).ne.0) then
-    !Create a cube
-    call cube_function_init(cube, gr%mesh%idx%ll)
-    call dcube_function_alloc_RS(cube)
-
     !Set the dimensions
     dims%number_of_components = st%d%nspin
     dims%number_of_grid_points_vector1 = cube%n(1)
@@ -215,9 +215,6 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     nullify(groups%geometry)
     flags%geometry = etsf_geometry_none
 
-    !Destroy the cube
-    call cube_function_end(cube)
-
     !Reset the dimensions
     dims%number_of_components = 1
     dims%number_of_grid_points_vector1 = 1
@@ -228,10 +225,6 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
 
   if (iand(outp%what, output_wfs).ne.0) then
-    !Create a cube
-    call cube_function_init(cube, gr%mesh%idx%ll)
-    call dcube_function_alloc_RS(cube)    
-
     !Set the dimensions
     nspin = 1
     if (st%d%ispin == SPIN_POLARIZED) nspin = 2
@@ -366,9 +359,6 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     nullify(groups%geometry)
     flags%geometry = etsf_geometry_none
 
-    !Destroy the cube
-    call cube_function_end(cube)
-
     !Reset the dimensions
     dims%max_number_of_states = 1
     dims%number_of_kpoints = 1
@@ -380,10 +370,12 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     dims%real_or_complex_wavefunctions = 1
   end if
 
+#endif
+
+  call cube_function_end(cube)
+
   POP_SUB(h_sys_output_etsf)
 end subroutine h_sys_output_etsf
-
-#endif
 
 !! Local Variables:
 !! mode: f90
