@@ -69,7 +69,7 @@ contains
     type(states_t), pointer :: st
 
     integer :: iunit, ios, i_start, ii, jj, is, isign, ierr, read_count, verbosity
-    FLOAT :: e_field
+    FLOAT :: e_field, e_field_saved
     FLOAT, allocatable :: Vpsl_save(:), trrho(:), dipole(:, :, :)
     FLOAT, allocatable :: elf(:,:), lr_elf(:,:), elfd(:,:), lr_elfd(:,:)
     FLOAT, allocatable :: lr_rho(:,:), lr_rho2(:,:), gs_rho(:,:), tmp_rho(:,:)
@@ -114,6 +114,8 @@ contains
         ! Finds out how many dipoles have already been written.
         rewind(iunit)
 
+        read(iunit, fmt=*, iostat = ios) e_field_saved
+
         read(iunit, fmt=*, iostat = ios) (center_dipole(jj), jj = 1, gr%mesh%sb%dim)
         center_written = (ios .eq. 0)
 
@@ -128,6 +130,15 @@ contains
 
         call io_close(iunit)
       end if
+
+      ! if saved dipoles used a different e_field, we cannot use them
+      if(abs(e_field_saved - e_field) > M_EPSILON) then
+        message(1) = "Saved dipoles are from a different electric field, cannot use them."
+        call write_warning(1)
+        center_written = .false.
+        diagonal_done = .false.
+        i_start = 1
+      endif
 
       read_count = (i_start - 1) * 2
       if(center_written) read_count = read_count + 1
@@ -147,8 +158,9 @@ contains
 
     if(i_start .eq. 1) then
       if(mpi_grp_is_root(mpi_world)) then
-        ! open new file, and erase old data
+        ! open new file, erase old data, write e_field
         iunit = io_open(trim(tmpdir)//EM_RESP_FD_DIR//RESTART_FILE, action='write', status='replace')
+        write(iunit, fmt='(e20.12)') e_field
         call io_close(iunit)
       end if
       center_written = .false.
