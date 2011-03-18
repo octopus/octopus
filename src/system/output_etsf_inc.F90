@@ -29,7 +29,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
   type(cube_function_t) :: cube
 #ifdef HAVE_ETSF_IO
   logical :: lstat
-  integer :: i, j, idir, is, ik, idim, ix, iy, iz, nkpoints, nspin, zdim, isymm, ikpoint
+  integer :: i, j, idir, is, ik, idim, ix, iy, iz, nkpoints, nspin, zdim, isymm, ikpoint, ispecies
   FLOAT   :: offset(MAX_DIM)
   FLOAT, allocatable :: d(:), md(:,:)
   REAL_DOUBLE, allocatable, target :: local_rho(:,:,:,:), local_wfs(:,:,:,:,:,:,:), local_ev(:, :, :)
@@ -56,12 +56,12 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
 #ifdef HAVE_ETSF_IO
 
-  ! First initialize data used by more than one output
-  
+  ! First initialize the geometry, included in all files
+  flags%geometry = etsf_geometry_all - etsf_geometry_valence_charges - etsf_geometry_pseudo_types
+  groups%geometry => geometry
+
   ! Primitive vectors
-
   SAFE_ALLOCATE(geometry%primitive_vectors(1:3, 1:3))
-
   do idir = 1, gr%sb%dim
     geometry%primitive_vectors(1:3, idir) = gr%sb%rlattice(1:3, idir)
   end do
@@ -78,43 +78,51 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     geometry%reduced_symmetry_translations(1:3, isymm) = symm_op_translation_vector(gr%sb%symm%ops(isymm))
   end do
 
+  ! The species
+  dims%number_of_atom_species = geo%nspecies
+  dims%number_of_atom_species = geo%nspecies
+
+  SAFE_ALLOCATE(geometry%atomic_numbers(geo%nspecies))
+  SAFE_ALLOCATE(geometry%chemical_symbols(geo%nspecies))
+  SAFE_ALLOCATE(geometry%atom_species_names(geo%nspecies))
+
+  do ispecies = 1, geo%nspecies
+    geometry%atomic_numbers(ispecies) = species_z(geo%species(ispecies))
+    geometry%chemical_symbols(ispecies) = trim(species_label(geo%species(ispecies)))
+    ! according to the specification atomic_numbers is enough, but
+    ! v_sim wants atom_species_name, so we use the label
+    geometry%atom_species_names(ispecies) = trim(species_label(geo%species(ispecies)))
+  end do
+
+  ! The atoms
+  dims%number_of_atoms = geo%natoms
+  SAFE_ALLOCATE(geometry%atom_species(geo%natoms))
+
+  do i = 1, geo%natoms
+    do j = 1, geo%nspecies
+      if (species_z(geo%atom(i)%spec) == species_z(geo%species(j))) then
+        geometry%atom_species(i) = j
+        exit
+      end if
+    end do
+  end do
+
+  ! The coordinates
+  SAFE_ALLOCATE(geometry%reduced_atom_positions(3,geo%natoms))
+
+  offset = -matmul(gr%sb%rlattice_primitive, gr%sb%lsize)
+  do i = gr%sb%periodic_dim+1, 3
+    offset(i)=-(cube%n(i) - 1)/2 * gr%mesh%spacing(i)
+  end do
+
+  do i = 1, geo%natoms
+    ! this is only valid if the primitive vectors are along the x, y, and z directions.
+    do idir = 1, 3
+      geometry%reduced_atom_positions(idir, i) = (geo%atom(i)%x(idir) - offset(idir))/geometry%primitive_vectors(idir, idir)
+    end do
+  end do
+
   if (iand(outp%what, output_geometry).ne.0) then
-    !Set the dimensions
-    dims%number_of_atoms        = geo%natoms
-    dims%number_of_atom_species = geo%nspecies
-
-    ! Get the offset
-    offset = -matmul(gr%sb%rlattice_primitive, gr%sb%lsize)
-    do i = gr%sb%periodic_dim+1, 3
-      offset(i)=-(cube%n(i) - 1)/2 * gr%mesh%spacing(i)
-    end do
-
-    !Next we created the geometry container
-    flags%geometry = etsf_geometry_all - etsf_geometry_valence_charges - &
-      etsf_geometry_pseudo_types - etsf_geometry_atom_species_names
-    groups%geometry => geometry
-    SAFE_ALLOCATE(geometry%reduced_atom_positions(3,geo%natoms))
-    SAFE_ALLOCATE(geometry%atom_species(geo%natoms))
-    SAFE_ALLOCATE(geometry%atomic_numbers(geo%nspecies))
-    SAFE_ALLOCATE(geometry%chemical_symbols(geo%nspecies))
-
-    do i = 1, geo%natoms
-      !Next line is obviously only valid if the primitive vectors are along the x, y, and z directions.
-      do idir = 1, 3
-        geometry%reduced_atom_positions(idir, i) = (geo%atom(i)%x(idir) - offset(idir))/geometry%primitive_vectors(idir, idir)
-      end do
-    end do
-    forall(i = 1:geo%nspecies) geometry%atomic_numbers(i) = species_z(geo%species(i))
-    forall(i = 1:geo%nspecies) geometry%chemical_symbols(i) = trim(species_label(geo%species(i)))
-    do i = 1, geo%natoms
-      do j = 1, geo%nspecies
-        if (species_z(geo%atom(i)%spec) == species_z(geo%species(j))) then
-          geometry%atom_species(i) = j
-        end if
-      end do
-    end do
-
-    !Open the file
     call etsf_io_data_init(dir//"/geometry-etsf.nc", flags, dims, &
       "Crystallographic_data file", &
       "Created by "//PACKAGE_STRING, &
@@ -134,20 +142,6 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
       message(1) = "ETSF_IO returned a fatal error. See message above."
       call write_fatal(1)
     end if
-
-    !Free the geometry container
-    SAFE_DEALLOCATE_P(geometry%space_group)
-    SAFE_DEALLOCATE_P(geometry%reduced_atom_positions)
-    SAFE_DEALLOCATE_P(geometry%atom_species)
-    SAFE_DEALLOCATE_P(geometry%atomic_numbers)
-    SAFE_DEALLOCATE_P(geometry%chemical_symbols)
-    nullify(groups%geometry)
-    flags%geometry = etsf_geometry_none
-
-    !Reset the dimensions
-    dims%number_of_atoms = 1
-    dims%number_of_atom_species = 1
-    dims%number_of_symmetry_operations = 1
   end if
 
 
@@ -158,11 +152,6 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     dims%number_of_grid_points_vector2 = cube%n(2)
     dims%number_of_grid_points_vector3 = cube%n(3)
     dims%real_or_complex_density = 1
-
-    !Next we created the geometry container
-    !We only need the primitive vectors
-    flags%geometry = etsf_geometry_primitive_vectors
-    groups%geometry => geometry
 
     !Open the file
     flags%main = etsf_main_density
@@ -214,10 +203,6 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     nullify(main%density%data4D)
     SAFE_DEALLOCATE_A(local_rho)
 
-    !Free the geometry container
-    nullify(groups%geometry)
-    flags%geometry = etsf_geometry_none
-
     !Reset the dimensions
     dims%number_of_components = 1
     dims%number_of_grid_points_vector1 = 1
@@ -245,10 +230,6 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     dims%number_of_grid_points_vector2 = cube%n(2)
     dims%number_of_grid_points_vector3 = cube%n(3)
     dims%real_or_complex_wavefunctions = zdim
-
-    !Created the geometry container
-    flags%geometry = etsf_geometry_primitive_vectors + etsf_geometry_red_sym_matrices + etsf_geometry_red_sym_trans    
-    groups%geometry => geometry
 
     !Create the electrons container
     flags%electrons = etsf_electrons_eigenvalues + etsf_electrons_occupations + etsf_electrons_number_of_states
@@ -303,8 +284,8 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
               call dmesh_to_cube(gr%mesh, st%dpsi(1:gr%mesh%np_part, idim, i, ik+is-1), cube)
               local_wfs(1, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, i, ik+(is-1)*nkpoints) = &
                 cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
-
-            elseif(states_are_complex(st)) then
+              
+            else if(states_are_complex(st)) then
               call dmesh_to_cube(gr%mesh, &
                 real(st%zpsi(1:gr%mesh%np_part, idim, i, ik+is-1), REAL_PRECISION), cube)
               local_wfs(1, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, i, ik+(is-1)*nkpoints) = &
@@ -351,10 +332,6 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     nullify(electrons%occupations%data3D)
     flags%electrons = etsf_electrons_none
 
-    !Free the geometry container
-    nullify(groups%geometry)
-    flags%geometry = etsf_geometry_none
-
     !Reset the dimensions
     dims%max_number_of_states = 1
     dims%number_of_kpoints = 1
@@ -366,10 +343,16 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     dims%real_or_complex_wavefunctions = 1
   end if
 
+  ! Free the geometry container
   SAFE_DEALLOCATE_P(geometry%primitive_vectors)
   SAFE_DEALLOCATE_P(geometry%reduced_symmetry_matrices)
   SAFE_DEALLOCATE_P(geometry%reduced_symmetry_translations)
-
+  SAFE_DEALLOCATE_P(geometry%space_group)
+  SAFE_DEALLOCATE_P(geometry%reduced_atom_positions)
+  SAFE_DEALLOCATE_P(geometry%atom_species)
+  SAFE_DEALLOCATE_P(geometry%atomic_numbers)
+  SAFE_DEALLOCATE_P(geometry%chemical_symbols)
+  SAFE_DEALLOCATE_P(geometry%atom_species_names)
 #endif
 
   call cube_function_end(cube)
