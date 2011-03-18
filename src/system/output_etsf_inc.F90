@@ -26,13 +26,14 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
   character(len=*),       intent(in) :: dir
   type(h_sys_output_t),   intent(in) :: outp
 
+  type(cube_function_t) :: cube
+#ifdef HAVE_ETSF_IO
   logical :: lstat
-  integer :: i, j, idir, is, ik, idim, ix, iy, iz, nik, nspin, zdim
+  integer :: i, j, idir, is, ik, idim, ix, iy, iz, nik, nspin, zdim, isymm
   FLOAT   :: offset(MAX_DIM)
   FLOAT, allocatable :: d(:), md(:,:)
   REAL_DOUBLE, allocatable, target :: local_rho(:,:,:,:), local_wfs(:,:,:,:,:,:,:), local_ev(:, :, :)
   REAL_DOUBLE, allocatable, target :: local_occ(:,:,:), local_red_coord_kpt(:,:), local_kpoint_weights(:)
-#ifdef HAVE_ETSF_IO
   type(etsf_io_low_error)  :: error_data
   type(etsf_dims) :: dims
   type(etsf_groups) :: groups
@@ -41,7 +42,6 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
   type(etsf_geometry), target :: geometry
   type(etsf_electrons), target :: electrons
   type(etsf_kpoints), target :: kpoints
-  type(cube_function_t) :: cube
 #endif
 
   PUSH_SUB(h_sys_output_etsf)
@@ -61,7 +61,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     dims%number_of_atom_species = geo%nspecies
 
     ! The symmetries
-    dims%number_of_symmetry_operations = 1
+    dims%number_of_symmetry_operations = gr%sb%symm%nops
 
     ! Get the offset
     offset = -matmul(gr%sb%rlattice_primitive, gr%sb%lsize)
@@ -76,8 +76,8 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     groups%geometry => geometry
     SAFE_ALLOCATE(geometry%space_group)
     SAFE_ALLOCATE(geometry%primitive_vectors(1:3, 1:3))
-    SAFE_ALLOCATE(geometry%reduced_symmetry_matrices(1:3, 1:3, 1:1))
-    SAFE_ALLOCATE(geometry%reduced_symmetry_translations(1:3, 1:1))
+    SAFE_ALLOCATE(geometry%reduced_symmetry_matrices(1:3, 1:3, 1:gr%sb%symm%nops))
+    SAFE_ALLOCATE(geometry%reduced_symmetry_translations(1:3, 1:gr%sb%symm%nops))
     SAFE_ALLOCATE(geometry%reduced_atom_positions(3,geo%natoms))
     SAFE_ALLOCATE(geometry%atom_species(geo%natoms))
     SAFE_ALLOCATE(geometry%atomic_numbers(geo%nspecies))
@@ -86,8 +86,12 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
       geometry%primitive_vectors(1:3, idir) = gr%sb%rlattice(1:3, idir)
     end do
     geometry%space_group = 1
-    geometry%reduced_symmetry_matrices = reshape( (/ 1, 0, 0, 0, 1, 0, 0, 0, 1 /), (/ 3, 3, 1 /))
-    geometry%reduced_symmetry_translations = reshape( (/ 0, 0, 0 /), (/ 3, 1 /))
+
+    do isymm = 1, gr%sb%symm%nops
+      geometry%reduced_symmetry_matrices(1:3, 1:3, isymm) = symm_op_rotation_matrix(gr%sb%symm%ops(isymm))
+      geometry%reduced_symmetry_translations(1:3, isymm) = symm_op_translation_vector(gr%sb%symm%ops(isymm))
+    end do
+
     do i = 1, geo%natoms
       !Next line is obviously only valid if the primitive vectors are along the x, y, and z directions.
       do idir = 1, 3

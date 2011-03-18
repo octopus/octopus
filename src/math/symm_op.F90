@@ -28,14 +28,16 @@ module symm_op_m
 
   private
   
-  public ::                     &
-       symm_op_init,            &
-       symm_op_copy,            &
-       symm_op_end,             &
-       symm_op_apply,           &
-       symm_op_apply_inv,       &
-       symm_op_invariant,       &
-       symm_op_has_translation, &
+  public ::                        &
+       symm_op_init,               &
+       symm_op_copy,               &
+       symm_op_end,                &
+       symm_op_apply,              &
+       symm_op_apply_inv,          &
+       symm_op_invariant,          &
+       symm_op_has_translation,    &
+       symm_op_rotation_matrix,    &
+       symm_op_translation_vector, &
        symm_op_t
 
   type symm_op_t
@@ -119,6 +121,26 @@ contains
     has = any(abs(this%translation(1:3)) >= prec)
 
   end function symm_op_has_translation
+
+  ! -------------------------------------------------------------------------------
+
+  function symm_op_rotation_matrix(this) result(matrix)
+    type(symm_op_t),  intent(in)  :: this
+    FLOAT                         :: matrix(1:3, 1:3)
+
+    matrix(1:3, 1:3) = this%rotation(1:3, 1:3)
+
+  end function symm_op_rotation_matrix
+
+  ! -------------------------------------------------------------------------------
+ 
+  function symm_op_translation_vector(this) result(vector)
+    type(symm_op_t),  intent(in)  :: this
+    FLOAT                         :: vector(1:3)
+
+    vector(1:3) = this%translation(1:3)
+
+  end function symm_op_translation_vector
 
 #include "undef.F90"
 #include "integer.F90"
