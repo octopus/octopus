@@ -136,7 +136,7 @@ subroutine X(sternheimer_solve)(                           &
             ASSERT(associated(this%X(rhs)))
             forall(idim = 1:st%d%dim, ip = 1:mesh%np) rhs(ip, idim, sigma) = this%X(rhs)(ip, idim, ist, ik)
           else
-            rhs(1:mesh%np, 1, sigma) = R_TOTYPE(M_ZERO)
+            rhs(1:mesh%np, 1:st%d%dim, sigma) = R_TOTYPE(M_ZERO)
             call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, st%X(psi)(:, :, ist, ik), rhs(:, :, sigma))
           end if
 
