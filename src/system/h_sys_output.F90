@@ -57,6 +57,7 @@ module h_sys_output_m
   use states_dim_m
   use states_io_m
   use symm_op_m
+  use symmetries_m
   use unit_m
   use unit_system_m
   use utils_m

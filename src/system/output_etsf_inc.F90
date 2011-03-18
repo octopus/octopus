@@ -67,13 +67,13 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
   end do
 
   ! The symmetries
+  SAFE_ALLOCATE(geometry%space_group)
+  geometry%space_group = symmetries_space_group_number(gr%sb%symm)
+  dims%number_of_symmetry_operations = symmetries_number(gr%sb%symm)
+  SAFE_ALLOCATE(geometry%reduced_symmetry_matrices(1:3, 1:3, 1:symmetries_number(gr%sb%symm)))
+  SAFE_ALLOCATE(geometry%reduced_symmetry_translations(1:3, 1:symmetries_number(gr%sb%symm)))
 
-  geometry%space_group = 1
-  dims%number_of_symmetry_operations = gr%sb%symm%nops
-  SAFE_ALLOCATE(geometry%reduced_symmetry_matrices(1:3, 1:3, 1:gr%sb%symm%nops))
-  SAFE_ALLOCATE(geometry%reduced_symmetry_translations(1:3, 1:gr%sb%symm%nops))
-
-  do isymm = 1, gr%sb%symm%nops
+  do isymm = 1, symmetries_number(gr%sb%symm)
     geometry%reduced_symmetry_matrices(1:3, 1:3, isymm) = symm_op_rotation_matrix(gr%sb%symm%ops(isymm))
     geometry%reduced_symmetry_translations(1:3, isymm) = symm_op_translation_vector(gr%sb%symm%ops(isymm))
   end do
@@ -93,7 +93,6 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     flags%geometry = etsf_geometry_all - etsf_geometry_valence_charges - &
       etsf_geometry_pseudo_types - etsf_geometry_atom_species_names
     groups%geometry => geometry
-    SAFE_ALLOCATE(geometry%space_group)
     SAFE_ALLOCATE(geometry%reduced_atom_positions(3,geo%natoms))
     SAFE_ALLOCATE(geometry%atom_species(geo%natoms))
     SAFE_ALLOCATE(geometry%atomic_numbers(geo%nspecies))

@@ -33,18 +33,20 @@ module symmetries_m
 
   private
   
-  public ::                      &
-       symmetries_init,          &
-       symmetries_copy,          &
-       symmetries_end,           &
-       symmetries_number,        &
-       symmetries_apply_kpoint,  &
-       symmetries_t
+  public ::                           &
+       symmetries_t,                  &
+       symmetries_init,               &
+       symmetries_copy,               &
+       symmetries_end,                &
+       symmetries_number,             &
+       symmetries_apply_kpoint,       &
+       symmetries_space_group_number
 
   type symmetries_t
     type(symm_op_t), pointer :: ops(:)
     integer                  :: nops
     FLOAT                    :: breakdir(1:3)
+    integer                  :: space_group
   end type symmetries_t
 
   real(8), parameter :: symprec = CNST(1e-5)
@@ -79,6 +81,14 @@ module symmetries_m
       real(8), intent(in) :: symprec
     end subroutine spglib_show_symmetry
 
+    integer function spglib_get_group_number(lattice, position, types, num_atom, symprec)
+      real(8), intent(in) :: lattice
+      real(8), intent(in) :: position
+      integer, intent(in) :: types
+      integer, intent(in) :: num_atom
+      real(8), intent(in) :: symprec
+    end function spglib_get_group_number
+
   end interface
   
 contains
@@ -111,6 +121,8 @@ contains
       this%nops = 1
       call symm_op_init(this%ops(1), reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/)))
       this%breakdir = M_ZERO
+      this%space_group = 1
+
     else
 
       lattice(1:3, 1:3) = rlattice(1:3, 1:3)
@@ -131,7 +143,9 @@ contains
 
       ! This outputs information about the symmetries, I will disable it
       ! for the moment as it causes some problems with the output.
-      !    call spglib_show_symmetry(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+      call spglib_show_symmetry(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+      
+      this%space_group = spglib_get_group_number(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
       max_size = spglib_get_max_multiplicity(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
@@ -256,6 +270,16 @@ contains
 
     POP_SUB(symmetries_apply_kpoint)
   end subroutine symmetries_apply_kpoint
+
+  ! -------------------------------------------------------------------------------
+
+  integer pure function symmetries_space_group_number(this) result(number)
+    type(symmetries_t),  intent(in) :: this
+    
+    number = this%space_group
+  end function symmetries_space_group_number
+
+  ! -------------------------------------------------------------------------------
 
 end module symmetries_m
 

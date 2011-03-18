@@ -40,3 +40,9 @@ void FC_FUNC_(spglib_show_symmetry, SPGLIB_SHOW_SYMMETRY)(const double lattice[3
 							  const int types[], const int * num_atom, const double * symprec){
   spg_show_symmetry(lattice, position, types, *num_atom, *symprec);
 }
+
+int FC_FUNC_(spglib_get_group_number, SPGLIB_GET_GROUP_NUMBER)(const double lattice[3][3], const double position[][3],
+							       const int types[], const int * num_atom, const double * symprec){
+  char symbol[11];
+  return spg_get_international(symbol, lattice, position, types, *num_atom, *symprec);
+}
