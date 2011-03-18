@@ -35,6 +35,7 @@ module h_sys_output_m
   use hamiltonian_m
   use io_m
   use io_function_m
+  use kpoints_m
   use linear_response_m
   use loct_m
   use loct_math_m

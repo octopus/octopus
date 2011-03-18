@@ -29,7 +29,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
   type(cube_function_t) :: cube
 #ifdef HAVE_ETSF_IO
   logical :: lstat
-  integer :: i, j, idir, is, ik, idim, ix, iy, iz, nik, nspin, zdim, isymm
+  integer :: i, j, idir, is, ik, idim, ix, iy, iz, nkpoints, nspin, zdim, isymm, ikpoint
   FLOAT   :: offset(MAX_DIM)
   FLOAT, allocatable :: d(:), md(:,:)
   REAL_DOUBLE, allocatable, target :: local_rho(:,:,:,:), local_wfs(:,:,:,:,:,:,:), local_ev(:, :, :)
@@ -46,22 +46,42 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
   PUSH_SUB(h_sys_output_etsf)
 
-  !Create a cube
-  call cube_function_init(cube, gr%mesh%idx%ll)
-  call dcube_function_alloc_RS(cube)    
-
 #ifndef HAVE_ETSF
   ASSERT(.false.)
 #endif
 
+  !Create a cube
+  call cube_function_init(cube, gr%mesh%idx%ll)
+  call dcube_function_alloc_RS(cube)    
+
 #ifdef HAVE_ETSF_IO
+
+  ! First initialize data used by more than one output
+  
+  ! Primitive vectors
+
+  SAFE_ALLOCATE(geometry%primitive_vectors(1:3, 1:3))
+
+  do idir = 1, gr%sb%dim
+    geometry%primitive_vectors(1:3, idir) = gr%sb%rlattice(1:3, idir)
+  end do
+
+  ! The symmetries
+
+  geometry%space_group = 1
+  dims%number_of_symmetry_operations = gr%sb%symm%nops
+  SAFE_ALLOCATE(geometry%reduced_symmetry_matrices(1:3, 1:3, 1:gr%sb%symm%nops))
+  SAFE_ALLOCATE(geometry%reduced_symmetry_translations(1:3, 1:gr%sb%symm%nops))
+
+  do isymm = 1, gr%sb%symm%nops
+    geometry%reduced_symmetry_matrices(1:3, 1:3, isymm) = symm_op_rotation_matrix(gr%sb%symm%ops(isymm))
+    geometry%reduced_symmetry_translations(1:3, isymm) = symm_op_translation_vector(gr%sb%symm%ops(isymm))
+  end do
+
   if (iand(outp%what, output_geometry).ne.0) then
     !Set the dimensions
     dims%number_of_atoms        = geo%natoms
     dims%number_of_atom_species = geo%nspecies
-
-    ! The symmetries
-    dims%number_of_symmetry_operations = gr%sb%symm%nops
 
     ! Get the offset
     offset = -matmul(gr%sb%rlattice_primitive, gr%sb%lsize)
@@ -70,27 +90,14 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     end do
 
     !Next we created the geometry container
-    !For now, we will assume a 3D finite system and we will use a cubic cell with no symmetry operations.
     flags%geometry = etsf_geometry_all - etsf_geometry_valence_charges - &
-                    etsf_geometry_pseudo_types - etsf_geometry_atom_species_names
+      etsf_geometry_pseudo_types - etsf_geometry_atom_species_names
     groups%geometry => geometry
     SAFE_ALLOCATE(geometry%space_group)
-    SAFE_ALLOCATE(geometry%primitive_vectors(1:3, 1:3))
-    SAFE_ALLOCATE(geometry%reduced_symmetry_matrices(1:3, 1:3, 1:gr%sb%symm%nops))
-    SAFE_ALLOCATE(geometry%reduced_symmetry_translations(1:3, 1:gr%sb%symm%nops))
     SAFE_ALLOCATE(geometry%reduced_atom_positions(3,geo%natoms))
     SAFE_ALLOCATE(geometry%atom_species(geo%natoms))
     SAFE_ALLOCATE(geometry%atomic_numbers(geo%nspecies))
     SAFE_ALLOCATE(geometry%chemical_symbols(geo%nspecies))
-    do idir = 1, gr%sb%dim
-      geometry%primitive_vectors(1:3, idir) = gr%sb%rlattice(1:3, idir)
-    end do
-    geometry%space_group = 1
-
-    do isymm = 1, gr%sb%symm%nops
-      geometry%reduced_symmetry_matrices(1:3, 1:3, isymm) = symm_op_rotation_matrix(gr%sb%symm%ops(isymm))
-      geometry%reduced_symmetry_translations(1:3, isymm) = symm_op_translation_vector(gr%sb%symm%ops(isymm))
-    end do
 
     do i = 1, geo%natoms
       !Next line is obviously only valid if the primitive vectors are along the x, y, and z directions.
@@ -110,9 +117,9 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
     !Open the file
     call etsf_io_data_init(dir//"/geometry-etsf.nc", flags, dims, &
-         & "Crystallographic_data file", &
-         & "Created by "//PACKAGE_STRING, &
-         & lstat, error_data, overwrite=.true.)
+      "Crystallographic_data file", &
+      "Created by "//PACKAGE_STRING, &
+      lstat, error_data, overwrite=.true.)
     if (.not. lstat) then
       call etsf_io_low_error_handle(error_data)
       message(1) = "ETSF_IO returned a fatal error. See message above."
@@ -121,7 +128,8 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
     !Write the geometry to the file
     call etsf_io_data_write(dir//"/geometry-etsf.nc", &
-         & groups, lstat, error_data)
+      groups, lstat, error_data)
+
     if (.not. lstat) then
       call etsf_io_low_error_handle(error_data)
       message(1) = "ETSF_IO returned a fatal error. See message above."
@@ -130,9 +138,6 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
     !Free the geometry container
     SAFE_DEALLOCATE_P(geometry%space_group)
-    SAFE_DEALLOCATE_P(geometry%primitive_vectors)
-    SAFE_DEALLOCATE_P(geometry%reduced_symmetry_matrices)
-    SAFE_DEALLOCATE_P(geometry%reduced_symmetry_translations)
     SAFE_DEALLOCATE_P(geometry%reduced_atom_positions)
     SAFE_DEALLOCATE_P(geometry%atom_species)
     SAFE_DEALLOCATE_P(geometry%atomic_numbers)
@@ -159,17 +164,13 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     !We only need the primitive vectors
     flags%geometry = etsf_geometry_primitive_vectors
     groups%geometry => geometry
-    SAFE_ALLOCATE(geometry%primitive_vectors(1:3, 1:3))
-    do idir = 1, gr%sb%dim
-      geometry%primitive_vectors(1:3, idir) = gr%sb%rlattice(1:3, idir)
-    end do
 
     !Open the file
     flags%main = etsf_main_density
     call etsf_io_data_init(dir//"/density-etsf.nc", flags, dims, &
-         & "Density file", &
-         & "Created by "//PACKAGE_STRING, &
-         & lstat, error_data, overwrite=.true.)
+      & "Density file", &
+      & "Created by "//PACKAGE_STRING, &
+      & lstat, error_data, overwrite=.true.)
     if (.not. lstat) then
       call etsf_io_low_error_handle(error_data)
       message(1) = "ETSF_IO returned a fatal error. See message above."
@@ -202,7 +203,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     main%density%data4D => local_rho
     groups%main => main
     call etsf_io_data_write(dir//"/density-etsf.nc", &
-         & groups, lstat, error_data)
+      & groups, lstat, error_data)
     if (.not. lstat) then
       call etsf_io_low_error_handle(error_data)
       message(1) = "ETSF_IO returned a fatal error. See message above."
@@ -215,7 +216,6 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     SAFE_DEALLOCATE_A(local_rho)
 
     !Free the geometry container
-    SAFE_DEALLOCATE_P(geometry%primitive_vectors)    
     nullify(groups%geometry)
     flags%geometry = etsf_geometry_none
 
@@ -232,14 +232,14 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     !Set the dimensions
     nspin = 1
     if (st%d%ispin == SPIN_POLARIZED) nspin = 2
-    nik = st%d%nik/nspin
+    nkpoints = st%d%nik/nspin
     if (states_are_real(st)) then
       zdim = 1
     elseif(states_are_complex(st)) then
       zdim = 2
-    end if    
+    end if
     dims%max_number_of_states = st%nst
-    dims%number_of_kpoints = nik
+    dims%number_of_kpoints = nkpoints
     dims%number_of_spins = nspin
     dims%number_of_spinor_components = st%d%dim
     dims%number_of_grid_points_vector1 = cube%n(1)
@@ -250,21 +250,13 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     !Created the geometry container
     flags%geometry = etsf_geometry_primitive_vectors + etsf_geometry_red_sym_matrices + etsf_geometry_red_sym_trans    
     groups%geometry => geometry
-    SAFE_ALLOCATE(geometry%primitive_vectors(1:3, 1:3))
-    SAFE_ALLOCATE(geometry%reduced_symmetry_matrices(1:3, 1:3, 1:1))
-    SAFE_ALLOCATE(geometry%reduced_symmetry_translations(1:3, 1:1))
-    do idir = 1, gr%sb%dim
-      geometry%primitive_vectors(1:3, idir) = gr%sb%rlattice(1:3, idir)
-    end do
-    geometry%reduced_symmetry_matrices = reshape( (/ 1, 0, 0, 0, 1, 0, 0, 0, 1 /), (/ 3, 3, 1 /))
-    geometry%reduced_symmetry_translations = reshape( (/ 0, 0, 0 /), (/ 3, 1 /))
 
     !Create the electrons container
     flags%electrons = etsf_electrons_eigenvalues + etsf_electrons_occupations + etsf_electrons_number_of_states
-    SAFE_ALLOCATE(local_ev(1:st%nst, 1:nik, 1:nspin))
-    SAFE_ALLOCATE(local_occ(1:st%nst, 1:nik, 1:nspin))
+    SAFE_ALLOCATE(local_ev(1:st%nst, 1:nkpoints, 1:nspin))
+    SAFE_ALLOCATE(local_occ(1:st%nst, 1:nkpoints, 1:nspin))
     do i = 1, st%nst
-      do ik = 1, nik
+      do ik = 1, nkpoints
         do is = 1, nspin 
           local_ev(i, ik, is) = st%eigenval(i, nspin*(ik-1) + is)
           local_occ(i, ik, is) = st%occ(i, nspin*(ik-1) + is)
@@ -277,11 +269,15 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
     !Create the kpoints container
     flags%kpoints = etsf_kpoints_red_coord_kpt + etsf_kpoints_kpoint_weights
-    SAFE_ALLOCATE(local_red_coord_kpt(1:3, 1:nik))
-    SAFE_ALLOCATE(local_kpoint_weights(1:nik))
-    !Here we will assume a finite system (one k-point at Gamma)
-    local_red_coord_kpt = reshape( (/0, 0, 0/), (/3, 1/))
-    local_kpoint_weights = M_ONE
+    SAFE_ALLOCATE(local_red_coord_kpt(1:3, 1:nkpoints))
+    SAFE_ALLOCATE(local_kpoint_weights(1:nkpoints))
+
+    do ikpoint = 1, nkpoints
+      local_red_coord_kpt(1:3, ikpoint) = M_ZERO
+      local_red_coord_kpt(1:gr%sb%dim, ikpoint) = gr%sb%kpoints%reduced%red_point(1:gr%sb%dim, ikpoint)
+      local_kpoint_weights(ikpoint) = kpoints_get_weight(gr%sb%kpoints, ikpoint)
+    end do
+
     kpoints%reduced_coordinates_of_kpoints => local_red_coord_kpt
     kpoints%kpoint_weights => local_kpoint_weights
     groups%kpoints => kpoints
@@ -289,9 +285,9 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     !Open the file
     flags%main = etsf_main_wfs_rsp
     call etsf_io_data_init(dir//"/wfs-etsf.nc", flags, dims, &
-         & "Wavefunctions file", &
-         & "Created by "//PACKAGE_STRING, &
-         & lstat, error_data, overwrite=.true.)
+      & "Wavefunctions file", &
+      & "Created by "//PACKAGE_STRING, &
+      & lstat, error_data, overwrite=.true.)
     if (.not. lstat) then
       call etsf_io_low_error_handle(error_data)
       message(1) = "ETSF_IO returned a fatal error. See message above."
@@ -306,19 +302,19 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
           do idim = 1, st%d%dim
             if (states_are_real(st)) then
               call dmesh_to_cube(gr%mesh, st%dpsi(1:gr%mesh%np_part, idim, i, ik+is-1), cube)
-              local_wfs(1, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, i, ik+(is-1)*nik) = &
-                   cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+              local_wfs(1, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, i, ik+(is-1)*nkpoints) = &
+                cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
 
             elseif(states_are_complex(st)) then
               call dmesh_to_cube(gr%mesh, &
-                   real(st%zpsi(1:gr%mesh%np_part, idim, i, ik+is-1), REAL_PRECISION), cube)
-              local_wfs(1, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, i, ik+(is-1)*nik) = &
-                   cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+                real(st%zpsi(1:gr%mesh%np_part, idim, i, ik+is-1), REAL_PRECISION), cube)
+              local_wfs(1, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, i, ik+(is-1)*nkpoints) = &
+                cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
 
               call dmesh_to_cube(gr%mesh, aimag(st%zpsi(1:gr%mesh%np_part, idim, i, ik+is-1)), cube)
-              local_wfs(2, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, i, ik+(is-1)*nik) = &
-                   cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
-              
+              local_wfs(2, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, i, ik+(is-1)*nkpoints) = &
+                cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+
             end if
           end do
         end do
@@ -328,7 +324,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     main%real_space_wavefunctions%data7D => local_wfs
     groups%main => main
     call etsf_io_data_write(dir//"/wfs-etsf.nc", &
-         & groups, lstat, error_data)
+      & groups, lstat, error_data)
     if (.not. lstat) then
       call etsf_io_low_error_handle(error_data)
       message(1) = "ETSF_IO returned a fatal error. See message above."
@@ -357,9 +353,6 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     flags%electrons = etsf_electrons_none
 
     !Free the geometry container
-    SAFE_DEALLOCATE_P(geometry%primitive_vectors)
-    SAFE_DEALLOCATE_P(geometry%reduced_symmetry_matrices)
-    SAFE_DEALLOCATE_P(geometry%reduced_symmetry_translations)
     nullify(groups%geometry)
     flags%geometry = etsf_geometry_none
 
@@ -373,6 +366,10 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     dims%number_of_grid_points_vector3 = 1
     dims%real_or_complex_wavefunctions = 1
   end if
+
+  SAFE_DEALLOCATE_P(geometry%primitive_vectors)
+  SAFE_DEALLOCATE_P(geometry%reduced_symmetry_matrices)
+  SAFE_DEALLOCATE_P(geometry%reduced_symmetry_translations)
 
 #endif
 
