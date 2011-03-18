@@ -494,7 +494,7 @@ contains
       call output_me(outp%me, dir, st, gr, geo, hm)
     end if
 
-    if (iand(outp%what, output_etsf) .ne. 0) then
+    if (iand(outp%how, output_etsf) .ne. 0) then
       call h_sys_output_etsf(st, gr, geo, dir, outp)
     end if
     

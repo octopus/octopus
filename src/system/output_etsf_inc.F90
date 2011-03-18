@@ -46,7 +46,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
   PUSH_SUB(h_sys_output_etsf)
 
-#ifndef HAVE_ETSF
+#ifndef HAVE_ETSF_IO
   ASSERT(.false.)
 #endif
 
