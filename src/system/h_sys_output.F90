@@ -433,15 +433,6 @@ contains
 
     if(outp%what .ne. 0 .and. outp%what .ne. output_matrix_elements) call io_function_read_how(sb, outp%how)
 
-#ifndef HAVE_ETSF_IO
-    if (iand(outp%how, output_etsf) .ne. 0) then
-      message(1) = 'Octopus was compiled without ETSF_IO support.'
-      message(2) = 'It is not possible to write output in ETSF format.'
-      call write_fatal(2)
-    end if
-#endif
-
-
     POP_SUB(h_sys_output_init)
   end subroutine h_sys_output_init
 
