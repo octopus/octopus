@@ -231,7 +231,9 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     dims%real_or_complex_wavefunctions = zdim
 
     !Create the electrons container
-    flags%electrons = etsf_electrons_eigenvalues + etsf_electrons_occupations + etsf_electrons_number_of_states
+    flags%electrons = etsf_electrons_eigenvalues + etsf_electrons_occupations + &
+      etsf_electrons_number_of_electrons
+
     SAFE_ALLOCATE(local_ev(1:st%nst, 1:nkpoints, 1:nspin))
     SAFE_ALLOCATE(local_occ(1:st%nst, 1:nkpoints, 1:nspin))
     do i = 1, st%nst
@@ -242,6 +244,8 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
         end do
       end do
     end do
+    SAFE_ALLOCATE(electrons%number_of_electrons)
+    electrons%number_of_electrons = st%qtot
     electrons%eigenvalues%data3D => local_ev
     electrons%occupations%data3D => local_occ
     groups%electrons => electrons
@@ -326,6 +330,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     !Free the electrons container
     SAFE_DEALLOCATE_A(local_occ)
     SAFE_DEALLOCATE_A(local_ev)
+    SAFE_DEALLOCATE_P(electrons%number_of_electrons)
     nullify(groups%electrons)
     nullify(electrons%eigenvalues%data3D)
     nullify(electrons%occupations%data3D)
