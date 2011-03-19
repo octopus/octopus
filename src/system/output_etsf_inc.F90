@@ -52,7 +52,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
   !Create a cube
   call cube_function_init(cube, gr%mesh%idx%ll)
-  call dcube_function_alloc_RS(cube)    
+  call dcube_function_alloc_RS(cube)
 
 #ifdef HAVE_ETSF_IO
 
@@ -79,7 +79,6 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
   end do
 
   ! The species
-  dims%number_of_atom_species = geo%nspecies
   dims%number_of_atom_species = geo%nspecies
 
   SAFE_ALLOCATE(geometry%atomic_numbers(geo%nspecies))
@@ -169,7 +168,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     SAFE_ALLOCATE(local_rho(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), 1:st%d%nspin))
     if (st%d%ispin /= SPINORS) then
       do i = 1, st%d%nspin
-        call dmesh_to_cube(gr%mesh, st%rho(:,i), cube)
+        call dmesh_to_cube(gr%mesh, st%rho(:,i), cube, local = .true.)
         local_rho(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), i) = cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
       end do
     else
@@ -179,10 +178,10 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
       d = st%rho(:, 1) + st%rho(:, 2)
       call magnetic_density(gr%mesh, st, st%rho, md)
 
-      call dmesh_to_cube(gr%mesh, d, cube)
+      call dmesh_to_cube(gr%mesh, d, cube, local = .true.)
       local_rho(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), 1) = cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
       do i = 1, 3
-        call dmesh_to_cube(gr%mesh, md(:,i), cube)
+        call dmesh_to_cube(gr%mesh, md(:,i), cube, local = .true.)
         local_rho(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), i+1) = cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
       end do
       SAFE_DEALLOCATE_A(d)
@@ -281,17 +280,17 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
         do i = 1, st%nst
           do idim = 1, st%d%dim
             if (states_are_real(st)) then
-              call dmesh_to_cube(gr%mesh, st%dpsi(1:gr%mesh%np_part, idim, i, ik+is-1), cube)
+              call dmesh_to_cube(gr%mesh, st%dpsi(1:gr%mesh%np_part, idim, i, ik+is-1), cube, local = .true.)
               local_wfs(1, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, i, ik+(is-1)*nkpoints) = &
                 cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
               
             else if(states_are_complex(st)) then
               call dmesh_to_cube(gr%mesh, &
-                real(st%zpsi(1:gr%mesh%np_part, idim, i, ik+is-1), REAL_PRECISION), cube)
+                real(st%zpsi(1:gr%mesh%np_part, idim, i, ik+is-1), REAL_PRECISION), cube, local = .true.)
               local_wfs(1, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, i, ik+(is-1)*nkpoints) = &
                 cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
 
-              call dmesh_to_cube(gr%mesh, aimag(st%zpsi(1:gr%mesh%np_part, idim, i, ik+is-1)), cube)
+              call dmesh_to_cube(gr%mesh, aimag(st%zpsi(1:gr%mesh%np_part, idim, i, ik+is-1)), cube, local = .true.)
               local_wfs(2, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, i, ik+(is-1)*nkpoints) = &
                 cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
 

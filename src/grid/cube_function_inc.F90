@@ -51,16 +51,32 @@ end subroutine X(cube_function_free_RS)
 !! parallel in real-space domains).
 ! ---------------------------------------------------------
 
-subroutine X(mesh_to_cube) (mesh, mf, cf)
-  type(mesh_t),  intent(in)    :: mesh
-  R_TYPE,        intent(in)    :: mf(:)  !< mf(mesh%np_global)
+subroutine X(mesh_to_cube)(mesh, mf, cf, local)
+  type(mesh_t),          intent(in)    :: mesh
+  R_TYPE,  target,       intent(in)    :: mf(:)  !< mf(mesh%np_global)
   type(cube_function_t), intent(inout) :: cf
+  logical, optional,     intent(in)    :: local  !< If .true. the mf array is a local array. Considered .false. if not present.
 
   integer :: ip, ix, iy, iz, center(3)
   integer :: im, ii, nn
+  logical :: local_
+  R_TYPE, pointer :: gmf(:)
 
   PUSH_SUB(X(mesh_to_cube))
   call profiling_in(prof_m2c, "MESH_TO_CUBE")
+
+  local_ = optional_default(local, .false.) .and. mesh%parallel_in_domains
+  
+  if(local_) then
+    ASSERT(ubound(mf, dim = 1) == mesh%np .or. ubound(mf, dim = 1) == mesh%np_part)
+    SAFE_ALLOCATE(gmf(1:mesh%np_global))
+#ifdef HAVE_MPI
+    call X(vec_allgather)(mesh%vp, gmf, mf)
+#endif
+  else
+    ASSERT(ubound(mf, dim = 1) == mesh%np_global .or. ubound(mf, dim = 1) == mesh%np_part_global)
+    gmf => mf
+  end if
 
   ASSERT(associated(cf%X(RS)))
 
@@ -75,9 +91,13 @@ subroutine X(mesh_to_cube) (mesh, mf, cf)
     ix = mesh%idx%Lxyz(ip, 1) + center(1)
     iy = mesh%idx%Lxyz(ip, 2) + center(2)
     iz = mesh%idx%Lxyz(ip, 3) + center(3)
-    forall(ii = 0:nn - 1) cf%X(RS)(ix, iy, iz + ii) = mf(ip + ii)
+    forall(ii = 0:nn - 1) cf%X(RS)(ix, iy, iz + ii) = gmf(ip + ii)
   end do
-  
+
+  if(local_) then
+    SAFE_DEALLOCATE_P(gmf)
+  end if
+
   call profiling_count_transfers(mesh%np_global, mf(1))
 
   call profiling_out(prof_m2c)
