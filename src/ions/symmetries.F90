@@ -25,6 +25,7 @@ module symmetries_m
   use geometry_m
   use parser_m
   use messages_m
+  use mpi_m
   use profiling_m
   use species_m
   use symm_op_m
@@ -141,9 +142,10 @@ contains
         typs(iatom) = anint(species_z(geo%atom(iatom)%spec))
       end forall
 
-      ! This outputs information about the symmetries, I will disable it
-      ! for the moment as it causes some problems with the output.
-      call spglib_show_symmetry(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+      ! This outputs information about the symmetries.
+      if(mpi_grp_is_root(mpi_world)) then
+        call spglib_show_symmetry(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+      endif
       
       this%space_group = spglib_get_group_number(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
