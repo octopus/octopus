@@ -43,6 +43,7 @@ module vdw_m
   use poisson_m
   use profiling_m
   use restart_m
+  use simul_box_m
   use states_m
   use sternheimer_m
   use string_m
@@ -77,6 +78,11 @@ contains
     FLOAT, parameter :: omega0 = CNST(0.3)
 
     PUSH_SUB(vdw_run)
+
+    if(simul_box_is_periodic(sys%gr%sb)) then
+      message(1) = "Van der Waals calculation for periodic system not implemented."
+      call write_fatal(1)
+    endif
 
     call input()
     call init_()
@@ -277,7 +283,7 @@ contains
              VDW_DIR, em_rho_tag(real(omega),dir), em_wfs_tag(dir,1))
       end do
 
-      call zcalc_polarizability_finite(sys, hm, lr(:,:), 1, perturbation, alpha(:,:), ndir)
+      call zcalc_polarizability_finite(sys, hm, lr(:,:), 1, perturbation, alpha(:,:), ndir = ndir)
 
       get_pol = M_ZERO
       do dir = 1, ndir

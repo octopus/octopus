@@ -78,7 +78,7 @@ module em_resp_m
     FLOAT :: eta                     ! small imaginary part to add to the frequency
     FLOAT :: freq_factor(3)
     FLOAT,      pointer :: omega(:)  ! the frequencies to consider
-    type(lr_t), pointer :: lr(:,:,:) ! linear response for (gr%mesh%sb%dim, nsigma, nfactor)
+    type(lr_t), pointer :: lr(:,:,:) ! linear response for (gr%sb%dim, nsigma, nfactor)
 
     logical :: calc_hyperpol
     CMPLX   :: alpha(MAX_DIM, MAX_DIM, 3)        ! the linear polarizability
@@ -148,10 +148,10 @@ contains
 
     ! read kdotp wavefunctions if necessary
     if (use_kdotp) then
-      message(1) = "Reading kdotp wavefunctions since system is periodic."
+      message(1) = "Reading kdotp wavefunctions for periodic directions."
       call write_info(1)
 
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%periodic_dim
         call lr_init(kdotp_lr(idir, 1))
         call lr_allocate(kdotp_lr(idir, 1), sys%st, sys%gr%mesh)
 
@@ -182,10 +182,10 @@ contains
       ! only considering positive values
     endif
 
-    SAFE_ALLOCATE(em_vars%lr(1:gr%mesh%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
-    em_vars%lr(1:gr%mesh%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor)%nst = sys%st%nst
+    SAFE_ALLOCATE(em_vars%lr(1:gr%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
+    em_vars%lr(1:gr%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor)%nst = sys%st%nst
     do ifactor = 1, em_vars%nfactor
-      call Born_charges_init(em_vars%Born_charges(ifactor), sys%geo, sys%st, gr%mesh%sb%dim)
+      call Born_charges_init(em_vars%Born_charges(ifactor), sys%geo, sys%st, gr%sb%dim)
     enddo
 
     ! setup Hamiltonian
@@ -364,7 +364,7 @@ contains
             
             call pert_setup_dir(em_vars%perturbation, idir)
 
-            if(use_kdotp) then
+            if(use_kdotp .and. idir <= gr%sb%periodic_dim) then
               if (states_are_complex(sys%st)) then
                 call zsternheimer_set_rhs(sh, kdotp_lr(idir, 1)%zdl_psi)
               else
@@ -431,18 +431,22 @@ contains
           message(1) = "Info: Calculating polarizabilities."
           call write_info(1)
     
-          if(use_kdotp .and. states_are_complex(sys%st)) then
-            call zcalc_polarizability_periodic(sys, em_vars%lr(:, :, ifactor), kdotp_lr(:, 1), &
-              em_vars%nsigma, em_vars%alpha(:, :, ifactor))
-          else if(use_kdotp .and. .not. states_are_complex(sys%st)) then
-            call dcalc_polarizability_periodic(sys, em_vars%lr(:, :, ifactor), kdotp_lr(:, 1), &
-              em_vars%nsigma, em_vars%alpha(:, :, ifactor))
-          else if(.not. use_kdotp .and. states_are_complex(sys%st)) then
+          if(use_kdotp) then
+            if(states_are_complex(sys%st)) then
+              call zcalc_polarizability_periodic(sys, em_vars%lr(:, :, ifactor), kdotp_lr(:, 1), &
+                em_vars%nsigma, em_vars%alpha(:, :, ifactor))
+            else
+              call dcalc_polarizability_periodic(sys, em_vars%lr(:, :, ifactor), kdotp_lr(:, 1), &
+                em_vars%nsigma, em_vars%alpha(:, :, ifactor))
+            endif
+          endif
+
+          if(states_are_complex(sys%st)) then
             call zcalc_polarizability_finite(sys, hm, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
-              em_vars%perturbation, em_vars%alpha(:, :, ifactor))
+              em_vars%perturbation, em_vars%alpha(:, :, ifactor), doalldirs = .not. use_kdotp)
           else
             call dcalc_polarizability_finite(sys, hm, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
-              em_vars%perturbation, em_vars%alpha(:, :, ifactor))
+              em_vars%perturbation, em_vars%alpha(:, :, ifactor), doalldirs = .not. use_kdotp)
           end if
     
           if(em_vars%calc_Born) then
@@ -821,7 +825,7 @@ contains
 
     if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
       call out_polarizability()
-      if(em_vars%calc_Born) call out_Born_charges(em_vars%Born_charges(ifactor), geo, gr%mesh%sb%dim, dirname)
+      if(em_vars%calc_Born) call out_Born_charges(em_vars%Born_charges(ifactor), geo, gr%sb%dim, dirname)
     else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
       call out_susceptibility()
     end if
@@ -906,7 +910,7 @@ contains
   
       write(iunit, '(3a)') '# Polarizability tensor [', trim(units_abbrev(units_out%polarizability)), ']'
       call output_tensor(iunit, TOFLOAT(em_vars%alpha(:, :, ifactor)), &
-        gr%mesh%sb%dim, units_out%polarizability)
+        gr%sb%dim, units_out%polarizability)
   
       call io_close(iunit)
   
@@ -1031,7 +1035,7 @@ contains
       PUSH_SUB(em_resp_output.out_projections)
 
       do ik = st%d%kpt%start, st%d%kpt%end
-        do idir = 1, gr%mesh%sb%dim
+        do idir = 1, gr%sb%dim
 
           write(fname, '(2a,i1,2a)') trim(dirname), '/projection-k', ik, '-', index2axis(idir)
           iunit = io_open(trim(fname), action='write')
@@ -1091,10 +1095,10 @@ contains
 
       PUSH_SUB(em_resp_output.out_wavefunctions)
 
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
         if(states_are_complex(st)) then 
 
-          if(gr%mesh%sb%dim == 3) then
+          if(gr%sb%dim == 3) then
             if(iand(outp%what, output_elf).ne.0) &
               call zlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
           end if
@@ -1103,7 +1107,7 @@ contains
           end do
         else
 
-          if(gr%mesh%sb%dim == 3) then
+          if(gr%sb%dim == 3) then
             if(iand(outp%what, output_elf) .ne. 0) &
               call dlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
           end if

@@ -270,11 +270,10 @@ subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, n
 
   mesh => sys%gr%mesh
 
-  ndir_ = mesh%sb%dim
+  ndir_ = mesh%sb%periodic_dim
   if(present(ndir)) ndir_ = ndir
 
   ! alpha_ij(w) = -e sum(m occ, k) [(<u_mk(0)|-id/dk_i)|u_mkj(1)(w)> + <u_mkj(1)(-w)|(-id/dk_i|u_mk(0)>)]
-  ! Smearing is not implemented here yet?
 
   do dir1 = 1, ndir_
     do dir2 = 1, sys%gr%sb%dim
@@ -309,11 +308,11 @@ subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, n
 #ifdef HAVE_MPI
   if(sys%st%parallel_in_states) then
     call MPI_Allreduce(zpol, zpol_temp, MAX_DIM**2, MPI_CMPLX, MPI_SUM, sys%st%mpi_grp%comm, mpi_err)
-    zpol(1:mesh%sb%dim, 1:mesh%sb%dim) = zpol_temp(1:mesh%sb%dim, 1:mesh%sb%dim)
+    zpol(1:mesh%sb%periodic_dim, 1:mesh%sb%dim) = zpol_temp(1:mesh%sb%periodic_dim, 1:mesh%sb%dim)
   endif
   if(sys%st%d%kpt%parallel) then
     call MPI_Allreduce(zpol, zpol_temp, MAX_DIM**2, MPI_CMPLX, MPI_SUM, sys%st%d%kpt%mpi_grp%comm, mpi_err)
-    zpol(1:mesh%sb%dim, 1:mesh%sb%dim) = zpol_temp(1:mesh%sb%dim, 1:mesh%sb%dim)
+    zpol(1:mesh%sb%periodic_dim, 1:mesh%sb%dim) = zpol_temp(1:mesh%sb%periodic_dim, 1:mesh%sb%dim)
   endif
 #endif
 
@@ -323,26 +322,32 @@ end subroutine X(calc_polarizability_periodic)
 
 
 ! ---------------------------------------------------------
-subroutine X(calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, zpol, ndir)
+subroutine X(calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, zpol, doalldirs, ndir)
   type(system_t),         intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: hm
   type(lr_t),             intent(inout) :: lr(:,:)
   integer,                intent(in)    :: nsigma
   type(pert_t),           intent(inout) :: perturbation
   CMPLX,                  intent(out)   :: zpol(1:MAX_DIM, 1:MAX_DIM)
+  logical, optional,      intent(in)    :: doalldirs
   integer, optional,      intent(in)    :: ndir
 
-  integer :: dir1, dir2, ndir_
+  integer :: dir1, dir2, ndir_, startdir
 
   PUSH_SUB(X(calc_polarizability_finite))
 
-  ndir_ = sys%gr%mesh%sb%dim
+  ndir_ = sys%gr%sb%dim
   if(present(ndir)) ndir_ = ndir
+
+  startdir = sys%gr%sb%periodic_dim + 1
+  if(present(doalldirs)) then
+    if(doalldirs) startdir = 1
+  endif
 
   ! alpha_ij(w) = - sum(m occ) [<psi_m(0)|r_i|psi_mj(1)(w)> + <psi_mj(1)(-w)|r_i|psi_m(0)>]
   ! minus sign is from electronic charge -e
 
-  do dir1 = 1, ndir_
+  do dir1 = sys%gr%sb%periodic_dim + 1, ndir_
     do dir2 = 1, sys%gr%sb%dim
       call pert_setup_dir(perturbation, dir1)
       zpol(dir1, dir2) = -X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, &
