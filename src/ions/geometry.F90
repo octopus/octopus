@@ -62,6 +62,16 @@ module geometry_m
     geometry_val_charge,   &
     geometry_grid_defaults
 
+  integer, parameter, public :: &
+    INTERACTION_COULOMB = 1,    &
+    INTERACTION_LJ      = 2
+
+  integer, parameter, public :: &
+    LJ_E   = 1,                 &
+    LJ_C12 = 2,                 &
+    LJ_C6  = 3
+
+  
   type atom_t
     character(len=15) :: label
     type(species_t), pointer :: spec             !< pointer to species
@@ -98,6 +108,9 @@ module geometry_m
     logical :: nlcc                 !< does any species have non-local core corrections?
 
     type(distributed_t) :: atoms_dist
+    
+    integer, allocatable :: ionic_interaction_type(:, :)
+    FLOAT,   allocatable :: ionic_interaction_parameter(:, :, :)
   end type geometry_t
 
 contains
@@ -116,6 +129,7 @@ contains
     call geometry_init_xyz(geo)
     call geometry_init_species(geo, print_info=print_info)
     call distributed_nullify(geo%atoms_dist, geo%natoms)
+    call geometry_init_interaction(geo, print_info=print_info)
 
     POP_SUB(geometry_init)
   end subroutine geometry_init
@@ -322,9 +336,102 @@ contains
       geo%nlpp = (geo%nlpp .or. species_is_ps(geo%species(i)))
     end do
 
-    POP_SUB(geometry_init_species)
+  POP_SUB(geometry_init_species)
   end subroutine geometry_init_species
 
+  ! ---------------------------------------------------------
+
+  subroutine geometry_init_interaction(geo, print_info)
+    type(geometry_t),  intent(inout) :: geo
+    logical, optional, intent(in)    :: print_info
+    
+    logical :: print_info_
+    integer :: nrow, irow, idx1, idx2, ispecies
+    type(block_t) :: blk
+    character(len=10)  :: label1, label2
+
+    PUSH_SUB(geometry_init_interaction)
+
+    print_info_ = .true.
+    if(present(print_info)) then
+      print_info_ = print_info
+    end if
+
+    SAFE_ALLOCATE(geo%ionic_interaction_type(1:geo%nspecies, 1:geo%nspecies))
+    !for the moment we consider three parameters for lj 12 6
+    SAFE_ALLOCATE(geo%ionic_interaction_parameter(1:3, 1:geo%nspecies, 1:geo%nspecies))
+
+    ! coulomb interaction by default
+    geo%ionic_interaction_type = INTERACTION_COULOMB
+
+    !%Variable IonicInteraction
+    !%Type block
+    !%Section System::Species
+    !%Description
+    !% This block defines the type of classical interaction between
+    !% ions. Each line represent the interaction between two types of
+    !% species. The first two columns contain the element symbols, the
+    !% next column is the type of interaction as defined below. The
+    !% next columns are the parameters for the interaction (if
+    !% any). Pairs not specified interact through Coulomb's law.
+    !%
+    !% Note: In most cases there is no need to specify this block,
+    !% since Coulomb interaction will be used by default.
+    !%
+    !%Option coulomb 1
+    !% Particles interact according to Coulomb's law. The interaction
+    !% strength is given by the charge of the species. There are no
+    !% parameters.
+    !%Option lennard_jones 2
+    !% (Experimental) The Lennard-Jones 12-6 model potential. The next
+    !% 3 columns contain the e, c12 and c6 parameters (given in the
+    !% corresponding input file units).
+    !%End
+
+    if(parse_block(datasets_check('IonicInteraction'), blk) == 0) then
+      call messages_experimental('non-Coulombian ionic interaction')
+      nrow = parse_block_n(blk)
+
+      do irow = 0, nrow - 1
+        ! get the labels
+        call parse_block_string(blk, irow, 0, label1)
+        call parse_block_string(blk, irow, 1, label2)
+        
+        ! and the index that corresponds to each species
+        do ispecies = 1, geo%nspecies
+          if(species_label(geo%species(ispecies)) == label1) idx1 = ispecies
+          if(species_label(geo%species(ispecies)) == label2) idx2 = ispecies
+        end do
+
+        ! get the type of interaction
+        call parse_block_integer(blk, irow, 2, geo%ionic_interaction_type(idx1, idx2))
+
+        ! the interaction is symmetrical
+        geo%ionic_interaction_type(idx2, idx1) = geo%ionic_interaction_type(idx1, idx2)
+        
+        select case(geo%ionic_interaction_type(idx1, idx2))
+        case(INTERACTION_COULOMB)
+          ! nothing to do
+        case(INTERACTION_LJ)
+          call parse_block_float(blk, irow, 3, geo%ionic_interaction_parameter(LJ_E, idx1, idx2), unit = units_inp%energy)
+          call parse_block_float(blk, irow, 3, geo%ionic_interaction_parameter(LJ_C12, idx1, idx2), unit = units_inp%length)
+          call parse_block_float(blk, irow, 3, geo%ionic_interaction_parameter(LJ_C6, idx1, idx2), unit = units_inp%length)
+
+          ! interaction is symmetric
+          geo%ionic_interaction_parameter(1:3, idx2, idx1) = geo%ionic_interaction_parameter(1:3, idx1, idx2)
+
+          if(print_info_) then
+            message(1) = 'Info: Interaction between '//trim(label1)//' and '//trim(label2)// &
+              ' is given by the Lennard-Jones potential.'
+            call write_info(1)
+          end if
+        end select
+
+      end do
+    end if
+
+    POP_SUB(geometry_init_interaction)
+  end subroutine geometry_init_interaction
 
   ! ---------------------------------------------------------
   subroutine geometry_partition(geo, mc)
