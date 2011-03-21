@@ -33,6 +33,13 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
   type(profile_t), save :: prof
 
   PUSH_SUB(X(calculate_eigenvalues))
+
+  if(hm%theory_level == CLASSICAL) then
+    st%eigenval = M_ZERO
+    POP_SUB(X(calculate_eigenvalues))
+    return
+  end if
+
   call profiling_in(prof, "EIGENVALUE_CALC")
 
   if(in_debug_mode) then

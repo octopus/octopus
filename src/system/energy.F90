@@ -115,6 +115,10 @@ contains
       hm%energy%total = hm%ep%eii + hm%energy%eigenvalues &
         - hm%energy%hartree + hm%energy%exchange + hm%energy%correlation - hm%energy%intnvxc
 
+    case(CLASSICAL)
+      st%eigenval = M_ZERO
+      hm%energy%eigenvalues = M_ZERO
+      hm%energy%total = hm%ep%eii
     end select
     
     hm%energy%entropy = smear_calc_entropy(st%smear, st%eigenval, st%d%nik, st%nst, st%d%kweights, st%occ)

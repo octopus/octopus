@@ -129,7 +129,7 @@ contains
     !%Default dft
     !%Section Hamiltonian
     !%Description
-    !% The calculations can be run with four different "theory levels":
+    !% The calculations can be run with different "theory levels":
     !%Option independent_particles 2
     !% Particles will be considered as independent, <i>i.e.</i> as non-interacting.
     !% This mode is mainly used for testing purposes, as the code is usually 
@@ -149,13 +149,17 @@ contains
     !% This is the default density-functional theory scheme. Note that you can also use 
     !% hybrids in this scheme, but they will be handled the "DFT" way, <i>i.e.</i>, solving the
     !% OEP equation.
+    !%Option classical 5
+    !% (Experimental) Only the classical interaction between particles is
+    !% considered. This is mainly for testing.
     !%End
     call parse_integer(datasets_check('TheoryLevel'), KOHN_SHAM_DFT, ks%theory_level)
     if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call input_error('TheoryLevel')
 
     call messages_obsolete_variable('NonInteractingElectrons', 'TheoryLevel')
     call messages_obsolete_variable('HartreeFock', 'TheoryLevel')
-
+    if(ks%theory_level == CLASSICAL) call messages_experimental('Classical theory level')
+    
     select case(ks%theory_level)
     case(INDEPENDENT_PARTICLES)
       ks%sic_type = SIC_NONE

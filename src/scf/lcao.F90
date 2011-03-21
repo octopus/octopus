@@ -435,6 +435,11 @@ contains
 
     PUSH_SUB(lcao_run)
 
+    if(sys%ks%theory_level == CLASSICAL) then
+      POP_SUB(lcao_run) 
+      return
+    end if
+
     if (.not. present(st_start)) then
       call guess_density(sys%gr%fine%mesh, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
         sys%st%d%spin_channels, sys%st%rho)

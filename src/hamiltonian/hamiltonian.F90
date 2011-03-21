@@ -190,7 +190,8 @@ module hamiltonian_m
     INDEPENDENT_PARTICLES = 2, &
     HARTREE               = 1, &
     HARTREE_FOCK          = 3, &
-    KOHN_SHAM_DFT         = 4
+    KOHN_SHAM_DFT         = 4, &
+    CLASSICAL             = 5
 
   type(profile_t), save :: prof_hamiltonian, prof_vlpsi, prof_kinetic
 
