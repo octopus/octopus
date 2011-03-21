@@ -25,6 +25,7 @@ module geometry_m
   use distributed_m
   use global_m
   use io_m
+  use loct_m
   use loct_math_m
   use messages_m
   use multicomm_m
@@ -774,6 +775,9 @@ contains
     geo_out%nlpp              = geo_in%nlpp
     geo_out%nlcc              = geo_in%nlcc
 
+    call loct_pointer_copy(geo_out%ionic_interaction_type, geo_in%ionic_interaction_type)
+    call loct_pointer_copy(geo_out%ionic_interaction_parameter, geo_in%ionic_interaction_parameter)
+    
     call distributed_copy(geo_in%atoms_dist, geo_out%atoms_dist)
 
     POP_SUB(geometry_copy)
