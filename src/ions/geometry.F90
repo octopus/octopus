@@ -128,7 +128,6 @@ contains
     call geometry_init_xyz(geo)
     call geometry_init_species(geo, print_info=print_info)
     call distributed_nullify(geo%atoms_dist, geo%natoms)
-    call geometry_init_interaction(geo, print_info=print_info)
 
     POP_SUB(geometry_init)
   end subroutine geometry_init
@@ -335,7 +334,9 @@ contains
       geo%nlpp = (geo%nlpp .or. species_is_ps(geo%species(i)))
     end do
 
-  POP_SUB(geometry_init_species)
+    call geometry_init_interaction(geo, print_info=print_info)
+
+    POP_SUB(geometry_init_species)
   end subroutine geometry_init_species
 
   ! ---------------------------------------------------------
