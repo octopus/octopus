@@ -904,7 +904,7 @@ contains
 
             !the force
             force(1:sb%dim, iatom) = force(1:sb%dim, iatom) &
-              - CNST(24.0)*epsilon*((CNST(2.0)*dd**12 - dd**6)/rr**2)*&
+              + CNST(24.0)*epsilon*((CNST(2.0)*dd**12 - dd**6)/rr**2)*&
               (geo%atom(iatom)%x(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))
             
             !energy
