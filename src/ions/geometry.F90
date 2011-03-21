@@ -67,10 +67,8 @@ module geometry_m
     INTERACTION_LJ      = 2
 
   integer, parameter, public :: &
-    LJ_E   = 1,                 &
-    LJ_C12 = 2,                 &
-    LJ_C6  = 3
-
+    LJ_EPSILON = 1,             &
+    LJ_SIGMA   = 2
   
   type atom_t
     character(len=15) :: label
@@ -109,8 +107,8 @@ module geometry_m
 
     type(distributed_t) :: atoms_dist
     
-    integer, allocatable :: ionic_interaction_type(:, :)
-    FLOAT,   allocatable :: ionic_interaction_parameter(:, :, :)
+    integer, pointer :: ionic_interaction_type(:, :)
+    FLOAT,   pointer :: ionic_interaction_parameter(:, :, :)
   end type geometry_t
 
 contains
@@ -358,8 +356,7 @@ contains
     end if
 
     SAFE_ALLOCATE(geo%ionic_interaction_type(1:geo%nspecies, 1:geo%nspecies))
-    !for the moment we consider three parameters for lj 12 6
-    SAFE_ALLOCATE(geo%ionic_interaction_parameter(1:3, 1:geo%nspecies, 1:geo%nspecies))
+    nullify(geo%ionic_interaction_parameter)
 
     ! coulomb interaction by default
     geo%ionic_interaction_type = INTERACTION_COULOMB
@@ -383,14 +380,19 @@ contains
     !% strength is given by the charge of the species. There are no
     !% parameters.
     !%Option lennard_jones 2
-    !% (Experimental) The Lennard-Jones 12-6 model potential. The next
-    !% 3 columns contain the e, c12 and c6 parameters (given in the
+    !% (Experimental) The Lennard-Jones 12-6 model potential. It has
+    !% the form <math>V(r) = 4\epsilon((\sigma/r)^12 -
+    !% (\sigma/r)^6)</math>.  The next 2 columns contain the
+    !% <math>\epsilon</math> and <math>\sigma</math> (given in the
     !% corresponding input file units).
     !%End
 
     if(parse_block(datasets_check('IonicInteraction'), blk) == 0) then
       call messages_experimental('non-Coulombian ionic interaction')
       nrow = parse_block_n(blk)
+
+      !for the moment we consider two parameters for lj 12 6
+      SAFE_ALLOCATE(geo%ionic_interaction_parameter(1:2, 1:geo%nspecies, 1:geo%nspecies))
 
       do irow = 0, nrow - 1
         ! get the labels
@@ -413,18 +415,18 @@ contains
         case(INTERACTION_COULOMB)
           ! nothing to do
         case(INTERACTION_LJ)
-          call parse_block_float(blk, irow, 3, geo%ionic_interaction_parameter(LJ_E, idx1, idx2), unit = units_inp%energy)
-          call parse_block_float(blk, irow, 3, geo%ionic_interaction_parameter(LJ_C12, idx1, idx2), unit = units_inp%length)
-          call parse_block_float(blk, irow, 3, geo%ionic_interaction_parameter(LJ_C6, idx1, idx2), unit = units_inp%length)
+          call parse_block_float(blk, irow, 3, geo%ionic_interaction_parameter(LJ_EPSILON, idx1, idx2), unit = units_inp%energy)
+          call parse_block_float(blk, irow, 4, geo%ionic_interaction_parameter(LJ_SIGMA, idx1, idx2), unit = units_inp%length)
 
           ! interaction is symmetric
-          geo%ionic_interaction_parameter(1:3, idx2, idx1) = geo%ionic_interaction_parameter(1:3, idx1, idx2)
+          geo%ionic_interaction_parameter(1:2, idx2, idx1) = geo%ionic_interaction_parameter(1:2, idx1, idx2)
 
           if(print_info_) then
             message(1) = 'Info: Interaction between '//trim(label1)//' and '//trim(label2)// &
               ' is given by the Lennard-Jones potential.'
             call write_info(1)
           end if
+
         end select
 
       end do
@@ -513,6 +515,9 @@ contains
     PUSH_SUB(geometry_end)
 
     call distributed_end(geo%atoms_dist)
+
+    SAFE_DEALLOCATE_P(geo%ionic_interaction_type)
+    SAFE_DEALLOCATE_P(geo%ionic_interaction_parameter)
 
     SAFE_DEALLOCATE_P(geo%atom)
 

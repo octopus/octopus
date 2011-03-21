@@ -823,8 +823,8 @@ contains
     FLOAT,                     intent(out)   :: force(:, :) ! sb%dim, geo%natoms
 
     type(species_t), pointer :: spec
-    FLOAT :: rr, dd, zi, zj
-    integer :: iatom, jatom
+    FLOAT :: rr, dd, zi, zj, epsilon, sigma
+    integer :: iatom, jatom, iindex, jindex
     FLOAT, parameter :: alpha = CNST(1.1313708)
     type(profile_t), save :: ion_ion_prof
     logical,  allocatable :: in_box(:)
@@ -870,6 +870,8 @@ contains
         if(species_type(spec) .eq. SPEC_JELLI) then
           energy = energy + (M_THREE / M_FIVE) * species_zval(spec)**2 / species_jradius(spec)
         end if
+        
+        iindex = species_index(geo%atom(iatom)%spec)
 
         do jatom = 1, geo%natoms
 
@@ -878,19 +880,37 @@ contains
           if(ep%ignore_external_ions) then
             if(.not. in_box(iatom)) cycle
           end if
-
-          zj = species_zval(geo%atom(jatom)%spec)
+          
+          jindex = species_index(geo%atom(jatom)%spec)
           rr = sqrt(sum((geo%atom(iatom)%x - geo%atom(jatom)%x)**2))
 
-          !the force
-          dd = zi * zj / rr**3
-          force(1:sb%dim, iatom) = force(1:sb%dim, iatom) + &
-            dd * (geo%atom(iatom)%x(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))
+          select case(geo%ionic_interaction_type(iindex, jindex))
+          case(INTERACTION_COULOMB)
+            zj = species_zval(geo%atom(jatom)%spec)
+            
+            !the force
+            dd = zi * zj / rr**3
+            force(1:sb%dim, iatom) = force(1:sb%dim, iatom) + &
+              dd * (geo%atom(iatom)%x(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))
+            
+            !energy
+            if(jatom > iatom) cycle
+            energy = energy + zi * zj / rr
+          case(INTERACTION_LJ)
+            epsilon = geo%ionic_interaction_parameter(LJ_EPSILON, iindex, jindex)
+            sigma   = geo%ionic_interaction_parameter(LJ_SIGMA, iindex, jindex)
+            
+            dd = sigma/rr
 
-          !energy
-          if(jatom > iatom) cycle
-          energy = energy + zi * zj / rr
-
+            !the force
+            force(1:sb%dim, iatom) = force(1:sb%dim, iatom) &
+              - CNST(24.0)*epsilon*((CNST(2.0)*dd**12 - dd**6)/rr**2)*&
+              (geo%atom(iatom)%x(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))
+            
+            !energy
+            if(jatom > iatom) cycle
+            energy = energy + CNST(4.0)*epsilon*(dd**12 - dd**6)
+          end select
         end do !jatom
       end do !iatom
 
@@ -921,6 +941,11 @@ contains
     FLOAT, parameter :: alpha = CNST(1.1313708)
 
     PUSH_SUB(ion_interaction_periodic)
+
+    if(any(geo%ionic_interaction_type /= INTERACTION_COULOMB)) then
+      message(1) = "Cannot calculate non-Coulombic interaction for periodic systems."
+      call write_fatal(1)
+    end if
 
     ! see
     ! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:Ion-Ion_interaction
