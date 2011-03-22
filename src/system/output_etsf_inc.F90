@@ -298,6 +298,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
   POP_SUB(h_sys_output_etsf)
 end subroutine h_sys_output_etsf
 
+#ifdef HAVE_ETSF_IO
 ! --------------------------------------------------------
 
 subroutine output_etsf_error(error_data)
@@ -407,6 +408,7 @@ subroutine output_etsf_geometry_write(geo, sb, ncid)
   SAFE_DEALLOCATE_P(geometry%atom_species_names)
 
 end subroutine output_etsf_geometry_write
+#endif
 
 !! Local Variables:
 !! mode: f90
