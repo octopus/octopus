@@ -28,7 +28,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
   type(cube_function_t) :: cube
 #ifdef HAVE_ETSF_IO
-  integer :: i, j, idir, is, ik, idim, ix, iy, iz, nspin, zdim, isymm, nkpoints, ikpoint, ispecies, ncid
+  integer :: i, idir, is, ik, idim, ix, iy, iz, nspin, zdim, isymm, nkpoints, ikpoint, ispecies, ncid
   FLOAT, allocatable :: d(:), md(:,:)
   REAL_DOUBLE, allocatable, target :: local_rho(:,:,:,:), local_wfs(:,:,:,:,:,:,:), local_ev(:, :, :)
   REAL_DOUBLE, allocatable, target :: local_occ(:,:,:)
@@ -37,7 +37,6 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
   type(etsf_dims) :: dims
   type(etsf_groups_flags), target :: flags
   type(etsf_main), target :: main
-  type(etsf_electrons), target :: electrons
 #endif
 
   PUSH_SUB(h_sys_output_etsf)
@@ -72,7 +71,6 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     call etsf_io_low_close(ncid, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
   end if
-
 
   if (iand(outp%what, output_density).ne.0) then
 
@@ -148,42 +146,21 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
   if (iand(outp%what, output_wfs).ne.0) then
     call output_etsf_geometry_dims(geo, gr%sb, dims, flags)
     call output_etsf_kpoints_dims(gr%sb, dims, flags)
+    call output_etsf_electrons_dims(st, dims, flags)
 
-    !Set the dimensions
     nspin = 1
     if (st%d%ispin == SPIN_POLARIZED) nspin = 2
+    
     nkpoints = st%d%nik/nspin
     if (states_are_real(st)) then
       zdim = 1
     elseif(states_are_complex(st)) then
       zdim = 2
     end if
-    dims%max_number_of_states = st%nst
-    dims%number_of_spins = nspin
-    dims%number_of_spinor_components = st%d%dim
     dims%number_of_grid_points_vector1 = cube%n(1)
     dims%number_of_grid_points_vector2 = cube%n(2)
     dims%number_of_grid_points_vector3 = cube%n(3)
     dims%real_or_complex_wavefunctions = zdim
-
-    !Create the electrons container
-    flags%electrons = etsf_electrons_eigenvalues + etsf_electrons_occupations + &
-      etsf_electrons_number_of_electrons
-
-    SAFE_ALLOCATE(local_ev(1:st%nst, 1:nkpoints, 1:nspin))
-    SAFE_ALLOCATE(local_occ(1:st%nst, 1:nkpoints, 1:nspin))
-    do i = 1, st%nst
-      do ik = 1, nkpoints
-        do is = 1, nspin 
-          local_ev(i, ik, is) = st%eigenval(i, nspin*(ik-1) + is)
-          local_occ(i, ik, is) = st%occ(i, nspin*(ik-1) + is)
-        end do
-      end do
-    end do
-    SAFE_ALLOCATE(electrons%number_of_electrons)
-    electrons%number_of_electrons = st%qtot
-    electrons%eigenvalues%data3D => local_ev
-    electrons%occupations%data3D => local_occ
 
     !Open the file
     flags%main = etsf_main_wfs_rsp
@@ -222,18 +199,16 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
     main%real_space_wavefunctions%data7D => local_wfs
 
+    ! open the file and set it in write mode
     call etsf_io_low_open_modify(ncid, dir//"/wfs-etsf.nc", lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
-    
     call etsf_io_low_set_write_mode(ncid, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
 
     call etsf_io_main_put(ncid, main, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
     
-    call etsf_io_electrons_put(ncid, electrons, lstat, error_data = error_data)
-    if (.not. lstat) call output_etsf_error(error_data)
-
+    call output_etsf_electrons_write(st, ncid)
     call output_etsf_geometry_write(geo, gr%sb, ncid)
     call output_etsf_kpoints_write(gr%sb, ncid)
 
@@ -243,15 +218,6 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     !Free the main container
     nullify(main%real_space_wavefunctions%data7D)
     SAFE_DEALLOCATE_A(local_wfs)
-
-    !Free the electrons container
-    SAFE_DEALLOCATE_A(local_occ)
-    SAFE_DEALLOCATE_A(local_ev)
-    SAFE_DEALLOCATE_P(electrons%number_of_electrons)
-
-    nullify(electrons%eigenvalues%data3D)
-    nullify(electrons%occupations%data3D)
-    flags%electrons = etsf_electrons_none
 
     !Reset the dimensions
     dims%max_number_of_states = 1
@@ -423,6 +389,65 @@ subroutine output_etsf_kpoints_write(sb, ncid)
   SAFE_DEALLOCATE_P(kpoints%kpoint_weights)
 
 end subroutine output_etsf_kpoints_write
+
+! --------------------------------------------------------
+
+subroutine output_etsf_electrons_dims(st, dims, flags)
+  type(states_t),          intent(in)    :: st
+  type(etsf_dims),         intent(inout) :: dims
+  type(etsf_groups_flags), intent(inout) :: flags
+  
+  flags%electrons = etsf_electrons_eigenvalues + etsf_electrons_occupations + &
+    etsf_electrons_number_of_electrons
+  
+  !Set the dimensions
+  dims%number_of_spins = 1
+  if (st%d%ispin == SPIN_POLARIZED) dims%number_of_spins = 2
+
+  dims%max_number_of_states = st%nst
+    dims%number_of_spinor_components = st%d%dim
+
+end subroutine output_etsf_electrons_dims
+
+! --------------------------------------------------------
+
+subroutine output_etsf_electrons_write(st, ncid)
+  type(states_t),      intent(in)    :: st
+  integer,             intent(in)    :: ncid
+
+  type(etsf_electrons) :: electrons
+  type(etsf_io_low_error)  :: error_data
+  logical :: lstat
+  integer :: nspin, ist, ik, ispin, nkpoints, zdim
+
+  SAFE_ALLOCATE(electrons%number_of_electrons)
+  electrons%number_of_electrons = st%qtot
+
+  nspin = 1
+  if (st%d%ispin == SPIN_POLARIZED) nspin = 2
+
+  nkpoints = st%d%nik/nspin
+
+  SAFE_ALLOCATE(electrons%eigenvalues%data3D(1:st%nst, 1:nkpoints, 1:nspin))
+  SAFE_ALLOCATE(electrons%occupations%data3D(1:st%nst, 1:nkpoints, 1:nspin))
+
+  do ist = 1, st%nst
+    do ik = 1, nkpoints
+      do ispin = 1, nspin 
+        electrons%eigenvalues%data3D(ist, ik, ispin) = st%eigenval(ist, nspin*(ik-1) + ispin)
+        electrons%occupations%data3D(ist, ik, ispin) = st%occ(ist, nspin*(ik-1) + ispin)
+      end do
+    end do
+  end do
+
+  call etsf_io_electrons_put(ncid, electrons, lstat, error_data = error_data)
+  if (.not. lstat) call output_etsf_error(error_data)
+
+  SAFE_DEALLOCATE_P(electrons%number_of_electrons)
+  SAFE_DEALLOCATE_P(electrons%eigenvalues%data3D)
+  SAFE_DEALLOCATE_P(electrons%occupations%data3D)
+
+end subroutine output_etsf_electrons_write
 
 #endif
 
