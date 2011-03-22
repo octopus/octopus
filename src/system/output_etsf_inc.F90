@@ -28,18 +28,16 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
   type(cube_function_t) :: cube
 #ifdef HAVE_ETSF_IO
-  integer :: i, j, idir, is, ik, idim, ix, iy, iz, nkpoints, nspin, zdim, isymm, ikpoint, ispecies, ncid
+  integer :: i, j, idir, is, ik, idim, ix, iy, iz, nspin, zdim, isymm, nkpoints, ikpoint, ispecies, ncid
   FLOAT, allocatable :: d(:), md(:,:)
   REAL_DOUBLE, allocatable, target :: local_rho(:,:,:,:), local_wfs(:,:,:,:,:,:,:), local_ev(:, :, :)
-  REAL_DOUBLE, allocatable, target :: local_occ(:,:,:), local_red_coord_kpt(:,:), local_kpoint_weights(:)
+  REAL_DOUBLE, allocatable, target :: local_occ(:,:,:)
   type(etsf_io_low_error)  :: error_data
   logical :: lstat
   type(etsf_dims) :: dims
-  type(etsf_groups) :: groups
   type(etsf_groups_flags), target :: flags
   type(etsf_main), target :: main
   type(etsf_electrons), target :: electrons
-  type(etsf_kpoints), target :: kpoints
 #endif
 
   PUSH_SUB(h_sys_output_etsf)
@@ -119,11 +117,6 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
       SAFE_DEALLOCATE_A(md)
     end if
     main%density%data4D => local_rho
-    groups%main => main
-
-    call etsf_io_data_write(dir//"/density-etsf.nc", &
-      & groups, lstat, error_data)
-    if (.not. lstat) call output_etsf_error(error_data)
 
     ! write the geometry
     call etsf_io_low_open_modify(ncid, dir//"/density-etsf.nc", lstat, error_data = error_data)
@@ -132,13 +125,15 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     call etsf_io_low_set_write_mode(ncid, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
 
+    call etsf_io_main_put(ncid, main, lstat, error_data = error_data)
+    if (.not. lstat) call output_etsf_error(error_data)
+
     call output_etsf_geometry_write(geo, gr%sb, ncid)
 
     call etsf_io_low_close(ncid, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
 
     !Free the main container
-    nullify(groups%main)
     nullify(main%density%data4D)
     SAFE_DEALLOCATE_A(local_rho)
 
@@ -152,6 +147,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
   if (iand(outp%what, output_wfs).ne.0) then
     call output_etsf_geometry_dims(geo, gr%sb, dims, flags)
+    call output_etsf_kpoints_dims(gr%sb, dims, flags)
 
     !Set the dimensions
     nspin = 1
@@ -163,7 +159,6 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
       zdim = 2
     end if
     dims%max_number_of_states = st%nst
-    dims%number_of_kpoints = nkpoints
     dims%number_of_spins = nspin
     dims%number_of_spinor_components = st%d%dim
     dims%number_of_grid_points_vector1 = cube%n(1)
@@ -189,29 +184,13 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     electrons%number_of_electrons = st%qtot
     electrons%eigenvalues%data3D => local_ev
     electrons%occupations%data3D => local_occ
-    groups%electrons => electrons
-
-    !Create the kpoints container
-    flags%kpoints = etsf_kpoints_red_coord_kpt + etsf_kpoints_kpoint_weights
-    SAFE_ALLOCATE(local_red_coord_kpt(1:3, 1:nkpoints))
-    SAFE_ALLOCATE(local_kpoint_weights(1:nkpoints))
-
-    do ikpoint = 1, nkpoints
-      local_red_coord_kpt(1:3, ikpoint) = M_ZERO
-      local_red_coord_kpt(1:gr%sb%dim, ikpoint) = gr%sb%kpoints%reduced%red_point(1:gr%sb%dim, ikpoint)
-      local_kpoint_weights(ikpoint) = kpoints_get_weight(gr%sb%kpoints, ikpoint)
-    end do
-
-    kpoints%reduced_coordinates_of_kpoints => local_red_coord_kpt
-    kpoints%kpoint_weights => local_kpoint_weights
-    groups%kpoints => kpoints
 
     !Open the file
     flags%main = etsf_main_wfs_rsp
     call etsf_io_data_init(dir//"/wfs-etsf.nc", flags, dims, &
-      & "Wavefunctions file", &
-      & "Created by "//PACKAGE_STRING, &
-      & lstat, error_data, overwrite=.true.)
+      "Wavefunctions file", &
+      "Created by "//PACKAGE_STRING, &
+      lstat, error_data, overwrite=.true.)
     if (.not. lstat) call output_etsf_error(error_data)
 
     !Write the wavefunctions to the file
@@ -242,48 +221,40 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     end do
 
     main%real_space_wavefunctions%data7D => local_wfs
-    groups%main => main
-    call etsf_io_data_write(dir//"/wfs-etsf.nc", &
-      & groups, lstat, error_data)
-    if (.not. lstat) call output_etsf_error(error_data)
 
-    ! write the geometry
-    call etsf_io_low_open_modify(ncid, dir//"/density-etsf.nc", lstat, error_data = error_data)
+    call etsf_io_low_open_modify(ncid, dir//"/wfs-etsf.nc", lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
     
     call etsf_io_low_set_write_mode(ncid, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
 
+    call etsf_io_main_put(ncid, main, lstat, error_data = error_data)
+    if (.not. lstat) call output_etsf_error(error_data)
+    
+    call etsf_io_electrons_put(ncid, electrons, lstat, error_data = error_data)
+    if (.not. lstat) call output_etsf_error(error_data)
+
     call output_etsf_geometry_write(geo, gr%sb, ncid)
+    call output_etsf_kpoints_write(gr%sb, ncid)
 
     call etsf_io_low_close(ncid, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
 
     !Free the main container
-    nullify(groups%main)
     nullify(main%real_space_wavefunctions%data7D)
     SAFE_DEALLOCATE_A(local_wfs)
-
-    !Free the k-points container
-    SAFE_DEALLOCATE_A(local_red_coord_kpt)
-    SAFE_DEALLOCATE_A(local_kpoint_weights)
-    nullify(groups%kpoints)
-    nullify(kpoints%reduced_coordinates_of_kpoints)
-    nullify(kpoints%kpoint_weights)
-    flags%kpoints = etsf_kpoints_none
 
     !Free the electrons container
     SAFE_DEALLOCATE_A(local_occ)
     SAFE_DEALLOCATE_A(local_ev)
     SAFE_DEALLOCATE_P(electrons%number_of_electrons)
-    nullify(groups%electrons)
+
     nullify(electrons%eigenvalues%data3D)
     nullify(electrons%occupations%data3D)
     flags%electrons = etsf_electrons_none
 
     !Reset the dimensions
     dims%max_number_of_states = 1
-    dims%number_of_kpoints = 1
     dims%number_of_spins = 1
     dims%number_of_spinor_components = 1
     dims%number_of_grid_points_vector1 = 1
@@ -365,7 +336,7 @@ subroutine output_etsf_geometry_write(geo, sb, ncid)
     geometry%atomic_numbers(ispecies) = species_z(geo%species(ispecies))
     geometry%chemical_symbols(ispecies) = trim(species_label(geo%species(ispecies)))
     ! according to the specification atomic_numbers is enough, but
-    ! v_sim wants atom_species_name, so we use the label
+    ! v_sim wants atom_species_name, so we use the label as name
     geometry%atom_species_names(ispecies) = trim(species_label(geo%species(ispecies)))
   end do
 
@@ -408,6 +379,51 @@ subroutine output_etsf_geometry_write(geo, sb, ncid)
   SAFE_DEALLOCATE_P(geometry%atom_species_names)
 
 end subroutine output_etsf_geometry_write
+
+! --------------------------------------------------------
+
+subroutine output_etsf_kpoints_dims(sb, dims, flags)
+  type(simul_box_t),       intent(in)    :: sb
+  type(etsf_dims),         intent(inout) :: dims
+  type(etsf_groups_flags), intent(inout) :: flags
+  
+  flags%kpoints = etsf_kpoints_red_coord_kpt + etsf_kpoints_kpoint_weights
+
+  dims%number_of_kpoints = sb%kpoints%reduced%npoints
+
+end subroutine output_etsf_kpoints_dims
+
+! --------------------------------------------------------
+
+subroutine output_etsf_kpoints_write(sb, ncid)
+  type(simul_box_t),      intent(in)    :: sb
+  integer,                intent(in)    :: ncid
+  
+  type(etsf_kpoints), target :: kpoints
+  integer  :: nkpoints, ikpoint
+  type(etsf_io_low_error)  :: error_data
+  logical :: lstat
+
+  nkpoints = sb%kpoints%reduced%npoints
+  
+  !Create the kpoints container
+  SAFE_ALLOCATE(kpoints%reduced_coordinates_of_kpoints(1:3, 1:nkpoints))
+  SAFE_ALLOCATE(kpoints%kpoint_weights(1:nkpoints))
+  
+  do ikpoint = 1, nkpoints
+    kpoints%reduced_coordinates_of_kpoints(1:3, ikpoint) = M_ZERO
+    kpoints%reduced_coordinates_of_kpoints(1:sb%dim, ikpoint) = sb%kpoints%reduced%red_point(1:sb%dim, ikpoint)
+    kpoints%kpoint_weights(ikpoint) = kpoints_get_weight(sb%kpoints, ikpoint)
+  end do
+  
+  call etsf_io_kpoints_put(ncid, kpoints, lstat, error_data = error_data)
+  if (.not. lstat) call output_etsf_error(error_data)
+
+  SAFE_DEALLOCATE_P(kpoints%reduced_coordinates_of_kpoints)
+  SAFE_DEALLOCATE_P(kpoints%kpoint_weights)
+
+end subroutine output_etsf_kpoints_write
+
 #endif
 
 !! Local Variables:
