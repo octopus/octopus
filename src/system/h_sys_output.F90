@@ -25,8 +25,6 @@ module h_sys_output_m
   use datasets_m
   use density_m
   use derivatives_m
-  use fourier_space_m
-  use fft_m
   use elf_m
 #if defined(HAVE_ETSF_IO)
   use etsf_io
