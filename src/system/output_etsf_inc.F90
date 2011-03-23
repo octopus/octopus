@@ -28,14 +28,11 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
   type(cube_function_t) :: cube
 #ifdef HAVE_ETSF_IO
-  integer :: i, is, ik, idim, nspin, zdim, nkpoints, ncid
-  FLOAT, allocatable :: d(:), md(:,:)
-  REAL_DOUBLE, allocatable, target :: local_rho(:,:,:,:), local_wfs(:,:,:,:,:,:,:)
+  integer :: ncid
   type(etsf_io_low_error)  :: error_data
   logical :: lstat
   type(etsf_dims) :: geometry_dims, density_dims, wfs_dims
-  type(etsf_groups_flags), target :: geometry_flags, density_flags, wfs_flags
-  type(etsf_main), target :: density_main, wfs_main
+  type(etsf_groups_flags) :: geometry_flags, density_flags, wfs_flags
 #endif
 
   PUSH_SUB(h_sys_output_etsf)
@@ -48,20 +45,26 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
   call cube_function_init(cube, gr%mesh%idx%ll)
   call dcube_function_alloc_RS(cube)
 
+  ! To create an etsf file one has to do the following:
+  !
+  ! * Calculate the dimensions and the flags with the _dims functions
+  !   for all sets of values.
+  ! * Init the data file with the flags and the dims.
+  ! * Call the _write functions for all sets.
+  ! * Close the file.
+  !
+  ! Note: to keep things clean, new data MUST be added following this
+  ! scheme and using functions.
+
+
 #ifdef HAVE_ETSF_IO
+
+  ! geometry
   if (iand(outp%what, output_geometry).ne.0) then
 
     call output_etsf_geometry_dims(geo, gr%sb, geometry_dims, geometry_flags)
 
-    call etsf_io_data_init(dir//"/geometry-etsf.nc", geometry_flags, geometry_dims, &
-      "Crystallographic_data file", "Created by "//PACKAGE_STRING, lstat, error_data, overwrite = .true.)
-    if (.not. lstat) call output_etsf_error(error_data)
-
-    call etsf_io_low_open_modify(ncid, dir//"/geometry-etsf.nc", lstat, error_data = error_data)
-    if (.not. lstat) call output_etsf_error(error_data)
-    
-    call etsf_io_low_set_write_mode(ncid, lstat, error_data = error_data)
-    if (.not. lstat) call output_etsf_error(error_data)
+    call output_etsf_file_init(dir//"/geometry-etsf.nc", "Crystallographic_data file", geometry_dims, geometry_flags, ncid)
 
     call output_etsf_geometry_write(geo, gr%sb, ncid)
 
@@ -69,140 +72,37 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     if (.not. lstat) call output_etsf_error(error_data)
   end if
 
+  ! density
   if (iand(outp%what, output_density).ne.0) then
-
-    !Set the dimensions
     call output_etsf_geometry_dims(geo, gr%sb, density_dims, density_flags)
+    call output_etsf_density_dims(st, gr%mesh, cube, density_dims, density_flags)
 
-    density_dims%number_of_components = st%d%nspin
-    density_dims%number_of_grid_points_vector1 = cube%n(1)
-    density_dims%number_of_grid_points_vector2 = cube%n(2)
-    density_dims%number_of_grid_points_vector3 = cube%n(3)
-    density_dims%real_or_complex_density = 1
+    call output_etsf_file_init(dir//"/density-etsf.nc", "Density file", density_dims, density_flags, ncid)
 
-    !Open the file
-    density_flags%main = etsf_main_density
-    call etsf_io_data_init(dir//"/density-etsf.nc", density_flags, density_dims, &
-       "Density file", "Created by "//PACKAGE_STRING, lstat, error_data, overwrite=.true.)
-    if (.not. lstat) call output_etsf_error(error_data)
-
-    !Write the density to the file
-    SAFE_ALLOCATE(local_rho(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), 1:st%d%nspin))
-    if (st%d%ispin /= SPINORS) then
-      do i = 1, st%d%nspin
-        call dmesh_to_cube(gr%mesh, st%rho(:,i), cube, local = .true.)
-        local_rho(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), i) = cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
-      end do
-    else
-      SAFE_ALLOCATE(md(1:gr%mesh%np, 1:3))
-      SAFE_ALLOCATE(d(1:gr%mesh%np_part))
-
-      d = st%rho(:, 1) + st%rho(:, 2)
-      call magnetic_density(gr%mesh, st, st%rho, md)
-
-      call dmesh_to_cube(gr%mesh, d, cube, local = .true.)
-      local_rho(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), 1) = cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
-      do i = 1, 3
-        call dmesh_to_cube(gr%mesh, md(:,i), cube, local = .true.)
-        local_rho(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), i+1) = cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
-      end do
-      SAFE_DEALLOCATE_A(d)
-      SAFE_DEALLOCATE_A(md)
-    end if
-    density_main%density%data4D => local_rho
-
-    ! write the geometry
-    call etsf_io_low_open_modify(ncid, dir//"/density-etsf.nc", lstat, error_data = error_data)
-    if (.not. lstat) call output_etsf_error(error_data)
-    
-    call etsf_io_low_set_write_mode(ncid, lstat, error_data = error_data)
-    if (.not. lstat) call output_etsf_error(error_data)
-
-    call etsf_io_main_put(ncid, density_main, lstat, error_data = error_data)
-    if (.not. lstat) call output_etsf_error(error_data)
-
+    call output_etsf_density_write(st, gr%mesh, cube, ncid)
     call output_etsf_geometry_write(geo, gr%sb, ncid)
 
     call etsf_io_low_close(ncid, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
-
-    !Free the main container
-    SAFE_DEALLOCATE_A(local_rho)
   end if
 
+  ! wave-functions
   if (iand(outp%what, output_wfs).ne.0) then
     call output_etsf_geometry_dims(geo, gr%sb, wfs_dims, wfs_flags)
     call output_etsf_kpoints_dims(gr%sb, wfs_dims, wfs_flags)
     call output_etsf_electrons_dims(st, wfs_dims, wfs_flags)
+    call output_etsf_wfs_rsp_dims(st, gr%mesh, cube, wfs_dims, wfs_flags)
 
-    nspin = 1
-    if (st%d%ispin == SPIN_POLARIZED) nspin = 2
-    
-    nkpoints = st%d%nik/nspin
-    if (states_are_real(st)) then
-      zdim = 1
-    elseif(states_are_complex(st)) then
-      zdim = 2
-    end if
-    wfs_dims%number_of_grid_points_vector1 = cube%n(1)
-    wfs_dims%number_of_grid_points_vector2 = cube%n(2)
-    wfs_dims%number_of_grid_points_vector3 = cube%n(3)
-    wfs_dims%real_or_complex_wavefunctions = zdim
+    call output_etsf_file_init(dir//"/wfs-etsf.nc", "Wavefunctions file", wfs_dims, wfs_flags, ncid)
 
-    !Open the file
-    wfs_flags%main = etsf_main_wfs_rsp
-    call etsf_io_data_init(dir//"/wfs-etsf.nc", wfs_flags, wfs_dims, &
-      "Wavefunctions file", "Created by "//PACKAGE_STRING, &
-      lstat, error_data, overwrite=.true.)
-    if (.not. lstat) call output_etsf_error(error_data)
-
-    !Write the wavefunctions to the file
-    SAFE_ALLOCATE(local_wfs(1:zdim, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), 1:st%d%dim, 1:st%nst, 1:st%d%nik))
-    do is = 1, nspin
-      do ik = 1, st%d%nik, nspin
-        do i = 1, st%nst
-          do idim = 1, st%d%dim
-            if (states_are_real(st)) then
-              call dmesh_to_cube(gr%mesh, st%dpsi(1:gr%mesh%np_part, idim, i, ik+is-1), cube, local = .true.)
-              local_wfs(1, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, i, ik+(is-1)*nkpoints) = &
-                cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
-              
-            else if(states_are_complex(st)) then
-              call dmesh_to_cube(gr%mesh, &
-                real(st%zpsi(1:gr%mesh%np_part, idim, i, ik+is-1), REAL_PRECISION), cube, local = .true.)
-              local_wfs(1, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, i, ik+(is-1)*nkpoints) = &
-                cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
-
-              call dmesh_to_cube(gr%mesh, aimag(st%zpsi(1:gr%mesh%np_part, idim, i, ik+is-1)), cube, local = .true.)
-              local_wfs(2, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, i, ik+(is-1)*nkpoints) = &
-                cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
-
-            end if
-          end do
-        end do
-      end do
-    end do
-
-    wfs_main%real_space_wavefunctions%data7D => local_wfs
-
-    ! open the file and set it in write mode
-    call etsf_io_low_open_modify(ncid, dir//"/wfs-etsf.nc", lstat, error_data = error_data)
-    if (.not. lstat) call output_etsf_error(error_data)
-    call etsf_io_low_set_write_mode(ncid, lstat, error_data = error_data)
-    if (.not. lstat) call output_etsf_error(error_data)
-
-    call etsf_io_main_put(ncid, wfs_main, lstat, error_data = error_data)
-    if (.not. lstat) call output_etsf_error(error_data)
-    
     call output_etsf_electrons_write(st, ncid)
     call output_etsf_geometry_write(geo, gr%sb, ncid)
     call output_etsf_kpoints_write(gr%sb, ncid)
+    call output_etsf_wfs_rsp_write(st, gr%mesh, cube, ncid)
 
     call etsf_io_low_close(ncid, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
 
-    !Free the main container
-    SAFE_DEALLOCATE_A(local_wfs)
   end if
 #endif
 
@@ -212,6 +112,33 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 end subroutine h_sys_output_etsf
 
 #ifdef HAVE_ETSF_IO
+! --------------------------------------------------------
+
+subroutine output_etsf_file_init(filename, filetype, dims, flags, ncid)
+  character(len=*),        intent(in)    :: filename
+  character(len=*),        intent(in)    :: filetype
+  type(etsf_dims),         intent(inout) :: dims
+  type(etsf_groups_flags), intent(inout) :: flags
+  integer,                 intent(out)   :: ncid
+
+  logical :: lstat
+  type(etsf_io_low_error) :: error_data
+
+  PUSH_SUB(output_etsf_file_init)
+
+  call etsf_io_data_init(filename, flags, dims, &
+    filetype, "Created by "//PACKAGE_STRING, lstat, error_data, overwrite = .true.)
+  if (.not. lstat) call output_etsf_error(error_data)
+
+  call etsf_io_low_open_modify(ncid, filename, lstat, error_data = error_data)
+  if (.not. lstat) call output_etsf_error(error_data)
+
+  call etsf_io_low_set_write_mode(ncid, lstat, error_data = error_data)
+  if (.not. lstat) call output_etsf_error(error_data)
+
+  POP_SUB(output_etsf_file_init)
+end subroutine output_etsf_file_init
+
 ! --------------------------------------------------------
 
 subroutine output_etsf_error(error_data)
@@ -231,12 +158,15 @@ subroutine output_etsf_geometry_dims(geo, sb, dims, flags)
   type(etsf_dims),         intent(inout) :: dims
   type(etsf_groups_flags), intent(inout) :: flags
   
+  PUSH_SUB(output_etsf_geometry_dims)
+
   flags%geometry = etsf_geometry_all - etsf_geometry_valence_charges - etsf_geometry_pseudo_types
 
   dims%number_of_symmetry_operations = symmetries_number(sb%symm)
   dims%number_of_atom_species = geo%nspecies
   dims%number_of_atoms = geo%natoms
 
+  POP_SUB(output_etsf_geometry_dims)
 end subroutine output_etsf_geometry_dims
 
 ! --------------------------------------------------------
@@ -251,6 +181,8 @@ subroutine output_etsf_geometry_write(geo, sb, ncid)
   FLOAT :: offset(1:3)
   type(etsf_io_low_error)  :: error_data
   logical :: lstat
+
+  PUSH_SUB(output_etsf_geometry_write)
 
   ! Primitive vectors
   SAFE_ALLOCATE(geometry%primitive_vectors(1:3, 1:3))
@@ -320,6 +252,7 @@ subroutine output_etsf_geometry_write(geo, sb, ncid)
   SAFE_DEALLOCATE_P(geometry%chemical_symbols)
   SAFE_DEALLOCATE_P(geometry%atom_species_names)
 
+  POP_SUB(output_etsf_geometry_write)
 end subroutine output_etsf_geometry_write
 
 ! --------------------------------------------------------
@@ -329,10 +262,13 @@ subroutine output_etsf_kpoints_dims(sb, dims, flags)
   type(etsf_dims),         intent(inout) :: dims
   type(etsf_groups_flags), intent(inout) :: flags
   
+  PUSH_SUB(output_etsf_kpoints_dims)
+
   flags%kpoints = etsf_kpoints_red_coord_kpt + etsf_kpoints_kpoint_weights
 
   dims%number_of_kpoints = sb%kpoints%reduced%npoints
 
+  POP_SUB(output_etsf_kpoints_dims)
 end subroutine output_etsf_kpoints_dims
 
 ! --------------------------------------------------------
@@ -345,6 +281,8 @@ subroutine output_etsf_kpoints_write(sb, ncid)
   integer  :: nkpoints, ikpoint
   type(etsf_io_low_error)  :: error_data
   logical :: lstat
+
+  PUSH_SUB(output_etsf_kpoints_write)
 
   nkpoints = sb%kpoints%reduced%npoints
   
@@ -364,6 +302,7 @@ subroutine output_etsf_kpoints_write(sb, ncid)
   SAFE_DEALLOCATE_P(kpoints%reduced_coordinates_of_kpoints)
   SAFE_DEALLOCATE_P(kpoints%kpoint_weights)
 
+  POP_SUB(output_etsf_kpoints_write)
 end subroutine output_etsf_kpoints_write
 
 ! --------------------------------------------------------
@@ -372,7 +311,9 @@ subroutine output_etsf_electrons_dims(st, dims, flags)
   type(states_t),          intent(in)    :: st
   type(etsf_dims),         intent(inout) :: dims
   type(etsf_groups_flags), intent(inout) :: flags
-  
+
+  PUSH_SUB(output_etsf_electrons_dims)
+
   flags%electrons = etsf_electrons_eigenvalues + etsf_electrons_occupations + &
     etsf_electrons_number_of_electrons
   
@@ -383,6 +324,7 @@ subroutine output_etsf_electrons_dims(st, dims, flags)
   dims%max_number_of_states = st%nst
   dims%number_of_spinor_components = st%d%dim
 
+  POP_SUB(output_etsf_electrons_dims)
 end subroutine output_etsf_electrons_dims
 
 ! --------------------------------------------------------
@@ -395,6 +337,8 @@ subroutine output_etsf_electrons_write(st, ncid)
   type(etsf_io_low_error)  :: error_data
   logical :: lstat
   integer :: nspin, ist, ik, ispin, nkpoints
+
+  PUSH_SUB(output_etsf_electrons_write)
 
   SAFE_ALLOCATE(electrons%number_of_electrons)
   electrons%number_of_electrons = st%qtot
@@ -423,8 +367,168 @@ subroutine output_etsf_electrons_write(st, ncid)
   SAFE_DEALLOCATE_P(electrons%eigenvalues%data3D)
   SAFE_DEALLOCATE_P(electrons%occupations%data3D)
 
+  POP_SUB(output_etsf_electrons_write)
 end subroutine output_etsf_electrons_write
 
+! --------------------------------------------------------
+
+subroutine output_etsf_density_dims(st, mesh, cube, dims, flags)
+  type(states_t),          intent(in)    :: st
+  type(mesh_t),            intent(in)    :: mesh
+  type(cube_function_t),   intent(in)    :: cube
+  type(etsf_dims),         intent(inout) :: dims
+  type(etsf_groups_flags), intent(inout) :: flags
+
+  PUSH_SUB(output_etsf_density_dims)
+
+  flags%main = etsf_main_density
+
+  dims%number_of_components = st%d%nspin
+  dims%number_of_grid_points_vector1 = cube%n(1)
+  dims%number_of_grid_points_vector2 = cube%n(2)
+  dims%number_of_grid_points_vector3 = cube%n(3)
+  dims%real_or_complex_density = 1
+  
+  POP_SUB(output_etsf_density_dims)
+end subroutine output_etsf_density_dims
+
+! --------------------------------------------------------
+
+subroutine output_etsf_density_write(st, mesh, cube, ncid)
+  type(states_t),        intent(in)    :: st
+  type(mesh_t),          intent(in)    :: mesh
+  type(cube_function_t), intent(inout) :: cube
+  integer,               intent(in)    :: ncid
+
+  type(etsf_main) :: main
+  type(etsf_io_low_error)  :: error_data
+  logical :: lstat
+  integer :: ispin
+  FLOAT, allocatable :: d(:), md(:,:)
+
+  PUSH_SUB(output_etsf_density_write)
+
+  SAFE_ALLOCATE(main%density%data4D(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), 1:st%d%nspin))
+
+  if (st%d%ispin /= SPINORS) then
+    do ispin = 1, st%d%nspin
+      call dmesh_to_cube(mesh, st%rho(:, ispin), cube, local = .true.)
+      main%density%data4D(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), ispin) = cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+    end do
+  else
+    SAFE_ALLOCATE(md(1:mesh%np, 1:3))
+    SAFE_ALLOCATE(d(1:mesh%np_part))
+
+    d = st%rho(:, 1) + st%rho(:, 2)
+    call magnetic_density(mesh, st, st%rho, md)
+
+    call dmesh_to_cube(mesh, d, cube, local = .true.)
+    main%density%data4D(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), 1) = cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+    do ispin = 1, 3
+      call dmesh_to_cube(mesh, md(:, ispin), cube, local = .true.)
+      main%density%data4D(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), ispin + 1) = cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+    end do
+    SAFE_DEALLOCATE_A(d)
+    SAFE_DEALLOCATE_A(md)
+  end if
+
+  call etsf_io_main_put(ncid, main, lstat, error_data = error_data)
+  if (.not. lstat) call output_etsf_error(error_data)
+
+  SAFE_DEALLOCATE_P(main%density%data4D)
+
+  POP_SUB(output_etsf_density_write)
+end subroutine output_etsf_density_write
+
+
+! --------------------------------------------------------
+
+subroutine output_etsf_wfs_rsp_dims(st, mesh, cube, dims, flags)
+  type(states_t),          intent(in)    :: st
+  type(mesh_t),            intent(in)    :: mesh
+  type(cube_function_t),   intent(in)    :: cube
+  type(etsf_dims),         intent(inout) :: dims
+  type(etsf_groups_flags), intent(inout) :: flags
+
+  PUSH_SUB(output_etsf_wfs_rsp_dims)
+
+  if (states_are_real(st)) then
+    dims%real_or_complex_wavefunctions = 1
+  elseif(states_are_complex(st)) then
+    dims%real_or_complex_wavefunctions = 2
+  end if
+
+  dims%number_of_grid_points_vector1 = cube%n(1)
+  dims%number_of_grid_points_vector2 = cube%n(2)
+  dims%number_of_grid_points_vector3 = cube%n(3)
+
+  flags%main = etsf_main_wfs_rsp
+
+  POP_SUB(output_etsf_wfs_rsp_dims)
+end subroutine output_etsf_wfs_rsp_dims
+
+! --------------------------------------------------------
+
+subroutine output_etsf_wfs_rsp_write(st, mesh, cube, ncid)
+  type(states_t),        intent(in)    :: st
+  type(mesh_t),          intent(in)    :: mesh
+  type(cube_function_t), intent(inout) :: cube
+  integer,               intent(in)    :: ncid
+
+  integer :: ist, ispin, ik, idim, nspin, zdim, nkpoints
+  type(etsf_main) :: main
+  type(etsf_io_low_error)  :: error_data
+  logical :: lstat
+  REAL_DOUBLE, allocatable, target :: local_wfs(:,:,:,:,:,:,:)
+
+  PUSH_SUB(output_etsf_wfs_rsp_write)
+
+  nspin = 1
+  if (st%d%ispin == SPIN_POLARIZED) nspin = 2
+
+  nkpoints = st%d%nik/nspin
+  if (states_are_real(st)) then
+    zdim = 1
+  elseif(states_are_complex(st)) then
+    zdim = 2
+  end if
+
+  !Write the wavefunctions to the file
+  SAFE_ALLOCATE(local_wfs(1:zdim, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), 1:st%d%dim, 1:st%nst, 1:st%d%nik))
+  do ispin = 1, nspin
+    do ik = 1, st%d%nik, nspin
+      do ist = 1, st%nst
+        do idim = 1, st%d%dim
+          if (states_are_real(st)) then
+            call dmesh_to_cube(mesh, st%dpsi(1:mesh%np_part, idim, ist, ik+ispin-1), cube, local = .true.)
+            local_wfs(1, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, ist, ik+(ispin-1)*nkpoints) = &
+              cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+
+          else if(states_are_complex(st)) then
+            call dmesh_to_cube(mesh, &
+              real(st%zpsi(1:mesh%np_part, idim, ist, ik+ispin-1), REAL_PRECISION), cube, local = .true.)
+            local_wfs(1, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, ist, ik+(ispin-1)*nkpoints) = &
+              cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+
+            call dmesh_to_cube(mesh, aimag(st%zpsi(1:mesh%np_part, idim, ist, ik+ispin-1)), cube, local = .true.)
+            local_wfs(2, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, ist, ik+(ispin-1)*nkpoints) = &
+              cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+
+          end if
+        end do
+      end do
+    end do
+  end do
+
+  main%real_space_wavefunctions%data7D => local_wfs
+
+  call etsf_io_main_put(ncid, main, lstat, error_data = error_data)
+  if (.not. lstat) call output_etsf_error(error_data)
+    
+  SAFE_DEALLOCATE_A(local_wfs)
+
+  POP_SUB(output_etsf_wfs_rsp_write)
+end subroutine output_etsf_wfs_rsp_write
 #endif
 
 !! Local Variables:
