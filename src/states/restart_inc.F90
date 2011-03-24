@@ -56,6 +56,8 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
 
   PUSH_SUB(X(restart_read_function))
   
+  nullify(read_ff)
+
 #ifdef HAVE_MPI
   if(present(map) .and. mesh%parallel_in_domains) then 
     ! for the moment we do not do this directly
@@ -82,6 +84,8 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
     offset = mesh%vp%xlocal(mesh%vp%partno) - 1
   end if
 #endif
+
+  ASSERT(associated(read_ff))
 
   call profiling_in(prof_io, "RESTART_READ_IO")
 

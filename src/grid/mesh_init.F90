@@ -631,8 +631,11 @@ contains
         end do
       end do
     end do
+    
+    ! set the rest to zero
+    mesh%idx%lxyz(1:mesh%np_part_global, 4:MAX_DIM) = 0
 
-    call checksum_calculate(1, mesh%np_part_global*MAX_DIM, mesh%idx%lxyz(1, 1), mesh%idx%checksum)
+    call checksum_calculate(1, mesh%np_part_global*mesh%sb%dim, mesh%idx%lxyz(1, 1), mesh%idx%checksum)
 
     ASSERT(iin == mesh%np_global)
     ASSERT(ien == mesh%np_part_global)

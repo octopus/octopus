@@ -492,7 +492,8 @@ contains
       do ip = 1, read_np
         xx = 0
         xx(1:gr%mesh%sb%dim) = read_lxyz(ip, 1:gr%mesh%sb%dim)
-        if(any(xx < gr%mesh%idx%nr(1, :)) .or. any(xx > gr%mesh%idx%nr(2, :))) then
+        if(any(xx(1:gr%mesh%sb%dim) < gr%mesh%idx%nr(1, 1:gr%mesh%sb%dim)) .or. &
+          any(xx(1:gr%mesh%sb%dim) > gr%mesh%idx%nr(2, 1:gr%mesh%sb%dim))) then
           map(ip) = 0
           grid_reordered = .false.
         else
