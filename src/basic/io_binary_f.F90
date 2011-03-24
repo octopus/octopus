@@ -57,6 +57,8 @@ contains
 
     PUSH_SUB(swrite_binary)
 
+    ASSERT(product(ubound(ff)) >= np)
+
     ierr = 0
     call write_binary(np, ff(1), type, ierr, trim(fname))
 
@@ -74,6 +76,8 @@ contains
     integer, parameter :: type = TYPE_DOUBLE
 
     PUSH_SUB(dwrite_binary)
+
+    ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
     call write_binary(np, ff(1), type, ierr, trim(fname))
@@ -93,6 +97,8 @@ contains
 
     PUSH_SUB(cwrite_binary)
 
+    ASSERT(product(ubound(ff)) >= np)
+
     ierr = 0
     call write_binary(np, ff(1), type, ierr, trim(fname))
 
@@ -110,6 +116,8 @@ contains
     integer, parameter :: type = TYPE_DOUBLE_COMPLEX
 
     PUSH_SUB(zwrite_binary)
+
+    ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
     call write_binary(np, ff(1), type, ierr, trim(fname))
@@ -129,6 +137,8 @@ contains
 
     PUSH_SUB(zwrite_3D_binary)
 
+    ASSERT(product(ubound(ff)) >= np)
+
     ierr = 0
     call write_binary(np, ff(1,1,1), type, ierr, trim(fname))
 
@@ -146,6 +156,8 @@ contains
     integer, parameter :: type = TYPE_INT_32
 
     PUSH_SUB(iwrite_binary)
+
+    ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
     call write_binary(np, ff(1), type, ierr, trim(fname))
@@ -165,6 +177,8 @@ contains
 
     PUSH_SUB(lwrite_binary)
 
+    ASSERT(product(ubound(ff)) >= np)
+
     ierr = 0
     call write_binary(np, ff(1), type, ierr, trim(fname))
 
@@ -183,6 +197,8 @@ contains
 
     PUSH_SUB(iwrite_binary2)
 
+    ASSERT(product(ubound(ff)) >= np)
+
     ierr = 0
     call write_binary(np, ff(1, 1), type, ierr, trim(fname))
 
@@ -200,6 +216,8 @@ contains
     integer, parameter :: type = TYPE_INT_64
 
     PUSH_SUB(lwrite_binary2)
+
+    ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
     call write_binary(np, ff(1, 1), type, ierr, trim(fname))
@@ -220,6 +238,8 @@ contains
 
     PUSH_SUB(sread_binary)
 
+    ASSERT(product(ubound(ff)) >= np)
+
     ierr = 0
     call read_binary(np, optional_default(offset, 0), ff(1), type, ierr, trim(fname))
 
@@ -238,6 +258,8 @@ contains
     integer, parameter :: type = TYPE_DOUBLE
 
     PUSH_SUB(dread_binary)
+
+    ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
     call read_binary(np, optional_default(offset, 0), ff(1), type, ierr, trim(fname))
@@ -277,6 +299,8 @@ contains
 
     PUSH_SUB(zread_binary)
 
+    ASSERT(product(ubound(ff)) >= np)
+
     ierr = 0
     call read_binary(np, optional_default(offset, 0), ff(1), type, ierr, trim(fname))
     
@@ -295,6 +319,8 @@ contains
 
     PUSH_SUB(zread_3D_binary)
    
+    ASSERT(product(ubound(ff)) >= np)
+
     ierr = 0
     call read_binary(np, 0, ff(1,1,1), type, ierr, trim(fname))
 
@@ -313,6 +339,8 @@ contains
     integer, parameter :: type = TYPE_INT_32
 
     PUSH_SUB(iread_binary)
+
+    ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
     call read_binary(np, optional_default(offset, 0), ff(1), type, ierr, trim(fname))
@@ -333,6 +361,8 @@ contains
 
     PUSH_SUB(lread_binary)
 
+    ASSERT(product(ubound(ff)) >= np)
+
     ierr = 0
     call read_binary(np, optional_default(offset, 0), ff(1), type, ierr, trim(fname))
 
@@ -351,6 +381,8 @@ contains
 
     PUSH_SUB(iread_binary2)
 
+    ASSERT(product(ubound(ff)) >= np)
+
     ierr = 0
     call read_binary(np, 0, ff(1, 1), type, ierr, trim(fname))
 
@@ -368,6 +400,8 @@ contains
     integer, parameter :: type = TYPE_INT_64
 
     PUSH_SUB(lread_binary2)
+
+    ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
     call read_binary(np, 0, ff(1, 1), type, ierr, trim(fname))
