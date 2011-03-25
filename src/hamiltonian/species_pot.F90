@@ -221,7 +221,7 @@ contains
     integer :: ia, is, idir, gmd_opt
     integer, save :: iseed = 321
     type(block_t) :: blk
-    FLOAT :: rr, rnd, phi, theta, mag(MAX_DIM), lmag, n1, n2
+    FLOAT :: rr, rnd, phi, theta, mag(1:3), lmag, n1, n2
     FLOAT, allocatable :: atom_rho(:,:)
     logical :: parallelized_in_atoms
 
@@ -361,7 +361,7 @@ contains
             call parse_block_float(blk, ia-1, idir-1, mag(idir))
             if (abs(mag(idir)) < CNST(1.0e-20)) mag(idir) = M_ZERO
           end do
-          lmag = sqrt(dot_product(mag, mag))
+          lmag = sqrt(dot_product(mag(1:3), mag(1:3)))
         end if
 
         !Get atomic density
