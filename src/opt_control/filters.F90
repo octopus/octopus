@@ -157,7 +157,7 @@ contains
     
     do i = 1, no_f
       write(message(1),'(a,i2)') "Info: Applying filter "         
-      call write_info(1)
+      call messages_info(1)
 
       nfreqs = tdf_nfreqs(f)
 
@@ -175,7 +175,7 @@ contains
 
       case default
         message(1) = "...I don't know this filter type..."
-        call write_fatal(1)
+        call messages_fatal(1)
       end select
 
     end do
@@ -217,7 +217,7 @@ contains
       case default
         write(message(1),'(a)') "Unknown choice of domain for filter."
         write(message(2),'(a)') "Choose: time or freq ."
-        call write_fatal(2)
+        call messages_fatal(2)
       end select
 
       call tdf_set_numerical(filter%f(i), 1, real(ff(1), REAL_PRECISION))

@@ -47,14 +47,14 @@ contains
     write(message(1), '(a)')        "Mesh"
     write(message(2), '(a,f10.1,a)') "  global  ", mesh_global, " [Mb] (global)"
     write(message(3), '(a,f10.1,a)') "  local   ", mesh_local,  " [Mb] (par_domains)"
-    call write_info(3)
+    call messages_info(3)
 
     wfns = states_wfns_memory(sys%st, sys%gr%mesh)/CNST(1024.0)**2
 
     write(message(1), '(a)')        "States"
     write(message(2), '(a,f10.1,a)') "  real    ", wfns,       " [Mb] (par_kpoints + par_states + par_domains)"
     write(message(3), '(a,f10.1,a)') "  complex ", M_TWO*wfns, " [Mb] (par_kpoints + par_states + par_domains)"
-    call write_info(3)
+    call messages_info(3)
 
     if(states_are_real(sys%st)) then
       ground_state = mesh_global + mesh_local + wfns
@@ -65,7 +65,7 @@ contains
     write(message(1), '(a)')        "Total"
     write(message(2), '(a,f10.1,a)') "  gs      ", ground_state, " [Mb]"
     write(message(3), '(a,f10.1,a)') "  td      ", mesh_global + mesh_local + M_TWO*wfns, " [Mb]"
-    call write_info(3)
+    call messages_info(3)
 
   end subroutine memory_run
 

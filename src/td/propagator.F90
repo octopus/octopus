@@ -126,7 +126,7 @@ contains
       call loct_pointer_copy(tro%vmagnus, tri%vmagnus)
     case(PROP_CRANK_NICHOLSON_SRC_MEM)
       message(1) = 'Internal error at propagator_copy.'
-      call write_fatal(1)
+      call messages_fatal(1)
     end select
 
     call loct_pointer_copy(tro%v_old, tri%v_old)
@@ -269,7 +269,7 @@ contains
       message(5) = '  TDEvolutionmethod = crank_nicholson_src_mem'
       message(6) = ''
       message(7) = 'in your input or remove the TDEvolutionMethod variable.'
-      call write_fatal(7)
+      call messages_fatal(7)
     end if
 
     select case(tr%method)
@@ -286,7 +286,7 @@ contains
       message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
       message(2) = 'library is required if the "crank_nicholson_sparskit" propagator is selected.'
       message(3) = 'Try using a different propagation scheme or recompile with SPARSKIT support.'
-      call write_fatal(3)
+      call messages_fatal(3)
 #endif
     case(PROP_MAGNUS)
       SAFE_ALLOCATE(tr%vmagnus(1:gr%mesh%np, 1:st%d%nspin, 1:2))
@@ -304,7 +304,7 @@ contains
          tr%method /= PROP_AETRS .and. &
          tr%method /= PROP_EXPONENTIAL_MIDPOINT) then
         message(1) = "To move the ions or put in a gauge field, use the etrs, aetrs or exp_mid propagators." 
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
     end if
 
@@ -1022,7 +1022,7 @@ contains
           if(.not.converged) then
             write(message(1),'(a)')        'The linear solver used for the Crank-Nicholson'
             write(message(2),'(a,es14.4)') 'propagator did not converge: Residual = ', dres
-            call write_warning(2)
+            call messages_warning(2)
           end if
 
         end do
@@ -1075,7 +1075,7 @@ contains
           case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL)
             write(message(1),'(a)') 'The Magnus propagator cannot be used with magnetic fields, or'
             write(message(2),'(a)') 'with an electric field described in the velocity gauge.'
-            call write_fatal(2)
+            call messages_fatal(2)
           end select
         end do
       end do

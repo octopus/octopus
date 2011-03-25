@@ -70,7 +70,7 @@ contains
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
-    call write_info(1)
+    call messages_info(1)
     call system_h_setup(sys, hm)
 
     call vibrations_init(vib, sys%geo, sys%gr%sb)
@@ -150,7 +150,7 @@ contains
     do iatom = 1, geo%natoms
       do alpha = 1, gr%mesh%sb%dim
         write(message(1), '(a,i3,3a)') 'Info: Moving atom ', iatom, ' in the ', index2axis(alpha), '-direction.'
-        call write_info(1)
+        call messages_info(1)
 
         ! move atom iatom in direction alpha by dist
         geo%atom(iatom)%x(alpha) = geo%atom(iatom)%x(alpha) + vib%disp

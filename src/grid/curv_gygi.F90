@@ -171,7 +171,7 @@ contains
       write(message(3),'(9f14.6)') x(1:sb%dim)
       message(4) = "Try varying the Gygi parameters -- usually reducing CurvGygiA or"
       message(5) = "CurvGygiAlpha (or both) solves the problem."
-      call write_fatal(5)
+      call messages_fatal(5)
     end if
 
   end subroutine curv_gygi_chi2x

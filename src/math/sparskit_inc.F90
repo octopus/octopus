@@ -81,7 +81,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   call parse_integer(datasets_check('SPARSKITPreconditioning'),     0, sk%preconditioning)
   if (sk%preconditioning.ne.0) then
     message(1) = 'Error: Preconditioning not implemented yet ...'
-    call write_fatal(1)
+    call messages_fatal(1)
   end if
 
   !%Variable SPARSKITMaxIter
@@ -182,9 +182,9 @@ subroutine X(sparskit_solver_init)(n, sk)
     write(message(1), '(a,i4,a)') "Input: '", sk%solver_type, &
       "' is not a valid SPARSKIT Solver"
     message(2) = '( SPARSKIT Solver =  cg | cgnr | bcg | dbcg | bcgstab | tfqmr | fom | gmres | fgmres | dqgmres )'
-    call write_fatal(2)
+    call messages_fatal(2)
   end select
-  call write_info(1)
+  call messages_info(1)
 
   ! Now we initialize the arrays for the reverse communication protocol
   sk%ipar = 0
@@ -300,7 +300,7 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
       write(message(1), '(a,i4,a)') "Input: '", sk%solver_type, &
            "' is not a valid SPARSKIT solver."
       message(2) = '( SPARSKITSolver =  cg | cgnr | bcg | dbcg | bcgstab | tfqmr | fom | gmres | fgmres | dqgmres )'
-      call write_fatal(2)
+      call messages_fatal(2)
     end select
     
     ! Evaluate reverse communication protocol
@@ -325,53 +325,53 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
     case(3)
       ! left preconditioner solver
       message(1) = 'Error: Preconditioning not implemented yet.'
-      call write_fatal(1)
+      call messages_fatal(1)
     case(4)
       ! left preconditioner transposed solve
       message(1) = 'Error: Preconditioning not implemented yet.'
-      call write_fatal(1)
+      call messages_fatal(1)
     case(5)
       ! right preconditioner solve
       message(1) = 'Error: Preconditioning not implemented yet.'
-      call write_fatal(1)
+      call messages_fatal(1)
     case(6)
       ! right preconditioner transposed solve
       message(1) = 'Error: Preconditioning not implemented yet.'
-      call write_fatal(1)
+      call messages_fatal(1)
     case(0)
       ! successful exit of solver
       exit solver_iter
     case(-1)
 !      message(1) = 'Warning: Maximum iteration number "SPARSKITMaxIter" exceeded.'
-!      call write_warning(1)
+!      call messages_warning(1)
       exit solver_iter
     case(-2)
       message(1) = 'Error: Insufficient work space.'
-      call write_fatal(1)
+      call messages_fatal(1)
     case(-3)
       message(1) = 'Error: Anticipated break-down / divide by zero.'
-      call write_fatal(1)
+      call messages_fatal(1)
     case(-4)
       message(1) = 'Error: "SPARSKITRelTolerance" and "SPARSKITAbsTolerance" are'
       message(2) = '       both <= 0. Valid ranges are 0 <= SPARSKITRelTolerance < 1,'
       message(3) = '       0 <= SPARSKITAbsTolerance.'
-      call write_fatal(3)
+      call messages_fatal(3)
     case(-9)
       message(1) = 'Error: while trying to detect a break-down, an abnormal number is detected.'
-      call write_fatal(1)
+      call messages_fatal(1)
     case(-10)
       message(1) = 'Error: return due to some non-numerical reasons, e.g. invalid'
       message(2) = 'floating-point numbers etc.'
-      call write_fatal(2)
+      call messages_fatal(2)
     case default
       message(1) = 'Error: Unknown SPARSKIT return value. Exiting ...'
-      call write_fatal(1)
+      call messages_fatal(1)
     end select
 
     if(sk%iter_out > 0) then
       if(mod(iter, sk%iter_out) == 0) then
         write(message(1), '(a,i7)') 'SPARSKIT Iter: ', iter
-        call write_info(1)
+        call messages_info(1)
       end if
     end if
       
@@ -381,7 +381,7 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
 
   if(iter .gt.sk%maxiter) then
 !    message(1) = 'Warning: Maxiter reached'
-!    call write_warning(1)
+!    call messages_warning(1)
   end if
 
   ! set back to zero to initialize the solver for the next call
@@ -397,7 +397,7 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
   ! output status info
   if(sk%verbose) then
     write(message(1), '(a,I5,a,E18.12)') 'SPARSKIT iter: ', sk%used_iter, ' residual norm: ', sk%residual_norm
-    call write_info(1)
+    call messages_info(1)
   end if
 
 #ifdef R_TREAL

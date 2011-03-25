@@ -41,7 +41,7 @@ module ob_interface_m
     interface_t,            &
     interface_init,         &
     interface_end,          &
-    interface_write_info,   &
+    interface_messages_info,   &
     get_intf_wf,            &
     put_intf_wf,            &
     member_of_interface
@@ -261,18 +261,18 @@ contains
 
   ! ---------------------------------------------------------
   ! Write number of interface points.
-  subroutine interface_write_info(intf, iunit)
+  subroutine interface_messages_info(intf, iunit)
     type(interface_t), intent(in) :: intf
     integer,           intent(in) :: iunit
 
-    PUSH_SUB(interface_write_info)
+    PUSH_SUB(interface_messages_info)
 
     write(message(1), '(a,i6)') 'Number of points in '//LEAD_NAME(intf%il)// &
       ' interface: ', intf%np_uc
-    call write_info(1, iunit)
+    call messages_info(1, iunit)
 
-    POP_SUB(interface_write_info)
-  end subroutine interface_write_info
+    POP_SUB(interface_messages_info)
+  end subroutine interface_messages_info
 
 
   ! ---------------------------------------------------------

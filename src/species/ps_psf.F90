@@ -73,7 +73,7 @@ contains
     message(1) = "Reading pseudopotential from file:"
     if(found) then
       write(message(2), '(6x,3a)') "'", trim(filename2), "'"
-      call write_info(2)
+      call messages_info(2)
 
       iunit = io_open(filename2, action='read', form='unformatted', status='old', is_tmp=.true.)
       call ps_psf_file_read(iunit, .false., pstm%psf_file)
@@ -86,12 +86,12 @@ contains
         inquire(file=filename2, exist=found)
         if(.not.found) then
           message(1) = "Pseudopotential file '" // trim(filename) // "{.vps|.psf}' not found"
-          call write_fatal(1)
+          call messages_fatal(1)
         end if
       end if
 
       write(message(2), '(6x,3a)') "'", trim(filename2), "'"
-      call write_info(2)
+      call messages_info(2)
 
       iunit = io_open(filename2, action='read', form='formatted', status='old', is_tmp=.true.)
       call ps_psf_file_read(iunit, .true., pstm%psf_file)
@@ -165,7 +165,7 @@ contains
       case('f'); conf%l(l) = 3
       case default
         message(1) = 'Error reading pseudopotential file.'
-        call write_fatal(1)
+        call messages_fatal(1)
       end select
     end do
 
@@ -266,7 +266,7 @@ contains
 
     ! Let us be a bit informative.
     message(1) = '      Calculating atomic pseudo-eigenfunctions for species ' // psf_file%namatm // '....'
-    call write_info(1)
+    call messages_info(1)
 
     ! Allocation.
     SAFE_ALLOCATE(s   (1:g%nrval))
@@ -329,7 +329,7 @@ contains
         write(message(1),'(a)') 'The algorithm that calculates atomic wavefunctions could not'
         write(message(2),'(a)') 'do its job. The program will terminate, since the wavefunctions'
         write(message(3),'(a)') 'are needed. Change the pseudopotential or improve the code.'
-        call write_fatal(3)
+        call messages_fatal(3)
       end if
       eigen(l, 1) = e
 
@@ -373,7 +373,7 @@ contains
               write(message(1),'(a)') 'The algorithm that calculates atomic wavefunctions could not'
               write(message(2),'(a)') 'do its job. The program will terminate, since the wavefunctions'
               write(message(3),'(a)') 'are needed. Change the pseudopotential or improve the code.'
-              call write_fatal(3)
+              call messages_fatal(3)
             end if
             eigen(l, 1 + is) = e
 
@@ -397,7 +397,7 @@ contains
         if(iter>1) rho = M_HALF*rho + M_HALF*prev
 
         !write(message(1),'(a,i4,a,e10.2)') '      Iter =', iter, '; Diff =', diff
-        !call write_info(1)
+        !call messages_info(1)
 
         call atomhxc(functl, g, 2, rho, ve, psf_file%chcore)
       end do self_consistent
@@ -492,7 +492,7 @@ contains
 
       if(ighost >= 0) then
         write(message(1), '(a,i2)') "Ghost state found for l = ", l
-        call write_warning(1)
+        call messages_warning(1)
       end if
     end do
 

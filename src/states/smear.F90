@@ -191,7 +191,7 @@ contains
       message(1) = 'Not enough states'
       write(message(2),'(6x,a,f12.6,a,f12.6)')'(total charge = ', qtot, &
         ' max charge = ', sumq
-      call write_fatal(2)
+      call messages_fatal(2)
     end if
 
     conv = .true.
@@ -272,7 +272,7 @@ contains
 
       if(.not.conv) then
         message(1) = 'Fermi: did not converge.'
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
 
     end if
@@ -386,7 +386,7 @@ contains
     select case(this%method)
     case(SMEAR_FIXED_OCC)
       message(1) = "smear_delta_function is not defined for SMEAR_FIXED_OCC."
-      call write_fatal(1)
+      call messages_fatal(1)
 
     case(SMEAR_SEMICONDUCTOR)
       if(xx == M_ZERO) &
@@ -446,7 +446,7 @@ contains
     select case(this%method)
     case(SMEAR_FIXED_OCC)
       message(1) = "smear_step_function is not defined for SMEAR_FIXED_OCC."
-      call write_fatal(1)
+      call messages_fatal(1)
 
     case(SMEAR_SEMICONDUCTOR)
       if(xx > M_ZERO) then
@@ -519,7 +519,7 @@ contains
     select case(this%method)
     case(SMEAR_FIXED_OCC)
       message(1) = "smear_entropy_function is not defined for SMEAR_FIXED_OCC."
-      call write_fatal(1)
+      call messages_fatal(1)
 
     case(SMEAR_SEMICONDUCTOR)
 

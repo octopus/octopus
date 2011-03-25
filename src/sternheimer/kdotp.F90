@@ -102,14 +102,14 @@ contains
 
     if(hm%theory_level == HARTREE_FOCK) then
       message(1) = "Commutator of Fock operator not yet implemented."
-      call write_warning(1)
+      call messages_warning(1)
     endif
 
     pdim = sys%gr%sb%periodic_dim
 
     if(.not. simul_box_is_periodic(sys%gr%sb)) then
        message(1) = "k.p perturbation cannot be used for a finite system."
-       call write_fatal(1)
+       call messages_fatal(1)
     endif
 
     SAFE_ALLOCATE(kdotp_vars%eff_mass_inv(1:sys%st%d%nik, 1:sys%st%nst, 1:pdim, 1:pdim))
@@ -130,7 +130,7 @@ contains
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
-    call write_info(1)
+    call messages_info(1)
     call system_h_setup(sys, hm)
     
     if(states_are_real(sys%st)) then
@@ -138,10 +138,10 @@ contains
     else
       message(1) = 'Info: Using complex wavefunctions.'
     end if
-    call write_info(1)
+    call messages_info(1)
 
     message(1) = 'Calculating band velocities.'
-    call write_info(1)
+    call messages_info(1)
 
     if(states_are_real(sys%st)) then
       kdotp_vars%velocity(:,:,:) = M_ZERO
@@ -172,21 +172,21 @@ contains
           
         if(ierr .ne. 0) then
           message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//trim(dirname)//"'"
-          call write_warning(1)
+          call messages_warning(1)
         end if      
       end if
     end do
 
     call info()
     message(1) = "Info: Calculating k.p linear response of ground-state wavefunctions."
-    call write_info(1)
+    call messages_info(1)
     kdotp_vars%ok = .true.
 
     ! solve the Sternheimer equation
     do idir = 1, pdim
       write(message(1), '(3a)') 'Info: Calculating response for the ', index2axis(idir), &
                                 '-direction.' 
-      call write_info(1)
+      call messages_info(1)
       call pert_setup_dir(kdotp_vars%perturbation, idir)
 
       if(states_are_real(sys%st)) then
@@ -205,7 +205,7 @@ contains
     ! calculate effective masses
     if (calc_eff_mass) then
       message(1) = "Info: Calculating effective masses."
-      call write_info(1)
+      call messages_info(1)
 
       if(states_are_real(sys%st)) then
         call dcalc_eff_mass_inv(sys, hm, kdotp_vars%lr, kdotp_vars%perturbation, &
@@ -310,7 +310,7 @@ contains
         message(1) = 'Occupied solution method: sum over states.'
       endif
 
-      call write_info(1)
+      call messages_info(1)
 
       call messages_print_stress(stdout)
       
@@ -434,7 +434,7 @@ contains
 
       tmp = int2str(ik2)
       write(message(1), '(3a, i1)') 'k-point ', trim(tmp), ', spin ', ispin 
-      call write_info(1)
+      call messages_info(1)
 
       ist = 1
       do while (ist <= st%nst)
@@ -443,7 +443,7 @@ contains
          tmp = int2str(ist)
          write(message(2),'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
            units_from_atomic(units_out%energy, st%eigenval(ist, ik)), ' ', units_abbrev(units_out%energy)
-         call write_info(2)
+         call messages_info(2)
 
          ist2 = ist + 1
          do while (ist2 <= st%nst .and. &
@@ -451,7 +451,7 @@ contains
            tmp = int2str(ist2)
            write(message(1),'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
              units_from_atomic(units_out%energy, st%eigenval(ist2, ik)), ' ', units_abbrev(units_out%energy)
-           call write_info(1)
+           call messages_info(1)
            ist2 = ist2 + 1
          enddo
 
@@ -459,11 +459,11 @@ contains
       enddo
 
       write(message(1),'()')
-      call write_info(1)
+      call messages_info(1)
     enddo
 
     message(1) = "Velocities and effective masses are not correct within degenerate subspaces."
-    call write_warning(1)
+    call messages_warning(1)
 
     POP_SUB(kdotp_write_degeneracies)
   end subroutine kdotp_write_degeneracies

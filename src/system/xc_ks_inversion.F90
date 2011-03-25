@@ -55,7 +55,7 @@ module xc_ks_inversion_m
     xc_ks_inversion_t,             &
     xc_ks_inversion_init,          &
     xc_ks_inversion_end,           &
-    xc_ks_inversion_write_info,    &
+    xc_ks_inversion_messages_info,    &
     xc_ks_inversion_calc,          &
     invertks_2part,                &
     invertks_iter,                 &
@@ -103,7 +103,7 @@ contains
 
 #if defined(HAVE_MPI)
     message(1) = "KS Inversion currently not available in parallel. Stopping octopus."
-    call write_fatal(1)
+    call messages_fatal(1)
 #endif
 
     call messages_experimental("Kohn-Sham inversion")
@@ -128,7 +128,7 @@ contains
     if(ks_inv%method < XC_INV_METHOD_VS_ITER &
       .or. ks_inv%method > XC_INV_METHOD_VXC_ITER) then
       call input_error('InvertKSmethod')
-      call write_fatal(1)
+      call messages_fatal(1)
     endif
 
     !%Variable KS_Inversion_Level
@@ -182,17 +182,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_ks_inversion_write_info(ks_inversion, iunit)
+  subroutine xc_ks_inversion_messages_info(ks_inversion, iunit)
     type(xc_ks_inversion_t), intent(in) :: ks_inversion
     integer,                 intent(in) :: iunit
 
     if(ks_inversion%level.eq.XC_KS_INVERSION_NONE) return
 
-    PUSH_SUB(xc_ks_inversion_write_info)
+    PUSH_SUB(xc_ks_inversion_messages_info)
     call messages_print_var_option(iunit, 'KS_Inversion_Level', ks_inversion%level)
 
-    POP_SUB(xc_ks_inversion_write_info)
-  end subroutine xc_ks_inversion_write_info
+    POP_SUB(xc_ks_inversion_messages_info)
+  end subroutine xc_ks_inversion_messages_info
 
 
   ! ---------------------------------------------------------
@@ -289,7 +289,7 @@ contains
     call parse_integer(datasets_check('InvertKSVerbosity'), 0, verbosity)  
     if(verbosity < 0 .or. verbosity > 2) then
       call input_error('InvertKSVerbosity')
-      call write_fatal(1)
+      call messages_fatal(1)
     endif
            
     SAFE_ALLOCATE(vhxc(1:np, 1:nspin))
@@ -361,7 +361,7 @@ contains
     call density_calc(st, gr, st%rho)
     
     write(message(1),'(a,I8)') "Iterative KS inversion, iterations needed:", counter
-    call write_info(1)
+    call messages_info(1)
     
     call io_close(iunit)      
 
@@ -437,7 +437,7 @@ contains
     call parse_integer(datasets_check('InvertKSVerbosity'), 0, verbosity)  
     if(verbosity < 0 .or. verbosity > 2) then
       call input_error('InvertKSVerbosity')
-      call write_fatal(1)
+      call messages_fatal(1)
     endif
   
     SAFE_ALLOCATE(rho(1:np))
@@ -533,7 +533,7 @@ contains
     end do
 
     write(message(1),'(a,I8)') "Invert KS: iterations needed:", counter
-    call write_info(1)
+    call messages_info(1)
     
     call io_close(iunit)      
     

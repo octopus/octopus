@@ -856,7 +856,7 @@ contains
     ! Now we cannot process files that do not contain the dipole, or that contain more than the dipole.
     if(lmax.ne.1) then
       message(1) = 'Multipoles file should contain the dipole -- and only the dipole.'
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     ! Find out the iteration numbers corresponding to the time limits.
@@ -1050,7 +1050,7 @@ contains
 
     if(dt_sin.ne.dt_cos) then
       message(1) = "dt is different in ftchds.cos and ftchds.sin!"
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     time_steps = min(time_steps_sin, time_steps_cos)
@@ -1239,7 +1239,7 @@ contains
     message(8) = ""
     write(message(9), '(a,5e15.6,5e15.6)') 'R(0) sum rule = ', sum1
     write(message(10),'(a,5e15.6,5e15.6)') 'R(2) sum rule = ', sum2
-    call write_info(10)
+    call messages_info(10)
 
 
     ! Output to file
@@ -1344,7 +1344,7 @@ contains
 
     if(ierr .ne. 0) then
       write(message(1),'(a)') 'Could not find a maximum.'      
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
     call hsfunction(xx, hsval)
     omega_min = xx
@@ -1713,7 +1713,7 @@ contains
     
     if(time_steps < 3) then
       message(1) = "Empty file?"
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     POP_SUB(count_time_steps)
@@ -1752,7 +1752,7 @@ contains
 
     if(energy_steps < 3) then
       message(1) = "Empty multipole file?"
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     POP_SUB(spectrum_cross_section_info)
@@ -1792,7 +1792,7 @@ contains
 
     if(time_steps < 3) then
       message(1) = "Empty multipole file?"
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     rewind(iunit)
@@ -1832,7 +1832,7 @@ contains
 
     if(time_steps < 3) then
       message(1) = "Empty multipole file?"
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     rewind(iunit)

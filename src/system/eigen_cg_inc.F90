@@ -50,7 +50,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
     write(message(2),'(a,e8.2)') '  Tolerance: ',tol
     write(message(3),'(a,i6)')   '  Maximum number of iterations per eigenstate:', niter
     message(4) = ''
-    call write_info(4)
+    call messages_info(4)
   end if
 
   maxter = niter
@@ -210,7 +210,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 
       if(in_debug_mode) then
         write(message(1), '(a,i4,a,i4,a,i4,a,f12.6)') 'Debug: CG Eigensolver - ik', ik, ' ist ', p, ' iter ', iter, ' res ', res
-        call write_info(1)
+        call messages_info(1)
       end if
 
       ! Test convergence.
@@ -227,7 +227,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       else
         write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2))," not converged. Iterations:", iter, '   [Res = ',res,']'
       end if
-      call write_info(1)
+      call messages_info(1)
     end if
 
     niter = niter + iter + 1
@@ -287,7 +287,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
     write(message(2),'(a,e8.2)') '  Tolerance: ', tol
     write(message(3),'(a,i6)')   '  Maximum number of iterations per eigenstate:', niter
     message(4) = ""
-    call write_info(4)
+    call messages_info(4)
   end if
 
   dim = st%d%dim
@@ -439,7 +439,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
       else
         write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2))," not converged. Iterations:", i, '   [Res = ',res,']'
       end if
-      call write_info(1)
+      call messages_info(1)
     end if
 
     if(mpi_grp_is_root(mpi_world).and..not.verbose_) then

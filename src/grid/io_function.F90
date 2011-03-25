@@ -180,7 +180,7 @@ contains
 
     if(how .eq. 0) then
       write(message(1), '(a)') 'Must specify output method with variable OutputHow.'
-      call write_fatal(1, only_root_writes = .true.)
+      call messages_fatal(1, only_root_writes = .true.)
      endif
 
     ! some modes are not available in some circumstances, so we reset how
@@ -192,14 +192,14 @@ contains
     if (iand(how, output_netcdf) .ne. 0) then
       message(1) = 'Octopus was compiled without NetCDF support.'
       message(2) = 'It is not possible to write output in NetCDF format.'
-      call write_fatal(2)
+      call messages_fatal(2)
     end if
 #endif
 #if !defined(HAVE_ETSF_IO)
     if (iand(how, output_etsf) .ne. 0) then
       message(1) = 'Octopus was compiled without ETSF_IO support.'
       message(2) = 'It is not possible to write output in ETSF format.'
-      call write_fatal(2)
+      call messages_fatal(2)
     end if
 #endif
 
@@ -354,7 +354,7 @@ contains
     write(message(1),'(3a)') "NETCDF error in function '" , trim(func) , "'"
     write(message(2),'(3a)') "(reading/writing ", trim(filename) , ")"
     write(message(3), '(6x,a,a)')'Error code = ', trim(nf90_strerror(status))
-    call write_warning(3)
+    call messages_warning(3)
     ierr = 5
 
     POP_SUB(ncdf_error)

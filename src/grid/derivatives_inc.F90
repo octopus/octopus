@@ -554,14 +554,14 @@ subroutine X(derivatives_test)(this)
 
   write(message(1), '(a,i4)') '   Blocksize = ', blocksize
   message(2) = ''
-  call write_info(2)
+  call messages_info(2)
 
 #ifdef R_TREAL
   write(message(1), '(a)') '      Real functions'
 #else
   write(message(1), '(a)') '      Complex functions'
 #endif
-  call write_info(1)
+  call messages_info(1)
 
   SAFE_ALLOCATE(ff(1:this%mesh%np_part))
   SAFE_ALLOCATE(opff(1:this%mesh%np, 1:this%mesh%sb%dim))
@@ -612,7 +612,7 @@ subroutine X(derivatives_test)(this)
   end forall
 
   write(message(1), '(a, es16.10)') '      Error in the Laplacian = ', X(mf_nrm2)(this%mesh, opffb%states_linear(blocksize)%X(psi))
-  call write_info(1)
+  call messages_info(1)
 
   call X(batch_delete)(ffb)
   call batch_end(ffb)
@@ -627,7 +627,7 @@ subroutine X(derivatives_test)(this)
 
   write(message(1), '(a, es16.10)') '      Error in the gradient  = ', X(mf_nrm2)(this%mesh, this%mesh%sb%dim, opff)
   message(2) = ''
-  call write_info(2)
+  call messages_info(2)
 
   SAFE_DEALLOCATE_A(ff)
 

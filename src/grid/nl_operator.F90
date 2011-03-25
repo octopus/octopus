@@ -360,14 +360,14 @@ contains
         SAFE_ALLOCATE(op%w_im(1:op%stencil%size, 1:1))
       end if
       message(1) = 'Info: nl_operator_build: working with constant weights.'
-      if(in_debug_mode) call write_info(1)
+      if(in_debug_mode) call messages_info(1)
     else
       SAFE_ALLOCATE(op%w_re(1:op%stencil%size, 1:op%np))
       if (op%cmplx_op) then
         SAFE_ALLOCATE(op%w_im(1:op%stencil%size, 1:op%np))
       end if
       message(1) = 'Info: nl_operator_build: working with non-constant weights.'
-      if(in_debug_mode) call write_info(1)
+      if(in_debug_mode) call messages_info(1)
     end if
 
     ! set initially to zero
@@ -795,7 +795,7 @@ contains
     if(op%mesh%vp%rank.eq.op%mesh%vp%root) then
       call nl_operator_common_copy(op, opg)
     end if
-    if(in_debug_mode) call write_debug_newlines(4)
+    if(in_debug_mode) call messages_debug_newlines(4)
 
     ! Gather op%i and - if necessary - op%w_re and op%w_im.
     ! Collect for every point in the stencil in a single step.
@@ -806,7 +806,7 @@ contains
     if(op%mesh%vp%rank.eq.op%mesh%vp%root) then
       call nl_operator_translate_indices(opg)
     end if
-    if(in_debug_mode) call write_debug_newlines(2)
+    if(in_debug_mode) call messages_debug_newlines(2)
 
     ! Weights have to be collected only if they are not constant.
     if(.not.op%const_w) then
@@ -1027,7 +1027,7 @@ contains
         SAFE_DEALLOCATE_P(opg)
       end if
     end if
-    if(in_debug_mode) call write_debug_newlines(2)
+    if(in_debug_mode) call messages_debug_newlines(2)
 
     POP_SUB(nl_operator_op_to_matrix)
 
@@ -1078,7 +1078,7 @@ contains
         SAFE_DEALLOCATE_P(opg)
       end if
     end if
-    if(in_debug_mode) call write_debug_newlines(2)
+    if(in_debug_mode) call messages_debug_newlines(2)
 
     POP_SUB(nl_operator_op_to_matrix)
 
@@ -1141,7 +1141,7 @@ contains
       unit = io_open(filename, action='write')
       if(unit < 0) then
         message(1) = 'Could not open file '//filename//' to write operator.'
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
       do ip = 1, op%mesh%np_global
         do jp = 1, op%mesh%np_global - 1

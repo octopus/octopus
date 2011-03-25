@@ -58,7 +58,7 @@ module mesh_m
     mesh_inborder,             &
     mesh_r,                    &
     mesh_gcutoff,              &
-    mesh_write_info,           &
+    mesh_messages_info,           &
     mesh_nearest_point,        &
     mesh_subset_indices,       &
     mesh_periodic_point,       &
@@ -169,7 +169,7 @@ contains
   
   
   ! ---------------------------------------------------------
-  subroutine mesh_write_info(mesh, unit)
+  subroutine mesh_messages_info(mesh, unit)
     type(mesh_t), intent(in) :: mesh
     integer,      intent(in) :: unit
     
@@ -178,7 +178,7 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return
     
-    PUSH_SUB(mesh_write_info)
+    PUSH_SUB(mesh_messages_info)
     
     write(message(1),'(3a)') '  Spacing [', trim(units_abbrev(units_out%length)), '] = ('
     do ii = 1, mesh%sb%dim
@@ -195,10 +195,10 @@ contains
     cutoff = mesh_gcutoff(mesh)**2 / M_TWO
     write(message(4),'(3a,f9.3,a,f9.3)') '  Grid Cutoff [', trim(units_abbrev(units_out%energy)),'] = ', &
       units_from_atomic(units_out%energy, cutoff), '    Grid Cutoff [Ry] = ', cutoff * 2
-    call write_info(4, unit)
+    call messages_info(4, unit)
     
-    POP_SUB(mesh_write_info)
-  end subroutine mesh_write_info
+    POP_SUB(mesh_messages_info)
+  end subroutine mesh_messages_info
   
   
   ! ---------------------------------------------------------
@@ -318,7 +318,7 @@ contains
 
     case(BOX_IMAGE, BOX_USDEF)
       message(1) = "Absorbing boundaries are not implemented for a user-defined box."
-      call write_fatal(1)
+      call messages_fatal(1)
 
     end select
     
@@ -573,7 +573,7 @@ contains
 
     if(ierr > 0) then
       message(1) = "Error: failed to read file "//trim(filename)//'.obf'
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     do ip = 1, mesh%np_part
@@ -612,7 +612,7 @@ contains
           '  from = (', from(1), ', ', from(2), ', ', from(3), ')'
         write(message(5), '(a, i6, a, i6, a, i6, a)') & 
           '  to   = (', to(1), ', ', to(2), ', ', to(3), ')'
-        call write_fatal(5)
+        call messages_fatal(5)
       end if
     end if
 

@@ -70,19 +70,19 @@ subroutine X(ode_solver_create)(os)
   case(ODE_RK4)
     os%vsize = 4
     message(1) = 'Info: ode_solver: Using Runge-Kutta, 4th order.'
-    call write_info(1)
+    call messages_info(1)
   case(ODE_FB78)
     os%vsize = 13
     message(1) = 'Info: ode_solver: Using Fehlberg, 7th/8th order.'
-    call write_info(1)
+    call messages_info(1)
   case(ODE_VR89)
     os%vsize = 16
     message(1) = 'Info: ode_solver: Using Verner, 8th/9th order.'
-    call write_info(1)
+    call messages_info(1)
   case(ODE_PD89)
     os%vsize = 13
     message(1) = 'Info: ode_solver: Using Prince-Dormand, 8th/9th order.'
-    call write_info(1)
+    call messages_info(1)
   end select
 
   SAFE_ALLOCATE(os%a(1:os%vsize, 1:os%vsize))
@@ -131,7 +131,7 @@ subroutine X(ode_solver_run)(os, func, startval, solutionp, solutionvec)
     write(message(1), '(a,i4,a)') "Input: '", os%solver_type, &
       "' is not a valid ODE solver"
     message(2) = '( ODE solver =  ode_rk4 | ode_fb7 | ode_vr8 | ode_pd8 )'
-    call write_fatal(2)
+    call messages_fatal(2)
   end select
 
   ! start stepping

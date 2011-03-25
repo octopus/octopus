@@ -127,7 +127,7 @@ contains
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC .and. &
       any(abs(em_vars%omega(1:em_vars%nomega)) > M_EPSILON)) then
       message(1) = "Dynamical magnetic response not implemented."
-      call write_fatal(1)
+      call messages_fatal(1)
     endif
 
     complex_response = (em_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
@@ -138,18 +138,18 @@ contains
     else
       message(1) = 'Info: SCF using complex wavefunctions.'
     end if
-    call write_info(1)
+    call messages_info(1)
 
     use_kdotp = simul_box_is_periodic(gr%sb) .and. .not. em_vars%force_no_kdotp
     if(use_kdotp .and. pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
       message(1) = "Magnetic perturbation in periodic system not implemented."
-      call write_fatal(1)
+      call messages_fatal(1)
     endif
 
     ! read kdotp wavefunctions if necessary
     if (use_kdotp) then
       message(1) = "Reading kdotp wavefunctions for periodic directions."
-      call write_info(1)
+      call messages_info(1)
 
       do idir = 1, gr%sb%periodic_dim
         call lr_init(kdotp_lr(idir, 1))
@@ -165,7 +165,7 @@ contains
         if(ierr .ne. 0) then
           message(1) = "Could not load kdotp wavefunctions from '"//trim(tmpdir)//trim(dirname_restart)//"'"
           message(2) = "Previous kdotp calculation required."
-          call write_fatal(2)
+          call messages_fatal(2)
         end if
       end do
     endif
@@ -190,7 +190,7 @@ contains
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response'
-    call write_info(1)
+    call messages_info(1)
     call system_h_setup(sys, hm)
 
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC &
@@ -290,7 +290,7 @@ contains
             str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(ifactor) * em_vars%omega(iomega)))
             write(message(1), '(5a)') 'Info: Calculating response for the ', index2axis(idir), &
               '-direction and frequency ', trim(str_tmp), '.'
-            call write_info(1)
+            call messages_info(1)
 
             exact_freq = .false.
             if(.not. fromscratch) then 
@@ -309,7 +309,7 @@ contains
 
                   if(ierr .ne. 0) then
                     message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//trim(dirname_restart)//"'"
-                    call write_warning(1)
+                    call messages_warning(1)
                   end if
                 end do
               endif
@@ -429,7 +429,7 @@ contains
     
           ! calculate polarizability
           message(1) = "Info: Calculating polarizabilities."
-          call write_info(1)
+          call messages_info(1)
     
           if(use_kdotp) then
             if(states_are_complex(sys%st)) then
@@ -452,7 +452,7 @@ contains
           if(em_vars%calc_Born) then
             ! calculate Born effective charges
             message(1) = "Info: Calculating (frequency-dependent) Born effective charges."
-            call write_info(1)
+            call messages_info(1)
     
             do idir = 1, sys%gr%sb%dim
               ! time = M_ZERO
@@ -482,7 +482,7 @@ contains
     
         else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
           message(1) = "Info: Calculating magnetic susceptibilities."
-          call write_info(1)
+          call messages_info(1)
     
           if(states_are_complex(sys%st)) then 
             call zlr_calc_susceptibility(sys, hm, em_vars%lr(:,:, ifactor), em_vars%nsigma, em_vars%perturbation, &
@@ -500,7 +500,7 @@ contains
       ! calculate hyperpolarizability
       if(em_vars%calc_hyperpol) then
         write(message(1), '(a)') 'Info: Calculating hyperpolarizabilities.'
-        call write_info(1)
+        call messages_info(1)
 
         if(states_are_complex(sys%st)) then
           call zlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, occ_response = em_vars%occ_response)
@@ -587,7 +587,7 @@ contains
           call parse_block_integer(blk, irow, 0, nfreqs_in_row)
           if(nfreqs_in_row < 1) then
             message(1) = "EMFreqs: invalid number of frequencies."
-            call write_fatal(1)
+            call messages_fatal(1)
           end if
           em_vars%nomega = em_vars%nomega + nfreqs_in_row
         end do
@@ -688,7 +688,7 @@ contains
 
           if(abs(sum(em_vars%freq_factor(1:3))) > M_EPSILON) then
             message(1) = "Frequency factors specified by EMHyperpol must sum to zero."
-            call write_fatal(1)
+            call messages_fatal(1)
           endif
 
           em_vars%calc_hyperpol = .true.
@@ -743,7 +743,7 @@ contains
       call parse_logical(datasets_check('EMOccupiedResponse'), .false., em_vars%occ_response)
       if(em_vars%occ_response .and. .not. (smear_is_semiconducting(sys%st%smear) .or. sys%st%smear%method == SMEAR_FIXED_OCC)) then
         message(1) = "EMOccupiedResponse cannot be used if there are partial occupations."
-        call write_fatal(1)
+        call messages_fatal(1)
       endif
 
       !%Variable EMWavefunctionsFromScratch
@@ -787,10 +787,10 @@ contains
       else
         message(1) = 'Wavefunctions type: Complex'
       end if
-      call write_info(1)
+      call messages_info(1)
 
       write(message(1),'(a,i3,a)') 'Calculating response for ', em_vars%nomega, ' frequencies.'
-      call write_info(1)
+      call messages_info(1)
 
       call messages_print_stress(stdout)
 
@@ -1138,7 +1138,7 @@ contains
       if(states_are_complex(st) .and. em_vars%nsigma == 2) then       
 
         message(1) = "Info: Calculating rotatory response."
-        call write_info(1)
+        call messages_info(1)
 
         call pert_init(angular_momentum, PERTURBATION_MAGNETIC, gr, geo)
         

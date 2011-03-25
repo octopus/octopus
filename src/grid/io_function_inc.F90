@@ -70,7 +70,7 @@ subroutine X(input_function)(filename, mesh, ff, ierr, is_tmp, map)
       SAFE_ALLOCATE(ff_global(1:mesh%np_global))
       call X(input_function_global)(filename, mesh, ff_global, ierr, is_tmp_, map)
     end if
-    if(in_debug_mode) call write_debug_newlines(2)
+    if(in_debug_mode) call messages_debug_newlines(2)
 
     ! Only root knows if the file was successfully read.
     ! Now, it tells everybody else.
@@ -189,7 +189,7 @@ subroutine X(input_function_global)(filename, mesh, ff, ierr, is_tmp, map)
   case("csv")
     if (mesh%sb%box_shape .ne. PARALLELEPIPED) then
       message(1) = "Box shape must be parallelepiped when a .csv file is used."
-      call write_fatal(1)
+      call messages_fatal(1)
     end if 
   
     call cube_function_init(cube, mesh%idx%ll)
@@ -199,7 +199,7 @@ subroutine X(input_function_global)(filename, mesh, ff, ierr, is_tmp, map)
     
     if (ierr .ne. 0) then
       message(1) = "Error: Could not read file "//trim(filename)//""
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
     
     SAFE_ALLOCATE(read_ff(1:dims(1)*dims(2)*dims(3)))
@@ -207,7 +207,7 @@ subroutine X(input_function_global)(filename, mesh, ff, ierr, is_tmp, map)
 
     if (ierr .ne. 0) then
       message(1) = "Error: Could not read file "//trim(filename)//""
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     if(mesh%sb%dim == 1) then
@@ -472,7 +472,7 @@ subroutine X(output_function) (how, dir, fname, mesh, ff, unit, ierr, is_tmp, ge
     ! I have to broadcast the error code
     call MPI_Bcast(ierr, 1, MPI_INTEGER, mesh%vp%root, mesh%vp%comm, mpi_err)
 
-    if(in_debug_mode) call write_debug_newlines(2)
+    if(in_debug_mode) call messages_debug_newlines(2)
 
     SAFE_DEALLOCATE_A(ff_global)
 
@@ -491,7 +491,7 @@ subroutine X(output_function) (how, dir, fname, mesh, ff, unit, ierr, is_tmp, ge
         call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, grp%comm, mpi_err)
       end if
 
-      if(in_debug_mode) call write_debug_newlines(2)
+      if(in_debug_mode) call messages_debug_newlines(2)
 
     else ! all nodes write output
 
@@ -972,7 +972,7 @@ contains
 
     if(mesh%sb%dim .ne. 3) then
       write(message(1), '(a)') 'Cannot output function in XCrySDen format except in 3D.'
-      call write_warning(1)
+      call messages_warning(1)
       return
     endif
 

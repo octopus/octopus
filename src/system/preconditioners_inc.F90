@@ -81,7 +81,7 @@ subroutine X(preconditioner_apply)(pre, gr, hm, ik, a, b, omega)
 
   case default
    write(message(1), '(a,i4,a)') "Error: unknown preconditioner ", pre%which, "."
-   call write_fatal(1)
+   call messages_fatal(1)
 
   end select
 

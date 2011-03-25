@@ -192,7 +192,7 @@ contains
       write(message(3),'(2x,a,f8.4,1x,a)') '3/2 k_B T =', &
         units_from_atomic(units_out%energy, (M_THREE/M_TWO)*P_Kb*temperature), &
         units_abbrev(units_out%energy)
-      call write_info(3)
+      call messages_info(3)
 
     else
       !%Variable XYZVelocities
@@ -232,7 +232,7 @@ contains
       if(xyz%file_type.ne.XYZ_FILE_ERR) then
         if(geo%natoms.ne.xyz%n) then
           write(message(1), '(a,i4,a,i4)') 'I need exactly ', geo%natoms, ' velocities, but I found ', xyz%n
-          call write_fatal(1)
+          call messages_fatal(1)
         end if
 
         ! copy information and adjust units

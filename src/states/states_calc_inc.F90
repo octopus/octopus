@@ -106,7 +106,7 @@ subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
 
     if(bof) then
       message(1) = "Orthogonalization failed; probably your eigenvectors are not independent."
-      call write_warning(1)
+      call messages_warning(1)
     end if
 
     do idim = 1, st%d%dim
@@ -172,7 +172,7 @@ contains
 
     if(info /= 0) then
       message(1) = "Orthogonalization failed; probably your eigenvectors are not independent."
-      call write_warning(1)
+      call messages_warning(1)
     end if
 
     call pblas_trsm(side = 'R', uplo = 'U', transa = 'N', diag = 'N', m = total_np, n = st%nst, &
@@ -234,11 +234,11 @@ contains
 
       if(blacs_info /= 0) then
         write(message(1),'(a,I6)') 'ScaLAPACK execution failed. Failed code: ', blacs_info
-        call write_warning(1)
+        call messages_warning(1)
       end if
 #else
       message(1) = 'The QR orthogonalization in parallel requires Scalapack.'
-      call write_fatal(1)
+      call messages_fatal(1)
 #endif 
     else
 
@@ -762,7 +762,7 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
     end do
 #else
     write(message(1), '(a)') 'Internal error at Xstates_matrix'
-    call write_fatal(1)
+    call messages_fatal(1)
 #endif
 
   else
@@ -793,7 +793,7 @@ subroutine X(states_calc_orth_test)(st, mc, mesh)
 
   message(1) = 'Info: Orthogonalizing random wavefunctions.'
   message(2) = ''
-  call write_info(2)
+  call messages_info(2)
 
   call X(states_orthogonalization_full)(st, st%nst, mesh, st%d%dim, st%X(psi)(:, :, :, 1))
 
@@ -818,7 +818,7 @@ contains
     SAFE_ALLOCATE(psi2(1:mesh%np_part, 1:st%d%dim))
 
     message(1) = 'Residuals:'
-    call write_info(1)
+    call messages_info(1)
     
     do ist = 1, st%nst
       do jst = ist, st%nst
@@ -865,13 +865,13 @@ contains
 #endif
         dd = X(mf_dotp)(mesh, st%d%dim, psi1, psi2)
         write (message(1), '(2i7, e16.6)') ist, jst, abs(dd)
-        call write_info(1)
+        call messages_info(1)
 
       end do
     end do
     
     message(1) = ''
-    call write_info(1)
+    call messages_info(1)
 
     SAFE_DEALLOCATE_A(psi1)
     SAFE_DEALLOCATE_A(psi2)

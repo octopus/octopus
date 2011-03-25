@@ -54,7 +54,7 @@ program rotational_strength
   if(in_file < 0) then
     write(message(1),'(a)') 'No "angular" or "'//trim(io_workpath('td.general/angular'))//'" file found. At least one of those'
     write(message(2),'(a)') 'should be visible.'
-    call write_fatal(2)
+    call messages_fatal(2)
   end if
   out_file = io_open('rotatory_strength', action='write')
 

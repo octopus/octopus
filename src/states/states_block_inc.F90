@@ -177,7 +177,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
     SAFE_DEALLOCATE_P(xpsi2_node)
 #else
     message(1) = 'Running gs parallel in states without MPI. This is a bug!'
-    call write_fatal(1)
+    call messages_fatal(1)
 #endif
   else ! No states parallelization.
 
@@ -444,7 +444,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, psi_end, res
     SAFE_DEALLOCATE_P(xres_node)
 #else
     message(1) = 'Running gs parallel in states without MPI. This is a bug!'
-    call write_fatal(1)
+    call messages_fatal(1)
 #endif
   else ! No states parallelization.
     ! Compact everything to pass it to BLAS.

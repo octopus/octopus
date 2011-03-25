@@ -530,20 +530,20 @@ end subroutine X(bi_conjugate_gradients)
       end if
     case(1)
       write(message(1), '(a)') "QMR breakdown, cannot continue: b or P*b is the zero vector!"
-      call write_fatal(1)
+      call messages_fatal(1)
     case(2)
       write(message(1), '(a)') "QMR breakdown, cannot continue: v^T*z is zero!"
-      call write_fatal(1)
+      call messages_fatal(1)
     case(3)
       write(message(1), '(a)') "QMR breakdown, cannot continue: q^T*p is zero!"
-      call write_fatal(1)
+      call messages_fatal(1)
     case(4)
       write(message(1), '(a)') "QMR breakdown, cannot continue: gamma is zero!"
-      call write_fatal(1)
+      call messages_fatal(1)
     case(5)
       write(message(1), '(a)') "QMR solver not converged!"
       write(message(2), '(a)') "Try increasing the maximum number of iterations or the tolerance."
-      call write_warning(2)
+      call messages_warning(2)
       if(present(converged)) then
         converged = .false.
       end if
@@ -766,19 +766,19 @@ end subroutine X(bi_conjugate_gradients)
       end if
     case(1)
       write(message(1), '(a)') "QMR failure, can't continue: b or P*b is the zero vector!"
-      call write_fatal(1)
+      call messages_fatal(1)
     case(2)
       write(message(1), '(a)') "QMR failure, can't continue: z^T*y is zero!"
-      call write_fatal(1)
+      call messages_fatal(1)
     case(3)
       write(message(1), '(a)') "QMR failure, can't continue: q^T*p is zero!"
-      call write_fatal(1)
+      call messages_fatal(1)
     case(4)
       write(message(1), '(a)') "QMR failure, can't continue: gamma is zero!"
-      call write_fatal(1)
+      call messages_fatal(1)
     case(5)
       write(message(1), '(a)') "QMR Solver not converged!"
-      call write_warning(1)
+      call messages_warning(1)
       if(present(converged)) then
         converged = .false.
       end if

@@ -244,7 +244,7 @@ contains
               'exponentiation scheme ("TDExponentialMethod = lanczos") or with the'
             write(message(3), '(a)') &
               'Taylor expansion ("TDExponentialMethod = taylor") method.'
-            call write_fatal(3)
+            call messages_fatal(3)
         end select
       end if
     end if
@@ -441,7 +441,7 @@ contains
 
         if(res > tol) then ! Here one should consider the possibility of the happy breakdown.
           write(message(1),'(a,es8.2)') 'Lanczos exponential expansion did not converge: ', res
-          call write_warning(1)
+          call messages_warning(1)
         end if
 
         ! zpsi = nrm * V * expo(1:iter, 1) = nrm * V * expo * V^(T) * zpsi
@@ -498,7 +498,7 @@ contains
 
           if(res > tol) then ! Here one should consider the possibility of the happy breakdown.
             write(message(1),'(a,es8.2)') 'Lanczos exponential expansion did not converge: ', res
-            call write_warning(1)
+            call messages_warning(1)
           end if
 
           call lalg_gemv(der%mesh%np, hm%d%dim, iter, M_z1*beta, v, expo(1:iter, 1), M_z0, tmp)

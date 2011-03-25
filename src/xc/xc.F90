@@ -44,7 +44,7 @@ module xc_m
     xc_t,               &
     xc_init,            &
     xc_end,             &
-    xc_write_info,      &
+    xc_messages_info,      &
     xc_get_vxc,         &
     xc_get_vxc_and_axc, &
     xc_get_fxc,         &
@@ -73,39 +73,39 @@ module xc_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_write_info(xcs, iunit)
+  subroutine xc_messages_info(xcs, iunit)
     type(xc_t), intent(in) :: xcs
     integer,    intent(in) :: iunit
 
     integer :: isp
 
-    PUSH_SUB(xc_write_info)
+    PUSH_SUB(xc_messages_info)
 
     if (xcs%cdft .and. iand(xcs%family, XC_FAMILY_LCA) /= 0) then
       write(message(1), '(a)') "Current-dependent exchange-correlation:"
-      call write_info(1, iunit)
-      call xc_functl_write_info(xcs%j_functl, iunit)
+      call messages_info(1, iunit)
+      call xc_functl_messages_info(xcs%j_functl, iunit)
 
       write(message(1), '(1x)')
       write(message(2), '(a)') "Auxiliary exchange-correlation functionals:"
-      call write_info(2, iunit)
+      call messages_info(2, iunit)
     else
       write(message(1), '(a)') "Exchange-correlation:"
-      call write_info(1, iunit)
+      call messages_info(1, iunit)
     end if
 
     do isp = 1, 2
-      call xc_functl_write_info(xcs%functl(isp, 1), iunit)
+      call xc_functl_messages_info(xcs%functl(isp, 1), iunit)
     end do
 
     if(xcs%exx_coef.ne.M_ZERO) then
       write(message(1), '(1x)')
       write(message(2), '(a,f8.5)') "Exact exchange mixing = ", xcs%exx_coef
-      call write_info(2, iunit)
+      call messages_info(2, iunit)
     end if
 
-    POP_SUB(xc_write_info)
-  end subroutine xc_write_info
+    POP_SUB(xc_messages_info)
+  end subroutine xc_messages_info
 
 
   ! ---------------------------------------------------------
@@ -160,7 +160,7 @@ contains
         if((xcs%functl(1,1)%id.ne.0).and.(xcs%functl(1,1)%id.ne.XC_OEP_X)) then
           message(1) = "You cannot use an exchange functional when performing"
           message(2) = "a Hartree-Fock calculation or using a hybrid functional."
-          call write_fatal(2)
+          call messages_fatal(2)
         end if
 
         ! get the mixing coefficient for hybrids
@@ -181,7 +181,7 @@ contains
       if (iand(xcs%family, XC_FAMILY_LCA).ne.0 .and. &
         iand(xcs%family, XC_FAMILY_MGGA + XC_FAMILY_OEP).ne.0) then
         message(1) = "LCA functional can only be used along with LDA or GGA functionals."
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
 
       if(iand(xcs%family, XC_FAMILY_MGGA).ne.0) then

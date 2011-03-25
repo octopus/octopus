@@ -289,7 +289,7 @@ contains
     call parse_integer(datasets_check('TotalStates'), 0, ntot)
     if (ntot < 0) then
       write(message(1), '(a,i5,a)') "Input: '", ntot, "' is not a valid value for TotalStates."
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     !%Variable ExtraStates
@@ -318,14 +318,14 @@ contains
     if (nempty < 0) then
       write(message(1), '(a,i5,a)') "Input: '", nempty, "' is not a valid value for ExtraStates."
       message(2) = '(0 <= ExtraStates)'
-      call write_fatal(2)
+      call messages_fatal(2)
     end if
 
     st%extrastates = (nempty > 0)
 
     if(ntot > 0 .and. nempty > 0) then
       message(1) = 'Error: You cannot set TotalStates and ExtraStates at the same time.'
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     ! For non-periodic systems this should just return the Gamma point
@@ -357,7 +357,7 @@ contains
         if(ierr.ne.0) then
           message(1) = 'Could not read the number of states of the periodic calculation'
           message(2) = 'from '//restart_dir//'.'
-          call write_fatal(2)
+          call messages_fatal(2)
         end if
       end do
       if(NLEADS.gt.1) then
@@ -365,7 +365,7 @@ contains
           ob_st(LEFT).ne.ob_st(LEFT).or. &
           ob_d(LEFT).ne.ob_d(RIGHT)) then
           message(1) = 'The number of states for the left and right leads are not equal.'
-          call write_fatal(1)
+          call messages_fatal(1)
         end if
       end if
       st%ob_d%dim = ob_d(LEFT)
@@ -382,7 +382,7 @@ contains
         message(1) = 'The spin type of the leads calculation from '&
                      //gr%ob_grid%lead(LEFT)%info%restart_dir
         message(2) = 'and SpinComponents of the current run do not match.'
-        call write_fatal(2)
+        call messages_fatal(2)
       end if
       SAFE_DEALLOCATE_P(st%d%kweights)
       SAFE_ALLOCATE(st%d%kweights(1:st%d%nik))
@@ -425,7 +425,7 @@ contains
     if(ntot > 0) then
       if(ntot < st%nst) then
         message(1) = 'Error: TotalStates is smaller than the number of states required by the system.'
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
 
       st%extrastates = (ntot > st%nst)
@@ -449,7 +449,7 @@ contains
         write(message(6), '(a,i5,a)') 'while your lead calculation had ', st%ob_nst, ' states.'
         write(message(7), '(a,i5,a)') 'Your central region contributes ', st%d%nik, ' k-points,'
         write(message(8), '(a,i5,a)') 'while your lead calculation had ', st%ob_d%nik, ' k-points.'
-        call write_fatal(8)
+        call messages_fatal(8)
       end if
     end if
 
@@ -472,10 +472,10 @@ contains
 
       if(st%d%ispin == SPINORS) then
         message(1) = "Sorry, current DFT not working yet for spinors."
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
       message(1) = "Info: Using current DFT"
-      call write_info(1)
+      call messages_info(1)
     end if
 
     ! Periodic systems require complex wavefunctions
@@ -578,7 +578,7 @@ contains
       occs = io_open(trim(restart_dir)//'/occs', action='read', is_tmp=.true., grp=mpi_world)
       if(occs .lt. 0) then
         message(1) = 'Could not read '//trim(restart_dir)//'/occs.'
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
 
       ! Skip two lines.
@@ -601,7 +601,7 @@ contains
 
         if(st%d%ispin .eq. SPIN_POLARIZED) then
             message(1) = 'Spin-Transport not implemented!'
-            call write_fatal(1)
+            call messages_fatal(1)
           if(is_spin_up(ik)) then
             !FIXME
 !              st%ob_eigenval(jst, SPIN_UP) = eigenval
@@ -868,7 +868,7 @@ return
 
     if(.not. smear_is_semiconducting(st%smear) .and. .not. st%smear%method == SMEAR_FIXED_OCC .and. st%nst * 2 .le. st%qtot) then
       message(1) = "Smearing needs unoccupied states (via ExtraStates) to be useful."
-      call write_warning(1)
+      call messages_warning(1)
     endif
 
     ! sanity check
@@ -879,7 +879,7 @@ return
     if(abs(charge - st%qtot) > CNST(1e-6)) then
       message(1) = "Initial occupations do not integrate to total charge."
       write(message(2), '(6x,f12.6,a,f12.6)') charge, ' != ', st%qtot
-      call write_fatal(2)
+      call messages_fatal(2)
     end if
 
     POP_SUB(states_read_initial_occs)
@@ -982,7 +982,7 @@ return
 
     if(associated(st%dpsi).or.associated(st%zpsi)) then
       message(1) = "Trying to allocate wavefunctions that are already allocated."
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
     
     if (present(wfs_type)) then
@@ -1215,7 +1215,7 @@ return
       call parse_integer(datasets_check('StatesBlockSize'), max(4, 2*mc%nthreads), st%d%block_size)
       if(st%d%block_size < 1) then
         message(1) = "Error: The variable 'StatesBlockSize' must be greater than 0."
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
 
       st%d%block_size = min(st%d%block_size, st%nst)
@@ -1271,11 +1271,11 @@ return
         case(ORTH_QR)
 #ifndef HAVE_SCALAPACK
           message(1) = 'The QR orthogonalizer requires scalapack to work with state-parallelization.'
-          call write_fatal(1)
+          call messages_fatal(1)
 #endif
         case default
           message(1) = 'The selected orthogonalization method cannot work with state-parallelization.'
-          call write_fatal(1)
+          call messages_fatal(1)
         end select
       end if
 #endif
@@ -1284,15 +1284,15 @@ return
       if(st%d%orth_method == ORTH_PAR_GS) then
 #ifndef HAVE_MPI
         message(1) = 'The parallel gram schmidt orthogonalizer can only be used in parallel.'
-        call write_fatal(1)
+        call messages_fatal(1)
 #else
 #ifndef HAVE_SCALAPACK
         message(1) = 'The parallel gram schmidt orthogonalizer requires scalapack.'
-        call write_fatal(1)
+        call messages_fatal(1)
 #endif
         if(st%dom_st_mpi_grp%size == 1) then
           message(1) = 'The parallel gram schmidt orthogonalizer is designed to be used with domain or state parallelization.'
-          call write_warning(1)
+          call messages_warning(1)
         end if
 #endif
       end if
@@ -1535,7 +1535,7 @@ return
     if(abs(charge-st%qtot) > CNST(1e-6)) then
       message(1) = 'Occupations do not integrate to total charge.'
       write(message(2), '(6x,f12.8,a,f12.8)') charge, ' != ', st%qtot
-      call write_warning(2)
+      call messages_warning(2)
     end if
 
     if(st%d%ispin == SPINORS) then
@@ -1640,7 +1640,7 @@ return
      if(st%nst < st%mpi_grp%size) then
        message(1) = "Have more processors than necessary"
        write(message(2),'(i4,a,i4,a)') st%mpi_grp%size, " processors and ", st%nst, " states."
-       call write_fatal(2)
+       call messages_fatal(2)
      end if
 
      SAFE_ALLOCATE(st%st_range(1:2, 0:st%mpi_grp%size-1))
@@ -1650,13 +1650,13 @@ return
        lsize = st%st_num, scalapack_compat = calc_mode_scalapack_compat())
 
      message(1) = "Info: Parallelization in states"
-     call write_info(1)
+     call messages_info(1)
 
      do inode = 0, st%mpi_grp%size - 1
        write(message(1),'(a,i4,a,i5,a,i6,a,i6)') &
             'Info: Nodes in states-group ', inode, ' will manage ', st%st_num(inode), ' states:', &
             st%st_range(1, inode), " - ", st%st_range(2, inode)
-       call write_info(1)
+       call messages_info(1)
 
        do ist = st%st_range(1, inode), st%st_range(2, inode)
          st%node(ist) = inode

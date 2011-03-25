@@ -104,17 +104,17 @@
         write(message(1), '(70(''#''))')
         write(message(2), *) &
           'GRADIENT (FORWARD-BACKWARD) |         GRADIENT (NUMERICAL)          |'
-        call write_info(2)
+        call messages_info(2)
         do j = 1, n
           write(message(1), '(4x,es18.8,7x,a,3x,es18.8,a4,es8.1,6x,a)') &
             df(j), '|', dfn(j), ' +/-', abserr(j), '|'
-          call write_info(1)
+          call messages_info(1)
         end do
         write(message(1), '(70(''-''))')
         write(message(2), '(a,es18.8,''                                        |'')') 'REL DIFF = ', &
           sqrt(dot_product(df-dfn,df-dfn))/sqrt(dot_product(dfn, dfn))
         write(message(3), '(70(''#''))')
-        call write_info(3)
+        call messages_info(3)
 
         SAFE_DEALLOCATE_A(dfn)
         SAFE_DEALLOCATE_A(x_)
@@ -142,14 +142,14 @@
 
 
   ! ---------------------------------------------------------
-  subroutine opt_control_cg_write_info(iter, n, val, maxdx, maxdf, x)
+  subroutine opt_control_cg_messages_info(iter, n, val, maxdx, maxdf, x)
     integer,     intent(in) :: iter, n
     REAL_DOUBLE, intent(in) :: val, maxdx, maxdf
     REAL_DOUBLE, intent(in) :: x(n)
 
     FLOAT :: fluence, j1, j2, j
 
-    PUSH_SUB(opt_control_cg_write_info)
+    PUSH_SUB(opt_control_cg_messages_info)
 
     j = - val
     fluence = controlfunction_fluence(par_)
@@ -164,13 +164,13 @@
     write(message(3), '(6x,a,f12.5)')    " => J2       = ", j2
     write(message(4), '(6x,a,f12.5)')    " => Fluence  = ", fluence
     write(message(5), '(6x,a,f12.5)')    " => Delta    = ", maxdx
-    call write_info(5)
+    call messages_info(5)
     call messages_print_stress(stdout)
 
     call iteration_manager_main(iterator, j, j1, j2, real(maxdx, REAL_PRECISION))
 
-    POP_SUB(opt_control_cg_write_info)
-  end subroutine opt_control_cg_write_info
+    POP_SUB(opt_control_cg_messages_info)
+  end subroutine opt_control_cg_messages_info
   ! ---------------------------------------------------------
 
 
@@ -217,7 +217,7 @@
 
 
   ! ---------------------------------------------------------
-  subroutine opt_control_direct_write_info(iter, n, val, maxdx, x)
+  subroutine opt_control_direct_messages_info(iter, n, val, maxdx, x)
     integer,     intent(in) :: iter, n
     REAL_DOUBLE, intent(in) :: val, maxdx
     REAL_DOUBLE, intent(in) :: x(n)
@@ -225,7 +225,7 @@
     FLOAT :: fluence, j1, j2, j
     FLOAT, allocatable :: theta(:)
 
-    PUSH_SUB(opt_control_direct_write_info)
+    PUSH_SUB(opt_control_direct_messages_info)
 
     SAFE_ALLOCATE(theta(1:n))
     theta = x
@@ -246,13 +246,13 @@
     write(message(3), '(6x,a,f12.5)')    " => J2       = ", j2
     write(message(4), '(6x,a,f12.5)')    " => Fluence  = ", fluence
     write(message(5), '(6x,a,f12.5)')    " => Delta    = ", maxdx
-    call write_info(5)
+    call messages_info(5)
     call messages_print_stress(stdout)
 
     call iteration_manager_main(iterator, j, j1, j2, real(maxdx, REAL_PRECISION))
 
-    POP_SUB(opt_control_direct_write_info)
-  end subroutine opt_control_direct_write_info
+    POP_SUB(opt_control_direct_messages_info)
+  end subroutine opt_control_direct_messages_info
   ! ---------------------------------------------------------
 
 

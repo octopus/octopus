@@ -146,7 +146,7 @@ subroutine output_etsf_error(error_data)
   
   call etsf_io_low_error_handle(error_data)
   message(1) = "ETSF_IO returned a fatal error. See message above."
-  call write_fatal(1)
+  call messages_fatal(1)
 
 end subroutine output_etsf_error
 

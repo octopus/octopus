@@ -173,7 +173,7 @@ contains
       if (reltype == 1) then
         write(message(1),'(a,a,a)') &
           "Spin-orbit coupling for species ", trim(species_label(atm%spec)), " is not available."
-        call write_warning(1)
+        call messages_warning(1)
       end if
     case (2)
       if (reltype == 0) then

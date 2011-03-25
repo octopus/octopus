@@ -80,7 +80,7 @@ subroutine X(sternheimer_solve)(                           &
   if(.not. have_restart_rho_) call X(lr_build_dl_rho)(mesh, st, lr, nsigma)
   
   message(1)="--------------------------------------------"
-  call write_info(1)
+  call messages_info(1)
 
   total_iter = 0
 
@@ -104,7 +104,7 @@ subroutine X(sternheimer_solve)(                           &
   iter_loop: do iter = 1, this%scf_tol%max_iter
     if (this%add_fxc .or. this%add_hartree) then
       write(message(1), '(a, i3)') "LR SCF Iteration: ", iter
-      call write_info(1)
+      call messages_info(1)
     else
       conv_last = .true.
     endif
@@ -115,7 +115,7 @@ subroutine X(sternheimer_solve)(                           &
          " Eta : ",     units_from_atomic(units_out%energy, R_AIMAG(omega))
     write(message(2), '(a)') &
          '   ik  ist                norm   iters            residual'
-    call write_info(2)
+    call messages_info(2)
 
     do ispin = 1, st%d%nspin
        call lalg_copy(mesh%np, lr(1)%X(dl_rho)(:, ispin), dl_rhoin(:, ispin, 1))
@@ -192,7 +192,7 @@ subroutine X(sternheimer_solve)(                           &
 
           write(message(1), '(i5, i5, f20.6, i8, e20.6)') &
             ik, (3 - 2 * sigma) * ist, dpsimod, this%solver%iter, this%solver%abs_psi 
-          call write_info(1)
+          call messages_info(1)
 
           states_conv = states_conv .and. (this%solver%abs_psi < tol)
           total_iter = total_iter + this%solver%iter
@@ -227,7 +227,7 @@ subroutine X(sternheimer_solve)(                           &
     
     if (.not. states_conv) then
       message(1) = "Linear solver failed to converge all states."
-      call write_warning(1)
+      call messages_warning(1)
     endif
 
     if (.not.(this%add_fxc .or. this%add_hartree)) then
@@ -239,7 +239,7 @@ subroutine X(sternheimer_solve)(                           &
       message(1)="--------------------------------------------"
       write(message(2), '(a, i8)') &
            'Info: Total Hamiltonian applications:', total_iter * linear_solver_ops_per_iter(this%solver)
-      call write_info(2)
+      call messages_info(2)
       exit
     endif
 
@@ -248,7 +248,7 @@ subroutine X(sternheimer_solve)(                           &
     if(this%scf_tol%max_iter == iter) then 
       message(1) = "Self-consistent iteration for response did not converge."
       this%ok = .false.
-      call write_warning(1)
+      call messages_warning(1)
     end if
 
     do ispin = 1, st%d%nspin
@@ -267,7 +267,7 @@ subroutine X(sternheimer_solve)(                           &
     write(message(1), '(a, e20.6)') "SCF Residual ", abs_dens
 
     message(2)="--------------------------------------------"
-    call write_info(2)
+    call messages_info(2)
       
     if( abs_dens <= this%scf_tol%conv_abs_dens ) then 
       if(conv_last .and. states_conv) then 
@@ -285,14 +285,14 @@ subroutine X(sternheimer_solve)(                           &
            'Info: SCF for response converged in ', iter, ' iterations.'
       write(message(2), '(a, i8)') &
            '      Total Hamiltonian applications:', total_iter * linear_solver_ops_per_iter(this%solver)
-      call write_info(2)
+      call messages_info(2)
       exit
     else
       ! not quitting if converged allows results to be calculated if possible
       ! before dying on the next direction or frequency
       if(clean_stop()) then
         message(1) = "Exiting cleanly."
-        call write_fatal(1, only_root_writes = .true.)
+        call messages_fatal(1, only_root_writes = .true.)
       endif
 
       do ispin = 1, st%d%nspin

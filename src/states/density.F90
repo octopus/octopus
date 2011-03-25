@@ -353,7 +353,7 @@ contains
     if(n >= st%nst) then
       write(message(1),'(a)') 'Attempting to freeze a number of orbitals which is larger or equal to'
       write(message(2),'(a)') 'the total number. The program has to stop.'
-      call write_fatal(2)
+      call messages_fatal(2)
     end if
 
     ASSERT(.not. st%parallel_in_states)

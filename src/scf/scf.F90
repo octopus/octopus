@@ -204,7 +204,7 @@ contains
       message(1) = "Input: Not all convergence criteria can be <= 0"
       message(2) = "Please set one of the following:"
       message(3) = "MaximumIter | ConvAbsDens | ConvRelDens | ConvAbsEv | ConvRelEv | ConvForce "
-      call write_fatal(3)
+      call messages_fatal(3)
     end if
 
     if(scf%max_iter < 0) scf%max_iter = huge(scf%max_iter)
@@ -244,13 +244,13 @@ contains
 
     if (scf%mix_field == MIXPOT.and.hm%theory_level==INDEPENDENT_PARTICLES) then
       message(1) = "Input: Cannot mix the potential for non-interacting particles."
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     if(scf%mix_field == MIXDENS .and. iand(hm%xc_family, XC_FAMILY_OEP + XC_FAMILY_MGGA) /= 0) then
       message(1) = "Input: You have selected to mix the density with OEP or MGGA XC functionals."
       message(2) = "       This might produce convergence problems. Mix the potential instead."
-      call write_warning(2)
+      call messages_warning(2)
     end if
 
     ! Handle mixing now...
@@ -290,7 +290,7 @@ contains
     call parse_logical(datasets_check('SCFinLCAO'), .false., scf%lcao_restricted)
     if(scf%lcao_restricted) then
       message(1) = 'Info: SCF restricted to LCAO subspace.'
-      call write_info(1)
+      call messages_info(1)
     end if
 
     !%Variable SCFCalculateForces
@@ -402,7 +402,7 @@ contains
       call lcao_init(lcao, gr, geo, st)
       if(.not. lcao_is_available(lcao)) then
         message(1) = 'LCAO is not available. Cannot do SCF in LCAO.'
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
     end if
 
@@ -451,7 +451,7 @@ contains
         write(message(1),'(a)') 'Info: No SCF iterations will be done.'
         finish = .true.
       endif
-      call write_info(1)
+      call messages_info(1)
     end if
 
     ! SCF cycle
@@ -564,7 +564,7 @@ contains
           call restart_write(trim(tmpdir) // GS_DIR, st, gr, err, iter=iter)
           if(err .ne. 0) then
             message(1) = 'Unsuccessful write of "'//trim(tmpdir)//GS_DIR//'"'
-            call write_fatal(1)
+            call messages_fatal(1)
           end if
         end if
       end if
@@ -573,7 +573,7 @@ contains
         if(verbosity_ >= VERB_COMPACT) then
           write(message(1), '(a, i4, a)') 'Info: SCF converged in ', iter, ' iterations'
           write(message(2), '(a)')        '' 
-          call write_info(2)
+          call messages_info(2)
         end if
         if(scf%lcao_restricted) call lcao_end(lcao)
         call profiling_out(prof)
@@ -625,7 +625,7 @@ contains
 
     if(.not.finish) then
       message(1) = 'SCF *not* converged!'
-      call write_warning(1)
+      call messages_warning(1)
     end if
 
     ! calculate forces
@@ -673,15 +673,15 @@ contains
         if (scf%conv_abs_force > M_ZERO) then
           write(message(3),'(23x,a,es9.2)') &
              ' force    = ', units_from_atomic(units_out%force, scf%abs_force)
-          call write_info(3)
+          call messages_info(3)
         else
-          call write_info(2)
+          call messages_info(2)
         end if
 
         if(.not.scf%lcao_restricted) then
           write(message(1),'(a,i6)') 'Matrix vector products: ', scf%eigens%matvec
           write(message(2),'(a,i6)') 'Converged eigenvectors: ', sum(scf%eigens%converged(1:st%d%nik))
-          call write_info(2)
+          call messages_info(2)
           call states_write_eigenvalues(stdout, st%nst, st, gr%sb, scf%eigens%diff)
         else
           call states_write_eigenvalues(stdout, st%nst, st, gr%sb)
@@ -689,7 +689,7 @@ contains
 
         if(st%smear%method .ne. SMEAR_SEMICONDUCTOR .and. st%smear%method .ne. SMEAR_FIXED_OCC) then
           write(message(1), '(a,f12.6,a)') "Fermi energy = ", units_from_atomic(units_out%energy, st%smear%e_fermi)
-          call write_info(1)
+          call messages_info(1)
         endif
 
         if(st%d%ispin > UNPOLARIZED) then
@@ -698,7 +698,7 @@ contains
 
         write(message(1),'(a)') ''
         write(message(2),'(a,i5,a,f14.2)') 'Elapsed time for SCF step ', iter,':', etime
-        call write_info(2)
+        call messages_info(2)
 
         if(conf%report_memory) then
           mem = get_memory_usage()/(CNST(1024.0)**2)
@@ -707,7 +707,7 @@ contains
           mem = mem_tmp
 #endif
           write(message(1),'(a,f14.2)') 'Memory usage [Mbytes]     :', mem
-          call write_info(1)
+          call messages_info(1)
         end if
 
         call messages_print_stress(stdout)
@@ -730,7 +730,7 @@ contains
              ' : abs_dens', scf%abs_dens, &
              ' : etime ', etime, 's'
         end if
-        call write_info(1)
+        call messages_info(1)
       end if
 
       POP_SUB(scf_run.scf_write_iter)
@@ -750,14 +750,14 @@ contains
         call io_mkdir(dir)
         iunit = io_open(trim(dir) // "/" // trim(fname), action='write')
 
-        call grid_write_info(gr, geo, iunit)
+        call grid_messages_info(gr, geo, iunit)
 
         if(simul_box_is_periodic(gr%sb)) then
-          call kpoints_write_info(gr%mesh%sb%kpoints, iunit)
+          call kpoints_messages_info(gr%mesh%sb%kpoints, iunit)
           write(iunit,'(1x)')
         end if
 
-        call v_ks_write_info(ks, iunit)
+        call v_ks_messages_info(ks, iunit)
 
         ! scf information
         if(finish) then
@@ -770,7 +770,7 @@ contains
         call states_write_eigenvalues(iunit, st%nst, st, gr%sb)
         if(st%smear%method .ne. SMEAR_SEMICONDUCTOR .and. st%smear%method .ne. SMEAR_FIXED_OCC) then
           write(message(1), '(a,f12.6,a)') "Fermi energy = ", units_from_atomic(units_out%energy, st%smear%e_fermi)
-          call write_info(1, iunit)
+          call messages_info(1, iunit)
         endif
         write(iunit, '(1x)')
 

@@ -237,32 +237,32 @@ contains
         write(message(1), '(a)') 'Info: The OCT control functions will be represented as a sine '
         write(message(2), '(a)') '      Fourier series, and then a transformation to hyperspherical'
         write(message(3), '(a)') '      coordinates will be made.'
-        call write_info(3)
+        call messages_info(3)
       case(ctr_fourier_series_h)
         write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series,'
         write(message(2), '(a)') '      and then a transformation to hyperspherical coordinates will be made.'
-        call write_info(2)
+        call messages_info(2)
       case(ctr_zero_fourier_series_h)
         write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series,'
         write(message(2), '(a)') '      in which (i) the zero-frequency component is assumed to be zero,'
         write(message(3), '(a)') '      and  (ii) the sum of all the cosine coefficients are zero, so that'
         write(message(4), '(a)') '      the control function starts and ends at zero.'
         write(message(5), '(a)') '      Then, a transformation to hyperspherical coordinates will be made.'
-        call write_info(6)
+        call messages_info(6)
       case(ctr_fourier_series)
         write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series.'
-        call write_info(1)
+        call messages_info(1)
       case(ctr_zero_fourier_series)
         write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series,'
         write(message(2), '(a)') '      in which the zero-frequency component is assumed to be zero,'
         write(message(3), '(a)') '      and  (ii) the sum of all the cosine coefficients are zero, so that'
         write(message(4), '(a)') '      the control function starts and ends at zero.'
-        call write_info(4)
+        call messages_info(4)
       end select
     else
       cf_common%representation = ctr_real_time
       write(message(1), '(a)') 'Info: The OCT control functions will be represented in real time.'
-      call write_info(1)
+      call messages_info(1)
     end if
 
     !%Variable OCTControlFunctionOmegaMax
@@ -358,7 +358,7 @@ contains
           write(message(5), '(a)') 'would not make sense to speak of a fixed phase difference). So in'
           write(message(6), '(a)') 'QOCT runs it would only make sense for envelope-only optimizations.'
           write(message(7), '(a)') 'This possibility should be implemented in the future.'
-          call write_fatal(7)
+          call messages_fatal(7)
         end if
       end do
     end do
@@ -397,7 +397,7 @@ contains
       if(ep%no_lasers > 1) then
         write(message(1), '(a)') 'If "OCTControlRepresentation = control_function_parametrized", you can'
         write(message(2), '(a)') 'have only one external field in the input file.'
-        call write_fatal(2)
+        call messages_fatal(2)
       end if
       cf_common%no_controlfunctions = 1
     else
@@ -411,14 +411,14 @@ contains
         write(message(1), '(a)') 'Error: If you set "OCTControlFunctionRepresentation" to either "control_sine_fourier_series_h",'
         write(message(2), '(a)') '       "control_fourier_series_h", or "control_zero_fourier_series_h", then the run'
         write(message(3), '(a)') '       must be done in fixed fluence mode.'
-        call write_fatal(3)
+        call messages_fatal(3)
       end if
       mode_fixed_fluence = .true.
     case(ctr_fourier_series, ctr_zero_fourier_series)
       if(cf_common%targetfluence .ne. M_ZERO) then
         write(message(1), '(a)') 'Error: If you set "OCTControlFunctionRepresentation" to "control_fourier_series",'
         write(message(2), '(a)') '       then you cannot run in fixed fluence mode.'
-        call write_fatal(2)
+        call messages_fatal(2)
       end if
       mode_fixed_fluence = .false.
     case default
@@ -499,7 +499,7 @@ contains
       if(cf_common%mode .ne. controlfunction_mode_epsilon) then
         write(message(1),'(a)') 'The block "OCTLaserEnvelope" is only compatible with the option'
         write(message(2),'(a)') '"OCTControlFunctionType = controlfunction_mode_epsilon".'
-        call write_fatal(2)
+        call messages_fatal(2)
       end if
 
       no_lines = parse_block_n(blk)
@@ -607,7 +607,7 @@ contains
       cp%dim = 2 * (tdf_nfreqs(cp%f(1)) - 1)
     case default
       message(1) = "Internal error: invalid representation."
-      call write_fatal(1)
+      call messages_fatal(1)
     end select
 
 
@@ -643,13 +643,13 @@ contains
     if(cp%dof <= 0) then
       write(message(1),'(a)') 'Error: The number of degrees of freedom used to describe the control function'
       write(message(2),'(a)') '       is less than or equal to zero. This should not happen. Please review your input file.'
-      call write_fatal(2)
+      call messages_fatal(2)
     else
       if(cf_common%representation .ne. ctr_real_time) then
         write(message(1), '(a)')      'Info: The expansion of the control functions in a Fourier series'
         write(message(2), '(a,i6,a)') '      expansion implies the use of ', cp%dim, ' basis-set functions.'
         write(message(3), '(a,i6,a)') '      The number of degrees of freedom is ', cp%dof,'.'
-        call write_info(3)
+        call messages_info(3)
 
         SAFE_ALLOCATE(cp%theta(1:cp%dof))
         cp%theta = M_ZERO
@@ -721,7 +721,7 @@ contains
         write(message(1), '(a)')         'Info: The QOCT run will attempt to find a solution with a predefined'
         write(message(2), '(a,f10.5,a)') '      fluence: F = ', cf_common%targetfluence, ' a.u.'
       end if
-      call write_info(2)
+      call messages_info(2)
       if(cf_common%fix_initial_fluence) call controlfunction_set_fluence(par)
     end if
 

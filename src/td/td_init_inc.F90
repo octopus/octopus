@@ -45,7 +45,7 @@ subroutine td_init(td, sys, hm)
   if (td%dt <= M_ZERO) then
     write(message(1),'(a,f14.6,a)') "Input: '", td%dt, "' is not a valid TDTimeStep"
     message(2) = '(0 < TDTimeStep)'
-    call write_fatal(2)
+    call messages_fatal(2)
   end if
 
   !%Variable TDIonicTimeScale
@@ -102,7 +102,7 @@ subroutine td_init(td, sys, hm)
   if(td%max_iter < 1) then
     write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid TDMaximumIter"
     message(2) = '(TDMaximumIter <= 1)'
-    call write_fatal(2)
+    call messages_fatal(2)
   end if
   
   ! Initialize the kick (if optical-spectrum calculations are to be performed)
@@ -156,7 +156,7 @@ subroutine td_init(td, sys, hm)
   if(td%dynamics == BO)  call scf_init(td%scf, sys%gr, sys%geo, sys%st, hm)
   if(hm%ep%no_lasers>0.and.mpi_grp_is_root(mpi_world)) then
     call messages_print_stress(stdout, "Time-dependent external fields")
-    call laser_write_info(hm%ep%lasers, stdout, td%dt, td%max_iter)
+    call laser_messages_info(hm%ep%lasers, stdout, td%dt, td%max_iter)
     call messages_print_stress(stdout)
   end if
 

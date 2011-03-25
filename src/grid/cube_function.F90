@@ -201,7 +201,7 @@ contains
 #ifndef HAVE_PFFT
     if (cf%fft_library == PFFT_LIB) then
       write(message(1),'(a)')'You have selected the PFFT for FFT, but it is not compiled.'
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 #else
     nullify(cf%pfft)

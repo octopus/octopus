@@ -79,7 +79,7 @@ subroutine X(cube_function_fft_init)(cf, sb)
 #else 
     message(1) = "You have selected to use the PFFT library, "
     message(2) = "but it has not been linked."
-    call write_fatal(2)
+    call messages_fatal(2)
 #endif
   end if
 

@@ -225,13 +225,13 @@ module opt_control_target_m
     select case(target%type)
     case(oct_tg_groundstate)
       message(1) =  'Info: Using Ground State for TargetOperator'
-      call write_info(1)
+      call messages_info(1)
       call restart_read(trim(restart_dir)//GS_DIR, target%st, gr, geo, ierr, exact = .true.)
       
     case(oct_tg_excited) 
 
       message(1) =  'Info: TargetOperator is a linear combination of Slater determinants.'
-      call write_info(1)
+      call messages_info(1)
 
       call states_look (trim(restart_dir)//GS_DIR, gr%mesh%mpi_grp, ip, ip, target%st%nst, ierr)
       target%st%st_start = 1
@@ -258,7 +258,7 @@ module opt_control_target_m
 
       message(1) =  'Info: The target functional is the exclusion of a number of states defined by'
       message(2) =  '      "OCTExcludedStates".'
-      call write_info(2)
+      call messages_info(2)
       !%Variable OCTExcludedStates
       !%Type string
       !%Section Calculation Modes::Optimal Control
@@ -276,7 +276,7 @@ module opt_control_target_m
     case(oct_tg_gstransformation)  
 
       message(1) =  'Info: Using Superposition of States for TargetOperator'
-      call write_info(1)
+      call messages_info(1)
 
       !%Variable OCTTargetTransformStates
       !%Type block
@@ -310,19 +310,19 @@ module opt_control_target_m
           call density_calc(target%st, gr, target%st%rho)
         else
           message(1) = '"OCTTargetTransformStates" has to be specified as block.'
-          call write_info(1)
+          call messages_info(1)
           call input_error('OCTTargetTransformStates')
         end if
       else
         message(1) = 'Error: if "OCTTargetOperator = oct_tg_superposition", then you must'
         message(2) = 'supply one "OCTTargetTransformStates" block to create the superposition.'
-        call write_info(2)
+        call messages_info(2)
         call input_error('OCTTargetTransformStates')
       end if
 
     case(oct_tg_userdefined) 
        message(1) =  'Info: Target is a user-defined state.'
-      call write_info(1)
+      call messages_info(1)
       
       !%Variable OCTTargetUserdefined
       !%Type block
@@ -378,13 +378,13 @@ module opt_control_target_m
         call parse_block_end(blk)
       else
         message(1) = '"OCTTargetUserdefined" has to be specified as block.'
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
 
     case(oct_tg_density) 
 
       message(1) =  'Info: Target is a density.'
-      call write_info(1)
+      call messages_info(1)
 
       !%Variable OCTTargetDensity
       !%Type string
@@ -437,7 +437,7 @@ module opt_control_target_m
             call parse_block_end(blk)
           else
             message(1) = '"OCTTargetDensityState" has to be specified as block.'
-            call write_info(1)
+            call messages_info(1)
             call input_error('OCTTargetDensity')
           end if
 
@@ -458,21 +458,21 @@ module opt_control_target_m
       else
         message(1) = 'If OCTTargetOperator = oct_tg_density, then you must give the shape'
         message(2) = 'of this target in variable "OCTTargetDensity".'
-        call write_fatal(2)
+        call messages_fatal(2)
       end if
       
       ! For a target combining density and current
 
       if(parse_isdef('OCTCurrentFunctional') .ne. 0) then
         message(1) =  'Info: Target is also a current.'
-        call write_info(1)
+        call messages_info(1)
 
         call parse_integer(datasets_check('OCTCurrentFunctional'), oct_no_curr, target%curr_functional)
         if( target%curr_functional .gt. M_FOUR .or. &
             target%curr_functional .lt. M_ZERO) then
         message(1) = 'This option is not available for a current functional.'
         message(2) = 'Define 0 .le. "OCTCurrentFunctional" .le. 4.'
-        call write_fatal(2)
+        call messages_fatal(2)
         end if
         
         call parse_float(datasets_check('OCTCurrentWeight'), M_ZERO, target%curr_weight)
@@ -481,18 +481,18 @@ module opt_control_target_m
           if( target%curr_weight .lt. M_ZERO) then
             message(1) = 'For "OCTCurrentFunctional" = oct_min_curr(_td) or oct_max_curr(_td)'
             message(2) = 'set "OCTCurrentWeight" .ge. 0.0'
-            call write_fatal(2)
+            call messages_fatal(2)
           end if
         end select   
         write(message(1), '(a,i3)')   'Info: OCTCurrentFunctional = ', target%curr_functional
         write(message(2), '(a,f8.3)') 'Info: OCTCurrentWeight = ',  target%curr_weight
-        call write_info(2)
+        call messages_info(2)
 
         call parse_integer(datasets_check('OCTStartIterCurrTg'), 0, target%strt_iter_curr_tg)
         if (target_mode(target) .eq. oct_targetmode_td) then
           write(message(1), '(a,i3)')   'Info: TargetMode = ', target_mode(target)
           write(message(2), '(a,i8)') 'Info: OCTStartIterCurrTg = ',  target%strt_iter_curr_tg
-          call write_info(2)
+          call messages_info(2)
           target%dt = td%dt
           SAFE_ALLOCATE(target%td_fitness(0:td%max_iter))
           target%td_fitness = M_ZERO
@@ -501,11 +501,11 @@ module opt_control_target_m
         end if
         if (target%strt_iter_curr_tg .lt. M_ZERO) then
           message(1) = 'OCTStartIterCurrTg must be negative'
-          call write_fatal(1)
+          call messages_fatal(1)
         end if
         if (target%strt_iter_curr_tg .ge. td%max_iter) then
           message(1) = 'OCTStartIterCurrTg has to be .lt. TDMaximumIter'
-          call write_fatal(1)
+          call messages_fatal(1)
         end if
 
         SAFE_ALLOCATE(stin%current( 1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:stin%d%nspin ) )
@@ -537,7 +537,7 @@ module opt_control_target_m
       else
         message(1) = 'If OCTTargetOperator = oct_tg_local, then you must give the shape'
         message(2) = 'of this target in variable "OCTLocalTarget".'
-        call write_fatal(2)
+        call messages_fatal(2)
       end if
 
     case(oct_tg_td_local)
@@ -547,7 +547,7 @@ module opt_control_target_m
         SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
       else
         message(1) = 'If OCTTargetMode = oct_targetmode_td, you must suppy a OCTTDTarget block.'
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
       target%dt = td%dt
       SAFE_ALLOCATE(target%td_fitness(0:td%max_iter))
@@ -602,13 +602,13 @@ module opt_control_target_m
           end do
         else
           message(1) = '"OCTOptimizeHarmonicSpectrum" has to be specified as a block.'
-          call write_info(1)
+          call messages_info(1)
           call input_error('OCTOptimizeHarmonicSpectrum')
         end if
       else
         write(message(1), '(a)') 'If "OCTTargetMode = oct_targetmode_hhg", you must supply an'
         write(message(2), '(a)') '"OCTOptimizeHarmonicSpectrum" block.'
-        call write_fatal(2)
+        call messages_fatal(2)
       end if
 
       target%hhg_w0 = w0
@@ -686,13 +686,13 @@ module opt_control_target_m
        else
           message(1) = 'If OCTTargetOperator = oct_tg_velocity, then you must give the shape'
           message(2) = 'of this target in the block "OCTVelocityTarget".'
-          call write_fatal(2)
+          call messages_fatal(2)
        end if
        
        if(parse_isdef('OCTMoveIons') .eq. 0) then
           message(1) = 'If OCTTargetOperator = oct_tg_velocity, then you must supply'
           message(2) = 'the variable "OCTMoveIons".'
-          call write_fatal(2)
+          call messages_fatal(2)
        else
           call parse_logical('OCTMoveIons', .false., target%move_ions)
        end if
@@ -709,7 +709,7 @@ module opt_control_target_m
              message(1) = 'If OCTTargetOperator = oct_tg_velocity, and'
              message(2) = 'OCTScheme = oct_algorithm_cg, then you must define the'
              message(3) = 'blocks "OCTVelocityTarget" AND "OCTVelocityDerivatives"'
-             call write_fatal(3)
+             call messages_fatal(3)
           end if
           
           SAFE_ALLOCATE(target%grad_local_pot(1:geo%natoms, 1:gr%mesh%np, 1:gr%sb%dim))
@@ -748,7 +748,7 @@ module opt_control_target_m
        
     case(oct_tg_current)
       message(1) =  'Info: Target is a current.'
-      call write_info(1)
+      call messages_info(1)
       !%Variable OCTCurrentFunctional
       !%Type integer
       !%Section Calculation Modes::Optimal Control
@@ -810,7 +810,7 @@ module opt_control_target_m
         target%curr_functional .gt. M_THREE) then
         message(1) = 'If you choose the current as a target,'
         message(2) = 'define 1 .le. "OCTCurrentFunctional" .le. 3.'
-        call write_fatal(2)
+        call messages_fatal(2)
       end if
       
       call parse_float(datasets_check('OCTCurrentWeight'), M_ZERO, target%curr_weight)
@@ -819,19 +819,19 @@ module opt_control_target_m
         if( target%curr_weight .lt. M_ZERO) then
           message(1) = 'For "OCTCurrentFunctional" = oct_min_curr(_td)'
           message(2) = 'set "OCTCurrentWeight" .ge. 0.0'
-          call write_fatal(2)
+          call messages_fatal(2)
         end if
       end select 
        
       write(message(1), '(a,i3)')   'Info: OCTCurrentFunctional = ', target%curr_functional
       write(message(2), '(a,f8.3)') 'Info: OCTCurrentWeight = ',  target%curr_weight
-      call write_info(2)
+      call messages_info(2)
       
       call parse_integer(datasets_check('OCTStartIterCurrTg'), 0, target%strt_iter_curr_tg)
       if (target_mode(target) .eq. oct_targetmode_td) then
         write(message(1), '(a,i3)')   'Info: TargetMode = ', target_mode(target)
         write(message(2), '(a,i8)') 'Info: OCTStartIterCurrTg = ',  target%strt_iter_curr_tg
-        call write_info(2)
+        call messages_info(2)
         target%dt = td%dt
         SAFE_ALLOCATE(target%td_fitness(0:td%max_iter))
         target%td_fitness = M_ZERO
@@ -840,11 +840,11 @@ module opt_control_target_m
       end if
       if (target%strt_iter_curr_tg .lt. M_ZERO) then
         message(1) = 'OCTStartIterCurrTg must be negative'
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
       if (target%strt_iter_curr_tg .ge. td%max_iter) then
         message(1) = 'OCTStartIterCurrTg has to be .lt. TDMaximumIter'
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
 
       SAFE_ALLOCATE(stin%current( 1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:stin%d%nspin ) )
@@ -852,7 +852,7 @@ module opt_control_target_m
 
     case default
       write(message(1),'(a)') "Target Operator not properly defined."
-      call write_fatal(1)
+      call messages_fatal(1)
     end select
 
     ! suppress current functional for all other targets other than density and/or current.
@@ -981,10 +981,10 @@ module opt_control_target_m
         SAFE_DEALLOCATE_A(opsi)
       case(SPIN_POLARIZED)
         message(1) = 'Error in target.target_tdcalc: spin_polarized.'
-        call write_fatal(1)
+        call messages_fatal(1)
       case(SPINORS)
         message(1) = 'Error in target.target_tdcalc: spinors.'
-        call write_fatal(1)
+        call messages_fatal(1)
       end select
 
     case(oct_tg_hhg)
@@ -1005,7 +1005,7 @@ module opt_control_target_m
 
     case default
       message(1) = 'Error in target.target_tdcalc: default.'
-      call write_fatal(1)
+      call messages_fatal(1)
     end select
 
     POP_SUB(target_tdcalc)
@@ -1127,10 +1127,10 @@ module opt_control_target_m
         SAFE_DEALLOCATE_A(opsi)
       case(SPIN_POLARIZED)
         message(1) = 'Error in target.j1_functional: spin_polarized.'
-        call write_fatal(1)
+        call messages_fatal(1)
       case(SPINORS)
         message(1) = 'Error in target.j1_functional: spinors.'
-        call write_fatal(1)
+        call messages_fatal(1)
       end select
 
     case(oct_tg_td_local)
@@ -1219,7 +1219,7 @@ module opt_control_target_m
       if(conf%devel_version) then
         write(message(1), '(6x,a,f12.5)')    " => Other functional   = ", j1
         write(message(2), '(6x,a,f12.5)')    " => Current functional = ", currfunc_tmp
-        call write_info(2)
+        call messages_info(2)
       end if
       ! accumulating functional values
       j1 = j1 + currfunc_tmp
@@ -1280,10 +1280,10 @@ module opt_control_target_m
 
       case(SPIN_POLARIZED)
          message(1) = 'Error in target.calc_chi: spin_polarized.'
-         call write_fatal(1)
+         call messages_fatal(1)
       case(SPINORS)
          message(1) = 'Error in target.calc_chi: spinors.'
-         call write_fatal(1)
+         call messages_fatal(1)
       end select
 
     case(oct_tg_local)
@@ -1298,10 +1298,10 @@ module opt_control_target_m
         end do
       case(SPIN_POLARIZED)
          message(1) = 'Error in target.calc_chi: spin_polarized.'
-         call write_fatal(1)
+         call messages_fatal(1)
       case(SPINORS)
          message(1) = 'Error in target.calc_chi: spinors.'
-         call write_fatal(1)
+         call messages_fatal(1)
       end select
 
     case(oct_tg_td_local)
@@ -1347,7 +1347,7 @@ module opt_control_target_m
       select case(psi_in%d%ispin)
       case(UNPOLARIZED)
         write(message(1), '(a)') 'Internal error in target.calc_chi: unpolarized.'
-        call write_fatal(1)
+        call messages_fatal(1)
 
       case(SPIN_POLARIZED)
         ASSERT(chi_out%d%nik .eq. 2)
@@ -1538,14 +1538,14 @@ module opt_control_target_m
           if(m == 0) then
              message(1) = "OCTVelocityTarget Input error!"
              message(2) = "Atom number is either larger than 99 or not defined."
-             call write_fatal(2)
+             call messages_fatal(2)
           end if
           read(inp_string(i+2:i+1+m),*) n_atom
           read(inp_string(i+3+m:i+3+m),*) coord
           if(coord < 1 .or. coord > 3) then
              message(1) = "OCTVelocityTarget Input error!"
              message(2) = "Vector component is either larger than 3 or smaller than 1."
-             call write_fatal(2)
+             call messages_fatal(2)
           end if
           write(v_string,*) geo%atom(n_atom)%v(coord)
           inp_string = inp_string(:i-1) // "(" // trim(v_string) // ")" // inp_string(i+5+m:)
@@ -1594,7 +1594,7 @@ module opt_control_target_m
     case(oct_max_curr_ring)
       if(gr%sb%dim .ne. M_TWO) then
         write(message(1), '(a)') 'This target only implemented for 2D.'
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
       do ip = 1, gr%mesh%np
         ! func = j_y * x - j_x * y 
@@ -1603,7 +1603,7 @@ module opt_control_target_m
       end do
     case default
       message(1) = 'Error in target.jcurr_functional: chosen target does not exist'
-      call write_fatal(1)
+      call messages_fatal(1)
     end select
 
     jcurr = target%curr_weight * dmf_integrate(gr%mesh, semilocal_function)
@@ -1670,7 +1670,7 @@ module opt_control_target_m
 
     case default
       message(1) = 'Error in target.chi_current: chosen target does not exist'
-      call write_fatal(1)
+      call messages_fatal(1)
     end select
         
     SAFE_DEALLOCATE_A(grad_psi_in)       

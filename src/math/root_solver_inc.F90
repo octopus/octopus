@@ -47,12 +47,12 @@ subroutine X(root_solver_run)(rs, func, root, success, startval, interval_, coef
 !!$  case(ROOT_BISECTION)
 !!$#ifdef R_TREAL
 !!$    message(1) = 'Info: root_solver: Using bisection.'
-!!$    call write_info(1)
+!!$    call messages_info(1)
 !!$    call droot_bisection()
 !!$#endif
 !!$#ifdef R_TCOMPLEX
 !!$    message(1) = 'Error: root_solver: Simple line bisection not defined for complex arithmetic'
-!!$    call write_fatal(1)
+!!$    call messages_fatal(1)
 !!$#endif
 !!$
 !!$
@@ -60,16 +60,16 @@ subroutine X(root_solver_run)(rs, func, root, success, startval, interval_, coef
 !!$#ifdef R_TREAL
 !!$    if(present(interval_)) then
 !!$      message(1) = 'Info: root_solver: Using Brent method.'
-!!$      call write_info(1)
+!!$      call messages_info(1)
 !!$!!        call droot_brent(rs, func, root(1), interval)
 !!$    else
 !!$      message(1) = 'Error: root_solver: search interval required for Brent method.'
-!!$      call write_fatal(1)
+!!$      call messages_fatal(1)
 !!$    end if
 !!$#endif
 !!$#ifdef R_TCOMPLEX
 !!$    message(1) = 'Error: root_solver: Brent method not defined for complex arithmetic'
-!!$    call write_fatal(1)
+!!$    call messages_fatal(1)
 !!$#endif
 !!$
 !!$
@@ -83,27 +83,27 @@ subroutine X(root_solver_run)(rs, func, root, success, startval, interval_, coef
 !!$  case(ROOT_LAGUERRE)
 !!$    if(present(coeff)) then
 !!$      message(1) = 'Info: root_solver: Using Laguerre method.'
-!!$      call write_info(1)
+!!$      call messages_info(1)
 !!$      ! pass root(1): only a single root will be returned
 !!$      call X(root_laguerre)(rs, root(1), startval, coeff)
 !!$    else
 !!$      message(1) = 'Error: root_solver: Laguerre method only valid for polynomials.'
-!!$      call write_fatal(1)
+!!$      call messages_fatal(1)
 !!$    end if
 !!$
   case(ROOT_WATTERSTROM)
 #ifdef R_TREAL
     message(1) = 'Error: root_solver: Watterstrom method not defined for pure real arithmetic'
-    call write_fatal(1)
+    call messages_fatal(1)
 #endif
 #ifdef R_TCOMPLEX
     if(present(coeff)) then
       message(1) = 'Info: root_solver: Using Watterstrom method.'
-      call write_info(1)
+      call messages_info(1)
       call zroot_watterstrom(rs, root, coeff)
     else
       message(1) = 'Error: root_solver: Watterstrom method only valid for polynomials.'
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 #endif
 
@@ -111,7 +111,7 @@ subroutine X(root_solver_run)(rs, func, root, success, startval, interval_, coef
     write(message(1), '(a,i4,a)') "Input: '", rs%solver_type, &
       "' is not a valid root solver"
     message(2) = '( root solver =  root_bisection | root_brent | root_newton | root_laguerre | root_watterstrom )'
-    call write_fatal(2)
+    call messages_fatal(2)
   end select
 
   POP_SUB(X(root_solver_run))

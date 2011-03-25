@@ -95,18 +95,18 @@ module opt_control_initst_m
     select case(istype)
     case(oct_is_groundstate) 
       message(1) =  'Info: Using ground state for initial state.'
-      call write_info(1)
+      call messages_info(1)
       call restart_read(trim(restart_dir)//GS_DIR, initial_state, sys%gr, sys%geo, ierr, exact = .true.)
 
     case(oct_is_excited)  
       message(1) = 'Error: Using an excited state as the starting state for an '
       message(2) = 'optimal-control run is not possible yet.'
       message(3) = 'Try using "OCTInitialState = oct_is_transformation" instead.'
-      call write_fatal(3)
+      call messages_fatal(3)
 
     case(oct_is_gstransformation)   
       message(1) =  'Info: Using superposition of states for initial state.'
-      call write_info(1)
+      call messages_info(1)
 
 
       !%Variable OCTInitialTransformStates
@@ -137,20 +137,20 @@ module opt_control_initst_m
           call states_end(tmp_st)
         else
           message(1) = '"OCTInitialTransformStates" has to be specified as block.'
-          call write_info(1)
+          call messages_info(1)
           call input_error('OCTInitialTransformStates')
         end if
       else
         message(1) = 'Error: if "OCTInitialState = oct_is_gstransformation", then you must'
         message(2) = 'supply an "OCTInitialTransformStates" block to define the transformation.'
-        call write_info(2)
+        call messages_info(2)
         call input_error('OCTInitialTransformStates')
       end if
 
 
     case(oct_is_userdefined) 
       message(1) =  'Info: Building user-defined initial state.'
-      call write_info(1)
+      call messages_info(1)
       
       !%Variable OCTInitialUserdefined
       !%Type block
@@ -206,13 +206,13 @@ module opt_control_initst_m
         call parse_block_end(blk)
       else
         message(1) = '"OCTInitialUserdefined" has to be specified as block.'
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
       
     case default
       write(message(1),'(a)') "No valid initial state defined."
       write(message(2),'(a)') "Choosing the ground state."
-      call write_info(2)
+      call messages_info(2)
     end select
 
     ! Check whether we want to freeze some of the deeper orbitals.
@@ -222,14 +222,14 @@ module opt_control_initst_m
       call states_freeze_orbitals(initial_state, sys%gr, sys%mc, freeze_orbitals)
       write(message(1),'(a,i4,a,i4,a)') 'Info: The lowest', freeze_orbitals, &
         ' orbitals have been frozen.', initial_state%nst, ' will be propagated.'
-      call write_info(1)
+      call messages_info(1)
       call density_calc(initial_state, sys%gr, initial_state%rho)
       call v_ks_calc(sys%ks, hm, initial_state, calc_eigenval = .true.)
     elseif(freeze_orbitals < 0) then
       ! This means SAE approximation. We calculate the Hxc first, then freeze all
       ! orbitals minus one.
       write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
-      call write_info(1)
+      call messages_info(1)
       call density_calc(initial_state, sys%gr, initial_state%rho)
       call v_ks_calc(sys%ks, hm, initial_state, calc_eigenval = .true.)
       call states_freeze_orbitals(initial_state, sys%gr, sys%mc, n = initial_state%nst - 1)

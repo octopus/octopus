@@ -438,7 +438,7 @@ subroutine X(mf_interpolate_points) (ndim, npoints_in, x_in, f_in, npoints_out, 
   case(1)
 #ifdef R_TCOMPLEX
     message(1) = 'Believe it or not: cannot do 1D complex interpolation, only 2D or 3D.'
-    call write_fatal(1)
+    call messages_fatal(1)
 #else
     call spline_init(interp1d)
     call spline_fit(npoints_in, R_REAL(rx_in(:, 1)), rf_in, interp1d)
@@ -566,7 +566,7 @@ R_TYPE function X(mf_surface_integral_scalar) (mesh, ff, plane) result(dd)
 
   if(mesh%sb%dim .ne. 3) then
     message(1) = 'INTERNAL ERROR at Xmf_surface_integral: wrong dimensionality.'
-    call write_fatal(1)
+    call messages_fatal(1)
   end if
 
   SAFE_ALLOCATE(f_in_plane(plane%nu:plane%mu, plane%nv:plane%mv))
@@ -619,7 +619,7 @@ R_TYPE function X(mf_line_integral_scalar) (mesh, ff, line) result(dd)
 
   if(mesh%sb%dim .ne. 2) then
     message(1) = 'INTERNAL ERROR at Xmf_surface_integral: wrong dimensionality.'
-    call write_fatal(1)
+    call messages_fatal(1)
   end if
 
   SAFE_ALLOCATE(f_in_line(line%nu:line%mu))

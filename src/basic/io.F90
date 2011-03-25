@@ -199,7 +199,7 @@ contains
         call loct_gettimeofday(sec, usec)
         call epoch_time_diff(sec,usec)
         write(message(1),'(a,i6,a,i6.6,20x,a)') '* I ',sec,'.',usec,' | MPI debug hook'
-        call write_debug(1)
+        call messages_debug(1)
 
         write(stdout,'(a,i3,a)') 'node:', mpi_world%rank, ' In debug hook'
         write(node_hook,'(i3.3)') mpi_world%rank
@@ -219,7 +219,7 @@ contains
         call loct_gettimeofday(sec, usec)
         call epoch_time_diff(sec,usec)
         write(message(1),'(a,i6,a,i6.6,20x,a)') '* O ', sec, '.', usec,' | MPI debug hook'
-        call write_debug(1)
+        call messages_debug(1)
       end if
     end if
 
@@ -371,7 +371,7 @@ contains
         if(die_) then
           write(stderr, '(a)') '*** IO Error: Too many files open'
           message(1) = 'Error: io_open.'
-          call write_fatal(1)
+          call messages_fatal(1)
         end if
         POP_SUB(io_open)
         return
@@ -396,7 +396,7 @@ contains
           write(*, '(5a)') '*** IO Error: Could not open file "', trim(file_), &
             '" for action="', trim(action), '"'
           message(1) = 'Error: io_open.'
-          call write_fatal(1)
+          call messages_fatal(1)
         end if
       end if
 
@@ -622,7 +622,7 @@ contains
     inquire(file=trim(filename), exist=file_exists)
     if(file_exists) then
       message(1) = trim(msg)
-      call write_warning(1)
+      call messages_warning(1)
     end if
 
     POP_SUB(io_file_exists)

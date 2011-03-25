@@ -110,7 +110,7 @@ contains
 
     if( iterator%ctr_iter_max < 0 .and. iterator%eps < M_ZERO ) then
       message(1) = "OCTMaxIter and OCTEps cannot be both < 0."
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
     if(iterator%ctr_iter_max < 0) iterator%ctr_iter_max = huge(iterator%ctr_iter_max)
 
@@ -185,7 +185,7 @@ contains
     
     if(iterator%ctr_iter .eq. iterator%ctr_iter_max) then
       message(1) = "Info: Maximum number of iterations reached."
-      call write_info(1)
+      call messages_info(1)
       stoploop = .true.
     end if
 
@@ -193,7 +193,7 @@ contains
         (delta < iterator%eps) .and. &
         (iterator%ctr_iter > 0 ) ) then
       message(1) = "Info: Convergence threshold reached."
-      call write_info(1)
+      call messages_info(1)
       stoploop = .true.
     end if
 
@@ -207,9 +207,9 @@ contains
     write(message(5), '(6x,a,f12.5)')  " => Penalty  = ", controlfunction_alpha(par, 1)
     write(message(6), '(6x,a,es12.2)') " => D[e,e']  = ", delta
     if(iterator%ctr_iter .ne. 0) then
-      call write_info(6)
+      call messages_info(6)
     else
-      call write_info(5)
+      call messages_info(5)
     end if
     call messages_print_stress(stdout)
 
@@ -267,10 +267,10 @@ contains
     write(message(2), '(6x,a,f12.5)')    " => J        = ", j
     write(message(3), '(6x,a,f12.5)')    " => J2       = ", j2
     write(message(4), '(6x,a,f12.5)')    " => Fluence  = ", fluence
-    call write_info(4)
+    call messages_info(4)
     if(present(dx)) then
       write(message(1), '(6x,a,f12.5)')  " => Delta    = ", dx
-      call write_info(1)
+      call messages_info(1)
     end if
     call messages_print_stress(stdout)
 

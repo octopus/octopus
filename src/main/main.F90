@@ -196,7 +196,7 @@ program octopus
     message(1) = ""
     message(2) = str_center("Running octopus", 70)
     message(3) = ""
-    call write_info(3)
+    call messages_info(3)
 
     message(1) = &
       "Version                : " // trim(conf%version)
@@ -204,7 +204,7 @@ program octopus
       "Revision               : "// trim(conf%latest_svn)
     message(3) = &
       "Build time             : "// trim(conf%build_time)
-    call write_info(3)
+    call messages_info(3)
 
     write(message(1), '(a, i1)') &
       'Configuration options  : max-dim=', MAX_DIM
@@ -248,7 +248,7 @@ program octopus
 
     message(3) = &
       'Architecture           : '// TOSTRING(OCT_ARCH)
-    call write_info(3)
+    call messages_info(3)
 
     message(1) = &
       "C compiler             : "//trim(conf%cc)
@@ -258,16 +258,16 @@ program octopus
       "Fortran compiler       : "//trim(conf%fc)
     message(4) = &
       "Fortran compiler flags : "//trim(conf%fcflags)
-    call write_info(4)
+    call messages_info(4)
 
     message(1) = ""
-    call write_info(1)
+    call messages_info(1)
 
     ! Let us print where we are running
     call loct_sysname(sys_name)
     write(message(1), '(a)') str_center("The octopus is swimming in " // trim(sys_name), 70)
     message(2) = ""
-    call write_info(2)
+    call messages_info(2)
 
 #if defined(HAVE_MPI)
     call MPI_Barrier(mpi_world%comm, mpi_err)
@@ -278,7 +278,7 @@ program octopus
     if(no_datasets > 1) then
       message(1) = 'Info: Multi-Dataset Mode'
       message(2) = 'Info: Running dataset "'//trim(current_label)//'"'
-      call write_info(2, stress = .true.)
+      call messages_info(2, stress = .true.)
     end if
 
     ! now we really start
@@ -328,7 +328,7 @@ contains
       write(message(2), '(a,1x,i2.2,a)') trim(message(2)), min, 'm'
     write(message(2), '(a,1x,i2.2,a,i3,a)') trim(message(2)), sec, '.', usec/1000, 's'
     message(1) = str_center('Walltime: ' // trim(message(2)), 70)
-    call write_info(1)
+    call messages_info(1)
 
   end subroutine print_walltime
 

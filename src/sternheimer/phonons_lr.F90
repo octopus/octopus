@@ -93,7 +93,7 @@ contains
     call restart_look_and_read(st, gr, geo)
 
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
-    call write_info(1)
+    call messages_info(1)
 
     call system_h_setup(sys, hm)
     call sternheimer_init(sh, sys, hm, "VM", .false.)
@@ -123,7 +123,7 @@ contains
       
       if (.not. fromscratch) then
         message(1) = "Loading restart wavefunctions for linear response."
-        call write_info(1)
+        call messages_info(1)
         call restart_read(trim(restart_dir)//VIB_MODES_DIR//trim(phn_wfs_tag(iatom, idir))//'_1',&
           st, gr, geo, ierr, lr = lr(1))
       end if

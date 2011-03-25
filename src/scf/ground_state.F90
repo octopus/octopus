@@ -73,7 +73,7 @@ contains
     PUSH_SUB(ground_state_run)
 
     message(1) = "Info: Allocating ground state wave-functions"
-    call write_info(1)
+    call messages_info(1)
 
     call states_allocate_wfns(sys%st, sys%gr%mesh)
 #ifdef HAVE_MPI
@@ -81,7 +81,7 @@ contains
     call MPI_Barrier(sys%st%dom_st_kpt_mpi_grp%comm, mpi_err)
 #endif
     message(1) = "      done."
-    call write_info(1)
+    call messages_info(1)
 
     ! Read free states for ground-state open-boundary calculation.
     if(sys%gr%ob_grid%open_boundaries) then
@@ -97,7 +97,7 @@ contains
       if(ierr .ne. 0) then
         message(1) = "Could not load wavefunctions from '"//trim(restart_dir)//GS_DIR//"'"
         message(2) = "Starting from scratch!"
-        call write_warning(2)
+        call messages_warning(2)
         fromScratch = .true.
       end if
     end if
@@ -107,7 +107,7 @@ contains
     else
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian.'
-      call write_info(1)
+      call messages_info(1)
       call system_h_setup(sys, hm)
     end if
 
@@ -117,7 +117,7 @@ contains
     else
       message(1) = 'Info: SCF using complex wavefunctions.'
     end if
-    call write_info(1)
+    call messages_info(1)
 
     call scf_init(scfv, sys%gr, sys%geo, sys%st, hm)
     call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp)

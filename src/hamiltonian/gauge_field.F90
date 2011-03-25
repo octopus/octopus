@@ -268,7 +268,7 @@ contains
 
     write (message(1), '(a,f12.6,a)') "Info: Electron-gas plasmon frequency", &
          units_from_atomic(units_out%energy, sqrt(this%wp2)), " ["//trim(units_abbrev(units_out%energy))//"]"
-    call write_info(1)
+    call messages_info(1)
 
     POP_SUB(gauge_field_init_vec_pot)
   end subroutine gauge_field_init_vec_pot

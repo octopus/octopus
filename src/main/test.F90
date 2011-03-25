@@ -172,7 +172,7 @@ program oct_test
 
     message(1) = 'Info: Testing the finite-differences derivatives.'
     message(2) = ''
-    call write_info(2)
+    call messages_info(2)
 
     if(test_type == TEST_ALL .or. test_type == TEST_REAL) then
       call dderivatives_test(sys%gr%der)
@@ -201,17 +201,17 @@ program oct_test
 
     message(1) = 'Info: Testing orthogonalization.'
     message(2) = ''
-    call write_info(2)
+    call messages_info(2)
 
     if(test_type == TEST_ALL .or. test_type == TEST_REAL) then
       message(1) = 'Info: Real wave-functions.'
-      call write_info(1)
+      call messages_info(1)
       call dstates_calc_orth_test(sys%st, sys%mc, sys%gr%mesh)
     end if
 
     if(test_type == TEST_ALL .or. test_type == TEST_COMPLEX) then
       message(1) = 'Info: Complex wave-functions.'
-      call write_info(1)
+      call messages_info(1)
       call zstates_calc_orth_test(sys%st, sys%mc, sys%gr%mesh)
     end if
 
@@ -238,17 +238,17 @@ program oct_test
 
     message(1) = 'Info: Testing subspace diagonalization.'
     message(2) = ''
-    call write_info(2)
+    call messages_info(2)
 
     if(test_type == TEST_ALL .or. test_type == TEST_REAL) then
       message(1) = 'Info: Real wave-functions.'
-      call write_info(1)
+      call messages_info(1)
       call dsubspace_test(sys%st, hm, sys%gr)
     end if
 
     if(test_type == TEST_ALL .or. test_type == TEST_COMPLEX) then
       message(1) = 'Info: Complex wave-functions.'
-      call write_info(1)
+      call messages_info(1)
       call zsubspace_test(sys%st, hm, sys%gr)
     end if
 

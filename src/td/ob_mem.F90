@@ -129,7 +129,7 @@ contains
     if(mem_tolerance .le. M_ZERO) then
       write(message(1), '(a,f14.6,a)') "Input : '", mem_tolerance, "' is not a valid MemoryTol."
       message(2) = '(0 < TDTransMemTol)'
-      call write_fatal(2)
+      call messages_fatal(2)
     end if
 
     !%Variable MemoryMaxIter
@@ -143,7 +143,7 @@ contains
     if(mem_iter .le. 0) then
       write(message(1), '(a,i6,a)') "Input : '", mem_iter, "' is not a valid MemoryMaxIter."
       message(2) = '(0 <= TDTransMemMaxIter)'
-      call write_fatal(2)
+      call messages_fatal(2)
     end if
 
     do il = 1, NLEADS
@@ -156,11 +156,11 @@ contains
         if (saved_iter .gt. 0) then
           write(message(1),'(a,i5,a)') 'Info: Successfully loaded the first', saved_iter, &
             ' memory coefficients of '//trim(lead_name(il))//' lead.'
-          call write_info(1)
+          call messages_info(1)
         end if
         message(1) = 'Info: Calculating missing coefficients for memory term of '// &
           trim(lead_name(il))//' lead.'
-        call write_info(1)
+        call messages_info(1)
 
         ! Initialize progress bar.
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, max_iter+1)
@@ -199,7 +199,7 @@ contains
           message(1) = ''
           message(2) = 'Info: Writing memory coefficients of '// &
             trim(lead_name(il))//' lead.'
-          call write_info(2)
+          call messages_info(2)
           if(mpi_grp_is_root(mpi_grp)) then
             call write_coeffs(trim(restart_dir)//'open_boundaries/', ob, hm, intf(il),     &
               op%mesh%sb%dim, max_iter, spacing, delta, op%stencil%size, order)
@@ -208,7 +208,7 @@ contains
       else
         message(1) = 'Info: Successfully loaded memory coefficients from '// &
           trim(lead_name(il))//' lead.'
-        call write_info(1)
+        call messages_info(1)
       end if
 
       if(ob%mem_type .eq. SAVE_CPU_TIME) then
@@ -254,7 +254,7 @@ contains
       else
         message(1) = 'Error in approx_coeff0:'
         message(2) = 'Off-diagonal term of Hamiltonian must not be the zero matrix!'
-        call write_fatal(2)
+        call messages_fatal(2)
       end if
     else ! We have the general case of a matrix, so solve the equation by iteration.
       ! Truncating the continued fraction is the same as iterating the equation
@@ -290,7 +290,7 @@ contains
       if(iter .gt. mem_iter) then
         write(message(1), '(a,i6,a)') 'Memory coefficent for time step 0, ' &
           //trim(lead_name(intf%il))//' lead, not converged'
-        call write_warning(1)
+        call messages_warning(1)
       end if
 
       SAFE_DEALLOCATE_A(q0)
@@ -356,7 +356,7 @@ contains
     if(iter .gt. mem_iter) then
       write(message(1), '(a,i6,a)') 'Memory coefficent for time step 0, ' &
         //trim(lead_name(intf%il))//' lead, not converged'
-      call write_warning(1)
+      call messages_warning(1)
     end if
 
     ! Diagonalization procedure.
@@ -476,14 +476,14 @@ contains
       if(ji .gt. mem_iter) then
         write(message(1), '(a,i6,a)') 'Memory coefficent for time step ', ii, &
           ', '//trim(lead_name(intf%il))//' lead, not converged.'
-        call write_warning(1)
+        call messages_warning(1)
       end if
 
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ii+1, iter+1)
     end do
 
     message(1) = ''
-    call write_info(1)
+    call messages_info(1)
 
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_A(tmp2)
@@ -601,14 +601,14 @@ contains
       if(ji .gt. mem_iter) then
         write(message(1), '(a,i6,a)') 'Memory coefficent for time step ', ii, &
           ', '//trim(lead_name(intf%il))//' lead, not converged.'
-        call write_warning(1)
+        call messages_warning(1)
       end if
 
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ii+1, iter+1)
     end do
 
     message(1) = ''
-    call write_info(1)
+    call messages_info(1)
 
     SAFE_DEALLOCATE_A(tmp1)
     SAFE_DEALLOCATE_A(tmp2)
@@ -647,7 +647,7 @@ contains
                     action='write', form='unformatted', is_tmp=.true.)
     if(iunit.lt.0) then
       message(1) = 'Cannot write memory coefficients to file.'
-      call write_warning(1)
+      call messages_warning(1)
       call io_close(iunit)
       POP_SUB(write_coeffs)
       return
@@ -846,7 +846,7 @@ contains
     case default
       message(1) = 'Sparse matrices for memory coefficients not supported'
       message(2) = 'in 1D or 3D.'
-      call write_fatal(2)
+      call messages_fatal(2)
     end select
 
     SAFE_DEALLOCATE_A(tmp)

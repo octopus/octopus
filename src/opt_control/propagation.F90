@@ -143,7 +143,7 @@ module opt_control_propagation_m
     PUSH_SUB(propagate_forward)
 
     message(1) = "Info: Forward propagation."
-    call write_info(1)
+    call messages_info(1)
 
     call controlfunction_to_h(par, hm%ep)
 
@@ -259,7 +259,7 @@ module opt_control_propagation_m
     PUSH_SUB(propagate_backward)
     
     message(1) = "Info: Backward propagation."
-    call write_info(1)
+    call messages_info(1)
 
     gr => sys%gr
 
@@ -319,7 +319,7 @@ module opt_control_propagation_m
     PUSH_SUB(fwd_step)
 
     message(1) = "Info: Forward propagation."
-    call write_info(1)
+    call messages_info(1)
 
     gr => sys%gr
     call propagator_copy(tr_chi, td%tr)
@@ -414,7 +414,7 @@ module opt_control_propagation_m
     PUSH_SUB(bwd_step)
 
     message(1) = "Info: Backward propagation."
-    call write_info(1)
+    call messages_info(1)
 
     gr => sys%gr
 
@@ -492,7 +492,7 @@ module opt_control_propagation_m
     PUSH_SUB(bwd_step_2)
 
     message(1) = "Info: Backward propagation."
-    call write_info(1)
+    call messages_info(1)
 
     gr => sys%gr
 
@@ -838,7 +838,7 @@ module opt_control_propagation_m
           write(message(1), '(a,es13.4)') &
             "WARNING: forward-backward propagation produced an error of", abs(overlap-prev_overlap)
           write(message(2), '(a,i8)') "Iter = ", iter
-          call write_warning(2)
+          call messages_warning(2)
        end if
        ! Restore state only if the number of checkpoints is larger than zero.
        if(prop%number_checkpoints > 0) then

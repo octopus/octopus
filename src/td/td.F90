@@ -345,7 +345,7 @@ contains
       else
         write(message(1), '(a7,1x,a14,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'CP Energy ', 'Elapsed Time '
       end if
-      call write_info(1)
+      call messages_info(1)
       call messages_print_stress(stdout)
 
     end subroutine print_header
@@ -368,7 +368,7 @@ contains
                 hm%energy%total + geo%kinetic_energy + cpmd_electronic_energy(td%cp_propagator)), &
              loct_clock() - etime
       end if
-      call write_info(1)
+      call messages_info(1)
       etime = loct_clock()
       ii = ii + 1
       if(ii==sys%outp%iter+1 .or. iter == td%max_iter .or. stopping) then ! output
@@ -421,7 +421,7 @@ contains
         
         if(ierr.ne.0) then
           message(1) = "Could not load "//trim(tmpdir)//"td: Starting from scratch"
-          call write_warning(1)
+          call messages_warning(1)
 
           fromScratch = .true.
         end if
@@ -434,7 +434,7 @@ contains
 
         if(ierr.ne.0) then
           message(1) = "Could not load "//trim(restart_dir)//"td/cpmd: Starting from scratch"
-          call write_warning(1)
+          call messages_warning(1)
           
           fromScratch = .true.
           td%iter = 0
@@ -451,7 +451,7 @@ contains
             if(ierr > 0) call dinput_function(trim(filename)//'.ncdf', gr%mesh, td%tr%v_old(1:gr%mesh%np, is, i), ierr)
             if(ierr > 0) then
               write(message(1), '(3a)') 'Unsuccessful read of "', trim(filename), '"'
-              call write_fatal(1)
+              call messages_fatal(1)
             end if
           end do
         end do
@@ -463,7 +463,7 @@ contains
           call restart_read(trim(restart_dir)//GS_DIR, st, gr, geo, ierr, exact = .true.)
           if(ierr.ne.0) then
             write(message(1), '(3a)') 'Unsuccessful read of states.'
-            call write_fatal(1)
+            call messages_fatal(1)
           end if
           ! extract the interface wave function
           if(gr%ob_grid%open_boundaries) call restart_get_ob_intf(st, gr)
@@ -516,7 +516,7 @@ contains
             call states_end(stin)
           else
             message(1) = '"TransformStates" has to be specified as block.'
-            call write_info(1)
+            call messages_info(1)
             call input_error('TransformStates')
           end if
         end if
@@ -552,14 +552,14 @@ contains
         call states_freeze_orbitals(st, gr, sys%mc, freeze_orbitals)
         write(message(1),'(a,i4,a,i4,a)') 'Info: The lowest', freeze_orbitals, &
           ' orbitals have been frozen.', st%nst, ' will be propagated.'
-        call write_info(1)
+        call messages_info(1)
         call density_calc(st, gr, st%rho)
         call v_ks_calc(sys%ks, hm, st, calc_eigenval=.true., time = td%iter*td%dt)
       elseif(freeze_orbitals < 0) then
         ! This means SAE approximation. We calculate the Hxc first, then freeze all
         ! orbitals minus one.
         write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
-        call write_info(1)
+        call messages_info(1)
         call density_calc(st, gr, st%rho)
         call v_ks_calc(sys%ks, hm, st, calc_eigenval=.true., time = td%iter*td%dt)
         call states_freeze_orbitals(st, gr, sys%mc, n = st%nst-1)
@@ -636,7 +636,7 @@ contains
             case default
               write(message(1), '(a,3F9.6,a)') 'Info: Unknown field type!'
           end select
-          call write_info(1)
+          call messages_info(1)
 
           kick_function = M_ZERO
           do ip = 1, gr%mesh%np
@@ -683,7 +683,7 @@ contains
         case (KICK_SPIN_DENSITY_MODE)
           message(2) = "Info: Delta kick mode: Density + Spin modes"
         end select
-        call write_info(2)
+        call messages_info(2)
 
         select case (kick%delta_strength_mode)
         case (KICK_DENSITY_MODE)
@@ -754,7 +754,7 @@ contains
       if(iunit < 0) then
         message(1) = "Could not open file '"//trim(io_workpath('td.general/coordinates'))//"'."
         message(2) = "Starting simulation from initial geometry."
-        call write_warning(2)
+        call messages_warning(2)
         POP_SUB(td_run.td_read_coordinates)
         return
       end if
@@ -796,7 +796,7 @@ contains
       if(iunit < 0) then
         message(1) = "Could not open file '"//trim(io_workpath('td.general/gauge_field'))//"'."
         message(2) = "Starting simulation from initial values."
-        call write_warning(2)
+        call messages_warning(2)
         POP_SUB(td_run.td_read_gauge_field)
         return
       end if
@@ -838,7 +838,7 @@ contains
       call restart_write(trim(tmpdir)//'td', st, gr, ierr, iter)
       if(ierr.ne.0) then
         message(1) = 'Unsuccessful write of "'//trim(tmpdir)//'td"'
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
 
       ! write potential from previous interactions
@@ -852,7 +852,7 @@ contains
           ! for simplicity
           if(ierr.ne.0) then
             write(message(1), '(3a)') 'Unsuccessful write of "', trim(filename), '"'
-            call write_fatal(1)
+            call messages_fatal(1)
           end if
         end do
       end do

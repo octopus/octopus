@@ -120,7 +120,7 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
 
   if(st%d%ispin == SPINORS) then
     message(1) = "Not yet implemented - please fix me"
-    call write_fatal(1)
+    call messages_fatal(1)
   end if
   
   ! initialize density

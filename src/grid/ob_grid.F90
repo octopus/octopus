@@ -38,7 +38,7 @@ module ob_grid_m
     ob_grid_t,                   &
     ob_grid_init,                &
     ob_grid_end,                 &
-    ob_grid_write_info
+    ob_grid_messages_info
 
   type ob_grid_lead_t
     type(simul_box_ob_info_t) :: info
@@ -198,7 +198,7 @@ contains
             if(trim(ob_grid%lead(LEFT)%info%dataset) .ne. trim(ob_grid%lead(RIGHT)%info%dataset)) then
               message(1) = 'For now datasets for left and right lead unit cells must'
               message(2) = 'be equal, i.e. only symmetric leads are possible.'
-              call write_fatal(2)
+              call messages_fatal(2)
             end if
           else
             do ol = 2, NLEADS
@@ -213,7 +213,7 @@ contains
               message(1) = 'Restart directories for left and right lead'
               message(2) = 'unit cells must be equal, i.e. only symmetric'
               message(3) = 'leads are possible.'
-              call write_fatal(3)
+              call messages_fatal(3)
             end if
           else
             do ol = 2, NLEADS
@@ -228,7 +228,7 @@ contains
               message(1) = 'Static directories for left and right lead'
               message(2) = 'unit cells must be equal, i.e. only symmetric'
               message(3) = 'leads are possible.'
-              call write_fatal(3)
+              call messages_fatal(3)
             end if
           else
             do ol = 2, NLEADS
@@ -246,7 +246,7 @@ contains
           end if
           if(any(ob_grid%lead(1:NLEADS)%info%ucells .lt. 0)) then
             message(1) = 'add_unit_cells in the OpenBoundaries block must not be negative.'
-            call write_fatal(1)
+            call messages_fatal(1)
           end if
         case(TD_POT_FORMULA)
           call parse_block_string(blk, nr, 1, ob_grid%lead(LEFT)%td_bias)
@@ -308,11 +308,11 @@ contains
   end subroutine ob_grid_end
 
   !--------------------------------------------------------------
-  subroutine ob_grid_write_info(ob_grid, iunit)
+  subroutine ob_grid_messages_info(ob_grid, iunit)
     type(ob_grid_t), intent(inout) :: ob_grid
     integer,           intent(in)  :: iunit
 
-    PUSH_SUB(ob_grid_write_info)
+    PUSH_SUB(ob_grid_messages_info)
 
     if(ob_grid%open_boundaries) then
       write(message(1), '(a)')       'Open boundaries in x-direction:'
@@ -324,11 +324,11 @@ contains
         trim(ob_grid%lead(LEFT)%info%restart_dir)
       write(message(5), '(a)')     '  Right lead read from directory: ' // &
         trim(ob_grid%lead(RIGHT)%info%restart_dir)
-      call write_info(5, iunit)
+      call messages_info(5, iunit)
     end if
 
-    POP_SUB(ob_grid_write_info)
-  end subroutine ob_grid_write_info
+    POP_SUB(ob_grid_messages_info)
+  end subroutine ob_grid_messages_info
 
 
   !--------------------------------------------------------------

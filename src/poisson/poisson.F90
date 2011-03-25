@@ -234,7 +234,7 @@ contains
       if(der%mesh%use_curvilinear.and.this%method.ne.POISSON_DIRECT_SUM_1D) then
         message(1) = 'If curvilinear coordinates are used in 1D, then the only working'
         message(2) = 'Poisson solver is -1 ("direct summation in one dimension").'
-        call write_fatal(2)
+        call messages_fatal(2)
       end if
 
       call messages_print_var_option(stdout, "PoissonSolver", this%method)
@@ -270,7 +270,7 @@ contains
       if(der%mesh%use_curvilinear .and. (this%method .ne. -der%mesh%sb%dim) ) then
         message(1) = 'If curvilinear coordinates are used in 2D, then the only working'
         message(2) = 'Poisson solver is -2 ("direct summation in two dimensions").'
-        call write_fatal(2)
+        call messages_fatal(2)
       end if
 
       call messages_print_var_option(stdout, "PoissonSolver", this%method)
@@ -304,7 +304,7 @@ contains
       if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FMM) then
         write(message(1), '(a,i1,a)')'FMM is not ready to deal with periodic boundaries at present, '
         write(message(2), '(a,i1,a)')'because it requires null net charge.'
-        call write_warning(2)
+        call messages_warning(2)
       end if
 
       if(der%mesh%sb%periodic_dim > 0 .and. &
@@ -314,13 +314,13 @@ contains
         write(message(1), '(a,i1,a)')'The system is periodic in ', der%mesh%sb%periodic_dim ,' dimension(s),'
         write(message(2), '(a,i1,a)')'but Poisson solver is set for ',this%method,' dimensions.'
         message(3) =                 'You know what you are doing, right?'
-        call write_warning(3)
+        call messages_warning(3)
       end if
 
       if(der%mesh%use_curvilinear .and. (this%method.ne.POISSON_CG_CORRECTED)) then
         message(1) = 'If curvilinear coordinates are used, then the only working'
         message(2) = 'Poisson solver is cg_corrected.'
-        call write_fatal(2)
+        call messages_fatal(2)
       end if
 
       if( (der%mesh%sb%box_shape == MINIMUM) .and. (this%method == POISSON_CG_CORRECTED) ) then
@@ -328,7 +328,7 @@ contains
         message(2) = 'Poisson solver, we have observed "sometimes" some non-'
         message(3) = 'negligible error. You may want to check that the "fft" or "cg"'
         message(4) = 'solver are providing, in your case, the same results.'
-        call write_warning(4)
+        call messages_warning(4)
       end if
       
       ! This should be done inside poisson3d_init, temporaly fix
@@ -343,7 +343,7 @@ contains
         if(.not. simul_box_complex_boundaries(der%mesh%sb)) then
           message(1) = 'Complex boundaries must be enabled to use the SETE poisson solver.'
           message(2) = 'Use ComplexBoundaries = yes in your input file.'
-          call write_fatal(2)
+          call messages_fatal(2)
         end if
       end if
 
@@ -601,7 +601,7 @@ contains
 
     if(mesh%sb%dim == 1) then
       write(message(1),'(a)') 'The Hartree integrator test is not implemented for the one-dimensional case.'
-      call write_warning(1)
+      call messages_warning(1)
       POP_SUB(poisson_test)
       return
     endif
@@ -622,7 +622,7 @@ contains
     beta = M_ONE / ( alpha**mesh%sb%dim * sqrt(M_PI)**mesh%sb%dim )
 
     write(message(1), '(a)') 'Building the Gaussian distribution of charge...'
-    call write_info(1)
+    call messages_info(1)
 
     range = CNST(8.0)
 
@@ -645,7 +645,7 @@ contains
       rho = rho + rhop
     end do
     write(message(1), '(a,f14.6)') 'Total charge of the Gaussian distribution', dmf_integrate(mesh, rho)
-    call write_info(1)
+    call messages_info(1)
 
     ! This builds analytically its potential
     vh_exact = M_ZERO

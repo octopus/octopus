@@ -369,21 +369,21 @@ contains
       write(message(2), '(a,i10)') 'Number of deallocations = ', prof_vars%dealloc_count
       write(message(3), '(a,f18.3,a)') 'Maximum total memory allocated = ', prof_vars%max_memory/megabyte, ' Mbytes'
       write(message(4), '(2x,a,a)') 'at ', trim(prof_vars%max_memory_location)
-      call write_info(4)
+      call messages_info(4)
 
       message(1) = ''
       message(2) = 'Largest variables allocated:'
-      call write_info(2)
+      call messages_info(2)
       do ii = 1, MAX_MEMORY_VARS
         write(message(1),'(i2,f18.3,2a)') ii, prof_vars%large_vars_size(ii)/megabyte, ' Mbytes ', trim(prof_vars%large_vars(ii))
-        call write_info(1)
+        call messages_info(1)
       end do
 
       call messages_print_stress(stdout)
 
       if(prof_vars%alloc_count.ne.prof_vars%dealloc_count) then
         message(1) = "Not all memory was deallocated!";
-        call write_warning(1)
+        call messages_warning(1)
       end if
     end if
 
@@ -728,7 +728,7 @@ contains
     iunit = io_open(trim(prof_vars%output_dir)//'/time.'//prof_vars%file_number, action='write')
     if(iunit.lt.0) then
       message(1) = 'Could not write profiling results.'
-      call write_warning(1)
+      call messages_warning(1)
       POP_SUB(profiling_output)
       return
     end if
@@ -795,7 +795,7 @@ contains
       end do
       if(jj == 0) then
         message(1) = "Internal Error in profiling_memory_log"
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
     end if
 
@@ -856,7 +856,7 @@ contains
     if(prof_vars%memory_limit > 0) then
       if(prof_vars%total_memory > prof_vars%memory_limit) then
         message(1) = "Memory limit set in the input file was passed"
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
     end if
 

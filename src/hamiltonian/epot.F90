@@ -198,7 +198,7 @@ contains
 
       if(ep%classical_pot > 0) then
         message(1) = 'Info: generating classical external potential.'
-        call write_info(1)
+        call messages_info(1)
 
         SAFE_ALLOCATE(ep%Vclassical(1:gr%mesh%np))
         call epot_generate_classical(ep, gr%mesh, geo)
@@ -231,10 +231,10 @@ contains
         if(idir <= gr%sb%periodic_dim .and. abs(ep%E_field(idir)) > M_EPSILON) then
           message(1) = "Applying StaticElectricField in a periodic direction is only accurate for large supercells."
           if(nik == 1) then
-            call write_warning(1)
+            call messages_warning(1)
           else
             message(2) = "Single-point Berry phase is not appropriate when k-point sampling is needed."
-            call write_warning(2)
+            call messages_warning(2)
           endif
         endif
       end do
@@ -299,7 +299,7 @@ contains
       call parse_block_end(blk)
       if(gr%sb%dim > 3) then
         message(1) = "Magnetic field not implemented for dim > 3."
-        call write_fatal(1)
+        call messages_fatal(1)
       endif
 
       ! Compute the vector potential
@@ -371,12 +371,12 @@ contains
     if(.not.varinfo_valid_option('RelativisticCorrection', ep%reltype)) call input_error('RelativisticCorrection')
     if (ispin /= SPINORS .and. ep%reltype == SPIN_ORBIT) then
       message(1) = "The spin-orbit term can only be applied when using spinors."
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
     ! This is temporary...
     if(ep%reltype > SPIN_ORBIT) then
       message(1) = 'Error: ZORA corrections not implemented.'
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
     call messages_print_var_option(stdout, "RelativisticCorrection", ep%reltype)
 
@@ -944,7 +944,7 @@ contains
 
     if(any(geo%ionic_interaction_type /= INTERACTION_COULOMB)) then
       message(1) = "Cannot calculate non-Coulombic interaction for periodic systems."
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     ! see

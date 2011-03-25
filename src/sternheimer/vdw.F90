@@ -81,7 +81,7 @@ contains
 
     if(simul_box_is_periodic(sys%gr%sb)) then
       message(1) = "Van der Waals calculation for periodic system not implemented."
-      call write_fatal(1)
+      call messages_fatal(1)
     endif
 
     call input()
@@ -199,7 +199,7 @@ contains
           message(1) = "Invalid restart of van der Waals calculation."
           message(2) = "The number of points in the Gauss-Legendre integration changed."
           write(message(3), '(i3,a,i3,a)') gaus_leg_n, " (input) != ", ii, "(restart)"
-          call write_fatal(3)
+          call messages_fatal(3)
         end if
         read(iunit,*) ! skip comment line
         do
@@ -218,7 +218,7 @@ contains
 
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian for linear response.'
-      call write_info(1)
+      call messages_info(1)
       call system_h_setup(sys, hm)
 
       do dir = 1, ndir
@@ -233,7 +233,7 @@ contains
           
           if(ierr.ne.0) then
             message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//dirname
-            call write_warning(1)
+            call messages_warning(1)
           end if
         end if
       end do
@@ -276,7 +276,7 @@ contains
       do dir = 1, ndir
         write(message(1), '(3a,f7.3)') 'Info: Calculating response for the ', index2axis(dir), &
           '-direction and imaginary frequency ', units_from_atomic(units_out%energy, aimag(omega))
-        call write_info(1)   
+        call messages_info(1)   
 
         call pert_setup_dir(perturbation, dir)
         call zsternheimer_solve(sh, sys, hm, lr(dir, :), 1,  omega, perturbation, &

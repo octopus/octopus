@@ -218,14 +218,14 @@ contains
     if (writ%lmax < 0 .or. writ%lmax > 4) then
       write(message(1), '(a,i6,a)') "Input: '", writ%lmax, "' is not a valid TDDipoleLmax."
       message(2) = '(0 <= TDDipoleLmax <= 4 )'
-      call write_fatal(2)
+      call messages_fatal(2)
     end if
 
     ! Compatibility test
     if( (writ%out(OUT_ACC)%write) .and. ions_move ) then
       message(1) = 'Error: If harmonic spectrum is to be calculated,'
       message(2) = 'atoms should not be allowed to move.'
-      call write_fatal(2)
+      call messages_fatal(2)
     end if
 
     rmin = geometry_min_distance(geo)
@@ -280,7 +280,7 @@ contains
       call restart_read(trim(restart_dir)//'gs', writ%gs_st, gr, geo, ierr)
       if(ierr.ne.0 .and.ierr.ne.(writ%gs_st%st_end-writ%gs_st%st_start+1)*writ%gs_st%d%nik*writ%gs_st%d%dim) then
         message(1) = "Could not load "//trim(restart_dir)//"gs"
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
     end if
 

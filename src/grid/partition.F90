@@ -44,7 +44,7 @@ module partition_m
     partition_build,       &
     partition_quality,     &
     partition_randomize,   &
-    partition_write_info,  &
+    partition_messages_info,  &
     partition_mutate,      &
     partition_crossover,   &
     partition_copy
@@ -152,7 +152,7 @@ contains
 
   ! ----------------------------------------------------------------------
 
-  subroutine partition_write_info(this)
+  subroutine partition_messages_info(this)
     type(partition_t), intent(in) :: this
     
     integer :: ipart
@@ -161,12 +161,12 @@ contains
     message(1) = &
       'Info: Mesh partition:'
     message(2) = ''
-    call write_info(2)
+    call messages_info(2)
 
     write(message(1),'(a,e16.6)') &
       '      Partition quality:', partition_quality(this)
     message(2) = ''
-    call write_info(2)
+    call messages_info(2)
 
     write(message(1),'(a)') &
       '                 Neighbours         Ghost points'
@@ -177,7 +177,7 @@ contains
     write(message(4),'(a,i5,a,i10)') &
       '      Maximum  :      ', maxval(this%nneigh),        '           ', maxval(this%nghost)
     message(5) = ''
-    call write_info(5)
+    call messages_info(5)
 
     do ipart = 1, this%npart
       write(message(1),'(a,i5)')  &
@@ -188,13 +188,13 @@ contains
       write(message(3),'(a,i10,a,i10)') &
         '        Ghost points   :', this%nghost(ipart), &
         '        Boundary points :', this%nbound(ipart)
-      call write_info(3)
+      call messages_info(3)
     end do
 
     message(1) = ''
-    call write_info(1)
+    call messages_info(1)
 
-  end subroutine partition_write_info
+  end subroutine partition_messages_info
 
   ! ----------------------------------------------------------------------
 

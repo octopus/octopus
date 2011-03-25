@@ -67,7 +67,7 @@ program xyzanim
   call parse_integer(datasets_check('AnimationSampling'), 100, sampling)
   if(sampling < 1) then
     message(1) = 'Sampling rate (AnimationSampling) should be bigger than 0'
-    call write_fatal(1)
+    call messages_fatal(1)
   end if
 
   nullify(geo%space)

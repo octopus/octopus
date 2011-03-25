@@ -69,7 +69,7 @@ program propagation_spectrum
     case default
       write(message(1), '(a)') 'No PropagationSpectrumType defined,'
       write(message(2), '(a)') 'cannot calculate the spectrum.'
-      call write_warning(2)
+      call messages_warning(2)
   end select
 
   call io_end()
@@ -126,7 +126,7 @@ program propagation_spectrum
         write(message(2),'(a)')  '(If more than one file is to be used, the files should be called'
         write(message(3),'(5a)') '"', trim(fname), '.1", "', trim(fname), '.2", etc.'
         write(message(4),'(a)')
-        call write_info(4)
+        call messages_info(4)
         
         ! OK, so we only have one file. Now we have to see what it has inside.
         call spectrum_mult_info(in_file(1), nspin, kick, time_steps, dt, file_units, lmax=lmax)
@@ -135,18 +135,18 @@ program propagation_spectrum
           calculate_tensor = .true.
           write(message(1),'(3a)') 'The file "', trim(fname), '" tells me that the system has three equivalent axes.'
           write(message(2),'(a)')  'I will calculate the full tensor, written in file "XXXX_tensor".'
-          call write_info(2)
+          call messages_info(2)
         else if(eq_axes == 2) then
           write(message(1),'(3a)') 'The file "', trim(fname), '" tells me that the system has two equivalent axes.'
           write(message(2),'(a)')  'However, I am only using this file; cannot calculate the full tensor.'
           write(message(3),'(a)')  'A file "XXXX_vector" will be generated instead.'
-          call write_warning(3)
+          call messages_warning(3)
           calculate_tensor = .false.
         else
           write(message(1),'(3a)') 'The file "', trim(fname), '" tells me that the system has no usable symmetry. '
           write(message(2),'(a)')  'However, I am only using this file; cannot calculate the full tensor.'
           write(message(3),'(a)')  'A file "XXXX_vector" will be generated instead.'
-          call write_warning(3)
+          call messages_warning(3)
           calculate_tensor = .false.
         end if
         
@@ -160,7 +160,7 @@ program propagation_spectrum
         if(in_file(1) < 0) then ! Could not find proper files. Die and complain.
           write(message(1),'(5a)') 'No "', trim(fname), '" or "', trim(fname), '.1" file found. At least one of those'
           write(message(2),'(a)')  'should be visible.'
-          call write_fatal(2)
+          call messages_fatal(2)
         end if
         
         call spectrum_mult_info(in_file(1), nspin, kick, time_steps, dt, file_units, lmax=lmax)
@@ -169,7 +169,7 @@ program propagation_spectrum
         if(eq_axes == 3) then
           write(message(1),'(3a)') 'The file "', trim(fname), '.1" tells me that the system has three equivalent axes.'
           write(message(2),'(a)') 'I will calculate the full tensor, written in file "cross_section_tensor".'
-          call write_info(2)
+          call messages_info(2)
           
         else if(eq_axes == 2) then
           in_file(2) = io_open(trim(fname)//'.2', action='read', status='old', die=.false.)
@@ -177,11 +177,11 @@ program propagation_spectrum
           if(in_file(2) < 0) then
             write(message(1),'(3a)') 'The file "', trim(fname), '.1" tells me that the system has two equivalent axes,'
             write(message(2),'(3a)') 'but I cannot find a "', trim(fname), '.2".'
-            call write_fatal(2)
+            call messages_fatal(2)
           end if
           write(message(1),'(5a)') 'Found two files, "', trim(fname), '.1" and "', trim(fname), '.2".'
           write(message(2),'(a)')  'Two polarization axes are equivalent. I will generate the full tensor.'
-          call write_info(2)
+          call messages_info(2)
           
         else ! No equivalent axes
           in_file(2) = io_open(trim(fname)//'.2', action='read', status='old', die=.false.)
@@ -189,18 +189,18 @@ program propagation_spectrum
           if(in_file(2) < 0) then
             write(message(1),'(3a)') 'The file "', trim(fname), '.1" tells me that the system has three inequivalent axes,'
             write(message(2),'(3a)') 'but I cannot find a "', trim(fname), '.2".'
-            call write_fatal(2)
+            call messages_fatal(2)
           end if
           in_file(3) = io_open(trim(fname)//'.3', action='read', status='old', die=.false.)
           if(in_file(3) < 0) in_file(3) = io_open('td.general/'//trim(fname)//'.3', action='read', status='old', die=.false.)
           if(in_file(3) < 0) then
             write(message(1),'(3a)') 'The file "', trim(fname), '.1" tells me that the system has three inequivalent axes,'
             write(message(2),'(3a)') 'but I cannot find a "', trim(fname), '.3".'
-            call write_fatal(2)
+            call messages_fatal(2)
           end if
           write(message(1),'(7a)') 'Found three files, "', trim(fname), '.1", "', trim(fname), '.2" and "', trim(fname), '.3".'
           write(message(2),'(a)')  'No symmetry information will be used.'
-          call write_info(2)
+          call messages_info(2)
         end if
         
       end if

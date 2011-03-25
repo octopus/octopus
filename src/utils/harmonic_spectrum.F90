@@ -80,13 +80,13 @@ program harmonic_spectrum
       (pol.ne.'+') .and. &
       (pol.ne.'-') ) then
     message(1) = 'The polarization direction given in the command line is not valid.'
-    call write_fatal(1)
+    call messages_fatal(1)
   end if
   if( (mode.ne.HS_FROM_MULT) .and. &
       (mode .ne.HS_FROM_ACC) .and. &
       (mode .ne. HS_FROM_VEL) ) then
     message(1) = 'The harmonic-spectrum mode given in the command line is not valid.'
-    call write_fatal(1)
+    call messages_fatal(1)
   end if
 
   select case(mode)

@@ -195,7 +195,7 @@ contains
         message(1)='Linear Solver: Sum-over-States'
     end select
 
-    call write_info(1)
+    call messages_info(1)
     
     call messages_print_stress(stdout)
 

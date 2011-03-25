@@ -186,7 +186,7 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
 
   write(message(1), '(a,i4,a,es14.6)') "Info: After ", iter, " iterations, the OEP converged to ", ff
   message(2) = ''
-  call write_info(2)
+  call messages_info(2)
 
   vxc(1:gr%mesh%np) = vxc_old(1:gr%mesh%np)
   SAFE_DEALLOCATE_A(bb)

@@ -46,7 +46,7 @@ module curvilinear_m
     curvilinear_chi2x,           &
     curvilinear_x2chi,           &
     curvilinear_det_Jac,         &
-    curvilinear_write_info
+    curvilinear_messages_info
 
   integer, parameter, public :: &
     CURV_METHOD_UNIFORM = 1,    &
@@ -179,7 +179,7 @@ contains
       call curv_gygi_x2chi(sb, cv%gygi, x, chi)
     case(CURV_METHOD_BRIGGS, CURV_METHOD_MODINE)
       message(1) = "Internal error in curvilinear_x2chi"
-      call write_fatal(1)
+      call messages_fatal(1)
     end select
 
     POP_SUB(curvilinear_x2chi)
@@ -228,11 +228,11 @@ contains
   end function curvilinear_det_Jac
 
   ! ---------------------------------------------------------
-  subroutine curvilinear_write_info(cv, unit)
+  subroutine curvilinear_messages_info(cv, unit)
     type(curvilinear_t), intent(in) :: cv
     integer,            intent(in) :: unit
 
-    PUSH_SUB(curvilinear_write_info)
+    PUSH_SUB(curvilinear_messages_info)
 
     select case(cv%method)
     case(CURV_METHOD_GYGI)
@@ -245,20 +245,20 @@ contains
       write(message(5), '(4x,3a,f6.3)') 'beta  [', &
                                       trim(units_abbrev(units_out%length)), '] = ', &
                                       units_from_atomic(units_out%length, cv%gygi%beta)
-      call write_info(5, unit)
+      call messages_info(5, unit)
 
     case(CURV_METHOD_BRIGGS)
       write(message(1), '(a)') '  Curvilinear Method = briggs'
-      call write_info(1, unit)
+      call messages_info(1, unit)
 
     case(CURV_METHOD_MODINE)
       write(message(1), '(a)') ' Curvilinear  Method = modine'
-      call write_info(1, unit)
+      call messages_info(1, unit)
 
     end select
 
-    POP_SUB(curvilinear_write_info)
-  end subroutine curvilinear_write_info
+    POP_SUB(curvilinear_messages_info)
+  end subroutine curvilinear_messages_info
 
   ! ---------------------------------------------------------
 

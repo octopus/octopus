@@ -464,7 +464,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
 
                      message(1) = 'Multiresolution radii are too close to each other (or outer boundary)'
                      write(message(2),'(7I4)') ix,iy,iz,newi,newj,newk,mesh%resolution(ix,iy,iz)
-                     call write_fatal(2)
+                     call messages_fatal(2)
                 end if
               end do
             end do
@@ -585,7 +585,7 @@ contains
         message(2) = 'of the mesh points cannot be chosen freely.'
         message(3) = 'All the values of MeshBlockSize have to be'
         message(4) = 'initialized with the value 1.'
-        call write_fatal(4)
+        call messages_fatal(4)
       end if
     end if
     
@@ -701,9 +701,9 @@ contains
     call partition_init(partition, mesh)
     partition%point_to_part = part
     call partition_build(partition, mesh, stencil)
-    call partition_write_info(partition)      
+    call partition_messages_info(partition)      
     call partition_end(partition)
-    call mesh_partition_write_debug(mesh, part)
+    call mesh_partition_messages_debug(mesh, part)
 
     !%Variable MeshUseTopology
     !%Type logical
@@ -878,7 +878,7 @@ contains
       if(mesh%sb%mr_flag) then
 
         message(1) = 'Info: Point volumes are calculated by solving interpolation coefficients for the intermediate points.'
-        call write_info(1)
+        call messages_info(1)
 
         ! The following interpolation routine is essentially the same as in the calculation of the Laplacian
 
@@ -916,7 +916,7 @@ contains
         do i_lev = 1, sb%hr_area%num_radii
 
           write (message(1),'(a,I2,a,I2)') 'Info: Point volume calculation at stage ',i_lev,'/',sb%hr_area%num_radii
-          call write_info(1)
+          call messages_info(1)
 
           ! loop through _all_ the points
           do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
@@ -972,7 +972,7 @@ contains
         end do
        
         write (message(1),'(a,F26.12)') 'Info: Point volume calculation finished. Total volume :',sum(mesh%vol_pp(1:mesh%np))
-        call write_info(1)
+        call messages_info(1)
 
         SAFE_DEALLOCATE_A(ww)
         SAFE_DEALLOCATE_A(pos)

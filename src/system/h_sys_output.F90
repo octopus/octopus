@@ -241,7 +241,7 @@ contains
        if(sb%dim .ne. 2 .and. sb%dim .ne. 3) then
          outp%what = iand(outp%what, not(output_elf + output_elf_basins + output_elf_fs))
          write(message(1), '(a)') 'Cannot calculate ELF except in 2D and 3D.'
-         call write_warning(1)
+         call messages_warning(1)
        endif
     endif
 
@@ -256,16 +256,16 @@ contains
     if(iand(outp%what, output_modelmb) .ne. 0) then
       write(message(1),'(a)') 'Model many-body quantities will be output, according to the presence of'
       write(message(2),'(a)') '  wfs, density, or density_matrix in Output.'
-      call write_info(2)
+      call messages_info(2)
     end if
 
     if(iand(outp%what, output_density_matrix) .ne. 0) then
       write(message(1),'(a)') 'Info: The density matrix will be calculated, traced'
       write(message(2),'(a)') 'over the second dimension, diagonalized, and output.'
-      call write_info(2)
+      call messages_info(2)
       if(iand(outp%what, output_modelmb) .eq. 0) then
         write(message(1),'(a)') 'Note that density matrix only works for model MB calculations for the moment.'
-        call write_info(1)
+        call messages_info(1)
       end if
       ! NOTES:
       !   could be made into block to be able to specify which dimensions to trace
@@ -361,14 +361,14 @@ contains
         norm = sqrt(sum(outp%plane%u(1:3)**2))
         if(norm < M_EPSILON) then
           write(1, '(a)') 'u-vector for CurrentThroughPlane cannot have norm zero.'
-          call write_fatal(1)
+          call messages_fatal(1)
         endif
         outp%plane%u(1:3) = outp%plane%u(1:3) / norm
 
         norm = sqrt(sum(outp%plane%v(1:3)**2))
         if(norm < M_EPSILON) then
           write(1, '(a)') 'v-vector for CurrentThroughPlane cannot have norm zero.'
-          call write_fatal(1)
+          call messages_fatal(1)
         endif
         outp%plane%v(1:3) = outp%plane%v(1:3) / norm
 
@@ -389,7 +389,7 @@ contains
         norm = sqrt(sum(outp%line%u(1:2)**2))
         if(norm < M_EPSILON) then
           write(1, '(a)') 'u-vector for CurrentThroughPlane cannot have norm zero.'
-          call write_fatal(1)
+          call messages_fatal(1)
         endif
         outp%line%u(1:2) = outp%line%u(1:2) / norm
 

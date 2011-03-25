@@ -199,7 +199,7 @@ contains
       end do
 
       write(message(1), '(a,i5,a)') 'Info: The system has ', this%nops, ' symmetries that can be used.'
-      call write_info(1)
+      call messages_info(1)
 
       SAFE_DEALLOCATE_A(rotation)
       SAFE_DEALLOCATE_A(translation)

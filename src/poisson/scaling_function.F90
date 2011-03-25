@@ -59,7 +59,7 @@ contains
       !O.K.
     case default
       message(1) = "Error: Only interpolating functions 8, 14, 16, 20, 24, 30, 40, 50, 60, 100."
-      call write_fatal(1)
+      call messages_fatal(1)
     end select
 !!$  write(unit=*,fmt="(1x,a,i0,a)") &
 !!$       "Use interpolating scaling functions of ",itype," order"
@@ -121,7 +121,7 @@ contains
       !O.K.
     case default
       message(1) = "Error: Only interpolating functions 8, 14, 16, 20, 24, 30, 40, 50, 60, 100."
-      call write_fatal(1)
+      call messages_fatal(1)
     end select
 
     select case(itype)

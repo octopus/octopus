@@ -96,7 +96,7 @@ contains
     inquire(file='stop', exist=file_exists)
     if(file_exists) then
       message(1) = 'Clean STOP'
-      call write_warning(1)
+      call messages_warning(1)
       clean_stop = .true.
 
       if(mpi_grp_is_root(mpi_world)) call loct_rm('stop')
@@ -129,7 +129,7 @@ contains
       restart_format = io_function_fill_how("Binary")
     else
       message(1) = 'Restart information will not be written'
-      call write_warning(1)
+      call messages_warning(1)
     end if
 
     !%Variable RestartDir
@@ -177,7 +177,7 @@ contains
     call states_look(trim(dir)//GS_DIR, gr%mesh%mpi_grp, kpoints, dim, nst, ierr)
     if(ierr .ne. 0) then
       message(1) = 'Could not properly read wavefunctions from "'//trim(dir)//GS_DIR//'".'
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
     
     ! FIXME: This wrong, one cannot just change the number of states
@@ -367,7 +367,7 @@ contains
     PUSH_SUB(restart_get_ob_intf)
 
     write(message(1), '(a,i5)') 'Info: Reading ground-state interface wavefunctions.'
-    call write_info(1)
+    call messages_info(1)
 
     ! Sanity check.
     do il = 1, NLEADS
@@ -436,7 +436,7 @@ contains
     else
       write(message(1), '(a,i5)') 'Info: Loading restart information for linear response.'
     end if
-    call write_info(1)
+    call messages_info(1)
 
     ! If one restarts a GS calculation changing the %Occupations block, one
     ! cannot read the occupations, otherwise these overwrite the ones from
@@ -506,10 +506,10 @@ contains
 
       if(grid_reordered) then
         message(1) = 'Octopus is attempting to restart from mesh with a different order of points.'
-        call write_warning(1)
+        call messages_warning(1)
       else
         message(1) = 'Octopus is attempting to restart from a different mesh.'
-        call write_warning(1)
+        call messages_warning(1)
         if(exact_) ierr = -1
       end if
 
@@ -523,7 +523,7 @@ contains
       if(occ_file > 0) call io_close(occ_file, grp = st%dom_st_kpt_mpi_grp)
       if(exact_) call restart_fail()
       write(message(1),'(a)') 'Could not load restart information.'
-      call write_info(1)
+      call messages_info(1)
       call messages_print_stress(stdout)
       call profiling_out(prof_read)
       POP_SUB(restart_read)
@@ -659,12 +659,12 @@ contains
       end if
       call messages_print_stress(stdout, trim(str))
       write(message(1),'(a)') 'No files could be read. No restart information can be used.'
-      call write_info(1)
+      call messages_info(1)
       call messages_print_stress(stdout)
     else if(ierr == st%nst * st%d%nik * st%d%dim) then
       ierr = 0
       write(message(1), '(a)') 'Info: Restart loading done.'
-      call write_info(1)
+      call messages_info(1)
     else
       if(.not. present(lr)) then 
         write(str, '(a,i5)') 'Loading restart information.'
@@ -674,7 +674,7 @@ contains
       call messages_print_stress(stdout, trim(str))
       write(message(1),'(a,i4,a,i4,a)') 'Only ', ierr,' files out of ', &
         st%nst * st%d%nik * st%d%dim, ' could be read.'
-      call write_info(1)
+      call messages_info(1)
       call messages_print_stress(stdout)
 
       if(ierr .ne. 0 .and. exact_) call restart_fail()
@@ -730,7 +730,7 @@ contains
     subroutine restart_fail()
       message(1) = "Could not read KS orbitals from '"//trim(dir)
       message(2) = "Please run a ground-state calculation first!"
-      call write_fatal(2)
+      call messages_fatal(2)
     end subroutine restart_fail
 
   end subroutine restart_read
@@ -771,12 +771,12 @@ contains
     wfns = io_open(trim(restart_dir)//'/wfns', action='read', is_tmp=.true., grp=mpi_grp)
     if(wfns .lt. 0) then
       message(1) = 'Could not read '//trim(restart_dir)//'/wfns.'
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
     occs = io_open(trim(restart_dir)//'/occs', action='read', is_tmp=.true., grp=mpi_grp)
     if(occs .lt. 0) then
       message(1) = 'Could not read '//trim(restart_dir)//'/occs.'
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     ! Skip two lines.
@@ -890,7 +890,7 @@ contains
 
     message(1) = "Info: Successfully initialized free states from '"//trim(restart_dir)//"'"
     write(message(2),'(a,i3,a)') 'Info:', counter, ' wave functions read by program.'
-    call write_info(2)
+    call messages_info(2)
 
     POP_SUB(read_free_states)
 
@@ -909,7 +909,7 @@ contains
         select case(st%d%ispin)
         case(SPINORS)
           message(1) = "restart.lead_dens_accum() does not work with spinors yet!"
-          call write_fatal(1)
+          call messages_fatal(1)
 !          if(k_idim.eq.2) then
 !            do ip = 1, np
 !              c = w_k*occ*tmp(ip, 1)*conjg(tmp(ip, 2))
@@ -1005,7 +1005,7 @@ contains
         if(ncols .lt. 5 .or. ncols .gt. 6) then
           message(1) = 'Each line in the UserDefinedStates block must have'
           message(2) = 'five or six columns.'
-          call write_fatal(2)
+          call messages_fatal(2)
         end if
 
         call parse_block_integer(blk, ib - 1, 0, idim)
@@ -1035,7 +1035,7 @@ contains
                 write(message(1), '(a,3i5)') 'Substituting state of orbital with k, ist, dim = ', ik, is, id
                 write(message(2), '(2a)') '  with the expression:'
                 write(message(3), '(2a)') '  ',trim(st%user_def_states(id, is, ik))
-                call write_info(3)
+                call messages_info(3)
 
                 ! convert to C string
                 call conv_to_C_string(st%user_def_states(id, is, ik))
@@ -1060,20 +1060,20 @@ contains
                 write(message(1), '(a,3i5)') 'Substituting state of orbital with k, ist, dim = ', ik, is, id
                 write(message(2), '(2a)') '  with data from file:'
                 write(message(3), '(2a)') '  ',trim(filename)
-                call write_info(3)
+                call messages_info(3)
 
                 ! finally read the state
                 call zinput_function(filename, mesh, st%zpsi(:, id, is, ik), ierr, .true.)
                 if (ierr > 0) then
                   message(1) = 'Could not read the file!'
                   write(message(2),'(a,i1)') 'Error code: ', ierr
-                  call write_fatal(2)
+                  call messages_fatal(2)
                 end if
 
               case default
                 message(1) = 'Wrong entry in UserDefinedStates, column 4.'
                 message(2) = 'You may state "formula" or "file" here.'
-                call write_fatal(2)
+                call messages_fatal(2)
               end select
 
               ! normalize orbital
@@ -1089,7 +1089,7 @@ contains
               case default
                 message(1) = 'The sixth column in UserDefinedStates may either be'
                 message(2) = '"normalize_yes" or "normalize_no"'
-                call write_fatal(2)
+                call messages_fatal(2)
               end select
             end do
           end do
@@ -1102,7 +1102,7 @@ contains
 
     else
       message(1) = '"UserDefinedStates" has to be specified as block.'
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     POP_SUB(restart_read_user_def_orbitals)

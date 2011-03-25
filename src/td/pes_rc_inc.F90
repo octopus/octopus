@@ -35,7 +35,7 @@ subroutine PES_rc_init(pesrc, mesh, st, save_iter)
   PUSH_SUB(PES_rc_init)
 
   message(1) = 'Info: Calculating PES using rc technique.'
-  call write_info(1)
+  call messages_info(1)
 
   !%Variable PES_rc_points
   !%Type block

@@ -97,7 +97,7 @@ contains
     FLOAT :: fbest
 
     message(1) = "Info: Performing a genetic algorithm optimization of the mesh partitioning"
-    call write_info(1)
+    call messages_info(1)
 
     SAFE_ALLOCATE(parents(1:this%npop))
     SAFE_ALLOCATE(childs(1:this%npop))
@@ -119,7 +119,7 @@ contains
       if(abs(maxval(fitness) - fbest) > M_EPSILON) then
         fbest = maxval(fitness)
         write(message(1), '(a,i5,a,e10.4)') "      GA generation: ", igen, " fitness ", fbest 
-        call write_info(1)
+        call messages_info(1)
       end if
 
       fsum = sum(fitness)

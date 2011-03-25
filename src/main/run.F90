@@ -109,7 +109,7 @@ contains
 
     message(1) = "Info: Octopus initialization completed."
     message(2) = "Info: Starting calculation mode."
-    call write_info(2)
+    call messages_info(2)
 
     !%Variable FromScratch
     !%Type logical
@@ -237,10 +237,10 @@ contains
       call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
       if(calc_mode_id /= CM_MEMORY) then
         message(1) = "Info: Generating external potential"
-        call write_info(1)
+        call messages_info(1)
         call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
         message(1) = "      done."
-        call write_info(1)
+        call messages_info(1)
       end if
       call restart_init()
     end if

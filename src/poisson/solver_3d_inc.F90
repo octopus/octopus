@@ -100,7 +100,7 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
   case(POISSON_CG)
      call parse_integer(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)
      write(message(1),'(a,i2)')'Info: Boundary conditions fixed up to L =',  maxl
-     call write_info(1)
+     call messages_info(1)
      call parse_integer(datasets_check('PoissonSolverMaxIter'), 400, iter)
      call parse_float(datasets_check('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
      call poisson_corrections_init(this%corrector, maxl, this%der%mesh)
@@ -111,7 +111,7 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
      call parse_integer(datasets_check('PoissonSolverMaxIter'), 400, iter)
      call parse_float(datasets_check('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
      write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
-     call write_info(1)
+     call messages_info(1)
      call poisson_corrections_init(this%corrector, maxl, this%der%mesh)
      call poisson_cg_init(this%der%mesh, maxl, threshold, iter)
 
@@ -119,7 +119,7 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
      call parse_integer(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)
      call parse_float(datasets_check('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
      write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
-     call write_info(1)
+     call messages_info(1)
 
      call poisson_multigrid_init(this%mg, this%der%mesh, maxl, threshold)
      
@@ -142,7 +142,7 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
     call poisson_fft_build_3d_0d(this%der%mesh, this%method)
     call parse_integer(datasets_check('PoissonSolverMaxMultipole'), 2, maxl)
     write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
-    call write_info(1)
+    call messages_info(1)
     call poisson_corrections_init(this%corrector, maxl, this%der%mesh)
 
   case(POISSON_SETE)

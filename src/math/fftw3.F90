@@ -213,12 +213,12 @@ contains
 
     if(fft_dim .eq. 0) then
       message(1) = "Internal error in fft_init: apparently, a 1x1x1 FFT is required."
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     if(fft_dim .gt. 3) then
       message(1) = "FFT for dimension greater than 3 not implemented."
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     optimize_ = .true.
@@ -258,7 +258,7 @@ contains
     if(jj == 0) then
       message(1) = "Not enough slots for FFTs."
       message(2) = "Please increase FFT_MAX in fftw3.F90 and recompile."
-      call write_fatal(2)
+      call messages_fatal(2)
     end if
 
     ! jj now contains an empty slot
@@ -313,7 +313,7 @@ contains
     enddo
     write(str_tmp, '(i2)') jj
         message(1) = trim(message(1)) // trim(str_tmp)
-    call write_info(1)
+    call messages_info(1)
 
     POP_SUB(fft_init)
   end subroutine fft_init
@@ -347,7 +347,7 @@ contains
     ii = fft%slot
     if(fft_refs(ii) == FFT_NULL) then
       message(1) = "Trying to deallocate FFT that has not been allocated."
-      call write_warning(1)
+      call messages_warning(1)
     else
       if(fft_refs(ii) > 1) then
         fft_refs(ii) = fft_refs(ii) - 1
@@ -356,7 +356,7 @@ contains
         call DFFTW(destroy_plan) (fft_array(ii)%planf)
         call DFFTW(destroy_plan) (fft_array(ii)%planb)
         write(message(1), '(a,i4)') "Info: FFT deallocated from slot ", ii
-        call write_info(1)
+        call messages_info(1)
       end if
     end if
 

@@ -94,7 +94,7 @@ contains
    
     if(parse_block(datasets_check('DensityMatricestoCalc'), blk)/=0) then
      message(1) = 'To print out density matrices, you must specify the DensityMatricestoCalc block in input'
-     call write_fatal(1)
+     call messages_fatal(1)
     end if
    
     ncols = parse_block_cols(blk, 0)
@@ -119,7 +119,7 @@ contains
       write (message(1),'(a,a)') 'labels_densmat = ', denmat%labels(ipart)
       write (message(2),'(a,i6)') 'particle_kept_densmat = ', denmat%particle_kept(ipart)
       write (message(3),'(a,i6)') 'nnatorb_prt_densmat = ', denmat%nnatorb_prt(ipart)
-      call write_info(3)
+      call messages_info(3)
     end do
     call parse_block_end(blk)
     ! END reading in of input var block DensityMatricestoCalc
@@ -285,7 +285,7 @@ contains
       write (message(1),'(a,I6,a,I6,a,I6)') 'For particle ', ikeeppart, ' of mb state ', mm
       write (message(2),'(a,3E20.10)') 'The dipole moment is (in a.u. = e bohr):     ', dipole_moment(1:min(3,ndim1part))
       write (message(3),'(a,E15.3)') '     with intrinsic numerical error usually <= ', 1.e-6*mb_1part%npt
-      call write_info(3)
+      call messages_info(3)
 
       SAFE_DEALLOCATE_A(evectors)
       SAFE_DEALLOCATE_A(evalues)

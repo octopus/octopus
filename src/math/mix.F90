@@ -278,7 +278,7 @@ contains
       smix%alpha = newmixing
     else
     !  message(1) = "Error: Mixing can only be adjusted in linear mixing scheme."
-    !  call write_fatal(1)
+    !  call messages_fatal(1)
     endif
     
     POP_SUB(mix_set_mixing)

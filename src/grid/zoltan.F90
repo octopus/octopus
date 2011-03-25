@@ -105,7 +105,7 @@ contains
       message(2) = '      Hypergraph partition algorithm.'
     end select
     message(3) = ''
-    call write_info(3)
+    call messages_info(3)
 
     POP_SUB(zoltan_method_info)
   end subroutine zoltan_method_info

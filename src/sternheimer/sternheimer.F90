@@ -215,7 +215,7 @@ contains
     else
        write(message(3), '(2a)') trim(message(3)), ' no'
     endif
-    call write_info(3) 
+    call messages_info(3) 
 
     if(present(set_default_solver)) then
       default_solver = set_default_solver
@@ -359,7 +359,7 @@ contains
       sigma_char = '-'
     case default 
       write(message(1),'(a,i2)') "Illegal integer isigma passed to wfs_tag_sigma: ", isigma
-      call write_fatal(1)
+      call messages_fatal(1)
     end select
 
     str = trim(base_name) // sigma_char

@@ -34,7 +34,7 @@ module xc_functl_m
     xc_j_functl_init,           &
     xc_functl_init_functl,      &
     xc_functl_end,              &
-    xc_functl_write_info
+    xc_functl_messages_info
 
 
   ! This adds to the constants defined in lib_xc. But since in that module
@@ -120,7 +120,7 @@ contains
       write(message(1), '(a,i3,a)') "'", functl%id, &
         "' is not a known current functional!"
       message(2) = "Please check the manual for a list of possible values."
-      call write_fatal(2)
+      call messages_fatal(2)
     end select
 
     POP_SUB(xc_j_functl_init)
@@ -181,31 +181,31 @@ contains
       ok = iand(functl%flags, XC_FLAGS_1D).ne.0
       if((ndim.ne.1).and.ok) then
         message(1) = 'Specified functional is only allowed in 1D.'
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
       if(ndim==1.and.(.not.ok)) then
         message(1) = 'Cannot use the specified functionals in 1D.'
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
 
       ok = iand(functl%flags, XC_FLAGS_2D).ne.0
       if((ndim.ne.2).and.ok) then
         message(1) = 'Specified functional is only allowed in 2D.'
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
       if(ndim==2.and.(.not.ok)) then
         message(1) = 'Cannot use the specified functionals in 2D.'
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
 
       ok = iand(functl%flags, XC_FLAGS_3D).ne.0
       if((ndim.ne.3).and.ok) then
         message(1) = 'Specified functional is only allowed in 3D.'
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
       if(ndim==3.and.(.not.ok)) then
         message(1) = 'Cannot use the specified functionals in 3D.'
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
     end if
 
@@ -276,7 +276,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_functl_write_info(functl, iunit)
+  subroutine xc_functl_messages_info(functl, iunit)
     type(xc_functl_t), intent(in) :: functl
     integer,           intent(in) :: iunit
 
@@ -284,7 +284,7 @@ contains
     type(XC_F90(pointer_t)) :: str
     integer :: ii
 
-    PUSH_SUB(xc_functl_write_info)
+    PUSH_SUB(xc_functl_messages_info)
 
     if(functl%family == XC_FAMILY_OEP) then
       ! this is handled separately
@@ -293,7 +293,7 @@ contains
       case(XC_OEP_X)
         write(message(1), '(2x,a)') 'Exchange'
         write(message(2), '(4x,a)') 'Exact exchange'
-        call write_info(2, iunit)
+        call messages_info(2, iunit)
       end select
 
     else if(functl%family == XC_FAMILY_KS_INVERSION) then
@@ -302,7 +302,7 @@ contains
       case(XC_KS_INVERSION)
         write(message(1), '(2x,a)') 'Exchange-Correlation:'
         write(message(2), '(4x,a)') '  KS Inversion'
-        call write_info(2, iunit)
+        call messages_info(2, iunit)
       end select
 
     else if(functl%family .ne. XC_FAMILY_NONE) then ! all the other families
@@ -324,19 +324,19 @@ contains
         case (XC_FAMILY_LCA);      write(s2,'(a)') "LCA"
       end select
       write(message(2), '(4x,4a)') trim(s1), ' (', trim(s2), ')'
-      call write_info(2, iunit)
+      call messages_info(2, iunit)
       
       ii = 0
       call XC_F90(info_refs)(functl%info, ii, str, s1)
       do while(ii >= 0)
         write(message(1), '(4x,a,i1,2a)') '[', ii, '] ', trim(s1)
-        call write_info(1, iunit)
+        call messages_info(1, iunit)
         call XC_F90(info_refs)(functl%info, ii, str, s1)
       end do
     end if
 
-    POP_SUB(xc_functl_write_info)
-  end subroutine xc_functl_write_info
+    POP_SUB(xc_functl_messages_info)
+  end subroutine xc_functl_messages_info
 
 end module xc_functl_m
 

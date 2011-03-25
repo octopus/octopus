@@ -33,7 +33,7 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   PUSH_SUB(PES_mask_init)
 
   message(1) = 'Info: Calculating PES using mask technique.'
-  call write_info(1)
+  call messages_info(1)
 
   ! allocate FFTs in case they are not allocated yet
   call fft_init(mesh%idx%ll,sb%dim,fft_complex,mask%fft, optimize = .not.simul_box_is_periodic(sb))
@@ -52,12 +52,12 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
 
   if (st%parallel_in_states) then
     message(1)= "Info: PES_mask parallelization on states experimental"
-    call write_info(1)
+    call messages_info(1)
 
     if(mesh%parallel_in_domains) then
       write(message(1),'(a)') "PES_mask: simultaneous parallelization on mesh and states not supported"
       write(message(2),'(a)') "Modify ParallelizationStrategy and rerun." 
-      call write_fatal(2) 
+      call messages_fatal(2) 
       end if    
   endif
 
@@ -71,7 +71,7 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
         call   laser_field(hm%ep%lasers(il),mesh%sb, field,it*dt)
       case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL)
         write(message(1),'(a)') 'PES with mask method does not work with magnetic fields yet'
-        call write_fatal(2)
+        call messages_fatal(2)
      end select
       mask%vec_pot(it,:)=mask%vec_pot(it,:)+field(:) !Sum up all the fields
    end do

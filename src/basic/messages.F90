@@ -33,12 +33,12 @@ module messages_m
   private
 
   public ::                     &
-    write_fatal,                &
-    write_warning,              &
-    write_info,                 &
-    write_debug,                &
-    write_debug_marker,         &
-    write_debug_newlines,       &
+    messages_fatal,             &
+    messages_warning,           &
+    messages_info,              &
+    messages_debug,             &
+    messages_debug_marker,      &
+    messages_debug_newlines,    &
     delete_debug_trace,         &
     print_date,                 &
     time_diff,                  &
@@ -54,7 +54,7 @@ module messages_m
     messages_print_var_option,  &
     messages_print_var_value,   &
     messages_obsolete_variable, &
-    messages_experimental,     &
+    messages_experimental,      &
     messages_check_def,         &
     messages_not_implemented
 
@@ -95,7 +95,7 @@ module messages_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine write_fatal(no_lines, only_root_writes)
+  subroutine messages_fatal(no_lines, only_root_writes)
     integer,           intent(in) :: no_lines
     logical, optional, intent(in) :: only_root_writes
 
@@ -165,11 +165,11 @@ contains
 #endif
 
     call loct_exit_failure()
-  end subroutine write_fatal
+  end subroutine messages_fatal
 
 
   ! ---------------------------------------------------------
-  subroutine write_warning(no_lines, all_nodes)
+  subroutine messages_warning(no_lines, all_nodes)
     integer,           intent(in) :: no_lines
     logical, optional, intent(in) :: all_nodes
 
@@ -219,11 +219,11 @@ contains
     end if
 
     return
-  end subroutine write_warning
+  end subroutine messages_warning
 
 
   ! ---------------------------------------------------------
-  subroutine write_info(no_lines, iunit, verbose_limit, stress)
+  subroutine messages_info(no_lines, iunit, verbose_limit, stress)
     integer,           intent(in) :: no_lines
     integer, optional, intent(in) :: iunit
     logical, optional, intent(in) :: verbose_limit
@@ -263,11 +263,11 @@ contains
 #ifdef HAVE_FLUSH
     call flush(iu)
 #endif
-  end subroutine write_info
+  end subroutine messages_info
 
 
   ! ---------------------------------------------------------
-  subroutine write_debug(no_lines)
+  subroutine messages_debug(no_lines)
     integer, intent(in) :: no_lines
 
     integer             :: il, iunit
@@ -290,11 +290,11 @@ contains
       close(iunit_out)
     end if
 
-  end subroutine write_debug
+  end subroutine messages_debug
 
 
   ! ---------------------------------------------------------
-  subroutine write_debug_newlines(no_lines)
+  subroutine messages_debug_newlines(no_lines)
     integer, intent(in) :: no_lines
 
     integer             :: il, iunit
@@ -316,19 +316,19 @@ contains
 
     if(flush_messages) close(iunit_out)
 
-  end subroutine write_debug_newlines
+  end subroutine messages_debug_newlines
 
 
   ! ---------------------------------------------------------
-  subroutine write_debug_marker(no)
+  subroutine messages_debug_marker(no)
     integer, intent(in) :: no
 
     if(.not. in_debug_mode) return
 
     write(message(1), '(a,i3)') 'debug marker #', no
-    call write_debug(1)
+    call messages_debug(1)
 
-  end subroutine write_debug_marker
+  end subroutine messages_debug_marker
 
 
   ! ---------------------------------------------------------
@@ -384,7 +384,7 @@ contains
     integer,          intent(in) :: line
 
     write(message(1), '(a,i14,3a,i5)') "Failed to allocate ", size, " words in file '", trim(file), "' line ", line
-    call write_fatal(1)
+    call messages_fatal(1)
 
   end subroutine alloc_error
 
@@ -396,7 +396,7 @@ contains
     integer,          intent(in) :: line
 
     write(message(1), '(a,i14,3a,i5)') "Failed to deallocate array of ", size, " words in file '", trim(file), "' line ", line
-    call write_fatal(1)
+    call messages_fatal(1)
 
   end subroutine dealloc_error
 
@@ -626,7 +626,7 @@ contains
       " at ", val(5), ":", val(6), ":", val(7)
     message(2) = str_center(trim(message(3)), 70)
     message(3) = ""
-    call write_info(3)
+    call messages_info(3)
 
   end subroutine print_date
 
@@ -710,7 +710,7 @@ contains
     if(no_sub_stack > 49) then
       sub_stack(50) = 'push_sub'
       message(1) = 'Too many recursion levels (max=50)'
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     sub_stack(no_sub_stack)  = trim(sub_name)
@@ -764,7 +764,7 @@ contains
       no_sub_stack = 1
       sub_stack(1) = 'pop_sub'
       message(1) = 'Too few recursion levels.'
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     ! the name might be truncated in sub_stack, so we copy to a string
@@ -775,7 +775,7 @@ contains
       write (message(1),'(a)') 'Wrong sub name on pop_sub :'
       write (message(2),'(2a)') ' got      : ', sub_name_short
       write (message(3),'(2a)') ' expected : ', sub_stack(no_sub_stack)
-      call write_fatal(3)
+      call messages_fatal(3)
     end if
 
     if(conf%debug_level .ge. 99) then
@@ -825,9 +825,9 @@ contains
         write(message(3), '(a)') 'Equivalent functionality can be obtained with the '//trim(rep)
         write(message(4), '(a)') 'variable. Check the documentation for details.'
         write(message(5), '(a)') '(You can use the `oct-help -s '//trim(rep)//'` command).'
-        call write_fatal(5, only_root_writes = .true.)
+        call messages_fatal(5, only_root_writes = .true.)
       else
-        call write_fatal(1, only_root_writes = .true.)
+        call messages_fatal(1, only_root_writes = .true.)
       end if
 
     end if
@@ -841,11 +841,11 @@ contains
     if(.not. conf%devel_version) then
       write(message(1), '(a)') 'Error: '//trim(name)//' is under development.'
       write(message(2), '(a)') 'To use it (at your own risk) set the variable ExperimentalFeatures to yes.'
-      call write_fatal(2, only_root_writes = .true.)
+      call messages_fatal(2, only_root_writes = .true.)
     else
       write(message(1), '(a)') trim(name)//' is under development.'
       write(message(2), '(a)') 'It might not work or produce wrong results.'
-      call write_warning(2)
+      call messages_warning(2)
     end if
 
   end subroutine messages_experimental
@@ -862,7 +862,7 @@ contains
     if(var > def) then
       write(message(1), '(3a)') "The value for '", text, "' does not match the recommended value."
       write(message(2), '(f8.3,a,f8.3)') var, ' > ', def
-      call write_warning(2)
+      call messages_warning(2)
     end if
 
     POP_SUB(messages_check_def)
@@ -876,7 +876,7 @@ contains
     PUSH_SUB(messages_not_implemented)
 
     message(1) = trim(feature)//" not implemented."
-    call write_fatal(1, only_root_writes = .true.)
+    call messages_fatal(1, only_root_writes = .true.)
 
     POP_SUB(messages_not_implemented)
   end subroutine messages_not_implemented

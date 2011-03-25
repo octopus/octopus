@@ -183,12 +183,12 @@ subroutine X(restart_read_lr_rho)(lr, gr, nspin, restart_subdir, rho_tag, ierr)
 
   if( ierr == 0 ) then 
     write(message(1),'(a)') 'Loaded restart density '//rho_tag
-    call write_info(1)
+    call messages_info(1)
 
   else
 
     write(message(1),'(a)') 'Could not load restart '//rho_tag
-    call write_info(1)
+    call messages_info(1)
 
   end if
 

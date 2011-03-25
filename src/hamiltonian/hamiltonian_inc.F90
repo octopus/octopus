@@ -55,7 +55,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   
   if(present(time) .and. hm%d%cdft) then
     message(1) = "TDCDFT not yet implemented."
-    call write_fatal(1)
+    call messages_fatal(1)
   end if
   
   ASSERT(batch_is_ok(psib))

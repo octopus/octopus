@@ -421,7 +421,7 @@ module opencl_m
       if(size_in_bytes > opencl%local_memory_size) then
         write(message(1), '(a,f12.6,a)') "CL Error: requested local memory: ", dble(size_in_bytes)/1024.0, " Kb"
         write(message(2), '(a,f12.6,a)') "          available local memory: ", dble(opencl%local_memory_size)/1024.0, " Kb"
-        call write_fatal(2)
+        call messages_fatal(2)
       end if
 
       call f90_cl_set_kernel_arg_local(kernel, narg, size_in_bytes, ierr)
@@ -576,7 +576,7 @@ module opencl_m
       end select
 
       message(1) = 'Error: OpenCL '//trim(name)//' '//trim(errcode)
-      call write_fatal(1)
+      call messages_fatal(1)
   
     end subroutine opencl_print_error
 

@@ -351,7 +351,7 @@ contains
 
     if(read_data == 0) then
       message(1) = 'Species '//trim(spec%label)//' not found.'
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     POP_SUB(species_read)
@@ -399,7 +399,7 @@ contains
         if(len(trim(spec%user_def)).gt.237) then
           message(2) = trim(message(2))//'...'
         end if
-        call write_info(2)
+        call messages_info(2)
       end if
       spec%niwfs = int(max(2*spec%z_val, CNST(1.0)))
 
@@ -414,7 +414,7 @@ contains
     case(SPEC_FROM_FILE)
       if(print_info_) then
         write(message(1),'(a)') 'Species read from file "'//trim(spec%filename)//'".'
-        call write_info(1)
+        call messages_info(1)
       end if
       spec%niwfs = 2*spec%z_val
       spec%omega = CNST(0.1)
@@ -425,7 +425,7 @@ contains
         write(message(2),'(a,f11.6)')  '   Valence charge = ', spec%z_val
         write(message(3),'(a,f11.6)')  '   Radius [a.u]   = ', spec%jradius
         write(message(4),'(a,f11.6)')  '   Rs [a.u]       = ', spec%jradius * spec%z_val ** (-M_ONE/M_THREE)
-        call write_info(4)
+        call messages_info(4)
       end if
       spec%niwfs = 2*spec%z_val
       spec%omega = CNST(0.1)
@@ -438,7 +438,7 @@ contains
         write(message(2),'(a,f11.6)')  '   Z = ', spec%z_val
         write(message(3),'(a)')  '   Potential will be calculated solving Poisson equation'
         write(message(4),'(a)')  '   for a delta density distribution.'
-        call write_info(4)
+        call messages_info(4)
       end if
       spec%omega = spec%z_val 
 
@@ -449,7 +449,7 @@ contains
         write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a distribution of charge:'
         write(message(2),'(a,a)')      '   rho = ', trim(spec%rho)
         write(message(3),'(a,f11.6)')  '   Z = ', spec%z_val
-        call write_info(3)
+        call messages_info(3)
       end if
     case default
       call input_error('Species')
@@ -507,18 +507,18 @@ contains
         units_from_atomic(units_out%length, this%ps%rc_max), " [", trim(units_abbrev(units_out%length)), "] "
       write(message(4), '(a,f5.1,3a)')  "     orbitals       = ", &
         units_from_atomic(units_out%length, orbital_radius), " [", trim(units_abbrev(units_out%length)), "] "
-      call write_info(4)
+      call messages_info(4)
 
       if(max(local_radius, this%ps%rc_max) > CNST(6.0)) then
         message(1) = "One of the radii of your pseudopotential's localized parts seems"
         message(2) = "unusually large; check that your pseudopotential is correct."
-        call write_warning(2)
+        call messages_warning(2)
       end if
 
       if(orbital_radius > CNST(20.0)) then
         message(1) = "The radius the atomic orbitals given by your pseudopotential seems"
         message(2) = "unusually large; check that your pseudopotential is correct."
-        call write_warning(2)
+        call messages_warning(2)
       end if
 
       if(in_debug_mode) then
@@ -874,7 +874,7 @@ contains
     logical :: bool
 
     if(.not.mpi_grp_is_root(mpi_world)) then
-      call write_debug_newlines(4)
+      call messages_debug_newlines(4)
       return
     end if
 

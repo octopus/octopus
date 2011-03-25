@@ -236,7 +236,7 @@ contains
     end select
 
     write(message(1), '(a,i2,a)') "Info: l = ", ps%l_max, " is maximum angular momentum considered."
-    call write_info(1)
+    call messages_info(1)
 
     ! We allocate all the stuff
     SAFE_ALLOCATE(ps%kb   (0:ps%l_max, 1:ps%kbc))

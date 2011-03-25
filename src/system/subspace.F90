@@ -115,20 +115,20 @@ contains
     if(this%method == SD_SCALAPACK) then
 #ifndef HAVE_MPI
       message(1) = 'The scalapack subspace diagonalization can only be used in parallel.'
-      call write_fatal(1)
+      call messages_fatal(1)
 #else
 #ifndef HAVE_SCALAPACK
       message(1) = 'The scalapack subspace diagonalization requires scalapack.'
-      call write_fatal(1)
+      call messages_fatal(1)
 #endif
       if(st%dom_st_mpi_grp%size == 1) then
         message(1) = 'The scalapack subspace diagonalization is designed to be used with domain or state parallelization.'
-        call write_warning(1)
+        call messages_warning(1)
       end if
 
       if(st%d%kpt%parallel) then
         message(1) = 'Currently the scalapack subspace diagonalization cannot work with subspace diagonalization.'
-        call write_warning(1)
+        call messages_warning(1)
       end if
 #endif
     end if
@@ -136,7 +136,7 @@ contains
 #ifdef HAVE_MPI
     if(this%method == SD_STANDARD .and. st%parallel_in_states) then
       message(1) = 'The standard subspace diagonalization cannot work with state parallelization.'
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 #endif
     

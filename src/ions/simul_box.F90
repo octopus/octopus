@@ -50,7 +50,7 @@ module simul_box_m
     simul_box_ob_info_t,        &
     simul_box_init,             &
     simul_box_end,              &
-    simul_box_write_info,       &
+    simul_box_messages_info,       &
     simul_box_is_periodic,      &
     simul_box_has_zero_bc,      &
     simul_box_in_box,           &
@@ -219,7 +219,7 @@ contains
         write(message(1), '(a,f12.5,a)') "Input: '", sb%fft_alpha, &
           "' is not a valid DoubleFFTParameter"
         message(2) = '1.0 <= DoubleFFTParameter <= 3.0'
-        call write_fatal(2)
+        call messages_fatal(2)
       end if
 
       sb%dim = space%dim
@@ -306,7 +306,7 @@ contains
         call parse_integer(datasets_check('MR_InterpolationOrder'), 5, sb%hr_area%interp%order)
         if(sb%hr_area%interp%order .le. 0) then
           message(1) = "The value for MR_InterpolationOrder must be > 0."
-          call write_fatal(1)
+          call messages_fatal(1)
         end if
 
         sb%hr_area%interp%nn = 2 * sb%hr_area%interp%order
@@ -402,7 +402,7 @@ contains
 
       if(sb%dim > 3 .and. sb%box_shape /= HYPERCUBE) then
         message(1) = "For more than 3 dimensions, you can only use the hypercubic box."
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
 
       sb%rsize = -M_ONE
@@ -504,14 +504,14 @@ contains
         sb%image = loct_gdimage_create_from(filename)
         if(.not.c_associated(sb%image)) then
           message(1) = "Could not open file '" // filename // "'"
-          call write_fatal(1)
+          call messages_fatal(1)
         end if
         sb%image_size(1) = loct_gdImage_SX(sb%image)
         sb%image_size(2) = loct_gdImage_SY(sb%image)
 #else
         message(1) = "To use 'BoxShape = box_image', you have to compile Octopus"
         message(2) = "with GD library support."
-        call write_fatal(2)
+        call messages_fatal(2)
 #endif
       end if     
 
@@ -724,9 +724,9 @@ contains
         write(message(1), '(a,i5,a)') "Atom ", iatom, " is outside the box." 
         if (sb%periodic_dim == sb%dim) then 
           message(2) = "This is a bug." 
-          call write_fatal(2) 
+          call messages_fatal(2) 
         else 
-          if(warn_if_not) call write_warning(1) 
+          if(warn_if_not) call messages_warning(1) 
         end if
       end if 
 
@@ -772,7 +772,7 @@ contains
       kv(1, 1) = M_ONE / rv(1, 1)
     case default ! dim > 3
       message(1) = "Reciprocal lattice is not correct for dim > 3."
-      call write_warning(1)
+      call messages_warning(1)
       volume = M_ONE
       do ii = 1, dim
         kv(ii, ii) = M_ONE
@@ -783,7 +783,7 @@ contains
 
     if ( volume < M_ZERO ) then 
       message(1) = "Your lattice vectors form a left-handed system."
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     POP_SUB(reciprocal_lattice)
@@ -810,7 +810,7 @@ contains
 
 
   !--------------------------------------------------------------
-  recursive subroutine simul_box_write_info(sb, geo, iunit)
+  recursive subroutine simul_box_messages_info(sb, geo, iunit)
     type(simul_box_t), intent(in) :: sb
     type(geometry_t),  intent(in) :: geo
     integer,           intent(in) :: iunit
@@ -825,7 +825,7 @@ contains
 
     integer :: idir, idir2, ispec
 
-    PUSH_SUB(simul_box_write_info)
+    PUSH_SUB(simul_box_messages_info)
 
     write(message(1),'(a)') 'Simulation Box:'
     if(sb%box_shape .eq. BOX_USDEF) then
@@ -833,27 +833,27 @@ contains
     else
       write(message(2), '(a,a,1x)') '  Type = ', bs(sb%box_shape)
     end if
-    call write_info(2, iunit)
+    call messages_info(2, iunit)
 
     if(sb%box_shape == SPHERE .or. sb%box_shape == CYLINDER &
        .or. (sb%box_shape == MINIMUM .and. sb%rsize > M_ZERO)) then
       write(message(1), '(3a,f7.3)') '  Radius  [', trim(units_abbrev(units_out%length)), '] = ', &
         units_from_atomic(units_out%length, sb%rsize)
-      call write_info(1, iunit)
+      call messages_info(1, iunit)
     endif
 
     if (sb%box_shape == MINIMUM .and. sb%rsize <= M_ZERO) then
       do ispec = 1, geo%nspecies     
         write(message(1), '(a,a5,5x,a,f7.3,2a)') '  Species = ', trim(species_label(geo%species(ispec))), 'Radius = ', &
           units_from_atomic(units_out%length, species_def_rsize(geo%species(ispec))), ' ', trim(units_abbrev(units_out%length))
-        call write_info(1, iunit)
+        call messages_info(1, iunit)
       enddo
     end if
 
     if(sb%box_shape == CYLINDER) then
       write(message(1), '(3a,f7.3)') '  Xlength [', trim(units_abbrev(units_out%length)), '] = ', &
         units_from_atomic(units_out%length, sb%xsize)
-      call write_info(1, iunit)
+      call messages_info(1, iunit)
     end if
 
     if(sb%box_shape == PARALLELEPIPED) then
@@ -861,13 +861,13 @@ contains
         '  Lengths [', trim(units_abbrev(units_out%length)), '] = ',    &
         '(', (units_from_atomic(units_out%length, sb%lsize(idir)), ',', idir = 1, sb%dim - 1),  &
         units_from_atomic(units_out%length, sb%lsize(sb%dim)), ')'
-      call write_info(1, iunit)
+      call messages_info(1, iunit)
     end if
 
     write(message(1), '(a,i1,a)') '  Octopus will run in ', sb%dim, ' dimension(s).'
     write(message(2), '(a,i1,a)') '  Octopus will treat the system as periodic in ', &
       sb%periodic_dim, ' dimension(s).'
-    call write_info(2, iunit)
+    call messages_info(2, iunit)
 
     if(sb%periodic_dim > 0 .or. sb%box_shape == PARALLELEPIPED) then
       write(message(1),'(1x)')
@@ -876,23 +876,23 @@ contains
         write(message(2+idir),'(9f12.6)') (units_from_atomic(units_out%length, sb%rlattice(idir2, idir)), &
                                          idir2 = 1, sb%dim) 
       end do
-      call write_info(2+sb%dim, iunit)
+      call messages_info(2+sb%dim, iunit)
 
       write(message(1),'(a,f18.4,3a,i1.1,a)') &
         '  Cell volume = ', units_from_atomic(units_out%length**sb%dim, sb%rcell_volume), &
         ' [', trim(units_abbrev(units_out%length**sb%dim)), ']'
-      call write_info(1, iunit)
+      call messages_info(1, iunit)
 
       write(message(1),'(a,3a,a)') '  Reciprocal-Lattice Vectors [', trim(units_abbrev(units_out%length**(-1))), ']'
       do idir = 1, sb%dim
         write(message(1+idir),'(3f12.6)') (units_from_atomic(unit_one / units_out%length, sb%klattice(idir2, idir)), &
                                            idir2 = 1, sb%dim)
       end do
-      call write_info(1+sb%dim, iunit)
+      call messages_info(1+sb%dim, iunit)
     end if
 
-    POP_SUB(simul_box_write_info)
-  end subroutine simul_box_write_info
+    POP_SUB(simul_box_messages_info)
+  end subroutine simul_box_messages_info
 
 
   !--------------------------------------------------------------
@@ -1258,13 +1258,13 @@ contains
     if(sb%box_shape.ne.PARALLELEPIPED) then
       message(1) = 'Open boundaries are only possible with a parallelepiped'
       message(2) = 'simulation box.'
-      call write_fatal(2)
+      call messages_fatal(2)
     end if
     ! Simulation box must not be periodic in transport direction.
     if(sb%periodic_dim.eq.1) then
       message(1) = 'When using open boundaries, you cannot use periodic boundary'
       message(2) = 'conditions in the x-direction.'
-      call write_fatal(2)
+      call messages_fatal(2)
     end if
 
     if(transport_mode) then
@@ -1317,31 +1317,31 @@ contains
 
       if(lead_sb(il)%box_shape .ne. PARALLELEPIPED) then
         message(1) = 'Simulation box of ' // LEAD_NAME(il) // ' lead is not a parallelepiped.'
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
 
       if(any(sb%lsize(2:sb%dim) .ne. lead_sb(il)%lsize(2:sb%dim))) then
         message(1) = 'The size in non-transport-directions of the ' // LEAD_NAME(il) // ' lead'
         message(2) = 'does not fit the size of the non-transport-directions of the central system.'
-        call write_fatal(2)
+        call messages_fatal(2)
       end if
 
       if(.not. is_integer_multiple(sb%lsize(1), lead_sb(il)%lsize(1))) then
         message(1) = 'The length in x-direction of the central simulation'
         message(2) = 'box is not an integer multiple of the x-length of'
         message(3) = 'the ' // trim(LEAD_NAME(il)) // ' lead.'
-        call write_fatal(3)
+        call messages_fatal(3)
       end if
 
       if(lead_sb(il)%periodic_dim .ne. 1) then
         message(1) = 'Simulation box of ' // LEAD_NAME(il) // ' lead is not periodic in x-direction.'
         message(2) = 'For now we assume the first unit cell to be the periodic representative.'
-        call write_warning(2)
+        call messages_warning(2)
       end if
       if(lead_sb(il)%dim .ne. sb%dim) then
         message(1) = 'Simulation box of ' // LEAD_NAME(il) // ' has a different dimension than'
         message(2) = 'the central system.'
-        call write_fatal(2)
+        call messages_fatal(2)
       end if
     end do
 

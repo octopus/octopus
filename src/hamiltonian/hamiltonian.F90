@@ -399,7 +399,7 @@ contains
       if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
         message(1) = 'Open-boundary calculations for interacting electrons are'
         message(2) = 'not yet possible.'
-        call write_fatal(2)
+        call messages_fatal(2)
       end if
       call init_lead_h
     end if
@@ -517,14 +517,14 @@ contains
             call dinput_function(trim(fname), gr%ob_grid%lead(il)%mesh, hm%lead(il)%vks(:, ispin), ierr)
             if(ierr.eq.0) then
               message(1) = 'Info: Successfully read KS potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
-              call write_info(1)
+              call messages_info(1)
             else
               ! NetCDF.
               fname = trim(static_dir)//'/vks-'//trim(channel)//'.ncdf'
               call dinput_function(trim(fname), gr%ob_grid%lead(il)%mesh, hm%lead(il)%vks(:, ispin), ierr)
               if(ierr.eq.0) then
                 message(1) = 'Info: Successfully read KS potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
-                call write_info(1)
+                call messages_info(1)
               else
                 ! Now try v0.
                 ! OBF.
@@ -533,7 +533,7 @@ contains
                 if(ierr.eq.0) then
                   message(1) = 'Info: Successfully read external potential of the '// &
                     trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
-                  call write_info(1)
+                  call messages_info(1)
                 else
                   ! NetCDF.
                   fname = trim(static_dir)//'/v0.ncdf'
@@ -541,7 +541,7 @@ contains
                   if(ierr.eq.0) then
                     message(1) = 'Info: Successfully read external potential of the '// &
                       trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
-                    call write_info(1)
+                    call messages_info(1)
                   else
                     ! Reading potential failed.
                     message(1) = 'Could read neither vks-x nor v0 from the directory'
@@ -552,7 +552,7 @@ contains
                     message(6) = ''
                     message(7) = 'in your periodic run. Octopus now assumes zero potential'
                     message(8) = 'in the leads. This is most likely not what you want.'
-                    call write_warning(8)
+                    call messages_warning(8)
                     hm%lead(il)%vks(:, ispin) = M_ZERO
                   end if
                 end if
@@ -589,7 +589,7 @@ contains
             call dinput_function(trim(fname), gr%ob_grid%lead(il)%mesh, hm%lead(il)%vhartree(:), ierr)
             if(ierr.eq.0) then
               message(1) = 'Info: Successfully read Hartree potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
-              call write_info(1)
+              call messages_info(1)
             else
               ! NetCDF.
               fname = trim(static_dir)//'/vh.ncdf'
@@ -597,7 +597,7 @@ contains
               if(ierr.eq.0) then
                 message(1) = 'Info: Successfully read Hartree potential of the '//trim(LEAD_NAME(il))&
                               //' lead from '//trim(fname)//'.'
-                call write_info(1)
+                call messages_info(1)
               else
                 message(1) = 'Could not read the Hartree potential of the leads.'
                 message(2) = 'The Hartree term will not be calculated correctly.'
@@ -607,7 +607,7 @@ contains
                 message(6) = ''
                 message(7) = 'in your periodic run and make sure the Hartree interaction'
                 message(8) = 'is switched on.'
-                call write_warning(8)
+                call messages_warning(8)
               end if
             end if
           end if
@@ -628,7 +628,7 @@ contains
         if (t_inv) then
           if(in_debug_mode) then ! write some info
             write(message(1), '(a,2i8)') 'Reallocate lead unit cell from ', gr%intf(il)%np_uc
-            call write_info(1)
+            call messages_info(1)
           end if
           ! resize array
           ! so delete the old array intf%index
@@ -643,7 +643,7 @@ contains
           call lead_resize(gr%intf(il), hm%lead(il), st%d%dim, hm%d%nspin)
           if(in_debug_mode) then ! write some info
             write(message(1), '(a,2i8)') 'to ', gr%intf(il)%np_uc
-            call write_info(1)
+            call messages_info(1)
           end if
         end if
       end do

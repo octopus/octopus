@@ -176,7 +176,7 @@ program oscillator_strength
   if(ierr.ne.0) then
     message(1) = "Your Fortran compiler doesn't support command-line arguments;"
     message(2) = "the oct-oscillator-strength command is not available."
-    call write_fatal(2)
+    call messages_fatal(2)
   end if
 
   ! Set the default values
@@ -256,21 +256,21 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
   if(order.ne.2) then
     write(message(1),'(a)') 'The run mode #3 is only compatible with the analysis of the'
     write(message(2),'(a)') 'second-order response.'
-    call write_fatal(2)
+    call messages_fatal(2)
   end if
 
   ! First, let us check that the file "ot" exists.
   inquire(file="ot", exist  = file_exists)
   if(.not.file_exists) then
     write(message(1),'(a)') "Could not find 'ot' file."
-    call write_fatal(1)
+    call messages_fatal(1)
   end if
 
   ! Now, we should find out which units the file "ot" has.
   call unit_system_from_file(units, "ot", ierr)
   if(ierr.ne.0) then
     write(message(1),'(a)') "Could not retrieve units in the 'ot' file."
-    call write_fatal(1)
+    call messages_fatal(1)
   end if
 
   mode = COSINE_TRANSFORM
@@ -278,7 +278,7 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
   iunit = io_open(trim(ffile), action='read', status='old', die=.false.)
   if(iunit.eq.0) then
     write(message(1),'(a)') 'Could not open '//trim(ffile)//' file.'
-    call write_fatal(1)
+    call messages_fatal(1)
   end if
 
   call io_skip_header(iunit)
@@ -320,7 +320,7 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
   if(order_in_file.ne.order) then
     write(message(1), '(a)') 'Error: The ot file should contain the second-order response'
     write(message(2), '(a)') '       in this run mode.'
-    call write_fatal(2)
+    call messages_fatal(2)
   end if
 
   if(final_time > M_ZERO) then
@@ -402,14 +402,14 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
   inquire(file="ot", exist  = file_exists)
   if(.not.file_exists) then
     write(message(1),'(a)') "Could not find 'ot' file."
-    call write_fatal(1)
+    call messages_fatal(1)
   end if
 
   ! Now, we should find out which units the file "ot" has.
   call unit_system_from_file(units, "ot", ierr)
   if(ierr.ne.0) then
     write(message(1),'(a)') "Could not retrieve units in the 'ot' file."
-    call write_fatal(1)
+    call messages_fatal(1)
   end if
 
   if(omega > M_ZERO) then
@@ -431,7 +431,7 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
 
   if(order_in_file.ne.order) then
     write(message(1), '(a)') 'Internal error in analyze_signal'
-    call write_fatal(1)
+    call messages_fatal(1)
   end if
 
   if(mod(order, 2).eq.1) then
@@ -609,7 +609,7 @@ subroutine find_resonance(omega, leftbound, rightbound, nfrequencies)
       units_from_atomic(units%energy, leftbound), ',', units_from_atomic(units%energy, rightbound), ']'
     write(message(4), '(a,f12.4,a)')         '   Search discretization = ', &
       units_from_atomic(units%energy, dw), ' '//trim(units_abbrev(units%energy))
-    call write_fatal(4)
+    call messages_fatal(4)
   end if
 
   SAFE_DEALLOCATE_A(warray)
@@ -778,12 +778,12 @@ subroutine generate_signal(order, observable)
   ! WARNING: Check that order is smaller or equal to nfiles
   if(nfiles == 0) then
     write(message(1),'(a)') 'No multipoles.x file was found'
-    call write_fatal(1)
+    call messages_fatal(1)
   endif
   if(order > nfiles) then
     write(message(1),'(a)') 'The order that you ask for is higher than the number'
     write(message(2),'(a)') 'of multipoles.x file that you supply.'
-    call write_fatal(2)
+    call messages_fatal(2)
   end if
 
   ! Open the files.
@@ -1105,7 +1105,7 @@ subroutine read_ot(nspin, order, nw_subtracted)
   iunit = io_open('ot', action='read', status='old')
   if(iunit .eq. 0) then
     write(message(1),'(a)') 'A file called ot should be present and was not found.'
-    call write_fatal(1)
+    call messages_fatal(1)
   end if
 
   read(iunit, '(15x,i2)') nspin
@@ -1130,7 +1130,7 @@ subroutine read_ot(nspin, order, nw_subtracted)
   else
     write(message(1),'(a)') 'Problem reading "ot" file: could not figure out the shape'
     write(message(2),'(a)') 'of the observation operator.'
-    call write_fatal(2)
+    call messages_fatal(2)
   end if
 
   call kick_read(kick, iunit)
@@ -1142,7 +1142,7 @@ subroutine read_ot(nspin, order, nw_subtracted)
   call unit_system_from_file(units, "ot", ierr)
   if(ierr.ne.0) then
     write(message(1), '(a)') 'Could not figure out the units in file "ot".'
-    call write_fatal(1)
+    call messages_fatal(1)
   end if
 
   select case(observable(1))
@@ -1213,14 +1213,14 @@ subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
   inquire(file="ot", exist  = file_exists)
   if(.not.file_exists) then
     write(message(1),'(a)') "Could not find 'ot' file."
-    call write_fatal(1)
+    call messages_fatal(1)
   end if
 
   ! Now, we should find out which units the file "ot" has.
   call unit_system_from_file(units, "ot", ierr)
   if(ierr.ne.0) then
     write(message(1),'(a)') "Could not retrieve units in the 'ot' file."
-    call write_fatal(1)
+    call messages_fatal(1)
   end if
 
   if(omega > M_ZERO) then

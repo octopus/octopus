@@ -230,11 +230,11 @@ contains
       if(.not. iand(xyz%flags, XYZ_FLAGS_CHARGE) .ne. 0) then
         message(1) = "Need to know charge for the classical atoms."
         message(2) = "Please use a .pdb"
-        call write_fatal(2)
+        call messages_fatal(2)
       end if
       geo%ncatoms = xyz%n
       write(message(1), '(a,i8)') 'Info: Number of classical atoms = ', geo%ncatoms
-      call write_info(1)
+      call messages_info(1)
 
       SAFE_ALLOCATE(geo%catom(1:geo%ncatoms))
       do ia = 1, geo%ncatoms
@@ -253,7 +253,7 @@ contains
       write(message(2), '(a)') "Please review your input files and the output geometry."
       ! then write out the geometry, whether asked for or not in Output variable
       call atom_write_xyz(STATIC_DIR, "geometry", geo, geo%space%dim)
-      call write_fatal(2)
+      call messages_fatal(2)
     end if
 
     POP_SUB(geometry_init_xyz)
@@ -426,7 +426,7 @@ contains
           if(print_info_) then
             message(1) = 'Info: Interaction between '//trim(label1)//' and '//trim(label2)// &
               ' is given by the Lennard-Jones potential.'
-            call write_info(1)
+            call messages_info(1)
           end if
 
         end select

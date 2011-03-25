@@ -58,7 +58,7 @@ module young_m
 
     if (ndown > nup) then
       write (message(1),'(a)') 'Error: we only make 2-row Young diagrams with nup >= ndown'
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     this%nup = nup
@@ -174,7 +174,7 @@ module young_m
 !    if (all(this%young_up(:,this%iyoung) /= nn) .and. all(this%young_down(:,this%iyoung) /= nn)) then
 !      write (message(1),'(a,I7,a)') 'Error : nn = ', nn, &
 !            ' was not attributed to any box- this should not happen!'
-!      call write_fatal(1)
+!      call messages_fatal(1)
 !    end if
 
     POP_SUB(young_fill)

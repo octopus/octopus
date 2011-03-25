@@ -72,7 +72,7 @@ contains
       if(in_debug_mode) then ! write info
         write(message(1), '(a)') 'Non-reducible unit cell'
         write(message(2), '(a,e10.3)') 'Sancho-Residual = ', residual
-        call write_info(2)
+        call messages_info(2)
       end if
     else
       ! 1. calculate with the fastest method
@@ -81,7 +81,7 @@ contains
       residual = calc_residual_green(energy, self_energy, diag, offdiag, intf)
       if(in_debug_mode) then ! write info
         write(message(1), '(a,e10.3)') 'Umerski-Residual = ', residual
-        call write_info(1)
+        call messages_info(1)
       end if
       if(residual.gt.eps) then
         ! 3. if not converged try the other method while saving the old
@@ -90,7 +90,7 @@ contains
         residual2 = calc_residual_green(energy, green2, diag, offdiag, intf)
         if(in_debug_mode) then ! write info
           write(message(1), '(a,e10.3)') 'Sancho-Residual = ', residual2
-          call write_info(1)
+          call messages_info(1)
         end if
         ! 4. if also not converged choose the best one and give warning
         if(residual2.lt.eps) then ! finally converged
@@ -104,7 +104,7 @@ contains
           write(message(3), '(a,e10.3)') 'Umerski-Residual = ', residual
           write(message(4), '(a,e10.3)') 'Sancho-Residual  = ', residual2
           message(5) = 'The better converged version is taken.'
-          call write_warning(5)
+          call messages_warning(5)
         end if
         ! cleanup
         SAFE_DEALLOCATE_A(green2)
@@ -142,14 +142,14 @@ contains
 
     if(in_debug_mode) then ! write info
       write(message(1), '(a,e10.3)') 'density of states = ', abs(dos)
-      call write_info(1)
+      call messages_info(1)
     end if
 
     if(dos.lt.M_ZERO) then
       green(:, :) = transpose(conjg(green(:, :)))
       if(in_debug_mode) then ! write info
         message(1) = "surface Green's function changed to its hermitian conjugate"
-        call write_info(1)
+        call messages_info(1)
       end if
     end if
 
@@ -282,7 +282,7 @@ contains
 
     if(in_debug_mode) then ! write some info
       message(1) = "surface Green's function: iterative algorithm"
-      call write_info(1)
+      call messages_info(1)
     end if
 
     call fix_green(np, green)
@@ -453,7 +453,7 @@ contains
     
     if(in_debug_mode) then ! write some info
       message(1) = "surface Green's function: direct algorithm (Moebius transformation)"
-      call write_info(1)
+      call messages_info(1)
     end if
 
     call fix_green(np, green)

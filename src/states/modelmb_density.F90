@@ -75,7 +75,7 @@ contains
     ! the description for this variable is in modelmb_particles.F90
     if(parse_block(datasets_check('DensitiestoCalc'), blk) /= 0) then
       message(1) = 'To print out density, you must specify the DensitiestoCalc block in input'
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
    
     ncols = parse_block_cols(blk, 0)
@@ -97,7 +97,7 @@ contains
    
       write (message(1),'(a,a)') 'labels_densities = ', den%labels(ipart)
       write (message(2),'(a,i6)') 'particle_kept_densities = ', den%particle_kept(ipart)
-      call write_info(2)
+      call messages_info(2)
     end do
     call parse_block_end(blk)
     ! END reading in of input var block DensitiestoCalc
@@ -196,7 +196,7 @@ contains
       write (message(1),'(a,I6,a,I6,a,I6)') 'For particle ', ikeeppart, ' of mb state ', mm
       write (message(2),'(a,3E20.10)') 'The dipole moment is (in a.u. = e bohr):     ', dipole_moment(1:min(3, ndim1part))
       write (message(3),'(a,E15.3)') '     with intrinsic numerical error usually <= ', 1.e-6 * mb_1part%npt
-      call write_info(3)
+      call messages_info(3)
       ! dipole should be expressed in units_out%length
 
       SAFE_DEALLOCATE_A(density)

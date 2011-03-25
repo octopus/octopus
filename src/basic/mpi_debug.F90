@@ -127,7 +127,7 @@ contains
     end do
     message(C_NUM_MPI_ROUTINES+5) = ''
     message(C_NUM_MPI_ROUTINES+6) = hyphens
-    call write_debug(C_NUM_MPI_ROUTINES+6)
+    call messages_debug(C_NUM_MPI_ROUTINES+6)
   end subroutine mpi_debug_statistics
 
 
@@ -142,7 +142,7 @@ contains
     write(message(1),'(a,f18.6,a,z8.8,a,i6.6,a,f13.6)') '* MPI_I ', &
       sec_in, ' '//mpi_rlabel(index)//' : 0x', comm, ' | ',  &
       call_counter(index), ' - ', sec_accum(index)
-    call write_debug(1)
+    call messages_debug(1)
   end subroutine mpi_debug_in
 
 
@@ -159,7 +159,7 @@ contains
     write(message(1),'(a,f18.6,a,z8.8,a,i6.6,a,f13.6,a,f13.6)')         &
       '* MPI_O ', sec_out, ' '//mpi_rlabel(index)//' : 0x', comm, ' | ', &
       call_counter(index), ' - ', sec_accum(index), ' - ', sec_diff
-    call write_debug(1)
+    call messages_debug(1)
   end subroutine mpi_debug_out
 
 

@@ -70,7 +70,7 @@ contains
     if(psf%pspcod.ne.6) then
       message(1) = "Inconsistency in pseudopotential file:"
       write(message(2),'(a,i2)') "  expecting pspcod = 6, but found ", psf%pspcod
-      call write_fatal(2)
+      call messages_fatal(2)
     end if
     
     read(unit, '(a3)') line

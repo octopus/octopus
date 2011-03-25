@@ -141,7 +141,7 @@ contains
         end if
         if(in_debug_mode) then ! write info
           write(message(1), '(a,i8,e10.3)') 'Iterations, Residual: ', iter, res
-          call write_info(1)
+          call messages_info(1)
         end if
 
         eigens%matvec = eigens%matvec + iter + 1 + 2

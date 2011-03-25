@@ -92,7 +92,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_un
         end do
       else
         message(1) = 'No current density output for real states since it is identically zero.'
-        call write_warning(1)
+        call messages_warning(1)
       endif
     end if
 

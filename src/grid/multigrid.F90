@@ -129,7 +129,7 @@ contains
     SAFE_ALLOCATE(mgrid%level(0)%tt%fine_i(1:mesh%np))
 
     write(message(1), '(a,i3)') "Multigrid levels:", n_levels + 1
-    call write_info(1)
+    call messages_info(1)
 
     do i = 1, mgrid%n_levels
       SAFE_ALLOCATE(mgrid%level(i)%mesh)
@@ -149,7 +149,7 @@ contains
 
       call derivatives_build(mgrid%level(i)%der, mgrid%level(i)%mesh)
 
-      call mesh_write_info(mgrid%level(i)%mesh, stdout)
+      call mesh_messages_info(mgrid%level(i)%mesh, stdout)
       
       mgrid%level(i)%der%finer => mgrid%level(i - 1)%der
       mgrid%level(i - 1)%der%coarser => mgrid%level(i)%der

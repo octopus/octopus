@@ -89,12 +89,12 @@ contains
 
     if(simul_box_is_periodic(gr%sb)) then
       message(1) = "Electric field cannot be applied to a periodic system (currently)."
-      call write_fatal(1)
+      call messages_fatal(1)
     endif
 
     ! set up Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
-    call write_info(1)
+    call messages_info(1)
     call system_h_setup (sys, hm)
 
     call io_mkdir(trim(tmpdir)//EM_RESP_FD_DIR) ! restart
@@ -134,7 +134,7 @@ contains
       ! if saved dipoles used a different e_field, we cannot use them
       if(abs(e_field_saved - e_field) > M_EPSILON) then
         message(1) = "Saved dipoles are from a different electric field, cannot use them."
-        call write_warning(1)
+        call messages_warning(1)
         center_written = .false.
         diagonal_done = .false.
         i_start = 1
@@ -144,7 +144,7 @@ contains
       if(center_written) read_count = read_count + 1
       if(diagonal_done)  read_count = read_count + 1
       write(message(1),'(a,i1,a)') "Read ", read_count, " dipole(s) from file."
-      call write_info(1)
+      call messages_info(1)
     end if
 
     if(iand(sys%outp%what, output_density) .ne. 0 .or. &
@@ -188,7 +188,7 @@ contains
 
     write(message(1), '(a)')
     write(message(2), '(a)') 'Info: Calculating dipole moment for zero field.'
-    call write_info(2)
+    call messages_info(2)
     call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
 
     gs_rho(1:gr%mesh%np, 1:st%d%nspin) = st%rho(1:gr%mesh%np, 1:st%d%nspin)
@@ -221,7 +221,7 @@ contains
         write(message(2), '(a,f6.4,5a)') 'Info: Calculating dipole moment for field ', &
           units_from_atomic(units_out%force, -(-1)**isign * e_field), ' ', &
           trim(units_abbrev(units_out%force)), ' in the ', index2axis(ii), '-direction.'
-        call write_info(2)
+        call messages_info(2)
         ! there is an extra factor of -1 in here that is for the electronic charge
 
         hm%ep%vpsl(1:gr%mesh%np) = vpsl_save(1:gr%mesh%np) + (-1)**isign * gr%mesh%x(1:gr%mesh%np, ii) * e_field
@@ -277,7 +277,7 @@ contains
           call restart_write(trim(dir_name), st, gr, ierr)
           if(ierr .ne. 0) then
             message(1) = 'Unsuccessful write of "'//trim(dir_name)//'"'
-            call write_fatal(1)
+            call messages_fatal(1)
           end if
         endif
 
@@ -298,7 +298,7 @@ contains
          trim(units_abbrev(units_out%force)), ' in the '//index2axis(2)//'-direction plus ', &
          units_from_atomic(units_out%force, e_field), ' ', &
          trim(units_abbrev(units_out%force)), ' in the '//index2axis(3)//'-direction.'
-      call write_info(2)
+      call messages_info(2)
   
       hm%ep%vpsl(1:gr%mesh%np) = vpsl_save(1:gr%mesh%np) &
         - (gr%mesh%x(1:gr%mesh%np, 2) + gr%mesh%x(1:gr%mesh%np, 3)) * e_field
@@ -359,7 +359,7 @@ contains
         call restart_write(trim(dir_name), st, gr, ierr)
         if(ierr .ne. 0) then
           message(1) = 'Unsuccessful write of "'//trim(dir_name)//'"'
-          call write_fatal(1)
+          call messages_fatal(1)
         end if
       endif
 
@@ -403,7 +403,7 @@ contains
       if (e_field <= M_ZERO) then
         write(message(1), '(a,e14.6,a)') "Input: '", e_field, "' is not a valid EMStaticElectricField."
         message(2) = '(Must have EMStaticElectricField > 0)'
-        call write_fatal(2)
+        call messages_fatal(2)
       end if
 
       ! variable defined in em_resp

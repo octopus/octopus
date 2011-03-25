@@ -196,7 +196,7 @@ module opt_control_global_m
       write(message(1), '(a)') '"OCTScheme = oct_algorithm_newuoa" is only possible if the newuoa'
       write(message(2), '(a)') 'code has been compiled. You must configure octopus passing the'
       write(message(3), '(a)') 'the "--enable-newuoa" switch.'
-      call write_fatal(3)
+      call messages_fatal(3)
 #endif
     case default
       oct%delta = M_ONE; oct%eta = M_ONE

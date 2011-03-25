@@ -95,19 +95,19 @@ contains
       inquire(file=filename2, exist=found)
       if(.not.found) then
         message(1) = "Pseudopotential file '" // trim(filename) // ".hgh' not found!"
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
     end if
 
     message(1) = "Reading pseudopotential from file:"
     write(message(2), '(6x,3a)') "'", trim(filename2), "'"
-    call write_info(2)
+    call messages_info(2)
 
     iunit = io_open(filename2, action='read', form='formatted', status='old', is_tmp=.true.)
     i = load_params(iunit, psp)
     if(i .ne. 0) then
       message(1) = 'Error reading hgh file!'
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
     call io_close(iunit)
 
@@ -190,7 +190,7 @@ contains
       write(message(1),'(a)') 'The algorithm that calculates atomic wavefunctions could not'
       write(message(2),'(a)') 'do its job. The program will continue, but expect poor'
       write(message(3),'(a)') 'convergence properties.'
-      call write_warning(3)
+      call messages_warning(3)
       psp%conf%p = 0
     end if
 
@@ -560,7 +560,7 @@ contains
 
     ! Let us be a bit informative.
     message(1) = '      Calculating atomic pseudo-eigenfunctions for species ' // psp%atom_name // '....'
-    call write_info(1)
+    call messages_info(1)
 
     ! "Double" self-consistent loop: nonlocal and XC parts have to be calculated
     ! self-consistently.
@@ -631,7 +631,7 @@ contains
         if (e > CNST(1.0e-5)) then
           write(message(1), '(a,i2,a)') "Eigenstate for n = ", n , ' is not normalized'
           write(message(2), '(a, f12.6,a)') '(abs(1-norm) = ', e, ')'
-          call write_warning(2)
+          call messages_warning(2)
         end if
       end do
 

@@ -62,7 +62,7 @@ contains
     ! initialize KS inversion module
     call xc_ks_inversion_init(sys%ks%ks_inversion, sys%ks%xc_family, &
          sys%gr, sys%geo, sys%st%d, sys%mc)
-    call xc_ks_inversion_write_info(sys%ks%ks_inversion, stdout)
+    call xc_ks_inversion_messages_info(sys%ks%ks_inversion, stdout)
 
     !abbreviations
     np      = sys%gr%mesh%np
@@ -103,7 +103,7 @@ contains
     enddo
    
     write(message(1),'(a)') "Calculating KS potential"
-    call write_info(1)
+    call messages_info(1)
        
     if (sys%ks%ks_inversion%method == XC_INV_METHOD_TWO_PARTICLE) then ! 2-particle exact inversion
      
@@ -143,7 +143,7 @@ contains
     enddo
     write (message(1),'(a,F16.6)') 'Achieved difference in densities wrt target:', &
         diffdensity
-    call write_info(1)
+    call messages_info(1)
 
     ! output for all cases    
     call h_sys_output_all(sys%outp, sys%gr, sys%geo, sys%ks%ks_inversion%aux_st, hm, STATIC_DIR)

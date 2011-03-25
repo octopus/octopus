@@ -59,9 +59,9 @@ module opt_control_m
   private
   public :: opt_control_run,              &
             opt_control_cg_calc,          &
-            opt_control_cg_write_info,    &
+            opt_control_cg_messages_info,    &
             opt_control_direct_calc,      &
-            opt_control_direct_write_info,&
+            opt_control_direct_messages_info,&
             opt_control_function_forward
 
 
@@ -122,7 +122,7 @@ contains
     call controlfunction_prepare_initial(par)
     call controlfunction_to_h(par, hm%ep)
     call messages_print_stress(stdout, "TD ext. fields after processing")
-    call laser_write_info(hm%ep%lasers, stdout)
+    call laser_messages_info(hm%ep%lasers, stdout)
     call messages_print_stress(stdout)
     call controlfunction_write(OCT_DIR//'initial_laser', par)
 
@@ -162,39 +162,39 @@ contains
     select case(oct%algorithm)
       case(oct_algorithm_zbr98)
         message(1) = "Info: Starting OCT iteration using scheme: ZBR98"
-        call write_info(1)
+        call messages_info(1)
         call scheme_zbr98
       case(oct_algorithm_wg05)
         message(1) = "Info: Starting OCT iteration using scheme: WG05"
-        call write_info(1)
+        call messages_info(1)
         call scheme_wg05
       case(oct_algorithm_zr98)
         message(1) = "Info: Starting OCT iteration using scheme: ZR98"
-        call write_info(1)
+        call messages_info(1)
         call scheme_mt03
       case(oct_algorithm_mt03)
         message(1) = "Info: Starting OCT iteration using scheme: MT03"
-        call write_info(1)
+        call messages_info(1)
         call scheme_mt03
       case(oct_algorithm_krotov)
         message(1) = "Info: Starting OCT iteration using scheme: KROTOV"
-        call write_info(1)
+        call messages_info(1)
         call scheme_mt03
       case(oct_algorithm_str_iter)
         message(1) = "Info: Starting OCT iterations using scheme: STRAIGHT ITERATION"
-        call write_info(1)
+        call messages_info(1)
         call scheme_straight_iteration
       case(oct_algorithm_cg)
         message(1) = "Info: Starting OCT iterations using scheme: CONJUGATE GRADIENTS"
-        call write_info(1)
+        call messages_info(1)
         call scheme_cg
       case(oct_algorithm_direct)
         message(1) = "Info: Starting OCT iterations using scheme: DIRECT OPTIMIZATION (NELDER-MEAD)"
-        call write_info(1)
+        call messages_info(1)
         call scheme_direct
       case(oct_algorithm_newuoa)
         message(1) = "Info: Starting OCT iterations using scheme: DIRECT OPTIMIZATION (NEWUOA)"
-        call write_info(1)
+        call messages_info(1)
         call scheme_newuoa
     case default
       call input_error('OCTScheme')
@@ -385,7 +385,7 @@ contains
         return
       end if
 
-      ! Set the module pointers, so that the direct_opt_calc and direct_opt_write_info routines
+      ! Set the module pointers, so that the direct_opt_calc and direct_opt_messages_info routines
       ! can use them.
       call controlfunction_copy(par_, par)
       sys_      => sys
@@ -403,16 +403,16 @@ contains
 
       ierr = loct_minimize(MINMETHOD_BFGS2, dof, x(1), step, &
            real(oct_iterator_tolerance(iterator), 8), real(oct_iterator_tolerance(iterator), 8), &
-           maxiter, opt_control_cg_calc, opt_control_cg_write_info, minvalue)
+           maxiter, opt_control_cg_calc, opt_control_cg_messages_info, minvalue)
 
       if(ierr.ne.0) then
         if(ierr <= 1024) then
           message(1) = "Error occurred during the GSL minimization procedure:"
           call loct_strerror(ierr, message(2))
-          call write_fatal(2)
+          call messages_fatal(2)
         else
           message(1) = "The CG optimization did not meet the convergence criterion."
-          call write_info(1)
+          call messages_info(1)
         end if
       end if
 
@@ -455,7 +455,7 @@ contains
 
       if(oct%random_initial_guess) call controlfunction_randomize(par)
 
-      ! Set the module pointers, so that the direct_opt_calc and direct_opt_write_info routines
+      ! Set the module pointers, so that the direct_opt_calc and direct_opt_messages_info routines
       ! can use them.
       call controlfunction_copy(par_, par)
       sys_      => sys
@@ -472,16 +472,16 @@ contains
 
       ierr = loct_minimize_direct(MINMETHOD_NMSIMPLEX, dim, x(1), step,&
                real(oct_iterator_tolerance(iterator), 8), maxiter, &
-               opt_control_direct_calc, opt_control_direct_write_info, minvalue)
+               opt_control_direct_calc, opt_control_direct_messages_info, minvalue)
 
       if(ierr.ne.0) then
         if(ierr <= 1024) then
           message(1) = "Error occurred during the GSL minimization procedure:"
           call loct_strerror(ierr, message(2))
-          call write_fatal(2)
+          call messages_fatal(2)
         else
           message(1) = "The OCT direct optimization did not meet the convergence criterion."
-          call write_info(1)
+          call messages_info(1)
         end if
       end if
 

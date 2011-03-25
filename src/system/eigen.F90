@@ -156,7 +156,7 @@ contains
     if(st%parallel_in_states .and. .not. eigensolver_parallel_in_states(eigens)) then
       message(1) = "The selected eigensolver is not parallel in states."
       message(2) = "Please use the lobpcg or rmmdiis eigensolvers."
-      call write_fatal(2)
+      call messages_fatal(2)
     end if
 
     !%Variable EigensolverVerbose
@@ -373,7 +373,7 @@ contains
             endif
             message(1) = trim(message(1)) // trim(str_tmp)
           enddo   
-          call write_info(1)
+          call messages_info(1)
         end if
       end if
       

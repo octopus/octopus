@@ -51,7 +51,7 @@ module mesh_partition_m
     mesh_partition_boundaries,   &
     mesh_partition_write,        &
     mesh_partition_read,         &
-    mesh_partition_write_debug
+    mesh_partition_messages_debug
 
 contains
   
@@ -109,7 +109,7 @@ contains
 
     if(mesh%np_global == 0) then
       message(1) = 'The mesh is empty and cannot be partitioned.'
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     !%Variable MeshPartitionPackage
@@ -137,7 +137,7 @@ contains
 #ifndef HAVE_METIS
     if(library == METIS) then
       message(1) = 'Error: METIS was requested, but Octopus was compiled without it.'
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 #endif
 
@@ -256,7 +256,7 @@ contains
           message(3) = 'Info: Compatible with METIS programs pmetis and kmetis.'
           message(4) = 'Info: First line contains number of vertices and edges.'
           message(5) = 'Info: Edges are not directed and appear twice in the lists.'
-          call write_info(5)
+          call messages_info(5)
           if(mpi_grp_is_root(mpi_world)) then
             call io_mkdir('debug/mesh_partition')
             iunit = io_open('debug/mesh_partition/mesh_graph.txt', action='write')
@@ -288,17 +288,17 @@ contains
       select case(method)
       case(RCB)
         message(1) = 'Info: Using METIS multilevel recursive bisection to partition the mesh.'
-        call write_info(1)
+        call messages_info(1)
         call oct_metis_part_graph_recursive(nv, xadj, adjncy, &
           0, 0, 0, 1, npart, options, edgecut, part)
       case(GRAPH)
         message(1) = 'Info: Using METIS multilevel k-way algorithm to partition the mesh.'
-        call write_info(1)
+        call messages_info(1)
         call oct_metis_part_graph_kway(nv, xadj, adjncy, &
           0, 0, 0, 1, npart, options, edgecut, part)
       case default
         message(1) = 'Error: Selected partition method is not available in METIS.'
-        call write_fatal(1)
+        call messages_fatal(1)
       end select
 #endif
     case(ZOLTAN)
@@ -476,7 +476,7 @@ contains
       else
         message(1) = "Info: Could not find a compatible mesh partition."
       end if
-      call write_info(1)
+      call messages_info(1)
     end if
     
     !broadcast the result
@@ -491,7 +491,7 @@ contains
 
   ! ----------------------------------------------------
 
-  subroutine mesh_partition_write_debug(mesh, part)
+  subroutine mesh_partition_messages_debug(mesh, part)
     type(mesh_t),    intent(in)    :: mesh
     integer,         intent(inout) :: part(:)
 
@@ -500,7 +500,7 @@ contains
     integer              :: iunit          ! For debug output to files.
     character(len=3)     :: filenum
 
-    PUSH_SUB(mesh_partition_write_debug)
+    PUSH_SUB(mesh_partition_messages_debug)
 
     if(in_debug_mode .and. mpi_grp_is_root(mpi_world)) then
 
@@ -542,9 +542,9 @@ contains
     call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
 #endif
 
-    POP_SUB(mesh_partition_write_debug)
+    POP_SUB(mesh_partition_messages_debug)
 
-  end subroutine mesh_partition_write_debug
+  end subroutine mesh_partition_messages_debug
 
 end module mesh_partition_m
 

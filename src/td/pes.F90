@@ -118,7 +118,7 @@ contains
 
     if(pes%calc_mask .and. ab /= 2) then
       message(1) = 'Warning: CalcPES_mask works only with AbsorbingBoundaries=2.'
-      call write_info(1)
+      call messages_info(1)
       call input_error('CalcPES_Mask')
     end if
 

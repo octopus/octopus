@@ -117,7 +117,7 @@ program vibrational
       if (mod(ntime,2) > CNST(1e-12)) then
          write(message(1), '(a)') "WARNING: Velocity autocorrelation function needs even number of input points,"
          write(message(2), '(a)') "the last point will be ignored."
-         call write_info(2)
+         call messages_info(2)
          nvaf=int((ntime-1)/2)
        
       else 
@@ -140,7 +140,7 @@ program vibrational
       
       if( av < CNST(1e-12)) then 
         write (message(1), '(a)') "Error: Velocity autocorrelation function is zero."
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
       
       vaf = vaf/av
@@ -313,7 +313,7 @@ contains
 
     write (message(1), '(a)') "Read velocities from '"// &
       trim(io_workpath('td.general/coordinates'))//"'"
-    call write_info(1)
+    call messages_info(1)
 
     !calculating the vaf
     vaf=M_ZERO
@@ -385,7 +385,7 @@ contains
 
     write (message(1), '(a)') "Read dipole moment from '"// &
       trim(io_workpath('td.general/multipoles'))//"'."
-    call write_info(1)
+    call messages_info(1)
   end subroutine read_dipole
   
   subroutine fourier(fi, ftfi)
@@ -414,7 +414,7 @@ contains
     end do
 
     write (message(1), '(a)') "Taking the fourier transform."
-    call write_info(1)
+    call messages_info(1)
 
     !now calculate the FT
     !$omp parallel do private(ww, jj)
@@ -429,7 +429,7 @@ contains
     !$omp end parallel do
 
     write (message(1), '(a)') "Done."
-    call write_info(1)
+    call messages_info(1)
 
   end subroutine fourier
 

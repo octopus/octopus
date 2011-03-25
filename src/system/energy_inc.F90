@@ -44,7 +44,7 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
 
   if(in_debug_mode) then
     write(message(1), '(a)') 'Debug: Calculating eigenvalues.'
-    call write_info(1)
+    call messages_info(1)
   end if
 
   ! FIXME: for TD open boundaries this is wrong. But the GS case like above

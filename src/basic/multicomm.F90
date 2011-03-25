@@ -180,7 +180,7 @@ contains
 
     if (mc%nthreads > 1) then
       write(message(1),'(a, i3)') 'Info: Number of threads ', mc%nthreads
-      call write_info(1)
+      call messages_info(1)
     end if
 
     if(mc%par_strategy.ne.P_STRATEGY_SERIAL) then
@@ -225,7 +225,7 @@ contains
       if(mc%have_slaves) then
 #ifndef HAVE_MPI2
         message(1) = 'Task parallelization requires MPI 2.'
-        call write_fatal(1)
+        call messages_fatal(1)
 #endif
         call messages_experimental('Task parallelization')
       end if
@@ -301,7 +301,7 @@ contains
           end do
           jj=jj+1
           write(message(jj),'(a,i6)') "mc%par_strategy is : ",mc%par_strategy
-          call write_fatal(jj, only_root_writes = .true.)
+          call messages_fatal(jj, only_root_writes = .true.)
         end if
       else
         mc%par_strategy = P_STRATEGY_SERIAL
@@ -316,7 +316,7 @@ contains
       !$omp end parallel
       if(mc%nthreads > MAX_OMP_THREADS) then
         message(1) = "Number of threads requested is larger than MAX_OMP_THREADS."
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
 #endif
 
@@ -325,7 +325,7 @@ contains
       else
         message(1) = "Octopus will run in *parallel*"
       end if
-      call write_info(1)
+      call messages_info(1)
       
       POP_SUB(multicomm_init.strategy)
     end subroutine strategy
@@ -354,7 +354,7 @@ contains
         if(mc%group_sizes(ii) == -1) then
           if(fill_used) then
             message = "Error: The 'fill' value can be used only once in ParallelizationGroupRanks."
-            call write_fatal(1, only_root_writes = .true.)
+            call messages_fatal(1, only_root_writes = .true.)
           end if
           mc%group_sizes(ii) = -base_grp%size / product(mc%group_sizes)
           fill_used = .true.
@@ -430,12 +430,12 @@ contains
 
         if(mc%group_sizes(slave_level) < num_slaves + 1) then
           message(1) = 'Too many nodes assigned to task parallelization.'
-          call write_fatal(1)
+          call messages_fatal(1)
         end if
 
         write(message(1),'(a,i6)') 'Info: Number of slaves nodes              :', &
           num_slaves*product(mc%group_sizes(1:slave_level - 1))
-        call write_info(1)
+        call messages_info(1)
 
       end if
 
@@ -449,26 +449,26 @@ contains
         write(message(ii),'(3a,i6,a,i8,a)') 'Info: Number of nodes in ', &
           par_types(kk), ' group:', real_group_sizes(kk), ' (', index_range(kk), ')'
       end do
-      call write_info(ii)
+      call messages_info(ii)
 
       ! do we have the correct number of processors
       if(product(mc%group_sizes(1:mc%n_index)) .ne. base_grp%size) then
         write(message(1),'(a,i4,a,i4,a)') "Inconsistent number of processors (", &
           product(real_group_sizes(1:mc%n_index)), ".ne.", base_grp%size, ")"
         message(2) = "You probably have a problem in the block 'ParallelizationGroupRanks'"
-        call write_fatal(2, only_root_writes = .true.)
+        call messages_fatal(2, only_root_writes = .true.)
       end if
 
       if(any(real_group_sizes(1:mc%n_index) > index_range(1:mc%n_index))) then
         message(1) = "Could not distribute nodes in parallel job. Most likely you are trying to"
         message(2) = "use too many nodes for the job."
-        call write_fatal(2, only_root_writes = .true.)
+        call messages_fatal(2, only_root_writes = .true.)
       end if
 
       if(any(index_range(1:mc%n_index) / real_group_sizes(1:mc%n_index) < min_range(1:mc%n_index))) then
         message(1) = "I have fewer elements in a parallel group than recommended."
         message(2) = "Maybe you should reduce the number of nodes."
-        call write_warning(2)
+        call messages_warning(2)
       end if
 
       ! calculate fraction of idle time
@@ -483,9 +483,9 @@ contains
         (M_ONE - frac)*CNST(100.0), "% of computer time."
       if(frac < CNST(0.8)) then
         message(2) = "Usually a number of processors which is a multiple of small primes is best."
-        call write_warning(3)
+        call messages_warning(3)
       else
-        call write_info(1)
+        call messages_info(1)
       end if
 
       POP_SUB(multicomm_init.sanity_check)

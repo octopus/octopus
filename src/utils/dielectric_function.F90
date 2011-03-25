@@ -75,7 +75,7 @@ program dielectric_function
     
     if(in_file < 0) then 
       message(1) = "Cannot find the GaugeVectorField in the input file"
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
   end if
@@ -85,7 +85,7 @@ program dielectric_function
   call count_time_steps(in_file, time_steps, dt)
   if(in_file < 0) then 
     message(1) = "Cannot open file '"//trim(io_workpath('td.general/gauge_field'))//"'"
-    call write_fatal(1)
+    call messages_fatal(1)
   end if
 
   SAFE_ALLOCATE(vecpot(1:MAX_DIM*3, 1:time_steps))
@@ -100,7 +100,7 @@ program dielectric_function
 
   write(message(1), '(a, i7, a)') "Info: Read ", time_steps, " steps from file '"// &
     trim(io_workpath('td.general/gauge_field'))//"'"
-  call write_info(1)
+  call messages_info(1)
 
 
   ! Find out the iteration numbers corresponding to the time limits.

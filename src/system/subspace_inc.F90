@@ -283,7 +283,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
 
   if(info /= 0) then
     write(message(1),'(a,i6)') "ScaLAPACK pzheev workspace query failure, error code = ", info
-    call write_fatal(1)
+    call messages_fatal(1)
   endif
 
   lwork = nint(abs(rttmp))
@@ -299,7 +299,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
 
   if(info /= 0) then
     write(message(1),'(a,i6)') "ScaLAPACK pzheev call failure, error code = ", info
-    call write_fatal(1)
+    call messages_fatal(1)
   endif
 
   SAFE_DEALLOCATE_A(work)
@@ -312,7 +312,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
 
   if(info /= 0) then
     write(message(1),'(a,i6)') "ScaLAPACK pdsyev workspace query failure, error code = ", info
-    call write_fatal(1)
+    call messages_fatal(1)
   endif
 
   lwork = nint(abs(rttmp))
@@ -323,7 +323,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
 
   if(info /= 0) then
     write(message(1),'(a,i6)') "ScaLAPACK pdsyev call failure, error code = ", info
-    call write_fatal(1)
+    call messages_fatal(1)
   endif
   
   SAFE_DEALLOCATE_A(work)
@@ -387,7 +387,7 @@ subroutine X(subspace_test)(st, hm, gr)
 
   message(1) = 'Info: Orthogonalizing random wavefunctions.'
   message(2) = ''
-  call write_info(2)
+  call messages_info(2)
 
   call X(states_orthogonalization_full)(st, st%nst, gr%mesh, st%d%dim, st%X(psi)(:, :, :, 1))
   call X(subspace_diag)(sdiag, gr%der, st, hm, 1, st%eigenval(:, 1), st%X(psi)(:, :, :, 1))
@@ -415,7 +415,7 @@ contains
     SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
 
     message(1) = 'Residuals:'
-    call write_info(1)
+    call messages_info(1)
     
     do ist = 1, st%nst
       do jst = ist, st%nst
@@ -465,13 +465,13 @@ contains
         hme = X(mf_dotp)(gr%mesh, st%d%dim, psi1, hpsi)        
 
         write (message(1), '(2i7, 2e16.6)') ist, jst, abs(dd), abs(hme)
-        call write_info(1)
+        call messages_info(1)
 
       end do
     end do
     
     message(1) = ''
-    call write_info(1)
+    call messages_info(1)
 
     SAFE_DEALLOCATE_A(psi1)
     SAFE_DEALLOCATE_A(psi2)

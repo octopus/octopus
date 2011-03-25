@@ -342,12 +342,12 @@ contains
       !%End
       if(parse_block(datasets_check('AtomsMagnetDirection'), blk) < 0) then
         message(1) = "AtomsMagnetDirection block is not defined."
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
 
       if (parse_block_n(blk) /= geo%natoms) then
         message(1) = "AtomsMagnetDirection block has the wrong number of rows."
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
 
       SAFE_ALLOCATE(atom_rho(1:mesh%np, 1:2))
@@ -452,7 +452,7 @@ contains
     end do
 
     write(message(1),'(a,f13.6)')'Info: Unnormalized total charge = ', rr
-    call write_info(1)
+    call messages_info(1)
 
     rr = qtot / rr
     rho = rr * rho
@@ -462,7 +462,7 @@ contains
     end do
 
     write(message(1),'(a,f13.6)')'Info: Renormalized total charge = ', rr
-    call write_info(1)
+    call messages_info(1)
 
     SAFE_DEALLOCATE_A(atom_rho)
     POP_SUB(guess_density)
@@ -526,7 +526,7 @@ contains
         "Info: spec_full_delta species ", trim(species_label(spec)), &
         " atom displaced ", units_from_atomic(units_out%length, sqrt(dist2_min)), &
         " [ ", trim(units_abbrev(units_out%length)), " ]"
-      call write_info(1)
+      call messages_info(1)
 
       have_point = .true.
 #ifdef HAVE_MPI
@@ -593,7 +593,7 @@ contains
 
       if(.not.conv) then
         write(message(1),'(a)') 'Internal error in get_species_density.'
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
 
       ! we want a charge of -Z
@@ -781,7 +781,7 @@ contains
         if(err .ne. 0) then
           write(message(1), '(a)')    'File '//trim(species_filename(spec))//'not found.'
           write(message(2), '(a,i4)') 'Error code returned = ', err
-          call write_fatal(1)
+          call messages_fatal(1)
         end if
 
       case(SPEC_POINT, SPEC_JELLI)

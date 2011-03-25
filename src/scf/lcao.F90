@@ -151,7 +151,7 @@ contains
         this%initialized = .false.
         write(message(1),'(a)') 'Cannot do LCAO initial calculation because there are not enough atomic orbitals.'
         write(message(2),'(a,i6,a,i6,a)') 'Required: ', st%nst, '. Available: ', this%maxorbs, '.'
-        call write_warning(2)
+        call messages_warning(2)
         POP_SUB(lcao_init)
         return
       end if
@@ -264,7 +264,7 @@ contains
       PUSH_SUB(lcao_init.lcao2_init)
 
       message(1) = "Info: Using LCAO alternative implementation."
-      call write_info(1)
+      call messages_info(1)
 
       call messages_experimental('LCAO alternative implementation')
 
@@ -447,7 +447,7 @@ contains
       ! set up Hamiltonian (we do not call system_h_setup here because we do not want to
       ! overwrite the guess density)
       message(1) = 'Info: Setting up Hamiltonian.'
-      call write_info(1)
+      call messages_info(1)
 
       ! get the effective potential (we don`t need the eigenvalues yet)
       call v_ks_calc(sys%ks, hm, sys%st, calc_eigenval=.false., calc_berry=.false.)
@@ -544,7 +544,7 @@ contains
         ! Randomly generate the initial wavefunctions.
         call states_generate_random(sys%st, sys%gr%mesh)
         message(1) = "Orthogonalizing random wavefunctions."
-        call write_info(1)
+        call messages_info(1)
         call states_orthogonalize(sys%st, sys%gr%mesh)
         call v_ks_calc(sys%ks, hm, sys%st, calc_eigenval=.true.) ! get potentials
         call states_fermi(sys%st, sys%gr%mesh)                           ! occupations

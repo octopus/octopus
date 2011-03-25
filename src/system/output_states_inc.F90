@@ -85,7 +85,7 @@
         SAFE_DEALLOCATE_A(current)
       else
         message(1) = 'No current density output for real states since it is identically zero.'
-        call write_warning(1)
+        call messages_warning(1)
       endif
     end if
 

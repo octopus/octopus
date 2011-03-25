@@ -136,7 +136,7 @@ contains
        case('f'); c%l(j) = 3
        case default
           message(1) = 'Error: read_valconf.'
-          call write_fatal(1)
+          call messages_fatal(1)
        end select
     end do
 
@@ -186,7 +186,7 @@ contains
       xcauth = 'PBE'
     case default
       message(1) = 'Internal Error in atomhxc: unknown functl'
-      call write_fatal(1)
+      call messages_fatal(1)
     end select
 
     rho = dens
@@ -316,7 +316,7 @@ contains
     ELSE
       GGA = .FALSE.
       write(message(1),'(a,a)') 'Error: atomxc: Unknown functional ', FUNCTL
-      call write_fatal(1)
+      call messages_fatal(1)
     ENDIF
     
     ! initialize xc functional
@@ -332,7 +332,7 @@ contains
         call xc_f90_func_init(c_conf, c_info, XC_LDA_C_PW, NSPIN)
       else
         write(message(1),'(a,a)') 'Error: LDAXC: Unknown author ', AUTHOR
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
     end if
     
@@ -949,7 +949,7 @@ contains
 
     if (mod(n,2).ne.1) then
       write(message(1),'(a,i6)') ' nrmlzg: n should be odd. n =', n
-      call write_warning(1)
+      call messages_warning(1)
     endif
 
     norm = M_ZERO

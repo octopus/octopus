@@ -92,7 +92,7 @@ contains
     case default
       message(1) = "Fatal: the one shot calculation mode has not been implemented for"
       message(2) = "       this theory level."
-      call write_fatal(2)
+      call messages_fatal(2)
     end select
 
     e_tot = e_t + e_ext + hm%energy%hartree + hm%energy%exchange + hm%energy%correlation + hm%ep%eii
@@ -105,7 +105,7 @@ contains
     write(message(5), '(6x,a, f18.8)') 'Hartree     = ', units_to_atomic(units_out%energy, hm%energy%hartree)
     write(message(6), '(6x,a, f18.8)') 'Exchange    = ', units_to_atomic(units_out%energy, hm%energy%exchange)
     write(message(7), '(6x,a, f18.8)') 'Correlation = ', units_to_atomic(units_out%energy, hm%energy%correlation)
-    call write_info(7, stdout)
+    call messages_info(7, stdout)
     call messages_print_stress(stdout)
 
     call h_sys_output_all(sys%outp, sys%gr, sys%geo, sys%st, hm, STATIC_DIR)

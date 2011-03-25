@@ -101,7 +101,7 @@ contains
     ASSERT(associated(this%map))
 
     message(1) = "Info: Calculating basins of attraction"
-    call write_info(1)
+    call messages_info(1)
 
     cur_color = 0
 
@@ -211,7 +211,7 @@ contains
       this%number = maxval(this%map) + 1
       if(this%number <= 0) then
         message(1) = "Internal error analysing basins of attraction"
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
 
       SAFE_ALLOCATE(this%position  (1:this%number))

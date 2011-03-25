@@ -107,12 +107,12 @@ contains
 
       if(.not.found) then
         message(1) = "Pseudopotential file '" // trim(filename) // ".UPF' not found"
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
     end if
 
     write(message(2), '(6x,3a)') "'", trim(filename2), "'"
-    call write_info(2)
+    call messages_info(2)
     iunit = io_open(filename2, action='read', form='formatted', status='old', is_tmp=.true.)
     call ps_upf_file_read(iunit, ps_upf)
     call io_close(iunit)
@@ -149,7 +149,7 @@ contains
 
     write(message(1), '(a,i2)') '      l max = ', ps_upf%l_max
     write(message(2), '(a,i2)') '      l loc = ', ps_upf%l_local
-    call write_info(2)
+    call messages_info(2)
 
     ! Define the KB-projector cut-off radii
     call ps_upf_cutoff_radii(ps_upf)
@@ -207,7 +207,7 @@ contains
     read(unit,*) ps_upf%type, dummy     ! US|NC|PAW    "Ultrasoft|Norm conserving|Projector-augmented"
     if (ps_upf%type /= "NC") then
       message(1) = "Octopus can only read norm-conserving pseudo-potentials from UPF format."
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
     read(unit,*) ps_upf%nlcc, dummy   ! nlcc     "Nonlinear Core Correction"
     read(unit,*) dummy                ! dft      "Exch-Corr"
@@ -289,7 +289,7 @@ contains
       read(unit,*) ii, jj, ps_upf%e(ii)
       if (ii /= jj) then
         message(1) = "Error while reading pseudo-potential data."
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
     end do
     call check_end_tag(unit, "PP_DIJ")
@@ -346,10 +346,10 @@ contains
       read(unit, *, iostat = iostat) string2
       if (iostat > 0) then
         message(1) = "Error in subroutine init_tag"
-        call write_fatal(1)
+        call messages_fatal(1)
       elseif (iostat == -1) then
         write(message(1),*) "No ", trim(string), " tag found."
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
       if (string_matches("<"//string//">", string2) ) exit
     end do
@@ -371,7 +371,7 @@ contains
       read(unit, *, iostat = iostat) string2
       if (iostat > 0) then
         message(1) = "Error in subroutine tag_isdef"
-        call write_fatal(1)
+        call messages_fatal(1)
       elseif (iostat < 0) then
         tag_isdef = .false.
         exit
@@ -397,7 +397,7 @@ contains
     read(unit, '(a)', iostat = iostat) string2
     if ((.not. string_matches("</"//string//">", string2)) .or. iostat /= 0) then
       write(message(1),*) "Could not find closing tag </", string, ">."
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     POP_SUB(check_end_tag)
@@ -473,7 +473,7 @@ contains
       if (nrm > CNST(1.0e-5)) then
         write(message(1), '(a,i2,a)') "Eigenstate for l = ", ps_upf%l(i), ' is not normalized'
         write(message(2), '(a, f12.6,a)') '(abs(1 - norm) = ', nrm, ')'
-        call write_warning(2)
+        call messages_warning(2)
       end if
     end do
 

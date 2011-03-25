@@ -187,7 +187,7 @@ contains
     PUSH_SUB(droot_bisection)
 
     message(1) = 'Not implemented yet.'
-    call write_fatal(1)
+    call messages_fatal(1)
 
     POP_SUB(droot_bisection)
   end subroutine droot_bisection

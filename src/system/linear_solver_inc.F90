@@ -95,7 +95,7 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, tol, occ_respo
 
   case default 
     write(message(1), '(a,i2)') "Unknown linear-response solver", this%solver
-    call write_fatal(1)
+    call messages_fatal(1)
 
   end select
 
@@ -197,7 +197,7 @@ subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, shift, tol)
 
   if(.not. conv) then 
     write(message(1), '(a)') "CG solver not converged!"
-    call write_warning(1)
+    call messages_warning(1)
   endif
 
   SAFE_DEALLOCATE_A(r)
@@ -327,7 +327,7 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol, occ
 
   if(.not. conv) then 
     write(message(1), '(a)') "BiCGSTAB solver not converged!"
-    call write_warning(1)
+    call messages_warning(1)
   endif
 
   SAFE_DEALLOCATE_A(r)
@@ -383,7 +383,7 @@ subroutine X(ls_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, shift, tol)
 
     if(in_debug_mode) then 
       write(message(1), *)  "Multigrid: iter ", iter,  ls%abs_psi, abs(X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), x))
-      call write_info(1)
+      call messages_info(1)
     end if
 
   end do
@@ -392,7 +392,7 @@ subroutine X(ls_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, shift, tol)
 
   if(ls%abs_psi > tol) then 
     write(message(1), '(a)') "Multigrid solver not converged!"
-    call write_warning(1)
+    call messages_warning(1)
   endif
 
   POP_SUB(X(ls_solver_multigrid))

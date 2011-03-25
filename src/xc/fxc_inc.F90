@@ -32,7 +32,7 @@ subroutine xc_get_fxc(xcs, mesh, rho, ispin, fxc)
   ! is there anything to do? (only LDA by now)
   if(iand(xcs%kernel_family, NOT(XC_FAMILY_LDA)).ne.XC_FAMILY_NONE) then
     message(1) = "Only LDA functionals are authorized for now in xc_get_fxc."
-    call write_fatal(1)
+    call messages_fatal(1)
   end if
 
   if(xcs%kernel_family == XC_FAMILY_NONE) return ! nothing to do
@@ -115,7 +115,7 @@ contains
         dens(ip, 2) = max(d(2), M_ZERO)
       case(SPINORS)
         message(1) = 'Do not know how to handle spinors'
-        call write_fatal(1)
+        call messages_fatal(1)
       end select
     end do
 
@@ -152,7 +152,7 @@ contains
       fxc(:,2,1) = fxc(:,2,1) + dedd(:,2)
     case(SPINORS)
       message(1) = 'Do not know how to handle spinors.'
-      call write_fatal(1)
+      call messages_fatal(1)
     end select
 
     POP_SUB(xc_get_fxc.lda_process)

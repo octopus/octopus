@@ -53,7 +53,7 @@
     write(message(2), '(6x,a,f12.5)') " => J        = ", jfunctional
     write(message(3), '(6x,a,f12.5)') " => J2       = ", j2
     write(message(4), '(6x,a,f12.5)') " => Fluence  = ", fluence
-    call write_info(4)
+    call messages_info(4)
     call messages_print_stress(stdout)
 
     call h_sys_output_states(psi, sys%gr, sys%geo, OCT_DIR//'final', sys%outp)

@@ -72,13 +72,13 @@ contains
       inquire(file=filename2, exist=found)
       if(.not.found) then
         message(1) = "Pseudopotential file '" // trim(filename) // ".cpi' not found"
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
     end if
 
     message(1) = "Reading pseudopotential from file:"
     write(message(2), '(6x,3a)') "'", trim(filename2), "'"
-    call write_info(2)
+    call messages_info(2)
 
     iunit = io_open(filename2, action='read', form='formatted', status='old', is_tmp=.true.)
     call ps_cpi_file_read(iunit, ps_cpi%cpi_file)

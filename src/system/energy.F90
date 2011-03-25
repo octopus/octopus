@@ -144,7 +144,7 @@ contains
       write(message(1), '(6x,a, f18.8)')'Total       = ', units_from_atomic(units_out%energy, hm%energy%total)
       write(message(2), '(6x,a, f18.8)')'Free        = ', units_from_atomic(units_out%energy, hm%energy%total - hm%energy%TS)
       write(message(3), '(6x,a)') '-----------'
-      call write_info(3, iunit)
+      call messages_info(3, iunit)
 
       write(message(1), '(6x,a, f18.8)')'Ion-ion     = ', units_from_atomic(units_out%energy, hm%ep%eii)
       write(message(2), '(6x,a, f18.8)')'Eigenvalues = ', units_from_atomic(units_out%energy, hm%energy%eigenvalues)
@@ -154,15 +154,15 @@ contains
       write(message(6), '(6x,a, f18.8)')'Correlation = ', units_from_atomic(units_out%energy, hm%energy%correlation)
       write(message(7), '(6x,a, f18.8)')'Entropy     = ', hm%energy%entropy ! the dimensionless sigma of Kittel&Kroemer
       write(message(8), '(6x,a, f18.8)')'-TS         = ', -units_from_atomic(units_out%energy, hm%energy%TS)
-      call write_info(8, iunit)
+      call messages_info(8, iunit)
       if(full_) then
         write(message(1), '(6x,a, f18.8)')'Kinetic     = ', units_from_atomic(units_out%energy, hm%energy%kinetic)
         write(message(2), '(6x,a, f18.8)')'External    = ', units_from_atomic(units_out%energy, hm%energy%extern)
-        call write_info(2, iunit)
+        call messages_info(2, iunit)
       end if
       if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb)) then
         write(message(1), '(6x,a, f18.8)')'Berry       = ', units_from_atomic(units_out%energy, hm%energy%berry)
-        call write_info(1, iunit)
+        call messages_info(1, iunit)
       endif  
     end if
 

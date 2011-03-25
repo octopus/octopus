@@ -46,7 +46,7 @@ module kpoints_m
     kpoints_number,          &
     kpoints_get_weight,      &
     kpoints_get_point,       &
-    kpoints_write_info,      &
+    kpoints_messages_info,      &
     kpoints_point_is_gamma
 
   type kpoints_grid_t
@@ -196,7 +196,7 @@ contains
 
     write(message(5),'(a)') ' '
     write(message(6),'(a)') ' index |    weight    |             coordinates              |'
-    call write_info(6)
+    call messages_info(6)
 
     do ik = 1, this%reduced%npoints
       write(str_tmp,'(i6,a,f12.6,a)') ik, " | ", this%reduced%weight(ik), " |"
@@ -207,11 +207,11 @@ contains
       enddo
       write(str_tmp,'(a)') "  |"
       message(1) = trim(message(1)) // trim(str_tmp)
-      call write_info(1)
+      call messages_info(1)
     end do
 
     write(message(1),'(a)') ' '
-    call write_info(1)
+    call messages_info(1)
 
     POP_SUB(kpoints_init)
 
@@ -268,7 +268,7 @@ contains
 
         if (any(this%nik_axis(1:dim) < 1)) then
           message(1) = 'Input: KPointsGrid is not valid.'
-          call write_fatal(1)
+          call messages_fatal(1)
         end if
 
         if(parse_block_n(blk) > 1) then ! we have a shift
@@ -386,7 +386,7 @@ contains
       call kpoints_grid_copy(this%full, this%reduced)
 
       write(message(1), '(a,i4,a)') 'Input: ', this%full%npoints, ' k-points were read from the input file'
-      call write_info(1)
+      call messages_info(1)
 
       POP_SUB(kpoints_init.read_user_kpoints)
     end function read_user_kpoints
@@ -648,14 +648,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine kpoints_write_info(this, iunit)
+  subroutine kpoints_messages_info(this, iunit)
     type(kpoints_t),    intent(in) :: this
     integer,            intent(in) :: iunit
     
     integer :: ik, idir
     character(len=100) :: str_tmp
     
-    PUSH_SUB(kpoints_write_info)
+    PUSH_SUB(kpoints_messages_info)
     
     if(this%method == KPOINTS_MONKH_PACK) then
       write(message(1),'(a)') 'Number of k-points in each direction = '
@@ -663,11 +663,11 @@ contains
         write(str_tmp,'(i3,1x)') this%nik_axis(idir)
         message(1) = trim(message(1)) // trim(str_tmp)
       enddo
-      call write_info(1, iunit)
+      call messages_info(1, iunit)
     else
       ! a Monkhorst-Pack grid was not used
       write(message(1),'(a,i3)') 'Number of k-points = ', kpoints_number(this)
-      call write_info(1, iunit)
+      call messages_info(1, iunit)
     endif
     
     write(message(1), '(6x,a)') 'ik'
@@ -678,7 +678,7 @@ contains
     write(str_tmp, '(6x,a)') 'Weight'
     message(1) = trim(message(1)) // trim(str_tmp)
     message(2) = '---------------------------------------------------------'
-    call write_info(2, iunit, verbose_limit = .true.)
+    call messages_info(2, iunit, verbose_limit = .true.)
     
     do ik = 1, kpoints_number(this)
       write(message(1),'(i8,1x)') ik
@@ -688,11 +688,11 @@ contains
       enddo
       write(str_tmp,'(f12.4)') kpoints_get_weight(this, ik)
       message(1) = trim(message(1)) // trim(str_tmp)
-      call write_info(1, iunit, verbose_limit = .true.)
+      call messages_info(1, iunit, verbose_limit = .true.)
     end do
     
-    POP_SUB(kpoints_write_info)
-  end subroutine kpoints_write_info
+    POP_SUB(kpoints_messages_info)
+  end subroutine kpoints_messages_info
   
 
   ! ---------------------------------------------------------

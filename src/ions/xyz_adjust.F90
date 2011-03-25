@@ -103,7 +103,7 @@ contains
       call axis_large(geo, x1, x2)
     case default
       write(message(1), '(a,i2,a)') 'AxisType = ', axis_type, ' not known by Octopus.'
-      call write_fatal(1)
+      call messages_fatal(1)
     end select
 
     ! check if the axes are OK

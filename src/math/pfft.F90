@@ -185,12 +185,12 @@ contains
 
     if(fft_dim < 3) then
       message(1) = "Internal error in pfft_init: apparently, a 1x1x1 FFT is required."
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     if(fft_dim > 3) then
       message(1) = "FFT for dimension greater than 3 not implemented."
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     optimize_ = .true.
@@ -230,7 +230,7 @@ contains
     if(jj == 0) then
       message(1) = "Not enough slots for FFTs."
       message(2) = "Please increase PFFT_MAX in pfft.F90 and recompile."
-      call write_fatal(2)
+      call messages_fatal(2)
     end if
 
     ! jj now contains an empty slot
@@ -255,7 +255,7 @@ contains
       message(1) = "The number of rows and columns in PFFT processor grid is not equal to "
       message(2) = "the number of processor in the MPI communicator."
       message(3) = "Please check it."
-      call write_fatal(3)
+      call messages_fatal(3)
     end if
 
     call PDFFT(local_size_3d) (alloc_local, nn, pfft%comm_cart_2d, PFFT_TRANSPOSED, &
@@ -287,7 +287,7 @@ contains
     enddo
     write(str_tmp, '(i2)') jj
     message(1) = trim(message(1)) // trim(str_tmp)
-    call write_info(1)
+    call messages_info(1)
     
     POP_SUB(pfft_init)       
   end subroutine pfft_init
@@ -334,7 +334,7 @@ contains
       message(1) = "Internal error in pfft_init: "
       message(2) = "Error creating the decomposition of the processor grid"  
       message(3) = "The number of processors could not be negative"
-      call write_fatal(3)
+      call messages_fatal(3)
     end if
     
     dim1 = 1
@@ -364,14 +364,14 @@ contains
       message(1) = "Internal error in pfft_init: "
       message(2) = "Error creating the decomposition of the processor grid"  
       message(3) = "The multiplication of the two dimensions have to be equal to the number of processors"
-      call write_fatal(3)
+      call messages_fatal(3)
     end if
     
     write(message(1),'(a)') "Info: PFFT processor grid"
     write(message(2),'(a, i9)') " No. of processors                = ",n_proc
     write(message(3),'(a, i9)') " No. of columns in the proc. grid = ",dim1
     write(message(4),'(a, i9)') " No. of rows    in the proc. grid = ",dim2
-    call write_info(4)
+    call messages_info(4)
 
     POP_SUB(decompose)
   end subroutine decompose
@@ -386,7 +386,7 @@ contains
     if (n < 1) then
       message(1) = "Internal error in pfft_init: "
       message(2) = "Error calculating the negative prime number"
-      call write_fatal(2)
+      call messages_fatal(2)
     end if
     if (n == 1) then
       is_prime = .false.

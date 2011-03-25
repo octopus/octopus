@@ -162,11 +162,11 @@ contains
     write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
       trim(units_abbrev(units_out%length)), '] = ',       &
       units_from_atomic(units_out%length, r_c)
-    call write_info(1)
+    call messages_info(1)
     if ( r_c > maxval(db(:)*mesh%spacing(:)/M_TWO) + DELTA_R) then
       message(1) = 'Poisson cutoff radius is larger than cell size.'
       message(2) = 'You can see electrons in next cell(s).'
-      call write_warning(2)
+      call messages_warning(2)
     end if
 
     ! store the fourier transform of the Coulomb interaction
@@ -247,11 +247,11 @@ contains
     write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
       trim(units_abbrev(units_out%length)), '] = ',       &
       units_from_atomic(units_out%length, r_c)
-    call write_info(1)
+    call messages_info(1)
     if ( r_c > maxval(db(:)*mesh%spacing(:)/M_TWO) + DELTA_R) then
       message(1) = 'Poisson cutoff radius is larger than cell size.'
       message(2) = 'You can see electrons in next cell(s).'
-      call write_warning(2)
+      call messages_warning(2)
     end if
 
     ! store the fourier transform of the Coulomb interaction
@@ -382,11 +382,11 @@ contains
       write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
         trim(units_abbrev(units_out%length)), '] = ',       &
         units_from_atomic(units_out%length, r_c)
-      call write_info(1)
+      call messages_info(1)
       if ( r_c > maxval(db(:)*mesh%spacing(:)/M_TWO) + DELTA_R) then
         message(1) = 'Poisson cutoff radius is larger than cell size.'
         message(2) = 'You can see electrons in next cell(s).'
-        call write_warning(2)
+        call messages_warning(2)
       end if
     end if
 
@@ -474,11 +474,11 @@ contains
     write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
       trim(units_abbrev(units_out%length)), '] = ',       &
       units_from_atomic(units_out%length, r_c)
-    call write_info(1)
+    call messages_info(1)
     if ( r_c > maxval(db(1:2)*mesh%spacing(1:2)/M_TWO) + DELTA_R) then
       message(1) = 'Poisson cutoff radius is larger than cell size.'
       message(2) = 'You can see electrons in next cell(s).'
-      call write_warning(2)
+      call messages_warning(2)
     end if
     call spline_init(besselintf)
 
@@ -731,7 +731,7 @@ contains
 #ifndef HAVE_PFFT
     if (fft_cf%fft_library == PFFT_LIB) then
       write(message(1),'(a)')'You have selected the PFFT for FFT, but it is not compiled.'
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 #endif
 

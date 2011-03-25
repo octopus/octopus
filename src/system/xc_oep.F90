@@ -49,7 +49,7 @@ module xc_oep_m
     xc_oep_t,                   &
     xc_oep_init,                &
     xc_oep_end,                 &
-    xc_oep_write_info,          &
+    xc_oep_messages_info,          &
     dxc_oep_calc,               &
     zxc_oep_calc
 
@@ -98,7 +98,7 @@ contains
 #if defined(HAVE_MPI)
     if(oep%level == XC_OEP_FULL) then
       message(1) = "Full OEP is not allowed with the code parallel in states."
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 #endif
 
@@ -132,7 +132,7 @@ contains
       ! this routine is only prepared for finite systems, and ispin = 1, 2
       if(d%ispin > SPIN_POLARIZED .or. d%nik>d%ispin) then
         message(1) = "OEP only works for finite systems and collinear spin."
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
     
       ! obtain the spin factors
@@ -176,17 +176,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_oep_write_info(oep, iunit)
+  subroutine xc_oep_messages_info(oep, iunit)
     type(xc_oep_t), intent(in) :: oep
     integer,        intent(in) :: iunit
 
     if(oep%level.eq.XC_OEP_NONE) return
 
-    PUSH_SUB(xc_oep_write_info)
+    PUSH_SUB(xc_oep_messages_info)
     call messages_print_var_option(iunit, 'OEP_level', oep%level)
 
-    POP_SUB(xc_oep_write_info)
-  end subroutine xc_oep_write_info
+    POP_SUB(xc_oep_messages_info)
+  end subroutine xc_oep_messages_info
 
 
   ! ---------------------------------------------------------

@@ -184,7 +184,7 @@ subroutine poisson_fmm_solve(this, pot, rho)
     else
       message(1) = "At present, FMM solver for Hartree potential can only deal with cubic boxes. "
       message(2) = " Please, change your Poisson solver or the size or dimensions of your box. "
-      call write_fatal(2)
+      call messages_fatal(2)
     endif
   endif
 

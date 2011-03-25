@@ -107,7 +107,7 @@
     if(.not.converged) then
       write(message(1),'(a)')        'The linear solver used for the Crank-Nicholson'
       write(message(2),'(a,es14.4)') 'propagator did not converge: Residual = ', dres
-      call write_warning(2)
+      call messages_warning(2)
     end if
 
     do ik = st%d%kpt%start, st%d%kpt%end

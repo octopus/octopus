@@ -95,12 +95,12 @@ contains
     if( (ierr .ne. 0)  .and.  (ierr < occupied_states) ) then
       message(1) = "Not all the occupied KS orbitals could be read from '"//trim(restart_dir)//GS_DIR//"'"
       message(2) = "Please run a ground-state calculation first!"
-      call write_fatal(2)
+      call messages_fatal(2)
     end if
 
     if(ierr .ne. 0) then
       message(1) = "Info:  Could not load all wavefunctions from '"//trim(restart_dir)//GS_DIR//"'"
-      call write_info(1)
+      call messages_info(1)
     end if
 
     if(fromScratch) then ! reset unoccupied states
@@ -114,14 +114,14 @@ contains
     call lcao_run(sys, hm, nst_calculated + 1)
     
     message(1) = "Info:  Starting calculation of unoccupied states."
-    call write_info(1)
+    call messages_info(1)
 
     ! reset this variable, so that the eigensolver passes through all states
     eigens%converged(:) = 0
 
     do iter = 1, max_iter
       write(message(1), '(a,i3)') "Info: Unoccupied states iteration ", iter
-      call write_info(1)
+      call messages_info(1)
       call eigensolver_run(eigens, sys%gr, sys%st, hm, 1, converged, verbose = .true.)
 
       if(converged .or. clean_stop()) exit
@@ -131,7 +131,7 @@ contains
     call restart_write (trim(tmpdir)//GS_DIR, sys%st, sys%gr, ierr)
     if(ierr .ne. 0) then
       message(1) = 'Unsuccessful write of "'//trim(tmpdir)//GS_DIR//'"'
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     ! write output file
@@ -182,7 +182,7 @@ contains
       call parse_integer(datasets_check('NumberUnoccStates'), 5, nus)
       if(nus <= 0) then
         message(1) = "Input: NumberUnoccStates must be > 0"
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
 
       ! fix states: THIS IS NOT OK

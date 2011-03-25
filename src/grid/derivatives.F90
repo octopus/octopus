@@ -590,7 +590,7 @@ contains
     SAFE_ALLOCATE(sol(1:op(1)%stencil%size, 1:n))
 
     message(1) = 'Info: Generating weights for finite-difference discretization of ' // trim(name)
-    call write_info(1)
+    call messages_info(1)
 
     ! use to generate power lookup table
     pow_max = maxval(pol)

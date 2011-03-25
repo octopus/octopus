@@ -61,7 +61,7 @@ contains
 
         if(n_divisors > max_d - 1) then
           message(1) = "Internal error in get_divisors. Please increase n_divisors"
-          call write_fatal(1)
+          call messages_fatal(1)
         end if
 
         divisors(n_divisors) = ii

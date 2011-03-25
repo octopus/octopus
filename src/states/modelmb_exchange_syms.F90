@@ -196,7 +196,7 @@ contains
             norm = sum(antisymrho)
             write (message(1), '(a,I7,a,I7,a,E20.10)') 'norm of pair-symmetrized-state ',&
                     mm, ' with ', nspindown, ' spins down is ', norm
-            call write_info(1)
+            call messages_info(1)
           end if
  
           ! for each permutation of particles of this type
@@ -229,7 +229,7 @@ contains
             norm = sum(antisymrho)
             write (message(1), '(a,I7,a,I7,a,E20.10)') 'norm of up-antisym+pairsym-state ',&
                     mm, ' with ', nspindown, ' spins down is ', norm
-            call write_info(1)
+            call messages_info(1)
           end if
 
           antisymwf_swap = M_z0

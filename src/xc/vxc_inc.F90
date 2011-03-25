@@ -198,7 +198,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, vxc, vt
 
           case(XC_FAMILY_HYB_GGA)
             message(1) = 'Hyb-GGAs are currently disabled.'
-            call write_fatal(1)
+            call messages_fatal(1)
 
           case(XC_FAMILY_MGGA)
             call XC_F90(mgga_exc)(functl(ixc)%conf, n_block, &
@@ -581,7 +581,7 @@ contains
     tb09_c =  -CNST(0.012) + CNST(1.023)*sqrt(dmf_integrate(der%mesh, gnon)/der%mesh%sb%rcell_volume)
 
     write(message(1), '(a,f8.6)') "Info: In the functional TB09 c = ", tb09_c
-    call write_info(1)
+    call messages_info(1)
 
     call  XC_F90(mgga_x_tb09_set_par)(functl(1)%conf, tb09_c)
 

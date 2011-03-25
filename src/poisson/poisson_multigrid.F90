@@ -232,7 +232,7 @@ contains
       
       if(in_debug_mode) then
         write(message(1), '(a,i5,a,i5,a,e12.6)') "Multigrid: base level ", curr_l, " iter ", t, " res ", res
-        call write_info(1)
+        call messages_info(1)
       end if
 
       if(res < this%threshold) then
@@ -260,7 +260,7 @@ contains
     if(res >= this%threshold) then
       message(1) = 'Multigrid Poisson solver did not converge.'
       write(message(2), '(a,e14.6)') '  Res = ', res
-      call write_warning(2)
+      call messages_warning(2)
     end if
 
     forall (ip = 1:base_der%mesh%np) pot(ip) = phi%level(0)%p(ip) + vh_correction(ip)

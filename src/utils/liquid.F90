@@ -101,7 +101,7 @@ contains
 
     write(message(1), '(a, f10.3, a)') 'Info: liquid density = ', &
       units_from_atomic(gr_per_cm3, density), ' '//units_abbrev(gr_per_cm3)
-    call write_info(1)
+    call messages_info(1)
 
     call xyz_adjust_it(geo)
 
@@ -116,7 +116,7 @@ contains
     if(nmolecules <= 0) call input_error('LiquidNumberOfMolecules')
 
     write(message(1), '(a, i5, a)') 'Info: ', nmolecules, ' molecules will be included in the liquid.'
-    call write_info(1)
+    call messages_info(1)
 
     !%Variable LiquidMoleculeScale
     !%Type float
@@ -144,7 +144,7 @@ contains
 
     write(message(1), '(a, f10.5, a)') 'Info: cubic cell size ', &
       units_from_atomic(units_out%length, cell_size(1)), ' '//units_abbrev(units_out%length)
-    call write_info(1)    
+    call messages_info(1)    
 
     ! Now comes the real part, the calculation of the coordinates.
 
@@ -239,7 +239,7 @@ contains
 
     write(message(1), '(a, f10.5, a)') 'Info: minimum distance between atoms in the liquid :', &
       units_from_atomic(units_out%length, min_dist), ' '//trim(units_abbrev(units_out%length))
-    call write_info(1)
+    call messages_info(1)
 
     SAFE_DEALLOCATE_A(center)
 
@@ -263,7 +263,7 @@ contains
     call io_close(iunit)
 
     write(message(1), '(a)') "Info: the atomic coordinates have been written to 'liquid.xyz'."
-    call write_info(1)   
+    call messages_info(1)   
 
     SAFE_DEALLOCATE_A(coordinates)
 

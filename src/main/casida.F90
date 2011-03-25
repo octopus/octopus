@@ -121,11 +121,11 @@ contains
 
     if (simul_box_is_periodic(sys%gr%sb)) then
       message(1) = "Casida formulation does not apply to periodic systems."
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     message(1) = 'Info: Starting Casida linear-response calculation.'
-    call write_info(1)
+    call messages_info(1)
 
     call restart_look_and_read(sys%st, sys%gr, sys%geo)
 
@@ -151,19 +151,19 @@ contains
     case(UNPOLARIZED, SPINORS)
       write(message(1),'(a,i4,a)') "Info: Found", cas%n_occ(1), " occupied states."
       write(message(2),'(a,i4,a)') "Info: Found", cas%n_unocc(1), " unoccupied states."
-      call write_info(2)
+      call messages_info(2)
     case(SPIN_POLARIZED)
       write(message(1),'(a,i4,a)') "Info: Found", cas%n_occ(1), " occupied states with spin up."
       write(message(2),'(a,i4,a)') "Info: Found", cas%n_unocc(1), " unoccupied states with spin up."
       write(message(3),'(a,i4,a)') "Info: Found", cas%n_occ(2), " occupied states with spin down."
       write(message(4),'(a,i4,a)') "Info: Found", cas%n_unocc(2), " unoccupied states with spin down."
-      call write_info(4)
+      call messages_info(4)
     end select
 
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
-    call write_info(1)
+    call messages_info(1)
     call system_h_setup(sys, hm)
 
     !%Variable CasidaKohnShamStates
@@ -190,7 +190,7 @@ contains
     write(default,'(a,a)') "1-", trim(adjustl(nst_string))
     call parse_string(datasets_check('CasidaKohnShamStates'), default, cas%wfn_list)
     write(message(1),'(a,a)') "Info: States that form the basis: ", trim(cas%wfn_list)
-    Call write_info(1)
+    Call messages_info(1)
 
     !%Variable CasidaTransitionDensities
     !%Type string
@@ -223,7 +223,7 @@ contains
       end do
       call parse_block_end(blk)
       message(1) = "Info: Calculating IXS/EELS transition rates."
-      call write_info(1)
+      call messages_info(1)
       cas%qcalc = .true.
     else
       cas%qvector(:) = M_ZERO
@@ -251,7 +251,7 @@ contains
     ! First, print the differences between KS eigenvalues (first approximation to the
     ! excitation energies, or rather, to the DOS).
     message(1) = "Info: Approximating resonance energies through KS eigenvalue differences"
-    call write_info(1)
+    call messages_info(1)
     cas%type = CASIDA_EPS_DIFF
     call casida_work(sys, hm, cas)
     call casida_write(cas, 'eps-diff')
@@ -259,14 +259,14 @@ contains
     if (sys%st%d%ispin /= SPINORS) then
       ! Then, calculate the excitation energies by making use of the Petersilka approximation
       message(1) = "Info: Calculating resonance energies via the Petersilka approximation"
-      call write_info(1)
+      call messages_info(1)
       cas%type = CASIDA_PETERSILKA
       call casida_work(sys, hm, cas)
       call casida_write(cas, 'petersilka')
 
       ! And finally, solve the full Casida problem.
       message(1) = "Info: Calculating resonance energies with the full Casida method"
-      call write_info(1)
+      call messages_info(1)
       cas%type = CASIDA_CASIDA
       call casida_work(sys, hm, cas)
       call casida_write(cas, 'casida')
@@ -313,11 +313,11 @@ contains
     end do
 
     write(message(1), '(a,i9)') "Number of occupied-unoccupied pairs: ", cas%n_pairs
-    call write_info(1)
+    call messages_info(1)
 
     if(cas%n_pairs < 1) then
       message(1) = "Error: Maybe there are no unoccupied states?"
-      call write_fatal(1)
+      call messages_fatal(1)
     end if
 
     ! allocate stuff
@@ -484,7 +484,7 @@ contains
                     st%eigenval(cas%pair(ia)%i, cas%pair(ia)%sigma)
         if(cas%w(ia) < -M_EPSILON) then
           message(1) = "There are negative unocc-occ KS eigenvalue differences."
-          call write_warning(1)
+          call messages_warning(1)
         endif
 
         if(cas%type == CASIDA_PETERSILKA) then
@@ -622,7 +622,7 @@ contains
           if(cas%w(ia) < -M_EPSILON) then
             write(message(1),'(a,i4,a)') 'For whatever reason, excitation energy', ia, ' is negative.'
             write(message(2),'(a)')      'This should not happen.'
-            call write_warning(2)
+            call messages_warning(2)
             cas%w(ia) = M_ZERO
           else
             cas%w(ia) = sqrt(cas%w(ia))

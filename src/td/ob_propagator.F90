@@ -174,7 +174,7 @@ contains
     if(ob%max_mem_coeffs.le.0) then
       write(message(1), '(a,i6,a)') "Input : '", ob%max_mem_coeffs, "' is not a valid OpenBoundariesMaxMemCoeffs."
       message(2) = '(0 < OpenBoundariesMaxMemCoeffs)'
-      call write_fatal(2)
+      call messages_fatal(2)
     end if
     if((iand(ob%additional_terms, SRC_TERM_FLAG).ne.0).and.(ob%max_mem_coeffs.lt.max_iter)) then
       write(message(1), '(a,i6,a)') "Input OpenBoundariesMaxMemCoeffs: '", ob%max_mem_coeffs,&
@@ -182,7 +182,7 @@ contains
       message(2) = 'This is an experimental parameter, so handle with care.'
       message(3) = 'If an open system is being simulated, the source term should be'
       message(4) = 'switched off, or strange behavior can occur.'
-      call write_warning(4)
+      call messages_warning(4)
     end if
 
     ! Calculate td-potential.
@@ -203,7 +203,7 @@ contains
     SAFE_DEALLOCATE_A(um)
     SAFE_DEALLOCATE_A(td_pot)
 
-    call ob_propagator_write_info(ob, st, gr, max_iter, order)
+    call ob_propagator_messages_info(ob, st, gr, max_iter, order)
 
     ! Initialize source and memory terms.
     call ob_mem_init(gr%intf, hm, ob, dt/M_TWO, ob%max_mem_coeffs, gr%der%lapl, &
@@ -361,7 +361,7 @@ contains
       end do
       if(in_debug_mode) then ! write info
         write(message(1), '(a,i8,e10.3)') 'Iterations, Residual: ', qmr_iter, dres
-        call write_info(1)
+        call messages_info(1)
       end if
     end do
 
@@ -790,7 +790,7 @@ contains
 
   ! ---------------------------------------------------------
   ! Write some status information to stdout.
-  subroutine ob_propagator_write_info(ob, st, gr, max_iter, order)
+  subroutine ob_propagator_messages_info(ob, st, gr, max_iter, order)
     type(ob_terms_t), intent(in) :: ob
     type(states_t),   intent(in) :: st
     type(grid_t),     intent(in) :: gr
@@ -800,7 +800,7 @@ contains
     character(len=64) :: terms, mem_type_name
     integer           :: il
 
-    PUSH_SUB(ob_propagator_write_info)
+    PUSH_SUB(ob_propagator_messages_info)
 
     call messages_print_stress(stdout, 'Open Boundaries')
 
@@ -832,12 +832,12 @@ contains
       trim(gr%ob_grid%lead(LEFT)%td_bias)
     write(message(NLEADS+7), '(a,a10)')    'TD right lead potential:         ', &
       trim(gr%ob_grid%lead(RIGHT)%td_bias)
-    call write_info(NLEADS+7, stdout)
+    call messages_info(NLEADS+7, stdout)
 
     call messages_print_stress(stdout)
 
-    POP_SUB(ob_propagator_write_info)
-  end subroutine ob_propagator_write_info
+    POP_SUB(ob_propagator_messages_info)
+  end subroutine ob_propagator_messages_info
 
 
   ! ---------------------------------------------------------

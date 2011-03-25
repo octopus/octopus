@@ -81,10 +81,10 @@ contains
     if(st%d%nspin == 2) ns = 2
 
     message(1) = 'Eigenvalues [' // trim(units_abbrev(units_out%energy)) // ']'
-    call write_info(1, iunit)
+    call messages_info(1, iunit)
     if (st%d%nik > ns) then
       message(1) = 'k-points [' // trim(units_abbrev(unit_one/units_out%length)) //']'
-      call write_info(1, iunit)
+      call messages_info(1, iunit)
     end if
 
     if(.not. mpi_grp_is_root(mpi_world)) then
@@ -109,7 +109,7 @@ contains
           '#st',' Spin',' Eigenvalue', 'Occupation '
       end if
     end if
-    call write_info(1, iunit)
+    call messages_info(1, iunit)
 
     do ik = 1, st%d%nik, ns
       if(st%d%nik > ns) then
@@ -122,7 +122,7 @@ contains
           if(idir < sb%dim) message(1) = trim(message(1))//','
         enddo
         message(1) = trim(message(1))//')'
-        call write_info(1, iunit)
+        call messages_info(1, iunit)
       end if
 
       do ist = 1, nst
@@ -164,7 +164,7 @@ contains
           else
             message(1) = trim(tmp_str(1))//trim(tmp_str(2))
           end if
-          call write_info(1, iunit)
+          call messages_info(1, iunit)
         end do
       end do
     end do
@@ -354,7 +354,7 @@ contains
       if(mpi_grp_is_root(mpi_world)) then
 
         message(1) = 'No orbital with half-occupancy found. TPA output is not written.'
-        call write_warning(1)
+        call messages_warning(1)
 
     POP_SUB(states_write_tpa)
 return
@@ -386,7 +386,7 @@ return
 
         if(mpi_grp_is_root(mpi_world)) then
           message(1) = 'Inconsistent size of momentum-transfer vector. It will not be used in the TPA calculation.'
-          call write_warning(1)
+          call messages_warning(1)
         end if
 
       else ! correct size
@@ -426,14 +426,14 @@ return
           case(2); write(message(2), '(a1,5(a15,1x))') '#', 'E' , '<x>', '<y>', '<f>', 'S(q,omega)'
           case(3); write(message(2), '(a1,6(a15,1x))') '#', 'E' , '<x>', '<y>', '<z>', '<f>', 'S(q,omega)'
         end select
-        call write_info(2,iunit)
+        call messages_info(2,iunit)
       else
         select case(gr%mesh%sb%dim)
           case(1); write(message(1), '(a1,3(a15,1x))') '#', 'E' , '<x>', '<f>'
           case(2); write(message(1), '(a1,4(a15,1x))') '#', 'E' , '<x>', '<y>', '<f>'
           case(3); write(message(1), '(a1,5(a15,1x))') '#', 'E' , '<x>', '<y>', '<z>', '<f>'
         end select
-        call write_info(1,iunit)
+        call messages_info(1,iunit)
       end if
 
     end if
@@ -480,7 +480,7 @@ return
             write(message(1), '(1x,6(es15.8,1x))') units_from_atomic(units_out%energy, transition_energy), osc(:), osc_strength
           endif
 
-          call write_info(1,iunit)
+          call messages_info(1,iunit)
 
         end if
 
@@ -604,7 +604,7 @@ return
         do is = 0, ns-1
           write(message(1), '(2f12.6)') units_from_atomic(units_out%energy, energy), &
                                         units_from_atomic(unit_one / units_out%energy, dos(ie, ist, is))
-          call write_info(1, iunit(is))
+          call messages_info(1, iunit(is))
         end do
       end do
 
@@ -629,7 +629,7 @@ return
           end do
           write(message(1), '(2f12.6)') units_from_atomic(units_out%energy, energy), &
                                         units_from_atomic(unit_one / units_out%energy, tdos)
-          call write_info(1, iunit(is))
+          call messages_info(1, iunit(is))
         end do
 
         call io_close(iunit(is))
@@ -650,7 +650,7 @@ return
       end do
       write(message(1), '(2f12.6)') units_from_atomic(units_out%energy, energy), &
                                     units_from_atomic(unit_one / units_out%energy, tdos)
-      call write_info(1, iunit(0))
+      call messages_info(1, iunit(0))
     end do
 
     call io_close(iunit(0))
@@ -714,7 +714,7 @@ return
     message(3) = trim(message(3)) // trim(str_tmp)
     message(4) = trim(message(4)) // trim(str_tmp)
 
-    call write_info(4, iunit)
+    call messages_info(4, iunit)
     call io_close(iunit)
 
     ! now we write the same information so that it can be used 
@@ -729,7 +729,7 @@ return
     write(message(2), '(4f12.6)') units_from_atomic(units_out%energy, st%smear%e_fermi), M_ZERO
     write(message(3), '(4f12.6)') units_from_atomic(units_out%energy, st%smear%e_fermi), maxdos
 
-    call write_info(3, iunit)
+    call messages_info(3, iunit)
     call io_close(iunit)
 
     POP_SUB(states_write_fermi_energy)
@@ -783,7 +783,7 @@ return
     end do
     call messages_print_stress(stdout, "Lead self-energy")
     message(1) = ' st#     k#  Spin      Lead     Energy'
-    call write_info(1)
+    call messages_info(1)
 #ifdef HAVE_MPI 
     ! wait for all processors to finish 
     if(st%d%kpt%parallel) then 
@@ -815,7 +815,7 @@ return
             end select
             write(message(1), '(i4,3x,i4,3x,a2,5x,a6,1x,f12.6)') ist, ik, &
               trim(spin), trim(LEAD_NAME(il)), energy
-            call write_info(1)
+            call messages_info(1)
 
             call lead_self_energy(energy, lead(il)%h_diag(:, :, ispin), lead(il)%h_offdiag(:, :), &
               gr%intf(il), st%ob_lead(il)%self_energy(:, :, ispin, ist, ik), .true.)
@@ -900,7 +900,7 @@ return
             iunit = io_open(trim(dir)//trim(fname), action='write', form='unformatted', is_tmp=.true.)
             if(iunit.lt.0) then
               message(1) = 'Cannot write term for source term to file.'
-              call write_warning(1)
+              call messages_warning(1)
               call io_close(iunit)
               POP_SUB(states_write_proj_lead_wf)
               return
@@ -943,7 +943,7 @@ return
           iunit = io_open(trim(dir)//trim(fname), action='read', status='old', die=.false., is_tmp=.true., form='unformatted')
           if(iunit.lt.0) then ! no file found
             message(1) = 'Cannot read src(0) from file.'
-            call write_fatal(1)
+            call messages_fatal(1)
           end if
 
           ! Now read the data.
@@ -951,7 +951,7 @@ return
 
           if(np.ne.size(src0, 1)) then
             message(1) = 'Size mismatch! Cannot read src(0) from file.'
-            call write_fatal(1)
+            call messages_fatal(1)
           end if
 
           ! because we use a sliced array we have to remap the index

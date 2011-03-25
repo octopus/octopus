@@ -63,7 +63,7 @@ contains
 
     if(.not. smear_is_semiconducting(st%smear)) then
       message(1) = "Warning: single-point Berry's phase dipole calculation not correct without integer occupations."
-      call write_warning(1)
+      call messages_warning(1)
     endif
 
     dipole = M_ZERO
@@ -166,7 +166,7 @@ contains
             ! If det = 0, mu = -infinity, so this condition should never be reached
             ! if things are working properly.
             write(message(1),*) "Divide by zero: Berry phase determinant = ", det
-            call write_fatal(1)
+            call messages_fatal(1)
           endif
           pot(1:mesh%np, ispin) = pot(1:mesh%np, ispin) + &
             aimag(factor * exp(M_PI * M_zI * mesh%x(1:mesh%np, idir) / mesh%sb%lsize(idir)))

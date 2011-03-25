@@ -151,18 +151,18 @@ contains
 
     if(l_loc >= 0) then
       write(message(1), '(a,i2,a)') "Info: l = ", l_loc, " component used as local potential."
-      call write_info(1)
+      call messages_info(1)
 
       ps%vlocal(:) = ps%vps(:, l_loc+1)
 
     else if(l_loc == -1) then
       if(ps%g%flavor .ne. LOGRID_PSF) then
         message(1) = "For the moment, Vanderbilt local potentials are only possible with tm grids."
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
 
       message(1) = "Info: Vanderbilt function local potential."
-      call write_info(1)
+      call messages_info(1)
 
       a = CNST(1.82) / rcore
       b = M_ONE
@@ -335,7 +335,7 @@ contains
       if (nrm > CNST(1.0e-5)) then
         write(message(1), '(a,i2,a)') "Eigenstate for l = ", l-1, ' is not normalized.'
         write(message(2), '(a, f12.6,a)') '(abs(1 - norm) = ', nrm, ')'
-        call write_warning(2)
+        call messages_warning(2)
       end if
     end do
 

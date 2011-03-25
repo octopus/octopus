@@ -131,7 +131,7 @@ subroutine X(eigensolve_scalapack)(n, a, eigenvalues, bof, proc_grid, err_code)
 #else
       write(message(1),'(3a,i5)') 'In ' // TOSTRING(X(scalapack_eigensolve)) // ' ScaLAPACK pzheevx returned error message ', info
 #endif
-      call write_fatal(1)
+      call messages_fatal(1)
     else
       if(present(bof)) then
         bof = .true.

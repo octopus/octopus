@@ -86,7 +86,7 @@ module gcm_m
     if(parse_block(datasets_check('GCMSlaterDeterminants'), blk) .ne. 0) then
       write(message(1),'(a)') 'If you run in "CalculationMode = gcm" mode, then you must'
       write(message(2),'(a)') 'supply also a "GCMSlaterDeterminants" block.'
-      call write_fatal(2)
+      call messages_fatal(2)
     else
      ndeterminants = parse_block_n(blk)
      SAFE_ALLOCATE(slatdetnames(1:ndeterminants))
@@ -169,7 +169,7 @@ module gcm_m
     do i = 1, ndeterminants
       write(message(1),'(a,i2.2,a,f20.8,a)') &
         'Etot(',i,') = ', units_from_atomic(units_out%energy, etot(i)), ' ['//trim(units_abbrev(units_out%energy))//']'
-      call write_info(1)
+      call messages_info(1)
     end do
     call messages_print_stress(stdout)
 
@@ -213,14 +213,14 @@ module gcm_m
     call messages_print_stress(stdout, 'H matrix')
     do i = 1, ndeterminants
       write(message(1),'(10f18.8)') (hmatrix(i, j), j=1, ndeterminants)
-      call write_info(1)
+      call messages_info(1)
     end do
     call messages_print_stress(stdout)
 
     call messages_print_stress(stdout, 'S matrix')
     do i = 1, ndeterminants
       write(message(1),'(10f18.8)') (smatrix(i, j), j=1, ndeterminants)
-      call write_info(1)
+      call messages_info(1)
     end do
     call messages_print_stress(stdout)
 
@@ -230,7 +230,7 @@ module gcm_m
     do i = 1, ndeterminants
       write(message(1), '(a,i2.2,a,f20.8,a)') &
         'E(',i,') = ', units_from_atomic(units_out%energy, etot(i)), ' ['//trim(units_abbrev(units_out%energy))//']'
-      call write_info(1)
+      call messages_info(1)
     end do
     call messages_print_stress(stdout)
 
@@ -286,7 +286,7 @@ module gcm_m
 
     case default
       write(message(1),'(a)') 'GCM mode does not handle yet systems with more than one orbital.'
-      call write_fatal(1)
+      call messages_fatal(1)
 
       SAFE_ALLOCATE(mat(1:nst, 1:nst, 1:nst, 1:nst))
       SAFE_ALLOCATE(rho(1:gr%mesh%np))

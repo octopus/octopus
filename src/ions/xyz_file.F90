@@ -153,7 +153,7 @@ contains
         ncol = parse_block_cols(blk, ia - 1)
         if((ncol .lt. space%dim + 1) .or. (ncol .gt. space%dim + 2)) then
           write(message(1), '(3a,i2)') 'Error in block ', what, ' line #', ia
-          call write_fatal(1)
+          call messages_fatal(1)
         end if
         call parse_block_string (blk, ia - 1, 0, gf%atom(ia)%label)
         do jdir = 1, space%dim

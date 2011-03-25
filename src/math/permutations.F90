@@ -79,7 +79,7 @@ module permutations_m
     do iperm = 1, this%npermutations
       write (message(1), '(a,I7,a,I7,a,10I7)') 'permutation ', iperm, &
               ' sign ', this%permsign(iperm), '= ', this%allpermutations(:,iperm)
-      call write_info(1)
+      call messages_info(1)
     end do
     
     POP_SUB(permutations_write)

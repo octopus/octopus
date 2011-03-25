@@ -172,7 +172,7 @@ contains
 
     if(iand(this%what, output_me_one_body).ne.0) then
       message(1) = "Computing one-body matrix elements"
-      call write_info(1)
+      call messages_info(1)
       if (states_are_real(st)) then
         call done_body(dir, gr, geo, st, hm)
       else
@@ -182,7 +182,7 @@ contains
 
     if(iand(this%what, output_me_two_body).ne.0) then
       message(1) = "Computing two-body matrix elements"
-      call write_info(1)
+      call messages_info(1)
       if (states_are_real(st)) then
         call dtwo_body(dir, gr, st)
       else
@@ -221,10 +221,10 @@ contains
     if(st%d%nspin == 2) ns = 2
 
     write(message(1),'(a)') 'Momentum of the KS states [a.u.]:'
-    call write_info(1, iunit)      
+    call messages_info(1, iunit)      
     if (st%d%nik > ns) then
       message(1) = 'k-points [' // trim(units_abbrev(unit_one/units_out%length)) // ']'
-      call write_info(1, iunit)
+      call messages_info(1, iunit)
     end if
 
     do ik = 1, st%d%nik, ns
@@ -242,7 +242,7 @@ contains
             message(1) = trim(message(1)) // ","
           endif
         enddo
-        call write_info(1, iunit)
+        call messages_info(1, iunit)
       end if
 
       write(message(1), '(a4,1x,a5)') '#st',' Spin'
@@ -252,7 +252,7 @@ contains
       enddo
       write(str_tmp, '(4x,a12,1x)') 'Occupation '
       message(1) = trim(message(1)) // trim(str_tmp)
-      call write_info(1, iunit)
+      call messages_info(1, iunit)
       
       do ist = 1, st%nst
         do is = 0, ns-1
@@ -274,13 +274,13 @@ contains
           enddo
           write(str_tmp, '(3x,f12.6)') occ
           message(1) = trim(message(1)) // trim(str_tmp)
-          call write_info(1, iunit)
+          call messages_info(1, iunit)
           
         end do
       end do
       
       write(message(1),'(a)') ''
-      call write_info(1, iunit)      
+      call messages_info(1, iunit)      
       
     end do
     
@@ -321,7 +321,7 @@ contains
       write(iunit,'(a)') 'Angular Momentum of the KS states [dimensionless]:'
       if (st%d%nik > ns) then
         message(1) = 'k-points [' // trim(units_abbrev(unit_one/units_out%length)) // ']'
-        call write_info(1, iunit)
+        call messages_info(1, iunit)
       end if
     end if
 
@@ -358,7 +358,7 @@ contains
             message(1) = trim(message(1)) // ","
           endif
         enddo
-        call write_info(1, iunit)
+        call messages_info(1, iunit)
       end if
       
       ! Exchange ang and ang2.
@@ -397,7 +397,7 @@ contains
 #endif
       write(message(1), '(a4,1x,a5,4a12,4x,a12,1x)')       &
            '#st',' Spin','        <Lx>', '        <Ly>', '        <Lz>', '        <L2>', 'Occupation '
-      call write_info(1, iunit)
+      call messages_info(1, iunit)
 
       if(mpi_grp_is_root(mpi_world)) then
         do ist = 1, st%nst
@@ -417,18 +417,18 @@ contains
             write(tmp_str(2), '(1x,4f12.6,3x,f12.6)') &
                  ang(ist, ik+is, 1:3), ang2(ist, ik+is), occ
             message(1) = trim(tmp_str(1))//trim(tmp_str(2))
-            call write_info(1, iunit)
+            call messages_info(1, iunit)
           end do
         end do
       end if
       write(message(1),'(a)') ''
-      call write_info(1, iunit)
+      call messages_info(1, iunit)
 
     end do
 
     write(message(1),'(a)') 'Total Angular Momentum L [dimensionless]'
     write(message(2),'(10x,4f12.6)') angular(1:3), lsquare
-    call write_info(2, iunit)
+    call messages_info(2, iunit)
 
     call io_close(iunit)
 

@@ -166,12 +166,12 @@ subroutine modelmb_particles_init (this,gr)
     write (message(1), '(2a,2I6)') ' Number of types of modelmb particles should be', &
       ' <= Number of modelmb particles ', &
       this%ntype_of_particle, this%nparticle
-    call write_fatal(1)
+    call messages_fatal(1)
   end if
 
   if (this%ndim*this%nparticle /= gr%sb%dim) then
     message(1) = ' Number of modelmb particles * dimension of modelmb space must be = Ndim'
-    call write_fatal(1)
+    call messages_fatal(1)
   end if
 
   ! read in blocks
@@ -248,7 +248,7 @@ subroutine modelmb_particles_init (this,gr)
       write (message(3),'(a,E20.10)') 'mass_particle = ', this%mass_particle(ipart)
       write (message(4),'(a,E20.10)') 'charge_particle = ', this%charge_particle(ipart)
       write (message(5),'(a,i6)') 'bosonfermion = ', this%bosonfermion(ipart)
-      call write_info(5)
+      call messages_info(5)
     end do
     call parse_block_end(blk)
 
@@ -306,7 +306,7 @@ subroutine modelmb_particles_init (this,gr)
 
       write (message(1),'(a,a)') 'labels_densities = ', this%labels_densities(ipart)
       write (message(2),'(a,i6)') 'particle_kept_densities = ', this%particle_kept_densities(ipart)
-      call write_info(2)
+      call messages_info(2)
     end do
     call parse_block_end(blk)
   else

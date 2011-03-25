@@ -100,7 +100,7 @@ contains
     else
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian.'
-      call write_info(1)
+      call messages_info(1)
       call system_h_setup(sys, hm)
     end if
 
@@ -127,7 +127,7 @@ contains
     if (ierr /= 0) then
       message(1) = "Error occurred during the GSL minimization procedure:"
       call loct_strerror(ierr, message(2))
-      call write_fatal(2)
+      call messages_fatal(2)
     end if
 
     ! print out geometry
@@ -242,7 +242,7 @@ contains
       call parse_integer(datasets_check('GOMaxIter'), 200, g_opt%max_iter)
       if(g_opt%max_iter <= 0) then
         message(1) = "GoMaxIter has to be larger than 0"
-        call write_fatal(1)
+        call messages_fatal(1)
       end if
 
       !%Variable GOWhat2Minimize
@@ -391,7 +391,7 @@ contains
     message(9) = message(3)
     message(10) = ""
     message(11) = ""
-    call write_info(11)
+    call messages_info(11)
 
     POP_SUB(write_iter_info)
   end subroutine write_iter_info
