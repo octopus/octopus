@@ -250,7 +250,12 @@ contains
     ! multigrid routines
     
     if(gr%have_fine_mesh) then
-      
+
+      if(gr%mesh%parallel_in_domains) then
+        message(1) = 'UseFineMesh does not work with domain parallelization.'
+        call write_fatal(1)
+      end if
+
       SAFE_ALLOCATE(gr%fine%mesh)
       SAFE_ALLOCATE(gr%fine%der)
       
