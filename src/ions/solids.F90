@@ -129,7 +129,7 @@ contains
   
   ! ----------------------------------------------------------------
 
-  function periodic_copy_position(this, sb, ii) result(pcopy)
+  pure function periodic_copy_position(this, sb, ii) result(pcopy)
     type(periodic_copy_t),   intent(in)  :: this
     type(simul_box_t),       intent(in)  :: sb
     integer, intent(in)                  :: ii
@@ -137,13 +137,10 @@ contains
     
     integer :: pd
 
-    PUSH_SUB(periodic_copy_position)
-
     pd = sb%periodic_dim
 
     if(.not. simul_box_is_periodic(sb)) then
       pcopy = this%pos
-      POP_SUB(periodic_copy_position)
       return
     end if
 
@@ -151,7 +148,6 @@ contains
     pcopy(1:pd) = matmul(sb%rlattice_primitive(1:pd, 1:pd), pcopy(1:pd))
     pcopy(pd + 1:MAX_DIM) = this%pos(pd+1:MAX_DIM)
 
-    POP_SUB(periodic_copy_position)
   end function periodic_copy_position
 
   ! ----------------------------------------------------------------

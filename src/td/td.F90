@@ -182,6 +182,8 @@ contains
         call gauge_field_init_vec_pot(hm%ep%gfield, gr%mesh, gr%sb, st, td%dt)
       end if
 
+      call hamiltonian_update(hm, gr%mesh, time = td%dt*td%iter)
+
       call gauge_field_get_force(hm%ep%gfield, gr, geo, hm%ep%proj, hm%phase, st, gauge_force)
     end if
 
