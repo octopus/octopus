@@ -1,0 +1,34 @@
+CalculationMode = gs
+
+%Coordinates
+"C"   |   0.000000  |   2.638058  |   0.000000
+"C"   |   2.284679  |   1.319029  |   0.000000
+"C"   |   2.284679  |  -1.319029  |   0.000000
+"C"   |   0.000000  |  -2.638058  |   0.000000
+"C"   |  -2.284679  |   1.319029  |   0.000000
+"C"   |  -2.284679  |  -1.319029  |   0.000000
+"H"   |   0.000000  |   4.684631  |   0.000000
+"H"   |   4.057242  |   2.343260  |   0.000000
+"H"   |   4.057242  |  -2.343260  |   0.000000
+"H"   |   0.000000  |  -4.684631  |   0.000000
+"H"   |  -4.057242  |   2.343260  |   0.000000
+"H"   |  -4.057242  |  -2.343260  |   0.000000
+%
+
+TotalStates = 16
+StatesBlockSize = 16
+
+Spacing = 0.52
+Radius = 5
+
+UseFineMesh = yes
+ExperimentalFeatures = yes
+
+ProfilingMode = yes
+
+LCAOAlternative = yes
+LCAOExtraStates = yes
+
+EigenSolver = rmmdiis
+
+ConvRelDens = 1e-6

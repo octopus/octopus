@@ -88,6 +88,8 @@ dist_share_DATA = \
 	25-multiresolution.01-Hatom.inp \
 	25-multiresolution.test \
 	26-nlcc.01-Fatom.inp \
-	26-nlcc.test
+	26-nlcc.test                                 \
+	27-fine_mesh.test                            \
+	27-fine_mesh.01-gs.inp
 
 CLEANFILES = *~ *.bak

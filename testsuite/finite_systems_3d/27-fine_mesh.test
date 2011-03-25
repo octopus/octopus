@@ -1,0 +1,46 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 27-fine_mesh.test $
+
+Test       : Fine mesh density - Benzene
+Programs   : octopus
+TestGroups : short-run
+Enabled    : Yes
+
+Input      : 27-fine_mesh.01-gs.inp
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ;  -37.85710807
+match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;  -12.93313889
+match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;  131.84939482
+match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;  -10.81775640
+match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;   -1.60268655
+match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;   28.68967884
+match ; External energy    ; GREP(static/info, 'External    =', 20) ; -289.09053437
+
+match ; Eigenvalue 1  ; GREP(static/info, ' 1   --', 13) ; -0.756464
+match ; Eigenvalue 2  ; GREP(static/info, ' 2   --', 13) ; -0.654197
+match ; Eigenvalue 3  ; GREP(static/info, ' 3   --', 13) ; -0.653372
+match ; Eigenvalue 4  ; GREP(static/info, ' 4   --', 13) ; -0.526582
+match ; Eigenvalue 5  ; GREP(static/info, ' 1   --', 13) ; -0.756464
+match ; Eigenvalue 6  ; GREP(static/info, ' 2   --', 13) ; -0.654197
+match ; Eigenvalue 7  ; GREP(static/info, ' 3   --', 13) ; -0.653372
+match ; Eigenvalue 8  ; GREP(static/info, ' 4   --', 13) ; -0.526582
+match ; Eigenvalue 9  ; GREP(static/info, ' 1   --', 13) ; -0.756464
+match ; Eigenvalue 10 ; GREP(static/info, ' 2   --', 13) ; -0.654197
+match ; Eigenvalue 11 ; GREP(static/info, ' 3   --', 13) ; -0.653372
+match ; Eigenvalue 12 ; GREP(static/info, ' 4   --', 13) ; -0.526582
+match ; Eigenvalue 13 ; GREP(static/info, ' 1   --', 13) ; -0.756464
+match ; Eigenvalue 14 ; GREP(static/info, ' 2   --', 13) ; -0.654197
+match ; Eigenvalue 15 ; GREP(static/info, ' 3   --', 13) ; -0.653372
+match ; Eigenvalue 16 ; GREP(static/info, ' 4   --', 13) ; -0.526582
+
+match ; Force X atom 1     ; GREP(static/info, '1         C', 17) ;  0.000000
+match ; Force X atom 2     ; GREP(static/info, '2         C', 17) ; -0.020811
+match ; Force X atom 3     ; GREP(static/info, '3         C', 17) ; -0.020811
+match ; Force X atom 4     ; GREP(static/info, '4         C', 17) ; -0.000000
+match ; Force X atom 5     ; GREP(static/info, '5         C', 17) ;  0.020811
+match ; Force X atom 6     ; GREP(static/info, '6         C', 17) ;  0.020811
+match ; Force X atom 7     ; GREP(static/info, '7         H', 17) ;  0.000000
+match ; Force X atom 8     ; GREP(static/info, '8         H', 17) ;  0.008587
+match ; Force X atom 9     ; GREP(static/info, '9         H', 17) ;  0.008587
+match ; Force X atom 10    ; GREP(static/info, '10         H', 17) ;  0.000000
+match ; Force X atom 11    ; GREP(static/info, '11         H', 17) ; -0.008587
+match ; Force X atom 12    ; GREP(static/info, '12         H', 17) ; -0.008587
