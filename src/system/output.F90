@@ -31,6 +31,7 @@ module output_m
   use etsf_io_tools
 #endif
   use fft_m
+  use fourier_shell_m
   use fourier_space_m
   use geometry_m
   use global_m

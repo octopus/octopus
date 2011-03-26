@@ -64,7 +64,8 @@ libgrid_a_SOURCES =       \
 	symmetrizer.F90         \
 	boundaries.F90          \
 	operate.c               \
-	mesh_cube_map.F90
+	mesh_cube_map.F90       \
+	fourier_shell.F90
 
 
 noinst_HEADERS =                  \
@@ -133,3 +134,4 @@ subarray.o : subarray.F90 subarray_inc.F90 batch.o
 boundaries.o : boundaries.F90 boundaries_inc.F90 subarray.o batch.o par_vec.o mesh.o
 operate.o : operate.c operate_inc.c
 mesh_cube_map.o : mesh_cube_map.F90 index.o
+fourier_shell.o : fourier_shell.F90 cube_function.o mesh.o

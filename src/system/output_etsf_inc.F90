@@ -28,6 +28,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
 
   type(cube_function_t) :: cube
 #ifdef HAVE_ETSF_IO
+  type(fourier_shell_t) :: shell
   integer :: ncid
   type(etsf_io_low_error)  :: error_data
   logical :: lstat
@@ -115,24 +116,26 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   if (iand(outp%what, C_OUTPUT_WFS).ne.0) then
     call zcube_function_fft_init(cube, gr%sb)
     call zcube_function_alloc_RS(cube)
+    call fourier_shell_init(shell, cube, gr%mesh)
 
     call output_etsf_geometry_dims(geo, gr%sb, pw_dims, pw_flags)
     call output_etsf_kpoints_dims(gr%sb, pw_dims, pw_flags)
     call output_etsf_electrons_dims(st, pw_dims, pw_flags)
-    call output_etsf_basisdata_dims(st, gr%mesh, cube, pw_dims, pw_flags)
-    call output_etsf_wfs_pw_dims(st, gr%mesh, cube, pw_dims, pw_flags)
+    call output_etsf_basisdata_dims(st, gr%mesh, cube, shell, pw_dims, pw_flags)
+    call output_etsf_wfs_pw_dims(st, gr%mesh, cube, shell, pw_dims, pw_flags)
 
     call output_etsf_file_init(dir//"/wfs-pw-etsf.nc", "Wavefunctions file", pw_dims, pw_flags, ncid)
 
     call output_etsf_electrons_write(st, ncid)
     call output_etsf_geometry_write(geo, gr%sb, ncid)
     call output_etsf_kpoints_write(gr%sb, ncid)
-    call output_etsf_basisdata_write(st, gr%mesh, cube, ncid)
-    call output_etsf_wfs_pw_write(st, gr%mesh, cube, ncid)
+    call output_etsf_basisdata_write(st, gr%mesh, cube, shell, ncid)
+    call output_etsf_wfs_pw_write(st, gr%mesh, cube, shell, ncid)
 
     call etsf_io_low_close(ncid, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
 
+    call fourier_shell_end(shell)
     call zcube_function_free_rs(cube)
   end if
 #endif
@@ -564,10 +567,11 @@ end subroutine output_etsf_wfs_rsp_write
 
 ! --------------------------------------------------
 
-subroutine output_etsf_basisdata_dims(st, mesh, cube, dims, flags)
+subroutine output_etsf_basisdata_dims(st, mesh, cube, shell, dims, flags)
   type(states_t),          intent(in)    :: st
   type(mesh_t),            intent(in)    :: mesh
   type(cube_function_t),   intent(in)    :: cube
+  type(fourier_shell_t),   intent(in)    :: shell
   type(etsf_dims),         intent(inout) :: dims
   type(etsf_groups_flags), intent(inout) :: flags
 
@@ -582,17 +586,18 @@ end subroutine output_etsf_basisdata_dims
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_basisdata_write(st, mesh, cube, ncid)
+subroutine output_etsf_basisdata_write(st, mesh, cube, shell, ncid)
   type(states_t),        intent(in)    :: st
   type(mesh_t),          intent(in)    :: mesh
   type(cube_function_t), intent(inout) :: cube
+  type(fourier_shell_t), intent(in)    :: shell
   integer,               intent(in)    :: ncid
 
   type(etsf_basisdata) :: basisdata
   type(etsf_io_low_error)  :: error_data
   logical :: lstat
   integer :: ig, ng, ix, iy, iz, ixx(1:3)
-
+ 
   if((maxval(mesh%spacing(1:3)) - minval(mesh%spacing(1:3))) > CNST(1e-10)) then
     message(1) = 'Cannot generate a ETSF plane wave wave-functions file,'
     message(2) = 'spacing is not the same for each direction.'
@@ -607,28 +612,13 @@ subroutine output_etsf_basisdata_write(st, mesh, cube, ncid)
 
   SAFE_ALLOCATE(basisdata%kinetic_energy_cutoff)
 
-  basisdata%kinetic_energy_cutoff = (M_PI/mesh%spacing(1))**2/M_TWO
+  basisdata%kinetic_energy_cutoff = shell%ekin_cutoff
 
-  ng = product(cube%n(1:3))
+  ng = shell%ngvectors
 
   SAFE_ALLOCATE(basisdata%reduced_coordinates_of_plane_waves%data2D(1:3, 1:ng))
 
-  ig = 0
-  do ix = 1, cube%n(1)
-    ixx(1) = pad_feq(ix, cube%n(1), .true.)
-    do iy = 1, cube%n(2)
-      ixx(2) = pad_feq(iy, cube%n(2), .true.)
-      do iz = 1, cube%n(3)
-        ixx(3) = pad_feq(iz, cube%n(3), .true.)
-        
-        INCR(ig, 1)
-        basisdata%reduced_coordinates_of_plane_waves%data2D(1:3, ig) = ixx(1:3)
-
-      end do
-    end do
-  end do
-
-  ASSERT(ig == ng)
+  basisdata%reduced_coordinates_of_plane_waves%data2D(1:3, 1:ng) = shell%red_gvec(1:3, 1:ng)
 
   call etsf_io_basisdata_put(ncid, basisdata, lstat, error_data = error_data)
   if (.not. lstat) call output_etsf_error(error_data)
@@ -643,10 +633,11 @@ end subroutine output_etsf_basisdata_write
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_wfs_pw_dims(st, mesh, cube, dims, flags)
+subroutine output_etsf_wfs_pw_dims(st, mesh, cube, shell, dims, flags)
   type(states_t),          intent(in)    :: st
   type(mesh_t),            intent(in)    :: mesh
   type(cube_function_t),   intent(in)    :: cube
+  type(fourier_shell_t),   intent(in)    :: shell
   type(etsf_dims),         intent(inout) :: dims
   type(etsf_groups_flags), intent(inout) :: flags
 
@@ -654,7 +645,7 @@ subroutine output_etsf_wfs_pw_dims(st, mesh, cube, dims, flags)
 
   flags%main = etsf_main_wfs_coeff
 
-  dims%max_number_of_coefficients = product(cube%n(1:3))
+  dims%max_number_of_coefficients = shell%ngvectors
   dims%real_or_complex_coefficients = 2
 
   POP_SUB(output_etsf_wfs_pw_dims)
@@ -663,10 +654,11 @@ end subroutine output_etsf_wfs_pw_dims
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_wfs_pw_write(st, mesh, cube, ncid)
+subroutine output_etsf_wfs_pw_write(st, mesh, cube, shell, ncid)
   type(states_t),        intent(in)    :: st
   type(mesh_t),          intent(in)    :: mesh
   type(cube_function_t), intent(inout) :: cube
+  type(fourier_shell_t), intent(in)    :: shell
   integer,               intent(in)    :: ncid
 
   type(etsf_main) :: main
@@ -686,7 +678,7 @@ subroutine output_etsf_wfs_pw_write(st, mesh, cube, ncid)
   nkpoints = st%d%nik/nspin
   zdim = 2
 
-  ng = product(cube%n(1:3))
+  ng = shell%ngvectors
 
   !Write the wavefunctions to the file
   SAFE_ALLOCATE(local_wfs(1:zdim, 1:ng, 1:st%d%dim, 1:st%nst, 1:nkpoints, 1:nspin))
@@ -711,24 +703,14 @@ subroutine output_etsf_wfs_pw_write(st, mesh, cube, ncid)
         call zmesh_to_cube(mesh, zpsi, cube, local = .true.)
         call zcube_function_rs2fs(cube)
 
-        ig = 0
-        do ix = 1, cube%n(1)
-          ixx(1) = pad_feq(ix, cube%n(1), .true.)
-          do iy = 1, cube%n(2)
-            ixx(2) = pad_feq(iy, cube%n(2), .true.)
-            do iz = 1, cube%n(3)
-              ixx(3) = pad_feq(iz, cube%n(3), .true.)
-              
-              INCR(ig, 1)
-
-              local_wfs(1, ig, idim, ist, ikpoint, ispin) = real(cube%fs(ix, iy, iz), 8)
-              local_wfs(2, ig, idim, ist, ikpoint, ispin) = aimag(cube%fs(ix, iy, iz))
-                           
-            end do
-          end do
+        do ig = 1, ng
+          ix = shell%coords(1, ig)
+          iy = shell%coords(2, ig)
+          iz = shell%coords(3, ig)
+          
+          local_wfs(1, ig, idim, ist, ikpoint, ispin) = real(cube%fs(ix, iy, iz), 8)
+          local_wfs(2, ig, idim, ist, ikpoint, ispin) = aimag(cube%fs(ix, iy, iz))
         end do
-        
-        ASSERT(ig == ng)
 
       end do
     end do
